@@ -10,6 +10,9 @@
 #include "track.h"
 #include "matlib.h"
 #include "chromDefs.h"
+#include "fftpackC.h"
+#include "twiss.h"
+#include <stddef.h>
 
 void copy_doubles(double *target, double *source, long n);
 double find_acceptance(ELEMENT_LIST *elem, long plane, RUN *run, char **name, double *end_pos);
@@ -30,9 +33,35 @@ void computeTunesFromTracking(double *tune, VMATRIX *M, LINE_LIST *beamline, RUN
 			      double *startingCoord, 
 			      double xAmplitude, double yAmplitude, long turns,
                               long useMatrix);
+void processTwissAnalysisRequests(ELEMENT_LIST *elem);
 
 static long twissConcatOrder = 3;
 static long doTuneShiftWithAmplitude = 0;
+
+#define TWISS_ANALYSIS_QUANTITIES 4
+static char *twissAnalysisQuantityName[TWISS_ANALYSIS_QUANTITIES] = {"betax", "betay", "etax", "etay"};
+static long twissAnalysisQuantityOffset[TWISS_ANALYSIS_QUANTITIES] = {
+  offsetof(TWISS, betax), offsetof(TWISS, betay), offsetof(TWISS, etax), offsetof(TWISS, etay)
+  };
+#define TWISS_ANALYSIS_AVE 0
+#define TWISS_ANALYSIS_MIN 1
+#define TWISS_ANALYSIS_MAX 2
+#define TWISS_ANALYSIS_STATS 3
+static char *twissAnalysisStatName[TWISS_ANALYSIS_STATS] = {"ave", "min", "max" };
+static long twissAnalysisStatCode[TWISS_ANALYSIS_STATS] = {
+  TWISS_ANALYSIS_AVE, TWISS_ANALYSIS_MIN, TWISS_ANALYSIS_MAX };
+
+typedef struct {
+  char *startName, *endName, *tag;
+  double sStart, sEnd;
+  short initialized;
+  long count;
+  double twissMem[TWISS_ANALYSIS_STATS][TWISS_ANALYSIS_QUANTITIES];
+} TWISS_ANALYSIS_REQUEST;
+
+static long twissAnalysisRequests = 0;
+static TWISS_ANALYSIS_REQUEST *twissAnalysisRequest = NULL;
+
 
 VMATRIX *compute_periodic_twiss(
                                 double *betax, double *alphax, double *etax, double *etapx, double *NUx,
@@ -216,10 +245,12 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
   long n_mat_computed, i, j, plane, otherPlane, hasMatrix;
   VMATRIX *M1, *M2;
   MATRIX *dispM, *dispOld, *dispNew;
+  ELEMENT_LIST *elemOrig;
   
   if (!twiss0)
     bomb("initial Twiss parameters not given (propagate_twiss_parameters())", NULL);
-
+  elemOrig = elem;
+  
   m_alloc(&dispM, 4, 4);
   m_alloc(&dispOld, 4, 1);
   m_alloc(&dispNew, 4, 1);
@@ -421,6 +452,9 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
     eta[plane] = func[3] = dispNew->a[2][0] + (hasMatrix?R[2][5]:0);
     etap[plane] = func[4] = dispNew->a[3][0] + (hasMatrix?R[3][5]:0);
 
+    if (elem->type==T_MARK && ((MARK*)elem->p_elem)->fitpoint)
+      store_fitpoint_twiss_parameters((MARK*)elem->p_elem, elem->name, elem->occurence,
+                                      elem->twiss);
     elem = elem->succ;
   }
   
@@ -433,6 +467,8 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
   
   free_matrices(M1); tfree(M1);
   free_matrices(M2); tfree(M2);
+
+  processTwissAnalysisRequests(elemOrig);
 }
 
 
@@ -801,8 +837,6 @@ void dump_twiss_parameters(
 
   log_exit("dump_twiss_parameters");
 }
-
-#include "twiss.h"
 
 long get_twiss_mode(long *mode, double *x_twiss, double *y_twiss)
 {
@@ -1578,6 +1612,7 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
   BEND *bptr;
   KSBEND *kbptr;
   CSBEND *cbptr;
+  CSRCSBEND *csrbptr;
   QUAD *qptr;
   KQUAD *qptrk;
   SEXT *sptr;
@@ -1673,6 +1708,14 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
     E1 = cbptr->e1*(cbptr->edge1_effects?1:0);
     E2 = cbptr->e2*(cbptr->edge2_effects?1:0);
     K1 = cbptr->k1;
+    break;
+  case T_CSRCSBEND:
+    csrbptr = (CSRCSBEND*)(elem->p_elem);
+    length = csrbptr->length;
+    angle = csrbptr->angle;
+    E1 = csrbptr->e1*(csrbptr->edge1_effects?1:0);
+    E2 = csrbptr->e2*(csrbptr->edge2_effects?1:0);
+    K1 = csrbptr->k1;
     break;
   default:
     isBend = 0;
@@ -1955,8 +1998,6 @@ void computeTuneShiftWithAmplitude(double *dnux_dA, double *dnuy_dA,
       *twiss->betay;
 }
 
-#include "fftpackC.h"
-
 void computeTunesFromTracking(double *tune, VMATRIX *M, LINE_LIST *beamline, RUN *run,
 			      double *startingCoord, 
 			      double xAmplitude, double yAmplitude, long turns,
@@ -2080,4 +2121,216 @@ void computeTuneShiftWithAmplitudeM(double *dnux_dA, double *dnuy_dA,
   }
 
   free_matrices(&M1);
+}
+
+void store_fitpoint_twiss_parameters(MARK *fpt, char *name, long occurence,TWISS *twiss)
+{
+  long i;
+  static char *twiss_name_suffix[12] = {
+    "betax", "alphax", "nux", "etax", "etapx", "etaxp",
+    "betay", "alphay", "nuy", "etay", "etapy", "etaxp",
+    } ;
+  static char s[100];
+  if (!(fpt->init_flags&1)) {
+    fpt->twiss_mem = tmalloc(sizeof(*(fpt->twiss_mem))*12);
+    fpt->init_flags |= 1;
+    for (i=0; i<12; i++) {
+      sprintf(s, "%s#%ld.%s", name, occurence, twiss_name_suffix[i]);
+      fpt->twiss_mem[i] = rpn_create_mem(s);
+    }
+  }
+  if (!twiss) {
+    fprintf(stdout, "twiss parameter pointer unexpectedly NULL\n");
+    fflush(stdout);
+    abort();
+  }
+  for (i=0; i<5; i++) {
+    rpn_store(*((&twiss->betax)+i)/(i==2?PIx2:1), fpt->twiss_mem[i]);
+    rpn_store(*((&twiss->betay)+i)/(i==2?PIx2:1), fpt->twiss_mem[i+6]);
+  }
+  /* store etaxp and etayp in under two names each: etapx and etaxp */
+  i = 4;
+  rpn_store(*((&twiss->betax)+i), fpt->twiss_mem[i+1]);
+  rpn_store(*((&twiss->betay)+i), fpt->twiss_mem[i+7]);
+}
+
+
+void clearTwissAnalysisRequests() 
+{
+  long i;
+  for (i=0; i<twissAnalysisRequests; i++) {
+    if (twissAnalysisRequest[i].startName)
+      free(twissAnalysisRequest[i].startName);
+    if (twissAnalysisRequest[i].endName)
+      free(twissAnalysisRequest[i].endName);
+    free(twissAnalysisRequest[i].tag);
+  }
+  free(twissAnalysisRequest);
+  twissAnalysisRequests = 0;
+}
+
+void addTwissAnalysisRequest(char *tag, char *startName, char *endName, 
+                             double sStart, double sEnd)
+{
+  long i;
+  if (!tag || !strlen(tag))
+    bomb("NULL or blank tag passed to addTwissAnalysisRequest", NULL);
+  if (!(startName && strlen(startName) && endName && strlen(endName)) && sStart==sEnd)
+    bomb("must have both startName and endName, or sStart!=sEnd (addTwissAnalysisRequest)", NULL);
+  for (i=0; i<twissAnalysisRequests; i++)
+    if (strcmp(twissAnalysisRequest[i].tag, tag)==0)
+      bomb("duplicate tag names seen (addTwissAnalysisRequest)", NULL);
+  if (!(twissAnalysisRequest = 
+        SDDS_Realloc(twissAnalysisRequest, sizeof(*twissAnalysisRequest)*(twissAnalysisRequests+1))) ||
+      !SDDS_CopyString(&twissAnalysisRequest[twissAnalysisRequests].tag, tag))
+    bomb("memory allocation failure (addTwissAnalysisRequest)", NULL);
+  twissAnalysisRequest[twissAnalysisRequests].startName = 
+    twissAnalysisRequest[twissAnalysisRequests].endName = NULL;
+  if ((startName &&
+       !SDDS_CopyString(&twissAnalysisRequest[twissAnalysisRequests].startName, startName)) ||
+      (endName &&
+       !SDDS_CopyString(&twissAnalysisRequest[twissAnalysisRequests].endName, endName)))
+    bomb("memory allocation failure (addTwissAnalysisRequest)", NULL);
+  twissAnalysisRequest[twissAnalysisRequests].sStart = sStart;
+  twissAnalysisRequest[twissAnalysisRequests].sEnd = sEnd;
+  twissAnalysisRequest[twissAnalysisRequests].initialized = 0;
+  twissAnalysisRequests++;
+}
+
+void processTwissAnalysisRequests(ELEMENT_LIST *elem)
+{
+  long i, is, iq, count;
+  char buffer[1024];
+  ELEMENT_LIST *elemOrig;
+  double value, lastValue, end_pos, start_pos, dz;
+  double twissData[TWISS_ANALYSIS_STATS][TWISS_ANALYSIS_QUANTITIES];
+
+  elemOrig = elem;
+  
+  for (i=0; i<twissAnalysisRequests; i++) {
+    /* initialize statistics buffers and rpn memories */
+    for (iq=0; iq<TWISS_ANALYSIS_QUANTITIES; iq++)  {
+      for (is=0; is<TWISS_ANALYSIS_STATS; is++)
+        if (!twissAnalysisRequest[i].initialized) {
+          sprintf(buffer, "%s.%s.%s", twissAnalysisRequest[i].tag,
+                  twissAnalysisStatName[is], twissAnalysisQuantityName[iq]);
+          twissAnalysisRequest[i].twissMem[is][iq] = rpn_create_mem(buffer);
+        }
+      twissData[TWISS_ANALYSIS_AVE][iq] = 0;
+      twissData[TWISS_ANALYSIS_MIN][iq] = DBL_MAX;
+      twissData[TWISS_ANALYSIS_MAX][iq] = -DBL_MAX;
+    }
+    twissAnalysisRequest[i].initialized = 1;
+    
+    count = end_pos = 0;
+    while (elem) {
+      if (!count) {
+        /* check for starting condition */
+        if ((twissAnalysisRequest[i].startName && 
+             strcmp(twissAnalysisRequest[i].startName, elem->name)!=0) ||
+            (twissAnalysisRequest[i].sStart<twissAnalysisRequest[i].sEnd &&
+             elem->end_pos<twissAnalysisRequest[i].sStart)) {
+          elem = elem->succ;
+          continue;
+        }
+      }
+      count++;
+      if (count==1) {
+        if (elem->pred)
+          start_pos = elem->pred->end_pos;
+        else
+          start_pos = 0;
+      }
+      if (elem->pred)
+        dz = (end_pos=elem->end_pos) - elem->pred->end_pos;
+      else
+        dz = 0;
+      for (iq=0; iq<TWISS_ANALYSIS_QUANTITIES; iq++)  {
+        if (elem->pred && elem->pred->twiss)
+          lastValue = *(double*)((char*)(elem->pred->twiss)+twissAnalysisQuantityOffset[iq]);
+        else
+          lastValue = 0;
+        value = *(double*)((char*)elem->twiss+twissAnalysisQuantityOffset[iq]);
+        for (is=0; is<TWISS_ANALYSIS_STATS; is++) {
+          switch (twissAnalysisStatCode[is]) {
+          case TWISS_ANALYSIS_AVE:
+            if (lastValue)
+              twissData[is][iq] += (value + lastValue)*dz;
+            break;
+          case TWISS_ANALYSIS_MIN:
+            if (twissData[is][iq]>value)
+              twissData[is][iq] = value;
+            break;
+          case TWISS_ANALYSIS_MAX:
+            if (twissData[is][iq]<value)
+              twissData[is][iq] = value;
+            break;
+          }
+        }
+      }
+      if ((twissAnalysisRequest[i].endName && 
+           strcmp(twissAnalysisRequest[i].endName, elem->name)==0) ||
+          (twissAnalysisRequest[i].sStart<twissAnalysisRequest[i].sEnd &&
+           elem->end_pos>=twissAnalysisRequest[i].sEnd) ||
+          !(elem = elem->succ)) 
+        break;
+    }
+    if (!count) {
+      fprintf(stderr, "error: twiss analysis conditions never satisfied for request with tag %s\n",
+              twissAnalysisRequest[i].tag);
+      exit(1);
+    }
+    for (iq=0; iq<TWISS_ANALYSIS_QUANTITIES; iq++)  {
+      if (end_pos-start_pos>0)
+        twissData[TWISS_ANALYSIS_AVE][iq] /= 2*(end_pos-start_pos);
+      else
+        twissData[TWISS_ANALYSIS_AVE][iq] = 0;
+      for (is=0; is<TWISS_ANALYSIS_STATS; is++) {
+        rpn_store(twissData[is][iq], twissAnalysisRequest[i].twissMem[is][iq]);
+        fprintf(stdout, "computed twiss analysis of %ld values %s.%s.%s = %le\n",
+                count, twissAnalysisRequest[i].tag,
+                twissAnalysisStatName[is], twissAnalysisQuantityName[iq],
+                twissData[is][iq]);
+      }
+    }
+    elem = elemOrig;
+  }
+}
+
+void setupTwissAnalysisRequest(NAMELIST_TEXT *nltext, RUN *run, 
+                               LINE_LIST *beamline)
+{
+  set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
+  set_print_namelist_flags(0);
+  process_namelist(&twiss_analysis, nltext);
+  print_namelist(stdout, &twiss_analysis);
+
+  if (twiss_analysis_struct.clear) {
+    clearTwissAnalysisRequests();
+    if (!(twiss_analysis_struct.start_name && twiss_analysis_struct.end_name) &&
+        twiss_analysis_struct.s_start==twiss_analysis_struct.s_end)
+      return;
+  }
+  
+  if (twiss_analysis_struct.start_name &&
+      !strlen(trim_spaces(str_toupper(twiss_analysis_struct.start_name))))
+    bomb("start_name is blank", NULL);
+  if (twiss_analysis_struct.end_name &&
+      !strlen(trim_spaces(str_toupper(twiss_analysis_struct.end_name))))
+    bomb("end_name is blank", NULL);
+  if ((twiss_analysis_struct.tag &&
+       !strlen(trim_spaces(twiss_analysis_struct.tag))) ||
+      !twiss_analysis_struct.tag)
+    bomb("tag is blank", NULL);
+  
+  if (!(twiss_analysis_struct.start_name && twiss_analysis_struct.end_name) &&
+      twiss_analysis_struct.s_start==twiss_analysis_struct.s_end)
+    bomb("you must give start_name and end_name, or s_start different from s_end", NULL);
+  if (twiss_analysis_struct.s_start>twiss_analysis_struct.s_end)
+    bomb("s_start>s_end", NULL);
+  addTwissAnalysisRequest(twiss_analysis_struct.tag,
+                          twiss_analysis_struct.start_name,
+                          twiss_analysis_struct.end_name,
+                          twiss_analysis_struct.s_start,
+                          twiss_analysis_struct.s_end);
 }

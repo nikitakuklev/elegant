@@ -2030,6 +2030,8 @@ long run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, lon
 void finish_twiss_output(void);
 void copy_doubles(double *source, double *target, long n);
 void computeRadiationIntegrals(RADIATION_INTEGRALS *RI, double Po, double revolutionLength);
+void setupTwissAnalysisRequest(NAMELIST_TEXT *nltext, RUN *run, 
+                               LINE_LIST *beamline);
 
 /* prototypes for elegant.c: */
 extern char *compose_filename(char *template, char *root_name);
@@ -2205,7 +2207,7 @@ void add_optimization_term(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
 void add_optimization_constraint(OPTIMIZATION_DATA *_optimize, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 void summarize_optimization_setup(OPTIMIZATION_DATA *_optimize);
 void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *error1, LINE_LIST *beamline1, 
-            BEAM *beam1, OUTPUT_FILES *output1, OPTIMIZATION_DATA *optimization_data1, long beam_type1);
+            BEAM *beam1, OUTPUT_FILES *output1, OPTIMIZATION_DATA *optimization_data1, long beam_type1, long doClosedOrbit);
 void add_optimization_covariable(OPTIMIZATION_DATA *_optimize, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 
 /* prototype for sample.c */

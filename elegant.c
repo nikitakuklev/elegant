@@ -78,7 +78,8 @@ char *GREETING="This is elegant, by Michael Borland. (This is version 14.6Beta4,
 #define DIVIDE_ELEMENTS 40
 #define TUNE_SHIFT_WITH_AMPLITUDE 41
 #define TRANSMUTE_ELEMENTS 42
-#define N_COMMANDS      43
+#define TWISS_ANALYSIS 43
+#define N_COMMANDS      44
 
 char *command[N_COMMANDS] = {
     "run_setup", "run_control", "vary_element", "error_control", "error_element", "awe_beam", "bunched_beam",
@@ -89,7 +90,7 @@ char *command[N_COMMANDS] = {
     "steering_element", "amplification_factors", "print_dictionary", "floor_coordinates", "correction_matrix_output",
     "load_parameters", "sdds_beam", "subprocess", "fit_traces", "sasefel", "alter_elements",
     "optimization_term", "slice_analysis", "divide_elements", "tune_shift_with_amplitude",
-    "transmute_elements",
+    "transmute_elements", "twiss_analysis",
         } ;
 
 char *description[N_COMMANDS] = {
@@ -136,6 +137,7 @@ char *description[N_COMMANDS] = {
     "divide_elements             sets up parser to automatically divide specified elements into parts",
     "tune_shift_with_amplitude   sets up twiss module for computation of tune shift with amplitude",
     "transmute_elements          defines transmutation of one element type into another",
+    "twiss_analysis              requests twiss analysis of regions of a beamline (for optimization)",
         } ;
 
 void initialize_structures(RUN *run_conditions, VARY *run_control, ERRORVAL *error_control, CORRECTION *correct, 
@@ -143,6 +145,7 @@ void initialize_structures(RUN *run_conditions, VARY *run_control, ERRORVAL *err
                            CHROM_CORRECTION *chrom_corr_data, TUNE_CORRECTION *tune_corr_data,
                            ELEMENT_LINKS *links);
 void free_beamdata(BEAM *beam);
+void printFarewell(FILE *fp);
 
 #define NAMELIST_BUFLEN 65536
 
@@ -706,6 +709,7 @@ char **argv;
               fclose(fopen(semaphore_file, "w"));
             }
             free_beamdata(&beam);
+            printFarewell(stdout);
             exit(0);
             break;
           case OPTIMIZATION_SETUP:
@@ -718,7 +722,7 @@ char **argv;
                 bomb("beam definition must come before optimize command", NULL);
             while (vary_beamline(&run_control, &error_control, &run_conditions, beamline)) {
                 do_optimize(&namelist_text, &run_conditions, &run_control, &error_control, beamline, &beam,
-                            &output_data, &optimize, beam_type);
+                            &output_data, &optimize, beam_type, do_closed_orbit);
                 if (parameters)
                   dumpLatticeParameters(parameters, &run_conditions, beamline);
                 }
@@ -1069,6 +1073,11 @@ char **argv;
               bomb("transmute_elements must precede run_setup", NULL);
 	    setupTransmuteElements(&namelist_text, &run_conditions, beamline);
             break;
+          case TWISS_ANALYSIS:
+            if (do_twiss_output)
+              bomb("twiss_analysis must come before twiss_output", NULL);
+            setupTwissAnalysisRequest(&namelist_text, &run_conditions, beamline);
+            break;
           default:
             fprintf(stdout, "unknown namelist %s given.  Known namelists are:\n", namelist_text.group_name);
             fflush(stdout);
@@ -1095,8 +1104,19 @@ char **argv;
     fflush(stdout);
 #endif
     log_exit("main");
+    printFarewell(stdout);
     return(0);
     }
+
+void printFarewell(FILE *fp)
+{
+  fprintf(stderr, "=================================================================================\n");
+  fprintf(stderr, "Thanks for using elegant.  Please cite the following reference in your publications:\n\n");
+  fprintf(stderr, "M. Borland, \"elegant: A Flexible SDDS-Compliant Code for Accelerator Simulation,\"\n");
+  fprintf(stderr, "Advanced Photon Source LS-287, September 2000.\n\n");
+  fprintf(stderr, "If you use a modified version, please indicate this in all publications.\n");
+}
+
 
 double find_beam_p_central(char *input)
 {

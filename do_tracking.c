@@ -406,12 +406,14 @@ long do_tracking(
             break;
           case T_MARK:
             if (((MARK*)eptr->p_elem)->fitpoint && i_pass==n_passes-1) {
-              if (beamline->flags&BEAMLINE_TWISS_WANTED) {
+              /*
+                if (beamline->flags&BEAMLINE_TWISS_WANTED) {
                 if (!(beamline->flags&BEAMLINE_TWISS_DONE))
                   update_twiss_parameters(run, beamline, NULL);
                 store_fitpoint_twiss_parameters((MARK*)eptr->p_elem, eptr->name, 
                                                 eptr->occurence, eptr->twiss);
               }
+              */
               store_fitpoint_matrix_values((MARK*)eptr->p_elem, eptr->name, 
                                            eptr->occurence, eptr->accumMatrix);
               store_fitpoint_beam_parameters((MARK*)eptr->p_elem, eptr->name,eptr->occurence, 
@@ -1349,38 +1351,6 @@ void store_fitpoint_beam_parameters(MARK *fpt, char *name, long occurence, doubl
   rpn_store(Po, fpt->centroid_mem[6]);
   rpn_store((double)np, fpt->centroid_mem[7]);
 }
-
-void store_fitpoint_twiss_parameters(MARK *fpt, char *name, long occurence,TWISS *twiss)
-{
-  long i;
-  static char *twiss_name_suffix[12] = {
-    "betax", "alphax", "nux", "etax", "etapx", "etaxp",
-    "betay", "alphay", "nuy", "etay", "etapy", "etaxp",
-    } ;
-  static char s[100];
-  if (!(fpt->init_flags&1)) {
-    fpt->twiss_mem = tmalloc(sizeof(*(fpt->twiss_mem))*12);
-    fpt->init_flags |= 1;
-    for (i=0; i<12; i++) {
-      sprintf(s, "%s#%ld.%s", name, occurence, twiss_name_suffix[i]);
-      fpt->twiss_mem[i] = rpn_create_mem(s);
-    }
-  }
-  if (!twiss) {
-    fprintf(stdout, "twiss parameter pointer unexpectedly NULL\n");
-    fflush(stdout);
-    abort();
-  }
-  for (i=0; i<5; i++) {
-    rpn_store(*((&twiss->betax)+i)/(i==2?PIx2:1), fpt->twiss_mem[i]);
-    rpn_store(*((&twiss->betay)+i)/(i==2?PIx2:1), fpt->twiss_mem[i+6]);
-  }
-  /* store etaxp and etayp in under two names each: etapx and etaxp */
-  i = 4;
-  rpn_store(*((&twiss->betax)+i), fpt->twiss_mem[i+1]);
-  rpn_store(*((&twiss->betay)+i), fpt->twiss_mem[i+7]);
-}
-
 
 ELEMENT_LIST *findBeamlineMatrixElement(ELEMENT_LIST *eptr)
 {

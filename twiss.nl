@@ -37,3 +37,12 @@
     long higher_order_chromaticity = 0;
 #end
 
+#namelist twiss_analysis,struct
+        STRING start_name = NULL;
+        STRING end_name = NULL;
+        double s_start = -1;
+        double s_end = -1;
+        STRING tag = NULL;
+        long clear = 0;
+#end
+
