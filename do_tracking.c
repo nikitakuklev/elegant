@@ -1918,7 +1918,7 @@ void distributionScatter(double **part, long np, double Po, DSCATTER *scat, long
 {
   static DSCATTER_GROUP *dscatterGroup = NULL;
   static long dscatterGroups = 0;
-  long i, ip, interpCode, nScattered;
+  long i, ip, interpCode, nScattered, nLeftThisPass;
   double t, P, beta, amplitude, cdf;
   TRACKING_CONTEXT context;
     
@@ -2038,25 +2038,46 @@ void distributionScatter(double **part, long np, double Po, DSCATTER *scat, long
       exit(1);
     }
     dscatterGroup[scat->groupIndex].nScattered = 0;
-    fprintf(stderr, "Initialized group structure for group %ld\n",
-            scat->group);
+    dscatterGroup[scat->groupIndex].allScattered = 0;
   }
+  if (scat->oncePerParticle && dscatterGroup[scat->groupIndex].allScattered)
+    return;
   
+  if (iPass==0) {
+    scat->nLeft = scat->limitTotal>=0 ? scat->limitTotal : np;
+    if (scat->nLeft>np)
+      scat->nLeft = np;
+  }
+  nLeftThisPass = np;
+  if (scat->limitTotal>=0)
+    nLeftThisPass = scat->nLeft;
+  if (scat->limitPerPass>=0) {
+    if (scat->limitPerPass<nLeftThisPass)
+      nLeftThisPass = scat->limitPerPass;
+  }
+  if (nLeftThisPass==0)
+    return;
+
   if (scat->oncePerParticle && dscatterGroup[scat->groupIndex].nParticles<np) {
     fprintf(stderr, "Error for %s: number of particles is greater than the size of the particle ID array.\n",
             context.elementName);
     exit(1);
   }
+
   nScattered = 0;
   for (ip=0; ip<np; ip++) {
     if (scat->probability<1 && random_2(1)>scat->probability)
       continue;
+    if (nLeftThisPass==0)
+      break;
     if (scat->oncePerParticle) {
       short found = 0;
-      if (dscatterGroup[scat->groupIndex].nScattered>=np) {
-        fprintf(stderr, "All particles scattered for group %ld (nscattered=%ld, np=%ld)\n",
-                scat->group, dscatterGroup[scat->groupIndex].nScattered, np);
-        break;
+      if (dscatterGroup[scat->groupIndex].nScattered>=dscatterGroup[scat->groupIndex].nParticles) {
+        fprintf(stderr, "All particles scattered for group %ld (nscattered=%ld, np0=%ld)\n",
+                scat->group, dscatterGroup[scat->groupIndex].nScattered, 
+		dscatterGroup[scat->groupIndex].nParticles);
+	dscatterGroup[scat->groupIndex].allScattered = 1;
+	return ;
       }
       for (i=0; i<dscatterGroup[scat->groupIndex].nScattered; i++) {
         if (dscatterGroup[scat->groupIndex].particleIDScattered[i]==part[ip][6]) {
@@ -2070,6 +2091,7 @@ void distributionScatter(double **part, long np, double Po, DSCATTER *scat, long
       dscatterGroup[scat->groupIndex].nScattered += 1;
     }
     nScattered++;
+    nLeftThisPass--;
     cdf = random_2(1);
     amplitude = scat->factor*interp(scat->indepData, scat->cdfData, scat->nData, cdf, 0, 1, &interpCode);
     if (scat->randomSign)
@@ -2089,6 +2111,7 @@ void distributionScatter(double **part, long np, double Po, DSCATTER *scat, long
     } else
       part[ip][scat->iPlane] += amplitude;
   }
+  scat->nLeft -= nScattered;
   fprintf(stderr, "%ld particles scattered by %s, group %ld, total=%ld\n", nScattered, context.elementName, scat->group, dscatterGroup[scat->groupIndex].nScattered);
 }
 
