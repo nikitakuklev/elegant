@@ -234,12 +234,18 @@ void do_transport_analysis(
     effort = 0;
     p_central = run->p_central;
     if (do_tracking(NULL, coord, n_trpoint, &effort, beamline, &p_central, 
-                    NULL, NULL, NULL, NULL, run, control->i_step, SILENT_RUNNING, control->n_passes, 0,
+                    NULL, NULL, NULL, NULL, run, control->i_step, 
+		    (control->fiducial_flag&
+		     (FIRST_BEAM_IS_FIDUCIAL+RESTRICT_FIDUCIALIZATION))
+		    +SILENT_RUNNING,
+		    control->n_passes, 0,
                     NULL, NULL, NULL, NULL)!=n_track) {
         fputs("warning: particle(s) lost during transport analysis--continuing with next step", stdout);
         log_exit("do_transport_analysis");
         return;
         }
+    if (p_central!=run->p_central && verbosity>0)
+      fprintf(stdout, "Central momentum changed from %e to %e\n", run->p_central, p_central);
 
     if (verbosity>0){
         if (orbit && center_on_orbit) {
