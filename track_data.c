@@ -1800,7 +1800,7 @@ PARAMETER lsrMdltr_param[N_LSRMDLTR_PARAMS] = {
     {"L", "M", IS_DOUBLE, 0, (long)((char *)&lsrMdltr_example.length), NULL, 0.0, 0, "length"},
     {"BU", "T", IS_DOUBLE, 0, (long)((char *)&lsrMdltr_example.Bu), NULL, 0.0, 0, "Undulator peak field"},
     {"PERIODS", "", IS_LONG, 0, (long)((char *)&lsrMdltr_example.periods), NULL, 0.0, 0, "Number of undulator periods."},
-    {"METHOD", NULL, IS_STRING, 0, (long)((char*)&lsrMdltr_example.method), DEFAULT_INTEG_METHOD, 0.0, 0, "integration method (runge-kutta, bulirsch-stoer, modified-midpoint, two-pass modified-midpoint, leap-frog, non-adaptive runge-kutta)"},
+    {"METHOD", NULL, IS_STRING, 0, (long)((char*)&lsrMdltr_example.method), "non-adaptive runge-kutta", 0.0, 0, "integration method (runge-kutta, bulirsch-stoer, modified-midpoint, two-pass modified-midpoint, leap-frog, non-adaptive runge-kutta)"},
     {"FIELD_EXPANSION", NULL, IS_STRING, 0, (long)((char*)&lsrMdltr_example.fieldExpansion), "ideal", 0.0, 0, "ideal, exact, or \"leading terms\""},
     {"ACCURACY", NULL, IS_DOUBLE, 0, (long)((char *)&lsrMdltr_example.accuracy), NULL, 0.0, 0, "Integration accuracy for adaptive integration. (Not recommended)"},
     {"N_STEPS", "", IS_LONG, 0, (long)((char *)&lsrMdltr_example.nSteps), NULL, 0.0, 0, "Number of integration steps for non-adaptive integration."},
