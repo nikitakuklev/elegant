@@ -1800,7 +1800,7 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
           (csrDrift->attenuationLength>0?CSRDRIFT_ATTENUATIONLENGTH:0) +
             (csrDrift->useStupakov?CSRDRIFT_STUPAKOV:0) ;
   while (zStart<csrWake.zLast) {
-    fprintf(stdout, "Note: incrementing zStart by revolution length for CSRDRIFT.\n");
+    /* fprintf(stdout, "Note: incrementing zStart by revolution length for CSRDRIFT.\n"); */
     zStart += revolutionLength;
   }
   if (bitsSet(mode)>1) {
