@@ -190,7 +190,7 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
                              SDDS_DATASET *SDDS_floor, long row_index)
 {
   double dX, dY, dZ, rho=0.0, angle, coord[3], sangle[3], length;
-  long is_bend, is_misalignment, is_magnet, is_rotation, i, is_alpha;
+  long is_bend, is_misalignment, is_magnet, is_rotation, i, is_alpha, is_mirror;
   BEND *bend; KSBEND *ksbend; CSBEND *csbend; MALIGN *malign; CSRCSBEND *csrbend;
   ROTATE *rotate; ALPH *alpha;
   char label[200];
@@ -208,7 +208,7 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
     matricesAllocated = 1;
   }
   
-  is_bend = is_magnet = is_rotation = is_misalignment = is_alpha = 0;
+  is_bend = is_magnet = is_rotation = is_misalignment = is_alpha = is_mirror = 0;
   length = dX = dY = dZ = tilt = angle = 0;
   switch (elem->type) {
   case T_RBEN: case T_SBEN:
@@ -272,6 +272,12 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
     tilt = rotate->tilt;
     is_rotation = 1;
     break;
+  case T_LMIRROR:
+    angle = PI-2*(((LMIRROR*)elem->p_elem)->theta);
+    tilt = (((LMIRROR*)elem->p_elem)->tilt);
+    length = 0;
+    is_mirror = 1;
+    break;
   default:
     if (entity_description[elem->type].flags&HAS_LENGTH)
       length = dZ = *((double*)(elem->p_elem));
@@ -284,8 +290,8 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
     phi0 = *phi;
     psi0 = *psi;
     m_identity(S);
-    if (is_bend) {
-      if (SDDS_floor && (include_vertices || vertices_only)) {
+    if (is_bend || is_mirror) {
+      if (!is_mirror && SDDS_floor && (include_vertices || vertices_only)) {
 	/* vertex point is reached by drifting by distance rho*tan(angle/2) */
 	R->a[0][0] = R->a[1][0] = 0;
 	if (angle && rho)
@@ -305,9 +311,13 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
 	}
       }
       if (angle && !isnan(rho)) {
-	R->a[0][0] = rho*(cos(angle)-1);
-	R->a[1][0] = 0;
-	R->a[2][0] = rho*sin(angle);
+        if (!is_mirror) {
+          R->a[0][0] = rho*(cos(angle)-1);
+          R->a[1][0] = 0;
+          R->a[2][0] = rho*sin(angle);
+        } else {
+          R->a[0][0] = R->a[1][0] = R->a[2][0] = 0;
+        }
 	S->a[0][0] = S->a[2][2] = cos(angle);
 	S->a[2][0] = -(S->a[0][2] = -sin(angle));
       } else {

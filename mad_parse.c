@@ -522,10 +522,14 @@ void copy_element(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long reverse, long divisio
         BEND *bptr;
         bptr = (BEND*)e1->p_elem;
         bptr->angle /= divisions;
-        if (division!=0)
+        if (division!=0) {
+          bptr->edge1_effects = 0;
           bptr->e1 = 0;
-        if (division!=(divisions-1))
+        }
+        if (division!=(divisions-1)) {
+          bptr->edge2_effects = 0;
           bptr->e2 = 0;
+        }
       }
       e1->divisions = divisions;
     }

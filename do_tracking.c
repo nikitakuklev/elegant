@@ -54,6 +54,7 @@ long do_tracking(
                  long step,
                  unsigned long flags,
                  long n_passes,
+                 long passOffset,
                  SASEFEL_OUTPUT *sasefel,
 		 SLICE_OUTPUT *sliceAnalysis,
                  double *finalCharge
@@ -151,7 +152,7 @@ long do_tracking(
   charge = NULL;
   if (finalCharge)
     *finalCharge = 0;
-  for (i_pass=0; i_pass<n_passes; i_pass++) {
+  for (i_pass=passOffset; i_pass<n_passes+passOffset; i_pass++) {
     log_entry("do_tracking.2.1");
 
     if (beamline->links) {

@@ -15,6 +15,7 @@
     double scale_up_factor = 1.05;
     double scale_down_limit = 0.01;
     double scale_up_limit = 1e-5;
+    long scaling_iterations = 10;
     long use_concatenation = 1;
     long verbose = 0;
 #end

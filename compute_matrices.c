@@ -747,6 +747,12 @@ VMATRIX *compute_matrix(
           elem->matrix->R[4][4] = elem->matrix->R[5][5] = 1;
         elem->matrix->R[1][1] = elem->matrix->R[3][3] = -1;
         break;
+      case T_LTHINLENS:
+        elem->matrix = lightThinLensMatrix((LTHINLENS*)elem->p_elem);
+        break;
+      case T_LMIRROR:
+        elem->matrix = lightMirrorMatrix((LMIRROR*)elem->p_elem);
+        break;
       case T_KPOLY: case T_RFDF:  case T_RFTMEZ0:  case T_RMDF:  case T_TMCF: case T_CEPL:  
       case T_TWPL:  case T_TWLA:  
       case T_TWMTA: case T_RCOL:  case T_PEPPOT: case T_MAXAMP: 
@@ -1122,5 +1128,61 @@ VMATRIX *twissTransformMatrix(TWISSELEMENT *twissWanted,
   M->R[3][2] = (alpha1-alpha2)/sqrt(beta1*beta2);
   M->R[3][3] = beta1/sqrt(beta1*beta2);
   
+  return M;
+}
+
+/* thin lens for light optics */
+VMATRIX *lightThinLensMatrix(LTHINLENS *ltl)
+{
+  VMATRIX  *M;
+  double *C, **R;
+  long i;
+  
+  M = tmalloc(sizeof(*M));
+  M->order = 1;
+  initialize_matrices(M, M->order);
+  R = M->R;
+  C = M->C;
+
+  for (i=0; i<6; i++) {
+    C[i] = 0;
+    R[i][i] = 1;
+  }
+  if (ltl->fx)
+    R[1][0] = -1/ltl->fx;
+  if (ltl->fy)
+    R[3][2] = -1/ltl->fy;
+  if (ltl->tilt)
+    tilt_matrices(M, ltl->tilt);
+  if (ltl->dx || ltl->dy || ltl->dz) 
+    misalign_matrix(M, ltl->dx, ltl->dy, ltl->dz, 0.0);
+  return M;
+}
+
+/* mirror for light optics */
+VMATRIX *lightMirrorMatrix(LMIRROR *lm)
+{
+  VMATRIX  *M;
+  double *C, **R;
+  long i;
+  
+  M = tmalloc(sizeof(*M));
+  M->order = 1;
+  initialize_matrices(M, M->order);
+  R = M->R;
+  C = M->C;
+
+  for (i=0; i<6; i++) {
+    C[i] = 0;
+    R[i][i] = 1;
+  }
+  if (lm->Rx)
+    R[1][0] = -2/(lm->Rx*cos(lm->theta));
+  if (lm->Ry)
+    R[3][2] = -2/(lm->Ry/cos(lm->theta));
+  if (lm->tilt)
+    tilt_matrices(M, lm->tilt);
+  if (lm->dx || lm->dy || lm->dz) 
+    misalign_matrix(M, lm->dx, lm->dy, lm->dz, 0.0);
   return M;
 }

@@ -9,6 +9,9 @@
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.17  2002/08/14 20:23:38  soliday
+ * Added Open License
+ *
  * Revision 1.16  2002/01/02 14:18:57  borland
  * Revised due to addition of slice_analysis command.
  *
@@ -648,7 +651,7 @@ void find_trajectory_bpm_readouts
   
   if (!do_tracking(particle, &nPart, NULL, beamline, &momentum,
                    (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
-                   trajBuffer, run, 0, tracking_flags, 1, NULL, NULL, NULL)) {
+                   trajBuffer, run, 0, tracking_flags, 1, 0, NULL, NULL, NULL)) {
     fprintf(stdout, "Error tracking particle to find trajectory at BPMs.\n");
     fflush(stdout);
     exit(1);

@@ -33,6 +33,7 @@ char *entity_name[N_TYPES] = {
     "WAKE", "TRWAKE", "TUBEND", "CHARGE", "PFILTER", "HISTOGRAM",
     "CSRCSBEND", "CSRDRIFT", "RFCW", "REMCOR", "MAPSOLENOID",
     "REFLECT", "CLEAN", "TWISS", "WIGGLER", "SCRIPT", "FLOOR",
+    "LTHINLENS", "LMIRROR",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -145,6 +146,8 @@ and phase modulation.",
     "A wiggler or undulator for damping or excitation of the beam.  Does not include focusing effects.",
     "An element that allows transforming the beam using an external script.",
     "Sets floor coordinates",
+    "A thin lens for light optics",
+    "A mirror for light optics",
     } ;
 
 QUAD quad_example;
@@ -1408,6 +1411,32 @@ PARAMETER floor_param[N_FLOORELEMENT_PARAMS] = {
   {"PSI", "", IS_DOUBLE, 0, (long)((char *)&floorElem_example.angle[2]), NULL, 0.0, 0, "psi value"},
 };
 
+LTHINLENS lthinlens_example;
+PARAMETER lthinlens_param[N_LTHINLENS_PARAMS]={
+    {"FX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lthinlens_example.fx), NULL, 0.0, 0, "focal length in horizontal plane"},
+    {"FY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lthinlens_example.fy), NULL, 0.0, 0, "focal length in vertical plane"},
+    {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lthinlens_example.dx), NULL, 0.0, 0, "misalignment"},
+    {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lthinlens_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lthinlens_example.dz), NULL, 0.0, 0, "misalignment"},
+    {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lthinlens_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
+    {"YAW", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lthinlens_example.tilt), NULL, 0.0, 0, "rotation about vertical axis"},
+    {"PITCH", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lthinlens_example.tilt), NULL, 0.0, 0, "rotation about transverse horizontal axis"},
+    };
+
+LMIRROR lmirror_example;
+PARAMETER lmirror_param[N_LMIRROR_PARAMS]={
+    {"RX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lmirror_example.Rx), NULL, 0.0, 0, "radius in horizontal plane"},
+    {"RY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lmirror_example.Ry), NULL, 0.0, 0, "radius in vertical plane"},
+    {"THETA", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lmirror_example.theta), NULL, 0.0, 0, "angle of incidence (in horizontal plane)"},
+    {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lmirror_example.dx), NULL, 0.0, 0, "misalignment"},
+    {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lmirror_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lmirror_example.dz), NULL, 0.0, 0, "misalignment"},
+    {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lmirror_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
+    {"YAW", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lmirror_example.tilt), NULL, 0.0, 0, "rotation about vertical axis"},
+    {"PITCH", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lmirror_example.tilt), NULL, 0.0, 0, "rotation about transverse horizontal axis"},
+    };
+
+
 /* array of parameter structures */
 
 #define MAT_LEN     HAS_MATRIX|HAS_LENGTH
@@ -1507,6 +1536,8 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_WIGGLER_PARAMS, MAT_LEN|MATRIX_TRACKING, sizeof(WIGGLER), wiggler_param},
     {  N_SCRIPT_PARAMS,           MAT_LEN, sizeof(SCRIPT),    script_param     }, 
     {  N_FLOORELEMENT_PARAMS,  0, sizeof(FLOORELEMENT),    floor_param     }, 
+    {  N_LTHINLENS_PARAMS,  HAS_MATRIX|IS_MAGNET|MATRIX_TRACKING,       sizeof(LTHINLENS),    lthinlens_param     },
+    {  N_LMIRROR_PARAMS,  HAS_MATRIX|IS_MAGNET|MATRIX_TRACKING,       sizeof(LMIRROR),    lmirror_param     },
 } ;
  
 

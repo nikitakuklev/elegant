@@ -548,7 +548,9 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_WIGGLER 79
 #define T_SCRIPT 80
 #define T_FLOORELEMENT 81
-#define N_TYPES 82
+#define T_LTHINLENS 82
+#define T_LMIRROR   83
+#define N_TYPES 84
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -637,6 +639,8 @@ extern char *entity_text[N_TYPES];
 #define N_WIGGLER_PARAMS 3
 #define N_SCRIPT_PARAMS 28
 #define N_FLOORELEMENT_PARAMS 6
+#define N_LTHINLENS_PARAMS 8
+#define N_LMIRROR_PARAMS 9
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -1756,6 +1760,7 @@ typedef struct {
 } BMAPXY;
 
 /* names and storage structure for CHARGE element */
+extern PARAMETER charge_param[N_CHARGE_PARAMS];
 typedef struct {
   double charge, chargePerParticle;
   /* for internal use only */
@@ -1763,6 +1768,7 @@ typedef struct {
 } CHARGE;
 
 /* names and storage structure for PFILTER element */
+extern PARAMETER pfilter_param[N_PFILTER_PARAMS];
 typedef struct {
   double deltaLimit, lowerFraction, upperFraction;
   long fixPLimits, beamCentered;
@@ -1773,12 +1779,14 @@ typedef struct {
 } PFILTER;
 
 /* names and storage structure for WIGGLER element */
+extern PARAMETER wiggler_param[N_WIGGLER_PARAMS];
 typedef struct {
   double length, radius;
   long poles;
 } WIGGLER;
 
 /* names and storage structure for SCRIPT element */
+extern PARAMETER script_param[N_SCRIPT_PARAMS];
 typedef struct {
   double length;
   char *command;
@@ -1788,6 +1796,23 @@ typedef struct {
   double NP[10];
   char *SP[10];
 } SCRIPT;
+
+/* Light Thin Lens element */
+extern PARAMETER lthinlens_param[N_LTHINLENS_PARAMS];
+typedef struct {
+  double fx, fy;
+  double dx, dy, dz;
+  double tilt, yaw, pitch;
+} LTHINLENS;
+
+/* Light Mirror element */
+extern PARAMETER lmirror_param[N_LMIRROR_PARAMS];
+typedef struct {
+  double Rx, Ry;
+  double theta;
+  double dx, dy, dz;
+  double tilt, yaw, pitch;
+} LMIRROR;
 
 /* macros for bending magnets */ 
 #define SAME_BEND_PRECEDES 1 
@@ -2003,7 +2028,7 @@ extern double beta_from_delta(double p, double delta);
 extern long do_tracking(double **coord, long *n_original, long *effort, LINE_LIST *beamline, 
                         double *P_central, double **accepted, BEAM_SUMS **sums_vs_z, 
                         long *n_z_points, TRAJECTORY *traj_vs_z, RUN *run, long step,
-                        unsigned long flags, long n_passes, SASEFEL_OUTPUT *sasefel,
+                        unsigned long flags, long n_passes, long passOffset, SASEFEL_OUTPUT *sasefel,
 			SLICE_OUTPUT *sliceAnalysis,
                         double *finalCharge);
 extern void getTrackingContext(TRACKING_CONTEXT *trackingContext);
@@ -2510,6 +2535,8 @@ double FELScalingFunction
 void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 
 VMATRIX *twissTransformMatrix(TWISSELEMENT *twissWanted, TWISS *twissInput);
+VMATRIX *lightThinLensMatrix(LTHINLENS *ltl);
+VMATRIX *lightMirrorMatrix(LMIRROR *lm);
 
 void setupDivideElements(NAMELIST_TEXT *nltext, RUN *run, 
 			 LINE_LIST *beamline);
