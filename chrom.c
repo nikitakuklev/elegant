@@ -136,6 +136,13 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
     m_alloc(&Ct, chrom->n_families, 2);
     m_alloc(&CtC, chrom->n_families, chrom->n_families);
     m_alloc(&inv_CtC, chrom->n_families, chrom->n_families);
+
+    if (chrom->T)
+      m_free(&(chrom->T));
+    if (chrom->dK2)
+      m_free(&(chrom->dK2));
+    if (chrom->dchrom)
+      m_free(&(chrom->dchrom));
     m_alloc(&(chrom->T), chrom->n_families, 2);
     m_alloc(&(chrom->dK2), chrom->n_families, 1);
     m_alloc(&(chrom->dchrom), 2, 1);

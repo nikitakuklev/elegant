@@ -103,6 +103,7 @@ VMATRIX *compute_periodic_twiss(
       M1->R[i][i] = 1;
     }
     M = append_full_matrix(elem, run, M1, twissConcatOrder);
+    free_matrices(M1);
 /*
     fprintf(stdout, "Computed revolution matrix on closed orbit to %ld order\n",
             twissConcatOrder);
@@ -1157,6 +1158,8 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
   beamline->elast = elast;
 
   if (periodic) {
+    if (beamline->matrix)
+      free_matrices(beamline->matrix);
     beamline->matrix = compute_periodic_twiss(&betax, &alphax, &etax, &etapx, beamline->tune,
                                               &betay, &alphay, &etay, &etapy, beamline->tune+1, 
                                               beamline->elem_twiss, starting_coord, run,
