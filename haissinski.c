@@ -25,9 +25,10 @@
 static char *USAGE1 = "haissinski <twissFile> <resultsFile>\n\
  {-wakeFunction=<file>,tColumn=<name>,wColumn=<name> |\n\
   -model=[L=<Henry>|Zn=<Ohms>],R=<Ohm>} \n\
- {-charge=<C>|-particles=<value>}\n\
+ {-charge=<C>|-particles=<value>|-bunchCurrent=<A>}\n\
  {-steps=<numberOfChargeSteps>} {-outputLastStepOnly}\n\
  {-RF=Voltage=<V>,harmonic=<value>|-length=<s>}\n\
+ {-harmonicCavity=Voltage=<V>,factor=<harmonicFactor>}\n\
  {-superPeriods=<number>} {-energy=<GeV>} \n\
  -integrationParameters=deltaTime=<s>,points=<number>,startTime=<s>,\n\
 iterations=<number>,fraction=<value>,tolerance=<value> \n\
@@ -48,6 +49,8 @@ static char *USAGE2 = "model          Instead of a wake function, a circuit mode
 RF             RF parameters that control the length of the zero-current beam.\n\
 length         Alternatively, one can specify the zero-current bunch length (rms)\n\
                in seconds directly.\n\
+harmonicCavity If -RF is given, one may also specify a higher-harmonic cavity\n\
+               for possible bunch shortening. \n\
 superPeriods   The number of superiods of lattice file in the actual machine.\n\
                Default is 1.\n\
 energy         The beam energy at which to perform computations, if it is desired\n\
@@ -77,7 +80,9 @@ integrationParameters   Specifies integration parameters for solving the \n\
 #define SUPERPERIODS 10
 #define ENERGY 11
 #define OUTPUT_LAST_STEP_ONLY 12
-#define N_OPTIONS 13
+#define HARMONIC_CAVITY 13
+#define BUNCH_CURRENT 14
+#define N_OPTIONS 15
 char *option[N_OPTIONS] = {
   "verbose",
   "charge",
@@ -91,7 +96,9 @@ char *option[N_OPTIONS] = {
   "intermediateSolutions",
   "superperiods",
   "energy",
-  "outputlaststeponly" };
+  "outputlaststeponly",
+  "harmoniccavity",
+  "bunchcurrent" };
 
 typedef struct {
   double *y, xStart, xDelta;
@@ -153,9 +160,10 @@ int main( int argc, char **argv)
   char *wakeFile, *tCol, *wCol;
   double revFrequency, syncPhase, syncTune, syncAngFrequency;
   double VrfDot, ZoverN, inductance, resistance;
+  double rfHigherHarmonic=0, rfHigherHarmonicVoltage=0;
   double maxDifference, rmsDifference, madDifference, maxTolerance, fraction;
   double maxDensity;
-  double averageCurrent=0.0, desiredEnergy;
+  double averageCurrent=0.0, bunchCurrent=0.0, desiredEnergy;
   
   SDDS_RegisterProgramName(argv[0]);
   argc  =  scanargs(&scanned, argc, argv);
@@ -178,8 +186,7 @@ int main( int argc, char **argv)
   twissFile  =  NULL;
   resultsFile  =  NULL;
   verbosity = 0;
-  particles = 0;
-  finalCharge = 0;
+  particles = finalCharge = bunchCurrent = 0;
   length = 0;
   rfVoltage = rfHarmonic = 0;
   steps = 1;
@@ -209,6 +216,11 @@ int main( int argc, char **argv)
         if (scanned[i].n_items<2)
           bomb("invalid -charge syntax", NULL);
         get_double(&finalCharge, scanned[i].list[1]);
+        break;
+      case BUNCH_CURRENT:
+        if (scanned[i].n_items<2)
+          bomb("invalid -bunchCurrent syntax", NULL);
+        get_double(&bunchCurrent, scanned[i].list[1]);
         break;
       case PARTICLES:
         if (scanned[i].n_items<2)
@@ -252,6 +264,19 @@ int main( int argc, char **argv)
                           NULL) ||
             rfVoltage<=0 || rfHarmonic<=0)
           bomb("invalid -rf syntax/values", "-rf=voltage=<V>,harmonic=<value>");
+        break;
+      case HARMONIC_CAVITY:
+        if (scanned[i].n_items<2)
+          bomb("invalid -harmonicCavity syntax", NULL);
+        scanned[i].n_items--;
+        rfHigherHarmonic = rfHigherHarmonicVoltage = 0;
+        if (!scanItemList(&dummyFlags, scanned[i].list+1, &scanned[i].n_items, 0,
+                          "voltage", SDDS_DOUBLE, &rfHigherHarmonicVoltage, 1, 0,
+                          "harmonic", SDDS_DOUBLE, &rfHigherHarmonic, 1, 0,
+                          NULL) ||
+            rfHigherHarmonicVoltage<0 || rfHigherHarmonic<=0)
+          bomb("invalid -harmonicCavity syntax/values", 
+               "-harmonicCavity=voltage=<V>,harmonicFactor=<value>");
         break;
       case INTEGRATION:
         if (scanned[i].n_items<3)
@@ -309,31 +334,39 @@ int main( int argc, char **argv)
         bomb("too many filenames given", NULL);
     }
   }
-  if (finalCharge && particles) {
-    bomb("Options charge and particles cannot be both specified.",NULL);
-  }
+  if (((finalCharge!=0)+(particles!=0)+(bunchCurrent!=0))>1)
+    bomb("Specify only one of -charge, -particles, or -bunchCurrent.",NULL);
 
-  if (!finalCharge) 
-    finalCharge = particles * e_mks;
-  if (!particles) {
-    particles = finalCharge/ e_mks;
-  }
-
-  if (length && rfVoltage) {
+  if (length && rfVoltage)
     bomb("Options length and RF cannot be both specified.",NULL);
+  if (rfHigherHarmonic) {
+    if (!rfVoltage)
+      bomb("You must give -rf if you give -harmonicCavity", NULL);
   }
   readRingParameters( twissFile, superPeriods, desiredEnergy*1e3,
                      &energyMeV, &momentumCompaction,
                      &U0, &sigmaE, &circumference);
   revFrequency = c_mks/ circumference;
+
+  if (bunchCurrent)
+    finalCharge = bunchCurrent/revFrequency;
+  if (!finalCharge) 
+    finalCharge = particles * e_mks;
+  if (!particles)
+    particles = finalCharge/ e_mks;
+
   if (!length) {
-    syncPhase = acos( U0/ rfVoltage);
-    syncTune = sqrt( momentumCompaction * rfHarmonic * sin(syncPhase) /
+    syncPhase = asin( U0/ rfVoltage);
+    syncTune = sqrt( momentumCompaction * rfHarmonic * cos(syncPhase) /
                     2 / PI * rfVoltage / (energyMeV * 1e6));
+    if (rfHigherHarmonic)
+      syncTune 
+        *= sqrt(1 + (rfHigherHarmonicVoltage/rfVoltage)*rfHigherHarmonic/cos(syncPhase));
     syncAngFrequency = syncTune * 2 * PI * revFrequency;
     length = momentumCompaction * sigmaE/ syncAngFrequency; /* length is seconds */
     /* derivative w.r.t time */
-    VrfDot = rfVoltage * 2 * PI * rfHarmonic * revFrequency * sin(syncPhase);
+    VrfDot = rfVoltage * 2 * PI * rfHarmonic * revFrequency * 
+      (cos(syncPhase) + rfHigherHarmonicVoltage/rfVoltage*rfHigherHarmonic);
   }
   else {
     syncAngFrequency = momentumCompaction * sigmaE/ length; /* length is seconds */
