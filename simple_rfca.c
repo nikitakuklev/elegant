@@ -354,29 +354,40 @@ long track_through_rfcw
    RUN *run, long i_pass, CHARGE *charge
    )
 {
-  
+  if (rfcw->cellLength<=0) 
+    bomb("invalid cell length for RFCW", NULL);
+  /* set up the RFCA, TRWAKE, and WAKE structures */
+  rfcw->rfca.length = rfcw->length;
+  rfcw->rfca.volt = rfcw->volt;
+  rfcw->rfca.phase  = rfcw->phase ;
+  rfcw->rfca.freq = rfcw->freq;
+  rfcw->rfca.Q = rfcw->Q;
+  rfcw->rfca.change_p0 = rfcw->change_p0;
+  rfcw->rfca.change_t = rfcw->change_t;
+  rfcw->rfca.end1Focus = rfcw->end1Focus;
+  rfcw->rfca.end2Focus = rfcw->end2Focus;
+  rfcw->rfca.nKicks = rfcw->nKicks;
+  rfcw->rfca.dx = rfcw->dx;
+  rfcw->rfca.dy = rfcw->dy;
   if (!rfcw->initialized) {
-    if (rfcw->cellLength<=0) 
-      bomb("invalid cell length for RFCW", NULL);
-    /* set up the RFCA, TRWAKE, and WAKE structures */
-    rfcw->rfca.length = rfcw->length;
-    rfcw->rfca.volt = rfcw->volt;
-    rfcw->rfca.phase  = rfcw->phase ;
-    rfcw->rfca.freq = rfcw->freq;
-    rfcw->rfca.Q = rfcw->Q;
     rfcw->rfca.phase_reference = rfcw->phase_reference;
-    rfcw->rfca.change_p0 = rfcw->change_p0;
-    rfcw->rfca.change_t = rfcw->change_t;
     if (rfcw->fiducial)
       SDDS_CopyString(&rfcw->rfca.fiducial, rfcw->fiducial);
     else 
       rfcw->rfca.fiducial = NULL;
-    rfcw->rfca.end1Focus = rfcw->end1Focus;
-    rfcw->rfca.end2Focus = rfcw->end2Focus;
-    rfcw->rfca.nKicks = rfcw->nKicks;
-    rfcw->rfca.dx = rfcw->dx;
-    rfcw->rfca.dy = rfcw->dy;
-
+  }
+  
+  rfcw->trwake.charge = 0;
+  rfcw->trwake.factor = 0;
+  rfcw->trwake.n_bins = rfcw->n_bins;
+  rfcw->trwake.interpolate = rfcw->interpolate;
+  rfcw->trwake.smoothing = rfcw->smoothing;
+  rfcw->trwake.SGHalfWidth = rfcw->SGHalfWidth;
+  rfcw->trwake.SGOrder = rfcw->SGOrder;
+  rfcw->trwake.dx = rfcw->dx;
+  rfcw->trwake.dy = rfcw->dy;
+  if (!rfcw->initialized) {
+    rfcw->trwake.initialized = 0;
     if (rfcw->wakeFile) {
       if (rfcw->trWakeFile || rfcw->zWakeFile)
         SDDS_Bomb("You can't give wakeFile along with trWakeFile or zWakeFile for RFCW element");
@@ -395,19 +406,19 @@ long track_through_rfcw
         SDDS_CopyString(&rfcw->trwake.WxColumn, rfcw->WxColumn);
       if (rfcw->WyColumn)
         SDDS_CopyString(&rfcw->trwake.WyColumn, rfcw->WyColumn);
-      rfcw->trwake.charge = 0;
-      rfcw->trwake.factor = 0;
-      rfcw->trwake.n_bins = rfcw->n_bins;
-      rfcw->trwake.interpolate = rfcw->interpolate;
-      rfcw->trwake.smoothing = rfcw->smoothing;
-      rfcw->trwake.SGHalfWidth = rfcw->SGHalfWidth;
-      rfcw->trwake.SGOrder = rfcw->SGOrder;
-      rfcw->trwake.dx = rfcw->dx;
-      rfcw->trwake.dy = rfcw->dy;
-      rfcw->trwake.initialized = 0;
     } else
       rfcw->WxColumn = rfcw->WyColumn = NULL;
-
+  }
+  
+  rfcw->wake.charge = 0;
+  rfcw->wake.factor = 0;
+  rfcw->wake.n_bins = rfcw->n_bins;
+  rfcw->wake.interpolate = rfcw->interpolate;
+  rfcw->wake.smoothing = rfcw->smoothing;
+  rfcw->wake.SGHalfWidth = rfcw->SGHalfWidth;
+  rfcw->wake.SGOrder = rfcw->SGOrder;
+  rfcw->wake.change_p0 = rfcw->change_p0;
+  if (!rfcw->initialized) {
     if (rfcw->WzColumn) {
       if (!rfcw->wakeFile)
         SDDS_Bomb("no input file for wake for RFCW element");
@@ -416,20 +427,12 @@ long track_through_rfcw
         SDDS_Bomb("no tColumn value for wake for RFCW element");
       SDDS_CopyString(&rfcw->wake.tColumn, rfcw->tColumn);
       SDDS_CopyString(&rfcw->wake.WColumn, rfcw->WzColumn);
-      rfcw->wake.charge = 0;
-      rfcw->wake.factor = 0;
-      rfcw->wake.n_bins = rfcw->n_bins;
-      rfcw->wake.interpolate = rfcw->interpolate;
-      rfcw->wake.smoothing = rfcw->smoothing;
-      rfcw->wake.SGHalfWidth = rfcw->SGHalfWidth;
-      rfcw->wake.SGOrder = rfcw->SGOrder;
-      rfcw->wake.change_p0 = rfcw->change_p0;
       rfcw->wake.initialized = 0;
     } else
       rfcw->wake.WColumn = NULL;
-     
-    rfcw->initialized = 1;
   }
+  
+  rfcw->initialized = 1;
 
   simple_rf_cavity(part, np, &rfcw->rfca, accepted, P_central, zEnd);
   if (rfcw->WzColumn) {

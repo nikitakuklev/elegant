@@ -363,7 +363,7 @@ VMATRIX *compute_matrix(
     MONI *moni; HMON *hmon; VMON *vmon; 
     KSEXT *ksext; KSBEND *ksbend; KQUAD *kquad; NIBEND *nibend; NISEPT *nisept;
     SAMPLE *sample; STRAY *stray; CSBEND *csbend; RFCA *rfca; ENERGY *energy;
-    RFCW *rfcw;
+    RFCW *rfcw; 
     MATTER *matter; MALIGN *malign; MATR *matr; MODRF *modrf;
     CSRCSBEND *csrcsbend;
     long bend_flags;
@@ -836,6 +836,11 @@ void reset_special_elements(LINE_LIST *beamline, long includeRF)
           case T_RFCA:
             if (includeRF) {
               ((RFCA*)eptr->p_elem)->fiducial_seen = 0;
+            }
+            break;
+          case T_RFCW:
+            if (includeRF) {
+              ((RFCW*)eptr->p_elem)->rfca.fiducial_seen = 0;
             }
             break;
           case T_MODRF:

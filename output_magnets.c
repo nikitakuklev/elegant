@@ -54,7 +54,7 @@ void output_magnets(char *filename, char *line_name, LINE_LIST *beamline)
                 break;
             case T_MARK:    /* zero-length drift */
                 break;
-            case T_RFCA: case T_TWLA: case T_RAMPRF:
+            case T_RFCA: case T_TWLA: case T_RAMPRF: case T_RFCW:
             case T_MODRF:
                 n_points += 9;
                 break;
@@ -230,7 +230,7 @@ void output_magnets(char *filename, char *line_name, LINE_LIST *beamline)
                             eptr->name, start, eptr->name, start, eptr->name, end);
                 start = end;
                 break;
-            case T_RFCA: case T_TWLA: case T_RAMPRF:
+            case T_RFCA: case T_TWLA: case T_RAMPRF: case T_RFCW:
             case T_MODRF:
                 dz = ((DRIFT*)eptr->p_elem)->length;
                 dz /= 8;
