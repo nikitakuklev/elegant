@@ -1,5 +1,4 @@
 
-# EPICS is really the user's local oag directory
 EPICS = ../../../..
 include Target.include
 include $(EPICS)/config/CONFIG_APPS
@@ -11,18 +10,14 @@ EXTENSIONS_LIBS=$(EPICS_EXTENSIONS_LIB)/libSDDS1.a \
 	$(EPICS_EXTENSIONS_LIB)/libmdbmth.a \
 	$(EPICS_EXTENSIONS_LIB)/libmatlib.a \
 	$(EPICS_EXTENSIONS_LIB)/libmdblib.a \
-	$(EPICS_EXTENSIONS_LIB)/librpnlib.a \
-   $(OAG_LIB)/libmeschach.a
+	$(EPICS_EXTENSIONS_LIB)/librpnlib.a $(OAG_LIB)/libmeschach.a
 
 DEPLIBS = $(EXTENSIONS_LIBS)
 
 MESCHACH = ../../meschach
-USR_CFLAGS = -I../../../../../epics/extensions/src/SDDS/include \
-               -I$(EPICS_EXTENSIONS_INCLUDE) -DUNIX -DIEEE_MATH -I$(MESCHACH)
-USR_LDFLAGS = -L../../../../../epics/extensions/lib/$(HOST_ARCH) \
-               -L. -L$(EPICS_EXTENSIONS_LIB) -L$(OAG_LIB)
-USR_LDLIBS = -lmdbmth -lSDDS1 -lnamelist -lmatlib -lrpnlib -lfftpack \
-               -lmdbmth -lmdblib -lmeschach -lm 
+USR_CFLAGS = -I../../../../../epics/extensions/src/SDDS/include -I$(EPICS_EXTENSIONS_INCLUDE) -DUNIX -DIEEE_MATH -I$(MESCHACH)
+USR_LDFLAGS = -L../../../../../epics/extensions/lib/$(HOST_ARCH) -L. -L$(EPICS_EXTENSIONS_LIB) -L$(OAG_LIB)
+USR_LDLIBS = -lmdbmth -lSDDS1 -lnamelist -lmatlib -lrpnlib -lfftpack -lmdbmth -lmdblib -lmeschach -lm 
 ifeq ($(HOST_ARCH),solaris)
 	USR_LDLIBS += -lsunmath
 endif
@@ -65,7 +60,7 @@ MADTOOBJS = sdds_strength_output.o convert_to_parmela.o convert_to_patpet.o conv
 IBSSRC = ibsEmittance.c zibs.c
 IBSOBJ = ibsEmittance.o zibs.o
 
-PROD = elegant sddsemitmeas madto ibsEmittance
+PROD = elegant sddsemitmeas madto sddssasefel sddsTouschekInteg ibsEmittance
 
 include $(EPICS)/config/RULES.Unix
 
@@ -160,6 +155,12 @@ elegant: $(OBJS) $(DEPLIBS)
 
 sddsemitmeas: sddsemitmeas.o 
 	$(LINK.c) -o $@ sddsemitmeas.o $(LDLIBS)
+
+sddssasefel: sddssasefel.o 
+	$(LINK.c) -o $@ sddssasefel.o $(LDLIBS)
+
+sddsTouschekInteg: sddsTouschekInteg.o 
+	$(LINK.c) -o $@ sddsTouschekInteg.o $(LDLIBS)
 
 madto: madto.o $(MADTOOBJS)
 	$(LINK.c) -o $@ madto.o $(MADTOOBJS) $(LDLIBS)
