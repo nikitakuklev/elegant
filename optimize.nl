@@ -33,6 +33,7 @@ static char *optimize_method[N_OPTIM_METHODS] = {
     long verbose = 1;
     long output_sparsing_factor = 1;
     long balance_terms = 0;
+    double simplex_divisor = 3;
 #end
 
 #namelist optimization_variable static

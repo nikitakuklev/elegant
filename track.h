@@ -345,6 +345,7 @@ typedef struct {
     long new_data_read;          /* new data has been read for optimization */
     long n_restarts;
     long matrix_order, *TijkMem, *UijklMem;
+    double simplexDivisor;
     } OPTIMIZATION_DATA;
 
 /* structure to store particle coordinates */

@@ -16,6 +16,9 @@
  * Michael Borland, 1999
  *
  $Log: not supported by cvs2svn $
+ Revision 1.8  2002/08/14 20:23:49  soliday
+ Added Open License
+
  Revision 1.7  2002/06/15 02:21:12  borland
  Added upper and lower limits on all optimizable parameters.
 
@@ -448,7 +451,7 @@ void OptimizeSASEFELParameters
   for (i=0; i<8; i++)
     dx[i] = 0.1*x0[i];
   if (simplexMin(&result, x0, dx, NULL, NULL, disable, 8, 0.0, 1e-9,
-                 SASEFELOptimFn, NULL, 500, 10, 12, 0)<0) {
+                 SASEFELOptimFn, NULL, 500, 10, 12, 3.0, 0)<0) {
     fprintf(stdout, "Optimization unsuccessful\n");
     fflush(stdout);
   }

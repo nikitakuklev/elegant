@@ -9,6 +9,9 @@
 
 /* 
  * $Log: not supported by cvs2svn $
+ * Revision 1.14  2002/11/12 02:33:51  borland
+ * In integrate mode, now outputs the bunch length and energy spread.
+ *
  * Revision 1.13  2002/09/24 22:01:48  borland
  * Added FLOOR element for setting floor coordinates inside a beamline.
  * Improved algorithm for finding closed orbit with path-length constraint.
@@ -531,7 +534,7 @@ int main( int argc, char **argv)
       }
       simplexMin( &yReturn, xGuess, dxGuess, xLowerLimit, xUpperLimit, disable, dimensions,
                  target, tolerance, IBSequations, verbosity?IBSsimplexReport:NULL, 
-                 maxEvaluations, maxPasses, 12, 0);
+                 maxEvaluations, maxPasses, 12, 3.0, 0);
       /* final answers */
       emitx = xGuess[0];
       sigmaDelta = xGuess[1];
