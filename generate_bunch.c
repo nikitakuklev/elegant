@@ -387,21 +387,28 @@ void gaussian_distribution(
   limit1 = s1*limit;
   limit2 = s2*limit;
   if (haltonID[offset] && haltonID[offset+1]) {
-    double s12[2], buffer;
+    double s12[2], buffer[2];
     long dim;
     s12[0] = s1;
     s12[1] = s2;
-    for (dim=0; dim<2; dim++) {
-      for (i_particle=0; i_particle<n_particles; i_particle++) {
-        buffer = nextHaltonSequencePoint(haltonID[offset+dim]);
-        convertSequenceToGaussianDistribution(&buffer, 1, 0);
-        if ((halo && fabs(buffer)<=limit) || (!halo && fabs(buffer)>limit))
-          i_particle--;
-        else 
-          particle[i_particle][offset+dim] = buffer;
-      }
-      for (i_particle=0; i_particle<n_particles; i_particle++)
-        particle[i_particle][offset+dim] *= s12[dim];
+    for (i_particle=0; i_particle<n_particles; i_particle++) {
+      do {
+        for (dim=0; dim<2; dim++) {
+          buffer[dim] = nextHaltonSequencePoint(haltonID[offset+dim]);
+          convertSequenceToGaussianDistribution(&buffer[dim], 1, 0);
+          buffer[dim] *= s12[dim];
+        }
+        if (limit_invar)
+          flag = (sqr(buffer[0])+sqr(beta*buffer[1]))<=limit_invar;
+        else
+          flag = fabs(buffer[0])<=limit1 && fabs(buffer[1])<=limit2;
+        if ((!halo && flag) || (halo && !flag))
+          break;
+      } while (1);
+      for (dim=0; dim<2; dim++)
+        particle[i_particle][offset+dim] = buffer[dim];
+      if ((!halo && flag) || (halo && !flag))
+        break;
     }
   }
   else {

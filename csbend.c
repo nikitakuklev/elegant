@@ -875,7 +875,8 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   long csrInhibit = 0;
   double derbenevRatio = 0;
   TRACKING_CONTEXT tContext;
-
+  VMATRIX *Msection, *Me1, *Me2;
+  
   reset_driftCSR();
   getTrackingContext(&tContext);
 
@@ -991,6 +992,17 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   Fy_0  = 1;
   Fy_x  = -nh;
   Fy_x2 = Fy_x3 = Fy_x4 = Fy_y2 = Fy_x_y2 = Fy_x2_y2 = Fy_y4 = 0;
+  if (csbend->useMatrix) {
+    csbend->nonlinear = 0;
+    Me1 = edge_matrix(e1, 1./rho0, 0.0, n,
+                      -1, Kg, 1, 0, 0);
+    Msection = bend_matrix(csbend->length/csbend->n_kicks, 
+                                   angle/csbend->n_kicks, 0.0, 0.0, 
+                                   0.0, 0.0, csbend->k1_internal, 0.0,
+                                   0.0, 0.0, 0.0, 0.0, 0.0, 1, 1, 0, 0);
+    Me2 = edge_matrix(e2, 1./rho0, 0.0, n, 
+                      1, Kg, 1, 0, 0);
+  }
   if (csbend->nonlinear) {
     Fy_x2    = betah2;
     Fy_x3    = gammah3;
@@ -1092,13 +1104,13 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
         !SDDS_DefineSimpleParameter(&csbend->SDDSpart, "pCentral", "m$be$nc", SDDS_DOUBLE) ||
         !SDDS_DefineSimpleParameter(&csbend->SDDSpart, "Angle", NULL, SDDS_DOUBLE) ||
         (csbend->xIndex=SDDS_DefineColumn(&csbend->SDDSpart, "x", NULL, "m", 
-                                                NULL, NULL, SDDS_DOUBLE, 0 ))<0 ||
+                                          NULL, NULL, SDDS_DOUBLE, 0 ))<0 ||
         (csbend->xpIndex=SDDS_DefineColumn(&csbend->SDDSpart, "xp", NULL, NULL, 
-                                                 NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+                                           NULL, NULL, SDDS_DOUBLE, 0))<0 ||
         (csbend->tIndex=SDDS_DefineColumn(&csbend->SDDSpart, "t", NULL, "s", 
-                                                NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+                                          NULL, NULL, SDDS_DOUBLE, 0))<0 ||
         (csbend->pIndex=SDDS_DefineColumn(&csbend->SDDSpart, "p", NULL, "m$be$nc", 
-                                                NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+                                          NULL, NULL, SDDS_DOUBLE, 0))<0 ||
         !SDDS_WriteLayout(&csbend->SDDSpart)) {
       SDDS_SetError("Problem setting up particle output file for CSR");
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
@@ -1140,7 +1152,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
       !(T1=SDDS_Realloc(T1, sizeof(*T1)*nBins)) ||
       !(T2=SDDS_Realloc(T2, sizeof(*T2)*nBins)) ||
       !(dGamma=SDDS_Realloc(dGamma, sizeof(*dGamma)*nBins)))
-      bomb("memory allocation failure (track_through_csbendCSR)", NULL);
+    bomb("memory allocation failure (track_through_csbendCSR)", NULL);
 
   csrWake.dGamma = dGamma;
   csrWake.bins = nBins;
@@ -1200,20 +1212,25 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 #define DP coord[5]
     if (csbend->edge1_effects) {
       /* apply edge focusing */
-      rho = (1+DP)*rho_actual;
-      if (csbend->edge_order<2) {
-        delta_xp = tan(e1)/rho*X;
-        XP += delta_xp;
-        YP -= tan(e1-psi1/(1+DP))/rho*Y;
+      if (csbend->useMatrix)
+        track_particles(&coord, Me1, &coord, 1);
+      else {
+        rho = (1+DP)*rho_actual;
+        if (csbend->useMatrix || csbend->edge_order<2) {
+          delta_xp = tan(e1)/rho*X;
+          XP += delta_xp;
+          YP -= tan(e1-psi1/(1+DP))/rho*Y;
+        }
+        else
+          apply_edge_effects(&X, &XP, &Y, &YP, rho, n, e1, he1, psi1*(1+DP), -1);
       }
-      else
-        apply_edge_effects(&X, &XP, &Y, &YP, rho, n, e1, he1, psi1*(1+DP), -1);
     }
 
-    /* transform to curvilinear coordinates */
-    XP *= (1+X/rho0);
-    YP *= (1+X/rho0);
-
+    if (!csbend->useMatrix) {
+      /* transform to curvilinear coordinates */
+      XP *= (1+X/rho0);
+      YP *= (1+X/rho0);
+    }
     if (csbend->edge1_effects && e1!=0 && rad_coef) {
       /* pre-adjust dp/p to anticipate error made by integrating over entire sector */
       y2 = Y*Y;
@@ -1226,6 +1243,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
       DP -= dp_prime*X*tan(e1);
     }
   }
+  
 
   if (csbend->csr)
     CSRConstant = 2*macroParticleCharge*e_mks/pow(3*rho0*rho0, 1./3.)/(4*PI*epsilon_o*me_mks*sqr(c_mks));
@@ -1237,38 +1255,43 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
       coord = part[i_part];
       if (particleLost[i_part])
         continue;
-      
-      /* load input coordinates into arrays */
-      Qi[0] = X;
-      Qi[1] = XP;
-      Qi[2] = Y;
-      Qi[3] = YP;
-      Qi[4] = 0;  
-      Qi[5] = DP;
 
-      if (csbend->integration_order==4)
-        integrate_csbend_ord4(Qf, Qi, csbend->length/csbend->n_kicks, 1, rho0, Po);
-      else
-        integrate_csbend_ord2(Qf, Qi, csbend->length/csbend->n_kicks, 1, rho0, Po);
-      particleLost[i_part] = particle_lost;
+      if (csbend->useMatrix)
+        track_particles(&coord, Msection, &coord, 1);
+      else {
+        /* load input coordinates into arrays */
+        Qi[0] = X;
+        Qi[1] = XP;
+        Qi[2] = Y;
+        Qi[3] = YP;
+        Qi[4] = 0;  
+        Qi[5] = DP;
+        
+        if (csbend->integration_order==4)
+          integrate_csbend_ord4(Qf, Qi, csbend->length/csbend->n_kicks, 1, rho0, Po);
+        else
+          integrate_csbend_ord2(Qf, Qi, csbend->length/csbend->n_kicks, 1, rho0, Po);
+        particleLost[i_part] = particle_lost;
       
-      /* retrieve coordinates from arrays */
-      X  = Qf[0];  
-      XP = Qf[1];  
-      Y  = Qf[2];  
-      YP = Qf[3];  
-      DP = Qf[5];
-      if (rad_coef) {
-        /* convert additional distance traveled to ct using mean velocity */
-        p1 = Po*(1+DP);
-        beta1 = p1/sqrt(p1*p1+1);
-        CT += Qf[4]*2/(beta0[i_part]+beta1);
-        beta0[i_part] = beta1;
-      } else {
-        CT += Qf[4]/beta0[i_part];  
+        /* retrieve coordinates from arrays */
+        X  = Qf[0];  
+        XP = Qf[1];  
+        Y  = Qf[2];  
+        YP = Qf[3];  
+        DP = Qf[5];
+
+        if (rad_coef) {
+          /* convert additional distance traveled to ct using mean velocity */
+          p1 = Po*(1+DP);
+          beta1 = p1/sqrt(p1*p1+1);
+          CT += Qf[4]*2/(beta0[i_part]+beta1);
+          beta0[i_part] = beta1;
+        } else {
+          CT += Qf[4]/beta0[i_part];  
+        }
       }
     }
-
+    
     if (n_part>1 && csbend->derbenevCriterionMode) {
       /* evaluate Derbenev criterion: sigma_x/sigma_z << (sigma_z/R)^(1/3) */
       long code;
@@ -1534,11 +1557,13 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     p1 = Po*(1+DP);
     beta1 = p1/sqrt(sqr(p1)+1);
     coord[4] = CT*beta1;
-    
-    /* transform to cartesian coordinates */
-    XP /= (1+X/rho0);
-    YP /= (1+X/rho0);
 
+    if (!csbend->useMatrix) {
+      /* transform to cartesian coordinates */
+      XP /= (1+X/rho0);
+      YP /= (1+X/rho0);
+    }
+    
     if (particleLost[i_part] || p1<=0) {
       if (!part[i_top]) {
         fprintf(stdout, "error: couldn't swap particles %ld and %ld--latter is null pointer (track_through_csbend)\n",
@@ -1565,15 +1590,19 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     }
 
     if (csbend->edge2_effects) {
-      /* apply edge focusing */
-      rho = (1+DP)*rho_actual;
-      if (csbend->edge_order<2) {
-        delta_xp = tan(e2)/rho*X;
-        XP += delta_xp;
-        YP -= tan(e2-psi2/(1+DP))/rho*Y;
+      if (csbend->useMatrix)
+        track_particles(&coord, Me2, &coord, 1);
+      else {
+        /* apply edge focusing */
+        rho = (1+DP)*rho_actual;
+        if (csbend->useMatrix || csbend->edge_order<2) {
+          delta_xp = tan(e2)/rho*X;
+          XP += delta_xp;
+          YP -= tan(e2-psi2/(1+DP))/rho*Y;
+        }
+        else 
+          apply_edge_effects(&X, &XP, &Y, &YP, rho, n, e2, he2, psi2*(1+DP), 1);
       }
-      else 
-        apply_edge_effects(&X, &XP, &Y, &YP, rho, n, e2, he2, psi2*(1+DP), 1);
     }
 
     coord = part[i_part];
@@ -1623,6 +1652,12 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     csrWake.MPCharge = macroParticleCharge;
     csrWake.binRangeFactor = csbend->binRangeFactor;
     csrWake.trapazoidIntegration = csbend->trapazoidIntegration;
+
+    if (csbend->useMatrix) {
+      free_matrices(Msection);
+      free_matrices(Me1);
+      free_matrices(Me2);
+    }
   }
   
 #if defined(MINIMIZE_MEMORY)

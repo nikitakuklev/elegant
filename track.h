@@ -612,7 +612,7 @@ extern char *entity_text[N_TYPES];
 #define N_CHARGE_PARAMS 2
 #define N_PFILTER_PARAMS 5
 #define N_HISTOGRAM_PARAMS 9
-#define N_CSRCSBEND_PARAMS 51
+#define N_CSRCSBEND_PARAMS 52
 #define N_CSRDRIFT_PARAMS 19
 #define N_REMCOR_PARAMS 6
 #define N_MAPSOLENOID_PARAMS 18
@@ -1439,7 +1439,7 @@ typedef struct {
     double dx, dy, dz;
     double fse;     /* Fractional Strength Error */
     double etilt;   /* error tilt angle */
-    long n_kicks, nonlinear, synch_rad;
+    long n_kicks, nonlinear, useMatrix, synch_rad;
     long edge1_effects, edge2_effects, edge_order;
     long integration_order, bins, binOnce;
     double binRangeFactor;
