@@ -1501,8 +1501,10 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
         if (iteration==1)
             for (i=0; i<6; i++)
                 orbit[1][0].centroid[i] = orbit[0][0].centroid[i];
-        if (!find_closed_orbit(clorb, clorb_acc, clorb_iter, beamline, M, run, dp, 1, CM->fixed_length, NULL, clorb_iter_frac))
-            return(-1);
+        if (!find_closed_orbit(clorb, clorb_acc, clorb_iter, beamline, M, run, dp, 1, CM->fixed_length, NULL, clorb_iter_frac)) {
+          fprintf(stderr, "Failed to find closed orbit.\n");
+          return(-1);
+        }
         if (Cdp)
             Cdp[iteration] = clorb[0].centroid[5];
         if (closed_orbit) {
@@ -1536,9 +1538,11 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
                 break;
             }
         rms_pos = sqrt(rms_pos/CM->nmon);
-        if (iteration==0 && rms_pos>1e3)
-            /* if the closed orbit has RMS > 1km, I assume correction won't work and routine bombs */
-            return(-1);
+        if (iteration==0 && rms_pos>1e9) {
+            /* if the closed orbit has RMS > 1e9m, I assume correction won't work and routine bombs */
+          fprintf(stderr, "Orbit beyond 10^9 m.  Aborting correction.\n");
+          return(-1);
+        }
         if (rms_pos>best_rms_pos+CM->corr_accuracy) {
             if (corr_fraction==1 || corr_fraction==0)
                 break;            
@@ -1624,9 +1628,11 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
         beamline->matrix = NULL;
         }
 
-    if (rms_pos>1e3)
-        /* if the final closed orbit has RMS > 1m, I assume correction didn't work and routine bombs */
-        return(-1);
+    if (rms_pos>1e9) {
+        /* if the final closed orbit has RMS > 1e9m, I assume correction didn't work and routine bombs */
+      fprintf(stderr, "Orbit beyond 1e9 m.  Aborting correction.\n");
+      return(-1);
+    }
 
     if (rms_pos>best_rms_pos+CM->corr_accuracy && (corr_fraction==1 || corr_fraction==0)) {
         fprintf(stderr, "orbit not improving--iteration terminated at iteration %ld with last result of %e m RMS\n",

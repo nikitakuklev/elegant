@@ -430,7 +430,7 @@ char **argv;
                   new_beam_flags = TRACK_PREVIOUS_BUNCH;
                 }
                 if (!do_correction(&correct, &run_conditions, beamline, starting_coord, &beam, 
-                                   run_control.i_step, 1)) {
+                                   run_control.i_step, 1) ) {
                   fputs("warning: orbit correction failed--continuing with next step\n", stderr);
                   continue;
                 }
