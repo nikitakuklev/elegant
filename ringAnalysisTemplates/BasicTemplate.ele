@@ -13,7 +13,7 @@
 
 &run_setup
 	lattice = <matrixLatticeFile>,
-	use_beamline = <beamline>
+	use_beamline = <matrixBeamline>
 	p_central = "{rpnl <momentum> mev /}",
 	default_order = <order>,
         magnets = %s.mag,

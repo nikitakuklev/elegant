@@ -1,8 +1,13 @@
+&transmute_elements
+        name = *, type = WATCH, 
+        new_type = DRIF
+&end
+
 &run_setup
 	lattice = <kickLatticeFile>,
 	use_beamline = <kickBeamline>
 	p_central = "{rpnl <momentum> mev /}",
-        rootname = <mainDirectory>/<mainPrefix>PhaseSpaceTracking<suffix>
+        rootname = <mainDirectory>/<mainPrefix>OffMomentumDynamicAperture<suffix>,
         semaphore_file = %s.done,
         tracking_updates = 0
 &end
@@ -17,16 +22,20 @@
 
 &alter_elements name=*, type=*SBEN*, item=EDGE_ORDER, value=1 &end
 &alter_elements name=<kickOffsetElement>, item=ON_PASS, value=0 &end
-&alter_elements name=<kickOffsetElement>, item=D<otherPlane>, value=<otherCoord> &end
-&alter_elements name=<kickOffsetElement>, item=D<offsetPlane>, value=<offset> &end
+&alter_elements name=<kickOffsetElement>, item=DP, value=<delta> &end
 
 &run_control
         n_passes = <turns>,
 &end
 
-&bunched_beam
-&end
-
-&track
+&find_aperture
+        output = %s.aper,
+        boundary = %s.abnd,
+        xmin = <xMinimum>, xmax=<xMaximum>,
+        ymax = <yMaximum>,
+        mode = many-particle,
+        nx = <xPoints>,
+        ny = <yPoints>,
+        verbosity = 1,
 &end
 

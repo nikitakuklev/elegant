@@ -2,7 +2,9 @@
 	lattice = <kickLatticeFile>,
 	use_beamline = <kickBeamline>
 	p_central = "{rpnl <momentum> mev /}",
-        rootname = <mainDirectory>/<mainPrefix>PhaseSpaceTracking<suffix>
+        magnets = %s.mag,
+        rootname = <mainDirectory>/<mainPrefix>OffMomentumTuneTracking,
+        final = %s.fin,
         semaphore_file = %s.done,
         tracking_updates = 0
 &end
@@ -17,11 +19,24 @@
 
 &alter_elements name=*, type=*SBEN*, item=EDGE_ORDER, value=1 &end
 &alter_elements name=<kickOffsetElement>, item=ON_PASS, value=0 &end
-&alter_elements name=<kickOffsetElement>, item=D<otherPlane>, value=<otherCoord> &end
-&alter_elements name=<kickOffsetElement>, item=D<offsetPlane>, value=<offset> &end
+
+&twiss_output
+        filename = %s.twi,
+        concat_order = 1,
+        matched = 1
+&end
+
+&alter_elements name=<kickOffsetElement>, item=DX, value=<xOffset> &end
+&alter_elements name=<kickOffsetElement>, item=DY, value=<yOffset> &end
 
 &run_control
         n_passes = <turns>,
+        n_indices = 1
+&end
+
+&vary_element 
+        name=<kickOffsetElement>, item=DP, index_number=0, index_limit=<sweepPoints>,
+        initial=<initialOffset>, final=<finalOffset>
 &end
 
 &bunched_beam
