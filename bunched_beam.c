@@ -148,7 +148,7 @@ void setup_bunched_beam(
     else
         beam->accepted = NULL;
     
-    beam->n_original = beam->n_to_track = n_particles_per_bunch;
+    beam->n_original = beam->n_to_track = beam->n_particle = n_particles_per_bunch;
     beam->n_accepted = beam->n_saved = 0;
 
     if (one_random_bunch) {

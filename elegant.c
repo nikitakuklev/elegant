@@ -1285,15 +1285,12 @@ char *translateUnitsToTex(char *source)
 
 void free_beamdata(BEAM *beam)
 {
-  if (beam->particle) {
-    free_zarray_2d((void**)beam->particle, beam->n_to_track, 7);
-  }
-  if (beam->accepted) {
-    free_zarray_2d((void**)beam->accepted, beam->n_to_track, 7);
-  }
-  if (beam->original && beam->original!=beam->particle) {
+  if (beam->particle)
+    free_zarray_2d((void**)beam->particle, beam->n_particle, 7);
+  if (beam->accepted)
+    free_zarray_2d((void**)beam->accepted, beam->n_particle, 7);
+  if (beam->original && beam->original!=beam->particle)
     free_zarray_2d((void**)beam->original, beam->n_original, 7);
-  }
   beam->particle = beam->accepted = beam->original = NULL;
-  beam->n_original = beam->n_to_track = beam->n_accepted = beam->p0 = beam->n_saved = 0;
+  beam->n_original = beam->n_to_track = beam->n_accepted = beam->p0 = beam->n_saved = beam->n_particle = 0;
 }  

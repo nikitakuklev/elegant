@@ -130,9 +130,9 @@ void setup_sdds_beam(
     bomb("either sample_fraction or sample_interval must be 1", NULL);
   if (save_initial_coordinates && !reuse_bunch)
     save_initial_coordinates = 0;
-  
+
   beam->original = beam->particle = beam->accepted = NULL;
-  beam->n_original = beam->n_to_track = beam->n_accepted = beam->n_saved = 0;
+  beam->n_original = beam->n_to_track = beam->n_accepted = beam->n_saved = beam->n_particle = 0;
   save_initial_coordinates = save_original || save_initial_coordinates;
   
   log_exit("setup_sdds_beam");
@@ -182,9 +182,9 @@ long new_sdds_beam(
         /* no beam has been read before, or else it was purged from memory to save RAM */
         /* free any arrays we may have from previous pass */
         if (beam->particle)
-          free_zarray_2d((void**)beam->particle, beam->n_to_track, 7);
+          free_zarray_2d((void**)beam->particle, beam->n_particle, 7);
         if (beam->accepted)
-          free_zarray_2d((void**)beam->accepted, beam->n_to_track, 7);
+          free_zarray_2d((void**)beam->accepted, beam->n_particle, 7);
         beam->particle = beam->accepted = beam->original = NULL;
         /* read the particle data */
         if (!(beam->n_original=get_sdds_particles(&beam->original, prebunched, 0))) {
@@ -195,12 +195,14 @@ long new_sdds_beam(
         has_been_read = 1;
         if (save_initial_coordinates || n_particles_per_ring!=1)
           beam->particle = (double**)zarray_2d
-            (sizeof(double), n_particles_per_ring*beam->n_original, 7);
-        else
+            (sizeof(double), beam->n_particle=n_particles_per_ring*beam->n_original, 7);
+        else {
           beam->particle = beam->original;
+          beam->n_particle = beam->n_original;
+        }
         if (run->acceptance)
           beam->accepted = (double**)zarray_2d
-            (sizeof(double), n_particles_per_ring*beam->n_original, 7);
+            (sizeof(double), beam->n_particle, 7);
         new_particle_data = 1;
       }
       else
@@ -213,9 +215,9 @@ long new_sdds_beam(
        */
       /* Free arrays from previous pass */
       if (beam->particle)
-        free_zarray_2d((void**)beam->particle, beam->n_to_track, 7);
+        free_zarray_2d((void**)beam->particle, beam->n_particle, 7);
       if (beam->accepted)
-        free_zarray_2d((void**)beam->accepted, beam->n_to_track, 7);
+        free_zarray_2d((void**)beam->accepted, beam->n_particle, 7);
       if (beam->original && beam->original!=beam->particle)
         free_zarray_2d((void**)beam->original, beam->n_original, 7);
       beam->particle = beam->accepted = beam->original = NULL;
@@ -224,12 +226,14 @@ long new_sdds_beam(
         n_tables_to_skip = 0;    /* use the user's parameter only the first time */
         if (save_initial_coordinates || n_particles_per_ring!=1)
           beam->particle = (double**)zarray_2d
-            (sizeof(double), n_particles_per_ring*beam->n_original, 7);
-        else
+            (sizeof(double), beam->n_particle=n_particles_per_ring*beam->n_original, 7);
+        else {
           beam->particle = beam->original;
+          beam->n_particle = beam->n_original;
+        }
         if (run->acceptance) 
           beam->accepted = (double**)zarray_2d
-            (sizeof(double), n_particles_per_ring*beam->n_original, 7);
+            (sizeof(double), beam->n_particle, 7);
       }
       else { 
         log_exit("new_sdds_beam");
@@ -484,6 +488,7 @@ long get_sdds_particles(double ***particle,
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     }
     input_initialized = 0;
+    return 0;
   }
 
   files_initialized = 0;
