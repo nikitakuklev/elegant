@@ -1169,7 +1169,7 @@ void dump_sigma(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, lo
       for (plane=0; plane<=2; plane+=2) {
         /* emittance */
         emit = SAFE_SQRT(sqr(Sigma[0+plane]*Sigma[1+plane]) 
-                         - sqr(sigma[0+plane][1+plane]-centroid[0+plane]*centroid[1+plane]));
+                         - sqr(sigma[0+plane][1+plane]));
 #if DO_NORMEMIT_SUMS
         emitNorm = SAFE_SQRT(sqr(pSigma[0+plane]*pSigma[1+plane]) 
                          - sqr(psigma[0+plane][1+plane]-pcentroid[0+plane]*pcentroid[1+plane]));
