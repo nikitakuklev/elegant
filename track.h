@@ -524,7 +524,7 @@ extern char *entity_text[N_TYPES];
 #define N_TWMTA_PARAMS 17
 #define N_ZLONGIT_PARAMS 17
 #define N_MODRF_PARAMS 13
-#define N_SREFFECTS_PARAMS 10
+#define N_SREFFECTS_PARAMS 13
 #define N_ZTRANSVERSE_PARAMS 19
 #define N_IBSCATTER_PARAMS 3
 #define N_FMULT_PARAMS 9
@@ -1459,6 +1459,7 @@ extern PARAMETER sreffects_param[N_SREFFECTS_PARAMS];
 
 typedef struct {
   double Jx, Jy, Jdelta, exRef, eyRef, SdeltaRef, DdeltaRef, pRef, coupling, fraction;
+  double damp, qExcite, loss;
 } SREFFECTS;
 
 /* names and storage structure for intra-beam scattering */

@@ -22,37 +22,41 @@ long tolower(char c);
 
 void delete_spaces(char *s);
 void str_to_upper_quotes(char *s);
+char *cfgets1(char *s, long n, FILE *fpin);
 
 char *cfgets(char *s, long n, FILE *fpin)
 {
-    register long l;
-    static long level = 0;
+  s[0] = 0;
+  if (!cfgets1(s, n, fpin))
+    return NULL;
+  str_to_upper_quotes(s);
+  return s;
+}
 
-    level++;
-    while (fgets(s, n, fpin)) {
-        chop_nl(s);
-        delete_spaces(s);
-        if (s[0]!='!') {
-            l = strlen(s);
-            while (l!=0 && s[l]<27)
-                l--;
-            if (s[l]=='&') {
-                cfgets(s+l, n-l, fpin);
-                if (level==1) 
-                    str_to_upper_quotes(s);
-                level--;
-                return(s);
-                }
-            else {
-                if (level==1) 
-                    str_to_upper_quotes(s);
-                level--;
-                return(s);
-                }
-            }
-        }
-    return(NULL);
+char *cfgets1(char *s, long n, FILE *fpin)
+{
+  register long l;
+  static long level = 0;
+  
+  while (fgets(s, n, fpin)) {
+    if (s[0]=='!')
+      continue;
+    chop_nl(s);
+    delete_spaces(s);
+    l = strlen(s);
+    while (l!=0 && s[l]<27)
+      l--;
+    if (s[l]=='&') {
+      s[l] = 0;
+      cfgets(s+l, n-l, fpin);
+      return(s);
     }
+    else {
+      return(s);
+    }
+  }
+  return NULL;
+}
 
 void delete_spaces(char *s)
 {
@@ -79,13 +83,15 @@ void delete_spaces(char *s)
 
 void str_to_upper_quotes(char *s)
 {
-    while (*s) {
-        if (*s=='"') {
-            while (*++s && *s!='"')
-                ;
-            }
-        else 
-            *s = toupper(*s);
-        s++;
-        }
+  if (!s)
+    return;
+  while (*s) {
+    if (*s=='"') {
+      while (*++s && *s!='"')
+        ;
     }
+    else 
+      *s = toupper(*s);
+    s++;
+  }
+}

@@ -46,20 +46,42 @@ void track_SReffects(double **coord, long np, SREFFECTS *SReffects, double Po,
 
     if (SReffects->DdeltaRef>0)
         bomb("DdeltaRef>0 in track_SReffects", NULL);
-    /* compute P/Po change per turn due to SR losses */
+    /* compute P/Po change per turn due to SR losses at the present momentum */
     Ddelta = SReffects->DdeltaRef*gammaRatio*gamma2Ratio;
 
     /* damping rates less RF contributions */
-    Fx = 1 + (SReffects->Jx - 1)*Ddelta;
-    Fy = 1 + (SReffects->Jy - 1)*Ddelta;
-    Fdelta = 1 + SReffects->Jdelta*Ddelta;
+    if (SReffects->damp) {
+      Fx = 1 + (SReffects->Jx - 1)*Ddelta;
+      Fy = 1 + (SReffects->Jy - 1)*Ddelta;
+      Fdelta = 1 + SReffects->Jdelta*Ddelta;
+    } else {
+      Fx = Fy = Fdelta = 1;
+    }
 
     /* RMS values for random added components */
     if (twiss->betax<=0 || twiss->betay<=0)
         bomb("Twiss parameters invalid in track_SReffects", NULL);
-    Srdelta = sqrt(1-sqr(Fdelta))*SReffects->SdeltaRef*gammaRatio;
-    Srxp    = sqrt((1-sqr(1+SReffects->Jx*Ddelta))*SReffects->exRef*gamma2Ratio*(1+sqr(twiss->alphax))/twiss->betax);
-    Sryp    = sqrt((1-sqr(1+SReffects->Jy*Ddelta))*SReffects->eyRef*gamma2Ratio*(1+sqr(twiss->alphay))/twiss->betay);
+    if (SReffects->qExcite) {
+      Srdelta = sqrt(1-sqr(Fdelta))*SReffects->SdeltaRef*gammaRatio;
+      Srxp    = sqrt((1-sqr(1+SReffects->Jx*Ddelta))*SReffects->exRef*gamma2Ratio*(1+sqr(twiss->alphax))/twiss->betax);
+      Sryp    = sqrt((1-sqr(1+SReffects->Jy*Ddelta))*SReffects->eyRef*gamma2Ratio*(1+sqr(twiss->alphay))/twiss->betay);
+    } else {
+      Srdelta = Srxp = Sryp = 0;
+    }
+
+    if (SReffects->fraction!=1) {
+      /* scale with fraction of effect */
+      Fx = 1+(Fx-1)*SReffects->fraction;
+      Fy = 1+(Fy-1)*SReffects->fraction;
+      Fdelta = 1+(Fdelta-1)*SReffects->fraction;
+      Ddelta *= SReffects->fraction;
+      Srdelta *= SReffects->fraction;
+      Srxp *= SReffects->fraction;
+      Sryp *= SReffects->fraction;
+    }
+
+    if (!SReffects->loss)
+      Ddelta = 0;
 
     if (first) {
         first = 0;
@@ -75,13 +97,13 @@ void track_SReffects(double **coord, long np, SREFFECTS *SReffects, double Po,
     for (ip=0; ip<np; ip++) {
         part     = coord[ip];
         xpEta    = part[5]*twiss->etapx;
-        part[1]  = (part[1] - xpEta)*Fx + SReffects->fraction*Srxp*gauss_rn(0, random_2) + xpEta;
+        part[1]  = (part[1] - xpEta)*Fx + Srxp*gauss_rn(0, random_2) + xpEta;
         ypEta    = part[5]*twiss->etapy;
-        part[3]  = (part[3] - ypEta)*Fy + SReffects->fraction*Sryp*gauss_rn(0, random_2) + ypEta;
+        part[3]  = (part[3] - ypEta)*Fy + Sryp*gauss_rn(0, random_2) + ypEta;
         P = (1+part[5])*Po;
         beta = P/sqrt(sqr(P)+1);
         t = part[4]/beta;
-        part[5]  = Ddelta + part[5]*Fdelta + SReffects->fraction*Srdelta*gauss_rn(0, random_2);
+        part[5]  = Ddelta + part[5]*Fdelta + Srdelta*gauss_rn(0, random_2);
         P = (1+part[5])*Po;
         beta = P/sqrt(sqr(P)+1);
         part[4] = t*beta;

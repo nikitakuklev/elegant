@@ -1012,6 +1012,9 @@ PARAMETER sreffects_param[N_SREFFECTS_PARAMS] = {
     {"PREF", "m$be$nc", IS_DOUBLE, 0, (long)((char *)&SReffects_example.pRef), NULL, 0.0, 0},
     {"COUPLING", "", IS_DOUBLE, 0, (long)((char *)&SReffects_example.coupling), NULL, 0.0, 0},
     {"FRACTION", "", IS_DOUBLE, 0, (long)((char *)&SReffects_example.fraction), NULL, 1.0, 0},
+    {"DAMPING", "", IS_LONG, 0, (long)((char *)&SReffects_example.damp), NULL, 0, 1},
+    {"QEXCITATION", "", IS_LONG, 0, (long)((char *)&SReffects_example.qExcite), NULL, 0, 1},
+    {"LOSSES", "", IS_LONG, 0, (long)((char *)&SReffects_example.loss), NULL, 0, 1},
     };
 
 MODRF modrf_example;
