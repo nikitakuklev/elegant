@@ -310,6 +310,8 @@ long simple_rf_cavity(
             coord[1] -= coord[0]*inverseF;
             coord[3] -= coord[2]*inverseF;
           }
+          /* adjust s for the new particle velocity */
+          coord[4] = (P+dP)/gamma*coord[4]/beta_i;
         }
         coord[0] += rfca->dx;
         coord[2] += rfca->dy;
