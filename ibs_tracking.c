@@ -91,8 +91,8 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
                  );
   RNSigma[0] = RNSigma[1] = RNSigma[2] = 0;
   dT = IBS->revolutionLength/vz;
-  if (IBS->fraction>0)
-    dT *= IBS->fraction;
+  if (IBS->factor>0)
+    dT *= IBS->factor;
   if (!IBS->smooth) {
     if (IBS->do_x && xGrowthRate>0)
       RNSigma[0] = sqrt((sqr(1+dT*xGrowthRate)-1))*sqrt(xBeamParam.s22);

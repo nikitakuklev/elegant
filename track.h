@@ -1704,7 +1704,7 @@ typedef struct {
 extern PARAMETER IBSCATTER_param[N_IBSCATTER_PARAMS];
 
 typedef struct {
-  double coupling, fraction, charge;
+  double coupling, factor, charge;
   long do_x, do_y, do_z;
   long smooth;
   /* internal use only */
