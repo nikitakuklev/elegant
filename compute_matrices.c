@@ -862,7 +862,7 @@ VMATRIX *compute_matrix(
                                         &elem->Pref_output, run->default_order?run->default_order:1,
                                         rfcw->end1Focus, rfcw->end2Focus,
                                         rfcw->bodyFocusModel, 
-                                        fiducialize*(rfca->change_p0 || run->always_change_p0),
+                                        fiducialize*(rfcw->change_p0 || run->always_change_p0),
 					Pref_output);
         if (rfcw->dx || rfcw->dy)
           misalign_matrix(elem->matrix, rfcw->dx, rfcw->dy, 0.0, 0.0);
