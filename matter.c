@@ -134,8 +134,9 @@ void track_through_matter(
       coord[4] += L*sqrt(1+sqr(coord[1])+sqr(coord[3]));
     }
   }
-  fprintf(stdout, "%e scatters per particle\n",
-          (1.0*nScatters)/np);
+  if (Nrad<1e-3)
+    fprintf(stdout, "%e scatters per particle\n",
+            (1.0*nScatters)/np);
   
   log_exit("track_through_matter");
 }
