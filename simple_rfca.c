@@ -78,7 +78,7 @@ long simple_rf_cavity(
     double P, gamma, dgamma=0.0, dgammaMax=0.0, phase, length, volt, To;
     double *coord, t, t0, omega, beta_i, tau, dt;
     long useSRSModel = 0;
-    static long been_warned = 0;
+    static long been_warned = 0, been_warned_kicks=0;
 #ifdef DEBUG
     static FILE *fplog = NULL;
     static long fplogCounter = 0;
@@ -93,6 +93,12 @@ long simple_rf_cavity(
         break;
       case 1:
         useSRSModel = 1;
+        if (rfca->nKicks && !been_warned_kicks) {
+          fprintf(stderr, "Warning: N_KICKS is nonzero for RFCA with SRS body focusing.\n");
+          fprintf(stderr, "This isn't supported so N_KICKS is being set to 0.\n");
+          been_warned_kicks = 1;
+        }
+        rfca->nKicks = 0;
         break;
       default:
         fprintf(stderr, "Error: bodyFocusModel=%s not understood for RFCA\n", rfca->bodyFocusModel);
