@@ -365,6 +365,7 @@ double compute_kick_coefficient(ELEMENT_LIST *elem, long plane, long type, doubl
         case T_VCOR:
             if (plane!=0 && param_offset==find_parameter_offset("KICK", type))
                 return(1.0);
+            break;
         case T_HVCOR:
             if (plane==0 && param_offset==find_parameter_offset("HKICK", type))
                 return(1.0);
