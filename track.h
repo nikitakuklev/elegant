@@ -984,8 +984,8 @@ typedef struct {
     double time_offset;             /* equivalent to phase */
     long n_kicks, phase_reference;
     /* for internal use only */
-    double t_first_particle;        /* not to be set by user! */
-    long   initialized;             /* ditto */
+    double t_first_particle;        
+    long   initialized;             
     } RFDF;
 
 /* TM-mode RF-cavity using Ez(z,r=0)
