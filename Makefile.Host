@@ -1,5 +1,9 @@
 TOP = ../../..
+ARCH_DEP_LDLIBS = 
+SYS_DLL_LIBS_Linux = 
 include $(TOP)/config/CONFIG_APPS
+ARCH_DEP_LDLIBS = 
+SYS_DLL_LIBS_Linux = 
 
 CMPLR = ANSI
 CC = $($(ANSI)_$(CMPLR))
