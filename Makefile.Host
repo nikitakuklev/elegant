@@ -7,6 +7,7 @@ CMPLR = ANSI
 PROD = elegant sddsemitmeas madto sddssasefel sddsTouschekInteg ibsEmittance recurseSetup
 
 USR_CFLAGS_DEFAULT = 	-I../../../../../epics/extensions/src/SDDS/include \
+                        -L../../../../../epics/extensions/lib/$(HOST_ARCH) \
 			-I$(EPICS_EXTENSIONS_INCLUDE) \
 			-DIEEE_MATH -DUNIX
 
