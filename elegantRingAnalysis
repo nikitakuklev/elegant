@@ -815,8 +815,10 @@ proc RunSCTuneSpread {} {
 		   | sddsxref $tmpRoot.1 -pipe -leave=* -transfer=parameter,* \
 		   | sddsxref $tmpRoot.2 -pipe -leave=* -transfer=parameter,* \
 		   | sddsprocess -pipe \
-		   {"-define=parameter,K,charge e_mks / re_mks * 2 pi * 1.5 pow / pCentral 3 pow / rmsBunchLength / emitx / emittanceRatio sqrt /"} \
-		   {"-define=column,SCTSIntegrand,betay sqrt betax sqrt betay emittanceRatio * sqrt + /"} \
+		   {"-define=parameter,K,charge e_mks / re_mks * 2 pi * 1.5 pow / pCentral 3 pow / rmsBunchLength /"} \
+		   {"-define=column,Sx,betax emitx * sigmaDelta etax * sqr + sqrt,units=m"} \
+		   {"-define=column,Sy,betay emity * sqrt,units=m"} \
+		   {"-define=column,SCTSIntegrand,betay Sy / Sx Sy + /,units=1/m"} \
 		   -process=SCTSIntegrand,integ,SCTSIntegral,functionOf=s \
 		   {"-define=parameter,spaceChargeTuneSpread,SCTSIntegral K *"} \
 		   | sddscollapse -pipe=in \
