@@ -209,9 +209,16 @@ void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long part
     ZImag[0] = getTransverseImpedance(&SDDSin, ztransverse->ZxImag);
     ZReal[1] = getTransverseImpedance(&SDDSin, ztransverse->ZyReal);
     ZImag[1] = getTransverseImpedance(&SDDSin, ztransverse->ZyImag);
-    if (!(freqData=SDDS_GetColumnInDoubles(&SDDSin, ztransverse->freqColumn)))
+    if (!(freqData=SDDS_GetColumnInDoubles(&SDDSin, ztransverse->freqColumn))) {
       fprintf(stdout, "Unable to read column %s (ZTRANSVERSE)\n", ztransverse->freqColumn);
       fflush(stdout);
+      exit(1);
+    }
+    if (!checkPointSpacing(freqData, n_spect, 1e-6)) {
+      fprintf(stdout, "Frequency values are not equispaced (ZTRANSVERSE)\n");
+      fflush(stdout);
+      exit(1);
+    }
     if ((df_spect = (freqData[n_spect-1]-freqData[0])/(n_spect-1))<=0) {
       fprintf(stdout, "Zero or negative frequency spacing in %s (ZTRANSVERSE)\n",
               ztransverse->inputFile);

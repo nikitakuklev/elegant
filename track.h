@@ -2408,6 +2408,7 @@ void set_up_trfmode(TRFMODE *trfmode, char *element_name, double element_z,
                     long n_passes, RUN *run, long n_particles);
 void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po, RUN *run, long i_pass,
                            CHARGE *charge);
+long checkPointSpacing(double *x, long n, double tolerance);
 void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse, 
                                double Po, RUN *run, long i_pass,
                                CHARGE *charge);

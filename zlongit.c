@@ -333,6 +333,8 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
         if (zlongit->Zimag && !getTableFromSearchPath(&Zi_data, zlongit->Zimag, 1, 0))
             bomb("unable to read imaginary impedance function (ZLONGIT)", NULL);
         if (zlongit->Zreal && !zlongit->Zimag) {
+            if (!checkPointSpacing(Zr_data.c1, Zr_data.n_data, 1e-6))
+                bomb("frequency values not equally spaced for real data (ZLONGIT)",  NULL);
             Zr = Zr_data.c2;
             if ((n_spect = Zr_data.n_data)<2)
                 bomb("too little data in real impedance input file (ZLONGIT)", NULL);
@@ -342,6 +344,8 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
                 Zi[i] = 0;
             }
         else if (zlongit->Zimag && !zlongit->Zreal) {
+            if (!checkPointSpacing(Zi_data.c1, Zi_data.n_data, 1e-6))
+                bomb("frequency values not equally spaced for real data (ZLONGIT)",  NULL);
             Zi = Zi_data.c2;
             if ((n_spect = Zi_data.n_data)<2)
                 bomb("too little data in imaginary impedance input file (ZLONGIT)", NULL);
@@ -351,6 +355,10 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
                 Zr[i] = 0;
             }
         else if (zlongit->Zimag && zlongit->Zreal) {
+            if (!checkPointSpacing(Zr_data.c1, Zr_data.n_data, 1e-6))
+                bomb("frequency values not equally spaced for real data (ZLONGIT)",  NULL);
+            if (!checkPointSpacing(Zi_data.c1, Zi_data.n_data, 1e-6))
+                bomb("frequency values not equally spaced for real data (ZLONGIT)",  NULL);
             if (Zi_data.n_data!=Zr_data.n_data)
                 bomb("real and imaginary impedance files have different amounts of data (ZLONGIT)", NULL);
             n_spect = Zi_data.n_data;
@@ -443,4 +451,22 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
       }
     zlongit->initialized = 1;
   }
+
+long checkPointSpacing(double *x, long n, double tolerance)
+{
+  double dx, dx0, range;
+  long i;
+  
+  if (n<3)
+    return 1;
+  if ((range = x[n-1] - x[0])<=0)
+    return 0;
+  dx0 = (x[1] - x[0])/range;
+  for (i=1; i<n-1; i++) {
+    dx = (x[i+1]-x[i])/range;
+    if (fabs(dx-dx0)>tolerance)
+      return 0;
+  }
+  return 1;
+}
 
