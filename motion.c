@@ -1562,9 +1562,9 @@ void setupRftmEz0FromFile(RFTMEZ0 *rftmEz0, double frequency, double length)
     exit(1);
   }
   
-  if (fabs((length-(z[rftmEz0->nz-1]-z[0]))/rftmEz0->dz)>1e-6) {
-    fprintf(stderr, "Error: declared length and length from fields from RFTMEZ0 file %s do not agree to 1/10^6 tolerance\n",
-            rftmEz0->inputFile);
+  if (fabs((length-(z[rftmEz0->nz-1]-z[0]))/rftmEz0->dz)>1e-4) {
+    fprintf(stderr, "Error: declared length (%le) and length from fields (%le) from RFTMEZ0 file %s do not agree to 1/10^4 tolerance\n",
+            length, z[rftmEz0->nz-1]-z[0], rftmEz0->inputFile);
     exit(1);
   }
   free(z);
@@ -1667,8 +1667,8 @@ void setupRftmEz0SolenoidFromFile(RFTMEZ0 *rftmEz0, double length, double k)
         exit(1);
       }
       z0 = z[0];
-      if (fabs((length-(z[rftmEz0->nzSol-1]-z[0]))/dz)>1e-6) {
-        fprintf(stderr, "Error: declared length and length from fields from RFTMEZ0 solenoid file %s do not agree to 1/10^6 tolerance\n",
+      if (fabs((length-(z[rftmEz0->nzSol-1]-z[0]))/dz)>1e-4) {
+        fprintf(stderr, "Error: declared length and length from fields from RFTMEZ0 solenoid file %s do not agree to 1/10^4 tolerance\n",
                 rftmEz0->solenoidFile);
         
         exit(1);
@@ -1775,7 +1775,7 @@ void setupMapSolenoidFromFile(MAP_SOLENOID *mapSol, double length)
   
   /* check for solenoid input file */
   if (!mapSol->inputFile)
-    return;
+    SDDS_Bomb("no input file given for MAPSOLENOID element");
   
   if (!mapSol->zColumn || !mapSol->rColumn ||
       !mapSol->BzColumn || !mapSol->BrColumn) 
@@ -1831,10 +1831,10 @@ void setupMapSolenoidFromFile(MAP_SOLENOID *mapSol, double length)
                 mapSol->inputFile, page);
         exit(1);
       }
-      if (fabs((length-(z[mapSol->nz-1]-z[0]))/dz)>1e-6) {
-        fprintf(stderr, "Error: declared length and length from fields from MAP_SOLENOID file %s do not agree to 1/10^6 tolerance\n",
-                mapSol->inputFile);
-        
+      if (fabs((length-(z[mapSol->nz-1]-z[0]))/dz)>1e-4) {
+        fprintf(stderr, "Error: declared length (%le) and length from fields (%le) from MAP_SOLENOID file %s do not agree to 1/10^4 tolerance (in units of dz=%le)\nDiscrepancy is %le\n",
+                length, z[mapSol->nz-1]-z[0], mapSol->inputFile, dz,
+                fabs((length-(z[mapSol->nz-1]-z[0]))/dz));
         exit(1);
       }
       free(z);
