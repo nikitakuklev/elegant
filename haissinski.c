@@ -50,7 +50,8 @@ RF             RF parameters that control the length of the zero-current beam.\n
 length         Alternatively, one can specify the zero-current bunch length (rms)\n\
                in seconds directly.\n\
 harmonicCavity If -RF is given, one may also specify a higher-harmonic cavity\n\
-               for possible bunch shortening. \n\
+               for possible bunch shortening.  If you want to lengthen the bunch,\n\
+               give a negative voltage.\n\
 superPeriods   The number of superiods of lattice file in the actual machine.\n\
                Default is 1.\n\
 energy         The beam energy at which to perform computations, if it is desired\n\
@@ -274,7 +275,7 @@ int main( int argc, char **argv)
                           "voltage", SDDS_DOUBLE, &rfHigherHarmonicVoltage, 1, 0,
                           "harmonic", SDDS_DOUBLE, &rfHigherHarmonic, 1, 0,
                           NULL) ||
-            rfHigherHarmonicVoltage<0 || rfHigherHarmonic<=0)
+            rfHigherHarmonic<=0)
           bomb("invalid -harmonicCavity syntax/values", 
                "-harmonicCavity=voltage=<V>,harmonicFactor=<value>");
         break;
