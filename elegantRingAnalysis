@@ -455,27 +455,50 @@ proc PostProcessRuns {args} {
     lappend copyList done
     foreach item $copyList {
         if [lsearch -exact $processedList $item]!=-1 continue
-        lappend processedList $item
+	setStatus "Copying [lindex $runNameList 0].$item to $rootname.$item"
         file copy -force [lindex $runNameList 0].$item $rootname.$item
 	eval file delete -force [affix -itemList $runNameList -suffix .$item]
+        lappend processedList $item
     }
     lappend mergeList var
     foreach item $mergeList {
         if [lsearch -exact $processedList $item]!=-1 continue
-        lappend processedList $item
-        if [catch {eval exec sddscombine [affix -itemList $runNameList -suffix .$item] \
-                     -merge -overwrite $rootname.$item} result] {
+	setStatus "Merging [llength $runNameList] files into $rootname.$item"
+	if [catch {exec sddscheck [lindex $runNameList 0].$item} result] {
 	    return -code error "$result"
-        }
+	}
+	if [string compare $result ok]==0 {
+	    if [catch {eval exec sddscombine [affix -itemList $runNameList -suffix .$item] \
+			   -merge -overwrite $rootname.$item} result] {
+		return -code error "$result"
+	    }
+	} else {
+	    if [catch {eval exec cat [affix -itemList $runNameList -suffix .$item] \
+			   > $rootname.$item} result] {
+		return -code error "$result"
+	    }
+	}
+        lappend processedList $item
         eval file delete -force [affix -itemList $runNameList -suffix .$item]
     }
     foreach item $combineList {
         if [lsearch -exact $processedList $item]!=-1 continue
-        lappend processedList $item
-        if [catch {eval exec sddscombine [affix -itemList $runNameList -suffix .$item] \
-                     -overwrite $rootname.$item} result] {
+	setStatus "Combining [llength $runNameList] files into $rootname.$item"
+	if [catch {exec sddscheck [lindex $runNameList 0].$item} result] {
 	    return -code error "$result"
-        }
+	}
+	if [string compare $result ok]==0 {
+	    if [catch {eval exec sddscombine [affix -itemList $runNameList -suffix .$item] \
+			   -overwrite $rootname.$item} result] {
+		return -code error "$result"
+	    }
+	} else {
+	    if [catch {eval exec cat [affix -itemList $runNameList -suffix .$item] \
+			   > $rootname.$item} result] {
+		return -code error "$result"
+	    }
+	}
+        lappend processedList $item
 	eval file delete -force [affix -itemList $runNameList -suffix .$item]
     }
     $postProcessProc -rootname $rootname
