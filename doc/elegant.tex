@@ -2553,6 +2553,9 @@ on subsequent pages.
         functions and dispersion.    The beam file
         is of the type written by {\tt elegant} using the {\tt output} field of the {\tt run\_setup}
         command, or the WATCH element.
+\item {\tt sddsrandmult} --- Simulates the effect of random mechanical errors in a quadrupole or sextupole,
+  generating multipole error data that can be used with {\tt elegant}'s {\tt KQUAD} and {\tt KSEXT}
+  elements.
 \item {\tt sddssampledist} --- This program allows creating particle
         distributions from user-designed distribution functions.  It is thus a more flexible alternative
         to \verb|bunched_beam|.  This program is part of the SDDS toolkit.  See the SDDS toolkit
@@ -2948,6 +2951,75 @@ passed to {\em outputfile} unchanged.
 \item {\bf author:} M. Borland, ANL/APS.
 \end{itemize}
 
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|sddsrandmult|}\end{center}
+\end{latexonly}
+\subsection{sddsrandmult}
+\label{sddsrandmult}
+
+\begin{itemize}
+\item {\bf description:} {\tt sddsrandmult} computes the multipole
+errors in a quadrupole or sextupole due to various construction
+errors.  The program is based on the analysis of
+Halbach\cite{Halbach_69a}, with which I'll assume the reader is
+familiar.  Instead of separately evaluating the effect of certain
+types of mechanical errors, it allows one to simulate several types of
+errors in order to get statistical distributions for the multipole
+perturbations.
+
+\item {\bf examples:}
+\begin{flushleft}{\tt
+sddsrandmult quadpert.in
+}\end{flushleft}
+
+\item {\bf synopsis:}
+\begin{flushleft}{\tt
+sddsrandmult {\em inputFile}
+}\end{flushleft}
+
+\item {\bf usage:}
+
+{\em inputFile} is a text file containing a series of namelist commands specifying
+the parameters of a quadrupole or sextupole, the type and amplitude of the errors
+to include, and the filenames for output.  Each namelist command results in a
+complete computation and generation of output files.
+
+The namelist command is {\tt perturbations}.  It has the following fields:
+\begin{itemize}
+\item {\tt type} --- A string value, either ``quadrupole'' (default) or ``sextupole''.
+\item {\tt name} --- An optional string value giving the name of the element.  This is
+  used in preparing data for {\tt elegant}.
+\item {\tt SDDS\_output} --- An required string value giving the name of an SDDS file to which
+  data for each seed will be written.  This file can be used to compute statistics or perform
+  histograms.
+\item {\tt elegant\_output} --- An optional string value giving the name of a text file to which
+  {\tt elegant} commands and element definitions will be written.  Note that this file is a mixture
+  of commands and element definitions.  As such, the user must manually edit the file and place the
+  appropriate parts in the lattice file and the command file.
+\item {\tt kmult\_output} --- An optional string value giving the name of an SDDS file to which
+  data will be written in the format accepted by the {\tt RANDOM\_MULTIPOLES} feature of the {\tt KQUAD}
+  and {\tt KSEXT} elements.  {\em This is the recommended data to use with {\tt elegant}}.
+\item {\tt effective\_length} --- The effective length of the magnet, in meters.
+\item {\tt bore\_radius} --- The bore radius of the magnet, in meters.
+\item {\tt dx\_pole} --- The rms error, in meters, to be imparted to the horizontal position of each pole.
+\item {\tt dy\_pole} --- The rms error, in meters, to be imparted to the vertical position of each pole.
+\item {\tt dradius} --- The rms error, in meters, in the bore radius.
+\item {\tt dx\_split} --- The rms error, in meters, to be imparted to the horizontal distance between the
+  left and right sides of the magnet.
+\item {\tt dy\_split} --- The rms error, in meters, to be imparted to the vertical distance between the
+  top and bottom halves of the magnet.
+\item {\tt dphi\_halves} --- The rms error, in radians, to be imparted to the relative rotation of the top
+  and bottom halves of the magnet.
+\item {\tt n\_cases} --- The number of cases to simulate (default is 1000).
+\item {\tt n\_harm} --- The number of harmonics to simulate.  The default is 0, which results in computing
+ all the harmonics for which Halbach indicates his treatment applies.
+\item {\tt random\_number\_seed} --- The initial seed for the random number generator.  Should be a large integer.
+\end{itemize}
+
+\item {\bf author:} M. Borland, ANL/APS.
+\end{itemize}
+
 \newpage
 \section{Accelerator and Element Description}
 
@@ -3180,6 +3252,10 @@ Top-Up Safety for the Advanced Photon Source,'', Proceedings of the
 LINAC''.
 
 \bibitem{GENESIS} S. Reiche, {\em NIM} A 429 (1999) 242.
+
+\bibitem{Halbach_69a}
+    K. Halbach, ``First Order Perturbation Effects in Iron-Dominated Two-Dimensional Symmetrial Multipoles'',
+    NIM {\bf 74-1}, 1969, 147-164.
 
 \end{thebibliography}
 
