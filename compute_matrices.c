@@ -1244,6 +1244,10 @@ VMATRIX *lightThinLensMatrix(LTHINLENS *ltl)
     R[3][2] = -1/ltl->fy;
   if (ltl->tilt)
     tilt_matrices(M, ltl->tilt);
+  if (ltl->pitch)
+    pitch_matrices(M, ltl->pitch);
+  if (ltl->yaw)
+    yaw_matrices(M, ltl->yaw);
   if (ltl->dx || ltl->dy || ltl->dz) 
     misalign_matrix(M, ltl->dx, ltl->dy, ltl->dz, 0.0);
   return M;
@@ -1272,8 +1276,12 @@ VMATRIX *lightMirrorMatrix(LMIRROR *lm)
     R[3][2] = -2/(lm->Ry/cos(lm->theta));
   if (lm->tilt)
     tilt_matrices(M, lm->tilt);
+  if (lm->pitch)
+    pitch_matrices(M, lm->pitch);
+  if (lm->yaw)
+    yaw_matrices(M, lm->yaw);
   if (lm->dx || lm->dy || lm->dz) 
-    misalign_matrix(M, lm->dx, lm->dy, lm->dz, PI-2*lm->theta);
+    misalign_matrix(M, lm->dx, lm->dy, lm->dz, 2*PI-2*lm->theta);
   return M;
 }
 
