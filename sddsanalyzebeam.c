@@ -14,6 +14,10 @@
  * Michael Borland, 2000
  *
  $Log: not supported by cvs2svn $
+ Revision 1.9  2003/02/26 18:00:12  borland
+ Copies input parameters through to output columns.
+ Think I fixed a memory leak.
+
  Revision 1.8  2003/01/09 15:58:51  borland
  Added -correctedOnly option.
 
@@ -86,9 +90,9 @@ int main(int argc, char **argv)
   unsigned long pipeFlags;
   double *x, *xp, *y, *yp, *p=NULL, *t;
   double pAve=0.0, sum;
-  double S[6][6], C[6], beta[2], alpha[2], eta[4], emit[2], emitcor[2], beamsize[6];
-  double betacor[2], alphacor[2];
-  double *data[6], Sbeta[4][4];
+  double S[6][6], C[6], beta[3], alpha[3], eta[4], emit[3], emitcor[3], beamsize[6];
+  double betacor[3], alphacor[3];
+  double *data[6], Sbeta[6][6];
   long tmpFileUsed, correctedOnly;
 
   SDDS_RegisterProgramName(argv[0]);
@@ -210,15 +214,15 @@ int main(int argc, char **argv)
         for (iPart=0; iPart<particles; iPart++)
           data[i][iPart] -= eta[i]*data[5][iPart];
       }
-      for (i=0; i<4; i++) {
-        for (j=0; j<4; j++) {
+      for (i=0; i<6; i++) {
+        for (j=0; j<6; j++) {
           for (iPart=sum=0; iPart<particles; iPart++)
             sum += data[i][iPart]*data[j][iPart];
           Sbeta[j][i] = Sbeta[i][j] = sum/particles;
         }
       }
       /* compute beta functions etc */
-      for (i=0; i<2; i++) {
+      for (i=0; i<3; i++) {
         emitcor[i] = emit[i] = beta[i] = alpha[i] = 0;
         if ((emit[i] = S[2*i+0][2*i+0]*S[2*i+1][2*i+1]-sqr(S[2*i+0][2*i+1]))>0) {
           emit[i] = sqrt(emit[i]);
@@ -269,7 +273,7 @@ int main(int argc, char **argv)
                              "betacx", betacor[0], "alphacx", alphacor[0],
                              "ecy", emitcor[1], "ecny", emitcor[1]*pAve,
                              "betacy", betacor[1], "alphacy", alphacor[1],
-                             "pAverage", pAve, "ElementName", "None", NULL)) {
+                             "el", emit[2], "pAverage", pAve, "ElementName", "None", NULL)) {
         SDDS_SetError("Problem setting Twiss values");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
@@ -338,7 +342,8 @@ long SetUpOutputFile(SDDS_DATASET *SDDSout, char *outputfile, long correctedOnly
       !SDDS_DefineSimpleColumn(SDDSout, "Syp", NULL, SDDS_DOUBLE) ||
       !SDDS_DefineSimpleColumn(SDDSout, "St", "s", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleColumn(SDDSout, "Sdelta", NULL, SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(SDDSout, "pAverage", NULL, SDDS_DOUBLE)) {
+      !SDDS_DefineSimpleColumn(SDDSout, "pAverage", NULL, SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleColumn(SDDSout, "el", "s", SDDS_DOUBLE)) {
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
   if (!correctedOnly &&
