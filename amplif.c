@@ -33,7 +33,7 @@ void compute_amplification_factors(
   static TRAJECTORY *traj = NULL, *trajc = NULL;
   static long n_traj = 0;
   static FILE *fpout = NULL, *fpcof = NULL, *fpuof = NULL, *fpkf = NULL;
-  double *kick, *Cij;
+  double *kick, *CijRMS, actuatorPosition;
   static char name_header[256], unit_header[256], printf_string[256], unit_pos[32], unit_kick[32], *Ai_unit, *Cij_unit;
   static char s[256], description[256];
   double *Ac_vs_z, *Au_vs_z;
@@ -44,7 +44,10 @@ void compute_amplification_factors(
 
   if (!one_part)
     one_part = (double**)zarray_2d(sizeof(**one_part), 1, 7);
+
+  /* array to store uncorrected amplification function */
   Au_vs_z = tmalloc(sizeof(*Au_vs_z)*(n_traj=beamline->n_elems+1));
+  /* array to store corrected amplification function */
   Ac_vs_z = tmalloc(sizeof(*Ac_vs_z)*(n_traj=beamline->n_elems+1));
 
   /* process namelist input */
@@ -63,10 +66,13 @@ void compute_amplification_factors(
   if (correct->mode!=-1) {
     CM = iplane==0?correct->CMx:correct->CMy;
     SL = iplane==0?&correct->SLx:&correct->SLy;
-    Cij = tmalloc(sizeof(*Cij)*(n_kicks=CM->ncor));
+    /* array of RMS corrector values for each corrector */
+    CijRMS = tmalloc(sizeof(*CijRMS)*(n_kicks=CM->ncor));
+    for (i=0; i<n_kicks; i++)
+      CijRMS[i] = 0;
   }
   else
-    Cij = NULL;
+    CijRMS = NULL;
 
   if (type) {
     str_toupper(type);
@@ -213,6 +219,7 @@ void compute_amplification_factors(
     fprintf(fpuof, "&parameter name=GroupDescription, type=string, fixed_value=\"%s\" &end\n",
             description);
     fprintf(fpuof, "&parameter name=Actuator, type=string &end\n");
+    fprintf(fpuof, "&parameter name=ActuatorPosition, type=double units=m &end\n");
     fprintf(fpuof, "&column name=s, units=m, type=double &end\n");
     fprintf(fpuof, "&column name=%sResponse, units=%s, type=double &end\n", iplane==0?"x":"y", unit_pos);
     fprintf(fpuof, "&column name=ElementName, type=string &end\n&column name=ElementOccurence, type=long &end\n");
@@ -224,6 +231,7 @@ void compute_amplification_factors(
     fprintf(fpcof, "&parameter name=GroupDescription, type=string, fixed_value=\"%s\" &end\n",
             description);
     fprintf(fpcof, "&parameter name=Actuator, type=string &end\n");
+    fprintf(fpcof, "&parameter name=ActuatorPosition, type=double units=m &end\n");
     fprintf(fpcof, "&column name=s, units=m, type=double &end\n");
     fprintf(fpcof, "&column name=%sResponse, units=%s, type=double &end\n", iplane==0?"x":"y", unit_pos);
     fprintf(fpcof, "&column name=ElementName, type=string &end\n&column name=ElementOccurence, type=long &end\n");
@@ -232,12 +240,14 @@ void compute_amplification_factors(
   if (fpkf) {
     fprintf(fpkf, "SDDS1\n&description text=\"Correction kick amplification functions for beamline %s from %s\" &end\n",
             beamline->name, run->lattice);
+    fprintf(fpkf, "&parameter name=Actuator, type=string &end\n");
+    fprintf(fpkf, "&parameter name=ActuatorPosition, type=double units=m &end\n");
     fprintf(fpkf, "&parameter name=GroupDescription, type=string, fixed_value=\"%s\" &end\n",
             description);
     fprintf(fpkf, "&column name=s, units=m, type=double &end\n");
     fprintf(fpkf, "&column name=C, units=%s, type=double &end\n", Cij_unit);
     fprintf(fpkf, "&column name=ElementName, type=string &end\n&column name=ElementOccurence, type=long &end\n");
-    fprintf(fpkf, "&data mode=ascii, no_row_counts=1 &end\n");
+    fprintf(fpkf, "&data mode=ascii &end\n");
   }
 
   fputs(name_header, stdout);
@@ -259,6 +269,10 @@ void compute_amplification_factors(
     }
     if ((iparam=confirm_parameter(item, eptr->type))==-1)
       continue;
+    if (eptr->pred)
+      actuatorPosition = (eptr->pred->end_pos + eptr->end_pos)/2;
+    else 
+      actuatorPosition = eptr->end_pos;
     number_to_do--;
     fprintf(stdout, "\nWorking on element %s#%ld at z=%em\n", eptr->name, eptr->occurence, eptr->end_pos);
     fflush(stdout);
@@ -339,7 +353,7 @@ void compute_amplification_factors(
     if (nsum)
       rms_pos = sqrt(rms_pos/nsum);
     if (fpuof) {
-      fprintf(fpuof, "%s#%ld\n%ld\n", eptr->name, eptr->occurence, n_traj-2);
+      fprintf(fpuof, "%s#%ld\n%le\n%ld\n", eptr->name, eptr->occurence, actuatorPosition, n_traj-2);
       for (i=1; i<n_traj-1; i++)
         if (traj[i].elem)
           fprintf(fpuof, "%e %e %s %ld\n", traj[i].elem->end_pos, traj[i].centroid[iplane]/change, 
@@ -349,7 +363,7 @@ void compute_amplification_factors(
     }
     
     if (fpcof) {
-      fprintf(fpcof, "%s#%ld\n%ld\n", eptr->name, eptr->occurence, n_traj-2);
+      fprintf(fpcof, "%s#%ld\n%le\n%ld\n", eptr->name, eptr->occurence, actuatorPosition, n_traj-2);
       for (i=1; i<n_traj-1; i++) 
         if (trajc[i].elem)
           fprintf(fpcof, "%e %e %s %ld\n", trajc[i].elem->end_pos, trajc[i].centroid[iplane]/change, 
@@ -359,20 +373,25 @@ void compute_amplification_factors(
     }
     if (correct->mode==-1 && emax) {
       fprintf(stdout, printf_string,
-              rms_pos/change, max_pos/change, emax->end_pos, eptr->end_pos, eptr->name, eptr->occurence);
+              rms_pos/change, max_pos/change, emax->end_pos, actuatorPosition, eptr->name, eptr->occurence);
       fflush(stdout);
       fputc('\n', stdout);
       if (fpout) {
         fprintf(fpout, printf_string,
-                rms_pos/change, max_pos/change, emax->end_pos, eptr->end_pos, eptr->name, eptr->occurence);
+                rms_pos/change, max_pos/change, emax->end_pos, actuatorPosition, eptr->name, eptr->occurence);
         fputc('\n', fpout);
       }
     }
     else {
       kick = CM->kick[correct->n_iterations];
       max_kick = -DBL_MAX;
+      if (fpkf)
+        fprintf(fpkf, "%s#%ld\n%le\n%ld\n", eptr->name, eptr->occurence, actuatorPosition, n_kicks);
       for (i=rms_kick=0; i<n_kicks; i++) {
-        Cij[i] += sqr(kick[i]);
+        if (fpkf) 
+          fprintf(fpkf, "%e %e %s %ld\n", CM->ucorr[i]->end_pos, kick[i]/change,
+                  CM->ucorr[i]->name, CM->ucorr[i]->occurence);
+        CijRMS[i] += sqr(kick[i]);
         if (fabs(kick[i])>max_kick)
           max_kick = fabs(kick[i]);
         rms_kick += sqr(kick[i]);
@@ -381,13 +400,13 @@ void compute_amplification_factors(
         rms_kick = sqrt(rms_kick/n_kicks);
       fprintf(stdout, printf_string,
               rms_pos/change, max_pos/change, emax->end_pos, rms_kick/change, 
-              max_kick/change, eptr->end_pos, eptr->name, eptr->occurence);
+              max_kick/change, actuatorPosition, eptr->name, eptr->occurence);
       fflush(stdout);
       fputc('\n', stdout);
       if (fpout) {
         fprintf(fpout, printf_string,
                 rms_pos/change, max_pos/change, emax->end_pos, rms_kick/change, 
-                max_kick/change, eptr->end_pos, eptr->name, eptr->occurence);
+                max_kick/change, actuatorPosition, eptr->name, eptr->occurence);
         fputc('\n', fpout);
       }
     }
@@ -397,9 +416,9 @@ void compute_amplification_factors(
   }
 
   if (fpuof) 
-    fprintf(fpuof, "ResponseRMS\n%ld\n", n_traj-2);
+    fprintf(fpuof, "ResponseRMS\n0\n%ld\n", n_traj-2);
   if (fpcof) 
-    fprintf(fpcof, "ResponseRMS\n%ld\n", n_traj-2);
+    fprintf(fpcof, "ResponseRMS\n0\n%ld\n", n_traj-2);
   if (nsum) {
     max_Ac = 0;
     max_Au = 0;
@@ -448,13 +467,14 @@ void compute_amplification_factors(
   tfree(Ac_vs_z);
 
   if (n_kicks && fpkf) {
+    fprintf(fpkf, "RMSResponse\n0\n%ld\n", n_kicks);
     for (i=max_kick=0; i<n_kicks; i++) {
-      Cij[i] = sqrt(Cij[i])/change;
-      if (max_kick<Cij[i]) {
-        max_kick=Cij[i];
+      CijRMS[i] = sqrt(CijRMS[i])/change;
+      if (max_kick<CijRMS[i]) {
+        max_kick=CijRMS[i];
         j = i;
       }
-      fprintf(fpkf, "%e %e %s %ld\n", CM->ucorr[i]->end_pos, Cij[i],
+      fprintf(fpkf, "%e %e %s %ld\n", CM->ucorr[i]->end_pos, CijRMS[i],
               CM->ucorr[i]->name, CM->ucorr[i]->occurence);
     }
     fclose(fpkf);
@@ -464,8 +484,8 @@ void compute_amplification_factors(
               SL->corr_param[CM->sl_index[j]], CM->ucorr[j]->end_pos);
       fflush(stdout);
   }
-  if (Cij)
-    tfree(Cij);
+  if (CijRMS)
+    tfree(CijRMS);
 
   log_exit("compute_amplification_factors");
 }
