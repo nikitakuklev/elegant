@@ -617,7 +617,8 @@ VMATRIX *compute_matrix(
       case T_RFCA: 
         rfca = (RFCA*)elem->p_elem;
         elem->matrix = rf_cavity_matrix(rfca->length, rfca->volt, rfca->freq, rfca->phase, 
-                                        &elem->Pref_output, run->default_order?run->default_order:1);
+                                        &elem->Pref_output, run->default_order?run->default_order:1,
+                                        rfca->end1Focus, rfca->end2Focus);
         if (!rfca->change_p0) {
             elem->matrix->C[5] = (elem->Pref_output-elem->Pref_input)/elem->Pref_input;
             elem->Pref_output = elem->Pref_input;
@@ -626,7 +627,8 @@ VMATRIX *compute_matrix(
       case T_MODRF: 
         modrf = (MODRF*)elem->p_elem;
         elem->matrix = rf_cavity_matrix(modrf->length, modrf->volt, modrf->freq, modrf->phase, 
-                                        &elem->Pref_output, run->default_order?run->default_order:1);
+                                        &elem->Pref_output, run->default_order?run->default_order:1,
+                                        0, 0);
         elem->matrix->C[5] = (elem->Pref_output-elem->Pref_input)/elem->Pref_input;
         elem->Pref_output = elem->Pref_input;
         break;
@@ -854,14 +856,15 @@ VMATRIX *stray_field_matrix(double length, double *lB, double *gB, double theta,
     }
 
 
-VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, double phase, double *P_central, long order)
+VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, double phase, 
+                          double *P_central, long order, long end1Focus, long end2Focus)
 {
-    VMATRIX *M;
+    VMATRIX *M, *Medge, *Mtot, *tmp;
     double *C, **R, dP, gamma, dgamma;
     double cos_phase, sin_phase;
-
-    log_entry("rf_cavity_matrix");
-
+    double inverseF[2] = {0,0};
+    long end;
+    
     M = tmalloc(sizeof(*M));
     M->order = 1;
     initialize_matrices(M, M->order);
@@ -890,9 +893,40 @@ VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, doubl
         R[0][1] = R[2][3] = length;
     R[5][4] = (voltage/me_mev)*cos_phase/(gamma + dgamma*sin_phase)*(PIx2*frequency/c_mks);
 
+    if (length && (end1Focus || end2Focus)) {
+      if (end1Focus) {
+        inverseF[0] = dgamma/(2*length*gamma);
+        }
+      if (end2Focus)
+        inverseF[1] = -dgamma/(2*length*(gamma+dgamma));
+      Medge = tmalloc(sizeof(*Medge));
+      initialize_matrices(Medge, Medge->order = 1);
+      Medge->R[0][0] = Medge->R[1][1] = Medge->R[2][2] = Medge->R[3][3] = 
+        Medge->R[4][4] = Medge->R[5][5] = 1;
+      Mtot = tmalloc(sizeof(*Mtot));
+      initialize_matrices(Mtot, Mtot->order = 1);
+      for (end=0; end<2; end++) {
+        if (inverseF[end]) {
+          Medge->R[1][0] = Medge->R[3][2] = -inverseF[end];
+        } else
+          continue;
+        if (end==0) {
+          concat_matrices(Mtot, M, Medge);
+        } else {
+          concat_matrices(Mtot, Medge, M);
+        }
+        tmp = Mtot;
+        Mtot = M;
+        M = tmp;
+      }
+      free_matrices(Medge);
+      tfree(Medge);
+      free_matrices(Mtot);
+      tfree(Mtot);
+    }
+    
     *P_central += dP;
 
-    log_exit("rf_cavity_matrix");
     return(M);
     }
 

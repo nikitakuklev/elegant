@@ -24,6 +24,7 @@
     C[j]*R[l][n]*T[k][m][p] + C[k]*R[j][n]*T[l][m][p] + C[l]*R[k][n]*T[j][m][p] : 0)
 
 void concat_matrices(VMATRIX *M2, VMATRIX *M1, VMATRIX *M0)
+/* M2 = M1*M0.  M0 is applied to particles first. */
 {
     double *C2, **R2, ***T2, ****Q2;
     double *C1, **R1, ***T1, ****Q1;

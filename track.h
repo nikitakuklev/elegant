@@ -487,7 +487,7 @@ extern char *entity_text[N_TYPES];
 #define N_SOLE_PARAMS 7
 #define N_HCOR_PARAMS 8
 #define N_VCOR_PARAMS 8
-#define N_RFCA_PARAMS 9
+#define N_RFCA_PARAMS 11
 #define N_ELSE_PARAMS 0
 #define N_HMON_PARAMS 8
 #define N_VMON_PARAMS 8
@@ -693,6 +693,7 @@ typedef struct {
     double length, volt, phase, freq, Q;
     long phase_reference, change_p0, change_t;
     char *fiducial;
+    long end1Focus, end2Focus;
     /* for internal use only: */
     long fiducial_seen;
     double phase_fiducial;
@@ -1664,7 +1665,7 @@ extern void set_up_watch_point(WATCH *watch, RUN *run);
 extern VMATRIX *magnification_matrix(MAGNIFY *magnif);
 extern void reset_special_elements(LINE_LIST *beamline, long includeRF);
 extern VMATRIX *stray_field_matrix(double length, double *lB, double *gB, double theta, long order, double p_central);
-extern VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, double phase, double *P_central, long order);
+extern VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, double phase, double *P_central, long order, long end1Focus, long end2Focus);
 
 /* prototypes for concat_beamline2.c: */
 extern void copy_matrices1(VMATRIX *M1,  VMATRIX *M0);

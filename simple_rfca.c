@@ -68,7 +68,7 @@ long simple_rf_cavity(
     )
 {
     long ip, same_dgamma;
-    double timeOffset;
+    double timeOffset, inverseF, dc4;
     double P, gamma, dgamma, phase, length, volt, To;
     double *coord, t, t0, omega, beta_i, tau, dt;
     static long been_warned = 0;
@@ -199,8 +199,9 @@ long simple_rf_cavity(
           /* apply initial drift */
           coord[0] += coord[1]*length/2;
           coord[2] += coord[3]*length/2;
-          coord[4] += length/2*sqrt(1+sqr(coord[1])+sqr(coord[3]));
-        }
+          coord[4] += (dc4=length/2*sqrt(1+sqr(coord[1])+sqr(coord[3])));
+        } else 
+          dc4 = 0;
         
         /* compute energy kick */
         P     = *P_central*(1+coord[5]);
@@ -211,14 +212,32 @@ long simple_rf_cavity(
         if  (!same_dgamma)
             dgamma = volt*sin(omega*t+phase)*(tau?sqrt(1-exp(-dt/tau)):1);
 
+        if (rfca->end1Focus && length) {
+          /* drift back, apply focus kick, then drift forward again */
+          inverseF = dgamma/(2*gamma*length);
+          coord[4] -= dc4;
+          coord[0] -= coord[1]*length/2;
+          coord[2] -= coord[3]*length/2;
+          coord[1] -= coord[0]*inverseF;
+          coord[3] -= coord[2]*inverseF;
+          coord[0] += coord[1]*length/2;
+          coord[2] += coord[3]*length/2;
+          coord[4] += length/2*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+        } 
         /* apply energy kick */
         add_to_particle_energy(coord, t, *P_central, dgamma);
-
+        gamma += dgamma;
+        
         if (length) {
-          /* apply final drift */
+          /* apply final drift and focus kick if needed */
           coord[0] += coord[1]*length/2;
           coord[2] += coord[3]*length/2;
           coord[4] += length/2.0*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+          if (rfca->end2Focus) {
+            inverseF = -dgamma/(2*gamma*length);
+            coord[1] -= coord[0]*inverseF;
+            coord[3] -= coord[2]*inverseF;
+          }
         }
       }
 
@@ -249,4 +268,5 @@ void add_to_particle_energy(double *coord, double timeOfFlight, double Po, doubl
   PRatio = Pz/Pz1;
   coord[1] *= PRatio;
   coord[3] *= PRatio;
+
 }

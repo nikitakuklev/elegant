@@ -269,7 +269,9 @@ PARAMETER rfca_param[N_RFCA_PARAMS] = {
     {"PHASE_REFERENCE", "", IS_LONG, 0, (long)((char *)&rfca_example.phase_reference), NULL, 0.0, 0},
     {"CHANGE_P0", "", IS_LONG, 0, (long)((char *)&rfca_example.change_p0), NULL, 0.0, 0}, 
     {"CHANGE_T", "", IS_LONG, 0, (long)((char *)&rfca_example.change_t), NULL, 0.0, 0}, 
-    {"FIDUCIAL", "", IS_STRING, 0, (long)((char *)&rfca_example.fiducial), NULL, 0.0, 0}
+    {"FIDUCIAL", "", IS_STRING, 0, (long)((char *)&rfca_example.fiducial), NULL, 0.0, 0},
+    {"END1_FOCUS", "", IS_LONG, 0, (long)((char *)&rfca_example.end1Focus), NULL, 0.0, 0},
+    {"END2_FOCUS", "", IS_LONG, 0, (long)((char *)&rfca_example.end2Focus), NULL, 0.0, 0}
     };
    
 HMON hmon_example;
