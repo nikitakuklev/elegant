@@ -46,7 +46,7 @@ void readErrorMultipoleData(MULTIPOLE_DATA *multData,
 {
   SDDS_DATASET SDDSin;
   char buffer[1024];
-  if (!multFile) {
+  if (!multFile || !strlen(multFile)) {
     multData->orders = 0;
     multData->initialized = 0;
     return;
