@@ -37,5 +37,5 @@ exec sddsprocess $input -pipe=out \
 	"-define=column,z,0,units=m" \
 	"-redefine=column,x,x $xref -,units=m" \
 	"-redefine=column,y,y $yref -,units=m" \
-	"-print=parameter,Type,electrons" \
+	"-reprint=parameter,Type,electrons" \
 	| sddsconvert -pipe=in $output -retain=column,u,v,w,x,y,z,Energy 

@@ -64,7 +64,7 @@ void initializeTransverseFeedbackPickup(TFBPICKUP *tfbp)
   for (i=sum=0; i<TFB_FILTER_LENGTH; i++)
     sum += tfbp->a[i];
   if (fabs(sum)>1e-6)
-    bomb("Sum of a[i] is nonzero for TFBPICKUP", NULL);
+    fprintf(stdout, "Warning: sum of a[i] is nonzero for TFBPICKUP\n");
 
   for (i=TFB_FILTER_LENGTH-1; i>=0; i--) {
     if (tfbp->a[i]!=0)
