@@ -19,14 +19,14 @@
 
 void traceback_handler(int code);
 
-#define N_OPTIONS  0
-/*
+#define DESCRIBE_INPUT 0
+#define N_OPTIONS  1
 char *option[N_OPTIONS] = {
+    "describeinput",
         };
-*/
-char *USAGE="elegant <inputfile> \n\nProgram by Michael Borland. (This is version 13.8, July 1995.)";
+char *USAGE="elegant <inputfile> [-describeInput]\n\nProgram by Michael Borland. (This is version 13.9, February 1996.)";
 
-char *GREETING="This is elegant version 13.8, by Michael Borland (July 1995).";
+char *GREETING="This is elegant version 13.9, by Michael Borland. (This is version 13.9, February 1996.)";
 
 #define RUN_SETUP        0
 #define RUN_CONTROL      1
@@ -193,8 +193,16 @@ char **argv;
     inputfile = NULL;
     for (i=1; i<argc; i++) {
         if (scanned[i].arg_type==OPTION) {
-            bomb("unknown option given.", USAGE);
-            break;
+            switch (match_string(scanned[i].list[0], option, N_OPTIONS, 0)) {
+              case DESCRIBE_INPUT:
+                show_namelists_fields(stdout, namelist_pointer, namelist_name, n_namelists);
+                if (argc==2)
+                    exit(0);
+                break;
+              default:
+                bomb("unknown option given.", USAGE);
+                break;
+                }
             }
         else { 
             /* filenames */
