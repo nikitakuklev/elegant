@@ -23,7 +23,7 @@ char *entity_name[N_TYPES] = {
     "KSEXT", "KSBEND", "KQUAD", "MAGNIFY", "SAMPLE", "KICKER", "SCATTER",
     "NIBEND", "KPOLY", "NISEPT", "RAMPRF", "RAMPP", "STRAY", "CSBEND",
     "TWMTA", "MATTER", "RFMODE", "TRFMODE", "ZLONGIT", "SREFFECTS",
-    "MODRF", "BMAPXY", "ZTRANSVERSE",
+    "MODRF", "BMAPXY", "ZTRANSVERSE", "IBSCATTER",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -117,6 +117,7 @@ impedance.",
 and phase modulation.",
     "A map of Bx and By vs x and y.",
     "A simulation of a single-pass broad-band or functionally-specified transverse dipole impedance.",
+    "A simulation of intra-beam scattering.",
     } ;
 
 QUAD quad_example;
@@ -444,9 +445,13 @@ WATCH watch_example;
 PARAMETER watch_param[N_WATCH_PARAMS] = {
     {"FRACTION", "", IS_DOUBLE, 0, (long)((char *)&watch_example.fraction), NULL, 1.0, 0},
     {"INTERVAL", "", IS_LONG, 0, (long)((char *)&watch_example.interval), NULL, 0.0, 1},
+    {"START_PASS", "", IS_LONG, 0, (long)((char*)&watch_example.start_pass), NULL, 0.0, 0},
     {"FILENAME", "", IS_STRING, 0, (long)((char *)&watch_example.filename), "", 0.0, 0},
     {"LABEL", "", IS_STRING, 0, (long)((char *)&watch_example.label), "", 0.0, 0},
     {"MODE", "", IS_STRING, 0, (long)((char *)&watch_example.mode), "coordinates", 0.0, 0},
+    {"XDATA", "", IS_LONG, 0, (long)((char*)&watch_example.xData), NULL, 0.0, 1},
+    {"YDATA", "", IS_LONG, 0, (long)((char*)&watch_example.yData), NULL, 0.0, 1},
+    {"LDATA", "", IS_LONG, 0, (long)((char*)&watch_example.longitData), NULL, 0.0, 1},
     } ;
 
 TW_PLATES twpl_example;
@@ -918,6 +923,8 @@ PARAMETER sreffects_param[N_SREFFECTS_PARAMS] = {
     {"SDELTAREF", "m", IS_DOUBLE, 0, (long)((char *)&SReffects_example.SdeltaRef), NULL, 0.0, 0},
     {"DDELTAREF", "", IS_DOUBLE, 0, (long)((char *)&SReffects_example.DdeltaRef), NULL, 0.0, 0},
     {"PREF", "m$be$nc", IS_DOUBLE, 0, (long)((char *)&SReffects_example.pRef), NULL, 0.0, 0},
+    {"COUPLING", "", IS_DOUBLE, 0, (long)((char *)&SReffects_example.coupling), NULL, 0.0, 0},
+    {"FRACTION", "", IS_DOUBLE, 0, (long)((char *)&SReffects_example.fraction), NULL, 1.0, 0},
     };
 
 MODRF modrf_example;
@@ -961,6 +968,13 @@ PARAMETER ztransverse_param[N_ZTRANSVERSE_PARAMS] = {
     {"ZYIMAG", "", IS_STRING, 0, (long)((char *)&ztransverse_example.ZyImag), NULL, 0.0, 0},
     {"BIN_SIZE", "S", IS_DOUBLE, 0, (long)((char *)&ztransverse_example.bin_size), NULL, 0.0, 0},
     {"N_BINS", "", IS_LONG, 0, (long)((char *)&ztransverse_example.n_bins), NULL, 0.0, 128},
+};
+
+IBSCATTER ibs_example;
+PARAMETER ibscatter_param[N_IBSCATTER_PARAMS] = {
+  {"COUPLING", "", IS_DOUBLE, 0, (long)((char *)&ibs_example.coupling), NULL, 1.0, 0},
+  {"FRACTION", "", IS_DOUBLE, 0, (long)((char *)&ibs_example.fraction), NULL, 1.0, 0},
+  {"CHARGE", "C", IS_DOUBLE, 0, (long)((char *)&ibs_example.charge), NULL, 0.0, 0},
 };
 
 /* array of parameter structures */
@@ -1039,6 +1053,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_MODRF_PARAMS, MAT_LEN_NCAT,       sizeof(MODRF),    modrf_param     }, 
     { N_BMAPXY_PARAMS,     HAS_LENGTH,   sizeof(BMAPXY),  bmapxy_param      },
     { N_ZTRANSVERSE_PARAMS,          0,     sizeof(ZTRANSVERSE),  ztransverse_param    },
+    { N_IBSCATTER_PARAMS,        0,   sizeof(IBSCATTER),  ibscatter_param  },
 } ;
  
 

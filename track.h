@@ -410,7 +410,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_MODRF 60
 #define T_BMAPXY 61
 #define T_ZTRANSVERSE 62
-#define N_TYPES 63
+#define T_IBSCATTER 63
+#define N_TYPES 64
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -444,7 +445,7 @@ extern char *entity_text[N_TYPES];
 #define N_TMCF_PARAMS 18
 #define N_CEPL_PARAMS 16
 #define N_TWPL_PARAMS 16
-#define N_WATCH_PARAMS 5
+#define N_WATCH_PARAMS 9
 #define N_MALIGN_PARAMS 9
 #define N_TWLA_PARAMS 18
 #define N_PEPPOT_PARAMS 6
@@ -476,9 +477,10 @@ extern char *entity_text[N_TYPES];
 #define N_TRFMODE_PARAMS 10
 #define N_TWMTA_PARAMS 17
 #define N_ZLONGIT_PARAMS 15
-#define N_MODRF_PARAMS 14
-#define N_SREFFECTS_PARAMS 8
+#define N_MODRF_PARAMS 13
+#define N_SREFFECTS_PARAMS 10
 #define N_ZTRANSVERSE_PARAMS 13
+#define N_IBSCATTER_PARAMS 3
 #define N_BMAPXY_PARAMS 5
 
 typedef struct {
@@ -802,6 +804,7 @@ extern PARAMETER watch_param[N_WATCH_PARAMS];
 #define WATCH_FFT 3
 #define N_WATCH_MODES 4
 extern char *watch_mode[N_WATCH_MODES];
+
 #define FFT_HANNING 0
 #define FFT_PARZEN 1
 #define FFT_WELCH 2
@@ -811,10 +814,12 @@ extern char *fft_window_name[N_FFT_WINDOWS];
 
 typedef struct {
     double fraction;
-    long interval;
+    long interval, start_pass;
     char *filename, *label, *mode;
+    long xData, yData, longitData;
     /* internal variables for SDDS output */
     long initialized, count, mode_code, window_code;
+    long xIndex[2], yIndex[2], longitIndex[3], IDIndex;
     SDDS_TABLE SDDS_table;
     } WATCH;
 
@@ -1283,8 +1288,19 @@ typedef struct {
 extern PARAMETER sreffects_param[N_SREFFECTS_PARAMS];
 
 typedef struct {
-    double Jx, Jy, Jdelta, exRef, eyRef, SdeltaRef, DdeltaRef, pRef;
-    } SREFFECTS;
+  double Jx, Jy, Jdelta, exRef, eyRef, SdeltaRef, DdeltaRef, pRef, coupling, fraction;
+} SREFFECTS;
+
+/* names and storage structure for intra-beam scattering */
+extern PARAMETER IBSCATTER_param[N_IBSCATTER_PARAMS];
+
+typedef struct {
+  double coupling, fraction, charge;
+  /* internal use only */
+  double *s, *betax, *alphax, *betay, *alphay, *etax, *etaxp;
+  long elements;
+  double revolutionLength;
+} IBSCATTER;
 
 /* names and storage structure for SR effects */
 extern PARAMETER bmapxy_param[N_BMAPXY_PARAMS];
@@ -1521,6 +1537,7 @@ extern double rms_emittance(double **coord, long i1, long i2, long n);
 extern double rms_longitudinal_emittance(double **coord, long n, double Po);
 extern double rms_norm_emittance(double **coord, long i1, long i2, long ip, long n, double Po);
 extern void compute_longitudinal_parameters(ONE_PLANE_PARAMETERS *bp, double **coord, long n, double Po);
+extern void compute_transverse_parameters(ONE_PLANE_PARAMETERS *bp, double **coord, long n, long plane);
 
 /* prototypes for matrix_output.c: */
 void simplify_units(char *buffer, char **numer, long n_numer, char **denom, long n_denom);
@@ -1548,6 +1565,7 @@ void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
 long run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, long tune_corrected);
 void finish_twiss_output(void);
 void copy_doubles(double *source, double *target, long n);
+void computeRadiationIntegrals(RADIATION_INTEGRALS *RI, double Po, double revolutionLength);
 
 /* prototypes for elegant.c: */
 extern char *compose_filename(char *template, char *root_name);
@@ -1785,7 +1803,9 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po, 
 void set_up_zlongit(ZLONGIT *zlongit, RUN *run);
 
 void track_SReffects(double **coord, long n, SREFFECTS *SReffects, double Po, 
-                             TWISS *twiss);
+                             TWISS *twiss, RADIATION_INTEGRALS *radIntegrals);
+void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po, 
+               ELEMENT_LIST *element, RADIATION_INTEGRALS *radIntegrals0);
 
 long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_error, double Po, double **accepted,
     double z_start);
@@ -1826,7 +1846,7 @@ extern void SDDS_BeamLossSetup(SDDS_TABLE *SDDS_table, char *filename, long mode
 extern void SDDS_SigmaMatrixSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row,
                            char *command_file, char *lattice_file, char *caller);
 extern void SDDS_WatchPointSetup(WATCH *waatch, long mode, long lines_per_row,
-                          char *command_file, char *lattice_file, char *caller, char *qualifier);
+                                 char *command_file, char *lattice_file, char *caller, char *qualifier);
 extern void dump_watch_particles(WATCH *watch, long step, long pass, double **particle, long particles, double Po,
                                  double length);
 extern void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, double **particle, long particles, 

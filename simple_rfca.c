@@ -70,7 +70,7 @@ long simple_rf_cavity(
     )
 {
     long ip, same_dgamma;
-    double PRatio;
+    double PRatio, timeOffset;
     double P, dP, P1, gamma, dgamma, gamma1, phase, length, volt, To;
     double *coord, t, t0, omega, beta_i, beta_f, tau, dt;
     static long been_warned = 0;
@@ -181,19 +181,29 @@ long simple_rf_cavity(
         same_dgamma = 1;
         }
 
+    timeOffset = 0;
+    if (omega && rfca->change_t) {
+      coord = part[0];
+      P     = *P_central*(1+coord[5]);
+      beta_i = P/(gamma=sqrt(sqr(P)+1));
+      t     = coord[4]/(c_mks*beta_i);
+      if (omega!=0 && t>(0.9*To) && rfca->change_t)
+        timeOffset = ((long)(t/To+0.5))*To;
+    }
+    
     for (ip=0; ip<np; ip++) {
         coord = part[ip];
-        /* apply initial drift */
-        coord[0] += coord[1]*length/2;
-        coord[2] += coord[3]*length/2;
-        coord[4] += length/2*sqrt(1+sqr(coord[1])+sqr(coord[3]));
-
+        if (length) {
+          /* apply initial drift */
+          coord[0] += coord[1]*length/2;
+          coord[2] += coord[3]*length/2;
+          coord[4] += length/2*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+        }
+        
         /* compute energy kick */
         P     = *P_central*(1+coord[5]);
         beta_i = P/(gamma=sqrt(sqr(P)+1));
-        t     = coord[4]/(c_mks*beta_i);
-        if (omega!=0 && t>To && rfca->change_t)
-            t -= ((long)(t/To))*To;
+        t     = coord[4]/(c_mks*beta_i)-timeOffset;
         if ((dt = t-t0)<0)
             dt = 0;
         if  (!same_dgamma)
@@ -202,12 +212,13 @@ long simple_rf_cavity(
         /* apply energy kick */
         add_to_particle_energy(coord, t, *P_central, dgamma);
 
-        /* apply final drift */
-        coord[0] += coord[1]*length/2;
-        coord[2] += coord[3]*length/2;
-        coord[4] += length/2.0*sqrt(1+sqr(coord[1])+sqr(coord[3]));
-
+        if (length) {
+          /* apply final drift */
+          coord[0] += coord[1]*length/2;
+          coord[2] += coord[3]*length/2;
+          coord[4] += length/2.0*sqrt(1+sqr(coord[1])+sqr(coord[3]));
         }
+      }
 
     if (rfca->change_p0)
         do_match_energy(part, np, P_central, 0);

@@ -513,7 +513,11 @@ long do_tracking(
                         track_through_zlongit(coord, n_to_track, (ZLONGIT*)eptr->p_elem, *P_central, run, i_pass);
                         break;
                       case T_SREFFECTS:
-                        track_SReffects(coord, n_to_track, (SREFFECTS*)eptr->p_elem, *P_central, eptr->twiss);
+                        track_SReffects(coord, n_to_track, (SREFFECTS*)eptr->p_elem, *P_central, eptr->twiss, &(beamline->radIntegrals));
+                        break;
+                      case T_IBSCATTER:
+                        track_IBS(coord, n_to_track, (IBSCATTER*)eptr->p_elem,
+                                  *P_central, &(beamline->elem), &(beamline->radIntegrals));
                         break;
                       default:
                         fprintf(stderr, "programming error: no tracking statements for element %s (type %s)\n",

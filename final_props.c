@@ -610,6 +610,59 @@ void compute_longitudinal_parameters(ONE_PLANE_PARAMETERS *bp, double **coord, l
     log_exit("compute_longitudinal_properties");
     }
 
+void compute_transverse_parameters(ONE_PLANE_PARAMETERS *bp, double **coord, long n, long plane)
+{
+  double s11, s12, s22, S1, S2, dx, dxp;
+  double xc, xpc;
+  double xmin, xmax, xpmin, xpmax;
+  long i, offset;
+
+  if (!n)
+    return;
+  if (!bp) {
+    fprintf(stderr, "NULL ONE_PLANE_PARAMETERS pointer passed to compute_transverse_parameters\n");
+    abort();
+  }
+  offset = plane?2:0;
+  
+  /* compute centroids */
+  xmax  = -(xmin  = HUGE);
+  xpmax = -(xpmin = HUGE);
+  for (i=xc=xpc=0; i<n; i++) {
+    xc  += coord[i][offset+0];
+    xpc += coord[i][offset+1];
+    if (coord[i][offset]>xmax)
+      xmax = coord[i][offset];
+    if (coord[i][offset]<xmin)
+      xmin = coord[i][offset];
+    if (coord[i][offset+1]>xpmax)
+      xpmax = coord[i][offset+1];
+    if (coord[i][offset+1]<xpmin)
+      xpmin = coord[i][offset+1];
+  }
+  
+  bp->c1 = (xc  /= n);
+  bp->c2 = (xpc /= n);
+  bp->min1 = xmin;
+  bp->min2 = xpmin;
+  bp->max1 = xmax;
+  bp->max2 = xpmax;
+
+  for (i=S1=S2=s11=s12=s22=0; i<n; i++) {
+    s11 += sqr(dx = coord[i][offset] - xc);
+    s22 += sqr(dxp = coord[i][offset+1] - xpc);
+    s12 += dx*dxp;
+    S1 += sqr(coord[i][offset]);
+    S2 += sqr(coord[i][offset+1]);
+  }
+  bp->s11 = (s11 /= n);
+  bp->s12 = (s12 /= n);
+  bp->s22 = (s22 /= n);
+  bp->S1  = sqrt(S1/n);
+  bp->S2  = sqrt(S2/n);
+  bp->emittance = SAFE_SQRT(s11*s22-sqr(s12));
+}
+
 void rpn_store_final_properties(double *value, long number)
 {
     static long *memory_number = NULL;

@@ -106,12 +106,21 @@ static SDDS_DEFINITION phase_space_column[PHASE_SPACE_COLUMNS] = {
     {"particleID", "&column name=particleID, type=long &end"},
     } ;
 
+#define PHASE_SPACE_PARAMETERS 2
+static SDDS_DEFINITION phase_space_parameter[PHASE_SPACE_PARAMETERS] = {
+  {"Step", "&parameter name=Step, type=long, description=\"Simulation step\" &end"},
+  {"pCentral", "&parameter name=pCentral, symbol=\"p$bcen$n\", units=\"m$be$nc\", type=double &end"},
+};
+
+ 
+
+  
 void SDDS_PhaseSpaceSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row, char *contents, 
                           char *command_file, char *lattice_file, char *caller)
 {
     log_entry("SDDS_PhaseSpaceSetup");
     SDDS_ElegantOutputSetup(SDDS_table, filename, mode, lines_per_row, contents, command_file, lattice_file,
-                            standard_parameter, STANDARD_PARAMETERS, phase_space_column, PHASE_SPACE_COLUMNS,
+                            phase_space_parameter, PHASE_SPACE_PARAMETERS, phase_space_column, PHASE_SPACE_COLUMNS,
                             caller, SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
     log_exit("SDDS_PhaseSpaceSetup");
     }
@@ -252,125 +261,181 @@ static SDDS_DEFINITION watch_point_fft_column[WATCH_POINT_FFT_COLUMNS] = {
 void SDDS_WatchPointSetup(WATCH *watch, long mode, long lines_per_row,
                           char *command_file, char *lattice_file, char *caller, char *qualifier)
 {
-    char s[100];
-    SDDS_TABLE *SDDS_table;
-    char *filename;
-    long watch_mode;
-
-    log_entry("SDDS_WatchPointSetup");
-    SDDS_table = &watch->SDDS_table;
-    filename = watch->filename;
-    watch_mode = watch->mode_code;
-    switch (watch_mode) {
-      case WATCH_COORDINATES:
-        SDDS_ElegantOutputSetup(SDDS_table, filename, mode, lines_per_row, "watch-point phase space", 
-                                command_file, lattice_file,
-                                standard_parameter, STANDARD_PARAMETERS, phase_space_column, PHASE_SPACE_COLUMNS,
-                                caller, SDDS_EOS_NEWFILE);
-        if (SDDS_DefineSimpleColumn(SDDS_table, "dt", "s", SDDS_DOUBLE)<0) {
-          fprintf(stderr, "Unable to define SDDS column dt for file %s (%s)\n",
-                  filename, caller);
-          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-          exit(1);
-        }
-        if (!SDDS_DefineSimpleParameter(SDDS_table, "Pass", NULL, SDDS_LONG) ||
-            !SDDS_DefineSimpleParameter(SDDS_table, "Particles", NULL, SDDS_LONG) ||
-            !SDDS_DefineSimpleParameter(SDDS_table, "pCentral", "m$be$nc", SDDS_DOUBLE) ||
-            !SDDS_DefineSimpleParameter(SDDS_table, "PassLength", "m", SDDS_DOUBLE) ||
-            !SDDS_DefineSimpleParameter(SDDS_table, "PassCentralTime", "s", SDDS_DOUBLE)) {
-            fprintf(stderr, "Unable define SDDS parameter for file %s (%s)\n", filename, caller);
-            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-            exit(1);
-            }
-        if (!SDDS_WriteLayout(SDDS_table)) {
-            fprintf(stderr, "Unable to write SDDS layout for file %s (%s)\n", filename, caller);
-            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-            exit(1);
-            }
-        break;
-      case WATCH_CENTROIDS:
-        SDDS_ElegantOutputSetup(SDDS_table, filename, mode, lines_per_row, "watch-point centroids",
-                                command_file, lattice_file,
-                                standard_parameter, STANDARD_PARAMETERS,
-                                watch_parameter_mode_column, WATCH_CENTROID_MODE_COLUMNS,
-                                caller, SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
-        break;
-      case WATCH_PARAMETERS:
-        SDDS_ElegantOutputSetup(SDDS_table, filename, mode, lines_per_row, "watch-point parameters", 
-                                command_file, lattice_file,
-                                standard_parameter, STANDARD_PARAMETERS, 
-                                watch_parameter_mode_column, WATCH_PARAMETER_MODE_COLUMNS,
-                                caller, SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
-        break;
-      case WATCH_FFT:
-        if (!qualifier)
-            watch->window_code = FFT_HANNING;
-        else if ((watch->window_code=match_string(qualifier, fft_window_name, N_FFT_WINDOWS, 0))<0) 
-            bomb("invalid window mode for WATCH fft", NULL);
-        sprintf(s,  "watch-point centroid FFT (%s window)", fft_window_name[watch->window_code]);
-        SDDS_ElegantOutputSetup(SDDS_table, filename, mode, lines_per_row, s,
-                                command_file, lattice_file, standard_parameter, STANDARD_PARAMETERS, 
-                                watch_point_fft_column, WATCH_POINT_FFT_COLUMNS,
-                                caller, SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
-        break;
-      default:
-        break;
-        }
-    log_exit("SDDS_WatchPointSetup");
+  char s[100];
+  SDDS_TABLE *SDDS_table;
+  char *filename;
+  long watch_mode, columns;
+  SDDS_DEFINITION columnDef[PHASE_SPACE_COLUMNS+2];
+  
+  SDDS_table = &watch->SDDS_table;
+  filename = watch->filename;
+  watch_mode = watch->mode_code;
+  switch (watch_mode) {
+    case WATCH_COORDINATES:
+    SDDS_ElegantOutputSetup(SDDS_table, filename, mode, lines_per_row, "watch-point phase space",
+                            command_file, lattice_file,
+                            standard_parameter, STANDARD_PARAMETERS,
+                            NULL, 0, caller, SDDS_EOS_NEWFILE);
+    columns = 0;
+    if (watch->xData) {
+      if ((watch->xIndex[0]=SDDS_DefineColumn(SDDS_table, "x", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+          (watch->xIndex[1]=SDDS_DefineColumn(SDDS_table, "xp", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0) {
+        fprintf(stderr, "Unable to define SDDS columns x and xp for file %s (%s)\n",
+                filename, caller);
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        exit(1);
+      }
     }
+    if (watch->yData) {
+      if ((watch->yIndex[0]=SDDS_DefineColumn(SDDS_table, "y", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+          (watch->yIndex[1]=SDDS_DefineColumn(SDDS_table, "yp",  NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0) {
+              fprintf(stderr, "Unable to define SDDS columns y and yp for file %s (%s)\n",
+                filename, caller);
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        exit(1);
+      }
+    }
+    if (watch->longitData) {
+      if ((watch->longitIndex[0]
+           =SDDS_DefineColumn(SDDS_table, "t", NULL, "s", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+          (watch->longitIndex[1]
+           =SDDS_DefineColumn(SDDS_table, "p", NULL, "m$be$nc", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+          (watch->longitIndex[2]
+           =SDDS_DefineColumn(SDDS_table, "dt", NULL, "s", NULL, NULL, SDDS_DOUBLE, 0))<0) {
+        fprintf(stderr, "Unable to define SDDS columns t, dt, and p for file %s (%s)\n",
+                filename, caller);
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        exit(1);
+      }
+    }
+    if ((watch->IDIndex = SDDS_DefineColumn(SDDS_table, "particleID", NULL, NULL, NULL, NULL, SDDS_LONG, 0))<0) {
+      fprintf(stderr, "Unable to define SDDS columns t, dt, and p for file %s (%s)\n",
+              filename, caller);
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      exit(1);
+    }
+    
+    if (!SDDS_DefineSimpleParameter(SDDS_table, "Pass", NULL, SDDS_LONG) ||
+        !SDDS_DefineSimpleParameter(SDDS_table, "Particles", NULL, SDDS_LONG) ||
+        !SDDS_DefineSimpleParameter(SDDS_table, "pCentral", "m$be$nc", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(SDDS_table, "PassLength", "m", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(SDDS_table, "PassCentralTime", "s", SDDS_DOUBLE)) {
+      fprintf(stderr, "Unable define SDDS parameter for file %s (%s)\n", filename, caller);
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      exit(1);
+    }
+    if (!SDDS_WriteLayout(SDDS_table)) {
+      fprintf(stderr, "Unable to write SDDS layout for file %s (%s)\n", filename, caller);
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      exit(1);
+    }
+    break;
+  case WATCH_CENTROIDS:
+    SDDS_ElegantOutputSetup(SDDS_table, filename, mode, lines_per_row, "watch-point centroids",
+                            command_file, lattice_file,
+                            standard_parameter, STANDARD_PARAMETERS,
+                            watch_parameter_mode_column, WATCH_CENTROID_MODE_COLUMNS,
+                            caller, SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
+    break;
+  case WATCH_PARAMETERS:
+    SDDS_ElegantOutputSetup(SDDS_table, filename, mode, lines_per_row, "watch-point parameters", 
+                            command_file, lattice_file,
+                            standard_parameter, STANDARD_PARAMETERS, 
+                            watch_parameter_mode_column, WATCH_PARAMETER_MODE_COLUMNS,
+                            caller, SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
+    break;
+  case WATCH_FFT:
+    if (!qualifier)
+      watch->window_code = FFT_HANNING;
+    else if ((watch->window_code=match_string(qualifier, fft_window_name, N_FFT_WINDOWS, 0))<0) 
+      bomb("invalid window mode for WATCH fft", NULL);
+    sprintf(s,  "watch-point centroid FFT (%s window)", fft_window_name[watch->window_code]);
+    SDDS_ElegantOutputSetup(SDDS_table, filename, mode, lines_per_row, s,
+                            command_file, lattice_file, standard_parameter, STANDARD_PARAMETERS, 
+                            watch_point_fft_column, WATCH_POINT_FFT_COLUMNS,
+                            caller, SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
+    break;
+  default:
+    break;
+  }
+}
 
-void dump_watch_particles(WATCH *watch, long step, long pass, double **particle, long particles, double Po,
-                          double length)
+void dump_watch_particles(WATCH *watch, long step, long pass, double **particle, long particles, 
+                          double Po, double length)
 {
-    long i, row;
-    double p, t0, t, dt;
+  long i, row;
+  double p, t0, t, dt;
 
-    log_entry("dump_watch_particles");
-    if (!watch->initialized)
-        bomb("uninitialized watch-point (coordinate mode) encountered (dump_watch_particles)", NULL);
-    if (!particle)
-        bomb("NULL coordinate pointer passed to dump_watch_particles", NULL);
-    if (watch->fraction>1)
-        bomb("logic error--fraction>1 in dump_watch_particles", NULL);
-    for (i=0; i<particles; i++)
-        if (!particle[i]) {
-            fprintf(stderr, "error: coordinate slot %ld is NULL (dump_watch_particles)\n", i);
-            abort();
-            }
-
-    if (!SDDS_StartTable(&watch->SDDS_table, particles)) {
-        SDDS_SetError("Problem starting SDDS table (dump_watch_particles)");
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-        }
-    row = 0;
-    t0 = pass*length*sqrt(Po*Po+1)/(c_mks*(Po+1e-32));
-    for (i=0; i<particles; i++) {
-        if (watch->fraction==1 || random_2(0)<watch->fraction) {
-            p = Po*(1+particle[i][5]);
-            t = particle[i][4]/(c_mks*p/sqrt(sqr(p)+1));
-            if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row++,
-                                   0, particle[i][0], 1, particle[i][1], 2, particle[i][2], 3, particle[i][3],
-                                   4, t, 5, p,
-                                   6, (long)particle[i][6], 7, t-t0, -1)) {
-                SDDS_SetError("Problem setting SDDS row values (dump_watch_particles)");
-                SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-                }
-            }
-        }
-    if (!SDDS_SetParameters(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
-                            "Step", step, "Pass", pass, "Particles", row, "pCentral", Po,
-                            "PassLength", length, 
-                            "PassCentralTime", t0, 
-                            NULL)) {
-        SDDS_SetError("Problem setting SDDS parameters (dump_watch_particles)");
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-        }
-    if (!SDDS_WriteTable(&watch->SDDS_table)) {
-        SDDS_SetError("Problem writing SDDS table (dump_watch_particles)");
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-        } 
-    log_exit("dump_watch_particles");
+  log_entry("dump_watch_particles");
+  if (!watch->initialized)
+    bomb("uninitialized watch-point (coordinate mode) encountered (dump_watch_particles)", NULL);
+  if (!particle)
+    bomb("NULL coordinate pointer passed to dump_watch_particles", NULL);
+  if (watch->fraction>1)
+    bomb("logic error--fraction>1 in dump_watch_particles", NULL);
+  if (watch->start_pass>pass)
+    return;
+  for (i=0; i<particles; i++)
+    if (!particle[i]) {
+      fprintf(stderr, "error: coordinate slot %ld is NULL (dump_watch_particles)\n", i);
+      abort();
     }
+
+  if (!SDDS_StartTable(&watch->SDDS_table, particles)) {
+    SDDS_SetError("Problem starting SDDS table (dump_watch_particles)");
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  }
+  row = 0;
+  t0 = pass*length*sqrt(Po*Po+1)/(c_mks*(Po+1e-32));
+  for (i=0; i<particles; i++) {
+    if (watch->fraction==1 || random_2(0)<watch->fraction) {
+      if (watch->xData && 
+          !SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row,
+                             watch->xIndex[0], particle[i][0], watch->xIndex[1], particle[i][1],
+                             -1)) {
+        SDDS_SetError("Problem setting SDDS row values (dump_watch_particles)");
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      }
+      if (watch->yData &&
+          !SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row,
+                             watch->yIndex[0], particle[i][2], watch->yIndex[1], particle[i][3],
+                             -1)) {
+        SDDS_SetError("Problem setting SDDS row values (dump_watch_particles)");
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      }
+      if (watch->longitData) {
+        p = Po*(1+particle[i][5]);
+        t = particle[i][4]/(c_mks*p/sqrt(sqr(p)+1));
+        if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row,
+                               watch->longitIndex[0], t,
+                               watch->longitIndex[1], p,
+                               watch->longitIndex[2], t-t0,
+                               -1)) {
+          SDDS_SetError("Problem setting SDDS row values (dump_watch_particles)");
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+        }
+      }
+      if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row++,
+                             watch->IDIndex, (long)particle[i][6], -1)) {
+        SDDS_SetError("Problem setting SDDS row values (dump_watch_particles)");
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      }
+    }
+  }
+  if (!SDDS_SetParameters(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
+                          "Step", step, "Pass", pass, "Particles", row, "pCentral", Po,
+                          "PassLength", length, 
+                          "PassCentralTime", t0, 
+                          NULL)) {
+    SDDS_SetError("Problem setting SDDS parameters (dump_watch_particles)");
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  }
+  if (!SDDS_WriteTable(&watch->SDDS_table)) {
+    SDDS_SetError("Problem writing SDDS table (dump_watch_particles)");
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  } 
+  log_exit("dump_watch_particles");
+}
 
 double tmp_safe_sqrt;
 #define SAFE_SQRT(x) ((tmp_safe_sqrt=(x))<0?(double)0.0:sqrt(tmp_safe_sqrt))
@@ -657,7 +722,7 @@ void dump_phase_space(SDDS_TABLE *SDDS_table, double **particle, long particles,
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
     if (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
-                            "Step", step, NULL)) {
+                            "Step", step, "pCentral", Po, NULL)) {
         SDDS_SetError("Problem setting parameter values for SDDS table (dump_phase_space)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
