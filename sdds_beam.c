@@ -381,7 +381,7 @@ long new_sdds_beam(
     new_particle_data = 0;
   }
 
-  if (new_particle_data && (one_random_bunch || reuse_bunch)) {
+  if (new_particle_data && (one_random_bunch || (reuse_bunch && input_type_code!=SPIFFE_BEAM))) {
     /* Copy the new "initial" data into original[] in case it needs to be reused,  
        but only if the stuff already in original[] is not going to be needed again.
        */
