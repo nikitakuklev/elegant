@@ -416,15 +416,15 @@ void final_floor_coordinates(LINE_LIST *beamline, double *XYZ, double *Angle)
     advanceFloorCoordinates(V1, W1, V0, W0, &theta, &phi, &psi, &s, elem, NULL, NULL, 0);
     if (elem->type==T_MARK && ((MARK*)elem->p_elem)->fitpoint) {
       MARK *mark;
-      char s[100];
-      static char *suffix[6] = {"X", "Y", "Z", "theta", "phi", "psi"};
+      char t[100];
+      static char *suffix[7] = {"X", "Y", "Z", "theta", "phi", "psi", "s"};
       mark = (MARK*)(elem->p_elem);
       if (!(mark->init_flags&4)) {
-        mark->floor_mem = tmalloc(sizeof(*mark->floor_mem)*6);
-        for (i=0; i<6; i++) {
-          sprintf(s, "%s#%ld.%s", elem->name, elem->occurence,
+        mark->floor_mem = tmalloc(sizeof(*mark->floor_mem)*7);
+        for (i=0; i<7; i++) {
+          sprintf(t, "%s#%ld.%s", elem->name, elem->occurence,
                   suffix[i]);
-          mark->floor_mem[i] = rpn_create_mem(s);
+          mark->floor_mem[i] = rpn_create_mem(t);
         }
         mark->init_flags |= 4;
       }
@@ -434,6 +434,7 @@ void final_floor_coordinates(LINE_LIST *beamline, double *XYZ, double *Angle)
       rpn_store(theta, mark->floor_mem[3]);
       rpn_store(phi, mark->floor_mem[4]);
       rpn_store(psi, mark->floor_mem[5]);
+      rpn_store(s, mark->floor_mem[6]);
     }
     m_copy(V0, V1);
     m_copy(W0, W1);

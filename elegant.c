@@ -1418,7 +1418,7 @@ char *makeTexSafeString(char *source)
   long index = 0;
   buffer[0] = 0;
   while (*source) {
-    if (*source=='_' || *source=='^' || *source=='{' || *source=='}') {
+    if (*source=='_' || *source=='^' || *source=='{' || *source=='}' || *source=='%') {
       buffer[index++] = '\\';
       buffer[index++] = *source++;
     }
