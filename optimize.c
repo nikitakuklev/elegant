@@ -20,8 +20,6 @@
 #include "match_string.h"
 #include "chromDefs.h"
 
-#define DEBUG 0
-
 static long stopOptimization = 0;
 long checkForOptimRecord(double *value, long values, long *again);
 void storeOptimRecord(double *value, long values, long invalid, double result);
@@ -72,6 +70,8 @@ void do_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
     optimization_data->simplexDivisor = simplex_divisor;
     if ((optimization_data->restart_worst_term_factor = restart_worst_term_factor)<=0)
       bomb("restart_worst_term_factor <= 0", NULL);
+    if ((optimization_data->restart_worst_terms=restart_worst_terms)<=0)
+      bomb("restart_worst_terms <= 0", NULL);
     
     /* reset flags for elements that may have been varied previously */
     if (optimization_data->variables.n_variables)
@@ -741,11 +741,23 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
           variables->step[i] = variables->orig_step[i];
         }
         if (optimization_data->restart_worst_term_factor!=1 && optimization_data->terms>1) {
-          long imax, imin;
-          if (index_min_max(&imin, &imax, optimization_data->termValue, optimization_data->terms))
-            optimization_data->termWeight[imax] *= optimization_data->restart_worst_term_factor;
-          fprintf(stderr, "Adjusted weight for term: %s\n",
-                  optimization_data->term[imax]);
+          long imax, imin, iworst;
+          double *savedTermValue;
+          if (!(savedTermValue = malloc(sizeof(*savedTermValue)*optimization_data->terms)))
+            bomb("memory allocation failure (saving term values)", NULL);
+          memcpy(savedTermValue, optimization_data->termValue, optimization_data->terms*sizeof(*savedTermValue));
+          for (iworst=0; iworst<optimization_data->restart_worst_terms; iworst++) {
+            if (index_min_max(&imin, &imax, optimization_data->termValue, optimization_data->terms)) {
+              optimization_data->termWeight[imax] *= optimization_data->restart_worst_term_factor;
+              fprintf(stdout, "Adjusted weight for term: %s\n",
+                      optimization_data->term[imax]);
+              /* just to be sure it doesn't get picked as the max again */
+              optimization_data->termValue[imax] = -DBL_MAX;
+            }
+            else 
+              break;
+          }
+          memcpy(optimization_data->termValue, savedTermValue, optimization_data->terms*sizeof(*savedTermValue));
           if (index_min_max(&imin, &imax, optimization_data->termWeight, optimization_data->terms) &&
               optimization_data->termWeight[imin]>0) {
             for (i=0; i<optimization_data->terms; i++)
@@ -863,7 +875,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 #define SET_BUNCHED_BEAM 6
 #define SET_SDDS_BEAM   33
 
-#define N_TWISS_QUANS 40
+#define N_TWISS_QUANS 44
 static char *twiss_name[N_TWISS_QUANS] = {
     "betax", "alphax", "nux", "etax", "etapx", 
     "betay", "alphay", "nuy", "etay", "etapy", 
@@ -878,19 +890,25 @@ static char *twiss_name[N_TWISS_QUANS] = {
     "dnux/dAx", "dnux/dAy", "dnuy/dAx", "dnuy/dAy",
     "dnux/dp2", "dnux/dp3",
     "dnuy/dp2", "dnuy/dp3",
+    "etax2" , "etax3", 
+    "etay2" , "etay3", 
     };
 static long twiss_mem[N_TWISS_QUANS] = {
-    -1, -1, -1, -1, -1, 
-    -1, -1, -1, -1, -1, 
-    -1, -1, -1,
-    -1, -1, -1, 
-    -1, -1, -1,
-    -1, -1, -1, 
-    -1, -1,
-    -1, -1, -1, -1,
-    -1, -1, -1, -1,
-    -1, -1, -1, -1,
-    -1, -1, -1, -1,
+  -1, -1, -1, -1, -1,  
+  -1, -1, -1, -1, -1,  
+  -1, -1, -1,  
+  -1, -1, -1, 
+  -1, -1, -1,  
+  -1, -1, -1, 
+  -1, -1, -1, -1, 
+  -1, -1, 
+  -1, -1, 
+  -1, -1, 
+  -1, -1, -1, -1, 
+  -1, -1, 
+  -1, -1, 
+  -1, -1,  
+  -1, -1,  
     };
 
 static char *radint_name[13] = {
@@ -1077,19 +1095,20 @@ double optimization_function(double *value, long *invalid)
   }
   
   if (beamline->flags&BEAMLINE_TWISS_WANTED) {
-#if DEBUG
-    fprintf(stdout, "optimization_function: Computing twiss parameters\n");
-    fflush(stdout);
-#endif
     if (twiss_mem[0]==-1) {
       for (i=0; i<N_TWISS_QUANS; i++)
         twiss_mem[i] = rpn_create_mem(twiss_name[i]);
     }
     /* get twiss mode and (beta, alpha, eta, etap) for both planes */
-    update_twiss_parameters(run, beamline, &unstable);
-    /* if (unstable)
-       fprintf(stdout, "Beamline is unstable\n"); */
+#if DEBUG
+    fprintf(stdout, "optimization_function: Computing twiss parameters\n");
     fflush(stdout);
+#endif
+    update_twiss_parameters(run, beamline, &unstable);
+#if DEBUG
+    fprintf(stdout, "Twiss parameters done.\n");
+    fflush(stdout);
+#endif
     /* store twiss parameters for last element */
     for (i=0; i<5; i++) {
       rpn_store(*((&beamline->elast->twiss->betax)+i)/(i==2?PIx2:1), twiss_mem[i]);
@@ -1134,6 +1153,15 @@ double optimization_function(double *value, long *invalid)
     rpn_store(beamline->chrom3[0], twiss_mem[37]);
     rpn_store(beamline->chrom2[1], twiss_mem[38]);
     rpn_store(beamline->chrom3[1], twiss_mem[39]);
+    /* higher-order dispersion */
+    rpn_store(beamline->eta2[0], twiss_mem[40]);
+    rpn_store(beamline->eta3[0], twiss_mem[41]);
+    rpn_store(beamline->eta2[2], twiss_mem[42]);
+    rpn_store(beamline->eta3[2], twiss_mem[43]);
+#if DEBUG
+    fprintf(stdout, "Twiss parameters done.\n");
+    fflush(stdout);
+#endif
   }
   if (beamline->flags&BEAMLINE_RADINT_WANTED) {
 #if DEBUG
