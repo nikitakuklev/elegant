@@ -568,7 +568,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
                             fputs("orbit not improved--discontinuing horizontal correction\n", stderr);
                         }
                     dump_cormon_stats(correct->verbose, 0, correct->CMx->kick, 
-                                      correct->CMx->ncor, correct->CMx->posi, correct->CMx->nmon, NULL, 
+                                      correct->CMx->ncor, correct->CMx->posi, correct->CMx->nmon, Cdp, 
                                       correct->n_iterations, i_cycle, i_cycle==correct->n_xy_cycles-1 || x_failed,
                                       sim_step);
                     if (i_cycle==correct->n_xy_cycles-1 || x_failed)
@@ -603,7 +603,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
                             fputs("orbit not improved--discontinuing vertical correction\n", stderr);
                         }
                     dump_cormon_stats(correct->verbose, 2, correct->CMy->kick, 
-                                      correct->CMy->ncor, correct->CMy->posi, correct->CMy->nmon, NULL, 
+                                      correct->CMy->ncor, correct->CMy->posi, correct->CMy->nmon, Cdp, 
                                       correct->n_iterations, i_cycle, i_cycle==correct->n_xy_cycles-1 || y_failed,
                                       sim_step);
                     if (i_cycle==correct->n_xy_cycles-1 || y_failed) 
