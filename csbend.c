@@ -1363,7 +1363,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     rms_emittance(part, 0, 1, i_top+1, &csrWake.S11, &csrWake.S12, &csrWake.S22);
 
     /* compute angular spread of radiation, using Wiedemann's formula */
-    /* wavelength ~ (sigma z)/2 */
+    /* wavelength ~ (sigma z) */
     wavelength = beam_width(0.6826, part, i_top+1, 4)/2;
     criticalWavelength = 4.19/ipow(Po, 3)*rho_actual;
     csrWake.thetaRad = 0.5463e-3/(Po*0.511e-3)/pow(criticalWavelength/wavelength, 1./3.);
