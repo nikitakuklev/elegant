@@ -969,7 +969,10 @@ void print_dictionary_entry(FILE *fp, long type)
                     PRINTABLE_NULL(entity_description[type].parameter[j].string));
             break;
           default:
-            bomb("invalid parameter type (print_dictionary_entry)", NULL);
+            fprintf(stderr, "Invalid parameter type for %s item of %s\n",
+                    PRINTABLE_NULL(entity_description[type].parameter[j].name),
+                    entity_name[type]);
+            exit(1);
             }
         }
     }
