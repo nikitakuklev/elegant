@@ -609,7 +609,7 @@ proc ScanCollectiveEffectsProgram {args} {
     set dataFile ""
     set type ""
     APSStrictParseArguments {template extension type dataFile}
-    global collectiveEffects mainDirectory mainPrefix runDone
+    global collectiveEffects mainDirectory mainPrefix runDone gridEngine
 
     set isIBS [expr ![string compare $type IBS]]
     set isSCTS [expr ![string compare $type SCTS]]
@@ -665,14 +665,44 @@ proc ScanCollectiveEffectsProgram {args} {
 		}
 	    }
 	}
-	APSExecLog .scan -unixCommand "$command" -width 100 -height 30 \
-	    -callback "set runDone 1" -cancelCallback "set runDone 2" \
-	    -abortCallback "set runDone 2"
-        tkwait variable runDone
-	if $runDone==2 {
-	    break
+	if $gridEngine {
+	    set scriptName $output.sh
+	    set fd [open $scriptName w]
+	    puts $fd "$command"
+	    puts $fd "echo done > $output.done"
+	    close $fd
+	    file attributes $output.sh -permission +x
+	    catch {exec csub $output.sh} result
+	    setStatus "$result"
+	    lappend scriptList $output.sh
+	} else {
+	    APSExecLog .scan -unixCommand "$command" -width 100 -height 30 \
+		-callback "set runDone 1" -cancelCallback "set runDone 2" \
+		-abortCallback "set runDone 2"
+	    tkwait variable runDone
+	    if $runDone==2 {
+		break
+	    }
 	}
+	lappend doneList $output.done
 	lappend outputList $output
+    }
+    if $gridEngine {
+	set waitingFor 1
+	while {$waitingFor} {
+	    set waitingFor 0
+	    foreach done $doneList {
+		if ![file exists $done] {
+		    incr waitingFor 
+		}
+	    }
+	    if $waitingFor {
+		setStatus "Waiting for $waitingFor jobs"
+		APSWaitWithUpdate -updateInterval 1 -waitSeconds 10
+	    }
+	}
+	setStatus "All jobs completed."
+	eval file delete $scriptList $doneList
     }
     if [llength $outputList] {
 	set prefix $collectiveEffects(prefix)
@@ -704,7 +734,7 @@ proc RunIBS {} {
     
     if [catch {ScanCollectiveEffectsProgram -extension ibs -type IBS \
 		   -dataFile $mainDirectory/${mainPrefix}$collectiveEffects(prefix).hai \
-		   -template "nice -19 ibsEmittance $mainDirectory/${mainPrefix}Basic.twi <output> -charge=<charge_nC> -coupling=<emittanceRatio> -length=<rmsBunchLength_mm> -superperiods=<superPeriods>"} result] {
+		   -template "ibsEmittance $mainDirectory/${mainPrefix}Basic.twi <output> -charge=<charge_nC> -coupling=<emittanceRatio> -length=<rmsBunchLength_mm> -superperiods=<superPeriods>"} result] {
 	return -code error "$result"
     }
     set mainFile [lindex $result 0]
