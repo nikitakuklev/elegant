@@ -31,9 +31,9 @@ char *option[N_OPTIONS] = {
     "describeinput",
     "macro",
         };
-char *USAGE="elegant <inputfile> [-macro=<tag>=<value>,[...]]\n\nProgram by Michael Borland. (This is version 14.7.1, "__DATE__".)";
+char *USAGE="elegant <inputfile> [-macro=<tag>=<value>,[...]]\n\nProgram by Michael Borland. (This is version 14.8Beta1, "__DATE__".)";
 
-char *GREETING="This is elegant, by Michael Borland. (This is version 14.7.1, "__DATE__".)";
+char *GREETING="This is elegant, by Michael Borland. (This is version 14.8Beta1, "__DATE__".)";
 
 #define RUN_SETUP        0
 #define RUN_CONTROL      1
@@ -308,6 +308,7 @@ char **argv;
             
             initialize_structures(NULL, &run_control, &error_control, &correct, &beam, &output_data,
                           &optimize, &chrom_corr_data, &tune_corr_data, &links);
+	    clearSliceAnalysis();
             finish_load_parameters();
             run_setuped = run_controled = error_controled = correction_setuped = 0;
             
