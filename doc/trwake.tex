@@ -35,12 +35,14 @@ which the object that causes the wake actually resides.
 The {\tt XPOWER} and {\tt YPOWER} parameters can be used to change the
 dependence of the wake on the x and y coordinates, respectively, of
 the particles.  Normally, {\tt XPOWER=1} and {\tt YPOWER=1}.  This is
-an ordinary dipole wake in a (supposedly) symmetric chamber.  If you
-have an asymmetric chamber, then you will have a transverse wake kick
-even if the beam is centered.  This part of the transverse wake is
-described with {\tt XPOWER=0} and {\tt YPOWER=0}.  (Of course, you'll
-need a 3-D wake code like GdfidL or MAFIA to compute this wake.)
+an ordinary dipole wake in a (supposedly) symmetric chamber.  
 
-If {\tt XPOWER=0} or {\tt YPOWER=0}, the units for the x or y wake
+If you have an asymmetric chamber, then you will have a transverse
+wake kick even if the beam is centered.  (Of course, you'll need a 3-D
+wake code like GdfidL or MAFIA to compute this wake.)  This part of
+the transverse wake is described with {\tt XPOWER=0} and {\tt
+YPOWER=0}.  It will result in an orbit distortion, but conceivably
+could have other effects, such as emittance dilution.  If {\tt
+XPOWER=0} or {\tt YPOWER=0}, the units for the x or y wake
 (respectively) must be $V/C$.  A negative value of the wake
-corresponds to a kick toward negative x (or y).  
+corresponds to a kick toward negative x (or y).
