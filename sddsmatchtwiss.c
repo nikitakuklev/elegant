@@ -55,6 +55,9 @@ CopyrightNotice001*/
  * Michael Borland, 2000
  *
  $Log: not supported by cvs2svn $
+ Revision 1.14  2002/05/20 23:08:39  borland
+ Fixed memory leak.
+
  Revision 1.13  2002/05/20 21:33:16  borland
  No longer attempts to perform transformation when it isn't requested.
  Fixed bug that resulted when energy spread was exactly zero.
@@ -210,7 +213,7 @@ int main(int argc, char **argv)
             (xSpec.flags&BETA_GIVEN && !(xSpec.flags&ALPHA_GIVEN)) ||
             (!(xSpec.flags&BETA_GIVEN) && xSpec.flags&ALPHA_GIVEN) ||
             (xSpec.flags&BETA_GIVEN && xSpec.beta<=0) || 
-            (xSpec.flags&NEMIT_GIVEN && xSpec.normEmittance<=0))
+            (xSpec.flags&NEMIT_GIVEN && xSpec.normEmittance<0))
           SDDS_Bomb("invalid -xPlane syntax/values---watch out for abbreviations of etaValue and etaSlope");
         break;
       case SET_YPLANE:
@@ -226,7 +229,7 @@ int main(int argc, char **argv)
             (ySpec.flags&BETA_GIVEN && !(ySpec.flags&ALPHA_GIVEN)) ||
             (!(ySpec.flags&BETA_GIVEN) && ySpec.flags&ALPHA_GIVEN) ||
             (ySpec.flags&BETA_GIVEN && ySpec.beta<=0) ||
-            (ySpec.flags&NEMIT_GIVEN && ySpec.normEmittance<=0))
+            (ySpec.flags&NEMIT_GIVEN && ySpec.normEmittance<0))
           SDDS_Bomb("invalid -yPlane syntax/values---watch out for abbreviations of etaValue and etaSlope");
         break;
       case SET_ZPLANE:
