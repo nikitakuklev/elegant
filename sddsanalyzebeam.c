@@ -55,6 +55,9 @@ CopyrightNotice001*/
  * Michael Borland, 2000
  *
  $Log: not supported by cvs2svn $
+ Revision 1.1  2000/08/14 21:44:57  borland
+ First version.
+
  */
 #include "mdb.h"
 #include "scan.h"
@@ -96,6 +99,7 @@ main(int argc, char **argv)
   double *x, *xp, *y, *yp, *p, *t;
   double pAve, sum;
   double S[6][6], C[6], beta[2], alpha[2], eta[4], emit[2], emitcor[2], beamsize[6];
+  double betacor[2], alphacor[2];
   double *data[6], Sbeta[4][4];
   long tmpFileUsed;
   
@@ -216,12 +220,15 @@ main(int argc, char **argv)
       /* compute beta functions etc */
       for (i=0; i<2; i++) {
         emitcor[i] = emit[i] = beta[i] = alpha[i] = 0;
-        if ((emit[i] = S[2*i+0][2*i+0]*S[2*i+1][2*i+1]-sqr(S[2*i+0][2*i+1]))>0)
+        if ((emit[i] = S[2*i+0][2*i+0]*S[2*i+1][2*i+1]-sqr(S[2*i+0][2*i+1]))>0) {
           emit[i] = sqrt(emit[i]);
+          beta[i] = S[2*i+0][2*i+0]/emit[i];
+          alpha[i] = -S[2*i+0][2*i+1]/emit[i];
+        }
         if ((emitcor[i] = Sbeta[2*i+0][2*i+0]*Sbeta[2*i+1][2*i+1]-sqr(Sbeta[2*i+0][2*i+1]))>0) {
           emitcor[i] = sqrt(emitcor[i]);
-          beta[i] = Sbeta[2*i+0][2*i+0]/emitcor[i];
-          alpha[i] = -Sbeta[2*i+0][2*i+1]/emitcor[i];
+          betacor[i] = Sbeta[2*i+0][2*i+0]/emitcor[i];
+          alphacor[i] = -Sbeta[2*i+0][2*i+1]/emitcor[i];
         }
       }
     }
@@ -253,9 +260,11 @@ main(int argc, char **argv)
                            "betax", beta[0], "alphax", alpha[0], "etax", eta[0],
                            "etaxp", eta[1], "ex", emit[0], "ecx", emitcor[0],
                            "enx", emit[0]*pAve, "ecnx", emitcor[0]*pAve,
+                           "betacx", betacor[0], "alphacx", alphacor[0],
                            "betay", beta[1], "alphay", alpha[1], "etay", eta[2],
                            "etayp", eta[3], "ey", emit[1], 
                            "ecy", emitcor[1], "eny", emit[1]*pAve, "ecny", emitcor[1]*pAve,
+                           "betacy", betacor[1], "alphacy", alphacor[1],
                            "pAverage", pAve, NULL)) {
       SDDS_SetError("Problem setting Twiss values");
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -280,18 +289,22 @@ long SetUpOutputFile(SDDS_DATASET *SDDSout, char *outputfile)
   if (!SDDS_InitializeOutput(SDDSout, SDDS_BINARY, 1, NULL, NULL, outputfile) ||
       !SDDS_DefineSimpleColumn(SDDSout, "ex", "m", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleColumn(SDDSout, "enx", "m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(SDDSout, "ecx", "m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(SDDSout, "ecnx", "m", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleColumn(SDDSout, "betax", "m", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleColumn(SDDSout, "alphax", NULL, SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleColumn(SDDSout, "ecx", "m", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleColumn(SDDSout, "ecnx", "m", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleColumn(SDDSout, "betacx", "m", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleColumn(SDDSout, "alphacx", NULL, SDDS_DOUBLE) ||
       !SDDS_DefineSimpleColumn(SDDSout, "etax", "m", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleColumn(SDDSout, "etaxp", NULL, SDDS_DOUBLE) ||
       !SDDS_DefineSimpleColumn(SDDSout, "ey", "m", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleColumn(SDDSout, "eny", "m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(SDDSout, "ecy", "m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(SDDSout, "ecny", "m", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleColumn(SDDSout, "betay", "m", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleColumn(SDDSout, "alphay", NULL, SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleColumn(SDDSout, "ecy", "m", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleColumn(SDDSout, "ecny", "m", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleColumn(SDDSout, "betacy", "m", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleColumn(SDDSout, "alphacy", NULL, SDDS_DOUBLE) ||
       !SDDS_DefineSimpleColumn(SDDSout, "etay", "m", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleColumn(SDDSout, "etayp", NULL, SDDS_DOUBLE) ||
       !SDDS_DefineSimpleColumn(SDDSout, "Sx", "m", SDDS_DOUBLE) ||
