@@ -55,6 +55,11 @@ CopyrightNotice001*/
  * Michael Borland, 2002
  *
  $Log: not supported by cvs2svn $
+ Revision 1.3  2002/04/24 14:26:38  borland
+ Refined calculation of radiation size and divergence.  Added
+ -noSpectralBroadening switch to allow turning off this part of the
+ calculation.
+
  Revision 1.2  2002/04/22 21:01:01  borland
  Added factors of 2 for square radiation opening angle and square of
  radiation size, per Dejus.
@@ -121,6 +126,9 @@ long GetTwissValues(SDDS_DATASET *SDDSin,
                     double *betax, double *alphax, double *etax, double *etaxp, 
                     double *betay, double *alphay, double *etay, double *etayp, 
                     double *ex0, double *Sdelta0, double *pCentral);
+double computeFactorOfConvolution(long periods, long harmonic, double Sdelta0);
+double convolutionFunc(double x);
+double delta0,sincNu; /*two constants used in convolutionFunc() */
 
 int main(int argc, char **argv)
 {
@@ -129,10 +137,11 @@ int main(int argc, char **argv)
   SCANNED_ARG *s_arg;
   unsigned long pipeFlags;
   double current, totalLength, periodLength, KStart, KEnd, coupling, emittanceRatio, dK;
-  long KPoints, harmonics, tmpFileUsed, iK, i_arg, poles, readCode, h, ih;
+  long KPoints, harmonics, tmpFileUsed, iK, i_arg, poles, readCode, h, ih, periods;
   unsigned long dummyFlags;
   double betax, alphax, betay, alphay, etax, etaxp, etay, etayp, lambda, energy;
-  double pCentral, ex0, Bn, Fn, K, Sdelta0;
+  double pCentral, ex0, Bn, Fn, K, Sdelta0, conFactor=1.0; /*the factor from convolution of
+                                                             sinc() and gaussian() */
   short spectralBroadening;
   
   SDDS_RegisterProgramName(argv[0]);
@@ -232,8 +241,9 @@ int main(int argc, char **argv)
     SDDS_Bomb("you must specify the total undulator length");
   if (!periodLength)
     SDDS_Bomb("you must specify the undulator period length");
-  poles = totalLength/periodLength;
-  if (poles<1)
+  /*poles = totalLength/periodLength; rename poles as periods, which makes sense.*/
+  periods=totalLength/periodLength;
+  if (periods<1)
     SDDS_Bomb("period lengths is shorter than undulator length!");
   
   processFilenames("sddsbrightness", &inputfile, &outputfile, pipeFlags, 0, &tmpFileUsed);
@@ -274,10 +284,16 @@ int main(int argc, char **argv)
       SDDS_Bomb("problem getting twiss parameters and other values from input file");
     if (!SDDS_StartPage(&SDDSout, KPoints))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    
     for (ih=0; ih<harmonics; ih++) {
       h = ih*2+1;
+      /*convolution factor is same for all K s, it varies on periods,h and Sdelta0 only*/
+      conFactor=1.0; 
+      if (spectralBroadening && Sdelta0!=0 && 0.36/periods/h>Sdelta0) {
+        conFactor=computeFactorOfConvolution(periods,h,Sdelta0);
+      } 
       for (K=KStart, iK=0; iK<KPoints; iK++, K+=dK) {
-        Bn = ComputeBrightness(periodLength, poles, K, h,
+        Bn = conFactor*ComputeBrightness(periodLength, periods, K, h,
                                pCentral, ex0, Sdelta0,
                                coupling, emittanceRatio, current,
                                betax, alphax, etax, etayp, 
@@ -297,8 +313,11 @@ int main(int argc, char **argv)
     if (!SDDS_WritePage(&SDDSout))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
+  
   if (!SDDS_Terminate(&SDDSin) || !SDDS_Terminate(&SDDSout))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  free_scanargs(&s_arg,argc);
+  
   return 0;
 }
 
@@ -341,8 +360,9 @@ double ComputeBrightness(double period, long Nu, double K, long n,
 {
   double JArg, Nn;
   double Sx, Sy, Sxp, Syp, Srp2, Sr2;
-  double ex, ey, lambda, Fn, sum;
+  double ex, ey, lambda, Fn;
   double gammax, gammay, length, broadening;
+  double sincWidth;
   
   JArg = n*K*K/(4+2*K*K);
   Fn = sqr(n*K/(1+K*K/2)*(jn((n+1)/2, JArg) - jn((n-1)/2, JArg)));
@@ -359,7 +379,8 @@ double ComputeBrightness(double period, long Nu, double K, long n,
   /* 0.001 is for 0.1% bandwidth */
   Nn = 0.5*PI/137.04*Nu*(current/e_mks)*0.001*Fn*(1+sqr(K)/2)/n;
   length = Nu*period;
-
+  sincWidth=0.36/Nu/n;
+  
   broadening = 1;
   if (spectralBroadening) {
     /* this factor includes the loss of peak brightness due to spectral
@@ -388,8 +409,45 @@ double ComputeBrightness(double period, long Nu, double K, long n,
   *FnOut = Fn;
   /* 1e-12 is to convert to 1/(mm^2*mrad^2) units */
   /* Joho does not put the broadening here, which I think is wrong */
+  if (Sdelta0!=0 && sincWidth>Sdelta0) 
+    broadening=1.0; /*calculate the factor by convolution instead */
   return Nn/(sqr(PIx2)*Sx*Sxp*Sy*Syp)/broadening*1e-12;
 }
+
+/*this function is to get the brightness by the convolution of sinc() and
+  gaussian function (the energy spreed).
+  since sinc() is symmetric, the peak position of the convolution is the same
+  as sinc(), that is, at x=0, thus, the convolution is calculated only at
+  one point: x=0, and returned as the brightness */
+/* S(x)=(sin(N*pi*x)/(N*pi*x))^2
+   g(x)=Cexp(-1/8 * (x/Sdelta0)^2) */
+/* g(x)=1.0*10^-7 while x=+- 4*Sdelta0*log(1e-7/C) (the range of convoluation */
+/* convoluation=integral of (g(x)*S(-x)dx, using gaussianQuadrature() to calculate it */
+double computeFactorOfConvolution(long periods, long harmonic, double Sdelta0)
+{
+  double startX,C, conFactor=1.0;
+  C=1/sqrt(PI*2)*0.5/Sdelta0; /*theorectical value for C=1/sqrt(2*pi)*1/(2*Sdelat0) */
+  startX=-(4*Sdelta0*sqrt(fabs(log(1e-7/C)))); 
+  sincNu=harmonic*periods*PI; /*sincNu and delta0 are two globals*/
+  delta0=Sdelta0;
+  gaussianQuadrature(convolutionFunc,startX,fabs(startX),1,0.01,&conFactor); 
+  /*fprintf(stderr,"integrated result=%.9f\n",conFactor); */
+  return conFactor;
+}
+/*integral function of gaussianQuadrature() */
+double convolutionFunc(double x)
+{
+  double multResult,C,sx,gx;
+  C=1/sqrt(PI*2)*0.5/delta0;
+  if (x==0)
+    sx=1;
+  else
+    sx=sqr(sin(sincNu*x)/(sincNu*x));
+  gx=exp(-(x*x)/(8*delta0*delta0));
+  multResult=C*sx*gx;
+  return multResult;
+}
+
 
 long GetTwissValues(SDDS_DATASET *SDDSin, 
                     double *betax, double *alphax, double *etax, double *etaxp, 
@@ -448,5 +506,4 @@ long GetTwissValues(SDDS_DATASET *SDDSin,
     SDDS_Bomb("unable to get parameters from twiss file");
   return 1;
 }
-
 
