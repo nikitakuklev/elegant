@@ -89,7 +89,7 @@ void setupTransmuteElements(NAMELIST_TEXT *nltext, RUN *run,
     if (!name && !type)
       return;
   }
-  if (ignore)
+  if (disable)
     return;
 
   if (!new_type)

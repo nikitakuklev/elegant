@@ -6,17 +6,17 @@
 &transmute_elements
         name = *, type = MAXAMP,
         new_type = DRIF,
-	ignore = <includeApertures>
+	disable = <includeApertures>
 &end
 &transmute_elements
         name = *, type = ?COL,
         new_type = DRIF,
-	ignore = <includeApertures>
+	disable = <includeApertures>
 &end
 &transmute_elements
         name = *, type = SCRAPER,
         new_type = DRIF,
-	ignore = <includeApertures>
+	disable = <includeApertures>
 &end
 
 &run_setup

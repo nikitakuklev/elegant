@@ -16,288 +16,108 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 14.9.1\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
+\author{Program Version 15.1.1\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
 \maketitle
 
-\section{Highlights of What's New in Version 14.9.1}
+\section{Highlights of What's New in Version 15.1.1}
 
-Here is a summary of what's changed since version 14.8.  For details
+Here is a summary of what's changed since release 14.9.1.  For details
 and references, see the specific entries in the manual.
-
-As many of you know, I was on leave of absence from ANL for one year,
-and worked at Lyncean Technologies, Inc.  LTI generously agreed that
-all the changes I made to {\tt elegant} and related programs while
-there would be shared with the accelerator physics community.
 
 \subsection{Known Bugs and Problems}
 \begin{itemize}
-\item Twiss output contains entries for the higher-order dispersion and
-	chromaticity as well as the tune shifts with amplitude, 
+\item Twiss output contains entries for the higher-order dispersion, tune
+        shifts with amplitude, higher-order chromaticity, and tune spreads
+        due to chromaticity and amplitude 
 	{\em even when these are not calculated}, which is potentially
 	misleading.   The values are zero when the calculation is not
         requested.
-\item Use of the perturbed matrix for chromaticity correction does not work.
-\end{itemize}
-
-\subsection{New Elements}
-\begin{itemize}
-\item Added LSCDRIFT, which provides simulation of longitudinal space charge
-  in a drift space, based on an impedance provided by Z. Huang (SLAC). 
-\item Added FRFMODE and FTRFMODE elements. These are similar to RFMODE and
-  TRFMODE, in that they simulate cavity modes.  However, FRFMODE and
-  FTRFMODE take the mode data from a file.  If there are several modes
-  to be simulated, this is {\em much} faster than using several
-  RFMODE or TRFMODE elements.
-\item Added TFBPICKUP and TFBDRIVER, a pair of elements for simulation of
-  single-bunch transverse digital feedback systems.
-\item Added FLOOR element for setting floor coordinates inside a beamline.
-  This can be used, for example, to optimize the initial coordinate and
-  direction of a beamline so that it terminates at a required location and
-  direction.
-\item Added LTHINLENS and LMIRROR elements, which provide modeling of 
-  thin lenses and mirrors for light beams.
-\item Added EMATRIX element, allowing explicit matrix input on the element
-  definition line (instead of in a file as in MATR element).  This was suggested
-  by P. Emma (SLAC).
 \end{itemize}
 
 \subsection{Bug Fixes for Elements}
 \begin{itemize}
-
-\item Fixed the units for K3 and K4 parameters on CSBEND and CSRCSBEND.
-
-\item Fixed a bug in the low-pass filter function for CSRCSBEND, which may have resulted
- in noise in the highest frequency bin.  (I haven't seen any effect on simulation results.)
-
-\item Fixed a bug in the FMULT (file multipole) element
- implementation. Results were incorrect for non-zero-length elements.
- Also, now requires both KnL (normal) and JnL (skew) data in the input file.
-
-\item Fixed dispersion and path-length terms in the corrector matrix for HKICK, 
-  VKICK, and HVKICK.   Previous versions used the terms for a sector magnet.
-  In this revision, these terms are computed correctly for a straight reference
-  trajectory and a rectangular magnet.  The changes are probably significant only if
-  one had sextupole included in the corrector field.
-
-\item Fixed problem with the MATTER elements that occurred with length
- was exactly a radiation length (there was no scattering!).  This bug was 
- discovered by P. Emma (SLAC).
-
-\item The BNL parameter of the MULT element has been renamed BTIPL, which is a more
- accurate description.
-
-\item RFTMEZ0 (TM-mode rf cavity from on-axis longitudinal field):'
- \begin{itemize}
- \item Now allows independent misalignment of cavity and solenoid fields.
- \item Added stray magentic fields.
- \item Is now active during trajectory correction.
- \end{itemize}
-
-\item Twiss parameter computation is now correct when the ROTATE
-element is used with an angle of 90 or 270 degrees.
-
-\item The SREFFECTS element (which simulates lumped quantum excitation
- and radiation damping in storage rings), now works correctly when $\alpha_x$ or 
- $\alpha_y$ are nonzero.
-
-\item The STRAY element (stray fields) now works for tilted beamlines.  The matrix
- for this element is now recomputed before each use to ensure that it is correct,
- since the beamline momentum may have changed.
-
+\item Added second-order path length matrix elements to the {\tt SOLE}
+        element (matrix-based solenoid).  This was suggested by P. Emma (SLAC),
+        who provided the expressions.
+\item Fixed a bug in the {\tt ECOL} (elliptical collimator), which resulted in
+        corruption of vertical particle coordinates when the element had non-zero
+        length.  This bug was found by P. Emma (SLAC).
 \end{itemize}
 
 \subsection{Improvements to Elements}
 \begin{itemize}
-\item Added GROUP parameter to all elements.  It allows assigning a common tag to
- elements.  The tags are saved in the lattice and parameter files.
+\item Added super-elliptical apertures for {\tt ECOL} and {\tt MAXAMP}.  A super-elliptical
+ aperture is somewhere between an ellipse and a rectangle.
+\item Added one-sided aperture capability to the {\tt ECOL}, {\tt RCOL}, and {\tt MAXAMP}
+        elements.
+\item The {\tt SCATTER} element now includes an optional scattering probability.
+\item Added a radius factor parameter for longitudinal space charge evaluation to the
+  {\tt LSCDRIFT} and {\tt RFCW} element.  The default value for this parameter changes the
+  computations from the previous release, and was computed by J. Wu (SLAC).
+\item Added ability to control expansion of square roots in canonically-integrated
+        elements.  The default is no expansion, as before.
+\end{itemize}
 
-\item The B2 (sextupole) parameter was added to the BUMPER element (which does
- time-dependent kicker simulation).  Also, the N\_KICKS parameter was added
- and must be non-zero if B2 is to have any effect.
+\subsection{New Elements}
+\begin{itemize}
+\item {\tt LSRMDLTR} --- A laser/undulator beam modulator, using a numerically-integrated
+        analytical planar undulator field with a laser beam focused to a waist at the
+        center of the undulator.  P. Emma (SLAC) requested this addition and helped with 
+        the development.
+\item {\tt TAYLORSERIES} --- A generate Taylor-series map specified as an SDDS file.
+        This element was implemented by L. Emery (ANL), but has yet to be fully
+        integrated into {\tt elegant}.
+\item {\tt DSCATTER} --- An element for scattering with a user-specified distribution.
 
-\item The CSRCSBEND now has a wake filter file capability, allowing the user to 
- specify a filter function as a way to add, for example, shielding effects.
+\end{itemize}
 
-\item The HISTOGRAM and WATCH (coordinate mode) now input parameter ``s'' giving the position
- of the element in the beamline.  The HISTOGRAM element has a new parameter NORMALIZE
- with a default value of 1, which results in normalization of the histogram with the
- number of particles.
-
-\item Added steering capability to KQUAD and QUAD using an imposed dipole field,
- including (in the case of KQUAD) higher multipoles.  (KQUAD and QUAD
- could already be used for steering by adjusting transverse position.)
-
-\item The MODRF (modulated rf cavity) now supports damping rates for AM and PM 
- modulations.
-
-\item Several improvements were made to the NIBEND (Numerically Integrated BEND) element:
- \begin{itemize}
- \item Added new fringe models: enge1, enge3, and enge5.  These
- give 1st, 3rd, and 5th order expansions of three-coefficient Enge functions.
- \item Added FP2 through FP4 parameters for NIBEND.  They are used for
- direct input of Enge coefficients.  
- \item Added ADJUST\_FIELD parameter, which provides a way to adjust
- the deflection angle to compensate for over- or under-bending due to fringe fields.
- \item Added ADJUST\_BOUNDARY parameter to allow turning off boundary position adjustment,
- which is the default method for adjusting the deflecting angle.
- \item Misalignments are now supported.
- \end{itemize}
-
-\item Matrices for the QUAD and SEXT elements may now have order up to 3.  This
- can make a difference in momentum-dependent tune shifts and nonlinear dispersion
- computations.  
-
-\item The RFCW element was changed extensively:
- \begin{itemize}
- \item The N\_KICKS parameter can now have a value other than 0 or 1.  A non-zero value
- results in a drfit-kick-drift simulation with N\_KICKS segments.  
- \item By default, the longitudinal and tranverse wakes are now applied at the location of
- the rf kick, which is a change from previous versions.  Use the WAKES\_AT\_END parameter
- (set to 1) to revert to the previous behavior.
- \item Added LSC parameter to the RFCW element, to provide
- simulation of longitudinal space charge in an accelerating cavity.
- \end{itemize}
-
-\item Added FREQ\_WAVEFORM and Q\_WAVEFORM support to the RFMODE element, allowing
- a rudimentary method of detuning or tuning a mode at a programmed point in a simulation.
- This was requested by N. Sereno (ANL).
-
-\item The SCRIPT element has new USE\_CSH and VERBOSITY controls.  Setting
- USE\_CSH=0 is much faster and should be used if C-shell is not needed. 
-
-\item TRWAKE: 
- \begin{itemize} 
- \item Added XFACTOR and YFACTOR parameters (which default to 1).  These allow multiplying
- the wakes by factors.
- \item Added TILT parameter.
- \item Added XPOWER and YPOWER fields, which allows simulating transverse wakes
- due to asymmetric chambers (by setting XPOWER=0 and/or YPOWER=0).  By default, 
- XPOWER=1 and YPOWER=1.
- \end{itemize}
-
-\item The ZLONGIT and ZTRANSVERSE elements now check that the input data is equispaced
- in frequency.  This bug was found by T. Shaftan (BNL).
-\item Added FACTOR and REVERSE\_TIME\_ORDER parameters to ZLONGIT.  The latter allows
- compensating for different sign conventions for the meaning of the longitudinal coordinate.
- (Recall that in {\tt elegant}, a negative longitudinal coordinate indicates the head of the
- bunch.)
-
+\subsection{New Commands} 
+\begin{itemize}
+\item The {\tt frequency\_map} command was added.  It performs Frequency Map Analysis for
+ storage rings.
 \end{itemize}
 
 \subsection{Modified Commands and Bug Fixes to Commands}
 \begin{itemize}
- \item {\tt amplification\_factors}
- \begin{itemize}
- \item Now sets all correctors to zero before computing a new amplification factor.
- \item Output now includes kick amplification function for each
- actuator as well as useful parameters in all the output files.
- \item Added amplification factor output for slopes.
- \end{itemize}
-
-\item {\tt bunched\_beam}: Previous versions did not generate
-longitudinal phase space for dynamic aperture beam type.  This version
-does.
-
-\item Several improvements where made to orbit correction and closed orbit
- computation:
- \begin{itemize}
- \item  The orbit correction matrix is now computing using the average
- Twiss parameters at the entrance and exit of the elements.  The previous
- version used just the exit parameters.
- \item BPM-weighted correction works properly now.  In past versions, the
- weight was basically either 0 (exclude) or 1 (include).
- \item Added output of the orbit slopes to the closed orbit output file.
- \item The fixed-path-length orbit computation algorithm now has improved
- convergence.
- \item Pre-correction corrector zeroing now includes objects other than HKICK, VKICK,
- and KICKER.
- \end{itemize}
-
-\item {\tt error\_element}: 
- \begin{itemize} 
- \item Added {\tt bind\_across\_names} parameter, which permits
- giving the same error to many elements that match a wild-card pattern but have different
- names.  In previous versions, error binding only applied to elements with the same name.
- \item Previously, the "plus\_or\_minus" error type was also necessarily and
- by default a fractional error.  This is no longer the case.  One
- must explicitly ask for fractional mode, just as with other error
- types.
- \end{itemize}
-
-\item {\tt find\_aperture}: Added {\tt search\_output} parameter, which gives a filename
- to which details on each tracked particle will be written.
-
-\item {\tt load\_parameters}
- \begin{itemize}
- \item Now correctly handles loading and saving parameters when element division is used.
- \end{itemize}
-
-\item Optimization
- \begin{itemize}
- \item Added two new optimization methods: ``randomwalk'' and ``randomsample''.
- These are very useful when starting from scratch with a system that is, for example,
- unstable.
- \item Added {\tt bestOptimizationFunction} parameter to final output file.  This 
- gives the best value of the optimization function obtained so far.
- \item Chromaticity correction is now optionally performed while doing an optimization.
- (One can also include the chromaticity in the optimization literally, of course.)
- \item Added the ability to automatically change the weights of different optimization
- function terms to emphasize the most difficult terms.  Paradoxically, this can often
- result in convergence for all terms.  
- \item Added controls for adjustment of initial simplex size on restart of simplex
- optimization. 
- \item Higher-order dispersion and chromaticities are now available for optimization expressions.
- \end{itemize}
-
-\item {\tt sdds\_beam}:
- \begin{itemize} 
- \item Fixed bug in the code that checks units for elegant-style input
-files.  In previous versions, if the units of p were blank (an allowed
-``error''), other units errors were ignored.
- \item Now read $p_\phi$ data for {\tt spiffe} input files. ({\tt spiffe} is
-a particle-in-cell code for rf gun simulation, available from the OAG web site.)
- \end{itemize}
-
-\item {\tt track}: Fixed bug that prevented linear chromatic matrix tracking (LCMT) from
-working in some cases.  LCMT now uses higher-order chromaticity and dispersion, if these
-are computed.  Also, now uses second-order momentum compaction for longitudinal motion.
-
-\item {\tt tune\_shift\_with\_amplitude}:
- \begin{itemize}
- \item Added controls for adjustment of the initial particle amplitude.
- \item Fixed problems with computation in presence of MALIGN elements with ON\_PASS parameters
- not equal to -1.
- \end{itemize}
-
+\item The {\tt run\_setup} command now optionally accepts the central momentum in MeV/c,
+        instead of just $\beta\gamma$.
+\item The {\tt tune\_shift\_with\_amplitude} command was improved to provide second-order
+        shifts as well as the tune spread for a specified range of amplitudes.
+        These quantities may be optimized.
+\item Fixed bug that prevented proper saving of a lattice when the {\tt alter\_elements}
+command was used with wildcards in the name.
+\item The lost-particles file (requested from {\tt run\_setup}), now includes the turn on
+which each particle is lost.
+\item Fixed problem with skewed selection of momentum offset values for higher-order
+ chromaticity when the number of points was not 5.
+\item Added computation of the minimum and maximum tunes for a specified range
+ of momentum offsets. These values may be optimized.
+\item Made changes that allow computing closed orbit for the momentum offset
+ of the beam distribution and then starting the beam on that orbit.
+ The changes are to the {\tt closed\_orbit} and {\tt track\_beam} commands.
+\item Optimization may now include the chromatic derivatives of the beta and alpha Twiss
+        parameters.
 \end{itemize}
 
 
-\subsection{Changes to Related Programs}
-
+\subsection{Changes and Additions to Related Programs}
+With this release, we have begun to supply Tcl/Tk scripts that assist users in
+using elegant or do related computations. 
 \begin{itemize}
-\item The program {\tt ibsEmittance} now provides IBS scattering rate contributions
-  as a function of position in the ring.
-\item The program {\tt madto} now attempts to output COSY format.  Users should
- check the results carefully!
-\item The program {\tt sddsanalyzebeam} now copies input parameters through to output columns.
- It also has a new option, {\tt -correctedOnly}, which results in computation of {\em only} 
- the dispersion-corrected twiss parameters. 
-\item Added the program {\tt sddsrandmult}, which computes random error multipole
- levels for specified quadrupole and sextupole construction errors.  The output
- of {\tt sddsrandmult} is accepted by the KQUAD and KSEXT elements.
+\item A new script, {\tt beamLifetimeCalc} is included that performs
+ beam lifetime calculations due to gas scattering and the Touschek
+ effect.  It will also perform computations as a function of scanned
+ parameters (e.g., rf voltage).
+\item A new script, {\tt elegantRingAnalysis} is included that
+ performs various analyses for storage rings, including phase space tracking, higher-order
+ dispersion, and dynamic aperture.
+\item A new script, {\tt fin2param} is included.  It can convert a ``final'' output file
+ from an optimization run into a parameter-style file that can be used with {\tt load\_parameters}.
 \end{itemize}
 
 
 \subsection{Other New Features and Bug Fixes}
 \begin{itemize}
-
-\item {\tt elegant} now builds on the IBM AIX platform, but has not 
-been tested.  This was done by R. Soliday (ANL).
-
-\item Added support for checkpointing using the CONDOR checkpointing
-library.  Contact the author if you need to use this feature (Linux 
-only, gcc 2.9X).
-
 \end{itemize}
 
 \section{Introduction}
