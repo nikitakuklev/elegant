@@ -28,6 +28,7 @@ void concat_matrices(VMATRIX *M2, VMATRIX *M1, VMATRIX *M0)
     double *C2, **R2, ***T2, ****Q2;
     double *C1, **R1, ***T1, ****Q1;
     double *C0, **R0, ***T0, ****Q0;
+    double M1C4, M0C4;
     long order;
     long i, j, k, l, m, n, p;
     double sum;
@@ -46,6 +47,8 @@ void concat_matrices(VMATRIX *M2, VMATRIX *M1, VMATRIX *M0)
     if (M1->order<1 || M0->order<1 || order<1)
         bomb("order<1 in concat_matrices", NULL);
 
+    M0C4 = C0[4];
+    C0[4] = 0;  /* necessary because path length is not differential quantity */
     /* calculate new zero-th order terms */
     for (i=0; i<6; i++) {
         /* sum up contributions to C[i]: */
@@ -63,7 +66,8 @@ void concat_matrices(VMATRIX *M2, VMATRIX *M1, VMATRIX *M0)
             }
         C2[i] = sum + C1[i];
         }
-
+    C2[4] += M0C4;
+    
     /* calculate new first order terms */
     for (i=0; i<6; i++) {
         for (m=0; m<6; m++) {
@@ -205,6 +209,9 @@ void concat_matrices(VMATRIX *M2, VMATRIX *M1, VMATRIX *M0)
                 }
             }
         }
+
+    C0[4] = M0C4;
+
     log_exit("concat_matrices");
     }
 
