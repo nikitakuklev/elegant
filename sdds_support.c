@@ -604,79 +604,83 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
     tc0 = (pass-watch->passLast)*revolutionLength*sqrt(Po*Po+1)/(c_mks*(Po+1e-32)) + watch->t0Last;
     watch->t0Last = tc0;
     watch->passLast = pass;
-    if (particles) {
-        /* compute centroids, sigmas, and emittances for x, y, and s */
-        for (i=0; i<6; i+=2 ) {
-            double x, xp, cx, cxp, sum_x, sum_xp, sum_x2, sum_xxp, sum_xp2;
-            for (j=sum_x=sum_xp=0; j<particles; j++) {
-                sum_x   += particle[j][i];
-                sum_xp  += particle[j][i+1];
-                }
-            cx  = sum_x/particles;
-            cxp = sum_xp/particles;
-            if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
-                                   i==0?"Cx" :(i==2?"Cy" :"Cs" ), cx,
-                                   i==0?"Cxp":(i==2?"Cyp":"Cdelta"), cxp, NULL)) {
-                SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
-                SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-                }
-            if (watch->mode_code==WATCH_PARAMETERS) {
-                for (j=sum_x2=sum_xp2=sum_xxp=0; j<particles; j++) {
-                    x  = particle[j][i]   - cx;
-                    xp = particle[j][i+1] - cxp;
-                    sum_x2  += sqr(x);
-                    sum_xxp += x*xp;
-                    sum_xp2 += sqr(xp);
-                    }
-                if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
-                                       i==0?"Sx" :(i==2?"Sy" :"Ss" ), sqrt(sum_x2/particles),
-                                       i==0?"Sxp":(i==2?"Syp":"Sdelta"), sqrt(sum_xp2/particles), NULL)) {
-                    SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
-                    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-                    }
-                if (i!=4)
-                    if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
-                                           i==0?"ex":"ey", SAFE_SQRT(sum_x2*sum_xp2-sqr(sum_xxp))/particles, NULL)) {
-                        SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
-                        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-                        }
-                }
-            }
-        if (watch->mode_code==WATCH_PARAMETERS)
-            if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
-                                   "el", rms_longitudinal_emittance(particle, particles, Po), NULL)) {
-                SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
-                SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-                }
-
-        /* time centroid and sigma */
-        for (i=p_sum=gamma_sum=sum=0; i<particles; i++) {
-            p = Po*(1+particle[i][5]);
-            p_sum     += p;
-            gamma_sum += sqrt(sqr(p)+1);
-            sum += particle[i][4]/(p/sqrt(sqr(p)+1)*c_mks) ;
-            }
-        tc = sum/particles;
+    /* compute centroids, sigmas, and emittances for x, y, and s */
+    for (i=0; i<6; i+=2 ) {
+      double x, xp, cx, cxp, sum_x, sum_xp, sum_x2, sum_xxp, sum_xp2;
+      for (j=sum_x=sum_xp=0; j<particles; j++) {
+        sum_x   += particle[j][i];
+        sum_xp  += particle[j][i+1];
+      }
+      if (particles) {
+        cx  = sum_x/particles;
+        cxp = sum_xp/particles;
+      }
+      else 
+        cx = cxp = 0;
+      if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
+                             i==0?"Cx" :(i==2?"Cy" :"Cs" ), cx,
+                             i==0?"Cxp":(i==2?"Cyp":"Cdelta"), cxp, NULL)) {
+        SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      }
+      if (watch->mode_code==WATCH_PARAMETERS) {
+        for (j=sum_x2=sum_xp2=sum_xxp=0; j<particles; j++) {
+          x  = particle[j][i]   - cx;
+          xp = particle[j][i+1] - cxp;
+          sum_x2  += sqr(x);
+          sum_xxp += x*xp;
+          sum_xp2 += sqr(xp);
+        }
         if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
-                               "Ct", tc, "dCt", tc-tc0,
-                               "pAverage", p_sum/particles, "pCentral", Po, 
-                               "KAverage", (gamma_sum/particles-1)*me_mev, NULL)) {
+                               i==0?"Sx" :(i==2?"Sy" :"Ss" ), particles?sqrt(sum_x2/particles):0.0,
+                               i==0?"Sxp":(i==2?"Syp":"Sdelta"), particles?sqrt(sum_xp2/particles):0.0, NULL)) {
+          SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+        }
+        if (i!=4)
+          if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
+                                 i==0?"ex":"ey", SAFE_SQRT(sum_x2*sum_xp2-sqr(sum_xxp))/particles, NULL)) {
             SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-            }
-
-        if (watch->mode_code==WATCH_PARAMETERS) {
-            for (i=sum=0; i<particles; i++) {
-	        p = Po*(1+particle[i][5]);
-                sum += sqr(particle[i][4]/(p/sqrt(sqr(p)+1)*c_mks) - tc);
-	    }
-            if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
-                               "St", sqrt(sum/particles), NULL)) {
-                SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
-                SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-                }
-            }
-        }
+          }
+      }
+    }
+    
+    if (watch->mode_code==WATCH_PARAMETERS)
+      if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
+                             "el", rms_longitudinal_emittance(particle, particles, Po), NULL)) {
+        SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      }
+    /* time centroid and sigma */
+    for (i=p_sum=gamma_sum=sum=0; i<particles; i++) {
+      p = Po*(1+particle[i][5]);
+      p_sum     += p;
+      gamma_sum += sqrt(sqr(p)+1);
+      sum += particle[i][4]/(p/sqrt(sqr(p)+1)*c_mks) ;
+    }
+    if (particles)
+      tc = sum/particles;
+    else
+      tc = 0;
+    if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
+                           "Ct", tc, "dCt", tc-tc0,
+                           "pAverage", p_sum/particles, "pCentral", Po, 
+                           "KAverage", (gamma_sum/particles-1)*me_mev, NULL)) {
+      SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+    if (watch->mode_code==WATCH_PARAMETERS) {
+      for (i=sum=0; i<particles; i++) {
+        p = Po*(1+particle[i][5]);
+        sum += sqr(particle[i][4]/(p/sqrt(sqr(p)+1)*c_mks) - tc);
+      }
+      if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
+                             "St", particles?sqrt(sum/particles):0.0, NULL)) {
+        SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      }
+    }
 
     /* number of particles */
     if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
@@ -684,15 +688,15 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
                            "Transmission", (original_particles?((double)particles)/original_particles:(double)0.0),
                            "Pass", sample*watch->interval, 
                            "Step", step, NULL)) {
-        SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-        }
+      SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
     if (!SDDS_SetParameters(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
                             "Step", step, NULL)) {
-        SDDS_SetError("Problem setting parameter values for SDDS table (dump_watch_parameters)");
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-        }
-
+      SDDS_SetError("Problem setting parameter values for SDDS table (dump_watch_parameters)");
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+    
     if (sample==(n_passes-1)/watch->interval) {
       if (watch->flushInterval>0) {
         if (sample!=watch->flushSample && !SDDS_UpdatePage(&watch->SDDS_table, 0)) {
@@ -716,7 +720,7 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
       fprintf(stdout, "warning: problem fsync'ing watch point parameter output\n");
     
     log_exit("dump_watch_parameters");
-    }
+  }
 
 
 void dump_watch_FFT(WATCH *watch, long step, long pass, long n_passes, double **particle, long particles,

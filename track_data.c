@@ -34,6 +34,7 @@ char *entity_name[N_TYPES] = {
     "CSRCSBEND", "CSRDRIFT", "RFCW", "REMCOR", "MAPSOLENOID",
     "REFLECT", "CLEAN", "TWISS", "WIGGLER", "SCRIPT", "FLOOR",
     "LTHINLENS", "LMIRROR", "EMATRIX", "FRFMODE", "FTRFMODE",
+    "TFBPICKUP", "TFBDRIVER",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -151,6 +152,8 @@ and phase modulation.",
     "Explicit matrix input with data in the element definition, rather than in a file.",
     "One or more beam-driven TM monopole modes of an RF cavity, with data from a file.",
     "One or more beam-driven TM dipole modes of an RF cavity, with data from a file.",
+    "Pickup for a transverse feedback loop",
+    "Driver for a transverse feedback loop",
     } ;
 
 QUAD quad_example;
@@ -1643,7 +1646,53 @@ PARAMETER ematrix_param[N_EMATRIX_PARAMS]={
     {"T666", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ematrix_example.T[5][5][5]), NULL, 0.0, 0, ""},
     };
 
+TFBPICKUP tfbPickup_example;
 
+PARAMETER tfbpickup_param[N_TFBPICKUP_PARAMS] = {
+   {"ID", "", IS_STRING, 0, (long)((char*)&tfbPickup_example.ID), NULL, 0.0, 0, "System identifier"},
+   {"PLANE", "", IS_STRING, 0, (long)((char*)&tfbPickup_example.plane), "x", 0.0, 0, "\"x\" or \"y\""},
+   {"A0", "", IS_DOUBLE, 0, (long)((char*)&tfbPickup_example.a[0]), NULL, 1.0, 0, "Filter coefficient"},
+   {"A1", "", IS_DOUBLE, 0, (long)((char*)&tfbPickup_example.a[1]), NULL, 0.0, 0, "Filter coefficient"},
+   {"A2", "", IS_DOUBLE, 0, (long)((char*)&tfbPickup_example.a[2]), NULL, 0.0, 0, "Filter coefficient"},
+   {"A3", "", IS_DOUBLE, 0, (long)((char*)&tfbPickup_example.a[3]), NULL, 0.0, 0, "Filter coefficient"},
+   {"A4", "", IS_DOUBLE, 0, (long)((char*)&tfbPickup_example.a[4]), NULL, 0.0, 0, "Filter coefficient"},
+   {"A5", "", IS_DOUBLE, 0, (long)((char*)&tfbPickup_example.a[5]), NULL, 0.0, 0, "Filter coefficient"},
+   {"A6", "", IS_DOUBLE, 0, (long)((char*)&tfbPickup_example.a[6]), NULL, 0.0, 0, "Filter coefficient"},
+   {"A7", "", IS_DOUBLE, 0, (long)((char*)&tfbPickup_example.a[7]), NULL, 0.0, 0, "Filter coefficient"},
+   {"A8", "", IS_DOUBLE, 0, (long)((char*)&tfbPickup_example.a[8]), NULL, 0.0, 0, "Filter coefficient"},
+   {"A9", "", IS_DOUBLE, 0, (long)((char*)&tfbPickup_example.a[9]), NULL, 0.0, 0, "Filter coefficient"},
+   {"A10", "", IS_DOUBLE, 0, (long)((char*)&tfbPickup_example.a[10]), NULL, 0.0, 0, "Filter coefficient"},
+   {"A11", "", IS_DOUBLE, 0, (long)((char*)&tfbPickup_example.a[11]), NULL, 0.0, 0, "Filter coefficient"},
+   {"A12", "", IS_DOUBLE, 0, (long)((char*)&tfbPickup_example.a[12]), NULL, 0.0, 0, "Filter coefficient"},
+   {"A13", "", IS_DOUBLE, 0, (long)((char*)&tfbPickup_example.a[13]), NULL, 0.0, 0, "Filter coefficient"},
+   {"A14", "", IS_DOUBLE, 0, (long)((char*)&tfbPickup_example.a[14]), NULL, 0.0, 0, "Filter coefficient"},
+} ;
+
+TFBDRIVER tfbDriver_example;
+
+PARAMETER tfbdriver_param[N_TFBDRIVER_PARAMS] = {
+   {"ID", "", IS_STRING, 0, (long)((char*)&tfbDriver_example.ID), NULL, 0.0, 0, "System identifier"},
+   {"STRENGTH", "", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.strength), NULL, 0.0, 0, "Strength factor"},
+   {"KICK_LIMIT", "", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.kickLimit), NULL, 0.0, 0, "Limit on applied kick"},
+   {"DELAY", "", IS_LONG, 0, (long)((char*)&tfbDriver_example.delay), NULL, 0.0, 0, "Delay (in turns)"},
+   {"OUTPUT_FILE", "", IS_STRING, 0, (long)((char*)&tfbDriver_example.outputFile), NULL, 0.0, 0, "File for logging filter output and driver output"},
+   {"A0", "", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.a[0]), NULL, 1.0, 0, "Filter coefficient"},
+   {"A1", "", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.a[1]), NULL, 0.0, 0, "Filter coefficient"},
+   {"A2", "", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.a[2]), NULL, 0.0, 0, "Filter coefficient"},
+   {"A3", "", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.a[3]), NULL, 0.0, 0, "Filter coefficient"},
+   {"A4", "", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.a[4]), NULL, 0.0, 0, "Filter coefficient"},
+   {"A5", "", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.a[5]), NULL, 0.0, 0, "Filter coefficient"},
+   {"A6", "", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.a[6]), NULL, 0.0, 0, "Filter coefficient"},
+   {"A7", "", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.a[7]), NULL, 0.0, 0, "Filter coefficient"},
+   {"A8", "", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.a[8]), NULL, 0.0, 0, "Filter coefficient"},
+   {"A9", "", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.a[9]), NULL, 0.0, 0, "Filter coefficient"},
+   {"A10", "", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.a[10]), NULL, 0.0, 0, "Filter coefficient"},
+   {"A11", "", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.a[11]), NULL, 0.0, 0, "Filter coefficient"},
+   {"A12", "", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.a[12]), NULL, 0.0, 0, "Filter coefficient"},
+   {"A13", "", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.a[13]), NULL, 0.0, 0, "Filter coefficient"},
+   {"A14", "", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.a[14]), NULL, 0.0, 0, "Filter coefficient"},
+} ;
+ 
 /* array of parameter structures */
 
 #define MAT_LEN     HAS_MATRIX|HAS_LENGTH
@@ -1748,6 +1797,8 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     {  N_EMATRIX_PARAMS,  HAS_MATRIX|HAS_RF_MATRIX,  sizeof(EMATRIX),    ematrix_param     }, 
     {  N_FRFMODE_PARAMS,         0,      sizeof(FRFMODE),   frfmode_param    },
     { N_FTRFMODE_PARAMS,         0,     sizeof(FTRFMODE),  ftrfmode_param    },
+    { N_TFBPICKUP_PARAMS,         0,     sizeof(TFBPICKUP),  tfbpickup_param    },
+    { N_TFBDRIVER_PARAMS,         0,     sizeof(TFBDRIVER),  tfbdriver_param    },
 } ;
  
 

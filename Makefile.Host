@@ -70,7 +70,7 @@ elegant_SRCS = 	alpha_data.c alpha_matrix.c amplif.c analyze.c aperture_search.c
 		ibs_tracking.c zibs.c wake.c \
 		trwake.c circles.c tubend.c sasefelmx.c sasefel.c alter.c \
 		sliceAnalysis.c divideElements.c transmuteElements.c \
-		frfmode.c ftrfmode.c 
+		frfmode.c ftrfmode.c tfeedback.c
 
 sddsemitmeas_SRCS = sddsemitmeas.c
 

@@ -556,7 +556,9 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_EMATRIX   84
 #define T_FRFMODE   85
 #define T_FTRFMODE  86
-#define N_TYPES     87
+#define T_TFBPICKUP 87
+#define T_TFBDRIVER 88
+#define N_TYPES     89
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -650,6 +652,8 @@ extern char *entity_text[N_TYPES];
 #define N_EMATRIX_PARAMS (1+6+6*6+6*21)
 #define N_FRFMODE_PARAMS  7
 #define N_FTRFMODE_PARAMS 10
+#define N_TFBPICKUP_PARAMS 17
+#define N_TFBDRIVER_PARAMS 20
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -1894,6 +1898,37 @@ typedef struct {
   double tilt, yaw, pitch;
 } LMIRROR;
 
+
+#define TFB_FILTER_LENGTH 15
+/* Transverse Feedback Pickup element */
+extern PARAMETER tfbpickup_param[N_TFBPICKUP_PARAMS];
+typedef struct {
+  char *ID, *plane;
+  double a[TFB_FILTER_LENGTH];
+  /* internal parameters */
+  long initialized, yPlane, filterLength;
+  double filterOutput;
+  /* circular buffer for storing past readings */
+  double data[TFB_FILTER_LENGTH];
+} TFBPICKUP;
+
+/* Transverse Feedback Driver element */
+extern PARAMETER tfbdriver_param[N_TFBDRIVER_PARAMS];
+typedef struct {
+  char *ID;
+  double strength, kickLimit;
+  long delay;
+  char *outputFile;
+  double a[TFB_FILTER_LENGTH];
+  /* internal parameters */
+  long initialized, filterLength;
+  TFBPICKUP *pickup;
+  SDDS_DATASET SDDSout;
+  /* circular buffer for storing output signal */
+  long maxDelay;
+  double *driverSignal;
+} TFBDRIVER;
+
 /* macros for bending magnets */ 
 #define SAME_BEND_PRECEDES 1 
 #define SAME_BEND_FOLLOWS 2 
@@ -2636,6 +2671,8 @@ void setupTransmuteElements(NAMELIST_TEXT *nltext, RUN *run,
                             LINE_LIST *beamline);
 
 
-
-
+void transverseFeedbackPickup(TFBPICKUP *tfbp, double **part, long np, long pass);
+void initializeTransverseFeedbackPickup(TFBPICKUP *tfbp);
+void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part, long np, LINE_LIST *beamline, long pass, long n_passes, char *rootname);
+void initializeTransverseFeedbackDriver(TFBDRIVER *tfbd, LINE_LIST *beamline, long n_passes, char *rootname);
 

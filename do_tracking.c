@@ -825,6 +825,14 @@ long do_tracking(
             break;
 	  case T_FLOORELEMENT:
 	    break;
+          case T_TFBPICKUP:
+            if (!(flags&TEST_PARTICLES))
+              transverseFeedbackPickup((TFBPICKUP*)eptr->p_elem, coord, n_to_track, i_pass);
+            break;
+          case T_TFBDRIVER:
+            if (!(flags&TEST_PARTICLES))
+              transverseFeedbackDriver((TFBDRIVER*)eptr->p_elem, coord, n_to_track, beamline, i_pass, n_passes, run->rootname);
+            break;
           default:
             fprintf(stdout, "programming error: no tracking statements for element %s (type %s)\n",
                     eptr->name, entity_name[eptr->type]);
