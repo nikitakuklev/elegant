@@ -296,10 +296,12 @@ char **argv;
     bomb("no input file was given", USAGE);
 
 #if defined(CONDOR_COMPILE)
-    sprintf(s, "%s.ckpt", inputfile);
-    init_image_with_file_name(s);
+  sprintf(s, "%s.ckpt", inputfile);
+  init_image_with_file_name(s);
 #else
-    signal(SIGUSR2, SIG_IGN);
+#if defined(UNIX)
+  signal(SIGUSR2, SIG_IGN);
+#endif
 #endif
   
   initialize_structures(&run_conditions, &run_control, &error_control, &correct, &beam, &output_data,
