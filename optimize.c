@@ -979,7 +979,8 @@ double optimization_function(double *value, long *invalid)
     /* copy the result into the "hidden" slot in the varied quantities array for output
      * to final properties file
      */
-    variables->varied_quan_value[variables->n_variables+1] = result;    
+    variables->varied_quan_value[variables->n_variables+1] = 
+      optimization_data->mode==OPTIM_MODE_MAXIMUM?-1*result:result;    
     if (force_output || (control->i_step-2)%output_sparsing_factor==0)
       do_track_beam_output(run, control, error, variables, beamline, beam, output, optim_func_flags,
                            charge);
