@@ -7,6 +7,9 @@
  */
 #include "mdb.h"
 #include "track.h"
+#if defined(__BORLANDC__)
+#define DBL_MAX         1.7976931348623158e+308 /* max value */
+#endif
 #include "optimize.h"
 #include "match_string.h"
 
