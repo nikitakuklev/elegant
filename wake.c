@@ -36,13 +36,17 @@ void track_through_wake(double **part, long np, WAKE *wakeData, double *PoInput,
 
   /* Compute time coordinate of each particle */
   tmean = computeTimeCoordinates(time, Po, part, np);
+  find_min_max(&tmin, &tmax, time, np);
+  if ((tmax-tmin) > (wakeData->t[wakeData->wakePoints-1]-wakeData->t[0]))
+    bomb("the beam is longer than the longitudinal wake function.  This would produce unphysical results.",
+         NULL);
+
   dt = wakeData->dt;
   if (wakeData->n_bins) {
     nb = wakeData->n_bins;
     tmin = tmean-dt*nb/2.0;
   }
   else {
-    find_min_max(&tmin, &tmax, time, np);
     nb = (tmax-tmin)/dt+3;
     tmin -= dt;
     tmax += dt;
@@ -160,10 +164,8 @@ void set_up_wake(WAKE *wakeData, RUN *run, long pass, long particles, CHARGE *ch
   if (tmin==tmax)
     bomb("no time span in WAKE data", NULL);
   if (tmin!=0)
-    fprintf(stdout, "warning: WAKE function does not start at t=0.  Offseting the function!\n");
-    fflush(stdout);
+    bomb("WAKE function does not start at t=0.", NULL);
   wakeData->dt = (tmax-tmin)/(wakeData->wakePoints-1);
-
 }
 
 void convolveArrays(double *output, long outputs, 

@@ -35,17 +35,19 @@ void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
 
   /* Compute time coordinate of each particle */
   tmean = computeTimeCoordinates(time, Po, part, np);
+  find_min_max(&tmin, &tmax, time, np);
+  if ((tmax-tmin) > (wakeData->t[wakeData->wakePoints-1]-wakeData->t[0]))
+    bomb("the beam is longer than the transverse wake function.  This would produce unphysical results.",
+         NULL);
   dt = wakeData->dt;
   if (wakeData->n_bins) {
     tmin = tmean-dt*wakeData->n_bins/2.0;
     nb = wakeData->n_bins;
   }
   else {
-    find_min_max(&tmin, &tmax, time, np);
     nb = (tmax-tmin)/dt+3;
     tmin -= dt;
     tmax += dt;
-    fprintf(stderr, "Using %ld bins for trwake\n", nb);
   }
   
   if (nb>max_n_bins) {
@@ -184,8 +186,7 @@ void set_up_trwake(TRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
   if (tmin==tmax)
     bomb("no time span in TRWAKE data", NULL);
   if (tmin!=0)
-    fprintf(stdout, "warning: TRWAKE function does not start at t=0.  Offseting the function!\n");
-    fflush(stdout);
+    bomb("TRWAKE function does not start at t=0.\n", NULL);
   wakeData->dt = (tmax-tmin)/(wakeData->wakePoints-1);
 }
 
