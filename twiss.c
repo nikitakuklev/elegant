@@ -811,6 +811,8 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
   
   log_entry("compute_twiss_parameters");
 
+  *unstable = 0;
+  
   if (!beamline->twiss0)
     beamline->twiss0 = tmalloc(sizeof(*beamline->twiss0));
 
