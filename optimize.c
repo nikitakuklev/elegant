@@ -1031,6 +1031,15 @@ double optimization_function(double *value, long *invalid)
       if (optimization_data->verbose && optimization_data->fp_log) {
         fprintf(optimization_data->fp_log, "equation evaluates to %23.15e\n\n", result);
         fflush(optimization_data->fp_log);
+        if (optimization_data->terms) {
+          fprintf(optimization_data->fp_log, "Terms of equation: \n");
+          for (i=0; i<optimization_data->terms; i++) {
+            rpn_clear();
+            fprintf(optimization_data->fp_log, "%20s: %23.15e\n",
+                    optimization_data->term[i],
+                    rpn(optimization_data->term[i]));
+          }
+        }
       }
       
       if (optimization_data->mode==OPTIM_MODE_MAXIMUM)
