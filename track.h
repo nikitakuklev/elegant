@@ -2184,6 +2184,7 @@ extern char *brief_number(double x, char *buffer);
 extern long track_beam(RUN *run, VARY *control, ERRORVAL *errcon, OPTIM_VARIABLES *optim,
                        LINE_LIST *beamline, BEAM *beam, OUTPUT_FILES *output, unsigned long flags,
                        long delayOutput, double *finalCharge);
+extern BEAM *getBeamBeingTracked();
 extern void do_track_beam_output(RUN *run, VARY *control, ERRORVAL *errcon, OPTIM_VARIABLES *optim,
                                  LINE_LIST *beamline, BEAM *beam, OUTPUT_FILES *output, unsigned long flags,
                                  double finalCharge);

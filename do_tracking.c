@@ -1887,8 +1887,22 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
   if (!(npNew=SDDS_RowCount(&SDDSin))) {
     return 0;
   }
-  if (npNew>np)
-    SDDS_Bomb("Script increased number of particles, which is not presently allowed.  Suggest randomly selecting particles to limit the number.");
+  if (npNew>np) {
+    BEAM *beam;
+    beam = getBeamBeingTracked();
+    if (beam->particle!=beam->original)
+      free_zarray_2d((void**)(*part), beam->n_particle, 7);
+    if (beam->accepted)  {
+      /* this data is invalid, actually */
+      free_zarray_2d((void**)beam->accepted, beam->n_particle, 7);
+      beam->accepted = (double**)zarray_2d(sizeof(double), npNew, 7);
+      for (i=0; i<npNew; i++)
+        for (j=0; j<7; j++)
+          beam->accepted[i][j] = -1;
+    }
+    beam->particle = *part = (double**)zarray_2d(sizeof(double), npNew, 7);
+    beam->n_particle = npNew;
+  }
   for (i=0; i<6; i++) {
     if (!(data = SDDS_GetColumnInDoubles(&SDDSin, dataname[i]))) {
       SDDS_SetError("Unable to read script output file");
@@ -1939,6 +1953,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
 
   /* clean up */
   free(cmdBuffer0);
+  free(cmdBuffer1);
   
   return npNew;
 }
