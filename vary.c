@@ -371,6 +371,8 @@ long vary_beamline(VARY *_control, ERROR *errcon, RUN *run, LINE_LIST *beamline)
         if (i) {
             beamline->flags &= ~BEAMLINE_CONCAT_CURRENT;
             beamline->flags &= ~BEAMLINE_TWISS_CURRENT;
+            beamline->flags &= ~BEAMLINE_RADINT_CURRENT;
+            
             }
         if (i && beamline->matrix) {
             free_matrices(beamline->matrix);
@@ -397,6 +399,7 @@ long vary_beamline(VARY *_control, ERROR *errcon, RUN *run, LINE_LIST *beamline)
         if (i) {
             beamline->flags &= ~BEAMLINE_CONCAT_CURRENT;
             beamline->flags &= ~BEAMLINE_TWISS_CURRENT;
+            beamline->flags &= ~BEAMLINE_RADINT_CURRENT;
             }
         if (i && beamline->matrix) {
             free_matrices(beamline->matrix);
@@ -439,6 +442,7 @@ long perturb_beamline(VARY *_control, ERROR *errcon, RUN *run, LINE_LIST *beamli
         if (i) {
             beamline->flags &= ~BEAMLINE_CONCAT_CURRENT;
             beamline->flags &= ~BEAMLINE_TWISS_CURRENT;
+            beamline->flags &= ~BEAMLINE_RADINT_CURRENT;
             }
         if (i && beamline->matrix) {
             free_matrices(beamline->matrix);
