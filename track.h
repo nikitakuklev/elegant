@@ -603,7 +603,7 @@ extern char *entity_text[N_TYPES];
 #define N_MODRF_PARAMS 13
 #define N_SREFFECTS_PARAMS 13
 #define N_ZTRANSVERSE_PARAMS 19
-#define N_IBSCATTER_PARAMS 3
+#define N_IBSCATTER_PARAMS 7
 #define N_FMULT_PARAMS 9
 #define N_BMAPXY_PARAMS 5
 #define N_WAKE_PARAMS 12
@@ -1696,6 +1696,8 @@ extern PARAMETER IBSCATTER_param[N_IBSCATTER_PARAMS];
 
 typedef struct {
   double coupling, fraction, charge;
+  long do_x, do_y, do_z;
+  long smooth;
   /* internal use only */
   double *s, *betax, *alphax, *betay, *alphay, *etax, *etaxp;
   long elements;
@@ -1760,20 +1762,20 @@ typedef struct {
 #define TRACK_PREVIOUS_BUNCH 1
 
 /* flags for do_tracking/track_beam flag word */
-#define FINAL_SUMS_ONLY          0x0001
-#define TEST_PARTICLES           0x0002
-#define BEGIN_AT_RECIRC          0x0004
-#define TEST_PARTICLE_LOSSES     0x0008
-#define SILENT_RUNNING           0x0010
-#define TIME_DEPENDENCE_OFF      0x0020
-#define INHIBIT_FILE_OUTPUT      0x0040
-#define LINEAR_CHROMATIC_MATRIX  0x0080
-#define LONGITUDINAL_RING_ONLY   0x0100
-#define FIRST_BEAM_IS_FIDUCIAL   0x0200
-#define FIDUCIAL_BEAM_SEEN       0x0400
-#define PRECORRECTION_BEAM       0x0800
-#define RESTRICT_FIDUCIALIZATION 0x1000
-
+#define FINAL_SUMS_ONLY          0x0001UL
+#define TEST_PARTICLES           0x0002UL
+#define BEGIN_AT_RECIRC          0x0004UL
+#define TEST_PARTICLE_LOSSES     0x0008UL
+#define SILENT_RUNNING           0x0010UL
+#define TIME_DEPENDENCE_OFF      0x0020UL
+#define INHIBIT_FILE_OUTPUT      0x0040UL
+#define LINEAR_CHROMATIC_MATRIX  0x0080UL
+#define LONGITUDINAL_RING_ONLY   0x0100UL
+#define FIRST_BEAM_IS_FIDUCIAL   0x0200UL
+#define FIDUCIAL_BEAM_SEEN       0x0400UL
+#define PRECORRECTION_BEAM       0x0800UL
+#define RESTRICT_FIDUCIALIZATION 0x1000UL
+#define IBS_ONLY_TRACKING        0x2000UL
 /* return values for get_reference_phase and check_reference_phase */
 #define REF_PHASE_RETURNED 1
 #define REF_PHASE_NOT_SET  2

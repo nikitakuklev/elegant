@@ -359,7 +359,8 @@ long do_tracking(
                                       eptrCLMatrix->matrix,
                                       beamline->alpha);
         }
-        else if (entity_description[eptr->type].flags&MATRIX_TRACKING) {
+        else if (entity_description[eptr->type].flags&MATRIX_TRACKING &&
+		 !(flags&IBS_ONLY_TRACKING)) {
           if (!(entity_description[eptr->type].flags&HAS_MATRIX))
             bomb("attempt to matrix-multiply for element with no matrix!",  NULL);
           if (!eptr->matrix) {
@@ -382,12 +383,29 @@ long do_tracking(
           }
         }
         else {
+	  long type;
           if (run->print_statistics>1 && !(flags&TEST_PARTICLES)) {
             fprintf(stdout, "Tracking element: ");
             fflush(stdout);
             print_elem(stdout, eptr);
           }
-          switch (eptr->type) {
+	  type = eptr->type;
+	  if (flags&IBS_ONLY_TRACKING) {
+	    switch (type) {
+	    case T_IBSCATTER:
+	    case T_WATCH:
+	    case T_CLEAN:
+	    case T_RCOL:
+	    case T_CHARGE:
+	      break;
+	    default:
+	      type = -1;
+	      break;
+	    }
+	  }
+          switch (type) {
+	  case -1:
+	    break;
           case T_CHARGE:
             if (i_pass==0) {
               if (elementsTracked!=0 && !warnedAboutChargePosition) {

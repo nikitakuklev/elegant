@@ -648,7 +648,8 @@ char **argv;
               track_beam(&run_conditions, &run_control, &error_control, &optimize.variables, 
                          beamline, &beam, &output_data, 
                          (use_linear_chromatic_matrix?LINEAR_CHROMATIC_MATRIX:0)+
-                         (longitudinal_ring_only?LONGITUDINAL_RING_ONLY:0), 0, &finalCharge);
+                         (longitudinal_ring_only?LONGITUDINAL_RING_ONLY:0)+
+			 (ibs_only?IBS_ONLY_TRACKING:0), 0, &finalCharge);
               if (parameters)
                 dumpLatticeParameters(parameters, &run_conditions, beamline);
             }

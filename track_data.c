@@ -1157,6 +1157,10 @@ PARAMETER ibscatter_param[N_IBSCATTER_PARAMS] = {
   {"COUPLING", "", IS_DOUBLE, 0, (long)((char *)&ibs_example.coupling), NULL, 1.0, 0, "x-y coupling"},
   {"FRACTION", "", IS_DOUBLE, 0, (long)((char *)&ibs_example.fraction), NULL, 1.0, 0, "fraction of full effect from each instance"},
   {"CHARGE", "C", IS_DOUBLE, 0, (long)((char *)&ibs_example.charge), NULL, 0.0, 0, "beam charge (or use CHARGE element)"},
+  {"DO_X", "", IS_LONG, 0, (long)((char *)&ibs_example.do_x), NULL, 0.0, 1, "do x-plane scattering?"},
+  {"DO_Y", "", IS_LONG, 0, (long)((char *)&ibs_example.do_y), NULL, 0.0, 1, "do y-plane scattering?"},
+  {"DO_Z", "", IS_LONG, 0, (long)((char *)&ibs_example.do_z), NULL, 0.0, 1, "do z-plane scattering?"},
+  {"SMOOTH", "", IS_LONG, 0, (long)((char *)&ibs_example.smooth), NULL, 0.0, 1, "Use smooth method instead of random numbers?"},
 };
 
 WAKE wake_example;

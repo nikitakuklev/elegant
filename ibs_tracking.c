@@ -10,6 +10,8 @@
 #define DEBUG 0
 
 void setup_track_IBS(IBSCATTER *IBS, ELEMENT_LIST *element);
+void inflateEmittance(double **coord, double Po, 
+		      long offset, long np, double factor);
 
 #define DEBUG 1
 
@@ -82,28 +84,81 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
                  );
   RNSigma[0] = RNSigma[1] = RNSigma[2] = 0;
   dT = IBS->revolutionLength/vz;
-  if (xGrowthRate>0)
-    RNSigma[0] = sqrt((sqr(1+dT*xGrowthRate)-1))*sqrt(xBeamParam.s22);
-  if (yGrowthRate>0)
-    RNSigma[1] = sqrt((sqr(1+dT*yGrowthRate)-1))*sqrt(yBeamParam.s22);
-  if (zGrowthRate>0)
-    RNSigma[2] = sqrt((sqr(1+dT*zGrowthRate)-1))*sigmaDelta;
+  if (IBS->fraction>0)
+    dT *= IBS->fraction;
+  if (!IBS->smooth) {
+    if (IBS->do_x && xGrowthRate>0)
+      RNSigma[0] = sqrt((sqr(1+dT*xGrowthRate)-1))*sqrt(xBeamParam.s22);
+    if (IBS->do_y && yGrowthRate>0)
+      RNSigma[1] = sqrt((sqr(1+dT*yGrowthRate)-1))*sqrt(yBeamParam.s22);
+    if (IBS->do_z && zGrowthRate>0)
+      RNSigma[2] = sqrt((sqr(1+dT*zGrowthRate)-1))*sigmaDelta;
+    for (icoord=1, ihcoord=0; icoord<6; icoord+=2, ihcoord++) {
+      if (RNSigma[ihcoord])
+	for (ipart=0; ipart<np; ipart++) {
+	  coord[ipart][icoord] 
+	    += gauss_rn_lim(0.0, RNSigma[ihcoord], 2.0, random_2);
+	}
+    }
+  } else {
+    /* inflate each emittance by the prescribed factor */
+    inflateEmittance(coord, Po, 0, np, (1+dT*xGrowthRate));
+    inflateEmittance(coord, Po, 2, np, (1+dT*yGrowthRate));
+    inflateEmittance(coord, Po, 4, np, (1+dT*zGrowthRate));
+  }
 #if DEBUG
-  fprintf(fpdeb, "%ld %le %le %le %le %le %le %le %le %le %le %le %le\n",
-          pass++, xGrowthRate, yGrowthRate, zGrowthRate, 
-	  RNSigma[0], RNSigma[1], RNSigma[2],
-	  emitx, emity, sigmaz*sigmaDelta, sigmaz, sigmaDelta,
-	  charge?
-	  fabs(charge->macroParticleCharge*np):
-	  fabs(IBS->charge));
-  fflush(fpdeb);
+    fprintf(fpdeb, "%ld %le %le %le %le %le %le %le %le %le %le %le %le\n",
+	    pass++, xGrowthRate, yGrowthRate, zGrowthRate, 
+	    RNSigma[0], RNSigma[1], RNSigma[2],
+	    emitx, emity, sigmaz*sigmaDelta, sigmaz, sigmaDelta,
+	    charge?
+	    fabs(charge->macroParticleCharge*np):
+	    fabs(IBS->charge));
+    fflush(fpdeb);
 #endif
+}
 
-  for (icoord=1, ihcoord=0; icoord<6; icoord+=2, ihcoord++) {
-    if (RNSigma[ihcoord])
-      for (ipart=0; ipart<np; ipart++) {
-        coord[ipart][icoord] += RNSigma[ihcoord]*gauss_rn(0, random_2);
-      }
+void inflateEmittance(double **coord, double Po, 
+		      long offset, long np, double factor)
+{
+  long i;
+  double factorSqrt;
+  if (!np)
+    return;
+  factorSqrt = sqrt(factor);
+  if (offset==4) {
+    /* longitudinal */
+    double tc, dpc, *time, beta, p;
+    time = tmalloc(sizeof(*time)*np);
+    for (i=dpc=tc=0; i<np; i++) {
+      dpc += coord[i][5];
+      p = Po*(1+coord[i][5]);
+      beta = p/sqrt(p*p+1);
+      time[i] = coord[i][4]/beta;
+      tc += time[i];
+    }
+    tc /= np;
+    dpc /= np;
+    for (i=0; i<np; i++) {
+      time[i] = (time[i]-tc)*factorSqrt+tc;
+      coord[i][5] = (coord[i][5]-dpc)*factorSqrt+dpc;
+      p = Po*(1+coord[i][5]);
+      beta = p/sqrt(p*p+1);
+      coord[i][4] = time[i]*beta;
+    }
+    free(time);
+  } else {
+    double c[2];
+    for (i=c[0]=c[1]=0; i<np; i++) {
+      c[0] += coord[i][offset+0];
+      c[1] += coord[i][offset+1];
+    }
+    c[0] /= np;
+    c[1] /= np;
+    for (i=0; i<np; i++) {
+      coord[i][offset+0] = (coord[i][offset+0]-c[0])*factorSqrt+c[0];
+      coord[i][offset+1] = (coord[i][offset+1]-c[1])*factorSqrt+c[1];
+    }
   }
 }
 
