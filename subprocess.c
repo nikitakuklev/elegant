@@ -83,7 +83,7 @@ void executeCshCommand(char *cmd)
     pid = getpid();
   }
   
-  fprintf(fp, "%s\nkill -USR1 %d\n", cmd, pid);
+  fprintf(fp, "%s\nsleep 2\nkill -USR1 %d\n", cmd, pid);
   fflush(fp);
 
 #if !defined(_WIN32)
