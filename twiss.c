@@ -21,8 +21,12 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
 void LoadStartingTwissFromFile(double *betax, double *betay, double *alphax, double *alphay,
                                double *etax, double *etay, double *etaxp, double *etayp,
                                char *filename, char *elementName, long elementOccurrence);
-void computeTuneShiftWithAmplitude(double *dnu_dAx, double *dnu_dAy,
-                                   TWISS *twiss, double *tune, VMATRIX *M);
+void computeTuneShiftWithAmplitude(double *dnux_dA, double *dnuy_dA,
+                                   TWISS *twiss, double *tune, VMATRIX *M,
+				   double *startingCoord);
+void computeTunesFromTracking(double *tune, VMATRIX  *M,
+			      double *startingCoord, 
+			      double xAmplitude, double yAmplitude, long turns);
 
 static long twissConcatOrder = 3;
 
@@ -206,7 +210,7 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
   M1 = tmalloc(sizeof(*M1));
   M2 = tmalloc(sizeof(*M2));
   initialize_matrices(M1, 1);
-  initialize_matrices(M2, run->default_order);
+  initialize_matrices(M2, twissConcatOrder);
   if (traj) {
     for (i=0; i<6; i++) {
       path[i] = traj[i];
@@ -880,7 +884,7 @@ long run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, lon
                            beta_y, alpha_y, eta_y, etap_y, &unstable);
   elast = beamline->elast;
 
-  if (run->default_order>=2) {
+  if (twissConcatOrder) {
 #ifdef DEBUG
     fprintf(stdout, "computing chromaticities\n");
     fflush(stdout);
@@ -1041,12 +1045,12 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
             beamline->matrix, beamline->matrix->C, beamline->matrix->R, beamline->matrix->T);
     fflush(stdout);
 #endif
-    if (run->default_order>=2 && !(beamline->matrix->T))
+    if (twissConcatOrder>=2 && !(beamline->matrix->T))
       bomb("logic error: T matrix is NULL on return from compute_periodic_twiss", NULL);
   }
   else {
     VMATRIX *M1;
-    if (run->default_order>1 && starting_coord) {
+    if (twissConcatOrder>1 && starting_coord) {
       M1 = tmalloc(sizeof(*M1));
       initialize_matrices(M1, 1);
       M1->C[0] = starting_coord[0];
@@ -1075,7 +1079,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
   beamline->twiss0->etay   = etay;
   beamline->twiss0->etapy  = etapy;
 
-  if (run->default_order>=2 && !(beamline->matrix->T))
+  if (twissConcatOrder>=2 && !(beamline->matrix->T))
     bomb("logic error: beamline T matrix is NULL in compute_twiss_parameters", NULL);
 
 #ifdef DEBUG
@@ -1127,7 +1131,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
     if (!(M = beamline->matrix))
       bomb("logic error: revolution matrix is NULL in compute_twiss_parameters", NULL);
 
-    if (run->default_order>=2) {
+    if (twissConcatOrder>1) {
 #ifdef DEBUG
       fprintf(stdout, "computing chromaticities\n");
       fflush(stdout);
@@ -1136,7 +1140,8 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
         bomb("logic error: T matrix is NULL in compute_twiss_parameters", NULL);
       computeChromaticities(&chromx, &chromy, &dbetax, &dbetay, &dalphax, &dalphay, beamline->twiss0, M);
       computeTuneShiftWithAmplitude(beamline->dnux_dA, beamline->dnuy_dA,
-                                    beamline->twiss0, beamline->tune, M);
+                                    beamline->twiss0, beamline->tune, M,
+				    starting_coord); 
     }
   }
   else {
@@ -1157,12 +1162,13 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
     etay = elast->twiss->etay;
     etapy = elast->twiss->etapy;
 
-    if (run->default_order>=2) {
+    if (twissConcatOrder>=2) {
       if (!(M->T))
         bomb("logic error: T matrix is NULL in compute_twiss_parameters", NULL);
       computeChromaticities(&chromx, &chromy, &dbetax, &dbetay, &dalphax, &dalphay, beamline->twiss0, M);
       computeTuneShiftWithAmplitude(beamline->dnux_dA, beamline->dnuy_dA,
-                                    beamline->twiss0, beamline->tune, M);
+                                    beamline->twiss0, beamline->tune, M,
+				    starting_coord); 
 #ifdef DEBUG
       fprintf(stdout, "chomaticities: %e, %e\n", chromx, chromy);
       fflush(stdout);
@@ -1762,52 +1768,113 @@ double QElement(double ****Q, long i1, long i2, long i3, long i4)
 
 
 void computeTuneShiftWithAmplitude(double *dnux_dA, double *dnuy_dA,
-                                   TWISS *twiss, double *tune, VMATRIX *M)
+                                   TWISS *twiss, double *tune, VMATRIX *M,
+				   double *startingCoord)
 {
-  double dR11, dR22, dR12;
-  double theta, C, S;
-  long plane, other, i, j, io, jo;
-  double beta[2], alpha[2], shift[2];
-  double coef11, coef12, coef22, trial;
-  
-  if (!(M->Q)) {
-    dnux_dA[0] = dnux_dA[1] = -1;
-    dnuy_dA[0] = dnuy_dA[1] = -1;
+  long turns = 50, trials = 8;
+  double result[4], lastResult[4], maxError, maxResult;
+  double tune0[2], tune_dx[2], tune_dy[2], accuracy;
+  long i;
+
+  if (tune_shift_with_amplitude_accuracy<=0) {
+    dnux_dA[0] = dnux_dA[1] = 0;
+    dnuy_dA[0] = dnuy_dA[1] = 0;
     return;
   }
+  accuracy = tune_shift_with_amplitude_accuracy;
 
-  beta[0] = twiss->betax;
-  beta[1] = twiss->betay;
-  alpha[0] = twiss->alphax;
-  alpha[1] = twiss->alphay;
+  /* use tracking and NAFF */
 
-  for (plane=0; plane<2; plane++) {
-    for (other=0; other<2; other++) {
-      shift[other] = 0;
-      i = (j = 2*plane)+1;
-      io = (jo = 2*other)+1;
-      coef11 = QElement(M->Q, i, i, io, io) + QElement(M->Q, j, j, io, io);
-      coef12 = QElement(M->Q, i, i, io, jo) + QElement(M->Q, j, j, io, jo);
-      coef22 = QElement(M->Q, i, i, jo, jo) + QElement(M->Q, j, j, jo, jo);
-      for (i=theta=0; i<72; i++, theta+=PIx2/72) {
-        C = cos(theta);
-        S = sin(theta) + alpha[other]*C;
-        trial = 
-          coef11*beta[other]*sqr(C) - coef12*C*S + coef22*sqr(S)/beta[other];
-        if (fabs(trial) > fabs(shift[other]))
-          shift[other] = trial;
+  lastResult[0] = result[0] = -1;
+  while (trials) {
+    if (lastResult[0]>0) {
+      maxError = maxResult = -1;
+      for (i=0; i<4; i++) {
+	if (fabs(result[i])>maxResult)
+	  maxResult = fabs(result[i]);
+	if (fabs(lastResult[i]-result[i])>maxError)
+	  maxError = fabs(lastResult[i]-result[i]);
       }
+      if (maxResult!=0 && maxError/maxResult<=accuracy)
+	break;
     }
-    if (plane==0) {
-      dnux_dA[0] = shift[0]/(-PIx2*sin(PI*tune[0]));
-      dnux_dA[0] = shift[1]/(-PIx2*sin(PI*tune[0]));
-    }
-    else {
-      dnuy_dA[0] = shift[0]/(-PIx2*sin(PI*tune[1]));
-      dnuy_dA[0] = shift[1]/(-PIx2*sin(PI*tune[1]));
-    }
+    for (i=0; i<4; i++)
+      lastResult[i] = result[i];
+    /* (0, 0) */
+    computeTunesFromTracking(tune0, M, startingCoord,
+			     tune_shift_with_amplitude_x0,
+			     tune_shift_with_amplitude_y0,
+			     turns);
+    /* (dx, 0) */
+    computeTunesFromTracking(tune_dx, M, startingCoord,
+			     tune_shift_with_amplitude_x1,
+			     tune_shift_with_amplitude_y0,
+			     turns);
+
+    /* (0, dy) */
+    computeTunesFromTracking(tune_dy, M, startingCoord,
+			     tune_shift_with_amplitude_x0,
+			     tune_shift_with_amplitude_y1,
+			     turns);
+
+    result[0] = (tune_dx[0] - tune0[0]);  /* dnux from dx */
+    result[1] = (tune_dx[1] - tune0[1]);  /* dnuy from dx */
+    result[2] = (tune_dy[0] - tune0[0]);  /* dnux from dy */
+    result[3] = (tune_dy[1] - tune0[1]);  /* dnuy from dy */
+    trials --;
+    turns *= 1.5;
   }
+  if (trials==0)
+    fprintf(stderr, "Warning: tune shift computation from tracking didn't converge to required accuracy\n");
+  dnux_dA[0] 
+    = result[0]/(sqr(tune_shift_with_amplitude_x1)-sqr(tune_shift_with_amplitude_x0))
+    *twiss->betax;
+  dnux_dA[1] 
+    = result[2]/(sqr(tune_shift_with_amplitude_y1)-sqr(tune_shift_with_amplitude_y0))
+    *twiss->betay;
+  dnuy_dA[0] 
+    = result[1]/(sqr(tune_shift_with_amplitude_x1)-sqr(tune_shift_with_amplitude_x0))
+    *twiss->betax;
+  dnuy_dA[1] 
+    = result[3]/(sqr(tune_shift_with_amplitude_y1)-sqr(tune_shift_with_amplitude_y0))
+    *twiss->betay;
 }
 
+#include "fftpackC.h"
 
-  
+void computeTunesFromTracking(double *tune, VMATRIX  *M,
+			      double *startingCoord, 
+			      double xAmplitude, double yAmplitude, long turns)
+{
+  double **oneParticle, dummy;
+  double *x, *y;
+  long i;
+
+  oneParticle = (double**)zarray_2d(sizeof(**oneParticle), 1, 7);
+  if (!startingCoord)
+    fill_double_array(oneParticle[0], 7, 0.0);
+  else {
+    memcpy(oneParticle[0], startingCoord, 6*sizeof(*oneParticle));
+    oneParticle[0][6] = 0;
+  }
+  oneParticle[0][0] += xAmplitude;
+  oneParticle[0][2] += yAmplitude;
+  if (!(x = malloc(sizeof(*x)*turns)) ||
+      !(y = malloc(sizeof(*y)*turns)))
+    bomb("memory allocation failure (computeTunesFromTracking)", NULL);
+
+  x[0] = oneParticle[0][0];
+  y[0] = oneParticle[0][2];
+  for (i=1; i<turns; i++) {
+    track_particles(oneParticle, M, oneParticle, 1);
+    x[i] = oneParticle[0][0];
+    y[i] = oneParticle[0][2];
+  }
+  PerformNAFF(tune+0, &dummy, &dummy, 0.0, 1.0, x, turns, 
+	      NAFF_MAX_FREQUENCIES|NAFF_FREQ_CYCLE_LIMIT|NAFF_FREQ_ACCURACY_LIMIT,
+	      0.0, 1, 100, 1e-6);
+  PerformNAFF(tune+1, &dummy, &dummy, 0.0, 1.0, y, turns,
+	      NAFF_MAX_FREQUENCIES|NAFF_FREQ_CYCLE_LIMIT|NAFF_FREQ_ACCURACY_LIMIT,
+	      0.0, 1, 100, 1e-6);
+}
+
