@@ -173,7 +173,7 @@ long trackRfCavityWithWakes
 
     length = rfca->length;
 
-    if (rfca->volt==0) {
+    if (rfca->volt==0 && !wake && !trwake && !LSCKick) {
         if (rfca->length) {
             for (ip=0; ip<np; ip++) {
                 coord = part[ip];
