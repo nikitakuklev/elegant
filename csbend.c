@@ -62,9 +62,13 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
 
   if (csbend->use_bn) {
     rho0 = csbend->length/csbend->angle;
-    csbend->k2 = csbend->b2/rho0;
-    csbend->k3 = csbend->b3/rho0;
-    csbend->k4 = csbend->b4/rho0;
+    csbend->k2_internal = csbend->b2/rho0;
+    csbend->k3_internal = csbend->b3/rho0;
+    csbend->k4_internal = csbend->b4/rho0;
+  } else {
+    csbend->k2_internal = csbend->k2;
+    csbend->k3_internal = csbend->k3;
+    csbend->k4_internal = csbend->k4;
   }
   
   if (csbend->angle<0) {
@@ -75,9 +79,9 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     tilt  = csbend->tilt + PI;
     rho0  = -csbend->length/angle;
     n     = -sqr(rho0)*csbend->k1;
-    beta  = 0.5*csbend->k2*pow3(rho0);
-    gamma = csbend->k3*pow4(rho0)/6.;
-    delta = csbend->k4*pow5(rho0)/24.;
+    beta  = 0.5*csbend->k2_internal*pow3(rho0);
+    gamma = csbend->k3_internal*pow4(rho0)/6.;
+    delta = csbend->k4_internal*pow5(rho0)/24.;
     rho0  = -rho0;
   }
   else {
@@ -88,9 +92,9 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     tilt  = csbend->tilt;
     rho0  = csbend->length/angle;
     n     = -sqr(rho0)*csbend->k1;
-    beta  = 0.5*csbend->k2*pow3(rho0);
-    gamma = csbend->k3*pow4(rho0)/6.;
-    delta = csbend->k4*pow5(rho0)/24.;
+    beta  = 0.5*csbend->k2_internal*pow3(rho0);
+    gamma = csbend->k3_internal*pow4(rho0)/6.;
+    delta = csbend->k4_internal*pow5(rho0)/24.;
   }
 
   fse = csbend->fse;
@@ -844,10 +848,15 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 
   if (csbend->use_bn) {
     rho0 = csbend->length/csbend->angle;
-    csbend->k2 = csbend->b2/rho0;
-    csbend->k3 = csbend->b3/rho0;
-    csbend->k4 = csbend->b4/rho0;
+    csbend->k2_internal = csbend->b2/rho0;
+    csbend->k3_internal = csbend->b3/rho0;
+    csbend->k4_internal = csbend->b4/rho0;
+  } else {
+    csbend->k2_internal = csbend->k2;
+    csbend->k3_internal = csbend->k3;
+    csbend->k4_internal = csbend->k4;
   }
+  
 
   if (csbend->angle<0) {
     angle = -csbend->angle;
@@ -857,9 +866,9 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     tilt  = csbend->tilt + PI;
     rho0  = -csbend->length/angle;
     n     = -sqr(rho0)*csbend->k1;
-    beta  = 0.5*csbend->k2*pow3(rho0);
-    gamma = csbend->k3*pow4(rho0)/6.;
-    delta = csbend->k4*pow5(rho0)/24.;
+    beta  = 0.5*csbend->k2_internal*pow3(rho0);
+    gamma = csbend->k3_internal*pow4(rho0)/6.;
+    delta = csbend->k4_internal*pow5(rho0)/24.;
     rho0  = -rho0;
   }
   else {
@@ -870,9 +879,9 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     tilt  = csbend->tilt;
     rho0  = csbend->length/angle;
     n     = -sqr(rho0)*csbend->k1;
-    beta  = 0.5*csbend->k2*pow3(rho0);
-    gamma = csbend->k3*pow4(rho0)/6.;
-    delta = csbend->k4*pow5(rho0)/24.;
+    beta  = 0.5*csbend->k2_internal*pow3(rho0);
+    gamma = csbend->k3_internal*pow4(rho0)/6.;
+    delta = csbend->k4_internal*pow5(rho0)/24.;
   }
 
   fse = csbend->fse;
