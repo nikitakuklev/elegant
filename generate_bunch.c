@@ -1,6 +1,12 @@
-/* Copyright 1994 by Michael Borland and Argonne National Laboratory,
- * all rights reserved.
- */
+/*************************************************************************\
+* Copyright (c) 2002 The University of Chicago, as Operator of Argonne
+* National Laboratory.
+* Copyright (c) 2002 The Regents of the University of California, as
+* Operator of Los Alamos National Laboratory.
+* This file is distributed subject to a Software License Agreement found
+* in the file LICENSE that is included with this distribution. 
+\*************************************************************************/
+
 /* routine: generate_bunch()
  * purpose: generate a 6-dimensional bunch in a variety of distributions
  * The distributions are calculated first in normalized coordinates, then transformed:

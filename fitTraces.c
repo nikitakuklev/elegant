@@ -1,8 +1,17 @@
-/* Copyright 1997 by Michael Borland and Argonne National Laboratory,
- * all rights reserved.
- */
+/*************************************************************************\
+* Copyright (c) 2002 The University of Chicago, as Operator of Argonne
+* National Laboratory.
+* Copyright (c) 2002 The Regents of the University of California, as
+* Operator of Los Alamos National Laboratory.
+* This file is distributed subject to a Software License Agreement found
+* in the file LICENSE that is included with this distribution. 
+\*************************************************************************/
+
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.16  2002/01/02 14:18:57  borland
+ * Revised due to addition of slice_analysis command.
+ *
  * Revision 1.15  2001/10/15 20:37:02  soliday
  * Cleaned up for Linux.
  *

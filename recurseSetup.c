@@ -1,11 +1,20 @@
-/* Copyright 1999 by Michael Borland and Argonne National Laboratory,
- * all rights reserved.
- */
+/*************************************************************************\
+* Copyright (c) 2002 The University of Chicago, as Operator of Argonne
+* National Laboratory.
+* Copyright (c) 2002 The Regents of the University of California, as
+* Operator of Los Alamos National Laboratory.
+* This file is distributed subject to a Software License Agreement found
+* in the file LICENSE that is included with this distribution. 
+\*************************************************************************/
+
 /* program: recurse.c
  * purpose: work out recursion relations for SLAC 75 for input into mathematica
  * 
  * Michael Borland, 1991, 1996
  $Log: not supported by cvs2svn $
+ Revision 1.3  1999/08/05 15:39:53  soliday
+ Added WIN32 and Linux support
+
  Revision 1.2  1999/03/10 17:21:37  borland
  Changed the naming of variables in the mathematica input file so that the
  meaning is clear for higher orders.

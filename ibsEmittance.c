@@ -1,5 +1,17 @@
+/*************************************************************************\
+* Copyright (c) 2002 The University of Chicago, as Operator of Argonne
+* National Laboratory.
+* Copyright (c) 2002 The Regents of the University of California, as
+* Operator of Los Alamos National Laboratory.
+* This file is distributed subject to a Software License Agreement found
+* in the file LICENSE that is included with this distribution. 
+\*************************************************************************/
+
 /* 
  * $Log: not supported by cvs2svn $
+ * Revision 1.11  2001/10/15 20:37:03  soliday
+ * Cleaned up for Linux.
+ *
  * Revision 1.10  2001/08/02 14:45:28  borland
  * Added search_path feature to run_setup namelist and to many (all?) elements and
  * commands that take input files.

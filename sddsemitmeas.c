@@ -1,6 +1,12 @@
-/* Copyright 1994 by Michael Borland and Argonne National Laboratory,
- * all rights reserved.
- */
+/*************************************************************************\
+* Copyright (c) 2002 The University of Chicago, as Operator of Argonne
+* National Laboratory.
+* Copyright (c) 2002 The Regents of the University of California, as
+* Operator of Los Alamos National Laboratory.
+* This file is distributed subject to a Software License Agreement found
+* in the file LICENSE that is included with this distribution. 
+\*************************************************************************/
+
 /* program: sddsemitmeas
  * purpose: process elegant runs to determine emittance of beam.
  *          Also processes experimental data using elegant-computed
@@ -9,6 +15,9 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.15  2002/04/25 21:27:52  borland
+ * Fixed an error message. SHould now fit y plane even if x plane fit fails.
+ *
  * Revision 1.14  2001/10/15 20:37:06  soliday
  * Cleaned up for Linux.
  *

@@ -1,6 +1,12 @@
-/* Copyright 1994 by Michael Borland and Argonne National Laboratory,
- * all rights reserved.
- */
+/*************************************************************************\
+* Copyright (c) 2002 The University of Chicago, as Operator of Argonne
+* National Laboratory.
+* Copyright (c) 2002 The Regents of the University of California, as
+* Operator of Los Alamos National Laboratory.
+* This file is distributed subject to a Software License Agreement found
+* in the file LICENSE that is included with this distribution. 
+\*************************************************************************/
+
 /* file: matrix.c--3rd-order matrix routines for tracking.
  * contents:  print_matrices(), initialize_matrices(), null_matrices(),
  *            free_matrices(), track_particles(), 

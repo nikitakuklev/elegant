@@ -1,52 +1,11 @@
-/*CopyrightNotice001
-
-*****************************************************************
-                          COPYRIGHT NOTIFICATION
-*****************************************************************
-
-THE FOLLOWING IS A NOTICE OF COPYRIGHT, AVAILABILITY OF THE CODE,
-AND DISCLAIMER WHICH MUST BE INCLUDED IN THE PROLOGUE OF THE CODE
-AND IN ALL SOURCE LISTINGS OF THE CODE.
- 
-(C)  COPYRIGHT 1998 UNIVERSITY OF CHICAGO
- 
-Argonne National Laboratory (ANL), with facilities in the States of 
-Illinois and Idaho, is owned by the United States Government, and
-operated by the University of Chicago under provision of a contract
-with the Department of Energy.
-
-Portions of this material resulted from work developed under a U.S.
-Government contract and are subject to the following license:  For
-a period of five years from December 30, 1998, the Government is
-granted for itself and others acting on its behalf a paid-up,
-nonexclusive, irrevocable worldwide license in this computer
-software to reproduce, prepare derivative works, and perform
-publicly and display publicly.  With the approval of DOE, this
-period may be renewed for two additional five year periods. 
-Following the expiration of this period or periods, the Government
-is granted for itself and others acting on its behalf, a paid-up,
-nonexclusive, irrevocable worldwide license in this computer
-software to reproduce, prepare derivative works, distribute copies
-to the public, perform publicly and display publicly, and to permit
-others to do so.
-
-*****************************************************************
-                                DISCLAIMER
-*****************************************************************
-
-NEITHER THE UNITED STATES GOVERNMENT NOR ANY AGENCY THEREOF, NOR
-THE UNIVERSITY OF CHICAGO, NOR ANY OF THEIR EMPLOYEES OR OFFICERS,
-MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR ASSUMES ANY LEGAL
-LIABILITY OR RESPONSIBILITY FOR THE ACCURACY, COMPLETENESS, OR
-USEFULNESS OF ANY INFORMATION, APPARATUS, PRODUCT, OR PROCESS
-DISCLOSED, OR REPRESENTS THAT ITS USE WOULD NOT INFRINGE PRIVATELY
-OWNED RIGHTS.  
-
-*****************************************************************
-LICENSING INQUIRIES MAY BE DIRECTED TO THE INDUSTRIAL TECHNOLOGY
-DEVELOPMENT CENTER AT ARGONNE NATIONAL LABORATORY.
-
-CopyrightNotice001*/
+/*************************************************************************\
+* Copyright (c) 2002 The University of Chicago, as Operator of Argonne
+* National Laboratory.
+* Copyright (c) 2002 The Regents of the University of California, as
+* Operator of Los Alamos National Laboratory.
+* This file is distributed subject to a Software License Agreement found
+* in the file LICENSE that is included with this distribution. 
+\*************************************************************************/
 
 /* program: sddsexpand
  * purpose: take a SDDS file and create a new file with the
@@ -57,6 +16,9 @@ CopyrightNotice001*/
  * Michael Borland, 1999
  *
  $Log: not supported by cvs2svn $
+ Revision 1.7  2002/06/15 02:21:12  borland
+ Added upper and lower limits on all optimizable parameters.
+
  Revision 1.6  2001/10/15 20:37:07  soliday
  Cleaned up for Linux.
 
