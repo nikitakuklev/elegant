@@ -4,11 +4,12 @@
 /* routine: generate_bunch()
  * purpose: generate a 6-dimensional bunch in a variety of distributions
  * The distributions are calculated first in normalized coordinates, then transformed:
- *     u = x*sqrt(beta)    u' = x'/sqrt(beta) + alpha/beta*u
+ *     u = x/sqrt(beta)    u' = x'/sqrt(beta) + alpha/beta*u
  *
  *     psi(x, x') = N*exp(-(x'^2*beta + 2*alpha*x'*x + x^2*gamma)/(2*eps)) = 
- *                  N*exp(-(u'^2*beta + u^2)/(2*eps))
- *
+ *                  N*exp(-(u'^2*beta^2 + u^2)/(2*eps))
+ *     hence, sigma(u) = sqrt(eps), sigma(u') = sigma(u)/beta
+ * 
  * The limits for the gaussian distribution are usually put on the sigma values for u' and u,
  * but can also by put on the invariant.
  *
