@@ -2284,8 +2284,8 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
 	  !(ix==0 || iy==0 || ix==iy)) 
 	continue;
       if (lost[ix][iy] ||
-	  xTune[ix][iy]<=0.0 || xTune[ix][iy]>=0.5 ||
-	  yTune[ix][iy]<=0.0 || yTune[ix][iy]>=0.5)
+	  xTune[ix][iy]<=0.0 || xTune[ix][iy]>=1.0 ||
+	  yTune[ix][iy]<=0.0 || yTune[ix][iy]>=1.0)
 	continue;
       if (xTuneExtrema[0]>xTune[ix][iy])
 	xTuneExtrema[0] = xTune[ix][iy];
@@ -2299,7 +2299,7 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
   }
   if (nLost && !tune_shift_with_amplitude_struct.exclude_lost_particles) {
     xTuneExtrema[0] = yTuneExtrema[0] = 0;
-    xTuneExtrema[1] = yTuneExtrema[1] = 0.5;
+    xTuneExtrema[1] = yTuneExtrema[1] = 1.0;
   }
 
   if (tune_shift_with_amplitude_struct.verbose) {
@@ -2541,26 +2541,26 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
 		  &dummy, 0.0, 1.0, x, turns, 
 		  NAFF_MAX_FREQUENCIES|NAFF_FREQ_CYCLE_LIMIT|NAFF_FREQ_ACCURACY_LIMIT,
 		  0.0, 1, 200, 1e-12,
-		  tuneLowerLimit?tuneLowerLimit[0]:0,
-		  tuneUpperLimit?tuneUpperLimit[0]:0)!=1 ||
+		  tuneLowerLimit?(tuneLowerLimit[0]>0.5 ? 1-tuneLowerLimit[0] : tuneLowerLimit[0]):0,
+		  tuneUpperLimit?(tuneUpperLimit[0]>0.5 ? 1-tuneUpperLimit[0] : tuneUpperLimit[0]):0)!=1 ||
       PerformNAFF(&frequency[1], &amplitude[1], &phase[1], 
 		  &dummy, 0.0, 1.0, xp, turns, 
 		  NAFF_MAX_FREQUENCIES|NAFF_FREQ_CYCLE_LIMIT|NAFF_FREQ_ACCURACY_LIMIT,
 		  0.0, 1, 200, 1e-12,
-		  tuneLowerLimit?tuneLowerLimit[0]:0,
-		  tuneUpperLimit?tuneUpperLimit[0]:0)!=1 ||
+		  tuneLowerLimit?(tuneLowerLimit[0]>0.5 ? 1-tuneLowerLimit[0] : tuneLowerLimit[0]):0,
+		  tuneUpperLimit?(tuneUpperLimit[0]>0.5 ? 1-tuneUpperLimit[0] : tuneUpperLimit[0]):0)!=1 ||
       PerformNAFF(&frequency[2], &amplitude[2], &phase[2], 
 		  &dummy, 0.0, 1.0, y, turns,
 		  NAFF_MAX_FREQUENCIES|NAFF_FREQ_CYCLE_LIMIT|NAFF_FREQ_ACCURACY_LIMIT,
 		  0.0, 1, 200, 1e-12,
-		  tuneLowerLimit?tuneLowerLimit[1]:0,
-		  tuneUpperLimit?tuneUpperLimit[1]:0)!=1 ||
+		  tuneLowerLimit?(tuneLowerLimit[1]>0.5 ? 1-tuneLowerLimit[1] : tuneLowerLimit[1]):0,
+		  tuneUpperLimit?(tuneUpperLimit[1]>0.5 ? 1-tuneUpperLimit[1] : tuneUpperLimit[1]):0)!=1 ||
       PerformNAFF(&frequency[3], &amplitude[3], &phase[3], 
 		  &dummy, 0.0, 1.0, yp, turns,
 		  NAFF_MAX_FREQUENCIES|NAFF_FREQ_CYCLE_LIMIT|NAFF_FREQ_ACCURACY_LIMIT,
 		  0.0, 1, 200, 1e-12,
-		  tuneLowerLimit?tuneLowerLimit[1]:0,
-		  tuneUpperLimit?tuneUpperLimit[1]:0)!=1)
+		  tuneLowerLimit?(tuneLowerLimit[1]>0.5 ? 1-tuneLowerLimit[1] : tuneLowerLimit[1]):0,
+		  tuneUpperLimit?(tuneUpperLimit[1]>0.5 ? 1-tuneUpperLimit[1] : tuneUpperLimit[1]):0)!=1 )
     return 0;
 
 #ifdef DEBUG
