@@ -72,6 +72,8 @@ void do_response_matrix_output(char *filename, char *type, RUN *run, char *beaml
                                STEERING_LIST *SL, long plane);
 
 static long rpn_x_mem= -1, rpn_y_mem= -1;
+static long usePerturbedMatrix = 0, fixedLengthMatrix = 0;
+
 double getMonitorWeight(ELEMENT_LIST *elem);
 double getMonitorCalibration(ELEMENT_LIST *elem, long coord);
 double getCorrectorCalibration(ELEMENT_LIST *elem, long coord);
@@ -129,6 +131,8 @@ void correction_setup(
     set_print_namelist_flags(0);
     process_namelist(&correct, nltext);
     print_namelist(stdout, &correct);
+    usePerturbedMatrix = use_perturbed_matrix;
+    fixedLengthMatrix = fixed_length_matrix;
     
     /* check for valid input data */
     if ((_correct->mode=match_string(mode, correction_mode, N_CORRECTION_MODES, 0))<0)
@@ -479,6 +483,12 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
   switch (correct->mode) {
   case TRAJECTORY_CORRECTION:
     x_failed = y_failed = 0;
+    if (usePerturbedMatrix) {
+      compute_trajcor_matrices(correct->CMx, &correct->SLx, 0, run, beamline, 0,
+                               !correct->response_only);
+      compute_trajcor_matrices(correct->CMy, &correct->SLy, 0, run, beamline, 0,
+                               !correct->response_only);
+    }
     for (i_cycle=0; i_cycle<correct->n_xy_cycles; i_cycle++) {
       final_traj = 1;
       if (!x_failed && correct->CMx->ncor) {
@@ -570,6 +580,12 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
     else
       Cdp = NULL;
     x_failed = y_failed = bombed = 0;
+    if (usePerturbedMatrix) {
+      compute_orbcor_matrices(correct->CMx, &correct->SLx, 0, run, beamline, 0, 
+                              !correct->response_only, fixedLengthMatrix);
+      compute_orbcor_matrices(correct->CMy, &correct->SLy, 2, run, beamline, 0, 
+                              !correct->response_only, fixedLengthMatrix);
+    }
     for (i_cycle=0; i_cycle<correct->n_xy_cycles; i_cycle++) {
       final_traj = 1;
       if (!x_failed && correct->CMx->ncor) {

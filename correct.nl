@@ -30,5 +30,6 @@
     double closed_orbit_accuracy = 1e-12;
     long closed_orbit_iterations = 10;
     double closed_orbit_iteration_fraction = 1;
+    long use_perturbed_matrix = 0;
 #end
 
