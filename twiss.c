@@ -361,6 +361,30 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
       incrementRadIntegrals(radIntegrals, elem->twiss->dI, 
                             elem, beta[0], alpha[0], gamma[0], 
                             eta[0], etap[0], path0);
+    if (elem->type==T_ROTATE) {
+      if (fabs(((ROTATE*)elem->p_elem)->tilt-PI/2.0)<1e-6 ||
+          fabs(((ROTATE*)elem->p_elem)->tilt-3*PI/2.0)<1e-6 ||
+          fabs(((ROTATE*)elem->p_elem)->tilt+PI/2.0)<1e-6 ||
+          fabs(((ROTATE*)elem->p_elem)->tilt+3*PI/2.0)<1e-6) {
+        elem->twiss->betax = beta[1];
+        elem->twiss->betay = beta[0];
+        elem->twiss->alphax = alpha[1];
+        elem->twiss->alphay = alpha[0];
+        elem->twiss->phix = phi[1];
+        elem->twiss->phiy = phi[0];
+        elem->twiss->etax = eta[1];
+        elem->twiss->etay = eta[0];
+        elem->twiss->etapx = etap[1];
+        elem->twiss->etapy = etap[0];
+        SWAP_DOUBLE(beta[0], beta[1]);
+        SWAP_DOUBLE(alpha[0], alpha[1]);
+        SWAP_DOUBLE(eta[0], eta[1]);
+        SWAP_DOUBLE(etap[0], etap[1]);
+        SWAP_DOUBLE(phi[0], phi[1]);
+        elem = elem->succ;
+        continue;
+      }
+    }
     for (plane=0; plane<2; plane++) {
       otherPlane = plane?0:1;
       detR[plane] = C[plane]*Sp[plane] - Cp[plane]*S[plane];

@@ -1096,6 +1096,8 @@ PARAMETER zlongit_param[N_ZLONGIT_PARAMS] = {
     {"SMOOTHING", "", IS_LONG, 0, (long)((char *)&zlongit_example.smoothing), NULL, 0.0, 0, "smooth current histogram?"},
     {"SG_ORDER", "", IS_LONG, 0, (long)((char *)&zlongit_example.SGOrder), NULL, 0.0, 1, "Savitzky-Golay filter order for smoothing"},
     {"SG_HALFWIDTH", "", IS_LONG, 0, (long)((char *)&zlongit_example.SGHalfWidth), NULL, 0.0, 4, "Savitzky-Golay filter halfwidth for smoothing"},
+    {"REVERSE_TIME_ORDER", "", IS_LONG, 0, (long)((char *)&zlongit_example.reverseTimeOrder), NULL, 0.0, 0, "Reverse time-order of particles for wake computation?"},
+    {"FACTOR", "", IS_DOUBLE, 0, (long)((char *)&zlongit_example.factor), NULL, 1.0, 0, "Factor by which to multiply impedance."},
     };
 
 SREFFECTS SReffects_example;

@@ -612,7 +612,7 @@ extern char *entity_text[N_TYPES];
 #define N_RFMODE_PARAMS 19
 #define N_TRFMODE_PARAMS 12
 #define N_TWMTA_PARAMS 17
-#define N_ZLONGIT_PARAMS 17
+#define N_ZLONGIT_PARAMS 19
 #define N_MODRF_PARAMS 13
 #define N_SREFFECTS_PARAMS 13
 #define N_ZTRANSVERSE_PARAMS 19
@@ -1618,6 +1618,8 @@ typedef struct {
     long interpolate;          /* flag to turn on interpolation */
     long smoothing;            /* flag to turn on smoothing */
     long SGOrder, SGHalfWidth; /* Savitzky-Golay smoothing parameters */
+    long reverseTimeOrder;     /* use for "acausal" impedances like CSR */
+    double factor;             /* multiply impedance by this factor */
     /* for internal use: */
     long initialized;          /* indicates that files are loaded */
     double *Z;                 /* n_Z (Re Z, Im Z) pairs */

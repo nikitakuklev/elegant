@@ -84,6 +84,10 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
         }
 
     tmean = computeTimeCoordinates(time, Po, part, np);
+    if (zlongit->reverseTimeOrder) {
+      for (ip=0; ip<np; ip++)
+        time[ip] = 2*tmean-time[ip];
+    }
     tmin = tmean - dt*zlongit->n_bins/2.0;
     
     for (ib=0; ib<zlongit->n_bins; ib++)
@@ -137,7 +141,7 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
      * to normalize the current waveform.
      */
     Vfreq = Vtime;
-    factor = zlongit->macroParticleCharge/dt;
+    factor = zlongit->macroParticleCharge/dt*zlongit->factor;
     Z = zlongit->Z;
     Vfreq[0] = Ifreq[0]*Z[0]*factor;
     nfreq = nb/2 + 1;
@@ -156,6 +160,7 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
 
     if (zlongit->SDDS_wake_initialized && zlongit->wakes) {
         /* wake potential output */
+      factor = zlongit->macroParticleCharge/dt;
         if (zlongit->wake_interval<=0 || (i_pass%zlongit->wake_interval)==0) {
             if (!SDDS_StartTable(&zlongit->SDDS_wake, nb)) {
                 SDDS_SetError("Problem starting SDDS table for wake output (track_through_zlongit)");
@@ -209,6 +214,8 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
         else
           dgam = Vtime[ib]/(1e6*me_mev);
         if (dgam) {
+          if (zlongit->reverseTimeOrder)
+            time[ip] = 2*tmean - time[ip];
           /* Put in minus sign here as the voltage decelerates the beam */
           add_to_particle_energy(part[ip], time[ip], Po, -dgam);
         }
