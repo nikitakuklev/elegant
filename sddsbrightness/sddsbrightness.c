@@ -14,6 +14,9 @@
  * Michael Borland, 2002
  *
  $Log: not supported by cvs2svn $
+ Revision 1.1  2004/04/08 16:10:28  soliday
+ Moved to subdirectory.
+
  Revision 1.8  2003/06/25 21:40:01  shang
  using pCentral as gamma instead of calculating it from the energy in dejus' method
 
@@ -122,7 +125,7 @@ double delta0,sincNu; /*two constants used in convolutionFunc() */
 void FindPeak(double *E,double *spec,double *ep,double *sp,long n);
 int Gauss_Convolve(double *E,double *spec,long *ns,double sigmaE);
 /* note that sigmaE=Sdelta0 */
-void Dejus_CalculateBrightness(double ENERGY, double current,long nE,
+void Dejus_CalculateBrightness(double current,long nE,
                                double period_mks, long nP, long device,
                                long ihMin,long ihMax,long ihStep,double sigmaE,
                                double gamma, double ex0,double coupling, double emitRatio, 
@@ -153,15 +156,13 @@ int main(int argc, char **argv)
   SCANNED_ARG *s_arg;
   unsigned long pipeFlags;
   double current, totalLength, periodLength, KStart, KEnd, coupling, emittanceRatio, dK;
-  long KPoints, harmonics, tmpFileUsed, iK, i_arg, poles, readCode, h, ih, periods;
+  long KPoints, harmonics, tmpFileUsed, iK, i_arg, readCode, h, ih, periods;
   unsigned long dummyFlags;
   double betax, alphax, betay, alphay, etax, etaxp, etay, etayp, lambda, energy;
   double pCentral, ex0, Bn, Fn, K, Sdelta0, conFactor=1.0; /*the factor from convolution of
                                                              sinc() and gaussian() */
   short spectralBroadening;
   long method, device,nE,ihMin,ihMax;
-  double ikMin,ikMax;
-  double ENERGY=7.0; /*storage ring energy Gev */
   double *KK,**FnOut,**Energy,**Brightness,**LamdarOut;
   long minNEKS,maxNEKS,neks;
   double sigmax,sigmay,sigmaxp,sigmayp;
@@ -363,7 +364,7 @@ int main(int argc, char **argv)
       ihMax=2*(harmonics-1)+1;
       nE=KPoints;
       current=current*1.0e3; /*change unit from A to mA for dejus's method */
-      Dejus_CalculateBrightness(ENERGY,current,nE,periodLength, periods,device,ihMin,ihMax,2,Sdelta0,
+      Dejus_CalculateBrightness(current,nE,periodLength, periods,device,ihMin,ihMax,2,Sdelta0,
                                 pCentral,ex0,coupling,emittanceRatio, 
                                 betax,alphax,etax,etaxp,betay,alphay,etay,etayp,
                                 minNEKS,maxNEKS,neks,KStart,KEnd,method,
@@ -645,7 +646,7 @@ void FindPeak(double *E,double *spec,double *ep,double *sp,long n)
 
 int Gauss_Convolve(double *E,double *spec,long *ns,double sigmaE) 
 {
-  long nSigma=3,nppSigma=6,e_size=10000, ne1,ne2,ns1,np;
+  long nSigma=3,nppSigma=6,ne1,ne2,ns1,np;
   
   int i,j;
   double ep,sp,sigp,de,sum, *gs,x, *spec2;
@@ -755,7 +756,7 @@ void ComputeBeamSize(double period, long Nu, double ex0, double Sdelta0,
          double **LamdarOut array of lamda, LamdarOut[H][nE]
 */  
 
-void Dejus_CalculateBrightness(double ENERGY, double current,long nE,
+void Dejus_CalculateBrightness(double current,long nE,
                                double period_mks, long nP, long device,
                                long ihMin,long ihMax,long ihStep,double sigmaE,
                                double gamma, double ex0,double coupling, double emitRatio, 
@@ -767,13 +768,14 @@ void Dejus_CalculateBrightness(double ENERGY, double current,long nE,
                                double **K, double ***FnOut,
                                double ***Energy, double ***Brightness, double ***LamdarOut)
 {
-  double gamma1,lamdar,reducedE,kx,ky,eMin,eMax,ekMin,ekMax,ep,sp,dep1,dep2,fc,fc2,de,smax;
-  long ih,ik,i,j,ie,ir,je,errorFlag=0;
+  double lamdar,reducedE,kx,ky,eMin,eMax,ekMin,ekMax,ep,sp,dep1,dep2,fc,fc2,de,smax;
+  long ih,i,j,je,errorFlag=0;
   long nSigma=3,nppSigma=6,nek,ns,exitLoop=0;
   double JArg,sigmaEE,gk,dek,ek;
   double *tmpE,*tmpSpec,**ei,*ptot,*pd,*kyb,**eb,**sb;
   double e,k;
   double sigmaX,sigmaX1,sigmaY,sigmaY1,period;
+  double ENERGY;
   
   tmpE=tmpSpec=pd=ptot=NULL;
   ei=eb=sb=NULL;
@@ -806,6 +808,7 @@ void Dejus_CalculateBrightness(double ENERGY, double current,long nE,
   
   /*gamma1=ENERGY/me_mev*1.0E3; */
   lamdar=period*1.0E8/(2.0*gamma*gamma); /*reduced wavelength A */
+  ENERGY = gamma*me_mev/1e3; /* GeV */
   reducedE=c_evang/lamdar; /*reduced energy ev */
   kx=0.0;
   eMin=reducedE/(1+kMax*kMax/2.0);
@@ -826,7 +829,8 @@ void Dejus_CalculateBrightness(double ENERGY, double current,long nE,
   *sigmay=sigmaY;
   *sigmaxp=sigmaX1;
   *sigmayp=sigmaY1;
-  
+
+  dep1 = dep2 = 0;
   for (i=1;i<3;i++) {
     if (i==1) {
       ekMin=0.95*i*eMax;
@@ -882,7 +886,7 @@ void Dejus_CalculateBrightness(double ENERGY, double current,long nE,
         ekMax=i*ek+i*dep1/2.0;
         if (i==1) ekMin=ekMin-dep1;
         if (i> (ek/dep1)) {
-          fprintf(stderr,"Warning: overlapping range for initial peak search for harmonic %d\n",i);
+          fprintf(stderr,"Warning: overlapping range for initial peak search for harmonic %ld\n",i);
           exitLoop=1;
           break;
         }
@@ -909,14 +913,14 @@ void Dejus_CalculateBrightness(double ENERGY, double current,long nE,
     if (exitLoop)
       break;
     if (smax < minB ) {
-      fprintf(stderr,"Warning, Harmonic intensity too small, for harmonic number %d\n",i);
+      fprintf(stderr,"Warning, Harmonic intensity too small, for harmonic number %ld\n",i);
       break;
     }
     FindPeak(tmpE,tmpSpec,&ep,&sp,ns);
     /*define fc */
     fc=0.985*ep/ek/i;
     if (i > 1/(1-fc) ) {
-      fprintf(stderr,"Warning: overlapping range for peak search for harmonics %d\n",i);
+      fprintf(stderr,"Warning: overlapping range for peak search for harmonics %ld\n",i);
       break;
     }
     je=nE-1;
