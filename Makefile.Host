@@ -1,32 +1,17 @@
-#*************************************************************************
-# Copyright (c) 2002 The University of Chicago, as Operator of Argonne
-# National Laboratory.
-# Copyright (c) 2002 The Regents of the University of California, as
-# Operator of Los Alamos National Laboratory.
-# This file is distributed subject to a Software License Agreement found
-# in the file LICENSE that is included with this distribution. 
-#*************************************************************************
-#
-
 TOP = ../../..
 include $(TOP)/config/CONFIG_APPS
 
 CMPLR = ANSI
 CC = $($(ANSI)_$(CMPLR))
-#HOST_OPT = NO
+HOST_OPT = NO
+#CC = quantify -cache-dir=/home/oxygen/BORLAND/.quantify-cache $($(ANSI)_$(CMPLR)) 
 #CC = purify $($(ANSI)_$(CMPLR)) 
 #CXX = purify $($(CPLUSPLUS)_$(CXXCMPLR)) 
-ifeq ($(CONDOR_COMPILE),1)
-  CC = condor_compile -condor_standalone $($(ANSI)_$(CMPLR)) -DCONDOR_COMPILE
-  CXX = condor_compile -condor_standalone $($(ANSI)_$(CMPLR)) -DCONDOR_COMPILE
-endif
 
-#EPICS_EXTENSIONS_LIB = ../../../../../epics/extensions/lib/$(HOST_ARCH)
+EPICS_EXTENSIONS_LIB = ../../../../../epics/extensions/lib/$(HOST_ARCH)
 PROD = elegant sddsemitmeas madto sddssasefel sddsTouschekInteg ibsEmittance recurseSetup haissinski \
-        sddsmatchtwiss sddsanalyzebeam sddsbrightness sddsresdiag
-ifndef WIN32
-PROD += ../longitCalcs ../longitCmd
-endif
+        sddsmatchtwiss sddsanalyzebeam sddsbrightness
+#PROD = sddsbrightness
 USR_CFLAGS = 	-I../../../../../epics/extensions/src/SDDS/include \
 		$(ZLIB_INC) \
 		-I$(EPICS_EXTENSIONS_INCLUDE) \
@@ -36,9 +21,6 @@ USR_CFLAGS = 	-I../../../../../epics/extensions/src/SDDS/include \
 USR_CFLAGS_DEFAULT += 	-L../../../../../epics/extensions/lib/$(HOST_ARCH) \
 			-DUNIX -DMINIMIZE_MEMORY
 
-ifeq ($(LYNCEANTECH),1) 
-        USR_CFLAGS += -DLYNCEANTECH
-endif
 USR_CFLAGS_WIN32 = -nil-
 
 PROD_LIBS = 	mdbcommon matlib fftpack SDDS1 \
@@ -77,7 +59,7 @@ elegant_SRCS = 	alpha_data.c alpha_matrix.c amplif.c analyze.c aperture_search.c
 		tune.c tilt_matrices.c trace.c track_data.c track_ramp.c track_rf.c trfmode.c \
 		ztransverse.c twiss.c vary.c zlongit.c SReffects.c mod_rfca.c fitTraces.c \
 		ibs_tracking.c zibs.c wake.c \
-		trwake.c circles.c tubend.c sasefelmx.c sasefel.c alter.c \
+		trwake.c circles.c tubend.c sasefelmx.c sasefel.c alter.c searchPath.c \
 		sliceAnalysis.c divideElements.c transmuteElements.c
 
 sddsemitmeas_SRCS = sddsemitmeas.c
@@ -85,7 +67,7 @@ sddsemitmeas_SRCS = sddsemitmeas.c
 madto_SRCS = 	madto.c sdds_strength_output.c convert_to_parmela.c convert_to_patpet.c convert_to_matlab.c \
 		convert_to_patricia.c convert_to_transport.c convert_to_xorbit.c track_data.c \
 		get_beamline.c mad_parse.c output_magnets.c cfgets.c trace.c check_duplic.c \
-		extend_list.c matrix.c compose_fn.c find_elem.c print_line.c divideElements.c \
+		extend_list.c matrix.c compose_fn.c find_elem.c print_line.c searchPath.c divideElements.c \
 		transmuteElements.c
 
 sddssasefel_SRCS = sddssasefel.c sasefelmx.c
@@ -100,8 +82,6 @@ haissinski_SRCS = haissinski.c
 
 sddsmatchtwiss_SRCS = sddsmatchtwiss.c
 
-sddsresdiag_SRCS = sddsresdiag.c
-
 sddsanalyzebeam_SRCS = sddsanalyzebeam.c
 
 sddsbrightness_SRCS = sddsbrightness.c
@@ -110,161 +90,162 @@ fitTraces_CFLAGS = -I../../../../../epics/extensions/src/SDDS/meschach
 
 include $(TOP)/config/RULES.Host
 
-NLPP = $(EPICS_EXTENSIONS_BIN)/nlpp
+sddsbrightness:
+	gnumake -f ../Makefile.Host.brightness
 
 alter$(OBJ): alter.h
 
 alter.h: ../alter.nl
-	$(NLPP) ../alter.nl alter.h
+	nlpp ../alter.nl alter.h
 
 amplif$(OBJ): amplif.h
 
 amplif.h: ../amplif.nl
-	$(NLPP) ../amplif.nl amplif.h
+	nlpp ../amplif.nl amplif.h
 
 analyze$(OBJ): analyze.h
 
 analyze.h: ../analyze.nl
-	$(NLPP) ../analyze.nl analyze.h
+	nlpp ../analyze.nl analyze.h
 
 aperture_search$(OBJ): aperture_search.h
 
 aperture_search.h: ../aperture_search.nl
-	$(NLPP) ../aperture_search.nl aperture_search.h
+	nlpp ../aperture_search.nl aperture_search.h
 
 bunched_beam$(OBJ): bunched_beam.h
 
 bunched_beam.h: ../bunched_beam.nl
-	$(NLPP) ../bunched_beam.nl bunched_beam.h
+	nlpp ../bunched_beam.nl bunched_beam.h
 
 chrom$(OBJ): chrom.h
 
 chrom.h: ../chrom.nl
-	$(NLPP) ../chrom.nl chrom.h
+	nlpp ../chrom.nl chrom.h
 
 closed_orbit$(OBJ): closed_orbit.h
 
 closed_orbit.h: ../closed_orbit.nl
-	$(NLPP) ../closed_orbit.nl closed_orbit.h
+	nlpp ../closed_orbit.nl closed_orbit.h
 
 correct$(OBJ): correct.h steer_elem.h
 
 correct.h: ../correct.nl
-	$(NLPP) ../correct.nl correct.h
+	nlpp ../correct.nl correct.h
 
 divideElements$(OBJ): divideElements.h
 
 divideElements.h: ../divideElements.nl
-	$(NLPP) ../divideElements.nl divideElements.h
+	nlpp ../divideElements.nl divideElements.h
 
 transmuteElements$(OBJ): transmuteElements.h
 
 transmuteElements.h: ../transmuteElements.nl
-	$(NLPP) ../transmuteElements.nl transmuteElements.h
+	nlpp ../transmuteElements.nl transmuteElements.h
 
 elegant$(OBJ): elegant.h
 
 elegant.h: ../elegant.nl
-	$(NLPP) ../elegant.nl elegant.h
+	nlpp ../elegant.nl elegant.h
 
 error$(OBJ): error.h
 
 error.h: ../error.nl
-	$(NLPP) ../error.nl error.h
+	nlpp ../error.nl error.h
 
 floor$(OBJ): floor.h
 
 floor.h: ../floor.nl
-	$(NLPP) ../floor.nl floor.h
+	nlpp ../floor.nl floor.h
 
 link_elements$(OBJ): link_elements.h
 
 link_elements.h: ../link_elements.nl
-	$(NLPP) ../link_elements.nl link_elements.h
+	nlpp ../link_elements.nl link_elements.h
 
 load_parameters$(OBJ): load_parameters.h
 
 load_parameters.h: ../load_parameters.nl
-	$(NLPP) ../load_parameters.nl load_parameters.h
+	nlpp ../load_parameters.nl load_parameters.h
 
 matrix_output$(OBJ): matrix_output.h
 
 matrix_output.h: ../matrix_output.nl
-	$(NLPP) ../matrix_output.nl matrix_output.h
+	nlpp ../matrix_output.nl matrix_output.h
 
 optim_covariable$(OBJ): optim_covariable.h
 
 optim_covariable.h: ../optim_covariable.nl
-	$(NLPP) ../optim_covariable.nl optim_covariable.h
+	nlpp ../optim_covariable.nl optim_covariable.h
 
 optimize$(OBJ): optimize.h optim_covariable.h
 
 optimize.h: ../optimize.nl
-	$(NLPP) ../optimize.nl optimize.h
+	nlpp ../optimize.nl optimize.h
 
 response$(OBJ): response.h
 
 response.h: ../response.nl
-	$(NLPP) ../response.nl response.h
+	nlpp ../response.nl response.h
 
 run_rpnexpr$(OBJ): run_rpnexpr.h
 
 run_rpnexpr.h: ../run_rpnexpr.nl
-	$(NLPP) ../run_rpnexpr.nl run_rpnexpr.h
+	nlpp ../run_rpnexpr.nl run_rpnexpr.h
 
 sasefel$(OBJ): sasefel.h
 
 sasefel.h: ../sasefel.nl
-	$(NLPP) ../sasefel.nl sasefel.h
+	nlpp ../sasefel.nl sasefel.h
 
 get_beamline$(OBJ): save_lattice.h
 
 save_lattice$(OBJ): save_lattice.h
 
 save_lattice.h: ../save_lattice.nl
-	$(NLPP) ../save_lattice.nl save_lattice.h
+	nlpp ../save_lattice.nl save_lattice.h
 
 sdds_beam$(OBJ): sdds_beam.h
 
 sdds_beam.h: ../sdds_beam.nl
-	$(NLPP) ../sdds_beam.nl sdds_beam.h
+	nlpp ../sdds_beam.nl sdds_beam.h
 
 sliceAnalysis$(OBJ): sliceAnalysis.h
 
 sliceAnalysis.h: ../sliceAnalysis.nl
-	$(NLPP) ../sliceAnalysis.nl sliceAnalysis.h
+	nlpp ../sliceAnalysis.nl sliceAnalysis.h
 
 steer_elem$(OBJ): steer_elem.h
 
 steer_elem.h: ../steer_elem.nl
-	$(NLPP) ../steer_elem.nl steer_elem.h
+	nlpp ../steer_elem.nl steer_elem.h
 
 subprocess$(OBJ): subprocess.h
 
 subprocess.h: ../subprocess.nl
-	$(NLPP) ../subprocess.nl subprocess.h
+	nlpp ../subprocess.nl subprocess.h
 
 trace$(OBJ): trace.h
 
 trace.h: ../trace.nl
-	$(NLPP) ../trace.nl trace.h
+	nlpp ../trace.nl trace.h
 
 tune$(OBJ): tune.h
 
 tune.h: ../tune.nl
-	$(NLPP) ../tune.nl tune.h
+	nlpp ../tune.nl tune.h
 
 twiss$(OBJ): twiss.h
 
 twiss.h: ../twiss.nl
-	$(NLPP) ../twiss.nl twiss.h
+	nlpp ../twiss.nl twiss.h
 
 vary$(OBJ): vary.h
 
 vary.h: ../vary.nl
-	$(NLPP) ../vary.nl vary.h
+	nlpp ../vary.nl vary.h
 
 fitTraces$(OBJ): fitTraces.h
 
 fitTraces.h: ../fitTraces.nl
-	$(NLPP) ../fitTraces.nl fitTraces.h
+	nlpp ../fitTraces.nl fitTraces.h
