@@ -54,6 +54,8 @@ void do_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
         matrix_order>3)
       bomb("matrix_order must be 1, 2, or 3", NULL);
     optimization_data->soft_failure = soft_failure;
+    if (output_sparsing_factor<=0)
+      output_sparsing_factor = 1;
     if (log_file) {
         if (str_in(log_file, "%s"))
             log_file = compose_filename(log_file, run->rootname);
