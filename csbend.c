@@ -44,7 +44,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   double tilt, etilt, cos_ttilt, sin_ttilt, ttilt;
   double *coord;
   double angle, e1, e2, Kg;
-  double psi1, psi2;
+  double psi1, psi2, R1, R2;
   double Qi[6], Qf[6];
   double dcoord_etilt[6];
   double dxi, dyi, dzi;
@@ -75,7 +75,9 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     csbend->k3_internal = csbend->k3;
     csbend->k4_internal = csbend->k4;
   }
-  
+
+  R1 = csbend->h1;
+  R2 = csbend->h2;
   if (csbend->angle<0) {
     angle = -csbend->angle;
     e1    = -csbend->e1;
@@ -281,13 +283,16 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     dp = dp0 = coord[5];
 
     if (csbend->edge1_effects) {
-      /* apply edge focusing */
       rho = (1+dp)*rho_actual;
-      delta_xp = tan(e1)/rho*x;
-      if (e1_kick_limit>0 && fabs(delta_xp)>e1_kick_limit)
-        delta_xp = SIGN(delta_xp)*e1_kick_limit;
-      xp += delta_xp;
-      yp -= tan(e1-psi1/(1+dp))/rho*y;
+      if (csbend->edge_order<2) {
+        /* apply edge focusing */
+        delta_xp = tan(e1)/rho*x;
+        if (e1_kick_limit>0 && fabs(delta_xp)>e1_kick_limit)
+          delta_xp = SIGN(delta_xp)*e1_kick_limit;
+        xp += delta_xp;
+        yp -= tan(e1-psi1/(1+dp))/rho*y;
+      } else
+        apply_edge_effects(&x, &xp, &y, &yp, rho, n, e1, R1, psi1*(1+dp), -1);
     }
 
     /* transform to curvilinear coordinates */
@@ -377,11 +382,14 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     if (csbend->edge2_effects) {
       /* apply edge focusing */
       rho = (1+dp)*rho_actual;
-      delta_xp = tan(e2)/rho*x;
-      if (e2_kick_limit>0 && fabs(delta_xp)>e2_kick_limit)
-        delta_xp = SIGN(delta_xp)*e2_kick_limit;
-      xp += delta_xp;
-      yp -= tan(e2-psi2/(1+dp))/rho*y;
+      if (csbend->edge_order<2) {
+        delta_xp = tan(e2)/rho*x;
+        if (e2_kick_limit>0 && fabs(delta_xp)>e2_kick_limit)
+          delta_xp = SIGN(delta_xp)*e2_kick_limit;
+        xp += delta_xp;
+        yp -= tan(e2-psi2/(1+dp))/rho*y;
+      } else
+        apply_edge_effects(&x, &xp, &y, &yp, rho, n, e2, R2, psi2*(1+dp), 1);
     }
     
     coord[0] =  x*cos_ttilt -  y*sin_ttilt + dcoord_etilt[0];
@@ -831,7 +839,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
                              CHARGE *charge, char *rootname)
 {
   double nh, betah2, gammah3, deltah4;
-  double h, h2, h3;
+  double h, h2, h3, R1, R2;
   static long csrWarning = 0;
   static double *beta0=NULL, *ctHist=NULL, *ctHistDeriv=NULL;
   static double *dGamma=NULL, *T1=NULL, *T2=NULL, *denom=NULL;
@@ -908,6 +916,8 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     csbend->k4_internal = csbend->k4;
   }
 
+  R1 = csbend->h1;
+  R2 = csbend->h2;
   if (csbend->angle<0) {
     angle = -csbend->angle;
     e1    = -csbend->e1;
@@ -1172,9 +1182,13 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     if (csbend->edge1_effects) {
       /* apply edge focusing */
       rho = (1+DP)*rho_actual;
-      delta_xp = tan(e1)/rho*X;
-      XP += delta_xp;
-      YP -= tan(e1-psi1/(1+DP))/rho*Y;
+      if (csbend->edge_order<2) {
+        delta_xp = tan(e1)/rho*X;
+        XP += delta_xp;
+        YP -= tan(e1-psi1/(1+DP))/rho*Y;
+      }
+      else
+        apply_edge_effects(&X, &XP, &Y, &YP, rho, n, e1, R1, psi1*(1+DP), -1);
     }
 
     /* transform to curvilinear coordinates */
@@ -1474,9 +1488,13 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     if (csbend->edge2_effects) {
       /* apply edge focusing */
       rho = (1+DP)*rho_actual;
-      delta_xp = tan(e2)/rho*X;
-      XP += delta_xp;
-      YP -= tan(e2-psi2/(1+DP))/rho*Y;
+      if (csbend->edge_order<2) {
+        delta_xp = tan(e2)/rho*X;
+        XP += delta_xp;
+        YP -= tan(e2-psi2/(1+DP))/rho*Y;
+      }
+      else 
+        apply_edge_effects(&X, &XP, &Y, &YP, rho, n, e2, R2, psi2*(1+DP), 1);
     }
 
     coord = part[i_part];
@@ -2460,5 +2478,48 @@ void DumpStupakovOutput(char *filename, SDDS_DATASET *SDDSout, long *active,
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
   }
     
+}
+
+
+void apply_edge_effects(
+                        double *x, double *xp, double *y, double *yp, 
+                        double rho, double n, double beta, double R, double psi, long which_edge
+                        )
+{
+  double h, tan_beta, tan2_beta, sec_beta, sec2_beta, h2;
+  double R21, R43;
+  double T111, T133, T211, T441, T331, T221, T233, T243, T431, T432;
+  double x0, xp0, y0, yp0;
+
+  h = 1/rho;
+  R21 = h*(tan_beta=tan(beta));
+  R43 = -h*tan(beta-psi);
+
+  h2 = sqr(h);
+  T111 = which_edge*h/2*(tan2_beta=sqr(tan_beta));
+  T133 = -which_edge*h/2*(sec2_beta=sqr(sec_beta=1./cos(beta)));
+  T211 = which_edge==-1?
+    -n*h2*tan_beta:
+    -h2*(n+tan2_beta/2)*tan_beta;
+  T441 = -(T331 = T221 = -which_edge*h*tan2_beta);
+  T233 =  which_edge==-1?
+    h2*(n+.5+tan2_beta)*tan_beta:
+    h2*(n-tan2_beta/2)*tan_beta;
+  T243 = which_edge*h*tan2_beta;
+  T431 = h2*(2*n+(which_edge==1?sec2_beta:0))*tan_beta;
+  T432 = which_edge*h*sec2_beta;
+  if (R!=0) {
+    double term;
+    term = h/(2*R)*sec2_beta*sec_beta;
+    T211 += term;
+    T233 -= term;
+    T431 -= term;
+  }
+
+  x0 = *x;  xp0 = *xp;  y0 = *y;  yp0 = *yp;
+  *x  = x0  + T111*sqr(x0) + T133*sqr(y0);
+  *xp = xp0 + R21*x0 + T211*sqr(x0) + T221*x0*xp0 + T233*sqr(y0) + T243*y0*yp0;
+  *y  = y0  + T331*x0*y0;
+  *yp = yp0 + R43*y0 + T441*yp0*x0 + T431*x0*y0 + T432*xp0*y0;
 }
 

@@ -17,6 +17,7 @@
 
 long checkForOptimRecord(double *value, long values);
 void storeOptimRecord(double *value, long values, long invalid, double result);
+void rpnStoreHigherMatrixElements(VMATRIX *M, long **TijkMem, long **UijklMem, long maxOrder);
 
 void do_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 {
@@ -43,7 +44,9 @@ void do_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
         bomb("n_evaluations <= 0", NULL);
     if ((optimization_data->n_restarts = n_restarts)<0)
       bomb("n_restarts < 0", NULL);
-    
+    if ((optimization_data->matrix_order=matrix_order)<1 ||
+        matrix_order>3)
+      bomb("matrix_order must be 1, 2, or 3", NULL);
     optimization_data->soft_failure = soft_failure;
     if (log_file) {
         if (str_in(log_file, "%s"))
@@ -70,6 +73,8 @@ void do_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
     optimization_data->variables.n_variables = 0;
     optimization_data->covariables.n_covariables = 0;
     optimization_data->constraints.n_constraints = 0;
+    optimization_data->TijkMem = NULL;
+    optimization_data->UijklMem = NULL;
     log_exit("do_optimization_setup");
     }
 
@@ -1017,6 +1022,8 @@ double optimization_function(double *value, long *invalid)
       free(output->sums_vs_z);
       output->sums_vs_z = NULL;
     }
+    M = accumulate_matrices(&(beamline->elem), run, NULL,
+                            optimization_data->matrix_order<1?1:optimization_data->matrix_order, 0);
     track_beam(run, control, error, variables, beamline, beam, output, optim_func_flags, 1,
                &charge);
     if (output->sasefel.active)
@@ -1030,8 +1037,7 @@ double optimization_function(double *value, long *invalid)
     if (!output->sums_vs_z)
         bomb("sums_vs_z element of output structure is NULL--programming error (optimization_function)", NULL);
     if ((i=compute_final_properties(final_property_value, output->sums_vs_z+output->n_z_points, 
-                                    beam->n_to_track, beam->p0, 
-                                    M=full_matrix(&(beamline->elem), run, 1), beam->particle, 
+                                    beam->n_to_track, beam->p0, M, beam->particle, 
                                     control->i_step, control->indexLimitProduct*control->n_steps,
                                     charge))
         != final_property_values) {
@@ -1041,6 +1047,10 @@ double optimization_function(double *value, long *invalid)
         abort();
         }
     rpn_store_final_properties(final_property_value, final_property_values);
+    if (optimization_data->matrix_order>1)
+      rpnStoreHigherMatrixElements(M, &optimization_data->TijkMem,
+                                   &optimization_data->UijklMem,
+                                   optimization_data->matrix_order);
     free_matrices(M); free(M); M = NULL;
     
 #if DEBUG
@@ -1245,6 +1255,66 @@ void optimization_report(double result, double *value, long pass, long n_evals, 
     for (i=0; i<n_dim; i++)
         fprintf(optimization_data->fp_log, "    %10s: %23.15e\n", variables->varied_quan_name[i], value[i]);
     fflush(optimization_data->fp_log);
+  }
+
+
+void rpnStoreHigherMatrixElements(VMATRIX *M, long **TijkMem, long **UijklMem, long maxOrder)
+{
+  long order, i, j, k, l, count;
+  char buffer[10];
+
+  if (!*TijkMem && maxOrder>=2) {
+    for (i=count=0; i<6; i++)
+      for (j=0; j<6; j++)
+        for (k=0; k<=j; k++)
+          count++;
+    if (!(*TijkMem = malloc(sizeof(**TijkMem)*count)))
+      bomb("memory allocation failure (rpnStoreHigherMatrixElements)", NULL);
+    for (i=count=0; i<6; i++)
+      for (j=0; j<6; j++)
+        for (k=0; k<=j; k++, count++) {
+          sprintf(buffer, "T%ld%ld%ld", i+1, j+1, k+1);
+          (*TijkMem)[count] = rpn_create_mem(buffer);
+        }
+  }
+  if (!*UijklMem && maxOrder>=3) {
+    for (i=count=0; i<6; i++)
+      for (j=0; j<6; j++)
+        for (k=0; k<=j; k++)
+          for (l=0; l<=k; l++)
+            count++;
+    if (!(*UijklMem = malloc(sizeof(**UijklMem)*count)))
+      bomb("memory allocation failure (rpnStoreHigherMatrixElements)", NULL);
+    for (i=count=0; i<6; i++)
+      for (j=0; j<6; j++)
+        for (k=0; k<=j; k++)
+          for (l=0; l<=k; l++, count++) {
+            sprintf(buffer, "U%ld%ld%ld", i+1, j+1, k+1, l+1);
+            (*UijklMem)[count] = rpn_create_mem(buffer);
+          }
+  }
+    
+  for (order=2; order<=maxOrder && order<=M->order; order++) {
+    switch (order) {
+    case 2:
+      if (!M->T)
+        bomb("second order matrix is missing!", NULL);
+      for (i=count=0; i<6; i++)
+        for (j=0; j<6; j++)
+          for (k=0; k<=j; k++, count++)
+            rpn_store(M->T[i][j][k], (*TijkMem)[count]);
+      break;
+    case 3:
+      if (!M->Q)
+        bomb("third order matrix is missing!", NULL);
+      for (i=count=0; i<6; i++)
+        for (j=0; j<6; j++)
+          for (k=0; k<=j; k++)
+            for (l=0; l<=k; l++, count++)
+              rpn_store(M->Q[i][j][k][l], (*UijklMem)[count]);
+      break;
+    default:
+      break;
     }
-
-
+  }
+}

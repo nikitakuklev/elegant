@@ -16,10 +16,6 @@ void kick_sbend_derivs(
     double s          /* path length of reference trajectory--ignored */
     );
 void integrate_ord2(double *Qf, double *Qi, double s, long n);
-void apply_edge_effects(
-    double *x, double *xp, double *y, double *yp,
-    double rho, double n, double beta, double psi, long which_edge
-    );
 
 static double Fy_0, Fy_x, Fy_x2, Fy_x3, Fy_x4;
 static double Fy_y2, Fy_x_y2, Fy_x2_y2;
@@ -259,7 +255,7 @@ long track_through_kick_sbend(double **part, long n_part, KSBEND *ksbend, double
         if (ksbend->edge1_effects) {
             /* apply edge focusing */
             if (ksbend->edge_order>1)
-                apply_edge_effects(&x, &xp, &y, &yp, rho, n, e1, psi1/(1+dp), -1);
+                apply_edge_effects(&x, &xp, &y, &yp, rho, n, e1, ksbend->h1, psi1/(1+dp), -1);
             else {
                 xp += tan(e1)/rho*x;
                 yp -= tan(e1-psi1/(1+dp))/rho*y;
@@ -347,7 +343,7 @@ long track_through_kick_sbend(double **part, long n_part, KSBEND *ksbend, double
         if (ksbend->edge2_effects) {
             /* apply edge focusing */
             if (ksbend->edge_order>1)
-                apply_edge_effects(&x, &xp, &y, &yp, rho, n, e2, psi2/(1+dp), 1);
+                apply_edge_effects(&x, &xp, &y, &yp, rho, n, e2, ksbend->h2, psi2/(1+dp), 1);
             else {
                 xp += tan(e2)/rho*x;
                 yp -= tan(e2-psi2/(1+dp))/rho*y;
@@ -485,39 +481,4 @@ void integrate_ord2(double *Qf, double *Qi, double s, long n)
         Qf[5] += dQds[5]*ds;
 /*        leapstep(Qf, kick_sbend_derivs, ds); */
         }
-    }
-
-void apply_edge_effects(
-    double *x, double *xp, double *y, double *yp, 
-    double rho, double n, double beta, double psi, long which_edge
-    )
-{
-    double h, tan_beta, tan2_beta, sec_beta, sec2_beta, h2;
-    double R21, R43;
-    double T111, T133, T211, T441, T331, T221, T233, T243, T431, T432;
-    double x0, xp0, y0, yp0;
-
-    h = 1/rho;
-    R21 = h*(tan_beta=tan(beta));
-    R43 = -h*tan(beta-psi);
-
-    h2 = sqr(h);
-    T111 = which_edge*h/2*(tan2_beta=sqr(tan_beta));
-    T133 = -which_edge*h/2*(sec2_beta=sqr(sec_beta=1./cos(beta)));
-    T211 = which_edge==-1?
-                 -n*h2*tan_beta:
-                 -h2*(n+tan2_beta/2)*tan_beta;
-    T441 = -(T331 = T221 = -which_edge*h*tan2_beta);
-    T233 =  which_edge==-1?
-                  h2*(n+.5+tan2_beta)*tan_beta:
-                  h2*(n-tan2_beta/2)*tan_beta;
-    T243 = which_edge*h*tan2_beta;
-    T431 = h2*(2*n+(which_edge==1?sec2_beta:0))*tan_beta;
-    T432 = which_edge*h*sec2_beta;
-
-    x0 = *x;  xp0 = *xp;  y0 = *y;  yp0 = *yp;
-    *x  = x0  + T111*sqr(x0) + T133*sqr(y0);
-    *xp = xp0 + R21*x0 + T211*sqr(x0) + T221*x0*xp0 + T233*sqr(y0) + T243*y0*x0;
-    *y  = y0  + T331*x0*y0;
-    *yp = yp0 + R43*y0 + T441*yp0*x0 + T431*x0*y0 + T432*xp0*y0;
     }

@@ -12,8 +12,10 @@
 VMATRIX *bend_matrix(
     double length,          /* arc length */ 
     double angle,           /* bending angle */
-    double ea1, 
-    double ea2,             /* entrance and exit pole face angles */
+    double ea1,             /* entrance and exit pole face angles */
+    double ea2,             
+    double Rpole1,          /* entrance and exit pole radii */
+    double Rpole2, 
     double k1,              /* quadrupole term */
     double k2,              /* sextupole term */
     double tilt,            /* tilt angle */
@@ -40,7 +42,7 @@ VMATRIX *bend_matrix(
 
     if (angle<0) {
         /* Note that k2 gets a minus sign here because beta has a rho^3 in it. */
-        M = bend_matrix(length, -angle, -ea1, -ea2, k1, -k2, tilt, 
+        M = bend_matrix(length, -angle, -ea1, -ea2, Rpole1, Rpole2, k1, -k2, tilt, 
                     fint, gap, fse, etilt, order, edge_order, flags, TRANSPORT);
         tilt_matrices(M, PI);
         log_exit("bend_matrix");
@@ -66,7 +68,7 @@ VMATRIX *bend_matrix(
         initialize_matrices(Mtot, M->order);
 
         if ((flags&BEND_EDGE1_EFFECTS) && !(flags&SAME_BEND_PRECEDES)) {
-            Medge = edge_matrix(ea1, ha, n, -1, fint*gap, order, edge_order>=2, TRANSPORT);
+            Medge = edge_matrix(ea1, ha, Rpole1, n, -1, fint*gap, order, edge_order>=2, TRANSPORT);
             concat_matrices(Mtot, M, Medge, 0);
             tmp  = Mtot;
             Mtot = M;
@@ -75,7 +77,7 @@ VMATRIX *bend_matrix(
             }
 
         if ((flags&BEND_EDGE2_EFFECTS) && !(flags&SAME_BEND_FOLLOWS)) {
-            Medge = edge_matrix(ea2, ha, n, 1, fint*gap, order, edge_order>=2, TRANSPORT);
+            Medge = edge_matrix(ea2, ha, Rpole2, n, 1, fint*gap, order, edge_order>=2, TRANSPORT);
             concat_matrices(Mtot, Medge, M, 0);
             tmp  = Mtot;
             Mtot = M;
@@ -130,7 +132,8 @@ VMATRIX *bend_matrix(
 
 VMATRIX *edge_matrix(
     double beta,                 /* edge angle--beta>0->more rectangular */
-    double h,                    /* curvature */
+    double h,                    /* radius of curvature of beam path */
+    double Rpole,                /* radius of pole face */
     double n,                    /* field index */
     long which_edge,             /* -1=entrance, 1=exit */
     double gK,                   /* gap*K (see SLAC 75, pg117) */
@@ -176,7 +179,14 @@ VMATRIX *edge_matrix(
             T[1][3][2] = which_edge*h*tan2_beta;
             T[3][2][0] = h2*(2*n+(which_edge==1?sec2_beta:0))*tan_beta;
             T[3][2][1] = which_edge*h*sec2_beta;
+            if (Rpole!=0) {
+              double term;
+              term = h/(2*Rpole)*sec_beta*sec2_beta;
+              T[1][0][0] += term;
+              T[1][2][2] -= term;
+              T[3][2][0] -= term;
             }
+          }
         T[1][5][0] = -R[1][0];
         if (!TRANSPORT) {
             T[3][5][2] = -R[3][2];
@@ -186,7 +196,7 @@ VMATRIX *edge_matrix(
         else
             T[3][5][2] = R[1][0];
         }
-/*    print_matrices(stdout, "edge matrix", M); */
+
     log_exit("edge_matrix");
     return(M);
     }
@@ -245,14 +255,14 @@ VMATRIX *hvcorrector_matrix(
         if (do_edges) {
             Mtot =  tmalloc(sizeof(*Mtot));
             initialize_matrices(Mtot, Mtot->order=max_order);
-            Medge = edge_matrix(0.0, h, 0.0, -1, 0.0, M->order, 1, 0);
+            Medge = edge_matrix(0.0, h, 0.0, 0.0, -1, 0.0, M->order, 1, 0);
             concat_matrices(Mtot, M, Medge, 0);
             tmp  = Mtot;
             Mtot = M;
             M    = tmp;
             free_matrices(Medge); tfree(Medge);
 
-            Medge = edge_matrix(kick, h, 0.0, 1, 0.0, M->order, 1, 0);
+            Medge = edge_matrix(kick, h, 0.0, 0.0, 1, 0.0, M->order, 1, 0);
             concat_matrices(Mtot, Medge, M, 0);
             tmp  = Mtot;
             Mtot = M;
@@ -314,14 +324,14 @@ VMATRIX *corrector_matrix(
         if (do_edges) {
             Mtot =  tmalloc(sizeof(*Mtot));
             initialize_matrices(Mtot, Mtot->order=max_order);
-            Medge = edge_matrix(0.0, h, 0.0, -1, 0.0, max_order, 1, 0);
+            Medge = edge_matrix(0.0, h, 0.0, 0.0, -1, 0.0, max_order, 1, 0);
             concat_matrices(Mtot, M, Medge, 0);
             tmp  = Mtot;
             Mtot = M;
             M    = tmp;
             free_matrices(Medge); tfree(Medge); 
         
-            Medge = edge_matrix(kick, h, 0.0, 1, 0.0, max_order, 1, 0);
+            Medge = edge_matrix(kick, h, 0.0, 0.0, 1, 0.0, max_order, 1, 0);
             concat_matrices(Mtot, Medge, M, 0);
             tmp  = Mtot;
             Mtot = M;

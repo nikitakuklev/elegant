@@ -84,6 +84,12 @@ VMATRIX *accumulate_matrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long ord
           member->accumMatrix = tmalloc(sizeof(*(member->accumMatrix)));
         copy_matrices(member->accumMatrix, M2);
       }
+    } else if (!full_matrix_only) {
+      if (member->accumMatrix)
+        free_matrices(member->accumMatrix);
+      else 
+        member->accumMatrix = tmalloc(sizeof(*(member->accumMatrix)));
+      copy_matrices(member->accumMatrix, M2);
     }
     member = member->succ;
   }
@@ -398,6 +404,7 @@ VMATRIX *compute_matrix(
         }
         elem->matrix = 
             bend_matrix(bend->length, bend->angle, bend->e1, bend->e2, 
+                        bend->h1, bend->h2, 
                         bend->k1_internal, bend->k2_internal, 
                         bend->tilt, bend->fint, 
                         bend->hgap*2, bend->fse, bend->etilt,
@@ -520,7 +527,8 @@ VMATRIX *compute_matrix(
             bomb("n_kicks must be > 0 for KSBEND element", NULL);
         ksbend->flags = determine_bend_flags(elem, ksbend->edge1_effects, ksbend->edge2_effects);
         elem->matrix = 
-            bend_matrix(ksbend->length, ksbend->angle, ksbend->e1, ksbend->e2, ksbend->k1, 
+            bend_matrix(ksbend->length, ksbend->angle, ksbend->e1, ksbend->e2, 
+                        ksbend->h1, ksbend->h2, ksbend->k1, 
                         ksbend->k2, ksbend->tilt, ksbend->fint, 
                         ksbend->hgap*2, ksbend->fse, ksbend->etilt,
                         (run->default_order?run->default_order:1), ksbend->edge_order, ksbend->flags,
@@ -583,8 +591,8 @@ VMATRIX *compute_matrix(
         nibend = (NIBEND*)elem->p_elem;
         bend_flags = determine_bend_flags(elem, 1, 1);
         elem->matrix = 
-            bend_matrix(nibend->length, nibend->angle, nibend->e1, nibend->e2, 0.0,
-                        0.0, nibend->tilt, nibend->fint, nibend->hgap*2,
+            bend_matrix(nibend->length, nibend->angle, nibend->e1, nibend->e2, 
+                        0.0, 0.0, 0.0, 0.0, nibend->tilt, nibend->fint, nibend->hgap*2,
                         nibend->fse, nibend->etilt,
                         (run->default_order?run->default_order:1), 0L, bend_flags, 0);
         break;
@@ -592,8 +600,8 @@ VMATRIX *compute_matrix(
         nisept = (NISEPT*)elem->p_elem;
         bend_flags = determine_bend_flags(elem, 1, 1);
         elem->matrix = 
-            bend_matrix(nisept->length, nisept->angle, nisept->e1, nisept->angle-nisept->e1, 0.0,
-                        0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            bend_matrix(nisept->length, nisept->angle, nisept->e1, nisept->angle-nisept->e1, 
+                        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                         (run->default_order?run->default_order:1), 0, bend_flags, 0);
         break;
       case T_STRAY:
@@ -620,7 +628,7 @@ VMATRIX *compute_matrix(
         }
         elem->matrix = 
             bend_matrix(csbend->length, csbend->angle, csbend->e1, csbend->e2, 
-                        csbend->k1_internal, 
+                        csbend->h1, csbend->h2, csbend->k1_internal, 
                         csbend->k2_internal, csbend->tilt, csbend->fint, 
                         csbend->hgap*2, csbend->fse, csbend->etilt,
                         (run->default_order?run->default_order:1), 1L, csbend->flags, 0);
@@ -648,7 +656,7 @@ VMATRIX *compute_matrix(
         }
         elem->matrix = 
             bend_matrix(csrcsbend->length, csrcsbend->angle, csrcsbend->e1, csrcsbend->e2, 
-                        csrcsbend->k1_internal, 
+                        csrcsbend->h1, csrcsbend->h2, csrcsbend->k1_internal, 
                         csrcsbend->k2_internal, csrcsbend->tilt, csrcsbend->fint, 
                         csrcsbend->hgap*2, csrcsbend->fse, csrcsbend->etilt,
                         (run->default_order?run->default_order:1), 1L, csrcsbend->flags, 0);

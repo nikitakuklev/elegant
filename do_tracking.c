@@ -13,6 +13,7 @@
 
 ELEMENT_LIST *findBeamlineMatrixElement(ELEMENT_LIST *eptr);
 void trackLongitudinalOnlyRing(double **part, long np, VMATRIX *M, double *alpha);
+void store_fitpoint_matrix_values(MARK *fpt, char *name, long occurence, VMATRIX *M);
 void trackWithChromaticLinearMatrix(double **particle, long particles,
                                     ELEMENT_LIST *eptr,
                                     TWISS *twiss0,
@@ -408,8 +409,11 @@ long do_tracking(
               if (beamline->flags&BEAMLINE_TWISS_WANTED) {
                 if (!(beamline->flags&BEAMLINE_TWISS_DONE))
                   update_twiss_parameters(run, beamline, NULL);
-                store_fitpoint_twiss_parameters((MARK*)eptr->p_elem, eptr->name, eptr->occurence, eptr->twiss);
+                store_fitpoint_twiss_parameters((MARK*)eptr->p_elem, eptr->name, 
+                                                eptr->occurence, eptr->twiss);
               }
+              store_fitpoint_matrix_values((MARK*)eptr->p_elem, eptr->name, 
+                                           eptr->occurence, eptr->accumMatrix);
               store_fitpoint_beam_parameters((MARK*)eptr->p_elem, eptr->name,eptr->occurence, 
                                              coord, n_to_track, *P_central); 
             }
@@ -1247,6 +1251,54 @@ void scatter(double **part, long np, double Po, SCATTER *scat)
   log_exit("scatter");
 }
 
+void store_fitpoint_matrix_values(MARK *fpt, char *name, long occurence, VMATRIX *M)
+{
+  char buffer[1000];
+  long i, j, k, count;
+
+  if (!M) 
+    bomb("NULL matrix passed to store_fitpoint_matrix_values", NULL);
+  if (!M->R)
+    bomb("NULL R matrix passed to store_fitpoint_matrix_values", NULL);
+
+  if (!(fpt->init_flags&8)) {
+    if (M->order==1) {
+      if (!(fpt->matrix_mem = malloc(sizeof(*(fpt->matrix_mem))*36)))
+        bomb("memory allocation failure (store_fitpoint_matrix_values)", NULL);
+    } else {
+      if (!(fpt->matrix_mem = malloc(sizeof(*(fpt->matrix_mem))*(36+126))))
+        bomb("memory allocation failure (store_fitpoint_matrix_values)", NULL);
+    }
+    for (i=count=0; i<6; i++) {
+      for (j=0; j<6; j++) {
+        sprintf(buffer, "%s#%ld.R%ld%ld", name, occurence, i+1, j+1);
+        fpt->matrix_mem[count++] = rpn_create_mem(buffer);
+      }
+    }
+    if (M->order>1) {
+      for (i=0; i<6; i++) {
+        for (j=0; j<6; j++) {
+          for (k=0; k<=j; k++) {
+            sprintf(buffer, "%s#%ld.T%ld%ld%ld", name, occurence, i+1, j+1, k+1);
+            fpt->matrix_mem[count++] = rpn_create_mem(buffer);
+          }
+        }
+      }
+    }
+    fpt->init_flags |= 8;
+  }
+  
+  for (i=count=0; i<6; i++)
+    for (j=0; j<6; j++)
+      rpn_store(M->R[i][j], fpt->matrix_mem[count++]);
+  if (M->order>1)
+    for (i=0; i<6; i++)
+      for (j=0; j<6; j++)
+        for (k=0; k<=j; k++) 
+          rpn_store(M->T[i][j][k], fpt->matrix_mem[count++]);
+}
+
+
 void store_fitpoint_beam_parameters(MARK *fpt, char *name, long occurence, double **coord, long np, double Po)
 {
   long i;
@@ -1257,7 +1309,7 @@ void store_fitpoint_beam_parameters(MARK *fpt, char *name, long occurence, doubl
     "Sx", "Sxp", "Sy", "Syp", "Ss", "Sdelta" };
   static char *emit_name_suffix[3] = {
     "ex", "ey", "es"};
-  static char s[100];
+  static char s[1000];
 
   compute_centroids(centroid, coord, np);
   compute_sigmas(emit, sigma, centroid, coord, np);

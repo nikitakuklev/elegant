@@ -326,6 +326,7 @@ typedef struct {
     long update_periodic_twiss_parameters;    /* flag: user must request this */
     long new_data_read;          /* new data has been read for optimization */
     long n_restarts;
+    long matrix_order, *TijkMem, *UijklMem;
     } OPTIMIZATION_DATA;
 
 /* structure to store particle coordinates */
@@ -553,7 +554,7 @@ extern char *entity_text[N_TYPES];
 #define N_RAMPP_PARAMS 1
 #define N_NISEPT_PARAMS 9
 #define N_STRAY_PARAMS 7
-#define N_CSBEND_PARAMS 33
+#define N_CSBEND_PARAMS 34
 #define N_MATTER_PARAMS 8
 #define N_RFMODE_PARAMS 18
 #define N_TRFMODE_PARAMS 12
@@ -571,7 +572,7 @@ extern char *entity_text[N_TYPES];
 #define N_CHARGE_PARAMS 2
 #define N_PFILTER_PARAMS 5
 #define N_HISTOGRAM_PARAMS 9
-#define N_CSRCSBEND_PARAMS 46
+#define N_CSRCSBEND_PARAMS 47
 #define N_CSRDRIFT_PARAMS 18
 #define N_REMCOR_PARAMS 6
 #define N_MAPSOLENOID_PARAMS 18
@@ -811,12 +812,14 @@ typedef struct {
     /* values for internal use: */
     unsigned long init_flags; /* 1:twiss_mem initialized, 
                                  2:centroid_mem, sigma_mem, emit_mem initialized,
-                                 4:floor_mem initialized */
+                                 4:floor_mem initialized
+                                 8:matrix_mem initialized*/
     long *twiss_mem;       /* betax, alphax, NUx, etax, etaxp, betay, ... */
     long *centroid_mem;    /* (x, xp, y, yp, s, dp, Pcen, n) */
     long *sigma_mem;       /* (x, xp, y, yp, s, dp) */
     long *emit_mem;        /* (x, y, z) */
     long *floor_mem;       /* X, Z, theta */
+    long *matrix_mem;
     } MARK;
 
 /* storage structure for alpha magnet */
@@ -1365,7 +1368,7 @@ typedef struct {
     double fse;     /* Fractional Strength Error */
     double etilt;   /* error tilt angle */
     long n_kicks, nonlinear, synch_rad;
-    long edge1_effects, edge2_effects;
+    long edge1_effects, edge2_effects, edge_order;
     long integration_order;
     double edge1_kick_limit, edge2_kick_limit;
     long kick_limit_scaling;
@@ -1387,7 +1390,7 @@ typedef struct {
     double fse;     /* Fractional Strength Error */
     double etilt;   /* error tilt angle */
     long n_kicks, nonlinear, synch_rad;
-    long edge1_effects, edge2_effects;
+    long edge1_effects, edge2_effects, edge_order;
     long integration_order, bins, binOnce;
     double binRangeFactor;
     long SGHalfWidth, SGOrder, SGDerivHalfWidth, SGDerivOrder;
@@ -1762,10 +1765,10 @@ extern void finish_awe_beam(OUTPUT_FILES *output, RUN *run, VARY *control, ERROR
 void adjust_arrival_time_data(double **coord, long np, double Po, long center_t, long flip_t);
  
 /* prototypes for bend_matrix6.c: */
-extern VMATRIX *bend_matrix(double length, double angle, double ea1, double ea2,             
+extern VMATRIX *bend_matrix(double length, double angle, double ea1, double ea2, double R1, double R2,
     double k1, double k2, double tilt, double fint, double gap, double fse, double etilt,
     long order, long edge_order, long flags, long TRANSPORT);
-extern VMATRIX *edge_matrix(double beta, double h, double n, long which_edge,             
+extern VMATRIX *edge_matrix(double beta, double h, double Rpole, double n, long which_edge,             
     double gK, long order, long all_terms, long TRANSPORT);
 extern VMATRIX *corrector_matrix(double length, double kick, double tilt, double b2, double calibration,
     long do_edges, long max_order);
@@ -1773,6 +1776,10 @@ extern VMATRIX *hvcorrector_matrix(double length, double xkick, double ykick, do
     double xcalibration, double ycalibration, long do_edges, long max_order);
 extern VMATRIX *sbend_matrix(double t0, double h, double ha, double n,         
     double beta, double xgamma, long order);
+void apply_edge_effects(
+    double *x, double *xp, double *y, double *yp,
+    double rho, double n, double beta, double R, double psi, long which_edge
+    );
  
 /* prototypes for bunched_beam12.c: */
 extern void setup_bunched_beam(BEAM *beam, NAMELIST_TEXT *nltext, RUN *run, VARY *control,

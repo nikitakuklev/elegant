@@ -192,6 +192,16 @@ void output_magnets(char *filename, char *line_name, LINE_LIST *beamline)
                 }
                 start += dz*8;
                 break;
+            case T_MATR:
+                dz = ((MATR*)eptr->p_elem)->length;
+                fprintf(fpm, "%s %e %e\n", eptr->name, start, 0.5);
+                fprintf(fpm, "%s %e %e\n", eptr->name, start+dz, -0.5);
+                fprintf(fpm, "%s %e %e\n", eptr->name, start+dz, 0.5);
+                fprintf(fpm, "%s %e %e\n", eptr->name, start, -0.5);
+                fprintf(fpm, "%s %e %e\n", eptr->name, start, 0.0);
+                fprintf(fpm, "%s %e %e\n", eptr->name, start+dz, 0.0);
+                start += dz;
+                break;
             default:
                 if (entity_description[eptr->type].flags&HAS_LENGTH) {
                     dz = ((DRIFT*)eptr->p_elem)->length;
