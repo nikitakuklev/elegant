@@ -1,7 +1,9 @@
 This element simulates transport through a transverse magnetic field
-specified as a field map.  It does not incorporate changes in the design
-trajectory resulting from the fields.  I.e., if you input a dipole field,
-it is interpreted as a steering element.
+specified as a field map.  It does this by simply integrating the
+Lorentz force equation in cartesian coordinates.  It does not
+incorporate changes in the design trajectory resulting from the
+fields.  I.e., if you input a dipole field, it is interpreted as a
+steering element.
 
 The field map file is an SDDS file with the following columns:
 \begin{itemize}
