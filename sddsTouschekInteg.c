@@ -42,7 +42,7 @@ int main()
   eacc = query_double("Starting value of zeta: ", 1e-9);
   eaccFinal = query_double("Ending value of zeta: ", 500);
   limit = query_long("Number of values per decade: ", 10);
-  query("Output file: ", filename);
+  queryn("Output file: ", filename, 500);
   chop_nl(filename);
   factor = exp(log(result/eacc)/limit);
   if (!(fp = fopen(filename, "w"))) {
