@@ -118,6 +118,7 @@ void setup_sdds_beam(
     inputFiles = 1;
     inputFile = tmalloc(sizeof(*inputFile)*1);
     cp_str(inputFile, input);
+    inputFile[0] = compose_filename(inputFile[0], run->rootname);
   }
   else {
     char *ptr;
@@ -127,6 +128,7 @@ void setup_sdds_beam(
       if (!(inputFile = SDDS_Realloc(inputFile, sizeof(*inputFile)*inputFiles)))
         bomb("memory allocation failure", NULL);
       cp_str(inputFile+inputFiles-1, ptr);
+      inputFile[inputFiles-1] = compose_filename(inputFile[inputFiles-1], run->rootname);
     }
   }
   

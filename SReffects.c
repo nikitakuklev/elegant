@@ -25,7 +25,7 @@ void track_SReffects(double **coord, long np, SREFFECTS *SReffects, double Po,
     double xpEta, ypEta;
     double *part, beta;
     static long first = 1;
-    double deltaChange;
+    double deltaChange, cutoff;
     
     if (SReffects->pRef==0) {
       if (!radIntegrals) {
@@ -101,18 +101,18 @@ void track_SReffects(double **coord, long np, SREFFECTS *SReffects, double Po,
 */
         }
     
-
+    cutoff = SReffects->cutoff;
     for (ip=0; ip<np; ip++) {
         part     = coord[ip];
         xpEta    = part[5]*twiss->etapx;
-        part[1]  = (part[1] - xpEta)*Fx + Srxp*gauss_rn(0, random_2) + xpEta;
+        part[1]  = (part[1] - xpEta)*Fx + Srxp*gauss_rn_lim(0.0, 1.0, cutoff, random_2) + xpEta;
         ypEta    = part[5]*twiss->etapy;
-        part[3]  = (part[3] - ypEta)*Fy + Sryp*gauss_rn(0, random_2) + ypEta;
+        part[3]  = (part[3] - ypEta)*Fy + Sryp*gauss_rn_lim(0.0, 1.0, cutoff, random_2) + ypEta;
         P = (1+part[5])*Po;
         beta = P/sqrt(sqr(P)+1);
         t = part[4]/beta;
         deltaChange = -part[5];
-        part[5]  = Ddelta + part[5]*Fdelta + Srdelta*gauss_rn(0, random_2);
+        part[5]  = Ddelta + part[5]*Fdelta + Srdelta*gauss_rn_lim(0.0, 1.0, cutoff, random_2);
         deltaChange += part[5];
         part[0] += twiss->etax*deltaChange;
         part[1] += twiss->etapx*deltaChange;

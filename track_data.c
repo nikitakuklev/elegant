@@ -1251,6 +1251,7 @@ PARAMETER sreffects_param[N_SREFFECTS_PARAMS] = {
     {"DAMPING", "", IS_LONG, 0, (long)((char *)&SReffects_example.damp), NULL, 0, 1, "include damping, less rf effects?"},
     {"QEXCITATION", "", IS_LONG, 0, (long)((char *)&SReffects_example.qExcite), NULL, 0, 1, "include quantum excitation?"},
     {"LOSSES", "", IS_LONG, 0, (long)((char *)&SReffects_example.loss), NULL, 0, 1, "include average losses?"},
+    {"CUTOFF", "", IS_DOUBLE, 0, (long)((char *)&SReffects_example.cutoff), NULL, 100.0, 0, "cutoff (in sigmas) for gaussian random numbers"},
     };
 
 MODRF modrf_example;

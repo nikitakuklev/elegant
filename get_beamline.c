@@ -91,6 +91,11 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
           fprintf(stdout, "%s\n", s);
           fflush(stdout);
         }
+	if (s[0]=='%') {
+	  /* rpn command */
+	  chop_nl(s);
+	  rpn(s+1);
+	}
         if (s[0]=='#' && strncmp(s, "#INCLUDE:", strlen("#INCLUDE:"))==0) {
           char *filename;
           if (++iMad==MAX_FILE_NESTING) 
