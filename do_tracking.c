@@ -781,6 +781,7 @@ long do_tracking(
       eptr = eptr->succ;
       n_to_track = n_left;
     }
+    
     log_entry("do_tracking.2.2.3");
     if (effort)
       *effort += n_left;
@@ -808,8 +809,24 @@ long do_tracking(
 #endif
     
     if (i_pass==0 || watch_pt_seen) {
+      /* if eptr is not NULL, then all particles have been lost */
+      /* some work still has to be done, however. */
       while (eptr) {
-        /* some elements need to be executed even if there are no particles */
+        if (entity_description[eptr->type].flags&HAS_LENGTH && eptr->p_elem)
+          z += ((DRIFT*)eptr->p_elem)->length;
+        else {
+          if (eptr->pred)
+            z += eptr->end_pos - eptr->pred->end_pos;
+          else
+            z += eptr->end_pos;
+        }
+        if (sums_vs_z && *sums_vs_z && !(flags&FINAL_SUMS_ONLY) && !(flags&TEST_PARTICLES)) {
+          if (i_sums<0)
+            bomb("attempt to accumulate beam sums with negative index!", NULL);
+          accumulate_beam_sums(*sums_vs_z+i_sums, coord, n_to_track, *P_central);
+          (*sums_vs_z)[i_sums].z = z;
+          i_sums++;
+        }
         switch (eptr->type) {
         case T_WATCH:
           if (!(flags&TEST_PARTICLES) && !(flags&INHIBIT_FILE_OUTPUT)) {
