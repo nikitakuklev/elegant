@@ -73,7 +73,7 @@ long simple_rf_cavity(
     double **part, long np, RFCA *rfca, double **accepted, double *P_central, double zEnd
     )
 {
-    long ip, same_dgamma;
+    long ip, same_dgamma, iKick, nKicks;
     double timeOffset, inverseF, dc4;
     double P, gamma, dgamma, phase, length, volt, To;
     double *coord, t, t0, omega, beta_i, tau, dt;
@@ -208,55 +208,110 @@ long simple_rf_cavity(
     fprintf(fplog, "%ld %21.15e %21.15e %21.15e %21.15e %21.15e %21.15e ",
             fplogCounter++, zEnd, *P_central, rfca->volt, rfca->phase, phase, rfca->length);
 #endif
+    nKicks = length?rfca->nKicks:1;
 
+    if (nKicks>1)
+      bomb("n_kicks>1 not yet supported for rfca element", NULL);
+    
     for (ip=0; ip<np; ip++) {
         coord = part[ip];
-        if (length) {
-          /* apply initial drift */
-          coord[0] += coord[1]*length/2;
-          coord[2] += coord[3]*length/2;
-          coord[4] += (dc4=length/2*sqrt(1+sqr(coord[1])+sqr(coord[3])));
-        } else 
-          dc4 = 0;
-        
-        /* compute energy kick */
-        P     = *P_central*(1+coord[5]);
-        beta_i = P/(gamma=sqrt(sqr(P)+1));
-        t     = coord[4]/(c_mks*beta_i)-timeOffset;
-        if ((dt = t-t0)<0)
+        if (nKicks>0) {
+          if (length) {
+            /* apply initial drift */
+            coord[0] += coord[1]*length/2;
+            coord[2] += coord[3]*length/2;
+            coord[4] += (dc4=length/2*sqrt(1+sqr(coord[1])+sqr(coord[3])));
+          } else 
+            dc4 = 0;
+          
+          /* compute energy kick */
+          P     = *P_central*(1+coord[5]);
+          beta_i = P/(gamma=sqrt(sqr(P)+1));
+          t     = coord[4]/(c_mks*beta_i)-timeOffset;
+          if ((dt = t-t0)<0)
             dt = 0;
-        if  (!same_dgamma)
+          if  (!same_dgamma)
             dgamma = volt*sin(omega*t+phase)*(tau?sqrt(1-exp(-dt/tau)):1);
 
-        if (rfca->end1Focus && length) {
-          /* drift back, apply focus kick, then drift forward again */
-          inverseF = dgamma/(2*gamma*length);
-          coord[4] -= dc4;
-          coord[0] -= coord[1]*length/2;
-          coord[2] -= coord[3]*length/2;
-          coord[1] -= coord[0]*inverseF;
-          coord[3] -= coord[2]*inverseF;
-          coord[0] += coord[1]*length/2;
-          coord[2] += coord[3]*length/2;
+          if (rfca->end1Focus && length) {
+            /* drift back, apply focus kick, then drift forward again */
+            inverseF = dgamma/(2*gamma*length);
+            coord[4] -= dc4;
+            coord[0] -= coord[1]*length/2;
+            coord[2] -= coord[3]*length/2;
+            coord[1] -= coord[0]*inverseF;
+            coord[3] -= coord[2]*inverseF;
+            coord[0] += coord[1]*length/2;
+            coord[2] += coord[3]*length/2;
+            coord[4] += length/2*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+          } 
+          /* apply energy kick */
+          add_to_particle_energy(coord, t, *P_central, dgamma);
+          gamma += dgamma;
+          
+          if (length) {
+            /* apply final drift and focus kick if needed */
+            coord[0] += coord[1]*length/2;
+            coord[2] += coord[3]*length/2;
+            coord[4] += length/2.0*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+            if (rfca->end2Focus) {
+              inverseF = -dgamma/(2*gamma*length);
+              coord[1] -= coord[0]*inverseF;
+              coord[3] -= coord[2]*inverseF;
+            }
+          }
+        }
+        else {
+          double sin_phase, cos_phase;
+          double R22, R12, dP, ds1;
+          
+          /* use matrix to propagate particles */
+
+          /* compute energy change using phase of arrival at center of cavity */
+          P     = *P_central*(1+coord[5]);
+          beta_i = P/(gamma=sqrt(sqr(P)+1));
+          ds1 = length/2*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+          t     = (coord[4]+ds1)/(c_mks*beta_i)-timeOffset;
+          if ((dt = t-t0)<0)
+            dt = 0;
+          if  (!same_dgamma) {
+            sin_phase = sin(omega*t+phase);
+            cos_phase = cos(omega*t+phase);
+            dgamma = volt*sin_phase*(tau?sqrt(1-exp(-dt/tau)):1);
+          }
+          
+          if (rfca->end1Focus && length) {
+            /* apply end focus kick */
+            inverseF = dgamma/(2*gamma*length);
+            coord[1] -= coord[0]*inverseF;
+            coord[3] -= coord[2]*inverseF;
+          } 
+          
+          dP = sqrt(sqr(gamma+dgamma)-1) - P;
+          R22 = 1/(1+dP/P);
+          if (fabs(dP/P)>1e-14)
+            R12 = length*(P/dP*log(1+dP/P));
+          else
+            R12 = length;
+
+          coord[4] += ds1;
+          coord[0] = coord[0] + coord[1]*R12;
+          coord[1] = coord[1]*R22;
+          coord[2] = coord[2] + coord[3]*R12;
+          coord[3] = coord[3]*R22;
           coord[4] += length/2*sqrt(1+sqr(coord[1])+sqr(coord[3]));
-        } 
-        /* apply energy kick */
-        add_to_particle_energy(coord, t, *P_central, dgamma);
-        gamma += dgamma;
-        
-        if (length) {
-          /* apply final drift and focus kick if needed */
-          coord[0] += coord[1]*length/2;
-          coord[2] += coord[3]*length/2;
-          coord[4] += length/2.0*sqrt(1+sqr(coord[1])+sqr(coord[3]));
-          if (rfca->end2Focus) {
+          coord[5] = (P+dP-(*P_central))/(*P_central);
+          
+          gamma += dgamma;
+          if (rfca->end2Focus && length) {
             inverseF = -dgamma/(2*gamma*length);
             coord[1] -= coord[0]*inverseF;
             coord[3] -= coord[2]*inverseF;
           }
         }
       }
-
+    
+    
     if (rfca->change_p0)
         do_match_energy(part, np, P_central, 0);
 #ifdef DEBUG

@@ -487,7 +487,7 @@ extern char *entity_text[N_TYPES];
 #define N_SOLE_PARAMS 7
 #define N_HCOR_PARAMS 8
 #define N_VCOR_PARAMS 8
-#define N_RFCA_PARAMS 11
+#define N_RFCA_PARAMS 12
 #define N_ELSE_PARAMS 0
 #define N_HMON_PARAMS 8
 #define N_VMON_PARAMS 8
@@ -693,7 +693,7 @@ typedef struct {
     double length, volt, phase, freq, Q;
     long phase_reference, change_p0, change_t;
     char *fiducial;
-    long end1Focus, end2Focus;
+    long end1Focus, end2Focus, nKicks;
     /* for internal use only: */
     long fiducial_seen;
     double phase_fiducial;
@@ -2068,7 +2068,7 @@ void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamli
 void final_floor_coordinates(LINE_LIST *beamline, double *X, double *Z, double *Theta);
 
 
-void setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
+long setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 long do_load_parameters(LINE_LIST *beamline, long change_definitions);
 #define NO_LOAD_PARAMETERS 0
 #define PARAMETERS_LOADED 1
