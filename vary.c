@@ -234,243 +234,244 @@ void add_varied_element(VARY *_control, NAMELIST_TEXT *nltext, RUN *run, LINE_LI
 
 long vary_beamline(VARY *_control, ERRORVAL *errcon, RUN *run, LINE_LIST *beamline)
 {
-    long i, ret_val, do_perturbations, step_incremented, parameters_loaded;
-    ELEMENT_LINKS *links;
+  long i, ret_val, do_perturbations, step_incremented, parameters_loaded;
+  ELEMENT_LINKS *links;
 
-    log_entry("vary_beamline");
-    links = beamline->links;
+  log_entry("vary_beamline");
+  links = beamline->links;
 
 #if DEBUG
-    fprintf(stdout, "vary_beamline called: i_step = %ld, i_vary = %ld\n", 
-        _control->i_step, _control->i_vary);
-    fflush(stdout);
+  fprintf(stdout, "vary_beamline called: i_step = %ld, i_vary = %ld\n", 
+          _control->i_step, _control->i_vary);
+  fflush(stdout);
 #endif
 
-    if ((_control->bunch_frequency==0 && _control->reset_rf_each_step) || 
-        _control->i_step==0)
-      delete_phase_references();
-    reset_special_elements(beamline, _control->reset_rf_each_step);
+  if ((_control->bunch_frequency==0 && _control->reset_rf_each_step) || 
+      _control->i_step==0)
+    delete_phase_references();
+  reset_special_elements(beamline, _control->reset_rf_each_step);
 
-    do_perturbations = step_incremented = 0;
+  do_perturbations = step_incremented = 0;
 
-    if (links && links->n_links) 
-        reset_element_links(links, run, beamline);
+  if (links && links->n_links) 
+    reset_element_links(links, run, beamline);
 
-    for (i=0, _control->indexLimitProduct=1; i<_control->n_indices; i++) {
-      if ((_control->indexLimitProduct *= _control->index_limit[i])<=0) {
-        fprintf(stdout, "index %ld has a limit of <= 0", i);
-        fflush(stdout);
-        exit(1);
-      }
+  for (i=0, _control->indexLimitProduct=1; i<_control->n_indices; i++) {
+    if ((_control->indexLimitProduct *= _control->index_limit[i])<=0) {
+      fprintf(stdout, "index %ld has a limit of <= 0", i);
+      fflush(stdout);
+      exit(1);
     }
-    
-    if (_control->n_indices==0 || _control->at_start) {
-        do_perturbations = 1;
-        if (errcon->n_items) {
+  }
+  
+  if (_control->n_indices==0 || _control->at_start) {
+    do_perturbations = 1;
+    if (errcon->n_items) {
 #if DEBUG
-            fputs("(re)asserting unperturbed values", stdout);
+      fputs("(re)asserting unperturbed values", stdout);
 #endif
-            log_entry("vary_beamline.1");
-            /* assert unperturbed values */
-            assert_parameter_values(errcon->name, errcon->param_number, errcon->elem_type,
-                errcon->unperturbed_value, errcon->n_items, beamline);
-            if (errcon->new_data_read) {
-                /* set element flags to indicate perturbation of parameters that change the matrix */
-                set_element_flags(beamline, errcon->name, errcon->flags, errcon->elem_type, errcon->param_number,
-                        errcon->n_items, PARAMETERS_ARE_PERTURBED, VMATRIX_IS_PERTURBED, 0, PRE_CORRECTION);
-                errcon->new_data_read = 0;
-                }
-            log_exit("vary_beamline.1");
-            }
-        }
-    if (_control->n_elements_to_vary) {
+      log_entry("vary_beamline.1");
+      /* assert unperturbed values */
+      assert_parameter_values(errcon->name, errcon->param_number, errcon->elem_type,
+                              errcon->unperturbed_value, errcon->n_items, beamline);
+      if (errcon->new_data_read) {
+        /* set element flags to indicate perturbation of parameters that change the matrix */
+        set_element_flags(beamline, errcon->name, errcon->flags, errcon->elem_type, errcon->param_number,
+                          errcon->n_items, PARAMETERS_ARE_PERTURBED, VMATRIX_IS_PERTURBED, 0, PRE_CORRECTION);
+        errcon->new_data_read = 0;
+      }
+      log_exit("vary_beamline.1");
+    }
+  }
+  if (_control->n_elements_to_vary) {
 #if DEBUG
-        fputs("inside vary-elements section", stdout);
+    fputs("inside vary-elements section", stdout);
 #endif
-        log_entry("vary_beamline.2");
-        check_VARY_structure(_control, "vary_beamline");
+    log_entry("vary_beamline.2");
+    check_VARY_structure(_control, "vary_beamline");
 
-        if (_control->new_data_read || _control->at_start) {
-            /* assert initial values of varied parameters */
-            assert_parameter_values(_control->element, _control->varied_param, _control->varied_type,
-                _control->initial, _control->n_elements_to_vary, beamline);
-            if (_control->cell) 
-                assert_parameter_values(_control->element, _control->varied_param, _control->varied_type,
-                    _control->initial, _control->n_elements_to_vary, _control->cell);
-            /* check for zero index_limits */
-            for (i=0; i<_control->n_indices; i++) {
-                if (_control->index_limit[i]==0)
-                    bomb("index limit must be given for each index", NULL);
-                _control->index[i] = 0;
-                _control->varied_quan_value[i] = _control->initial[i];
-                }
-            /* calculate step sizes after checking that data is okay for all indices */
-            for (i=0; i<_control->n_elements_to_vary; i++) {
-                if (_control->index_limit[_control->element_index[i]]>1) {
-                    if (_control->flags[i]&VARY_GEOMETRIC)
-                        _control->step[i] = pow(_control->final[i]/_control->initial[i], 
-                                                1./(_control->index_limit[_control->element_index[i]]-1));
-                    else
-                        _control->step[i] = (_control->final[i]-_control->initial[i])/
-                                (_control->index_limit[_control->element_index[i]]-1);
-                    }
-                else if (_control->index_limit[_control->element_index[i]]==1)
-                    _control->step[i] = 0;
-                else
-                    bomb("index limits must be set for all indices", NULL);
-                }
-            /* set element flags to indicate variation of parameters */
-            set_element_flags(beamline, _control->element, NULL, _control->varied_type, _control->varied_param, 
-                    _control->n_elements_to_vary, PARAMETERS_ARE_VARIED, VMATRIX_IS_VARIED, 0, 0);
-            if (_control->cell)
-                set_element_flags(_control->cell, _control->element, NULL, _control->varied_type, _control->varied_param, 
+    if (_control->new_data_read || _control->at_start) {
+      /* assert initial values of varied parameters */
+      assert_parameter_values(_control->element, _control->varied_param, _control->varied_type,
+                              _control->initial, _control->n_elements_to_vary, beamline);
+      if (_control->cell) 
+        assert_parameter_values(_control->element, _control->varied_param, _control->varied_type,
+                                _control->initial, _control->n_elements_to_vary, _control->cell);
+      /* check for zero index_limits */
+      for (i=0; i<_control->n_indices; i++) {
+        if (_control->index_limit[i]==0)
+          bomb("index limit must be given for each index", NULL);
+        _control->index[i] = 0;
+        _control->varied_quan_value[i] = _control->initial[i];
+      }
+      /* calculate step sizes after checking that data is okay for all indices */
+      for (i=0; i<_control->n_elements_to_vary; i++) {
+        if (_control->index_limit[_control->element_index[i]]>1) {
+          if (_control->flags[i]&VARY_GEOMETRIC)
+            _control->step[i] = pow(_control->final[i]/_control->initial[i], 
+                                    1./(_control->index_limit[_control->element_index[i]]-1));
+          else
+            _control->step[i] = (_control->final[i]-_control->initial[i])/
+              (_control->index_limit[_control->element_index[i]]-1);
+        }
+        else if (_control->index_limit[_control->element_index[i]]==1)
+          _control->step[i] = 0;
+        else
+          bomb("index limits must be set for all indices", NULL);
+      }
+      /* set element flags to indicate variation of parameters */
+      set_element_flags(beamline, _control->element, NULL, _control->varied_type, _control->varied_param, 
                         _control->n_elements_to_vary, PARAMETERS_ARE_VARIED, VMATRIX_IS_VARIED, 0, 0);
-            _control->new_data_read = _control->at_start = 0;
-            _control->i_vary = 1;
-            _control->i_step++;
-            step_incremented = 1;
-            fprintf(stdout, "vary counter reset\n");
-            fflush(stdout);
-            }
-        else {
+      if (_control->cell)
+        set_element_flags(_control->cell, _control->element, NULL, _control->varied_type, _control->varied_param, 
+                          _control->n_elements_to_vary, PARAMETERS_ARE_VARIED, VMATRIX_IS_VARIED, 0, 0);
+      _control->new_data_read = _control->at_start = 0;
+      _control->i_vary = 1;
+      _control->i_step++;
+      step_incremented = 1;
+      fprintf(stdout, "vary counter reset\n");
+      fflush(stdout);
+    }
+    else {
 #if DEBUG
-            fputs("calling advance_values", stdout);
+      fputs("calling advance_values", stdout);
 #endif
-            if (advance_values1(_control->varied_quan_value, _control->n_elements_to_vary, _control->element_index,
-                    _control->initial, _control->step, _control->enumerated_value, 
-                    _control->index, _control->index_limit, _control->flags, _control->n_indices)<0)  {
-                if (_control->n_steps && _control->i_step>=_control->n_steps) {
-                    log_exit("vary_beamline.2");
-                    log_exit("vary_beamline");
-                    return(0);
-                    }
-                _control->at_start = 1;
-                ret_val = vary_beamline(_control, errcon, run, beamline);
-                log_exit("vary_beamline.2");
-                log_exit("vary_beamline");
-                return(ret_val);
-                }
-            fprintf(stdout, "counter advanced: ");
-            fflush(stdout);
-            for (i=0; i<_control->n_indices; i++)
-                fprintf(stdout, "%4ld ", _control->index[i]);
-                fflush(stdout);
-            fprintf(stdout, "\nvalues advanced: ");
-            fflush(stdout);
-            for (i=0; i<_control->n_elements_to_vary; i++)
-                fprintf(stdout, "%e ", _control->varied_quan_value[i]);
-                fflush(stdout);
-            fprintf(stdout, "\n");
-            fflush(stdout);
-            assert_parameter_values(_control->element, _control->varied_param, _control->varied_type,
-                _control->varied_quan_value, _control->n_elements_to_vary, beamline);
-            if (_control->cell)
-                assert_parameter_values(_control->element, _control->varied_param, _control->varied_type,
-                    _control->varied_quan_value, _control->n_elements_to_vary, _control->cell);
-            /* set element flags to indicate variation of parameters */
-            set_element_flags(beamline, _control->element, NULL, _control->varied_type, _control->varied_param, 
-                    _control->n_elements_to_vary, PARAMETERS_ARE_VARIED, VMATRIX_IS_VARIED, 0, 0);
-            if (_control->cell)
-                set_element_flags(_control->cell, _control->element, NULL, _control->varied_type, _control->varied_param, 
-                        _control->n_elements_to_vary, PARAMETERS_ARE_VARIED, VMATRIX_IS_VARIED, 0, 0);
-            _control->i_vary++;
-            }
+      if (advance_values1(_control->varied_quan_value, _control->n_elements_to_vary, _control->element_index,
+                          _control->initial, _control->step, _control->enumerated_value, 
+                          _control->index, _control->index_limit, _control->flags, _control->n_indices)<0)  {
+        if (_control->n_steps && _control->i_step>=_control->n_steps) {
+          log_exit("vary_beamline.2");
+          log_exit("vary_beamline");
+          return(0);
+        }
+        _control->at_start = 1;
+        ret_val = vary_beamline(_control, errcon, run, beamline);
         log_exit("vary_beamline.2");
-        }
-    if (errcon->n_items && do_perturbations) {
-#if DEBUG
-          fputs("doing perturbation", stdout);
-#endif
-          log_entry("vary_beamline.3");
-          /* calculate random errors and add them to the existing value (which may not be the unperturbed value
-             if the parameter is both varied and perturbed) */
-          if (_control->n_steps && (_control->i_step-(step_incremented?1:0))>=_control->n_steps) {
-            log_exit("vary_beamline.3");
-            log_exit("vary_beamline");
-            return(0);
-          }
-          assert_perturbations(errcon->name, errcon->param_number, errcon->elem_type,
-                               errcon->n_items, errcon->error_level, errcon->error_cutoff, errcon->error_type, 
-                               errcon->error_value, errcon->flags, errcon->bind_number,
-                               errcon->sMin, errcon->sMax,
-                               errcon->fp_log, _control->i_step, beamline, 
-                               PRE_CORRECTION+
-                               ((_control->i_step==0 && errcon->no_errors_first_step)?FORCE_ZERO_ERRORS:0));
-          /* set element flags to indicate perturbation of parameters that change the matrix */
-          set_element_flags(beamline, errcon->name, errcon->flags, errcon->elem_type, errcon->param_number,
-                            errcon->n_items, PARAMETERS_ARE_PERTURBED, VMATRIX_IS_PERTURBED, 0, PRE_CORRECTION);
-        if (!step_incremented) {
-            _control->i_step++;
-            step_incremented = 1;
-            }
-        log_exit("vary_beamline.3");
-        }        
-
-    parameters_loaded = 0;
-    if (!(_control->i_step>=_control->n_steps && !_control->n_indices))
-        parameters_loaded = do_load_parameters(beamline, 0);
-
-    if (_control->n_elements_to_vary || errcon->n_items || parameters_loaded==PARAMETERS_LOADED) {
-#if DEBUG
-        fputs("computing matrices", stdout);
-#endif
-        log_entry("vary_beamline.4");
-        /* compute matrices for perturbed elements */
-        rebaseline_element_links(links, run, beamline);
-        fprintf(stdout, "%ld matrices (re)computed\n", 
-                (i=compute_changed_matrices(beamline, run)
-                + assert_element_links(links, run, beamline, STATIC_LINK+DYNAMIC_LINK))
-                + (_control->cell?compute_changed_matrices(_control->cell, run):0) );
-        fflush(stdout);
-        if (i) {
-            beamline->flags &= ~BEAMLINE_CONCAT_CURRENT;
-            beamline->flags &= ~BEAMLINE_TWISS_CURRENT;
-            beamline->flags &= ~BEAMLINE_RADINT_CURRENT;
-            
-            }
-        if (i && beamline->matrix) {
-            free_matrices(beamline->matrix);
-            tfree(beamline->matrix);
-            beamline->matrix = NULL;
-            }
-        if (!step_incremented) {
-            _control->i_step++;
-            step_incremented = 1;
-            }
-        fprintf(stdout, "tracking step %ld.%ld\n", _control->i_step, _control->i_vary);
-        fflush(stdout);
-        log_exit("vary_beamline.4");
         log_exit("vary_beamline");
-        return(1);
-        }
+        return(ret_val);
+      }
+      fprintf(stdout, "counter advanced: ");
+      fflush(stdout);
+      for (i=0; i<_control->n_indices; i++)
+        fprintf(stdout, "%4ld ", _control->index[i]);
+      fflush(stdout);
+      fprintf(stdout, "\nvalues advanced: ");
+      fflush(stdout);
+      for (i=0; i<_control->n_elements_to_vary; i++)
+        fprintf(stdout, "%e ", _control->varied_quan_value[i]);
+      fflush(stdout);
+      fprintf(stdout, "\n");
+      fflush(stdout);
+      assert_parameter_values(_control->element, _control->varied_param, _control->varied_type,
+                              _control->varied_quan_value, _control->n_elements_to_vary, beamline);
+      if (_control->cell)
+        assert_parameter_values(_control->element, _control->varied_param, _control->varied_type,
+                                _control->varied_quan_value, _control->n_elements_to_vary, _control->cell);
+      /* set element flags to indicate variation of parameters */
+      set_element_flags(beamline, _control->element, NULL, _control->varied_type, _control->varied_param, 
+                        _control->n_elements_to_vary, PARAMETERS_ARE_VARIED, VMATRIX_IS_VARIED, 0, 0);
+      if (_control->cell)
+        set_element_flags(_control->cell, _control->element, NULL, _control->varied_type, _control->varied_param, 
+                          _control->n_elements_to_vary, PARAMETERS_ARE_VARIED, VMATRIX_IS_VARIED, 0, 0);
+      _control->i_vary++;
+    }
+    log_exit("vary_beamline.2");
+  }
 
-    if ((_control->i_step>=_control->n_steps || parameters_loaded==PARAMETERS_ENDED) && !_control->n_indices) {
-        log_exit("vary_beamline");
-        return(0);
-        }
+  parameters_loaded = 0;
+  if (!(_control->i_step>=_control->n_steps && !_control->n_indices))
+    parameters_loaded = do_load_parameters(beamline, 0);
 
-    if (links && links->n_links) {
-        rebaseline_element_links(links, run, beamline);
-        fprintf(stdout, "%ld matrices (re)computed\n", i=assert_element_links(links, run, beamline, STATIC_LINK+DYNAMIC_LINK));
-        fflush(stdout);
-        if (i) {
-            beamline->flags &= ~BEAMLINE_CONCAT_CURRENT;
-            beamline->flags &= ~BEAMLINE_TWISS_CURRENT;
-            beamline->flags &= ~BEAMLINE_RADINT_CURRENT;
-            }
-        if (i && beamline->matrix) {
-            free_matrices(beamline->matrix);
-            tfree(beamline->matrix);
-            beamline->matrix = NULL;
-            }
-        }
+  if (errcon->n_items && do_perturbations) {
+#if DEBUG
+    fputs("doing perturbation", stdout);
+#endif
+    log_entry("vary_beamline.3");
+    /* calculate random errors and add them to the existing value (which may not be the unperturbed value
+       if the parameter is both varied and perturbed) */
+    if (_control->n_steps && (_control->i_step-(step_incremented?1:0))>=_control->n_steps) {
+      log_exit("vary_beamline.3");
+      log_exit("vary_beamline");
+      return(0);
+    }
+    assert_perturbations(errcon->name, errcon->param_number, errcon->elem_type,
+                         errcon->n_items, errcon->error_level, errcon->error_cutoff, errcon->error_type, 
+                         errcon->error_value, errcon->flags, errcon->bind_number,
+                         errcon->sMin, errcon->sMax,
+                         errcon->fp_log, _control->i_step, beamline, 
+                         PRE_CORRECTION+
+                         ((_control->i_step==0 && errcon->no_errors_first_step)?FORCE_ZERO_ERRORS:0));
+    /* set element flags to indicate perturbation of parameters that change the matrix */
+    set_element_flags(beamline, errcon->name, errcon->flags, errcon->elem_type, errcon->param_number,
+                      errcon->n_items, PARAMETERS_ARE_PERTURBED, VMATRIX_IS_PERTURBED, 0, PRE_CORRECTION);
+    if (!step_incremented) {
+      _control->i_step++;
+      step_incremented = 1;
+    }
+    log_exit("vary_beamline.3");
+  }        
 
-    fprintf(stdout, "tracking step %ld\n", ++_control->i_step);
+  if (_control->n_elements_to_vary || errcon->n_items || parameters_loaded==PARAMETERS_LOADED) {
+#if DEBUG
+    fputs("computing matrices", stdout);
+#endif
+    log_entry("vary_beamline.4");
+    /* compute matrices for perturbed elements */
+    rebaseline_element_links(links, run, beamline);
+    fprintf(stdout, "%ld matrices (re)computed\n", 
+            (i=compute_changed_matrices(beamline, run)
+             + assert_element_links(links, run, beamline, STATIC_LINK+DYNAMIC_LINK))
+            + (_control->cell?compute_changed_matrices(_control->cell, run):0) );
     fflush(stdout);
-
+    if (i) {
+      beamline->flags &= ~BEAMLINE_CONCAT_CURRENT;
+      beamline->flags &= ~BEAMLINE_TWISS_CURRENT;
+      beamline->flags &= ~BEAMLINE_RADINT_CURRENT;
+      
+    }
+    if (i && beamline->matrix) {
+      free_matrices(beamline->matrix);
+      tfree(beamline->matrix);
+      beamline->matrix = NULL;
+    }
+    if (!step_incremented) {
+      _control->i_step++;
+      step_incremented = 1;
+    }
+    fprintf(stdout, "tracking step %ld.%ld\n", _control->i_step, _control->i_vary);
+    fflush(stdout);
+    log_exit("vary_beamline.4");
     log_exit("vary_beamline");
     return(1);
+  }
+
+  if ((_control->i_step>=_control->n_steps || parameters_loaded==PARAMETERS_ENDED) && !_control->n_indices) {
+    log_exit("vary_beamline");
+    return(0);
+  }
+
+  if (links && links->n_links) {
+    rebaseline_element_links(links, run, beamline);
+    fprintf(stdout, "%ld matrices (re)computed\n", i=assert_element_links(links, run, beamline, STATIC_LINK+DYNAMIC_LINK));
+    fflush(stdout);
+    if (i) {
+      beamline->flags &= ~BEAMLINE_CONCAT_CURRENT;
+      beamline->flags &= ~BEAMLINE_TWISS_CURRENT;
+      beamline->flags &= ~BEAMLINE_RADINT_CURRENT;
     }
+    if (i && beamline->matrix) {
+      free_matrices(beamline->matrix);
+      tfree(beamline->matrix);
+      beamline->matrix = NULL;
+    }
+  }
+
+  fprintf(stdout, "tracking step %ld\n", ++_control->i_step);
+  fflush(stdout);
+
+  log_exit("vary_beamline");
+  return(1);
+}
 
 long perturb_beamline(VARY *_control, ERRORVAL *errcon, RUN *run, LINE_LIST *beamline)
 {
