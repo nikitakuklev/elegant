@@ -19,6 +19,7 @@
 #include "optimize.h"
 #include "match_string.h"
 #include "chromDefs.h"
+#include "tuneDefs.h"
 
 static long stopOptimization = 0;
 long checkForOptimRecord(double *value, long values, long *again);
@@ -476,13 +477,16 @@ static OPTIMIZATION_DATA *optimization_data;
 static OUTPUT_FILES *output;
 static LINE_LIST *beamline;
 static CHROM_CORRECTION *chromCorrData;
+static void *orbitCorrData;
+static long orbitCorrMode;
+static TUNE_CORRECTION *tuneCorrData;
 static long beam_type_code, n_evaluations_made, n_passes_made;
 static double *final_property_value;
 static long final_property_values;
 static double charge;
 static long optim_func_flags;
 static long force_output;
-static long doClosedOrbit, doChromCorr;
+static long doClosedOrbit, doChromCorr, doTuneCorr;
 
 /* structure to keep results of last N optimization function
  * evaluations, so we don't track the same thing twice.
@@ -515,7 +519,9 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
                  LINE_LIST *beamline1, BEAM *beam1, OUTPUT_FILES *output1, 
                  OPTIMIZATION_DATA *optimization_data1, 
                  void *chromCorrData1, long beam_type1,
-                 long doClosedOrbit1, long doChromCorr1)
+                 long doClosedOrbit1, long doChromCorr1,
+                 void *orbitCorrData1, long orbitCorrMode1,
+                 void *tuneCorrData1, long doTuneCorr1)
 {
     static long optUDFcount = 0;
     double optimization_function(double *values, long *invalid);
@@ -541,6 +547,11 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
     beam_type_code    = beam_type1;
     doClosedOrbit     = doClosedOrbit1;
     doChromCorr       = doChromCorr1;
+    orbitCorrData     = orbitCorrData1;
+    orbitCorrMode     = orbitCorrMode1;
+    tuneCorrData      = (TUNE_CORRECTION*)tuneCorrData1;
+    doTuneCorr        = doTuneCorr1;
+    
     n_evaluations_made = 0;
     n_passes_made      = 0;
     
@@ -1123,17 +1134,31 @@ double optimization_function(double *value, long *invalid)
 
   control->i_step++;       /* to prevent automatic regeneration of beam */
   zero_beam_sums(output->sums_vs_z, output->n_z_points+1);
-  if (doClosedOrbit &&
-      !run_closed_orbit(run, beamline, startingOrbitCoord, NULL, 0)) {
+
+  if (orbitCorrMode!=-1 && 
+      !do_correction(orbitCorrData, run, beamline, startingOrbitCoord, beam, control->i_step, 0)) {
     *invalid = 1;
-    fprintf(stdout, "warning: unable to find closed orbit\n");
+    fprintf(stdout, "warning: unable to perform orbit correction\n");
+    return 0;
+  }
+  if (doTuneCorr &&
+      !do_tune_correction(tuneCorrData, run, beamline, startingOrbitCoord, 
+                                  0, 0)) {
+    *invalid = 1;
+    fprintf(stdout, "warning: unable to do tune correction\n");
     return 0;
   }
   if (doChromCorr &&
       !do_chromaticity_correction(chromCorrData, run, beamline, startingOrbitCoord, 
                                   0, 0)) {
     *invalid = 1;
-    fprintf(stdout, "warning: unable to correct chromaticity\n");
+    fprintf(stdout, "warning: unable to do chromaticity correction\n");
+    return 0;
+  }
+  if (doClosedOrbit &&
+      !run_closed_orbit(run, beamline, startingOrbitCoord, NULL, 0)) {
+    *invalid = 1;
+    fprintf(stdout, "warning: unable to find closed orbit\n");
     return 0;
   }
   

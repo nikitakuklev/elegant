@@ -2645,8 +2645,9 @@ void add_optimization_term(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
 void add_optimization_constraint(OPTIMIZATION_DATA *_optimize, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 void summarize_optimization_setup(OPTIMIZATION_DATA *_optimize);
 void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *error1, LINE_LIST *beamline1, 
-            BEAM *beam1, OUTPUT_FILES *output1, OPTIMIZATION_DATA *optimization_data1, 
-            void *chromData, long beam_type1, long doClosedOrbit, long doChromCorr);
+                 BEAM *beam1, OUTPUT_FILES *output1, OPTIMIZATION_DATA *optimization_data1, 
+                 void *chromData, long beam_type1, long doClosedOrbit, long doChromCorr,
+                 void *correct, long correctMode, void *tuneData, long doTuneCorr);
 void add_optimization_covariable(OPTIMIZATION_DATA *_optimize, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 
 /* prototype for sample.c */
