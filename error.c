@@ -68,11 +68,11 @@ void error_setup(ERRORVAL *errcon, NAMELIST_TEXT *nltext, RUN *run_cond, LINE_LI
                         errcon->error_level[i]);
                     fflush(stdout);
                     break;
-                }
-            }
+	    }
+	}
         log_exit("error_setup");
         return;
-        }
+    }
 
     errcon->no_errors_first_step = no_errors_for_first_step;
 
@@ -113,6 +113,8 @@ void error_setup(ERRORVAL *errcon, NAMELIST_TEXT *nltext, RUN *run_cond, LINE_LI
             set_element_flags(beamline, errcon->name, NULL, NULL, NULL, errcon->n_items, PARAMETERS_ARE_STATIC, 0, 1, 0);
         errcon->n_items = 0;
         }
+    fprintf(stdout, "\n*** Cleared error settings\n");
+    fflush(stdout);
     log_exit("error_setup");
     }
 

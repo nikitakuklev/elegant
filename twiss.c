@@ -2981,7 +2981,8 @@ void AddWigglerRadiationIntegrals(double length, long poles, double radius,
     }
   } else {
     /* Even number of poles: use half-length end-poles to match */
-    /* Integrate a full period at a time */
+    /* Integrate a full period at a time (starts and ends in the
+     * middle of a pole) */
     double L;
     L = 2*Lp;
     h0 = 1./radius;
