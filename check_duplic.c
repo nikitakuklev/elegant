@@ -99,6 +99,7 @@ void check_duplic_elem(
         *elem0 = (*new_elem);
       *new_elem = elast;
     }
+    free(elemArray);
   }
 
 #ifdef DEBUG
