@@ -50,18 +50,13 @@ void track_SReffects(double **coord, long np, SREFFECTS *SReffects, double Po,
     /* compute P/Po change per turn due to SR losses at the present momentum */
     Ddelta = SReffects->DdeltaRef*gammaRatio*gamma2Ratio;
 
-    /* damping rates less RF contributions */
-    if (SReffects->damp) {
-      Fx = 1 + (SReffects->Jx - 1)*Ddelta;
-      Fy = 1 + (SReffects->Jy - 1)*Ddelta;
-      Fdelta = 1 + SReffects->Jdelta*Ddelta;
-    } else {
-      Fx = Fy = Fdelta = 1;
-    }
-
     /* RMS values for random added components */
     if (twiss->betax<=0 || twiss->betay<=0)
         bomb("Twiss parameters invalid in track_SReffects", NULL);
+    /* damping rates less RF contributions */
+    Fx = 1 + (SReffects->Jx - 1)*Ddelta;
+    Fy = 1 + (SReffects->Jy - 1)*Ddelta;
+    Fdelta = 1 + SReffects->Jdelta*Ddelta;
     if (SReffects->qExcite) {
       Srdelta = sqrt(1-sqr(Fdelta))*SReffects->SdeltaRef*gammaRatio;
       Srxp    = sqrt((1-sqr(1+SReffects->Jx*Ddelta))*SReffects->exRef*gamma2Ratio*(1+sqr(twiss->alphax))/twiss->betax);
@@ -69,6 +64,12 @@ void track_SReffects(double **coord, long np, SREFFECTS *SReffects, double Po,
     } else {
       Srdelta = Srxp = Sryp = 0;
     }
+
+    /* damping rates less RF contributions */
+    if (!SReffects->damp)
+      Fx = Fy = Fdelta = 1;
+    if (!SReffects->loss)
+      Ddelta = 0;
 
     if (SReffects->fraction!=1) {
       /* scale with fraction of effect */
@@ -81,19 +82,16 @@ void track_SReffects(double **coord, long np, SREFFECTS *SReffects, double Po,
       Sryp *= SReffects->fraction;
     }
 
-    if (!SReffects->loss)
-      Ddelta = 0;
-
     if (first) {
         first = 0;
-        /*
+/*
         fprintf(stdout, "Damping/QE constants:\nFx = %e, Fy = %e, Fd = %e\nSrxp = %e, Sryp = %e, Srd = %e\n",
                Fx, Fy, Fdelta, Srxp, Sryp, Srdelta);
         fflush(stdout);
         fprintf(stdout, "Twiss parameters: betax = %e, etapx = %e, betay = %e\n",
                twiss->betax, twiss->etapx, twiss->betay);
         fflush(stdout);
-               */
+*/
         }
     
 
