@@ -432,9 +432,8 @@ VMATRIX *solenoid_matrix(double length, double ks, long max_order)
         
         T[4][1][1] = T[4][3][3] = length/2;
         /* These terms per P. Emma */
-        T[4][0][0] = T[4][2][2] = sqr(2*ks)*length/2;
-        T[4][0][3] = -(T[4][1][2] = -2*ks*length);
-        
+        T[4][0][0] = T[4][2][2] = sqr(ks)*length/2;
+        T[4][3][0] = -(T[4][2][1] = -ks*length);
         }
     log_exit("solenoid_matrix");
     return(M);
