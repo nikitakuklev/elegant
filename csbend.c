@@ -1326,7 +1326,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     }
   }
 
-  if (n_part>1 && !csrInhibit) {
+  if (n_part>1 && !csrInhibit && !csbend->csrBlock) {
     /* prepare some data for use by CSRDRIFT element */
     csrWake.dctBin = dct;
     ctLower = ctUpper = dct = 0;
@@ -1414,7 +1414,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     coord[4] += dzf*sqrt(1+ sqr(coord[1]) + sqr(coord[3]));
   }
 
-  if (n_part>1) {
+  if (n_part>1 && !csbend->csrBlock) {
     /* prepare more data for CSRDRIFT */
     long imin, imax;
     double S55;

@@ -26,7 +26,7 @@ char *entity_name[N_TYPES] = {
     "MODRF", "BMAPXY", "ZTRANSVERSE", "IBSCATTER", "FMULT",
     "WAKE", "TRWAKE", "TUBEND", "CHARGE", "PFILTER", "HISTOGRAM",
     "CSRCSBEND", "CSRDRIFT", "RFCW", "REMCOR", "MAPSOLENOID",
-    "REFLECT",
+    "REFLECT", "CLEAN",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -133,7 +133,8 @@ and phase modulation.",
     "A combination of RFCA, WAKE, and TRWAKE.",
     "An element to remove correlations from the tracked beam to simulate certain types of correction.",
     "A numerically-integrated solenoid specified as a map of (Bz, Br) vs (z, r).",
-    "Reflects the beam back on itself, which is useful for multiple beamline matching."
+    "Reflects the beam back on itself, which is useful for multiple beamline matching.",
+    "Cleans the beam by removing outlier particles.",
     } ;
 
 QUAD quad_example;
@@ -348,6 +349,18 @@ PARAMETER ecol_param[N_ECOL_PARAMS] = {
     {"Y_MAX", "M", IS_DOUBLE, 0, (long)((char *)&ecol_example.y_max), NULL, 0.0, 0, "half-axis in y"},
     {"DX", "M", IS_DOUBLE, 0, (long)((char *)&ecol_example.dx), NULL, 0.0, 0, "misalignment"},
     {"DY", "M", IS_DOUBLE, 0, (long)((char *)&ecol_example.dy), NULL, 0.0, 0, "misalignment"},
+    } ;
+
+CLEAN clean_example;
+/* name for beam cleaner physical parameters */
+PARAMETER clean_param[N_CLEAN_PARAMS] = {
+    {"MODE", "", IS_STRING, 0, (long)((char *)&clean_example.mode), "stdeviation", 0.0, 0, "stdeviation, absdeviation, or absvalue"},
+    {"XLIMIT", "", IS_DOUBLE, 0, (long)((char *)&clean_example.xLimit), NULL, 0.0, 0, "Limit for x"},
+    {"XPLIMIT", "", IS_DOUBLE, 0, (long)((char *)&clean_example.xpLimit), NULL, 0.0, 0, "Limit for x'"},
+    {"YLIMIT", "", IS_DOUBLE, 0, (long)((char *)&clean_example.yLimit), NULL, 0.0, 0, "Limit for y"},
+    {"YPLIMIT", "", IS_DOUBLE, 0, (long)((char *)&clean_example.ypLimit), NULL, 0.0, 0, "Limit for y'"},
+    {"TLIMIT", "", IS_DOUBLE, 0, (long)((char *)&clean_example.tLimit), NULL, 0.0, 0, "Limit for t"},
+    {"DELTALIMIT", "", IS_DOUBLE, 0, (long)((char *)&clean_example.deltaLimit), NULL, 0.0, 0, "Limit for (p-p0)/p0"},
     } ;
 
 MARK mark_example;
@@ -943,6 +956,7 @@ PARAMETER csrcsbend_param[N_CSRCSBEND_PARAMS] = {
     {"B4", "1/M$a4$n", IS_DOUBLE, 0, (long)((char *)&csrcsbend_example.b4), NULL, 0.0, 0, "K4 = B4*rho"},
     {"ISR", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (scattering)?"},
     {"CSR", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.csr), NULL, 0.0, 1, "enable CSR computations?"},
+    {"BLOCK_CSR", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.csrBlock), NULL, 0.0, 0, "block CSR from entering CSRDRIFT?"},
     {"DERBENEV_CRITERION_MODE", "", IS_STRING, 0, (long)((char *)&csrcsbend_example.derbenevCriterionMode), "disable", 0.0, 1, "disable, evaluate, or enforce"},
     };
 
@@ -1375,6 +1389,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     {  N_REMCOR_PARAMS,           0,     sizeof(REMCOR),    remcor_param   },
     { N_MAPSOLENOID_PARAMS,  MAT_LEN_NCAT,    sizeof(MAP_SOLENOID),    mapSolenoid_param    }, 
     { N_REFLECT_PARAMS,      HAS_MATRIX|MATRIX_TRACKING,    sizeof(REFLECT),    reflect_param  },
+    { N_CLEAN_PARAMS,  0, sizeof(CLEAN), clean_param }
 } ;
  
 

@@ -466,6 +466,11 @@ long do_tracking(
             else
               n_left = elliptical_collimator(coord, (ECOL*)eptr->p_elem, n_to_track, accepted, z, *P_central);
             break;
+          case T_CLEAN:
+            if (!(flags&TEST_PARTICLES && !(flags&TEST_PARTICLE_LOSSES)))
+              n_left = remove_outlier_particles(coord, (CLEAN*)eptr->p_elem, 
+                                                n_to_track, accepted, z, *P_central);
+            break;
           case T_SCRAPER:
             if (!(flags&TEST_PARTICLES && !(flags&TEST_PARTICLE_LOSSES))) {
               n_left = beam_scraper(coord, (SCRAPER*)eptr->p_elem, n_to_track, accepted, z, *P_central);

@@ -595,3 +595,124 @@ long track_through_pfilter(
   return itop+1;
 }
 
+long remove_outlier_particles(
+                              double **initial, CLEAN *clean, long np, double **accepted, double z,
+                              double Po
+                              )
+{
+  double length, *ini;
+  long ip, itop, is_out, j, mode;
+  double limit[6], centroid[6], stDev[6];
+  long count;
+#define CLEAN_STDEV 0
+#define CLEAN_ABSDEV 1
+#define CLEAN_ABSVAL 2
+#define CLEAN_MODES 3
+  static char *modeName[CLEAN_MODES] = {"stdeviation", "absdeviation", "absvalue"};
+
+  switch ((mode=match_string(clean->mode, modeName, 3, 0))) {
+  case CLEAN_STDEV:
+  case CLEAN_ABSDEV:
+  case CLEAN_ABSVAL:
+    break;
+  default:
+    fprintf(stderr, "Error: mode for CLEAN element must be one of the following:\n");
+    for (j=0; j<CLEAN_MODES; j++)
+      fprintf(stderr, "%s  ", modeName[j]);
+    fprintf(stderr, "\n");
+    exit(1);
+    break;
+  }
+  
+  if (!(clean->xLimit>0 || clean->xpLimit>0 ||
+        clean->yLimit>0 || clean->ypLimit>0 ||
+        clean->tLimit>0 || clean->deltaLimit>0)) {
+    return(np);
+  }
+
+  /* copy limits into array */
+  limit[0] = clean->xLimit;
+  limit[1] = clean->xpLimit;
+  limit[2] = clean->yLimit;
+  limit[3] = clean->ypLimit;
+  limit[4] = clean->tLimit*Po/sqrt(sqr(Po)+1)*c_mks;
+  limit[5] = clean->deltaLimit;
+
+  /* compute centroids for each coordinate */
+  for (j=0; j<6; j++)
+    centroid[j] = stDev[j] = 0;
+  for (ip=count=0; ip<np; ip++) {
+    ini = initial[ip];
+    for (j=0; j<6; j++) {
+      if (!isnan(ini[j]) && !isinf(ini[j])) {
+        centroid[j] += ini[j];
+        count++;
+      }
+    }
+  }
+  if (!count) {
+    for (ip=0; ip<np; ip++) {
+      initial[ip][4] = z; /* record position of particle loss */
+      initial[ip][5] = Po*(1+initial[ip][5]);
+    }
+    return 0;
+  }
+  for (j=0; j<6; j++)
+    centroid[j] /= count;
+
+  /* compute standard deviation of coordinates, if needed */
+  if (mode==CLEAN_STDEV) {
+    for (ip=0; ip<np; ip++) {
+      ini = initial[ip];
+      for (j=0; j<6; j++) {
+        if (!isnan(ini[j]) && !isinf(ini[j]))
+          stDev[j] += sqr(centroid[j] - ini[j]);
+      }
+    }
+    for (j=0; j<6; j++)
+      stDev[j] = sqrt(stDev[j]/count);
+  }
+  
+  itop = np-1;
+  for (ip=0; ip<np; ip++) {
+    ini = initial[ip];
+    for (j=is_out=0; j<6; j++) {
+      if (is_out)
+        break;
+      if (limit[j]<=0)
+        continue;
+      switch (mode) {
+      case CLEAN_STDEV:
+        if (fabs(ini[j]-centroid[j])/stDev[j]>limit[j])
+          is_out = 1;
+        break;
+      case CLEAN_ABSDEV:
+        if (fabs(ini[j]-centroid[j])>limit[j])
+          is_out = 1;
+        break;
+      case CLEAN_ABSVAL:
+        if (fabs(ini[j])>limit[j])
+          is_out = 1;
+        break;
+      default:
+        fprintf(stderr, "invalid mode in remove_outlier_particles---programming error!\n");
+        exit(1);
+        break;
+      }
+    }
+    if (is_out) {
+      SWAP_PTR(initial[ip], initial[itop]);
+      if (accepted)
+        SWAP_PTR(accepted[ip], accepted[itop]);
+      initial[itop][4] = z; /* record position of particle loss */
+      initial[itop][5] = Po*(1+initial[itop][5]);
+      --itop;
+      --ip;
+      --np;
+    }
+  }
+
+  return(np);
+}
+
+

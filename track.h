@@ -492,7 +492,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_REMCOR 74
 #define T_MAPSOLENOID 75
 #define T_REFLECT 76
-#define N_TYPES 77
+#define T_CLEAN 77
+#define N_TYPES 78
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -570,12 +571,13 @@ extern char *entity_text[N_TYPES];
 #define N_CHARGE_PARAMS 2
 #define N_PFILTER_PARAMS 5
 #define N_HISTOGRAM_PARAMS 9
-#define N_CSRCSBEND_PARAMS 42
+#define N_CSRCSBEND_PARAMS 43
 #define N_CSRDRIFT_PARAMS 15
 #define N_REMCOR_PARAMS 6
 #define N_MAPSOLENOID_PARAMS 18
 #define N_RFCW_PARAMS 28
 #define N_REFLECT_PARAMS 1
+#define N_CLEAN_PARAMS 7
 
 typedef struct {
     char *name;            /* parameter name */
@@ -792,6 +794,14 @@ extern PARAMETER ecol_param[N_ECOL_PARAMS] ;
 typedef struct {
     double length, x_max, y_max, dx, dy;
     } ECOL;
+
+/* storage structure for beam cleaner */
+extern PARAMETER clean_param[N_CLEAN_PARAMS];
+
+typedef struct {
+  char *mode;
+  double xLimit, xpLimit, yLimit, ypLimit, tLimit, deltaLimit;
+} CLEAN;
 
 /* storage structure for marker */
 
@@ -1384,7 +1394,7 @@ typedef struct {
     long outputInterval, outputLastWakeOnly, steadyState;
     long use_bn;
     double b1, b2, b3, b4;
-    long isr, csr;
+    long isr, csr, csrBlock;
     char *derbenevCriterionMode;
     /* for internal use only: */
     long flags, fileActive;
