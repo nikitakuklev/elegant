@@ -452,7 +452,7 @@ typedef struct {
   double *variableValue;
   double result;
 } OPTIM_RECORD;
-static long optimRecords = 0, nextOptimRecordSlot = 0, balanceTerms = 0;
+static long optimRecords = 0, nextOptimRecordSlot = 0, balanceTerms = 0, ignoreOptimRecords=0;
 static OPTIM_RECORD optimRecord[MAX_OPTIM_RECORDS];
 
 
@@ -470,7 +470,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
     
     log_entry("do_optimize");
     
-    optimRecords = nextOptimRecordSlot = 0;
+    optimRecords = ignoreOptimRecords = nextOptimRecordSlot = 0;
     
     run               = run1;
     control           = control1;
@@ -633,9 +633,10 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
       }
 
       /* evaluate once more at the optimimum point to get all parameters right and to get additional output */
-      optimRecords = 0;  /* to force re-evaluation */
       force_output = 1;
+      ignoreOptimRecords = 1;  /* to force re-evaluation */
       result = optimization_function(variables->varied_quan_value, &i);
+      ignoreOptimRecords = 0;
       force_output = 0;
       if (result<=optimization_data->target || fabs(result-lastResult)<optimization_data->tolerance)
         break;
@@ -655,8 +656,9 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
     /* evaluate once more at the optimimum point to get all parameters right and to get additional output */
     optim_func_flags = 0;
     force_output = 1;
-    optimRecords = 0;  /* to force re-evaluation */
+    ignoreOptimRecords = 1; /* to force re-evaluation */
     result = optimization_function(variables->varied_quan_value, &i);
+    ignoreOptimRecords = 0; 
     force_output = 0;
     variables->varied_quan_value[variables->n_variables] = 1;   /* indicates end-of-optimization */
           
@@ -677,13 +679,16 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
         fprintf(optimization_data->fp_log, "Optimization results:\n  optimization function has value %.15g\n", 
                 optimization_data->mode==OPTIM_MODE_MAXIMUM?-result:result);
         if (optimization_data->terms) {
+          double sum;
           fprintf(optimization_data->fp_log, "Terms of equation: \n");
-          for (i=0; i<optimization_data->terms; i++) {
+          for (i=sum=0; i<optimization_data->terms; i++) {
             rpn_clear();
             fprintf(optimization_data->fp_log, "%20s: %23.15e\n",
                     optimization_data->term[i],
                     rpn(optimization_data->term[i])*optimization_data->termWeight[i]);
+            sum += rpn(optimization_data->term[i])*optimization_data->termWeight[i];
           }
+          fprintf(optimization_data->fp_log, "    Error check: %le\n", sum-result);
         }
         fprintf(optimization_data->fp_log, "    A total of %ld function evaluations were made.\n", n_evaluations_made);
         if (constraints->n_constraints) {
@@ -705,13 +710,16 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
         fprintf(stdout, "Optimization results:\n    optimization function has value %.15g\n",
                 optimization_data->mode==OPTIM_MODE_MAXIMUM?-result:result);
         if (optimization_data->terms) {
+          double sum;
           fprintf(stdout, "Terms of equation: \n");
-          for (i=0; i<optimization_data->terms; i++) {
+          for (i=sum=0; i<optimization_data->terms; i++) {
             rpn_clear();
             fprintf(stdout, "%20s: %23.15e\n",
                     optimization_data->term[i],
-                    rpn(optimization_data->term[i]));
+                    optimization_data->termWeight[i]*rpn(optimization_data->term[i]));
+            sum += optimization_data->termWeight[i]*rpn(optimization_data->term[i]);
           }
+          fprintf(optimization_data->fp_log, "    Error check: %le\n", sum-result);
         }
         fflush(stdout);
         fprintf(stdout, "    A total of %ld function evaluations were made.\n", n_evaluations_made);
@@ -1106,17 +1114,20 @@ double optimization_function(double *value, long *invalid)
         exit(1);
 
       if (optimization_data->verbose && optimization_data->fp_log) {
-        fprintf(optimization_data->fp_log, "equation evaluates to %23.15e\n\n", result);
+        fprintf(optimization_data->fp_log, "equation evaluates to %23.15e\n", result);
         fflush(optimization_data->fp_log);
         if (optimization_data->terms) {
           fprintf(optimization_data->fp_log, "Terms of equation: \n");
           for (i=0; i<optimization_data->terms; i++) {
             rpn_clear();
-            fprintf(optimization_data->fp_log, "%20s: %23.15e\n",
+            fprintf(optimization_data->fp_log, "%g*(%20s): %23.15e\n",
+                    optimization_data->termWeight[i],
                     optimization_data->term[i],
                     rpn(optimization_data->term[i])*optimization_data->termWeight[i]);
           }
+          fprintf(optimization_data->fp_log, "    Error check: %le\n", sum-result);
         }
+        fprintf(optimization_data->fp_log, "\n\n");
       }
       
       if (optimization_data->mode==OPTIM_MODE_MAXIMUM)
@@ -1140,7 +1151,7 @@ double optimization_function(double *value, long *invalid)
     fflush(stdout);
 #endif
     storeOptimRecord(value, variables->n_variables, *invalid, result);
-    
+
     log_exit("optimization_function");
     return(result);
     }
@@ -1149,6 +1160,8 @@ long checkForOptimRecord(double *value, long values)
 {
   long iRecord, iValue;
   double diff;
+  if (ignoreOptimRecords)
+    return -1;
   for (iRecord=0; iRecord<optimRecords; iRecord++) {
     for (iValue=0; iValue<values; iValue++) {
       diff = fabs(value[iValue]-optimRecord[iRecord].variableValue[iValue]);
@@ -1165,6 +1178,8 @@ long checkForOptimRecord(double *value, long values)
 void storeOptimRecord(double *value, long values, long invalid, double result)
 {
   long i;
+  if (ignoreOptimRecords)
+    return ;
   for (i=0; i<values; i++)
     optimRecord[nextOptimRecordSlot].variableValue[i] = value[i];
   optimRecord[nextOptimRecordSlot].invalid = invalid;
@@ -1181,10 +1196,15 @@ void optimization_report(double result, double *value, long pass, long n_evals, 
     OPTIM_COVARIABLES *covariables;
     OPTIM_CONSTRAINTS *constraints;
     long i;
-
+    
     if (!optimization_data->fp_log)
         return;
-
+    
+    /* update internal values (particularly rpn) */
+    ignoreOptimRecords = 1 ;  /* force reevaluation */
+    result = optimization_function(value, &i);
+    ignoreOptimRecords = 0;
+    
     variables = &(optimization_data->variables);
     covariables = &(optimization_data->covariables);
     constraints = &(optimization_data->constraints);
@@ -1193,13 +1213,16 @@ void optimization_report(double result, double *value, long pass, long n_evals, 
             pass, optimization_data->mode==OPTIM_MODE_MAXIMUM?-result:result);
     n_passes_made = pass;
     if (optimization_data->terms) {
+      double sum;
       fprintf(optimization_data->fp_log, "Terms of equation: \n");
-      for (i=0; i<optimization_data->terms; i++) {
+      for (i=sum=0; i<optimization_data->terms; i++) {
         rpn_clear();
-        fprintf(optimization_data->fp_log, "%20s: %23.15e\n",
-                optimization_data->term[i],
+        fprintf(optimization_data->fp_log, "%g*(%20s): %23.15e\n",
+                optimization_data->termWeight[i], optimization_data->term[i],
                 rpn(optimization_data->term[i])*optimization_data->termWeight[i]);
+        sum += rpn(optimization_data->term[i])*optimization_data->termWeight[i];
       }
+      fprintf(optimization_data->fp_log, "Error check: %le\n", sum-result);
     }
     
     if (constraints->n_constraints) {
