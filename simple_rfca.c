@@ -234,7 +234,7 @@ long simple_rf_cavity(
             dt = 0;
           if  (!same_dgamma)
             dgamma = volt*sin(omega*t+phase)*(tau?sqrt(1-exp(-dt/tau)):1);
-
+          
           if (rfca->end1Focus && length) {
             /* drift back, apply focus kick, then drift forward again */
             inverseF = dgamma/(2*gamma*length);
@@ -354,8 +354,13 @@ long track_through_rfcw
    RUN *run, long i_pass, CHARGE *charge
    )
 {
+  static long warned = 0;
   if (rfcw->cellLength<=0) 
     bomb("invalid cell length for RFCW", NULL);
+  if (rfcw->length==0 && !warned) {
+    fprintf(stdout, "** Warning: length of RFCW element is zero. Wakefields will scale to 0!\n");
+    warned = 1;
+  }
   /* set up the RFCA, TRWAKE, and WAKE structures */
   rfcw->rfca.length = rfcw->length;
   rfcw->rfca.volt = rfcw->volt;
@@ -376,7 +381,7 @@ long track_through_rfcw
     else 
       rfcw->rfca.fiducial = NULL;
   }
-  
+
   rfcw->trwake.charge = 0;
   rfcw->trwake.factor = 0;
   rfcw->trwake.n_bins = rfcw->n_bins;

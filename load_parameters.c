@@ -199,6 +199,16 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
     }
 
     if ((code=load_request[i].last_code=SDDS_ReadTable(&load_request[i].table))<1) {
+      free(load_request[i].reset_address);
+      load_request[i].reset_address = NULL;
+      free(load_request[i].value_type);
+      load_request[i].value_type = NULL;
+      free(load_request[i].element_flags);
+      load_request[i].element_flags = NULL;
+      free(load_request[i].starting_value);
+      load_request[i].starting_value = NULL;
+      free(load_request[i].element);
+      load_request[i].element = NULL;
       if (code<0) {
         fprintf(stdout, "warning: file %s ends unexpectedly\n", load_request[i].filename);
         fflush(stdout);
@@ -319,16 +329,21 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
       do {
         numberChanged++;
         p_elem = eptr->p_elem;
-        load_request[i].reset_address = trealloc(load_request[i].reset_address,
-                                                 sizeof(*load_request[i].reset_address)*(load_request[i].values+1));
-        load_request[i].value_type = trealloc(load_request[i].value_type,
-                                              sizeof(*load_request[i].value_type)*(load_request[i].values+1));
-        load_request[i].element_flags = trealloc(load_request[i].element_flags,
-                                                 sizeof(*load_request[i].element_flags)*(load_request[i].values+1));
-        load_request[i].starting_value = trealloc(load_request[i].starting_value,
-                                                  sizeof(*load_request[i].starting_value)*(load_request[i].values+1));
-        load_request[i].element = trealloc(load_request[i].element,
-                                           sizeof(*load_request[i].element)*(load_request[i].values+1));
+        load_request[i].reset_address 
+          = trealloc(load_request[i].reset_address,
+                     sizeof(*load_request[i].reset_address)*(load_request[i].values+1));
+        load_request[i].value_type 
+          = trealloc(load_request[i].value_type,
+                     sizeof(*load_request[i].value_type)*(load_request[i].values+1));
+        load_request[i].element_flags 
+          = trealloc(load_request[i].element_flags,
+                     sizeof(*load_request[i].element_flags)*(load_request[i].values+1));
+        load_request[i].starting_value 
+          = trealloc(load_request[i].starting_value,
+                     sizeof(*load_request[i].starting_value)*(load_request[i].values+1));
+        load_request[i].element 
+          = trealloc(load_request[i].element,
+                     sizeof(*load_request[i].element)*(load_request[i].values+1));
         load_request[i].reset_address[load_request[i].values]
           = ((double*)(p_elem+entity_description[eptr->type].parameter[param].offset));
         load_request[i].element[load_request[i].values] = eptr;
@@ -442,8 +457,19 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
     free(value);
     if (occurence)
       free(occurence);
-    if (load_request[i].flags&COMMAND_FLAG_CHANGE_DEFINITIONS) 
+    if (load_request[i].flags&COMMAND_FLAG_CHANGE_DEFINITIONS) {
+      free(load_request[i].reset_address);
+      load_request[i].reset_address = NULL;
+      free(load_request[i].value_type);
+      load_request[i].value_type = NULL;
+      free(load_request[i].element_flags);
+      load_request[i].element_flags = NULL;
+      free(load_request[i].starting_value);
+      load_request[i].starting_value = NULL;
+      free(load_request[i].element);
+      load_request[i].element = NULL;
       load_request[i].flags |= COMMAND_FLAG_IGNORE;   /* ignore hereafter */
+    }
   }
   if (!allFilesRead || allFilesIgnored) {
     compute_end_positions(beamline);

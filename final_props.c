@@ -237,6 +237,7 @@ void dump_final_properties
             SDDS_SetError("Problem setting SDDS parameter values for computed properties (dump_final_properties)");
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
             }
+    free(computed_properties);
     
     if (first_varied_quan_name) {
         if ((index=SDDS_GetParameterIndex(SDDS_table, first_varied_quan_name))<0) {

@@ -310,7 +310,11 @@ long track_beam(
     report_stats(stdout, "Tracking step completed");
     fputs("\n\n", stdout);
   }
-
+  if (output->sums_vs_z) {
+    free(output->sums_vs_z);
+    output->sums_vs_z = NULL;
+  }
+  
   log_exit("track_beam");
   return(1);
 }
