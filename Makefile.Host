@@ -8,23 +8,21 @@ CMPLR = ANSI
 
 PROD = elegant sddsemitmeas madto sddssasefel sddsTouschekInteg ibsEmittance recurseSetup replaceText
 
-USR_CFLAGS_DEFAULT = 	-I../../../../../epics/extensions/src/SDDS/include \
-			$(ZLIB_INC) \
-                        -L../../../../../epics/extensions/lib/$(HOST_ARCH) \
-			-I$(EPICS_EXTENSIONS_INCLUDE) \
-			-DIEEE_MATH -DUNIX -DMINIMIZE_MEMORY \
-			$(ZLIB_CFLAG)
+USR_CFLAGS = 	-I../../../../../epics/extensions/src/SDDS/include \
+		$(ZLIB_INC) \
+		-I$(EPICS_EXTENSIONS_INCLUDE) \
+		-DIEEE_MATH \
+		$(ZLIB_CFLAG)
 
-USR_CFLAGS_WIN32 =	-I../../../../../epics/extensions/src/SDDS/include \
-			$(ZLIB_INC) \
-			-I$(EPICS_EXTENSIONS_INCLUDE) \
-			-DIEEE_MATH \
-			$(ZLIB_CFLAG)
+USR_CFLAGS_DEFAULT += 	-L../../../../../epics/extensions/lib/$(HOST_ARCH) \
+			-DUNIX -DMINIMIZE_MEMORY
 
-PROD_LIBS_DEFAULT = 	mdbmth SDDS1 namelist matlib rpnlib fftpack mdbmth mdblib meschach \
-			mdbmth SDDS1 namelist matlib rpnlib fftpack mdbmth mdblib meschach $(ZLIB_PROD_LIB)
+USR_CFLAGS_WIN32 = -nil-
 
-PROD_LIBS_WIN32 = 	mdbmth SDDS1 namelist matlib rpnlib fftpack mdbmth mdblib meschach fdlibm $(ZLIB_PROD_LIB)
+PROD_LIBS_DEFAULT = 	mdbcommon matlib fftpack SDDS1 \
+			rpnlib mdbmth namelist mdblib \
+			meschach $(ZLIB_PROD_LIB)
+PROD_LIBS_WIN32 += fdlibm
 
 SYS_PROD_LIBS_solaris += sunmath
 
@@ -34,6 +32,7 @@ fftpack_DIR = $(EPICS_EXTENSIONS_LIB)
 mdbmth_DIR = $(EPICS_EXTENSIONS_LIB)
 matlib_DIR = $(EPICS_EXTENSIONS_LIB)
 mdblib_DIR = $(EPICS_EXTENSIONS_LIB)
+mdbcommon_DIR = $(EPICS_EXTENSIONS_LIB)
 rpnlib_DIR = $(EPICS_EXTENSIONS_LIB)
 meschach_DIR = $(EPICS_EXTENSIONS_LIB)
 fdlibm_DIR = $(EPICS_EXTENSIONS_LIB)
