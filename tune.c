@@ -215,13 +215,10 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
   ELEMENT_LIST *context;
   long i, K1_param, type=0, iter;
   double beta_x, alpha_x, eta_x, etap_x;
-  double beta_y, alpha_y, eta_y, etap_y;
+  double beta_y, alpha_y, eta_y, etap_y, dtunex, dtuney;
   static long tunes_saved=0;
   static double nux_orig, nuy_orig;
   unsigned long unstable;
-  
-  if (tune->use_perturbed_matrix)
-    computeTuneCorrectionMatrix(run, beamline, tune, 0);
   
   M = beamline->matrix = compute_periodic_twiss(&beta_x, &alpha_x, &eta_x, &etap_x, beamline->tune,
                                                 &beta_y, &alpha_y, &eta_y, &etap_y, beamline->tune+1, 
@@ -259,15 +256,20 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
   gain = tune->gain;
   
   for (iter=0; iter<tune->n_iterations; iter++) {
-    tune->dtune->a[0][0] = tune->tunex - beamline->tune[0];
-    tune->dtune->a[1][0] = tune->tuney - beamline->tune[1];
+    dtunex = tune->tunex - beamline->tune[0];
+    dtuney = tune->tuney - beamline->tune[1];
     if (tune->tolerance>0 &&
-        tune->tolerance>fabs(tune->dtune->a[0][0]) &&
-        tune->tolerance>fabs(tune->dtune->a[1][0])) {
+        tune->tolerance>fabs(dtunex) &&
+        tune->tolerance>fabs(dtuney)) {
       fprintf(stdout, "Tunes are acceptable---stopping tune correction.\n");
       break;
     }
 
+    if (tune->use_perturbed_matrix)
+      computeTuneCorrectionMatrix(run, beamline, tune, 0);
+    tune->dtune->a[0][0] = dtunex;
+    tune->dtune->a[1][0] = dtuney;
+  
     LastMsError = MsError;
     if (iter) {
       MsError = sqr(beamline->tune[0]-tune->tunex)+sqr(beamline->tune[1]-tune->tuney);
@@ -337,15 +339,13 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
     beamline->twiss0->etay   = eta_y;
     beamline->twiss0->etapy  = etap_y;
     
-    if (tune->use_perturbed_matrix)
-      computeTuneCorrectionMatrix(run, beamline, tune, 0);
-  
     if (!M || !M->C || !M->R)
       bomb("something wrong with transfer map for beamline (do_tune_correction.2)", NULL);
 
     propagate_twiss_parameters(beamline->twiss0, beamline->tune, beamline->waists,
                                NULL, beamline->elem_twiss, run, clorb);
     fprintf(stdout, "new tunes: %e %e\n", beamline->tune[0], beamline->tune[1]);
+
     fflush(stdout);
   }
 
