@@ -6,7 +6,13 @@ have, for example, the wake for a cell and you need the wake for N
 cells, then you may use the {\tt FACTOR} parameter to make the
 appropriate multiplication.  The values of the time coordinate should
 begin at 0 and be equi-spaced.  A positive value of time represents
-the distance behind the exciting particle.
+the distance behind the exciting particle.  
+
+The sign convention for $W_q$ ($q$ being $x$ or $y$) is as follows: a
+particle with $q>0$ will impart a positive kick ($\Delta q^\prime >
+0$) to a trailing particle following $t$ seconds behind if $W_q(t)>0$.
+A physical wake function should be zero at $t=0$ and also be initially
+positive as $t$ increases from 0.
 
 Use of the {\tt CHARGE} parameter on the {\tt TRWAKE} element is
 disparaged.  It is preferred to use the {\tt CHARGE} element as part
