@@ -17,6 +17,7 @@ void convertFromCSBendCoords(double **part, long np, double rho0,
 			     double cos_ttilt, double sin_ttilt, long ctMode);
 void convertToCSBendCoords(double **part, long np, double rho0, 
 			     double cos_ttilt, double sin_ttilt, long ctMode);
+long applyHighPassFilter(double *histogram, long bins, double dx, double start, double end);
 
 static double Fy_0, Fy_x, Fy_x2, Fy_x3, Fy_x4;
 static double Fy_y2, Fy_x_y2, Fy_x2_y2;
@@ -830,6 +831,7 @@ typedef struct {
   SDDS_DATASET SDDS_Stupakov;
   long StupakovFileActive, StupakovOutputInterval;
   long trapazoidIntegration;
+  double highFrequencyCutoff0, highFrequencyCutoff1;
 } CSR_LAST_WAKE;
 CSR_LAST_WAKE csrWake;
 
@@ -1143,7 +1145,9 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   csrWake.bins = nBins;
   csrWake.ds0 = csbend->length/csbend->n_kicks;
   csrWake.zLast = csrWake.z0 = z_end;
-
+  csrWake.highFrequencyCutoff0 = csbend->highFrequencyCutoff0;
+  csrWake.highFrequencyCutoff1 = csbend->highFrequencyCutoff1;
+  
 #if !defined(PARALLEL)  
   multipoleKicksDone += n_part*csbend->n_kicks*(csbend->integration_order==4?4:1);
 #endif
@@ -1312,6 +1316,15 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
         /* - smooth the histogram, normalize to get linear density, and 
            copy in preparation for taking derivative
            */
+        if (csbend->highFrequencyCutoff0>0) {
+          long nz;
+          nz = applyHighPassFilter(ctHist, nBins, dct, csbend->highFrequencyCutoff0, csbend->highFrequencyCutoff1);
+          if (nz) {
+            fprintf(stdout, "Warning: high pass filter resulted in negative values in %ld bins\n",
+                    nz);
+            fflush(stdout);
+          }
+        }
         if (csbend->SGHalfWidth>0)
           SavitzyGolaySmooth(ctHist, nBins, csbend->SGOrder, csbend->SGHalfWidth, csbend->SGHalfWidth,  0);
         for (iBin=0; iBin<nBins; iBin++) {
@@ -2321,14 +2334,23 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
     /* - smooth the histogram, normalize to get linear density, and 
        copy in preparation for taking derivative
        */
+    if (csrWake.highFrequencyCutoff0>0) {
+      long nz;
+      nz = applyHighPassFilter(ctHist, nBins, dct, csrWake.highFrequencyCutoff0, csrWake.highFrequencyCutoff1);
+      if (nz) {
+        fprintf(stdout, "Warning: high pass filter resulted in negative values in %ld bins\n",
+                nz);
+        fflush(stdout);
+      }
+    }
     if (csrWake.SGHalfWidth>0)
-      SavitzyGolaySmooth(ctHist, nBins, csrWake.SGOrder, csrWake.SGHalfWidth, csrWake.SGHalfWidth,  0);
+      SavitzkyGolaySmooth(ctHist, nBins, csrWake.SGOrder, csrWake.SGHalfWidth, csrWake.SGHalfWidth,  0);
     for (iBin=0; iBin<nBins; iBin++)
       ctHistDeriv[iBin] = (ctHist[iBin] /= dct);
     /* - compute derivative with smoothing.  The deriv is w.r.t. index number and
      * I won't scale it now as it will just fall out in the integral 
      */
-    SavitzyGolaySmooth(ctHistDeriv, nBins, csrWake.SGDerivOrder, 
+    SavitzkyGolaySmooth(ctHistDeriv, nBins, csrWake.SGDerivOrder, 
                        csrWake.SGDerivHalfWidth, csrWake.SGDerivHalfWidth, 1);
 
     /* Case C */ 
@@ -2681,4 +2703,70 @@ void convertToCSBendCoords(double **part, long np, double rho0,
       coord[4] *= c_mks;
   }
 }
+
+#include "fftpackC.h"
+long applyHighPassFilter(double *histogram, long bins, double dx, double start, double end)
+{
+  long i, i1, i2, nz;
+  double fraction, dfraction, sum1, sum2;
+  double *realimag, dfrequency, length;
+  long frequencies;
+
+  if (!(realimag = (double*)malloc(sizeof(*realimag)*(bins+2))))
+    SDDS_Bomb("allocation failure");
+
+  if (end<start)
+    end = start;
+
+  frequencies = bins/2 + 1;
+  length = dx*(bins-1);
+  dfrequency = 1.0/length;
+  realFFT2(realimag, histogram, bins, 0);
+
+  i1 = start/dfrequency+0.5;
+  if (i1<0) 
+    i1=0;
+  if (i1>frequencies-1)
+    i1 = frequencies-1;
+  
+  i2 = end/dfrequency+0.5;
+  if (i2<0) 
+    i2=0;
+  if (i2>frequencies-1)
+    i2 = frequencies-1;
+  
+  dfraction = i1==i2? 0 : 1./(i2-i1);
+  fraction = 1;
+  for (i=i1; i<=i2; i++) {
+    realimag[2*i  ] *= fraction;
+    realimag[2*i+1] *= fraction;
+    if ((fraction -= dfraction)>1)
+      fraction = 0;
+  }
+  for (; i<frequencies; i++) {
+    realimag[2*i  ] = 0;
+    realimag[2*i+1] = 0;
+  }
+
+  realFFT2(realimag, realimag, bins, INVERSE_FFT);
+
+  /* copy data to input buffer.
+   * normalize to keep the sum constant
+   * don't allow negative values 
+   */
+  for (i=nz=sum1=sum2=0; i<bins; i++) {
+    sum1 += histogram[i];
+    if ((histogram[i] = realimag[i])<0) {
+      nz++;
+      histogram[i] = 0;
+    }
+    sum2 += histogram[i];
+  }
+  free(realimag);
+  if (sum2)
+    for (i=0; i<bins; i++)
+      histogram[i] *= sum1/sum2;
+  return nz;
+}
+
 
