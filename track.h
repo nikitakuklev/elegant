@@ -605,9 +605,9 @@ extern char *entity_text[N_TYPES];
 #define N_VCOR_PARAMS 8
 #define N_RFCA_PARAMS 17
 #define N_ELSE_PARAMS 0
-#define N_HMON_PARAMS 8
-#define N_VMON_PARAMS 8
-#define N_MONI_PARAMS 10
+#define N_HMON_PARAMS 9
+#define N_VMON_PARAMS 9
+#define N_MONI_PARAMS 11
 #define N_RCOL_PARAMS 6
 #define N_ECOL_PARAMS 7
 #define N_MARK_PARAMS 1
@@ -882,6 +882,9 @@ typedef struct {
     double length, dx, dy, weight, tilt, calibration;
     long order;
     char *readout;   /* rpn equation for x readout as function of x and y */
+    long coFitpoint;
+    short initialized;
+    long coMemoryNumber;
     } HMON;
 
 /* names and storage structure for vertical monitor physical parameters */
@@ -891,6 +894,9 @@ typedef struct {
     double length, dx, dy, weight, tilt, calibration;
     long order;
     char *readout;   /* rpn equation for y readout as function of x and y */
+    long coFitpoint;
+    short initialized;
+    long coMemoryNumber;
     } VMON;
 
 /* names and storage structure for two-plane monitor physical parameters */
@@ -900,6 +906,9 @@ typedef struct {
     double length, dx, dy, weight, tilt, xcalibration, ycalibration;
     long order;
     char *x_readout, *y_readout; /* rpn equations for x and y readouts as function of actual x and y */
+    long coFitpoint;
+    short initialized;
+    long coMemoryNumber[2];
     } MONI;
 
 /* names and storage structure for rectangular collimator physical parameters */

@@ -343,7 +343,8 @@ PARAMETER hmon_param[N_HMON_PARAMS] = {
     {"TILT", "", IS_DOUBLE, 0, (long)((char *)&hmon_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
     {"CALIBRATION", "", IS_DOUBLE, 0, (long)((char *)&hmon_example.calibration), NULL, 1.0, 0, "calibration factor for readout"},
     {"ORDER", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&hmon_example.order), NULL, 1.0, 0, "matrix order"},
-    {"READOUT", "", IS_STRING, 0, (long)((char *)&hmon_example.readout), NULL, 0.0, 1, "rpn expression for readout (actual position supplied in variable x)"}
+    {"READOUT", "", IS_STRING, 0, (long)((char *)&hmon_example.readout), NULL, 0.0, 1, "rpn expression for readout (actual position supplied in variable x)"},
+    {"CO_FITPOINT", "", IS_LONG, 0, (long)((char *)&hmon_example.coFitpoint), NULL, 0.0, 0, "If nonzero, then closed orbit value is placed in variable <name>#<occurence>.xco"},
     } ;
    
 VMON vmon_example;
@@ -356,7 +357,8 @@ PARAMETER vmon_param[N_VMON_PARAMS] = {
     {"TILT", "", IS_DOUBLE, 0, (long)((char *)&vmon_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
     {"CALIBRATION", "", IS_DOUBLE, 0, (long)((char *)&vmon_example.calibration), NULL, 1.0, 0, "calibration factor for readout"},
     {"ORDER", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&vmon_example.order), NULL, 1.0, 0, "matrix order"},
-    {"READOUT", "", IS_STRING, 0, (long)((char *)&vmon_example.readout), NULL, 0.0, 1, "rpn expression for readout (actual position supplied in variable y)"}
+    {"READOUT", "", IS_STRING, 0, (long)((char *)&vmon_example.readout), NULL, 0.0, 1, "rpn expression for readout (actual position supplied in variable y)"},
+    {"CO_FITPOINT", "", IS_LONG, 0, (long)((char *)&vmon_example.coFitpoint), NULL, 0.0, 0, "If nonzero, then closed orbit value is placed in variable <name>#<occurence>.yco"},
     } ;
 
 MONI moni_example;   
@@ -371,7 +373,8 @@ PARAMETER moni_param[N_MONI_PARAMS] = {
     {"YCALIBRATION", "", IS_DOUBLE, 0, (long)((char *)&moni_example.ycalibration), NULL, 1.0, 0, "calibration factor for y readout"},
     {"ORDER", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&moni_example.order), NULL, 1.0, 0, "matrix order"},
     {"XREADOUT", "", IS_STRING, 0, (long)((char *)&moni_example.x_readout), NULL, 0.0, 1, "rpn expression for x readout (actual position supplied in variables x, y"},
-    {"YREADOUT", "", IS_STRING, 0, (long)((char *)&moni_example.y_readout), NULL, 0.0, 1, "rpn expression for y readout (actual position supplied in variables x, y"}
+    {"YREADOUT", "", IS_STRING, 0, (long)((char *)&moni_example.y_readout), NULL, 0.0, 1, "rpn expression for y readout (actual position supplied in variables x, y"},
+    {"CO_FITPOINT", "", IS_LONG, 0, (long)((char *)&moni_example.coFitpoint), NULL, 0.0, 0, "If nonzero, then closed orbit values are placed in variables <name>#<occurence>.xco and <name>#<occurence>.yco"},
     } ;
 
 RCOL rcol_example;   

@@ -1355,17 +1355,36 @@ void do_print_dictionary(char *filename, long latex_form)
   }
   qsort((void*)dictList, N_TYPES-1, sizeof(*dictList), dictionaryEntryCmp);
   fp = fopen_e(filename, "w", 0);
+#if DEBUG
+  fprintf(stderr, "Opened file to print dictionary entries\n");
+#endif
   if (latex_form) {
     fprintf(fp, "\\newlength{\\descwidth}\n");
     fprintf(fp, "\\setlength{\\descwidth}{2in}\n");
   }
+#if DEBUG
+  fprintf(stderr, "Beginning loop to print dictionary entries\n");
+#endif
   for (i=0; i<N_TYPES-1; i++) {
+#if DEBUG
+    fprintf(stderr, "Printing dictionary entry %ld (%s) of %ld\n", i, 
+            dictList[i].elementName, (long)(N_TYPES-1));
+#endif
     if (entity_description[dictList[i].index].flags&NO_DICT_OUTPUT)
       continue;
     print_dictionary_entry(fp, dictList[i].index, latex_form);
   }
+#if DEBUG
+  fprintf(stderr, "Free'ing dictList\n");
+#endif
   free(dictList);
+#if DEBUG
+  fprintf(stderr, "Closing file\n");
+#endif
   fclose(fp);
+#if DEBUG
+  fprintf(stderr, "Exiting do_print_dictionary\n");
+#endif
 }
 
 #define PRINTABLE_NULL(s) (s?s:"NULL")

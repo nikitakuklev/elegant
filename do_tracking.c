@@ -39,6 +39,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge, BE
                              long np, long nLost, char *mainRootname, long iPass, long driftOrder);
 void distributionScatter(double **part, long np, double Po, DSCATTER *scat, long iPass);
 void recordLossPass(long *lostOnPass, long *nLost, long nLeft, long nMaximum, long pass);
+void storeMonitorOrbitValues(ELEMENT_LIST *eptr, double **part, long np);
 
 static TRACKING_CONTEXT trackingContext;
 
@@ -417,11 +418,22 @@ long do_tracking(
               print_elem(stdout, eptr);
               print_matrices(stdout, "", eptr->matrix);
             }
+            if (flags&TEST_PARTICLES) {
+              switch (eptr->type) {
+              case T_MONI:
+              case T_HMON:
+              case T_VMON:
+                storeMonitorOrbitValues(eptr, coord, nToTrack);
+                break;
+              default:
+                break;
+              }
+            }
             track_particles(coord, eptr->matrix, coord, nToTrack);
           }
         }
         else {
-	  long type;
+          long type;
           if (run->print_statistics>1 && !(flags&TEST_PARTICLES)) {
             fprintf(stdout, "Tracking element: ");
             fflush(stdout);
@@ -2289,3 +2301,59 @@ void recordLossPass(long *lostOnPass, long *nLost, long nLeft, long nMaximum, lo
   *nLost = nMaximum - nLeft;
 }
 
+void storeMonitorOrbitValues(ELEMENT_LIST *eptr, double **part, long np)
+{
+  MONI *moni;
+  HMON *hmon;
+  VMON *vmon;
+  char s[1000];
+  double centroid[6];
+  
+  if (!np)
+    return;
+  
+  switch (eptr->type) {
+  case T_MONI:
+    moni = (MONI*)eptr->p_elem;
+    if (!moni->coFitpoint) 
+      return;
+    compute_centroids(centroid, part, np);
+    if (!moni->initialized) {
+      sprintf(s, "%s#%ld.xco", eptr->name, eptr->occurence);
+      moni->coMemoryNumber[0] = rpn_create_mem(s, 0);
+      sprintf(s, "%s#%ld.yco", eptr->name, eptr->occurence);
+      moni->coMemoryNumber[1] = rpn_create_mem(s, 0);
+      moni->initialized = 1;
+    }
+    rpn_store(centroid[0], NULL, moni->coMemoryNumber[0]);
+    rpn_store(centroid[2], NULL, moni->coMemoryNumber[1]);
+    break;
+  case T_HMON:
+    hmon = (HMON*)eptr->p_elem;
+    if (!hmon->coFitpoint) 
+      return;
+    compute_centroids(centroid, part, np);
+    if (!hmon->initialized) {
+      sprintf(s, "%s#%ld.xco", eptr->name, eptr->occurence);
+      hmon->coMemoryNumber = rpn_create_mem(s, 0);
+      hmon->initialized = 1;
+    }
+    rpn_store(centroid[0], NULL, hmon->coMemoryNumber);
+    break;
+  case T_VMON:
+    vmon = (VMON*)eptr->p_elem;
+    if (!vmon->coFitpoint) 
+      return;
+    compute_centroids(centroid, part, np);
+    if (!vmon->initialized) {
+      sprintf(s, "%s#%ld.yco", eptr->name, eptr->occurence);
+      vmon->coMemoryNumber = rpn_create_mem(s, 0);
+      vmon->initialized = 1;
+    }
+    rpn_store(centroid[2], NULL, vmon->coMemoryNumber);
+    break;
+  default:
+    return ;
+    break;
+  }
+}
