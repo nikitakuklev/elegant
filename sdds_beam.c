@@ -33,11 +33,12 @@ static char *input_type_name[N_SDDS_INPUT_TYPES] = {
   /* SDDS routines will be asked to deliver data in the order given in
    * this string, which matches the order of the #define's 
    */
-  static char *spiffe_columns = "r pr pz t";
+static char *spiffe_columns = "r pr pz t pphi";
 #define ISC_R 0
 #define ISC_PR 1
 #define ISC_PZ 2
 #define ISC_T 3
+#define ISC_PPHI 4
 
 /* SDDS routines will be asked to deliver data in the order given in
  * this string, which matches the order of the #define's 
@@ -172,7 +173,7 @@ long new_sdds_beam(
 #endif
   long i_store, i, j;
   static long new_particle_data, generate_new_bunch;
-  double r, theta, rp, delta;
+  double r, theta, pr, pz, pphi, delta;
   double sin_theta, cos_theta, path, *pti;
 
   log_entry("new_sdds_beam");
@@ -286,14 +287,16 @@ long new_sdds_beam(
         if (sample_fraction!=1 && random_4(1)>sample_fraction)
           continue;
         pti = beam->original[i];
-        p = sqrt(sqr(pti[ISC_PZ]) + sqr(pti[ISC_PR]));
+        pz = pti[ISC_PZ];
+        pr = pti[ISC_PR];
+        pphi = pti[ISC_PPHI];
+        p = sqrt(sqr(pz) + sqr(pr) + sqr(pphi));
         gamma = sqrt(sqr(p)+1);
         if (p_lower && (p_lower>p || p_upper<p))
           continue;
         r      = pti[ISC_R];
         path   = (t_offset + pti[ISC_T])*c_mks*(beta = p/gamma) ;
         delta  = (p-p_central)/p_central;
-        rp     = pti[ISC_PR]/pti[ISC_PZ];
         theta  = PIx2*random_4(1);
         for (j=0; j<n_particles_per_ring; j++, i_store++) {
           sin_theta = sin(theta);
@@ -305,9 +308,9 @@ long new_sdds_beam(
             exit(1);
           }
           beam->particle[i_store][0] = r*cos_theta;
-          beam->particle[i_store][1] = rp*cos_theta;
+          beam->particle[i_store][1] = (pr*cos_theta - pphi*sin_theta)/pz;
           beam->particle[i_store][2] = r*sin_theta;
-          beam->particle[i_store][3] = rp*sin_theta;
+          beam->particle[i_store][3] = (pr*sin_theta + pphi*cos_theta)/pz;
           beam->particle[i_store][4] = path;
           beam->particle[i_store][5] = delta;
           beam->particle[i_store][6] = particleID++;
@@ -484,7 +487,7 @@ long new_sdds_beam(
 
 /* get_sdds_particles reads data from all of the input files and puts it into the particle array as
  * follows:
- *     for spiffe input:   (*particle)[i] = (r, pr, pz, t) for ith particle
+ *     for spiffe input:   (*particle)[i] = (r, pr, pz, pphi, t) for ith particle
  *     for elegant input:  (*particle)[i] = (x, xp, y, yp, t, p) for ith particle
  */
 long get_sdds_particles(double ***particle, 
@@ -541,7 +544,8 @@ long get_sdds_particles(double ***particle,
         if (!check_sdds_beam_column(&SDDS_input, "r", "m") || 
             !check_sdds_beam_column(&SDDS_input, "pr", "m$be$nc") ||
             !check_sdds_beam_column(&SDDS_input, "pz", "m$be$nc") ||
-          !check_sdds_beam_column(&SDDS_input, "t", "s")) {
+            !check_sdds_beam_column(&SDDS_input, "pphi", "m$be$nc") ||
+            !check_sdds_beam_column(&SDDS_input, "t", "s")) {
           fprintf(stdout, 
                   "necessary data quantities (r, pr, pz, t) have the wrong units or are not present in %s", 
                   inputFile[inputFileIndex]);
@@ -551,7 +555,7 @@ long get_sdds_particles(double ***particle,
       }
       else {
         if (!check_sdds_beam_column(&SDDS_input, "x", "m") ||
-          !check_sdds_beam_column(&SDDS_input, "y", "m") ||
+            !check_sdds_beam_column(&SDDS_input, "y", "m") ||
             !check_sdds_beam_column(&SDDS_input, "xp", NULL) ||
             !check_sdds_beam_column(&SDDS_input, "yp", NULL) ||
             !check_sdds_beam_column(&SDDS_input, "p", "m$be$nc") ||
