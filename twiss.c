@@ -328,6 +328,7 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, RADIATION_INTEGRALS
 
     elem = elem->succ;
   }
+  
   tune[0] = phi[0]/PIx2;
   tune[1] = phi[1]/PIx2;
 
@@ -498,7 +499,8 @@ void dump_twiss_parameters(
                           IP_NUX, tune[0], IP_DNUXDP, chromaticity[0], IP_AX, acceptance[0],
                           IP_NUY, tune[1], IP_DNUYDP, chromaticity[1], IP_AY, acceptance[1], 
                           IP_ALPHAC, alphac[0], IP_ALPHAC2, alphac[1], 
-                          IP_DBETAXDP, dbeta[0], IP_DBETAYDP, dbeta[1], -1)) {
+                          IP_DBETAXDP, dbeta[0], IP_DBETAYDP, dbeta[1],
+                          IP_PCENTRAL, run->p_central, -1)) {
     SDDS_SetError("Problem setting SDDS parameters (dump_twiss_parameters 1)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
@@ -519,13 +521,12 @@ void dump_twiss_parameters(
                             IP_JDELTA, radIntegrals->Jdelta,
                             IP_U0, radIntegrals->Uo, 
                             IP_ENX0, radIntegrals->ex0*sqrt(sqr(run->p_central)+1), 
-                            IP_PCENTRAL, run->p_central, 
                             -1)) {
       SDDS_SetError("Problem setting SDDS parameters (dump_twiss_parameters 2)");
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
   }
-  
+
   if (!final_values_only) {
     row_count = 0;
     data[0] = 0;     /* position */
@@ -714,6 +715,7 @@ long run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, lon
   long n_elem, last_n_elem;
   unsigned long unstable;
   TWISS twiss_ave, twiss_min, twiss_max;
+  long i;
 
   /*
     if (beamline->flags&BEAMLINE_TWISS_CURRENT)
@@ -953,6 +955,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
 #endif
 
   chromx = chromy = 0;
+  dbetax = dbetay = 0;
   if (periodic) {
     if (!(M = beamline->matrix))
       bomb("logic error: revolution matrix is NULL in compute_twiss_parameters", NULL);
@@ -969,7 +972,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
   else {
     M = beamline->matrix;
     elast = beamline->elast;
-
+    
     if (!elast)
       bomb("logic error in compute_twiss_parameters--elast pointer is NULL", NULL);
     if (!elast->twiss)
