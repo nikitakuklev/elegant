@@ -528,7 +528,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_REFLECT 76
 #define T_CLEAN 77
 #define T_TWISSELEMENT 78
-#define N_TYPES 79
+#define T_WIGGLER 79
+#define N_TYPES 80
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -614,6 +615,7 @@ extern char *entity_text[N_TYPES];
 #define N_REFLECT_PARAMS 1
 #define N_CLEAN_PARAMS 7
 #define N_TWISSELEMENT_PARAMS 6
+#define N_WIGGLER_PARAMS 3
 
 typedef struct {
     char *name;            /* parameter name */
@@ -1719,6 +1721,12 @@ typedef struct {
   double pLower, pUpper;
   long hasLower, hasUpper;
 } PFILTER;
+
+/* names and storage structure for WIGGLER element */
+typedef struct {
+  double length, radius;
+  long periods;
+} WIGGLER;
 
 /* macros for bending magnets */ 
 #define SAME_BEND_PRECEDES 1 

@@ -26,7 +26,7 @@ char *entity_name[N_TYPES] = {
     "MODRF", "BMAPXY", "ZTRANSVERSE", "IBSCATTER", "FMULT",
     "WAKE", "TRWAKE", "TUBEND", "CHARGE", "PFILTER", "HISTOGRAM",
     "CSRCSBEND", "CSRDRIFT", "RFCW", "REMCOR", "MAPSOLENOID",
-    "REFLECT", "CLEAN", "TWISS",
+    "REFLECT", "CLEAN", "TWISS", "WIGGLER",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -136,6 +136,7 @@ and phase modulation.",
     "Reflects the beam back on itself, which is useful for multiple beamline matching.",
     "Cleans the beam by removing outlier particles.",
     "Sets Twiss parameter values.",
+    "A wiggler or undulator for damping or excitation of the beam.  Does not include focusing effects.",
     } ;
 
 QUAD quad_example;
@@ -1320,6 +1321,13 @@ PARAMETER twissElement_param[N_TWISSELEMENT_PARAMS] = {
   {"ONCE_ONLY", "", IS_LONG, 0, (long)((char *)&twissElem_example.onceOnly), NULL, 0.0, 0, "compute correction only for first beam or input twiss parameters, apply to all?"},        
 };
 
+WIGGLER wiggler_example;
+
+PARAMETER wiggler_param[N_WIGGLER_PARAMS] = {
+  {"L", "M", IS_DOUBLE, 0, (long)((char *)&wiggler_example.length), NULL, 0.0, 0, "length"},
+  {"RADIUS", "M", IS_DOUBLE, 0, (long)((char *)&wiggler_example.radius), NULL, 0.0, 0, "peak bending radius"},
+  {"PERIODS", "", IS_LONG, 0, (long)((char *)&wiggler_example.periods), NULL, 0.0, 0, "number of wiggler periods"},
+} ;
 
 /* array of parameter structures */
 
@@ -1417,6 +1425,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_REFLECT_PARAMS,      HAS_MATRIX|MATRIX_TRACKING,    sizeof(REFLECT),    reflect_param  },
     { N_CLEAN_PARAMS,  0, sizeof(CLEAN), clean_param },
     { N_TWISSELEMENT_PARAMS, HAS_MATRIX|MATRIX_TRACKING, sizeof(TWISSELEMENT), twissElement_param},
+    { N_WIGGLER_PARAMS, MAT_LEN|MATRIX_TRACKING, sizeof(WIGGLER), wiggler_param},
 } ;
  
 

@@ -21,6 +21,10 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
                            ELEMENT_LIST *elem, 
                            double beta0, double alpha0, double gamma0,
                            double eta0, double etap0, double *coord);
+void AddWigglerRadiationIntegrals(double length, long periods, double radius,
+				  double eta, double etap, 
+				  double beta, double alpha,
+				  double *I1, double *I2, double *I3, double *I4, double *I5);
 void LoadStartingTwissFromFile(double *betax, double *betay, double *alphax, double *alphay,
                                double *etax, double *etay, double *etaxp, double *etayp,
                                char *filename, char *elementName, long elementOccurrence);
@@ -1624,146 +1628,160 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
   double etaAve, etaK1_rhoAve, HAve, h, K2=0.0, dx=0.0;
 
   I1 = I2 = I3 = I4 = I5 = 0;
-  
-  isBend = 1;
-  switch (elem->type) {
-  case T_QUAD:
-  case T_KQUAD:
-    if (!coord && !coord[0]) {
-      isBend = 0;
-      break;
-    }
-    switch (elem->type) {
-    case T_QUAD:
-      qptr = (QUAD*)(elem->p_elem);
-      length = qptr->length;
-      K1 = qptr->k1;
-      dx = qptr->dx;
-      break;
-    case T_KQUAD:
-      qptrk = (KQUAD*)(elem->p_elem);
-      length = qptrk->length;
-      K1 = qptrk->k1;
-      dx = qptrk->dx;
-      break;
-    }
-    if (!(h = K1*(coord[0]-dx))) {
-      isBend = 0;
-      break;
-    }
-    angle = length*h;
-    E1 = E2 = 0;
-    isBend = 1;
-    break;
-  case T_SEXT:
-  case T_KSEXT:
-    if (!coord && !coord[0]) {
-      isBend = 0;
-      break;
-    }
-    switch (elem->type) {
-    case T_SEXT:
-      sptr = (SEXT*)(elem->p_elem);
-      length = sptr->length;
-      K2 = sptr->k2;
-      dx = sptr->dx;
-      break;
-    case T_KSEXT:
-      sptrk = (KSEXT*)(elem->p_elem);
-      length = sptrk->length;
-      K2 = sptrk->k2;
-      dx = sptrk->dx;
-      break;
-    }
-    if (!(h = K2*sqr(coord[0]-dx)/2)) {
-      isBend = 0;
-      break;
-    }
-    K1 = K2*(coord[0]-dx);
-    angle = length*h;
-    E1 = E2 = 0;
-    isBend = 1;
-    break;
-  case T_SBEN:
-  case T_RBEN:
-    bptr = (BEND*)(elem->p_elem);
-    length = bptr->length;
-    angle = bptr->angle;
-    E1 = bptr->e1*(bptr->edge1_effects?1:0);
-    E2 = bptr->e2*(bptr->edge2_effects?1:0);
-    K1 = bptr->k1;
-    break;
-  case T_KSBEND:
-    kbptr = (KSBEND*)(elem->p_elem);
-    length = kbptr->length;
-    angle = kbptr->angle;
-    E1 = kbptr->e1*(kbptr->edge1_effects?1:0);
-    E2 = kbptr->e2*(kbptr->edge2_effects?1:0);
-    K1 = kbptr->k1;
-    break;
-  case T_CSBEND:
-    cbptr = (CSBEND*)(elem->p_elem);
-    length = cbptr->length;
-    angle = cbptr->angle;
-    E1 = cbptr->e1*(cbptr->edge1_effects?1:0);
-    E2 = cbptr->e2*(cbptr->edge2_effects?1:0);
-    K1 = cbptr->k1;
-    break;
-  case T_CSRCSBEND:
-    csrbptr = (CSRCSBEND*)(elem->p_elem);
-    length = csrbptr->length;
-    angle = csrbptr->angle;
-    E1 = csrbptr->e1*(csrbptr->edge1_effects?1:0);
-    E2 = csrbptr->e2*(csrbptr->edge2_effects?1:0);
-    K1 = csrbptr->k1;
-    break;
-  default:
-    isBend = 0;
-    break;
-  }
-  if (isBend && angle!=0) {
-    if (coord) {
-      K1 /= 1+coord[5];
-      angle /= 1+coord[5];
-    }
-    rho = length/angle;
-    k2 = K1+1./(rho*rho);
-    /* equations are from SLAC 1193 */
-    if (k2<0) {
-      k = sqrt(-k2);
-      kl = k*length;
-      cos_kl = cosh(kl);
-      sin_kl = sinh(kl);
-    } else {
-      k = sqrt(k2);
-      kl = k*length;
-      sin_kl = sin(kl);
-      cos_kl = cos(kl);
-    }
-    etap1 = etap0 + eta0/rho*tan(E1);
-    eta2  = eta0*cos_kl + etap1*sin_kl/k + (1-cos_kl)/(rho*k2);
-    alpha1 = alpha0 - beta0/rho*tan(E1);
-    gamma1 = (1+sqr(alpha1))/beta0;
-    etaAve = eta0*sin_kl/kl + etap1*(1-cos_kl)/(k2*length) +
-      (kl-sin_kl)/(k2*kl*rho);
-    etaK1_rhoAve =  -etaAve*K1/rho + (eta0*tan(E1)+eta2*tan(E2))/(2*length*sqr(rho));
-    HAve = gamma1*sqr(eta0) + 2*alpha1*eta0*etap1 + beta0*sqr(etap1) 
-      + 2*angle*( -(gamma1*eta0+alpha1*etap1)*(kl-sin_kl)/(k*k2*sqr(length)) +
-                 (alpha1*eta0+beta0*etap1)*(1-cos_kl)/(k2*sqr(length))
-                 )
-        + sqr(angle)*(gamma1*(3*kl-4*sin_kl+sin_kl*cos_kl)/(2*k*k2*k2*ipow(length,3)) 
-                      - alpha1*sqr(1-cos_kl)/(k2*k2*ipow(length,3))
-                      + beta0*(kl-cos_kl*sin_kl)/(2*kl*k2*sqr(length)));
-    I1 = etaAve*length/rho;
-    I2 = length/sqr(rho);
-    I3 = I2/fabs(rho);
-    I4 = I2/rho*etaAve - 2*length*etaK1_rhoAve;
-    I5 = HAve*I3;
+
+  if (elem->type==T_WIGGLER) {
+    WIGGLER *wiggler;
+    wiggler = (WIGGLER*)(elem->p_elem);
+    AddWigglerRadiationIntegrals(wiggler->length, wiggler->periods, wiggler->radius,
+				 eta0, etap0, 
+				 beta0, alpha0,
+				 &I1, &I2, &I3, &I4, &I5);
     radIntegrals->I[0] += I1;
     radIntegrals->I[1] += I2;
     radIntegrals->I[2] += I3;
     radIntegrals->I[3] += I4;
     radIntegrals->I[4] += I5;
+  } else {
+    isBend = 1;
+    switch (elem->type) {
+    case T_QUAD:
+    case T_KQUAD:
+      if (!coord && !coord[0]) {
+	isBend = 0;
+	break;
+      }
+      switch (elem->type) {
+      case T_QUAD:
+	qptr = (QUAD*)(elem->p_elem);
+	length = qptr->length;
+	K1 = qptr->k1;
+	dx = qptr->dx;
+	break;
+      case T_KQUAD:
+	qptrk = (KQUAD*)(elem->p_elem);
+	length = qptrk->length;
+	K1 = qptrk->k1;
+	dx = qptrk->dx;
+	break;
+      }
+      if (!(h = K1*(coord[0]-dx))) {
+	isBend = 0;
+	break;
+      }
+      angle = length*h;
+      E1 = E2 = 0;
+      isBend = 1;
+      break;
+    case T_SEXT:
+    case T_KSEXT:
+      if (!coord && !coord[0]) {
+	isBend = 0;
+	break;
+      }
+      switch (elem->type) {
+      case T_SEXT:
+	sptr = (SEXT*)(elem->p_elem);
+	length = sptr->length;
+	K2 = sptr->k2;
+	dx = sptr->dx;
+	break;
+      case T_KSEXT:
+	sptrk = (KSEXT*)(elem->p_elem);
+	length = sptrk->length;
+	K2 = sptrk->k2;
+	dx = sptrk->dx;
+	break;
+      }
+      if (!(h = K2*sqr(coord[0]-dx)/2)) {
+	isBend = 0;
+	break;
+      }
+      K1 = K2*(coord[0]-dx);
+      angle = length*h;
+      E1 = E2 = 0;
+      isBend = 1;
+      break;
+    case T_SBEN:
+    case T_RBEN:
+      bptr = (BEND*)(elem->p_elem);
+      length = bptr->length;
+      angle = bptr->angle;
+      E1 = bptr->e1*(bptr->edge1_effects?1:0);
+      E2 = bptr->e2*(bptr->edge2_effects?1:0);
+      K1 = bptr->k1;
+      break;
+    case T_KSBEND:
+      kbptr = (KSBEND*)(elem->p_elem);
+      length = kbptr->length;
+      angle = kbptr->angle;
+      E1 = kbptr->e1*(kbptr->edge1_effects?1:0);
+      E2 = kbptr->e2*(kbptr->edge2_effects?1:0);
+      K1 = kbptr->k1;
+      break;
+    case T_CSBEND:
+      cbptr = (CSBEND*)(elem->p_elem);
+      length = cbptr->length;
+      angle = cbptr->angle;
+      E1 = cbptr->e1*(cbptr->edge1_effects?1:0);
+      E2 = cbptr->e2*(cbptr->edge2_effects?1:0);
+      K1 = cbptr->k1;
+      break;
+    case T_CSRCSBEND:
+      csrbptr = (CSRCSBEND*)(elem->p_elem);
+      length = csrbptr->length;
+      angle = csrbptr->angle;
+      E1 = csrbptr->e1*(csrbptr->edge1_effects?1:0);
+      E2 = csrbptr->e2*(csrbptr->edge2_effects?1:0);
+      K1 = csrbptr->k1;
+      break;
+    default:
+      isBend = 0;
+      break;
+    }
+    if (isBend && angle!=0) {
+      if (coord) {
+	K1 /= 1+coord[5];
+	angle /= 1+coord[5];
+      }
+      rho = length/angle;
+      k2 = K1+1./(rho*rho);
+      /* equations are from SLAC 1193 */
+      if (k2<0) {
+	k = sqrt(-k2);
+	kl = k*length;
+	cos_kl = cosh(kl);
+	sin_kl = sinh(kl);
+      } else {
+	k = sqrt(k2);
+	kl = k*length;
+	sin_kl = sin(kl);
+	cos_kl = cos(kl);
+      }
+      etap1 = etap0 + eta0/rho*tan(E1);
+      eta2  = eta0*cos_kl + etap1*sin_kl/k + (1-cos_kl)/(rho*k2);
+      alpha1 = alpha0 - beta0/rho*tan(E1);
+      gamma1 = (1+sqr(alpha1))/beta0;
+      etaAve = eta0*sin_kl/kl + etap1*(1-cos_kl)/(k2*length) +
+	(kl-sin_kl)/(k2*kl*rho);
+      etaK1_rhoAve =  -etaAve*K1/rho + (eta0*tan(E1)+eta2*tan(E2))/(2*length*sqr(rho));
+      HAve = gamma1*sqr(eta0) + 2*alpha1*eta0*etap1 + beta0*sqr(etap1) 
+	+ 2*angle*( -(gamma1*eta0+alpha1*etap1)*(kl-sin_kl)/(k*k2*sqr(length)) +
+		    (alpha1*eta0+beta0*etap1)*(1-cos_kl)/(k2*sqr(length))
+		    )
+        + sqr(angle)*(gamma1*(3*kl-4*sin_kl+sin_kl*cos_kl)/(2*k*k2*k2*ipow(length,3)) 
+                      - alpha1*sqr(1-cos_kl)/(k2*k2*ipow(length,3))
+                      + beta0*(kl-cos_kl*sin_kl)/(2*kl*k2*sqr(length)));
+      I1 = etaAve*length/rho;
+      I2 = length/sqr(rho);
+      I3 = I2/fabs(rho);
+      I4 = I2/rho*etaAve - 2*length*etaK1_rhoAve;
+      I5 = HAve*I3;
+      radIntegrals->I[0] += I1;
+      radIntegrals->I[1] += I2;
+      radIntegrals->I[2] += I3;
+      radIntegrals->I[3] += I4;
+      radIntegrals->I[4] += I5;
+    }
   }
   if (dI) {
     dI[0] = I1;
@@ -2206,7 +2224,8 @@ void processTwissAnalysisRequests(ELEMENT_LIST *elem)
   double twissData[TWISS_ANALYSIS_STATS][TWISS_ANALYSIS_QUANTITIES];
 
   elemOrig = elem;
-  
+  start_pos = 0;
+
   for (i=0; i<twissAnalysisRequests; i++) {
     /* initialize statistics buffers and rpn memories */
     for (iq=0; iq<TWISS_ANALYSIS_QUANTITIES; iq++)  {
@@ -2334,4 +2353,63 @@ void setupTwissAnalysisRequest(NAMELIST_TEXT *nltext, RUN *run,
                           twiss_analysis_struct.s_start,
                           twiss_analysis_struct.s_end);
 }
+
+void AddWigglerRadiationIntegrals(double length, long periods, double radius,
+                                   double eta, double etap, 
+                                   double beta, double alpha,
+                                   double *I1, double *I2, double *I3, double *I4, double *I5)
+{
+  double h0, gamma;
+  double Lp;
+  long pole, fieldSign;
+  
+  gamma = (1+alpha*alpha)/beta;
+  if (periods%2)
+    bomb("wiggler must have an even number of periods", NULL);
+  if (periods<=2)
+    bomb("wiggler must have at least 4 periods", NULL);
+  
+  Lp = length/periods;
+  
+  fieldSign = 1;
+  for (pole=0; pole<=periods; pole++) {
+    fieldSign *= -1;
+    if (pole==0 || pole==periods) {
+      h0 = fieldSign*0.5/radius;
+    } else
+      h0 = fieldSign/radius;
+    fprintf(stderr, "wiggler: pole=%ld, h0=%le, beta=%le, alpha=%le, eta=%le, etap=%le\n",
+	    pole, h0, beta, alpha, eta, etap);
+
+    *I1 += (h0*Lp*(h0*ipow(Lp,2) + 4*eta*PI + 2*etap*Lp*PI))/
+      (2.*ipow(PI,2));
+    
+    *I2 += (ipow(h0,2)*Lp)/2.;
+    
+    *I3 += SIGN(h0)*(4*ipow(h0,3)*Lp)/(3.*PI);
+    
+    *I4 += (ipow(h0,3)*Lp*(7*h0*ipow(Lp,2) + 16*(2*eta + etap*Lp)*PI))/(24.*ipow(PI,2));
+
+    *I5 += SIGN(h0)*
+      (ipow(h0,3)*Lp*(225*ipow(PI,2)*
+		      (alpha*(-289*ipow(h0,2)*ipow(Lp,3) + 
+			      5*h0*Lp*(128*eta - 45*etap*Lp)*PI + 640*eta*etap*ipow(PI,2)
+			      ) + 64*beta*(6*ipow(h0,2)*ipow(Lp,2) + 10*etap*h0*Lp*PI + 
+					   5*ipow(etap,2)*ipow(PI,2))) + 
+		      2*gamma*(ipow(h0,2)*ipow(Lp,4)*(-144896 + 13725*ipow(PI,2)) + 
+			       4000*(-40*ipow(etap,2)*ipow(Lp,2)*ipow(PI,2) + 
+				     9*ipow(eta,2)*ipow(PI,4) - 9*eta*etap*Lp*ipow(PI,4)) + 
+			       125*h0*ipow(Lp,2)*PI*
+			       (-450*eta*ipow(PI,2) + etap*Lp*(-2560 + 81*ipow(PI,2))))))/
+      (54000.*ipow(PI,5));
+    
+    beta  = beta - 2*Lp*alpha + sqr(Lp)*gamma;
+    alpha = alpha - Lp*alpha;
+    eta   = eta + (etap + Lp/PI*h0)*Lp ;
+    etap  = etap + 2*Lp/PI*h0;
+  }
+  fprintf(stderr, "wiggler: pole=%ld, h0=%le, beta=%le, alpha=%le, eta=%le, etap=%le\n",
+	  pole, h0, beta, alpha, eta, etap);
+}
+
 

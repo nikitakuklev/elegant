@@ -391,6 +391,10 @@ VMATRIX *compute_matrix(
         drift = (DRIFT*)elem->p_elem;
         elem->matrix = drift_matrix(drift->length, (drift->order?drift->order:run->default_order));
         break;
+      case T_WIGGLER:
+        drift = (DRIFT*)elem->p_elem;
+        elem->matrix = drift_matrix(drift->length, 1);
+	break;
       case T_RBEN: case T_SBEN:
         bend = (BEND*)elem->p_elem;
         bend_flags = determine_bend_flags(elem, bend->edge1_effects, bend->edge2_effects);
