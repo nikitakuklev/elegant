@@ -325,6 +325,12 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
           } else {
             newValue = value[j];
           }
+          if (verbose) {
+            fprintf(stderr, "Changing %s from %21.15e to %21.15e\n",
+                    entity_description[eptr->type].parameter[param].name,
+                    *((double*)(p_elem+entity_description[eptr->type].parameter[param].offset)),
+                    newValue);
+          }
           load_request[i].starting_value[load_request[i].values]
             = *((double*)(p_elem+entity_description[eptr->type].parameter[param].offset));
           load_request[i].value_type[load_request[i].values] = IS_DOUBLE;
@@ -344,6 +350,12 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
           } else {
             newValue = value[j];
           }
+          if (verbose) {
+            fprintf(stderr, "Changing %s from %ld to %.0f\n",
+                    entity_description[eptr->type].parameter[param].name,
+                    *((long*)(p_elem+entity_description[eptr->type].parameter[param].offset)),
+                    newValue);
+          }
           load_request[i].starting_value[load_request[i].values]
             = *((long*)(p_elem+entity_description[eptr->type].parameter[param].offset));
           load_request[i].value_type[load_request[i].values] = IS_LONG;
@@ -356,6 +368,12 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
           break;
         case IS_STRING:
           load_request[i].value_type[load_request[i].values] = IS_STRING;
+          if (verbose) {
+            fprintf(stderr, "Changing %s from %s to %s\n",
+                    entity_description[eptr->type].parameter[param].name,
+                    *((char**)(p_elem+entity_description[eptr->type].parameter[param].offset)),
+                    valueString[j]);
+          }
           if (!SDDS_CopyString((char**)(p_elem+entity_description[eptr->type].parameter[param].offset),
                                valueString[j])) {
             fprintf(stderr, "Error (do_load_parameters): unable to copy value string\n");
