@@ -3,8 +3,8 @@ include $(TOP)/config/CONFIG_APPS
 
 CMPLR = ANSI
 CC = $($(ANSI)_$(CMPLR))
-HOST_OPT = NO
-CC = purify $($(ANSI)_$(CMPLR))
+#HOST_OPT = NO
+#CC = purify $($(ANSI)_$(CMPLR))
 
 EPICS_EXTENSIONS_LIB = ../../../../../epics/extensions/lib/$(HOST_ARCH)
 PROD = elegant sddsemitmeas madto sddssasefel sddsTouschekInteg ibsEmittance recurseSetup haissinski \
