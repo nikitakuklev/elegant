@@ -1342,7 +1342,11 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
                                    &ctLower, &ctUpper, &dct, &nBins, 
                                    csbend->binRangeFactor<1.1?1.1:csbend->binRangeFactor, 
                                    part, n_part, 4))!=n_part) {
-          fprintf(stdout, "Only %ld of %ld particles binned for CSR\n", nBinned, n_part);
+          fprintf(stdout, "Only %ld of %ld particles binned for CSRCSBEND (z0=%le, kick=%ld, BRF=%le)\n", 
+		  nBinned, n_part, z_start, kick,
+		  csbend->binRangeFactor<1.1?1.1:csbend->binRangeFactor);
+	  fprintf(stdout, "ct min, max = %21.15e, %21.15e, dct = %21.15e, nBins=%ld, maxBins=%ld\n",
+		  ctLower, ctUpper, dct, nBins, maxBins);
           fflush(stdout);
         }
         
@@ -1535,7 +1539,11 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
                                &ctLower, &ctUpper, &dct, &nBins, 
                                csbend->binRangeFactor<1.1?1.1:csbend->binRangeFactor, 
                                part, n_part, 4))!=n_part) {
-      fprintf(stdout, "Only %ld of %ld particles binned for CSR\n", nBinned, n_part);
+      fprintf(stdout, "Only %ld of %ld particles binned for CSRCSBEND (z0=%le, end, BRF=%le)\n", 
+	      nBinned, n_part, z_start,
+	      csbend->binRangeFactor<1.1?1.1:csbend->binRangeFactor);
+      fprintf(stdout, "ct min, max = %21.15e, %21.15e, dct = %21.15e, nBins=%ld, maxBins=%ld\n",
+	      ctLower, ctUpper, dct, nBins, maxBins);
       fflush(stdout);
     }
     csrWake.s0 = ctLower + dzf;
@@ -1747,7 +1755,8 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
                                      double Po, double **accepted, double zStart, char *rootname);
 
 long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift, 
-                            double Po, double **accepted, double zStart, char *rootname)
+                            double Po, double **accepted, double zStart, 
+			    double revolutionLength, char *rootname)
 {
   long iPart, iKick, iBin, binned, nKicks, iSpreadMode=0;
   double *coord, p, beta, dz, ct0=0.0, factor, dz0, dzFirst;
@@ -1759,7 +1768,10 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
   unsigned long mode;
   static long warned = 0;
   long nBins1;
+  TRACKING_CONTEXT tContext;
   
+  getTrackingContext(&tContext);
+
   if (np<=1 || !csrWake.valid || !csrDrift->csr) {
     if (csrDrift->linearOptics) {
       long i;
@@ -1781,6 +1793,10 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
         (csrDrift->useSaldin54?CSRDRIFT_SALDIN54:0) +
           (csrDrift->attenuationLength>0?CSRDRIFT_ATTENUATIONLENGTH:0) +
             (csrDrift->useStupakov?CSRDRIFT_STUPAKOV:0) ;
+  while (zStart<csrWake.zLast) {
+    fprintf(stdout, "Note: incrementing zStart by revolution length for CSRDRIFT.\n");
+    zStart += revolutionLength;
+  }
   if (bitsSet(mode)>1) {
     fprintf(stdout, "Error: Too many modes set for CSRDRIFT.\n");
     exit(1);
@@ -1998,14 +2014,12 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
       coord[4] = beta*coord[4];
     }
     if (csrWake.dGamma && np!=binned) {
-      fprintf(stdout, "only %ld of %ld particles binned for CSR drift\n",
-              binned, np);
-#ifdef DEBUG
+      fprintf(stdout, "only %ld of %ld particles binned for CSR drift %s (track_through_driftCSR)\n",
+              binned, np, tContext.elementName);
       fprintf(stdout, "beam ct min, max = %21.15e, %21.15e\n",
               ctmin, ctmax);
       fprintf(stdout, "wake ct0 = %21.15e, ct1 = %21.15e\n",
               ct0, ct0+csrWake.dctBin*csrWake.bins);
-#endif
       fflush(stdout);
     }
   }
@@ -2395,7 +2409,11 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
                                &ctLower, &ctUpper, &dct, &nBins, 
                                csrWake.binRangeFactor<1.1?1.1:csrWake.binRangeFactor,
                                part, np, 4))!=np) {
-      fprintf(stdout, "Only %ld of %ld particles binned for CSRDRIFT\n", nBinned, np);
+      fprintf(stdout, "Only %ld of %ld particles binned for CSRDRIFT (%s, BRF=%le, Stupakov)\n", 
+	      nBinned, np,
+	      tContext.elementName, csrWake.binRangeFactor);
+      fprintf(stdout, "ct min, max = %21.15e, %21.15e, dct = %21.15e, nBins=%ld, maxBins=%ld\n",
+	      ctLower, ctUpper, dct, nBins, maxBins);
       fflush(stdout);
     }
       
@@ -2519,6 +2537,9 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
       if (iBin>=0 && iBin<nBins1) {
         coord[5] += ((1-f)*csrWake.dGamma[iBin] + f*csrWake.dGamma[iBin+1])/Po;
         binned ++;
+      } else {
+	fprintf(stdout, "Particle out of bin range---not kicked: ct-ctLower=%21.15e, dct=%21.15e, iBin=%ld\n",
+		coord[4]-ctLower, dct, iBin);
       }
       p = (1+coord[5])*Po;
       beta = p/sqrt(p*p+1);
@@ -2533,8 +2554,11 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
 				   tContext.elementName, 
 				   zOutput, 0);
     if (np!=binned) {
-      fprintf(stdout, "only %ld of %ld particles binned for CSR drift\n",
-              binned, np);
+      fprintf(stdout, "Only %ld of %ld particles kicked for CSRDRIFT (%s, BRF=%le, Stupakov)\n", 
+	      binned, np,
+	      tContext.elementName, csrWake.binRangeFactor);
+      fprintf(stdout, "ct min, max = %21.15e, %21.15e, dct = %21.15e, nBins=%ld, maxBins=%ld\n",
+	      ctLower, ctUpper, dct, nBins, maxBins);
       fflush(stdout);
     }
   }
@@ -2851,8 +2875,6 @@ long correctDistribution(double *array, long npoints, double desiredSum)
   factor = desiredSum/sum;
   for (i=0; i<npoints; i++)
     array[i] *= factor;
-  fprintf(stdout, "Distribution corrected by factor %le with %ld points set to zero\n",
-	  factor, nz);
   return nz;
 }
 

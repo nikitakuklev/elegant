@@ -147,7 +147,7 @@ long do_tracking(
     *finalCharge = 0;
   for (i_pass=0; i_pass<n_passes; i_pass++) {
     log_entry("do_tracking.2.1");
-    
+
     if (beamline->links) {
       sprintf(s, "%.15e sto p_central  %ld sto turn", *P_central, i_pass);
       rpn(s);
@@ -670,7 +670,9 @@ long do_tracking(
             break;
           case T_CSRDRIFT:
             n_left = track_through_driftCSR(coord, n_to_track, (CSRDRIFT*)eptr->p_elem,
-                                            *P_central, accepted, last_z, run->rootname);
+                                            *P_central, accepted, last_z, 
+					    beamline->revolution_length,
+					    run->rootname);
             break;
           case T_TUBEND:
             n_left = track_through_tubend(coord, n_to_track, 
