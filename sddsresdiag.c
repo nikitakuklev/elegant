@@ -36,8 +36,8 @@ int main(int argc, char **argv)
 {
     char *output = NULL;
     FILE *fp_out;
-    long n_super, nsol, m;
-    long max_order, min_order;
+    long n_super, nsol, m, first;
+    long max_order, min_order, order;
     double nux, nuy;
     double nuxi[2], nuyi[2];
     long location[2], j, k;
@@ -103,13 +103,14 @@ int main(int argc, char **argv)
     fp_out = fopen_e(output, "w", 0);
     fprintf(fp_out, "SDDS1\n&column name=nux, symbol=\"$gn$r$bx$n\", type=double &end\n");
     fprintf(fp_out, "&column name=nuy, symbol=\"$gn$r$by$n\", type=double &end\n");
+    fprintf(fp_out, "&parameter name=Order, type=long &end\n");
     fprintf(fp_out, 
             "&parameter name=Description, type=string, fixed_value=\"%ld-superperiod resonance diagram for order %ld through %ld\" &end\n",
             n_super, min_order, max_order);
     fprintf(fp_out, "&data mode=ascii no_row_counts=1 &end\n");
-
     m = max_order*((nux_int>nuy_int?nux_int:nuy_int)+1);
 
+    first = 1;
     do {
         for (k=-max_order; k<=max_order; k++) {
             for (j=-max_order; j<=max_order; j++) {
@@ -122,6 +123,7 @@ int main(int argc, char **argv)
 /*                if (common_factor(m, k, j))
                     continue;
  */
+                order = abs(k)+abs(j);
                 if (k==0) {
                     /* vertical line */
                     if (j==0)
@@ -193,7 +195,11 @@ int main(int argc, char **argv)
                         SWAP_DOUBLE(nuyi[0], nuyi[1]);
                         SWAP_LONG(location[0], location[1]);
                         }
+                    if (!first) 
+                      fprintf(fp_out, "\n");
+                    first = 0;
                     fprintf(fp_out, "! %ld NUx +  %ld NUy = %ld        type = %ld\n", j, k, m*n_super, type);
+                    fprintf(fp_out, "%ld\n", order);
                     if (location[0]&FL_LOC_BOTTOM || location[0]&FL_LOC_LEFT)
                         fprintf(fp_out, "%lf %lf\n", nux_int+nuxi[0], nuy_int+nuyi[0]);
                     else if (location[0]&FL_LOC_RIGHT)
