@@ -863,7 +863,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 #define SET_BUNCHED_BEAM 6
 #define SET_SDDS_BEAM   33
 
-#define N_TWISS_QUANS 36
+#define N_TWISS_QUANS 40
 static char *twiss_name[N_TWISS_QUANS] = {
     "betax", "alphax", "nux", "etax", "etapx", 
     "betay", "alphay", "nuy", "etay", "etapy", 
@@ -876,6 +876,8 @@ static char *twiss_name[N_TWISS_QUANS] = {
     "etaxp", "etayp",
     "waistsx", "waistsy",
     "dnux/dAx", "dnux/dAy", "dnuy/dAx", "dnuy/dAy",
+    "dnux/dp2", "dnux/dp3",
+    "dnuy/dp2", "dnuy/dp3",
     };
 static long twiss_mem[N_TWISS_QUANS] = {
     -1, -1, -1, -1, -1, 
@@ -888,7 +890,9 @@ static long twiss_mem[N_TWISS_QUANS] = {
     -1, -1, -1, -1,
     -1, -1, -1, -1,
     -1, -1, -1, -1,
+    -1, -1, -1, -1,
     };
+
 static char *radint_name[13] = {
     "ex0", "Sdelta0",
     "Jx", "Jy", "Jdelta",
@@ -1125,6 +1129,11 @@ double optimization_function(double *value, long *invalid)
     rpn_store(beamline->dnux_dA[1], twiss_mem[33]);
     rpn_store(beamline->dnuy_dA[0], twiss_mem[34]);
     rpn_store(beamline->dnuy_dA[1], twiss_mem[35]);
+    /* higher-order chromaticities */
+    rpn_store(beamline->chrom2[0], twiss_mem[36]);
+    rpn_store(beamline->chrom3[0], twiss_mem[37]);
+    rpn_store(beamline->chrom2[1], twiss_mem[38]);
+    rpn_store(beamline->chrom3[1], twiss_mem[39]);
   }
   if (beamline->flags&BEAMLINE_RADINT_WANTED) {
 #if DEBUG
