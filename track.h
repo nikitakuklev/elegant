@@ -376,10 +376,10 @@ typedef struct {
   long nSlices;
   double sStart, sEnd;
   /* simulation data */
-  double *ecnx, *ecny, eta[4];
+  double *enx, *eny, *ecnx, *ecny, eta[4];
   double *Cx, *Cy, *Cxp, *Cyp, *Ct, *Cdelta, *Sdelta, *duration, *charge;
   double *particles;
-  long *ecnxIndex, *ecnyIndex;
+  long *enxIndex, *enyIndex, *ecnxIndex, *ecnyIndex;
   long *CxIndex, *CyIndex, *CxpIndex, *CypIndex, *CtIndex, *CdeltaIndex, *SdeltaIndex;
   long *durationIndex, *chargeIndex, *particlesIndex;
   long *sliceFound;
@@ -599,7 +599,7 @@ extern char *entity_text[N_TYPES];
 #define N_CHARGE_PARAMS 2
 #define N_PFILTER_PARAMS 5
 #define N_HISTOGRAM_PARAMS 9
-#define N_CSRCSBEND_PARAMS 48
+#define N_CSRCSBEND_PARAMS 49
 #define N_CSRDRIFT_PARAMS 19
 #define N_REMCOR_PARAMS 6
 #define N_MAPSOLENOID_PARAMS 18
@@ -1427,7 +1427,7 @@ typedef struct {
     long edge1_effects, edge2_effects, edge_order;
     long integration_order, bins, binOnce;
     double binRangeFactor;
-    long SGHalfWidth, SGOrder, SGDerivHalfWidth, SGDerivOrder;
+    long SGHalfWidth, SGOrder, SGDerivHalfWidth, SGDerivOrder, trapazoidIntegration;
     char *histogramFile;
     long outputInterval, outputLastWakeOnly, steadyState;
     long use_bn;

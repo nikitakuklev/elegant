@@ -949,6 +949,7 @@ PARAMETER csrcsbend_param[N_CSRCSBEND_PARAMS] = {
     {"SG_ORDER", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.SGOrder), NULL, 0.0, 1, "Savitzky-Golay filter order for smoothing current histogram"},
     {"SGDERIV_HALFWIDTH", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.SGDerivHalfWidth), NULL, 0.0, 0, "Savitzky-Golay filter half-width for taking derivative of current histogram"},
     {"SGDERIV_ORDER", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.SGDerivOrder), NULL, 0.0, 1, "Savitzky-Golay filter order for taking derivative of current histogram"},
+    {"TRAPAZOID_INTEGRATION", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.trapazoidIntegration), NULL, 0.0, 1, "Select whether to use trapazoid-rule integration (default) or a simple sum."},
     {"OUTPUT_FILE", "", IS_STRING, 0, (long)((char *)&csrcsbend_example.histogramFile), NULL, 0.0, 0, "output file for CSR wakes"},
     {"OUTPUT_INTERVAL", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.outputInterval), NULL, 0.0, 1, "interval (in kicks) of output to OUTPUT_FILE"},
     {"OUTPUT_LAST_WAKE_ONLY", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.outputLastWakeOnly), NULL, 0.0, 0, "output final wake only?"},

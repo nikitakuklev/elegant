@@ -3,6 +3,12 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.4  2002/01/07 03:42:14  borland
+ * Removed purify and no-optimization from Makefile.
+ * Slice analysis now uses the eta values computed from the whole beam rather
+ * than the slice.  Slice analysis includes output of the eta's and the number
+ * of particles in each slice.
+ *
  * Revision 1.3  2002/01/04 21:38:39  borland
  * Added computation and output of the number of waists in x and y twiss parameters.
  * This is available for optimization as well.
@@ -25,6 +31,9 @@
 #if defined(__BORLANDC__)
 #include <fdlibm.h>
 #endif
+
+static double tmp_safe_sqrt;
+#define SAFE_SQRT(x) ((tmp_safe_sqrt=(x))<0?0.0:sqrt(tmp_safe_sqrt))
 
 double correctedEmittance(double S[6][6], double eta[4], long i1, long i2);
 
@@ -53,6 +62,8 @@ void setupSliceAnalysis(NAMELIST_TEXT *nltext, RUN *run,
   if (sliceOutput->active && sliceOutput->filename) {
     SDDS_Terminate(&(sliceOutput->SDDSout));
     SDDS_ClearErrors();
+    if (sliceOutput->enx) free(sliceOutput->enx);
+    if (sliceOutput->eny) free(sliceOutput->eny);
     if (sliceOutput->ecnx) free(sliceOutput->ecnx);
     if (sliceOutput->ecny) free(sliceOutput->ecny);
     if (sliceOutput->charge) free(sliceOutput->charge);
@@ -66,6 +77,8 @@ void setupSliceAnalysis(NAMELIST_TEXT *nltext, RUN *run,
     if (sliceOutput->Cdelta) free(sliceOutput->Cdelta);
     if (sliceOutput->Ct) free(sliceOutput->Ct);
 
+    if (sliceOutput->enxIndex) free(sliceOutput->enxIndex);
+    if (sliceOutput->enyIndex) free(sliceOutput->enyIndex);
     if (sliceOutput->ecnxIndex) free(sliceOutput->ecnxIndex);
     if (sliceOutput->ecnyIndex) free(sliceOutput->ecnyIndex);
     if (sliceOutput->chargeIndex) free(sliceOutput->chargeIndex);
@@ -87,7 +100,9 @@ void setupSliceAnalysis(NAMELIST_TEXT *nltext, RUN *run,
   sliceOutput->sStart = s_start;
   sliceOutput->sEnd = s_end;
   
-  if (!(sliceOutput->ecnx = malloc(sizeof(*(sliceOutput->ecnx))*(n_slices+2))) ||
+  if (!(sliceOutput->enx = malloc(sizeof(*(sliceOutput->enx))*(n_slices+2))) ||
+      !(sliceOutput->eny = malloc(sizeof(*(sliceOutput->eny))*(n_slices+2))) ||
+      !(sliceOutput->ecnx = malloc(sizeof(*(sliceOutput->ecnx))*(n_slices+2))) ||
       !(sliceOutput->ecny = malloc(sizeof(*(sliceOutput->ecny))*(n_slices+2))) ||
       !(sliceOutput->charge = malloc(sizeof(*(sliceOutput->charge))*(n_slices+2))) ||
       !(sliceOutput->particles = malloc(sizeof(*(sliceOutput->particles))*(n_slices+2))) ||
@@ -101,7 +116,9 @@ void setupSliceAnalysis(NAMELIST_TEXT *nltext, RUN *run,
       !(sliceOutput->Ct = malloc(sizeof(*(sliceOutput->Ct))*(n_slices+2))))
     bomb("memory allocation failure (setupSliceAnalysis)", NULL);
 
-  if (!(sliceOutput->ecnxIndex = malloc(sizeof(*(sliceOutput->ecnxIndex))*(n_slices+2))) ||
+  if (!(sliceOutput->enxIndex = malloc(sizeof(*(sliceOutput->enxIndex))*(n_slices+2))) ||
+      !(sliceOutput->enyIndex = malloc(sizeof(*(sliceOutput->enyIndex))*(n_slices+2))) ||
+      !(sliceOutput->ecnxIndex = malloc(sizeof(*(sliceOutput->ecnxIndex))*(n_slices+2))) ||
       !(sliceOutput->ecnyIndex = malloc(sizeof(*(sliceOutput->ecnyIndex))*(n_slices+2))) ||
       !(sliceOutput->chargeIndex = malloc(sizeof(*(sliceOutput->chargeIndex))*(n_slices+2))) ||
       !(sliceOutput->particlesIndex = malloc(sizeof(*(sliceOutput->particlesIndex))*(n_slices+2))) ||
@@ -170,6 +187,14 @@ long defineSliceParameters(SLICE_OUTPUT *sliceOutput, long slice)
   else
     sliceNumString[0] = 0;
 
+  sprintf(buffer, "enx%s", sliceNumString);
+  if ((sliceOutput->enxIndex[slice] = 
+       SDDS_DefineColumn(SDDSout, buffer, NULL, "m", NULL, NULL, SDDS_DOUBLE, 0))<0)
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  sprintf(buffer, "eny%s", sliceNumString);
+  if ((sliceOutput->enyIndex[slice] = 
+       SDDS_DefineColumn(SDDSout, buffer, NULL, "m", NULL, NULL, SDDS_DOUBLE, 0))<0)
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   sprintf(buffer, "ecnx%s", sliceNumString);
   if ((sliceOutput->ecnxIndex[slice] = 
        SDDS_DefineColumn(SDDSout, buffer, NULL, "m", NULL, NULL, SDDS_DOUBLE, 0))<0)
@@ -184,7 +209,7 @@ long defineSliceParameters(SLICE_OUTPUT *sliceOutput, long slice)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   sprintf(buffer, "particles%s", sliceNumString);
   if ((sliceOutput->particlesIndex[slice] = 
-       SDDS_DefineColumn(SDDSout, buffer, NULL, "C", NULL, NULL, SDDS_DOUBLE, 0))<0)
+       SDDS_DefineColumn(SDDSout, buffer, NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   sprintf(buffer, "duration%s", sliceNumString);
   if ((sliceOutput->durationIndex[slice] = 
@@ -270,6 +295,8 @@ void performSliceAnalysisOutput(SLICE_OUTPUT *sliceOutput, double **particle, lo
       break;
     if (!SDDS_SetRowValues(SDDSout, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, 
 			   sliceOutput->rows,
+			   sliceOutput->enxIndex[slice], sliceOutput->enx[slice], 
+			   sliceOutput->enyIndex[slice], sliceOutput->eny[slice], 
 			   sliceOutput->ecnxIndex[slice], sliceOutput->ecnx[slice], 
 			   sliceOutput->ecnyIndex[slice], sliceOutput->ecny[slice], 
 			   sliceOutput->chargeIndex[slice], sliceOutput->charge[slice], 
@@ -305,12 +332,13 @@ void performSliceAnalysis(SLICE_OUTPUT *sliceOutput, double **particle, long par
     fflush(stdout);
     /* fill in some dummy values */
     for (slice=0; slice<sliceOutput->nSlices+1; slice++) {
-      sliceOutput->ecnx[slice] = sliceOutput->ecny[slice] = 
-        sliceOutput->Cx[slice] = sliceOutput->Cy[slice] =
-          sliceOutput->Cxp[slice] = sliceOutput->Cyp[slice] = 
-            sliceOutput->Cdelta[slice] = sliceOutput->duration[slice] = 
-              sliceOutput->Sdelta[slice] = sliceOutput->charge[slice] = 
-                sliceOutput->particles[slice] = DBL_MAX;
+      sliceOutput->enx[slice] = sliceOutput->eny[slice] = 
+        sliceOutput->ecnx[slice] = sliceOutput->ecny[slice] = 
+          sliceOutput->Cx[slice] = sliceOutput->Cy[slice] =
+            sliceOutput->Cxp[slice] = sliceOutput->Cyp[slice] = 
+              sliceOutput->Cdelta[slice] = sliceOutput->duration[slice] = 
+                sliceOutput->Sdelta[slice] = sliceOutput->charge[slice] = 
+                  sliceOutput->particles[slice] = DBL_MAX;
     }
     return;
   }
@@ -342,6 +370,8 @@ void performSliceAnalysis(SLICE_OUTPUT *sliceOutput, double **particle, long par
   if (S[5][5]) 
     for (i=0; i<4; i++)
       sliceOutput->eta[i] = S[i][5]/S[5][5];
+  sliceOutput->enx[0] = Po*SAFE_SQRT(S[0][0]*S[1][1]-sqr(S[0][1]));
+  sliceOutput->eny[0] = Po*SAFE_SQRT(S[2][2]*S[3][3]-sqr(S[2][3]));
   sliceOutput->ecnx[0] = Po*correctedEmittance(S, sliceOutput->eta, 0, 1);
   sliceOutput->ecny[0] = Po*correctedEmittance(S, sliceOutput->eta, 2, 3);
   
@@ -389,9 +419,13 @@ void performSliceAnalysis(SLICE_OUTPUT *sliceOutput, double **particle, long par
 	sliceOutput->Ct[slice] = aveCoord[4];
 	sliceOutput->Cdelta[slice] = aveCoord[5];
 	sliceOutput->Sdelta[slice] = sqrt(S[5][5]);
+        sliceOutput->enx[slice] = Po*SAFE_SQRT(S[0][0]*S[1][1]-sqr(S[0][1]));
+        sliceOutput->eny[slice] = Po*SAFE_SQRT(S[2][2]*S[3][3]-sqr(S[2][3]));
         sliceOutput->ecnx[slice] = Po*correctedEmittance(S, sliceOutput->eta, 0, 1);
         sliceOutput->ecny[slice] = Po*correctedEmittance(S, sliceOutput->eta, 2, 3);
 
+	sliceOutput->enx[nSlices+1] += sliceOutput->enx[slice];
+	sliceOutput->eny[nSlices+1] += sliceOutput->eny[slice];
 	sliceOutput->ecnx[nSlices+1] += sliceOutput->ecnx[slice];
 	sliceOutput->ecny[nSlices+1] += sliceOutput->ecny[slice];
 	sliceOutput->charge[nSlices+1] += sliceOutput->charge[slice];
@@ -410,6 +444,8 @@ void performSliceAnalysis(SLICE_OUTPUT *sliceOutput, double **particle, long par
     if (!slicesFound)
       bomb("No valid slices found for slice property computation.", NULL);
 
+    sliceOutput->enx[nSlices+1] /= slicesFound;
+    sliceOutput->eny[nSlices+1] /= slicesFound;
     sliceOutput->ecnx[nSlices+1] /= slicesFound;
     sliceOutput->ecny[nSlices+1] /= slicesFound;
     sliceOutput->Sdelta[nSlices+1] /= slicesFound;

@@ -803,17 +803,6 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double s, long n, double rho0
   Qf[4] += dist;
 }
 
-double CSRInteg1(double fa, double fb, long a, long b, long s, double *factor)
-{
-  double f1, f2;
-  f1 = sqr(factor[s-a]);
-  f2 = sqr(factor[s-b]);
-  return 
-    (-3*f1*(-2*a*fa + 5*b*fa - 3*a*fb - 3*fa*s + 3*fb*s))/(10.*(a - b)) + 
-      (3*f2*(3*b*fa - 5*a*fb + 2*b*fb - 3*fa*s + 3*fb*s))/(10.*(a - b));
-}
-
-
 typedef struct {
   unsigned long lastMode;
 #define CSRDRIFT_STUPAKOV          0x0001UL
@@ -839,6 +828,7 @@ typedef struct {
   char *StupakovOutput;
   SDDS_DATASET SDDS_Stupakov;
   long StupakovFileActive, StupakovOutputInterval;
+  long trapazoidIntegration;
 } CSR_LAST_WAKE;
 CSR_LAST_WAKE csrWake;
 
@@ -1343,25 +1333,39 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
         double term1, term2;
         long count;
         T1[iBin] = T2[iBin] = 0;
+        term1 = term2 = 0;
         if (CSRConstant) {
           if (csbend->steadyState) {
-            if ((iBinBehind=iBin+1)<nBins)
-              term1 = ctHistDeriv[iBinBehind]/denom[iBinBehind-iBin];
-            for (count=0, iBinBehind=iBin+1; iBinBehind<nBins; iBinBehind++, count++)
-              T1[iBin] += (term2=ctHistDeriv[iBinBehind]/denom[iBinBehind-iBin]);
-            T1[iBin] += 0.3*sqr(denom[1])*(2*ctHistDeriv[iBin+1]+3*ctHistDeriv[iBin])/dct;
-            if (count>1)
-              T1[iBin] -= (term1+term2)/2;
+            if (!csbend->trapazoidIntegration) {
+              for (iBinBehind=iBin+1; iBinBehind<nBins; iBinBehind++)
+                T1[iBin] += ctHistDeriv[iBinBehind]/denom[iBinBehind-iBin];
+            }
+            else {
+              if ((iBinBehind=iBin+1)<nBins)
+                term1 = ctHistDeriv[iBinBehind]/denom[iBinBehind-iBin];
+              for (count=0, iBinBehind=iBin+1; iBinBehind<nBins; iBinBehind++, count++)
+                T1[iBin] += (term2=ctHistDeriv[iBinBehind]/denom[iBinBehind-iBin]);
+              if ((iBin+1)<nBins)
+                T1[iBin] += 0.3*sqr(denom[1])*(2*ctHistDeriv[iBin+1]+3*ctHistDeriv[iBin])/dct;
+              if (count>1)
+                T1[iBin] -= (term1+term2)/2;
+            }
           } else {
-            if ((iBinBehind = iBin+1)<nBins && iBinBehind<=(iBin+diSlippage))
-              term1 = ctHistDeriv[iBinBehind]/denom[iBinBehind-iBin]/2;
-            for (count=0, iBinBehind = iBin+1; iBinBehind<=(iBin+diSlippage) && iBinBehind<nBins; 
-                 count++, iBinBehind++)
-              T1[iBin] += (term2=ctHistDeriv[iBinBehind]/denom[iBinBehind-iBin]);
-            if (diSlippage>0 && (iBin+1)<nBins)
-              T1[iBin] += 0.3*sqr(denom[1])*(2*ctHistDeriv[iBin+1]+3*ctHistDeriv[iBin])/dct;
-            if (count>1)
-              T1[iBin] -= (term1+term2)/2;
+            if (!csbend->trapazoidIntegration) {
+              for (iBinBehind=iBin+1; iBinBehind<=(iBin+diSlippage) && iBinBehind<nBins; iBinBehind++)
+                T1[iBin] += ctHistDeriv[iBinBehind]/denom[iBinBehind-iBin];
+            }
+            else {
+              if ((iBinBehind = iBin+1)<nBins && iBinBehind<=(iBin+diSlippage))
+                term1 = ctHistDeriv[iBinBehind]/denom[iBinBehind-iBin]/2;
+              for (count=0, iBinBehind = iBin+1; iBinBehind<=(iBin+diSlippage) && iBinBehind<nBins; 
+                   count++, iBinBehind++)
+                T1[iBin] += (term2=ctHistDeriv[iBinBehind]/denom[iBinBehind-iBin]);
+              if (diSlippage>0 && (iBin+1)<nBins)
+                T1[iBin] += 0.3*sqr(denom[1])*(2*ctHistDeriv[iBin+1]+3*ctHistDeriv[iBin])/dct;
+              if (count>1)
+                T1[iBin] -= (term1+term2)/2;
+            }
             if ((iBin+diSlippage)<nBins)
               T2[iBin] += ctHist[iBin+diSlippage];
             if ((iBin+diSlippage4)<nBins)
@@ -1594,6 +1598,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     csrWake.GSConstant = CSRConstant*pow(3*rho0*rho0, 1./3.)/2;  /* used for G. Stupakov's drift formulae */
     csrWake.MPCharge = macroParticleCharge;
     csrWake.binRangeFactor = csbend->binRangeFactor;
+    csrWake.trapazoidIntegration = csbend->trapazoidIntegration;
   }
   
 #if defined(MINIMIZE_MEMORY)
@@ -2370,7 +2375,7 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
         } else
           break;
       }
-      if (count>1)
+      if (count>1 && csrWake.trapazoidIntegration)
         /* trapazoid rule correction for ends */
         csrWake.dGamma[iBin] += (term1+term2)/2;
     }
