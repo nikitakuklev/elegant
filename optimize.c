@@ -405,8 +405,9 @@ static LINE_LIST *beamline;
 static long beam_type_code, n_evaluations_made, n_passes_made;
 static double *final_property_value;
 static long final_property_values;
-
+static double charge;
 static long optim_func_flags;
+static long force_output;
 
 /* structure to keep results of last N optimization function
  * evaluations, so we don't track the same thing twice.
@@ -559,7 +560,9 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERROR *error1
 
       /* evaluate once more at the optimimum point to get all parameters right and to get additional output */
       optimRecords = 0;  /* to force re-evaluation */
+      force_output = 1;
       result = optimization_function(variables->varied_quan_value, &i);
+      force_output = 0;
       if (result<=optimization_data->target || fabs(result-lastResult)<optimization_data->tolerance)
         break;
       lastResult = result;
@@ -576,8 +579,10 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERROR *error1
     fflush(stdout);
     /* evaluate once more at the optimimum point to get all parameters right and to get additional output */
     optim_func_flags = 0;
+    force_output = 1;
     optimRecords = 0;  /* to force re-evaluation */
     result = optimization_function(variables->varied_quan_value, &i);
+    force_output = 0;
     variables->varied_quan_value[variables->n_variables] = 1;   /* indicates end-of-optimization */
           
     for (i=0; i<MAX_OPTIM_RECORDS; i++)
@@ -685,7 +690,7 @@ double optimization_function(double *value, long *invalid)
     OPTIM_VARIABLES *variables;
     OPTIM_CONSTRAINTS *constraints;
     OPTIM_COVARIABLES *covariables;
-    double conval, result, charge;
+    double conval, result;
     long i, iRec;
     unsigned long unstable;
     VMATRIX *M;
@@ -962,8 +967,9 @@ double optimization_function(double *value, long *invalid)
      * to final properties file
      */
     variables->varied_quan_value[variables->n_variables+1] = result;    
-    do_track_beam_output(run, control, error, variables, beamline, beam, output, optim_func_flags,
-                         charge);
+    if (force_output || (control->i_step-2)%output_sparsing_factor==0)
+      do_track_beam_output(run, control, error, variables, beamline, beam, output, optim_func_flags,
+                           charge);
     
 #if DEBUG
     fprintf(stdout, "optimization_function: Returning %le,  invalid=%ld\n", result, *invalid);

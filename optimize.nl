@@ -25,6 +25,7 @@ static char *optimize_method[N_OPTIM_METHODS] = {
     long n_restarts = 0;
     STRING log_file = NULL;
     long verbose = 1;
+    long output_sparsing_factor = 1;
 #end
 
 #namelist optimization_variable static

@@ -1120,7 +1120,9 @@ PARAMETER charge_param[N_CHARGE_PARAMS] = {
 PFILTER pfilter_example;
 /* PFILTER physical parameters */
 PARAMETER pfilter_param[N_PFILTER_PARAMS] = {
-    {"DELTALIMIT", "", IS_DOUBLE, 0, (long)((char *)&pfilter_example.deltalimit), NULL, -1.0, 0},
+    {"DELTALIMIT", "", IS_DOUBLE, 0, (long)((char *)&pfilter_example.deltaLimit), NULL, -1.0, 0},
+    {"LOWERFRACTION", "", IS_DOUBLE, 0, (long)((char *)&pfilter_example.lowerFraction), NULL, 0.0, 0},
+    {"UPPERFRACTION", "", IS_DOUBLE, 0, (long)((char *)&pfilter_example.upperFraction), NULL, 0.0, 0},
 };
 
 HISTOGRAM histogram_example;
