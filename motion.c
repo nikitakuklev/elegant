@@ -355,6 +355,8 @@ void (*set_up_derivatives(
   case T_RFTMEZ0:
     rftmEz0 = field;
     *kscale = (omega=PIx2*rftmEz0->frequency)/c_mks;
+    if (rftmEz0->change_p0)
+      change_p0 = 1;
     if (!rftmEz0->Ez)
       setupRftmEz0FromFile(rftmEz0, rftmEz0->frequency, rftmEz0->length, rftmEz0->Ez_peak);
     if (!rftmEz0->fiducial_part) {
