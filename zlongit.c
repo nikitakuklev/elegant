@@ -186,7 +186,7 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
                 gam = sqrt(sqr(P)+1);
                 P = sqrt(sqr(gam+dgam)-1);
                 part[ip][5] = (P-Po)/Po;
-                part[ip][4] = time[ip]*c_mks*P/sqrt(sqr(P)+1);
+                part[ip][4] = time[ip]*c_mks*P/gam;
                 }
             }
         }
