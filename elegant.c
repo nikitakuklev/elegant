@@ -758,7 +758,8 @@ char **argv;
         bomb("beam definition must come before optimize command", NULL);
       while (vary_beamline(&run_control, &error_control, &run_conditions, beamline)) {
         do_optimize(&namelist_text, &run_conditions, &run_control, &error_control, beamline, &beam,
-                    &output_data, &optimize, beam_type, do_closed_orbit);
+                    &output_data, &optimize, &chrom_corr_data, beam_type, do_closed_orbit,
+                    do_chromatic_correction);
         if (parameters)
           dumpLatticeParameters(parameters, &run_conditions, beamline);
       }

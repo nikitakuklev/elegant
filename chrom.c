@@ -21,6 +21,7 @@
 
 static FILE *fp_sl = NULL;
 static long alter_defined_values;
+static long verbosityLevel = 2;
 
 void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, CHROM_CORRECTION *chrom)
 {
@@ -59,6 +60,7 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
     chrom->use_perturbed_matrix = use_perturbed_matrix;
     chrom->sextupole_tweek = sextupole_tweek;
     chrom->tolerance = tolerance;
+    verbosityLevel = verbosity;
     
     if (!use_perturbed_matrix) {
       if (!beamline->twiss0 || !beamline->matrix) {
@@ -129,7 +131,7 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
     ELEMENT_LIST *context;
     long i, count, K2_param=0;
     MATRIX *C, *Ct, *CtC, *inv_CtC;
-
+    
     m_alloc(&C, 2, chrom->n_families);
     m_alloc(&Ct, chrom->n_families, 2);
     m_alloc(&CtC, chrom->n_families, chrom->n_families);
@@ -138,8 +140,11 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
     m_alloc(&(chrom->dK2), chrom->n_families, 1);
     m_alloc(&(chrom->dchrom), 2, 1);
 
-    fprintf(stdout, "Computing chromaticity influence matrix for all named sextupoles.\n");
-    fflush(stdout);
+    if (verbosityLevel>2) {
+      fprintf(stdout, "Computing chromaticity influence matrix for all named sextupoles.\n");
+      fflush(stdout);
+    }
+
     computeChromaticities(&chromx0, &chromy0, 
                           NULL, NULL, NULL, NULL, 
 			  beamline->twiss0, M=beamline->matrix);
@@ -204,25 +209,29 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
         }
     beamline->matrix = full_matrix(beamline->elem_twiss, run, run->default_order);
 
-    fprintf(stdout, "\nfamily           dCHROMx/dK2        dCHROMy/dK2\n");
-    fflush(stdout);
-    for (i=0; i<chrom->n_families; i++)
-       fprintf(stdout, "%10s:    %14.7e     %14.7e\n", chrom->name[i], C->a[0][i], C->a[1][i]);
-       fflush(stdout);
-
+    if (verbosityLevel>1) {
+      fprintf(stdout, "\nfamily           dCHROMx/dK2        dCHROMy/dK2\n");
+      fflush(stdout);
+      for (i=0; i<chrom->n_families; i++)
+        fprintf(stdout, "%10s:    %14.7e     %14.7e\n", chrom->name[i], C->a[0][i], C->a[1][i]);
+      fflush(stdout);
+    }
+    
     m_trans(Ct, C);
     m_mult(CtC, Ct, C);
     m_invert(inv_CtC, CtC);
     m_mult(chrom->T, inv_CtC, Ct);
 
-    fprintf(stdout, "\nfamily           dK2/dCHROMx        dK2/dCHROMy\n");
-    fflush(stdout);
-    for (i=0; i<chrom->n_families; i++)
-       fprintf(stdout, "%10s:    %14.7e     %14.7e\n", chrom->name[i], chrom->T->a[i][0], chrom->T->a[i][1]);
-       fflush(stdout);
-    fprintf(stdout, "\n");
-    fflush(stdout);
-
+    if (verbosityLevel>1) {
+      fprintf(stdout, "\nfamily           dK2/dCHROMx        dK2/dCHROMy\n");
+      fflush(stdout);
+      for (i=0; i<chrom->n_families; i++)
+        fprintf(stdout, "%10s:    %14.7e     %14.7e\n", chrom->name[i], chrom->T->a[i][0], chrom->T->a[i][1]);
+      fflush(stdout);
+      fprintf(stdout, "\n");
+      fflush(stdout);
+    }
+    
     m_free(&C);
     m_free(&Ct);
     m_free(&CtC);
@@ -241,8 +250,10 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
     long i, K2_param=0, type=0, iter, count;
     double beta_x, alpha_x, eta_x, etap_x;
     double beta_y, alpha_y, eta_y, etap_y;
+    double K2_min, K2_max;
     unsigned long unstable;
     double lastError, presentError;
+    char buffer[256];
     
     log_entry("do_chromaticity_correction");
 
@@ -285,12 +296,15 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
     computeChromaticities(&chromx0, &chromy0, 
 			  NULL, NULL, NULL, NULL, beamline->twiss0, M);
 
-    fprintf(stdout, "\nAdjusting chromaticities:\n");
-    fflush(stdout);
-    fprintf(stdout, "initial chromaticities:  %e  %e\n", chromx0, chromy0);
-    fflush(stdout);
-
+    if (verbosityLevel>0) {
+      fprintf(stdout, "\nAdjusting chromaticities:\n");
+      fflush(stdout);
+      fprintf(stdout, "initial chromaticities:  %e  %e\n", chromx0, chromy0);
+      fflush(stdout);
+    }
+    
     presentError = DBL_MAX;
+    K2_max = -(K2_min = DBL_MAX);
     for (iter=0; iter<chrom->n_iterations; iter++) {
         dchromx = chrom->chromx - chromx0;
         dchromy = chrom->chromy - chromy0;
@@ -339,6 +353,12 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
                 if (chrom->strengthLimit>0 && chrom->strengthLimit<fabs(K2)) {
                   K2 = *K2ptr = SIGN(K2)*chrom->strengthLimit;
                 }
+                sprintf(buffer, "%s#%ld.K2", context->name, context->occurence);
+                rpn_store(K2, rpn_create_mem(buffer));
+                if (K2>K2_max)
+                  K2_max = K2;
+                if (K2<K2_min)
+                  K2_min = K2;
                 if (context->matrix)
                     free_matrices(context->matrix);
                 compute_matrix(context, run, NULL);
@@ -349,9 +369,11 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
                    fflush(stdout);
                        */
               }
-            fprintf(stdout, "Change for family %ld (%ld sextupoles): %e\n",
-                    i, count, chrom->correction_fraction*chrom->dK2->a[i][0]);
-            fflush(stdout);
+            if (verbosityLevel>1) {
+              fprintf(stdout, "Change for family %ld (%ld sextupoles): %e\n",
+                      i, count, chrom->correction_fraction*chrom->dK2->a[i][0]);
+              fflush(stdout);
+            }
             if (alter_defined_values)
               change_defined_parameter(chrom->name[i], K2_param, type, K2, NULL, LOAD_FLAG_ABSOLUTE);
             }    
@@ -380,10 +402,13 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
 			      NULL, NULL, NULL, NULL, beamline->twiss0, M);
         beamline->chromaticity[0] = chromx0;
         beamline->chromaticity[1] = chromy0;
-        fprintf(stdout, "resulting chromaticities:  %e  %e\n", chromx0, chromy0);
-        fflush(stdout);
+        if (verbosityLevel>0) {
+          fprintf(stdout, "resulting chromaticities:  %e  %e\n", chromx0, chromy0);
+          fprintf(stdout, "min, max sextupole strength:  %e  %e  1/m^2\n", K2_min, K2_max);
+          fflush(stdout);
         }
-
+      }
+    
     if (fp_sl && last_iteration) {
         for (i=0; i<chrom->n_families; i++) {
             context = NULL;
@@ -535,7 +560,7 @@ double computeChromaticDeriv2RElem(long i, long m, TWISS *twiss, VMATRIX *M,
   double sum, eta[6] = {0,0,0,0,0,0};
   double eta2[6] = {0,0,0,0,0,0};
    
-  fprintf(stderr, "Computing d2R%ld%ld:\n", i, m);
+  fprintf(stdout, "Computing d2R%ld%ld:\n", i, m);
   eta[0] = twiss->etax;
   eta[1] = twiss->etapx;
   eta[2] = twiss->etay;
@@ -577,7 +602,7 @@ double computeChromaticDeriv2RElem(long i, long m, TWISS *twiss, VMATRIX *M,
 	  }
 	}
   }
-  fprintf(stderr, "sum is %e from %ld terms\n",
+  fprintf(stdout, "sum is %e from %ld terms\n",
 	  sum, count);
   return sum;
 }  
@@ -590,7 +615,7 @@ double computeChromaticDeriv3RElem(long i, long m, TWISS *twiss, VMATRIX *M,
   double eta2[6] = {0,0,0,0,0,0};
   double eta3[6] = {0,0,0,0,0,0};
    
-  fprintf(stderr, "Computing d3R%ld%ld:\n", i, m);
+  fprintf(stdout, "Computing d3R%ld%ld:\n", i, m);
   eta[0] = twiss->etax;
   eta[1] = twiss->etapx;
   eta[2] = twiss->etay;
@@ -601,8 +626,8 @@ double computeChromaticDeriv3RElem(long i, long m, TWISS *twiss, VMATRIX *M,
     eta3[j] = eta3q[j];
   }
   for (j=0; j<6; j++) {
-    fprintf(stderr, "eta[%ld] = %e, %e, ", j, eta[j], eta2[j]);
-    fprintf(stderr, "%e\n", eta3[j]);
+    fprintf(stdout, "eta[%ld] = %e, %e, ", j, eta[j], eta2[j]);
+    fprintf(stdout, "%e\n", eta3[j]);
   }
   i--;
   m--;
@@ -612,17 +637,17 @@ double computeChromaticDeriv3RElem(long i, long m, TWISS *twiss, VMATRIX *M,
       if (k>m) {
 	count ++;
         sum += eta3[k]*M->T[i][k][m];
-	fprintf(stderr, "term eta3[%ld]*T[%ld][%ld][%ld] = %e*%e\n",
+	fprintf(stdout, "term eta3[%ld]*T[%ld][%ld][%ld] = %e*%e\n",
 		k, i, k, m, eta3[k], M->T[i][k][m]);
       } else if (k==m) {
 	count ++;
         sum += eta3[k]*M->T[i][k][k]*2;
-	fprintf(stderr, "term eta3[%ld]*T[%ld][%ld][%ld] = %e*%e\n",
+	fprintf(stdout, "term eta3[%ld]*T[%ld][%ld][%ld] = %e*%e\n",
 		k, i, k, k, eta3[k], M->T[i][k][k]);
       } else {
 	count ++;
         sum += eta3[k]*M->T[i][m][k];
-	fprintf(stderr, "term eta3[%ld]*T[%ld][%ld][%ld] = %e*%e\n",
+	fprintf(stdout, "term eta3[%ld]*T[%ld][%ld][%ld] = %e*%e\n",
 		k, i, m, k, eta3[k], M->T[i][m][k]);
       }
     }
@@ -633,26 +658,26 @@ double computeChromaticDeriv3RElem(long i, long m, TWISS *twiss, VMATRIX *M,
 	  if (j==m) {
 	    count ++;
 	    sum += M->Q[i][j][k][l]*(eta2[k]*eta[l]+eta[k]*eta2[l]);
-	    fprintf(stderr, "term eta*U[%ld][%ld][%ld][%ld] = %e*%e\n",
+	    fprintf(stdout, "term eta*U[%ld][%ld][%ld][%ld] = %e*%e\n",
 		    i, j, k, l, (eta2[k]*eta[l]+eta[k]*eta2[l]), 
 		    M->Q[i][j][k][l]);
 	  }
 	  if (k==m) {
 	    count ++;
 	    sum += M->Q[i][j][k][l]*(eta2[j]*eta[l]+eta[j]*eta2[l]);
-	    fprintf(stderr, "term eta*U[%ld][%ld][%ld][%ld] = %e*%e\n",
+	    fprintf(stdout, "term eta*U[%ld][%ld][%ld][%ld] = %e*%e\n",
 		    i, j, k, l, (eta2[j]*eta[l]+eta[j]*eta2[l]),
 		    M->Q[i][j][k][l]);
 	  }
 	  if (l==m) {
 	    count ++;
 	    sum += M->Q[i][j][k][l]*(eta2[j]*eta[k]+eta[j]*eta2[k]);
-	    fprintf(stderr, "term eta*U[%ld][%ld][%ld][%ld] = %e*%e\n",
+	    fprintf(stdout, "term eta*U[%ld][%ld][%ld][%ld] = %e*%e\n",
 		    i, j, k, l, (eta2[j]*eta[k]+eta[j]*eta2[k]),
 		    M->Q[i][j][k][l]);
 	  }
 	}
   }
-  fprintf(stderr, "sum of %ld terms is %e\n", count, sum);
+  fprintf(stdout, "sum of %ld terms is %e\n", count, sum);
   return sum;
 }  

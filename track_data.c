@@ -1178,7 +1178,8 @@ PARAMETER ibscatter_param[N_IBSCATTER_PARAMS] = {
   {"DO_Y", "", IS_LONG, 0, (long)((char *)&ibs_example.do_y), NULL, 0.0, 1, "do y-plane scattering?"},
   {"DO_Z", "", IS_LONG, 0, (long)((char *)&ibs_example.do_z), NULL, 0.0, 1, "do z-plane scattering?"},
   {"SMOOTH", "", IS_LONG, 0, (long)((char *)&ibs_example.smooth), NULL, 0.0, 0, "Use smooth method instead of random numbers?"},
-  {"VERBOSITY", "", IS_LONG, 0, (long)((char *)&ibs_example.verbosity), NULL, 0.0, 0, "Set verbosity level"}
+  {"VERBOSITY", "", IS_LONG, 0, (long)((char *)&ibs_example.verbosity), NULL, 0.0, 0, "Set verbosity level"},
+  {"FORCE_MATCHED_TWISS", "", IS_LONG, 0, (long)((char *)&ibs_example.forceMatchedTwiss), NULL, 0.0, 0, "Force computations to be done with twiss parameters of the beamline, not the beam."},
 };
 
 WAKE wake_example;

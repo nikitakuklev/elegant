@@ -74,8 +74,14 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
   emitl = longitBeamParam.emittance;  /* units are seconds */
   gamma = sqrt(sqr(Po)+1);
   vz = c_mks*Po/gamma;
-  sigmax = sqrt(xBeamParam.s11);
-  sigmay = sqrt(yBeamParam.s11);
+  if (!IBS->forceMatchedTwiss) {
+    sigmax = sqrt(xBeamParam.s11);
+    sigmay = sqrt(yBeamParam.s11);
+  }
+  else {
+    sigmax = sqrt(emitx*IBS->betax[0]);
+    sigmay = sqrt(emity*IBS->betay[0]);
+  }
   sigmaz = vz*(sigmat = sqrt(longitBeamParam.s11));
   sigmaDelta = sqrt(longitBeamParam.s22);
   IBSGrowthRates(gamma, 

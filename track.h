@@ -616,7 +616,7 @@ extern char *entity_text[N_TYPES];
 #define N_MODRF_PARAMS 13
 #define N_SREFFECTS_PARAMS 13
 #define N_ZTRANSVERSE_PARAMS 19
-#define N_IBSCATTER_PARAMS 8
+#define N_IBSCATTER_PARAMS 9
 #define N_FMULT_PARAMS 9
 #define N_BMAPXY_PARAMS 5
 #define N_WAKE_PARAMS 12
@@ -1734,7 +1734,7 @@ extern PARAMETER IBSCATTER_param[N_IBSCATTER_PARAMS];
 typedef struct {
   double coupling, factor, charge;
   long do_x, do_y, do_z;
-  long smooth, verbosity;
+  long smooth, verbosity, forceMatchedTwiss;
   /* internal use only */
   double *s, *betax, *alphax, *betay, *alphay, *etax, *etaxp;
   long elements;
@@ -2285,7 +2285,8 @@ void add_optimization_term(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
 void add_optimization_constraint(OPTIMIZATION_DATA *_optimize, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 void summarize_optimization_setup(OPTIMIZATION_DATA *_optimize);
 void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *error1, LINE_LIST *beamline1, 
-            BEAM *beam1, OUTPUT_FILES *output1, OPTIMIZATION_DATA *optimization_data1, long beam_type1, long doClosedOrbit);
+            BEAM *beam1, OUTPUT_FILES *output1, OPTIMIZATION_DATA *optimization_data1, 
+            void *chromData, long beam_type1, long doClosedOrbit, long doChromCorr);
 void add_optimization_covariable(OPTIMIZATION_DATA *_optimize, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 
 /* prototype for sample.c */

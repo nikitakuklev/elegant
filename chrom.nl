@@ -17,6 +17,7 @@
     long change_defined_values = 0;
     double strength_limit = 0;
     long use_perturbed_matrix = 0;    
+    long verbosity = 2;
 #end
 
 

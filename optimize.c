@@ -18,6 +18,7 @@
 #endif
 #include "optimize.h"
 #include "match_string.h"
+#include "chromDefs.h"
 
 #define DEBUG 0
 
@@ -158,6 +159,14 @@ void add_optimization_variable(OPTIMIZATION_DATA *optimization_data, NAMELIST_TE
         bomb("lower_limit >= upper_limit", NULL);
 
     variables->initial_value[n_variables] = variables->varied_quan_value[n_variables];
+    if (variables->initial_value[n_variables]>upper_limit) {
+      fprintf(stdout, "Initial value (%e) is greater than upper limit\n", variables->initial_value[n_variables]);
+      exit(1);
+    }
+    if (variables->initial_value[n_variables]<lower_limit) {
+      fprintf(stdout, "Initial value (%e) is smaller than lower limit\n", variables->initial_value[n_variables]);
+      exit(1);
+    }
     variables->orig_step[n_variables]     = step_size;
     variables->varied_quan_name[n_variables]  = tmalloc(sizeof(char)*(strlen(name)+strlen(item)+3));
     sprintf(variables->varied_quan_name[n_variables], "%s.%s", name, item);
@@ -276,7 +285,7 @@ void add_optimization_covariable(OPTIMIZATION_DATA *optimization_data, NAMELIST_
     sprintf(nameBuffer, "AOCEqn%ld", nameIndex++);
     create_udf(nameBuffer, equation);
     if (!SDDS_CopyString(&ptr, nameBuffer)) 
-      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+      SDDS_PrintErrors(stdout, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     covariables->pcode[n_covariables] = ptr;
     optimization_data->covariables.n_covariables += 1;
     log_exit("add_optimization_covariable");
@@ -448,13 +457,14 @@ static BEAM *beam;
 static OPTIMIZATION_DATA *optimization_data;
 static OUTPUT_FILES *output;
 static LINE_LIST *beamline;
+static CHROM_CORRECTION *chromCorrData;
 static long beam_type_code, n_evaluations_made, n_passes_made;
 static double *final_property_value;
 static long final_property_values;
 static double charge;
 static long optim_func_flags;
 static long force_output;
-static long doClosedOrbit;
+static long doClosedOrbit, doChromCorr;
 
 /* structure to keep results of last N optimization function
  * evaluations, so we don't track the same thing twice.
@@ -477,14 +487,15 @@ void optimizationInterruptHandler(int signal)
 {
   simplexMinAbort(1);
   optimAbort(1);
-  fprintf(stderr, "Aborting optimization...");
+  fprintf(stdout, "Aborting optimization...");
 }
 #endif
 
 void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *error1, 
                  LINE_LIST *beamline1, BEAM *beam1, OUTPUT_FILES *output1, 
-                 OPTIMIZATION_DATA *optimization_data1, long beam_type1,
-                 long doClosedOrbit1)
+                 OPTIMIZATION_DATA *optimization_data1, 
+                 void *chromCorrData1, long beam_type1,
+                 long doClosedOrbit1, long doChromCorr1)
 {
     static long optUDFcount = 0;
     double optimization_function(double *values, long *invalid);
@@ -506,8 +517,10 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
     beam              = beam1;
     output            = output1,
     optimization_data = optimization_data1;
+    chromCorrData     = (CHROM_CORRECTION*)chromCorrData1;
     beam_type_code    = beam_type1;
     doClosedOrbit     = doClosedOrbit1;
+    doChromCorr       = doChromCorr1;
     n_evaluations_made = 0;
     n_passes_made      = 0;
     
@@ -966,7 +979,7 @@ double optimization_function(double *value, long *invalid)
 
   if ((iRec=checkForOptimRecord(value, variables->n_variables, &recordUsedAgain))>=0) {
     if (recordUsedAgain>5) {
-      fprintf(stderr, "record used too many times---stopping optimization\n");
+      fprintf(stdout, "record used too many times---stopping optimization\n");
       stopOptimization = 1;
       simplexMinAbort(1);
     }
@@ -1025,10 +1038,17 @@ double optimization_function(double *value, long *invalid)
   if (doClosedOrbit &&
       !run_closed_orbit(run, beamline, startingOrbitCoord, NULL, 0)) {
     *invalid = 1;
-    fprintf(stderr, "warning: unable to find closed orbit\n");
+    fprintf(stdout, "warning: unable to find closed orbit\n");
     return 0;
   }
-
+  if (doChromCorr &&
+      !do_chromaticity_correction(chromCorrData, run, beamline, startingOrbitCoord, 
+                                  0, 0)) {
+    *invalid = 1;
+    fprintf(stdout, "warning: unable to correct chromaticity\n");
+    return 0;
+  }
+  
   if (beamline->flags&BEAMLINE_TWISS_WANTED) {
 #if DEBUG
     fprintf(stdout, "optimization_function: Computing twiss parameters\n");
