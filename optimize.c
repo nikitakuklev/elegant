@@ -689,10 +689,10 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
     optim_func_flags = 0;
     force_output = 1;
     ignoreOptimRecords = 1; /* to force re-evaluation */
+    variables->varied_quan_value[variables->n_variables] = 1;   /* indicates end-of-optimization */
     result = optimization_function(variables->varied_quan_value, &i);
     ignoreOptimRecords = 0; 
     force_output = 0;
-    variables->varied_quan_value[variables->n_variables] = 1;   /* indicates end-of-optimization */
           
     for (i=0; i<MAX_OPTIM_RECORDS; i++)
       free(optimRecord[i].variableValue);
