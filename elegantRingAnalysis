@@ -9,6 +9,7 @@ exec oagwish "$0" "$@"
 set auto_path [linsert $auto_path 0  /usr/local/oag/apps/lib/$env(HOST_ARCH)]
 set auto_path [linsert $auto_path 0  /usr/local/oag/lib_patch/$env(HOST_ARCH)]
 APSDebugPath
+
 set CVSRevisionAuthor "\$Author: borland $"
 
 APSApplication . -name elegantRingAnalysis \
@@ -19,7 +20,7 @@ APSApplication . -name elegantRingAnalysis \
 set status "Working..."
 APSScrolledStatus .status -parent .userFrame -textVariable status -height 10 -width 95 
 
-set sourceDir $env(HOME)/elegantRingAnalysisTemplates
+set sourceDir $OAGGlobal(OAGAppConfigDataDirectory)/elegant/ringAnalysisTemplates
 
 proc setStatus {text} {
     APSSetVarAndUpdate status $text
@@ -918,10 +919,28 @@ proc OffMomentumDynamicAperture {args} {
       -column=x,y $rootname.abnd -graph=line -omnipresent &
 }
 
-set sectionList [list Main Basic "Phase Space" "Higher-Order Disp." "Off-momentum Tunes" "DA" "Off-Momentum DA"]
+set tabIndex -1
+set sectionList [list Main Basic "Phase Space" "Higher-Order Disp." \
+    "Off-momentum Tunes" "DA" "Off-Momentum DA" "Fine DA"]
+set descriptionList [list "" "Twiss parameters, chromaticities, radiation integrals" \
+    "Phase space tracking, plots, FFTs." \
+    "Higher order dispersion from off-momentum orbits." \
+    "Off-momentum tunes from tracking." \
+    "On-momentum dynamic aperture using a relatively coarse algorithm." \
+    "Off-momentum dynamic apertures using a relatively coarse algorithm." \
+    "Dynamic aperture using a high-resolution algorithm (requires a cluster)."]
+
+proc DescribeSection {} {
+    global tabIndex descriptionList
+    if [string length [lindex $descriptionList $tabIndex]] {
+        setStatus [lindex $descriptionList $tabIndex]
+    }
+}
 
 set tabFrameWidgetList [APSTabFrame .main -parent .userFrame \
-    -labelList $sectionList -width 900 -height 395] 
+    -labelList $sectionList -width 900 -height 395 -frameIndexVariable tabIndex \
+    -commandList \
+        [APSReplicateItem -item DescribeSection -number [llength $sectionList]]]
 
 FillMainFrame  [lindex $tabFrameWidgetList 0]
 FillBasicFrame [lindex $tabFrameWidgetList 1]
