@@ -638,7 +638,8 @@ PARAMETER ksext_param[N_KSEXT_PARAMS] = {
     {"N_KICKS", "", IS_LONG, 0, (long)((char *)&ksext_example.n_kicks), NULL, 0.0, DEFAULT_N_KICKS},
     {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&ksext_example.synch_rad), NULL, 0.0, 0},
     {"SYSTEMATIC_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&ksext_example.systematic_multipoles), NULL, 0.0, 0},
-    {"ERROR_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&ksext_example.error_multipoles), NULL, 0.0, 0},
+    {"RANDOM_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&ksext_example.random_multipoles), NULL, 0.0, 0},
+    {"INTEGRATION_ORDER", "", IS_LONG, 0, (long)((char *)&ksext_example.integration_order), NULL, 0.0, 4},
     };
 
 KSBEND ksbend_example;
@@ -688,7 +689,8 @@ PARAMETER kquad_param[N_KQUAD_PARAMS]={
     {"N_KICKS", "", IS_LONG, 1, (long)((char *)&kquad_example.n_kicks), NULL, 0.0, DEFAULT_N_KICKS},
     {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&kquad_example.synch_rad), NULL, 0.0, 0},
     {"SYSTEMATIC_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&kquad_example.systematic_multipoles), NULL, 0.0, 0},
-    {"ERROR_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&kquad_example.error_multipoles), NULL, 0.0, 0},
+    {"RANDOM_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&kquad_example.random_multipoles), NULL, 0.0, 0},
+    {"INTEGRATION_ORDER", "", IS_LONG, 0, (long)((char *)&kquad_example.integration_order), NULL, 0.0, 4},
     };
 
 MAGNIFY magnify_example;
