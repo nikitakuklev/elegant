@@ -1483,10 +1483,10 @@ PARAMETER twissElement_param[N_TWISSELEMENT_PARAMS] = {
 WIGGLER wiggler_example;
 
 PARAMETER wiggler_param[N_WIGGLER_PARAMS] = {
-  {"L", "M", IS_DOUBLE, 0, (long)((char *)&wiggler_example.length), NULL, 0.0, 0, "length"},
-  {"RADIUS", "M", IS_DOUBLE, 0, (long)((char *)&wiggler_example.radius), NULL, 0.0, 0, "peak bending radius"},
-  {"K", "", IS_DOUBLE, 0, (long)((char *)&wiggler_example.K), NULL, 0.0, 0, "Dimensionless strength parameter. Ignored if radius is nonzero."},
-  {"POLES", "", IS_LONG, 0, (long)((char *)&wiggler_example.poles), NULL, 0.0, 0, "number of wiggler poles"},
+  {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&wiggler_example.length), NULL, 0.0, 0, "length"},
+  {"RADIUS", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&wiggler_example.radius), NULL, 0.0, 0, "peak bending radius"},
+  {"K", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&wiggler_example.K), NULL, 0.0, 0, "Dimensionless strength parameter. Ignored if radius is nonzero."},
+  {"POLES", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&wiggler_example.poles), NULL, 0.0, 0, "number of wiggler poles"},
 } ;
 
 SCRIPT script_example;
