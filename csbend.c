@@ -1230,31 +1230,37 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     }
     if (n_part>1 && !csrInhibit) {
       /* compute CSR potential function */
-      /* - first make a density histogram */
-      ctLower = ctUpper = dct = 0;
-      if ((nBinned = 
-           binParticleCoordinate(&ctHist, &maxBins,
-                                 &ctLower, &ctUpper, &dct, &nBins, 
-                                 csbend->binRangeFactor<1?1:csbend->binRangeFactor, 
-                                 part, n_part, 4))!=n_part) {
-        fprintf(stdout, "Only %ld of %ld particles binned for CSR\n", nBinned, n_part);
-        fflush(stdout);
+      if (kick==0 || !csbend->binOnce) {
+        /* - first make a density histogram */
+        ctLower = ctUpper = dct = 0;
+        if ((nBinned = 
+             binParticleCoordinate(&ctHist, &maxBins,
+                                   &ctLower, &ctUpper, &dct, &nBins, 
+                                   csbend->binRangeFactor<1?1:csbend->binRangeFactor, 
+                                   part, n_part, 4))!=n_part) {
+          fprintf(stdout, "Only %ld of %ld particles binned for CSR\n", nBinned, n_part);
+          fflush(stdout);
+        }
+        
+        /* - smooth the histogram, normalize to get linear density, and 
+           copy in preparation for taking derivative
+           */
+        SavitzyGolaySmooth(ctHist, nBins, csbend->SGOrder, csbend->SGHalfWidth, csbend->SGHalfWidth,  0);
+        for (iBin=0; iBin<nBins; iBin++) {
+          denom[iBin] = pow(dct*iBin, 1./3.);
+          ctHistDeriv[iBin] = (ctHist[iBin] /= dct);
+        }
+        /* - compute derivative with smoothing.  The deriv is w.r.t. index number and
+         * I won't scale it now as it will just fall out in the integral 
+         */
+        SavitzyGolaySmooth(ctHistDeriv, nBins, csbend->SGDerivOrder, 
+                           csbend->SGDerivHalfWidth, csbend->SGDerivHalfWidth, 1);
+      } else {
+        ctLower += rho0*angle/csbend->n_kicks;
+        ctUpper += rho0*angle/csbend->n_kicks;
       }
       
-      /* - smooth the histogram, normalize to get linear density, and 
-         copy in preparation for taking derivative
-         */
-      SavitzyGolaySmooth(ctHist, nBins, csbend->SGOrder, csbend->SGHalfWidth, csbend->SGHalfWidth,  0);
-      for (iBin=0; iBin<nBins; iBin++) {
-        denom[iBin] = pow(dct*iBin, 1./3.);
-        ctHistDeriv[iBin] = (ctHist[iBin] /= dct);
-      }
-      /* - compute derivative with smoothing.  The deriv is w.r.t. index number and
-       * I won't scale it now as it will just fall out in the integral 
-       */
-      SavitzyGolaySmooth(ctHistDeriv, nBins, csbend->SGDerivOrder, 
-                         csbend->SGDerivHalfWidth, csbend->SGDerivHalfWidth, 1);
-
+      
       phiBend += angle/csbend->n_kicks;
       slippageLength = rho0*ipow(phiBend, 3)/24.0;
       slippageLength13 = pow(slippageLength, 1./3.);
@@ -1316,6 +1322,11 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
                                 "BinSize", dct, 
                                 "DerbenevRatio", derbenevRatio, NULL))
           SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+        if (csbend->binOnce) {
+          /* fix these arrays so they can be used again */
+          ctHist[iBin] /= macroParticleCharge*c_mks;
+          ctHistDeriv[iBin] /= macroParticleCharge*sqr(c_mks)/dct;
+        }
         /* use T1 array to output s */
         for (iBin=0; iBin<nBins; iBin++)
           T1[iBin] = ctLower-(ctLower+ctUpper)/2.0+dct*(iBin+0.5);
@@ -1326,7 +1337,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     }
   }
 
-  if (n_part>1 && !csrInhibit && !csbend->csrBlock) {
+  if (!csbend->binOnce && n_part>1 && !csrInhibit && !csbend->csrBlock) {
     /* prepare some data for use by CSRDRIFT element */
     csrWake.dctBin = dct;
     ctLower = ctUpper = dct = 0;
@@ -1338,6 +1349,9 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
       fprintf(stdout, "Only %ld of %ld particles binned for CSR\n", nBinned, n_part);
       fflush(stdout);
     }
+    csrWake.s0 = ctLower + dzf;
+  } else {
+    csrWake.dctBin = dct;
     csrWake.s0 = ctLower + dzf;
   }
   

@@ -388,7 +388,7 @@ char **argv;
 
             /* parse the lattice file and create the beamline */
             run_conditions.lattice = compose_filename(saved_lattice, rootname);
-            beamline = get_beamline(lattice, use_beamline, p_central, echo_lattice);
+            beamline = get_beamline(lattice, use_beamline, p_central, echo_lattice, element_divisions);
             fprintf(stdout, "length of beamline %s per pass: %21.15e m\n", beamline->name, beamline->revolution_length);
             fflush(stdout);
             lattice = saved_lattice;

@@ -554,7 +554,7 @@ extern char *entity_text[N_TYPES];
 #define N_NISEPT_PARAMS 9
 #define N_STRAY_PARAMS 7
 #define N_CSBEND_PARAMS 33
-#define N_MATTER_PARAMS 7
+#define N_MATTER_PARAMS 8
 #define N_RFMODE_PARAMS 18
 #define N_TRFMODE_PARAMS 12
 #define N_TWMTA_PARAMS 17
@@ -571,7 +571,7 @@ extern char *entity_text[N_TYPES];
 #define N_CHARGE_PARAMS 2
 #define N_PFILTER_PARAMS 5
 #define N_HISTOGRAM_PARAMS 9
-#define N_CSRCSBEND_PARAMS 43
+#define N_CSRCSBEND_PARAMS 44
 #define N_CSRDRIFT_PARAMS 15
 #define N_REMCOR_PARAMS 6
 #define N_MAPSOLENOID_PARAMS 18
@@ -627,6 +627,7 @@ typedef struct {
 #define HAS_RF_MATRIX     0x00000040UL
 #define MAY_CHANGE_ENERGY 0x00000080UL
 #define MAT_CHW_ENERGY    0x00000100UL
+#define DIVIDE_OK         0x00000200UL
 typedef struct {
     long n_params;
     unsigned long flags;
@@ -1387,7 +1388,7 @@ typedef struct {
     double etilt;   /* error tilt angle */
     long n_kicks, nonlinear, synch_rad;
     long edge1_effects, edge2_effects;
-    long integration_order, bins;
+    long integration_order, bins, binOnce;
     double binRangeFactor;
     long SGHalfWidth, SGOrder, SGDerivHalfWidth, SGDerivOrder;
     char *histogramFile;
@@ -1453,7 +1454,7 @@ extern PARAMETER matter_param[N_MATTER_PARAMS];
 typedef struct {
     double length;
     double Xo;       /* radiation length */
-    long elastic, Z;
+    long elastic, energyStraggle, Z;
     double A, rho, pLimit;
     } MATTER;
 
@@ -1974,7 +1975,7 @@ extern void extend_elem_list(ELEMENT_LIST **eptr);
  
 /* prototypes for get_beamline5.c: */
 extern void show_elem(ELEMENT_LIST *eptr, long type);
-extern LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, long echo);
+extern LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, long echo, long divisions);
 double compute_end_positions(LINE_LIST *lptr) ;
 extern void show_elem(ELEMENT_LIST *eptr, long type);
 extern void free_elements(ELEMENT_LIST *elemlist);
@@ -2005,14 +2006,15 @@ void bend_edge_kicks(double *x, double *xp, double *y, double *yp, double rho, d
 
 /* prototypes for mad_parse4.c: */
 extern long is_simple(char *s);
-extern void fill_line(LINE_LIST *line, long nl, ELEMENT_LIST *elem, long ne, char *s);
+extern void fill_line(LINE_LIST *line, long nl, ELEMENT_LIST *elem, long ne, char *s, long divisions);
 extern ELEMENT_LIST *expand_line(ELEMENT_LIST *leptr, LINE_LIST *lptr,
-    char *s, LINE_LIST *line, long nl, ELEMENT_LIST *elem, long ne, char *part_of);
+    char *s, LINE_LIST *line, long nl, ELEMENT_LIST *elem, long ne, char *part_of, long divisions);
 extern long is_simple(char *s);
 extern void fill_elem(ELEMENT_LIST *eptr, char *s, long type, FILE *fp_input);
 extern long expand_phys(ELEMENT_LIST *leptr, char *entity, ELEMENT_LIST *elem_list,     
-    long ne, LINE_LIST *line_list, long nl, long reverse, long multiplier, char *part_of);
-extern void copy_element(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long reverse);
+    long ne, LINE_LIST *line_list, long nl, long reverse, long multiplier, char *part_of, long divisions);
+extern void copy_element(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long reverse, long division,
+                         long divisions);
 void copy_named_element(ELEMENT_LIST *eptr, char *s, ELEMENT_LIST *elem);
 extern long copy_line(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long ne, long reverse, char *part_of);
 extern long tell_type(char *s, ELEMENT_LIST *elem);

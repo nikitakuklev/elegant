@@ -33,7 +33,7 @@ void lfree(void *ptr)
 
 #define MAX_LINE_LENGTH 128*16384 
 #define MAX_FILE_NESTING 10
-LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, long echo)
+LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, long echo, long divisions)
 {
   long type, i, i_elem;
   long occurence, iMad;
@@ -128,7 +128,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
           fflush(stdout);
           print_elem_list(stdout, elem);
 #endif
-          fill_line(line, n_lines, elem, n_elems, s);
+          fill_line(line, n_lines, elem, n_elems, s, divisions);
           check_duplic_line(line, lptr, n_lines+1);
 #ifdef DEBUG 
           fprintf(stdout, "\n****** expanded line %s:\n", lptr->name);
@@ -152,9 +152,9 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
             fprintf(stdout, "creating new element\n");
             fflush(stdout);
 #endif
-            fill_elem(eptr, s, type, fp_mad[iMad]); 
+            fill_elem(eptr, s, type, fp_mad[iMad]);
+            check_duplic_elem(&elem, &eptr, n_elems);
           }
-          check_duplic_elem(&elem, &eptr, n_elems);
 #ifdef DEBUG
           print_elem(stdout, elem);
 #endif

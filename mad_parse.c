@@ -18,6 +18,7 @@
 
 long is_simple(char *s);
 
+
 long max_name_length = 8;
 long set_max_name_length(long length)
 {
@@ -38,7 +39,8 @@ void fill_line(
     long nl,                 /* number of line definitions so far */
     ELEMENT_LIST *elem,      /* linked list of element definitions */
     long ne,                 /* number of element definitions so far */
-    char *s                  /* text to parse into a new line definition */
+    char *s,                 /* text to parse into a new line definition */
+    long divisions           /* number of pieces to divide elements into */
     )
 {
     register char *ptr;
@@ -85,9 +87,12 @@ void fill_line(
     lptr->n_elems = 0;
     lptr->flags = 0;
 
-    expand_line(leptr, lptr, ptr, line, nl, elem, ne, lptr->name);
-    while (leptr->succ!=NULL) 
-        leptr = leptr->succ;
+    expand_line(leptr, lptr, ptr, line, nl, elem, ne, lptr->name, divisions);
+    while (leptr->succ!=NULL) {
+      leptr = leptr->succ;
+    }
+    if (leptr->pred==NULL)
+      bomb("programming error: problem in linked list of beamlines", NULL);
     (leptr->pred)->succ = NULL;
     log_exit("fill_line");
     }
@@ -100,13 +105,14 @@ extern ELEMENT_LIST *expand_line(
     long nl,                 /* number of existing lines */
     ELEMENT_LIST *elem,      /* pointer to linked-list of element structures for defined elements */
     long ne,                 /* number of defined elements */
-    char *part_of            /* name of the group that elements will be part of if they are not members of sub-lines */
+    char *part_of,           /* name of the group that elements will be part of if they are not members of sub-lines */
+    long divisions           /* number of pieces to divide elements into */
     )
 {
     register char *ptr, *ptr1;
     char *ptrs;
     register long i, l;
-    long multiplier=1, reverse=0, simple;
+    long multiplier=1, reverse=0, simple, count1;
     char *line_save;
 
     log_entry("expand_line");
@@ -118,6 +124,7 @@ extern ELEMENT_LIST *expand_line(
     fflush(stdout);
 #endif
 
+    count1 = 0;
     while ((ptr1 = get_token_tq(s, ",", ",", "(\"", ")\""))) {
         ptr = ptr1+strlen(ptr1)-1;
         while (isspace(*ptr))
@@ -129,8 +136,6 @@ extern ELEMENT_LIST *expand_line(
         fprintf(stdout, "ptr1 = %s\n", ptr1);
         fflush(stdout);
 #endif
-
-
         reverse = 0;
     	if (*ptr1=='-') {
             reverse = 1;
@@ -152,15 +157,6 @@ extern ELEMENT_LIST *expand_line(
                 if (*ptr1=='(')
                     ptr1++;
                 }
-/** this code was removed to solve problem with names like 17QD 
-            else {
-                fprintf(stdout, "problem with line: %s\n", line_save);
-                fflush(stdout);
-                fprintf(stdout, "position is %s\n", ptr1);
-                fflush(stdout);
-                bomb("improper element multiplication", NULL);
-                }
-***/
             }
 #ifdef DEBUG
         fprintf(stdout, "reverse = %ld, multiplier = %ld\n", reverse, multiplier);
@@ -174,10 +170,14 @@ extern ELEMENT_LIST *expand_line(
             fprintf(stdout, "simple = %ld\n", simple);
             fflush(stdout);
 #endif
+        count1 += multiplier;
         if (simple) {
             /* add simple elements to the line's element list */
             lptr->n_elems += 
-                (l=expand_phys(leptr, ptr1, elem, ne, line, nl, reverse, multiplier, part_of));
+                (l=expand_phys(leptr, ptr1, elem, ne, line, nl, reverse, multiplier, part_of, divisions));
+#ifdef DEBUG
+            fprintf(stdout, "number of elements now %ld\n", lptr->n_elems);
+#endif
             for (i=0; i<l; i++) 
                 leptr = leptr->succ;
             }
@@ -186,17 +186,22 @@ extern ELEMENT_LIST *expand_line(
             cp_str(&ptrs, ptr1);
             for (i=0; i<multiplier; i++) {
                 strcpy(ptr1, ptrs);
-                leptr = expand_line(leptr, lptr, ptr1, line, nl, elem, ne, part_of);
+                leptr = expand_line(leptr, lptr, ptr1, line, nl, elem, ne, part_of, divisions);
                 }
+#ifdef DEBUG
+            fprintf(stdout, "number of elements now %ld\n", lptr->n_elems);
+#endif
             tfree(ptrs);
             ptrs = NULL;
             }
         }
 
+    if (count1>lptr->n_elems) {
+      fprintf(stdout, "Problem with line parsing: expected at least %ld elements, but got %ld\n",
+              count1, lptr->n_elems);
+      print_line(stdout, lptr);
+    }
 
-#ifdef DEBUG
-    print_line(stdout, lptr);
-#endif
     log_exit("fill_line");
     return(leptr);
     }
@@ -368,10 +373,11 @@ long expand_phys(
     long nl,                     /* number of same */
     long reverse, 
     long multiplier,
-    char *part_of                /* name of line this is to be part of */
+    char *part_of,               /* name of line this is to be part of */
+    long divisions
     )
 {
-    long ie, il, i, j, comparison;
+    long ie, il, i, j, comparison, div;
     char trunc_char;
     ELEMENT_LIST *elem0;
 
@@ -380,6 +386,8 @@ long expand_phys(
     /* search for truncated name, for the case that it turns out
      * to be an element */
     trunc_char = 0;
+    if (divisions<1)
+      divisions = 1;
     if (((long)strlen(entity))>max_name_length) {
         trunc_char = entity[max_name_length];
         entity[max_name_length] = 0;
@@ -392,12 +400,18 @@ long expand_phys(
             fflush(stdout);
 #endif
             for (i=0; i<multiplier; i++) {
-                copy_element(leptr, elem_list, reverse);
+              long j;
+              if (entity_description[elem_list->type].flags&DIVIDE_OK)
+                div = divisions;
+              else 
+                div = 1;
+              for (j=0; j<div; j++) {
+                copy_element(leptr, elem_list, reverse, j, div);
                 leptr->part_of = elem_list->part_of?elem_list->part_of:part_of;
                 extend_elem_list(&leptr);
-                }
-            log_exit("expand_phys");
-            return(multiplier);
+              }
+            }
+            return(multiplier*div);
             }
         if (comparison<0)
             break;
@@ -436,7 +450,7 @@ long expand_phys(
  * purpose: copy an element 
  */
 
-void copy_element(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long reverse)
+void copy_element(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long reverse, long division, long divisions)
 {
     long i;
     char *ptr1, *ptr2;
@@ -482,6 +496,19 @@ void copy_element(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long reverse)
         break;
       }
     }
+    if (divisions>1) {
+      if (entity_description[e1->type].flags&HAS_LENGTH)
+        *(double*)(e1->p_elem) /= divisions;
+      if (IS_BEND(e1->type)) {
+        BEND *bptr;
+        bptr = (BEND*)e1->p_elem;
+        bptr->angle /= divisions;
+        if (division!=0)
+          bptr->e1 = 0;
+        if (division!=(divisions-1))
+          bptr->e2 = 0;
+      }
+    }
     log_exit("copy_element");
   }
 
@@ -497,7 +524,7 @@ long copy_line(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long ne, long reverse, char *
     
     if (!reverse) {
         for (i=0; i<ne; i++) {
-            copy_element(e1, e2, reverse);
+            copy_element(e1, e2, reverse, 0, 0);
             e1->part_of = e2->part_of?e2->part_of:part_of;
             extend_elem_list(&e1);
             e2 = e2->succ;
@@ -507,7 +534,7 @@ long copy_line(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long ne, long reverse, char *
         for (i=0; i<(ne-1); i++)
             e2 = e2->succ;
         for (i=0; i<ne; i++) {
-            copy_element(e1, e2, reverse);
+            copy_element(e1, e2, reverse, 0, 0);
             e1->part_of = e2->part_of?e2->part_of:part_of;
             extend_elem_list(&e1);
             e2 = e2->pred;

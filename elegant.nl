@@ -31,6 +31,7 @@
     STRING expand_for = NULL;
     long tracking_updates = 1;
     STRING search_path = NULL;
+    long element_divisions = 0;
 #end
 
 #namelist track static

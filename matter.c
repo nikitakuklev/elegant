@@ -18,9 +18,9 @@ void track_through_matter(
                           )
 {
   long ip;
-  double L, Nrad, *coord, theta_rms, beta, P, E;
-  double z1, z2, dx, dy, ds, t;
-  double K1, K2, sigmaTotal, probScatter;
+  double L, Nrad, *coord, theta_rms, beta, P, gamma;
+  double z1, z2, dx, dy, ds, t, dGammaFactor;
+  double K1, K2, sigmaTotal, probScatter, dgamma;
   long nScatters=0;
   
   log_entry("track_through_matter");
@@ -35,7 +35,7 @@ void track_through_matter(
     Nrad = matter->length/matter->Xo;
     theta_rms = 13.6/me_mev/Po/sqr(beta)*sqrt(Nrad)*(1+0.038*log(Nrad));
   }
-  fprintf(stdout, "Nrad = %le\n", Nrad);
+  dGammaFactor = 1-exp(-Nrad);
   
   if (Nrad<1e-3) {
     if (matter->Z<1 || matter->A<1 || matter->rho<=0)
@@ -52,8 +52,8 @@ void track_through_matter(
     if (Nrad) {
       if (!matter->elastic) {
         P = (1+coord[5])*Po;
-        E = sqrt(sqr(P)+1)-1;
-        beta = P/E;
+        gamma = sqrt(sqr(P)+1);
+        beta = P/gamma;
         t = coord[4]/beta;
       }
       if (Nrad>1e-3) {
@@ -105,10 +105,18 @@ void track_through_matter(
         }
       }
       if (!matter->elastic) {
-        E *= exp(-ds/matter->Xo);
-        P = sqrt(sqr(E+1)-1);
+        dgamma = gamma*dGammaFactor;
+        if (matter->energyStraggle) {
+          double dgamma1;
+          /* very simple-minded estimate: StDev(dE) = Mean(dE)/2 */
+          while ((dgamma1 = dgamma*(1+0.5*gauss_rn(0, random_2)))<0)
+            ;
+          dgamma = dgamma1;
+        }
+        gamma -= dgamma;
+        P = sqrt(sqr(gamma)-1);
         coord[5] = (P-Po)/Po;
-        beta = P/E;
+        beta = P/gamma;
         coord[4] = t*beta+ds;
       }
       else
