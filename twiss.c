@@ -2370,7 +2370,7 @@ void AddWigglerRadiationIntegrals(double length, long poles, double radius,
     bomb("wiggler must have at least 3 poles", NULL);
   
   /* length of each pole */
-  Lp = length/pole;
+  Lp = length/poles;
   
   fieldSign = 1;
   for (pole=0; pole<poles; pole++) {
