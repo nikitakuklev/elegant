@@ -269,7 +269,8 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
                 eptr = eptr->succ;
                 }
             }
-    
+        if (beamline->matrix)
+          free_matrices(beamline->matrix);
         M = beamline->matrix = compute_periodic_twiss(&beta_x, &alpha_x, &eta_x, &etap_x, beamline->tune,
                                                       &beta_y, &alpha_y, &eta_y, &etap_y, beamline->tune+1, 
                                                       beamline->elem_twiss, clorb, run, &unstable, NULL, NULL);
@@ -287,8 +288,11 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
         propagate_twiss_parameters(beamline->twiss0, beamline->tune, beamline->waists,
                                    NULL, beamline->elem_twiss, run, clorb);
         }
-    else if (beamline->matrix->order<2)
-        beamline->matrix = full_matrix(beamline->elem_twiss, run, 2);
+    else if (beamline->matrix->order<2) {
+      if (beamline->matrix)
+        free_matrices(beamline->matrix);
+      beamline->matrix = full_matrix(beamline->elem_twiss, run, 2);
+    }
 
     if (!(M = beamline->matrix) || !M->C || !M->R || !M->T)
         bomb("something wrong with transfer map for beamline (do_chromaticity_correction.1)", NULL);
@@ -360,7 +364,7 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
                 if (K2<K2_min)
                   K2_min = K2;
                 if (context->matrix)
-                    free_matrices(context->matrix);
+                  free_matrices(context->matrix);
                 compute_matrix(context, run, NULL);
                 type = context->type;
                 count++;
@@ -382,6 +386,8 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
             assert_element_links(beamline->links, run, beamline, 
                                  STATIC_LINK+DYNAMIC_LINK+(alter_defined_values?LINK_ELEMENT_DEFINITION:0));
 
+        if (beamline->matrix)
+          free_matrices(beamline->matrix);
         M = beamline->matrix = compute_periodic_twiss(&beta_x, &alpha_x, &eta_x, &etap_x, beamline->tune,
                                                       &beta_y, &alpha_y, &eta_y, &etap_y, beamline->tune+1, 
                                                       beamline->elem_twiss, clorb, run, &unstable, NULL, NULL);
