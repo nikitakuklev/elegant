@@ -39,7 +39,8 @@ void compute_amplification_factors(
   double *Ac_vs_z, *Au_vs_z;
   CORMON_DATA *CM=NULL;
   STEERING_LIST *SL=NULL;
-
+  long changed;
+  
   log_entry("compute_amplification_factors");
 
   if (!one_part)
@@ -327,6 +328,17 @@ void compute_amplification_factors(
       compute_matrix(eptr, run, NULL);
     }
 
+    /* put correctors back to zero */
+    if (beamline->elem_recirc)
+      changed = zero_correctors(beamline->elem_recirc, run, correct);
+    else
+      changed = zero_correctors(&(beamline->elem), run, correct);
+    if (changed && beamline->matrix) {
+      free_matrices(beamline->matrix);
+      tfree(beamline->matrix);
+      beamline->matrix = NULL;
+    }
+    
     max_pos = -DBL_MAX;
     emax = NULL;
     for (i=nsum=rms_pos=0; i<=beamline->n_elems; i++) {
@@ -414,6 +426,7 @@ void compute_amplification_factors(
     if (!name)
       eptr = eptr->succ;
   }
+  
 
   if (fpuof) 
     fprintf(fpuof, "ResponseRMS\n0\n%ld\n", n_traj-2);
