@@ -180,12 +180,10 @@ char **argv;
     signal(SIGSEGV, traceback_handler);
 #endif
 #if defined(UNIX)
-    /*
     signal(SIGHUP, traceback_handler);
     signal(SIGQUIT, traceback_handler);
     signal(SIGTRAP, traceback_handler);
     signal(SIGBUS, traceback_handler);
-    */
 #endif
     
     log_entry("main");
