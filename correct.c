@@ -64,7 +64,7 @@ long zero_correctors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct);
 long zero_hcorrectors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct);
 long zero_vcorrectors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct);
 double rms_value(double *data, long n_data);
-long steering_corrector(ELEMENT_LIST *eptr, STEERING_LIST *SL);
+long steering_corrector(ELEMENT_LIST *eptr, STEERING_LIST *SL, long plane);
 void zero_closed_orbit(TRAJECTORY *clorb, long n);
 long find_index(long key, long *list, long n_listed);
 void add_steer_elem_to_lists(STEERING_LIST *SL, long plane, char *name, char *item, 
@@ -218,7 +218,12 @@ void correction_setup(
                               _correct->CMx->corr_limit, beamline, run);
       cp_str(&item, "HKICK");
       add_steer_type_to_lists(&_correct->SLx, 0, T_HVCOR, item, _correct->CMx->default_tweek, 
-                              _correct->CMy->corr_limit, beamline, run);
+                              _correct->CMx->corr_limit, beamline, run);
+      cp_str(&item, "XKICK");
+      add_steer_type_to_lists(&_correct->SLx, 0, T_QUAD, item, _correct->CMx->default_tweek, 
+                              _correct->CMx->corr_limit, beamline, run);
+      add_steer_type_to_lists(&_correct->SLx, 0, T_KQUAD, item, _correct->CMx->default_tweek, 
+                              _correct->CMx->corr_limit, beamline, run);
     }
     if (_correct->SLy.n_corr_types==0) {
       cp_str(&item, "KICK");
@@ -226,6 +231,11 @@ void correction_setup(
                               _correct->CMx->corr_limit, beamline, run);
       cp_str(&item, "VKICK");
       add_steer_type_to_lists(&_correct->SLy, 2, T_HVCOR, item, _correct->CMy->default_tweek, 
+                              _correct->CMy->corr_limit, beamline, run);
+      cp_str(&item, "YKICK");
+      add_steer_type_to_lists(&_correct->SLy, 0, T_QUAD, item, _correct->CMy->default_tweek, 
+                              _correct->CMy->corr_limit, beamline, run);
+      add_steer_type_to_lists(&_correct->SLy, 0, T_KQUAD, item, _correct->CMy->default_tweek, 
                               _correct->CMy->corr_limit, beamline, run);
     }
 
@@ -1295,7 +1305,7 @@ ELEMENT_LIST *find_useable_moni_corr(long *nmon, long *ncor, long **mon_index,
     /* advance to position of next corrector */
     if (!(corr = next_element_of_types(corr, SL->corr_type, SL->n_corr_types, &index)))
       break;
-    if (steering_corrector(corr, SL) && match_string(corr->name, SL->corr_name, SL->n_corr_types, EXACT_MATCH)>=0) {
+    if (steering_corrector(corr, SL, plane) && match_string(corr->name, SL->corr_name, SL->n_corr_types, EXACT_MATCH)>=0) {
       *ucorr = trealloc(*ucorr, sizeof(**ucorr)*(*ncor+1));
       (*ucorr)[*ncor] = corr;
       *sl_index = trealloc(*sl_index, sizeof(**sl_index)*(*ncor+1));
@@ -1335,7 +1345,7 @@ ELEMENT_LIST *find_useable_moni_corr(long *nmon, long *ncor, long **mon_index,
     i_elem = 0;
     while (moni) {
       if (find_index(moni->type, SL->corr_type, SL->n_corr_types)!=-1 && 
-          (steering_corrector(moni, SL) || match_string(moni->name, SL->corr_name, SL->n_corr_types, EXACT_MATCH)>=0))
+          (steering_corrector(moni, SL, plane) || match_string(moni->name, SL->corr_name, SL->n_corr_types, EXACT_MATCH)>=0))
         corr_seen = 1;
       if ((moni->type==moni_type_1 || moni->type==moni_type_2) 
           && ((MONI*)moni->p_elem)->weight>0 && corr_seen) {
@@ -2164,7 +2174,7 @@ double rms_value(double *data, long n_data)
         return(0.0);
     }
 
-long steering_corrector(ELEMENT_LIST *eptr, STEERING_LIST *SL)
+long steering_corrector(ELEMENT_LIST *eptr, STEERING_LIST *SL, long plane)
 {
   long i;
   for (i=0; i<SL->n_corr_types; i++)
@@ -2178,6 +2188,16 @@ long steering_corrector(ELEMENT_LIST *eptr, STEERING_LIST *SL)
         break;
       case T_VCOR:
         return ((VCOR*)(eptr->p_elem))->steering;
+        break;
+      case T_QUAD:
+        if (plane==0)
+          return ((QUAD*)(eptr->p_elem))->xSteering;
+        return ((QUAD*)(eptr->p_elem))->ySteering;
+        break;
+      case T_KQUAD:
+        if (plane==0)
+          return ((KQUAD*)(eptr->p_elem))->xSteering;
+        return ((KQUAD*)(eptr->p_elem))->ySteering;
         break;
       default:
         return 1;
