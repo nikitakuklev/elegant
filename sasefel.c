@@ -9,6 +9,9 @@
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.21  2003/05/07 14:48:34  soliday
+ * Removed fsync warning message.
+ *
  * Revision 1.20  2003/02/15 22:57:49  borland
  * Added SDDS_DoFSync() calls to make sure output files get updated on
  * file server.
@@ -154,6 +157,8 @@ void setupSASEFELAtEnd(NAMELIST_TEXT *nltext, RUN *run, OUTPUT_FILES *output_dat
     if (sasefelOutput->Cy) free(sasefelOutput->Cy);
     if (sasefelOutput->Cxp) free(sasefelOutput->Cxp);
     if (sasefelOutput->Cyp) free(sasefelOutput->Cyp);
+    if (sasefelOutput->Ct) free(sasefelOutput->Ct);
+    if (sasefelOutput->Cdelta) free(sasefelOutput->Cdelta);
     if (sasefelOutput->lightWavelength) free(sasefelOutput->lightWavelength);
     if (sasefelOutput->saturationLength) free(sasefelOutput->saturationLength);
     if (sasefelOutput->gainLength) free(sasefelOutput->gainLength);
@@ -204,6 +209,8 @@ void setupSASEFELAtEnd(NAMELIST_TEXT *nltext, RUN *run, OUTPUT_FILES *output_dat
       !(sasefelOutput->Cy = malloc(sizeof(*(sasefelOutput->Cy))*(n_slices+2))) ||
       !(sasefelOutput->Cxp = malloc(sizeof(*(sasefelOutput->Cxp))*(n_slices+2))) ||
       !(sasefelOutput->Cyp = malloc(sizeof(*(sasefelOutput->Cyp))*(n_slices+2))) ||
+      !(sasefelOutput->Ct = malloc(sizeof(*(sasefelOutput->Ct))*(n_slices+2))) ||
+      !(sasefelOutput->Cdelta = malloc(sizeof(*(sasefelOutput->Cdelta))*(n_slices+2))) ||
       !(sasefelOutput->lightWavelength = malloc(sizeof(*(sasefelOutput->lightWavelength))*(n_slices+2))) ||
       !(sasefelOutput->saturationLength = malloc(sizeof(*(sasefelOutput->saturationLength))*(n_slices+2))) ||
       !(sasefelOutput->gainLength = malloc(sizeof(*(sasefelOutput->gainLength))*(n_slices+2))) ||
@@ -231,6 +238,8 @@ void setupSASEFELAtEnd(NAMELIST_TEXT *nltext, RUN *run, OUTPUT_FILES *output_dat
       !(sasefelOutput->CyIndex = malloc(sizeof(*(sasefelOutput->CyIndex))*(n_slices+2))) ||
       !(sasefelOutput->CxpIndex = malloc(sizeof(*(sasefelOutput->CxpIndex))*(n_slices+2))) ||
       !(sasefelOutput->CypIndex = malloc(sizeof(*(sasefelOutput->CypIndex))*(n_slices+2))) ||
+      !(sasefelOutput->CtIndex = malloc(sizeof(*(sasefelOutput->CtIndex))*(n_slices+2))) ||
+      !(sasefelOutput->CdeltaIndex = malloc(sizeof(*(sasefelOutput->CdeltaIndex))*(n_slices+2))) ||
       !(sasefelOutput->lightWavelengthIndex = malloc(sizeof(*(sasefelOutput->lightWavelengthIndex))*(n_slices+2))) ||
       !(sasefelOutput->saturationLengthIndex = malloc(sizeof(*(sasefelOutput->saturationLengthIndex))*(n_slices+2))) ||
       !(sasefelOutput->gainLengthIndex = malloc(sizeof(*(sasefelOutput->gainLengthIndex))*(n_slices+2))) ||
@@ -287,7 +296,7 @@ long DefineSASEParameters(SASEFEL_OUTPUT *sasefelOutput, long slice)
   SDDSout = &(sasefelOutput->SDDSout);
   if (slice && sasefelOutput->nSlices>1) {
     if (slice<=sasefelOutput->nSlices) {
-      sprintf(sliceNumString, "Slice%02ld", slice);
+      sprintf(sliceNumString, sasefelOutput->nSlices<100?"Slice%02ld":"Slice%03ld", slice);
     } else {
       /* "slice" N+1 is the average over all slices */
       sprintf(sliceNumString, "Ave");
@@ -300,7 +309,6 @@ long DefineSASEParameters(SASEFEL_OUTPUT *sasefelOutput, long slice)
   if ((sasefelOutput->betaToUseIndex[slice] = 
        SDDS_DefineParameter(SDDSout, buffer, NULL, "m", NULL, NULL, SDDS_DOUBLE, NULL))<0)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-
 
   sprintf(buffer, "Cx%s", sliceNumString);
   if ((sasefelOutput->CxIndex[slice] = 
@@ -317,6 +325,14 @@ long DefineSASEParameters(SASEFEL_OUTPUT *sasefelOutput, long slice)
   sprintf(buffer, "Cyp%s", sliceNumString);
   if ((sasefelOutput->CypIndex[slice] = 
        SDDS_DefineParameter(SDDSout, buffer, NULL, "m", NULL, NULL, SDDS_DOUBLE, NULL))<0)
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  sprintf(buffer, "Ct%s", sliceNumString);
+  if ((sasefelOutput->CtIndex[slice] = 
+       SDDS_DefineParameter(SDDSout, buffer, NULL, "s", NULL, NULL, SDDS_DOUBLE, NULL))<0)
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  sprintf(buffer, "Cdelta%s", sliceNumString);
+  if ((sasefelOutput->CdeltaIndex[slice] = 
+       SDDS_DefineParameter(SDDSout, buffer, NULL, NULL, NULL, NULL, SDDS_DOUBLE, NULL))<0)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 
   sprintf(buffer, "betaxBeam%s", sliceNumString);
@@ -445,6 +461,8 @@ void doSASEFELAtEndOutput(SASEFEL_OUTPUT *sasefelOutput, long step)
                             sasefelOutput->CyIndex[slice], sasefelOutput->Cy[slice],
                             sasefelOutput->CxpIndex[slice], sasefelOutput->Cxp[slice],
                             sasefelOutput->CypIndex[slice], sasefelOutput->Cyp[slice],
+                            sasefelOutput->CtIndex[slice], sasefelOutput->Ct[slice],
+                            sasefelOutput->CdeltaIndex[slice], sasefelOutput->Cdelta[slice],
                             sasefelOutput->lightWavelengthIndex[slice], sasefelOutput->lightWavelength[slice], 
                             sasefelOutput->saturationLengthIndex[slice], sasefelOutput->saturationLength[slice], 
                             sasefelOutput->gainLengthIndex[slice], sasefelOutput->gainLength[slice], 
@@ -472,7 +490,7 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
   long i, slice, nSlices;
   double xLimit[2], percentLevel[2];
   long count, slicesFound=0, j;
-  double aveCoord[6], rmsCoord[6];
+  double aveCoord[7], rmsCoord[7];
   
   if (!particles) {
     fprintf(stdout, "no particles left---can't compute FEL parameters");
@@ -485,6 +503,7 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
       sasefelOutput->enx[slice] = sasefelOutput->eny[slice] = DBL_MAX;
       sasefelOutput->Cx[slice] = sasefelOutput->Cy[slice] = DBL_MAX;
       sasefelOutput->Cxp[slice] = sasefelOutput->Cyp[slice] = DBL_MAX;
+      sasefelOutput->Ct[slice] = sasefelOutput->Cdelta[slice] = DBL_MAX;
       sasefelOutput->pCentral[slice] = sasefelOutput->rmsBunchLength[slice] = DBL_MAX;
       sasefelOutput->Sdelta[slice] = sasefelOutput->emit[slice] = DBL_MAX;
       sasefelOutput->lightWavelength[slice] = sasefelOutput->saturationLength[slice] = DBL_MAX;
@@ -501,19 +520,23 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
 
   /* compute normal values (over entire beam) */
   /* find center of energy distribution */
-  for (j=0; j<6; j++)
+  for (j=0; j<7; j++)
     aveCoord[j] = 0;
   for (i=0; i<particles; i++) {
     for (j=0; j<6; j++)
       aveCoord[j] += particle[i][j];
+    aveCoord[j] += time[i];
   }
-  for (j=0; j<6; j++)
+  for (j=0; j<7; j++)
     aveCoord[j] /= particles;
   deltaAve = aveCoord[5];
   sasefelOutput->Cx[0] = aveCoord[0];
   sasefelOutput->Cxp[0] = aveCoord[1];
   sasefelOutput->Cy[0] = aveCoord[2];
   sasefelOutput->Cyp[0] = aveCoord[3];
+  sasefelOutput->Cdelta[0] = aveCoord[5];
+  sasefelOutput->Ct[0] = aveCoord[6];
+
   /* compute rms energy spread */
   for (i=deltaRMS=0; i<particles; i++)
     deltaRMS += sqr(particle[i][5]-deltaAve);
@@ -575,6 +598,7 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
     sasefelOutput->etaEnergySpread[nSlices+1] = 0;
     sasefelOutput->Cx[nSlices+1] = sasefelOutput->Cxp[nSlices+1] = 0;
     sasefelOutput->Cy[nSlices+1] = sasefelOutput->Cyp[nSlices+1] = 0;
+    sasefelOutput->Ct[nSlices+1] = sasefelOutput->Cdelta[nSlices+1] = 0;
 
     for (slice=1; slice<=sasefelOutput->nSlices; slice++) {
       /* find boundaries of slice in time */
@@ -592,14 +616,15 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
       compute_percentiles(xLimit, percentLevel, 2, time, particles);
       sasefelOutput->rmsBunchLength[slice] = (xLimit[1] - xLimit[0])/sqrt(2*PI);
       
-      /* find center of energy distribution */
-      for (j=0; j<6; j++)
+      /* find centroids of slice */
+      for (j=0; j<7; j++)
         aveCoord[j] = 0;
       for (i=count=0; i<particles; i++) {
         if (time[i]>xLimit[0] && time[i]<xLimit[1]) {
           count++;
           for (j=0; j<6; j++)
             aveCoord[j] += particle[i][j];
+	  aveCoord[j] += time[i];
         }
       }
       if (count<2) {
@@ -618,10 +643,11 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
         sasefelOutput->etaEnergySpread[slice] = DBL_MAX;
         sasefelOutput->Cx[nSlices+1] = sasefelOutput->Cxp[nSlices+1] = DBL_MAX;
         sasefelOutput->Cy[nSlices+1] = sasefelOutput->Cyp[nSlices+1] = DBL_MAX;
+        sasefelOutput->Ct[nSlices+1] = sasefelOutput->Cdelta[nSlices+1] = DBL_MAX;
       }
       slicesFound++;
       sasefelOutput->sliceFound[slice] = 1;
-      for (j=0; j<6; j++) {
+      for (j=0; j<7; j++) {
         aveCoord[j] /= count;
         rmsCoord[j] = 0;
       }
@@ -630,6 +656,8 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
       sasefelOutput->Cxp[slice] = aveCoord[1];
       sasefelOutput->Cy[slice] = aveCoord[2];
       sasefelOutput->Cyp[slice] = aveCoord[3];
+      sasefelOutput->Cdelta[slice] = aveCoord[5];
+      sasefelOutput->Ct[slice] = aveCoord[6];
       
       /* compute rms energy spread and transverse moments */
       for (i=deltaRMS=0; i<particles; i++)
@@ -709,6 +737,8 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
       sasefelOutput->Cxp[nSlices+1] += sasefelOutput->Cxp[slice];
       sasefelOutput->Cy[nSlices+1] += sasefelOutput->Cy[slice];
       sasefelOutput->Cyp[nSlices+1] += sasefelOutput->Cyp[slice];
+      sasefelOutput->Cdelta[nSlices+1] += sasefelOutput->Cdelta[slice];
+      sasefelOutput->Ct[nSlices+1] += sasefelOutput->Ct[slice];
     }
     
     if (!slicesFound)
@@ -739,6 +769,8 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
     sasefelOutput->Cxp[nSlices+1] /= slicesFound;
     sasefelOutput->Cy[nSlices+1] /= slicesFound;
     sasefelOutput->Cyp[nSlices+1] /= slicesFound;
+    sasefelOutput->Ct[nSlices+1] /= slicesFound;
+    sasefelOutput->Cdelta[nSlices+1] /= slicesFound;
   }
   
   free(time);
