@@ -22,8 +22,8 @@ typedef struct {
 #define COMMAND_FLAG_CHANGE_DEFINITIONS 0x0001UL
 #define COMMAND_FLAG_IGNORE             0x0002UL
 #define COMMAND_FLAG_IGNORE_OCCURENCE   0x0004UL
-    char *includeNamePattern, *includeItemPattern;
-    char *excludeNamePattern, *excludeItemPattern;
+    char *includeNamePattern, *includeItemPattern, *includeTypePattern;
+    char *excludeNamePattern, *excludeItemPattern, *excludeTypePattern;
     long last_code;          /* return code from SDDS_ReadTable */
     short string_data;       /* if non-zero, indicates data stored as strings */   
     double *starting_value;  /* only for numerical data */
@@ -46,6 +46,7 @@ static char *Parameter_ColumnName = "ElementParameter";
 static char *Value_ColumnName = "ParameterValue";
 static char *ValueString_ColumnName = "ParameterValueString";
 static char *Mode_ColumnName = "ParameterMode";
+static char *ElementType_ColumnName = "ElementType";
 
 /* the order here must match the order of the #define's in track.h */
 #define LOAD_MODES             4
@@ -83,9 +84,11 @@ long setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     if (change_defined_values && !force_occurence_data)
       load_request[load_requests].flags |= COMMAND_FLAG_IGNORE_OCCURENCE;
     load_request[load_requests].includeNamePattern = include_name_pattern;
-    load_request[load_requests].excludeNamePattern = exclude_name_pattern;
     load_request[load_requests].includeItemPattern = include_item_pattern;
+    load_request[load_requests].includeTypePattern = include_type_pattern;
+    load_request[load_requests].excludeNamePattern = exclude_name_pattern;
     load_request[load_requests].excludeItemPattern = exclude_item_pattern;
+    load_request[load_requests].excludeTypePattern = exclude_type_pattern;
     
     SDDS_ClearErrors();
 
@@ -129,7 +132,16 @@ long setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
       }
       load_request[load_requests].string_data = 1;
     }
-    
+    if ((include_type_pattern || exclude_type_pattern) &&
+	((index=SDDS_GetColumnIndex(&load_request[load_requests].table, ElementType_ColumnName))<0 ||
+	 SDDS_GetColumnType(&load_request[load_requests].table, index)!=SDDS_STRING)) {
+      fprintf(stdout, "include_type_pattern and/or exclude_type_pattern given, but\n");
+      fprintf(stdout, "column \"%s\" is not in file %s or is not of string type.\n",
+	      ElementType_ColumnName, load_request[load_requests].filename);
+      fflush(stdout);
+      exit(1);
+    }
+
     /* The Mode column is optional: */
     if ((index=SDDS_GetColumnIndex(&load_request[load_requests].table, Mode_ColumnName))>=0 &&
         SDDS_GetColumnType(&load_request[load_requests].table, index)!=SDDS_STRING) {
@@ -146,7 +158,7 @@ long setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
         fflush(stdout);
         exit(1);
         }
-
+    
     if (SDDS_NumberOfErrors()) {
         fprintf(stdout, "error: an uncaught error occured in SDDS routines (setup_load_parameters):\n");
         fflush(stdout);
@@ -176,7 +188,7 @@ long setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 long do_load_parameters(LINE_LIST *beamline, long change_definitions)
 {
   long i, j, count, mode_flags, code, rows, *occurence, param, allFilesRead, allFilesIgnored;
-  char **element, **parameter, **mode, *p_elem, *ptr, lastMissingElement[100];
+  char **element, **parameter, **type, **mode, *p_elem, *ptr, lastMissingElement[100];
   double *value, newValue;
   char **valueString;
   ELEMENT_LIST *eptr;
@@ -251,6 +263,14 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exit(1);
     }
+    type = NULL;
+    if ((load_request[i].includeTypePattern || load_request[i].excludeTypePattern) &&
+	!(type = (char**)SDDS_GetColumn(&load_request[i].table, ElementType_ColumnName))) {
+      fprintf(stdout, "Error: problem accessing data from load_parameters file %s\n", load_request[i].filename);
+      fflush(stdout);
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      exit(1);
+    }
     valueString = NULL;
     value = NULL;
     if ((!load_request[i].string_data  &&
@@ -296,14 +316,20 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
       if (load_request[i].includeNamePattern &&
           !wild_match(element[j], load_request[i].includeNamePattern))
         continue;
-      if (load_request[i].excludeNamePattern &&
-          wild_match(element[j], load_request[i].excludeNamePattern))
-        continue;
       if (load_request[i].includeItemPattern &&
           !wild_match(parameter[j], load_request[i].includeItemPattern))
         continue;
+      if (load_request[i].includeItemPattern &&
+          !wild_match(type[j], load_request[i].includeTypePattern))
+        continue;
+      if (load_request[i].excludeNamePattern &&
+          wild_match(element[j], load_request[i].excludeNamePattern))
+        continue;
       if (load_request[i].excludeItemPattern &&
           wild_match(parameter[j], load_request[i].excludeItemPattern))
+        continue;
+      if (load_request[i].excludeTypePattern &&
+          wild_match(type[j], load_request[i].excludeTypePattern))
         continue;
       element_missing = 0;
       while (count-- > 0) {
