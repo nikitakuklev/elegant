@@ -1483,16 +1483,20 @@ void matr_element_tracking(double **coord, VMATRIX *M, MATR *matr,
   long i;
   if (!np)
     return;
-  if (!matr->fiducialSeen) {
-    double sum = 0;
+  if (!matr) {
+    track_particles(coord, M, coord, np);
+  } else {
+    if (!matr->fiducialSeen) {
+      double sum = 0;
+      for (i=0; i<np; i++)
+        sum += coord[i][4];
+      matr->sReference = sum/np;
+      matr->fiducialSeen = 1;
+    }
     for (i=0; i<np; i++)
-      sum += coord[i][4];
-    matr->sReference = sum/np;
-    matr->fiducialSeen = 1;
+      coord[i][4] -= matr->sReference;
+    track_particles(coord, M, coord, np);
+    for (i=0; i<np; i++)
+      coord[i][4] += matr->sReference;
   }
-  for (i=0; i<np; i++)
-    coord[i][4] -= matr->sReference;
-  track_particles(coord, M, coord, np);
-  for (i=0; i<np; i++)
-    coord[i][4] += matr->sReference;
 }
