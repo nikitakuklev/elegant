@@ -12,6 +12,7 @@
     long output_before_tune_correction = 0;
     long final_values_only = 0;
     long statistics = 0;
+    long radiation_integrals = 0;
     double beta_x = 1;
     double alpha_x = 0;
     double eta_x = 0;

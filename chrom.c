@@ -83,8 +83,8 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
         beamline->twiss0->etay   = eta_y;
         beamline->twiss0->etapy  = etap_y;
         
-        propagate_twiss_parameters(beamline->twiss0, beamline->tune  , beamline->elem_twiss, 0, run, NULL);
-        propagate_twiss_parameters(beamline->twiss0, beamline->tune+1, beamline->elem_twiss, 1, run, NULL);
+        propagate_twiss_parameters(beamline->twiss0, beamline->tune  , NULL, beamline->elem_twiss, 0, run, NULL);
+        propagate_twiss_parameters(beamline->twiss0, beamline->tune+1, NULL, beamline->elem_twiss, 1, run, NULL);
         }
 
     if (!(M=beamline->matrix) || !M->C || !M->R || !M->T)
@@ -226,8 +226,8 @@ void do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
         beamline->twiss0->etay   = eta_y;
         beamline->twiss0->etapy  = etap_y;
         
-        propagate_twiss_parameters(beamline->twiss0, beamline->tune  , beamline->elem_twiss, 0, run, clorb);
-        propagate_twiss_parameters(beamline->twiss0, beamline->tune+1, beamline->elem_twiss, 1, run, clorb);
+        propagate_twiss_parameters(beamline->twiss0, beamline->tune  , NULL, beamline->elem_twiss, 0, run, clorb);
+        propagate_twiss_parameters(beamline->twiss0, beamline->tune+1, NULL, beamline->elem_twiss, 1, run, clorb);
         }
     else if (beamline->matrix->order<2)
         beamline->matrix = full_matrix(beamline->elem_twiss, run, 2);
@@ -309,8 +309,8 @@ void do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
         fflush(fp_sl);
         }
 
-    propagate_twiss_parameters(beamline->twiss0, beamline->tune  , beamline->elem_twiss, 0, run, clorb);
-    propagate_twiss_parameters(beamline->twiss0, beamline->tune+1, beamline->elem_twiss, 1, run, clorb);
+    propagate_twiss_parameters(beamline->twiss0, beamline->tune  , NULL, beamline->elem_twiss, 0, run, clorb);
+    propagate_twiss_parameters(beamline->twiss0, beamline->tune+1, NULL, beamline->elem_twiss, 1, run, clorb);
     log_exit("do_chromaticity_correction");
     }
 

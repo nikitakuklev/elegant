@@ -100,6 +100,15 @@ typedef struct {
     long n_links;
     } ELEMENT_LINKS;
 
+
+/* radiation integrals and related values.  See SLAC 1193. */
+typedef struct {
+  double I[5];
+  double Jx, Jy, Jdelta;
+  double taux, tauy, taudelta;
+  double ex0, sigmadelta, Uo;
+} RADIATION_INTEGRALS;
+
 /* Node structure for linked-list of beamline definitions: */
 
 typedef struct line_list {
@@ -119,6 +128,7 @@ typedef struct line_list {
     double tune[2];          /* x and y tunes from start of elem_twiss to end of line */
     double chromaticity[2];  /* dNUx/dp and dNUy/dp */
     double acceptance[4];    /* in pi-meter-radians for x and y, plus z locations of limits (4 doubles in all) */
+    RADIATION_INTEGRALS radIntegrals;
     char *acc_limit_name[2];  /* names of elements at which acceptance is limited, in x and y */
     TRAJECTORY *closed_orbit;  /* closed orbit, if previously calculated, starting at recirc element */
     VMATRIX *matrix;       /* matrix from start of elem_twiss to end of line */
@@ -136,6 +146,9 @@ typedef struct line_list {
 #define BEAMLINE_TWISS_CURRENT  0x00000004
 #define BEAMLINE_TWISS_DONE     0x00000008
 #define BEAMLINE_TWISS_WANTED   0x00000010
+#define BEAMLINE_RADINT_WANTED  0x00000020
+#define BEAMLINE_RADINT_CURRENT 0x00000040
+#define BEAMLINE_RADINT_DONE    0x00000080
     } LINE_LIST;
 
 /* structure for passing information on run conditions */
@@ -358,6 +371,7 @@ typedef struct {
     char **name;            /* names of quadrupole families */
     long n_families;        /* number of families */
     long n_iterations;      /* number of times to repeat correction */
+    double gain;            /* gain for correction */
     MATRIX *T;              /* Nfx2 matrix to give quadrupole strength changes to change 
                                chromaticities by given amount */
     MATRIX *dK1;           /* Nfx1 matrix of quadrupole strength changes */
@@ -1586,13 +1600,15 @@ void setup_matrix_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 VMATRIX *compute_periodic_twiss(double *betax, double *alphax, double *etax, double *etaxp,
     double *phix, double *betay, double *alphay, double *etay, double *etayp, double *phiy,
     ELEMENT_LIST *elem, double *clorb, RUN *run);
-void propagate_twiss_parameters(TWISS *twiss0, double *tune, ELEMENT_LIST *elem, long plane, RUN *run, double *traj);
+void propagate_twiss_parameters(TWISS *twiss0, double *tune, RADIATION_INTEGRALS *radIntegrals,
+                                ELEMENT_LIST *elem, long plane, RUN *run, double *traj);
 long get_twiss_mode(long *mode, double *x_twiss, double *y_twiss);
 void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_coord, long matched, 
-    double beta_x, double alpha_x, double eta_x, double etap_x, 
-    double beta_y, double alpha_y, double eta_y, double etap_y);
+                              long radiation_integrals,
+                              double beta_x, double alpha_x, double eta_x, double etap_x, 
+                              double beta_y, double alpha_y, double eta_y, double etap_y);
 void dump_twiss_parameters(TWISS *twiss0, ELEMENT_LIST *elem, long n_elem, 
-    double *tune, double *chromaticity, double *acceptance, double alphac,
+    double *tune, RADIATION_INTEGRALS *radIntegrals, double *chromaticity, double *acceptance, double alphac,
     long final_values_only, long tune_corrected, RUN *run);
 void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, long *do_twiss_output);
 void run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, long tune_corrected);

@@ -557,8 +557,14 @@ static long twiss_mem[16] = {
     -1, -1, -1, -1, -1, 
     -1, -1, -1, -1, -1, 
     -1, -1, -1,
-    -1, -1, -1,
+    -1, -1, -1, 
     };
+static char *radint_name[4] = {
+    "ex0", "Jx", "Jy", "Jdelta",
+  } ;
+static long radint_mem[4] = {
+  -1, -1, -1, -1,
+} ;
 
 double optimization_function(double *value, long *invalid)
 {
@@ -570,7 +576,7 @@ double optimization_function(double *value, long *invalid)
     long i;
     VMATRIX *M;
     TWISS twiss_ave, twiss_min, twiss_max;
-
+    
     log_entry("optimization_function");
 
     n_evaluations_made++;
@@ -623,6 +629,7 @@ double optimization_function(double *value, long *invalid)
     if (i) {
         beamline->flags &= ~BEAMLINE_CONCAT_CURRENT;
         beamline->flags &= ~BEAMLINE_TWISS_CURRENT;
+        beamline->flags &= ~BEAMLINE_RADINT_CURRENT;
         }
     if (i && beamline->matrix) {
         free_matrices(beamline->matrix);
@@ -674,7 +681,20 @@ double optimization_function(double *value, long *invalid)
         rpn_store(twiss_max.etay,  twiss_mem[14]);
         rpn_store(twiss_max.etapy, twiss_mem[15]);
         }
-
+    if (beamline->flags&BEAMLINE_RADINT_WANTED) {
+      if (radint_mem[0]==-1) {
+        for (i=0; i<4; i++)
+          radint_mem[i] = rpn_create_mem(radint_name[i]);
+      }
+      /* radiation integrals already updated by update_twiss_parameters above
+         which is guaranteed to be called
+         */
+      rpn_store(beamline->radIntegrals.ex0, radint_mem[0]);
+      rpn_store(beamline->radIntegrals.Jx, radint_mem[1]);
+      rpn_store(beamline->radIntegrals.Jy, radint_mem[2]);
+      rpn_store(beamline->radIntegrals.Jdelta, radint_mem[3]);
+    }
+    
     for (i=0; i<variables->n_variables; i++)
       variables->varied_quan_value[i] = value[i];
 

@@ -85,8 +85,8 @@ void setup_tune_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline,
     beamline->twiss0->etay   = eta_y;
     beamline->twiss0->etapy  = etap_y;
     
-    propagate_twiss_parameters(beamline->twiss0, beamline->tune  , beamline->elem_twiss, 0, run, NULL);
-    propagate_twiss_parameters(beamline->twiss0, beamline->tune+1, beamline->elem_twiss, 1, run, NULL);
+    propagate_twiss_parameters(beamline->twiss0, beamline->tune  , NULL, beamline->elem_twiss, 0, run, NULL);
+    propagate_twiss_parameters(beamline->twiss0, beamline->tune+1, NULL, beamline->elem_twiss, 1, run, NULL);
 
     if (tune->tunex<0)
         printf("horizontal tune will be held at %f\n", tune->tunex = beamline->tune[0]);
@@ -205,8 +205,8 @@ void do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline, do
     beamline->twiss0->etay   = eta_y;
     beamline->twiss0->etapy  = etap_y;
         
-    propagate_twiss_parameters(beamline->twiss0, beamline->tune  , beamline->elem_twiss, 0, run, clorb);
-    propagate_twiss_parameters(beamline->twiss0, beamline->tune+1, beamline->elem_twiss, 1, run, clorb);
+    propagate_twiss_parameters(beamline->twiss0, beamline->tune  , NULL, beamline->elem_twiss, 0, run, clorb);
+    propagate_twiss_parameters(beamline->twiss0, beamline->tune+1, NULL, beamline->elem_twiss, 1, run, clorb);
 
     if (!M || !M->C || !M->R)
         bomb("something wrong with transfer map for beamline (do_tune_correction.1)", NULL);
@@ -265,8 +265,8 @@ void do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline, do
         if (!M || !M->C || !M->R)
             bomb("something wrong with transfer map for beamline (do_tune_correction.2)", NULL);
 
-        propagate_twiss_parameters(beamline->twiss0, beamline->tune  , beamline->elem_twiss, 0, run, clorb);
-        propagate_twiss_parameters(beamline->twiss0, beamline->tune+1, beamline->elem_twiss, 1, run, clorb);
+        propagate_twiss_parameters(beamline->twiss0, beamline->tune  , NULL, beamline->elem_twiss, 0, run, clorb);
+        propagate_twiss_parameters(beamline->twiss0, beamline->tune+1, NULL, beamline->elem_twiss, 1, run, clorb);
         printf("new tunes: %e %e\n", beamline->tune[0], beamline->tune[1]);
         }
 

@@ -33,7 +33,7 @@ VMATRIX *compute_periodic_twiss(
     if ((i = fill_in_matrices(elem, run)))
         printf("%ld matrices recomputed for periodic Twiss parameter computation\n", i);
     
-    modify_rfca_matrices(elem, run->default_order);
+    modify_rfca_matrices(elem, run->default_order);  /* replace rf cavities with drifts */
     if (clorb) {
         /* use the closed orbit to compute the on-orbit R matrix */
         M1 = tmalloc(sizeof(*M1));
@@ -99,8 +99,8 @@ VMATRIX *compute_periodic_twiss(
     return(M);
     }
 
-void propagate_twiss_parameters(
-        TWISS *twiss0, double *tune, ELEMENT_LIST *elem, long plane, RUN *run, double *traj
+void propagate_twiss_parameters(TWISS *twiss0, double *tune, RADIATION_INTEGRALS *radIntegrals, ELEMENT_LIST *elem, 
+                                long plane, RUN *run, double *traj
         )
 {
     double beta0, alpha0, phi0, eta0, etap0, gamma0;
@@ -110,7 +110,8 @@ void propagate_twiss_parameters(
     long n_mat_computed, i;
     VMATRIX *M1, *M2;
     double func0, func1;
-
+    ELEMENT_LIST *elem0;
+    
     log_entry("propagate_twiss_parameters");
 
     if (!twiss0)
@@ -154,6 +155,12 @@ void propagate_twiss_parameters(
         }
 
     n_mat_computed = 0;
+
+    if (radIntegrals) {
+      for (i=0; i<6; i++) 
+        radIntegrals->I[i] = 0;
+    }
+    
     while (elem) {
         gamma0 = (1+sqr(alpha0))/beta0;
         if (entity_description[elem->type].flags&HAS_MATRIX) {
@@ -205,6 +212,89 @@ void propagate_twiss_parameters(
         func = ((double*)elem->twiss) + (plane?TWISS_Y_OFFSET:0);
         /* store centroid position */
         *(((double*)elem->twiss) + (plane?1:0) + TWISS_CENT_OFFSET) = path[plane?2:0];
+
+        if (radIntegrals && plane==0) {
+          /* compute contribution to radiation integrals */
+          long isBend;
+          BEND *bptr;
+          KSBEND *kbptr;
+          CSBEND *cbptr;
+          double length, angle, E1, E2, K1;
+          double k2, rho, k, kl, gamma1;
+          double I1, I2, I3, I4, I5;
+          double alpha1, gamam1, etap1, eta2, sin_kl, cos_kl;
+          double etaAve, etaK1_rhoAve, HAve;
+          
+          isBend = 1;
+          switch (elem->type) {
+          case T_SBEN:
+          case T_RBEN:
+            bptr = (BEND*)(elem->p_elem);
+            length = bptr->length;
+            angle = bptr->angle;
+            E1 = bptr->e1*(bptr->edge1_effects?1:0);
+            E2 = bptr->e2*(bptr->edge2_effects?1:0);
+            K1 = bptr->k1;
+            break;
+          case T_KSBEND:
+            kbptr = (KSBEND*)(elem->p_elem);
+            length = kbptr->length;
+            angle = kbptr->angle;
+            E1 = kbptr->e1*(kbptr->edge1_effects?1:0);
+            E2 = kbptr->e2*(kbptr->edge2_effects?1:0);
+            K1 = kbptr->k1;
+            break;
+          case T_CSBEND:
+            cbptr = (CSBEND*)(elem->p_elem);
+            length = cbptr->length;
+            angle = cbptr->angle;
+            E1 = cbptr->e1*(cbptr->edge1_effects?1:0);
+            E2 = cbptr->e2*(cbptr->edge2_effects?1:0);
+            K1 = cbptr->k1;
+            break;
+          default:
+            isBend = 0;
+            break;
+          }
+          if (isBend && angle!=0) {
+            rho = length/angle;
+            k2 = K1+1./(rho*rho);
+            if (k2<0) {
+              bomb("Can't do rad integrals in dipole with defocusing just now!", NULL);
+            } else {
+              /* equations are from SLAC 1193 */
+              k = sqrt(k2);
+              kl = k*length;
+              sin_kl = sin(kl);
+              cos_kl = cos(kl);
+              etap1 = etap0 + eta0/rho*tan(E1);
+              eta2  = eta0*cos_kl + etap1*sin_kl/k + (1-cos_kl)/(rho*k2);
+              alpha1 = alpha0 - beta0/rho*tan(E1);
+              gamma1 = (1+sqr(alpha1))/beta0;
+              etaAve = eta0*sin_kl/kl + etap1*(1-cos_kl)/(k2*length) +
+                (kl-sin_kl)/(k2*kl*rho);
+              etaK1_rhoAve =  etaAve*K1/rho + (eta0*tan(E1)+eta2*tan(E2))/(2*length*sqr(rho));
+              HAve = gamma1*sqr(eta0) + 2*alpha1*eta0*etap1 + beta0*sqr(etap1) 
+                + 2*angle*( -(gamma1*eta0+alpha1*etap1)*(kl-sin_kl)/(k*k2*sqr(length)) +
+                           (alpha1*eta0+beta0*etap1)*(1-cos_kl)/sqr(kl)
+                           )
+                  + sqr(angle)*(gamma1*(3*kl-4*sin_kl+sin_kl*cos_kl)/(2*ipow(k,5)*ipow(length,3)) 
+                                - alpha1*sqr(1-cos_kl)/(ipow(k,4)*ipow(length,3))
+                                + beta0*(kl-cos_kl*sin_kl)/(2*ipow(kl,3)));
+              I1 = etaAve*length/rho;
+              I2 = length/sqr(rho);
+              I3 = I2/fabs(rho);
+              I4 = I2/rho*etaAve - 2*length*etaK1_rhoAve;
+              I5 = HAve*I3;
+              radIntegrals->I[0] += I1;
+              radIntegrals->I[1] += I2;
+              radIntegrals->I[2] += I3;
+              radIntegrals->I[3] += I4;
+              radIntegrals->I[4] += I5;
+            }
+          }
+        }
+        
         /* calculate new beta and alpha */
         func[0] = (sqr(C)*beta0 - 2*C*S*alpha0 + sqr(S)*gamma0)/detR;
         func[1] = (-C*Cp*beta0 + (Sp*C+S*Cp)*alpha0 - S*Sp*gamma0)/detR;
@@ -242,6 +332,7 @@ void propagate_twiss_parameters(
         phi0   = func[2] = phi0 + atan2(sin_dphi, cos_dphi);
         beta0  = func[0];
         alpha0 = func[1];
+        /* compute new dispersion function and slope */
         func[3] = eta0*C  + etap0*S  + D;
         func[4] = eta0*Cp + etap0*Sp + Dp;
         eta0  = func[3];
@@ -253,6 +344,7 @@ void propagate_twiss_parameters(
 #endif
         }
     *tune = phi0/PIx2;
+
     if (traj) {
         tfree(path);
         free_matrices(M1); tfree(M1);
@@ -315,7 +407,21 @@ static SDDS_DEFINITION column_definition[N_COLUMNS] = {
 #define IP_AY 6
 #define IP_STAGE 7
 #define IP_ALPHAC 8
-#define N_PARAMETERS 9
+#define IP_I1 9
+#define IP_I2 10
+#define IP_I3 11
+#define IP_I4 12
+#define IP_I5 13
+#define IP_EX0 14
+#define IP_TAUX 15
+#define IP_JX 16
+#define IP_TAUY 17
+#define IP_JY 18
+#define IP_SIGMADELTA 19
+#define IP_TAUDELTA 20
+#define IP_JDELTA 21
+#define IP_U0 22
+#define N_PARAMETERS 23
 static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
     {"Step", "&parameter name=Step, type=long, description=\"Simulation step\" &end"},
     {"nux", "&parameter name=nux, symbol=\"$gn$r$bx$n\", type=double, units=\"1/(2$gp$r)\", description=\"Horizontal tune\" &end"},
@@ -326,6 +432,20 @@ static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
     {"Ay", "&parameter name=Ay, symbol=\"A$by$n\", type=double, units=\"$gp$rm\", description=\"Vertical acceptance\" &end"},
     {"Stage", "&parameter name=Stage, type=string, description=\"Stage of computation\" &end"},
     {"alphac", "&parameter name=alphac, symbol=\"$ga$r$bc$n\", type=double, description=\"Momentum compaction factor\" &end"},
+  {"I1", "&parameter name=I1, type=double, description=\"Radiation integral 1\", units=m &end"} ,
+  {"I2", "&parameter name=I2, type=double, description=\"Radiation integral 2\", units=1/m &end"} ,
+  {"I3", "&parameter name=I3, type=double, description=\"Radiation integral 3\", units=1/m$a2$n &end"} ,
+  {"I4", "&parameter name=I4, type=double, description=\"Radiation integral 4\", units=1/m &end"} ,
+  {"I5", "&parameter name=I5, type=double, description=\"Radiation integral 5\", units=1/m &end"} ,
+  {"ex0", "&parameter name=ex0, type=double, description=\"Damped horizontal emittance\", units=$gp$rm &end"},
+  {"taux", "&parameter name=taux, type=double, description=\"Horizontal damping time\", units=s &end"},
+  {"Jx", "&parameter name=Jx, type=double, description=\"Horizontal damping partition number\" &end"},
+  {"tauy", "&parameter name=tauy, type=double, description=\"Vertical damping time\", units=s &end"},
+  {"Jy", "&parameter name=Jy, type=double, description=\"Vertical damping partition number\" &end"},
+  {"Sdelta0", "&parameter name=Sdelta0, type=double, description=\"RMS fractional energy spread\" &end"},
+  {"taudelta", "&parameter name=taudelta, type=double, description=\"Longitudinal damping time\", units=s &end"},
+  {"Jdelta", "&parameter name=Jdelta, type=double, description=\"Longitudinal damping partition number\" &end"},
+  {"U0", "&parameter name=U0, type=double, units=MeV, description=\"Energy loss per turn\" &end"},
     } ;
 
 void dump_twiss_parameters(
@@ -333,6 +453,7 @@ void dump_twiss_parameters(
     ELEMENT_LIST *elem,
     long n_elem,
     double *tune,
+    RADIATION_INTEGRALS *radIntegrals,                           
     double *chromaticity,
     double *acceptance,
     double alphac,
@@ -369,7 +490,27 @@ void dump_twiss_parameters(
         SDDS_SetError("Problem setting SDDS parameters (dump_twiss_parameters)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
-
+    if (radIntegrals) {
+      if (!SDDS_SetParameters(&SDDS_twiss, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE,
+                              IP_I1, radIntegrals->I[0],
+                              IP_I2, radIntegrals->I[1],
+                              IP_I3, radIntegrals->I[2],
+                              IP_I4, radIntegrals->I[3],
+                              IP_I5, radIntegrals->I[4],
+                              IP_EX0, radIntegrals->ex0,
+                              IP_TAUX, radIntegrals->taux,
+                              IP_JX, radIntegrals->Jx,
+                              IP_TAUY, radIntegrals->tauy,
+                              IP_JY, radIntegrals->Jy,
+                              IP_SIGMADELTA, radIntegrals->sigmadelta,
+                              IP_TAUDELTA, radIntegrals->taudelta,
+                              IP_JDELTA, radIntegrals->Jdelta,
+                              IP_U0, radIntegrals->Uo, -1)) {
+        SDDS_SetError("Problem setting SDDS parameters (dump_twiss_parameters)");
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      }
+    }
+    
     if (!final_values_only) {
         row_count = 0;
         data[0] = 0;     /* position */
@@ -499,7 +640,8 @@ void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
 
     if (filename) {
         SDDS_ElegantOutputSetup(&SDDS_twiss, filename, SDDS_BINARY, 1, "Twiss parameters",
-                                run->runfile, run->lattice, parameter_definition, N_PARAMETERS,
+                                run->runfile, run->lattice, parameter_definition, 
+                                (radiation_integrals?N_PARAMETERS:IP_I1),
                                 column_definition, N_COLUMNS, "setup_twiss_output",
                                 SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
         SDDS_twiss_initialized = 1;
@@ -510,7 +652,9 @@ void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
     twiss_initialized = 1;
 
     beamline->flags |= BEAMLINE_TWISS_WANTED;
-
+    if (radiation_integrals)
+      beamline->flags |= BEAMLINE_RADINT_WANTED;
+    
     log_exit("setup_twiss_output");
     }
 
@@ -559,7 +703,7 @@ void run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, lon
         }
     n_elem = last_n_elem;
     
-    compute_twiss_parameters(run, beamline, starting_coord, matched, 
+    compute_twiss_parameters(run, beamline, starting_coord, matched, radiation_integrals,
                              beta_x, alpha_x, eta_x, etap_x,
                              beta_y, alpha_y, eta_y, etap_y);
     elast = beamline->elast;
@@ -634,7 +778,7 @@ void run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, lon
 
     if (SDDS_twiss_initialized) {
         dump_twiss_parameters(beamline->twiss0, beamline->elem_twiss, n_elem,
-                              beamline->tune, beamline->chromaticity,
+                              beamline->tune, &(beamline->radIntegrals), beamline->chromaticity,
                               beamline->acceptance, 
                               (beamline->matrix->C[4]?
                                beamline->matrix->R[4][5]/beamline->matrix->C[4]:
@@ -646,8 +790,9 @@ void run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, lon
     }
 
 void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_coord, long periodic,
-    double betax, double alphax, double etax, double etapx, 
-    double betay, double alphay, double etay, double etapy)
+                              long radiation_integrals,
+                              double betax, double alphax, double etax, double etapx, 
+                              double betay, double alphay, double etay, double etapy)
 {
     VMATRIX *M;
     double chromx, chromy;
@@ -655,7 +800,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
     ELEMENT_LIST *eptr, *elast;
     char *x_acc_name, *y_acc_name;
     long i;
-
+    
     log_entry("compute_twiss_parameters");
 
     if (!beamline->twiss0)
@@ -724,9 +869,29 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
            beamline->matrix, beamline->matrix->C, beamline->matrix->R, beamline->matrix->T);
 #endif
 
-    propagate_twiss_parameters(beamline->twiss0, beamline->tune  , beamline->elem_twiss, 0, run, starting_coord);
-    propagate_twiss_parameters(beamline->twiss0, beamline->tune+1, beamline->elem_twiss, 1, run, starting_coord);
-
+    propagate_twiss_parameters(beamline->twiss0, beamline->tune, 
+                               (radiation_integrals?&(beamline->radIntegrals):NULL),
+                               beamline->elem_twiss, 0, run, starting_coord);
+    propagate_twiss_parameters(beamline->twiss0, beamline->tune+1, NULL,
+                               beamline->elem_twiss, 1, run, starting_coord);
+    
+    if (radiation_integrals) {
+      double Rce, gamma;
+      RADIATION_INTEGRALS *RI;
+      RI = &(beamline->radIntegrals);
+      gamma = sqrt(sqr(run->p_central)+1);
+      Rce = sqr(e_mks)/(1e7*me_mks);
+      RI->Uo = me_mev*Rce*RI->I[1]*2./3.*ipow(gamma,4);
+      RI->Jx = 1 - RI->I[3]/RI->I[1];
+      RI->Jdelta = 3 - RI->Jx;
+      RI->Jy = 1;
+      RI->tauy = 1./(Rce/3*ipow(gamma,3)*c_mks/beamline->revolution_length*RI->I[1]);
+      RI->taux = RI->tauy*RI->Jy/RI->Jx;
+      RI->taudelta = RI->tauy*RI->Jy/RI->Jdelta;
+      RI->sigmadelta = gamma*sqrt(55./32./sqrt(3.)*hbar_mks/(me_mks*c_mks)*RI->I[2]/(2*RI->I[1]+RI->I[3]));
+      RI->ex0 = sqr(gamma)*55./32./sqrt(3.)*hbar_mks/(me_mks*c_mks)*RI->I[4]/(RI->I[1]-RI->I[3]);
+    }
+    
 #ifdef DEBUG
     printf("finding acceptance\n");
 #endif
@@ -803,6 +968,7 @@ void update_twiss_parameters(RUN *run, LINE_LIST *beamline)
 {
     log_entry("update_twiss_parameters");
     compute_twiss_parameters(run, beamline, beamline->closed_orbit?beamline->closed_orbit->centroid:NULL, matched, 
+                             radiation_integrals,
                              beta_x, alpha_x, eta_x, etap_x, beta_y, alpha_y, eta_y, etap_y);
     log_exit("update_twiss_parameters");
     }
@@ -983,6 +1149,8 @@ long has_aperture(ELEMENT_LIST *elem)
     }
 
 void modify_rfca_matrices(ELEMENT_LIST *eptr, long order)
+/* Replace the matrices for rf cavities with drift matrices. 
+   Used prior to twiss parameter computations. */
 {
     while (eptr) {
         if (eptr->type==T_RFCA || eptr->type==T_MODRF) {
