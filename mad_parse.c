@@ -425,6 +425,7 @@ void copy_element(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long reverse)
       case T_RBEN:
         bptr = (BEND*)e1->p_elem;
         SWAP_DOUBLE(bptr->e1, bptr->e2);
+        SWAP_LONG(bptr->edge1_effects, bptr->edge2_effects);
         break;
       case T_KSBEND:
         ksbptr = (KSBEND*)e1->p_elem;
@@ -437,6 +438,7 @@ void copy_element(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long reverse)
       case T_CSBEND:
         csbptr = (CSBEND*)e1->p_elem;
         SWAP_DOUBLE(csbptr->e1, csbptr->e2);
+        SWAP_LONG(csbptr->edge1_effects, csbptr->edge2_effects);
         break;
       default:
         break;
