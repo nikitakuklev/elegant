@@ -893,7 +893,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   macroParticleCharge = 0;
   if (charge) {
     macroParticleCharge = charge->macroParticleCharge;
-  } else if (csbend->bins && !csrWarning) {
+  } else if (csbend->bins && !csrWarning && csbend->csr) {
     fprintf(stdout, "Warning: you asked for CSR on CSBEND but didn't give a CHARGE element\n");
     fflush(stdout);
     csrWarning = 1;
