@@ -368,7 +368,7 @@ VMATRIX *sbend_matrix(
         i44623, i36633, i46633, i33114, i43114, i34124, i44124, i33214, i43214, i34224, i44224, i33614, i43614,
         i34624, i44624, i36634, i46634, i33316, i43316, i34326, i44326, i36336, i46336, i33416, i43416, i34426,
         i44426, i36436, i46436;
-    double small3, small2;
+    double small3;
     double t0_2, t0_3, t0_4, t0_5, t0_6;
     long ky2_is_zero, kx2_is_zero;
     double *C, **R, ***T, ****U;
@@ -408,16 +408,14 @@ VMATRIX *sbend_matrix(
     ky2_is_zero = (ky2==0);
     kx2_is_zero = (kx2==0);
 
-    small3 = pow(1e6/DBL_MAX, 1./3.);
+    small3 = pow(1e-16, 1./3.);
 
-#ifdef DEBUG
-    printf("kx2 = %.16le, ky2 = %.16le, small3 = %.16le, small2 = %.16le\n",
-        kx2, ky2, small3, small2);
-#endif
+    if (sqrt(FABS(kx2))*t0<small3) {
+      kx2 = sqr(small3/t0);
+      if (kx2)
+        kx2 = SIGN(kx2)*kx2;
+    }
 
-    if (FABS(kx2)<small3) {
-        kx2 = small3;
-        }
     if (kx2>0.0) {
         kx = sqrt(kx2);
         cx = cos(kx*t0);
@@ -430,8 +428,10 @@ VMATRIX *sbend_matrix(
         }
 
     if (FABS(ky2)<small3) {
-        ky2 = small3;
-        }
+      ky2 = sqr(small3/t0);
+      if (ky2)
+        ky2 = SIGN(ky2)*ky2;
+    }
     if (ky2>0.0) {
         ky = sqrt(ky2);
         cy = cos(ky*t0);
