@@ -44,6 +44,8 @@ static SDDS_DEFINITION wake_parameter[WAKE_PARAMETERS] = {
 
 #define DEBUG 1
 
+void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles);
+
 void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
     RUN *run, long i_pass
     )
@@ -58,10 +60,7 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
     long ip, ib, nb, n_binned, nfreq, iReal, iImag;
     double factor, tmin, tmax, tmean, dt, dt1, P, dgam, gam, frac;
 
-    log_entry("track_through_zlongit");
-
-    if (!zlongit->initialized)
-        set_up_zlongit(zlongit, run);
+    set_up_zlongit(zlongit, run, i_pass, np);
     nb = zlongit->n_bins;
     dt = zlongit->bin_size;
 
@@ -75,14 +74,7 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
         time = trealloc(time, sizeof(*time)*max_np);
         }
 
-    tmin = HUGE;
-    tmean = 0;
-    for (ip=0; ip<np; ip++) {
-        P = Po*(part[ip][5]+1);
-        time[ip] = part[ip][4]*sqrt(sqr(P)+1)/(c_mks*P);
-        tmean += time[ip];
-        }
-    tmean /= np;
+    tmean = computeTimeCoordinates(time, Po, part, np);
     tmin = tmean - dt*zlongit->n_bins/2.0;
     
     for (ib=0; ib<zlongit->n_bins; ib++)
@@ -121,7 +113,7 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
       fprintf(fp, "%ld\n", nb);
       for (ib=0; ib<nb; ib++) 
         fprintf(fp, "%e %e\n",
-                ib*dt+tmin, Itime[ib]*(zlongit->charge/np)/dt);
+                ib*dt+tmin, Itime[ib]*zlongit->macroParticleCharge/dt);
       fclose(fp);
     }
 #endif
@@ -134,7 +126,7 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
      * to normalize the current waveform.
      */
     Vfreq = Vtime;
-    factor = (zlongit->charge/np)/dt;
+    factor = zlongit->macroParticleCharge/dt;
     Z = zlongit->Z;
     Vfreq[0] = Ifreq[0]*Z[0]*factor;
     nfreq = nb/2 + 1;
@@ -212,20 +204,26 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
         }
       }
     }
-    log_exit("track_through_zlongit");
   }
 
 
 
-void set_up_zlongit(ZLONGIT *zlongit, RUN *run)
+void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles)
 {
     long i, nfreq;
     double df, t_range;
     static char associate[SDDS_MAXLINE];
 
-    log_entry("set_up_zlongit");
+    if (pass==0) {
+      zlongit->macroParticleCharge = 0;
+      if (particles)
+        zlongit->macroParticleCharge = zlongit->charge/particles;
+    }
 
+    if (zlongit->initialized)
+      return ;
     zlongit->initialized = 1;
+
     if (zlongit->bin_size<=0)
         bomb("bin_size must be positive for ZLONGIT element", NULL);
     if (zlongit->broad_band) {
@@ -404,6 +402,5 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run)
         zlongit->SDDS_wake_initialized = 1;
       }
     zlongit->initialized = 1;
-    log_exit("set_up_zlongit");
   }
 
