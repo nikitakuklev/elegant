@@ -3,6 +3,9 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.13  2000/05/31 15:38:16  borland
+ * Added transverse centroids to sase fel output.
+ *
  * Revision 1.12  2000/05/15 19:52:21  borland
  * Added CSRDRIFT reset routine (for multipass tracking with CSRDRIFTS upstream
  * of CSR bends).
@@ -371,6 +374,8 @@ void doSASEFELAtEndOutput(SASEFEL_OUTPUT *sasefelOutput, long step)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
   for (slice=0; slice<=sasefelOutput->nSlices+1; slice++) {
+    if (slice==1 && sasefelOutput->nSlices==0)
+      break;
     if (!SDDS_SetParameters(SDDSout, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE,
                             sasefelOutput->betaToUseIndex[slice], sasefelOutput->betaToUse[slice], 
                             sasefelOutput->betaxBeamIndex[slice], sasefelOutput->betaxBeam[slice], 
