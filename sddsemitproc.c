@@ -15,6 +15,10 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.1  2004/12/30 03:29:45  borland
+ * Simplified version of sddsemitmeas, with only the Monte-Carlo-based
+ * error analysis.  More reliable and preferred over sddsemitmeas.
+ *
  * Revision 1.19  2004/12/29 23:33:56  borland
  * Fixed bug in previous change.
  *
@@ -403,7 +407,7 @@ int main(
   if (!SDDS_InitializeOutput(&SDDSout, SDDS_BINARY, 1, NULL, NULL, output))
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
   if (!ignore_x) {
-    if (!SDDS_DefineSimpleParameter(&SDDSout, "ex", "$gp$rm", SDDS_DOUBLE) ||
+    if (!SDDS_DefineSimpleParameter(&SDDSout, "ex", "m", SDDS_DOUBLE) ||
         !SDDS_DefineSimpleParameter(&SDDSout, "S11", "m$a2$n", SDDS_DOUBLE) ||
         !SDDS_DefineSimpleParameter(&SDDSout, "S12", "m", SDDS_DOUBLE) ||
         !SDDS_DefineSimpleParameter(&SDDSout, "S22", "", SDDS_DOUBLE) ||
@@ -413,7 +417,7 @@ int main(
         !SDDS_DefineSimpleParameter(&SDDSout, "xGoodFits", "", SDDS_LONG) ||
         !SDDS_DefineSimpleParameter(&SDDSout, "xAverageFitPoints", "", SDDS_DOUBLE) ||
         (error_output && 
-         (!SDDS_DefineSimpleParameter(&SDDSout, "exSigma", "$gp$rm", SDDS_DOUBLE) ||
+         (!SDDS_DefineSimpleParameter(&SDDSout, "exSigma", "m", SDDS_DOUBLE) ||
           !SDDS_DefineSimpleParameter(&SDDSout, "S11Sigma", "m$a2$n", SDDS_DOUBLE) ||
           !SDDS_DefineSimpleParameter(&SDDSout, "S12Sigma", "m", SDDS_DOUBLE) ||
           !SDDS_DefineSimpleParameter(&SDDSout, "S22Sigma", "", SDDS_DOUBLE) ||
@@ -426,7 +430,7 @@ int main(
     }
   }
   if (!ignore_y) {
-    if (!SDDS_DefineSimpleParameter(&SDDSout, "ey", "$gp$rm", SDDS_DOUBLE) ||
+    if (!SDDS_DefineSimpleParameter(&SDDSout, "ey", "m", SDDS_DOUBLE) ||
         !SDDS_DefineSimpleParameter(&SDDSout, "S33", "m$a2$n", SDDS_DOUBLE) ||
         !SDDS_DefineSimpleParameter(&SDDSout, "S34", "m", SDDS_DOUBLE) ||
         !SDDS_DefineSimpleParameter(&SDDSout, "S44", "", SDDS_DOUBLE) ||
@@ -436,7 +440,7 @@ int main(
         !SDDS_DefineSimpleParameter(&SDDSout, "yGoodFits", "", SDDS_LONG) ||
         !SDDS_DefineSimpleParameter(&SDDSout, "yAverageFitPoints", "", SDDS_DOUBLE) ||
         (error_output &&
-         (!SDDS_DefineSimpleParameter(&SDDSout, "eySigma", "$gp$rm", SDDS_DOUBLE) ||
+         (!SDDS_DefineSimpleParameter(&SDDSout, "eySigma", "m", SDDS_DOUBLE) ||
           !SDDS_DefineSimpleParameter(&SDDSout, "S33Sigma", "m$a2$n", SDDS_DOUBLE) ||
           !SDDS_DefineSimpleParameter(&SDDSout, "S34Sigma", "m", SDDS_DOUBLE) ||
           !SDDS_DefineSimpleParameter(&SDDSout, "S44Sigma", "", SDDS_DOUBLE) ||
