@@ -1488,6 +1488,7 @@ void matr_element_tracking(double **coord, VMATRIX *M, MATR *matr,
     for (i=0; i<np; i++)
       sum += coord[i][4];
     matr->sReference = sum/np;
+    matr->fiducialSeen = 1;
   }
   for (i=0; i<np; i++)
     coord[i][4] -= matr->sReference;
