@@ -63,8 +63,12 @@ void setupFrequencyMap(
   /* check for data errors */
   if (!output)
     bomb("no output filename specified", NULL);
+  if (xmin<=0) 
+    bomb("xmin<=0. A small positive value is suggested.", NULL);
   if (xmin>xmax)
     bomb("xmin > xmax", NULL);
+  if (ymin<=0) 
+    bomb("ymin<=0. A small positive value is suggested.", NULL);
   if (ymin>ymax)
     bomb("ymin > ymax", NULL);
   if (nx<1)
@@ -142,7 +146,7 @@ long doFrequencyMap(
       if (!computeTunesFromTracking(firstTune, firstAmplitude,
 				    beamline->matrix, beamline, run,
                                     startingCoord, x, y, turns,
-                                    0, endingCoord, NULL, NULL) ||
+                                    0, endingCoord, NULL, NULL, 1) ||
 	  firstTune[0]>0.5 || firstTune[0]<0 || firstTune[1]>0.5 || firstTune[1]<0) 
         continue;
       if (!SDDS_SetRowValues(&SDDS_fmap, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ip,
@@ -158,7 +162,7 @@ long doFrequencyMap(
 	if (!computeTunesFromTracking(secondTune, secondAmplitude,
 				      beamline->matrix, beamline, run,
 				      startingCoord, 0.0, 0.0, turns,
-				      0, endingCoord, NULL, NULL) || 
+				      0, endingCoord, NULL, NULL, 1) || 
 	    secondTune[0]>0.5 || secondTune[0]<0 || secondTune[1]>0.5 || secondTune[1]<0) 
 	  continue;
 	if (!SDDS_SetRowValues(&SDDS_fmap, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ip,
