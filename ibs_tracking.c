@@ -26,11 +26,11 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
 {
   double gamma, emitx, emity, sigmaDelta, sigmaz;
   double xGrowthRate, yGrowthRate, zGrowthRate;
-  double sigmax, sigmay, sigmat, emitl, dT;
+  double sigmax, sigmay, sigmat, emitl, dT, randomNumber;
   RADIATION_INTEGRALS radIntegrals;
   ONE_PLANE_PARAMETERS longitBeamParam, xBeamParam, yBeamParam;
-  double vz;
-  double RNSigma[3];
+  double vz, beta0, beta1, p;
+  double RNSigma[3], RNSigmaCheck[3]={0,0,0};
   long ipart, icoord, ihcoord;
   
   if (!(IBS->s))
@@ -40,18 +40,19 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
     if (!(fpdeb=fopen("ibs.sdds", "w")))
       bomb("can't open ibs.sdds", NULL);
     fprintf(fpdeb, "SDDS1\n&column name=Pass type=long &end\n");
-    fprintf(fpdeb, "&column name=xRate type=double &end\n");
-    fprintf(fpdeb, "&column name=yRate type=double &end\n");
-    fprintf(fpdeb, "&column name=zRate type=double &end\n");
-    fprintf(fpdeb, "&column name=xRN type=double &end\n");
-    fprintf(fpdeb, "&column name=yRN type=double &end\n");
-    fprintf(fpdeb, "&column name=zRN type=double &end\n");
-    fprintf(fpdeb, "&column name=emitx type=double &end\n");
-    fprintf(fpdeb, "&column name=emity type=double &end\n");
-    fprintf(fpdeb, "&column name=emitz type=double &end\n");
-    fprintf(fpdeb, "&column name=sigmaz type=double &end\n");
-    fprintf(fpdeb, "&column name=sigmaDelta type=double &end\n");
-    fprintf(fpdeb, "&column name=charge type=double &end\n");
+    fprintf(fpdeb, "&column name=xRate type=float &end\n");
+    fprintf(fpdeb, "&column name=zRate type=float &end\n");
+    fprintf(fpdeb, "&column name=xRateEmit type=float &end\n");
+    fprintf(fpdeb, "&column name=zRateEmit type=float &end\n");
+    fprintf(fpdeb, "&column name=xRN type=float &end\n");
+    fprintf(fpdeb, "&column name=xRNCheck type=float &end\n");
+    fprintf(fpdeb, "&column name=zRN type=float &end\n");
+    fprintf(fpdeb, "&column name=zRNCheck type=float &end\n");
+    fprintf(fpdeb, "&column name=emitx type=float &end\n");
+    fprintf(fpdeb, "&column name=emitz type=float &end\n");
+    fprintf(fpdeb, "&column name=sigmaz type=float &end\n");
+    fprintf(fpdeb, "&column name=sigmaDelta type=float &end\n");
+    fprintf(fpdeb, "&column name=charge type=float &end\n");
     fprintf(fpdeb, "&data mode=ascii no_row_counts=1 &end\n");
     fflush(fpdeb);
   }
@@ -94,11 +95,28 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
     if (IBS->do_z && zGrowthRate>0)
       RNSigma[2] = sqrt((sqr(1+dT*zGrowthRate)-1))*sigmaDelta;
     for (icoord=1, ihcoord=0; icoord<6; icoord+=2, ihcoord++) {
-      if (RNSigma[ihcoord])
-	for (ipart=0; ipart<np; ipart++) {
-	  coord[ipart][icoord] 
-	    += gauss_rn_lim(0.0, RNSigma[ihcoord], 2.0, random_2);
+      if (RNSigma[ihcoord]) {
+	RNSigmaCheck[ihcoord] = 0;
+	if (icoord!=5) {
+	  for (ipart=0; ipart<np; ipart++) {
+	    randomNumber = gauss_rn_lim(0.0, RNSigma[ihcoord], 3.0, random_2);
+	    coord[ipart][icoord] += randomNumber;
+	    RNSigmaCheck[ihcoord] += sqr(randomNumber);
+	  }
+	} else {
+	  for (ipart=0; ipart<np; ipart++) {
+	    randomNumber = gauss_rn_lim(0.0, RNSigma[ihcoord], 3.0, random_2);
+	    p = Po*(1+coord[ipart][5]);
+	    beta0 = p/sqrt(p*p+1);
+	    coord[ipart][icoord] += randomNumber;
+	    p = Po*(1+coord[ipart][5]);
+	    beta1 = p/sqrt(p*p+1);
+	    coord[ipart][4] *= beta1/beta0;
+	    RNSigmaCheck[ihcoord] += sqr(randomNumber);
+	  }
 	}
+	RNSigmaCheck[ihcoord] = sqrt(RNSigmaCheck[ihcoord]/np);
+      }
     }
   } else {
     /* inflate each emittance by the prescribed factor */
@@ -107,14 +125,16 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
     inflateEmittance(coord, Po, 4, np, (1+dT*zGrowthRate));
   }
 #if DEBUG
-    fprintf(fpdeb, "%ld %le %le %le %le %le %le %le %le %le %le %le %le\n",
-	    pass++, xGrowthRate, yGrowthRate, zGrowthRate, 
-	    RNSigma[0], RNSigma[1], RNSigma[2],
-	    emitx, emity, sigmaz*sigmaDelta, sigmaz, sigmaDelta,
-	    charge?
-	    fabs(charge->macroParticleCharge*np):
-	    fabs(IBS->charge));
-    fflush(fpdeb);
+  fprintf(fpdeb, "%ld %le %le %le %le %le %le %le %le %le %le %le %le %le\n",
+	  pass++, 
+	  xGrowthRate, zGrowthRate, 
+	  xGrowthRate*emitx, zGrowthRate*emitl*vz,
+	  RNSigma[0], RNSigmaCheck[0], RNSigma[2], RNSigmaCheck[2],
+	  emitx, emitl*vz, sigmaz, sigmaDelta,
+	  charge?
+	  fabs(charge->macroParticleCharge*np):
+	  fabs(IBS->charge));
+  fflush(fpdeb);
 #endif
 }
 
