@@ -206,6 +206,7 @@ main(int argc, char **argv)
                            quad_ap, sext_ap, p_cent*1e3); 
         break;
       case SDDS_OUTPUT:
+        set_max_name_length(12);
         beamline = get_beamline(input, NULL, p_cent/(1e6*me_mev));
         if (magnets)
             output_magnets(magnets, beamline->name, beamline);
