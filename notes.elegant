@@ -1,0 +1,4 @@
+Added ability to compute and output the fixed-path-length response
+matrix.  Also added the ability to use this matrix, or the ordinary
+one, for orbit correction.  These changes affect the horizontal
+plane only.
