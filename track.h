@@ -1473,6 +1473,11 @@ typedef struct {
     double lBx, lBy;         /* local field, in Tesla */
     double gBx, gBy, gBz;    /* global field, in Tesla */
     long order;
+    /* for internal use only */
+    long WiInitialized;
+    void *Wi;              /* pointer to inverse of survey rotation matrix */
+                           /* use a void here because we can't load the matrix.h */
+                           /* file due to conflicts between two matrix libraries */
     } STRAY;
 
 /* names and storage structure for canonically-integrated bending magnet physical parameters */
@@ -2138,7 +2143,8 @@ extern VMATRIX *compute_matrix(ELEMENT_LIST *elem, RUN *run, VMATRIX *Mspace);
 extern void set_up_watch_point(WATCH *watch, RUN *run);
 extern VMATRIX *magnification_matrix(MAGNIFY *magnif);
 extern void reset_special_elements(LINE_LIST *beamline, long includeRF);
-extern VMATRIX *stray_field_matrix(double length, double *lB, double *gB, double theta, long order, double p_central);
+extern VMATRIX *stray_field_matrix(double length, double *lB, double *gB, double theta, long order, double p_central, 
+                                   void *Wi);
 extern VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, double phase, double *P_central, long order, long end1Focus, long end2Focus, char *bodyFocusModel);
 
 /* prototypes for concat_beamline2.c: */
