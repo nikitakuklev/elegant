@@ -395,7 +395,10 @@ void gaussian_distribution(
       do {
         for (dim=0; dim<2; dim++) {
           buffer[dim] = nextHaltonSequencePoint(haltonID[offset+dim]);
-          convertSequenceToGaussianDistribution(&buffer[dim], 1, 0);
+          if (!convertSequenceToGaussianDistribution(&buffer[dim], 1, 0)) {
+            dim--;
+            continue;
+          }
           buffer[dim] *= s12[dim];
         }
         if (limit_invar)
@@ -407,8 +410,6 @@ void gaussian_distribution(
       } while (1);
       for (dim=0; dim<2; dim++)
         particle[i_particle][offset+dim] = buffer[dim];
-      if ((!halo && flag) || (halo && !flag))
-        break;
     }
   }
   else {
