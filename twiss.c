@@ -2315,10 +2315,6 @@ void processTwissAnalysisRequests(ELEMENT_LIST *elem)
         twissData[TWISS_ANALYSIS_AVE][iq] = 0;
       for (is=0; is<TWISS_ANALYSIS_STATS; is++) {
         rpn_store(twissData[is][iq], twissAnalysisRequest[i].twissMem[is][iq]);
-        fprintf(stdout, "computed twiss analysis of %ld values %s.%s.%s = %le\n",
-                count, twissAnalysisRequest[i].tag,
-                twissAnalysisStatName[is], twissAnalysisQuantityName[iq],
-                twissData[is][iq]);
       }
     }
     elem = elemOrig;
