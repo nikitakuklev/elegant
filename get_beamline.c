@@ -483,7 +483,7 @@ void do_save_lattice(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     long lvalue;
     char *ptr;
     PARAMETER *parameter;
-    char s[1024], t[100], name[100];
+    char s[16384], t[1024], name[1024];
 
     log_entry("do_save_lattice");
 
@@ -565,26 +565,31 @@ void print_with_continuation(FILE *fp, char *s, long endcol)
     char c, *ptr;
     long l;
 
-    log_entry("print_with_continuation");
-
     while ((l=strlen(s))) {
         if (l>endcol) {
+          ptr = s+endcol-2;
+          while (ptr!=s && *ptr!=',')
+            ptr--;
+          if (ptr==s)
             c = *(ptr = s + endcol - 1);
-            *ptr = 0;
-            fputs(s, fp);
-            fputs("&\n", fp);
-            s = ptr;
-            *ptr = c;
-            }
-        else {
-            fputs(s, fp);
-            fputc('\n', fp);
-            log_exit("print_with_continuation");
-            return;
-            }
+          else {
+            ptr++;
+            c = *ptr;
+          }
+          *ptr = 0;
+          fputs(s, fp);
+          fputs("&\n", fp);
+          s = ptr;
+          *ptr = c;
         }
-    log_exit("print_with_continuation");
-    }
+        else {
+          fputs(s, fp);
+          fputc('\n', fp);
+          log_exit("print_with_continuation");
+          return;
+        }
+      }
+  }
 
 void change_defined_parameter_values(char **elem_name, long *param_number, long *type, double *value, long n_elems)
 {
