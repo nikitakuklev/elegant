@@ -103,6 +103,7 @@ void setupDivideElements(NAMELIST_TEXT *nltext, RUN *run,
     bomb("maximum_length<0 doesn't make sense", NULL);
   if (!name || !strlen(name))
     bomb("no name given", NULL);
+  str_toupper(name);
   if (has_wildcards(name) && strchr(name, '-'))
     name = expand_ranges(name);
   if (type) {
@@ -115,9 +116,11 @@ void setupDivideElements(NAMELIST_TEXT *nltext, RUN *run,
     if (i==N_TYPES)
       bomb("type pattern does not match any known type", NULL);
   }
-  if (exclude && has_wildcards(exclude) && strchr(exclude, '-'))
-    exclude = expand_ranges(exclude);
-
+  if (exclude) {
+    str_toupper(exclude);
+    if (has_wildcards(exclude) && strchr(exclude, '-'))
+      exclude = expand_ranges(exclude);
+  }
   addDivisionSpec(name, type, exclude, divisions, maximum_length);
 }
 

@@ -41,7 +41,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
   static LINE_LIST *lptr;
   static long n_elems, n_lines;
   FILE *fp_mad[MAX_FILE_NESTING];
-  char *s, *t=NULL, *cfgets(), *ptr;
+  char *s, *t=NULL, *ptr;
 
   log_entry("get_beamline");
 
@@ -148,11 +148,35 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
             copy_named_element(eptr, s, elem);
           }
           else {
+            long newType;
+            double length;
 #ifdef DEBUG
             fprintf(stdout, "creating new element\n");
             fflush(stdout);
 #endif
             fill_elem(eptr, s, type, fp_mad[iMad]);
+            length = 0;
+            if ((newType=elementTransmutation(eptr->name, eptr->type))!=eptr->type &&
+                newType>=0) {
+              if (entity_description[eptr->type].flags&HAS_LENGTH) {
+                if (!(entity_description[newType].flags&HAS_LENGTH)) {
+                  fprintf(stderr, "error: can't transmute %s %s into %s---would change length of beamline\n",
+                          entity_name[eptr->type], eptr->name, 
+                          entity_name[newType]);
+                  exit(1);
+                }
+                length = ((DRIFT*)eptr->p_elem)->length;
+              }
+              fprintf(stderr, "Transmuting %s %s into %s\n",
+                          entity_name[eptr->type], eptr->name, 
+                          entity_name[newType]);
+              free(eptr->p_elem);
+              eptr->p_elem = tmalloc(entity_description[type].structure_size);
+              zero_memory(eptr->p_elem, entity_description[type].structure_size);
+              eptr->type = newType;
+              if (entity_description[newType].flags&HAS_LENGTH)
+                ((DRIFT*)eptr->p_elem)->length = length;
+            }
             check_duplic_elem(&elem, &eptr, n_elems);
           }
 #ifdef DEBUG

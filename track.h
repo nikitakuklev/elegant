@@ -2432,3 +2432,14 @@ void addDivisionSpec(char *name, char *type, char *exclude,
 		     long divisions,
 		     double maximum_length);
 long elementDivisions(char *name, char *type, double length);
+
+void addTransmutationSpec(char *name, char *type, char *exclude,
+                          long newType);
+void clearTransmutationSpecs() ;
+long elementTransmutation(char *name, long type) ;
+void setupTransmuteElements(NAMELIST_TEXT *nltext, RUN *run, 
+                            LINE_LIST *beamline);
+
+
+
+

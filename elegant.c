@@ -77,7 +77,8 @@ char *GREETING="This is elegant, by Michael Borland. (This is version 14.6Beta4,
 #define SLICE_ANALYSIS  39
 #define DIVIDE_ELEMENTS 40
 #define TUNE_SHIFT_WITH_AMPLITUDE 41
-#define N_COMMANDS      42
+#define TRANSMUTE_ELEMENTS 42
+#define N_COMMANDS      43
 
 char *command[N_COMMANDS] = {
     "run_setup", "run_control", "vary_element", "error_control", "error_element", "awe_beam", "bunched_beam",
@@ -88,6 +89,7 @@ char *command[N_COMMANDS] = {
     "steering_element", "amplification_factors", "print_dictionary", "floor_coordinates", "correction_matrix_output",
     "load_parameters", "sdds_beam", "subprocess", "fit_traces", "sasefel", "alter_elements",
     "optimization_term", "slice_analysis", "divide_elements", "tune_shift_with_amplitude",
+    "transmute_elements",
         } ;
 
 char *description[N_COMMANDS] = {
@@ -133,6 +135,7 @@ char *description[N_COMMANDS] = {
     "slice_analysis              computes and outputs slice analysis of the beam",
     "divide_elements             sets up parser to automatically divide specified elements into parts",
     "tune_shift_with_amplitude   sets up twiss module for computation of tune shift with amplitude",
+    "transmute_elements          defines transmutation of one element type into another",
         } ;
 
 void initialize_structures(RUN *run_conditions, VARY *run_control, ERRORVAL *error_control, CORRECTION *correct, 
@@ -1060,6 +1063,11 @@ char **argv;
             if (run_setuped)
               bomb("divide_elements must precede run_setup", NULL);
 	    setupDivideElements(&namelist_text, &run_conditions, beamline);
+            break;
+          case TRANSMUTE_ELEMENTS:
+            if (run_setuped)
+              bomb("transmute_elements must precede run_setup", NULL);
+	    setupTransmuteElements(&namelist_text, &run_conditions, beamline);
             break;
           default:
             fprintf(stdout, "unknown namelist %s given.  Known namelists are:\n", namelist_text.group_name);
