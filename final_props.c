@@ -23,7 +23,7 @@
 static double tmp_safe_sqrt;
 #define SAFE_SQRT(x) ((tmp_safe_sqrt=(x))<0?0.0:sqrt(tmp_safe_sqrt))
 
-#define FINAL_PROPERTY_PARAMETERS (96+9)
+#define FINAL_PROPERTY_PARAMETERS (96+9+4)
 #define FINAL_PROPERTY_LONG_PARAMETERS 5
 #define F_SIGMA_OFFSET 0
 #define F_SIGMA_QUANS 7
@@ -37,7 +37,9 @@ static double tmp_safe_sqrt;
 #define F_EMIT_QUANS 5
 #define F_NEMIT_OFFSET F_EMIT_OFFSET+F_EMIT_QUANS
 #define F_NEMIT_QUANS 4
-#define F_WIDTH_OFFSET F_NEMIT_OFFSET+F_NEMIT_QUANS
+#define F_MAXAMP_OFFSET F_NEMIT_OFFSET+F_NEMIT_QUANS
+#define F_MAXAMP_QUANS 4
+#define F_WIDTH_OFFSET F_MAXAMP_OFFSET+F_NEMIT_QUANS
 #define F_WIDTH_QUANS 16
 #define F_PERC_OFFSET F_WIDTH_OFFSET+F_WIDTH_QUANS
 #define F_PERC_QUANS 9
@@ -96,6 +98,10 @@ static SDDS_DEFINITION final_property_parameter[FINAL_PROPERTY_PARAMETERS] = {
     {"eny", "&parameter name=eny, symbol=\"$ge$r$by,n$n\", type=double, units=m &end"},
     {"ecnx", "&parameter name=ecnx, symbol=\"$ge$r$bx,cn$n\", type=double, units=m &end"},
     {"ecny", "&parameter name=ecny, symbol=\"$ge$r$by,cn$n\", type=double, units=m &end"},
+    {"ma1", "&parameter name=ma1, type=double, units=m &end"},
+    {"ma2", "&parameter name=ma2, type=double, &end"},
+    {"ma3", "&parameter name=ma3, type=double, units=m &end"},
+    {"ma4", "&parameter name=ma4, type=double, &end"},
     {"Wx", "&parameter name=Wx, type=double, units=m, symbol=\"W$bx$n\" &end"},
     {"Wy", "&parameter name=Wy, type=double, units=m, symbol=\"W$by$n\" &end"},
     {"Dt", "&parameter name=Dt, type=double, units=s, symbol=\"$gD$rt\" &end"},
@@ -391,6 +397,8 @@ long compute_final_properties
       centroid[i] = data[i+F_CENTROID_OFFSET] = sums->centroid[i];
     for (i=0; i<6; i++)
       data[i+F_SIGMA_OFFSET   ] = sqrt(sums->sigma[i][i]);
+    for (i=0; i<4; i++)
+      data[i+F_MAXAMP_OFFSET] = sums->maxabs[i];
     offset = F_SIGMAT_OFFSET;
     index = 0;
     /* sigma matrix elements sij */
