@@ -31,6 +31,12 @@ void track_through_rfmode(
     
     log_entry("track_through_rfmode");
 
+    if (pass==0) {
+      rfmode->mp_charge = 0;
+      if (np)
+        rfmode->mp_charge = rfmode->charge/np;
+    }
+
     if (pass%rfmode->pass_interval)
       return;
       
@@ -188,11 +194,15 @@ void track_through_rfmode(
 
 #include "complex.h"
 
-void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_passes, RUN *run, long n_particles,
+void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_passes, 
+                   RUN *run, long n_particles,
                    double Po, double total_length)
 {
     long n;
     double T;
+
+    if (rfmode->initialized)
+      return;
     
     rfmode->initialized = 1;
     if (rfmode->pass_interval<=0)
@@ -234,7 +244,6 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
         n = n_passes/rfmode->sample_interval;
         fwrite(&n, sizeof(n), 1, rfmode->fprec);
         }
-    rfmode->mp_charge = rfmode->charge/n_particles;
     if (rfmode->preload && rfmode->charge) {
         double Vb, omega, To, tau;
         COMPLEX Vc;

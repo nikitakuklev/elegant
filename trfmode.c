@@ -38,6 +38,12 @@ void track_through_trfmode(
 
   log_entry("track_through_trfmode");
 
+  if (pass==0) {
+    trfmode->mp_charge = 0;
+    if (np)
+      trfmode->mp_charge = trfmode->charge/np;
+  }
+
 #if DEBUG
   if (!fpdeb) {
     fpdeb = fopen("trfmode.debug", "w");
@@ -223,9 +229,14 @@ void track_through_trfmode(
 
 #include "complex.h"
 
-void set_up_trfmode(TRFMODE *trfmode, char *element_name, double element_z, long n_passes, RUN *run, long n_particles)
+void set_up_trfmode(TRFMODE *trfmode, char *element_name, double element_z, 
+                    long n_passes, RUN *run, long n_particles)
 {
   double T;
+
+  if (trfmode->initialized)
+    return;
+  
   trfmode->initialized = 1;
   
   if (n_particles<1)
@@ -245,7 +256,6 @@ void set_up_trfmode(TRFMODE *trfmode, char *element_name, double element_z, long
     fprintf(stderr, "The TRFMODE %s bin size is too large--setting to %e and increasing to %ld bins\n",
             element_name, trfmode->bin_size, trfmode->n_bins);
   }
-  trfmode->mp_charge = trfmode->charge/n_particles;
   trfmode->last_t = element_z/c_mks;
   trfmode->Vxr = trfmode->Vxi = trfmode->Vx = 0;
   trfmode->Vyr = trfmode->Vyi = trfmode->Vy = 0;
