@@ -21,6 +21,8 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
 void LoadStartingTwissFromFile(double *betax, double *betay, double *alphax, double *alphay,
                                double *etax, double *etay, double *etaxp, double *etayp,
                                char *filename, char *elementName, long elementOccurrence);
+void computeTuneShiftWithAmplitude(double *dnu_dAx, double *dnu_dAy,
+                                   TWISS *twiss, double *tune, VMATRIX *M);
 
 static long twissConcatOrder = 3;
 
@@ -481,8 +483,12 @@ static SDDS_DEFINITION column_definition[N_COLUMNS_WRI] = {
 #define IP_ETAYMAX 18
 #define IP_WAISTSX 19
 #define IP_WAISTSY 20
-#define IP_ALPHAC2 21
-#define IP_ALPHAC 22
+#define IP_DNUXDAX 21
+#define IP_DNUXDAY 22
+#define IP_DNUYDAX 23
+#define IP_DNUYDAY 24
+#define IP_ALPHAC2 25
+#define IP_ALPHAC  26
 /* IP_ALPHAC must be the last item before the radiation-integral-related
  * items!
  */
@@ -524,6 +530,10 @@ static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
 {"etayMax", "&parameter name=etayMax, type=double, units=m, description=\"Maximum absolute value of etay\" &end"},
 {"waistsx", "&parameter name=waistsx, type=long, description=\"Number of changes in the sign of alphax\" &end"},
 {"waistsy", "&parameter name=waistsy, type=long, description=\"Number of changes in the sign of alphay\" &end"},
+{"dnux/dAx", "&parameter name=dnux/dAx, type=double, description=\"Horizontal tune shift with horizontal amplitude\", units=1/m &end"},
+{"dnux/dAy", "&parameter name=dnux/dAy, type=double, description=\"Horizontal tune shift with vertical amplitude\", units=1/m &end"},
+{"dnuy/dAx", "&parameter name=dnuy/dAx, type=double, description=\"Vertical tune shift with horizontal amplitude\", units=1/m &end"},
+{"dnuy/dAy", "&parameter name=dnuy/dAy, type=double, description=\"Vertical tune shift with vertical amplitude\", units=1/m &end"},
 {"alphac2", "&parameter name=alphac2, symbol=\"$ga$r$bc2$n\", type=double, description=\"2nd-order momentum compaction factor\" &end"},
 {"alphac", "&parameter name=alphac, symbol=\"$ga$r$bc$n\", type=double, description=\"Momentum compaction factor\" &end"},
 {"I1", "&parameter name=I1, type=double, description=\"Radiation integral 1\", units=m &end"} ,
@@ -598,6 +608,10 @@ void dump_twiss_parameters(
                           IP_ETAYMAX, MAX(fabs(twiss_min.etay), fabs(twiss_max.etay)),
                           IP_WAISTSX, beamline->waists[0],
                           IP_WAISTSY, beamline->waists[1],
+                          IP_DNUXDAX, beamline->dnux_dA[0],
+                          IP_DNUXDAY, beamline->dnux_dA[1],
+                          IP_DNUYDAX, beamline->dnuy_dA[0],
+                          IP_DNUYDAY, beamline->dnuy_dA[1],
                           IP_PCENTRAL, run->p_central, -1)) {
     SDDS_SetError("Problem setting SDDS parameters (dump_twiss_parameters 1)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -1106,6 +1120,9 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
 
   chromx = chromy = 0;
   dbetax = dbetay = 0;
+  for (i=0; i<2; i++)
+    beamline->dnux_dA[i] = beamline->dnuy_dA[i] = 0;
+
   if (periodic) {
     if (!(M = beamline->matrix))
       bomb("logic error: revolution matrix is NULL in compute_twiss_parameters", NULL);
@@ -1118,6 +1135,8 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
       if (!(M->T))
         bomb("logic error: T matrix is NULL in compute_twiss_parameters", NULL);
       computeChromaticities(&chromx, &chromy, &dbetax, &dbetay, &dalphax, &dalphay, beamline->twiss0, M);
+      computeTuneShiftWithAmplitude(beamline->dnux_dA, beamline->dnuy_dA,
+                                    beamline->twiss0, beamline->tune, M);
     }
   }
   else {
@@ -1142,6 +1161,8 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
       if (!(M->T))
         bomb("logic error: T matrix is NULL in compute_twiss_parameters", NULL);
       computeChromaticities(&chromx, &chromy, &dbetax, &dbetay, &dalphax, &dalphay, beamline->twiss0, M);
+      computeTuneShiftWithAmplitude(beamline->dnux_dA, beamline->dnuy_dA,
+                                    beamline->twiss0, beamline->tune, M);
 #ifdef DEBUG
       fprintf(stdout, "chomaticities: %e, %e\n", chromx, chromy);
       fflush(stdout);
@@ -1725,3 +1746,68 @@ void LoadStartingTwissFromFile(double *betax, double *betay, double *alphax, dou
   free(etaxpData);
   free(etaypData);
 }
+
+double QElement(double ****Q, long i1, long i2, long i3, long i4)
+{
+  if (i3<i4)
+    SWAP_LONG(i3, i4);
+  if (i2<i3)
+    SWAP_LONG(i2, i3);
+  if (i3<i4)
+    SWAP_LONG(i3, i4);
+  if (i2<i3 || i3<i4)
+    bomb("it didn't work",NULL);
+  return Q[i1][i2][i3][i4];
+}
+
+
+void computeTuneShiftWithAmplitude(double *dnux_dA, double *dnuy_dA,
+                                   TWISS *twiss, double *tune, VMATRIX *M)
+{
+  double dR11, dR22, dR12;
+  double theta, C, S;
+  long plane, other, i, j, io, jo;
+  double beta[2], alpha[2], shift[2];
+  double coef11, coef12, coef22, trial;
+  
+  if (!(M->Q)) {
+    dnux_dA[0] = dnux_dA[1] = -1;
+    dnuy_dA[0] = dnuy_dA[1] = -1;
+    return;
+  }
+
+  beta[0] = twiss->betax;
+  beta[1] = twiss->betay;
+  alpha[0] = twiss->alphax;
+  alpha[1] = twiss->alphay;
+
+  for (plane=0; plane<2; plane++) {
+    for (other=0; other<2; other++) {
+      shift[other] = 0;
+      i = (j = 2*plane)+1;
+      io = (jo = 2*other)+1;
+      coef11 = QElement(M->Q, i, i, io, io) + QElement(M->Q, j, j, io, io);
+      coef12 = QElement(M->Q, i, i, io, jo) + QElement(M->Q, j, j, io, jo);
+      coef22 = QElement(M->Q, i, i, jo, jo) + QElement(M->Q, j, j, jo, jo);
+      for (i=theta=0; i<72; i++, theta+=PIx2/72) {
+        C = cos(theta);
+        S = sin(theta) + alpha[other]*C;
+        trial = 
+          coef11*beta[other]*sqr(C) - coef12*C*S + coef22*sqr(S)/beta[other];
+        if (fabs(trial) > fabs(shift[other]))
+          shift[other] = trial;
+      }
+    }
+    if (plane==0) {
+      dnux_dA[0] = shift[0]/(-PIx2*sin(PI*tune[0]));
+      dnux_dA[0] = shift[1]/(-PIx2*sin(PI*tune[0]));
+    }
+    else {
+      dnuy_dA[0] = shift[0]/(-PIx2*sin(PI*tune[1]));
+      dnuy_dA[0] = shift[1]/(-PIx2*sin(PI*tune[1]));
+    }
+  }
+}
+
+
+  

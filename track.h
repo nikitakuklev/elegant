@@ -97,6 +97,7 @@ typedef struct element_list {
     VMATRIX *accumMatrix; /* accumulated matrix to the end of this element */
     char *part_of;     /* name of lowest-level line that this element is part of */
     struct element_list *pred, *succ;
+    long divisions;    /* if element was subdivided, how many times */
     } ELEMENT_LIST;
 
 typedef struct {
@@ -159,6 +160,8 @@ typedef struct line_list {
     double dbeta_dPoP[2];    /* d/d(p/p0) of betax and betay */
     double dalpha_dPoP[2];   /* d/d(p/p0) of alphax and alphay */
     double alpha[2];         /* first and second order momentum compaction */
+    double dnux_dA[2];       /* dNUx/d(Ax) and dNUx/d(Ay) (tune shift with amplitude) */
+    double dnuy_dA[2];       /* dNUy/d(Ax) and dNUy/d(Ay) (tune shift with amplitude) */
     double acceptance[4];    /* in pi-meter-radians for x and y, plus z locations of limits (4 doubles in all) */
     RADIATION_INTEGRALS radIntegrals;
     char *acc_limit_name[2];  /* names of elements at which acceptance is limited, in x and y */

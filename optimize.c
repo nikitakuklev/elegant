@@ -760,7 +760,8 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 #define SET_BUNCHED_BEAM 6
 #define SET_SDDS_BEAM   33
 
-static char *twiss_name[32] = {
+#define N_TWISS_QUANS 36
+static char *twiss_name[N_TWISS_QUANS] = {
     "betax", "alphax", "nux", "etax", "etapx", 
     "betay", "alphay", "nuy", "etay", "etapy", 
     "max.betax", "max.etax", "max.etapx", 
@@ -771,8 +772,9 @@ static char *twiss_name[32] = {
     "ave.betax", "ave.betay",
     "etaxp", "etayp",
     "waistsx", "waistsy",
+    "dnux/dAx", "dnux/dAy", "dnuy/dAx", "dnuy/dAy",
     };
-static long twiss_mem[32] = {
+static long twiss_mem[N_TWISS_QUANS] = {
     -1, -1, -1, -1, -1, 
     -1, -1, -1, -1, -1, 
     -1, -1, -1,
@@ -781,7 +783,8 @@ static long twiss_mem[32] = {
     -1, -1, -1, 
     -1, -1,
     -1, -1, -1, -1,
-    -1, -1, -1, -1
+    -1, -1, -1, -1,
+    -1, -1, -1, -1,
     };
 static char *radint_name[8] = {
     "ex0", "Sdelta0",
@@ -949,7 +952,7 @@ double optimization_function(double *value, long *invalid)
       fflush(stdout);
 #endif
         if (twiss_mem[0]==-1) {
-            for (i=0; i<32; i++)
+            for (i=0; i<N_TWISS_QUANS; i++)
                 twiss_mem[i] = rpn_create_mem(twiss_name[i]);
         }
         /* get twiss mode and (beta, alpha, eta, etap) for both planes */
@@ -991,6 +994,11 @@ double optimization_function(double *value, long *invalid)
         /* number of waists per plane */
         rpn_store((double)beamline->waists[0], twiss_mem[30]);
         rpn_store((double)beamline->waists[1], twiss_mem[31]);
+        /* amplitude-dependent tune shifts */
+        rpn_store(beamline->dnux_dA[0], twiss_mem[32]);
+        rpn_store(beamline->dnux_dA[1], twiss_mem[33]);
+        rpn_store(beamline->dnuy_dA[0], twiss_mem[34]);
+        rpn_store(beamline->dnuy_dA[1], twiss_mem[35]);
     }
     if (beamline->flags&BEAMLINE_RADINT_WANTED) {
 #if DEBUG
