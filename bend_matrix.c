@@ -233,6 +233,7 @@ VMATRIX *hvcorrector_matrix(
         M->C[0] = M->C[2] = M->C[3] = M->C[4] = M->C[5] = 0;
         M->C[1] = kick;
         M->R[0][0] = M->R[1][1] = M->R[2][2] = M->R[3][3] = M->R[4][4] = M->R[5][5] = 1;
+        M->R[1][5] = -sin(kick);
         }
     else {
         /* convert length to arc length */
@@ -302,6 +303,7 @@ VMATRIX *corrector_matrix(
         M->C[0] = M->C[2] = M->C[3] = M->C[4] = M->C[5] = 0;
         M->C[1] = kick;
         M->R[0][0] = M->R[1][1] = M->R[2][2] = M->R[3][3] = M->R[4][4] = M->R[5][5] = 1;
+        M->R[1][5] = -sin(kick);
         }
     else {
         /* convert length to arc length */
