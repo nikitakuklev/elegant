@@ -261,8 +261,6 @@ void do_response_output(RESPONSE_OUTPUT *respOutput, CORMON_DATA *CM, STEERING_L
     ELEMENT_LIST *eptr;
     double value;
 
-    fprintf(stderr, "unitCode = %ld\n", unitsCode);
-    
     log_entry("do_response_output");
     if (!SDDS_StartTable(&respOutput->SDDSout, CM->nmon) ||
         !SDDS_SetParameters(&respOutput->SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
@@ -281,7 +279,6 @@ void do_response_output(RESPONSE_OUTPUT *respOutput, CORMON_DATA *CM, STEERING_L
                 value = (inverse?CM->T->a[j][i]:CM->C->a[i][j]);
                 if (eptr->type==T_HCOR || eptr->type==T_HVCOR || eptr->type==T_VCOR) {
                     value *= (inverse?eptr->Pref_output/586.679:586.679/(eptr->Pref_output+1e-10));
-                    fprintf(stderr, "At %s, Pref = %e\n", eptr->name, eptr->Pref_output);
                   }
                 if (!SDDS_SetRowValues(&respOutput->SDDSout, SDDS_PASS_BY_VALUE|SDDS_SET_BY_INDEX, i,
                                        respOutput->correctorIndex[j], value, -1))
