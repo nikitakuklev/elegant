@@ -1441,7 +1441,6 @@ long binParticleCoordinate(double **hist, long *maxBins,
   return nBinned;
 }
 
-
 long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift, 
                             double Po, double **accepted, double zStart)
 {
@@ -1467,10 +1466,8 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
   dzFirst = zStart - csrWake.zLast;
 #ifdef DEBUG
   fprintf(stdout, "CSR in drift:\n");
-  fprintf(stdout, "zStart = %21.15le, zLast = %21.15le, Po = %21.15le\n", zStart, csrWake.zLast, Po);
-  fprintf(stdout, "dz = %21.15le, nKicks = %ld\n", dz, nKicks);
-  fprintf(stdout, "dzFirst = %21.15e\n", dzFirst);
-  fprintf(stdout, "s0 = %21.15e\n", csrWake.s0);
+  fprintf(stdout, "zStart = %21.15le, zLast = %21.15le, ", zStart, csrWake.zLast);
+  fprintf(stdout, "dzFirst = %21.15e, s0 = %21.15e", dzFirst, csrWake.s0);
 #endif
 
   zTravel = zStart-csrWake.z0;  /* total distance traveled by radiation to reach this point */
@@ -1498,11 +1495,6 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
         ctmin = coord[4];
 #endif
     }
-#ifdef DEBUG
-    fprintf(stdout, "beam ct min, max = %21.15e, %21.15e\n",
-              ctmin, ctmax);
-    fflush(stdout);
-#endif
 
     factor = 1;
     if (csrWake.dGamma) {
@@ -1542,11 +1534,6 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
     
     dzFirst = 0;
 
-#ifdef DEBUG
-    fprintf(stdout, "wake ct0 = %21.15e, ct1 = %21.15e\n",
-            ct0, ct0+csrWake.dctBin*csrWake.bins);
-    fflush(stdout);
-#endif
 
     /* apply kick to each particle and convert back to normal coordinates */
     for (iPart=binned=0; iPart<np; iPart++) {
@@ -1565,6 +1552,13 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
     if (csrWake.dGamma && np!=binned) {
       fprintf(stdout, "only %ld of %ld particles binned for CSR drift\n",
               binned, np);
+#ifdef DEBUG
+      fprintf(stdout, "beam ct min, max = %21.15e, %21.15e\n",
+              ctmin, ctmax);
+      fprintf(stdout, "wake ct0 = %21.15e, ct1 = %21.15e\n",
+              ct0, ct0+csrWake.dctBin*csrWake.bins);
+      fflush(stdout);
+#endif
       fflush(stdout);
     }
   }
@@ -1596,6 +1590,12 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
   return np;
 }
 
+/* this should be called before starting to track a beamline to make sure that
+ * CSR drift elements upstream of all CSRBEND elements get treated like ordinary
+ * drift spaces. */
 
-
+long reset_driftCSR()
+{
+  csrWake.valid = 0;
+}
 

@@ -3,6 +3,9 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.11  2000/05/13 04:06:04  borland
+ * Fixed bugs in evaluation for whole beam.
+ *
  * Revision 1.10  2000/05/13 03:09:22  borland
  * Fixed error in computing beam betax and betay.
  *
@@ -418,8 +421,8 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
   sasefelOutput->rmsBunchLength[0] = tRMS 
     = (xLimit[1] - xLimit[0])/(0.8*sqrt(2*PI));
   
-  emitx = rms_emittance(particle, 0, 1, particles, &S11, NULL, NULL);
-  emity = rms_emittance(particle, 2, 3, particles, &S33, NULL, NULL);
+  emitx = rms_emittance(particle, 0, 1, particles, &S11, &S12, NULL);
+  emity = rms_emittance(particle, 2, 3, particles, &S33, &S34, NULL);
   sasefelOutput->emit[0] = sqrt(emitx*emity);
   sasefelOutput->pCentral[0] = Po*(1+deltaAve);
   sasefelOutput->charge[0] = charge;  

@@ -117,6 +117,7 @@ long do_tracking(
     delete_phase_references();
     reset_special_elements(beamline, 1);
   }
+  reset_driftCSR();
   
   while (eptr) {
     if (check_nan) 

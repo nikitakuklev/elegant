@@ -2158,6 +2158,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     double z_start);
 long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift, 
                             double Po, double **accepted, double zStart);
+long reset_driftCSR();
 
 void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 void final_floor_coordinates(LINE_LIST *beamline, double *X, double *Z, double *Theta);
