@@ -1167,6 +1167,9 @@ void do_print_dictionary(char *filename, long latex_form)
   }
   qsort((void*)dictList, N_TYPES-1, sizeof(*dictList), dictionaryEntryCmp);
   fp = fopen_e(filename, "w", 0);
+  fprintf(fp, "\\newlength{\\descwidth}\n");
+  fprintf(fp, "%% first argument is latex command the second the html command\n");
+  fprintf(fp, "\\latexhtml{\\setlength{\\descwidth}{2in}}{\\setlength{\\descwidth}{4in}}\n");
   for (i=0; i<N_TYPES-1; i++)
     print_dictionary_entry(fp, dictList[i].index, latex_form);
   free(dictList);
@@ -1185,7 +1188,7 @@ void print_dictionary_entry(FILE *fp, long type, long latex_form)
     fprintf(fp, "\\begin{latexonly}\n\\newpage\n\\begin{center}{\\Large\\verb|%s|}\\end{center}\n\\end{latexonly}\\subsection{%s}\n", 
             entity_name[type], entity_name[type]);
     fprintf(fp, "%s\n\\\\\n", makeTexSafeString(entity_text[type]));
-    fprintf(fp, "\\begin{tabular}{|l|l|l|l|l|} \\hline\n");
+    fprintf(fp, "\\begin{tabular}{|l|l|l|l|p{\\descwidth}|} \\hline\n");
     fprintf(fp, "Parameter Name & Units & Type & Default & Description \\\\ \\hline \n");
   }
   else  {
@@ -1193,13 +1196,14 @@ void print_dictionary_entry(FILE *fp, long type, long latex_form)
     fprintf(fp, "%s\n", entity_text[type]);
   }
   for (j=texLines=0; j<entity_description[type].n_params; j++) {
+    /* 35 lines fits on a latex page */
     if (latex_form && texLines>35) {
       texLines = 0;
       fprintf(fp, "\\end{tabular}\n\n");
       fprintf(fp, "\\begin{latexonly}\n\\newpage\n\\begin{center}{\\Large\\verb|%s| continued}\\end{center}\n\\end{latexonly}\n", 
               entity_name[type], entity_name[type]);
       fprintf(fp, "%s\n\\\\\n", makeTexSafeString(entity_text[type]));
-      fprintf(fp, "\\begin{tabular}{|l|l|l|l|l|} \\hline\n");
+      fprintf(fp, "\\begin{tabular}{|l|l|l|l|p{\\descwidth}|} \\hline\n");
       fprintf(fp, "Parameter Name & Units & Type & Default & Description \\\\ \\hline \n");
     }
     if (!latex_form)
@@ -1243,6 +1247,10 @@ void print_dictionary_entry(FILE *fp, long type, long latex_form)
       char *ptr0, *ptr1, buffer[1024];
       strcpy(buffer, entity_description[type].parameter[j].description);
       if (strlen(ptr0 = buffer)) {
+        /* don't need splitting of strings since the p tabular code 
+           is used.
+           */
+        /*
         while (strlen(ptr0)>20) {
           ptr1 = ptr0+20;
           while (*ptr1 && *ptr1!=' ')
@@ -1255,6 +1263,10 @@ void print_dictionary_entry(FILE *fp, long type, long latex_form)
           ptr0 = ptr1+1;
           texLines++;
         }
+        */
+        /* add to lines counter based on estimate of wrap-around lines
+           in the latex parbox. 28 is approximate number of char. in 2 in */
+        texLines += strlen(ptr0) / 28;
         if (*ptr0) {
           fprintf(fp, " & %s ", 
                   makeTexSafeString(ptr0));
