@@ -188,10 +188,12 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
     eptr = &(lptr->elem);
     while (eptr) {
         eptr->occurence = 0;
+        lptr->elast = eptr;
         eptr = eptr->succ;
       }
 
     eptr = &(lptr->elem);
+    lptr->flags = 0;
     while (eptr) {
         eptr->Pref_input = eptr->Pref_output = p_central;
         if (eptr->occurence==0) {
@@ -226,9 +228,7 @@ double compute_end_positions(LINE_LIST *lptr)
     z = z_recirc = 0;
     theta = 0;
     i_elem = 0;
-    lptr->flags = 0;
     do {
-        lptr->elast = eptr;
         if (!(entity_description[eptr->type].flags&HAS_LENGTH))
             l = 0;
         else
