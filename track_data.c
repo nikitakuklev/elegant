@@ -156,10 +156,10 @@ and phase modulation.",
     "Driver for a transverse feedback loop",
     "Longitudinal space charge impedance",
     "A scattering element to add random changes to particle coordinates according to a user-supplied distribution function",
-    "A non-symplectic numerically integrated planar undulator including optional co-propagating laser beam for laser modulation of the electron beam."
+    "A non-symplectic numerically integrated planar undulator including optional co-propagating laser beam for laser modulation of the electron beam.",
     "Tracks through a Taylor series map specified by a file containing coefficients.",
     "Tracks through a TM110-mode (deflecting) rf cavity with all magnetic and electric field components.",
-    "Tracks through a wiggler using canonical integration routines of Y. Wu."
+    "Tracks through a wiggler using canonical integration routines of Y. Wu (Duke University)."
     } ;
 
 QUAD quad_example;
