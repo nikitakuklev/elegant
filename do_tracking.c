@@ -266,7 +266,7 @@ long do_tracking(
     if (!(flags&SILENT_RUNNING) && !is_batch && n_passes!=1 && !(flags&TEST_PARTICLES)
         && !(run->tracking_updates==0)) {
 #if defined(VAX_VMS)
-      sprintf(s, "%ld particles left after pass %ld        ",
+      sprintf(s, "%ld particles present after pass %ld        ",
               nToTrack, i_pass);
       fputs(s, stdout);
       if (is_ansi_term)
@@ -278,7 +278,7 @@ long do_tracking(
 #endif
 #if defined(UNIX) || defined(_WIN32)
       if ((et2=delapsed_time())-et1>2.0) {
-        sprintf(s, "%ld particles left after pass %ld        ", 
+        sprintf(s, "%ld particles present after pass %ld        ", 
                 nToTrack, i_pass);
         fputs(s, stdout);
         if (is_ansi_term)
@@ -289,7 +289,7 @@ long do_tracking(
         et1 = et2;
       }
 #else
-      sprintf(s, "%ld particles left after pass %ld        ", 
+      sprintf(s, "%ld particles present after pass %ld        ", 
               nToTrack, i_pass);
       fputs(s, stdout);
       if (is_ansi_term)
@@ -868,8 +868,10 @@ long do_tracking(
             nLeft = transformBeamWithScript((SCRIPT*)eptr->p_elem, *P_central, charge, 
                                             beam, coord, nToTrack, nLost, 
                                             run->rootname, i_pass, run->default_order);
-            fprintf(stderr, "nLost=%ld, beam->n_particle=%ld, nLeft=%ld\n",
-                    nLost, beam->n_particle, nLeft);
+            /* 
+	       fprintf(stderr, "nLost=%ld, beam->n_particle=%ld, nLeft=%ld\n",
+	       nLost, beam->n_particle, nLeft);
+	    */
             if (beam && coord!=beam->particle) {
               /* particles were created and so the particle array was changed */
               coord = beam->particle;
@@ -877,6 +879,7 @@ long do_tracking(
                 fprintf(stderr, "Particle accounting problem after return from script.\n");
                 fprintf(stderr, "nLost=%ld, beam->n_particle=%ld, nLeft=%ld\n",
                         nLost, beam->n_particle, nLeft);
+		exit(1);
               }
             }
             nToTrack = nLeft;
@@ -1165,7 +1168,7 @@ long do_tracking(
   log_exit("do_tracking.3");
   log_entry("do_tracking.4");
   if (!(flags&SILENT_RUNNING) && !is_batch && n_passes!=1 && !(flags&TEST_PARTICLES)) {
-    fprintf(stdout, "%ld particles left after pass %ld        \n", 
+    fprintf(stdout, "%ld particles present after pass %ld        \n", 
             nToTrack, i_pass);
     fflush(stdout);
   }
@@ -1931,18 +1934,22 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
   }
   if (npNew>np) {
     /* We have to resize the arrays in the BEAM structure */
-    fprintf(stderr, "Increasing number of particles from %ld (%ld active) to %ld (%ld active)\n",
-            np+nLost, np, npNew+nLost, npNew);
+    /* 
+       fprintf(stderr, "Increasing number of particles from %ld (%ld active) to %ld (%ld active)\n",
+       np+nLost, np, npNew+nLost, npNew);
+    */
     if (!beam) {
       fprintf(stderr, "Error: script element increased the number of particles from %ld to %ld\n.",
               np, npNew);
       fprintf(stderr, "This happened (apparently) during a pre-tracking stage, which isn't allowed\n");
       fprintf(stderr, "in this version of elegant.\n");
+      exit(1);
     }
     if ((np+nLost)!=beam->n_particle) {
       fprintf(stderr, "Particle accounting problem in SCRIPT element:\n");
       fprintf(stderr, "np = %ld, nLost = %ld, n_particle = %ld\n",
               np, nLost, beam->n_particle);
+      exit(1);
     }
     
     if (beam->original==beam->particle) {
@@ -1961,6 +1968,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
         !(beam->lostOnPass = realloc(beam->lostOnPass, sizeof(beam->lostOnPass)*(npNew+nLost)))) {
       fprintf(stderr, "Memory allocation failure increasing particle array size to %ld\n",
               npNew+nLost);
+      exit(1);
     }
     /* allocate space for new particle pointers */
     for (i=np+nLost; i<npNew+nLost; i++) 
@@ -1977,8 +1985,10 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
     }
     beam->n_particle = npNew+nLost;
     beam->n_to_track = npNew;
-    fprintf(stderr, "beam->n_particle = %ld, beam->n_to_track = %ld\n",
-            beam->n_particle, beam->n_to_track);
+    /*
+      fprintf(stderr, "beam->n_particle = %ld, beam->n_to_track = %ld\n",
+      beam->n_particle, beam->n_to_track);
+    */
     part = beam->particle;
   }
   for (i=0; i<6; i++) {
