@@ -275,6 +275,7 @@ void fill_elem(ELEMENT_LIST *eptr, char *s, long type, FILE *fp_input)
           fprintf(stderr,"Unable to find MATR file %s\n", matr->filename);
           exit(1);
         }
+        fprintf(stdout, "File %s found: %s\n", matr->filename, filename);
         fpm = fopen_e(filename, "r", 0);
         free(filename);
         matr->M.order = matr->order;
