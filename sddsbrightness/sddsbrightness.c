@@ -14,6 +14,10 @@
  * Michael Borland, 2002
  *
  $Log: not supported by cvs2svn $
+ Revision 1.2  2004/07/06 15:43:47  borland
+ Fixed bug in Dejus method implementation: the gamma value was not being used consistently.
+ Rather, in some places, a fixed energy value of 7 GeV was still used.
+
  Revision 1.1  2004/04/08 16:10:28  soliday
  Moved to subdirectory.
 
@@ -183,7 +187,7 @@ int main(int argc, char **argv)
   current = totalLength = periodLength = 0;
   KStart = KEnd = coupling = emittanceRatio = 0;
   harmonics = KPoints = 0;
-  method=0;
+  method=1;
   device=0;
   minNEKS=100;
   maxNEKS=500;
