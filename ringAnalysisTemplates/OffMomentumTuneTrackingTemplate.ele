@@ -29,6 +29,13 @@
 &bunched_beam
 &end
 
+&closed_orbit
+        output = %s.clo,
+        iteration_fraction = 0.75,
+        closed_orbit_iterations = 500,
+&end
+
 &track
+        center_on_orbit = 1
 &end
 

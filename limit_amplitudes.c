@@ -305,7 +305,7 @@ long elliptical_collimator(
     ini = initial[ip];
     lost = 0;
     ini[0] += length*ini[1];
-    ini[2] += length*ini[2];
+    ini[2] += length*ini[3];
     xo = ini[0]/xsize;
     yo = ini[2]/ysize;
     if ((ipow(xo, ecol->exponent) + ipow(yo, ecol->exponent))>1)
