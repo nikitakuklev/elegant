@@ -430,8 +430,16 @@ static SDDS_DEFINITION column_definition[N_COLUMNS_WRI] = {
 #define IP_PCENTRAL 8
 #define IP_DBETAXDP 9
 #define IP_DBETAYDP 10
-#define IP_ALPHAC2 11
-#define IP_ALPHAC 12
+#define IP_BETAXMIN 11
+#define IP_BETAXAVE 12
+#define IP_BETAXMAX 13
+#define IP_BETAYMIN 14
+#define IP_BETAYAVE 15
+#define IP_BETAYMAX 16
+#define IP_ETAXMAX 17
+#define IP_ETAYMAX 18
+#define IP_ALPHAC2 19
+#define IP_ALPHAC 20
 /* IP_ALPHAC must be the last item before the radiation-integral-related
  * items!
  */
@@ -463,6 +471,14 @@ static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
 {"pCentral", "&parameter name=pCentral, type=double, units=\"m$be$nc\", description=\"Central momentum\" &end"},
 {"dbetax/dp", "&parameter name=dbetax/dp, units=m, type=double, description=\"Derivative of betax with momentum offset\" &end"},
 {"dbetay/dp", "&parameter name=dbetay/dp, units=m, type=double, description=\"Derivative of betay with momentum offset\" &end"},
+{"betaxMin", "&parameter name=betaxMin, type=double, units=m, description=\"Minimum betax\" &end"},
+{"betaxAve", "&parameter name=betaxAve, type=double, units=m, description=\"Average betax\" &end"},
+{"betaxMax", "&parameter name=betaxMax, type=double, units=m, description=\"Maximum betax\" &end"},
+{"betayMin", "&parameter name=betayMin, type=double, units=m, description=\"Minimum betay\" &end"},
+{"betayAve", "&parameter name=betayAve, type=double, units=m, description=\"Average betay\" &end"},
+{"betayMax", "&parameter name=betayMax, type=double, units=m, description=\"Maximum betay\" &end"},
+{"etaxMax", "&parameter name=etaxMax, type=double, units=m, description=\"Maximum absolute value of etax\" &end"},
+{"etayMax", "&parameter name=etayMax, type=double, units=m, description=\"Maximum absolute value of etay\" &end"},
 {"alphac2", "&parameter name=alphac2, symbol=\"$ga$r$bc2$n\", type=double, description=\"2nd-order momentum compaction factor\" &end"},
 {"alphac", "&parameter name=alphac, symbol=\"$ga$r$bc$n\", type=double, description=\"Momentum compaction factor\" &end"},
 {"I1", "&parameter name=I1, type=double, description=\"Radiation integral 1\", units=m &end"} ,
@@ -483,8 +499,7 @@ static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
 } ;
 
 void dump_twiss_parameters(
-  TWISS *twiss0,
-  ELEMENT_LIST *elem,
+  LINE_LIST *beamline,
   long n_elem,
   double *tune,
   RADIATION_INTEGRALS *radIntegrals,                           
@@ -500,9 +515,16 @@ void dump_twiss_parameters(
   double *data;
   long i, j, row_count;
   char *stage;
+  TWISS twiss_ave, twiss_min, twiss_max;
+
+  TWISS *twiss0;
+  ELEMENT_LIST *elem;
 
   log_entry("dump_twiss_parameters");
 
+  twiss0 = beamline->twiss0;
+  elem = beamline->elem_twiss;
+  
   if (!twiss0)
     bomb("Twiss data not computed prior to dump_twiss_parameters() call (1)", NULL);
 
@@ -517,12 +539,18 @@ void dump_twiss_parameters(
     SDDS_SetError("Problem starting SDDS table (dump_twiss_parameters)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
+  
+  compute_twiss_statistics(beamline, &twiss_ave, &twiss_min, &twiss_max);
   if (!SDDS_SetParameters(&SDDS_twiss, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE,
                           IP_STEP, twiss_count, IP_STAGE, stage, 
                           IP_NUX, tune[0], IP_DNUXDP, chromaticity[0], IP_AX, acceptance[0],
                           IP_NUY, tune[1], IP_DNUYDP, chromaticity[1], IP_AY, acceptance[1], 
                           IP_ALPHAC, alphac[0], IP_ALPHAC2, alphac[1], 
                           IP_DBETAXDP, dbeta[0], IP_DBETAYDP, dbeta[1],
+                          IP_BETAXMIN, twiss_min.betax, IP_BETAXAVE, twiss_ave.betax, IP_BETAXMAX, twiss_max.betax, 
+                          IP_BETAYMIN, twiss_min.betay, IP_BETAYAVE, twiss_ave.betay, IP_BETAYMAX, twiss_max.betay, 
+                          IP_ETAXMAX, MAX(fabs(twiss_min.etax), fabs(twiss_max.etax)),
+                          IP_ETAYMAX, MAX(fabs(twiss_min.etay), fabs(twiss_max.etay)),
                           IP_PCENTRAL, run->p_central, -1)) {
     SDDS_SetError("Problem setting SDDS parameters (dump_twiss_parameters 1)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -882,7 +910,7 @@ long run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, lon
     fflush(stdout);
 
   if (SDDS_twiss_initialized) {
-    dump_twiss_parameters(beamline->twiss0, beamline->elem_twiss, n_elem,
+    dump_twiss_parameters(beamline, n_elem,
                           beamline->tune, 
                           radiation_integrals?&(beamline->radIntegrals):NULL, 
                           beamline->chromaticity, beamline->dbeta_dPoP,

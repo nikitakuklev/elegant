@@ -549,7 +549,7 @@ extern char *entity_text[N_TYPES];
 #define N_PFILTER_PARAMS 4
 #define N_HISTOGRAM_PARAMS 9
 #define N_CSRCSBEND_PARAMS 36
-#define N_CSRDRIFT_PARAMS 4
+#define N_CSRDRIFT_PARAMS 5
 
 typedef struct {
     char *name;            /* parameter name */
@@ -1308,6 +1308,7 @@ extern PARAMETER csrdrift_param[N_CSRDRIFT_PARAMS];
 typedef struct {
   double length, attenuationLength;
   long nKicks, spread;
+  double dz;
 } CSRDRIFT;
 
 /* names and storage structure for top-up bending magnet physical parameters */
@@ -1800,7 +1801,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
                               unsigned long *unstable);
 void update_twiss_parameters(RUN *run, LINE_LIST *beamline, unsigned long *unstable);
 void compute_twiss_statistics(LINE_LIST *beamline, TWISS *twiss_ave, TWISS *twiss_min, TWISS *twiss_max);
-void dump_twiss_parameters(TWISS *twiss0, ELEMENT_LIST *elem, long n_elem, 
+void dump_twiss_parameters(LINE_LIST *beamline, long n_elem, 
                            double *tune, RADIATION_INTEGRALS *radIntegrals, double *chromaticity, 
                            double *dbeta, double *acceptance, double *alphac,
                            long final_values_only, long tune_corrected, RUN *run);

@@ -1160,6 +1160,7 @@ PARAMETER csrdrift_param[N_CSRDRIFT_PARAMS] = {
     {"ATTENUATION_LENGTH", "M", IS_DOUBLE, 1, (long)((char *)&csrdrift_example.attenuationLength), NULL, 0.0, 0},
     {"N_KICKS", "", IS_LONG, 1, (long)((char *)&csrdrift_example.nKicks), NULL, 0.0, 1},
     {"SPREAD", "", IS_LONG, 1, (long)((char *)&csrdrift_example.spread), NULL, 0.0, 0},
+    {"DZ", "", IS_DOUBLE, 1, (long)((char *)&csrdrift_example.dz), NULL, 0.0, 0},
     };
 
 /* array of parameter structures */

@@ -1387,12 +1387,20 @@ long binParticleCoordinate(double **hist, long *maxBins,
 long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift, 
                             double Po, double **accepted, double zStart)
 {
-  long iPart, iKick, iBin, binned;
+  long iPart, iKick, iBin, binned, nKicks;
   double *coord, t, p, beta, dz, ct0, factor, dz0, dzFirst;
   double ctmin, ctmax, spreadFactor;
   double zTravel;
+
+  if (csrDrift->dz>0) {
+    if ((nKicks = csrDrift->length/csrDrift->dz)<1)
+      nKicks = 1;
+  } else 
+    nKicks = csrDrift->nKicks;
+  if (nKicks<=0)
+    bomb("nKicks=0 in CSR drift.", NULL);
   
-  dz = (dz0=csrDrift->length/csrDrift->nKicks)/2;
+  dz = (dz0=csrDrift->length/nKicks)/2;
   dzFirst = zStart - csrWake.zLast;
 #ifdef DEBUG
   fprintf(stdout, "dzFirst = %21.15e\n", dzFirst);
@@ -1404,7 +1412,7 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
 
   
   zTravel = zStart-csrWake.z0;  /* total distance traveled by radiation to reach this point */
-  for (iKick=0; iKick<csrDrift->nKicks; iKick++) {
+  for (iKick=0; iKick<nKicks; iKick++) {
     /* first drift is dz=dz0/2, others are dz0 */
     if (iKick==1)
       dz = dz0;
