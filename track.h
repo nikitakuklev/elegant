@@ -2376,6 +2376,15 @@ void copy_doubles(double *source, double *target, long n);
 void computeRadiationIntegrals(RADIATION_INTEGRALS *RI, double Po, double revolutionLength);
 void setupTwissAnalysisRequest(NAMELIST_TEXT *nltext, RUN *run, 
                                LINE_LIST *beamline);
+long computeTunesFromTracking(double *tune, VMATRIX *M, LINE_LIST *beamline, RUN *run,
+			      double *startingCoord, 
+			      double xAmplitude, double yAmplitude, long turns,
+                              long useMatrix, double *endingCoord);
+/* frequencyMap.c */
+void setupFrequencyMap(NAMELIST_TEXT *nltext, RUN *run, VARY *control);
+long doFrequencyMap(RUN *run, VARY *control, double *referenceCoord,
+                    ERRORVAL *errcon, LINE_LIST *beamline);
+void finishFrequencyMap();
 
 /* prototypes for elegant.c: */
 extern char *compose_filename(char *template, char *root_name);

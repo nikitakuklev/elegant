@@ -88,7 +88,8 @@ char *GREETING="This is elegant, by Michael Borland. (This is version 15.1, "__D
 #define TRANSMUTE_ELEMENTS 42
 #define TWISS_ANALYSIS 43
 #define SEMAPHORES     44
-#define N_COMMANDS      45
+#define FREQUENCY_MAP  45
+#define N_COMMANDS      46
 
 char *command[N_COMMANDS] = {
     "run_setup", "run_control", "vary_element", "error_control", "error_element", "awe_beam", "bunched_beam",
@@ -99,7 +100,7 @@ char *command[N_COMMANDS] = {
     "steering_element", "amplification_factors", "print_dictionary", "floor_coordinates", "correction_matrix_output",
     "load_parameters", "sdds_beam", "subprocess", "fit_traces", "sasefel", "alter_elements",
     "optimization_term", "slice_analysis", "divide_elements", "tune_shift_with_amplitude",
-    "transmute_elements", "twiss_analysis", "semaphores",
+    "transmute_elements", "twiss_analysis", "semaphores", "frequency_map"
         } ;
 
 char *description[N_COMMANDS] = {
@@ -147,7 +148,8 @@ char *description[N_COMMANDS] = {
     "tune_shift_with_amplitude   sets up twiss module for computation of tune shift with amplitude",
     "transmute_elements          defines transmutation of one element type into another",
     "twiss_analysis              requests twiss analysis of regions of a beamline (for optimization)",
-    "semaphores                  requests use of semaphore files to indicate run start and end"
+    "semaphores                  requests use of semaphore files to indicate run start and end",
+    "frequency_map               command to perform frequency map analysis",
         } ;
 
 void initialize_structures(RUN *run_conditions, VARY *run_control, ERRORVAL *error_control, CORRECTION *correct, 
@@ -185,7 +187,7 @@ char **argv;
   TUNE_CORRECTION tune_corr_data;
   ELEMENT_LINKS links;
   char *saved_lattice = NULL;
-  long correction_setuped, run_setuped, run_controled, error_controled, beam_type;
+  long correction_setuped, run_setuped, run_controled, error_controled, beam_type, commandCode;
   long do_chromatic_correction = 0, do_twiss_output = 0, fl_do_tune_correction = 0;
   long do_closed_orbit = 0, do_matrix_output = 0, do_response_output = 0;
   long last_default_order = 0, new_beam_flags, links_present, twiss_computed = 0;
@@ -320,7 +322,7 @@ char **argv;
       free_namelist_text(&namelist_text);
     scan_namelist(&namelist_text, s);
     namelists_read = 1;
-    switch (match_string(namelist_text.group_name, command, N_COMMANDS, EXACT_MATCH)) {
+    switch ((commandCode=match_string(namelist_text.group_name, command, N_COMMANDS, EXACT_MATCH))) {
     case RUN_SETUP:
       beam_type = -1;
       
@@ -815,7 +817,15 @@ char **argv;
       fflush(stdout);
       break;
     case FIND_APERTURE:
-      setup_aperture_search(&namelist_text, &run_conditions, &run_control);
+    case FREQUENCY_MAP:
+      switch (commandCode) {
+      case FIND_APERTURE:
+        setup_aperture_search(&namelist_text, &run_conditions, &run_control);
+        break;
+      case FREQUENCY_MAP:
+        setupFrequencyMap(&namelist_text, &run_conditions, &run_control);
+        break;
+      }
       while (vary_beamline(&run_control, &error_control, &run_conditions, beamline)) {
         fill_double_array(starting_coord, 6, 0.0);
         if (correct.mode!= -1) {
@@ -908,11 +918,24 @@ char **argv;
         }
         if (do_response_output)
           run_response_output(&run_conditions, beamline, &correct, 1);
-        do_aperture_search(&run_conditions, &run_control, &error_control, beamline);
+        switch (commandCode) {
+        case FIND_APERTURE:
+          do_aperture_search(&run_conditions, &run_control, &error_control, beamline);
+          break;
+        case FREQUENCY_MAP:
+          doFrequencyMap(&run_conditions, &run_control, starting_coord, &error_control, beamline);
+        }
       }
       fprintf(stdout, "Finished all tracking steps.\n"); fflush(stdout);
       fflush(stdout);
-      finish_aperture_search(&run_conditions, &run_control, &error_control, beamline);
+      switch (commandCode) {
+      case FIND_APERTURE:
+        finish_aperture_search(&run_conditions, &run_control, &error_control, beamline);
+        break;
+      case FREQUENCY_MAP:
+        finishFrequencyMap();
+        break;
+      }
       if (do_closed_orbit)
         finish_clorb_output();
 #ifdef SUNOS4

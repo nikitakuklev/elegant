@@ -41,10 +41,6 @@ void computeTuneShiftWithAmplitude(double *dnux_dA, double *dnuy_dA,
 				   RUN *run, double *startingCoord);
 void computeTuneShiftWithAmplitudeM(double *dnux_dA, double *dnuy_dA,
                                     TWISS *twiss, double *tune, VMATRIX *M);
-long computeTunesFromTracking(double *tune, VMATRIX *M, LINE_LIST *beamline, RUN *run,
-			      double *startingCoord, 
-			      double xAmplitude, double yAmplitude, long turns,
-                              long useMatrix);
 void processTwissAnalysisRequests(ELEMENT_LIST *elem);
 
 static long twissConcatOrder = 3;
@@ -2048,7 +2044,7 @@ void computeTuneShiftWithAmplitude(double *dnux_dA, double *dnuy_dA,
                                  tune_shift_with_amplitude_struct.x0,
                                  tune_shift_with_amplitude_struct.y0,
                                  tune_shift_with_amplitude_struct.turns,
-                                  tune_shift_with_amplitude_struct.use_concatenation)) {
+                                  tune_shift_with_amplitude_struct.use_concatenation, NULL)) {
       lost = 1;
       break;
     }
@@ -2063,7 +2059,7 @@ void computeTuneShiftWithAmplitude(double *dnux_dA, double *dnuy_dA,
                                   tune_shift_with_amplitude_struct.x1,
                                   tune_shift_with_amplitude_struct.y0,
                                   tune_shift_with_amplitude_struct.turns, 
-                                  tune_shift_with_amplitude_struct.use_concatenation)) {
+                                  tune_shift_with_amplitude_struct.use_concatenation, NULL)) {
       lost = 1;
       break;
     }
@@ -2077,7 +2073,7 @@ void computeTuneShiftWithAmplitude(double *dnux_dA, double *dnuy_dA,
                                   tune_shift_with_amplitude_struct.x0,
                                   tune_shift_with_amplitude_struct.y1,
                                   tune_shift_with_amplitude_struct.turns,
-                                  tune_shift_with_amplitude_struct.use_concatenation)) {
+                                  tune_shift_with_amplitude_struct.use_concatenation, NULL)) {
       lost = 1;
       break;
     }
@@ -2177,7 +2173,8 @@ void computeTuneShiftWithAmplitude(double *dnux_dA, double *dnuy_dA,
 long computeTunesFromTracking(double *tune, VMATRIX *M, LINE_LIST *beamline, RUN *run,
 			      double *startingCoord, 
 			      double xAmplitude, double yAmplitude, long turns,
-                              long useMatrix)
+                              long useMatrix,
+                              double *endingCoord)
 {
   double **oneParticle, dummy;
   double *x, *y, p;
@@ -2266,6 +2263,10 @@ long computeTunesFromTracking(double *tune, VMATRIX *M, LINE_LIST *beamline, RUN
 #endif
     x[i] = oneParticle[0][0];
     y[i] = oneParticle[0][2];
+  }
+  if (endingCoord) {
+    for (i=0; i<6; i++)
+      endingCoord[i] = oneParticle[0][i];
   }
 #ifdef DEBUG
   fprintf(stdout, "Ending coordinates: %le, %le, %le, %le, %le, %le\n",
