@@ -144,12 +144,10 @@ void print_elem_names(FILE *fp, ELEMENT_LIST *eptr)
     char *ptr;
     PARAMETER *parameter;
 
-    log_entry("print_elem_names");
-
     while (eptr) {
+      if (eptr->name)
         fprintf(fp, "%s\n", eptr->name);
-        eptr = eptr->succ;
-        }
-    log_exit("print_elem_names");
+      eptr = eptr->succ;
     }
+  }
 
