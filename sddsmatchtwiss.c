@@ -55,6 +55,9 @@ CopyrightNotice001*/
  * Michael Borland, 2000
  *
  $Log: not supported by cvs2svn $
+ Revision 1.5  2001/05/08 14:07:22  borland
+ Added -ztransform option, which permits changing the longitudinal parameters.
+
  Revision 1.4  2001/04/06 14:44:55  borland
  Added ability to change the emittance of the beam in both planes.
 
@@ -91,7 +94,7 @@ char *option[N_OPTIONS] = {
 char *USAGE="sddsmatchtwiss [-pipe=[input][,output]] [<SDDSinputfile>] [<SDDSoutputfile>]\n\
   [-xPlane=[beta=<meters>,alpha=<value>][nemittance=<meters>,][,etaValue=<meters>][,etaSlope=<value>]]\n\
   [-yPlane=[beta=<meters>,alpha=<value>][nemittance=<meters>,][,etaValue=<meters>][,etaSlope=<value>]]\n\
-  [-zPlane=[deltaStDev=<value>][,tStDev=<seconds>][,correlation=<seconds>]]\n\
+  [-zPlane=[deltaStDev=<value>][,tStDev=<seconds>][,correlation=<seconds>][,betaGamma=<central-value>]]\n\
   [-nowarnings] [-oneTransform]\n\
 The input file must have columns x, xp, y, yp, and p; for example, an elegant\n\
 beam output file is acceptable.\n\
@@ -101,7 +104,7 @@ the coordinates have no dispersion adjustment.  If etaSlope is not given, then\n
 slopes have no dispersion adjustment.\n\
 If -oneTransform is given, then the transformation is computed for the first page only,\n\
 then reused for all subsequent pages.\n\n\
-Program by Michael Borland.  (This is version 3, April 2001.)\n";
+Program by Michael Borland.  (This is version 4, May 2001.)\n";
 
 typedef struct {
   double beta, alpha, eta, etap, normEmittance;
@@ -116,17 +119,19 @@ typedef struct {
 } PLANE_SPEC;
 
 typedef struct {
-  double deltaStDev, tStDev, correlation;
+  double deltaStDev, tStDev, correlation, betaGamma;
   unsigned long flags;
   double R11, R12, R21, R22;
 #define DELTASTDEV_GIVEN  0x0001UL
 #define TSTDEV_GIVEN      0x0002UL
 #define CORRELATION_GIVEN 0x0004UL
+#define BETAGAMMA_GIVEN   0x0008UL
 } ZPLANE_SPEC;
 
 long PerformTransformation(double *x, double *xp, double *p, long rows, PLANE_SPEC *match,
                            long compute);
-long PerformZTransformation(double *t, double *p, long rows, ZPLANE_SPEC *match, long compute);
+long PerformZTransformation(double *t, double *p, double *x, double *xp,
+                            double *y, double *yp, long rows, ZPLANE_SPEC *match, long compute);
 
 long check_sdds_beam_column(SDDS_TABLE *SDDS_table, char *name, char *units);
 
@@ -195,10 +200,12 @@ main(int argc, char **argv)
                           "tStDev", SDDS_DOUBLE, &zSpec.tStDev, 1, TSTDEV_GIVEN,
                           "deltaStDev", SDDS_DOUBLE, &zSpec.deltaStDev, 1, DELTASTDEV_GIVEN,
                           "correlation", SDDS_DOUBLE, &zSpec.correlation, 1, CORRELATION_GIVEN,
+                          "betagamma", SDDS_DOUBLE, &zSpec.betaGamma, 1, BETAGAMMA_GIVEN,
                           NULL) ||
             bitsSet(zSpec.flags)<1 ||
             (zSpec.flags&TSTDEV_GIVEN &&  zSpec.tStDev<0) ||
-            (zSpec.flags&DELTASTDEV_GIVEN && zSpec.deltaStDev<0))
+            (zSpec.flags&DELTASTDEV_GIVEN && zSpec.deltaStDev<0) ||
+            (zSpec.flags&BETAGAMMA_GIVEN && zSpec.betaGamma<=0))
           SDDS_Bomb("invalid -zPlane syntax/values");
         break;
       case SET_PIPE:
@@ -265,7 +272,7 @@ main(int argc, char **argv)
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     PerformTransformation(x, xp, p, rows, &xSpec, readCode==1?1:!oneTransform);
     PerformTransformation(y, yp, p, rows, &ySpec, readCode==1?1:!oneTransform);
-    PerformZTransformation(t, p, rows, &zSpec, readCode==1?1:!oneTransform);
+    PerformZTransformation(t, p, x, xp, y, yp, rows, &zSpec, readCode==1?1:!oneTransform);
     if (verbose) {
       if (xSpec.flags)
         fprintf(stderr, "x transformation: %le, %le, %le, %le, %le, %le\n",
@@ -379,14 +386,17 @@ long PerformTransformation(double *x, double *xp, double *p, long rows, PLANE_SP
   return 1;
 }
 
-long PerformZTransformation(double *t, double *p, long rows, ZPLANE_SPEC *match,
-                           long computeTransform)
+long PerformZTransformation(double *t, double *p, 
+                            double *x, double *xp,
+                            double *y, double *yp,
+                            long rows, ZPLANE_SPEC *match,
+                            long computeTransform)
 {
   long i;
   double pAve, tAve;
   double S11, S22, S12;
   double R11, R12, R21, R22;
-  double x0, xp0;
+  double x0, xp0, delta0, t0;
   double emit1, beta1, beta2, alpha1, alpha2;
   double emit2, ratio;
 
@@ -433,16 +443,30 @@ long PerformZTransformation(double *t, double *p, long rows, ZPLANE_SPEC *match,
   }
 
   for (i=0; i<rows; i++) {
-    x0 = t[i];
-    xp0 = p[i];
-    t[i] = R11*x0 + R12*xp0;
-    p[i] = R21*x0 + R22*xp0;
+    t0 = t[i];
+    delta0 = p[i];
+    t[i] = R11*t0 + R12*delta0;
+    p[i] = R21*t0 + R22*delta0;
   }
 
-  for (i=0; i<rows; i++) {
-    p[i] = (p[i]+1)*pAve;
-    t[i] += tAve;
+  if (match->flags&BETAGAMMA_GIVEN) {
+    double ratio;
+    ratio = sqrt(pAve/match->betaGamma);
+    for (i=0; i<rows; i++) {
+      x[i] *= ratio;
+      xp[i] *= ratio;
+      y[i] *= ratio;
+      yp[i] *= ratio;
+      t[i] += tAve;
+      p[i] = p[i]*pAve + match->betaGamma;
+    }
+  } else {
+    for (i=0; i<rows; i++) {
+      p[i] = (p[i]+1)*pAve;
+      t[i] += tAve;
+    }
   }
+  
   return 1;
 }
 
