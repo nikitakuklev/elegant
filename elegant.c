@@ -153,7 +153,8 @@ char **argv;
     long last_default_order = 0, new_beam_flags, links_present, twiss_computed = 0;
     double *starting_coord;
     long namelists_read = 0, failed;
-
+    char buffer[16384];
+                    
 #if defined(UNIX)
     signal(SIGHUP, traceback_handler);
     signal(SIGINT, traceback_handler);
@@ -317,7 +318,10 @@ char **argv;
             run_conditions.output     = compose_filename(output, rootname);
             run_conditions.losses     = compose_filename(losses, rootname);
             magnets                   = compose_filename(magnets, rootname);
-            
+            semaphore_file            = compose_filename(semaphore_file, rootname);
+            if (semaphore_file && fexists(semaphore_file))
+              remove(semaphore_file);
+
             /* parse the lattice file and create the beamline */
             run_conditions.lattice = compose_filename(saved_lattice, rootname);
             beamline = get_beamline(lattice, use_beamline, p_central);
@@ -392,9 +396,8 @@ char **argv;
             set_print_namelist_flags(0);
             process_namelist(&track, &namelist_text);
             print_namelist(stderr, &track);
-            if (use_linear_chromatic_matrix && !twiss_computed)
+            if (use_linear_chromatic_matrix && (!twiss_computed && !do_twiss_output))
               bomb("you must compute twiss parameters to do linear chromatic matrix tracking", NULL);
-            
             if (beam_type==-1)
                 bomb("beam must be defined prior to tracking", NULL);
             new_beam_flags = 0;
@@ -572,6 +575,9 @@ char **argv;
           case STOP:
             lorentz_report();
             finish_load_parameters();
+            if (semaphore_file && !fexists(semaphore_file)) {
+              fclose(fopen(semaphore_file, "w"));
+            }
             exit(0);
             break;
           case OPTIMIZATION_SETUP:
@@ -880,6 +886,9 @@ char **argv;
     fprintf(stderr, "End of input data encountered.\n"); fflush(stderr);
     lorentz_report();
     finish_load_parameters();
+    if (semaphore_file && !fexists(semaphore_file)) {
+      fclose(fopen(semaphore_file, "w"));
+    }
     log_exit("main");
     exit(0);
     }

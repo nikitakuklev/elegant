@@ -16,6 +16,7 @@
     STRING acceptance = NULL;
     STRING losses = NULL;
     STRING magnets = NULL;
+    STRING semaphore_file = NULL;
     long combine_bunch_statistics = 0;
     long wrap_around = 1;
     long default_order = 2;
