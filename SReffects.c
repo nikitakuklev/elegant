@@ -41,11 +41,11 @@ void track_SReffects(double **coord, long np, SREFFECTS *SReffects, double Po,
       SReffects->eyRef = SReffects->exRef*SReffects->coupling;
       SReffects->SdeltaRef = radIntegrals->sigmadelta;
       SReffects->DdeltaRef = -radIntegrals->Uo/me_mev/Po;
-      /*
-        fprintf(stdout, "SReffects set up:\nPref=%g, Jx/y/delta=%g/%g/%g\nex/ey=%g/%g  Sdelta=%g  Ddelta=%g\n",
+/*
+      fprintf(stdout, "SReffects set up:\nPref=%g, Jx/y/delta=%g/%g/%g\nex/ey=%g/%g  Sdelta=%g  Ddelta=%g\n",
               SReffects->pRef, SReffects->Jx, SReffects->Jy, SReffects->Jdelta,
               SReffects->exRef, SReffects->eyRef, SReffects->SdeltaRef, SReffects->DdeltaRef);
-              */
+*/
       fflush(stdout);
     }
 
@@ -66,8 +66,8 @@ void track_SReffects(double **coord, long np, SREFFECTS *SReffects, double Po,
     Fdelta = 1 + SReffects->Jdelta*Ddelta;
     if (SReffects->qExcite) {
       Srdelta = sqrt(1-sqr(Fdelta))*SReffects->SdeltaRef*gammaRatio;
-      Srxp    = sqrt((1-sqr(1+SReffects->Jx*Ddelta))*SReffects->exRef*gamma2Ratio*(1+sqr(twiss->alphax))/twiss->betax);
-      Sryp    = sqrt((1-sqr(1+SReffects->Jy*Ddelta))*SReffects->eyRef*gamma2Ratio*(1+sqr(twiss->alphay))/twiss->betay);
+      Srxp    = sqrt((1-sqr(1+SReffects->Jx*Ddelta))*SReffects->exRef*gamma2Ratio/twiss->betax);
+      Sryp    = sqrt((1-sqr(1+SReffects->Jy*Ddelta))*SReffects->eyRef*gamma2Ratio/twiss->betay);
     } else {
       Srdelta = Srxp = Sryp = 0;
     }
