@@ -545,7 +545,7 @@ extern char *entity_text[N_TYPES];
 #define N_TRWAKE_PARAMS 13
 #define N_TUBEND_PARAMS 6
 #define N_CHARGE_PARAMS 2
-#define N_PFILTER_PARAMS 3
+#define N_PFILTER_PARAMS 4
 #define N_HISTOGRAM_PARAMS 9
 #define N_CSRCSBEND_PARAMS 32
 
@@ -1512,6 +1512,11 @@ typedef struct {
 /* names and storage structure for PFILTER element */
 typedef struct {
   double deltaLimit, lowerFraction, upperFraction;
+  long fixPLimits;
+  /* for internal use only */
+  long limitsFixed;
+  double pLower, pUpper;
+  long hasLower, hasUpper;
 } PFILTER;
 
 /* macros for bending magnets */ 

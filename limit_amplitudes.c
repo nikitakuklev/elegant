@@ -490,7 +490,7 @@ long track_through_pfilter(
   
   itop = np-1;
 
-  if (pfilter->lowerFraction || pfilter->upperFraction) {
+  if ((pfilter->lowerFraction || pfilter->upperFraction) && !pfilter->limitsFixed) {
     double level[2]={-1,-1}, limit[2], upper[2];
     long count = 0, i;
     if (maxBuffer<np &&
@@ -513,17 +513,49 @@ long track_through_pfilter(
     for (i=0; i<2; i++) {
       if (level[i]<0)
         break;
-      for (ip=0; ip<=itop; ip++) {
-        if ((upper[i] && initial[ip][5]>limit[i]) ||
-            (!upper[i] && initial[ip][5]<limit[i])) {
-          SWAP_PTR(initial[ip], initial[itop]);
-          initial[itop][4] = z;  /* record position of particle loss */
-          initial[itop][5] = Po*(1+initial[itop][5]);  /* momentum at loss */
+      if (upper[i]) {
+        pfilter->pUpper = (1+limit[i])*Po;
+        pfilter->hasUpper = 1;
+      }
+      else {
+        pfilter->pLower = (1+limit[i])*Po;
+        pfilter->hasLower = 1;
+      }
+      if (!pfilter->fixPLimits) {
+        /* filter in next block so there are no discrepancies due to
+         * small numerical differences
+         */
+        for (ip=0; ip<=itop; ip++) {
+          if ((upper[i] && initial[ip][5]>limit[i]) ||
+              (!upper[i] && initial[ip][5]<limit[i])) {
+            SWAP_PTR(initial[ip], initial[itop]);
+            initial[itop][4] = z;  /* record position of particle loss */
+            initial[itop][5] = Po*(1+initial[itop][5]);  /* momentum at loss */
+            if (accepted)
+              SWAP_PTR(accepted[ip], accepted[itop]);
+            --itop;
+            --ip;
+          }
+        }
+      }
+    }
+    if (pfilter->fixPLimits)
+      pfilter->limitsFixed = 1;
+  }
+  
+  if (pfilter->limitsFixed) {
+    double p;
+    for (ip=0; ip<=itop; ip++) {
+      p = (1+initial[ip][5])*Po;
+      if ((pfilter->hasUpper && p>pfilter->pUpper) ||
+          (pfilter->hasLower && p<pfilter->pLower)) {
+        SWAP_PTR(initial[ip], initial[itop]);
+        initial[itop][4] = z;  /* record position of particle loss */
+        initial[itop][5] = p;  /* momentum at loss */
           if (accepted)
             SWAP_PTR(accepted[ip], accepted[itop]);
-          --itop;
-          --ip;
-        }
+        --itop;
+        --ip;
       }
     }
   }
