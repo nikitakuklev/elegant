@@ -949,7 +949,10 @@ char **argv;
 #ifdef SUNOS4
       check_heap();
 #endif
-      fprintf(stdout, "Finished dynamic aperture search.\n");
+      if (commandCode==FIND_APERTURE)
+	fprintf(stdout, "Finished dynamic aperture search.\n");
+      else
+	fprintf(stdout, "Finished frequency map analysis.\n");
       fflush(stdout);
       /* reassert defaults for namelist run_setup */
       lattice = use_beamline = acceptance = centroid = sigma = final = output = rootname = losses =
