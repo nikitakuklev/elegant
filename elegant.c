@@ -856,6 +856,7 @@ void do_print_dictionary(char *filename)
         print_dictionary_entry(fp, i);
     }
 
+#define PRINTABLE_NULL(s) (s?s:"NULL")
 void print_dictionary_entry(FILE *fp, long type)
 {
     char *type_name[3] = {"double", "long", "STRING", };
@@ -863,8 +864,10 @@ void print_dictionary_entry(FILE *fp, long type)
     fprintf(fp, "***** element type %s:\n", entity_name[type]);
     fprintf(fp, "%s\n", entity_text[type]);
     for (j=0; j<entity_description[type].n_params; j++) {
-        fprintf(fp, "%20s  %20s  %10s", entity_description[type].parameter[j].name, entity_description[type].parameter[j].unit,
-                type_name[entity_description[type].parameter[j].type-1]);
+        fprintf(fp, "%20s  %20s  %10s", 
+                PRINTABLE_NULL(entity_description[type].parameter[j].name), 
+                PRINTABLE_NULL(entity_description[type].parameter[j].unit),
+                PRINTABLE_NULL(type_name[entity_description[type].parameter[j].type-1]));
         switch (entity_description[type].parameter[j].type) {
           case IS_DOUBLE:
             fprintf(fp, "  %.15g\n", entity_description[type].parameter[j].number);
@@ -873,7 +876,8 @@ void print_dictionary_entry(FILE *fp, long type)
             fprintf(fp, "  %-15ld\n", entity_description[type].parameter[j].integer);
             break;
               case IS_STRING:
-            fprintf(fp, "  %-15s\n", entity_description[type].parameter[j].string);
+            fprintf(fp, "  %-15s\n", 
+                    PRINTABLE_NULL(entity_description[type].parameter[j].string));
             break;
           default:
             bomb("invalid parameter type (print_dictionary_entry)", NULL);
