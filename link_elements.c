@@ -468,7 +468,7 @@ long assert_element_links(ELEMENT_LINKS *links, RUN *run, LINE_LIST *beamline, l
                 }
             if (flags&LINK_ELEMENT_DEFINITION) 
                 change_defined_parameter_values(&targ[i_elem]->name, &param, &targ[i_elem]->type, &value, 1);
-            if (entity_description[targ[0]->type].parameter[param].changes_matrix && targ[i_elem]->matrix) {
+            if ((entity_description[targ[0]->type].parameter[param].flags&PARAM_CHANGES_MATRIX) && targ[i_elem]->matrix) {
                 free_matrices(targ[i_elem]->matrix);
                 tfree(targ[i_elem]->matrix);
                 compute_matrix(targ[i_elem], run, NULL);
@@ -523,7 +523,7 @@ void reset_element_links(ELEMENT_LINKS *links, RUN *run, LINE_LIST *beamline)
                     bomb("unknown/invalid variable quantity (reset_element_links)", NULL);
                     exit(1);
                 }
-            if (entity_description[targ[0]->type].parameter[param].changes_matrix && targ[i_elem]->matrix) {
+            if ((entity_description[targ[0]->type].parameter[param].flags&PARAM_CHANGES_MATRIX) && targ[i_elem]->matrix) {
                 free_matrices(targ[i_elem]->matrix);
                 tfree(targ[i_elem]->matrix);
                 targ[i_elem]->matrix = NULL;

@@ -405,8 +405,11 @@ long expand_phys(
 #endif
       if (entity_description[elem_list->type].flags&DIVIDE_OK &&
 	  entity_description[elem_list->type].flags&HAS_LENGTH &&
-	  (length = *(double*)(elem_list->p_elem))>0)
+	  (length = *(double*)(elem_list->p_elem))>0) {
 	div = elementDivisions(entity, entity_name[elem_list->type], length);
+        if (div>1)
+          elem_list->divisions = div;
+      }
 #ifdef DEBUG
       fprintf(stderr,  "Dividing %s %ld times\n",
 	      entity, div);
@@ -416,6 +419,10 @@ long expand_phys(
 	for (j=0; j<div; j++) {
 	  copy_element(leptr, elem_list, reverse, j, div);
 	  leptr->part_of = elem_list->part_of?elem_list->part_of:part_of;
+#ifdef DEBUG
+          fprintf(stdout, "expand_phys copied: name=%s divisions=%ld first=%hd j=%ld\n",
+                  leptr->name, leptr->divisions, leptr->firstOfDivGroup, j);
+#endif
 	  extend_elem_list(&leptr);
 	}
       }
@@ -505,7 +512,10 @@ void copy_element(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long reverse, long divisio
         break;
       }
     }
+    e1->firstOfDivGroup = 0;
     if (divisions>1) {
+      if (division==0)
+        e1->firstOfDivGroup = 1;
       if (entity_description[e1->type].flags&HAS_LENGTH)
         *(double*)(e1->p_elem) /= divisions;
       if (IS_BEND(e1->type)) {
@@ -536,6 +546,8 @@ long copy_line(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long ne, long reverse, char *
         for (i=0; i<ne; i++) {
             copy_element(e1, e2, reverse, 0, 0);
             e1->part_of = e2->part_of?e2->part_of:part_of;
+            e1->divisions = e2->divisions;
+            e1->firstOfDivGroup = e2->firstOfDivGroup;
             extend_elem_list(&e1);
             e2 = e2->succ;
             }                
@@ -546,6 +558,8 @@ long copy_line(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long ne, long reverse, char *
         for (i=0; i<ne; i++) {
             copy_element(e1, e2, reverse, 0, 0);
             e1->part_of = e2->part_of?e2->part_of:part_of;
+            e1->divisions = e2->divisions;
+            e1->firstOfDivGroup = e2->firstOfDivGroup;
             extend_elem_list(&e1);
             e2 = e2->pred;
             } 

@@ -579,6 +579,14 @@ void do_save_lattice(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
       switch (parameter[j].type) {
       case IS_DOUBLE:
         dvalue = *(double*)(eptr->p_elem+parameter[j].offset);
+        /*
+        if ((parameter[j].flags&PARAM_DIVISION_RELATED) && 
+            eptr->divisions>1) {
+          fprintf(stderr, "Multiplying %s by %ld\n",
+                  parameter[j].name, eptr->divisions);
+          dvalue *= eptr->divisions;
+        }
+        */
         if (dvalue!=parameter[j].number) {
           /* value is not the default, so add to output */
           sprintf(t, "%s=%.16g", parameter[j].name, dvalue);
@@ -664,12 +672,14 @@ void print_with_continuation(FILE *fp, char *s, long endcol)
   }
 }
 
-void change_defined_parameter_values(char **elem_name, long *param_number, long *type, double *value, long n_elems)
+void change_defined_parameter_values(char **elem_name, long *param_number, long *type, 
+                                     double *value, long n_elems)
 {
   ELEMENT_LIST *eptr;
   char *p_elem;
   long i_elem, elem_type, data_type, param;
-
+  double dValue;
+  
   log_entry("change_defined_parameter_values");
 
   for (i_elem=0; i_elem<n_elems; i_elem++) {
@@ -681,7 +691,11 @@ void change_defined_parameter_values(char **elem_name, long *param_number, long 
       p_elem = eptr->p_elem;
       switch (data_type) {
       case IS_DOUBLE:
-        *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)) = value[i_elem];
+        dValue = value[i_elem];
+        if ((entity_description[elem_type].parameter[param].flags&PARAM_DIVISION_RELATED) &&
+            eptr->divisions)
+          dValue *= eptr->divisions;
+        *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)) = dValue;
 #if DEBUG
         fprintf(stdout, "   changing parameter %s of %s #%ld to %e\n",
                 entity_description[elem_type].parameter[param].name,
@@ -711,8 +725,10 @@ void change_defined_parameter_values(char **elem_name, long *param_number, long 
   log_exit("change_defined_parameter_values");
 }
 
-void change_defined_parameter(char *elem_name, long param, long elem_type, 
-                              double value, char *valueString, unsigned long mode)
+
+void change_defined_parameter_divopt(char *elem_name, long param, long elem_type, 
+                                      double value, char *valueString, unsigned long mode, 
+                                      long checkDiv)
 {
   ELEMENT_LIST *eptr;
   char *p_elem;
@@ -735,6 +751,9 @@ void change_defined_parameter(char *elem_name, long param, long elem_type,
           exit(1);
         }
       }
+      if (checkDiv && eptr->divisions>1 &&
+          (entity_description[elem_type].parameter[param].flags&PARAM_DIVISION_RELATED))
+        value /= eptr->divisions;
       if (mode&LOAD_FLAG_VERBOSE)
         fprintf(stdout, "Changing definition (mode %s) %s.%s from %e to ", 
                 (mode&LOAD_FLAG_ABSOLUTE)?"absolute":
@@ -804,6 +823,13 @@ void change_defined_parameter(char *elem_name, long param, long elem_type,
   }
   log_exit("change_defined_parameter");
 }
+
+void change_defined_parameter(char *elem_name, long param, long elem_type, 
+                              double value, char *valueString, unsigned long mode)
+{
+  change_defined_parameter_divopt(elem_name, param, elem_type, value, valueString, mode, 0);
+}
+
 
 void process_rename_request(char *s, char **name, long n_names)
 {

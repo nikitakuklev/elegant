@@ -560,7 +560,7 @@ void set_element_flags(LINE_LIST *beamline, char **elem_name, long *elem_perturb
             else 
                 eptr->flags |= pflag;
             if (type && entity_description[type[i_elem]].flags&HAS_MATRIX &&
-                    entity_description[type[i_elem]].parameter[param[i_elem]].changes_matrix)
+                (entity_description[type[i_elem]].parameter[param[i_elem]].flags&PARAM_CHANGES_MATRIX))
                 eptr->flags |= mflag;
             }
         }

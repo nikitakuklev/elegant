@@ -434,6 +434,8 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
           } else {
             newValue = value[j];
           }
+          if (eptr->divisions>1 && (entity_description[eptr->type].parameter[param].flags&PARAM_DIVISION_RELATED))
+            newValue /= eptr->divisions;
           if (verbose)
             fprintf(stdout, "Changing %s.%s #%ld from %21.15e to ",
                     eptr->name, 
@@ -515,7 +517,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
         }
         eptr->flags |= 
           PARAMETERS_ARE_PERTURBED |
-            (entity_description[eptr->type].parameter[param].changes_matrix?VMATRIX_IS_PERTURBED:0);
+            ((entity_description[eptr->type].parameter[param].flags&PARAM_CHANGES_MATRIX)?VMATRIX_IS_PERTURBED:0);
         load_request[i].element_flags[load_request[i].values] = eptr->flags;
         load_request[i].values++;
       } while (!occurence && find_element(element[j], &eptr, &(beamline->elem)));
@@ -608,6 +610,15 @@ void dumpLatticeParameters(char *filename, RUN *run, LINE_LIST *beamline)
   
   eptr = &(beamline->elem);
   for (iElem=0; iElem<beamline->n_elems; iElem++) {
+    /*
+      fprintf(stdout, "name=%s, divisions=%ld  first=%hd\n",
+      eptr->name, eptr->divisions, eptr->firstOfDivGroup);
+      */
+    if (eptr->divisions>1 && !eptr->firstOfDivGroup) {
+      /* don't emit data for every member of a divided group */
+      eptr = eptr->succ;
+      continue;
+    }
     if (!(parameter = entity_description[eptr->type].parameter))
       SDDS_Bomb("parameter entry is NULL for entity description (dumpLatticeParameters)");
     if (!(eptr->name))
@@ -617,6 +628,9 @@ void dumpLatticeParameters(char *filename, RUN *run, LINE_LIST *beamline)
       switch (parameter[iParam].type) {
       case IS_DOUBLE: 
         value = *(double*)(eptr->p_elem+parameter[iParam].offset);
+        if (parameter[iParam].flags&PARAM_DIVISION_RELATED &&
+            eptr->divisions>1)
+          value *= eptr->divisions;
         break;
       case IS_LONG:
         value = *(long*)(eptr->p_elem+parameter[iParam].offset);

@@ -107,6 +107,7 @@ typedef struct element_list {
     char *part_of;     /* name of lowest-level line that this element is part of */
     struct element_list *pred, *succ;
     long divisions;    /* if element was subdivided, how many times */
+    short firstOfDivGroup;
     } ELEMENT_LIST;
 
 typedef struct {
@@ -636,11 +637,14 @@ extern char *entity_text[N_TYPES];
 #define N_SCRIPT_PARAMS 26
 #define N_FLOORELEMENT_PARAMS 6
 
+#define PARAM_CHANGES_MATRIX   0x0001UL
+#define PARAM_DIVISION_RELATED 0x0002UL
+
 typedef struct {
     char *name;            /* parameter name */
     char *unit;            /* parameter unit */
     long type;              /* parameter data type */
-    long changes_matrix;    /* logical value */
+    unsigned long flags;
     long offset;           /* offset position in structure */
     /* one of the following will have a meaningful value--I don't use a union,
      * since these cannot be initialized (except the first member)
@@ -2115,6 +2119,9 @@ extern void free_beamlines(LINE_LIST *beamline);
 extern void do_save_lattice(NAMELIST_TEXT *nl, RUN *run, LINE_LIST *beamline);
 void print_with_continuation(FILE *fp, char *s, long endcol);
 void change_defined_parameter_values(char **elem_name, long *param_number, long *type, double *value, long n_elems);
+void change_defined_parameter_divopt(char *elem_name, long param, long elem_type, 
+                                     double value, char *valueString, unsigned long mode, 
+                                     long checkDiv);
 void change_defined_parameter(char *elem_name, long param_number, long type, double value, char *valueString, unsigned long mode);
 extern void delete_matrix_data(LINE_LIST *beamline);
 

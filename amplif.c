@@ -267,7 +267,7 @@ void compute_amplification_factors(
 
     original_value = *((double*)(eptr->p_elem+entity_description[eptr->type].parameter[iparam].offset));
     *((double*)(eptr->p_elem+entity_description[eptr->type].parameter[iparam].offset)) += change;
-    if (entity_description[eptr->type].parameter[iparam].changes_matrix) {
+    if (entity_description[eptr->type].parameter[iparam].flags&PARAM_CHANGES_MATRIX) {
       if (eptr->matrix) {
         free_matrices(eptr->matrix);
         tfree(eptr->matrix);
@@ -304,7 +304,7 @@ void compute_amplification_factors(
     }
 
     *((double*)(eptr->p_elem+entity_description[eptr->type].parameter[iparam].offset)) = original_value;
-    if (entity_description[eptr->type].parameter[iparam].changes_matrix) {
+    if (entity_description[eptr->type].parameter[iparam].flags&PARAM_CHANGES_MATRIX) {
       if (eptr->matrix) {
         free_matrices(eptr->matrix);
         tfree(eptr->matrix);

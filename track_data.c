@@ -150,41 +150,41 @@ and phase modulation.",
 QUAD quad_example;
 /* quadrupole physical parameters */
 PARAMETER quad_param[N_QUAD_PARAMS]={
-    {"L", "M", IS_DOUBLE, 1, (long)((char *)&quad_example.length), NULL, 0.0, 0, "length"},
-    {"K1", "1/M$a2$n", IS_DOUBLE, 1, (long)((char *)&quad_example.k1), NULL, 0.0, 0, "geometric strength"},
-    {"TILT", "RAD", IS_DOUBLE, 1, (long)((char *)&quad_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
-    {"FFRINGE", "", IS_DOUBLE, 1, (long)((char *)&quad_example.ffringe), NULL, 0.0, 0, "fraction of length occupied by linear fringe region"},
-    {"DX", "M", IS_DOUBLE, 1, (long)((char *)&quad_example.dx), NULL, 0.0, 0, "misalignment"},
-    {"DY", "M", IS_DOUBLE, 1, (long)((char *)&quad_example.dy), NULL, 0.0, 0, "misalignment"},
-    {"DZ", "M", IS_DOUBLE, 1, (long)((char *)&quad_example.dz), NULL, 0.0, 0, "misalignment"},
-    {"FSE", "M", IS_DOUBLE, 1, (long)((char *)&quad_example.fse), NULL, 0.0, 0, "fractional strength error"},
-    {"ORDER", "", IS_LONG, 1, (long)((char *)&quad_example.order), NULL, 0.0, 0, "matrix order"}
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX|PARAM_DIVISION_RELATED, (long)((char *)&quad_example.length), NULL, 0.0, 0, "length"},
+    {"K1", "1/M$a2$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&quad_example.k1), NULL, 0.0, 0, "geometric strength"},
+    {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&quad_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
+    {"FFRINGE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&quad_example.ffringe), NULL, 0.0, 0, "fraction of length occupied by linear fringe region"},
+    {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&quad_example.dx), NULL, 0.0, 0, "misalignment"},
+    {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&quad_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&quad_example.dz), NULL, 0.0, 0, "misalignment"},
+    {"FSE", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&quad_example.fse), NULL, 0.0, 0, "fractional strength error"},
+    {"ORDER", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&quad_example.order), NULL, 0.0, 0, "matrix order"}
     };
 
 BEND bend_example;
 /* bending magnet physical parameters */
 PARAMETER bend_param[N_BEND_PARAMS] = {
-    {"L", "M", IS_DOUBLE, 1, (long)((char *)&bend_example.length), NULL, 0.0, 0, "arc length"},
-    {"ANGLE", "RAD", IS_DOUBLE, 1, (long)((char *)&bend_example.angle), NULL, 0.0, 0, "bend angle"},
-    {"K1", "1/M$a2$n", IS_DOUBLE, 1, (long)((char *)&bend_example.k1), NULL, 0.0, 0, "geometric focusing strength"},
-    {"E1", "RAD", IS_DOUBLE, 1, (long)((char *)&bend_example.e1), NULL, 0.0, 0, "entrance edge angle"},
-    {"E2", "RAD", IS_DOUBLE, 1, (long)((char *)&bend_example.e2), NULL, 0.0, 0, "exit edge angle"},
-    {"TILT", "RAD", IS_DOUBLE, 1, (long)((char *)&bend_example.tilt), NULL, 0.0, 0, "rotation about incoming longitudinal axis"},
-    {"K2", "1/M$a3$n", IS_DOUBLE, 1, (long)((char *)&bend_example.k2), NULL, 0.0, 0, "geometric sextupole strength"},
-    {"H1", "1/M", IS_DOUBLE, 1, (long)((char *)&bend_example.h1), NULL, 0.0, 0, "entrace pole-face curvature"},
-    {"H2", "1/M", IS_DOUBLE, 1, (long)((char *)&bend_example.h2), NULL, 0.0, 0, "exit pole-face curvature"},
-    {"HGAP", "M", IS_DOUBLE, 1, (long)((char *)&bend_example.hgap), NULL, 0.0, 0, "half-gap between poles"},
-    {"FINT", "", IS_DOUBLE, 1, (long)((char *)&bend_example.fint), NULL, DEFAULT_FINT, 0, "edge-field integral"},
-    {"DX", "M", IS_DOUBLE, 1, (long)((char *)&bend_example.dx), NULL, 0.0, 0, "misaligment of entrance"},
-    {"DY", "M", IS_DOUBLE, 1, (long)((char *)&bend_example.dy), NULL, 0.0, 0, "misalignment of entrace"},
-    {"DZ", "M", IS_DOUBLE, 1, (long)((char *)&bend_example.dz), NULL, 0.0, 0, "misalignment of entrance"},
-    {"FSE", "", IS_DOUBLE, 1, (long)((char *)&bend_example.fse), NULL, 0.0, 0, "fractional strength error"},
-    {"ETILT", "RAD", IS_DOUBLE, 1, (long)((char *)&bend_example.etilt), NULL, 0.0, 0, "error rotation about incoming longitudinal axis"},
-    {"EDGE1_EFFECTS", "", IS_LONG, 1, (long)((char *)&bend_example.edge1_effects), NULL, 0.0, 1, "include entrace edge effects?"},
-    {"EDGE2_EFFECTS", "", IS_LONG, 1, (long)((char *)&bend_example.edge2_effects), NULL, 0.0, 1, "include exit edge effects?"},
-    {"ORDER", "", IS_LONG, 1, (long)((char *)&bend_example.order), NULL, 0.0, 0, "matrix order"},
-    {"EDGE_ORDER", "", IS_LONG, 1, (long)((char *)&bend_example.edge_order), NULL, 0.0, 0, "edge matrix order"},
-    {"TRANSPORT", "", IS_LONG, 1, (long)((char *)&bend_example.TRANSPORT), NULL, 0.0, 0, "use (incorrect) TRANSPORT equations for T436 of edge?"},
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX|PARAM_DIVISION_RELATED, (long)((char *)&bend_example.length), NULL, 0.0, 0, "arc length"},
+    {"ANGLE", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX|PARAM_DIVISION_RELATED, (long)((char *)&bend_example.angle), NULL, 0.0, 0, "bend angle"},
+    {"K1", "1/M$a2$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bend_example.k1), NULL, 0.0, 0, "geometric focusing strength"},
+    {"E1", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bend_example.e1), NULL, 0.0, 0, "entrance edge angle"},
+    {"E2", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bend_example.e2), NULL, 0.0, 0, "exit edge angle"},
+    {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bend_example.tilt), NULL, 0.0, 0, "rotation about incoming longitudinal axis"},
+    {"K2", "1/M$a3$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bend_example.k2), NULL, 0.0, 0, "geometric sextupole strength"},
+    {"H1", "1/M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bend_example.h1), NULL, 0.0, 0, "entrace pole-face curvature"},
+    {"H2", "1/M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bend_example.h2), NULL, 0.0, 0, "exit pole-face curvature"},
+    {"HGAP", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bend_example.hgap), NULL, 0.0, 0, "half-gap between poles"},
+    {"FINT", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bend_example.fint), NULL, DEFAULT_FINT, 0, "edge-field integral"},
+    {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bend_example.dx), NULL, 0.0, 0, "misaligment of entrance"},
+    {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bend_example.dy), NULL, 0.0, 0, "misalignment of entrace"},
+    {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bend_example.dz), NULL, 0.0, 0, "misalignment of entrance"},
+    {"FSE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bend_example.fse), NULL, 0.0, 0, "fractional strength error"},
+    {"ETILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&bend_example.etilt), NULL, 0.0, 0, "error rotation about incoming longitudinal axis"},
+    {"EDGE1_EFFECTS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&bend_example.edge1_effects), NULL, 0.0, 1, "include entrace edge effects?"},
+    {"EDGE2_EFFECTS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&bend_example.edge2_effects), NULL, 0.0, 1, "include exit edge effects?"},
+    {"ORDER", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&bend_example.order), NULL, 0.0, 0, "matrix order"},
+    {"EDGE_ORDER", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&bend_example.edge_order), NULL, 0.0, 0, "edge matrix order"},
+    {"TRANSPORT", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&bend_example.TRANSPORT), NULL, 0.0, 0, "use (incorrect) TRANSPORT equations for T436 of edge?"},
     {"USE_BN", "", IS_LONG, 0, (long)((char *)&bend_example.use_bn), NULL, 0.0, 0, "use B1 and B2 instead of K1 and K2 values?"},
     {"B1", "1/M", IS_DOUBLE, 0, (long)((char *)&bend_example.b1), NULL, 0.0, 0, "K1 = B1*rho, where rho is bend radius"},
     {"B2", "1/M$a2$n", IS_DOUBLE, 0, (long)((char *)&bend_example.b2), NULL, 0.0, 0, "K2 = B2*rho"},
@@ -193,21 +193,21 @@ PARAMETER bend_param[N_BEND_PARAMS] = {
 DRIFT drift_example;
 /* drift length physical parameters */
 PARAMETER drift_param[N_DRIFT_PARAMS] = {
-    {"L", "M", IS_DOUBLE, 1, (long)((char *)&drift_example.length), NULL, 0.0, 0, "length"},
-    {"ORDER", "", IS_LONG, 1, (long)((char *)&drift_example.order), NULL, 0.0, 0, "matrix order"}
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX|PARAM_DIVISION_RELATED, (long)((char *)&drift_example.length), NULL, 0.0, 0, "length"},
+    {"ORDER", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&drift_example.order), NULL, 0.0, 0, "matrix order"}
     };
 
 SEXT sext_example;
 /* sextupole physical parameters */
 PARAMETER sext_param[N_SEXT_PARAMS] = {
-    {"L", "M", IS_DOUBLE, 1, (long)((char *)&sext_example.length), NULL, 0.0, 0, "length"},
-    {"K2", "1/M$a3$n", IS_DOUBLE, 1, (long)((char *)&sext_example.k2), NULL, 0.0, 0, "geometric strength"},
-    {"TILT", "RAD", IS_DOUBLE, 1, (long)((char *)&sext_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
-    {"DX", "M", IS_DOUBLE, 1, (long)((char *)&sext_example.dx), NULL, 0.0, 0, "misalignment"},
-    {"DY", "M", IS_DOUBLE, 1, (long)((char *)&sext_example.dy), NULL, 0.0, 0, "misalignment"},
-    {"DZ", "M", IS_DOUBLE, 1, (long)((char *)&sext_example.dz), NULL, 0.0, 0, "misalignment"},
-    {"FSE", "M", IS_DOUBLE, 1, (long)((char *)&sext_example.fse), NULL, 0.0, 0, "fractional strength error"},
-    {"ORDER", "", IS_LONG, 1, (long)((char *)&sext_example.order), NULL, 0.0, 0, "matrix order"}
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX|PARAM_DIVISION_RELATED, (long)((char *)&sext_example.length), NULL, 0.0, 0, "length"},
+    {"K2", "1/M$a3$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&sext_example.k2), NULL, 0.0, 0, "geometric strength"},
+    {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&sext_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
+    {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&sext_example.dx), NULL, 0.0, 0, "misalignment"},
+    {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&sext_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&sext_example.dz), NULL, 0.0, 0, "misalignment"},
+    {"FSE", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&sext_example.fse), NULL, 0.0, 0, "fractional strength error"},
+    {"ORDER", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&sext_example.order), NULL, 0.0, 0, "matrix order"}
     };
    
 MULT mult_example;
@@ -244,86 +244,86 @@ PARAMETER fmult_param[N_FMULT_PARAMS] = {
 SOLE sole_example;
 /* solenoid physical parameters */
 PARAMETER sole_param[N_SOLE_PARAMS] = {
-    {"L", "M", IS_DOUBLE, 1, (long)((char *)&sole_example.length), NULL, 0.0, 0, "length"},
-    {"KS", "RAD/M", IS_DOUBLE, 1, (long)((char *)&sole_example.ks), NULL, 0.0, 0, "geometric strength"},
-    {"B", "T", IS_DOUBLE, 1, (long)((char *)&sole_example.B), NULL, 0.0, 0, "field strength (used if KS is zero)"},
-    {"DX", "M", IS_DOUBLE, 1, (long)((char *)&sole_example.dx), NULL, 0.0, 0, "misalignment"},
-    {"DY", "M", IS_DOUBLE, 1, (long)((char *)&sole_example.dy), NULL, 0.0, 0, "misalignment"},
-    {"DZ", "M", IS_DOUBLE, 1, (long)((char *)&sole_example.dz), NULL, 0.0, 0, "misalignment"},
-    {"ORDER", "", IS_LONG, 1, (long)((char *)&sole_example.order), NULL, 0.0, 0, "matrix order"},
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&sole_example.length), NULL, 0.0, 0, "length"},
+    {"KS", "RAD/M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&sole_example.ks), NULL, 0.0, 0, "geometric strength"},
+    {"B", "T", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&sole_example.B), NULL, 0.0, 0, "field strength (used if KS is zero)"},
+    {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&sole_example.dx), NULL, 0.0, 0, "misalignment"},
+    {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&sole_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&sole_example.dz), NULL, 0.0, 0, "misalignment"},
+    {"ORDER", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&sole_example.order), NULL, 0.0, 0, "matrix order"},
     };
    
 HCOR hcor_example;
 /* horizontal corrector physical parameters */
 PARAMETER hcor_param[N_HCOR_PARAMS] = {
-    {"L", "M", IS_DOUBLE, 1, (long)((char *)&hcor_example.length), NULL, 0.0, 0, "length"},
-    {"KICK", "RAD", IS_DOUBLE, 1, (long)((char *)&hcor_example.kick), NULL, 0.0, 0, "kick strength"},
-    {"TILT", "RAD", IS_DOUBLE, 1, (long)((char *)&hcor_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
-    {"B2", "1/M$a2$n", IS_DOUBLE, 1, (long)((char *)&hcor_example.b2), NULL, 0.0, 0, "normalized sextupole strength (kick = KICK*(1+B2*x^2))"},
-    {"CALIBRATION", "", IS_DOUBLE, 1, (long)((char *)&hcor_example.calibration), NULL, 1.0, 0, "strength multiplier"},
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hcor_example.length), NULL, 0.0, 0, "length"},
+    {"KICK", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hcor_example.kick), NULL, 0.0, 0, "kick strength"},
+    {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hcor_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
+    {"B2", "1/M$a2$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hcor_example.b2), NULL, 0.0, 0, "normalized sextupole strength (kick = KICK*(1+B2*x^2))"},
+    {"CALIBRATION", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hcor_example.calibration), NULL, 1.0, 0, "strength multiplier"},
     {"EDGE_EFFECTS", "", IS_LONG, 0, (long)((char *)&hcor_example.edge_effects), NULL, 0.0, 0, "include edge effects?"},
-    {"ORDER", "", IS_LONG, 1, (long)((char *)&hcor_example.order), NULL, 0.0, 0, "matrix order"},
+    {"ORDER", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&hcor_example.order), NULL, 0.0, 0, "matrix order"},
     {"STEERING", "", IS_LONG, 0, (long)((char *)&hcor_example.steering), NULL, 0.0, 1, "use for steering?"},
     };
 
 VCOR vcor_example;
 /* vertical corrector physical parameters */
 PARAMETER vcor_param[N_VCOR_PARAMS] = {
-    {"L", "M", IS_DOUBLE, 1, (long)((char *)&vcor_example.length), NULL, 0.0, 0, "length"},
-    {"KICK", "RAD", IS_DOUBLE, 1, (long)((char *)&vcor_example.kick), NULL, 0.0, 0, "kick strength"},
-    {"TILT", "RAD", IS_DOUBLE, 1, (long)((char *)&vcor_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
-    {"B2", "1/M$a2$n", IS_DOUBLE, 1, (long)((char *)&vcor_example.b2), NULL, 0.0, 0, "normalized sextupole strength (kick = KICK*(1+B2*y^2))"},
-    {"CALIBRATION", "", IS_DOUBLE, 1, (long)((char *)&vcor_example.calibration), NULL, 1.0, 0, "strength multiplier"},
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&vcor_example.length), NULL, 0.0, 0, "length"},
+    {"KICK", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&vcor_example.kick), NULL, 0.0, 0, "kick strength"},
+    {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&vcor_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
+    {"B2", "1/M$a2$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&vcor_example.b2), NULL, 0.0, 0, "normalized sextupole strength (kick = KICK*(1+B2*y^2))"},
+    {"CALIBRATION", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&vcor_example.calibration), NULL, 1.0, 0, "strength multiplier"},
     {"EDGE_EFFECTS", "", IS_LONG, 0, (long)((char *)&vcor_example.edge_effects), NULL, 0.0, 0, "include edge effects?"},
-    {"ORDER", "", IS_LONG, 1, (long)((char *)&vcor_example.order), NULL, 0.0, 0, "matrix order"},
+    {"ORDER", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&vcor_example.order), NULL, 0.0, 0, "matrix order"},
     {"STEERING", "", IS_LONG, 0, (long)((char *)&vcor_example.steering), NULL, 0.0, 1, "use for steering?"},
     };
 
 RFCA rfca_example;
 /* rf cavity physical parameters */
 PARAMETER rfca_param[N_RFCA_PARAMS] = {
-    {"L", "M", IS_DOUBLE, 1, (long)((char *)&rfca_example.length), NULL, 0.0, 0, "length"},
-    {"VOLT", "V", IS_DOUBLE, 1, (long)((char *)&rfca_example.volt), NULL, 0.0, 0, "peak voltage"},
-    {"PHASE", "DEG", IS_DOUBLE, 1, (long)((char *)&rfca_example.phase), NULL, 0.0, 0, "phase"},
-    {"FREQ", "Hz", IS_DOUBLE, 1, (long)((char *)&rfca_example.freq), NULL, 500.0e6, 0, "frequency"},
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rfca_example.length), NULL, 0.0, 0, "length"},
+    {"VOLT", "V", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rfca_example.volt), NULL, 0.0, 0, "peak voltage"},
+    {"PHASE", "DEG", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rfca_example.phase), NULL, 0.0, 0, "phase"},
+    {"FREQ", "Hz", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rfca_example.freq), NULL, 500.0e6, 0, "frequency"},
     {"Q", "", IS_DOUBLE, 0, (long)((char *)&rfca_example.Q), NULL, 0.0, 0, "cavity Q"},
     {"PHASE_REFERENCE", "", IS_LONG, 0, (long)((char *)&rfca_example.phase_reference), NULL, 0.0, 0, "phase reference number (to link with other time-dependent elements)"},
-    {"CHANGE_P0", "", IS_LONG, 1, (long)((char *)&rfca_example.change_p0), NULL, 0.0, 0, "does cavity change central momentum?"}, 
+    {"CHANGE_P0", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&rfca_example.change_p0), NULL, 0.0, 0, "does cavity change central momentum?"}, 
     {"CHANGE_T", "", IS_LONG, 0, (long)((char *)&rfca_example.change_t), NULL, 0.0, 0, "not recommended"},
     {"FIDUCIAL", "", IS_STRING, 0, (long)((char *)&rfca_example.fiducial), NULL, 0.0, 0, "mode for determining fiducial arrival time (light, tmean, first, pmaximum)"},
-    {"END1_FOCUS", "", IS_LONG, 1, (long)((char *)&rfca_example.end1Focus), NULL, 0.0, 0, "include focusing at entrance?"},
-    {"END2_FOCUS", "", IS_LONG, 1, (long)((char *)&rfca_example.end2Focus), NULL, 0.0, 0, "include focusing at exit?"},
-    {"BODY_FOCUS_MODEL", "", IS_STRING, 1, (long)((char *)&rfca_example.bodyFocusModel), NULL, 0.0, 0, "None (default) or SRS (simplified Rosenzweig/Serafini for standing wave)"},
+    {"END1_FOCUS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&rfca_example.end1Focus), NULL, 0.0, 0, "include focusing at entrance?"},
+    {"END2_FOCUS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&rfca_example.end2Focus), NULL, 0.0, 0, "include focusing at exit?"},
+    {"BODY_FOCUS_MODEL", "", IS_STRING, PARAM_CHANGES_MATRIX, (long)((char *)&rfca_example.bodyFocusModel), NULL, 0.0, 0, "None (default) or SRS (simplified Rosenzweig/Serafini for standing wave)"},
     {"N_KICKS", "", IS_LONG, 0, (long)((char *)&rfca_example.nKicks), NULL, 0.0, 1, "number of kicks to use.  Set to zero for matrix method."},
-    {"DX", "M", IS_DOUBLE, 1, (long)((char *)&rfca_example.dx), NULL, 0.0, 0, "misalignment"},
-    {"DY", "M", IS_DOUBLE, 1, (long)((char *)&rfca_example.dy), NULL, 0.0, 0, "misalignment"},
-    {"T_REFERENCE", "S", IS_DOUBLE, 1, (long)((char *)&rfca_example.tReference), NULL, -1.0, 0, "arrival time of reference particle"},
+    {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rfca_example.dx), NULL, 0.0, 0, "misalignment"},
+    {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rfca_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"T_REFERENCE", "S", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rfca_example.tReference), NULL, -1.0, 0, "arrival time of reference particle"},
     {"LINEARIZE", "", IS_LONG, 0, (long)((char *)&rfca_example.linearize), NULL, 0.0, 0, "Linearize phase dependence?"},
     };
    
 HMON hmon_example;
 /* name for horizontal monitor physical parameters */
 PARAMETER hmon_param[N_HMON_PARAMS] = {
-    {"L", "M", IS_DOUBLE, 1, (long)((char *)&hmon_example.length), NULL, 0.0, 0, "length"},
-    {"DX", "M", IS_DOUBLE, 1, (long)((char *)&hmon_example.dx), NULL, 0.0, 0, "misalignment"},
-    {"DY", "M", IS_DOUBLE, 1, (long)((char *)&hmon_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hmon_example.length), NULL, 0.0, 0, "length"},
+    {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hmon_example.dx), NULL, 0.0, 0, "misalignment"},
+    {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hmon_example.dy), NULL, 0.0, 0, "misalignment"},
     {"WEIGHT", "", IS_DOUBLE, 0, (long)((char *)&hmon_example.weight), NULL, 1.0, 0, "weight in correction"},
     {"TILT", "", IS_DOUBLE, 0, (long)((char *)&hmon_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
     {"CALIBRATION", "", IS_DOUBLE, 0, (long)((char *)&hmon_example.calibration), NULL, 1.0, 0, "calibration factor for readout"},
-    {"ORDER", "", IS_LONG, 1, (long)((char *)&hmon_example.order), NULL, 1.0, 0, "matrix order"},
+    {"ORDER", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&hmon_example.order), NULL, 1.0, 0, "matrix order"},
     {"READOUT", "", IS_STRING, 0, (long)((char *)&hmon_example.readout), NULL, 0.0, 1, "rpn expression for readout (actual position supplied in variable x)"}
     } ;
    
 VMON vmon_example;
 /* name for vertical monitor physical parameters */
 PARAMETER vmon_param[N_VMON_PARAMS] = {
-    {"L", "M", IS_DOUBLE, 1, (long)((char *)&vmon_example.length), NULL, 0.0, 0, "length"},
-    {"DX", "M", IS_DOUBLE, 1, (long)((char *)&vmon_example.dx), NULL, 0.0, 0, "misalignment"},
-    {"DY", "M", IS_DOUBLE, 1, (long)((char *)&vmon_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&vmon_example.length), NULL, 0.0, 0, "length"},
+    {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&vmon_example.dx), NULL, 0.0, 0, "misalignment"},
+    {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&vmon_example.dy), NULL, 0.0, 0, "misalignment"},
     {"WEIGHT", "", IS_DOUBLE, 0, (long)((char *)&vmon_example.weight), NULL, 1.0, 0, "weight in correction"},
     {"TILT", "", IS_DOUBLE, 0, (long)((char *)&vmon_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
     {"CALIBRATION", "", IS_DOUBLE, 0, (long)((char *)&vmon_example.calibration), NULL, 1.0, 0, "calibration factor for readout"},
-    {"ORDER", "", IS_LONG, 1, (long)((char *)&vmon_example.order), NULL, 1.0, 0, "matrix order"},
+    {"ORDER", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&vmon_example.order), NULL, 1.0, 0, "matrix order"},
     {"READOUT", "", IS_STRING, 0, (long)((char *)&vmon_example.readout), NULL, 0.0, 1, "rpn expression for readout (actual position supplied in variable y)"}
     } ;
 
@@ -337,7 +337,7 @@ PARAMETER moni_param[N_MONI_PARAMS] = {
     {"TILT", "", IS_DOUBLE, 0, (long)((char *)&moni_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
     {"XCALIBRATION", "", IS_DOUBLE, 0, (long)((char *)&moni_example.xcalibration), NULL, 1.0, 0, "calibration factor for x readout"},
     {"YCALIBRATION", "", IS_DOUBLE, 0, (long)((char *)&moni_example.ycalibration), NULL, 1.0, 0, "calibration factor for y readout"},
-    {"ORDER", "", IS_LONG, 1, (long)((char *)&moni_example.order), NULL, 1.0, 0, "matrix order"},
+    {"ORDER", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&moni_example.order), NULL, 1.0, 0, "matrix order"},
     {"XREADOUT", "", IS_STRING, 0, (long)((char *)&moni_example.x_readout), NULL, 0.0, 1, "rpn expression for x readout (actual position supplied in variables x, y"},
     {"YREADOUT", "", IS_STRING, 0, (long)((char *)&moni_example.y_readout), NULL, 0.0, 1, "rpn expression for y readout (actual position supplied in variables x, y"}
     } ;
@@ -391,19 +391,19 @@ PARAMETER matr_param[N_MATR_PARAMS] = {
 ALPH alph_example;
 /* names for alpha magnet parameters */
 PARAMETER alph_param[N_ALPH_PARAMS] = {
-    {"XMAX", "M", IS_DOUBLE, 1, (long)((char *)&alph_example.xmax), NULL, 0.0, 0, "size of alpha"},
-    {"XS1", "M", IS_DOUBLE, 1, (long)((char *)&alph_example.xs1), NULL, 0.0, 0, "inner scraper position"},
-    {"XS2", "M", IS_DOUBLE, 1, (long)((char *)&alph_example.xs2), NULL, 0.0, 0, "outer scraper position"},
-    {"DP1", "", IS_DOUBLE, 1, (long)((char *)&alph_example.dp1), NULL, -1, 0, "inner scraper momentum deviation"},
-    {"DP2", "", IS_DOUBLE, 1, (long)((char *)&alph_example.dp2), NULL, 1, 0, "outer scraper momentum deviation"},
-    {"XPUCK", "M", IS_DOUBLE, 1, (long)((char *)&alph_example.xPuck), NULL, -1, 0, "position of scraper puck"},
-    {"WIDTHPUCK", "M", IS_DOUBLE, 1, (long)((char *)&alph_example.widthPuck), NULL, 0, 0, "size of scraper puck"},
-    {"DX", "M", IS_DOUBLE, 1, (long)((char *)&alph_example.dx), NULL, 0.0, 0, "misalignment"},
-    {"DY", "M", IS_DOUBLE, 1, (long)((char *)&alph_example.dy), NULL, 0.0, 0, "misalignment"},
-    {"DZ", "M", IS_DOUBLE, 1, (long)((char *)&alph_example.dz), NULL, 0.0, 0, "misalignment"},
+    {"XMAX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&alph_example.xmax), NULL, 0.0, 0, "size of alpha"},
+    {"XS1", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&alph_example.xs1), NULL, 0.0, 0, "inner scraper position"},
+    {"XS2", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&alph_example.xs2), NULL, 0.0, 0, "outer scraper position"},
+    {"DP1", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&alph_example.dp1), NULL, -1, 0, "inner scraper momentum deviation"},
+    {"DP2", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&alph_example.dp2), NULL, 1, 0, "outer scraper momentum deviation"},
+    {"XPUCK", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&alph_example.xPuck), NULL, -1, 0, "position of scraper puck"},
+    {"WIDTHPUCK", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&alph_example.widthPuck), NULL, 0, 0, "size of scraper puck"},
+    {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&alph_example.dx), NULL, 0.0, 0, "misalignment"},
+    {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&alph_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&alph_example.dz), NULL, 0.0, 0, "misalignment"},
     {"TILT", "", IS_DOUBLE, 0, (long)((char *)&alph_example.tilt), NULL, 0.0, 0, "rotation about incoming longitudinal axis"},
     {"PART", "", IS_LONG, 0, (long)((char *)&alph_example.part), NULL, 0.0, 0, "0=full, 1=first half, 2=second half"},
-    {"ORDER", "", IS_LONG, 1, (long)((char *)&alph_example.order), NULL, 0.0, 0, "matrix order [1,3]"}
+    {"ORDER", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&alph_example.order), NULL, 0.0, 0, "matrix order [1,3]"}
     } ;
 
 RFDF rfdf_example;
@@ -554,14 +554,14 @@ PARAMETER twpl_param[N_TWPL_PARAMS] = {
 MALIGN malign_example;
 /* names for misaligment parameters */
 PARAMETER malign_param[N_MALIGN_PARAMS] = {
-    {"DXP", "", IS_DOUBLE, 1, (long)((char *)&malign_example.dxp), NULL, 0.0, 0, "delta x'"},
-    {"DYP", "", IS_DOUBLE, 1, (long)((char *)&malign_example.dyp), NULL, 0.0, 0, "delta y'"},
-    {"DX", "M", IS_DOUBLE, 1, (long)((char *)&malign_example.dx), NULL, 0.0, 0, "delta x"},
-    {"DY", "M", IS_DOUBLE, 1, (long)((char *)&malign_example.dy), NULL, 0.0, 0, "delta y"},
-    {"DZ", "M", IS_DOUBLE, 1, (long)((char *)&malign_example.dz), NULL, 0.0, 0, "delta z"},
-    {"DT", "S", IS_DOUBLE, 1, (long)((char *)&malign_example.dt), NULL, 0.0, 0, "delta t"},
-    {"DP", "", IS_DOUBLE, 1, (long)((char *)&malign_example.dp), NULL, 0.0, 0, "delta p/pCentral"},
-    {"DE", "", IS_DOUBLE, 1, (long)((char *)&malign_example.de), NULL, 0.0, 0, "delta gamma/gammaCentral"},
+    {"DXP", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&malign_example.dxp), NULL, 0.0, 0, "delta x'"},
+    {"DYP", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&malign_example.dyp), NULL, 0.0, 0, "delta y'"},
+    {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&malign_example.dx), NULL, 0.0, 0, "delta x"},
+    {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&malign_example.dy), NULL, 0.0, 0, "delta y"},
+    {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&malign_example.dz), NULL, 0.0, 0, "delta z"},
+    {"DT", "S", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&malign_example.dt), NULL, 0.0, 0, "delta t"},
+    {"DP", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&malign_example.dp), NULL, 0.0, 0, "delta p/pCentral"},
+    {"DE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&malign_example.de), NULL, 0.0, 0, "delta gamma/gammaCentral"},
     {"ON_PASS", "", IS_LONG, 0, (long)((char *)&malign_example.on_pass), NULL, 0.0, -1, "pass on which to apply"},
     {"FORCE_MODIFY_MATRIX", "", IS_LONG, 0, (long)((char *)&malign_example.forceModifyMatrix), NULL, 0.0, 0, "modify the matrix even if on_pass>=0"},
     } ;
@@ -622,7 +622,7 @@ PARAMETER maxamp_param[N_MAXAMP_PARAMS] = {
 ROTATE rotate_example;
 /* names for beam rotation */
 PARAMETER rotate_param[N_ROTATE_PARAMS] = {
-    {"TILT", "RAD", IS_DOUBLE, 1, (long)((char *)&rotate_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
+    {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rotate_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
     } ;
 
 /* names for transmission count */
@@ -643,21 +643,21 @@ PARAMETER recirc_param[N_RECIRC_PARAMS] = {
 QFRING qfring_example;
 /* quadrupole fringe-field physical parameters */
 PARAMETER qfring_param[N_QFRING_PARAMS]={
-    {"L", "M", IS_DOUBLE, 1, (long)((char *)&qfring_example.length), NULL, 0.0, 0, "length"},
-    {"K1", "1/M$a2$n", IS_DOUBLE, 1, (long)((char *)&qfring_example.k1), NULL, 0.0, 0, "peak geometric strength"},
-    {"TILT", "RAD", IS_DOUBLE, 1, (long)((char *)&qfring_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
-    {"DX", "M", IS_DOUBLE, 1, (long)((char *)&qfring_example.dx), NULL, 0.0, 0, "misalignment"},
-    {"DY", "M", IS_DOUBLE, 1, (long)((char *)&qfring_example.dy), NULL, 0.0, 0, "misalignment"},
-    {"DZ", "M", IS_DOUBLE, 1, (long)((char *)&qfring_example.dz), NULL, 0.0, 0, "misalignment"},
-    {"FSE", "M", IS_DOUBLE, 1, (long)((char *)&qfring_example.fse), NULL, 0.0, 0, "fractional strength error"},
-    {"DIRECTION", "", IS_LONG, 1, (long)((char *)&qfring_example.direction), NULL, 0.0, 0, "1=entrance, -1=exit"},
-    {"ORDER", "", IS_LONG, 1, (long)((char *)&qfring_example.order), NULL, 0.0, 0, "matrix order"}
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&qfring_example.length), NULL, 0.0, 0, "length"},
+    {"K1", "1/M$a2$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&qfring_example.k1), NULL, 0.0, 0, "peak geometric strength"},
+    {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&qfring_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
+    {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&qfring_example.dx), NULL, 0.0, 0, "misalignment"},
+    {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&qfring_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&qfring_example.dz), NULL, 0.0, 0, "misalignment"},
+    {"FSE", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&qfring_example.fse), NULL, 0.0, 0, "fractional strength error"},
+    {"DIRECTION", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&qfring_example.direction), NULL, 0.0, 0, "1=entrance, -1=exit"},
+    {"ORDER", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&qfring_example.order), NULL, 0.0, 0, "matrix order"}
     };
 
 SCRAPER scraper_example;
 /* scraper physical parameters */
 PARAMETER scraper_param[N_SCRAPER_PARAMS]={
-    {"L", "M", IS_DOUBLE, 1, (long)((char *)&scraper_example.length), NULL, 0.0, 0, "length"},
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&scraper_example.length), NULL, 0.0, 0, "length"},
     {"POSITION", "M", IS_DOUBLE, 0, (long)((char *)&scraper_example.position), NULL, 0.0, 0, "position of edge"},
     {"DX", "M", IS_DOUBLE, 0, (long)((char *)&scraper_example.dx), NULL, 0.0, 0, "misalignment"},
     {"DY", "M", IS_DOUBLE, 0, (long)((char *)&scraper_example.dy), NULL, 0.0, 0, "misalignment"},
@@ -694,15 +694,15 @@ PARAMETER kicker_param[N_KICKER_PARAMS] = {
 KSEXT ksext_example;
 /* kick sextupole physical parameters */
 PARAMETER ksext_param[N_KSEXT_PARAMS] = {
-    {"L", "M", IS_DOUBLE, 1, (long)((char *)&ksext_example.length), NULL, 0.0, 0, "length"},
-    {"K2", "1/M$a3$n", IS_DOUBLE, 1, (long)((char *)&ksext_example.k2), NULL, 0.0, 0, "geometric strength"},
-    {"TILT", "RAD", IS_DOUBLE, 1, (long)((char *)&ksext_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
-    {"BORE", "M", IS_DOUBLE, 1, (long)((char *)&ksext_example.bore), NULL, 0.0, 0, "bore radius"},
-    {"B", "T", IS_DOUBLE, 1, (long)((char *)&ksext_example.B), NULL, 0.0, 0, "field at pole tip (used if bore nonzero)"},
-    {"DX", "M", IS_DOUBLE, 1, (long)((char *)&ksext_example.dx), NULL, 0.0, 0, "misalignment"},
-    {"DY", "M", IS_DOUBLE, 1, (long)((char *)&ksext_example.dy), NULL, 0.0, 0, "misalignment"},
-    {"DZ", "M", IS_DOUBLE, 1, (long)((char *)&ksext_example.dz), NULL, 0.0, 0, "misalignment"},
-    {"FSE", "M", IS_DOUBLE, 1, (long)((char *)&ksext_example.fse), NULL, 0.0, 0, "fractional strength error"},
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksext_example.length), NULL, 0.0, 0, "length"},
+    {"K2", "1/M$a3$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksext_example.k2), NULL, 0.0, 0, "geometric strength"},
+    {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksext_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
+    {"BORE", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksext_example.bore), NULL, 0.0, 0, "bore radius"},
+    {"B", "T", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksext_example.B), NULL, 0.0, 0, "field at pole tip (used if bore nonzero)"},
+    {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksext_example.dx), NULL, 0.0, 0, "misalignment"},
+    {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksext_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksext_example.dz), NULL, 0.0, 0, "misalignment"},
+    {"FSE", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksext_example.fse), NULL, 0.0, 0, "fractional strength error"},
     {"N_KICKS", "", IS_LONG, 0, (long)((char *)&ksext_example.n_kicks), NULL, 0.0, DEFAULT_N_KICKS, "number of kicks"},
     {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&ksext_example.synch_rad), NULL, 0.0, 0, "include classical synchrotron radiation?"},
     {"SYSTEMATIC_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&ksext_example.systematic_multipoles), NULL, 0.0, 0, "input file for systematic multipoles"},
@@ -713,48 +713,48 @@ PARAMETER ksext_param[N_KSEXT_PARAMS] = {
 KSBEND ksbend_example;
 /* symplectic sector bending magnet physical parameters */
 PARAMETER ksbend_param[N_KSBEND_PARAMS] = {
-    {"L", "M", IS_DOUBLE, 1, (long)((char *)&ksbend_example.length), NULL, 0.0, 0, "arc length"},
-    {"ANGLE", "RAD", IS_DOUBLE, 1, (long)((char *)&ksbend_example.angle), NULL, 0.0, 0, "bend angle"},
-    {"K1", "1/M$a2$n", IS_DOUBLE, 1, (long)((char *)&ksbend_example.k1), NULL, 0.0, 0, "geometric quadrupole strength"},
-    {"K2", "1/M$a3$n", IS_DOUBLE, 1, (long)((char *)&ksbend_example.k2), NULL, 0.0, 0, "geometric sextupole strength"},
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksbend_example.length), NULL, 0.0, 0, "arc length"},
+    {"ANGLE", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksbend_example.angle), NULL, 0.0, 0, "bend angle"},
+    {"K1", "1/M$a2$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksbend_example.k1), NULL, 0.0, 0, "geometric quadrupole strength"},
+    {"K2", "1/M$a3$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksbend_example.k2), NULL, 0.0, 0, "geometric sextupole strength"},
     {"K3", "1/M$a3$n", IS_DOUBLE, 0, (long)((char *)&ksbend_example.k3), NULL, 0.0, 0, "geometric octupole strength"},
     {"K4", "1/M$a4$n", IS_DOUBLE, 0, (long)((char *)&ksbend_example.k4), NULL, 0.0, 0, "geometric decapole strength"},
-    {"E1", "RAD", IS_DOUBLE, 1, (long)((char *)&ksbend_example.e1), NULL, 0.0, 0, "entrance edge angle"},
-    {"E2", "RAD", IS_DOUBLE, 1, (long)((char *)&ksbend_example.e2), NULL, 0.0, 0, "exit edge angle"},
-    {"TILT", "RAD", IS_DOUBLE, 1, (long)((char *)&ksbend_example.tilt), NULL, 0.0, 0, "rotation about incoming longitudinal axis"},
-    {"H1", "1/M", IS_DOUBLE, 1, (long)((char *)&ksbend_example.h1), NULL, 0.0, 0, "entrance pole-face curvature"},
-    {"H2", "1/M", IS_DOUBLE, 1, (long)((char *)&ksbend_example.h2), NULL, 0.0, 0, "exit pole-face curvature"},
-    {"HGAP", "M", IS_DOUBLE, 1, (long)((char *)&ksbend_example.hgap), NULL, 0.0, 0, "half-gap between poles"},
-    {"FINT", "", IS_DOUBLE, 1, (long)((char *)&ksbend_example.fint), NULL, DEFAULT_FINT, 0, "edge-field integral"},
-    {"DX", "M", IS_DOUBLE, 1, (long)((char *)&ksbend_example.dx), NULL, 0.0, 0, "misalignment"},
-    {"DY", "M", IS_DOUBLE, 1, (long)((char *)&ksbend_example.dy), NULL, 0.0, 0, "misalignment"},
-    {"DZ", "M", IS_DOUBLE, 1, (long)((char *)&ksbend_example.dz), NULL, 0.0, 0, "misalignment"},
-    {"FSE", "", IS_DOUBLE, 1, (long)((char *)&ksbend_example.fse), NULL, 0.0, 0, "fractional strength error"},
-    {"ETILT", "", IS_DOUBLE, 1, (long)((char *)&ksbend_example.etilt), NULL, 0.0, 0, "error rotation about incoming longitudinal axis"},
+    {"E1", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksbend_example.e1), NULL, 0.0, 0, "entrance edge angle"},
+    {"E2", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksbend_example.e2), NULL, 0.0, 0, "exit edge angle"},
+    {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksbend_example.tilt), NULL, 0.0, 0, "rotation about incoming longitudinal axis"},
+    {"H1", "1/M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksbend_example.h1), NULL, 0.0, 0, "entrance pole-face curvature"},
+    {"H2", "1/M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksbend_example.h2), NULL, 0.0, 0, "exit pole-face curvature"},
+    {"HGAP", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksbend_example.hgap), NULL, 0.0, 0, "half-gap between poles"},
+    {"FINT", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksbend_example.fint), NULL, DEFAULT_FINT, 0, "edge-field integral"},
+    {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksbend_example.dx), NULL, 0.0, 0, "misalignment"},
+    {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksbend_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksbend_example.dz), NULL, 0.0, 0, "misalignment"},
+    {"FSE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksbend_example.fse), NULL, 0.0, 0, "fractional strength error"},
+    {"ETILT", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksbend_example.etilt), NULL, 0.0, 0, "error rotation about incoming longitudinal axis"},
     {"N_KICKS", "", IS_LONG, 0, (long)((char *)&ksbend_example.n_kicks), NULL, 0.0, DEFAULT_N_KICKS, "number of kicks"},
     {"NONLINEAR", "", IS_LONG, 0, (long)((char *)&ksbend_example.nonlinear), NULL, 0.0, 1, "include nonlinear field components?"},
     {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&ksbend_example.synch_rad), NULL, 0.0, 0, "include classical synchrotron radiation?"},
-    {"EDGE1_EFFECTS", "", IS_LONG, 1, (long)((char *)&ksbend_example.edge1_effects), NULL, 0.0, 1, "include entrace edge effects?"},
-    {"EDGE2_EFFECTS", "", IS_LONG, 1, (long)((char *)&ksbend_example.edge2_effects), NULL, 0.0, 1, "include exit edge effects?"},
-    {"EDGE_ORDER", "", IS_LONG, 1, (long)((char *)&ksbend_example.edge_order), NULL, 0.0, 1, "edge matrix order"},
+    {"EDGE1_EFFECTS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&ksbend_example.edge1_effects), NULL, 0.0, 1, "include entrace edge effects?"},
+    {"EDGE2_EFFECTS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&ksbend_example.edge2_effects), NULL, 0.0, 1, "include exit edge effects?"},
+    {"EDGE_ORDER", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&ksbend_example.edge_order), NULL, 0.0, 1, "edge matrix order"},
     {"PARAXIAL", "", IS_LONG, 0, (long)((char *)&ksbend_example.paraxial), NULL, 0.0, 0, "use paraxial approximation?"},
-    {"TRANSPORT", "", IS_LONG, 1, (long)((char *)&ksbend_example.TRANSPORT), NULL, 0.0, 0, "use (incorrect) TRANSPORT equations for T436 of edge?"},
+    {"TRANSPORT", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&ksbend_example.TRANSPORT), NULL, 0.0, 0, "use (incorrect) TRANSPORT equations for T436 of edge?"},
     {"METHOD", "", IS_STRING, 0, (long)((char *)&ksbend_example.method), "modified-midpoint", 0.0, 0, "integration method (modified-midpoint, leap-frog"}
     };
 
 KQUAD kquad_example;
 /* kick quadrupole physical parameters */
 PARAMETER kquad_param[N_KQUAD_PARAMS]={
-    {"L", "M", IS_DOUBLE, 1, (long)((char *)&kquad_example.length), NULL, 0.0, 0, "length"},
-    {"K1", "1/M$a2$n", IS_DOUBLE, 1, (long)((char *)&kquad_example.k1), NULL, 0.0, 0, "geometric strength"},
-    {"TILT", "RAD", IS_DOUBLE, 1, (long)((char *)&kquad_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
-    {"BORE", "M", IS_DOUBLE, 1, (long)((char *)&kquad_example.bore), NULL, 0.0, 0, "bore radius"},
-    {"B", "T", IS_DOUBLE, 1, (long)((char *)&kquad_example.B), NULL, 0.0, 0, "pole tip field (used if bore nonzero)"},
-    {"DX", "M", IS_DOUBLE, 1, (long)((char *)&kquad_example.dx), NULL, 0.0, 0, "misalignment"},
-    {"DY", "M", IS_DOUBLE, 1, (long)((char *)&kquad_example.dy), NULL, 0.0, 0, "misalignment"},
-    {"DZ", "M", IS_DOUBLE, 1, (long)((char *)&kquad_example.dz), NULL, 0.0, 0, "misalignment"},
-    {"FSE", "M", IS_DOUBLE, 1, (long)((char *)&kquad_example.fse), NULL, 0.0, 0, "fractional strength error"},
-    {"N_KICKS", "", IS_LONG, 1, (long)((char *)&kquad_example.n_kicks), NULL, 0.0, DEFAULT_N_KICKS, "number of kicks"},
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.length), NULL, 0.0, 0, "length"},
+    {"K1", "1/M$a2$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.k1), NULL, 0.0, 0, "geometric strength"},
+    {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
+    {"BORE", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.bore), NULL, 0.0, 0, "bore radius"},
+    {"B", "T", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.B), NULL, 0.0, 0, "pole tip field (used if bore nonzero)"},
+    {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.dx), NULL, 0.0, 0, "misalignment"},
+    {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.dz), NULL, 0.0, 0, "misalignment"},
+    {"FSE", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.fse), NULL, 0.0, 0, "fractional strength error"},
+    {"N_KICKS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.n_kicks), NULL, 0.0, DEFAULT_N_KICKS, "number of kicks"},
     {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&kquad_example.synch_rad), NULL, 0.0, 0, "include classical synchrotron radiation?"},
     {"SYSTEMATIC_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&kquad_example.systematic_multipoles), NULL, 0.0, 0, "input file for systematic multipoles"},
     {"RANDOM_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&kquad_example.random_multipoles), NULL, 0.0, 0, "input file for random multipoles"},
@@ -764,12 +764,12 @@ PARAMETER kquad_param[N_KQUAD_PARAMS]={
 MAGNIFY magnify_example;
 /* magnifier physical parameters */
 PARAMETER magnify_param[N_MAGNIFY_PARAMS] = {
-    {"MX", "", IS_DOUBLE, 1, (long)((char *)&magnify_example.mx), NULL, 1.0, 0, "factor for x coordinates"},
-    {"MXP", "", IS_DOUBLE, 1, (long)((char *)&magnify_example.mxp), NULL, 1.0, 0, "factor for x' coordinates"},
-    {"MY", "", IS_DOUBLE, 1, (long)((char *)&magnify_example.my), NULL, 1.0, 0, "factor for y coordinates"},
-    {"MYP", "", IS_DOUBLE, 1, (long)((char *)&magnify_example.myp), NULL, 1.0, 0, "factor for y' coordinates"},
-    {"MS", "", IS_DOUBLE, 1, (long)((char *)&magnify_example.ms), NULL, 1.0, 0, "factor for s coordinates"},
-    {"MDP", "", IS_DOUBLE, 1, (long)((char *)&magnify_example.mdp), NULL, 1.0, 0, "factor for (p-pCentral)/pCentral"},
+    {"MX", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&magnify_example.mx), NULL, 1.0, 0, "factor for x coordinates"},
+    {"MXP", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&magnify_example.mxp), NULL, 1.0, 0, "factor for x' coordinates"},
+    {"MY", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&magnify_example.my), NULL, 1.0, 0, "factor for y coordinates"},
+    {"MYP", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&magnify_example.myp), NULL, 1.0, 0, "factor for y' coordinates"},
+    {"MS", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&magnify_example.ms), NULL, 1.0, 0, "factor for s coordinates"},
+    {"MDP", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&magnify_example.mdp), NULL, 1.0, 0, "factor for (p-pCentral)/pCentral"},
     } ;
     
 SAMPLE sample_example;
@@ -782,15 +782,15 @@ PARAMETER sample_param[N_SAMPLE_PARAMS] = {
 HVCOR hvcor_example;
 /* horizontal/vertical corrector physical parameters */
 PARAMETER hvcor_param[N_HVCOR_PARAMS] = {
-    {"L", "M", IS_DOUBLE, 1, (long)((char *)&hvcor_example.length), NULL, 0.0, 0, "length"},
-    {"HKICK", "RAD", IS_DOUBLE, 1, (long)((char *)&hvcor_example.xkick), NULL, 0.0, 0, "x kick angle"},
-    {"VKICK", "RAD", IS_DOUBLE, 1, (long)((char *)&hvcor_example.ykick), NULL, 0.0, 0, "y kick angle"},
-    {"TILT", "RAD", IS_DOUBLE, 1, (long)((char *)&hvcor_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
-    {"B2", "1/M$a2$n", IS_DOUBLE, 1, (long)((char *)&hvcor_example.b2), NULL, 0.0, 0, "normalized sextupole strength (e.g., kick = KICK*(1+B2*x^2))"},
-    {"HCALIBRATION", "", IS_DOUBLE, 1, (long)((char *)&hvcor_example.xcalibration), NULL, 1.0, 0, "factor applied to obtain x kick"},
-    {"VCALIBRATION", "", IS_DOUBLE, 1, (long)((char *)&hvcor_example.ycalibration), NULL, 1.0, 0, "factor applied to obtain y kick"},
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hvcor_example.length), NULL, 0.0, 0, "length"},
+    {"HKICK", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hvcor_example.xkick), NULL, 0.0, 0, "x kick angle"},
+    {"VKICK", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hvcor_example.ykick), NULL, 0.0, 0, "y kick angle"},
+    {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hvcor_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
+    {"B2", "1/M$a2$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hvcor_example.b2), NULL, 0.0, 0, "normalized sextupole strength (e.g., kick = KICK*(1+B2*x^2))"},
+    {"HCALIBRATION", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hvcor_example.xcalibration), NULL, 1.0, 0, "factor applied to obtain x kick"},
+    {"VCALIBRATION", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&hvcor_example.ycalibration), NULL, 1.0, 0, "factor applied to obtain y kick"},
     {"EDGE_EFFECTS", "", IS_LONG, 0, (long)((char *)&hvcor_example.edge_effects), NULL, 0.0, 0, "include edge effects?"},
-    {"ORDER", "", IS_LONG, 1, (long)((char *)&hvcor_example.order), NULL, 0.0, 0, "matrix order"},
+    {"ORDER", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&hvcor_example.order), NULL, 0.0, 0, "matrix order"},
     {"STEERING", "", IS_LONG, 0, (long)((char *)&hvcor_example.steering), NULL, 0.0, 1, "use for steering?"},
     };
 
@@ -807,21 +807,21 @@ PARAMETER scatter_param[N_SCATTER_PARAMS] = {
 NIBEND nibend_example;
 /* integrated bending magnet physical parameters */
 PARAMETER nibend_param[N_NIBEND_PARAMS] = {
-    {"L", "M", IS_DOUBLE, 1, (long)((char *)&nibend_example.length), NULL, 0.0, 0, "arc length"},
-    {"ANGLE", "RAD", IS_DOUBLE, 1, (long)((char *)&nibend_example.angle), NULL, 0.0, 0, "bending angle"},
-    {"E1", "RAD", IS_DOUBLE, 1, (long)((char *)&nibend_example.e1), NULL, 0.0, 0, "entrance edge angle"},
-    {"E2", "RAD", IS_DOUBLE, 1, (long)((char *)&nibend_example.e2), NULL, 0.0, 0, "exit edge angle"},
-    {"TILT", "", IS_DOUBLE, 1, (long)((char *)&nibend_example.tilt), NULL, 0.0, 0, "rotation about incoming longitudinal axis"},
-    {"DX", "M", IS_DOUBLE, 1, (long)((char *)&nibend_example.dx), NULL, 0.0, 0, "misalignment"},
-    {"DY", "M", IS_DOUBLE, 1, (long)((char *)&nibend_example.dy), NULL, 0.0, 0, "misalignment"},
-    {"DZ", "M", IS_DOUBLE, 1, (long)((char *)&nibend_example.dz), NULL, 0.0, 0, "misalignment"},
-    {"FINT", "", IS_DOUBLE, 1, (long)((char *)&nibend_example.fint), NULL, DEFAULT_FINT, 0, "edge-field integral"},
-    {"HGAP", "M", IS_DOUBLE, 1, (long)((char *)&nibend_example.hgap), NULL, 0.0, 0, "half-gap between poles"},
-    {"FP1", "M", IS_DOUBLE, 1, (long)((char *)&nibend_example.fp1), NULL, 10.0, 0, "fringe parameter (tanh model)"},
-    {"FP2", "M", IS_DOUBLE, 1, (long)((char *)&nibend_example.fp2), NULL, 1.0, 0, "not used"},
-    {"FSE", "", IS_DOUBLE, 1, (long)((char *)&nibend_example.fse), NULL, 0.0, 0, "fractional strength error"},
-    {"ETILT", "", IS_DOUBLE, 1, (long)((char *)&nibend_example.etilt), NULL, 0.0, 0, "error rotation about incoming longitudinal axis"},
-    {"ACCURACY", "", IS_DOUBLE, 1, (long)((char *)&nibend_example.accuracy), NULL, DEFAULT_ACCURACY, 0, "integration accuracy"},
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&nibend_example.length), NULL, 0.0, 0, "arc length"},
+    {"ANGLE", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&nibend_example.angle), NULL, 0.0, 0, "bending angle"},
+    {"E1", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&nibend_example.e1), NULL, 0.0, 0, "entrance edge angle"},
+    {"E2", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&nibend_example.e2), NULL, 0.0, 0, "exit edge angle"},
+    {"TILT", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&nibend_example.tilt), NULL, 0.0, 0, "rotation about incoming longitudinal axis"},
+    {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&nibend_example.dx), NULL, 0.0, 0, "misalignment"},
+    {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&nibend_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&nibend_example.dz), NULL, 0.0, 0, "misalignment"},
+    {"FINT", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&nibend_example.fint), NULL, DEFAULT_FINT, 0, "edge-field integral"},
+    {"HGAP", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&nibend_example.hgap), NULL, 0.0, 0, "half-gap between poles"},
+    {"FP1", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&nibend_example.fp1), NULL, 10.0, 0, "fringe parameter (tanh model)"},
+    {"FP2", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&nibend_example.fp2), NULL, 1.0, 0, "not used"},
+    {"FSE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&nibend_example.fse), NULL, 0.0, 0, "fractional strength error"},
+    {"ETILT", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&nibend_example.etilt), NULL, 0.0, 0, "error rotation about incoming longitudinal axis"},
+    {"ACCURACY", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&nibend_example.accuracy), NULL, DEFAULT_ACCURACY, 0, "integration accuracy"},
     {"MODEL", "", IS_STRING, 0, (long)((char *)&nibend_example.model), DEFAULT_NIBEND_TYPE, 0.0, 0, "fringe model (hard-edge, linear, cubic-spline, tanh, quintic"},
     {"METHOD", "", IS_STRING, 0, (long)((char *)&nibend_example.method), DEFAULT_INTEG_METHOD, 0.0, 0, "integration method (runge-kutta, bulirsch-stoer, modified-midpoint, two-pass modified-midpoint, leap-frog, non-adaptive runge-kutta"},
     {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&nibend_example.synch_rad), NULL, 0.0, 0, "include classical synchrotron radiation?"},
@@ -843,13 +843,13 @@ PARAMETER kpoly_param[N_KPOLY_PARAMS] = {
 NISEPT nisept_example;
 /* integrated septum magnet physical parameters */
 PARAMETER nisept_param[N_NISEPT_PARAMS] = {
-    {"L", "M", IS_DOUBLE, 1, (long)((char *)&nisept_example.length), NULL, 0.0, 0, "arc length"},
-    {"ANGLE", "RAD", IS_DOUBLE, 1, (long)((char *)&nisept_example.angle), NULL, 0.0, 0, "bend angle"},
-    {"E1", "RAD", IS_DOUBLE, 1, (long)((char *)&nisept_example.e1), NULL, 0.0, 0, "entrance edge angle"},
-    {"B1", "1/M", IS_DOUBLE, 1, (long)((char *)&nisept_example.b1), NULL, 0.0, 0, "normalized gradient (K1=B1*L/ANGLE)"},
-    {"Q1REF", "M", IS_DOUBLE, 1, (long)((char *)&nisept_example.q1_ref), NULL, 0.0, 0, "distance from septum at which bending radius is L/ANGLE"},
-    {"FLEN", "M", IS_DOUBLE, 1, (long)((char *)&nisept_example.flen), NULL, 0.0, 0, "fringe field length"},
-    {"ACCURACY", "", IS_DOUBLE, 1, (long)((char *)&nisept_example.accuracy), NULL, DEFAULT_ACCURACY, 0, "integration accuracy"},
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&nisept_example.length), NULL, 0.0, 0, "arc length"},
+    {"ANGLE", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&nisept_example.angle), NULL, 0.0, 0, "bend angle"},
+    {"E1", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&nisept_example.e1), NULL, 0.0, 0, "entrance edge angle"},
+    {"B1", "1/M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&nisept_example.b1), NULL, 0.0, 0, "normalized gradient (K1=B1*L/ANGLE)"},
+    {"Q1REF", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&nisept_example.q1_ref), NULL, 0.0, 0, "distance from septum at which bending radius is L/ANGLE"},
+    {"FLEN", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&nisept_example.flen), NULL, 0.0, 0, "fringe field length"},
+    {"ACCURACY", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&nisept_example.accuracy), NULL, DEFAULT_ACCURACY, 0, "integration accuracy"},
     {"METHOD", "", IS_STRING, 0, (long)((char *)&nisept_example.method), DEFAULT_INTEG_METHOD, 0.0, 0, "integration method (runge-kutta, bulirsch-stoer, modified-midpoint, two-pass modified-midpoint, leap-frog, non-adaptive runge-kutta"},
     {"MODEL", "", IS_STRING, 0, (long)((char *)&nisept_example.model), DEFAULT_NIBEND_TYPE, 0.0, 0, "fringe model (hard-edge, linear, cubic-spline, tanh, quintic"},
     };
@@ -857,10 +857,10 @@ PARAMETER nisept_param[N_NISEPT_PARAMS] = {
 RAMPRF ramprf_example;
 /* ramped rf cavity physical parameters */
 PARAMETER ramprf_param[N_RAMPRF_PARAMS] = {
-    {"L", "M", IS_DOUBLE, 1, (long)((char *)&ramprf_example.length), NULL, 0.0, 0, "length"},
-    {"VOLT", "V", IS_DOUBLE, 1, (long)((char *)&ramprf_example.volt), NULL, 0.0, 0, "nominal voltage"},
-    {"PHASE", "DEG", IS_DOUBLE, 1, (long)((char *)&ramprf_example.phase), NULL, 0.0, 0, "nominal phase"},
-    {"FREQ", "Hz", IS_DOUBLE, 1, (long)((char *)&ramprf_example.freq), NULL, 500.0e6, 0, "nominal frequency"},
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ramprf_example.length), NULL, 0.0, 0, "length"},
+    {"VOLT", "V", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ramprf_example.volt), NULL, 0.0, 0, "nominal voltage"},
+    {"PHASE", "DEG", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ramprf_example.phase), NULL, 0.0, 0, "nominal phase"},
+    {"FREQ", "Hz", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ramprf_example.freq), NULL, 500.0e6, 0, "nominal frequency"},
     {"PHASE_REFERENCE", "", IS_LONG, 0, (long)((char *)&ramprf_example.phase_reference), NULL, 0.0, 0, "phase reference number (to link with other time-dependent elements)"},
     {"VOLT_WAVEFORM", "", IS_STRING, 0, (long)((char *)&ramprf_example.vwaveform), NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving voltage waveform factor vs time"},
     {"PHASE_WAVEFORM", "", IS_STRING, 0, (long)((char *)&ramprf_example.pwaveform), NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving phase offset vs time (requires FREQ_WAVEFORM)"},
@@ -876,36 +876,36 @@ PARAMETER rampp_param[N_RAMPP_PARAMS] = {
 STRAY stray_example;
 /* stray field physical parameters */
 PARAMETER stray_param[N_STRAY_PARAMS] = {
-    {"L", "M", IS_DOUBLE, 1, (long)((char *)&stray_example.length), NULL, 0.0, 0, "length"},
-    {"LBX", "T", IS_DOUBLE, 1, (long)((char *)&stray_example.lBx), NULL, 0.0, 0, "local Bx"},
-    {"LBY", "T", IS_DOUBLE, 1, (long)((char *)&stray_example.lBy), NULL, 0.0, 0, "local By"},
-    {"GBX", "T", IS_DOUBLE, 1, (long)((char *)&stray_example.gBx), NULL, 0.0, 0, "global Bx"},
-    {"GBY", "T", IS_DOUBLE, 1, (long)((char *)&stray_example.gBy), NULL, 0.0, 0, "global By"},
-    {"GBZ", "T", IS_DOUBLE, 1, (long)((char *)&stray_example.gBz), NULL, 0.0, 0, "global Bz"},
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&stray_example.length), NULL, 0.0, 0, "length"},
+    {"LBX", "T", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&stray_example.lBx), NULL, 0.0, 0, "local Bx"},
+    {"LBY", "T", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&stray_example.lBy), NULL, 0.0, 0, "local By"},
+    {"GBX", "T", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&stray_example.gBx), NULL, 0.0, 0, "global Bx"},
+    {"GBY", "T", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&stray_example.gBy), NULL, 0.0, 0, "global By"},
+    {"GBZ", "T", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&stray_example.gBz), NULL, 0.0, 0, "global Bz"},
     {"ORDER", "", IS_LONG, 0, (long)((char *)&stray_example.order), NULL, 0.0, 0, "matrix order"},
     };
 
 CSBEND csbend_example;
 /* canonically-integrated sector bending magnet physical parameters */
 PARAMETER csbend_param[N_CSBEND_PARAMS] = {
-    {"L", "M", IS_DOUBLE, 1, (long)((char *)&csbend_example.length), NULL, 0.0, 0, "arc length"},
-    {"ANGLE", "RAD", IS_DOUBLE, 1, (long)((char *)&csbend_example.angle), NULL, 0.0, 0, "bend angle"},
-    {"K1", "1/M$a2$n", IS_DOUBLE, 1, (long)((char *)&csbend_example.k1), NULL, 0.0, 0, "geometric quadrupole strength"},
-    {"K2", "1/M$a3$n", IS_DOUBLE, 1, (long)((char *)&csbend_example.k2), NULL, 0.0, 0, "geometric sextupole strength"},
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csbend_example.length), NULL, 0.0, 0, "arc length"},
+    {"ANGLE", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csbend_example.angle), NULL, 0.0, 0, "bend angle"},
+    {"K1", "1/M$a2$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csbend_example.k1), NULL, 0.0, 0, "geometric quadrupole strength"},
+    {"K2", "1/M$a3$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csbend_example.k2), NULL, 0.0, 0, "geometric sextupole strength"},
     {"K3", "1/M$a3$n", IS_DOUBLE, 0, (long)((char *)&csbend_example.k3), NULL, 0.0, 0, "geometric octupole strength"},
     {"K4", "1/M$a4$n", IS_DOUBLE, 0, (long)((char *)&csbend_example.k4), NULL, 0.0, 0, "geometric decapole strength"},
-    {"E1", "RAD", IS_DOUBLE, 1, (long)((char *)&csbend_example.e1), NULL, 0.0, 0, "entrance edge angle"},
-    {"E2", "RAD", IS_DOUBLE, 1, (long)((char *)&csbend_example.e2), NULL, 0.0, 0, "exit edge angle"},
-    {"TILT", "RAD", IS_DOUBLE, 1, (long)((char *)&csbend_example.tilt), NULL, 0.0, 0, "rotation about incoming longitudinal axis"},
-    {"H1", "1/M", IS_DOUBLE, 1, (long)((char *)&csbend_example.h1), NULL, 0.0, 0, "entrance pole-face curvature"},
-    {"H2", "1/M", IS_DOUBLE, 1, (long)((char *)&csbend_example.h2), NULL, 0.0, 0, "exit pole-face curvature"},
-    {"HGAP", "M", IS_DOUBLE, 1, (long)((char *)&csbend_example.hgap), NULL, 0.0, 0, "half-gap between poles"},
-    {"FINT", "", IS_DOUBLE, 1, (long)((char *)&csbend_example.fint), NULL, DEFAULT_FINT, 0, "edge-field integral"},
-    {"DX", "M", IS_DOUBLE, 1, (long)((char *)&csbend_example.dx), NULL, 0.0, 0, "misalignment"},
-    {"DY", "M", IS_DOUBLE, 1, (long)((char *)&csbend_example.dy), NULL, 0.0, 0, "misalignment"},
-    {"DZ", "M", IS_DOUBLE, 1, (long)((char *)&csbend_example.dz), NULL, 0.0, 0, "misalignment"},
-    {"FSE", "", IS_DOUBLE, 1, (long)((char *)&csbend_example.fse), NULL, 0.0, 0, "fractional strength error"},
-    {"ETILT", "", IS_DOUBLE, 1, (long)((char *)&csbend_example.etilt), NULL, 0.0, 0, "error rotation about incoming longitudinal axis"},
+    {"E1", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csbend_example.e1), NULL, 0.0, 0, "entrance edge angle"},
+    {"E2", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csbend_example.e2), NULL, 0.0, 0, "exit edge angle"},
+    {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csbend_example.tilt), NULL, 0.0, 0, "rotation about incoming longitudinal axis"},
+    {"H1", "1/M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csbend_example.h1), NULL, 0.0, 0, "entrance pole-face curvature"},
+    {"H2", "1/M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csbend_example.h2), NULL, 0.0, 0, "exit pole-face curvature"},
+    {"HGAP", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csbend_example.hgap), NULL, 0.0, 0, "half-gap between poles"},
+    {"FINT", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csbend_example.fint), NULL, DEFAULT_FINT, 0, "edge-field integral"},
+    {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csbend_example.dx), NULL, 0.0, 0, "misalignment"},
+    {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csbend_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csbend_example.dz), NULL, 0.0, 0, "misalignment"},
+    {"FSE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csbend_example.fse), NULL, 0.0, 0, "fractional strength error"},
+    {"ETILT", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csbend_example.etilt), NULL, 0.0, 0, "error rotation about incoming longitudinal axis"},
     {"N_KICKS", "", IS_LONG, 0, (long)((char *)&csbend_example.n_kicks), NULL, 0.0, DEFAULT_N_KICKS, "number of kicks"},
     {"NONLINEAR", "", IS_LONG, 0, (long)((char *)&csbend_example.nonlinear), NULL, 0.0, 1, "include nonlinear field components?"},
     {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&csbend_example.synch_rad), NULL, 0.0, 0, "include classical synchrotron radiation?"},
@@ -928,24 +928,24 @@ PARAMETER csbend_param[N_CSBEND_PARAMS] = {
 CSRCSBEND csrcsbend_example;
 /* canonically-integrated sector bending magnet with CSR physical parameters */
 PARAMETER csrcsbend_param[N_CSRCSBEND_PARAMS] = {
-    {"L", "M", IS_DOUBLE, 1, (long)((char *)&csrcsbend_example.length), NULL, 0.0, 0, "arc length"},
-    {"ANGLE", "RAD", IS_DOUBLE, 1, (long)((char *)&csrcsbend_example.angle), NULL, 0.0, 0, "bend angle"},
-    {"K1", "1/M$a2$n", IS_DOUBLE, 1, (long)((char *)&csrcsbend_example.k1), NULL, 0.0, 0, "geometric quadrupole strength"},
-    {"K2", "1/M$a3$n", IS_DOUBLE, 1, (long)((char *)&csrcsbend_example.k2), NULL, 0.0, 0, "geometric sextupole strength"},
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csrcsbend_example.length), NULL, 0.0, 0, "arc length"},
+    {"ANGLE", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csrcsbend_example.angle), NULL, 0.0, 0, "bend angle"},
+    {"K1", "1/M$a2$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csrcsbend_example.k1), NULL, 0.0, 0, "geometric quadrupole strength"},
+    {"K2", "1/M$a3$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csrcsbend_example.k2), NULL, 0.0, 0, "geometric sextupole strength"},
     {"K3", "1/M$a3$n", IS_DOUBLE, 0, (long)((char *)&csrcsbend_example.k3), NULL, 0.0, 0, "geometric octupole strength"},
     {"K4", "1/M$a4$n", IS_DOUBLE, 0, (long)((char *)&csrcsbend_example.k4), NULL, 0.0, 0, "geometric decapole strength"},
-    {"E1", "RAD", IS_DOUBLE, 1, (long)((char *)&csrcsbend_example.e1), NULL, 0.0, 0, "entrance edge angle"},
-    {"E2", "RAD", IS_DOUBLE, 1, (long)((char *)&csrcsbend_example.e2), NULL, 0.0, 0, "exit edge angle"},
-    {"TILT", "RAD", IS_DOUBLE, 1, (long)((char *)&csrcsbend_example.tilt), NULL, 0.0, 0, "rotation about incoming longitudinal axis"},
-    {"H1", "1/M", IS_DOUBLE, 1, (long)((char *)&csrcsbend_example.h1), NULL, 0.0, 0, "entrance pole-face curvature"},
-    {"H2", "1/M", IS_DOUBLE, 1, (long)((char *)&csrcsbend_example.h2), NULL, 0.0, 0, "exit pole-face curvature"},
-    {"HGAP", "M", IS_DOUBLE, 1, (long)((char *)&csrcsbend_example.hgap), NULL, 0.0, 0, "half-gap between poles"},
-    {"FINT", "", IS_DOUBLE, 1, (long)((char *)&csrcsbend_example.fint), NULL, DEFAULT_FINT, 0, "edge-field integral"},
-    {"DX", "M", IS_DOUBLE, 1, (long)((char *)&csrcsbend_example.dx), NULL, 0.0, 0, "misalignment"},
-    {"DY", "M", IS_DOUBLE, 1, (long)((char *)&csrcsbend_example.dy), NULL, 0.0, 0, "misalignment"},
-    {"DZ", "M", IS_DOUBLE, 1, (long)((char *)&csrcsbend_example.dz), NULL, 0.0, 0, "misalignment"},
-    {"FSE", "", IS_DOUBLE, 1, (long)((char *)&csrcsbend_example.fse), NULL, 0.0, 0, "fractional strength error"},
-    {"ETILT", "", IS_DOUBLE, 1, (long)((char *)&csrcsbend_example.etilt), NULL, 0.0, 0, "error rotation about incoming longitudinal axis"},
+    {"E1", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csrcsbend_example.e1), NULL, 0.0, 0, "entrance edge angle"},
+    {"E2", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csrcsbend_example.e2), NULL, 0.0, 0, "exit edge angle"},
+    {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csrcsbend_example.tilt), NULL, 0.0, 0, "rotation about incoming longitudinal axis"},
+    {"H1", "1/M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csrcsbend_example.h1), NULL, 0.0, 0, "entrance pole-face curvature"},
+    {"H2", "1/M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csrcsbend_example.h2), NULL, 0.0, 0, "exit pole-face curvature"},
+    {"HGAP", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csrcsbend_example.hgap), NULL, 0.0, 0, "half-gap between poles"},
+    {"FINT", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csrcsbend_example.fint), NULL, DEFAULT_FINT, 0, "edge-field integral"},
+    {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csrcsbend_example.dx), NULL, 0.0, 0, "misalignment"},
+    {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csrcsbend_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csrcsbend_example.dz), NULL, 0.0, 0, "misalignment"},
+    {"FSE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csrcsbend_example.fse), NULL, 0.0, 0, "fractional strength error"},
+    {"ETILT", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csrcsbend_example.etilt), NULL, 0.0, 0, "error rotation about incoming longitudinal axis"},
     {"N_KICKS", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.n_kicks), NULL, 0.0, DEFAULT_N_KICKS, "number of kicks"},
     {"NONLINEAR", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.nonlinear), NULL, 0.0, 1, "include nonlinear field components?"},
     {"LINEARIZE", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.useMatrix), NULL, 0.0, 0, "use linear matrix instead of symplectic integrator?"},
@@ -985,12 +985,12 @@ PARAMETER csrcsbend_param[N_CSRCSBEND_PARAMS] = {
 TUBEND tubend_example;
 /* special bending magnet for top-up with entry through the side! */
 PARAMETER tubend_param[N_TUBEND_PARAMS] = {
-    {"L", "M", IS_DOUBLE, 1, (long)((char *)&tubend_example.length), NULL, 0.0, 0, "arc length"},
-    {"ANGLE", "RAD", IS_DOUBLE, 1, (long)((char *)&tubend_example.angle), NULL, 0.0, 0, "bend angle"},
-    {"FSE", "", IS_DOUBLE, 1, (long)((char *)&tubend_example.fse), NULL, 0.0, 0, "fractional strength error"},
-    {"OFFSET", "", IS_DOUBLE, 1, (long)((char *)&tubend_example.offset), NULL, 0.0, 0, "horizontal offset of magnet center from arc center"},
-    {"MAGNET_WIDTH", "", IS_DOUBLE, 1, (long)((char *)&tubend_example.magnet_width), NULL, 0.0, 0, "horizontal width of the magnet pole"},
-    {"MAGNET_ANGLE", "", IS_DOUBLE, 1, (long)((char *)&tubend_example.magnet_angle), NULL, 0.0, 0, "angle that the magnet was designed for"},
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&tubend_example.length), NULL, 0.0, 0, "arc length"},
+    {"ANGLE", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&tubend_example.angle), NULL, 0.0, 0, "bend angle"},
+    {"FSE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&tubend_example.fse), NULL, 0.0, 0, "fractional strength error"},
+    {"OFFSET", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&tubend_example.offset), NULL, 0.0, 0, "horizontal offset of magnet center from arc center"},
+    {"MAGNET_WIDTH", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&tubend_example.magnet_width), NULL, 0.0, 0, "horizontal width of the magnet pole"},
+    {"MAGNET_ANGLE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&tubend_example.magnet_angle), NULL, 0.0, 0, "angle that the magnet was designed for"},
     };
 
 TWMTA twmta_example;
@@ -1019,8 +1019,8 @@ PARAMETER twmta_param[N_TWMTA_PARAMS] = {
 MATTER matter_example;
 /* matter physical parameters */
 PARAMETER matter_param[N_MATTER_PARAMS] = {
-    {"L", "M", IS_DOUBLE, 1, (long)((char *)&matter_example.length), NULL, 0.0, 0, "length"},
-    {"XO", "M", IS_DOUBLE, 1, (long)((char *)&matter_example.Xo), NULL, 0.0, 0, "radiation length"},
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&matter_example.length), NULL, 0.0, 0, "length"},
+    {"XO", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&matter_example.Xo), NULL, 0.0, 0, "radiation length"},
     {"ELASTIC", "", IS_LONG, 0, (long)((char *)&matter_example.elastic), NULL, 0.0, 0, "elastic scattering?"},
     {"ENERGY_STRAGGLE", "", IS_LONG, 0, (long)((char *)&matter_example.energyStraggle), NULL, 0.0, 0, "use simple-minded energy straggling model?"},
     {"Z", "", IS_LONG, 0, (long)((char *)&matter_example.Z), NULL, 0.0, 0, "Atomic number"},
@@ -1240,7 +1240,7 @@ PARAMETER histogram_param[N_HISTOGRAM_PARAMS] = {
 CSRDRIFT csrdrift_example;
 /* CSR drift length physical parameters */
 PARAMETER csrdrift_param[N_CSRDRIFT_PARAMS] = {
-    {"L", "M", IS_DOUBLE, 1, (long)((char *)&csrdrift_example.length), NULL, 0.0, 0, "length"},
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csrdrift_example.length), NULL, 0.0, 0, "length"},
     {"ATTENUATION_LENGTH", "M", IS_DOUBLE, 0, (long)((char *)&csrdrift_example.attenuationLength), NULL, 0.0, 0, "exponential attenuation length for wake"},
     {"DZ", "", IS_DOUBLE, 0, (long)((char *)&csrdrift_example.dz), NULL, 0.0, 0, "interval between kicks"},
     {"N_KICKS", "", IS_LONG, 0, (long)((char *)&csrdrift_example.nKicks), NULL, 0.0, 1, "number of kicks (if DZ is zero)"},
@@ -1265,19 +1265,19 @@ PARAMETER csrdrift_param[N_CSRDRIFT_PARAMS] = {
 RFCW rfcw_example;
 /* rf cavity with wakes physical parameters */
 PARAMETER rfcw_param[N_RFCW_PARAMS] = {
-    {"L", "M", IS_DOUBLE, 1, (long)((char *)&rfcw_example.length), NULL, 0.0, 0, "length"},
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rfcw_example.length), NULL, 0.0, 0, "length"},
     {"CELL_LENGTH", "M", IS_DOUBLE, 0, (long)((char *)&rfcw_example.cellLength), NULL, 0.0, 0, "cell length (used to scale wakes)"},
-    {"VOLT", "V", IS_DOUBLE, 1, (long)((char *)&rfcw_example.volt), NULL, 0.0, 0, "voltage"},
-    {"PHASE", "DEG", IS_DOUBLE, 1, (long)((char *)&rfcw_example.phase), NULL, 0.0, 0, "phase"},
-    {"FREQ", "Hz", IS_DOUBLE, 1, (long)((char *)&rfcw_example.freq), NULL, 500.0e6, 0, "frequency"},
+    {"VOLT", "V", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rfcw_example.volt), NULL, 0.0, 0, "voltage"},
+    {"PHASE", "DEG", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rfcw_example.phase), NULL, 0.0, 0, "phase"},
+    {"FREQ", "Hz", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rfcw_example.freq), NULL, 500.0e6, 0, "frequency"},
     {"Q", "", IS_DOUBLE, 0, (long)((char *)&rfcw_example.Q), NULL, 0.0, 0, "cavity Q"},
     {"PHASE_REFERENCE", "", IS_LONG, 0, (long)((char *)&rfcw_example.phase_reference), NULL, 0.0, 0, "phase reference number (to link with other time-dependent elements)"},
-    {"CHANGE_P0", "", IS_LONG, 1, (long)((char *)&rfcw_example.change_p0), NULL, 0.0, 0, "does element change central momentum?"}, 
+    {"CHANGE_P0", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&rfcw_example.change_p0), NULL, 0.0, 0, "does element change central momentum?"}, 
     {"CHANGE_T", "", IS_LONG, 0, (long)((char *)&rfcw_example.change_t), NULL, 0.0, 0, "not recommended"}, 
     {"FIDUCIAL", "", IS_STRING, 0, (long)((char *)&rfcw_example.fiducial), NULL, 0.0, 0, "mode for determining fiducial arrival time (light, tmean, first, pmaximum)"},
-    {"END1_FOCUS", "", IS_LONG, 1, (long)((char *)&rfcw_example.end1Focus), NULL, 0.0, 0, "include focusing at entrance?"},
-    {"END2_FOCUS", "", IS_LONG, 1, (long)((char *)&rfcw_example.end2Focus), NULL, 0.0, 0, "include focusing at exit?"},
-    {"BODY_FOCUS_MODEL", "", IS_STRING, 1, (long)((char *)&rfcw_example.bodyFocusModel), NULL, 0.0, 0, "None (default) or SRS (simplified Rosenzweig/Serafini for standing wave)"},
+    {"END1_FOCUS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&rfcw_example.end1Focus), NULL, 0.0, 0, "include focusing at entrance?"},
+    {"END2_FOCUS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&rfcw_example.end2Focus), NULL, 0.0, 0, "include focusing at exit?"},
+    {"BODY_FOCUS_MODEL", "", IS_STRING, PARAM_CHANGES_MATRIX, (long)((char *)&rfcw_example.bodyFocusModel), NULL, 0.0, 0, "None (default) or SRS (simplified Rosenzweig/Serafini for standing wave)"},
     {"N_KICKS", "", IS_LONG, 0, (long)((char *)&rfcw_example.nKicks), NULL, 0.0, 1, "number of kicks to use.  Set to zero for matrix method."},
     {"WAKEFILE", "", IS_STRING, 0, (long)((char *)&rfcw_example.wakeFile), NULL, 0.0, 0, "name of file containing Green functions"},
     {"ZWAKEFILE", "", IS_STRING, 0, (long)((char *)&rfcw_example.zWakeFile), NULL, 0.0, 0, "if WAKEFILE=NULL, optional name of file containing longitudinal Green function"},
@@ -1291,8 +1291,8 @@ PARAMETER rfcw_param[N_RFCW_PARAMS] = {
     {"SMOOTHING", "", IS_LONG, 0, (long)((char *)&rfcw_example.smoothing), NULL, 0.0, 0, "smooth current histogram?"},
     {"SG_HALFWIDTH", "", IS_LONG, 0, (long)((char *)&rfcw_example.SGHalfWidth), NULL, 0.0, 4, "Savitzky-Golay filter half-width for smoothing"},
     {"SG_ORDER", "", IS_LONG, 0, (long)((char *)&rfcw_example.SGOrder), NULL, 0.0, 1, "Savitzky-Golay filter order for smoothing"},
-    {"DX", "M", IS_DOUBLE, 1, (long)((char *)&rfcw_example.dx), NULL, 0.0, 0, "misalignment"},
-    {"DY", "M", IS_DOUBLE, 1, (long)((char *)&rfcw_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rfcw_example.dx), NULL, 0.0, 0, "misalignment"},
+    {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rfcw_example.dy), NULL, 0.0, 0, "misalignment"},
     {"LINEARIZE", "", IS_LONG, 0, (long)((char *)&rfcw_example.linearize), NULL, 0.0, 0, "Linearize phase dependence?"},
     };
    
