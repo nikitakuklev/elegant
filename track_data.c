@@ -144,7 +144,7 @@ and phase modulation.",
     "Reflects the beam back on itself, which is useful for multiple beamline matching.",
     "Cleans the beam by removing outlier particles.",
     "Sets Twiss parameter values.",
-    "A wiggler or undulator for damping or excitation of the beam.  Does not include focusing effects.",
+    "A wiggler or undulator for damping or excitation of the beam.",
     "An element that allows transforming the beam using an external script.",
     "Sets floor coordinates",
     "A thin lens for light optics",
@@ -1485,6 +1485,7 @@ WIGGLER wiggler_example;
 PARAMETER wiggler_param[N_WIGGLER_PARAMS] = {
   {"L", "M", IS_DOUBLE, 0, (long)((char *)&wiggler_example.length), NULL, 0.0, 0, "length"},
   {"RADIUS", "M", IS_DOUBLE, 0, (long)((char *)&wiggler_example.radius), NULL, 0.0, 0, "peak bending radius"},
+  {"K", "", IS_DOUBLE, 0, (long)((char *)&wiggler_example.K), NULL, 0.0, 0, "Dimensionless strength parameter. Ignored if radius is nonzero."},
   {"POLES", "", IS_LONG, 0, (long)((char *)&wiggler_example.poles), NULL, 0.0, 0, "number of wiggler poles"},
 } ;
 

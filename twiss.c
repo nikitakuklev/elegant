@@ -2809,9 +2809,11 @@ void AddWigglerRadiationIntegrals(double length, long poles, double radius,
   gamma = (1+alpha*alpha)/beta;
   poles = 2*(poles/2)+1;
 
-  if (poles<=3)
+  if (poles<3)
     bomb("wiggler must have at least 3 poles", NULL);
-  
+  if (radius<=0)
+    bomb("wiggler must have positive, nonzero radius", NULL);
+
   /* length of each pole */
   Lp = length/poles;
   

@@ -255,6 +255,32 @@ VMATRIX *drift_matrix(double length, long order)
     return(M);
     }
 
+VMATRIX *wiggler_matrix(double length, double radius, long order)
+{
+    VMATRIX *M;
+    double **R, *C;
+    double kl;
+
+    M = tmalloc(sizeof(*M));
+    M->order = 1;
+    initialize_matrices(M, M->order);
+    R = M->R;
+    C = M->C;
+
+    R[0][0] = R[1][1] = R[2][2] = R[3][3] = R[4][4] = R[5][5] = 1;
+
+    if (length) {
+      C[4] = length;
+      R[0][1] = length;
+      kl = length/(SQRT2*fabs(radius));
+      R[2][2] = R[3][3] = cos(kl);
+      R[2][3] = sin(kl)/(kl/length);
+      R[3][2] = -(kl/length)*sin(kl);
+    }
+
+    return(M);
+    }
+
 VMATRIX *sextupole_matrix(double K2, double length, long maximum_order, double tilt, double fse)
 {
     VMATRIX *M;
@@ -457,8 +483,9 @@ VMATRIX *compute_matrix(
     CSRCSBEND *csrcsbend;
     CSRDRIFT *csrdrift;
     LSCDRIFT *lscdrift;
+    WIGGLER *wiggler;
     long bend_flags;
-    double ks;
+    double ks, wigglerRadius;
     
     log_entry("compute_matrix");
     
@@ -476,8 +503,22 @@ VMATRIX *compute_matrix(
         elem->matrix = drift_matrix(drift->length, (drift->order?drift->order:run->default_order));
         break;
       case T_WIGGLER:
-        elem->matrix = drift_matrix(((WIGGLER*)elem->p_elem)->length, 
-				    run->default_order);
+	wiggler = (WIGGLER*)elem->p_elem;
+	if (wiggler->K) {
+	  long poles;
+	  double period;
+	  poles = 2*(wiggler->poles/2)+1;
+	  period = 2*(wiggler->length/poles);
+	  wigglerRadius = sqrt(sqr(elem->Pref_input)+1)*period/(PIx2*wiggler->K);
+	} else
+	  wigglerRadius = wiggler->radius;
+	if (wigglerRadius==0) {
+	  fprintf(stderr, "Error: wiggler radius is zero\n");
+	  fprintf(stderr, "Parameters are length=%e, poles=%ld, radius=%e, K=%e\n",
+		  wiggler->length, wiggler->poles, wiggler->radius, wiggler->K);
+	}
+        elem->matrix = wiggler_matrix(wiggler->length, wigglerRadius, 
+				      run->default_order);
 	break;
       case T_SCRIPT:
         elem->matrix = drift_matrix(((SCRIPT*)elem->p_elem)->length, 

@@ -667,7 +667,7 @@ extern char *entity_text[N_TYPES];
 #define N_REFLECT_PARAMS 1
 #define N_CLEAN_PARAMS 7
 #define N_TWISSELEMENT_PARAMS 6
-#define N_WIGGLER_PARAMS 3
+#define N_WIGGLER_PARAMS 4
 #define N_SCRIPT_PARAMS 30
 #define N_FLOORELEMENT_PARAMS 6
 #define N_LTHINLENS_PARAMS 8
@@ -1959,7 +1959,7 @@ typedef struct {
 /* names and storage structure for WIGGLER element */
 extern PARAMETER wiggler_param[N_WIGGLER_PARAMS];
 typedef struct {
-  double length, radius;
+  double length, radius, K;
   long poles;
 } WIGGLER;
 
@@ -2230,6 +2230,7 @@ VMATRIX *accumulate_matrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long ord
 extern long fill_in_matrices(ELEMENT_LIST *elem, RUN *run);
 extern long calculate_matrices(LINE_LIST *line, RUN *run);
 extern VMATRIX *drift_matrix(double length, long order);
+extern VMATRIX *wiggler_matrix(double length, double radius, long order);
 extern VMATRIX *sextupole_matrix(double K2, double length, long maximum_order, double tilt, double fse);
 extern VMATRIX *solenoid_matrix(double length, double ks, long max_order);
 extern VMATRIX *compute_matrix(ELEMENT_LIST *elem, RUN *run, VMATRIX *Mspace);
