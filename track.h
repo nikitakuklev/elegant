@@ -770,6 +770,7 @@ typedef struct {
     long use_bn;
     double b1, b2;
     /* for internal use only: */
+    unsigned long edgeFlags;
     double k1_internal, k2_internal;
     } BEND;
 
@@ -1469,6 +1470,7 @@ typedef struct {
     double x_correction;    /* used to fix spurious central trajectory offsets */
     double s_offset;        /* error in path length, which must be compensated with drifts before and after */
     long angleSign;         /* used internally to keep sign of angle separate from angle */
+    unsigned long edgeFlags;
     } NIBEND;
 
 /* names and storage structure for numerically integrated septum magnet physical parameters */
@@ -1492,6 +1494,7 @@ typedef struct {
     double last_fse_opt;    
     double q1_offset;
     long negative_angle;
+    unsigned long edgeFlags;
     } NISEPT;
 
 /* names and storage structure for ramped RF cavity physical parameters */
@@ -1554,7 +1557,7 @@ typedef struct {
     double b1, b2, b3, b4;
     long isr, sqrtOrder;
     /* for internal use only: */
-    long flags;
+    unsigned long edgeFlags;
     double k1_internal, k2_internal, k3_internal, k4_internal;
     } CSBEND;
 
@@ -1589,6 +1592,7 @@ typedef struct {
     short xIndex, xpIndex, tIndex, pIndex;
     long wffValues;
     double *wffFreqValue, *wffRealFactor, *wffImagFactor;
+    unsigned long edgeFlags;
     } CSRCSBEND;
 
 /* names and storage structure for drift with CSR */

@@ -1822,32 +1822,32 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
       bptr = (BEND*)(elem->p_elem);
       length = bptr->length;
       angle = bptr->angle;
-      E1 = bptr->e1*(bptr->edge1_effects?1:0);
-      E2 = bptr->e2*(bptr->edge2_effects?1:0);
+      E1 = bptr->e1*(bptr->edgeFlags&BEND_EDGE1_EFFECTS?1:0);
+      E2 = bptr->e2*(bptr->edgeFlags&BEND_EDGE2_EFFECTS?1:0);
       K1 = bptr->k1;
       break;
     case T_KSBEND:
       kbptr = (KSBEND*)(elem->p_elem);
       length = kbptr->length;
       angle = kbptr->angle;
-      E1 = kbptr->e1*(kbptr->edge1_effects?1:0);
-      E2 = kbptr->e2*(kbptr->edge2_effects?1:0);
+      E1 = kbptr->e1*(kbptr->flags&BEND_EDGE1_EFFECTS?1:0);
+      E2 = kbptr->e2*(kbptr->flags&BEND_EDGE2_EFFECTS?1:0);
       K1 = kbptr->k1;
       break;
     case T_CSBEND:
       cbptr = (CSBEND*)(elem->p_elem);
       length = cbptr->length;
       angle = cbptr->angle;
-      E1 = cbptr->e1*(cbptr->edge1_effects?1:0);
-      E2 = cbptr->e2*(cbptr->edge2_effects?1:0);
+      E1 = cbptr->e1*(cbptr->edgeFlags&BEND_EDGE1_EFFECTS?1:0);
+      E2 = cbptr->e2*(cbptr->edgeFlags&BEND_EDGE2_EFFECTS?1:0);
       K1 = cbptr->k1;
       break;
     case T_CSRCSBEND:
       csrbptr = (CSRCSBEND*)(elem->p_elem);
       length = csrbptr->length;
       angle = csrbptr->angle;
-      E1 = csrbptr->e1*(csrbptr->edge1_effects?1:0);
-      E2 = csrbptr->e2*(csrbptr->edge2_effects?1:0);
+      E1 = csrbptr->e1*(csrbptr->edgeFlags&BEND_EDGE1_EFFECTS?1:0);
+      E2 = csrbptr->e2*(csrbptr->edgeFlags&BEND_EDGE2_EFFECTS?1:0);
       K1 = csrbptr->k1;
       break;
     default:
@@ -1862,14 +1862,12 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
       rho = length/angle;
       k2 = K1+1./(rho*rho);
       /* equations are from SLAC 1193 */
+      k = sqrt(fabs(k2));
+      kl = k*length;
       if (k2<0) {
-	k = sqrt(-k2);
-	kl = k*length;
 	cos_kl = cosh(kl);
 	sin_kl = sinh(kl);
       } else {
-	k = sqrt(k2);
-	kl = k*length;
 	sin_kl = sin(kl);
 	cos_kl = cos(kl);
       }
@@ -1877,16 +1875,34 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
       eta2  = eta0*cos_kl + etap1*sin_kl/k + (1-cos_kl)/(rho*k2);
       alpha1 = alpha0 - beta0/rho*tan(E1);
       gamma1 = (1+sqr(alpha1))/beta0;
-      etaAve = eta0*sin_kl/kl + etap1*(1-cos_kl)/(k2*length) +
-	(kl-sin_kl)/(k2*kl*rho);
-      etaK1_rhoAve =  -etaAve*K1/rho + (eta0*tan(E1)+eta2*tan(E2))/(2*length*sqr(rho));
-      HAve = gamma1*sqr(eta0) + 2*alpha1*eta0*etap1 + beta0*sqr(etap1) 
-	+ 2*angle*( -(gamma1*eta0+alpha1*etap1)*(kl-sin_kl)/(k*k2*sqr(length)) +
-		    (alpha1*eta0+beta0*etap1)*(1-cos_kl)/(k2*sqr(length))
-		    )
-        + sqr(angle)*(gamma1*(3*kl-4*sin_kl+sin_kl*cos_kl)/(2*k*k2*k2*ipow(length,3)) 
-                      - alpha1*sqr(1-cos_kl)/(k2*k2*ipow(length,3))
-                      + beta0*(kl-cos_kl*sin_kl)/(2*kl*k2*sqr(length)));
+      if (kl>1e-4) {
+	etaAve = eta0*sin_kl/kl + etap1*(1-cos_kl)/(k2*length) +
+	  (kl-sin_kl)/(k2*kl*rho);
+	etaK1_rhoAve =  -etaAve*K1/rho + (eta0*tan(E1)+eta2*tan(E2))/(2*length*sqr(rho));
+	HAve = gamma1*sqr(eta0) + 2*alpha1*eta0*etap1 + beta0*sqr(etap1) 
+	  + 2*angle*( -(gamma1*eta0+alpha1*etap1)*(kl-sin_kl)/(k*k2*sqr(length)) +
+		      (alpha1*eta0+beta0*etap1)*(1-cos_kl)/(k2*sqr(length))
+		      )
+	  + sqr(angle)*(gamma1*(3*kl-4*sin_kl+sin_kl*cos_kl)/(2*k*k2*k2*ipow(length,3)) 
+			- alpha1*sqr(1-cos_kl)/(k2*k2*ipow(length,3))
+			+ beta0*(kl-cos_kl*sin_kl)/(2*kl*k2*sqr(length)));
+      } else {
+	h = 1./rho;
+	etaAve = ((840 - 42*ipow(kl,2) + ipow(kl,4))*ipow(length,2) +
+		  42*eta0*(120 - 20*ipow(kl,2) + ipow(kl,4))*rho +
+		  7*etap1*(360 - 30*ipow(kl,2) + ipow(kl,4))*length*rho)/(5040.*rho);
+	etaK1_rhoAve =  -etaAve*K1/rho + (eta0*tan(E1)+eta2*tan(E2))/(2*length*sqr(rho));
+	HAve = (8*beta0*(2520*ipow(etap1,2) +
+			 7*etap1*h*(360 - 30*ipow(kl,2) + ipow(kl,4))*length +
+			 8*ipow(h,2)*(105 - 21*ipow(kl,2) + 2*ipow(kl,4))*ipow(length,2))
+		+ gamma1*(20160*ipow(eta0,2) -
+			  8*eta0*h*(840 - 42*ipow(kl,2) + ipow(kl,4))*ipow(length,2) +
+			  ipow(h,2)*(1008 - 120*ipow(kl,2) + 7*ipow(kl,4))*ipow(length,4))
+		+ alpha1*(56*eta0*(720*etap1 +
+				   h*(360 - 30*ipow(kl,2) + ipow(kl,4))*length) -
+			  h*ipow(length,2)*(8*etap1*(840 - 42*ipow(kl,2) + ipow(kl,4)) +
+					    21*h*(240 - 40*ipow(kl,2) + 3*ipow(kl,4))*length)))/20160.;
+      }
       I1 = etaAve*length/rho;
       I2 = length/sqr(rho);
       I3 = I2/fabs(rho);

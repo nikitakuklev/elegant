@@ -484,7 +484,6 @@ VMATRIX *compute_matrix(
     CSRDRIFT *csrdrift;
     LSCDRIFT *lscdrift;
     WIGGLER *wiggler;
-    long bend_flags;
     double ks, wigglerRadius;
     
     log_entry("compute_matrix");
@@ -526,7 +525,7 @@ VMATRIX *compute_matrix(
 	break;
       case T_RBEN: case T_SBEN:
         bend = (BEND*)elem->p_elem;
-        bend_flags = determine_bend_flags(elem, bend->edge1_effects, bend->edge2_effects);
+        bend->edgeFlags = determine_bend_flags(elem, bend->edge1_effects, bend->edge2_effects);
         if (bend->use_bn) {
           bend->k1_internal = bend->b1/(bend->length/bend->angle);
           bend->k2_internal = bend->b2/(bend->length/bend->angle);
@@ -541,8 +540,8 @@ VMATRIX *compute_matrix(
                         bend->k1_internal, bend->k2_internal, 
                         bend->tilt, bend->fint, 
                         bend->hgap*2, bend->fse, bend->etilt,
-                        bend->order?bend->order:run->default_order, bend->edge_order, bend_flags,
-                        bend->TRANSPORT);
+                        bend->order?bend->order:run->default_order, bend->edge_order, 
+			bend->edgeFlags, bend->TRANSPORT);
         if (bend->dx || bend->dy || bend->dz) {
             if (bend->tilt)
                 bomb("can't misalign tilted bending magnet--sorry.", NULL);
@@ -725,20 +724,20 @@ VMATRIX *compute_matrix(
         break;
       case T_NIBEND:
         nibend = (NIBEND*)elem->p_elem;
-        bend_flags = determine_bend_flags(elem, 1, 1);
+        nibend->edgeFlags = determine_bend_flags(elem, 1, 1);
         elem->matrix = 
             bend_matrix(nibend->length, nibend->angle, nibend->e1, nibend->e2, 
                         0.0, 0.0, 0.0, 0.0, nibend->tilt, nibend->fint, nibend->hgap*2,
                         nibend->fse, nibend->etilt,
-                        (run->default_order?run->default_order:1), 0L, bend_flags, 0);
+                        (run->default_order?run->default_order:1), 0L, nibend->edgeFlags, 0);
         break;
       case T_NISEPT:
         nisept = (NISEPT*)elem->p_elem;
-        bend_flags = determine_bend_flags(elem, 1, 1);
+        nisept->edgeFlags = determine_bend_flags(elem, 1, 1);
         elem->matrix = 
             bend_matrix(nisept->length, nisept->angle, nisept->e1, nisept->angle-nisept->e1, 
                         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                        (run->default_order?run->default_order:1), 0, bend_flags, 0);
+                        (run->default_order?run->default_order:1), 0, nisept->edgeFlags, 0);
         break;
       case T_STRAY:
         stray = (STRAY*)elem->p_elem;
@@ -751,7 +750,7 @@ VMATRIX *compute_matrix(
         csbend = (CSBEND*)elem->p_elem;
         if (csbend->n_kicks<1)
             bomb("n_kicks must be > 0 for CSBEND element", NULL);
-        csbend->flags = determine_bend_flags(elem, csbend->edge1_effects, csbend->edge2_effects);
+        csbend->edgeFlags = determine_bend_flags(elem, csbend->edge1_effects, csbend->edge2_effects);
         if (csbend->use_bn) {
           csbend->k1_internal = csbend->b1/(csbend->length/csbend->angle);
           csbend->k2_internal = csbend->b2/(csbend->length/csbend->angle);
@@ -769,7 +768,7 @@ VMATRIX *compute_matrix(
                         csbend->k2_internal, csbend->tilt, csbend->fint, 
                         csbend->hgap*2, csbend->fse, csbend->etilt,
                         csbend->nonlinear?2:(run->default_order?run->default_order:1),
-                        csbend->edge_order, csbend->flags, 0);
+                        csbend->edge_order, csbend->edgeFlags, 0);
         if (csbend->dx || csbend->dy || csbend->dz) {
           if (csbend->tilt)
               bomb("can't misalign tilted bending magnet", NULL);
@@ -780,7 +779,7 @@ VMATRIX *compute_matrix(
         csrcsbend = (CSRCSBEND*)elem->p_elem;
         if (csrcsbend->n_kicks<1)
             bomb("n_kicks must be > 0 for CSRCSBEND element", NULL);
-        csrcsbend->flags = determine_bend_flags(elem, csrcsbend->edge1_effects, csrcsbend->edge2_effects);
+        csrcsbend->edgeFlags = determine_bend_flags(elem, csrcsbend->edge1_effects, csrcsbend->edge2_effects);
         if (csrcsbend->use_bn) {
           csrcsbend->k1_internal = csrcsbend->b1/(csrcsbend->length/csrcsbend->angle);
           csrcsbend->k2_internal = csrcsbend->b2/(csrcsbend->length/csrcsbend->angle);
@@ -798,7 +797,7 @@ VMATRIX *compute_matrix(
                         csrcsbend->k2_internal, csrcsbend->tilt, csrcsbend->fint, 
                         csrcsbend->hgap*2, csrcsbend->fse, csrcsbend->etilt,
                         csrcsbend->nonlinear?2:(run->default_order?run->default_order:1),
-                        csrcsbend->edge_order, csrcsbend->flags, 0);
+                        csrcsbend->edge_order, csrcsbend->edgeFlags, 0);
         if (csrcsbend->dx || csrcsbend->dy || csrcsbend->dz) {
             if (csrcsbend->tilt)
                 bomb("can't misalign tilted bending magnet", NULL);
