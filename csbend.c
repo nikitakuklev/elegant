@@ -791,9 +791,16 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double s, long n, double rho0
 typedef struct {
   long bins, valid;
   double dctBin, s0, ds0, zLast, z0;
-  double thetaRad[2], overtakingLength;
   double S11, S12, S22;
   double *dGamma;
+  double rho, bendingAngle, Po, perc68BunchLength, perc90BunchLength, peakToPeakWavelength, rmsBunchLength;
+  /* for Saldin eq 54 (NIM A 398 (1997) 373-394) mode: */
+#ifdef DEBUG
+  FILE *fpSaldin;
+#endif
+  long nSaldin;
+  double *FdNorm;   /* Saldin's Fd(sh, x)/Fd(sh, 0), sh = bunch-length*gamma^3/rho */
+  double *xSaldin;  /* distance from end of bend */
 } CSR_LAST_WAKE;
 CSR_LAST_WAKE csrWake;
 
@@ -831,9 +838,14 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   csrWake.valid = csrWake.bins = 0;
   csrWake.dctBin = csrWake.s0 = csrWake.ds0 = csrWake.zLast =
     csrWake.z0 = csrWake.S11 = csrWake.S12 = csrWake.S22 = 0;
-  csrWake.thetaRad[0] = csrWake.thetaRad[1] = 0;
   csrWake.dGamma = NULL;
-
+  csrWake.nSaldin = 0;
+  if (csrWake.FdNorm) {
+    free(csrWake.FdNorm);
+    free(csrWake.xSaldin);
+    csrWake.FdNorm = csrWake.xSaldin = NULL;
+  }
+  
   if (!csbend)
     bomb("null CSBEND pointer (track_through_csbend)", NULL);
 
@@ -1363,28 +1375,28 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 
   if (n_part>1) {
     /* prepare more data for CSRDRIFT */
-    double sigmaZ;
     long imin, imax;
+    double S55;
+    
     rms_emittance(part, 0, 1, i_top+1, &csrWake.S11, &csrWake.S12, &csrWake.S22);
+    rms_emittance(part, 4, 5, i_top+1, &S55, NULL, NULL);
+    csrWake.rmsBunchLength = sqrt(S55);
+    csrWake.perc68BunchLength = beam_width(0.6826, part, i_top+1, 4)/2;
+    csrWake.perc90BunchLength = beam_width(0.9, part, i_top+1, 4)/2;
+    fprintf(stderr, "rms bunch length = %le, percentile bunch length (68, 90) = %le, %le\n",
+            csrWake.rmsBunchLength, csrWake.perc68BunchLength, csrWake.perc90BunchLength);
 
-    /* compute angular spread of radiation, using Wiedemann's formula */
-    /* wavelength ~ (sigma z) */
-    wavelength = sigmaZ = beam_width(0.6826, part, i_top+1, 4)/2;
-    criticalWavelength = 4.19/ipow(Po, 3)*rho_actual;
-    csrWake.thetaRad[0] = 0.5463e-3/(Po*0.511e-3)/pow(criticalWavelength/wavelength, 1./3.);
-
-    /* wavelength ~ 2*(peak-to-peak) distance, but not more than 10*sigmaz */
     if (macroParticleCharge) {
       index_min_max(&imin, &imax, csrWake.dGamma, csrWake.bins);
-      if ((wavelength = 2*fabs(1.0*imax-imin)*dct)>10*sigmaZ)
-        wavelength = 10*sigmaZ;
+      csrWake.peakToPeakWavelength = 2*fabs(1.0*imax-imin)*dct;
+    } else {
+      csrWake.peakToPeakWavelength = csrWake.perc68BunchLength;
     }
-    else
-      wavelength = sigmaZ;
-    csrWake.thetaRad[1] = 0.5463e-3/(Po*0.511e-3)/pow(criticalWavelength/wavelength, 1./3.);
 
     csrWake.valid = 1;
-    csrWake.overtakingLength = pow(24*sigmaZ*rho_actual*rho_actual, 1./3.);
+    csrWake.rho = rho_actual;
+    csrWake.bendingAngle = fabs(angle);
+    csrWake.Po = Po;
   }
   
 #if defined(MINIMIZE_MEMORY)
@@ -1455,39 +1467,28 @@ long binParticleCoordinate(double **hist, long *maxBins,
   return nBinned;
 }
 
+long SaldinDebugFileNum = 0;
+void computeSaldinFdNorm(double **FdNorm, double **x, long *n, double s,
+                         double Po, double radius, double angle, double dx);
+double SaldinPsiFn(double psi);
+
 long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift, 
                             double Po, double **accepted, double zStart)
 {
-  long iPart, iKick, iBin, binned, nKicks, iSpreadMode, iWavelengthMode;
+  long iPart, iKick, iBin, binned, nKicks, iSpreadMode;
   double *coord, t, p, beta, dz, ct0, factor, dz0, dzFirst;
   double ctmin, ctmax, spreadFactor;
-  double zTravel, attenuationLength, thetaRad;
+  double zTravel, attenuationLength, thetaRad, sigmaZ, overtakingLength, criticalWavelength, wavelength;
+  double a0, a1, a2;
   static char *spreadMode[3] = {"full", "simple", "radiation-only"};
-  static char *wavelengthMode[2] = {"sigmaz", "peak-to-peak"};
-    
+  static char *wavelengthMode[3] = {"sigmaz", "bunchlength", "peak-to-peak"};
+  static char *bunchlengthMode[3] = {"rms", "68-percentile", "90-percentile"};
+  
   if (np<=1 || !csrWake.valid || !csrDrift->csr) {
     drift_beam(part, np, csrDrift->length, 2);
     return np;
   }
 
-  if (csrDrift->useOvertakingLength) {
-    attenuationLength = csrWake.overtakingLength*csrDrift->overtakingLengthMultiplier;
-  }
-  else
-    attenuationLength = csrDrift->attenuationLength;
-  
-  if (csrDrift->spread) {
-    iSpreadMode = 0;
-    if (csrDrift->spreadMode && 
-        (iSpreadMode=match_string(csrDrift->spreadMode, spreadMode, 3, 0))<0)
-      bomb("invalid spread_mode for CSR DRIFT.  Use full, simple, or radiation-only", NULL);
-    iWavelengthMode = 0;
-    if (csrDrift->wavelengthMode &&
-        (iWavelengthMode=match_string(csrDrift->wavelengthMode, wavelengthMode, 2, 0))<0)
-      bomb("invalid wavelength_mode for CSR DRIFT.  Use sigmaz or peak-to-peak", NULL);
-    thetaRad = csrWake.thetaRad[iWavelengthMode];
-  }
-  
   if (csrDrift->dz>0) {
     if ((nKicks = csrDrift->length/csrDrift->dz)<1)
       nKicks = 1;
@@ -1495,10 +1496,78 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
     nKicks = csrDrift->nKicks;
   if (nKicks<=0)
     bomb("nKicks=0 in CSR drift.", NULL);
-  
   dz = (dz0=csrDrift->length/nKicks)/2;
-  dzFirst = zStart - csrWake.zLast;
+  
+  sigmaZ = 0;
+  switch (match_string(csrDrift->bunchlengthMode, bunchlengthMode, 3, 0)) {
+  case 0:
+    sigmaZ = csrWake.rmsBunchLength;
+    fprintf(stderr, "Using rms bunch length for csr drift computations\n");
+    break;
+  case 1:
+    sigmaZ = csrWake.perc68BunchLength;
+    fprintf(stderr, "Using half of 68-percentile bunch length for csr drift computations\n");
+    break;
+  case 2:
+    sigmaZ = csrWake.perc90BunchLength;
+    fprintf(stderr, "Using half of 90-percentile bunch length for csr drift computations\n");
+    break;
+  default:
+    bomb("invalid bunchlength_mode for CSRDRIFT.  Use rms or percentile.", NULL);
+  }
+  
+  overtakingLength = pow(24*sigmaZ*csrWake.rho*csrWake.rho, 1./3.);
 
+  if (csrDrift->useOvertakingLength) {
+    if (csrDrift->spread || csrDrift->useSaldin54 || csrDrift->attenuationLength>0) 
+      bomb("give only one of USE_OVERTAKING_LENGTH, SPREAD, ATTENUATION_LENGTH, or USE_SALDIN54 for CSRDRIFT", NULL);
+    attenuationLength = overtakingLength*csrDrift->overtakingLengthMultiplier;
+  }
+  else
+    attenuationLength = csrDrift->attenuationLength;
+  
+  if (csrDrift->spread) {
+    if (csrDrift->useOvertakingLength || csrDrift->useSaldin54 || csrDrift->attenuationLength>0)
+      bomb("give only one of USE_OVERTAKING_LENGTH, SPREAD, ATTENUATION_LENGTH, or USE_SALDIN54 for CSRDRIFT", NULL);
+    iSpreadMode = 0;
+    if (csrDrift->spreadMode && 
+        (iSpreadMode=match_string(csrDrift->spreadMode, spreadMode, 3, 0))<0)
+      bomb("invalid spread_mode for CSR DRIFT.  Use full, simple, or radiation-only", NULL);
+    switch (match_string(csrDrift->wavelengthMode, wavelengthMode, 3, 0)) {
+    case 0:
+    case 1:
+      /* bunch length */
+      wavelength = sigmaZ;
+      break;
+    case 2:
+      /* peak-to-peak */
+      wavelength = csrWake.peakToPeakWavelength;
+      break;
+    default:
+      bomb("invalid wavelength_mode for CSR DRIFT.  Use sigmaz or peak-to-peak", NULL);
+      break;
+    }
+    criticalWavelength = 4.19/ipow(csrWake.Po, 3)*csrWake.rho;
+    thetaRad = 0.5463e-3/(csrWake.Po*0.511e-3)/pow(criticalWavelength/wavelength, 1./3.);
+  }
+
+  if (csrDrift->useSaldin54) {
+    if (csrDrift->useOvertakingLength || csrDrift->spread || csrDrift->attenuationLength>0)
+      bomb("give only one of USE_OVERTAKING_LENGTH, SPREAD, ATTENUATION_LENGTH, or USE_SALDIN54 for CSRDRIFT", NULL);
+    if (csrWake.FdNorm==NULL) {
+      char s[100];
+      computeSaldinFdNorm(&csrWake.FdNorm, &csrWake.xSaldin, &csrWake.nSaldin,
+                          sigmaZ, csrWake.Po, csrWake.rho, csrWake.bendingAngle, dz);
+#ifdef DEBUG
+      sprintf(s, "CSRDrift-%ld.sampled", SaldinDebugFileNum);
+      csrWake.fpSaldin = fopen(s, "w");
+      fprintf(csrWake.fpSaldin, "SDDS1\n&column name=z, type=double &end\n&column name=Factor, type=double &end\n");
+      fprintf(csrWake.fpSaldin, "&data mode=ascii no_row_counts=1 &end\n");
+#endif
+    }
+  }
+
+  dzFirst = zStart - csrWake.zLast;
   zTravel = zStart-csrWake.z0;  /* total distance traveled by radiation to reach this point */
 #ifdef DEBUG
   fprintf(stdout, "CSR in drift:\n");
@@ -1575,9 +1644,26 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
         break;
       }
     }
-    
-    dzFirst = 0;
 
+    if (csrDrift->useSaldin54) {
+      long code;
+      double f0;
+      if (zTravel<=csrWake.xSaldin[csrWake.nSaldin-1]) 
+        factor *= (f0=interp(csrWake.FdNorm, csrWake.xSaldin, csrWake.nSaldin, zTravel, 0, 1, &code));
+      else 
+        factor = 0;
+#ifdef DEBUG
+      fprintf(csrWake.fpSaldin, "%le %le\n", zTravel, f0);
+      fflush(csrWake.fpSaldin);
+#endif
+      if (!code) {
+        fprintf(stderr, "Warning: interpolation failure for Saldin eq. 54\n");
+        fprintf(stderr, "zTravel = %le,  csrWake available up to %le\n",
+                zTravel, csrWake.xSaldin[csrWake.nSaldin-1]);
+        factor = 0;
+      }
+    }
+    dzFirst = 0;
 
     /* apply kick to each particle and convert back to normal coordinates */
     for (iPart=binned=0; iPart<np; iPart++) {
@@ -1642,4 +1728,162 @@ long reset_driftCSR()
   csrWake.valid = 0;
   return 1;
 }
+
+static double SaldinCoef[5];
+static long SaldinPsiFnEvals, SaldinPsiFnEvalsMax;
+
+void computeSaldinFdNorm(double **FdNorm, double **x, long *n, double s,
+                         double Po, double radius, double bendingAngle, double dx)
+{
+  double xEnd, sh, beta, gamma, xh;
+  long ix, ix1, ix2, scan, try, success, failures;
+  double psi, psi2, phihs;
+  FILE *fp;
+
+#ifdef DEBUG
+  char name[100];
+  sprintf(name, "CSRDrift-%ld.sdds", SaldinDebugFileNum++);
+  fp = fopen(name, "w");
+  fprintf(fp, "SDDS1\n&column name=z, type=double &end\n&column name=Factor, type=double &end\n");
+  fprintf(fp, "&column name=psi, type=double &end\n&column name=psiCheck type=double &end\n");
+  fprintf(fp, "&parameter name=s type=double fixed_value=%le &end\n", s);
+  fprintf(fp, "&parameter name=Gamma type=double fixed_value=%le &end\n", Po);
+  fprintf(fp, "&parameter name=R type=double fixed_value=%le &end\n", radius);
+  fprintf(fp, "&data mode=ascii no_row_counts=1 &end\n");
+#endif
+
+  gamma = sqrt(sqr(Po)+1);
+  beta = Po/gamma;
+  fprintf(stderr, "beta = %le, s = %le, xEnd = %le\n", beta, s, s/(1-beta));
+  
+  if ((xEnd = 0.999*s/(1-beta))>100)
+    xEnd = 100;
+  
+  if ((*n = xEnd/dx+1)>1001) {
+    *n = 1001;
+    dx = xEnd/(*n-1);
+  }
+
+  fprintf(stderr, "Using %ld points with spacing %le m for CSR drift decay table.\n",
+          *n, dx);
+  fprintf(stderr, "Have xEnd = %le and xLimit = %le m\n",
+          xEnd, s/(1-beta));
+  
+  if (!(*FdNorm = malloc(sizeof(**FdNorm)*(*n))) ||
+      !(*x = malloc(sizeof(**x)*(*n))))
+    bomb("memory allocation failure (computeSaldinFdNorm)", NULL);
+  
+  sh = s*ipow(gamma, 3)/radius;
+
+  phihs = pow(12*sh + sqrt(64+144*sh*sh), 1./3.) - pow(-12*sh + sqrt(64+144*sh*sh), 1./3.);
+  if (phihs>bendingAngle*gamma) {
+    fprintf(stderr, "Warning: CSR drift computation is not strictly valid for such a short dipole.\n");
+    fprintf(stderr, "This code assumes that the dipole is infinitely long for CSR drift simulation.\n");
+  }
+  
+  failures = 0;
+  SaldinPsiFnEvalsMax = 10000;
+  for (ix=0; ix<*n; ix++) {
+    (*x)[ix] = ix*dx;
+    xh = (*x)[ix]*gamma/radius;
+    SaldinCoef[4] = 1;
+    SaldinCoef[3] = 4*xh;
+    SaldinCoef[2] = 12;
+    SaldinCoef[1] = 24*(xh-sh);
+    SaldinCoef[0] = 12*xh*(xh-2*sh);
+    for (scan=success=0; scan<3; scan++) {
+      for (try=0; try<2; try++) {
+        SaldinPsiFnEvals = 0;
+        psi = zeroIntHalve(SaldinPsiFn, 0.0, 0.01, 1e3, .1/ipow(10, 2*scan), 1e-6);
+        SaldinPsiFnEvals = 0;
+        if (fabs(SaldinPsiFn(psi))<1e-5) {
+          success = 1;
+          break;
+        }
+      }
+      if (success)
+        break;
+    }
+    if (!success) {
+      /* Will come back to this later.  Mark with negative value */
+      if (ix==0) 
+        bomb("unable to compute Saldin Fd function at x=0!", NULL);
+      if (ix==(*n-1)) {
+        /* common problem near the endpoint, just set to zero */
+        (*FdNorm)[ix] = 0;
+      } else {
+        failures ++;
+        (*FdNorm)[ix] = -1;
+      }
+    } else {
+      psi2 = psi*psi;
+      /* this is actually -Fd, which is always positive */
+      if (((*FdNorm)[ix] =  4*(2*xh*(psi2+1)+psi*(psi2+2))/
+           (4*xh*xh*(psi2+1)+4*xh*psi*(psi2+2)+psi2*(psi2+4)) - 1/sh)<0)
+        (*FdNorm)[ix] = 0;
+    }
+#ifdef DEBUG
+    fprintf(fp, "%le %le %le %le\n",
+            (*x)[ix], 
+            (*FdNorm)[ix], 
+            psi, 
+            SaldinPsiFn(psi));
+#endif
+  }
+
+  /* normalize to value at x=0 */
+  if ((*FdNorm)[0]==0) 
+    bomb("Saldin Fd function is zero at x=0!", NULL);
+  for (ix=1; ix<*n; ix++) {
+    if ((*FdNorm)[ix]>0)
+      (*FdNorm)[ix] /= (*FdNorm)[0];
+  }
+  (*FdNorm)[0] = 1;
+  
+  if (failures) {
+    /* interpolate at any points where the above failed */
+    fprintf(stderr, "Warning: there were numerical problems on %ld of %ld points for Saldin Fd evaluation\n",
+            failures, *n);
+    fprintf(stderr, "Filling in bad points with interpolation\n");
+    ix1 = 0;
+    ix2 = -1;
+    for (ix=1; ix<*n-1; ix++) {
+      if (!failures--) 
+        break;
+      if ((*FdNorm)[ix]==-1) {
+        if (ix2<ix) {
+          for (ix2=ix+1; ix2<*n; ix2++)
+            if ((*FdNorm)[ix2]!=-1)
+              break;
+        }
+        if (ix2!=*n) {
+          (*FdNorm)[ix] = (*FdNorm)[ix1] + ((*FdNorm)[ix2]-(*FdNorm)[ix1])/(1.0*ix2-ix1)*(1.0*ix-ix1);
+        } else {
+          (*FdNorm)[ix] = (*FdNorm)[ix1] + (0-(*FdNorm)[ix1])/(1.0*(*n)-ix1)*(1.0*ix-ix1);
+        }
+      }
+      ix1 = ix;
+    }
+  }
+#ifdef DEBUG
+  fclose(fp);
+#endif
+}
+
+double SaldinPsiFn(double psi)
+{
+  double value, power;
+  long i;
+  power = 1;
+  for (i=value=0; i<5; i++) {
+    value += SaldinCoef[i]*power;
+    power *= psi;
+  }
+  if (++SaldinPsiFnEvals>SaldinPsiFnEvalsMax) {
+    return 0;
+  }
+  return value;
+}
+
+
 

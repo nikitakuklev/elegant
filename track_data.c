@@ -1178,9 +1178,11 @@ PARAMETER csrdrift_param[N_CSRDRIFT_PARAMS] = {
     {"N_KICKS", "", IS_LONG, 1, (long)((char *)&csrdrift_example.nKicks), NULL, 0.0, 1, "number of kicks (if DZ is zero)"},
     {"SPREAD", "", IS_LONG, 1, (long)((char *)&csrdrift_example.spread), NULL, 0.0, 0, "use spreading function?"},
     {"USE_OVERTAKING_LENGTH", "", IS_LONG, 1, (long)((char *)&csrdrift_example.useOvertakingLength), NULL, 0.0, 0, "use overtaking length for ATTENUATION_LENGTH?"},
+    {"USE_SALDIN54", "", IS_LONG, 1, (long)((char*)&csrdrift_example.useSaldin54), NULL, 0, 0, "Use Saldin et al eq. 54 (NIM A 398 (1997) 373-394 for decay vs z?"},
     {"CSR", "", IS_LONG, 1, (long)((char *)&csrdrift_example.csr), NULL, 0.0, 1, "do CSR calcuations"},
     {"SPREAD_MODE", "", IS_STRING, 1, (long)((char *)&csrdrift_example.spreadMode), "full", 0.0, 0, "full, simple, or radiation-only"},
     {"WAVELENGTH_MODE", "", IS_STRING, 1, (long)((char *)&csrdrift_example.wavelengthMode), "sigmaz", 0.0, 0, "sigmaz or peak-to-peak"},
+    {"BUNCHLENGTH_MODE", "", IS_STRING, 1, (long)((char *)&csrdrift_example.bunchlengthMode), "68-percentile", 0.0, 0, "rms, 68-percentile, or 90-percentile"},
     {"OL_MULTIPLIER", "", IS_DOUBLE, 1, (long)((char *)&csrdrift_example.overtakingLengthMultiplier), NULL, 1.0, 0, "factor by which to multiply the overtaking length to get the attenuation length"},
     };
 
