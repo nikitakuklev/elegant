@@ -70,7 +70,7 @@ void output_magnets(char *filename, char *line_name, LINE_LIST *beamline)
         eptr = eptr->succ;
         }
 
-    fpm = fopen_e(filename, "w", FOPEN_SAVE_IF_EXISTS);
+    fpm = fopen_e(filename, "w", 0);
 
     start = end = 0;
     n_points += 1;

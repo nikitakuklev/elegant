@@ -100,7 +100,7 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
 
     if (strength_log) {
         strength_log = compose_filename(strength_log, run->rootname);
-        fp_sl = fopen_e(strength_log, "w", FOPEN_SAVE_IF_EXISTS);
+        fp_sl = fopen_e(strength_log, "w", 0);
         fprintf(fp_sl, "SDDS1\n&column name=Step, type=long, description=\"Simulation step\" &end\n");
         fprintf(fp_sl, "&column name=K2, type=double, units=\"1/m$a2$n\" &end\n");
         fprintf(fp_sl, "&column name=SextupoleName, type=string  &end\n");

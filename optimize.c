@@ -45,7 +45,7 @@ void do_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
             log_file = compose_filename(log_file, run->rootname);
         if (strcmp(log_file, "/dev/tty")==0 || strcmp(log_file, "tt:")==0)
             optimization_data->fp_log = stderr;
-        else if ((optimization_data->fp_log=fopen_e(log_file, "w", FOPEN_RETURN_ON_ERROR|FOPEN_SAVE_IF_EXISTS))==NULL)
+        else if ((optimization_data->fp_log=fopen_e(log_file, "w", FOPEN_RETURN_ON_ERROR))==NULL)
             bomb("unable to open log file", NULL);
         }
     optimization_data->verbose = verbose;

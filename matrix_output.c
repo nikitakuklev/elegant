@@ -107,7 +107,7 @@ void setup_matrix_output(
     SDDS_ZeroMemory(SDDS_matrix+n_outputs, sizeof(*SDDS_matrix));
 
     if (printout) {
-        fp_printout[n_outputs] = fopen_e(printout, "w", FOPEN_SAVE_IF_EXISTS);
+        fp_printout[n_outputs] = fopen_e(printout, "w", 0);
         }
     else
         fp_printout[n_outputs] = NULL;

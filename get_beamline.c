@@ -467,7 +467,7 @@ void do_save_lattice(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
         bomb("no filename given to save lattice to", NULL);
     if (str_in(filename, "%s"))
         filename = compose_filename(filename, run->rootname);
-    fp = fopen_e(filename, "w", FOPEN_INFORM_OF_OPEN|FOPEN_SAVE_IF_EXISTS);
+    fp = fopen_e(filename, "w", FOPEN_INFORM_OF_OPEN);
 
     eptr = elem;
     while (eptr) {

@@ -61,7 +61,7 @@ void process_trace_request(NAMELIST_TEXT *nltext)
     trace_mode += (memory_log?TRACE_MEMORY_LEVEL:0);
     trace_mode += (traceback_on?TRACEBACK_ON:0);
     if (trace_on) {
-        fp = fopen_e(filename, "w", FOPEN_SAVE_IF_EXISTS);
+        fp = fopen_e(filename, "w", 0);
         for (i=0; i<MAX_LENGTH; i++)
             blank[i] = ' ';
         trace_mode += TRACE_ENTRY + (heap_verify_depth?TRACE_HEAP_VERIFY:0);

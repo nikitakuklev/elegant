@@ -105,7 +105,7 @@ long simple_rf_cavity(
 
 #ifdef DEBUG
     if (!fplog) {
-        fplog = fopen_e("rfca.debug", "w", FOPEN_SAVE_IF_EXISTS);
+        fplog = fopen_e("rfca.debug", "w", 0);
         fprintf(fplog, "11\nnp\nlength\nvoltage\nphase\nQ\nt0\nt\n$gD$rp\nR$b12$n\nR$b22$n\n\n\n1000\n");
         }
     fprintf(fplog, "%ld  %le  %le  %le  %le ",

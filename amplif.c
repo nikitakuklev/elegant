@@ -93,12 +93,12 @@ void compute_amplification_factors(
     fpout = NULL;
   if (corrected_orbit_function)
     fpcof = fopen_e(corrected_orbit_function = compose_filename(corrected_orbit_function, run->rootname), "w", 
-                    FOPEN_SAVE_IF_EXISTS);
+                    0);
   if (uncorrected_orbit_function)
     fpuof = fopen_e(uncorrected_orbit_function = compose_filename(uncorrected_orbit_function, run->rootname), "w", 
-                    FOPEN_SAVE_IF_EXISTS);
+                    0);
   if (kick_function)
-    fpkf = fopen_e(kick_function = compose_filename(kick_function, run->rootname), "w", FOPEN_SAVE_IF_EXISTS);
+    fpkf = fopen_e(kick_function = compose_filename(kick_function, run->rootname), "w", 0);
 
   if (number_to_do>0 && maximum_z>0)
     bomb("only one of number_to_do and maximum_z may be positive", NULL);
