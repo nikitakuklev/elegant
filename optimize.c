@@ -547,23 +547,31 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERROR *error1
 #define SET_BUNCHED_BEAM 6
 #define SET_SDDS_BEAM   33
 
-static char *twiss_name[16] = {
+static char *twiss_name[22] = {
     "betax", "alphax", "nux", "etax", "etapx", 
     "betay", "alphay", "nuy", "etay", "etapy",
     "max.betax", "max.etax", "max.etapx", 
     "max.betay", "max.etay", "max.etapy",
+    "min.betax", "min.etax", "min.etapx", 
+    "min.betay", "min.etay", "min.etapy",
     };
-static long twiss_mem[16] = {
+static long twiss_mem[22] = {
     -1, -1, -1, -1, -1, 
     -1, -1, -1, -1, -1, 
     -1, -1, -1,
     -1, -1, -1, 
+    -1, -1, -1,
+    -1, -1, -1, 
     };
-static char *radint_name[4] = {
-    "ex0", "Jx", "Jy", "Jdelta",
+static char *radint_name[8] = {
+    "ex0", "Sdelta0",
+    "Jx", "Jy", "Jdelta",
+    "taux", "tauy", "taudelta",
   } ;
-static long radint_mem[4] = {
-  -1, -1, -1, -1,
+static long radint_mem[8] = {
+  -1, -1, 
+  -1, -1, -1,
+  -1, -1, -1,
 } ;
 
 double optimization_function(double *value, long *invalid)
@@ -662,7 +670,7 @@ double optimization_function(double *value, long *invalid)
     zero_beam_sums(output->sums_vs_z, output->n_z_points+1);
     if (beamline->flags&BEAMLINE_TWISS_WANTED) {
         if (twiss_mem[0]==-1) {
-            for (i=0; i<10; i++)
+            for (i=0; i<22; i++)
                 twiss_mem[i] = rpn_create_mem(twiss_name[i]);
             }
         /* get twiss mode and (beta, alpha, eta, etap) for both planes */
@@ -680,19 +688,29 @@ double optimization_function(double *value, long *invalid)
         rpn_store(twiss_max.betay, twiss_mem[13]);
         rpn_store(twiss_max.etay,  twiss_mem[14]);
         rpn_store(twiss_max.etapy, twiss_mem[15]);
+        rpn_store(twiss_min.betax, twiss_mem[16]);
+        rpn_store(twiss_min.etax,  twiss_mem[17]);
+        rpn_store(twiss_min.etapx, twiss_mem[18]);
+        rpn_store(twiss_min.betay, twiss_mem[19]);
+        rpn_store(twiss_min.etay,  twiss_mem[20]);
+        rpn_store(twiss_min.etapy, twiss_mem[21]);
         }
     if (beamline->flags&BEAMLINE_RADINT_WANTED) {
       if (radint_mem[0]==-1) {
-        for (i=0; i<4; i++)
+        for (i=0; i<8; i++)
           radint_mem[i] = rpn_create_mem(radint_name[i]);
       }
       /* radiation integrals already updated by update_twiss_parameters above
          which is guaranteed to be called
          */
       rpn_store(beamline->radIntegrals.ex0, radint_mem[0]);
-      rpn_store(beamline->radIntegrals.Jx, radint_mem[1]);
-      rpn_store(beamline->radIntegrals.Jy, radint_mem[2]);
-      rpn_store(beamline->radIntegrals.Jdelta, radint_mem[3]);
+      rpn_store(beamline->radIntegrals.sigmadelta, radint_mem[1]);
+      rpn_store(beamline->radIntegrals.Jx, radint_mem[2]);
+      rpn_store(beamline->radIntegrals.Jy, radint_mem[3]);
+      rpn_store(beamline->radIntegrals.Jdelta, radint_mem[4]);
+      rpn_store(beamline->radIntegrals.taux, radint_mem[5]);
+      rpn_store(beamline->radIntegrals.tauy, radint_mem[6]);
+      rpn_store(beamline->radIntegrals.taudelta, radint_mem[7]);
     }
     
     for (i=0; i<variables->n_variables; i++)
