@@ -108,7 +108,7 @@ void setup_response_output(RESPONSE_OUTPUT *respOutput,
     respOutput->monitorNameIndex = 
         SDDS_DefineColumn(&respOutput->SDDSout, "BPMName", NULL, NULL, "beam-position-monitor name", NULL, SDDS_STRING, 0);
     respOutput->sIndex = 
-        SDDS_DefineColumn(&respOutput->SDDSout, "s", NULL, NULL, "beam-position-monitor location", NULL, SDDS_DOUBLE, 0);
+        SDDS_DefineColumn(&respOutput->SDDSout, "s", NULL, "m", "beam-position-monitor location", NULL, SDDS_DOUBLE, 0);
     SDDS_DefineParameter(&respOutput->SDDSout, "CorrectionMatrixType", NULL, NULL, "correction matrix type",
                          NULL, SDDS_STRING, inverse?"Inverse":"Response");
     SDDS_DefineParameter1(&respOutput->SDDSout, "NCorrectors", NULL, NULL, "Number of correctors", NULL, SDDS_LONG, 
