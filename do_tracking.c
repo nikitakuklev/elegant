@@ -44,7 +44,7 @@ long do_tracking(
     double dgamma, dP[3], z, z_recirc, last_z;
     long i, j, i_traj=0, i_sums, n_to_track, i_pass, isConcat;
     long i_sums_recirc;
-    long watch_pt_seen;
+    long watch_pt_seen, twiss_calculated;
     double sum, x_max, y_max;
     long elliptical;
     double et1, et2;
@@ -88,7 +88,7 @@ long do_tracking(
     elliptical = isConcat = 0;
     n_left = n_to_track;
     watch_pt_seen = 0;
-
+    
     check_nan = 1;
     eptr = &(beamline->elem);
     while (eptr && check_nan) {
@@ -274,8 +274,11 @@ long do_tracking(
                     switch (eptr->type) {
                       case T_MARK:
                         if (((MARK*)eptr->p_elem)->fitpoint && i_pass==n_passes-1) {
-                            if (beamline->flags&BEAMLINE_TWISS_WANTED)
-                                store_fitpoint_twiss_parameters((MARK*)eptr->p_elem, eptr->name, eptr->occurence, eptr->twiss);
+                          if (beamline->flags&BEAMLINE_TWISS_WANTED) {
+                            if (!(beamline->flags&BEAMLINE_TWISS_DONE))
+                              update_twiss_parameters(run, beamline);
+                            store_fitpoint_twiss_parameters((MARK*)eptr->p_elem, eptr->name, eptr->occurence, eptr->twiss);
+                            }
                             store_fitpoint_beam_parameters((MARK*)eptr->p_elem, eptr->name,eptr->occurence, 
                                                            coord, n_to_track, *P_central); 
                             }
