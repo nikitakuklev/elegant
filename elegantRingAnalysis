@@ -362,6 +362,7 @@ proc PostProcessRun {args} {
 	after 10000 "PostProcessRun -rootname $rootname -postProcessProc $postProcessProc"
 	return
     }
+    setStatus "Run $rootname completed"
     $postProcessProc -rootname $rootname
 }
 
@@ -1545,6 +1546,7 @@ proc FillDynamicApertureErrorsFrame {widget args} {
     set dynamicApertureErrors(xMinimum) -0.01
     set dynamicApertureErrors(xMaximum)  0.01
     set dynamicApertureErrors(yMaximum)  0.01
+    set dynamicApertureErrors(delta)  0.0
     set dynamicApertureErrors(xPoints)   31
     set dynamicApertureErrors(yPoints)   16
     set dynamicApertureErrors(turns) 500
@@ -1583,6 +1585,9 @@ proc FillDynamicApertureErrorsFrame {widget args} {
       -label "Number of y points: " -width 20 -textVariable dynamicApertureErrors(yPoints) \
       -contextHelp \
       "Enter the number of points into which to divide the y interval."
+    APSLabeledEntry .le5a -parent $widget \
+      -label "Fractional momentum offset: " -width 20 -textVariable dynamicApertureErrors(delta) \
+      -contextHelp "Enter the fractional momentum offset."
     APSLabeledEntry .le6 -parent $widget \
       -label "Number of turns: " -width 20 -textVariable dynamicApertureErrors(turns) \
       -contextHelp \
@@ -1667,9 +1672,21 @@ proc DynamicApertureErrorsPP {args} {
     APSStrictParseArguments {rootname}
     source $rootname.runCfg
 
+    if [catch {exec sddscombine $rootname.aper -pipe=out -merge \
+		   | sddsprocess -pipe -process=x,spread,xSpread -process=y,spread,ySpread \
+		   | sdds2stream -pipe -parameter=xSpread,ySpread} result] {
+	return -code error "$result"
+    }
+    set xSpread [lindex $result 0]
+    set ySpread [lindex $result 1]
+    set dx [expr ($dynamicApertureErrors(xMaximum)-$dynamicApertureErrors(xMinimum))/($dynamicApertureErrors(xPoints)-1)]
+    set dy [expr ($dynamicApertureErrors(yMaximum)-0.0)/($dynamicApertureErrors(yPoints)-1)]
+
+    set xPoints [expr int(1+$xSpread/$dx)]
+    set yPoints [expr int(1+$ySpread/$dy)]
+		 
     exec sddscombine $rootname.aper -pipe=out -merge \
-	| sddshist2d -pipe=in $rootname.aper.h2d -columns=x,y -xparameter=$dynamicApertureErrors(xPoints) \
-	-yparameter=$dynamicApertureErrors(yPoints)
+	| sddshist2d -pipe=in $rootname.aper.h2d -columns=x,y -xparameter=$xPoints -yparameter=$yPoints
 
     exec sddscontour -shade $rootname.aper.h2d &
 
