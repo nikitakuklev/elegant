@@ -8,6 +8,8 @@
 #namelist slice_analysis static
     STRING output = NULL;
     long n_slices = 0;
+    double s_start = 0;
+    double s_end = DBL_MAX;
 #end
 
 

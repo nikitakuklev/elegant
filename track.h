@@ -370,16 +370,18 @@ typedef struct {
 
 typedef struct {
   long active, rows;
-  char *filename;
   SDDS_DATASET SDDSout;
   /* input data */
+  char *filename;
   long nSlices;
+  double sStart, sEnd;
   /* simulation data */
-  double *ecnx, *ecny;
+  double *ecnx, *ecny, eta[4];
   double *Cx, *Cy, *Cxp, *Cyp, *Ct, *Cdelta, *Sdelta, *duration, *charge;
+  double *particles;
   long *ecnxIndex, *ecnyIndex;
   long *CxIndex, *CyIndex, *CxpIndex, *CypIndex, *CtIndex, *CdeltaIndex, *SdeltaIndex;
-  long *durationIndex, *chargeIndex;
+  long *durationIndex, *chargeIndex, *particlesIndex;
   long *sliceFound;
 } SLICE_OUTPUT;
 
