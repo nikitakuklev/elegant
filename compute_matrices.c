@@ -657,10 +657,12 @@ VMATRIX *compute_matrix(
         elem->matrix = rf_cavity_matrix(rfca->length, rfca->volt, rfca->freq, rfca->phase, 
                                         &elem->Pref_output, run->default_order?run->default_order:1,
                                         rfca->end1Focus, rfca->end2Focus);
+        if (rfca->dx || rfca->dy)
+          misalign_matrix(elem->matrix, rfca->dx, rfca->dy, 0.0, 0.0);
         if (!rfca->change_p0) {
-            elem->matrix->C[5] = (elem->Pref_output-elem->Pref_input)/elem->Pref_input;
-            elem->Pref_output = elem->Pref_input;
-            }
+          elem->matrix->C[5] = (elem->Pref_output-elem->Pref_input)/elem->Pref_input;
+          elem->Pref_output = elem->Pref_input;
+        }
         break;
       case T_MODRF: 
         modrf = (MODRF*)elem->p_elem;

@@ -214,7 +214,9 @@ long simple_rf_cavity(
       bomb("n_kicks>1 not yet supported for rfca element", NULL);
     
     for (ip=0; ip<np; ip++) {
-        coord = part[ip];
+      coord = part[ip];
+        coord[0] -= rfca->dx;
+        coord[2] -= rfca->dy;
         if (nKicks>0) {
           if (length) {
             /* apply initial drift */
@@ -309,6 +311,8 @@ long simple_rf_cavity(
             coord[3] -= coord[2]*inverseF;
           }
         }
+        coord[0] += rfca->dx;
+        coord[2] += rfca->dy;
       }
     
     

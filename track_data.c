@@ -277,6 +277,8 @@ PARAMETER rfca_param[N_RFCA_PARAMS] = {
     {"END1_FOCUS", "", IS_LONG, 0, (long)((char *)&rfca_example.end1Focus), NULL, 0.0, 0},
     {"END2_FOCUS", "", IS_LONG, 0, (long)((char *)&rfca_example.end2Focus), NULL, 0.0, 0},
     {"N_KICKS", "", IS_LONG, 0, (long)((char *)&rfca_example.nKicks), NULL, 0.0, 1},
+    {"DX", "M", IS_DOUBLE, 1, (long)((char *)&rfca_example.dx), NULL, 0.0, 0},
+    {"DY", "M", IS_DOUBLE, 1, (long)((char *)&rfca_example.dy), NULL, 0.0, 0},
     };
    
 HMON hmon_example;
