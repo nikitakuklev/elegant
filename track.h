@@ -319,6 +319,7 @@ typedef struct {
     OPTIM_COVARIABLES covariables;
     long update_periodic_twiss_parameters;    /* flag: user must request this */
     long new_data_read;          /* new data has been read for optimization */
+    long n_restarts;
     } OPTIMIZATION_DATA;
 
 /* structure to store particle coordinates */

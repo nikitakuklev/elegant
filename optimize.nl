@@ -22,6 +22,7 @@ static char *optimize_method[N_OPTIM_METHODS] = {
     long soft_failure = 1;
     long n_passes = 2;
     long n_evaluations = 500;
+    long n_restarts = 0;
     STRING log_file = NULL;
     long verbose = 1;
 #end
