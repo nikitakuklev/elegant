@@ -561,7 +561,7 @@ long do_tracking(
                 case WATCH_COORDINATES:
                   dump_watch_particles(watch, step, i_pass, coord, n_to_track, *P_central,
                                        beamline->revolution_length, 
-                                       charge?charge->macroParticleCharge*n_to_track:0.0);
+                                       charge?charge->macroParticleCharge*n_to_track:0.0, z);
                   break;
                 case WATCH_PARAMETERS:
                 case WATCH_CENTROIDS:
@@ -588,7 +588,7 @@ long do_tracking(
               if (i_pass>=histogram->startPass && (i_pass-histogram->startPass)%histogram->interval==0) {
                 dump_particle_histogram(histogram, step, i_pass, coord, n_to_track, *P_central,
                                         beamline->revolution_length, 
-                                        charge?charge->macroParticleCharge*n_to_track:0.0);
+                                        charge?charge->macroParticleCharge*n_to_track:0.0, z);
               }
             }
             break;

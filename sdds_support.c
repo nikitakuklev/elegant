@@ -347,7 +347,8 @@ void SDDS_WatchPointSetup(WATCH *watch, long mode, long lines_per_row,
     
     if (!SDDS_DefineSimpleParameter(SDDS_table, "Pass", NULL, SDDS_LONG) ||
         !SDDS_DefineSimpleParameter(SDDS_table, "PassLength", "m", SDDS_DOUBLE) ||
-        !SDDS_DefineSimpleParameter(SDDS_table, "PassCentralTime", "s", SDDS_DOUBLE)) {
+	!SDDS_DefineSimpleParameter(SDDS_table, "PassCentralTime", "s", SDDS_DOUBLE) ||
+	!SDDS_DefineSimpleParameter(SDDS_table, "s", "m", SDDS_DOUBLE)) {
       fprintf(stdout, "Unable define SDDS parameter for file %s (%s)\n", filename, caller);
       fflush(stdout);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
@@ -473,7 +474,8 @@ void SDDS_HistogramSetup(HISTOGRAM *histogram, long mode, long lines_per_row,
     bomb("no output selected for histogram", NULL);
   if (!SDDS_DefineSimpleParameter(SDDS_table, "Pass", NULL, SDDS_LONG) ||
       !SDDS_DefineSimpleParameter(SDDS_table, "PassLength", "m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleParameter(SDDS_table, "PassCentralTime", "s", SDDS_DOUBLE)) {
+      !SDDS_DefineSimpleParameter(SDDS_table, "PassCentralTime", "s", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleParameter(SDDS_table, "s", "m", SDDS_DOUBLE)) {
     fprintf(stdout, "Unable define SDDS parameter for file %s (%s)\n", filename, caller);
     fflush(stdout);
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
@@ -488,7 +490,7 @@ void SDDS_HistogramSetup(HISTOGRAM *histogram, long mode, long lines_per_row,
 }
 
 void dump_watch_particles(WATCH *watch, long step, long pass, double **particle, long particles, 
-                          double Po, double length, double charge)
+                          double Po, double length, double charge, double z)
 {
   long i, row;
   double p, t0, t;
@@ -556,7 +558,7 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
                           "Step", step, "Pass", pass, "Particles", row, "pCentral", Po,
                           "PassLength", length, 
                           "Charge", charge,
-                          "PassCentralTime", t0, 
+                          "PassCentralTime", t0, "s", z,
                           NULL)) {
     SDDS_SetError("Problem setting SDDS parameters (dump_watch_particles)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -860,7 +862,7 @@ void do_watch_FFT(double **data, long n_data, long slot, long window_code)
 
 
 void dump_particle_histogram(HISTOGRAM *histogram, long step, long pass, double **particle, long particles, 
-                          double Po, double length, double charge)
+                          double Po, double length, double charge, double z)
 {
   long icoord, ipart, ibin;
   double p, t0;
@@ -947,7 +949,7 @@ void dump_particle_histogram(HISTOGRAM *histogram, long step, long pass, double 
   if (!SDDS_SetParameters(&histogram->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
                           "Step", step, "Pass", pass, "Particles", particles, "pCentral", Po,
                           "PassLength", length, "Charge", charge,
-                          "PassCentralTime", t0, 
+                          "PassCentralTime", t0, "s", z,
                           NULL)) {
     SDDS_SetError("Problem setting SDDS parameters (dump_particle_histogram)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);

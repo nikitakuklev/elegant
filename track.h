@@ -2613,9 +2613,9 @@ extern void SDDS_WatchPointSetup(WATCH *waatch, long mode, long lines_per_row,
 void SDDS_HistogramSetup(HISTOGRAM *histogram, long mode, long lines_per_row,
                          char *command_file, char *lattice_file, char *caller);
 void dump_particle_histogram(HISTOGRAM *histogram, long step, long pass, double **particle, long particles, 
-                             double Po, double length, double charge);
+                             double Po, double length, double charge, double z);
 extern void dump_watch_particles(WATCH *watch, long step, long pass, double **particle, long particles, double Po,
-                                 double length, double charge);
+                                 double length, double charge, double z);
 extern void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, double **particle, long particles, 
                            long original_particles,  double Po, double revolutionLength);
 extern void dump_watch_FFT(WATCH *watch, long step, long pass, long n_passes, double **particle, long particles,

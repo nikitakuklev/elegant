@@ -1823,7 +1823,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_FTRFMODE_PARAMS,         0,     sizeof(FTRFMODE),  ftrfmode_param    },
     { N_TFBPICKUP_PARAMS,         0,     sizeof(TFBPICKUP),  tfbpickup_param    },
     { N_TFBDRIVER_PARAMS,         0,     sizeof(TFBDRIVER),  tfbdriver_param    },
-    { N_LSCDRIFT_PARAMS,         0,     sizeof(LSCDRIFT),  lscdrift_param    },
+    { N_LSCDRIFT_PARAMS, MAT_LEN_NCAT,     sizeof(LSCDRIFT),  lscdrift_param    },
 } ;
  
 
