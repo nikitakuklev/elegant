@@ -2,17 +2,21 @@
         name = *, type = WATCH, 
         new_type = DRIF
 &end
+
 &transmute_elements
         name = *, type = MAXAMP,
-        new_type = DRIF
+        new_type = DRIF,
+	disable = <includeApertures>
 &end
 &transmute_elements
         name = *, type = ?COL,
-        new_type = DRIF
+        new_type = DRIF,
+	disable = <includeApertures>
 &end
 &transmute_elements
         name = *, type = SCRAPER,
-        new_type = DRIF
+        new_type = DRIF,
+	disable = <includeApertures>
 &end
 
 &run_setup
@@ -41,14 +45,11 @@
         n_passes = <turns>,
 &end
 
-&bunched_beam 
-	centroid[5] = <delta>
-&end
+&alter_elements name=<kickOffsetElement>, item=ON_PASS, value=0 &end
+&alter_elements name=<kickOffsetElement>, item=DP, value=<delta> &end
 
 &closed_orbit
 	output = %s.clo,
-	start_from_centroid = 0,
-	start_from_dp_centroid = 1,
         iteration_fraction = 0.5,
         closed_orbit_iterations = 500,
 &end
