@@ -163,7 +163,7 @@ char **argv;
     long last_default_order = 0, new_beam_flags, links_present, twiss_computed = 0;
     long correctionDone;
     double *starting_coord, finalCharge;
-    long namelists_read = 0, failed;
+    long namelists_read = 0, failed, firstPass;
                     
 #if defined(UNIX) || defined(_WIN32)
     signal(SIGINT, traceback_handler);
@@ -360,6 +360,8 @@ char **argv;
                 output_magnets(magnets, lattice, beamline);
 
             delete_phase_references();    /* necessary for multi-step runs */
+            reset_special_elements(beamline, 1);
+            reset_driftCSR();
             last_default_order = default_order;
             run_setuped = 1;
             break;
@@ -398,6 +400,9 @@ char **argv;
                 bomb("beam setup (bunched_beam or sdds_beam) must follow correction setup", NULL);
             correction_setuped = 1;
             correction_setup(&correct, &namelist_text, &run_conditions, beamline); 
+            delete_phase_references();
+            reset_special_elements(beamline, 1);
+            reset_driftCSR();
             break;
           case SET_AWE_BEAM: 
             fprintf(stdout, "This program no longer supports awe-format files.\n");
@@ -440,6 +445,7 @@ char **argv;
             if (beam_type==-1)
                 bomb("beam must be defined prior to tracking", NULL);
             new_beam_flags = 0;
+            firstPass = 1;
             while (vary_beamline(&run_control, &error_control, &run_conditions, beamline)) {
               fill_double_array(starting_coord, 6, 0.0);
               correctionDone = 0;
@@ -579,6 +585,13 @@ char **argv;
                 run_response_output(&run_conditions, beamline, &correct, 1);
               if (center_on_orbit)
                 center_beam_on_coords(beam.particle, beam.n_to_track, starting_coord, center_momentum_also);
+              if (firstPass) {
+                /* prevent fiducialization of RF etc. by correction etc. */
+                delete_phase_references();
+                reset_special_elements(beamline, 1);
+                reset_driftCSR();
+              }
+              firstPass = 0;
               track_beam(&run_conditions, &run_control, &error_control, &optimize.variables, 
                          beamline, &beam, &output_data, 
                          (use_linear_chromatic_matrix?LINEAR_CHROMATIC_MATRIX:0)+
@@ -627,6 +640,9 @@ char **argv;
             if (!do_twiss_output) {
                 twiss_computed = 1;
                 run_twiss_output(&run_conditions, beamline, NULL, -1);
+                delete_phase_references();
+                reset_special_elements(beamline, 1);
+                reset_driftCSR();
                 finish_twiss_output();
             }
             break;
@@ -930,6 +946,9 @@ char **argv;
                                            do_twiss_output+do_matrix_output+twiss_computed);
             if (!do_response_output) {
                 run_response_output(&run_conditions, beamline, &correct, -1);
+                delete_phase_references();
+                reset_special_elements(beamline, 1);
+                reset_driftCSR();
                 finish_response_output();
                 }
             break;
