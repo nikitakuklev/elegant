@@ -34,7 +34,6 @@ void track_through_rfmode(
 
     if (charge) {
       rfmode->mp_charge = charge->macroParticleCharge;
-      rfmode->charge = charge->macroParticleCharge*np;
     } else if (pass==0) {
       rfmode->mp_charge = 0;
       if (np)

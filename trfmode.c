@@ -41,7 +41,6 @@ void track_through_trfmode(
 
   if (charge) {
     trfmode->mp_charge = charge->macroParticleCharge;
-    trfmode->charge = charge->macroParticleCharge*np;
   } else if (pass==0) {
     trfmode->mp_charge = 0;
     if (np)

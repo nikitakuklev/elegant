@@ -117,7 +117,6 @@ void set_up_trwake(TRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
   
   if (charge) {
     wakeData->macroParticleCharge = charge->macroParticleCharge;
-    wakeData->charge = charge->macroParticleCharge*particles;
   } else if (pass==0) {
     wakeData->macroParticleCharge = 0;
     if (particles)

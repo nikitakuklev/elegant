@@ -113,7 +113,6 @@ void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long part
 
   if (charge) {
     ztransverse->macroParticleCharge = charge->macroParticleCharge;
-    ztransverse->charge = charge->macroParticleCharge*particles;
   } else if (pass==0) {
     ztransverse->macroParticleCharge = 0;
     if (particles)

@@ -381,10 +381,8 @@ long do_tracking(
               charge->macroParticleCharge = 0;
               if (*n_original)
                 charge->macroParticleCharge = charge->charge/(*n_original);
-              if (charge->chargePerParticle) {
+              if (charge->chargePerParticle)
                 charge->macroParticleCharge = charge->chargePerParticle;
-                charge->charge = (*n_original)*charge->macroParticleCharge;
-              }
             }
             break;
           case T_MARK:

@@ -215,7 +215,6 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
 
     if (charge) {
       zlongit->macroParticleCharge = charge->macroParticleCharge;
-      zlongit->charge = charge->macroParticleCharge*particles;
     } else if (pass==0) {
       zlongit->macroParticleCharge = 0;
       if (particles)

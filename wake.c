@@ -110,7 +110,6 @@ void set_up_wake(WAKE *wakeData, RUN *run, long pass, long particles, CHARGE *ch
   
   if (charge) {
     wakeData->macroParticleCharge = charge->macroParticleCharge;
-    wakeData->charge = charge->macroParticleCharge*particles;
   } else if (pass==0) {
     wakeData->macroParticleCharge = 0;
     if (particles)
