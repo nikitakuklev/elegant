@@ -2395,6 +2395,7 @@ void finishFrequencyMap();
 extern char *compose_filename(char *template, char *root_name);
 extern double find_beam_p_central(char *input);
 void center_beam_on_coords(double **particle, long n_part, double *coord, long center_momentum_also);
+void offset_beam_by_coords(double **part, long np, double *coord, long offset_dp);
 void link_date(void);
 void check_heap(void);
 void do_print_dictionary(char *filename, long latex_form);

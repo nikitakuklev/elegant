@@ -1045,7 +1045,7 @@ proc FineDynamicAperture {args} {
                 -startValue $fineDynamicAperture(xMinimum) \
                 -endValue $fineDynamicAperture(xMaximum) \
                 -points $fineDynamicAperture(xPoints) \
-                -copyList done -combineList [list ele ele.log los bun] \
+                -copyList done -combineList [list ele ele.log los bun clo] \
                 -tag $tag -momentum $momentum -originalList $origList -replacementList $replList]} {
             return 
         }
@@ -1055,8 +1055,11 @@ proc FineDynamicAperture {args} {
             return -code error "$rootname not done"
         }
     }
+    exec sddsprocess $rootname.clo $rootname.clo.tmp -process=x,first,xCO
     exec sddsxref $rootname.los $rootname.bun -pipe=out \
-	-equate=particleID -take=x,y -edit=column,*,ei/0/  \
+	-equate=particleID -take=x,y -edit=column,*,ei/0/  -transfer=param,* \
+	| sddsxref -pipe -leave=* -transfer=param,xCO $rootname.clo.tmp \
+	| sddsprocess -pipe "-redefine=column,x0,x0 xCO +,units=m" \
 	| sddscombine -pipe=in -merge $rootname.da -overwrite
     exec sddsplot -column=x0,y0 $rootname.da -graph=dot,vary -order=spect -split=column=Pass,width=1 &
 }

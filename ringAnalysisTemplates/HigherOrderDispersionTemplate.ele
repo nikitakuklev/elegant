@@ -40,7 +40,7 @@
 
 &closed_orbit
         output = %s.clo,
-        iteration_fraction = 0.75,
+        iteration_fraction = 0.5,
         closed_orbit_iterations = 500,
 &end
 

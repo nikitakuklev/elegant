@@ -669,6 +669,8 @@ char **argv;
           run_response_output(&run_conditions, beamline, &correct, 1);
         if (center_on_orbit)
           center_beam_on_coords(beam.particle, beam.n_to_track, starting_coord, center_momentum_also);
+	else if (offset_by_orbit)
+          offset_beam_by_coords(beam.particle, beam.n_to_track, starting_coord, offset_momentum_also);
         if (firstPass) {
           /* prevent fiducialization of RF etc. by correction etc. */
           delete_phase_references();
@@ -1287,6 +1289,25 @@ void center_beam_on_coords(double **part, long np, double *coord, long center_dp
         offset = sum/np - coord[j];
         for (i=0; i<np; i++)
             part[i][j] -= offset;
+        }
+    }
+
+void offset_beam_by_coords(double **part, long np, double *coord, long offset_dp)
+{
+    double sum, offset;
+    long i, j, lim;
+    
+    if (!np)
+        return;
+    
+    if (offset_dp)
+        lim = 5;
+    else
+        lim = 4;
+    
+    for (j=0; j<=lim; j++) {
+        for (i=0; i<np; i++)
+            part[i][j] += coord[j];
         }
     }
 

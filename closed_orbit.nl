@@ -8,6 +8,7 @@
 #namelist closed_orbit
     STRING output = NULL;
     long start_from_centroid = 1;
+    long start_from_dp_centroid = 0;
     double closed_orbit_accuracy = 1e-12;
     long closed_orbit_iterations = 10;
     long fixed_length = 0;

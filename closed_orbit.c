@@ -102,7 +102,7 @@ long run_closed_orbit(RUN *run, LINE_LIST *beamline, double *starting_coord, BEA
     if (!starting_coord)
         bomb("starting_coord array is NULL (run_closed_orbit)", NULL);
 
-    if (start_from_centroid) {
+    if (start_from_centroid || start_from_dp_centroid) {
         if (!beam)
             bomb("no beam present for closed-orbit calculation starting from centroid", NULL);
         compute_centroids(starting_coord, beam->particle, beam->n_to_track);
