@@ -303,9 +303,9 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
         }
     else {
         TABLE Zr_data, Zi_data;
-        double *Zr, *Zi;
-        double df_spect;
-        long n_spect;
+        double *Zr=NULL, *Zi=NULL;
+        double df_spect=0.0;
+        long n_spect=0;
         if (zlongit->n_bins<1)
             bomb("ZLONGIT element must have n_bins>=1", NULL);
         if (!zlongit->Zreal && !zlongit->Zimag)

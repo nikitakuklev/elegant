@@ -209,10 +209,10 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
                         double *clorb, long step, long last_iteration)
 {
   VMATRIX *M;
-  double K1, gain, LastMsError, MsError;
+  double K1=0.0, gain, LastMsError, MsError;
   long steps_since_gain_change;
   ELEMENT_LIST *context;
-  long i, K1_param, type, iter;
+  long i, K1_param, type=0, iter;
   double beta_x, alpha_x, eta_x, etap_x;
   double beta_y, alpha_y, eta_y, etap_y;
   static long tunes_saved=0;

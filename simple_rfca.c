@@ -33,7 +33,7 @@ unsigned long parseFiducialMode(char *modeString)
 double findFiducialTime(double **part, long np, double s0, double sOffset,
                         double p0, unsigned long mode)
 {
-  double tFid;
+  double tFid=0.0;
   
   if (mode&FID_MODE_LIGHT)
     tFid =  (s0+sOffset)/c_mks;
@@ -75,7 +75,7 @@ long simple_rf_cavity(
 {
     long ip, same_dgamma, nKicks;
     double timeOffset, inverseF, dc4, x, xp;
-    double P, gamma, dgamma, dgammaMax, phase, length, volt, To;
+    double P, gamma, dgamma=0.0, dgammaMax=0.0, phase, length, volt, To;
     double *coord, t, t0, omega, beta_i, tau, dt;
     long useSRSModel = 0;
     static long been_warned = 0;
@@ -284,7 +284,7 @@ long simple_rf_cavity(
           }
         }
         else {
-          double sin_phase, cos_phase;
+          double sin_phase=0.0, cos_phase;
           double R11=1, R21=0, R22, R12, dP, ds1;
           
           /* use matrix to propagate particles */

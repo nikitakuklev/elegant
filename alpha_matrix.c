@@ -249,7 +249,7 @@ long alpha_magnet_tracking(
     double **accepted, double P_central, double z
     )
 {
-    float xmax, xl, xu;
+    float xmax, xl=0.0, xu=0.0;
     long do_xl, do_xu;
     long ip, itop;
     double *coord;

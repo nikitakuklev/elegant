@@ -489,7 +489,7 @@ long get_sdds_particles(double ***particle,
 {
   long i, np_max, np, np_new, rows, dump_rejected;
   long retval, data_seen;
-  double **data, **new_data;
+  double **data=NULL, **new_data;
   static char s[200];
   long indexID = -1;
 

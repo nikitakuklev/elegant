@@ -19,7 +19,7 @@ void track_through_kicker(
     double time, time_offset, angle, t0, *coord, sum_amp, amplitude, dx, ds;
     double x, xp, y, yp, dp, s, cos_tilt, sin_tilt, curv;
     double theta_i, alpha_i, alpha_f;
-    long xmem, ymem;
+    long xmem=0, ymem=0;
 
     if (np<=0)
         return;

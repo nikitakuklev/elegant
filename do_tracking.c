@@ -56,7 +56,7 @@ long do_tracking(
   long n_left, show_dE;
   double dgamma, dP[3], z, z_recirc, last_z;
   long i, j, i_traj=0, i_sums, n_to_track, i_pass, isConcat;
-  long i_sums_recirc, saveISR;
+  long i_sums_recirc, saveISR=0;
   long watch_pt_seen;
   double sum, x_max, y_max;
   long elliptical;
@@ -1319,7 +1319,7 @@ void store_fitpoint_twiss_parameters(MARK *fpt, char *name, long occurence,TWISS
 
 ELEMENT_LIST *findBeamlineMatrixElement(ELEMENT_LIST *eptr)
 {
-  ELEMENT_LIST *eptr0;
+  ELEMENT_LIST *eptr0=NULL;
   long matrixSeen = 0;
   while (eptr) {
     if ((eptr->p_elem || eptr->matrix) && 

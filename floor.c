@@ -177,12 +177,12 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
                              ELEMENT_LIST *elem, ELEMENT_LIST *last_elem, 
                              SDDS_DATASET *SDDS_floor, long row_index)
 {
-  double dX, dY, dZ, rho, angle, coord[3], sangle[3], length;
+  double dX, dY, dZ, rho=0.0, angle, coord[3], sangle[3], length;
   long is_bend, is_misalignment, is_magnet, is_rotation, i, is_alpha;
   BEND *bend; KSBEND *ksbend; CSBEND *csbend; MALIGN *malign; CSRCSBEND *csrbend;
   ROTATE *rotate; ALPH *alpha;
   char label[200];
-  static MATRIX *temp33, *tempV, *R, *S, *T, *TInv, *V0s, *V1s;
+  static MATRIX *temp33, *tempV, *R, *S, *T, *TInv;
   static long matricesAllocated = 0;
   double theta0, phi0, psi0, tilt;
   

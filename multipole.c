@@ -149,11 +149,11 @@ long fmultipole_tracking(
   double dx, dy, dz;  /* offsets of the multipole center */
   long order;         /* order (n) */
   long n_kicks;       /* number of kicks to split multipole into */
-  long i_part, i_top, is_lost, i_order;
+  long i_part, i_top, is_lost=0, i_order;
   double KnL;
   double *coord;
   double drift, cos_tilt, sin_tilt;
-  double x, xp, y, yp;
+  double x=0.0, xp=0.0, y=0.0, yp=0.0;
   double rad_coef;
   MULTIPOLE_DATA *multData;
   
@@ -960,7 +960,7 @@ void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
                                       double KmL, long rootOrder)
 {
   long i;
-  double sFactor, rFactor;
+  double sFactor=0.0, rFactor=0.0;
   
   if (!totalMult->initialized) {
     totalMult->initialized = 1;

@@ -122,9 +122,9 @@ void IBSGrowthRates (double gamma, double emitx, double emity,
   double zintx, zinty, zintz;
   double ccy, td1, td2, tz1, tz2, ty1, ty2, tx1, tx2;
   double h, aloop, term, func, polyx, polyy, polyz, sumz;
-  double alam, cof, f, coff, tmpx, tmpy, tmpz;
+  double alam, cof, f=0.0, coff, tmpx, tmpy, tmpz;
   double txi, tyi, tzi, weight, taux, tauy, tauz;
-  double epsCheck, epzCheck;  
+  double epsCheck=0.0, epzCheck=0.0;  
 
 #define STEPS 10
 #define MAXDECADES 30

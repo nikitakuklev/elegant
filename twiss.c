@@ -180,7 +180,7 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, RADIATION_INTEGRALS
 {
   double beta[2], alpha[2], phi[2], eta[2], etap[2], gamma[2];
   double *func, path[6], path0[6], detR[2];
-  double **R, C[2], S[2], Cp[2], Sp[2], D[2], Dp[2], sin_dphi, cos_dphi, dphi;
+  double **R=NULL, C[2], S[2], Cp[2], Sp[2], D[2], Dp[2], sin_dphi, cos_dphi, dphi;
   long n_mat_computed, i, j, plane, otherPlane, hasMatrix;
   VMATRIX *M1, *M2;
   MATRIX *dispM, *dispOld, *dispNew;
@@ -1382,7 +1382,7 @@ void modify_rfca_matrices(ELEMENT_LIST *eptr, long order)
 void compute_twiss_statistics(LINE_LIST *beamline, TWISS *twiss_ave, TWISS *twiss_min, TWISS *twiss_max)
 {
   ELEMENT_LIST *eptr;
-  double dz, end_pos;
+  double dz, end_pos=0.0;
   long nElems;
   
   if (!twiss_ave) {
@@ -1470,11 +1470,11 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
   KQUAD *qptrk;
   SEXT *sptr;
   KSEXT *sptrk;
-  double length, angle, E1, E2, K1;
+  double length=0.0, angle=0.0, E1=0.0, E2=0.0, K1=0.0;
   double k2, rho, k, kl;
   double I1, I2, I3, I4, I5;
   double alpha1, gamma1, etap1, eta2, sin_kl, cos_kl;
-  double etaAve, etaK1_rhoAve, HAve, h, K2, dx;
+  double etaAve, etaK1_rhoAve, HAve, h, K2=0.0, dx=0.0;
 
   I1 = I2 = I3 = I4 = I5 = 0;
   
@@ -1641,9 +1641,9 @@ void LoadStartingTwissFromFile(double *betax, double *betay, double *alphax, dou
                                char *filename, char *elementName, long elementOccurrence)
 {
   SDDS_DATASET SDDSin;
-  long rows, rowOfInterest;
-  double *betaxData, *betayData, *alphaxData, *alphayData;
-  double *etaxData, *etayData, *etaxpData, *etaypData;
+  long rows=0, rowOfInterest;
+  double *betaxData, *betayData=NULL, *alphaxData=NULL, *alphayData=NULL;
+  double *etaxData=NULL, *etayData=NULL, *etaxpData=NULL, *etaypData=NULL;
   
   if (!SDDS_InitializeInputFromSearchPath(&SDDSin, filename) || 
       SDDS_ReadPage(&SDDSin)!=1)

@@ -57,6 +57,11 @@ CopyrightNotice001*/
  * Michael Borland, 1999
  *
  $Log: not supported by cvs2svn $
+ Revision 1.5  2001/08/02 14:45:31  borland
+ Added search_path feature to run_setup namelist and to many (all?) elements and
+ commands that take input files.
+ FITPOINT beam statistics data now includes x, y, and z emittances.
+
  Revision 1.4  2001/05/16 19:02:59  borland
  Modified calls to simplexMin() to accomodate new argument.
  Added simplified Rosenzweig/Serafini model for rf focusing in the
@@ -153,7 +158,7 @@ double FELScalingFunction
    double lightWavelength, double undulatorPeriod, double sigmaDelta);
 
 
-main(int argc, char **argv)
+int main(int argc, char **argv)
 {
   SDDS_DATASET SDDSin, SDDSout;
   char *inputfile, *outputfile;
@@ -435,7 +440,7 @@ main(int argc, char **argv)
   }
   if (!SDDS_Terminate(&SDDSin) || !SDDS_Terminate(&SDDSout))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-  exit(0);
+  return(0);
 }
 
 void OptimizeSASEFELParameters

@@ -55,6 +55,9 @@ CopyrightNotice001*/
  * Michael Borland, 2000
  *
  $Log: not supported by cvs2svn $
+ Revision 1.5  2001/10/15 15:42:33  soliday
+ Cleaned up for WIN32.
+
  Revision 1.4  2001/08/06 13:56:40  borland
  Fixed memory leak.
 
@@ -98,7 +101,7 @@ char *CenName[6];
 char *CorName[6][6];
 char *psName[6] = {"x", "xp", "y", "yp", "t", "delta" };
   
-main(int argc, char **argv)
+int main(int argc, char **argv)
 {
   SDDS_DATASET SDDSin, SDDSout;
   char *inputfile, *outputfile;
@@ -106,8 +109,8 @@ main(int argc, char **argv)
   long i, j;
   SCANNED_ARG *s_arg;
   unsigned long pipeFlags;
-  double *x, *xp, *y, *yp, *p, *t;
-  double pAve, sum;
+  double *x, *xp, *y, *yp, *p=NULL, *t;
+  double pAve=0.0, sum;
   double S[6][6], C[6], beta[2], alpha[2], eta[4], emit[2], emitcor[2], beamsize[6];
   double betacor[2], alphacor[2];
   double *data[6], Sbeta[4][4];

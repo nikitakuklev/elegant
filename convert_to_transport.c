@@ -67,7 +67,7 @@ void convert_to_transport(char *outputfile, LINE_LIST *beamline, long flip_k, do
             case T_QUAD:
                 quad = (QUAD*)eptr->p_elem;
                 if (quad->tilt!=0) {
-                    sprintf(s, "%QT%02ld", n_quad_tilts++);
+                    sprintf(s, "%%QT%02ld", n_quad_tilts++);
                     sprintf(buffer, "%8.8s %-5d %21.16e;\n", 
                         quoted_label(s), 20, quad->tilt*180/PI);
                     do_output_transport(fp, buffer);
@@ -78,7 +78,7 @@ void convert_to_transport(char *outputfile, LINE_LIST *beamline, long flip_k, do
                     quad_aperture);
                 do_output_transport(fp, buffer);
                 if (quad->tilt!=0) {
-                    sprintf(s, "%QT%02ld", n_quad_tilts++);
+                    sprintf(s, "%%QT%02ld", n_quad_tilts++);
                     sprintf(buffer, "%8.8s %-5d %21.16e;\n", 
                         quoted_label(s), 20, -quad->tilt*180/PI);
                     do_output_transport(fp, buffer);
@@ -125,7 +125,7 @@ void convert_to_transport(char *outputfile, LINE_LIST *beamline, long flip_k, do
                     }
                 /* use 20 cards to tilt and un-tilt the magnet */
                 if (bend->tilt!=0) {
-                    sprintf(s, "%BT%02ld", n_bend_tilts++);
+                    sprintf(s, "%%BT%02ld", n_bend_tilts++);
                     sprintf(buffer, "%8.8s %-5d %21.16e;\n", 
                         quoted_label(s), 20, bend->tilt*180/PI);
                     do_output_transport(fp, buffer);
@@ -144,7 +144,7 @@ void convert_to_transport(char *outputfile, LINE_LIST *beamline, long flip_k, do
                         quoted_label(s), 2, bend->e2*180/PI);
                 do_output_transport(fp, buffer);
                 if (bend->tilt!=0) {
-                    sprintf(s, "%BT%02ld", n_bend_tilts++);
+                    sprintf(s, "%%BT%02ld", n_bend_tilts++);
                     sprintf(buffer, "%8.8s %-5d %21.16e;\n", 
                         quoted_label(s), 20, -bend->tilt*180/PI);
                     do_output_transport(fp, buffer);
@@ -199,7 +199,7 @@ void convert_to_transport(char *outputfile, LINE_LIST *beamline, long flip_k, do
             case T_SEXT:
                 sext = (SEXT*)eptr->p_elem;
                 if (sext->tilt!=0) {
-                    sprintf(s, "%ST%02ld", n_sext_tilts++);
+                    sprintf(s, "%%ST%02ld", n_sext_tilts++);
                     sprintf(buffer, "%8.8s %-5d %21.16e;\n", 
                         quoted_label(s), 20, sext->tilt*180/PI);
                     do_output_transport(fp, buffer);
@@ -210,7 +210,7 @@ void convert_to_transport(char *outputfile, LINE_LIST *beamline, long flip_k, do
                         sext_aperture);
                 do_output_transport(fp, buffer);
                 if (sext->tilt!=0) {
-                    sprintf(s, "%ST%02ld", n_sext_tilts++);
+                    sprintf(s, "%%ST%02ld", n_sext_tilts++);
                     sprintf(buffer, "%8.8s %-5d %21.16e;\n", 
                         quoted_label(s), 20, -sext->tilt*180/PI);
                     do_output_transport(fp, buffer);

@@ -21,7 +21,7 @@ char *findFileInSearchPath(char *filename)
   
   if (!filename || !strlen(filename))
     return NULL;
-  if (sddsTags=strchr(filename, '=')) {
+  if ((sddsTags=strchr(filename, '='))) {
     /* <filename>=<x>+<y> form ? */
     if (!strchr(sddsTags+1, '+'))
       sddsTags = NULL;
@@ -31,7 +31,7 @@ char *findFileInSearchPath(char *filename)
   }
   if (search_path && strlen(search_path)) {
     cp_str(&pathList, search_path);
-    while (path=get_token(pathList)) {
+    while ((path=get_token(pathList))) {
       tmpName = malloc(strlen(filename)+strlen(path)+2+(sddsTags?strlen(sddsTags)+2:0));
       sprintf(tmpName, "%s/%s", path, filename);
       if (fexists(tmpName)) {

@@ -23,9 +23,9 @@ long track_through_tubend(double **part, long n_part, TUBEND *tubend,
   double rhoMagnet, thetaMagnet, w2, dY;
   double distanceToEdge;
   double XInitial, YInitial, phiInitial, YRI, CEY;
-  double Xint[2], Yint[2], XInt, YInt;
+  double Xint[2], Yint[2], XInt=0.0, YInt=0.0;
   double XMagnetEnd, YPoleCenter, YRefFinal;
-  double phiExit, XFinal, YFinal;
+  double phiExit=0.0, XFinal, YFinal;
   double *coord;
   double rho_particle, CPX, CPY;
 

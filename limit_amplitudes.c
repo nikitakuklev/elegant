@@ -386,8 +386,8 @@ long beam_scraper(
         /* scraper has material properties that scatter beam and
          * absorb energy--method is the same as track_through_matter()
          */
-        double Nrad, theta_rms, beta, P, E;
-        double x1, y1, z1, z2, dx, dy, ds, t;
+        double Nrad, theta_rms, beta, P, E=0.0;
+        double x1, y1, z1, z2, dx, dy, ds, t=0.0;
         
         beta = Po/sqrt(sqr(Po)+1);
         Nrad = scraper->length/scraper->Xo;

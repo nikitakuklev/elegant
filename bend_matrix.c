@@ -140,7 +140,7 @@ VMATRIX *edge_matrix(
     )
 {
     double tan_beta, tan2_beta, sec_beta, sec2_beta, h2;
-    double psi;
+    double psi=0.0;
     VMATRIX *M;
     double **R, ***T;
 

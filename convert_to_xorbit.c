@@ -80,7 +80,7 @@ void convert_to_xorbit(char *outputfile, LINE_LIST *beamline, long flip_k,
             break;
           case T_MULT:
             mult = (MULT*)eptr->p_elem;
-            fprintf(fp, "%-8s n%1ld%10.6f%10.6f\n",
+            fprintf(fp, "%-8s n%10.6f%10.6f\n",
                     eptr->name, mult->KnL*cos(mult->tilt*(mult->order+1))/factorial(mult->order),
                     -mult->KnL*sin(mult->tilt*(mult->order+1))/factorial(mult->order));
             break;

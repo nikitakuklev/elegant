@@ -71,7 +71,7 @@ void element_link_control(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, RUN *run_
 
 void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *beamline)
 {
-    long n_links, src_position_code, n_targets, n_sources, mode_code;
+    long n_links, src_position_code=0, n_targets, n_sources, mode_code=0;
     long targets, iTarget, j;
     char **targetList;
     ELEMENT_LIST *t_context, *s_context, **eptr, *eptr1;
@@ -149,7 +149,7 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
         if (!duplic)
           targets++;
       }
-    } while (t_context=wfind_element(target, &t_context, &(beamline->elem)));
+    } while ((t_context=wfind_element(target, &t_context, &(beamline->elem))));
     if (!targets)
       bomb("cannot make link--no targets found\n", NULL);
       

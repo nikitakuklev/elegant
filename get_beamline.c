@@ -35,13 +35,13 @@ void lfree(void *ptr)
 #define MAX_FILE_NESTING 10
 LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, long echo, long divisions)
 {
-  long type, i;
+  long type=0, i;
   long occurence, iMad;
   static ELEMENT_LIST *eptr, *eptr1;
   static LINE_LIST *lptr;
   static long n_elems, n_lines;
   FILE *fp_mad[MAX_FILE_NESTING];
-  char *s, *t, *cfgets(), *ptr;
+  char *s, *t=NULL, *cfgets(), *ptr;
 
   log_entry("get_beamline");
 
@@ -253,7 +253,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
 double compute_end_positions(LINE_LIST *lptr) 
 {
     double z, l, theta, z_recirc;
-    static ELEMENT_LIST *eptr, *eptr1;
+    static ELEMENT_LIST *eptr;
     long i_elem, recircPresent;
     
     /* use length data to establish z coordinates at end of each element */

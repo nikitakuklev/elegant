@@ -3,6 +3,9 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.17  2001/10/15 15:42:32  soliday
+ * Cleaned up for WIN32.
+ *
  * Revision 1.16  2001/06/12 00:25:51  borland
  * Added beamsize_mode control to sasefel command.
  *
@@ -766,7 +769,7 @@ void SetSASEBetaEmitValues(double *emitToUse, double *betaToUse,
     *betaToUse = userBeta;
   }
   else {
-    double Sx, Sy, S;
+    double Sx, Sy, S=0.0;
     Sx = sqrt(S11);
     Sy = sqrt(S33);
     switch (beamsizeMode) {

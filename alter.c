@@ -10,7 +10,7 @@
 
 void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 {
-    long thisType, lastType, iParam, nMatches;
+    long thisType, lastType, iParam=0, nMatches;
     ELEMENT_LIST *context, *eptr;
     char *p_elem;
     
@@ -42,7 +42,7 @@ void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     context = NULL;
     lastType = -1;
     nMatches = 0;
-    while (eptr=wfind_element(name, &context, &(beamline->elem))) {
+    while ((eptr=wfind_element(name, &context, &(beamline->elem)))) {
       if (exclude && strlen(exclude) && wild_match(eptr->name, exclude))
         continue;
       if (type && !wild_match(entity_name[context->type], type))

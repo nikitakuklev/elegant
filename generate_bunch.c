@@ -64,7 +64,7 @@ long generate_bunch(
 {
     long i_particle, first_call=1, i, j;
     double s1, s2, s3, s4, delta_p;
-    double s56, beta, emit, alpha;
+    double s56, beta, emit, alpha=0.0;
     double *randomizedData = NULL;
     
     log_entry("generate_bunch");
@@ -414,7 +414,7 @@ void uniform_distribution(
   double x1, x2;
   long i_particle;
   double range1, range2; 
-  double rnd1, rnd2;
+  double rnd1, rnd2=0.0;
 
   log_entry("uniform_distribution");
 
@@ -631,7 +631,7 @@ long dynap_distribution(double **particle, long n_particles, double sx, double s
         long nx, long ny)
 {
     long ix, iy, ip;
-    double x, y, dx, dy;
+    double x, y, dx=0.0, dy=0.0;
     double *coord;
 
     log_entry("dynap_distribution");

@@ -840,7 +840,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   long diSlippage, diSlippage4;
   long nBins, nBinned;
   long i_part, i_top, kick;
-  double rho, Fx, Fy, y2;
+  double rho=0.0, Fx, Fy, y2;
   double n, beta, gamma, delta, fse, dp_prime;
   double tilt, etilt, cos_ttilt, sin_ttilt, ttilt;
   double *coord;
@@ -1559,10 +1559,10 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
 long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift, 
                             double Po, double **accepted, double zStart, char *rootname)
 {
-  long iPart, iKick, iBin, binned, nKicks, iSpreadMode;
-  double *coord, p, beta, dz, ct0, factor, dz0, dzFirst;
+  long iPart, iKick, iBin, binned, nKicks, iSpreadMode=0;
+  double *coord, p, beta, dz, ct0=0.0, factor, dz0, dzFirst;
   double ctmin, ctmax, spreadFactor, dct;
-  double zTravel, attenuationLength, thetaRad, sigmaZ, overtakingLength, criticalWavelength, wavelength;
+  double zTravel, attenuationLength, thetaRad=0.0, sigmaZ, overtakingLength, criticalWavelength, wavelength=0.0;
   static char *spreadMode[3] = {"full", "simple", "radiation-only"};
   static char *wavelengthMode[3] = {"sigmaz", "bunchlength", "peak-to-peak"};
   static char *bunchlengthMode[3] = {"rms", "68-percentile", "90-percentile"};

@@ -23,7 +23,7 @@ int FindLineCircleIntersections1(double *x, double *y,
                                  double x0, double y0, double theta, 
                                  double xc, double yc, double r)
 {
-  double slope, intercept, tmp;
+  double slope=0.0, intercept, tmp;
   long rotate = 0, solutions;
 
   if (theta==PIo2 || theta==-PIo2)

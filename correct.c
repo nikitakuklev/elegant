@@ -337,7 +337,7 @@ void add_steer_elem_to_lists(STEERING_LIST *SL, long plane, char *name, char *it
     context = NULL;
     found = 0;
     
-    while (context=wfind_element(name, &context, &(beamline->elem))) {
+    while ((context=wfind_element(name, &context, &(beamline->elem)))) {
       if (element_type &&
           !wild_match(entity_name[context->type], element_type))
         continue;
@@ -380,7 +380,7 @@ void add_steer_elem_to_lists(STEERING_LIST *SL, long plane, char *name, char *it
 double compute_kick_coefficient(ELEMENT_LIST *elem, long plane, long type, double corr_tweek, char *name, char *item, RUN *run)
 {
     double value, coef;
-    long param_offset, param_number;
+    long param_offset=0, param_number;
 
     if ((param_number=confirm_parameter(item, type))<0 || (param_offset=find_parameter_offset(item, type))<0)
         bomb("invalid parameter or element type (compute_kick_coefficient)", NULL);
@@ -438,7 +438,7 @@ double compute_kick_coefficient(ELEMENT_LIST *elem, long plane, long type, doubl
 long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *starting_coord, 
                    BEAM *beam, long sim_step, long initial_correction)
 {
-  long i, i_cycle, x_failed, y_failed, n_iter_taken, bombed, final_traj;
+  long i, i_cycle, x_failed, y_failed, n_iter_taken, bombed=0, final_traj;
   double *closed_orbit, rms_before, rms_after, *Cdp;
 
   log_entry("do_correction");
@@ -678,7 +678,7 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
     long kick_offset, i_corr, i_moni, i, equalW;
     long n_part;
     static MATRIX *I1=NULL, *I2=NULL, *I3=NULL, *I4=NULL, *W=NULL;
-    double **one_part, p, p0, kick0, kick1, corr_tweek, corrCalibration, *moniCalibration, W0;
+    double **one_part, p, p0, kick0, kick1, corr_tweek, corrCalibration, *moniCalibration, W0=0.0;
     VMATRIX *save;
     long i_type;
 
@@ -1340,7 +1340,7 @@ void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN
 {
   ELEMENT_LIST *start;
   long i_corr, i_moni, equalW;
-  double coef, htune, moniFactor, *corrFactor, *corrFactorFL, coefFL, W0;
+  double coef, htune, moniFactor, *corrFactor, *corrFactorFL, coefFL, W0=0.0;
   static MATRIX *I1=NULL, *I2=NULL, *I3=NULL, *I4=NULL, *W=NULL;
 
   log_entry("compute_orbcor_matrices");
@@ -1749,7 +1749,7 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
     static long initialized = 0, been_warned = 0;
     long i, j, n_iter = 0, bad_orbit;
     long n_part;
-    double p, error, last_error, total_length, ds, R56;
+    double p, error, last_error, total_length=0.0, ds, R56=0.0;
 
     log_entry("find_closed_orbit");
 

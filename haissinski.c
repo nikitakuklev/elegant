@@ -122,7 +122,7 @@ int main( int argc, char **argv)
   SDDS_DATASET resultsPage;
   double particles, charge, finalCharge, length;
   long steps, points, iterationLimits, converged;
-  long useWakeFunction, intermediateSolutions;
+  long useWakeFunction=0, intermediateSolutions;
   double rfVoltage, rfHarmonic;
   double energyMeV, momentumCompaction, U0, sigmaE, circumference;
   double startTime, deltaTime;
@@ -133,7 +133,7 @@ int main( int argc, char **argv)
   double revFrequency, syncPhase, syncTune, syncAngFrequency;
   double VrfDot, ZoverN, inductance, resistance;
   double maxDifference, rmsDifference, madDifference, maxTolerance, fraction;
-  double averageCurrent;
+  double averageCurrent=0.0;
   
   SDDS_RegisterProgramName(argv[0]);
   argc  =  scanargs(&scanned, argc, argv);
@@ -402,7 +402,7 @@ int main( int argc, char **argv)
   if (!SDDS_Terminate(&resultsPage))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
 
-  exit(0);
+  return 0;
 }
 
 void initializeFunction( FUNCTION *data) {

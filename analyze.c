@@ -153,7 +153,7 @@ void do_transport_analysis(
     long n_track, n_trpoint, i, j, effort, index;
     double sin_phi, cos_phi, det;
     static double *orbit_p, *orbit_m;
-    TRAJECTORY *clorb;
+    TRAJECTORY *clorb=NULL;
 
     log_entry("do_transport_analysis");
         

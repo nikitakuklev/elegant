@@ -118,9 +118,9 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
     VMATRIX *M;
     double chromx, chromy;
     double chromx0, chromy0;
-    double K2, *K2ptr;
+    double K2=0.0, *K2ptr;
     ELEMENT_LIST *context;
-    long i, count, K2_param;
+    long i, count, K2_param=0;
     MATRIX *C, *Ct, *CtC, *inv_CtC;
 
     m_alloc(&C, 2, chrom->n_families);
@@ -226,9 +226,9 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
 {
     VMATRIX *M;
     double chromx0, chromy0;
-    double K2, *K2ptr;
+    double K2=0.0, *K2ptr;
     ELEMENT_LIST *context;
-    long i, K2_param, type, iter, count;
+    long i, K2_param=0, type=0, iter, count;
     double beta_x, alpha_x, eta_x, etap_x;
     double beta_y, alpha_y, eta_y, etap_y;
     unsigned long unstable;

@@ -3,6 +3,9 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.14  2001/10/15 15:42:28  soliday
+ * Cleaned up for WIN32.
+ *
  * Revision 1.13  2001/08/02 14:45:27  borland
  * Added search_path feature to run_setup namelist and to many (all?) elements and
  * commands that take input files.
@@ -154,7 +157,7 @@ void do_fit_trace_data(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 {
   long i, iteration, subIteration, parameters, readbacks, outputRow, i_restart;
   long iBPM, iTrace, goodSteps;
-  double rmsError, lastRmsError;
+  double rmsError=0.0, lastRmsError=0.0;
   FIT_TRACE_PARAMETERS *fitParam, *bpmCalParam;
   FIT_TRACE_DATA *traceData;
   MAT *D, *readbackVector, *paramVector;
@@ -1404,7 +1407,7 @@ double fit_trace_calibrateMonitors
   long iBPM, iTrace, iParam;
   double rmsError, calibration;
   long checkLimits, nxCals, nyCals;
-  double sum1, sum2, reading, xCalSum, yCalSum, xdCalAverage, ydCalAverage;
+  double sum1, sum2, reading, xCalSum, yCalSum, xdCalAverage=0.0, ydCalAverage=0.0;
 
   /* find the new trajectory */
   rmsError = fit_trace_findReadbackErrors(readbackVector, traceData, beamline, run);

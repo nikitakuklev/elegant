@@ -16,8 +16,8 @@ void sdds_strength_output(char *output, LINE_LIST *beamline, char *input)
     ELEMENT_LIST *eptr;
     char s[SDDS_MAXLINE], t[SDDS_MAXLINE];
     long row, n;
-    double KnL, L, KnL2PF, Kn;
-    char *param_name;
+    double KnL=0.0, L=0.0, KnL2PF=0.0, Kn;
+    char *param_name=NULL;
 
     sprintf(s, "Magnet strengths for beamline %s of file %s",
             beamline->name, input);

@@ -174,16 +174,16 @@ void track_through_rfmode(
     
     if (rfmode->record) {
       if ((pass%rfmode->sample_interval)==0 && 
-          !SDDS_SetRowValues(&rfmode->SDDSrec, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-                             (pass/rfmode->sample_interval),
-                             "Pass", pass, "NumberOccupied", n_occupied,
-                             "FractionBinned", np?(1.0*n_binned)/np:0.0,
-                             "VPostBeam", rfmode->V, "PhasePostBeam", rfmode->last_phase,
-                             "tPostBeam", rfmode->last_t,
-                             "V", n_summed?V_sum/n_summed:0.0,
-                             "VReal", n_summed?Vr_sum/n_summed:0.0,
-                             "Phase", n_summed?phase_sum/n_summed:0.0, NULL) ||
-          !SDDS_UpdatePage(&rfmode->SDDSrec, 0)) {
+          (!SDDS_SetRowValues(&rfmode->SDDSrec, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+			      (pass/rfmode->sample_interval),
+			      "Pass", pass, "NumberOccupied", n_occupied,
+			      "FractionBinned", np?(1.0*n_binned)/np:0.0,
+			      "VPostBeam", rfmode->V, "PhasePostBeam", rfmode->last_phase,
+			      "tPostBeam", rfmode->last_t,
+			      "V", n_summed?V_sum/n_summed:0.0,
+			      "VReal", n_summed?Vr_sum/n_summed:0.0,
+			      "Phase", n_summed?phase_sum/n_summed:0.0, NULL) ||
+	   !SDDS_UpdatePage(&rfmode->SDDSrec, 0))) {
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
         SDDS_Bomb("problem setting up data for RFMODE record file");
       }

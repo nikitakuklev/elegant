@@ -18,7 +18,7 @@ long ramped_rf_cavity(
     double **part, long np, RAMPRF *ramprf, double P_central, double L_central, double zEnd, long pass
     )
 {
-    long ip, i_volt, i_phase, i_freq, i;
+    long ip, i_volt, i_phase=0, i_freq=0, i;
     double P, gamma, beta, dgamma, phase, length, volt;
     double *coord, t, t0, omega, beta_i;
     long fixed_freq;

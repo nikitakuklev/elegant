@@ -377,7 +377,7 @@ long expand_phys(
     long divisions
     )
 {
-    long ie, il, i, j, comparison, div;
+    long ie, il, i, j, comparison, div=0;
     char trunc_char;
     ELEMENT_LIST *elem0;
 

@@ -9,6 +9,9 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.13  2000/08/17 13:45:41  borland
+ * Fixed error in usage message for -errorLevels .
+ *
  * Revision 1.12  2000/08/02 01:36:17  borland
  * Fixed an error message that was sent to stdout.
  *
@@ -181,10 +184,10 @@ int main(
 {
   SDDS_TABLE SDDSin, SDDSout;
   double *R11;        /* R11 matrix element for ith configuration */
-  double *R12;        /* R12 matrix element for ith configuration */
-  double *etax, *etay;  /* dispersion at measurement point, if provided */
+  double *R12=NULL;        /* R12 matrix element for ith configuration */
+  double *etax=NULL, *etay=NULL;  /* dispersion at measurement point, if provided */
   double *sigmax, *uncertx;               /* sigma in x plane for ith configuration */
-  double *R33, *R34, *sigmay, *uncerty;   /* similar data for y plane */
+  double *R33=NULL, *R34=NULL, *sigmay, *uncerty;   /* similar data for y plane */
   int n_configs, i_config;
   MATRIX *Rx, *Ry, *s2x, *s2y;
   MATRIX *Sx, *Sy, *sSx, *sSy, *Kx, *Ky;
@@ -212,14 +215,14 @@ int main(
   int ny_used, ny_used_sum;
   int n_good_fits_x, n_good_fits_y;
   double x_resol, y_resol;
-  double x_limit, y_limit;
+  double x_limit=0.0, y_limit=0.0;
   int limit_code, reject_at_limit;
   int n_xresol, n_yresol, ignore_x, ignore_y, error_output;
   double x_uncert_frac, y_uncert_frac;
   double x_uncert_min, y_uncert_min;
   double x_fixed_uncert, y_fixed_uncert;
   double energySpread, energySize;
-  int equal_weights_x_fit, equal_weights_y_fit, constant_weighting;
+  int equal_weights_x_fit=0, equal_weights_y_fit=0, constant_weighting;
   int find_uncert, verbosity;
   char *x_width_name, *y_width_name;
   unsigned long pipeFlags;
@@ -1061,48 +1064,48 @@ double solve_normal_form(
 
   /* find the fit */
   if (!m_trans(Pt, P)) {
-    fprintf(stderr, "matrix error--call was: m_trans(Pt, P)", NULL);
+    fprintf(stderr, "matrix error--call was: m_trans(Pt, P)");
     return -1;
   }
   if (!m_mult(Pt_K, Pt, K)) {
-    fprintf(stderr, "matrix error--call was: m_mult(Pt_K, Pt, K)", NULL);
+    fprintf(stderr, "matrix error--call was: m_mult(Pt_K, Pt, K)");
     return -1;
   }
   if (!m_mult(Pt_K_P, Pt_K, P)) {
-    fprintf(stderr, "matrix error--call was: m_mult(Pt_K_P, Pt_K, P)", NULL);
+    fprintf(stderr, "matrix error--call was: m_mult(Pt_K_P, Pt_K, P)");
     return -1;
   }
   if (!m_invert(Inv_Pt_K_P, Pt_K_P)) {
-    fprintf(stderr, "matrix error--call was: m_invert(Inv_Pt_K_P, Pt_K_P)", NULL);
+    fprintf(stderr, "matrix error--call was: m_invert(Inv_Pt_K_P, Pt_K_P)");
     return -1;
   }
   if (!m_mult(Inv_PtKP_PtK, Inv_Pt_K_P, Pt_K)) {
-    fprintf(stderr, "matrix error--call was: m_mult(Inv_PtKP_PtK, Inv_Pt_K_P, Pt_K)", NULL);
+    fprintf(stderr, "matrix error--call was: m_mult(Inv_PtKP_PtK, Inv_Pt_K_P, Pt_K)");
     return -1;
   }
   if (!m_mult(F, Inv_PtKP_PtK, M)) {
-    fprintf(stderr, "matrix error--call was: m_mult(F, Inv_PtKP_PtK, M)", NULL);
+    fprintf(stderr, "matrix error--call was: m_mult(F, Inv_PtKP_PtK, M)");
     return -1;
   }
   m_zero(sF);
   if (m_invert(C, K)) {
     if (!m_trans(Tt, Inv_PtKP_PtK)) {
-      fprintf(stderr, "matrix error--call was: m_trans(Tt, Inv_PtKP_PtK)", NULL);
+      fprintf(stderr, "matrix error--call was: m_trans(Tt, Inv_PtKP_PtK)");
       return -1;
     }
     if (!m_mult(TC, Inv_PtKP_PtK, C)) {
-      fprintf(stderr, "matrix error--call was: m_mult(TC, Inv_PtKP_PtK, C)", NULL);
+      fprintf(stderr, "matrix error--call was: m_mult(TC, Inv_PtKP_PtK, C)");
       return -1;
     }
     if (!m_mult(sF, TC, Tt)) {
-      fprintf(stderr, "matrix error--call was: m_mult(sF, TC, Tt)", NULL);
+      fprintf(stderr, "matrix error--call was: m_mult(sF, TC, Tt)");
       return -1;
     }
   }
 
   /* evaluate the fit */
   if (!m_mult(Mp, P, F)) {
-    fprintf(stderr, "matrix error--call was: m_mult(Mp, P, F)", NULL);
+    fprintf(stderr, "matrix error--call was: m_mult(Mp, P, F)");
     return -1;
   }
   for (i=rms_error=0; i<Mp->n; i++) {

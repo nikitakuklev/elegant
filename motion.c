@@ -154,7 +154,7 @@ long motion(
     static double gamma0, P0[3];
     long n_steps;
     double tol_factor, end_factor;
-    double X, Y;
+    double X=0.0, Y=0.0;
 
     if (!n_part)
         return(0);
@@ -1288,7 +1288,7 @@ double exit_function(
     double phase
     )
 {
-    double X, Y, dZ;
+    double X=0.0, Y=0.0, dZ;
 
     if ((dZ=Z_end-q[2])>=0 && !limit_hit) {
         if (radial_limit) {
@@ -1332,7 +1332,7 @@ static char *known_mode[N_KNOWN_MODES] = {
 double *select_fiducial(double **part, long n_part, char *var_mode_in)
 {
   long i;
-  long i_best, i_var, fid_mode;
+  long i_best=0, i_var, fid_mode;
   double value, best_value, sum;
   char *var, *mode, *var_mode, *ptr;
 
@@ -1600,7 +1600,7 @@ void setupRftmEz0FromFile(RFTMEZ0 *rftmEz0, double frequency, double length)
 void setupRftmEz0SolenoidFromFile(RFTMEZ0 *rftmEz0, double length, double k) 
 {
   SDDS_DATASET SDDSin;
-  double *z, *r, dz, dr, *rTemp, z0;
+  double *z, *r, dz, dr, *rTemp, z0=0.0;
   long page, ir, iz;
   
   if (rftmEz0->initialized)
@@ -1754,7 +1754,7 @@ long analyzeSpacing(double *z, long nz, double *dzReturn, FILE *fpError)
   }
   if (fabs(1-dzMin/dzMax)>0.0001) {
     if (fpError)
-      fprintf(fpError, "Error: spacing of points is not uniform (0.01% tolerance)\n");
+      fprintf(fpError, "Error: spacing of points is not uniform (0.01%% tolerance)\n");
     return 0;
   }
   *dzReturn = (z[nz-1]-z[0])/(nz-1.0);

@@ -565,7 +565,7 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
                            double revolutionLength)
 {
     long sample, i, j;
-    double tc, tc0, p_sum, gamma_sum, sum, p;
+    double tc, tc0, p_sum, gamma_sum, sum, p=0.0;
     
     log_entry("dump_watch_parameters");
 
@@ -1032,7 +1032,7 @@ void dump_centroid(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline,
     ELEMENT_LIST *eptr;
     double *cent;
     char *name, *type_name;
-    long s_index, Cx_index, occurence;
+    long s_index, Cx_index=0, occurence;
 
     log_entry("dump_centroid");
 
@@ -1128,7 +1128,7 @@ void dump_sigma(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, lo
   ELEMENT_LIST *eptr;
   double emit, emitNorm;
   char *name, *type_name;
-  long s_index, ma1_index, Sx_index, occurence, ex_index;
+  long s_index, ma1_index=0, Sx_index=0, occurence, ex_index=0;
   long sNIndex[6];
 
   if (!SDDS_table)

@@ -18,9 +18,9 @@ void track_through_matter(
                           )
 {
   long ip;
-  double L, Nrad, *coord, theta_rms, beta, P, gamma;
-  double z1, z2, dx, dy, ds, t, dGammaFactor;
-  double K1, K2, sigmaTotal, probScatter, dgamma;
+  double L, Nrad, *coord, theta_rms, beta, P, gamma=0.0;
+  double z1, z2, dx, dy, ds, t=0.0, dGammaFactor;
+  double K1, K2=0.0, sigmaTotal, probScatter=0.0, dgamma;
   long nScatters=0;
   
   log_entry("track_through_matter");

@@ -55,6 +55,9 @@ CopyrightNotice001*/
  * Michael Borland, 2000
  *
  $Log: not supported by cvs2svn $
+ Revision 1.8  2001/10/15 15:42:33  soliday
+ Cleaned up for WIN32.
+
  Revision 1.7  2001/05/30 15:53:27  borland
  -zPlane option now allows specifying alphaz or correlation.
 
@@ -143,7 +146,7 @@ long PerformZTransformation(double *t, double *p, double *x, double *xp,
 long check_sdds_beam_column(SDDS_TABLE *SDDS_table, char *name, char *units);
 
 
-main(int argc, char **argv)
+int main(int argc, char **argv)
 {
   SDDS_DATASET SDDSin, SDDSout;
   char *inputfile, *outputfile;
@@ -152,7 +155,7 @@ main(int argc, char **argv)
   unsigned long pipeFlags;
   PLANE_SPEC xSpec, ySpec;
   ZPLANE_SPEC zSpec;
-  double *x, *xp, *y, *yp, *p, *t;
+  double *x, *xp=NULL, *y=NULL, *yp=NULL, *p=NULL, *t=NULL;
   long oneTransform, verbose;
   
   SDDS_RegisterProgramName(argv[0]);

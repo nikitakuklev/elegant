@@ -663,7 +663,7 @@ void assert_perturbations(char **elem_name, long *param_number, long *type, long
     ELEMENT_LIST *eptr;
     char *p_elem;
     long i_elem, elem_type, data_type, param, i_group, first_output;
-    double delta;
+    double delta=0.0;
 
     log_entry("assert_perturbations");
     if (!elem_name)
@@ -902,7 +902,7 @@ void check_VARY_structure(VARY *vary, char *caller)
 long load_enumerated_values(double **value, char *file, char *column)
 {
     SDDS_TABLE SDDS_table;
-    long count;
+    long count=0;
 
     if (!value)
         bomb("NULL value pointer passed (load_enumerated_values)", NULL);

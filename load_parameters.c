@@ -517,7 +517,7 @@ void dumpLatticeParameters(char *filename, RUN *run, LINE_LIST *beamline)
   ELEMENT_LIST *eptr;
   PARAMETER *parameter;
   long row, maxRows, doSave;
-  double value;
+  double value=0.0;
   
   SDDSout = &SDDS_dumpLattice;
   if (!dumpingLatticeParameters) {

@@ -145,8 +145,8 @@ char **argv;
 {
   char **macroTag, **macroValue;
   long macros;
-  LINE_LIST *beamline;        /* pointer to root of linked list */
-  FILE *fp_in;
+  LINE_LIST *beamline=NULL;        /* pointer to root of linked list */
+  FILE *fp_in=NULL;
   char *inputfile;
   SCANNED_ARG *scanned;
   char s[NAMELIST_BUFLEN], *ptr;
@@ -245,7 +245,7 @@ char **argv;
                     macroTag[macros] = scanned[i].list[j+1];
                     if (!(macroValue[macros] = strchr(macroTag[macros], '=')))
                       bomb("invalid -macro syntax", USAGE);
-                    macroValue[macros][0] = NULL;
+                    macroValue[macros][0] = 0;
                     macroValue[macros] += 1;
                     macros++;
                   }
@@ -1069,7 +1069,7 @@ double find_beam_p_central(char *input)
 {
   SDDS_DATASET SDDSin;
   char s[SDDS_MAXLINE];
-  double *p, psum;
+  double *p=NULL, psum;
   long i, rows;
   
   if (!SDDS_InitializeInputFromSearchPath(&SDDSin, input) || !SDDS_ReadPage(&SDDSin)) {
@@ -1231,7 +1231,7 @@ void print_dictionary_entry(FILE *fp, long type, long latex_form)
       texLines = 0;
       fprintf(fp, "\\end{tabular}\n\n");
       fprintf(fp, "\\begin{latexonly}\n\\newpage\n\\begin{center}{\\Large\\verb|%s| continued}\\end{center}\n\\end{latexonly}\n", 
-              entity_name[type], entity_name[type]);
+              entity_name[type]);
       fprintf(fp, "%s\n\\\\\n", makeTexSafeString(entity_text[type]));
       fprintf(fp, "\\begin{tabular}{|l|l|l|l|p{\\descwidth}|} \\hline\n");
       fprintf(fp, "Parameter Name & Units & Type & Default & Description \\\\ \\hline \n");

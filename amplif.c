@@ -20,8 +20,8 @@ void compute_amplification_factors(
                                    )
 {
 #include "amplif.h"
-  ELEMENT_LIST *eptr, *emax, *emaxu, *emaxc;
-  long type_code, iparam, iplane, n_part, i, j, nsum, n_kicks;
+  ELEMENT_LIST *eptr, *emax=NULL, *emaxu, *emaxc;
+  long type_code, iparam=0, iplane, n_part, i, j=0, nsum=0, n_kicks;
   double start[7], p, max_pos, max_kick, max_Ac, max_Au, rms_pos, rms_kick, original_value;
   static double **one_part = NULL;
   static TRAJECTORY *traj = NULL, *trajc = NULL;
@@ -31,8 +31,8 @@ void compute_amplification_factors(
   static char name_header[256], unit_header[256], printf_string[256], unit_pos[32], unit_kick[32], *Ai_unit, *Cij_unit;
   static char s[256], description[256];
   double *Ac_vs_z, *Au_vs_z;
-  CORMON_DATA *CM;
-  STEERING_LIST *SL;
+  CORMON_DATA *CM=NULL;
+  STEERING_LIST *SL=NULL;
 
   log_entry("compute_amplification_factors");
 

@@ -1210,7 +1210,7 @@ void bmapxy_coord_transform(double *q, double *coord, BMAPXY *bmapxy, long which
 void bmapxy_field_setup(BMAPXY *bmapxy)
 {
   SDDS_DATASET SDDSin;
-  double *x, *y, *Fx, *Fy;
+  double *x=NULL, *y=NULL, *Fx=NULL, *Fy=NULL;
   long nx;
 
   if (!fexists(bmapxy->filename)) {

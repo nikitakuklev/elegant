@@ -1,5 +1,10 @@
 /* 
  * $Log: not supported by cvs2svn $
+ * Revision 1.10  2001/08/02 14:45:28  borland
+ * Added search_path feature to run_setup namelist and to many (all?) elements and
+ * commands that take input files.
+ * FITPOINT beam statistics data now includes x, y, and z emittances.
+ *
  * Revision 1.9  2001/05/16 19:02:58  borland
  * Modified calls to simplexMin() to accomodate new argument.
  * Added simplified Rosenzweig/Serafini model for rf focusing in the
@@ -128,8 +133,8 @@ int main( int argc, char **argv)
   long dimensions = 14, maxEvaluations = 500, maxPasses = 2;
   double target = 1e-4, tolerance = 1e-6;
   long integrationTurns, integrationStepSize, integrationPoints = 0;
-  double *exInteg, *eyInteg, *elInteg, *xRateInteg, *yRateInteg, *zRateInteg;
-  long *passInteg;
+  double *exInteg=NULL, *eyInteg=NULL, *elInteg=NULL, *xRateInteg=NULL, *yRateInteg=NULL, *zRateInteg=NULL;
+  long *passInteg=NULL;
   unsigned long dummyFlags;
   double rfVoltage, rfHarmonic;
   double alphac, U0, circumference, energy;
