@@ -633,9 +633,9 @@ long remove_outlier_particles(
                               double Po
                               )
 {
-  double *ini;
+  double *ini, beta, p, *sSave;
   long ip, itop, is_out, j, mode;
-  double limit[6], centroid[6], stDev[6];
+  double limit[6], centroid[6], stDev[6], minVal[6], maxVal[6];
   long count;
 #define CLEAN_STDEV 0
 #define CLEAN_ABSDEV 1
@@ -668,29 +668,45 @@ long remove_outlier_particles(
   limit[1] = clean->xpLimit;
   limit[2] = clean->yLimit;
   limit[3] = clean->ypLimit;
-  limit[4] = clean->tLimit*Po/sqrt(sqr(Po)+1)*c_mks;
+  limit[4] = clean->tLimit;
   limit[5] = clean->deltaLimit;
 
+  if (!(sSave = malloc(sizeof(*sSave)*np)))
+    bomb("memory allocation failure", NULL);
+
   /* compute centroids for each coordinate */
-  for (j=0; j<6; j++)
+  for (j=0; j<6; j++) {
     centroid[j] = stDev[j] = 0;
+    minVal[j] = HUGE;
+    maxVal[j] = -HUGE;
+  }
   for (ip=count=0; ip<np; ip++) {
     ini = initial[ip];
+    sSave[ip] = ini[4];
     for (j=0; j<6; j++)
-      if (isnan(ini[j]) && isinf(ini[j]))
+      if (isnan(ini[j]) || isinf(ini[j]))
         break;
     if (j!=6)
       continue;
+    /* compute time of flight and store in place of s */
+    p = Po*(1+ini[5]);
+    beta = p/sqrt(p*p+1);
+    ini[4] /= beta*c_mks;
     count++;
-    for (j=0; j<6; j++)
-      if (!isnan(ini[j]) && !isinf(ini[j]))
-        centroid[j] += ini[j];
+    for (j=0; j<6; j++) {
+      centroid[j] += ini[j];
+      if (ini[j]>maxVal[j])
+	maxVal[j] = ini[j];
+      if (ini[j]<minVal[j])
+	minVal[j] = ini[j];
+    }
   }
   if (!count) {
     for (ip=0; ip<np; ip++) {
       initial[ip][4] = z; /* record position of particle loss */
       initial[ip][5] = Po*(1+initial[ip][5]);
     }
+    free(sSave);
     return 0;
   }
   for (j=0; j<6; j++)
@@ -713,8 +729,6 @@ long remove_outlier_particles(
   for (ip=0; ip<np; ip++) {
     ini = initial[ip];
     for (j=is_out=0; j<6; j++) {
-      if (is_out)
-        break;
       if (limit[j]<=0)
         continue;
       switch (mode) {
@@ -724,20 +738,28 @@ long remove_outlier_particles(
         break;
       case CLEAN_ABSDEV:
         if (fabs(ini[j]-centroid[j])>limit[j])
-          is_out = 1;
+          is_out = 2;
         break;
       case CLEAN_ABSVAL:
         if (fabs(ini[j])>limit[j])
-          is_out = 1;
+          is_out = 3;
         break;
       default:
         fprintf(stderr, "invalid mode in remove_outlier_particles---programming error!\n");
         exit(1);
         break;
       }
+      if (is_out)
+        break;
     }
     if (is_out) {
+      fprintf(stderr, "Particle lost (%ld) due to coord %ld\n", is_out, j);
+      fprintf(stderr, "coord=%21.15e, centroid=%21.15e\ndelta=%21.15e, limit=%21.15e\nspread = %21.15e\n",
+	      ini[j], centroid[j], 
+	      ini[j]-centroid[j], limit[j],
+	      maxVal[j]-minVal[j]);
       SWAP_PTR(initial[ip], initial[itop]);
+      SWAP_DOUBLE(sSave[ip], sSave[itop]);
       if (accepted)
         SWAP_PTR(accepted[ip], accepted[itop]);
       initial[itop][4] = z; /* record position of particle loss */
@@ -747,6 +769,11 @@ long remove_outlier_particles(
       --np;
     }
   }
+
+  /* restore s data to particle array */
+  for (ip=0; ip<np; ip++)
+    initial[ip][4] = sSave[ip];
+  free(sSave);
 
   return(np);
 }
