@@ -884,8 +884,17 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     bomb("null CSBEND pointer (track_through_csbend)", NULL);
 
   if (csbend->angle==0) {
-    exactDrift(part, n_part, csbend->length);
-    return n_part;
+    if (!csbend->useMatrix)
+      exactDrift(part, n_part, csbend->length); 
+    else {
+      long i;
+      for (i=0; i<n_part; i++) {
+        part[i][0] += csbend->length*part[i][1];
+        part[i][2] += csbend->length*part[i][3];
+        part[i][4] += csbend->length;
+      }
+    }
+   return n_part;
   }
 
   if (csbend->integration_order!=2 && csbend->integration_order!=4)
@@ -994,13 +1003,13 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   Fy_x2 = Fy_x3 = Fy_x4 = Fy_y2 = Fy_x_y2 = Fy_x2_y2 = Fy_y4 = 0;
   if (csbend->useMatrix) {
     csbend->nonlinear = 0;
-    Me1 = edge_matrix(e1, 1./rho0, 0.0, n,
+    Me1 = edge_matrix(e1, 1./(rho0/(1+csbend->fse)), 0.0, n,
                       -1, Kg, 1, 0, 0);
     Msection = bend_matrix(csbend->length/csbend->n_kicks, 
                                    angle/csbend->n_kicks, 0.0, 0.0, 
                                    0.0, 0.0, csbend->k1_internal, 0.0,
-                                   0.0, 0.0, 0.0, 0.0, 0.0, 1, 1, 0, 0);
-    Me2 = edge_matrix(e2, 1./rho0, 0.0, n, 
+                                   0.0, 0.0, 0.0, csbend->fse, csbend->etilt, 1, 1, 0, 0);
+    Me2 = edge_matrix(e2, 1./(rho0/(1+csbend->fse)), 0.0, n, 
                       1, Kg, 1, 0, 0);
   }
   if (csbend->nonlinear) {
@@ -1885,7 +1894,10 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
       coord[2] += coord[3]*dz;
       p = Po*(1+coord[5]);
       beta = p/sqrt(p*p+1);
-      coord[4] = (coord[4]+dz*sqrt(1+sqr(coord[1])+sqr(coord[3])))/beta;
+      if (csrDrift->linearOptics) 
+        coord[4] = (coord[4]+dz)/beta;
+      else 
+        coord[4] = (coord[4]+dz*sqrt(1+sqr(coord[1])+sqr(coord[3])))/beta;
 #ifdef DEBUG
       if (coord[4]>ctmax)
         ctmax = coord[4];
@@ -1994,7 +2006,10 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
     coord = part[iPart];
     coord[0] += coord[1]*dz;
     coord[2] += coord[3]*dz;
-    coord[4] += dz*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+    if (csrDrift->linearOptics)
+      coord[4] += dz;
+    else
+      coord[4] += dz*sqrt(1+sqr(coord[1])+sqr(coord[3]));
   }    
 
   csrWake.zLast = zStart+csrDrift->length;
@@ -2314,7 +2329,10 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
       coord = part[iPart];
       coord[0] -= dzFirst*coord[1];
       coord[2] -= dzFirst*coord[3];
-      coord[4] -= dzFirst*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+      if (csrDrift->linearOptics)
+        coord[4] -= dzFirst;
+      else
+        coord[4] -= dzFirst*sqrt(1+sqr(coord[1])+sqr(coord[3]));
     }
     zStart = csrWake.zLast;
   }
@@ -2355,7 +2373,10 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
       coord[2] += coord[3]*dz;
       p = Po*(1+coord[5]);
       beta = p/sqrt(p*p+1);
-      coord[4] = (coord[4]+dz*sqrt(1+sqr(coord[1])+sqr(coord[3])))/beta;
+      if (csrDrift->linearOptics)
+        coord[4] = (coord[4]+dz)/beta;
+      else
+        coord[4] = (coord[4]+dz*sqrt(1+sqr(coord[1])+sqr(coord[3])))/beta;
     }
 
     /* bin the particle distribution */
@@ -2515,7 +2536,10 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
     coord = part[iPart];
     coord[0] += coord[1]*dz;
     coord[2] += coord[3]*dz;
-    coord[4] += dz*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+    if (csrDrift->linearOptics)
+      coord[4] += dz;
+    else
+      coord[4] += dz*sqrt(1+sqr(coord[1])+sqr(coord[3]));
   }    
 
   csrWake.zLast = zStart + length;

@@ -613,7 +613,7 @@ extern char *entity_text[N_TYPES];
 #define N_PFILTER_PARAMS 5
 #define N_HISTOGRAM_PARAMS 9
 #define N_CSRCSBEND_PARAMS 52
-#define N_CSRDRIFT_PARAMS 19
+#define N_CSRDRIFT_PARAMS 20
 #define N_REMCOR_PARAMS 6
 #define N_MAPSOLENOID_PARAMS 18
 #define N_RFCW_PARAMS 28
@@ -1472,6 +1472,7 @@ typedef struct {
   long useStupakov;
   char *StupakovOutput;
   long StupakovOutputInterval, sliceAnalysisInterval;
+  long linearOptics;
   /* used internally only */
   FILE *fpSaldin;
 } CSRDRIFT;
