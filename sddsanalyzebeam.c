@@ -14,6 +14,9 @@
  * Michael Borland, 2000
  *
  $Log: not supported by cvs2svn $
+ Revision 1.7  2002/08/14 20:23:48  soliday
+ Added Open License
+
  Revision 1.6  2001/10/15 20:37:06  soliday
  Cleaned up for Linux.
 
@@ -42,21 +45,25 @@
 
 #define SET_PIPE 0
 #define SET_NOWARNINGS 1
-#define N_OPTIONS 2
+#define SET_CORRECTED_ONLY 2
+#define N_OPTIONS 3
 
 char *option[N_OPTIONS] = {
-  "pipe", "nowarnings"
+  "pipe", "nowarnings", "correctedonly",
 } ;
 
 char *USAGE="sddsanalyzebeam [-pipe=[input][,output]] [<SDDSinputfile>] [<SDDSoutputfile>]\n\
-  [-nowarnings]\n\
+  [-nowarnings] [-correctedOnly]\n\
 Computes Twiss parameters and other properties of a particle beam.\n\
 The input file must have columns x, xp, y, yp, t, and p; for example, an elegant\n\
-beam output file is acceptable.\n\
-Program by Michael Borland.  (This is version 1, August 2000.)\n";
+beam output file is acceptable.\nIf -correctedOnly is given, then only the\n\
+\"corrected values\" (with dispersion terms correctly subtracted) are given.\n\
+Use this if you plan to use the output as input to the twiss_output command in\n\
+elegant.\n\n\
+Program by Michael Borland.  (This is version 2, January 2002.)\n";
 
 
-long SetUpOutputFile(SDDS_DATASET *SDDSout, char *outputfile);
+long SetUpOutputFile(SDDS_DATASET *SDDSout, char *outputfile, long correctedOnly);
 long check_sdds_beam_column(SDDS_TABLE *SDDS_table, char *name, char *units);
 
 char *CenName[6];
@@ -76,15 +83,15 @@ int main(int argc, char **argv)
   double S[6][6], C[6], beta[2], alpha[2], eta[4], emit[2], emitcor[2], beamsize[6];
   double betacor[2], alphacor[2];
   double *data[6], Sbeta[4][4];
-  long tmpFileUsed;
-  
+  long tmpFileUsed, correctedOnly;
+
   SDDS_RegisterProgramName(argv[0]);
   argc = scanargs(&s_arg, argc, argv);
   if (argc<2) 
     bomb(NULL, USAGE);
 
   inputfile = outputfile = NULL;
-  pipeFlags = noWarnings = 0;
+  pipeFlags = noWarnings = correctedOnly = 0;
   
   for (i_arg=1; i_arg<argc; i_arg++) {
     if (s_arg[i_arg].arg_type==OPTION) {
@@ -95,6 +102,9 @@ int main(int argc, char **argv)
         break;
       case SET_NOWARNINGS:
         noWarnings = 1;
+        break;
+      case SET_CORRECTED_ONLY:
+        correctedOnly = 1;
         break;
       default:
         fprintf(stdout, "error: unknown switch: %s\n", s_arg[i_arg].list[0]);
@@ -131,7 +141,7 @@ int main(int argc, char **argv)
     exit(1);
   }
 
-  if (!SetUpOutputFile(&SDDSout, outputfile))
+  if (!SetUpOutputFile(&SDDSout, outputfile, correctedOnly))
     SDDS_Bomb("problem setting up output file");
 
   for (i=0; i<6; i++)
@@ -237,18 +247,36 @@ int main(int argc, char **argv)
     }
     
     /* set twiss parameter, etc */
-    if (!SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, row, 
-                           "betax", beta[0], "alphax", alpha[0], "etax", eta[0],
-                           "etaxp", eta[1], "ex", emit[0], "ecx", emitcor[0],
-                           "enx", emit[0]*pAve, "ecnx", emitcor[0]*pAve,
-                           "betacx", betacor[0], "alphacx", alphacor[0],
-                           "betay", beta[1], "alphay", alpha[1], "etay", eta[2],
-                           "etayp", eta[3], "ey", emit[1], 
-                           "ecy", emitcor[1], "eny", emit[1]*pAve, "ecny", emitcor[1]*pAve,
-                           "betacy", betacor[1], "alphacy", alphacor[1],
-                           "pAverage", pAve, NULL)) {
-      SDDS_SetError("Problem setting Twiss values");
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    if (!correctedOnly) {
+      if (!SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, row, 
+                             "betax", beta[0], "alphax", alpha[0], "etax", eta[0],
+                             "etaxp", eta[1], "ex", emit[0], 
+                             "enx", emit[0]*pAve, 
+                             "betay", beta[1], "alphay", alpha[1], "etay", eta[2],
+                             "etayp", eta[3], "ey", emit[1], 
+                             "eny", emit[1]*pAve, 
+                             "pAverage", pAve, 
+                             "ecx", emitcor[0], "ecnx", emitcor[0]*pAve,
+                             "betacx", betacor[0], "alphacx", alphacor[0],
+                             "ecy", emitcor[1], "ecny", emitcor[1]*pAve,
+                             "betacy", betacor[1], "alphacy", alphacor[1],
+                             "pAverage", pAve, "ElementName", "None", NULL)) {
+        SDDS_SetError("Problem setting Twiss values");
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      }
+    }
+    else {
+      if (!SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, row, 
+                             "etax", eta[0], "etaxp", eta[1], 
+                             "etay", eta[2], "etayp", eta[3], 
+                             "ex", emitcor[0], "enx", emitcor[0]*pAve,
+                             "betax", betacor[0], "alphax", alphacor[0],
+                             "ey", emitcor[1], "eny", emitcor[1]*pAve,
+                             "betay", betacor[1], "alphay", alphacor[1],
+                             "pAverage", pAve, NULL)) {
+        SDDS_SetError("Problem setting Twiss values");
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      }
     }
     row++;
   }
@@ -261,31 +289,24 @@ int main(int argc, char **argv)
 }
 
 
-long SetUpOutputFile(SDDS_DATASET *SDDSout, char *outputfile)
+long SetUpOutputFile(SDDS_DATASET *SDDSout, char *outputfile, long correctedOnly)
 {
   char units[128], name[128];
   char *ppUnits[6] = {"m", "", "m", "", "s", ""} ;
   long i, j;
   
   if (!SDDS_InitializeOutput(SDDSout, SDDS_BINARY, 1, NULL, NULL, outputfile) ||
+      !SDDS_DefineSimpleColumn(SDDSout, "ElementName", NULL, SDDS_STRING) ||
       !SDDS_DefineSimpleColumn(SDDSout, "ex", "m", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleColumn(SDDSout, "enx", "m", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleColumn(SDDSout, "betax", "m", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleColumn(SDDSout, "alphax", NULL, SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(SDDSout, "ecx", "m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(SDDSout, "ecnx", "m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(SDDSout, "betacx", "m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(SDDSout, "alphacx", NULL, SDDS_DOUBLE) ||
       !SDDS_DefineSimpleColumn(SDDSout, "etax", "m", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleColumn(SDDSout, "etaxp", NULL, SDDS_DOUBLE) ||
       !SDDS_DefineSimpleColumn(SDDSout, "ey", "m", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleColumn(SDDSout, "eny", "m", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleColumn(SDDSout, "betay", "m", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleColumn(SDDSout, "alphay", NULL, SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(SDDSout, "ecy", "m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(SDDSout, "ecny", "m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(SDDSout, "betacy", "m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(SDDSout, "alphacy", NULL, SDDS_DOUBLE) ||
       !SDDS_DefineSimpleColumn(SDDSout, "etay", "m", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleColumn(SDDSout, "etayp", NULL, SDDS_DOUBLE) ||
       !SDDS_DefineSimpleColumn(SDDSout, "Sx", "m", SDDS_DOUBLE) ||
@@ -295,6 +316,17 @@ long SetUpOutputFile(SDDS_DATASET *SDDSout, char *outputfile)
       !SDDS_DefineSimpleColumn(SDDSout, "St", "s", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleColumn(SDDSout, "Sdelta", NULL, SDDS_DOUBLE) ||
       !SDDS_DefineSimpleColumn(SDDSout, "pAverage", NULL, SDDS_DOUBLE)) {
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  }
+  if (!correctedOnly &&
+      (!SDDS_DefineSimpleColumn(SDDSout, "ecx", "m", SDDS_DOUBLE) ||
+       !SDDS_DefineSimpleColumn(SDDSout, "ecnx", "m", SDDS_DOUBLE) ||
+       !SDDS_DefineSimpleColumn(SDDSout, "betacx", "m", SDDS_DOUBLE) ||
+       !SDDS_DefineSimpleColumn(SDDSout, "alphacx", NULL, SDDS_DOUBLE) ||
+       !SDDS_DefineSimpleColumn(SDDSout, "ecy", "m", SDDS_DOUBLE) ||
+       !SDDS_DefineSimpleColumn(SDDSout, "ecny", "m", SDDS_DOUBLE) ||
+       !SDDS_DefineSimpleColumn(SDDSout, "betacy", "m", SDDS_DOUBLE) ||
+       !SDDS_DefineSimpleColumn(SDDSout, "alphacy", NULL, SDDS_DOUBLE))) {
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
   for (i=0; i<6; i++) {
