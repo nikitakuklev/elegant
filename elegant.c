@@ -29,9 +29,9 @@ void traceback_handler(int code);
 char *option[N_OPTIONS] = {
     "describeinput",
         };
-char *USAGE="elegant <inputfile>\n\nProgram by Michael Borland. (This is version 14.4 Beta, "__DATE__".)";
+char *USAGE="elegant <inputfile>\n\nProgram by Michael Borland. (This is version 14.4 Beta 1, "__DATE__".)";
 
-char *GREETING="This is elegant, by Michael Borland. (This is version 14.4 Beta, "__DATE__".)";
+char *GREETING="This is elegant, by Michael Borland. (This is version 14.4 Beta 1, "__DATE__".)";
 
 #define RUN_SETUP        0
 #define RUN_CONTROL      1
