@@ -107,7 +107,6 @@ void setup_bunched_beam(
         bomb("y distribution cutoff < 0", NULL);
     if (distribution_cutoff[2]<0)
         bomb("longitudinal distribution cutoff < 0", NULL);
-
     if ((enforce_rms_values[0] || enforce_rms_values[1] || enforce_rms_values[2]) && n_particles_per_bunch%4)
         fputs("Note: you will get better results for enforcing RMS values if n_particles_per_bunch is divisible by 4.\n", stdout);
 
@@ -216,7 +215,7 @@ long new_bunched_beam(
         n_actual_particles = 
           generate_bunch(beam->original, n_particles_per_bunch, &x_plane,
                          &y_plane, &longit, enforce_rms_values, limit_invariants, 
-                         symmetrize, limit_in_4d, Po);
+                         symmetrize, halton_sequence, randomize_order, limit_in_4d, Po);
         if (n_actual_particles!=n_particles_per_bunch)
             fprintf(stdout, "warning: only %ld of %ld requested particles are actually being tracked.\n", n_actual_particles, 
                     n_particles_per_bunch);
