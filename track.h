@@ -1604,6 +1604,7 @@ typedef struct {
     char *fwaveform, *Qwaveform;  /* waveforms for f/f0 and Q/Q0 vs time */
     /* values for restarting the cavity */
     /* for internal use: */
+    double RaInternal;         /* used to store Ra or 2*Rs, whichever is nonzero */
     double mp_charge;          /* charge per macroparticle */
     long initialized;          /* indicates that beam has been seen */
     double V;                  /* magnitude of voltage */
@@ -1660,6 +1661,7 @@ typedef struct {
     double dx, dy;
     double xfactor, yfactor;
     /* for internal use: */
+    double RaInternal;         /* used to store Ra or 2*Rs, whichever is nonzero */
     long doX, doY;
     double mp_charge;          /* charge per macroparticle */
     long initialized;          /* indicates that beam has been seen */

@@ -139,7 +139,7 @@ void track_through_rfmode(
       exit(1);
     }
     tau = 2*Q/omega;
-    k = omega/4*(rfmode->Ra)/rfmode->Q;
+    k = omega/4*(rfmode->RaInternal)/rfmode->Q;
 
     /* These adjustments per Zotter and Kheifets, 3.2.4 */
     Qrp = sqrt(Q*Q - 0.25);
@@ -256,8 +256,10 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
     bomb("bin_size must be positive for RFMODE", NULL);
   if (rfmode->Ra && rfmode->Rs) 
     bomb("RFMODE element may have only one of Ra or Rs nonzero.  Ra is just 2*Rs", NULL);
-  if (!rfmode->Ra)
-    rfmode->Ra = 2*rfmode->Rs;
+  if (rfmode->Ra)
+    rfmode->RaInternal = rfmode->Ra;
+  else
+    rfmode->RaInternal = 2*rfmode->Rs;
   if (rfmode->bin_size*rfmode->freq>0.1) {
     T = rfmode->bin_size*rfmode->n_bins;
     rfmode->bin_size = 0.1/rfmode->freq;
