@@ -127,7 +127,7 @@ char *description[N_COMMANDS] = {
     "alter_elements              alters a common parameter for one or more elements",
         } ;
 
-void initialize_structures(RUN *run_conditions, VARY *run_control, ERROR *error_control, CORRECTION *correct, 
+void initialize_structures(RUN *run_conditions, VARY *run_control, ERRORVAL *error_control, CORRECTION *correct, 
                            BEAM *beam, OUTPUT_FILES *output_data, OPTIMIZATION_DATA *optimize,
                            CHROM_CORRECTION *chrom_corr_data, TUNE_CORRECTION *tune_corr_data,
                            ELEMENT_LINKS *links);
@@ -149,7 +149,7 @@ char **argv;
     RUN run_conditions;
     VARY run_control;
     CORRECTION correct;
-    ERROR error_control;
+    ERRORVAL error_control;
     BEAM beam;
     OUTPUT_FILES output_data;
     OPTIMIZATION_DATA optimize;
@@ -1196,7 +1196,7 @@ void print_dictionary_entry(FILE *fp, long type, long latex_form)
 
 #include <memory.h>
 
-void initialize_structures(RUN *run_conditions, VARY *run_control, ERROR *error_control, CORRECTION *correct, 
+void initialize_structures(RUN *run_conditions, VARY *run_control, ERRORVAL *error_control, CORRECTION *correct, 
                            BEAM *beam, OUTPUT_FILES *output_data, OPTIMIZATION_DATA *optimize,
                            CHROM_CORRECTION *chrom_corr_data, TUNE_CORRECTION *tune_corr_data,
                            ELEMENT_LINKS *links)

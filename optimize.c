@@ -414,7 +414,7 @@ void summarize_optimization_setup(OPTIMIZATION_DATA *optimization_data)
  */
 static RUN *run;
 static VARY *control;
-static ERROR *error;
+static ERRORVAL *error;
 static BEAM *beam;
 static OPTIMIZATION_DATA *optimization_data;
 static OUTPUT_FILES *output;
@@ -439,7 +439,7 @@ static long optimRecords = 0, nextOptimRecordSlot = 0;
 static OPTIM_RECORD optimRecord[MAX_OPTIM_RECORDS];
 
 
-void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERROR *error1, LINE_LIST *beamline1, 
+void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *error1, LINE_LIST *beamline1, 
             BEAM *beam1, OUTPUT_FILES *output1, OPTIMIZATION_DATA *optimization_data1, long beam_type1)
 {
     static long optUDFcount = 0;

@@ -114,7 +114,7 @@ void setup_aperture_search(
 long do_aperture_search(
     RUN *run,
     VARY *control,
-    ERROR *errcon,
+    ERRORVAL *errcon,
     LINE_LIST *beamline
     )
 {    
@@ -134,7 +134,7 @@ long do_aperture_search(
 long do_aperture_search_mp(
     RUN *run,
     VARY *control,
-    ERROR *errcon,
+    ERRORVAL *errcon,
     LINE_LIST *beamline
     )
 {
@@ -419,7 +419,7 @@ long do_aperture_search_mp(
 long do_aperture_search_sp(
     RUN *run,
     VARY *control,
-    ERROR *errcon,
+    ERRORVAL *errcon,
     LINE_LIST *beamline
     )
 {    
@@ -646,7 +646,7 @@ long do_aperture_search_sp(
 void finish_aperture_search(
     RUN *run,
     VARY *control,
-    ERROR *errcon,
+    ERRORVAL *errcon,
     LINE_LIST *beamline
     )
 {

@@ -232,7 +232,7 @@ void add_varied_element(VARY *_control, NAMELIST_TEXT *nltext, RUN *run, LINE_LI
     }
 
 
-long vary_beamline(VARY *_control, ERROR *errcon, RUN *run, LINE_LIST *beamline)
+long vary_beamline(VARY *_control, ERRORVAL *errcon, RUN *run, LINE_LIST *beamline)
 {
     long i, ret_val, do_perturbations, step_incremented, parameters_loaded;
     ELEMENT_LINKS *links;
@@ -469,7 +469,7 @@ long vary_beamline(VARY *_control, ERROR *errcon, RUN *run, LINE_LIST *beamline)
     return(1);
     }
 
-long perturb_beamline(VARY *_control, ERROR *errcon, RUN *run, LINE_LIST *beamline)
+long perturb_beamline(VARY *_control, ERRORVAL *errcon, RUN *run, LINE_LIST *beamline)
 {
     long i;
     ELEMENT_LINKS *links;

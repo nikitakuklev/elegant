@@ -56,7 +56,7 @@ void setup_sdds_beam(
                      NAMELIST_TEXT *nltext,
                      RUN *run, 
                      VARY *control,
-                     ERROR *errcon,
+                     ERRORVAL *errcon,
                      OPTIM_VARIABLES *optim,
                      OUTPUT_FILES *output,
                      LINE_LIST *beamline,

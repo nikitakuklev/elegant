@@ -96,7 +96,7 @@ void setup_transport_analysis(
     NAMELIST_TEXT *nltext,
     RUN *run,
     VARY *control,
-    ERROR *errcon
+    ERRORVAL *errcon
     )
 {
     log_entry("setup_transport_analysis");
@@ -139,7 +139,7 @@ void setup_transport_analysis(
 void do_transport_analysis(
     RUN *run,
     VARY *control,
-    ERROR *errcon,
+    ERRORVAL *errcon,
     LINE_LIST *beamline,
     double *orbit
     )
@@ -407,7 +407,7 @@ void do_transport_analysis(
 void finish_transport_analysis(
     RUN *run,
     VARY *control,
-    ERROR *errcon,
+    ERRORVAL *errcon,
     LINE_LIST *beamline
     )
 {

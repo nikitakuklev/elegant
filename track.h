@@ -252,7 +252,7 @@ typedef struct {
     FILE *fp_log;                /* file to log error values to */
     long new_data_read;          /* new data has been read for control of tracking */
     long no_errors_first_step;   /* if nonzero, first step is perfect lattice */
-    } ERROR;
+    } ERRORVAL;
 
 /* structures containing information for optimization */
 
@@ -1680,29 +1680,29 @@ extern VMATRIX *sbend_matrix(double t0, double h, double ha, double n,
  
 /* prototypes for bunched_beam12.c: */
 extern void setup_bunched_beam(BEAM *beam, NAMELIST_TEXT *nltext, RUN *run, VARY *control,
-                               ERROR *errcon, OPTIM_VARIABLES *optim, OUTPUT_FILES *output, 
+                               ERRORVAL *errcon, OPTIM_VARIABLES *optim, OUTPUT_FILES *output, 
                                LINE_LIST *beamline, long n_elements,
                                long save_original);
 extern long new_bunched_beam(BEAM *beam, RUN *run, VARY *control, OUTPUT_FILES *output, long flags);
-extern long run_bunched_beam(RUN *run, VARY *control, ERROR *errcon, OPTIM_VARIABLES *optim, 
+extern long run_bunched_beam(RUN *run, VARY *control, ERRORVAL *errcon, OPTIM_VARIABLES *optim, 
                              LINE_LIST *beamline, long n_elements,
                              BEAM *beam, OUTPUT_FILES *output, long flags);
-extern void finish_bunched_beam(OUTPUT_FILES *output, RUN *run, VARY *control, ERROR *errcon, 
+extern void finish_bunched_beam(OUTPUT_FILES *output, RUN *run, VARY *control, ERRORVAL *errcon, 
                                 OPTIM_VARIABLES *optim,
                                 LINE_LIST *beamline, long n_elements, BEAM *beam);
 extern char *brief_number(double x, char *buffer);
 
-extern long track_beam(RUN *run, VARY *control, ERROR *errcon, OPTIM_VARIABLES *optim,
+extern long track_beam(RUN *run, VARY *control, ERRORVAL *errcon, OPTIM_VARIABLES *optim,
                        LINE_LIST *beamline, BEAM *beam, OUTPUT_FILES *output, unsigned long flags,
                        long delayOutput, double *finalCharge);
-extern void do_track_beam_output(RUN *run, VARY *control, ERROR *errcon, OPTIM_VARIABLES *optim,
+extern void do_track_beam_output(RUN *run, VARY *control, ERRORVAL *errcon, OPTIM_VARIABLES *optim,
                                  LINE_LIST *beamline, BEAM *beam, OUTPUT_FILES *output, unsigned long flags,
                                  double finalCharge);
 extern void finish_output(OUTPUT_FILES *output, RUN *run, VARY *control,
-                          ERROR *errcon, OPTIM_VARIABLES *optim,
+                          ERRORVAL *errcon, OPTIM_VARIABLES *optim,
                           LINE_LIST *beamline, long n_elements, BEAM *beam,
                           double finalCharge);
-extern void setup_output(OUTPUT_FILES *output, RUN *run, VARY *control, ERROR *errcon, 
+extern void setup_output(OUTPUT_FILES *output, RUN *run, VARY *control, ERRORVAL *errcon, 
                          OPTIM_VARIABLES *optim,
                          LINE_LIST *beamline);
 
@@ -1870,8 +1870,8 @@ void do_print_dictionary(char *filename, long latex_form);
 void print_dictionary_entry(FILE *fp, long type, long latex_form);
 
 /* prototypes for error.c: */
-extern void error_setup(ERROR *errcon, NAMELIST_TEXT *nltext, RUN *run_cond, LINE_LIST *beamline);
-extern void add_error_element(ERROR *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beamline);
+extern void error_setup(ERRORVAL *errcon, NAMELIST_TEXT *nltext, RUN *run_cond, LINE_LIST *beamline);
+extern void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beamline);
 extern double parameter_value(char *pname, long elem_type, long param, LINE_LIST *beamline);
 extern double perturbation(double xamplitude, double xcutoff, long xerror_type);
  
@@ -2002,8 +2002,8 @@ extern void track_through_rf_deflector(double **final, RFDF *rf_param, double **
 /* prototypes for vary4.c: */
 extern void vary_setup(VARY *_control, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 extern void add_varied_element(VARY *_control, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
-extern long vary_beamline(VARY *_control, ERROR *errcon, RUN *run, LINE_LIST *beamline);
-extern long perturb_beamline(VARY *_control, ERROR *errcon, RUN *run, LINE_LIST *beamline);
+extern long vary_beamline(VARY *_control, ERRORVAL *errcon, RUN *run, LINE_LIST *beamline);
+extern long perturb_beamline(VARY *_control, ERRORVAL *errcon, RUN *run, LINE_LIST *beamline);
 extern ELEMENT_LIST *find_element(char *elem_name,  ELEMENT_LIST **context, ELEMENT_LIST *elem);
 extern ELEMENT_LIST *wfind_element(char *elem_name,  ELEMENT_LIST **context, ELEMENT_LIST *elem);
 ELEMENT_LIST *find_element_index(char *elem_name,  ELEMENT_LIST **context,  ELEMENT_LIST *elem, long *index);
@@ -2028,7 +2028,7 @@ void add_optimization_term(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
                            LINE_LIST *beamline);
 void add_optimization_constraint(OPTIMIZATION_DATA *_optimize, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 void summarize_optimization_setup(OPTIMIZATION_DATA *_optimize);
-void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERROR *error1, LINE_LIST *beamline1, 
+void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *error1, LINE_LIST *beamline1, 
             BEAM *beam1, OUTPUT_FILES *output1, OPTIMIZATION_DATA *optimization_data1, long beam_type1);
 void add_optimization_covariable(OPTIMIZATION_DATA *_optimize, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 
@@ -2077,15 +2077,15 @@ void setup_closed_orbit(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 
 /* prototypes for aperture_search.c */
 void setup_aperture_search(NAMELIST_TEXT *nltext, RUN *run, VARY *control);
-long do_aperture_search(RUN *run, VARY *control, ERROR *errcon, LINE_LIST *beamline);
-long do_aperture_search_mp(RUN *run, VARY *control, ERROR *errcon, LINE_LIST *beamline);
-long do_aperture_search_sp(RUN *run, VARY *control, ERROR *errcon, LINE_LIST *beamline);
-void finish_aperture_search(RUN *run, VARY *control, ERROR *errcon, LINE_LIST *beamline);
+long do_aperture_search(RUN *run, VARY *control, ERRORVAL *errcon, LINE_LIST *beamline);
+long do_aperture_search_mp(RUN *run, VARY *control, ERRORVAL *errcon, LINE_LIST *beamline);
+long do_aperture_search_sp(RUN *run, VARY *control, ERRORVAL *errcon, LINE_LIST *beamline);
+void finish_aperture_search(RUN *run, VARY *control, ERRORVAL *errcon, LINE_LIST *beamline);
 
 /* prototypes for analyze.c */
-void setup_transport_analysis(NAMELIST_TEXT *nltext, RUN *run, VARY *control, ERROR *errcon);
-void do_transport_analysis(RUN *run, VARY *control, ERROR *errcon, LINE_LIST *beamline, double *orbit);
-void finish_transport_analysis(RUN *run, VARY *control, ERROR *errcon, LINE_LIST *beamline);
+void setup_transport_analysis(NAMELIST_TEXT *nltext, RUN *run, VARY *control, ERRORVAL *errcon);
+void do_transport_analysis(RUN *run, VARY *control, ERRORVAL *errcon, LINE_LIST *beamline, double *orbit);
+void finish_transport_analysis(RUN *run, VARY *control, ERRORVAL *errcon, LINE_LIST *beamline);
 
 /* prototypes for link_elements.c */
 void element_link_control(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, RUN *run_cond, LINE_LIST *beamline);
@@ -2216,7 +2216,7 @@ extern void set_up_histogram(HISTOGRAM *histogram, RUN *run);
 extern long track_through_tubend(double **part, long n_part, TUBEND *tubend,
                           double p_error, double Po, double **accepted,
                           double z_start);
-extern void setup_sdds_beam(BEAM *beam,NAMELIST_TEXT *nltext,RUN *run, VARY *control,ERROR *errcon,OPTIM_VARIABLES *optim,OUTPUT_FILES *output,LINE_LIST *beamline,long n_elements,
+extern void setup_sdds_beam(BEAM *beam,NAMELIST_TEXT *nltext,RUN *run, VARY *control,ERRORVAL *errcon,OPTIM_VARIABLES *optim,OUTPUT_FILES *output,LINE_LIST *beamline,long n_elements,
                             long save_original);
 extern long new_sdds_beam(BEAM *beam,RUN *run,VARY *control,OUTPUT_FILES *output,long flags);
 void terminate_sdds_beam();

@@ -38,7 +38,7 @@ void setup_bunched_beam(
     NAMELIST_TEXT *nltext,
     RUN *run,
     VARY *control,
-    ERROR *errcon,
+    ERRORVAL *errcon,
     OPTIM_VARIABLES *optim,
     OUTPUT_FILES *output,
     LINE_LIST *beamline,
@@ -261,7 +261,7 @@ long new_bunched_beam(
 long track_beam(
                 RUN *run,
                 VARY *control,
-                ERROR *errcon,
+                ERRORVAL *errcon,
                 OPTIM_VARIABLES *optim,
                 LINE_LIST *beamline,
                 BEAM *beam,
@@ -342,7 +342,7 @@ long track_beam(
 }
 
 void do_track_beam_output(RUN *run, VARY *control,
-                          ERROR *errcon, OPTIM_VARIABLES *optim,
+                          ERRORVAL *errcon, OPTIM_VARIABLES *optim,
                           LINE_LIST *beamline, BEAM *beam,
                           OUTPUT_FILES *output, unsigned long flags,
                           double finalCharge)
@@ -467,7 +467,7 @@ void setup_output(
     OUTPUT_FILES *output,
     RUN *run,
     VARY *control,
-    ERROR *errcon,
+    ERRORVAL *errcon,
     OPTIM_VARIABLES *optim,
     LINE_LIST *beamline
     )
@@ -531,7 +531,7 @@ void finish_output(
     OUTPUT_FILES *output,
     RUN *run,
     VARY *control,
-    ERROR *errcon,
+    ERRORVAL *errcon,
     OPTIM_VARIABLES *optim,
     LINE_LIST *beamline,
     long n_elements,
