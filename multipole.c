@@ -158,10 +158,8 @@ long fmultipole_tracking(
                          )
 {
   double dx, dy, dz;  /* offsets of the multipole center */
-  long order;         /* order (n) */
   long n_kicks;       /* number of kicks to split multipole into */
   long i_part, i_top, is_lost=0, i_order;
-  double KnL;
   double *coord;
   double drift, cos_tilt, sin_tilt;
   double x=0.0, xp=0.0, y=0.0, yp=0.0;
@@ -303,9 +301,10 @@ long multipole_tracking(
     drift = multipole->length/n_kicks/2;
     if (multipole->bore)
         /* KnL = d^nB/dx^n * L/(B.rho) = n! B(a)/a^n * L/(B.rho) */
-        KnL = dfactorial(multipole->order)*multipole->BnL/ipow(multipole->bore, multipole->order)*
+        KnL = dfactorial(multipole->order)*multipole->BTipL/ipow(multipole->bore, multipole->order)*
               (e_mks/(me_mks*c_mks*Po))*multipole->factor;
-    KnL = multipole->KnL*multipole->factor/n_kicks;
+    else
+      KnL = multipole->KnL*multipole->factor/n_kicks;
 
     cos_tilt = cos(multipole->tilt);
     sin_tilt = sin(multipole->tilt);

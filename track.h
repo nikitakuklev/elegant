@@ -760,7 +760,7 @@ typedef struct {
 extern PARAMETER mult_param[N_MULT_PARAMS];
    
 typedef struct {
-    double length, KnL, tilt, bore, BnL;
+    double length, KnL, tilt, bore, BTipL;
     double dx, dy, dz, factor;
     long order, n_kicks, synch_rad;
     } MULT;
