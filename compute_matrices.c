@@ -891,7 +891,7 @@ VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, doubl
         R[0][1] = R[2][3] = length*(*P_central)/dP*log(1 + dP/(*P_central));
     else
         R[0][1] = R[2][3] = length;
-    R[5][4] = (voltage/me_mev)*cos_phase/(gamma + dgamma*sin_phase)*(PIx2*frequency/c_mks);
+    R[5][4] = (voltage/me_mev)*cos_phase/(gamma + dgamma)*(PIx2*frequency/c_mks);
 
     if (length && (end1Focus || end2Focus)) {
       if (end1Focus) {
