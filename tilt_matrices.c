@@ -271,7 +271,53 @@ void rotate3(double *data, void *Rv)
   data[1] = Q1->a[2][0];
 }
 
+void yaw_matrices(VMATRIX *M, double yaw)
+/* transform element matrix to reflect yawing of element (rotation
+ * about vertical axis)
+ */
+{
+  static VMATRIX input, output;
+  static long initialized=0;
+  static VMATRIX Mr;
 
+  if (yaw==0)
+    return;
 
+  if (!initialized) {
+    initialized = 1;
+    initialize_matrices(&input, 1);
+    initialize_matrices(&output, 1);
+    initialize_matrices(&Mr, M->order);
+  }
+  
+  input.C[1] = yaw;
+  output.C[1] = -yaw;
+  concat_matrices(&Mr, M, &input, 0);
+  concat_matrices(M, &output, &Mr, 0);
+}
 
+void pitch_matrices(VMATRIX *M, double pitch)
+/* transform element matrix to reflect pitching of element (rotation
+ * about horizontal transverse axis)
+ */
+{
+  static VMATRIX input, output;
+  static long initialized=0;
+  static VMATRIX Mr;
+
+  if (pitch==0)
+    return;
+
+  if (!initialized) {
+    initialized = 1;
+    initialize_matrices(&input, 1);
+    initialize_matrices(&output, 1);
+    initialize_matrices(&Mr, M->order);
+  }
+  
+  input.C[3] = pitch;
+  output.C[3] = -pitch;
+  concat_matrices(&Mr, M, &input, 0);
+  concat_matrices(M, &output, &Mr, 0);
+}
 

@@ -2398,6 +2398,8 @@ extern void tilt_matrices(VMATRIX *M, double tilt);
 extern VMATRIX *rotation_matrix(double tilt);
 extern void rotate_coordinates(double *coord, double angle);
 extern void rotateBeamCoordinates(double **part, long np, double angle);
+void pitch_matrices(VMATRIX *M, double pitch);
+void yaw_matrices(VMATRIX *M, double yaw);
 
 /* prototypes for track_ramp.c: */
 extern void track_through_ramped_deflector(double **final, RMDF *ramp_param, double **initial, long n_particles, double pc_central);
