@@ -60,7 +60,7 @@ command.",
     "An alpha magnet implemented as a matrix, up to 3rd order.  PART is used to split\n\
 the magnet into halves.  XS<n> and DP<n> allow momentum filtration at the midpoint.",
     "A simple traveling-wave (beta=1) deflecting RF cavity.",
-    "Not implemented.",
+    "A TM-mode RF cavity specified by the on-axis Ez field.",
     "A linearly-ramped electric field deflector, using an approximate analytical solution FOR LOW ENERGY PARTICLES.",
     "A numerically-integrated accelerating TM RF cavity with spatially-constant fields.",
     "A numerically-integrated linearly-ramped electric field deflector.",
