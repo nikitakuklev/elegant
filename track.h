@@ -1469,7 +1469,13 @@ extern void copy_particles(double **copy, double **original, long n_particles);
  
 /* prototypes for correct.c: */
 extern void correction_setup(CORRECTION *_correct, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
-double computeMonitorReading(ELEMENT_LIST *elem, long coord, double x, double y);
+double computeMonitorReading(ELEMENT_LIST *elem, long coord, double x, double y, 
+                             unsigned long flags);
+#define COMPUTEMONITORREADING_TILT_0 0x0001UL
+#define COMPUTEMONITORREADING_CAL_1  0x0002UL
+void setMonitorCalibration(ELEMENT_LIST *elem, double calib, long coord);
+double getMonitorCalibration(ELEMENT_LIST *elem, long coord);
+
 extern long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *starting_coords, 
         BEAM *beam, long sim_step);
 extern long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LINE_LIST *beamline, VMATRIX *M, 

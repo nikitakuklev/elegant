@@ -921,7 +921,7 @@ void global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
                 bomb("invalid element pointer in trajectory array (global_trajcor_plane)", NULL);
             x = traj[CM->mon_index[i_moni]].centroid[0];
             y = traj[CM->mon_index[i_moni]].centroid[2];
-            reading = computeMonitorReading(eptr, coord, x, y);
+            reading = computeMonitorReading(eptr, coord, x, y, 0);
             CM->posi[iteration][i_moni] = CM->Qo->a[i_moni][0] =  
                 reading + (CM->bpm_noise?noise_value(CM->bpm_noise, CM->bpm_noise_cutoff, CM->bpm_noise_distribution):0);
 	    }
@@ -1068,7 +1068,7 @@ void one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TR
                 bomb("invalid element pointer in trajectory array (one_to_one_trajcor_plane)", NULL);
             x = traj[CM->mon_index[i_moni]].centroid[0];
             y = traj[CM->mon_index[i_moni]].centroid[2];
-            reading = computeMonitorReading(eptr, coord, x, y);
+            reading = computeMonitorReading(eptr, coord, x, y, 0);
             reading += (CM->bpm_noise?noise_value(CM->bpm_noise, CM->bpm_noise_cutoff, CM->bpm_noise_distribution):0);
             CM->posi[iteration][i_moni] = reading;
 
@@ -1489,7 +1489,7 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
             x = clorb[i].centroid[0];
             y = clorb[i].centroid[2];
             eptr = clorb[i].elem;
-            reading = computeMonitorReading(eptr, coord, x, y);
+            reading = computeMonitorReading(eptr, coord, x, y, 0);
 
             CM->Qo->a[i_moni][0] = CM->posi[iteration][i_moni] = reading + 
                 (CM->bpm_noise?noise_value(CM->bpm_noise, CM->bpm_noise_cutoff, CM->bpm_noise_distribution):0.0);
@@ -2043,73 +2043,86 @@ double noise_value(double xamplitude, double xcutoff, long xerror_type)
     return(0.0);
     }
 
-double computeMonitorReading(ELEMENT_LIST *elem, long coord, double x, double y)
+double computeMonitorReading(ELEMENT_LIST *elem, long coord, double x, double y,
+                             unsigned long flags)
 /* coord = 0 is x, otherwise y */
 {
-    double calibration, tilt, reading;
-    char *equation;
+  double calibration, tilt, reading;
+  char *equation;
 
-    switch (elem->type) {
-      case T_MONI:  
-        x -= ((MONI*)(elem->p_elem))->dx;
-        y -= ((MONI*)(elem->p_elem))->dy;
-        if (coord==0)
-            calibration = ((MONI*)(elem->p_elem))->xcalibration;
-        else 
-            calibration = ((MONI*)(elem->p_elem))->ycalibration;
-        if (tilt=((MONI*)(elem->p_elem))->tilt)
-            rotate_xy(&x, &y, tilt);   
-        if (coord==0)
-            equation = ((MONI*)(elem->p_elem))->x_readout; 
-        else
-            equation = ((MONI*)(elem->p_elem))->y_readout;
-        break;
-      case T_HMON: 
-        x -= ((HMON*)(elem->p_elem))->dx;
-        y -= ((HMON*)(elem->p_elem))->dy;
-        calibration = ((HMON*)(elem->p_elem))->calibration;
-        if (tilt=((HMON*)(elem->p_elem))->tilt)
-            rotate_xy(&x, &y, tilt);   
-        equation = ((HMON*)(elem->p_elem))->readout; 
-        if (coord!=0)
-            bomb("element in horizontal monitor list is not a vertical monitor--internal logic error", NULL);
-        break;
-      case T_VMON:
-        x -= ((VMON*)(elem->p_elem))->dx;
-        y -= ((VMON*)(elem->p_elem))->dy;
-        calibration = ((VMON*)(elem->p_elem))->calibration;
-        if (tilt=((VMON*)(elem->p_elem))->tilt)
-            rotate_xy(&x, &y, tilt);   
-        equation = ((VMON*)(elem->p_elem))->readout; 
-        if (!coord)
-            bomb("element in vertical monitor list is not a vertical monitor--internal logic error", NULL);
-        break;
-      default:
-        fprintf(stderr, "error: element %s found in monitor list--internal logic error\n", 
-                elem->name);
-        abort();
-        break;
-        }
-    
-    if (equation) {
-        rpn_clear();
-        rpn_store(x, rpn_x_mem);
-        rpn_store(y, rpn_y_mem);
-        reading = rpn(equation)*calibration;
-        if (rpn_check_error()) exit(1);
-        }
-    else {
-        switch (coord) {
-          case 0: 
-            reading = x*calibration;
-            break;
-          default:
-            reading = y*calibration;
-            break;
-            }
-        }
-    return reading;
+  switch (elem->type) {
+  case T_MONI:  
+    x -= ((MONI*)(elem->p_elem))->dx;
+    y -= ((MONI*)(elem->p_elem))->dy;
+    if (coord==0)
+      calibration = ((MONI*)(elem->p_elem))->xcalibration;
+    else 
+      calibration = ((MONI*)(elem->p_elem))->ycalibration;
+    tilt = ((MONI*)(elem->p_elem))->tilt;
+    if (flags&COMPUTEMONITORREADING_TILT_0)
+      tilt = 0;
+    if (tilt)
+      rotate_xy(&x, &y, tilt);   
+    if (coord==0)
+      equation = ((MONI*)(elem->p_elem))->x_readout; 
+    else
+      equation = ((MONI*)(elem->p_elem))->y_readout;
+    break;
+  case T_HMON: 
+    x -= ((HMON*)(elem->p_elem))->dx;
+    y -= ((HMON*)(elem->p_elem))->dy;
+    calibration = ((HMON*)(elem->p_elem))->calibration;
+    tilt = ((HMON*)(elem->p_elem))->tilt;
+    if (flags&COMPUTEMONITORREADING_TILT_0)
+      tilt = 0;
+    if (tilt)
+      rotate_xy(&x, &y, tilt);   
+    equation = ((HMON*)(elem->p_elem))->readout; 
+    if (coord!=0)
+      bomb("element in horizontal monitor list is not a vertical monitor--internal logic error", NULL);
+    break;
+  case T_VMON:
+    x -= ((VMON*)(elem->p_elem))->dx;
+    y -= ((VMON*)(elem->p_elem))->dy;
+    calibration = ((VMON*)(elem->p_elem))->calibration;
+    tilt = ((VMON*)(elem->p_elem))->tilt;
+    if (flags&COMPUTEMONITORREADING_TILT_0)
+      tilt = 0;
+    if (tilt)
+      rotate_xy(&x, &y, tilt);   
+    equation = ((VMON*)(elem->p_elem))->readout; 
+    if (!coord)
+      bomb("element in vertical monitor list is not a vertical monitor--internal logic error", NULL);
+    break;
+  default:
+    fprintf(stderr, "error: element %s found in monitor list--internal logic error\n", 
+            elem->name);
+    abort();
+    break;
+  }
+  
+  if (flags&COMPUTEMONITORREADING_CAL_1)
+    calibration = 1;
+
+  if (equation) {
+    rpn_clear();
+    rpn_store(x, rpn_x_mem);
+    rpn_store(y, rpn_y_mem);
+    reading = rpn(equation)*calibration;
+    if (rpn_check_error()) exit(1);
+  }
+  else {
+    switch (coord) {
+    case 0: 
+      reading = x*calibration;
+      break;
+    default:
+      reading = y*calibration;
+      break;
     }
+  }
+  return reading;
+}
 
 double getMonitorWeight(ELEMENT_LIST *elem)
 {
@@ -2144,6 +2157,28 @@ double getMonitorCalibration(ELEMENT_LIST *elem, long coord)
         }
     bomb("invalid element type in getMonitorCalibration()", NULL);
     }
+
+void setMonitorCalibration(ELEMENT_LIST *elem, double calib, long coord)
+{
+  switch (elem->type) {
+  case T_HMON:
+    ((HMON*)(elem->p_elem))->calibration = calib;
+    break;
+  case T_VMON:
+    ((VMON*)(elem->p_elem))->calibration = calib;
+    break;
+  case T_MONI:
+    if (coord)
+      ((MONI*)(elem->p_elem))->ycalibration = calib;
+    else 
+      ((MONI*)(elem->p_elem))->xcalibration = calib;
+    break;
+  default:
+    bomb("invalid element type in setMonitorCalibration()", NULL);
+    break;
+  }
+}
+
 
 double getCorrectorCalibration(ELEMENT_LIST *elem, long coord)
 {
