@@ -466,7 +466,6 @@ void lorentz_setup(
                             (fringe_code==ENGE3_MODEL ? 3 : 5) ;
                         if (!nibend->fp2) {
                           /* determine a1, a2, and a3 to match FINT, HGAP, and angle */
-                          fprintf(stdout, "Determining Enge coefficients for NIBEND\n");
                           computeEngeCoefficients(engeCoef, fabs(nibend->length/nibend->angle),
                                                   nibend->length, engeD, nibend->fint);
                         } else {
