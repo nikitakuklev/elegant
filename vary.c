@@ -904,7 +904,7 @@ long load_enumerated_values(double **value, char *file, char *column)
     if (!column)
         bomb("NULL column name passed (load_enumerated_values)", NULL);
     
-    if (!SDDS_InitializeInput(&SDDS_table, file) || 
+    if (!SDDS_InitializeInputFromSearchPath(&SDDS_table, file) || 
         SDDS_ReadTable(&SDDS_table)!=1 ||
         !(count=SDDS_CountRowsOfInterest(&SDDS_table)) ||
         !(*value = SDDS_GetColumnInDoubles(&SDDS_table, column)) ||

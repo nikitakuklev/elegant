@@ -192,8 +192,6 @@ void setupRotate3Matrix(void **Rv, double roll, double yaw, double pitch)
   R->a[2][0] = C_PSI*S_THETA*C_PHI + S_PSI*S_PHI;
   R->a[2][1] = C_PSI*S_THETA*S_PHI - S_PSI*C_PHI;
   R->a[2][2] = C_THETA*C_PSI;
-  m_show(R, "%10.3lg", "Rotation matrix:\n", stdout);
-  
   *Rv = R;
 }
 

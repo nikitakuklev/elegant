@@ -193,7 +193,7 @@ void set_up_trwake(TRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
       break;
   }
   if (iw==storedWakes) {
-    if (!SDDS_InitializeInput(&SDDSin, wakeData->inputFile) || SDDS_ReadPage(&SDDSin)!=1 ||
+    if (!SDDS_InitializeInputFromSearchPath(&SDDSin, wakeData->inputFile) || SDDS_ReadPage(&SDDSin)!=1 ||
         (wakeData->wakePoints=SDDS_RowCount(&SDDSin))<0 ||
         wakeData->wakePoints<2) {
       fprintf(stderr, "Error: TRWAKE file %s is unreadable, or has insufficient data.\n", wakeData->inputFile);

@@ -1640,7 +1640,7 @@ void LoadStartingTwissFromFile(double *betax, double *betay, double *alphax, dou
   double *betaxData, *betayData, *alphaxData, *alphayData;
   double *etaxData, *etayData, *etaxpData, *etaypData;
   
-  if (!SDDS_InitializeInput(&SDDSin, filename) || 
+  if (!SDDS_InitializeInputFromSearchPath(&SDDSin, filename) || 
       SDDS_ReadPage(&SDDSin)!=1)
     SDDS_Bomb("problem reading Twiss reference file");
   if (SDDS_CheckColumn(&SDDSin, "betax", "m", SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK ||

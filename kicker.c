@@ -178,7 +178,7 @@ void set_up_kicker(KICKER *kicker)
     if (!kicker->waveform)
         bomb("no waveform filename given for kicker", NULL);
 
-    if (!get_table(&data, kicker->waveform, 1, 0))
+    if (!getTableFromSearchPath(&data, kicker->waveform, 1, 0))
         bomb("unable to read waveform for kicker", NULL);
 
     if (data.n_data<=1)

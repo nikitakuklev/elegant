@@ -1218,7 +1218,7 @@ void bmapxy_field_setup(BMAPXY *bmapxy)
     fflush(stdout);
     exit(1);
   }
-  if (!SDDS_InitializeInput(&SDDSin, bmapxy->filename) ||
+  if (!SDDS_InitializeInputFromSearchPath(&SDDSin, bmapxy->filename) ||
       SDDS_ReadPage(&SDDSin)<=0 ||
       !(x=SDDS_GetColumnInDoubles(&SDDSin, "x")) ||
       !(y=SDDS_GetColumnInDoubles(&SDDSin, "y")) ||

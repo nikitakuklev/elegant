@@ -82,7 +82,7 @@ void set_up_ramp_p(RAMPP *rampp)
     if (!rampp->waveform)
         bomb("no waveform filename given for rampp", NULL);
 
-    if (!get_table(&data, rampp->waveform, 1, 0))
+    if (!getTableFromSearchPath(&data, rampp->waveform, 1, 0))
         bomb("unable to read waveform for rampp", NULL);
 
     if (data.n_data<=1)

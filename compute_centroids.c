@@ -47,6 +47,7 @@ void compute_centroids(
  */
 
 void compute_sigmas(
+    double *emit,
     double *sigma,
     double *centroid,
     double **coordinates,
@@ -58,19 +59,36 @@ void compute_sigmas(
 
     for (i_coord=0; i_coord<6; i_coord++)
         sum2[i_coord] = 0;
-
+    if (emit)
+      for (i_coord=0; i_coord<3;  i_coord++)
+        emit[i_coord] = 0;
+    
     for (i_part=0; i_part<n_part; i_part++) {
         part = coordinates[i_part];
         for (i_coord=0; i_coord<6; i_coord++) 
             sum2[i_coord] += sqr(part[i_coord]-centroid[i_coord]);
         }
-    if (n_part)
+    if (n_part) {
         for (i_coord=0; i_coord<6; i_coord++)
             if ((value=sum2[i_coord])>0)
                 sigma[i_coord] = sqrt(value/n_part);
             else
                 sigma[i_coord] = 0;
-
+        if (emit) {
+          for (i_coord=0; i_coord<6; i_coord+=2) {
+            double sum12;
+            sum12 = 0;
+            for (i_part=0; i_part<n_part; i_part++) {
+              part = coordinates[i_part];
+              sum12 += (part[i_coord]-centroid[i_coord])*(part[i_coord+1]-centroid[i_coord+1]);
+            }
+            if ((emit[i_coord/2] = sqr(sigma[i_coord]*sigma[i_coord+1]) - sqr(sum12/n_part))>0)
+              emit[i_coord/2] = sqrt(emit[i_coord/2]);
+            else
+              emit[i_coord/2] = 0;
+          }
+        }
+      }
     }
 
 void zero_beam_sums(

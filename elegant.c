@@ -140,6 +140,8 @@ void substituteTagValue(char *input, long buflen,
 
 #define NAMELIST_BUFLEN 65536
 
+#define DEBUG 0
+
 int main(argc, argv)
 int argc;
 char **argv;
@@ -210,7 +212,7 @@ char **argv;
  */
     
     argc = scanargs(&scanned, argc, argv);
-    if (argc<2 || argc>(2+N_OPTIONS)) {
+    if (argc<2) {
         fprintf(stdout, "usage: %s\n", USAGE);
         fflush(stdout);
         link_date();
@@ -280,6 +282,9 @@ char **argv;
 
     while (get_namelist(s, NAMELIST_BUFLEN, fp_in)) {
         substituteTagValue(s, NAMELIST_BUFLEN, macroTag, macroValue, macros);
+#if DEBUG
+      fprintf(stderr, "%s\n", s);
+#endif
 #if defined(VAX_VMS) || defined(UNIX) || defined(_WIN32)
         report_stats(stdout, "statistics: ");
         fflush(stdout);
@@ -304,7 +309,7 @@ char **argv;
             set_print_namelist_flags(0);
             process_namelist(&run_setup, &namelist_text);
             print_namelist(stdout, &run_setup);
-            
+            setSearchPath(search_path);
             /* check for validity of namelist inputs */
             if (lattice==NULL) {
                 if (!saved_lattice)

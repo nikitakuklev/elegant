@@ -16,8 +16,8 @@
     STRING exclude = NULL;
     STRING item = NULL;
     STRING source = NULL;
-    STRING source_position = "before";
-    STRING mode = "dynamic";
+    STRING source_position = NULL;
+    STRING mode = NULL;
     STRING equation = NULL;
 #end
 

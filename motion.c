@@ -1478,7 +1478,7 @@ void setupRftmEz0FromFile(RFTMEZ0 *rftmEz0, double frequency, double length)
     bomb("RFTMEZ0 restricted to radial_order=1 at present", NULL);
 
   /* read (z, Ez) data from the file  */
-  if (!SDDS_InitializeInput(&SDDSin, rftmEz0->inputFile) || SDDS_ReadPage(&SDDSin)!=1) {
+  if (!SDDS_InitializeInputFromSearchPath(&SDDSin, rftmEz0->inputFile) || SDDS_ReadPage(&SDDSin)!=1) {
     fprintf(stderr, "Error: unable to open or read RFTMEZ0 file %s\n", 
             rftmEz0->inputFile);
     exit(1);
@@ -1578,7 +1578,7 @@ void setupRftmEz0SolenoidFromFile(RFTMEZ0 *rftmEz0, double length, double k)
       !rftmEz0->solenoidBzColumn || !rftmEz0->solenoidBrColumn) 
     SDDS_Bomb("missing column name for solenoid for RFTMEZ0 element");
 
-  if (!SDDS_InitializeInput(&SDDSin, rftmEz0->solenoidFile)) {
+  if (!SDDS_InitializeInputFromSearchPath(&SDDSin, rftmEz0->solenoidFile)) {
     fprintf(stderr, "Error: unable to open or read RFTMEZ0 solenoid file %s\n", 
             rftmEz0->solenoidFile);
     exit(1);
@@ -1743,7 +1743,7 @@ void setupMapSolenoidFromFile(MAP_SOLENOID *mapSol, double length)
       !mapSol->BzColumn || !mapSol->BrColumn) 
     SDDS_Bomb("missing column name for solenoid for MAPSOLENOID element");
 
-  if (!SDDS_InitializeInput(&SDDSin, mapSol->inputFile)) {
+  if (!SDDS_InitializeInputFromSearchPath(&SDDSin, mapSol->inputFile)) {
     fprintf(stderr, "Error: unable to open or read MAPSOLENOID file %s\n", 
             mapSol->inputFile);
     exit(1);

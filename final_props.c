@@ -469,7 +469,7 @@ long compute_final_properties
   } else 
     data[F_EMIT_OFFSET+2] = data[F_EMIT_OFFSET+3] = 0;
 
-    data[F_EMIT_OFFSET+4] = rms_longitudinal_emittance(coord, sums->n_part, p_central);
+  data[F_EMIT_OFFSET+4] = rms_longitudinal_emittance(coord, sums->n_part, p_central);
   
   /* compute normalized emittances */
   for (i=0; i<4; i++)

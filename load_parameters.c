@@ -80,7 +80,7 @@ long setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 
     SDDS_ClearErrors();
 
-    if (!SDDS_InitializeInput(&load_request[load_requests].table, filename)) {
+    if (!SDDS_InitializeInputFromSearchPath(&load_request[load_requests].table, filename)) {
         fprintf(stdout, "error: couldn't initialize SDDS input for load_parameters file %s\n", filename);
         fflush(stdout);
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);

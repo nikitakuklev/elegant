@@ -1,5 +1,10 @@
 /* 
  * $Log: not supported by cvs2svn $
+ * Revision 1.9  2001/05/16 19:02:58  borland
+ * Modified calls to simplexMin() to accomodate new argument.
+ * Added simplified Rosenzweig/Serafini model for rf focusing in the
+ * body of RFCA and RFCW elements.
+ *
  * Revision 1.8  2000/10/23 18:57:08  borland
  * Implemented -energy option.
  *
@@ -492,7 +497,7 @@ int main( int argc, char **argv)
       }
       simplexMin( &yReturn, xGuess, dxGuess, xLowerLimit, xUpperLimit, disable, dimensions,
                  target, tolerance, IBSequations, verbosity?IBSsimplexReport:NULL, 
-                 maxEvaluations, maxPasses, 0);
+                 maxEvaluations, maxPasses, 12, 0);
       /* final answers */
       emitx = xGuess[0];
       sigmaDelta = xGuess[1];

@@ -57,6 +57,11 @@ CopyrightNotice001*/
  * Michael Borland, 1999
  *
  $Log: not supported by cvs2svn $
+ Revision 1.4  2001/05/16 19:02:59  borland
+ Modified calls to simplexMin() to accomodate new argument.
+ Added simplified Rosenzweig/Serafini model for rf focusing in the
+ body of RFCA and RFCW elements.
+
  Revision 1.3  2000/01/25 21:17:24  borland
  Now supports commandline setting of undulator K, period, and beta.
  Also accepts elegant .fin files as input.
@@ -462,7 +467,7 @@ void OptimizeSASEFELParameters
           x0[0], x0[1], x0[2], x0[3], x0[4], x0[5], x0[6], x0[7]);
   fflush(stdout);
   if (simplexMin(&result, x0, dx, NULL, NULL, disable, 8, 0.0, 1e-10,
-                 SASEFELOptimFn, NULL, 500, 10, 0)<0) {
+                 SASEFELOptimFn, NULL, 500, 10, 12, 0)<0) {
     fprintf(stdout, "Optimization unsuccessful\n");
     fflush(stdout);
   }
@@ -470,7 +475,7 @@ void OptimizeSASEFELParameters
   for (i=0; i<8; i++)
     dx[i] = 0.1*x0[i];
   if (simplexMin(&result, x0, dx, NULL, NULL, disable, 8, 0.0, 1e-9,
-                 SASEFELOptimFn, NULL, 500, 10, 0)<0) {
+                 SASEFELOptimFn, NULL, 500, 10, 12, 0)<0) {
     fprintf(stdout, "Optimization unsuccessful\n");
     fflush(stdout);
   }

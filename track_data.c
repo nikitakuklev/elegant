@@ -1265,7 +1265,7 @@ PARAMETER mapSolenoid_param[N_MAPSOLENOID_PARAMS] = {
     {"FACTOR", "", IS_DOUBLE, 0, (long)((char *)&mapSol_example.factor), NULL, DEFAULT_ACCURACY, 0, "factor by which to multiply fields in file"},
     {"BXUNIFORM", "", IS_DOUBLE, 0, (long)((char *)&mapSol_example.BxUniform), NULL, 0.0, 0, "uniform horizontal field to superimpose on solenoid field"},
     {"BYUNIFORM", "", IS_DOUBLE, 0, (long)((char *)&mapSol_example.ByUniform), NULL, 0.0, 0, "uniform vertical field to superimpose on solenoid field"},
-    {"L_UNIFORM", "", IS_DOUBLE, 0, (long)((char *)&mapSol_example.lUniform), NULL, 0.0, 0, "length of uniform field superimposed on solenoid field"},
+    {"LUNIFORM", "", IS_DOUBLE, 0, (long)((char *)&mapSol_example.lUniform), NULL, 0.0, 0, "length of uniform field superimposed on solenoid field"},
     {"ACCURACY", "", IS_DOUBLE, 0, (long)((char *)&mapSol_example.accuracy), NULL, DEFAULT_ACCURACY, 0, "integration accuracy"},
     {"METHOD", " ", IS_STRING, 0, (long)((char *)&mapSol_example.method), DEFAULT_INTEG_METHOD, 0.0, 0, "integration method (runge-kutta, bulirsch-stoer, non-adaptive runge-kutta, modified midpoint)"},
     } ;

@@ -575,7 +575,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
                        variables->lower_limit, variables->upper_limit, NULL, 
                        variables->n_variables, optimization_data->target, 
                        optimization_data->tolerance, optimization_function, optimization_report,
-                       optimization_data->n_evaluations, optimization_data->n_passes, 0)<0) {
+                       optimization_data->n_evaluations, optimization_data->n_passes, 12, 0)<0) {
           if (result>optimization_data->tolerance) {
             if (!optimization_data->soft_failure)
               bomb("optimization unsuccessful--aborting", NULL);
@@ -751,17 +751,18 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 #define SET_BUNCHED_BEAM 6
 #define SET_SDDS_BEAM   33
 
-static char *twiss_name[28] = {
+static char *twiss_name[30] = {
     "betax", "alphax", "nux", "etax", "etapx", 
-    "betay", "alphay", "nuy", "etay", "etapy",
+    "betay", "alphay", "nuy", "etay", "etapy", 
     "max.betax", "max.etax", "max.etapx", 
     "max.betay", "max.etay", "max.etapy",
     "min.betax", "min.etax", "min.etapx", 
     "min.betay", "min.etay", "min.etapy",
     "dnux/dp", "dnuy/dp", "alphac", "alphac2",
     "ave.betax", "ave.betay",
+    "etaxp", "etayp",
     };
-static long twiss_mem[28] = {
+static long twiss_mem[30] = {
     -1, -1, -1, -1, -1, 
     -1, -1, -1, -1, -1, 
     -1, -1, -1,
@@ -770,6 +771,7 @@ static long twiss_mem[28] = {
     -1, -1, -1, 
     -1, -1,
     -1, -1, -1, -1,
+    -1, -1,
     };
 static char *radint_name[8] = {
     "ex0", "Sdelta0",
@@ -792,7 +794,7 @@ int showTwissMemories(FILE *fp)
 {
   long i;
   
-  for (i=0; i<28; i++) {
+  for (i=0; i<30; i++) {
     if (twiss_mem[i]!=-1)
       fprintf(fp, "%s = %21.15e\n", 
               twiss_name[i], rpn_recall(twiss_mem[i]));
@@ -931,9 +933,9 @@ double optimization_function(double *value, long *invalid)
       fflush(stdout);
 #endif
         if (twiss_mem[0]==-1) {
-            for (i=0; i<28; i++)
+            for (i=0; i<30; i++)
                 twiss_mem[i] = rpn_create_mem(twiss_name[i]);
-            }
+        }
         /* get twiss mode and (beta, alpha, eta, etap) for both planes */
         update_twiss_parameters(run, beamline, &unstable);
         /* if (unstable)
@@ -944,10 +946,6 @@ double optimization_function(double *value, long *invalid)
             rpn_store(*((&beamline->elast->twiss->betax)+i)/(i==2?PIx2:1), twiss_mem[i]);
             rpn_store(*((&beamline->elast->twiss->betay)+i)/(i==2?PIx2:1), twiss_mem[i+5]);
         }
-        rpn_store(beamline->chromaticity[0], twiss_mem[22]);
-        rpn_store(beamline->chromaticity[1], twiss_mem[23]);
-        rpn_store(beamline->alpha[0], twiss_mem[24]);
-        rpn_store(beamline->alpha[1], twiss_mem[25]);
         /* store statistics */
         compute_twiss_statistics(beamline, &twiss_ave, &twiss_min, &twiss_max);
         rpn_store(twiss_max.betax, twiss_mem[10]);
@@ -962,8 +960,18 @@ double optimization_function(double *value, long *invalid)
         rpn_store(twiss_min.betay, twiss_mem[19]);
         rpn_store(twiss_min.etay,  twiss_mem[20]);
         rpn_store(twiss_min.etapy, twiss_mem[21]);
+        /* chromaticity */
+        rpn_store(beamline->chromaticity[0], twiss_mem[22]);
+        rpn_store(beamline->chromaticity[1], twiss_mem[23]);
+        /* first and second-order momentum compaction */
+        rpn_store(beamline->alpha[0], twiss_mem[24]);
+        rpn_store(beamline->alpha[1], twiss_mem[25]);
+        /* more statistics */
         rpn_store(twiss_ave.betax, twiss_mem[26]);
         rpn_store(twiss_ave.betay, twiss_mem[27]);
+        /* alternate names for etapx and etapy */
+        rpn_store(beamline->elast->twiss->etapx, twiss_mem[28]);
+        rpn_store(beamline->elast->twiss->etapy, twiss_mem[29]);
     }
     if (beamline->flags&BEAMLINE_RADINT_WANTED) {
 #if DEBUG

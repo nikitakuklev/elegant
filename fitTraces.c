@@ -3,6 +3,11 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.12  2000/10/25 20:52:00  borland
+ * Added FLUSH_INTERVAL parameter to WATCH element.
+ * Improvements to trace fitting.
+ * Optimization includes ability to supply weights for each term.
+ *
  * Revision 1.11  1999/10/12 21:49:54  borland
  * All printouts now go to the stdout rather than stderr.  fflush statements,
  * some unnecessary, were added in a mostly automated fashion.
@@ -660,7 +665,7 @@ FIT_TRACE_PARAMETERS *fit_traces_readFitParametersFile
   long names0;
   ELEMENT_LIST *elem;
   
-  if (!SDDS_InitializeInput(&SDDSin, dataFile)) {
+  if (!SDDS_InitializeInputFromSearchPath(&SDDSin, dataFile)) {
     fprintf(stdout, "Error: couldn't read file %s\n", dataFile);
     fflush(stdout);
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
@@ -860,7 +865,7 @@ FIT_TRACE_DATA *fit_traces_readTraceDataFile
   FIT_TRACE_DATA *trace;
   char **BPMName;
 
-  if (!SDDS_InitializeInput(&SDDSin, dataFile)) {
+  if (!SDDS_InitializeInputFromSearchPath(&SDDSin, dataFile)) {
     fprintf(stdout, "Error: couldn't read file %s\n", dataFile);
     fflush(stdout);
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);

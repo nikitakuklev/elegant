@@ -1241,25 +1241,32 @@ void scatter(double **part, long np, double Po, SCATTER *scat)
 void store_fitpoint_beam_parameters(MARK *fpt, char *name, long occurence, double **coord, long np, double Po)
 {
   long i;
-  static double centroid[6], sigma[6];
-  static char *centroid_name_prefix[8] = {
+  static double centroid[6], sigma[6], emit[3];
+  static char *centroid_name_suffix[8] = {
     "Cx", "Cxp", "Cy", "Cyp", "Cs", "Cdelta", "pCentral", "Particles" };
-  static char *sigma_name_prefix[6] = {
+  static char *sigma_name_suffix[6] = {
     "Sx", "Sxp", "Sy", "Syp", "Ss", "Sdelta" };
+  static char *emit_name_suffix[3] = {
+    "ex", "ey", "es"};
   static char s[100];
 
   compute_centroids(centroid, coord, np);
-  compute_sigmas(sigma, centroid, coord, np);
+  compute_sigmas(emit, sigma, centroid, coord, np);
   if (!(fpt->init_flags&2)) {
     fpt->centroid_mem = tmalloc(sizeof(*fpt->centroid_mem)*8);
     fpt->sigma_mem = tmalloc(sizeof(*fpt->sigma_mem)*6);
+    fpt->emit_mem = tmalloc(sizeof(*fpt->emit_mem)*3);
     for (i=0; i<8; i++) {
-      sprintf(s, "%s#%ld.%s", name, occurence, centroid_name_prefix[i]);
+      sprintf(s, "%s#%ld.%s", name, occurence, centroid_name_suffix[i]);
       fpt->centroid_mem[i] = rpn_create_mem(s);
     }
     for (i=0; i<6; i++) {
-      sprintf(s, "%s#%ld.%s", name, occurence, sigma_name_prefix[i]);
+      sprintf(s, "%s#%ld.%s", name, occurence, sigma_name_suffix[i]);
       fpt->sigma_mem[i] = rpn_create_mem(s);
+    }
+    for (i=0; i<3; i++) {
+      sprintf(s, "%s#%ld.%s", name, occurence, emit_name_suffix[i]);
+      fpt->emit_mem[i] = rpn_create_mem(s);
     }
     fpt->init_flags |= 2;
   }
@@ -1267,6 +1274,8 @@ void store_fitpoint_beam_parameters(MARK *fpt, char *name, long occurence, doubl
     rpn_store(centroid[i], fpt->centroid_mem[i]);
     rpn_store(sigma[i], fpt->sigma_mem[i]);
   }
+  for (i=0; i<3; i++)
+    rpn_store(emit[i], fpt->emit_mem[i]);
   rpn_store(Po, fpt->centroid_mem[6]);
   rpn_store((double)np, fpt->centroid_mem[7]);
 }
@@ -1274,16 +1283,16 @@ void store_fitpoint_beam_parameters(MARK *fpt, char *name, long occurence, doubl
 void store_fitpoint_twiss_parameters(MARK *fpt, char *name, long occurence,TWISS *twiss)
 {
   long i;
-  static char *twiss_name_prefix[10] = {
-    "betax", "alphax", "nux", "etax", "etapx",
-    "betay", "alphay", "nuy", "etay", "etapy"
+  static char *twiss_name_suffix[12] = {
+    "betax", "alphax", "nux", "etax", "etapx", "etaxp",
+    "betay", "alphay", "nuy", "etay", "etapy", "etaxp",
     } ;
   static char s[100];
   if (!(fpt->init_flags&1)) {
-    fpt->twiss_mem = tmalloc(sizeof(*(fpt->twiss_mem))*10);
+    fpt->twiss_mem = tmalloc(sizeof(*(fpt->twiss_mem))*12);
     fpt->init_flags |= 1;
-    for (i=0; i<10; i++) {
-      sprintf(s, "%s#%ld.%s", name, occurence, twiss_name_prefix[i]);
+    for (i=0; i<12; i++) {
+      sprintf(s, "%s#%ld.%s", name, occurence, twiss_name_suffix[i]);
       fpt->twiss_mem[i] = rpn_create_mem(s);
     }
   }
@@ -1294,8 +1303,12 @@ void store_fitpoint_twiss_parameters(MARK *fpt, char *name, long occurence,TWISS
   }
   for (i=0; i<5; i++) {
     rpn_store(*((&twiss->betax)+i)/(i==2?PIx2:1), fpt->twiss_mem[i]);
-    rpn_store(*((&twiss->betay)+i)/(i==2?PIx2:1), fpt->twiss_mem[i+5]);
+    rpn_store(*((&twiss->betay)+i)/(i==2?PIx2:1), fpt->twiss_mem[i+6]);
   }
+  /* store etaxp and etayp in under two names each: etapx and etaxp */
+  i = 4;
+  rpn_store(*((&twiss->betax)+i), fpt->twiss_mem[i+1]);
+  rpn_store(*((&twiss->betay)+i), fpt->twiss_mem[i+7]);
 }
 
 

@@ -218,7 +218,7 @@ void set_up_ramped_rfca(RAMPRF *ramprf)
     if (!ramprf->vwaveform)
         bomb("no voltage waveform filename given for ramprf", NULL);
 
-    if (!get_table(&data, ramprf->vwaveform, 1, 0))
+    if (!getTableFromSearchPath(&data, ramprf->vwaveform, 1, 0))
         bomb("unable to read voltage waveform for ramprf", NULL);
 
     if (data.n_data<=1)
@@ -237,7 +237,7 @@ void set_up_ramped_rfca(RAMPRF *ramprf)
         bomb("you must give both a freq_waveform and a phase_waveform, or else give neither (RAMPRF)", NULL);
 
     if (ramprf->pwaveform) {
-        if (!get_table(&data, ramprf->pwaveform, 1, 0))
+        if (!getTableFromSearchPath(&data, ramprf->pwaveform, 1, 0))
             bomb("unable to read phase waveform for ramprf", NULL);
         
         if (data.n_data<=1)
@@ -254,7 +254,7 @@ void set_up_ramped_rfca(RAMPRF *ramprf)
         }
 
     if (ramprf->fwaveform) {
-        if (!get_table(&data, ramprf->fwaveform, 1, 0))
+        if (!getTableFromSearchPath(&data, ramprf->fwaveform, 1, 0))
             bomb("unable to read frequency waveform for ramprf", NULL);
         
         if (data.n_data<=1)

@@ -50,11 +50,19 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
     bomb("memory allocation failure (get_beamline)", NULL);
       
   if (madfile) {
+    char *filename;
+
 #ifdef DEBUG
     fprintf(stdout, "reading from file %s\n", madfile);
     fflush(stdout);
 #endif
-    fp_mad[0] = fopen_e(madfile, "r", 0);
+    if (!(filename=findFileInSearchPath(madfile))) {
+      fprintf(stderr, "Unable to find file %s\n", madfile);
+      exit(1);
+    }
+    fp_mad[0] = fopen_e(filename, "r", 0);
+    free(filename);
+    
     iMad = 0;
     
     elem = tmalloc(sizeof(*elem));
@@ -78,13 +86,19 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
           fflush(stdout);
         }
         if (s[0]=='#' && strncmp(s, "#INCLUDE:", strlen("#INCLUDE:"))==0) {
+          char *filename;
           if (++iMad==MAX_FILE_NESTING) 
             bomb("files nested too deeply", NULL);
           ptr = get_token(s+strlen("#INCLUDE:"));
           if (echo) {
             fprintf(stdout, "reading file %s\n", ptr);
           }
-          fp_mad[iMad] = fopen_e(ptr, "r", 0);
+          if (!(filename=findFileInSearchPath(ptr))) {
+            fprintf(stderr, "Unable to find file %s\n", ptr);
+            exit(1);
+          }
+          fp_mad[iMad] = fopen_e(filename, "r", 0);
+          free(filename);
           continue;
         }
         strcpy(t, s);

@@ -30,6 +30,7 @@
     long always_change_p0 = 0;
     STRING expand_for = NULL;
     long tracking_updates = 1;
+    STRING search_path = NULL;
 #end
 
 #namelist track static

@@ -11,6 +11,7 @@
 #include "namelist.h"
 #include "SDDS.h"
 #include "rpn.h"
+#include "table.h"
 #if defined(_WIN32)
 #include <float.h>
 #define isnan(x) _isnan(x)
@@ -795,11 +796,12 @@ typedef struct {
     long fitpoint;
     /* values for internal use: */
     unsigned long init_flags; /* 1:twiss_mem initialized, 
-                                 2:centroid_mem and sigma_mem initialized,
+                                 2:centroid_mem, sigma_mem, emit_mem initialized,
                                  4:floor_mem initialized */
     long *twiss_mem;       /* betax, alphax, NUx, etax, etaxp, betay, ... */
     long *centroid_mem;    /* (x, xp, y, yp, s, dp, Pcen, n) */
     long *sigma_mem;       /* (x, xp, y, yp, s, dp) */
+    long *emit_mem;        /* (x, y, z) */
     long *floor_mem;       /* X, Z, theta */
     } MARK;
 
@@ -1782,7 +1784,7 @@ extern void check_duplic_line(LINE_LIST *line, LINE_LIST *new_line, long n_lines
  
 /* prototypes for compute_centroids.c: */
 extern void compute_centroids(double *centroid, double **coordinates, long n_part);
-extern void compute_sigmas(double *sigma, double *centroid, double **coordinates, long n_part);
+extern void compute_sigmas(double *emit, double *sigma, double *centroid, double **coordinates, long n_part);
 extern void zero_beam_sums(BEAM_SUMS *sums, long n);
 extern void accumulate_beam_sums(BEAM_SUMS *sums, double **coords, long n_part, double p_central);
 extern void copy_beam_sums(BEAM_SUMS *target, BEAM_SUMS *source);
@@ -2300,6 +2302,10 @@ extern void finishLatticeParametersFile(void);
 
 extern void doSubprocessCommand(char *command);
 void run_subprocess(NAMELIST_TEXT *nltext, RUN *run);
+long setSearchPath(char *path);
+char *findFileInSearchPath(char *filename);
+long getTableFromSearchPath(TABLE *tab, char *file, long sampleInterval, long flags);
+long SDDS_InitializeInputFromSearchPath(SDDS_DATASET *SDDSin, char *file);
 
 void ComputeSASEFELParameters
   (double *lightWavelength, double *saturationLength, double *gainLength,  double *noisePower,

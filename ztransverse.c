@@ -186,7 +186,7 @@ void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long part
     if (!ztransverse->ZxReal && !ztransverse->ZxImag &&
         !ztransverse->ZyReal && !ztransverse->ZxImag)
       bomb("you must either give broad_band=1, or Z[xy]Real and/or Z[xy]Imag (ZTRANSVERSE)", NULL);
-    if (!SDDS_InitializeInput(&SDDSin, ztransverse->inputFile) || !SDDS_ReadPage(&SDDSin)) {
+    if (!SDDS_InitializeInputFromSearchPath(&SDDSin, ztransverse->inputFile) || !SDDS_ReadPage(&SDDSin)) {
       fprintf(stdout, "unable to read file %s\n", ztransverse->inputFile);
       fflush(stdout);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors); 

@@ -263,10 +263,8 @@ long new_sdds_beam(
           fflush(stdout);
           exit(1);
         }
-        if (sample_fraction!=1 && random_4(1)>sample_fraction) {
-          i_store--;
+        if (sample_fraction!=1 && random_4(1)>sample_fraction)
           continue;
-        }
         pti = beam->original[i];
         p = sqrt(sqr(pti[ISC_PZ]) + sqr(pti[ISC_PR]));
         gamma = sqrt(sqr(p)+1);
@@ -494,7 +492,7 @@ long get_sdds_particles(double ***particle,
   files_initialized = 0;
   if (!input_initialized) {
     input_initialized = 1;
-    if (!SDDS_InitializeInput(&SDDS_input, input_file)) {
+    if (!SDDS_InitializeInputFromSearchPath(&SDDS_input, input_file)) {
       sprintf(s, "Problem opening beam input file %s", input_file);
       SDDS_SetError(s);
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);

@@ -44,7 +44,7 @@ void readErrorMultipoleData(MULTIPOLE_DATA *multData,
   }
   if (multData->initialized)
     return;
-  if (!SDDS_InitializeInput(&SDDSin, multFile)) {
+  if (!SDDS_InitializeInputFromSearchPath(&SDDSin, multFile)) {
     fprintf(stdout, "Problem opening file %s\n", multFile);
     fflush(stdout);
     exit(1);
@@ -98,7 +98,7 @@ void initialize_fmultipole(FMULT *multipole)
     return;
   if (!multipole->filename)
     bomb("FMULT element doesn't have filename", NULL);
-  if (!SDDS_InitializeInput(&SDDSin, multipole->filename)) {
+  if (!SDDS_InitializeInputFromSearchPath(&SDDSin, multipole->filename)) {
     sprintf(buffer, "Problem opening file %s (FMULT)\n", multipole->filename);
     SDDS_SetError(buffer);
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);

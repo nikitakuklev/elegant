@@ -266,8 +266,14 @@ void fill_elem(ELEMENT_LIST *eptr, char *s, long type, FILE *fp_input)
     else if (type==T_MATR) {
         MATR *matr;
         FILE *fpm;
+        char *filename;
         matr = (MATR*)eptr->p_elem;
-        fpm = fopen_e(matr->filename, "r", 0);
+        if (!(filename=findFileInSearchPath(matr->filename))) {
+          fprintf(stderr,"Unable to find MATR file %s\n", matr->filename);
+          exit(1);
+        }
+        fpm = fopen_e(filename, "r", 0);
+        free(filename);
         matr->M.order = matr->order;
         initialize_matrices(&(matr->M), matr->order);
         if (!read_matrices(&(matr->M), fpm)) {

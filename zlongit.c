@@ -42,7 +42,7 @@ static SDDS_DEFINITION wake_parameter[WAKE_PARAMETERS] = {
     {"Deltaf", "&parameter name=Deltaf, symbol=\"$gD$rf\", units=Hz, type=double, description=\"Frequency sampling interval\" &end"},
     } ;
 
-#define DEBUG 1
+#define DEBUG 0
 
 void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARGE *charge);
 
@@ -310,9 +310,9 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
             bomb("ZLONGIT element must have n_bins>=1", NULL);
         if (!zlongit->Zreal && !zlongit->Zimag)
             bomb("you must either give broad_band=1, or Zreal and/or Zimag (ZLONGIT)", NULL);
-        if (zlongit->Zreal && !get_table(&Zr_data, zlongit->Zreal, 1, 0))
+        if (zlongit->Zreal && !getTableFromSearchPath(&Zr_data, zlongit->Zreal, 1, 0))
             bomb("unable to read real impedance function (ZLONGIT)", NULL);
-        if (zlongit->Zimag && !get_table(&Zi_data, zlongit->Zimag, 1, 0))
+        if (zlongit->Zimag && !getTableFromSearchPath(&Zi_data, zlongit->Zimag, 1, 0))
             bomb("unable to read imaginary impedance function (ZLONGIT)", NULL);
         if (zlongit->Zreal && !zlongit->Zimag) {
             Zr = Zr_data.c2;

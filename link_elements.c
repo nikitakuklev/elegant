@@ -84,6 +84,11 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
 
     /* set namelist variables to defaults */
     target = item = source = equation = exclude = NULL;
+    /* must initialize these hear rather than in the .nl file
+     * to avoid problems with str_tolower() and other operations
+     */
+    cp_str(&source_position, "before");
+    cp_str(&mode, "dynamic");
 
     /* process namelist text */
     process_namelist(&link_elements, nltext);

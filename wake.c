@@ -188,7 +188,7 @@ void set_up_wake(WAKE *wakeData, RUN *run, long pass, long particles, CHARGE *ch
   
   if (iw==storedWakes) {
     /* read in a new wake */
-    if (!SDDS_InitializeInput(&SDDSin, wakeData->inputFile) || SDDS_ReadPage(&SDDSin)!=1) {
+    if (!SDDS_InitializeInputFromSearchPath(&SDDSin, wakeData->inputFile) || SDDS_ReadPage(&SDDSin)!=1) {
       fprintf(stderr, "Error: unable to open or read WAKE file %s\n", wakeData->inputFile);
       exit(1);
     }
