@@ -40,7 +40,7 @@ double engeOptimizationFunction(double *b, long *invalid)
   bnEnge[2] = b[2];
   *invalid = 0;
   
-  /* field goes to 1 at center of arc */
+  /* field should go to 1 at center of arc */
   F[0] = 1 - engeProfile(-rhoEnge*tan(angleEnge/2));
 
   /* effective length constraint */
