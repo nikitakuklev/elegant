@@ -510,7 +510,7 @@ void do_save_lattice(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
                     dvalue = *(double*)(eptr->p_elem+parameter[j].offset);
                     if (dvalue!=parameter[j].number) {
                         /* value is not the default, so add to output */
-                        sprintf(t, "%s=%.15g", parameter[j].name, dvalue);
+                        sprintf(t, "%s=%.16g", parameter[j].name, dvalue);
                         strcat(s, t);
                         if (j!=entity_description[eptr->type].n_params-1)
                             strcat(s, ",");
