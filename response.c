@@ -97,10 +97,10 @@ void setup_response_output(RESPONSE_OUTPUT *respOutput,
         SDDS_DefineColumn(&respOutput->SDDSout, "s", NULL, NULL, "beam-position-monitor location", NULL, SDDS_DOUBLE, 0);
     SDDS_DefineParameter(&respOutput->SDDSout, "CorrectionMatrixType", NULL, NULL, "correction matrix type",
                          NULL, SDDS_STRING, inverse?"Inverse":"Response");
-    SDDS_DefineParameter(&respOutput->SDDSout, "NCorrectors", NULL, NULL, "Number of correctors", NULL, SDDS_LONG, 
-                         sprintf(s, "%ld", CM->ncor));
-    SDDS_DefineParameter(&respOutput->SDDSout, "NMonitors", NULL, NULL, "Number of correctors", NULL, SDDS_LONG, 
-                         sprintf(s, "%ld", CM->nmon));
+    SDDS_DefineParameter1(&respOutput->SDDSout, "NCorrectors", NULL, NULL, "Number of correctors", NULL, SDDS_LONG, 
+                         &CM->ncor);
+    SDDS_DefineParameter1(&respOutput->SDDSout, "NMonitors", NULL, NULL, "Number of correctors", NULL, SDDS_LONG, 
+                          &CM->nmon);
     SDDS_DefineParameter(&respOutput->SDDSout, "Stage", NULL, NULL, "Simulation stage", NULL, SDDS_STRING, NULL);
     if (SDDS_NumberOfErrors())
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);

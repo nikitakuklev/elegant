@@ -111,7 +111,6 @@ void concatenate_beamline(LINE_LIST *beamline, RUN *run)
             memcpy((char*)ecat, (char*)elem, sizeof(*ecat));
             ecat->pred = pred;
             ecat->succ = succ;
-            ecat->twiss = NULL;
             ecat->flags   = 0;
             if (ecat->type==T_RECIRC)
                 beamline->ecat_recirc = ecat;

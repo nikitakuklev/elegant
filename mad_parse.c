@@ -222,7 +222,7 @@ void fill_elem(ELEMENT_LIST *eptr, char *s, long type, FILE *fp_input)
         }
 
     eptr->name = get_token_t(s, " ,\011");
-    if (strlen(eptr->name)>max_name_length) {
+    if (((long)strlen(eptr->name))>max_name_length) {
         printf("warning: element name %s truncated to %ld  characters\n",
                 eptr->name, max_name_length);
         eptr->name[max_name_length] = 0;
@@ -283,7 +283,7 @@ void copy_named_element(ELEMENT_LIST *eptr, char *s, ELEMENT_LIST *elem)
         }
     delete_bounding(match, "\"");
 
-    if (strlen(name)>max_name_length) {
+    if (((long)strlen(name))>max_name_length) {
         printf("warning: element name %s truncated to %ld characters\n",
                 eptr->name, max_name_length);
         name[max_name_length] = 0;
@@ -345,7 +345,7 @@ long expand_phys(
     /* search for truncated name, for the case that it turns out
      * to be an element */
     trunc_char = 0;
-    if (strlen(entity)>max_name_length) {
+    if (((long)strlen(entity))>max_name_length) {
         trunc_char = entity[max_name_length];
         entity[max_name_length] = 0;
         }
@@ -531,7 +531,7 @@ long tell_type(char *s, ELEMENT_LIST *elem)
                 fprintf(stderr, "error: item %s is ambiguous--specify more of the item name\n", ptr);
                 exit(1);
                 }
-            if (l==strlen(madcom_name[i])) {
+            if (l==((long)strlen(madcom_name[i]))) {
                 log_exit("tell_type");
                 return(-i-1);
                 }

@@ -415,7 +415,8 @@ long get_sdds_particles(double ***particle, long one_dump, long n_skip)
         /* reset for reading again */
         for (ifile=0; ifile<n_input_files; ifile++)  {
             if (input_initialized[ifile] && !SDDS_Terminate(SDDS_input+ifile)) {
-                SDDS_SetError(sprintf(s, "Problem terminating SDDS beam input from file %s", input_file[ifile]));
+                sprintf(s, "Problem terminating SDDS beam input from file %s", input_file[ifile]);
+                SDDS_SetError(s);
                 SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
                 }
             input_initialized[ifile] = 0;
@@ -431,7 +432,8 @@ long get_sdds_particles(double ***particle, long one_dump, long n_skip)
         files_initialized++;
         input_initialized[ifile] = 1;
         if (!SDDS_InitializeInput(SDDS_input+ifile, input_file[ifile])) {
-            SDDS_SetError(sprintf(s, "Problem opening beam input file %s", input_file[ifile]));
+            sprintf(s, "Problem opening beam input file %s", input_file[ifile]);
+            SDDS_SetError(s);
             SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
             }
         if (selection_parameter) {
@@ -495,8 +497,8 @@ long get_sdds_particles(double ***particle, long one_dump, long n_skip)
             if (selection_parameter) {
                 char *value;
                 if (!SDDS_GetParameter(SDDS_input+ifile, selection_parameter, &value)) {
-                    SDDS_SetError(sprintf(s, "Problem getting value of parameter %s from file %s",
-                                          selection_parameter, input_file[ifile]));
+                    sprintf(s, "Problem getting value of parameter %s from file %s", selection_parameter, input_file[ifile]);
+                    SDDS_SetError(s);
                     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
                     }
                 if (!wild_match(value, selection_string)) {
@@ -507,17 +509,20 @@ long get_sdds_particles(double ***particle, long one_dump, long n_skip)
             SDDS_SetColumnFlags(SDDS_input+ifile, 0);
             if (input_type_code==SPIFFE_BEAM && 
                 !SDDS_SetColumnsOfInterest(SDDS_input+ifile, SDDS_NAMES_STRING, spiffe_columns)) {
-                SDDS_SetError(sprintf(s, "Problem setting columns of interest for file %s", input_file[ifile]));
+                sprintf(s, "Problem setting columns of interest for file %s", input_file[ifile]);
+                SDDS_SetError(s);
                 SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
                 }
             else if (input_type_code!=SPIFFE_BEAM &&
                      !SDDS_SetColumnsOfInterest(SDDS_input+ifile, SDDS_NAMES_STRING, elegant_columns)) {
-                SDDS_SetError(sprintf(s, "Problem setting columns of interest for file %s", input_file[ifile]));
+                sprintf(s, "Problem setting columns of interest for file %s", input_file[ifile]);
+                SDDS_SetError(s);
                 SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
                 }
             if ((rows = SDDS_CountRowsOfInterest(SDDS_input+ifile))<=0) {
                 if (rows==-1) {
-                    SDDS_SetError(sprintf(s, "Problem counting rows of interest for file %s", input_file[ifile]));
+                    sprintf(s, "Problem counting rows of interest for file %s", input_file[ifile]);
+                    SDDS_SetError(s);
                     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
                     }
                 break;
@@ -528,11 +533,13 @@ long get_sdds_particles(double ***particle, long one_dump, long n_skip)
                 data = trealloc(data, np_max*sizeof(*data));
                 }
             if (!(new_data=SDDS_GetCastMatrixOfRows(SDDS_input+ifile, &i, SDDS_DOUBLE))) {
-                SDDS_SetError(sprintf(s, "Problem getting matrix of rows for file %s", input_file[ifile]));
+                sprintf(s, "Problem getting matrix of rows for file %s", input_file[ifile]);
+                SDDS_SetError(s);
                 SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
                 }
             if (i!=rows) {
-                SDDS_SetError(sprintf(s, "Row count mismatch for file %s", input_file[ifile]));
+                sprintf(s, "Row count mismatch for file %s", input_file[ifile]);
+                SDDS_SetError(s);
                 SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
                 }
             for (i=np; i<np_new; i++)
@@ -541,7 +548,8 @@ long get_sdds_particles(double ***particle, long one_dump, long n_skip)
             if ((indexID=SDDS_GetColumnIndex(SDDS_input+ifile, "particleID"))>=0) {
                 double *index;
                 if (!(index=SDDS_GetColumnInDoubles(SDDS_input+ifile, "particleID"))) {
-                    SDDS_SetError(sprintf(s, "Problem reading particleID column for file %s", input_file[ifile]));
+                    sprintf(s, "Problem reading particleID column for file %s", input_file[ifile]);
+                    SDDS_SetError(s);
                     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
                     }
                 for (i=np; i<np_new; i++)
