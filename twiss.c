@@ -1741,6 +1741,10 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
 
   I1 = I2 = I3 = I4 = I5 = 0;
 
+#ifdef DEBUG
+  fprintf(stderr, "incrementRadIntegrals: %s at %e: beta=%e, alpha=%e, eta=%e, etap=%e\n", 
+	  elem->name, elem->end_pos, beta0, alpha0, eta0, etap0);
+#endif
   if (elem->type==T_WIGGLER) {
     WIGGLER *wiggler;
     wiggler = (WIGGLER*)(elem->p_elem);
@@ -2818,6 +2822,10 @@ void AddWigglerRadiationIntegrals(double length, long poles, double radius,
       h0 = fieldSign*0.5/radius;
     } else
       h0 = fieldSign/radius;
+#ifdef DEBUG
+    fprintf(stderr, "Wiggler: pole=%4ld beta=%14.6e alpha=%14.6e gamma=%14.6e eta=%14.6e etap=%14.6e\n",
+	    pole, beta, alpha, gamma, eta, etap);
+#endif
 
     *I1 += (h0*Lp*(h0*ipow(Lp,2) + 4*eta*PI + 2*etap*Lp*PI))/
       (2.*ipow(PI,2));
@@ -2842,7 +2850,8 @@ void AddWigglerRadiationIntegrals(double length, long poles, double radius,
       (54000.*ipow(PI,5));
     
     beta  = beta - 2*Lp*alpha + sqr(Lp)*gamma;
-    alpha = alpha - Lp*alpha;
+    alpha = alpha - Lp*gamma;
+    gamma = (1+alpha*alpha)/beta;
     eta   = eta + (etap + Lp/PI*h0)*Lp ;
     etap  = etap + 2*Lp/PI*h0;
   }
