@@ -5,6 +5,7 @@
 	STRING type = NULL;
 	STRING exclude = NULL;
         STRING new_type = "DRIF";
-        long clear;
+	long ignore = 0;
+        long clear_all = 0;
 #end
 

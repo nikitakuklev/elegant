@@ -84,11 +84,13 @@ void setupTransmuteElements(NAMELIST_TEXT *nltext, RUN *run,
   process_namelist(&transmute_elements, nltext);
   print_namelist(stdout, &transmute_elements);
 
-  if (clear) {
+  if (clear_all) {
     clearTransmutationSpecs();
     if (!name && !type)
       return;
   }
+  if (ignore)
+    return;
 
   if (!new_type)
     bomb("new_type must be given", NULL);
