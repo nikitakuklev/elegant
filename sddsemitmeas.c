@@ -15,6 +15,9 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.19  2004/12/29 23:33:56  borland
+ * Fixed bug in previous change.
+ *
  * Revision 1.18  2004/12/29 23:31:19  borland
  * Now outputs the sigma data and fit even with errors.  In this case, any
  * first perturbation is provided.
@@ -165,6 +168,7 @@ USAGE,
 "    In this case, you must put the dispersion (etax, etay) at the measurement",
 "    point in <inputfile>.  This can be done using the elegant twiss",
 "    output plus some SDDS tools.",
+"\n*** Note: use of sddsemitproc is recommended instead of this program! ***",
 NULL
     } ; 
 
@@ -693,6 +697,9 @@ int main(
       n_good_fits_x = n_good_fits_y = 0;
       n_xresol = n_yresol = 0; 
       for (i_error=0; i_error<n_error_sets; i_error++) {
+        if (verbosity>1) {
+          fprintf(stderr, "Error set %ld...\n", i_error);
+        }
         for (i_config=0; i_config<n_configs; i_config++) {
           s2x->a[i_config][0] =  sqr( sigmax[i_config] ) - sqr(x_resol);
           s2y->a[i_config][0] =  sqr( sigmay[i_config] ) - sqr(y_resol);
@@ -754,6 +761,9 @@ int main(
               md_x += contrib;
               if (nx_used && (emitx = Sx->a[0][0]*Sx->a[2][0]-sqr(Sx->a[1][0]))>0) {
                   emitx = sqrt(emitx);
+                  if (verbosity>2) {
+                    fprintf(stderr, "Vertical emittance: %e\n", emitx);
+                  }
                   S11_sum += Sx->a[0][0]; S11_sum2 += sqr(Sx->a[0][0]);
                   S12_sum += Sx->a[1][0]; S12_sum2 += sqr(Sx->a[1][0]);
                   S22_sum += Sx->a[2][0]; S22_sum2 += sqr(Sx->a[2][0]);
@@ -783,6 +793,9 @@ int main(
               md_y += contrib;
               if (ny_used && (emity = Sy->a[0][0]*Sy->a[2][0]-sqr(Sy->a[1][0]))>0) {
                   emity = sqrt(emity);
+                  if (verbosity>2) {
+                    fprintf(stderr, "Vertical emittance: %e\n", emity);
+                  }
                   S33_sum += Sy->a[0][0]; S33_sum2 += sqr(Sy->a[0][0]);
                   S34_sum += Sy->a[1][0]; S34_sum2 += sqr(Sy->a[1][0]);
                   S44_sum += Sy->a[2][0]; S44_sum2 += sqr(Sy->a[2][0]);
