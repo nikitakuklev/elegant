@@ -4,6 +4,9 @@ exec oagwish "$0" "$@"
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.8  2004/10/26 16:41:36  borland
+# Added command buttons to file entry boxes.
+#
 # Revision 1.7  2004/09/23 21:27:40  borland
 # Added optional variation of Energy, EnergySpread, and RfVoltage from file.
 # Haissinski equation now uses script value of energy spread.
@@ -150,7 +153,7 @@ set auto_path [linsert $auto_path 0  /usr/local/oag/apps/lib/$env(HOST_ARCH)]
 set auto_path [linsert $auto_path 0 /usr/local/oag/lib_patch/$env(HOST_ARCH)]
 APSDebugPath
 
-set CVSRevisionAuthor "\$Revision: 1.8 $ \$Author: borland $"
+set CVSRevisionAuthor "\$Revision: 1.9 $ \$Author: borland $"
 
 APSApplication . -name beamLifetimeCalc -version $CVSRevisionAuthor -overview \
   "Calculates the gas scattering lifetime due to single Coulomb scattering and
@@ -217,7 +220,7 @@ set haissinskiPoints 4000
 set haissinskiFraction 0.01
 set haissinskiDivisor 100.0
 set haissinskiIterations 1000
-set haissinskiTolerance 0.001
+set haissinskiTolerance 0.0001
 set broadBandImpedance 0.5
 set revolutionFrequency 271.55e3
 # default area for lattice.
