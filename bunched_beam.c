@@ -23,6 +23,7 @@ static long x_beam_type, y_beam_type, longit_beam_type;
 
 static SDDS_TABLE SDDS_bunch;
 static long SDDS_bunch_initialized;
+static long beamRepeatSeed;
 
 void fill_transverse_structure(TRANSVERSE *trans, double emit, double beta, 
     double alpha, double eta, double etap, long xbeam_type, double cutoff,
@@ -40,7 +41,8 @@ void setup_bunched_beam(
     OPTIM_VARIABLES *optim,
     OUTPUT_FILES *output,
     LINE_LIST *beamline,
-    long n_elements
+    long n_elements,
+    long save_original
     )
 {
 
@@ -129,16 +131,25 @@ void setup_bunched_beam(
     fill_longitudinal_structure(&longit, sigma_dp, sigma_s, dp_s_coupling,
             longit_beam_type, distribution_cutoff[2], centroid+4);
 
-    beam->original = (double**)zarray_2d(sizeof(double), n_particles_per_bunch, 7);
     beam->particle = (double**)zarray_2d(sizeof(double), n_particles_per_bunch, 7);
+    if (!save_original)
+      beam->original = beam->particle;
+    else
+      beam->original = (double**)zarray_2d(sizeof(double), n_particles_per_bunch, 7);
     if (run->acceptance) 
         beam->accepted = (double**)zarray_2d(sizeof(double), n_particles_per_bunch, 7);
     else
         beam->accepted = NULL;
-
+    
     beam->n_original = beam->n_to_track = n_particles_per_bunch;
     beam->n_accepted = 0;
 
+    if (one_random_bunch) {
+      /* make a seed for reinitializing the beam RN generator */
+      beamRepeatSeed = 1e8*random_4(1);
+      random_4(-beamRepeatSeed);
+    }
+    
     log_exit("setup_bunched_beam");
     }
 
@@ -166,8 +177,14 @@ long new_bunched_beam(
 
     p_central = beam->p0_original = run->p_central;
 
-    if (!(flags&TRACK_PREVIOUS_BUNCH) && (!one_random_bunch  || 
-                (control->i_step==1 && (control->n_indices==0 || control->i_vary==1)))) {
+    if (flags&TRACK_PREVIOUS_BUNCH && beam->original==beam->particle)
+      bomb("programming error: original beam coordinates needed but not saved", NULL);
+    
+    if (!(flags&TRACK_PREVIOUS_BUNCH)) {
+        if (one_random_bunch)
+            /* reseed the random number generator to get the same sequence again */
+            /* means we don't have to store the original coordinates */
+            random_4(-beamRepeatSeed);
         if (control->cell) {
             compute_periodic_twiss(&beta_x, &alpha_x, &eta_x, &etap_x, &dummy,
                                    &beta_y, &alpha_y, &eta_y, &etap_y, &dummy, 
@@ -186,8 +203,10 @@ long new_bunched_beam(
             }
         fprintf(stdout, "generating bunch %ld.%ld\n", control->i_step, control->i_vary);
         fflush(stdout);
-        n_actual_particles = generate_bunch(beam->original, n_particles_per_bunch, &x_plane,
-                   &y_plane, &longit, enforce_rms_values, limit_invariants, symmetrize, limit_in_4d, Po);
+        n_actual_particles = 
+          generate_bunch(beam->original, n_particles_per_bunch, &x_plane,
+                         &y_plane, &longit, enforce_rms_values, limit_invariants, 
+                         symmetrize, limit_in_4d, Po);
         if (n_actual_particles!=n_particles_per_bunch)
             fprintf(stdout, "warning: only %ld of %ld requested particles are actually being tracked.\n", n_actual_particles, 
                     n_particles_per_bunch);
@@ -220,7 +239,8 @@ long new_bunched_beam(
     s_offset = control->bunch_frequency?
                 (control->i_step-1)*(beta*c_mks)/control->bunch_frequency:0;
     for (i_particle=0; i_particle<beam->n_to_track; i_particle++) {
-        for (i_coord=0; i_coord<7; i_coord++) 
+        if (beam->particle!=beam->original)
+          for (i_coord=0; i_coord<7; i_coord++) 
             beam->particle[i_particle][i_coord] = beam->original[i_particle][i_coord];
         gamma = sqrt(sqr(p=Po*(1+beam->particle[i_particle][5]))+1);
         beta  = p/gamma;
@@ -279,9 +299,9 @@ long track_beam(
                        (!(run->centroid || run->sigma)?FINAL_SUMS_ONLY:0)+
                        ((control->fiducial_flag|flags)&
                         (LINEAR_CHROMATIC_MATRIX+LONGITUDINAL_RING_ONLY+FIRST_BEAM_IS_FIDUCIAL
-                         +FIDUCIAL_BEAM_SEEN)),
+                         +FIDUCIAL_BEAM_SEEN+PRECORRECTION_BEAM)),
                        control->n_passes, &(output->sasefel), finalCharge);
-  if (control->fiducial_flag&FIRST_BEAM_IS_FIDUCIAL)
+  if (control->fiducial_flag&FIRST_BEAM_IS_FIDUCIAL && !(flags&PRECORRECTION_BEAM))
     control->fiducial_flag |= FIDUCIAL_BEAM_SEEN;
   
   if (!beam) {
@@ -627,18 +647,13 @@ void finish_output(
         tfree(output->sums_vs_z);
         output->sums_vs_z = NULL;
         }
-    if (beam->original) {
+    if (beam->original && beam->original!=beam->particle)
         free_zarray_2d((void**)beam->original, beam->n_original, 7);
-        beam->original = NULL;
-        }
-    if (beam->particle) {
+    if (beam->particle)
         free_zarray_2d((void**)beam->particle, beam->n_original, 7);
-        beam->particle = NULL;
-        }
-    if (beam->accepted) {
+    if (beam->accepted)
         free_zarray_2d((void**)beam->accepted, beam->n_original, 7);
-        beam->accepted = NULL;
-        }
+    beam->original = beam->particle = beam->accepted = NULL;
     log_exit("finish_output.3");
     }
 

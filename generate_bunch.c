@@ -279,16 +279,19 @@ void gaussian_distribution(
 {
     float x1, x2;
     long i_particle;
-
+    double sum1=0, sum2=0;
+    
     log_entry("gaussian_distribution");
 
     for (i_particle=0; i_particle<n_particles; i_particle++) {
         do {
-            x1 = gauss_rn_lim(0.0, s1, limit, random_2);
-            x2 = gauss_rn_lim(0.0, s2, limit, random_2);
+            x1 = gauss_rn_lim(0.0, s1, limit, random_4);
+            x2 = gauss_rn_lim(0.0, s2, limit, random_4);
             particle[i_particle][0+offset] = x1;
             particle[i_particle][1+offset] = x2;
             } while (limit_invar!=0 && (sqr(x1)+sqr(beta*x2))>limit_invar);
+        sum1 += x1;
+        sum2 += x2;
         if (symmetrize) {
             if (++i_particle>=n_particles)
                 break;
@@ -329,8 +332,8 @@ void uniform_distribution(
 
     for (i_particle=0; i_particle<n_particles; i_particle++) {
         do {
-            rnd1 = random_2(1)-.5;
-            rnd2 = random_2(1)-.5;
+            rnd1 = random_4(1)-.5;
+            rnd2 = random_4(1)-.5;
             } while (rnd2*rnd2+rnd1*rnd1 > .25) ;
         x1 = range1*rnd1;
         x2 = range2*rnd2;
@@ -425,8 +428,8 @@ void hard_edge_distribution(
     range2 = 2*max2*cutoff;
 
     for (i_particle=0; i_particle<n_particles; i_particle++) {
-        rnd1 = random_2(1)-.5;
-        rnd2 = random_2(1)-.5;
+        rnd1 = random_4(1)-.5;
+        rnd2 = random_4(1)-.5;
         x1 = range1*rnd1;
         x2 = range2*rnd2;
         particle[i_particle][0+offset] = x1;
@@ -636,10 +639,10 @@ void gaussian_4d_distribution(
     cutoff2 = sqr(cutoff);
     for (i_particle=0; i_particle<n_particles; i_particle++) {
         do {
-            x1 = gauss_rn_lim(0.0, 1.0, cutoff, random_2);
-            x2 = gauss_rn_lim(0.0, 1.0, cutoff, random_2);
-            x3 = gauss_rn_lim(0.0, 1.0, cutoff, random_2);
-            x4 = gauss_rn_lim(0.0, 1.0, cutoff, random_2);
+            x1 = gauss_rn_lim(0.0, 1.0, cutoff, random_4);
+            x2 = gauss_rn_lim(0.0, 1.0, cutoff, random_4);
+            x3 = gauss_rn_lim(0.0, 1.0, cutoff, random_4);
+            x4 = gauss_rn_lim(0.0, 1.0, cutoff, random_4);
             } while (sqr(x1)+sqr(x2)+sqr(x3)+sqr(x4)>cutoff2);
         particle[i_particle][0+offset] = x1*s1;
         particle[i_particle][1+offset] = x2*s2;
@@ -672,10 +675,10 @@ void uniform_4d_distribution(
 
     for (i_particle=0; i_particle<n_particles; i_particle++) {
         do {
-            rnd1 = random_2(1)-.5;
-            rnd2 = random_2(1)-.5;
-            rnd3 = random_2(1)-.5;
-            rnd4 = random_2(1)-.5;
+            rnd1 = random_4(1)-.5;
+            rnd2 = random_4(1)-.5;
+            rnd3 = random_4(1)-.5;
+            rnd4 = random_4(1)-.5;
             } while (rnd1*rnd1+rnd2*rnd2+rnd3*rnd3+rnd4*rnd4 > .25) ;
         particle[i_particle][0+offset] = max1*rnd1;
         particle[i_particle][1+offset] = max2*rnd2;

@@ -37,8 +37,6 @@ void track_through_trfmode(
   static long debugPass = 0;
 #endif
 
-  log_entry("track_through_trfmode");
-
   if (charge) {
     trfmode->mp_charge = charge->macroParticleCharge;
   } else if (pass==0) {
@@ -69,7 +67,7 @@ void track_through_trfmode(
   }
   tau = 2*Q/omega;
   Qrp = sqrt(Q*Q - 0.25);
-  k = omega/4*trfmode->Ra/Q;
+  k = omega/4*trfmode->Ra/trfmode->Q;
 
   if (!trfmode->doX && !trfmode->doY)
     bomb("x and y turned off for TRFMODE---this shouldn't happen", NULL);
@@ -230,7 +228,18 @@ void track_through_trfmode(
     }
   }
 
-  log_exit("track_through_trfmode");
+#if defined(MINIMIZE_MEMORY)
+  free(xsum);
+  free(ysum);
+  free(Vxbin);
+  free(Vybin);
+  free(pbin);
+  free(time);
+  xsum = ysum = Vxbin = Vybin = time = NULL;
+  pbin = NULL;
+  max_n_bins =  max_np = 0;
+#endif
+
 }
 
 

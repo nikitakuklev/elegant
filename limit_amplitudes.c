@@ -560,8 +560,14 @@ long track_through_pfilter(
     }
   }
   
-  if (pfilter->deltaLimit<0)
+  if (pfilter->deltaLimit<0) {
+#if defined(MINIMIZE_MEMORY)
+    free(deltaBuffer);
+    deltaBuffer = NULL;
+    maxBuffer= 0;
+#endif
     return itop+1;
+  }
   for (ip=0; ip<=itop; ip++) {
     if (fabs(initial[ip][5])<pfilter->deltaLimit)
       continue;
@@ -573,6 +579,11 @@ long track_through_pfilter(
     --itop;
     --ip;
   }
+#if defined(MINIMIZE_MEMORY)
+  free(deltaBuffer);
+  deltaBuffer = NULL;
+  maxBuffer= 0;
+#endif
   return itop+1;
 }
 

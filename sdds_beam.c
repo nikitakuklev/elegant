@@ -61,7 +61,8 @@ void setup_sdds_beam(
                      OPTIM_VARIABLES *optim,
                      OUTPUT_FILES *output,
                      LINE_LIST *beamline,
-                     long n_elements
+                     long n_elements,
+                     long save_original
                      )
 {
   char *ptr;
@@ -239,7 +240,7 @@ long new_sdds_beam(
           fflush(stdout);
           exit(1);
         }
-        if (sample_fraction!=1 && random_2(1)>sample_fraction) {
+        if (sample_fraction!=1 && random_4(1)>sample_fraction) {
           i_store--;
           continue;
         }
@@ -252,7 +253,7 @@ long new_sdds_beam(
         path   = (t_offset + pti[ISC_T])*c_mks*(beta = p/gamma) ;
         delta  = (p-p_central)/p_central;
         rp     = pti[ISC_PR]/pti[ISC_PZ];
-        theta  = PIx2*random_2(1);
+        theta  = PIx2*random_4(1);
         for (j=0; j<n_particles_per_ring; j++, i_store++) {
           sin_theta = sin(theta);
           cos_theta = cos(theta);
@@ -305,7 +306,7 @@ long new_sdds_beam(
       if (!beam->particle)
         bomb("beam->particle array is NULL (new_sdds_beam)", NULL);
       for (i=i_store=0; i<beam->n_original; i_store++,i+=sample_interval) {
-        if (sample_fraction!=1 && random_2(1)>sample_fraction) {
+        if (sample_fraction!=1 && random_4(1)>sample_fraction) {
           i_store--;
           continue;
         }

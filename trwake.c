@@ -23,8 +23,6 @@ void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
   long ib, nb, n_binned, plane;
   double factor, tmin, tmean, tmax, dt;
 
-  log_entry("track_through_wake");
-
   set_up_trwake(wakeData, run, i_pass, np, charge);
 
   if (np>max_np) {
@@ -36,6 +34,7 @@ void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
   /* Compute time coordinate of each particle */
   tmean = computeTimeCoordinates(time, Po, part, np);
   find_min_max(&tmin, &tmax, time, np);
+  
   if ((tmax-tmin) > (wakeData->t[wakeData->wakePoints-1]-wakeData->t[0]))
     bomb("the beam is longer than the transverse wake function.  This would produce unphysical results.",
          NULL);
@@ -48,6 +47,11 @@ void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
     nb = (tmax-tmin)/dt+3;
     tmin -= dt;
     tmax += dt;
+  }
+
+  if (tmin>tmax || nb<=0) {
+    fprintf(stdout, "Problem with time coordinates in TRWAKE.  Po=%le\n", Po);
+    exit(1);
   }
   
   if (nb>max_n_bins) {
@@ -91,7 +95,17 @@ void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
                              Vtime, nb, tmin, dt, wakeData->interpolate);
     
   }
-  log_exit("track_through_wake");
+#if defined(MINIMIZE_MEMORY)
+  free(posItime[0]);
+  free(posItime[1]);
+  free(Vtime);
+  free(pbin);
+  free(time);
+  free(pz);
+  Vtime = time = pz = posItime[0] = posItime[1] = NULL;
+  pbin = NULL;
+  max_n_bins = max_np = 0;
+#endif
 }
 
 void applyTransverseWakeKicks(double **part, double *time, double *pz, long *pbin, long np,

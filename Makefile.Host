@@ -3,9 +3,9 @@ TOP = ../../..
 include $(TOP)/config/CONFIG_APPS
 
 CMPLR = ANSI
-#CC = $($(ANSI)_$(CMPLR))
-#HOST_OPT = NO
-#CC = purify $($(ANSI)_$(CMPLR))
+CC = $($(ANSI)_$(CMPLR))
+HOST_OPT = NO
+CC = purify $($(ANSI)_$(CMPLR))
 
 PROD = elegant sddsemitmeas madto sddssasefel sddsTouschekInteg ibsEmittance recurseSetup
 
@@ -13,7 +13,7 @@ USR_CFLAGS_DEFAULT = 	-I../../../../../epics/extensions/src/SDDS/include \
 			$(ZLIB_INC) \
                         -L../../../../../epics/extensions/lib/$(HOST_ARCH) \
 			-I$(EPICS_EXTENSIONS_INCLUDE) \
-			-DIEEE_MATH -DUNIX \
+			-DIEEE_MATH -DUNIX -DMINIMIZE_MEMORY \
 			$(ZLIB_CFLAG)
 
 USR_CFLAGS_WIN32 =	-I../../../../../epics/extensions/src/SDDS/include \

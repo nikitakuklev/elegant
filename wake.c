@@ -86,6 +86,16 @@ void track_through_wake(double **part, long np, WAKE *wakeData, double *PoInput,
 
   if (wakeData->change_p0)
     do_match_energy(part, np, PoInput, 0);
+  
+#if defined(MINIMIZE_MEMORY)
+  free(Itime);
+  free(Vtime);
+  free(pbin);
+  free(time);
+  Itime = Vtime = time = NULL;
+  pbin = NULL;
+  max_n_bins =  max_np= 0;
+#endif
 }
 
 void applyLongitudinalWakeKicks(double **part, double *time, long *pbin, long np, double Po,

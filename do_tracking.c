@@ -118,21 +118,25 @@ long do_tracking(
     reset_special_elements(beamline, 1);
   }
   
-  while (eptr && check_nan) {
-    switch (eptr->type) {
-    case T_RCOL: case T_ECOL: case T_MAXAMP:
-      check_nan = 0;
-      break;
-    default:
-      break;
-    }
+  while (eptr) {
+    if (check_nan) 
+      switch (eptr->type) {
+      case T_RCOL: case T_ECOL: case T_MAXAMP:
+        check_nan = 0;
+        break;
+      default:
+        break;
+      }
     if (flags&FIRST_BEAM_IS_FIDUCIAL && !(flags&FIDUCIAL_BEAM_SEEN))
       eptr->Pref_output_fiducial = 0;
     eptr = eptr->succ;
   }
-  if (flags&FIRST_BEAM_IS_FIDUCIAL && !(flags&FIDUCIAL_BEAM_SEEN) && !(flags&SILENT_RUNNING))
+  if (!(flags&FIDUCIAL_BEAM_SEEN) && flags&PRECORRECTION_BEAM)
+    flags &= ~FIRST_BEAM_IS_FIDUCIAL; 
+  if (flags&FIRST_BEAM_IS_FIDUCIAL && !(flags&FIDUCIAL_BEAM_SEEN) && !(flags&SILENT_RUNNING)) {
     fprintf(stdout, "This step establishes energy profile vs s (fiducial beam).\n");
     fflush(stdout);
+  }
   
   log_exit("do_tracking.1");
   log_entry("do_tracking.2");

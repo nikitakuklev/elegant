@@ -205,6 +205,17 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
         }
       }
     }
+
+#if defined(MINIMIZE_MEMORY)
+    free(Itime);
+    free(Vtime);
+    free(pbin);
+    free(time);
+    Itime = Vtime = time = NULL;
+    pbin = NULL;
+    max_np = max_n_bins = 0;
+#endif
+
   }
 
 void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARGE *charge)

@@ -1590,6 +1590,7 @@ typedef struct {
 #define LONGITUDINAL_RING_ONLY   0x0100
 #define FIRST_BEAM_IS_FIDUCIAL   0x0200
 #define FIDUCIAL_BEAM_SEEN       0x0400
+#define PRECORRECTION_BEAM       0x0800
 
 /* return values for get_reference_phase and check_reference_phase */
 #define REF_PHASE_RETURNED 1
@@ -1665,11 +1666,15 @@ extern VMATRIX *sbend_matrix(double t0, double h, double ha, double n,
  
 /* prototypes for bunched_beam12.c: */
 extern void setup_bunched_beam(BEAM *beam, NAMELIST_TEXT *nltext, RUN *run, VARY *control,
-    ERROR *errcon, OPTIM_VARIABLES *optim, OUTPUT_FILES *output, LINE_LIST *beamline, long n_elements);
+                               ERROR *errcon, OPTIM_VARIABLES *optim, OUTPUT_FILES *output, 
+                               LINE_LIST *beamline, long n_elements,
+                               long save_original);
 extern long new_bunched_beam(BEAM *beam, RUN *run, VARY *control, OUTPUT_FILES *output, long flags);
-extern long run_bunched_beam(RUN *run, VARY *control, ERROR *errcon, OPTIM_VARIABLES *optim, LINE_LIST *beamline, long n_elements,
-    BEAM *beam, OUTPUT_FILES *output, long flags);
-extern void finish_bunched_beam(OUTPUT_FILES *output, RUN *run, VARY *control, ERROR *errcon, OPTIM_VARIABLES *optim,
+extern long run_bunched_beam(RUN *run, VARY *control, ERROR *errcon, OPTIM_VARIABLES *optim, 
+                             LINE_LIST *beamline, long n_elements,
+                             BEAM *beam, OUTPUT_FILES *output, long flags);
+extern void finish_bunched_beam(OUTPUT_FILES *output, RUN *run, VARY *control, ERROR *errcon, 
+                                OPTIM_VARIABLES *optim,
                                 LINE_LIST *beamline, long n_elements, BEAM *beam);
 extern char *brief_number(double x, char *buffer);
 
@@ -2197,7 +2202,8 @@ extern void set_up_histogram(HISTOGRAM *histogram, RUN *run);
 extern long track_through_tubend(double **part, long n_part, TUBEND *tubend,
                           double p_error, double Po, double **accepted,
                           double z_start);
-extern void setup_sdds_beam(BEAM *beam,NAMELIST_TEXT *nltext,RUN *run, VARY *control,ERROR *errcon,OPTIM_VARIABLES *optim,OUTPUT_FILES *output,LINE_LIST *beamline,long n_elements);
+extern void setup_sdds_beam(BEAM *beam,NAMELIST_TEXT *nltext,RUN *run, VARY *control,ERROR *errcon,OPTIM_VARIABLES *optim,OUTPUT_FILES *output,LINE_LIST *beamline,long n_elements,
+                            long save_original);
 extern long new_sdds_beam(BEAM *beam,RUN *run,VARY *control,OUTPUT_FILES *output,long flags);
 void terminate_sdds_beam();
 extern void dumpLatticeParameters(char *filename, RUN *run, LINE_LIST *beamline);

@@ -819,7 +819,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   csrWake.dctBin = csrWake.s0 = csrWake.ds0 = csrWake.zLast =
     csrWake.z0 = csrWake.thetaRad = csrWake.S11 = csrWake.S12 = csrWake.S22 = 0;
   csrWake.dGamma = NULL;
-  
+
   if (!csbend)
     bomb("null CSBEND pointer (track_through_csbend)", NULL);
 
@@ -1031,7 +1031,6 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     }
   }
-  
 
   /*  prepare arrays for CSR integrals */
   nBins = csbend->bins;
@@ -1354,6 +1353,20 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 #ifdef DEBUG
   fprintf(stdout, "wavelength = %le, critWL = %le, thetaRad = %le\n",
           wavelength, criticalWavelength, csrWake.thetaRad);
+#endif
+
+#if defined(MINIMIZE_MEMORY)
+  /* leave dGamma out of this because that memory is used by CSRDRIFT */
+  free(beta0);
+  free(ctHist);
+  free(ctHistDeriv);
+  free(T1);
+  free(T2);
+  free(denom);
+  free(particleLost);
+  beta0 = ctHist = ctHistDeriv = T1 = T2 = denom = NULL;
+  particleLost  = NULL;
+  maxBins = maxParticles = 0;
 #endif
 
   return(i_top+1);

@@ -29,9 +29,9 @@ void traceback_handler(int code);
 char *option[N_OPTIONS] = {
     "describeinput",
         };
-char *USAGE="elegant <inputfile>\n\nProgram by Michael Borland. (This is version 13.19, February 2000.)";
+char *USAGE="elegant <inputfile>\n\nProgram by Michael Borland. (This is version 14.0, February 2000.)";
 
-char *GREETING="This is elegant, by Michael Borland. (This is version 13.19, February 2000.)";
+char *GREETING="This is elegant, by Michael Borland. (This is version 14.0, February 2000.)";
 
 #define RUN_SETUP        0
 #define RUN_CONTROL      1
@@ -298,9 +298,12 @@ char **argv;
                 fflush(stdout);
                 }
             
-            /* seed random number generators.  Note that random_1 seeds random_2, and random_3.
-             * random_1 is used for beamline errors.  random_2 is used for beam generation and 
-             * random scraping/sampling/scattering.  random_3 is used for BPM noise.
+            /* seed random number generators.  Note that random_1 seeds random_2, random_3,
+             * and random_4.
+             * random_1 is used for beamline errors.  
+             * random_4 is used for beam generation 
+             * random_2 is used for random scraping/sampling/scattering.  
+             * random_3 is used for BPM noise.
              */
             random_1(-FABS(random_number_seed));
 
@@ -388,6 +391,8 @@ char **argv;
           case CORRECTION_SETUP:
             if (!run_setuped)
                 bomb("run_setup must precede correction", NULL);
+            if (beam_type!=-1)
+                bomb("beam setup (bunched_beam or sdds_beam) must follow correction setup", NULL);
             correction_setuped = 1;
             correction_setup(&correct, &namelist_text, &run_conditions, beamline); 
             break;
@@ -403,7 +408,9 @@ char **argv;
             if (!run_setuped || !run_controled)
                 bomb("run_setup and run_control must precede bunched_beam namelist", NULL);
             setup_bunched_beam(&beam, &namelist_text, &run_conditions, &run_control, &error_control, &optimize.variables,
-                               &output_data, beamline, beamline->n_elems);
+                               &output_data, beamline, beamline->n_elems,
+                               correct.mode!=-1 && 
+                               (correct.track_before_and_after || correct.start_from_centroid));
             setup_output(&output_data, &run_conditions, &run_control, &error_control, &optimize.variables, beamline);
             beam_type = SET_BUNCHED_BEAM;
             break;
@@ -411,7 +418,9 @@ char **argv;
             if (!run_setuped || !run_controled)
                 bomb("run_setup and run_control must precede sdds_beam namelist", NULL);
             setup_sdds_beam(&beam, &namelist_text, &run_conditions, &run_control, &error_control, 
-                           &optimize.variables, &output_data, beamline, beamline->n_elems);
+                            &optimize.variables, &output_data, beamline, beamline->n_elems,
+                            correct.mode!=-1 && 
+                            (correct.track_before_and_after || correct.start_from_centroid));
             setup_output(&output_data, &run_conditions, &run_control, &error_control, &optimize.variables, beamline);
             beam_type = SET_SDDS_BEAM;
             break;
@@ -448,7 +457,7 @@ char **argv;
                   if (correct.track_before_and_after) {
                     track_beam(&run_conditions, &run_control, &error_control, &optimize.variables, 
                                beamline, &beam, &output_data, 
-                               0, 0, &finalCharge);
+                               PRECORRECTION_BEAM, 0, &finalCharge);
                   }
                 }
                 else if (correct.use_actual_beam) {

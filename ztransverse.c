@@ -89,8 +89,12 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
       Vfreq[nb-1] = posIfreq[nb-1]*iZ[nb-1]*factor;
     for (ib=1; ib<nfreq-1; ib++) {
       iImag = (iReal = 2*ib-1)+1;
-      Vfreq[iReal] = -(posIfreq[iReal]*iZ[iImag] + posIfreq[iImag]*iZ[iReal])*factor; 
-      Vfreq[iImag] =  (posIfreq[iReal]*iZ[iReal] - posIfreq[iImag]*iZ[iImag])*factor;
+      /* The signs are chosen here to get agreement with TRFMODE.
+         In particular, test particles following closely behind the 
+         drive particle get defocused.
+         */
+      Vfreq[iReal] =  (posIfreq[iReal]*iZ[iImag] + posIfreq[iImag]*iZ[iReal])*factor; 
+      Vfreq[iImag] = -(posIfreq[iReal]*iZ[iReal] - posIfreq[iImag]*iZ[iImag])*factor;
     }
 
     /* Compute inverse FFT of V(f) to get V(t) */
@@ -103,6 +107,19 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
                              Vtime, nb, tmin, dt, ztransverse->interpolate);
     
   }
+
+#if defined(MIMIMIZE_MEMORY)
+  free(posItime[0]);
+  free(posItime[1]);
+  free(Vtime);
+  free(pbin);
+  free(time);
+  free(pz);
+  posItime[0] = posItime[1] = Vtime = time = pz = NULL;
+  pbin = NULL;
+  max_n_bins = max_np = 0 ;
+#endif
+
 }
 
 
@@ -121,11 +138,12 @@ void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long part
   
   if (ztransverse->initialized)
     return;
-  ztransverse->initialized = 1;
 
   if (ztransverse->bin_size<=0)
     bomb("bin_size must be positive for ZTRANSVERSE element", NULL);
   if (ztransverse->broad_band) {
+    /* Use impedance Z = j*wr/w*Rs/(1 + j*Q(w/wr-wr/w))
+       */
     double term;
     if (ztransverse->n_bins%2!=0)
       bomb("ZTRANSVERSE element must have n_bins divisible by 2", NULL);
@@ -135,24 +153,27 @@ void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long part
     nfreq = ztransverse->n_bins/2 + 1;
     ztransverse->iZ[0] = tmalloc(sizeof(**(ztransverse->iZ))*ztransverse->n_bins);
     ztransverse->iZ[1] = tmalloc(sizeof(**(ztransverse->iZ))*ztransverse->n_bins);
+    /* df is the frequency spacing normalized to the resonant frequency */
     df = 1/(ztransverse->n_bins*ztransverse->bin_size)/(ztransverse->freq);
-    /* DC term of iZ is pure real */
-    ztransverse->iZ[0][0] = ztransverse->iZ[1][0] = 
-      -(ztransverse->Rs)/ztransverse->Q;
+    /* DC term of iZ is zero */
+    ztransverse->iZ[0][0] = ztransverse->iZ[1][0] = 0;
     /* Nyquist term--real part of iZ only */
+    for (i=1; i<nfreq-1; i++) {
+      term = ztransverse->Q*(i*df-1.0/(i*df));
+      /* real part of i*Z */
+      ztransverse->iZ[0][2*i-1] =  
+        ztransverse->iZ[1][2*i-1] =  
+          ztransverse->Rs/(i*df)/(1+term*term);
+      /* imaginary part of i*Z is -Real[i*Z]*term */
+      ztransverse->iZ[0][2*i] = 
+        ztransverse->iZ[1][2*i] = 
+          -term*ztransverse->iZ[0][2*i-1];
+    }
     term = ztransverse->Q*(1.0/(nfreq*df)-nfreq*df);
     ztransverse->iZ[0][ztransverse->n_bins-1] = 
       ztransverse->iZ[1][ztransverse->n_bins-1] = 
-        (ztransverse->Rs)*ztransverse->freq/(nfreq*df)/(1-sqr(term))*term;
-    for (i=1; i<nfreq-1; i++) {
-      term = ztransverse->Q*(1.0/(i*df)-i*df);
-      /* imaginary part of i*Z */
-      ztransverse->iZ[0][2*i] = 
-        ztransverse->iZ[1][2*i] = (ztransverse->Rs)*ztransverse->freq/(i*df)/(1-sqr(term));  
-      /* real part is Imag(i*Z)*Q*(fr/f-f/fr) */
-      ztransverse->iZ[0][2*i-1] =  
-        ztransverse->iZ[1][2*i-1] =  ztransverse->iZ[0][2*i]*term;
-    }
+        ztransverse->Rs/(nfreq*df)/(1+term*term);
+    df *= ztransverse->freq;
   } else {
     double *ZReal[2], *ZImag[2], *freqData;
     double df_spect;
@@ -191,6 +212,8 @@ void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long part
       fflush(stdout);
       exit(1);
     }
+    df = df_spect;
+    nfreq = n_spect;
     t_range = ztransverse->n_bins*ztransverse->bin_size;
     ztransverse->n_bins = 2*(n_spect-1);
     ztransverse->bin_size = 1.0/(ztransverse->n_bins*df_spect);
@@ -223,8 +246,10 @@ void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long part
         ztransverse->iZ[0][n_spect-1] = -ZImag[0][i];
         ztransverse->iZ[1][n_spect-1] = -ZImag[1][i];
       } else {
+        /* real part of iZ */
         ztransverse->iZ[0][2*i-1] = -ZImag[0][i];
         ztransverse->iZ[1][2*i-1] = -ZImag[1][i];
+        /* imaginary part of iZ */
         ztransverse->iZ[0][2*i  ] = ZReal[0][i];
         ztransverse->iZ[1][2*i  ] = ZReal[1][i];
       }
@@ -234,6 +259,21 @@ void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long part
     free(ZImag[0]);
     free(ZImag[1]);
   }
+#if 0
+  if (!ztransverse->initialized) {
+      FILE *fp;
+      fp = fopen_e("ztransverse.sdds", "w", 0);
+      fprintf(fp, "SDDS1\n&column name=f units=Hz type=double &end\n");
+      fprintf(fp, "&column name=ZReal type=double &end\n");
+      fprintf(fp, "&column name=ZImag type=double &end\n");
+      fprintf(fp, "&data mode=ascii no_row_counts=1 &end\n");
+      for (i=0; i<nfreq; i++) 
+        fprintf(fp, "%21.15e %21.15e %21.15e\n",
+                i*df, ztransverse->iZ[0][2*i], -ztransverse->iZ[0][2*i-1]);
+      fclose(fp);
+    }
+#endif
+
   ztransverse->initialized = 1;
 }
 
