@@ -2331,6 +2331,56 @@ lattices with orbits.  However, if the orbit is zero, it is much faster to use
         occurence is used.
 \end{itemize}
 
+The output file from this command contains the following columns, giving values of quantities at the
+exit of each element, unless otherwise noted.
+\begin{itemize}
+\item {\tt s} --- The arc length.
+\item {\tt ElementName} --- The name of the element.
+\item {\tt ElementType} --- The type name of the element.
+\item {\tt betax} and {\tt betay} --- The horizontal and vertical beta functions.
+\item {\tt alphax} and {\tt alphay} --- The horizontal and vertical alpha functions, where $\alpha = -\frac{d \beta}{2 ds}$.
+\item {\tt psix} and {\tt psiy} --- The horizontal and vertical betatron phase advance in radians.
+\item {\tt etax} and {\tt etay} --- The horizontal and vertical dispersion functions.
+\item {\tt etaxp} and {\tt etayp} --- The slopes of the horizontal and vertical dispersion functions.
+\item {\tt xAperture} and {\tt yAperture} --- The horizontal and vertical apertures.  If undefined, will have a 
+  value of 0.
+\item {\tt pCentral0} --- The central momentum ($\beta\gamma$) at the {\bf entrance} to the element.
+\item {\tt dI}{\em n} --- Contribution to radiation integral {\tt I}{\em n}.  Radiation integrals take account of
+  horizontal bending only.
+\end{itemize}
+
+The output file contains the following parameters.  Note that chromatic quantities depend on the order 
+settings of the individual elements, the default order (in \verb|run_setup|), and the concatenation order
+given in the \verb|twiss_output| command.  These quantities pertain to the end of the lattice or to the
+lattice as a whole.
+\begin{itemize}
+\item {\tt nux} and {\tt nuy} --- The horizontal and vertical tunes.
+\item {\tt dnux/dp} and {\tt dnuy/dp} --- The horizontal and vertical chromaticities, defined as $d\nu/d\delta$.
+\item {\tt dnux/dp2} and {\tt dnuy/dp2} --- The horizontal and vertical 2nd-order chromaticities, 
+  defined as $d^2\nu/d\delta^2$.  Will be zero if \verb|higher_order_chromaticity| is zero.
+\item {\tt dnux/dp3} and {\tt dnuy/dp3} --- The horizontal and vertical 3rd-order chromaticities, 
+  defined as $d^3\nu/d\delta^3$.  Will be zero if \verb|higher_order_chromaticity| is zero.
+\item {\tt Ax} and {\tt Ay} --- The horizontal and vertical acceptance.  These will be zero if no apertures are
+  defined.
+\item {\tt dbetax/dp} and {\tt dbetay/dp} --- Chromatic derivatives of the horizontal and vertical beta functions,
+defined as $\frac{d\beta}{d\delta}$.
+\item {\tt etax2}, {\tt etax3}, {\tt etay2}, {\tt etay3} --- Higher order dispersion in the horizontal and
+  vertical planes.  For example, for the horizontal plane, the closed orbit at the end of the lattice 
+  depends on $\delta$ according to
+  $x = \eta_x\delta + \eta_{x2} \delta^2 + \eta_{x3}\delta^3$.  This differs from the chromaticity expansion,
+  which is given in terms of successive derivatives of $\nu(\delta)$.
+\item {\tt dnux/dAx}, {\tt dnux/dAy}, {\tt dnuy/dAx}, {\tt dnuy/dAy} --- Tune shifts with amplitude.  These will
+  be zero unless the \verb|tune_shift_with_amplitude| command is given.
+\item {\tt alphac}, {\tt alphac2} --- First- and second-order momentum compaction.  The path length is 
+  $s = s_o + \alpha_c\delta + \alpha_{c2}\delta^2$.
+\item {\tt I}{\em n} --- The $n^{\rm th}$ radiation integral.
+\item {\tt taux}, {\tt tauy}, {\tt taudelta} --- Radiation damping times for x, y, and $\delta$.
+\item {\tt Jx}, {\tt Jy}, {\tt Jdelta} --- Damping partition factors for  x, y, and $\delta$.
+\item {\tt ex0}, {\tt enx0} --- Horizontal equilibrium geometric and normalized emittances.
+\item {\tt Sdelta0} --- Equilibrium fractional rms energy spread.
+\item {\tt U0} --- Energy loss per turn.
+\end{itemize}
+
 \begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|track|}\end{center}
