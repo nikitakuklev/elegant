@@ -14,6 +14,9 @@
  * Michael Borland, 2000
  *
  $Log: not supported by cvs2svn $
+ Revision 1.8  2003/01/09 15:58:51  borland
+ Added -correctedOnly option.
+
  Revision 1.7  2002/08/14 20:23:48  soliday
  Added Open License
 
@@ -63,12 +66,15 @@ elegant.\n\n\
 Program by Michael Borland.  (This is version 2, January 2002.)\n";
 
 
-long SetUpOutputFile(SDDS_DATASET *SDDSout, char *outputfile, long correctedOnly);
+long SetUpOutputFile(SDDS_DATASET *SDDSout, char *outputfile, long correctedOnly, SDDS_DATASET *SDDSin);
 long check_sdds_beam_column(SDDS_TABLE *SDDS_table, char *name, char *units);
 
 char *CenName[6];
 char *CorName[6][6];
 char *psName[6] = {"x", "xp", "y", "yp", "t", "delta" };
+/* columns in output file derived from parameters in input file */
+long pColumns;
+char **pColumn;
   
 int main(int argc, char **argv)
 {
@@ -141,7 +147,7 @@ int main(int argc, char **argv)
     exit(1);
   }
 
-  if (!SetUpOutputFile(&SDDSout, outputfile, correctedOnly))
+  if (!SetUpOutputFile(&SDDSout, outputfile, correctedOnly, &SDDSin))
     SDDS_Bomb("problem setting up output file");
 
   for (i=0; i<6; i++)
@@ -156,9 +162,12 @@ int main(int argc, char **argv)
     for (i=0; i<6; i++) {
       for (j=C[i]=0; j<=i; j++)
         S[i][j] = 0;
-      if (data[i])
+      if (data[i]) {
         free(data[i]);
+        data[i] = NULL;
+      }
     }
+    x = xp = y = yp = t = p = NULL;
     if ((particles=SDDS_RowCount(&SDDSin))>2) {
       if (!(data[0] = x = SDDS_GetColumnInDoubles(&SDDSin, "x")) ||
           !(data[1] = xp = SDDS_GetColumnInDoubles(&SDDSin, "xp")) ||
@@ -278,6 +287,21 @@ int main(int argc, char **argv)
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
     }
+    /* copy parameters from the input file to columns in the output file */
+    for (i=0; i<pColumns; i++) {
+      long buffer[16];
+      if (!pColumn[i])
+        continue;
+      if (!SDDS_GetParameter(&SDDSin, pColumn[i], buffer)) {
+	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+	exit(1);
+      }
+      if (!SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_REFERENCE, row,
+                             pColumn[i], buffer, NULL)) {
+	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+	exit(1);
+      }
+    }
     row++;
   }
   if (readCode==0)
@@ -288,8 +312,7 @@ int main(int argc, char **argv)
   return 0;
 }
 
-
-long SetUpOutputFile(SDDS_DATASET *SDDSout, char *outputfile, long correctedOnly)
+long SetUpOutputFile(SDDS_DATASET *SDDSout, char *outputfile, long correctedOnly, SDDS_DATASET *SDDSin)
 {
   char units[128], name[128];
   char *ppUnits[6] = {"m", "", "m", "", "s", ""} ;
@@ -354,6 +377,20 @@ long SetUpOutputFile(SDDS_DATASET *SDDSout, char *outputfile, long correctedOnly
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       if (!SDDS_CopyString(&CorName[i][j], name))
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+  }
+  if (!(pColumn = SDDS_GetParameterNames(SDDSin, &pColumns))) {
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+    exit(1);
+  }
+  for (i=0; i<pColumns; i++) {
+    if (SDDS_GetColumnIndex(SDDSout, pColumn[i])>=0) {
+      free(pColumn[i]);
+      pColumn[i] = NULL;
+    }
+    if (!SDDS_DefineColumnLikeParameter(SDDSout, SDDSin, pColumn[i], NULL)) {
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      exit(1);
     }
   }
   if (!SDDS_SaveLayout(SDDSout) || !SDDS_WriteLayout(SDDSout) ||
