@@ -17,8 +17,8 @@ long do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     /* process the namelist text */
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
-    process_namelist(&alter_element, nltext);
-    print_namelist(stdout, &alter_element);
+    process_namelist(&alter_elements, nltext);
+    print_namelist(stdout, &alter_elements);
 
     if (!strlen(name))
       bomb("no name given", NULL);

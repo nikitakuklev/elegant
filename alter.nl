@@ -5,7 +5,7 @@
  */
 #include "namelist.h"
 
-#namelist alter_element static
+#namelist alter_elements static
         STRING name = NULL;
         STRING item = NULL;
         STRING exclude = NULL;

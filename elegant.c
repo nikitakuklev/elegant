@@ -70,7 +70,7 @@ char *GREETING="This is elegant, by Michael Borland. (This is version 13.15, Oct
 #define SUBPROCESS      34
 #define FIT_TRACES      35
 #define SASEFEL_AT_END  36
-#define ALTER_ELEMENT   37
+#define ALTER_ELEMENTS  37
 #define N_COMMANDS      38
 
 char *command[N_COMMANDS] = {
@@ -80,7 +80,7 @@ char *command[N_COMMANDS] = {
     "optimization_covariable", "save_lattice", "rpn_expression", "trace", "chromaticity", "closed_orbit",
     "find_aperture", "analyze_map", "correct_tunes", "link_control", "link_elements",
     "steering_element", "amplification_factors", "print_dictionary", "floor_coordinates", "correction_matrix_output",
-    "load_parameters", "sdds_beam", "subprocess", "fit_traces", "sasefel", "alter_element",
+    "load_parameters", "sdds_beam", "subprocess", "fit_traces", "sasefel", "alter_elements",
         } ;
 
 char *description[N_COMMANDS] = {
@@ -121,7 +121,7 @@ char *description[N_COMMANDS] = {
     "subprocess                  executes a string in a sub-shell",
     "fit_traces                  obtains a lattice model by fitting to multiple tracks through a beamline",
     "sasefel                     computes parameters of SASE FEL at end of system",
-    "alter_element               alters a common parameter for one or more elements",
+    "alter_elements              alters a common parameter for one or more elements",
         } ;
 
 void initialize_structures(RUN *run_conditions, VARY *run_control, ERROR *error_control, CORRECTION *correct, 
@@ -156,6 +156,7 @@ char **argv;
     long do_chromatic_correction = 0, do_twiss_output = 0, fl_do_tune_correction = 0;
     long do_closed_orbit = 0, do_matrix_output = 0, do_response_output = 0;
     long last_default_order = 0, new_beam_flags, links_present, twiss_computed = 0;
+    long correctionDone;
     double *starting_coord, finalCharge;
     long namelists_read = 0, failed;
                     
@@ -422,6 +423,7 @@ char **argv;
             new_beam_flags = 0;
             while (vary_beamline(&run_control, &error_control, &run_conditions, beamline)) {
               fill_double_array(starting_coord, 6, 0.0);
+              correctionDone = 0;
               if (correct.mode!= -1) {
                 if (correct.track_before_and_after || correct.start_from_centroid) {
                   if (beam_type==SET_AWE_BEAM) {
@@ -455,10 +457,12 @@ char **argv;
                   new_beam_flags = TRACK_PREVIOUS_BUNCH;
                 }
                 if (!do_correction(&correct, &run_conditions, beamline, starting_coord, &beam, 
-                                   run_control.i_step, 1) ) {
+                                   run_control.i_step, 
+                                   (fl_do_tune_correction || do_chromatic_correction)) ) {
                   fputs("warning: orbit correction failed--continuing with next step\n", stdout);
                   continue;
                 }
+                correctionDone = 1;
               }
               if (beam_type==SET_AWE_BEAM) {
                 bomb("beam type of SET_AWE_BEAM in main routine--this shouldn't happen", NULL);
@@ -486,10 +490,12 @@ char **argv;
               if (do_response_output)
                 run_response_output(&run_conditions, beamline, &correct, 0);
               run_matrix_output(&run_conditions, beamline);
-              for (i=failed=0; (fl_do_tune_correction || do_chromaticity_correction) && i<correction_iterations; i++) {
-                if (correction_iterations>1)
+              for (i=failed=0; (fl_do_tune_correction || do_chromatic_correction) && i<correction_iterations; i++) {
+                correctionDone = 0;
+                if (correction_iterations>1) {
                   fprintf(stdout, "\nTune/chromaticity correction iteration %ld\n", i+1);
                   fflush(stdout);
+                }
                 if (fl_do_tune_correction) {
                   if (do_closed_orbit && 
                       !run_closed_orbit(&run_conditions, beamline, starting_coord, &beam, 0) &&
@@ -530,7 +536,7 @@ char **argv;
               if (failed)
                 continue;
               perturb_beamline(&run_control, &error_control, &run_conditions, beamline); 
-              if (correct.mode!=-1 &&
+              if (correct.mode!=-1 && !correctionDone &&
                   !do_correction(&correct, &run_conditions, beamline, starting_coord, &beam, run_control.i_step, 0) &&
                   !soft_failure) {
                 fputs("warning: orbit correction failed--continuing with next step\n", stdout);
@@ -934,7 +940,7 @@ char **argv;
               bomb("sasefel namelist must precede beam definition", NULL);
             setupSASEFELAtEnd(&namelist_text, &run_conditions, &output_data);
             break;
-          case ALTER_ELEMENT:
+          case ALTER_ELEMENTS:
             if (!run_setuped)
               bomb("run_setup must precede alter_element namelist", NULL);
             do_alter_element(&namelist_text, &run_conditions, beamline);
