@@ -332,8 +332,9 @@ long new_sdds_beam(
         zero_centroid(beam->particle, beam->n_to_track, 2);
         zero_centroid(beam->particle, beam->n_to_track, 3);
       }
-      if (center_arrival_time)
-        adjust_arrival_time_data(beam->particle, beam->n_to_track, p_central);
+      if (center_arrival_time || reverse_t_sign)
+        adjust_arrival_time_data(beam->particle, beam->n_to_track, p_central, 
+                                 center_arrival_time, reverse_t_sign);
     }
     else {
       /* In this case, the data is for point particles already,
@@ -389,8 +390,9 @@ long new_sdds_beam(
         zero_centroid(beam->particle, beam->n_to_track, 2);
         zero_centroid(beam->particle, beam->n_to_track, 3);
       }
-      if (center_arrival_time)
-        adjust_arrival_time_data(beam->particle, beam->n_to_track, p_central);
+      if (center_arrival_time || reverse_t_sign)
+        adjust_arrival_time_data(beam->particle, beam->n_to_track, p_central, 
+                                 center_arrival_time, reverse_t_sign);
     }
   }
   else {
@@ -713,7 +715,7 @@ long check_sdds_beam_column(SDDS_TABLE *SDDS_table, char *name, char *units)
   return(0);
 }
 
-void adjust_arrival_time_data(double **coord, long np, double Po)
+void adjust_arrival_time_data(double **coord, long np, double Po, long center_t, long flip_t)
 {
   long ip;
   double P, beta;
@@ -722,17 +724,21 @@ void adjust_arrival_time_data(double **coord, long np, double Po)
   if (np<1)
     return;
 
-  for (ip=tave=0; ip<np; ip++) {
-    P = Po*(1+coord[ip][5]);
-    beta = P/sqrt(sqr(P)+1);
-    tave += coord[ip][4]/beta;
+  if (flip_t) 
+    for (ip=0; ip<np; ip++)
+      coord[ip][4] *= -1;
+  
+  if (center_t) {
+    for (ip=tave=0; ip<np; ip++) {
+      P = Po*(1+coord[ip][5]);
+      beta = P/sqrt(sqr(P)+1);
+      tave += coord[ip][4]/beta;
+    }
+    tave /= np;
+    for (ip=0; ip<np; ip++) {
+      P = Po*(1+coord[ip][5]);
+      beta = P/sqrt(sqr(P)+1);
+      coord[ip][4] -= beta*tave;
+    }
   }
-  tave /= np;
-
-  for (ip=0; ip<np; ip++) {
-    P = Po*(1+coord[ip][5]);
-    beta = P/sqrt(sqr(P)+1);
-    coord[ip][4] -= beta*tave;
-  }
-
 }

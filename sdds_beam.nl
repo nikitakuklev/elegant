@@ -19,6 +19,7 @@
     long n_tables_to_skip = 0;
     long center_transversely = 0;
     long center_arrival_time = 0;
+    long reverse_t_sign = 0;
     double sample_fraction = 1;
     double p_lower = 0.0;
     double p_upper = 0.0;
