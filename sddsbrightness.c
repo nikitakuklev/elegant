@@ -55,6 +55,12 @@ CopyrightNotice001*/
  * Michael Borland, 2002
  *
  $Log: not supported by cvs2svn $
+ Revision 1.2  2002/04/22 21:01:01  borland
+ Added factors of 2 for square radiation opening angle and square of
+ radiation size, per Dejus.
+ Refined energy-broadening effect by fitting a gaussian to the sinc function
+ to get a width of xn=0.36 for sigma.
+
  Revision 1.1  2002/04/18 23:41:57  borland
  First version, with assistence of L. Emery.
 
@@ -73,17 +79,18 @@ CopyrightNotice001*/
 #define SET_PERIODLENGTH 5
 #define SET_EMITTANCERATIO 6
 #define SET_COUPLING 7
-#define N_OPTIONS 8
+#define SET_NOSPECTRALBROADENING 8
+#define N_OPTIONS 9
 
 char *option[N_OPTIONS] = {
   "pipe", "harmonics", "krange", "current", "totallength", "periodlength", 
-  "emittanceratio", "coupling", 
+  "emittanceratio", "coupling", "nospectralbroadening",
 } ;
 
 char *USAGE="sddsbrightness [-pipe=[input][,output]] [<twissFile>] [<SDDSoutputfile>]\n\
  -harmonics=<integer> -Krange=start=<value>,end=<value>,points=<integer>\n\
  -current=<Amps> -totalLength=<meters> -periodLength=<meters>\n\
- [-emittanceRatio=<value> | -coupling=<value>]\n\n\
+ [-emittanceRatio=<value> | -coupling=<value>] [-noSpectralBroadening]\n\n\
 harmonics        number of harmonics to compute\n\
 Krange           range and number of undulator K parameter to evaluate\n\
 current          beam current in amperes\n\
@@ -92,7 +99,10 @@ periodLength     length of the undulator period in meters\n\
 emittanceRatio   ratio of y emittance to x emittance.  x emittance is\n\
                  ex0 from input file. y emittance is ratio*ex0\n\
 coupling         x emittance is ex0/(1+coupling), while y emittance is\n\
-                 coupling*ex0/(1+coupling).\n\n\
+                 coupling*ex0/(1+coupling).\n\
+noSpectralBroadening\n\
+                 Turns off the default inclusion of spectral broadening in\n\
+                 the calculation.  Gives an over-estimate of the brightness.\n\n\
 Computes on-axis brightness for an undulator centered on the end of the beamline\n\
 the Twiss parameters for which are in the input file.  You should generate the\n\
 input file using elegant's twiss_output command with radiation_integrals=1 .\n\n\
@@ -105,7 +115,8 @@ double ComputeBrightness(double period, long Nu, double K, long n,
                          double current, 
                          double betax, double alphax, double etax, double etaxp,
                          double betay, double alphay, double etay, double etayp,
-                         double *lambda, double *Fn);
+                         double *lambda, double *Fn, 
+                         short spectralBroadening);
 long GetTwissValues(SDDS_DATASET *SDDSin, 
                     double *betax, double *alphax, double *etax, double *etaxp, 
                     double *betay, double *alphay, double *etay, double *etayp, 
@@ -122,6 +133,7 @@ int main(int argc, char **argv)
   unsigned long dummyFlags;
   double betax, alphax, betay, alphay, etax, etaxp, etay, etayp, lambda, energy;
   double pCentral, ex0, Bn, Fn, K, Sdelta0;
+  short spectralBroadening;
   
   SDDS_RegisterProgramName(argv[0]);
   argc = scanargs(&s_arg, argc, argv);
@@ -130,7 +142,7 @@ int main(int argc, char **argv)
 
   inputfile = outputfile = NULL;
   pipeFlags = 0;
-
+  spectralBroadening = 1;
   current = totalLength = periodLength = 0;
   KStart = KEnd = coupling = emittanceRatio = 0;
   harmonics = KPoints = 0;
@@ -187,6 +199,9 @@ int main(int argc, char **argv)
             !sscanf(s_arg[i_arg].list[1], "%le", &coupling) ||
             coupling<=0)
           SDDS_Bomb("invalid -coupling value");
+        break;
+      case SET_NOSPECTRALBROADENING:
+        spectralBroadening = 0;
         break;
       default:
         fprintf(stdout, "error: unknown switch: %s\n", s_arg[i_arg].list[0]);
@@ -267,7 +282,7 @@ int main(int argc, char **argv)
                                coupling, emittanceRatio, current,
                                betax, alphax, etax, etayp, 
                                betay, alphay, etay, etaxp, 
-                               &lambda, &Fn);
+                               &lambda, &Fn, spectralBroadening);
         energy = 12.39/(lambda*1e10);
         if (!SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iK,
                                ih*4+1, Bn,
@@ -321,7 +336,8 @@ double ComputeBrightness(double period, long Nu, double K, long n,
                          double current, 
                          double betax, double alphax, double etax, double etaxp,
                          double betay, double alphay, double etay, double etayp,
-                         double *lambdaOut, double *FnOut)
+                         double *lambdaOut, double *FnOut,
+                         short spectralBroadening)
 {
   double JArg, Nn;
   double Sx, Sy, Sxp, Syp, Srp2, Sr2;
@@ -341,11 +357,26 @@ double ComputeBrightness(double period, long Nu, double K, long n,
   lambda = period/(2*n*sqr(gamma))*(1+sqr(K)/2);
 
   /* 0.001 is for 0.1% bandwidth */
-  Nn = PI/137.04*Nu*(current/e_mks)*0.001*Fn*(1+sqr(K)/2)/n;
+  Nn = 0.5*PI/137.04*Nu*(current/e_mks)*0.001*Fn*(1+sqr(K)/2)/n;
   length = Nu*period;
-  /* radiation divergence and size, squared */
-  Srp2 = lambda/(2*length);
-  Sr2  = 2*lambda*length/sqr(4*PI);
+
+  broadening = 1;
+  if (spectralBroadening) {
+    /* this factor includes the loss of peak brightness due to spectral
+     * broadening from the energy spread. The factor of 2 in front of Sdelta0
+     * is because wavelength ~ 1/gamma^2 .  The 0.36 is from a gaussian fit
+     * to the sinc function, which gives sigma(omega)/omega = 0.36/(n*Nu)
+     */
+    broadening = sqrt( 1 + sqr(2*Sdelta0*n*Nu/0.36) );
+  }
+
+  /* radiation divergence and size, squared.
+   * numerical factors are from "Radiation Properties of an Undulator",
+   * SLS-Note 4/95, by W. Joho
+   */
+  Srp2 = sqr(0.58)*lambda/length;   /* Joho has *broadening here, which I think is wrong */
+  Sr2  = sqr(0.12/0.58)*lambda*length;
+
   gammax = (1+sqr(alphax))/betax;
   gammay = (1+sqr(alphay))/betay;
   Sxp = sqrt(ex*gammax + sqr(Sdelta0*etaxp) + Srp2);
@@ -355,13 +386,9 @@ double ComputeBrightness(double period, long Nu, double K, long n,
   
   *lambdaOut = lambda;
   *FnOut = Fn;
-  /* this factor includes the loss of peak brightness due to spectral
-   * broadening from the energy spread. The factor of 2 in front of Sdelta0
-   * is because wavelength ~ 1/gamma^2 
-   */
-  broadening = sqrt( sqr(0.36/(1.0*n*Nu)) / (sqr(0.36/(1.0*n*Nu)) + sqr(2*Sdelta0)));
   /* 1e-12 is to convert to 1/(mm^2*mrad^2) units */
-  return Nn/(sqr(PIx2)*Sx*Sxp*Sy*Syp)*1e-12*broadening;
+  /* Joho does not put the broadening here, which I think is wrong */
+  return Nn/(sqr(PIx2)*Sx*Sxp*Sy*Syp)/broadening*1e-12;
 }
 
 long GetTwissValues(SDDS_DATASET *SDDSin, 
