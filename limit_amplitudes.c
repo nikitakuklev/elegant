@@ -355,14 +355,16 @@ long beam_scraper(
     log_entry("beam_scraper");
 
     if (scraper->insert_from) {
-        switch (scraper->insert_from[1]) {
-          case 'y': case 'v':
+        switch (toupper(scraper->insert_from[1])) {
+          case 'Y': case 'V':
             scraper->direction = 1;
             break;
-          case 'x': case 'h':
+          case 'X': case 'H':
             scraper->direction = 0;
             break;
           default:
+            fprintf(stderr, "Error: invalid scraper insert_from parameter: %s\n",
+                    scraper->insert_from);
             bomb("scraper insert_from axis letter is not one of x, h, y, or v", NULL);
             break;
             }
