@@ -973,6 +973,8 @@ PARAMETER trfmode_param[N_TRFMODE_PARAMS] = {
     {"N_BINS", "", IS_LONG, 0, (long)((char *)&trfmode_example.n_bins), NULL, 0.0, 20},
     {"PLANE", "", IS_STRING, 0, (long)((char *)&trfmode_example.plane), "both", 0.0, 0},
     {"SINGLE_PASS", "", IS_LONG, 0, (long)((char *)&trfmode_example.single_pass), NULL, 0.0, 0},
+    {"DX", "M", IS_DOUBLE, 0, (long)((char *)&trfmode_example.dx), NULL, 0.0, 0},
+    {"DY", "M", IS_DOUBLE, 0, (long)((char *)&trfmode_example.dy), NULL, 0.0, 0},
     };
 
 ZLONGIT zlongit_example;
@@ -1057,6 +1059,8 @@ PARAMETER ztransverse_param[N_ZTRANSVERSE_PARAMS] = {
     {"SMOOTHING", "", IS_LONG, 0, (long)((char *)&ztransverse_example.smoothing), NULL, 0.0, 0},
     {"SG_ORDER", "", IS_LONG, 0, (long)((char *)&ztransverse_example.SGOrder), NULL, 0.0, 2},
     {"SG_HALFWIDTH", "", IS_LONG, 0, (long)((char *)&ztransverse_example.SGHalfWidth), NULL, 0.0, 4},
+    {"DX", "M", IS_DOUBLE, 0, (long)((char *)&ztransverse_example.dx), NULL, 0.0, 0},
+    {"DY", "M", IS_DOUBLE, 0, (long)((char *)&ztransverse_example.dy), NULL, 0.0, 0},
 };
 
 IBSCATTER ibs_example;
@@ -1073,7 +1077,7 @@ PARAMETER wake_param[N_WAKE_PARAMS] = {
     {"TCOLUMN", "", IS_STRING, 0, (long)((char *)&wake_example.tColumn), NULL, 0.0, 0},
     {"WCOLUMN", "", IS_STRING, 0, (long)((char *)&wake_example.WColumn), NULL, 0.0, 0},
     {"CHARGE", "C", IS_DOUBLE, 0, (long)((char *)&wake_example.charge), NULL, 0.0, 0},
-    {"FACTOR", "C", IS_DOUBLE, 0, (long)((char *)&wake_example.factor), NULL, 0.0, 0},
+    {"FACTOR", "C", IS_DOUBLE, 0, (long)((char *)&wake_example.factor), NULL, 1.0, 0},
     {"N_BINS", "", IS_LONG, 0, (long)((char *)&wake_example.n_bins), NULL, 0.0, 128},
     {"INTERPOLATE", "", IS_LONG, 0, (long)((char *)&wake_example.interpolate), NULL, 0.0, 0},
     {"SMOOTHING", "", IS_LONG, 0, (long)((char *)&wake_example.smoothing), NULL, 0.0, 0},
@@ -1089,12 +1093,14 @@ PARAMETER trwake_param[N_TRWAKE_PARAMS] = {
     {"WXCOLUMN", "", IS_STRING, 0, (long)((char *)&trwake_example.WxColumn), NULL, 0.0, 0},
     {"WYCOLUMN", "", IS_STRING, 0, (long)((char *)&trwake_example.WyColumn), NULL, 0.0, 0},
     {"CHARGE", "C", IS_DOUBLE, 0, (long)((char *)&trwake_example.charge), NULL, 0.0, 0},
-    {"FACTOR", "C", IS_DOUBLE, 0, (long)((char *)&trwake_example.factor), NULL, 0.0, 0},
+    {"FACTOR", "C", IS_DOUBLE, 0, (long)((char *)&trwake_example.factor), NULL, 1.0, 0},
     {"N_BINS", "", IS_LONG, 0, (long)((char *)&trwake_example.n_bins), NULL, 0.0, 128},
     {"INTERPOLATE", "", IS_LONG, 0, (long)((char *)&trwake_example.interpolate), NULL, 0.0, 0},
     {"SMOOTHING", "", IS_LONG, 0, (long)((char *)&trwake_example.smoothing), NULL, 0.0, 0},
     {"SG_HALFWIDTH", "", IS_LONG, 0, (long)((char *)&trwake_example.SGHalfWidth), NULL, 0.0, 4},
     {"SG_ORDER", "", IS_LONG, 0, (long)((char *)&trwake_example.SGOrder), NULL, 0.0, 2},
+    {"DX", "M", IS_DOUBLE, 0, (long)((char *)&trwake_example.dx), NULL, 0.0, 0},
+    {"DY", "M", IS_DOUBLE, 0, (long)((char *)&trwake_example.dy), NULL, 0.0, 0},
     };
 
 CHARGE charge_example;

@@ -46,7 +46,8 @@ void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
   tmean = computeTimeCoordinates(time, Po, part, np);
   tmin = tmean-dt*wakeData->n_bins/2.0;
   
-  n_binned = binTransverseTimeDistribution(posItime, pz, pbin, tmin, dt, nb, time, part, Po, np);
+  n_binned = binTransverseTimeDistribution(posItime, pz, pbin, tmin, dt, nb, time, part, Po, np,
+                                           wakeData->dx, wakeData->dy);
   if (n_binned!=np)
     fprintf(stderr, "warning: only %ld of %ld particles where binned (WAKE)\n", n_binned, np);
 
@@ -100,8 +101,7 @@ void applyTransverseWakeKicks(double **part, double *time, double *pz, long *pbi
           dt1 += dt;
         }
         Vinterp = Vtime[ib]+(Vtime[ib+1]-Vtime[ib])/dt*dt1;
-      }
-      else
+      } else
         Vinterp = Vtime[ib];
       if (Vinterp)
         part[ip][offset] += Vinterp/(1e6*me_mev)/pz[ip];
@@ -192,7 +192,8 @@ double computeTimeCoordinates(double *time, double Po, double **part, long np)
 }
 
 long binTransverseTimeDistribution(double **posItime, double *pz, long *pbin, double tmin, double dt, long nb,
-                                 double *time, double **part, double Po, long np)
+                                   double *time, double **part, double Po, long np,
+                                   double dx, double dy)
 {
   long ip, ib, n_binned;
   for (ib=0; ib<nb; ib++)
@@ -205,8 +206,8 @@ long binTransverseTimeDistribution(double **posItime, double *pz, long *pbin, do
       continue;
     if (ib>nb - 1)
       continue;
-    posItime[0][ib] += part[ip][0];
-    posItime[1][ib] += part[ip][2];
+    posItime[0][ib] += part[ip][0]-dx;
+    posItime[1][ib] += part[ip][2]-dy;
     pbin[ip] = ib;
     pz[ip] = Po*(1+part[ip][5])/sqrt(1+sqr(part[ip][1])+sqr(part[ip][3]));
     n_binned++;

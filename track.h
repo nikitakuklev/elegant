@@ -520,17 +520,17 @@ extern char *entity_text[N_TYPES];
 #define N_CSBEND_PARAMS 27
 #define N_MATTER_PARAMS 3
 #define N_RFMODE_PARAMS 17
-#define N_TRFMODE_PARAMS 10
+#define N_TRFMODE_PARAMS 12
 #define N_TWMTA_PARAMS 17
 #define N_ZLONGIT_PARAMS 17
 #define N_MODRF_PARAMS 13
 #define N_SREFFECTS_PARAMS 10
-#define N_ZTRANSVERSE_PARAMS 17
+#define N_ZTRANSVERSE_PARAMS 19
 #define N_IBSCATTER_PARAMS 3
 #define N_FMULT_PARAMS 9
 #define N_BMAPXY_PARAMS 5
 #define N_WAKE_PARAMS 10
-#define N_TRWAKE_PARAMS 11
+#define N_TRWAKE_PARAMS 13
 #define N_TUBEND_PARAMS 6
 #define N_CHARGE_PARAMS 1
 #define N_PFILTER_PARAMS 1
@@ -1357,6 +1357,7 @@ typedef struct {
     long n_bins;               /* number of charge bins */
     char *plane;               /* "x", "y", or "both" */
     long single_pass;          /* controls accumulation of voltage from turn-to-turn */
+    double dx, dy;
     /* for internal use: */
     long doX, doY;
     double mp_charge;          /* charge per macroparticle */
@@ -1412,6 +1413,7 @@ typedef struct {
     long n_bins;               /* number of charge bins--must be 2^n */
     long smoothing;            /* flag to turn on smoothing */
     long SGOrder, SGHalfWidth; /* Savitzky-Golay smoothing parameters */
+    double dx, dy;
     /* for internal use */
     double *iZ[2];             /* i*Z (Re Z, Im Z) pairs for each plane */
     long initialized;
@@ -1444,6 +1446,7 @@ typedef struct {
     long n_bins;               /* number of charge bins */
     long interpolate;          /* flag to turn on interpolation */
     long smoothing, SGHalfWidth, SGOrder;  /* flag to turn on smoothing plus control parameters */
+    double dx, dy;
     /* for internal use: */
     long initialized;          /* indicates that files are loaded */
     long wakePoints;
@@ -2010,7 +2013,8 @@ void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
                           RUN *run, long i_pass, CHARGE *charge);
 double computeTimeCoordinates(double *time, double Po, double **part, long np);
 long binTransverseTimeDistribution(double **posItime, double *pz, long *pbin, double tmin,
-                                   double dt, long nb, double *time, double **part, double Po, long np);
+                                   double dt, long nb, double *time, double **part, double Po, long np,
+                                   double dx, double dy);
 long binTimeDistribution(double *Itime, long *pbin, double tmin,
                          double dt, long nb, double *time, double **part, double Po, long np);
 

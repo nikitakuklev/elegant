@@ -123,8 +123,8 @@ void track_through_trfmode(
       continue;
     if (ib>trfmode->n_bins - 1)
       continue;
-    xsum[ib] += part[ip][0];
-    ysum[ib] += part[ip][2];
+    xsum[ib] += part[ip][0]-trfmode->dx;
+    ysum[ib] += part[ip][2]-trfmode->dy;
     pbin[ip] = ib;
     if (ib>lastBin)
       lastBin = ib;

@@ -72,8 +72,8 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
     ib = (time[ip]-tmin)/dt;
     if (ib<0 || ib>nb - 1)
       continue;
-    posItime[0][ib] += part[ip][0];
-    posItime[0][ib] += part[ip][2];
+    posItime[0][ib] += part[ip][0]-ztransverse->dx;
+    posItime[1][ib] += part[ip][2]-ztransverse->dy;
     pbin[ip] = ib;
     pz[ip] = Po*(1+part[ip][5])/sqrt(1+sqr(part[ip][1])+sqr(part[ip][3]));
     n_binned++;
