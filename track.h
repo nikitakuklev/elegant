@@ -341,11 +341,18 @@ typedef struct {
   SDDS_DATASET SDDSout;
   /* input data */
   double beta, undulatorK, undulatorPeriod;
+  double sliceFraction;
+  long nSlices;
   /* simulation data */
-  double betaToUse, charge, pCentral, rmsBunchLength, Sdelta, emit;
+  double *betaToUse, *charge, *pCentral, *rmsBunchLength, *Sdelta, *emit;
+  long *betaToUseIndex, *chargeIndex, *pCentralIndex, *rmsBunchLengthIndex, *SdeltaIndex, *emitIndex;
   /* computed FEL output */
-  double lightWavelength, saturationLength, gainLength, noisePower;
-  double saturationPower, PierceParameter, etaDiffraction, etaEmittance, etaEnergySpread;
+  double *lightWavelength, *saturationLength, *gainLength, *noisePower;
+  double *saturationPower, *PierceParameter, *etaDiffraction, *etaEmittance, *etaEnergySpread;
+  long *lightWavelengthIndex, *saturationLengthIndex, *gainLengthIndex, *noisePowerIndex;
+  long *saturationPowerIndex, *PierceParameterIndex, *etaDiffractionIndex, *etaEmittanceIndex, 
+              *etaEnergySpreadIndex;
+  long *sliceFound;
 } SASEFEL_OUTPUT;
 
 /* structure to hold information for output files specified in run_setup namelist */
