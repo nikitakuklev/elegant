@@ -95,8 +95,8 @@ void setup_sdds_beam(
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
     process_namelist(&sdds_beam, nltext);
-    print_namelist(stdout, &sdds_beam);
-    fflush(stdout);
+    print_namelist(stderr, &sdds_beam);
+    fflush(stderr);
 
     /* check for validity of namelist inputs */
     if (input==NULL)
@@ -162,8 +162,8 @@ long new_sdds_beam(
         if (beam->n_original==0)
             bomb("can't retrack with previous bunch--there isn't one!", NULL);
         if (n_particles_per_ring!=1) {
-            puts("Warning: can't do retracking with previous bunch when n_particles_per_ring!=1\n");
-            puts("Will use a new bunch generated from previously read data.\n");
+            fputs("Warning: can't do retracking with previous bunch when n_particles_per_ring!=1\n", stderr);
+            fputs("Will use a new bunch generated from previously read data.\n", stderr);
             generate_new_bunch = 1;
             }
         else
@@ -269,11 +269,11 @@ long new_sdds_beam(
             for (i_store=0; i_store<beam->n_to_track; i_store++) {
                 for (i=0; i<6; i++) {
                     if (!beam->particle[i_store]) {
-                        printf("error: beam->particle[%ld] is NULL\n", i_store);
+                        fprintf(stderr, "error: beam->particle[%ld] is NULL\n", i_store);
                         exit(1);
                         }
                     if (isnan(beam->particle[i_store][i]) || isinf(beam->particle[i_store][i])) {
-                        printf("error: NaN or Infinity detected in initial particle data, coordinate %ld\n", i);
+                        fprintf(stderr, "error: NaN or Infinity detected in initial particle data, coordinate %ld\n", i);
                         exit(1);
                         }
                     }
@@ -326,7 +326,7 @@ long new_sdds_beam(
             for (i_store=0; i_store<beam->n_to_track; i_store++) {
                 for (i=0; i<6; i++) {
                     if (isnan(beam->particle[i_store][i]) || isinf(beam->particle[i_store][i])) {
-                        printf("error: NaN or Infinity detected in initial particle data, coordinate %ld\n", i);
+                        fprintf(stderr, "error: NaN or Infinity detected in initial particle data, coordinate %ld\n", i);
                         exit(1);
                         }
                     }
@@ -566,7 +566,7 @@ long get_sdds_particles(double ***particle, long one_dump, long n_skip)
             break;
         }
     
-    printf("a total of %ld data points were read\n\n", np);
+    fprintf(stderr, "a total of %ld data points were read\n\n", np);
     *particle = data;
 
     log_exit("get_sdds_particles");

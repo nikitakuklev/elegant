@@ -60,7 +60,7 @@ void setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
     process_namelist(&load_parameters, nltext);
-    print_namelist(stdout, &load_parameters);
+    print_namelist(stderr, &load_parameters);
 
     if (!filename && !clear_settings)
         bomb("filename must be given for load_parameters", NULL);

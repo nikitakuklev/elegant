@@ -39,7 +39,7 @@ long rectangular_collimator(
         return(np);
         }
 
-/*    printf("rcol: %e by %e at (%e, %e, %le)\n", xsize, ysize, x_center, y_center, z); */
+/*    fprintf(stderr, "rcol: %e by %e at (%e, %e, %le)\n", xsize, ysize, x_center, y_center, z); */
 
     itop = np-1;
     for (ip=0; ip<np; ip++) {
@@ -217,7 +217,7 @@ long elliptical_collimator(
         return(np);
         }
 
-/*    printf("ecol: %le by %le at (%e, %e, %le)\n", ecol->x_max, ecol->y_max, dx, dy, z); */
+/*    fprintf(stderr, "ecol: %le by %le at (%e, %e, %le)\n", ecol->x_max, ecol->y_max, dx, dy, z); */
 
     itop = np-1;
     for (ip=0; ip<np; ip++) {
@@ -294,7 +294,7 @@ long elimit_amplitudes(
         return(np);
         }
 
-/*    printf("elimit: %le by %le at %le\n", xmax, ymax, z); */
+/*    fprintf(stderr, "elimit: %le by %le at %le\n", xmax, ymax, z); */
 
     a2 = sqr(xmax);
     b2 = sqr(ymax);

@@ -31,7 +31,7 @@ void check_duplic_elem(
     bomb("new element pointer is null (check_duplic_elem)", NULL);
   
 #ifdef DEBUG    
-  printf("%ld elements in list\n",
+  fprintf(stderr, "%ld elements in list\n",
          n_elems);
 #endif
   if (n_elems>=1) {
@@ -80,7 +80,7 @@ void check_duplic_elem(
     }
     if (insertionPoint) {
 #ifdef DEBUG
-      printf("inserting %s before %s\n", new_name, insertionPoint->name);
+      fprintf(stderr, "inserting %s before %s\n", new_name, insertionPoint->name);
 #endif
       elast = (*new_elem)->pred;
       if ((*new_elem)->pred)
@@ -99,10 +99,10 @@ void check_duplic_elem(
 #ifdef DEBUG
   elem  = *elem0;
   while (elem && elem->name) {
-    printf("  %s\n", elem->name);
+    fprintf(stderr, "  %s\n", elem->name);
     elem = elem->succ;
   }
-  fflush(stdout);
+  fflush(stderr);
 #endif
 
 }

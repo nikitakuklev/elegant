@@ -44,7 +44,7 @@ void compute_amplification_factors(
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
     process_namelist(&amplification_factors, nltext);
-    print_namelist(stdout, &amplification_factors);
+    print_namelist(stderr, &amplification_factors);
 
     if (plane)
         str_tolower(plane);
@@ -142,14 +142,14 @@ void compute_amplification_factors(
     add_to_standard_headers(name_header, unit_header, printf_string,   "element",  "", "%10s#%ld", 10);
 
     if (correct->mode!=-1) {
-        fputs("Amplification factors with correction for", stdout);
+        fputs("Amplification factors with correction for", stderr);
         if (fpuof) {
             if (correct->n_xy_cycles!=1)
                 bomb("n_xy_cycles!=1--can't provide uncorrected amplification function\nuse separate run or set n_xy_cycles=1", NULL);
             }
         }
     else {
-        fputs("Amplification factors", stdout);
+        fputs("Amplification factors", stderr);
         if (fpcof)
             bomb("can't compute corrected-orbit amplification function if you don't do correction", NULL);
         if (fpkf)
@@ -179,7 +179,7 @@ void compute_amplification_factors(
             item, change, entity_description[eptr->type].parameter[iparam].unit);
     strcat(description, s);
 
-    puts(description);
+    fputs(description, stderr);
 
     if (fpout) {
         fprintf(fpout, "SDDS1\n&description text=\"Amplification factors for beamline %s from %s\" &end\n",
@@ -230,11 +230,11 @@ void compute_amplification_factors(
         fprintf(fpkf, "&data mode=ascii, no_row_counts=1 &end\n");
         }
 
-    fputs(name_header, stdout);
-    fputc('\n', stdout);
-    fputs(unit_header, stdout);
-    fputc('\n', stdout);
-    fflush(stdout);
+    fputs(name_header, stderr);
+    fputc('\n', stderr);
+    fputs(unit_header, stderr);
+    fputc('\n', stderr);
+    fflush(stderr);
 
     if (!name)
         eptr = &(beamline->elem);
@@ -250,7 +250,7 @@ void compute_amplification_factors(
         if ((iparam=confirm_parameter(item, eptr->type))==-1)
             continue;
         number_to_do--;
-        printf("\nWorking on element %s#%ld at z=%em\n", eptr->name, eptr->occurence, eptr->end_pos);
+        fprintf(stderr, "\nWorking on element %s#%ld at z=%em\n", eptr->name, eptr->occurence, eptr->end_pos);
         if (entity_description[eptr->type].parameter[iparam].type!=IS_DOUBLE)
             bomb("item is not floating-point type", NULL);
 
@@ -340,9 +340,9 @@ void compute_amplification_factors(
                         trajc[i].elem->name, trajc[i].elem->occurence);
             }
         if (correct->mode==-1 && emax) {
-            fprintf(stdout, printf_string,
+            fprintf(stderr, printf_string,
                     rms_pos/change, max_pos/change, emax->end_pos, eptr->end_pos, eptr->name, eptr->occurence);
-            fputc('\n', stdout);
+            fputc('\n', stderr);
             if (fpout) {
                 fprintf(fpout, printf_string,
                         rms_pos/change, max_pos/change, emax->end_pos, eptr->end_pos, eptr->name, eptr->occurence);
@@ -360,10 +360,10 @@ void compute_amplification_factors(
                 }
             if (n_kicks)
                 rms_kick = sqrt(rms_kick/n_kicks);
-            fprintf(stdout, printf_string,
+            fprintf(stderr, printf_string,
                     rms_pos/change, max_pos/change, emax->end_pos, rms_kick/change, 
                     max_kick/change, eptr->end_pos, eptr->name, eptr->occurence);
-            fputc('\n', stdout);
+            fputc('\n', stderr);
             if (fpout) {
                 fprintf(fpout, printf_string,
                         rms_pos/change, max_pos/change, emax->end_pos, rms_kick/change, 
@@ -405,12 +405,12 @@ void compute_amplification_factors(
                 emaxu = traj[i].elem;
                 }
             }
-        putchar('\n');
+        fputc('\n', stderr);
         if (emaxc && correct->mode!=-1)
-            printf("maximum corrected-orbit amplification function is %e %s at %s at z=%em\n",
+            fprintf(stderr, "maximum corrected-orbit amplification function is %e %s at %s at z=%em\n",
                    max_Ac, Ai_unit, emaxc->name, emaxc->end_pos);
         if (emaxu)
-            printf("maximum orbit amplification function is %e %s at %s at z=%em\n",
+            fprintf(stderr, "maximum orbit amplification function is %e %s at %s at z=%em\n",
                    max_Au, Ai_unit, emax->name, emax->end_pos);
         }
     if (fpcof)
@@ -432,7 +432,7 @@ void compute_amplification_factors(
             }
         fclose(fpkf);
         if (max_kick)
-            printf("maximum kick amplification factor is %e %s from %s#%ld.%s at %e m\n",
+            fprintf(stderr, "maximum kick amplification factor is %e %s from %s#%ld.%s at %e m\n",
                    max_kick, Cij_unit, CM->ucorr[j]->name, CM->ucorr[j]->occurence,
                    SL->corr_param[CM->sl_index[j]], CM->ucorr[j]->end_pos);
         }

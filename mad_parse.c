@@ -49,7 +49,7 @@ void fill_line(
     log_entry("fill_line");
 
 #ifdef DEBUG    
-    printf("expanding beamline: %s\n", s);
+    fprintf(stderr, "expanding beamline: %s\n", s);
 #endif
 
     /* get pointer to empty spot in list of LINE definitions */
@@ -64,13 +64,13 @@ void fill_line(
 
     /* get beamline name */
     if ((ptr = strchr(s, ','))==NULL) {
-        printf("error parsing LINE: %s\n", s);
+        fprintf(stderr, "error parsing LINE: %s\n", s);
         exit(1);
         }
     *ptr = 0;
     lptr->name = get_token_t(s, " ,\011");
 #ifdef DEBUG
-    printf("line name is %s\n", lptr->name);
+    fprintf(stderr, "line name is %s\n", lptr->name);
 #endif
     if (strpbrk(lptr->name, ":.,/-_+ "))
         sprintf(lptr->definition, "\"%s\": LINE=%s", lptr->name, ptr+1);
@@ -111,7 +111,7 @@ extern ELEMENT_LIST *expand_line(
     cp_str(&line_save, s);
 
 #ifdef DEBUG
-    printf("line is %s\n", s);
+    fprintf(stderr, "line is %s\n", s);
 #endif
 
     while (ptr1 = get_token_tq(s, ",", ",", "(\"", ")\"")) {
@@ -122,7 +122,7 @@ extern ELEMENT_LIST *expand_line(
             *ptr = 0;
         delete_bounding(ptr1, "\"");
 #ifdef DEBUG 
-        printf("ptr1 = %s\n", ptr1);
+        fprintf(stderr, "ptr1 = %s\n", ptr1);
 #endif
 
 
@@ -137,8 +137,8 @@ extern ELEMENT_LIST *expand_line(
             if (ptr=strchr(ptr1, '*')) {
                 *ptr = 0;
                 if (1!=sscanf(ptr1, "%ld", &multiplier)) {
-                    printf("problem with line: %s\n", line_save);
-                    printf("position is %s\n", ptr1);
+                    fprintf(stderr, "problem with line: %s\n", line_save);
+                    fprintf(stderr, "position is %s\n", ptr1);
                     bomb("improper element multiplication", NULL);
                     }
                 ptr1 = ptr+1;
@@ -147,20 +147,20 @@ extern ELEMENT_LIST *expand_line(
                 }
 /** this code was removed to solve problem with names like 17QD 
             else {
-                printf("problem with line: %s\n", line_save);
-                printf("position is %s\n", ptr1);
+                fprintf(stderr, "problem with line: %s\n", line_save);
+                fprintf(stderr, "position is %s\n", ptr1);
                 bomb("improper element multiplication", NULL);
                 }
 ***/
             }
 #ifdef DEBUG
-        printf("reverse = %ld, multiplier = %ld\n", reverse, multiplier);
-        printf("ptr1 = %s\n",ptr1);
+        fprintf(stderr, "reverse = %ld, multiplier = %ld\n", reverse, multiplier);
+        fprintf(stderr, "ptr1 = %s\n",ptr1);
 #endif
 
         simple = is_simple(ptr1);
 #ifdef DEBUG
-            printf("simple = %ld\n", simple);
+            fprintf(stderr, "simple = %ld\n", simple);
 #endif
         if (simple) {
             /* add simple elements to the line's element list */
@@ -183,7 +183,7 @@ extern ELEMENT_LIST *expand_line(
 
 
 #ifdef DEBUG
-    print_line(stdout, lptr);
+    print_line(stderr, lptr);
 #endif
     log_exit("fill_line");
     return(leptr);
@@ -216,14 +216,14 @@ void fill_elem(ELEMENT_LIST *eptr, char *s, long type, FILE *fp_input)
     eptr->end_pos = eptr->flags = 0;
 
     if ((eptr->type = type)>=N_TYPES || type<=0) {
-        printf("unknown element type %ld in fill_elem()\n", type);
-        printf("remainder of line is: \n%s\n", s);
+        fprintf(stderr, "unknown element type %ld in fill_elem()\n", type);
+        fprintf(stderr, "remainder of line is: \n%s\n", s);
         exit(1);
         }
 
     eptr->name = get_token_t(s, " ,\011");
     if (((long)strlen(eptr->name))>max_name_length) {
-        printf("warning: element name %s truncated to %ld  characters\n",
+        fprintf(stderr, "warning: element name %s truncated to %ld  characters\n",
                 eptr->name, max_name_length);
         eptr->name[max_name_length] = 0;
         }
@@ -284,13 +284,13 @@ void copy_named_element(ELEMENT_LIST *eptr, char *s, ELEMENT_LIST *elem)
     delete_bounding(match, "\"");
 
     if (((long)strlen(name))>max_name_length) {
-        printf("warning: element name %s truncated to %ld characters\n",
+        fprintf(stderr, "warning: element name %s truncated to %ld characters\n",
                 eptr->name, max_name_length);
         name[max_name_length] = 0;
         }
 
 #ifdef DEBUG
-    printf("seeking match for name %s to copy for defining name %s\n",
+    fprintf(stderr, "seeking match for name %s to copy for defining name %s\n",
            match, name);
 #endif
 
@@ -306,7 +306,7 @@ void copy_named_element(ELEMENT_LIST *eptr, char *s, ELEMENT_LIST *elem)
         exit(1);
         }
 #ifdef DEBUG
-    printf("match found for %s: %s\n", name, match);
+    fprintf(stderr, "match found for %s: %s\n", name, match);
 #endif
 
     eptr->p_elem = tmalloc(entity_description[elem->type].structure_size);
@@ -353,7 +353,7 @@ long expand_phys(
     for (ie=0; ie<ne; ie++) {
         if ((comparison=strcmp(entity, elem_list->name))==0) {
 #ifdef DEBUG
-            printf("adding element %ld*%s\n", multiplier, entity);
+            fprintf(stderr, "adding element %ld*%s\n", multiplier, entity);
 #endif
             for (i=0; i<multiplier; i++) {
                 copy_element(leptr, elem_list, reverse);
@@ -387,9 +387,9 @@ long expand_phys(
         line_list = line_list->succ;
         }
 
-    printf("no expansion for entity %s\n", entity);
-    printf("known elements are:\n");
-    print_elem_names(stdout, elem0);
+    fprintf(stderr, "no expansion for entity %s\n", entity);
+    fprintf(stderr, "known elements are:\n");
+    print_elem_names(stderr, elem0);
     exit(1);
     return(0);
     }
@@ -498,17 +498,17 @@ long tell_type(char *s, ELEMENT_LIST *elem)
         }
     delete_bounding(name, "\"");
 #ifdef DEBUG
-    printf("first token on line: >%s<\n", name);
-    printf("remainder of line: >%s<\n", s);
+    fprintf(stderr, "first token on line: >%s<\n", name);
+    fprintf(stderr, "remainder of line: >%s<\n", s);
 #endif
     ptr = get_token_tq(s, "", ",=", " \"", " \"");
     delete_bounding(ptr, "\"");
 #ifdef DEBUG
-    printf("second token: >%s<\n", ptr);
+    fprintf(stderr, "second token: >%s<\n", ptr);
 #endif
     if (!ptr || is_blank(ptr)) {
 #ifdef DEBUG
-        printf("second token is blank\n");
+        fprintf(stderr, "second token is blank\n");
 #endif
         if (ptr=strchr(name, ',')) {
             strcpy(s, ptr+1);
@@ -524,7 +524,7 @@ long tell_type(char *s, ELEMENT_LIST *elem)
          * pointed to by ptr, but is not in s. */
         }
 #ifdef DEBUG
-    printf("seeking to match %s to entity name\n", ptr);
+    fprintf(stderr, "seeking to match %s to entity name\n", ptr);
 #endif
     if (entity_name_length==NULL) {
         entity_name_length = tmalloc(sizeof(*entity_name_length)*N_TYPES);
@@ -545,12 +545,12 @@ long tell_type(char *s, ELEMENT_LIST *elem)
             return_value = i;
             match_found = 1;
 #ifdef DEBUG
-            printf("%s matches entity name %s\n", ptr, entity_name[i]);
+            fprintf(stderr, "%s matches entity name %s\n", ptr, entity_name[i]);
 #endif
             }
         }
 #ifdef DEBUG
-    printf("seeking to match %s to command name\n", ptr);
+    fprintf(stderr, "seeking to match %s to command name\n", ptr);
 #endif
     for (i=1; i<N_MADCOMS; i++) {
         if (strncmp(ptr, madcom_name[i], MIN(l, strlen(madcom_name[i])))==0) {
@@ -565,12 +565,12 @@ long tell_type(char *s, ELEMENT_LIST *elem)
             return_value = -i-1;
             match_found = 1;
 #ifdef DEBUG
-            printf("%s matches command name %s\n", ptr, madcom_name[i]);
+            fprintf(stderr, "%s matches command name %s\n", ptr, madcom_name[i]);
 #endif
             }
         }
 #ifdef DEBUG
-    printf("seeking to match %s to element name\n", ptr);
+    fprintf(stderr, "seeking to match %s to element name\n", ptr);
 #endif
     /* this code depends on the elements being previously sorted into
      * strcmp() order.  This is done by check_duplic_elem
@@ -584,8 +584,8 @@ long tell_type(char *s, ELEMENT_LIST *elem)
             buffer = tmalloc(sizeof(*buffer)*(strlen(elem->definition_text)+strlen(s)+1));
             if (ptr=strchr(s, ',')) {
 #ifdef DEBUG
-                printf("inserting into: %s\n", s);
-                printf("inserting: %s\n", elem->definition_text);
+                fprintf(stderr, "inserting into: %s\n", s);
+                fprintf(stderr, "inserting: %s\n", elem->definition_text);
 #endif
                 insert(ptr, elem->definition_text);
                 }
@@ -595,7 +595,7 @@ long tell_type(char *s, ELEMENT_LIST *elem)
                 }
             free(buffer);
 #ifdef DEBUG
-            printf("modified input text for element %s:\n%s\n", name, s);
+            fprintf(stderr, "modified input text for element %s:\n%s\n", name, s);
 #endif
             log_exit("tell_type");
             return(elem->type);
@@ -622,7 +622,7 @@ char *get_param_name(char *s)
     log_entry("get_param_name");
 
     if ((ptr=strchr(s, '='))==NULL) {
-        printf("get_param_name(): no parameter name found in string %s\n", s);
+        fprintf(stderr, "get_param_name(): no parameter name found in string %s\n", s);
         exit(1);
         }
     *ptr = 0;
@@ -666,7 +666,7 @@ char *find_param(char *s, char *param)
 void unknown_parameter(char *parameter, 
     char *element, char *type_name, char *caller)
 {
-    printf("error: unknown parameter %s used for %s %s (%s)\n",
+    fprintf(stderr, "error: unknown parameter %s used for %s %s (%s)\n",
             parameter, type_name, element, caller);
     exit(1);
     }
@@ -727,23 +727,23 @@ void parse_element(
             if (strcmp(parameter[i].name, ptr1)==0)
                 break;
         if (i==n_params) {
-            printf("error: unknown parameter %s used for %s %s (%s)\n",
+            fprintf(stderr, "error: unknown parameter %s used for %s %s (%s)\n",
                     ptr1, eptr->name, type_name, "parse_element");
-            puts("valid parameters are:");
+            fputs("valid parameters are:", stderr);
             for (i=0; i<n_params; i++) {
                 switch (parameter[i].type) {
                     case IS_DOUBLE:
-                        printf("%s (%.16f %s)\n",
+                        fprintf(stderr, "%s (%.16f %s)\n",
                             parameter[i].name, parameter[i].number,
                             parameter[i].unit);
                         break;
                     case IS_LONG:
-                        printf("%s (%ld %s)\n",
+                        fprintf(stderr, "%s (%ld %s)\n",
                             parameter[i].name, parameter[i].integer,
                             parameter[i].unit);
                         break;
                     case IS_STRING:
-                        printf("%s (\"%s\")\n",
+                        fprintf(stderr, "%s (\"%s\")\n",
                             parameter[i].name, 
                             parameter[i].string==NULL?"{null}":
                                     parameter[i].string);
@@ -756,15 +756,15 @@ void parse_element(
             case IS_DOUBLE:
                 if (!isdigit(*ptr) && *ptr!='.' && *ptr!='-' && *ptr!='+') {
 #if defined(DEBUG)
-                    printf("non-numeric string for double value: %s\n", ptr);
+                    fprintf(stderr, "non-numeric string for double value: %s\n", ptr);
 #endif
                     rpn_token = get_token(ptr);
 #if defined(DEBUG)
-                    printf("rpn token : %s\n", rpn_token);
+                    fprintf(stderr, "rpn token : %s\n", rpn_token);
 #endif
                     *((double*)(p_elem+parameter[i].offset)) = rpn(rpn_token);
                     if (rpn_check_error()) exit(1);
-                    printf("computed value for %s.%s is %.15e\n", eptr->name, parameter[i].name, 
+                    fprintf(stderr, "computed value for %s.%s is %.15e\n", eptr->name, parameter[i].name, 
                            *((double*)(p_elem+parameter[i].offset)));
                     }
                 else
@@ -772,7 +772,7 @@ void parse_element(
                 break;
             case IS_LONG:
                 if (!isdigit(*ptr) && *ptr!='-' && *ptr!='+') {
-                    printf("error: non-integer value given for parameter %s of %s\n",
+                    fprintf(stderr, "error: non-integer value given for parameter %s of %s\n",
                         parameter[i].name, eptr->name);
                     exit(1);
                     }
@@ -812,7 +812,7 @@ void parse_pepper_pot(
     for (i_hole=0; i_hole<n_holes; i_hole++) {
         if (!fgets(s, 100, fp) ||
                 !get_double(&x, s) || !get_double(&y, s)) {
-            printf("error: data missing for pepper-pot plate %s\n",
+            fprintf(stderr, "error: data missing for pepper-pot plate %s\n",
                 name);
             exit(1);
             }
@@ -821,11 +821,11 @@ void parse_pepper_pot(
         }
 
 /*
-    printf("pepper pot plate %s:\n", name);
-    printf("L=%lf  RADII=%lf  N_HOLES=%ld\n", 
+    fprintf(stderr, "pepper pot plate %s:\n", name);
+    fprintf(stderr, "L=%lf  RADII=%lf  N_HOLES=%ld\n", 
             peppot->length, peppot->radii, peppot->n_holes);
     for (i_hole=0; i_hole<n_holes; i_hole++) 
-        printf("x = %lf    y = %lf\n",
+        fprintf(stderr, "x = %lf    y = %lf\n",
                 peppot->x[i_hole], peppot->y[i_hole]);
  */
     log_exit("parse_pepper_pot");

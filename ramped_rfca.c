@@ -33,16 +33,16 @@ long ramped_rf_cavity(
 
     if (!been_warned) {        
         if (ramprf->freq<1e3 && ramprf->freq)  {
-            printf("\7\7\7warning: your RAMPRF frequency is less than 1kHz--this may be an error\n");
+            fprintf(stderr, "\7\7\7warning: your RAMPRF frequency is less than 1kHz--this may be an error\n");
             been_warned = 1;
             }
         if (fabs(ramprf->volt)<100 && ramprf->volt) {
-            printf("\7\7\7warning: your RAMPRF voltage is less than 100V--this may be an error\n");
+            fprintf(stderr, "\7\7\7warning: your RAMPRF voltage is less than 100V--this may be an error\n");
             been_warned = 1;
             }
         if (been_warned) {
-            printf("units of parameters for RAMPRF are as follows:\n");
-            print_dictionary_entry(stdout, T_RAMPRF);
+            fprintf(stderr, "units of parameters for RAMPRF are as follows:\n");
+            print_dictionary_entry(stderr, T_RAMPRF);
             }
         }
 
@@ -303,7 +303,7 @@ double linear_interpolation(double *y, double *t, long n, double t0, long i)
     if (i==-1)
         return(y[0]);
     if (!(t0>=t[i] && t0<=t[i+1])) {
-        printf("failure to bracket point in time array: t0=%e, t[0] = %e, t[n-1] = %e\n",
+        fprintf(stderr, "failure to bracket point in time array: t0=%e, t[0] = %e, t[n-1] = %e\n",
                t0, t[0], t[n-1]);
         abort();
         }

@@ -82,16 +82,16 @@ long simple_rf_cavity(
 
     if (!been_warned) {        
         if (rfca->freq<1e3 && rfca->freq)  {
-            printf("\7\7\7warning: your RFCA frequency is less than 1kHz--this may be an error\n");
+            fprintf(stderr, "\7\7\7warning: your RFCA frequency is less than 1kHz--this may be an error\n");
             been_warned = 1;
             }
         if (fabs(rfca->volt)<100 && rfca->volt) {
-            printf("\7\7\7warning: your RFCA voltage is less than 100V--this may be an error\n");
+            fprintf(stderr, "\7\7\7warning: your RFCA voltage is less than 100V--this may be an error\n");
             been_warned = 1;
             }
         if (been_warned) {
-            printf("units of parameters for RFCA are as follows:\n");
-            print_dictionary_entry(stdout, T_RFCA);
+            fprintf(stderr, "units of parameters for RFCA are as follows:\n");
+            print_dictionary_entry(stderr, T_RFCA);
             }
         }
 

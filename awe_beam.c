@@ -88,8 +88,8 @@ void setup_awe_beam(
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
     process_namelist(&awe_beam, nltext);
-    print_namelist(stdout, &awe_beam);
-    fflush(stdout);
+    print_namelist(stderr, &awe_beam);
+    fflush(stderr);
 
     /* check for validity of namelist inputs */
     if (input==NULL)
@@ -148,8 +148,8 @@ long new_awe_beam(
         if (beam->n_original==0)
             bomb("can't retrack with previous bunch--there isn't one!", NULL);
         if (n_particles_per_ring!=1) {
-            puts("Warning: can't do retracking with previous bunch when n_particles_per_ring!=1\n");
-            puts("Will use a new bunch generated from previously read data.\n");
+            fputs("Warning: can't do retracking with previous bunch when n_particles_per_ring!=1\n", stderr);
+            fputs("Will use a new bunch generated from previously read data.\n", stderr);
             generate_new_bunch = 1;
             }
         else
@@ -257,7 +257,7 @@ long new_awe_beam(
             for (i_store=0; i_store<beam->n_to_track; i_store++) {
                 for (i=0; i<6; i++) {
                     if (isnan(beam->particle[i_store][i]) || isinf(beam->particle[i_store][i])) {
-                        printf("error: NaN or Infinity detected in initial particle data, coordinate %ld\n", i);
+                        fprintf(stderr, "error: NaN or Infinity detected in initial particle data, coordinate %ld\n", i);
                         exit(1);
                         }
                     }
@@ -321,11 +321,11 @@ long new_awe_beam(
             for (i_store=0; i_store<beam->n_to_track; i_store++) {
                 for (i=0; i<6; i++) {
                     if (!beam->particle[i_store]) {
-                        printf("error: beam->particle[%ld] is NULL\n", i_store);
+                        fprintf(stderr, "error: beam->particle[%ld] is NULL\n", i_store);
                         exit(1);
                         }
                     if (isnan(beam->particle[i_store][i]) || isinf(beam->particle[i_store][i])) {
-                        printf("error: NaN or Infinity detected in initial particle data, coordinate %ld\n", i);
+                        fprintf(stderr, "error: NaN or Infinity detected in initial particle data, coordinate %ld\n", i);
                         exit(1);
                         }
                     }
@@ -381,7 +381,7 @@ long new_awe_beam(
             for (i_store=0; i_store<beam->n_to_track; i_store++) {
                 for (i=0; i<6; i++) {
                     if (isnan(beam->particle[i_store][i]) || isinf(beam->particle[i_store][i])) {
-                        printf("error: NaN or Infinity detected in initial particle data, coordinate %ld\n", i);
+                        fprintf(stderr, "error: NaN or Infinity detected in initial particle data, coordinate %ld\n", i);
                         exit(1);
                         }
                     }
@@ -464,7 +464,7 @@ long get_particles(double ***particle, char **input_file, long n_input_files, lo
     log_entry("get_particles");
 
 #ifdef DEBUG
-    printf("heap verification: get_particles.1\n");
+    fprintf(stderr, "heap verification: get_particles.1\n");
     malloc_verify();
 #endif
 
@@ -482,7 +482,7 @@ long get_particles(double ***particle, char **input_file, long n_input_files, lo
         
     if (!last_nif) {
 #ifdef DEBUG
-        printf("heap verification: get_particles.2\n");
+        fprintf(stderr, "heap verification: get_particles.2\n");
         malloc_verify();
 #endif
         last_nif = n_input_files;
@@ -496,10 +496,10 @@ long get_particles(double ***particle, char **input_file, long n_input_files, lo
                 (input_type_code==ELEGANT_BEAM && input_specs[ifile].n_quantities<7) ||
                 (input_type_code==SPIFFE_BEAM && input_specs[ifile].n_quantities<3) )
                 bomb("too few quantities in dump file.", NULL);
-            printf("dump specifications:\nrun identifier = %s\n%ld quantities per point:\n",
+            fprintf(stderr, "dump specifications:\nrun identifier = %s\n%ld quantities per point:\n",
                    input_specs[ifile].run_identifier, input_specs[ifile].n_quantities);
             for (i=0; i<input_specs[ifile].n_quantities; i++) 
-                printf("    %s in %s in %s precision\n", 
+                fprintf(stderr, "    %s in %s in %s precision\n", 
                        input_specs[ifile].quantity_name[i], input_specs[ifile].quantity_unit[i],
                        (input_specs[ifile].quantity_precision[i]==DOUBLE_PRECISION?
                         "double":"single"));
@@ -552,7 +552,7 @@ long get_particles(double ***particle, char **input_file, long n_input_files, lo
             continue;
             }
 #ifdef DEBUG
-        printf("heap verification: get_particles.3\n");
+        fprintf(stderr, "heap verification: get_particles.3\n");
         malloc_verify();
 #endif
         dump_rejected = 0;
@@ -565,7 +565,7 @@ long get_particles(double ***particle, char **input_file, long n_input_files, lo
                 }
             if ((np_new=np+input_dump[ifile].n_points)>np_max) {
 #ifdef DEBUG
-                printf("heap verification: get_particles.4\n");
+                fprintf(stderr, "heap verification: get_particles.4\n");
                 malloc_verify();
 #endif
                 /* must reallocate to get more space */
@@ -581,17 +581,17 @@ long get_particles(double ***particle, char **input_file, long n_input_files, lo
                     data[i] = trealloc(input_dump[ifile].point[i-np], sizeof(**data)*7);
             np = np_new;
 #ifdef DEBUG
-            printf("heap verification: get_particles.5\n");
+            fprintf(stderr, "heap verification: get_particles.5\n");
             malloc_verify();
 #endif
             tfree(input_dump[ifile].point);
             input_dump[ifile].point = NULL;
 #ifdef DEBUG
-            printf("heap verification: get_particles.6\n");
+            fprintf(stderr, "heap verification: get_particles.6\n");
             malloc_verify();
 #endif
 #ifdef DEBUG
-            printf("heap verification: get_particles.7\n");
+            fprintf(stderr, "heap verification: get_particles.7\n");
             malloc_verify();
 #endif
             }
@@ -599,10 +599,10 @@ long get_particles(double ***particle, char **input_file, long n_input_files, lo
             break;
         }
     
-    printf("a total of %ld data points were read\n\n", np);
+    fprintf(stderr, "a total of %ld data points were read\n\n", np);
     *particle = data;
 #ifdef DEBUG
-    printf("heap verification: get_particles.8\n");
+    fprintf(stderr, "heap verification: get_particles.8\n");
     malloc_verify();
 #endif
     log_exit("get_particles");

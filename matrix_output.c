@@ -67,7 +67,7 @@ void setup_matrix_output(
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
     process_namelist(&matrix_output, nltext);
-    print_namelist(stdout, &matrix_output);
+    print_namelist(stderr, &matrix_output);
 
     /* check for validity of namelist inputs */
     if (printout==NULL && SDDS_output==NULL)
@@ -275,7 +275,7 @@ void run_matrix_output(
             while (sfo--)
                 if (!(first_member=find_element(start_name[i_output], &member, &(beamline->elem))))
                     bomb("can't find specified occurence of given element for matrix output", NULL);
-            printf("starting matrix output from element %s at z=%e m\n", first_member->name, first_member->end_pos);
+            fprintf(stderr, "starting matrix output from element %s at z=%e m\n", first_member->name, first_member->end_pos);
             member = first_member;
             if (first_member->pred)
                 z0 = first_member->pred->end_pos;
@@ -284,8 +284,8 @@ void run_matrix_output(
         beamline->i_recirc    = 0;
         while (member) {
 #if DEBUG
-            printf("working on matrix for %s\n", member->name);
-            print_elem(stdout, member);
+            fprintf(stderr, "working on matrix for %s\n", member->name);
+            print_elem(stderr, member);
 #endif
             if (!member->matrix)
                 compute_matrix(member, run, NULL);
@@ -319,7 +319,7 @@ void run_matrix_output(
             if (entity_description[member->type].flags&HAS_MATRIX) {
                 if (fp_printout[i_output] && !print_full_only[i_output]) {
 #ifdef DEBUG
-                    printf("doing printout for matrix of %s %s\n", 
+                    fprintf(stderr, "doing printout for matrix of %s %s\n", 
                            entity_name[member->type], member->name);
 #endif
                     if (member->matrix->order>print_order[i_output]) {
@@ -331,7 +331,7 @@ void run_matrix_output(
                         print_matrices(fp_printout[i_output], member->name, member->matrix);
                     }
 #ifdef DEBUG
-                printf("concatenating matrix of %s %s\n", 
+                fprintf(stderr, "concatenating matrix of %s %s\n", 
                        entity_name[member->type], member->name);
 #endif
                 concat_matrices(M2, member->matrix, M1);
@@ -385,13 +385,13 @@ void simplify_units(char *buffer, char **numer, long n_numer, char **denom, long
     log_entry("simplify_units");
 
 #ifdef DEBUG
-    printf("*** simplify_units called\nnumerators: ");
+    fprintf(stderr, "*** simplify_units called\nnumerators: ");
     for (in=0; in<n_numer; in++)
-        printf("%s ", numer[in]);
-    printf("\ndenominators: ");
+        fprintf(stderr, "%s ", numer[in]);
+    fprintf(stderr, "\ndenominators: ");
     for (id=0; id<n_denom; id++)
-        printf("%s ", denom[id]);
-    putchar('\n');
+        fprintf(stderr, "%s ", denom[id]);
+    fputc('\n', stderr);
 #endif
 
     for (in=0; n_numer>0 && in<n_numer; in++) {
@@ -415,13 +415,13 @@ void simplify_units(char *buffer, char **numer, long n_numer, char **denom, long
         }
 
 #ifdef DEBUG
-    printf("common factors divided out\nnumerators: ");
+    fprintf(stderr, "common factors divided out\nnumerators: ");
     for (in=0; in<n_numer; in++)
-        printf("%s ", numer[in]);
-    printf("\ndenominators: ");
+        fprintf(stderr, "%s ", numer[in]);
+    fprintf(stderr, "\ndenominators: ");
     for (id=0; id<n_denom; id++)
-        printf("%s ", denom[id]);
-    putchar('\n');
+        fprintf(stderr, "%s ", denom[id]);
+    fputc('\n', stderr);
 #endif
 
     mult_numer = tmalloc(sizeof(*mult_numer)*(n_numer?n_numer:1));
@@ -453,13 +453,13 @@ void simplify_units(char *buffer, char **numer, long n_numer, char **denom, long
         }
 
 #ifdef DEBUG
-    printf("multiplicities established\nnumerators: ");
+    fprintf(stderr, "multiplicities established\nnumerators: ");
     for (in=0; in<n_numer; in++)
-        printf("%s^%ld ", numer[in], mult_numer[in]);
-    printf("\ndenominators: ");
+        fprintf(stderr, "%s^%ld ", numer[in], mult_numer[in]);
+    fprintf(stderr, "\ndenominators: ");
     for (id=0; id<n_denom; id++)
-        printf("%s^%ld ", denom[id], mult_denom[id]);
-    putchar('\n');
+        fprintf(stderr, "%s^%ld ", denom[id], mult_denom[id]);
+    fputc('\n', stderr);
 #endif
 
     if (n_numer==0 && n_denom==0)

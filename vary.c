@@ -29,7 +29,7 @@ void vary_setup(VARY *_control, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beam
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
     process_namelist(&run_control, nltext);
-    print_namelist(stdout, &run_control);
+    print_namelist(stderr, &run_control);
 
     /* check validity of input values */
     if (n_steps<=0 && n_indices<=0)
@@ -113,7 +113,7 @@ void add_varied_element(VARY *_control, NAMELIST_TEXT *nltext, RUN *run, LINE_LI
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
     process_namelist(&vary_element, nltext);
-    print_namelist(stdout, &vary_element);
+    print_namelist(stderr, &vary_element);
 
     /* check for valid input */
     if (index_number<0 || index_number>=_control->n_indices)
@@ -126,10 +126,10 @@ void add_varied_element(VARY *_control, NAMELIST_TEXT *nltext, RUN *run, LINE_LI
         if (!(index_limit = load_enumerated_values(_control->enumerated_value+n_elements_to_vary, 
                                    enumeration_file, enumeration_column)))
             bomb("enumerated_values_file contains no valid values", NULL);
-        printf("%ld values of %s loaded from file %s\n", index_limit, enumeration_column,
+        fprintf(stderr, "%ld values of %s loaded from file %s\n", index_limit, enumeration_column,
                enumeration_file);
         if (_control->index_limit[index_number]) {
-            printf("Warning: the limit for index %ld is specified more than once.\nThe lowest-valued specification is used.\n", index_number);
+            fprintf(stderr, "Warning: the limit for index %ld is specified more than once.\nThe lowest-valued specification is used.\n", index_number);
             if (index_limit>_control->index_limit[index_number])
                 index_limit = _control->index_limit[index_number];
             }
@@ -142,7 +142,7 @@ void add_varied_element(VARY *_control, NAMELIST_TEXT *nltext, RUN *run, LINE_LI
                 _control->index_limit[index_number] = index_limit;
             }
         else if (index_limit>0) {
-            printf("Warning: the limit for index %ld is specified more than once.\nThe first specification is used.\n",
+            fprintf(stderr, "Warning: the limit for index %ld is specified more than once.\nThe first specification is used.\n",
                    index_number);
             }
         }
@@ -152,14 +152,14 @@ void add_varied_element(VARY *_control, NAMELIST_TEXT *nltext, RUN *run, LINE_LI
     str_toupper(name);
     context = NULL;
     if (!find_element(name, &context, &(beamline->elem))) {
-        printf("error: cannot vary element %s--not in beamline\n", name);
+        fprintf(stderr, "error: cannot vary element %s--not in beamline\n", name);
         exit(1);
         }
     cp_str(&_control->element[n_elements_to_vary], name);
     _control->varied_type[n_elements_to_vary] = context->type;
     str_toupper(item);
     if ((_control->varied_param[n_elements_to_vary] = confirm_parameter(item, context->type))<0) {
-        printf("error: cannot vary %s--no such parameter for %s\n",item, name);
+        fprintf(stderr, "error: cannot vary %s--no such parameter for %s\n",item, name);
         exit(1);
         }
     cp_str(&_control->item[n_elements_to_vary], item);
@@ -209,7 +209,7 @@ long vary_beamline(VARY *_control, ERROR *errcon, RUN *run, LINE_LIST *beamline)
     links = beamline->links;
 
 #if DEBUG
-    printf("vary_beamline called: i_step = %ld, i_vary = %ld\n", 
+    fprintf(stderr, "vary_beamline called: i_step = %ld, i_vary = %ld\n", 
         _control->i_step, _control->i_vary);
 #endif
 
@@ -226,7 +226,7 @@ long vary_beamline(VARY *_control, ERROR *errcon, RUN *run, LINE_LIST *beamline)
         do_perturbations = 1;
         if (errcon->n_items) {
 #if DEBUG
-            puts("(re)asserting unperturbed values");
+            fputs("(re)asserting unperturbed values", stderr);
 #endif
             log_entry("vary_beamline.1");
             /* assert unperturbed values */
@@ -243,7 +243,7 @@ long vary_beamline(VARY *_control, ERROR *errcon, RUN *run, LINE_LIST *beamline)
         }
     if (_control->n_elements_to_vary) {
 #if DEBUG
-        puts("inside vary-elements section");
+        fputs("inside vary-elements section", stderr);
 #endif
         log_entry("vary_beamline.2");
         check_VARY_structure(_control, "vary_beamline");
@@ -287,11 +287,11 @@ long vary_beamline(VARY *_control, ERROR *errcon, RUN *run, LINE_LIST *beamline)
             _control->i_vary = 1;
             _control->i_step++;
             step_incremented = 1;
-            printf("vary counter reset\n");
+            fprintf(stderr, "vary counter reset\n");
             }
         else {
 #if DEBUG
-            puts("calling advance_values");
+            fputs("calling advance_values", stderr);
 #endif
             if (advance_values1(_control->varied_quan_value, _control->n_elements_to_vary, _control->element_index,
                     _control->initial, _control->step, _control->enumerated_value, 
@@ -307,13 +307,13 @@ long vary_beamline(VARY *_control, ERROR *errcon, RUN *run, LINE_LIST *beamline)
                 log_exit("vary_beamline");
                 return(ret_val);
                 }
-            printf("counter advanced: ");
+            fprintf(stderr, "counter advanced: ");
             for (i=0; i<_control->n_indices; i++)
-                printf("%4ld ", _control->index[i]);
-            printf("\nvalues advanced: ");
+                fprintf(stderr, "%4ld ", _control->index[i]);
+            fprintf(stderr, "\nvalues advanced: ");
             for (i=0; i<_control->n_elements_to_vary; i++)
-                printf("%le ", _control->varied_quan_value[i]);
-            printf("\n");
+                fprintf(stderr, "%le ", _control->varied_quan_value[i]);
+            fprintf(stderr, "\n");
             assert_parameter_values(_control->element, _control->varied_param, _control->varied_type,
                 _control->varied_quan_value, _control->n_elements_to_vary, beamline);
             if (_control->cell)
@@ -331,7 +331,7 @@ long vary_beamline(VARY *_control, ERROR *errcon, RUN *run, LINE_LIST *beamline)
         }
     if (errcon->n_items && do_perturbations) {
 #if DEBUG
-        puts("doing perturbation");
+        fputs("doing perturbation", stderr);
 #endif
         log_entry("vary_beamline.3");
         /* calculate random errors and add them to the existing value (which may not be the unperturbed value
@@ -361,11 +361,11 @@ long vary_beamline(VARY *_control, ERROR *errcon, RUN *run, LINE_LIST *beamline)
 
     if (_control->n_elements_to_vary || errcon->n_items || parameters_loaded==PARAMETERS_LOADED) {
 #if DEBUG
-        puts("computing matrices");
+        fputs("computing matrices", stderr);
 #endif
         log_entry("vary_beamline.4");
         /* compute matrices for perturbed elements */
-        printf("%ld matrices (re)computed\n", 
+        fprintf(stderr, "%ld matrices (re)computed\n", 
                 (i=compute_changed_matrices(beamline, run)+assert_element_links(links, run, beamline, STATIC_LINK+DYNAMIC_LINK))
                 + (_control->cell?compute_changed_matrices(_control->cell, run):0) );
         if (i) {
@@ -381,7 +381,7 @@ long vary_beamline(VARY *_control, ERROR *errcon, RUN *run, LINE_LIST *beamline)
             _control->i_step++;
             step_incremented = 1;
             }
-        printf("tracking step %ld.%ld\n", _control->i_step, _control->i_vary);
+        fprintf(stderr, "tracking step %ld.%ld\n", _control->i_step, _control->i_vary);
         log_exit("vary_beamline.4");
         log_exit("vary_beamline");
         return(1);
@@ -393,7 +393,7 @@ long vary_beamline(VARY *_control, ERROR *errcon, RUN *run, LINE_LIST *beamline)
         }
 
     if (links && links->n_links) {
-        printf("%ld matrices (re)computed\n", i=assert_element_links(links, run, beamline, STATIC_LINK+DYNAMIC_LINK));
+        fprintf(stderr, "%ld matrices (re)computed\n", i=assert_element_links(links, run, beamline, STATIC_LINK+DYNAMIC_LINK));
         if (i) {
             beamline->flags &= ~BEAMLINE_CONCAT_CURRENT;
             beamline->flags &= ~BEAMLINE_TWISS_CURRENT;
@@ -405,7 +405,7 @@ long vary_beamline(VARY *_control, ERROR *errcon, RUN *run, LINE_LIST *beamline)
             }
         }
 
-    printf("tracking step %ld\n", ++_control->i_step);
+    fprintf(stderr, "tracking step %ld\n", ++_control->i_step);
 
     log_exit("vary_beamline");
     return(1);
@@ -432,7 +432,7 @@ long perturb_beamline(VARY *_control, ERROR *errcon, RUN *run, LINE_LIST *beamli
         }        
     if (_control->n_elements_to_vary || errcon->n_items) {
         /* compute matrices for perturbed elements */
-        printf("%ld matrices (re)computed after correction\n", 
+        fprintf(stderr, "%ld matrices (re)computed after correction\n", 
                (i=compute_changed_matrices(beamline, run)
                 + assert_element_links(links, run, beamline, DYNAMIC_LINK+POST_CORRECTION_LINK))
                + (_control->cell?compute_changed_matrices(_control->cell, run):0) );

@@ -20,12 +20,12 @@ VMATRIX *full_matrix(ELEMENT_LIST *elem, RUN *run, long order)
     double Pref_input;
 
     if (!elem) {
-        puts("error: NULL element pointer passed to full_matrix()");
+        fputs("error: NULL element pointer passed to full_matrix", stderr);
         abort();
         }
     
 #ifdef WATCH_MEMORY
-    printf("start full_matrix: CPU: %6.2lf  PF: %6ld  MEM: %6ld\n",
+    fprintf(stderr, "start full_matrix: CPU: %6.2lf  PF: %6ld  MEM: %6ld\n",
            cpu_time()/100.0, page_faults(), memory_count());
 #endif
     
@@ -40,7 +40,7 @@ VMATRIX *accumulate_matrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long ord
   long i;
   
   if (!elem) {
-    puts("error: NULL element pointer passed to accumulate_matrices()");
+    fputs("error: NULL element pointer passed to accumulate_matrices", stderr);
     abort();
   }
   
@@ -54,8 +54,8 @@ VMATRIX *accumulate_matrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long ord
   member = elem;
   while (member) {
     if (member->type<0 || member->type>=N_TYPES) {
-      printf("error: bad element type %ld (accumulate_matrices)\n", member->type);
-      printf("element name is %s and end position is %em\n", 
+      fprintf(stderr, "error: bad element type %ld (accumulate_matrices)\n", member->type);
+      fprintf(stderr, "element name is %s and end position is %em\n", 
              (member->name?member->name:"{null}"), member->end_pos);
       abort();
     }
@@ -101,11 +101,11 @@ VMATRIX *append_full_matrix(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long orde
 
     log_entry("append_full_matrix");
     if (!elem) {
-        puts("error: NULL element pointer passed to append_full_matrix()");
+        fputs("error: NULL element pointer passed to append_full_matrix", stderr);
         abort();
         }
     if (!M0) {
-        puts("error: NULL initial matrix pointer passed to append_full_matrix()");
+        fputs("error: NULL initial matrix pointer passed to append_full_matrix", stderr);
         abort();
         }
     
@@ -116,8 +116,8 @@ VMATRIX *append_full_matrix(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long orde
     member = elem;
     while (member) {
         if (member->type<0 || member->type>=N_TYPES) {
-            printf("error: bad element type %ld (full_matrix)\n", member->type);
-            printf("element name is %s and end position is %em\n", 
+            fprintf(stderr, "error: bad element type %ld (full_matrix)\n", member->type);
+            fprintf(stderr, "element name is %s and end position is %em\n", 
                    (member->name?member->name:"{null}"), member->end_pos);
             abort();
             }
@@ -162,8 +162,8 @@ long fill_in_matrices(
     member = elem;
     while (member) {
         if (member->type<0 || member->type>=N_TYPES) {
-            printf("error: bad element type %ld (fill_in_matrices)\n", member->type);
-            printf("element name is %s and end position is %em\n", 
+            fprintf(stderr, "error: bad element type %ld (fill_in_matrices)\n", member->type);
+            fprintf(stderr, "element name is %s and end position is %em\n", 
                    (member->name?member->name:"{null}"), member->end_pos);
             abort();
             }
@@ -403,12 +403,12 @@ VMATRIX *compute_matrix(
       case T_ALPH:
         alph = (ALPH*)elem->p_elem;
 #if DEBUG
-        print_elem(stdout, elem);
-        printf("part = %ld, threshold = %e, order = %ld\nxmax = %e, xs1 = %e, xs2 = %e\n",
+        print_elem(stderr, elem);
+        fprintf(stderr, "part = %ld, threshold = %e, order = %ld\nxmax = %e, xs1 = %e, xs2 = %e\n",
                alph->part, alph->threshold, alph->order, alph->xs1, alph->xs2);
-        printf("dp1 = %e, dp2 = %e, dx = %e, dy = %e, gradient = %e\n",
+        fprintf(stderr, "dp1 = %e, dp2 = %e, dx = %e, dy = %e, gradient = %e\n",
                alph->dp1, alph->dp2, alph->dx, alph->dy, alph->gradient);
-        print_elem(stdout, elem);
+        print_elem(stderr, elem);
 #endif
         if (alph->xmax)
             alph->gradient = run->p_central*sqr(ALPHA_CONST/alph->xmax);

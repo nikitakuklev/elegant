@@ -199,12 +199,12 @@ static long n_invalid_particles = 0;
 void lorentz_report(void)
 {
     if (n_lorentz_calls) {
-        printf("\nStatistics for numerical integrations by lorentz() module:\n");
-        printf("    %ld calls to main module\n    %ld derivative evaluations\n    %ld particles integrated\n", 
+        fprintf(stderr, "\nStatistics for numerical integrations by lorentz() module:\n");
+        fprintf(stderr, "    %ld calls to main module\n    %ld derivative evaluations\n    %ld particles integrated\n", 
             n_lorentz_calls, n_deriv_calls, n_particles_done);
         if (length_mult_sum && n_particles_done && !integrator) 
-            printf("    average length multiplier for non-adaptive integration: %e\n", length_mult_sum/n_particles_done);
-        printf("    %ld calls to derivative module had invalid particles\n",
+            fprintf(stderr, "    average length multiplier for non-adaptive integration: %e\n", length_mult_sum/n_particles_done);
+        fprintf(stderr, "    %ld calls to derivative module had invalid particles\n",
                n_invalid_particles);
         }
     n_lorentz_calls = n_deriv_calls = n_particles_done = 0;
@@ -303,9 +303,9 @@ long do_lorentz_integration(double *coord, void *field)
             case DIFFEQ_CANT_TAKE_STEP:
             case DIFFEQ_OUTSIDE_INTERVAL:
             case DIFFEQ_XI_GT_XF:
-                printf("Integration failure---may be program bug: %s\n", diffeq_result_description(int_return));
+                fprintf(stderr, "Integration failure---may be program bug: %s\n", diffeq_result_description(int_return));
                 for (i=0; i<6; i++) 
-                    printf("%11.4le  ", coord[i]);
+                    fprintf(stderr, "%11.4le  ", coord[i]);
                 exit(1);
                 break;
             case DIFFEQ_END_OF_INTERVAL:
@@ -314,7 +314,7 @@ long do_lorentz_integration(double *coord, void *field)
                 break;
             default:
                 if ((exvalue = (*exit_function)(NULL, q, central_length))>exit_toler)  {
-                    printf("warning: exit value of %e exceeds tolerance of %e--particle lost.\n", exvalue, exit_toler);
+                    fprintf(stderr, "warning: exit value of %e exceeds tolerance of %e--particle lost.\n", exvalue, exit_toler);
                     log_exit("do_lorentz_integration");
                     return(0);
                     }
@@ -340,7 +340,7 @@ long do_lorentz_integration(double *coord, void *field)
                     lorentz_leap_frog(qout, q, s_end-s_start, n_steps, deriv_function);
                     break;
                 default:
-                    printf("error: unknown non-adaptive integration method code: %ld\n", method_code);
+                    fprintf(stderr, "error: unknown non-adaptive integration method code: %ld\n", method_code);
                     exit(1);
                     break;
                 }
@@ -433,7 +433,7 @@ void lorentz_setup(
                 nibend->negative_angle = 1;
                 }
             if (nibend->e1!=nibend->e2 && !warning_given) {
-                printf("warning: e1!=e2 for NIBEND--this may cause orbit distortions\n");
+                fprintf(stderr, "warning: e1!=e2 for NIBEND--this may cause orbit distortions\n");
                 warning_given = 1;
                 }
             nibend->rho0 = nibend->length/nibend->angle;
@@ -480,14 +480,14 @@ void lorentz_setup(
 #endif
                     if (offset==0)
                         offset = 1./DBL_MAX;
-                    printf("NIBEND offset adjusted to %e to obtain trajectory error of %e\n",
+                    fprintf(stderr, "NIBEND offset adjusted to %e to obtain trajectory error of %e\n",
                         offset, nibend_trajectory_error(offset));
-                    printf("final coordinates: %e, %e, %e, %e, %e\n", 
+                    fprintf(stderr, "final coordinates: %e, %e, %e, %e, %e\n", 
                         traj_err_final_coord[0], traj_err_final_coord[1], traj_err_final_coord[2],
                         traj_err_final_coord[3], traj_err_final_coord[4]);
                     x_correction = traj_err_final_coord[0];
                     if (offset>0)
-                        printf("\7\7warning: a positive offset is unexpected and is probably incorrect!\n");
+                        fprintf(stderr, "\7\7warning: a positive offset is unexpected and is probably incorrect!\n");
                     last_offset = nibend->last_zeta_offset = nibend->zeta_offset = offset;
                     nibend->x_correction = x_correction;
                     }
@@ -498,9 +498,9 @@ void lorentz_setup(
 
 /*
 #ifdef DEBUG
-            printf("entrance: begin fringe intercept = %.16le, end = %.16le, slope = %.16le\n",
+            fprintf(stderr, "entrance: begin fringe intercept = %.16le, end = %.16le, slope = %.16le\n",
                 entr_intercept, fentr_intercept, entr_slope);
-            printf("exit    : begin fringe intercept = %.16le, end = %.16le, slope = %.16le\n",
+            fprintf(stderr, "exit    : begin fringe intercept = %.16le, end = %.16le, slope = %.16le\n",
                 exit_intercept, fexit_intercept, exit_slope);
 #endif
 */
@@ -551,9 +551,9 @@ void lorentz_setup(
 #endif
                 if (fse_opt==0)
                     fse_opt = 1./DBL_MAX;
-                printf("NISEPT fse_opt adjusted to %e to obtain trajectory error of %e\n",
+                fprintf(stderr, "NISEPT fse_opt adjusted to %e to obtain trajectory error of %e\n",
                     fse_opt, nisept_trajectory_error(fse_opt));
-                printf("final coordinates: %e, %e, %e, %e, %e\n", 
+                fprintf(stderr, "final coordinates: %e, %e, %e, %e, %e\n", 
                     traj_err_final_coord[0], traj_err_final_coord[1], traj_err_final_coord[2],
                     traj_err_final_coord[3], traj_err_final_coord[4]);
                 last_fse = nisept->last_fse_opt = nisept->fse_opt = fse_opt;

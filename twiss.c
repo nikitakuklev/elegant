@@ -31,7 +31,7 @@ VMATRIX *compute_periodic_twiss(
     log_entry("compute_periodic_twiss");
 
     if ((i = fill_in_matrices(elem, run)))
-        printf("%ld matrices recomputed for periodic Twiss parameter computation\n", i);
+        fprintf(stderr, "%ld matrices recomputed for periodic Twiss parameter computation\n", i);
     
     modify_rfca_matrices(elem, run->default_order);  /* replace rf cavities with drifts */
     if (clorb) {
@@ -45,19 +45,19 @@ VMATRIX *compute_periodic_twiss(
         /* use 3rd order here to get as close to tracked closed orbit as possible */
         M = append_full_matrix(elem, run, M1, 3);
 #if defined(DEBUG)
-        printf("matrix concatenation for periodic Twiss computation:\n");
-        printf("closed orbit at input:\n  ");
+        fprintf(stderr, "matrix concatenation for periodic Twiss computation:\n");
+        fprintf(stderr, "closed orbit at input:\n  ");
         for (i=0; i<6; i++)
-            printf("%14.6e ", clorb[i]);
-        printf("\nclosed orbit at output:\n  ");
+            fprintf(stderr, "%14.6e ", clorb[i]);
+        fprintf(stderr, "\nclosed orbit at output:\n  ");
         for (i=0; i<6; i++)
-            printf("%14.6e ", M->C[i]);
-        printf("\nR matrix:\n");
+            fprintf(stderr, "%14.6e ", M->C[i]);
+        fprintf(stderr, "\nR matrix:\n");
         for (i=0; i<6; i++) {
-            printf("  ");
+            fprintf(stderr, "  ");
             for (j=0; j<6; j++)
-                printf("%14.6e ", M->R[i][j]);
-            printf("\n");
+                fprintf(stderr, "%14.6e ", M->R[i][j]);
+            fprintf(stderr, "\n");
             }
 #endif
         }
@@ -67,7 +67,7 @@ VMATRIX *compute_periodic_twiss(
 
     for (i=0; i<4; i+=2 ) {
         if (fabs(cos_phi = (R[i][i] + R[i+1][i+1])/2)>1) {
-            printf("warning: beamline unstable for %c plane--can't match beta functions.\n", 'x'+i/2);
+            fprintf(stderr, "warning: beamline unstable for %c plane--can't match beta functions.\n", 'x'+i/2);
             sin_phi = 1e-6;
             }
         beta[i/2] = fabs(R[i][i+1]/sin(acos(cos_phi)));
@@ -77,7 +77,7 @@ VMATRIX *compute_periodic_twiss(
             phi[i/2] += PIx2;
         alpha[i/2] = (R[i][i]-R[i+1][i+1])/(2*sin_phi);
         if ((det = (2-R[i][i]-R[i+1][i+1]))<=0) {
-            printf("error: beamline unstable for %c plane--can't match dispersion functions.\n",
+            fprintf(stderr, "error: beamline unstable for %c plane--can't match dispersion functions.\n",
                 'x'+i/2);
             det = 1e-6;
             }
@@ -135,8 +135,8 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, RADIATION_INTEGRALS
         }
 
 #if defined(DEBUG)
-    printf("now in propagate_twiss_parameters\n");
-    printf("initial twiss parameters for %c plane:\nbeta = %e, alpha = %e, eta = %e, etap = %e\n",
+    fprintf(stderr, "now in propagate_twiss_parameters\n");
+    fprintf(stderr, "initial twiss parameters for %c plane:\nbeta = %e, alpha = %e, eta = %e, etap = %e\n",
            plane==0?'x':'y', beta0, alpha0, eta0, etap0);
 #endif
 
@@ -299,29 +299,29 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, RADIATION_INTEGRALS
         func[0] = (sqr(C)*beta0 - 2*C*S*alpha0 + sqr(S)*gamma0)/detR;
         func[1] = (-C*Cp*beta0 + (Sp*C+S*Cp)*alpha0 - S*Sp*gamma0)/detR;
 #if defined(DEBUG)
-        printf("** working on element %s at z=%e\n", elem->name, elem->end_pos);
-        printf("initial twiss parameters: beta = %e, alpha = %e, gamma = %e, eta = %e, etap = %e\n",
+        fprintf(stderr, "** working on element %s at z=%e\n", elem->name, elem->end_pos);
+        fprintf(stderr, "initial twiss parameters: beta = %e, alpha = %e, gamma = %e, eta = %e, etap = %e\n",
                beta0, alpha0, gamma0, eta0, etap0);
-        printf("matrix: C = %e, S = %e, C' = %e, S' = %e\n",
+        fprintf(stderr, "matrix: C = %e, S = %e, C' = %e, S' = %e\n",
             C, S, Cp, Sp);
-        printf("func[0] = %e, func[1] = %e \n", func[0], func[1]);
-        printf("func0   = %e, func1   = %e \n",
+        fprintf(stderr, "func[0] = %e, func[1] = %e \n", func[0], func[1]);
+        fprintf(stderr, "func0   = %e, func1   = %e \n",
           sqr(C)*beta0 - 2*C*S*alpha0 + sqr(S)*gamma0,
           -C*Cp*beta0 + (Sp*C+S*Cp)*alpha0 - S*Sp*gamma0);
 #endif
         /* use R12=S to find sin(dphi) */
         if ((sin_dphi=S/sqrt(beta0*func[0]))>1) {
-            printf("warning: argument of asin > 1 by %f (propagate_twiss)\n", sin_dphi-1);
-            printf("element is %s at z=%em\n", elem->name, elem->end_pos);
-            printf("%c-plane matrix:  C = %e,  S = %e,  C' = %e,  S' = %e\n",
+            fprintf(stderr, "warning: argument of asin > 1 by %f (propagate_twiss)\n", sin_dphi-1);
+            fprintf(stderr, "element is %s at z=%em\n", elem->name, elem->end_pos);
+            fprintf(stderr, "%c-plane matrix:  C = %e,  S = %e,  C' = %e,  S' = %e\n",
                    (plane==0?'x':'y'), C, S, Cp, Sp);
-            printf("beta0 = %e, func[0] = %e\n", beta0, func[0]);
+            fprintf(stderr, "beta0 = %e, func[0] = %e\n", beta0, func[0]);
             sin_dphi = 1;
             cos_dphi = 0;
             }
         else if (sin_dphi<-1) {
-            printf("warning: argument of asin < -1 by %f (propagate_twiss)\n", sin_dphi+1);
-            printf("element is %s at z=%em\n", elem->name, elem->end_pos);
+            fprintf(stderr, "warning: argument of asin < -1 by %f (propagate_twiss)\n", sin_dphi+1);
+            fprintf(stderr, "element is %s at z=%em\n", elem->name, elem->end_pos);
             sin_dphi = -1;
             cos_dphi = 0;
             }
@@ -339,7 +339,7 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, RADIATION_INTEGRALS
         etap0 = func[4];
         elem = elem->succ;
 #if defined(DEBUG)
-        printf("new twiss parameters: beta = %e, alpha = %e, eta = %e, etap = %e\n",
+        fprintf(stderr, "new twiss parameters: beta = %e, alpha = %e, eta = %e, etap = %e\n",
                beta0, alpha0, eta0, etap0);
 #endif
         }
@@ -626,7 +626,7 @@ void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
     process_namelist(&twiss_output, nltext);
-    print_namelist(stdout, &twiss_output);
+    print_namelist(stderr, &twiss_output);
 
     if (filename)
         filename = compose_filename(filename, run->rootname);
@@ -683,7 +683,7 @@ void run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, lon
     log_entry("run_twiss_output");
 
 #ifdef DEBUG
-    printf("now in run_twiss_output\n");
+    fprintf(stderr, "now in run_twiss_output\n");
 #endif
 
     if (tune_corrected==0 && !output_before_tune_correction) {
@@ -710,71 +710,71 @@ void run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, lon
 
     if (run->default_order>=2) {
 #ifdef DEBUG
-        printf("computing chromaticities\n");
+        fprintf(stderr, "computing chromaticities\n");
 #endif
-        printf("%s Twiss parameters (chromaticity valid for fully second-order calculation only!):\n",
+        fprintf(stderr, "%s Twiss parameters (chromaticity valid for fully second-order calculation only!):\n",
             matched?"periodic":"final");
-        printf("         beta          alpha           nu           eta          eta'       dnu/d(dp/p)     accept.\n");
-        printf("          m                          1/2pi           m                         1/2pi        mm-mrad\n");
-        printf("------------------------------------------------------------------------------------------------------\n");
-        printf("  x: %13.6le %13.6le %13.6le %13.6le %13.6le %13.6le %13.6le\n",  
+        fprintf(stderr, "         beta          alpha           nu           eta          eta'       dnu/d(dp/p)     accept.\n");
+        fprintf(stderr, "          m                          1/2pi           m                         1/2pi        mm-mrad\n");
+        fprintf(stderr, "------------------------------------------------------------------------------------------------------\n");
+        fprintf(stderr, "  x: %13.6le %13.6le %13.6le %13.6le %13.6le %13.6le %13.6le\n",  
                elast->twiss->betax, elast->twiss->alphax, beamline->tune[0], elast->twiss->etax, elast->twiss->etapx,
                beamline->chromaticity[0], 1e6*beamline->acceptance[0]);
         if (statistics) {
             compute_twiss_statistics(beamline, &twiss_ave, &twiss_min, &twiss_max);
-            printf("ave: %13.6le %13.6le %-13s %13.6le %13.6le\n",
+            fprintf(stderr, "ave: %13.6le %13.6le %-13s %13.6le %13.6le\n",
                    twiss_ave.betax, twiss_ave.alphax, "", twiss_ave.etax, twiss_ave.etapx);
-            printf("min: %13.6le %13.6le %-13s %13.6le %13.6le\n",
+            fprintf(stderr, "min: %13.6le %13.6le %-13s %13.6le %13.6le\n",
                    twiss_min.betax, twiss_min.alphax, "", twiss_min.etax, twiss_min.etapx);
-            printf("max: %13.6le %13.6le %-13s %13.6le %13.6le\n",
+            fprintf(stderr, "max: %13.6le %13.6le %-13s %13.6le %13.6le\n",
                    twiss_max.betax, twiss_max.alphax, "", twiss_max.etax, twiss_max.etapx);
             }
-        printf("  y: %13.6le %13.6le %13.6le %13.6le %13.6le %13.6le %13.6le\n",  
+        fprintf(stderr, "  y: %13.6le %13.6le %13.6le %13.6le %13.6le %13.6le %13.6le\n",  
                elast->twiss->betay, elast->twiss->alphay, beamline->tune[1], elast->twiss->etay, elast->twiss->etapy,
                beamline->chromaticity[1], 1e6*beamline->acceptance[1]);
         if (statistics) {
-            printf("ave: %13.6le %13.6le %-13s %13.6le %13.6le\n",
+            fprintf(stderr, "ave: %13.6le %13.6le %-13s %13.6le %13.6le\n",
                    twiss_ave.betay, twiss_ave.alphay, "", twiss_ave.etay, twiss_ave.etapy);
-            printf("min: %13.6le %13.6le %-13s %13.6le %13.6le\n",
+            fprintf(stderr, "min: %13.6le %13.6le %-13s %13.6le %13.6le\n",
                    twiss_min.betay, twiss_min.alphay, "", twiss_min.etay, twiss_min.etapy);
-            printf("max: %13.6le %13.6le %-13s %13.6le %13.6le\n",
+            fprintf(stderr, "max: %13.6le %13.6le %-13s %13.6le %13.6le\n",
                    twiss_max.betay, twiss_max.alphay, "", twiss_max.etay, twiss_max.etapy);
             }
         }
     else {
-        printf("%s Twiss parameters:\n", matched?"periodic":"final");
-        printf("         beta          alpha           nu           eta          eta'        accept.\n");
-        printf("          m                          1/2pi           m                       mm-mrad\n");
-        printf("---------------------------------------------------------------------------------------\n");
-        printf("  x: %13.6le %13.6le %13.6le %13.6le %13.6le %13.6le\n",  
+        fprintf(stderr, "%s Twiss parameters:\n", matched?"periodic":"final");
+        fprintf(stderr, "         beta          alpha           nu           eta          eta'        accept.\n");
+        fprintf(stderr, "          m                          1/2pi           m                       mm-mrad\n");
+        fprintf(stderr, "---------------------------------------------------------------------------------------\n");
+        fprintf(stderr, "  x: %13.6le %13.6le %13.6le %13.6le %13.6le %13.6le\n",  
                elast->twiss->betax, elast->twiss->alphax, beamline->tune[0], elast->twiss->etax, elast->twiss->etapx,
                1e6*beamline->acceptance[0]);
         if (statistics) {
             compute_twiss_statistics(beamline, &twiss_ave, &twiss_min, &twiss_max);
-            printf("ave: %13.6le %13.6le %-13s %13.6le %13.6le\n",
+            fprintf(stderr, "ave: %13.6le %13.6le %-13s %13.6le %13.6le\n",
                    twiss_ave.betax, twiss_ave.alphax, "", twiss_ave.etax, twiss_ave.etapx);
-            printf("min: %13.6le %13.6le %-13s %13.6le %13.6le\n",
+            fprintf(stderr, "min: %13.6le %13.6le %-13s %13.6le %13.6le\n",
                    twiss_min.betax, twiss_min.alphax, "", twiss_min.etax, twiss_min.etapx);
-            printf("max: %13.6le %13.6le %-13s %13.6le %13.6le\n",
+            fprintf(stderr, "max: %13.6le %13.6le %-13s %13.6le %13.6le\n",
                    twiss_max.betax, twiss_max.alphax, "", twiss_max.etax, twiss_max.etapx);
             }
-        printf("  y: %13.6le %13.6le %13.6le %13.6le %13.6le %13.6le\n",  
+        fprintf(stderr, "  y: %13.6le %13.6le %13.6le %13.6le %13.6le %13.6le\n",  
                elast->twiss->betay, elast->twiss->alphay, beamline->tune[1], elast->twiss->etay, elast->twiss->etapy,
                1e6*beamline->acceptance[1]);
         if (statistics) {
-            printf("ave: %13.6le %13.6le %-13s %13.6le %13.6le\n",
+            fprintf(stderr, "ave: %13.6le %13.6le %-13s %13.6le %13.6le\n",
                    twiss_ave.betay, twiss_ave.alphay, "", twiss_ave.etay, twiss_ave.etapy);
-            printf("min: %13.6le %13.6le %-13s %13.6le %13.6le\n",
+            fprintf(stderr, "min: %13.6le %13.6le %-13s %13.6le %13.6le\n",
                    twiss_min.betay, twiss_min.alphay, "", twiss_min.etay, twiss_min.etapy);
-            printf("max: %13.6le %13.6le %-13s %13.6le %13.6le\n",
+            fprintf(stderr, "max: %13.6le %13.6le %-13s %13.6le %13.6le\n",
                    twiss_max.betay, twiss_max.alphay, "", twiss_max.etay, twiss_max.etapy);
             }
         }
 
     if (beamline->acc_limit_name[0])
-        printf("x acceptance limited by %s ending at %e m\n", beamline->acc_limit_name[0], beamline->acceptance[2]);
+        fprintf(stderr, "x acceptance limited by %s ending at %e m\n", beamline->acc_limit_name[0], beamline->acceptance[2]);
     if (beamline->acc_limit_name[1])
-        printf("y acceptance limited by %s ending at %e m\n", beamline->acc_limit_name[1], beamline->acceptance[3]);
+        fprintf(stderr, "y acceptance limited by %s ending at %e m\n", beamline->acc_limit_name[1], beamline->acceptance[3]);
 
     if (SDDS_twiss_initialized) {
         dump_twiss_parameters(beamline->twiss0, beamline->elem_twiss, n_elem,
@@ -821,9 +821,9 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
         beamline->matrix = compute_periodic_twiss(&betax, &alphax, &etax, &etapx, beamline->tune,
             &betay, &alphay, &etay, &etapy, beamline->tune+1, beamline->elem_twiss, starting_coord, run);
 #ifdef DEBUG
-        printf("matched parameters computed--returned to compute_twiss_parameters\n");
-        printf("beamline matrix has order %ld\n", beamline->matrix->order);
-        printf("beamline matrix pointers:  %x, %x, %x, %x\n",
+        fprintf(stderr, "matched parameters computed--returned to compute_twiss_parameters\n");
+        fprintf(stderr, "beamline matrix has order %ld\n", beamline->matrix->order);
+        fprintf(stderr, "beamline matrix pointers:  %x, %x, %x, %x\n",
                beamline->matrix, beamline->matrix->C, beamline->matrix->R, beamline->matrix->T);
 #endif
         if (run->default_order>=2 && !(beamline->matrix->T))
@@ -864,8 +864,8 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
         bomb("logic error: beamline T matrix is NULL in compute_twiss_parameters", NULL);
 
 #ifdef DEBUG
-    printf("propagating parameters\n");
-    printf("beamline matrix pointers:  %x, %x, %x, %x\n",
+    fprintf(stderr, "propagating parameters\n");
+    fprintf(stderr, "beamline matrix pointers:  %x, %x, %x, %x\n",
            beamline->matrix, beamline->matrix->C, beamline->matrix->R, beamline->matrix->T);
 #endif
 
@@ -893,7 +893,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
     }
     
 #ifdef DEBUG
-    printf("finding acceptance\n");
+    fprintf(stderr, "finding acceptance\n");
 #endif
     beamline->acceptance[0] = find_acceptance(beamline->elem_twiss, 0, run, &x_acc_name, &x_acc_z);
     beamline->acceptance[1] = find_acceptance(beamline->elem_twiss, 1, run, &y_acc_name, &y_acc_z);
@@ -912,7 +912,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
     beamline->twiss0->apy = beamline->elem_twiss->twiss->apy;
 
 #ifdef DEBUG
-    printf("computing chromaticities\n");
+    fprintf(stderr, "computing chromaticities\n");
 #endif
 
     chromx = chromy = 0;
@@ -922,7 +922,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
 
         if (run->default_order>=2) {
 #ifdef DEBUG
-            printf("computing chromaticities\n");
+            fprintf(stderr, "computing chromaticities\n");
 #endif
             if (!(M->T))
                 bomb("logic error: T matrix is NULL in compute_twiss_parameters", NULL);
@@ -952,7 +952,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
                 bomb("logic error: T matrix is NULL in compute_twiss_parameters", NULL);
             computeChromaticities(&chromx, &chromy, beamline->twiss0, M);
 #ifdef DEBUG
-            printf("chomaticities: %e, %e\n", chromx, chromy);
+            fprintf(stderr, "chomaticities: %e, %e\n", chromx, chromy);
 #endif
             }
         }

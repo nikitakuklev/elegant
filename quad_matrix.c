@@ -275,7 +275,7 @@ void qfringe_T_matrix(
         /* T511 terms */
         term = sqr(ko)*pow3(l);
         if ((mult = ko*sqr(l))>1)
-            printf("warning: path-length terms for qfringe may be inaccurate: ko*lf^2>1\n");
+            fprintf(stderr, "warning: path-length terms for qfringe may be inaccurate: ko*lf^2>1\n");
         *T511  = 1./20.*term;         term *= mult;
         *T511 += -1./240.*term;       term *= mult; 
         *T511 +=  13./79200.*term;    term *= mult;
@@ -304,7 +304,7 @@ void qfringe_T_matrix(
         /* T511 terms */
         term = sqr(ko)*pow3(l);
         if ((mult = ko*sqr(l))>1)
-            printf("warning: path-length terms for qfringe may be inaccurate: ko*lf^2>1\n");
+            fprintf(stderr, "warning: path-length terms for qfringe may be inaccurate: ko*lf^2>1\n");
         *T511  = 2./15.*term;        term *= mult;
         *T511 += -1./80.*term;       term *= mult; 
         *T511 +=  1./1848.*term;     term *= mult;

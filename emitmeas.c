@@ -9,6 +9,11 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.2  1997/09/05 18:16:12  emery
+ * Fixed a non-initialized memory error
+ * which occurs when the uncertainty column isn't specified
+ * in sigma_x_file
+ *
  * Revision 1.1  1997/08/28 19:51:44  borland
  * First version in repository.
  *
@@ -423,7 +428,7 @@ main(
         }
 
     if (!output)
-        fpo = stdout;
+        fpo = stderr;
     else
         fpo = fopen_e(output, "w", 0);
 

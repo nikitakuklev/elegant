@@ -159,7 +159,7 @@ void track_through_kicker(
         }
 /*
     if (np)
-        printf("average kicker amplitude = %f\n", sum_amp/np);
+        fprintf(stderr, "average kicker amplitude = %f\n", sum_amp/np);
  */
 
     log_exit("track_through_kicker");

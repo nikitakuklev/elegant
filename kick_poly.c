@@ -43,7 +43,7 @@ long polynomial_kicks(
         yplane = 1;
     else {
         if (kpoly->plane && !(kpoly->plane[0]=='x' || kpoly->plane[0]=='X')) {
-            puts("warning: KPOLY plane not recognized--x plane assumed.");
+            fputs("warning: KPOLY plane not recognized--x plane assumed.", stderr);
             cp_str(&kpoly->plane, "x");
             }
         yplane = 0;

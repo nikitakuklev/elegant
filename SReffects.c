@@ -42,9 +42,9 @@ void track_SReffects(double **coord, long np, SREFFECTS *SReffects, double Po,
 
     if (first) {
         first = 0;
-        printf("Damping/QE constants:\nFx = %e, Fy = %e, Fd = %e\nSrxp = %e, Sryp = %e, Srd = %e\n",
+        fprintf(stderr, "Damping/QE constants:\nFx = %e, Fy = %e, Fd = %e\nSrxp = %e, Sryp = %e, Srd = %e\n",
                Fx, Fy, Fdelta, Srxp, Sryp, Srdelta);
-        printf("Twiss parameters: betax = %e, etapx = %e, betay = %e\n",
+        fprintf(stderr, "Twiss parameters: betax = %e, etapx = %e, betay = %e\n",
                twiss->betax, twiss->etapx, twiss->betay);
         }
     

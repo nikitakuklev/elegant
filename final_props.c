@@ -314,7 +314,7 @@ long compute_final_properties
         tmax = dp_max = -(tmin=dp_min=DBL_MAX);
         for (i=sum=0; i<sums->n_part; i++) {
             if (!coord[i]) {
-                printf("coordinate element for particle %ld is null (compute_final_properties)\n", i);
+                fprintf(stderr, "coordinate element for particle %ld is null (compute_final_properties)\n", i);
                 abort();
                 }
             if (coord[i][5]>dp_max)
@@ -432,11 +432,11 @@ double beam_width(double fraction, double **coord, long n_part,
     /* find indices of particles that are at +/- fraction/2 from the median */
     i_median = n_part/2;
     if ((i_lo = i_median - fraction/2.*n_part)<0) {
-        printf("warning: i_lo < 0 in beam_width\ni_median = %ld, n_part = %ld, fraction = %e\n",
+        fprintf(stderr, "warning: i_lo < 0 in beam_width\ni_median = %ld, n_part = %ld, fraction = %e\n",
             i_lo, n_part, fraction);
         }
     if ((i_hi = i_median + fraction/2.*n_part)>=n_part) {
-        printf("warning: i_hi >= n_part in beam_width!\ni_median = %ld, n_part = %ld, fraction = %e\n",
+        fprintf(stderr, "warning: i_hi >= n_part in beam_width!\ni_median = %ld, n_part = %ld, fraction = %e\n",
             i_hi, n_part, fraction);
         }
 

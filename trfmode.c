@@ -36,12 +36,12 @@ void track_through_trfmode(
 
     if (!been_warned) {        
         if (trfmode->freq<1e3 && trfmode->freq)  {
-            printf("\7\7\7warning: your TRFMODE frequency is less than 1kHz--this may be an error\n");
+            fprintf(stderr, "\7\7\7warning: your TRFMODE frequency is less than 1kHz--this may be an error\n");
             been_warned = 1;
             }
         if (been_warned) {
-            printf("units of parameters for TRFMODE are as follows:\n");
-            print_dictionary_entry(stdout, T_TRFMODE);
+            fprintf(stderr, "units of parameters for TRFMODE are as follows:\n");
+            print_dictionary_entry(stderr, T_TRFMODE);
             }
         }
 
@@ -216,7 +216,7 @@ void set_up_trfmode(TRFMODE *trfmode, char *element_name, double element_z, long
         fprintf(trfmode->fprec, "TRFMODE %s at z=%fm\n\n%10d\n", element_name, element_z, n_passes/trfmode->sample_interval+1);
         }
     if (trfmode->n_bins%2==0) {
-        printf("warning: number of bins for TRFMODE %s increased from %d to %d (odd number preferred)\n",
+        fprintf(stderr, "warning: number of bins for TRFMODE %s increased from %d to %d (odd number preferred)\n",
                element_name, trfmode->n_bins, trfmode->n_bins+1);
         trfmode->n_bins += 1;
         }

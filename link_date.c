@@ -5,7 +5,7 @@
 
 void link_date(void)
 {
-    printf("Link date: %s %s\n", __DATE__, __TIME__);
+    fprintf(stderr, "Link date: %s %s\n", __DATE__, __TIME__);
     }
 
     

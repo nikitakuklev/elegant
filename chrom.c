@@ -34,7 +34,7 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
     set_print_namelist_flags(0);
     process_namelist(&chromaticity, nltext);
     str_toupper(sextupoles);
-    print_namelist(stdout, &chromaticity);
+    print_namelist(stderr, &chromaticity);
 
     if (run->default_order<2)
         bomb("default order must be >= 2 for chromaticity correction", NULL);
@@ -56,7 +56,7 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
         double beta_x, alpha_x, eta_x, etap_x;
         double beta_y, alpha_y, eta_y, etap_y;
 
-        printf("Computing periodic Twiss parameters.\n");
+        fprintf(stderr, "Computing periodic Twiss parameters.\n");
 
         if (!beamline->twiss0)
             beamline->twiss0 = tmalloc(sizeof(*beamline->twiss0));
@@ -99,7 +99,7 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
     m_alloc(&(chrom->dK2), chrom->n_families, 1);
     m_alloc(&(chrom->dchrom), 2, 1);
 
-    printf("Computing chromaticity influence matrix for all named sextupoles.\n");
+    fprintf(stderr, "Computing chromaticity influence matrix for all named sextupoles.\n");
 
     for (i=0; i<chrom->n_families; i++) {
         count = 0;
@@ -156,19 +156,19 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
         }
     beamline->matrix = full_matrix(beamline->elem_twiss, run, run->default_order);
 
-    printf("\nfamily           dCHROMx/dK2        dCHROMy/dK2\n");
+    fprintf(stderr, "\nfamily           dCHROMx/dK2        dCHROMy/dK2\n");
     for (i=0; i<chrom->n_families; i++)
-       printf("%10s:    %14.7e     %14.7e\n", chrom->name[i], C->a[0][i], C->a[1][i]);
+       fprintf(stderr, "%10s:    %14.7e     %14.7e\n", chrom->name[i], C->a[0][i], C->a[1][i]);
 
     m_trans(Ct, C);
     m_mult(CtC, Ct, C);
     m_invert(inv_CtC, CtC);
     m_mult(chrom->T, inv_CtC, Ct);
 
-    printf("\nfamily           dK2/dCHROMx        dK2/dCHROMy\n");
+    fprintf(stderr, "\nfamily           dK2/dCHROMx        dK2/dCHROMy\n");
     for (i=0; i<chrom->n_families; i++)
-       printf("%10s:    %14.7e     %14.7e\n", chrom->name[i], chrom->T->a[i][0], chrom->T->a[i][1]);
-    printf("\n");
+       fprintf(stderr, "%10s:    %14.7e     %14.7e\n", chrom->name[i], chrom->T->a[i][0], chrom->T->a[i][1]);
+    fprintf(stderr, "\n");
 
     m_free(&C);
     m_free(&Ct);
@@ -236,8 +236,8 @@ void do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
         bomb("something wrong with transfer map for beamline (do_chromaticity_correction.1)", NULL);
     computeChromaticities(&chromx0, &chromy0, beamline->twiss0, M);
 
-    printf("\nAdjusting chromaticities:\n");
-    printf("initial chromaticities:  %e  %e\n", chromx0, chromy0);
+    fprintf(stderr, "\nAdjusting chromaticities:\n");
+    fprintf(stderr, "initial chromaticities:  %e  %e\n", chromx0, chromy0);
 
     for (iter=0; iter<chrom->n_iterations; iter++) {
         chrom->dchrom->a[0][0] = chrom->chromx - chromx0;
@@ -264,7 +264,7 @@ void do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
                 compute_matrix(context, run, NULL);
                 type = context->type;
                 count++;
-                printf("new value of %s#%ld[K2] is  %.15lg 1/m^3\n", 
+                fprintf(stderr, "new value of %s#%ld[K2] is  %.15lg 1/m^3\n", 
                        chrom->name[i], context->occurence, K2);
                 }
             if (alter_defined_values)
@@ -293,7 +293,7 @@ void do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
         computeChromaticities(&chromx0, &chromy0, beamline->twiss0, M);
         beamline->chromaticity[0] = chromx0;
         beamline->chromaticity[1] = chromy0;
-        printf("resulting chromaticities:  %e  %e\n", chromx0, chromy0);
+        fprintf(stderr, "resulting chromaticities:  %e  %e\n", chromx0, chromy0);
         }
 
     if (fp_sl && last_iteration) {

@@ -36,7 +36,7 @@ void setup_tune_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline,
     set_print_namelist_flags(0);
     process_namelist(&correct_tunes, nltext);
     str_toupper(quadrupoles);
-    print_namelist(stdout, &correct_tunes);
+    print_namelist(stderr, &correct_tunes);
 
     if (tune->name)
         tfree(tune->name);
@@ -71,7 +71,7 @@ void setup_tune_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline,
     
         }
 
-    printf("Computing periodic Twiss parameters.\n");
+    fprintf(stderr, "Computing periodic Twiss parameters.\n");
     M = beamline->matrix = compute_periodic_twiss(&beta_x, &alpha_x, &eta_x, &etap_x, beamline->tune,
             &beta_y, &alpha_y, &eta_y, &etap_y, beamline->tune+1, beamline->elem_twiss, NULL, run);
     beamline->twiss0->betax  = beta_x;
@@ -89,9 +89,9 @@ void setup_tune_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline,
     propagate_twiss_parameters(beamline->twiss0, beamline->tune+1, NULL, beamline->elem_twiss, 1, run, NULL);
 
     if (tune->tunex<0)
-        printf("horizontal tune will be held at %f\n", tune->tunex = beamline->tune[0]);
+        fprintf(stderr, "horizontal tune will be held at %f\n", tune->tunex = beamline->tune[0]);
     if (tune->tuney<0)
-        printf("vertical tune will be held at %f\n", tune->tuney = beamline->tune[1]);
+        fprintf(stderr, "vertical tune will be held at %f\n", tune->tuney = beamline->tune[1]);
 
     if (!(M=beamline->matrix) || !M->C || !M->R)
         bomb("something wrong with transfer map for beamline (setup_tune_correction)", NULL);
@@ -104,7 +104,7 @@ void setup_tune_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline,
     m_alloc(&(tune->dK1), tune->n_families, 1);
     m_alloc(&(tune->dtune), 2, 1);
 
-    printf("Computing tune influence matrix for all named quadrupoles.\n");
+    fprintf(stderr, "Computing tune influence matrix for all named quadrupoles.\n");
 
     for (i=0; i<tune->n_families; i++) {
         count = 0;
@@ -122,10 +122,10 @@ void setup_tune_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline,
             count++;
             }
         if (count==0) {
-            printf("error: element %s is not part of the beamline\n", tune->name[i]);
+            fprintf(stderr, "error: element %s is not part of the beamline\n", tune->name[i]);
             exit(1);
             }
-        printf("%ld instances of %s found\n", count, tune->name[i]); 
+        fprintf(stderr, "%ld instances of %s found\n", count, tune->name[i]); 
         
         C->a[0][i] = betax_L_sum/(4*PI);
         C->a[1][i] = -betay_L_sum/(4*PI);
@@ -135,24 +135,24 @@ void setup_tune_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline,
             }
         }
 
-    printf("\nfamily               dNUx/dK1                  dNUy/dK1\n");
+    fprintf(stderr, "\nfamily               dNUx/dK1                  dNUy/dK1\n");
 
     for (i=0; i<tune->n_families; i++)
-       printf("%10s:    %22.15le     %22.15le\n", tune->name[i], C->a[0][i], C->a[1][i]);
+       fprintf(stderr, "%10s:    %22.15le     %22.15le\n", tune->name[i], C->a[0][i], C->a[1][i]);
 
     m_trans(Ct, C);
     m_mult(CtC, Ct, C);
     m_invert(inv_CtC, CtC);
     m_mult(tune->T, inv_CtC, Ct);
 
-    printf("\nfamily               dK1/dNUx                  dK1/dNUy\n");
+    fprintf(stderr, "\nfamily               dK1/dNUx                  dK1/dNUy\n");
     for (i=0; i<tune->n_families; i++)
-       printf("%10s:    %22.15le     %22.15le\n", tune->name[i], tune->T->a[i][0], tune->T->a[i][1]);
-    printf("\n");
+       fprintf(stderr, "%10s:    %22.15le     %22.15le\n", tune->name[i], tune->T->a[i][0], tune->T->a[i][1]);
+    fprintf(stderr, "\n");
 
 /*
-    m_show(C, "%14.6le ", "tune influence matrix:\n", stdout);
-    m_show(tune->T, "%14.6le ", "tune correction matrix:\n", stdout);
+    m_show(C, "%14.6le ", "tune influence matrix:\n", stderr);
+    m_show(tune->T, "%14.6le ", "tune correction matrix:\n", stderr);
  */
 
     m_free(&C);
@@ -211,8 +211,8 @@ void do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline, do
     if (!M || !M->C || !M->R)
         bomb("something wrong with transfer map for beamline (do_tune_correction.1)", NULL);
 
-    printf("\nAdjusting tunes:\n");
-    printf("initial tunes:  %e  %e\n", beamline->tune[0], beamline->tune[1]);
+    fprintf(stderr, "\nAdjusting tunes:\n");
+    fprintf(stderr, "initial tunes:  %e  %e\n", beamline->tune[0], beamline->tune[1]);
 
     if (!tunes_saved) {
         nux_orig = beamline->tune[0];
@@ -237,9 +237,9 @@ void do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline, do
                 compute_matrix(context, run, NULL);
                 type = context->type;
                 }
-            printf("change of %s[K1] is  %.15g 1/m^3\n", tune->name[i], tune->dK1->a[i][0]);
+            fprintf(stderr, "change of %s[K1] is  %.15g 1/m^3\n", tune->name[i], tune->dK1->a[i][0]);
             if (alter_defined_values) {
-                printf("new value of %s[K1] is  %.15g 1/m^3\n", tune->name[i], K1);
+                fprintf(stderr, "new value of %s[K1] is  %.15g 1/m^3\n", tune->name[i], K1);
                 change_defined_parameter(tune->name[i], K1_param, type, K1, NULL, LOAD_FLAG_ABSOLUTE);
                 }
             }    
@@ -267,7 +267,7 @@ void do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline, do
 
         propagate_twiss_parameters(beamline->twiss0, beamline->tune  , NULL, beamline->elem_twiss, 0, run, clorb);
         propagate_twiss_parameters(beamline->twiss0, beamline->tune+1, NULL, beamline->elem_twiss, 1, run, clorb);
-        printf("new tunes: %e %e\n", beamline->tune[0], beamline->tune[1]);
+        fprintf(stderr, "new tunes: %e %e\n", beamline->tune[0], beamline->tune[1]);
         }
 
     if (fp_sl && last_iteration) {

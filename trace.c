@@ -39,13 +39,13 @@ void process_trace_request(NAMELIST_TEXT *nltext)
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
     process_namelist(&trace, nltext);
-    print_namelist(stdout, &trace);
+    print_namelist(stderr, &trace);
 
     if (record_allocation && filename)
         keep_alloc_record(filename);
 
 #if defined(VAX_VMS)
-    puts("warning: program trace is not supported on this system");
+    fputs("warning: program trace is not supported on this system", stderr);
     return;
 #endif
 
@@ -187,6 +187,6 @@ void traceback_handler(int sig)
     else if (in_trace_routine==2)
         fprintf(stderr, "log_exit\n");
     fflush(stderr);
-    fflush(stdout);    /* to force flushing of output sent to stdout by other parts of the code */
+    fflush(stderr);    /* to force flushing of output sent to stderr by other parts of the code */
     exit(1);
     }

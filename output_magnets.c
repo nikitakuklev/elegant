@@ -58,7 +58,7 @@ void output_magnets(char *filename, char *line_name, LINE_LIST *beamline)
                 if (entity_description[eptr->type].flags&HAS_LENGTH)
                     n_points += 1;
                 else
-                    printf("warning: element %s, entity type (%s) will not appear in magnet output.\n",
+                    fprintf(stderr, "warning: element %s, entity type (%s) will not appear in magnet output.\n",
                         eptr->name, entity_name[eptr->type]);
                 break;
             }

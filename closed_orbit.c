@@ -55,7 +55,7 @@ void setup_closed_orbit(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
     process_namelist(&closed_orbit, nltext);
-    print_namelist(stdout, &closed_orbit);
+    print_namelist(stderr, &closed_orbit);
 
     if (output)
         output = compose_filename(output, run->rootname);
@@ -121,10 +121,10 @@ void run_closed_orbit(RUN *run, LINE_LIST *beamline, double *starting_coord, BEA
 
     /* do output, if required */
     if (verbosity && !bad_orbit) {
-        printf("closed orbit: \n");
+        fprintf(stderr, "closed orbit: \n");
         for (i=0; i<7; i++)
-            printf("%.8e ", starting_coord[i]);
-        putchar('\n');
+            fprintf(stderr, "%.8e ", starting_coord[i]);
+        fputc('\n', stderr);
         }
 
     if (do_output && SDDS_clorb_initialized && !bad_orbit) 

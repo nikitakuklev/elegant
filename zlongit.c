@@ -105,7 +105,7 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
         n_binned++;
         }
     if (n_binned!=np)
-        printf("warning: only %ld of %ld particles where binned (ZLONGIT)\n", n_binned, np);
+        fprintf(stderr, "warning: only %ld of %ld particles where binned (ZLONGIT)\n", n_binned, np);
 
     /* Take the FFT of I(t) to get I(f) */
     realFFT(Itime, nb, 0);

@@ -104,7 +104,7 @@ void setup_transport_analysis(
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
     process_namelist(&analyze_map, nltext);
-    print_namelist(stdout, &analyze_map);
+    print_namelist(stderr, &analyze_map);
 
     /* check for data errors */
     if (!output)
@@ -229,22 +229,22 @@ void do_transport_analysis(
     p_central = run->p_central;
     if (do_tracking(coord, &n_trpoint, &effort, beamline, &p_central, 
                NULL, NULL, NULL, NULL, run, control->i_step, SILENT_RUNNING, control->n_passes)!=n_track) {
-        puts("warning: particle(s) lost during transport analysis--continuing with next step");
+        fputs("warning: particle(s) lost during transport analysis--continuing with next step", stderr);
         log_exit("do_transport_analysis");
         return;
         }
 
     if (verbosity>0){
         if (orbit && center_on_orbit) {
-            printf("closed orbit: \n");
+            fprintf(stderr, "closed orbit: \n");
             for (i=0; i<6; i++)
-                printf("%15.8e ", orbit[i]);
-            putchar('\n');
+                fprintf(stderr, "%15.8e ", orbit[i]);
+            fputc('\n', stderr);
             }
-        printf("final coordinates of refence particle: \n");
+        fprintf(stderr, "final coordinates of refence particle: \n");
         for (i=0; i<6; i++)
-            printf("%15.8e ", coord[n_track-1][i]);
-        putchar('\n');
+            fprintf(stderr, "%15.8e ", coord[n_track-1][i]);
+        fputc('\n', stderr);
         }
 
     for (i=0; i<6; i++) 
@@ -268,7 +268,7 @@ void do_transport_analysis(
         }
     /* find NUx */
     if (fabs(cos_phi = (R->a[0][0]+R->a[1][1])/2)>=1) {
-        printf("warning: beamline unstable for x plane\n");
+        fprintf(stderr, "warning: beamline unstable for x plane\n");
         beta = 0;
         tune = 0;
         }
@@ -282,7 +282,7 @@ void do_transport_analysis(
     data[X_BETA_OFFSET+1] = tune;
     /* find NUy */
     if (fabs(cos_phi = (R->a[2][2]+R->a[3][3])/2)>=1) {
-        printf("warning: beamline unstable for y plane\n");
+        fprintf(stderr, "warning: beamline unstable for y plane\n");
         beta = 0;
         tune = 0;
         }
@@ -299,7 +299,7 @@ void do_transport_analysis(
 
     /* compute etax and etax' */
     if ((det = (2 - R->a[0][0] - R->a[1][1]))<=0) {
-        printf("error: beamline unstable for x plane--can't match dispersion functions\n");
+        fprintf(stderr, "error: beamline unstable for x plane--can't match dispersion functions\n");
         det = 1e-6;
         }
     data[X_ETA_OFFSET  ] = ((1-R->a[1][1])*R->a[0][5]+R->a[0][1]*R->a[1][5])/det;
@@ -307,7 +307,7 @@ void do_transport_analysis(
 
     /* compute etay and etay' */
     if ((det = (2 - R->a[2][2] - R->a[3][3]))<=0) {
-        printf("error: beamline unstable for y plane--can't match dispersion functions\n");
+        fprintf(stderr, "error: beamline unstable for y plane--can't match dispersion functions\n");
         det = 1e-6;
         }
     data[Y_ETA_OFFSET  ] = ((1-R->a[3][3])*R->a[2][5]+R->a[2][3]*R->a[3][5])/det;
@@ -360,17 +360,17 @@ void do_transport_analysis(
 
     if (verbosity>0) {
         for (i=0; i<6; i++) {
-            printf("R%ld: ", i+1);
+            fprintf(stderr, "R%ld: ", i+1);
             for (j=0; j<6; j++) 
-                printf("%20.13e ", R->a[i][j]);
-            fputc('\n', stdout);
+                fprintf(stderr, "%20.13e ", R->a[i][j]);
+            fputc('\n', stderr);
             }
-        printf("horizontal:   tune = %20.13e  beta = %20.13e  eta = %20.13e  eta' = %20.13e\n",
+        fprintf(stderr, "horizontal:   tune = %20.13e  beta = %20.13e  eta = %20.13e  eta' = %20.13e\n",
             data[X_BETA_OFFSET+1], data[X_BETA_OFFSET], data[X_ETA_OFFSET], data[X_ETA_OFFSET+1]);
-        printf("vertical  :   tune = %20.13e  beta = %20.13e  eta = %20.13e  eta' = %20.13e\n",
+        fprintf(stderr, "vertical  :   tune = %20.13e  beta = %20.13e  eta = %20.13e  eta' = %20.13e\n",
             data[Y_BETA_OFFSET+1], data[Y_BETA_OFFSET], data[Y_ETA_OFFSET], data[Y_ETA_OFFSET+1]);
-        printf("determinant of R = 1 + %20.13e\n", data[DETR_OFFSET]-1);
-        printf("dispersion functions from closed-orbit calculations:\nx: %e m    %e\ny: %e m    %e\n",
+        fprintf(stderr, "determinant of R = 1 + %20.13e\n", data[DETR_OFFSET]-1);
+        fprintf(stderr, "dispersion functions from closed-orbit calculations:\nx: %e m    %e\ny: %e m    %e\n",
             data[CLORB_ETA_OFFSET  ], data[CLORB_ETA_OFFSET+1],
             data[CLORB_ETA_OFFSET+2], data[CLORB_ETA_OFFSET+3]);
         }

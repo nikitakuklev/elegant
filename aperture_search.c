@@ -47,7 +47,7 @@ void setup_aperture_search(
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
     process_namelist(&find_aperture, nltext);
-    print_namelist(stdout, &find_aperture);
+    print_namelist(stderr, &find_aperture);
 
     /* check for data errors */
     if (!output)
@@ -199,26 +199,24 @@ long do_aperture_search_mp(
         if (!ny1)
             break;
         if (verbosity>1) {
-            printf("tracking %ld particles with x = %e:  \n", ny1, coord[0][0]);
+            fprintf(stderr, "tracking %ld particles with x = %e:  \n", ny1, coord[0][0]);
             if (verbosity>2) {
                 for (iy=0; iy<ny1; iy++) 
-                    printf("    y = %e ", coord[iy][2]);
-                putchar('\n');
+                    fprintf(stderr, "    y = %e ", coord[iy][2]);
+                fputc('\n', stderr);
                 }
-            fflush(stdout);
             }
         p_central = run->p_central;
         n_trpoint = ny1;
         n_survived = do_tracking(coord, &n_trpoint, &effort, beamline, &p_central, 
                                  accepted, NULL, NULL, NULL, run, control->i_step, SILENT_RUNNING, control->n_passes);
         if (verbosity>1) {
-            printf("    %ld particles survived\n", n_survived);
-            fflush(stdout);
+            fprintf(stderr, "    %ld particles survived\n", n_survived);
             }
         
         for (is=0; is<n_survived; is++) {
             if (verbosity>2)
-                printf("survivor: x = %e, y = %e\n", accepted[is][0], accepted[is][2]);
+                fprintf(stderr, "survivor: x = %e, y = %e\n", accepted[is][0], accepted[is][2]);
             for (iy=0; iy<ny; iy++) {
                 if (!found[iy] && accepted[is][2]==xy_left[iy][1])
                     break;
@@ -230,8 +228,8 @@ long do_aperture_search_mp(
                 found[iy] = 1;
                 }
             else {
-                printf("error: data handling error (do_aperture_search)\n");
-                printf("no match for particle with y = %e\n", accepted[is][2]);
+                fprintf(stderr, "error: data handling error (do_aperture_search)\n");
+                fprintf(stderr, "no match for particle with y = %e\n", accepted[is][2]);
                 abort();
                 }
             }
@@ -251,10 +249,9 @@ long do_aperture_search_mp(
             }
         }
     if (verbosity>1) {
-        printf("results for scan from left\n");
+        fprintf(stderr, "results for scan from left\n");
         for (iy=0; iy<n_left; iy++)
-            printf("    stable particle at x=%e, y=%e\n", xy_left[iy][0], xy_left[iy][1]);
-        fflush(stdout);
+            fprintf(stderr, "    stable particle at x=%e, y=%e\n", xy_left[iy][0], xy_left[iy][1]);
         }
     log_exit("do_aperture_search_mp.3");
 
@@ -279,26 +276,24 @@ long do_aperture_search_mp(
         if (!ny1)
             break;
         if (verbosity>1) {
-            printf("tracking %ld particles with x = %e:  \n", ny1, coord[0][0]);
+            fprintf(stderr, "tracking %ld particles with x = %e:  \n", ny1, coord[0][0]);
             if (verbosity>2) {
                 for (iy=0; iy<ny1; iy++) 
-                    printf("    y = %e ", coord[iy][2]);
-                putchar('\n');
+                    fprintf(stderr, "    y = %e ", coord[iy][2]);
+                fputc('\n', stderr);
                 }
-            fflush(stdout);
             }
         p_central = run->p_central;
         n_trpoint = ny1;
         n_survived = do_tracking(coord, &n_trpoint, &effort, beamline, &p_central, 
                accepted, NULL, NULL, NULL, run, control->i_step, SILENT_RUNNING, control->n_passes);
         if (verbosity>1) {
-            printf("    %ld particles survived\n", n_survived);
-            fflush(stdout);
+            fprintf(stderr, "    %ld particles survived\n", n_survived);
             }
         
         for (is=0; is<n_survived; is++) {
             if (verbosity>2)
-                printf("survivor: x = %e, y = %e\n", accepted[is][0], accepted[is][2]);
+                fprintf(stderr, "survivor: x = %e, y = %e\n", accepted[is][0], accepted[is][2]);
             for (iy=0; iy<ny; iy++) {
                 if (!found[iy] && accepted[is][2]==xy_right[iy][1])
                     break;
@@ -310,8 +305,8 @@ long do_aperture_search_mp(
                 found[iy] = 1;
                 }
             else {
-                printf("error: data handling error (do_aperture_search)\n");
-                printf("no match for particle with y = %e\n", accepted[is][2]);
+                fprintf(stderr, "error: data handling error (do_aperture_search)\n");
+                fprintf(stderr, "no match for particle with y = %e\n", accepted[is][2]);
                 abort();
                 }
             }
@@ -324,11 +319,11 @@ long do_aperture_search_mp(
             for (ix=iy+1; ix<ny; ix++) {
                 found[ix-1] = found[ix];
                 if (!xy_right[ix-1]) {
-                    printf("error: xy_right[%ld] is NULL\n", ix-1);
+                    fprintf(stderr, "error: xy_right[%ld] is NULL\n", ix-1);
                     abort();
                     }
                 if (!xy_right[ix]) {
-                    printf("error: xy_right[%ld] is NULL\n", ix);
+                    fprintf(stderr, "error: xy_right[%ld] is NULL\n", ix);
                     abort();
                     }
                 xy_right[ix-1][0] = xy_right[ix][0];
@@ -339,17 +334,14 @@ long do_aperture_search_mp(
             }
         }
     if (verbosity>1) {
-        printf("results for scan from right\n");
-        fflush(stdout);
+        fprintf(stderr, "results for scan from right\n");
         for (iy=0; iy<n_right; iy++)
-            printf("    stable particle at x=%e, y=%e\n", xy_right[iy][0], xy_right[iy][1]);
-        fflush(stdout);
+            fprintf(stderr, "    stable particle at x=%e, y=%e\n", xy_right[iy][0], xy_right[iy][1]);
         }
     log_exit("do_aperture_search_mp.4");
 
     if (verbosity>0) {
-        printf("total effort:  %ld particle-turns   %ld stable particles were tracked\n", effort, n_stable);
-        fflush(stdout);
+        fprintf(stderr, "total effort:  %ld particle-turns   %ld stable particles were tracked\n", effort, n_stable);
         }
 
     log_entry("do_aperture_search_mp.5");
@@ -437,11 +429,10 @@ long do_aperture_search_sp(
     n_stable = 0;
     for (iy=0, y=ymin; iy<ny; iy++, y+=dy) {
         if (verbosity>0)
-            printf("searching for aperture for y = %e m\n", y);
+            fprintf(stderr, "searching for aperture for y = %e m\n", y);
         /* search from left */
         if (verbosity>1) {
-            printf("    searching from left to right\n");
-            fflush(stdout);
+            fprintf(stderr, "    searching from left to right\n");
             }
         if (assume_nonincreasing && iy!=0) {
             x = last_x_left;
@@ -455,8 +446,7 @@ long do_aperture_search_sp(
             }
         for ( ; ix<nx; ix++, x+=dx) {
             if (verbosity>1) {
-                printf("    tracking for x = %e m\n", x);
-                fflush(stdout);
+                fprintf(stderr, "    tracking for x = %e m\n", x);
                 }
             coord[0][0] = x;
             coord[0][2] = y;
@@ -479,8 +469,7 @@ long do_aperture_search_sp(
                         break;
                     x = (1-split_fraction)*x1 + split_fraction*x2;
                     if (verbosity>1) {
-                        printf("    splitting:  %e, %e --> %e \n", x1, x2, x);
-                        fflush(stdout);
+                        fprintf(stderr, "    splitting:  %e, %e --> %e \n", x1, x2, x);
                         }
                     coord[0][0] = x;
                     coord[0][2] = y;
@@ -500,22 +489,19 @@ long do_aperture_search_sp(
             xy_left[n_left][0] = x;
             xy_left[n_left][1] = y;
             if (verbosity>0) {
-                printf("    x = %e m is stable\n", x);
-                fflush(stdout);
+                fprintf(stderr, "    x = %e m is stable\n", x);
                 }
             n_left++;
             }
         else {
             if (verbosity>0) {
-                printf("    no stable particles seen\n");
-                fflush(stdout);
+                fprintf(stderr, "    no stable particles seen\n");
                 }
             continue;
             }
         /* search from right */
         if (verbosity>1) {
-            printf("    searching from right to left\n");
-            fflush(stdout);
+            fprintf(stderr, "    searching from right to left\n");
             }
         if (assume_nonincreasing && iy!=0) {
             x = last_x_right;
@@ -529,8 +515,7 @@ long do_aperture_search_sp(
             }
         for ( ; ix<nx; ix++, x-=dx) {
             if (verbosity>1) {
-                printf("    tracking for x = %e m\n", x);
-                fflush(stdout);
+                fprintf(stderr, "    tracking for x = %e m\n", x);
                 }
             coord[0][0] = x;
             coord[0][2] = y;
@@ -553,8 +538,7 @@ long do_aperture_search_sp(
                         break;
                     x = (1-split_fraction)*x1 + split_fraction*x2;
                     if (verbosity>1) {
-                        printf("    splitting:  %e, %e --> %e \n", x1, x2, x);
-                        fflush(stdout);
+                        fprintf(stderr, "    splitting:  %e, %e --> %e \n", x1, x2, x);
                         }
                     coord[0][0] = x;
                     coord[0][2] = y;
@@ -574,15 +558,13 @@ long do_aperture_search_sp(
             xy_right[n_right][0] = x;
             xy_right[n_right][1] = y;
             if (verbosity>0) {
-                printf("    x = %e m is stable\n", x);
-                fflush(stdout);
+                fprintf(stderr, "    x = %e m is stable\n", x);
                 }
             n_right++;
             }
         }
     if (verbosity>0) {
-        printf("total effort:  %ld particle-turns   %ld stable particles were tracked\n", effort, n_stable);
-        fflush(stdout);
+        fprintf(stderr, "total effort:  %ld particle-turns   %ld stable particles were tracked\n", effort, n_stable);
         }
 
     if (!SDDS_StartTable(&SDDS_aperture, n_left+n_right)) {

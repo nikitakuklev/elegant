@@ -43,7 +43,7 @@ VMATRIX *alpha_magnet_matrix(
     double *C, **R, ***T, ****Q;      /* individual matrices of same */
 
 #ifdef DEBUG
-    report_stats(stdout, "alpha_magnet_matrix called");
+    report_stats(stderr, "alpha_magnet_matrix called");
 #endif
 
     log_entry("alpha_magnet_matrix");
@@ -59,7 +59,7 @@ VMATRIX *alpha_magnet_matrix(
         initialize_precalculated_matrix(&alpha_2, &gradient_2, &gamma_2,
                 second_half_alpha_matrix_elems);
 #ifdef DEBUG
-        report_stats(stdout, "Precalculated alpha-magnet matrices have been initialized.\n");	
+        report_stats(stderr, "Precalculated alpha-magnet matrices have been initialized.\n");	
 #endif
         matrices_initialized = 1;
         }
@@ -96,7 +96,7 @@ VMATRIX *alpha_magnet_matrix(
 
 
 #ifdef DEBUG
-    report_stats(stdout, "preparing matrix memory");
+    report_stats(stderr, "preparing matrix memory");
 #endif
 
     maximum_order = MIN(3, maximum_order);
@@ -104,7 +104,7 @@ VMATRIX *alpha_magnet_matrix(
     initialize_matrices(M, M->order = maximum_order);
 
 #ifdef DEBUG
-    report_stats(stdout, "matrix memory prepared");
+    report_stats(stderr, "matrix memory prepared");
 #endif
 
     set_matrix_pointers(&C, &R, &T, &Q, M);
@@ -118,7 +118,7 @@ VMATRIX *alpha_magnet_matrix(
         }
 
 #ifdef DEBUG
-    report_stats(stdout, "C matrix scaled");
+    report_stats(stderr, "C matrix scaled");
 #endif
 
     /* Scale R:  R[n][m] = U[n][i]*R_[i][j]*U_1[j][m] */
@@ -136,7 +136,7 @@ VMATRIX *alpha_magnet_matrix(
         }
 
 #ifdef DEBUG
-    report_stats(stdout, "R matrix scaled");
+    report_stats(stderr, "R matrix scaled");
 #endif
 
     if (M->order>=2) {
@@ -162,7 +162,7 @@ VMATRIX *alpha_magnet_matrix(
         }
 
 #ifdef DEBUG
-    report_stats(stdout, "T matrix scaled");
+    report_stats(stderr, "T matrix scaled");
 #endif
 
     if (M->order>=3) {
@@ -194,7 +194,7 @@ VMATRIX *alpha_magnet_matrix(
         }
 
 #ifdef DEBUG
-    report_stats(stdout, "Q matrix scaled");
+    report_stats(stderr, "Q matrix scaled");
 #endif
 
     log_exit("alpha_magnet_matrix");

@@ -248,12 +248,12 @@ double *expansion_coefficients(long n)
 
     /* calculate expansion coefficients with signs for (x+iy)^n/n! */
 #if DEBUG
-    printf("coefficients of expansion for multipole of order %ld\n", n);
+    fprintf(stderr, "coefficients of expansion for multipole of order %ld\n", n);
 #endif
     for (i=0; i<=n; i++) {
         expansion_coef[n_expansions][i] = (ODD(i/2)?-1.0:1.0)/(dfactorial(i)*dfactorial(n-i));
 #if DEBUG
-        printf("%.16lf*%sx^%ld*y^%ld \n", expansion_coef[n_expansions][i]*dfactorial(n),
+        fprintf(stderr, "%.16lf*%sx^%ld*y^%ld \n", expansion_coef[n_expansions][i]*dfactorial(n),
                 (ODD(i)?"i*":""), n-i, i);
 #endif
         }             
@@ -332,7 +332,7 @@ long multipole_tracking2(
             rad_coef = sqr(e_mks)*pow3(Po)/(6*PI*epsilon_o*sqr(c_mks)*me_mks);
         break;
       default:
-        printf("error: multipole_tracking2() called for element %s--not supported!\n", elem->name);
+        fprintf(stderr, "error: multipole_tracking2() called for element %s--not supported!\n", elem->name);
         exit(1);
         break;
         }

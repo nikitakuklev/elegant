@@ -27,7 +27,7 @@ long get_phase_reference(
 {
     long i;
 #ifdef DEBUG    
-    printf("get_phase_reference(%le, %ld)\n", *phase, phase_ref_number);
+    fprintf(stderr, "get_phase_reference(%le, %ld)\n", *phase, phase_ref_number);
 #endif
 
     log_entry("get_phase_reference");
@@ -42,20 +42,20 @@ long get_phase_reference(
             if (reference[i].flags&FL_REF_PHASE_SET) {
                 *phase = reference[i].phase;
 #ifdef DEBUG
-                printf("returning REF_PHASE_RETURNED\n");
+                fprintf(stderr, "returning REF_PHASE_RETURNED\n");
 #endif
                 log_exit("get_phase_reference");
                 return(REF_PHASE_RETURNED);
                 }
 #ifdef DEBUG
-                printf("returning REF_PHASE_NOT_SET\n");
+                fprintf(stderr, "returning REF_PHASE_NOT_SET\n");
 #endif
             log_exit("get_phase_reference");
             return(REF_PHASE_NOT_SET);
             }
         }
 #ifdef DEBUG
-                printf("returning REF_PHASE_NONEXISTENT\n");
+                fprintf(stderr, "returning REF_PHASE_NONEXISTENT\n");
 #endif
     log_exit("get_phase_reference");
     return(REF_PHASE_NONEXISTENT);
@@ -71,7 +71,7 @@ long set_phase_reference(
     log_entry("set_phase_reference");
     
 #ifdef DEBUG
-    printf("set_phase_reference(%ld, %le)\n", phase_ref_number, phase);
+    fprintf(stderr, "set_phase_reference(%ld, %le)\n", phase_ref_number, phase);
 #endif
 
     if (phase_ref_number==0) {
@@ -84,7 +84,7 @@ long set_phase_reference(
             reference[i].phase = phase;
             reference[i].flags = FL_REF_PHASE_SET;
 #ifdef DEBUG
-            printf("existing phase reference set\n");
+            fprintf(stderr, "existing phase reference set\n");
 #endif
             log_exit("set_phase_reference");
             return(1);
@@ -97,7 +97,7 @@ long set_phase_reference(
     reference[i].phase = phase;
     reference[i].flags = FL_REF_PHASE_SET;
 #ifdef DEBUG
-    printf("new phase reference set\n");
+    fprintf(stderr, "new phase reference set\n");
 #endif
     log_exit("set_phase_reference");
     return(1);
@@ -110,7 +110,7 @@ void delete_phase_references(void)
     log_entry("delete_phase_references");
 
 #ifdef DEBUG
-    printf("phase references deleted\n");
+    fprintf(stderr, "phase references deleted\n");
 #endif
     for (i=0; i<n_references; i++)
         reference[i].flags = 0;
@@ -141,7 +141,7 @@ double get_reference_phase(long phase_ref, double phase0)
 
     log_entry("get_reference_phase");
 #ifdef DEBUG
-    printf("obsolete routine get_reference_phase called\n");
+    fprintf(stderr, "obsolete routine get_reference_phase called\n");
 #endif
     switch (get_phase_reference(&phase, phase_ref)) {
         case REF_PHASE_RETURNED:

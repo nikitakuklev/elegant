@@ -194,7 +194,7 @@ long track_through_kick_sbend(double **part, long n_part, KSBEND *ksbend, double
         dcoord_etilt[4] = dz*sqrt(1+sqr(qp3));
         dcoord_etilt[5] = 0;
 #ifdef DEBUG
-        printf("pre-tilt offsets due to ETILT=%le:  %le %le %le %le %le\n",
+        fprintf(stderr, "pre-tilt offsets due to ETILT=%le:  %le %le %le %le %le\n",
             etilt, dcoord_etilt[0], dcoord_etilt[1], dcoord_etilt[2],
              dcoord_etilt[3], dcoord_etilt[4]);
 #endif
@@ -202,7 +202,7 @@ long track_through_kick_sbend(double **part, long n_part, KSBEND *ksbend, double
         /* rotate by tilt to get into same frame as bend equations. */
         rotate_coordinates(dcoord_etilt, tilt);
 #ifdef DEBUG
-        printf("offsets due to ETILT=%le:  %le %le %le %le %le\n",
+        fprintf(stderr, "offsets due to ETILT=%le:  %le %le %le %le %le\n",
             etilt, dcoord_etilt[0], dcoord_etilt[1], dcoord_etilt[2],
              dcoord_etilt[3], dcoord_etilt[4]);
 #endif

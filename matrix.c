@@ -137,7 +137,7 @@ void initialize_matrices(VMATRIX *M, long order)
                 }
             break;
         default:
-            printf("invalid order: %ld  (initialize_matrices)\n", 
+            fprintf(stderr, "invalid order: %ld  (initialize_matrices)\n", 
                 order);
             exit(1);
             break;
@@ -194,7 +194,7 @@ void null_matrices(VMATRIX *M)
                 }
             break;
         default:
-            printf("invalid order: %ld  (null_matrices)\n", 
+            fprintf(stderr, "invalid order: %ld  (null_matrices)\n", 
                 M->order);
             exit(1);
             break;
@@ -338,7 +338,7 @@ void track_particles(double **final, VMATRIX *M, double  **initial, long n_part)
             }
         break;
       default:
-        printf("invalid order: %ld  (track_particle)\n", 
+        fprintf(stderr, "invalid order: %ld  (track_particle)\n", 
                M->order);
         exit(1);
         break;
@@ -426,7 +426,7 @@ void free_matrices(VMATRIX *M)
             tfree(R);
             break;
         default:
-            printf("invalid order: %ld  (free_matrices)\n", 
+            fprintf(stderr, "invalid order: %ld  (free_matrices)\n", 
                 M->order);
             exit(1);
             break;
@@ -478,7 +478,7 @@ void free_nonlinear_matrices(VMATRIX *M)
         case 1:
             break;
         default:
-            printf("invalid order: %ld  (free_matrices)\n", 
+            fprintf(stderr, "invalid order: %ld  (free_matrices)\n", 
                 M->order);
             exit(1);
             break;
@@ -632,7 +632,7 @@ void filter_matrices(VMATRIX *M, double threshold)
                 }
             break;
         default:
-            printf("invalid order: %ld  (filter_matrices)\n", 
+            fprintf(stderr, "invalid order: %ld  (filter_matrices)\n", 
                 M->order);
             exit(1);
             break;
@@ -688,7 +688,7 @@ void random_matrices(VMATRIX *M, double C0, double R0, double T0, double Q0)
                 }
             break;
         default:
-            printf("invalid order: %ld  (null_matrices)\n", 
+            fprintf(stderr, "invalid order: %ld  (null_matrices)\n", 
                 M->order);
             exit(1);
             break;
@@ -734,37 +734,37 @@ long check_matrix(VMATRIX *M, char *comment)
     log_entry("check_matrix");
 
     if (M==NULL) {
-        printf("error: NULL matrix pointer---%s\n", comment);
+        fprintf(stderr, "error: NULL matrix pointer---%s\n", comment);
         abort();
         }
     if (M->order<=0 || M->order>3) {
-        printf("error: matrix order out of range---%s\n", comment);
+        fprintf(stderr, "error: matrix order out of range---%s\n", comment);
         abort();
         }
     if (M->R==NULL) {
-        printf("error: NULL R matrix---%s\n", comment);
+        fprintf(stderr, "error: NULL R matrix---%s\n", comment);
         abort();
         }
     for (i=0; i<6; i++) {
         if (M->R[i]==NULL)
-            printf("error: NULL R[%ld] row---%s\n", i, comment);
+            fprintf(stderr, "error: NULL R[%ld] row---%s\n", i, comment);
         }
     if (M->order==1) {
         log_exit("check_matrix");
         return(1);
         }
     if (M->T==NULL) {
-        printf("error: NULL Tmatrix---%s\n", comment);
+        fprintf(stderr, "error: NULL Tmatrix---%s\n", comment);
         abort();
         }
     for (i=0; i<6; i++) {
         if (M->T[i]==NULL) {
-            printf("error: NULL T[%ld] row---%s\n", i, comment);
+            fprintf(stderr, "error: NULL T[%ld] row---%s\n", i, comment);
             abort();
             }
         for (j=0; j<6; j++) {
             if (M->T[i][j]==NULL) {
-                printf("error: NULL T[%ld][%ld] row---%s\n", i, j, comment);
+                fprintf(stderr, "error: NULL T[%ld][%ld] row---%s\n", i, j, comment);
                 abort();
                 }
             }
@@ -774,22 +774,22 @@ long check_matrix(VMATRIX *M, char *comment)
         return(2);
         }
     if (M->Q==NULL) {
-        printf("error: NULL Q matrix---%s\n", comment);
+        fprintf(stderr, "error: NULL Q matrix---%s\n", comment);
         abort();
         }
     for (i=0; i<6; i++) {
         if (M->Q[i]==NULL) {
-            printf("error: NULL T[%ld] row---%s\n", i, comment);
+            fprintf(stderr, "error: NULL T[%ld] row---%s\n", i, comment);
             abort();
             }
         for (j=0; j<6; j++) {
             if (M->Q[i][j]==NULL) {
-                printf("error: NULL T[%ld][%ld] row---%s\n", i, j, comment);
+                fprintf(stderr, "error: NULL T[%ld][%ld] row---%s\n", i, j, comment);
                 abort();
                 }
             for (k=0; k<=j; k++) {
                 if (M->Q[i][j][k]==NULL) {
-                    printf("error: NULL Q[%ld][%ld][%ld] row---%s\n", i, j, k, comment);
+                    fprintf(stderr, "error: NULL Q[%ld][%ld][%ld] row---%s\n", i, j, k, comment);
                     abort();
                     }
                 }

@@ -3,6 +3,10 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.2  1997/10/20 14:57:10  borland
+ * Improved trace fitting and related routines.  Added output of traces
+ * after fitting.  Fixed some output-related bugs.
+ *
  * Revision 1.1  1997/08/13 20:03:46  borland
  * First version.
  *
@@ -91,7 +95,7 @@ void do_fit_trace_data(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
   
   /* process namelist text */
   process_namelist(&fit_traces, nltext);
-  print_namelist(stdout, &fit_traces);
+  print_namelist(stderr, &fit_traces);
 
   if (!trace_data_file || !fexists(trace_data_file)) {
     fprintf(stderr, "fit_traces: trace_data_file file not given or not found\n");
@@ -740,8 +744,8 @@ FIT_TRACE_DATA *fit_traces_readTraceDataFile
       trace->startingCoord[iTrace][3] = 0;
   }
   
-  fprintf(stdout, "%ld traces found with %ld BPMs.\n", trace->traces, trace->BPMs);
-  fflush(stdout);
+  fprintf(stderr, "%ld traces found with %ld BPMs.\n", trace->traces, trace->BPMs);
+  fflush(stderr);
   return trace;
 }
 

@@ -32,12 +32,12 @@ void track_through_rfmode(
 
     if (!been_warned) {        
         if (rfmode->freq<1e3 && rfmode->freq)  {
-            printf("\7\7\7warning: your RFMODE frequency is less than 1kHz--this may be an error\n");
+            fprintf(stderr, "\7\7\7warning: your RFMODE frequency is less than 1kHz--this may be an error\n");
             been_warned = 1;
             }
         if (been_warned) {
-            printf("units of parameters for RFMODE are as follows:\n");
-            print_dictionary_entry(stdout, T_RFMODE);
+            fprintf(stderr, "units of parameters for RFMODE are as follows:\n");
+            print_dictionary_entry(stderr, T_RFMODE);
             }
         }
 
@@ -203,7 +203,7 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
         fwrite(&n, sizeof(n), 1, rfmode->fprec);
         }
     if (rfmode->n_bins%2==0) {
-        printf("warning: number of bins for RFMODE %s increased from %d to %d (odd number preferred)\n",
+        fprintf(stderr, "warning: number of bins for RFMODE %s increased from %d to %d (odd number preferred)\n",
                element_name, rfmode->n_bins, rfmode->n_bins+1);
         rfmode->n_bins += 1;
         }
@@ -218,10 +218,10 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
         Vc = cmulr(cdiv(cassign(1, 0), cadd(cassign(1, 0), cmulr(cexpi(omega*To), -exp(-To/tau)))), -Vb*exp(-To/tau));
         rfmode->V = sqrt(sqr(Vc.r)+sqr(Vc.i));
         rfmode->last_phase = atan2(Vc.i, Vc.r);
-        printf("RFMODE %s at z=%fm preloaded:  V = (%e, %e) V  =  %eV at %fdeg \n",
+        fprintf(stderr, "RFMODE %s at z=%fm preloaded:  V = (%e, %e) V  =  %eV at %fdeg \n",
                element_name, element_z, Vc.r, Vc.i,
                rfmode->V, rfmode->last_phase*180/PI);
-        printf("To = %es, Vb = %eV, tau = %es\n", To, Vb, tau);
+        fprintf(stderr, "To = %es, Vb = %eV, tau = %es\n", To, Vb, tau);
         }
     else {
         /* calculate phasor for specified initial voltage--convert to V=Vo*sin(phase) convention */

@@ -178,12 +178,12 @@ long motion(
                 case DIFFEQ_CANT_TAKE_STEP:
                 case DIFFEQ_OUTSIDE_INTERVAL:
                 case DIFFEQ_XI_GT_XF:
-                    printf("Integration failure---may be program bug: %s\n", diffeq_result_description(rk_return));
+                    fprintf(stderr, "Integration failure---may be program bug: %s\n", diffeq_result_description(rk_return));
                     for (i=0; i<6; i++) 
-                        printf("%11.4e  ", coord[i]);
-                    printf("\ngamma = %.4e,  P=(%.4e, %.4e, %.4e)\n",
+                        fprintf(stderr, "%11.4e  ", coord[i]);
+                    fprintf(stderr, "\ngamma = %.4e,  P=(%.4e, %.4e, %.4e)\n",
                         gamma0, P0[0], P0[1], P0[2]);
-                    printf("tolerance = %e     end_factor = %e\n",
+                    fprintf(stderr, "tolerance = %e     end_factor = %e\n",
                         tolerance, end_factor);
                     SWAP_PTR(part[i_part], part[i_top]);
                     part[i_top][4] = z_start;
@@ -195,7 +195,7 @@ long motion(
                     break;
                 default:
 #if defined(DEBUG)
-                    printf("initial, final phase: %e, %e\n", initial_phase, final_phase);
+                    fprintf(stderr, "initial, final phase: %e, %e\n", initial_phase, final_phase);
 #endif
                     Po      = sqrt(sqr(P[0])+sqr(P[1])+sqr(P[2]));
                     gamma   = sqrt(1+sqr(Po));
@@ -430,10 +430,10 @@ void (*set_up_derivatives(
             X_aperture_center = twp->k*twp->dx;
             Y_aperture_center = twp->k*twp->dy;
 #if defined(DEBUG)
-            printf("TWPL parameters:\n");
-            printf("l=%le acc=%le x_max=%le y_max=%le\n",
+            fprintf(stderr, "TWPL parameters:\n");
+            fprintf(stderr, "l=%le acc=%le x_max=%le y_max=%le\n",
                   twp->length, twp->accuracy, twp->x_max, twp->y_max);
-            printf("dx=%le dy=%le method=%s ramp_time=%le phiref=%ld\n",
+            fprintf(stderr, "dx=%le dy=%le method=%s ramp_time=%le phiref=%ld\n",
                   twp->dx, twp->dy, twp->method, twp->ramp_time,
                   twp->phase_reference);
 #endif
@@ -511,9 +511,9 @@ void (*set_up_derivatives(
                 twmta->Ky = twmta->ky/(*kscale);
                 twmta->Kz = twmta->kz/(*kscale);
 /*
-                printf("TWMTA kx, ky, kz = %e, %e, %e\n", twmta->kx, twmta->ky, twmta->kz);
-                printf("      Ex, Ey, Ez = %e, %e, %e\n", twmta->ExS, twmta->EyS, twmta->EzS);
-                printf("      Bx, By, Bz = %e, %e\n", twmta->BxS, twmta->ByS);
+                fprintf(stderr, "TWMTA kx, ky, kz = %e, %e, %e\n", twmta->kx, twmta->ky, twmta->kz);
+                fprintf(stderr, "      Ex, Ey, Ez = %e, %e, %e\n", twmta->ExS, twmta->EyS, twmta->EzS);
+                fprintf(stderr, "      Bx, By, Bz = %e, %e\n", twmta->BxS, twmta->ByS);
  */
                 twmta->fiducial_part = fiducial = select_fiducial(part, n_part, twmta->fiducial);
                 if (fiducial) {
@@ -1100,8 +1100,8 @@ void select_integrator(char *desired_method)
     log_entry("select_integrator");
 
 #if defined(DEBUG)
-    printf("select_integrator called with pointer %lx\n", (long)(desired_method));
-    printf("this translates into string %s\n", desired_method);
+    fprintf(stderr, "select_integrator called with pointer %lx\n", (long)(desired_method));
+    fprintf(stderr, "this translates into string %s\n", desired_method);
 #endif
     switch (match_string(desired_method, method, N_METHODS, 0)) {
       case RUNGE_KUTTA:

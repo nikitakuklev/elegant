@@ -611,7 +611,7 @@ void do_watch_FFT(double **data, long n_data, long slot, long window_code)
 
     /* do the FFT */
     if (!realFFT2(real_imag, real_imag, n_data, 0)) {
-        printf("error: FFT fails for slot %ld of watch point\n", slot);
+        fprintf(stderr, "error: FFT fails for slot %ld of watch point\n", slot);
         abort();
         }
 
@@ -850,7 +850,7 @@ void dump_sigma(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, lo
     for (ie=0; ie<n_elements; ie++) {
         beam  = sums+ie;
         if (!beam->sum || !beam->sum2) {
-            printf("error: sum or sum2 element of BEAM_SUMS is undefined for element %ld (%s)\n",
+            fprintf(stderr, "error: sum or sum2 element of BEAM_SUMS is undefined for element %ld (%s)\n",
                 ie, name);
             exit(1);
             }

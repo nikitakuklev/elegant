@@ -48,7 +48,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central)
 
     if (madfile) {
 #ifdef DEBUG
-        printf("reading from file %s\n", madfile);
+        fprintf(stderr, "reading from file %s\n", madfile);
 #endif
         fp_mad = fopen_e(madfile, "r", 0);
     
@@ -68,16 +68,16 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central)
            of fully expanded line definitions */
         while (cfgets(s, MAX_LINE_LENGTH, fp_mad)) {
 #ifdef DEBUG
-            printf("input line: %s\n", s);
+            fprintf(stderr, "input line: %s\n", s);
 #endif
             strcpy(t, s);
             if ((type = tell_type(s, elem))==T_NODEF) {
                 if (!is_blank(s))
-                    printf("warning: no recognized statement on line: %s\n", t);
+                    fprintf(stderr, "warning: no recognized statement on line: %s\n", t);
                 continue;
                 }
 #ifdef DEBUG
-            printf("type code = %ld\n", type);
+            fprintf(stderr, "type code = %ld\n", type);
 #endif
             if (type==T_RENAME)
                 process_rename_request(s, entity_name, N_TYPES);
@@ -91,14 +91,14 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central)
                 break;
             else if (type==T_LINE) {
 #ifdef DEBUG
-                printf("current element list is:\n");
-                print_elem_list(stdout, elem);
+                fprintf(stderr, "current element list is:\n");
+                print_elem_list(stderr, elem);
 #endif
                 fill_line(line, n_lines, elem, n_elems, s);
                 check_duplic_line(line, lptr, n_lines+1);
 #ifdef DEBUG 
-                printf("\n****** expanded line %s:\n", lptr->name);
-                print_line(stdout, lptr); 
+                fprintf(stderr, "\n****** expanded line %s:\n", lptr->name);
+                print_line(stderr, lptr); 
 #endif
                 extend_line_list(&lptr);
                 n_lines++;
@@ -106,27 +106,27 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central)
             else {
                 if (type==T_ECOPY) {
 #ifdef DEBUG
-                    printf("copying existing element\n");
+                    fprintf(stderr, "copying existing element\n");
 #endif
                     strcpy(s, t);
                     copy_named_element(eptr, s, elem);
                     }
                 else {
 #ifdef DEBUG
-                    printf("creating new element\n");
+                    fprintf(stderr, "creating new element\n");
 #endif
                     fill_elem(eptr, s, type, fp_mad); 
                     }
                 check_duplic_elem(&elem, &eptr, n_elems);
 #ifdef DEBUG
-                print_elem(stdout, elem);
+                print_elem(stderr, elem);
 #endif
                 extend_elem_list(&eptr);
                 n_elems++;
                 }
             }
         if (n_elems==0 || n_lines==0) {
-            printf("Insufficient (recognizable) data in file.\n");
+            fprintf(stderr, "Insufficient (recognizable) data in file.\n");
             exit(1);
             }
         /* since the lists were being extended before it was known that
@@ -148,7 +148,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central)
     if (type!=T_USE && use_beamline==NULL) {
         if (n_lines==0)
             bomb("no beam-line defined\n", NULL);
-        printf("no USE statement--will use line %s\n", lptr->name);
+        fprintf(stderr, "no USE statement--will use line %s\n", lptr->name);
         }
     else {
         if (!use_beamline) {
@@ -164,7 +164,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central)
             lptr = lptr->succ;
             }
         if (lptr==NULL) {
-            printf("no definition of beam-line %s\n", ptr);
+            fprintf(stderr, "no definition of beam-line %s\n", ptr);
             exit(1);
             }
         }
@@ -199,7 +199,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central)
         else if (eptr->type==T_CSBEND)
             theta += ((CSBEND*)eptr->p_elem)->angle;
         if (l<0)
-            printf("warning(1): element %s has negative length = %e\n", eptr->name, l);
+            fprintf(stderr, "warning(1): element %s has negative length = %e\n", eptr->name, l);
         eptr->end_pos = z + l;
         eptr->end_theta = theta ;
         z = eptr->end_pos;
@@ -237,7 +237,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central)
     eptr = &(lptr->elem);
     while (eptr->succ) {
         if (eptr->succ->end_pos<eptr->end_pos)
-            printf("warning(2): element %s has negative length of %e\n",
+            fprintf(stderr, "warning(2): element %s has negative length of %e\n",
                 eptr->name, eptr->succ->end_pos-eptr->end_pos);
         eptr = eptr->succ;
         }
@@ -256,27 +256,27 @@ void show_elem(ELEMENT_LIST *eptr, long type)
     log_entry("show_elem");
 
     parameter = entity_description[type].parameter;
-    printf( "%s %s at z=%em:\n", 
+    fprintf(stderr,  "%s %s at z=%em:\n", 
         entity_name[type], eptr->name, eptr->end_pos);
     for (j=0; j<entity_description[type].n_params; j++) {
         switch (parameter[j].type) {
             case IS_DOUBLE:
-                printf( "    %s = %.16le with offset %ld\n", 
+                fprintf(stderr,  "    %s = %.16le with offset %ld\n", 
                     parameter[j].name, 
                     *(double*)(eptr->p_elem+parameter[j].offset),
                     parameter[j].offset);
                 break;
             case IS_LONG:
-                printf( "    %s = %ld with offset %ld\n", 
+                fprintf(stderr,  "    %s = %ld with offset %ld\n", 
                     parameter[j].name, 
                     *(long *)(eptr->p_elem+parameter[j].offset),
                     parameter[j].offset);
                 break;
             case IS_STRING:
                 if (ptr = *(char**)(eptr->p_elem+parameter[j].offset))
-                    printf( "    %s = %e\n", parameter[j].name, ptr);
+                    fprintf(stderr,  "    %s = %e\n", parameter[j].name, ptr);
                 else
-                    printf( "    %s = %e\n", parameter[j].name, ptr);
+                    fprintf(stderr,  "    %s = %e\n", parameter[j].name, ptr);
                 break;
             }
         }
@@ -296,12 +296,12 @@ void free_elements(ELEMENT_LIST *elemlist)
         eptr = elem;
         elem = NULL;
 #ifdef DEBUG
-        printf("freeing elements in main list\n");
+        fprintf(stderr, "freeing elements in main list\n");
 #endif
         }
     while (eptr) {
 #ifdef DEBUG
-        printf("freeing memory for element %s of type %s\n", 
+        fprintf(stderr, "freeing memory for element %s of type %s\n", 
                 eptr->name?eptr->name:"NULL",
                 (eptr->type>=0 && eptr->type<N_TYPES)?entity_name[eptr->type]:"NULL");
 #endif
@@ -315,9 +315,9 @@ void free_elements(ELEMENT_LIST *elemlist)
                 }
             }
 #ifdef DEBUG
-        printf("pointers: p_elem = %x   name = %x   matrix = %x\n",
+        fprintf(stderr, "pointers: p_elem = %x   name = %x   matrix = %x\n",
             eptr->p_elem, eptr->name, eptr->matrix);
-        printf("          pred = %x     succ = %x  \n",
+        fprintf(stderr, "          pred = %x     succ = %x  \n",
             eptr->pred, eptr->succ);
 #endif
         tfree(eptr->p_elem);
@@ -360,14 +360,14 @@ void free_beamlines(LINE_LIST *beamline)
         lptr = line;
         line = NULL;
 #ifdef DEBUG
-        printf("freeing main beamline list\n", NULL);
+        fprintf(stderr, "freeing main beamline list\n", NULL);
 #endif
         }
     while (lptr) {
 #ifdef DEBUG
-        printf("*************************\nfreeing memory for beamline %s with %ld elements\n",
+        fprintf(stderr, "*************************\nfreeing memory for beamline %s with %ld elements\n",
             lptr->name?lptr->name:"NULL", lptr->n_elems);
-        printf("pointers:   name = %x    succ = %x   pred = %x\n",
+        fprintf(stderr, "pointers:   name = %x    succ = %x   pred = %x\n",
             lptr->name, lptr->succ, lptr->pred);
 #endif
         if (lptr->definition) {
@@ -460,7 +460,7 @@ void do_save_lattice(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
     process_namelist(&save_lattice, nltext);
-    print_namelist(stdout, &save_lattice);
+    print_namelist(stderr, &save_lattice);
 
     /* check for valid data */
     if (filename==NULL)
@@ -574,7 +574,7 @@ void change_defined_parameter_values(char **elem_name, long *param_number, long 
                 case IS_DOUBLE:
                     *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)) = value[i_elem];
 #if DEBUG
-                    printf("   changing parameter %s of %s #%ld to %e\n",
+                    fprintf(stderr, "   changing parameter %s of %s #%ld to %e\n",
                            entity_description[elem_type].parameter[param].name,
                            eptr->name, eptr->occurence,
                            *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)));
@@ -583,7 +583,7 @@ void change_defined_parameter_values(char **elem_name, long *param_number, long 
                 case IS_LONG:
                     *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) = value[i_elem]+0.5;
 #if DEBUG
-                    printf("   changing parameter %s of %s #%ld to %ld\n",
+                    fprintf(stderr, "   changing parameter %s of %s #%ld to %ld\n",
                            entity_description[elem_type].parameter[param].name,
                            eptr->name, eptr->occurence,
                            *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)));
@@ -705,7 +705,7 @@ void process_rename_request(char *s, char **name, long n_names)
         fprintf(stderr, "error: can't rename %s to %s--%s not recognized\n", old, new, old);
         exit(1);
         }
-    printf("warning: element %s now known as %s\n", old, new);
+    fprintf(stderr, "warning: element %s now known as %s\n", old, new);
     cp_str(name+i, new);
     log_exit("process_rename_request");
     }

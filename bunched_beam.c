@@ -53,7 +53,7 @@ void setup_bunched_beam(
     process_namelist(&bunched_beam, nltext);
     if (Po<=0)
         Po = run->p_central;
-    print_namelist(stdout, &bunched_beam);
+    print_namelist(stderr, &bunched_beam);
 
     /* check for validity of namelist inputs */
     if (n_particles_per_bunch<=0)
@@ -86,7 +86,7 @@ void setup_bunched_beam(
         bomb("longitudinal distribution cutoff < 0", NULL);
 
     if ((enforce_rms_values[0] || enforce_rms_values[1] || enforce_rms_values[2]) && n_particles_per_bunch%4)
-        fputs("Note: you will get better results for enforcing RMS values if n_particles_per_bunch is divisible by 4.\n", stdout);
+        fputs("Note: you will get better results for enforcing RMS values if n_particles_per_bunch is divisible by 4.\n", stderr);
 
     if (matched_to_cell) {
         if (!(control->cell = get_beamline(NULL, matched_to_cell, run->p_central)))
@@ -156,26 +156,26 @@ long new_bunched_beam(
                 &beta_y, &alpha_y, &eta_y, &etap_y, &dummy, 
                 (control->cell->elem_recirc?control->cell->elem_recirc:&(control->cell->elem)), 
                 NULL, run);
-	    printf("matched Twiss parameters for beam generation:\nbetax = %13.6e m  alphax = %13.6e  etax = %13.6e m  etax' = %13.6e\n",
+	    fprintf(stderr, "matched Twiss parameters for beam generation:\nbetax = %13.6e m  alphax = %13.6e  etax = %13.6e m  etax' = %13.6e\n",
                 beta_x, alpha_x, eta_x, etap_x);
-            printf("betay = %13.6e m  alphay = %13.6e  etay = %13.6e m  etay' = %13.6e\n",
+            fprintf(stderr, "betay = %13.6e m  alphay = %13.6e  etay = %13.6e m  etay' = %13.6e\n",
                 beta_y, alpha_y, eta_y, etap_y);
             fill_transverse_structure(&x_plane, emit_x, beta_x, alpha_x, eta_x, etap_x,
                     x_beam_type, distribution_cutoff[0], centroid);
             fill_transverse_structure(&y_plane, emit_y, beta_y, alpha_y, eta_y, etap_y,
                     y_beam_type, distribution_cutoff[1], centroid+2);
             }
-        printf("generating bunch %ld.%ld\n", control->i_step, control->i_vary);
+        fprintf(stderr, "generating bunch %ld.%ld\n", control->i_step, control->i_vary);
         n_actual_particles = generate_bunch(beam->original, n_particles_per_bunch, &x_plane,
                    &y_plane, &longit, enforce_rms_values, limit_invariants, symmetrize, limit_in_4d, Po);
         if (n_actual_particles!=n_particles_per_bunch)
-            fprintf(stdout, "warning: only %ld of %ld requested particles are actually being tracked.\n", n_actual_particles, 
+            fprintf(stderr, "warning: only %ld of %ld requested particles are actually being tracked.\n", n_actual_particles, 
                     n_particles_per_bunch);
 
         if (bunch) {
             if (!SDDS_bunch_initialized)
                 bomb("'bunch' file is uninitialized (new_bunched_beam)", NULL);
-            printf("dumping bunch\n");
+            fprintf(stderr, "dumping bunch\n");
             dump_phase_space(&SDDS_bunch, beam->original, n_actual_particles, control->i_step, Po);
             if (one_random_bunch) {
                 if (!SDDS_Terminate(&SDDS_bunch)) {
@@ -244,7 +244,7 @@ long track_beam(
 
     /* now track particles */
     if (!(flags&SILENT_RUNNING))
-        printf("tracking %ld particles\n", beam->n_to_track);
+        fprintf(stderr, "tracking %ld particles\n", beam->n_to_track);
     n_trpoint = beam->n_to_track;
 
     effort = 0;
@@ -255,24 +255,24 @@ long track_beam(
                          control->n_passes);
 
     if (!beam) {
-        printf("error: beam pointer is null on return from do_tracking (track_beam)\n");
+        fprintf(stderr, "error: beam pointer is null on return from do_tracking (track_beam)\n");
         abort();
         }
     beam->p0 = p_central;
     beam->n_accepted = n_left;
     if (!(flags&SILENT_RUNNING))
-        printf("%ld particles transmitted, total effort of %ld particle-turns\n\n", n_left, effort);
-    fflush(stdout);
+        fprintf(stderr, "%ld particles transmitted, total effort of %ld particle-turns\n\n", n_left, effort);
+    fflush(stderr);
 
     log_entry("track_beam.1");
     if (run->output && !(flags&INHIBIT_FILE_OUTPUT)) {
         if (!output->output_initialized)
             bomb("'output' file is uninitialized (track_beam)", NULL);
         if (!(flags&SILENT_RUNNING)) 
-            printf("Dumping output beam data..."); fflush(stdout);
+            fprintf(stderr, "Dumping output beam data..."); fflush(stderr);
         dump_phase_space(&output->SDDS_output, beam->particle, n_left, control->i_step, p_central);
         if (!(flags&SILENT_RUNNING)) 
-            printf("done.\n"); fflush(stdout);
+            fprintf(stderr, "done.\n"); fflush(stderr);
         }
     log_exit("track_beam.1");
 
@@ -281,10 +281,10 @@ long track_beam(
         if (!output->accept_initialized)
             bomb("'acceptance' file is uninitialized (track_beam)", NULL);
         if (!(flags&SILENT_RUNNING)) 
-            printf("Dumping acceptance output..."); fflush(stdout);
+            fprintf(stderr, "Dumping acceptance output..."); fflush(stderr);
         dump_phase_space(&output->SDDS_accept, beam->accepted, beam->n_accepted, control->i_step, p_central);
         if (!(flags&SILENT_RUNNING)) 
-            printf("done.\n"); fflush(stdout);
+            fprintf(stderr, "done.\n"); fflush(stderr);
         }
     log_exit("track_beam.2");
 
@@ -293,10 +293,10 @@ long track_beam(
         if (!output->losses_initialized)
             bomb("'losses' file is uninitialized (track_beam)", NULL);
         if (!(flags&SILENT_RUNNING)) 
-            printf("Dumping lost-particle data..."); fflush(stdout);
+            fprintf(stderr, "Dumping lost-particle data..."); fflush(stderr);
         dump_lost_particles(&output->SDDS_losses, beam->particle+n_left, beam->n_to_track-n_left, control->i_step);
         if (!(flags&SILENT_RUNNING)) 
-            printf("done.\n"); fflush(stdout);
+            fprintf(stderr, "done.\n"); fflush(stderr);
         }
     log_exit("track_beam.3");
 
@@ -307,10 +307,10 @@ long track_beam(
         if (!output->sums_vs_z)
             bomb("missing beam sums pointer (track_beam)", NULL);
         if (!(flags&SILENT_RUNNING)) 
-            printf("Dumping centroid data..."); fflush(stdout);
+            fprintf(stderr, "Dumping centroid data..."); fflush(stderr);
         dump_centroid(&output->SDDS_centroid, output->sums_vs_z, beamline, output->n_z_points, control->i_step, p_central);
         if (!(flags&SILENT_RUNNING)) 
-            printf("done.\n"); fflush(stdout);
+            fprintf(stderr, "done.\n"); fflush(stderr);
         }
     log_exit("track_beam.4");
 
@@ -321,10 +321,10 @@ long track_beam(
         if (!output->sums_vs_z)
             bomb("missing beam sums pointer (track_beam)", NULL);
         if (!(flags&SILENT_RUNNING)) 
-            printf("Dumping sigma data..."); fflush(stdout);
+            fprintf(stderr, "Dumping sigma data..."); fflush(stderr);
         dump_sigma(&output->SDDS_sigma, output->sums_vs_z, beamline, output->n_z_points, control->i_step, p_central);
         if (!(flags&SILENT_RUNNING)) 
-            printf("done.\n"); fflush(stdout);
+            fprintf(stderr, "done.\n"); fflush(stderr);
         }
     log_exit("track_beam.5");
 
@@ -339,7 +339,7 @@ long track_beam(
         if (!output->sums_vs_z)
             bomb("beam sums array for final output is NULL", NULL);
         if (!(flags&SILENT_RUNNING)) 
-            printf("Dumping final propertes data..."); fflush(stdout);
+            fprintf(stderr, "Dumping final propertes data..."); fflush(stderr);
         dump_final_properties
             (&output->SDDS_final, output->sums_vs_z+output->n_z_points, 
              control->varied_quan_value, control->varied_quan_name?*control->varied_quan_name:NULL, control->n_elements_to_vary,
@@ -348,14 +348,14 @@ long track_beam(
                  optim->n_variables?optim->n_variables+1:0,
              control->i_step, beam->particle, beam->n_to_track, p_central, M);
         if (!(flags&SILENT_RUNNING)) 
-            printf("done.\n"); fflush(stdout);
+            fprintf(stderr, "done.\n"); fflush(stderr);
         free_matrices(M); free(M); M = NULL;
         }
     log_exit("track_beam.6");
 
     if (!(flags&SILENT_RUNNING)) {
-        report_stats(stdout, "Tracking step completed");
-        fputs("\n\n", stdout);
+        report_stats(stderr, "Tracking step completed");
+        fputs("\n\n", stderr);
         }
 
     log_exit("track_beam");
