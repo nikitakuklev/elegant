@@ -791,7 +791,7 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double s, long n, double rho0
 typedef struct {
   long bins, valid;
   double dctBin, s0, ds0, zLast, z0;
-  double thetaRad;
+  double thetaRad[2], overtakingLength;
   double S11, S12, S22;
   double *dGamma;
 } CSR_LAST_WAKE;
@@ -830,7 +830,8 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   
   csrWake.valid = csrWake.bins = 0;
   csrWake.dctBin = csrWake.s0 = csrWake.ds0 = csrWake.zLast =
-    csrWake.z0 = csrWake.thetaRad = csrWake.S11 = csrWake.S12 = csrWake.S22 = 0;
+    csrWake.z0 = csrWake.S11 = csrWake.S12 = csrWake.S22 = 0;
+  csrWake.thetaRad[0] = csrWake.thetaRad[1] = 0;
   csrWake.dGamma = NULL;
 
   if (!csbend)
@@ -1362,21 +1363,30 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 
   if (n_part>1) {
     /* prepare more data for CSRDRIFT */
+    double sigmaZ;
+    long imin, imax;
     rms_emittance(part, 0, 1, i_top+1, &csrWake.S11, &csrWake.S12, &csrWake.S22);
 
     /* compute angular spread of radiation, using Wiedemann's formula */
     /* wavelength ~ (sigma z) */
-    wavelength = beam_width(0.6826, part, i_top+1, 4)/2;
+    wavelength = sigmaZ = beam_width(0.6826, part, i_top+1, 4)/2;
     criticalWavelength = 4.19/ipow(Po, 3)*rho_actual;
-    csrWake.thetaRad = 0.5463e-3/(Po*0.511e-3)/pow(criticalWavelength/wavelength, 1./3.);
+    csrWake.thetaRad[0] = 0.5463e-3/(Po*0.511e-3)/pow(criticalWavelength/wavelength, 1./3.);
+
+    /* wavelength ~ 2*(peak-to-peak) distance, but not more than 10*sigmaz */
+    if (macroParticleCharge) {
+      index_min_max(&imin, &imax, csrWake.dGamma, csrWake.bins);
+      if ((wavelength = 2*fabs(1.0*imax-imin)*dct)>10*sigmaZ)
+        wavelength = 10*sigmaZ;
+    }
+    else
+      wavelength = sigmaZ;
+    csrWake.thetaRad[1] = 0.5463e-3/(Po*0.511e-3)/pow(criticalWavelength/wavelength, 1./3.);
+
     csrWake.valid = 1;
+    csrWake.overtakingLength = pow(24*sigmaZ*rho_actual*rho_actual, 1./3.);
   }
   
-#ifdef DEBUG
-  fprintf(stdout, "wavelength = %le, critWL = %le, thetaRad = %le\n",
-          wavelength, criticalWavelength, csrWake.thetaRad);
-#endif
-
 #if defined(MINIMIZE_MEMORY)
   /* leave dGamma out of this because that memory is used by CSRDRIFT */
   free(beta0);
@@ -1448,21 +1458,40 @@ long binParticleCoordinate(double **hist, long *maxBins,
 long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift, 
                             double Po, double **accepted, double zStart)
 {
-  long iPart, iKick, iBin, binned, nKicks, iSpreadMode;
+  long iPart, iKick, iBin, binned, nKicks, iSpreadMode, iWavelengthMode;
   double *coord, t, p, beta, dz, ct0, factor, dz0, dzFirst;
   double ctmin, ctmax, spreadFactor;
-  double zTravel;
+  double zTravel, attenuationLength, thetaRad;
   static char *spreadMode[3] = {"full", "simple", "radiation-only"};
-  
-  if (np<=1 || !csrWake.valid) {
+  static char *wavelengthMode[2] = {"sigmaz", "peak-to-peak"};
+    
+  if (np<=1 || !csrWake.valid || !csrDrift->csr) {
+    fprintf(stdout, "Skipping csr drift computation\n");
     drift_beam(part, np, csrDrift->length, 2);
     return np;
   }
+
+  if (csrDrift->useOvertakingLength) {
+    attenuationLength = csrWake.overtakingLength;
+  }
+  else
+    attenuationLength = csrDrift->attenuationLength;
+  fprintf(stdout, "CSR attenuation length is %le m\n", attenuationLength);
+  fflush(stdout);
   
-  iSpreadMode = 0;
-  if (csrDrift->spreadMode && 
-      (iSpreadMode=match_string(csrDrift->spreadMode, spreadMode, 3, 0))<0)
-    bomb("invalid spread_mode for CSR DRIFT.  Use full, simple, or radiation-only", NULL);
+  if (csrDrift->spread) {
+    iSpreadMode = 0;
+    if (csrDrift->spreadMode && 
+        (iSpreadMode=match_string(csrDrift->spreadMode, spreadMode, 3, 0))<0)
+      bomb("invalid spread_mode for CSR DRIFT.  Use full, simple, or radiation-only", NULL);
+    fprintf(stdout, "spread mode is %s\n", spreadMode[iSpreadMode]);
+    iWavelengthMode = 0;
+    if (csrDrift->wavelengthMode &&
+        (iWavelengthMode=match_string(csrDrift->wavelengthMode, wavelengthMode, 2, 0))<0)
+      bomb("invalid wavelength_mode for CSR DRIFT.  Use sigmaz or peak-to-peak", NULL);
+    fprintf(stdout, "wavelength mode is %s\n", wavelengthMode[iWavelengthMode]);
+    thetaRad = csrWake.thetaRad[iWavelengthMode];
+  }
   
   if (csrDrift->dz>0) {
     if ((nKicks = csrDrift->length/csrDrift->dz)<1)
@@ -1512,9 +1541,9 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
       csrWake.s0 += dz+dzFirst;   /* accumulates position of back end of the radiation pulse */
       ct0 = csrWake.s0;
       
-      if (csrDrift->attenuationLength>0) {
+      if (attenuationLength>0) {
         /* attenuate wake */
-        if ((factor = exp(-(dz+dzFirst)/csrDrift->attenuationLength))<1) {
+        if ((factor = exp(-(dz+dzFirst)/attenuationLength))<1) {
           for (iBin=0; iBin<csrWake.bins; iBin++)
             csrWake.dGamma[iBin] *= factor;
         }
@@ -1534,28 +1563,20 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
         factor *= (spreadFactor =
                    sqrt(csrWake.S11/(csrWake.S11 + 
                                      2*zTravel*csrWake.S12 + 
-                                     zTravel*zTravel*(sqr(csrWake.thetaRad)+csrWake.S22))));
+                                     zTravel*zTravel*(sqr(thetaRad)+csrWake.S22))));
         break;
       case 1: /* simple */
         factor *= (spreadFactor =
-                   sqrt(csrWake.S11/(csrWake.S11 + zTravel*zTravel*(sqr(csrWake.thetaRad)+csrWake.S22))));
+                   sqrt(csrWake.S11/(csrWake.S11 + zTravel*zTravel*(sqr(thetaRad)+csrWake.S22))));
         break;
       case 2: /* radiation only */
         factor *= (spreadFactor =
-                   sqrt(csrWake.S11/(csrWake.S11 + sqr(zTravel*csrWake.thetaRad))));
+                   sqrt(csrWake.S11/(csrWake.S11 + sqr(zTravel*thetaRad))));
         break;
       default:
         bomb("invalid spread code---programming error!", NULL);
         break;
       }
-
-#if 0
-#ifdef DEBUG
-      fprintf(stdout, "Spread factor is %21.15le after zTravel=%21.15le\n", spreadFactor, zTravel);
-      fprintf(stdout, "S11 = %21.15le  S12 = %21.15le  S22 = %21.15le\nthetaRad = %21.15le  z = %21.15le\n",
-              csrWake.S11, csrWake.S12, csrWake.S22, csrWake.thetaRad, zTravel);
-#endif
-#endif
     }
     
     dzFirst = 0;
@@ -1604,9 +1625,9 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
     csrWake.s0 += dz;
     ct0 = csrWake.s0;
     
-    if (csrDrift->attenuationLength>0) {
+    if (attenuationLength>0) {
       /* attenuate wake */
-      if ((factor = exp(-dz/csrDrift->attenuationLength))<1) {
+      if ((factor = exp(-dz/attenuationLength))<1) {
         for (iBin=0; iBin<csrWake.bins; iBin++)
             csrWake.dGamma[iBin] *= factor;
       }
@@ -1623,5 +1644,6 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
 long reset_driftCSR()
 {
   csrWake.valid = 0;
+  return 1;
 }
 

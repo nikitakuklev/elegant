@@ -1172,10 +1172,13 @@ CSRDRIFT csrdrift_example;
 PARAMETER csrdrift_param[N_CSRDRIFT_PARAMS] = {
     {"L", "M", IS_DOUBLE, 1, (long)((char *)&csrdrift_example.length), NULL, 0.0, 0},
     {"ATTENUATION_LENGTH", "M", IS_DOUBLE, 1, (long)((char *)&csrdrift_example.attenuationLength), NULL, 0.0, 0},
+    {"DZ", "", IS_DOUBLE, 1, (long)((char *)&csrdrift_example.dz), NULL, 0.0, 0},
     {"N_KICKS", "", IS_LONG, 1, (long)((char *)&csrdrift_example.nKicks), NULL, 0.0, 1},
     {"SPREAD", "", IS_LONG, 1, (long)((char *)&csrdrift_example.spread), NULL, 0.0, 0},
-    {"DZ", "", IS_DOUBLE, 1, (long)((char *)&csrdrift_example.dz), NULL, 0.0, 0},
+    {"USE_OVERTAKING_LENGTH", "", IS_LONG, 1, (long)((char *)&csrdrift_example.useOvertakingLength), NULL, 0.0, 0},
+    {"CSR", "", IS_LONG, 1, (long)((char *)&csrdrift_example.csr), NULL, 0.0, 1},
     {"SPREAD_MODE", "", IS_STRING, 1, (long)((char *)&csrdrift_example.spreadMode), "full", 0.0, 0},
+    {"WAVELENGTH_MODE", "", IS_STRING, 1, (long)((char *)&csrdrift_example.wavelengthMode), "sigmaz", 0.0, 0},
     };
 
 RFCW rfcw_example;
