@@ -52,7 +52,7 @@ set mainParameterFile(1) ""
 set mainParameterFile(2) ""
 set mainParameterFile(3) ""
 set mainParameterFile(4) ""
-set forceOccurence 1
+set forceOccurence 0
 set mainDirectory [pwd]
 set mainPrefix ""
 set gridEngine 0
