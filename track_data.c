@@ -625,9 +625,9 @@ PARAMETER scraper_param[N_SCRAPER_PARAMS]={
 CENTER center_example;
 /* beam centering physical parameters */
 PARAMETER center_param[N_CENTER_PARAMS]={
-    {"X" , "M", IS_LONG, 0, (long)((char *)&center_example.x), NULL, 0.0, 1},
+    {"X" , "", IS_LONG, 0, (long)((char *)&center_example.x), NULL, 0.0, 1},
     {"XP", "", IS_LONG, 0, (long)((char *)&center_example.xp), NULL, 0.0, 1},
-    {"Y" , "M", IS_LONG, 0, (long)((char *)&center_example.y), NULL, 0.0, 1},
+    {"Y" , "", IS_LONG, 0, (long)((char *)&center_example.y), NULL, 0.0, 1},
     {"YP", "", IS_LONG, 0, (long)((char *)&center_example.yp), NULL, 0.0, 1},
     {"ONCE_ONLY", "", IS_LONG, 0, (long)((char *)&center_example.onceOnly), NULL, 0.0, 0},
     };
