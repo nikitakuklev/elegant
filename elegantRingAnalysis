@@ -52,6 +52,7 @@ set mainParameterFile(1) ""
 set mainParameterFile(2) ""
 set mainParameterFile(3) ""
 set mainParameterFile(4) ""
+set forceOccurence 1
 set mainDirectory [pwd]
 set mainPrefix ""
 set gridEngine 0
@@ -150,6 +151,8 @@ proc FillMainFrame {widget args} {
           -contextHelp \
           "Enter the name of the parameter file that contains element parameters.  It will be loaded over the lattice."
     }
+    APSRadioButtonFrame .rb4 -parent $widget -label "Force occurence data on parameter files: " \
+	-variable forceOccurence -valueList "1 0" -buttonList "Yes No" -orientation horizontal
     APSLabeledEntry .le5 -parent $widget -label "Output directory: " \
       -width 60 -textVariable mainDirectory \
       -fileSelectButton 1 -buttonsOnLeft 1 -fileSelectDirectory 1 \
@@ -215,7 +218,7 @@ proc FillBasicFrame {widget args} {
 }
 
 proc BasicComputations {args} {
-    global sourceDir 
+    global sourceDir  forceOccurence
     global basicComputations momentum matrixLatticeFile mainParameterFile mainDirectory mainPrefix matrixBeamline
     
     set tag Basic
@@ -246,6 +249,7 @@ proc BasicComputations {args} {
 	lappend replList [set $item]
     }
     PerformRun -template $sourceDir/BasicTemplate.ele -parameterFileList $parameterFileList \
+	-forceOccurence $forceOccurence \
 	-tag $tag -order $order -momentum $momentum -suffix $basicComputations(userSuffix) \
 	-originalList $origList -replacementList $replList \
 	-suffix $basicComputations(userSuffix) -postProcessProc BasicComputationsPP 
@@ -302,6 +306,7 @@ proc BasicComputationsPP {args} {
 proc PerformRun {args} {
     set template ""
     set parameterFileList ""
+    set forceOccurence 0
     set order 1
     set momentum 7e3
     set replacementList ""
@@ -310,10 +315,11 @@ proc PerformRun {args} {
     set suffix ""
     set postProcessProc ""
     APSStrictParseArguments {template parameterFileList order momentum \
-				 replacementList originalList tag suffix postProcessProc}
+	replacementList originalList tag suffix postProcessProc \
+	forceOccurence}
     global mainDirectory mainPrefix matrixLatticeFile kickLatticeFile sourceDir 
     global matrixBeamline kickBeamline matrixOffsetElement kickOffsetElement gridEngine
-    foreach item [list order momentum mainDirectory mainPrefix matrixLatticeFile kickLatticeFile parameterFileList matrixBeamline kickBeamline matrixOffsetElement kickOffsetElement] {
+    foreach item [list order momentum mainDirectory mainPrefix matrixLatticeFile kickLatticeFile parameterFileList matrixBeamline kickBeamline matrixOffsetElement kickOffsetElement forceOccurence] {
 	lappend originalList <$item>
 	lappend replacementList [set $item]
     }
@@ -354,6 +360,7 @@ proc PostProcessRun {args} {
 proc PerformRuns {args} {
     set template ""
     set parameterFileList ""
+    set forceOccurence 0
     set order 1
     set momentum 7e3
     set replacementList ""
@@ -370,11 +377,11 @@ proc PerformRuns {args} {
     set postProcessProc ""
     APSStrictParseArguments {template parameterFileList order momentum tag  \
 				 variable startValue endValue  points copyList \
-				 combineList mergeList suffix \
+				 combineList mergeList suffix forceOccurence \
 				 replacementList originalList postProcessProc}
     global mainDirectory mainPrefix matrixLatticeFile kickLatticeFile sourceDir 
     global matrixBeamline kickBeamline matrixOffsetElement kickOffsetElement gridEngine
-    foreach item [list order momentum mainDirectory mainPrefix matrixLatticeFile kickLatticeFile parameterFileList matrixBeamline kickBeamline matrixOffsetElement kickOffsetElement] {
+    foreach item [list order momentum mainDirectory mainPrefix matrixLatticeFile kickLatticeFile parameterFileList matrixBeamline kickBeamline matrixOffsetElement kickOffsetElement forceOccurence] {
 	lappend originalList <$item>
 	lappend replacementList [set $item]
     }
@@ -523,7 +530,7 @@ proc FillPhaseSpaceFrame {widget args} {
 }
 
 proc PhaseSpaceTracking {} {
-    global sourceDir 
+    global sourceDir forceOccurence
     global phaseSpaceTracking momentum matrixLatticeFile mainParameterFile mainDirectory mainPrefix
     global kickOffsetElement
 
@@ -545,7 +552,7 @@ proc PhaseSpaceTracking {} {
     set plane [string tolower $phaseSpaceTracking(offsetPlane)]
     set variable offset
     PerformRuns -template $sourceDir/PhaseSpaceTrackingTemplate.ele -parameterFileList $parameterFileList \
-	-variable $variable \
+	-variable $variable -forceOccurence $forceOccurence \
 	-startValue $phaseSpaceTracking(initialOffset) \
 	-endValue $phaseSpaceTracking(finalOffset) \
 	-points $phaseSpaceTracking(sweepPoints) \
@@ -649,7 +656,7 @@ proc FillOffMomentumTunesFrame {widget args} {
 }
 
 proc OffMomentumTuneTracking {} {
-    global sourceDir 
+    global sourceDir forceOccurence
     global offMomentumTuneTracking momentum matrixLatticeFile mainParameterFile mainDirectory mainPrefix
 
     set tag OffMomentumTuneTracking
@@ -671,7 +678,7 @@ proc OffMomentumTuneTracking {} {
 	lappend replList [set offMomentumTuneTracking($item)]
     }
     PerformRuns -template $sourceDir/OffMomentumTuneTrackingTemplate.ele \
-	-parameterFileList $parameterFileList \
+	-parameterFileList $parameterFileList -forceOccurence $forceOccurence \
 	-originalList $origList -replacementList $replList \
 	-variable delta -suffix $offMomentumTuneTracking(userSuffix) \
 	-startValue $offMomentumTuneTracking(initialOffset) \
@@ -760,7 +767,7 @@ proc FillHigherOrderDispersionFrame {widget args} {
 }
 
 proc HigherOrderDispersion {args} {
-    global sourceDir 
+    global sourceDir forceOccurence 
     global higherOrderDispersion momentum matrixLatticeFile mainParameterFile mainDirectory mainPrefix
     global kickOffsetElement
 
@@ -781,7 +788,7 @@ proc HigherOrderDispersion {args} {
     set variable delta
     catch {file delete $rootname.done}
     PerformRuns -template $sourceDir/HigherOrderDispersionTemplate.ele \
-	-parameterFileList $parameterFileList \
+	-parameterFileList $parameterFileList -forceOccurence $forceOccurence \
 	-variable $variable -suffix $higherOrderDispersion(userSuffix) \
 	-startValue $higherOrderDispersion(initialOffset) \
 	-endValue $higherOrderDispersion(finalOffset) \
@@ -869,7 +876,7 @@ proc FillDynamicApertureFrame {widget args} {
 }
 
 proc DynamicAperture {args} {
-    global sourceDir 
+    global sourceDir forceOccurence 
     global dynamicAperture momentum matrixLatticeFile mainParameterFile mainDirectory mainPrefix
     global kickOffsetElement
 
@@ -968,7 +975,7 @@ proc FillOffMomentumDynamicApertureFrame {widget args} {
 }
 
 proc OffMomentumDynamicAperture {args} {
-    global sourceDir 
+    global sourceDir forceOccurence 
     global offMomentumDynamicAperture momentum matrixLatticeFile mainParameterFile mainDirectory mainPrefix
     global kickOffsetElement
 
@@ -988,7 +995,7 @@ proc OffMomentumDynamicAperture {args} {
     }
     set variable delta
     PerformRuns -template $sourceDir/OffMomentumDynamicApertureTemplate.ele \
-	-parameterFileList $parameterFileList \
+	-parameterFileList $parameterFileList -forceOccurence $forceOccurence \
 	-variable $variable -suffix $offMomentumDynamicAperture(userSuffix) \
 	-startValue $offMomentumDynamicAperture(deltaMinimum) \
 	-endValue $offMomentumDynamicAperture(deltaMaximum) \
@@ -1072,7 +1079,7 @@ proc FillFineDynamicApertureFrame {widget args} {
 }
 
 proc FineDynamicAperture {args} {
-    global sourceDir 
+    global sourceDir forceOccurence 
     global fineDynamicAperture momentum matrixLatticeFile mainParameterFile mainDirectory mainPrefix
     global kickOffsetElement
 
@@ -1092,7 +1099,7 @@ proc FineDynamicAperture {args} {
     }
     set variable xOffset
     PerformRuns -template $sourceDir/FineDynamicApertureTemplate.ele \
-	-parameterFileList $parameterFileList \
+	-parameterFileList $parameterFileList -forceOccurence $forceOccurence \
 	-variable $variable -suffix $fineDynamicAperture(userSuffix) \
 	-startValue $fineDynamicAperture(xMinimum) \
 	-endValue $fineDynamicAperture(xMaximum) \
@@ -1177,7 +1184,7 @@ proc FillFrequencyMapFrame {widget args} {
 }
 
 proc FrequencyMap {args} {
-    global sourceDir 
+    global sourceDir forceOccurence 
     global frequencyMap momentum matrixLatticeFile mainParameterFile mainDirectory mainPrefix
     global kickOffsetElement
 
@@ -1197,7 +1204,7 @@ proc FrequencyMap {args} {
     }
     set variable xOffset
     PerformRuns -template $sourceDir/FrequencyMapTemplate.ele \
-	-parameterFileList $parameterFileList \
+	-parameterFileList $parameterFileList -forceOccurence $forceOccurence \
 	-variable $variable -suffix $frequencyMap(userSuffix) \
 	-startValue $frequencyMap(xMinimum) \
 	-endValue $frequencyMap(xMaximum) \
@@ -1289,7 +1296,7 @@ proc DescribeSection {} {
 }
 
 set tabFrameWidgetList [APSTabFrame .main -parent .userFrame \
-    -labelList $sectionList -width 900 -height 395 -frameIndexVariable tabIndex \
+    -labelList $sectionList -width 900 -height 425 -frameIndexVariable tabIndex \
     -commandList \
         [APSReplicateItem -item DescribeSection -number [llength $sectionList]]]
 
