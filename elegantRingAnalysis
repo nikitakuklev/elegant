@@ -289,25 +289,25 @@ proc PerformRun {args} {
 	lappend originalList <$item>
 	lappend replacementList [set $item]
     }
-    set command elegant
-    if $gridEngine {
-	set command "ssub elegant"
-    }
     setStatus "Running elegant..."
     set runDone 0
     file delete -force $mainDirectory/${mainPrefix}${tag}${suffix}.done
     exec replaceText $template $mainDirectory/${mainPrefix}${tag}${suffix}.ele \
 	-original=[join $originalList ,] -replacement=[join $replacementList ,]
-    APSExecLog [APSUniqueName .] -width 100 \
-	-unixCommand "$command $mainDirectory/${mainPrefix}${tag}${suffix}.ele" \
-	-callback "set runDone 1" \
-	-cancelCallback "set runDone 2" -abortCallback "set runDone 2"
-    tkwait variable runDone
     if $gridEngine {
+	if [catch {exec ssub elegant $mainDirectory/${mainPrefix}${tag}${suffix}.ele} result] {
+	    return -code error "$result"
+	}
 	while {![file exists $mainDirectory/${mainPrefix}${tag}${suffix}.done]} {
 	    APSWaitWithUpdate -waitSeconds 10 -updateInterval 1
 	    setStatus "$mainDirectory/${mainPrefix}${tag}${suffix} not done.  Waiting."
 	}
+    } else {
+	APSExecLog [APSUniqueName .] -width 100 \
+	    -unixCommand "elegant $mainDirectory/${mainPrefix}${tag}${suffix}.ele" \
+	    -callback "set runDone 1" \
+	    -cancelCallback "set runDone 2" -abortCallback "set runDone 2"
+	tkwait variable runDone
     }
     set runDone [file exists $mainDirectory/${mainPrefix}${tag}${suffix}.done]
     if !$runDone {
@@ -347,10 +347,6 @@ proc PerformRuns {args} {
     set delta [expr ($endValue*1.0-$startValue)/($points-1.0)]
     set w [APSUniqueName .]
     set rootnameList ""
-    set command elegant
-    if $gridEngine {
-        set command "ssub elegant "
-    }
     for {set i 0} {$i<$points} {incr i} {
         set value [expr $startValue + $i*$delta]
         setStatus "Running elegant..."
@@ -362,11 +358,16 @@ proc PerformRuns {args} {
 	exec replaceText $template $rootname.ele \
 	    -original=[join $originalList ,],<suffix>,<$variable> \
 	    -replacement=[join $replacementList ,],$suffix0,$value
-        APSExecLog $w -width 100 \
-          -unixCommand "$command $rootname.ele" \
-          -callback "set runDone 1" \
-          -cancelCallback "set runDone 2" -abortCallback "set runDone 2"
-        if !$gridEngine {
+        if $gridEngine {
+	    if [catch {exec ssub elegant $rootname.ele} result] {
+		return -code error "$result"
+	    }
+            setStatus "Run $i submitted."
+	} else {
+	    APSExecLog $w -width 100 \
+		-unixCommand "$command $rootname.ele" \
+		-callback "set runDone 1" \
+		-cancelCallback "set runDone 2" -abortCallback "set runDone 2"
             tkwait variable runDone
             set runDone [file exists $rootname.done]
             if !$runDone {
@@ -374,8 +375,6 @@ proc PerformRuns {args} {
                 return 0
             }
             setStatus "Run $i finished."
-        } else {
-            setStatus "Run $i submitted."
         }
         lappend rootnameList $rootname
     }
@@ -1055,6 +1054,7 @@ proc FineDynamicAperture {args} {
             return -code error "$rootname not done"
         }
     }
+    APSAddToTempFileList $rootname.clo.tmp
     exec sddsprocess $rootname.clo $rootname.clo.tmp -process=x,first,xCO
     exec sddsxref $rootname.los $rootname.bun -pipe=out \
 	-equate=particleID -take=x,y -edit=column,*,ei/0/  -transfer=param,* \
