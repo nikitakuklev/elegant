@@ -401,8 +401,7 @@ void lorentz_setup(
     log_entry("lorentz_setup");
     field_global = field;
     Fa = Fb = 0;
-    x_correction = 0;
-    s_offset = 0;
+    x_correction = s_offset = 0;
     
     switch (field_type) {
         case T_NIBEND:
@@ -449,12 +448,12 @@ void lorentz_setup(
                 Fa = Fb = nibend->flen = 0;
                 fringe_code = HARD_EDGE_MODEL;
                 }
-            nibend->negative_angle = 0;
+            nibend->angleSign = 1;
             if (nibend->angle<0) {
               nibend->angle *= -1;
               nibend->e1    *= -1;
               nibend->e2    *= -1;
-              nibend->negative_angle = 1;
+              nibend->angleSign = -1;
             }
             if (nibend->e1!=nibend->e2 && !warning_given) {
                 fprintf(stdout, "warning: e1!=e2 for NIBEND--this may cause orbit distortions\n");
@@ -466,7 +465,7 @@ void lorentz_setup(
             S0 = 1/nibend->rho0;
             central_length = nibend->length + flen; 
             tolerance = nibend->accuracy;
-
+            
             /* calculate slope and intercept for entrance plane */ 
             alpha = nibend->angle/2-nibend->e1;
             fentr_intercept = -(nibend->rho0*(sin(nibend->angle/2) - cos(nibend->angle/2)*tan(alpha)) - flen/cos(alpha)/2);
@@ -494,10 +493,20 @@ void lorentz_setup(
                 if (!flen)
                     nibend->zeta_offset = nibend->x_correction = 0;
                 else {
+                    double save[4];
                     rad_coef = 0;        /* this must be zero for offset adjustment */
                     x_correction = 0;    /* ditto */
+                    save[0] = nibend->etilt; 
+                    nibend->etilt = 0;
+                    save[1] = nibend->dx;
+                    nibend->dx = 0;
+                    save[2] = nibend->dy;
+                    nibend->dy = 0;
+                    save[3] = nibend->dz;
+                    nibend->dz = 0;
                     if ((offset = nibend->last_zeta_offset)==0)
                         offset = last_offset;
+                    
                     offset = zeroNewton(nibend_trajectory_error, 0, offset, 1e-6, 10, 1e-14);
 #ifdef IEEE_MATH
                     if (isnan(offset) || isinf(offset))
@@ -515,6 +524,10 @@ void lorentz_setup(
                     last_offset = nibend->last_zeta_offset = nibend->zeta_offset = offset;
                     nibend->x_correction = x_correction;
                     nibend->s_offset = (nibend->length-traj_err_final_coord[4])/2;
+                    nibend->etilt = save[0]; 
+                    nibend->dx = save[1];
+                    nibend->dy = save[2];
+                    nibend->dz = save[3];
                     }
                 }
             x_correction = nibend->x_correction;
@@ -624,11 +637,9 @@ void lorentz_terminate(
     switch (field_type) {
         case T_NIBEND:
             nibend = (NIBEND*)field;
-            if (nibend->negative_angle) {
-              nibend->angle *= -1;
-              nibend->e1    *= -1;
-              nibend->e2    *= -1;
-            }
+            nibend->angle *= nibend->angleSign;
+            nibend->e1    *= nibend->angleSign;
+            nibend->e2    *= nibend->angleSign;
             break;
           default:
             break;
@@ -736,16 +747,24 @@ double nibend_trajectory_error(double offsetp)
 void nibend_coord_transform(double *q, double *coord, NIBEND *nibend, long which_end)
 {
     double dxds, dyds, dzds;
-    double q0[3], dqds[3];
+    double q0[3], dqds[3], dcoordEtilt[6];
     double cos_ah, sin_ah, tan_ah;
     double q0I, ds, alpha;
     long i;
-
+    double ttilt, dz, dx, dy;
+    
     if (which_end==-1) {
-        if (nibend->negative_angle) {
-            for (i=0; i<4; i++)
-                coord[i] *= -1;
-            }
+        /* do misalignment */
+        dx = -nibend->dx;
+        dz =  nibend->dz;
+        dy = -nibend->dy;
+        coord[4] += dz*sqrt(1 + sqr(coord[1]) + sqr(coord[3]));
+        coord[0]  = coord[0] + dx + dz*coord[1];
+        coord[2]  = coord[2] + dy + dz*coord[3];
+        /* perform coordinate rotation---centroid offset due to error tilt is 
+         * added at the end 
+         */
+        rotate_coordinates(coord, nibend->tilt+(nibend->angleSign==-1?PI:0)+nibend->etilt);
         /* transform coord (x, x', y, y', s, dp/p) into q (q0,q1,q2,d/ds(q0,q1,q2),s,dp/p) */
         /* convert slopes to normalized velocities */
         dzds = 1/sqrt(1+sqr(coord[1])+sqr(coord[3]));
@@ -772,6 +791,7 @@ void nibend_coord_transform(double *q, double *coord, NIBEND *nibend, long which
         q[7] = coord[5];
         }
     else if (which_end==-2) {
+      bomb("nibend transform called with which_end==-2", NULL);
         /* transform q into coord at entrance refence plane */
         dqds[0] = q[3];
         dqds[1] = q[4];
@@ -794,7 +814,7 @@ void nibend_coord_transform(double *q, double *coord, NIBEND *nibend, long which
         coord[3] = dyds/dzds;
         coord[4] = q[6] + ds;
         coord[5] = q[7];
-        if (nibend->negative_angle) {
+        if (nibend->angleSign==-1) {
             for (i=0; i<4; i++)
                 coord[i] *= -1;
             }
@@ -822,10 +842,19 @@ void nibend_coord_transform(double *q, double *coord, NIBEND *nibend, long which
         coord[3] = dyds/dzds;
         coord[4] = q[6] + ds;
         coord[5] = q[7];
-        if (nibend->negative_angle) {
-            for (i=0; i<4; i++)
-                coord[i] *= -1;
-            }
+        /* rotate back and add centroid offset due to error tilt */
+        rotate_coordinates(coord, -(nibend->tilt+(nibend->angleSign==-1?PI:0)+nibend->etilt));
+        computeEtiltCentroidOffset(dcoordEtilt, nibend->rho0, nibend->angle, nibend->etilt, 
+                                   nibend->tilt+(nibend->angleSign==-1?PI:0));
+        for (i=0; i<4; i++)
+          coord[i] += dcoordEtilt[i];
+        /* undo misalignment */
+        dx = nibend->dx*cos(nibend->angleSign*nibend->angle) + nibend->dz*sin(nibend->angleSign*nibend->angle);
+        dz = nibend->dx*sin(nibend->angleSign*nibend->angle) - nibend->dz*cos(nibend->angleSign*nibend->angle);
+        dy = nibend->dy;
+        coord[0] += dx + dz*coord[1];
+        coord[2] += dy + dz*coord[3];
+        coord[4] += dz*sqrt(1+ sqr(coord[1]) + sqr(coord[3]));
         }
     else
         bomb("unknown coordinate conversion requested (nibend_coord_transform)", NULL);

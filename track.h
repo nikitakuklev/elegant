@@ -1391,7 +1391,7 @@ typedef struct {
     double last_zeta_offset; 
     double x_correction;    /* used to fix spurious central trajectory offsets */
     double s_offset;        /* error in path length, which must be compensated with drifts before and after */
-    long negative_angle;    /* used to keep track of need to invert signs before and after integration */
+    long angleSign;         /* used internally to keep sign of angle separate from angle */
     } NIBEND;
 
 /* names and storage structure for numerically integrated septum magnet physical parameters */
@@ -2055,6 +2055,7 @@ extern void center_beam(double **part, CENTER *center, long np);
 void remove_correlations(double **part, REMCOR *remcor, long np);
 void drift_beam(double **part, long np, double length, long order);
 void exactDrift(double **part, long np, double length);
+void computeEtiltCentroidOffset(double *dcoord_etilt, double rho0, double angle, double etilt, double tilt);
 void scatter(double **part, long np, double Po, SCATTER *scatter);
 void store_fitpoint_twiss_parameters(MARK *fpt, char *name, long occurence, TWISS *twiss);
 void store_fitpoint_beam_parameters(MARK *fpt, char *name, long occurence, double **coord, long np, double Po);

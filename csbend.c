@@ -203,53 +203,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     sin_ttilt = sin(ttilt);
   }
 
-  if (etilt) {
-    /* compute final offsets due to error-tilt of the magnet */
-    /* see pages 90-93 of notebook 1 about this */
-    double q1a, q2a, q3a;
-    double q1b, q2b, q3b;
-    double qp1, qp2, qp3; 
-    double dz, tan_alpha, k;
-
-    q1a = (1-cos(angle))*rho0*(cos(etilt)-1);
-    q2a = 0;
-    q3a = (1-cos(angle))*rho0*sin(etilt);
-    qp1 = sin(angle)*cos(etilt);
-    qp2 = cos(angle);
-    k = sqrt(sqr(qp1)+sqr(qp2));
-    qp1 /= k;
-    qp2 /= k;
-    qp3 = sin(angle)*sin(etilt)/k;
-    tan_alpha = 1./tan(angle)/cos(etilt);
-    q1b = q1a*tan_alpha/(tan(angle)+tan_alpha);
-    q2b = -q1b*tan(angle);
-    dz  = sqrt(sqr(q1b-q1a)+sqr(q2b-q2a));
-    q3b = q3a + qp3*dz;
-
-    dcoord_etilt[0] = sqrt(sqr(q1b) + sqr(q2b));
-    dcoord_etilt[1] = tan(atan(tan_alpha)-(PIo2-angle));
-    dcoord_etilt[2] = q3b;
-    dcoord_etilt[3] = qp3;
-    dcoord_etilt[4] = dz*sqrt(1+sqr(qp3));
-    dcoord_etilt[5] = 0;
-#ifdef DEBUG
-    fprintf(stdout, "pre-tilt offsets due to ETILT=%le:  %le %le %le %le %le\n",
-            etilt, dcoord_etilt[0], dcoord_etilt[1], dcoord_etilt[2],
-            dcoord_etilt[3], dcoord_etilt[4]);
-    fflush(stdout);
-#endif
-
-    /* rotate by tilt to get into same frame as bend equations. */
-    rotate_coordinates(dcoord_etilt, tilt);
-#ifdef DEBUG
-    fprintf(stdout, "offsets due to ETILT=%le:  %le %le %le %le %le\n",
-            etilt, dcoord_etilt[0], dcoord_etilt[1], dcoord_etilt[2],
-            dcoord_etilt[3], dcoord_etilt[4]);
-    fflush(stdout);
-#endif
-  }
-  else
-    fill_double_array(dcoord_etilt, 6L, 0.0);
+  computeEtiltCentroidOffset(dcoord_etilt, rho0, angle, etilt, tilt);
 
   dxi = -csbend->dx;
   dzi =  csbend->dz;
@@ -2890,4 +2844,55 @@ long correctDistribution(double *array, long npoints, double desiredSum)
   return nz;
 }
 
+void computeEtiltCentroidOffset(double *dcoord_etilt, double rho0, double angle, double etilt, double tilt)
+{
+  /* compute final offsets due to error-tilt of the magnet */
+  /* see pages 90-93 of notebook 1 about this */
+  double q1a, q2a, q3a;
+  double q1b, q2b, q3b;
+  double qp1, qp2, qp3; 
+  double dz, tan_alpha, k;
+  
+  if (!etilt) {
+    fill_double_array(dcoord_etilt, 6L, 0.0);
+    return;
+  }
+
+  q1a = (1-cos(angle))*rho0*(cos(etilt)-1);
+  q2a = 0;
+  q3a = (1-cos(angle))*rho0*sin(etilt);
+  qp1 = sin(angle)*cos(etilt);
+  qp2 = cos(angle);
+  k = sqrt(sqr(qp1)+sqr(qp2));
+  qp1 /= k;
+  qp2 /= k;
+  qp3 = sin(angle)*sin(etilt)/k;
+  tan_alpha = 1./tan(angle)/cos(etilt);
+  q1b = q1a*tan_alpha/(tan(angle)+tan_alpha);
+  q2b = -q1b*tan(angle);
+  dz  = sqrt(sqr(q1b-q1a)+sqr(q2b-q2a));
+  q3b = q3a + qp3*dz;
+
+  dcoord_etilt[0] = sqrt(sqr(q1b) + sqr(q2b));
+  dcoord_etilt[1] = tan(atan(tan_alpha)-(PIo2-angle));
+  dcoord_etilt[2] = q3b;
+  dcoord_etilt[3] = qp3;
+  dcoord_etilt[4] = dz*sqrt(1+sqr(qp3));
+  dcoord_etilt[5] = 0;
+#ifdef DEBUG
+  fprintf(stdout, "pre-tilt offsets due to ETILT=%le:  %le %le %le %le %le\n",
+          etilt, dcoord_etilt[0], dcoord_etilt[1], dcoord_etilt[2],
+          dcoord_etilt[3], dcoord_etilt[4]);
+  fflush(stdout);
+#endif
+
+  /* rotate by tilt to get into same frame as bend equations. */
+  rotate_coordinates(dcoord_etilt, tilt);
+#ifdef DEBUG
+  fprintf(stdout, "offsets due to ETILT=%le:  %le %le %le %le %le\n",
+          etilt, dcoord_etilt[0], dcoord_etilt[1], dcoord_etilt[2],
+          dcoord_etilt[3], dcoord_etilt[4]);
+  fflush(stdout);
+#endif
+}
 

@@ -148,10 +148,24 @@ void rotate_coordinates(double *coord, double angle)
     static double x, xp, y, yp;
     static double sin_a, cos_a;
 
-    if (!angle)
+    if (!angle || fabs(fabs(angle)-PIx2)<1e-12)
         return;
-    sin_a = sin(angle);
-    cos_a = cos(angle);
+    if (fabs(fabs(angle)-PI)<1e-12) {
+      cos_a = -1;
+      sin_a = 0;
+    }
+    else if (fabs(angle-PIo2)<1e-12) {
+      cos_a = 0;
+      sin_a = 1;
+    }
+    else if (fabs(angle+PIo2)<1e-12) {
+      cos_a = 0;
+      sin_a = -1;
+    }
+    else {
+      cos_a = cos(angle);
+      sin_a = sin(angle);
+    }
     x = coord[0]; xp = coord[1]; y = coord[2]; yp = coord[3];
     coord[0] =   x*cos_a + y*sin_a;
     coord[2] =  -x*sin_a + y*cos_a;
@@ -165,10 +179,25 @@ void rotateBeamCoordinates(double **part, long np, double angle)
   double sin_a, cos_a;
   long i;
 
-  if (!angle)
+  if (!angle || fabs(fabs(angle)-PIx2)<1e-12)
     return;
-  sin_a = sin(angle);
-  cos_a = cos(angle);
+  if (fabs(fabs(angle)-PI)<1e-12) {
+    cos_a = -1;
+    sin_a = 0;
+  }
+  else if (fabs(angle-PIo2)<1e-12) {
+    cos_a = 0;
+    sin_a = 1;
+  }
+  else if (fabs(angle+PIo2)<1e-12) {
+    cos_a = 0;
+    sin_a = -1;
+  }
+  else {
+    cos_a = cos(angle);
+    sin_a = sin(angle);
+  }
+  
   for (i=0; i<np; i++) {
     coord = part[i];
     x = coord[0]; xp = coord[1]; y = coord[2]; yp = coord[3];
