@@ -650,7 +650,7 @@ extern char *entity_text[N_TYPES];
 #define N_ZLONGIT_PARAMS 19
 #define N_MODRF_PARAMS 15
 #define N_SREFFECTS_PARAMS 13
-#define N_ZTRANSVERSE_PARAMS 19
+#define N_ZTRANSVERSE_PARAMS 24
 #define N_IBSCATTER_PARAMS 9
 #define N_FMULT_PARAMS 10
 #define N_BMAPXY_PARAMS 5
@@ -1848,10 +1848,16 @@ typedef struct {
     long smoothing;            /* flag to turn on smoothing */
     long SGOrder, SGHalfWidth; /* Savitzky-Golay smoothing parameters */
     double dx, dy;
+    double factor, xfactor, yfactor;  /* multiply impedance by these factors */
+    char *wakes;               /* name of file to save wake potentials to */
+    long wake_interval;        /* interval (in turns) between output of wakes */
     /* for internal use */
     double *iZ[2];             /* i*Z (Re Z, Im Z) pairs for each plane */
     long initialized;
     double macroParticleCharge;
+    /* variables for SDDS output of wakes */
+    SDDS_TABLE SDDS_wake;
+    long SDDS_wake_initialized;
     } ZTRANSVERSE;
 
 /* names and storage structure for longitudinal wake physical parameters */

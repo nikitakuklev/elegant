@@ -54,7 +54,7 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
   static double *pz = NULL;
   static long max_np = 0;
   double *Vfreq, *iZ;
-  long ib, nb, n_binned, nfreq, iReal, iImag, plane;
+  long ib, nb, n_binned, nfreq, iReal, iImag, plane, first;
   double factor, tmin, tmax, tmean, dt, userFactor[2];
   static long not_first_call = -1;
 #if defined(DEBUG)
@@ -66,10 +66,10 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
   nb = ztransverse->n_bins;
   dt = ztransverse->bin_size;
 
-  if (ztransverse->n_bins>max_n_bins) {
-    posItime[0] = trealloc(posItime[0], 2*sizeof(**posItime)*(max_n_bins=ztransverse->n_bins));
-    posItime[1] = trealloc(posItime[1], 2*sizeof(**posItime)*(max_n_bins=ztransverse->n_bins));
-    posIfreq = trealloc(posIfreq, 2*sizeof(*posIfreq)*(max_n_bins=ztransverse->n_bins));
+  if (nb>max_n_bins) {
+    posItime[0] = trealloc(posItime[0], 2*sizeof(**posItime)*(max_n_bins=nb));
+    posItime[1] = trealloc(posItime[1], 2*sizeof(**posItime)*(max_n_bins=nb));
+    posIfreq = trealloc(posIfreq, 2*sizeof(*posIfreq)*(max_n_bins=nb));
     Vtime = trealloc(Vtime, 2*sizeof(*Vtime)*(max_n_bins+1));
   }
 
@@ -79,7 +79,7 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
     pz = trealloc(pz, sizeof(*pz)*max_np);
   }
 
-  for (ib=0; ib<ztransverse->n_bins; ib++)
+  for (ib=0; ib<nb; ib++)
     posItime[0][2*ib] = posItime[0][2*ib+1] = 
       posItime[1][2*ib] = posItime[1][2*ib+1] = 0;
 
@@ -104,8 +104,8 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
 
   userFactor[0] = ztransverse->factor*ztransverse->xfactor;
   userFactor[1] = ztransverse->factor*ztransverse->yfactor;
+  first = 1;
   for (plane=0; plane<2; plane++) {
-    fprintf(stdout, "User factor = %e for plane = %ld\n", userFactor[plane], plane);
     if (userFactor[plane]==0) {
       for (ib=0; ib<nb; ib++)
 	Vtime[ib] = 0;
@@ -115,7 +115,7 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
 			   ztransverse->SGHalfWidth, ztransverse->SGHalfWidth, 0);
       
       /* Take the FFT of (x*I)(t) to get (x*I)(f) */
-      memcpy(posIfreq, posItime[plane], 2*ztransverse->n_bins*sizeof(*posIfreq));
+      memcpy(posIfreq, posItime[plane], 2*nb*sizeof(*posIfreq));
       realFFT(posIfreq, nb, 0);
       
       /* Compute V(f) = i*Z(f)*(x*I)(f), putting in a factor 
@@ -153,7 +153,7 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
       /* wake potential output */
       factor = ztransverse->macroParticleCharge/dt;
       if (ztransverse->wake_interval<=0 || (i_pass%ztransverse->wake_interval)==0) {
-	if (plane==0 && !SDDS_StartTable(&ztransverse->SDDS_wake, nb)) {
+	if (first && !SDDS_StartTable(&ztransverse->SDDS_wake, nb)) {
 	  SDDS_SetError("Problem starting SDDS table for wake output (track_through_ztransverse)");
 	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 	}
@@ -179,7 +179,7 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
 	    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 	  }
 	}
-	if (plane==1) {
+	if (!first) {
 	  if (!SDDS_WriteTable(&ztransverse->SDDS_wake)) {
 	    SDDS_SetError("Problem writing SDDS table for wake output (track_through_ztransverse)");
 	    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -188,6 +188,7 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
 	}
       }
     }
+    first = 0;
   }
 
 #if defined(MIMIMIZE_MEMORY)
@@ -240,9 +241,8 @@ void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long part
     ztransverse->iZ[1] = tmalloc(sizeof(**(ztransverse->iZ))*ztransverse->n_bins);
     /* df is the frequency spacing normalized to the resonant frequency */
     df = 1/(ztransverse->n_bins*ztransverse->bin_size)/(ztransverse->freq);
-    /* DC term of iZ is Rs  */
-    ztransverse->iZ[0][0] = ztransverse->Rs;
-    ztransverse->iZ[1][0] = 0;
+    /* DC term of iZ is 0  */
+    ztransverse->iZ[0][0] = ztransverse->iZ[1][0] = 0;
     for (i=1; i<nfreq-1; i++) {
       term = ztransverse->Q*(i*df-1.0/(i*df));
       /* real part of i*Z */

@@ -1293,6 +1293,11 @@ PARAMETER ztransverse_param[N_ZTRANSVERSE_PARAMS] = {
     {"SG_HALFWIDTH", "", IS_LONG, 0, (long)((char *)&ztransverse_example.SGHalfWidth), NULL, 0.0, 4, "Savitzky-Golay filter halfwidth for smoothing"},
     {"DX", "M", IS_DOUBLE, 0, (long)((char *)&ztransverse_example.dx), NULL, 0.0, 0, "misalignment"},
     {"DY", "M", IS_DOUBLE, 0, (long)((char *)&ztransverse_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"FACTOR", "", IS_DOUBLE, 0, (long)((char *)&ztransverse_example.factor), NULL, 1.0, 0, "Factor by which to multiply x and y impedances."},
+    {"XFACTOR", "", IS_DOUBLE, 0, (long)((char *)&ztransverse_example.xfactor), NULL, 1.0, 0, "Factor by which to multiply x impedance."},
+    {"YFACTOR", "", IS_DOUBLE, 0, (long)((char *)&ztransverse_example.yfactor), NULL, 1.0, 0, "Factor by which to multiply y impedance."},
+    {"WAKES", "", IS_STRING, 0, (long)((char *)&ztransverse_example.wakes), NULL, 0.0, 0, "filename for output of wake"},
+    {"WAKE_INTERVAL", "", IS_LONG, 0, (long)((char *)&ztransverse_example.wake_interval), NULL, 0.0, 1, "interval in passes at which to output wake"},
 };
 
 IBSCATTER ibs_example;
