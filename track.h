@@ -2006,7 +2006,8 @@ typedef struct {
   long initialized;
   double *ByData, *BxData; 
   long ByHarmonics, BxHarmonics;
-  double radiusInternal;  /* computed from BMax */
+  double sumCmn2;            /* computed from dominant-plane harmonics */
+  double radiusInternal;     /* computed from BMax and sumCmn2 */
 } CWIGGLER;
 
 /* names and storage structure for SCRIPT element */

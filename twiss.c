@@ -1761,7 +1761,8 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
   } else if (elem->type==T_CWIGGLER) {
     CWIGGLER *wiggler;
     wiggler = (CWIGGLER*)(elem->p_elem);
-    AddWigglerRadiationIntegrals(wiggler->length, wiggler->periods*2, wiggler->radiusInternal, 
+    AddWigglerRadiationIntegrals(wiggler->length, wiggler->periods*2, 
+				 wiggler->radiusInternal/sqrt(wiggler->sumCmn2), 
 				 eta0, etap0, 
 				 beta0, alpha0,
 				 &I1, &I2, &I3, &I4, &I5);

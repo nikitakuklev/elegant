@@ -209,9 +209,19 @@ void GWigSymplecticPass(double **coord, long num_particles, double pCentral,
 
 void InitializeCWiggler(CWIGGLER *cwiggler)
 {
-  long harmonics = 0;
-  harmonics += ReadCWigglerHarmonics(&cwiggler->ByData, &cwiggler->ByHarmonics, cwiggler->ByFile, "By");
-  harmonics += ReadCWigglerHarmonics(&cwiggler->BxData, &cwiggler->BxHarmonics, cwiggler->BxFile, "Bx");
+  double sumCmn2[2] = {0,0};
+  long i;
+  if (cwiggler->initialized)
+    return;
+  ReadCWigglerHarmonics(&cwiggler->ByData, &cwiggler->ByHarmonics, 
+			       cwiggler->ByFile, "By");
+  ReadCWigglerHarmonics(&cwiggler->BxData, &cwiggler->BxHarmonics, 
+			       cwiggler->BxFile, "Bx");
+  for (i=0; i<cwiggler->ByHarmonics; i++)
+    sumCmn2[0] += sqr(cwiggler->ByData[6*i+1]);
+  for (i=0; i<cwiggler->BxHarmonics; i++)
+    sumCmn2[1] += sqr(cwiggler->BxData[6*i+1]);
+  cwiggler->sumCmn2 = MAX(sumCmn2[0], sumCmn2[1]);
   cwiggler->initialized = 1;
 }
 

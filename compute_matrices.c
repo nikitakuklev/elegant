@@ -549,11 +549,12 @@ VMATRIX *compute_matrix(
 	  fprintf(stderr, "Error: CWIGGLER has BMAX<=0\n");
 	  exit(1);
 	}
+	InitializeCWiggler(cwiggler);
 	/* Basic first-harmonic focusing for a horizontal or vertical planar wiggler */
-	cwiggler->radiusInternal = elem->Pref_input/(e_mks/me_mks/c_mks)/cwiggler->BMax,
+	cwiggler->radiusInternal = elem->Pref_input/(e_mks/me_mks/c_mks)/cwiggler->BMax;
 	elem->matrix 
 	  = wiggler_matrix(cwiggler->length,
-			   cwiggler->radiusInternal,
+			   cwiggler->radiusInternal/sqrt(cwiggler->sumCmn2),
 			   cwiggler->dx, cwiggler->dy, cwiggler->dz,
 			   cwiggler->tilt
 			   + (cwiggler->BxFile && !cwiggler->ByFile ? PI/2.0 : 0),
