@@ -42,12 +42,12 @@ long do_tracking(
                  long n_passes
                  )
 {
-    RFMODE *rfmode; TRFMODE *trfmode; ZLONGIT *zlongit;
+    RFMODE *rfmode; TRFMODE *trfmode;
     WATCH *watch;
     ENERGY *energy;
     MAXAMP *maxamp;
     MALIGN *malign;
-    ELEMENT_LIST *eptr, *eptrCLMatrix;
+    ELEMENT_LIST *eptr, *eptrCLMatrix=NULL;
     long n_left, show_dE;
     double dgamma, dP[3], z, z_recirc, last_z;
     long i, j, i_traj=0, i_sums, n_to_track, i_pass, isConcat;
@@ -391,7 +391,7 @@ long do_tracking(
                             if (i_pass==0 && (n_passes/watch->interval)==0)
                                 fprintf(stderr, "warning: n_passes = %ld and WATCH interval = %ld--no output will be generated!\n",
                                        n_passes, watch->interval);
-                            if ((i_pass-watch->start_pass)%watch->interval==0) {
+                            if (i_pass>=watch->start_pass && (i_pass-watch->start_pass)%watch->interval==0) {
                                 switch (watch->mode_code) {
                                   case WATCH_COORDINATES:
                                     dump_watch_particles(watch, step, i_pass, coord, n_to_track, *P_central,
@@ -530,7 +530,8 @@ long do_tracking(
                       case T_RFMODE:
                         rfmode = (RFMODE*)eptr->p_elem;
                         if (!rfmode->initialized)
-                            set_up_rfmode(rfmode, eptr->name, eptr->end_pos, n_passes, run, *n_original, *P_central,
+                            set_up_rfmode(rfmode, eptr->name, eptr->end_pos, n_passes, run, 
+                                          *n_original, *P_central,
                                           beamline->revolution_length);
                         track_through_rfmode(coord, n_to_track, (RFMODE*)eptr->p_elem, *P_central,
                                              eptr->name, eptr->end_pos, i_pass, n_passes);
@@ -544,6 +545,12 @@ long do_tracking(
                         break;
                       case T_ZLONGIT:
                         track_through_zlongit(coord, n_to_track, (ZLONGIT*)eptr->p_elem, *P_central, run, i_pass);
+                        break;
+                      case T_WAKE:
+                        track_through_wake(coord, n_to_track, (WAKE*)eptr->p_elem, *P_central, run, i_pass);
+                        break;
+                      case T_TRWAKE:
+                        track_through_trwake(coord, n_to_track, (TRWAKE*)eptr->p_elem, *P_central, run, i_pass);
                         break;
                       case T_SREFFECTS:
                         if (!(flags&TEST_PARTICLES))
