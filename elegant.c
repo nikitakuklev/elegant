@@ -98,7 +98,7 @@ char *description[N_COMMANDS] = {
     "awe_beam                    defines name of input beam data file, type of data, and some preprocessing",
     "bunched_beam                defines beam distribution",
     "correct                     requests orbit or trajectory correction and define parameters",
-    "matrix_output               requests awe-format output or printed output of the matrix",
+    "matrix_output               requests SDDS-format output or printed output of the matrix",
     "twiss_output                requests output of Twiss parameters, chromaticity, and acceptance",
     "track                       command to begin tracking",
     "stop                        command to stop reading input file and end the run",
