@@ -73,7 +73,7 @@ void track_through_trfmode(
   }
   tau = 2*Q/omega;
   Qrp = sqrt(Q*Q - 0.25);
-  k = omega/4*trfmode->Ra/trfmode->Q;
+  k = omega/4*trfmode->RaInternal/trfmode->Q;
 
   if (!trfmode->doX && !trfmode->doY)
     bomb("x and y turned off for TRFMODE---this shouldn't happen", NULL);
@@ -269,8 +269,10 @@ void set_up_trfmode(TRFMODE *trfmode, char *element_name, double element_z,
     bomb("bin_size must be positive for TRFMODE", NULL);
   if (trfmode->Ra && trfmode->Rs) 
     bomb("TRFMODE element may have only one of Ra or Rs nonzero.  Ra is just 2*Rs", NULL);
-  if (!trfmode->Ra)
-    trfmode->Ra = 2*trfmode->Rs;
+  if (trfmode->Ra)
+    trfmode->RaInternal = trfmode->Ra;
+  else
+    trfmode->RaInternal = 2*trfmode->Rs;
   if (trfmode->bin_size*trfmode->freq>0.1) {
     T = trfmode->bin_size*trfmode->n_bins;
     trfmode->bin_size = 0.1/trfmode->freq;
