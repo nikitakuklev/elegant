@@ -165,13 +165,13 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
             if ((newType=elementTransmutation(eptr->name, eptr->type))!=eptr->type &&
                 newType>=0) {
               if (entity_description[eptr->type].flags&HAS_LENGTH) {
-                if (!(entity_description[newType].flags&HAS_LENGTH)) {
+                length = ((DRIFT*)eptr->p_elem)->length;
+                if (length && !(entity_description[newType].flags&HAS_LENGTH)) {
                   fprintf(stderr, "error: can't transmute %s %s into %s---would change length of beamline\n",
                           entity_name[eptr->type], eptr->name, 
                           entity_name[newType]);
                   exit(1);
                 }
-                length = ((DRIFT*)eptr->p_elem)->length;
               }
               free(eptr->p_elem);
               eptr->p_elem = tmalloc(entity_description[type].structure_size);
