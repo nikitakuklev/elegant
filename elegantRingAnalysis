@@ -578,13 +578,17 @@ proc PhaseSpaceTrackingPP {args} {
     exec sddsplot -column=f,FFTC${plane} ${rootname}.w1.fft \
 	-title=@${plane}Label -separate=page -split=page -mode=y=log,y=special \
 	-topline=$rootname &
-    exec sddsnaff ${rootname}.w1 -pipe=out -columns=Pass,C${plane},C${otherPlane} \
+    exec sddsprocess ${rootname}.w1 -pipe=out \
+	-process=C${plane},first,%sFirst \
+	| sddsnaff -pipe \
+	-columns=Pass,C${plane},C${otherPlane} \
 	-terminateSearch=frequencies=1 -nowarnings -iterate=cycleLimit=200,accuracyLimit=1e-12 \
+	| sddsprocess -pipe -define=column,C${plane}0,C${plane}First,units=m \
 	| sddscombine -pipe -merge \
 	| sddsxref -pipe=in ${rootname}.var -take=* ${rootname}.w1.naff
     exec sddsplot -topline=$rootname \
-	-column=C${plane}Amplitude,C${plane}Frequency ${rootname}.w1.naff -end \
-	-column=C${plane}Amplitude,C${otherPlane}Frequency ${rootname}.w1.naff &
+	-column=C${plane}0,C${plane}Frequency ${rootname}.w1.naff -end \
+	-column=C${plane}0,C${otherPlane}Frequency ${rootname}.w1.naff &
 }
 
 proc FillOffMomentumTunesFrame {widget args} {
