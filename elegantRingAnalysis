@@ -1572,7 +1572,7 @@ proc FrequencyMap {args} {
 	-startValue $frequencyMap(xMinimum) \
 	-endValue $frequencyMap(xMaximum) \
 	-points $frequencyMap(xPoints) \
-	-copyList done -combineList [list ele ele.log los bun clo fma] \
+	-copyList done -combineList [list ele ele.log clo fma] \
 	-tag $tag -momentum $momentum -originalList $origList -replacementList $replList \
 	-postProcessProc FrequencyMapPP
 }
