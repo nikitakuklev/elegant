@@ -4,6 +4,9 @@ exec oagwish "$0" "$@"
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.4  2004/06/23 19:49:49  borland
+# Added option for computing the bunch length using the haissinski program.
+#
 # Revision 1.3  2004/04/19 22:42:29  borland
 # First an errors in the location of some widgets (wrong tab frame).
 #
@@ -136,7 +139,7 @@ set auto_path [linsert $auto_path 0  /usr/local/oag/apps/lib/$env(HOST_ARCH)]
 set auto_path [linsert $auto_path 0 /usr/local/oag/lib_patch/$env(HOST_ARCH)]
 APSDebugPath
 
-set CVSRevisionAuthor "\$Revision: 1.4 $ \$Author: borland $"
+set CVSRevisionAuthor "\$Revision: 1.5 $ \$Author: borland $"
 
 APSApplication . -name beamLifetimeCalc -version $CVSRevisionAuthor -overview \
   "Calculates the gas scattering lifetime due to single Coulomb scattering and
@@ -180,7 +183,7 @@ SetGasDefaults
 set NGas [llength [array names component]]
 set betaAve 13.5
 set acceptance 1.55e-6
-set energyAperture 0.028
+set energyAperture 0.022
 set effectiveEnergyAperture 0
 set energy 7
 set referenceEnergy 7
@@ -192,14 +195,19 @@ set alpha 2.28e-4
 set Uo 5.45
 set harmonic 1296
 set rfVoltage 9.5
-set coupling 0.02
+set coupling 0.01
 set energySpread 9.6e-4
 set bunchCurrent [expr 102.0/(23.0)]
-set bunchLength 10.0
-set bunchLengthFactor 1.5
+set bunchLength 7.0
+set bunchLengthFactor [expr 10.0/7.0]
 set useHaissinski 0
-set verboseHaissinski 0
-set broadBandImpedance 1.0
+set haissinskiSteps 100
+set haissinskiPoints 4000
+set haissinskiFraction 0.01
+set haissinskiDivisor 100.0
+set haissinskiIterations 1000
+set haissinskiTolerance 0.001
+set broadBandImpedance 0.5
 set revolutionFrequency 271.55e3
 # default area for lattice.
 set touschekIntegralFile $applicationDir/DTouschek.sdds 
@@ -350,6 +358,8 @@ APSLabeledEntry .bunchLengthFactor -parent $w -label "Bunch length factor:" \
 APSRadioButtonFrame .useHaissinski -parent $w -label "Haissinski eqn? " \
     -orientation horizontal -variable useHaissinski -buttonList "Yes Yes(verbose) No" -valueList "1 2 0" \
     -contextHelp "If Yes, then the bunch length is computed by solving the Haissinski equation with Emery's haissinski program.  If No, then the user-supplied bunch length factor is applied."
+APSButton .setHaissinski -parent $w -text "Set Haissinski parameters..." \
+    -command HaissinskiParameterDialog -packOption "-side top"
 APSLabeledEntry .impedance -parent $w -label "Broad band impedance (Ohms): " \
   -textVariable broadBandImpedance -width 22 -contextHelp \
   "Enter the broad-band impedance (Z/n) for use in Haissinski equation."
@@ -364,6 +374,7 @@ foreach widget1 {dtime bunchLengthFactor revolutionFrequency rfvoltage syncFrequ
 bind $w.useHaissinski.frame.button1 <ButtonRelease> RecomputeOutputs
 bind $w.useHaissinski.frame.button2 <ButtonRelease> RecomputeOutputs
 
+
 set widget [lindex $widgetList 4] 
 APSFrame .vary -parent $widget -label "Automatic variation"
 set w $widget.vary.frame
@@ -375,8 +386,8 @@ set mergeAfterVariation 1
 APSRadioButtonFrame .vlist -parent $w -label "Variable:" \
   -orientation horizontal \
   -limitPerRow 4 \
-  -buttonList {Pressure "Average beta" "Acceptance" "Energy acceptance" "User lifetime" Coupling "Bunch current" "rf Voltage"} \
-  -valueList {pressure betaAve acceptance energyAperture tauUser coupling bunchCurrent rfVoltage}  \
+  -buttonList {Pressure "Average beta" "Acceptance" "Energy acceptance" "User lifetime" Coupling "Bunch current" "rf Voltage" "Energy"} \
+  -valueList {pressure betaAve acceptance energyAperture tauUser coupling bunchCurrent rfVoltage energy}  \
   -variable varyChoice -contextHelp \
   "Select a quantity to vary."
 APSLabeledEntry .vstart -parent $w -label "Start:" -width 8 \
@@ -746,30 +757,32 @@ proc RecomputeOutputs {args} {
         if [expr $broadBandImpedance<=0] {
             eval $statusCallback {"Broad-band impedance <= 0!"}
         }
-        global haissinskiDone superperiods
+        global haissinskiDone superperiods haissinskiIterations haissinskiTolerance
+        global haissinskiSteps haissinskiPoints haissinskiFraction haissinskiDivisor
         set Q [expr $bunchCurrent/1000.0/$revolutionFrequency]
         set tmpRoot /tmp/[APSTmpString]
         APSAddToTempFileList $tmpRoot.1
         set haissinskiDone 0
-        set extraOption ""
+        set extraOption -outputLastStepOnly
         if $useHaissinski==2 {
             set extraOption -verbose
         }
         set unixCommand \
           "haissinski $latticeFile $tmpRoot.1 -model=Zn=$broadBandImpedance \
             -charge=$Q -rf=voltage=[expr $rfVoltage*1e6],harmonic=$harmonic \
-            -steps=50 $extraOption -superPeriods=$superperiods \
-            -integration=deltaTime=[expr $bunchLength/1e3/100.0/$cmks],points=2000,fraction=0.1"
+            -steps=$haissinskiSteps \
+            $extraOption -superPeriods=$superperiods -energy=$energy \
+            -integration=deltaTime=[expr $bunchLength/1e3/$haissinskiDivisor/$cmks],points=$haissinskiPoints,fraction=$haissinskiFraction,iterations=$haissinskiIterations,tolerance=$haissinskiTolerance" 
         if $useHaissinski==2 {
             APSExecLog .haissinskiExec -unixCommand $unixCommand \
               -width 80 -height 20 -callback "set haissinskiDone 1"
         } else {
             APSExec -unixCommand $unixCommand -callback "set haissinskiDone 1"
         }
-        APSWaitWithUpdate -waitSeconds 60 -updateInterval 1 -abortVariable haissinskiDone \
+        APSWaitWithUpdate -waitSeconds 120 -updateInterval 5 -abortVariable haissinskiDone \
           -updateCommand "eval $statusCallback {\"Waiting for Haissinski run...\"}"
         if !$haissinskiDone {
-            eval $statusCallback {"Error: Haissinski run didn't complete in 60s."}
+            eval $statusCallback {"Error: Haissinski run didn't complete in 120s."}
             return
         }
         if [catch {exec sddsprocess $tmpRoot.1 -pipe=out \
@@ -1101,6 +1114,42 @@ proc APSTouschekLifetime {args} {
     catch {APSGetSDDSColumn -column InvHalfLifeFactor -fileName $tmpFile.sdds} InvHalfLifeFactor
     catch {eval exec rm $tmpFile.1 $tmpFile.2 $tmpFile.sdds}
     return [expr 1./(3600.0*$InvHalfLifeFactor*($bunchmA*1e-3/$revolutionFrequency/1.602e-19))]
+}
+
+proc HaissinskiParameterDialog {} {
+    global haissinskiDialogOk 
+    set haissinskiDialogOk 0
+    APSDialogBox .haissinski -okCommand "set haissinskiDialogOk 1" 
+    set w .haissinski.userFrame
+    global haissinskiSteps haissinskiPoints haissinskiFraction haissinskiDivisor haissinskiIterations
+    APSLabeledEntry .le1 -parent $w \
+      -textVariable haissinskiSteps -label "Charge steps: " \
+       -type integer \
+      -contextHelp "The number of charge steps to take between zero and the desired charge.  More steps takes longer but gives improved numerical behavior."
+    
+    APSLabeledEntry .le2 -parent $w \
+      -textVariable haissinskiPoints -label "Profile points: " \
+       -type integer \
+      -contextHelp "The number of points on the density profile.  Too few points leads to inaccurate souations.  Too many points may increase convergence problems and running time."
+    
+    APSLabeledEntry .le3 -parent $w \
+      -textVariable haissinskiDivisor -label "Point-spacing divisor: " \
+      -contextHelp "Ratio of the zero-current rms bunch length to the point spacing in the profile."
+    
+    APSLabeledEntry .le4 -parent $w \
+      -textVariable haissinskiFraction -label "Iteration fraction: " \
+      -contextHelp "The gain factor for the iteration.  If you get unsmooth profiles, try decreasing this."
+    
+    APSLabeledEntry .le5 -parent $w \
+      -textVariable haissinskiIterations -label "Maximum iterations: " \
+      -contextHelp "Maximum number of iterations at each charge level.  If you get unsmooth profiles, try increasing this."
+    
+    APSLabeledEntry .le6 -parent $w \
+      -textVariable haissinskiTolerance -label "Convergence criterion: " \
+      -contextHelp "Convergence criterion, giving the maximum allowed fractional deviation. If you get unsmooth profiles, try decreasing this."
+    
+    update
+    tkwait window .haissinski
 }
 
 update
