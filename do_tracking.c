@@ -1433,7 +1433,7 @@ ELEMENT_LIST *findBeamlineMatrixElement(ELEMENT_LIST *eptr)
     if ((eptr->p_elem || eptr->matrix) && eptr->type==T_MATR) {
       fprintf(stderr, "***** WARNING ****\n");
       fprintf(stderr, "Possible problem with \"linear chromatic\" or \"longitudinal-only\" matrix tracking\n");
-      fprintf(stderr, "Concatenation resulted in more than one matrix.  Make the additional matrices do\n");
+      fprintf(stderr, "Concatenation resulted in more than one matrix.  Make sure the additional matrices do\n");
       fprintf(stderr, "not affect the revolution matrix!\n");
       print_elem_list(stderr, eptrPassed);
       fprintf(stderr, "***** WARNING ****\n");
