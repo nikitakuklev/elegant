@@ -259,39 +259,42 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, RADIATION_INTEGRALS
           if (isBend && angle!=0) {
             rho = length/angle;
             k2 = K1+1./(rho*rho);
+            /* equations are from SLAC 1193 */
             if (k2<0) {
-              bomb("Can't do rad integrals in dipole with defocusing just now!", NULL);
+              k = sqrt(-k2);
+              kl = k*length;
+              cos_kl = cosh(kl);
+              sin_kl = sinh(kl);
             } else {
-              /* equations are from SLAC 1193 */
               k = sqrt(k2);
               kl = k*length;
               sin_kl = sin(kl);
               cos_kl = cos(kl);
-              etap1 = etap0 + eta0/rho*tan(E1);
-              eta2  = eta0*cos_kl + etap1*sin_kl/k + (1-cos_kl)/(rho*k2);
-              alpha1 = alpha0 - beta0/rho*tan(E1);
-              gamma1 = (1+sqr(alpha1))/beta0;
-              etaAve = eta0*sin_kl/kl + etap1*(1-cos_kl)/(k2*length) +
-                (kl-sin_kl)/(k2*kl*rho);
-              etaK1_rhoAve =  etaAve*K1/rho + (eta0*tan(E1)+eta2*tan(E2))/(2*length*sqr(rho));
-              HAve = gamma1*sqr(eta0) + 2*alpha1*eta0*etap1 + beta0*sqr(etap1) 
-                + 2*angle*( -(gamma1*eta0+alpha1*etap1)*(kl-sin_kl)/(k*k2*sqr(length)) +
-                           (alpha1*eta0+beta0*etap1)*(1-cos_kl)/sqr(kl)
-                           )
-                  + sqr(angle)*(gamma1*(3*kl-4*sin_kl+sin_kl*cos_kl)/(2*ipow(k,5)*ipow(length,3)) 
-                                - alpha1*sqr(1-cos_kl)/(ipow(k,4)*ipow(length,3))
-                                + beta0*(kl-cos_kl*sin_kl)/(2*ipow(kl,3)));
-              I1 = etaAve*length/rho;
-              I2 = length/sqr(rho);
-              I3 = I2/fabs(rho);
-              I4 = I2/rho*etaAve - 2*length*etaK1_rhoAve;
-              I5 = HAve*I3;
-              radIntegrals->I[0] += I1;
-              radIntegrals->I[1] += I2;
-              radIntegrals->I[2] += I3;
-              radIntegrals->I[3] += I4;
-              radIntegrals->I[4] += I5;
             }
+            etap1 = etap0 + eta0/rho*tan(E1);
+            eta2  = eta0*cos_kl + etap1*sin_kl/k + (1-cos_kl)/(rho*k2);
+            alpha1 = alpha0 - beta0/rho*tan(E1);
+            gamma1 = (1+sqr(alpha1))/beta0;
+            etaAve = eta0*sin_kl/kl + etap1*(1-cos_kl)/(k2*length) +
+              (kl-sin_kl)/(k2*kl*rho);
+            etaK1_rhoAve =  -etaAve*K1/rho + (eta0*tan(E1)+eta2*tan(E2))/(2*length*sqr(rho));
+            HAve = gamma1*sqr(eta0) + 2*alpha1*eta0*etap1 + beta0*sqr(etap1) 
+              + 2*angle*( -(gamma1*eta0+alpha1*etap1)*(kl-sin_kl)/(k*k2*sqr(length)) +
+                         (alpha1*eta0+beta0*etap1)*(1-cos_kl)/(k2*sqr(length))
+                         )
+                + sqr(angle)*(gamma1*(3*kl-4*sin_kl+sin_kl*cos_kl)/(2*k*k2*k2*ipow(length,3)) 
+                              - alpha1*sqr(1-cos_kl)/(k2*k2*ipow(length,3))
+                              + beta0*(kl-cos_kl*sin_kl)/(2*kl*k2*sqr(length)));
+            I1 = etaAve*length/rho;
+            I2 = length/sqr(rho);
+            I3 = I2/fabs(rho);
+            I4 = I2/rho*etaAve - 2*length*etaK1_rhoAve;
+            I5 = HAve*I3;
+            radIntegrals->I[0] += I1;
+            radIntegrals->I[1] += I2;
+            radIntegrals->I[2] += I3;
+            radIntegrals->I[3] += I4;
+            radIntegrals->I[4] += I5;
           }
         }
         
