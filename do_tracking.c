@@ -115,9 +115,13 @@ long do_tracking(
     default:
       break;
     }
+    if (flags&FIRST_BEAM_IS_FIDUCIAL && !(flags&FIDUCIAL_BEAM_SEEN))
+      eptr->Pref_output_fiducial = 0;
     eptr = eptr->succ;
   }
-
+  if (flags&FIRST_BEAM_IS_FIDUCIAL && !(flags&FIDUCIAL_BEAM_SEEN) && !(flags&SILENT_RUNNING))
+    fprintf(stderr, "This step establishes energy profile vs s (fiducial beam).\n");
+  
   log_exit("do_tracking.1");
   log_entry("do_tracking.2");
   name = "_BEG_";
@@ -497,7 +501,10 @@ long do_tracking(
           case T_ENERGY:
             energy = (ENERGY*)eptr->p_elem;
             if (energy->match_beamline) {
-              do_match_energy(coord, n_to_track, P_central, 0);
+              if ((flags&FIDUCIAL_BEAM_SEEN) && eptr->Pref_output_fiducial>0)
+                set_central_momentum(coord, n_to_track, eptr->Pref_output_fiducial, P_central);
+              else
+                do_match_energy(coord, n_to_track, P_central, 0);
               if (energy->match_particles)
                 bomb("can't match_beamline AND match_particles for ENERGY element", NULL);
             }
@@ -693,6 +700,15 @@ long do_tracking(
         fprintf(stderr, "element %s was ignored in tracking.\n",
                 eptr->name);
       }
+      if (flags&FIRST_BEAM_IS_FIDUCIAL && !(flags&FIDUCIAL_BEAM_SEEN)) {
+        do_match_energy(coord, n_left, P_central, 0);
+        eptr->Pref_output_fiducial = *P_central;
+      } else if (flags&FIDUCIAL_BEAM_SEEN) {
+        if (*P_central!=eptr->Pref_output_fiducial)
+          set_central_momentum(coord, n_left, eptr->Pref_output_fiducial, P_central);
+      }
+      else if (run->always_change_p0)
+        do_match_energy(coord, n_left, P_central, 0);
       if (i_pass==0 && traj_vs_z) {
         /* collect trajectory data--used mostly by trajectory correction routines */
         if (!traj_vs_z[i_traj].centroid) {

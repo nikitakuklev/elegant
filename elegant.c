@@ -300,6 +300,7 @@ char **argv;
             run_conditions.combine_bunch_statistics = combine_bunch_statistics;
             run_conditions.wrap_around = wrap_around;
             run_conditions.tracking_updates = tracking_updates;
+            run_conditions.always_change_p0 = always_change_p0;
             
             /* extract the root filename from the input filename */
             strcpy(s, inputfile);
@@ -428,7 +429,8 @@ char **argv;
                     compute_centroids(starting_coord, beam.particle, beam.n_to_track);
                   if (correct.track_before_and_after) {
                     track_beam(&run_conditions, &run_control, &error_control, &optimize.variables, 
-                               beamline, &beam, &output_data, 0, 0, &finalCharge);
+                               beamline, &beam, &output_data, 
+                               0, 0, &finalCharge);
                   }
                 }
                 else if (correct.use_actual_beam) {

@@ -94,6 +94,7 @@ typedef struct element_list {
 #define VMATRIX_IS_VARIED 4
 #define VMATRIX_IS_PERTURBED 8
     double Pref_input, Pref_output;
+    double Pref_output_fiducial;
     VMATRIX *matrix;      /* matrix of this element */
     TWISS *twiss;
     VMATRIX *accumMatrix; /* accumulated matrix to the end of this element */
@@ -189,6 +190,7 @@ typedef struct {
     double ideal_gamma, p_central;
     long default_order, concat_order, print_statistics;
     long combine_bunch_statistics, wrap_around, tracking_updates; 
+    long always_change_p0;
     char *runfile, *lattice, *acceptance, *centroid, *sigma, 
          *final, *output, *rootname, *losses;
     } RUN;
@@ -218,6 +220,7 @@ typedef struct {
     long n_steps;                /* number of error sets/bunches levels */
     double bunch_frequency;      /* bunch interval, if timing is varied */
     long reset_rf_each_step;     /* whether to reset rf element phases/timing */
+    unsigned long fiducial_flag; /* for track_beam/do_tracking */
     long n_passes;               /* number of times to go through beamline */
     long new_data_read;          /* new data has been read for variation of elements */
     LINE_LIST *cell;             /* cell to be varied along with main beamline */
@@ -1531,6 +1534,8 @@ typedef struct {
 #define INHIBIT_FILE_OUTPUT      0x0040
 #define LINEAR_CHROMATIC_MATRIX  0x0080
 #define LONGITUDINAL_RING_ONLY   0x0100
+#define FIRST_BEAM_IS_FIDUCIAL   0x0200
+#define FIDUCIAL_BEAM_SEEN       0x0400
 
 /* return values for get_reference_phase and check_reference_phase */
 #define REF_PHASE_RETURNED 1
@@ -2129,6 +2134,7 @@ extern long track_through_tubend(double **part, long n_part, TUBEND *tubend,
                           double z_start);
 extern void setup_sdds_beam(BEAM *beam,NAMELIST_TEXT *nltext,RUN *run, VARY *control,ERROR *errcon,OPTIM_VARIABLES *optim,OUTPUT_FILES *output,LINE_LIST *beamline,long n_elements);
 extern long new_sdds_beam(BEAM *beam,RUN *run,VARY *control,OUTPUT_FILES *output,long flags);
+void terminate_sdds_beam();
 extern void dumpLatticeParameters(char *filename, RUN *run, LINE_LIST *beamline);
 extern void do_fit_trace_data(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 extern void compute_offsets();

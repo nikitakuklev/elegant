@@ -254,8 +254,13 @@ long track_beam(
                        beam->accepted, &output->sums_vs_z, &output->n_z_points,
                        NULL, run, control->i_step,
                        (!(run->centroid || run->sigma)?FINAL_SUMS_ONLY:0)+
-                       (flags&(LINEAR_CHROMATIC_MATRIX+LONGITUDINAL_RING_ONLY)),
+                       ((control->fiducial_flag|flags)&
+                        (LINEAR_CHROMATIC_MATRIX+LONGITUDINAL_RING_ONLY+FIRST_BEAM_IS_FIDUCIAL
+                         +FIDUCIAL_BEAM_SEEN)),
                        control->n_passes, &(output->sasefel), finalCharge);
+  if (control->fiducial_flag&FIRST_BEAM_IS_FIDUCIAL)
+    control->fiducial_flag |= FIDUCIAL_BEAM_SEEN;
+  
   if (!beam) {
     fprintf(stderr, "error: beam pointer is null on return from do_tracking (track_beam)\n");
     abort();
