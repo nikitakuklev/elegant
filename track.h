@@ -341,6 +341,7 @@ typedef struct {
 /* structure for chromaticity correction information */
 typedef struct {
     double chromx, chromy;    /* desired chromaticities */
+    double strengthLimit;     /* maximum absolute value of strength */
     char **name;              /* names of sextupole families */
     long n_families;          /* number of families */
     long n_iterations;        /* number of times to repeat correction */

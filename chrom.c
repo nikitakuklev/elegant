@@ -28,13 +28,6 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
     log_entry("setup_chromaticity_correction");
 
     cp_str(&sextupoles, "sf sd");
-/*
-    dnux_dp = dnuy_dp = 0;
-    sextupole_tweek = 1e-3;
-    n_iterations = 1;
-    strength_log = NULL;
-    change_defined_values = 0;
- */
 
     /* process namelist input */
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
@@ -57,7 +50,8 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
     chrom->chromy = dnuy_dp;
     chrom->n_iterations = n_iterations;
     alter_defined_values = change_defined_values;
-
+    chrom->strengthLimit = strength_limit;
+    
     if (!beamline->twiss0 || !beamline->matrix) {
         double beta_x, alpha_x, eta_x, etap_x;
         double beta_y, alpha_y, eta_y, etap_y;
@@ -262,6 +256,9 @@ void do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
                 if (!(K2ptr = (double*)(context->p_elem + entity_description[context->type].parameter[K2_param].offset)))
                     bomb("K2ptr NULL in setup_chromaticity_correction", NULL);
                 K2 = (*K2ptr += chrom->dK2->a[i][0]);
+                if (chrom->strengthLimit>0 && chrom->strengthLimit<fabs(K2)) {
+                  K2 = *K2ptr = SIGN(K2)*chrom->strengthLimit;
+                }
                 if (context->matrix)
                     free_matrices(context->matrix);
                 compute_matrix(context, run, NULL);

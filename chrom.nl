@@ -13,6 +13,7 @@
     long n_iterations = 1;
     STRING strength_log = NULL;
     long change_defined_values = 0;
+    double strength_limit = 0;
 #end
 
 
