@@ -45,6 +45,7 @@ void processTwissAnalysisRequests(ELEMENT_LIST *elem);
 
 static long twissConcatOrder = 3;
 static long doTuneShiftWithAmplitude = 0;
+static SDDS_DATASET SDDSTswaTunes;
 
 #define TWISS_ANALYSIS_QUANTITIES 4
 static char *twissAnalysisQuantityName[TWISS_ANALYSIS_QUANTITIES] = {"betax", "betay", "etax", "etay"};
@@ -997,6 +998,8 @@ void finish_twiss_output(void)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
   SDDS_twiss_initialized = twiss_count = 0;
+  if (doTuneShiftWithAmplitude && tune_shift_with_amplitude_struct.tune_output)
+    SDDS_Terminate(&SDDSTswaTunes);
   doTuneShiftWithAmplitude = 0;
   log_exit("finish_twiss_output");
 }
@@ -1966,7 +1969,7 @@ void LoadStartingTwissFromFile(double *betax, double *betay, double *alphax, dou
   free(etaypData);
 }
 
-void setupTuneShiftWithAmplitude(NAMELIST_TEXT *nltext)
+void setupTuneShiftWithAmplitude(NAMELIST_TEXT *nltext, RUN *run)
 {
   /* process namelist input */
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
@@ -1985,6 +1988,27 @@ void setupTuneShiftWithAmplitude(NAMELIST_TEXT *nltext)
       bomb("x1 or y1 is too small (tune_shift_with_amplitude)", NULL);
   }
   doTuneShiftWithAmplitude = 1;
+  if (tune_shift_with_amplitude_struct.tune_output) {
+    char *filename;
+    filename = compose_filename(tune_shift_with_amplitude_struct.tune_output, run->rootname);
+    if (!SDDS_InitializeOutput(&SDDSTswaTunes, SDDS_BINARY, 0, NULL, NULL, 
+			       filename) ||
+	!SDDS_DefineSimpleColumn(&SDDSTswaTunes, "x", "m", SDDS_DOUBLE) ||
+	!SDDS_DefineSimpleColumn(&SDDSTswaTunes, "y", "m", SDDS_DOUBLE) ||
+	!SDDS_DefineSimpleColumn(&SDDSTswaTunes, "Ax", "m", SDDS_DOUBLE) ||
+	!SDDS_DefineSimpleColumn(&SDDSTswaTunes, "Ay", "m", SDDS_DOUBLE) ||
+	!SDDS_DefineSimpleColumn(&SDDSTswaTunes, "nux", NULL, SDDS_DOUBLE) ||
+	!SDDS_DefineSimpleColumn(&SDDSTswaTunes, "nuy", NULL, SDDS_DOUBLE) ||
+	!SDDS_WriteLayout(&SDDSTswaTunes)) {
+      fprintf(stdout, "Unable set up file %s\n", 
+	      tune_shift_with_amplitude_struct.tune_output);
+      fflush(stdout);
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      exit(1);
+    }
+    if (filename!=tune_shift_with_amplitude_struct.tune_output)
+      free(filename);
+  }
 }
 
 double QElement(double ****Q, long i1, long i2, long i3, long i4)
@@ -2008,10 +2032,12 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
 #define TSWA_TRACKING_PTS (N_TSWA+TSWA_TRACKING_EXTRA_PTS)
   double tune1[2];
   double Ax[TSWA_TRACKING_PTS], Ay[TSWA_TRACKING_PTS];
+  double x0[TSWA_TRACKING_PTS], y0[TSWA_TRACKING_PTS];
   double xTune[TSWA_TRACKING_PTS][TSWA_TRACKING_PTS], yTune[TSWA_TRACKING_PTS][TSWA_TRACKING_PTS];
+  double tuneLowerLimit[2], tuneUpperLimit[2];
   double result, maxResult;
   double x, y;
-  long ix, iy, tries, lost, gridSize;
+  long ix, iy, tries, lost=0, gridSize;
   double upperLimit[2], lowerLimit[2];
   MATRIX *AxAy, *Coef, *Nu, *AxAyTr, *Mf, *MfInv, *AxAyTrNu;
   long i, j, m, n, ix1, iy1;
@@ -2022,24 +2048,19 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
     return;
   }
 
-#ifdef DEBUG
-  FILE *fpd = NULL;
-  fpd = fopen("tswa.sdds", "w");
-  fprintf(fpd, "SDDS1\n");
-  fprintf(fpd, "&column name=x type=double units=m &end\n");
-  fprintf(fpd, "&column name=Ax type=double units=m &end\n");
-  fprintf(fpd, "&column name=y type=double units=m &end\n");
-  fprintf(fpd, "&column name=Ay type=double units=m &end\n");
-  fprintf(fpd, "&column name=nux type=double &end\n");
-  fprintf(fpd, "&column name=nuy type=double &end\n");
-  fprintf(fpd, "&data mode=ascii no_row_counts=1 &end\n");
-#endif
-  
   if ((gridSize=tune_shift_with_amplitude_struct.grid_size)>TSWA_TRACKING_PTS) {
     gridSize = tune_shift_with_amplitude_struct.grid_size = TSWA_TRACKING_PTS;
-    fprintf(stdout, "Warning: grid_size for TSWA is limited to %ld\n", gridSize);
+    fprintf(stdout, "Error: grid_size for TSWA is limited to %ld\n", gridSize);
+    exit(1);
   }
   
+  if (tune_shift_with_amplitude_struct.tune_output &&
+      !SDDS_StartPage(&SDDSTswaTunes, gridSize*gridSize)) {
+    fprintf(stdout, "Problem starting SDDS page for TSWA tune output\n");
+    SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
+    exit(1);
+  }
+
   /* use tracking and NAFF */
   tries = tune_shift_with_amplitude_struct.scaling_iterations;
   upperLimit[0] = upperLimit[1] = 1;
@@ -2047,26 +2068,37 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
   while (tries--) {
     lost = 0;
     m = 0;  /* number of tune points */
+    tuneLowerLimit[0] = tuneLowerLimit[1] = 0;
+    tuneUpperLimit[0] = tuneUpperLimit[1] = 0;
     for (ix=0; !lost && ix<gridSize; ix++) {
-      x = sqrt(ix*
-               sqr((tune_shift_with_amplitude_struct.x1-tune_shift_with_amplitude_struct.x0))/(gridSize-1)
-               + sqr(tune_shift_with_amplitude_struct.x0));
+      x0[ix] = 
+	x = sqrt(ix*
+		 sqr((tune_shift_with_amplitude_struct.x1-tune_shift_with_amplitude_struct.x0))/(gridSize-1)
+		 + sqr(tune_shift_with_amplitude_struct.x0));
       Ax[ix] = sqr(x)/twiss->betax;
       for (iy=0; iy<gridSize; iy++) {
         if (tune_shift_with_amplitude_struct.sparse_grid &&
             !(ix==0 || iy==0 || ix==iy)) 
           continue;
         m++;
-        y = sqrt(iy*
-                 sqr((tune_shift_with_amplitude_struct.y1-tune_shift_with_amplitude_struct.y0))/(gridSize-1)
-                 + sqr(tune_shift_with_amplitude_struct.y0));
+        y0[iy] = 
+	  y = sqrt(iy*
+		   sqr((tune_shift_with_amplitude_struct.y1-tune_shift_with_amplitude_struct.y0))/(gridSize-1)
+		   + sqr(tune_shift_with_amplitude_struct.y0));
         Ay[iy] = sqr(y)/twiss->betay;
         if (!computeTunesFromTracking(tune1, NULL, M, beamline, run, startingCoord,
                                       x, y,
-                                      tune_shift_with_amplitude_struct.turns, 0, NULL)) {
+                                      tune_shift_with_amplitude_struct.turns, 0, NULL,
+				      tuneLowerLimit, tuneUpperLimit)) {
           lost = 1;
           break;
         }
+	if (ix==0 && iy==0) {
+	  tuneLowerLimit[0] = tune1[0] - tune_shift_with_amplitude_struct.nux_roi_width/2;
+	  tuneLowerLimit[1] = tune1[1] - tune_shift_with_amplitude_struct.nuy_roi_width/2;
+	  tuneUpperLimit[0] = tune1[0] + tune_shift_with_amplitude_struct.nux_roi_width/2;
+	  tuneUpperLimit[1] = tune1[1] + tune_shift_with_amplitude_struct.nuy_roi_width/2;
+	}
         xTune[ix][iy] = tune1[0];
         yTune[ix][iy] = tune1[1];
         if (tune_shift_with_amplitude_struct.verbose)
@@ -2121,6 +2153,27 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
       for (iy=0; iy<N_TSWA; iy++)
         dnux_dA[ix][iy] = dnuy_dA[ix][iy] = sqrt(DBL_MAX);
   } else {
+    if (tune_shift_with_amplitude_struct.tune_output) {
+      for (ix=j=0; ix<gridSize; ix++) {
+	for (iy=0; iy<gridSize; iy++, j++) {
+	  if (!SDDS_SetRowValues(&SDDSTswaTunes, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, j,
+				 "x", x0[ix], "Ax", Ax[ix],
+				 "nux", xTune[ix][iy],
+				 "y", y0[iy], "Ay", Ay[iy],
+				 "nuy", yTune[ix][iy],
+				 NULL)) {
+	    fprintf(stdout, "Problem filling SDDS page for TSWA tune output\n");
+	    SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
+	    exit(1);
+	  }
+	}
+      }
+      if (!SDDS_WritePage(&SDDSTswaTunes)) {
+	fprintf(stdout, "Problem writing SDDS page for TSWA tune output\n");
+	SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
+	exit(1);
+      }
+    }
     /* the expansion is
        nu = Ax^0 (TS00 + Ay*TS01 + Ay^2*TS02) +
             Ax^1 (TS10 + Ay*TS11 + Ay^2*TS12) +
@@ -2219,7 +2272,7 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
 			      double *startingCoord, 
 			      double xAmplitude, double yAmplitude, long turns,
                               long useMatrix,
-                              double *endingCoord)
+                              double *endingCoord, double *tuneLowerLimit, double *tuneUpperLimit)
 {
   double **oneParticle, dummy;
   double *x, *y, p;
@@ -2322,11 +2375,15 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
 #endif
 
   if (PerformNAFF(tune+0, amp?amp+0:&dummy, &dummy, 0.0, 1.0, x, turns, 
-	      NAFF_MAX_FREQUENCIES|NAFF_FREQ_CYCLE_LIMIT|NAFF_FREQ_ACCURACY_LIMIT,
-	      0.0, 1, 200, 1e-9)!=1 ||
+		  NAFF_MAX_FREQUENCIES|NAFF_FREQ_CYCLE_LIMIT|NAFF_FREQ_ACCURACY_LIMIT,
+		  0.0, 1, 200, 1e-12,
+		  tuneLowerLimit?tuneLowerLimit[0]:0,
+		  tuneUpperLimit?tuneUpperLimit[0]:0)!=1 ||
       PerformNAFF(tune+1, amp?amp+1:&dummy, &dummy, 0.0, 1.0, y, turns,
 		  NAFF_MAX_FREQUENCIES|NAFF_FREQ_CYCLE_LIMIT|NAFF_FREQ_ACCURACY_LIMIT,
-		  0.0, 1, 200, 1e-9)!=1)
+		  0.0, 1, 200, 1e-12,
+		  tuneLowerLimit?tuneLowerLimit[1]:0,
+		  tuneUpperLimit?tuneUpperLimit[1]:0)!=1)
     return 0;
 
 #ifdef DEBUG

@@ -11,6 +11,8 @@
     double y0 = 1e-6;
     double x1 = 3e-4;
     double y1 = 3e-4;
+    double nux_roi_width = 2e-3;
+    double nuy_roi_width = 2e-3;
     long grid_size = 6;
     long sparse_grid = 0;
     double scale_down_factor = 2;
@@ -20,6 +22,7 @@
     long scaling_iterations = 10;
     long use_concatenation = 0;
     long verbose = 0;
+    STRING tune_output = NULL;
 #end
 
 #namelist twiss_output

@@ -135,14 +135,14 @@ long doFrequencyMap(
       if (!computeTunesFromTracking(firstTune, firstAmplitude,
 				    beamline->matrix, beamline, run,
                                     startingCoord, x, y, control->n_passes/2, 
-                                    0, endingCoord) ||
+                                    0, endingCoord, NULL, NULL) ||
 	  firstTune[0]>0.5 || firstTune[0]<0 || firstTune[1]>0.5 || firstTune[1]<0) 
         continue;
       memcpy(startingCoord, endingCoord, sizeof(*startingCoord)*6);
       if (!computeTunesFromTracking(secondTune, secondAmplitude,
 				    beamline->matrix, beamline, run,
                                     startingCoord, 0.0, 0.0, control->n_passes/2, 
-                                    0, endingCoord) || 
+                                    0, endingCoord, NULL, NULL) || 
 	  secondTune[0]>0.5 || secondTune[0]<0 || secondTune[1]>0.5 || secondTune[1]<0) 
         continue;
       if (!SDDS_SetRowValues(&SDDS_fmap, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ip,

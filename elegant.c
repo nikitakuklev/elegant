@@ -736,7 +736,7 @@ char **argv;
     case TUNE_SHIFT_WITH_AMPLITUDE:
       if (do_twiss_output)
         bomb("you must give tune_shift_with_amplitude before twiss_output", NULL);
-      setupTuneShiftWithAmplitude(&namelist_text);
+      setupTuneShiftWithAmplitude(&namelist_text, &run_conditions);
       break;
     case SEMAPHORES:
       if (run_setuped)
