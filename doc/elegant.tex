@@ -390,11 +390,13 @@ Among the numerically integrated elements available are
 extended-fringe-field bending magnets and traveling-wave accelerators.
 A number of hybrid elements exist that have first-order transport with
 exact time dependence, e.g., RF cavities.  Several elements support
-simulation of collective effects, such as wakefields and intra-beam
-scattering.  Some of the more unusual elements available are
-third-order alpha-magnets\cite{Borland_thesis,Enge}, time-dependent
-kicker magnets, voltage-ramped RF cavities, beam scrapers, and
-beam-analysis ``screens.''
+simulation of collective effects, such as wakefields, resonator
+impedances, intra-beam scattering, coherent synchrotron radiation, and
+the longitudinal space charge impedance.  Some of the more unusual
+elements available are third-order
+alpha-magnets\cite{Borland_thesis,Enge}, time-dependent kicker
+magnets, voltage-ramped RF cavities, beam scrapers, and beam-analysis
+``screens.''
 
 A wide variety of output is available from tracking, including
 centroid and sigma-matrix output along the accelerator.  In addition
@@ -420,13 +422,13 @@ measurements involving beam-size measurements during variation of one
 or more quadrupoles\cite{Borland_PC}.
 
 Like many accelerator codes, {\tt elegant} does accelerator
-optimization.  While {\tt elegant} is not designed to replace matching
-codes like MAD, it will fit the first-order matrix and beta functions.
-Of more interest is the ability to optimize results of tracking using
-a user-supplied function of the final beam and transport parameters.
-This permits solution of a wide variety of problems, from matching a
-kicker bump in the presence of nonlinearities to optimizing dynamic
-aperture by adjusting sextupoles.
+optimization.  It will fit the first- and second-order matrix, beta
+functions, tunes, chromaticities, natural emittance, etc.  It also has
+the ability to optimize results of tracking using a user-supplied
+function of the final beam and transport parameters.  This permits
+solution of a wide variety of problems, from matching a kicker bump in
+the presence of nonlinearities to optimizing dynamic aperture by
+adjusting sextupoles.
 
 {\tt elegant} provides several methods for determining accelerator
 aperture, whether dynamic or physical.  One may do straightforward
