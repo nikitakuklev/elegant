@@ -1792,6 +1792,7 @@ form \verb|<element-name>.<parameter-name>|, in all capital letters.
     long soft_failure = 1;
     long n_passes = 2;
     long n_evaluations = 500; 
+    long n_restarts = 0;
     long matrix_order = 1;
     STRING log_file = NULL;
     long output_sparsing_factor = 0;
@@ -1878,16 +1879,16 @@ whether it has converged or not.
 \item \verb|soft_failure| --- A flag indicating, if set, that failure of an optimization pass should not
 result in termination of the optimization.
 
+\item \verb|n_evaluations| --- The number of allowed evaluations of
+the optimization function.  If simplex optimization is used, this is
+the number of allowed evaluations per pass.
+
 \item \verb|n_passes| --- The number of optimization passes made to
 achieve convergence (``simplex'' only).  A pass ends (roughly) when
 the number of evaluations is completed or the function doesn't change
 within the tolerance.  A new pass involves starting the optimization
-again using step sizes given determined from the range of the simplex
-and the factor \verb|simplex_pass_factor|.
-
-\item \verb|n_evaluations| --- The number of allowed evaluations of
-the optimization function.  If simplex optimization is used, this is
-the number of allowed evaluations per pass.
+again using step sizes determined from the range of the simplex and
+the factor \verb|simplex_pass_factor|.
 
 \item \verb|n_restarts| --- The number of complete restarts of the
 optimization (simplex only).  This is an additional loop around the
