@@ -59,7 +59,7 @@ typedef struct {
 typedef struct {
     double centroid[6];  /* centroid[i] = Sum(x[i]/n) */
     double sigma[6][6];  /* sigma[i][j] = Sum((x[i]-c[i])*(x[j]-c[j])/n) */
-    double maxabs[4];    /* maximum values for transverse coordinates */
+    double maxabs[6];    /* maximum values for x, xp, y, yp, max deviation for s, max value for dp/p */
     long n_part;         /* number of particles */
     double z;            /* z location */
     double p0;           /* reference momentum (beta*gamma) */
@@ -519,7 +519,7 @@ extern char *entity_text[N_TYPES];
 #define N_MATR_PARAMS 3
 #define N_ALPH_PARAMS 13
 #define N_RFDF_PARAMS 8
-#define N_RFTMEZ0_PARAMS 23
+#define N_RFTMEZ0_PARAMS 26
 #define N_RMDF_PARAMS 10
 #define N_TMCF_PARAMS 18
 #define N_CEPL_PARAMS 16
@@ -571,7 +571,7 @@ extern char *entity_text[N_TYPES];
 #define N_CSRCSBEND_PARAMS 42
 #define N_CSRDRIFT_PARAMS 15
 #define N_REMCOR_PARAMS 6
-#define N_MAPSOLENOID_PARAMS 12
+#define N_MAPSOLENOID_PARAMS 18
 #define N_RFCW_PARAMS 28
 
 typedef struct {
@@ -842,7 +842,7 @@ extern PARAMETER rftmez0_param[N_RFTMEZ0_PARAMS] ;
 typedef struct {
     double length, frequency, phase, Ez_peak, time_offset;
     long phase_reference;
-    double dx, dy;
+    double dx, dy, eTilt, eYaw, ePitch;
     long n_steps, radial_order, change_p0;
     char *inputFile, *zColumn, *EzColumn;
     char *solenoidFile, *solenoid_zColumn, *solenoid_rColumn, *solenoidBzColumn, *solenoidBrColumn;
@@ -924,15 +924,17 @@ extern PARAMETER mapSolenoid_param[N_MAPSOLENOID_PARAMS] ;
 
 typedef struct {
     double length, dx, dy;
+    double eTilt, eYaw, ePitch; /* misalignment angles */
     long n_steps;
     char *inputFile, *rColumn, *zColumn, *BrColumn, *BzColumn;
-    double factor, accuracy;
+    double factor, BxUniform, ByUniform, lUniform, accuracy;
     char *method;
     /* variables for internal use only: */
     long initialized;
     long nz, nr; 
     double dz, dr;
-    double **Bz, **Br;
+    double **Bz, **Br, BxUniformScaled, ByUniformScaled;
+    double zMap0, zMap1;
   } MAP_SOLENOID;
 
 /* storage structure for watch points  */
@@ -1825,6 +1827,8 @@ double getMonitorCalibration(ELEMENT_LIST *elem, long coord);
 extern long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LINE_LIST *beamline, VMATRIX *M, 
     RUN *run, double dp, long start_from_recirc, long fixed_length, double *starting_point, double iter_fraction);
 extern void rotate_xy(double *x, double *y, double angle);
+extern void setupRotate3Matrix(void **Rv, double roll, double yaw, double pitch);
+void rotate3(double *data, void *Rv);
 
 /* prototypes for counter.c: */
 extern long advance_values1(double *value, long n_values, long *value_index, double *initial, double *step, 
@@ -1836,7 +1840,6 @@ extern long do_tracking(double **coord, long *n_original, long *effort, LINE_LIS
                         long *n_z_points, TRAJECTORY *traj_vs_z, RUN *run, long step,
                         unsigned long flags, long n_passes, SASEFEL_OUTPUT *sasefel,
                         double *finalCharge);
-extern void do_element_misalignment(ELEMENT_LIST *elem, double **coord, long n, long mode);
 extern void offset_beam(double **coord, long n_to_track, MALIGN *offset, double P_central);
 extern void do_match_energy(double **coord, long np, double *P_central, long change_beam);
 extern void set_central_energy(double **coord, long np, double new_energy, double *P_central);
@@ -2266,7 +2269,8 @@ extern void do_watch_FFT(double **data, long n_data, long slot, long window_code
 extern void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long particles, long step);
 extern void dump_centroid(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, long n_elements, long bunch,
                           double p_central);
-extern void dump_phase_space(SDDS_TABLE *SDDS_table, double **particle, long particles, long step, double Po);
+extern void dump_phase_space(SDDS_TABLE *SDDS_table, double **particle, long particles, long step, double Po,
+                             double charge);
 extern void dump_sigma(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, long n_elements, long step,
                 double p_central);
 extern void doSASEFELAtEndOutput(SASEFEL_OUTPUT *sasefelOutput, long step);

@@ -30,6 +30,7 @@
 #include "mdb.h"
 #include "match_string.h"
 #include "track.h"
+#include "matlib.h"
 
 void (*set_up_derivatives(void *field, long field_type, double *kscale, 
         double z_start, double *Z_end, double *tau_start, double **part, long n_part, 
@@ -71,7 +72,7 @@ void derivatives_mapSolenoid(
     double tau     
     );
 
-void setupRftmEz0FromFile(RFTMEZ0 *rftmEz0, double frequency, double length, double Ez_peak);
+void setupRftmEz0FromFile(RFTMEZ0 *rftmEz0, double frequency, double length);
 void setupRftmEz0SolenoidFromFile(RFTMEZ0 *rftmEz0, double length, double k);
 void setupMapSolenoidFromFile(MAP_SOLENOID *mapSol, double length);
 double exit_function(double *qp, double *q, double phase);
@@ -95,7 +96,7 @@ long analyzeSpacing(double *z, long nz, double *dzReturn, FILE *fpError);
 double Z_end;
 
 /* offsets to be added to particle position to get coordinates relative
- * to element center.
+ * to element transverse center.
  */
 double X_offset, Y_offset;
 
@@ -117,6 +118,11 @@ long limit_hit, radial_limit, derivCalls=0;
 
 /* flag to indicate that element changes the central momentum */
 static long change_p0;
+
+/* rotation matrices for tilt (roll), yaw, pitch */
+static MATRIX *partRot, *fieldRot;
+/* geometrical center of the element used for rotation */
+double X_center, Y_center, Z_center;
 
 #if defined(DEBUG)
 static long starting_integration;
@@ -369,13 +375,20 @@ void (*set_up_derivatives(
       setupMapSolenoidFromFile(mapSol, mapSol->length);
     *tau_start = 0;
     *Z_end = mapSol->length;
-    X_offset = -(X_aperture_center = mapSol->dx);
-    Y_offset = -(Y_aperture_center = mapSol->dy);
+    X_offset = -(X_center = X_aperture_center = mapSol->dx);
+    Y_offset = -(Y_center = Y_aperture_center = mapSol->dy);
+    Z_center = mapSol->length/2;
     /* assume 1000m aperture for now */     
     *X_limit = *Y_limit = 1e3;
     *accuracy = mapSol->accuracy;
     *n_steps = mapSol->n_steps;
+    mapSol->zMap0 = mapSol->length/2-mapSol->lUniform/2;
+    mapSol->zMap1 = mapSol->length/2+mapSol->lUniform/2;
+    mapSol->BxUniformScaled = mapSol->BxUniform*e_mks/(me_mks*c_mks);
+    mapSol->ByUniformScaled = mapSol->ByUniform*e_mks/(me_mks*c_mks);
     select_integrator(mapSol->method);
+    setupRotate3Matrix((void**)&partRot, -mapSol->eTilt, -mapSol->eYaw, -mapSol->ePitch);
+    setupRotate3Matrix((void**)&fieldRot, mapSol->eTilt, mapSol->eYaw, mapSol->ePitch);
     return(derivatives_mapSolenoid);
     break;
   case T_RFTMEZ0:
@@ -384,7 +397,7 @@ void (*set_up_derivatives(
     if (rftmEz0->change_p0)
       change_p0 = 1;
     if (!rftmEz0->Ez) {
-      setupRftmEz0FromFile(rftmEz0, rftmEz0->frequency, rftmEz0->length, rftmEz0->Ez_peak);
+      setupRftmEz0FromFile(rftmEz0, rftmEz0->frequency, rftmEz0->length);
       setupRftmEz0SolenoidFromFile(rftmEz0, rftmEz0->length, *kscale);
       rftmEz0->initialized = 1;
     }
@@ -414,14 +427,17 @@ void (*set_up_derivatives(
     *tau_start = rftmEz0->phase + PIx2*rftmEz0->frequency*rftmEz0->time_offset +
       rftmEz0->phase0;
     *Z_end = rftmEz0->length*(*kscale);
-    X_offset = -(X_aperture_center = rftmEz0->k*rftmEz0->dx);
-    Y_offset = -(Y_aperture_center = rftmEz0->k*rftmEz0->dy);
+    X_offset = -(X_center = X_aperture_center = rftmEz0->k*rftmEz0->dx);
+    Y_offset = -(Y_center = Y_aperture_center = rftmEz0->k*rftmEz0->dy);
+    Z_center = *Z_end/2;
     /* assume 1000m aperture for now */     
     *X_limit = rftmEz0->k*1e3;
     *Y_limit = rftmEz0->k*1e3;
     *accuracy = rftmEz0->accuracy;
     *n_steps = rftmEz0->n_steps;
     select_integrator(rftmEz0->method);
+    setupRotate3Matrix((void**)&partRot, rftmEz0->eTilt, rftmEz0->eYaw, rftmEz0->ePitch);
+    setupRotate3Matrix((void**)&fieldRot, rftmEz0->eTilt, rftmEz0->eYaw, rftmEz0->ePitch);
     return(derivatives_rftmEz0);
     break;
   case T_TMCF:
@@ -693,11 +709,11 @@ void derivatives_rftmEz0(
     )
 {
   double gamma, *P, *Pp;
-  double E[3], BOverGamma[3];
+  double E[3], BOverGamma[3], XYZ[3];
   RFTMEZ0 *rftmEz0;
   long iz, ir;
   double R, Zoffset, BphiOverRG, ErOverR, BrOverRG;
-  double X, Y, sinPhase, cosPhase;
+  double X, Y, Z, sinPhase, cosPhase;
   double B1, B2;
   
   derivCalls++;
@@ -709,8 +725,15 @@ void derivatives_rftmEz0(
   qp[1] = P[1]/gamma;
   qp[2] = P[2]/gamma;
   
-  X = q[0]+X_offset;
-  Y = q[1]+Y_offset;
+  /* find coordinates relative to element center */
+  XYZ[0] = q[0]-X_center;
+  XYZ[1] = q[1]-Y_center;
+  XYZ[2] = q[2]-Z_center;
+  /* perform coordinate rotation into the element frame */
+  rotate3(XYZ, partRot);
+  X = XYZ[0];
+  Y = XYZ[1];
+  Z = XYZ[2] + Z_center;  /* Z is expressed relative to element start */
   R = sqrt(sqr(X)+sqr(Y));
 
   /* get scaled RF fields */
@@ -722,12 +745,12 @@ void derivatives_rftmEz0(
   } else {
     if (iz==(rftmEz0->nz-1))
       iz -= 1;
-    Zoffset = q[2]-iz*rftmEz0->dZ;
+    Zoffset = Z-iz*rftmEz0->dZ;
     sinPhase = sin(tau);
     cosPhase = cos(tau);
-    E[2] = (rftmEz0->Ez[iz] + Zoffset*rftmEz0->dEzdZ[iz])*sinPhase;
+    E[2] = (rftmEz0->Ez[iz] + Zoffset*rftmEz0->dEzdZ[iz])*sinPhase*rftmEz0->Ez_peak;
     ErOverR = -(rftmEz0->dEzdZ[iz] + 
-           (rftmEz0->dEzdZ[iz+1]-rftmEz0->dEzdZ[iz])/rftmEz0->dZ*Zoffset)/2*sinPhase;
+           (rftmEz0->dEzdZ[iz+1]-rftmEz0->dEzdZ[iz])/rftmEz0->dZ*Zoffset)/2*sinPhase*rftmEz0->Ez_peak;
     E[0] = ErOverR*X;
     E[1] = ErOverR*Y;
     BphiOverRG = E[2]/2/gamma*cosPhase;
@@ -738,8 +761,8 @@ void derivatives_rftmEz0(
 
   /* add scaled solenoid fields */
   if (rftmEz0->BzSol) {
-    iz = (q[2] - rftmEz0->Z0Sol)/rftmEz0->dZSol;
-    Zoffset = q[2] - (iz*rftmEz0->dZSol + rftmEz0->Z0Sol);
+    iz = (Z - rftmEz0->Z0Sol)/rftmEz0->dZSol;
+    Zoffset = Z - (iz*rftmEz0->dZSol + rftmEz0->Z0Sol);
     ir = R/rftmEz0->dRSol;
     
     if (iz>=0 && iz<rftmEz0->nzSol && ir<rftmEz0->nrSol) {
@@ -763,9 +786,16 @@ void derivatives_rftmEz0(
         (rftmEz0->BzSol[ir+1][iz] - rftmEz0->BzSol[ir][iz])/rftmEz0->dRSol*(R-ir*rftmEz0->dRSol);
       B2 = rftmEz0->BzSol[ir][iz+1] +
         (rftmEz0->BzSol[ir+1][iz+1] - rftmEz0->BzSol[ir][iz+1])/rftmEz0->dRSol*(R-ir*rftmEz0->dRSol);
-      BOverGamma[2] = (B1 + (B2-B1)*Zoffset/rftmEz0->dZSol)/gamma*rftmEz0->solenoidFactor;
+      BOverGamma[2] = 
+        (B1 + (B2-B1)*Zoffset/rftmEz0->dZSol)/gamma*rftmEz0->solenoidFactor;
     }
   }
+  /* E and BOverGama contain field components in the element frame for
+   * the present particle position (which was expressed in the element frame
+   * also).  Rotate these components back to the lab frame. 
+   */
+  rotate3(E, fieldRot);
+  rotate3(BOverGamma, fieldRot);
   
   /* (Px,Py,Pz)' = (Ex,Ey,Ez) + (Px,Py,Pz)x(Bx,By,Bz)/gamma */
   Pp = qp+3;
@@ -782,10 +812,11 @@ void derivatives_mapSolenoid(
 {
   double gamma, *P, *Pp;
   double BOverGamma[3];
+  double XYZ[3];
   MAP_SOLENOID *mapSol;
   long iz, ir;
   double R, Zoffset, BphiOverRG, ErOverR, BrOverRG;
-  double X, Y, sinPhase, cosPhase;
+  double X, Y, Z, sinPhase, cosPhase;
   double B1, B2;
   
   derivCalls++;
@@ -796,14 +827,21 @@ void derivatives_mapSolenoid(
   qp[0] = P[0]/gamma;
   qp[1] = P[1]/gamma;
   qp[2] = P[2]/gamma;
-  
-  X = q[0]+X_offset;
-  Y = q[1]+Y_offset;
+
+  /* find coordinates relative to element center */
+  XYZ[0] = q[0]-X_center;
+  XYZ[1] = q[1]-Y_center;
+  XYZ[2] = q[2]-Z_center;
+  /* perform coordinate rotation */
+  rotate3(XYZ, partRot);
+  X = XYZ[0];
+  Y = XYZ[1];
+  Z = XYZ[2] + Z_center;
   R = sqrt(sqr(X)+sqr(Y));
 
   mapSol = field_global;
-  iz = q[2]/mapSol->dz;
-  Zoffset = q[2] - iz*mapSol->dz;
+  iz = Z/mapSol->dz;
+  Zoffset = Z - iz*mapSol->dz;
   ir = R/mapSol->dr;
   
   BOverGamma[0] = BOverGamma[1] = BOverGamma[2] = 0;
@@ -830,12 +868,27 @@ void derivatives_mapSolenoid(
       (mapSol->Bz[ir+1][iz+1] - mapSol->Bz[ir][iz+1])/mapSol->dr*(R-ir*mapSol->dr);
     BOverGamma[2] = (B1 + (B2-B1)*Zoffset/mapSol->dz)/gamma*mapSol->factor;
   }
+
+  if ((mapSol->BxUniform || mapSol->ByUniform) &&
+      (Z>mapSol->zMap0 && Z<mapSol->zMap1)) {
+    /* add components from uniform field, if any */
+    BOverGamma[0] += mapSol->BxUniformScaled/gamma;
+    BOverGamma[1] += mapSol->ByUniformScaled/gamma;
+  }
+  /* BOverGama contains field components in the element frame for
+   * the present particle position (which was expressed in the element frame
+   * also).  Rotate these components back to the lab frame. 
+   */
+  rotate3(BOverGamma, fieldRot);
   
   /* (Px,Py,Pz)' = (Ex,Ey,Ez) + (Px,Py,Pz)x(Bx,By,Bz)/gamma */
   Pp = qp+3;
   Pp[0] = P[1]*BOverGamma[2]-P[2]*BOverGamma[1];
   Pp[1] = P[2]*BOverGamma[0]-P[0]*BOverGamma[2];
   Pp[2] = P[0]*BOverGamma[1]-P[1]*BOverGamma[0]; 
+  /* Since the field components and momenta are in the lab frame, 
+   * I don't need to perform a rotation of the forces. 
+   */
 }
 
 void derivatives_tmcf_mode(
@@ -1405,7 +1458,7 @@ void select_integrator(char *desired_method)
     log_exit("select_integrator");
     }
 
-void setupRftmEz0FromFile(RFTMEZ0 *rftmEz0, double frequency, double length, double EzPeak)
+void setupRftmEz0FromFile(RFTMEZ0 *rftmEz0, double frequency, double length)
 {
   SDDS_DATASET SDDSin;
   long i;
@@ -1478,24 +1531,24 @@ void setupRftmEz0FromFile(RFTMEZ0 *rftmEz0, double frequency, double length, dou
   }
   free(z);
 
-  /* find maximum Ez and normalize */
+  /* find maximum Ez */
   EzMax = 0;
   for (i=0; i<rftmEz0->nz; i++) {
     if ((Ez=fabs(rftmEz0->Ez[i]))>EzMax)
       EzMax = Ez;
   }
-  if (EzMax==0) {
-    EzPeak = 0;
-    EzMax = 1;
-  }
   
-  /* perform scaling */
+  /* perform scaling and normalization (scaling by Ez_peak occurs when derivatives are computed) */
   k = (PIx2*frequency)/c_mks;
   rftmEz0->dZ = rftmEz0->dz*k;
   fflush(stdout);
-  for (i=0; i<rftmEz0->nz; i++)
-    rftmEz0->Ez[i] *= e_mks/(me_mks*c_mks*PIx2*frequency)*EzPeak/EzMax;
-  
+  if (EzMax)
+    for (i=0; i<rftmEz0->nz; i++)
+      rftmEz0->Ez[i] *= e_mks/(me_mks*c_mks*PIx2*frequency)/EzMax;
+  else
+    for (i=0; i<rftmEz0->nz; i++)
+      rftmEz0->Ez[i] = 0;
+
   /* take derivative except at endpoints */
   for (i=1; i<rftmEz0->nz-1; i++)
     rftmEz0->dEzdZ[i] = (rftmEz0->Ez[i+1]-rftmEz0->Ez[i-1])/(2*rftmEz0->dZ);
