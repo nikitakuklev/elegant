@@ -379,6 +379,23 @@ void add_steer_elem_to_lists(STEERING_LIST *SL, long plane, char *name, char *it
     
     SL->corr_type[SL->n_corr_types] = context->type;
     cp_str(SL->corr_name+SL->n_corr_types, context->name);
+
+    switch (context->type) {
+    case T_QUAD:
+      if (plane)
+        ((QUAD*)(context->p_elem))->xSteering = 1;
+      else
+        ((QUAD*)(context->p_elem))->ySteering = 1;
+      break;
+    case T_KQUAD:
+      if (!plane) 
+        ((KQUAD*)(context->p_elem))->xSteering = 1;
+      else
+        ((KQUAD*)(context->p_elem))->ySteering = 1;
+      break;
+    default:
+      break;
+    }
     
     cp_str(SL->corr_param+SL->n_corr_types, item);
     SL->corr_tweek[SL->n_corr_types] = tweek;
