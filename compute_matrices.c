@@ -1261,6 +1261,8 @@ VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, doubl
       R[1][1] = R[3][3] = R[0][0]*gamma/gammaf;
       R[0][1] = R[2][3] = 2*SQRT2*gamma*length/dgammaMax*(sin_alpha=sin(alpha));
       R[1][0] = R[3][2] = -sin_alpha*dgammaMax/(length*gammaf*2*SQRT2);
+      R[4][4] = 1;
+      R[5][5] = 1/(1+dP/(*P_central));
     }
     
     R[5][4] = (voltage/me_mev)*cos_phase/(gamma + dgamma)*(PIx2*frequency/c_mks);
