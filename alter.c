@@ -79,8 +79,9 @@ void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
                   entity_description[eptr->type].parameter[iParam].name, 
                   *((double*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)));
         /* this step could be very inefficient */
-        change_defined_parameter(eptr->name, iParam, thisType, value, NULL, 
-                                 differential?LOAD_FLAG_DIFFERENTIAL:(multiplicative?LOAD_FLAG_FRACTIONAL:LOAD_FLAG_ABSOLUTE));
+        if (nMatches==1)
+          change_defined_parameter(eptr->name, iParam, thisType, value, NULL, 
+                                   differential?LOAD_FLAG_DIFFERENTIAL:(multiplicative?LOAD_FLAG_FRACTIONAL:LOAD_FLAG_ABSOLUTE));
         if (differential)
           *((double*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)) += value;
         else if (multiplicative)
@@ -100,8 +101,9 @@ void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
                   entity_description[eptr->type].parameter[iParam].name, 
                   *((long*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)));
         /* this step could be very inefficient */
-        change_defined_parameter(eptr->name, iParam, thisType, value, NULL, 
-                                 differential?LOAD_FLAG_DIFFERENTIAL:(multiplicative?LOAD_FLAG_FRACTIONAL:LOAD_FLAG_ABSOLUTE));
+        if (nMatches==1)
+          change_defined_parameter(eptr->name, iParam, thisType, value, NULL, 
+                                   differential?LOAD_FLAG_DIFFERENTIAL:(multiplicative?LOAD_FLAG_FRACTIONAL:LOAD_FLAG_ABSOLUTE));
         if (differential)
           *((long*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)) += 
             nearestInteger(value);
@@ -133,8 +135,9 @@ void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
         cp_str((char**)(p_elem+entity_description[eptr->type].parameter[iParam].offset),
                string_value);
         /* this step could be very inefficient */
-        change_defined_parameter(eptr->name, iParam, thisType, 0, string_value, 
-                                 differential?LOAD_FLAG_DIFFERENTIAL:(multiplicative?LOAD_FLAG_FRACTIONAL:LOAD_FLAG_ABSOLUTE));
+        if (nMatches==1)
+          change_defined_parameter(eptr->name, iParam, thisType, 0, string_value, 
+                                   differential?LOAD_FLAG_DIFFERENTIAL:(multiplicative?LOAD_FLAG_FRACTIONAL:LOAD_FLAG_ABSOLUTE));
         if (verbose) {
           fprintf(stdout, "%s\n",
                   *((char**)(p_elem+entity_description[eptr->type].parameter[iParam].offset)));
