@@ -1,5 +1,9 @@
 /* 
  * $Log: not supported by cvs2svn $
+ * Revision 1.7  1999/10/12 21:49:55  borland
+ * All printouts now go to the stdout rather than stderr.  fflush statements,
+ * some unnecessary, were added in a mostly automated fashion.
+ *
  * Revision 1.6  1999/08/05 15:35:52  soliday
  * Added WIN32 and Linux support
  *
@@ -42,7 +46,7 @@ static char *USAGE = "ibsEmittance <twissFile> <resultsFile>\n\
  [-growthRatesOnly] \n\
  [-superperiods=<value>]\n\
  {-RF=Voltage=<MV>,harmonic=<value>|-length=<mm>}\n\
- [-energyRange=initial=<value>,final=<value>,delta=<value>,file=<string>]\n\
+ [-energy=<MeV>]\n\
  [-integrate=turns=<number>[,stepSize=<number>]]";
 
 #define SET_ENERGY 0
@@ -61,7 +65,7 @@ static char *USAGE = "ibsEmittance <twissFile> <resultsFile>\n\
 #define SET_INTEGRATE 13
 #define N_OPTIONS 14
 char *option[N_OPTIONS] = {
-  "energyRange",
+  "energy",
   "verbose",
   "charge",
   "particles",
@@ -120,8 +124,7 @@ int main( int argc, char **argv)
   long *passInteg;
   unsigned long dummyFlags;
   double rfVoltage, rfHarmonic;
-  double alphac, U0, circumference;
-  
+  double alphac, U0, circumference, energy;
   SDDS_RegisterProgramName(argv[0]);
   argc  =  scanargs(&scanned, argc, argv);
   if (argc == 1)
@@ -129,7 +132,7 @@ int main( int argc, char **argv)
 
   inputfile  =  NULL;
   outputfile  =  NULL;
-/*  energy = 0; */
+  energy = 0;
   verbosity = 0;
   particles = 0;
   charge = 0;
@@ -200,7 +203,10 @@ int main( int argc, char **argv)
           bomb("invalid -rf syntax/values", "-rf=voltage=MV,harmonic=<value>");
         break;
       case SET_ENERGY:
-        bomb("Option %s not implemented.\n", scanned[i].list[0]);
+        if (scanned[i].n_items!=2)
+          bomb("invalid -energy syntax", NULL);
+        if (!sscanf(scanned[i].list[1], "%lf", &energy) || energy<=0)
+          bomb("invalid -energy syntax/values", "-energy=<MeV>");
         break;
       case SET_INTEGRATE:
         if (scanned[i].n_items<2)
@@ -358,6 +364,15 @@ int main( int argc, char **argv)
     s = SDDS_GetColumnInDoubles(&twissPage, "s");
     circumference = s[elements-1]*superperiods;
     U0 *= superperiods;
+    if (energy!=0) {
+      /* scale to new energy */
+      pCentral = sqrt(sqr(energy/me_mev)-1);
+      taux /= ipow(energy/EMeV, 3);
+      taudelta /= ipow(energy/EMeV, 3);
+      U0 *= ipow(energy/EMeV, 4);
+      EMeV = energy;
+    }
+    
     if (!length && U0>rfVoltage)
       bomb("energy loss per turn is greater than rf voltage", NULL);
     betax = SDDS_GetColumnInDoubles(&twissPage, "betax");
