@@ -55,6 +55,9 @@ CopyrightNotice001*/
  * Michael Borland, 2000
  *
  $Log: not supported by cvs2svn $
+ Revision 1.7  2001/05/30 15:53:27  borland
+ -zPlane option now allows specifying alphaz or correlation.
+
  Revision 1.6  2001/05/15 16:52:54  borland
  Added to -zPlane option the ability to change the central momentum.
 
@@ -144,7 +147,7 @@ main(int argc, char **argv)
 {
   SDDS_DATASET SDDSin, SDDSout;
   char *inputfile, *outputfile;
-  long i_arg, row, rows, readCode, noWarnings;
+  long i_arg, rows, readCode, noWarnings;
   SCANNED_ARG *s_arg;
   unsigned long pipeFlags;
   PLANE_SPEC xSpec, ySpec;
@@ -402,7 +405,7 @@ long PerformZTransformation(double *t, double *p,
   double pAve, tAve;
   double S11, S22, S12;
   double R11, R12, R21, R22;
-  double x0, xp0, delta0, t0;
+  double delta0, t0;
   double emit1, beta1, beta2, alpha1, alpha2;
   double emit2, ratio;
 

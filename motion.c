@@ -852,8 +852,8 @@ void derivatives_mapSolenoid(
   double XYZ[3];
   MAP_SOLENOID *mapSol;
   long iz, ir;
-  double R, Zoffset, BphiOverRG, ErOverR, BrOverRG;
-  double X, Y, Z, sinPhase, cosPhase;
+  double R, Zoffset, BrOverRG;
+  double X, Y, Z;
   double B1, B2;
   
   derivCalls++;
@@ -1500,7 +1500,7 @@ void setupRftmEz0FromFile(RFTMEZ0 *rftmEz0, double frequency, double length)
   SDDS_DATASET SDDSin;
   long i;
   double *z;
-  double k, omega, Ez, EzMax;
+  double k, Ez, EzMax;
   
   if (!rftmEz0)
     bomb("setupRftmEz0FromFile: NULL pointer passed.", NULL);
@@ -1764,7 +1764,7 @@ long analyzeSpacing(double *z, long nz, double *dzReturn, FILE *fpError)
 void setupMapSolenoidFromFile(MAP_SOLENOID *mapSol, double length)
 {
   SDDS_DATASET SDDSin;
-  double *z, *r, dz, dr, *rTemp, z0;
+  double *z, *r, dz, dr, *rTemp;
   long page, ir, iz;
   
   if (mapSol->initialized)

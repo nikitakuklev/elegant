@@ -55,6 +55,9 @@ CopyrightNotice001*/
  * Michael Borland, 2000
  *
  $Log: not supported by cvs2svn $
+ Revision 1.4  2001/08/06 13:56:40  borland
+ Fixed memory leak.
+
  Revision 1.3  2001/07/02 18:09:46  borland
  Usage and error messages now mention the requirement for 't' column.
 
@@ -360,6 +363,7 @@ long SetUpOutputFile(SDDS_DATASET *SDDSout, char *outputfile)
       !SDDS_StartPage(SDDSout, 1)) {
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
+  return(1);
 }
 
 

@@ -66,7 +66,6 @@ void setup_sdds_beam(
                      long save_original
                      )
 {
-  char *ptr;
   static long initial_call = 1;
 
   log_entry("setup_sdds_beam");
@@ -488,7 +487,7 @@ long get_sdds_particles(double ***particle,
                         long n_skip      /* number of pages to skip */
                         )
 {
-  long i, np_max, np, np_new, rows, ifile, dump_rejected;
+  long i, np_max, np, np_new, rows, dump_rejected;
   long retval, data_seen;
   double **data, **new_data;
   static char s[200];

@@ -3,6 +3,11 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.13  2001/08/02 14:45:27  borland
+ * Added search_path feature to run_setup namelist and to many (all?) elements and
+ * commands that take input files.
+ * FITPOINT beam statistics data now includes x, y, and z emittances.
+ *
  * Revision 1.12  2000/10/25 20:52:00  borland
  * Added FLUSH_INTERVAL parameter to WATCH element.
  * Improvements to trace fitting.
@@ -156,7 +161,7 @@ void do_fit_trace_data(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
   MAT *D0, *paramVector0;
   double *lastParameterValues, *startParameterValues, minSV, maxSV;
   FIT_OUTPUT_DATA *outputData;
-  long pass=0, passCount, first, monitorCalsDone;
+  long pass=0, passCount, monitorCalsDone;
   
   /* process namelist text */
   process_namelist(&fit_traces, nltext);

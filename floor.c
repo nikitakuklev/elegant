@@ -178,7 +178,7 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
                              SDDS_DATASET *SDDS_floor, long row_index)
 {
   double dX, dY, dZ, rho, angle, coord[3], sangle[3], length;
-  long is_bend, is_misalignment, is_magnet, is_rotation, n_points, i, is_alpha;
+  long is_bend, is_misalignment, is_magnet, is_rotation, i, is_alpha;
   BEND *bend; KSBEND *ksbend; CSBEND *csbend; MALIGN *malign; CSRCSBEND *csrbend;
   ROTATE *rotate; ALPH *alpha;
   char label[200];

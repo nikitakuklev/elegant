@@ -1998,6 +1998,8 @@ extern long limit_amplitudes(double **coord, double xmax, double ymax, long np, 
 extern long elliptical_collimator(double **initial, ECOL *ecol, long np, double **accepted, double z, double P_central);
 extern long elimit_amplitudes(double **coord, double xmax, double ymax, long np, double **accepted, double z,
     double P_central, long extrapolate_z);
+extern long remove_outlier_particles(double **initial, CLEAN *clean, long np, 
+				     double **accepted, double z, double Po);  
 extern long beam_scraper(double **initial, SCRAPER *scraper, long np, double **accepted, double z,
     double P_central);
 extern long track_through_pfilter(double **initial, PFILTER *pfilter, long np, 
@@ -2192,6 +2194,7 @@ void element_link_control(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, RUN *run_
 void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *beamline);
 long assert_element_links(ELEMENT_LINKS *links, RUN *run_cond, LINE_LIST *beamline, long flags);
 void reset_element_links(ELEMENT_LINKS *links, RUN *run_cond, LINE_LIST *beamline);
+void rebaseline_element_links(ELEMENT_LINKS *links, RUN *run, LINE_LIST *beamline);
 
 void track_through_matter(double **part, long np, MATTER *matter, double Po);
 
@@ -2330,7 +2333,7 @@ extern void finishLatticeParametersFile(void);
 
 extern void doSubprocessCommand(char *command);
 void run_subprocess(NAMELIST_TEXT *nltext, RUN *run);
-long setSearchPath(char *path);
+void setSearchPath(char *path);
 char *findFileInSearchPath(char *filename);
 long getTableFromSearchPath(TABLE *tab, char *file, long sampleInterval, long flags);
 long SDDS_InitializeInputFromSearchPath(SDDS_DATASET *SDDSin, char *file);
@@ -2345,5 +2348,5 @@ double FELScalingFunction
    double *etaEnergySpread, double L1D, double beta, double emittance,
    double lightWavelength, double undulatorPeriod, double sigmaDelta);
 
-long do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
+void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 

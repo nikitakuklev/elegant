@@ -600,7 +600,7 @@ long remove_outlier_particles(
                               double Po
                               )
 {
-  double length, *ini;
+  double *ini;
   long ip, itop, is_out, j, mode;
   double limit[6], centroid[6], stDev[6];
   long count;

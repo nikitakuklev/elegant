@@ -853,7 +853,6 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   double delta_xp;
   double macroParticleCharge, CSRConstant;
   long iBin, iBinBehind;
-  double wavelength, criticalWavelength;
   long csrInhibit = 0;
   double derbenevRatio = 0;
 
@@ -1561,8 +1560,7 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
                             double Po, double **accepted, double zStart, char *rootname)
 {
   long iPart, iKick, iBin, binned, nKicks, iSpreadMode;
-  long nBins, maxBins, nBinned, diBin;
-  double *coord, t, p, beta, dz, ct0, factor, dz0, dzFirst;
+  double *coord, p, beta, dz, ct0, factor, dz0, dzFirst;
   double ctmin, ctmax, spreadFactor, dct;
   double zTravel, attenuationLength, thetaRad, sigmaZ, overtakingLength, criticalWavelength, wavelength;
   static char *spreadMode[3] = {"full", "simple", "radiation-only"};
@@ -1660,7 +1658,6 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
 
   if (mode&CSRDRIFT_SALDIN54) {
     if (csrWake.FdNorm==NULL) {
-      char s[100];
       if (csrDrift->nSaldin54Points<20) 
         csrDrift->nSaldin54Points = 20;
       computeSaldinFdNorm(&csrWake.FdNorm, &csrWake.xSaldin, &csrWake.nSaldin,
@@ -1869,9 +1866,9 @@ void computeSaldinFdNorm(double **FdNorm, double **x, long *n, double sMax, long
                          double Po, double radius, double bendingAngle, double dx, 
                          char *normMode)
 {
-  double xEnd, sh, beta, gamma, xh, xLimit, dx0;
-  long ix, ix1, ix2, scan, try, is;
-  double psi, psi2, phihs, phihm, xhLowerLimit, xUpperLimit, s, f, fx;
+  double xEnd, sh, beta, gamma, xh, dx0;
+  long ix, is;
+  double phihs, phihm, xhLowerLimit, xUpperLimit, s, f, fx;
   double t1, t2, f0, fmax;
   char *allowedNormMode[2] = {"first", "peak"};
 
@@ -1962,7 +1959,7 @@ void computeSaldinFdNorm(double **FdNorm, double **x, long *n, double sMax, long
 
 double SolveForPsiSaldin54(double xh, double sh)
 {
-  double s_sum, s_diff2, bestSol, bestSolValue;
+  double s_sum, s_diff2, bestSol;
   double solList[4];
   long nSols=0, sol;
   
@@ -2104,10 +2101,10 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
                             double Po, double **accepted, double zStart, char *rootname)
 {
   long iPart, iKick, iBin, binned, nKicks;
-  long nCaseC, nCaseD1, nCaseD2, noCaseD2;
+  long nCaseC, nCaseD1, nCaseD2;
   double ctLower, ctUpper, ds;
   long nBins, maxBins, nBinned, diBin;
-  double *coord, t, p, beta, dz, factor, dz0, dzFirst;
+  double *coord, p, beta, dz, factor, dz0, dzFirst;
   double zTravel, dct;
   double *ctHist=NULL, *ctHistDeriv=NULL, *phiSoln=NULL;
   double length;
@@ -2311,9 +2308,8 @@ double SolveForPhiStupakovFn(double phi)
 
 double SolveForPhiStupakov(double x, double ds, double phim)
 {
-  double phi, phi0;
+  double phi;
   static double phiLast = -1;
-  long i;
   
   if (ds<0)
     return -1;

@@ -116,9 +116,7 @@ void accumulate_beam_sums(
                           double p_central
                           )
 {
-  double *part, *part0;
   long i_part, i, j;
-  double beta0;
   double centroid[6];
   double Sij, value;
   

@@ -8,11 +8,11 @@
 
 #define DEBUG 0
 
-long do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
+void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 {
-    long i, index, thisType, lastType, iParam, nMatches;
+    long thisType, lastType, iParam, nMatches;
     ELEMENT_LIST *context, *eptr;
-    char *p_elem, *sdata;
+    char *p_elem;
     
     /* process the namelist text */
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);

@@ -3,6 +3,9 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.16  2001/06/12 00:25:51  borland
+ * Added beamsize_mode control to sasefel command.
+ *
  * Revision 1.15  2001/05/26 23:28:42  borland
  * Added longitudinal twiss parameter input for bunched_beam namelist.
  * Fixed problems with R&S focusing model in rf cavity elements.
@@ -386,8 +389,7 @@ long DefineSASEParameters(SASEFEL_OUTPUT *sasefelOutput, long slice)
 void doSASEFELAtEndOutput(SASEFEL_OUTPUT *sasefelOutput, long step)
 {
   SDDS_DATASET *SDDSout;
-  long slice, i;
-  char buffer[100];
+  long slice;
   
   if (!sasefelOutput || !sasefelOutput->active) 
     SDDS_Bomb("doSASEFELAtEndOutput called without proper setup!");

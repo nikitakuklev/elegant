@@ -73,7 +73,7 @@ long simple_rf_cavity(
     double **part, long np, RFCA *rfca, double **accepted, double *P_central, double zEnd
     )
 {
-    long ip, same_dgamma, iKick, nKicks;
+    long ip, same_dgamma, nKicks;
     double timeOffset, inverseF, dc4, x, xp;
     double P, gamma, dgamma, dgammaMax, phase, length, volt, To;
     double *coord, t, t0, omega, beta_i, tau, dt;

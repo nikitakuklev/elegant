@@ -1078,7 +1078,7 @@ double optimization_function(double *value, long *invalid)
 #endif
     result = 0;
     if (!*invalid) {
-      long i, terms;
+      long i, terms=0;
       double value, sum;
       if (balanceTerms && optimization_data->balance_terms && optimization_data->terms) {
         for (i=sum=0; i<optimization_data->terms; i++) {

@@ -85,29 +85,29 @@ typedef struct {
 
 #define ITERATION_LIMITS 10
 
-long printFunction( char *label, FUNCTION *data);
-long initializeFunction( FUNCTION *data);
-long readRingParameters( char *twissFile, double *energyMeV, 
+void printFunction( char *label, FUNCTION *data);
+void initializeFunction( FUNCTION *data);
+void readRingParameters( char *twissFile, double *energyMeV, 
                         double *momentumCompaction,
                         double *U0, double *sigmaDelta,
                         double *circumference);
 /* returned results is the first parameter. */
-long getWakeFunction( FUNCTION *wake, char *wakeFile, char *tCol, char *wCol,
+void getWakeFunction( FUNCTION *wake, char *wakeFile, char *tCol, char *wCol,
                      double delta, long points);
-long integrateWakeFunction( FUNCTION *stepResponse, FUNCTION *wake);
-long setupResultsFile( SDDS_TABLE *resultsPage, char *resultsFile, long points);
-long getInitialDensity( FUNCTION *density, long points, double deltaTime, double charge, double length);
-long copyDensity( FUNCTION *target, FUNCTION *source);
-long getPotentialDistortion( FUNCTION *potentialDistortion,
+void integrateWakeFunction( FUNCTION *stepResponse, FUNCTION *wake);
+void setupResultsFile( SDDS_TABLE *resultsPage, char *resultsFile, long points);
+void getInitialDensity( FUNCTION *density, long points, double deltaTime, double charge, double length);
+void copyDensity( FUNCTION *target, FUNCTION *source);
+void getPotentialDistortion( FUNCTION *potentialDistortion,
                   FUNCTION *Vinduced,
                   FUNCTION *density, FUNCTION *wake);
-long getPotentialDistortionFromModel( FUNCTION *potentialDistortion,
+void getPotentialDistortionFromModel( FUNCTION *potentialDistortion,
                            FUNCTION *Vinduced,
                            FUNCTION *density, double L, double R);
-long calculateDistribution( FUNCTION *distribution, FUNCTION *potential,
+void calculateDistribution( FUNCTION *distribution, FUNCTION *potential,
                           FUNCTION *potentialDistortion, double length, double VrfDot);
-long normalizeDensityFunction( FUNCTION *density, FUNCTION *distribution, double charge);
-long writeResults( SDDS_TABLE *resultsPage, FUNCTION *density, 
+void normalizeDensityFunction( FUNCTION *density, FUNCTION *distribution, double charge);
+void writeResults( SDDS_TABLE *resultsPage, FUNCTION *density, 
                   FUNCTION *potential, FUNCTION *potentialDistortion, 
                   FUNCTION *Vind, double charge, double averageCurrent,
                   long converged);
@@ -119,7 +119,7 @@ int main( int argc, char **argv)
   SCANNED_ARG *scanned;
   long i, j, k;
   char *twissFile, *resultsFile;
-  SDDS_DATASET twissPage, resultsPage;
+  SDDS_DATASET resultsPage;
   double particles, charge, finalCharge, length;
   long steps, points, iterationLimits, converged;
   long useWakeFunction, intermediateSolutions;
@@ -405,20 +405,19 @@ int main( int argc, char **argv)
   exit(0);
 }
 
-long initializeFunction( FUNCTION *data) {
+void initializeFunction( FUNCTION *data) {
   data->y = NULL;
   data->xStart = data->xDelta = 0.0;
   data->points = data->offset = 0;
   data->xFactor = data->yFactor = 0.0;
-  return;
 }
 
-long readRingParameters( char *twissFile, double *energyMeV, 
+void readRingParameters( char *twissFile, double *energyMeV, 
                         double *momentumCompaction,
                         double *U0, double *sigmaE,
                         double *circumference) {
   SDDS_TABLE twissPage;
-  double pCentral, *s, temp;
+  double pCentral, *s;
   long elements;
   
   if (verbosity)
@@ -444,10 +443,9 @@ long readRingParameters( char *twissFile, double *energyMeV,
   if (!SDDS_Terminate(&twissPage))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
   free(s);
-  return;
 }
 
-long getWakeFunction(FUNCTION *wake, char *wakeFile, char *tCol, char *wCol,
+void getWakeFunction(FUNCTION *wake, char *wakeFile, char *tCol, char *wCol,
                      double deltaTime, long points) {
   SDDS_TABLE wakePage;
   double time, *t, *V;
@@ -501,10 +499,9 @@ long getWakeFunction(FUNCTION *wake, char *wakeFile, char *tCol, char *wCol,
     time = wake->xStart + i * deltaTime;
     wake->y[i] = interp( V, t, rows, time, 1, 1, &returnCode );
   }
-  return;
 }
 
-long integrateWakeFunction(FUNCTION *stepResponse, FUNCTION *wake) {
+void integrateWakeFunction(FUNCTION *stepResponse, FUNCTION *wake) {
   long i;
   
   *stepResponse = *wake;
@@ -515,10 +512,9 @@ long integrateWakeFunction(FUNCTION *stepResponse, FUNCTION *wake) {
     stepResponse->y[i] = stepResponse->y[i-1] + wake->xDelta * 
       (wake->y[i] + wake->y[i-1]) / 2.0;
   }
-  return;
 }
 
-long setupResultsFile( SDDS_TABLE *resultsPage, char *resultsFile, long points) {
+void setupResultsFile( SDDS_TABLE *resultsPage, char *resultsFile, long points) {
   /* define three columns but no parameters */
   if (!SDDS_InitializeOutput(resultsPage, SDDS_BINARY, 1, 
                              "Bunch density distribution", 
@@ -555,10 +551,9 @@ long setupResultsFile( SDDS_TABLE *resultsPage, char *resultsFile, long points) 
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   if (!SDDS_WriteLayout(resultsPage)|| !SDDS_StartPage(resultsPage, points))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-  return;
 }
 
-long getInitialDensity( FUNCTION *density, long points, double deltaTime, 
+void getInitialDensity( FUNCTION *density, long points, double deltaTime, 
                        double charge, double length) {
   long i;
   double C;
@@ -576,10 +571,9 @@ long getInitialDensity( FUNCTION *density, long points, double deltaTime,
     density->y[i] = C * exp( -sqr( (i + density->offset) * density->xDelta) /
                             2.0 / sqr(length));
   }
-  return;
 }
 
-long copyDensity( FUNCTION *target, FUNCTION *source) {
+void copyDensity( FUNCTION *target, FUNCTION *source) {
   long i;
   double *ptr;
   
@@ -595,10 +589,9 @@ long copyDensity( FUNCTION *target, FUNCTION *source) {
   for (i=0; i<source->points;i++) {
     target->y[i] = source->y[i];
   }
-  return;
 }
 
-long getPotentialDistortion( FUNCTION *potentialDistortion,
+void getPotentialDistortion( FUNCTION *potentialDistortion,
                   FUNCTION *Vind,
                   FUNCTION *density, FUNCTION *wake) {
   long i, j, index;
@@ -659,10 +652,9 @@ long getPotentialDistortion( FUNCTION *potentialDistortion,
   for (i=0; i<potentialDistortion->points; i++) {
     potentialDistortion->y[i] -= potentialDistortion->y[potentialDistortion->offset];
   }
-  return;
 }
 
-long getPotentialDistortionFromModel( FUNCTION *potentialDistortion,
+void getPotentialDistortionFromModel( FUNCTION *potentialDistortion,
                            FUNCTION *Vind,
                            FUNCTION *density, double L, double R) {
   long i;
@@ -714,10 +706,9 @@ long getPotentialDistortionFromModel( FUNCTION *potentialDistortion,
          density->y[potentialDistortion->points - 2])/
       density->xDelta + R * density->y[potentialDistortion->points - 1];
   free(charge);
-  return;
 }
 
-long calculateDistribution( FUNCTION *distribution, FUNCTION *potential,
+void calculateDistribution( FUNCTION *distribution, FUNCTION *potential,
                           FUNCTION *potentialDistortion,
                           double length, double VrfDot) {
   long i;
@@ -752,10 +743,9 @@ long calculateDistribution( FUNCTION *distribution, FUNCTION *potential,
       1.0/ VrfDot/ sqr(length) * potentialDistortion->y[i];
     distribution->y[i] = exp( - potential->y[i]);
   }
-  return;
 }
 
-long normalizeDensityFunction( FUNCTION *density, FUNCTION *distribution, double charge) {
+void normalizeDensityFunction( FUNCTION *density, FUNCTION *distribution, double charge) {
   long i;
   double integral;
   
@@ -768,10 +758,9 @@ long normalizeDensityFunction( FUNCTION *density, FUNCTION *distribution, double
   for (i=0; i<distribution->points; i++) {
     density->y[i] = (charge/integral) * distribution->y[i];
   }
-  return;
 }
 
-long writeResults( SDDS_TABLE *resultsPage, FUNCTION *density, 
+void writeResults( SDDS_TABLE *resultsPage, FUNCTION *density, 
                   FUNCTION *potential, FUNCTION *potentialDistortion, 
                   FUNCTION *Vind, double charge, double averageCurrent,
                   long converged) {
@@ -803,10 +792,9 @@ long writeResults( SDDS_TABLE *resultsPage, FUNCTION *density,
   free(time);
   free(current);
   free(actualDensity);
-  return;
 }
 
-long printFunction( char *label, FUNCTION *data) {
+void printFunction( char *label, FUNCTION *data) {
   long i;
 
   fprintf( stderr, "Structure %s:\n", label);
@@ -825,5 +813,4 @@ long printFunction( char *label, FUNCTION *data) {
   for (i=data->points-3;i<data->points;i++) {
     fprintf( stderr, "\t%s.y[%ld]: %g\n", label, i, data->y[i]);
   }
-  return;
 }

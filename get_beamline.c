@@ -35,7 +35,7 @@ void lfree(void *ptr)
 #define MAX_FILE_NESTING 10
 LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, long echo, long divisions)
 {
-  long type, i, i_elem;
+  long type, i;
   long occurence, iMad;
   static ELEMENT_LIST *eptr, *eptr1;
   static LINE_LIST *lptr;

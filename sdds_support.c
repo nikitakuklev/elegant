@@ -566,7 +566,6 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
 {
     long sample, i, j;
     double tc, tc0, p_sum, gamma_sum, sum, p;
-    double revolutionTime;
     
     log_entry("dump_watch_parameters");
 
@@ -1127,7 +1126,7 @@ void dump_sigma(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, lo
   long i, j, ie, offset, plane, index;
   BEAM_SUMS *beam;
   ELEMENT_LIST *eptr;
-  double Sigma[6], sigma[6][6], centroid[6], emit, emitNorm;
+  double emit, emitNorm;
   char *name, *type_name;
   long s_index, ma1_index, Sx_index, occurence, ex_index;
   long sNIndex[6];

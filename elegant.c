@@ -1274,7 +1274,7 @@ void print_dictionary_entry(FILE *fp, long type, long latex_form)
       exit(1);
     }
     if (latex_form) {
-      char *ptr0, *ptr1, buffer[1024];
+      char *ptr0, buffer[1024];
       strcpy(buffer, entity_description[type].parameter[j].description);
       if (strlen(ptr0 = buffer)) {
         /* don't need splitting of strings since the p tabular code 

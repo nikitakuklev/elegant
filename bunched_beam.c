@@ -311,9 +311,8 @@ long track_beam(
                 double *finalCharge
                 )
 {    
-  double p_central, p_central0;
+  double p_central;
   long n_left, n_trpoint, effort;
-  VMATRIX *M;
 
   log_entry("track_beam");
 

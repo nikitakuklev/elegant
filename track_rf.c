@@ -19,14 +19,12 @@ void track_through_rf_deflector(
 {
     double t_first;     /* time when first particle crosses cavity center */
     double t_part;      /* time at which a particle enters cavity */
-    double Epsi;         /* omega*(t_part-t_first)+phase      */
     double Estrength;    /* |e.V.L/nSections|/(gap.m.c^2.k) */
-    double x, xp, y, yp, dxp, dyp;
-    double beta, dp_r, px, py, pz, dr, beta_z, pc;
+    double x, xp, y, yp;
+    double beta, dp_r, px, py, pz, beta_z, pc;
     double omega, Ephase;
     double cos_tilt, sin_tilt;
-    double cos_Epsi;
-    double length, dt_part, k, z;
+    double length, k, z;
     long ip, is;
 
     log_entry("track_through_rf_deflector");

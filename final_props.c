@@ -339,7 +339,7 @@ long compute_final_properties
   register long i, j;
   long i_data, index, offset;
   double dp_min, dp_max, Ddp;
-  double p_sum, gamma_sum, p, sum, sum2, tc, tmin, tmax, dt, t, pAverage;
+  double p_sum, gamma_sum, p, sum, tc, tmin, tmax, dt, t, pAverage;
   double **R, centroid[6];
   MATRIX Rmat;
   static double *tData = NULL, *deltaData = NULL;

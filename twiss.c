@@ -804,7 +804,6 @@ long run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, lon
   long n_elem, last_n_elem;
   unsigned long unstable;
   TWISS twiss_ave, twiss_min, twiss_max;
-  long i;
 
   /*
     if (beamline->flags&BEAMLINE_TWISS_CURRENT)

@@ -4,7 +4,7 @@
 #include "mdb.h"
 
 static char *search_path = NULL;
-long setSearchPath(char *input)
+void setSearchPath(char *input)
 {
   if (search_path)
     free(search_path);

@@ -21,7 +21,7 @@ int main()
 {
   double a, b, err, factor, eaccFinal;
   long i, n, limit, evals, decades, decade;
-  double fn(), result, lastResult;
+  double fn(), result=0, lastResult;
   double fn1(double x);
   char filename[500];
   FILE *fp;

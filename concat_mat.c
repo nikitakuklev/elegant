@@ -29,7 +29,7 @@ void concat_matrices(VMATRIX *M2, VMATRIX *M1, VMATRIX *M0, unsigned long mode)
     double *C2, **R2, ***T2, ****Q2;
     double *C1, **R1, ***T1, ****Q1;
     double *C0, **R0, ***T0, ****Q0;
-    double M1C4, M0C4;
+    double M0C4;
     long order;
     long i, j, k, l, m, n, p;
     double sum;
