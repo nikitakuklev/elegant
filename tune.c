@@ -47,6 +47,7 @@ void setup_tune_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline,
         bomb("too few quadrupoles given for tune correction", NULL);
     tune->tunex = tune_x;
     tune->tuney = tune_y;
+    tune->gain = correction_fraction;
     tune->n_iterations = n_iterations;
     alter_defined_values = change_defined_values;
 
@@ -226,6 +227,7 @@ void do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline, do
             bomb("confirm_parameter doesn't return offset for K1 parameter of quadrupole!\n", NULL);
     
         m_mult(tune->dK1, tune->T, tune->dtune);
+        m_scmul(tune->dK1, tune->dK1, tune->gain);
         for (i=0; i<tune->n_families; i++) {
             context = NULL;
             while (context=find_element(tune->name[i], &context, &(beamline->elem))) {

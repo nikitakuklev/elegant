@@ -9,7 +9,8 @@
     STRING quadrupoles = NULL;
     double tune_x = -1;
     double tune_y = -1;
-    long n_iterations = 1;
+    long n_iterations = 5;
+    double correction_fraction = 0.9;
     STRING strength_log = NULL;
     long change_defined_values = 0;
 #end
