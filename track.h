@@ -513,14 +513,14 @@ extern char *entity_text[N_TYPES];
 #define N_ECOL_PARAMS 5
 #define N_MARK_PARAMS 1
 #define N_MATR_PARAMS 3
-#define N_ALPH_PARAMS 12
+#define N_ALPH_PARAMS 13
 #define N_RFDF_PARAMS 8
 #define N_RFTM_PARAMS 15
 #define N_RMDF_PARAMS 10
 #define N_TMCF_PARAMS 18
 #define N_CEPL_PARAMS 16
 #define N_TWPL_PARAMS 16
-#define N_WATCH_PARAMS 10
+#define N_WATCH_PARAMS 11
 #define N_MALIGN_PARAMS 9
 #define N_TWLA_PARAMS 19
 #define N_PEPPOT_PARAMS 6
@@ -799,13 +799,14 @@ extern PARAMETER alph_param[N_ALPH_PARAMS] ;
 
 /* x_max(m) = ALPHA_CONST*sqrt(beta*gamma/grad_B(G/cm)) */
 #define ALPHA_CONST 0.750498604674380
+#define ALPHA_ANGLE (PI/180.0*40.709910707900)
 
 typedef struct {
     double xmax;        /* 75.05*sqrt(beta*gamma/gradient) in meters */
     double xs1, xs2;    /* for momentum filtration */
     double dp1, dp2;    /* for momentum filtration */
     double xPuck, widthPuck;  /* for momentum filtration */
-    double dx, dy, dz;
+    double dx, dy, dz, tilt;
     long part;
     long order;
     double gradient;   
@@ -922,7 +923,7 @@ typedef struct {
     double fraction;
     long interval, start_pass;
     char *filename, *label, *mode;
-    long xData, yData, longitData, flushInterval;
+    long xData, yData, longitData, excludeSlopes, flushInterval;
     /* internal variables for SDDS output */
     long initialized, count, mode_code, window_code;
     long xIndex[2], yIndex[2], longitIndex[3], IDIndex;

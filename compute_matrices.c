@@ -444,6 +444,8 @@ VMATRIX *compute_matrix(
         if ((alph->xs1 || alph->xs2 || alph->dp1!=-1 || alph->dp2!=1 ||
              alph->xPuck!=-1 || alph->widthPuck!=0) && alph->part==0)
             bomb("alpha-magnet scraper not supported for full magnet", NULL);
+        if (alph->tilt)
+            tilt_matrices(elem->matrix, alph->tilt);
         if (alph->dx || alph->dy || alph->dz)
             misalign_matrix(elem->matrix, alph->dx, alph->dy, alph->dz, 0.0);
         break;  

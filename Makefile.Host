@@ -2,7 +2,7 @@ TOP = ../../..
 include $(TOP)/config/CONFIG_APPS
 
 CMPLR = ANSI
-#CC = $($(ANSI)_$(CMPLR))
+CC = $($(ANSI)_$(CMPLR))
 #HOST_OPT = NO
 #CC = purify $($(ANSI)_$(CMPLR))
 

@@ -372,6 +372,7 @@ PARAMETER alph_param[N_ALPH_PARAMS] = {
     {"DX", "M", IS_DOUBLE, 1, (long)((char *)&alph_example.dx), NULL, 0.0, 0},
     {"DY", "M", IS_DOUBLE, 1, (long)((char *)&alph_example.dy), NULL, 0.0, 0},
     {"DZ", "M", IS_DOUBLE, 1, (long)((char *)&alph_example.dz), NULL, 0.0, 0},
+    {"TILT", "", IS_DOUBLE, 0, (long)((char *)&alph_example.tilt), NULL, 0.0, 0},
     {"PART", "", IS_LONG, 0, (long)((char *)&alph_example.part), NULL, 0.0, 0},
     {"ORDER", "", IS_LONG, 1, (long)((char *)&alph_example.order), NULL, 0.0, 0}
     } ;
@@ -485,6 +486,7 @@ PARAMETER watch_param[N_WATCH_PARAMS] = {
     {"X_DATA", "", IS_LONG, 0, (long)((char*)&watch_example.xData), NULL, 0.0, 1},
     {"Y_DATA", "", IS_LONG, 0, (long)((char*)&watch_example.yData), NULL, 0.0, 1},
     {"LONGIT_DATA", "", IS_LONG, 0, (long)((char*)&watch_example.longitData), NULL, 0.0, 1},
+    {"EXCLUDE_SLOPES", "", IS_LONG, 0, (long)((char*)&watch_example.excludeSlopes), NULL, 0.0, 0},
     {"FLUSH_INTERVAL", "", IS_LONG, 0, (long)((char *)&watch_example.flushInterval), NULL, 0.0, 0},    
     } ;
 

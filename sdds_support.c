@@ -296,8 +296,9 @@ void SDDS_WatchPointSetup(WATCH *watch, long mode, long lines_per_row,
     columns = 0;
     if (watch->xData) {
       if ((watch->xIndex[0]=SDDS_DefineColumn(SDDS_table, "x", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
-          (watch->xIndex[1]=SDDS_DefineColumn(SDDS_table, "xp", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0) {
-        fprintf(stdout, "Unable to define SDDS columns x and xp for file %s (%s)\n",
+          (!watch->excludeSlopes &&
+           (watch->xIndex[1]=SDDS_DefineColumn(SDDS_table, "xp", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0)) {
+        fprintf(stdout, "Unable to define SDDS columns x and/or xp for file %s (%s)\n",
                 filename, caller);
         fflush(stdout);
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
@@ -306,7 +307,8 @@ void SDDS_WatchPointSetup(WATCH *watch, long mode, long lines_per_row,
     }
     if (watch->yData) {
       if ((watch->yIndex[0]=SDDS_DefineColumn(SDDS_table, "y", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
-          (watch->yIndex[1]=SDDS_DefineColumn(SDDS_table, "yp",  NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0) {
+          (!watch->excludeSlopes &&
+           (watch->yIndex[1]=SDDS_DefineColumn(SDDS_table, "yp",  NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0)) {
               fprintf(stdout, "Unable to define SDDS columns y and yp for file %s (%s)\n",
                 filename, caller);
               fflush(stdout);
@@ -507,14 +509,16 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
     if (watch->fraction==1 || random_2(0)<watch->fraction) {
       if (watch->xData && 
           !SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row,
-                             watch->xIndex[0], particle[i][0], watch->xIndex[1], particle[i][1],
+                             watch->xIndex[0], particle[i][0], 
+                             watch->excludeSlopes?-1:watch->xIndex[1], particle[i][1],
                              -1)) {
         SDDS_SetError("Problem setting SDDS row values (dump_watch_particles)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
       if (watch->yData &&
           !SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row,
-                             watch->yIndex[0], particle[i][2], watch->yIndex[1], particle[i][3],
+                             watch->yIndex[0], particle[i][2], 
+                             watch->excludeSlopes?-1:watch->yIndex[1], particle[i][3],
                              -1)) {
         SDDS_SetError("Problem setting SDDS row values (dump_watch_particles)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);

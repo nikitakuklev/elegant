@@ -148,7 +148,8 @@ void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamli
   m_alloc(&W1, 3, 3);
   s = 0;
   while (elem) {
-    row_index = advanceFloorCoordinates(V1, W1, V0, W0, &theta, &phi, &psi, &s, elem, last_elem, &SDDS_floor, row_index);
+    row_index = advanceFloorCoordinates(V1, W1, V0, W0, &theta, &phi, &psi, &s, 
+                                        elem, last_elem, &SDDS_floor, row_index);
     m_copy(W0, W1);
     m_copy(V0, V1);
     elem = elem->succ;
@@ -177,9 +178,9 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
                              SDDS_DATASET *SDDS_floor, long row_index)
 {
   double dX, dY, dZ, rho, angle, coord[3], sangle[3], length;
-  long is_bend, is_misalignment, is_magnet, is_rotation, n_points, i;
+  long is_bend, is_misalignment, is_magnet, is_rotation, n_points, i, is_alpha;
   BEND *bend; KSBEND *ksbend; CSBEND *csbend; MALIGN *malign; CSRCSBEND *csrbend;
-  ROTATE *rotate;
+  ROTATE *rotate; ALPH *alpha;
   char label[200];
   static MATRIX *temp33, *tempV, *R, *S, *T, *TInv, *V0s, *V1s;
   static long matricesAllocated = 0;
@@ -195,8 +196,8 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
     matricesAllocated = 1;
   }
   
-  is_bend = is_magnet = is_rotation = is_misalignment = 0;
-  length = dX = dY = dZ = tilt = 0;
+  is_bend = is_magnet = is_rotation = is_misalignment = is_alpha = 0;
+  length = dX = dY = dZ = tilt = angle = 0;
   switch (elem->type) {
   case T_RBEN: case T_SBEN:
     is_bend = 1;
@@ -234,6 +235,25 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
     angle = atan(sqrt(sqr(malign->dxp)+sqr(malign->dyp)));
     tilt = atan2(malign->dyp, -malign->dxp);
     is_misalignment = 1;
+    break;
+  case T_ALPH:
+    is_alpha = 1;
+    alpha = (ALPH*)elem->p_elem;
+    tilt = alpha->tilt;
+    switch (alpha->part) {
+    case 1:
+      dX = alpha->xmax*sin(ALPHA_ANGLE);
+      dZ = alpha->xmax*cos(ALPHA_ANGLE);
+      angle = -(ALPHA_ANGLE + PI/2);
+      break;
+    case 2:
+      dX = alpha->xmax;
+      angle = -(ALPHA_ANGLE + PI/2);
+      break;
+    default:
+      angle = -(2*ALPHA_ANGLE + PI);
+      break;
+    }
     break;
   case T_ROTATE:
     rotate = (ROTATE*)elem->p_elem;
@@ -281,7 +301,7 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
       R->a[0][0] = R->a[1][0] = 0;
       R->a[2][0] = length;
     }
-  } else if (is_misalignment) {
+  } else if (is_misalignment || is_alpha) {
     R->a[0][0] = dX;
     R->a[1][0] = dY;
     R->a[2][0] = dZ;
@@ -462,6 +482,7 @@ void computeSurveyAngles(double *theta, double *phi, double *psi, MATRIX *W)
   double arg;
   
   arg = sqrt( sqr(W->a[1][0]) + sqr(W->a[1][1]));  /* |cos(phi)| */
+  arg = SIGN(cos(*phi))*arg;
   *phi = nearbyAngle(atan2(W->a[1][2], arg), *phi);
   if (arg>1e-20) {
     *theta = nearbyAngle(atan2(W->a[0][2], W->a[2][2]), *theta);
