@@ -17,7 +17,7 @@ void convertFromCSBendCoords(double **part, long np, double rho0,
 			     double cos_ttilt, double sin_ttilt, long ctMode);
 void convertToCSBendCoords(double **part, long np, double rho0, 
 			     double cos_ttilt, double sin_ttilt, long ctMode);
-long applyHighPassFilter(double *histogram, long bins, double dx, double start, double end);
+long applyLowPassFilter(double *histogram, long bins, double dx, double start, double end);
 
 static double Fy_0, Fy_x, Fy_x2, Fy_x3, Fy_x4;
 static double Fy_y2, Fy_x_y2, Fy_x2_y2;
@@ -1318,7 +1318,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
            */
         if (csbend->highFrequencyCutoff0>0) {
           long nz;
-          nz = applyHighPassFilter(ctHist, nBins, dct, csbend->highFrequencyCutoff0, csbend->highFrequencyCutoff1);
+          nz = applyLowPassFilter(ctHist, nBins, dct, csbend->highFrequencyCutoff0, csbend->highFrequencyCutoff1);
           if (nz) {
             fprintf(stdout, "Warning: high pass filter resulted in negative values in %ld bins\n",
                     nz);
@@ -2336,7 +2336,7 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
        */
     if (csrWake.highFrequencyCutoff0>0) {
       long nz;
-      nz = applyHighPassFilter(ctHist, nBins, dct, csrWake.highFrequencyCutoff0, csrWake.highFrequencyCutoff1);
+      nz = applyLowPassFilter(ctHist, nBins, dct, csrWake.highFrequencyCutoff0, csrWake.highFrequencyCutoff1);
       if (nz) {
         fprintf(stdout, "Warning: high pass filter resulted in negative values in %ld bins\n",
                 nz);
@@ -2705,7 +2705,7 @@ void convertToCSBendCoords(double **part, long np, double rho0,
 }
 
 #include "fftpackC.h"
-long applyHighPassFilter(double *histogram, long bins, double dx, double start, double end)
+long applyLowPassFilter(double *histogram, long bins, double dx, double start, double end)
 {
   long i, i1, i2, nz;
   double fraction, dfraction, sum1, sum2;
@@ -2723,13 +2723,13 @@ long applyHighPassFilter(double *histogram, long bins, double dx, double start, 
   dfrequency = 1.0/length;
   realFFT2(realimag, histogram, bins, 0);
 
-  i1 = start/dfrequency+0.5;
+  i1 = start*frequencies;
   if (i1<0) 
     i1=0;
   if (i1>frequencies-1)
     i1 = frequencies-1;
   
-  i2 = end/dfrequency+0.5;
+  i2 = end*frequencies;
   if (i2<0) 
     i2=0;
   if (i2>frequencies-1)
