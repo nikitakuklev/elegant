@@ -792,6 +792,12 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double s, long n, double rho0
 }
 
 typedef struct {
+  unsigned long lastMode;
+#define CSRDRIFT_STUPAKOV          0x0001UL
+#define CSRDRIFT_SALDIN54          0x0002UL
+#define CSRDRIFT_OVERTAKINGLENGTH  0x0004UL
+#define CSRDRIFT_ATTENUATIONLENGTH 0x0008UL
+#define CSRDRIFT_SPREAD            0x0010UL
   long bins, valid;
   double dctBin, s0, ds0, zLast, z0;
   double S11, S12, S22;
@@ -803,6 +809,10 @@ typedef struct {
   double *FdNorm;   /* Saldin's Fd(sh, x)/Fd(sh, 0), sh = bunch-length*gamma^3/rho */
   double *xSaldin;  /* distance from end of bend */
   double lastFdNorm; /* last value obtained from interpolation */
+  /* for Stupakov mode */
+  long SGOrder, SGHalfWidth, SGDerivHalfWidth, SGDerivOrder;
+  long binRangeFactor;
+  double GSConstant, MPCharge;
 } CSR_LAST_WAKE;
 CSR_LAST_WAKE csrWake;
 
@@ -1064,6 +1074,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
         !SDDS_DefineSimpleColumn(&csbend->SDDSout, "LinearDensity", "C/s", SDDS_DOUBLE) ||
         !SDDS_DefineSimpleColumn(&csbend->SDDSout, "LinearDensityDeriv", "C/s$a2$n", SDDS_DOUBLE) ||
         !SDDS_DefineSimpleColumn(&csbend->SDDSout, "DeltaGamma", NULL, SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(&csbend->SDDSout, "GammaDeriv", "1/m", SDDS_DOUBLE) ||
         !SDDS_DefineSimpleColumn(&csbend->SDDSout, "DeltaGammaT1", NULL, SDDS_DOUBLE) ||
         !SDDS_DefineSimpleColumn(&csbend->SDDSout, "DeltaGammaT2", NULL, SDDS_DOUBLE) ||
         !SDDS_WriteLayout(&csbend->SDDSout)) {
@@ -1236,7 +1247,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
         if ((nBinned = 
              binParticleCoordinate(&ctHist, &maxBins,
                                    &ctLower, &ctUpper, &dct, &nBins, 
-                                   csbend->binRangeFactor<1?1:csbend->binRangeFactor, 
+                                   csbend->binRangeFactor<1.1?1.1:csbend->binRangeFactor, 
                                    part, n_part, 4))!=n_part) {
           fprintf(stdout, "Only %ld of %ld particles binned for CSR\n", nBinned, n_part);
           fflush(stdout);
@@ -1290,12 +1301,16 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
       }
       
       for (i_part=0; i_part<n_part; i_part++) {
+        long nBins1;
+        nBins1 = nBins-1;
         coord = part[i_part];
         if (!particleLost[i_part]) {
+          double f;
           /* apply CSR kick */
-          iBin = (CT-ctLower)/dct;
-          if (iBin>=0 && iBin<nBins)
-            DP += dGamma[iBin]/Po;
+          iBin = (f=(CT-ctLower)/dct);
+          f -= iBin;
+          if (iBin>=0 && iBin<nBins1)
+            DP += ((1-f)*dGamma[iBin]+f*dGamma[iBin+1])/Po;
         }
       }
 
@@ -1327,10 +1342,13 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
           ctHist[iBin] /= macroParticleCharge*c_mks;
           ctHistDeriv[iBin] /= macroParticleCharge*sqr(c_mks)/dct;
         }
-        /* use T1 array to output s */
-        for (iBin=0; iBin<nBins; iBin++)
+        /* use T1 array to output s and T2 to output dGamma/ds */
+        for (iBin=0; iBin<nBins; iBin++) {
           T1[iBin] = ctLower-(ctLower+ctUpper)/2.0+dct*(iBin+0.5);
+          T2[iBin] = dGamma[iBin]/(csbend->length/csbend->n_kicks);
+        }
         if (!SDDS_SetColumn(&csbend->SDDSout, SDDS_SET_BY_NAME, T1, nBins, "s") ||
+            !SDDS_SetColumn(&csbend->SDDSout, SDDS_SET_BY_NAME, T2, nBins, "GammaDeriv") ||
             !SDDS_WritePage(&csbend->SDDSout))
           SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
       }
@@ -1344,7 +1362,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     if ((nBinned = 
          binParticleCoordinate(&ctHist, &maxBins,
                                &ctLower, &ctUpper, &dct, &nBins, 
-                               csbend->binRangeFactor<1?1:csbend->binRangeFactor, 
+                               csbend->binRangeFactor<1.1?1.1:csbend->binRangeFactor, 
                                part, n_part, 4))!=n_part) {
       fprintf(stdout, "Only %ld of %ld particles binned for CSR\n", nBinned, n_part);
       fflush(stdout);
@@ -1453,6 +1471,13 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     csrWake.rho = rho_actual;
     csrWake.bendingAngle = fabs(angle);
     csrWake.Po = Po;
+    csrWake.SGOrder = csbend->SGOrder;
+    csrWake.SGDerivOrder = csbend->SGDerivOrder;
+    csrWake.SGHalfWidth = csbend->SGHalfWidth;
+    csrWake.SGDerivHalfWidth = csbend->SGDerivHalfWidth;
+    csrWake.GSConstant = CSRConstant*pow(3*rho0*rho0, 1./3.)/2;  /* used for G. Stupakov's drift formulae */
+    csrWake.MPCharge = macroParticleCharge;
+    csrWake.binRangeFactor = csbend->binRangeFactor;
   }
   
 #if defined(MINIMIZE_MEMORY)
@@ -1485,6 +1510,7 @@ long binParticleCoordinate(double **hist, long *maxBins,
   if (*binSize>0 && *bins>1)
     return -2;
   if (*lower==*upper) {
+    /* find range of points */
     *upper = -(*lower = DBL_MAX);
     for (iParticle=0; iParticle<nParticles; iParticle++) {
       value = particleCoord[iParticle][coordinateIndex];
@@ -1493,7 +1519,7 @@ long binParticleCoordinate(double **hist, long *maxBins,
       if (value>*upper)
         *upper = value;
     }
-    if (expansionFactor!=1) {
+    if (expansionFactor>1) {
       double center, range;
       center = (*lower+*upper)/2;
       range = (*upper-*lower)*expansionFactor;
@@ -1503,8 +1529,11 @@ long binParticleCoordinate(double **hist, long *maxBins,
   }
   
   if (*binSize>0)
+    /* bin size given, so determine the number of bins */
     *bins = (*upper-*lower)/(*binSize);
   *binSize = (*upper-*lower)/(*bins);
+
+  /* realloc if necessary */
   if (*bins>*maxBins &&
       !(*hist=SDDS_Realloc(*hist, sizeof(**hist)*(*maxBins=*bins))))
     bomb("Memory allocation failure (binParticleCoordinate)", NULL);
@@ -1525,24 +1554,56 @@ long binParticleCoordinate(double **hist, long *maxBins,
 
 void computeSaldinFdNorm(double **FdNorm, double **x, long *n, double sMax, long ns,
                          double Po, double radius, double angle, double dx, char *normMode);
+long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift, 
+                                     double Po, double **accepted, double zStart, char *rootname);
 
 long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift, 
                             double Po, double **accepted, double zStart, char *rootname)
 {
   long iPart, iKick, iBin, binned, nKicks, iSpreadMode;
+  long nBins, maxBins, nBinned, diBin;
   double *coord, t, p, beta, dz, ct0, factor, dz0, dzFirst;
-  double ctmin, ctmax, spreadFactor;
+  double ctmin, ctmax, spreadFactor, dct;
   double zTravel, attenuationLength, thetaRad, sigmaZ, overtakingLength, criticalWavelength, wavelength;
-  double a0, a1, a2;
   static char *spreadMode[3] = {"full", "simple", "radiation-only"};
   static char *wavelengthMode[3] = {"sigmaz", "bunchlength", "peak-to-peak"};
   static char *bunchlengthMode[3] = {"rms", "68-percentile", "90-percentile"};
+  unsigned long mode;
+  static long warned = 0;
+  long nBins1;
   
   if (np<=1 || !csrWake.valid || !csrDrift->csr) {
     drift_beam(part, np, csrDrift->length, 2);
     return np;
   }
+  nBins1 = csrWake.bins - 1;
 
+  mode = 
+    (csrDrift->spread?CSRDRIFT_SPREAD:0) +
+      (csrDrift->useOvertakingLength?CSRDRIFT_OVERTAKINGLENGTH:0) +
+        (csrDrift->useSaldin54?CSRDRIFT_SALDIN54:0) +
+          (csrDrift->attenuationLength>0?CSRDRIFT_ATTENUATIONLENGTH:0) +
+            (csrDrift->useStupakov?CSRDRIFT_STUPAKOV:0) ;
+  if (bitsSet(mode)>1) {
+    fprintf(stdout, "Error: Too many modes set for CSRDRIFT.\n");
+    exit(1);
+  }
+  if (csrWake.lastMode && csrWake.lastMode!=mode) {
+    fprintf(stdout, "Error: CSRDRIFT mode changed between dipoles. Pick one mode following each dipole.\n");
+    exit(1);
+  }
+  csrWake.lastMode = mode;
+  
+  if (mode&CSRDRIFT_STUPAKOV)
+    return track_through_driftCSR_Stupakov(part, np, csrDrift, Po, accepted, zStart, rootname);
+
+  if (!warned) {
+    fprintf(stdout, "Warning: USE_STUPAKOV=1 is recommended for CSRDRIFT elements.\n");
+    fprintf(stdout, "This is the most physical model available at this time in elegant.\n");
+    warned = 1;
+  }
+  
+  dct = csrWake.dctBin;
   if (csrDrift->dz>0) {
     if ((nKicks = csrDrift->length/csrDrift->dz)<1)
       nKicks = 1;
@@ -1569,17 +1630,12 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
   
   overtakingLength = pow(24*sigmaZ*csrWake.rho*csrWake.rho, 1./3.);
 
-  if (csrDrift->useOvertakingLength) {
-    if (csrDrift->spread || csrDrift->useSaldin54 || csrDrift->attenuationLength>0) 
-      bomb("give only one of USE_OVERTAKING_LENGTH, SPREAD, ATTENUATION_LENGTH, or USE_SALDIN54 for CSRDRIFT", NULL);
+  if (mode&CSRDRIFT_OVERTAKINGLENGTH)
     attenuationLength = overtakingLength*csrDrift->overtakingLengthMultiplier;
-  }
   else
     attenuationLength = csrDrift->attenuationLength;
   
-  if (csrDrift->spread) {
-    if (csrDrift->useOvertakingLength || csrDrift->useSaldin54 || csrDrift->attenuationLength>0)
-      bomb("give only one of USE_OVERTAKING_LENGTH, SPREAD, ATTENUATION_LENGTH, or USE_SALDIN54 for CSRDRIFT", NULL);
+  if (mode&CSRDRIFT_SPREAD) {
     iSpreadMode = 0;
     if (csrDrift->spreadMode && 
         (iSpreadMode=match_string(csrDrift->spreadMode, spreadMode, 3, 0))<0)
@@ -1602,9 +1658,7 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
     thetaRad = 0.5463e-3/(csrWake.Po*0.511e-3)/pow(criticalWavelength/wavelength, 1./3.);
   }
 
-  if (csrDrift->useSaldin54) {
-    if (csrDrift->useOvertakingLength || csrDrift->spread || csrDrift->attenuationLength>0)
-      bomb("give only one of USE_OVERTAKING_LENGTH, SPREAD, ATTENUATION_LENGTH, or USE_SALDIN54 for CSRDRIFT", NULL);
+  if (mode&CSRDRIFT_SALDIN54) {
     if (csrWake.FdNorm==NULL) {
       char s[100];
       if (csrDrift->nSaldin54Points<20) 
@@ -1638,11 +1692,15 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
 #endif
 
   for (iKick=0; iKick<nKicks; iKick++) {
+    fprintf(stdout, "Tracking through part %ld of %ld of CSRDRIFT\n",
+            iKick, nKicks);
+    fflush(stdout);
+    
     /* first drift is dz=dz0/2, others are dz0 */
     if (iKick==1)
       dz = dz0;
     zTravel += dz;
-    
+
     ctmin = DBL_MAX;
     ctmax = -DBL_MAX;
 
@@ -1682,7 +1740,7 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
        */
       factor = (dz0+dzFirst)/csrWake.ds0;
     }
-    if (csrDrift->spread) {
+    if (mode&CSRDRIFT_SPREAD) {
       /* compute loss of on-axis field due to spread of beam using a simple-minded
        * computation of beam sizes */
       switch (iSpreadMode) {
@@ -1705,8 +1763,8 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
         break;
       }
     }
-
-    if (csrDrift->useSaldin54) {
+    
+    if (mode&CSRDRIFT_SALDIN54) {
       long code;
       double f0 = 0;
       if (zTravel<=csrWake.xSaldin[csrWake.nSaldin-1]) 
@@ -1725,15 +1783,18 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
         factor = 0;
       }
     }
+    
     dzFirst = 0;
 
     /* apply kick to each particle and convert back to normal coordinates */
     for (iPart=binned=0; iPart<np; iPart++) {
       coord = part[iPart];
       if (csrWake.dGamma) {
-        iBin = (coord[4]-ct0)/csrWake.dctBin;
-        if (iBin>=0 && iBin<csrWake.bins) {
-          coord[5] += csrWake.dGamma[iBin]/Po*factor;
+        double f;
+        iBin = (f=(coord[4]-ct0)/dct);
+        f -= iBin;
+        if (iBin>=0 && iBin<nBins1) {
+          coord[5] += ((1-f)*csrWake.dGamma[iBin]+f*csrWake.dGamma[iBin+1])/Po*factor;
           binned ++;
         }
       }
@@ -1763,7 +1824,7 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
   }    
 
   csrWake.zLast = zStart+csrDrift->length;
-
+  
   if (csrWake.dGamma) {
     /* propagate wake forward */
     csrWake.s0 += dz;
@@ -1774,7 +1835,7 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
       if ((factor = exp(-dz/attenuationLength))<1) {
         for (iBin=0; iBin<csrWake.bins; iBin++)
             csrWake.dGamma[iBin] *= factor;
-      }
+        }
     }
   }
 
@@ -1787,6 +1848,7 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
 
 long reset_driftCSR()
 {
+  csrWake.lastMode = 0;
   if (csrWake.valid && csrWake.FdNorm) {
     fprintf(stdout, "Last value of normalization factor for CSR wake was %le\n",
             csrWake.lastFdNorm);
@@ -2029,3 +2091,322 @@ void exactDrift(double **part, long np, double length)
     coord[4] += length*sqrt(1+sqr(coord[1])+sqr(coord[3]));
   }
 }
+
+
+double SolveForPhiStupakov(double x, double ds, double phim);
+void DumpStupakovOutput(char *filename, SDDS_DATASET *SDDSout, long *active,
+                        double zTravel, double *ctHist, double *ctHistDeriv,
+                        double *dGamma, long nBins, double dct, 
+                        double MPCharge, double dz,
+                        long nCaseC, long nCaseD1,long nCaseD2,
+                        double x, double dsMax, double phi0, double phi1) ;
+
+static double SolveForPhiStupakovDiffSum = 0;
+static long SolveForPhiStupakovDiffCount = 0;
+
+long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift, 
+                            double Po, double **accepted, double zStart, char *rootname)
+{
+  long iPart, iKick, iBin, binned, nKicks;
+  long nCaseC, nCaseD1, nCaseD2, noCaseD2;
+  double ctLower, ctUpper, ds;
+  long nBins, maxBins, nBinned, diBin;
+  double *coord, t, p, beta, dz, factor, dz0, dzFirst;
+  double zTravel, dct;
+  double *ctHist=NULL, *ctHistDeriv=NULL, *phiSoln=NULL;
+  double length;
+  long nBins1;
+  double dsMax, x;
+
+  SolveForPhiStupakovDiffCount = 0;
+  SolveForPhiStupakovDiffSum = 0;
+  
+  length = csrDrift->length;
+  if (zStart!=csrWake.zLast) {
+    length += (dzFirst = zStart-csrWake.zLast);
+    /* propagate beam back so we can tranverse the missing length including CSR
+     */
+    for (iPart=0; iPart<np; iPart++) {
+      coord = part[iPart];
+      coord[0] -= dzFirst*coord[1];
+      coord[2] -= dzFirst*coord[3];
+      coord[4] -= dzFirst*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+    }
+    zStart = csrWake.zLast;
+  }
+  
+  if (csrDrift->dz>0) {
+    if ((nKicks = length/csrDrift->dz+0.5)<1)
+      nKicks = 1;
+  } else 
+    nKicks = csrDrift->nKicks;
+  if (nKicks<=0)
+    bomb("nKicks=0 in CSR drift.", NULL);
+  dz = (dz0=length/nKicks)/2;
+  
+  zTravel = zStart-csrWake.z0;  /* total distance traveled by radiation to reach this point */
+
+  maxBins = nBins = csrWake.bins;
+  nBins1 = nBins-1;
+  if (!(ctHist=SDDS_Malloc(sizeof(*ctHist)*nBins)) ||
+      !(ctHistDeriv=SDDS_Malloc(sizeof(*ctHistDeriv)*nBins)) ||
+      !(phiSoln=SDDS_Malloc(sizeof(*phiSoln)*nBins)))
+    bomb("memory allocation failure (track_through_driftCSR)", NULL);
+  
+  for (iKick=0; iKick<nKicks; iKick++) {
+    /* first drift is dz=dz0/2, others are dz0 */
+    if (iKick==1)
+      dz = dz0;
+    zTravel += dz;
+
+    x = zTravel/csrWake.rho;
+    dsMax = csrWake.rho/24*pow(csrWake.bendingAngle, 3)
+      *(csrWake.bendingAngle+4*x)/(csrWake.bendingAngle+x);
+
+    /* propagate particles forward, converting s to c*t=s/beta */
+    for (iPart=0; iPart<np; iPart++) {
+      coord = part[iPart];
+      coord[0] += coord[1]*dz;
+      coord[2] += coord[3]*dz;
+      p = Po*(1+coord[5]);
+      beta = p/sqrt(p*p+1);
+      coord[4] = (coord[4]+dz*sqrt(1+sqr(coord[1])+sqr(coord[3])))/beta;
+    }
+
+    /* bin the particle distribution */
+    ctLower = ctUpper = dct = 0;
+    if ((nBinned = 
+         binParticleCoordinate(&ctHist, &maxBins,
+                               &ctLower, &ctUpper, &dct, &nBins, 
+                               csrWake.binRangeFactor<1.1?1.1:csrWake.binRangeFactor,
+                               part, np, 4))!=np) {
+      fprintf(stdout, "Only %ld of %ld particles binned for CSRDRIFT\n", nBinned, np);
+      fflush(stdout);
+    }
+      
+    /* - smooth the histogram, normalize to get linear density, and 
+       copy in preparation for taking derivative
+       */
+    SavitzyGolaySmooth(ctHist, nBins, csrWake.SGOrder, csrWake.SGHalfWidth, csrWake.SGHalfWidth,  0);
+    for (iBin=0; iBin<nBins; iBin++)
+      ctHistDeriv[iBin] = (ctHist[iBin] /= dct);
+    /* - compute derivative with smoothing.  The deriv is w.r.t. index number and
+     * I won't scale it now as it will just fall out in the integral 
+     */
+    SavitzyGolaySmooth(ctHistDeriv, nBins, csrWake.SGDerivOrder, 
+                       csrWake.SGDerivHalfWidth, csrWake.SGDerivHalfWidth, 1);
+
+    /* Case C */ 
+    nCaseC = 0;
+    nCaseD1 = 0;
+    nCaseD2 = 0;
+    for (iBin=0; iBin<nBins; iBin++) {
+      double f;
+      ds = csrWake.rho/6*sqr(csrWake.bendingAngle)*(csrWake.bendingAngle + 3*x);
+      diBin = ds/dct;
+      if (iBin+diBin<nBins) {
+        f = -1/(csrWake.bendingAngle+2*x); 
+        csrWake.dGamma[iBin] = f*ctHist[iBin+diBin];
+        nCaseC++;
+      } else
+        csrWake.dGamma[iBin] = 0;
+    }
+    /* Case D */
+    for (iBin=0; iBin<nBins; iBin++) {
+      phiSoln[iBin] = -1;
+      if ((ds = iBin*dct)>dsMax)
+        break;
+      phiSoln[iBin] = SolveForPhiStupakov(x, iBin*dct/csrWake.rho, csrWake.bendingAngle);
+    }
+    for (iBin=0; iBin<nBins; iBin++) {
+      long jBin;
+      diBin = dsMax/dct;
+      if (iBin+diBin<nBins) {
+        nCaseD1 ++;
+        csrWake.dGamma[iBin] += ctHist[iBin+diBin]/(csrWake.bendingAngle+2*x);
+      }
+      for (jBin=iBin; jBin<nBins; jBin++) {
+        double phi;
+        if ((phi = phiSoln[jBin-iBin])>=0) {
+          /* I put in a negative sign here because my s is opposite in direction to 
+           * Saldin et al. and Stupakov, so my derivative has the opposite sign.
+           * Note lack of ds factor here as I use the same one in my unnormalized derivative.
+           */
+          csrWake.dGamma[iBin] -= ctHistDeriv[jBin]/(phi+2*x);
+          nCaseD2 ++;
+        } else
+          break;
+      }
+    }
+    /* the minus sign adjusts for Stupakov using wake<0 to indicate energy gain
+     */
+    factor = -4/csrWake.rho*csrWake.GSConstant*dz0;
+    for (iBin=0; iBin<nBins; iBin++)
+      csrWake.dGamma[iBin] *= factor;
+
+    if (csrDrift->StupakovOutput) {
+      double x, dsMax, phi0, phi1;
+      if (!csrDrift->StupakovFileActive)
+        csrDrift->StupakovOutput = compose_filename(csrDrift->StupakovOutput, rootname);
+      x = zTravel/csrWake.rho;
+      dsMax = csrWake.rho/24*pow(csrWake.bendingAngle, 3)
+        *(csrWake.bendingAngle+4*x)/(csrWake.bendingAngle+x);
+      phi0 = SolveForPhiStupakov(x, 0.0, csrWake.bendingAngle);
+      phi1 = SolveForPhiStupakov(x, dsMax/csrWake.rho*0.999, csrWake.bendingAngle);
+      
+      /* note that the contents of ctHist and ctHistDeriv are corrupted by this operation */
+      DumpStupakovOutput(csrDrift->StupakovOutput, &csrDrift->SDDS_Stupakov, 
+                         &csrDrift->StupakovFileActive, zTravel,
+                         ctHist, ctHistDeriv, csrWake.dGamma, nBins, dct, csrWake.MPCharge,
+                         dz0, nCaseC, nCaseD1, nCaseD2,
+                         x, dsMax/csrWake.rho, phi0, phi1);
+    }
+    
+    /* apply kick to each particle and convert back to normal coordinates */
+    for (iPart=binned=0; iPart<np; iPart++) {
+      double f;
+      coord = part[iPart];
+      iBin = (f=(coord[4]-ctLower)/dct);
+      f -= iBin;
+      if (iBin>=0 && iBin<nBins1) {
+        coord[5] += ((1-f)*csrWake.dGamma[iBin] + f*csrWake.dGamma[iBin+1])/Po;
+        binned ++;
+      }
+      p = (1+coord[5])*Po;
+      beta = p/sqrt(p*p+1);
+      coord[4] = beta*coord[4];
+    }
+    if (np!=binned) {
+      fprintf(stdout, "only %ld of %ld particles binned for CSR drift\n",
+              binned, np);
+      fflush(stdout);
+    }
+  }
+  
+  /* do final drift of dz0/2 */
+  dz = dz0/2;
+  for (iPart=0; iPart<np; iPart++) {
+    coord = part[iPart];
+    coord[0] += coord[1]*dz;
+    coord[2] += coord[3]*dz;
+    coord[4] += dz*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+  }    
+
+  csrWake.zLast = zStart + length;
+  free(ctHist);
+  free(ctHistDeriv);
+  free(phiSoln);
+  if (SolveForPhiStupakovDiffCount)
+    fprintf(stdout, "Phi solution accuracy for %ld solutions: %le\n",
+            SolveForPhiStupakovDiffCount, SolveForPhiStupakovDiffSum/SolveForPhiStupakovDiffCount);
+  return np;
+}
+
+static double SolveForPhiStupakov_x, SolveForPhiStupakov_4x;
+
+double SolveForPhiStupakovFn(double phi)
+{
+  return phi*phi*phi*(phi+SolveForPhiStupakov_4x)/(phi+SolveForPhiStupakov_x);
+}
+
+/* solve for phi:  ds=phi^3/24*(phi+4*x)/(phi+x), where ds = (s-s')/rho */
+
+double SolveForPhiStupakov(double x, double ds, double phim)
+{
+  double phi, phi0;
+  static double phiLast = -1;
+  long i;
+  
+  if (ds<0)
+    return -1;
+  if (ds==0)
+    return 0;
+  
+  ds *= 24;
+  SolveForPhiStupakov_x = x;
+  SolveForPhiStupakov_4x = 4*x;
+
+  if (phiLast==-1)
+    phiLast = phim/2;
+
+  /* try phim first */
+  if (fabs(ds-SolveForPhiStupakovFn(phim))<ds/1e4) {
+    phiLast = phim;
+    return phim;
+  }
+  
+  /* try a solution with Newton's method */
+  phi = zeroNewton(SolveForPhiStupakovFn, ds, phiLast, phim/1000, 3, ds/1e4);
+  if (phi<0 || phi>phim || fabs(ds - SolveForPhiStupakovFn(phi))>ds/1e4) 
+    /* try a more plodding method */
+    phi = zeroInterp(SolveForPhiStupakovFn, ds, 0, phim*1.01, phim/100, ds/1e4);
+  if (phi<0 || phi>phim)
+    return -1;
+  phiLast = phi;
+  SolveForPhiStupakovDiffCount ++;
+  SolveForPhiStupakovDiffSum += fabs(ds - SolveForPhiStupakovFn(phi));
+  return phi;
+}
+
+
+/* this procedure destroys the contents of ctHist and ctHistDeriv ! */
+
+void DumpStupakovOutput(char *filename, SDDS_DATASET *SDDSout, long *active,
+                        double zTravel, double *ctHist, double *ctHistDeriv,
+                        double *dGamma, long nBins, double dct, 
+                        double MPCharge, double dz,
+                        long nCaseC, long nCaseD1, long nCaseD2,
+                        double x, double dsMax, double phi0, double phi1) 
+{
+  long i;
+  if (!*active) {
+    if (!SDDS_InitializeOutput(SDDSout, SDDS_BINARY, 1, NULL, NULL, filename) ||
+        !SDDS_DefineSimpleParameter(SDDSout, "z", "m", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(SDDSout, "CaseC", "#", SDDS_LONG) ||
+        !SDDS_DefineSimpleParameter(SDDSout, "CaseD1", "#", SDDS_LONG) ||
+        !SDDS_DefineSimpleParameter(SDDSout, "CaseD2", "#", SDDS_LONG) ||
+        !SDDS_DefineSimpleParameter(SDDSout, "x", NULL, SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(SDDSout, "dsMax", NULL, SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(SDDSout, "phi0", NULL, SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(SDDSout, "phi1", NULL, SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(SDDSout, "s", "m", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(SDDSout, "LinearDensity", "C/s", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(SDDSout, "LinearDensityDeriv", "C/s$a2$n", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(SDDSout, "DeltaGamma", NULL, SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(SDDSout, "GammaDeriv", "1/m", SDDS_DOUBLE) ||
+        !SDDS_WriteLayout(SDDSout)) {
+      SDDS_SetError("Problem setting up output file for CSRDRIFT (Stupakov mode)");
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    }
+    *active = 1;
+  }
+  for (i=0; i<nBins; i++) {
+    ctHist[i] *= MPCharge*c_mks;
+    ctHistDeriv[i] *= MPCharge*sqr(c_mks)/dct;
+  }
+  if (!SDDS_StartPage(SDDSout, nBins) ||
+      !SDDS_SetColumn(SDDSout, SDDS_SET_BY_NAME, dGamma, nBins, "DeltaGamma")  ||
+      !SDDS_SetColumn(SDDSout, SDDS_SET_BY_NAME, ctHist, nBins, "LinearDensity")  ||
+      !SDDS_SetColumn(SDDSout, SDDS_SET_BY_NAME, ctHistDeriv, nBins, "LinearDensityDeriv")) {
+    SDDS_SetError("Problem writing to output file for CSRDRIFT (Stupakov mode)");
+    SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+  }
+  /* use ctHist array for output of s and ctHistDeriv for dGamma/ds */
+  for (i=0; i<nBins; i++) {
+    ctHist[i] = dct*(i+0.5-nBins/2);
+    ctHistDeriv[i] = dGamma[i]/dz;
+  }
+  if (!SDDS_SetColumn(SDDSout, SDDS_SET_BY_NAME, ctHist, nBins, "s") ||
+      !SDDS_SetColumn(SDDSout, SDDS_SET_BY_NAME, ctHistDeriv, nBins, "GammaDeriv") ||
+      !SDDS_SetParameters(SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
+                          "z", zTravel, "CaseC", nCaseC,
+                          "CaseD1", nCaseD1, "CaseD2", nCaseD2, 
+                          "x", x, "dsMax", dsMax, "phi0", phi0, "phi1", phi1,
+                          NULL) ||
+      !SDDS_WritePage(SDDSout)) {
+    SDDS_SetError("Problem writing to output file for CSRDRIFT (Stupakov mode)");
+    SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+  }
+    
+}
+
