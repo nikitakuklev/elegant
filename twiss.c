@@ -1158,8 +1158,10 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
   beamline->elast = elast;
 
   if (periodic) {
-    if (beamline->matrix)
+    if (beamline->matrix) {
       free_matrices(beamline->matrix);
+      free(beamline->matrix);
+    }
     beamline->matrix = compute_periodic_twiss(&betax, &alphax, &etax, &etapx, beamline->tune,
                                               &betay, &alphay, &etay, &etapy, beamline->tune+1, 
                                               beamline->elem_twiss, starting_coord, run,

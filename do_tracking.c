@@ -211,7 +211,7 @@ long do_tracking(
     }
       
     if (sums_vs_z && n_z_points) {
-      if (!sums_allocated || !*sums_vs_z) {
+      if (!sums_allocated && !*sums_vs_z) {
         /* allocate storage for beam sums */
         if (!isConcat)
           *n_z_points = beamline->n_elems + 1 + 

@@ -155,7 +155,7 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
     computeChromaticities(&chromx0, &chromy0, 
                           NULL, NULL, NULL, NULL, 
 			  beamline->twiss0, M=beamline->matrix);
-
+    M = NULL;
     for (i=0; i<chrom->n_families; i++) {
         count = 0;
         context = NULL;
@@ -171,8 +171,10 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
             if (count==0)
                 K2 = *K2ptr;
             *K2ptr = K2 + chrom->sextupole_tweek;
-            if (context->matrix)
+            if (context->matrix) {
                 free_matrices(context->matrix);
+                free(context->matrix);
+                }       
             compute_matrix(context, run, NULL);
             count++;
             }
@@ -183,6 +185,10 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
             }
         if (beamline->links)
             assert_element_links(beamline->links, run, beamline, STATIC_LINK+DYNAMIC_LINK);
+        if (M) {
+          free_matrices(M);
+          free(M);
+        }
         M = full_matrix(beamline->elem_twiss, run, 2);
         computeChromaticities(&chromx, &chromy, 
                               NULL, NULL, NULL, NULL, beamline->twiss0, M);
@@ -208,12 +214,20 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
             if (!K2ptr)
                 bomb("K2ptr NULL in setup_chromaticity_correction", NULL);
             *K2ptr = K2;
-            if (context->matrix)
+            if (context->matrix) {
                 free_matrices(context->matrix);
+                free(context->matrix);
+                }
             compute_matrix(context, run, NULL);
             count++;
             }
         }
+    if (M) {
+      free_matrices(M);
+      free(M);
+    }
+    if (beamline->matrix)
+      free_matrices(beamline->matrix);
     beamline->matrix = full_matrix(beamline->elem_twiss, run, run->default_order);
 
     if (verbosityLevel>1) {
@@ -276,9 +290,11 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
                 eptr = eptr->succ;
                 }
             }
-        if (beamline->matrix)
+        if (beamline->matrix) {
           free_matrices(beamline->matrix);
-        M = beamline->matrix = compute_periodic_twiss(&beta_x, &alpha_x, &eta_x, &etap_x, beamline->tune,
+          free(beamline->matrix);
+        }
+        beamline->matrix = compute_periodic_twiss(&beta_x, &alpha_x, &eta_x, &etap_x, beamline->tune,
                                                       &beta_y, &alpha_y, &eta_y, &etap_y, beamline->tune+1, 
                                                       beamline->elem_twiss, clorb, run, &unstable, NULL, NULL);
         beamline->twiss0->betax  = beta_x;
@@ -296,8 +312,10 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
                                    NULL, beamline->elem_twiss, run, clorb);
         }
     else if (beamline->matrix->order<2) {
-      if (beamline->matrix)
-        free_matrices(beamline->matrix);
+      if (beamline->matrix) {
+          free_matrices(beamline->matrix);
+          free(beamline->matrix);
+        }
       beamline->matrix = full_matrix(beamline->elem_twiss, run, 2);
     }
 
@@ -370,8 +388,10 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
                   K2_max = K2;
                 if (K2<K2_min)
                   K2_min = K2;
-                if (context->matrix)
+                if (context->matrix) {
                   free_matrices(context->matrix);
+                  free(context->matrix);
+                  }
                 compute_matrix(context, run, NULL);
                 type = context->type;
                 count++;
@@ -393,8 +413,10 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
             assert_element_links(beamline->links, run, beamline, 
                                  STATIC_LINK+DYNAMIC_LINK+(alter_defined_values?LINK_ELEMENT_DEFINITION:0));
 
-        if (beamline->matrix)
+        if (beamline->matrix) {
           free_matrices(beamline->matrix);
+          free(beamline->matrix);
+        }
         M = beamline->matrix = compute_periodic_twiss(&beta_x, &alpha_x, &eta_x, &etap_x, beamline->tune,
                                                       &beta_y, &alpha_y, &eta_y, &etap_y, beamline->tune+1, 
                                                       beamline->elem_twiss, clorb, run, &unstable, NULL, NULL);
@@ -522,6 +544,7 @@ void computeHigherOrderChromaticities(LINE_LIST *beamline, double *clorb, RUN *r
       /* Tr[0,1][p] is the trace for x,y plane for point p */
       trace[i][p] = M1->R[2*i][2*i] + M1->R[2*i+1][2*i+1];
     free_matrices(M1);
+    free(M1);
   }
   for (i=0; i<2; i++) {
     lsfn(delta, trace[i], NULL, NDELTA_VALUES, NDELTA_VALUES-2, coef, sCoef, &chi, NULL);
