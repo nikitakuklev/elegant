@@ -123,14 +123,6 @@ long do_tracking(
   reset_driftCSR();
   
   while (eptr) {
-    if (check_nan) 
-      switch (eptr->type) {
-      case T_RCOL: case T_ECOL: case T_MAXAMP:
-        check_nan = 0;
-        break;
-      default:
-        break;
-      }
     if (flags&FIRST_BEAM_IS_FIDUCIAL && !(flags&FIDUCIAL_BEAM_SEEN))
       eptr->Pref_output_fiducial = 0;
     eptr = eptr->succ;
