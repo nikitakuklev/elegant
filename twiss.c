@@ -1403,8 +1403,16 @@ void compute_twiss_statistics(LINE_LIST *beamline, TWISS *twiss_ave, TWISS *twis
     end_pos = eptr->end_pos;
     eptr = eptr->succ;
   }
-  if (nElems==0)
-    memcpy(twiss_ave, twiss_min, sizeof(*twiss_min));
+  if (nElems==0) {
+    twiss_ave->betax  = (twiss_min->betax  + twiss_max->betax )/2;
+    twiss_ave->alphax = (twiss_min->alphax + twiss_max->alphax)/2;
+    twiss_ave->etax   = (twiss_min->etax   + twiss_max->etax  )/2;
+    twiss_ave->etapx  = (twiss_min->etapx  + twiss_max->etapx )/2;
+    twiss_ave->betay  = (twiss_min->betay  + twiss_max->betay )/2;
+    twiss_ave->alphay = (twiss_min->alphay + twiss_max->alphay)/2;
+    twiss_ave->etay   = (twiss_min->etay   + twiss_max->etay  )/2;
+    twiss_ave->etapy  = (twiss_min->etapy  + twiss_max->etapy )/2;
+  }
   else if (end_pos) {
     twiss_ave->betax  /= end_pos;
     twiss_ave->alphax /= end_pos;
