@@ -14,6 +14,9 @@
  * Michael Borland, 2002
  *
  $Log: not supported by cvs2svn $
+ Revision 1.7  2003/04/17 15:20:15  soliday
+ Fixed for WIN32
+
  Revision 1.6  2003/02/24 20:00:11  shang
  added -method option which includes dejus and walker's method for calculating
  the on-axis brightness.
@@ -798,8 +801,8 @@ void Dejus_CalculateBrightness(double ENERGY, double current,long nE,
     sb[i]=(double*)calloc(MAXIMUM_H,sizeof(**sb));
   }
   
-  gamma1=ENERGY/me_mev*1.0E3;
-  lamdar=period*1.0E8/(2.0*gamma1*gamma1); /*reduced wavelength A */
+  /*gamma1=ENERGY/me_mev*1.0E3; */
+  lamdar=period*1.0E8/(2.0*gamma*gamma); /*reduced wavelength A */
   reducedE=c_evang/lamdar; /*reduced energy ev */
   kx=0.0;
   eMin=reducedE/(1+kMax*kMax/2.0);
