@@ -424,6 +424,10 @@ long do_tracking(
                         n_left = multipole_tracking(coord, n_to_track, (MULT*)eptr->p_elem, 0.0,
                                                     *P_central, accepted, z);
                         break;
+                      case T_FMULT:
+                        n_left = fmultipole_tracking(coord, n_to_track, (FMULT*)eptr->p_elem, 0.0,
+                                                    *P_central, accepted, z);
+                        break;
                       case T_KICKER:
                         if (flags&TIME_DEPENDENCE_OFF)
                             drift_beam(coord, n_to_track, ((KICKER*)eptr->p_elem)->length, run->default_order);
@@ -513,11 +517,13 @@ long do_tracking(
                         track_through_zlongit(coord, n_to_track, (ZLONGIT*)eptr->p_elem, *P_central, run, i_pass);
                         break;
                       case T_SREFFECTS:
-                        track_SReffects(coord, n_to_track, (SREFFECTS*)eptr->p_elem, *P_central, eptr->twiss, &(beamline->radIntegrals));
+                        if (!(flags&TEST_PARTICLES))
+                          track_SReffects(coord, n_to_track, (SREFFECTS*)eptr->p_elem, *P_central, eptr->twiss, &(beamline->radIntegrals));
                         break;
                       case T_IBSCATTER:
-                        track_IBS(coord, n_to_track, (IBSCATTER*)eptr->p_elem,
-                                  *P_central, &(beamline->elem), &(beamline->radIntegrals));
+                        if (!(flags&TEST_PARTICLES))
+                          track_IBS(coord, n_to_track, (IBSCATTER*)eptr->p_elem,
+                                    *P_central, &(beamline->elem), &(beamline->radIntegrals));
                         break;
                       default:
                         fprintf(stderr, "programming error: no tracking statements for element %s (type %s)\n",

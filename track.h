@@ -21,6 +21,14 @@ typedef struct {
     long order;
     } VMATRIX;
 
+/* structure for general multipole kicks */
+
+typedef struct {
+  long initialized;
+  long orders, *order;
+  double *KnL;
+} MULTIPOLE_DATA ;
+
 /* structure for storing Twiss parameters */
 typedef struct {
   /* the order of the items in this structure should not be
@@ -411,7 +419,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_BMAPXY 61
 #define T_ZTRANSVERSE 62
 #define T_IBSCATTER 63
-#define N_TYPES 64
+#define T_FMULT 64
+#define N_TYPES 65
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -460,7 +469,7 @@ extern char *entity_text[N_TYPES];
 #define N_KICKER_PARAMS 9
 #define N_KSEXT_PARAMS 11
 #define N_KSBEND_PARAMS 27
-#define N_KQUAD_PARAMS 11
+#define N_KQUAD_PARAMS 13
 #define N_MAGNIFY_PARAMS 6
 #define N_SAMPLE_PARAMS 2
 #define N_HVCOR_PARAMS 10
@@ -481,6 +490,7 @@ extern char *entity_text[N_TYPES];
 #define N_SREFFECTS_PARAMS 10
 #define N_ZTRANSVERSE_PARAMS 13
 #define N_IBSCATTER_PARAMS 3
+#define N_FMULT_PARAMS 9
 #define N_BMAPXY_PARAMS 5
 
 typedef struct {
@@ -592,6 +602,17 @@ typedef struct {
     double dx, dy, dz, factor;
     long order, n_kicks, synch_rad;
     } MULT;
+
+/* names and storage structure for arbitary multipole from an SDDS File */
+extern PARAMETER fmult_param[N_FMULT_PARAMS];
+
+typedef struct {
+  double length, tilt, dx, dy, dz, fse;
+  long n_kicks, synch_rad;
+  char *filename;
+  /* For internal use: */
+  MULTIPOLE_DATA multData;
+} FMULT;
 
 /* names and storage structure for horizontal corrector physical parameters */
 extern PARAMETER hcor_param[N_HCOR_PARAMS] ;
@@ -1011,6 +1032,11 @@ typedef struct {
     double length, k1, tilt, bore, B;
     double dx, dy, dz, fse;
     long n_kicks, synch_rad;
+    char *systematic_multipoles, *error_multipoles;
+    /* for internal use */
+    MULTIPOLE_DATA systematicMultipoleData; 
+    MULTIPOLE_DATA errorMultipoleData;      
+    MULTIPOLE_DATA totalMultipoleData;  /* generated when randomization takes place */
     } KQUAD;
 
 /* names and storage structure for magnifier physical parameters */
@@ -1659,6 +1685,8 @@ extern long motion(double **part, long n_part, void *field, long field_type, dou
 /* prototypes for multipole.c: */
 extern long multipole_tracking(double **particle, long n_part, MULT *multipole, double p_error, double Po, double **accepted, double z_start);
 extern long multipole_tracking2(double **particle, long n_part, ELEMENT_LIST *elem, double p_error, double Po, double **accepted, double z_start);
+extern long fmultipole_tracking(double **particle,  long n_part, FMULT *multipole,
+                                double p_error, double Po, double **accepted, double z_start);
 
 /* prototypes for output_magnets.c: */
 extern void output_magnets(char *filename, char *line_name, LINE_LIST *beamline);

@@ -10,8 +10,240 @@
 #include "track.h"
 
 double *expansion_coefficients(long n);
+void apply_canonical_multipole_kicks(double *qx, double *qy,
+                                   double *sum_Fx, double *sum_Fy,
+                                   double x, double y,
+                                   long order, double KnL);
 
 #define ODD(j) (j%2)
+
+void initialize_fmultipole(FMULT *multipole)
+{
+  SDDS_DATASET SDDSin;
+  char buffer[1024];
+  MULTIPOLE_DATA *multData;
+  
+  multData = &(multipole->multData);
+  if (multData->initialized)
+    return;
+  if (!multipole->filename)
+    bomb("FMULT element doesn't have filename", NULL);
+  if (!SDDS_InitializeInput(&SDDSin, multipole->filename)) {
+    sprintf(buffer, "Problem opening file %s (FMULT)\n", multipole->filename);
+    SDDS_SetError(buffer);
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+    exit(1);
+  }
+  if (SDDS_CheckColumn(&SDDSin, "order", NULL, SDDS_ANY_INTEGER_TYPE, stderr)!=SDDS_CHECK_OK ||
+      SDDS_CheckColumn(&SDDSin, "KnL", NULL, SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OK)
+    bomb("problems with data in FMULT input file", NULL);
+  if (SDDS_ReadPage(&SDDSin)!=1)  {
+    sprintf(buffer, "Problem reading FMULT file %s\n", multipole->filename);
+    SDDS_SetError(buffer);
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+    exit(1);
+  }
+  if ((multData->orders = SDDS_RowCount(&SDDSin))<=0) {
+    fprintf(stderr, "Warning: no data in FMULT file %s\n", multipole->filename);
+    SDDS_Terminate(&SDDSin);
+    return;
+  }
+  if (!(multData->order=SDDS_GetColumnInLong(&SDDSin, "order")) ||
+      !(multData->KnL=SDDS_GetColumnInDoubles(&SDDSin, "KnL"))) {
+    sprintf(buffer, "Unable to read data for FMULT file %s\n", multipole->filename);
+    SDDS_SetError(buffer);
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+    exit(1);
+  }    
+  if (SDDS_ReadPage(&SDDSin)==2) {
+    fprintf(stderr, "Warning: FMULT file %s has multiple pages, which are ignored\n",
+            multipole->filename);
+  }
+  SDDS_Terminate(&SDDSin);
+}
+
+
+long fmultipole_tracking(
+                         double **particle,  /* initial/final phase-space coordinates */
+                         long n_part,        /* number of particles */
+                         FMULT *multipole,   /* multipole structure */
+                         double p_error,     /* p_nominal/p_central */
+                         double Po,
+                         double **accepted,
+                         double z_start
+                         )
+{
+  double dx, dy, dz;  /* offsets of the multipole center */
+  long order;         /* order (n) */
+  long n_kicks;       /* number of kicks to split multipole into */
+  long i_part, i_kick, i, i_top, is_lost, i_order;
+  double sum_Fx, sum_Fy, xypow, denom, qx, qy, KnL;
+  double *coord;
+  double drift, cos_tilt, sin_tilt;
+  double *coef;
+  double x, xp, y, yp, s, dp;
+  double ratio, rad_coef;
+  double beta0, beta1, p;
+  MULTIPOLE_DATA *multData;
+  
+  if (!particle)
+    bomb("particle array is null (fmultipole_tracking)", NULL);
+
+  if (!multipole)
+    bomb("null MULT pointer (fmultipole_tracking)", NULL);
+  
+  if (!multipole->multData.initialized)
+    initialize_fmultipole(multipole);
+  
+  if ((n_kicks=multipole->n_kicks)<=0)
+    bomb("n_kicks<=0 in multipole()", NULL);
+
+  drift = multipole->length/n_kicks/2;
+
+  cos_tilt = cos(multipole->tilt);
+  sin_tilt = sin(multipole->tilt);
+  dx = multipole->dx;
+  dy = multipole->dy;
+  dz = multipole->dz;
+  if (multipole->synch_rad)
+    rad_coef = sqr(e_mks)*pow3(Po)/(6*PI*epsilon_o*sqr(c_mks)*me_mks);
+  else
+    rad_coef = 0;
+
+  multData = &(multipole->multData);
+  i_top = n_part-1;
+  for (i_part=0; i_part<=i_top; i_part++) {
+    if (!(coord = particle[i_part])) {
+      fprintf(stderr, "null coordinate pointer for particle %ld (fmultipole_tracking)", i_part);
+      abort();
+    }
+    if (accepted && !accepted[i_part]) {
+      fprintf(stderr, "null accepted coordinates pointer for particle %ld (fmultipole_tracking)", i_part);
+      abort();
+    }
+
+    /* calculate coordinates in rotated and offset frame */
+    coord[4] += dz*sqrt(1 + sqr(coord[1]) + sqr(coord[3]));
+    coord[0]  = coord[0] - dx + dz*coord[1];
+    coord[2]  = coord[2] - dy + dz*coord[3];
+
+    x  =   cos_tilt*coord[0] + sin_tilt*coord[2];
+    y  = - sin_tilt*coord[0] + cos_tilt*coord[2];
+    xp =   cos_tilt*coord[1] + sin_tilt*coord[3];
+    yp = - sin_tilt*coord[1] + cos_tilt*coord[3];
+    s  = 0;
+    dp = coord[5];
+    p = Po*(1+dp);
+    beta0 = p/sqrt(sqr(p)+1);
+
+#if defined(IEEE_MATH)
+    if (isnan(x) || isnan(xp) || isnan(y) || isnan(yp)) {
+      SWAP_PTR(particle[i_part], particle[i_top]);
+      if (accepted)
+        SWAP_PTR(accepted[i_part], accepted[i_top]);
+      particle[i_top][4] = z_start;
+      particle[i_top][5] = Po*(1+particle[i_top][5]);
+      i_top--;
+      i_part--;
+      continue;
+    }
+#endif
+    if (FABS(x)>COORD_LIMIT || FABS(y)>COORD_LIMIT ||
+        FABS(xp)>SLOPE_LIMIT || FABS(yp)>SLOPE_LIMIT) {
+      SWAP_PTR(particle[i_part], particle[i_top]);
+      if (accepted)
+        SWAP_PTR(accepted[i_part], accepted[i_top]);
+      particle[i_top][4] = z_start;
+      particle[i_top][5] = Po*(1+particle[i_top][5]);
+      i_top--;
+      i_part--;
+      continue;
+    }
+
+    /* calculate initial canonical momenta */
+    qx = (1+dp)*xp/(denom=sqrt(1+sqr(xp)+sqr(yp)));
+    qy = (1+dp)*yp/denom;
+    is_lost = 0;
+    for (i_order=0; i_order<multData->orders; i_order++) {
+      order = multData->order[i_order];
+      KnL = multData->KnL[i_order];
+      if (!(coef = expansion_coefficients(order)))
+        bomb("expansion_coefficients() returned null pointer (fmultipole_tracking)", NULL);
+      for (i_kick=0; i_kick<n_kicks; i_kick++) {
+        if (drift) {
+          x += xp*drift*(i_kick?2:1);
+          y += yp*drift*(i_kick?2:1);
+          s += (i_kick?2:1)*drift*sqrt(1+sqr(xp)+sqr(yp));
+        }
+        apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, order, KnL);
+        if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
+          is_lost = 1;
+          break;
+        }
+        xp = qx/(denom=sqrt(denom));
+        yp = qy/denom;
+        if (rad_coef && drift) {
+          qx /= (1+dp);
+          qy /= (1+dp);
+          dp -= rad_coef*sqr(KnL*(1+dp))*(sqr(sum_Fy)+sqr(sum_Fx))*sqrt(1+sqr(xp)+sqr(yp))/(2*drift);
+          qx *= (1+dp);
+          qy *= (1+dp);
+        }
+      }
+      if (drift && !is_lost) {
+        /* go through final drift */
+        x += xp*drift;
+        y += yp*drift;
+        s += drift*sqrt(1 + sqr(xp) + sqr(yp));
+      }
+    }
+    /* undo the rotation and store in place of initial coordinates */
+    coord[0] = cos_tilt*x  - sin_tilt*y ;
+    coord[2] = sin_tilt*x  + cos_tilt*y ;
+    coord[1] = cos_tilt*xp - sin_tilt*yp;
+    coord[3] = sin_tilt*xp + cos_tilt*yp;
+    if (rad_coef) {
+      p = Po*(1+dp);
+      beta1 = p/sqrt(sqr(p)+1);
+      coord[4] = beta1*(coord[4]/beta0 + 2*s/(beta0+beta1));
+    }
+    else 
+      coord[4] += s;
+    coord[5] = dp;
+
+    /* remove the coordinate offsets */
+    coord[0] += dx - coord[1]*dz;
+    coord[2] += dy - coord[3]*dz;
+    coord[4] -= dz*sqrt(1+ sqr(coord[1]) + sqr(coord[3]));
+
+#if defined(IEEE_MATH)
+    if (isnan(x) || isnan(xp) || isnan(y) || isnan(yp)) {
+      SWAP_PTR(particle[i_part], particle[i_top]);
+      if (accepted)
+        SWAP_PTR(accepted[i_part], accepted[i_top]);
+      particle[i_top][4] = z_start;
+      particle[i_top][5] = Po*(1+particle[i_top][5]);
+      i_top--;
+      i_part--;
+      continue;
+    }
+#endif
+    if (FABS(x)>COORD_LIMIT || FABS(y)>COORD_LIMIT ||
+        FABS(xp)>SLOPE_LIMIT || FABS(yp)>SLOPE_LIMIT || is_lost) {
+      SWAP_PTR(particle[i_part], particle[i_top]);
+      if (accepted)
+        SWAP_PTR(accepted[i_part], accepted[i_top]);
+      particle[i_top][4] = z_start;
+      particle[i_top][5] = Po*(1+particle[i_top][5]);
+      i_top--;
+      i_part--;
+      continue;
+    }
+  }
+  log_exit("fmultipole_tracking");
+  return(i_top+1);
+}
+
 
 long multipole_tracking(
     double **particle,  /* initial/final phase-space coordinates */
@@ -286,7 +518,8 @@ long multipole_tracking2(
     double beta0, beta1, p;
     KQUAD *kquad;
     KSEXT *ksext;
-
+    MULTIPOLE_DATA *multData;
+    
     log_entry("multipole_tracking2");
 
     if (!particle)
@@ -314,6 +547,7 @@ long multipole_tracking2(
         dy = kquad->dy;
         if (kquad->synch_rad)
             rad_coef = sqr(e_mks)*pow3(Po)/(6*PI*epsilon_o*sqr(c_mks)*me_mks);
+        multData = &(kquad->totalMultipoleData);
         break;
       case T_KSEXT:
         ksext = ((KSEXT*)elem->p_elem);
@@ -330,6 +564,7 @@ long multipole_tracking2(
         dy = ksext->dy;
         if (ksext->synch_rad)
             rad_coef = sqr(e_mks)*pow3(Po)/(6*PI*epsilon_o*sqr(c_mks)*me_mks);
+        multData = NULL;
         break;
       default:
         fprintf(stderr, "error: multipole_tracking2() called for element %s--not supported!\n", elem->name);
@@ -409,29 +644,17 @@ long multipole_tracking2(
                 y += yp*drift*(i_kick?2:1);
                 s += drift*(i_kick?2:1)*sqrt(1 + sqr(xp) + sqr(yp));
                 }
-            if (x==0) {
-                if (y==0)
-                    continue;
-                xypow = ipow(y, order);
-                i = order;
-                ratio = 0;
-                }
-            else {
-                xypow = ipow(x, order);
-                ratio = y/x;
-                i = 0;
-                }
-            /* now sum up the terms for the multipole expansion */
-            for (sum_Fx=sum_Fy=0; i<=order; i++) {
-                if (ODD(i))
-                    sum_Fx += coef[i]*xypow;
-                else
-                    sum_Fy += coef[i]*xypow;
-                xypow *= ratio;
-                }
-            /* apply kicks canonically */
-            qx -= KnL*sum_Fy;
-            qy += KnL*sum_Fx;
+            apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, order, KnL);
+
+            /* do kicks for spurious multipoles */
+            if (multData) {
+              long imult;
+              for (imult=0; imult<multData->orders; multData++) {
+                apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+                                                multData->order[imult], multData->KnL[imult]);
+              }
+            }
+
             if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
                 is_lost = 1;
                 break;
@@ -499,3 +722,44 @@ long multipole_tracking2(
     return(i_top+1);
     }
   
+
+void apply_canonical_multipole_kicks(double *qx, double *qy, 
+                                     double *sum_Fx_return, double *sum_Fy_return,
+                                     double x, double y,
+                                     long order, double KnL)
+{
+  long i;
+  double sum_Fx, sum_Fy, xypow, ratio;
+  double *coef;
+  coef = expansion_coefficients(order);
+  if (x==0) {
+    if (y==0)
+      return;
+    xypow = ipow(y, order);
+    i = order;
+    ratio = 0;
+  }
+  else {
+    xypow = ipow(x, order);
+    ratio = y/x;
+    i = 0;
+  }
+  /* now sum up the terms for the multipole expansion */
+  for (sum_Fx=sum_Fy=0; i<=order; i++) {
+    if (ODD(i))
+      sum_Fx += coef[i]*xypow;
+    else
+      sum_Fy += coef[i]*xypow;
+    xypow *= ratio;
+  }
+  /* apply kicks canonically */
+  *qx -= KnL*sum_Fy;
+  *qy += KnL*sum_Fx;
+  if (sum_Fx_return)
+    *sum_Fx_return = sum_Fx;
+  if (sum_Fy_return)
+    *sum_Fy_return = sum_Fy;
+}
+
+
+

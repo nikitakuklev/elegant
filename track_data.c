@@ -23,7 +23,7 @@ char *entity_name[N_TYPES] = {
     "KSEXT", "KSBEND", "KQUAD", "MAGNIFY", "SAMPLE", "KICKER", "SCATTER",
     "NIBEND", "KPOLY", "NISEPT", "RAMPRF", "RAMPP", "STRAY", "CSBEND",
     "TWMTA", "MATTER", "RFMODE", "TRFMODE", "ZLONGIT", "SREFFECTS",
-    "MODRF", "BMAPXY", "ZTRANSVERSE", "IBSCATTER",
+    "MODRF", "BMAPXY", "ZTRANSVERSE", "IBSCATTER", "FMULT",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -118,6 +118,7 @@ and phase modulation.",
     "A map of Bx and By vs x and y.",
     "A simulation of a single-pass broad-band or functionally-specified transverse dipole impedance.",
     "A simulation of intra-beam scattering.",
+    "Multipole kick element with coefficient input from an SDDS file.",
     } ;
 
 QUAD quad_example;
@@ -195,6 +196,20 @@ PARAMETER mult_param[N_MULT_PARAMS] = {
     {"ORDER", "", IS_LONG, 0, (long)((char *)&mult_example.order), NULL, 0.0, 1},
     {"N_KICKS", "", IS_LONG, 0, (long)((char *)&mult_example.n_kicks), NULL, 0.0, DEFAULT_N_KICKS},
     {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&mult_example.synch_rad), NULL, 0.0, 0},
+    };
+
+FMULT fmult_example;
+/* multipole physical parameters */
+PARAMETER fmult_param[N_FMULT_PARAMS] = {
+    {"L", "M", IS_DOUBLE, 0, (long)((char *)&fmult_example.length), NULL, 0.0, 0},
+    {"TILT", "RAD", IS_DOUBLE, 0, (long)((char *)&fmult_example.tilt), NULL, 0.0, 0},
+    {"DX", "M", IS_DOUBLE, 0, (long)((char *)&fmult_example.dx), NULL, 0.0, 0},
+    {"DY", "M", IS_DOUBLE, 0, (long)((char *)&fmult_example.dy), NULL, 0.0, 0},
+    {"DZ", "M", IS_DOUBLE, 0, (long)((char *)&fmult_example.dz), NULL, 0.0, 0},
+    {"FSE", "", IS_DOUBLE, 0, (long)((char *)&fmult_example.fse), NULL, 0.0, 0},
+    {"N_KICKS", "", IS_LONG, 0, (long)((char *)&fmult_example.n_kicks), NULL, 0.0, 1},
+    {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&fmult_example.synch_rad), NULL, 0.0, 0},
+    {"FILENAME", "", IS_STRING, 0, (long)((char *)&fmult_example.filename), NULL, 0.0, 0},
     };
 
 SOLE sole_example;
@@ -1054,6 +1069,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_BMAPXY_PARAMS,     HAS_LENGTH,   sizeof(BMAPXY),  bmapxy_param      },
     { N_ZTRANSVERSE_PARAMS,          0,     sizeof(ZTRANSVERSE),  ztransverse_param    },
     { N_IBSCATTER_PARAMS,        0,   sizeof(IBSCATTER),  ibscatter_param  },
+    { N_FMULT_PARAMS,  MAT_LEN_NCAT|IS_MAGNET,       sizeof(FMULT),    fmult_param     }, 
 } ;
  
 
