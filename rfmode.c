@@ -1,6 +1,7 @@
 /* Copyright 1994 by Michael Borland and Argonne National Laboratory,
  * all rights reserved.
  */
+
 /* file: rfmode.c
  * contents: track_through_rfmode()
  *
