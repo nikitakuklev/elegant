@@ -14,6 +14,7 @@
 
 ELEMENT_LIST *findChromaticLinearMatrixElement(ELEMENT_LIST *eptr);
 void trackWithChromaticLinearMatrix(double **particle, long particles,
+                                    ELEMENT_LIST *eptr,
                                     TWISS *twiss0,
                                     double *tune0,
                                     double *chrom,
@@ -116,42 +117,6 @@ long do_tracking(
     last_type = sums_allocated = 0;
     for (i_pass=0; i_pass<n_passes; i_pass++) {
         log_entry("do_tracking.2.1");
-        if (!(flags&SILENT_RUNNING) && !is_batch && n_passes!=1 && !(flags&TEST_PARTICLES)
-            && !(run->tracking_updates==0)) {
-#if defined(VAX_VMS)
-            sprintf(s, "%ld particles left after pass %ld        ",
-                    n_to_track, i_pass);
-            fputs(s, stderr);
-            if (is_ansi_term)
-                backspace(strlen(s));
-            else
-                fputc('\n', stderr);
-            fflush(stderr);
-            et1 = et2;
-#endif
-#if defined(UNIX)
-            if ((et2=delapsed_time())-et1>2.0) {
-                sprintf(s, "%ld particles left after pass %ld        ", 
-                        n_to_track, i_pass);
-                fputs(s, stderr);
-                if (is_ansi_term)
-                    backspace(strlen(s));
-                else
-                    fputc('\n', stderr);
-                fflush(stderr);
-                et1 = et2;
-                }
-#else
-            sprintf(s, "%ld particles left after pass %ld        ", 
-                    n_to_track, i_pass);
-            fputs(s, stderr);
-            if (is_ansi_term)
-                backspace(strlen(s));
-            else
-                fputc('\n', stderr);
-            fflush(stderr);
-#endif 
-            }
         
         if (beamline->links) {
             sprintf(s, "%.15e sto p_central  %ld sto turn", *P_central, i_pass);
@@ -193,8 +158,7 @@ long do_tracking(
             fprintf(stderr, "tracking, you must ask for matrix concatenation in the run_setup.\n");
             exit(1);
           }
-          eptrCLMatrix = 
-            findChromaticLinearMatrixElement(eptr);
+          eptrCLMatrix = findChromaticLinearMatrixElement(eptr);
         }
         
         if (sums_vs_z && n_z_points) {
@@ -225,6 +189,42 @@ long do_tracking(
         log_entry("do_tracking.2.2");
         if (check_nan) {
             n_left = n_to_track = limit_amplitudes(coord, DBL_MAX, DBL_MAX, n_to_track, accepted, z, *P_central, 0);
+            }
+        if (!(flags&SILENT_RUNNING) && !is_batch && n_passes!=1 && !(flags&TEST_PARTICLES)
+            && !(run->tracking_updates==0)) {
+#if defined(VAX_VMS)
+            sprintf(s, "%ld particles left after pass %ld        ",
+                    n_to_track, i_pass);
+            fputs(s, stderr);
+            if (is_ansi_term)
+                backspace(strlen(s));
+            else
+                fputc('\n', stderr);
+            fflush(stderr);
+            et1 = et2;
+#endif
+#if defined(UNIX)
+            if ((et2=delapsed_time())-et1>2.0) {
+                sprintf(s, "%ld particles left after pass %ld        ", 
+                        n_to_track, i_pass);
+                fputs(s, stderr);
+                if (is_ansi_term)
+                    backspace(strlen(s));
+                else
+                    fputc('\n', stderr);
+                fflush(stderr);
+                et1 = et2;
+                }
+#else
+            sprintf(s, "%ld particles left after pass %ld        ", 
+                    n_to_track, i_pass);
+            fputs(s, stderr);
+            if (is_ansi_term)
+                backspace(strlen(s));
+            else
+                fputc('\n', stderr);
+            fflush(stderr);
+#endif 
             }
         while (eptr && n_to_track) {
             log_entry("do_tracking.2.2.0");
@@ -281,7 +281,8 @@ long do_tracking(
                 show_dE = 0;
                 if (eptr==eptrCLMatrix)  {
                   /* This element is the place-holder for the chromatic linear matrix */
-                  trackWithChromaticLinearMatrix(coord, n_to_track, 
+                  trackWithChromaticLinearMatrix(coord, n_to_track,
+                                                 eptrCLMatrix,
                                                  beamline->twiss0,
                                                  beamline->tune,
                                                  beamline->chromaticity,
@@ -1145,13 +1146,14 @@ ELEMENT_LIST *findChromaticLinearMatrixElement(ELEMENT_LIST *eptr)
 }
 
 void trackWithChromaticLinearMatrix(double **particle, long particles,
+                                    ELEMENT_LIST *eptr,
                                     TWISS *twiss,
                                     double *tune0,
                                     double *chrom,
                                     double *dbeta_dPoP, 
                                     double *dalpha_dPoP)
 {
-  long ip, plane, offset;
+  long ip, plane, offset, i, j;
   double *coord, deltaPoP, tune2pi, sin_phi, cos_phi;
   double alpha[2], beta[2], beta1, alpha1;
   double R11, R22, R12;
@@ -1165,6 +1167,12 @@ void trackWithChromaticLinearMatrix(double **particle, long particles,
   beta[1] = twiss->betay;
   alpha[0] = twiss->alphax;
   alpha[1] = twiss->alphay;
+  for (i=4; i<6; i++) {
+    for (j=0; j<6; j++) {
+      M1->R[i][j] = eptr->matrix->R[i][j];
+      M1->R[j][i] = eptr->matrix->R[j][i];
+    }
+  }
   for (ip=0; ip<particles; ip++) {
     coord = particle[ip];
     deltaPoP = coord[5];
@@ -1192,7 +1200,6 @@ void trackWithChromaticLinearMatrix(double **particle, long particles,
         }
       }
     }
-    M1->R[4][4] = M1->R[5][5] = 1;
     lastDPoP = deltaPoP;
     track_particles(&coord, M1, &coord, 1);
   }
