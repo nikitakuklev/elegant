@@ -67,11 +67,11 @@ double rms_value(double *data, long n_data);
 long steering_corrector(ELEMENT_LIST *eptr, STEERING_LIST *SL, long plane);
 void zero_closed_orbit(TRAJECTORY *clorb, long n);
 long find_index(long key, long *list, long n_listed);
-void add_steer_elem_to_lists(STEERING_LIST *SL, long plane, char *name, char *item, 
+long add_steer_elem_to_lists(STEERING_LIST *SL, long plane, char *name, char *item, 
                              char *element_type, double tweek, double limit,
-                             LINE_LIST *beamline, RUN *run);
-void add_steer_type_to_lists(STEERING_LIST *SL, long plane, long type, char *item, double tweek, double limit,
-    LINE_LIST *beamline, RUN *run);
+                             LINE_LIST *beamline, RUN *run, long forceQuads);
+long add_steer_type_to_lists(STEERING_LIST *SL, long plane, long type, char *item, double tweek, double limit,
+    LINE_LIST *beamline, RUN *run, long forceQuads);
 double compute_kick_coefficient(ELEMENT_LIST *elem, long plane, long type, double corr_tweek, char *name, char *item, RUN *run);
 double noise_value(double xamplitude, double xcutoff, long xerror_type);
 void do_response_matrix_output(char *filename, char *type, RUN *run, char *beamline_name, CORMON_DATA *CM, 
@@ -213,30 +213,36 @@ void correction_setup(
       fputs("finding correctors/monitors and/or computing correction matrices\n", stdout);
     
     if (_correct->SLx.n_corr_types==0) {
+      long found = 0;
       cp_str(&item, "KICK");
-      add_steer_type_to_lists(&_correct->SLx, 0, T_HCOR, item, _correct->CMx->default_tweek, 
-                              _correct->CMx->corr_limit, beamline, run);
+      found += add_steer_type_to_lists(&_correct->SLx, 0, T_HCOR, item, _correct->CMx->default_tweek, 
+                              _correct->CMx->corr_limit, beamline, run, 0);
       cp_str(&item, "HKICK");
-      add_steer_type_to_lists(&_correct->SLx, 0, T_HVCOR, item, _correct->CMx->default_tweek, 
-                              _correct->CMx->corr_limit, beamline, run);
+      found += add_steer_type_to_lists(&_correct->SLx, 0, T_HVCOR, item, _correct->CMx->default_tweek, 
+                              _correct->CMx->corr_limit, beamline, run, 0);
       cp_str(&item, "HKICK");
-      add_steer_type_to_lists(&_correct->SLx, 0, T_QUAD, item, _correct->CMx->default_tweek, 
-                              _correct->CMx->corr_limit, beamline, run);
-      add_steer_type_to_lists(&_correct->SLx, 0, T_KQUAD, item, _correct->CMx->default_tweek, 
-                              _correct->CMx->corr_limit, beamline, run);
+      found += add_steer_type_to_lists(&_correct->SLx, 0, T_QUAD, item, _correct->CMx->default_tweek, 
+                              _correct->CMx->corr_limit, beamline, run, 0);
+      found += add_steer_type_to_lists(&_correct->SLx, 0, T_KQUAD, item, _correct->CMx->default_tweek, 
+                              _correct->CMx->corr_limit, beamline, run, 0);
+      if (!found)
+        bomb("no horizontal steering elements found", NULL);
     }
     if (_correct->SLy.n_corr_types==0) {
+      long found = 0;
       cp_str(&item, "KICK");
-      add_steer_type_to_lists(&_correct->SLy, 2, T_VCOR, item, _correct->CMy->default_tweek, 
-                              _correct->CMx->corr_limit, beamline, run);
+      found += add_steer_type_to_lists(&_correct->SLy, 2, T_VCOR, item, _correct->CMy->default_tweek, 
+                              _correct->CMx->corr_limit, beamline, run, 0);
       cp_str(&item, "VKICK");
-      add_steer_type_to_lists(&_correct->SLy, 2, T_HVCOR, item, _correct->CMy->default_tweek, 
-                              _correct->CMy->corr_limit, beamline, run);
+      found += add_steer_type_to_lists(&_correct->SLy, 2, T_HVCOR, item, _correct->CMy->default_tweek, 
+                              _correct->CMy->corr_limit, beamline, run, 0);
       cp_str(&item, "VKICK");
-      add_steer_type_to_lists(&_correct->SLy, 0, T_QUAD, item, _correct->CMy->default_tweek, 
-                              _correct->CMy->corr_limit, beamline, run);
-      add_steer_type_to_lists(&_correct->SLy, 0, T_KQUAD, item, _correct->CMy->default_tweek, 
-                              _correct->CMy->corr_limit, beamline, run);
+      found += add_steer_type_to_lists(&_correct->SLy, 2, T_QUAD, item, _correct->CMy->default_tweek, 
+                              _correct->CMy->corr_limit, beamline, run, 0);
+      found += add_steer_type_to_lists(&_correct->SLy, 2, T_KQUAD, item, _correct->CMy->default_tweek, 
+                              _correct->CMy->corr_limit, beamline, run, 0);
+      if (!found)
+        bomb("no horizontal steering elements found", NULL);
     }
 
     if (_correct->mode==TRAJECTORY_CORRECTION) {
@@ -295,28 +301,34 @@ void add_steering_element(CORRECTION *correct, LINE_LIST *beamline, RUN *run, NA
   if (limit && (limit<tweek || limit<0))
     bomb("invalid limit specified for steering element", NULL);
 
-  if (plane[0]=='h' || plane[0]=='H') 
-    add_steer_elem_to_lists(&correct->SLx, 0, name, item, element_type, tweek, limit, beamline, run);
-  else if (plane[0]=='v' || plane[0]=='V')
-    add_steer_elem_to_lists(&correct->SLy, 2, name, item, element_type, tweek, limit, beamline, run);
+  if (plane[0]=='h' || plane[0]=='H')  {
+    if (!add_steer_elem_to_lists(&correct->SLx, 0, name, item, element_type, tweek, limit, beamline, run, 1))
+      bomb("no match to given element name or type", NULL);
+  }
+  else if (plane[0]=='v' || plane[0]=='V') {
+    if (!add_steer_elem_to_lists(&correct->SLy, 2, name, item, element_type, tweek, limit, beamline, run, 1))
+      bomb("no match to given element name or type", NULL);
+  }
   else
     bomb("invalid plane specified for steering element", NULL);
 }
 
-void add_steer_type_to_lists(STEERING_LIST *SL, long plane, long type, char *item, double tweek, double limit,
-                             LINE_LIST *beamline, RUN *run)
+long add_steer_type_to_lists(STEERING_LIST *SL, long plane, long type, char *item, double tweek, double limit,
+                             LINE_LIST *beamline, RUN *run, long forceQuads)
 {
+  long found = 0;
   ELEMENT_LIST *context;
   context = &(beamline->elem);
   while (context && (context=next_element_of_type(context, type))) {
-    add_steer_elem_to_lists(SL, plane, context->name, item, NULL, tweek, limit, beamline, run);
+    found += add_steer_elem_to_lists(SL, plane, context->name, item, NULL, tweek, limit, beamline, run, forceQuads);
     context = context->succ;
   }
+  return found;
 }
 
-void add_steer_elem_to_lists(STEERING_LIST *SL, long plane, char *name, char *item, 
+long add_steer_elem_to_lists(STEERING_LIST *SL, long plane, char *name, char *item, 
                              char *element_type, double tweek, double limit, 
-                             LINE_LIST *beamline, RUN *run)
+                             LINE_LIST *beamline, RUN *run, long forceQuads)
 {
   ELEMENT_LIST *context;
   long param_number, i, found;
@@ -365,9 +377,46 @@ void add_steer_elem_to_lists(STEERING_LIST *SL, long plane, char *name, char *it
         !wild_match(entity_name[context->type], element_type))
       continue;
 
+#ifdef DEBUG
+  printf("Adding %s #%ld to %c plane steering list, forceQuad=%d\n",
+         context->name, context->occurence, plane?'y':'x', forceQuads);
+#endif
+
+    switch (context->type) {
+    case T_QUAD:
+      if (plane) {
+        if (!((QUAD*)(context->p_elem))->xSteering)
+          ((QUAD*)(context->p_elem))->xSteering = forceQuads;
+      }
+      else {
+        if (!((QUAD*)(context->p_elem))->ySteering)
+          ((QUAD*)(context->p_elem))->ySteering = forceQuads;
+      }
+      break;
+    case T_KQUAD:
+      if (plane) {
+        if (!((KQUAD*)(context->p_elem))->xSteering)
+          ((KQUAD*)(context->p_elem))->xSteering = forceQuads;
+      }
+      else {
+        if (!((KQUAD*)(context->p_elem))->ySteering)
+          ((KQUAD*)(context->p_elem))->ySteering = forceQuads;
+      }
+      break;
+    default:
+      break;
+    }
+    
     for (i=0; i<SL->n_corr_types; i++)
       if (strcmp(context->name, SL->corr_name[i])==0)
-        return;
+        break;
+    if (i!=SL->n_corr_types)
+      continue;
+
+#ifdef DEBUG
+  printf("Adding %s to %c plane steering list\n",
+         context->name, plane?'y':'x');
+#endif
 
     SL->corr_name    = trealloc(SL->corr_name, (SL->n_corr_types+1)*sizeof(*SL->corr_name));
     SL->corr_type    = trealloc(SL->corr_type, (SL->n_corr_types+1)*sizeof(*SL->corr_type));
@@ -380,23 +429,6 @@ void add_steer_elem_to_lists(STEERING_LIST *SL, long plane, char *name, char *it
     SL->corr_type[SL->n_corr_types] = context->type;
     cp_str(SL->corr_name+SL->n_corr_types, context->name);
 
-    switch (context->type) {
-    case T_QUAD:
-      if (plane)
-        ((QUAD*)(context->p_elem))->xSteering = 1;
-      else
-        ((QUAD*)(context->p_elem))->ySteering = 1;
-      break;
-    case T_KQUAD:
-      if (!plane) 
-        ((KQUAD*)(context->p_elem))->xSteering = 1;
-      else
-        ((KQUAD*)(context->p_elem))->ySteering = 1;
-      break;
-    default:
-      break;
-    }
-    
     cp_str(SL->corr_param+SL->n_corr_types, item);
     SL->corr_tweek[SL->n_corr_types] = tweek;
     SL->corr_limit[SL->n_corr_types] = limit;
@@ -412,8 +444,7 @@ void add_steer_elem_to_lists(STEERING_LIST *SL, long plane, char *name, char *it
     SL->n_corr_types += 1;    
     found = 1;
   }
-  if (!found)
-    bomb("no match to give name or element type", NULL);
+  return found;
 }
 
 

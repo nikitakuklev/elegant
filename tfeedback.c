@@ -155,10 +155,10 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part, long np, LINE_LIST
 
 void flushTransverseFeedbackDriverFiles(TFBDRIVER *tfbd)
 {
-  if (!(tfbd->dataWritten)) {
+  if (tfbd->initialized && !(tfbd->dataWritten)) {
     if (!SDDS_WritePage(&tfbd->SDDSout)) {
       SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
-      SDDS_Bomb("problem writing data for TFBDRIVER output file");
+      SDDS_Bomb("problem writing data for TFBDRIVER output file (flushTransverseFeedbackDriverFiles)");
     }
     tfbd->dataWritten = 1;
   }
