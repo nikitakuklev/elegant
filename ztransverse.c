@@ -17,6 +17,27 @@
 #include "table.h"
 #include "fftpackC.h"
 
+#define WAKE_COLUMNS 5
+static SDDS_DEFINITION wake_column[WAKE_COLUMNS] = {
+    {"Deltat", "&column name=Deltat, symbol=\"$gD$rt\", units=s, type=double, description=\"Time after head of bunch\" &end"},
+    {"Ix", "&column name=Ix, symbol=\"<I*x>\", units=C*m/s, type=double, description=\"Transverse horizontal moment\" &end"},
+    {"Wx", "&column name=Wx, symbol=\"W$bx$n\", units=V/m, type=double, description=\"Transverse horizontal wake\" &end"},
+    {"Iy", "&column name=Iy, symbol=\"<I*y>\", units=C*m/s, type=double, description=\"Transverse vertical moment\" &end"},
+    {"Wy", "&column name=Wy, symbol=\"W$by$n\", units=V/m, type=double, description=\"Transverse vertical wake\" &end"},
+    };
+
+#define WAKE_PARAMETERS 5
+#define BB_WAKE_PARAMETERS 5
+#define NBB_WAKE_PARAMETERS 2
+static SDDS_DEFINITION wake_parameter[WAKE_PARAMETERS] = {
+    {"Pass", "&parameter name=Pass, type=long &end"},
+    {"q", "&parameter name=q, units=C, type=double, description=\"Total charge\" &end"},
+    {"Rs", "&parameter name=Rs, symbol=\"R$bs$n\", units=\"$gW$r\", type=double, description=\"Broad-band impedance\" &end"},
+    {"fo", "&parameter name=fo, symbol=\"f$bo$n\", units=Hz, type=double, description=\"Frequency of BB resonator\" &end"},
+    {"Deltaf", "&parameter name=Deltaf, symbol=\"$gD$rf\", units=Hz, type=double, description=\"Frequency sampling interval\" &end"},
+    } ;
+
+
 void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long particles, CHARGE *charge);
 double *getTransverseImpedance(SDDS_DATASET *SDDSin, char *ZName);
 
@@ -24,16 +45,17 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
                                RUN *run, long i_pass, CHARGE *charge
                                )
 {
-  static double *posItime[2] = {NULL, NULL};     /* array for histogram of particle density times x, y*/
+  static double *posItime[2] = {NULL, NULL};     /* array for particle density times x, y*/
+  static double *posIfreq;                       /* array for FFT of particle density times x or y*/
   static double *Vtime = NULL;           /* array for voltage acting on each bin */
   static long max_n_bins = 0;
   static long *pbin = NULL;              /* array to record which bin each particle is in */
   static double *time = NULL;            /* array to record arrival time of each particle */
   static double *pz = NULL;
   static long max_np = 0;
-  double *posIfreq, *Vfreq, *iZ;
+  double *Vfreq, *iZ;
   long ib, nb, n_binned, nfreq, iReal, iImag, plane;
-  double factor, tmin, tmax, tmean, dt;
+  double factor, tmin, tmax, tmean, dt, userFactor[2];
   static long not_first_call = -1;
 #if defined(DEBUG)
   FILE *fp;
@@ -47,6 +69,7 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
   if (ztransverse->n_bins>max_n_bins) {
     posItime[0] = trealloc(posItime[0], 2*sizeof(**posItime)*(max_n_bins=ztransverse->n_bins));
     posItime[1] = trealloc(posItime[1], 2*sizeof(**posItime)*(max_n_bins=ztransverse->n_bins));
+    posIfreq = trealloc(posIfreq, 2*sizeof(*posIfreq)*(max_n_bins=ztransverse->n_bins));
     Vtime = trealloc(Vtime, 2*sizeof(*Vtime)*(max_n_bins+1));
   }
 
@@ -79,55 +102,103 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
     fflush(stdout);
   }  
 
+  userFactor[0] = ztransverse->factor*ztransverse->xfactor;
+  userFactor[1] = ztransverse->factor*ztransverse->yfactor;
   for (plane=0; plane<2; plane++) {
-    if (ztransverse->smoothing)
-      SavitzyGolaySmooth(posItime[plane], nb, ztransverse->SGOrder,
-                         ztransverse->SGHalfWidth, ztransverse->SGHalfWidth, 0);
-
-    /* Take the FFT of (x*I)(t) to get (x*I)(f) */
-    realFFT(posItime[plane], nb, 0);
-    posIfreq = posItime[plane]; 
-    
-    /* Compute V(f) = i*Z(f)*(x*I)(f), putting in a factor 
-     * to normalize the current waveform
-     */
-    Vfreq = Vtime;
-    factor = ztransverse->macroParticleCharge/dt;
-    iZ = ztransverse->iZ[plane];
-    Vfreq[0] = posIfreq[0]*iZ[0]*factor;
-    nfreq = nb/2 + 1;
-    if (nb%2==0)
-      /* Nyquist term */
-      Vfreq[nb-1] = posIfreq[nb-1]*iZ[nb-1]*factor;
-    for (ib=1; ib<nfreq-1; ib++) {
-      iImag = (iReal = 2*ib-1)+1;
-      /* The signs are chosen here to get agreement with TRFMODE.
-         In particular, test particles following closely behind the 
-         drive particle get defocused.
-         */
-      Vfreq[iReal] =  (posIfreq[iReal]*iZ[iImag] + posIfreq[iImag]*iZ[iReal])*factor; 
-      Vfreq[iImag] = -(posIfreq[iReal]*iZ[iReal] - posIfreq[iImag]*iZ[iImag])*factor;
+    fprintf(stdout, "User factor = %e for plane = %ld\n", userFactor[plane], plane);
+    if (userFactor[plane]==0) {
+      for (ib=0; ib<nb; ib++)
+	Vtime[ib] = 0;
+    } else {
+      if (ztransverse->smoothing)
+	SavitzyGolaySmooth(posItime[plane], nb, ztransverse->SGOrder,
+			   ztransverse->SGHalfWidth, ztransverse->SGHalfWidth, 0);
+      
+      /* Take the FFT of (x*I)(t) to get (x*I)(f) */
+      memcpy(posIfreq, posItime[plane], 2*ztransverse->n_bins*sizeof(*posIfreq));
+      realFFT(posIfreq, nb, 0);
+      
+      /* Compute V(f) = i*Z(f)*(x*I)(f), putting in a factor 
+       * to normalize the current waveform
+       */
+      Vfreq = Vtime;
+      factor = ztransverse->macroParticleCharge/dt*userFactor[plane];
+      iZ = ztransverse->iZ[plane];
+      Vfreq[0] = posIfreq[0]*iZ[0]*factor;
+      nfreq = nb/2 + 1;
+      if (nb%2==0)
+	/* Nyquist term */
+	Vfreq[nb-1] = posIfreq[nb-1]*iZ[nb-1]*factor;
+      for (ib=1; ib<nfreq-1; ib++) {
+	iImag = (iReal = 2*ib-1)+1;
+	/* The signs are chosen here to get agreement with TRFMODE.
+	   In particular, test particles following closely behind the 
+	   drive particle get defocused.
+	*/
+	Vfreq[iReal] =  (posIfreq[iReal]*iZ[iImag] + posIfreq[iImag]*iZ[iReal])*factor; 
+	Vfreq[iImag] = -(posIfreq[iReal]*iZ[iReal] - posIfreq[iImag]*iZ[iImag])*factor;
+      }
+      
+      /* Compute inverse FFT of V(f) to get V(t) */
+      realFFT(Vfreq, nb, INVERSE_FFT);
+      Vtime = Vfreq;
+      
+      /* change particle transverse momenta to reflect voltage in relevant bin */
+      applyTransverseWakeKicks(part, time, pz, pbin, np, 
+			       Po, plane, 
+			       Vtime, nb, tmin, dt, ztransverse->interpolate);
     }
 
-    /* Compute inverse FFT of V(f) to get V(t) */
-    realFFT(Vfreq, nb, INVERSE_FFT);
-    Vtime = Vfreq;
-            
-    /* change particle transverse momenta to reflect voltage in relevant bin */
-    applyTransverseWakeKicks(part, time, pz, pbin, np, 
-                             Po, plane, 
-                             Vtime, nb, tmin, dt, ztransverse->interpolate);
-    
+    if (ztransverse->SDDS_wake_initialized && ztransverse->wakes) {
+      /* wake potential output */
+      factor = ztransverse->macroParticleCharge/dt;
+      if (ztransverse->wake_interval<=0 || (i_pass%ztransverse->wake_interval)==0) {
+	if (plane==0 && !SDDS_StartTable(&ztransverse->SDDS_wake, nb)) {
+	  SDDS_SetError("Problem starting SDDS table for wake output (track_through_ztransverse)");
+	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+	}
+	for (ib=0; ib<nb; ib++) {
+	  if (!SDDS_SetRowValues(&ztransverse->SDDS_wake, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ib,
+				 0, ib*dt, 
+				 1+plane*2, posItime[plane][ib]*factor,  
+				 2+plane*2, Vtime[ib], -1)) {
+	    SDDS_SetError("Problem setting rows of SDDS table for wake output (track_through_ztransverse)");
+	    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+	  }
+	}
+	if (!SDDS_SetParameters(&ztransverse->SDDS_wake, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+				"Pass", i_pass, "q", ztransverse->macroParticleCharge*np, NULL)) {
+	  SDDS_SetError("Problem setting parameters of SDDS table for wake output (track_through_ztransverse)");
+	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+	}
+	if (ztransverse->broad_band) {
+	  if (!SDDS_SetParameters(&ztransverse->SDDS_wake, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+				  "Rs", ztransverse->Rs, "fo", ztransverse->freq, 
+				  "Deltaf", ztransverse->bin_size, NULL)) {
+	    SDDS_SetError("Problem setting parameters of SDDS table for wake output (track_through_ztransverse)");
+	    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+	  }
+	}
+	if (plane==1) {
+	  if (!SDDS_WriteTable(&ztransverse->SDDS_wake)) {
+	    SDDS_SetError("Problem writing SDDS table for wake output (track_through_ztransverse)");
+	    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+	  }
+	  SDDS_DoFSync(&ztransverse->SDDS_wake);
+	}
+      }
+    }
   }
 
 #if defined(MIMIMIZE_MEMORY)
   free(posItime[0]);
   free(posItime[1]);
+  free(posIfreq);
   free(Vtime);
   free(pbin);
   free(time);
   free(pz);
-  posItime[0] = posItime[1] = Vtime = time = pz = NULL;
+  posItime[0] = posItime[1] = Vtime = time = pz = posIfreq = NULL;
   pbin = NULL;
   max_n_bins = max_np = 0 ;
 #endif
@@ -147,12 +218,14 @@ void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long part
     if (particles)
       ztransverse->macroParticleCharge = ztransverse->charge/particles;
   }
-  
+
   if (ztransverse->initialized)
     return;
 
+  ztransverse->SDDS_wake_initialized = 0;
+
   if (ztransverse->broad_band) {
-    /* Use impedance Z = j*wr/w*Rs/(1 + j*Q(w/wr-wr/w))
+    /* Use impedance Z = i*wr/w*Rs/(1 + i*Q(w/wr-wr/w))
        */
     double term;
     if (ztransverse->bin_size<=0)
@@ -167,24 +240,25 @@ void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long part
     ztransverse->iZ[1] = tmalloc(sizeof(**(ztransverse->iZ))*ztransverse->n_bins);
     /* df is the frequency spacing normalized to the resonant frequency */
     df = 1/(ztransverse->n_bins*ztransverse->bin_size)/(ztransverse->freq);
-    /* DC term of iZ is zero */
-    ztransverse->iZ[0][0] = ztransverse->iZ[1][0] = 0;
+    /* DC term of iZ is Rs  */
+    ztransverse->iZ[0][0] = ztransverse->Rs;
+    ztransverse->iZ[1][0] = 0;
     for (i=1; i<nfreq-1; i++) {
       term = ztransverse->Q*(i*df-1.0/(i*df));
       /* real part of i*Z */
       ztransverse->iZ[0][2*i-1] =  
         ztransverse->iZ[1][2*i-1] =  
-          ztransverse->Rs/(i*df)/(1+term*term);
+	ztransverse->Rs/(i*df)/(1+term*term);
       /* imaginary part of i*Z is -Real[i*Z]*term */
       ztransverse->iZ[0][2*i] = 
         ztransverse->iZ[1][2*i] = 
-          -term*ztransverse->iZ[0][2*i-1];
+	-term*ztransverse->iZ[0][2*i-1];
     }
     /* Nyquist term--real part of iZ only */
     term = ztransverse->Q*(1.0/(nfreq*df)-nfreq*df);
     ztransverse->iZ[0][ztransverse->n_bins-1] = 
       ztransverse->iZ[1][ztransverse->n_bins-1] = 
-        ztransverse->Rs/(nfreq*df)/(1+term*term);
+      ztransverse->Rs/(nfreq*df)/(1+term*term);
     df *= ztransverse->freq;
   } else {
     double *ZReal[2], *ZImag[2], *freqData;
@@ -283,6 +357,23 @@ void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long part
     }
 #endif
 
+  if (ztransverse->wakes) {
+    ztransverse->wakes = compose_filename(ztransverse->wakes, run->rootname);
+    if (ztransverse->broad_band) 
+      SDDS_ElegantOutputSetup(&ztransverse->SDDS_wake, ztransverse->wakes, SDDS_BINARY, 
+			      1, "transverse wake",
+			      run->runfile, run->lattice, wake_parameter, BB_WAKE_PARAMETERS,
+			      wake_column, WAKE_COLUMNS, "set_up_ztransverse", 
+			      SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
+    else {
+      SDDS_ElegantOutputSetup(&ztransverse->SDDS_wake, ztransverse->wakes, SDDS_BINARY, 
+			      1, "transverse wake",
+			      run->runfile, run->lattice, wake_parameter, NBB_WAKE_PARAMETERS,
+			      wake_column, WAKE_COLUMNS, "set_up_ztransverse", 
+			      SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
+    }
+    ztransverse->SDDS_wake_initialized = 1;
+  }
   ztransverse->initialized = 1;
 }
 
