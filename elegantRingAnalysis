@@ -1,0 +1,368 @@
+#!/bin/sh
+# \
+exec oagwish "$0" "$@"
+
+#
+# $Log: elegantRingAnalysis,v
+#
+
+set auto_path [linsert $auto_path 0  /usr/local/oag/apps/lib/$env(HOST_ARCH)]
+set auto_path [linsert $auto_path 0  /usr/local/oag/lib_patch/$env(HOST_ARCH)]
+APSDebugPath
+set CVSRevisionAuthor "\$Author: borland $"
+
+APSApplication . -name elegantRingAnalysis \
+  -overview "Performs various elegant simulations for a ring."
+
+set sourceDir /home/oxygen/BORLAND/oag/apps/src/elegant/ringAnalysisTemplates
+
+proc setStatus {text} {
+    APSSetVarAndUpdate status $text
+    update
+}
+
+setStatus "Working..."
+APSScrolledStatus .status -parent .userFrame -textVariable status -height 10 -width 95
+update
+.menu.file.menu insert 1 command -label "Save as..." -command SaveConfiguration
+.menu.file.menu insert 1 command -label "Read..." -command ReadConfiguration
+
+set momentum 7.0e3
+set matrixLatticeFile ""
+set kickLatticeFile ""
+set mainParameterFile(1) ""
+set mainParameterFile(2) ""
+set mainParameterFile(3) ""
+set mainParameterFile(4) ""
+set mainDirectory [pwd]
+set mainPrefix ""
+
+proc SaveConfiguration {} {
+    global mainDirectory saveVarList
+    set configFile [APSFileSelectDialog .saveDialog -listDir $mainDirectory \
+                     -checkValidity 0]
+    if ![string length $configFile] return
+    if [file exists $configFile] {
+        if {[APSMultipleChoice [APSUniqueName .] \
+               -question "$configFile exists already.  What do you want to do?" \
+               -labelList {Overwrite Cancel}]==Cancel} {
+            return
+        }
+    }
+    set fd [open $configFile w]
+    eval global $saveVarList
+    foreach variable $saveVarList {
+        set names [array names $variable]
+        if ![llength $names] {
+            puts $fd "set $variable [set $variable]"
+        } else {
+            foreach name $names {
+                puts $fd "set $variable\($name\) [set $variable\($name\)]" 
+            }
+        }
+    }
+    close $fd
+    setStatus "Configuration $configFile written."
+}
+
+proc ReadConfiguration {} {
+    global mainDirectory saveVarList
+    eval global $saveVarList
+    set configFile [APSFileSelectDialog .saveDialog -listDir $mainDirectory \
+                     -checkValidity 1]
+    if ![string length $configFile] return
+    if ![file exists $configFile] return
+    source $configFile
+    setStatus "Configuration $configFile read."
+}
+
+proc FillMainFrame {widget args} {
+    APSLabeledEntry .le1 -parent $widget -label "Momentum (MeV/c): " \
+      -width 60 -textVariable momentum -contextHelp \
+      "Enter the beam momentum in MeV/c."
+    APSLabeledEntry .le2 -parent $widget -label "Matrix lattice file: " \
+      -width 60 -textVariable matrixLatticeFile -fileSelectButton 1 -fileSelectPattern *.lte \
+      -contextHelp \
+      "Enter the name of the lattice file that uses matrix-based elements."
+    APSLabeledEntry .le3 -parent $widget -label "Tracking lattice file: " \
+      -width 60 -textVariable kickLatticeFile -fileSelectButton 1 -fileSelectPattern *.lte \
+      -contextHelp \
+      "Enter the name of the lattice file that uses kick-based elements for tracking."
+    foreach item {1 2 3 4} {
+        APSLabeledEntry .le4$item -parent $widget -label "Parameter file (optional): " \
+          -width 60 -textVariable mainParameterFile($item) -fileSelectButton 1 -fileSelectPattern *.param \
+          -contextHelp \
+          "Enter the name of the parameter file that contains element parameters.  It will be loaded over the lattice."
+    }
+    APSLabeledEntry .le5 -parent $widget -label "Output directory: " \
+      -width 60 -textVariable mainDirectory \
+      -fileSelectButton 1 -fileSelectDirectory 1 \
+      -contextHelp \
+      "Enter the directory in which to place calculation results." 
+    APSLabeledEntry .le6 -parent $widget -label "Output file prefix (optional): " \
+      -width 60 -textVariable mainPrefix \
+      -contextHelp "Enter an optional prefix to use in creating output filenames."
+}
+
+proc FillBasicFrame {widget args} {
+    global basicComputations
+    foreach item [list Chromaticity HigherOrderChromaticity ChromaticTuneSpread \
+                    RadiationIntegrals ] {
+        set basicComputations(do$item) 0
+        lappend variableList basicComputations(do$item) 
+    }
+    APSCheckButtonFrame .cb1 -parent $widget \
+      -label "Include: " -allNone 1 -limitPerRow 4 \
+      -buttonList [list Chromaticity "Higher-order chromaticity" "Chromatic Tune Spread" \
+                     "Radiation Integrals" ] \
+      -variableList $variableList 
+
+    set basicComputations(chromaticTuneSpreadMomentumSpread) 0.015
+    APSLabeledEntry .le1 -parent $widget -width 20 \
+      -label "Momentum fractional half-range for chromatic tune spread: " \
+      -textVariable basicComputations(chromaticTuneSpreadMomentumSpread) 
+
+    set basicComputations(driftDivisions) 1
+    set basicComputations(dipoleDivisions) 1
+    set basicComputations(quadDivisions) 1
+    set basicComputations(sextDivisions) 1
+    APSLabeledEntry .le2 -parent $widget -width 20 \
+      -label "Drift divisions: " -type integer \
+      -textVariable basicComputations(driftDivisions)
+    APSLabeledEntry .le3 -parent $widget -width 20 \
+      -label "Dipole divisions: " -type integer \
+      -textVariable basicComputations(dipoleDivisions)
+    APSLabeledEntry .le4 -parent $widget -width 20 \
+      -label "Quad divisions: " -type integer \
+      -textVariable basicComputations(quadDivisions)
+
+    set basicComputations(beamline) RING
+    APSLabeledEntry .le5 -parent $widget -width 20 \
+      -label "Beamline: " -textVariable basicComputations(beamline)
+
+    APSButton .bu1 -parent $widget -text "Compute" -command \
+      "BasicComputations -mode run"
+    APSButton .bu2 -parent $widget -text "Display" -command \
+      "BasicComputations -mode display"
+}
+
+proc BasicComputations {args} {
+    set mode run
+    APSStrictParseArguments {mode}
+
+    global sourceDir 
+    global basicComputations momentum matrixLatticeFile mainParameterFile mainDirectory mainPrefix
+    foreach name [array names basicComputations] {
+        set $name $basicComputations($name)
+    }
+    set order 1
+    if $doChromaticity {
+        set order 2
+    }
+    if {$doHigherOrderChromaticity || $doChromaticTuneSpread} {
+        set order 3
+    }
+    if {$doChromaticTuneSpread && [expr $chromaticTuneSpreadMomentumSpread<=0]} {
+        return -code error "momentum spread must be positive for chromatic tune spread computations"        
+    }
+    set parameterFileList ""
+    foreach item [lsort [array names mainParameterFile]] {
+        if [string length $mainParameterFile($item)] {
+            append parameterFileList "$mainParameterFile($item) "
+        }
+    }
+    foreach item [array names basicComputations] {
+        lappend macroList $item=[set $item]
+    }
+    set tag Basic
+    if [string compare $mode run]==0 {
+        if {![PerformRun -template $sourceDir/BasicTemplate.ele -parameterFileList $parameterFileList \
+                -tag $tag -order $order -momentum $momentum -macroList [join $macroList ,]]} {
+            return 
+        }
+    } else {
+        set runDone [file exists $mainDirectory/${mainPrefix}${tag}.done]
+        if !$runDone {
+            return -code error "$mainDirectory/${mainPrefix}${tag} not done"
+        }
+    }
+
+    set tmpRoot /tmp/[APSTmpString]
+    APSAddToTempFileList $tmpRoot.p1
+    exec plotTwiss -fileRoot $mainDirectory/${mainPrefix}${tag}  &
+    set parameterList -parameter=nu?,end 
+    if $doChromaticity {
+        lappend parameterList -parameter=dnu?/dp,end 
+    }
+    if $doHigherOrderChromaticity {
+        lappend parameterList -parameter=dnu?/dp2,end -parameter=dnu?/dp3,end 
+    }
+    if $doChromaticTuneSpread {
+        lappend parameterList -parameter=dnu?Chrom,end
+    }
+    if $basicComputations(doRadiationIntegrals) {
+        lappend parameterList -parameter=ex0 -parameter=Sdelta0 -parameter=U0,end
+        lappend parameterList -parameter=J? -parameter=Jdelta,end
+        lappend parameterList -parameter=tau? -parameter=taudelta,end
+    }
+    eval exec sddsprocess $mainDirectory/${mainPrefix}${tag}.twi -pipe=out \
+      {"-define=parameter,dnuxChrom,nuxChromUpper nuxChromLower -"} \
+      {"-define=parameter,dnuyChrom,nuyChromUpper nuyChromLower -"} \
+      | sddsprintout -pipe=in $tmpRoot.p1 -title=$mainDirectory/${mainPrefix}${tag}.twi \
+      $parameterList -parameter=beta?Max,end -parameter=beta?Min,end \
+      -parameter=etaxM*,end 
+    APSFileDisplayWindow [APSUniqueName .] -fileName $tmpRoot.p1 -deleteOnClose 1 \
+      -height [llength $parameterList] -width 120
+}
+
+proc PerformRun {args} {
+    set template ""
+    set parameterFileList ""
+    set order 1
+    set momentum 7e3
+    set macroList ""
+    set tag ""
+    APSStrictParseArguments {template parameterFileList order momentum macroList tag}
+    global mainDirectory mainPrefix matrixLatticeFile kickLatticeFile sourceDir
+    set macroList [split $macroList ,]
+    foreach item [list order momentum mainDirectory mainPrefix matrixLatticeFile kickLatticeFile parameterFileList] {
+        lappend macroList $item=[set $item]
+    }
+    set runDone [file exists $mainDirectory/${mainPrefix}${tag}.done]
+    setStatus "Running elegant..."
+    set runDone 0
+    APSExecLog [APSUniqueName .] -width 100 \
+      -unixCommand "elegant \"-macro=[join $macroList ,]\" $template" \
+      -callback "set runDone 1" \
+      -cancelCallback "set runDone 2" -abortCallback "set runDone 2"
+    tkwait variable runDone
+    if ![file exists $mainDirectory/${mainPrefix}${tag}.done] {
+        setStatus "Run failed."
+        return 0
+    }
+    setStatus "Run finished."
+    return 1
+}
+
+proc FillPhaseSpaceFrame {widget args} {
+    global phaseSpaceTracking
+    set phaseSpaceTracking(offsetPlane) X
+    set phaseSpaceTracking(otherPlane) Y
+    set phaseSpaceTracking(initialOffset) 1e-6
+    set phaseSpaceTracking(finalOffset)   1e-3
+    set phaseSpaceTracking(otherCoord) 0.0
+    set phaseSpaceTracking(sweepPoints) 11
+    set phaseSpaceTracking(turns) 1024
+    set phaseSpaceTracking(offsetElement) MALIN
+    APSRadioButtonFrame .rb1 -parent $widget \
+      -label "Plane: " -orientation horizontal -buttonList {x y} -valueList {X Y} \
+      -commandList {"set phaseSpaceTracking(otherPlane) y" "set phaseSpaceTracking(otherPlane) x"} \
+      -variable phaseSpaceTracking(offsetPlane) -contextHelp \
+      "Choose the plane for which the initial coordinate will be varied."
+    APSLabeledEntry .le1 -parent $widget \
+      -label "Initial offset for scan (m): " -width 20 -textVariable phaseSpaceTracking(initialOffset) \
+      -contextHelp \
+      "Enter the initial value of the offset for the swept coordinate."
+    APSLabeledEntry .le2 -parent $widget \
+      -label "Final offset for scan (m): " -width 20 -textVariable phaseSpaceTracking(finalOffset) \
+      -contextHelp \
+      "Enter the final value of the offset for the swept coordinate."
+    APSLabeledEntry .le2p1 -parent $widget \
+      -label "Number of offset values in scan" -width 20 -textVariable phaseSpaceTracking(sweepPoints) \
+      -contextHelp \
+      "Enter the number of offset values in the scan."
+    APSLabeledEntry .le2p2 -parent $widget \
+      -label "Element to use for offsetting:" \
+      -width 20 -textVariable phaseSpaceTracking(offsetElement) \
+      -contextHelp \
+      "Enter the name of the element to use for offsetting the coordinate.  It should be at the start of the beamline.  It will be set to ON_PASS=0."
+
+    APSLabeledEntry .le3 -parent $widget \
+      -label "Fixed offset value for the unscanned plane (m): " \
+      -width 20 -textVariable phaseSpaceTracking(otherCoord) \
+      -contextHelp \
+      "Enter the fixed offset value for the unscanned plane."
+    APSLabeledEntry .le4 -parent $widget \
+      -label "Turns to track: " -width 20 -textVariable phaseSpaceTracking(turns) \
+      -contextHelp \
+      "Enter the number of turns to track."
+
+    set phaseSpaceTracking(beamline) RING
+    APSLabeledEntry .le5 -parent $widget -width 20 \
+      -label "Beamline: " -textVariable phaseSpaceTracking(beamline)
+
+    APSButton .bu1 -parent $widget \
+      -text "Run" -command "PhaseSpaceTracking -mode run"
+    APSButton .bu2 -parent $widget \
+      -text "Display" -command "PhaseSpaceTracking -mode display"
+}
+
+proc PhaseSpaceTracking {args} {
+    set mode display
+    APSStrictParseArguments {mode}
+
+    global sourceDir 
+    global phaseSpaceTracking momentum matrixLatticeFile mainParameterFile mainDirectory mainPrefix
+    set parameterFileList ""
+    foreach item [lsort [array names mainParameterFile]] {
+        if [string length $mainParameterFile($item)] {
+            append parameterFileList "$mainParameterFile($item) "
+        }
+    }
+    foreach item [array names phaseSpaceTracking] {
+        lappend macroList $item=[set phaseSpaceTracking($item)]
+    }
+    set tag PhaseSpaceTracking
+    if [string compare $mode run]==0 {
+        if {![PerformRun -template $sourceDir/PhaseSpaceTrackingTemplate.ele -parameterFileList $parameterFileList \
+                -tag $tag -order 3 -momentum $momentum -macroList [join $macroList ,]]} {
+            return 
+        }
+    } else {
+        set runDone [file exists $mainDirectory/${mainPrefix}${tag}.done]
+        if !$runDone {
+            return -code error "$mainDirectory/${mainPrefix}${tag} not done"
+        }
+    }
+    set plane [string tolower $phaseSpaceTracking(offsetPlane)]
+    exec sddsplot -col=C${plane},C${plane}p -graph=dot $mainDirectory/${mainPrefix}${tag}.w1 &
+    if [expr $phaseSpaceTracking(otherCoord)!=0.0] {
+        set plane [string tolower $phaseSpaceTracking(otherPlane)]
+        exec sddsplot -col=C${plane},C${plane}p -graph=dot $mainDirectory/${mainPrefix}${tag}.w1 &
+    }
+    exec sddsfft $mainDirectory/${mainPrefix}${tag}.w1 \
+      -column=Pass,C${plane} -window -suppressAverage -pipe=out \
+      | sddsxref -pipe $mainDirectory/${mainPrefix}${tag}.fin  \
+      -leave=* -transfer=parameter,* \
+      | sddsprocess -pipe=in $mainDirectory/${mainPrefix}${tag}.w1.fft \
+      "-print=parameter,${plane}Label,${plane}0 = %.5f,$phaseSpaceTracking(offsetElement).D[string toupper $plane]"
+    exec sddsplot -column=f,FFTC${plane} $mainDirectory/${mainPrefix}${tag}.w1.fft \
+      -title=@${plane}Label -separate -mode=y=log,y=special
+}
+
+proc FillDynamicApertureFrame {widget args} {
+}
+ 
+proc FillOffMomentumTunesFrame {widget args} {
+}
+
+proc FillOffMomentumDynamicApertureFrame {widget args} {
+}
+
+set sectionList [list Main Basic "Phase Space" "DA" "Off-momentum Tunes" "Off-Momentum DA"]
+
+set tabFrameWidgetList [APSTabFrame .main -parent .userFrame -label "" \
+    -labelList $sectionList -width 900 -height 315]
+
+FillMainFrame  [lindex $tabFrameWidgetList 0]
+FillBasicFrame [lindex $tabFrameWidgetList 1]
+FillPhaseSpaceFrame [lindex $tabFrameWidgetList 2]
+FillDynamicApertureFrame [lindex $tabFrameWidgetList 3]
+FillOffMomentumTunesFrame [lindex $tabFrameWidgetList 4]
+FillOffMomentumDynamicApertureFrame [lindex $tabFrameWidgetList 5]
+
+lappend saveVarList momentum matrixLatticeFile kickLatticeFile mainParameterFile mainDirectory mainPrefix
+lappend saveVarList basicComputations phaseSpaceTracking
+
+setStatus "Ready."
+update
