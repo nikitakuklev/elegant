@@ -1113,16 +1113,109 @@ proc FineDynamicAperturePP {args} {
 	-order=spect -split=column=Pass,width=1 &
 }
 
+proc FillFrequencyMapFrame {widget args} {
+    global frequencyMap
+    set frequencyMap(xMinimum)  1e-6
+    set frequencyMap(xMaximum)  0.01
+    set frequencyMap(yMinimum)  1e-6
+    set frequencyMap(yMaximum)  0.01
+    set frequencyMap(xPoints)   101
+    set frequencyMap(yPoints)   51
+    set frequencyMap(turns)     500
+    set frequencyMap(delta)     0.0
+    set frequencyMap(userSuffix)    ""
+
+    APSLabeledEntry .le1 -parent $widget \
+      -label "Minimum x coordinate (m): " -width 20 -textVariable frequencyMap(xMinimum) \
+      -contextHelp \
+      "Enter the minimum x coordinate for the dynamic aperture run"
+    APSLabeledEntry .le2 -parent $widget \
+      -label "Maximum x coordinate (m): " -width 20 -textVariable frequencyMap(xMaximum) \
+      -contextHelp \
+      "Enter the maximum x coordinate for the dynamic aperture run"
+    APSLabeledEntry .le3 -parent $widget \
+      -label "Number of x points: " -width 20 -textVariable frequencyMap(xPoints) \
+      -contextHelp \
+      "Enter the number of points into which to divide the x interval."
+    APSLabeledEntry .le4a -parent $widget \
+      -label "Minimum y coordinate (m): " -width 20 -textVariable frequencyMap(yMinimum) \
+      -contextHelp \
+      "Enter the maximum y coordinate for the dynamic aperture search"
+    APSLabeledEntry .le4 -parent $widget \
+      -label "Maximum y coordinate (m): " -width 20 -textVariable frequencyMap(yMaximum) \
+      -contextHelp \
+      "Enter the maximum y coordinate for the dynamic aperture search"
+    APSLabeledEntry .le5 -parent $widget \
+      -label "Number of y points: " -width 20 -textVariable frequencyMap(yPoints) \
+      -contextHelp \
+      "Enter the number of points into which to divide the y interval."
+    APSLabeledEntry .le6 -parent $widget \
+      -label "Number of turns: " -width 20 -textVariable frequencyMap(turns) \
+      -contextHelp \
+      "Enter the number of turns to track."
+    APSLabeledEntry .le7 -parent $widget \
+      -label "Fractional momentum offset: " -width 20 -textVariable frequencyMap(delta) \
+      -contextHelp "Enter the fractional momentum offset" 
+    APSLabeledEntry .le8 -parent $widget \
+      -label "Run suffix: " -width 20 -textVariable frequencyMap(userSuffix) \
+      -contextHelp "Enter the suffix for the filenames."
+
+    APSButton .bu1 -parent $widget \
+      -text "Run" -command "FrequencyMap"
+    APSButton .bu2 -parent $widget \
+      -text "Display" -command \
+	{FrequencyMapPP -rootname $mainDirectory/${mainPrefix}FrequencyMap$frequencyMap(userSuffix)}
+}
+
+proc FrequencyMap {args} {
+    global sourceDir 
+    global frequencyMap momentum matrixLatticeFile mainParameterFile mainDirectory mainPrefix
+    global kickOffsetElement
+
+    set tag FrequencyMap
+    set rootname $mainDirectory/${mainPrefix}${tag}$frequencyMap(userSuffix)
+    SaveJobConfiguration -filename $rootname.runCfg
+
+    set parameterFileList ""
+    foreach item [lsort [array names mainParameterFile]] {
+        if [string length $mainParameterFile($item)] {
+            append parameterFileList "$mainParameterFile($item) "
+        }
+    }
+    foreach item [array names frequencyMap] {
+	lappend origList <$item>
+	lappend replList [set frequencyMap($item)]
+    }
+    set variable xOffset
+    PerformRuns -template $sourceDir/FrequencyMapTemplate.ele \
+	-parameterFileList $parameterFileList \
+	-variable $variable -suffix $frequencyMap(userSuffix) \
+	-startValue $frequencyMap(xMinimum) \
+	-endValue $frequencyMap(xMaximum) \
+	-points $frequencyMap(xPoints) \
+	-copyList done -combineList [list ele ele.log los bun clo fma] \
+	-tag $tag -momentum $momentum -originalList $origList -replacementList $replList \
+	-postProcessProc FrequencyMapPP
+}
+
+proc FrequencyMapPP {args} {
+    set rootname ""
+    APSStrictParseArguments {rootname}
+
+    exec sddsplot -column=nux,nuy $rootname.fma -graph=dot,subtype=4 &
+}
+
 set tabIndex -1
 set sectionList [list Main Basic "Phase Space" "Higher-Order Disp." \
-    "Off-momentum Tunes" "DA" "Off-Momentum DA" "Fine DA"]
+    "Off-momentum Tunes" "DA" "Off-Momentum DA" "Fine DA" "Frequency Map"]
 set descriptionList [list "" "Twiss parameters, chromaticities, radiation integrals" \
     "Phase space tracking, plots, FFTs." \
     "Higher order dispersion from off-momentum orbits." \
     "Off-momentum tunes from tracking." \
     "On-momentum dynamic aperture using a relatively coarse algorithm." \
     "Off-momentum dynamic apertures using a relatively coarse algorithm." \
-    "Dynamic aperture using a high-resolution algorithm (requires a cluster)."]
+    "Dynamic aperture using a high-resolution algorithm (requires a cluster)." \
+    "Frequency map analysis (requires a cluster)."]
 
 proc DescribeSection {} {
     global tabIndex descriptionList
@@ -1144,11 +1237,13 @@ FillOffMomentumTunesFrame [lindex $tabFrameWidgetList 4]
 FillDynamicApertureFrame [lindex $tabFrameWidgetList 5]
 FillOffMomentumDynamicApertureFrame [lindex $tabFrameWidgetList 6]
 FillFineDynamicApertureFrame [lindex $tabFrameWidgetList 7]
+FillFrequencyMapFrame [lindex $tabFrameWidgetList 8]
 
 lappend saveVarList momentum matrixLatticeFile kickLatticeFile mainParameterFile mainDirectory mainPrefix gridEngine
 lappend saveVarList matrixBeamline kickBeamline matrixOffsetElement kickOffsetElement
 lappend saveVarList basicComputations phaseSpaceTracking offMomentumTuneTracking higherOrderDispersion
 lappend saveVarList dynamicAperture offMomentumDynamicAperture fineDynamicAperture
+lappend saveVarList frequencyMap
 
 set args $argv
 set configuration ""
