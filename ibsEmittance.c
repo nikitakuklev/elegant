@@ -1,4 +1,8 @@
 /* $Log: not supported by cvs2svn $
+ * Revision 1.2  1999/01/27 17:55:15  borland
+ * Removed prototypes from ibsEmittance.c and zibs.c and put them in common
+ * file zibs.h
+ *
  * Revision 1.1  1999/01/25 10:51:05  emery
  * First installation of ibsEmittance.c zibs.c
  * for intra-beam scattering rate calculation
@@ -82,7 +86,7 @@ int main( int argc, char **argv)
   double yReturn, *xGuess, *dxGuess, *xLowerLimit, *xUpperLimit;
   short *disable;
   long dimensions = 14, maxEvaluations = 500, maxPasses = 2;
-  double target = 0.0, tolerance = 0.01;
+  double target = 1e-4, tolerance = 1e-6;
   
   SDDS_RegisterProgramName(argv[0]);
   argc  =  scanargs(&scanned, argc, argv);
