@@ -221,7 +221,7 @@ long track_beam(
                 unsigned long flags
                 )
 {    
-    double p_central;
+    double p_central, p_central0;
     long n_left, n_trpoint, effort;
     VMATRIX *M;
 
@@ -240,7 +240,7 @@ long track_beam(
     if (!output)
         bomb("OUTPUT_FILES pointer is NULL (track_beam)", NULL);
 
-    p_central = run->p_central;
+    p_central0 = p_central = run->p_central;
 
     /* now track particles */
     if (!(flags&SILENT_RUNNING))
@@ -286,7 +286,7 @@ long track_beam(
             bomb("'acceptance' file is uninitialized (track_beam)", NULL);
         if (!(flags&SILENT_RUNNING)) 
             fprintf(stderr, "Dumping acceptance output..."); fflush(stderr);
-        dump_phase_space(&output->SDDS_accept, beam->accepted, beam->n_accepted, control->i_step, p_central);
+        dump_phase_space(&output->SDDS_accept, beam->accepted, beam->n_accepted, control->i_step, p_central0);
         if (!(flags&SILENT_RUNNING)) 
             fprintf(stderr, "done.\n"); fflush(stderr);
         }
