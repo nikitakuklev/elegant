@@ -20,9 +20,11 @@ long do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     process_namelist(&alter_elements, nltext);
     print_namelist(stdout, &alter_elements);
 
-    if (!strlen(name))
+    if (!name || !strlen(name))
       bomb("no name given", NULL);
-    if (!strlen(item))
+    if (has_wildcards(name) && strchr(name, '-'))
+      name = expand_ranges(name);
+    if (!item || !strlen(item))
       bomb("no item given", NULL);
     if (multiplicative)
       /* convert to fractional change */
@@ -34,7 +36,9 @@ long do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
       if (has_wildcards(type) && strchr(type, '-'))
         type = expand_ranges(type);
     }
-
+    if (exclude && has_wildcards(exclude) && strchr(exclude, '-'))
+      exclude = expand_ranges(exclude);
+      
     context = NULL;
     lastType = -1;
     nMatches = 0;
