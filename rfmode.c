@@ -135,17 +135,22 @@ void track_through_rfmode(
     if (rfmode->rigid_until_pass<=pass) {
         /* change particle momentum offsets to reflect voltage in relevant bin */
         /* also recompute slopes for new momentum to conserve transverse momentum */
-        double PRatio, P1;
+        double PRatio, P1, Pz1, Pz, gamma1;
         for (ip=0; ip<np; ip++) {
             if (pbin[ip]>=0) {
+                /* compute new momentum and momentum offset for this particle */
                 dgamma = Vbin[pbin[ip]]/(1e6*me_mev);
                 P = Po*(1+part[ip][5]);
-                gamma = sqrt(P*P+1) + dgamma;
-                P1 = sqrt(gamma*gamma-1);
+                gamma1 = (gamma=sqrt(P*P+1)) + dgamma;
+                P1 = sqrt(gamma1*gamma1-1);
                 part[ip][5] = (P1-Po)/Po;
-                part[ip][4] = time[ip]*c_mks*P1/gamma;
-                /* strictly speaking should use Pz/Pz1 in the next line */
-                part[ip][1] *= (PRatio=P/P1);
+                /* adjust s for the new particle velocity */
+                part[ip][4] = time[ip]*c_mks*P1/gamma1;
+                /* adjust slopes so that Px and Py are conserved */
+                Pz = P/sqrt(1+sqr(part[ip][1])+sqr(part[ip][3]));
+                Pz1 = sqrt(Pz*Pz + gamma1*gamma1 - gamma*gamma);
+                PRatio = Pz/Pz1;
+                part[ip][1] *= PRatio;
                 part[ip][3] *= PRatio;
                 }
             }
