@@ -2006,15 +2006,17 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
                                    TWISS *twiss, double *tune, VMATRIX *M, LINE_LIST *beamline, 
                                    RUN *run, double *startingCoord)
 {
-#define TSWA_TRACKING_EXTRA_PTS 1
+#define TSWA_TRACKING_EXTRA_PTS 5
 #define TSWA_TRACKING_PTS (N_TSWA+TSWA_TRACKING_EXTRA_PTS)
   double tune1[2];
   double Ax[TSWA_TRACKING_PTS], Ay[TSWA_TRACKING_PTS];
   double xTune[TSWA_TRACKING_PTS][TSWA_TRACKING_PTS], yTune[TSWA_TRACKING_PTS][TSWA_TRACKING_PTS];
   double result, maxResult;
   double x, y;
-  long ix, iy, tries, lost;
+  long ix, iy, tries, lost, gridSize;
   double upperLimit[2], lowerLimit[2];
+  MATRIX *AxAy, *Coef, *Nu, *AxAyTr, *Mf, *MfInv, *AxAyTrNu;
+  long i, j, m, n, ix1, iy1;
 #ifdef DEBUG
   FILE *fpd;
   fpd = fopen("tswa.sdds", "w");
@@ -2033,21 +2035,30 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
     computeTuneShiftWithAmplitudeM(dnux_dA, dnuy_dA, twiss, tune, M);
     return;
   }
-
+  if ((gridSize=tune_shift_with_amplitude_struct.grid_size)>TSWA_TRACKING_PTS) {
+    gridSize = tune_shift_with_amplitude_struct.grid_size = TSWA_TRACKING_PTS;
+    fprintf(stdout, "Warning: grid_size for TSWA is limited to %ld\n", gridSize);
+  }
+  
   /* use tracking and NAFF */
   tries = tune_shift_with_amplitude_struct.scaling_iterations;
   upperLimit[0] = upperLimit[1] = 1;
   lowerLimit[0] = lowerLimit[1] = 0;
   while (tries--) {
     lost = 0;
-    for (ix=0; !lost && ix<TSWA_TRACKING_PTS; ix++) {
+    m = 0;  /* number of tune points */
+    for (ix=0; !lost && ix<gridSize; ix++) {
       x = sqrt(ix*
-               sqr((tune_shift_with_amplitude_struct.x1-tune_shift_with_amplitude_struct.x0))/(TSWA_TRACKING_PTS-1)
+               sqr((tune_shift_with_amplitude_struct.x1-tune_shift_with_amplitude_struct.x0))/(gridSize-1)
                + sqr(tune_shift_with_amplitude_struct.x0));
       Ax[ix] = sqr(x)/twiss->betax;
-      for (iy=0; iy<TSWA_TRACKING_PTS; iy++) {
+      for (iy=0; iy<gridSize; iy++) {
+        if (tune_shift_with_amplitude_struct.sparse_grid &&
+            !(ix==0 || iy==0 || ix==iy)) 
+          continue;
+        m++;
         y = sqrt(iy*
-                 sqr((tune_shift_with_amplitude_struct.y1-tune_shift_with_amplitude_struct.y0))/(TSWA_TRACKING_PTS-1)
+                 sqr((tune_shift_with_amplitude_struct.y1-tune_shift_with_amplitude_struct.y0))/(gridSize-1)
                  + sqr(tune_shift_with_amplitude_struct.y0));
         Ay[iy] = sqr(y)/twiss->betay;
         if (!computeTunesFromTracking(tune1, NULL, M, beamline, run, startingCoord,
@@ -2071,9 +2082,12 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
       fprintf(stdout, "All tunes computed for TSWA\n");
     
     maxResult = -DBL_MAX;
-    for (ix=0; ix<TSWA_TRACKING_PTS; ix++) {
-      for (iy=0; iy<TSWA_TRACKING_PTS; iy++) {
+    for (ix=0; ix<gridSize; ix++) {
+      for (iy=0; iy<gridSize; iy++) {
         if (ix==0 && iy==0)
+          continue;
+        if (tune_shift_with_amplitude_struct.sparse_grid &&
+            !(ix==0 || iy==0 || ix==iy)) 
           continue;
         result = fabs(xTune[ix][iy] - xTune[0][0]);
         if (result>maxResult)
@@ -2113,9 +2127,7 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
             Ax^2 (TS20 + Ay*TS21 + Ay^2*TS22) 
             where TSij = 1/(i!j!) dnu/(dAx^i dAy^j)
      */
-    MATRIX *AxAy, *Coef, *Nu, *AxAyTr, *M, *MInv, *AxAyTrNu;
-    long i, j, m, n, ix1, iy1;
-    m = TSWA_TRACKING_PTS*TSWA_TRACKING_PTS;
+    m = gridSize*gridSize;
     n = N_TSWA*N_TSWA;
     /* Nu = AxAy*Coef 
      * Nu is mx1, AxAy is mxn, Coef is nx1 */
@@ -2123,26 +2135,35 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
     m_alloc(&Coef, n, 1);
     m_alloc(&Nu, m, 1);
     m_alloc(&AxAyTr, n, m);
-    m_alloc(&M, n, n);
-    m_alloc(&MInv, n, n);
+    m_alloc(&Mf, n, n);
+    m_alloc(&MfInv, n, n);
     m_alloc(&AxAyTrNu, n, 1);
-    for (ix=i=0; ix<TSWA_TRACKING_PTS; ix++) {
-      for (iy=0; iy<TSWA_TRACKING_PTS; iy++, i++) {
+    for (ix=i=0; ix<gridSize; ix++) {
+      for (iy=0; iy<gridSize; iy++) {
+        if (tune_shift_with_amplitude_struct.sparse_grid &&
+            !(ix==0 || iy==0 || ix==iy)) 
+          continue;
         for (ix1=j=0; ix1<N_TSWA; ix1++) {
           for (iy1=0; iy1<N_TSWA; iy1++, j++) {
             AxAy->a[i][j] = ipow(Ax[ix], ix1)*ipow(Ay[iy], iy1);
           }
         }
+        i++;
       }
     }
     m_trans(AxAyTr, AxAy);
-    m_mult(M, AxAyTr, AxAy);
-    m_invert(MInv, M);
-    for (ix=i=0; ix<TSWA_TRACKING_PTS; ix++)
-      for (iy=0; iy<TSWA_TRACKING_PTS; iy++, i++)
+    m_mult(Mf, AxAyTr, AxAy);
+    m_invert(MfInv, Mf);
+    for (ix=i=0; ix<gridSize; ix++)
+      for (iy=0; iy<gridSize; iy++) {
+        if (tune_shift_with_amplitude_struct.sparse_grid &&
+            !(ix==0 || iy==0 || ix==iy)) 
+          continue;
         Nu->a[i][0] = xTune[ix][iy];
+        i++;
+      }
     m_mult(AxAyTrNu, AxAyTr, Nu);
-    m_mult(Coef, MInv, AxAyTrNu);
+    m_mult(Coef, MfInv, AxAyTrNu);
     for (ix=i=0; ix<N_TSWA; ix++) 
       for (iy=0; iy<N_TSWA; iy++, i++)
         dnux_dA[ix][iy] = Coef->a[i][0]*factorial(ix)*factorial(iy);
@@ -2155,11 +2176,16 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
       }
     }
 
-    for (ix=i=0; ix<TSWA_TRACKING_PTS; ix++)
-      for (iy=0; iy<TSWA_TRACKING_PTS; iy++, i++)
+    for (ix=i=0; ix<gridSize; ix++)
+      for (iy=0; iy<gridSize; iy++) {
+        if (tune_shift_with_amplitude_struct.sparse_grid &&
+            !(ix==0 || iy==0 || ix==iy)) 
+          continue;
         Nu->a[i][0] = yTune[ix][iy];
+        i++;
+      }
     m_mult(AxAyTrNu, AxAyTr, Nu);
-    m_mult(Coef, MInv, AxAyTrNu);
+    m_mult(Coef, MfInv, AxAyTrNu);
     for (ix=i=0; ix<N_TSWA; ix++) 
       for (iy=0; iy<N_TSWA; iy++, i++)
         dnuy_dA[ix][iy] = Coef->a[i][0]*factorial(ix)*factorial(iy);
@@ -2176,8 +2202,8 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
     m_free(&Coef);
     m_free(&Nu);
     m_free(&AxAyTr);
-    m_free(&M);
-    m_free(&MInv);
+    m_free(&Mf);
+    m_free(&MfInv);
     m_free(&AxAyTrNu);
   }
 }

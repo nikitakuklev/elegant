@@ -11,6 +11,8 @@
     double y0 = 1e-6;
     double x1 = 1e-4;
     double y1 = 1e-4;
+    long grid_size = 5;
+    long sparse_grid = 1;
     double scale_down_factor = 2;
     double scale_up_factor = 1.05;
     double scale_down_limit = 0.01;
