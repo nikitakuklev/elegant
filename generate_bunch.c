@@ -197,23 +197,43 @@ long generate_bunch(
         }
 
     /* make energy-distance distribution */
-    s56  = longit->sigma_dp*longit->sigma_s*longit->dp_s_coupling;
-    emit = sqrt(sqr(longit->sigma_dp*longit->sigma_s) - sqr(s56));
+    /* three possibilities for inputs:
+     * 1. sigma_s, sigma_dp, and dp_s_coupling
+     * 2. sigma_s, sigma_dp, and alpha_z
+     * 3. emit_z, beta_z, and alpha_z
+     */
+    if (longit->emit) {
+      /* #3 */
+      beta = longit->beta;
+      alpha = longit->alpha;
+      emit = longit->emit;
+      s1 = sqrt(emit);
+      s2 = s1/beta;
+    } else {
+      if (!longit->alpha)
+        s56 = longit->sigma_dp*longit->sigma_s*longit->dp_s_coupling;
+      else
+        s56 = -longit->sigma_dp*longit->sigma_s*longit->alpha/sqrt(1+sqr(longit->alpha));
+      emit = sqrt(sqr(longit->sigma_dp*longit->sigma_s) - sqr(s56));
 #ifdef IEEE_MATH
-    if (isnan(emit) || isinf(emit))
+      if (isnan(emit) || isinf(emit))
         emit = 0;
 #endif
-    if (emit) {
+      if (emit) {
         beta  = sqr(longit->sigma_s)/emit;
-        alpha = -s56/emit;
+        if (longit->alpha)
+          alpha = longit->alpha;
+        else
+          alpha = -s56/emit;
         s1 = sqrt(emit);
         s2 = s1/beta;
-        }
-    else {
+      }
+      else {
         s1 = longit->sigma_s;
         s2 = longit->sigma_dp;
         beta = 0;
         }
+    }
     switch (longit->beam_type) {
       case GAUSSIAN_BEAM:
         gaussian_distribution(particle, n_particles, 4, s1, s2, 

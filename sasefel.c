@@ -3,6 +3,9 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.14  2000/06/21 22:01:18  borland
+ * Fixed a bug in data storage to file for 0 slices.
+ *
  * Revision 1.13  2000/05/31 15:38:16  borland
  * Added transverse centroids to sase fel output.
  *
@@ -519,7 +522,9 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
     sasefelOutput->saturationPower[nSlices+1] = sasefelOutput->PierceParameter[nSlices+1] = 0;
     sasefelOutput->etaDiffraction[nSlices+1] = sasefelOutput->etaEmittance[nSlices+1] = 0;
     sasefelOutput->etaEnergySpread[nSlices+1] = 0;
-  
+    sasefelOutput->Cx[nSlices+1] = sasefelOutput->Cxp[nSlices+1] = 0;
+    sasefelOutput->Cy[nSlices+1] = sasefelOutput->Cyp[nSlices+1] = 0;
+
     for (slice=1; slice<=sasefelOutput->nSlices; slice++) {
       /* find boundaries of slice in time */
       percentLevel[0] = 100*(0.5-sasefelOutput->nSlices*sasefelOutput->sliceFraction/2.0 + 
@@ -645,6 +650,10 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
       sasefelOutput->pCentral[nSlices+1] += sasefelOutput->pCentral[slice];
       sasefelOutput->charge[nSlices+1] += sasefelOutput->charge[slice];
       sasefelOutput->rmsBunchLength[nSlices+1] += sasefelOutput->rmsBunchLength[slice];
+      sasefelOutput->Cx[nSlices+1] += sasefelOutput->Cx[slice];
+      sasefelOutput->Cxp[nSlices+1] += sasefelOutput->Cxp[slice];
+      sasefelOutput->Cy[nSlices+1] += sasefelOutput->Cy[slice];
+      sasefelOutput->Cyp[nSlices+1] += sasefelOutput->Cyp[slice];
     }
     
     if (!slicesFound)

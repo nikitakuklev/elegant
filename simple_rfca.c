@@ -86,16 +86,16 @@ long simple_rf_cavity(
 
     log_entry("simple_rf_cavity");
 
-    if (rfca->focusModel) {
-      char *modelName[2] = { "neal", "srs" };
-      switch (match_string(rfca->focusModel, modelName, 2, 0)) {
+    if (rfca->bodyFocusModel) {
+      char *modelName[2] = { "none", "srs" };
+      switch (match_string(rfca->bodyFocusModel, modelName, 2, 0)) {
       case 0:
         break;
       case 1:
         useSRSModel = 1;
         break;
       default:
-        fprintf(stderr, "Error: focusModel=%s not understood for RFCA\n", rfca->focusModel);
+        fprintf(stderr, "Error: bodyFocusModel=%s not understood for RFCA\n", rfca->bodyFocusModel);
         exit(1);
         break;
       }
@@ -253,7 +253,7 @@ long simple_rf_cavity(
           if ((dt = t-t0)<0)
             dt = 0;
           if  (!same_dgamma)
-            dgamma = volt*sin(phase)*(tau?sqrt(1-exp(-dt/tau)):1);
+            dgamma = volt*sin(omega*t+phase)*(tau?sqrt(1-exp(-dt/tau)):1);
           
           if (rfca->end1Focus && length) {
             /* drift back, apply focus kick, then drift forward again */
@@ -311,6 +311,10 @@ long simple_rf_cavity(
           dP = sqrt(sqr(gamma+dgamma)-1) - P;
 
           if (useSRSModel) {
+            /* note that Rosenzweig and Serafini use gamma in places
+             * where they should probably use momentum, but I'll keep
+             * their expressions for now.
+             */
             double alpha, sin_alpha, gammaf;
             gammaf = gamma+dgamma;
             if (fabs(sin_phase)>1e-6)
@@ -319,9 +323,12 @@ long simple_rf_cavity(
               alpha = dgammaMax/gamma/(2*SQRT2);
             R11 = cos(alpha);
             R22 = R11*gamma/gammaf;
-            R12 = 2*SQRT2*P*length/dgammaMax*(sin_alpha=sin(alpha));
+            R12 = 2*SQRT2*gamma*length/dgammaMax*(sin_alpha=sin(alpha));
             R21 = -sin_alpha*dgammaMax/(length*gammaf*2*SQRT2);
           } else {
+            /* my original treatment used momentum for all 
+             * computations, which I still think is correct
+             */
             R22 = 1/(1+dP/P);
             if (fabs(dP/P)>1e-14)
               R12 = length*(P/dP*log(1+dP/P));
@@ -411,10 +418,10 @@ long track_through_rfcw
   rfcw->rfca.tReference = -1;
   rfcw->rfca.end1Focus = rfcw->end1Focus;
   rfcw->rfca.end2Focus = rfcw->end2Focus;
-  if (rfcw->focusModel) 
-    SDDS_CopyString(&rfcw->rfca.focusModel, rfcw->focusModel);
+  if (rfcw->bodyFocusModel) 
+    SDDS_CopyString(&rfcw->rfca.bodyFocusModel, rfcw->bodyFocusModel);
   else
-    rfcw->rfca.focusModel = NULL;
+    rfcw->rfca.bodyFocusModel = NULL;
   rfcw->rfca.nKicks = rfcw->nKicks;
   rfcw->rfca.dx = rfcw->dx;
   rfcw->rfca.dy = rfcw->dy;

@@ -25,13 +25,15 @@
 void traceback_handler(int code);
 
 #define DESCRIBE_INPUT 0
-#define N_OPTIONS  1
+#define DEFINE_MACRO 1
+#define N_OPTIONS  2
 char *option[N_OPTIONS] = {
     "describeinput",
+    "macro",
         };
-char *USAGE="elegant <inputfile>\n\nProgram by Michael Borland. (This is version 14.4 Beta 1, "__DATE__".)";
+char *USAGE="elegant <inputfile> [-macro=<tag>=<value>,[...]]\n\nProgram by Michael Borland. (This is version 14.4 Beta 1, "__DATE__".)";
 
-char *GREETING="This is elegant, by Michael Borland. (This is version 14.4 Beta 1, "__DATE__".)";
+char *GREETING="This is elegant, by Michael Borland. (This is version 14.4, "__DATE__".)";
 
 #define RUN_SETUP        0
 #define RUN_CONTROL      1
@@ -132,38 +134,42 @@ void initialize_structures(RUN *run_conditions, VARY *run_control, ERRORVAL *err
                            CHROM_CORRECTION *chrom_corr_data, TUNE_CORRECTION *tune_corr_data,
                            ELEMENT_LINKS *links);
 void free_beamdata(BEAM *beam);
+void substituteTagValue(char *input, long buflen, 
+                        char **macroTag, char **macroValue, long macros);
 
 
-#define NAMELIST_BUFLEN 16384
+#define NAMELIST_BUFLEN 65536
 
 int main(argc, argv)
 int argc;
 char **argv;
 {
-    LINE_LIST *beamline;        /* pointer to root of linked list */
-    FILE *fp_in;
-    char *inputfile;
-    SCANNED_ARG *scanned;
-    char s[NAMELIST_BUFLEN], *ptr;
-    long i;
-    RUN run_conditions;
-    VARY run_control;
-    CORRECTION correct;
-    ERRORVAL error_control;
-    BEAM beam;
-    OUTPUT_FILES output_data;
-    OPTIMIZATION_DATA optimize;
-    CHROM_CORRECTION chrom_corr_data;
-    TUNE_CORRECTION tune_corr_data;
-    ELEMENT_LINKS links;
-    char *saved_lattice = NULL;
-    long correction_setuped, run_setuped, run_controled, error_controled, beam_type;
-    long do_chromatic_correction = 0, do_twiss_output = 0, fl_do_tune_correction = 0;
-    long do_closed_orbit = 0, do_matrix_output = 0, do_response_output = 0;
-    long last_default_order = 0, new_beam_flags, links_present, twiss_computed = 0;
-    long correctionDone;
-    double *starting_coord, finalCharge;
-    long namelists_read = 0, failed, firstPass;
+  char **macroTag, **macroValue;
+  long macros;
+  LINE_LIST *beamline;        /* pointer to root of linked list */
+  FILE *fp_in;
+  char *inputfile;
+  SCANNED_ARG *scanned;
+  char s[NAMELIST_BUFLEN], *ptr;
+  long i;
+  RUN run_conditions;
+  VARY run_control;
+  CORRECTION correct;
+  ERRORVAL error_control;
+  BEAM beam;
+  OUTPUT_FILES output_data;
+  OPTIMIZATION_DATA optimize;
+  CHROM_CORRECTION chrom_corr_data;
+  TUNE_CORRECTION tune_corr_data;
+  ELEMENT_LINKS links;
+  char *saved_lattice = NULL;
+  long correction_setuped, run_setuped, run_controled, error_controled, beam_type;
+  long do_chromatic_correction = 0, do_twiss_output = 0, fl_do_tune_correction = 0;
+  long do_closed_orbit = 0, do_matrix_output = 0, do_response_output = 0;
+  long last_default_order = 0, new_beam_flags, links_present, twiss_computed = 0;
+  long correctionDone;
+  double *starting_coord, finalCharge;
+  long namelists_read = 0, failed, firstPass;
                     
 #if defined(UNIX) || defined(_WIN32)
     signal(SIGINT, traceback_handler);
@@ -188,7 +194,9 @@ char **argv;
 
     compute_offsets();
     set_max_name_length(12);
-
+    macros = 0;
+    macroTag = macroValue = NULL;
+  
 #if defined(VAX_VMS) || defined(UNIX) || defined(_WIN32)
     init_stats();
 #endif
@@ -226,6 +234,24 @@ char **argv;
                 if (argc==2)
                     exit(0);
                 break;
+              case DEFINE_MACRO:
+                if ((scanned[i].n_items-=1)<1)
+                  bomb("invalid -macro syntax", USAGE);
+                if (!(macroTag=SDDS_Realloc(macroTag, sizeof(*macroTag)*scanned[i].n_items)) ||
+                    !(macroValue=SDDS_Realloc(macroValue, sizeof(*macroValue)*scanned[i].n_items)))
+                  bomb("memory allocation failure (-macro)", NULL);
+                else {
+                  long j;
+                  for (j=0; j<scanned[i].n_items; j++) {
+                    macroTag[j] = scanned[i].list[j+1];
+                    if (!(macroValue[j] = strchr(macroTag[j], '=')))
+                      bomb("invalid -macro syntax", USAGE);
+                    macroValue[j][0] = NULL;
+                    macroValue[j] += 1;
+                    macros++;
+                  }
+                }
+                break;
               default:
                 bomb("unknown option given.", USAGE);
                 break;
@@ -253,6 +279,7 @@ char **argv;
     beam_type = -1;
 
     while (get_namelist(s, NAMELIST_BUFLEN, fp_in)) {
+        substituteTagValue(s, NAMELIST_BUFLEN, macroTag, macroValue, macros);
 #if defined(VAX_VMS) || defined(UNIX) || defined(_WIN32)
         report_stats(stdout, "statistics: ");
         fflush(stdout);
@@ -1395,3 +1422,27 @@ void free_beamdata(BEAM *beam)
   beam->particle = beam->accepted = beam->original = NULL;
   beam->n_original = beam->n_to_track = beam->n_accepted = beam->p0 = beam->n_saved = beam->n_particle = 0;
 }  
+
+void substituteTagValue(char *input, long buflen, 
+                        char **macroTag, char **macroValue, long macros)
+{
+  char *buffer;
+  long i;
+  char *ptr;
+  char *version1=NULL, *version2=NULL;
+  if (!(buffer=SDDS_Malloc(sizeof(*buffer)*buflen)))
+    bomb("memory allocation failure doing macro substitution", NULL);
+  for (i=0; i<macros; i++) {
+    if (!(version1 = SDDS_Realloc(version1, sizeof(*version1)*(strlen(macroTag[i])+10))) ||
+        !(version2 = SDDS_Realloc(version2, sizeof(*version2)*(strlen(macroTag[i])+10))))
+      bomb("memory allocation failure doing macro substitution", NULL);
+    sprintf(version1, "<%s>", macroTag[i]);
+    sprintf(version2, "$%s", macroTag[i]);
+    if (replace_string(buffer, input, version1, macroValue[i]))
+      strcpy(input, buffer);
+    if (replace_string(buffer, input, version2, macroValue[i]))
+      strcpy(input, buffer);
+  }
+}
+
+

@@ -724,7 +724,7 @@ typedef struct {
     long phase_reference, change_p0, change_t;
     char *fiducial;
     long end1Focus, end2Focus;
-    char *focusModel;
+    char *bodyFocusModel;
     long nKicks;
     double dx, dy;
     double tReference;
@@ -1575,7 +1575,7 @@ typedef struct {
     long phase_reference, change_p0, change_t;
     char *fiducial;
     long end1Focus, end2Focus;
-    char *focusModel;
+    char *bodyFocusModel;
     long nKicks;
     char *wakeFile, *zWakeFile, *trWakeFile, *tColumn, *WxColumn, *WyColumn, *WzColumn;
     long n_bins;               /* number of charge bins */
@@ -1690,6 +1690,7 @@ typedef struct {
 
 typedef struct {
     double sigma_dp, sigma_s, dp_s_coupling;
+    double beta, emit, alpha;
     double cutoff;
     long beam_type;
     double cent_s, cent_dp;
@@ -1794,7 +1795,7 @@ extern void set_up_watch_point(WATCH *watch, RUN *run);
 extern VMATRIX *magnification_matrix(MAGNIFY *magnif);
 extern void reset_special_elements(LINE_LIST *beamline, long includeRF);
 extern VMATRIX *stray_field_matrix(double length, double *lB, double *gB, double theta, long order, double p_central);
-extern VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, double phase, double *P_central, long order, long end1Focus, long end2Focus);
+extern VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, double phase, double *P_central, long order, long end1Focus, long end2Focus, char *bodyFocusModel);
 
 /* prototypes for concat_beamline2.c: */
 extern void copy_matrices1(VMATRIX *M1,  VMATRIX *M0);

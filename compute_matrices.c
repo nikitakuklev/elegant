@@ -368,6 +368,7 @@ VMATRIX *compute_matrix(
     CSRCSBEND *csrcsbend;
     CSRDRIFT *csrdrift;
     long bend_flags;
+    double ks;
     
     log_entry("compute_matrix");
     
@@ -468,9 +469,10 @@ VMATRIX *compute_matrix(
         break;
       case T_SOLE:
         sole = (SOLE*) elem->p_elem;
-        if (sole->B && !sole->ks)
-          sole->ks = -sole->B*e_mks/(me_mks*c_mks*elem->Pref_input);
-        elem->matrix = solenoid_matrix(sole->length, sole->ks,
+        ks = sole->ks;
+        if (sole->B && !ks)
+          ks = -sole->B*e_mks/(me_mks*c_mks*elem->Pref_input);
+        elem->matrix = solenoid_matrix(sole->length, ks,
                                        sole->order?sole->order:run->default_order);
         if (sole->dx || sole->dy || sole->dz)
             misalign_matrix(elem->matrix, sole->dx, sole->dy, sole->dz, 0.0);
@@ -660,7 +662,8 @@ VMATRIX *compute_matrix(
         rfca = (RFCA*)elem->p_elem;
         elem->matrix = rf_cavity_matrix(rfca->length, rfca->volt, rfca->freq, rfca->phase, 
                                         &elem->Pref_output, run->default_order?run->default_order:1,
-                                        rfca->end1Focus, rfca->end2Focus);
+                                        rfca->end1Focus, rfca->end2Focus,
+                                        rfca->bodyFocusModel);
         if (rfca->dx || rfca->dy)
           misalign_matrix(elem->matrix, rfca->dx, rfca->dy, 0.0, 0.0);
         if (!rfca->change_p0) {
@@ -672,7 +675,8 @@ VMATRIX *compute_matrix(
         rfcw = (RFCW*)elem->p_elem;
         elem->matrix = rf_cavity_matrix(rfcw->length, rfcw->volt, rfcw->freq, rfcw->phase, 
                                         &elem->Pref_output, run->default_order?run->default_order:1,
-                                        rfcw->end1Focus, rfcw->end2Focus);
+                                        rfcw->end1Focus, rfcw->end2Focus,
+                                        rfcw->bodyFocusModel);
         if (rfcw->dx || rfcw->dy)
           misalign_matrix(elem->matrix, rfcw->dx, rfcw->dy, 0.0, 0.0);
         if (!rfcw->change_p0) {
@@ -684,7 +688,7 @@ VMATRIX *compute_matrix(
         modrf = (MODRF*)elem->p_elem;
         elem->matrix = rf_cavity_matrix(modrf->length, modrf->volt, modrf->freq, modrf->phase, 
                                         &elem->Pref_output, run->default_order?run->default_order:1,
-                                        0, 0);
+                                        0, 0, NULL);
         elem->matrix->C[5] = (elem->Pref_output-elem->Pref_input)/elem->Pref_input;
         elem->Pref_output = elem->Pref_input;
         break;
@@ -939,14 +943,15 @@ VMATRIX *stray_field_matrix(double length, double *lB, double *gB, double theta,
 
 
 VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, double phase, 
-                          double *P_central, long order, long end1Focus, long end2Focus)
+                          double *P_central, long order, long end1Focus, long end2Focus,
+                          char *bodyFocusModel)
 {
     VMATRIX *M, *Medge, *Mtot, *tmp;
-    double *C, **R, dP, gamma, dgamma;
+    double *C, **R, dP, gamma, dgamma, dgammaMax;
     double cos_phase, sin_phase;
     double inverseF[2] = {0,0};
-    long end;
-    
+    long end, useSRSModel;
+
     M = tmalloc(sizeof(*M));
     M->order = 1;
     initialize_matrices(M, M->order);
@@ -963,16 +968,50 @@ VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, doubl
     voltage /= 1e6;  /* convert to MV */
     sin_phase = sin(PI*phase/180.0);
     cos_phase = cos(PI*phase/180.0);
-    dgamma = voltage/me_mev*sin_phase;
+    dgamma = (dgammaMax=voltage/me_mev)*sin_phase;
     gamma = sqrt(sqr(*P_central)+1);
     dP    = sqrt(sqr(gamma+dgamma)-1) - *P_central;
 
-    R[0][0] = R[2][2] = R[4][4] = 1;
-    R[1][1] = R[3][3] = R[5][5] = 1/(1+dP/(*P_central));
-    if (fabs(dP/(*P_central))>1e-14)
+    useSRSModel = 0;
+    if (bodyFocusModel) {
+      char *modelName[2] = { "none", "srs" };
+      switch (match_string(bodyFocusModel, modelName, 2, 0)) {
+      case 0:
+        break;
+      case 1:
+        useSRSModel = 1;
+        break;
+      default:
+        fprintf(stderr, "Error: bodyFocusModel=%s not understood for RFCA\n", bodyFocusModel);
+        exit(1);
+        break;
+      }
+    }
+
+    if (!useSRSModel) {
+      R[0][0] = R[2][2] = R[4][4] = 1;
+      R[1][1] = R[3][3] = R[5][5] = 1/(1+dP/(*P_central));
+      if (fabs(dP/(*P_central))>1e-14)
         R[0][1] = R[2][3] = length*(*P_central)/dP*log(1 + dP/(*P_central));
-    else
+      else
         R[0][1] = R[2][3] = length;
+    } else {
+      /* note that Rosenzweig and Serafini use gamma in places
+       * where they should probably use momentum, but I'll keep
+       * their expressions for now.
+       */
+      double alpha, sin_alpha, gammaf;
+      gammaf = gamma+dgamma;
+      if (fabs(sin_phase)>1e-6)
+        alpha = log(gammaf/gamma)/(2*SQRT2*sin_phase);
+      else
+        alpha = dgammaMax/gamma/(2*SQRT2);
+      R[0][0] = R[2][2] = cos(alpha);
+      R[1][1] = R[3][3] = R[0][0]*gamma/gammaf;
+      R[0][1] = R[2][3] = 2*SQRT2*gamma*length/dgammaMax*(sin_alpha=sin(alpha));
+      R[1][0] = R[3][2] = -sin_alpha*dgammaMax/(length*gammaf*2*SQRT2);
+    }
+    
     R[5][4] = (voltage/me_mev)*cos_phase/(gamma + dgamma)*(PIx2*frequency/c_mks);
 
     if (length && (end1Focus || end2Focus)) {

@@ -1043,6 +1043,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
         !SDDS_DefineSimpleParameter(&csbend->SDDSout, "SlippageLength", "m", SDDS_DOUBLE) ||
         !SDDS_DefineSimpleParameter(&csbend->SDDSout, "TotalBunchLength", "m", SDDS_DOUBLE) ||
         !SDDS_DefineSimpleParameter(&csbend->SDDSout, "BinSize", "m", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(&csbend->SDDSout, "dsKick", "m", SDDS_DOUBLE) ||
         !SDDS_DefineSimpleColumn(&csbend->SDDSout, "s", "m", SDDS_DOUBLE) ||
         !SDDS_DefineSimpleColumn(&csbend->SDDSout, "LinearDensity", "C/s", SDDS_DOUBLE) ||
         !SDDS_DefineSimpleColumn(&csbend->SDDSout, "LinearDensityDeriv", "C/s$a2$n", SDDS_DOUBLE) ||
@@ -1262,7 +1263,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
             !SDDS_SetColumn(&csbend->SDDSout, SDDS_SET_BY_NAME, ctHist, nBins, "LinearDensity") ||
             !SDDS_SetColumn(&csbend->SDDSout, SDDS_SET_BY_NAME, ctHistDeriv, nBins, "LinearDensityDeriv") ||
             !SDDS_SetParameters(&csbend->SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
-                                "Pass", -1, "Kick", kick, 
+                                "Pass", -1, "Kick", kick, "dsKick", csbend->length/csbend->n_kicks,
                                 "pCentral", Po, "Angle", phiBend, "SlippageLength", slippageLength,
                                 "TotalBunchLength", ctUpper-ctLower,
                                 "BinSize", dct, NULL))
@@ -1749,14 +1750,10 @@ void computeSaldinFdNorm(double **FdNorm, double **x, long *n, double sMax, long
   double xEnd, sh, beta, gamma, xh, xLimit, dx0;
   long ix, ix1, ix2, scan, try, is;
   double psi, psi2, phihs, phihm, xhLowerLimit, xUpperLimit, s, f, fx;
-  FILE *fp;
   double t1, t2;
   
   gamma = sqrt(sqr(Po)+1);
   beta = Po/gamma;
-#ifdef DEBUG
-  fprintf(stderr, "beta = %le, s = %le, xEnd = %le\n", beta, sMax, sMax/(1-beta));
-#endif
 
   if ((xEnd = sMax/(1-beta))>1000 || isnan(xEnd) || isinf(xEnd)) {
     fprintf(stderr, "Warning: the extent of the CSR drift wake decay was limited at 1km\n");
@@ -1775,13 +1772,6 @@ void computeSaldinFdNorm(double **FdNorm, double **x, long *n, double sMax, long
     dx = dx0;
   fx = pow(xEnd/dx, 1./(*n));
 
-#ifdef DEBUG
-  fprintf(stderr, "Using %ld points with spacing %le m for CSR drift decay table.\n",
-          *n, dx);
-  fprintf(stderr, "Have xEnd = %le and xLimit = %le m\n",
-          xEnd, sMax/(1-beta));
-#endif
-  
   if (!(*FdNorm = calloc(sizeof(**FdNorm), (*n))) ||
       !(*x = malloc(sizeof(**x)*(*n))))
     bomb("memory allocation failure (computeSaldinFdNorm)", NULL);
@@ -1820,9 +1810,6 @@ void computeSaldinFdNorm(double **FdNorm, double **x, long *n, double sMax, long
   for (ix=0; ix<*n; ix++)
     (*FdNorm)[ix] /= f;
 
-#ifdef DEBUG
-  fclose(fp);
-#endif
 }
 
 double SolveForPsiSaldin54(double xh, double sh)

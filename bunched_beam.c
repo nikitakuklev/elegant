@@ -31,8 +31,10 @@ void fill_transverse_structure(TRANSVERSE *trans, double emit, double beta,
     double alpha, double eta, double etap, long xbeam_type, double cutoff,
     double *xcentroid);
 void fill_longitudinal_structure(LONGITUDINAL *xlongit, double xsigma_dp,
-    double xsigma_s, double xcoupling_angle, long xbeam_type, double xcutoff,
-    double *xcentroid);
+                                 double xsigma_s, double xcoupling_angle, 
+                                 double xemit, double xbeta, double xalpha,
+                                 long xbeam_type, double xcutoff,
+                                 double *xcentroid);
 
 void setup_bunched_beam(
     BEAM *beam,
@@ -90,6 +92,19 @@ void setup_bunched_beam(
     bomb("sigma_dp<0 or sigma_s<0", NULL);
   if (fabs(dp_s_coupling)>1)
     bomb("|dp_s_coupling| > 1", NULL);
+  if (emit_z<0)
+    bomb("emit_z < 0", NULL);
+  if (beta_z<0)
+    bomb("beta_z < 0", NULL);
+  if (emit_z && (sigma_dp || sigma_s)) 
+    bomb("give emit_z or both sigma_dp and sigma_s", NULL);
+  if (emit_z && beta_z<=0)
+    bomb("give beta_z with emit_z", NULL);
+  if (alpha_z && dp_s_coupling)
+    bomb("give alpha_z or dp_s_coupling", NULL);
+  if (emit_z && dp_s_coupling)
+    bomb("give alpha_z not dp_s_coupling with emit_z", NULL);
+  
   if (!distribution_type[0] || 
       (x_beam_type=match_string(distribution_type[0], beam_type, 
                                 N_BEAM_TYPES, 0))<0)
@@ -133,7 +148,9 @@ void setup_bunched_beam(
     fill_transverse_structure(&y_plane, emit_y, beta_y, alpha_y, eta_y, etap_y,
                               y_beam_type, distribution_cutoff[1], centroid+2);
   }
-  fill_longitudinal_structure(&longit, sigma_dp, sigma_s, dp_s_coupling,
+  fill_longitudinal_structure(&longit, 
+                              sigma_dp, sigma_s, dp_s_coupling,
+                              emit_z, beta_z, alpha_z, 
                               longit_beam_type, distribution_cutoff[2], centroid+4);
 
   save_initial_coordinates = save_original || save_initial_coordinates;
@@ -709,6 +726,9 @@ void fill_longitudinal_structure(
     double xsigma_dp,
     double xsigma_s,
     double xdp_s_coupling,
+    double xemit_z,
+    double xbeta_z,
+    double xalpha_z,
     long xbeam_type,
     double xcutoff,
     double *xcentroid
@@ -718,6 +738,9 @@ void fill_longitudinal_structure(
     xlongit->sigma_dp   = xsigma_dp;
     xlongit->sigma_s    = xsigma_s;
     xlongit->dp_s_coupling = xdp_s_coupling;
+    xlongit->emit       = xemit_z;
+    xlongit->beta       = xbeta_z;
+    xlongit->alpha      = xalpha_z;
     xlongit->beam_type  = xbeam_type;
     xlongit->cutoff     = xcutoff;
     xlongit->cent_s     = xcentroid[0];

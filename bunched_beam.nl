@@ -28,6 +28,9 @@
     double sigma_dp = 0.0;
     double sigma_s = 0.0;
     double dp_s_coupling = 0;
+    double emit_z = 0;
+    double beta_z = 0;
+    double alpha_z = 0;
     long one_random_bunch = 1;
     long save_initial_coordinates = 1;
     long limit_invariants = 0;
