@@ -1536,6 +1536,7 @@ PARAMETER script_param[N_SCRIPT_PARAMS] = {
   {"VERBOSITY", "", IS_LONG, 0, (long)((char *)&script_example.verbosity), NULL, 0.0, 0, "Set the verbosity level."},
   {"START_PASS", "", IS_LONG, 0, (long)((char *)&script_example.startPass), NULL, 0.0, -1, "Start script action on this pass.  Before that, behaves like a drift space."},
   {"ON_PASS", "", IS_LONG, 0, (long)((char *)&script_example.onPass), NULL, 0.0, -1, "Perform script action only on this pass.  Other than that, behaveslike a drift space."},
+  {"DIRECTORY", "", IS_STRING, 0, (long)((char *)&script_example.directory), NULL, 0.0, 0, "Directory in which to place input and output files.  If blank, the present working directory is used."},
   {"ROOTNAME", "", IS_STRING, 0, (long)((char *)&script_example.rootname), NULL, 0.0, 0, "Rootname for use in naming input and output files.  %s may be used to represent the run rootname."},
   {"INPUT_EXTENSION", "", IS_STRING, 0, (long)((char *)&script_example.inputExtension), "in", 0.0, 0, "Extension for the script input file."},
   {"OUTPUT_EXTENSION", "", IS_STRING, 0, (long)((char *)&script_example.outputExtension), "out", 0.0, 0, "Extension for the script output file."},

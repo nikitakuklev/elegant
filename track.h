@@ -672,7 +672,7 @@ extern char *entity_text[N_TYPES];
 #define N_CLEAN_PARAMS 7
 #define N_TWISSELEMENT_PARAMS 6
 #define N_WIGGLER_PARAMS 8
-#define N_SCRIPT_PARAMS 30
+#define N_SCRIPT_PARAMS 31
 #define N_FLOORELEMENT_PARAMS 6
 #define N_LTHINLENS_PARAMS 8
 #define N_LMIRROR_PARAMS 9
@@ -2016,7 +2016,7 @@ typedef struct {
   double length;
   char *command;
   long useCsh, verbosity, startPass, onPass;
-  char *rootname, *inputExtension, *outputExtension;
+  char *directory, *rootname, *inputExtension, *outputExtension;
   long keepFiles;
   double NP[10];
   char *SP[10];

@@ -34,7 +34,7 @@ PRODOAG = elegant sddsemitmeas sddsemitproc madto \
           recurseSetup haissinski sddsmatchtwiss \
           sddsanalyzebeam sddsrandmult sddsresdiag
 
-SCRIPTS = elegantRingAnalysis beamLifetimeCalc fin2param
+SCRIPTS = elegantRingAnalysis beamLifetimeCalc fin2param elegant2shower shower2elegant
 
 ifeq ($(EPICS_VERSION).$(EPICS_REVISION),3.13)
 PROD = $(PRODOAG)

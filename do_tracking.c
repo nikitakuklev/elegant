@@ -1793,8 +1793,9 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
       bomb("problem generating temporary filename for script", NULL);
   } else 
     rootname = compose_filename(script->rootname, mainRootname);
-  nameLength = strlen(rootname) + strlen(script->inputExtension) +
-    strlen(script->outputExtension) + 2;
+  nameLength = (script->directory?strlen(script->directory):0) + \
+    strlen(rootname) + strlen(script->inputExtension) +
+    strlen(script->outputExtension) + 4;
   if (!(input = malloc(sizeof(*input)*nameLength)) ||
       !(output = malloc(sizeof(*output)*nameLength)))
     bomb("problem generating temporary filename for script", NULL);
@@ -1814,8 +1815,18 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
   }
 
   /* prepare command */
-  sprintf(input, "%s.%s", rootname, script->inputExtension);
-  sprintf(output, "%s.%s", rootname, script->outputExtension);
+  if (script->directory && strlen(script->directory)) {
+#if defined(_WIN32)
+    sprintf(input, "%s\\%s.%s", script->directory, rootname, script->inputExtension);
+    sprintf(output, "%s\\%s.%s", script->directory, rootname, script->outputExtension);
+#else
+    sprintf(input, "%s/%s.%s", script->directory, rootname, script->inputExtension);
+    sprintf(output, "%s/%s.%s", script->directory, rootname, script->outputExtension);
+#endif
+  } else {
+    sprintf(input, "%s.%s", rootname, script->inputExtension);
+    sprintf(output, "%s.%s", rootname, script->outputExtension);
+  }
   if (rootname!=script->rootname)
     free(rootname);
 
