@@ -2036,8 +2036,8 @@ double computeMonitorReading(ELEMENT_LIST *elem, long coord, double x, double y)
 
     switch (elem->type) {
       case T_MONI:  
-        x += ((MONI*)(elem->p_elem))->dx;
-        y += ((MONI*)(elem->p_elem))->dy;
+        x -= ((MONI*)(elem->p_elem))->dx;
+        y -= ((MONI*)(elem->p_elem))->dy;
         if (coord==0)
             calibration = ((MONI*)(elem->p_elem))->xcalibration;
         else 
@@ -2050,8 +2050,8 @@ double computeMonitorReading(ELEMENT_LIST *elem, long coord, double x, double y)
             equation = ((MONI*)(elem->p_elem))->y_readout;
         break;
       case T_HMON: 
-        x += ((HMON*)(elem->p_elem))->dx;
-        y += ((HMON*)(elem->p_elem))->dy;
+        x -= ((HMON*)(elem->p_elem))->dx;
+        y -= ((HMON*)(elem->p_elem))->dy;
         calibration = ((HMON*)(elem->p_elem))->calibration;
         if (tilt=((HMON*)(elem->p_elem))->tilt)
             rotate_xy(&x, &y, tilt);   
@@ -2060,8 +2060,8 @@ double computeMonitorReading(ELEMENT_LIST *elem, long coord, double x, double y)
             bomb("element in horizontal monitor list is not a vertical monitor--internal logic error", NULL);
         break;
       case T_VMON:
-        x += ((VMON*)(elem->p_elem))->dx;
-        y += ((VMON*)(elem->p_elem))->dy;
+        x -= ((VMON*)(elem->p_elem))->dx;
+        y -= ((VMON*)(elem->p_elem))->dy;
         calibration = ((VMON*)(elem->p_elem))->calibration;
         if (tilt=((VMON*)(elem->p_elem))->tilt)
             rotate_xy(&x, &y, tilt);   
