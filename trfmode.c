@@ -4,10 +4,12 @@
 /* file: trfmode.c
  * contents: track_through_trfmode()
  *
- * Michael Borland, 1993
+ * Michael Borland, 1999
  */
 #include "mdb.h"
 #include "track.h"
+
+#define DEBUG 0
 
 void track_through_trfmode(
                            double **part, long np, TRFMODE *trfmode, double Po,
@@ -29,8 +31,26 @@ void track_through_trfmode(
   double Q, Qrp;
   long n_binned, lastBin;
   static long been_warned = 0;
+#if DEBUG
+  static FILE *fpdeb = NULL;
+  static long debugPass = 0;
+#endif
 
   log_entry("track_through_trfmode");
+
+#if DEBUG
+  if (!fpdeb) {
+    fpdeb = fopen("trfmode.debug", "w");
+    fprintf(fpdeb, "SDDS1\n&parameter name=Pass type=long &end\n");
+    fprintf(fpdeb, "&parameter name=nBinned type=long &end\n");
+    fprintf(fpdeb, "&column name=Bin , type=double &end\n");
+    fprintf(fpdeb, "&column name=xSum , type=double &end\n");
+    fprintf(fpdeb, "&column name=ySum , type=double &end\n");
+    fprintf(fpdeb, "&column name=xVoltage , type=double &end\n");
+    fprintf(fpdeb, "&column name=yVoltage , type=double &end\n");
+    fprintf(fpdeb, "&data mode=ascii &end\n");
+  }
+#endif
 
   omega = PIx2*trfmode->freq;
   if ((Q = trfmode->Q/(1+trfmode->beta))<=0.5) {
@@ -84,7 +104,8 @@ void track_through_trfmode(
   for (ib=0; ib<trfmode->n_bins; ib++)
     xsum[ib] = ysum[ib] = 0;
   dt = (tmax - tmin)/trfmode->n_bins;
-  n_binned = lastBin = 0;
+  n_binned = 0;
+  lastBin = -1;
   for (ip=0; ip<np; ip++) {
     pbin[ip] = -1;
     ib = (time[ip]-tmin)/dt;
@@ -99,13 +120,18 @@ void track_through_trfmode(
       lastBin = ib;
     n_binned++;
   }
-
+  if (n_binned!=np) {
+    fprintf(stderr, "Warning: only %ld of %ld particles binned (TRFMODE)\n",
+            n_binned, np);
+  }
+  
   /* These adjustments per Zotter and Kheifets, 3.2.4, 3.3.2 */
   k *= Q/Qrp;
   omega *= Qrp/Q;
 
   if (trfmode->single_pass)
     trfmode->Vx = trfmode->Vy = 0;
+
   for (ib=0; ib<=lastBin; ib++) {
     if (!xsum[ib] && !ysum[ib])
       continue;
@@ -161,15 +187,22 @@ void track_through_trfmode(
       else
         trfmode->last_yphase = atan2(trfmode->Vyi, trfmode->Vyr);
       trfmode->Vy = sqrt(sqr(trfmode->Vyr)+sqr(trfmode->Vyi));
-    }
-    
+    }    
   }
   
+#if DEBUG
+  fprintf(fpdeb, "%ld\n%ld\n%ld\n", 
+          debugPass++, n_binned, lastBin+1);
+  for (ib=0; ib<=lastBin; ib++) {
+    fprintf(fpdeb, "%ld %e %e %e %e\n",
+            ib, xsum[ib], ysum[ib], 
+            xsum[ib]?Vxbin[ib]:0.0,
+            ysum[ib]?Vybin[ib]:0.0);
+  }
+  fflush(fpdeb);
+#endif
 
   /* change particle slopes to reflect voltage in relevant bin */
-  /* insert a minus sign so that particles tend to oppose their
-   * own displacement
-   */
   for (ip=0; ip<np; ip++) {
     if (pbin[ip]>=0) {
       P = Po*(1+part[ip][5]);
