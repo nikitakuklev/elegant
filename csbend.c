@@ -1761,7 +1761,16 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
   long nBins1;
   
   if (np<=1 || !csrWake.valid || !csrDrift->csr) {
-    exactDrift(part, np, csrDrift->length);
+    if (csrDrift->linearOptics) {
+      long i;
+      for (i=0; i<np; i++) {
+        part[i][0] += csrDrift->length*part[i][1];
+        part[i][2] += csrDrift->length*part[i][3];
+        part[i][4] += csrDrift->length;
+      }
+    }
+    else
+      exactDrift(part, np, csrDrift->length);
     return np;
   }
   nBins1 = csrWake.bins - 1;
