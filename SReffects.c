@@ -10,7 +10,7 @@
 #include "track.h"
 
 void track_SReffects(double **coord, long np, SREFFECTS *SReffects, double Po, 
-                             TWISS *twiss)
+                             TWISS *twiss, RADIATION_INTEGRALS *radIntegrals)
 {
     long ip;
     double Fx, Fy, Fdelta, Ddelta, P, t;
@@ -19,6 +19,27 @@ void track_SReffects(double **coord, long np, SREFFECTS *SReffects, double Po,
     double xpEta, ypEta, ex, ey;
     double *part, beta;
     static long first = 1;
+
+    if (SReffects->pRef==0) {
+      if (!radIntegrals) {
+        bomb("Problem with SREFFECTS element: pRef=0 but no radiation integrals computed.  Use the twiss_output command to compute these.", NULL);
+      }
+      /* take data from radiation integrals */
+      SReffects->pRef = Po;
+      SReffects->Jx = radIntegrals->Jx;
+      SReffects->Jx = radIntegrals->Jx;
+      SReffects->Jy = radIntegrals->Jy;
+      SReffects->Jdelta = radIntegrals->Jdelta;
+      SReffects->exRef = radIntegrals->ex0/(1+SReffects->coupling);
+      SReffects->eyRef = SReffects->exRef*SReffects->coupling;
+      SReffects->SdeltaRef = radIntegrals->sigmadelta;
+      SReffects->DdeltaRef = -radIntegrals->Uo/me_mev/Po;
+/*
+      fprintf(stderr, "SReffects set up:\nPref=%g, Jx/y/delta=%g/%g/%g\nex/ey=%g/%g  Sdelta=%g  Ddelta=%g\n",
+              SReffects->pRef, SReffects->Jx, SReffects->Jy, SReffects->Jdelta,
+              SReffects->exRef, SReffects->eyRef, SReffects->SdeltaRef, SReffects->DdeltaRef);
+*/
+    }
 
     gamma2Ratio = (sqr(Po)+1)/(sqr(SReffects->pRef)+1);
     gammaRatio = sqrt(gamma2Ratio);
@@ -42,23 +63,25 @@ void track_SReffects(double **coord, long np, SREFFECTS *SReffects, double Po,
 
     if (first) {
         first = 0;
+        /*
         fprintf(stderr, "Damping/QE constants:\nFx = %e, Fy = %e, Fd = %e\nSrxp = %e, Sryp = %e, Srd = %e\n",
                Fx, Fy, Fdelta, Srxp, Sryp, Srdelta);
         fprintf(stderr, "Twiss parameters: betax = %e, etapx = %e, betay = %e\n",
                twiss->betax, twiss->etapx, twiss->betay);
+               */
         }
     
 
     for (ip=0; ip<np; ip++) {
         part     = coord[ip];
         xpEta    = part[5]*twiss->etapx;
-        part[1]  = (part[1] - xpEta)*Fx + Srxp*gauss_rn(0, random_2) + xpEta;
+        part[1]  = (part[1] - xpEta)*Fx + SReffects->fraction*Srxp*gauss_rn(0, random_2) + xpEta;
         ypEta    = part[5]*twiss->etapy;
-        part[3]  = (part[3] - ypEta)*Fy + Sryp*gauss_rn(0, random_2) + ypEta;
+        part[3]  = (part[3] - ypEta)*Fy + SReffects->fraction*Sryp*gauss_rn(0, random_2) + ypEta;
         P = (1+part[5])*Po;
         beta = P/sqrt(sqr(P)+1);
         t = part[4]/beta;
-        part[5]  = Ddelta + part[5]*Fdelta + Srdelta*gauss_rn(0, random_2);
+        part[5]  = Ddelta + part[5]*Fdelta + SReffects->fraction*Srdelta*gauss_rn(0, random_2);
         P = (1+part[5])*Po;
         beta = P/sqrt(sqr(P)+1);
         part[4] = t*beta;
