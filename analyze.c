@@ -191,9 +191,9 @@ void do_transport_analysis(
     offset[2] = delta_y ;
     coord[4][2] += delta_y ;
     coord[5][2] -= delta_y ;
-    /* particles 7 and 7 are for d/dy */
+    /* particles 6 and 7 are for d/dy */
     offset[3] = delta_y ;
-    coord[7][3] += delta_y ;
+    coord[6][3] += delta_y ;
     coord[7][3] -= delta_y ;
     /* particles 8 and 9 are for d/ds */
     offset[4] = delta_s ;
@@ -241,16 +241,24 @@ void do_transport_analysis(
             fflush(stdout);
             for (i=0; i<6; i++)
                 fprintf(stdout, "%15.8e ", orbit[i]);
-                fflush(stdout);
             fputc('\n', stdout);
             }
         fprintf(stdout, "final coordinates of refence particle: \n");
         fflush(stdout);
         for (i=0; i<6; i++)
             fprintf(stdout, "%15.8e ", coord[n_track-1][i]);
-            fflush(stdout);
         fputc('\n', stdout);
+        fflush(stdout);
+        if (verbosity>1) {
+          for (i=0; i<n_track-1; i++) {
+            fprintf(stdout, "Particle %ld end coordinates:\n", i);
+            for (j=0; j<4; j++)
+              fprintf(stdout, "%e%c", coord[i][j], j==3?'\n':' ');
+          }
+          fflush(stdout);
         }
+      }
+    
 
     for (i=0; i<6; i++) 
         data[i+CMATRIX_OFFSET] = coord[n_track-1][i];
