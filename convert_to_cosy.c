@@ -138,8 +138,8 @@ void emitCosyDipole(FILE *fp, char *name,
   fprintf(fp, "    VARIABLE W 1 4 4 ;\n");
   fprintf(fp, "    W(1,1) := 1 ;\n");
   fprintf(fp, "    W(2,1) := %.15g ;\n", K1*rho);
-  fprintf(fp, "    W(3,1) := %.15g ;\n", K2*rho);
-  fprintf(fp, "    W(4,1) := %.15g ;\n", K3*rho);
+  fprintf(fp, "    W(3,1) := %.15g ;\n", K2*rho/2);
+  fprintf(fp, "    W(4,1) := %.15g ;\n", K3*rho/6);
   for (i=1; i<=4; i++) 
     for (j=2; j<=4; j++)
       fprintf(fp, "    W(%ld, %ld) := 0 ;\n", i, j);
