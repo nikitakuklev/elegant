@@ -643,7 +643,7 @@ extern char *entity_text[N_TYPES];
 #define N_CSRDRIFT_PARAMS 20
 #define N_REMCOR_PARAMS 6
 #define N_MAPSOLENOID_PARAMS 18
-#define N_RFCW_PARAMS 34
+#define N_RFCW_PARAMS 35
 #define N_REFLECT_PARAMS 1
 #define N_CLEAN_PARAMS 7
 #define N_TWISSELEMENT_PARAMS 6
@@ -1824,6 +1824,7 @@ typedef struct {
     double dx, dy;
     long linearize, doLSC, LSCBins, LSCInterpolate;
     double LSCHighFrequencyCutoff0, LSCHighFrequencyCutoff1;
+    long wakesAtEnd;
     /* for internal use only: */
     long initialized;
     RFCA rfca;

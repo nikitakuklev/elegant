@@ -21,7 +21,8 @@ static char *fiducialModeChoice[4] = {
 
 long trackRfCavityWithWakes(double **part, long np, RFCA *rfca, double **accepted, 
                             double *P_central, double zEnd, long iPass, RUN *run,
-                            CHARGE *charge, WAKE *wake, TRWAKE *trwake, LSCKICK *LSCKick );
+                            CHARGE *charge, WAKE *wake, TRWAKE *trwake, LSCKICK *LSCKick,
+                            long wakesAtEnd);
 
 
 unsigned long parseFiducialMode(char *modeString)
@@ -85,7 +86,7 @@ long simple_rf_cavity(
     )
 {
   return trackRfCavityWithWakes(part, np, rfca, accepted, P_central, zEnd, 0,
-                         NULL, NULL, NULL, NULL, NULL);
+                         NULL, NULL, NULL, NULL, NULL, 0);
 }
 
 long trackRfCavityWithWakes
@@ -99,7 +100,8 @@ long trackRfCavityWithWakes
    CHARGE *charge,
    WAKE *wake,
    TRWAKE *trwake,
-   LSCKICK *LSCKick
+   LSCKICK *LSCKick,
+   long wakesAtEnd
    )
 {
     long ip, same_dgamma, nKicks, linearize, ik;
@@ -324,17 +326,19 @@ long trackRfCavityWithWakes
             inverseF[ip] *= -1*gamma/gamma1;
         }
 
-        /* do wakes */
-        if (wake) 
-          track_through_wake(part, np, wake, P_central, run, iPass, charge);
-        if (trwake)
-          track_through_trwake(part, np, trwake, *P_central, run, iPass, charge);
-        if (LSCKick) {
-          if (dgammaOverGammaNp)
-            dgammaOverGammaAve /= dgammaOverGammaNp;
-          addLSCKick(part, np, LSCKick, *P_central, charge, length, dgammaOverGammaAve);
+        if (!wakesAtEnd) {
+          /* do wakes */
+          if (wake) 
+            track_through_wake(part, np, wake, P_central, run, iPass, charge);
+          if (trwake)
+            track_through_trwake(part, np, trwake, *P_central, run, iPass, charge);
+          if (LSCKick) {
+            if (dgammaOverGammaNp)
+              dgammaOverGammaAve /= dgammaOverGammaNp;
+            addLSCKick(part, np, LSCKick, *P_central, charge, length, dgammaOverGammaAve);
+          }
         }
-         
+
         if (length) {
           /* apply final drift and focus kick if needed */
           for (ip=0; ip<np; ip++) {
@@ -346,6 +350,19 @@ long trackRfCavityWithWakes
               coord[1] -= coord[0]*inverseF[ip];
               coord[3] -= coord[2]*inverseF[ip];
             }
+          }
+        }
+        
+        if (wakesAtEnd) {
+          /* do wakes */
+          if (wake) 
+            track_through_wake(part, np, wake, P_central, run, iPass, charge);
+          if (trwake)
+            track_through_trwake(part, np, trwake, *P_central, run, iPass, charge);
+          if (LSCKick) {
+            if (dgammaOverGammaNp)
+              dgammaOverGammaAve /= dgammaOverGammaNp;
+            addLSCKick(part, np, LSCKick, *P_central, charge, length, dgammaOverGammaAve);
           }
         }
       }
@@ -593,8 +610,8 @@ long track_through_rfcw
                               i_pass, run, charge, 
                               rfcw->WzColumn?&rfcw->wake:NULL,
                               (rfcw->WxColumn || rfcw->WyColumn)?&rfcw->trwake:NULL,
-                              rfcw->doLSC?&rfcw->LSCKick:NULL
-                              );
+                              rfcw->doLSC?&rfcw->LSCKick:NULL,
+                              rfcw->wakesAtEnd);
   return np;
 }
 
