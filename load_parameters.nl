@@ -11,6 +11,7 @@
         long clear_settings = 0;
         long allow_missing_elements = 0;
         long allow_missing_parameters = 0;
+        long force_occurence_data = 0;
         long verbose = 0;
 #end
 

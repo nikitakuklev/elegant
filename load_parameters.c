@@ -18,9 +18,10 @@
 typedef struct {
     SDDS_TABLE table;
     char *filename;
-    long flags;
-#define COMMAND_FLAG_CHANGE_DEFINITIONS 1
-#define COMMAND_FLAG_IGNORE 2
+    unsigned long flags;
+#define COMMAND_FLAG_CHANGE_DEFINITIONS 0x0001UL
+#define COMMAND_FLAG_IGNORE             0x0002UL
+#define COMMAND_FLAG_IGNORE_OCCURENCE   0x0004UL
     long last_code;          /* return code from SDDS_ReadTable */
     short string_data;       /* if non-zero, indicates data stored as strings */   
     double *starting_value;  /* only for numerical data */
@@ -77,7 +78,9 @@ long setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     load_request = trealloc(load_request, sizeof(*load_request)*(load_requests+1));
     load_request[load_requests].flags = change_defined_values?COMMAND_FLAG_CHANGE_DEFINITIONS:0;
     load_request[load_requests].filename = compose_filename(filename, run->rootname);
-
+    if (change_defined_values && !force_occurence_data)
+      load_request[load_requests].flags |= COMMAND_FLAG_IGNORE_OCCURENCE;
+    
     SDDS_ClearErrors();
 
     if (!SDDS_InitializeInputFromSearchPath(&load_request[load_requests].table, 
@@ -255,12 +258,16 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
     }
 
     occurence = NULL;
-    if (SDDS_GetColumnIndex(&load_request[i].table, Occurence_ColumnName)>=0) {
-      if (!(occurence = (long *)SDDS_GetColumn(&load_request[i].table, Occurence_ColumnName))) {
-        fprintf(stdout, "Error: problem accessing data from load_parameters file %s\n", load_request[i].filename);
-        fflush(stdout);
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-        exit(1);
+    if (!change_definitions || !(load_request[i].flags&COMMAND_FLAG_IGNORE_OCCURENCE)) {
+      if (verbose)
+	fprintf(stdout, "Using occurence data.\n");
+      if (SDDS_GetColumnIndex(&load_request[i].table, Occurence_ColumnName)>=0) {
+        if (!(occurence = (long *)SDDS_GetColumn(&load_request[i].table, Occurence_ColumnName))) {
+          fprintf(stdout, "Error: problem accessing data from load_parameters file %s\n", load_request[i].filename);
+          fflush(stdout);
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+          exit(1);
+        }
       }
     }
     
