@@ -111,6 +111,7 @@ typedef struct {
     long *n_targets;               /* number of targets with given name */
     char **item;                   /* names of items to be changed */
     double *initial_value;         /* initial value of the parameter */
+    double **baseline_value;       /* baseline value after initial change/perturbation */
     long *target_param;            /* parameter (item) type code */
     char **source_name;            /* names of source elements, parallel to target_name */
     long *source_position;         /* before, after, etc. */

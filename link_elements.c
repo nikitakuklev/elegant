@@ -72,7 +72,7 @@ void element_link_control(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, RUN *run_
 void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *beamline)
 {
     long n_links, src_position_code, n_targets, n_sources, mode_code;
-    long targets, iTarget;
+    long targets, iTarget, j;
     char **targetList;
     ELEMENT_LIST *t_context, *s_context, **eptr, *eptr1;
     double dz_min, dz;
@@ -148,6 +148,7 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
     if (!targets)
       bomb("cannot make link--no targets found\n", NULL);
       
+    /* note that targets==1 if all the targets have the same name ! */
     for (iTarget=0; iTarget<targets; iTarget++) {
       n_links = links->n_links;
       target = targetList[iTarget];
@@ -166,6 +167,7 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
       links->equation        = trealloc(links->equation, sizeof(*links->equation)*(n_links+1));
       links->n_targets       = trealloc(links->n_targets, sizeof(*links->n_targets)*(n_links+1));
       links->initial_value   = trealloc(links->initial_value, sizeof(*links->initial_value)*(n_links+1));
+      links->baseline_value  = trealloc(links->baseline_value, sizeof(*links->baseline_value)*(n_links+1));
 
       /* copy the basic data */
       cp_str(links->target_name+n_links, target);
@@ -189,6 +191,7 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
         eptr[n_targets] = t_context;
         n_targets++;
       }
+      links->baseline_value[n_links] = tmalloc(sizeof(*links->baseline_value[n_links])*n_targets);
       links->n_targets[n_links] = n_targets;
       links->target_elem[n_links] = eptr;
       t_context = links->target_elem[n_links][0];
@@ -205,7 +208,8 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
         bomb("invalid type of item for target of link", NULL);
         break;
       }
-      
+      for (j=0; j<n_targets; j++)
+        links->baseline_value[n_links][j] = links->initial_value[n_links];
 
       /* make the list of pointers to sources */
       if (iTarget) {
@@ -425,19 +429,12 @@ long assert_element_links(ELEMENT_LINKS *links, RUN *run, LINE_LIST *beamline, l
 
             rpn_clear();
             /* push original value onto stack */
-            switch (data_type) {
-                case IS_DOUBLE:
-                    value = *((double*)(p_elem+entity_description[elem_type].parameter[param].offset));
-                    break;
-                case IS_LONG:
-                    value = *((long*)(p_elem+entity_description[elem_type].parameter[param].offset));
-                    break;
-                case IS_STRING:
-                default:
-                    bomb("unknown/invalid variable quantity (assert_element_links)", NULL);
-                    exit(1);
-                }
-            push_num(value);
+            if (verbosity>1)
+                fprintf(stdout, "prior value is %.15g for %s#%ld.%s at z=%.15gm\n",
+                        links->baseline_value[i_link][i_elem], 
+                        links->target_name[i_link], targ[i_elem]->occurence, links->item[i_link], 
+                        targ[i_elem]->end_pos);
+            push_num(links->baseline_value[i_link][i_elem]);
             value = rpn(links->equation[i_link]);
             if (rpn_check_error()) exit(1);
             rpn_clear();
@@ -485,6 +482,7 @@ void reset_element_links(ELEMENT_LINKS *links, RUN *run, LINE_LIST *beamline)
     log_entry("reset_element_links");
     if (!links || links->n_links==0) {
         log_exit("reset_element_links");
+        return;
         }
 
     if (!links->target_name || !links->item || !links->equation ||
@@ -502,11 +500,12 @@ void reset_element_links(ELEMENT_LINKS *links, RUN *run, LINE_LIST *beamline)
             p_elem = targ[i_elem]->p_elem;
             switch (data_type) {
                 case IS_DOUBLE:
-                    *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)) = links->initial_value[i_link];
+                    *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)) = 
+                      links->baseline_value[i_link][i_elem] = links->initial_value[i_link];
                     break;
                 case IS_LONG:
                     *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) = 
-                      nearestInteger(links->initial_value[i_link]);
+                      links->baseline_value[i_link][i_elem] = nearestInteger(links->initial_value[i_link]);
                     break;
                 case IS_STRING:
                 default:
@@ -522,4 +521,46 @@ void reset_element_links(ELEMENT_LINKS *links, RUN *run, LINE_LIST *beamline)
         }
     log_exit("reset_element_links");
     }
+
+
+void rebaseline_element_links(ELEMENT_LINKS *links, RUN *run, LINE_LIST *beamline)
+{
+    long i_link, i_elem;
+    long elem_type, data_type, param;
+    ELEMENT_LIST **targ;
+    char *p_elem;
+
+    if (!links || links->n_links==0) {
+      return;
+    }
+
+    if (!links->target_name || !links->item || !links->equation ||
+            !links->n_targets || !links->target_elem) {
+        fputs("error: link structure has null pointers (rebaseline_element_links)", stdout);
+        abort();
+        }
+    
+    for (i_link=0; i_link<links->n_links; i_link++) {
+        targ = links->target_elem[i_link];
+        elem_type = targ[0]->type;
+        param     = links->target_param[i_link];
+        data_type = entity_description[elem_type].parameter[param].type;
+        for (i_elem=0; i_elem<links->n_targets[i_link]; i_elem++) {
+            p_elem = targ[i_elem]->p_elem;
+            switch (data_type) {
+                case IS_DOUBLE:
+                    links->baseline_value[i_link][i_elem] = *((double*)(p_elem+entity_description[elem_type].parameter[param].offset));
+                    break;
+                case IS_LONG:
+                    links->baseline_value[i_link][i_elem] = *((long*)(p_elem+entity_description[elem_type].parameter[param].offset));
+                    break;
+                case IS_STRING:
+                default:
+                    bomb("unknown/invalid variable quantity (reset_element_links)", NULL);
+                    exit(1);
+                }
+            }
+        }
+    }
+
 

@@ -31,7 +31,7 @@ void lfree(void *ptr)
     tfree(ptr);
     }
 
-#define MAX_LINE_LENGTH 16384 
+#define MAX_LINE_LENGTH 128*16384 
 #define MAX_FILE_NESTING 10
 LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, long echo)
 {
