@@ -7,6 +7,7 @@
 
 #namelist steering_element static
     STRING name = NULL;
+    STRING element_type = NULL;
     STRING item = NULL;
     STRING plane = "h";
     double tweek = 1e-3;

@@ -61,8 +61,9 @@ double rms_value(double *data, long n_data);
 long steering_corrector(ELEMENT_LIST *eptr);
 void zero_closed_orbit(TRAJECTORY *clorb, long n);
 long find_index(long key, long *list, long n_listed);
-void add_steer_elem_to_lists(STEERING_LIST *SL, long plane, char *name, char *item, double tweek, double limit,
-        LINE_LIST *beamline, RUN *run);
+void add_steer_elem_to_lists(STEERING_LIST *SL, long plane, char *name, char *item, 
+                             char *element_type, double tweek, double limit,
+                             LINE_LIST *beamline, RUN *run);
 void add_steer_type_to_lists(STEERING_LIST *SL, long plane, long type, char *item, double tweek, double limit,
     LINE_LIST *beamline, RUN *run);
 double compute_kick_coefficient(ELEMENT_LIST *elem, long plane, long type, double corr_tweek, char *name, char *item, RUN *run);
@@ -197,7 +198,7 @@ void correction_setup(
     /* find correction matrices Qo, T, C, and W for all monitors using all correctors */
     if (verbose)
         fputs("finding correctors/monitors and/or computing correction matrices\n", stdout);
-
+    
     if (_correct->SLx.n_corr_types==0) {
         cp_str(&item, "KICK");
         add_steer_type_to_lists(&_correct->SLx, 0, T_HCOR, item, _correct->CMx->default_tweek, 
@@ -272,9 +273,9 @@ void add_steering_element(CORRECTION *correct, LINE_LIST *beamline, RUN *run, NA
         bomb("invalid limit specified for steering element", NULL);
 
     if (plane[0]=='h' || plane[0]=='H') 
-        add_steer_elem_to_lists(&correct->SLx, 0, name, item, tweek, limit, beamline, run);
+        add_steer_elem_to_lists(&correct->SLx, 0, name, item, element_type, tweek, limit, beamline, run);
     else if (plane[0]=='v' || plane[0]=='V')
-        add_steer_elem_to_lists(&correct->SLy, 2, name, item, tweek, limit, beamline, run);
+        add_steer_elem_to_lists(&correct->SLy, 2, name, item, element_type, tweek, limit, beamline, run);
     else
         bomb("invalid plane specified for steering element", NULL);
     }
@@ -285,16 +286,17 @@ void add_steer_type_to_lists(STEERING_LIST *SL, long plane, long type, char *ite
     ELEMENT_LIST *context;
     context = &(beamline->elem);
     while (context && (context=next_element_of_type(context, type))) {
-        add_steer_elem_to_lists(SL, plane, context->name, item, tweek, limit, beamline, run);
+        add_steer_elem_to_lists(SL, plane, context->name, item, NULL, tweek, limit, beamline, run);
         context = context->succ;
         }
     }
 
-void add_steer_elem_to_lists(STEERING_LIST *SL, long plane, char *name, char *item, double tweek, double limit, 
-        LINE_LIST *beamline, RUN *run)
+void add_steer_elem_to_lists(STEERING_LIST *SL, long plane, char *name, char *item, 
+                             char *element_type, double tweek, double limit, 
+                             LINE_LIST *beamline, RUN *run)
 {
     ELEMENT_LIST *context;
-    long param_number, i;
+    long param_number, i, found;
 
     if (SL->n_corr_types==0) {
         if (SL->corr_name)    tfree(SL->corr_name);
@@ -313,43 +315,67 @@ void add_steer_elem_to_lists(STEERING_LIST *SL, long plane, char *name, char *it
         SL->param_index = NULL;
         }
 
-    context = NULL;
-    if (!name)
-        bomb("NULL name passed to add_steer_elem_to_list", NULL);
-    str_toupper(name);
+    if (!name && !element_type)
+        bomb("NULL name and element_type passed to add_steer_elem_to_list", NULL);
+    if (name) {
+      str_toupper(name);
+      if (has_wildcards(name) && strchr(name, '-'))
+        name = expand_ranges(name);
+    }
+    else 
+      cp_str(&name, "*");
+    if (element_type) {
+      str_toupper(element_type);
+      if (has_wildcards(element_type) && strchr(name, '-'))
+        element_type = expand_ranges(element_type);
+    }
+
     if (!item)
         bomb("NULL item passed to add_steer_elem_to_list", NULL);
     str_toupper(item);
+
+    context = NULL;
+    found = 0;
+    
+    while (context=wfind_element(name, &context, &(beamline->elem))) {
+      if (element_type &&
+          !wild_match(entity_name[context->type], element_type))
+        continue;
+
+      for (i=0; i<SL->n_corr_types; i++)
+        if (strcmp(context->name, SL->corr_name[i])==0)
+          return;
+
+      SL->corr_name    = trealloc(SL->corr_name, (SL->n_corr_types+1)*sizeof(*SL->corr_name));
+      SL->corr_type    = trealloc(SL->corr_type, (SL->n_corr_types+1)*sizeof(*SL->corr_type));
+      SL->corr_param   = trealloc(SL->corr_param, (SL->n_corr_types+1)*sizeof(*SL->corr_param));
+      SL->corr_tweek   = trealloc(SL->corr_tweek, (SL->n_corr_types+1)*sizeof(*SL->corr_tweek));
+      SL->corr_limit   = trealloc(SL->corr_limit, (SL->n_corr_types+1)*sizeof(*SL->corr_limit));
+      SL->param_offset = trealloc(SL->param_offset, (SL->n_corr_types+1)*sizeof(*SL->param_offset));
+      SL->param_index  = trealloc(SL->param_index , (SL->n_corr_types+1)*sizeof(*SL->param_index ));
         
-    if (!(context=find_element(name, &context, &(beamline->elem))))
-        bomb("invalid name specified for correction--not in beamline", NULL);
-
-    for (i=0; i<SL->n_corr_types; i++)
-        if (strcmp(name, SL->corr_name[i])==0)
-            return;
-
-    SL->corr_name    = trealloc(SL->corr_name, (SL->n_corr_types+1)*sizeof(*SL->corr_name));
-    SL->corr_type    = trealloc(SL->corr_type, (SL->n_corr_types+1)*sizeof(*SL->corr_type));
-    SL->corr_param   = trealloc(SL->corr_param, (SL->n_corr_types+1)*sizeof(*SL->corr_param));
-    SL->corr_tweek   = trealloc(SL->corr_tweek, (SL->n_corr_types+1)*sizeof(*SL->corr_tweek));
-    SL->corr_limit   = trealloc(SL->corr_limit, (SL->n_corr_types+1)*sizeof(*SL->corr_limit));
-    SL->param_offset = trealloc(SL->param_offset, (SL->n_corr_types+1)*sizeof(*SL->param_offset));
-    SL->param_index  = trealloc(SL->param_index , (SL->n_corr_types+1)*sizeof(*SL->param_index ));
-        
-    SL->corr_type[SL->n_corr_types] = context->type;
-    cp_str(SL->corr_name+SL->n_corr_types, name);
-
-    cp_str(SL->corr_param+SL->n_corr_types, item);
-    SL->corr_tweek[SL->n_corr_types] = tweek;
-    SL->corr_limit[SL->n_corr_types] = limit;
-        
-    if ((SL->param_index[SL->n_corr_types]=param_number=confirm_parameter(item, context->type))<0 ||
-        entity_description[context->type].parameter[param_number].type!=IS_DOUBLE ||
-        (SL->param_offset[SL->n_corr_types]=find_parameter_offset(item, SL->corr_type[SL->n_corr_types]))<0)
-        bomb("no such (floating-point) parameter for given element (add_steer_elem_to_lists)", NULL);
-
-    SL->n_corr_types += 1;    
+      SL->corr_type[SL->n_corr_types] = context->type;
+      cp_str(SL->corr_name+SL->n_corr_types, context->name);
+      
+      cp_str(SL->corr_param+SL->n_corr_types, item);
+      SL->corr_tweek[SL->n_corr_types] = tweek;
+      SL->corr_limit[SL->n_corr_types] = limit;
+      
+      if ((SL->param_index[SL->n_corr_types]=param_number=confirm_parameter(item, context->type))<0 ||
+          entity_description[context->type].parameter[param_number].type!=IS_DOUBLE ||
+          (SL->param_offset[SL->n_corr_types]=find_parameter_offset(item, SL->corr_type[SL->n_corr_types]))<0) {
+        fprintf(stderr, "No such floating-point parameter (%s) for %s (add_steer_elem_to_lists)\n", 
+                item, context->name);
+        exit(1);
+      }
+      
+      SL->n_corr_types += 1;    
+      found = 1;
     }
+    if (!found)
+      bomb("no match to give name or element type", NULL);
+  }
+
 
 double compute_kick_coefficient(ELEMENT_LIST *elem, long plane, long type, double corr_tweek, char *name, char *item, RUN *run)
 {
