@@ -54,7 +54,7 @@ void track_SReffects(double **coord, long np, SREFFECTS *SReffects, double Po,
         xpEta    = part[5]*twiss->etapx;
         part[1]  = (part[1] - xpEta)*Fx + Srxp*gauss_rn(0, random_2) + xpEta;
         ypEta    = part[5]*twiss->etapy;
-        part[2]  = (part[1] - ypEta)*Fy + Sryp*gauss_rn(0, random_2) + ypEta;
+        part[3]  = (part[3] - ypEta)*Fy + Sryp*gauss_rn(0, random_2) + ypEta;
         P = (1+part[5])*Po;
         beta = P/sqrt(sqr(P)+1);
         t = part[4]/beta;
