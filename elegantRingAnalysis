@@ -1158,8 +1158,8 @@ proc FillFrequencyMapFrame {widget args} {
       -contextHelp \
       "Enter the number of turns to track."
     APSLabeledEntry .le7 -parent $widget \
-      -label "Fractional momentum offset: " -width 20 -textVariable frequencyMap(delta) \
-      -contextHelp "Enter the fractional momentum offset" 
+	-label "Fractional momentum offset: " -width 20 -textVariable frequencyMap(delta) \
+	-contextHelp "Enter the fractional momentum offset" 
     APSLabeledEntry .le8 -parent $widget \
       -label "Run suffix: " -width 20 -textVariable frequencyMap(userSuffix) \
       -contextHelp "Enter the suffix for the filenames."
@@ -1202,17 +1202,63 @@ proc FrequencyMap {args} {
 	-postProcessProc FrequencyMapPP
 }
 
+proc QueryValuesDialog {args} {
+    set nameList ""
+    set defaultList ""
+    set typeList ""
+    set elementList ""
+    set name ""
+    APSStrictParseArguments {nameList defaultList typeList name elementList}
+
+    global queryValuesDialogDone queryValuesDialogArray
+    set queryValuesDialogDone 0
+
+    set w [APSUniqueName .]
+    APSDialogBox $w -name $name \
+	-okCommand "set queryValuesDialogDone 1" \
+	-cancelCommand "set queryValuesDialogDone 2"
+
+    set index 0
+    foreach name $nameList default $defaultList type $typeList {
+	set queryValuesDialogArray($name) $default
+	APSLabeledEntry .le$index -parent $w.userFrame  \
+	    -label "$name: " \
+	    -textVariable queryValuesDialogArray($name) \
+	    -type $type
+	incr index
+    }
+    tkwait variable queryValuesDialogDone
+    if $queryValuesDialogDone==2 {
+	return ""
+    }
+    set arrayList ""
+    foreach element $elementList name $nameList {
+	lappend arrayList $element
+	lappend arrayList $queryValuesDialogArray($name)
+    }
+    return $arrayList
+}
+
 proc FrequencyMapPP {args} {
     set rootname ""
     APSStrictParseArguments {rootname}
     source $rootname.runCfg
 
-    catch {exec sddsresdiag ${rootname}.resdiag -order=4 }
+    set valueList [QueryValuesDialog -name "FMA Plot" \
+		       -nameList [list "Resonance diagram order" "Minimum nux" \
+				      "Maximum nux" "Minimum nuy" "Maximum nuy"] \
+		       -defaultList [list 4 -0.05 0.55 -0.05 0.55] \
+		       -elementList [list order nux0 nux1 nuy0 nuy1] \
+		       -typeList [list integer real real real real]]
+    if ![llength $valueList] return
+    array set parameter $valueList
+    catch {exec sddsresdiag $rootname.resdiag -order=$parameter(order)}
     exec sddsplot -filename \
-	-column=nux,nuy $rootname.resdiag -limit=xmax=0.51,ymax=0.51,auto \
+	-limit=xmin=$parameter(nux0),xmax=$parameter(nux1),ymin=$parameter(nuy0),ymax=$parameter(nuy1),auto \
+	-column=nux,nuy $rootname.resdiag \
 	-column=nux,nuy $rootname.fma -graph=dot,subtype=2,vary -order=spect \
 	-split=column=x,width=[expr $frequencyMap(xMaximum)/100.0] -end \
-	-column=nux,nuy $rootname.resdiag -limit=xmax=0.51,ymax=0.51,auto \
+	-column=nux,nuy $rootname.resdiag \
 	-column=nux,nuy $rootname.fma -graph=dot,subtype=2,vary -order=spect \
 	-split=column=y,width=[expr $frequencyMap(yMaximum)/100.0] &
 }
