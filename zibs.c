@@ -390,16 +390,17 @@ void IBSGrowthRates (double gamma, double emitx, double emity,
     tyi = cony * (zinty/cprime);
     tzi = conz * (zintz/cprime);
 
-    if (xRateVsS)
-      xRateVsS[i] = txi*weight;
-    if (yRateVsS)
-      yRateVsS[i] = tyi*weight;
-    if (zRateVsS)
-      zRateVsS[i] = tzi*weight;
-
     *xGrowthRate += txi*weight;
     *yGrowthRate += tyi*weight;
     *zGrowthRate += tzi*weight;
+
+    /* these are the rate per meter */
+    if (xRateVsS)
+      xRateVsS[i] = txi;
+    if (yRateVsS)
+      yRateVsS[i] = tyi;
+    if (zRateVsS)
+      zRateVsS[i] = tzi;
   }
   taux = 1.0/ *xGrowthRate;
   tauy = 1.0/ *yGrowthRate;

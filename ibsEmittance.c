@@ -9,6 +9,9 @@
 
 /* 
  * $Log: not supported by cvs2svn $
+ * Revision 1.16  2003/01/18 03:04:53  borland
+ * Include contribution to total rate vs s in columns.
+ *
  * Revision 1.15  2003/01/16 02:20:36  borland
  * Added simplex_divisor parameter to optimization_setup namelist.
  * Updated calls to simplexMin().
@@ -374,9 +377,9 @@ int main( int argc, char **argv)
         SDDS_DefineColumn(&resultsPage, "el", "$ge$r$bl$n", "s", "Longitudinal Emittance", NULL, SDDS_DOUBLE, 0)<0 ||
         SDDS_DefineColumn(&resultsPage, "Sdelta", "$gs$bd$n$r", "", "Fractional RMS Energy Spread", NULL, SDDS_DOUBLE, 0)<0 ||
         SDDS_DefineColumn(&resultsPage, "Sz", "$gs$r$bz$n", "m", "RMS Bunch Length", NULL, SDDS_DOUBLE, 0)<0 ||
-        SDDS_DefineColumn(&resultsPage, "IBSRatex", NULL, "s", "Horizontal IBS Emittance Growth Rate", NULL, SDDS_DOUBLE, 0)<0 ||
-        SDDS_DefineColumn(&resultsPage, "IBSRatey", NULL, "s", "Vertical IBS Emittance Growth Rate", NULL, SDDS_DOUBLE, 0)<0 ||
-        SDDS_DefineColumn(&resultsPage, "IBSRatel", NULL, "s", "Longitudinal IBS Emittance Growth Rate", NULL, SDDS_DOUBLE, 0)<0 ||
+        SDDS_DefineColumn(&resultsPage, "IBSRatex", NULL, "1/s", "Horizontal IBS Emittance Growth Rate", NULL, SDDS_DOUBLE, 0)<0 ||
+        SDDS_DefineColumn(&resultsPage, "IBSRatey", NULL, "1/s", "Vertical IBS Emittance Growth Rate", NULL, SDDS_DOUBLE, 0)<0 ||
+        SDDS_DefineColumn(&resultsPage, "IBSRatel", NULL, "1/s", "Longitudinal IBS Emittance Growth Rate", NULL, SDDS_DOUBLE, 0)<0 ||
         SDDS_DefineColumn(&resultsPage, "Pass", NULL, NULL, NULL, NULL, SDDS_LONG, 0)<0)
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     integrationPoints = integrationTurns/integrationStepSize+1;
@@ -392,9 +395,9 @@ int main( int argc, char **argv)
       bomb("memory allocation failure (integration arrays)", NULL);
   } else {
     if (SDDS_DefineColumn(&resultsPage, "s", NULL, "m", "Position", NULL, SDDS_DOUBLE, 0)<0 ||
-        SDDS_DefineColumn(&resultsPage, "dIBSRatex", NULL, "s", "Contribution to Horizontal IBS Emittance Growth Rate",  NULL, SDDS_DOUBLE, 0)<0 ||
-        SDDS_DefineColumn(&resultsPage, "dIBSRatey", NULL, "s", "Contribution to Vertical IBS Emittance Growth Rate",  NULL, SDDS_DOUBLE, 0)<0 ||
-        SDDS_DefineColumn(&resultsPage, "dIBSRatel", NULL, "s", "Contribution to Longitudinal IBS Emittance Growth Rate",  NULL, SDDS_DOUBLE, 0)<0)
+        SDDS_DefineColumn(&resultsPage, "dIBSRatex", NULL, "1/(m s)", "Horizontal IBS Emittance Growth Rate",  NULL, SDDS_DOUBLE, 0)<0 ||
+        SDDS_DefineColumn(&resultsPage, "dIBSRatey", NULL, "1/(m s)", "Vertical IBS Emittance Growth Rate",  NULL, SDDS_DOUBLE, 0)<0 ||
+        SDDS_DefineColumn(&resultsPage, "dIBSRatel", NULL, "1/(m s)", "Longitudinal IBS Emittance Growth Rate",  NULL, SDDS_DOUBLE, 0)<0)
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
 
@@ -551,7 +554,7 @@ int main( int argc, char **argv)
       }
       simplexMin( &yReturn, xGuess, dxGuess, xLowerLimit, xUpperLimit, disable, dimensions,
                  target, tolerance, IBSequations, verbosity?IBSsimplexReport:NULL, 
-                 maxEvaluations, maxPasses, 12, 3.0, 0);
+                 maxEvaluations, maxPasses, 12, 3.0, 1.0, 0);
       /* final answers */
       emitx = xGuess[0];
       sigmaDelta = xGuess[1];
