@@ -29,9 +29,9 @@ void traceback_handler(int code);
 char *option[N_OPTIONS] = {
     "describeinput",
         };
-char *USAGE="elegant <inputfile>\n\nProgram by Michael Borland. (This is version 14.0, February 2000.)";
+char *USAGE="elegant <inputfile>\n\nProgram by Michael Borland. (This is version 14.0, March 2000.)";
 
-char *GREETING="This is elegant, by Michael Borland. (This is version 14.0, February 2000.)";
+char *GREETING="This is elegant, by Michael Borland. (This is version 14.0, March 2000.)";
 
 #define RUN_SETUP        0
 #define RUN_CONTROL      1
@@ -131,6 +131,8 @@ void initialize_structures(RUN *run_conditions, VARY *run_control, ERROR *error_
                            BEAM *beam, OUTPUT_FILES *output_data, OPTIMIZATION_DATA *optimize,
                            CHROM_CORRECTION *chrom_corr_data, TUNE_CORRECTION *tune_corr_data,
                            ELEMENT_LINKS *links);
+void free_beamdata(BEAM *beam);
+
 
 #define NAMELIST_BUFLEN 16384
 
@@ -283,6 +285,7 @@ char **argv;
                 free_beamlines(NULL);
                 saved_lattice = lattice;
                 }
+            free_beamdata(&beam);
             if (default_order<1 || default_order>3)
                 bomb("default_order is out of range", NULL);
             if (concat_order>3)
@@ -585,6 +588,7 @@ char **argv;
             }
             finish_output(&output_data, &run_conditions, &run_control, &error_control, &optimize.variables, 
                           beamline, beamline->n_elems, &beam, finalCharge);
+            free_beamdata(&beam);
             if (do_closed_orbit)
               finish_clorb_output();
             if (do_twiss_output)
@@ -632,6 +636,7 @@ char **argv;
             if (semaphore_file && !fexists(semaphore_file)) {
               fclose(fopen(semaphore_file, "w"));
             }
+            free_beamdata(&beam);
             exit(0);
             break;
           case OPTIMIZATION_SETUP:
@@ -977,6 +982,7 @@ char **argv;
     if (semaphore_file && !fexists(semaphore_file)) {
       fclose(fopen(semaphore_file, "w"));
     }
+    free_beamdata(&beam);
 #if defined(VAX_VMS) || defined(UNIX) || defined(_WIN32)
     report_stats(stdout, "statistics: ");
     fflush(stdout);
@@ -1276,3 +1282,18 @@ char *translateUnitsToTex(char *source)
   strcat(buffer, "$");
   return buffer;
 }
+
+void free_beamdata(BEAM *beam)
+{
+  if (beam->particle) {
+    free_zarray_2d((void**)beam->particle, beam->n_to_track, 7);
+  }
+  if (beam->accepted) {
+    free_zarray_2d((void**)beam->accepted, beam->n_to_track, 7);
+  }
+  if (beam->original && beam->original!=beam->particle) {
+    free_zarray_2d((void**)beam->original, beam->n_original, 7);
+  }
+  beam->particle = beam->accepted = beam->original = NULL;
+  beam->n_original = beam->n_to_track = beam->n_accepted = beam->p0 = beam->n_saved = 0;
+}  

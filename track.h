@@ -324,11 +324,13 @@ typedef struct {
 /* structure to store particle coordinates */
 typedef struct {
     double **original;      /* original particle data */
-    long n_original;        /* number of particles, and also the length of all arrays */
+    long n_original;        /* number of particles read from data file */
     long n_saved;           /* number of particles saved in original array, if this is being done */
     double p0_original;     /* initial central momentum */
     double **particle;      /* current/final coordinates */
-    long n_to_track;        /* initial number of particles being tracked.  Often equal to n_original, but not always. */
+    long n_to_track;        /* initial number of particles being tracked.  
+                               Often equal to n_original, but not always. 
+                               particle and accepted arrays are of this length. */
     double p0;              /* current/final central momentum */
     double **accepted;      /* coordinates of accepted particles, with loss info on lost particles */
     long n_accepted;        /* final number of particles being tracked. */

@@ -149,7 +149,7 @@ void setup_bunched_beam(
         beam->accepted = NULL;
     
     beam->n_original = beam->n_to_track = n_particles_per_bunch;
-    beam->n_accepted = 0;
+    beam->n_accepted = beam->n_saved = 0;
 
     if (one_random_bunch) {
       /* make a seed for reinitializing the beam RN generator */
@@ -429,7 +429,7 @@ void do_track_beam_output(RUN *run, VARY *control,
     if (!output->sums_vs_z)
       bomb("beam sums array for final output is NULL", NULL);
     if (!(flags&SILENT_RUNNING)) 
-      fprintf(stdout, "Dumping final propertes data..."); fflush(stdout);
+      fprintf(stdout, "Dumping final properties data..."); fflush(stdout);
       fflush(stdout);
     dump_final_properties
       (&output->SDDS_final, output->sums_vs_z+output->n_z_points, 
@@ -653,13 +653,6 @@ void finish_output(
         tfree(output->sums_vs_z);
         output->sums_vs_z = NULL;
         }
-    if (beam->original && beam->original!=beam->particle)
-        free_zarray_2d((void**)beam->original, beam->n_original, 7);
-    if (beam->particle)
-        free_zarray_2d((void**)beam->particle, beam->n_original, 7);
-    if (beam->accepted)
-        free_zarray_2d((void**)beam->accepted, beam->n_original, 7);
-    beam->original = beam->particle = beam->accepted = NULL;
     log_exit("finish_output.3");
     }
 

@@ -19,10 +19,9 @@ static char *input_type_name[N_SDDS_INPUT_TYPES] = {
   "elegant", "spiffe"
   } ;
 
-static long n_input_files = 0;
-static char **input_file = NULL;
-static SDDS_TABLE *SDDS_input = NULL;
-static long *input_initialized = NULL;
+static char *input_file = NULL;
+static SDDS_TABLE SDDS_input;
+static long input_initialized = 0, has_been_read = 0;
 
 #ifdef VAX_VMS
 #define isnan(x) 0
@@ -105,21 +104,14 @@ void setup_sdds_beam(
   if ((selection_parameter && !selection_string) || (!selection_parameter && selection_string))
     bomb("must specify selection_parameter and selection_string together or not at all", NULL);
 
-  n_input_files = 0;
-  while ((ptr=get_token(input))) {
-    input_file = trealloc(input_file, sizeof(*input_file)*(n_input_files+1));
-    SDDS_input = trealloc(SDDS_input, sizeof(*SDDS_input)*(n_input_files+1));
-    input_initialized = trealloc(input_initialized, sizeof(*input_initialized)*(n_input_files+1));
-    cp_str(input_file+n_input_files, ptr);
-    SDDS_ZeroMemory(SDDS_input+n_input_files, sizeof(*SDDS_input));
-    input_initialized[n_input_files] = 0;
-    if (!fexists(input_file[n_input_files])) {
-      fprintf(stdout, "error: input file %s does not exist\n", input_file[n_input_files]);
-      fflush(stdout);
-      exit(1);
-    }
-    n_input_files++;
+  cp_str(&input_file, input);
+  input_initialized = has_been_read = 0;
+  if (!fexists(input_file)) {
+    fprintf(stdout, "error: input file %s does not exist\n", input_file);
+    fflush(stdout);
+    exit(1);
   }
+
   if ((input_type_code=match_string(input_type, input_type_name, N_SDDS_INPUT_TYPES, 0))<0)
     bomb("unknown sdds input type", NULL);
   if (input_type_code==SPIFFE_BEAM && n_particles_per_ring<=0)
@@ -136,10 +128,13 @@ void setup_sdds_beam(
     bomb("sample_fraction > 1", NULL);
   if (sample_fraction<1 && sample_interval>1)
     bomb("either sample_fraction or sample_interval must be 1", NULL);
-
+  if (save_initial_coordinates && !reuse_bunch)
+    save_initial_coordinates = 0;
+  
   beam->original = beam->particle = beam->accepted = NULL;
-  beam->n_original = beam->n_to_track = beam->n_accepted = 0;
-
+  beam->n_original = beam->n_to_track = beam->n_accepted = beam->n_saved = 0;
+  save_initial_coordinates = save_original || save_initial_coordinates;
+  
   log_exit("setup_sdds_beam");
 }
 
@@ -163,7 +158,10 @@ long new_sdds_beam(
   log_entry("new_sdds_beam");
 
   if (flags&TRACK_PREVIOUS_BUNCH) {
-    if (beam->n_original==0)
+    /* retracking bunch that has already been set up */
+    if (!save_initial_coordinates)
+      bomb("logic error---initial beam coordinates not saved", NULL);
+    if (beam->original==NULL)
       bomb("can't retrack with previous bunch--there isn't one!", NULL);
     if (n_particles_per_ring!=1) {
       fputs("Warning: can't do retracking with previous bunch when n_particles_per_ring!=1\n", stdout);
@@ -176,41 +174,59 @@ long new_sdds_beam(
   else {
     if (!prebunched) {
       /* The beam in the input file is to be treated as a single bunch,
-       * even though it may be spread over several tables.
+       * even though it may be spread over several pages.
        * Read in all the particles from the input file and allocate arrays
        * for storing initial coordinates and coordinates of accepted 
        * particles. */
-      if (beam->n_original==0) {
-        /* there is no bunch in memory */
-        if (!(beam->n_original=get_sdds_particles(&beam->original, prebunched, 0))) 
+      if (beam->original==NULL) {
+        /* no beam has been read before, or else it was purged from memory to save RAM */
+        /* free any arrays we may have from previous pass */
+        if (beam->particle)
+          free_zarray_2d((void**)beam->particle, beam->n_to_track, 7);
+        if (beam->accepted)
+          free_zarray_2d((void**)beam->accepted, beam->n_to_track, 7);
+        beam->particle = beam->accepted = beam->original = NULL;
+        /* read the particle data */
+        if (!(beam->n_original=get_sdds_particles(&beam->original, prebunched, 0))) {
+          if (has_been_read) 
+            return -1;
           bomb("no particles in input file", NULL);
-        beam->particle = (double**)zarray_2d
-          (sizeof(double), n_particles_per_ring*beam->n_original, 7);
+        }
+        has_been_read = 1;
+        if (save_initial_coordinates || n_particles_per_ring!=1)
+          beam->particle = (double**)zarray_2d
+            (sizeof(double), n_particles_per_ring*beam->n_original, 7);
+        else
+          beam->particle = beam->original;
         if (run->acceptance)
           beam->accepted = (double**)zarray_2d
             (sizeof(double), n_particles_per_ring*beam->n_original, 7);
         new_particle_data = 1;
       }
       else
+        /* since we've read the whole file already and saved it, there is no new data */
         new_particle_data = 0;
     }
     else {
-      /* Each dump in the input file is to be treated as a separate
-       * bunch.  Read in the next dump for tracking.
+      /* Each page in the input file is to be treated as a separate
+       * bunch.  Read in the next page for tracking.
        */
-      if (beam->n_original) {
-        if (beam->particle)
-          free_zarray_2d((void**)beam->particle, n_particles_per_ring*beam->n_original, 7);
-        if (beam->accepted)
-          free_zarray_2d((void**)beam->accepted, n_particles_per_ring*beam->n_original, 7);
-        if (beam->original)
-          free_zarray_2d((void**)beam->original, beam->n_original, 7);
-      }
+      /* Free arrays from previous pass */
+      if (beam->particle)
+        free_zarray_2d((void**)beam->particle, beam->n_to_track, 7);
+      if (beam->accepted)
+        free_zarray_2d((void**)beam->accepted, beam->n_to_track, 7);
+      if (beam->original && beam->original!=beam->particle)
+        free_zarray_2d((void**)beam->original, beam->n_original, 7);
       beam->particle = beam->accepted = beam->original = NULL;
+      /* read the new page */
       if ((beam->n_original=get_sdds_particles(&beam->original, prebunched, n_tables_to_skip))>=0) { 
         n_tables_to_skip = 0;    /* use the user's parameter only the first time */
-        beam->particle = (double**)zarray_2d
-          (sizeof(double), n_particles_per_ring*beam->n_original, 7);
+        if (save_initial_coordinates || n_particles_per_ring!=1)
+          beam->particle = (double**)zarray_2d
+            (sizeof(double), n_particles_per_ring*beam->n_original, 7);
+        else
+          beam->particle = beam->original;
         if (run->acceptance) 
           beam->accepted = (double**)zarray_2d
             (sizeof(double), n_particles_per_ring*beam->n_original, 7);
@@ -219,6 +235,7 @@ long new_sdds_beam(
         log_exit("new_sdds_beam");
         return(-1);
       }
+      has_been_read = 1;
       new_particle_data = 1;
     }
   }
@@ -226,9 +243,11 @@ long new_sdds_beam(
   t_offset = (control->bunch_frequency?(control->i_step-1)/control->bunch_frequency:0);
 
   p_central = beam->p0_original = run->p_central;
-  /* Create the initial distribution from the beam->original particle data */
   if (new_particle_data || generate_new_bunch || 
       (input_type_code==SPIFFE_BEAM && !one_random_bunch && !(flags&TRACK_PREVIOUS_BUNCH))) {
+    /* Create the initial distribution from the beam->original particle data 
+     * or generate a new distribution from those data 
+     */
     if (input_type_code==SPIFFE_BEAM) {
       if (!beam->original)
         bomb("beam->original array is NULL (new_sdds_beam-2)", NULL);
@@ -300,7 +319,8 @@ long new_sdds_beam(
     }
     else {
       /* In this case, the data is for point particles already,
-       * so I just copy the data for the most part. */
+       * so I just copy the data for the most part, except for sampling.
+       */
       if (!beam->original && beam->n_original)
         bomb("beam->original array is NULL (new_sdds_beam)", NULL);
       if (!beam->particle)
@@ -357,7 +377,10 @@ long new_sdds_beam(
   }
   else {
     /* use (x, x', y, x', s, dp/p) saved in beam->original[] */
-    beam->n_to_track = beam->n_saved;
+    if (!(beam->n_to_track = beam->n_saved)) {
+      log_exit("new_sdds_beam");
+      return -1;
+    }
     if (!beam->original)
       bomb("beam->original is NULL (new_sdds_beam.3)", NULL);
     if (!beam->particle)
@@ -382,11 +405,14 @@ long new_sdds_beam(
     new_particle_data = 0;
   }
 
-  if (new_particle_data && (one_random_bunch || (reuse_bunch && input_type_code!=SPIFFE_BEAM))) {
+  if (new_particle_data && save_initial_coordinates && 
+      (one_random_bunch || (reuse_bunch && input_type_code!=SPIFFE_BEAM))) {
     /* Copy the new "initial" data into original[] in case it needs to be reused,  
-       but only if the stuff already in original[] is not going to be needed again.
+       but only if the stuff already in original[] is not going to be needed again
+       to generate new beams.
        */
-
+    if (beam->original==beam->particle) 
+      bomb("logic error in new_sdds_beam: array for original coordinates is missing", NULL);
     if (!beam->original)
       bomb("beam->original is NULL (new_sdds_beam.4)", NULL);
     if (!beam->particle)
@@ -409,6 +435,25 @@ long new_sdds_beam(
     new_particle_data = 0;
   }
 
+  if (!save_initial_coordinates) {
+    if (reuse_bunch) {
+      /* close the SDDS file to free memory and read again from scratch next time */
+      if (!SDDS_Terminate(&SDDS_input)) {
+        SDDS_SetError("Problem terminate sdds beam input");
+        SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+      }
+      input_initialized = 0;
+    }
+    /* free the 'original' particle data array */
+    if (beam->original && beam->original!=beam->particle) {
+      free_zarray_2d((void**)beam->original, beam->n_original, 7);
+      beam->original = NULL;
+      beam->n_original = 0;
+    }
+  if (beam->original==beam->particle)
+      beam->original = NULL;
+  }
+  
   log_exit("new_sdds_beam");
   return(beam->n_to_track);
 }
@@ -430,171 +475,159 @@ long get_sdds_particles(double ***particle, long one_dump, long n_skip)
 
   if (particle==NULL) {
     /* reset for reading again */
-    for (ifile=0; ifile<n_input_files; ifile++)  {
-      if (input_initialized[ifile] && !SDDS_Terminate(SDDS_input+ifile)) {
-        sprintf(s, "Problem terminating SDDS beam input from file %s", input_file[ifile]);
-        SDDS_SetError(s);
-        SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-      }
-      input_initialized[ifile] = 0;
+    if (input_initialized && !SDDS_Terminate(&SDDS_input)) {
+      sprintf(s, "Problem terminating SDDS beam input from file %s", input_file);
+      SDDS_SetError(s);
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     }
-    log_exit("get_sdds_particles");
-    return(-1);
+    input_initialized = 0;
   }
 
   files_initialized = 0;
-  for (ifile=0; ifile<n_input_files; ifile++) {
-    if (input_initialized[ifile])
-      continue;
-    files_initialized++;
-    input_initialized[ifile] = 1;
-    if (!SDDS_InitializeInput(SDDS_input+ifile, input_file[ifile])) {
-      sprintf(s, "Problem opening beam input file %s", input_file[ifile]);
+  if (!input_initialized) {
+    input_initialized = 1;
+    if (!SDDS_InitializeInput(&SDDS_input, input_file)) {
+      sprintf(s, "Problem opening beam input file %s", input_file);
       SDDS_SetError(s);
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     }
     if (selection_parameter) {
-      if ((i=SDDS_GetParameterIndex(SDDS_input+ifile, selection_parameter))<0)
+      if ((i=SDDS_GetParameterIndex(&SDDS_input, selection_parameter))<0)
         fprintf(stdout, "warning: SDDS beam file %s does not contain the selection parameter %s\n",
-                input_file[ifile], selection_parameter);
+                input_file, selection_parameter);
         fflush(stdout);
-      if (SDDS_GetParameterType(SDDS_input+ifile, i)!=SDDS_STRING) {
+      if (SDDS_GetParameterType(&SDDS_input, i)!=SDDS_STRING) {
         sprintf(s, "SDDS beam file %s contains parameter %s, but parameter is not a string", 
-                input_file[ifile], selection_parameter);
+                input_file, selection_parameter);
         SDDS_SetError(s);
         SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
       }
     }
     if (input_type_code==SPIFFE_BEAM) {
-      if (!check_sdds_beam_column(SDDS_input+ifile, "r", "m") || 
-          !check_sdds_beam_column(SDDS_input+ifile, "pr", "m$be$nc") ||
-          !check_sdds_beam_column(SDDS_input+ifile, "pz", "m$be$nc") ||
-          !check_sdds_beam_column(SDDS_input+ifile, "t", "s")) {
+      if (!check_sdds_beam_column(&SDDS_input, "r", "m") || 
+          !check_sdds_beam_column(&SDDS_input, "pr", "m$be$nc") ||
+          !check_sdds_beam_column(&SDDS_input, "pz", "m$be$nc") ||
+          !check_sdds_beam_column(&SDDS_input, "t", "s")) {
         fprintf(stdout, 
                 "necessary data quantities (r, pr, pz, t) have the wrong units or are not present in %s", 
-                input_file[ifile]);
+                input_file);
         fflush(stdout);
         exit(1);
       }
     }
     else {
-      if (!check_sdds_beam_column(SDDS_input+ifile, "x", "m") ||
-          !check_sdds_beam_column(SDDS_input+ifile, "y", "m") ||
-          !check_sdds_beam_column(SDDS_input+ifile, "xp", NULL) ||
-          !check_sdds_beam_column(SDDS_input+ifile, "yp", NULL) ||
-          !check_sdds_beam_column(SDDS_input+ifile, "p", "m$be$nc") ||
-          !check_sdds_beam_column(SDDS_input+ifile, "t", "s")) {
-        if (!check_sdds_beam_column(SDDS_input+ifile, "p", "m$be$nc") &&
-            check_sdds_beam_column(SDDS_input+ifile, "p", NULL)) {
+      if (!check_sdds_beam_column(&SDDS_input, "x", "m") ||
+          !check_sdds_beam_column(&SDDS_input, "y", "m") ||
+          !check_sdds_beam_column(&SDDS_input, "xp", NULL) ||
+          !check_sdds_beam_column(&SDDS_input, "yp", NULL) ||
+          !check_sdds_beam_column(&SDDS_input, "p", "m$be$nc") ||
+          !check_sdds_beam_column(&SDDS_input, "t", "s")) {
+        if (!check_sdds_beam_column(&SDDS_input, "p", "m$be$nc") &&
+            check_sdds_beam_column(&SDDS_input, "p", NULL)) {
           fprintf(stdout, "Warning: p has no units.  Expected m$be$nc\n");
           fflush(stdout);
         } else {
           fprintf(stdout, 
                   "necessary data quantities (x, x', y, y', t, p) have the wrong units or are not present in %s", 
-                  input_file[ifile]);
+                  input_file);
           fflush(stdout);
           exit(1);
         }
         
       }
     }
-    
   }
   
-  if (files_initialized && files_initialized!=n_input_files)
-    bomb("the number of SDDS beam files initialized isn't equal to the number of files in use", NULL);
+  if (!input_initialized)
+    bomb("SDDS beam file not initialized!  This shouldn't happen.", NULL);
   
   np_max = np = 0;
   data = NULL;
   data_seen = 1;
   while (data_seen) {
     data_seen = 0;
-    for (ifile=0; ifile<n_input_files; ifile++) {
-      if ((retval=SDDS_ReadTable(SDDS_input+ifile))==0)
-        SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-      else if (retval==-1) 
-        continue;
+    if ((retval=SDDS_ReadTable(&SDDS_input))==0)
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    else if (retval!=-1) 
       data_seen = 1;
-    }
-    if (!data_seen)
+    else 
       break;
     if (one_dump && n_skip>0) {
       n_skip--;
       continue;
     }
     dump_rejected = 0;
-    for (ifile=0; ifile<n_input_files; ifile++) {
-      if (selection_parameter) {
-        char *value;
-        if (!SDDS_GetParameter(SDDS_input+ifile, selection_parameter, &value)) {
-          sprintf(s, "Problem getting value of parameter %s from file %s", selection_parameter, input_file[ifile]);
-          SDDS_SetError(s);
-          SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-        }
-        if (!wild_match(value, selection_string)) {
-          dump_rejected = 1;
-          break;
-        }
-      }
-      SDDS_SetColumnFlags(SDDS_input+ifile, 0);
-      if (input_type_code==SPIFFE_BEAM && 
-          !SDDS_SetColumnsOfInterest(SDDS_input+ifile, SDDS_NAMES_STRING, spiffe_columns)) {
-        sprintf(s, "Problem setting columns of interest for file %s", input_file[ifile]);
+    if (selection_parameter) {
+      char *value;
+      if (!SDDS_GetParameter(&SDDS_input, selection_parameter, &value)) {
+        sprintf(s, "Problem getting value of parameter %s from file %s", selection_parameter, input_file);
         SDDS_SetError(s);
         SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
       }
-      else if (input_type_code!=SPIFFE_BEAM &&
-               !SDDS_SetColumnsOfInterest(SDDS_input+ifile, SDDS_NAMES_STRING, elegant_columns)) {
-        sprintf(s, "Problem setting columns of interest for file %s", input_file[ifile]);
-        SDDS_SetError(s);
-        SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-      }
-      if ((rows = SDDS_CountRowsOfInterest(SDDS_input+ifile))<=0) {
-        if (rows==-1) {
-          sprintf(s, "Problem counting rows of interest for file %s", input_file[ifile]);
-          SDDS_SetError(s);
-          SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-        }
+      if (!wild_match(value, selection_string)) {
+        dump_rejected = 1;
         break;
       }
-      if ((np_new=np+rows)>np_max) {
-        /* must reallocate to get more space */
-        np_max = np + 2*rows;
-        data = trealloc(data, np_max*sizeof(*data));
-      }
-      if (!(new_data=SDDS_GetCastMatrixOfRows(SDDS_input+ifile, &i, SDDS_DOUBLE))) {
-        sprintf(s, "Problem getting matrix of rows for file %s", input_file[ifile]);
+    }
+    SDDS_SetColumnFlags(&SDDS_input, 0);
+    if (!SDDS_SetColumnsOfInterest(&SDDS_input, SDDS_NAMES_STRING, 
+                                   input_type_code==SPIFFE_BEAM?spiffe_columns:elegant_columns)) {
+      sprintf(s, "Problem setting columns of interest for file %s", input_file);
+      SDDS_SetError(s);
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    }
+    if ((rows = SDDS_CountRowsOfInterest(&SDDS_input))<=0) {
+      if (rows==-1) {
+        sprintf(s, "Problem counting rows of interest for file %s", input_file);
         SDDS_SetError(s);
         SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
       }
-      if (i!=rows) {
-        sprintf(s, "Row count mismatch for file %s", input_file[ifile]);
+      break;
+    }
+    if ((np_new=np+rows)>np_max) {
+      /* must reallocate to get more space */
+      np_max = np + 2*rows;
+      data = trealloc(data, np_max*sizeof(*data));
+    }
+    if (!(new_data=SDDS_GetCastMatrixOfRows(&SDDS_input, &i, SDDS_DOUBLE))) {
+      sprintf(s, "Problem getting matrix of rows for file %s", input_file);
+      SDDS_SetError(s);
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    }
+    if (i!=rows) {
+      sprintf(s, "Row count mismatch for file %s", input_file);
+      SDDS_SetError(s);
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    }
+    for (i=np; i<np_new; i++)
+      /* will want to use this storage for 6D+1 phase space latter */
+      data[i] = trealloc(new_data[i-np], sizeof(**new_data)*7);
+    if ((indexID=SDDS_GetColumnIndex(&SDDS_input, "particleID"))>=0) {
+      double *index;
+      if (!(index=SDDS_GetColumnInDoubles(&SDDS_input, "particleID"))) {
+        sprintf(s, "Problem reading particleID column for file %s", input_file);
         SDDS_SetError(s);
         SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
       }
       for (i=np; i<np_new; i++)
-        /* will want to use this storage for 6D+1 phase space latter */
-        data[i] = trealloc(new_data[i-np], sizeof(**new_data)*7);
-      if ((indexID=SDDS_GetColumnIndex(SDDS_input+ifile, "particleID"))>=0) {
-        double *index;
-        if (!(index=SDDS_GetColumnInDoubles(SDDS_input+ifile, "particleID"))) {
-          sprintf(s, "Problem reading particleID column for file %s", input_file[ifile]);
-          SDDS_SetError(s);
-          SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-        }
-        for (i=np; i<np_new; i++)
-          data[i][6] = index[i-np];
-      }
-      else if (input_type_code!=SPIFFE_BEAM)
-        for (i=np; i<np_new; i++)
-          data[i][6] = particleID++;
-      free(new_data);
-      np = np_new;
+        data[i][6] = index[i-np];
+      free(index);
     }
+    else if (input_type_code!=SPIFFE_BEAM)
+      for (i=np; i<np_new; i++)
+        data[i][6] = particleID++;
+    free(new_data);
+    np = np_new;
+      
     if (one_dump && !dump_rejected)
       break;
   }
-
+  
+  if (!SDDS_ShortenTable(&SDDS_input, 1)) {
+    SDDS_SetError("Problem releasing table memory when reading SDDS beam file.");
+    SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+  }
+  
   if (!data_seen && one_dump)
     return -1;
   

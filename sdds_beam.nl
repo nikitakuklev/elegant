@@ -21,5 +21,6 @@
     double sample_fraction = 1;
     double p_lower = 0.0;
     double p_upper = 0.0;
+    long save_initial_coordinates = 1;
 #end
 
