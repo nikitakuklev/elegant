@@ -1540,6 +1540,177 @@ proc OffMomentumDynamicAperturePP {args} {
     }
 }
 
+proc FillDynamicApertureErrorsFrame {widget args} {
+    global dynamicApertureErrors
+    set dynamicApertureErrors(xMinimum) -0.01
+    set dynamicApertureErrors(xMaximum)  0.01
+    set dynamicApertureErrors(yMaximum)  0.01
+    set dynamicApertureErrors(xPoints)   31
+    set dynamicApertureErrors(yPoints)   16
+    set dynamicApertureErrors(turns) 500
+    set dynamicApertureErrors(includeApertures) 1
+    set dynamicApertureErrors(seeds) 50
+    set dynamicApertureErrors(dxBend) 1e-4
+    set dynamicApertureErrors(dyBend) 1e-4
+    set dynamicApertureErrors(dtiltBend) 1e-4
+    set dynamicApertureErrors(fseBend) 1e-4
+    set dynamicApertureErrors(dxQuad) 1e-4
+    set dynamicApertureErrors(dyQuad) 1e-4
+    set dynamicApertureErrors(dtiltQuad) 1e-4
+    set dynamicApertureErrors(fseQuad) 1e-4
+    set dynamicApertureErrors(dxSext) 1e-4
+    set dynamicApertureErrors(dySext) 1e-4
+    set dynamicApertureErrors(dtiltSext) 1e-4
+    set dynamicApertureErrors(fseSext) 1e-4
+
+    APSLabeledEntry .le1 -parent $widget \
+      -label "Minimum x coordinate (m): " -width 20 -textVariable dynamicApertureErrors(xMinimum) \
+      -contextHelp \
+      "Enter the minimum x coordinate for the dynamic aperture search"
+    APSLabeledEntry .le2 -parent $widget \
+      -label "Maximum x coordinate (m): " -width 20 -textVariable dynamicApertureErrors(xMaximum) \
+      -contextHelp \
+      "Enter the maximum x coordinate for the dynamic aperture search"
+    APSLabeledEntry .le3 -parent $widget \
+      -label "Number of x points: " -width 20 -textVariable dynamicApertureErrors(xPoints) \
+      -contextHelp \
+      "Enter the number of points into which to divide the x interval."
+    APSLabeledEntry .le4 -parent $widget \
+      -label "Maximum y coordinate (m): " -width 20 -textVariable dynamicApertureErrors(yMaximum) \
+      -contextHelp \
+      "Enter the maximum y coordinate for the dynamic aperture search"
+    APSLabeledEntry .le5 -parent $widget \
+      -label "Number of y points: " -width 20 -textVariable dynamicApertureErrors(yPoints) \
+      -contextHelp \
+      "Enter the number of points into which to divide the y interval."
+    APSLabeledEntry .le6 -parent $widget \
+      -label "Number of turns: " -width 20 -textVariable dynamicApertureErrors(turns) \
+      -contextHelp \
+      "Enter the number of turns to track."
+    APSLabeledEntry .le61 -parent $widget \
+      -label "Number of seeds: " -width 20 -textVariable dynamicApertureErrors(seeds) \
+      -contextHelp \
+      "Enter the number of random seeds to run."
+
+    APSFrameGrid .fg -parent $widget -xList "magnet dx dy dtilt fse" \
+	-yList "label bend quad sext"
+    foreach label {dx dy dtilt fse} unit {m m rad ""} {
+	label $widget.fg.$label.label.label -text "$label ($unit)"
+	pack $widget.fg.$label.label.label 
+    }
+    foreach magnet {Bend Quad Sext} type {bend quad sext} {
+	label $widget.fg.magnet.$type.label -text "${magnet}:" 
+	pack $widget.fg.magnet.$type.label
+    }
+
+    foreach quantity {dx dy dtilt fse} {
+	foreach type {bend quad sext} magnet {Bend Quad Sext} {
+	    entry $widget.fg.$quantity.$type.entry \
+		-textvariable dynamicApertureErrors($quantity$magnet) \
+		-width 10
+	    pack $widget.fg.$quantity.$type.entry
+	}
+    }
+
+    set dynamicApertureErrors(userSuffix) ""
+    APSLabeledEntry .le7 -parent $widget \
+      -label "Run suffix: " -width 20 -textVariable dynamicApertureErrors(userSuffix) \
+      -contextHelp "Enter a suffix for this set of runs."
+
+    APSRadioButtonFrame .rb1 -parent $widget \
+      -label "Include apertures: " -orientation horizontal -buttonList {Yes No} -valueList {1 0} \
+      -variable dynamicApertureErrors(includeApertures) -contextHelp \
+      "Choose whether to include the effects of apertures that are defined in the beamline."
+    
+    APSButton .bu1 -parent $widget \
+      -text "Run" -command "DynamicApertureErrors"
+    APSButton .bu2 -parent $widget \
+      -text "Display" -command \
+	{DynamicApertureErrorsPP -rootname $mainDirectory/${mainPrefix}DynamicApertureErrors$dynamicApertureErrors(userSuffix)}
+}
+
+proc DynamicApertureErrors {args} {
+    global sourceDir forceOccurence 
+    global dynamicApertureErrors momentum matrixLatticeFile mainParameterFile mainDirectory mainPrefix
+    global kickOffsetElement
+
+    set tag DynamicApertureErrors
+    set rootname $mainDirectory/${mainPrefix}${tag}$dynamicApertureErrors(userSuffix)
+    SaveJobConfiguration -filename $rootname.runCfg
+
+    set parameterFileList ""
+    foreach item [lsort [array names mainParameterFile]] {
+        if [string length $mainParameterFile($item)] {
+            append parameterFileList "$mainParameterFile($item) "
+        }
+    }
+    foreach item [array names dynamicApertureErrors] {
+	lappend origList <$item>
+	lappend replList [set dynamicApertureErrors($item)]
+    }
+    set variable seed
+    set firstSeed [expr 2*int([clock seconds]/2)+1]
+    set lastSeed [expr $firstSeed+10*($dynamicApertureErrors(seeds)-1)]
+    PerformRuns -template $sourceDir/DynamicApertureErrorsTemplate.ele \
+	-parameterFileList $parameterFileList -forceOccurence $forceOccurence \
+	-variable $variable -suffix $dynamicApertureErrors(userSuffix) \
+	-startValue $firstSeed \
+	-endValue $lastSeed \
+	-points $dynamicApertureErrors(seeds) \
+	-copyList [list done mag] -combineList [list twi orb cor scor aper abnd ele ele.log] \
+	-tag $tag -momentum $momentum -originalList $origList \
+	-replacementList $replList -postProcessProc DynamicApertureErrorsPP
+}
+
+proc DynamicApertureErrorsPP {args} {
+    set rootname ""
+    APSStrictParseArguments {rootname}
+    source $rootname.runCfg
+
+    exec sddscombine $rootname.aper -pipe=out -merge \
+	| sddshist2d -pipe=in $rootname.aper.h2d -columns=x,y -xparameter=$dynamicApertureErrors(xPoints) \
+	-yparameter=$dynamicApertureErrors(yPoints)
+
+    exec sddscontour -shade $rootname.aper.h2d &
+
+    global makePngFiles
+    if $makePngFiles {
+	exec sddscontour -device=png,onwhite -output=$rootname-aper.png -shade $rootname-aper.h2d &
+	setStatus "PNG file: $rootname-aper.png"
+    }
+    
+    exec sddsenvelope $rootname.twi $rootname.twi.env \
+	-copy=s -minimum=beta*,etax -maximum=beta*,etax -mean=beta*,etax 
+    exec sddsplot -graph=line,vary -unsup=y \
+	-column=s,(betaxMin,betaxMean,betaxMax) $rootname.twi.env -end \
+	-column=s,(betayMin,betayMean,betayMax) $rootname.twi.env -end \
+	-column=s,(etaxMin,etaxMean,etaxMax) $rootname.twi.env -end \
+	-column=s,Profile $rootname.mag -overlay=xmode=norm,yfact=0.04 -omnipresent &
+    if $makePngFiles {
+	exec sddsplot \
+	    -device=png,onwhite,template=$rootname-twi-%ld.png \
+	    -graph=line,vary -unsup=y \
+	    -column=s,(betaxMin,betaxMean,betaxMax) $rootname.twi.env -end \
+	    -column=s,(betayMin,betayMean,betayMax) $rootname.twi.env -end \
+	    -column=s,(etaxMin,etaxMean,etaxMax) $rootname.twi.env -end \
+	    -column=s,Profile $rootname.mag -overlay=xmode=norm,yfact=0.04 -omnipresent &
+	setStatus "PNG file: $rootname-twi-*.png"
+    }
+
+    exec sddsenvelope $rootname.orb $rootname.orb.env \
+	-copy=s -rms=x,y 
+    exec sddsplot -graph=line,vary -unsup=y \
+	-column=s,(xRms,yRms) $rootname.orb.env \
+	-column=s,Profile $rootname.mag -overlay=xmode=norm,yfact=0.04 &
+    if $makePngFiles {
+	exec sddsplot -device=png,onwhite -output=$rootname-orb.png \
+	    -graph=line,vary -unsup=y \
+	    -column=s,(xRms,yRms) $rootname.orb.env \
+	    -column=s,Profile $rootname.mag -overlay=xmode=norm,yfact=0.04 &
+	setStatus "PNG file: $rootname-orb.png"
+    }
+}
+
 proc FillFineDynamicApertureFrame {widget args} {
     global fineDynamicAperture
     set fineDynamicAperture(xMinimum) -0.01
@@ -1790,18 +1961,22 @@ proc FrequencyMapPP {args} {
     if ![llength $valueList] return
     array set parameter $valueList
     catch {exec sddsresdiag $rootname.resdiag -order=$parameter(order)}
+
     exec sddsplot -filename \
 	-limit=xmin=$parameter(nux0),xmax=$parameter(nux1),ymin=$parameter(nuy0),ymax=$parameter(nuy1),auto \
 	-column=nux,nuy $rootname.resdiag \
 	-column=nux,nuy $rootname.fma -graph=dot,subtype=2,vary -order=spect \
+	"-title=Column indicates initial x amplitude" \
 	-split=column=x,width=[expr $frequencyMap(xMaximum)/100.0] -end \
 	-column=nux,nuy $rootname.resdiag \
+	"-title=Column indicates initial y amplitude" \
 	-column=nux,nuy $rootname.fma -graph=dot,subtype=2,vary -order=spect \
 	-split=column=y,width=[expr $frequencyMap(yMaximum)/100.0] &
 
+
     global makePngFiles
     if $makePngFiles {
-	exec sddsplot -device=png,onwhite -thickness=2 -output=$rootname.png \
+	exec sddsplot -device=png,onwhite -thickness=2 -output=$rootname-fma1.png \
 	    -filename \
 	    -limit=xmin=$parameter(nux0),xmax=$parameter(nux1),ymin=$parameter(nuy0),ymax=$parameter(nuy1),auto \
 	    -column=nux,nuy $rootname.resdiag \
@@ -1810,20 +1985,49 @@ proc FrequencyMapPP {args} {
 	    -column=nux,nuy $rootname.resdiag \
 	    -column=nux,nuy $rootname.fma -graph=dot,subtype=2,vary -order=spect \
 	    -split=column=y,width=[expr $frequencyMap(yMaximum)/100.0]
-	setStatus "PNG file: $rootname.png"
+	setStatus "PNG file: $rootname-fma1.png"
+    }
+
+    set xmin [expr $frequencyMap(xMinimum)<0 ? 1.05*$frequencyMap(xMinimum) : 0]
+    set xmax [expr 1.05*$frequencyMap(xMaximum)]
+    set ymin [expr $frequencyMap(yMinimum)<0 ? 1.05*$frequencyMap(yMinimum) : 0]
+    set ymax [expr 1.05*$frequencyMap(yMaximum)]
+
+    exec sddsplot -filename \
+	-limit=xmin=$xmin,xmax=$xmax,ymin=$ymin,ymax=$ymax \
+	-column=x,y $rootname.fma -graph=dot,subtype=2,vary -order=spect \
+	"-title=Column indicates x tune" \
+	-split=column=nux,width=0.01,start=0 -end \
+	-column=x,y $rootname.fma -graph=dot,subtype=2,vary -order=spect \
+	"-title=Column indicates y tune" \
+	-split=column=nuy,width=0.01,start=0 -end &
+
+    global makePngFiles
+    if $makePngFiles {
+	exec sddsplot -device=png,onwhite -thickness=2 -output=$rootname-fma2.png \
+	    -filename \
+	    -limit=xmin=$xmin,xmax=$xmax,ymin=$ymin,ymax=$ymax \
+	    -column=x,y $rootname.fma -graph=dot,subtype=2,vary -order=spect \
+	    "-title=Column indicates x tune" \
+	    -split=column=nux,width=0.01,start=0 -end \
+	    -column=x,y $rootname.fma -graph=dot,subtype=2,vary -order=spect \
+	    "-title=Column indicates y tune" \
+	    -split=column=nuy,width=0.01,start=0 -end &
+	setStatus "PNG file: $rootname-fma2.png"
     }
 }
 
 set tabIndex -1
-set sectionList [list Main Basic "PhaseSpace" "Higher-Order Disp." \
-    "Off-mom. Tunes" "DA" "Off-mom. DA" "Fine DA" "FMA" \
-    "Collective Effects"]
+set sectionList [list Main Basic PhsSpc HghrOrdrDsprsn \
+    OffMmntmTunes DA OffMmntmDA DA+Errors FineDA FMA \
+    ClctveEfcts]
 set descriptionList [list "" "Twiss parameters, chromaticities, radiation integrals" \
     "Phase space tracking, plots, FFTs." \
     "Higher order dispersion from off-momentum orbits." \
     "Off-momentum tunes from tracking." \
     "On-momentum dynamic aperture using a relatively coarse algorithm." \
     "Off-momentum dynamic apertures using a relatively coarse algorithm." \
+    "On-momentum dynamic aperture with errors (many seeds)." \
     "Dynamic aperture using a high-resolution algorithm (requires a cluster)." \
     "Frequency map analysis (requires a cluster)." \
     "Collective effects."]
@@ -1840,22 +2044,24 @@ set tabFrameWidgetList [APSTabFrame .main -parent .userFrame \
     -commandList \
         [APSReplicateItem -item DescribeSection -number [llength $sectionList]]]
 
-FillMainFrame  [lindex $tabFrameWidgetList 0]
-FillBasicFrame [lindex $tabFrameWidgetList 1]
-FillPhaseSpaceFrame [lindex $tabFrameWidgetList 2]
-FillHigherOrderDispersionFrame [lindex $tabFrameWidgetList 3]
-FillOffMomentumTunesFrame [lindex $tabFrameWidgetList 4]
-FillDynamicApertureFrame [lindex $tabFrameWidgetList 5]
-FillOffMomentumDynamicApertureFrame [lindex $tabFrameWidgetList 6]
-FillFineDynamicApertureFrame [lindex $tabFrameWidgetList 7]
-FillFrequencyMapFrame [lindex $tabFrameWidgetList 8]
-FillCollectiveEffectsFrame [lindex $tabFrameWidgetList 9]
+set i 0
+FillMainFrame  [lindex $tabFrameWidgetList $i]; incr i
+FillBasicFrame [lindex $tabFrameWidgetList $i]; incr i
+FillPhaseSpaceFrame [lindex $tabFrameWidgetList $i]; incr i
+FillHigherOrderDispersionFrame [lindex $tabFrameWidgetList $i]; incr i
+FillOffMomentumTunesFrame [lindex $tabFrameWidgetList $i]; incr i
+FillDynamicApertureFrame [lindex $tabFrameWidgetList $i]; incr i
+FillOffMomentumDynamicApertureFrame [lindex $tabFrameWidgetList $i]; incr i
+FillDynamicApertureErrorsFrame [lindex $tabFrameWidgetList $i]; incr i
+FillFineDynamicApertureFrame [lindex $tabFrameWidgetList $i]; incr i
+FillFrequencyMapFrame [lindex $tabFrameWidgetList $i]; incr i
+FillCollectiveEffectsFrame [lindex $tabFrameWidgetList $i]; incr i
 
 lappend saveVarList momentum matrixLatticeFile kickLatticeFile mainParameterFile mainDirectory mainPrefix gridEngine
 lappend saveVarList matrixBeamline kickBeamline matrixOffsetElement kickOffsetElement
 lappend saveVarList basicComputations phaseSpaceTracking offMomentumTuneTracking higherOrderDispersion
 lappend saveVarList dynamicAperture offMomentumDynamicAperture fineDynamicAperture
-lappend saveVarList frequencyMap collectiveEffects
+lappend saveVarList frequencyMap collectiveEffects dynamicApertureErrors
 
 set args $argv
 set configuration ""
