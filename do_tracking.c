@@ -1966,6 +1966,7 @@ void distributionScatter(double **part, long np, double Po, DSCATTER *scat, long
                                                 scat->cdfName?scat->cdfName:scat->pdfName))) {
       fprintf(stderr, "Error for %s: CDF/PDF data is invalid.\n",
               context.elementName);
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
       exit(1);
     }
     SDDS_Terminate(&SDDSin);
@@ -2025,8 +2026,11 @@ void distributionScatter(double **part, long np, double Po, DSCATTER *scat, long
       }
       scat->groupIndex = i;
     }
+    if (scat->startOnPass<0)
+      scat->startOnPass = 0;
   }
-  
+
+
   if (iPass==0 && scat->oncePerParticle && scat->firstInGroup) {
     /* Initialize data for remembering which particles have been scattered */
     dscatterGroup[scat->groupIndex].nParticles = np;
@@ -2040,10 +2044,13 @@ void distributionScatter(double **part, long np, double Po, DSCATTER *scat, long
     dscatterGroup[scat->groupIndex].nScattered = 0;
     dscatterGroup[scat->groupIndex].allScattered = 0;
   }
+
+  if (iPass<scat->startOnPass) 
+    return;
   if (scat->oncePerParticle && dscatterGroup[scat->groupIndex].allScattered)
     return;
-  
-  if (iPass==0) {
+
+  if (iPass==scat->startOnPass) {
     scat->nLeft = scat->limitTotal>=0 ? scat->limitTotal : np;
     if (scat->nLeft>np)
       scat->nLeft = np;
@@ -2112,7 +2119,7 @@ void distributionScatter(double **part, long np, double Po, DSCATTER *scat, long
       part[ip][scat->iPlane] += amplitude;
   }
   scat->nLeft -= nScattered;
-  fprintf(stderr, "%ld particles scattered by %s, group %ld, total=%ld\n", nScattered, context.elementName, scat->group, dscatterGroup[scat->groupIndex].nScattered);
+  fprintf(stderr, "%ld particles scattered by %s#%ld, group %ld, total=%ld\n", nScattered, context.elementName, context.elementOccurrence, scat->group, dscatterGroup[scat->groupIndex].nScattered);
 }
 
 

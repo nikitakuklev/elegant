@@ -861,6 +861,7 @@ PARAMETER dscatter_param[N_DSCATTER_PARAMS] = {
     {"RANDOMSIGN", "", IS_LONG, 0, (long)((char*)&dscatter_example.randomSign), NULL, 0.0, 0, "If non-zero, then the scatter is given a random sign.  Useful if distribution data is one-sided."},
     {"LIMITPERPASS", "", IS_LONG, 0, (long)((char*)&dscatter_example.limitPerPass), NULL, 0.0, -1, "Maximum number of particles that will be scattered on each pass."},
     {"LIMITTOTAL", "", IS_LONG, 0, (long)((char*)&dscatter_example.limitTotal), NULL, 0.0, -1, "Maximum number of particles that will be scatter for each step."},
+    {"STARTONPASS", "", IS_LONG, 0, (long)((char*)&dscatter_example.startOnPass), NULL, 0.0, 0, "Pass number to start on."},
     } ;
     
 NIBEND nibend_example;
