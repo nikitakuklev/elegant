@@ -31,32 +31,37 @@ long tolower(char c);
 
 void delete_spaces(char *s);
 void str_to_upper_quotes(char *s);
-char *cfgets1(char *s, long n, FILE *fpin);
+char *cfgets1(char *s, long n, FILE *fpin, long strip, long start);
 
 char *cfgets(char *s, long n, FILE *fpin)
 {
   s[0] = 0;
-  if (!cfgets1(s, n, fpin))
+  if (!cfgets1(s, n, fpin, 1, 1))
     return NULL;
-  str_to_upper_quotes(s);
+  if (s[0]!='%') 
+    str_to_upper_quotes(s);
   return s;
 }
 
-char *cfgets1(char *s, long n, FILE *fpin)
+char *cfgets1(char *s, long n, FILE *fpin, long strip, long start)
 {
   register long l;
-  
+
   while (fgets(s, n, fpin)) {
+    if (start && s[0]=='%')
+      strip = 0;
+    start = 0;
     if (s[0]=='!')
       continue;
     chop_nl(s);
-    delete_spaces(s);
+    if (strip)
+      delete_spaces(s);
     l = strlen(s);
     while (l!=0 && s[l]<27)
       l--;
     if (s[l]=='&') {
       s[l] = 0;
-      cfgets(s+l, n-l, fpin);
+      cfgets1(s+l, n-l, fpin, strip, 0);
       return(s);
     }
     else {
