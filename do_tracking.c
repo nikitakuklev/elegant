@@ -1054,11 +1054,13 @@ void do_match_energy(
     /* change the central momentum so that it matches the beam's centroid */
     P_average = 0;
     for (ip=0; ip<np; ip++) 
-      P_average += (coord[ip][5] = *P_central*(1+coord[ip][5]));
+      P_average += (*P_central)*(1+coord[ip][5]);
     P_average /= np;
-    for (ip=0; ip<np; ip++)
-      coord[ip][5] = (coord[ip][5]- P_average)/ P_average;
-    *P_central =  P_average;
+    if (P_average!= *P_central) {
+      for (ip=0; ip<np; ip++)
+        coord[ip][5] = ((1+coord[ip][5])*(*P_central) - P_average)/ P_average;
+      *P_central =  P_average;
+    }
   }
   else {
     /* change the particle momenta so that the centroid is the central momentum */
@@ -1118,19 +1120,15 @@ void set_central_momentum(
 {
   long ip;
   
-  log_entry("set_central_momentum");
-  
   if (!np) {
     *P_central =  P_new;
-    log_exit("set_central_momentum");
     return;
   }
-  
-  for (ip=0; ip<np; ip++)
-    coord[ip][5] = ((1+coord[ip][5])*(*P_central) - P_new)/P_new;
-  
-  *P_central =  P_new;
-  log_exit("set_central_momentum");
+  if (*P_central != P_new) {
+    for (ip=0; ip<np; ip++)
+      coord[ip][5] = ((1+coord[ip][5])*(*P_central) - P_new)/P_new;
+    *P_central =  P_new;
+  }
 }
 
 void center_beam(double **part, CENTER *center, long np)
