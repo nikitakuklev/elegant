@@ -222,6 +222,7 @@ main(int argc, char **argv)
         bomb("internal error--unknown output mode", NULL);
         break;
         }
+    exit(0);
     }
 
 char *quoted_label(char *s)
