@@ -428,7 +428,9 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_ZTRANSVERSE 62
 #define T_IBSCATTER 63
 #define T_FMULT 64
-#define N_TYPES 65
+#define T_WAKE 65
+#define T_TRWAKE 66
+#define N_TYPES 67
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -496,10 +498,12 @@ extern char *entity_text[N_TYPES];
 #define N_ZLONGIT_PARAMS 15
 #define N_MODRF_PARAMS 13
 #define N_SREFFECTS_PARAMS 10
-#define N_ZTRANSVERSE_PARAMS 13
+#define N_ZTRANSVERSE_PARAMS 14
 #define N_IBSCATTER_PARAMS 3
 #define N_FMULT_PARAMS 9
 #define N_BMAPXY_PARAMS 5
+#define N_WAKE_PARAMS 7
+#define N_TRWAKE_PARAMS 8
 
 typedef struct {
     char *name;            /* parameter name */
@@ -1309,6 +1313,7 @@ typedef struct {
     /* variables for SDDS output of wakes */
     SDDS_TABLE SDDS_wake;
     long SDDS_wake_initialized;
+    double macroParticleCharge;
     } ZLONGIT;
 
 /* names and storage structure for transverse impedance physical parameters */
@@ -1323,10 +1328,44 @@ typedef struct {
     /* columns from input file */
     char *freqColumn, *ZxReal, *ZxImag, *ZyReal, *ZyImag;
     double bin_size;           /* size of charge bins */
+    long interpolate;          /* whether to interpolate voltage or not */
     long n_bins;               /* number of charge bins--must be 2^n */
     /* for internal use */
     double *iZ[2];             /* i*Z (Re Z, Im Z) pairs for each plane */
+    long initialized;
+    double macroParticleCharge;
     } ZTRANSVERSE;
+
+/* names and storage structure for longitudinal wake physical parameters */
+extern PARAMETER wake_param[N_WAKE_PARAMS];
+
+typedef struct {
+    char *inputFile, *tColumn, *WColumn;
+    double charge;             /* total initial charge */
+    long n_bins;               /* number of charge bins */
+    long interpolate;          /* flag to turn on interpolation */
+    long smooth_passes;        /* flag to turn on smoothing and specify number of passes */
+    /* for internal use: */
+    long initialized;          /* indicates that files are loaded */
+    long wakePoints;
+    double *W, *t, macroParticleCharge, dt;
+  } WAKE;
+
+/* names and storage structure for transverse wake physical parameters */
+extern PARAMETER trwake_param[N_TRWAKE_PARAMS];
+
+typedef struct {
+    char *inputFile, *tColumn, *WxColumn, *WyColumn;
+    double charge;             /* total initial charge */
+    long n_bins;               /* number of charge bins */
+    long interpolate;          /* flag to turn on interpolation */
+    long smooth_passes;        /* flag to turn on smoothing and specify number of passes */
+    /* for internal use: */
+    long initialized;          /* indicates that files are loaded */
+    long wakePoints;
+    double *W[2], *t, macroParticleCharge, dt;
+  } TRWAKE;
+
 
 /* names and storage structure for SR effects */
 extern PARAMETER sreffects_param[N_SREFFECTS_PARAMS];
@@ -1848,10 +1887,29 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
 
 void track_through_trfmode(double **part, long np, TRFMODE *trfmode, double Po,
     char *element_name, double element_z, long pass, long n_passes);
-void set_up_trfmode(TRFMODE *rfmode, char *element_name, double element_z, long n_passes, RUN *run, long n_particles);
-
+void set_up_trfmode(TRFMODE *trfmode, char *element_name, double element_z, 
+                    long n_passes, RUN *run, long n_particles);
 void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po, RUN *run, long i_pass);
-void set_up_zlongit(ZLONGIT *zlongit, RUN *run);
+void convolveArrays(double *output, long outputs, 
+                    double *a1, long n1,
+                    double *a2, long n2);
+void applyLongitudinalWakeKicks(double **part, double *time, long *pbin, long np, double Po,
+                                double *Vtime, long nb, double tmin, double dt,
+                                long interpolate);
+void applyTransverseWakeKicks(double **part, double *time, double *pz, long *pbin, long np,
+                              double Po, long plane,
+                              double *Vtime, long nb, double tmin, double dt, 
+                              long interpolate);
+void track_through_wake(double **part, long np, WAKE *wakeData, double Po,
+                        RUN *run, long i_pass);
+void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
+                          RUN *run, long i_pass);
+double computeTimeCoordinates(double *time, double Po, double **part, long np);
+long binTransverseTimeDistribution(double **posItime, double *pz, long *pbin, double tmin,
+                                   double dt, long nb, double *time, double **part, double Po, long np);
+long binTimeDistribution(double *Itime, long *pbin, double tmin,
+                         double dt, long nb, double *time, double **part, double Po, long np);
+
 
 void track_SReffects(double **coord, long n, SREFFECTS *SReffects, double Po, 
                              TWISS *twiss, RADIATION_INTEGRALS *radIntegrals);
