@@ -24,6 +24,7 @@ char *entity_name[N_TYPES] = {
     "NIBEND", "KPOLY", "NISEPT", "RAMPRF", "RAMPP", "STRAY", "CSBEND",
     "TWMTA", "MATTER", "RFMODE", "TRFMODE", "ZLONGIT", "SREFFECTS",
     "MODRF", "BMAPXY", "ZTRANSVERSE", "IBSCATTER", "FMULT",
+    "WAKE", "TRWAKE",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -119,6 +120,8 @@ and phase modulation.",
     "A simulation of a single-pass broad-band or functionally-specified transverse dipole impedance.",
     "A simulation of intra-beam scattering.",
     "Multipole kick element with coefficient input from an SDDS file.",
+    "Longitudinal wake specified as a function of time lag behind the particle.",
+    "Transverse wake specified as a function of time lag behind the particle.",
     } ;
 
 QUAD quad_example;
@@ -989,6 +992,7 @@ PARAMETER ztransverse_param[N_ZTRANSVERSE_PARAMS] = {
     {"ZYREAL", "", IS_STRING, 0, (long)((char *)&ztransverse_example.ZyReal), NULL, 0.0, 0},
     {"ZYIMAG", "", IS_STRING, 0, (long)((char *)&ztransverse_example.ZyImag), NULL, 0.0, 0},
     {"BIN_SIZE", "S", IS_DOUBLE, 0, (long)((char *)&ztransverse_example.bin_size), NULL, 0.0, 0},
+    {"INTERPOLATE", "", IS_LONG, 0, (long)((char *)&ztransverse_example.interpolate), NULL, 0.0, 0},
     {"N_BINS", "", IS_LONG, 0, (long)((char *)&ztransverse_example.n_bins), NULL, 0.0, 128},
 };
 
@@ -998,6 +1002,31 @@ PARAMETER ibscatter_param[N_IBSCATTER_PARAMS] = {
   {"FRACTION", "", IS_DOUBLE, 0, (long)((char *)&ibs_example.fraction), NULL, 1.0, 0},
   {"CHARGE", "C", IS_DOUBLE, 0, (long)((char *)&ibs_example.charge), NULL, 0.0, 0},
 };
+
+WAKE wake_example;
+/* WAKE physical parameters */
+PARAMETER wake_param[N_WAKE_PARAMS] = {
+    {"INPUTFILE", "", IS_STRING, 0, (long)((char *)&wake_example.inputFile), NULL, 0.0, 0},
+    {"TCOLUMN", "", IS_STRING, 0, (long)((char *)&wake_example.tColumn), NULL, 0.0, 0},
+    {"WCOLUMN", "", IS_STRING, 0, (long)((char *)&wake_example.WColumn), NULL, 0.0, 0},
+    {"CHARGE", "C", IS_DOUBLE, 0, (long)((char *)&wake_example.charge), NULL, 0.0, 0},
+    {"N_BINS", "", IS_LONG, 0, (long)((char *)&wake_example.n_bins), NULL, 0.0, 128},
+    {"INTERPOLATE", "", IS_LONG, 0, (long)((char *)&wake_example.interpolate), NULL, 0.0, 0},
+    {"SMOOTH_PASSES", "", IS_LONG, 0, (long)((char *)&wake_example.smooth_passes), NULL, 0.0, 0},
+    };
+
+TRWAKE trwake_example;
+/* TRWAKE physical parameters */
+PARAMETER trwake_param[N_TRWAKE_PARAMS] = {
+    {"INPUTFILE", "", IS_STRING, 0, (long)((char *)&trwake_example.inputFile), NULL, 0.0, 0},
+    {"TCOLUMN", "", IS_STRING, 0, (long)((char *)&trwake_example.tColumn), NULL, 0.0, 0},
+    {"WXCOLUMN", "", IS_STRING, 0, (long)((char *)&trwake_example.WxColumn), NULL, 0.0, 0},
+    {"WYCOLUMN", "", IS_STRING, 0, (long)((char *)&trwake_example.WyColumn), NULL, 0.0, 0},
+    {"CHARGE", "C", IS_DOUBLE, 0, (long)((char *)&trwake_example.charge), NULL, 0.0, 0},
+    {"N_BINS", "", IS_LONG, 0, (long)((char *)&trwake_example.n_bins), NULL, 0.0, 128},
+    {"INTERPOLATE", "", IS_LONG, 0, (long)((char *)&trwake_example.interpolate), NULL, 0.0, 0},
+    {"SMOOTH_PASSES", "", IS_LONG, 0, (long)((char *)&trwake_example.smooth_passes), NULL, 0.0, 0},
+    };
 
 /* array of parameter structures */
 
@@ -1077,6 +1106,8 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_ZTRANSVERSE_PARAMS,          0,     sizeof(ZTRANSVERSE),  ztransverse_param    },
     { N_IBSCATTER_PARAMS,        0,   sizeof(IBSCATTER),  ibscatter_param  },
     { N_FMULT_PARAMS,  MAT_LEN_NCAT|IS_MAGNET,       sizeof(FMULT),    fmult_param     }, 
+    { N_WAKE_PARAMS, 0, sizeof(WAKE), wake_param},
+    { N_TRWAKE_PARAMS, 0, sizeof(TRWAKE), trwake_param},
 } ;
  
 
