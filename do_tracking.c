@@ -361,6 +361,7 @@ long do_tracking(
           }
           if (eptr->matrix->C[5]!=0) {
             fprintf(stdout, "Warning: matrix with C5!=0 detected in matrix multiplier--this shouldn't happen!\nAll particles considered lost!\n");
+            fprintf(stdout, "Element in question is %s, C5=%le\n", eptr->name, eptr->matrix->C[5]);
             fflush(stdout);
             n_left = 0;
           } else {

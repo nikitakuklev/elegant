@@ -1081,7 +1081,8 @@ VMATRIX *sbend_matrix(
         T[3][5][5] -= h*R[0][5]*R[3][5];
         T[4][1][0] += h*R[4][1];
         T[4][3][0] += h*R[4][3];
-        C[4] += sqr((1-ha/h))*T[4][5][5];
+        if (h)
+          C[4] += sqr((1-ha/h))*T[4][5][5];
         }
 
     log_exit("sbend_matrix");
