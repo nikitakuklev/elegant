@@ -54,7 +54,7 @@ void track_through_rf_deflector(
     cos_tilt = cos(rf_param->tilt);
     sin_tilt = sin(rf_param->tilt);
     length = rf_param->length/rf_param->n_kicks;
-    Estrength = (e_mks*rf_param->voltage)/(me_mks*sqr(c_mks))*length;
+    Estrength = (e_mks*rf_param->voltage/rf_param->n_kicks)/(me_mks*sqr(c_mks));
     k = omega/c_mks;
     Ephase = rf_param->phase*PI/180.0 + k*rf_param->length/2 + omega*(rf_param->time_offset-t_first);
     
@@ -72,20 +72,20 @@ void track_through_rf_deflector(
         t_part = initial[ip][4]/(c_mks*beta);
         z = 0;
         for (is=0; is<=rf_param->n_kicks; is++) {
-          if (is==0 || is==(rf_param->n_kicks-1)) {
+          if (is==0 || is==rf_param->n_kicks) {
             /* first half-drift and last half-drift */
             t_part += (length/(2*c_mks*beta_z)); 
             x += xp*length/2;
             y += yp*length/2;
             z += length/2;
+            if (is==rf_param->n_kicks)
+              break;
           } else {
             t_part += (length/(c_mks*beta_z)); 
             x += xp*length;
             y += yp*length;
             z += length;
           }
-          if (is==rf_param->n_kicks)
-            break;
           dp_r = Estrength*cos(t_part*omega - k*z + Ephase);
           xp = (px += dp_r*cos_tilt)/pz;
           yp = (py += dp_r*sin_tilt)/pz;
