@@ -41,10 +41,14 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
   static LINE_LIST *lptr;
   static long n_elems, n_lines;
   FILE *fp_mad[MAX_FILE_NESTING];
-  char s[MAX_LINE_LENGTH], *cfgets(), *ptr, t[MAX_LINE_LENGTH];
+  char *s, *t, *cfgets(), *ptr;
 
   log_entry("get_beamline");
 
+  if (!(s=malloc(sizeof(*s)*MAX_LINE_LENGTH)) ||
+      !(t=malloc(sizeof(*s)*MAX_LINE_LENGTH)))
+    bomb("memory allocation failure (get_beamline)", NULL);
+      
   if (madfile) {
 #ifdef DEBUG
     fprintf(stdout, "reading from file %s\n", madfile);
@@ -226,6 +230,8 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
   }
 
   compute_end_positions(lptr);
+  free(s);
+  free(t);
   
   return(lptr);
 }
