@@ -66,10 +66,12 @@ void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
 
   n_binned = binTransverseTimeDistribution(posItime, pz, pbin, tmin, dt, nb, time, part, Po, np,
                                            wakeData->dx, wakeData->dy);
-  if (n_binned!=np)
-    fprintf(stdout, "warning: only %ld of %ld particles where binned (WAKE)\n", n_binned, np);
+  if (n_binned!=np) {
+    fprintf(stdout, "warning: only %ld of %ld particles where binned (TRWAKE)\n", n_binned, np);
+    fprintf(stdout, "consider setting n_bins=0 in TRWAKE definition to invoke autoscaling\n");
     fflush(stdout);
-
+  }
+  
   for (plane=0; plane<2; plane++) {
     if (!wakeData->W[plane])
       continue;

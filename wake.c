@@ -63,6 +63,7 @@ void track_through_wake(double **part, long np, WAKE *wakeData, double *PoInput,
   n_binned = binTimeDistribution(Itime, pbin, tmin, dt, nb, time, part, Po, np);
   if (n_binned!=np) {
     fprintf(stdout, "warning: only %ld of %ld particles where binned (WAKE)\n", n_binned, np);
+    fprintf(stdout, "consider setting n_bins=0 in WAKE definition to invoke autoscaling\n");
     fflush(stdout);
   }
   
