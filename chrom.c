@@ -480,7 +480,7 @@ void computeChromaticities(double *chromx, double *chromy,
   dR33 = computeChromaticDerivRElem(3, 3, twiss, M);
   dR34 = computeChromaticDerivRElem(3, 4, twiss, M);
   dR44 = computeChromaticDerivRElem(4, 4, twiss, M);
-
+  
   *chromx = -(dR11 + dR22)/M->R[0][1]*twiss->betax/(2*PIx2);
   *chromy = -(dR33 + dR44)/M->R[2][3]*twiss->betay/(2*PIx2);
 
@@ -489,6 +489,9 @@ void computeChromaticities(double *chromx, double *chromy,
       *dbetax = twiss->betax*(dR12 - PI*twiss->betax*(*chromx)*(M->R[0][0]+M->R[1][1]))/M->R[0][1];
     else
       *dbetax = DBL_MAX;
+#ifdef DEBUG
+    fprintf(stdout, "dbetax/dp = %e\n", *dbetax);
+#endif
   }
   if (dalphax) {
     if (M->R[0][1])
@@ -496,12 +499,18 @@ void computeChromaticities(double *chromx, double *chromy,
         (-twiss->alphax*(M->R[0][0]+M->R[1][1])*PIx2*(*chromx) + dR11-dR22);
     else
       *dalphax = DBL_MAX;
+#ifdef DEBUG
+    fprintf(stdout, "dalphax/dp = %e\n", *dalphax);
+#endif
   }
   if (dbetay) {
     if (M->R[2][3])
       *dbetay = twiss->betay*(dR34 - PI*twiss->betay*(*chromy)*(M->R[2][2]+M->R[3][3]))/M->R[2][3];
     else
       *dbetay = DBL_MAX;
+#ifdef DEBUG
+    fprintf(stdout, "dbetay/dp = %e\n", *dbetay);
+#endif
   }
   if (dalphay) {
     if (M->R[2][3])
@@ -509,6 +518,9 @@ void computeChromaticities(double *chromx, double *chromy,
         (-twiss->alphay*(M->R[2][2]+M->R[3][3])*PIx2*(*chromy) + dR33-dR44);
     else
       *dalphay = DBL_MAX;
+#ifdef DEBUG
+    fprintf(stdout, "dalphay/dp = %e\n", *dalphay);
+#endif
   }
 }
 
@@ -586,6 +598,10 @@ double computeChromaticDerivRElem(long i, long j, TWISS *twiss, VMATRIX *M)
       sum += eta[k]*M->T[i][j][k];
     }
   }
+#ifdef DEBUG
+  fprintf(stdout, "dR%ld%ld/ddelta = %e\n",
+          i+1, j+1, sum);
+#endif
   return sum;
 }  
 

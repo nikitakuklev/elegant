@@ -235,7 +235,7 @@ void set_up_trwake(TRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
       if (wakeData->xPower==1) {
         if (SDDS_CheckColumn(&SDDSin, wakeData->WxColumn, "V/C/m", SDDS_ANY_FLOATING_TYPE, 
                              stdout)!=SDDS_CHECK_OK) {
-          fprintf(stderr, "Error: problem with Wx wake column for TRWAKE file %s---check existence, units, and type", 
+          fprintf(stderr, "Error: problem (1) with Wx wake column for TRWAKE file %s---check existence, units, and type", 
                   wakeData->inputFile);
           exit(1);
         }
@@ -243,7 +243,7 @@ void set_up_trwake(TRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
       else if (wakeData->xPower==0) {
         if (SDDS_CheckColumn(&SDDSin, wakeData->WxColumn, "V/C", SDDS_ANY_FLOATING_TYPE, 
                              stdout)!=SDDS_CHECK_OK) {
-          fprintf(stderr, "Error: problem with Wx wake column for TRWAKE file %s---check existence, units, and type", 
+          fprintf(stderr, "Error: problem (2) with Wx wake column for TRWAKE file %s---check existence, units, and type", 
                   wakeData->inputFile);
           exit(1);
         }
