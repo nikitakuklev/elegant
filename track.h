@@ -2185,3 +2185,5 @@ double FELScalingFunction
    double *etaEnergySpread, double L1D, double beta, double emittance,
    double lightWavelength, double undulatorPeriod, double sigmaDelta);
 
+long do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
+
