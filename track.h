@@ -1627,7 +1627,7 @@ extern void free_beamlines(LINE_LIST *beamline);
 extern void do_save_lattice(NAMELIST_TEXT *nl, RUN *run, LINE_LIST *beamline);
 void print_with_continuation(FILE *fp, char *s, long endcol);
 void change_defined_parameter_values(char **elem_name, long *param_number, long *type, double *value, long n_elems);
-void change_defined_parameter(char *elem_name, long param_number, long type, double value, char *valueString);
+void change_defined_parameter(char *elem_name, long param_number, long type, double value, char *valueString, unsigned long mode);
 
 /* prototypes for limit_amplitudes4.c: */
 extern long rectangular_collimator(double **initial, RCOL *rcol, long np, double **accepted, double z, double P_central);
@@ -1861,6 +1861,17 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions);
 #define PARAMETERS_LOADED 1
 #define PARAMETERS_ENDED 2
 void finish_load_parameters();
+/* load parameters modes and indices */
+/* order here must be the same as load_mode array in load_parameters.c */
+#define LOAD_MODE_ABSOLUTE     0
+#define LOAD_MODE_DIFFERENTIAL 1
+#define LOAD_MODE_IGNORE       2
+#define LOAD_MODE_FRACTIONAL   3
+#define LOAD_FLAG_ABSOLUTE     (1<<LOAD_MODE_ABSOLUTE)
+#define LOAD_FLAG_DIFFERENTIAL (1<<LOAD_MODE_DIFFERENTIAL)
+#define LOAD_FLAG_IGNORE       (1<<LOAD_MODE_IGNORE)
+#define LOAD_FLAG_FRACTIONAL   (1<<LOAD_MODE_FRACTIONAL)
+#define LOAD_FLAG_VERBOSE      (LOAD_FLAG_FRACTIONAL<<1)
 
 typedef struct {
     char *name, *text; 

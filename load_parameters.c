@@ -44,19 +44,11 @@ static char *Value_ColumnName = "ParameterValue";
 static char *ValueString_ColumnName = "ParameterValueString";
 static char *Mode_ColumnName = "ParameterMode";
 
-/* recognized values for the mode in the load_parameters files */
-#define LOAD_MODE_ABSOLUTE     0
-#define LOAD_MODE_DIFFERENTIAL 1
-#define LOAD_MODE_IGNORE       2
-#define LOAD_MODE_FRACTIONAL   3
+/* the order here must match the order of the #define's in track.h */
 #define LOAD_MODES             4
 static char *load_mode[LOAD_MODES] = {
     "absolute", "differential", "ignore", "fractional"
-        } ;
-#define LOAD_FLAG_ABSOLUTE     (1<<LOAD_MODE_ABSOLUTE)
-#define LOAD_FLAG_DIFFERENTIAL (1<<LOAD_MODE_DIFFERENTIAL)
-#define LOAD_FLAG_IGNORE       (1<<LOAD_MODE_IGNORE)
-#define LOAD_FLAG_FRACTIONAL   (1<<LOAD_MODE_FRACTIONAL)
+    } ;
 
 void setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 {
@@ -164,7 +156,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
   char **valueString;
   ELEMENT_LIST *eptr;
   static long warned_about_occurence = 0;
-  long element_missing;
+  long element_missing, numberChanged;
 
   if (!load_requests || !load_parameters_setup)
     return NO_LOAD_PARAMETERS;
@@ -290,17 +282,18 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
       if (mode_flags&LOAD_FLAG_IGNORE)
         continue;
       if (load_request[i].flags&COMMAND_FLAG_CHANGE_DEFINITIONS) {
-        if (mode_flags&LOAD_FLAG_DIFFERENTIAL)
-          bomb("can't presently do differential load of parameter definition change (do_load_parameters)", NULL);
         if (occurence && !warned_about_occurence) {
           warned_about_occurence = 1;
           fprintf(stderr, 
                   "\007\007\007warning: occurence column is necessarily ignored when changing defined values (do_load_parameters)\n");
         }
         change_defined_parameter(element[j], param, eptr->type, value?value[j]:0, 
-                                 valueString?valueString[j]:NULL);
+                                 valueString?valueString[j]:NULL, 
+                                 mode_flags+(verbose?LOAD_FLAG_VERBOSE:0));
       }
+      numberChanged = 0;
       do {
+        numberChanged++;
         p_elem = eptr->p_elem;
         load_request[i].reset_address = trealloc(load_request[i].reset_address,
                                                  sizeof(*load_request[i].reset_address)*(load_request[i].values+1));
@@ -319,19 +312,17 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
         case IS_DOUBLE:
           if (valueString) {
             if (!sscanf(valueString[j], "%lf", &newValue)) {
-              fprintf(stderr, "Error (change_defined_parameter): unable to scan double from \"%s\"\n", valueString);
+              fprintf(stderr, "Error: unable to scan double from \"%s\"\n", valueString);
               exit(1);
             }
           } else {
             newValue = value[j];
           }
-          if (verbose) {
-            fprintf(stderr, "Changing %s[%s] from %21.15e to %21.15e\n",
-                    eptr->name,
-                    entity_description[eptr->type].parameter[param].name,
-                    *((double*)(p_elem+entity_description[eptr->type].parameter[param].offset)),
-                    newValue);
-          }
+          if (verbose)
+            fprintf(stderr, "Changing %s.%s #%ld from %21.15e to ",
+                    eptr->name, 
+                    entity_description[eptr->type].parameter[param].name, numberChanged,
+                    *((double*)(p_elem+entity_description[eptr->type].parameter[param].offset)));
           load_request[i].starting_value[load_request[i].values]
             = *((double*)(p_elem+entity_description[eptr->type].parameter[param].offset));
           load_request[i].value_type[load_request[i].values] = IS_DOUBLE;
@@ -341,23 +332,24 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
             *((double*)(p_elem+entity_description[eptr->type].parameter[param].offset)) += newValue;
           else if (mode_flags&LOAD_FLAG_FRACTIONAL)
             *((double*)(p_elem+entity_description[eptr->type].parameter[param].offset)) *= 1+newValue;
+          if (verbose)
+            fprintf(stderr, "%21.15le\n",
+                    *((double*)(p_elem+entity_description[eptr->type].parameter[param].offset)));
           break;
         case IS_LONG:
           if (valueString) {
             if (!sscanf(valueString[j], "%lf", &newValue)) {
-              fprintf(stderr, "Error (change_defined_parameter): unable to scan double from \"%s\"\n", valueString);
+              fprintf(stderr, "Error: unable to scan double from \"%s\"\n", valueString);
               exit(1);
             }
           } else {
             newValue = value[j];
           }
-          if (verbose) {
-            fprintf(stderr, "Changing %s[%s] from %ld to %.0f\n",
+          if (verbose)
+            fprintf(stderr, "Changing %s.%s #%ld from %ld to ",
                     eptr->name,
-                    entity_description[eptr->type].parameter[param].name,
-                    *((long*)(p_elem+entity_description[eptr->type].parameter[param].offset)),
-                    newValue);
-          }
+                    entity_description[eptr->type].parameter[param].name, numberChanged,
+                    *((long*)(p_elem+entity_description[eptr->type].parameter[param].offset)));
           load_request[i].starting_value[load_request[i].values]
             = *((long*)(p_elem+entity_description[eptr->type].parameter[param].offset));
           load_request[i].value_type[load_request[i].values] = IS_LONG;
@@ -367,21 +359,25 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
             *((long*)(p_elem+entity_description[eptr->type].parameter[param].offset)) += newValue+0.5;
           else if (mode_flags&LOAD_FLAG_FRACTIONAL)
             *((long*)(p_elem+entity_description[eptr->type].parameter[param].offset)) *= 1+newValue;
+          if (verbose)
+            fprintf(stderr, "%ld\n",
+                    *((long*)(p_elem+entity_description[eptr->type].parameter[param].offset)));
           break;
         case IS_STRING:
           load_request[i].value_type[load_request[i].values] = IS_STRING;
-          if (verbose) {
-            fprintf(stderr, "Changing %s[%s] from %s to %s\n",
+          if (verbose)
+            fprintf(stderr, "Changing %s.%s #%ld from %s to ",
                     eptr->name,
-                    entity_description[eptr->type].parameter[param].name,
-                    *((char**)(p_elem+entity_description[eptr->type].parameter[param].offset)),
-                    valueString[j]);
-          }
+                    entity_description[eptr->type].parameter[param].name, numberChanged,
+                    *((char**)(p_elem+entity_description[eptr->type].parameter[param].offset)));
           if (!SDDS_CopyString((char**)(p_elem+entity_description[eptr->type].parameter[param].offset),
                                valueString[j])) {
             fprintf(stderr, "Error (do_load_parameters): unable to copy value string\n");
             exit(1);
           }
+          if (verbose)
+            fprintf(stderr, "%s\n", 
+                    *((char**)(p_elem+entity_description[eptr->type].parameter[param].offset)));
           break;
         default:
           fprintf(stderr,

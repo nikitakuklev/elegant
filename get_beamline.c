@@ -599,7 +599,8 @@ void change_defined_parameter_values(char **elem_name, long *param_number, long 
     log_exit("change_defined_parameter_values");
     }
 
-void change_defined_parameter(char *elem_name, long param, long elem_type, double value, char *valueString)
+void change_defined_parameter(char *elem_name, long param, long elem_type, 
+                              double value, char *valueString, unsigned long mode)
 {
   ELEMENT_LIST *eptr;
   char *p_elem;
@@ -609,6 +610,8 @@ void change_defined_parameter(char *elem_name, long param, long elem_type, doubl
 
   eptr = NULL;
   data_type = entity_description[elem_type].parameter[param].type;
+  if (mode&LOAD_FLAG_IGNORE)
+    return;
   while (find_element(elem_name, &eptr, elem)) {
     p_elem = eptr->p_elem;
     switch (data_type) {
@@ -619,7 +622,22 @@ void change_defined_parameter(char *elem_name, long param, long elem_type, doubl
           exit(1);
         }
       }
-      *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)) = value;
+      if (mode&LOAD_FLAG_VERBOSE)
+        fprintf(stderr, "Changing definition (mode %s) %s.%s from %le to ", 
+                (mode&LOAD_FLAG_ABSOLUTE)?"absolute":
+                ((mode&LOAD_FLAG_DIFFERENTIAL)?"differential":
+                 (mode&LOAD_FLAG_FRACTIONAL)?"fractional":"unknown"),
+                elem_name, entity_description[elem_type].parameter[param].name,
+                *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)));
+      if (mode&LOAD_FLAG_ABSOLUTE)
+        *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)) = value;
+      else if (mode&LOAD_FLAG_DIFFERENTIAL)
+        *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)) += value;
+      else if (mode&LOAD_FLAG_FRACTIONAL)
+        *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)) *= 1+value;
+      if (mode&LOAD_FLAG_VERBOSE)
+        fprintf(stderr, "%le\n", 
+                *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)));
       break;
     case IS_LONG:
       if (valueString) {
@@ -628,9 +646,29 @@ void change_defined_parameter(char *elem_name, long param, long elem_type, doubl
           exit(1);
         }
       }
-      *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) = value+0.5;
+      if (mode&LOAD_FLAG_VERBOSE)
+        fprintf(stderr, "Changing definition (mode %s) %s.%s from %ld to ",
+                (mode&LOAD_FLAG_ABSOLUTE)?"absolute":
+                ((mode&LOAD_FLAG_DIFFERENTIAL)?"differential":
+                 (mode&LOAD_FLAG_FRACTIONAL)?"fractional":"unknown"),
+                elem_name, entity_description[elem_type].parameter[param].name,
+                *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)));
+      if (mode&LOAD_FLAG_ABSOLUTE)
+        *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) = value+0.5;
+      else if (mode&LOAD_FLAG_DIFFERENTIAL)
+        *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) += value+0.5;
+      else if (mode&LOAD_FLAG_FRACTIONAL)
+        *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) *= 1+value;
+      if (mode&LOAD_FLAG_VERBOSE)
+        fprintf(stderr, "%ld\n",
+                *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)));
       break;
     case IS_STRING:
+      if (mode&LOAD_FLAG_VERBOSE)
+        fprintf(stderr, "Changing definition %s.%s from %s to %s\n",
+                elem_name, entity_description[elem_type].parameter[param].name,
+                *((char**)(p_elem+entity_description[elem_type].parameter[param].offset)),
+                valueString);
       if (!SDDS_CopyString(((char**)(p_elem+entity_description[elem_type].parameter[param].offset)), 
                            valueString)) {
         fprintf(stderr, "Error (change_defined_parameter): unable to copy string parameter value\n");

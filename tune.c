@@ -238,7 +238,7 @@ void do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline, do
             printf("change of %s[K1] is  %.15g 1/m^3\n", tune->name[i], tune->dK1->a[i][0]);
             if (alter_defined_values) {
                 printf("new value of %s[K1] is  %.15g 1/m^3\n", tune->name[i], K1);
-                change_defined_parameter(tune->name[i], K1_param, type, K1, NULL);
+                change_defined_parameter(tune->name[i], K1_param, type, K1, NULL, LOAD_FLAG_ABSOLUTE);
                 }
             }    
     
