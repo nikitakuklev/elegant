@@ -553,21 +553,23 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERROR *error1
 #define SET_BUNCHED_BEAM 6
 #define SET_SDDS_BEAM   33
 
-static char *twiss_name[22] = {
+static char *twiss_name[24] = {
     "betax", "alphax", "nux", "etax", "etapx", 
     "betay", "alphay", "nuy", "etay", "etapy",
     "max.betax", "max.etax", "max.etapx", 
     "max.betay", "max.etay", "max.etapy",
     "min.betax", "min.etax", "min.etapx", 
     "min.betay", "min.etay", "min.etapy",
+    "dnux/dp", "dnuy/dp",
     };
-static long twiss_mem[22] = {
+static long twiss_mem[24] = {
     -1, -1, -1, -1, -1, 
     -1, -1, -1, -1, -1, 
     -1, -1, -1,
     -1, -1, -1, 
     -1, -1, -1,
     -1, -1, -1, 
+    -1, -1,
     };
 static char *radint_name[8] = {
     "ex0", "Sdelta0",
@@ -592,7 +594,11 @@ double optimization_function(double *value, long *invalid)
     TWISS twiss_ave, twiss_min, twiss_max;
     
     log_entry("optimization_function");
-
+    
+#if DEBUG
+    fprintf(stderr, "optimization_function: In optimization function\n");
+#endif
+    
     n_evaluations_made++;
 
     variables = &(optimization_data->variables);
@@ -612,6 +618,9 @@ double optimization_function(double *value, long *invalid)
             variables->n_variables, PARAMETERS_ARE_VARIED, VMATRIX_IS_VARIED, 0, 0);
 
     if (covariables->n_covariables) {
+#if DEBUG
+      fprintf(stderr, "optimization_function: Computing covariables\n");
+#endif
         /* calculate values of covariables and assert these as well */
         for (i=0; i<covariables->n_covariables; i++) {
             rpn_store(covariables->varied_quan_value[i]=rpn(covariables->pcode[i]), covariables->memory_number[i]);
@@ -639,6 +648,9 @@ double optimization_function(double *value, long *invalid)
         }
 
     /* compute matrices for perturbed elements */
+#if DEBUG
+      fprintf(stderr, "optimization_function: Computing matrices\n");
+#endif
     i = compute_changed_matrices(beamline, run);
     if (i) {
         beamline->flags &= ~BEAMLINE_CONCAT_CURRENT;
@@ -656,6 +668,9 @@ double optimization_function(double *value, long *invalid)
         fflush(optimization_data->fp_log);
         }
 
+#if DEBUG
+      fprintf(stderr, "optimization_function: Generating beam\n");
+#endif
     /* generate initial beam distribution and track it */
     switch (beam_type_code) {
       case SET_AWE_BEAM:
@@ -675,8 +690,11 @@ double optimization_function(double *value, long *invalid)
     control->i_step++;       /* to prevent automatic regeneration of beam */
     zero_beam_sums(output->sums_vs_z, output->n_z_points+1);
     if (beamline->flags&BEAMLINE_TWISS_WANTED) {
+#if DEBUG
+      fprintf(stderr, "optimization_function: Computing twiss parameters\n");
+#endif
         if (twiss_mem[0]==-1) {
-            for (i=0; i<22; i++)
+            for (i=0; i<24; i++)
                 twiss_mem[i] = rpn_create_mem(twiss_name[i]);
             }
         /* get twiss mode and (beta, alpha, eta, etap) for both planes */
@@ -686,6 +704,8 @@ double optimization_function(double *value, long *invalid)
             rpn_store(*((&beamline->elast->twiss->betax)+i)/(i==2?PIx2:1), twiss_mem[i]);
             rpn_store(*((&beamline->elast->twiss->betay)+i)/(i==2?PIx2:1), twiss_mem[i+5]);
             }
+        rpn_store(beamline->chromaticity[0], twiss_mem[22]);
+        rpn_store(beamline->chromaticity[1], twiss_mem[23]);
         /* store statistics */
         compute_twiss_statistics(beamline, &twiss_ave, &twiss_min, &twiss_max);
         rpn_store(twiss_max.betax, twiss_mem[10]);
@@ -702,6 +722,9 @@ double optimization_function(double *value, long *invalid)
         rpn_store(twiss_min.etapy, twiss_mem[21]);
         }
     if (beamline->flags&BEAMLINE_RADINT_WANTED) {
+#if DEBUG
+      fprintf(stderr, "optimization_function: Computing radiation integrals\n");
+#endif
       if (radint_mem[0]==-1) {
         for (i=0; i<8; i++)
           radint_mem[i] = rpn_create_mem(radint_name[i]);
@@ -709,7 +732,8 @@ double optimization_function(double *value, long *invalid)
       /* radiation integrals already updated by update_twiss_parameters above
          which is guaranteed to be called
          */
-      rpn_store(beamline->radIntegrals.ex0, radint_mem[0]);
+      rpn_store(beamline->radIntegrals.ex0>0?beamline->radIntegrals.ex0:sqrt(DBL_MAX), 
+                radint_mem[0]);
       rpn_store(beamline->radIntegrals.sigmadelta, radint_mem[1]);
       rpn_store(beamline->radIntegrals.Jx, radint_mem[2]);
       rpn_store(beamline->radIntegrals.Jy, radint_mem[3]);
@@ -722,9 +746,15 @@ double optimization_function(double *value, long *invalid)
     for (i=0; i<variables->n_variables; i++)
       variables->varied_quan_value[i] = value[i];
 
+#if DEBUG
+      fprintf(stderr, "optimization_function: Tracking\n");
+#endif
     track_beam(run, control, error, variables, beamline, beam, output, optim_func_flags);
 
     /* compute final parameters and store in rpn memories */
+#if DEBUG
+      fprintf(stderr, "optimization_function: Computing final parameters\n");
+#endif
     if (!output->sums_vs_z)
         bomb("sums_vs_z element of output structure is NULL--programming error (optimization_function)", NULL);
     if ((i=compute_final_properties(final_property_value, output->sums_vs_z+output->n_z_points, beam->n_to_track, beam->p0, 
@@ -737,6 +767,9 @@ double optimization_function(double *value, long *invalid)
     rpn_store_final_properties(final_property_value, final_property_values);
     free_matrices(M); free(M); M = NULL;
 
+#if DEBUG
+      fprintf(stderr, "optimization_function: Checking constraints\n");
+#endif
     /* check constraints */
     *invalid = 0;
     if (optimization_data->fp_log && constraints->n_constraints) {
@@ -763,6 +796,9 @@ double optimization_function(double *value, long *invalid)
             }
         }
 
+#if DEBUG
+      fprintf(stderr, "optimization_function: Computing rpn function\n");
+#endif
     /* compute and return optimized quantity */
     rpn_clear();    /* clear rpn stack */
     result = rpn(optimization_data->UDFname);
@@ -782,6 +818,9 @@ double optimization_function(double *value, long *invalid)
         result *= -1;
     log_exit("optimization_function");
     
+#if DEBUG
+      fprintf(stderr, "optimization_function: Returning\n");
+#endif
     return(result);
     }
 
