@@ -9,6 +9,9 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.1  1997/08/28 19:51:44  borland
+ * First version in repository.
+ *
  */
 #include "mdb.h"
 #include "matlib.h"
@@ -54,19 +57,19 @@ char *option[N_OPTIONS] = {
     "emittance_results", "constant_weighting", "verbosity"
     } ;
 
-#define USAGE "emitmeas inputfile [outputfile]\
- [-error_level=value_in_mm[{`gaussian',n_sigmas | `uniform'}]]\
- [-limit_mode={`resolution' | `zero'}[{,`reject'}]\
- [-n_error_sets=number] [-constant_weighting]\
- [-seed=integer] [-filter=quantity_name,lower,upper{,`notch'}]\
- [-deviation_limit=level1_in_mm{,level2...}] [-use_widths]\
- [-sigma_x_file=filename,variable-name,sigma-name[,uncertainty-name]]\
- [-sigma_y_file=filename,variable-name,sigma-name[,uncertainty-name]]\
- [-x_fit_output=filename] [-y_fit_output=filename]\
- [-variable_name=name] [-resolution=x_resolution_mm,y_resolution_mm]\
- [-ignore_plane={`x' | `y'}] [-uncertainty_fraction=x_value,y_value]\
- [-minimum_uncertainty=x_value_mm,y_value_mm]] [-add_resolution] \
- [-find_uncertainties] [-fixed_uncertainty=x_value_mm,y_value_mm]\
+#define USAGE "emitmeas inputfile [outputfile]\n\
+ [-error_level=value_in_mm[{`gaussian',n_sigmas | `uniform'}]]\n\
+ [-limit_mode={`resolution' | `zero'}[{,`reject'}]\n\
+ [-n_error_sets=number] [-constant_weighting]\n\
+ [-seed=integer] [-filter=quantity_name,lower,upper{,`notch'}]\n\
+ [-deviation_limit=level1_in_mm{,level2...}] [-use_widths]\n\
+ [-sigma_x_file=filename,variable-name,sigma-name[,uncertainty-name]]\n\
+ [-sigma_y_file=filename,variable-name,sigma-name[,uncertainty-name]]\n\
+ [-x_fit_output=filename] [-y_fit_output=filename]\n\
+ [-variable_name=name] [-resolution=x_resolution_mm,y_resolution_mm]\n\
+ [-ignore_plane={`x' | `y'}] [-uncertainty_fraction=x_value,y_value]\n\
+ [-minimum_uncertainty=x_value_mm,y_value_mm]] [-add_resolution] \n\
+ [-find_uncertainties] [-fixed_uncertainty=x_value_mm,y_value_mm]\n\
  [-emittance_results=filename] [-verbosity=level]\n\n\
 Program by Michael Borland. (This is version 16, March 1994.)"
 
@@ -201,6 +204,9 @@ main(
     filter_quan = NULL;
     use_widths = 0;
     sigma_x_file = sigma_y_file = NULL;
+    sigma_x_vname = sigma_y_vname = NULL;
+    sigma_x_sname = sigma_y_sname = NULL;
+    sigma_x_uname = sigma_y_uname = NULL;
     x_fit_file = y_fit_file = NULL;
     variable_name = NULL;
     x_resol = y_resol = 0;
@@ -218,7 +224,7 @@ main(
     add_resolution = find_uncert = constant_weighting = 0;
     x_fixed_uncert = y_fixed_uncert = verbosity = 0;
     fpe = NULL;
-
+    
     for (i_arg=1; i_arg<argc; i_arg++) {
         if (scanned[i_arg].arg_type==OPTION) {
             switch (match_string(scanned[i_arg].list[0], option,
@@ -1313,7 +1319,8 @@ void get_sigma_data(
     SDDS_TABLE table;
     int i, j, n_data;
     double *vdata, *sdata, *udata;
-
+    
+    udata = NULL;
     if (!SDDS_InitializeInput(&table, file) || !SDDS_ReadTable(&table))
         SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     if ((n_data=SDDS_CountRowsOfInterest(&table))<n_configs) {
@@ -1343,7 +1350,8 @@ void get_sigma_data(
         }
     free(sdata);
     free(vdata);
-    free(udata);
+    if (udata) 
+      free(udata);
     fprintf(fpo, "%d sigmas taken from file %s.\n", n_configs, file);
     }
 
