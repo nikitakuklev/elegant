@@ -4,6 +4,10 @@ exec oagwish "$0" "$@"
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.7  2004/09/23 21:27:40  borland
+# Added optional variation of Energy, EnergySpread, and RfVoltage from file.
+# Haissinski equation now uses script value of energy spread.
+#
 # Revision 1.6  2004/07/22 20:33:29  borland
 # Now recalculates lifetimes when the bunch current is changed.
 #
@@ -146,7 +150,7 @@ set auto_path [linsert $auto_path 0  /usr/local/oag/apps/lib/$env(HOST_ARCH)]
 set auto_path [linsert $auto_path 0 /usr/local/oag/lib_patch/$env(HOST_ARCH)]
 APSDebugPath
 
-set CVSRevisionAuthor "\$Revision: 1.7 $ \$Author: borland $"
+set CVSRevisionAuthor "\$Revision: 1.8 $ \$Author: borland $"
 
 APSApplication . -name beamLifetimeCalc -version $CVSRevisionAuthor -overview \
   "Calculates the gas scattering lifetime due to single Coulomb scattering and
@@ -299,7 +303,7 @@ APSFrame .lattice -parent $widget -label ""
 set w $widget.lattice.frame
 set superperiods 40
 
-APSLabeledEntry .lattice -parent $w -label "Lattice file:" -textVariable latticeFile -width 75 \
+APSLabeledEntry .lattice -parent $w -label "Lattice file:" -commandButton 1 -textVariable latticeFile -width 75 \
     -fileSelectButton 1 -fileSelectPattern "*.twi" \
   -contextHelp "Give the name of an elegant twiss output file.  Required for Touschek lifetime calculations."
 
@@ -418,7 +422,7 @@ set w $widget.output.frame
 set outputWidget $widget.output.frame
 set outputFile ""
 set outputFID ""
-APSLabeledEntry .file -parent $w -width 80 -label "File:" \
+APSLabeledEntry .file -parent $w -width 80 -label "File:" -commandButton 1 \
   -textVariable outputFile -contextHelp \
   "Enter the name of an SDDS file to which computations will be written."
 APSButton .clearfile -parent $w -text "Clear file" -command ClearOutputFile \
@@ -1054,10 +1058,6 @@ proc RunVariation {} {
     }
     if $varyStart<0 {
         setStatus "Starting point is less than 0."
-        return
-    }
-    if $varyStart>=$varyEnd {
-        setStatus "Ending point is less than or equal to starting point."
         return
     }
     set delta [expr ($varyEnd-1.0*$varyStart)/($varyPoints-1.0)]
