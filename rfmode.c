@@ -120,7 +120,6 @@ void track_through_rfmode(
       rfmode->V = 0;
     
     /* find frequency and Q at this time */
-    Q = rfmode->Q;
     omega = PIx2*rfmode->freq;
     if (rfmode->nFreq) {
       double omegaFactor;
@@ -129,11 +128,12 @@ void track_through_rfmode(
       /* keeps stored energy constant for constant R/Q */
       rfmode->V *= sqrt(omegaFactor);
     }
+    Q = rfmode->Q/(1+rfmode->beta);
     if (rfmode->nQ) {
       ib = find_nearby_array_entry(rfmode->tQ, rfmode->nQ, tmean);
       Q *= linear_interpolation(rfmode->fQ, rfmode->tQ, rfmode->nQ, tmean, ib);
     }
-    if ((Q = rfmode->Q/(1+rfmode->beta))<=0.5) {
+    if (Q<0.5) {
       fprintf(stdout, "The effective Q<=0.5 for RFMODE.  Use the ZLONGIT element.\n");
       fflush(stdout);
       exit(1);
@@ -293,6 +293,10 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
   if (rfmode->preload && rfmode->charge) {
     double Vb, omega, To, tau;
     COMPLEX Vc;
+    if (rfmode->fwaveform || rfmode->Qwaveform) {
+      printf("Warning: preloading of RFMODE doesn't work properly with frequency or Q waveforms\n");
+      printf("unless the initial values of the frequency and Q factors are 1.\n");
+    }
     To = total_length/(Po*c_mks/sqrt(sqr(Po)+1));
     omega = rfmode->freq*PIx2;
     Vb = 2 * omega/4*(rfmode->Ra)/rfmode->Q * rfmode->charge * rfmode->preload_factor;
