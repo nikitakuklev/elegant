@@ -1016,6 +1016,8 @@ char **argv;
       add_steering_element(&correct, beamline, &run_conditions, &namelist_text);
       break;
     case AMPLIF_FACTORS:
+      if (parameters)
+        dumpLatticeParameters(parameters, &run_conditions, beamline);
       compute_amplification_factors(&namelist_text, &run_conditions, &correct, do_closed_orbit, beamline);
       break;
     case PRINT_DICTIONARY:
