@@ -2523,6 +2523,7 @@ unit parameter change for the element.
     long statistics = 0;
     long radiation_integrals = 0;
     long concat_order = 3;
+    long higher_order_chromaticity = 0;
     double beta_x = 1;
     double alpha_x = 0;
     double eta_x = 0;
@@ -2553,10 +2554,20 @@ and included in output. {\em N.B.: Radiation integral computation is not correct
 bending, nor does it take into account coupling.}
 \item \verb|beta_X|, \verb|alpha_X|, \verb|eta_X|, \verb|etap_X| --- If \verb|matched| is zero, the initial values for
 the X plane.
-\item \verb|concat_order| --- Order of matrix concatenation to use for determining matrix for
-computation of Twiss parameters.  Using a lower order will result in inaccuracy for nonlinear
-lattices with orbits.  However, if the orbit is zero, it is much faster to use 
-\verb|concat_order=1|.
+
+\item \verb|concat_order| --- Order of matrix concatenation to use for
+determining matrix for computation of Twiss parameters.  Using a lower
+order will result in inaccuracy for nonlinear lattices with orbits
+and/or momentum errors.  However, for on-momentum conditions with zero
+orbit, it is much faster to use \verb|concat_order=1|.
+
+\item \verb|higher_order_chromaticity| --- If nonzero, requests
+computation of the second- and third-order chromaticity.  {\em The
+third-order chromaticity is not reliable and should be disregarded at
+this time.}  To obtain reliable values, the user should use
+\verb|concat_order=3| in this namelist and the highest available order
+for all beamline elements.
+
 \item \verb|reference_file| --- If given, the name of a file from which twiss parameter data will
         be taken to give the starting values.  Ignored if \verb|matched| is nonzero.  The file
         should have the beta and alpha functions with the same names as the file created by
