@@ -1071,15 +1071,15 @@ void dump_centroid(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline,
 void dump_sigma(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, long n_elements, long step,
                 double p_central)
 {
-  long i, j, ie, index;
+  long i, j, ie, index, plane;
   BEAM_SUMS *beam;
   ELEMENT_LIST *eptr;
-  double *sigma, emit;
+  double Sigma[6], sigma[6][6], centroid[6], emit, emitNorm;
+  double pSigma[6], psigma[6][6], pcentroid[6];
   char *name, *type_name;
   long s_index, s1_index, ma1_index, Sx_index, occurence, ex_index;
   long s2_index, s3_index, s4_index;
 
-  log_entry("dump_sigma");
   if (!SDDS_table)
     bomb("SDDS_TABLE pointer is NULL (dump_sigma)", NULL);
   if (!sums)
@@ -1115,7 +1115,6 @@ void dump_sigma(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, lo
   name = "_BEG_";
   type_name = "MARK";
   occurence = 1;
-  sigma = tmalloc(sizeof(*sigma)*21);
   for (ie=0; ie<n_elements; ie++) {
     beam  = sums+ie;
     if (!beam->sum || !beam->sum2) {
@@ -1124,45 +1123,61 @@ void dump_sigma(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, lo
       exit(1);
     }
     if (beam->n_part) {
+      /* compute centroids, sigma matrix, and beam sizes (with centroid term removed) */
       for (i=index=0; i<6; i++) {
-        sigma[index] = sqrt(beam->sum2[index]/beam->n_part) ; 
-        index++;
-        for (j=i+1; j<6; j++, index++)
-          sigma[index] = beam->sum2[index]/beam->n_part; 
-      }
-      if (index!=21)
-        bomb("indexing problem (dump_sigma)", NULL);
-      for (i=0; i<21; i++)
-        if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, s1_index+i, sigma[i], -1)) {
+        centroid[i] = beam->sum[i]/beam->n_part;
+        sigma[i][i] = beam->sum2[i][i]/beam->n_part;
+        Sigma[i] = SAFE_SQRT(beam->sum2[i][i]/beam->n_part-sqr(centroid[i]));
+#if DO_NORMEMIT_SUMS
+        if (i<4) {
+          pcentroid[i] = beam->psum[i]/beam->n_part;
+          psigma[i][i] = beam->psum2[i][i]/beam->n_part;
+          pSigma[i] = SAFE_SQRT(beam->psum2[i][i]/beam->n_part-sqr(pcentroid[i])); 
+        }
+#endif
+        if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, 
+                               s1_index+i, sqrt(sigma[i][i]), 
+                               Sx_index+i, Sigma[i],
+                               -1)) {
           SDDS_SetError("Problem setting SDDS row values (dump_sigma)");
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
+        for (j=i+1; j<6; j++, index++) {
+          sigma[i][j] = beam->sum2[i][j]/beam->n_part; 
+#if DO_NORMEMIT_SUMS
+          if (i<4 && j<4)
+            psigma[i][j] = beam->psum2[i][j]/beam->n_part; 
+#endif
+          if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, s1_index+i, sigma[i], -1)) {
+            SDDS_SetError("Problem setting SDDS row values (dump_sigma)");
+            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+          }
+        }
+      }
+      
+      /* Set values for maximum amplitudes of transverse coordinates */
       for (i=0; i<4; i++)
         if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, ma1_index+i, beam->maxabs[i], -1)) {
           SDDS_SetError("Problem setting SDDS row values (dump_sigma)");
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
-      for (i=j=0; j<6; i+=(6-j), j++)
-        if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, Sx_index+j, 
-                               SAFE_SQRT(sqr(sigma[i]) - sqr(beam->sum[j]/beam->n_part)), -1)) {
+      for (plane=0; plane<=2; plane+=2) {
+        /* emittance */
+        emit = SAFE_SQRT(sqr(Sigma[0+plane]*Sigma[1+plane]) 
+                         - sqr(sigma[0+plane][1+plane]-centroid[0+plane]*centroid[1+plane]));
+#if DO_NORMEMIT_SUMS
+        emitNorm = SAFE_SQRT(sqr(pSigma[0+plane]*pSigma[1+plane]) 
+                         - sqr(psigma[0+plane][1+plane]-pcentroid[0+plane]*pcentroid[1+plane]));
+#else
+        emitNorm = emit*beam->p0;
+#endif
+        if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, 
+                               ex_index+plane, emit, 
+                               ex_index+1+plane, emitNorm,
+                               -1)) {
           SDDS_SetError("Problem setting SDDS row values (dump_sigma)");
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
-      /* x emittance = sqrt(sqr(s1*s2)-sqr(s12)) */
-      emit = sqrt(sqr(sigma[0]*sigma[s2_index-s1_index])-sqr(sigma[1]));
-      if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, 
-                             ex_index, emit, ex_index+1, emit*beam->p0*(1+beam->sum[5]/beam->n_part),
-                             -1)) {
-        SDDS_SetError("Problem setting SDDS row values (dump_sigma)");
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-      }
-      /* y emittance = sqrt(sqr(s3*s4)-sqr(s34)) */
-      emit = sqrt(sqr(sigma[s3_index-s1_index]*sigma[s4_index-s1_index])-sqr(sigma[s3_index-s1_index+1]));
-      if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, 
-                             ex_index+2, emit, ex_index+3, emit*beam->p0*(1+beam->sum[5]/beam->n_part),
-                             -1)) {
-        SDDS_SetError("Problem setting SDDS row values (dump_sigma)");
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
     }
     else {
@@ -1214,7 +1229,5 @@ void dump_sigma(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, lo
     SDDS_SetError("Unable to erase sigma data (dump_sigma)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
-  free(sigma);
-  log_exit("dump_sigma");
 }
 

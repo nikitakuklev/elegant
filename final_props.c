@@ -279,143 +279,144 @@ void dump_final_properties
  */
 
 long compute_final_properties
-    (double *data, BEAM_SUMS *sums, long n_original, double p_central, VMATRIX *M, double **coord, 
-     long step, long steps)
+  (double *data, BEAM_SUMS *sums, long n_original, double p_central, VMATRIX *M, double **coord, 
+   long step, long steps)
 {
-    register long i, j;
-    long i_data, index, offset;
-    double dp_min, dp_max, Ddp;
-    double p_sum, gamma_sum, p_ideal, p, sum, tc, tmin, tmax, dt, t;
-    double **R;
-    MATRIX Rmat;
+  register long i, j;
+  long i_data, index, offset;
+  double dp_min, dp_max, Ddp;
+  double p_sum, gamma_sum, p, sum, tc, tmin, tmax, dt, t;
+  double **R;
+  MATRIX Rmat;
 
-    log_entry("compute_final_properties");
+  log_entry("compute_final_properties");
 
-    if (!data)
-        bomb("return data array is null (compute_final_properties)", NULL);
-    if (!sums)
-        bomb("beam sums element is null (compute_final_properties)", NULL);
-    if (!M || !M->C || !M->R)
-        bomb("invalid/null transport map (compute_final_properties)", NULL);
-    if (!coord)
-        bomb("particle coordinate array is null (compute_final_properties)", NULL);
-    
-    /* compute centroids and sigmas */
-    if (sums->n_part) {
-        for (i=0; i<6; i++) 
-            data[i+F_CENTROID_OFFSET] = sums->sum[i]/sums->n_part;
-        for (i=index=0; i<6; index+=(6-i), i++)
-            /* note that I subtract off the centroid before finding sigma, which I don't do for dump_sigma() */
-            data[i+F_SIGMA_OFFSET   ] = SAFE_SQRT(sums->sum2[index]/sums->n_part - sqr(data[i+F_CENTROID_OFFSET]));
-        offset = F_SIGMAT_OFFSET;
-        index = 0;
-        /* sigma matrix elements sij */
-        for (i=0; i<6; i++) {
-            index++;    /* skip diagonal element */
-            for (j=i+1; j<6; j++) 
-                data[offset++] = sums->sum2[index++]/sums->n_part;
-            }
-        /* time centroid, sigma, and delta */
-        tmax = dp_max = -(tmin=dp_min=DBL_MAX);
-        for (i=sum=0; i<sums->n_part; i++) {
-            if (!coord[i]) {
-                fprintf(stderr, "coordinate element for particle %ld is null (compute_final_properties)\n", i);
-                abort();
-                }
-            if (coord[i][5]>dp_max)
-                dp_max = coord[i][5];
-            if (coord[i][5]<dp_min)
-                dp_min = coord[i][5];
-            p = p_central*(1+coord[i][5]);
-            sum += ( t = coord[i][4]/(p/sqrt(sqr(p)+1)*c_mks) );
-            if (t<tmin)
-                tmin = t;
-            if (t>tmax)
-                tmax = t;
-            }
-        dt = tmax-tmin;
-        Ddp = dp_max - dp_min;
-        data[6+F_CENTROID_OFFSET] = (tc = sum/sums->n_part);
-        for (i=sum=0; i<sums->n_part; i++)
-            sum += sqr(coord[i][4]/(p/sqrt(sqr(p)+1)*c_mks) - tc);
-        data[6+F_SIGMA_OFFSET] = sqrt(sum/sums->n_part);
-        }
-    else {
-        for (i=0; i<7; i++) 
-            data[i+F_CENTROID_OFFSET] = data[i+F_SIGMA_OFFSET] = 0;
-        dt = Ddp = 0;
-        }
-
-    /* transmission */
-    if (n_original)
-        data[F_T_OFFSET] = ((double)sums->n_part)/n_original;
-    else
-        data[F_T_OFFSET] = 0;
-    /* lattice momentum */
-    data[F_T_OFFSET+1] = p_central;
-    /* compute average momentum and kinetic energy */
-    p_ideal = p_central;
-    p_sum = gamma_sum = 0;
-    for (i=0; i<sums->n_part; i++) {
-        p_sum     += (p = (1+coord[i][5])*p_ideal);
-        gamma_sum += sqrt(sqr(p)+1);
-        }
-    if (sums->n_part) {
-        data[F_T_OFFSET+2] = p_sum/sums->n_part;
-        data[F_T_OFFSET+3] = (gamma_sum/sums->n_part-1)*me_mev;
-        }
-    else
-        data[F_T_OFFSET+2] = data[F_T_OFFSET+3] = 0;
-
-    /* compute "sigma" from width of particle distributions for x and y */
-    if (coord && sums->n_part>3) {
-        data[F_WIDTH_OFFSET] = beam_width(0.6826F, coord, sums->n_part, 0L)/2.;
-        data[F_WIDTH_OFFSET+1] = beam_width(0.6826F, coord, sums->n_part, 2L)/2.;
-        data[F_WIDTH_OFFSET+2] = dt;
-        data[F_WIDTH_OFFSET+3] = Ddp;
-        }
-    else
-        data[F_WIDTH_OFFSET] = data[F_WIDTH_OFFSET+1] = data[F_WIDTH_OFFSET+2] = 
-            data[F_WIDTH_OFFSET+4] = 0;
-
-    /* compute emittances */
-    data[F_EMIT_OFFSET]   = rms_emittance(coord, 0, 1, sums->n_part);
-    data[F_EMIT_OFFSET+1] = rms_emittance(coord, 2, 3, sums->n_part);
-    data[F_EMIT_OFFSET+2] = rms_longitudinal_emittance(coord, sums->n_part, p_central);
-
-    /* compute normalized emittances */
-    data[F_NEMIT_OFFSET]   = rms_norm_emittance(coord, 0, 1, 5, sums->n_part, p_ideal);
-    data[F_NEMIT_OFFSET+1] = rms_norm_emittance(coord, 2, 3, 5, sums->n_part, p_ideal);
-
-    R = M->R;
-    i_data = F_RMAT_OFFSET;
-    for (i=0; i<5; i++) 
-        for (j=0; j<6; j++)
-            data[i_data++] = R[i][j];
-    Rmat.a = R;
-    Rmat.n = Rmat.m = 6;
-    data[i_data] = m_det(&Rmat);
-    
-    /* run time statistics */
-    i_data = F_STATS_OFFSET;
-#if defined(UNIX) || defined(VAX_VMS)
-    data[i_data++] = cpu_time()/100.0;
-    data[i_data++] = memory_count();
-    data[i_data++] = page_faults();
-#else
-    data[i_data++] = 0;
-    data[i_data++] = 0;
-    data[i_data++] = 0;
-#endif
-    data[i_data++] = step;
-    data[i_data++] = steps;
-    
-    /* number of particles */
-    data[i_data=F_N_OFFSET] = sums->n_part;
-
-    log_exit("compute_final_properties");
-    return(i_data+1);
+  if (!data)
+    bomb("return data array is null (compute_final_properties)", NULL);
+  if (!sums)
+    bomb("beam sums element is null (compute_final_properties)", NULL);
+  if (!M || !M->C || !M->R)
+    bomb("invalid/null transport map (compute_final_properties)", NULL);
+  if (!coord)
+    bomb("particle coordinate array is null (compute_final_properties)", NULL);
+  
+  /* compute centroids and sigmas */
+  if (sums->n_part) {
+    for (i=0; i<6; i++) 
+      data[i+F_CENTROID_OFFSET] = sums->sum[i]/sums->n_part;
+    for (i=0; i<6; i++)
+      /* note that I subtract off the centroid before finding sigma, which I don't do for dump_sigma() */
+      data[i+F_SIGMA_OFFSET   ] = 
+        SAFE_SQRT(sums->sum2[i][i]/sums->n_part - sqr(data[i+F_CENTROID_OFFSET]));
+    offset = F_SIGMAT_OFFSET;
+    index = 0;
+    /* sigma matrix elements sij */
+    for (i=0; i<6; i++) {
+      /* skip the diagonal element */
+      for (j=i+1; j<6; j++) 
+        data[offset++] = sums->sum2[i][j]/sums->n_part;
     }
+    /* time centroid, sigma, and delta */
+    tmax = dp_max = -(tmin=dp_min=DBL_MAX);
+    for (i=sum=0; i<sums->n_part; i++) {
+      if (!coord[i]) {
+        fprintf(stderr, "coordinate element for particle %ld is null (compute_final_properties)\n", i);
+        abort();
+      }
+      if (coord[i][5]>dp_max)
+        dp_max = coord[i][5];
+      if (coord[i][5]<dp_min)
+        dp_min = coord[i][5];
+      p = p_central*(1+coord[i][5]);
+      sum += ( t = coord[i][4]/(p/sqrt(sqr(p)+1)*c_mks) );
+      if (t<tmin)
+        tmin = t;
+      if (t>tmax)
+        tmax = t;
+    }
+    dt = tmax-tmin;
+    Ddp = dp_max - dp_min;
+    data[6+F_CENTROID_OFFSET] = (tc = sum/sums->n_part);
+    for (i=sum=0; i<sums->n_part; i++)
+      sum += sqr(coord[i][4]/(p/sqrt(sqr(p)+1)*c_mks) - tc);
+    data[6+F_SIGMA_OFFSET] = sqrt(sum/sums->n_part);
+  }
+  else {
+    for (i=0; i<7; i++) 
+      data[i+F_CENTROID_OFFSET] = data[i+F_SIGMA_OFFSET] = 0;
+    dt = Ddp = 0;
+  }
+
+  /* transmission */
+  if (n_original)
+    data[F_T_OFFSET] = ((double)sums->n_part)/n_original;
+  else
+    data[F_T_OFFSET] = 0;
+  /* lattice momentum */
+  data[F_T_OFFSET+1] = p_central;
+
+  /* compute average momentum and kinetic energy */
+  p_sum = gamma_sum = 0;
+  for (i=0; i<sums->n_part; i++) {
+    p_sum     += (p = (1+coord[i][5])*p_central);
+    gamma_sum += sqrt(sqr(p)+1);
+  }
+  if (sums->n_part) {
+    data[F_T_OFFSET+2] = p_sum/sums->n_part;
+    data[F_T_OFFSET+3] = (gamma_sum/sums->n_part-1)*me_mev;
+  }
+  else
+    data[F_T_OFFSET+2] = data[F_T_OFFSET+3] = 0;
+
+  /* compute "sigma" from width of particle distributions for x and y */
+  if (coord && sums->n_part>3) {
+    data[F_WIDTH_OFFSET] = beam_width(0.6826F, coord, sums->n_part, 0L)/2.;
+    data[F_WIDTH_OFFSET+1] = beam_width(0.6826F, coord, sums->n_part, 2L)/2.;
+    data[F_WIDTH_OFFSET+2] = dt;
+    data[F_WIDTH_OFFSET+3] = Ddp;
+  }
+  else
+    data[F_WIDTH_OFFSET] = data[F_WIDTH_OFFSET+1] = data[F_WIDTH_OFFSET+2] = 
+      data[F_WIDTH_OFFSET+4] = 0;
+
+  /* compute emittances */
+  data[F_EMIT_OFFSET]   = rms_emittance(coord, 0, 1, sums->n_part);
+  data[F_EMIT_OFFSET+1] = rms_emittance(coord, 2, 3, sums->n_part);
+  data[F_EMIT_OFFSET+2] = rms_longitudinal_emittance(coord, sums->n_part, p_central);
+
+  /* compute normalized emittances */
+  data[F_NEMIT_OFFSET]   = rms_norm_emittance(coord, 0, 1, 5, sums->n_part, p_central);
+  data[F_NEMIT_OFFSET+1] = rms_norm_emittance(coord, 2, 3, 5, sums->n_part, p_central);
+
+  R = M->R;
+  i_data = F_RMAT_OFFSET;
+  for (i=0; i<5; i++) 
+    for (j=0; j<6; j++)
+      data[i_data++] = R[i][j];
+  Rmat.a = R;
+  Rmat.n = Rmat.m = 6;
+  data[i_data] = m_det(&Rmat);
+  
+  /* run time statistics */
+  i_data = F_STATS_OFFSET;
+#if defined(UNIX) || defined(VAX_VMS)
+  data[i_data++] = cpu_time()/100.0;
+  data[i_data++] = memory_count();
+  data[i_data++] = page_faults();
+#else
+  data[i_data++] = 0;
+  data[i_data++] = 0;
+  data[i_data++] = 0;
+#endif
+  data[i_data++] = step;
+  data[i_data++] = steps;
+  
+  /* number of particles */
+  data[i_data=F_N_OFFSET] = sums->n_part;
+
+  log_exit("compute_final_properties");
+  return(i_data+1);
+}
 
 
 double beam_width(double fraction, double **coord, long n_part, 
@@ -489,14 +490,14 @@ double rms_emittance(double **coord, long i1, long i2, long n)
 
 double rms_norm_emittance(double **coord, long i1, long i2, long ip, long n, double Po)
 {
+    return Po*rms_emittance(coord, i1, i2, n);
+#if 0
     double s11, s12, s22;
     double x, px, xc, pxc;
     long i;
     
     if (!n)
         return(0.0);
-
-    log_entry("rms_norm_emittance");
 
     /* compute centroids */
     for (i=xc=pxc=0; i<n; i++) {
@@ -511,9 +512,10 @@ double rms_norm_emittance(double **coord, long i1, long i2, long ip, long n, dou
         s22 += sqr( px = coord[i][i2]*(1+coord[i][ip])/sqrt(1+sqr(coord[i][1])+sqr(coord[i][3])) - pxc );
         s12 += x*px;
         }
-    log_exit("rms_norm_emittance");
+
     return(Po*SAFE_SQRT(s11*s22-sqr(s12))/n);
-    }
+#endif
+  }
 
 double rms_longitudinal_emittance(double **coord, long n, double Po)
 {

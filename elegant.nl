@@ -41,4 +41,3 @@
 #namelist print_dictionary static
     STRING filename = NULL;
 #end
-

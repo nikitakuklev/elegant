@@ -48,8 +48,8 @@ void track_through_wake(double **part, long np, WAKE *wakeData, double Po,
   if (n_binned!=np)
     fprintf(stderr, "warning: only %ld of %ld particles where binned (WAKE)\n", n_binned, np);
 
-  if (wakeData->smooth_passes)
-    smoothData(Itime, nb, 3, wakeData->smooth_passes);
+  if (wakeData->smoothing)
+    SavitzyGolaySmooth(Itime, nb, wakeData->SGOrder, wakeData->SGHalfWidth, wakeData->SGHalfWidth, 0);
   
   /* Do the convolution of the particle density and the wake function,
      V(T) = Integral[W(T-t)*I(t)dt, t={-infinity, T}]
@@ -62,8 +62,9 @@ void track_through_wake(double **part, long np, WAKE *wakeData, double Po,
                  Itime, nb, 
                  wakeData->W, wakeData->wakePoints);
 
+  factor = wakeData->macroParticleCharge*wakeData->factor;
   for (ib=0; ib<nb; ib++)
-    Vtime[ib] *= wakeData->macroParticleCharge;
+    Vtime[ib] *= factor;
   
   applyLongitudinalWakeKicks(part, time, pbin, np, Po, 
                              Vtime, nb, tmin, dt, wakeData->interpolate);

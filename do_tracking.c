@@ -321,11 +321,20 @@ long do_tracking(
           if (eptr->matrix->C[5]!=0) {
             fprintf(stderr, "Warning: matrix with C5!=0 detected in matrix multiplier--this shouldn't happen!\nAll particles considered lost!\n");
             n_left = 0;
-          }
-          else 
+          } else {
+            if (run->print_statistics>1 && !(flags&TEST_PARTICLES)) {
+              fprintf(stderr, "Tracking matrix for %s\n", eptr->name);
+              print_elem(stderr, eptr);
+              print_matrices(stderr, "", eptr->matrix);
+            }
             track_particles(coord, eptr->matrix, coord, n_to_track);
+          }
         }
         else {
+          if (run->print_statistics>1 && !(flags&TEST_PARTICLES)) {
+            fprintf(stderr, "Tracking element: ");
+            print_elem(stderr, eptr);
+          }
           switch (eptr->type) {
           case T_CHARGE:
             if (i_pass==0) {

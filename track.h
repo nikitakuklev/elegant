@@ -50,9 +50,15 @@ typedef struct {
 
 /* structure for accumulating beam moments */
 
+#define DO_NORMEMIT_SUMS 0
+
 typedef struct {
     double sum[6];       /* sums for centroids */
-    double sum2[21];     /* sums for off-diagonal first moments */
+    double sum2[6][6];   /* sums of products of coordinates, sum2[i][j] = Sum[xi*xj], j>=i */
+#if DO_NORMEMIT_SUMS
+    double psum[4];      /* x, xp, y, yp */
+    double psum2[4][4];  /* psum2[i][j] = Sum[xi*xj], j>=i, where x1=px, x3=py */
+#endif
     double maxabs[4];    /* maximum values for transverse coordinates */
     long n_part;         /* number of particles */
     double z;            /* z location */
@@ -502,15 +508,15 @@ extern char *entity_text[N_TYPES];
 #define N_RFMODE_PARAMS 17
 #define N_TRFMODE_PARAMS 10
 #define N_TWMTA_PARAMS 17
-#define N_ZLONGIT_PARAMS 15
+#define N_ZLONGIT_PARAMS 17
 #define N_MODRF_PARAMS 13
 #define N_SREFFECTS_PARAMS 10
-#define N_ZTRANSVERSE_PARAMS 14
+#define N_ZTRANSVERSE_PARAMS 17
 #define N_IBSCATTER_PARAMS 3
 #define N_FMULT_PARAMS 9
 #define N_BMAPXY_PARAMS 5
-#define N_WAKE_PARAMS 7
-#define N_TRWAKE_PARAMS 8
+#define N_WAKE_PARAMS 10
+#define N_TRWAKE_PARAMS 11
 #define N_TUBEND_PARAMS 6
 #define N_CHARGE_PARAMS 1
 #define N_PFILTER_PARAMS 1
@@ -1365,7 +1371,8 @@ typedef struct {
     long wake_interval;        /* interval (in turns) between outupt of wakes */
     long area_weight;          /* flag to turn on area-weighting */
     long interpolate;          /* flag to turn on interpolation */
-    long smooth_passes;        /* flag to turn on smoothing and specify number of passes */
+    long smoothing;            /* flag to turn on smoothing */
+    long SGOrder, SGHalfWidth; /* Savitzky-Golay smoothing parameters */
     /* for internal use: */
     long initialized;          /* indicates that files are loaded */
     double *Z;                 /* n_Z (Re Z, Im Z) pairs */
@@ -1389,6 +1396,8 @@ typedef struct {
     double bin_size;           /* size of charge bins */
     long interpolate;          /* whether to interpolate voltage or not */
     long n_bins;               /* number of charge bins--must be 2^n */
+    long smoothing;            /* flag to turn on smoothing */
+    long SGOrder, SGHalfWidth; /* Savitzky-Golay smoothing parameters */
     /* for internal use */
     double *iZ[2];             /* i*Z (Re Z, Im Z) pairs for each plane */
     long initialized;
@@ -1401,9 +1410,10 @@ extern PARAMETER wake_param[N_WAKE_PARAMS];
 typedef struct {
     char *inputFile, *tColumn, *WColumn;
     double charge;             /* total initial charge */
+    double factor;             /* factor to multiply by (e.g., number of cells) */
     long n_bins;               /* number of charge bins */
     long interpolate;          /* flag to turn on interpolation */
-    long smooth_passes;        /* flag to turn on smoothing and specify number of passes */
+    long smoothing, SGHalfWidth, SGOrder;  /* flag to turn on smoothing plus control parameters */
     /* for internal use: */
     long initialized;          /* indicates that files are loaded */
     long wakePoints;
@@ -1416,9 +1426,10 @@ extern PARAMETER trwake_param[N_TRWAKE_PARAMS];
 typedef struct {
     char *inputFile, *tColumn, *WxColumn, *WyColumn;
     double charge;             /* total initial charge */
+    double factor;             /* factor to multiply by (e.g., number of cells) */
     long n_bins;               /* number of charge bins */
     long interpolate;          /* flag to turn on interpolation */
-    long smooth_passes;        /* flag to turn on smoothing and specify number of passes */
+    long smoothing, SGHalfWidth, SGOrder;  /* flag to turn on smoothing plus control parameters */
     /* for internal use: */
     long initialized;          /* indicates that files are loaded */
     long wakePoints;

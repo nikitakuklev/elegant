@@ -82,10 +82,14 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
     fprintf(stderr, "warning: only %ld of %ld particles where binned (ZTRANSVERSE)\n", n_binned, np);
 
   for (plane=0; plane<1; plane++) {
+    if (ztransverse->smoothing)
+      SavitzyGolaySmooth(posItime[plane], nb, ztransverse->SGOrder,
+                         ztransverse->SGHalfWidth, ztransverse->SGHalfWidth, 0);
+
     /* Take the FFT of (x*I)(t) to get (x*I)(f) */
     realFFT(posItime[plane], nb, 0);
     posIfreq = posItime[plane];
-
+    
     /* Compute V(f) = i*Z(f)*(x*I)(f), putting in a factor 
      * to normalize the current waveform
      */

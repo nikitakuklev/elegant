@@ -101,8 +101,9 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
     }
     if (n_binned!=np)
         fprintf(stderr, "warning: only %ld of %ld particles where binned (ZLONGIT)\n", n_binned, np);
-    if (zlongit->smooth_passes)
-      smoothData(Itime, nb, 3, zlongit->smooth_passes);
+    if (zlongit->smoothing)
+      SavitzyGolaySmooth(Itime, nb, zlongit->SGOrder, 
+                         zlongit->SGHalfWidth, zlongit->SGHalfWidth, 0);
     
 #if DEBUG 
     /* Output the time-binned data */

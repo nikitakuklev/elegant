@@ -54,8 +54,9 @@ void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
     if (!wakeData->W[plane])
       continue;
     
-    if (wakeData->smooth_passes) 
-      smoothData(posItime[plane], nb, 3, wakeData->smooth_passes);
+    if (wakeData->smoothing)
+      SavitzyGolaySmooth(posItime[plane], nb, wakeData->SGOrder, 
+                         wakeData->SGHalfWidth, wakeData->SGHalfWidth, 0);
 
     /* Do the convolution of the particle density and the wake function,
        V(T) = Integral[W(T-t)*I(t)dt, t={-infinity, T}]
@@ -67,8 +68,10 @@ void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
     convolveArrays(Vtime, wakeData->n_bins, 
                    posItime[plane], wakeData->n_bins,
                    wakeData->W[plane], wakeData->wakePoints);
+
+    factor = wakeData->macroParticleCharge*wakeData->factor;
     for (ib=0; ib<wakeData->n_bins; ib++)
-      Vtime[ib] *= wakeData->macroParticleCharge;
+      Vtime[ib] *= factor;
 
     /* change particle transverse momenta to reflect voltage in relevant bin */
     applyTransverseWakeKicks(part, time, pz, pbin, np, 
