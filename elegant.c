@@ -339,7 +339,7 @@ char **argv;
             fflush(stdout);
             lattice = saved_lattice;
             
-            /* output the magnet layout in mpl format */
+            /* output the magnet layout */
             if (magnets)
                 output_magnets(magnets, lattice, beamline);
 
@@ -915,7 +915,9 @@ char **argv;
                 bomb("load_parameters namelists must precede run_control namelist", NULL);
             if (error_controled)
                 bomb("load_parameters namelists must precede error_control and error namelists", NULL);
-            setup_load_parameters(&namelist_text, &run_conditions, beamline);
+            if (setup_load_parameters(&namelist_text, &run_conditions, beamline) && magnets)
+              /* make sure the magnet output is right in case loading parameters changed something */
+              output_magnets(magnets, lattice, beamline);
             break;
           case SUBPROCESS:
             run_subprocess(&namelist_text, &run_conditions);
@@ -978,7 +980,7 @@ double find_beam_p_central(char *input)
             input);
     fflush(stdout);
   SDDS_Terminate(&SDDSin);
-  fprintf(stdout, "Expanding about p = %e\n", psum/rows);
+  fprintf(stdout, "Expanding about p = %21.15e\n", psum/rows);
   fflush(stdout);
   return psum/rows;
 }
