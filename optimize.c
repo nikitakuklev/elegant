@@ -655,7 +655,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERROR *error1
             }
         fprintf(optimization_data->fp_log, "Optimum values of variables and changes from initial values:\n");
         for (i=0; i<variables->n_variables; i++)
-            fprintf(optimization_data->fp_log, "%10s: %23.15e  %23.15e (was 23%.15e)\n", variables->varied_quan_name[i], 
+            fprintf(optimization_data->fp_log, "%10s: %23.15e  %23.15e (was %23.15e)\n", variables->varied_quan_name[i], 
                     variables->varied_quan_value[i], variables->varied_quan_value[i]-variables->initial_value[i],
                     variables->initial_value[i]);
         for (i=0; i<covariables->n_covariables; i++)
