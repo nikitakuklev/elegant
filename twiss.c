@@ -1369,6 +1369,10 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, ELEMENT_LIST *elem
     isBend = 0;
     break;
   }
+  if (coord) {
+    K1 /= 1+coord[5];
+    angle /= 1+coord[5];
+  }
   if (isBend && angle!=0) {
     rho = length/angle;
     k2 = K1+1./(rho*rho);
