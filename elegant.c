@@ -164,6 +164,8 @@ void printFarewell(FILE *fp);
 
 #define DEBUG 0
 
+static VARY run_control;
+
 int main(argc, argv)
 int argc;
 char **argv;
@@ -177,7 +179,6 @@ char **argv;
   char s[NAMELIST_BUFLEN], *ptr;
   long i;
   RUN run_conditions;
-  VARY run_control;
   CORRECTION correct;
   ERRORVAL error_control;
   BEAM beam;
@@ -457,6 +458,7 @@ char **argv;
       if (!run_setuped)
         bomb("run_setup must precede run_control namelist", NULL);
       vary_setup(&run_control, &namelist_text, &run_conditions, beamline);
+      run_control.ready = 1;
       run_controled = 1;
       break;
     case VARY_ELEMENT:
@@ -1614,3 +1616,7 @@ void do_semaphore_setup(char **semaphoreFile,
     SDDS_CopyString(&semaphoreFile[1], done);
 }
 
+void getRunControlContext (VARY *context)
+{
+  *context = run_control;
+}

@@ -226,6 +226,7 @@ typedef struct {
 
 /* structure containing information for variation of parameters */
 typedef struct {
+    long ready;                  /* indicates there is valid data here */
     long at_start;               /* indicates that present state is start of variation */
     long n_indices;              /* number of indices for variation */
     long *index, *index_limit;   /* current indices, index limits */
@@ -449,6 +450,7 @@ typedef struct {
   double zStart, zEnd;
   char rootname[CONTEXT_BUFSIZE+1];
 } TRACKING_CONTEXT;
+
 
 /* data arrays for awe dumps, found in dump_particlesX.c */
 #define N_BEAM_QUANTITIES 9
@@ -2267,7 +2269,7 @@ extern VMATRIX *magnification_matrix(MAGNIFY *magnif);
 extern void reset_special_elements(LINE_LIST *beamline, long includeRF);
 extern VMATRIX *stray_field_matrix(double length, double *lB, double *gB, double theta, long order, double p_central, 
                                    void *Wi);
-extern VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, double phase, double *P_central, long order, long end1Focus, long end2Focus, char *bodyFocusModel);
+extern VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, double phase, double *P_central, long order, long end1Focus, long end2Focus, char *bodyFocusModel, long change_p0, double Preference);
 
 /* prototypes for concat_beamline2.c: */
 extern void copy_matrices1(VMATRIX *M1,  VMATRIX *M0);
@@ -2422,6 +2424,7 @@ long doFrequencyMap(RUN *run, VARY *control, double *referenceCoord,
 void finishFrequencyMap();
 
 /* prototypes for elegant.c: */
+extern void getRunControlContext(VARY *context);
 extern char *compose_filename(char *template, char *root_name);
 extern double find_beam_p_central(char *input);
 void center_beam_on_coords(double **particle, long n_part, double *coord, long center_momentum_also);

@@ -484,14 +484,31 @@ VMATRIX *compute_matrix(
     CSRDRIFT *csrdrift;
     LSCDRIFT *lscdrift;
     WIGGLER *wiggler;
-    double ks, wigglerRadius;
-    
-    log_entry("compute_matrix");
-    
+    double ks, wigglerRadius, Pref_output;
+    VARY rcContext;
+    long fiducialize;
+
+    getRunControlContext(&rcContext);
+    fiducialize = 1;
+    if (rcContext.ready) {
+      if ((rcContext.fiducial_flag&FIRST_BEAM_IS_FIDUCIAL) &&
+	  rcContext.i_step!=0)
+	fiducialize = 0;
+    }
     if (elem->pred)
         elem->Pref_input = elem->pred->Pref_output;
     else 
         elem->Pref_input = run->p_central;
+
+    /* Pref_output is the assumed output value of Pref */
+    Pref_output = elem->Pref_input;
+    if (!fiducialize)
+      /* Assume we've already fiducialized and use the previous Pref output value */
+      Pref_output = elem->Pref_output;
+    /* This variable is used to pass the input momentum to some elements and 
+     * get the output momentum back.  It will be reset to the local variable
+     * Pref_output if fiducializing 
+     */
     elem->Pref_output = elem->Pref_input;
 
     elem->matrix = NULL;
@@ -809,34 +826,29 @@ VMATRIX *compute_matrix(
         elem->matrix = rf_cavity_matrix(rfca->length, rfca->volt, rfca->freq, rfca->phase, 
                                         &elem->Pref_output, run->default_order?run->default_order:1,
                                         rfca->end1Focus, rfca->end2Focus,
-                                        rfca->bodyFocusModel);
+                                        rfca->bodyFocusModel, 
+                                        fiducialize*(rfca->change_p0 || run->always_change_p0),
+					Pref_output);
         if (rfca->dx || rfca->dy)
           misalign_matrix(elem->matrix, rfca->dx, rfca->dy, 0.0, 0.0);
-        if (!rfca->change_p0) {
-          elem->matrix->C[5] = (elem->Pref_output-elem->Pref_input)/elem->Pref_input;
-          elem->Pref_output = elem->Pref_input;
-        }
         break;
       case T_RFCW: 
         rfcw = (RFCW*)elem->p_elem;
         elem->matrix = rf_cavity_matrix(rfcw->length, rfcw->volt, rfcw->freq, rfcw->phase, 
                                         &elem->Pref_output, run->default_order?run->default_order:1,
                                         rfcw->end1Focus, rfcw->end2Focus,
-                                        rfcw->bodyFocusModel);
+                                        rfcw->bodyFocusModel, 
+                                        fiducialize*(rfca->change_p0 || run->always_change_p0),
+					Pref_output);
         if (rfcw->dx || rfcw->dy)
           misalign_matrix(elem->matrix, rfcw->dx, rfcw->dy, 0.0, 0.0);
-        if (!rfcw->change_p0) {
-          elem->matrix->C[5] = (elem->Pref_output-elem->Pref_input)/elem->Pref_input;
-          elem->Pref_output = elem->Pref_input;
-        }
         break;
       case T_MODRF: 
         modrf = (MODRF*)elem->p_elem;
         elem->matrix = rf_cavity_matrix(modrf->length, modrf->volt, modrf->freq, modrf->phase, 
                                         &elem->Pref_output, run->default_order?run->default_order:1,
-                                        0, 0, NULL);
-        elem->matrix->C[5] = (elem->Pref_output-elem->Pref_input)/elem->Pref_input;
-        elem->Pref_output = elem->Pref_input;
+                                        0, 0, NULL,
+                                        fiducialize*run->always_change_p0, Pref_output);
         break;
       case T_ENERGY:
         energy = (ENERGY*)elem->p_elem;
@@ -900,8 +912,7 @@ VMATRIX *compute_matrix(
             }
         break;
         }
-    
-    log_exit("compute_matrix");
+
     return(elem->matrix);
     }
 
@@ -1160,7 +1171,7 @@ VMATRIX *stray_field_matrix(double length, double *lB, double *gB, double theta,
 
 VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, double phase, 
                           double *P_central, long order, long end1Focus, long end2Focus,
-                          char *bodyFocusModel)
+                          char *bodyFocusModel, long change_p0, double Preference)
 {
     VMATRIX *M, *Medge, *Mtot, *tmp;
     double *C, **R, dP, gamma, dgamma, dgammaMax;
@@ -1261,11 +1272,36 @@ VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, doubl
       free_matrices(Mtot);
       tfree(Mtot);
     }
-    
-    *P_central += dP;
+
+    if (change_p0)
+      Preference = *P_central + dP;
+
+    if (!change_p0) {
+      /* The matrix implicitly included acceleration. 
+       * Must change the reference momentum of the matrix to exclude this.
+       */
+      long i;
+      Mtot = tmalloc(sizeof(*Mtot));
+      Medge = tmalloc(sizeof(*Medge));
+      initialize_matrices(Mtot, Mtot->order = 1);
+      initialize_matrices(Medge, Medge->order = 1);
+      Medge->R[0][0] = Medge->R[1][1] = Medge->R[2][2] = Medge->R[3][3] = 
+        Medge->R[4][4] = Medge->R[5][5] = 1;
+      Medge->C[5] = (*P_central+dP-Preference)/Preference;
+      concat_matrices(Mtot, Medge, M, CONCAT_EXCLUDE_S0);
+      tmp = Mtot;
+      Mtot = M;
+      M = tmp;
+      free_matrices(Medge);
+      free_matrices(Mtot);
+      tfree(Medge);
+      tfree(Mtot);
+    }
+
+    *P_central = Preference;
 
     return(M);
-    }
+}
 
 VMATRIX *twissTransformMatrix(TWISSELEMENT *twissWanted,
                               TWISS *twissInput)

@@ -425,10 +425,12 @@ long vary_beamline(VARY *_control, ERRORVAL *errcon, RUN *run, LINE_LIST *beamli
     log_entry("vary_beamline.4");
     /* compute matrices for perturbed elements */
     rebaseline_element_links(links, run, beamline);
+    _control->i_step -= step_incremented;
     fprintf(stdout, "%ld matrices (re)computed\n", 
             (i=compute_changed_matrices(beamline, run)
              + assert_element_links(links, run, beamline, STATIC_LINK+DYNAMIC_LINK))
             + (_control->cell?compute_changed_matrices(_control->cell, run):0) );
+    _control->i_step += step_incremented;
     fflush(stdout);
     if (i) {
       beamline->flags &= ~BEAMLINE_CONCAT_CURRENT;
