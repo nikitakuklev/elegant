@@ -1326,7 +1326,7 @@ WIGGLER wiggler_example;
 PARAMETER wiggler_param[N_WIGGLER_PARAMS] = {
   {"L", "M", IS_DOUBLE, 0, (long)((char *)&wiggler_example.length), NULL, 0.0, 0, "length"},
   {"RADIUS", "M", IS_DOUBLE, 0, (long)((char *)&wiggler_example.radius), NULL, 0.0, 0, "peak bending radius"},
-  {"PERIODS", "", IS_LONG, 0, (long)((char *)&wiggler_example.periods), NULL, 0.0, 0, "number of wiggler periods"},
+  {"POLES", "", IS_LONG, 0, (long)((char *)&wiggler_example.poles), NULL, 0.0, 0, "number of wiggler poles"},
 } ;
 
 /* array of parameter structures */

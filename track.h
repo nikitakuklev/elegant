@@ -1725,7 +1725,7 @@ typedef struct {
 /* names and storage structure for WIGGLER element */
 typedef struct {
   double length, radius;
-  long periods;
+  long poles;
 } WIGGLER;
 
 /* macros for bending magnets */ 

@@ -1632,7 +1632,7 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
   if (elem->type==T_WIGGLER) {
     WIGGLER *wiggler;
     wiggler = (WIGGLER*)(elem->p_elem);
-    AddWigglerRadiationIntegrals(wiggler->length, wiggler->periods, wiggler->radius,
+    AddWigglerRadiationIntegrals(wiggler->length, wiggler->poles, wiggler->radius,
 				 eta0, etap0, 
 				 beta0, alpha0,
 				 &I1, &I2, &I3, &I4, &I5);
@@ -2354,7 +2354,7 @@ void setupTwissAnalysisRequest(NAMELIST_TEXT *nltext, RUN *run,
                           twiss_analysis_struct.s_end);
 }
 
-void AddWigglerRadiationIntegrals(double length, long periods, double radius,
+void AddWigglerRadiationIntegrals(double length, long poles, double radius,
                                    double eta, double etap, 
                                    double beta, double alpha,
                                    double *I1, double *I2, double *I3, double *I4, double *I5)
@@ -2364,22 +2364,21 @@ void AddWigglerRadiationIntegrals(double length, long periods, double radius,
   long pole, fieldSign;
   
   gamma = (1+alpha*alpha)/beta;
-  if (periods%2)
-    bomb("wiggler must have an even number of periods", NULL);
-  if (periods<=2)
-    bomb("wiggler must have at least 4 periods", NULL);
+  poles = 2*(poles/2)+1;
+
+  if (poles<=3)
+    bomb("wiggler must have at least 3 poles", NULL);
   
-  Lp = length/periods;
+  /* length of each pole */
+  Lp = length/pole;
   
   fieldSign = 1;
-  for (pole=0; pole<=periods; pole++) {
+  for (pole=0; pole<poles; pole++) {
     fieldSign *= -1;
-    if (pole==0 || pole==periods) {
+    if (pole==0 || pole==poles-1) {
       h0 = fieldSign*0.5/radius;
     } else
       h0 = fieldSign/radius;
-    fprintf(stderr, "wiggler: pole=%ld, h0=%le, beta=%le, alpha=%le, eta=%le, etap=%le\n",
-	    pole, h0, beta, alpha, eta, etap);
 
     *I1 += (h0*Lp*(h0*ipow(Lp,2) + 4*eta*PI + 2*etap*Lp*PI))/
       (2.*ipow(PI,2));
@@ -2408,8 +2407,6 @@ void AddWigglerRadiationIntegrals(double length, long periods, double radius,
     eta   = eta + (etap + Lp/PI*h0)*Lp ;
     etap  = etap + 2*Lp/PI*h0;
   }
-  fprintf(stderr, "wiggler: pole=%ld, h0=%le, beta=%le, alpha=%le, eta=%le, etap=%le\n",
-	  pole, h0, beta, alpha, eta, etap);
 }
 
 
