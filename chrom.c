@@ -568,14 +568,14 @@ void computeHigherOrderChromaticities(LINE_LIST *beamline, double *clorb, RUN *r
          coef, sCoef, &chi, NULL);
     c1 = -coef[1]/(4*PI*sin(PIx2*beamline->tune[i]));
     beamline->chrom2[i] = (
-		 2*coef[2]
-		 + 8*sqr(PI)*sqr(c1)*cos(PIx2*beamline->tune[i])
-		 )/(-4*PI*sin(PIx2*beamline->tune[i]));
+                           2*coef[2]
+                           + 8*sqr(PI)*sqr(c1)*cos(PIx2*beamline->tune[i])
+                           )/(-4*PI*sin(PIx2*beamline->tune[i]));
     beamline->chrom3[i] = (
-		 6*coef[3] 
-                 - 16*pow3(PI*c1)*sin(PIx2*beamline->tune[i]) 
-		 + 24*sqr(PI)*c1*beamline->chrom2[i]*cos(PIx2*beamline->tune[i])
-		 )/(-4*PI*sin(PIx2*beamline->tune[i]));
+                           6*coef[3] 
+                           - 16*pow3(PI*c1)*sin(PIx2*beamline->tune[i]) 
+                           + 24*sqr(PI)*c1*beamline->chrom2[i]*cos(PIx2*beamline->tune[i])
+                           )/(-4*PI*sin(PIx2*beamline->tune[i]));
   }
   free_matrices(&M0);
 }
@@ -740,5 +740,41 @@ double computeChromaticDeriv3RElem(long i, long m, TWISS *twiss, VMATRIX *M,
   return sum;
 }  
 
-
-
+void computeChromaticTuneLimits(LINE_LIST *beamline)
+{
+  long i, j, n, p;
+  double c1, c2, c3, tuneValue[5], solution[2];
+  
+  for (i=0; i<2; i++) {
+    if (beamline->chromDeltaHalfRange<=0) {
+      beamline->tuneChromUpper[i] = beamline->tuneChromLower[i] = beamline->tune[i];
+    } else {
+      tuneValue[0] = beamline->tune[i];
+      /* polynomial coefficients */
+      c1 = beamline->chromaticity[i];
+      c2 = beamline->chrom2[i]/2.0;
+      c3 = beamline->chrom3[i]/6.0;
+      tuneValue[1] = beamline->tune[i] + 
+        beamline->chromDeltaHalfRange*c1 + 
+          sqr(beamline->chromDeltaHalfRange)*c2 +
+            ipow(beamline->chromDeltaHalfRange, 3)*c3;
+      tuneValue[2] = beamline->tune[i] -
+        beamline->chromDeltaHalfRange*c1 + 
+          sqr(beamline->chromDeltaHalfRange)*c2 -
+            ipow(beamline->chromDeltaHalfRange, 3)*c3;
+      p = 3;
+      /* find extrema */
+      n = solveQuadratic(3*c3, 2*c2, c1, solution);
+      for (j=0; j<n; j++) {
+        if (fabs(solution[j])>beamline->chromDeltaHalfRange)
+          continue;
+        tuneValue[p] = beamline->tune[i] +
+          solution[j]*c1 + sqr(solution[j])*c2 +
+            ipow(solution[j], 3)*c3;
+        p += 1;
+      }
+      find_min_max(beamline->tuneChromLower+i, beamline->tuneChromUpper+i, 
+                   tuneValue, p);
+    }
+  }
+}

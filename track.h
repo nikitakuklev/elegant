@@ -169,6 +169,9 @@ typedef struct line_list {
     double chromaticity[2];  /* dNUx/d(p/p0) and dNUy/d(p/p0) */
     double eta2[4], eta3[4]; /* second- and third-order dispersion (x=x0+eta*delta+eta2*delta^2+eta3*delta^3 */
     double chrom2[2], chrom3[2]; /* second- and third-order chromaticity (derivatives, not polynomial coefs) */
+    double chromDeltaHalfRange;    /* momentum error range for tune limits */
+    double tuneChromUpper[2];  /* upper limit of tune due to chromaticity and momentum spread */
+    double tuneChromLower[2];  /* lower limit of tune due to chromaticity and momentum spread */
     double dbeta_dPoP[2];    /* d/d(p/p0) of betax and betay */
     double dalpha_dPoP[2];   /* d/d(p/p0) of alphax and alphay */
     double alpha[2];         /* first and second order momentum compaction: Cs=Cs0+alpha*delta+alpha2*delta^2*/

@@ -580,30 +580,35 @@ static SDDS_DEFINITION column_definition[N_COLUMNS_WRI] = {
 #define IP_DNUYDP2 8
 #define IP_DNUYDP3 9
 #define IP_AY 10
-#define IP_STAGE 11
-#define IP_PCENTRAL 12
-#define IP_DBETAXDP 13
-#define IP_DBETAYDP 14
-#define IP_ETAX2    15
-#define IP_ETAY2    16
-#define IP_ETAX3    17
-#define IP_ETAY3    18
-#define IP_BETAXMIN 19
-#define IP_BETAXAVE 20
-#define IP_BETAXMAX 21
-#define IP_BETAYMIN 22
-#define IP_BETAYAVE 23
-#define IP_BETAYMAX 24
-#define IP_ETAXMAX 25
-#define IP_ETAYMAX 26
-#define IP_WAISTSX 27
-#define IP_WAISTSY 28
-#define IP_DNUXDAX 29
-#define IP_DNUXDAY 30
-#define IP_DNUYDAX 31
-#define IP_DNUYDAY 32
-#define IP_ALPHAC2 33
-#define IP_ALPHAC  34
+#define IP_DPHRANGE 11
+#define IP_NUXUPPER 12
+#define IP_NUXLOWER 13
+#define IP_NUYUPPER 14
+#define IP_NUYLOWER 15
+#define IP_STAGE 16
+#define IP_PCENTRAL 17
+#define IP_DBETAXDP 18
+#define IP_DBETAYDP 19
+#define IP_ETAX2    20
+#define IP_ETAY2    21
+#define IP_ETAX3    22
+#define IP_ETAY3    23
+#define IP_BETAXMIN 24
+#define IP_BETAXAVE 25
+#define IP_BETAXMAX 26
+#define IP_BETAYMIN 27
+#define IP_BETAYAVE 28
+#define IP_BETAYMAX 29
+#define IP_ETAXMAX 30
+#define IP_ETAYMAX 31
+#define IP_WAISTSX 32
+#define IP_WAISTSY 33
+#define IP_DNUXDAX 34
+#define IP_DNUXDAY 35
+#define IP_DNUYDAX 36
+#define IP_DNUYDAY 37
+#define IP_ALPHAC2 38
+#define IP_ALPHAC  39
 /* IP_ALPHAC must be the last item before the radiation-integral-related
  * items!
  */
@@ -635,6 +640,11 @@ static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
 {"dnuy/dp2", "&parameter name=dnuy/dp2, symbol=\"$gx$r$by2$n\", type=double, units=\"1/(2$gp$r)\", description=\"Vertical 2nd-order chromaticity\" &end"},
 {"dnuy/dp3", "&parameter name=dnuy/dp3, symbol=\"$gx$r$by3$n\", type=double, units=\"1/(2$gp$r)\", description=\"Vertical 3rd-order chromaticity\" &end"},
 {"Ay", "&parameter name=Ay, symbol=\"A$by$n\", type=double, units=\"$gp$rm\", description=\"Vertical acceptance\" &end"},
+{"deltaHalfRange", "&parameter name=deltaHalfRange, symbol=\"$gDd$r/2\", type=double, description=\"Half range of momentum offset for chromatic tune spread evaluation\" &end"},
+{"nuxChromUpper", "&parameter name=nuxChromUpper, symbol=\"$gx$r$bu$n\", type=double, description=\"Upper limit of x tune due to chromaticity and deltaRange\" &end"},
+{"nuxChromLower", "&parameter name=nuxChromLower, symbol=\"$gx$r$bu$n\", type=double, description=\"Lower limit of x tune due to chromaticity and deltaRange\" &end"},
+{"nuyChromUpper", "&parameter name=nuyChromUpper, symbol=\"$gy$r$bu$n\", type=double, description=\"Upper limit of y tune due to chromaticity and deltaRange\" &end"},
+{"nuyChromLower", "&parameter name=nuyChromLower, symbol=\"$gy$r$bu$n\", type=double, description=\"Lower limit of y tune due to chromaticity and deltaRange\" &end"},
 {"Stage", "&parameter name=Stage, type=string, description=\"Stage of computation\" &end"},
 {"pCentral", "&parameter name=pCentral, type=double, units=\"m$be$nc\", description=\"Central momentum\" &end"},
 {"dbetax/dp", "&parameter name=dbetax/dp, units=m, type=double, description=\"Derivative of betax with momentum offset\" &end"},
@@ -727,6 +737,11 @@ void dump_twiss_parameters(
                           IP_DNUYDP2, beamline->chrom2[1],
                           IP_DNUXDP3, beamline->chrom3[0],
                           IP_DNUYDP3, beamline->chrom3[1],
+                          IP_DPHRANGE, beamline->chromDeltaHalfRange,
+                          IP_NUXUPPER, beamline->tuneChromUpper[0],
+                          IP_NUYUPPER, beamline->tuneChromUpper[1],
+                          IP_NUXLOWER, beamline->tuneChromLower[0],
+                          IP_NUYLOWER, beamline->tuneChromLower[1],
                           IP_ALPHAC, alphac[0], IP_ALPHAC2, alphac[1], 
                           IP_DBETAXDP, dbeta[0], IP_DBETAYDP, dbeta[1],
                           IP_BETAXMIN, twiss_min.betax, IP_BETAXAVE, twiss_ave.betax, IP_BETAXMAX, twiss_max.betax, 
@@ -954,7 +969,9 @@ void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
   beamline->flags |= BEAMLINE_TWISS_WANTED;
   if (radiation_integrals)
     beamline->flags |= BEAMLINE_RADINT_WANTED;
-  
+
+  beamline->chromDeltaHalfRange = chromatic_tune_spread_half_range;
+
   log_exit("setup_twiss_output");
 }
 
@@ -1275,11 +1292,14 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
         bomb("logic error: T matrix is NULL in compute_twiss_parameters", NULL);
       computeChromaticities(&chromx, &chromy, 
                             &dbetax, &dbetay, &dalphax, &dalphay, beamline->twiss0, M);
+      beamline->chromaticity[0] = chromx;
+      beamline->chromaticity[1] = chromy;
       if (twissConcatOrder>1 && higher_order_chromaticity)
 	computeHigherOrderChromaticities(beamline, starting_coord, run, twissConcatOrder,
                                          higher_order_chromaticity_range/
                                          (higher_order_chromaticity_points-1),
                                          higher_order_chromaticity_points);
+      computeChromaticTuneLimits(beamline);
       if (doTuneShiftWithAmplitude)
         computeTuneShiftWithAmplitude(beamline->dnux_dA, beamline->dnuy_dA,
                                       beamline->twiss0, beamline->tune, M, beamline, run,
@@ -1313,11 +1333,14 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
         bomb("logic error: T matrix is NULL in compute_twiss_parameters", NULL);
       computeChromaticities(&chromx, &chromy, 
                             &dbetax, &dbetay, &dalphax, &dalphay, beamline->twiss0, M);
+      beamline->chromaticity[0] = chromx;
+      beamline->chromaticity[1] = chromy;
       if (twissConcatOrder>1 && higher_order_chromaticity)
 	computeHigherOrderChromaticities(beamline, starting_coord, run, twissConcatOrder,
                                          higher_order_chromaticity_range/
                                          (higher_order_chromaticity_points-1),
                                          higher_order_chromaticity_points);
+      computeChromaticTuneLimits(beamline);
       if (doTuneShiftWithAmplitude)
         computeTuneShiftWithAmplitude(beamline->dnux_dA, beamline->dnuy_dA,
                                       beamline->twiss0, beamline->tune, M, beamline, run,
@@ -1332,8 +1355,6 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
 #endif
     }
   }
-  beamline->chromaticity[0] = chromx;
-  beamline->chromaticity[1] = chromy;
   beamline->dbeta_dPoP[0] = dbetax;
   beamline->dbeta_dPoP[1] = dbetay;
   beamline->dalpha_dPoP[0] = dalphax;

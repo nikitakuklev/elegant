@@ -38,4 +38,5 @@ void computeChromaticities(double *chromx, double *chromy,
 void computeHigherOrderChromaticities(LINE_LIST *beamline, double *clorb, RUN *run,
 				      long concatOrder, double deltaStep, long deltaPoints);
 void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTION *chrom);
+void computeChromaticTuneLimits(LINE_LIST *beamline);
 
