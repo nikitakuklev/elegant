@@ -43,11 +43,11 @@ char *madcom_name[N_MADCOMS] = {
 
 char *entity_text[N_TYPES] = {
     NULL, 
-    "A quadrupole implemented as a matrix, up to 2nd order.",
+    "A quadrupole implemented as a matrix, up to 3rd order.",
     "A sector dipole implemented as a matrix, up to 2nd order.",
-    "A rectangular dipole, implemented as a SBEND with edge angles.",
+    "A rectangular dipole, implemented as a SBEND with edge angles, up to 2nd order.",
     "A drift space implemented as a matrix, up to 2nd order",
-    "A sextupole implemented as a matrix, up to 2nd order",
+    "A sextupole implemented as a matrix, up to 3rd order",
     "Not implemented--use the MULT element.",
     "A canonical kick multipole.",
     "A solenoid implemented as a matrix, up to 2nd order.",

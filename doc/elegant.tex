@@ -2382,15 +2382,19 @@ defined as $\frac{d\beta}{d\delta}$.
 \end{itemize}
 
 N.B.: the higher-order dispersion and higher-order chromaticity are
-computed using the concatenated third-order matrix.  Since (with the
-exception of alpha magnets) {\tt elegant} doesn't have matrices higher
-than second-order for individual elements, these results are probably
-not very reliable.  That is, while they are reasonably accurate in
-characterizing the concatenated system of second-order matrices, that
-is the limit of their applicability.  Users who are concerned about
-these effects should perform off-energy tracking using canonical
-elements (i.e., CSBEND, KQUAD, KSEXT, and MULT), which include energy
-dependence to all orders.
+computed using the concatenated third-order matrix.  However, {\tt
+elegant} only has third-order matrices for three elements:
+alpha magnets, quadrupoles, and sextupoles.  This may be acceptable if
+any dipoles (for example) have large bending radius.  Users who are
+concerned about these effects should perform off-energy tracking using
+canonical elements (i.e., CSBEND, KQUAD, KSEXT, and MULT), which
+include energy dependence to all orders.
+
+Also, note that by default all elements are computed to second order
+only.  You must change the \verb|default\_order| parameter on
+\verb|run\_setup| to \verb|3| in order to use the third-order matrices
+for alpha magnets, quadrupoles, and sextupoles.  You may also use the
+{\tt ORDER} parameter on individual element definitions.
 
 \begin{latexonly}
 \newpage
