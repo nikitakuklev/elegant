@@ -668,7 +668,7 @@ extern char *entity_text[N_TYPES];
 #define N_CLEAN_PARAMS 7
 #define N_TWISSELEMENT_PARAMS 6
 #define N_WIGGLER_PARAMS 3
-#define N_SCRIPT_PARAMS 28
+#define N_SCRIPT_PARAMS 29
 #define N_FLOORELEMENT_PARAMS 6
 #define N_LTHINLENS_PARAMS 8
 #define N_LMIRROR_PARAMS 9
@@ -1968,7 +1968,7 @@ extern PARAMETER script_param[N_SCRIPT_PARAMS];
 typedef struct {
   double length;
   char *command;
-  long useCsh, verbosity;
+  long useCsh, verbosity, startPass, onPass;
   char *rootname, *inputExtension, *outputExtension;
   long keepFiles;
   double NP[10];

@@ -36,7 +36,8 @@ void matr_element_tracking(double **coord, VMATRIX *M, MATR *matr,
 void ematrix_element_tracking(double **coord, VMATRIX *M, EMATRIX *matr,
                               long np, double z);
 long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge, 
-                             double ***part, long np, char *mainRootname);
+                             double ***part, long np, char *mainRootname, long iPass,
+			     long driftOrder);
 void distributionScatter(double **part, long np, double Po, DSCATTER *scat, long iPass);
 void recordLossPass(long *lostOnPass, long *nLost, long nLeft, long nOriginal, long pass);
 
@@ -848,7 +849,7 @@ long do_tracking(
           case T_SCRIPT:
             n_left = transformBeamWithScript((SCRIPT*)eptr->p_elem,
                                     *P_central, charge, &coord, n_to_track,
-				    run->rootname);
+				    run->rootname, i_pass, run->default_order);
             break;
 	  case T_FLOORELEMENT:
 	    break;
@@ -1731,14 +1732,15 @@ void ematrix_element_tracking(double **coord, VMATRIX *M, EMATRIX *matr,
 }
 
 long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge, 
-                             double ***part, long np, char *mainRootname)
+                             double ***part, long np, char *mainRootname, long iPass,
+			     long driftOrder)
 {
   char *rootname, *input, *output;
   char *cmdBuffer0, *cmdBuffer1;
   SDDS_DATASET SDDSout, SDDSin;
   double *data;
   char *dataname[6] = {"x","xp","y","yp","t","p"};
-  long i, j, npNew, nameLength;
+  long i, j, npNew, nameLength, doDrift;
 
   if (!script->rootname || !strlen(script->rootname)) {
     /* generate random rootname */
@@ -1751,6 +1753,20 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
   if (!(input = malloc(sizeof(*input)*nameLength)) ||
       !(output = malloc(sizeof(*output)*nameLength)))
     bomb("problem generating temporary filename for script", NULL);
+
+  doDrift = 0;
+  if (script->onPass>=0) {
+    if (script->onPass!=iPass)
+      doDrift = 1;
+  } else if (script->startPass>=0) {
+    if (script->startPass>iPass)
+      doDrift = 1;
+  }
+
+  if (doDrift) {
+    drift_beam(*part, np, script->length, driftOrder);
+    return np;
+  }
 
   /* prepare command */
   sprintf(input, "%s.%s", rootname, script->inputExtension);

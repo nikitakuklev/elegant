@@ -1495,6 +1495,8 @@ PARAMETER script_param[N_SCRIPT_PARAMS] = {
   {"COMMAND", "", IS_STRING, 0, (long)((char *)&script_example.command), NULL, 0.0, 0, "SDDS-compliant command to apply to the beam.  Use the sequence %i to represent the input filename and %o to represent the output filename."},
   {"USE_CSH", "", IS_LONG, 0, (long)((char *)&script_example.useCsh), NULL, 0.0, 1, "Use C-shell for execution (may be slower)?"},
   {"VERBOSITY", "", IS_LONG, 0, (long)((char *)&script_example.verbosity), NULL, 0.0, 0, "Set the verbosity level."},
+  {"START_PASS", "", IS_LONG, 0, (long)((char *)&script_example.startPass), NULL, 0.0, -1, "Start script action on this pass.  Before that, behaves like a drift space."},
+  {"ON_PASS", "", IS_LONG, 0, (long)((char *)&script_example.onPass), NULL, 0.0, -1, "Perform script action only on this pass.  Other than that, behaveslike a drift space."},
   {"ROOTNAME", "", IS_STRING, 0, (long)((char *)&script_example.rootname), NULL, 0.0, 0, "Rootname for use in naming input and output files.  %s may be used to represent the run rootname."},
   {"INPUT_EXTENSION", "", IS_STRING, 0, (long)((char *)&script_example.inputExtension), "in", 0.0, 0, "Extension for the script input file."},
   {"OUTPUT_EXTENSION", "", IS_STRING, 0, (long)((char *)&script_example.outputExtension), "out", 0.0, 0, "Extension for the script output file."},
