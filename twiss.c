@@ -2146,7 +2146,7 @@ void store_fitpoint_twiss_parameters(MARK *fpt, char *name, long occurence,TWISS
   long i;
   static char *twiss_name_suffix[12] = {
     "betax", "alphax", "nux", "etax", "etapx", "etaxp",
-    "betay", "alphay", "nuy", "etay", "etapy", "etaxp",
+    "betay", "alphay", "nuy", "etay", "etapy", "etayp",
     } ;
   static char s[100];
   if (!(fpt->init_flags&1)) {
