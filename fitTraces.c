@@ -9,6 +9,11 @@
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.18  2003/01/27 16:46:02  borland
+ * Fixed problems with tune-shift-with-amplitude computation in presence
+ * of MALIGN elements with ON_PASS!=-1.
+ * Added LTHINLENS and LMIRROR elements.
+ *
  * Revision 1.17  2002/08/14 20:23:38  soliday
  * Added Open License
  *
@@ -455,6 +460,8 @@ void fit_trace_writeTraceOutput
     }
     if (!SDDS_WritePage(&SDDSout))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    if (!SDDS_DoFSync(&SDDSout))
+      fprintf(stdout, "Warning: problem fsync'ing trace output file\n");
   }
   if (!SDDS_Terminate(&SDDSout))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);

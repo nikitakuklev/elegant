@@ -9,6 +9,9 @@
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.19  2002/08/14 20:23:46  soliday
+ * Added Open License
+ *
  * Revision 1.18  2001/10/15 20:37:05  soliday
  * Cleaned up for Linux.
  *
@@ -452,6 +455,8 @@ void doSASEFELAtEndOutput(SASEFEL_OUTPUT *sasefelOutput, long step)
   }
   if (!SDDS_WritePage(SDDSout))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  if (!SDDS_DoFSync(SDDSout))
+    fprintf(stdout, "Warning: problem fsync'ing SASE output file\n");
 }
 
 

@@ -868,6 +868,8 @@ void dump_twiss_parameters(
     SDDS_SetError("Unable to write Twiss parameter data (dump_twiss_parameters)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
+  if (!SDDS_DoFSync(&SDDS_twiss))
+    fprintf(stdout, "Warning: problem fsync'ing twiss output file\n");
   if (!SDDS_EraseData(&SDDS_twiss)) {
     SDDS_SetError("Unable to erase Twiss parameter data (dump_twiss_parameters)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);

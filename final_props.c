@@ -347,6 +347,8 @@ void dump_final_properties
         SDDS_SetError("Problem writing SDDS data for final properties (dump_final_properties)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
+    if (!SDDS_DoFSync(SDDS_table))
+      fprintf(stdout, "Warning: problem fsync'ing final properties output file\n");
 
     log_exit("dump_final_properties");
     }

@@ -386,7 +386,9 @@ void do_transport_analysis(
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
         exit(1);
         }
-
+    if (!SDDS_DoFSync(&SDDS_analyze))
+      fprintf(stdout, "Warning: problem fsync'ing map analysis output file\n");
+    
     if (verbosity>0) {
         for (i=0; i<6; i++) {
             fprintf(stdout, "R%ld: ", i+1);

@@ -565,6 +565,8 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
     SDDS_SetError("Problem writing SDDS table (dump_watch_particles)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   } 
+  if (!SDDS_DoFSync(&watch->SDDS_table))
+    fprintf(stdout, "warning: problem fsync'ing watch point particle output\n");
   log_exit("dump_watch_particles");
 }
 
@@ -710,6 +712,8 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
       }
       watch->flushSample = sample;
     }
+    if (!SDDS_DoFSync(&watch->SDDS_table))
+      fprintf(stdout, "warning: problem fsync'ing watch point parameter output\n");
     
     log_exit("dump_watch_parameters");
     }
@@ -791,6 +795,8 @@ void dump_watch_FFT(WATCH *watch, long step, long pass, long n_passes, double **
             SDDS_SetError("Problem writing data to SDDS file (dump_watch_FFT)");
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
             }
+        if (!SDDS_DoFSync(&watch->SDDS_table))
+          fprintf(stdout, "warning: problem fsync'ing watch point FFT output\n");
         }
     log_exit("dump_watch_FFT");
     }
@@ -949,6 +955,8 @@ void dump_particle_histogram(HISTOGRAM *histogram, long step, long pass, double 
     SDDS_SetError("Problem writing SDDS table (dump_particle_histogram)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   } 
+  if (!SDDS_DoFSync(&histogram->SDDS_table))
+    fprintf(stdout, "warning: problem fsync'ing histogram output\n");
   histogram->count++;
 }
 
@@ -997,6 +1005,8 @@ void dump_phase_space(SDDS_TABLE *SDDS_table, double **particle, long particles,
         SDDS_SetError("Problem writing SDDS table (dump_phase_space)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         } 
+    if (!SDDS_DoFSync(SDDS_table))
+      fprintf(stdout, "warning: problem fsync'ing particle phase-space output\n");
 
     log_exit("dump_phase_space");
     }
@@ -1036,6 +1046,8 @@ void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long particl
         SDDS_SetError("Problem writing SDDS table (dump_lost_particles)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         } 
+    if (!SDDS_DoFSync(SDDS_table))
+      fprintf(stdout, "warning: problem fsync'ing lost particle output\n");
 
     log_exit("dump_lost_particles");
     }
@@ -1128,6 +1140,8 @@ void dump_centroid(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline,
         SDDS_SetError("Unable to write centroid data (dump_centroid)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
+    if (!SDDS_DoFSync(SDDS_table))
+      fprintf(stdout, "warning: problem fsync'ing centroid vs s output\n");
     if (!SDDS_EraseData(SDDS_table)) {
         SDDS_SetError("Unable to erase centroid data (dump_centroid)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -1292,6 +1306,8 @@ void dump_sigma(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, lo
     SDDS_SetError("Unable to write sigma data (dump_sigma)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
+  if (!SDDS_DoFSync(SDDS_table))
+      fprintf(stdout, "warning: problem fsync'ing sigma vs s output\n");
   if (!SDDS_EraseData(SDDS_table)) {
     SDDS_SetError("Unable to erase sigma data (dump_sigma)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);

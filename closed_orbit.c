@@ -224,6 +224,8 @@ void dump_closed_orbit(TRAJECTORY *traj, long n_elems, long step, double *deviat
         SDDS_SetError("Unable to write closed orbit data (dump_closed_orbit)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
+    if (!SDDS_DoFSync(&SDDS_clorb))
+      fprintf(stdout, "Warning: problem fsync'ing closed orbit output file\n");
     if (!SDDS_EraseData(&SDDS_clorb)) {
         SDDS_SetError("Unable to erase closed orbit data (dump_closed_orbit)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
