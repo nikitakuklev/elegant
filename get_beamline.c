@@ -605,9 +605,12 @@ void do_save_lattice(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 void print_with_continuation(FILE *fp, char *s, long endcol)
 {
   char c, *ptr;
-  long l;
+  long l, isContin;
 
+  isContin = 0;
   while ((l=strlen(s))) {
+    if (isContin)
+      fputc(' ', fp);
     if (l>endcol) {
       ptr = s+endcol-2;
       while (ptr!=s && *ptr!=',')
@@ -621,6 +624,7 @@ void print_with_continuation(FILE *fp, char *s, long endcol)
       *ptr = 0;
       fputs(s, fp);
       fputs("&\n", fp);
+      isContin = 1;
       s = ptr;
       *ptr = c;
     }
