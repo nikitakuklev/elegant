@@ -191,7 +191,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
 
     if ((code=load_request[i].last_code=SDDS_ReadTable(&load_request[i].table))<1) {
       if (code<0) {
-        fprintf(stderr, "\007warning: file %s ends unexpectedly\n", load_request[i].filename);
+        fprintf(stderr, "warning: file %s ends unexpectedly\n", load_request[i].filename);
         load_request[i].flags |= COMMAND_FLAG_IGNORE;
         continue;
       }
@@ -285,7 +285,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
         if (occurence && !warned_about_occurence) {
           warned_about_occurence = 1;
           fprintf(stderr, 
-                  "\007\007\007warning: occurence column is necessarily ignored when changing defined values (do_load_parameters)\n");
+                  "warning: occurence column is necessarily ignored when changing defined values (do_load_parameters)\n");
         }
         change_defined_parameter(element[j], param, eptr->type, value?value[j]:0, 
                                  valueString?valueString[j]:NULL, 
