@@ -6,6 +6,20 @@
  *
  * Michael Borland, 1993
  */
+
+/* Sign conventions in this module:
+ * V = I*Z 
+ * V(t) = V(w)*exp(i*w*t)  I(t) = I(w)*exp(i*w*t)
+ * For inductor:   Z = i*w*L
+ * For capacitor:  Z = -i/(w*C)
+ * For resistor:   Z = R
+ * For resonator:  Z = R/(1+i*Q*(w/wr-wr/w))
+ *
+ * The minus sign to get energy loss instead of energy gain is 
+ * used internally and must not be included in the impedance.
+ *
+ */
+
 #include "mdb.h"
 #include "track.h"
 #include "table.h"
@@ -28,6 +42,8 @@ static SDDS_DEFINITION wake_parameter[WAKE_PARAMETERS] = {
     {"Deltaf", "&parameter name=Deltaf, symbol=\"$gD$rf\", units=Hz, type=double, description=\"Frequency sampling interval\" &end"},
     } ;
 
+#define DEBUG 1
+
 void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
     RUN *run, long i_pass
     )
@@ -41,10 +57,6 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
     double *Ifreq, *Vfreq, *Z;
     long ip, ib, nb, n_binned, nfreq, iReal, iImag;
     double factor, tmin, tmax, tmean, dt, dt1, P, dgam, gam, frac;
-#if defined(DEBUG)
-    static long first_call = 1;
-    FILE *fp;
-#endif
 
     log_entry("track_through_zlongit");
 
@@ -68,54 +80,61 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
     for (ip=0; ip<np; ip++) {
         P = Po*(part[ip][5]+1);
         time[ip] = part[ip][4]*sqrt(sqr(P)+1)/(c_mks*P);
-        if (time[ip]<tmin)
-            tmin = time[ip];
         tmean += time[ip];
         }
-    tmin -= dt;
-    tmax = tmin + zlongit->bin_size*zlongit->n_bins;
     tmean /= np;
-
+    tmin = tmean - dt*zlongit->n_bins/2.0;
+    
     for (ib=0; ib<zlongit->n_bins; ib++)
         Itime[2*ib] = Itime[2*ib+1] = 0;
 
     for (ip=n_binned=0; ip<np; ip++) {
-        pbin[ip] = -1;
-        ib = (time[ip]-tmin)/dt;
-        if (zlongit->area_weight) {
-            frac = (time[ip]-tmin)/dt-ib;
-            if (ib==0) {
-                ib = 1;
-                frac = 0;
-                }
-            }
-        else
-            frac = 0;
-        if (ib<0)
-            continue;
-        if (ib>nb - 1)
-            continue;
-        if (ib<nb-1) {
-            Itime[ib]   += (1-frac);
-            Itime[ib+1] += frac;
-            }
-        else
-            Itime[ib] += 1;
-        pbin[ip] = ib;
-        n_binned++;
-        }
+      pbin[ip] = -1;
+      ib = (time[ip]-tmin)/dt;
+      if (ib<0)
+        continue;
+      if (ib>nb - 1)
+        continue;
+      if (zlongit->area_weight && ib>1 && ib<(nb-1)) {
+        double dist;
+        dist = (time[ip]-((ib+0.5)*dt+tmin))/dt;
+        Itime[ib] += 0.5;
+        Itime[ib-1] += 0.25-0.5*dist;
+        Itime[ib+1] += 0.25+0.5*dist;
+      }
+      else 
+        Itime[ib] += 1;
+      pbin[ip] = ib;
+      n_binned++;
+    }
     if (n_binned!=np)
         fprintf(stderr, "warning: only %ld of %ld particles where binned (ZLONGIT)\n", n_binned, np);
+    if (zlongit->smooth_passes)
+      smoothData(Itime, nb, 3, zlongit->smooth_passes);
+    
+#if DEBUG 
+    /* Output the time-binned data */
+    if (1) {
+      FILE *fp;
+      fp = fopen("zlongit.tbin", "w");
+      fprintf(fp, "SDDS1\n&column name=t type=double units=s &end\n&column name=I type=double &end\n&data mode=ascii &end\n");
+      fprintf(fp, "%ld\n", nb);
+      for (ib=0; ib<nb; ib++) 
+        fprintf(fp, "%e %e\n",
+                ib*dt+tmin, Itime[ib]*(zlongit->charge/np)/dt);
+      fclose(fp);
+    }
+#endif
 
     /* Take the FFT of I(t) to get I(f) */
     realFFT(Itime, nb, 0);
     Ifreq = Itime;
 
     /* Compute V(f) = Z(f)*I(f), putting in a factor 
-     * to normalize the current waveform
+     * to normalize the current waveform.
      */
     Vfreq = Vtime;
-    factor = -(zlongit->charge/np)/((tmax-tmin)/nb);
+    factor = (zlongit->charge/np)/dt;
     Z = zlongit->Z;
     Vfreq[0] = Ifreq[0]*Z[0]*factor;
     nfreq = nb/2 + 1;
@@ -170,22 +189,29 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
     Vtime[nb] = 0;
     /* change particle momentum offsets to reflect voltage in relevant bin */
     for (ip=0; ip<np; ip++) {
-        if ((ib=pbin[ip])>=1 && ib<=nb-1) {
-            if (zlongit->interpolate) {
-                dt1 = time[ip]-(tmin+dt*ib);
-                if (dt1<0)
-                    dt1 = dt-dt1;
-                else 
-                    ib += 1;
-                dgam = (Vtime[ib-1]+(Vtime[ib]-Vtime[ib-1])/dt*dt1)/(1e6*me_mev);
-                }
-            else
-                dgam = Vtime[ib]/(1e6*me_mev);
-            if (dgam) {
-              add_to_particle_energy(part[ip], time[ip], Po, dgam);
-            }
+      if ((ib=pbin[ip])>=0 && ib<=nb-1) {
+        if (zlongit->interpolate && ib>0) {
+          /* dt/2 offset is so that center of bin is location where
+           * particle sees voltage for that bin only
+           */
+          dt1 = time[ip]-(tmin+dt/2.0+dt*ib);
+          if (dt1<0)
+            dt1 += dt;
+          else
+            ib += 1;
+          if (ib<nb)
+            dgam = (Vtime[ib-1]+(Vtime[ib]-Vtime[ib-1])/dt*dt1)/(1e6*me_mev);
+          else
+            continue;
+        }
+        else
+          dgam = Vtime[ib]/(1e6*me_mev);
+        if (dgam) {
+          /* Put in minus sign here as the voltage decelerates the beam */
+          add_to_particle_energy(part[ip], time[ip], Po, -dgam);
         }
       }
+    }
     log_exit("track_through_zlongit");
   }
 
@@ -203,14 +229,41 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run)
     if (zlongit->bin_size<=0)
         bomb("bin_size must be positive for ZLONGIT element", NULL);
     if (zlongit->broad_band) {
-        double term;
+      /* compute impedance for a resonator.  Recall that I use V(t) = Vo*exp(i*w*t) convention,
+       * so the impedance is Z(w) = (Ra/2)*(1 + i*T)/(1+T^2), where T=Q*(wo/w-w/wo).
+       * The imaginary and real parts are positive for small w.
+       */
+        double term, factor1, factor2, factor;
+        if (zlongit->Ra && zlongit->Rs) 
+          bomb("ZLONGIT element broad-band resonator may have only one of Ra or Rs nonzero.  Ra is just 2*Rs", NULL);
+        if (!zlongit->Ra)
+          zlongit->Ra = 2*zlongit->Rs;
         if (zlongit->n_bins%2!=0)
             bomb("ZLONGIT element must have n_bins divisible by 2", NULL);
         if (zlongit->Zreal  || zlongit->Zimag) 
             bomb("can't specify both broad_band impedance and Z(f) files for ZLONGIT element", NULL);
-        nfreq = zlongit->n_bins/2 + 1;
-        zlongit->Z = tmalloc(sizeof(*(zlongit->Z))*zlongit->n_bins);
+        if (2/(zlongit->freq*zlongit->bin_size)<10) {
+          /* want maximum frequency in Z > 10*fResonance */
+          fprintf(stderr, "ZLONGIT has excessive bin size for given frequency\n", NULL);
+          zlongit->bin_size = 0.2/zlongit->freq;
+          fprintf(stderr, "  Bin size adjusted to %e\n", zlongit->bin_size);
+        }
+        /* Want frequency resolution < fResonance/10 */
+        factor1 = 10/(zlongit->n_bins*zlongit->bin_size*zlongit->freq);
+        /* Want frequency resolution < fResonanceWidth/10 */
+        factor2 = 10/(zlongit->n_bins*zlongit->bin_size*zlongit->freq/zlongit->Q);
+        factor = MAX(factor1, factor2);
+        if (factor>1) {
+          fprintf(stderr, "ZLONGIT has too few bins or excessive bin size for given frequency\n");
+          zlongit->n_bins = pow(2, (long)(log(zlongit->n_bins*factor)/log(2)+1));
+          fprintf(stderr, "  Number of bins adjusted to %ld\n",
+                  zlongit->n_bins);
+        }
         df = 1/(zlongit->n_bins*zlongit->bin_size)/(zlongit->freq);
+        nfreq = zlongit->n_bins/2 + 1;
+        fprintf(stderr, "ZLONGIT has %ld frequency points with df=%le\n",
+                nfreq, df);
+        zlongit->Z = tmalloc(sizeof(*(zlongit->Z))*zlongit->n_bins);
         zlongit->Z[0] = 0;
         zlongit->Z[zlongit->n_bins-1] = 0;    /* Nyquist term */
         for (i=1; i<nfreq-1; i++) {
@@ -278,6 +331,9 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run)
             bomb("impedance spectrum has non-zero imaginary DC term (ZLONGIT)", NULL);
         if (!power_of_2(n_spect-1))
             bomb("number of spectrum points must be 2^n+1, n>1 (ZLONGIT)", NULL);
+        /* Recalculate the bin size and number of bins for consistency with the given
+         * frequency range and spacing.  Try to maintain sufficient range of time binning. 
+         */
         t_range = zlongit->n_bins*zlongit->bin_size;
         zlongit->n_bins = 2*(n_spect-1);
         zlongit->bin_size = 1.0/(zlongit->n_bins*df_spect);
@@ -286,6 +342,8 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run)
             fprintf(stderr, "consider padding the impedance spectrum\n");
             exit(1);
             }
+        fprintf(stderr, "Using Nb=%ld and dt=%le in ZLONGIT\n",
+                zlongit->n_bins, zlongit->bin_size);
         zlongit->Z = tmalloc(sizeof(*zlongit->Z)*2*zlongit->n_bins);
         for (i=0; i<n_spect; i++) {
             if (i==0)
@@ -326,26 +384,26 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run)
                     fprintf(stderr, "Unable to define SDDS associate (set_up_zlongit)--string was:%s\n", associate);
                     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
                     exit(1);
-                    }
+                  }
                 sprintf(associate, 
                         "&associate filename=\"%s\", path=\"%s\", description=\"Imaginary part of impedance spectrum\",\
  contents=\"real impedance spectrum, parent\", sdds=0 &end", 
                         zlongit->Zimag, getenv("PWD"));
                 if (!SDDS_ProcessAssociateString(&zlongit->SDDS_wake, associate)) {
-                    fprintf(stderr, "Unable to define SDDS associate (set_up_zlongit)--string was:%s\n", associate);
-                    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-                    exit(1);
-                    }
+                  fprintf(stderr, "Unable to define SDDS associate (set_up_zlongit)--string was:%s\n", associate);
+                  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+                  exit(1);
                 }
+              }
             if (!SDDS_WriteLayout(&zlongit->SDDS_wake)) {
-                SDDS_SetError("Unable to write SDDS layout (set_up_zlongit)");
-                SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-                exit(1);
-                }
+              SDDS_SetError("Unable to write SDDS layout (set_up_zlongit)");
+              SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+              exit(1);
             }
+          }
         zlongit->SDDS_wake_initialized = 1;
-        }
+      }
     zlongit->initialized = 1;
     log_exit("set_up_zlongit");
-    }
+  }
 

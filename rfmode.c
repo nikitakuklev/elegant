@@ -20,15 +20,29 @@ void track_through_rfmode(
     static long *pbin = NULL;                /* array to record which bin each particle is in */
     static double *time = NULL;              /* array to record arrival time of each particle */
     static long max_np = 0;
-    long ip, ib, nb2;
+    long ip, ib, nb2, lastBin, n_binned;
     double tmin, tmax, tmean, dt, P;
     double Vb, V, omega, phase, t, k, damping_factor, tau;
     double V_sum, Vr_sum, phase_sum;
     double Vc, Vcr, Q_sum, dgamma, gamma;
     long n_summed, max_hist, n_occupied;
     static long been_warned = 0;
-
+    double Qrp, VbImagFactor, Q;
+    
     log_entry("track_through_rfmode");
+
+    omega = PIx2*rfmode->freq;
+    if ((Q = rfmode->Q/(1+rfmode->beta))<=0.5) {
+      fprintf(stderr, "The effective Q<=0.5 for RFMODE.  Use the ZLONGIT element.\n");
+      exit(1);
+    }
+    tau = 2*Q/omega;
+    Qrp = sqrt(Q*Q - 0.25);
+    k = omega/4*(rfmode->Ra)/Q;
+
+    /* These adjustments per Zotter and Kheifets, 3.2.4 */
+    VbImagFactor = 1/(2*Qrp);
+    omega *= Qrp/Q;
 
     if (!been_warned) {        
         if (rfmode->freq<1e3 && rfmode->freq)  {
@@ -73,6 +87,7 @@ void track_through_rfmode(
         Ihist[ib] = 0;
 
     dt = (tmax - tmin)/rfmode->n_bins;
+    n_binned = lastBin = 0;
     for (ip=0; ip<np; ip++) {
         pbin[ip] = -1;
         ib = (time[ip]-tmin)/dt;
@@ -82,18 +97,17 @@ void track_through_rfmode(
             continue;
         Ihist[ib] += 1;
         pbin[ip] = ib;
+        if (ib>lastBin)
+          lastBin = ib;
+        n_binned++;
         }
 
-    omega = PIx2*rfmode->freq;
-    tau = 2*rfmode->Q/(omega*(1+rfmode->beta));
-    k = omega/4*(rfmode->Ra)/rfmode->Q;
-    
     V_sum = Vr_sum = phase_sum = Vc = Vcr = Q_sum = 0;
     n_summed = max_hist = n_occupied = 0;
     nb2 = rfmode->n_bins/2;
     if (rfmode->single_pass)
         rfmode->V = 0;
-    for (ib=0; ib<rfmode->n_bins; ib++) {
+    for (ib=0; ib<=lastBin; ib++) {
         if (!Ihist[ib])
             continue;
         if (Ihist[ib]>max_hist)
@@ -117,6 +131,7 @@ void track_through_rfmode(
         
         /* add beam-induced voltage to cavity voltage */
         rfmode->Vr -= Vb;
+        rfmode->Vi -= Vb*VbImagFactor;
         rfmode->last_phase = atan2(rfmode->Vi, rfmode->Vr);
         rfmode->V = sqrt(sqr(rfmode->Vr)+sqr(rfmode->Vi));
  
@@ -174,7 +189,8 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
                    double Po, double total_length)
 {
     long n;
-
+    double T;
+    
     rfmode->initialized = 1;
     if (n_particles<1)
         bomb("too few particles in set_up_rfmode()", NULL);
@@ -182,6 +198,17 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
         bomb("too few bins for RFMODE", NULL);
     if (rfmode->bin_size<=0)
         bomb("bin_size must be positive for RFMODE", NULL);
+    if (rfmode->Ra && rfmode->Rs) 
+      bomb("RFMODE element may have only one of Ra or Rs nonzero.  Ra is just 2*Rs", NULL);
+    if (!rfmode->Ra)
+      rfmode->Ra = 2*rfmode->Rs;
+    if (rfmode->bin_size*rfmode->freq>0.1) {
+      T = rfmode->bin_size*rfmode->n_bins;
+      rfmode->bin_size = 0.1/rfmode->freq;
+      rfmode->n_bins = T/rfmode->bin_size;
+      fprintf(stderr, "The RFMODE %s bin size is too large--setting to %e and increasing to %ld bins\n",
+              element_name, rfmode->bin_size, rfmode->n_bins);
+    }
     if (rfmode->sample_interval<=0)
         rfmode->sample_interval = 1;
     if (rfmode->record) {
@@ -201,11 +228,6 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
         fprintf(rfmode->fprec, "&data mode=binary &end\n");
         n = n_passes/rfmode->sample_interval;
         fwrite(&n, sizeof(n), 1, rfmode->fprec);
-        }
-    if (rfmode->n_bins%2==0) {
-        fprintf(stderr, "warning: number of bins for RFMODE %s increased from %d to %d (odd number preferred)\n",
-               element_name, rfmode->n_bins, rfmode->n_bins+1);
-        rfmode->n_bins += 1;
         }
     rfmode->mp_charge = rfmode->charge/n_particles;
     if (rfmode->preload && rfmode->charge) {
