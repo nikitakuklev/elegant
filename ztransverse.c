@@ -169,7 +169,6 @@ void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long part
     df = 1/(ztransverse->n_bins*ztransverse->bin_size)/(ztransverse->freq);
     /* DC term of iZ is zero */
     ztransverse->iZ[0][0] = ztransverse->iZ[1][0] = 0;
-    /* Nyquist term--real part of iZ only */
     for (i=1; i<nfreq-1; i++) {
       term = ztransverse->Q*(i*df-1.0/(i*df));
       /* real part of i*Z */
@@ -181,6 +180,7 @@ void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long part
         ztransverse->iZ[1][2*i] = 
           -term*ztransverse->iZ[0][2*i-1];
     }
+    /* Nyquist term--real part of iZ only */
     term = ztransverse->Q*(1.0/(nfreq*df)-nfreq*df);
     ztransverse->iZ[0][ztransverse->n_bins-1] = 
       ztransverse->iZ[1][ztransverse->n_bins-1] = 
