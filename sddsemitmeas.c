@@ -9,6 +9,9 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.2  1998/02/26 16:16:29  borland
+ * This version works.
+ *
  * Revision 1.1  1997/09/25 19:32:25  borland
  * First version in repository.  Doesn't work.  Probably doesn't even compile.
  *
@@ -39,19 +42,21 @@
 #define SET_CONSTANT_WEIGHTING 13
 #define SET_SIGMA_DATA 14
 #define SET_PIPE 15
-#define N_OPTIONS 16
+#define SET_ENERGYSPREAD 16
+#define N_OPTIONS 17
 
 char *option[N_OPTIONS] = {
     "errorlevel", "nerrorsets", "seed", "verbosity",
     "deviationlimit", "resolution", "limitmode", "ignoreplane",
     "uncertaintyfraction", "minimumuncertainty", "addresolution",
     "finduncertainties", "fixeduncertainty", "constantweighting",
-    "sigmadata", "pipe",
+    "sigmadata", "pipe", "energyspread",
     } ;
 
 #define USAGE "sddsemitmeas\n\
  [<inputfile>] [<outputfile>] [-pipe=[input][,output]]\n\
  -sigmaData=<xName>,<yName>\n\
+ [-energySpread=<fractionalRMSValue>]\n\
  [-errorLevel=<valueInmm>,[{gaussian,<nSigmas> | uniform}]]\n\
  [-nErrorSets=<number>]\n\
  [-limitMode={resolution | zero}[{,reject}]\n\
@@ -74,7 +79,7 @@ USAGE,
 "which contains the R matrix and simulated beam sigmas as a function",
 "of some variable or variables.  It may also contain experimental data",
 "that has been obtained separately and put into the elegant output file",
-"(e.g., using sddsxref).\n"
+"(e.g., using sddsxref). \n"
 "-sigmaData is used to name the columns in <inputfile> that contain the",
 "    beam sizes to be used in fitting.",
 "-errorLevel and -nErrorSets allow the addition of random measurement",
@@ -91,6 +96,10 @@ USAGE,
 "    -constantWeighting specifies that all points have the same weighting",
 "    in the fit, which is not the same as having the same uncertainty for",
 "    each point.",
+"-energySpread is used if there is dispersion at the measurement point.",
+"    In this case, you must put the dispersion (etax, etay) at the measurement",
+"    point in <inputfile>.  This can be done using the elegant twiss",
+"    output plus some SDDS tools.",
 NULL
     } ; 
 
@@ -136,6 +145,7 @@ main(
   long outputRowLimit, outputRow;
   double *R11;        /* R11 matrix element for ith configuration */
   double *R12;        /* R12 matrix element for ith configuration */
+  double *etax, *etay;  /* dispersion at measurement point, if provided */
   double *data;       /* utility pointer */
   double *sigmax, *uncertx;               /* sigma in x plane for ith configuration */
   double *R33, *R34, *sigmay, *uncerty;   /* similar data for y plane */
@@ -146,7 +156,7 @@ main(
   double S33_sum, S33_sum2, S34_sum, S34_sum2, S44_sum, S44_sum2;
   double betax, alphax, betax_sum, betax_sum2, alphax_sum, alphax_sum2;
   double betay, alphay, betay_sum, betay_sum2, alphay_sum, alphay_sum2;
-  int i_R11, i_R12, i_R33, i_R34, i_sx, i_sy, i_variable;
+  int i_variable;
   double emitx, emity;
   SCANNED_ARG *scanned;
   int i_arg, i;
@@ -173,6 +183,7 @@ main(
   double x_uncert_frac, y_uncert_frac;
   double x_uncert_min, y_uncert_min;
   double x_fixed_uncert, y_fixed_uncert;
+  double energySpread, energySize;
   int equal_weights_x_fit, equal_weights_y_fit, constant_weighting;
   int add_resolution, find_uncert, verbosity;
   char *x_width_name, *y_width_name;
@@ -206,6 +217,8 @@ main(
   x_fixed_uncert = y_fixed_uncert = verbosity = 0;
   x_width_name = "Sx";
   y_width_name = "Sy";
+  energySpread = 0;
+  pipeFlags = 0;
   
   for (i_arg=1; i_arg<argc; i_arg++) {
     if (scanned[i_arg].arg_type==OPTION) {
@@ -327,6 +340,11 @@ main(
 	if (!processPipeOption(scanned[i_arg].list+1, scanned[i_arg].n_items-1, &pipeFlags))
 	  SDDS_Bomb("invalid -pipe syntax");
 	break;
+      case SET_ENERGYSPREAD:
+        if (scanned[i_arg].n_items!=2 ||
+            !sscanf(scanned[i_arg].list[1], "%lf", &energySpread) ||
+            energySpread<0)
+          SDDS_Bomb("invalid -energySpread syntax");
         break;
       default:
         bomb("unknown option given", USAGE);
@@ -421,15 +439,17 @@ main(
   if (!SDDS_WriteLayout(&SDDSout) || !SDDS_StartPage(&SDDSout, outputRowLimit=100))
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
   
-  i_sx  = SDDS_GetColumnIndex(&SDDSin, x_width_name);
-  i_sy  = SDDS_GetColumnIndex(&SDDSin, y_width_name);
-  i_R11 = SDDS_GetColumnIndex(&SDDSin, "R11");
-  i_R12 = SDDS_GetColumnIndex(&SDDSin, "R12");
-  i_R33 = SDDS_GetColumnIndex(&SDDSin, "R33");
-  i_R34 = SDDS_GetColumnIndex(&SDDSin, "R34");
-  if (i_R11<0 || i_R12<0 || i_R33<0 || i_R34<0 || i_sx<0 || i_sy<0)
-    bomb("input file has wrong format or missing data", NULL);
-
+  if (SDDS_GetColumnIndex(&SDDSin, x_width_name)<0 ||
+      SDDS_GetColumnIndex(&SDDSin, y_width_name)<0 ||
+      SDDS_GetColumnIndex(&SDDSin, "R11")<0 ||
+      SDDS_GetColumnIndex(&SDDSin, "R12")<0 ||
+      SDDS_GetColumnIndex(&SDDSin, "R33")<0 ||
+      SDDS_GetColumnIndex(&SDDSin, "R34")<0)
+  if (energySpread && 
+      (SDDS_GetColumnIndex(&SDDSin, "etax")<0 ||
+       SDDS_GetColumnIndex(&SDDSin, "etay")<0))
+      SDDS_Bomb("input file missing etax or etay");
+  
   if (variable_name) {
     if ((i_variable=SDDS_GetColumnIndex(&SDDSin, variable_name))<0)
       bomb("no match for variable for fit output/filtering", NULL);
@@ -462,7 +482,11 @@ main(
         !(R33 = SDDS_GetColumn(&SDDSin, "R33")) ||
         !(R34 = SDDS_GetColumn(&SDDSin, "R34")) ) 
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-
+    if (energySpread &&
+        (!(etax = SDDS_GetColumn(&SDDSin, "etax")) ||
+         !(etay = SDDS_GetColumn(&SDDSin, "etay"))))
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    
     if (!(sigmax = SDDS_GetColumn(&SDDSin, x_width_name)))
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     if (!(sigmay = SDDS_GetColumn(&SDDSin, y_width_name)))
@@ -486,6 +510,12 @@ main(
       for (i_config=0; i_config<n_configs; i_config++) {
         if (add_resolution && x_resol)  
           sigmax[i_config] = sqrt(sqr(sigmax[i_config]) + sqr(x_resol));
+        if (energySpread && etax[i_config]) {
+          energySize = sqr(energySpread*etax[i_config]);
+          if (energySize>sqr(sigmax[i_config]))
+            SDDS_Bomb("size due to energy spread exceeds measured horizontal size");
+          sigmax[i_config] = sqrt(sqr(sigmax[i_config]) - energySize);
+        }
       }
       if (x_resol && add_resolution)
         x_resol = 0;
@@ -521,6 +551,13 @@ main(
       for (i_config=0; i_config<n_configs; i_config++) {
         if (add_resolution && y_resol)  
           sigmay[i_config] = sqrt(sqr(sigmay[i_config]) + sqr(y_resol));
+        if (energySpread && etay[i_config]) {
+          energySize = sqr(energySpread*etay[i_config]);
+          if (energySize>sqr(sigmay[i_config]))
+            SDDS_Bomb("size due to energy spread exceeds measured vertical size");
+          sigmay[i_config] = sqrt(sqr(sigmay[i_config]) - energySize);
+        }
+        
       }
       if (y_resol && add_resolution)
         y_resol = 0;
