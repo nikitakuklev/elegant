@@ -1113,7 +1113,7 @@ void set_central_momentum(
   }
   
   for (ip=0; ip<np; ip++)
-    coord[ip][5] = (1+coord[ip][5])*(*P_central)/ P_new-1;
+    coord[ip][5] = ((1+coord[ip][5])*(*P_central) - P_new)/P_new;
   
   *P_central =  P_new;
   log_exit("set_central_momentum");
