@@ -19,7 +19,8 @@ void track_SReffects(double **coord, long np, SREFFECTS *SReffects, double Po,
     double xpEta, ypEta;
     double *part, beta;
     static long first = 1;
-
+    double deltaChange;
+    
     if (SReffects->pRef==0) {
       if (!radIntegrals) {
         bomb("Problem with SREFFECTS element: pRef=0 but no radiation integrals computed.  Use the twiss_output command to compute these.", NULL);
@@ -104,7 +105,13 @@ void track_SReffects(double **coord, long np, SREFFECTS *SReffects, double Po,
         P = (1+part[5])*Po;
         beta = P/sqrt(sqr(P)+1);
         t = part[4]/beta;
+        deltaChange = -part[5];
         part[5]  = Ddelta + part[5]*Fdelta + Srdelta*gauss_rn(0, random_2);
+        deltaChange += part[5];
+        part[0] += twiss->etax*deltaChange;
+        part[1] += twiss->etapx*deltaChange;
+        part[2] += twiss->etay*deltaChange;
+        part[3] += twiss->etapy*deltaChange;
         P = (1+part[5])*Po;
         beta = P/sqrt(sqr(P)+1);
         part[4] = t*beta;
