@@ -326,7 +326,7 @@ void add_steer_elem_to_lists(STEERING_LIST *SL, long plane, char *name, char *it
       cp_str(&name, "*");
     if (element_type) {
       str_toupper(element_type);
-      if (has_wildcards(element_type) && strchr(name, '-'))
+      if (has_wildcards(element_type) && strchr(element_type, '-'))
         element_type = expand_ranges(element_type);
     }
 
