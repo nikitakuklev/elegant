@@ -1072,7 +1072,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   dzf =  csbend->dx*sin(csbend->angle) - csbend->dz*cos(csbend->angle);
   dyf = csbend->dy;
 
-  if (csbend->particleOutputFile && !csbend->particleFileActive) {
+  if (csbend->particleOutputFile && strlen(csbend->particleOutputFile) && !csbend->particleFileActive) {
     /* set up SDDS output file for particle coordinates inside bend */
     csbend->particleFileActive = 1;
     csbend->particleOutputFile = compose_filename(csbend->particleOutputFile, rootname);
@@ -1096,7 +1096,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     }
   }
   
-  if (csbend->histogramFile && !csbend->wakeFileActive) {
+  if (csbend->histogramFile && strlen(csbend->histogramFile) && !csbend->wakeFileActive) {
     /* set up SDDS output file for CSR monitoring */
     csbend->wakeFileActive = 1;
     csbend->histogramFile = compose_filename(csbend->histogramFile, rootname);
@@ -1123,7 +1123,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     }
   }
 
-  if (csbend->wakeFilterFile && !csbend->wffValues) 
+  if (csbend->wakeFilterFile && strlen(csbend->wakeFilterFile) && !csbend->wffValues) 
     readWakeFilterFile(&csbend->wffValues,
                        &csbend->wffFreqValue, &csbend->wffRealFactor, &csbend->wffImagFactor, 
                        csbend->wffFreqColumn, csbend->wffRealColumn, csbend->wffImagColumn,
@@ -2683,7 +2683,6 @@ void DumpStupakovOutput(char *filename, SDDS_DATASET *SDDSout, long *active,
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
   }
   SDDS_DoFSync(SDDSout);
-    
 }
 
 
