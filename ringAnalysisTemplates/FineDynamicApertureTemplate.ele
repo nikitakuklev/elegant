@@ -1,0 +1,69 @@
+&transmute_elements
+        name = *, type = WATCH, 
+        new_type = DRIF
+&end
+
+&transmute_elements
+        name = *, type = MAXAMP,
+        new_type = DRIF,
+	ignore = <includeApertures>
+&end
+&transmute_elements
+        name = *, type = ?COL,
+        new_type = DRIF,
+	ignore = <includeApertures>
+&end
+&transmute_elements
+        name = *, type = SCRAPER,
+        new_type = DRIF,
+	ignore = <includeApertures>
+&end
+
+&run_setup
+	lattice = <kickLatticeFile>,
+	use_beamline = <kickBeamline>
+	p_central_mev = <momentum>,
+        rootname = <mainDirectory>/<mainPrefix>FineDynamicAperture<suffix>,
+        semaphore_file = %s.done,
+	losses = %s.los,
+        tracking_updates = 0,
+	default_order = 1,
+	concat_order = 1
+&end
+
+&load_parameters
+        filename_list = " <parameterFileList>",
+        change_defined_values = 1,
+        allow_missing_elements = 1,
+        allow_missing_parameters = 1,
+        allow_missing_files = 1,
+&end
+
+&alter_elements name=*, type=*SBEN*, item=EDGE_ORDER, value=1 &end
+
+&run_control
+        n_passes = <turns>,
+&end
+
+&bunched_beam
+	distribution_type[0] = 2*"line",
+	bunch = %s.bun,
+	beta_x = 1.0, emit_x = 0.0,
+	beta_y = "{rpnl <yMaximum> 2e-24 /}", 
+	emit_y = "{rpnl <yMaximum> 2e24 /}",
+	n_particles_per_bunch = <yPoints>,
+	centroid[0] = <xOffset>, 0, "{rpnl <yMaximum> 2 /}", 0, 0, <delta>,
+&end
+
+&closed_orbit
+	output = %s.clo,
+	start_from_centroid = 0,
+	start_from_dp_centroid = 1,
+        iteration_fraction = 0.5,
+        closed_orbit_iterations = 500,
+&end
+
+&track
+	offset_by_orbit = 1,
+	offset_momentum_also = 0
+&end
