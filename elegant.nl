@@ -32,6 +32,7 @@
     long center_on_orbit = 0;
     long center_momentum_also = 1;
     long soft_failure = 1;
+    long use_linear_chromatic_matrix = 0;
 #end
 
 #namelist print_dictionary static

@@ -520,8 +520,9 @@ char **argv;
                 run_response_output(&run_conditions, beamline, &correct, 1);
               if (center_on_orbit)
                 center_beam_on_coords(beam.particle, beam.n_to_track, starting_coord, center_momentum_also);
-              track_beam(&run_conditions, &run_control, &error_control, &optimize.variables, beamline,
-                         &beam, &output_data, 0);
+              track_beam(&run_conditions, &run_control, &error_control, &optimize.variables, 
+                         beamline, &beam, &output_data, 
+                         use_linear_chromatic_matrix?LINEAR_CHROMATIC_MATRIX:0);
             }
             finish_output(&output_data, &run_conditions, &run_control, &error_control, &optimize.variables, 
                           beamline, beamline->n_elems, &beam);

@@ -143,7 +143,9 @@ typedef struct line_list {
                               Usually &elem or elem_recirc. */
     ELEMENT_LIST *elast;    /* pointer to last element &elem list */
     double tune[2];          /* x and y tunes from start of elem_twiss to end of line */
-    double chromaticity[2];  /* dNUx/dp and dNUy/dp */
+    double chromaticity[2];  /* dNUx/d(p/p0) and dNUy/d(p/p0) */
+    double dbeta_dPoP[2];    /* d/d(p/p0) of betax and betay */
+    double dalpha_dPoP[2];   /* d/d(p/p0) of alphax and alphay */
     double alpha[2];         /* first and second order momentum compaction */
     double acceptance[4];    /* in pi-meter-radians for x and y, plus z locations of limits (4 doubles in all) */
     RADIATION_INTEGRALS radIntegrals;
@@ -1369,13 +1371,14 @@ typedef struct {
 #define TRACK_PREVIOUS_BUNCH 1
 
 /* flags for do_tracking/track_beam flag word */
-#define FINAL_SUMS_ONLY 1
-#define TEST_PARTICLES 2
-#define BEGIN_AT_RECIRC 4
-#define TEST_PARTICLE_LOSSES 8
-#define SILENT_RUNNING 16
-#define TIME_DEPENDENCE_OFF 32
-#define INHIBIT_FILE_OUTPUT 64
+#define FINAL_SUMS_ONLY         0x0001
+#define TEST_PARTICLES          0x0002
+#define BEGIN_AT_RECIRC         0x0004
+#define TEST_PARTICLE_LOSSES    0x0008
+#define SILENT_RUNNING          0x0010
+#define TIME_DEPENDENCE_OFF     0x0020
+#define INHIBIT_FILE_OUTPUT     0x0040
+#define LINEAR_CHROMATIC_MATRIX 0x0080
 
 /* return values for get_reference_phase and check_reference_phase */
 #define REF_PHASE_RETURNED 1
@@ -1456,11 +1459,13 @@ extern void finish_bunched_beam(OUTPUT_FILES *output, RUN *run, VARY *control, E
 extern char *brief_number(double x, char *buffer);
 
 extern long track_beam(RUN *run, VARY *control, ERROR *errcon, OPTIM_VARIABLES *optim,
-    LINE_LIST *beamline, BEAM *beam, OUTPUT_FILES *output, long flags);
-extern void finish_output(OUTPUT_FILES *output, RUN *run, VARY *control, ERROR *errcon, OPTIM_VARIABLES *optim,
+    LINE_LIST *beamline, BEAM *beam, OUTPUT_FILES *output, unsigned long flags);
+extern void finish_output(OUTPUT_FILES *output, RUN *run, VARY *control,
+                          ERROR *errcon, OPTIM_VARIABLES *optim,
                           LINE_LIST *beamline, long n_elements, BEAM *beam);
-extern void setup_output(OUTPUT_FILES *output, RUN *run, VARY *control, ERROR *errcon, OPTIM_VARIABLES *optim,
-    LINE_LIST *beamline);
+extern void setup_output(OUTPUT_FILES *output, RUN *run, VARY *control, ERROR *errcon, 
+                         OPTIM_VARIABLES *optim,
+                         LINE_LIST *beamline);
 
 /* prototypes for cfgets.c: */
 extern char *cfgets(char *s, long n, FILE *fpin);
@@ -1522,11 +1527,11 @@ extern void rotate_xy(double *x, double *y, double angle);
 extern long advance_values1(double *value, long n_values, long *value_index, double *initial, double *step, 
                             double **enumerated_value, long *counter, long *max_count, long *flags, long n_indices);
 
-/* prototypes for do_tracking13.c: */
 extern double beta_from_delta(double p, double delta);
-extern long do_tracking(double **coord, long *n_original, long *effort, LINE_LIST *beamline, double *P_central,    
-    double **accepted, BEAM_SUMS **sums_vs_z, long *n_z_points, TRAJECTORY *traj_vs_z, RUN *run, long step,
-    long flags, long n_passes);
+extern long do_tracking(double **coord, long *n_original, long *effort, LINE_LIST *beamline, 
+                        double *P_central, double **accepted, BEAM_SUMS **sums_vs_z, 
+                        long *n_z_points, TRAJECTORY *traj_vs_z, RUN *run, long step,
+                        unsigned long flags, long n_passes);
 extern void do_element_misalignment(ELEMENT_LIST *elem, double **coord, long n, long mode);
 extern void offset_beam(double **coord, long n_to_track, MALIGN *offset, double P_central);
 extern void do_match_energy(double **coord, long np, double *P_central, long change_beam);
@@ -1601,8 +1606,9 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
 void update_twiss_parameters(RUN *run, LINE_LIST *beamline, unsigned long *unstable);
 void compute_twiss_statistics(LINE_LIST *beamline, TWISS *twiss_ave, TWISS *twiss_min, TWISS *twiss_max);
 void dump_twiss_parameters(TWISS *twiss0, ELEMENT_LIST *elem, long n_elem, 
-    double *tune, RADIATION_INTEGRALS *radIntegrals, double *chromaticity, double *acceptance, double *alphac,
-    long final_values_only, long tune_corrected, RUN *run);
+                           double *tune, RADIATION_INTEGRALS *radIntegrals, double *chromaticity, 
+                           double *dbeta, double *acceptance, double *alphac,
+                           long final_values_only, long tune_corrected, RUN *run);
 void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, long *do_twiss_output);
 long run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, long tune_corrected);
 void finish_twiss_output(void);

@@ -22,6 +22,9 @@ typedef struct {
 void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, CHROM_CORRECTION *chrom);
 long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *beamline, double *clorb,
         long step, long last_iteration);
-void computeChromaticities(double *chromx, double *chromy, TWISS *twiss, VMATRIX *M);
+void computeChromaticities(double *chromx, double *chromy, 
+                           double *dbetax, double *dbetay,
+                           double *dalphax, double *dalphay,
+                           TWISS *twiss, VMATRIX *M);
 void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTION *chrom);
 

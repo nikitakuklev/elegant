@@ -212,15 +212,15 @@ long new_bunched_beam(
     }
 
 long track_beam(
-    RUN *run,
-    VARY *control,
-    ERROR *errcon,
-    OPTIM_VARIABLES *optim,
-    LINE_LIST *beamline,
-    BEAM *beam,
-    OUTPUT_FILES *output,
-    long flags
-    )
+                RUN *run,
+                VARY *control,
+                ERROR *errcon,
+                OPTIM_VARIABLES *optim,
+                LINE_LIST *beamline,
+                BEAM *beam,
+                OUTPUT_FILES *output,
+                unsigned long flags
+                )
 {    
     double p_central;
     long n_left, n_trpoint, effort;
@@ -252,7 +252,8 @@ long track_beam(
     n_left = do_tracking(beam->particle, &n_trpoint, &effort, beamline, &p_central, 
                          beam->accepted, &output->sums_vs_z, &output->n_z_points,
                          NULL, run, control->i_step,
-                         !(run->centroid || run->sigma)?FINAL_SUMS_ONLY:0,
+                         (!(run->centroid || run->sigma)?FINAL_SUMS_ONLY:0)+
+                         (flags&LINEAR_CHROMATIC_MATRIX),
                          control->n_passes);
 
     if (!beam) {

@@ -395,27 +395,29 @@ static SDDS_DEFINITION column_definition[N_COLUMNS] = {
 #define IP_AY 6
 #define IP_STAGE 7
 #define IP_PCENTRAL 8
-#define IP_ALPHAC2 9
-#define IP_ALPHAC 10
+#define IP_DBETAXDP 9
+#define IP_DBETAYDP 10
+#define IP_ALPHAC2 11
+#define IP_ALPHAC 12
 /* IP_ALPHAC must be the last item before the radiation-integral-related
  * items!
  */
-#define IP_I1 11
-#define IP_I2 12
-#define IP_I3 13
-#define IP_I4 14
-#define IP_I5 15
-#define IP_EX0 16
-#define IP_ENX0 17
-#define IP_TAUX 18
-#define IP_JX 19
-#define IP_TAUY 20
-#define IP_JY 21
-#define IP_SIGMADELTA 22
-#define IP_TAUDELTA 23
-#define IP_JDELTA 24
-#define IP_U0 25
-#define N_PARAMETERS 26
+#define IP_I1 IP_ALPHAC+1
+#define IP_I2 IP_ALPHAC+2
+#define IP_I3 IP_ALPHAC+3
+#define IP_I4 IP_ALPHAC+4
+#define IP_I5 IP_ALPHAC+5
+#define IP_EX0 IP_ALPHAC+6
+#define IP_ENX0 IP_ALPHAC+7
+#define IP_TAUX IP_ALPHAC+8
+#define IP_JX IP_ALPHAC+9
+#define IP_TAUY IP_ALPHAC+10
+#define IP_JY IP_ALPHAC+11
+#define IP_SIGMADELTA IP_ALPHAC+12
+#define IP_TAUDELTA IP_ALPHAC+13
+#define IP_JDELTA IP_ALPHAC+14
+#define IP_U0 IP_ALPHAC+15
+#define N_PARAMETERS IP_U0+1
 static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
 {"Step", "&parameter name=Step, type=long, description=\"Simulation step\" &end"},
 {"nux", "&parameter name=nux, symbol=\"$gn$r$bx$n\", type=double, units=\"1/(2$gp$r)\", description=\"Horizontal tune\" &end"},
@@ -425,7 +427,9 @@ static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
 {"dnuy/dp", "&parameter name=dnuy/dp, symbol=\"$gx$r$by$n\", type=double, units=\"1/(2$gp$r)\", description=\"Vertical chromaticity\" &end"},
 {"Ay", "&parameter name=Ay, symbol=\"A$by$n\", type=double, units=\"$gp$rm\", description=\"Vertical acceptance\" &end"},
 {"Stage", "&parameter name=Stage, type=string, description=\"Stage of computation\" &end"},
-{"pCentral", "&parameter name=pCentral, type=double, units=\"m$be$nc\", description=\"Central momentum\""},
+{"pCentral", "&parameter name=pCentral, type=double, units=\"m$be$nc\", description=\"Central momentum\" &end"},
+{"dbetax/dp", "&parameter name=dbetax/dp, units=m, type=double, description=\"Derivative of betax with momentum offset\" &end"},
+{"dbetay/dp", "&parameter name=dbetay/dp, units=m, type=double, description=\"Derivative of betay with momentum offset\" &end"},
 {"alphac2", "&parameter name=alphac2, symbol=\"$ga$r$bc2$n\", type=double, description=\"2nd-order momentum compaction factor\" &end"},
 {"alphac", "&parameter name=alphac, symbol=\"$ga$r$bc$n\", type=double, description=\"Momentum compaction factor\" &end"},
 {"I1", "&parameter name=I1, type=double, description=\"Radiation integral 1\", units=m &end"} ,
@@ -452,6 +456,7 @@ void dump_twiss_parameters(
   double *tune,
   RADIATION_INTEGRALS *radIntegrals,                           
   double *chromaticity,
+  double *dbeta,
   double *acceptance,
   double *alphac,
   long final_values_only,
@@ -483,7 +488,8 @@ void dump_twiss_parameters(
                           IP_STEP, twiss_count, IP_STAGE, stage, 
                           IP_NUX, tune[0], IP_DNUXDP, chromaticity[0], IP_AX, acceptance[0],
                           IP_NUY, tune[1], IP_DNUYDP, chromaticity[1], IP_AY, acceptance[1], 
-                          IP_ALPHAC, alphac[0], IP_ALPHAC2, alphac[1], -1)) {
+                          IP_ALPHAC, alphac[0], IP_ALPHAC2, alphac[1], 
+                          IP_DBETAXDP, dbeta[0], IP_DBETAYDP, dbeta[1], -1)) {
     SDDS_SetError("Problem setting SDDS parameters (dump_twiss_parameters 1)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
@@ -715,12 +721,12 @@ long run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, lon
 #endif
     fprintf(stderr, "%s Twiss parameters (chromaticity valid for fully second-order calculation only!):\n",
             matched?"periodic":"final");
-    fprintf(stderr, "         beta          alpha           nu           eta          eta'       dnu/d(dp/p)     accept.\n");
-    fprintf(stderr, "          m                          1/2pi           m                         1/2pi        mm-mrad\n");
-    fprintf(stderr, "------------------------------------------------------------------------------------------------------\n");
-    fprintf(stderr, "  x: %13.6le %13.6le %13.6le %13.6le %13.6le %13.6le %13.6le\n",  
+    fprintf(stderr, "         beta          alpha           nu           eta          eta'       dnu/d(dp/p)   dbeta/(dp/p)     accept.\n");
+    fprintf(stderr, "          m                          1/2pi           m                         1/2pi            m          mm-mrad\n");
+    fprintf(stderr, "--------------------------------------------------------------------------------------------------------------------\n");
+    fprintf(stderr, "  x: %13.6le %13.6le %13.6le %13.6le %13.6le %13.6le %13.6le %13.6le\n",  
             elast->twiss->betax, elast->twiss->alphax, beamline->tune[0], elast->twiss->etax, elast->twiss->etapx,
-            beamline->chromaticity[0], 1e6*beamline->acceptance[0]);
+            beamline->chromaticity[0], beamline->dbeta_dPoP[0], 1e6*beamline->acceptance[0]);
     if (statistics) {
       compute_twiss_statistics(beamline, &twiss_ave, &twiss_min, &twiss_max);
       fprintf(stderr, "ave: %13.6le %13.6le %-13s %13.6le %13.6le\n",
@@ -730,9 +736,9 @@ long run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, lon
       fprintf(stderr, "max: %13.6le %13.6le %-13s %13.6le %13.6le\n",
               twiss_max.betax, twiss_max.alphax, "", twiss_max.etax, twiss_max.etapx);
     }
-    fprintf(stderr, "  y: %13.6le %13.6le %13.6le %13.6le %13.6le %13.6le %13.6le\n",  
+    fprintf(stderr, "  y: %13.6le %13.6le %13.6le %13.6le %13.6le %13.6le %13.6le %13.6le\n",  
             elast->twiss->betay, elast->twiss->alphay, beamline->tune[1], elast->twiss->etay, elast->twiss->etapy,
-            beamline->chromaticity[1], 1e6*beamline->acceptance[1]);
+            beamline->chromaticity[1], beamline->dbeta_dPoP[1], 1e6*beamline->acceptance[1]);
     if (statistics) {
       fprintf(stderr, "ave: %13.6le %13.6le %-13s %13.6le %13.6le\n",
               twiss_ave.betay, twiss_ave.alphay, "", twiss_ave.etay, twiss_ave.etapy);
@@ -781,7 +787,8 @@ long run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, lon
     dump_twiss_parameters(beamline->twiss0, beamline->elem_twiss, n_elem,
                           beamline->tune, 
                           radiation_integrals?&(beamline->radIntegrals):NULL, 
-                          beamline->chromaticity, beamline->acceptance, 
+                          beamline->chromaticity, beamline->dbeta_dPoP,
+                          beamline->acceptance, 
                           beamline->alpha, final_values_only, tune_corrected, run);
   }
 
@@ -804,7 +811,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
                               unsigned long *unstable)
 {
   VMATRIX *M;
-  double chromx, chromy, alpha1, alpha2;
+  double chromx, chromy, dbetax, dbetay, alpha1, alpha2, dalphax, dalphay;
   double x_acc_z, y_acc_z, eta2[4];
   ELEMENT_LIST *eptr, *elast;
   char *x_acc_name, *y_acc_name;
@@ -923,7 +930,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
 #endif
       if (!(M->T))
         bomb("logic error: T matrix is NULL in compute_twiss_parameters", NULL);
-      computeChromaticities(&chromx, &chromy, beamline->twiss0, M);
+      computeChromaticities(&chromx, &chromy, &dbetax, &dbetay, &dalphax, &dalphay, beamline->twiss0, M);
     }
   }
   else {
@@ -947,7 +954,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
     if (run->default_order>=2) {
       if (!(M->T))
         bomb("logic error: T matrix is NULL in compute_twiss_parameters", NULL);
-      computeChromaticities(&chromx, &chromy, beamline->twiss0, M);
+      computeChromaticities(&chromx, &chromy, &dbetax, &dbetay, &dalphax, &dalphay, beamline->twiss0, M);
 #ifdef DEBUG
       fprintf(stderr, "chomaticities: %e, %e\n", chromx, chromy);
 #endif
@@ -955,7 +962,11 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
   }
   beamline->chromaticity[0] = chromx;
   beamline->chromaticity[1] = chromy;
-
+  beamline->dbeta_dPoP[0] = dbetax;
+  beamline->dbeta_dPoP[1] = dbetay;
+  beamline->dalpha_dPoP[0] = dalphax;
+  beamline->dalpha_dPoP[1] = dalphay;
+  
   alpha1 = alpha2 = 0;
   if (beamline->matrix->C[4]!=0) {
     alpha1 = (beamline->matrix->R[4][5] +

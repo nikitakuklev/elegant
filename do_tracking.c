@@ -12,6 +12,14 @@
 
 #pragma inline beta_from_delta
 
+ELEMENT_LIST *findChromaticLinearMatrixElement(ELEMENT_LIST *eptr);
+void trackWithChromaticLinearMatrix(double **particle, long particles,
+                                    TWISS *twiss0,
+                                    double *tune0,
+                                    double *chrom,
+                                    double *dbeta_dPoP, 
+                                    double *dalpha_dPoP);
+
 double beta_from_delta(double p, double delta)
 {
     p *= 1+delta;
@@ -30,7 +38,7 @@ long do_tracking(
                  TRAJECTORY *traj_vs_z,
                  RUN *run,
                  long step,
-                 long flags,
+                 unsigned long flags,
                  long n_passes
                  )
 {
@@ -39,7 +47,7 @@ long do_tracking(
     ENERGY *energy;
     MAXAMP *maxamp;
     MALIGN *malign;
-    ELEMENT_LIST *eptr;
+    ELEMENT_LIST *eptr, *eptrCLMatrix;
     long n_left, show_dE;
     double dgamma, dP[3], z, z_recirc, last_z;
     long i, j, i_traj=0, i_sums, n_to_track, i_pass, isConcat;
@@ -159,13 +167,15 @@ long do_tracking(
             && !(flags&TEST_PARTICLES)) {
             update_twiss_parameters(run, beamline, NULL);
             }
-        if (run->concat_order && !(flags&TEST_PARTICLES) && !(beamline->flags&BEAMLINE_CONCAT_CURRENT) ) {
+        if (run->concat_order && !(flags&TEST_PARTICLES) && 
+            !(beamline->flags&BEAMLINE_CONCAT_CURRENT) ) {
             /* form concatenated beamline for tracking */
             fprintf(stderr, "Concatenating lattice into matrices of order %ld where possible.\n", run->concat_order);
             concatenate_beamline(beamline, run);
             }
 
-        if (run->concat_order && beamline->flags&BEAMLINE_CONCAT_DONE && !(flags&TEST_PARTICLES)) {
+        if (run->concat_order && beamline->flags&BEAMLINE_CONCAT_DONE &&
+            !(flags&TEST_PARTICLES)) {
             if (beamline->ecat_recirc && (i_pass || flags&BEGIN_AT_RECIRC))
                 eptr = beamline->ecat_recirc;
             else
@@ -177,6 +187,16 @@ long do_tracking(
         else
             eptr = &(beamline->elem);
 
+        if (flags&LINEAR_CHROMATIC_MATRIX) {
+          if (!isConcat) {
+            fprintf(stderr, "Error: in order to use the \"linear chromatic matrix\" for\n");
+            fprintf(stderr, "tracking, you must ask for matrix concatenation in the run_setup.\n");
+            exit(1);
+          }
+          eptrCLMatrix = 
+            findChromaticLinearMatrixElement(eptr);
+        }
+        
         if (sums_vs_z && n_z_points) {
             if (!sums_allocated || !*sums_vs_z) {
                 /* allocate storage for beam sums */
@@ -259,7 +279,16 @@ long do_tracking(
 #endif
                 n_left = n_to_track;
                 show_dE = 0;
-                if (entity_description[eptr->type].flags&MATRIX_TRACKING) {
+                if (eptr==eptrCLMatrix)  {
+                  /* This element is the place-holder for the chromatic linear matrix */
+                  trackWithChromaticLinearMatrix(coord, n_to_track, 
+                                                 beamline->twiss0,
+                                                 beamline->tune,
+                                                 beamline->chromaticity,
+                                                 beamline->dbeta_dPoP,
+                                                 beamline->dalpha_dPoP);
+                }
+                else if (entity_description[eptr->type].flags&MATRIX_TRACKING) {
                     if (!(entity_description[eptr->type].flags&HAS_MATRIX))
                         bomb("attempt to matrix-multiply for element with no matrix!",  NULL);
                     if (!eptr->matrix) {
@@ -1079,3 +1108,85 @@ void store_fitpoint_twiss_parameters(MARK *fpt, char *name, long occurence,TWISS
     }
 
 
+ELEMENT_LIST *findChromaticLinearMatrixElement(ELEMENT_LIST *eptr)
+{
+  ELEMENT_LIST *eptr0;
+  long matrixSeen = 0;
+  while (eptr) {
+    if ((eptr->p_elem || eptr->matrix) && 
+        entity_description[eptr->type].flags&MATRIX_TRACKING) {
+      if (!(entity_description[eptr->type].flags&HAS_MATRIX))
+        bomb("attempt to matrix track for element with no matrix!",  NULL);
+      eptr0 = eptr;
+      matrixSeen = 1;
+      eptr = eptr->succ;
+      break;
+    }
+    eptr = eptr->succ;
+  }
+  if (!matrixSeen)
+    bomb("Can't do \"linear chromatic matrix\" tracking---no matrices!", NULL);
+  while (eptr) {
+    if ((eptr->p_elem || eptr->matrix) &&
+        entity_description[eptr->type].flags&MATRIX_TRACKING) {
+      bomb("Can't do \"linear chromatic matrix\" tracking---concatenation resulted in more than one matrix",
+           NULL);
+    }
+    eptr = eptr->succ;
+  }
+  return eptr0;
+}
+
+void trackWithChromaticLinearMatrix(double **particle, long particles,
+                                    TWISS *twiss,
+                                    double *tune0,
+                                    double *chrom,
+                                    double *dbeta_dPoP, 
+                                    double *dalpha_dPoP)
+{
+  long ip, plane, offset;
+  double *coord, deltaPoP, tune2pi, sin_phi, cos_phi;
+  double alpha[2], beta[2], beta1, alpha1;
+  double R11, R22, R12;
+  static VMATRIX *M1 = NULL;
+  double lastDPoP = -1;
+  if (!M1) {
+    M1 = tmalloc(sizeof(*M1));
+    initialize_matrices(M1, 1);
+  }
+  beta[0] = twiss->betax;
+  beta[1] = twiss->betay;
+  alpha[0] = twiss->alphax;
+  alpha[1] = twiss->alphay;
+  for (ip=0; ip<particles; ip++) {
+    coord = particle[ip];
+    deltaPoP = coord[5];
+    if (deltaPoP!=lastDPoP) {
+      for (plane=0; plane<2; plane++) {
+        tune2pi = PIx2*(tune0[plane] + chrom[plane]*deltaPoP);
+        offset = 2*plane;
+        /* R11=R22 or R33=R44 */
+        sin_phi = sin(tune2pi);
+        cos_phi = cos(tune2pi);
+        beta1 = beta[plane]+dbeta_dPoP[plane]*deltaPoP;
+        alpha1 = alpha[plane]+dalpha_dPoP[plane]*deltaPoP;
+        /* R11 or R33 */
+        R11 = M1->R[0+offset][0+offset] = cos_phi + alpha1*sin_phi;
+        /* R22 or R44 */
+        R22 = M1->R[1+offset][1+offset] = cos_phi - alpha1*sin_phi;
+        /* R12 or R34 */
+        if (R12 = M1->R[0+offset][1+offset] = beta1*sin_phi) {
+          /* R21 or R43 */
+          M1->R[1+offset][0+offset] = 
+            (R11*R22-1)/R12;
+        }
+        else {
+          bomb("divided by zero in trackWithChromaticLinearMatrix", NULL);
+        }
+      }
+    }
+    M1->R[4][4] = M1->R[5][5] = 1;
+    lastDPoP = deltaPoP;
+    track_particles(&coord, M1, &coord, 1);
+  }
+}

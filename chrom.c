@@ -12,7 +12,6 @@
 
 static FILE *fp_sl = NULL;
 static long alter_defined_values;
-void computeChromaticities(double *chromx, double *chromy, TWISS *twiss, VMATRIX *M);
 
 void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, CHROM_CORRECTION *chrom)
 {
@@ -130,7 +129,7 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
     m_alloc(&(chrom->dchrom), 2, 1);
 
     fprintf(stderr, "Computing chromaticity influence matrix for all named sextupoles.\n");
-    computeChromaticities(&chromx0, &chromy0, beamline->twiss0, M=beamline->matrix);
+    computeChromaticities(&chromx0, &chromy0, NULL, NULL, NULL, NULL, beamline->twiss0, M=beamline->matrix);
 
     for (i=0; i<chrom->n_families; i++) {
         count = 0;
@@ -158,7 +157,7 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
         if (beamline->links)
             assert_element_links(beamline->links, run, beamline, STATIC_LINK+DYNAMIC_LINK);
         M = full_matrix(beamline->elem_twiss, run, 2);
-        computeChromaticities(&chromx, &chromy, beamline->twiss0, M);
+        computeChromaticities(&chromx, &chromy, NULL, NULL, NULL, NULL, beamline->twiss0, M);
 
         C->a[0][i] = (chromx-chromx0)/chrom->sextupole_tweek;
         C->a[1][i] = (chromy-chromy0)/chrom->sextupole_tweek;
@@ -262,7 +261,7 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
     if (chrom->use_perturbed_matrix)
       computeChromCorrectionMatrix(run, beamline, chrom);
     
-    computeChromaticities(&chromx0, &chromy0, beamline->twiss0, M);
+    computeChromaticities(&chromx0, &chromy0, NULL, NULL, NULL, NULL, beamline->twiss0, M);
 
     fprintf(stderr, "\nAdjusting chromaticities:\n");
     fprintf(stderr, "initial chromaticities:  %e  %e\n", chromx0, chromy0);
@@ -342,7 +341,7 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
         
         if (!M || !M->C || !M->R || !M->T)
             bomb("something wrong with transfer map for beamline (do_chromaticity_correction.2)", NULL);
-        computeChromaticities(&chromx0, &chromy0, beamline->twiss0, M);
+        computeChromaticities(&chromx0, &chromy0, NULL, NULL, NULL, NULL, beamline->twiss0, M);
         beamline->chromaticity[0] = chromx0;
         beamline->chromaticity[1] = chromy0;
         fprintf(stderr, "resulting chromaticities:  %e  %e\n", chromx0, chromy0);
@@ -369,18 +368,80 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
     return 1;
     }
 
-void computeChromaticities(double *chromx, double *chromy, TWISS *twiss, VMATRIX *M)
+void computeChromaticities(double *chromx, double *chromy, 
+                           double *dbetax, double *dbetay,
+                           double *dalphax, double *dalphay,
+                           TWISS *twiss, VMATRIX *M)
 {
-    double dR11, dR22, dR33, dR44;
-
+  double computeChromaticDerivRElem(long i, long j, TWISS *twiss, VMATRIX *M);
+  double dR11, dR22, dR12, dR33, dR34, dR44;
+  
+  dR11 = computeChromaticDerivRElem(1, 1, twiss, M);
+  dR12 = computeChromaticDerivRElem(1, 2, twiss, M);
+  dR22 = computeChromaticDerivRElem(2, 2, twiss, M);
+  dR33 = computeChromaticDerivRElem(3, 3, twiss, M);
+  dR34 = computeChromaticDerivRElem(3, 4, twiss, M);
+  dR44 = computeChromaticDerivRElem(4, 4, twiss, M);
+  *chromx = -(dR11 + dR22)/M->R[0][1]*twiss->betax/(2*PIx2);
+  *chromy = -(dR33 + dR44)/M->R[2][3]*twiss->betay/(2*PIx2);
+  if (dbetax) {
+    if (M->R[0][1])
+      *dbetax = twiss->betax*(dR12 - PI*twiss->betax*(*chromx)*(M->R[0][0]+M->R[1][1]))/M->R[0][1];
+    else
+      *dbetax = DBL_MAX;
+  }
+  if (dalphax) {
+    if (M->R[0][1])
+      *dalphax = twiss->betax/(2*M->R[0][1])*
+        (-twiss->alphax*(M->R[0][0]+M->R[1][1])*PIx2*(*chromx) + dR11-dR22);
+    else
+      *dalphax = DBL_MAX;
+  }
+  if (dbetay) {
+    if (M->R[2][3])
+      *dbetay = twiss->betay*(dR34 - PI*twiss->betay*(*chromy)*(M->R[2][2]+M->R[3][3]))/M->R[2][3];
+    else
+      *dbetay = DBL_MAX;
+  }
+  if (dalphay) {
+    if (M->R[2][3])
+      *dalphay = twiss->betay/(2*M->R[2][3])*
+        (-twiss->alphay*(M->R[2][2]+M->R[3][3])*PIx2*(*chromy) + dR33-dR44);
+    else
+      *dalphay = DBL_MAX;
+  }
+  
+/*
     dR11 = M->T[0][5][0] + 2*M->T[0][0][0]*twiss->etax  + M->T[0][1][0]*twiss->etapx +
         M->T[0][2][0]*twiss->etay + M->T[0][3][0]*twiss->etapy;
     dR22 = M->T[1][5][1] + 2*M->T[1][1][1]*twiss->etapx + M->T[1][1][0]*twiss->etax  +
         M->T[1][2][1]*twiss->etay + M->T[1][3][1]*twiss->etapy;
-    *chromx = -(dR11 + dR22)/M->R[0][1]*twiss->betax/(2*PIx2);
     dR33 = M->T[2][5][2] + 2*M->T[2][2][2]*twiss->etay  + M->T[2][3][2]*twiss->etapy +
         M->T[2][2][0]*twiss->etax + M->T[2][2][1]*twiss->etapx;
     dR44 = M->T[3][5][3] + 2*M->T[3][3][3]*twiss->etapy + M->T[3][3][2]*twiss->etay  +
         M->T[3][3][0]*twiss->etax + M->T[3][3][1]*twiss->etapx;
-    *chromy = -(dR33 + dR44)/M->R[2][3]*twiss->betay/(2*PIx2);
+*/
+}  
+
+double computeChromaticDerivRElem(long i, long j, TWISS *twiss, VMATRIX *M)
+{
+  long k;
+  double sum, eta[6] = {0,0,0,0,0,0};
+  eta[0] = twiss->etax;
+  eta[1] = twiss->etapx;
+  eta[2] = twiss->etay;
+  eta[3] = twiss->etapy;
+  eta[5] = 1;
+  i--;
+  j--;
+  for (k=sum=0; k<6; k++) {
+    if (k>j) {
+      sum += eta[k]*M->T[i][k][j];
+    } else if (k==j) {
+      sum += eta[k]*M->T[i][k][k]*2;
+    } else {
+      sum += eta[k]*M->T[i][j][k];
     }
+  }
+  return sum;
+}  
