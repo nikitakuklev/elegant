@@ -67,7 +67,7 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
   
   /* make arrays of I(t)*x and I(t)*y */
   n_binned = binTransverseTimeDistribution(posItime, pz, pbin, tmin, dt, nb, time, part, Po, np,
-                                           ztransverse->dx, ztransverse->dy);
+                                           ztransverse->dx, ztransverse->dy, 1, 1);
 
   if (n_binned!=np)
     fprintf(stdout, "warning: only %ld of %ld particles where binned (ZTRANSVERSE)\n", n_binned, np);

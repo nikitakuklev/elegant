@@ -2537,7 +2537,7 @@ on subsequent pages.
         Twiss parameters, such as that provided by the \verb|twiss_output| command.
         (Program by L. Emery)
 \item {\tt madto} --- Translates an {\tt elegant}-style lattice file (or a MAD file, with
-        some restrictions) into formats accepted by other programs, such as PARMELA, 
+        some restrictions) into formats accepted by other programs, such as COSY, PARMELA, 
         PATPET, PATRICIA, TRANSPORT, and XORBIT.  Will also generate an SDDS file containing lattice
         data.
 \item {\tt sddsanalyzebeam} --- Analyzes a beam of macro-particles and produces an SDDS file
@@ -2609,7 +2609,7 @@ on subsequent pages.
 \begin{itemize}
 \item {\bf description:} 
 \verb|madto| translates an {\tt elegant}-style (or a MAD file, with
-some restrictions) into formats accepted by other programs, such as
+some restrictions) into formats accepted by other programs, such as COSY,
 PARMELA, PATPET, PATRICIA, TRANSPORT, and XORBIT.  Will also generate
 an SDDS file containing lattice data.
 
@@ -2626,7 +2626,9 @@ madto lattice.lte lattice.trin -transport=10,5,1.5
 madto {\em inputfile} {\em outputfile}
  \{-patricia | -patpet | -transport[={\em quadAper(mm)},{\em sextAper(mm)},{\em p(GeV/c)}]
             | -parmela[={\em quadAper(mm)},{\em sextAper(mm)},{\em p(GeV/c)}]
-            | -sdds[={\em p(GeV/c)}] | -xorbit\}
+            | -sdds[={\em p(GeV/c)}] \
+            | -cosy={\em quadAper(mm)},{\em sextAper(mm)},{\em p(MeV/c)} \
+            | -xorbit\}
  [-angle\_tolerance={\em value}] [-flip\_k\_signs] [-magnets={\em filename}]
  [-header={\em filename}] [-ender={\em filename}]
 }\end{flushleft}
@@ -2639,6 +2641,9 @@ madto {\em inputfile} {\em outputfile}
 
 \item {\bf switches:}
 \begin{itemize}
+\item {\bf -cosy} --- Provide data for the program COSY INFINITY.  This can take a little while
+  as the program must figure out the Enge coefficients that correspond to the {\tt FINT} and
+  {\tt HGAP} values for all the dipoles.
 \item {\bf -patricia} --- Provide data for the program PATRICIA.
 \item {\bf -patpet} --- Provide data for the program PATPET, a merging of the programs
         PATRICIA and PETROS.

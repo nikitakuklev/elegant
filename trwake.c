@@ -73,7 +73,8 @@ void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
     rotateBeamCoordinates(part, np, -1*wakeData->tilt);
   
   n_binned = binTransverseTimeDistribution(posItime, pz, pbin, tmin, dt, nb, time, part, Po, np,
-                                           wakeData->dx, wakeData->dy);
+                                           wakeData->dx, wakeData->dy,
+                                           wakeData->xPower, wakeData->yPower);
   if (n_binned!=np) {
     fprintf(stdout, "warning: only %ld of %ld particles where binned (TRWAKE)\n", n_binned, np);
     fprintf(stdout, "consider setting n_bins=0 in TRWAKE definition to invoke autoscaling\n");
@@ -231,11 +232,21 @@ void set_up_trwake(TRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
 
     wakeData->W[0] = wakeData->W[1] = NULL;
     if (wakeData->WxColumn) {
-      if (SDDS_CheckColumn(&SDDSin, wakeData->WxColumn, "V/C/m", SDDS_ANY_FLOATING_TYPE, 
-                           stdout)!=SDDS_CHECK_OK) {
-        fprintf(stderr, "Error: problem with Wx wake column for TRWAKE file %s---check existence, units, and type", 
-                wakeData->inputFile);
-        exit(1);
+      if (wakeData->xPower==1) {
+        if (SDDS_CheckColumn(&SDDSin, wakeData->WxColumn, "V/C/m", SDDS_ANY_FLOATING_TYPE, 
+                             stdout)!=SDDS_CHECK_OK) {
+          fprintf(stderr, "Error: problem with Wx wake column for TRWAKE file %s---check existence, units, and type", 
+                  wakeData->inputFile);
+          exit(1);
+        }
+      } 
+      else if (wakeData->xPower==0) {
+        if (SDDS_CheckColumn(&SDDSin, wakeData->WxColumn, "V/C", SDDS_ANY_FLOATING_TYPE, 
+                             stdout)!=SDDS_CHECK_OK) {
+          fprintf(stderr, "Error: problem with Wx wake column for TRWAKE file %s---check existence, units, and type", 
+                  wakeData->inputFile);
+          exit(1);
+        }
       }
       if (!(wakeData->W[0]=SDDS_GetColumnInDoubles(&SDDSin, wakeData->WxColumn))) {
         fprintf(stderr, "Error: unable to retrieve Wx data from TRWAKE file %s\n", wakeData->inputFile);
@@ -243,11 +254,21 @@ void set_up_trwake(TRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
       }
     }
     if (wakeData->WyColumn) {
-      if (SDDS_CheckColumn(&SDDSin, wakeData->WyColumn, "V/C/m", SDDS_ANY_FLOATING_TYPE, 
-                           stdout)!=SDDS_CHECK_OK) {
-        fprintf(stderr, "Error: problem with Wy wake column for TRWAKE file %s---check existence, units, and type", 
-                wakeData->inputFile);
-        exit(1);
+      if (wakeData->yPower==1) {
+        if (SDDS_CheckColumn(&SDDSin, wakeData->WyColumn, "V/C/m", SDDS_ANY_FLOATING_TYPE, 
+                             stdout)!=SDDS_CHECK_OK) {
+          fprintf(stderr, "Error: problem with Wy wake column for TRWAKE file %s---check existence, units, and type", 
+                  wakeData->inputFile);
+          exit(1);
+        }
+      }
+      else if (wakeData->yPower==0) {
+        if (SDDS_CheckColumn(&SDDSin, wakeData->WyColumn, "V/C", SDDS_ANY_FLOATING_TYPE, 
+                             stdout)!=SDDS_CHECK_OK) {
+          fprintf(stderr, "Error: problem with Wy wake column for TRWAKE file %s---check existence, units, and type", 
+                  wakeData->inputFile);
+          exit(1);
+        }
       }
       if (!(wakeData->W[1]=SDDS_GetColumnInDoubles(&SDDSin, wakeData->WyColumn))) {
         fprintf(stderr, "Error: unable to retrieve Wy data from TRWAKE file %s\n", wakeData->inputFile);
@@ -301,7 +322,7 @@ double computeTimeCoordinates(double *time, double Po, double **part, long np)
 
 long binTransverseTimeDistribution(double **posItime, double *pz, long *pbin, double tmin, double dt, long nb,
                                    double *time, double **part, double Po, long np,
-                                   double dx, double dy)
+                                   double dx, double dy, long xPower, long yPower)
 {
   long ip, ib, n_binned;
   for (ib=0; ib<nb; ib++)
@@ -314,8 +335,18 @@ long binTransverseTimeDistribution(double **posItime, double *pz, long *pbin, do
       continue;
     if (ib>nb - 1)
       continue;
-    posItime[0][ib] += part[ip][0]-dx;
-    posItime[1][ib] += part[ip][2]-dy;
+    if (xPower==1)
+      posItime[0][ib] += part[ip][0]-dx;
+    else if (xPower<1)
+      posItime[0][ib] += 1;
+    else
+      posItime[0][ib] += ipow(part[ip][0]-dx, xPower);
+    if (yPower==1)
+      posItime[1][ib] += part[ip][2]-dy;
+    else if (yPower<1)
+      posItime[1][ib] += 1;
+    else
+      posItime[1][ib] += ipow(part[ip][2]-dy, yPower);
     pbin[ip] = ib;
     pz[ip] = Po*(1+part[ip][5])/sqrt(1+sqr(part[ip][1])+sqr(part[ip][3]));
     n_binned++;

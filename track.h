@@ -629,7 +629,7 @@ extern char *entity_text[N_TYPES];
 #define N_FMULT_PARAMS 9
 #define N_BMAPXY_PARAMS 5
 #define N_WAKE_PARAMS 12
-#define N_TRWAKE_PARAMS 16
+#define N_TRWAKE_PARAMS 18
 #define N_TUBEND_PARAMS 6
 #define N_CHARGE_PARAMS 2
 #define N_PFILTER_PARAMS 5
@@ -1775,6 +1775,7 @@ typedef struct {
     long interpolate;          /* flag to turn on interpolation */
     long smoothing, SGHalfWidth, SGOrder;  /* flag to turn on smoothing plus control parameters */
     double dx, dy, tilt;
+    long xPower, yPower;
     /* for internal use: */
     long initialized;          /* indicates that files are loaded */
     long wakePoints, isCopy;
@@ -2492,7 +2493,7 @@ void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
 double computeTimeCoordinates(double *time, double Po, double **part, long np);
 long binTransverseTimeDistribution(double **posItime, double *pz, long *pbin, double tmin,
                                    double dt, long nb, double *time, double **part, double Po, long np,
-                                   double dx, double dy);
+                                   double dx, double dy, long xPower, long yPower);
 long binTimeDistribution(double *Itime, long *pbin, double tmin,
                          double dt, long nb, double *time, double **part, double Po, long np);
 

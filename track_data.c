@@ -1253,6 +1253,8 @@ PARAMETER trwake_param[N_TRWAKE_PARAMS] = {
     {"DX", "M", IS_DOUBLE, 0, (long)((char *)&trwake_example.dx), NULL, 0.0, 0, "misalignment"},
     {"DY", "M", IS_DOUBLE, 0, (long)((char *)&trwake_example.dy), NULL, 0.0, 0, "misalignment"},
     {"TILT", "RAD", IS_DOUBLE, 0, (long)((char *)&trwake_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
+    {"XPOWER", "", IS_LONG, 0, (long)((char *)&trwake_example.xPower), NULL, 0.0, 1, "Power of x that x kick depends on."},
+    {"YPOWER", "", IS_LONG, 0, (long)((char *)&trwake_example.yPower), NULL, 0.0, 1, "Power of y that y kick depends on."},
     };
 
 CHARGE charge_example;
