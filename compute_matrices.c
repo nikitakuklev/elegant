@@ -913,6 +913,10 @@ void reset_special_elements(LINE_LIST *beamline, long includeRF)
           case T_KSEXT:
             ((KSEXT*)eptr->p_elem)->randomMultipoleData.randomized = 0;
             break;
+          case T_MATR:
+            if (includeRF)
+              ((MATR*)eptr->p_elem)->fiducialSeen = 0;
+            break;
           default:
             break;
             }

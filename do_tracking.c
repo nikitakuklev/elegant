@@ -21,6 +21,9 @@ void trackWithChromaticLinearMatrix(double **particle, long particles,
                                     double *chrom,
                                     double *dbeta_dPoP, 
                                     double *dalpha_dPoP);
+void matr_element_tracking(double **coord, VMATRIX *M, MATR *matr,
+                           long np, double z);
+
 
 static TRACKING_CONTEXT trackingContext;
 
@@ -599,6 +602,10 @@ long do_tracking(
               bomb("no matrix for alpha magnet", NULL);
             n_left = alpha_magnet_tracking(coord, eptr->matrix, (ALPH*)eptr->p_elem, n_to_track,
                                            accepted, *P_central, z);
+            break;
+          case T_MATR:
+            matr_element_tracking(coord, eptr->matrix, (MATR*)eptr->p_elem, n_to_track,
+                                  z);
             break;
           case T_MULT:
             n_left = multipole_tracking(coord, n_to_track, (MULT*)eptr->p_elem, 0.0,
@@ -1467,4 +1474,24 @@ void getTrackingContext(TRACKING_CONTEXT *trackingContext0)
   memcpy(trackingContext0, &trackingContext, sizeof(trackingContext));
 }
 
-
+void matr_element_tracking(double **coord, VMATRIX *M, MATR *matr,
+                           long np, double z)
+/* subtract off <s> prior to using a user-supplied matrix to avoid possible
+ * problems with R5? and T?5? elements
+ */
+{
+  long i;
+  if (!np)
+    return;
+  if (!matr->fiducialSeen) {
+    double sum = 0;
+    for (i=0; i<np; i++)
+      sum += coord[i][4];
+    matr->sReference = sum/np;
+  }
+  for (i=0; i<np; i++)
+    coord[i][4] -= matr->sReference;
+  track_particles(coord, M, coord, np);
+  for (i=0; i<np; i++)
+    coord[i][4] += matr->sReference;
+}

@@ -1296,7 +1296,8 @@ typedef struct {
     char *filename;
     long order;
     /* for internal use only */
-    long matrix_read;
+    long matrix_read, fiducialSeen;
+    double sReference;
     VMATRIX M;
     } MATR;
 
