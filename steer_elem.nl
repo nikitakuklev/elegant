@@ -10,7 +10,7 @@
     STRING element_type = NULL;
     STRING item = NULL;
     STRING plane = "h";
-    double tweek = 1e-3;
+    double tweek = 1e-6;
     double limit = 0;
 #end
 
