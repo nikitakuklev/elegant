@@ -858,6 +858,7 @@ PARAMETER dscatter_param[N_DSCATTER_PARAMS] = {
     {"FACTOR", "", IS_DOUBLE, 0, (long)((char*)&dscatter_example.factor), NULL, 1.0, 0, "Factor by which to multiply the independent variable values."},
     {"PROBABILITY", "", IS_DOUBLE, 0, (long)((char*)&dscatter_example.probability), NULL, 1.0, 0, "Probability that any particle will be selected for scattering."},
     {"GROUPID", "", IS_LONG, 0, (long)((char*)&dscatter_example.group), NULL, 0.0, -1, "Group ID number (nonnegative integer) for linking once-per-particle behavior of multiple elements."},
+    {"RANDOMSIGN", "", IS_LONG, 0, (long)((char*)&dscatter_example.randomSign), NULL, 0.0, -1, "If non-zero, then the scatter is given a random sign.  Useful if distribution data is one-sided."},
     } ;
     
 NIBEND nibend_example;

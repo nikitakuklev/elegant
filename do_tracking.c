@@ -2072,6 +2072,8 @@ void distributionScatter(double **part, long np, double Po, DSCATTER *scat, long
     nScattered++;
     cdf = random_2(1);
     amplitude = scat->factor*interp(scat->indepData, scat->cdfData, scat->nData, cdf, 0, 1, &interpCode);
+    if (scat->randomSign)
+      amplitude *= random_2(1)>0.5 ? 1 : -1;
     if (!interpCode)
       fprintf(stderr, "Warning: interpolation error for %s.  cdf=%e\n",
               context.elementName, cdf);

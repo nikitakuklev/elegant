@@ -663,7 +663,7 @@ extern char *entity_text[N_TYPES];
 #define N_TFBPICKUP_PARAMS 18
 #define N_TFBDRIVER_PARAMS 20
 #define N_LSCDRIFT_PARAMS  9
-#define N_DSCATTER_PARAMS 9
+#define N_DSCATTER_PARAMS 10
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -1407,7 +1407,7 @@ typedef struct {
   char *plane, *fileName, *valueName, *cdfName, *pdfName;
   long oncePerParticle;
   double factor, probability;
-  long group;
+  long group, randomSign;
   /* internal variables */
   short initialized, firstInGroup;
   long iPlane, nData, groupIndex;
