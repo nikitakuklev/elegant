@@ -875,7 +875,9 @@ PARAMETER csbend_param[N_CSBEND_PARAMS] = {
     {"B2", "1/M$a2$n", IS_DOUBLE, 0, (long)((char *)&csbend_example.b2), NULL, 0.0, 0},
     {"B3", "1/M$a3$n", IS_DOUBLE, 0, (long)((char *)&csbend_example.b3), NULL, 0.0, 0},
     {"B4", "1/M$a4$n", IS_DOUBLE, 0, (long)((char *)&csbend_example.b4), NULL, 0.0, 0},
+    {"ISR", "", IS_LONG, 0, (long)((char *)&csbend_example.isr), NULL, 0.0, 0},
     };
+
 
 CSRCSBEND csrcsbend_example;
 /* canonically-integrated sector bending magnet with CSR physical parameters */
@@ -917,6 +919,7 @@ PARAMETER csrcsbend_param[N_CSRCSBEND_PARAMS] = {
     {"B2", "1/M$a2$n", IS_DOUBLE, 0, (long)((char *)&csrcsbend_example.b2), NULL, 0.0, 0},
     {"B3", "1/M$a3$n", IS_DOUBLE, 0, (long)((char *)&csrcsbend_example.b3), NULL, 0.0, 0},
     {"B4", "1/M$a4$n", IS_DOUBLE, 0, (long)((char *)&csrcsbend_example.b4), NULL, 0.0, 0},
+    {"ISR", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.isr), NULL, 0.0, 0},
     };
 
 TUBEND tubend_example;

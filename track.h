@@ -531,7 +531,7 @@ extern char *entity_text[N_TYPES];
 #define N_RAMPP_PARAMS 1
 #define N_NISEPT_PARAMS 9
 #define N_STRAY_PARAMS 7
-#define N_CSBEND_PARAMS 32
+#define N_CSBEND_PARAMS 33
 #define N_MATTER_PARAMS 3
 #define N_RFMODE_PARAMS 18
 #define N_TRFMODE_PARAMS 12
@@ -549,7 +549,7 @@ extern char *entity_text[N_TYPES];
 #define N_CHARGE_PARAMS 2
 #define N_PFILTER_PARAMS 4
 #define N_HISTOGRAM_PARAMS 9
-#define N_CSRCSBEND_PARAMS 37
+#define N_CSRCSBEND_PARAMS 38
 #define N_CSRDRIFT_PARAMS 5
 #define N_RFCW_PARAMS 27
 
@@ -1286,6 +1286,7 @@ typedef struct {
     long kick_limit_scaling;
     long use_bn;
     double b1, b2, b3, b4;
+    long isr;
     /* for internal use only: */
     long flags;
     double k1_internal, k2_internal, k3_internal, k4_internal;
@@ -1307,6 +1308,7 @@ typedef struct {
     long outputInterval, steadyState;
     long use_bn;
     double b1, b2, b3, b4;
+    long isr;
     /* for internal use only: */
     long flags, fileActive;
     SDDS_DATASET SDDSout;

@@ -20,7 +20,7 @@ static double Fy_y4;
 static double Fx_y, Fx_x_y, Fx_x2_y, Fx_x3_y;
 static double Fx_y3, Fx_x_y3;
 
-static double rho0, rho_actual, rad_coef;
+static double rho0, rho_actual, rad_coef, isrConstant;
 
 static long particle_lost;
 static double s_lost;
@@ -135,7 +135,13 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     rad_coef = sqr(e_mks)*pow3(Po)*sqr(1+fse)/(6*PI*epsilon_o*sqr(c_mks)*me_mks*sqr(rho0));
   else
     rad_coef = 0;
-
+  /* isrConstant is the RMS increase in dP/P per meter due to incoherent SR.  */
+  if (csbend->isr)
+    isrConstant = re_mks*sqrt(55.0/(24*sqrt(3))*pow5(Po)*
+                              137.0359895/pow3(fabs(rho_actual)));
+  else
+    isrConstant = 0;
+                            
   Fy_0  = 1;
   Fy_x  = -nh;
   Fy_x2 = Fy_x3 = Fy_x4 = Fy_y2 = Fy_x_y2 = Fy_x2_y2 = Fy_y4 = 0;
@@ -475,17 +481,18 @@ void integrate_csbend_ord2(double *Qf, double *Qi, double s, long n, double rho0
     /* do kicks */
     QX += -ds*(1+X/rho0)*Fy/rho_actual;
     QY += ds*(1+X/rho0)*Fx/rho_actual;
-    if (rad_coef) {
+    if (rad_coef || isrConstant) {
       denom = sqrt(sqr(1+DPoP)-sqr(QX)-sqr(QY));
       xp = QX/denom;
       yp = QY/denom;
       QX /= (1+DPoP);
       QY /= (1+DPoP);
-      DPoP -= rad_coef*sqr(1+DPoP)*(sqr(Fx)+sqr(Fy))*sqrt(sqr(1+X/rho0)+sqr(xp)+sqr(yp))*ds;
+      DPoP -= rad_coef*sqr(1+DPoP)*(sqr(Fx)+sqr(Fy))*sqrt(sqr(1+X/rho0)+sqr(xp)+sqr(yp))*ds 
+        + isrConstant*sqrt(ds)*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
       QX *= (1+DPoP);
       QY *= (1+DPoP);
     }
-
+    
     if (i==n-1) {
       /* do half-length drift */
       if ((f=sqr(1+DPoP)-sqr(QY))<=0) {
@@ -559,7 +566,8 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double s, long n, double rho0
   double Fx, Fy, x, y, y2;
   double sine, cosi, tang;
   double sin_phi, cos_phi;
-
+  double isrFactor;
+  
 #define X0 Qi[0]
 #define XP0 Qi[1]
 #define Y0 Qi[2]
@@ -598,7 +606,9 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double s, long n, double rho0
   dist = 0;
 
   s /= n;
+  isrFactor = isrConstant*sqrt(s/3);
   for (i=0; i<n; i++) {
+    
     /* do first drift */
     dsh = s/2/(2-BETA);
     if ((f=sqr(1+DPoP)-sqr(QY))<=0) {
@@ -638,10 +648,11 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double s, long n, double rho0
     /* --do kicks */
     QX += -ds*(1+X/rho0)*Fy/rho_actual;
     QY += ds*(1+X/rho0)*Fx/rho_actual;
-    if (rad_coef) {
+    if (rad_coef || isrConstant) {
       QX /= (1+DPoP);
       QY /= (1+DPoP);
-      DPoP -= rad_coef*sqr(1+DPoP)*(sqr(Fx)+sqr(Fy))*(1+X/rho0)*ds;
+      DPoP -= rad_coef*sqr(1+DPoP)*(sqr(Fx)+sqr(Fy))*(1+X/rho0)*ds 
+        + isrFactor*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
       QX *= (1+DPoP);
       QY *= (1+DPoP);
     }
@@ -685,10 +696,11 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double s, long n, double rho0
     /* --do kicks */
     QX += -ds*(1+X/rho0)*Fy/rho_actual;
     QY += ds*(1+X/rho0)*Fx/rho_actual;
-    if (rad_coef) {
+    if (rad_coef || isrConstant) {
       QX /= (1+DPoP);
       QY /= (1+DPoP);
-      DPoP -= rad_coef*sqr(1+DPoP)*(sqr(Fx)+sqr(Fy))*(1+X/rho0)*ds;
+      DPoP -= rad_coef*sqr(1+DPoP)*(sqr(Fx)+sqr(Fy))*(1+X/rho0)*ds +
+        isrFactor*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
       QX *= (1+DPoP);
       QY *= (1+DPoP);
     }
@@ -731,10 +743,11 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double s, long n, double rho0
     /* --do kicks */
     QX += -ds*(1+X/rho0)*Fy/rho_actual;
     QY += ds*(1+X/rho0)*Fx/rho_actual;
-    if (rad_coef) {
+    if (rad_coef || isrConstant) {
       QX /= (1+DPoP);
       QY /= (1+DPoP);
-      DPoP -= rad_coef*sqr(1+DPoP)*(sqr(Fx)+sqr(Fy))*(1+X/rho0)*ds;
+      DPoP -= rad_coef*sqr(1+DPoP)*(sqr(Fx)+sqr(Fy))*(1+X/rho0)*ds +
+        isrFactor*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
       QX *= (1+DPoP);
       QY *= (1+DPoP);
     }
@@ -914,7 +927,12 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     rad_coef = sqr(e_mks)*pow3(Po)*sqr(1+fse)/(6*PI*epsilon_o*sqr(c_mks)*me_mks*sqr(rho0));
   else
     rad_coef = 0;
-
+  /* isrConstant is the RMS increase in dP/P per meter due to incoherent SR.  */
+  if (csbend->isr) 
+    isrConstant = re_mks*sqrt(55.0/(24*sqrt(3))*pow5(Po)*
+                              137.0359895/pow3(fabs(rho_actual)));
+  else
+    isrConstant = 0;
   Fy_0  = 1;
   Fy_x  = -nh;
   Fy_x2 = Fy_x3 = Fy_x4 = Fy_y2 = Fy_x_y2 = Fy_x2_y2 = Fy_y4 = 0;
