@@ -719,7 +719,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
                     optimization_data->termWeight[i]*rpn(optimization_data->term[i]));
             sum += optimization_data->termWeight[i]*rpn(optimization_data->term[i]);
           }
-          fprintf(optimization_data->fp_log, "    Error check: %le\n", sum-result);
+          fprintf(stdout, "    Error check: %le\n", sum-result);
         }
         fflush(stdout);
         fprintf(stdout, "    A total of %ld function evaluations were made.\n", n_evaluations_made);
