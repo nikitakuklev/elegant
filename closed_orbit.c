@@ -21,15 +21,19 @@ static long clorb_count = 0;
 
 #define IC_S 0
 #define IC_X 1
-#define IC_Y 2
-#define IC_ELEMENT 3
-#define IC_OCCURENCE 4
-#define IC_TYPE 5
-#define N_COLUMNS 6
+#define IC_XP 2
+#define IC_Y 3
+#define IC_YP 4
+#define IC_ELEMENT 5
+#define IC_OCCURENCE 6
+#define IC_TYPE 7
+#define N_COLUMNS 8
 static SDDS_DEFINITION column_definition[N_COLUMNS] = {
     {"s", "&column name=s, units=m, type=double, description=\"Distance\" &end"},
     {"x", "&column name=x, units=m, type=double, description=\"Horizontal position\" &end"},
+    {"xp", "&column name=xp, type=double, description=\"Horizontal slope\" &end"},
     {"y", "&column name=y, units=m, type=double, description=\"Vertical position\" &end"},
+    {"yp", "&column name=yp, type=double, description=\"Vertical slope\" &end"},
     {"ElementName", "&column name=ElementName, type=string, description=\"Element name\", format_string=%10s &end"},
     {"ElementOccurence", 
          "&column name=ElementOccurence, type=long, description=\"Occurence of element\", format_string=%6ld &end"},
@@ -206,6 +210,7 @@ void dump_closed_orbit(TRAJECTORY *traj, long n_elems, long step, double *deviat
             continue;
         if (!SDDS_SetRowValues(&SDDS_clorb, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row++,
                                IC_S, position, IC_X, traj[i].centroid[0], IC_Y, traj[i].centroid[2],
+                               IC_XP, traj[i].centroid[1], IC_YP, traj[i].centroid[3], 
                                IC_ELEMENT, name, IC_OCCURENCE, occurence, 
                                IC_TYPE, i==0?"MARK":entity_name[traj[i].elem->type], -1)) {
             fprintf(stdout, "Unable to set row %ld values (dump_closed_orbit)\n", i);
