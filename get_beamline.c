@@ -234,7 +234,7 @@ double compute_end_positions(LINE_LIST *lptr)
 {
     double z, l, theta, z_recirc;
     static ELEMENT_LIST *eptr, *eptr1;
-    long i_elem;
+    long i_elem, recircPresent;
     
     /* use length data to establish z coordinates at end of each element */
     /* also check for duplicate recirculation elements and set occurence numbers to 0 */
@@ -242,6 +242,7 @@ double compute_end_positions(LINE_LIST *lptr)
     z = z_recirc = 0;
     theta = 0;
     i_elem = 0;
+    recircPresent = 0;
     do {
         if (!(entity_description[eptr->type].flags&HAS_LENGTH))
             l = 0;
@@ -258,11 +259,12 @@ double compute_end_positions(LINE_LIST *lptr)
         else if (eptr->type==T_CSBEND)
             theta += ((CSBEND*)eptr->p_elem)->angle;
         else if (eptr->type==T_RECIRC) {
-            if (lptr->elem_recirc)
+            if (recircPresent)
                 bomb("multiple recirculation (RECIRC) elements in beamline--this doesn't make sense", NULL);
             lptr->elem_recirc = eptr;
             lptr->i_recirc = i_elem;
             z_recirc = z;
+            recircPresent = 1;
             }
         if (l<0) {
             fprintf(stdout, "warning(1): element %s has negative length = %e\n", eptr->name, l);
