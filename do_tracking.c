@@ -1896,6 +1896,8 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
   if (npNew>np) {
     BEAM *beam;
     beam = getBeamBeingTracked();
+    /* need to copy lost particle data to space above the new particles ! */
+    /* also need to copy lostOnPass data in the same way */
     if (beam->particle!=beam->original)
       free_zarray_2d((void**)(*part), beam->n_particle, 7);
     if (beam->accepted)  {
