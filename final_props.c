@@ -299,7 +299,7 @@ long compute_final_properties
   register long i, j;
   long i_data, index, offset;
   double dp_min, dp_max, Ddp;
-  double p_sum, gamma_sum, p, sum, tc, tmin, tmax, dt, t, pAverage;
+  double p_sum, gamma_sum, p, sum, sum2, tc, tmin, tmax, dt, t, pAverage;
   double **R, centroid[6];
   MATRIX Rmat;
   static double *tData = NULL, *deltaData = NULL;
@@ -321,17 +321,16 @@ long compute_final_properties
   /* compute centroids and sigmas */
   if (sums->n_part) {
     for (i=0; i<6; i++) 
-      centroid[i] = data[i+F_CENTROID_OFFSET] = sums->sum[i]/sums->n_part;
+      centroid[i] = data[i+F_CENTROID_OFFSET] = sums->centroid[i];
     for (i=0; i<6; i++)
-      data[i+F_SIGMA_OFFSET   ] = 
-        SAFE_SQRT(sums->sum2[i][i]/sums->n_part - sqr(centroid[i]));
+      data[i+F_SIGMA_OFFSET   ] = sqrt(sums->sigma[i][i]);
     offset = F_SIGMAT_OFFSET;
     index = 0;
     /* sigma matrix elements sij */
     for (i=0; i<6; i++) {
       /* skip the diagonal element */
       for (j=i+1; j<6; j++) 
-        data[offset++] = sums->sum2[i][j]/sums->n_part - centroid[i]*centroid[j] ;
+        data[offset++] = sums->sigma[i][j];
     }
     /* time centroid, sigma, and delta */
     tmax = dp_max = -(tmin=dp_min=DBL_MAX);

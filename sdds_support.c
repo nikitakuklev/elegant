@@ -1049,14 +1049,14 @@ void dump_centroid(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline,
             abort();
             }
         beam = sums+i;
-        if (!beam->sum) {
-            fprintf(stdout, "beam->sum is NULL, i=%ld (dump_centroid)\n", i);
+        if (!beam->centroid) {
+            fprintf(stdout, "beam->centroid is NULL, i=%ld (dump_centroid)\n", i);
             fflush(stdout);
             abort();
             }
         if (beam->n_part)
             for (j=0; j<6; j++) {
-                cent[j] = beam->sum[j]/beam->n_part;
+                cent[j] = beam->centroid[j];
                 if (isnan(cent[j]) || isinf(cent[j]))
                     cent[j] = DBL_MAX;
                 }
@@ -1146,42 +1146,25 @@ void dump_sigma(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, lo
   occurence = 1;
   for (ie=0; ie<n_elements; ie++) {
     beam  = sums+ie;
-    if (!beam->sum || !beam->sum2) {
-      fprintf(stdout, "error: sum or sum2 element of BEAM_SUMS is undefined for element %ld (%s)\n",
+    if (!beam->sigma) {
+      fprintf(stdout, "error: sigma element of BEAM_SUMS is undefined for element %ld (%s)\n",
               ie, name);
       fflush(stdout);
       exit(1);
     }
     if (beam->n_part) {
-      /* compute centroids, sigma matrix, and beam sizes (with centroid term removed) */
-      for (i=0; i<6; i++)
-        centroid[i] = beam->sum[i]/beam->n_part;
       for (i=0; i<6; i++) {
-        sigma[i][i] = beam->sum2[i][i]/beam->n_part;
-        Sigma[i] = SAFE_SQRT(beam->sum2[i][i]/beam->n_part-sqr(centroid[i]));
-#if DO_NORMEMIT_SUMS
-        if (i<4) {
-          pcentroid[i] = beam->psum[i]/beam->n_part;
-          psigma[i][i] = beam->psum2[i][i]/beam->n_part;
-          pSigma[i] = SAFE_SQRT(beam->psum2[i][i]/beam->n_part-sqr(pcentroid[i])); 
-        }
-#endif
         if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, 
-                               sNIndex[i], sqrt(sigma[i][i]), 
-                               Sx_index+i, Sigma[i],
+                               Sx_index+i, sqrt(beam->sigma[i][i]),
+                               sNIndex[i], sqrt(beam->sigma[i][i]),
                                -1)) {
           SDDS_SetError("Problem setting SDDS row values (dump_sigma)");
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
         offset = 1;
         for (j=i+1; j<6; j++, offset++) {
-          sigma[i][j] = beam->sum2[i][j]/beam->n_part - centroid[i]*centroid[j]; 
-#if DO_NORMEMIT_SUMS
-          if (i<4 && j<4)
-            psigma[i][j] = beam->psum2[i][j]/beam->n_part; 
-#endif
           if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, 
-                                 sNIndex[i]+offset, sigma[i][j], -1)) {
+                                 sNIndex[i]+offset, beam->sigma[i][j], -1)) {
             SDDS_SetError("Problem setting SDDS row values (dump_sigma)");
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
           }
@@ -1196,14 +1179,9 @@ void dump_sigma(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, lo
         }
       for (plane=0; plane<=2; plane+=2) {
         /* emittance */
-        emit = SAFE_SQRT(sqr(Sigma[0+plane]*Sigma[1+plane]) 
-                         - sqr(sigma[0+plane][1+plane]));
-#if DO_NORMEMIT_SUMS
-        emitNorm = SAFE_SQRT(sqr(pSigma[0+plane]*pSigma[1+plane]) 
-                         - sqr(psigma[0+plane][1+plane]-pcentroid[0+plane]*pcentroid[1+plane]));
-#else
-        emitNorm = emit*beam->p0*(1+centroid[5]);
-#endif
+        emit = SAFE_SQRT(beam->sigma[0+plane][0+plane]*beam->sigma[1+plane][1+plane] 
+                         - sqr(beam->sigma[0+plane][1+plane]));
+        emitNorm = emit*beam->p0*(1+beam->centroid[5]);
         if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, 
                                ex_index+plane, emit, 
                                ex_index+1+plane, emitNorm,

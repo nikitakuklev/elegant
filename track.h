@@ -57,12 +57,8 @@ typedef struct {
 #define DO_NORMEMIT_SUMS 0
 
 typedef struct {
-    double sum[6];       /* sums for centroids */
-    double sum2[6][6];   /* sums of products of coordinates, sum2[i][j] = Sum[xi*xj], j>=i */
-#if DO_NORMEMIT_SUMS
-    double psum[4];      /* x, xp, y, yp */
-    double psum2[4][4];  /* psum2[i][j] = Sum[xi*xj], j>=i, where x1=px, x3=py */
-#endif
+    double centroid[6];  /* centroid[i] = Sum(x[i]/n) */
+    double sigma[6][6];  /* sigma[i][j] = Sum((x[i]-c[i])*(x[j]-c[j])/n) */
     double maxabs[4];    /* maximum values for transverse coordinates */
     long n_part;         /* number of particles */
     double z;            /* z location */
