@@ -18,15 +18,48 @@ ELEMENT_LIST *find_element(char *elem_name,  ELEMENT_LIST **context,  ELEMENT_LI
     if (!elem)
         bomb("elem is NULL (find_element)", NULL);
 
-    if (*context==NULL)
+    if (!context || *context==NULL)
         eptr = elem;
     else
-        eptr = *context = (*context)->succ;
+        eptr = (*context)->succ;
     while (eptr && strcmp(eptr->name, elem_name)!=0)
         eptr = eptr->succ;
     log_exit("find_element");
-    return(*context=eptr);
+    if (context)
+      return *context=eptr;
+    else
+      return eptr;
     }
+
+ELEMENT_LIST *find_element_index(char *elem_name,  ELEMENT_LIST **context,  ELEMENT_LIST *elem, long *index)
+{
+  ELEMENT_LIST *eptr;
+
+  if (!elem_name)
+    bomb("elem_name is NULL (find_element)", NULL);
+  if (!elem)
+    bomb("elem is NULL (find_element)", NULL);
+
+  if (!context || *context==NULL) {
+    *index = 0;
+    eptr = elem;
+  }
+  else {
+    *index += 1;
+    eptr = (*context)->succ;
+  }
+  while (eptr && strcmp(eptr->name, elem_name)!=0) {
+    *index += 1;
+    eptr = eptr->succ;
+  }
+  if (!eptr)
+    *index = -1;
+  if (context)
+    return *context=eptr;
+  else
+    return eptr;
+}
+
 
 ELEMENT_LIST *wfind_element(char *elem_name,  ELEMENT_LIST **context,  ELEMENT_LIST *elem)
 {
@@ -38,15 +71,18 @@ ELEMENT_LIST *wfind_element(char *elem_name,  ELEMENT_LIST **context,  ELEMENT_L
     if (!elem)
         bomb("elem is NULL (wfind_element)", NULL);
 
-    if (*context==NULL)
+    if (!context || *context==NULL)
         eptr = elem;
     else
-        eptr = *context = (*context)->succ;
+        eptr = (*context)->succ;
     while (eptr && !wild_match(eptr->name, elem_name))
         eptr = eptr->succ;
 
     log_exit("wfind_element");
-    return(*context=eptr);
+    if (context)
+      return *context=eptr;
+    else
+      return eptr;
     }
 
 long confirm_parameter(char *item_name, long type)
