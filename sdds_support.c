@@ -187,7 +187,7 @@ void SDDS_CentroidOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode,
     log_exit("SDDS_CentroidOutputSetup");
     }
 
-#define SIGMA_MATRIX_COLUMNS 41
+#define SIGMA_MATRIX_COLUMNS 53
 static SDDS_DEFINITION sigma_matrix_column[SIGMA_MATRIX_COLUMNS] = {
     {"s1",    "&column name=s1, symbol=\"$gs$r$b1$n\", units=m, type=double &end"},
     {"s12",    "&column name=s12, symbol=\"$gs$r$b12$n\", units=m, type=double &end"},
@@ -216,6 +216,18 @@ static SDDS_DEFINITION sigma_matrix_column[SIGMA_MATRIX_COLUMNS] = {
     {"ma4",    "&column name=ma4, symbol=\"max$sb$ey'$sb$e\", type=double &end"},
     {"ma5",    "&column name=ma5, symbol=\"max$sb$e$gD$rs$sb$e\", type=double, units=m &end"},
     {"ma6",    "&column name=ma6, symbol=\"max$sb$e$gd$r$sb$e\", type=double &end"},
+    {"minimum1",   "&column name=minimum1, symbol=\"x$bmin$n\", type=double, units=m &end"},
+    {"minimum2",   "&column name=minimum2, symbol=\"x'$bmin$n\", type=double, units=m &end"},
+    {"minimum3",   "&column name=minimum3, symbol=\"y$bmin$n\", type=double, units=m &end"},
+    {"minimum4",   "&column name=minimum4, symbol=\"y'$bmin$n\", type=double, units=m &end"},
+    {"minimum5",   "&column name=minimum5, symbol=\"$gD$rs$bmin$n\", type=double, units=m &end"},
+    {"minimum6",   "&column name=minimum6, symbol=\"$gd$r$bmin$n\", type=double, units=m &end"},
+    {"maximum1",   "&column name=maximum1, symbol=\"x$bmax$n\", type=double, units=m &end"},
+    {"maximum2",   "&column name=maximum2, symbol=\"x'$bmax$n\", type=double, units=m &end"},
+    {"maximum3",   "&column name=maximum3, symbol=\"y$bmax$n\", type=double, units=m &end"},
+    {"maximum4",   "&column name=maximum4, symbol=\"y'$bmax$n\", type=double, units=m &end"},
+    {"maximum5",   "&column name=maximum5, symbol=\"$gD$rs$bmax$n\", type=double, units=m &end"},
+    {"maximum6",   "&column name=maximum6, symbol=\"$gd$r$bmax$n\", type=double, units=m &end"},
     {"Sx",    "&column name=Sx, symbol=\"$gs$r$bx$n\", units=m, type=double &end"},
     {"Sxp",    "&column name=Sxp, symbol=\"$gs$r$bx'$n\", type=double &end"},
     {"Sy",    "&column name=Sy, symbol=\"$gs$r$by$n\", units=m, type=double &end"},
@@ -1159,8 +1171,8 @@ void dump_sigma(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, lo
   ELEMENT_LIST *eptr;
   double emit, emitNorm;
   char *name, *type_name;
-  long s_index, ma1_index=0, Sx_index=0, occurence, ex_index=0;
-  long sNIndex[6];
+  long s_index=0, ma1_index=0, min1_index=0, max1_index=0, Sx_index=0, occurence, ex_index=0;
+  long sNIndex[6]={0,0,0,0,0,0};
 
   if (!SDDS_table)
     bomb("SDDS_TABLE pointer is NULL (dump_sigma)", NULL);
@@ -1176,6 +1188,8 @@ void dump_sigma(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, lo
       (sNIndex[4]=SDDS_GetColumnIndex(SDDS_table, "s5"))<0 ||
       (sNIndex[5]=SDDS_GetColumnIndex(SDDS_table, "s6"))<0 ||
       (ma1_index=SDDS_GetColumnIndex(SDDS_table, "ma1"))<0 ||
+      (min1_index=SDDS_GetColumnIndex(SDDS_table, "minimum1"))<0 ||
+      (max1_index=SDDS_GetColumnIndex(SDDS_table, "maximum1"))<0 ||
       (Sx_index=SDDS_GetColumnIndex(SDDS_table, "Sx"))<0 ||
       (ex_index=SDDS_GetColumnIndex(SDDS_table, "ex"))<0) {
     SDDS_SetError("Problem getting index of SDDS columns (dump_sigma)");
@@ -1226,12 +1240,21 @@ void dump_sigma(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, lo
         }
       }
       
-      /* Set values for maximum amplitudes of transverse coordinates */
-      for (i=0; i<6; i++)
+      /* Set values for maximum amplitudes of coordinates */
+      for (i=0; i<6; i++) {
         if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, ma1_index+i, beam->maxabs[i], -1)) {
           SDDS_SetError("Problem setting SDDS row values (dump_sigma)");
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
+        if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, min1_index+i, beam->min[i], -1)) {
+          SDDS_SetError("Problem setting SDDS row values (dump_sigma)");
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+        }
+        if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, max1_index+i, beam->max[i], -1)) {
+          SDDS_SetError("Problem setting SDDS row values (dump_sigma)");
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+        }
+      }
       for (plane=0; plane<=2; plane+=2) {
         /* emittance */
         emit = SAFE_SQRT(beam->sigma[0+plane][0+plane]*beam->sigma[1+plane][1+plane] 

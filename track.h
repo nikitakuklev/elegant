@@ -78,6 +78,8 @@ typedef struct {
     double centroid[6];  /* centroid[i] = Sum(x[i]/n) */
     double sigma[6][6];  /* sigma[i][j] = Sum((x[i]-c[i])*(x[j]-c[j])/n) */
     double maxabs[6];    /* maximum values for x, xp, y, yp, max deviation for s, max value for dp/p */
+    double min[6];
+    double max[6];
     long n_part;         /* number of particles */
     double z;            /* z location */
     double p0;           /* reference momentum (beta*gamma) */

@@ -107,6 +107,8 @@ void zero_beam_sums(
     for (j=0; j<6; j++)
       sums[i].maxabs[j] = 0;
     for (j=0; j<6; j++)
+      sums[i].min[j] = -(sums[i].max[j] = -DBL_MAX);
+    for (j=0; j<6; j++)
       sums[i].centroid[j] = 0;
     for (j=0; j<6; j++)
       for (k=j; k<6; k++)
@@ -137,6 +139,10 @@ void accumulate_beam_sums(
       for (i_part=0; i_part<n_part; i_part++) {
         if ((value=fabs(coord[i_part][i]))>sums->maxabs[i])
           sums->maxabs[i] = value;
+	if ((value=coord[i_part][i]) > sums->max[i])
+	  sums->max[i] = value;
+	if ((value=coord[i_part][i]) < sums->min[i])
+	  sums->min[i] = value;
       }
     }
     /* compute centroids for present beam and add in to existing centroid data */
@@ -147,9 +153,14 @@ void accumulate_beam_sums(
       centroid[i] /= n_part;
     }
     i = 4;
-    for (i_part=0; i_part<n_part; i_part++)
+    for (i_part=0; i_part<n_part; i_part++) {
       if ((value=fabs(coord[i_part][i]-centroid[i]))>sums->maxabs[i])
         sums->maxabs[i] = value;
+      if ((value=coord[i_part][i]-centroid[i])>sums->max[i])
+	sums->max[i] = value;
+      if ((value=coord[i_part][i]-centroid[i])<sums->min[i])
+	sums->min[i] = value;
+    }
     /* compute Sigma[i][j] for present beam and add to existing data */
     for (i=0; i<6; i++)
       for (j=i; j<6; j++) {
