@@ -1581,8 +1581,8 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     rms_emittance(part, 0, 1, i_top+1, &csrWake.S11, &csrWake.S12, &csrWake.S22);
     rms_emittance(part, 4, 5, i_top+1, &S55, NULL, NULL);
     csrWake.rmsBunchLength = sqrt(S55);
-    csrWake.perc68BunchLength = beam_width(0.6826, part, i_top+1, 4)/2;
-    csrWake.perc90BunchLength = beam_width(0.9, part, i_top+1, 4)/2;
+    csrWake.perc68BunchLength = approximateBeamWidth(0.6826, part, i_top+1, 4)/2;
+    csrWake.perc90BunchLength = approximateBeamWidth(0.9, part, i_top+1, 4)/2;
 #ifdef DEBUG
       fprintf(stderr, "rms bunch length = %le, percentile bunch length (68, 90) = %le, %le\n",
               csrWake.rmsBunchLength, csrWake.perc68BunchLength, csrWake.perc90BunchLength);
