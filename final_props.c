@@ -421,15 +421,19 @@ long compute_final_properties
   data[F_EMIT_OFFSET]   = rms_emittance(coord, 0, 1, sums->n_part, NULL, NULL, NULL);
   data[F_EMIT_OFFSET+1] = rms_emittance(coord, 2, 3, sums->n_part, NULL, NULL, NULL);
   /* corrected transverse emittances */
-  data[F_EMIT_OFFSET+2] = SAFE_SQRT(sqr(data[F_EMIT_OFFSET]) - 
-                                    (sqr(sums->sigma[0][5])*sums->sigma[1][1] -
-                                     2*sums->sigma[0][1]*sums->sigma[0][5]*sums->sigma[1][5] +
-                                     sqr(sums->sigma[1][5])*sums->sigma[0][0])/sums->sigma[5][5]);
-  data[F_EMIT_OFFSET+3] = SAFE_SQRT(sqr(data[F_EMIT_OFFSET+1]) - 
-                                    (sqr(sums->sigma[2][5])*sums->sigma[3][3] -
-                                     2*sums->sigma[2][3]*sums->sigma[2][5]*sums->sigma[3][5] +
-                                     sqr(sums->sigma[3][5])*sums->sigma[2][2])/sums->sigma[5][5]);
-  data[F_EMIT_OFFSET+4] = rms_longitudinal_emittance(coord, sums->n_part, p_central);
+  if (sums->sigma[5][5]) {
+    data[F_EMIT_OFFSET+2] = SAFE_SQRT(sqr(data[F_EMIT_OFFSET]) - 
+                                      (sqr(sums->sigma[0][5])*sums->sigma[1][1] -
+                                       2*sums->sigma[0][1]*sums->sigma[0][5]*sums->sigma[1][5] +
+                                       sqr(sums->sigma[1][5])*sums->sigma[0][0])/sums->sigma[5][5]);
+    data[F_EMIT_OFFSET+3] = SAFE_SQRT(sqr(data[F_EMIT_OFFSET+1]) - 
+                                      (sqr(sums->sigma[2][5])*sums->sigma[3][3] -
+                                       2*sums->sigma[2][3]*sums->sigma[2][5]*sums->sigma[3][5] +
+                                       sqr(sums->sigma[3][5])*sums->sigma[2][2])/sums->sigma[5][5]);
+  } else 
+    data[F_EMIT_OFFSET+2] = data[F_EMIT_OFFSET+3] = 0;
+
+    data[F_EMIT_OFFSET+4] = rms_longitudinal_emittance(coord, sums->n_part, p_central);
   
   /* compute normalized emittances */
   for (i=0; i<4; i++)

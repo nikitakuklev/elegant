@@ -1194,10 +1194,13 @@ void dump_sigma(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, lo
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
         /* corrected emittance */
-        emit = SAFE_SQRT(sqr(emit) - 
-                    (sqr(beam->sigma[0+plane][5])*beam->sigma[1+plane][1+plane] -
-                     2*beam->sigma[0+plane][1+plane]*beam->sigma[0+plane][5]*beam->sigma[1+plane][5] +
-                     sqr(beam->sigma[1+plane][5])*beam->sigma[0+plane][0+plane])/beam->sigma[5][5]);
+        if (beam->sigma[5][5])
+          emit = SAFE_SQRT(sqr(emit) - 
+                           (sqr(beam->sigma[0+plane][5])*beam->sigma[1+plane][1+plane] -
+                            2*beam->sigma[0+plane][1+plane]*beam->sigma[0+plane][5]*beam->sigma[1+plane][5] +
+                            sqr(beam->sigma[1+plane][5])*beam->sigma[0+plane][0+plane])/beam->sigma[5][5]);
+        else
+          emit = 0;
         emitNorm = emit*beam->p0*(1+beam->centroid[5]);
         if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, 
                                ex_index+2+2*plane, emit, 
