@@ -181,7 +181,7 @@ void SDDS_CentroidOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode,
     log_exit("SDDS_CentroidOutputSetup");
     }
 
-#define SIGMA_MATRIX_COLUMNS 35
+#define SIGMA_MATRIX_COLUMNS 39
 static SDDS_DEFINITION sigma_matrix_column[SIGMA_MATRIX_COLUMNS] = {
     {"s1",    "&column name=s1, symbol=\"$gs$r$b1$n\", units=m, type=double &end"},
     {"s12",    "&column name=s12, symbol=\"$gs$r$b12$n\", units=m, type=double &end"},
@@ -216,8 +216,12 @@ static SDDS_DEFINITION sigma_matrix_column[SIGMA_MATRIX_COLUMNS] = {
     {"Sdelta",    "&column name=Sdelta, symbol=\"$gs$bd$n$r\", type=double &end"},
     {"ex", "&column name=ex, symbol=\"$ge$r$bx$n\", units=\"$gp$rm\", type=double &end"},
     {"enx", "&column name=enx, symbol=\"$ge$r$bx,n$n\", type=double, units=\"$gp$rm$be$ncm\"  &end"},
+    {"ecx", "&column name=ecx, symbol=\"$ge$r$bx,c$n\", units=\"$gp$rm\", type=double &end"},
+    {"ecnx", "&column name=ecnx, symbol=\"$ge$r$bx,cn$n\", type=double, units=\"$gp$rm$be$ncm\"  &end"},
     {"ey", "&column name=ey, symbol=\"$ge$r$by$n\", units=\"$gp$rm\", type=double &end"},
     {"eny", "&column name=eny, symbol=\"$ge$r$by,n$n\", type=double, units=\"$gp$rm$be$ncm\"  &end"},
+    {"ecy", "&column name=ecy, symbol=\"$ge$r$by,c$n\", units=\"$gp$rm\", type=double &end"},
+    {"ecny", "&column name=ecny, symbol=\"$ge$r$by,cn$n\", type=double, units=\"$gp$rm$be$ncm\"  &end"},
     } ;
 
 void SDDS_SigmaOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row,
@@ -1183,8 +1187,21 @@ void dump_sigma(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, lo
                          - sqr(beam->sigma[0+plane][1+plane]));
         emitNorm = emit*beam->p0*(1+beam->centroid[5]);
         if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, 
-                               ex_index+plane, emit, 
-                               ex_index+1+plane, emitNorm,
+                               ex_index+2*plane, emit, 
+                               ex_index+1+2*plane, emitNorm,
+                               -1)) {
+          SDDS_SetError("Problem setting SDDS row values (dump_sigma)");
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+        }
+        /* corrected emittance */
+        emit = SAFE_SQRT(sqr(emit) - 
+                    (sqr(beam->sigma[0+plane][5])*beam->sigma[1+plane][1+plane] -
+                     2*beam->sigma[0+plane][1+plane]*beam->sigma[0+plane][5]*beam->sigma[1+plane][5] +
+                     sqr(beam->sigma[1+plane][5])*beam->sigma[0+plane][0+plane])/beam->sigma[5][5]);
+        emitNorm = emit*beam->p0*(1+beam->centroid[5]);
+        if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, 
+                               ex_index+2+2*plane, emit, 
+                               ex_index+3+2*plane, emitNorm,
                                -1)) {
           SDDS_SetError("Problem setting SDDS row values (dump_sigma)");
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);

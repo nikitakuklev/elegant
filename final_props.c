@@ -15,7 +15,7 @@
 static double tmp_safe_sqrt;
 #define SAFE_SQRT(x) ((tmp_safe_sqrt=(x))<0?0.0:sqrt(tmp_safe_sqrt))
 
-#define FINAL_PROPERTY_PARAMETERS 86
+#define FINAL_PROPERTY_PARAMETERS 90
 #define FINAL_PROPERTY_LONG_PARAMETERS 5
 #define F_SIGMA_OFFSET 0
 #define F_SIGMA_QUANS 7
@@ -26,9 +26,9 @@ static double tmp_safe_sqrt;
 #define F_T_OFFSET F_SIGMAT_OFFSET+F_SIGMAT_QUANS
 #define F_T_QUANS 5
 #define F_EMIT_OFFSET F_T_OFFSET+F_T_QUANS
-#define F_EMIT_QUANS 3
+#define F_EMIT_QUANS 5
 #define F_NEMIT_OFFSET F_EMIT_OFFSET+F_EMIT_QUANS
-#define F_NEMIT_QUANS 2
+#define F_NEMIT_QUANS 4
 #define F_WIDTH_OFFSET F_NEMIT_OFFSET+F_NEMIT_QUANS
 #define F_WIDTH_QUANS 10
 #define F_RMAT_OFFSET F_WIDTH_OFFSET+F_WIDTH_QUANS
@@ -79,9 +79,13 @@ static SDDS_DEFINITION final_property_parameter[FINAL_PROPERTY_PARAMETERS] = {
     {"Charge", "&parameter name=Charge, units=C, type=double &end"},
     {"ex", "&parameter name=ex, symbol=\"$ge$r$bx$n\", units=\"$gp$rm\", type=double &end"},
     {"ey", "&parameter name=ey, symbol=\"$ge$r$by$n\", units=\"$gp$rm\", type=double &end"},
+    {"ecx", "&parameter name=ecx, symbol=\"$ge$r$bx,c$n\", units=\"$gp$rm\", type=double &end"},
+    {"ecy", "&parameter name=ecy, symbol=\"$ge$r$by,c$n\", units=\"$gp$rm\", type=double &end"},
     {"el", "&parameter name=el, symbol=\"$ge$r$bl$n\", units=s, type=double &end"},
     {"enx", "&parameter name=enx, symbol=\"$ge$r$bx,n$n\", type=double, units=\"$gp$rm$be$ncm\"  &end"},
     {"eny", "&parameter name=eny, symbol=\"$ge$r$by,n$n\", type=double, units=\"$gp$rm$be$ncm\"  &end"},
+    {"ecnx", "&parameter name=ecnx, symbol=\"$ge$r$bx,cn$n\", type=double, units=\"$gp$rm$be$ncm\"  &end"},
+    {"ecny", "&parameter name=ecny, symbol=\"$ge$r$by,cn$n\", type=double, units=\"$gp$rm$be$ncm\"  &end"},
     {"Wx", "&parameter name=Wx, type=double, units=m, symbol=\"W$bx$n\" &end"},
     {"Wy", "&parameter name=Wy, type=double, units=m, symbol=\"W$by$n\" &end"},
     {"Dt", "&parameter name=Dt, type=double, units=s, symbol=\"$gD$rt\" &end"},
@@ -416,11 +420,20 @@ long compute_final_properties
   /* compute emittances */
   data[F_EMIT_OFFSET]   = rms_emittance(coord, 0, 1, sums->n_part, NULL, NULL, NULL);
   data[F_EMIT_OFFSET+1] = rms_emittance(coord, 2, 3, sums->n_part, NULL, NULL, NULL);
-  data[F_EMIT_OFFSET+2] = rms_longitudinal_emittance(coord, sums->n_part, p_central);
-
+  /* corrected transverse emittances */
+  data[F_EMIT_OFFSET+2] = SAFE_SQRT(sqr(data[F_EMIT_OFFSET]) - 
+                                    (sqr(sums->sigma[0][5])*sums->sigma[1][1] -
+                                     2*sums->sigma[0][1]*sums->sigma[0][5]*sums->sigma[1][5] +
+                                     sqr(sums->sigma[1][5])*sums->sigma[0][0])/sums->sigma[5][5]);
+  data[F_EMIT_OFFSET+3] = SAFE_SQRT(sqr(data[F_EMIT_OFFSET+1]) - 
+                                    (sqr(sums->sigma[2][5])*sums->sigma[3][3] -
+                                     2*sums->sigma[2][3]*sums->sigma[2][5]*sums->sigma[3][5] +
+                                     sqr(sums->sigma[3][5])*sums->sigma[2][2])/sums->sigma[5][5]);
+  data[F_EMIT_OFFSET+4] = rms_longitudinal_emittance(coord, sums->n_part, p_central);
+  
   /* compute normalized emittances */
-  data[F_NEMIT_OFFSET]   = rms_norm_emittance(coord, 0, 1, 5, sums->n_part, pAverage);
-  data[F_NEMIT_OFFSET+1] = rms_norm_emittance(coord, 2, 3, 5, sums->n_part, pAverage);
+  for (i=0; i<4; i++)
+    data[F_NEMIT_OFFSET+i]   = pAverage*data[F_EMIT_OFFSET+i];
 
   R = M->R;
   i_data = F_RMAT_OFFSET;

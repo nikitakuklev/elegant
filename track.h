@@ -370,7 +370,7 @@ typedef struct {
 #define N_BEAM_QUANTITIES 9
 extern char *beam_quan[N_BEAM_QUANTITIES];
 extern char *beam_unit[N_BEAM_QUANTITIES];
-#define N_FINAL_QUANTITIES 76
+#define N_FINAL_QUANTITIES 80
 extern char *final_quan[N_FINAL_QUANTITIES];
 extern char *final_unit[N_FINAL_QUANTITIES];
 
