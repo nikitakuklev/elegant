@@ -981,6 +981,9 @@ double optimization_function(double *value, long *invalid)
   delete_phase_references();
   reset_special_elements(beamline, 1);
 
+  if (beamline->links && beamline->links->n_links)
+    reset_element_links(beamline->links, run, beamline);
+  
   assert_parameter_values(variables->element, variables->varied_param, variables->varied_type,
                           value, variables->n_variables, beamline);
   for (i=0; i<variables->n_variables; i++)
@@ -1039,7 +1042,10 @@ double optimization_function(double *value, long *invalid)
   fprintf(stdout, "optimization_function: Computing matrices\n");
   fflush(stdout);
 #endif
-  i = compute_changed_matrices(beamline, run);
+  if (beamline->links && beamline->links->n_links)
+    rebaseline_element_links(beamline->links, run, beamline);
+  i = compute_changed_matrices(beamline, run) +
+    assert_element_links(beamline->links, run, beamline, STATIC_LINK+DYNAMIC_LINK);
   if (i) {
     beamline->flags &= ~BEAMLINE_CONCAT_CURRENT;
     beamline->flags &= ~BEAMLINE_TWISS_CURRENT;
