@@ -1,4 +1,7 @@
 /* $Log: not supported by cvs2svn $
+ * Revision 1.4  1999/02/15 14:41:26  borland
+ * Added integration vs time.
+ *
  * Revision 1.3  1999/02/11 20:46:35  borland
  * Now uses target parameter of simplexMin to accept any solution with
  * 1e-4 or better convergence.
@@ -113,6 +116,8 @@ int main( int argc, char **argv)
   double *exInteg, *eyInteg, *elInteg, *xRateInteg, *yRateInteg, *zRateInteg;
   long *passInteg;
   unsigned long dummyFlags;
+  double rfVoltage, rfHarmonic;
+  double alphac, U0, circumference;
   
   SDDS_RegisterProgramName(argv[0]);
   argc  =  scanargs(&scanned, argc, argv);
@@ -133,6 +138,7 @@ int main( int argc, char **argv)
   sigmaDeltaInput = 0;
   growthRatesOnly = 0;
   integrationTurns = 0;
+  rfVoltage = rfHarmonic = 0;
   for (i = 1; i<argc; i++) {
     if (scanned[i].arg_type == OPTION) {
       delete_chars(scanned[i].list[0], "_");
@@ -179,6 +185,17 @@ int main( int argc, char **argv)
           bomb("invalid -target syntax", NULL);
         break;
       case RF:
+        if (scanned[i].n_items<2)
+          bomb("invalid -rf syntax", NULL);
+        scanned[i].n_items--;
+        rfVoltage = rfHarmonic = 0;
+        if (!scanItemList(&dummyFlags, scanned[i].list+1, &scanned[i].n_items, 0,
+                          "voltage", SDDS_DOUBLE, &rfVoltage, 1, 0,
+                          "harmonic", SDDS_DOUBLE, &rfHarmonic, 1, 0,
+                          NULL) ||
+            rfVoltage<=0 || rfHarmonic<=0)
+          bomb("invalid -rf syntax/values", "-rf=voltage=MV,harmonic=<value>");
+        break;
       case SET_ENERGY:
         bomb("Option %s not implemented.\n", scanned[i].list[0]);
         break;
@@ -220,8 +237,8 @@ int main( int argc, char **argv)
   }
   if (!coupling) 
     bomb("Coupling value not specified.",NULL);
-  if (!length) 
-    bomb("Bunch length value not specified.",NULL);
+  if (!length && !rfVoltage) 
+    bomb("Specify either the bunch length or the rf voltage.", NULL);
 
   /***************************************************\
    * get parameter information from first input file  *
@@ -329,11 +346,17 @@ int main( int argc, char **argv)
                             "I5", &I5,
                             "taux", &taux,
                             "taudelta", &taudelta,
+                            "alphac", &alphac,
+                            "U0", &U0,
                             NULL) )
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     EMeV = sqrt(sqr(pCentral) + 1) * me_mev;
     elements = SDDS_CountRowsOfInterest(&twissPage);
     s = SDDS_GetColumnInDoubles(&twissPage, "s");
+    circumference = s[elements-1]*superperiods;
+    U0 *= superperiods;
+    if (!length && U0>rfVoltage)
+      bomb("energy loss per turn is greater than rf voltage", NULL);
     betax = SDDS_GetColumnInDoubles(&twissPage, "betax");
     betay = SDDS_GetColumnInDoubles(&twissPage, "betay");
     alphax = SDDS_GetColumnInDoubles(&twissPage, "alphax");
@@ -356,9 +379,16 @@ int main( int argc, char **argv)
     if (!emitxInput)
       emitxInput = emitx0/ ( 1 + coupling);
     emityInput = emitxInput * coupling;
-    sigmaz0 = length;
-    sigmaz = sigmaz0;
     sigmaDelta = sigmaDeltaInput;
+    if (length)
+      sigmaz0 = length;
+    else {
+      /* compute length in m from rf voltage, energy spread, etc */
+      sigmaz0 = 
+        circumference*sigmaDelta*
+          sqrt(alphac*EMeV/(PIx2*rfHarmonic*sqrt(sqr(rfVoltage)-sqr(U0))));
+    }
+    sigmaz = sigmaz0;
     emity = emityInput;
     emitx = emitxInput;
 
@@ -482,13 +512,14 @@ int main( int argc, char **argv)
                             "sigmaDelta", sigmaDelta,
                             "sigmaz0", sigmaz0,
                             "sigmaz", sigmaz, NULL) ||
-        !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, exInteg, integrationPoints, "ex") ||
-        !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, eyInteg, integrationPoints, "ey") ||
-        !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, elInteg, integrationPoints, "el") ||
-        !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, xRateInteg, integrationPoints, "IBSRatex") ||
-        !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, yRateInteg, integrationPoints, "IBSRatey") ||
-        !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, zRateInteg, integrationPoints, "IBSRatel") ||
-        !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, passInteg, integrationPoints, "Pass") ||
+        (integrationPoints && 
+         (!SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, exInteg, integrationPoints, "ex") ||
+          !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, eyInteg, integrationPoints, "ey") ||
+          !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, elInteg, integrationPoints, "el") ||
+          !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, xRateInteg, integrationPoints, "IBSRatex") ||
+          !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, yRateInteg, integrationPoints, "IBSRatey") ||
+          !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, zRateInteg, integrationPoints, "IBSRatel") ||
+          !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, passInteg, integrationPoints, "Pass"))) ||
         !SDDS_WritePage(&resultsPage))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
