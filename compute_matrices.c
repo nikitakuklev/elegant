@@ -257,7 +257,7 @@ VMATRIX *drift_matrix(double length, long order)
 VMATRIX *sextupole_matrix(double K2, double length, long maximum_order, double tilt, double fse)
 {
     VMATRIX *M;
-    double *C, **R, ***T;
+    double *C, **R, ***T, ****U;
     double temp;
     
     log_entry("sextupole_matrix");
@@ -265,40 +265,112 @@ VMATRIX *sextupole_matrix(double K2, double length, long maximum_order, double t
     K2 *= (1+fse);
 
     M = tmalloc(sizeof(*M));
-    initialize_matrices(M, M->order=MIN(2,maximum_order));
+    initialize_matrices(M, M->order=MIN(3,maximum_order));
     R = M->R;
     C = M->C;
     
     R[0][0] = R[1][1] = R[2][2] = R[3][3] = R[4][4] = R[5][5] = 1;
     C[4] = R[0][1] = R[2][3] = length;
     if (M->order>=2) {
-        T = M->T;
-        temp = K2*length/2;   /* temp = ks^2*l */
-        T[1][0][0] = -(T[1][2][2] = temp);
-        T[3][2][0] = 2*temp;
-        temp *= length;       /* temp = ks^2*l^2 */
-        T[0][0][0] = -temp/2;
-        T[0][2][2] = temp/2;
-        T[1][1][0] = -temp;
-        T[1][3][2] = temp;
-        T[2][2][0] =  T[3][3][0] = T[3][2][1] = temp;
-        temp *= length;       /* temp = ks^2*l^3 */
-        T[0][1][0] = -temp/3.;
-        T[1][1][1] = -temp/3.;
-        T[0][3][2] = T[2][3][0] = T[2][2][1] = temp/3.;
-        T[1][3][3] = temp/3.;
-        T[3][3][1] = 2*temp/3;
-        temp *= length;       /* temp = ks^2*l^4 */
-        T[0][1][1] = -temp/12;
-        T[0][3][3] =  temp/12;
-        T[2][3][1] =  temp/6;
-        /* path length terms--same as for drift */
-        T[4][1][1] = T[4][3][3] = length/2;
-        }
+      T = M->T;
+      temp = K2*length/2;   /* temp = ks^2*l */
+      T[1][0][0] = -(T[1][2][2] = temp);
+      T[3][2][0] = 2*temp;
+      temp *= length;       /* temp = ks^2*l^2 */
+      T[0][0][0] = -temp/2;
+      T[0][2][2] = temp/2;
+      T[1][1][0] = -temp;
+      T[1][3][2] = temp;
+      T[2][2][0] =  T[3][3][0] = T[3][2][1] = temp;
+      temp *= length;       /* temp = ks^2*l^3 */
+      T[0][1][0] = -temp/3.;
+      T[1][1][1] = -temp/3.;
+      T[0][3][2] = T[2][3][0] = T[2][2][1] = temp/3.;
+      T[1][3][3] = temp/3.;
+      T[3][3][1] = 2*temp/3;
+      temp *= length;       /* temp = ks^2*l^4 */
+      T[0][1][1] = -temp/12;
+      T[0][3][3] =  temp/12;
+      T[2][3][1] =  temp/6;
+      /* path length terms--same as for drift */
+      T[4][1][1] = T[4][3][3] = length/2;
+
+      if (M->order >= 3) {
+        U = M->Q;
+        U[0][0][0][0] = ipow(K2,2)*ipow(length,4)/48.0 ;
+        U[0][1][0][0] = ipow(K2,2)*ipow(length,5)/48.0 ;
+        U[0][1][1][0] = ipow(K2,2)*ipow(length,6)/144.0 ;
+        U[0][1][1][1] = ipow(K2,2)*ipow(length,7)/1008.0 ;
+        U[0][2][2][0] = ipow(K2,2)*ipow(length,4)/48.0 ;
+        U[0][2][2][1] = -ipow(K2,2)*ipow(length,5)/240.0 ;
+        U[0][3][2][0] = ipow(K2,2)*ipow(length,5)/40.0 ;
+        U[0][3][2][1] = ipow(K2,2)*ipow(length,6)/360.0 ;
+        U[0][3][3][0] = ipow(K2,2)*ipow(length,6)/240.0 ;
+        U[0][3][3][1] = ipow(K2,2)*ipow(length,7)/1008.0 ;
+        U[0][5][0][0] = K2*ipow(length,2)/4.0 ;
+        U[0][5][1][0] = K2*ipow(length,3)/6.0 ;
+        U[0][5][1][1] = K2*ipow(length,4)/24.0 ;
+        U[0][5][2][2] = -K2*ipow(length,2)/4.0 ;
+        U[0][5][3][2] = -K2*ipow(length,3)/6.0 ;
+        U[0][5][3][3] = -K2*ipow(length,4)/24.0 ;
+        U[1][0][0][0] = ipow(K2,2)*ipow(length,3)/12.0 ;
+        U[1][1][0][0] = 5.0*ipow(K2,2)*ipow(length,4)/48.0 ;
+        U[1][1][1][0] = ipow(K2,2)*ipow(length,5)/24.0 ;
+        U[1][1][1][1] = ipow(K2,2)*ipow(length,6)/144.0 ;
+        U[1][2][2][0] = ipow(K2,2)*ipow(length,3)/12.0 ;
+        U[1][2][2][1] = -ipow(K2,2)*ipow(length,4)/48.0 ;
+        U[1][3][2][0] = ipow(K2,2)*ipow(length,4)/8.0 ;
+        U[1][3][2][1] = ipow(K2,2)*ipow(length,5)/60.0 ;
+        U[1][3][3][0] = ipow(K2,2)*ipow(length,5)/40.0 ;
+        U[1][3][3][1] = ipow(K2,2)*ipow(length,6)/144.0 ;
+        U[1][5][0][0] = K2*length/2.0 ;
+        U[1][5][1][0] = K2*ipow(length,2)/2.0 ;
+        U[1][5][1][1] = K2*ipow(length,3)/6.0 ;
+        U[1][5][2][2] = -K2*length/2.0 ;
+        U[1][5][3][2] = -K2*ipow(length,2)/2.0 ;
+        U[1][5][3][3] = -K2*ipow(length,3)/6.0 ;
+        U[2][2][0][0] = ipow(K2,2)*ipow(length,4)/48.0 ;
+        U[2][2][1][0] = ipow(K2,2)*ipow(length,5)/40.0 ;
+        U[2][2][1][1] = ipow(K2,2)*ipow(length,6)/240.0 ;
+        U[2][2][2][2] = ipow(K2,2)*ipow(length,4)/48.0 ;
+        U[2][3][0][0] = -ipow(K2,2)*ipow(length,5)/240.0 ;
+        U[2][3][1][0] = ipow(K2,2)*ipow(length,6)/360.0 ;
+        U[2][3][1][1] = ipow(K2,2)*ipow(length,7)/1008.0 ;
+        U[2][3][2][2] = ipow(K2,2)*ipow(length,5)/48.0 ;
+        U[2][3][3][2] = ipow(K2,2)*ipow(length,6)/144.0 ;
+        U[2][3][3][3] = ipow(K2,2)*ipow(length,7)/1008.0 ;
+        U[2][5][2][0] = -K2*ipow(length,2)/2.0 ;
+        U[2][5][2][1] = -K2*ipow(length,3)/6.0 ;
+        U[2][5][3][0] = -K2*ipow(length,3)/6.0 ;
+        U[2][5][3][1] = -K2*ipow(length,4)/12.0 ;
+        U[3][2][0][0] = ipow(K2,2)*ipow(length,3)/12.0 ;
+        U[3][2][1][0] = ipow(K2,2)*ipow(length,4)/8.0 ;
+        U[3][2][1][1] = ipow(K2,2)*ipow(length,5)/40.0 ;
+        U[3][2][2][2] = ipow(K2,2)*ipow(length,3)/12.0 ;
+        U[3][3][0][0] = -ipow(K2,2)*ipow(length,4)/48.0 ;
+        U[3][3][1][0] = ipow(K2,2)*ipow(length,5)/60.0 ;
+        U[3][3][1][1] = ipow(K2,2)*ipow(length,6)/144.0 ;
+        U[3][3][2][2] = 5.0*ipow(K2,2)*ipow(length,4)/48.0 ;
+        U[3][3][3][2] = ipow(K2,2)*ipow(length,5)/24.0 ;
+        U[3][3][3][3] = ipow(K2,2)*ipow(length,6)/144.0 ;
+        U[3][5][2][0] = -K2*length ;
+        U[3][5][2][1] = -K2*ipow(length,2)/2.0 ;
+        U[3][5][3][0] = -K2*ipow(length,2)/2.0 ;
+        U[3][5][3][1] = -K2*ipow(length,3)/3.0 ;
+        U[4][1][0][0] = -K2*ipow(length,2)/4.0 ;
+        U[4][1][1][0] = -K2*ipow(length,3)/6.0 ;
+        U[4][1][1][1] = -K2*ipow(length,4)/24.0 ;
+        U[4][2][2][1] = K2*ipow(length,2)/4.0 ;
+        U[4][3][2][0] = K2*ipow(length,2)/2.0 ;
+        U[4][3][2][1] = K2*ipow(length,3)/3.0 ;
+        U[4][3][3][0] = K2*ipow(length,3)/6.0 ;
+        U[4][3][3][1] = K2*ipow(length,4)/8.0 ;
+      }
+    }
     tilt_matrices(M, tilt);
     log_exit("sextupole_matrix");
     return(M);
-    }
+  }
 
 
 VMATRIX *solenoid_matrix(double length, double ks, long max_order)

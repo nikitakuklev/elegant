@@ -25,20 +25,20 @@ VMATRIX *quadrupole_matrix(double K1, double lHC, long maximum_order,
 {
     VMATRIX *M;
     VMATRIX *Mfringe, *Mtot, *Md, *tmp;
-    double *C, **R, ***T;
+    double *C, **R, ***T, ****U;
     double kl, k, sin_kl, cos_kl, cosh_kl, sinh_kl;
     double lNominal, lEdge=0;
     static char *fringeTypeOpt[2] = {"inset", "fixed-strength"};
     long fixedStrengthFringe = 0;
     
     K1 *= (1+fse);
-
+    
     if (K1==0 || lHC==0) {
       M = drift_matrix(lHC, maximum_order);
     }
     else {
       M = tmalloc(sizeof(*M));
-      initialize_matrices(M, M->order = MIN(2,maximum_order));
+      initialize_matrices(M, M->order = MIN(3,maximum_order));
       R = M->R;
       C = M->C;
 
@@ -99,6 +99,17 @@ VMATRIX *quadrupole_matrix(double K1, double lHC, long maximum_order,
           T[4][2][2] = -sqr(k)*(lHC - sinh_kl/k*cosh_kl)/4;
           T[4][3][2] = sqr(sinh_kl)/2;
           T[4][3][3] = (lHC + sinh_kl/k*cosh_kl)/4;
+          if (M->order>=3) {
+            U = M->Q;
+            U[0][5][5][0] = (-3.0)*kl*sin_kl/8.0-pow(k,2)*pow(lHC,2)*cos_kl/8.0 ;
+            U[0][5][5][1] = -k*pow(lHC,2)*sin_kl/8.0-pow(k,-1)*sin_kl/8.0+lHC*cos_kl/8.0 ;
+            U[1][5][5][0] = pow(k,3)*pow(lHC,2)*sin_kl/8.0+(-3.0)*k*sin_kl/8.0+(-5.0)*pow(k,2)*lHC*cos_kl/8.0 ;
+            U[1][5][5][1] = (-3.0)*kl*sin_kl/8.0-pow(k,2)*pow(lHC,2)*cos_kl/8.0 ;
+            U[2][5][5][2] = 3.0*kl*sinh_kl/8.0+pow(k,2)*pow(lHC,2)*cosh_kl/8.0 ;
+            U[2][5][5][3] = k*pow(lHC,2)*sinh_kl/8.0-pow(k,-1)*sinh_kl/8.0+lHC*cosh_kl/8.0 ;
+            U[3][5][5][2] = pow(k,3)*pow(lHC,2)*sinh_kl/8.0+3.0*k*sinh_kl/8.0+5.0*pow(k,2)*lHC*cosh_kl/8.0 ;
+            U[3][5][5][3] = 3.0*kl*sinh_kl/8.0+pow(k,2)*pow(lHC,2)*cosh_kl/8.0 ;
+          }
         }
       } else {
         /* defocussing in horizontal plane */
@@ -123,6 +134,17 @@ VMATRIX *quadrupole_matrix(double K1, double lHC, long maximum_order,
           T[4][2][2] = sqr(k)*(lHC - sin_kl/k*cos_kl)/4;
           T[4][3][2] = -sqr(sin_kl)/2;
           T[4][3][3] = (lHC + sin_kl/k*cos_kl)/4;
+          if (M->order>=3) {
+            U = M->Q;
+            U[0][5][5][0] = 3.0*kl*sinh_kl/8.0+pow(k,2)*pow(lHC,2)*cosh_kl/8.0 ;
+            U[0][5][5][1] = k*pow(lHC,2)*sinh_kl/8.0-pow(k,-1)*sinh_kl/8.0+lHC*cosh_kl/8.0 ;
+            U[1][5][5][0] = pow(k,3)*pow(lHC,2)*sinh_kl/8.0+3.0*k*sinh_kl/8.0+5.0*pow(k,2)*lHC*cosh_kl/8.0 ;
+            U[1][5][5][1] = 3.0*kl*sinh_kl/8.0+pow(k,2)*pow(lHC,2)*cosh_kl/8.0 ;
+            U[2][5][5][2] = (-3.0)*kl*sin_kl/8.0-pow(k,2)*pow(lHC,2)*cos_kl/8.0 ;
+            U[2][5][5][3] = -k*pow(lHC,2)*sin_kl/8.0-pow(k,-1)*sin_kl/8.0+lHC*cos_kl/8.0 ;
+            U[3][5][5][2] = pow(k,3)*pow(lHC,2)*sin_kl/8.0+(-3.0)*k*sin_kl/8.0+(-5.0)*pow(k,2)*lHC*cos_kl/8.0 ;
+            U[3][5][5][3] = (-3.0)*kl*sin_kl/8.0-pow(k,2)*pow(lHC,2)*cos_kl/8.0 ;
+          }
         }
       }
 
