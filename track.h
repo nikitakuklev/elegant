@@ -424,11 +424,13 @@ typedef struct {
     SLICE_OUTPUT sliceAnalysis;
     } OUTPUT_FILES;
 
+#define CONTEXT_BUFSIZE 1024
 typedef struct {
-  char elementName[1024];
+  char elementName[CONTEXT_BUFSIZE+1];
   long elementOccurrence, step;
   SLICE_OUTPUT *sliceAnalysis;
   double zStart, zEnd;
+  char rootname[CONTEXT_BUFSIZE+1];
 } TRACKING_CONTEXT;
 
 /* data arrays for awe dumps, found in dump_particlesX.c */
@@ -588,7 +590,7 @@ extern char *entity_text[N_TYPES];
 #define N_MATR_PARAMS 3
 #define N_ALPH_PARAMS 13
 #define N_RFDF_PARAMS 8
-#define N_RFTMEZ0_PARAMS 26
+#define N_RFTMEZ0_PARAMS 36
 #define N_RMDF_PARAMS 10
 #define N_TMCF_PARAMS 18
 #define N_CEPL_PARAMS 16
@@ -956,12 +958,13 @@ extern PARAMETER rftmez0_param[N_RFTMEZ0_PARAMS] ;
 typedef struct {
     double length, frequency, phase, Ez_peak, time_offset;
     long phase_reference;
-    double dx, dy, eTilt, eYaw, ePitch;
+    double dx, dy, dzMA, eTilt, eYaw, ePitch;
     long n_steps, radial_order, change_p0;
     char *inputFile, *zColumn, *EzColumn;
     char *solenoidFile, *solenoid_zColumn, *solenoid_rColumn, *solenoidBzColumn, *solenoidBrColumn;
-    double solenoidFactor, accuracy;
-    char *method, *fiducial;
+    double solenoidFactor, dxSol, dySol, dzSolMA, eTiltSol, eYawSol, ePitchSol;
+    double BxStray, ByStray, accuracy;
+    char *method, *fiducial, *fieldTestFile;
     /* variables for internal use only: */
     long initialized;
     double *fiducial_part;
@@ -975,6 +978,10 @@ typedef struct {
     long nzSol, nrSol;
     double dRSol, dZSol, Z0Sol;  /* scaled grid spacing and starting point */
     double **BrSol, **BzSol;
+    /* for use in case where user gives only on-axis data */
+    double *dBzdZSol;     /* derivative of scaled Bz wrt Z  */
+    /* Stray field */
+    double BxStrayScaled, ByStrayScaled;
     } RFTMEZ0;
 
 /* names and storage structure for ramped deflector plates using 

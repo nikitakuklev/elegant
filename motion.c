@@ -77,6 +77,9 @@ void derivatives_mapSolenoid(
     double *q,        /* X,Y,Z,Px,Py,Pz */
     double tau     
     );
+void computeFields_rftmEz0(double *E, double *BOverGamma, double *BOverGammaSol, 
+                           double q0, double q1, double q2, double tau, double gamma);
+void makeRftmEz0FieldTestFile(RFTMEZ0 *rftmEz0);
 
 void setupRftmEz0FromFile(RFTMEZ0 *rftmEz0, double frequency, double length);
 void setupRftmEz0SolenoidFromFile(RFTMEZ0 *rftmEz0, double length, double k);
@@ -127,8 +130,10 @@ static long change_p0;
 
 /* rotation matrices for tilt (roll), yaw, pitch */
 static MATRIX *partRot, *fieldRot;
+static MATRIX *partRot1, *fieldRot1;
 /* geometrical center of the element used for rotation */
 double X_center, Y_center, Z_center;
+double X_center1, Y_center1, Z_center1;
 
 #if defined(DEBUG)
 static long starting_integration;
@@ -405,7 +410,6 @@ void (*set_up_derivatives(
     if (!rftmEz0->Ez) {
       setupRftmEz0FromFile(rftmEz0, rftmEz0->frequency, rftmEz0->length);
       setupRftmEz0SolenoidFromFile(rftmEz0, rftmEz0->length, *kscale);
-      rftmEz0->initialized = 1;
     }
     if (!rftmEz0->fiducial_part) {
       /* This is the fiducial particle--the phase offset is set so 
@@ -433,17 +437,28 @@ void (*set_up_derivatives(
     *tau_start = rftmEz0->phase + PIx2*rftmEz0->frequency*rftmEz0->time_offset +
       rftmEz0->phase0;
     *Z_end = rftmEz0->length*(*kscale);
-    X_offset = -(X_center = X_aperture_center = rftmEz0->k*rftmEz0->dx);
-    Y_offset = -(Y_center = Y_aperture_center = rftmEz0->k*rftmEz0->dy);
-    Z_center = *Z_end/2;
+    X_center = X_aperture_center = rftmEz0->k*rftmEz0->dx;
+    Y_center = Y_aperture_center = rftmEz0->k*rftmEz0->dy;
+    Z_center = *Z_end/2 + rftmEz0->k*rftmEz0->dzMA;
+    X_center1 = rftmEz0->k*rftmEz0->dxSol;
+    Y_center1 = rftmEz0->k*rftmEz0->dySol;
+    Z_center1 = *Z_end/2 + rftmEz0->k*rftmEz0->dzSolMA;
     /* assume 1000m aperture for now */     
     *X_limit = rftmEz0->k*1e3;
     *Y_limit = rftmEz0->k*1e3;
     *accuracy = rftmEz0->accuracy;
     *n_steps = rftmEz0->n_steps;
     select_integrator(rftmEz0->method);
-    setupRotate3Matrix((void**)&partRot, rftmEz0->eTilt, rftmEz0->eYaw, rftmEz0->ePitch);
+    setupRotate3Matrix((void**)&partRot, -rftmEz0->eTilt, -rftmEz0->eYaw, -rftmEz0->ePitch);
     setupRotate3Matrix((void**)&fieldRot, rftmEz0->eTilt, rftmEz0->eYaw, rftmEz0->ePitch);
+    setupRotate3Matrix((void**)&partRot1, -rftmEz0->eTiltSol, -rftmEz0->eYawSol, -rftmEz0->ePitchSol);
+    setupRotate3Matrix((void**)&fieldRot1, rftmEz0->eTiltSol, rftmEz0->eYawSol, rftmEz0->ePitchSol);
+    rftmEz0->BxStrayScaled = rftmEz0->BxStray*e_mks/(me_mks*rftmEz0->k*c_mks);
+    rftmEz0->ByStrayScaled = rftmEz0->ByStray*e_mks/(me_mks*rftmEz0->k*c_mks);
+    if (!rftmEz0->initialized) {
+      makeRftmEz0FieldTestFile(rftmEz0);
+      rftmEz0->initialized = 1;
+    }
     return(derivatives_rftmEz0);
     break;
   case T_TMCF:
@@ -715,16 +730,8 @@ void derivatives_rftmEz0(
     )
 {
   double gamma, *P, *Pp;
-  double E[3], BOverGamma[3], XYZ[3];
-  RFTMEZ0 *rftmEz0;
-  long iz, ir;
-  double R, Zoffset, BphiOverRG, ErOverR, BrOverRG;
-  double X, Y, Z, sinPhase, cosPhase;
-  double B1, B2;
-#if defined(DEBUG)
-  double divisor1, divisor2;
-  static FILE *fpField = NULL;
-#endif
+  double E[3], BOverGamma[3], BOverGammaDC[3];
+  long i;
   
   derivCalls++;
   P  = q+3;
@@ -734,11 +741,37 @@ void derivatives_rftmEz0(
   qp[0] = P[0]/gamma;
   qp[1] = P[1]/gamma;
   qp[2] = P[2]/gamma;
+
+  computeFields_rftmEz0(E, BOverGamma, BOverGammaDC, 
+                        q[0], q[1], q[2], tau, gamma);
+  for (i=0; i<3; i++)
+    BOverGamma[i] += BOverGammaDC[i];
+
+  /* (Px,Py,Pz)' = (Ex,Ey,Ez) + (Px,Py,Pz)x(Bx,By,Bz)/gamma */
+  Pp = qp+3;
+  Pp[0] = -(E[0] + (P[1]*BOverGamma[2]-P[2]*BOverGamma[1]));
+  Pp[1] = -(E[1] + (P[2]*BOverGamma[0]-P[0]*BOverGamma[2]));
+  Pp[2] = -(E[2] + (P[0]*BOverGamma[1]-P[1]*BOverGamma[0]));
+
+}
+
+void computeFields_rftmEz0(double *E, double *BOverGamma, double *BOverGammaDC, 
+                           double q0, double q1, double q2, double tau, double gamma)
+{
+  double XYZ[3];
+  RFTMEZ0 *rftmEz0;
+  long iz, ir;
+  double R, Zoffset, BphiOverRG, ErOverR, BrOverRG;
+  double X, Y, Z, sinPhase, cosPhase;
+  double B1, B2;
   
+  rftmEz0 = field_global;
+
+  /*** scaled RF fields ***/
   /* find coordinates relative to element center */
-  XYZ[0] = q[0]-X_center;
-  XYZ[1] = q[1]-Y_center;
-  XYZ[2] = q[2]-Z_center;
+  XYZ[0] = q0-X_center;
+  XYZ[1] = q1-Y_center;
+  XYZ[2] = q2-Z_center;
   /* perform coordinate rotation into the element frame */
   rotate3(XYZ, partRot);
   X = XYZ[0];
@@ -746,9 +779,7 @@ void derivatives_rftmEz0(
   Z = XYZ[2] + Z_center;  /* Z is expressed relative to element start */
   R = sqrt(sqr(X)+sqr(Y));
 
-  /* get scaled RF fields */
-  rftmEz0 = field_global;
-  iz = q[2]/rftmEz0->dZ;
+  iz = Z/rftmEz0->dZ;
   if (iz<0 || iz>=rftmEz0->nz) {
     E[0] = E[1] = E[2] = 0;
     BOverGamma[0] = BOverGamma[1] = BOverGamma[2] = 0;
@@ -758,7 +789,7 @@ void derivatives_rftmEz0(
     Zoffset = Z-iz*rftmEz0->dZ;
     sinPhase = sin(tau);
     cosPhase = cos(tau);
-    E[2] = (rftmEz0->Ez[iz] + Zoffset*rftmEz0->dEzdZ[iz])*rftmEz0->Ez_peak;
+    E[2] = (rftmEz0->Ez[iz] + (rftmEz0->Ez[iz+1]-rftmEz0->Ez[iz])/rftmEz0->dZ*Zoffset)*rftmEz0->Ez_peak;
     ErOverR = -(rftmEz0->dEzdZ[iz] + 
            (rftmEz0->dEzdZ[iz+1]-rftmEz0->dEzdZ[iz])/rftmEz0->dZ*Zoffset)/2*sinPhase*rftmEz0->Ez_peak;
     E[0] = ErOverR*X;
@@ -770,82 +801,77 @@ void derivatives_rftmEz0(
     E[2] *= sinPhase;
   }
 
-  /* add scaled solenoid fields */
-  if (rftmEz0->BzSol) {
-    iz = (Z - rftmEz0->Z0Sol)/rftmEz0->dZSol;
-    Zoffset = Z - (iz*rftmEz0->dZSol + rftmEz0->Z0Sol);
-    ir = R/rftmEz0->dRSol;
-    
-    if (iz>=0 && iz<rftmEz0->nzSol && ir<rftmEz0->nrSol) {
-      if (iz==rftmEz0->nzSol-1)
-        iz -= 1;
-      if (ir==rftmEz0->nrSol-1)
-        ir -= 1;
-      BrOverRG = 0;
-      if (R>0) {
-        /* compute Br/R */
-        B1 = rftmEz0->BrSol[ir][iz] +
-          (rftmEz0->BrSol[ir+1][iz] - rftmEz0->BrSol[ir][iz])/rftmEz0->dRSol*(R-ir*rftmEz0->dRSol);
-        B2 = rftmEz0->BrSol[ir][iz+1] +
-          (rftmEz0->BrSol[ir+1][iz+1] - rftmEz0->BrSol[ir][iz+1])/rftmEz0->dRSol*(R-ir*rftmEz0->dRSol);
-        BrOverRG = (B1 + (B2-B1)*Zoffset/rftmEz0->dZSol)/gamma/R*rftmEz0->solenoidFactor;
-        BOverGamma[0] += X*BrOverRG;
-        BOverGamma[1] += Y*BrOverRG;
-      }
-      /* compute Bz/Gamma */
-      B1 = rftmEz0->BzSol[ir][iz] +
-        (rftmEz0->BzSol[ir+1][iz] - rftmEz0->BzSol[ir][iz])/rftmEz0->dRSol*(R-ir*rftmEz0->dRSol);
-      B2 = rftmEz0->BzSol[ir][iz+1] +
-        (rftmEz0->BzSol[ir+1][iz+1] - rftmEz0->BzSol[ir][iz+1])/rftmEz0->dRSol*(R-ir*rftmEz0->dRSol);
-      BOverGamma[2] = 
-        (B1 + (B2-B1)*Zoffset/rftmEz0->dZSol)/gamma*rftmEz0->solenoidFactor;
-    }
-  }
   /* E and BOverGama contain field components in the element frame for
    * the present particle position (which was expressed in the element frame
    * also).  Rotate these components back to the lab frame. 
    */
   rotate3(E, fieldRot);
   rotate3(BOverGamma, fieldRot);
-  
-  /* (Px,Py,Pz)' = (Ex,Ey,Ez) + (Px,Py,Pz)x(Bx,By,Bz)/gamma */
-  Pp = qp+3;
-  Pp[0] = -(E[0] + (P[1]*BOverGamma[2]-P[2]*BOverGamma[1]));
-  Pp[1] = -(E[1] + (P[2]*BOverGamma[0]-P[0]*BOverGamma[2]));
-  Pp[2] = -(E[2] + (P[0]*BOverGamma[1]-P[1]*BOverGamma[0]));
 
-#if defined(DEBUG)
-  if (!fpField) {
-    fpField = fopen("fields.sdds", "w");
-    fprintf(fpField, "SDDS1\n&column name=X type=double &end\n");
-    fprintf(fpField, "&column name=Y type=double &end\n");
-    fprintf(fpField, "&column name=Z type=double &end\n");
-    fprintf(fpField, "&column name=iZ, type=long &end\n");
-    fprintf(fpField, "&column name=Ex type=double &end\n");
-    fprintf(fpField, "&column name=Ey type=double &end\n");
-    fprintf(fpField, "&column name=Ez type=double &end\n");
-    fprintf(fpField, "&column name=Bx type=double &end\n");
-    fprintf(fpField, "&column name=By type=double &end\n");
-    fprintf(fpField, "&column name=Bz type=double &end\n");
-    fprintf(fpField, "&data mode=ascii no_row_counts=1 &end\n");
+  BOverGammaDC[0] = BOverGammaDC[1] = BOverGammaDC[2] = 0;
+  if (rftmEz0->BzSol) {
+    /** scaled solenoid fields **/
+    /* find coordinates relative to element center */
+    XYZ[0] = q0-X_center1;
+    XYZ[1] = q1-Y_center1;
+    XYZ[2] = q2-Z_center1;
+    /* perform coordinate rotation into the element frame */
+    rotate3(XYZ, partRot1);
+    X = XYZ[0];
+    Y = XYZ[1];
+    Z = XYZ[2] + Z_center1;  /* Z is expressed relative to element start */
+    R = sqrt(sqr(X)+sqr(Y));
+
+    iz = (Z - rftmEz0->Z0Sol)/rftmEz0->dZSol;
+    Zoffset = Z - (iz*rftmEz0->dZSol + rftmEz0->Z0Sol);
+    if (rftmEz0->dRSol)
+      ir = R/rftmEz0->dRSol;
+    else
+      ir = 0;
+    if (iz>=0 && iz<rftmEz0->nzSol && (rftmEz0->nrSol==1 || ir<rftmEz0->nrSol)) {
+      if (iz==rftmEz0->nzSol-1)
+        iz -= 1;
+      if (ir==rftmEz0->nrSol-1)
+        ir -= 1;
+      if (rftmEz0->nrSol==1) {
+        /* do off-axis expansion */
+        BOverGammaDC[2] = (rftmEz0->BzSol[0][iz] + 
+                            (rftmEz0->BzSol[0][iz+1]-rftmEz0->BzSol[0][iz])/rftmEz0->dZSol*Zoffset)
+          /gamma*rftmEz0->solenoidFactor;
+        BrOverRG = -0.5*(rftmEz0->dBzdZSol[iz] + 
+                         (rftmEz0->dBzdZSol[iz+1] - rftmEz0->dBzdZSol[iz])/rftmEz0->dZSol*Zoffset)
+          /gamma*rftmEz0->solenoidFactor;
+        /* compute x and y components */
+        BOverGammaDC[0] = X*BrOverRG;
+        BOverGammaDC[1] = Y*BrOverRG;
+      } else {
+        BrOverRG = 0;
+        if (R>0) {
+          /* compute Br/R */
+          B1 = rftmEz0->BrSol[ir][iz] +
+            (rftmEz0->BrSol[ir+1][iz] - rftmEz0->BrSol[ir][iz])/rftmEz0->dRSol*(R-ir*rftmEz0->dRSol);
+          B2 = rftmEz0->BrSol[ir][iz+1] +
+              (rftmEz0->BrSol[ir+1][iz+1] - rftmEz0->BrSol[ir][iz+1])/rftmEz0->dRSol*(R-ir*rftmEz0->dRSol);
+          BrOverRG = (B1 + (B2-B1)*Zoffset/rftmEz0->dZSol)/gamma/R*rftmEz0->solenoidFactor;
+          /* compute x and y components */
+          BOverGammaDC[0] = X*BrOverRG;
+          BOverGammaDC[1] = Y*BrOverRG;
+        }
+        /* compute Bz/Gamma */
+        B1 = rftmEz0->BzSol[ir][iz] +
+          (rftmEz0->BzSol[ir+1][iz] - rftmEz0->BzSol[ir][iz])/rftmEz0->dRSol*(R-ir*rftmEz0->dRSol);
+        B2 = rftmEz0->BzSol[ir][iz+1] +
+          (rftmEz0->BzSol[ir+1][iz+1] - rftmEz0->BzSol[ir][iz+1])/rftmEz0->dRSol*(R-ir*rftmEz0->dRSol);
+        BOverGammaDC[2] = 
+          (B1 + (B2-B1)*Zoffset/rftmEz0->dZSol)/gamma*rftmEz0->solenoidFactor;
+      }
+    }
+    rotate3(BOverGammaDC, fieldRot1);
   }
-
-  if (fabs(sinPhase)>1e-14)
-    divisor1 = sinPhase;
-  else 
-    divisor2 = 1e300;
-  if (fabs(cosPhase)>1e-14)
-    divisor2 = cosPhase;
-  else 
-    divisor2 = 1e300;
-  fprintf(fpField, "%le %le %le %ld %le %le %le %le %le %le\n",
-          X, Y, Z, iz,
-          E[0]/divisor1, E[1]/divisor1, E[2]/divisor1,
-          BOverGamma[0]*gamma/divisor2, 
-          BOverGamma[1]*gamma/divisor2, 
-          BOverGamma[2]*gamma/divisor2);
-#endif
+  BOverGammaDC[0] += rftmEz0->BxStrayScaled/gamma;
+  BOverGammaDC[1] += rftmEz0->ByStrayScaled/gamma;
 }
+
 
 void derivatives_mapSolenoid(
     double *qp,       /* derivatives w.r.t. phase */
@@ -1556,6 +1582,7 @@ void setupRftmEz0FromFile(RFTMEZ0 *rftmEz0, double frequency, double length)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
   if (!(rftmEz0->dEzdZ=SDDS_Malloc(sizeof(*(rftmEz0->dEzdZ))*rftmEz0->nz))) {
+    
     fprintf(stderr, "Error: memory allocation failure setting up RFTMEZ0 file %s\n",
             rftmEz0->inputFile);
     exit(1);
@@ -1597,9 +1624,10 @@ void setupRftmEz0FromFile(RFTMEZ0 *rftmEz0, double frequency, double length)
   for (i=1; i<rftmEz0->nz-1; i++)
     rftmEz0->dEzdZ[i] = (rftmEz0->Ez[i+1]-rftmEz0->Ez[i-1])/(2*rftmEz0->dZ);
 
-  /* for endpoints, assume field is zero outside region of data */
-  rftmEz0->dEzdZ[0] = rftmEz0->Ez[1]/(2*rftmEz0->dZ);
-  rftmEz0->dEzdZ[rftmEz0->nz-1] = rftmEz0->Ez[rftmEz0->nz-1]/(2*rftmEz0->dZ);
+  /* endpoints */
+  rftmEz0->dEzdZ[0] = (rftmEz0->Ez[1] - rftmEz0->Ez[0])/rftmEz0->dZ;
+  rftmEz0->dEzdZ[rftmEz0->nz-1] = 
+    (rftmEz0->Ez[rftmEz0->nz-1] - rftmEz0->Ez[rftmEz0->nz-2])/rftmEz0->dZ;
 
 }
 
@@ -1618,9 +1646,10 @@ void setupRftmEz0SolenoidFromFile(RFTMEZ0 *rftmEz0, double length, double k)
   if (!rftmEz0->solenoidFile)
     return;
   
-  if (!rftmEz0->solenoid_zColumn || !rftmEz0->solenoid_rColumn ||
-      !rftmEz0->solenoidBzColumn || !rftmEz0->solenoidBrColumn) 
+  if (!rftmEz0->solenoid_zColumn || !rftmEz0->solenoidBzColumn)
     SDDS_Bomb("missing column name for solenoid for RFTMEZ0 element");
+  if (rftmEz0->solenoidBrColumn && !rftmEz0->solenoid_rColumn) 
+    SDDS_Bomb("missing column name for solenoid for RFTMEZ0 element---supply r column with Br column");
 
   if (!SDDS_InitializeInputFromSearchPath(&SDDSin, rftmEz0->solenoidFile)) {
     fprintf(stderr, "Error: unable to open or read RFTMEZ0 solenoid file %s\n", 
@@ -1633,7 +1662,8 @@ void setupRftmEz0SolenoidFromFile(RFTMEZ0 *rftmEz0, double length, double k)
             rftmEz0->solenoid_zColumn, rftmEz0->solenoidFile);
     exit(1);
   }
-  if (SDDS_CheckColumn(&SDDSin, rftmEz0->solenoid_rColumn, "m", SDDS_ANY_FLOATING_TYPE,
+  if (rftmEz0->solenoid_rColumn &&
+      SDDS_CheckColumn(&SDDSin, rftmEz0->solenoid_rColumn, "m", SDDS_ANY_FLOATING_TYPE,
                        stderr)!=SDDS_CHECK_OK) {
     fprintf(stderr, "Error: problem with column %s in RFTMEZ0 solenoid file %s.  Check existence, type, and units.\n",
             rftmEz0->solenoid_rColumn, rftmEz0->solenoidFile);
@@ -1646,7 +1676,8 @@ void setupRftmEz0SolenoidFromFile(RFTMEZ0 *rftmEz0, double length, double k)
             rftmEz0->solenoidBzColumn, rftmEz0->solenoidFile);
     exit(1);
   }
-  if (SDDS_CheckColumn(&SDDSin, rftmEz0->solenoidBrColumn, "T", SDDS_ANY_FLOATING_TYPE,
+  if (rftmEz0->solenoidBrColumn &&
+      SDDS_CheckColumn(&SDDSin, rftmEz0->solenoidBrColumn, "T", SDDS_ANY_FLOATING_TYPE,
                        stderr)!=SDDS_CHECK_OK) {
     fprintf(stderr, "Error: problem with column %s in RFTMEZ0 solenoid file %s.  Check existence, type, and units.\n",
             rftmEz0->solenoidBzColumn, rftmEz0->solenoidFile);
@@ -1681,6 +1712,10 @@ void setupRftmEz0SolenoidFromFile(RFTMEZ0 *rftmEz0, double length, double k)
       }
       free(z);
     } else {
+      if (!rftmEz0->solenoidBrColumn) {
+        fprintf(stderr, "Error: multi-page file for RFTMEZ0 solenoid, but no BrColumn or rColumn\n");
+        exit(1);
+      }
       if (rftmEz0->nzSol!=SDDS_RowCount(&SDDSin)) {
         fprintf(stderr, "Error: page %ld of RFTMEZ0 file %s has only %ld rows (%ld expected)\n",
                 page, rftmEz0->solenoidFile, SDDS_RowCount(&SDDSin), rftmEz0->nzSol);
@@ -1688,51 +1723,84 @@ void setupRftmEz0SolenoidFromFile(RFTMEZ0 *rftmEz0, double length, double k)
       }
     }
 
-    if (!(rTemp = SDDS_GetColumnInDoubles(&SDDSin, rftmEz0->solenoid_rColumn))) {
-      fprintf(stderr, "Error: problem getting r data from RFTMEZ0 solenoid file %s\n",
+    if (rftmEz0->solenoidBrColumn)  {
+      if (!(rTemp = SDDS_GetColumnInDoubles(&SDDSin, rftmEz0->solenoid_rColumn))) {
+        fprintf(stderr, "Error: problem getting r data from RFTMEZ0 solenoid file %s\n",
+                rftmEz0->solenoidFile);
+        exit(1);
+      }
+      if (!(r = SDDS_Realloc(r, sizeof(*r)*page)))
+        SDDS_Bomb("memory allocation failure (setupRftmEz0SolenoidFromFile)");
+      r[page-1] = rTemp[0];
+      free(rTemp);
+      if (!(rftmEz0->BrSol = SDDS_Realloc(rftmEz0->BrSol, sizeof(*rftmEz0->BrSol)*page)) )
+        SDDS_Bomb("memory allocation failure (setupRftmEz0SolenoidFromFile)");
+      if (!(rftmEz0->BrSol[page-1] = 
+            SDDS_GetColumnInDoubles(&SDDSin, rftmEz0->solenoidBrColumn)) )  {
+        fprintf(stderr, "Error: problem getting field data from RFTMEZ0 solenoid file %s\n",
+                rftmEz0->solenoidFile);
+        exit(1);
+      }
+    }
+    
+    if (!(rftmEz0->BzSol = SDDS_Realloc(rftmEz0->BzSol, sizeof(*rftmEz0->BzSol)*page)))
+      SDDS_Bomb("memory allocation failure (setupRftmEz0SolenoidFromFile)");
+    if (!(rftmEz0->BzSol[page-1] = 
+          SDDS_GetColumnInDoubles(&SDDSin, rftmEz0->solenoidBzColumn))) {
+      fprintf(stderr, "Error: problem getting field data from RFTMEZ0 solenoid file %s\n",
               rftmEz0->solenoidFile);
       exit(1);
     }
-    if (!(r = SDDS_Realloc(r, sizeof(*r)*page)))
-      SDDS_Bomb("memory allocation failure (setupRftmEz0SolenoidFromFile)");
-    r[page-1] = rTemp[0];
-    free(rTemp);
-    
-    if (!(rftmEz0->BzSol = SDDS_Realloc(rftmEz0->BzSol, sizeof(*rftmEz0->BzSol)*page)) ||
-        !(rftmEz0->BrSol = SDDS_Realloc(rftmEz0->BrSol, sizeof(*rftmEz0->BrSol)*page)) )
-      SDDS_Bomb("memory allocation failure (setupRftmEz0SolenoidFromFile)");
-    if (!(rftmEz0->BzSol[page-1] = 
-          SDDS_GetColumnInDoubles(&SDDSin, rftmEz0->solenoidBzColumn)) ||
-        !(rftmEz0->BrSol[page-1] = 
-          SDDS_GetColumnInDoubles(&SDDSin, rftmEz0->solenoidBrColumn)) )  {
-       fprintf(stderr, "Error: problem getting field data from RFTMEZ0 solenoid file %s\n",
-               rftmEz0->solenoidFile);
-       exit(1);
-    }
     rftmEz0->nrSol = page;
   }
-
+  
   SDDS_Terminate(&SDDSin);
   
-  if (!analyzeSpacing(r, rftmEz0->nrSol, &dr, stderr)) {
-    fprintf(stderr, "Problem with r spacing of solenoid data from RFTMEZ0 file %s\nr values are:\n",
-            rftmEz0->solenoidFile);
-    for (ir=0; ir<rftmEz0->nrSol; ir++)
-      fprintf(stderr, "%le\n", r[ir]);
-    exit(1);
-  }
-  free(r);
+  if (rftmEz0->solenoid_rColumn) {
+    if (!analyzeSpacing(r, rftmEz0->nrSol, &dr, stderr)) {
+      fprintf(stderr, "Problem with r spacing of solenoid data from RFTMEZ0 file %s\nr values are:\n",
+              rftmEz0->solenoidFile);
+      for (ir=0; ir<rftmEz0->nrSol; ir++)
+        fprintf(stderr, "%le\n", r[ir]);
+      exit(1);
+    }
+    free(r);
+  } else
+    dr = 0;
   
   rftmEz0->dRSol = k*dr;
   rftmEz0->dZSol = k*dz;
   rftmEz0->Z0Sol = k*(z0-rftmEz0->z0);
-
+  
   /* perform scaling */
   for (ir=0; ir<rftmEz0->nrSol; ir++) 
-    for (iz=0; iz<rftmEz0->nzSol; iz++)  {
-      rftmEz0->BrSol[ir][iz] *= e_mks/(me_mks*k*c_mks);
+    for (iz=0; iz<rftmEz0->nzSol; iz++) 
       rftmEz0->BzSol[ir][iz] *= e_mks/(me_mks*k*c_mks);
+  if (rftmEz0->BrSol) 
+    for (ir=0; ir<rftmEz0->nrSol; ir++) 
+      for (iz=0; iz<rftmEz0->nzSol; iz++) 
+        rftmEz0->BrSol[ir][iz] *= e_mks/(me_mks*k*c_mks);
+
+  rftmEz0->dBzdZSol = NULL;
+  if (rftmEz0->nrSol==1) {
+    /* take derivative for off-axis expansion */
+
+    if (!(rftmEz0->dBzdZSol=SDDS_Malloc(sizeof(*(rftmEz0->dBzdZSol))*rftmEz0->nzSol))) {
+      fprintf(stderr, "Error: memory allocation failure setting up RFTMEZ0 file %s\n",
+              rftmEz0->solenoidFile);
+      exit(1);
     }
+    /* take derivative except at endpoints */
+    for (iz=1; iz<rftmEz0->nzSol-1; iz++)
+      rftmEz0->dBzdZSol[iz] = (rftmEz0->BzSol[0][iz+1]-rftmEz0->BzSol[0][iz-1])/(2*rftmEz0->dZSol);
+
+    /* endpoints */
+    rftmEz0->dBzdZSol[0] = 
+      (rftmEz0->BzSol[0][1] - rftmEz0->BzSol[0][0])/rftmEz0->dZSol;
+    rftmEz0->dBzdZSol[rftmEz0->nzSol-1] = 
+      (rftmEz0->BzSol[0][rftmEz0->nzSol-1] - rftmEz0->BzSol[0][rftmEz0->nzSol-2])/rftmEz0->dZSol;
+  }
+  
 }
 
 long analyzeSpacing(double *z, long nz, double *dzReturn, FILE *fpError) 
@@ -1896,5 +1964,66 @@ void setupMapSolenoidFromFile(MAP_SOLENOID *mapSol, double length)
 
   mapSol->dr = dr;
   mapSol->dz = dz;
+}
+
+void makeRftmEz0FieldTestFile(RFTMEZ0 *rftmEz0)
+{
+  double dZ, dX, dY, scale, ERFscale, BRFscale, k;
+  long iz, nz;
+  double E[3], BOverGamma[3], BOverGammaSol[3];
+  SDDS_DATASET SDDSout;
+  TRACKING_CONTEXT context;
+  getTrackingContext(&context);
+  
+  field_global = rftmEz0;
+  if (!rftmEz0->fieldTestFile)
+    return;
+  dZ = MIN(rftmEz0->dZ, rftmEz0->dZSol)/2;
+  nz = 2*(rftmEz0->nz>rftmEz0->nzSol ? rftmEz0->nz : rftmEz0->nzSol);
+  rftmEz0->fieldTestFile = compose_filename(rftmEz0->fieldTestFile, context.rootname);
+  if (!SDDS_InitializeOutput(&SDDSout, SDDS_BINARY, 0, NULL, NULL, rftmEz0->fieldTestFile) ||
+      !SDDS_DefineSimpleColumn(&SDDSout, "z", "m", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleColumn(&SDDSout, "ExRFOverr", "V/m/m", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleColumn(&SDDSout, "EyRFOverr", "V/m/m", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleColumn(&SDDSout, "EzRF", "V/m", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleColumn(&SDDSout, "BxRFOverr", "T/m", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleColumn(&SDDSout, "ByRFOverr", "T/m", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleColumn(&SDDSout, "BzRF", "T", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleColumn(&SDDSout, "BxSolOverr", "T/m", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleColumn(&SDDSout, "BySolOverr", "T/m", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleColumn(&SDDSout, "BzSol", "T", SDDS_DOUBLE) ||
+      !SDDS_WriteLayout(&SDDSout)  || !SDDS_StartPage(&SDDSout, nz)) {
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+    exit(1);
+  }
+  dX = dY = 1e-3*rftmEz0->k/sqrt(2);
+  ERFscale = 1/(sin(PI/2.0)*e_mks/(me_mks*c_mks*PIx2*rftmEz0->frequency));
+  BRFscale = 1/(cos(PI/2.0)*e_mks/(me_mks*PIx2*rftmEz0->frequency));
+  k = PIx2*rftmEz0->frequency/c_mks;
+  scale = me_mks*k*c_mks/e_mks;
+  for (iz=0; iz<nz; iz++) {
+    computeFields_rftmEz0(E, BOverGamma, BOverGammaSol, 
+                          dX, dY, iz*dZ,
+                          PI/2.0, 1.0);
+    if (!SDDS_SetRowValues(&SDDSout,
+                           SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iz,
+                           "z", iz*dZ/rftmEz0->k,
+                           "ExRFOverr", E[0]/1e-3*ERFscale,
+                           "EyRFOverr", E[1]/1e-3*ERFscale,
+                           "EzRF", E[2]*ERFscale,
+                           "BxRFOverr", BOverGamma[0]/1e-3*BRFscale,
+                           "ByRFOverr", BOverGamma[1]/1e-3*BRFscale,
+                           "BzRF", BOverGamma[2]*BRFscale,
+                           "BxSolOverr", BOverGammaSol[0]/1e-3*scale,
+                           "BySolOverr", BOverGammaSol[1]/1e-3*scale,
+                           "BzSol", BOverGammaSol[2]*scale, NULL)) {
+        SDDS_SetError("Problem setting SDDS row values (makeRftmEz0FieldTestFile)");
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+  }
+  if (!SDDS_WritePage(&SDDSout) || !SDDS_Terminate(&SDDSout)) {
+    SDDS_SetError("Problem writing or terminating file (makeRftmEz0FieldTestFile)");
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  }
 }
 

@@ -339,13 +339,14 @@ long do_tracking(
       /* fill a structure that can be used to pass to other routines 
        * information on the tracking context 
        */
-      strcpy(trackingContext.elementName, eptr->name);
+      strncpy(trackingContext.elementName, eptr->name, CONTEXT_BUFSIZE);
       trackingContext.elementOccurrence = eptr->occurence;
       trackingContext.sliceAnalysis = sliceAnalysis;
       trackingContext.zStart = last_z;
       trackingContext.zEnd = z;
       trackingContext.step = step;
-
+      strncpy(trackingContext.rootname, run->rootname, CONTEXT_BUFSIZE);
+      
       log_exit("do_tracking.2.2.1");
       if (eptr->p_elem || eptr->matrix) {
 #ifdef VAX_VMS

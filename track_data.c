@@ -444,6 +444,7 @@ PARAMETER rftmez0_param[N_RFTMEZ0_PARAMS] = {
     {"PHASE_REFERENCE", "", IS_LONG, 0, (long)((char *)&rftmez0_example.phase_reference), NULL, 0.0, 0, "phase reference number (to link to other time-dependent elements)"},
     {"DX", "M", IS_DOUBLE, 0, (long)((char *)&rftmez0_example.dx), NULL, 0.0, 0, "misalignment"},
     {"DY", "M", IS_DOUBLE, 0, (long)((char *)&rftmez0_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"DZ", "M", IS_DOUBLE, 0, (long)((char *)&rftmez0_example.dzMA), NULL, 0.0, 0, "misalignment"},
     {"ETILT", "RAD", IS_DOUBLE, 0, (long)((char *)&rftmez0_example.eTilt), NULL, 0.0, 0, "misalignment"},
     {"EYAW", "RAD", IS_DOUBLE, 0, (long)((char *)&rftmez0_example.eYaw), NULL, 0.0, 0, "misalignment"},
     {"EPITCH", "RAD", IS_DOUBLE, 0, (long)((char *)&rftmez0_example.ePitch), NULL, 0.0, 0, "misalignment"},
@@ -459,9 +460,18 @@ PARAMETER rftmez0_param[N_RFTMEZ0_PARAMS] = {
     {"SOLENOID_BZCOLUMN", "", IS_STRING, 0, (long)((char *)&rftmez0_example.solenoidBzColumn), NULL, 0.0, 0, "column containing Bz values for solenoid map."},
     {"SOLENOID_BRCOLUMN", "", IS_STRING, 0, (long)((char *)&rftmez0_example.solenoidBrColumn), NULL, 0.0, 0, "column containing Br values for solenoid map."},
     {"SOLENOID_FACTOR", "", IS_DOUBLE, 0, (long)((char *)&rftmez0_example.solenoidFactor), NULL, 1.0, 0, "factor by which to multiply solenoid fields."},        
+    {"SOLENOID_DX", "M", IS_DOUBLE, 0, (long)((char *)&rftmez0_example.dxSol), NULL, 0.0, 0, "misalignment"},
+    {"SOLENOID_DY", "M", IS_DOUBLE, 0, (long)((char *)&rftmez0_example.dySol), NULL, 0.0, 0, "misalignment"},
+    {"SOLENOID_DZ", "M", IS_DOUBLE, 0, (long)((char *)&rftmez0_example.dzSolMA), NULL, 0.0, 0, "misalignment"},
+    {"SOLENOID_ETILT", "RAD", IS_DOUBLE, 0, (long)((char *)&rftmez0_example.eTiltSol), NULL, 0.0, 0, "misalignment"},
+    {"SOLENOID_EYAW", "RAD", IS_DOUBLE, 0, (long)((char *)&rftmez0_example.eYawSol), NULL, 0.0, 0, "misalignment"},
+    {"SOLENOID_EPITCH", "RAD", IS_DOUBLE, 0, (long)((char *)&rftmez0_example.ePitchSol), NULL, 0.0, 0, "misalignment"},
+    {"BX_STRAY", "", IS_DOUBLE, 0, (long)((char *)&rftmez0_example.BxStray), NULL, 0.0, 0, "Uniform stray horizontal field"},
+    {"BY_STRAY", "", IS_DOUBLE, 0, (long)((char *)&rftmez0_example.ByStray), NULL, 0.0, 0, "Uniform stray vertical field"},
     {"ACCURACY", "", IS_DOUBLE, 0, (long)((char *)&rftmez0_example.accuracy), NULL, DEFAULT_ACCURACY, 0, "integration accuracy"},
     {"METHOD", " ", IS_STRING, 0, (long)((char *)&rftmez0_example.method), DEFAULT_INTEG_METHOD, 0.0, 0, "integration method (runge-kutta, bulirsch-stoer, non-adaptive runge-kutta, modified midpoint)"},
     {"FIDUCIAL", "", IS_STRING, 0, (long)((char *)&rftmez0_example.fiducial), DEFAULT_FIDUCIAL_MODE, 0.0, 0, "{t|p},{median|min|max|ave|first|light} (e.g., \"t,median\")"},
+    {"FIELD_TEST_FILE", "", IS_STRING, 0, (long)((char *)&rftmez0_example.fieldTestFile), NULL, 0.0, 0, "filename for output of test fields (r=0)"},
     } ;
 
 RMDF rmdf_example;
