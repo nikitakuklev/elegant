@@ -875,7 +875,7 @@ void print_dictionary_entry(FILE *fp, long type)
           case IS_LONG:
             fprintf(fp, "  %-15ld\n", entity_description[type].parameter[j].integer);
             break;
-              case IS_STRING:
+          case IS_STRING:
             fprintf(fp, "  %-15s\n", 
                     PRINTABLE_NULL(entity_description[type].parameter[j].string));
             break;
