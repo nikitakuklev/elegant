@@ -55,6 +55,9 @@ CopyrightNotice001*/
  * Michael Borland, 2002
  *
  $Log: not supported by cvs2svn $
+ Revision 1.1  2002/04/18 23:41:57  borland
+ First version, with assistence of L. Emery.
+
  */
 #include "mdb.h"
 #include "scan.h"
@@ -93,7 +96,7 @@ coupling         x emittance is ex0/(1+coupling), while y emittance is\n\
 Computes on-axis brightness for an undulator centered on the end of the beamline\n\
 the Twiss parameters for which are in the input file.  You should generate the\n\
 input file using elegant's twiss_output command with radiation_integrals=1 .\n\n\
-Program by Michael Borland.  (This is version 1, April 2002.)\n";
+Program by Michael Borland.  (This is version 2, April 2002.)\n";
 
 long SetUpOutputFile(SDDS_DATASET *SDDSout, SDDS_DATASET *SDDSin, char *outputfile, long harmonics);
 double ComputeBrightness(double period, long Nu, double K, long n,
@@ -321,7 +324,7 @@ double ComputeBrightness(double period, long Nu, double K, long n,
                          double *lambdaOut, double *FnOut)
 {
   double JArg, Nn;
-  double Sx, Sy, Sxp, Syp;
+  double Sx, Sy, Sxp, Syp, Srp2, Sr2;
   double ex, ey, lambda, Fn, sum;
   double gammax, gammay, length, broadening;
   
@@ -339,18 +342,25 @@ double ComputeBrightness(double period, long Nu, double K, long n,
 
   /* 0.001 is for 0.1% bandwidth */
   Nn = PI/137.04*Nu*(current/e_mks)*0.001*Fn*(1+sqr(K)/2)/n;
+  length = Nu*period;
+  /* radiation divergence and size, squared */
+  Srp2 = lambda/(2*length);
+  Sr2  = 2*lambda*length/sqr(4*PI);
   gammax = (1+sqr(alphax))/betax;
   gammay = (1+sqr(alphay))/betay;
-  length = Nu*period;
-  Sxp = sqrt(ex*gammax + sqr(Sdelta0*etaxp) + lambda/length);
-  Syp = sqrt(ey*gammay + sqr(Sdelta0*etayp) + lambda/length);
-  Sx = sqrt(ex*betax + sqr(Sdelta0*etax) + lambda*length/sqr(4*PI));
-  Sy = sqrt(ey*betay + sqr(Sdelta0*etay) + lambda*length/sqr(4*PI));
+  Sxp = sqrt(ex*gammax + sqr(Sdelta0*etaxp) + Srp2);
+  Syp = sqrt(ey*gammay + sqr(Sdelta0*etayp) + Srp2);
+  Sx = sqrt(ex*betax + sqr(Sdelta0*etax) + Sr2);
+  Sy = sqrt(ey*betay + sqr(Sdelta0*etay) + Sr2);
   
   *lambdaOut = lambda;
   *FnOut = Fn;
+  /* this factor includes the loss of peak brightness due to spectral
+   * broadening from the energy spread. The factor of 2 in front of Sdelta0
+   * is because wavelength ~ 1/gamma^2 
+   */
+  broadening = sqrt( sqr(0.36/(1.0*n*Nu)) / (sqr(0.36/(1.0*n*Nu)) + sqr(2*Sdelta0)));
   /* 1e-12 is to convert to 1/(mm^2*mrad^2) units */
-  broadening = sqrt( sqr(1./(2*n*Nu)) / (sqr(1./(2*n*Nu)) + sqr(2*Sdelta0)));
   return Nn/(sqr(PIx2)*Sx*Sxp*Sy*Syp)*1e-12*broadening;
 }
 
