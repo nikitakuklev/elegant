@@ -167,7 +167,8 @@ long fill_in_matrices(
                    (member->name?member->name:"{null}"), member->end_pos);
             abort();
             }
-        if (member->matrix==NULL || (member->pred && member->pred->Pref_output!=member->Pref_input)) {
+        if ((member->matrix==NULL || (member->pred && member->pred->Pref_output!=member->Pref_input)) &&
+            entity_description[member->type].flags&HAS_MATRIX) {
           compute_matrix(member, run, NULL);
           n_elements++;
         }
