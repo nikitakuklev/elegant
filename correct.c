@@ -401,7 +401,7 @@ double compute_kick_coefficient(ELEMENT_LIST *elem, long plane, long type, doubl
 
 long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *starting_coord, BEAM *beam, long sim_step)
 {
-    long i, i_cycle, x_failed, y_failed, n_iter_taken, bombed;
+    long i, i_cycle, x_failed, y_failed, n_iter_taken, bombed, final_traj;
     double *closed_orbit, rms_before, rms_after, *Cdp;
 
     log_entry("do_correction");
@@ -438,10 +438,12 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
         }
 
     correct->CMx->n_cycles_done = correct->CMy->n_cycles_done = 0;
+    final_traj = 1;
     switch (correct->mode) {
         case TRAJECTORY_CORRECTION:
             x_failed = y_failed = 0;
             for (i_cycle=0; i_cycle<correct->n_xy_cycles; i_cycle++) {
+                final_traj = 1;
                 if (!x_failed && correct->CMx->ncor) {
                     if (correct->method==GLOBAL_CORRECTION) 
                         global_trajcor_plane(correct->CMx, &correct->SLx, 0, correct->traj, correct->n_iterations, 
@@ -476,6 +478,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
                         dump_corrector_data(correct->CMx, &correct->SLx, correct->n_iterations, "horizontal", sim_step);
                     }
                 if (!y_failed && correct->CMy->ncor) {                    
+                    final_traj = 2;
                     if (correct->method==GLOBAL_CORRECTION)
                         global_trajcor_plane(correct->CMy, &correct->SLy, 2, correct->traj+1, correct->n_iterations, run, 
                                              beamline, starting_coord, (correct->use_actual_beam?beam:NULL));
@@ -515,7 +518,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
                     }
                 }
             if (correct->n_iterations>=1)
-                    dump_orb_traj(correct->traj[2], beamline->n_elems, "corrected", sim_step);
+                    dump_orb_traj(correct->traj[final_traj], beamline->n_elems, "corrected", sim_step);
             if (starting_coord)
                 for (i=0; i<6; i++)
                     starting_coord[i] = 0;  /* don't want to seem to be returning a closed orbit here */
@@ -528,6 +531,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
                 Cdp = NULL;
             x_failed = y_failed = bombed = 0;
             for (i_cycle=0; i_cycle<correct->n_xy_cycles; i_cycle++) {
+                final_traj = 1;
                 if (!x_failed && correct->CMx->ncor) {
                     if ((n_iter_taken = orbcor_plane(correct->CMx, &correct->SLx, 0, correct->traj, 
                             correct->n_iterations, correct->clorb_accuracy, correct->clorb_iterations, run, beamline, 
@@ -562,6 +566,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
                         dump_corrector_data(correct->CMx, &correct->SLx, correct->n_iterations, "horizontal", sim_step);
                     }
                 if (!y_failed && correct->CMy->ncor) {
+                    final_traj = 2;
                     if ((n_iter_taken = orbcor_plane(correct->CMy, &correct->SLy, 2, correct->traj+1, 
                             correct->n_iterations, correct->clorb_accuracy, correct->clorb_iterations, run, beamline, 
                             closed_orbit, Cdp))<0) {
@@ -600,11 +605,11 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
                     }
                 }
             if (!bombed && correct->n_iterations>=1)
-                dump_orb_traj(correct->traj[2], beamline->n_elems, "corrected", sim_step);
+                dump_orb_traj(correct->traj[final_traj], beamline->n_elems, "corrected", sim_step);
             break;
 	}
 
-    beamline->closed_orbit = correct->traj[2];
+    beamline->closed_orbit = correct->traj[final_traj];
 
     log_exit("do_correction");
     return(!bombed);
