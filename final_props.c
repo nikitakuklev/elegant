@@ -15,7 +15,7 @@
 static double tmp_safe_sqrt;
 #define SAFE_SQRT(x) ((tmp_safe_sqrt=(x))<0?0.0:sqrt(tmp_safe_sqrt))
 
-#define FINAL_PROPERTY_PARAMETERS 79
+#define FINAL_PROPERTY_PARAMETERS 80
 #define FINAL_PROPERTY_LONG_PARAMETERS 5
 #define F_SIGMA_OFFSET 0
 #define F_SIGMA_QUANS 7
@@ -24,7 +24,7 @@ static double tmp_safe_sqrt;
 #define F_SIGMAT_OFFSET F_CENTROID_OFFSET+F_CENTROID_QUANS
 #define F_SIGMAT_QUANS 15
 #define F_T_OFFSET F_SIGMAT_OFFSET+F_SIGMAT_QUANS
-#define F_T_QUANS 4
+#define F_T_QUANS 5
 #define F_EMIT_OFFSET F_T_OFFSET+F_T_QUANS
 #define F_EMIT_QUANS 3
 #define F_NEMIT_OFFSET F_EMIT_OFFSET+F_EMIT_QUANS
@@ -76,6 +76,7 @@ static SDDS_DEFINITION final_property_parameter[FINAL_PROPERTY_PARAMETERS] = {
     {"pCentral", "&parameter name=pCentral, symbol=\"p$bcen$n\", units=\"m$be$nc\", type=double &end"},
     {"pAverage", "&parameter name=pAverage, symbol=\"p$bave$n\", units=\"m$be$nc\", type=double &end"},
     {"KAverage",  "&parameter name=KAverage, symbol=\"K$bave$n\", units=MeV, type=double &end"},
+    {"Charge", "&parameter name=Charge, units=C, type=double &end"},
     {"ex", "&parameter name=ex, symbol=\"$ge$r$bx$n\", units=\"$gp$rm\", type=double &end"},
     {"ey", "&parameter name=ey, symbol=\"$ge$r$by$n\", units=\"$gp$rm\", type=double &end"},
     {"el", "&parameter name=el, symbol=\"$ge$r$bl$n\", units=s, type=double &end"},
@@ -160,7 +161,8 @@ void dump_final_properties
      long totalSteps,
      double *perturbed_quan, char *first_perturbed_quan_name, long n_perturbed_quan,
      double *optim_quan, char *first_optim_quan_name, long n_optim_quan,
-     long step, double **particle, long n_original, double p_central, VMATRIX *M)
+     long step, double **particle, long n_original, double p_central, VMATRIX *M,
+     double charge)
 {
     long n_computed, n_properties;
     double *computed_properties;
@@ -198,7 +200,7 @@ void dump_final_properties
 
     if ((n_computed=compute_final_properties
                        (computed_properties, sums, n_original, p_central, M, particle, step,
-                        totalSteps))!=
+                        totalSteps, charge))!=
         (n_properties-(n_varied_quan+n_perturbed_quan+n_optim_quan))) {
         fprintf(stderr, "error: compute_final_properties computed %ld quantities--%ld expected. (dump_final_properties)",
             n_computed, n_properties-(n_varied_quan+n_perturbed_quan+n_optim_quan));
@@ -281,7 +283,7 @@ void dump_final_properties
 
 long compute_final_properties
   (double *data, BEAM_SUMS *sums, long n_original, double p_central, VMATRIX *M, double **coord, 
-   long step, long steps)
+   long step, long steps, double charge)
 {
   register long i, j;
   long i_data, index, offset;
@@ -367,7 +369,9 @@ long compute_final_properties
   }
   else
     data[F_T_OFFSET+2] = data[F_T_OFFSET+3] = 0;
-
+  /* beam charge */
+  data[F_T_OFFSET+4] = charge;
+  
   /* compute "sigma" from width of particle distributions for x and y */
   if (coord && sums->n_part>3) {
     data[F_WIDTH_OFFSET] = beam_width(0.6826F, coord, sums->n_part, 0L)/2.;

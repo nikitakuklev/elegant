@@ -433,7 +433,7 @@ void finish_load_parameters()
 }
 
 static long dumpingLatticeParameters = 0;
-static long iElementName, iElementParameter, iParameterValue;
+static long iElementName, iElementParameter, iParameterValue, iElementType;
 static SDDS_DATASET SDDS_dumpLattice;
 void dumpLatticeParameters(char *filename, RUN *run, LINE_LIST *beamline)
 {
@@ -450,6 +450,7 @@ void dumpLatticeParameters(char *filename, RUN *run, LINE_LIST *beamline)
         (iElementName=SDDS_DefineColumn(SDDSout, "ElementName", NULL, NULL, NULL, NULL, SDDS_STRING, 0))<0 ||
         (iElementParameter=SDDS_DefineColumn(SDDSout, "ElementParameter", NULL, NULL, NULL, NULL, SDDS_STRING, 0))<0 ||
         (iParameterValue=SDDS_DefineColumn(SDDSout, "ParameterValue", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+        (iElementType=SDDS_DefineColumn(SDDSout, "ElementType", NULL, NULL, NULL, NULL, SDDS_STRING, 0))<0 ||
         !SDDS_WriteLayout(SDDSout)) {
       fprintf(stderr, "Problem setting up parameter output file\n");
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
@@ -482,6 +483,7 @@ void dumpLatticeParameters(char *filename, RUN *run, LINE_LIST *beamline)
                                iElementName, eptr->name,
                                iElementParameter, parameter[iParam].name,
                                iParameterValue, value, 
+                               iElementType, entity_name[eptr->type],
                                -1)) {
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }

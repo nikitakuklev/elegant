@@ -218,166 +218,178 @@ long track_beam(
                 LINE_LIST *beamline,
                 BEAM *beam,
                 OUTPUT_FILES *output,
-                unsigned long flags
+                unsigned long flags,
+                long delayOutput,
+                double *finalCharge
                 )
 {    
-    double p_central, p_central0;
-    long n_left, n_trpoint, effort;
-    VMATRIX *M;
+  double p_central, p_central0;
+  long n_left, n_trpoint, effort;
+  VMATRIX *M;
 
-    log_entry("track_beam");
+  log_entry("track_beam");
 
-    if (!run)
-        bomb("RUN pointer is NULL (track_beam)", NULL);
-    if (!control)
-        bomb("VARY pointer is NULL (track_beam)", NULL);
-    if (!errcon)
-        bomb("ERROR pointer is NULL (track_beam)", NULL);
-    if (!beamline)
-        bomb("LINE_LIST pointer is NULL (track_beam)", NULL);
-    if (!beam)
-        bomb("BEAM pointer is NULL (track_beam)", NULL);
+  if (!run)
+    bomb("RUN pointer is NULL (track_beam)", NULL);
+  if (!control)
+    bomb("VARY pointer is NULL (track_beam)", NULL);
+  if (!errcon)
+    bomb("ERROR pointer is NULL (track_beam)", NULL);
+  if (!beamline)
+    bomb("LINE_LIST pointer is NULL (track_beam)", NULL);
+  if (!beam)
+    bomb("BEAM pointer is NULL (track_beam)", NULL);
+  if (!output)
+    bomb("OUTPUT_FILES pointer is NULL (track_beam)", NULL);
+
+  p_central = run->p_central;
+
+  /* now track particles */
+  if (!(flags&SILENT_RUNNING))
+    fprintf(stderr, "tracking %ld particles\n", beam->n_to_track);
+  n_trpoint = beam->n_to_track;
+
+  effort = 0;
+  n_left = do_tracking(beam->particle, &n_trpoint, &effort, beamline, &p_central, 
+                       beam->accepted, &output->sums_vs_z, &output->n_z_points,
+                       NULL, run, control->i_step,
+                       (!(run->centroid || run->sigma)?FINAL_SUMS_ONLY:0)+
+                       (flags&(LINEAR_CHROMATIC_MATRIX+LONGITUDINAL_RING_ONLY)),
+                       control->n_passes, &(output->sasefel), finalCharge);
+  if (!beam) {
+    fprintf(stderr, "error: beam pointer is null on return from do_tracking (track_beam)\n");
+    abort();
+  }
+  beam->p0 = p_central;
+  beam->n_accepted = n_left;
+
+  if (!(flags&SILENT_RUNNING)) {
+    extern unsigned long multipoleKicksDone;
+    fprintf(stderr, "%ld particles transmitted, total effort of %ld particle-turns\n", n_left, effort);
+    fprintf(stderr, "%lu multipole kicks done\n\n", multipoleKicksDone);
+    fflush(stderr);
+  }
+
+  if (!delayOutput)
+    do_track_beam_output(run, control, errcon, optim,
+                         beamline, beam, output, flags, 
+                         finalCharge?*finalCharge:0.0);
+
+  if (!(flags&SILENT_RUNNING)) {
+    report_stats(stderr, "Tracking step completed");
+    fputs("\n\n", stderr);
+  }
+
+  log_exit("track_beam");
+  return(1);
+}
+
+void do_track_beam_output(RUN *run, VARY *control,
+                          ERROR *errcon, OPTIM_VARIABLES *optim,
+                          LINE_LIST *beamline, BEAM *beam,
+                          OUTPUT_FILES *output, unsigned long flags,
+                          double finalCharge)
+{
+  VMATRIX *M;
+  long n_left;
+  double p_central, p_central0;
+
+  p_central = beam->p0;
+  n_left = beam->n_accepted;
+  p_central0 = beam->p0_original;
+  
+  if (run->output && !(flags&INHIBIT_FILE_OUTPUT)) {
+    if (!output->output_initialized)
+      bomb("'output' file is uninitialized (track_beam)", NULL);
+    if (!(flags&SILENT_RUNNING)) 
+      fprintf(stderr, "Dumping output beam data..."); fflush(stderr);
+    dump_phase_space(&output->SDDS_output, beam->particle, n_left, control->i_step, p_central);
+    if (!(flags&SILENT_RUNNING)) 
+      fprintf(stderr, "done.\n"); fflush(stderr);
+  }
+
+  if (run->acceptance && !(flags&INHIBIT_FILE_OUTPUT)) {
+    if (!output->accept_initialized)
+      bomb("'acceptance' file is uninitialized (track_beam)", NULL);
+    if (!(flags&SILENT_RUNNING)) 
+      fprintf(stderr, "Dumping acceptance output..."); fflush(stderr);
+    dump_phase_space(&output->SDDS_accept, beam->accepted, beam->n_accepted, control->i_step, p_central0);
+    if (!(flags&SILENT_RUNNING)) 
+      fprintf(stderr, "done.\n"); fflush(stderr);
+  }
+
+  if (run->losses && !(flags&INHIBIT_FILE_OUTPUT)) {
+    if (!output->losses_initialized)
+      bomb("'losses' file is uninitialized (track_beam)", NULL);
+    if (!(flags&SILENT_RUNNING)) 
+      fprintf(stderr, "Dumping lost-particle data..."); fflush(stderr);
+    dump_lost_particles(&output->SDDS_losses, beam->particle+n_left, beam->n_to_track-n_left, control->i_step);
+    if (!(flags&SILENT_RUNNING)) 
+      fprintf(stderr, "done.\n"); fflush(stderr);
+  }
+
+  if (run->centroid && !run->combine_bunch_statistics && !(flags&FINAL_SUMS_ONLY)  && !(flags&INHIBIT_FILE_OUTPUT)) {
+    if (!output->centroid_initialized)
+      bomb("'centroid' file is uninitialized (track_beam)", NULL);
+    if (!output->sums_vs_z)
+      bomb("missing beam sums pointer (track_beam)", NULL);
+    if (!(flags&SILENT_RUNNING)) 
+      fprintf(stderr, "Dumping centroid data..."); fflush(stderr);
+    dump_centroid(&output->SDDS_centroid, output->sums_vs_z, beamline, output->n_z_points, control->i_step, p_central);
+    if (!(flags&SILENT_RUNNING)) 
+      fprintf(stderr, "done.\n"); fflush(stderr);
+  }
+
+  if (run->sigma && !run->combine_bunch_statistics && !(flags&FINAL_SUMS_ONLY) && !(flags&INHIBIT_FILE_OUTPUT)) {
+    if (!output->sigma_initialized)
+      bomb("'sigma' file is uninitialized (track_beam)", NULL);
+    if (!output->sums_vs_z)
+      bomb("missing beam sums pointer (track_beam)", NULL);
+    if (!(flags&SILENT_RUNNING)) 
+      fprintf(stderr, "Dumping sigma data..."); fflush(stderr);
+    dump_sigma(&output->SDDS_sigma, output->sums_vs_z, beamline, output->n_z_points, control->i_step, p_central);
+    if (!(flags&SILENT_RUNNING)) 
+      fprintf(stderr, "done.\n"); fflush(stderr);
+  }
+
+  if (run->final && !run->combine_bunch_statistics) {
+    if (!(M = full_matrix(&(beamline->elem), run, 1)))
+      bomb("computation of full matrix for final output failed (track_beam)", NULL);
     if (!output)
-        bomb("OUTPUT_FILES pointer is NULL (track_beam)", NULL);
-
-    p_central0 = p_central = run->p_central;
-
-    /* now track particles */
-    if (!(flags&SILENT_RUNNING))
-        fprintf(stderr, "tracking %ld particles\n", beam->n_to_track);
-    n_trpoint = beam->n_to_track;
-
-    effort = 0;
-    n_left = do_tracking(beam->particle, &n_trpoint, &effort, beamline, &p_central, 
-                         beam->accepted, &output->sums_vs_z, &output->n_z_points,
-                         NULL, run, control->i_step,
-                         (!(run->centroid || run->sigma)?FINAL_SUMS_ONLY:0)+
-                         (flags&(LINEAR_CHROMATIC_MATRIX+LONGITUDINAL_RING_ONLY)),
-                         control->n_passes, &(output->sasefel));
-
-    if (!beam) {
-      fprintf(stderr, "error: beam pointer is null on return from do_tracking (track_beam)\n");
-      abort();
-    }
-    beam->p0 = p_central;
-    beam->n_accepted = n_left;
+      bomb("output pointer is NULL on attempt to write 'final' file (track_beam)", NULL);
+    if (!output->final_initialized)
+      bomb("'final' file is uninitialized (track_beam)", NULL);
+    if (!output->sums_vs_z)
+      bomb("beam sums array for final output is NULL", NULL);
+    if (!(flags&SILENT_RUNNING)) 
+      fprintf(stderr, "Dumping final propertes data..."); fflush(stderr);
+    dump_final_properties
+      (&output->SDDS_final, output->sums_vs_z+output->n_z_points, 
+       control->varied_quan_value, control->varied_quan_name?*control->varied_quan_name:NULL, 
+       control->n_elements_to_vary, control->n_steps*control->indexLimitProduct,
+       errcon->error_value, errcon->quan_name?*errcon->quan_name:NULL, errcon->n_items,
+       optim->varied_quan_value, optim->varied_quan_name?*optim->varied_quan_name:NULL,
+       optim->n_variables?optim->n_variables+2:0,
+       control->i_step, beam->particle, beam->n_to_track, p_central, M,
+       finalCharge);
     if (!(flags&SILENT_RUNNING)) {
-      extern unsigned long multipoleKicksDone;
-      fprintf(stderr, "%ld particles transmitted, total effort of %ld particle-turns\n", n_left, effort);
-      fprintf(stderr, "%lu multipole kicks done\n\n", multipoleKicksDone);
+      fprintf(stderr, "done.\n"); 
       fflush(stderr);
     }
+    free_matrices(M); free(M); M = NULL;
+  }
 
-    log_entry("track_beam.1");
-    if (run->output && !(flags&INHIBIT_FILE_OUTPUT)) {
-        if (!output->output_initialized)
-            bomb("'output' file is uninitialized (track_beam)", NULL);
-        if (!(flags&SILENT_RUNNING)) 
-            fprintf(stderr, "Dumping output beam data..."); fflush(stderr);
-        dump_phase_space(&output->SDDS_output, beam->particle, n_left, control->i_step, p_central);
-        if (!(flags&SILENT_RUNNING)) 
-            fprintf(stderr, "done.\n"); fflush(stderr);
-        }
-    log_exit("track_beam.1");
-
-    log_entry("track_beam.2");
-    if (run->acceptance && !(flags&INHIBIT_FILE_OUTPUT)) {
-        if (!output->accept_initialized)
-            bomb("'acceptance' file is uninitialized (track_beam)", NULL);
-        if (!(flags&SILENT_RUNNING)) 
-            fprintf(stderr, "Dumping acceptance output..."); fflush(stderr);
-        dump_phase_space(&output->SDDS_accept, beam->accepted, beam->n_accepted, control->i_step, p_central0);
-        if (!(flags&SILENT_RUNNING)) 
-            fprintf(stderr, "done.\n"); fflush(stderr);
-        }
-    log_exit("track_beam.2");
-
-    log_entry("track_beam.3");
-    if (run->losses && !(flags&INHIBIT_FILE_OUTPUT)) {
-        if (!output->losses_initialized)
-            bomb("'losses' file is uninitialized (track_beam)", NULL);
-        if (!(flags&SILENT_RUNNING)) 
-            fprintf(stderr, "Dumping lost-particle data..."); fflush(stderr);
-        dump_lost_particles(&output->SDDS_losses, beam->particle+n_left, beam->n_to_track-n_left, control->i_step);
-        if (!(flags&SILENT_RUNNING)) 
-            fprintf(stderr, "done.\n"); fflush(stderr);
-        }
-    log_exit("track_beam.3");
-
-    log_entry("track_beam.4");
-    if (run->centroid && !run->combine_bunch_statistics && !(flags&FINAL_SUMS_ONLY)  && !(flags&INHIBIT_FILE_OUTPUT)) {
-        if (!output->centroid_initialized)
-            bomb("'centroid' file is uninitialized (track_beam)", NULL);
-        if (!output->sums_vs_z)
-            bomb("missing beam sums pointer (track_beam)", NULL);
-        if (!(flags&SILENT_RUNNING)) 
-            fprintf(stderr, "Dumping centroid data..."); fflush(stderr);
-        dump_centroid(&output->SDDS_centroid, output->sums_vs_z, beamline, output->n_z_points, control->i_step, p_central);
-        if (!(flags&SILENT_RUNNING)) 
-            fprintf(stderr, "done.\n"); fflush(stderr);
-        }
-    log_exit("track_beam.4");
-
-    log_entry("track_beam.5");
-    if (run->sigma && !run->combine_bunch_statistics && !(flags&FINAL_SUMS_ONLY) && !(flags&INHIBIT_FILE_OUTPUT)) {
-        if (!output->sigma_initialized)
-            bomb("'sigma' file is uninitialized (track_beam)", NULL);
-        if (!output->sums_vs_z)
-            bomb("missing beam sums pointer (track_beam)", NULL);
-        if (!(flags&SILENT_RUNNING)) 
-            fprintf(stderr, "Dumping sigma data..."); fflush(stderr);
-        dump_sigma(&output->SDDS_sigma, output->sums_vs_z, beamline, output->n_z_points, control->i_step, p_central);
-        if (!(flags&SILENT_RUNNING)) 
-            fprintf(stderr, "done.\n"); fflush(stderr);
-        }
-    log_exit("track_beam.5");
-
-    log_entry("track_beam.6");
-    if (run->final && !run->combine_bunch_statistics) {
-        if (!(M = full_matrix(&(beamline->elem), run, 1)))
-            bomb("computation of full matrix for final output failed (track_beam)", NULL);
-        if (!output)
-            bomb("output pointer is NULL on attempt to write 'final' file (track_beam)", NULL);
-        if (!output->final_initialized)
-            bomb("'final' file is uninitialized (track_beam)", NULL);
-        if (!output->sums_vs_z)
-            bomb("beam sums array for final output is NULL", NULL);
-        if (!(flags&SILENT_RUNNING)) 
-            fprintf(stderr, "Dumping final propertes data..."); fflush(stderr);
-        dump_final_properties
-            (&output->SDDS_final, output->sums_vs_z+output->n_z_points, 
-             control->varied_quan_value, control->varied_quan_name?*control->varied_quan_name:NULL, 
-             control->n_elements_to_vary, control->n_steps*control->indexLimitProduct,
-             errcon->error_value, errcon->quan_name?*errcon->quan_name:NULL, errcon->n_items,
-             optim->varied_quan_value, optim->varied_quan_name?*optim->varied_quan_name:NULL,
-             optim->n_variables?optim->n_variables+1:0,
-             control->i_step, beam->particle, beam->n_to_track, p_central, M);
-        if (!(flags&SILENT_RUNNING)) {
-          fprintf(stderr, "done.\n"); 
-          fflush(stderr);
-        }
-        free_matrices(M); free(M); M = NULL;
-      }
-    log_exit("track_beam.6");
-
-    if (output->sasefel.active && output->sasefel.filename) {
-      if (!(flags&SILENT_RUNNING)) 
-        fprintf(stderr, "Dumping SASE FEL data...");
-      doSASEFELAtEndOutput(&(output->sasefel), control->i_step);
-      if (!(flags&SILENT_RUNNING)) {
-        fprintf(stderr, "done.\n");
-        fflush(stderr);
-      }
-    }
-
+  if (output->sasefel.active && output->sasefel.filename) {
+    if (!(flags&SILENT_RUNNING)) 
+      fprintf(stderr, "Dumping SASE FEL data...");
+    doSASEFELAtEndOutput(&(output->sasefel), control->i_step);
     if (!(flags&SILENT_RUNNING)) {
-        report_stats(stderr, "Tracking step completed");
-        fputs("\n\n", stderr);
-        }
-
-    log_exit("track_beam");
-    return(1);
+      fprintf(stderr, "done.\n");
+      fflush(stderr);
     }
+  }
+}
+
 
 
 void setup_output(
@@ -425,7 +437,8 @@ void setup_output(
         SDDS_FinalOutputSetup(&output->SDDS_final, run->final, SDDS_BINARY, 1, "final properties", run->runfile, run->lattice, 
                               control->varied_quan_name, control->varied_quan_unit, control->n_elements_to_vary, 
                               errcon->quan_name, errcon->quan_unit, errcon->n_items, 
-                              optim->varied_quan_name, optim->varied_quan_unit, (optim->n_variables?optim->n_variables+1:0),
+                              optim->varied_quan_name, optim->varied_quan_unit, 
+                              (optim->n_variables?optim->n_variables+2:0),
                               "setup_output");
         output->final_initialized = 1;
         }
@@ -449,7 +462,8 @@ void finish_output(
     OPTIM_VARIABLES *optim,
     LINE_LIST *beamline,
     long n_elements,
-    BEAM *beam
+    BEAM *beam,
+    double finalCharge                   
     )
 {
     log_entry("finish_output.1");
@@ -489,8 +503,9 @@ void finish_output(
              control->n_elements_to_vary, control->indexLimitProduct*control->n_steps,
              errcon->error_value, errcon->quan_name?*errcon->quan_name:NULL, errcon->n_items,
              optim->varied_quan_value, optim->varied_quan_name?*optim->varied_quan_name:NULL,
-                 optim->n_variables?optim->n_variables+1:0,
-             0, beam->particle, beam->n_to_track, beam->p0, M=full_matrix(&(beamline->elem), run, 1));
+             optim->n_variables?optim->n_variables+2:0,
+             0, beam->particle, beam->n_to_track, beam->p0, M=full_matrix(&(beamline->elem), run, 1),
+             finalCharge);
         free_matrices(M);
         free(M);
         }

@@ -48,6 +48,7 @@ void do_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
         else if ((optimization_data->fp_log=fopen_e(log_file, "w", FOPEN_RETURN_ON_ERROR|FOPEN_SAVE_IF_EXISTS))==NULL)
             bomb("unable to open log file", NULL);
         }
+    optimization_data->verbose = verbose;
     if (optimization_data->mode==OPTIM_MODE_MAXIMUM && target!=-DBL_MAX)
       target = -target;
     optimization_data->target = target;
@@ -71,9 +72,10 @@ void add_optimization_variable(OPTIMIZATION_DATA *optimization_data, NAMELIST_TE
     OPTIM_VARIABLES *variables;
     ELEMENT_LIST *context;
     /* these are used to append a dummy name to the variables list for use with final parameters output: */
-    static char *extra_name = "optimized";
-    static char *extra_unit = "";
-
+    static char *extra_name[2] = {"optimized", "optimizationFunction"};
+    static char *extra_unit[2] = {"", ""};
+    long i, extras = 2;
+    
     log_entry("add_optimization_variable");
 
     if ((n_variables = optimization_data->variables.n_variables)==0) {
@@ -83,19 +85,19 @@ void add_optimization_variable(OPTIMIZATION_DATA *optimization_data, NAMELIST_TE
         }
 
     variables = &(optimization_data->variables);
-    variables->element = trealloc(variables->element, sizeof(*variables->element)*(n_variables+2));
-    variables->item = trealloc(variables->item, sizeof(*variables->item)*(n_variables+2));
-    variables->lower_limit = trealloc(variables->lower_limit, sizeof(*variables->lower_limit)*(n_variables+2));
-    variables->upper_limit = trealloc(variables->upper_limit, sizeof(*variables->upper_limit)*(n_variables+2));
-    variables->step = trealloc(variables->step, sizeof(*variables->step)*(n_variables+2));
-    variables->orig_step = trealloc(variables->orig_step, sizeof(*variables->orig_step)*(n_variables+2));
-    variables->varied_quan_name = trealloc(variables->varied_quan_name, sizeof(*variables->varied_quan_name)*(n_variables+2));
-    variables->varied_quan_unit = trealloc(variables->varied_quan_unit, sizeof(*variables->varied_quan_unit)*(n_variables+2));
-    variables->varied_type = trealloc(variables->varied_type, sizeof(*variables->varied_type)*(n_variables+2));
-    variables->varied_param = trealloc(variables->varied_param, sizeof(*variables->varied_param)*(n_variables+2));
-    variables->varied_quan_value = trealloc(variables->varied_quan_value, sizeof(*variables->varied_quan_value)*(n_variables+2));
-    variables->initial_value = trealloc(variables->initial_value, sizeof(*variables->initial_value)*(n_variables+2));
-    variables->memory_number = trealloc(variables->memory_number, sizeof(*variables->memory_number)*(n_variables+2));
+    variables->element = trealloc(variables->element, sizeof(*variables->element)*(n_variables+extras+1));
+    variables->item = trealloc(variables->item, sizeof(*variables->item)*(n_variables+extras+1));
+    variables->lower_limit = trealloc(variables->lower_limit, sizeof(*variables->lower_limit)*(n_variables+extras+1));
+    variables->upper_limit = trealloc(variables->upper_limit, sizeof(*variables->upper_limit)*(n_variables+extras+1));
+    variables->step = trealloc(variables->step, sizeof(*variables->step)*(n_variables+extras+1));
+    variables->orig_step = trealloc(variables->orig_step, sizeof(*variables->orig_step)*(n_variables+extras+1));
+    variables->varied_quan_name = trealloc(variables->varied_quan_name, sizeof(*variables->varied_quan_name)*(n_variables+extras+1));
+    variables->varied_quan_unit = trealloc(variables->varied_quan_unit, sizeof(*variables->varied_quan_unit)*(n_variables+extras+1));
+    variables->varied_type = trealloc(variables->varied_type, sizeof(*variables->varied_type)*(n_variables+extras+1));
+    variables->varied_param = trealloc(variables->varied_param, sizeof(*variables->varied_param)*(n_variables+extras+1));
+    variables->varied_quan_value = trealloc(variables->varied_quan_value, sizeof(*variables->varied_quan_value)*(n_variables+extras+1));
+    variables->initial_value = trealloc(variables->initial_value, sizeof(*variables->initial_value)*(n_variables+extras+1));
+    variables->memory_number = trealloc(variables->memory_number, sizeof(*variables->memory_number)*(n_variables+extras+1));
 
     /* process namelist text */
     /* can't use automatic defaults, because of DBL_MAX being a nonconstant object */
@@ -144,9 +146,11 @@ void add_optimization_variable(OPTIMIZATION_DATA *optimization_data, NAMELIST_TE
               variables->memory_number[n_variables] = 
               rpn_create_mem(variables->varied_quan_name[n_variables]));
 
-    variables->varied_quan_name[n_variables+1] = extra_name;
-    variables->varied_quan_unit[n_variables+1] = extra_unit;
-
+    for (i=0; i<extras; i++) {
+      variables->varied_quan_name[n_variables+i+1] = extra_name[i];
+      variables->varied_quan_unit[n_variables+i+1] = extra_unit[i];
+    }
+    
     optimization_data->variables.n_variables += 1;
     log_exit("add_optimization_variable");
     }
@@ -430,7 +434,9 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERROR *error1
     
     /* set the end-of-optimization hidden variable to 0 */
     variables->varied_quan_value[variables->n_variables] = 0;
-
+    /* set the optimization function hidden variable to 0 */
+    variables->varied_quan_value[variables->n_variables+1] = 0;
+    
     /* process namelist text */
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
@@ -620,7 +626,7 @@ double optimization_function(double *value, long *invalid)
     OPTIM_VARIABLES *variables;
     OPTIM_CONSTRAINTS *constraints;
     OPTIM_COVARIABLES *covariables;
-    double conval, result;
+    double conval, result, charge;
     long i, iRec;
     unsigned long unstable;
     VMATRIX *M;
@@ -669,7 +675,7 @@ double optimization_function(double *value, long *invalid)
                 covariables->n_covariables, PARAMETERS_ARE_VARIED, VMATRIX_IS_VARIED, 0, 0);
         }
 
-    if (optimization_data->fp_log) {
+    if (optimization_data->verbose && optimization_data->fp_log) {
         fprintf(optimization_data->fp_log, "new variable values for evaluation %ld of pass %ld:\n", n_evaluations_made, n_passes_made+1);
         fflush(optimization_data->fp_log);
         for (i=0; i<variables->n_variables; i++)
@@ -684,7 +690,7 @@ double optimization_function(double *value, long *invalid)
         }
 
     if ((iRec=checkForOptimRecord(value, variables->n_variables))>=0) {
-      if (optimization_data->fp_log)
+      if (optimization_data->verbose && optimization_data->fp_log)
         fprintf(optimization_data->fp_log, "Using previously computed value %23.15e\n\n", 
                 optimRecord[iRec].result);
       *invalid = optimRecord[iRec].invalid;
@@ -707,7 +713,7 @@ double optimization_function(double *value, long *invalid)
         beamline->matrix = NULL;
         }
     
-    if (optimization_data->fp_log) {
+    if (optimization_data->verbose && optimization_data->fp_log) {
         fprintf(optimization_data->fp_log, "%ld matrices (re)computed\n", i);
         fflush(optimization_data->fp_log);
         }
@@ -804,7 +810,8 @@ double optimization_function(double *value, long *invalid)
 #if DEBUG
       fprintf(stderr, "optimization_function: Tracking\n");
 #endif
-    track_beam(run, control, error, variables, beamline, beam, output, optim_func_flags);
+    track_beam(run, control, error, variables, beamline, beam, output, optim_func_flags, 1,
+               &charge);
     if (output->sasefel.active)
       storeSASEFELAtEndInRPN(&(output->sasefel));
     
@@ -817,7 +824,8 @@ double optimization_function(double *value, long *invalid)
     if ((i=compute_final_properties(final_property_value, output->sums_vs_z+output->n_z_points, 
                                     beam->n_to_track, beam->p0, 
                                     M=full_matrix(&(beamline->elem), run, 1), beam->particle, 
-                                    control->i_step, control->indexLimitProduct*control->n_steps))
+                                    control->i_step, control->indexLimitProduct*control->n_steps,
+                                    charge))
         != final_property_values) {
         fprintf(stderr, "error: compute_final_properties computed %ld quantities when %ld were expected (optimization_function)\n",
                 i, final_property_values);
@@ -830,25 +838,25 @@ double optimization_function(double *value, long *invalid)
       fprintf(stderr, "optimization_function: Checking constraints\n");
 #endif
     /* check constraints */
-    if (optimization_data->fp_log && constraints->n_constraints) {
+    if (optimization_data->verbose && optimization_data->fp_log && constraints->n_constraints) {
         fprintf(optimization_data->fp_log, "    Constraints:\n");
         fflush(optimization_data->fp_log);
         }
     for (i=0; i<constraints->n_constraints; i++) {
-        if (optimization_data->fp_log)
+        if (optimization_data->verbose && optimization_data->fp_log)
             fprintf(optimization_data->fp_log, "    %10s: %23.15e", constraints->quantity[i], 
                     final_property_value[constraints->index[i]]);
         if ((conval=final_property_value[constraints->index[i]])<constraints->lower[i] ||
                 conval>constraints->upper[i]) {
             *invalid = 1;
-            if (optimization_data->fp_log) {
+            if (optimization_data->verbose && optimization_data->fp_log) {
                 fprintf(optimization_data->fp_log, " ---- invalid\n\n");
                 fflush(optimization_data->fp_log);
                 }
             log_exit("optimization_function");
-            return(0.0);
+            break;
             }
-        if (optimization_data->fp_log) {
+        if (optimization_data->verbose && optimization_data->fp_log) {
             fputc('\n', optimization_data->fp_log);
             fflush(optimization_data->fp_log);
             }
@@ -857,26 +865,35 @@ double optimization_function(double *value, long *invalid)
 #if DEBUG
       fprintf(stderr, "optimization_function: Computing rpn function\n");
 #endif
-    /* compute and return optimized quantity */
-    rpn_clear();    /* clear rpn stack */
-    result = rpn(optimization_data->UDFname);
-    if (isnan(result) || isinf(result)) {
-      result = sqrt(DBL_MAX);
-    }
-    
-    if (rpn_check_error())
+    result = 0;
+    if (!*invalid) {
+      /* compute and return optimized quantity */
+      rpn_clear();    /* clear rpn stack */
+      result = rpn(optimization_data->UDFname);
+      if (isnan(result) || isinf(result)) {
+        result = sqrt(DBL_MAX);
+      }
+      if (rpn_check_error())
         exit(1);
 
-    if (optimization_data->fp_log) {
+      if (optimization_data->verbose && optimization_data->fp_log) {
         fprintf(optimization_data->fp_log, "equation evaluates to %23.15e\n\n", result);
         fflush(optimization_data->fp_log);
-        }
-
-    if (optimization_data->mode==OPTIM_MODE_MAXIMUM)
+      }
+      
+      if (optimization_data->mode==OPTIM_MODE_MAXIMUM)
         result *= -1;
-    if (unstable)
-      *invalid = 1;
+      if (unstable)
+        *invalid = 1;
+    }
 
+    /* copy the result into the "hidden" slot in the varied quantities array for output
+     * to final properties file
+     */
+    variables->varied_quan_value[variables->n_variables+1] = result;    
+    do_track_beam_output(run, control, error, variables, beamline, beam, output, optim_func_flags,
+                         charge);
+    
 #if DEBUG
     fprintf(stderr, "optimization_function: Returning %le,  invalid=%ld\n", result, *invalid);
 #endif
@@ -923,12 +940,8 @@ void optimization_report(double result, double *value, long pass, long n_evals, 
     OPTIM_CONSTRAINTS *constraints;
     long i;
 
-    log_entry("optimization_report");
-
-    if (!optimization_data->fp_log)  {
-        log_exit("optimization_report");
+    if (!optimization_data->fp_log)
         return;
-        }
 
     variables = &(optimization_data->variables);
     covariables = &(optimization_data->covariables);
@@ -949,5 +962,6 @@ void optimization_report(double result, double *value, long pass, long n_evals, 
     for (i=0; i<n_dim; i++)
         fprintf(optimization_data->fp_log, "    %10s: %23.15e\n", variables->varied_quan_name[i], value[i]);
     fflush(optimization_data->fp_log);
-    log_exit("optimization_report");
     }
+
+

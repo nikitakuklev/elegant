@@ -175,10 +175,11 @@ long method_code = 0;
 #define MODIFIED_MIDPOINT 2
 #define TWO_PASS_MODIFIED_MIDPOINT 3
 #define LEAP_FROG 4
-#define N_METHODS 5
+#define NA_RUNGE_KUTTA 5
+#define N_METHODS 6
 static char *method[N_METHODS] = {
     "runge-kutta", "bulirsch-stoer", "modified-midpoint", "two-pass modified-midpoint",
-    "leap-frog"
+    "leap-frog", "non-adaptive runge-kutta"
     } ;
 void lorentz_leap_frog(double *Qf, double *Qi, double s, long n_steps, void (*derivs)(double *dQds, double *Q, double sd));
 
@@ -290,11 +291,13 @@ long do_lorentz_integration(double *coord, void *field)
     fill_long_array(misses, 8, 0);
 
     if (integrator!=NULL) {
-        /* use adaptive integration */
+        /* use adaptive integration or another compatible routine */
         s_start = 0;
         s_end   = central_length*2;
         hmax    = central_length/N_INTERIOR_STEPS;
         hrec    = hmax/10;
+        if (integrator==rk_odeint3_na)
+          hrec = central_length*tolerance;
         if ((exit_toler = sqr(tolerance)*s_end)<central_length*1e-14)
             exit_toler = central_length*1e-14;
         switch (int_return = (*integrator)(q, deriv_function, n_eq, accuracy, accmode, tiny, misses,
@@ -589,6 +592,9 @@ void select_lorentz_integrator(char *desired_method)
             break;
         case BULIRSCH_STOER:
             integrator = bs_odeint3;
+            break;
+          case NA_RUNGE_KUTTA:
+            integrator = rk_odeint3_na;
             break;
         case MODIFIED_MIDPOINT:
         case TWO_PASS_MODIFIED_MIDPOINT:
@@ -1233,3 +1239,5 @@ void bmapxy_field_setup(BMAPXY *bmapxy)
   bmapxy->Fx = Fx;
   bmapxy->Fy = Fy;
 }
+
+

@@ -207,7 +207,8 @@ long do_aperture_search_mp(
         p_central = run->p_central;
         n_trpoint = ny1;
         n_survived = do_tracking(coord, &n_trpoint, &effort, beamline, &p_central, 
-                                 accepted, NULL, NULL, NULL, run, control->i_step, SILENT_RUNNING, control->n_passes, NULL);
+                                 accepted, NULL, NULL, NULL, run, control->i_step, 
+                                 SILENT_RUNNING, control->n_passes, NULL, NULL);
         if (verbosity>1) {
             fprintf(stderr, "    %ld particles survived\n", n_survived);
             }
@@ -284,7 +285,8 @@ long do_aperture_search_mp(
         p_central = run->p_central;
         n_trpoint = ny1;
         n_survived = do_tracking(coord, &n_trpoint, &effort, beamline, &p_central, 
-               accepted, NULL, NULL, NULL, run, control->i_step, SILENT_RUNNING, control->n_passes, NULL);
+                                 accepted, NULL, NULL, NULL, run, control->i_step, 
+                                 SILENT_RUNNING, control->n_passes, NULL, NULL);
         if (verbosity>1) {
             fprintf(stderr, "    %ld particles survived\n", n_survived);
             }
@@ -451,7 +453,8 @@ long do_aperture_search_sp(
             coord[0][1] = coord[0][3] = coord[0][4] = coord[0][5] = 0;
             n_trpoint = 1;
             if (do_tracking(coord, &n_trpoint, &effort, beamline, &p_central, 
-                   NULL, NULL, NULL, NULL, run, control->i_step, SILENT_RUNNING, control->n_passes, NULL))
+                            NULL, NULL, NULL, NULL, run, control->i_step, 
+                            SILENT_RUNNING, control->n_passes, NULL, NULL))
                 break;
             }
         if (ix!=nx) {
@@ -474,7 +477,8 @@ long do_aperture_search_sp(
                     coord[0][1] = coord[0][3] = coord[0][4] = coord[0][5] = 0;
                     n_trpoint = 1;
                     if (do_tracking(coord, &n_trpoint, &effort, beamline, &p_central, 
-                           NULL, NULL, NULL, NULL, run, control->i_step, SILENT_RUNNING, control->n_passes, NULL)) {
+                                    NULL, NULL, NULL, NULL, run, control->i_step, 
+                                    SILENT_RUNNING, control->n_passes, NULL, NULL)) {
                         n_stable++;
                         x1 = x;    /* stable */
                         }
@@ -520,7 +524,8 @@ long do_aperture_search_sp(
             coord[0][1] = coord[0][3] = coord[0][4] = coord[0][5] = 0;
             n_trpoint = 1;
             if (do_tracking(coord, &n_trpoint, &effort, beamline, &p_central, 
-                            NULL, NULL, NULL, NULL, run, control->i_step, SILENT_RUNNING, control->n_passes, NULL))
+                            NULL, NULL, NULL, NULL, run, control->i_step, 
+                            SILENT_RUNNING, control->n_passes, NULL, NULL))
                 break;
             }
         if (ix!=nx) {
@@ -543,7 +548,8 @@ long do_aperture_search_sp(
                     coord[0][1] = coord[0][3] = coord[0][4] = coord[0][5] = 0;
                     n_trpoint = 1;
                     if (do_tracking(coord, &n_trpoint, &effort, beamline, &p_central, 
-                           NULL, NULL, NULL, NULL, run, control->i_step, SILENT_RUNNING, control->n_passes, NULL)) {
+                                    NULL, NULL, NULL, NULL, run, control->i_step, 
+                                    SILENT_RUNNING, control->n_passes, NULL, NULL)) {
                         n_stable++;
                         x1 = x;    /* stable */
                         }

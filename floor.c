@@ -36,7 +36,7 @@ void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamli
     ELEMENT_LIST *elem, *last_elem;
     double dX, dZ, dtheta, rho, angle;
     long is_bend, is_magnet, n_points, row_index;
-    BEND *bend; KSBEND *ksbend; CSBEND *csbend; MALIGN *malign;
+    BEND *bend; KSBEND *ksbend; CSBEND *csbend; MALIGN *malign; CSRCSBEND *csrbend;
     char label[200];
 #include "floor.h"
 
@@ -72,6 +72,7 @@ void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamli
               case T_SBEN: 
               case T_KSBEND: 
               case T_CSBEND:
+              case T_CSRCSBEND:
                 n_points ++;
                 break;
               default:
@@ -118,6 +119,12 @@ void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamli
             csbend = (CSBEND*)elem->p_elem;
             dtheta = -(angle=csbend->angle);
             rho = (length=csbend->length)/csbend->angle;
+            break;
+          case T_CSRCSBEND:
+            is_bend = 1;
+            csrbend = (CSRCSBEND*)elem->p_elem;
+            dtheta = -(angle=csrbend->angle);
+            rho = (length=csrbend->length)/csrbend->angle;
             break;
           case T_MALIGN:
             malign = (MALIGN*)elem->p_elem;
@@ -214,6 +221,7 @@ void final_floor_coordinates(LINE_LIST *beamline, double *X, double *Z, double *
   double X0, Z0, theta0;
   long is_bend, is_magnet;
   BEND *bend; KSBEND *ksbend; CSBEND *csbend; MALIGN *malign;
+  CSRCSBEND *csrbend;
 
   last_elem = NULL;
   elem = &(beamline->elem);
@@ -239,6 +247,12 @@ void final_floor_coordinates(LINE_LIST *beamline, double *X, double *Z, double *
       csbend = (CSBEND*)elem->p_elem;
       dtheta = -(angle=csbend->angle);
       rho = (length=csbend->length)/csbend->angle;
+      break;
+    case T_CSRCSBEND:
+      is_bend = 1;
+      csrbend = (CSRCSBEND*)elem->p_elem;
+      dtheta = -(angle=csrbend->angle);
+      rho = (length=csrbend->length)/csrbend->angle;
       break;
     case T_MALIGN:
       malign = (MALIGN*)elem->p_elem;

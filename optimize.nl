@@ -23,6 +23,7 @@ static char *optimize_method[N_OPTIM_METHODS] = {
     long n_passes = 2;
     long n_evaluations = 500;
     STRING log_file = NULL;
+    long verbose = 1;
 #end
 
 #namelist optimization_variable static

@@ -42,7 +42,8 @@ long do_tracking(
                  long step,
                  unsigned long flags,
                  long n_passes,
-                 SASEFEL_OUTPUT *sasefel
+                 SASEFEL_OUTPUT *sasefel,
+                 double *finalCharge
                  )
 {
   RFMODE *rfmode; TRFMODE *trfmode;
@@ -122,6 +123,8 @@ long do_tracking(
   name = "_BEG_";
   last_type = sums_allocated = 0;
   charge = NULL;
+  if (finalCharge)
+    *finalCharge = 0;
   for (i_pass=0; i_pass<n_passes; i_pass++) {
     log_entry("do_tracking.2.1");
     
@@ -835,6 +838,8 @@ long do_tracking(
   log_exit("do_tracking.4");
 
   log_exit("do_tracking");
+  if (charge && finalCharge)
+    *finalCharge = n_to_track*charge->macroParticleCharge;
   return(n_to_track);
 }
 

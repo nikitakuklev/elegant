@@ -3,6 +3,9 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.9  1999/08/05 15:35:31  soliday
+ * Added WIN32 and Linux support
+ *
  * Revision 1.8  1999/07/01 01:52:38  borland
  * Made computation of sigma matrix for sigma and final output files consistent.
  * In both cases, now remove the centroid contributions.
@@ -554,7 +557,7 @@ void find_trajectory_bpm_readouts
   
   if (!do_tracking(particle, &nPart, NULL, beamline, &momentum,
                    (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
-                   trajBuffer, run, 0, tracking_flags, 1, NULL)) {
+                   trajBuffer, run, 0, tracking_flags, 1, NULL, NULL)) {
     fprintf(stderr, "Error tracking particle to find trajectory at BPMs.\n");
     exit(1);
   }

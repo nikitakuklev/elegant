@@ -13,7 +13,7 @@ void output_magnets(char *filename, char *line_name, LINE_LIST *beamline)
 {
     ELEMENT_LIST *eptr;
     QUAD  *qptr; BEND  *bptr; 
-    KQUAD *kqptr; KSBEND *kbptr; CSBEND *cbptr;
+    KQUAD *kqptr; KSBEND *kbptr; CSBEND *cbptr; CSRCSBEND *csrbptr;
     long n_points, iPhase;
     double start, end, total_length, dz, value;
     FILE *fpm;
@@ -28,7 +28,7 @@ void output_magnets(char *filename, char *line_name, LINE_LIST *beamline)
             case T_QUAD: case T_KQUAD:
                 n_points += 5;
                 break;
-            case T_RBEN:  case T_SBEN: case T_KSBEND: case T_CSBEND:
+            case T_RBEN:  case T_SBEN: case T_KSBEND: case T_CSBEND: case T_CSRCSBEND:
                 n_points += 6;
                 break;
             case T_SEXT: case T_KSEXT:
@@ -208,6 +208,21 @@ void output_magnets(char *filename, char *line_name, LINE_LIST *beamline)
                             eptr->name, start, eptr->name, end, eptr->name, end, 
                             eptr->name, start, eptr->name, start, eptr->name, end);
                 else if (cbptr->angle<0) 
+                    fprintf(fpm, 
+                        "%s %e -.33333333\n%s %e -.33333333\n%s %e  0\n%s %e  0\n%s %e  0\n%s %e 0\n",
+                            eptr->name, start, eptr->name, end, eptr->name, end, 
+                            eptr->name, start, eptr->name, start, eptr->name, end);
+                start = end;
+                break;
+            case T_CSRCSBEND:
+                csrbptr = (CSRCSBEND*)eptr->p_elem;
+                end  = start+csrbptr->length;
+                if (csrbptr->angle>0)
+                    fprintf(fpm, 
+                        "%s %e .33333333\n%s %e .33333333\n%s %e  0\n%s %e  0\n%s %e  0\n%s %e 0\n",
+                            eptr->name, start, eptr->name, end, eptr->name, end, 
+                            eptr->name, start, eptr->name, start, eptr->name, end);
+                else if (csrbptr->angle<0) 
                     fprintf(fpm, 
                         "%s %e -.33333333\n%s %e -.33333333\n%s %e  0\n%s %e  0\n%s %e  0\n%s %e 0\n",
                             eptr->name, start, eptr->name, end, eptr->name, end, 

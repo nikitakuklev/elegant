@@ -305,6 +305,7 @@ typedef struct {
     long i_pass, n_passes, n_evaluations;
     long soft_failure, UDFcreated;
     FILE *fp_log;
+    long verbose;
     char *equation;              /* rpn equation for thing to optimize */    
     char *UDFname;
     OPTIM_VARIABLES variables;
@@ -322,7 +323,7 @@ typedef struct {
     double p0_original;     /* initial central momentum */
     double **particle;      /* current/final coordinates */
     long n_to_track;        /* initial number of particles being tracked.  Often equal to n_original, but not always. */
-    double p0;                /* current/final central momentum */
+    double p0;              /* current/final central momentum */
     double **accepted;      /* coordinates of accepted particles, with loss info on lost particles */
     long n_accepted;        /* final number of particles being tracked. */
     } BEAM;
@@ -1611,10 +1612,15 @@ extern void finish_bunched_beam(OUTPUT_FILES *output, RUN *run, VARY *control, E
 extern char *brief_number(double x, char *buffer);
 
 extern long track_beam(RUN *run, VARY *control, ERROR *errcon, OPTIM_VARIABLES *optim,
-    LINE_LIST *beamline, BEAM *beam, OUTPUT_FILES *output, unsigned long flags);
+                       LINE_LIST *beamline, BEAM *beam, OUTPUT_FILES *output, unsigned long flags,
+                       long delayOutput, double *finalCharge);
+extern void do_track_beam_output(RUN *run, VARY *control, ERROR *errcon, OPTIM_VARIABLES *optim,
+                                 LINE_LIST *beamline, BEAM *beam, OUTPUT_FILES *output, unsigned long flags,
+                                 double finalCharge);
 extern void finish_output(OUTPUT_FILES *output, RUN *run, VARY *control,
                           ERROR *errcon, OPTIM_VARIABLES *optim,
-                          LINE_LIST *beamline, long n_elements, BEAM *beam);
+                          LINE_LIST *beamline, long n_elements, BEAM *beam,
+                          double finalCharge);
 extern void setup_output(OUTPUT_FILES *output, RUN *run, VARY *control, ERROR *errcon, 
                          OPTIM_VARIABLES *optim,
                          LINE_LIST *beamline);
@@ -1683,7 +1689,8 @@ extern double beta_from_delta(double p, double delta);
 extern long do_tracking(double **coord, long *n_original, long *effort, LINE_LIST *beamline, 
                         double *P_central, double **accepted, BEAM_SUMS **sums_vs_z, 
                         long *n_z_points, TRAJECTORY *traj_vs_z, RUN *run, long step,
-                        unsigned long flags, long n_passes, SASEFEL_OUTPUT *sasefel);
+                        unsigned long flags, long n_passes, SASEFEL_OUTPUT *sasefel,
+                        double *finalCharge);
 extern void do_element_misalignment(ELEMENT_LIST *elem, double **coord, long n, long mode);
 extern void offset_beam(double **coord, long n_to_track, MALIGN *offset, double P_central);
 extern void do_match_energy(double **coord, long np, double *P_central, long change_beam);
@@ -1723,10 +1730,11 @@ extern void dump_final_properties(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums,
      double *varied_quan, char *first_varied_quan_name, long n_varied_quan, long totalSteps,
      double *perturbed_quan, char *first_perturbed_quan_name, long n_perturbed_quan,
      double *optim_quan, char *first_optim_quan_name, long n_optim_quan,
-     long step, double **particle, long n_original, double p_central, VMATRIX *M);
+     long step, double **particle, long n_original, double p_central, VMATRIX *M,
+     double finalCharge);
 extern long compute_final_properties
     (double *data, BEAM_SUMS *sums, long n_original, double p_central, VMATRIX *M, double **coord, 
-     long step, long totalSteps);
+     long step, long totalSteps, double finalCharge);
 extern void rpn_store_final_properties(double *value, long number);
 extern long get_final_property_index(char *name);
 extern long count_final_properties();

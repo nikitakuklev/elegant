@@ -154,7 +154,7 @@ char **argv;
     long do_chromatic_correction = 0, do_twiss_output = 0, fl_do_tune_correction = 0;
     long do_closed_orbit = 0, do_matrix_output = 0, do_response_output = 0;
     long last_default_order = 0, new_beam_flags, links_present, twiss_computed = 0;
-    double *starting_coord;
+    double *starting_coord, finalCharge;
     long namelists_read = 0, failed;
                     
 #if defined(UNIX) || defined(_WIN32)
@@ -428,7 +428,7 @@ char **argv;
                     compute_centroids(starting_coord, beam.particle, beam.n_to_track);
                   if (correct.track_before_and_after) {
                     track_beam(&run_conditions, &run_control, &error_control, &optimize.variables, 
-                               beamline, &beam, &output_data, 0);
+                               beamline, &beam, &output_data, 0, 0, &finalCharge);
                   }
                 }
                 else if (correct.use_actual_beam) {
@@ -537,12 +537,12 @@ char **argv;
               track_beam(&run_conditions, &run_control, &error_control, &optimize.variables, 
                          beamline, &beam, &output_data, 
                          (use_linear_chromatic_matrix?LINEAR_CHROMATIC_MATRIX:0)+
-                         (longitudinal_ring_only?LONGITUDINAL_RING_ONLY:0));
+                         (longitudinal_ring_only?LONGITUDINAL_RING_ONLY:0), 0, &finalCharge);
               if (parameters)
                 dumpLatticeParameters(parameters, &run_conditions, beamline);
             }
             finish_output(&output_data, &run_conditions, &run_control, &error_control, &optimize.variables, 
-                          beamline, beamline->n_elems, &beam);
+                          beamline, beamline->n_elems, &beam, finalCharge);
             if (do_closed_orbit)
               finish_clorb_output();
             if (do_twiss_output)
