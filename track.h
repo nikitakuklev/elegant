@@ -562,9 +562,9 @@ extern char *entity_text[N_TYPES];
 #define N_TRWAKE_PARAMS 13
 #define N_TUBEND_PARAMS 6
 #define N_CHARGE_PARAMS 2
-#define N_PFILTER_PARAMS 4
+#define N_PFILTER_PARAMS 5
 #define N_HISTOGRAM_PARAMS 9
-#define N_CSRCSBEND_PARAMS 39
+#define N_CSRCSBEND_PARAMS 40
 #define N_CSRDRIFT_PARAMS 6
 #define N_REMCOR_PARAMS 6
 #define N_RFCW_PARAMS 27
@@ -1335,7 +1335,7 @@ typedef struct {
     long outputInterval, outputLastWakeOnly, steadyState;
     long use_bn;
     double b1, b2, b3, b4;
-    long isr;
+    long isr, csr;
     /* for internal use only: */
     long flags, fileActive;
     SDDS_DATASET SDDSout;
@@ -1594,7 +1594,7 @@ typedef struct {
 /* names and storage structure for PFILTER element */
 typedef struct {
   double deltaLimit, lowerFraction, upperFraction;
-  long fixPLimits;
+  long fixPLimits, beamCentered;
   /* for internal use only */
   long limitsFixed;
   double pLower, pUpper;

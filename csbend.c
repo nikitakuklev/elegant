@@ -850,7 +850,9 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     fflush(stdout);
     csrWarning = 1;
   }
-
+  if (csbend->csr==0)
+    macroParticleCharge = 0;
+  
   if ((nBins=csbend->bins)<2)
     bomb("Less than 2 bins for CSR!", NULL);
 

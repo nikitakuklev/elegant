@@ -487,6 +487,7 @@ long track_through_pfilter(
   long ip, itop;
   static double *deltaBuffer=NULL;
   static long maxBuffer = 0;
+  double reference;
   
   itop = np-1;
 
@@ -568,8 +569,15 @@ long track_through_pfilter(
 #endif
     return itop+1;
   }
+  reference = 0;
+  if (pfilter->beamCentered) {
+    for (ip=0; ip<=itop; ip++)
+      reference += initial[ip][5];
+    reference /= (itop+1);
+  }
+  
   for (ip=0; ip<=itop; ip++) {
-    if (fabs(initial[ip][5])<pfilter->deltaLimit)
+    if (fabs(initial[ip][5]-reference)<pfilter->deltaLimit)
       continue;
     SWAP_PTR(initial[ip], initial[itop]);
     initial[itop][4] = z;  /* record position of particle loss */

@@ -921,6 +921,7 @@ PARAMETER csrcsbend_param[N_CSRCSBEND_PARAMS] = {
     {"B3", "1/M$a3$n", IS_DOUBLE, 0, (long)((char *)&csrcsbend_example.b3), NULL, 0.0, 0},
     {"B4", "1/M$a4$n", IS_DOUBLE, 0, (long)((char *)&csrcsbend_example.b4), NULL, 0.0, 0},
     {"ISR", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.isr), NULL, 0.0, 0},
+    {"CSR", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.csr), NULL, 0.0, 1},
     };
 
 TUBEND tubend_example;
@@ -1149,6 +1150,7 @@ PARAMETER pfilter_param[N_PFILTER_PARAMS] = {
     {"LOWERFRACTION", "", IS_DOUBLE, 0, (long)((char *)&pfilter_example.lowerFraction), NULL, 0.0, 0},
     {"UPPERFRACTION", "", IS_DOUBLE, 0, (long)((char *)&pfilter_example.upperFraction), NULL, 0.0, 0},
     {"FIXPLIMITS", "", IS_LONG, 0, (long)((char *)&pfilter_example.fixPLimits), NULL, 0.0, 0},
+    {"BEAMCENTERED", "", IS_LONG, 0, (long)((char *)&pfilter_example.beamCentered), NULL, 0.0, 0},
 };
 
 HISTOGRAM histogram_example;
