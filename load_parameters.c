@@ -60,135 +60,161 @@ static char *load_mode[LOAD_MODES] = {
     "absolute", "differential", "ignore", "fractional"
     } ;
 
+long setup_load_parameters_for_file(char *filename, RUN *run, LINE_LIST *beamline);
+
 long setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 {
-    long i, index;
+  long i, index;
+  
+  /* process the namelist text */
+  set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
+  set_print_namelist_flags(0);
+  process_namelist(&load_parameters, nltext);
+  print_namelist(stdout, &load_parameters);
 
-    /* process the namelist text */
-    set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
-    set_print_namelist_flags(0);
-    process_namelist(&load_parameters, nltext);
-    print_namelist(stdout, &load_parameters);
-
+  if (filename_list && strlen(filename_list)) {
+    fprintf(stdout, "Using list of filenames for parameter loading\n");
+  }
+  else {
     if (!filename && !clear_settings)
-        bomb("filename must be given for load_parameters", NULL);
+      bomb("filename or filename_list must be given for load_parameters unless you are clearing settings", NULL);
+    fprintf(stdout, "Using single filename for parameter loading");
+  }
 
-    if (clear_settings && load_requests) {
-        for (i=0; i<load_requests; i++) {
-            if (!SDDS_Terminate(&load_request[i].table))
-                bomb("problem terminating load_parameters table", NULL);
-            }
-        load_requests = 0;
-        }
-    if (clear_settings)
-        return 0;
-    load_parameters_setup = 1;
-
-    load_request = trealloc(load_request, sizeof(*load_request)*(load_requests+1));
-    load_request[load_requests].flags = change_defined_values?COMMAND_FLAG_CHANGE_DEFINITIONS:0;
-    load_request[load_requests].filename = compose_filename(filename, run->rootname);
-    if (change_defined_values && !force_occurence_data)
-      load_request[load_requests].flags |= COMMAND_FLAG_IGNORE_OCCURENCE;
-    load_request[load_requests].includeNamePattern = include_name_pattern;
-    load_request[load_requests].includeItemPattern = include_item_pattern;
-    load_request[load_requests].includeTypePattern = include_type_pattern;
-    load_request[load_requests].excludeNamePattern = exclude_name_pattern;
-    load_request[load_requests].excludeItemPattern = exclude_item_pattern;
-    load_request[load_requests].excludeTypePattern = exclude_type_pattern;
-    
-    SDDS_ClearErrors();
-
-    if (!SDDS_InitializeInputFromSearchPath(&load_request[load_requests].table, 
-                                            load_request[load_requests].filename)) {
-        fprintf(stdout, "error: couldn't initialize SDDS input for load_parameters file %s\n", 
-                load_request[load_requests].filename);
-        fflush(stdout);
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-        exit(1);
-        }
-    if ((index=SDDS_GetColumnIndex(&load_request[load_requests].table, Element_ColumnName))<0 ||
-        SDDS_GetColumnType(&load_request[load_requests].table, index)!=SDDS_STRING) {
-        fprintf(stdout, "Column \"%s\" is not in file %s or is not of string type.\n", Element_ColumnName,
-                load_request[load_requests].filename);
-        fflush(stdout);
-        exit(1);
-        }
-    if ((index=SDDS_GetColumnIndex(&load_request[load_requests].table, Parameter_ColumnName))<0 ||
-        SDDS_GetColumnType(&load_request[load_requests].table, index)!=SDDS_STRING) {
-        fprintf(stdout, "Column \"%s\" is not in file %s or is not of string type.\n", Parameter_ColumnName, 
-                load_request[load_requests].filename);
-        fflush(stdout);
-        exit(1);
-        }
-    load_request[load_requests].string_data = 0;
-    if ((index=SDDS_GetColumnIndex(&load_request[load_requests].table, Value_ColumnName))>=0) {
-      if (SDDS_GetColumnType(&load_request[load_requests].table, index)!=SDDS_DOUBLE) {
-        fprintf(stdout, "Column \"%s\" is not in file %s or is not of double-precision type.\n", 
-                Value_ColumnName, load_request[load_requests].filename);
-        fflush(stdout);
-        exit(1);
-      } 
-    } else {
-      if ((index=SDDS_GetColumnIndex(&load_request[load_requests].table, ValueString_ColumnName))<0 ||
-          SDDS_GetColumnType(&load_request[load_requests].table, index)!=SDDS_STRING) {
-        fprintf(stdout, "Column \"%s\" is not in file %s or is not of string type.\n",
-                ValueString_ColumnName, load_request[load_requests].filename);
-        fflush(stdout);
-        exit(1);
-      }
-      load_request[load_requests].string_data = 1;
+  if (clear_settings && load_requests) {
+    for (i=0; i<load_requests; i++) {
+      if (!SDDS_Terminate(&load_request[i].table))
+        bomb("problem terminating load_parameters table", NULL);
     }
-    if ((include_type_pattern || exclude_type_pattern) &&
-	((index=SDDS_GetColumnIndex(&load_request[load_requests].table, ElementType_ColumnName))<0 ||
-	 SDDS_GetColumnType(&load_request[load_requests].table, index)!=SDDS_STRING)) {
-      fprintf(stdout, "include_type_pattern and/or exclude_type_pattern given, but\n");
-      fprintf(stdout, "column \"%s\" is not in file %s or is not of string type.\n",
-	      ElementType_ColumnName, load_request[load_requests].filename);
+    load_requests = 0;
+  }
+  if (clear_settings)
+    return 0;
+  load_parameters_setup = 1;
+
+  if (filename_list) {
+    char *filename0;
+    while (filename0 = get_token(filename_list))
+      i = setup_load_parameters_for_file(filename0, run, beamline);
+    return i;
+  }
+  else
+    return setup_load_parameters_for_file(filename, run, beamline);
+}
+
+long setup_load_parameters_for_file(char *filename, RUN *run, LINE_LIST *beamline)
+{
+  long i, index;
+  
+  load_request = trealloc(load_request, sizeof(*load_request)*(load_requests+1));
+  load_request[load_requests].flags = change_defined_values?COMMAND_FLAG_CHANGE_DEFINITIONS:0;
+  load_request[load_requests].filename = compose_filename(filename, run->rootname);
+  if (change_defined_values && !force_occurence_data)
+    load_request[load_requests].flags |= COMMAND_FLAG_IGNORE_OCCURENCE;
+  load_request[load_requests].includeNamePattern = include_name_pattern;
+  load_request[load_requests].includeItemPattern = include_item_pattern;
+  load_request[load_requests].includeTypePattern = include_type_pattern;
+  load_request[load_requests].excludeNamePattern = exclude_name_pattern;
+  load_request[load_requests].excludeItemPattern = exclude_item_pattern;
+  load_request[load_requests].excludeTypePattern = exclude_type_pattern;
+  
+  SDDS_ClearErrors();
+
+  if (!SDDS_InitializeInputFromSearchPath(&load_request[load_requests].table, 
+                                          load_request[load_requests].filename)) {
+    fprintf(stdout, "%s: couldn't initialize SDDS input for load_parameters file %s\n", 
+            load_request[load_requests].filename,
+            allow_missing_files?"warning":"error");
+    fflush(stdout);
+    if (!allow_missing_files) {
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      exit(1);
+    }
+    return 1;
+  }
+  if ((index=SDDS_GetColumnIndex(&load_request[load_requests].table, Element_ColumnName))<0 ||
+      SDDS_GetColumnType(&load_request[load_requests].table, index)!=SDDS_STRING) {
+    fprintf(stdout, "Column \"%s\" is not in file %s or is not of string type.\n", Element_ColumnName,
+            load_request[load_requests].filename);
+    fflush(stdout);
+    exit(1);
+  }
+  if ((index=SDDS_GetColumnIndex(&load_request[load_requests].table, Parameter_ColumnName))<0 ||
+      SDDS_GetColumnType(&load_request[load_requests].table, index)!=SDDS_STRING) {
+    fprintf(stdout, "Column \"%s\" is not in file %s or is not of string type.\n", Parameter_ColumnName, 
+            load_request[load_requests].filename);
+    fflush(stdout);
+    exit(1);
+  }
+  load_request[load_requests].string_data = 0;
+  if ((index=SDDS_GetColumnIndex(&load_request[load_requests].table, Value_ColumnName))>=0) {
+    if (SDDS_GetColumnType(&load_request[load_requests].table, index)!=SDDS_DOUBLE) {
+      fprintf(stdout, "Column \"%s\" is not in file %s or is not of double-precision type.\n", 
+              Value_ColumnName, load_request[load_requests].filename);
+      fflush(stdout);
+      exit(1);
+    } 
+  } else {
+    if ((index=SDDS_GetColumnIndex(&load_request[load_requests].table, ValueString_ColumnName))<0 ||
+        SDDS_GetColumnType(&load_request[load_requests].table, index)!=SDDS_STRING) {
+      fprintf(stdout, "Column \"%s\" is not in file %s or is not of string type.\n",
+              ValueString_ColumnName, load_request[load_requests].filename);
       fflush(stdout);
       exit(1);
     }
+    load_request[load_requests].string_data = 1;
+  }
+  if ((include_type_pattern || exclude_type_pattern) &&
+      ((index=SDDS_GetColumnIndex(&load_request[load_requests].table, ElementType_ColumnName))<0 ||
+       SDDS_GetColumnType(&load_request[load_requests].table, index)!=SDDS_STRING)) {
+    fprintf(stdout, "include_type_pattern and/or exclude_type_pattern given, but\n");
+    fprintf(stdout, "column \"%s\" is not in file %s or is not of string type.\n",
+            ElementType_ColumnName, load_request[load_requests].filename);
+    fflush(stdout);
+    exit(1);
+  }
 
-    /* The Mode column is optional: */
-    if ((index=SDDS_GetColumnIndex(&load_request[load_requests].table, Mode_ColumnName))>=0 &&
-        SDDS_GetColumnType(&load_request[load_requests].table, index)!=SDDS_STRING) {
-        fprintf(stdout, "Column \"%s\" is in file %s but is not of string type.\n", 
-                Mode_ColumnName, load_request[load_requests].filename);
-        fflush(stdout);
-        exit(1);
-        }
-    /* The Occurence column is optional: */ 
-    if ((index=SDDS_GetColumnIndex(&load_request[load_requests].table, Occurence_ColumnName))>=0 && 
-        SDDS_GetColumnType(&load_request[load_requests].table, index)!=SDDS_LONG) {
-        fprintf(stdout, "Column \"%s\" is in file %s but is not of long-integer type.\n", 
-                Occurence_ColumnName, load_request[load_requests].filename);
-        fflush(stdout);
-        exit(1);
-        }
-    
-    if (SDDS_NumberOfErrors()) {
-        fprintf(stdout, "error: an uncaught error occured in SDDS routines (setup_load_parameters):\n");
-        fflush(stdout);
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-        exit(1);
-        }
+  /* The Mode column is optional: */
+  if ((index=SDDS_GetColumnIndex(&load_request[load_requests].table, Mode_ColumnName))>=0 &&
+      SDDS_GetColumnType(&load_request[load_requests].table, index)!=SDDS_STRING) {
+    fprintf(stdout, "Column \"%s\" is in file %s but is not of string type.\n", 
+            Mode_ColumnName, load_request[load_requests].filename);
+    fflush(stdout);
+    exit(1);
+  }
+  /* The Occurence column is optional: */ 
+  if ((index=SDDS_GetColumnIndex(&load_request[load_requests].table, Occurence_ColumnName))>=0 && 
+      SDDS_GetColumnType(&load_request[load_requests].table, index)!=SDDS_LONG) {
+    fprintf(stdout, "Column \"%s\" is in file %s but is not of long-integer type.\n", 
+            Occurence_ColumnName, load_request[load_requests].filename);
+    fflush(stdout);
+    exit(1);
+  }
+  
+  if (SDDS_NumberOfErrors()) {
+    fprintf(stdout, "error: an uncaught error occured in SDDS routines (setup_load_parameters):\n");
+    fflush(stdout);
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+    exit(1);
+  }
 
-    load_request[load_requests].last_code = 0;
-    load_request[load_requests].starting_value = NULL;
-    load_request[load_requests].element = NULL;
-    load_request[load_requests].reset_address = NULL;
-    load_request[load_requests].value_type = NULL;
-    load_request[load_requests].element_flags = NULL;
-    load_request[load_requests].values = 0;
-    load_requests++;
-    if (load_request[load_requests-1].flags&COMMAND_FLAG_CHANGE_DEFINITIONS) {
-        /* do this right away so that it gets propagated into error and vary operations */
-        do_load_parameters(beamline, 1);
-        fprintf(stdout, "New length per pass: %21.15e m\n",
-                compute_end_positions(beamline));
-        return 1;
-      }
-    return 0;
-    }
+  load_request[load_requests].last_code = 0;
+  load_request[load_requests].starting_value = NULL;
+  load_request[load_requests].element = NULL;
+  load_request[load_requests].reset_address = NULL;
+  load_request[load_requests].value_type = NULL;
+  load_request[load_requests].element_flags = NULL;
+  load_request[load_requests].values = 0;
+  load_requests++;
+  if (load_request[load_requests-1].flags&COMMAND_FLAG_CHANGE_DEFINITIONS) {
+    /* do this right away so that it gets propagated into error and vary operations */
+    do_load_parameters(beamline, 1);
+    fprintf(stdout, "New length per pass: %21.15e m\n",
+            compute_end_positions(beamline));
+    return 1;
+  }
+  return 0;
+}
 
 
 long do_load_parameters(LINE_LIST *beamline, long change_definitions)
