@@ -655,7 +655,7 @@ extern char *entity_text[N_TYPES];
 #define N_FTRFMODE_PARAMS 10
 #define N_TFBPICKUP_PARAMS 18
 #define N_TFBDRIVER_PARAMS 20
-#define N_LSCDRIFT_PARAMS  7
+#define N_LSCDRIFT_PARAMS  9
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -1944,7 +1944,8 @@ extern PARAMETER lscdrift_param[N_LSCDRIFT_PARAMS];
 typedef struct {
   double length;
   long bins;
-  long smoothing, SGHalfWidth, SGOrder, SGDerivHalfWidth, interpolate;
+  long smoothing, SGHalfWidth, SGOrder, interpolate;
+  double highFrequencyCutoff0, highFrequencyCutoff1;
 } LSCDRIFT;
 
 /* macros for bending magnets */ 
@@ -2568,6 +2569,7 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
                             double Po, double **accepted, double zStart, 
 			    double revolutionLength, char *rootname);
 long reset_driftCSR();
+long applyLowPassFilter(double *histogram, long bins, double start, double end);
 
 void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 void final_floor_coordinates(LINE_LIST *beamline, double *XYZ, double *Angle,

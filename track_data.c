@@ -1713,8 +1713,9 @@ PARAMETER lscdrift_param[N_LSCDRIFT_PARAMS] = {
     {"SMOOTHING", "", IS_LONG, 0, (long)((char *)&lscdrift_example.smoothing), NULL, 0.0, 0, "smooth current histogram?"},
     {"SG_HALFWIDTH", "", IS_LONG, 0, (long)((char *)&lscdrift_example.SGHalfWidth), NULL, 0.0, 1, "Savitzky-Golay filter half-width for smoothing current histogram"},
     {"SG_ORDER", "", IS_LONG, 0, (long)((char *)&lscdrift_example.SGOrder), NULL, 0.0, 1, "Savitzky-Golay filter order for smoothing current histogram"},
-    {"SGDERIV_HALFWIDTH", "", IS_LONG, 0, (long)((char *)&lscdrift_example.SGDerivHalfWidth), NULL, 0.0, 0, "Savitzky-Golay filter half-width for taking derivative of current histogram"},
     {"INTERPOLATE", "", IS_LONG, 0, (long)((char *)&lscdrift_example.interpolate), NULL, 0.0, 1, "Interpolate wake?"},
+    {"HIGH_FREQUENCY_CUTOFF0", "", IS_DOUBLE, 0, (long)((char*)&lscdrift_example.highFrequencyCutoff0), NULL, -1.0, 0, "Spatial frequency at which smoothing filter begins.  If not positive, no frequency filter smoothing is done.  Frequency is in units of Nyquist (0.5/binsize)."},
+    {"HIGH_FREQUENCY_CUTOFF1", "", IS_DOUBLE, 0, (long)((char*)&lscdrift_example.highFrequencyCutoff1), NULL, -1.0, 0, "Spatial frequency at which smoothing filter is 0.  If not given, defaults to HIGH_FREQUENCY_CUTOFF0."},
 };
 
 /* array of parameter structures */

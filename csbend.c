@@ -24,7 +24,6 @@ void convertFromCSBendCoords(double **part, long np, double rho0,
 			     double cos_ttilt, double sin_ttilt, long ctMode);
 void convertToCSBendCoords(double **part, long np, double rho0, 
 			     double cos_ttilt, double sin_ttilt, long ctMode);
-long applyLowPassFilter(double *histogram, long bins, double dx, double start, double end);
 void applyFilterTable(double *function, long bins, double dt, long fValues,
                       double *fFreq, double *fReal, double *fImag);
 
@@ -1336,7 +1335,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
            */
         if (csbend->highFrequencyCutoff0>0) {
           long nz;
-          nz = applyLowPassFilter(ctHist, nBins, dct, csbend->highFrequencyCutoff0, csbend->highFrequencyCutoff1);
+          nz = applyLowPassFilter(ctHist, nBins, csbend->highFrequencyCutoff0, csbend->highFrequencyCutoff1);
           if (nz) {
             fprintf(stdout, "Warning: low pass filter resulted in negative values in %ld bins\n",
                     nz);
@@ -2408,7 +2407,7 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
        */
     if (csrWake.highFrequencyCutoff0>0) {
       long nz;
-      nz = applyLowPassFilter(ctHist, nBins, dct, csrWake.highFrequencyCutoff0, csrWake.highFrequencyCutoff1);
+      nz = applyLowPassFilter(ctHist, nBins, csrWake.highFrequencyCutoff0, csrWake.highFrequencyCutoff1);
       if (nz) {
         fprintf(stdout, "Warning: low pass filter resulted in negative values in %ld bins\n",
                 nz);
@@ -2793,11 +2792,14 @@ void convertToCSBendCoords(double **part, long np, double rho0,
 }
 
 #include "fftpackC.h"
-long applyLowPassFilter(double *histogram, long bins, double dx, double start, double end)
+long applyLowPassFilter(double *histogram, long bins, 
+			double start,   /* in units of Nyquist frequency */
+			double end      /* in units of Nyquist frequency */
+			)
 {
   long i, i1, i2;
   double fraction, dfraction, sum;
-  double *realimag, dfrequency, length;
+  double *realimag;
   long frequencies;
 
   if (!(realimag = (double*)malloc(sizeof(*realimag)*(bins+2))))
@@ -2807,8 +2809,6 @@ long applyLowPassFilter(double *histogram, long bins, double dx, double start, d
     end = start;
 
   frequencies = bins/2 + 1;
-  length = dx*(bins-1);
-  dfrequency = 1.0/length;
   realFFT2(realimag, histogram, bins, 0);
 
   i1 = start*frequencies;

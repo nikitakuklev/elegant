@@ -93,7 +93,16 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
       fflush(stdout);
 #endif
     }
-    
+    if (LSC->highFrequencyCutoff0>0) {
+      long nz;
+      nz = applyLowPassFilter(Itime, nb, LSC->highFrequencyCutoff0, LSC->highFrequencyCutoff1);
+      if (nz) {
+	fprintf(stdout, "Warning: low pass filter resulted in negative values in %ld bins\n",
+		nz);
+	fflush(stdout);
+      }
+    }
+
     /* Compute kSC and length to drift */
     /* - find maximum current */
     find_min_max(&Imin, &Imax, Itime, nb);
@@ -103,7 +112,7 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
   fflush(stdout);
 #endif
     Imax *= charge->macroParticleCharge/dt;
-    /* - compute beam radius as he average rms beam size in x and y */
+    /* - compute beam radius as the average rms beam size in x and y */
     rms_emittance(part, 0, 2, np, &S11, NULL, &S33);
     if ((beamRadius = (sqrt(S11)+sqrt(S33))/2)==0) {
       fprintf(stdout, "Error: beam radius is zero in LSCDRIFT\n");
