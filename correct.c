@@ -1289,6 +1289,15 @@ void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN
   if (!(beamline->flags&BEAMLINE_TWISS_CURRENT)) {
     fprintf(stderr, "updating twiss parameters...");
     update_twiss_parameters(run, beamline);
+#ifdef DEBUG
+    fprintf(stderr, "Tunes: %e, %e\n", beamline->tune[0], beamline->tune[1]);
+    fprintf(stderr, "Initial eta: %e, %e\n", 
+            beamline->elem.twiss->etax, 
+            beamline->elem.twiss->etay);
+    fprintf(stderr, "Final eta: %e, %e\n", 
+            beamline->elast->twiss->etax, 
+            beamline->elast->twiss->etay);
+#endif
     report_stats(stderr, "\ndone: ");
   }
 
