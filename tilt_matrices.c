@@ -153,3 +153,71 @@ void rotate_coordinates(double *coord, double angle)
     coord[3] = -xp*sin_a + yp*cos_a;
     }
 
+#include "matlib.h"
+
+void setupRotate3Matrix(void **Rv, double roll, double yaw, double pitch)
+{
+  MATRIX *R;
+  double angle[3];    /* yaw=phi, pitch=theta, roll=psi */
+  double s[3], c[3];  /* sine, cosine of theta, phi, psi */
+  long ip;
+  
+  /* sequence of rotations is: yaw, pitch, roll 
+   * this is the 3-2-1 seqeunce from Appendix B of Goldstein's Classical Mechanics 
+   * angles: phi=yaw, theta=pitch, psi=roll
+   * coordinates: Z = y, X = z, Y = x,
+   * where capital letters are Goldstein's (x,y,z) and small letters are accelerator
+   * coordinates.
+   */
+  angle[0] = yaw;
+  angle[1] = pitch;
+  angle[2] = roll;
+  for (ip=0; ip<3; ip++) {
+    s[ip] = sin(angle[ip]);
+    c[ip] = cos(angle[ip]);
+  }
+  m_alloc(&R, 3, 3);
+#define C_PHI   c[0]
+#define S_PHI   s[0]
+#define C_THETA c[1]
+#define S_THETA s[1]
+#define C_PSI   c[2]
+#define S_PSI   s[2]
+  R->a[0][0] = C_THETA*C_PHI;
+  R->a[0][1] = C_THETA*S_PHI;
+  R->a[0][2] = -S_THETA;
+  R->a[1][0] = S_PSI*S_THETA*C_PHI - C_PSI*S_PHI;
+  R->a[1][1] = S_PSI*S_THETA*S_PHI + C_PSI*C_PHI;
+  R->a[1][2] = C_THETA*S_PSI;
+  R->a[2][0] = C_PSI*S_THETA*C_PHI + S_PSI*S_PHI;
+  R->a[2][1] = C_PSI*S_THETA*S_PHI - S_PSI*C_PHI;
+  R->a[2][2] = C_THETA*C_PSI;
+  m_show(R, "%10.3lg", "Rotation matrix:\n", stdout);
+  
+  *Rv = R;
+}
+
+void rotate3(double *data, void *Rv)
+{
+  static MATRIX *Q1=NULL, *Q0=NULL;      /* (z, x, y) */
+  MATRIX *R;
+  R = (MATRIX*)Rv;
+
+  if (!Q0) {
+    m_alloc(&Q0, 3, 1);
+    m_alloc(&Q1, 3, 1);
+  }
+
+  Q0->a[0][0] = data[2];  /* accelerator z is Goldstein's x */
+  Q0->a[1][0] = data[0];  /* accelerator x is Goldstein's y */
+  Q0->a[2][0] = data[1];  /* accelerator y is Goldstein's z */
+  m_mult(Q1, R, Q0);
+  data[2] = Q1->a[0][0];
+  data[0] = Q1->a[1][0];
+  data[1] = Q1->a[2][0];
+}
+
+
+
+
+
