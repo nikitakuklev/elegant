@@ -116,10 +116,20 @@ void applyLongitudinalWakeKicks(double **part, double *time, long *pbin, long np
   }
 }
 
+typedef struct {
+  char *filename;
+  long points;
+  double *t, *W;
+} WAKE_DATA;
+
+static WAKE_DATA *storedWake = NULL;
+static long storedWakes = 0;
+
 void set_up_wake(WAKE *wakeData, RUN *run, long pass, long particles, CHARGE *charge)
 {
   SDDS_DATASET SDDSin;
   double tmin, tmax;
+  long iw;
   
   if (charge) {
     wakeData->macroParticleCharge = charge->macroParticleCharge;
@@ -132,7 +142,8 @@ void set_up_wake(WAKE *wakeData, RUN *run, long pass, long particles, CHARGE *ch
   if (wakeData->initialized)
     return;
   wakeData->initialized = 1;
-  
+  wakeData->W = wakeData->t = NULL;
+
   if (wakeData->n_bins<2 && wakeData->n_bins!=0)
     bomb("n_bins must be >=2 or else 0 (autoscale) for WAKE element", NULL);
 
@@ -143,26 +154,49 @@ void set_up_wake(WAKE *wakeData, RUN *run, long pass, long particles, CHARGE *ch
   if (!wakeData->WColumn || !strlen(wakeData->WColumn))
     bomb("supply WColumn for WAKE element", NULL);
   
-  if (!SDDS_InitializeInput(&SDDSin, wakeData->inputFile) || SDDS_ReadPage(&SDDSin)!=1)
-    SDDS_Bomb("unable to read WAKE file");
-  if ((wakeData->wakePoints=SDDS_RowCount(&SDDSin))<0)
-    bomb("no data in WAKE file", NULL);
-  if (wakeData->wakePoints<2)
-    bomb("too little data in WAKE file", NULL);
+  for (iw=0; iw<storedWakes; iw++) {
+    if (strcmp(storedWake[iw].filename, wakeData->inputFile)==0)
+      break;
+  }
   
-  if (SDDS_CheckColumn(&SDDSin, wakeData->tColumn, "s", SDDS_ANY_FLOATING_TYPE, 
-                       stdout)!=SDDS_CHECK_OK)
-    bomb("problem with time column for WAKE file---check existence, units, and type", NULL);
-  if (!(wakeData->t=SDDS_GetColumnInDoubles(&SDDSin, wakeData->tColumn)))
-    SDDS_Bomb("unable to read WAKE file");
-  
-  if (SDDS_CheckColumn(&SDDSin, wakeData->WColumn, "V/C", SDDS_ANY_FLOATING_TYPE, 
-                       stdout)!=SDDS_CHECK_OK)
+  if (iw==storedWakes) {
+    /* read in a new wake */
+    if (!SDDS_InitializeInput(&SDDSin, wakeData->inputFile) || SDDS_ReadPage(&SDDSin)!=1)
+      SDDS_Bomb("unable to read WAKE file");
+    if ((wakeData->wakePoints=SDDS_RowCount(&SDDSin))<0)
+      bomb("no data in WAKE file", NULL);
+    if (wakeData->wakePoints<2)
+      bomb("too little data in WAKE file", NULL);
+    if (SDDS_CheckColumn(&SDDSin, wakeData->tColumn, "s", SDDS_ANY_FLOATING_TYPE, 
+                         stdout)!=SDDS_CHECK_OK)
+      bomb("problem with time column for WAKE file---check existence, units, and type", NULL);
+    if (!(wakeData->t=SDDS_GetColumnInDoubles(&SDDSin, wakeData->tColumn)))
+      SDDS_Bomb("unable to read WAKE file");
+    
+    if (SDDS_CheckColumn(&SDDSin, wakeData->WColumn, "V/C", SDDS_ANY_FLOATING_TYPE, 
+                         stdout)!=SDDS_CHECK_OK)
     bomb("problem with wake column for WAKE file---check existence, units, and type", NULL);
-  if (!(wakeData->W=SDDS_GetColumnInDoubles(&SDDSin, wakeData->WColumn)))
-    SDDS_Bomb("unable to read WAKE file");
-  SDDS_Terminate(&SDDSin);
-  
+    if (!(wakeData->W=SDDS_GetColumnInDoubles(&SDDSin, wakeData->WColumn)))
+      SDDS_Bomb("unable to read WAKE file");
+    SDDS_Terminate(&SDDSin);
+
+    /* record in wake storage */
+    if (!(storedWake=SDDS_Realloc(storedWake, sizeof(*storedWake)*(storedWakes+1))) || 
+        !SDDS_CopyString(&storedWake[storedWakes].filename, wakeData->inputFile))
+      SDDS_Bomb("Memory allocation failure (WAKE)");
+    storedWake[storedWakes].t = wakeData->t;
+    storedWake[storedWakes].W = wakeData->W;
+    storedWake[storedWakes].points = wakeData->wakePoints;
+    wakeData->isCopy = 0;
+    storedWakes++;
+  }
+  else {
+    /* point to an existing wake */
+    wakeData->t = storedWake[iw].t;
+    wakeData->W = storedWake[iw].W;
+    wakeData->wakePoints = storedWake[iw].points;
+    wakeData->isCopy = 1;
+  }
   find_min_max(&tmin, &tmax, wakeData->t, wakeData->wakePoints);
   if (tmin==tmax)
     bomb("no time span in WAKE data", NULL);

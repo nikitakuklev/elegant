@@ -1476,7 +1476,7 @@ typedef struct {
     long change_p0;
     /* for internal use: */
     long initialized;          /* indicates that files are loaded */
-    long wakePoints;
+    long wakePoints, isCopy;
     double *W, *t, macroParticleCharge, dt;
   } WAKE;
 
@@ -1493,7 +1493,7 @@ typedef struct {
     double dx, dy;
     /* for internal use: */
     long initialized;          /* indicates that files are loaded */
-    long wakePoints;
+    long wakePoints, isCopy;
     double *W[2], *t, macroParticleCharge, dt;
   } TRWAKE;
 

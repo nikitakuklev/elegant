@@ -120,10 +120,20 @@ void applyTransverseWakeKicks(double **part, double *time, double *pz, long *pbi
   }
 }
 
+typedef struct {
+  char *filename;
+  long points;
+  double *t, *Wx, *Wy;
+} WAKE_DATA;
+
+static WAKE_DATA *storedWake = NULL;
+static long storedWakes = 0;
+
 void set_up_trwake(TRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE *charge)
 {
   SDDS_DATASET SDDSin;
   double tmin, tmax;
+  long iw;
   
   if (charge) {
     wakeData->macroParticleCharge = charge->macroParticleCharge;
@@ -136,6 +146,7 @@ void set_up_trwake(TRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
   if (wakeData->initialized)
     return;
   wakeData->initialized = 1;
+  wakeData->W[0] = wakeData->W[1] = wakeData->t = NULL;
   
   if (wakeData->n_bins<2 && wakeData->n_bins!=0)
     bomb("n_bins must be >=2 or 0 (autoscale) for TRWAKE element", NULL);
@@ -149,36 +160,61 @@ void set_up_trwake(TRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
   if (wakeData->WyColumn && !strlen(wakeData->WyColumn))
     bomb("supply valid column name for WyColumn for TRWAKE element", NULL);
   
-  if (!SDDS_InitializeInput(&SDDSin, wakeData->inputFile) || SDDS_ReadPage(&SDDSin)!=1)
-    SDDS_Bomb("unable to read TRWAKE file");
-  if ((wakeData->wakePoints=SDDS_RowCount(&SDDSin))<0)
-    bomb("no data in TRWAKE file", NULL);
-  if (wakeData->wakePoints<2)
-    bomb("too little data in TRWAKE file", NULL);
-  
-  if (SDDS_CheckColumn(&SDDSin, wakeData->tColumn, "s", SDDS_ANY_FLOATING_TYPE, 
-                       stdout)!=SDDS_CHECK_OK)
-    bomb("problem with time column for TRWAKE file---check existence, units, and type", NULL);
-  if (!(wakeData->t=SDDS_GetColumnInDoubles(&SDDSin, wakeData->tColumn)))
-    SDDS_Bomb("unable to read TRWAKE file");
-
-  wakeData->W[0] = wakeData->W[1] = NULL;
-  if (wakeData->WxColumn) {
-    if (SDDS_CheckColumn(&SDDSin, wakeData->WxColumn, "V/C/m", SDDS_ANY_FLOATING_TYPE, 
-                         stdout)!=SDDS_CHECK_OK)
-      bomb("problem with Wx wake column for TRWAKE file---check existence, units, and type", NULL);
-    if (!(wakeData->W[0]=SDDS_GetColumnInDoubles(&SDDSin, wakeData->WxColumn)))
-      SDDS_Bomb("unable to read WAKE file");
+  for (iw=0; iw<storedWakes; iw++) {
+    if (strcmp(storedWake[iw].filename, wakeData->inputFile)==0)
+      break;
   }
-  if (wakeData->WyColumn) {
-    if (SDDS_CheckColumn(&SDDSin, wakeData->WyColumn, "V/C/m", SDDS_ANY_FLOATING_TYPE, 
-                         stdout)!=SDDS_CHECK_OK)
-      bomb("problem with Wy wake column for TRWAKE file---check existence, units, and type", NULL);
-    if (!(wakeData->W[1]=SDDS_GetColumnInDoubles(&SDDSin, wakeData->WyColumn)))
+  if (iw==storedWakes) {
+    if (!SDDS_InitializeInput(&SDDSin, wakeData->inputFile) || SDDS_ReadPage(&SDDSin)!=1)
       SDDS_Bomb("unable to read TRWAKE file");
-  }
-  SDDS_Terminate(&SDDSin);
+    if ((wakeData->wakePoints=SDDS_RowCount(&SDDSin))<0)
+      bomb("no data in TRWAKE file", NULL);
+    if (wakeData->wakePoints<2)
+      bomb("too little data in TRWAKE file", NULL);
+    
+    if (SDDS_CheckColumn(&SDDSin, wakeData->tColumn, "s", SDDS_ANY_FLOATING_TYPE, 
+                         stdout)!=SDDS_CHECK_OK)
+      bomb("problem with time column for TRWAKE file---check existence, units, and type", NULL);
+    if (!(wakeData->t=SDDS_GetColumnInDoubles(&SDDSin, wakeData->tColumn)))
+      SDDS_Bomb("unable to read TRWAKE file");
 
+    wakeData->W[0] = wakeData->W[1] = NULL;
+    if (wakeData->WxColumn) {
+      if (SDDS_CheckColumn(&SDDSin, wakeData->WxColumn, "V/C/m", SDDS_ANY_FLOATING_TYPE, 
+                           stdout)!=SDDS_CHECK_OK)
+        bomb("problem with Wx wake column for TRWAKE file---check existence, units, and type", NULL);
+      if (!(wakeData->W[0]=SDDS_GetColumnInDoubles(&SDDSin, wakeData->WxColumn)))
+        SDDS_Bomb("unable to read WAKE file");
+    }
+    if (wakeData->WyColumn) {
+      if (SDDS_CheckColumn(&SDDSin, wakeData->WyColumn, "V/C/m", SDDS_ANY_FLOATING_TYPE, 
+                           stdout)!=SDDS_CHECK_OK)
+        bomb("problem with Wy wake column for TRWAKE file---check existence, units, and type", NULL);
+      if (!(wakeData->W[1]=SDDS_GetColumnInDoubles(&SDDSin, wakeData->WyColumn)))
+        SDDS_Bomb("unable to read TRWAKE file");
+    }
+    SDDS_Terminate(&SDDSin);
+
+    /* record in wake storage */
+    if (!(storedWake=SDDS_Realloc(storedWake, sizeof(*storedWake)*(storedWakes+1))) || 
+        !SDDS_CopyString(&storedWake[storedWakes].filename, wakeData->inputFile))
+      SDDS_Bomb("Memory allocation failure (WAKE)");
+    storedWake[storedWakes].t = wakeData->t;
+    storedWake[storedWakes].Wx = wakeData->W[0];
+    storedWake[storedWakes].Wy = wakeData->W[1];
+    storedWake[storedWakes].points = wakeData->wakePoints;
+    wakeData->isCopy = 0;
+    storedWakes++;
+  }
+  else {
+    /* point to an existing wake */
+    wakeData->t = storedWake[iw].t;
+    wakeData->W[0] = storedWake[iw].Wx;
+    wakeData->W[1] = storedWake[iw].Wy;
+    wakeData->wakePoints = storedWake[iw].points;
+    wakeData->isCopy = 1;
+  }
+  
   if (!wakeData->W[0] && !wakeData->W[1])
     bomb("no valid wake data for TRWAKE element", NULL);
   
