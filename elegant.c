@@ -605,7 +605,11 @@ char **argv;
             while (vary_beamline(&run_control, &error_control, &run_conditions, beamline)) {
                 do_optimize(&namelist_text, &run_conditions, &run_control, &error_control, beamline, &beam,
                             &output_data, &optimize, beam_type);
+                if (parameters)
+                  dumpLatticeParameters(parameters, &run_conditions, beamline);
                 }
+            if (parameters)
+              finishLatticeParametersFile();
             break;
           case OPTIMIZATION_VARIABLE:
             if (beam_type!=-1)
@@ -916,9 +920,30 @@ char **argv;
 
 double find_beam_p_central(char *input)
 {
-    bomb("the expand_for feature is disabled at this time", NULL);
-    return(1);
-    }
+  SDDS_DATASET SDDSin;
+  char s[SDDS_MAXLINE];
+  double *p, psum;
+  long i, rows;
+  
+  if (!SDDS_InitializeInput(&SDDSin, input) || !SDDS_ReadPage(&SDDSin)) {
+    sprintf(s, "Problem opening beam input file %s", input);
+    SDDS_SetError(s);
+    SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+  }
+  if ((rows=SDDS_RowCount(&SDDSin))<=0 || !(p=SDDS_GetColumnInDoubles(&SDDSin, "p"))) {
+    sprintf(s, "No data in input file %s", input);
+    SDDS_SetError(s);
+    SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+  }
+  for (i=psum=0; i<rows; i++) 
+    psum += p[i];
+  if (SDDS_ReadPage(&SDDSin)>0)
+    fprintf(stderr, "Warning: file %s has multiple pages.  Only the first is used for expand_for.\n",
+            input);
+  SDDS_Terminate(&SDDSin);
+  fprintf(stderr, "Expanding about p = %e\n", psum/rows);
+  return psum/rows;
+}
 
 #ifdef SUNOS4
 #include <malloc.h>
