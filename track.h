@@ -626,6 +626,8 @@ typedef struct {
     long order, edge_order, TRANSPORT;
     long use_bn;
     double b2;
+    /* for internal use only: */
+    double k2_internal;
     } BEND;
 
 /* names and storage structure for drift length physical parameters */
@@ -1279,6 +1281,7 @@ typedef struct {
     double b2, b3, b4;
     /* for internal use only: */
     long flags;
+    double k2_internal, k3_internal, k4_internal;
     } CSBEND;
 
 /* names and storage structure for canonically-integrated bending magnet with CSR physical parameters */
@@ -1300,6 +1303,7 @@ typedef struct {
     /* for internal use only: */
     long flags, fileActive;
     SDDS_DATASET SDDSout;
+    double k2_internal, k3_internal, k4_internal;
     } CSRCSBEND;
 
 /* names and storage structure for drift with CSR */
