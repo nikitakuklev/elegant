@@ -1975,6 +1975,11 @@ void computeTuneShiftWithAmplitude(double *dnux_dA, double *dnuy_dA,
     computeTuneShiftWithAmplitudeM(dnux_dA, dnuy_dA, twiss, tune, M);
     return;
   }
+#ifdef DEBUG
+  fprintf(stdout, "Doing TSWA\n");
+  fflush(stdout);
+#endif
+/*
 
 #ifdef DEBUG
   if (!fpout) {
@@ -1996,6 +2001,7 @@ void computeTuneShiftWithAmplitude(double *dnux_dA, double *dnuy_dA,
     fprintf(fpout, "&data mode=ascii no_row_counts=1 &end\n");
   }
 #endif
+*/
   
   /* use tracking and NAFF */
 
@@ -2004,6 +2010,11 @@ void computeTuneShiftWithAmplitude(double *dnux_dA, double *dnuy_dA,
   upperLimit[0] = upperLimit[1] = 1;
   lowerLimit[0] = lowerLimit[1] = 0;
   while (tries--) {
+#ifdef DEBUG
+    fprintf(stdout, "TSWA tries: %ld\n", tries);
+    fflush(stdout);
+#endif
+
     lost = 0;
     
     /* (0, 0) */
@@ -2015,6 +2026,11 @@ void computeTuneShiftWithAmplitude(double *dnux_dA, double *dnuy_dA,
       lost = 1;
       break;
     }
+#ifdef DEBUG
+    fprintf(stdout, "TSWA: 0,0 done\n");
+    fflush(stdout);
+#endif
+
     
     /* (dx, 0) */
     if (!computeTunesFromTracking(tune_dx, M, beamline, run, startingCoord,
@@ -2025,7 +2041,11 @@ void computeTuneShiftWithAmplitude(double *dnux_dA, double *dnuy_dA,
       lost = 1;
       break;
     }
-      
+#ifdef DEBUG
+    fprintf(stdout, "TSWA: dx,0 done\n");
+    fflush(stdout);
+#endif      
+
     /* (0, dy) */
     if (!computeTunesFromTracking(tune_dy, M, beamline, run, startingCoord,
                                   tune_shift_with_amplitude_struct.x0,
@@ -2035,6 +2055,10 @@ void computeTuneShiftWithAmplitude(double *dnux_dA, double *dnuy_dA,
       lost = 1;
       break;
     }
+#ifdef DEBUG
+    fprintf(stdout, "TSWA: 0,dy done\n");
+    fflush(stdout);
+#endif
 
     if (tune_shift_with_amplitude_struct.verbose) {
       fprintf(stdout, "Tunes for TSWA: nux0=%e, dnux(x)=%e, dnux(y)=%e\n",
@@ -2048,6 +2072,7 @@ void computeTuneShiftWithAmplitude(double *dnux_dA, double *dnuy_dA,
     result[2] = (tune_dy[0] - tune0[0]);  /* dnux from dy */
     result[3] = (tune_dy[1] - tune0[1]);  /* dnuy from dy */
 
+/*
 #ifdef DEBUG
     fprintf(fpout, "%e %e %ld %21.15e %21.15e %21.15e %21.15e %21.15e %21.15e %e %e %e %e\n",
             sqr(tune_shift_with_amplitude_struct.x1)/twiss->betax,
@@ -2058,7 +2083,8 @@ void computeTuneShiftWithAmplitude(double *dnux_dA, double *dnuy_dA,
             tune_dy[0], tune_dy[1],
             result[0], result[1], result[2], result[3]);
 #endif
-    
+*/    
+
     maxResult = -(minResult = DBL_MAX);
     for (i=0; i<4; i++) {
       if (fabs(result[i])>maxResult)
@@ -2132,6 +2158,11 @@ long computeTunesFromTracking(double *tune, VMATRIX *M, LINE_LIST *beamline, RUN
   long i, one=1;
   double CSave[6];
   
+#ifdef DEBUG
+  fprintf(stdout, "In computeTunesFromTracking: turns=%ld, xAmp=%le, yAmp=%le, useMatrix=%ld\n",
+          turns, xAmplitude, yAmplitude, useMatrix);
+  fflush(stdout);
+#endif
   x = y = NULL;
   if (useMatrix) {
     /* this is necessary because the concatenated matrix includes the closed orbit in 
@@ -2151,20 +2182,40 @@ long computeTunesFromTracking(double *tune, VMATRIX *M, LINE_LIST *beamline, RUN
   }
   oneParticle[0][0] += xAmplitude;
   oneParticle[0][2] += yAmplitude;
-  /*
-    fprintf(stdout, "Starting coordinates: %le, %le, %le, %le, %le, %le\n",
-    oneParticle[0][0], oneParticle[0][1],
-    oneParticle[0][2], oneParticle[0][3],
-    oneParticle[0][4], oneParticle[0][5]);
-    */
+
+#ifdef DEBUG
+  fprintf(stdout, "Starting coordinates: %le, %le, %le, %le, %le, %le\n",
+          oneParticle[0][0], oneParticle[0][1],
+          oneParticle[0][2], oneParticle[0][3],
+          oneParticle[0][4], oneParticle[0][5]);
+  fflush(stdout);
+#endif
+
+#ifdef DEBUG
+  fprintf(stdout, "Doing malloc: turns=%ld\n", turns);
+  fflush(stdout);
+#endif
+
 
   if (!(x = malloc(sizeof(*x)*turns)) ||
       !(y = malloc(sizeof(*y)*turns)))
     bomb("memory allocation failure (computeTunesFromTracking)", NULL);
 
+#ifdef DEBUG
+  fprintf(stdout, "Did malloc\n");
+  fflush(stdout);
+#endif
+
   x[0] = oneParticle[0][0];
   y[0] = oneParticle[0][2];
   p = run->p_central;
+
+
+#ifdef DEBUG
+  fprintf(stdout, "Starting to track\n");
+  fflush(stdout);
+#endif
+
   for (i=1; i<turns; i++) {
     if (useMatrix)
       track_particles(oneParticle, M, oneParticle, one);
@@ -2180,23 +2231,35 @@ long computeTunesFromTracking(double *tune, VMATRIX *M, LINE_LIST *beamline, RUN
         isnan(oneParticle[0][2]) || isnan(oneParticle[0][3]) ||
         isnan(oneParticle[0][4]) || isnan(oneParticle[0][5])) {
       fprintf(stdout, "warning: test particle lost on turn %ld (computeTunesFromTracking)\n", i);
+      fflush(stdout);
       return 0;
     }
+#ifdef DEBUG
+    fprintf(stdout, "Turn %ld done\n", i);
+    fflush(stdout);
+#endif
     x[i] = oneParticle[0][0];
     y[i] = oneParticle[0][2];
   }
-  /*
+#ifdef DEBUG
   fprintf(stdout, "Ending coordinates: %le, %le, %le, %le, %le, %le\n",
           oneParticle[0][0], oneParticle[0][1],
           oneParticle[0][2], oneParticle[0][3],
           oneParticle[0][4], oneParticle[0][5]);
-  */
+  fflush(stdout);
+#endif
+
   PerformNAFF(tune+0, &dummy, &dummy, 0.0, 1.0, x, turns, 
 	      NAFF_MAX_FREQUENCIES|NAFF_FREQ_CYCLE_LIMIT|NAFF_FREQ_ACCURACY_LIMIT,
 	      0.0, 1, 100, 1e-6);
   PerformNAFF(tune+1, &dummy, &dummy, 0.0, 1.0, y, turns,
 	      NAFF_MAX_FREQUENCIES|NAFF_FREQ_CYCLE_LIMIT|NAFF_FREQ_ACCURACY_LIMIT,
 	      0.0, 1, 100, 1e-6);
+#ifdef DEBUG
+  fprintf(stdout, "NAFF done\n");
+  fflush(stdout);
+#endif
+
   free(x);
   free(y);
   free_zarray_2d((void*)oneParticle, 1, 7);
@@ -2235,9 +2298,11 @@ void computeTuneShiftWithAmplitudeM(double *dnux_dA, double *dnuy_dA,
 
   free_matrices(&M2);
 
+/*
   fprintf(stderr, "Tune check: \n%le %le\n%le %le\n",
           cos(PIx2*turns*tune[0]), (M1.R[0][0]+M1.R[1][1])/2,
           cos(PIx2*turns*tune[1]), (M1.R[2][2]+M1.R[3][3])/2);
+*/
   
   alpha[0] = twiss->alphax;
   alpha[1] = twiss->alphay;
