@@ -12,11 +12,13 @@
     double time_start = 0;
     STRING matched_to_cell = NULL;
     double emit_x  = 0;
+    double emit_nx  = 0;
     double beta_x  = 1.0;
     double alpha_x = 0.0;
     double eta_x   = 0.0;
     double etap_x  = 0.0;
     double emit_y  = 0;
+    double emit_ny  = 0;
     double beta_y  = 1.0;
     double alpha_y = 0.0;
     double eta_y   = 0.0;

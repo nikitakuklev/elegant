@@ -75,6 +75,10 @@ void setup_bunched_beam(
     print_namelist(stdout, &bunched_beam);
 
     /* check for validity of namelist inputs */
+    if (emit_nx && !emit_x)
+      emit_x = emit_nx/Po;
+    if (emit_ny && !emit_y)
+      emit_y = emit_ny/Po;
     if (n_particles_per_bunch<=0)
         bomb("n_particles_per_bunch is invalid", NULL);
     if (emit_x<0 || beta_x<=0)
