@@ -1301,6 +1301,41 @@ end are given.
 
 \begin{latexonly}
 \newpage
+\begin{center}{\Large\verb|frequency_map|}\end{center}
+\end{latexonly}
+\subsection{frequency\_map}
+
+\begin{itemize}
+\item type: setup command.  Actual tracking occurs when the {\tt track} command is given.
+        The number of turns tracked is set by the \verb|run\_control| command.
+\item function: compute frequency map from tracking
+\end{itemize}
+
+\begin{verbatim}
+&floor_coordinates
+    STRING output = NULL;
+    double xmin = 0.0;
+    double xmax = 0.1;
+    double ymin = 0.0;
+    double ymax = 0.1;
+    long nx = 21;
+    long ny = 11;
+    long verbosity = 1;
+&end
+\end{verbatim}
+
+\begin{itemize}
+\item \verb|output| --- The (incomplete) name of an SDDS file to send output to.  
+ Recommended value: ``\%s.fma''.
+\item \verb|xmin|, \verb|xmax| --- Limits of grid of initial x coordinates for tracking.
+\item \verb|ymin|, \verb|ymax| --- Limits of grid of initial y coordinates for tracking.
+\item \verb|nx| --- Number of values of x coordinate in the grid.
+\item \verb|ny| --- Number of values of y coordinate in the grid.
+\item \verb|verbosity| --- If nonzero, prints possibly useful information while running.
+\end{itemize}
+
+\begin{latexonly}
+\newpage
 \begin{center}{\Large\verb|link_control|}\end{center}
 \end{latexonly}
 \subsection{link\_control}
