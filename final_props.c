@@ -15,7 +15,7 @@
 static double tmp_safe_sqrt;
 #define SAFE_SQRT(x) ((tmp_safe_sqrt=(x))<0?0.0:sqrt(tmp_safe_sqrt))
 
-#define FINAL_PROPERTY_PARAMETERS 80
+#define FINAL_PROPERTY_PARAMETERS 86
 #define FINAL_PROPERTY_LONG_PARAMETERS 5
 #define F_SIGMA_OFFSET 0
 #define F_SIGMA_QUANS 7
@@ -30,7 +30,7 @@ static double tmp_safe_sqrt;
 #define F_NEMIT_OFFSET F_EMIT_OFFSET+F_EMIT_QUANS
 #define F_NEMIT_QUANS 2
 #define F_WIDTH_OFFSET F_NEMIT_OFFSET+F_NEMIT_QUANS
-#define F_WIDTH_QUANS 4
+#define F_WIDTH_QUANS 10
 #define F_RMAT_OFFSET F_WIDTH_OFFSET+F_WIDTH_QUANS
 #define F_RMAT_QUANS 31
 #define F_STATS_OFFSET F_RMAT_OFFSET+F_RMAT_QUANS
@@ -49,7 +49,7 @@ static SDDS_DEFINITION final_property_parameter[FINAL_PROPERTY_PARAMETERS] = {
     {"Syp",    "&parameter name=Syp, symbol=\"$gs$r$by'$n\", type=double &end"},
     {"Ss",    "&parameter name=Ss, units=m, symbol=\"$gs$r$bs$n\", type=double &end"},
     {"Sdelta",    "&parameter name=Sdelta, symbol=\"$gs$bd$n$r\", type=double &end"},
-    {"St", "&parameter name=St, symbol=\"$gs$r$bt$n\", type=double, units=s, symbol=\"\" &end"},
+    {"St", "&parameter name=St, symbol=\"$gs$r$bt$n\", type=double, units=s, &end"},
     {"Cx", "&parameter name=Cx, symbol=\"<x>\", units=m, type=double &end"},
     {"Cxp", "&parameter name=Cxp, symbol=\"<x'>\", type=double &end"},
     {"Cy", "&parameter name=Cy, symbol=\"<y>\", units=m, type=double &end"},
@@ -86,6 +86,12 @@ static SDDS_DEFINITION final_property_parameter[FINAL_PROPERTY_PARAMETERS] = {
     {"Wy", "&parameter name=Wy, type=double, units=m, symbol=\"W$by$n\" &end"},
     {"Dt", "&parameter name=Dt, type=double, units=s, symbol=\"$gD$rt\" &end"},
     {"Ddelta", "&parameter name=Ddelta, type=double, symbol=\"$gDd$r\" &end"},
+    {"Dt80", "&parameter name=Dt80, type=double, units=s, symbol=\"$gD$rt$b80$n\", &end"},
+    {"Dt90", "&parameter name=Dt90, type=double, units=s, symbol=\"$gD$rt$b90$n\", &end"},
+    {"Dt95", "&parameter name=Dt95, type=double, units=s, symbol=\"$gD$rt$b95$n\", &end"},
+    {"Ddelta80", "&parameter name=Ddelta80, type=double, symbol=\"$gDd$r$b80$n\", &end"},
+    {"Ddelta90", "&parameter name=Ddelta90, type=double, symbol=\"$gDd$r$b90$n\", &end"},
+    {"Ddelta95", "&parameter name=Ddelta95, type=double, symbol=\"$gDd$r$b95$n\", &end"},
     {"R11", "&parameter name=R11, type=double, symbol=\"R$b11$n\" &end"},
     {"R12", "&parameter name=R12, type=double, units=m, symbol=\"R$b12$n\" &end"},
     {"R13", "&parameter name=R13, type=double, symbol=\"R$b13$n\" &end"},
@@ -295,7 +301,11 @@ long compute_final_properties
   double p_sum, gamma_sum, p, sum, tc, tmin, tmax, dt, t;
   double **R, centroid[6];
   MATRIX Rmat;
-
+  static double *tData = NULL, *deltaData = NULL;
+  static long percDataMax = 0;
+  double percLevel[6] = {10, 5, 2.5, 90, 95, 97.5};
+  double tPosition[6], deltaPosition[6];
+  
   log_entry("compute_final_properties");
 
   if (!data)
@@ -324,6 +334,10 @@ long compute_final_properties
     }
     /* time centroid, sigma, and delta */
     tmax = dp_max = -(tmin=dp_min=DBL_MAX);
+    if ((!tData || sums->n_part>percDataMax) &&
+        (!(tData = malloc(sizeof(*tData)*(percDataMax=sums->n_part))) ||
+         !(deltaData = malloc(sizeof(*deltaData)*(percDataMax=sums->n_part)))))
+      bomb("memory allocation failure (compute_final_properties)", NULL);
     for (i=sum=0; i<sums->n_part; i++) {
       if (!coord[i]) {
         fprintf(stdout, "coordinate element for particle %ld is null (compute_final_properties)\n", i);
@@ -335,7 +349,8 @@ long compute_final_properties
       if (coord[i][5]<dp_min)
         dp_min = coord[i][5];
       p = p_central*(1+coord[i][5]);
-      sum += ( t = coord[i][4]/(p/sqrt(sqr(p)+1)*c_mks) );
+      deltaData[i] = coord[i][5];
+      sum += ( t = tData[i] = coord[i][4]/(p/sqrt(sqr(p)+1)*c_mks) );
       if (t<tmin)
         tmin = t;
       if (t>tmax)
@@ -347,11 +362,16 @@ long compute_final_properties
     for (i=sum=0; i<sums->n_part; i++)
       sum += sqr(coord[i][4]/(p/sqrt(sqr(p)+1)*c_mks) - tc);
     data[6+F_SIGMA_OFFSET] = sqrt(sum/sums->n_part);
+    /* results of these calls used below */
+    compute_percentiles(tPosition, percLevel, 6, tData, sums->n_part);
+    compute_percentiles(deltaPosition, percLevel, 6, deltaData, sums->n_part);
   }
   else {
     for (i=0; i<7; i++) 
       data[i+F_CENTROID_OFFSET] = data[i+F_SIGMA_OFFSET] = 0;
     dt = Ddp = 0;
+    for (i=0; i<6; i++)
+      tPosition[i] = deltaPosition[i] = 0;
   }
 
   /* transmission */
@@ -383,10 +403,14 @@ long compute_final_properties
     data[F_WIDTH_OFFSET+1] = beam_width(0.6826F, coord, sums->n_part, 2L)/2.;
     data[F_WIDTH_OFFSET+2] = dt;
     data[F_WIDTH_OFFSET+3] = Ddp;
+    for (i=0; i<3; i++) {
+      data[F_WIDTH_OFFSET+4+i] = tPosition[3+i]-tPosition[0+i];
+      data[F_WIDTH_OFFSET+7+i] = deltaPosition[3+i]-deltaPosition[0+i];
+    }
   }
   else
-    data[F_WIDTH_OFFSET] = data[F_WIDTH_OFFSET+1] = data[F_WIDTH_OFFSET+2] = 
-      data[F_WIDTH_OFFSET+4] = 0;
+    for (i=0; i<10; i++)
+      data[F_WIDTH_OFFSET] = 0;
 
   /* compute emittances */
   data[F_EMIT_OFFSET]   = rms_emittance(coord, 0, 1, sums->n_part, NULL, NULL, NULL);
