@@ -455,7 +455,7 @@ VMATRIX *sbend_matrix(
 #endif
 
     C[0] = C[1] = C[2] = C[3] = C[5] = 0;
-    C[4] = t0;
+    C[4] = t0 ;
     if (h!=0) {
         C[0] =  -(h-ha)*(cx - 1)/kx2;
         C[1] = (h-ha)*sx;
@@ -475,6 +475,7 @@ VMATRIX *sbend_matrix(
         R[4][1] = -(h*(cx - 1))/kx2;
         R[4][2] = R[4][3] = 0;
         R[4][5] = (h*ha*(t0 - sx))/kx2;
+        C[4] += R[4][5]*(1-ha/h);
         }
     else {
         /* steering corrector */
