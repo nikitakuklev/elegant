@@ -146,7 +146,14 @@ void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
         PARAMETERS_ARE_PERTURBED |
           ((entity_description[eptr->type].parameter[iParam].flags&PARAM_CHANGES_MATRIX)?VMATRIX_IS_PERTURBED:0);
     }
-    if (nMatches==0)
-      fprintf(stdout, "Warning: no matches for %s\n", name);
-}
+    if (nMatches==0)  {
+      if (allow_missing_elements)
+        fprintf(stdout, "Warning: no matches for %s\n", name);
+      else {
+        fprintf(stdout, "Error: no matches for %s\n", name);
+        exit(1);
+      }
+    }
+  }
+
 
