@@ -48,7 +48,7 @@ elegant_SRCS = 	alpha_data.c alpha_matrix.c amplif.c analyze.c aperture_search.c
 		run_rpnexpr.c sample.c sdds_beam.c sdds_support.c simple_rfca.c  subprocess.c \
 		tune.c tilt_matrices.c trace.c track_data.c track_ramp.c track_rf.c trfmode.c ztransverse.c \
 		twiss.c vary.c zlongit.c SReffects.c mod_rfca.c fitTraces.c ibs_tracking.c zibs.c wake.c \
-		trwake.c circles.c tubend.c sasefelmx.c sasefel.c
+		trwake.c circles.c tubend.c sasefelmx.c sasefel.c alter.c
 
 sddsemitmeas_SRCS = sddsemitmeas.c
 
@@ -68,6 +68,11 @@ recurseSetup_SRCS = recurseSetup.c
 fitTraces_CFLAGS = -I../../../../../epics/extensions/src/SDDS/meschach
 
 include $(TOP)/config/RULES.Host
+
+alter$(OBJ): alter.h
+
+alter.h: ../alter.nl
+	nlpp ../alter.nl alter.h
 
 amplif$(OBJ): amplif.h
 
