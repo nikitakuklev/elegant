@@ -674,7 +674,7 @@ extern char *entity_text[N_TYPES];
 #define N_TFBDRIVER_PARAMS 20
 #define N_LSCDRIFT_PARAMS  9
 #define N_DSCATTER_PARAMS 13
-#define N_PLUND_PARAMS 10
+#define N_PLUND_PARAMS 13
 #define N_TAYLORSERIES_PARAMS 6
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
@@ -2033,8 +2033,9 @@ typedef struct {
   double length, Bu;
   long periods;
   char *method;
-  double accuracy;
+  double accuracy; 
   long nSteps;
+  double poleFactor1, poleFactor2, poleFactor3;
   double usersLaserWavelength, laserPeakPower, laserW0, laserPhase;
   /* internal variables */
   double laserWavelength, Ef0Laser, omega, k;

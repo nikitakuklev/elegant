@@ -142,6 +142,9 @@ static long starting_integration;
 static double initial_phase=0, final_phase=0;
 #endif
 
+static double xMaxSeen=-1e300, xMinSeen=1e300;
+static long xMotionCenterVar = -1;
+
 long motion(
     double **part,
     long n_part,
@@ -194,7 +197,11 @@ long motion(
     fill_long_array(accmode, 6, 3);
     fill_double_array(tiny , 6, 1e-16);
     hrec = 0;
-
+    xMaxSeen=-1e300;
+    xMinSeen=1e300;
+    if (xMotionCenterVar<0)
+      xMotionCenterVar = rpn_create_mem("xMotionCenter");
+    
     for (i_part=0; i_part<=i_top; i_part++) {
         tol_factor = 1;
         end_factor = 1.5;
@@ -336,7 +343,10 @@ long motion(
                     break;
                 }
             }
-        }
+        if (i_part==0) 
+          rpn_store((xMaxSeen+xMinSeen)/2, xMotionCenterVar);
+      }
+    
     if (change_p0)
       do_match_energy(part, n_part, pCentral, 0);
     
@@ -426,7 +436,8 @@ void (*set_up_derivatives(
     plUnd->Ef0Laser = 2/plUnd->laserW0*sqrt(sqrt(mu_o/epsilon_o)*plUnd->laserPeakPower/PI);
     fprintf(stderr, "laser wavelength is %e \n", plUnd->laserWavelength);
     fprintf(stderr, "Ef0Laser = %e V/m\n", plUnd->Ef0Laser);
-    X_offset = Ku/(gamma*plUnd->ku)*(*kscale);
+    /* X_offset = Ku/(gamma*plUnd->ku)*(*kscale); */
+    X_offset = 0;
     X_aperture_center = X_center = 0;
     Y_aperture_center = Y_center = 0;
     Y_offset = 0;
@@ -2063,7 +2074,6 @@ void makeRftmEz0FieldTestFile(RFTMEZ0 *rftmEz0)
 void computeLaserField(double *Ef, double *Bf, double phase, double Ef0, 
                        double k, double w0, double x, double y, double dz) ;
 
-
 #ifdef DEBUG
 FILE *fppu = NULL;
 #endif
@@ -2073,8 +2083,8 @@ void derivatives_planarUndulator(double *qp, double *q, double tau)
   PLUND *plUnd; 
   double gamma, *P, *Pp;
   double BOverGamma[3]={0,0,0}, E[3]={0,0,0}, Blaser[3]={0,0,0};
-  double x, y, z;
-  long i;
+  double x, y, z, factor;
+  long i, poleNumber;
   
 #ifdef DEBUG
   if (!fppu) {
@@ -2108,9 +2118,22 @@ void derivatives_planarUndulator(double *qp, double *q, double tau)
   x = (q[0] - X_offset)/plUnd->k;
   y = q[1]/plUnd->k;
   z = q[2]/plUnd->k;
+  if (x<xMinSeen)
+    xMinSeen = x;
+  if (x>xMaxSeen)
+    xMaxSeen = x;
   
-  BOverGamma[1] = plUnd->Bu*cos(plUnd->ku*z)*cosh(plUnd->ku*y)*plUnd->Bscale/gamma;
-  BOverGamma[2] = plUnd->Bu*sin(plUnd->ku*z)*sinh(plUnd->ku*y)*plUnd->Bscale/gamma;
+  poleNumber = 2*z/(plUnd->length/plUnd->periods);
+  factor = 1;
+  if (poleNumber==0 || poleNumber==(2*plUnd->periods-1))
+    factor = plUnd->poleFactor1;
+  if (poleNumber==1 || poleNumber==(2*plUnd->periods-2))
+    factor = plUnd->poleFactor2;
+  if (poleNumber==2 || poleNumber==(2*plUnd->periods-3))
+    factor = plUnd->poleFactor3;
+  
+  BOverGamma[1] = factor*plUnd->Bu*cos(plUnd->ku*z)*cosh(plUnd->ku*y)*plUnd->Bscale/gamma;
+  BOverGamma[2] = factor*plUnd->Bu*sin(plUnd->ku*z)*sinh(plUnd->ku*y)*plUnd->Bscale/gamma;
 
   if (plUnd->Ef0Laser>0 && plUnd->laserW0>0) {
     computeLaserField(E, Blaser, -tau+plUnd->k*z - Z_center + plUnd->laserPhase,
