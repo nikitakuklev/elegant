@@ -253,7 +253,7 @@ void fill_elem(ELEMENT_LIST *eptr, char *s, long type, FILE *fp_input)
         }
     cp_str(&eptr->definition_text, s);
     eptr->matrix = NULL;
-
+    eptr->group = NULL;
     eptr->p_elem = tmalloc(entity_description[type].structure_size);
     zero_memory(eptr->p_elem, entity_description[type].structure_size);
 
@@ -357,6 +357,9 @@ void copy_named_element(ELEMENT_LIST *eptr, char *s, ELEMENT_LIST *elem)
     eptr->p_elem = tmalloc(entity_description[elem->type].structure_size);
     memcpy((void*)eptr->p_elem, (const void *)elem->p_elem, entity_description[elem->type].structure_size);
     cp_str(&eptr->name, name);
+    eptr->group = NULL;
+    if (elem->group)
+      cp_str(&eptr->group, elem->group);
     eptr->matrix = NULL;
     eptr->flags = PARAMETERS_ARE_STATIC;
     eptr->type = elem->type;
@@ -473,6 +476,9 @@ void copy_element(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long reverse, long divisio
     log_entry("copy_element");
 
     cp_str(&e1->name, e2->name);
+    e1->group = NULL;
+    if (e2->group)
+      cp_str(&e1->group, e2->group);
     e1->end_pos = 0;
     e1->flags   = 0;
     e1->matrix  = NULL;
@@ -792,7 +798,7 @@ void parse_element(
     char *type_name
     )
 {
-  long i, difference;
+  long i, difference, isGroup, pType;
   char *ptr, *ptr1, *rpn_token;
 
   log_entry("parse_element");
@@ -842,10 +848,17 @@ void parse_element(
     fprintf(stdout, "Parsing %s\n", ptr);
 #endif
     ptr1 = get_param_name(ptr);
+    isGroup = 0;
     for (i=0; i<n_params; i++) 
       if (strcmp(parameter[i].name, ptr1)==0)
         break;
-    if (i==n_params) {
+    if (strcmp(ptr1, "GROUP")==0) {
+      pType = IS_STRING;
+      isGroup = 1;
+    } else {
+      pType = parameter[i].type;
+    }
+    if (i==n_params && !isGroup) {
       fprintf(stdout, "error: unknown parameter %s used for %s %s (%s)\n",
               ptr1, eptr->name, type_name, "parse_element");
       fflush(stdout);
@@ -875,13 +888,9 @@ void parse_element(
       }
       exit(1);
     }
-    switch (parameter[i].type) {
+    switch (pType) {
     case IS_DOUBLE:
       if (!isdigit(*ptr) && *ptr!='.' && *ptr!='-' && *ptr!='+') {
-#if defined(DEBUG)
-        fprintf(stdout, "non-numeric string for double value: %s\n", ptr);
-        fflush(stdout);
-#endif
         rpn_token = get_token(ptr);
         SDDS_UnescapeQuotes(rpn_token, '"');
         *((double*)(p_elem+parameter[i].offset)) = rpn(rpn_token);
@@ -908,7 +917,10 @@ void parse_element(
         get_long((long*)(p_elem+parameter[i].offset), ptr);
       break;
     case IS_STRING:
-      *(char**)(p_elem+parameter[i].offset) = get_token(ptr);
+      if (!isGroup)
+        *(char**)(p_elem+parameter[i].offset) = get_token(ptr);
+      else
+        eptr->group = get_token(ptr);
       break;
     default:
       bomb("unknown data type in parse_element!", NULL);

@@ -579,6 +579,10 @@ void do_save_lattice(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     else
       strcpy(name, eptr->name);
     sprintf(s, "%s: %s,", name, entity_name[eptr->type]);
+    if (eptr->group && strlen(eptr->group)) {
+      sprintf(t, "GROUP=\"%s\",", eptr->group);
+      strcat(s, t);
+    }
     for (j=0; j<entity_description[eptr->type].n_params; j++) {
       switch (parameter[j].type) {
       case IS_DOUBLE:

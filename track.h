@@ -88,7 +88,7 @@ typedef struct {
 
 typedef struct element_list {
     double end_pos, end_theta;
-    char *name;
+    char *name, *group;
     char *definition_text;
     char *p_elem;       /* pointer to the element structure */
     long type;
