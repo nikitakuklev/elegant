@@ -1004,16 +1004,38 @@ void center_beam_on_coords(double **part, long np, double *coord, long center_dp
         }
     }
 
+typedef struct {
+  char *elementName;
+  long index;
+} DICTIONARY_ENTRY;
+
+int dictionaryEntryCmp(const void *p1, const void *p2)
+{
+  DICTIONARY_ENTRY *de1, *de2;
+  de1 = (DICTIONARY_ENTRY *)p1;
+  de2 = (DICTIONARY_ENTRY *)p2;
+  return strcmp(de1->elementName, de2->elementName);
+}
+
 void do_print_dictionary(char *filename, long latex_form)
 {
   FILE *fp;
   long i;
-
+  DICTIONARY_ENTRY *dictList;
+  
   if (!filename)
     bomb("filename invalid (do_print_dictionary)", NULL);
+  if (!(dictList = malloc(sizeof(*dictList)*N_TYPES)))
+    bomb("memory allocation failure", NULL);
+  for (i=1; i<N_TYPES; i++) {
+    dictList[i-1].elementName = entity_name[i];
+    dictList[i-1].index = i;
+  }
+  qsort((void*)dictList, N_TYPES-1, sizeof(*dictList), dictionaryEntryCmp);
   fp = fopen_e(filename, "w", 0);
-  for (i=1; i<N_TYPES; i++)
-    print_dictionary_entry(fp, i, latex_form);
+  for (i=0; i<N_TYPES-1; i++)
+    print_dictionary_entry(fp, dictList[i].index, latex_form);
+  free(dictList);
   fclose(fp);
 }
 

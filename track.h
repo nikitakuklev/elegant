@@ -537,7 +537,7 @@ extern char *entity_text[N_TYPES];
 #define N_WAKE_PARAMS 11
 #define N_TRWAKE_PARAMS 13
 #define N_TUBEND_PARAMS 6
-#define N_CHARGE_PARAMS 1
+#define N_CHARGE_PARAMS 2
 #define N_PFILTER_PARAMS 1
 #define N_HISTOGRAM_PARAMS 9
 #define N_CSRCSBEND_PARAMS 32
@@ -1496,7 +1496,7 @@ typedef struct {
 
 /* names and storage structure for CHARGE element */
 typedef struct {
-  double charge;
+  double charge, chargePerParticle;
   /* for internal use only */
   double macroParticleCharge;
 } CHARGE;

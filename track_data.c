@@ -1112,6 +1112,7 @@ CHARGE charge_example;
 /* CHARGE physical parameters */
 PARAMETER charge_param[N_CHARGE_PARAMS] = {
     {"TOTAL", "C", IS_DOUBLE, 0, (long)((char *)&charge_example.charge), NULL, 0.0, 0},
+    {"PER_PARTICLE", "C", IS_DOUBLE, 0, (long)((char *)&charge_example.chargePerParticle), NULL, 0.0, 0},
 };
 
 PFILTER pfilter_example;
