@@ -617,7 +617,7 @@ extern char *entity_text[N_TYPES];
 #define N_CLEAN_PARAMS 7
 #define N_TWISSELEMENT_PARAMS 6
 #define N_WIGGLER_PARAMS 3
-#define N_SCRIPT_PARAMS 1
+#define N_SCRIPT_PARAMS 6
 
 typedef struct {
     char *name;            /* parameter name */
@@ -1732,7 +1732,9 @@ typedef struct {
 
 /* names and storage structure for SCRIPT element */
 typedef struct {
-  char *command;
+  double length;
+  char *command, *rootname, *inputExtension, *outputExtension;
+  long keepFiles;
 } SCRIPT;
 
 /* macros for bending magnets */ 

@@ -24,7 +24,7 @@ void trackWithChromaticLinearMatrix(double **particle, long particles,
 void matr_element_tracking(double **coord, VMATRIX *M, MATR *matr,
                            long np, double z);
 long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge, 
-                             double ***part, long *np);
+                             double ***part, long np, char *mainRootname);
 
 static TRACKING_CONTEXT trackingContext;
 
@@ -756,8 +756,9 @@ long do_tracking(
                         charge);
             break;
           case T_SCRIPT:
-            transformBeamWithScript((SCRIPT*)eptr->p_elem,
-                                    *P_central, charge, &coord, &n_to_track);
+            n_left = transformBeamWithScript((SCRIPT*)eptr->p_elem,
+                                    *P_central, charge, &coord, n_to_track,
+				    run->rootname);
             break;
           default:
             fprintf(stdout, "programming error: no tracking statements for element %s (type %s)\n",
@@ -1507,25 +1508,33 @@ void matr_element_tracking(double **coord, VMATRIX *M, MATR *matr,
 }
 
 long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge, 
-                             double ***part, long *np)
+                             double ***part, long np, char *mainRootname)
 {
   char *rootname, *input, *output;
   char *cmdBuffer0, *cmdBuffer1;
   SDDS_DATASET SDDSout, SDDSin;
   double *data;
   char *dataname[6] = {"x","xp","y","yp","t","p"};
-  long i, j, npNew;
-  
-  /* generate random rootname */
-  if (!(rootname = tmpname(NULL)))
-    bomb("problem generating temporary filename for script", NULL);
-  if (!(input = malloc(sizeof(*input)*(strlen(rootname)+10))) ||
-      !(output = malloc(sizeof(*output)*(strlen(rootname)+10))))
+  long i, j, npNew, nameLength;
+
+  if (!script->rootname && !strlen(script->rootname)) {
+    /* generate random rootname */
+    if (!(rootname = tmpname(NULL)))
+      bomb("problem generating temporary filename for script", NULL);
+  } else 
+    rootname = compose_filename(script->rootname, mainRootname);
+  nameLength = strlen(rootname) + strlen(script->inputExtension) +
+    strlen(script->outputExtension) + 2;
+  if (!(input = malloc(sizeof(*input)*nameLength)) ||
+      !(output = malloc(sizeof(*output)*nameLength)))
     bomb("problem generating temporary filename for script", NULL);
 
   /* prepare command */
-  sprintf(input, "%s.in", rootname);
-  sprintf(output, "%s.out", rootname);
+  sprintf(input, "%s.%s", rootname, script->inputExtension);
+  sprintf(output, "%s.%s", rootname, script->outputExtension);
+  if (rootname!=script->rootname)
+    free(rootname);
+
   if (!(cmdBuffer0=malloc(sizeof(char)*(strlen(script->command)+10*strlen(input)+10*strlen(output)))) ||
       !(cmdBuffer1=malloc(sizeof(char)*(strlen(script->command)+10*strlen(input)+10*strlen(output)))))
     bomb("memory allocation failure making command buffer for script", NULL);
@@ -1535,17 +1544,19 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
   
   /* dump the data to script input file */
   SDDS_ForceInactive(&SDDSout);
-  SDDS_PhaseSpaceSetup(&SDDSout, input, SDDS_BINARY, 1, "script input", "unknown", "unknown",
+  SDDS_PhaseSpaceSetup(&SDDSout, input, SDDS_BINARY, 1, "script input", 
+		       "unknown", "unknown",
                        "transformBeamWithScript");
-  dump_phase_space(&SDDSout, *part, *np, 0, pCentral, 
-                   charge?charge->macroParticleCharge*(*np):0.0);
+  dump_phase_space(&SDDSout, *part, np, 0, pCentral, 
+                   charge?charge->macroParticleCharge*np:0.0);
 
   if (!SDDS_Terminate(&SDDSout))
     SDDS_Bomb("problem terminating script input file");
   
   /* run the script */
   executeCshCommand(cmdBuffer1);
-  
+  fprintf(stderr, "Command completed\n");
+
   /* read the data from script output file */
   if (!fexists(output)) 
     SDDS_Bomb("unable to find script output file");
@@ -1576,12 +1587,10 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
   }
   if (!(npNew=SDDS_RowCount(&SDDSin))) {
-    *np = 0;
-    return 1;
+    return 0;
   }
-  if (*np!=npNew 
-      && !(*part = SDDS_Realloc(*part, sizeof(**part)*npNew)))
-    SDDS_Bomb("memory allocation failure loading from script output file");
+  if (npNew>np)
+    SDDS_Bomb("Script increased number of particles, which is not presently allowed.  Suggest randomly selecting particles to limit the number.");
   for (i=0; i<6; i++) {
     if (!(data = SDDS_GetColumnInDoubles(&SDDSin, dataname[i]))) {
       SDDS_SetError("Unable to read script output file");
@@ -1591,6 +1600,10 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
       (*part)[j][i] = data[j];
     free(data);
   }
+  /* assign new particle IDs */
+  for (j=0; j<npNew; j++)
+    (*part)[j][6] = j;
+
   if (charge) {
     double totalCharge;
     if (!SDDS_GetParameterAsDouble(&SDDSin, "Charge", &totalCharge)) {
@@ -1606,6 +1619,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
     SDDS_Bomb("Script output file has multiple pages");
   if (!SDDS_Terminate(&SDDSin))
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+  fprintf(stderr, "done with file\n");
     
   /* convert (t, p) data to (s, delta) */
   for (j=0; j<npNew; j++) {
@@ -1616,13 +1630,15 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
     (*part)[j][4] *= beta*c_mks;
   }
 
-  /* delete the input and output files */
-  sprintf(cmdBuffer0, "rm -f %s %s", input, output);
-  system(cmdBuffer0);
-  
+  if (!script->keepFiles) {
+    /* delete the input and output files */
+    remove(input);
+    remove(output);
+  }
+
   /* clean up */
   free(cmdBuffer0);
   
-  return 1;
+  return npNew;
 }
 

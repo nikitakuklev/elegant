@@ -1333,7 +1333,12 @@ PARAMETER wiggler_param[N_WIGGLER_PARAMS] = {
 SCRIPT script_example;
 
 PARAMETER script_param[N_SCRIPT_PARAMS] = {
+  {"L", "M", IS_DOUBLE, 0, (long)((char *)&script_example.length), NULL, 0.0, 0, "Length to be used for matrix-based operations such as twiss parameter computation."},
   {"COMMAND", "", IS_STRING, 0, (long)((char *)&script_example.command), NULL, 0.0, 0, "SDDS-compliant command to apply to the beam.  Use the sequence %i to represent the input filename and %o to represent the output filename."},
+  {"ROOTNAME", "", IS_STRING, 0, (long)((char *)&script_example.rootname), NULL, 0.0, 0, "Rootname for use in naming input and output files.  %s may be used to represent the run rootname."},
+  {"INPUT_EXTENSION", "", IS_STRING, 0, (long)((char *)&script_example.inputExtension), "in", 0.0, 0, "Extension for the script input file."},
+  {"OUTPUT_EXTENSION", "", IS_STRING, 0, (long)((char *)&script_example.outputExtension), "in", 0.0, 0, "Extension for the script output file."},
+  {"KEEP_FILES", "", IS_LONG, 0, (long)((char *)&script_example.keepFiles), NULL, 0.0, 0, "If nonzero, then script input and output files are not deleted after use.  By default, they are deleted."},
 };
   
 /* array of parameter structures */
@@ -1433,7 +1438,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_CLEAN_PARAMS,  0, sizeof(CLEAN), clean_param },
     { N_TWISSELEMENT_PARAMS, HAS_MATRIX|MATRIX_TRACKING, sizeof(TWISSELEMENT), twissElement_param},
     { N_WIGGLER_PARAMS, MAT_LEN|MATRIX_TRACKING, sizeof(WIGGLER), wiggler_param},
-    {  N_SCRIPT_PARAMS,           0,       sizeof(SCRIPT),    script_param     }, 
+    {  N_SCRIPT_PARAMS,           MAT_LEN, sizeof(SCRIPT),    script_param     }, 
 } ;
  
 
