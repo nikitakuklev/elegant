@@ -752,8 +752,9 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
               newResult -= optimization_data->termValue[imax];
               optimization_data->termWeight[imax] *= optimization_data->restart_worst_term_factor;
               newResult += optimization_data->termValue[imax]*optimization_data->restart_worst_term_factor;
-              fprintf(stdout, "Adjusted weight for term: %s\n",
-                      optimization_data->term[imax]);
+              fprintf(stdout, "Adjusted weight for term from %le to %le: %s\n",
+                      optimization_data->termWeight[imax]/optimization_data->restart_worst_term_factor,
+                      optimization_data->termWeight[imax], optimization_data->term[imax]);
               /* just to be sure it doesn't get picked as the max again */
               optimization_data->termValue[imax] = -DBL_MAX;
             }
@@ -762,8 +763,14 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
           }
           memcpy(optimization_data->termValue, savedTermValue, optimization_data->terms*sizeof(*savedTermValue));
           if (newResult) {
-            for (i=0; i<optimization_data->terms; i++)
+            fprintf(stdout, "Normalizing weights by factor %e (%e/%e):\n",
+                    lastResult/newResult, lastResult, newResult);
+            for (i=0; i<optimization_data->terms; i++) {
+              fprintf(stdout, "Adjusted weight from %e to %e for %s\n",
+                      optimization_data->termWeight[i], optimization_data->termWeight[i]*lastResult/newResult,
+                      optimization_data->term[i]);
               optimization_data->termWeight[i] *= lastResult/newResult;
+            }
           }
         }
         fprintf(stdout, "Redoing optimization\n");

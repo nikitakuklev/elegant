@@ -23,12 +23,14 @@
 
 char *USAGE = "madto inputfile outputfile \n\
  { -EmmaMatlab | -patpet | -patricia | -parmela[=quad_ap(mm),sext_ap(mm),p(MeV/c)]\n\
-  -transport[=quad_ap(mm),sext_ap(mm),p(GeV/c)] | -sdds=[p(GeV/c)] | [-xorbit] }\n\
+  -transport[=quad_ap(mm),sext_ap(mm),p(GeV/c)] | -sdds=[p(GeV/c)] | [-xorbit] \n\
+  -cosy=quad_ap(mm),sext_ap(mm),p(MeV/c),order }\n\
  [-angle_tolerance=value] [-flip_k_signs] [-magnets=filename]\n\
  [-header=filename] [-ender=filename]\n\n\
 madto converts MAD accelerator lattice format to various other formats.\n\
 The required input format is the dialect of MAD format used by elegant.\n\
-Program by Michael Borland.  (This is Version 5, February 2002.)\n";
+N.B.: the units for various quantities are not the same for different options!.\n\
+Program by Michael Borland.  (This is Version 6, March 2003.)\n";
 
 #define SET_CONVERT_TO_PATRICIA 0
 #define SET_CONVERT_TO_TRANSPORT 1
@@ -42,11 +44,12 @@ Program by Michael Borland.  (This is Version 5, February 2002.)\n";
 #define SET_HEADER_FILE 9
 #define SET_ENDER_FILE 10
 #define SET_CONVERT_TO_EMMAMATLAB 11
-#define N_OPTIONS 12
+#define SET_CONVERT_TO_COSY 12
+#define N_OPTIONS 13
 char *option[N_OPTIONS] = {
     "patricia", "transport", "parmela", "patpet", "sdds", "xorbit",
     "angle_tolerance", "flip_k_signs", "magnets", "header", "ender", 
-    "emmamatlab",
+    "emmamatlab", "cosy",
     } ;
 
 #define TRANSPORT_OUTPUT 1
@@ -56,6 +59,7 @@ char *option[N_OPTIONS] = {
 #define SDDS_OUTPUT 5
 #define XORBIT_OUTPUT 6
 #define EMMAMATLAB_OUTPUT 7
+#define COSY_OUTPUT 8
 
 int main(int argc, char **argv)
 {
@@ -66,7 +70,8 @@ int main(int argc, char **argv)
     double angle_tolerance;
     SCANNED_ARG *scanned;
     double quad_ap, sext_ap, p_cent;
-
+    long order;
+    
     if (argc<3 || argc>7)
         bomb(NULL, USAGE);
 
@@ -166,6 +171,18 @@ int main(int argc, char **argv)
                 if (scanned[i].n_items!=1)
                     bomb("wrong number of values with -EmmaMatlab option", USAGE);
                 break;
+              case SET_CONVERT_TO_COSY:
+                if (output_mode)
+                    bomb("can only convert to one format at a time", USAGE);
+                output_mode = COSY_OUTPUT;
+                if (scanned[i].n_items!=5)
+                    bomb("wrong number of values with -cosy option", USAGE);
+                if (sscanf(scanned[i].list[1], "%lf", &quad_ap)!=1 || quad_ap<=0 ||
+                     sscanf(scanned[i].list[2], "%lf", &sext_ap)!=1 || sext_ap<=0 ||
+                     sscanf(scanned[i].list[3], "%lf", &p_cent )!=1 || p_cent <=0 ||
+                     sscanf(scanned[i].list[4], "%ld", &order )!=1 || order<=0)
+                    bomb("invalid values for -cosy option", USAGE);
+                break;
               default:
                 bomb("unknown option given", USAGE);
                 break;
@@ -238,6 +255,12 @@ int main(int argc, char **argv)
         if (magnets)
             output_magnets(magnets, beamline->name, beamline);
         convert_to_EmmaMatlab(output, beamline, header_file, ender_file);
+        break;
+      case COSY_OUTPUT:
+        beamline = get_beamline(input, NULL, p_cent/me_mev, 0);
+        if (magnets)
+            output_magnets(magnets, beamline->name, beamline);
+        convert_to_cosy(output, beamline, order, p_cent/me_mev, quad_ap/1e3, sext_ap/1e3); 
         break;
       default:
         bomb("internal error--unknown output mode", NULL);
