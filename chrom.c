@@ -89,7 +89,8 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
         beamline->twiss0->etay   = eta_y;
         beamline->twiss0->etapy  = etap_y;
         
-        propagate_twiss_parameters(beamline->twiss0, beamline->tune, NULL, beamline->elem_twiss, run, NULL);
+        propagate_twiss_parameters(beamline->twiss0, beamline->tune, beamline->waists,
+                                   NULL, beamline->elem_twiss, run, NULL);
       }
 
       if (!(M=beamline->matrix) || !M->C || !M->R || !M->T)
@@ -263,7 +264,8 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
         beamline->twiss0->etay   = eta_y;
         beamline->twiss0->etapy  = etap_y;
         
-        propagate_twiss_parameters(beamline->twiss0, beamline->tune, NULL, beamline->elem_twiss, run, clorb);
+        propagate_twiss_parameters(beamline->twiss0, beamline->tune, beamline->waists,
+                                   NULL, beamline->elem_twiss, run, clorb);
         }
     else if (beamline->matrix->order<2)
         beamline->matrix = full_matrix(beamline->elem_twiss, run, 2);
@@ -384,7 +386,8 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
       }
     
 
-    propagate_twiss_parameters(beamline->twiss0, beamline->tune, NULL, beamline->elem_twiss, run, clorb);
+    propagate_twiss_parameters(beamline->twiss0, beamline->tune, 
+                               beamline->waists, NULL, beamline->elem_twiss, run, clorb);
     log_exit("do_chromaticity_correction");
     return 1;
     }

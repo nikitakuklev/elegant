@@ -723,6 +723,9 @@ VMATRIX *compute_matrix(
           bomb("Give one and only one of SPREAD, ATTENUATION_LENGTH, or USE_OVERTAKING_LENGTH for CSRDRIFT", NULL);
         elem->matrix = drift_matrix(csrdrift->length, run->default_order);
         break;
+      case T_TWISSELEMENT:
+        elem->matrix = twissTransformMatrix((TWISSELEMENT*)elem->p_elem, NULL);
+        break;
       case T_REFLECT:
         elem->matrix = tmalloc(sizeof(*(elem->matrix)));
         initialize_matrices(elem->matrix, elem->matrix->order = 1);
@@ -1072,3 +1075,34 @@ VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, doubl
     return(M);
     }
 
+VMATRIX *twissTransformMatrix(TWISSELEMENT *twissWanted,
+                              TWISS *twissInput)
+{
+  VMATRIX *M;
+  double beta1, beta2, alpha1, alpha2;
+  
+  M = tmalloc(sizeof(*M));
+  initialize_matrices(M, M->order=1);
+  M->R[0][0] = M->R[1][1] = M->R[2][2] = M->R[3][3] = 
+    M->R[4][4] = M->R[5][5] = 1;
+  if (twissInput==NULL)
+    return M;
+
+  beta1 = twissInput->betax;
+  beta2 = twissWanted->betax;
+  alpha1 = twissInput->alphax;
+  alpha2 = twissWanted->alphax;
+  M->R[0][0] = beta2/sqrt(beta1*beta2);
+  M->R[1][0] = (alpha1-alpha2)/sqrt(beta1*beta2);
+  M->R[1][1] = beta1/sqrt(beta1*beta2);
+  
+  beta1 = twissInput->betay;
+  beta2 = twissWanted->betay;
+  alpha1 = twissInput->alphay;
+  alpha2 = twissWanted->alphay;
+  M->R[2][2] = beta2/sqrt(beta1*beta2);
+  M->R[3][2] = (alpha1-alpha2)/sqrt(beta1*beta2);
+  M->R[3][3] = beta1/sqrt(beta1*beta2);
+  
+  return M;
+}

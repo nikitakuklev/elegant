@@ -154,6 +154,7 @@ typedef struct line_list {
                               Usually &elem or elem_recirc. */
     ELEMENT_LIST *elast;    /* pointer to last element &elem list */
     double tune[2];          /* x and y tunes from start of elem_twiss to end of line */
+    long waists[2];          /* number of sign changes in alpha */
     double chromaticity[2];  /* dNUx/d(p/p0) and dNUy/d(p/p0) */
     double dbeta_dPoP[2];    /* d/d(p/p0) of betax and betay */
     double dalpha_dPoP[2];   /* d/d(p/p0) of alphax and alphay */
@@ -517,7 +518,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_MAPSOLENOID 75
 #define T_REFLECT 76
 #define T_CLEAN 77
-#define N_TYPES 78
+#define T_TWISSELEMENT 78
+#define N_TYPES 79
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -602,6 +604,7 @@ extern char *entity_text[N_TYPES];
 #define N_RFCW_PARAMS 28
 #define N_REFLECT_PARAMS 1
 #define N_CLEAN_PARAMS 7
+#define N_TWISSELEMENT_PARAMS 6
 
 typedef struct {
     char *name;            /* parameter name */
@@ -827,6 +830,12 @@ typedef struct {
   char *mode;
   double xLimit, xpLimit, yLimit, ypLimit, tLimit, deltaLimit;
 } CLEAN;
+
+/* storage structure for twiss element (sets twiss parameters) */
+typedef struct {
+  double betax, betay, alphax, alphay;
+  long fromBeam, onceOnly;
+} TWISSELEMENT;
 
 /* storage structure for marker */
 
@@ -1981,7 +1990,8 @@ void setup_matrix_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 VMATRIX *compute_periodic_twiss(double *betax, double *alphax, double *etax, double *etaxp,
     double *phix, double *betay, double *alphay, double *etay, double *etayp, double *phiy,
     ELEMENT_LIST *elem, double *clorb, RUN *run, unsigned long *unstable, double *eta2);
-void propagate_twiss_parameters(TWISS *twiss0, double *tune, RADIATION_INTEGRALS *radIntegrals,
+void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
+                                RADIATION_INTEGRALS *radIntegrals,
                                 ELEMENT_LIST *elem, RUN *run, double *traj);
 long get_twiss_mode(long *mode, double *x_twiss, double *y_twiss);
 void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_coord, long matched, 
@@ -2392,4 +2402,6 @@ double FELScalingFunction
    double lightWavelength, double undulatorPeriod, double sigmaDelta);
 
 void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
+
+VMATRIX *twissTransformMatrix(TWISSELEMENT *twissWanted, TWISS *twissInput);
 

@@ -3,6 +3,11 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.2  2002/01/02 18:28:58  borland
+ * Added slice analysis inside CSRCSBEND and CSRDRIFT elements.
+ * Emittance units for tracked beam are now "m" instead of some
+ * complicated sequence.
+ *
  * Revision 1.1  2002/01/02 14:17:07  borland
  * First version of slice analysis code.
  *
@@ -315,9 +320,6 @@ void performSliceAnalysis(SLICE_OUTPUT *sliceOutput, double **particle, long par
 		 sqr(S[3][5])*S[2][2])/S[5][5]);
   }
   
-  /* offset all time coordinates by the average time coordinate */
-  for (i=0; i<particles; i++)
-    particle[i][4] -= aveCoord[4];
   /* find total bunch duration */
   tMaxAll = -(tMinAll = DBL_MAX);
   for (i=0; i<particles; i++) {
@@ -333,7 +335,7 @@ void performSliceAnalysis(SLICE_OUTPUT *sliceOutput, double **particle, long par
     nSlices = sliceOutput->nSlices;
 
     sliceOutput->ecnx[nSlices+1] = sliceOutput->ecny[nSlices+1] =  0;
-    sliceOutput->charge[0] = sliceOutput->duration[nSlices+1] = 0;
+    sliceOutput->charge[nSlices+1] = sliceOutput->duration[nSlices+1] = 0;
     sliceOutput->Sdelta[nSlices+1] = 0;
     sliceOutput->Cx[nSlices+1] = sliceOutput->Cxp[nSlices+1] = 0;
     sliceOutput->Cy[nSlices+1] = sliceOutput->Cyp[nSlices+1] = 0;

@@ -26,7 +26,7 @@ char *entity_name[N_TYPES] = {
     "MODRF", "BMAPXY", "ZTRANSVERSE", "IBSCATTER", "FMULT",
     "WAKE", "TRWAKE", "TUBEND", "CHARGE", "PFILTER", "HISTOGRAM",
     "CSRCSBEND", "CSRDRIFT", "RFCW", "REMCOR", "MAPSOLENOID",
-    "REFLECT", "CLEAN",
+    "REFLECT", "CLEAN", "TWISS",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -135,6 +135,7 @@ and phase modulation.",
     "A numerically-integrated solenoid specified as a map of (Bz, Br) vs (z, r).",
     "Reflects the beam back on itself, which is useful for multiple beamline matching.",
     "Cleans the beam by removing outlier particles.",
+    "Sets Twiss parameter values.",
     } ;
 
 QUAD quad_example;
@@ -1305,6 +1306,18 @@ PARAMETER mapSolenoid_param[N_MAPSOLENOID_PARAMS] = {
     {"METHOD", " ", IS_STRING, 0, (long)((char *)&mapSol_example.method), DEFAULT_INTEG_METHOD, 0.0, 0, "integration method (runge-kutta, bulirsch-stoer, non-adaptive runge-kutta, modified midpoint)"},
     } ;
 
+TWISSELEMENT twissElem_example;
+
+PARAMETER twissElement_param[N_TWISSELEMENT_PARAMS] = {
+  {"BETAX", "M", IS_DOUBLE, 0, (long)((char *)&twissElem_example.betax), NULL, 1.0, 0, "horizontal beta function"},
+  {"BETAY", "M", IS_DOUBLE, 0, (long)((char *)&twissElem_example.betay), NULL, 1.0, 0, "vertical beta function"},
+  {"ALPHAX", "", IS_DOUBLE, 0, (long)((char *)&twissElem_example.alphax), NULL, 0.0, 0, "horizontal alpha function"},
+  {"ALPHAY", "", IS_DOUBLE, 0, (long)((char *)&twissElem_example.alphay), NULL, 0.0, 0, "vertical alpha function"},
+  {"FROM_BEAM", "", IS_LONG, 0, (long)((char *)&twissElem_example.fromBeam), NULL, 0.0, 0, "compute correction from tracked beam properties instead of Twiss parameters?"},
+  {"ONCE_ONLY", "", IS_LONG, 0, (long)((char *)&twissElem_example.onceOnly), NULL, 0.0, 0, "compute correction only for first beam or input twiss parameters, apply to all?"},        
+};
+
+
 /* array of parameter structures */
 
 #define MAT_LEN     HAS_MATRIX|HAS_LENGTH
@@ -1399,7 +1412,8 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     {  N_REMCOR_PARAMS,           0,     sizeof(REMCOR),    remcor_param   },
     { N_MAPSOLENOID_PARAMS,  MAT_LEN_NCAT,    sizeof(MAP_SOLENOID),    mapSolenoid_param    }, 
     { N_REFLECT_PARAMS,      HAS_MATRIX|MATRIX_TRACKING,    sizeof(REFLECT),    reflect_param  },
-    { N_CLEAN_PARAMS,  0, sizeof(CLEAN), clean_param }
+    { N_CLEAN_PARAMS,  0, sizeof(CLEAN), clean_param },
+    { N_TWISSELEMENT_PARAMS, HAS_MATRIX|MATRIX_TRACKING, sizeof(TWISSELEMENT), twissElement_param},
 } ;
  
 

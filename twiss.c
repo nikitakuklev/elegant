@@ -174,11 +174,12 @@ VMATRIX *compute_periodic_twiss(
   return(M);
 }
 
-void propagate_twiss_parameters(TWISS *twiss0, double *tune, RADIATION_INTEGRALS *radIntegrals, 
+void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
+                                RADIATION_INTEGRALS *radIntegrals, 
                                 ELEMENT_LIST *elem,  RUN *run, double *traj
                                 )
 {
-  double beta[2], alpha[2], phi[2], eta[2], etap[2], gamma[2];
+  double beta[2], alpha[2], phi[2], eta[2], etap[2], gamma[2], refAlpha[2];
   double *func, path[6], path0[6], detR[2];
   double **R=NULL, C[2], S[2], Cp[2], Sp[2], D[2], Dp[2], sin_dphi, cos_dphi, dphi;
   long n_mat_computed, i, j, plane, otherPlane, hasMatrix;
@@ -194,7 +195,7 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, RADIATION_INTEGRALS
   
   for (plane=0; plane<2; plane++) {
     beta[plane]  = *(&twiss0->betax+plane*TWISS_Y_OFFSET);
-    alpha[plane] = *(&twiss0->alphax+plane*TWISS_Y_OFFSET);
+    refAlpha[plane] = alpha[plane] = *(&twiss0->alphax+plane*TWISS_Y_OFFSET);
     phi[plane]   = *(&twiss0->phix+plane*TWISS_Y_OFFSET);
     eta[plane]   = *(&twiss0->etax+plane*TWISS_Y_OFFSET);
     etap[plane]  = *(&twiss0->etapx+plane*TWISS_Y_OFFSET);
@@ -223,13 +224,27 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, RADIATION_INTEGRALS
     for (i=0; i<6; i++) 
       radIntegrals->I[i] = 0;
   }
+  waists[0] = waists[1] = 0;
   
   while (elem) {
     for (plane=0; plane<2; plane++) 
       gamma[plane] = (1+sqr(alpha[plane]))/beta[plane];
     if (entity_description[elem->type].flags&HAS_MATRIX) {
-      if (!elem->matrix || !(elem->matrix->R) || (elem->pred && elem->pred->Pref_output!=elem->Pref_input)) {
-        elem->matrix = compute_matrix(elem, run, NULL);
+      if (!elem->matrix || !(elem->matrix->R) || 
+          (elem->pred && elem->pred->Pref_output!=elem->Pref_input) ||
+          elem->type==T_TWISSELEMENT) {
+        if (elem->matrix)
+          free_matrices(elem->matrix);
+        if (elem->type==T_TWISSELEMENT) {
+          TWISS twissInput;
+          twissInput.betax = beta[0];
+          twissInput.betay = beta[1];
+          twissInput.alphax = alpha[0];
+          twissInput.alphay = alpha[1];
+          elem->matrix = twissTransformMatrix((TWISSELEMENT*)elem->p_elem,
+                                              &twissInput);
+        } else
+          elem->matrix = compute_matrix(elem, run, NULL);
         n_mat_computed++;
       }
       hasMatrix = 1;
@@ -334,7 +349,13 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, RADIATION_INTEGRALS
       
       phi[plane]  = func[2] = phi[plane] + dphi;
       beta[plane]  = fabs(func[0]);
+    
       alpha[plane] = func[1];
+      if (SIGN(alpha[plane])!=SIGN(refAlpha[plane]) && refAlpha[plane]!=0 && alpha[plane]!=0) {
+        /* if sign of alpha changes, it is called a "waist". */
+        waists[plane] ++;
+        refAlpha[plane] = alpha[plane];
+      }
     }
     
     /* compute dispersion function and slope */
@@ -458,8 +479,10 @@ static SDDS_DEFINITION column_definition[N_COLUMNS_WRI] = {
 #define IP_BETAYMAX 16
 #define IP_ETAXMAX 17
 #define IP_ETAYMAX 18
-#define IP_ALPHAC2 19
-#define IP_ALPHAC 20
+#define IP_WAISTSX 19
+#define IP_WAISTSY 20
+#define IP_ALPHAC2 21
+#define IP_ALPHAC 22
 /* IP_ALPHAC must be the last item before the radiation-integral-related
  * items!
  */
@@ -499,6 +522,8 @@ static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
 {"betayMax", "&parameter name=betayMax, type=double, units=m, description=\"Maximum betay\" &end"},
 {"etaxMax", "&parameter name=etaxMax, type=double, units=m, description=\"Maximum absolute value of etax\" &end"},
 {"etayMax", "&parameter name=etayMax, type=double, units=m, description=\"Maximum absolute value of etay\" &end"},
+{"waistsx", "&parameter name=waistsx, type=long, description=\"Number of changes in the sign of alphax\" &end"},
+{"waistsy", "&parameter name=waistsy, type=long, description=\"Number of changes in the sign of alphay\" &end"},
 {"alphac2", "&parameter name=alphac2, symbol=\"$ga$r$bc2$n\", type=double, description=\"2nd-order momentum compaction factor\" &end"},
 {"alphac", "&parameter name=alphac, symbol=\"$ga$r$bc$n\", type=double, description=\"Momentum compaction factor\" &end"},
 {"I1", "&parameter name=I1, type=double, description=\"Radiation integral 1\", units=m &end"} ,
@@ -571,6 +596,8 @@ void dump_twiss_parameters(
                           IP_BETAYMIN, twiss_min.betay, IP_BETAYAVE, twiss_ave.betay, IP_BETAYMAX, twiss_max.betay, 
                           IP_ETAXMAX, MAX(fabs(twiss_min.etax), fabs(twiss_max.etax)),
                           IP_ETAYMAX, MAX(fabs(twiss_min.etay), fabs(twiss_max.etay)),
+                          IP_WAISTSX, beamline->waists[0],
+                          IP_WAISTSY, beamline->waists[1],
                           IP_PCENTRAL, run->p_central, -1)) {
     SDDS_SetError("Problem setting SDDS parameters (dump_twiss_parameters 1)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -1045,7 +1072,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
   fflush(stdout);
 #endif
 
-  propagate_twiss_parameters(beamline->twiss0, beamline->tune, 
+  propagate_twiss_parameters(beamline->twiss0, beamline->tune, beamline->waists,
                              (radiation_integrals?&(beamline->radIntegrals):NULL),
                              beamline->elem_twiss, run, starting_coord);
   

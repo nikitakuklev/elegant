@@ -93,7 +93,8 @@ void setup_tune_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline,
       beamline->twiss0->etay   = eta_y;
       beamline->twiss0->etapy  = etap_y;
       
-      propagate_twiss_parameters(beamline->twiss0, beamline->tune, NULL, beamline->elem_twiss, run, NULL);
+      propagate_twiss_parameters(beamline->twiss0, beamline->tune, beamline->waists,
+                                 NULL, beamline->elem_twiss, run, NULL);
       if (tune->tunex<0)
         fprintf(stdout, "horizontal tune will be held at %f\n", tune->tunex = beamline->tune[0]);
         fflush(stdout);
@@ -236,7 +237,8 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
   beamline->twiss0->etay   = eta_y;
   beamline->twiss0->etapy  = etap_y;
   
-  propagate_twiss_parameters(beamline->twiss0, beamline->tune, NULL, beamline->elem_twiss, run, clorb);
+  propagate_twiss_parameters(beamline->twiss0, beamline->tune, beamline->waists,
+                             NULL, beamline->elem_twiss, run, clorb);
 
   if (!M || !M->C || !M->R)
     bomb("something wrong with transfer map for beamline (do_tune_correction.1)", NULL);
@@ -337,7 +339,8 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
     if (!M || !M->C || !M->R)
       bomb("something wrong with transfer map for beamline (do_tune_correction.2)", NULL);
 
-    propagate_twiss_parameters(beamline->twiss0, beamline->tune, NULL, beamline->elem_twiss, run, clorb);
+    propagate_twiss_parameters(beamline->twiss0, beamline->tune, beamline->waists,
+                               NULL, beamline->elem_twiss, run, clorb);
     fprintf(stdout, "new tunes: %e %e\n", beamline->tune[0], beamline->tune[1]);
     fflush(stdout);
   }

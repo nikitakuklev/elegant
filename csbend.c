@@ -803,6 +803,17 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double s, long n, double rho0
   Qf[4] += dist;
 }
 
+double CSRInteg1(double fa, double fb, long a, long b, long s, double *factor)
+{
+  double f1, f2;
+  f1 = sqr(factor[s-a]);
+  f2 = sqr(factor[s-b]);
+  return 
+    (-3*f1*(-2*a*fa + 5*b*fa - 3*a*fb - 3*fa*s + 3*fb*s))/(10.*(a - b)) + 
+      (3*f2*(3*b*fa - 5*a*fb + 2*b*fb - 3*fa*s + 3*fb*s))/(10.*(a - b));
+}
+
+
 typedef struct {
   unsigned long lastMode;
 #define CSRDRIFT_STUPAKOV          0x0001UL
@@ -901,8 +912,13 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 
   if (csbend->SGDerivHalfWidth<=0)
     csbend->SGDerivHalfWidth = csbend->SGHalfWidth;
+  if (csbend->SGDerivHalfWidth<=0)
+    csbend->SGDerivHalfWidth = 1;
+
   if (csbend->SGDerivOrder<=0)
     csbend->SGDerivOrder = csbend->SGOrder;
+  if (csbend->SGDerivOrder<=0)
+    csbend->SGDerivOrder = 1;
   
   if (n_part>maxParticles &&
       (!(beta0=SDDS_Realloc(beta0, sizeof(*beta0)*(maxParticles=n_part))) ||
@@ -1301,7 +1317,8 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
         /* - smooth the histogram, normalize to get linear density, and 
            copy in preparation for taking derivative
            */
-        SavitzyGolaySmooth(ctHist, nBins, csbend->SGOrder, csbend->SGHalfWidth, csbend->SGHalfWidth,  0);
+        if (csbend->SGHalfWidth>0)
+          SavitzyGolaySmooth(ctHist, nBins, csbend->SGOrder, csbend->SGHalfWidth, csbend->SGHalfWidth,  0);
         for (iBin=0; iBin<nBins; iBin++) {
           denom[iBin] = pow(dct*iBin, 1./3.);
           ctHistDeriv[iBin] = (ctHist[iBin] /= dct);
@@ -1323,14 +1340,28 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
       diSlippage = slippageLength/dct;
       diSlippage4 = 4*slippageLength/dct;
       for (iBin=0; iBin<nBins; iBin++) {
+        double term1, term2;
+        long count;
         T1[iBin] = T2[iBin] = 0;
         if (CSRConstant) {
           if (csbend->steadyState) {
-            for (iBinBehind=iBin+1; iBinBehind<nBins; iBinBehind++)
-              T1[iBin] += ctHistDeriv[iBinBehind]/denom[iBinBehind-iBin];
+            if ((iBinBehind=iBin+1)<nBins)
+              term1 = ctHistDeriv[iBinBehind]/denom[iBinBehind-iBin];
+            for (count=0, iBinBehind=iBin+1; iBinBehind<nBins; iBinBehind++, count++)
+              T1[iBin] += (term2=ctHistDeriv[iBinBehind]/denom[iBinBehind-iBin]);
+            T1[iBin] += 0.3*sqr(denom[1])*(2*ctHistDeriv[iBin+1]+3*ctHistDeriv[iBin])/dct;
+            if (count>1)
+              T1[iBin] -= (term1+term2)/2;
           } else {
-            for (iBinBehind=iBin+1; iBinBehind<=(iBin+diSlippage) && iBinBehind<nBins; iBinBehind++)
-              T1[iBin] += ctHistDeriv[iBinBehind]/denom[iBinBehind-iBin];
+            if ((iBinBehind = iBin+1)<nBins && iBinBehind<=(iBin+diSlippage))
+              term1 = ctHistDeriv[iBinBehind]/denom[iBinBehind-iBin]/2;
+            for (count=0, iBinBehind = iBin+1; iBinBehind<=(iBin+diSlippage) && iBinBehind<nBins; 
+                 count++, iBinBehind++)
+              T1[iBin] += (term2=ctHistDeriv[iBinBehind]/denom[iBinBehind-iBin]);
+            if (diSlippage>0 && (iBin+1)<nBins)
+              T1[iBin] += 0.3*sqr(denom[1])*(2*ctHistDeriv[iBin+1]+3*ctHistDeriv[iBin])/dct;
+            if (count>1)
+              T1[iBin] -= (term1+term2)/2;
             if ((iBin+diSlippage)<nBins)
               T2[iBin] += ctHist[iBin+diSlippage];
             if ((iBin+diSlippage4)<nBins)
@@ -1657,7 +1688,7 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
   long nBins1;
   
   if (np<=1 || !csrWake.valid || !csrDrift->csr) {
-    drift_beam(part, np, csrDrift->length, 2);
+    exactDrift(part, np, csrDrift->length);
     return np;
   }
   nBins1 = csrWake.bins - 1;
@@ -2051,9 +2082,9 @@ void computeSaldinFdNorm(double **FdNorm, double **x, long *n, double sMax, long
 double SolveForPsiSaldin54(double xh, double sh)
 {
   double s_sum, s_diff2, bestSol;
-  double solList[4];
+  double solList[4] = {-1, -1, -1, -1};
   long nSols=0, sol;
-  
+
   s_sum = (-2*xh - sqrt(-8 + 4*pow(xh,2) - 
                          (4*pow(2,0.3333333333333333)*(-1 + pow(xh,2)))/
                          pow(2 + 9*pow(sh,2) - 3*pow(xh,2) - 6*sh*pow(xh,3) + 
@@ -2154,10 +2185,12 @@ double Saldin5354Factor(double xh, double sh, double phihm, double xhLowerLimit)
     t2 = 3*(phihm+2*xh);
     f = 2/(phihm+2*xh)*(1 + (t1 + t2)/sqrt(t1*t1+sqr(phihm*t2))) - 1/sh;
   } else {
-    psi = SolveForPsiSaldin54(xh, sh);
-    psi2 = psi*psi;
-    f =  4*(2*xh*(psi2+1)+psi*(psi2+2))/
-      (4*xh*xh*(psi2+1)+4*xh*psi*(psi2+2)+psi2*(psi2+4)) - 1/sh;
+    if ((psi = SolveForPsiSaldin54(xh, sh))>=0) {
+      psi2 = psi*psi;
+      f =  4*(2*xh*(psi2+1)+psi*(psi2+2))/
+        (4*xh*xh*(psi2+1)+4*xh*psi*(psi2+2)+psi2*(psi2+4)) - 1/sh;
+    } else
+      return 0;
   }
   if (isnan(f) || isinf(f))
     f = 0;
@@ -2196,7 +2229,7 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
   double ctLower, ctUpper, ds;
   long nBins, maxBins, nBinned, diBin;
   double *coord, p, beta, dz, factor, dz0, dzFirst;
-  double zTravel, dct;
+  double zTravel, dct, zOutput;
   double *ctHist=NULL, *ctHistDeriv=NULL, *phiSoln=NULL;
   double length;
   long nBins1;
@@ -2221,6 +2254,7 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
     }
     zStart = csrWake.zLast;
   }
+  zOutput = zStart;  /* absolute coordinate used for output of data vs z or s */
   
   if (csrDrift->dz>0) {
     if ((nKicks = length/csrDrift->dz+0.5)<1)
@@ -2245,7 +2279,8 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
     if (iKick==1)
       dz = dz0;
     zTravel += dz;
-
+    zOutput += dz;
+    
     x = zTravel/csrWake.rho;
     dsMax = csrWake.rho/24*pow(csrWake.bendingAngle, 3)
       *(csrWake.bendingAngle+4*x)/(csrWake.bendingAngle+x);
@@ -2273,7 +2308,8 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
     /* - smooth the histogram, normalize to get linear density, and 
        copy in preparation for taking derivative
        */
-    SavitzyGolaySmooth(ctHist, nBins, csrWake.SGOrder, csrWake.SGHalfWidth, csrWake.SGHalfWidth,  0);
+    if (csrWake.SGHalfWidth>0)
+      SavitzyGolaySmooth(ctHist, nBins, csrWake.SGOrder, csrWake.SGHalfWidth, csrWake.SGHalfWidth,  0);
     for (iBin=0; iBin<nBins; iBin++)
       ctHistDeriv[iBin] = (ctHist[iBin] /= dct);
     /* - compute derivative with smoothing.  The deriv is w.r.t. index number and
@@ -2305,26 +2341,38 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
       phiSoln[iBin] = SolveForPhiStupakov(x, iBin*dct/csrWake.rho, csrWake.bendingAngle);
     }
     for (iBin=0; iBin<nBins; iBin++) {
-      long jBin;
+      long jBin, first, count;
+      double term1, term2;
       diBin = dsMax/dct;
       if (iBin+diBin<nBins) {
         nCaseD1 ++;
         csrWake.dGamma[iBin] += ctHist[iBin+diBin]/(csrWake.bendingAngle+2*x);
       }
+      first = 1;
+      count = 0;
       for (jBin=iBin; jBin<nBins; jBin++) {
-        double phi;
+        double phi, denom;
         if ((phi = phiSoln[jBin-iBin])>=0) {
           /* I put in a negative sign here because my s is opposite in direction to 
            * Saldin et al. and Stupakov, so my derivative has the opposite sign.
            * Note lack of ds factor here as I use the same one in my unnormalized derivative.
            */
-          if (phi) {
-            csrWake.dGamma[iBin] -= ctHistDeriv[jBin]/(phi+2*x);
-            nCaseD2 ++;
+          if ((denom=phi+2*x)>0) {
+            term2 = ctHistDeriv[jBin]/denom;
+            csrWake.dGamma[iBin] -= term2;
+            if (first) {
+              term1 = term2;
+              first = 0;
+            }
+            count++;
+            nCaseD2++;
           }
         } else
           break;
       }
+      if (count>1)
+        /* trapazoid rule correction for ends */
+        csrWake.dGamma[iBin] += (term1+term2)/2;
     }
     /* the minus sign adjusts for Stupakov using wake<0 to indicate energy gain
      */
@@ -2375,8 +2423,7 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
 				   0, tContext.step, Po, 
 				   csrWake.MPCharge*np,
 				   tContext.elementName, 
-				   zStart+zTravel,
-				   0);
+				   zOutput, 0);
     if (np!=binned) {
       fprintf(stdout, "only %ld of %ld particles binned for CSR drift\n",
               binned, np);
