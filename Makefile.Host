@@ -19,7 +19,7 @@ CC = $($(ANSI)_$(CMPLR))
 
 #EPICS_EXTENSIONS_LIB = ../../../../../epics/extensions/lib/$(HOST_ARCH)
 PROD = elegant sddsemitmeas madto sddssasefel sddsTouschekInteg ibsEmittance recurseSetup haissinski \
-        sddsmatchtwiss sddsanalyzebeam sddsbrightness
+        sddsmatchtwiss sddsanalyzebeam sddsbrightness ../longitCalcs ../longitCmd
 
 USR_CFLAGS = 	-I../../../../../epics/extensions/src/SDDS/include \
 		$(ZLIB_INC) \
