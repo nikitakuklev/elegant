@@ -219,7 +219,7 @@ void correction_setup(
       cp_str(&item, "HKICK");
       add_steer_type_to_lists(&_correct->SLx, 0, T_HVCOR, item, _correct->CMx->default_tweek, 
                               _correct->CMx->corr_limit, beamline, run);
-      cp_str(&item, "XKICK");
+      cp_str(&item, "HKICK");
       add_steer_type_to_lists(&_correct->SLx, 0, T_QUAD, item, _correct->CMx->default_tweek, 
                               _correct->CMx->corr_limit, beamline, run);
       add_steer_type_to_lists(&_correct->SLx, 0, T_KQUAD, item, _correct->CMx->default_tweek, 
@@ -232,7 +232,7 @@ void correction_setup(
       cp_str(&item, "VKICK");
       add_steer_type_to_lists(&_correct->SLy, 2, T_HVCOR, item, _correct->CMy->default_tweek, 
                               _correct->CMy->corr_limit, beamline, run);
-      cp_str(&item, "YKICK");
+      cp_str(&item, "VKICK");
       add_steer_type_to_lists(&_correct->SLy, 0, T_QUAD, item, _correct->CMy->default_tweek, 
                               _correct->CMy->corr_limit, beamline, run);
       add_steer_type_to_lists(&_correct->SLy, 0, T_KQUAD, item, _correct->CMy->default_tweek, 
