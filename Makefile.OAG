@@ -19,6 +19,7 @@ ifeq ($(EPICS_VERSION).$(EPICS_REVISION),3.13)
   CC = condor_compile -condor_standalone $($(ANSI)_$(CMPLR)) -DCONDOR_COMPILE 
   CXX = condor_compile -condor_standalone $($(ANSI)_$(CMPLR)) -DCONDOR_COMPILE
 else
+  POSIX_LDLIBS_YES = 
   CC := condor_compile -condor_standalone $(CC) -DCONDOR_COMPILE
   CCC := condor_compile -condor_standalone $(CCC) -DCONDOR_COMPILE
 endif
