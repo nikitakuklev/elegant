@@ -16,12 +16,12 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 15.2\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
+\author{Program Version 15.3\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
 \maketitle
 
-\section{Highlights of What's New in Version 15.2}
+\section{Highlights of What's New in Version 15.3}
 
-Here is a summary of what's changed since release 15.1.1.  For details
+Here is a summary of what's changed since release 15.2.  For details
 and references, see the specific entries in the manual.
 
 \subsection{Known Bugs and Problems}
@@ -36,159 +36,105 @@ and references, see the specific entries in the manual.
 
 \subsection{Bug Fixes for Elements}
 \begin{itemize}
-\item Fixed some problems with radiation integral calculations for dipoles
- under some conditions:
- \begin{itemize}
- \item If a dipole was split into several pieces, edge contributions to the
- radiation integrals were inappropriately added at the interior ``edges.''
- This might happen if element division was used, or if the lattice definition
- contained a series of adjacent dipole elements with the same name.
- \item In dipoles with gradients, if 
- $k l = \sqrt{\left|K_1+1/\rho^2\right|} l \ll 1$, 
- the radiation integral calculations were unreliable.  Fixing this necessitated using
- a power series expansion for $k l<0.01$, which may result in some very small changes in 
- radiation integrals (relative to the previous version) for weak dipoles, even if there
- is no gradient.
- \end{itemize}
-\item Made a correction to the expression for $I_5$ radiation integral for the
- {\tt WIGGLER} element, having to do with propagation of the beta function.
-\item Fixed problem with {\tt ZTRANSVERSE}, which used the wrong value for
- $Z(0)$ for a broad-band impedance.
-\item Fixed bugs in {\tt RFDF} implementation for {\tt N\_KICKS}$>1$ and {\tt LENGTH}$>0$.
+\item Fixed error in creating the matrix for {\tt RFCA} elements when the {\tt SRS}
+ focusing model was invoked.  The $R_{5j}$ matrix elements of the downstream system
+ (reported in the {\tt final} output from {\tt run\_setup} or the output of 
+ {\tt matrix\_output}) would be incorrect.  Tracking was not affected by this 
+ bug, which was discovered by M. Cornacchia.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item Fixed bug with fiducialization during matrix computations, which
-impacted the {\tt final} output from the {\tt run\_setup} command and
-the output from the {\tt matrix\_output} command.  For simulations
-with acceleration, this would have shown up as incorrect matrix
-results in the final output file and the output from the {\tt
-matrix\_output} command.  Twiss parameters and tracking were not
-affected.  This bug was found by Philippe Piot.
-
-\item Fixed bug in {\tt matrix\_output}, which resulted in incorrect
-results when there was acceleration and the starting point for the
-matrix was not the start of the beamline.  This bug was found by
-Philippe Piot.
-
-\item Fixed a bug in orbit correction ({\tt correct} command): when {\tt
-prezero\_correctors} was set (the default), {\tt elegant} was
-prezeroing the quadrupole steering parameters {\tt HKICK} and {\tt
-VKICK} even if they were not selected as steering elements.  This
-wouldn't cause any problem unless the {\tt HKICK} or {\tt VKICK}
-parameters of {\tt QUAD} or {\tt KQUAD} elements where given non-zero values. 
-This is unrelated to quadrupole misalignment.
-
-\item Fixed a bug that resulted in no calculations when a {\tt
-load\_parameters} file had no rows in {\tt change\_defined\_values} mode.
-
+\item Fixed a bug that occurred when optimization of twiss parameters was performed
+ and the {\tt matched\_to\_cell} feature of {\tt bunched\_beam} was used.  The
+ bug resulted in twiss variables not getting defined.  This bug was discovered by
+ V. Sajaev.
+\item Fixed bug in accounting for lost particles for the {\tt losses} output file of
+ {\tt run\_setup}.  The problem would be seen when particles were created by a 
+ {\tt SCRIPT} element on multiple turns.
+\item Multi-step runs (i.e., {\tt n\_steps}>1 in {\tt run\_control})
+can now be done with optimization.  This bug was found by P. Emma.
+\item Fixed bug in {\tt slice\_analysis} command.  If the {\tt final\_values\_only} parameter
+ was nonzero and if a {\tt CSBEND} element was in the lattice, {\tt elegant} would exit with
+ a cryptic error.  This bug was found by X. Zhu.
 \end{itemize}
 
 \subsection{Modified Elements}
 \begin{itemize}
-\item The {\tt WIGGLER} element was upgraded:
-\begin{itemize}
-\item Includes vertical focusing effects.
-\item Now allows even or odd number of poles.
-\item Wiggler strength can be specified via the K parameter, instead of 
- the radius.
-\end{itemize}
-
-\item The {\tt SCRIPT} element now allows creation of particles by the script.
-Previously, the number of particles returned by the script had to be
-equal to or less than the original number.  This is useful, for
-example, in simulating shower creation and transport in a beamline using the {\tt
-shower} program.  Also added the {\tt START\_PASS} and {\tt ON\_PASS} parameters
-\item Added the {\tt ON\_PASS} parameter to the {\tt CENTER} element, so that
-the centering can be applied only on the specified pass through the system.
-\item For particle output via {\tt WATCH} elements, the {\tt LABEL} input is now put
-in a parameter (``{\tt Description}'') in the output file. 
-\item The {\tt BMAPXY} eleement will now use {\tt Bx} and {\tt By} columns (field
-in Tesla) if {\tt Fx} and {\tt Fy} (normalized field) are not provided.
-
-\item Upgraded the {\tt ZTRANSVERSE} element.  These improvements were suggested
- by Yong-Chul Chae:
-\begin{itemize}
-\item Added {\tt WAKES} and {\tt WAKE\_INTERVAL} parameters to allow getting
- wake data in an SDDS file.
-\item Added {\tt FACTOR}, {\tt XFACTOR}, and {\tt YFACTOR} parameters,
- which allow multiplying the impedance by factors.
-\end{itemize}
-
+\item The {\tt SCRIPT} element now has a {\tt DIRECTORY} parameter.  If given, input
+ and output files are created and retrieved from the specified directory.  For example,
+ to increase speed on a cluster one can use {\tt DIRECTORY=/tmp}, forcing the script mechanism to
+ use the local temporary drive.
+\item Added the {\tt CUTOFF} parameter to {\tt SREFFECTS}, allowing restriction of the number 
+ of $\sigma$'s used for the random numbers.
+\item Added length, angle, and tilt parameters to the {\tt EMATRIX}
+(Explicit MATRIX) element.
+\item {\tt MARK} elements with {\tt FITPOINT=1} now produce {\tt rpn} variables with the
+ $\Sigma_{ij} = \langle x_i x_j \rangle$ parameters of the tracked beam. The variables are
+ named {\em markName}\verb|#|{\em occurrence}.{\tt s}{\em i}{\em j}.
+\item Added calibration factors for correctors embedded in quadrupoles ({\tt QUAD} and {\tt KQUAD}).
 \end{itemize}
 
 \subsection{Modified Commands}
 \begin{itemize}
-\item Frequency map analysis now outputs tunes on range from [0, 1],
-instead of [0, 0.5].  Louis Emery assisted with this improvement and
-provided ideas for the algorithm.
-\item One can now use differential and multiplicative mode simultaneously for
-{\tt alter\_elements}.
+\item Added the {\tt final\_pass} control to {\tt run\_setup}.  If nonzero, the {\tt centroid}
+ and {\tt sigma} output is computed for the final pass only.  By default, these outputs give
+ statistics over all passes.  
 
-\item Added {\tt minimum}{\em n} and {\tt maximum}{\em n} columns to the {\tt sigma}
-output file from {\tt run\_setup}, where {\em n} is 1 to 6.  These columns
-give the minimum and maximum amplitude of the corresponding
-phase-space coordinate.  Fixed problem with units for {\tt s}{\em
-i}{\em j} output.  Fixed a bug that resulted in wrong sigma values in
-the output file for single-particle beam.
+\item The lattice file may now contain {\tt rpn} sequences.  For example, if you need to define some
+physical, mathematical, or other constants for use in element definitions, you may use the following
+syntax
+\begin{verbatim}
+! Define pi
+% 1 atan 4 * sto Pi
+% Pi 40 / sto myAngle
+! Define a rectangular bend for a ring with 80 equal bends
+B1: SBEN,L=1.0,ANGLE=''myAngle'',E1=''myAngle 2 /'',E2=''myAngle 2 /''
+\end{verbatim}
+(Note that {\tt pi} is already defined in the standard {\tt defns.rpn}
+file.)  This feature was suggested by M. Cornacchia.
+\item The ``\%s'' syntax for the rootname may now be used in the input files of {\tt sdds\_beam}.
 
-\item The {\tt transmute\_elements} command can now transmute an
-element that has the {\tt LENGTH} parameter into an element that doesn't have
-{\tt LENGTH}, as long as the length is zero.
+\item Orbit and tune correction will, if set up, take place inside the optimization loop.
+
+\item Closed orbit values at monitors are now stored in {\tt rpn} variables for use in optimization, provided
+ the {\tt CO\_FITPOINT} parameter of the {\tt MONI}, {\tt HMON}, or {\tt VMON} element is set to 1.
+ The variable names are\\ {\em bpmName}\verb|#|{\em occurence}.{\em plane}{\tt co}, where {\em plane} is {\tt x} or
+ {\tt y}.  This also works for {\tt MARK} elements if {\tt FITPOINT=1} is set.  In addition to {\tt xco} 
+ and {\tt yco}, one may refer to {\tt xpco} and {\tt ypco} to get the slopes.
+
+\item Response matrix values (computed by {\tt
+ correction\_matrix\_output}) are now stored in {\tt rpn} variables
+ for use in optimization.  The variable names are of the form \\ {\em
+ Plane}{\tt R\_}{\em bpmName}\verb|#|{\em occurence}{\tt \_}{\em
+ corrName}\verb|#|{\em occurence}{\tt .}{\em corrParam}, where {\em
+ Plane} is {\tt H} (horizontal) or {\tt V} (vertical) and {\em
+ corrParam} is the parameter of the corrector used for changing the
+ orbit (e.g., {\tt HKICK} or {\tt VKICK} for a {\tt KICKER} element).
 
 \end{itemize}
 
 \subsection{New Elements}
 \begin{itemize}
-\item Added the CWIGGLER element, which uses a canonically-integrated 
- wiggler code for general wiggler fields. This code was provided by Ying Wu of
- Duke University.
-\item Added the RFTM110 element, which provides simulation of a TM110 deflecting
- cavity, using a sixth-order expansion in $k\rho$, where $k$ is the radial
- wavenumber and $\rho$ is the radius.
+
+\item {\tt EDRIFT} --- This is an Exact DRIFT space.  In particular, path length computations
+ are good to all orders in $x^\prime$ and $y^\prime$.
+
 \end{itemize}
 
 \subsection{Changes and Additions to Related Programs}
 \begin{itemize}
-\item {\tt beamLifetimeCalc} now optionally uses the {\tt haissinski} program
- to compute bunch lengthening.  One can now vary additional quantities (beam energy, 
- energy spread, and rf voltage) using values from an SDDS file.
-\item {\tt elegantRingAnalysis} improvements:
- \begin{itemize}
- \item Added collective effects tab with Haissinski equation, IBS, and space-charge
- tune shift.
- \item Added floor coordinate computation to basic ring analysis.
- \item Added printout of radiation integrals for basic ring analysis.
- \item Added optional auto-creation of PNG files for each plot.
- \end{itemize}
-\item {\tt haissinski} improvements:
- \begin{itemize}
- \item Added {\tt -harmonicCavity} option, allowing inclusion of a second rf cavity with
- a higher harmonic.
- \item Added {\tt -superPeriod} option.
- \item Modified iteration algorithm to actually honor the convergence criterion,
- resulting in more reliable convergence.
- \end{itemize}
-\item {\tt ibsEmittance} improvements:
- \begin{itemize}
-        \item Reduced the default target to $10^{-6}$, and made the 
-         tolerance 1/100 of the target, to get better convergence when IBS is weak.
-        \item Added the rf voltage to the output file.
- \end{itemize}
-\item {\tt sddsbrightness} improvements:
- \begin{itemize}
- \item The default method is now actually Dejus' method, consistent with the usage message.
-  Previously, default method was Borland's method.
- \item Fixed bug in Dejus method implementation: the value 
- of $\gamma$ was not being used consistently.  Rather, in some places, a 
- fixed energy value of 7 GeV was used.
- \item Fixed a bug that led to multiplication of the current by 1000 for 
- each pass through the main loop.  This would affect calculations with multipage
- input files.  Roger Dejus helped in finding this bug.
- \item Added feature whereby the parameter {\tt ey0} from the twiss file is 
- accepted for the vertical emittance, if it exists.
- \end{itemize}
+\item Added the program {\tt sddsemitproc}.  This is a simplified version of {\tt sddsemitmeas}.
+ Both programs analyze emittance measurement data from multi-quadrupole scans.  {\tt sddsemitproc}
+ is preferred as it lacks ``features'' of {\tt sddsemitmeas} that are not in fact useful.
+\item {\tt sddsanalyzebeam} can now generate a new beam file matching the six-dimensional
+ phase space of the beam it is analyzing.  This allows, for example, creating a new beam
+ file with more particles than the one analyzed.  This is done with the {\tt -generate}
+ option.
+\item {\tt elegantRingAnalysis} collective effects calculations now use cluster resources if
+ requested.
+\item {\tt haissinski} now accepts negative values for the harmonic cavity voltage, to allow
+ simulation of a bunch lengthening cavity.
 \end{itemize}
 
 \section{Introduction}
@@ -1750,6 +1696,12 @@ form \verb|<element-name>.<parameter-name>|, in all capital letters.
     long balance_terms = 0;
     double restart_worst_term_factor = 1;
     long restart_worst_terms = 1;
+    long verbose = 1;
+    long balance_terms = 0;
+    double simplex_divisor = 3;
+    double simplex_pass_range_factor = 1;
+    long include_simplex_1d_scans = 1;
+    long start_from_simplex_vertex1 = 0;
 &end
 \end{verbatim}
 
@@ -1765,9 +1717,24 @@ symbols of the form
 \verb|<element-name>#<occurrence-number>.<parameter-name>|, where
 \verb|<parameter-name>| can be a Twiss parameter name (if the twiss
 command was given), a floor coordinate name (if the floor command was
-given, or a beam-size or centroid name.  The parameter names are the
-same as those used in the corresponding output files.  Beam sizes
-and centroids are from tracking the particle distribution.
+given, a beam-size or centroid name, a sigma-matrix element, or a
+closed orbit value ({\tt xco}, {\tt xpco}, etc) if closed orbit
+calculations are requested.  The parameter names are the same as those
+used in the corresponding output files.  Beam sizes, centroids, and
+sigma-matrix elements are from tracking the particle distribution.
+
+If closed orbit calculations are requested, data from {\tt MONI}, {\tt
+HMON}, and {\tt VMON} elements that have {\tt CO\_FITPOINT=1} is
+available under the names {\em bpmName}\verb|#|{\em occurence}.{\em q}{\tt
+co}, where {\em q} is {\tt x}, {\tt xp}, {\tt y}, or {\tt yp}.
+
+If response matrix calculation is requested, response matrix values
+are available in variables with names {\em Plane}{\tt R\_}{\em
+bpmName}\verb|#|{\em occurence}{\tt \_}{\em corrName}\verb|#|{\em occurence}{\tt
+.}{\em corrParam}, where {\em Plane} is {\tt H} (horizontal) or {\tt
+V} (vertical) and {\em corrParam} is the parameter of the corrector
+used for changing the orbit (e.g., {\tt HKICK} or {\tt VKICK} for a
+{\tt KICKER} element).
 
 If the twiss command was given, one may also refer to statistics of
 Twiss parameters in the form \verb|<statistic>.<parameter-name>|,
@@ -1861,9 +1828,29 @@ Names for first-, second-, and third-order elements are of the form
 {\tt R}{\em ij}, {\tt T}{\em ijk}, and {\tt U}{\em ijkl}.
 \item \verb|log_file| --- A file to which progress reports will be written as optimization proceeds.
 For SDDS data, use the \verb|final| output file from the \verb|run_setup| namelist.
+
 \item \verb|output_sparsing_factor| --- If set to a value larger than 0, results in
 sparsing of output to the ``final'' file (see \verb|run_setup|). This can make
 a significant difference in the optimization speed.
+
+\item \verb|balance_terms| --- If nonzero, then all terms of the optimization expression have
+ their weights adjusted so they make equal contributions to the penalty function.  This can
+ help prevent optimization of a single term at the expense of others.  It is performed only 
+ for the initial value of the optimization function.
+
+\item \verb|simplex_divisor| --- The factor by which simplex step sizes are changed as the 
+ optimization algorithm searches for a valid initial simplex.
+
+\item \verb|simplex_pass_range_factor| --- When starting a new pass, the simplex optimizer takes
+ the range over the previous simplex of each variable times this factor
+ as the starting step size for that variable.
+ 
+\item \verb|include_simplex_1d_scans| --- If nonzero, optimizer performs single-variable scans prior to 
+ starting simplex optimization.
+
+\item \verb|start_from_simplex_vertex1| --- If nonzero, optimizer uses the initial simplex vertex as the
+ starting point for each new 1d scan.  Otherwise, it uses the result of the previous scan.
+
 \end{itemize}
 
 \begin{latexonly}
@@ -2046,6 +2033,7 @@ fiducialized to the average momentum of the beam.
     STRING parameters = NULL;
     long combine_bunch_statistics = 0;
     long wrap_around = 1;
+    long final_pass = 0;
     long default_order = 2;
     long concat_order = 0;
     long print_statistics = 0;
@@ -2098,9 +2086,13 @@ which parameters of accelerator elements are written.
 combine statistical information for all simulation steps.  If
 non-zero, then the \verb|sigma| and \verb|centroid| data will be
 combined over all simulation steps.
-\item \verb|wrap_around| --- A flag indicating whether the z
-coordinate should wrap-around or increase monotonically in multipass
-simulations.
+\item \verb|wrap_around| --- A flag indicating whether the s
+ coordinate should wrap-around or increase monotonically in multipass
+ simulations.  If zero, then the centroid and sigma data is computed for
+ each turn with the s coordinate increasing continuously.
+\item \verb|final_pass| --- A flag indicating whether the centroid and
+ sigma output should be computed only from the data from the final pass.
+ By default, the statistics include data from all passes.
 \item \verb|default_order| --- The default order of transfer matrices
 used for elements having matrices.
 \item \verb|concat_order| --- If non-zero, the order of matrix
@@ -3391,6 +3383,19 @@ types, and default values of all parameters of each element.
 The present output of this command is listed in the next section.
 The reader is referred to the MAD manual\cite{MAD} for details on sign
 conventions for angles, focusing strength, and so forth.  
+
+Comments may be embedded in the lattice file by starting a line with 
+an exclamation point (``!'').  Rpn expressions may be embedded separately
+from an element definition by starting a line with a percent sign (``%'').
+For example
+\begin{verbatim}
+! Define pi
+% 1 atan 4 * sto Pi
+% Pi 40 / sto myAngle
+! Define a rectangular bend for a ring with 80 equal bends
+B1: SBEN,L=1.0,ANGLE=''myAngle'',E1=''myAngle 2 /'',E2=''myAngle 2 /''
+\end{verbatim}
+(Note that {\tt pi} is already defined in the standard {\tt defns.rpn} file.)
 
 \newpage
 \section{Element Dictionary}

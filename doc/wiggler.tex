@@ -5,10 +5,11 @@ focusing.  Both are included as of release 15.2 of elegant.
 If the number of poles should be an odd integer, we include
 half-strength end poles to match the dispersion, but only for the
 radiation integral calculation.  For the focusing, we assume all the
-poles are full strength.  If the number of poles is an even integer,
-no special end poles are required, but we make the unphysical
-assumption that the field at the entrance (exit) of the device jumps
-instantaneously from 0 (full field) to full field (0).
+poles are full strength (i.e., a pure sinusoidal variation).  If the
+number of poles is an even integer, no special end poles are required,
+but we make the unphysical assumption that the field at the entrance
+(exit) of the device jumps instantaneously from 0 (full field) to full
+field (0).
 
 The radiation integrals are computed by summing the contributions for
 a series of half-poles.  The integrals for a single half-pole were
