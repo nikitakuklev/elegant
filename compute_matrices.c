@@ -363,6 +363,7 @@ VMATRIX *compute_matrix(
     MONI *moni; HMON *hmon; VMON *vmon; 
     KSEXT *ksext; KSBEND *ksbend; KQUAD *kquad; NIBEND *nibend; NISEPT *nisept;
     SAMPLE *sample; STRAY *stray; CSBEND *csbend; RFCA *rfca; ENERGY *energy;
+    RFCW *rfcw;
     MATTER *matter; MALIGN *malign; MATR *matr; MODRF *modrf;
     CSRCSBEND *csrcsbend;
     long bend_flags;
@@ -660,6 +661,18 @@ VMATRIX *compute_matrix(
         if (rfca->dx || rfca->dy)
           misalign_matrix(elem->matrix, rfca->dx, rfca->dy, 0.0, 0.0);
         if (!rfca->change_p0) {
+          elem->matrix->C[5] = (elem->Pref_output-elem->Pref_input)/elem->Pref_input;
+          elem->Pref_output = elem->Pref_input;
+        }
+        break;
+      case T_RFCW: 
+        rfcw = (RFCW*)elem->p_elem;
+        elem->matrix = rf_cavity_matrix(rfcw->length, rfcw->volt, rfcw->freq, rfcw->phase, 
+                                        &elem->Pref_output, run->default_order?run->default_order:1,
+                                        rfcw->end1Focus, rfcw->end2Focus);
+        if (rfcw->dx || rfcw->dy)
+          misalign_matrix(elem->matrix, rfcw->dx, rfcw->dy, 0.0, 0.0);
+        if (!rfcw->change_p0) {
           elem->matrix->C[5] = (elem->Pref_output-elem->Pref_input)/elem->Pref_input;
           elem->Pref_output = elem->Pref_input;
         }

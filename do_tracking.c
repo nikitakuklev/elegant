@@ -476,6 +476,10 @@ long do_tracking(
           case T_RFCA:
             n_left = simple_rf_cavity(coord, n_to_track, (RFCA*)eptr->p_elem, accepted, P_central, z);
             break;
+          case T_RFCW:
+            n_left = track_through_rfcw(coord, n_to_track, (RFCW*)eptr->p_elem, accepted, P_central, z,
+                                        run, i_pass, charge);
+            break;
           case T_MODRF:
             modulated_rf_cavity(coord, n_to_track, (MODRF*)eptr->p_elem, *P_central, z);
             break;

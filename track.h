@@ -471,7 +471,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_HISTOGRAM 70
 #define T_CSRCSBEND 71
 #define T_CSRDRIFT 72
-#define N_TYPES 73
+#define T_RFCW  73
+#define N_TYPES 74
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -551,6 +552,7 @@ extern char *entity_text[N_TYPES];
 #define N_HISTOGRAM_PARAMS 9
 #define N_CSRCSBEND_PARAMS 37
 #define N_CSRDRIFT_PARAMS 5
+#define N_RFCW_PARAMS 27
 
 typedef struct {
     char *name;            /* parameter name */
@@ -707,7 +709,6 @@ typedef struct {
     long fiducial_seen;
     double phase_fiducial;
     } RFCA;
-
 
 /* names and storage structure for modulated RF cavity physical parameters */
 extern PARAMETER modrf_param[N_MODRF_PARAMS] ;
@@ -1496,6 +1497,25 @@ typedef struct {
     double *W[2], *t, macroParticleCharge, dt;
   } TRWAKE;
 
+/* names and storage structure for RF cavity with wake physical parameters */
+extern PARAMETER rfcw_param[N_RFCW_PARAMS] ;
+   
+typedef struct {
+    double length, cellLength, volt, phase, freq, Q;
+    long phase_reference, change_p0, change_t;
+    char *fiducial;
+    long end1Focus, end2Focus, nKicks;
+    char *wakeFile, *zWakeFile, *trWakeFile, *tColumn, *WxColumn, *WyColumn, *WzColumn;
+    long n_bins;               /* number of charge bins */
+    long interpolate;          /* flag to turn on interpolation */
+    long smoothing, SGHalfWidth, SGOrder;  /* flag to turn on smoothing plus control parameters */
+    double dx, dy;
+    /* for internal use only: */
+    long initialized;
+    RFCA rfca;
+    TRWAKE trwake;
+    WAKE wake;
+    } RFCW;
 
 /* names and storage structure for SR effects */
 extern PARAMETER sreffects_param[N_SREFFECTS_PARAMS];
@@ -1749,6 +1769,8 @@ extern void track_through_kicker(double **part, long np, KICKER *kicker, double 
       long order);
 extern long simple_rf_cavity(double **part, long np, RFCA *rfca, double **accepted, double *P_central,
                              double zEnd);
+extern long track_through_rfcw(double **part, long np, RFCW *rfcw, double **accepted, double *P_central, 
+                               double zEnd, RUN *run, long i_pass, CHARGE *charge);
 extern long modulated_rf_cavity(double **part, long np, MODRF *modrf, double P_central, double zEnd);
 extern void set_up_kicker(KICKER *kicker);
 void add_to_particle_energy(double *coord, double timeOfFlight, double Po, double dgamma);

@@ -25,7 +25,7 @@ char *entity_name[N_TYPES] = {
     "TWMTA", "MATTER", "RFMODE", "TRFMODE", "ZLONGIT", "SREFFECTS",
     "MODRF", "BMAPXY", "ZTRANSVERSE", "IBSCATTER", "FMULT",
     "WAKE", "TRWAKE", "TUBEND", "CHARGE", "PFILTER", "HISTOGRAM",
-    "CSRCSBEND", "CSRDRIFT",
+    "CSRCSBEND", "CSRDRIFT", "RFCW",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -1168,6 +1168,38 @@ PARAMETER csrdrift_param[N_CSRDRIFT_PARAMS] = {
     {"DZ", "", IS_DOUBLE, 1, (long)((char *)&csrdrift_example.dz), NULL, 0.0, 0},
     };
 
+RFCW rfcw_example;
+/* rf cavity with wakes physical parameters */
+PARAMETER rfcw_param[N_RFCW_PARAMS] = {
+    {"L", "M", IS_DOUBLE, 0, (long)((char *)&rfcw_example.length), NULL, 0.0, 0},
+    {"CELL_LENGTH", "M", IS_DOUBLE, 0, (long)((char *)&rfcw_example.cellLength), NULL, 0.0, 0},
+    {"VOLT", "V", IS_DOUBLE, 0, (long)((char *)&rfcw_example.volt), NULL, 0.0, 0},
+    {"PHASE", "DEG", IS_DOUBLE, 0, (long)((char *)&rfcw_example.phase), NULL, 0.0, 0},
+    {"FREQ", "Hz", IS_DOUBLE, 0, (long)((char *)&rfcw_example.freq), NULL, 500.0e6, 0},
+    {"Q", "", IS_DOUBLE, 0, (long)((char *)&rfcw_example.Q), NULL, 0.0, 0},
+    {"PHASE_REFERENCE", "", IS_LONG, 0, (long)((char *)&rfcw_example.phase_reference), NULL, 0.0, 0},
+    {"CHANGE_P0", "", IS_LONG, 0, (long)((char *)&rfcw_example.change_p0), NULL, 0.0, 0}, 
+    {"CHANGE_T", "", IS_LONG, 0, (long)((char *)&rfcw_example.change_t), NULL, 0.0, 0}, 
+    {"FIDUCIAL", "", IS_STRING, 0, (long)((char *)&rfcw_example.fiducial), NULL, 0.0, 0},
+    {"END1_FOCUS", "", IS_LONG, 0, (long)((char *)&rfcw_example.end1Focus), NULL, 0.0, 0},
+    {"END2_FOCUS", "", IS_LONG, 0, (long)((char *)&rfcw_example.end2Focus), NULL, 0.0, 0},
+    {"N_KICKS", "", IS_LONG, 0, (long)((char *)&rfcw_example.nKicks), NULL, 0.0, 1},
+    {"WAKEFILE", "", IS_STRING, 0, (long)((char *)&rfcw_example.wakeFile), NULL, 0.0, 0},
+    {"ZWAKEFILE", "", IS_STRING, 0, (long)((char *)&rfcw_example.zWakeFile), NULL, 0.0, 0},
+    {"TRWAKEFILE", "", IS_STRING, 0, (long)((char *)&rfcw_example.trWakeFile), NULL, 0.0, 0},
+    {"TCOLUMN", "", IS_STRING, 0, (long)((char *)&rfcw_example.tColumn), NULL, 0.0, 0},
+    {"WXCOLUMN", "", IS_STRING, 0, (long)((char *)&rfcw_example.WxColumn), NULL, 0.0, 0},
+    {"WYCOLUMN", "", IS_STRING, 0, (long)((char *)&rfcw_example.WyColumn), NULL, 0.0, 0},
+    {"WZCOLUMN", "", IS_STRING, 0, (long)((char *)&rfcw_example.WzColumn), NULL, 0.0, 0},
+    {"N_BINS", "", IS_LONG, 0, (long)((char *)&rfcw_example.n_bins), NULL, 0.0, 0},
+    {"INTERPOLATE", "", IS_LONG, 0, (long)((char *)&rfcw_example.interpolate), NULL, 0.0, 0},
+    {"SMOOTHING", "", IS_LONG, 0, (long)((char *)&rfcw_example.smoothing), NULL, 0.0, 0},
+    {"SG_HALFWIDTH", "", IS_LONG, 0, (long)((char *)&rfcw_example.SGHalfWidth), NULL, 0.0, 4},
+    {"SG_ORDER", "", IS_LONG, 0, (long)((char *)&rfcw_example.SGOrder), NULL, 0.0, 2},
+    {"DX", "M", IS_DOUBLE, 1, (long)((char *)&rfcw_example.dx), NULL, 0.0, 0},
+    {"DY", "M", IS_DOUBLE, 1, (long)((char *)&rfcw_example.dy), NULL, 0.0, 0},
+    };
+   
 /* array of parameter structures */
 
 #define MAT_LEN     HAS_MATRIX|HAS_LENGTH
@@ -1256,6 +1288,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
                                          sizeof(CSRCSBEND),    csrcsbend_param   },
     {  N_CSRDRIFT_PARAMS, MAT_LEN_NCAT,
                                          sizeof(CSRDRIFT),    csrdrift_param   },
+    {    N_RFCW_PARAMS,     MAT_LEN_NCAT|HAS_RF_MATRIX,       sizeof(RFCW),    rfcw_param     }, 
 } ;
  
 
