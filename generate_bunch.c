@@ -90,7 +90,7 @@ long generate_bunch(
           case GAUSSIAN_BEAM:
             gaussian_distribution(particle, n_particles, 0, s1, s2, 
                                   symmetrize && (enforce_rms_params[0] || n_particles%4==0), x_plane->cutoff,
-                                  (limit_invar?x_plane->cutoff*x_plane->emit:0.0), x_plane->beta);
+                                  (limit_invar?sqr(x_plane->cutoff)*x_plane->emit:0.0), x_plane->beta);
             break;
           case HARD_EDGE_BEAM:
             hard_edge_distribution(particle, n_particles, 0, s1, s2, 
@@ -126,7 +126,7 @@ long generate_bunch(
           case GAUSSIAN_BEAM:
             gaussian_distribution(particle, n_particles, 2, s1, s2, 
                                   symmetrize && (enforce_rms_params[1] || n_particles%4==0), y_plane->cutoff,
-                                  (limit_invar?y_plane->cutoff*y_plane->emit:0.0), y_plane->beta);
+                                  (limit_invar?sqr(y_plane->cutoff)*y_plane->emit:0.0), y_plane->beta);
             break;
           case HARD_EDGE_BEAM:
             hard_edge_distribution(particle, n_particles, 2, s1, s2, 
@@ -201,11 +201,13 @@ long generate_bunch(
     else {
         s1 = longit->sigma_s;
         s2 = longit->sigma_dp;
+        beta = 0;
         }
     switch (longit->beam_type) {
       case GAUSSIAN_BEAM:
         gaussian_distribution(particle, n_particles, 4, s1, s2, 
-                              symmetrize && (enforce_rms_params[2] || n_particles%4==0), longit->cutoff, 0.0, 0.0);
+                              symmetrize && (enforce_rms_params[2] || n_particles%4==0), longit->cutoff, 
+                              (limit_invar?sqr(longit->cutoff)*emit:0.0), beta);
         break;
       case HARD_EDGE_BEAM:
         hard_edge_distribution(particle, n_particles, 4, s1, s2, 
