@@ -1234,7 +1234,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   }
   
 
-  if (csbend->csr)
+  if (csbend->csr && n_part>1)
     CSRConstant = 2*macroParticleCharge*e_mks/pow(3*rho0*rho0, 1./3.)/(4*PI*epsilon_o*me_mks*sqr(c_mks));
   else
     CSRConstant = 0;
