@@ -55,6 +55,9 @@ CopyrightNotice001*/
  * Michael Borland, 2000
  *
  $Log: not supported by cvs2svn $
+ Revision 1.9  2001/10/15 20:37:07  soliday
+ Cleaned up for Linux.
+
  Revision 1.8  2001/10/15 15:42:33  soliday
  Cleaned up for WIN32.
 
@@ -103,17 +106,24 @@ char *option[N_OPTIONS] = {
 char *USAGE="sddsmatchtwiss [-pipe=[input][,output]] [<SDDSinputfile>] [<SDDSoutputfile>]\n\
   [-xPlane=[beta=<meters>,alpha=<value>][nemittance=<meters>,][,etaValue=<meters>][,etaSlope=<value>]]\n\
   [-yPlane=[beta=<meters>,alpha=<value>][nemittance=<meters>,][,etaValue=<meters>][,etaSlope=<value>]]\n\
-  [-zPlane=[deltaStDev=<value>][,tStDev=<seconds>][,{correlation=<seconds>|alpha=<value>}][,betaGamma=<central-value>]]\n\
+  [-zPlane=[deltaStDev=<value>][,tStDev=<seconds>][,{correlation=<seconds>|alpha=<value>}][,chirp=<1/seconds>][,betaGamma=<central-value>]]\n\
   [-nowarnings] [-oneTransform]\n\
-The input file must have columns x, xp, y, yp, and p; for example, an elegant\n\
-beam output file is acceptable.\n\
-beta and alpha must be given together, or omitted together.\n\
-etaValue and etaSlope may be given individually or together.  If etaValue is not given,\n\
-the coordinates have no dispersion adjustment.  If etaSlope is not given, then\n\
-slopes have no dispersion adjustment.\n\
-If -oneTransform is given, then the transformation is computed for the first page only,\n\
-then reused for all subsequent pages.\n\n\
-Program by Michael Borland.  (This is version 4, May 2001.)\n";
+The input file must have columns x, xp, y, yp, and p; for example, an\n\
+elegant beam output file is acceptable.  beta and alpha must be given\n\
+together, or omitted together.  etaValue and etaSlope may be given\n\
+individually or together.  If etaValue is not given, the coordinates\n\
+have no dispersion adjustment.  If etaSlope is not given, then slopes\n\
+have no dispersion adjustment.\n\
+For -zPlane, operations are performed as follows: matching of the\n\
+fraction momentum spread, bunch length, and correlation/alpha;\n\
+application of the chirp; adjustment of central beta-gamma.\n\
+If central beta-gamma is adjusted, the normalized emittance is preserved\n\
+in x and y planes while the absolute momentum spread is preserved in\n\
+the longitudinal plane.\n\
+If -oneTransform is given, then the transformation is computed for the
+first page only, then reused for all subsequent pages.
+
+Program by Michael Borland.  (This is version 5, January 2002.)\n";
 
 typedef struct {
   double beta, alpha, eta, etap, normEmittance;
@@ -128,7 +138,7 @@ typedef struct {
 } PLANE_SPEC;
 
 typedef struct {
-  double deltaStDev, tStDev, correlation, alpha, betaGamma;
+  double deltaStDev, tStDev, correlation, alpha, betaGamma, chirp;
   unsigned long flags;
   double R11, R12, R21, R22;
 #define DELTASTDEV_GIVEN  0x0001UL
@@ -136,6 +146,7 @@ typedef struct {
 #define CORRELATION_GIVEN 0x0004UL
 #define BETAGAMMA_GIVEN   0x0008UL
 #define ALPHAZ_GIVEN      0x0010UL
+#define CHIRP_GIVEN       0x0020UL
 } ZPLANE_SPEC;
 
 long PerformTransformation(double *x, double *xp, double *p, long rows, PLANE_SPEC *match,
@@ -211,10 +222,11 @@ int main(int argc, char **argv)
                           "deltaStDev", SDDS_DOUBLE, &zSpec.deltaStDev, 1, DELTASTDEV_GIVEN,
                           "correlation", SDDS_DOUBLE, &zSpec.correlation, 1, CORRELATION_GIVEN,
                           "alpha", SDDS_DOUBLE, &zSpec.alpha, 1, ALPHAZ_GIVEN,
+                          "chirp", SDDS_DOUBLE, &zSpec.chirp, 1, CHIRP_GIVEN,
                           "betagamma", SDDS_DOUBLE, &zSpec.betaGamma, 1, BETAGAMMA_GIVEN,
                           NULL) ||
             bitsSet(zSpec.flags)<1 ||
-            (zSpec.flags&ALPHAZ_GIVEN && zSpec.flags&CORRELATION_GIVEN) ||
+	    bitsSet(zSpec.flags&(ALPHAZ_GIVEN+CORRELATION_GIVEN))>1 ||
             (zSpec.flags&TSTDEV_GIVEN &&  zSpec.tStDev<0) ||
             (zSpec.flags&DELTASTDEV_GIVEN && zSpec.deltaStDev<0) ||
             (zSpec.flags&BETAGAMMA_GIVEN && zSpec.betaGamma<=0))
@@ -353,19 +365,19 @@ long PerformTransformation(double *x, double *xp, double *p, long rows, PLANE_SP
         emit = sqrt(emit);
       beta1 = S11/emit;
       alpha1 = -S12/emit;
+      beta2 = match->beta;
+      alpha2 = match->alpha;
+      match->R11 = R11 = beta2/sqrt(beta1*beta2);
+      match->R12 = R12 = 0;
+      match->R21 = R21 = (alpha1-alpha2)/sqrt(beta1*beta2);
+      match->R22 = R22 = beta1/sqrt(beta1*beta2);
       if (match->flags&NEMIT_GIVEN) {
-        match->R11 = R11 = match->R22 = R22 = 
-          sqrt(match->normEmittance/(emit*pAve));
-        match->R12 = R12 = match->R21 = R21 = 0;
-        beta2 = beta1;
-        alpha2 = alpha1;
-      } else {
-        beta2 = match->beta;
-        alpha2 = match->alpha;
-        match->R11 = R11 = beta2/sqrt(beta1*beta2);
-        match->R12 = R12 = 0;
-        match->R21 = R21 = (alpha1-alpha2)/sqrt(beta1*beta2);
-        match->R22 = R22 = beta1/sqrt(beta1*beta2);
+	double factor;
+	factor = sqrt(match->normEmittance/(emit*pAve));
+	match->R11 = (R11 *= factor);
+	match->R12 = (R12 *= factor);
+	match->R22 = (R22 *= factor);
+	match->R21 = (R21 *= factor);
       }
     }
     else {
@@ -434,7 +446,7 @@ long PerformZTransformation(double *t, double *p,
       S22 = sqr(match->deltaStDev);
     if (match->flags&CORRELATION_GIVEN) 
       S12 = match->correlation*sqrt(S11*S22);
-    if (match->flags&ALPHAZ_GIVEN)
+    else if (match->flags&ALPHAZ_GIVEN)
       S12 = -match->alpha*sqrt(S11*S22)/sqrt(1+sqr(match->alpha));
     if ((emit2 = S11*S22-sqr(S12))<=0)
       SDDS_Bomb("longitudinal emittance is zero");
@@ -464,6 +476,11 @@ long PerformZTransformation(double *t, double *p,
     delta0 = p[i];
     t[i] = R11*t0 + R12*delta0;
     p[i] = R21*t0 + R22*delta0;
+  }
+
+  if (match->flags&CHIRP_GIVEN) {
+    for (i=0; i<rows; i++)
+      p[i] += t[i]*match->chirp;
   }
 
   if (match->flags&BETAGAMMA_GIVEN) {
