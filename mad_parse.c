@@ -421,7 +421,7 @@ long expand_phys(
     fflush(stdout);
     fprintf(stdout, "known elements are:\n");
     fflush(stdout);
-    print_elem_names(stdout, elem0);
+    print_elem_names(stdout, elem0, 100);
     exit(1);
     return(0);
     }

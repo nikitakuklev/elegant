@@ -1180,19 +1180,28 @@ char *makeTexSafeString(char *source);
 void print_dictionary_entry(FILE *fp, long type, long latex_form)
 {
   char *type_name[3] = {"double", "long", "STRING", };
-  long j;
+  long j, texLines;
   if (latex_form) {
     fprintf(fp, "\\begin{latexonly}\n\\newpage\n\\begin{center}{\\Large\\verb|%s|}\\end{center}\n\\end{latexonly}\\subsection{%s}\n", 
             entity_name[type], entity_name[type]);
     fprintf(fp, "%s\n\\\\\n", makeTexSafeString(entity_text[type]));
-    fprintf(fp, "\\begin{tabular}{|l|l|l|l|} \\hline\n");
-    fprintf(fp, "Parameter Name & Units & Type & Default \\\\ \\hline \n");
+    fprintf(fp, "\\begin{tabular}{|l|l|l|l|l|} \\hline\n");
+    fprintf(fp, "Parameter Name & Units & Type & Default & Description \\\\ \\hline \n");
   }
   else  {
     fprintf(fp, "***** element type %s:\n", entity_name[type]);
     fprintf(fp, "%s\n", entity_text[type]);
   }
-  for (j=0; j<entity_description[type].n_params; j++) {
+  for (j=texLines=0; j<entity_description[type].n_params; j++) {
+    if (latex_form && texLines>35) {
+      texLines = 0;
+      fprintf(fp, "\\end{tabular}\n\n");
+      fprintf(fp, "\\begin{latexonly}\n\\newpage\n\\begin{center}{\\Large\\verb|%s| continued}\\end{center}\n\\end{latexonly}\n", 
+              entity_name[type], entity_name[type]);
+      fprintf(fp, "%s\n\\\\\n", makeTexSafeString(entity_text[type]));
+      fprintf(fp, "\\begin{tabular}{|l|l|l|l|l|} \\hline\n");
+      fprintf(fp, "Parameter Name & Units & Type & Default & Description \\\\ \\hline \n");
+    }
     if (!latex_form)
       fprintf(fp, "%20s %20s %10s", 
               PRINTABLE_NULL(entity_description[type].parameter[j].name), 
@@ -1230,10 +1239,35 @@ void print_dictionary_entry(FILE *fp, long type, long latex_form)
       fflush(stdout);
       exit(1);
     }
-    if (latex_form)
-      fprintf(fp, " \\\\ \\hline \n");
+    if (latex_form) {
+      char *ptr0, *ptr1, buffer[1024];
+      strcpy(buffer, entity_description[type].parameter[j].description);
+      if (strlen(ptr0 = buffer)) {
+        while (strlen(ptr0)>20) {
+          ptr1 = ptr0+20;
+          while (*ptr1 && *ptr1!=' ')
+            ptr1++;
+          if (!*ptr1)
+            break;
+          *ptr1 = 0;
+          fprintf(fp, " & %s ", makeTexSafeString(ptr0));
+          fprintf(fp, "\\\\ \n & & & ");
+          ptr0 = ptr1+1;
+          texLines++;
+        }
+        if (*ptr0) {
+          fprintf(fp, " & %s ", 
+                  makeTexSafeString(ptr0));
+          fprintf(fp, " \\\\ \\hline \n");
+          texLines++;
+        }
+      } else {
+        fprintf(fp, " & \\\\ \\hline \n");
+        texLines++;
+      }
+    }
     else 
-      fprintf(fp, "\n");
+      fprintf(fp, "  %s\n", entity_description[type].parameter[j].description);
   }
   if (latex_form)
     fprintf(fp, "\\end{tabular}\n\n");
@@ -1276,9 +1310,17 @@ char *makeTexSafeString(char *source)
   long index = 0;
   buffer[0] = 0;
   while (*source) {
-    if (*source=='_')
+    if (*source=='_' || *source=='^' || *source=='{' || *source=='}') {
       buffer[index++] = '\\';
-    buffer[index++] = *source++;
+      buffer[index++] = *source++;
+    }
+    else if  (*source=='<' || *source=='>' || *source=='|') {
+      buffer[index++] = '$';
+      buffer[index++] = *source++;
+      buffer[index++] = '$';
+    }
+    else
+      buffer[index++] = *source++;
   }
   buffer[index] = 0;
   return buffer;

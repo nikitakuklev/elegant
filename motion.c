@@ -19,7 +19,7 @@
  *
  *       _   ____        _     _ 
  * where P = beta.gamma, X = k.x, and derivatives are with respect to
- * tau=omega.time. 
+ * tau=omega.time.   E has units of V/m and B has units of T.
  *
  * For resonant fields, omega is the angular frequency and k=omega/c.
  * For ramped fields, omega is 1/ramp_time and k=omega/c.
@@ -36,6 +36,11 @@ void (*set_up_derivatives(void *field, long field_type, double *kscale,
         double Po, double *X_limit, double *Y_limit, double *accuracy,
         long *n_steps))(double *, double *, double);
 void derivatives_tmcf_mode(
+    double *qp,       /* derivatives w.r.t. tau */
+    double *q,        /* X,Y,Z,Px,Py,Pz */
+    double tau     
+    );
+void derivatives_rftmEz0(
     double *qp,       /* derivatives w.r.t. tau */
     double *q,        /* X,Y,Z,Px,Py,Pz */
     double tau     
@@ -60,6 +65,7 @@ void derivatives_twmta(
     double *q,        /* X,Y,Z,Px,Py,Pz */
     double tau 
     );
+void setupRftmEz0FromFile(RFTMEZ0 *rftmEz0, double frequency, double length, double Ez_peak);
 double exit_function(double *qp, double *q, double phase);
 double *select_fiducial(double **part, long n_part, char *mode);
 void select_integrator(char *desired_method);
@@ -313,339 +319,403 @@ long motion(
 void *field_global;
  
 void (*set_up_derivatives(
-    void *field,
-    long field_type,
-    double *kscale,
-    double z_start,
-    double *Z_end,
-    double *tau_start,
-    double **part,
-    long n_part,
-    double P_central,
-    double *X_limit,
-    double *Y_limit,
-    double *accuracy,
-    long *n_steps
-    ))(double *, double *, double)
+                          void *field,
+                          long field_type,
+                          double *kscale,
+                          double z_start,
+                          double *Z_end,
+                          double *tau_start,
+                          double **part,
+                          long n_part,
+                          double P_central,
+                          double *X_limit,
+                          double *Y_limit,
+                          double *accuracy,
+                          long *n_steps
+                          ))(double *, double *, double)
 {
-    void derivatives_tm_mode(), derivatives_tmcf_mode(),
-         derivatives_ce_plates(), derivatives_tw_plates(),
-         derivatives_tw_linac(), derivatives_twmta();
-    TMCF_MODE *tmcf;
-    CE_PLATES *cep;
-    TW_PLATES *twp;
-    TW_LINAC *twla;
-    TWMTA *twmta;
-    double *fiducial, gamma, Po, Pz, gamma_w, omega;
-    double Escale, Bscale;
 
-    log_entry("set_up_derivatives");
+  TMCF_MODE *tmcf;
+  CE_PLATES *cep;
+  TW_PLATES *twp;
+  TW_LINAC *twla;
+  TWMTA *twmta;
+  RFTMEZ0 *rftmEz0;
+  
+  double *fiducial, gamma, Po, Pz, gamma_w, omega;
+  double Escale, Bscale;
 
-    field_global = field;
+  log_entry("set_up_derivatives");
 
-    Escale = (Bscale = e_mks/me_mks)/c_mks;
+  field_global = field;
 
-    switch (field_type) {
-        case T_RFTM:
-            bomb("tm_mode cavities not implemented yet", NULL);
-            break;
-        case T_TMCF:
-            tmcf = field;
-            *kscale = (omega=PIx2*tmcf->frequency)/c_mks;
-            if (!tmcf->fiducial_part) {
-                /* This is the fiducial particle--the phase offset is set so 
-                 * that its phase when it reaches the cavity center will be 
-                 * approximately tmcf->phase + omega*tmcf->time_offset.
-                 * Several other quantities are calculated here also.
-                 */
-                tmcf->k = (omega=PIx2*tmcf->frequency)/c_mks;
-                *kscale = tmcf->k;
-                tmcf->fiducial_part = fiducial = select_fiducial(part, n_part, tmcf->fiducial);
-                if (fiducial) {
-                    Po = P_central*(1+fiducial[5]);
-                    gamma = sqrt(1+sqr(Po));
-                    Pz = Po*sqrt(1-sqr(fiducial[0])-sqr(fiducial[2]));
-                    tmcf->phase0 =
-                        get_reference_phase((long)(tmcf->phase_reference+.5),
-                                            -tmcf->k*gamma*(tmcf->length/(2*Pz) + fiducial[4]/Po));
-                    }
-                else {
-                    /* phase to v=c */
-                    tmcf->phase0 = get_reference_phase((long)(tmcf->phase_reference+.5),
-                                                       -tmcf->k*tmcf->length/2 + z_start);
-                    tmcf->fiducial_part = part[0];
-                    }
-                tmcf->Er   *= e_mks/(me_mks*c_mks*omega);
-                tmcf->Ez   *= e_mks/(me_mks*c_mks*omega);
-                tmcf->Bphi *= e_mks/(me_mks*omega);
-                }
-            *tau_start = tmcf->phase + PIx2*tmcf->frequency*tmcf->time_offset +
-                         tmcf->phase0;
-            *Z_end = tmcf->length*(*kscale);
-            X_offset = tmcf->k*tmcf->radial_offset*cos(tmcf->tilt);
-            Y_offset = tmcf->k*tmcf->radial_offset*sin(tmcf->tilt);
-            *X_limit = tmcf->k*tmcf->x_max;
-            *Y_limit = tmcf->k*tmcf->y_max;
-            X_aperture_center = tmcf->k*tmcf->dx;
-            Y_aperture_center = tmcf->k*tmcf->dy;
-            *accuracy = tmcf->accuracy;
-            *n_steps = tmcf->n_steps;
-            select_integrator(tmcf->method);
-            log_exit("set_up_derivatives");
-            return(derivatives_tmcf_mode);
-        case T_CEPL:
-            cep = field;
-            *kscale = 1./(c_mks*cep->ramp_time);
-            if (!cep->fiducial_part) {
-                /* This is the fiducial particle--the tau offset tau0 is set 
-                 * so that its tau when it reaches the cavity center will be 
-                 * approximately 0. Several other quantities are calculated 
-                 * here also.
-                 */
-                *kscale = cep->k = 1./(c_mks*cep->ramp_time);
-                cep->fiducial_part = fiducial = select_fiducial(part, n_part, cep->fiducial);
-                if (fiducial) {
-                    Po = P_central*(1+fiducial[5]);
-                    gamma = sqrt(1+sqr(Po));
-                    Pz = Po*sqrt(1-sqr(fiducial[0])-sqr(fiducial[2]));
-                    cep->tau0 = get_reference_phase(cep->phase_reference,
-                                                    -cep->k*gamma*(cep->length/(2*Pz) + fiducial[4]/Po ) );
-                    }
-                else {
-                    /* phase to v=c */
-                    cep->tau0 = get_reference_phase((long)(cep->phase_reference+.5),
-                                                       -cep->k*cep->length/2 + z_start);
-                    cep->fiducial_part = part[0];
-                    }
-                }
-            cep->E_scaled = e_mks*cep->voltage*cep->ramp_time/
-                (cep->gap*me_mks*c_mks);
-            cep->E_static = e_mks*cep->static_voltage*cep->ramp_time/
-                (cep->gap*me_mks*c_mks);
-            cep->cos_tilt = cos(cep->tilt);
-            cep->sin_tilt = sin(cep->tilt);
-            *tau_start = cep->time_offset/cep->ramp_time + cep->tau0;
-            *Z_end = cep->length*(*kscale);
-            *accuracy = cep->accuracy;
-            *n_steps = cep->n_steps;
-            X_offset = Y_offset = 0;
-            *X_limit = cep->k*cep->x_max;
-            *Y_limit = cep->k*cep->y_max;
-            X_aperture_center = cep->k*cep->dx;
-            Y_aperture_center = cep->k*cep->dy;
-            select_integrator(cep->method);
-            log_exit("set_up_derivatives");
-            return(derivatives_ce_plates);
-        case T_TWPL:
-            twp = field;
-            *kscale = 1./(c_mks*twp->ramp_time);
-            if (!twp->fiducial_part) {
-                /* This is the fiducial particle--the tau offset tau0 is set 
-                 * so that its tau when it reaches the cavity center will be 
-                 * approximately omega*time_offset. Several other quantities are calculated 
-                 * here also.
-                 */
-                *kscale = twp->k = 1./(c_mks*twp->ramp_time);
-                twp->fiducial_part = fiducial = select_fiducial(part, n_part, twp->fiducial);
-                if (fiducial) {
-                    Po = P_central*(1+fiducial[5]);
-                    gamma = sqrt(1+sqr(Po));
-                    Pz = Po*sqrt(1-sqr(fiducial[0])-sqr(fiducial[2]));
-                    twp->tau0 = get_reference_phase(twp->phase_reference,
-                                                    -twp->k*gamma*(twp->length/(2*Pz) + fiducial[4]/Po) );
-                    }
-                else {
-                    /* phase to v=c */
-                    twp->tau0 = get_reference_phase((long)(twp->phase_reference+.5),
-                                                       -twp->k*twp->length/2 + z_start);
-                    twp->fiducial_part = part[0];
-                    }
-                }
-            twp->E_scaled = e_mks*twp->voltage*twp->ramp_time/
-                (twp->gap*me_mks*c_mks);
-            twp->E_static = e_mks*twp->static_voltage*twp->ramp_time/
-                (twp->gap*me_mks*c_mks);
-            twp->cos_tilt = cos(twp->tilt);
-            twp->sin_tilt = sin(twp->tilt);
-            *tau_start = twp->time_offset/twp->ramp_time + twp->tau0;
-            *Z_end = twp->length*(*kscale);
-            *accuracy = twp->accuracy;
-            *n_steps = twp->n_steps;
-            X_offset = Y_offset = 0;
-            *X_limit = twp->k*twp->x_max;
-            *Y_limit = twp->k*twp->y_max;
-            X_aperture_center = twp->k*twp->dx;
-            Y_aperture_center = twp->k*twp->dy;
-#if defined(DEBUG)
-            fprintf(stdout, "TWPL parameters:\n");
-            fflush(stdout);
-            fprintf(stdout, "l=%le acc=%le x_max=%le y_max=%le\n",
-                  twp->length, twp->accuracy, twp->x_max, twp->y_max);
-            fflush(stdout);
-            fprintf(stdout, "dx=%le dy=%le method=%s ramp_time=%le phiref=%ld\n",
-                  twp->dx, twp->dy, twp->method, twp->ramp_time,
-                  twp->phase_reference);
-            fflush(stdout);
-#endif
-            select_integrator(twp->method);
-            log_exit("set_up_derivatives");
-            return(derivatives_tw_plates);
-        case T_TWLA:
-            twla = (TW_LINAC*)field;
-            radial_limit = 1;
-            *kscale = (omega=twla->frequency*PIx2)/c_mks;
-            twla->alphaS = twla->alpha/(*kscale);
-            if (twla->change_p0)
-              change_p0 = 1;
-            if (!twla->fiducial_part) {
-                /* This is the fiducial particle--the phase offset phase0 is 
-                 * set so that its initial phase will be twla->phase + 
-                 * omega*twla->time_offset. Several other quantities are 
-                 * calculated here also.
-                 */
-                twla->kz = *kscale/twla->beta_wave;
-                twla->fiducial_part = fiducial = select_fiducial(part, n_part, twla->fiducial);
-                if (fiducial) {
-                    Po = P_central*(1+fiducial[5]);
-                    gamma = sqrt(1+sqr(Po));
-                    /* find the phase offset, phase0 = -omega*t_fiducial , or else equivalent value
-                     * for phase reference */
-                    twla->phase0 = get_reference_phase(twla->phase_reference,
-                                                       -omega/c_mks*gamma*fiducial[4]/Po );
-                    }
-                else {
-                    /* use v=c */
-                    twla->phase0 = get_reference_phase(twla->phase_reference, -omega/c_mks*z_start);
-                    twla->fiducial_part = part[0];
-                    }
-                }
-            Escale /= omega;
-            Bscale /= omega;
-            twla->ErS    = -twla->Ez*twla->kz/2 * Escale * twla->focussing / (*kscale);
-            twla->BphiS  = -twla->Ez*omega/(2*sqr(c_mks)) * Bscale * twla->focussing / (*kscale);
-            twla->EzS    = twla->Ez * Escale;
-            twla->BsolS  = twla->B_solenoid * Bscale;
-            /* calculate initial tau value, less omega*t: 
-             *    tau_start = omega*(t_offset-t_fid)+phase 
-             *              = omega*t_offset + phase + phase0
-             */
-            *tau_start = twla->phase + omega*twla->time_offset + twla->phase0;
-            *Z_end = twla->length*(*kscale);
-            X_offset = X_aperture_center = (*kscale)*twla->dx;
-            Y_offset = Y_aperture_center = (*kscale)*twla->dy;
-            *X_limit = (*kscale)*twla->x_max;
-            *Y_limit = (*kscale)*twla->y_max;
-            *accuracy = twla->accuracy;
-            *n_steps = twla->n_steps;
-            select_integrator(twla->method);
-            derivatives    = derivatives_tw_linac;
-            input_impulse  = input_impulse_tw_linac;
-            output_impulse = output_impulse_tw_linac;
-            log_exit("set_up_derivatives");
-            return(derivatives_tw_linac);
-        case T_TWMTA:
-            twmta = field;
-            radial_limit = 0;
-            *kscale = (omega=twmta->frequency*PIx2)/c_mks;
-            twmta->alphaS = twmta->alpha/(*kscale);
-            if (!twmta->fiducial_part) {
-                /* This is the fiducial particle--the phase offset phase0 is 
-                 * set so that its initial phase will be twmta->phase + 
-                 * omega*twmta->time_offset. Several other quantities are 
-                 * calculated here also.
-                 */
-                twmta->kz = (*kscale)/twmta->beta_wave;
-                gamma_w = 1/sqrt(1-sqr(twmta->beta_wave));
-                twmta->ky = sqrt(sqr(twmta->kx)+sqr(twmta->kz/gamma_w));
-                twmta->Kx = twmta->kx/(*kscale);
-                twmta->Ky = twmta->ky/(*kscale);
-                twmta->Kz = twmta->kz/(*kscale);
-/*
-                fprintf(stdout, "TWMTA kx, ky, kz = %e, %e, %e\n", twmta->kx, twmta->ky, twmta->kz);
-                fflush(stdout);
-                fprintf(stdout, "      Ex, Ey, Ez = %e, %e, %e\n", twmta->ExS, twmta->EyS, twmta->EzS);
-                fflush(stdout);
-                fprintf(stdout, "      Bx, By, Bz = %e, %e\n", twmta->BxS, twmta->ByS);
-                fflush(stdout);
- */
-                twmta->fiducial_part = fiducial = select_fiducial(part, n_part, twmta->fiducial);
-                if (fiducial) {
-                    /* find the phase offset, phase0 = -omega*t_fiducial , or else equivalent value
-                     * for phase reference */
-                    Po = P_central*(1+fiducial[5]);
-                    gamma = sqrt(1+sqr(Po));
-                    twmta->phase0 = get_reference_phase(twmta->phase_reference,
-                                                        -omega/c_mks*gamma*fiducial[4]/Po );
-                    }
-                else {
-                    /* use v=c */
-                    twmta->phase0 = get_reference_phase(twmta->phase_reference, -omega/c_mks*z_start);
-                    fiducial = part[0];
-                    }
-                }
-            Escale /= omega;
-            Bscale /= omega;
-            twmta->EzS = twmta->Ez * Escale;
-            twmta->ExS = twmta->EzS*twmta->kx*twmta->kz/(sqr(twmta->ky)-sqr(twmta->kx));
-            twmta->EyS = -twmta->ExS*twmta->ky/twmta->kx;
-            twmta->BxS = twmta->Ez/omega*Bscale*twmta->ky*
-                (sqr(twmta->kx)-sqr(twmta->ky)+sqr(twmta->kz))/(sqr(twmta->ky)-sqr(twmta->kx));
-            twmta->ByS = twmta->BxS*twmta->kx/twmta->ky;
-            twmta->BsolS = twmta->Bsol*Bscale;
-            /* calculate initial tau value, less omega*t: 
-             *    tau_start = omega*(-t_fid)+phase 
-             *              = phase + phase0
-             */
-            *tau_start = twmta->phase + twmta->phase0;
-            *Z_end = twmta->length*(*kscale);
-            X_offset = X_aperture_center = (*kscale)*twmta->dx;
-            Y_offset = Y_aperture_center = (*kscale)*twmta->dy;
-            *X_limit = (*kscale)*twmta->x_max;
-            *Y_limit = (*kscale)*twmta->y_max;
-            *accuracy = twmta->accuracy;
-            *n_steps = twmta->n_steps;
-            select_integrator(twmta->method);
-            input_impulse  = input_impulse_twmta;
-            output_impulse = output_impulse_twmta;
-            log_exit("set_up_derivatives");
-            return(derivatives_twmta);
-        default:
-            bomb("invalid mode type (set_up_derivatives", NULL);
-            break;
-        }
-	exit(1);
+  Escale = (Bscale = e_mks/me_mks)/c_mks;
+
+  switch (field_type) {
+  case T_RFTMEZ0:
+    rftmEz0 = field;
+    *kscale = (omega=PIx2*rftmEz0->frequency)/c_mks;
+    if (!rftmEz0->Ez)
+      setupRftmEz0FromFile(rftmEz0, rftmEz0->frequency, rftmEz0->length, rftmEz0->Ez_peak);
+    if (!rftmEz0->fiducial_part) {
+      /* This is the fiducial particle--the phase offset is set so 
+       * that its phase when it reaches the cavity center will be 
+       * approximately rftmEz0->phase + omega*rftmEz0->time_offset.
+       * Several other quantities are calculated here also.
+       */
+      rftmEz0->k = *kscale;
+      rftmEz0->fiducial_part = fiducial = select_fiducial(part, n_part, rftmEz0->fiducial);
+      if (fiducial) {
+        Po = P_central*(1+fiducial[5]);
+        gamma = sqrt(1+sqr(Po));
+        Pz = Po*sqrt(1-sqr(fiducial[0])-sqr(fiducial[2]));
+        rftmEz0->phase0 =
+          get_reference_phase((long)(rftmEz0->phase_reference+.5),
+                              -rftmEz0->k*gamma*(rftmEz0->length/(2*Pz) + fiducial[4]/Po));
+      }
+      else {
+        /* phase to v=c */
+        rftmEz0->phase0 = get_reference_phase((long)(rftmEz0->phase_reference+.5),
+                                           -rftmEz0->k*rftmEz0->length/2 + z_start);
+        rftmEz0->fiducial_part = part[0];
+      }
     }
+    *tau_start = rftmEz0->phase + PIx2*rftmEz0->frequency*rftmEz0->time_offset +
+      rftmEz0->phase0;
+    *Z_end = rftmEz0->length*(*kscale);
+    X_offset = -(X_aperture_center = rftmEz0->k*rftmEz0->dx);
+    Y_offset = -(Y_aperture_center = rftmEz0->k*rftmEz0->dy);
+    /* assume 1000m aperture for now */     
+    *X_limit = rftmEz0->k*1e3;
+    *Y_limit = rftmEz0->k*1e3;
+    *accuracy = rftmEz0->accuracy;
+    *n_steps = rftmEz0->n_steps;
+    select_integrator(rftmEz0->method);
+    log_exit("set_up_derivatives");
+    return(derivatives_rftmEz0);
+    break;
+  case T_TMCF:
+    tmcf = field;
+    *kscale = (omega=PIx2*tmcf->frequency)/c_mks;
+    if (!tmcf->fiducial_part) {
+      /* This is the fiducial particle--the phase offset is set so 
+       * that its phase when it reaches the cavity center will be 
+       * approximately tmcf->phase + omega*tmcf->time_offset.
+       * Several other quantities are calculated here also.
+       */
+      tmcf->k = (omega=PIx2*tmcf->frequency)/c_mks;
+      *kscale = tmcf->k;
+      tmcf->fiducial_part = fiducial = select_fiducial(part, n_part, tmcf->fiducial);
+      if (fiducial) {
+        Po = P_central*(1+fiducial[5]);
+        gamma = sqrt(1+sqr(Po));
+        Pz = Po*sqrt(1-sqr(fiducial[0])-sqr(fiducial[2]));
+        tmcf->phase0 =
+          get_reference_phase((long)(tmcf->phase_reference+.5),
+                              -tmcf->k*gamma*(tmcf->length/(2*Pz) + fiducial[4]/Po));
+      }
+      else {
+        /* phase to v=c */
+        tmcf->phase0 = get_reference_phase((long)(tmcf->phase_reference+.5),
+                                           -tmcf->k*tmcf->length/2 + z_start);
+        tmcf->fiducial_part = part[0];
+      }
+      tmcf->Er   *= e_mks/(me_mks*c_mks*omega);
+      tmcf->Ez   *= e_mks/(me_mks*c_mks*omega);
+      tmcf->Bphi *= e_mks/(me_mks*omega);
+    }
+    *tau_start = tmcf->phase + PIx2*tmcf->frequency*tmcf->time_offset +
+      tmcf->phase0;
+    *Z_end = tmcf->length*(*kscale);
+    X_offset = tmcf->k*tmcf->radial_offset*cos(tmcf->tilt);
+    Y_offset = tmcf->k*tmcf->radial_offset*sin(tmcf->tilt);
+    *X_limit = tmcf->k*tmcf->x_max;
+    *Y_limit = tmcf->k*tmcf->y_max;
+    X_aperture_center = tmcf->k*tmcf->dx;
+    Y_aperture_center = tmcf->k*tmcf->dy;
+    *accuracy = tmcf->accuracy;
+    *n_steps = tmcf->n_steps;
+    select_integrator(tmcf->method);
+    log_exit("set_up_derivatives");
+    return(derivatives_tmcf_mode);
+  case T_CEPL:
+    cep = field;
+    *kscale = 1./(c_mks*cep->ramp_time);
+    if (!cep->fiducial_part) {
+      /* This is the fiducial particle--the tau offset tau0 is set 
+       * so that its tau when it reaches the cavity center will be 
+       * approximately 0. Several other quantities are calculated 
+       * here also.
+       */
+      *kscale = cep->k = 1./(c_mks*cep->ramp_time);
+      cep->fiducial_part = fiducial = select_fiducial(part, n_part, cep->fiducial);
+      if (fiducial) {
+        Po = P_central*(1+fiducial[5]);
+        gamma = sqrt(1+sqr(Po));
+        Pz = Po*sqrt(1-sqr(fiducial[0])-sqr(fiducial[2]));
+        cep->tau0 = get_reference_phase(cep->phase_reference,
+                                        -cep->k*gamma*(cep->length/(2*Pz) + fiducial[4]/Po ) );
+      }
+      else {
+        /* phase to v=c */
+        cep->tau0 = get_reference_phase((long)(cep->phase_reference+.5),
+                                        -cep->k*cep->length/2 + z_start);
+        cep->fiducial_part = part[0];
+      }
+    }
+    cep->E_scaled = e_mks*cep->voltage*cep->ramp_time/
+      (cep->gap*me_mks*c_mks);
+    cep->E_static = e_mks*cep->static_voltage*cep->ramp_time/
+      (cep->gap*me_mks*c_mks);
+    cep->cos_tilt = cos(cep->tilt);
+    cep->sin_tilt = sin(cep->tilt);
+    *tau_start = cep->time_offset/cep->ramp_time + cep->tau0;
+    *Z_end = cep->length*(*kscale);
+    *accuracy = cep->accuracy;
+    *n_steps = cep->n_steps;
+    X_offset = Y_offset = 0;
+    *X_limit = cep->k*cep->x_max;
+    *Y_limit = cep->k*cep->y_max;
+    X_aperture_center = cep->k*cep->dx;
+    Y_aperture_center = cep->k*cep->dy;
+    select_integrator(cep->method);
+    log_exit("set_up_derivatives");
+    return(derivatives_ce_plates);
+  case T_TWPL:
+    twp = field;
+    *kscale = 1./(c_mks*twp->ramp_time);
+    if (!twp->fiducial_part) {
+      /* This is the fiducial particle--the tau offset tau0 is set 
+       * so that its tau when it reaches the cavity center will be 
+       * approximately omega*time_offset. Several other quantities are calculated 
+       * here also.
+       */
+      *kscale = twp->k = 1./(c_mks*twp->ramp_time);
+      twp->fiducial_part = fiducial = select_fiducial(part, n_part, twp->fiducial);
+      if (fiducial) {
+        Po = P_central*(1+fiducial[5]);
+        gamma = sqrt(1+sqr(Po));
+        Pz = Po*sqrt(1-sqr(fiducial[0])-sqr(fiducial[2]));
+        twp->tau0 = get_reference_phase(twp->phase_reference,
+                                        -twp->k*gamma*(twp->length/(2*Pz) + fiducial[4]/Po) );
+      }
+      else {
+        /* phase to v=c */
+        twp->tau0 = get_reference_phase((long)(twp->phase_reference+.5),
+                                        -twp->k*twp->length/2 + z_start);
+        twp->fiducial_part = part[0];
+      }
+    }
+    twp->E_scaled = e_mks*twp->voltage*twp->ramp_time/
+      (twp->gap*me_mks*c_mks);
+    twp->E_static = e_mks*twp->static_voltage*twp->ramp_time/
+      (twp->gap*me_mks*c_mks);
+    twp->cos_tilt = cos(twp->tilt);
+    twp->sin_tilt = sin(twp->tilt);
+    *tau_start = twp->time_offset/twp->ramp_time + twp->tau0;
+    *Z_end = twp->length*(*kscale);
+    *accuracy = twp->accuracy;
+    *n_steps = twp->n_steps;
+    X_offset = Y_offset = 0;
+    *X_limit = twp->k*twp->x_max;
+    *Y_limit = twp->k*twp->y_max;
+    X_aperture_center = twp->k*twp->dx;
+    Y_aperture_center = twp->k*twp->dy;
+#if defined(DEBUG)
+    fprintf(stdout, "TWPL parameters:\n");
+    fflush(stdout);
+    fprintf(stdout, "l=%le acc=%le x_max=%le y_max=%le\n",
+            twp->length, twp->accuracy, twp->x_max, twp->y_max);
+    fflush(stdout);
+    fprintf(stdout, "dx=%le dy=%le method=%s ramp_time=%le phiref=%ld\n",
+            twp->dx, twp->dy, twp->method, twp->ramp_time,
+            twp->phase_reference);
+    fflush(stdout);
+#endif
+    select_integrator(twp->method);
+    log_exit("set_up_derivatives");
+    return(derivatives_tw_plates);
+  case T_TWLA:
+    twla = (TW_LINAC*)field;
+    radial_limit = 1;
+    *kscale = (omega=twla->frequency*PIx2)/c_mks;
+    twla->alphaS = twla->alpha/(*kscale);
+    if (twla->change_p0)
+      change_p0 = 1;
+    if (!twla->fiducial_part) {
+      /* This is the fiducial particle--the phase offset phase0 is 
+       * set so that its initial phase will be twla->phase + 
+       * omega*twla->time_offset. Several other quantities are 
+       * calculated here also.
+       */
+      twla->kz = *kscale/twla->beta_wave;
+      twla->fiducial_part = fiducial = select_fiducial(part, n_part, twla->fiducial);
+      if (fiducial) {
+        Po = P_central*(1+fiducial[5]);
+        gamma = sqrt(1+sqr(Po));
+        /* find the phase offset, phase0 = -omega*t_fiducial , or else equivalent value
+         * for phase reference */
+        twla->phase0 = get_reference_phase(twla->phase_reference,
+                                           -omega/c_mks*gamma*fiducial[4]/Po );
+      }
+      else {
+        /* use v=c */
+        twla->phase0 = get_reference_phase(twla->phase_reference, -omega/c_mks*z_start);
+        twla->fiducial_part = part[0];
+      }
+    }
+    Escale /= omega;
+    Bscale /= omega;
+    twla->ErS    = -twla->Ez*twla->kz/2 * Escale * twla->focussing / (*kscale);
+    twla->BphiS  = -twla->Ez*omega/(2*sqr(c_mks)) * Bscale * twla->focussing / (*kscale);
+    twla->EzS    = twla->Ez * Escale;
+    twla->BsolS  = twla->B_solenoid * Bscale;
+    /* calculate initial tau value, less omega*t: 
+     *    tau_start = omega*(t_offset-t_fid)+phase 
+     *              = omega*t_offset + phase + phase0
+     */
+    *tau_start = twla->phase + omega*twla->time_offset + twla->phase0;
+    *Z_end = twla->length*(*kscale);
+    X_offset = X_aperture_center = (*kscale)*twla->dx;
+    Y_offset = Y_aperture_center = (*kscale)*twla->dy;
+    *X_limit = (*kscale)*twla->x_max;
+    *Y_limit = (*kscale)*twla->y_max;
+    *accuracy = twla->accuracy;
+    *n_steps = twla->n_steps;
+    select_integrator(twla->method);
+    derivatives    = derivatives_tw_linac;
+    input_impulse  = input_impulse_tw_linac;
+    output_impulse = output_impulse_tw_linac;
+    log_exit("set_up_derivatives");
+    return(derivatives_tw_linac);
+  case T_TWMTA:
+    twmta = field;
+    radial_limit = 0;
+    *kscale = (omega=twmta->frequency*PIx2)/c_mks;
+    twmta->alphaS = twmta->alpha/(*kscale);
+    if (!twmta->fiducial_part) {
+      /* This is the fiducial particle--the phase offset phase0 is 
+       * set so that its initial phase will be twmta->phase + 
+       * omega*twmta->time_offset. Several other quantities are 
+       * calculated here also.
+       */
+      twmta->kz = (*kscale)/twmta->beta_wave;
+      gamma_w = 1/sqrt(1-sqr(twmta->beta_wave));
+      twmta->ky = sqrt(sqr(twmta->kx)+sqr(twmta->kz/gamma_w));
+      twmta->Kx = twmta->kx/(*kscale);
+      twmta->Ky = twmta->ky/(*kscale);
+      twmta->Kz = twmta->kz/(*kscale);
+      /*
+        fprintf(stdout, "TWMTA kx, ky, kz = %e, %e, %e\n", twmta->kx, twmta->ky, twmta->kz);
+        fflush(stdout);
+        fprintf(stdout, "      Ex, Ey, Ez = %e, %e, %e\n", twmta->ExS, twmta->EyS, twmta->EzS);
+        fflush(stdout);
+        fprintf(stdout, "      Bx, By, Bz = %e, %e\n", twmta->BxS, twmta->ByS);
+        fflush(stdout);
+        */
+      twmta->fiducial_part = fiducial = select_fiducial(part, n_part, twmta->fiducial);
+      if (fiducial) {
+        /* find the phase offset, phase0 = -omega*t_fiducial , or else equivalent value
+         * for phase reference */
+        Po = P_central*(1+fiducial[5]);
+        gamma = sqrt(1+sqr(Po));
+        twmta->phase0 = get_reference_phase(twmta->phase_reference,
+                                            -omega/c_mks*gamma*fiducial[4]/Po );
+      }
+      else {
+        /* use v=c */
+        twmta->phase0 = get_reference_phase(twmta->phase_reference, -omega/c_mks*z_start);
+        fiducial = part[0];
+      }
+    }
+    Escale /= omega;
+    Bscale /= omega;
+    twmta->EzS = twmta->Ez * Escale;
+    twmta->ExS = twmta->EzS*twmta->kx*twmta->kz/(sqr(twmta->ky)-sqr(twmta->kx));
+    twmta->EyS = -twmta->ExS*twmta->ky/twmta->kx;
+    twmta->BxS = twmta->Ez/omega*Bscale*twmta->ky*
+      (sqr(twmta->kx)-sqr(twmta->ky)+sqr(twmta->kz))/(sqr(twmta->ky)-sqr(twmta->kx));
+    twmta->ByS = twmta->BxS*twmta->kx/twmta->ky;
+    twmta->BsolS = twmta->Bsol*Bscale;
+    /* calculate initial tau value, less omega*t: 
+     *    tau_start = omega*(-t_fid)+phase 
+     *              = phase + phase0
+     */
+    *tau_start = twmta->phase + twmta->phase0;
+    *Z_end = twmta->length*(*kscale);
+    X_offset = X_aperture_center = (*kscale)*twmta->dx;
+    Y_offset = Y_aperture_center = (*kscale)*twmta->dy;
+    *X_limit = (*kscale)*twmta->x_max;
+    *Y_limit = (*kscale)*twmta->y_max;
+    *accuracy = twmta->accuracy;
+    *n_steps = twmta->n_steps;
+    select_integrator(twmta->method);
+    input_impulse  = input_impulse_twmta;
+    output_impulse = output_impulse_twmta;
+    log_exit("set_up_derivatives");
+    return(derivatives_twmta);
+  default:
+    bomb("invalid mode type (set_up_derivatives", NULL);
+    break;
+  }
+  exit(1);
+}
 
-void derivatives_tm_mode(
+void derivatives_rftmEz0(
     double *qp,       /* derivatives w.r.t. phase */
     double *q,        /* X,Y,Z,Px,Py,Pz */
     double tau 
     )
 {
-    register double gamma, *P, *Pp;
-    static double E[3], B[3];
-
-    derivCalls++;
-    /* gamma = sqrt(P^2+1) */
-    P  = q+3;
-    gamma = sqrt(sqr(P[0])+sqr(P[1])+sqr(P[2])+1);
-
-    /* X' = Px/gamma, etc. */
-    qp[0] = P[0]/gamma;
-    qp[1] = P[1]/gamma;
-    qp[2] = P[2]/gamma;
-
-    /* get scaled RF fields */
-    bomb("tm_mode_fields does not exist", NULL);
-/*    tm_mode_fields(E, B, q, tau, field_global); */
-
-    /* (Px,Py,Pz)' = (Ex,Ey,Ez) + (Px,Py,Pz)x(Bx,By,Bz)/gamma */
-    Pp = qp+3;
-    Pp[0] = E[0] + (P[1]*B[2]-P[2]*B[1])/gamma;
-    Pp[1] = E[1] + (P[2]*B[3]-P[3]*B[2])/gamma;
-    Pp[2] = E[2] + (P[3]*B[1]-P[1]*B[3])/gamma;
-
-    }
+  double gamma, *P, *Pp;
+  double E[3], BOverGamma[3];
+  RFTMEZ0 *rftmEz0;
+  long iz;
+  
+  derivCalls++;
+  P  = q+3;
+  gamma = sqrt(sqr(P[0])+sqr(P[1])+sqr(P[2])+1);
+  
+  /* X' = Px/gamma, etc. */
+  qp[0] = P[0]/gamma;
+  qp[1] = P[1]/gamma;
+  qp[2] = P[2]/gamma;
+  
+  /* get scaled RF fields */
+  rftmEz0 = field_global;
+  iz = q[2]/rftmEz0->dZ;
+  if (iz<0 || iz>=rftmEz0->nz) {
+    E[0] = E[1] = E[2] = 0;
+    BOverGamma[0] = BOverGamma[1] = BOverGamma[2] = 0;
+  } else {
+    double R, Zoffset, BphiOverRG, ErOverR;
+    double X, Y, sinPhase, cosPhase;
+    
+    if (iz==(rftmEz0->nz-1))
+      iz -= 1;
+    X = q[0]+X_offset;
+    Y = q[1]+Y_offset;
+    R = sqrt(sqr(X)+sqr(Y));
+    Zoffset = q[2]-iz*rftmEz0->dZ;
+    sinPhase = sin(tau);
+    cosPhase = cos(tau);
+    E[2] = (rftmEz0->Ez[iz] + Zoffset*rftmEz0->dEzdZ[iz])*sinPhase;
+    ErOverR = -(rftmEz0->dEzdZ[iz] + 
+           (rftmEz0->dEzdZ[iz+1]-rftmEz0->dEzdZ[iz])/rftmEz0->dZ*Zoffset)/2*sinPhase;
+    E[0] = ErOverR*X;
+    E[1] = ErOverR*Y;
+    BphiOverRG = E[2]/2/gamma*cosPhase;
+    BOverGamma[0] = -BphiOverRG*Y;
+    BOverGamma[1] = BphiOverRG*X;
+    BOverGamma[2] = 0;
+  }
+  
+  /* (Px,Py,Pz)' = (Ex,Ey,Ez) + (Px,Py,Pz)x(Bx,By,Bz)/gamma */
+  Pp = qp+3;
+  Pp[0] = -(E[0] + (                  -P[2]*BOverGamma[1]));
+  Pp[1] = -(E[1] + (P[2]*BOverGamma[0]                   ));
+  Pp[2] = -(E[2] + (P[0]*BOverGamma[1]-P[1]*BOverGamma[0]));
+}
 
 void derivatives_tmcf_mode(
     double *qp,       /* derivatives w.r.t. tau */
@@ -1213,3 +1283,112 @@ void select_integrator(char *desired_method)
         }
     log_exit("select_integrator");
     }
+
+void setupRftmEz0FromFile(RFTMEZ0 *rftmEz0, double frequency, double length, double EzPeak)
+{
+  SDDS_DATASET SDDSin;
+  long i;
+  double dzMin, dzMax, dzAve, dz, *z;
+  double k, omega, Ez, EzMax;
+  
+  if (!rftmEz0)
+    bomb("setupRftmEz0FromFile: NULL pointer passed.", NULL);
+
+  if (rftmEz0->initialized)
+    return;
+
+  /* verify input parameters */
+  if (!rftmEz0->inputFile || !rftmEz0->zColumn || !rftmEz0->EzColumn)
+    bomb("RFTMEZ0 must have INPUTFILE, ZCOLUMN, and EZCOLUMN specified.", NULL);
+  if (rftmEz0->radial_order!=1)
+    bomb("RFTMEZ0 restricted to radial_order=1 at present", NULL);
+
+  /* read (z, Ez) data from the file  */
+  if (!SDDS_InitializeInput(&SDDSin, rftmEz0->inputFile) || SDDS_ReadPage(&SDDSin)!=1) {
+    fprintf(stderr, "Error: unable to open or read RFTMEZ0 file %s\n", 
+            rftmEz0->inputFile);
+    exit(1);
+  }
+  if ((rftmEz0->nz=SDDS_RowCount(&SDDSin))<0 || rftmEz0->nz<2) {
+    fprintf(stderr, "Error: no data or insufficient data in RFTMEZ0 file %s\n", 
+            rftmEz0->inputFile);
+    exit(1);
+  }
+  if (SDDS_CheckColumn(&SDDSin, rftmEz0->zColumn, "m", SDDS_ANY_FLOATING_TYPE,
+                       stderr)!=SDDS_CHECK_OK) {
+    fprintf(stderr, "Error: problem with column %s in RFTMEZ0 file %s.  Check existence, type, and units.\n",
+            rftmEz0->zColumn, rftmEz0->inputFile);
+    exit(1);
+  }
+  if (SDDS_CheckColumn(&SDDSin, rftmEz0->EzColumn, NULL, SDDS_ANY_FLOATING_TYPE,
+                       stderr)!=SDDS_CHECK_OK) {
+    fprintf(stderr, "Error: problem with column %s in RFTMEZ0 file %s.  Check existence and type.\n",
+            rftmEz0->zColumn, rftmEz0->inputFile);
+    exit(1);
+  }
+  if (!(z=SDDS_GetColumnInDoubles(&SDDSin, rftmEz0->zColumn)) ||
+      !(rftmEz0->Ez=SDDS_GetColumnInDoubles(&SDDSin, rftmEz0->EzColumn))) {
+    fprintf(stderr, "Error: problem retrieving RFTMEZ0 data from SDDS structure for file %s\n",
+            rftmEz0->inputFile);
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  }
+  if (!(rftmEz0->dEzdZ=SDDS_Malloc(sizeof(*(rftmEz0->dEzdZ))*rftmEz0->nz))) {
+    fprintf(stderr, "Error: memory allocation failure setting up RFTMEZ0 file %s\n",
+            rftmEz0->inputFile);
+    exit(1);
+  }
+
+  /* compute dEz/dz for use in computing Er(z) */
+  dzMin = dzMax = z[1]-z[0];
+  for (i=2; i<rftmEz0->nz; i++) {
+    if ((dz=z[i]-z[i-1])<dzMin)
+      dzMin = dz;
+    if (dz>dzMax)
+      dzMax = dz;
+  }
+  if (dzMin<=0 || dzMax<=0) {
+    fprintf(stderr, "Error: z points in RFTMEZ0 file %s are not monotonically increasing\n",
+            rftmEz0->inputFile);
+    exit(1);
+  }
+  if (fabs(1-dzMin/dzMax)>0.0001) {
+    fprintf(stderr, "Error: spacing of z points in RFTMEZ0 file %s is not uniform (0.01% tolerance)\n",
+            rftmEz0->inputFile);
+    exit(1);
+  }
+  rftmEz0->dz = (z[rftmEz0->nz-1]-z[0])/(rftmEz0->nz-1.0);
+  if (fabs((length-z[rftmEz0->nz-1])/rftmEz0->dz)>1e-6) {
+    fprintf(stderr, "Error: declared length and length from fields from RFTMEZ0 file %s do not agree to 1/10^6 tolerance\n",
+            rftmEz0->inputFile);
+    exit(1);
+  }
+  free(z);
+
+  /* find maximum Ez and normalize */
+  EzMax = 0;
+  for (i=0; i<rftmEz0->nz; i++) {
+    if ((Ez=fabs(rftmEz0->Ez[i]))>EzMax)
+      EzMax = Ez;
+  }
+  if (EzMax==0) {
+    EzPeak = 0;
+    EzMax = 1;
+  }
+  
+  /* perform scaling */
+  k = (PIx2*frequency)/c_mks;
+  rftmEz0->dZ = rftmEz0->dz*k;
+  fflush(stdout);
+  for (i=0; i<rftmEz0->nz; i++)
+    rftmEz0->Ez[i] *= e_mks/(me_mks*c_mks*PIx2*frequency)*EzPeak/EzMax;
+  
+  /* take derivative except at endpoints */
+  for (i=1; i<rftmEz0->nz-1; i++)
+    rftmEz0->dEzdZ[i] = (rftmEz0->Ez[i+1]-rftmEz0->Ez[i-1])/(2*rftmEz0->dZ);
+
+  /* for endpoints, assume field is zero outside region of data */
+  rftmEz0->dEzdZ[0] = rftmEz0->Ez[1]/(2*rftmEz0->dZ);
+  rftmEz0->dEzdZ[rftmEz0->nz-1] = rftmEz0->Ez[rftmEz0->nz-1]/(2*rftmEz0->dZ);
+  
+}
+

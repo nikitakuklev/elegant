@@ -414,8 +414,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_ALPH  20
 /* RF DeFlector */
 #define T_RFDF  21
-/* TM-mode RF cavity using fields from SUPERFISH and NAG integrator: */
-#define T_RFTM  22
+/* TM-mode RF cavity using Ez(z,r=0) from cavity simulation: */
+#define T_RFTMEZ0  22
 /* RaMped, spatially-constant electric DeFlector--semi-analytical solution: */
 #define T_RMDF  23
 /* TM-mode RF cavity with spatially Constant Fields, using NAG integrator: */
@@ -515,7 +515,7 @@ extern char *entity_text[N_TYPES];
 #define N_MATR_PARAMS 3
 #define N_ALPH_PARAMS 13
 #define N_RFDF_PARAMS 8
-#define N_RFTM_PARAMS 15
+#define N_RFTMEZ0_PARAMS 17
 #define N_RMDF_PARAMS 10
 #define N_TMCF_PARAMS 18
 #define N_CEPL_PARAMS 16
@@ -581,6 +581,7 @@ typedef struct {
     char *string;
     double number;
     long integer;
+    char *description;
     } PARAMETER;
 
 /* maximum slope and coordinate allowed for particles in certain routines
@@ -826,26 +827,27 @@ typedef struct {
     long   initialized;             /* ditto */
     } RFDF;
 
-/* TM-mode RF-cavity using NAG integrator and output from SUPERFISH
+/* TM-mode RF-cavity using Ez(z,r=0)
  */
-extern PARAMETER rftm_param[N_RFTM_PARAMS] ;
+extern PARAMETER rftmez0_param[N_RFTMEZ0_PARAMS] ;
 
 typedef struct {
     double length, frequency, phase, Ez_peak, time_offset;
-    double radial_offset, tilt;
-    double accuracy;
-    long phase_reference, n_steps;
+    long phase_reference;
     double dx, dy;
-    char *filename, *method, *fiducial;
+    long n_steps, radial_order, change_p0;
+    char *inputFile, *zColumn, *EzColumn;
+    double accuracy;
+    char *method, *fiducial;
     /* variables for internal use only: */
+    long initialized;
     double *fiducial_part;
     double phase0;
-    double k;
-    double **Er, **Bphi, **Ez;
-    long nr, nz;
-    double dr, dz;
-    double r_min, z_min;
-    } TM_MODE;
+    double k;  /* omega*c */
+    long nz;
+    double dz, dZ;  /* actual and scaled point spacing (dZ=k*dz) */
+    double *Ez, *dEzdZ;  /* scaled field Ez*e/(mc) and derivative wrt Z */
+    } RFTMEZ0;
 
 /* names and storage structure for ramped deflector plates using 
  * semi-analytical method.
@@ -1999,7 +2001,7 @@ extern double get_reference_phase(long phase_ref, double phase0);
 extern void print_line(FILE *fp, LINE_LIST *lptr);
 extern void print_elem_list(FILE *fp, ELEMENT_LIST *eptr);
 extern void print_elem(FILE *fp, ELEMENT_LIST *eptr);
-extern void print_elem_names(FILE *fp, ELEMENT_LIST *eptr);
+extern void print_elem_names(FILE *fp, ELEMENT_LIST *eptr, long width);
 
 /* prototypes for quad_matrix3.c: */
 extern VMATRIX *quadrupole_matrix(double K1, double l, long maximum_order, double tilt, double ffringe, double fse);

@@ -138,13 +138,20 @@ void print_elem_list(FILE *fp, ELEMENT_LIST *eptr)
     log_exit("print_elem_list");
     }
 
-void print_elem_names(FILE *fp, ELEMENT_LIST *eptr)
+void print_elem_names(FILE *fp, ELEMENT_LIST *eptr, long width)
 {
-
-    while (eptr) {
-      if (eptr->name)
-        fprintf(fp, "%s\n", eptr->name);
-      eptr = eptr->succ;
+  long pos;
+  pos = 0;
+  while (eptr) {
+    if (eptr->name)
+      fprintf(fp, "%16s,", eptr->name);
+    pos += 16;
+    if (pos+16>width) {
+      fprintf(fp, "\n");
+      pos = 0;
     }
+    eptr = eptr->succ;
   }
+  fprintf(fp, "\n");
+}
 

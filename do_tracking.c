@@ -433,9 +433,7 @@ long do_tracking(
             else
               drift_beam(coord, n_to_track, ((RMDF*)eptr->p_elem)->length, run->default_order);
             break;
-          case T_RFTM:
-            bomb("RFTM not implemented yet", NULL);
-            break;
+          case T_RFTMEZ0:
           case T_TMCF:
           case T_CEPL:
           case T_TWPL:
@@ -548,19 +546,24 @@ long do_tracking(
             energy = (ENERGY*)eptr->p_elem;
             if (energy->match_beamline) {
               if ((flags&FIDUCIAL_BEAM_SEEN) && eptr->Pref_output_fiducial>0)
+                /* Beamline momentum is defined.  Change particle reference momentum to match. */
                 set_central_momentum(coord, n_to_track, eptr->Pref_output_fiducial, P_central);
               else
+                /* Compute new central momentum to match the average momentum of the particles. */
                 do_match_energy(coord, n_to_track, P_central, 0);
               if (energy->match_particles)
                 bomb("can't match_beamline AND match_particles for ENERGY element", NULL);
             }
             else if (energy->match_particles) {
+              /* change the particle momenta so that the centroid is the central momentum */
               do_match_energy(coord, n_to_track, P_central, 1);
             }
             else if (energy->central_energy)
+              /* Change particle reference momentum to match the given energy */
               set_central_momentum(coord, n_to_track, sqrt(sqr(energy->central_energy+1)-1), 
                                    P_central);
             else if (energy->central_momentum)
+              /* Change particle reference momentum to match the given value */
               set_central_momentum(coord, n_to_track, energy->central_momentum, P_central);
             break;
           case T_MAXAMP:
