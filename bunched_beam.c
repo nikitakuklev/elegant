@@ -221,10 +221,6 @@ long new_bunched_beam(
     char s[100];
 #endif
 
-    fprintf(stderr, "new_bunched_beam: n_particles_per_bunch = %ld, n_particle = %ld, n_original = %ld \n",
-            n_particles_per_bunch, 
-            beam->n_particle, beam->n_original);
-    
     beamCounter++;
     if (firstIsFiducial && beamCounter==1)
       beam->n_original = beam->n_to_track = 1;
