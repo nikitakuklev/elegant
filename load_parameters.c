@@ -478,7 +478,7 @@ void dumpLatticeParameters(char *filename, RUN *run, LINE_LIST *beamline)
   long iElem, iParam;
   ELEMENT_LIST *eptr;
   PARAMETER *parameter;
-  long row, maxRows;
+  long row, maxRows, doSave;
   double value;
   
   SDDSout = &SDDS_dumpLattice;
@@ -508,8 +508,26 @@ void dumpLatticeParameters(char *filename, RUN *run, LINE_LIST *beamline)
     if (!(eptr->name))
       SDDS_Bomb("element name is NULL (dumpLatticeParameters)");
     for (iParam=0; iParam<entity_description[eptr->type].n_params; iParam++) {
-      if (parameter[iParam].type==IS_DOUBLE) {
+      doSave = 1;
+      switch (parameter[iParam].type) {
+      case IS_DOUBLE: 
         value = *(double*)(eptr->p_elem+parameter[iParam].offset);
+        break;
+      case IS_LONG:
+        value = *(long*)(eptr->p_elem+parameter[iParam].offset);
+        break;
+      default:
+        doSave = 0;
+        break;
+      }
+      /* some kludges to avoid saving things that shouldn't be saved as the user didn't
+         set them in the first place
+         */
+      if (strcmp(parameter[iParam].name, "PHASE_REFERENCE")==0 && value>LONG_MAX/2) {
+        doSave = 0;
+      }
+
+      if (doSave) {
         if (!(parameter[iParam].name)) 
           SDDS_Bomb("parameter name is NULL (dumpLatticeParameters)");
         if (row>=maxRows) {
