@@ -782,15 +782,21 @@ void run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, lon
         fprintf(stderr, "y acceptance limited by %s ending at %e m\n", beamline->acc_limit_name[1], beamline->acceptance[3]);
 
     if (SDDS_twiss_initialized) {
-        dump_twiss_parameters(beamline->twiss0, beamline->elem_twiss, n_elem,
-                              beamline->tune, 
-                              radiation_integrals?&(beamline->radIntegrals):NULL, 
-                              beamline->chromaticity, beamline->acceptance, 
-                              (beamline->matrix->C[4]?
-                               beamline->matrix->R[4][5]/beamline->matrix->C[4]:
-                               0.0),
-                              final_values_only, tune_corrected, run);
-        }
+      double alphac = 0;
+      if (beamline->matrix->C[4]!=0) {
+        alphac = (beamline->matrix->R[4][5] + 
+                  beamline->matrix->R[4][0]*elast->twiss->etax +
+                  beamline->matrix->R[4][1]*elast->twiss->etapx +
+                  beamline->matrix->R[4][2]*elast->twiss->etay +
+                  beamline->matrix->R[4][3]*elast->twiss->etapy)/beamline->matrix->C[4];
+      }
+      dump_twiss_parameters(beamline->twiss0, beamline->elem_twiss, n_elem,
+                            beamline->tune, 
+                            radiation_integrals?&(beamline->radIntegrals):NULL, 
+                            beamline->chromaticity, beamline->acceptance, 
+                            alphac,
+                            final_values_only, tune_corrected, run);
+    }
 
     log_exit("run_twiss_output");
     }
