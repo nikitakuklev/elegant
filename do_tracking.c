@@ -867,7 +867,7 @@ long do_tracking(
         }
         i_traj++;
       }
-      if (!(flags&TEST_PARTICLES) && !sliceAnalysis->finalValuesOnly) {
+      if (!(flags&TEST_PARTICLES) && sliceAnalysis && !sliceAnalysis->finalValuesOnly) {
 	performSliceAnalysisOutput(sliceAnalysis, coord, n_to_track, 
 				   !sliceAnDone, step, 
 				   *P_central, 
@@ -882,7 +882,7 @@ long do_tracking(
       n_to_track = n_left;
     }
     
-    if (!(flags&TEST_PARTICLES) && sliceAnalysis->finalValuesOnly) {
+    if (!(flags&TEST_PARTICLES) && sliceAnalysis && sliceAnalysis->finalValuesOnly) {
       performSliceAnalysisOutput(sliceAnalysis, coord, n_to_track, 
 				 !sliceAnDone, step, 
 				 *P_central, 
