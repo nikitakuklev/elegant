@@ -14,10 +14,6 @@ long determine_bend_flags(ELEMENT_LIST *eptr, long edge1_effects, long edge2_eff
 
 VMATRIX *full_matrix(ELEMENT_LIST *elem, RUN *run, long order) 
 {
-    VMATRIX *M1, *M2, *tmp, *Md;
-    ELEMENT_LIST *member;
-    long i;
-    double Pref_input;
 
     if (!elem) {
         fputs("error: NULL element pointer passed to full_matrix", stderr);
@@ -348,7 +344,7 @@ VMATRIX *compute_matrix(
                         )
 {
     QUAD *quad; BEND *bend; SEXT *sext; HCOR *hcor; HVCOR *hvcor;
-    VCOR *vcor; ALPH *alph; WATCH *watch; DRIFT *drift;
+    VCOR *vcor; ALPH *alph; DRIFT *drift;
     SOLE *sole; ROTATE *rot; QFRING *qfring;
     MONI *moni; HMON *hmon; VMON *vmon; 
     KSEXT *ksext; KSBEND *ksbend; KQUAD *kquad; NIBEND *nibend; NISEPT *nisept;
@@ -672,7 +668,7 @@ void set_up_watch_point(WATCH *watch, RUN *run)
     if (!watch->mode || watch->mode[0]==0)
         bomb("mode must be given for WATCH element", NULL);
     mode = watch->mode;
-    if (qualifier=strchr(mode, ' '))
+    if ((qualifier=strchr(mode, ' ')))
          *qualifier++ = 0;
     if ((watch->mode_code=match_string(watch->mode, watch_mode, N_WATCH_MODES, 0))<0)
         bomb("unknown watch mode", NULL);

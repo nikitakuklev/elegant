@@ -25,7 +25,7 @@ void track_through_trfmode(
   static long *pbin = NULL;                /* array to record which bin each particle is in */
   static double *time = NULL;              /* array to record arrival time of each particle */
   static long max_np = 0;
-  long ip, ib, nb2;
+  long ip, ib;
   double tmin, tmax, tmean, dt, P;
   double Vxb, Vyb, V, omega, phase, t, k, damping_factor, tau;
   double Px, Py, Pz;

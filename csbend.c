@@ -48,7 +48,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   double dcoord_etilt[6];
   double dxi, dyi, dzi;
   double dxf, dyf, dzf;
-  double delta_xp, fabs_theta_actual;
+  double delta_xp;
   double e1_kick_limit, e2_kick_limit;
   
   if (!csbend)
@@ -105,7 +105,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     e2_kick_limit *= rho0/rho_actual;
   }
   if (e1_kick_limit>0 || e2_kick_limit>0)
-    fprintf(stderr, "rho0=%le  rho_a=%le fse=%le e1_kick_limit=%le e2_kick_limit=%le\n",
+    fprintf(stderr, "rho0=%e  rho_a=%e fse=%e e1_kick_limit=%e e2_kick_limit=%e\n",
             rho0, rho_actual, csbend->fse, e1_kick_limit, e2_kick_limit);
   
   /* angles for fringe-field effects */
@@ -758,11 +758,11 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   static double nh, betah2, gammah3, deltah4;
   static double h, h2, h3;
   static long csrWarning = 0;
-  static double *dp0=NULL, *beta0=NULL, *ctHist=NULL, *ctHistDeriv=NULL;
+  static double *beta0=NULL, *ctHist=NULL, *ctHistDeriv=NULL;
   static double *dGamma=NULL, *T1=NULL, *T2=NULL, *denom=NULL;
   static long maxParticles = 0, maxBins = 0 ;
   static char *particleLost=NULL;
-  double x, xp, y, yp, dp, ct, p1, beta1, p0;
+  double x, xp, y, yp, p1, beta1, p0;
   double ctLower, ctUpper, dct, slippageLength, phiBend, slippageLength13;
   long diSlippage, diSlippage4;
   long nBins, nBinned;
@@ -777,7 +777,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   double dcoord_etilt[6];
   double dxi, dyi, dzi;
   double dxf, dyf, dzf;
-  double delta_xp, fabs_theta_actual;
+  double delta_xp;
   double macroParticleCharge, CSRConstant;
   long iBin, iBinBehind;
 

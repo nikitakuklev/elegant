@@ -143,16 +143,13 @@ long fmultipole_tracking(
   double dx, dy, dz;  /* offsets of the multipole center */
   long order;         /* order (n) */
   long n_kicks;       /* number of kicks to split multipole into */
-  long i_part, i_kick, i, i_top, is_lost, i_order;
-  double sum_Fx, sum_Fy, xypow, denom, qx, qy, KnL;
+  long i_part, i_top, is_lost, i_order;
+  double KnL;
   double *coord;
   double drift, cos_tilt, sin_tilt;
-  double *coef;
-  double x, xp, y, yp, s, dp;
-  double ratio, rad_coef;
-  double beta0, beta1, p;
+  double x, xp, y, yp;
+  double rad_coef;
   MULTIPOLE_DATA *multData;
-  double coord0[6];
   
   if (!particle)
     bomb("particle array is null (fmultipole_tracking)", NULL);
@@ -207,8 +204,10 @@ long fmultipole_tracking(
     
     if (!is_lost) {
       coord[4] -= dz*sqrt(1 + sqr(coord[1]) + sqr(coord[3]));
-      coord[0]  = coord[0] - dz*coord[1];
-      coord[2]  = coord[2] - dz*coord[3];
+      x = coord[0]  = coord[0] - dz*coord[1];
+      y = coord[2]  = coord[2] - dz*coord[3];
+	  xp = coord[1];
+	  yp = coord[3];
 
 #if defined(IEEE_MATH)
       if (isnan(x) || isnan(xp) || isnan(y) || isnan(yp)) {
@@ -503,15 +502,12 @@ long multipole_tracking2(
   double dx, dy;      /* offsets of the multipole center */
   long order;         /* order (n) */
   long n_kicks, integ_order;
-  long i_part, i_kick, i, i_top, is_lost, n_parts;
-  double sum_Fx, sum_Fy, xypow, denom, qx, qy;
+  long i_part, i_top, n_parts;
   double *coord;
   double drift, cos_tilt, sin_tilt;
   double *coef;
-  double x, xp, y, yp, dp, s;
-  double ratio, tilt;
+  double tilt;
   double rad_coef;
-  double beta0, beta1, p;
   KQUAD *kquad;
   KSEXT *ksext;
   MULTIPOLE_DATA *multData;
@@ -771,7 +767,7 @@ int integrate_kick_multipole_ord4(double *coord, double cos_tilt, double sin_til
   double p, qx, qy, denom, beta0, beta1, dp, s;
   double x, y, xp, yp, sum_Fx, sum_Fy;
   long i_kick, step;
-  double ds, dsh;
+  double dsh;
   static double driftFrac[4] = {
     0.5/(2-BETA),  (1-BETA)/(2-BETA)/2,  (1-BETA)/(2-BETA)/2,  0.5/(2-BETA)
     } ;
@@ -950,7 +946,6 @@ void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
 {
   long i;
   double sFactor, rFactor;
-  double nFactorial;
   
   if (!totalMult->initialized) {
     totalMult->initialized = 1;

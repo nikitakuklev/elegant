@@ -42,7 +42,7 @@ void print_line(FILE *fp, LINE_LIST *lptr)
                         parameter[j].unit);
                     break;
                 case IS_STRING:
-                    if (ptr = *(char**)(eptr->p_elem+parameter[j].offset))
+                    if ((ptr = *(char**)(eptr->p_elem+parameter[j].offset)))
                         fprintf(fp, "    %s = \"%s\"\n", parameter[j].name, ptr);
                     else
                         fprintf(fp, "    %s = \"\"\n", parameter[j].name);
@@ -84,7 +84,7 @@ void print_elem(FILE *fp, ELEMENT_LIST *eptr)
                     parameter[j].unit);
                 break;
             case IS_STRING:
-                if (ptr = *(char**)(eptr->p_elem+parameter[j].offset))
+                if ((ptr = *(char**)(eptr->p_elem+parameter[j].offset)))
                     fprintf(fp, "    %s = \"%s\"\n", parameter[j].name, ptr);
                 else
                     fprintf(fp, "    %s = \"\"\n", parameter[j].name);
@@ -125,7 +125,7 @@ void print_elem_list(FILE *fp, ELEMENT_LIST *eptr)
                             parameter[j].unit);
                         break;
                     case IS_STRING:
-                        if (ptr = *(char**)(eptr->p_elem+parameter[j].offset))
+                        if ((ptr = *(char**)(eptr->p_elem+parameter[j].offset)))
                             fprintf(fp, "    %s = \"%s\"\n", parameter[j].name, ptr);
                         else
                             fprintf(fp, "    %s = %e\n", parameter[j].name, ptr);
@@ -140,9 +140,6 @@ void print_elem_list(FILE *fp, ELEMENT_LIST *eptr)
 
 void print_elem_names(FILE *fp, ELEMENT_LIST *eptr)
 {
-    long j;
-    char *ptr;
-    PARAMETER *parameter;
 
     while (eptr) {
       if (eptr->name)

@@ -16,10 +16,10 @@ static long alter_defined_values;
 void setup_tune_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, TUNE_CORRECTION *tune)
 {
     VMATRIX *M;
-    ELEMENT_LIST *eptr, *elast, *context;
+    ELEMENT_LIST *eptr, *elast;
     double beta_x, alpha_x, eta_x, etap_x;
     double beta_y, alpha_y, eta_y, etap_y;
-    long i, n_elem, last_n_elem, count;
+    long n_elem, last_n_elem;
     unsigned long unstable;
     
 #include "tune.h"
@@ -41,7 +41,7 @@ void setup_tune_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline,
     if (tune->name)
         tfree(tune->name);
     tune->name = tmalloc(sizeof(*tune->name)*(tune->n_families=1));
-    while (tune->name[tune->n_families-1]=get_token(quadrupoles))
+    while ((tune->name[tune->n_families-1]=get_token(quadrupoles)))
         tune->name = trealloc(tune->name, sizeof(*tune->name)*(tune->n_families+=1));
     if ((--tune->n_families)<2)
         bomb("too few quadrupoles given for tune correction", NULL);
@@ -117,9 +117,9 @@ void computeTuneCorrectionMatrix(RUN *run, LINE_LIST *beamline, TUNE_CORRECTION 
 {
     MATRIX *C, *Ct, *CtC, *inv_CtC;
     VMATRIX *M;
-    long i, n_elem, last_n_elem, count;
+    long i, count;
     double betax_L_sum, betay_L_sum;
-    ELEMENT_LIST *eptr, *elast, *context;
+    ELEMENT_LIST *context;
     
     if (!(M=beamline->matrix) || !M->C || !M->R)
         bomb("something wrong with transfer map for beamline (setup_tune_correction)", NULL);
@@ -138,7 +138,7 @@ void computeTuneCorrectionMatrix(RUN *run, LINE_LIST *beamline, TUNE_CORRECTION 
         count = 0;
         context = NULL;
         betax_L_sum = betay_L_sum = 0;
-        while (context=find_element(tune->name[i], &context, &(beamline->elem))) {
+        while ((context=find_element(tune->name[i], &context, &(beamline->elem)))) {
             if (count==0) {
                 if (context->type!=T_QUAD && context->type!=T_KQUAD) {
                     fprintf(stderr, "%s is not a QUAD or KQUAD element!\n", context->name);
@@ -168,7 +168,7 @@ void computeTuneCorrectionMatrix(RUN *run, LINE_LIST *beamline, TUNE_CORRECTION 
       fprintf(stderr, "\nfamily               dNUx/dK1                  dNUy/dK1\n");
 
       for (i=0; i<tune->n_families; i++)
-        fprintf(stderr, "%10s:    %22.15le     %22.15le\n", tune->name[i], C->a[0][i], C->a[1][i]);
+        fprintf(stderr, "%10s:    %22.15e     %22.15e\n", tune->name[i], C->a[0][i], C->a[1][i]);
     }
     
     m_trans(Ct, C);
@@ -179,7 +179,7 @@ void computeTuneCorrectionMatrix(RUN *run, LINE_LIST *beamline, TUNE_CORRECTION 
     if (printout) {
       fprintf(stderr, "\nfamily               dK1/dNUx                  dK1/dNUy\n");
       for (i=0; i<tune->n_families; i++)
-        fprintf(stderr, "%10s:    %22.15le     %22.15le\n", tune->name[i], tune->T->a[i][0], tune->T->a[i][1]);
+        fprintf(stderr, "%10s:    %22.15e     %22.15e\n", tune->name[i], tune->T->a[i][0], tune->T->a[i][1]);
       fprintf(stderr, "\n");
     }
     
@@ -274,7 +274,7 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
     
     for (i=0; i<tune->n_families; i++) {
       context = NULL;
-      while (context=find_element(tune->name[i], &context, &(beamline->elem))) {
+      while ((context=find_element(tune->name[i], &context, &(beamline->elem)))) {
         K1 = (((QUAD*)context->p_elem)->k1 += tune->dK1->a[i][0]);
         if (context->matrix)
           free_matrices(context->matrix);
@@ -326,7 +326,7 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
     tunes_saved = 0;
     for (i=0; i<tune->n_families; i++) {
       context = NULL;
-      while (context=find_element(tune->name[i], &context, &(beamline->elem)))
+      while ((context=find_element(tune->name[i], &context, &(beamline->elem))))
         fprintf(fp_sl, "%ld %21.15e %s\n", step, ((QUAD*)context->p_elem)->k1, tune->name[i]);
     }    
     fflush(fp_sl);

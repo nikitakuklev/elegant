@@ -131,7 +131,7 @@ void concatenate_beamline(LINE_LIST *beamline, RUN *run)
             new_seq = 1;
             }
         lastelem = elem;
-        } while (elem=elem->succ);
+        } while ((elem=elem->succ));
 
     if (in_seq) {
         /*  end of sequence--copy concatenated matrix into ecat list */

@@ -22,7 +22,7 @@ void process_rename_request(char *s, char **name, long n_names);
 static ELEMENT_LIST *elem;   /* elem: root of linked-list of ELEM structures */
 static LINE_LIST *line;      /* line: root of linked-list of LINE structures */
 
-long lfree(void *ptr) 
+void lfree(void *ptr) 
 {
     static FILE *fpl = NULL;
     if (!fpl)
@@ -213,7 +213,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central)
         else if (eptr->type==T_SREFFECTS)
             lptr->flags |= BEAMLINE_TWISS_WANTED;
         i_elem++;
-        } while (eptr=eptr->succ);
+        } while ((eptr=eptr->succ));
 
     lptr->revolution_length = z - z_recirc;
 
@@ -261,7 +261,7 @@ void show_elem(ELEMENT_LIST *eptr, long type)
     for (j=0; j<entity_description[type].n_params; j++) {
         switch (parameter[j].type) {
             case IS_DOUBLE:
-                fprintf(stderr,  "    %s = %.16le with offset %ld\n", 
+                fprintf(stderr,  "    %s = %.16e with offset %ld\n", 
                     parameter[j].name, 
                     *(double*)(eptr->p_elem+parameter[j].offset),
                     parameter[j].offset);
@@ -273,7 +273,7 @@ void show_elem(ELEMENT_LIST *eptr, long type)
                     parameter[j].offset);
                 break;
             case IS_STRING:
-                if (ptr = *(char**)(eptr->p_elem+parameter[j].offset))
+                if ((ptr = *(char**)(eptr->p_elem+parameter[j].offset)))
                     fprintf(stderr,  "    %s = %e\n", parameter[j].name, ptr);
                 else
                     fprintf(stderr,  "    %s = %e\n", parameter[j].name, ptr);
@@ -307,7 +307,7 @@ void free_elements(ELEMENT_LIST *elemlist)
 #endif
         if (eptr->type==T_WATCH) {
             WATCH *wptr;
-            if (wptr = (WATCH*)eptr->p_elem) {
+            if ((wptr = (WATCH*)eptr->p_elem)) {
                 if (wptr->initialized && !SDDS_Terminate(&wptr->SDDS_table)) {
                     SDDS_SetError("Problem terminate watch-point SDDS file (free_elements)");
                     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
@@ -500,7 +500,7 @@ void do_save_lattice(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
                         }
                     break;
                 case IS_STRING:
-                    if (ptr = *(char**)(eptr->p_elem+parameter[j].offset)) {
+                    if ((ptr = *(char**)(eptr->p_elem+parameter[j].offset))) {
                         sprintf(t, "%s=\"%s\"", parameter[j].name, ptr);
                         strcat(s, t);
                         if (j!=entity_description[eptr->type].n_params-1)
@@ -536,7 +536,7 @@ void print_with_continuation(FILE *fp, char *s, long endcol)
 
     log_entry("print_with_continuation");
 
-    while (l=strlen(s)) {
+    while ((l=strlen(s))) {
         if (l>endcol) {
             c = *(ptr = s + endcol - 1);
             *ptr = 0;
@@ -623,7 +623,7 @@ void change_defined_parameter(char *elem_name, long param, long elem_type,
         }
       }
       if (mode&LOAD_FLAG_VERBOSE)
-        fprintf(stderr, "Changing definition (mode %s) %s.%s from %le to ", 
+        fprintf(stderr, "Changing definition (mode %s) %s.%s from %e to ", 
                 (mode&LOAD_FLAG_ABSOLUTE)?"absolute":
                 ((mode&LOAD_FLAG_DIFFERENTIAL)?"differential":
                  (mode&LOAD_FLAG_FRACTIONAL)?"fractional":"unknown"),
@@ -636,7 +636,7 @@ void change_defined_parameter(char *elem_name, long param, long elem_type,
       else if (mode&LOAD_FLAG_FRACTIONAL)
         *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)) *= 1+value;
       if (mode&LOAD_FLAG_VERBOSE)
-        fprintf(stderr, "%le\n", 
+        fprintf(stderr, "%e\n", 
                 *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)));
       break;
     case IS_LONG:

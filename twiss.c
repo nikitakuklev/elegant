@@ -9,7 +9,7 @@
 #include "mdb.h"
 #include "track.h"
 #include "matlib.h"
-
+#include "chromDefs.h"
 
 void copy_doubles(double *target, double *source, long n);
 double find_acceptance(ELEMENT_LIST *elem, long plane, RUN *run, char **name, double *end_pos);
@@ -27,11 +27,9 @@ VMATRIX *compute_periodic_twiss(
                                 double *eta2)
 {
   VMATRIX *M, *M1;
-  double cos_phi, sin_phi, **R, beta[2], alpha[2], eta[2], etap[2], phi[2];
+  double cos_phi, sin_phi, **R, beta[2], alpha[2], phi[2];
   double ***T;
-  double det;
   long i, j, k;
-  double eta0, etap0, eta1, etap1;
   MATRIX *dispR, *dispM, *dispMInv, *dispEta;
 
   log_entry("compute_periodic_twiss");
@@ -164,11 +162,8 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, RADIATION_INTEGRALS
   double beta[2], alpha[2], phi[2], eta[2], etap[2], gamma[2];
   double *func, path[6], path0[6], detR[2];
   double **R, C[2], S[2], Cp[2], Sp[2], D[2], Dp[2], sin_dphi, cos_dphi, dphi;
-  double centroid;
   long n_mat_computed, i, j, plane, otherPlane, hasMatrix;
   VMATRIX *M1, *M2;
-  double func0, func1;
-  ELEMENT_LIST *elem0;
   MATRIX *dispM, *dispOld, *dispNew;
   
   if (!twiss0)
@@ -663,7 +658,6 @@ long get_twiss_mode(long *mode, double *x_twiss, double *y_twiss)
 
 void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, long *do_twiss_output)
 {
-  char label[200];
 
   log_entry("setup_twiss_output");
 
@@ -763,27 +757,27 @@ long run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, lon
     fprintf(stderr, "         beta          alpha           nu           eta          eta'       dnu/d(dp/p)   dbeta/(dp/p)     accept.\n");
     fprintf(stderr, "          m                          1/2pi           m                         1/2pi            m          mm-mrad\n");
     fprintf(stderr, "--------------------------------------------------------------------------------------------------------------------\n");
-    fprintf(stderr, "  x: %13.6le %13.6le %13.6le %13.6le %13.6le %13.6le %13.6le %13.6le\n",  
+    fprintf(stderr, "  x: %13.6e %13.6e %13.6e %13.6e %13.6e %13.6e %13.6e %13.6e\n",  
             elast->twiss->betax, elast->twiss->alphax, beamline->tune[0], elast->twiss->etax, elast->twiss->etapx,
             beamline->chromaticity[0], beamline->dbeta_dPoP[0], 1e6*beamline->acceptance[0]);
     if (statistics) {
       compute_twiss_statistics(beamline, &twiss_ave, &twiss_min, &twiss_max);
-      fprintf(stderr, "ave: %13.6le %13.6le %-13s %13.6le %13.6le\n",
+      fprintf(stderr, "ave: %13.6e %13.6e %-13s %13.6e %13.6e\n",
               twiss_ave.betax, twiss_ave.alphax, "", twiss_ave.etax, twiss_ave.etapx);
-      fprintf(stderr, "min: %13.6le %13.6le %-13s %13.6le %13.6le\n",
+      fprintf(stderr, "min: %13.6e %13.6e %-13s %13.6e %13.6e\n",
               twiss_min.betax, twiss_min.alphax, "", twiss_min.etax, twiss_min.etapx);
-      fprintf(stderr, "max: %13.6le %13.6le %-13s %13.6le %13.6le\n",
+      fprintf(stderr, "max: %13.6e %13.6e %-13s %13.6e %13.6e\n",
               twiss_max.betax, twiss_max.alphax, "", twiss_max.etax, twiss_max.etapx);
     }
-    fprintf(stderr, "  y: %13.6le %13.6le %13.6le %13.6le %13.6le %13.6le %13.6le %13.6le\n",  
+    fprintf(stderr, "  y: %13.6e %13.6e %13.6e %13.6e %13.6e %13.6e %13.6e %13.6e\n",  
             elast->twiss->betay, elast->twiss->alphay, beamline->tune[1], elast->twiss->etay, elast->twiss->etapy,
             beamline->chromaticity[1], beamline->dbeta_dPoP[1], 1e6*beamline->acceptance[1]);
     if (statistics) {
-      fprintf(stderr, "ave: %13.6le %13.6le %-13s %13.6le %13.6le\n",
+      fprintf(stderr, "ave: %13.6e %13.6e %-13s %13.6e %13.6e\n",
               twiss_ave.betay, twiss_ave.alphay, "", twiss_ave.etay, twiss_ave.etapy);
-      fprintf(stderr, "min: %13.6le %13.6le %-13s %13.6le %13.6le\n",
+      fprintf(stderr, "min: %13.6e %13.6e %-13s %13.6e %13.6e\n",
               twiss_min.betay, twiss_min.alphay, "", twiss_min.etay, twiss_min.etapy);
-      fprintf(stderr, "max: %13.6le %13.6le %-13s %13.6le %13.6le\n",
+      fprintf(stderr, "max: %13.6e %13.6e %-13s %13.6e %13.6e\n",
               twiss_max.betay, twiss_max.alphay, "", twiss_max.etay, twiss_max.etapy);
     }
   }
@@ -792,27 +786,27 @@ long run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, lon
     fprintf(stderr, "         beta          alpha           nu           eta          eta'        accept.\n");
     fprintf(stderr, "          m                          1/2pi           m                       mm-mrad\n");
     fprintf(stderr, "---------------------------------------------------------------------------------------\n");
-    fprintf(stderr, "  x: %13.6le %13.6le %13.6le %13.6le %13.6le %13.6le\n",  
+    fprintf(stderr, "  x: %13.6e %13.6e %13.6e %13.6e %13.6e %13.6e\n",  
             elast->twiss->betax, elast->twiss->alphax, beamline->tune[0], elast->twiss->etax, elast->twiss->etapx,
             1e6*beamline->acceptance[0]);
     if (statistics) {
       compute_twiss_statistics(beamline, &twiss_ave, &twiss_min, &twiss_max);
-      fprintf(stderr, "ave: %13.6le %13.6le %-13s %13.6le %13.6le\n",
+      fprintf(stderr, "ave: %13.6e %13.6e %-13s %13.6e %13.6e\n",
               twiss_ave.betax, twiss_ave.alphax, "", twiss_ave.etax, twiss_ave.etapx);
-      fprintf(stderr, "min: %13.6le %13.6le %-13s %13.6le %13.6le\n",
+      fprintf(stderr, "min: %13.6e %13.6e %-13s %13.6e %13.6e\n",
               twiss_min.betax, twiss_min.alphax, "", twiss_min.etax, twiss_min.etapx);
-      fprintf(stderr, "max: %13.6le %13.6le %-13s %13.6le %13.6le\n",
+      fprintf(stderr, "max: %13.6e %13.6e %-13s %13.6e %13.6e\n",
               twiss_max.betax, twiss_max.alphax, "", twiss_max.etax, twiss_max.etapx);
     }
-    fprintf(stderr, "  y: %13.6le %13.6le %13.6le %13.6le %13.6le %13.6le\n",  
+    fprintf(stderr, "  y: %13.6e %13.6e %13.6e %13.6e %13.6e %13.6e\n",  
             elast->twiss->betay, elast->twiss->alphay, beamline->tune[1], elast->twiss->etay, elast->twiss->etapy,
             1e6*beamline->acceptance[1]);
     if (statistics) {
-      fprintf(stderr, "ave: %13.6le %13.6le %-13s %13.6le %13.6le\n",
+      fprintf(stderr, "ave: %13.6e %13.6e %-13s %13.6e %13.6e\n",
               twiss_ave.betay, twiss_ave.alphay, "", twiss_ave.etay, twiss_ave.etapy);
-      fprintf(stderr, "min: %13.6le %13.6le %-13s %13.6le %13.6le\n",
+      fprintf(stderr, "min: %13.6e %13.6e %-13s %13.6e %13.6e\n",
               twiss_min.betay, twiss_min.alphay, "", twiss_min.etay, twiss_min.etapy);
-      fprintf(stderr, "max: %13.6le %13.6le %-13s %13.6le %13.6le\n",
+      fprintf(stderr, "max: %13.6e %13.6e %-13s %13.6e %13.6e\n",
               twiss_max.betay, twiss_max.alphay, "", twiss_max.etay, twiss_max.etapy);
     }
   }
@@ -1223,10 +1217,8 @@ long has_aperture(ELEMENT_LIST *elem)
   switch (elem->type) {
   case T_MAXAMP: case T_RCOL: case T_ECOL: case T_SCRAPER:
     return(1);
-    break;
   default:
     return(0);
-    break;
   }
 }
 

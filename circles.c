@@ -2,7 +2,16 @@
  * all rights reserved.
  */
 #include "mdb.h"
+#if defined(_WIN32)
+#include <float.h>
+#define isnan(x) _isnan(x)
+#endif
 
+
+int FindLineCircleIntersections2(double *x, double *y, 
+                                double slope, double yi,
+                                double xc, double yc, 
+                                double r);
 
 /* Find the intersections of a circle with a line, when the
  * line is specified by an angle and a point.

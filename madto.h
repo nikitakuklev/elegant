@@ -1,4 +1,4 @@
-#include "../track.h"
+#include "track.h"
 
 void sdds_strength_output(char *outputfile, LINE_LIST *beamline, char *input);
 void convert_to_patpet(char *output, LINE_LIST *beamline, long flip_k, double angle_tolerance,

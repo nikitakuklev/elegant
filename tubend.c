@@ -7,10 +7,6 @@
 int FindLineCircleIntersections1(double *x, double *y,
                                  double x0, double y0, double theta, 
                                  double xc, double yc, double r);
-int FindLineCircleIntersections2(double *x, double *y, 
-                                 double slope, double yi,
-                                 double xc, double yc, 
-                                 double r);
 #define DEBUG 0
 
 long track_through_tubend(double **part, long n_part, TUBEND *tubend,
@@ -25,7 +21,7 @@ long track_through_tubend(double **part, long n_part, TUBEND *tubend,
   long ip, particleLost, i_top, solutions;
   double rhoRefTraj, thetaRefTraj;
   double rhoMagnet, thetaMagnet, w2, dY;
-  double halfLength, distanceToEdge;
+  double distanceToEdge;
   double XInitial, YInitial, phiInitial, YRI, CEY;
   double Xint[2], Yint[2], XInt, YInt;
   double XMagnetEnd, YPoleCenter, YRefFinal;

@@ -5,10 +5,20 @@
  *
  * Michael Borland, 1994
  */
+#include <stdio.h>
+#if defined(_WIN32)
+#include <process.h>
+#else
+#include <unistd.h>
+#endif
 #include "mdb.h"
 #include "track.h"
 #include "subprocess.h"
 #include <signal.h>
+
+#if defined(_WIN32)
+#define popen(command, mode) _popen(command, mode)
+#endif
 
 static FILE *fp = NULL;
 static int pid;
@@ -21,7 +31,9 @@ void run_subprocess(NAMELIST_TEXT *nltext, RUN *run)
 
     log_entry("run_subprocess");
 
+#if !defined(_WIN32)
     signal(SIGUSR1, dummy_sigusr1);
+#endif
     if (!fp) {
         /* open a pipe and start csh */
         fp = popen("csh", "w");
@@ -37,7 +49,7 @@ void run_subprocess(NAMELIST_TEXT *nltext, RUN *run)
     if (command) {
         buffer[0] = 0;
         ptr0 = command;
-        while (ptr=strstr(ptr0, "%s")) {
+        while ((ptr=strstr(ptr0, "%s"))) {
             if (!run || !run->rootname)
                 bomb("rootname must be initialized prior to subprocess execution if \%s substitution is used", NULL);
             *ptr = 0;
@@ -50,12 +62,16 @@ void run_subprocess(NAMELIST_TEXT *nltext, RUN *run)
         fprintf(stderr, "%s\n", buffer);
         fprintf(fp, "%s\nkill -USR1 %d\n", buffer, pid);
         fflush(fp);
+#if !defined(_WIN32)
         /* pause until SIGUSR1 is received */
         sigpause(SIGUSR1);
+#endif
         }
-               
+
+#if !defined(_WIN32)               
     /* back to default behavior for sigusr1 */
     signal(SIGUSR1, SIG_DFL);
+#endif
     log_exit("run_subprocess");
     }
 

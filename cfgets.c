@@ -14,10 +14,13 @@
 #include "mdb.h"
 #include "track.h"
 #include <ctype.h>
-
+#if defined(_WIN32)
+#include <stdlib.h>
+#else
 #if defined(UNIX) && defined(GNU_C)
 long toupper(char c);
 long tolower(char c);
+#endif
 #endif
 
 void delete_spaces(char *s);
@@ -36,7 +39,6 @@ char *cfgets(char *s, long n, FILE *fpin)
 char *cfgets1(char *s, long n, FILE *fpin)
 {
   register long l;
-  static long level = 0;
   
   while (fgets(s, n, fpin)) {
     if (s[0]=='!')

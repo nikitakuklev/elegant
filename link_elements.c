@@ -39,7 +39,7 @@ void element_link_control(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, RUN *run_
         for (i=0; i<links->n_links; i++) {
             j = 0;
             flag = links->flags[i]&LINK_FLAG_MASK;
-            while (flag = flag/2)
+            while ((flag = flag/2))
                 j ++;
             if (j>=N_LINK_MODES)
                 bomb("unknown link mode detected during link summary", NULL);
@@ -145,7 +145,7 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
         exit(1);
         }
     n_targets = 1;
-    while (t_context=find_element(target, &t_context, &(beamline->elem))) {
+    while ((t_context=find_element(target, &t_context, &(beamline->elem)))) {
         eptr = trealloc(eptr, sizeof(*eptr)*(n_targets+1));
         eptr[n_targets] = t_context;
         n_targets++;
@@ -213,7 +213,7 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
         n_sources = 0;
         while (n_sources<n_targets) {
             eptr1 = NULL;
-            if (eptr1=links->target_elem[n_links][n_sources]->pred) {
+            if ((eptr1=links->target_elem[n_links][n_sources]->pred)) {
                 if (strcmp(eptr1->name, source)!=0)
                     eptr1 = NULL;
                 }

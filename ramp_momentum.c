@@ -14,7 +14,7 @@ void set_up_ramp_p(RAMPP *rampp);
 long find_nearby_array_entry(double *entry, long n, double key);
 double linear_interpolation(double *y, double *t, long n, double t0, long i);
 
-long ramp_momentum(
+void ramp_momentum(
     double **coord,
     long np,
     RAMPP *rampp,

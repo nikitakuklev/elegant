@@ -150,7 +150,7 @@ void setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 
 long do_load_parameters(LINE_LIST *beamline, long change_definitions)
 {
-  long i, j, count, matrices_changed, mode_flags, code, rows, *occurence, param, allFilesRead, allFilesIgnored;
+  long i, j, count, mode_flags, code, rows, *occurence, param, allFilesRead, allFilesIgnored;
   char **element, **parameter, **mode, *p_elem, *ptr;
   double *value, newValue;
   char **valueString;
@@ -265,7 +265,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
       }
       mode_flags = 0;
       if (mode) 
-        while (ptr=get_token_t(mode[j], " \t,+")) {
+        while ((ptr=get_token_t(mode[j], " \t,+"))) {
           long k;
           if ((k=match_string(ptr, load_mode, LOAD_MODES, UNIQUE_MATCH))<0) {
             fprintf(stderr, "Error: unknown/ambiguous mode specifier %s (do_load_parameters)\nKnown specifiers are:\n",
@@ -312,7 +312,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
         case IS_DOUBLE:
           if (valueString) {
             if (!sscanf(valueString[j], "%lf", &newValue)) {
-              fprintf(stderr, "Error: unable to scan double from \"%s\"\n", valueString);
+              fprintf(stderr, "Error: unable to scan double from \"%s\"\n", valueString[j]);
               exit(1);
             }
           } else {
@@ -333,13 +333,13 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
           else if (mode_flags&LOAD_FLAG_FRACTIONAL)
             *((double*)(p_elem+entity_description[eptr->type].parameter[param].offset)) *= 1+newValue;
           if (verbose)
-            fprintf(stderr, "%21.15le\n",
+            fprintf(stderr, "%21.15e\n",
                     *((double*)(p_elem+entity_description[eptr->type].parameter[param].offset)));
           break;
         case IS_LONG:
           if (valueString) {
             if (!sscanf(valueString[j], "%lf", &newValue)) {
-              fprintf(stderr, "Error: unable to scan double from \"%s\"\n", valueString);
+              fprintf(stderr, "Error: unable to scan double from \"%s\"\n", valueString[j]);
               exit(1);
             }
           } else {
@@ -486,7 +486,7 @@ void dumpLatticeParameters(char *filename, RUN *run, LINE_LIST *beamline)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 }
 
-finishLatticeParametersFile() 
+void finishLatticeParametersFile() 
 {
   if (dumpingLatticeParameters && !SDDS_Terminate(&SDDS_dumpLattice))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);

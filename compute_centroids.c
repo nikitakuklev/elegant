@@ -108,8 +108,8 @@ void accumulate_beam_sums(
   double value;
   double *part, *part0;
   long i_part, i, j;
-  double *sum, **sum2, *maxabs, *psum;
-  double pz, beta0, ds, save[4];
+  double *sum, *maxabs;
+  double beta0;
   
   sum  = sums->sum;
 #if DO_NORMEMIT_SUMS
@@ -161,9 +161,11 @@ void copy_beam_sums(
     )
 {
   long i, j;
-  double *sum_s, *maxabs_s, *psum_s;
-  double *sum_t, *maxabs_t, *psum_t;
-
+  double *sum_s, *maxabs_s;
+  double *sum_t, *maxabs_t;
+#if DO_NORMEMIT_SUMS
+  double *psum_s, *psum_t;
+#endif
   sum_s    = source->sum;
   maxabs_s = source->maxabs;
   
@@ -178,8 +180,10 @@ void copy_beam_sums(
   for (i=0; i<4; i++) {
     maxabs_t[i] = maxabs_s[i];
   }
+#if DO_NORMEMIT_SUMS
   for (i=0; i<2; i++)
     psum_t[i] = psum_s[i];
+#endif
   for (i=0; i<6; i++) {
     sum_t[i] = sum_s[i];
     for (j=i; j<6; j++)

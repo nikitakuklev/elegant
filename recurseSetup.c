@@ -6,6 +6,10 @@
  * 
  * Michael Borland, 1991, 1996
  $Log: not supported by cvs2svn $
+ Revision 1.2  1999/03/10 17:21:37  borland
+ Changed the naming of variables in the mathematica input file so that the
+ meaning is clear for higher orders.
+
  Revision 1.1  1999/03/02 03:48:11  borland
  First version in repository.
  
@@ -16,7 +20,7 @@
 void test_and_print(FILE *fpo, int i1, int i2, int factor, char *sfact);
 
 
-main(int argc, char **argv)
+int main(int argc, char **argv)
 {
     int nx, ny, n, m, maxord, ix, iy;
     FILE  *fpo;
@@ -83,10 +87,10 @@ main(int argc, char **argv)
     fprintf(fpo, "F11 := -nh\n");
     for (n=2; n<20; n++) {
       if (n>9)
-        fprintf(fpo, "F1%c := %.0f*%ch%ld\n", 
+        fprintf(fpo, "F1%c := %.0f*%ch%d\n", 
                 'A'+n-9, dfactorial(n), 'A'+n-1, n);
       else 
-        fprintf(fpo, "F1%ld := %.0f*%ch%ld\n", 
+        fprintf(fpo, "F1%d := %.0f*%ch%d\n", 
                 n, dfactorial(n), 'A'+n-1, n);
     }
     
@@ -109,8 +113,9 @@ main(int argc, char **argv)
             fprintf(fpo, "WriteString[rfile, \"Fy%02d%02d = \"]\n", ix, iy);
             fprintf(fpo, "Write[rfile, CForm[Fy%02d%02d]]\n", ix, iy);
             }
+    return(0);
 
-    }
+}
 
 void test_and_print(FILE *fpo, int i1, int i2, int factor, char *sfact)
 {

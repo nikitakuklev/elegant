@@ -7,6 +7,7 @@
  * Michael Borland, 1989
  */
 #include "mdb.h"
+#include "mdbsun.h"
 #include "track.h"
 /* #include "smath.h" */
 
@@ -55,14 +56,14 @@ long do_tracking(
   double dgamma, dP[3], z, z_recirc, last_z;
   long i, j, i_traj=0, i_sums, n_to_track, i_pass, isConcat;
   long i_sums_recirc;
-  long watch_pt_seen, twiss_calculated;
+  long watch_pt_seen;
   double sum, x_max, y_max;
   long elliptical;
   double et1, et2;
   long is_batch = 0, last_type;
   static long is_ansi_term = -1;
   char s[100], *name;
-  long check_nan, links_asserted=0, sums_allocated = 0;
+  long check_nan, sums_allocated = 0;
   long elementsTracked;
   CHARGE *charge;
   static long warnedAboutChargePosition = 0;
@@ -76,7 +77,7 @@ long do_tracking(
           cpu_time()/100.0, page_faults(), memory_count());
 #endif
   
-#if defined(UNIX)
+#if defined(UNIX) || defined(_WIN32)
   if (is_ansi_term==-1) {
     char *ptr;
     is_ansi_term = 1;
@@ -217,7 +218,7 @@ long do_tracking(
       fflush(stderr);
       et1 = et2;
 #endif
-#if defined(UNIX)
+#if defined(UNIX) || defined(_WIN32)
       if ((et2=delapsed_time())-et1>2.0) {
         sprintf(s, "%ld particles left after pass %ld        ", 
                 n_to_track, i_pass);
@@ -1006,7 +1007,7 @@ void do_match_energy(
           fprintf(stderr, "%15.8e ", coord[ip][i]);
         fputc('\n', stderr);
         fprintf(stderr, "P_average = %e  P_central = %e  t = %e  dP_centroid = %e\n",
-                P_average, P_central, t, dP_centroid);
+                P_average, *P_central, t, dP_centroid);
         abort();
       }
 #endif
@@ -1285,7 +1286,7 @@ void trackWithChromaticLinearMatrix(double **particle, long particles,
         /* R22 or R44 */
         R22 = M1->R[1+offset][1+offset] = cos_phi - alpha1*sin_phi;
         /* R12 or R34 */
-        if (R12 = M1->R[0+offset][1+offset] = beta1*sin_phi) {
+        if ((R12 = M1->R[0+offset][1+offset] = beta1*sin_phi)) {
           /* R21 or R43 */
           M1->R[1+offset][0+offset] = 
             (R11*R22-1)/R12;
@@ -1296,7 +1297,7 @@ void trackWithChromaticLinearMatrix(double **particle, long particles,
         det = M1->R[0+offset][0+offset]*M1->R[1+offset][1+offset] -
           M1->R[0+offset][1+offset]*M1->R[1+offset][0+offset];
         if (fabs(det-1)>1e-6) {
-          fprintf(stderr, "Determinant is suspect: %le\n", det);
+          fprintf(stderr, "Determinant is suspect: %e\n", det);
           exit(1);
         }
       }

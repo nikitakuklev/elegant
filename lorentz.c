@@ -305,13 +305,12 @@ long do_lorentz_integration(double *coord, void *field)
             case DIFFEQ_XI_GT_XF:
                 fprintf(stderr, "Integration failure---may be program bug: %s\n", diffeq_result_description(int_return));
                 for (i=0; i<6; i++) 
-                    fprintf(stderr, "%11.4le  ", coord[i]);
+                    fprintf(stderr, "%11.4e  ", coord[i]);
                 exit(1);
                 break;
             case DIFFEQ_END_OF_INTERVAL:
                 log_exit("do_lorentz_integration");
                 return(0);
-                break;
             default:
                 if ((exvalue = (*exit_function)(NULL, q, central_length))>exit_toler)  {
                     fprintf(stderr, "warning: exit value of %e exceeds tolerance of %e--particle lost.\n", exvalue, exit_toler);
@@ -390,7 +389,7 @@ void lorentz_setup(
             if ((fringe_code=match_string(nibend->model, fringe_model, N_FRINGE_MODELS, 0))<0)
                 bomb("unknown fringe-field model for NIBEND", NULL);
             flen = 0;
-            if (Kg=2*nibend->hgap*nibend->fint) {
+            if ((Kg=2*nibend->hgap*nibend->fint)) {
                 switch (fringe_code) {
                     case HARD_EDGE_MODEL:
                         Fa = Fb = 0;
@@ -1095,7 +1094,7 @@ double bmapxy_exit_function(double *qp, double *q, double s)
 void bmapxy_deriv_function(double *qp, double *q, double s)
 {
     double *w, *wp, F0, F1, F2, Fa, Fb, fx, fy;
-    double S, dq0, dq1, x, y;
+    double x, y;
     BMAPXY *bmapxy;
     long ix, iy;
     
@@ -1202,7 +1201,7 @@ void bmapxy_field_setup(BMAPXY *bmapxy)
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
   }
   if (!(bmapxy->points=SDDS_CountRowsOfInterest(&SDDSin)) || bmapxy->points<2) {
-    fprintf(stderr, "file %s for BMAPXY element has insufficient data\n");
+    fprintf(stderr, "file %s for BMAPXY element has insufficient data\n", bmapxy->filename);
     exit(1);
   }
   SDDS_Terminate(&SDDSin);

@@ -40,7 +40,7 @@ void convert_to_transport(char *outputfile, LINE_LIST *beamline, long flip_k, do
     quad_aperture *= 1e-3;
     sext_aperture *= 1e-3;
 
-    fprintf(fp, "(* pc = %lg Gev/c *)\n", pc);
+    fprintf(fp, "(* pc = %g Gev/c *)\n", pc);
 
     if (header_file) {
         fpi = fopen_e(header_file, "r", 1);
@@ -53,7 +53,7 @@ void convert_to_transport(char *outputfile, LINE_LIST *beamline, long flip_k, do
     fprintf(fp, "15. 1. 'M' ;\n15. 2. 'R' ;\n15. 5. 'M' ;\n15. 6. 'N' ;\n");
     
     /* default beam card */
-    sprintf(s, "1. 1E-3 1E-3 1E-3 1E-3 1E-3 1E-3 %.16lg;\n", pc);
+    sprintf(s, "1. 1E-3 1E-3 1E-3 1E-3 1E-3 1E-3 %.16g;\n", pc);
     str_toupper(s);
     fputs(s, fp);
 
@@ -68,18 +68,18 @@ void convert_to_transport(char *outputfile, LINE_LIST *beamline, long flip_k, do
                 quad = (QUAD*)eptr->p_elem;
                 if (quad->tilt!=0) {
                     sprintf(s, "%QT%02ld", n_quad_tilts++);
-                    sprintf(buffer, "%8.8s %-5ld %21.16le;\n", 
+                    sprintf(buffer, "%8.8s %-5d %21.16e;\n", 
                         quoted_label(s), 20, quad->tilt*180/PI);
                     do_output_transport(fp, buffer);
                     }
-                sprintf(buffer, "%8.8s %-5ld %21.16le %21.16le %21.16le;\n",
+                sprintf(buffer, "%8.8s %-5d %21.16e %21.16e %21.16e;\n",
                     quoted_label(eptr->name), 5, quad->length,
                     -quad->k1*quad_aperture*pc*quad_sign, 
                     quad_aperture);
                 do_output_transport(fp, buffer);
                 if (quad->tilt!=0) {
                     sprintf(s, "%QT%02ld", n_quad_tilts++);
-                    sprintf(buffer, "%8.8s %-5ld %21.16le;\n", 
+                    sprintf(buffer, "%8.8s %-5d %21.16e;\n", 
                         quoted_label(s), 20, -quad->tilt*180/PI);
                     do_output_transport(fp, buffer);
                     }
@@ -95,95 +95,95 @@ void convert_to_transport(char *outputfile, LINE_LIST *beamline, long flip_k, do
                 /* set special parameters */
                 if (bend->hgap!=0) {
                     sprintf(s, "GP%02ld", n_bend_gap++);
-                    sprintf(buffer, "%8.8s %-5ld %12ld %21.16le;\n",
+                    sprintf(buffer, "%8.8s %-5d %12d %21.16e;\n",
                         quoted_label(s), 16, 5, bend->hgap);
                     do_output_transport(fp, buffer);
                     }
                 if (bend->h1!=0) {
                     sprintf(s, "CF%02ld", n_bend_curved_faces++);
-                    sprintf(buffer, "%8.8s %-5ld %12ld %21.16le;\n", 
+                    sprintf(buffer, "%8.8s %-5d %12d %21.16e;\n", 
                         quoted_label(s), 16, 12, bend->h1);
                     do_output_transport(fp, buffer);
                     }
                 if (bend->h2!=0) {
                     sprintf(s, "CF%02ld", n_bend_curved_faces++);
-                    sprintf(buffer, "%8.8s %-5ld %12ld %21.16le;\n", 
+                    sprintf(buffer, "%8.8s %-5d %12d %21.16e;\n", 
                         quoted_label(s), 16, 13, bend->h2);
                     do_output_transport(fp, buffer);
                     }
                 if (bend->k2!=0) {
                     sprintf(s, "BS%02ld", n_bend_k2++);
-                    sprintf(buffer, "%8.8s %-5ld %12ld %21.16le;\n",
+                    sprintf(buffer, "%8.8s %-5d %12d %21.16e;\n",
                         quoted_label(s), 16, 1, .5*bend->k2*rho);
                     do_output_transport(fp, buffer);
                     }
                 if (bend->fint!=.5) {
                     sprintf(s, "FI%02ld", n_bend_fint++);
-                    sprintf(buffer, "%8.8s %-5ld %12ld %21.16le;\n",
+                    sprintf(buffer, "%8.8s %-5d %12d %21.16e;\n",
                         quoted_label(s), 16, 7, bend->fint);
                     do_output_transport(fp, buffer);
                     }
                 /* use 20 cards to tilt and un-tilt the magnet */
                 if (bend->tilt!=0) {
                     sprintf(s, "%BT%02ld", n_bend_tilts++);
-                    sprintf(buffer, "%8.8s %-5ld %21.16le;\n", 
+                    sprintf(buffer, "%8.8s %-5d %21.16e;\n", 
                         quoted_label(s), 20, bend->tilt*180/PI);
                     do_output_transport(fp, buffer);
                     }
                 /* print the pole faces and the magnet */
                 sprintf(s, "FA%02ld", n_bend_rotated_faces++);
-                sprintf(buffer, "%8.8s %-5ld %21.16le;\n", 
+                sprintf(buffer, "%8.8s %-5d %21.16e;\n", 
                         quoted_label(s), 2, bend->e1*180/PI);
                 do_output_transport(fp, buffer);
-                sprintf(buffer, "%8.8s %-5ld %21.16le %21.16le %21.16le;\n",
+                sprintf(buffer, "%8.8s %-5d %21.16e %21.16e %21.16e;\n",
                         quoted_label(eptr->name), 4, bend->length, pc/rho, 
                         -bend->k1*sqr(rho));
                 do_output_transport(fp, buffer);
                 sprintf(s, "FA%02ld", n_bend_rotated_faces++);
-                sprintf(buffer, "%8.8s %-5ld %21.16le;\n", 
+                sprintf(buffer, "%8.8s %-5d %21.16e;\n", 
                         quoted_label(s), 2, bend->e2*180/PI);
                 do_output_transport(fp, buffer);
                 if (bend->tilt!=0) {
                     sprintf(s, "%BT%02ld", n_bend_tilts++);
-                    sprintf(buffer, "%8.8s %-5ld %21.16le;\n", 
+                    sprintf(buffer, "%8.8s %-5d %21.16e;\n", 
                         quoted_label(s), 20, -bend->tilt*180/PI);
                     do_output_transport(fp, buffer);
                     }
                 /* reset special parameters to default values */
                 if (bend->hgap!=0) {
                     sprintf(s, "GP%02ld", n_bend_gap++);
-                    sprintf(buffer, "%8.8s %-5ld %12ld %21.16le;\n",
+                    sprintf(buffer, "%8.8s %-5d %12d %21.16e;\n",
                         quoted_label(s), 16, 5, 0.);
                     do_output_transport(fp, buffer);
                     }
                 if (bend->h1!=0) {
                     sprintf(s, "CF%02ld", n_bend_curved_faces++);
-                    sprintf(buffer, "%8.8s %-5ld %12ld %21.16le;\n", 
+                    sprintf(buffer, "%8.8s %-5d %12d %21.16e;\n", 
                         quoted_label(s), 16, 12, 0.);
                     do_output_transport(fp, buffer);
                     }
                 if (bend->h2!=0) {
                     sprintf(s, "CF%02ld", n_bend_curved_faces++);
-                    sprintf(buffer, "%8.8s %-5ld %12ld %21.16le;\n", 
+                    sprintf(buffer, "%8.8s %-5d %12d %21.16e;\n", 
                         quoted_label(s), 16, 13, 0.);
                     do_output_transport(fp, buffer);
                     }
                 if (bend->k2!=0) {
                     sprintf(s, "BS%02ld", n_bend_k2++);
-                    sprintf(buffer, "%8.8s %-5ld %12ld %21.16le;\n",
+                    sprintf(buffer, "%8.8s %-5d %12d %21.16e;\n",
                         quoted_label(s), 16, 1, 0.);
                     do_output_transport(fp, buffer);
                     }
                 if (bend->fint!=.5) {
                     sprintf(s, "FI%02ld", n_bend_fint++);
-                    sprintf(buffer, "%8.8s %-5ld %12ld %21.16le;\n",
+                    sprintf(buffer, "%8.8s %-5d %12d %21.16e;\n",
                         quoted_label(s), 16, 7, 0.);
                     do_output_transport(fp, buffer);
                     }
                 break;
             case T_DRIF:
                 drift = (DRIFT*)eptr->p_elem;
-                sprintf(buffer, "%8.8s %-5ld %21.16le;\n", 
+                sprintf(buffer, "%8.8s %-5d %21.16e;\n", 
                         quoted_label(eptr->name),
                         3, drift->length);
                 do_output_transport(fp, buffer);
@@ -191,7 +191,7 @@ void convert_to_transport(char *outputfile, LINE_LIST *beamline, long flip_k, do
             case T_VCOR:
             case T_HCOR:
                 vcor = (VCOR*)eptr->p_elem;
-                sprintf(buffer, "%8.8s %-5ld %21.16le;\n", 
+                sprintf(buffer, "%8.8s %-5d %21.16e;\n", 
                         quoted_label(eptr->name),
                         3, vcor->length);
                 do_output_transport(fp, buffer);
@@ -200,18 +200,18 @@ void convert_to_transport(char *outputfile, LINE_LIST *beamline, long flip_k, do
                 sext = (SEXT*)eptr->p_elem;
                 if (sext->tilt!=0) {
                     sprintf(s, "%ST%02ld", n_sext_tilts++);
-                    sprintf(buffer, "%8.8s %-5ld %21.16le;\n", 
+                    sprintf(buffer, "%8.8s %-5d %21.16e;\n", 
                         quoted_label(s), 20, sext->tilt*180/PI);
                     do_output_transport(fp, buffer);
                     }
-                sprintf(buffer, "%8.8s %-5ld %21.16le %21.16le %21.16le;\n",
+                sprintf(buffer, "%8.8s %-5d %21.16e %21.16e %21.16e;\n",
                         quoted_label(eptr->name), 18, sext->length, 
                         sext->k2*sqr(sext_aperture)*pc/2,
                         sext_aperture);
                 do_output_transport(fp, buffer);
                 if (sext->tilt!=0) {
                     sprintf(s, "%ST%02ld", n_sext_tilts++);
-                    sprintf(buffer, "%8.8s %-5ld %21.16le;\n", 
+                    sprintf(buffer, "%8.8s %-5d %21.16e;\n", 
                         quoted_label(s), 20, -sext->tilt*180/PI);
                     do_output_transport(fp, buffer);
                     }

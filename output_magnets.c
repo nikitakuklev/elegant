@@ -85,9 +85,9 @@ void output_magnets(char *filename, char *line_name, LINE_LIST *beamline)
          switch (eptr->type) {
             case T_QUAD:
                 qptr = (QUAD*)eptr->p_elem;
-                fprintf(fpm, "%s %e  %ld\n", eptr->name, start, SIGN(qptr->k1));
+                fprintf(fpm, "%s %e  %d\n", eptr->name, start, SIGN(qptr->k1));
                 end = start+qptr->length;
-                fprintf(fpm, "%s %e  %ld\n%s %e  0\n%s %e 0 %\n%s %e 0\n", eptr->name, 
+                fprintf(fpm, "%s %e  %d\n%s %e  0\n%s %e 0 %\n%s %e 0\n", eptr->name, 
                         end, SIGN(qptr->k1), eptr->name, end, eptr->name, start, eptr->name, end);
                 start = end;
                 break;
@@ -97,9 +97,9 @@ void output_magnets(char *filename, char *line_name, LINE_LIST *beamline)
                     value = kqptr->B;
                 else
                     value = kqptr->k1;
-                fprintf(fpm, "%s %e  %ld\n", eptr->name, start, SIGN(kqptr->k1));
+                fprintf(fpm, "%s %e  %d\n", eptr->name, start, SIGN(kqptr->k1));
                 end = start+kqptr->length;
-                fprintf(fpm, "%s %e  %ld\n%s %e  0\n%s %e 0 %\n%s %e 0\n", eptr->name, 
+                fprintf(fpm, "%s %e  %d\n%s %e  0\n%s %e 0 %\n%s %e 0\n", eptr->name, 
                         end, SIGN(kqptr->k1), eptr->name, end, eptr->name, start, eptr->name, end);
                 start = end;
                 break;

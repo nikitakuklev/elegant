@@ -8,6 +8,7 @@
  * Michael Borland, 1989
  */
 #include "mdb.h"
+#include "mdbsun.h"
 #include "track.h"
 #include "bunched_beam.h"
 
@@ -42,8 +43,6 @@ void setup_bunched_beam(
     long n_elements
     )
 {
-    long i;
-    char t[1024];
 
     log_entry("setup_bunched_beam");
 

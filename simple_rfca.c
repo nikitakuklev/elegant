@@ -15,7 +15,6 @@ static char *fiducialModeChoice[4] = {
 
 unsigned long parseFiducialMode(char *modeString)
 {
-    unsigned long mode;
     long code;
 
     if (!modeString)
@@ -26,10 +25,8 @@ unsigned long parseFiducialMode(char *modeString)
       case 2:
       case 3:
         return FID_MODE_LIGHT<<code;
-        break;
       default:
         return 0;
-        break;
         }
     }
 
@@ -53,7 +50,7 @@ double findFiducialTime(double **part, long np, double s0, double sOffset,
         return (part[ibest][4]+sOffset)/(c_mks*beta_from_delta(p0, part[ibest][5]));
         }
     if (mode&FID_MODE_TMEAN) {
-        double tsum, p;
+        double tsum;
         long ip;
         
         for (ip=tsum=0; ip<np; ip++) {
@@ -62,6 +59,7 @@ double findFiducialTime(double **part, long np, double s0, double sOffset,
         return tsum/np;
         }
     bomb("invalid fiducial mode in findFiducialTime", NULL);
+	return(1);
     }
 
 
@@ -70,9 +68,9 @@ long simple_rf_cavity(
     )
 {
     long ip, same_dgamma;
-    double PRatio, timeOffset;
-    double P, dP, P1, gamma, dgamma, gamma1, phase, length, volt, To;
-    double *coord, t, t0, omega, beta_i, beta_f, tau, dt;
+    double timeOffset;
+    double P, gamma, dgamma, phase, length, volt, To;
+    double *coord, t, t0, omega, beta_i, tau, dt;
     static long been_warned = 0;
 #ifdef DEBUG
     static FILE *fplog = NULL;

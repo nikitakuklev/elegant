@@ -23,8 +23,8 @@ void track_through_wake(double **part, long np, WAKE *wakeData, double *PoInput,
   static long *pbin = NULL;              /* array to record which bin each particle is in */
   static double *time = NULL;            /* array to record arrival time of each particle */
   static long max_np = 0;
-  long ip, ib, ib1, ib2, nb, n_binned;
-  double factor, tmin, tmean, dt, dt1, P, dgam, gam, frac, Po;
+  long ib, nb, n_binned;
+  double factor, tmin, tmean, dt, Po;
 
   set_up_wake(wakeData, run, i_pass, np, charge);
   nb = wakeData->n_bins;

@@ -44,7 +44,7 @@ void convert_to_patpet(char *outputfile, LINE_LIST *beamline, long flip_k, doubl
         }
 
     /* define a zero-length drift space */
-    sprintf(output, "%-4s%6ld%5ld     %20.7le\n", "D000", 1, 0,  0.0);
+    sprintf(output, "%-4s%6d%5d     %20.7e\n", "D000", 1, 0,  0.0);
     do_output(fp, output);
 
     quad_sign = (flip_k )?(-1):( 1);
@@ -56,9 +56,9 @@ void convert_to_patpet(char *outputfile, LINE_LIST *beamline, long flip_k, doubl
             case T_QUAD:
                 quad = (QUAD*)eptr->p_elem;
                 sprintf(output, 
-                    "%-4s%6ld%5ld     %20.7le%20.7le%5.1lf%5.1lf\n",
+                    "%-4s%6d%5d     %20.7e%20.7e%5.1f%5.1f\n",
                     eptr->name, 3, RAD_TO_DEG(quad->tilt),  quad->length, 
-                    quad->k1*quad_sign, 0., 0., 0.); 
+                    quad->k1*quad_sign, 0., 0.); 
                 do_output(fp, output);
                 break;
             case T_RBEN:  case T_SBEN:
@@ -78,10 +78,10 @@ void convert_to_patpet(char *outputfile, LINE_LIST *beamline, long flip_k, doubl
                         exit(1);
                         }
                     if (!nearly_equal(bend->e1*2, bend->angle, angle_tolerance)) {
-                        printf("error: sector bend %s has edge angles of %.4le and  bending angle %.4le.\n",
+                        printf("error: sector bend %s has edge angles of %.4e and  bending angle %.4e.\n",
                             eptr->name, bend->e1, bend->angle);
                         puts("Sector bend may only have edge angles such that they are equivalent to");
-                        printf("rectangular magnets (to within a tolerance of %le).\n", 
+                        printf("rectangular magnets (to within a tolerance of %e).\n", 
                                 angle_tolerance);
                         puts("You may change this edge-angle tolerance with the -tolerance switch.");
                         exit(1);
@@ -92,7 +92,7 @@ void convert_to_patpet(char *outputfile, LINE_LIST *beamline, long flip_k, doubl
                         }
                     }
                 sprintf(output,  
-                    "%-4s%6ld%5ld %c   %20.7le%20.7le%5.1lf%5.1lf%10.7f\n",
+                    "%-4s%6d%5d %c   %20.7e%20.7e%5.1f%5.1f%10.7f\n",
                     eptr->name, 2, RAD_TO_DEG(bend->tilt),  
                     ((eptr->type==T_SBEN)?'1':' '), bend->length, 
                     bend_sign*((bend->angle==0)?0.:(bend->length/bend->angle)),
@@ -101,52 +101,52 @@ void convert_to_patpet(char *outputfile, LINE_LIST *beamline, long flip_k, doubl
                 break;
             case T_DRIF:
                 drift = (DRIFT*)eptr->p_elem;
-                sprintf(output, "%-4s%6ld%5ld     %20.7le\n",
+                sprintf(output, "%-4s%6d%5d     %20.7e\n",
                     eptr->name, 1, 0,  drift->length);
                 do_output(fp, output);
                 break;
             case T_SEXT:
                 sext = (SEXT*)eptr->p_elem;
                 sprintf(output, 
-                    "%-4s%6ld%5ld     %20.7le%20.7le%5.1lf%5.1lf\n",
+                    "%-4s%6d%5d     %20.7e%20.7e%5.1f%5.1f\n",
                     eptr->name, 4, RAD_TO_DEG(sext->tilt),  sext->length, 
                     sext->length*sext->k2*quad_sign, 0., 0.); 
                 do_output(fp, output);
                 break;
             case T_HCOR:
                 hcor = (HCOR*)eptr->p_elem;
-                sprintf(output, "%-4s%6ld%5ld     %20.7le%20.7le\n",
+                sprintf(output, "%-4s%6d%5d     %20.7e%20.7e\n",
                     eptr->name, 1, RAD_TO_DEG(hcor->tilt), hcor->length, 
                     (hcor->length==0)?0.0:(hcor->kick/hcor->length));
                 do_output(fp, output);
                 break;
             case T_VCOR:
                 vcor = (VCOR*)eptr->p_elem;
-                sprintf(output, "%-4s%6ld%5ld     %20.7le%20.7le\n",
+                sprintf(output, "%-4s%6d%5d     %20.7e%20.7e\n",
                     eptr->name, 1, 90+RAD_TO_DEG(vcor->tilt), vcor->length, 
                     (vcor->length==0)?0.0:(vcor->kick/vcor->length));
                 do_output(fp, output);
                 break;
             case T_HMON:
                 hmon = (HMON*)eptr->p_elem;
-                sprintf(output, "%-4s%6ld%5ld     %20.7le\n",
+                sprintf(output, "%-4s%6d%5d     %20.7e\n",
                     eptr->name, 1, 0, hmon->length);
                 do_output(fp, output);
                 break;
             case T_VMON:
                 vmon = (VMON*)eptr->p_elem;
-                sprintf(output, "%-4s%6ld%5ld     %20.7le\n",
+                sprintf(output, "%-4s%6d%5d     %20.7e\n",
                     eptr->name, 1, 90, vmon->length);
                 do_output(fp, output);
                 break;
             case T_MONI:
                 moni = (MONI*)eptr->p_elem;
-                sprintf(output, "%-4s%6ld%5ld     %20.7le\n",
+                sprintf(output, "%-4s%6d%5d     %20.7e\n",
                     eptr->name, 1, 90, moni->length);
                 do_output(fp, output);
                 break;
             case T_MARK:    /* zero-length drift */
-                sprintf(output, "%-4s%6ld%5ld     %20.7le\n",
+                sprintf(output, "%-4s%6d%5d     %20.7e\n",
                     eptr->name, 1, 0,  0.0);
                 do_output(fp, output);
                 break;

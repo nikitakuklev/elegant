@@ -7,6 +7,7 @@
  * Michael Borland, 1993.
  */
 #include "mdb.h"
+#include "fftpackC.h"
 #include "track.h"
 #include "SDDS.h"
 
@@ -38,7 +39,7 @@ void SDDS_ElegantOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, 
 
     /* define SDDS parameters */
     for (i=0; i<n_parameters; i++) {
-        if (!SDDS_ProcessParameterString(SDDS_table, parameter_definition[i].text, NULL) ||
+        if (!SDDS_ProcessParameterString(SDDS_table, parameter_definition[i].text, 0) ||
             (index=SDDS_GetParameterIndex(SDDS_table, parameter_definition[i].name))<0) {
             fprintf(stderr, "Unable to define SDDS parameter for %s--string was:\n%s\n", caller,
                     parameter_definition[i].text);
@@ -55,7 +56,7 @@ void SDDS_ElegantOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, 
     last_index = -1;
     /* define SDDS columns */
     for (i=0; i<n_columns; i++) {
-        if (!SDDS_ProcessColumnString(SDDS_table, column_definition[i].text, NULL) ||
+        if (!SDDS_ProcessColumnString(SDDS_table, column_definition[i].text, 0) ||
             (index=SDDS_GetColumnIndex(SDDS_table, column_definition[i].name))<0) {
             fprintf(stderr, "Unable to define SDDS column for %s--string was:\n%s\n", caller,
                     column_definition[i].text);
@@ -367,7 +368,6 @@ void SDDS_WatchPointSetup(WATCH *watch, long mode, long lines_per_row,
 void SDDS_HistogramSetup(HISTOGRAM *histogram, long mode, long lines_per_row,
                           char *command_file, char *lattice_file, char *caller)
 {
-  char s[100];
   SDDS_TABLE *SDDS_table;
   char *filename;
   long column, columns;
@@ -456,7 +456,7 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
                           double Po, double length)
 {
   long i, row;
-  double p, t0, t, dt;
+  double p, t0, t;
 
   log_entry("dump_watch_particles");
   if (!watch->initialized)
@@ -533,7 +533,7 @@ double tmp_safe_sqrt;
 void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, double **particle, long particles, 
                            long original_particles,  double Po)
 {
-    long row, sample, i, j;
+    long sample, i, j;
     double tc, last_tc, p_sum, gamma_sum, sum, p;
 
     log_entry("dump_watch_parameters");
@@ -740,7 +740,7 @@ void dump_watch_FFT(WATCH *watch, long step, long pass, long n_passes, double **
  
 void do_watch_FFT(double **data, long n_data, long slot, long window_code) 
 {
-    double *real_imag, r1, r2, factor;
+    double *real_imag, r1, r2;
     long i;
 
     log_entry("do_watch_FFT");
@@ -797,7 +797,7 @@ void do_watch_FFT(double **data, long n_data, long slot, long window_code)
 void dump_particle_histogram(HISTOGRAM *histogram, long step, long pass, double **particle, long particles, 
                           double Po, double length)
 {
-  long icoord, ipart, row, ibin;
+  long icoord, ipart, ibin;
   double p, t0;
   static long maxBins = 0, maxParticles = 0;
   static double *frequency=NULL, *coordinate=NULL, *histData=NULL;
@@ -1075,7 +1075,6 @@ void dump_sigma(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, lo
   BEAM_SUMS *beam;
   ELEMENT_LIST *eptr;
   double Sigma[6], sigma[6][6], centroid[6], emit, emitNorm;
-  double pSigma[6], psigma[6][6], pcentroid[6];
   char *name, *type_name;
   long s_index, ma1_index, Sx_index, occurence, ex_index;
   long sNIndex[6];

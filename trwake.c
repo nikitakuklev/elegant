@@ -20,8 +20,8 @@ void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
   static double *time = NULL;            /* array to record arrival time of each particle */
   static double *pz = NULL;
   static long max_np = 0;
-  long ip, ib, nb, n_binned, plane, offset;
-  double factor, tmin, tmean, dt, dt1, P, dgam, gam, frac, Vinterp;
+  long ib, nb, n_binned, plane;
+  double factor, tmin, tmean, dt;
 
   log_entry("track_through_wake");
 

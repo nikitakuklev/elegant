@@ -114,7 +114,7 @@ extern ELEMENT_LIST *expand_line(
     fprintf(stderr, "line is %s\n", s);
 #endif
 
-    while (ptr1 = get_token_tq(s, ",", ",", "(\"", ")\"")) {
+    while ((ptr1 = get_token_tq(s, ",", ",", "(\"", ")\""))) {
         ptr = ptr1+strlen(ptr1)-1;
         while (isspace(*ptr))
             ptr--;
@@ -134,7 +134,7 @@ extern ELEMENT_LIST *expand_line(
 
         multiplier = 1;
         if (isdigit(*ptr1)) {
-            if (ptr=strchr(ptr1, '*')) {
+            if ((ptr=strchr(ptr1, '*'))) {
                 *ptr = 0;
                 if (1!=sscanf(ptr1, "%ld", &multiplier)) {
                     fprintf(stderr, "problem with line: %s\n", line_save);
@@ -266,7 +266,7 @@ void fill_elem(ELEMENT_LIST *eptr, char *s, long type, FILE *fp_input)
 
 void copy_named_element(ELEMENT_LIST *eptr, char *s, ELEMENT_LIST *elem)
 {
-    char *name, *match, *ptr, *ptr0;
+    char *name, *match;
 
     log_entry("copy_named_element");
     eptr->end_pos = eptr->flags = 0;
@@ -512,7 +512,7 @@ long tell_type(char *s, ELEMENT_LIST *elem)
 #ifdef DEBUG
         fprintf(stderr, "second token is blank\n");
 #endif
-        if (ptr=strchr(name, ',')) {
+        if ((ptr=strchr(name, ','))) {
             strcpy(s, ptr+1);
             *ptr = 0;
             }
@@ -584,7 +584,7 @@ long tell_type(char *s, ELEMENT_LIST *elem)
             if (!elem->definition_text)
                 bomb("element copy with no definition_text--internal error", NULL);
             buffer = tmalloc(sizeof(*buffer)*(strlen(elem->definition_text)+strlen(s)+1));
-            if (ptr=strchr(s, ',')) {
+            if ((ptr=strchr(s, ','))) {
 #ifdef DEBUG
                 fprintf(stderr, "inserting into: %s\n", s);
                 fprintf(stderr, "inserting: %s\n", elem->definition_text);
@@ -655,7 +655,7 @@ char *find_param(char *s, char *param)
 
     l = strlen(param);
 
-    while (ptr=get_param_name(s)) {
+    while ((ptr=get_param_name(s))) {
         if (strncmp(param, ptr, l)==0)  {
             log_exit("find_param");
             return(ptr);
@@ -723,7 +723,7 @@ void parse_element(
                 break;
             }
                 
-    while (ptr=get_token(string)) {
+    while ((ptr=get_token(string))) {
         ptr1 = get_param_name(ptr);
         for (i=0; i<n_params; i++) 
             if (strcmp(parameter[i].name, ptr1)==0)

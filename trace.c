@@ -11,6 +11,7 @@
  * M.Borland, 1992 
  */
 #include "mdb.h"
+#include "mdbsun.h"
 #include "track.h"
 #include "trace.h"
 #include <signal.h>
@@ -160,17 +161,19 @@ void traceback_handler(int sig)
 {
     long i;
     switch (sig) {
+#if !defined(_WIN32)
         case SIGHUP: fprintf(stderr, "\nTerminated by SIGHUP\n"); break;
-        case SIGINT: fprintf(stderr, "\nTerminated by SIGINT\n"); break;
         case SIGQUIT: fprintf(stderr, "\nTerminated by SIGQUIT\n"); break;
-        case SIGABRT: fprintf(stderr, "\nTerminated by SIGABRT\n"); break;
-        case SIGILL: fprintf(stderr, "\nTerminated by SIGILL\n"); break;
         case SIGTRAP: fprintf(stderr, "\nTerminated by SIGTRAP\n"); break;
-        case SIGFPE: 
-            fprintf(stderr, "\nTerminated by SIGFPE"); 
-            break;
         case SIGBUS: 
             fprintf(stderr, "\nTerminated by SIGBUS"); 
+            break;
+#endif
+        case SIGINT: fprintf(stderr, "\nTerminated by SIGINT\n"); break;
+        case SIGABRT: fprintf(stderr, "\nTerminated by SIGABRT\n"); break;
+        case SIGILL: fprintf(stderr, "\nTerminated by SIGILL\n"); break;
+        case SIGFPE: 
+            fprintf(stderr, "\nTerminated by SIGFPE"); 
             break;
         case SIGSEGV: 
             fprintf(stderr, "\nTerminated by SIGSEGV"); 

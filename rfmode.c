@@ -25,7 +25,7 @@ void track_through_rfmode(
     double tmin, tmax, tmean, dt, P;
     double Vb, V, omega, phase, t, k, damping_factor, tau;
     double V_sum, Vr_sum, phase_sum;
-    double Vc, Vcr, Q_sum, dgamma, gamma;
+    double Vc, Vcr, Q_sum, dgamma;
     long n_summed, max_hist, n_occupied;
     static long been_warned = 0;
     double Qrp, VbImagFactor, Q;

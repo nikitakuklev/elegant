@@ -64,7 +64,7 @@ void setup_sdds_beam(
                      long n_elements
                      )
 {
-  char t[1024], *ptr;
+  char *ptr;
   static long initial_call = 1;
 
   log_entry("setup_sdds_beam");
@@ -105,7 +105,7 @@ void setup_sdds_beam(
     bomb("must specify selection_parameter and selection_string together or not at all", NULL);
 
   n_input_files = 0;
-  while (ptr=get_token(input)) {
+  while ((ptr=get_token(input))) {
     input_file = trealloc(input_file, sizeof(*input_file)*(n_input_files+1));
     SDDS_input = trealloc(SDDS_input, sizeof(*SDDS_input)*(n_input_files+1));
     input_initialized = trealloc(input_initialized, sizeof(*input_initialized)*(n_input_files+1));
@@ -443,10 +443,10 @@ long get_sdds_particles(double ***particle, long one_dump, long n_skip)
     if (selection_parameter) {
       if ((i=SDDS_GetParameterIndex(SDDS_input+ifile, selection_parameter))<0)
         fprintf(stderr, "warning: SDDS beam file %s does not contain the selection parameter %s\n",
-                selection_parameter);
+                input_file[ifile], selection_parameter);
       if (SDDS_GetParameterType(SDDS_input+ifile, i)!=SDDS_STRING) {
         sprintf(s, "SDDS beam file %s contains parameter %s, but parameter is not a string", 
-                selection_parameter);
+                input_file[ifile], selection_parameter);
         SDDS_SetError(s);
         SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
       }
@@ -619,7 +619,7 @@ long check_sdds_beam_column(SDDS_TABLE *SDDS_table, char *name, char *units)
 void adjust_arrival_time_data(double **coord, long np, double Po)
 {
   long ip;
-  double P, beta, time;
+  double P, beta;
   double tave;
 
   if (np<1)

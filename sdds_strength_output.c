@@ -15,7 +15,7 @@ void sdds_strength_output(char *output, LINE_LIST *beamline, char *input)
     SDDS_TABLE SDDS_table;
     ELEMENT_LIST *eptr;
     char s[SDDS_MAXLINE], t[SDDS_MAXLINE];
-    long row, n, is_integral;
+    long row, n;
     double KnL, L, KnL2PF, Kn;
     char *param_name;
 

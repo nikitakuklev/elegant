@@ -122,7 +122,7 @@ void IBSGrowthRates (double gamma, double emitx, double emity,
   double zintx, zinty, zintz;
   double ccy, td1, td2, tz1, tz2, ty1, ty2, tx1, tx2;
   double h, aloop, term, func, polyx, polyy, polyz, sumz;
-  double alam, bb, cof, f, coff, tmpx, tmpy, tmpz;
+  double alam, cof, f, coff, tmpx, tmpy, tmpz;
   double txi, tyi, tzi, weight, taux, tauy, tauz;
   double epsCheck, epzCheck;  
 
@@ -148,7 +148,7 @@ void IBSGrowthRates (double gamma, double emitx, double emity,
   noWarning = 1;
   coulombLogReturn = coulombLog(gamma, emitx, emity, betaxAve, betayAve, sigmaz, particles, noWarning);
   if (verbosity>3)
-    fprintf( stderr, "Coulomb log: %lg.\n", coulombLogReturn);
+    fprintf( stderr, "Coulomb log: %g.\n", coulombLogReturn);
   constant = particles * coulombLogReturn * sqr(re_mks) * c_mks /
     (8 * PI * pow(beta,3) * pow(gamma,4) * emitx *  emity * sigmaDelta * sigmaz);
   dencon = particles/ (8 * sigmaz * sqrt(pow(PI,3) * emitx * emity));
@@ -177,7 +177,7 @@ void IBSGrowthRates (double gamma, double emitx, double emity,
   SCtuneShifty = tuneShiftConst * sumy;
   SCtuneShiftMax = MAX(SCtuneShiftx, SCtuneShifty);
   if (verbosity>3)
-    fprintf( stderr, "Space charge tune shifts:\n x: %lg y: %lg.\n", 
+    fprintf( stderr, "Space charge tune shifts:\n x: %g y: %g.\n", 
             SCtuneShiftx, SCtuneShifty);
   if (SCtuneShiftMax > SCtuneShiftLimit ) {
     particlesSC = SCtuneShiftLimit * particles/ SCtuneShiftMax;
@@ -261,8 +261,8 @@ void IBSGrowthRates (double gamma, double emitx, double emity,
     cony = constant*cy;
 
     if (verbosity>3) {
-      fprintf( stderr, "constant= %12.5lg  conz=%12.5lg  cony=%12.5lg"
-              "   a=%12.5lg b=%12.5lg\n", constant, conz, cony, a, b);
+      fprintf( stderr, "constant= %12.5g  conz=%12.5g  cony=%12.5g"
+              "   a=%12.5g b=%12.5g\n", constant, conz, cony, a, b);
     }
     
     /*     split integral into decades, with "steps" steps per decade
@@ -394,7 +394,7 @@ void IBSGrowthRates (double gamma, double emitx, double emity,
     (GSRL-GLIBS(EPLHAT))*EPLHAT/(GSRL*EPS0L) RATIOS
     */
   if (verbosity>1 && transSRdampRate!=0.0) {
-    fprintf( stderr, "coupling = %8.4lf\n(transSRdampRate - IBSGrowthRate(emitxTrial)/(1+coupling)) * emitxTrial/(transSRdampRate*emitx0) = %15.6g\n", coupling, epsCheck);
+    fprintf( stderr, "coupling = %8.4f\n(transSRdampRate - IBSGrowthRate(emitxTrial)/(1+coupling)) * emitxTrial/(transSRdampRate*emitx0) = %15.6g\n", coupling, epsCheck);
     fprintf( stderr, "(longSRdampRate - IBSLongGrowthRate(emitzTrial)) * emitzTrial/(longSRdampRate*emitz0)    = %15.6g\n", epzCheck);
   }
   return;

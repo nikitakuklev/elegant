@@ -3,6 +3,9 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.1  1999/07/01 19:19:57  borland
+ * First versions in repository.
+ *
  */
 #include "mdb.h"
 #include "track.h"
@@ -103,10 +106,10 @@ void doSASEFELAtEndOutput(SASEFEL_OUTPUT *sasefelOutput, long step)
 void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long particles, 
                          double Po, double charge)
 {
-  double emitx, emity, bunchLength, Sdelta;
-  double *time, *delta, tAve, deltaAve, deltaRMS, tRMS, S11, S33;
+  double emitx, emity;
+  double *time, *delta, deltaAve, deltaRMS, tRMS, S11, S33;
   long i;
-  double xLimit[2], percentLevel[2] = {10, 90}, tSpread;
+  double xLimit[2], percentLevel[2] = {10, 90};
   
   if (!(time=SDDS_Malloc(sizeof(*time)*particles)))
     SDDS_Bomb("memory allocation failure (computeSASEFELAtEnd)");

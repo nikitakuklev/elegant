@@ -43,7 +43,6 @@ static TRAJECTORY *clorb = NULL;
 
 void setup_closed_orbit(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 {
-    static char label[1024];
 
     log_entry("setup_closed_orbit");
 

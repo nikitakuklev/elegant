@@ -106,7 +106,7 @@ void compute_amplification_factors(
   if (type_code==-1) {
     eptr = NULL;
     iparam = -1;
-    while (eptr = wfind_element(name, &eptr, &(beamline->elem))) {
+    while ((eptr = wfind_element(name, &eptr, &(beamline->elem)))) {
       if ((iparam=confirm_parameter(item, eptr->type))>=0)
         break;
     }
@@ -205,7 +205,7 @@ void compute_amplification_factors(
     fprintf(fpuof, "&parameter name=GroupDescription, type=string, fixed_value=\"%s\" &end\n",
             description);
     fprintf(fpuof, "&parameter name=Actuator, type=string &end\n");
-    fprintf(fpuof, "&column name=s, units=m, type=double &end\n", unit_pos);
+    fprintf(fpuof, "&column name=s, units=m, type=double &end\n");
     fprintf(fpuof, "&column name=%sResponse, units=%s, type=double &end\n", iplane==0?"x":"y", unit_pos);
     fprintf(fpuof, "&column name=ElementName, type=string &end\n&column name=ElementOccurence, type=long &end\n");
     fprintf(fpuof, "&data mode=ascii &end\n");
@@ -216,7 +216,7 @@ void compute_amplification_factors(
     fprintf(fpcof, "&parameter name=GroupDescription, type=string, fixed_value=\"%s\" &end\n",
             description);
     fprintf(fpcof, "&parameter name=Actuator, type=string &end\n");
-    fprintf(fpcof, "&column name=s, units=m, type=double &end\n", unit_pos);
+    fprintf(fpcof, "&column name=s, units=m, type=double &end\n");
     fprintf(fpcof, "&column name=%sResponse, units=%s, type=double &end\n", iplane==0?"x":"y", unit_pos);
     fprintf(fpcof, "&column name=ElementName, type=string &end\n&column name=ElementOccurence, type=long &end\n");
     fprintf(fpcof, "&data mode=ascii &end\n");
@@ -226,7 +226,7 @@ void compute_amplification_factors(
             beamline->name, run->lattice);
     fprintf(fpkf, "&parameter name=GroupDescription, type=string, fixed_value=\"%s\" &end\n",
             description);
-    fprintf(fpkf, "&column name=s, units=m, type=double &end\n", unit_pos);
+    fprintf(fpkf, "&column name=s, units=m, type=double &end\n");
     fprintf(fpkf, "&column name=C, units=%s, type=double &end\n", Cij_unit);
     fprintf(fpkf, "&column name=ElementName, type=string &end\n&column name=ElementOccurence, type=long &end\n");
     fprintf(fpkf, "&data mode=ascii, no_row_counts=1 &end\n");

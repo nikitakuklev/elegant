@@ -48,6 +48,7 @@ DEVELOPMENT CENTER AT ARGONNE NATIONAL LABORATORY.
 
 CopyrightNotice001*/
 
+#include <math.h>
 #include "mdb.h"
 #include "SDDS.h"
 #include "track.h"

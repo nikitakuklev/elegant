@@ -147,14 +147,12 @@ double get_reference_phase(long phase_ref, double phase0)
         case REF_PHASE_RETURNED:
             log_exit("get_reference_phase");
             return(phase);
-            break;
         case REF_PHASE_NOT_SET:
         case REF_PHASE_NONEXISTENT:
         default:
             set_phase_reference(phase_ref, phase0);
             log_exit("get_reference_phase");
             return(phase0);
-            break;
         }
     }
 

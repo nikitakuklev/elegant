@@ -1,4 +1,8 @@
-/* $Log: not supported by cvs2svn $
+/* 
+ * $Log: not supported by cvs2svn $
+ * Revision 1.5  1999/03/18 21:02:44  borland
+ * Implemented the -rf option.
+ *
  * Revision 1.4  1999/02/15 14:41:26  borland
  * Added integration vs time.
  *
@@ -95,18 +99,14 @@ int main( int argc, char **argv)
   SCANNED_ARG *scanned;
   char *inputfile, *outputfile;
   SDDS_DATASET twissPage, resultsPage;
-  double energy, particles, charge, length;
-  long verbosity, i, j, k, elements, superperiods, growthRatesOnly;
+  double particles, charge, length;
+  long verbosity, i, elements, superperiods, growthRatesOnly;
   double pCentral, I1, I2, I3, I4, I5, taux, taudelta;
   double EMeV;
   double emitx0, emitx, emitxInput, emityInput, emity, coupling, sigmaz0, sigmaz;
   double sigmaDelta0, sigmaDelta, sigmaDeltaInput, xGrowthRate, yGrowthRate, zGrowthRate;
-  double xGrowthRateOld, yGrowthRateOld, zGrowthRateOld;
-  double Gx, Gy, Gz;
-  double a, b, c, emitxOld, emityOld, sigmaDeltaOld, emittanceTolerance = 1e-5;
-  double d, e, f, dfde, dfdd, dgde, dgdd, determinant, func1, func2;
-  double x, dfdx, dgdx;
-  long method, converged, loopLimit = 50, totalSteps;
+  double emitxOld, sigmaDeltaOld;
+  long method, converged;
 /* used in simplex minimization */
   double yReturn, *xGuess, *dxGuess, *xLowerLimit, *xUpperLimit;
   short *disable;
@@ -404,7 +404,7 @@ int main( int argc, char **argv)
     
     if (!growthRatesOnly) {
       if (verbosity > 1) {
-        fprintf (stderr, "Starting values:\nemitx: %10.5lg sigmaDelta %10.5lg.\n", emitx, sigmaDelta);
+        fprintf (stderr, "Starting values:\nemitx: %10.5g sigmaDelta %10.5g.\n", emitx, sigmaDelta);
       }
       emitxOld = emitx;
       sigmaDeltaOld = sigmaDelta;
@@ -527,7 +527,7 @@ int main( int argc, char **argv)
   if (!SDDS_Terminate(&twissPage) || !SDDS_Terminate(&resultsPage))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   
-  exit(0);
+  return(0);
 }
 
 double IBSequations(double *x, long *invalid) {
@@ -538,7 +538,6 @@ double IBSequations(double *x, long *invalid) {
   double xGrowthRate, yGrowthRate, zGrowthRate;
   double Gx, Gy, Gz;
   double a, b, c, d, e, f, func1, func2;
-  long findEquilibrium;
   
   emitx = x[0];
   sigmaDelta = x[1];
@@ -635,9 +634,9 @@ double IBSequations(double *x, long *invalid) {
 }
 
 void IBSsimplexReport(double ymin, double *xmin, long pass, long evals, long dims) {
-  fprintf( stderr, "IBS Simplex Report:\nMinimum value obtained: %le.\n", ymin);
+  fprintf( stderr, "IBS Simplex Report:\nMinimum value obtained: %e.\n", ymin);
   fprintf( stderr, "    %ld passes, %ld evaluations.\n", pass, evals);
-  fprintf( stderr, "    emitx = %le   sigmaDelta = %le.\n", xmin[0], xmin[1]);
+  fprintf( stderr, "    emitx = %e   sigmaDelta = %e.\n", xmin[0], xmin[1]);
   return;
 }
 

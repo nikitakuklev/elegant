@@ -125,7 +125,7 @@ void setup_matrix_output(
                     else
                         sprintf(t, "units=%s &end", unit[i]);
                     strcat(buffer, t);
-                    if (!SDDS_ProcessColumnString(SDDS_matrix+n_outputs, buffer, NULL)) {
+                    if (!SDDS_ProcessColumnString(SDDS_matrix+n_outputs, buffer, 0)) {
                         SDDS_SetError("Problem defining SDDS matrix output Rij columns (setup_matrix_output)");
                         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
                         }
@@ -140,7 +140,7 @@ void setup_matrix_output(
                     else
                         sprintf(t, "units=%s/%s &end", unit[i], unit[j]);
                     strcat(buffer, t);
-                    if (!SDDS_ProcessColumnString(SDDS_matrix+n_outputs, buffer, NULL)) {
+                    if (!SDDS_ProcessColumnString(SDDS_matrix+n_outputs, buffer, 0)) {
                         SDDS_SetError("Problem defining SDDS matrix output Rij columns (setup_matrix_output)");
                         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
                         }
@@ -166,7 +166,7 @@ void setup_matrix_output(
                         else
                             sprintf(t, "units=%s &end", s);
                         strcat(buffer, t);
-                        if (!SDDS_ProcessColumnString(SDDS_matrix+n_outputs, buffer, NULL)) {
+                        if (!SDDS_ProcessColumnString(SDDS_matrix+n_outputs, buffer, 0)) {
                             SDDS_SetError("Problem defining SDDS matrix output Tijk columns (setup_matrix_output)");
                             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
                             }
@@ -194,7 +194,7 @@ void setup_matrix_output(
                             else
                                 sprintf(t, "units=%s &end", s);
                             strcat(buffer, t);
-                            if (!SDDS_ProcessColumnString(SDDS_matrix+n_outputs, buffer, NULL)) {
+                            if (!SDDS_ProcessColumnString(SDDS_matrix+n_outputs, buffer, 0)) {
                                 SDDS_SetError("Problem defining SDDS matrix output Uijk columns (setup_matrix_output)");
                                 SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
                                 }
@@ -249,7 +249,7 @@ void run_matrix_output(
     long i_SDDS_output, n_SDDS_output;
     long i_output, output_order;
     VMATRIX *M1, *M2, *tmp;
-    char s[256], name[256];
+    char s[256];
     double z0;
 
     if (n_outputs==0)

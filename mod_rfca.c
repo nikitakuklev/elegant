@@ -12,10 +12,10 @@
 
 long modulated_rf_cavity(double **part, long np, MODRF *modrf, double P_central, double zEnd)
 {
-    long ip, same_dgamma;
-    double PRatio, amPhase, pmPhase;
-    double P, dP, P1, gamma, dgamma, gamma1, phase, length, volt, beta;
-    double *coord, t, t0, omega0, omega, beta_i, beta_f, tau, dt, t1;
+    long ip;
+    double amPhase, pmPhase;
+    double P, gamma, dgamma, phase, length, volt;
+    double *coord, t, t0, omega0, omega, beta_i, tau, dt, t1;
     static long been_warned = 0;
 #ifdef DEBUG
     static SDDS_TABLE debugTable;
@@ -103,7 +103,7 @@ long modulated_rf_cavity(double **part, long np, MODRF *modrf, double P_central,
                 if (!(mode = parseFiducialMode(modrf->fiducial)))
                     bomb("invalid fiducial mode for MODRF element", NULL);
                 t0 = findFiducialTime(part, np, zEnd-length, length/2, P_central, mode);
-                modrf->phase_fiducial = -omega*t0;
+                modrf->phase_fiducial = -omega0*t0;
                 modrf->fiducial_seen = 1;
                 }
             set_phase_reference(modrf->phase_reference, phase=modrf->phase_fiducial);
@@ -128,7 +128,7 @@ long modulated_rf_cavity(double **part, long np, MODRF *modrf, double P_central,
 
     amPhase = modrf->amFreq*PIx2*dt + modrf->amPhase*PI/180;
     volt  = modrf->volt/(1e6*me_mev)*(1 + modrf->amMag*sin(amPhase));
-    if (tau=modrf->Q/omega0)
+    if ((tau=modrf->Q/omega0))
         volt *= sqrt(1 - exp(-dt/tau));
 
     for (ip=0; ip<np; ip++) {

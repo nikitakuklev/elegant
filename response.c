@@ -65,7 +65,6 @@ void setup_response_output(RESPONSE_OUTPUT *respOutput,
     ELEMENT_LIST *eptr;
     static char s[256], t[256], units[32];
     long i, j, *unique_name, sl_index;
-    FILE *fp;
 
     log_entry("setup_response_output");
     filename = compose_filename(filename, run->rootname);

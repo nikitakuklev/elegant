@@ -19,9 +19,8 @@ long ramped_rf_cavity(
     )
 {
     long ip, i_volt, i_phase, i_freq, i;
-    double PRatio, gamma1;
-    double P, dP, gamma, beta, dgamma, phase, length, volt;
-    double *coord, t, t0, Ts, omega, beta_i, beta_f;
+    double P, gamma, beta, dgamma, phase, length, volt;
+    double *coord, t, t0, omega, beta_i;
     long fixed_freq;
     static long been_warned = 0;
 #if DEBUG

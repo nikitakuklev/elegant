@@ -11,6 +11,10 @@
 #include "namelist.h"
 #include "SDDS.h"
 #include "rpn.h"
+#if defined(_WIN32)
+#include <float.h>
+#define isnan(x) _isnan(x)
+#endif
 
 #define malloc_verify(n) 1
 
@@ -1569,6 +1573,7 @@ extern long alpha_magnet_tracking(double **particle, VMATRIX *M, ALPH *alpha, lo
     double **accepted, double P_central, double z);
  
 /* prototypes for awe_beam13.c: */
+/*
 extern long get_particles(double ***particle, char **input, long n_input, long one_dump, long n_skip);
 extern void setup_awe_beam(BEAM *beam, NAMELIST_TEXT *nltext, RUN *run, VARY *control,
     ERROR *errcon, OPTIM_VARIABLES *optim, OUTPUT_FILES *output, LINE_LIST *beamline, long n_elements);
@@ -1577,6 +1582,9 @@ extern long run_awe_beam(RUN *run, VARY *control, ERROR *errcon,
 extern long new_awe_beam(BEAM *beam, RUN *run, VARY *control, OUTPUT_FILES *output, long flags);
 extern void finish_awe_beam(OUTPUT_FILES *output, RUN *run, VARY *control, ERROR *errcon,
     LINE_LIST *beamline, long n_elements, BEAM *beam);
+*/
+
+/*prototypes for sdds_beam.c */
 extern void adjust_arrival_time_data(double **coord, long np, double Po);
  
 /* prototypes for bend_matrix6.c: */
@@ -1789,6 +1797,7 @@ extern void do_save_lattice(NAMELIST_TEXT *nl, RUN *run, LINE_LIST *beamline);
 void print_with_continuation(FILE *fp, char *s, long endcol);
 void change_defined_parameter_values(char **elem_name, long *param_number, long *type, double *value, long n_elems);
 void change_defined_parameter(char *elem_name, long param_number, long type, double value, char *valueString, unsigned long mode);
+extern void delete_matrix_data(LINE_LIST *beamline);
 
 /* prototypes for limit_amplitudes4.c: */
 extern long rectangular_collimator(double **initial, RCOL *rcol, long np, double **accepted, double z, double P_central);
@@ -1827,6 +1836,7 @@ extern void unknown_parameter(char *parameter, char *element, char *type_name, c
 extern void parse_element(char *p_elem, PARAMETER *parameter, long n_params,
     char *string, ELEMENT_LIST *eptr, char *type_name);
 extern void parse_pepper_pot(PEPPOT *peppot, FILE *fp, char *name);
+extern long set_max_name_length(long length);
  
 /* prototypes for malign_mat.c: */
 extern void misalign_matrix(VMATRIX *M, double dx, double dy, double dz, double bend_angle);
@@ -1873,7 +1883,9 @@ extern double get_reference_phase(long phase_ref, double phase0);
 /* prototypes for print_line2.c: */
 extern void print_line(FILE *fp, LINE_LIST *lptr);
 extern void print_elem_list(FILE *fp, ELEMENT_LIST *eptr);
- 
+extern void print_elem(FILE *fp, ELEMENT_LIST *eptr);
+extern void print_elem_names(FILE *fp, ELEMENT_LIST *eptr);
+
 /* prototypes for quad_matrix3.c: */
 extern VMATRIX *quadrupole_matrix(double K1, double l, long maximum_order, double tilt, double ffringe, double fse);
 extern VMATRIX *quad_fringe(double l, double ko, long order, long reverse, double fse);
@@ -1955,7 +1967,7 @@ long polynomial_kicks(double **particle, long n_part, KPOLY *kpoly, double p_err
     double **accepted, double z_start);
 
 /* prototypes for ramp_p.c */
-long ramp_momentum(double **coord, long np, RAMPP *rampp, double *P_central, long pass);
+void ramp_momentum(double **coord, long np, RAMPP *rampp, double *P_central, long pass);
 
 /* prototypes for ramped_rfca.c */
 long ramped_rf_cavity(double **part, long np, RAMPRF *ramprf, double P_central, 
@@ -2085,6 +2097,31 @@ extern void do_watch_FFT(double **data, long n_data, long slot, long window_code
 extern void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long particles, long step);
 extern void dump_centroid(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, long n_elements, long bunch,
                           double p_central);
+extern void dump_phase_space(SDDS_TABLE *SDDS_table, double **particle, long particles, long step, double Po);
+extern void dump_sigma(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, long n_elements, long step,
+                double p_central);
+extern void doSASEFELAtEndOutput(SASEFEL_OUTPUT *sasefelOutput, long step);
+extern void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long particles, 
+                         double Po, double charge);
+extern void setupSASEFELAtEnd(NAMELIST_TEXT *nltext, RUN *run, OUTPUT_FILES *output_data);
+extern void storeSASEFELAtEndInRPN(SASEFEL_OUTPUT *sasefelOutput);
+extern void SDDS_CentroidOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row, char *contents, char *command_file, char *lattice_file, char *caller);
+extern void SDDS_SigmaOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row,
+                           char *command_file, char *lattice_file, char *caller);
+extern void readErrorMultipoleData(MULTIPOLE_DATA *multData,
+                               char *multFile);
+extern void set_up_histogram(HISTOGRAM *histogram, RUN *run);
+extern long track_through_tubend(double **part, long n_part, TUBEND *tubend,
+                          double p_error, double Po, double **accepted,
+                          double z_start);
+extern void setup_sdds_beam(BEAM *beam,NAMELIST_TEXT *nltext,RUN *run, VARY *control,ERROR *errcon,OPTIM_VARIABLES *optim,OUTPUT_FILES *output,LINE_LIST *beamline,long n_elements);
+extern long new_sdds_beam(BEAM *beam,RUN *run,VARY *control,OUTPUT_FILES *output,long flags);
+extern void dumpLatticeParameters(char *filename, RUN *run, LINE_LIST *beamline);
+extern void do_fit_trace_data(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
+extern void compute_offsets();
+extern void convert_to_xorbit(char *outputfile, LINE_LIST *beamline, long flip_k, 
+                    char *header_file, char *ender_file);
+extern void finishLatticeParametersFile();
 
 extern void doSubprocessCommand(char *command);
 void run_subprocess(NAMELIST_TEXT *nltext, RUN *run);

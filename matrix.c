@@ -295,7 +295,7 @@ void track_particles(double **final, VMATRIX *M, double  **initial, long n_part)
                 if (!(Ti  = T[i]+5))
                     bomb("NULL T[i] pointer (track_particles)", NULL);
                 for (j=5; j>=0; j--, Ri--, Ti--) {
-                    if (coord_j= *(ini_k=ini+j)) {
+                    if ((coord_j= *(ini_k=ini+j))) {
                         sum1 = *Ri;
                         if (!(Tij  = *Ti+j))
                             bomb("NULL T[i][j] pointer (tracking_particles)", NULL);

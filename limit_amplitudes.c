@@ -1,6 +1,7 @@
 /* Copyright 1994 by Michael Borland and Argonne National Laboratory,
  * all rights reserved.
  */
+#include <ctype.h>
 #include "track.h"
 #include "mdb.h"
 

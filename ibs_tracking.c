@@ -20,8 +20,7 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
                ELEMENT_LIST *element, RADIATION_INTEGRALS *radIntegrals0,
                CHARGE *charge)
 {
-  double gamma, emitx, emity, sigmaDelta, sigmaz, emitx0, sigmaDelta0;
-  double transSRdampRate, longSRdampRate;
+  double gamma, emitx, emity, sigmaDelta, sigmaz;
   double xGrowthRate, yGrowthRate, zGrowthRate;
   double sigmax, sigmay, sigmat, emitl, dT;
   RADIATION_INTEGRALS radIntegrals;

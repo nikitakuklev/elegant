@@ -22,7 +22,7 @@ void check_duplic_elem(
 {
   char *new_name;
   long i, comparison, hi, lo, mid;
-  ELEMENT_LIST *elem, *insertionPoint, *newPred, *newSucc, *elast;
+  ELEMENT_LIST *elem, *insertionPoint, *elast;
   ELEMENT_LIST **elemArray = NULL;
 
   if (!elem0 || !*elem0)

@@ -147,7 +147,7 @@ void add_error_element(ERROR *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beamline
         if (strchr(name, '-'))
             name = expand_ranges(name);
         str_toupper(name);
-        while (context=wfind_element(name, &context, &(beamline->elem))) {
+        while ((context=wfind_element(name, &context, &(beamline->elem)))) {
             if (i_start!=n_items && duplicate_name(errcon->name+i_start, n_items-i_start, context->name))
                 continue;
             errcon->name              = trealloc(errcon->name, sizeof(*errcon->name)*(n_items+1));
@@ -285,12 +285,10 @@ double parameter_value(char *pname, long elem_type, long param, LINE_LIST *beaml
                 dresult = *((double*)(p_elem+entity_description[elem_type].parameter[param].offset));
                 log_exit("parameter_value");
                 return(dresult);
-                break;
             case IS_LONG:
                 lresult = *((long*)(p_elem+entity_description[elem_type].parameter[param].offset));
                 log_exit("parameter_value");
                 return((double)lresult);
-                break;
             case IS_STRING:
             default:
                 bomb("unknown/invalid variable quantity", NULL);
@@ -308,16 +306,13 @@ double perturbation(double xamplitude, double xcutoff, long xerror_type)
     switch (xerror_type) {
         case UNIFORM_ERRORS:
             return(2*xamplitude*(random_1(0)-0.5));
-            break;
         case GAUSSIAN_ERRORS:
             return(gauss_rn_lim(0.0, xamplitude, xcutoff, random_1));
-            break;
         case PLUS_OR_MINUS_ERRORS:
             /* return either -x-1 or x-1, which is added to 1 in the calling routine
              * (since these are implemented as fractional errors)
              */
             return(xamplitude*(random_1(0)>0.5?1.0:-1.0) - 1);
-            break;
         default:
             bomb("unknown error type in perturbation()", NULL);
             exit(1);

@@ -6,6 +6,7 @@
  * Michael Borland, 1989-1994
  */
 #include "mdb.h"
+#include "mdbsun.h"
 #include "track.h"
 #include "elegant.h"
 #include "scan.h"
@@ -13,7 +14,7 @@
 #include "match_string.h"
 #include <signal.h>
 #include <time.h>
-#ifdef UNIX
+#if defined(UNIX) || defined(_WIN32)
 #include <malloc.h>
 #endif
 
@@ -128,7 +129,7 @@ void initialize_structures(RUN *run_conditions, VARY *run_control, ERROR *error_
 
 #define NAMELIST_BUFLEN 4096
 
-main(argc, argv)
+int main(argc, argv)
 int argc;
 char **argv;
 {
@@ -151,29 +152,30 @@ char **argv;
     char *saved_lattice = NULL;
     long correction_setuped, run_setuped, run_controled, error_controled, beam_type;
     long do_chromatic_correction = 0, do_twiss_output = 0, fl_do_tune_correction = 0;
-    long do_closed_orbit = 0, do_matrix_output = 0, do_response_output = 0, step;
+    long do_closed_orbit = 0, do_matrix_output = 0, do_response_output = 0;
     long last_default_order = 0, new_beam_flags, links_present, twiss_computed = 0;
     double *starting_coord;
     long namelists_read = 0, failed;
-    char buffer[16384];
                     
-#if defined(UNIX)
-    signal(SIGHUP, traceback_handler);
+#if defined(UNIX) || defined(_WIN32)
     signal(SIGINT, traceback_handler);
-    signal(SIGQUIT, traceback_handler);
     signal(SIGILL, traceback_handler);
     signal(SIGABRT, traceback_handler);
-    signal(SIGTRAP, traceback_handler);
     signal(SIGFPE, traceback_handler);
-    signal(SIGBUS, traceback_handler);
     signal(SIGSEGV, traceback_handler);
+#endif
+#if defined(UNIX)
+    signal(SIGHUP, traceback_handler);
+    signal(SIGQUIT, traceback_handler);
+    signal(SIGTRAP, traceback_handler);
+    signal(SIGBUS, traceback_handler);
 #endif
     
     log_entry("main");
     compute_offsets();
     set_max_name_length(12);
 
-#if defined(VAX_VMS) || defined(UNIX)
+#if defined(VAX_VMS) || defined(UNIX) || defined(_WIN32)
     init_stats();
 #endif
 
@@ -303,7 +305,7 @@ char **argv;
             strcpy(s, inputfile);
             if (rootname==NULL) {
                 clean_filename(s);
-                if (ptr=strrchr(s, '.'))
+                if ((ptr=strrchr(s, '.')))
                     *ptr = 0;
                 cp_str(&rootname, s);
                 run_conditions.rootname = rootname;
@@ -329,7 +331,7 @@ char **argv;
             /* parse the lattice file and create the beamline */
             run_conditions.lattice = compose_filename(saved_lattice, rootname);
             beamline = get_beamline(lattice, use_beamline, p_central);
-            fprintf(stderr, "length of beamline %s per pass: %21.15le m\n", beamline->name, beamline->revolution_length);
+            fprintf(stderr, "length of beamline %s per pass: %21.15e m\n", beamline->name, beamline->revolution_length);
             lattice = saved_lattice;
             
             /* output the magnet layout in mpl format */
@@ -562,7 +564,7 @@ char **argv;
             concat_order = 0;
             tracking_updates = 1;
             concat_order = print_statistics = p_central = 0;
-#if defined(VAX_VMS) || defined(UNIX)
+#if defined(VAX_VMS) || defined(UNIX) || defined(_WIN32)
             report_stats(stderr, "statistics: ");
             fflush(stderr);
 #endif
@@ -747,7 +749,7 @@ char **argv;
             concat_order = 0;
             tracking_updates = 1;
             concat_order = print_statistics = p_central = 0;
-#if defined(VAX_VMS) || defined(UNIX)
+#if defined(VAX_VMS) || defined(UNIX) || defined(_WIN32)
             report_stats(stderr, "statistics: ");
             fflush(stderr);
 #endif
@@ -821,7 +823,7 @@ char **argv;
             concat_order = 0;
             tracking_updates = 1;
             concat_order = print_statistics = p_central = 0;
-#if defined(VAX_VMS) || defined(UNIX)
+#if defined(VAX_VMS) || defined(UNIX) || defined(_WIN32)
             report_stats(stderr, "statistics: ");
             fflush(stderr);
 #endif
@@ -909,12 +911,13 @@ char **argv;
       fclose(fopen(semaphore_file, "w"));
     }
     log_exit("main");
-    exit(0);
+    return(0);
     }
 
 double find_beam_p_central(char *input)
 {
     bomb("the expand_for feature is disabled at this time", NULL);
+    return(1);
     }
 
 #ifdef SUNOS4
@@ -930,7 +933,7 @@ void check_heap()
     else
         fputs("errors, detected.", stderr);
     fflush(stderr);
-#if defined(VAX_VMS) || defined(UNIX)
+#if defined(VAX_VMS) || defined(UNIX) || defined(_WIN32)
     report_stats(stderr, "statistics: ");
     fflush(stderr);
 #endif
@@ -979,7 +982,7 @@ void center_beam_on_coords(double **part, long np, double *coord, long center_dp
 void do_print_dictionary(char *filename, long latex_form)
 {
   FILE *fp;
-  long i, j;
+  long i;
 
   if (!filename)
     bomb("filename invalid (do_print_dictionary)", NULL);

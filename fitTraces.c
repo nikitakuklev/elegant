@@ -3,6 +3,10 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.8  1999/07/01 01:52:38  borland
+ * Made computation of sigma matrix for sigma and final output files consistent.
+ * In both cases, now remove the centroid contributions.
+ *
  * Revision 1.7  1998/08/25 23:54:24  borland
  * Latest version.  Still has trouble with real SR data.
  *
@@ -119,18 +123,16 @@ MAT *m_diag( VEC *diagElements, MAT *A ) {
 
 void do_fit_trace_data(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 {
-  double result;
-  long i, j, iteration, subIteration, parameters, readbacks, outputRow;
-  long iCoord, iBPM, iTrace, iUserParam, offset, goodSteps;
+  long i, iteration, subIteration, parameters, readbacks, outputRow;
+  long iBPM, iTrace, goodSteps;
   double rmsError, lastRmsError;
   FIT_TRACE_PARAMETERS *fitParam, *bpmCalParam;
   FIT_TRACE_DATA *traceData;
-  MAT *D, *Dt, *DtD, *DtDInv, *DtDInvDt, *readbackVector, *paramVector;
-  MAT *D0, *Dt0, *DtD0, *DtDInv0, *DtDInvDt0, *readbackVector0, *paramVector0;
+  MAT *D, *readbackVector, *paramVector;
+  MAT *D0, *paramVector0;
   double *lastParameterValues, *startParameterValues, minSV, maxSV;
   FIT_OUTPUT_DATA *outputData;
-  double rmsErrorDelta[3];
-  long iMin, iMax, pass=0, passCount;
+  long pass=0, passCount;
   
   /* process namelist text */
   process_namelist(&fit_traces, nltext);
@@ -170,7 +172,7 @@ void do_fit_trace_data(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
   for (iTrace=0; iTrace<traceData->traces; iTrace++) {
     fprintf(stderr, "Trace %ld: ", iTrace);
     for (iBPM=0; iBPM<traceData->BPMs; iBPM++) {
-      fprintf(stderr, "(%10.3le, %10.3le)  ",
+      fprintf(stderr, "(%10.3e, %10.3e)  ",
               traceData->x[iTrace][iBPM],
               traceData->y[iTrace][iBPM]);
     }
@@ -253,7 +255,7 @@ void do_fit_trace_data(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
           break;
         lastRmsError = rmsError;
       }
-      fprintf(stderr, "RMS error is %le after trace optimization  %ld passes\n", 
+      fprintf(stderr, "RMS error is %e after trace optimization  %ld passes\n", 
               rmsError, passCount);
     }
     
@@ -299,10 +301,10 @@ void do_fit_trace_data(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
       lastRmsError = rmsError;
     } while (--subIteration > 0);
     rmsError = fit_trace_findReadbackErrors(readbackVector, traceData, beamline, run);
-    fprintf(stderr, "RMS error is %le after full  optimization  %ld passes,  C=%le\n", 
+    fprintf(stderr, "RMS error is %e after full  optimization  %ld passes,  C=%e\n", 
             rmsError, passCount, convergence_factor);
     if (use_SVD) 
-      fprintf(stderr, "  min/max inverse SVs: %le %le\n",
+      fprintf(stderr, "  min/max inverse SVs: %e %e\n",
               minSV, maxSV);
     if (rmsError<target)
       break;
@@ -708,7 +710,7 @@ FIT_TRACE_PARAMETERS *fit_traces_readFitParametersFile
     elementType = ftp->target[i]->type;
     if ((parameterIndex=confirm_parameter(ftp->parameterName[i], elementType))<0) {
       fprintf(stderr, "Error: element %s does not have a parameter called %s\n", 
-              ftp->parameterName[i]);
+              ftp->elementName[i], ftp->parameterName[i]);
       exit(1);
     }
     if (entity_description[elementType].parameter[parameterIndex].type!=IS_DOUBLE) {
@@ -761,7 +763,7 @@ FIT_TRACE_DATA *fit_traces_readTraceDataFile
    ) 
 {
   SDDS_TABLE SDDSin;
-  long maxTraces, iTrace, indexFirst, iTraceFirst;
+  long maxTraces, iTrace, indexFirst;
   long iBPMFirst, iBPM;
   FIT_TRACE_DATA *trace;
   char **BPMName;
@@ -1032,7 +1034,7 @@ double fit_trace_takeStep
    )
 {
   double rmsError, factor;
-  long iTrace, iCoord, offset, iUserParam, iBPM, checkLimits, i, j;
+  long iTrace, iCoord, offset, iUserParam, checkLimits, i;
   FIT_TRACE_PARAMETERS fitParam0 = {
     0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
   static MAT *DInv=NULL, *U=NULL, *V=NULL, *T=NULL, *S=NULL;
@@ -1158,7 +1160,7 @@ double fit_trace_takeStep
   }
   
   if (factor<1) {
-    fprintf(stderr, "changes reduced by factor %lf to stay within change limits\n",
+    fprintf(stderr, "changes reduced by factor %f to stay within change limits\n",
             factor);
     sm_mlt(factor, paramVector, paramVector);
   } else if (factor>1) {

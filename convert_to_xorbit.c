@@ -25,13 +25,10 @@ void convert_to_xorbit(char *outputfile, LINE_LIST *beamline, long flip_k,
     BEND  *bend;
     HCOR  *hcor;
     VCOR  *vcor;
-    HMON  *hmon;
-    VMON  *vmon;
-    MONI  *moni;
     DRIFT *drift;
     MULT *mult;
-    char s[100], output[300];
-    int count, quad_sign;
+    char s[100];
+    int quad_sign;
     FILE *fpi, *fp;
     double length;
 

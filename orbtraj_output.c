@@ -43,8 +43,6 @@ static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
 
 void setup_orb_traj_output(char *filename, char *mode, RUN *run)
 {
-    static char description[SDDS_MAXLINE], contents[SDDS_MAXLINE];
-    long i;
     char s[200];
 
     log_entry("setup_orb_traj_output");

@@ -39,7 +39,6 @@ void setup_aperture_search(
     VARY *control
     )
 {
-    char t[1024];
 
     log_entry("setup_aperture_search");
 
@@ -141,10 +140,9 @@ long do_aperture_search_mp(
 {
     double **coord, **accepted;
     double y, dx, dy;
-    double **xy_left, **xy_right, **xy_data;
+    double **xy_left, **xy_right;
     long *found;
     long n_left, n_right, n_survived;
-    char s[100];
     double p_central;
     long n_trpoint, ix, iy, is, ny1;
     long effort, n_stable;
@@ -406,10 +404,9 @@ long do_aperture_search_sp(
 {    
     double **coord;
     double x, y, dx, dy;
-    double **xy_left, **xy_right, **xy_data;
+    double **xy_left, **xy_right;
     long n_left, n_right;
     double last_x_left, last_x_right, x1, x2;
-    char s[100];
     double p_central;
     long n_trpoint, ix, iy, is;
     long effort, n_stable;

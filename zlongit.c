@@ -58,7 +58,7 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
     static long max_np = 0;
     double *Ifreq, *Vfreq, *Z;
     long ip, ib, nb, n_binned, nfreq, iReal, iImag;
-    double factor, tmin, tmax, tmean, dt, dt1, P, dgam, gam, frac;
+    double factor, tmin, tmean, dt, dt1, dgam;
 
     set_up_zlongit(zlongit, run, i_pass, np, charge);
     nb = zlongit->n_bins;
@@ -145,7 +145,6 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
     Vtime = Vfreq;
 
     if (zlongit->SDDS_wake_initialized && zlongit->wakes) {
-        char s[100];
         /* wake potential output */
         if (zlongit->wake_interval<=0 || (i_pass%zlongit->wake_interval)==0) {
             if (!SDDS_StartTable(&zlongit->SDDS_wake, nb)) {
@@ -244,7 +243,7 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
             bomb("can't specify both broad_band impedance and Z(f) files for ZLONGIT element", NULL);
         if (2/(zlongit->freq*zlongit->bin_size)<10) {
           /* want maximum frequency in Z > 10*fResonance */
-          fprintf(stderr, "ZLONGIT has excessive bin size for given frequency\n", NULL);
+          fprintf(stderr, "ZLONGIT has excessive bin size for given frequency\n");
           zlongit->bin_size = 0.2/zlongit->freq;
           fprintf(stderr, "  Bin size adjusted to %e\n", zlongit->bin_size);
         }
@@ -261,7 +260,7 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
         }
         df = 1/(zlongit->n_bins*zlongit->bin_size)/(zlongit->freq);
         nfreq = zlongit->n_bins/2 + 1;
-        fprintf(stderr, "ZLONGIT has %ld frequency points with df=%le\n",
+        fprintf(stderr, "ZLONGIT has %ld frequency points with df=%e\n",
                 nfreq, df);
         zlongit->Z = tmalloc(sizeof(*(zlongit->Z))*zlongit->n_bins);
         zlongit->Z[0] = 0;
@@ -342,7 +341,7 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
             fprintf(stderr, "consider padding the impedance spectrum\n");
             exit(1);
             }
-        fprintf(stderr, "Using Nb=%ld and dt=%le in ZLONGIT\n",
+        fprintf(stderr, "Using Nb=%ld and dt=%e in ZLONGIT\n",
                 zlongit->n_bins, zlongit->bin_size);
         zlongit->Z = tmalloc(sizeof(*zlongit->Z)*2*zlongit->n_bins);
         for (i=0; i<n_spect; i++) {

@@ -14,7 +14,6 @@
 
 void do_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 {
-    long i;
 
     log_entry("do_optimization_setup");
 

@@ -9,6 +9,10 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.8  1999/07/02 15:57:55  borland
+ * Replaced all instances of the "HUGE" macro with "DBL_MAX".  The former
+ * is only defined on Solaris.
+ *
  * Revision 1.7  1998/12/23 19:47:51  borland
  * Improved robustness of error handling when, for example, the orbit or
  * tunes can't be found.  By default, this is turned off, but can be
@@ -140,9 +144,6 @@ int make_tweeked_data_set(MATRIX *s2, double *sigma, double error_level, double 
 long SetSigmaData(SDDS_DATASET *SDDSout, char *dataName, MATRIX *s2, char *fitName, double *fitSigSqr, 
                   long configs);
 
-static char *x_width_symbol = "BS$bx$n (m)";
-static char *y_width_symbol = "BS$by$n (m)";
-
 #define GAUSSIAN_ERRORS 0
 #define UNIFORM_ERRORS  1
 #define N_ERROR_TYPES   2
@@ -159,17 +160,15 @@ char *limit_option[N_LIMIT_OPTIONS] = {
 
 #define MAX_N_TRIES 100
 
-main(
+int main(
      int argc,
      char **argv
      )
 {
   SDDS_TABLE SDDSin, SDDSout;
-  long outputRowLimit;
   double *R11;        /* R11 matrix element for ith configuration */
   double *R12;        /* R12 matrix element for ith configuration */
   double *etax, *etay;  /* dispersion at measurement point, if provided */
-  double *data;       /* utility pointer */
   double *sigmax, *uncertx;               /* sigma in x plane for ith configuration */
   double *R33, *R34, *sigmay, *uncerty;   /* similar data for y plane */
   int n_configs, i_config;
@@ -192,7 +191,6 @@ main(
   double emity_max, emity_min;
   double emitx_sum, emity_sum;
   double emitx2_sum, emity2_sum;
-  double emitx_sd, emity_sd;
   double error_level, x_error_level, y_error_level;
   double md_x, md_y, *dev_limit, md;
   int i_dev, n_dev_limits;
@@ -816,7 +814,7 @@ main(
           S11 = Sx->a[0][0]; sS11 = sqrt(sSx->a[0][0]);
           S12 = Sx->a[1][0]; sS12 = sqrt(sSx->a[1][1]);
           S22 = Sx->a[2][0]; sS22 = sqrt(sSx->a[2][2]);
-          if (emitx = sqrt(S11*S22 - sqr(S12))) 
+          if ((emitx = sqrt(S11*S22 - sqr(S12)))) 
             s_emitx = propagate_errors_for_emittance(Sx->a, sSx->a);
           else
             s_emitx = 0;
@@ -850,7 +848,7 @@ main(
           S33 = Sy->a[0][0]; sS33 = sqrt(sSy->a[0][0]);
           S34 = Sy->a[1][0]; sS34 = sqrt(sSy->a[1][1]);
           S44 = Sy->a[2][0]; sS44 = sqrt(sSy->a[2][2]);
-          if (emity = sqrt(S33*S44 - sqr(S34))) 
+          if ((emity = sqrt(S33*S44 - sqr(S34)))) 
             s_emity = propagate_errors_for_emittance(Sy->a, sSy->a);
           else
             s_emity = 0;
@@ -902,7 +900,7 @@ main(
   if (!SDDS_Terminate(&SDDSin) || !SDDS_Terminate(&SDDSout))
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
 
-  exit(0);
+  return(0);
 }
 
 void print_fit(
@@ -924,7 +922,7 @@ void print_fit(
 
   for (i=0; i<n_pts; i++) 
     if (sigma2_fit[i]>=0)
-      fprintf(fp, "%le %le\n", variable_data[i], sqrt(sigma2_fit[i]+sqr(resol)));
+      fprintf(fp, "%e %e\n", variable_data[i], sqrt(sigma2_fit[i]+sqr(resol)));
 
   fclose(fp);
 }
@@ -1193,7 +1191,6 @@ long SetSigmaData(SDDS_DATASET *SDDSout, char *dataName, MATRIX *s2,
                   char *fitName, double *fitSigSqr, long configs)
 {
   static double *buffer = NULL;
-  double *dataSqr;
   long i;
 
   if (!(buffer=SDDS_Realloc(buffer, configs*sizeof(*buffer))))

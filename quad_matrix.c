@@ -98,7 +98,7 @@ VMATRIX *quadrupole_matrix(double K1, double l, long maximum_order,
             }
         }
     
-    if (l = ltot*ffringe/2) {
+    if ((l = ltot*ffringe/2)) {
         VMATRIX *Mfringe, *Mtot, *tmp;
 
         Mtot = tmalloc(sizeof(*Mtot));

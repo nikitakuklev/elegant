@@ -4,18 +4,26 @@
  *
  */
 #include "mdb.h"
+#if defined(_WIN32)
+#include <float.h>
+#define isnan(x) _isnan(x)
+#else
+#if !defined(linux)
 #include <sunmath.h>
-
+#endif
+#endif
 double eacc;
 double f1;
 
-main()
+long gaussianQuadrature(double(*fn)(), double a, double b, long n, double err, double *result);
+
+int main()
 {
   double a, b, err, factor, eaccFinal;
   long i, n, limit, evals, decades, decade;
   double fn(), result, lastResult;
   double fn1(double x);
-  char s[100], filename[500];
+  char filename[500];
   FILE *fp;
   
   b = PI/2;
@@ -33,13 +41,13 @@ main()
     exit(1);
   }
   fprintf(fp, "SDDS1\n");
-  fprintf(fp, "&parameter name=IntegError, type=double, fixed_value=%le &end\n",
+  fprintf(fp, "&parameter name=IntegError, type=double, fixed_value=%e &end\n",
           err);
   fprintf(fp, "&parameter name=NInitial, type=long, fixed_value=%ld &end\n",
           n);
-  fprintf(fp, "&parameter name=ZetaStart, type=double, fixed_value=%le &end\n",
+  fprintf(fp, "&parameter name=ZetaStart, type=double, fixed_value=%e &end\n",
           eacc);
-  fprintf(fp, "&parameter name=ZetaEnd, type=double, fixed_value=%le &end\n",
+  fprintf(fp, "&parameter name=ZetaEnd, type=double, fixed_value=%e &end\n",
           eaccFinal);
   fputs("&column name=Evaluations type=long &end\n", fp);
   fputs("&column name=zeta type=double &end\n", fp);
@@ -59,9 +67,9 @@ main()
       evals = gaussianQuadrature(fn, a, b, n, err, &result);
       if (result==0)
         break;
-      fprintf(fp, "%ld %.16le %.16le ", evals, eacc, 0.5*result-1.5*exp(-eacc));
+      fprintf(fp, "%ld %.16e %.16e ", evals, eacc, 0.5*result-1.5*exp(-eacc));
       evals = gaussianQuadrature(fn1, 0.0, PI/2, n, err, &result);
-      fprintf(fp, "%ld %.16le \n", evals, result);
+      fprintf(fp, "%ld %.16e \n", evals, result);
       fflush(fp);
       eacc *= factor;
       if (eacc>eaccFinal)
@@ -77,6 +85,7 @@ main()
       break;
   }
   fclose(fp);
+  return(0);
 }
   
 double fn(double x)
@@ -99,7 +108,7 @@ double fn(double x)
 double fn1(double x)
 {
   double tanx, cosx, tanxp1;
-  double result, term;
+  double result;
   tanx = tan(x);
   cosx = cos(x);
   if (isnan(tanx) || isinf(tanx))

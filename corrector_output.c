@@ -44,9 +44,6 @@ static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
 
 void setup_corrector_output(char *filename, RUN *run)
 {
-    static char description[SDDS_MAXLINE], contents[SDDS_MAXLINE];
-    long i;
-
     log_entry("setup_corrector_output");
     if (!SDDS_cor_initialized) {
         SDDS_cor_initialized = 1;

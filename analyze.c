@@ -151,7 +151,6 @@ void do_transport_analysis(
     static MATRIX *R, *Rc;
     double p_central, beta, tune;
     long n_track, n_trpoint, i, j, effort, index;
-    char s[100];
     double sin_phi, cos_phi, det;
     static double *orbit_p, *orbit_m;
     TRAJECTORY *clorb;

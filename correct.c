@@ -7,6 +7,7 @@
  * Michael Borland, 1991. 
  */
 #include "mdb.h"
+#include "mdbsun.h"
 #include "track.h"
 #include "match_string.h"
 #include "correctDefs.h"
@@ -89,8 +90,6 @@ void correction_setup(
     )
 {
 #include "correct.h"
-    long t_mon;
-    static long first_call = 1;
     char *item;
 
     log_entry("correction_setup");
@@ -869,7 +868,7 @@ long global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
     long i_moni, i_corr;
     long n_part, i, tracking_flags, sl_index;
     double **particle;
-    double p, x, y, reading, tilt, fraction, minFraction, param, change;
+    double p, x, y, reading, fraction, minFraction, param, change;
 
     log_entry("global_trajcor_plane");
 
@@ -1016,6 +1015,7 @@ long global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
         free_zarray_2d((void**)particle, beam->n_to_track, 7);
     particle = NULL;
     log_exit("global_trajcor_plane");
+	return(1);
     }
 
 void one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **traject, long n_iterations, RUN *run,
@@ -1027,7 +1027,7 @@ void one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TR
     long i_moni, i_corr, sl_index;
     long n_part, i, tracking_flags;
     double **particle, param, fraction;
-    double p, x, y, reading, tilt;
+    double p, x, y, reading;
     
     log_entry("one_to_one_trajcor_plane");
     
@@ -1159,7 +1159,6 @@ ELEMENT_LIST *find_useable_moni_corr(long *nmon, long *ncor, long **mon_index,
     ELEMENT_LIST *corr, *moni, *start;
     long i_elem, moni_follows, corr_seen, index;
     long moni_type_1, moni_type_2;
-    char s[100];
 
     log_entry("find_useable_moni_corr");
 
@@ -1238,7 +1237,7 @@ ELEMENT_LIST *find_useable_moni_corr(long *nmon, long *ncor, long **mon_index,
                 }
             *ncor += 1;
             }
-        } while (corr=corr->succ);
+        } while ((corr=corr->succ));
 
     if (!recircs) {
         /* count all monitors with one or more correctors upstream and non-negative weight */
@@ -1453,7 +1452,7 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
     VMATRIX *M;
     long iteration, kick_offset;
     long i_moni, i_corr, i, sl_index;
-    double dp, x, y, reading, tilt;
+    double dp, x, y, reading;
     double last_rms_pos, best_rms_pos, rms_pos, corr_fraction;
     double fraction, minFraction, param, change;
     
@@ -2070,16 +2069,12 @@ long steering_corrector(ELEMENT_LIST *eptr)
     switch (eptr->type) {
         case T_HCOR:
             return(((HCOR*)eptr->p_elem)->steering);
-            break;
         case T_VCOR:
             return(((VCOR*)eptr->p_elem)->steering);
-            break;
         case T_HVCOR:
             return(((HVCOR*)eptr->p_elem)->steering);
-            break;
         default:
             return(-1);
-            break;
         }
     }
 
@@ -2097,16 +2092,13 @@ double noise_value(double xamplitude, double xcutoff, long xerror_type)
     switch (xerror_type) {
         case UNIFORM_ERRORS:
             return(2*xamplitude*(random_3(0)-0.5));
-            break;
         case GAUSSIAN_ERRORS:
             return(gauss_rn_lim(0.0, xamplitude, xcutoff, random_3));
-            break;
         case PLUS_OR_MINUS_ERRORS:
             /* return a number on [-x-1, x-1]), which is added to 1 in the calling routine
              * (since these are implemented as fractional errors)
              */
             return(xamplitude*(random_3(0)>0.5?1.0:-1.0) - 1);
-            break;
         default:
             bomb("unknown error type in perturbation()", NULL);
             exit(1);
@@ -2201,15 +2193,13 @@ double getMonitorWeight(ELEMENT_LIST *elem)
     switch (elem->type) {
       case T_MONI:
         return ((MONI*)(elem->p_elem))->weight;
-        break;
       case T_HMON:
         return ((HMON*)(elem->p_elem))->weight;
-        break;
       case T_VMON:
         return ((VMON*)(elem->p_elem))->weight;
-        break;
         }
     bomb("invalid element type in getMonitorWeight()", NULL);
+	return(1);
     }
 
 double getMonitorCalibration(ELEMENT_LIST *elem, long coord)
@@ -2217,17 +2207,15 @@ double getMonitorCalibration(ELEMENT_LIST *elem, long coord)
     switch (elem->type) {
       case T_HMON:
         return ((HMON*)(elem->p_elem))->calibration;
-        break;
       case T_VMON:
         return ((VMON*)(elem->p_elem))->calibration;
-        break;
       case T_MONI:
         if (coord)
             return ((MONI*)(elem->p_elem))->ycalibration;
         return ((MONI*)(elem->p_elem))->xcalibration;
-        break;
         }
     bomb("invalid element type in getMonitorCalibration()", NULL);
+	return(1);
     }
 
 void setMonitorCalibration(ELEMENT_LIST *elem, double calib, long coord)
@@ -2257,17 +2245,13 @@ double getCorrectorCalibration(ELEMENT_LIST *elem, long coord)
     switch (elem->type) {
       case T_HCOR:
         return ((HCOR*)(elem->p_elem))->calibration;
-        break;
       case T_VCOR:
         return ((VCOR*)(elem->p_elem))->calibration;
-        break;
       case T_HVCOR:
         if (coord)
             return ((HVCOR*)(elem->p_elem))->ycalibration;
         return ((HVCOR*)(elem->p_elem))->xcalibration;
-        break;
       default:
         return 1;
-        break;
         }
     }

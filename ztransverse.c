@@ -25,9 +25,9 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
   static double *time = NULL;            /* array to record arrival time of each particle */
   static double *pz = NULL;
   static long max_np = 0;
-  double *posIfreq, *Vfreq, *iZ, Vinterp;
-  long ip, ib, nb, n_binned, nfreq, iReal, iImag, plane, offset;
-  double factor, tmin, tmax, tmean, dt, dt1, P, dgam, gam, frac;
+  double *posIfreq, *Vfreq, *iZ;
+  long ib, nb, n_binned, nfreq, iReal, iImag, plane;
+  double factor, tmin, tmax, tmean, dt;
 #if defined(DEBUG)
   static long first_call = 1;
   FILE *fp;

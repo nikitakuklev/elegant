@@ -49,14 +49,13 @@ char *option[N_OPTIONS] = {
 #define SDDS_OUTPUT 5
 #define XORBIT_OUTPUT 6
 
-main(int argc, char **argv)
+int main(int argc, char **argv)
 {
     LINE_LIST *beamline;
     char *input, *output, *magnets;
-    long i, flip_k_signs, output_mode, charge;
+    long i, flip_k_signs, output_mode;
     char *header_file, *ender_file;
     double angle_tolerance;
-    long charge_sign;
     SCANNED_ARG *scanned;
     double quad_ap, sext_ap, p_cent;
 
@@ -222,7 +221,7 @@ main(int argc, char **argv)
         bomb("internal error--unknown output mode", NULL);
         break;
         }
-    exit(0);
+    return(0);
     }
 
 char *quoted_label(char *s)

@@ -6,6 +6,9 @@
  *
  * Michael Borland, 1992
  */
+#if !defined(_WIN32) && !defined(linux)
+#include <sunmath.h>
+#endif
 #include "mdb.h"
 #include "track.h"
 #include "chromDefs.h"
@@ -16,10 +19,7 @@ static long alter_defined_values;
 void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, CHROM_CORRECTION *chrom)
 {
     VMATRIX *M;
-    static long initial_call = 1;
-    ELEMENT_LIST *eptr, *elast, *context;
-    long i, n_elem, last_n_elem, count, K2_param;
-    MATRIX *C, *Ct, *CtC, *inv_CtC;
+    ELEMENT_LIST *eptr, *elast;
 #include "chrom.h"
     unsigned long unstable;
     
@@ -40,7 +40,7 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
     if (chrom->name)
         tfree(chrom->name);
     chrom->name = tmalloc(sizeof(*chrom->name)*(chrom->n_families=1));
-    while (chrom->name[chrom->n_families-1]=get_token(sextupoles))
+    while ((chrom->name[chrom->n_families-1]=get_token(sextupoles)))
         chrom->name = trealloc(chrom->name, sizeof(*chrom->name)*(chrom->n_families+=1));
     if ((--chrom->n_families)<1)
         bomb("too few sextupoles given for chromaticity correction", NULL);
@@ -118,8 +118,8 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
     double chromx, chromy;
     double chromx0, chromy0;
     double K2, *K2ptr;
-    ELEMENT_LIST *eptr, *elast, *context;
-    long i, n_elem, last_n_elem, count, K2_param;
+    ELEMENT_LIST *context;
+    long i, count, K2_param;
     MATRIX *C, *Ct, *CtC, *inv_CtC;
 
     m_alloc(&C, 2, chrom->n_families);
@@ -136,7 +136,7 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
     for (i=0; i<chrom->n_families; i++) {
         count = 0;
         context = NULL;
-        while (context=find_element(chrom->name[i], &context, beamline->elem_twiss)) {
+        while ((context=find_element(chrom->name[i], &context, beamline->elem_twiss))) {
             if (!count && !(K2_param=confirm_parameter("K2", context->type))) {
                 fprintf(stderr, "error: element %s does not have K2 parameter\n", 
                         context->name);
@@ -169,7 +169,7 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
             }
         count = 0;
         context = NULL;
-        while (context=find_element(chrom->name[i], &context, beamline->elem_twiss)) {
+        while ((context=find_element(chrom->name[i], &context, beamline->elem_twiss))) {
             if (!count && !(K2_param=confirm_parameter("K2", context->type))) {
                 fprintf(stderr, "error: element %s does not have K2 parameter\n", 
                         context->name);
@@ -296,7 +296,7 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
         for (i=0; i<chrom->n_families; i++) {
             context = NULL;
             count = 0;
-            while (context=find_element(chrom->name[i], &context, beamline->elem_twiss)) {
+            while ((context=find_element(chrom->name[i], &context, beamline->elem_twiss))) {
                 if (count==0 && (K2_param = confirm_parameter("K2", context->type))<0) {
                     fprintf(stderr, "error: element %s doesn't have K2 parameter\n",
                             context->name);
@@ -352,7 +352,7 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
     if (fp_sl && last_iteration) {
         for (i=0; i<chrom->n_families; i++) {
             context = NULL;
-            while (context=find_element(chrom->name[i], &context, beamline->elem_twiss)) {
+            while ((context=find_element(chrom->name[i], &context, beamline->elem_twiss))) {
               if (( K2_param = confirm_parameter("K2", context->type))<0)
                 bomb("confirm_parameter doesn't return offset for K2 parameter.\n", NULL);
               fprintf(fp_sl, "%ld %e %s\n", 

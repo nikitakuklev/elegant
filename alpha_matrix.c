@@ -125,7 +125,7 @@ VMATRIX *alpha_magnet_matrix(
     for (n=0; n<6; n++) {
         for (m=0; m<6; m++) {
             for (i=sum1=0; i<6; i++) {
-                if (uval1=U[n][i]) {
+                if ((uval1=U[n][i])) {
                     for (j=sum2=0; j<6; j++)
                         sum2 += R_[i][j]*U_1[j][m];
                     sum1 += sum2*uval1;
@@ -145,9 +145,9 @@ VMATRIX *alpha_magnet_matrix(
             for (m=0; m<6; m++) {
                 for (o=0; o<=m; o++) {
                     for (i=sum1=0; i<6; i++) {
-                        if (uval1=U[n][i]) {
+                        if ((uval1=U[n][i])) {
                             for (j=sum2=0; j<6; j++) {
-                                if (uval2 = uval1*U_1[j][m]) {
+                                if ((uval2 = uval1*U_1[j][m])) {
                                     for (k=0; k<=j; k++) 
                                         sum2 += T_[i][j][k]*U_1[k][o];
                                     sum1 += uval2*sum2; 
@@ -172,11 +172,11 @@ VMATRIX *alpha_magnet_matrix(
                 for (o=0; o<=m; o++) {
                     for (p=0; p<=o; p++) {
                         for (i=sum1=0; i<6; i++) {
-                            if (uval1=U[n][i]) {
+                            if ((uval1=U[n][i])) {
                                 for (j=0; j<6; j++) {
-                                    if (uval2 = uval1*U_1[j][m]) {
+                                    if ((uval2 = uval1*U_1[j][m])) {
                                         for (k=0; k<=j; k++) {
-                                            if (uval3 = uval2*U_1[k][o]) {
+                                            if ((uval3 = uval2*U_1[k][o])) {
                                                 for (l=sum2=0; l<=k; l++) 
                                                     sum2 += Q_[i][j][k][l]*U_1[l][p];
                                                 sum1 += uval3*sum2;

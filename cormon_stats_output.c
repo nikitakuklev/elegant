@@ -45,8 +45,6 @@ static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
 
 void setup_cormon_stats(char *filename, RUN *run)
 {
-    static char description[SDDS_MAXLINE], contents[SDDS_MAXLINE];
-    long i;
 
     log_entry("setup_cormon_stats");
 

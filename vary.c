@@ -47,7 +47,7 @@ void vary_setup(VARY *_control, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beam
                 PARAMETERS_ARE_STATIC, 0, 1, 0);
     
     /* copy data into run control structure */
-    if (_control->n_indices = n_indices) {
+    if ((_control->n_indices = n_indices)) {
         _control->index_limit = tmalloc(sizeof(*_control->index_limit)*_control->n_indices);
         fill_long_array(_control->index_limit, _control->n_indices, 0);
         _control->index       = tmalloc(sizeof(*_control->index)*_control->n_indices);
@@ -319,7 +319,7 @@ long vary_beamline(VARY *_control, ERROR *errcon, RUN *run, LINE_LIST *beamline)
                 fprintf(stderr, "%4ld ", _control->index[i]);
             fprintf(stderr, "\nvalues advanced: ");
             for (i=0; i<_control->n_elements_to_vary; i++)
-                fprintf(stderr, "%le ", _control->varied_quan_value[i]);
+                fprintf(stderr, "%e ", _control->varied_quan_value[i]);
             fprintf(stderr, "\n");
             assert_parameter_values(_control->element, _control->varied_param, _control->varied_type,
                 _control->varied_quan_value, _control->n_elements_to_vary, beamline);
@@ -575,16 +575,13 @@ long get_parameter_value(double *value, char *elem_name, long param_number, long
                 *value = *((double*)(p_elem+entity_description[type].parameter[param_number].offset));
                 log_exit("get_parameter_value");
                 return(1);
-                break;
             case IS_LONG:
                 *value = *((long*)(p_elem+entity_description[type].parameter[param_number].offset));
                 log_exit("get_parameter_value");
                 return(1);
-                break;
             case IS_STRING:
                 log_exit("get_parameter_value");
                 return(0);
-                break;
             default:
                 bomb("unknown/invalid variable quantity", NULL);
                 exit(1);

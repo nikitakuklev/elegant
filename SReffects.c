@@ -15,8 +15,8 @@ void track_SReffects(double **coord, long np, SREFFECTS *SReffects, double Po,
     long ip;
     double Fx, Fy, Fdelta, Ddelta, P, t;
     double gamma2Ratio, gammaRatio;
-    double Srxp, Sryp, Srdelta, rx, ry, rdelta, Sxp, Syp;
-    double xpEta, ypEta, ex, ey;
+    double Srxp, Sryp, Srdelta;
+    double xpEta, ypEta;
     double *part, beta;
     static long first = 1;
 

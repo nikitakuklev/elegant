@@ -8,6 +8,7 @@
  */
 
 #include "mdb.h"
+#include "mdbsun.h"
 #include "track.h"
 #include "matlib.h"
 

@@ -34,7 +34,32 @@
 void (*set_up_derivatives(void *field, long field_type, double *kscale, 
         double z_start, double *Z_end, double *tau_start, double **part, long n_part, 
         double Po, double *X_limit, double *Y_limit, double *accuracy,
-        long *n_steps))();
+        long *n_steps))(double *, double *, double);
+void derivatives_tmcf_mode(
+    double *qp,       /* derivatives w.r.t. tau */
+    double *q,        /* X,Y,Z,Px,Py,Pz */
+    double tau     
+    );
+void derivatives_ce_plates(
+    double *qp,       /* derivatives w.r.t. tau */
+    double *q,        /* X,Y,Z,Px,Py,Pz */
+    double tau 
+    );
+void derivatives_tw_plates(
+    double *qp,       /* derivatives w.r.t. tau */
+    double *q,        /* X,Y,Z,Px,Py,Pz */
+    double tau 
+    );
+void derivatives_tw_linac(
+    double *qp,       /* derivatives w.r.t. tau */
+    double *q,        /* X,Y,Z,Px,Py,Pz */
+    double tau 
+    );
+void derivatives_twmta(
+    double *qp,       /* derivatives w.r.t. tau */
+    double *q,        /* X,Y,Z,Px,Py,Pz */
+    double tau 
+    );
 double exit_function(double *qp, double *q, double phase);
 double *select_fiducial(double **part, long n_part, char *mode);
 void select_integrator(char *desired_method);
@@ -102,7 +127,7 @@ long motion(
     static double accuracy[6], tiny[6];
     double tolerance, hmax, hrec;
     double *coord;
-    long i_part, i_top, i, rk_return;
+    long i_part, i_top, rk_return;
     double kscale, *P, Po, gamma;
     static double gamma0, P0[3];
     long n_steps;
@@ -293,7 +318,7 @@ void (*set_up_derivatives(
     double *Y_limit,
     double *accuracy,
     long *n_steps
-    ))()
+    ))(double *, double *, double)
 {
     void derivatives_tm_mode(), derivatives_tmcf_mode(),
          derivatives_ce_plates(), derivatives_tw_plates(),
@@ -360,7 +385,6 @@ void (*set_up_derivatives(
             select_integrator(tmcf->method);
             log_exit("set_up_derivatives");
             return(derivatives_tmcf_mode);
-            break;
         case T_CEPL:
             cep = field;
             *kscale = 1./(c_mks*cep->ramp_time);
@@ -404,7 +428,6 @@ void (*set_up_derivatives(
             select_integrator(cep->method);
             log_exit("set_up_derivatives");
             return(derivatives_ce_plates);
-            break;
         case T_TWPL:
             twp = field;
             *kscale = 1./(c_mks*twp->ramp_time);
@@ -415,8 +438,8 @@ void (*set_up_derivatives(
                  * here also.
                  */
                 *kscale = twp->k = 1./(c_mks*twp->ramp_time);
+                twp->fiducial_part = fiducial = select_fiducial(part, n_part, twp->fiducial);
                 if (fiducial) {
-                    twp->fiducial_part = fiducial = select_fiducial(part, n_part, twp->fiducial);
                     Po = P_central*(1+fiducial[5]);
                     gamma = sqrt(1+sqr(Po));
                     Pz = Po*sqrt(1-sqr(fiducial[0])-sqr(fiducial[2]));
@@ -426,7 +449,7 @@ void (*set_up_derivatives(
                 else {
                     /* phase to v=c */
                     twp->tau0 = get_reference_phase((long)(twp->phase_reference+.5),
-                                                       -twp->k*cep->length/2 + z_start);
+                                                       -twp->k*twp->length/2 + z_start);
                     twp->fiducial_part = part[0];
                     }
                 }
@@ -456,7 +479,6 @@ void (*set_up_derivatives(
             select_integrator(twp->method);
             log_exit("set_up_derivatives");
             return(derivatives_tw_plates);
-            break;
         case T_TWLA:
             twla = (TW_LINAC*)field;
             radial_limit = 1;
@@ -510,7 +532,6 @@ void (*set_up_derivatives(
             output_impulse = output_impulse_tw_linac;
             log_exit("set_up_derivatives");
             return(derivatives_tw_linac);
-            break;
         case T_TWMTA:
             twmta = field;
             radial_limit = 0;
@@ -574,11 +595,11 @@ void (*set_up_derivatives(
             output_impulse = output_impulse_twmta;
             log_exit("set_up_derivatives");
             return(derivatives_twmta);
-            break;
         default:
             bomb("invalid mode type (set_up_derivatives", NULL);
             break;
         }
+	exit(1);
     }
 
 void derivatives_tm_mode(
@@ -819,9 +840,8 @@ void derivatives_tw_linac(
 
 void input_impulse_tw_linac(double *P, double *q)
 {
-    register double gamma, *Pp;
-    static double E[3], B[3];
-    double phase, X, Y, Z, cos_phase, sin_phase;
+    register double gamma;
+    static double B[3];
     TW_LINAC *twla;
 
     /* gamma = sqrt(P^2+1) */
@@ -841,9 +861,8 @@ void input_impulse_tw_linac(double *P, double *q)
 
 void output_impulse_tw_linac(double *P, double *q)
 {
-    register double gamma, *Pp;
-    static double E[3], B[3];
-    double phase, X, Y, Z, cos_phase, sin_phase;
+    register double gamma;
+    static double B[3];
     TW_LINAC *twla;
 
     /* gamma = sqrt(P^2+1) */
@@ -928,9 +947,8 @@ void derivatives_twmta(
 
 void input_impulse_twmta(double *P, double *q)
 {
-    register double gamma, *Pp;
-    static double E[3], B[3];
-    double phase, X, Y, Z, cos_phase, sin_phase;
+    register double gamma;
+    static double B[3];
     TWMTA *twmta;
 
     /* gamma = sqrt(P^2+1) */
@@ -950,9 +968,8 @@ void input_impulse_twmta(double *P, double *q)
 
 void output_impulse_twmta(double *P, double *q)
 {
-    register double gamma, *Pp;
-    static double E[3], B[3];
-    double phase, X, Y, Z, cos_phase, sin_phase;
+    register double gamma;
+    static double B[3];
     TWMTA *twmta;
 
     /* gamma = sqrt(P^2+1) */
@@ -1044,7 +1061,7 @@ double *select_fiducial(double **part, long n_part, char *var_mode_in)
       else
         i_var = 5;
     } 
-    if (mode=get_token(var_mode)) {
+    if ((mode=get_token(var_mode))) {
       if ((fid_mode=match_string(mode, known_mode, N_KNOWN_MODES, 0))<0) {
         fputs("error: no known mode listed for fiducialization--must be one of:\n", stderr);
         for (i=0; i<N_KNOWN_MODES; i++)
@@ -1116,7 +1133,6 @@ double *select_fiducial(double **part, long n_part, char *var_mode_in)
       /* special case--return NULL pointer to indicate that phasing is to v=c */
       log_exit("select_fiducial");
       return(NULL);
-      break;
     default:
       bomb("apparent programming error in select_fiducial", NULL);
       break;
