@@ -1,0 +1,39 @@
+&run_setup
+	lattice = <kickLatticeFile>,
+	use_beamline = <beamline>
+	p_central = "{rpnl <momentum> mev /}",
+        magnets = %s.mag,
+        rootname = <mainDirectory>/<mainPrefix>PhaseSpaceTracking,
+        final = %s.fin,
+        semaphore_file = %s.done,
+        tracking_updates = 0
+&end
+
+&load_parameters
+        filename_list = " <parameterFileList>",
+        change_defined_values = 1,
+        allow_missing_elements = 1,
+        allow_missing_parameters = 1,
+        allow_missing_files = 1,
+&end
+
+&alter_elements name=*, type=*SBEN*, item=EDGE_ORDER, value=1 &end
+&alter_elements name=<offsetElement>, item=ON_PASS, value=0 &end
+&alter_elements name=<offsetElement>, item=D<otherPlane>, value=<otherCoord> &end
+
+&run_control
+        n_passes = <turns>,
+        n_indices = 1
+&end
+
+&vary_element name=<offsetElement>, item=D<offsetPlane>, 
+        index_number=0, index_limit=<sweepPoints>,
+        initial=<initialOffset>, final=<finalOffset>
+&end
+
+&bunched_beam
+&end
+
+&track
+&end
+
