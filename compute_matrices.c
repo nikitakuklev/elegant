@@ -366,6 +366,7 @@ VMATRIX *compute_matrix(
     RFCW *rfcw; 
     MATTER *matter; MALIGN *malign; MATR *matr; MODRF *modrf;
     CSRCSBEND *csrcsbend;
+    CSRDRIFT *csrdrift;
     long bend_flags;
     
     log_entry("compute_matrix");
@@ -699,6 +700,13 @@ VMATRIX *compute_matrix(
       case T_MATTER:
         matter = (MATTER*)elem->p_elem;
         elem->matrix = drift_matrix(matter->length, run->default_order);
+        break;
+      case T_CSRDRIFT:
+        csrdrift = (CSRDRIFT*)elem->p_elem;
+        if ((csrdrift->useOvertakingLength?1:0)+
+            (csrdrift->spread?1:0)+(csrdrift->attenuationLength>0?1:0)>1) 
+          bomb("Give one and only one of SPREAD, ATTENUATION_LENGTH, or USE_OVERTAKING_LENGTH for CSRDRIFT", NULL);
+        elem->matrix = drift_matrix(csrdrift->length, run->default_order);
         break;
       case T_KPOLY: case T_RFDF:  case T_RFTM:  case T_RMDF:  case T_TMCF: case T_CEPL:  case T_TWPL:  case T_TWLA:  
       case T_TWMTA: case T_RCOL:  case T_PEPPOT: case T_MAXAMP: case T_ECOL: case T_TRCOUNT: 
