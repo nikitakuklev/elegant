@@ -34,7 +34,7 @@ char *entity_name[N_TYPES] = {
     "CSRCSBEND", "CSRDRIFT", "RFCW", "REMCOR", "MAPSOLENOID",
     "REFLECT", "CLEAN", "TWISS", "WIGGLER", "SCRIPT", "FLOOR",
     "LTHINLENS", "LMIRROR", "EMATRIX", "FRFMODE", "FTRFMODE",
-    "TFBPICKUP", "TFBDRIVER", "LSCDRIFT",
+    "TFBPICKUP", "TFBDRIVER", "LSCDRIFT", "DSCATTER",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -154,6 +154,7 @@ and phase modulation.",
     "Pickup for a transverse feedback loop",
     "Driver for a transverse feedback loop",
     "Longitudinal space charge impedance",
+    "A scattering element to add random changes to particle coordinates according to a user-supplied distribution function"
     } ;
 
 QUAD quad_example;
@@ -376,6 +377,7 @@ PARAMETER ecol_param[N_ECOL_PARAMS] = {
     {"DX", "M", IS_DOUBLE, 0, (long)((char *)&ecol_example.dx), NULL, 0.0, 0, "misalignment"},
     {"DY", "M", IS_DOUBLE, 0, (long)((char *)&ecol_example.dy), NULL, 0.0, 0, "misalignment"},
     {"OPEN_SIDE", "", IS_STRING, 0, (long)((char *)&ecol_example.openSide), NULL, 0.0, 0, "which side, if any, is open (+x, -x, +y, -y)"},
+    {"EXPONENT", "", IS_LONG, 0, (long)((char *)&ecol_example.exponent), NULL, 0.0, 2, "Exponent for boundary equation.  2 is ellipse."},
     } ;
 
 CLEAN clean_example;
@@ -643,6 +645,7 @@ PARAMETER maxamp_param[N_MAXAMP_PARAMS] = {
     {"X_MAX", "M", IS_DOUBLE, 0, (long)((char *)&maxamp_example.x_max), NULL, 0.0, 0, "x half-aperture"},
     {"Y_MAX", "M", IS_DOUBLE, 0, (long)((char *)&maxamp_example.y_max), NULL, 0.0, 0, "y half-aperture"},
     {"ELLIPTICAL", "", IS_LONG, 0, (long)((char *)&maxamp_example.elliptical), NULL, 0.0, 0, "is aperture elliptical?"},
+    {"EXPONENT", "", IS_LONG, 0, (long)((char *)&maxamp_example.exponent), NULL, 0.0, 2, "exponent for boundary equation in elliptical mode.  2 is a true ellipse."},
     {"OPEN_SIDE", "", IS_STRING, 0, (long)((char *)&maxamp_example.openSide), NULL, 0.0, 0, "which side, if any, is open (+x, -x, +y, -y)"},
     } ;
 
@@ -685,13 +688,18 @@ SCRAPER scraper_example;
 /* scraper physical parameters */
 PARAMETER scraper_param[N_SCRAPER_PARAMS]={
     {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&scraper_example.length), NULL, 0.0, 0, "length"},
+    {"XO", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&scraper_example.Xo), NULL, 0.0, 0, "radiation length"},
+    {"ELASTIC", "", IS_LONG, 0, (long)((char *)&scraper_example.elastic), NULL, 0.0, 0, "elastic scattering? If zero, then particles will lose energy due to material."},
+    {"ENERGY_STRAGGLE", "", IS_LONG, 0, (long)((char *)&scraper_example.energyStraggle), NULL, 0.0, 0, "Use simple-minded energy straggling model?  Ignored for ELASTIC scattering."},
+    {"Z", "", IS_LONG, 0, (long)((char *)&scraper_example.Z), NULL, 0.0, 0, "Atomic number"},
+    {"A", "AMU", IS_DOUBLE, 0, (long)((char *)&scraper_example.A), NULL, 0.0, 0, "Atomic mass"},
+    {"RHO", "KG/M^3", IS_DOUBLE, 0, (long)((char *)&scraper_example.rho), NULL, 0.0, 0, "Density"},       
+    {"PLIMIT", "", IS_DOUBLE, 0, (long)((char *)&scraper_example.pLimit), NULL, 0.05, 0, "Probability cutoff for each slice"},
     {"POSITION", "M", IS_DOUBLE, 0, (long)((char *)&scraper_example.position), NULL, 0.0, 0, "position of edge"},
     {"DX", "M", IS_DOUBLE, 0, (long)((char *)&scraper_example.dx), NULL, 0.0, 0, "misalignment"},
     {"DY", "M", IS_DOUBLE, 0, (long)((char *)&scraper_example.dy), NULL, 0.0, 0, "misalignment"},
-    {"XO", "M", IS_DOUBLE, 0, (long)((char *)&scraper_example.Xo), NULL, 0.0, 0, "Radiation length.  If nonzero, then particles scatter in the material."},
-    {"INSERT_FROM", "", IS_STRING, 0, (long)((char *)&scraper_example.insert_from), NULL, 0.0, 0, "direction from which inserted (+x, -x, +y, -y"},
-    {"ELASTIC", "", IS_LONG,  0, (long)((char *)&scraper_example.elastic), NULL, 0.0, 0, "Elastic scattering? If zero, then particles will lose energy due to material."},
-    {"DIRECTION", "", IS_LONG,  0, (long)((char *)&scraper_example.direction), NULL, 0.0, -1, "obsolete"},
+    {"INSERT_FROM", "", IS_STRING, 0, (long)((char *)&scraper_example.insert_from), NULL, 0.0, 0, "direction from which inserted (+x, -x, +y, -y)"},
+    {"DIRECTION", "", IS_LONG, 0, (long)((char *)&scraper_example.direction), NULL, 0.0, -1, "obsolete, use insert_from instead"},
     };
 
 CENTER center_example;
@@ -835,6 +843,21 @@ PARAMETER scatter_param[N_SCATTER_PARAMS] = {
     {"Y", "M", IS_DOUBLE, 0, (long)((char*)&scatter_example.y), NULL, 0.0, 0, "rms scattering level for y"},
     {"YP", "M", IS_DOUBLE, 0, (long)((char*)&scatter_example.yp), NULL, 0.0, 0, "rms scattering level for y'"},
     {"DP", "M", IS_DOUBLE, 0, (long)((char*)&scatter_example.dp), NULL, 0.0, 0, "rms scattering level for (p-pCentral)/pCentral"},
+    {"PROBABILITY", "", IS_DOUBLE, 0, (long)((char*)&scatter_example.probability), NULL, 1.0, 0, "Probability that any particle will be selected for scattering."},
+    } ;
+
+DSCATTER dscatter_example;
+/* dscatter physical parameters */
+PARAMETER dscatter_param[N_DSCATTER_PARAMS] = {
+    {"PLANE", "", IS_STRING, 0, (long)((char*)&dscatter_example.plane), NULL, 0.0, 0, "Plane to scatter: xp, yp, dp (dp is deltaP/P)"},
+    {"FILENAME", "", IS_STRING, 0, (long)((char*)&dscatter_example.fileName), NULL, 0.0, 0, "Name of SDDS file containing distribution function."},
+    {"VALUENAME", "", IS_STRING, 0, (long)((char*)&dscatter_example.valueName), NULL, 0.0, 0, "Name of column containing the independent variable for the distribution function data."},
+    {"CDFNAME", "", IS_STRING, 0, (long)((char*)&dscatter_example.cdfName), NULL, 0.0, 0, "Name of column containing the cumulative distribution function data."},
+    {"PDFNAME", "", IS_STRING, 0, (long)((char*)&dscatter_example.pdfName), NULL, 0.0, 0, "Name of column containing the probability distribution function data."},
+    {"ONCEPERPARTICLE", "", IS_LONG, 0, (long)((char*)&dscatter_example.oncePerParticle), NULL, 0.0, 0, "If nonzero, each particle can only get scattered once by this element."},
+    {"FACTOR", "", IS_DOUBLE, 0, (long)((char*)&dscatter_example.factor), NULL, 1.0, 0, "Factor by which to multiply the independent variable values."},
+    {"PROBABILITY", "", IS_DOUBLE, 0, (long)((char*)&dscatter_example.probability), NULL, 1.0, 0, "Probability that any particle will be selected for scattering."},
+    {"GROUPID", "", IS_LONG, 0, (long)((char*)&dscatter_example.group), NULL, 0.0, -1, "Group ID number (nonnegative integer) for linking once-per-particle behavior of multiple elements."},
     } ;
     
 NIBEND nibend_example;
@@ -1850,6 +1873,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_TFBPICKUP_PARAMS,         0,     sizeof(TFBPICKUP),  tfbpickup_param    },
     { N_TFBDRIVER_PARAMS,         0,     sizeof(TFBDRIVER),  tfbdriver_param    },
     { N_LSCDRIFT_PARAMS, MAT_LEN_NCAT,     sizeof(LSCDRIFT),  lscdrift_param    },
+    { N_DSCATTER_PARAMS,          0,     sizeof(DSCATTER),    dscatter_param  },
 } ;
  
 

@@ -352,6 +352,7 @@ typedef struct {
     long restart_worst_terms;
     long matrix_order, *TijkMem, *UijklMem;
     double simplexDivisor, simplexPassRangeFactor;
+    long includeSimplex1dScans;
     } OPTIMIZATION_DATA;
 
 /* structure to store particle coordinates */
@@ -564,7 +565,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_TFBPICKUP 87
 #define T_TFBDRIVER 88
 #define T_LSCDRIFT  89
-#define N_TYPES     90
+#define T_DSCATTER  90
+#define N_TYPES     91
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -588,7 +590,7 @@ extern char *entity_text[N_TYPES];
 #define N_VMON_PARAMS 8
 #define N_MONI_PARAMS 10
 #define N_RCOL_PARAMS 6
-#define N_ECOL_PARAMS 6
+#define N_ECOL_PARAMS 7
 #define N_MARK_PARAMS 1
 #define N_MATR_PARAMS 3
 #define N_ALPH_PARAMS 13
@@ -603,12 +605,12 @@ extern char *entity_text[N_TYPES];
 #define N_TWLA_PARAMS 19
 #define N_PEPPOT_PARAMS 6
 #define N_ENERGY_PARAMS 4
-#define N_MAXAMP_PARAMS 4
+#define N_MAXAMP_PARAMS 5
 #define N_ROTATE_PARAMS 1
 #define N_TRCOUNT_PARAMS 1
 #define N_RECIRC_PARAMS 1
 #define N_QFRING_PARAMS 9
-#define N_SCRAPER_PARAMS 8
+#define N_SCRAPER_PARAMS 13
 #define N_CENTER_PARAMS 5
 #define N_KICKER_PARAMS 10
 #define N_KSEXT_PARAMS 14
@@ -617,7 +619,7 @@ extern char *entity_text[N_TYPES];
 #define N_MAGNIFY_PARAMS 6
 #define N_SAMPLE_PARAMS 2
 #define N_HVCOR_PARAMS 10
-#define N_SCATTER_PARAMS 5
+#define N_SCATTER_PARAMS 6
 #define N_NIBEND_PARAMS 22
 #define N_KPOLY_PARAMS 8
 #define N_RAMPRF_PARAMS 9
@@ -661,6 +663,7 @@ extern char *entity_text[N_TYPES];
 #define N_TFBPICKUP_PARAMS 18
 #define N_TFBDRIVER_PARAMS 20
 #define N_LSCDRIFT_PARAMS  9
+#define N_DSCATTER_PARAMS 9
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -891,6 +894,7 @@ extern PARAMETER ecol_param[N_ECOL_PARAMS] ;
 typedef struct {
     double length, x_max, y_max, dx, dy;
     char *openSide;
+    long exponent;
     } ECOL;
 
 /* storage structure for beam cleaner */
@@ -1196,7 +1200,7 @@ extern PARAMETER maxamp_param[N_MAXAMP_PARAMS];
 
 typedef struct {
     double x_max, y_max;
-    long elliptical;
+    long elliptical, exponent;
     char *openSide;
     } MAXAMP;
 
@@ -1241,12 +1245,14 @@ typedef struct {
 extern PARAMETER scraper_param[N_SCRAPER_PARAMS];
 
 typedef struct {
-    double length, position;
-    double dx, dy;
-    double Xo;                  /* radiation length--if zero, all particles are absorbed */
-    char *insert_from;          /* one of +x, -x, +y, -y --- replaces direction */
-    long elastic;               /* selects (in)elastic scattering, if Xo is nonzero */
-    long direction;             /* obsolete--used internally, however */
+  double length;
+  double Xo;
+  long elastic, energyStraggle, Z;
+  double A, rho, pLimit;
+  double position;
+  double dx, dy;
+  char *insert_from;          /* one of +x, -x, +y, -y --- replaces direction */
+  long direction;
 /* scraper 'direction' indicates the side from which the scraper comes in:
  *                       1
  *                       ^ y
@@ -1257,7 +1263,7 @@ typedef struct {
  *                       | 
  *                       3
  */
-    } SCRAPER;
+} SCRAPER;
 
 /* names and storage structure for beam-centering parameters */
 extern PARAMETER center_param[N_CENTER_PARAMS];
@@ -1389,8 +1395,24 @@ typedef struct {
 
 /* names and storage structure for scattering element physical parameters */
 typedef struct {
-    double x, xp, y, yp, dp;
+    double x, xp, y, yp, dp, probability;
     } SCATTER;
+
+/* names and storage structure for distribution-based scattering element physical parameters */
+typedef struct {
+  long *particleIDScattered, nParticles, group, nScattered;
+} DSCATTER_GROUP;
+
+typedef struct {
+  char *plane, *fileName, *valueName, *cdfName, *pdfName;
+  long oncePerParticle;
+  double factor, probability;
+  long group;
+  /* internal variables */
+  short initialized, firstInGroup;
+  long iPlane, nData, groupIndex;
+  double *indepData, *cdfData;
+} DSCATTER;
 
 /* names and storage structure for polynomial kick terms */
 extern PARAMETER kpoly_param[N_KPOLY_PARAMS];
@@ -2344,7 +2366,7 @@ extern long limit_amplitudes(double **coord, double xmax, double ymax, long np, 
                                    long extrapolate_z, long openCode);
 extern long elliptical_collimator(double **initial, ECOL *ecol, long np, double **accepted, double z, double P_central);
 extern long elimit_amplitudes(double **coord, double xmax, double ymax, long np, double **accepted, double z,
-    double P_central, long extrapolate_z, long openCode);
+    double P_central, long extrapolate_z, long openCode, long exponent);
 extern long remove_outlier_particles(double **initial, CLEAN *clean, long np, 
 				     double **accepted, double z, double Po);  
 extern long beam_scraper(double **initial, SCRAPER *scraper, long np, double **accepted, double z,
