@@ -19,6 +19,11 @@ static char *fiducialModeChoice[4] = {
     "light", "tmean", "first", "pmaximum",
     };
 
+long trackRfCavityWithWakes(double **part, long np, RFCA *rfca, double **accepted, 
+                            double *P_central, double zEnd, long iPass, RUN *run,
+                            CHARGE *charge, WAKE *wake, TRWAKE *trwake );
+
+
 unsigned long parseFiducialMode(char *modeString)
 {
     long code;
@@ -79,18 +84,29 @@ long simple_rf_cavity(
     double **part, long np, RFCA *rfca, double **accepted, double *P_central, double zEnd
     )
 {
-    long ip, same_dgamma, nKicks, linearize;
+  return trackRfCavityWithWakes(part, np, rfca, accepted, P_central, zEnd, 0,
+                         NULL, NULL, NULL, NULL);
+}
+
+long trackRfCavityWithWakes
+  (
+   double **part, long np, 
+   RFCA *rfca, 
+   double **accepted, 
+   double *P_central, double zEnd,
+   long iPass,
+   RUN *run,
+   CHARGE *charge,
+   WAKE *wake,
+   TRWAKE *trwake
+   )
+{
+    long ip, same_dgamma, nKicks, linearize, ik;
     double timeOffset, inverseF, dc4, x, xp;
-    double P, gamma, dgamma=0.0, dgammaMax=0.0, phase, length, volt, To;
-    double *coord, t, t0, omega, beta_i, tau, dt, tAve, dgammaAve;
+    double P, gamma, dgamma=0.0, dgammaMax=0.0, phase, length, dtLight, volt, To;
+    double *coord, t, t0, omega, beta_i, tau, dt, tAve=0, dgammaAve=0;
     long useSRSModel = 0;
     static long been_warned = 0, been_warned_kicks=0;
-#ifdef DEBUG
-    static FILE *fplog = NULL;
-    static long fplogCounter = 0;
-#endif
-
-    log_entry("simple_rf_cavity");
 
     if (rfca->bodyFocusModel) {
       char *modelName[2] = { "none", "srs" };
@@ -132,18 +148,18 @@ long simple_rf_cavity(
         }
 
     if (!part)
-        bomb("NULL particle data pointer (simple_rf_cavity)", NULL);
+        bomb("NULL particle data pointer (trackRfCavityWithWakes)", NULL);
     for (ip=0; ip<np; ip++)
         if (!part[ip]) {
-            fprintf(stdout, "NULL pointer for particle %ld (simple_rf_cavity)\n", ip);
+            fprintf(stdout, "NULL pointer for particle %ld (trackRfCavityWithWakes)\n", ip);
             fflush(stdout);
             abort();
             }
     if (!rfca)
-        bomb("NULL rfca pointer (simple_rf_cavity)", NULL);
+        bomb("NULL rfca pointer (trackRfCavityWithWakes)", NULL);
 
     if (np<=0) {
-        log_exit("simple_rf_cavity");
+        log_exit("trackRfCavityWithWakes");
         return(np);
         }
 
@@ -161,7 +177,7 @@ long simple_rf_cavity(
                 coord[4] += length*sqrt(1+sqr(coord[1])+sqr(coord[3]));
                 }
             }
-        log_exit("simple_rf_cavity");
+        log_exit("trackRfCavityWithWakes");
         return(np);
         }
 
@@ -171,7 +187,13 @@ long simple_rf_cavity(
         tau = rfca->Q/omega;
     else
         tau = 0;
-
+    nKicks = length?rfca->nKicks:1;
+    if (nKicks>0) {
+      length /= nKicks;
+      volt /= nKicks;
+    }
+    dtLight = length/c_mks;
+    
     if (rfca->phase_reference==0) 
         rfca->phase_reference = unused_phase_reference();
 
@@ -187,7 +209,7 @@ long simple_rf_cavity(
                 if (rfca->tReference!=-1)
                   t0 = rfca->tReference;
                 else 
-                  t0 = findFiducialTime(part, np, zEnd-length, length/2, *P_central, mode);
+                  t0 = findFiducialTime(part, np, zEnd-rfca->length, length/2, *P_central, mode);
                 rfca->phase_fiducial = -omega*t0;
                 rfca->fiducial_seen = 1;
                 }
@@ -223,46 +245,31 @@ long simple_rf_cavity(
         timeOffset = ((long)(t/To+0.5))*To;
     }
     
-#ifdef DEBUG
-    if (!fplog) {
-        fplog = fopen_e("rfca.debug", "w", 0);
-        fprintf(fplog, "SDDS1\n");
-        fprintf(fplog, "&column name=Row,type=long &end\n");
-        fprintf(fplog, "&column name=zEnd , type=double &end\n");
-        fprintf(fplog, "&column name=pCentral0 , type=double &end\n");
-        fprintf(fplog, "&column name=Voltage , type=double &end\n");
-        fprintf(fplog, "&column name=Phase , type=double &end\n");
-        fprintf(fplog, "&column name=InternalPhase , type=double &end\n");
-        fprintf(fplog, "&column name=Length, type=double &end\n");
-        fprintf(fplog, "&column name=pCentral1 , type=double &end\n");
-        fprintf(fplog, "&data mode=ascii no_row_counts=1 &end\n");
-        }
-    fprintf(fplog, "%ld %21.15e %21.15e %21.15e %21.15e %21.15e %21.15e ",
-            fplogCounter++, zEnd, *P_central, rfca->volt, rfca->phase, phase, rfca->length);
-#endif
-    nKicks = length?rfca->nKicks:1;
-
-    if (nKicks>1)
-      bomb("n_kicks>1 not yet supported for rfca element", NULL);
-
     if ((linearize = rfca->linearize)) {
       tAve = 0;
+      if (nKicks!=1)
+        bomb("Must use n_kicks=1 for linearized rf cavity", NULL);
       for (ip=0; ip<np; ip++) {
 	coord = part[ip];
 	P     = *P_central*(1+coord[5]);
 	beta_i = P/(gamma=sqrt(sqr(P)+1));
-	t     = (coord[4]+rfca->length/2)/(c_mks*beta_i)-timeOffset;
+	t     = (coord[4]+length/2)/(c_mks*beta_i)-timeOffset;
 	tAve += t;
       }
       tAve /= np;
       dgammaAve = volt*sin(omega*tAve+phase);
     }
-
+    
     for (ip=0; ip<np; ip++) {
-        coord = part[ip];
-        coord[0] -= rfca->dx;
-        coord[2] -= rfca->dy;
-        if (nKicks>0) {
+      coord = part[ip];
+      coord[0] -= rfca->dx;
+      coord[2] -= rfca->dy;
+    }
+    
+    if (nKicks>0) {
+      for (ik=0; ik<nKicks; ik++) {
+        for (ip=0; ip<np; ip++) {
+          coord = part[ip];
           if (length) {
             /* apply initial drift */
             coord[0] += coord[1]*length/2;
@@ -278,12 +285,12 @@ long simple_rf_cavity(
           if ((dt = t-t0)<0)
             dt = 0;
           if  (!same_dgamma) {
-	    if (!linearize)
-	      dgamma = volt*sin(omega*t+phase)*(tau?sqrt(1-exp(-dt/tau)):1);
-	    else
-	      dgamma = dgammaAve +  volt*omega*(t-tAve)*cos(omega*tAve+phase);
-	  }
-
+            if (!linearize)
+              dgamma = volt*sin(omega*(t-ik*dtLight)+phase)*(tau?sqrt(1-exp(-dt/tau)):1);
+            else
+              dgamma = dgammaAve +  volt*omega*(t-tAve)*cos(omega*tAve+phase);
+          }
+            
           if (rfca->end1Focus && length) {
             /* drift back, apply focus kick, then drift forward again */
             inverseF = dgamma/(2*gamma*length);
@@ -300,7 +307,7 @@ long simple_rf_cavity(
           add_to_particle_energy(coord, t, *P_central, dgamma);
           if ((gamma += dgamma)<=1)
             coord[5] = -1;
-          
+
           if (length) {
             /* apply final drift and focus kick if needed */
             coord[0] += coord[1]*length/2;
@@ -313,102 +320,118 @@ long simple_rf_cavity(
             }
           }
         }
-        else {
-          double sin_phase=0.0, cos_phase;
-          double R11=1, R21=0, R22, R12, dP, ds1;
-          
-          /* use matrix to propagate particles */
-          /* compute energy change using phase of arrival at center of cavity */
-          P     = *P_central*(1+coord[5]);
-          beta_i = P/(gamma=sqrt(sqr(P)+1));
-          ds1 = length/2*sqrt(1+sqr(coord[1])+sqr(coord[3]));
-          t     = (coord[4]+ds1)/(c_mks*beta_i)-timeOffset;
-          if ((dt = t-t0)<0)
-            dt = 0;
-          if  (!same_dgamma) {
-	    if (!linearize) {
-	      sin_phase = sin(omega*t+phase);
-	      cos_phase = cos(omega*t+phase);
-	      dgamma = (dgammaMax=volt*(tau?sqrt(1-exp(-dt/tau)):1))*sin_phase;
-	    } else {
-	      cos_phase = cos(omega*tAve+phase);
-	      sin_phase = omega*(t-tAve)*cos_phase;
-	      dgamma = (dgammaMax=volt*(tau?sqrt(1-exp(-dt/tau)):1))*sin_phase +
-		dgammaAve;
-	    }
-          }
-          
-          if (rfca->end1Focus && length) {
-            /* apply end focus kick */
-            inverseF = dgamma/(2*gamma*length);
-            coord[1] -= coord[0]*inverseF;
-            coord[3] -= coord[2]*inverseF;
-          } 
-          
-          dP = sqrt(sqr(gamma+dgamma)-1) - P;
-
-          if (useSRSModel) {
-            /* note that Rosenzweig and Serafini use gamma in places
-             * where they should probably use momentum, but I'll keep
-             * their expressions for now.
-             */
-            double alpha, sin_alpha, gammaf;
-            gammaf = gamma+dgamma;
-            if (fabs(sin_phase)>1e-6)
-              alpha = log(gammaf/gamma)/(2*SQRT2*sin_phase);
-            else
-              alpha = dgammaMax/gamma/(2*SQRT2);
-            R11 = cos(alpha);
-            R22 = R11*gamma/gammaf;
-            R12 = 2*SQRT2*gamma*length/dgammaMax*(sin_alpha=sin(alpha));
-            R21 = -sin_alpha*dgammaMax/(length*gammaf*2*SQRT2);
-          } else {
-            /* my original treatment used momentum for all 
-             * computations, which I still think is correct
-             */
-            R22 = 1/(1+dP/P);
-            if (fabs(dP/P)>1e-14)
-              R12 = length*(P/dP*log(1+dP/P));
-            else
-              R12 = length;
-          }
-            
-          coord[4] += ds1;
-          x = coord[0];
-          xp = coord[1];
-          coord[0] = x*R11 + xp*R12;
-          coord[1] = x*R21 + xp*R22;
-          x = coord[2];
-          xp = coord[3];
-          coord[2] = x*R11 + xp*R12;
-          coord[3] = x*R21 + xp*R22;
-          coord[4] += length/2*sqrt(1+sqr(coord[1])+sqr(coord[3]));
-          coord[5] = (P+dP-(*P_central))/(*P_central);
-          
-          if ((gamma += dgamma)<=1)
-            coord[5] = -1;
-          if (rfca->end2Focus && length) {
-            inverseF = -dgamma/(2*gamma*length);
-            coord[1] -= coord[0]*inverseF;
-            coord[3] -= coord[2]*inverseF;
-          }
-          /* adjust s for the new particle velocity */
-          coord[4] = (P+dP)/gamma*coord[4]/beta_i;
-        }
-        coord[0] += rfca->dx;
-        coord[2] += rfca->dy;
+        /* do wakes */
+        if (wake) 
+          track_through_wake(part, np, wake, P_central, run, iPass, charge);
+        if (trwake)
+          track_through_trwake(part, np, trwake, *P_central, run, iPass, charge);
       }
+    } else {
+      double sin_phase=0.0, cos_phase;
+      double R11=1, R21=0, R22, R12, dP, ds1;
+      for (ip=0; ip<np; ip++) {
+        coord = part[ip];
+        
+        /* use matrix to propagate particles */
+        /* compute energy change using phase of arrival at center of cavity */
+        P     = *P_central*(1+coord[5]);
+        beta_i = P/(gamma=sqrt(sqr(P)+1));
+        ds1 = length/2*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+        t     = (coord[4]+ds1)/(c_mks*beta_i)-timeOffset;
+        if ((dt = t-t0)<0)
+          dt = 0;
+        if  (!same_dgamma) {
+          if (!linearize) {
+            sin_phase = sin(omega*t+phase);
+            cos_phase = cos(omega*t+phase);
+            dgamma = (dgammaMax=volt*(tau?sqrt(1-exp(-dt/tau)):1))*sin_phase;
+          } else {
+            cos_phase = cos(omega*tAve+phase);
+            sin_phase = omega*(t-tAve)*cos_phase;
+            dgamma = (dgammaMax=volt*(tau?sqrt(1-exp(-dt/tau)):1))*sin_phase +
+              dgammaAve;
+          }
+        }
+        
+        if (rfca->end1Focus && length) {
+          /* apply end focus kick */
+          inverseF = dgamma/(2*gamma*length);
+          coord[1] -= coord[0]*inverseF;
+          coord[3] -= coord[2]*inverseF;
+        } 
+        
+        dP = sqrt(sqr(gamma+dgamma)-1) - P;
+        
+        if (useSRSModel) {
+          /* note that Rosenzweig and Serafini use gamma in places
+           * where they should probably use momentum, but I'll keep
+           * their expressions for now.
+           */
+          double alpha, sin_alpha, gammaf;
+          gammaf = gamma+dgamma;
+          if (fabs(sin_phase)>1e-6)
+            alpha = log(gammaf/gamma)/(2*SQRT2*sin_phase);
+          else
+            alpha = dgammaMax/gamma/(2*SQRT2);
+          R11 = cos(alpha);
+          R22 = R11*gamma/gammaf;
+          R12 = 2*SQRT2*gamma*length/dgammaMax*(sin_alpha=sin(alpha));
+          R21 = -sin_alpha*dgammaMax/(length*gammaf*2*SQRT2);
+        } else {
+          /* my original treatment used momentum for all 
+           * computations, which I still think is correct
+           */
+          R22 = 1/(1+dP/P);
+          if (fabs(dP/P)>1e-14)
+            R12 = length*(P/dP*log(1+dP/P));
+          else
+            R12 = length;
+        }
+        
+        coord[4] += ds1;
+        x = coord[0];
+        xp = coord[1];
+        coord[0] = x*R11 + xp*R12;
+        coord[1] = x*R21 + xp*R22;
+        x = coord[2];
+        xp = coord[3];
+        coord[2] = x*R11 + xp*R12;
+        coord[3] = x*R21 + xp*R22;
+        coord[4] += length/2*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+        coord[5] = (P+dP-(*P_central))/(*P_central);
+        
+        if ((gamma += dgamma)<=1)
+          coord[5] = -1;
+        if (rfca->end2Focus && length) {
+          inverseF = -dgamma/(2*gamma*length);
+          coord[1] -= coord[0]*inverseF;
+          coord[3] -= coord[2]*inverseF;
+        }
+        /* adjust s for the new particle velocity */
+        coord[4] = (P+dP)/gamma*coord[4]/beta_i;
+      }
+      
+      /* do wakes */
+      if (wake) 
+        track_through_wake(part, np, wake, P_central, run, iPass, charge);
+      if (trwake)
+        track_through_trwake(part, np, trwake, *P_central, run, iPass, charge);
+    }
+    
+    
+    for (ip=0; ip<np; ip++) {
+      coord = part[ip];
+      coord[0] += rfca->dx;
+      coord[2] += rfca->dy;
+    }
+    
     
     np = removeInvalidParticles(part, np, accepted, zEnd, *P_central);
     if (rfca->change_p0)
-        do_match_energy(part, np, P_central, 0);
-#ifdef DEBUG
-    fprintf(fplog, "%21.15e\n", *P_central);
-#endif
+      do_match_energy(part, np, P_central, 0);
 
-    log_exit("simple_rf_cavity");
     return(np);
-    }
+}    
 
 void add_to_particle_energy(double *coord, double timeOfFlight, double Po, double dgamma)
 {
@@ -460,7 +483,7 @@ long track_through_rfcw
     SDDS_CopyString(&rfcw->rfca.bodyFocusModel, rfcw->bodyFocusModel);
   else
     rfcw->rfca.bodyFocusModel = NULL;
-  rfcw->rfca.nKicks = rfcw->nKicks;
+  rfcw->rfca.nKicks = rfcw->length?rfcw->nKicks:1;
   rfcw->rfca.dx = rfcw->dx;
   rfcw->rfca.dy = rfcw->dy;
   rfcw->rfca.linearize = rfcw->linearize;
@@ -479,8 +502,9 @@ long track_through_rfcw
   rfcw->trwake.smoothing = rfcw->smoothing;
   rfcw->trwake.SGHalfWidth = rfcw->SGHalfWidth;
   rfcw->trwake.SGOrder = rfcw->SGOrder;
-  rfcw->trwake.dx = rfcw->dx;
-  rfcw->trwake.dy = rfcw->dy;
+  /* misalignment is taken care of by code before and after wake call */
+  rfcw->trwake.dx = 0;
+  rfcw->trwake.dy = 0;
   rfcw->trwake.xPower = rfcw->trwake.yPower = 1;
   if (!rfcw->initialized) {
     rfcw->trwake.initialized = 0;
@@ -529,15 +553,15 @@ long track_through_rfcw
 
   rfcw->initialized = 1;
 
-  simple_rf_cavity(part, np, &rfcw->rfca, accepted, P_central, zEnd);
-  if (rfcw->WzColumn) {
-    rfcw->wake.factor = rfcw->length/rfcw->cellLength;
-    track_through_wake(part, np, &rfcw->wake, P_central, run, i_pass, charge);
-  }
-  if (rfcw->WxColumn || rfcw->WyColumn) {
-    rfcw->trwake.factor = rfcw->length/rfcw->cellLength;
-    track_through_trwake(part, np, &rfcw->trwake, *P_central, run, i_pass, charge);
-  }
+  if (rfcw->WzColumn)
+    rfcw->wake.factor = rfcw->length/rfcw->cellLength/(rfcw->rfca.nKicks?rfcw->rfca.nKicks:1);
+  if (rfcw->WxColumn || rfcw->WyColumn)
+    rfcw->trwake.factor = rfcw->length/rfcw->cellLength/(rfcw->rfca.nKicks?rfcw->rfca.nKicks:1);
+  np = trackRfCavityWithWakes(part, np, &rfcw->rfca, accepted, P_central, zEnd,
+                         i_pass, run, charge, 
+                         rfcw->WzColumn?&rfcw->wake:NULL,
+                         (rfcw->WxColumn || rfcw->WyColumn)?&rfcw->trwake:NULL
+                         );
   return np;
 }
 
