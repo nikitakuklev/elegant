@@ -558,18 +558,17 @@ long get_sdds_particles(double ***particle,
             !check_sdds_beam_column(&SDDS_input, "y", "m") ||
             !check_sdds_beam_column(&SDDS_input, "xp", NULL) ||
             !check_sdds_beam_column(&SDDS_input, "yp", NULL) ||
-            !check_sdds_beam_column(&SDDS_input, "p", "m$be$nc") ||
             !check_sdds_beam_column(&SDDS_input, "t", "s")) {
-          if (!check_sdds_beam_column(&SDDS_input, "p", "m$be$nc") &&
-              check_sdds_beam_column(&SDDS_input, "p", NULL)) {
+          fprintf(stdout, 
+                  "necessary data quantities (x, x', y, y', t, p) have the wrong units or are not present in %s\n", 
+                  inputFile[inputFileIndex]);
+          fflush(stdout);
+          exit(1);
+        }
+        if (!check_sdds_beam_column(&SDDS_input, "p", "m$be$nc")) {
+          if (check_sdds_beam_column(&SDDS_input, "p", NULL)) {
             fprintf(stdout, "Warning: p has no units.  Expected m$be$nc\n");
             fflush(stdout);
-          } else {
-            fprintf(stdout, 
-                    "necessary data quantities (x, x', y, y', t, p) have the wrong units or are not present in %s", 
-                    inputFile[inputFileIndex]);
-            fflush(stdout);
-            exit(1);
           }
         }
       }
