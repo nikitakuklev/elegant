@@ -251,7 +251,7 @@ long simple_rf_cavity(
 	coord = part[ip];
 	P     = *P_central*(1+coord[5]);
 	beta_i = P/(gamma=sqrt(sqr(P)+1));
-	t     = coord[4]/(c_mks*beta_i)-timeOffset;
+	t     = (coord[4]+rfca->length/2)/(c_mks*beta_i)-timeOffset;
 	tAve += t;
       }
       tAve /= np;
