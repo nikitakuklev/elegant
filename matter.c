@@ -50,7 +50,7 @@ void track_through_matter(
     K2 = sqr(pow(matter->Z, 1./3.)/137.036/Po);
     sigmaTotal = K1*pow(PI, 3)/(sqr(K2)+K2*SQR_PI);
     probScatter = matter->rho/(AMU*matter->A)*matter->length*sigmaTotal;
-    fprintf(stdout, "K1=%le, K2=%le, mean expected number of scatters is %le\n", K1, K2, probScatter);
+    /* fprintf(stdout, "K1=%le, K2=%le, mean expected number of scatters is %le\n", K1, K2, probScatter); */
   }
   
   for (ip=0; ip<np; ip++) {
@@ -134,9 +134,15 @@ void track_through_matter(
       coord[4] += L*sqrt(1+sqr(coord[1])+sqr(coord[3]));
     }
   }
+/*
   if (Nrad<1e-3)
     fprintf(stdout, "%e scatters per particle\n",
             (1.0*nScatters)/np);
+*/
   
   log_exit("track_through_matter");
 }
+
+
+
+
