@@ -76,27 +76,28 @@ void setup_tune_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline,
     
         }
 
-    fprintf(stderr, "Computing periodic Twiss parameters.\n");
-    M = beamline->matrix = compute_periodic_twiss(&beta_x, &alpha_x, &eta_x, &etap_x, beamline->tune,
-                                                  &beta_y, &alpha_y, &eta_y, &etap_y, beamline->tune+1, 
-                                                  beamline->elem_twiss, NULL, run, &unstable, NULL);
-    beamline->twiss0->betax  = beta_x;
-    beamline->twiss0->alphax = alpha_x;
-    beamline->twiss0->phix   = 0;
-    beamline->twiss0->etax   = eta_x;
-    beamline->twiss0->etapx  = etap_x;
-    beamline->twiss0->betay  = beta_y;
-    beamline->twiss0->alphay = alpha_y;
-    beamline->twiss0->phiy   = 0;
-    beamline->twiss0->etay   = eta_y;
-    beamline->twiss0->etapy  = etap_y;
-    
-    propagate_twiss_parameters(beamline->twiss0, beamline->tune, NULL, beamline->elem_twiss, run, NULL);
-
-    if (tune->tunex<0)
+    if (!tune->use_perturbed_matrix || tune->tunex<0 || tune->tuney<0) {
+      fprintf(stderr, "Computing periodic Twiss parameters.\n");
+      M = beamline->matrix = compute_periodic_twiss(&beta_x, &alpha_x, &eta_x, &etap_x, beamline->tune,
+                                                    &beta_y, &alpha_y, &eta_y, &etap_y, beamline->tune+1, 
+                                                    beamline->elem_twiss, NULL, run, &unstable, NULL);
+      beamline->twiss0->betax  = beta_x;
+      beamline->twiss0->alphax = alpha_x;
+      beamline->twiss0->phix   = 0;
+      beamline->twiss0->etax   = eta_x;
+      beamline->twiss0->etapx  = etap_x;
+      beamline->twiss0->betay  = beta_y;
+      beamline->twiss0->alphay = alpha_y;
+      beamline->twiss0->phiy   = 0;
+      beamline->twiss0->etay   = eta_y;
+      beamline->twiss0->etapy  = etap_y;
+      
+      propagate_twiss_parameters(beamline->twiss0, beamline->tune, NULL, beamline->elem_twiss, run, NULL);
+      if (tune->tunex<0)
         fprintf(stderr, "horizontal tune will be held at %f\n", tune->tunex = beamline->tune[0]);
-    if (tune->tuney<0)
+      if (tune->tuney<0)
         fprintf(stderr, "vertical tune will be held at %f\n", tune->tuney = beamline->tune[1]);
+    }
     
     if (strength_log) {
         strength_log = compose_filename(strength_log, run->rootname);

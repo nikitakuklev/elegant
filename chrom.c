@@ -54,24 +54,25 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
     chrom->sextupole_tweek = sextupole_tweek;
     chrom->tolerance = tolerance;
     
-    if (!beamline->twiss0 || !beamline->matrix) {
+    if (!use_perturbed_matrix) {
+      if (!beamline->twiss0 || !beamline->matrix) {
         double beta_x, alpha_x, eta_x, etap_x;
         double beta_y, alpha_y, eta_y, etap_y;
 
         fprintf(stderr, "Computing periodic Twiss parameters.\n");
 
         if (!beamline->twiss0)
-            beamline->twiss0 = tmalloc(sizeof(*beamline->twiss0));
+          beamline->twiss0 = tmalloc(sizeof(*beamline->twiss0));
 
         eptr = beamline->elem_twiss = &(beamline->elem);
         elast = eptr;
         while (eptr) {
-            if (eptr->type==T_RECIRC)
-                beamline->elem_twiss = beamline->elem_recirc = eptr;
-            elast = eptr;
-            eptr = eptr->succ;
-            }
-    
+          if (eptr->type==T_RECIRC)
+            beamline->elem_twiss = beamline->elem_recirc = eptr;
+          elast = eptr;
+          eptr = eptr->succ;
+        }
+        
         M = beamline->matrix = compute_periodic_twiss(&beta_x, &alpha_x, &eta_x, &etap_x, beamline->tune,
                                                       &beta_y, &alpha_y, &eta_y, &etap_y, beamline->tune+1, 
                                                       beamline->elem_twiss, NULL, run, 
@@ -88,13 +89,14 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
         beamline->twiss0->etapy  = etap_y;
         
         propagate_twiss_parameters(beamline->twiss0, beamline->tune, NULL, beamline->elem_twiss, run, NULL);
-        }
+      }
 
-    if (!(M=beamline->matrix) || !M->C || !M->R || !M->T)
+      if (!(M=beamline->matrix) || !M->C || !M->R || !M->T)
         bomb("something wrong with transfer map for beamline (setup_chromaticity_correction)", NULL);
 
-    if (!use_perturbed_matrix)
       computeChromCorrectionMatrix(run, beamline, chrom);
+    }
+    
 
     if (strength_log) {
         strength_log = compose_filename(strength_log, run->rootname);

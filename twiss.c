@@ -14,7 +14,8 @@
 void copy_doubles(double *target, double *source, long n);
 double find_acceptance(ELEMENT_LIST *elem, long plane, RUN *run, char **name, double *end_pos);
 void modify_rfca_matrices(ELEMENT_LIST *eptr, long order);
-void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, ELEMENT_LIST *elem, 
+void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI, 
+                           ELEMENT_LIST *elem, 
                            double beta0, double alpha0, double gamma0,
                            double eta0, double etap0, double *coord);
 static long twissConcatOrder = 3;
@@ -50,7 +51,8 @@ VMATRIX *compute_periodic_twiss(
       M1->R[i][i] = 1;
     }
     M = append_full_matrix(elem, run, M1, twissConcatOrder);
-    
+    fprintf(stderr, "Computed revolution matrix on closed orbit to %ld order\n",
+            twissConcatOrder);
 /*
     fprintf(stderr, "matrix concatenation for periodic Twiss computation:\n");
     fprintf(stderr, "closed orbit at input:\n  ");
@@ -68,10 +70,14 @@ VMATRIX *compute_periodic_twiss(
     }
 */
   }
-  else
+  else {
     M = full_matrix(elem, run, twissConcatOrder);
+    fprintf(stderr, "Computed revolution matrix to %ld order\n", twissConcatOrder);
+  }
+
   R = M->R;
   T = M->T;
+
   
   /* allocate matrices for computing dispersion, which I do
    * in 4-d using 
@@ -244,12 +250,12 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, RADIATION_INTEGRALS
         S[0] = S[1] = 0;
       }
     }
-    if (radIntegrals)
-      incrementRadIntegrals(radIntegrals, elem, beta[0], alpha[0], gamma[0], 
-                            eta[0], etap[0], path0);
-
     if (!elem->twiss)
       elem->twiss = tmalloc(sizeof(*elem->twiss));
+    if (radIntegrals)
+      incrementRadIntegrals(radIntegrals, elem->twiss->dI, 
+                            elem, beta[0], alpha[0], gamma[0], 
+                            eta[0], etap[0], path0);
     for (plane=0; plane<2; plane++) {
       otherPlane = plane?0:1;
       detR[plane] = C[plane]*Sp[plane] - Cp[plane]*S[plane];
@@ -1266,7 +1272,8 @@ void compute_twiss_statistics(LINE_LIST *beamline, TWISS *twiss_ave, TWISS *twis
 }
 
 
-void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, ELEMENT_LIST *elem, 
+void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI, 
+                           ELEMENT_LIST *elem, 
                            double beta0, double alpha0, double gamma0,
                            double eta0, double etap0, double *coord)
 {
@@ -1283,7 +1290,7 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, ELEMENT_LIST *elem
   double k2, rho, k, kl;
   double I1, I2, I3, I4, I5;
   double alpha1, gamma1, etap1, eta2, sin_kl, cos_kl;
-  double etaAve, etaK1_rhoAve, HAve, h, K2;
+  double etaAve, etaK1_rhoAve, HAve, h, K2, dx;
   
   isBend = 1;
   switch (elem->type) {
@@ -1298,14 +1305,16 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, ELEMENT_LIST *elem
       qptr = (QUAD*)(elem->p_elem);
       length = qptr->length;
       K1 = qptr->k1;
+      dx = qptr->dx;
       break;
     case T_KQUAD:
       qptrk = (KQUAD*)(elem->p_elem);
       length = qptrk->length;
       K1 = qptrk->k1;
+      dx = qptrk->dx;
       break;
     }
-    if (!(h = K1*coord[0])) {
+    if (!(h = K1*(coord[0]-dx))) {
       isBend = 0;
       break;
     }
@@ -1324,18 +1333,20 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, ELEMENT_LIST *elem
       sptr = (SEXT*)(elem->p_elem);
       length = sptr->length;
       K2 = sptr->k2;
+      dx = sptr->dx;
       break;
     case T_KSEXT:
       sptrk = (KSEXT*)(elem->p_elem);
       length = sptrk->length;
-      K2 = sptr->k2;
+      K2 = sptrk->k2;
+      dx = sptrk->dx;
       break;
     }
-    if (!(h = K2*sqr(coord[0])/2)) {
+    if (!(h = K2*sqr(coord[0]-dx)/2)) {
       isBend = 0;
       break;
     }
-    K1 = K2*coord[0];
+    K1 = K2*(coord[0]-dx);
     angle = length*h;
     E1 = E2 = 0;
     isBend = 1;
@@ -1369,11 +1380,11 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, ELEMENT_LIST *elem
     isBend = 0;
     break;
   }
-  if (coord) {
-    K1 /= 1+coord[5];
-    angle /= 1+coord[5];
-  }
   if (isBend && angle!=0) {
+    if (coord) {
+      K1 /= 1+coord[5];
+      angle /= 1+coord[5];
+    }
     rho = length/angle;
     k2 = K1+1./(rho*rho);
     /* equations are from SLAC 1193 */
@@ -1407,6 +1418,13 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, ELEMENT_LIST *elem
     I3 = I2/fabs(rho);
     I4 = I2/rho*etaAve - 2*length*etaK1_rhoAve;
     I5 = HAve*I3;
+    if (dI) {
+      dI[0] = I1;
+      dI[1] = I2;
+      dI[2] = I3;
+      dI[3] = I4;
+      dI[4] = I5;
+    }
     radIntegrals->I[0] += I1;
     radIntegrals->I[1] += I2;
     radIntegrals->I[2] += I3;
