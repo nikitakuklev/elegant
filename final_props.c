@@ -133,7 +133,7 @@ static SDDS_DEFINITION final_property_parameter[FINAL_PROPERTY_PARAMETERS] = {
     {"R14", "&parameter name=R14, type=double, units=m, symbol=\"R$b14$n\" &end"},
     {"R15", "&parameter name=R15, type=double, units=m, symbol=\"R$b15$n\" &end"},
     {"R16", "&parameter name=R16, type=double, units=m, symbol=\"R$b16$n\" &end"},
-    {"R21", "&parameter name=R21, type=double, units=m, symbol=\"R$b21$n\" &end"},
+    {"R21", "&parameter name=R21, type=double, units=1/m, symbol=\"R$b21$n\" &end"},
     {"R22", "&parameter name=R22, type=double, symbol=\"R$b22$n\" &end"},
     {"R23", "&parameter name=R23, type=double, units=1/m, symbol=\"R$b23$n\" &end"},
     {"R24", "&parameter name=R24, type=double, symbol=\"R$b24$n\" &end"},
