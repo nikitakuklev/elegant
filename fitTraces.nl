@@ -5,6 +5,9 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.5  1998/06/08 16:50:43  borland
+ * Fixed problems with SVD.  Added more reporting.
+ *
  * Revision 1.4  1998/04/17 22:15:37  borland
  * Use Meschach matrix library.  Supports SVD or non-SVD.  Removes BPM
  * common mode.
@@ -33,6 +36,7 @@
         long use_SVD = 0;
         long SVs_to_keep = 0;
         long SVs_to_remove = 0;
+        double BPM_threshold = 1.75e-6;
         double convergence_factor = 1;
         double convergence_factor_divisor = 2;
         double convergence_factor_multiplier = 1.5;
@@ -47,6 +51,9 @@
         STRING fit_output_file = NULL;
         STRING trace_output_file = NULL;
         double target = 1e-12;
+        double tolerance = 1e-12;
         long reject_BPM_common_mode = 1;
+        long n_restarts = 1;
+        double restart_randomization_level = 0.01;
 #end
 

@@ -485,6 +485,7 @@ PARAMETER watch_param[N_WATCH_PARAMS] = {
     {"X_DATA", "", IS_LONG, 0, (long)((char*)&watch_example.xData), NULL, 0.0, 1},
     {"Y_DATA", "", IS_LONG, 0, (long)((char*)&watch_example.yData), NULL, 0.0, 1},
     {"LONGIT_DATA", "", IS_LONG, 0, (long)((char*)&watch_example.longitData), NULL, 0.0, 1},
+    {"FLUSH_INTERVAL", "", IS_LONG, 0, (long)((char *)&watch_example.flushInterval), NULL, 0.0, 0},    
     } ;
 
 TW_PLATES twpl_example;

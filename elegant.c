@@ -180,6 +180,12 @@ char **argv;
 #endif
     
     log_entry("main");
+    if (!SDDS_CheckTableStructureSize(sizeof(SDDS_TABLE))) {
+        fprintf(stderr, "table structure size is inconsistent\n");
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        exit(1);
+        }
+
     compute_offsets();
     set_max_name_length(12);
 
@@ -616,7 +622,8 @@ char **argv;
             fprintf(stdout, "Finished tracking.\n");
             fflush(stdout);
             /* reassert defaults for namelist run_setup */
-            lattice = use_beamline = acceptance = centroid = sigma = final = output = rootname = losses = NULL;
+            lattice = use_beamline = acceptance = centroid = sigma = final = output = rootname = losses = 
+              parameters = NULL;
             combine_bunch_statistics = 0;
             random_number_seed = 987654321;
             wrap_around = 1;
@@ -824,7 +831,8 @@ char **argv;
             fprintf(stdout, "Finished dynamic aperture search.\n");
             fflush(stdout);
             /* reassert defaults for namelist run_setup */
-            lattice = use_beamline = acceptance = centroid = sigma = final = output = rootname = losses = NULL;
+            lattice = use_beamline = acceptance = centroid = sigma = final = output = rootname = losses =
+              parameters = NULL;
             combine_bunch_statistics = 0;
             random_number_seed = 987654321;
             wrap_around = 1;
@@ -896,7 +904,8 @@ char **argv;
             fprintf(stdout, "Finished transport analysis.\n");
             fflush(stdout);
             /* reassert defaults for namelist run_setup */
-            lattice = use_beamline = acceptance = centroid = sigma = final = output = rootname = losses = NULL;
+            lattice = use_beamline = acceptance = centroid = sigma = final = output = rootname = losses = 
+              parameters = NULL;
             combine_bunch_statistics = 0;
             random_number_seed = 987654321;
             wrap_around = 1;
@@ -969,6 +978,22 @@ char **argv;
             break;
           case FIT_TRACES:
             do_fit_trace_data(&namelist_text, &run_conditions, beamline);
+            if (parameters) {
+              dumpLatticeParameters(parameters, &run_conditions, beamline);
+              finishLatticeParametersFile();
+            }
+            /* reassert defaults for namelist run_setup */
+            lattice = use_beamline = acceptance = centroid = sigma = final = output = rootname = losses =
+              parameters = NULL;
+            combine_bunch_statistics = 0;
+            random_number_seed = 987654321;
+            wrap_around = 1;
+            default_order = 2;
+            concat_order = 0;
+            tracking_updates = 1;
+            concat_order = print_statistics = p_central = 0;
+            run_setuped = run_controled = error_controled = correction_setuped = do_chromatic_correction =
+              fl_do_tune_correction = do_closed_orbit = do_twiss_output = do_response_output = 0;
             break;
           case SASEFEL_AT_END:
             if (!run_setuped)

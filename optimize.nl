@@ -15,6 +15,7 @@ static char *optimize_method[N_OPTIM_METHODS] = {
 
 #namelist optimization_term static
     STRING term = NULL;
+    double weight = 1.0;
 #end
 
 #namelist optimization_setup static
@@ -30,6 +31,7 @@ static char *optimize_method[N_OPTIM_METHODS] = {
     STRING log_file = NULL;
     long verbose = 1;
     long output_sparsing_factor = 1;
+    long balance_terms = 0;
 #end
 
 #namelist optimization_variable static

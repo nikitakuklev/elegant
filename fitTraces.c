@@ -3,6 +3,10 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.11  1999/10/12 21:49:54  borland
+ * All printouts now go to the stdout rather than stderr.  fflush statements,
+ * some unnecessary, were added in a mostly automated fashion.
+ *
  * Revision 1.10  1999/09/09 04:41:30  borland
  * Modified tracking procedure (track_beam) to separate tracking stage
  * and output stage. This allowed adding optimization function output to
@@ -68,6 +72,7 @@ typedef struct {
 typedef struct {
   long parameters;
   char **elementName, **parameterName;
+  long *parameterIndex, *elementType;
   double *delta, *changeLimit, *lowerLimit, *upperLimit;
   double **paramData; /* will point to the actual location used to store the parameter value in
                          the element structure */
@@ -100,7 +105,8 @@ void fit_trace_saveParamValues(double *buffer, FIT_TRACE_DATA *traceData,
                                FIT_TRACE_PARAMETERS *bpmCalParam);
 void fit_trace_restoreParamValues(double *buffer, FIT_TRACE_DATA *traceData,
                                   FIT_TRACE_PARAMETERS *fitParam, 
-                                  FIT_TRACE_PARAMETERS *bpmCalParam, RUN *run);
+                                  FIT_TRACE_PARAMETERS *bpmCalParam, RUN *run,
+                                  LINE_LIST *beamline);
 double fit_trace_takeStep(MAT *D, MAT *readbackVector, MAT *paramVector, FIT_TRACE_DATA *traceData, 
                           FIT_TRACE_PARAMETERS *fitParam, LINE_LIST *beamline, RUN *run,
                           double convergenceFactor, double position_change_limit,
@@ -118,6 +124,9 @@ double fit_trace_calibrateMonitors(MAT *readbackVector, FIT_TRACE_DATA *traceDat
 long fit_trace_setUpTraceOutput(char *filename);
 void fit_trace_writeTraceOutput(char *filename, FIT_TRACE_DATA *traceData,
                                 LINE_LIST *beamline, RUN *run, MAT *readbackError);
+void fit_trace_randomizeValues(MAT *paramVector, FIT_TRACE_DATA *traceData, 
+                                 FIT_TRACE_PARAMETERS *fitParam, LINE_LIST *beamline, RUN *run, double level);
+
 
 MAT *m_diag( VEC *diagElements, MAT *A ) {
   long i;
@@ -133,7 +142,7 @@ MAT *m_diag( VEC *diagElements, MAT *A ) {
 
 void do_fit_trace_data(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 {
-  long i, iteration, subIteration, parameters, readbacks, outputRow;
+  long i, iteration, subIteration, parameters, readbacks, outputRow, i_restart;
   long iBPM, iTrace, goodSteps;
   double rmsError, lastRmsError;
   FIT_TRACE_PARAMETERS *fitParam, *bpmCalParam;
@@ -142,7 +151,7 @@ void do_fit_trace_data(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
   MAT *D0, *paramVector0;
   double *lastParameterValues, *startParameterValues, minSV, maxSV;
   FIT_OUTPUT_DATA *outputData;
-  long pass=0, passCount;
+  long pass=0, passCount, first, monitorCalsDone;
   
   /* process namelist text */
   process_namelist(&fit_traces, nltext);
@@ -244,96 +253,126 @@ void do_fit_trace_data(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
   D0 = m_get(readbacks, parameters-fitParam->parameters);
   paramVector0 = m_get(parameters-fitParam->parameters, 1);
 
-  lastRmsError = rmsError = 0;
-  for (iteration=outputRow=goodSteps=0; iteration<iterations; iteration++) {
-    fit_trace_setRowValues(outputData, outputRow++, rmsError, lastRmsError, pass, 
-                           convergence_factor, traceData, fitParam, bpmCalParam);
+  if (n_restarts<0)
+    n_restarts = 0;
+  outputRow = 0;
+  for (i_restart=0; i_restart<=n_restarts; i_restart++) {
+    fprintf(stdout, "Starting optimization pass %ld\n", i_restart);
+    if (n_restarts && i_restart>0)
+      fit_trace_randomizeValues(paramVector0, traceData, fitParam, beamline, run, restart_randomization_level);
+    else
+      lastRmsError = rmsError = 0;
+    for (iteration=goodSteps=0; iteration<iterations; iteration++) {
+      rmsError = fit_trace_findReadbackErrors(readbackVector, traceData, beamline, run);
+      fit_trace_setRowValues(outputData, outputRow++, rmsError, lastRmsError, pass, 
+                             convergence_factor, traceData, fitParam, bpmCalParam);
+      
+      minSV = DBL_MAX;
+      maxSV = -DBL_MAX;
+      if (iteration==0) {
+        for (i=passCount=goodSteps=0; i<trace_sub_iterations; i++) {
+          lastRmsError = rmsError;
+          rmsError = fit_trace_takeStep(D0, readbackVector, paramVector0,
+                                        traceData, NULL, beamline, run,
+                                        trace_convergence_factor, position_change_limit,
+                                        slope_change_limit, 0, 0, 0,
+                                        &minSV, &maxSV);
+          passCount++;
+          if (lastRmsError<rmsError) {
+            trace_convergence_factor /= convergence_factor_divisor;
+            if (trace_convergence_factor<convergence_factor_min)
+              trace_convergence_factor = convergence_factor_min;
+            goodSteps = 0;
+          } else {
+            goodSteps++;
+            if (goodSteps>=convergence_increase_steps) {
+              trace_convergence_factor *= convergence_factor_multiplier;
+              goodSteps = 0;
+              if (trace_convergence_factor>convergence_factor_max)
+                trace_convergence_factor = convergence_factor_max;
+            }
+          }
+          
+          if (i && fabs(lastRmsError-rmsError)/(rmsError+1e-10)<trace_fractional_target)
+            break;
+        }
+        fprintf(stdout, "RMS error is %e after trace optimization  %ld passes\n", 
+                rmsError, passCount);
+        fflush(stdout);
+      }
+      
+      /*
+        if (use_SVD) 
+        fprintf(stdout, "  min/max inverse SVs: %le %le\n",
+        minSV, maxSV);
+        fflush(stdout);
+        */
 
-    lastRmsError = fit_trace_findReadbackErrors(readbackVector, traceData, beamline, run);
-    
-    minSV = DBL_MAX;
-    maxSV = -DBL_MAX;
-    if (iteration==0) {
-      for (i=passCount=goodSteps=0; i<trace_sub_iterations; i++) {
-        rmsError = fit_trace_takeStep(D0, readbackVector, paramVector0,
-                                      traceData, NULL, beamline, run,
-                                      trace_convergence_factor, position_change_limit,
-                                      slope_change_limit, 0, 0, 0,
+      passCount = 0;
+      subIteration = sub_iterations;
+      minSV = DBL_MAX;
+      maxSV = -DBL_MAX;
+      monitorCalsDone = 0;
+      do {
+        lastRmsError = rmsError;
+        /* fit_trace_saveParamValues(lastParameterValues, traceData, fitParam); */
+        rmsError = fit_trace_takeStep(D, readbackVector, paramVector,
+                                      traceData, fitParam, beamline, run,
+                                      convergence_factor, position_change_limit,
+                                      slope_change_limit, use_SVD,
+                                      SVs_to_keep, SVs_to_remove,
                                       &minSV, &maxSV);
+        if ((passCount && lastRmsError>rmsError && (lastRmsError-rmsError)<BPM_threshold) 
+            || rmsError<BPM_threshold) {
+          monitorCalsDone ++;
+          rmsError = fit_trace_calibrateMonitors(readbackVector, traceData, fitParam, bpmCalParam,
+                                                 beamline, run, convergence_factor, 
+                                                 reject_BPM_common_mode);
+        }
         passCount++;
+        if (rmsError<target)
+          break;
+        if (fabs(lastRmsError-rmsError)<tolerance)
+          break;
         if (lastRmsError<rmsError) {
-          trace_convergence_factor /= convergence_factor_divisor;
+          convergence_factor /= convergence_factor_divisor;
+          if (convergence_factor<convergence_factor_min)
+            convergence_factor = convergence_factor_min;
           goodSteps = 0;
         } else {
           goodSteps++;
           if (goodSteps>=convergence_increase_steps) {
-            trace_convergence_factor *= convergence_factor_multiplier;
+            convergence_factor *= convergence_factor_multiplier;
+            if (convergence_factor>convergence_factor_max)
+              convergence_factor = convergence_factor_max;
             goodSteps = 0;
           }
         }
-        
-        if (i && fabs(lastRmsError-rmsError)/(rmsError+1e-10)<trace_fractional_target)
-          break;
-        lastRmsError = rmsError;
+        pass++;
+      } while (--subIteration > 0);
+      rmsError = fit_trace_findReadbackErrors(readbackVector, traceData, beamline, run);
+      fprintf(stdout, "RMS error is %e after full  optimization  %ld passes,  %ld monitor calibrations, C=%e\n", 
+              rmsError, passCount, monitorCalsDone, convergence_factor);
+      fflush(stdout);
+      if (use_SVD)  {
+        fprintf(stdout, "  min/max inverse SVs: %e %e\n",
+                minSV, maxSV);
+        fflush(stdout);
       }
-      fprintf(stdout, "RMS error is %e after trace optimization  %ld passes\n", 
-              rmsError, passCount);
-      fflush(stdout);
-    }
-    
-/*
-    if (use_SVD) 
-      fprintf(stdout, "  min/max inverse SVs: %le %le\n",
-              minSV, maxSV);
-      fflush(stdout);
-*/
-
-    passCount = 0;
-    subIteration = sub_iterations;
-    minSV = DBL_MAX;
-    maxSV = -DBL_MAX;
-    do {
-      /* fit_trace_saveParamValues(lastParameterValues, traceData, fitParam); */
-      rmsError = fit_trace_takeStep(D, readbackVector, paramVector,
-                                    traceData, fitParam, beamline, run,
-                                    convergence_factor, position_change_limit,
-                                    slope_change_limit, use_SVD,
-                                    SVs_to_keep, SVs_to_remove,
-                                    &minSV, &maxSV);
-      rmsError = fit_trace_calibrateMonitors(readbackVector, traceData, fitParam, bpmCalParam,
-                                             beamline, run, convergence_factor, 
-                                             reject_BPM_common_mode);
-      passCount++;
-      if (rmsError<target)
+      if (rmsError<target) {
+        fprintf(stdout, "rms error less than target %e, terminating.\n", target);
         break;
-      if (lastRmsError<rmsError) {
-        convergence_factor /= convergence_factor_divisor;
-        if (convergence_factor<convergence_factor_min)
-          convergence_factor = convergence_factor_min;
-        goodSteps = 0;
-      } else {
-        goodSteps++;
-        if (goodSteps>=convergence_increase_steps) {
-          convergence_factor *= convergence_factor_multiplier;
-          if (convergence_factor>convergence_factor_max)
-            convergence_factor = convergence_factor_max;
-          goodSteps = 0;
-        }
       }
-      pass++;
-      lastRmsError = rmsError;
-    } while (--subIteration > 0);
-    rmsError = fit_trace_findReadbackErrors(readbackVector, traceData, beamline, run);
-    fprintf(stdout, "RMS error is %e after full  optimization  %ld passes,  C=%e\n", 
-            rmsError, passCount, convergence_factor);
+      if (fabs(lastRmsError-rmsError)<tolerance) {
+        fprintf(stdout, "rms error change less than tolerance %e, terminating.\n", tolerance);
+        break;
+      }
+    }
     fflush(stdout);
-    if (use_SVD) 
-      fprintf(stdout, "  min/max inverse SVs: %e %e\n",
-              minSV, maxSV);
-      fflush(stdout);
     if (rmsError<target)
-      break;
+        break;
   }
+  
   fit_trace_setRowValues(outputData, outputRow++, rmsError, lastRmsError, pass, 
                          convergence_factor, traceData, fitParam, bpmCalParam);
   if (!SDDS_Terminate(&outputData->SDDStable))
@@ -406,7 +445,10 @@ double fit_trace_findReadbackErrors
   static long lastBPMs = 0, lastElements = 0;
   double startingCoord[4], p, sum;
   static TRAJECTORY *trajectory = NULL;
+
   
+  assert_element_links(beamline->links, run, beamline, DYNAMIC_LINK|LINK_ELEMENT_DEFINITION);
+
   if (!lastBPMs || lastBPMs!=traceData->BPMs) {
     lastBPMs = traceData->BPMs;
     if (!(x=SDDS_Realloc(x, sizeof(*x)*lastBPMs)) ||
@@ -557,8 +599,6 @@ void fit_traces_findDerivatives
   }
 
 }
-
-
 
 void find_trajectory_bpm_readouts
   (
@@ -739,6 +779,8 @@ FIT_TRACE_PARAMETERS *fit_traces_readFitParametersFile
     exit(1);
   }
   if (!(ftp->target = malloc(sizeof(*ftp->target)*ftp->parameters)) ||
+      !(ftp->parameterIndex = malloc(sizeof(*ftp->parameterIndex)*ftp->parameters)) ||
+      !(ftp->elementType = malloc(sizeof(*ftp->elementType)*ftp->parameters)) ||
       !(ftp->definedValue = malloc(sizeof(*ftp->definedValue)*ftp->parameters))) {
     fprintf(stdout, "Error: memory allocation problem reading parameters file\n");
     fflush(stdout);
@@ -750,8 +792,8 @@ FIT_TRACE_PARAMETERS *fit_traces_readFitParametersFile
       fflush(stdout);
       exit(1);
     }
-    elementType = ftp->target[i]->type;
-    if ((parameterIndex=confirm_parameter(ftp->parameterName[i], elementType))<0) {
+    ftp->elementType[i] = elementType = ftp->target[i]->type;
+    if ((ftp->parameterIndex[i]=parameterIndex=confirm_parameter(ftp->parameterName[i], elementType))<0) {
       fprintf(stdout, "Error: element %s does not have a parameter called %s\n", 
               ftp->elementName[i], ftp->parameterName[i]);
       fflush(stdout);
@@ -1024,7 +1066,7 @@ FIT_OUTPUT_DATA *fit_trace_setUpOutputFile(char *filename,
   }
   
   if (!SDDS_WriteLayout(&outputData->SDDStable) 
-      || !SDDS_StartPage(&outputData->SDDStable, iterations+2)) {
+      || !SDDS_StartPage(&outputData->SDDStable, iterations*2)) {
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
   return outputData;
@@ -1056,7 +1098,8 @@ void fit_trace_restoreParamValues
    FIT_TRACE_DATA *traceData,
    FIT_TRACE_PARAMETERS *fitParam,
    FIT_TRACE_PARAMETERS *bpmCalParam,
-   RUN *run
+   RUN *run,
+   LINE_LIST *beamline
    )
 {
   long iTrace, iCoord, iUserParam, offset;
@@ -1078,6 +1121,7 @@ void fit_trace_restoreParamValues
     }
     compute_matrix(fitParam->target[iUserParam], run, NULL);
   }
+  assert_element_links(beamline->links, run, beamline, DYNAMIC_LINK|LINK_ELEMENT_DEFINITION);
 }
 
 double fit_trace_takeStep
@@ -1287,13 +1331,52 @@ double fit_trace_takeStep
       free_matrices(fitParam->target[iUserParam]->matrix);
       free(fitParam->target[iUserParam]->matrix);
     }
+    change_defined_parameter_values(&fitParam->elementName[iUserParam],
+                                    &fitParam->parameterIndex[iUserParam], 
+                                    &fitParam->elementType[iUserParam],
+                                    fitParam->paramData[iUserParam], 1);
     compute_matrix(fitParam->target[iUserParam], run, NULL);
   }
-
 
   /* compute RMS error and return it */
   rmsError = fit_trace_findReadbackErrors(readbackVector, traceData, beamline, run);
   return rmsError;
+}
+
+void fit_trace_randomizeValues
+  (
+   MAT *paramVector,
+   FIT_TRACE_DATA *traceData, 
+   FIT_TRACE_PARAMETERS *fitParam, 
+   LINE_LIST *beamline, 
+   RUN *run,
+   double level
+   )
+{
+  FIT_TRACE_PARAMETERS fitParam0 = {
+    0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+  long iTrace, iCoord, iUserParam;
+  
+  if (!fitParam) {
+    fitParam = &fitParam0;
+    fitParam->parameters = 0;
+  }
+  
+  /* randomize trajectory starting values */
+  for (iTrace=0; iTrace<traceData->traces; iTrace++) {
+    for (iCoord=0; iCoord<4; iCoord++)
+      traceData->startingCoord[iTrace][iCoord] *= 1 + (random_1(-1)-0.5)*level*2;
+  }
+  
+  /* randomize element parameter values and recompute matrices */
+  for (iUserParam=0; iUserParam<fitParam->parameters; iUserParam++) {
+    *(fitParam->paramData[iUserParam]) *= 1 + (random_1(-1)-0.5)*level*2;
+    change_defined_parameter_values(&fitParam->elementName[iUserParam],
+                                    &fitParam->parameterIndex[iUserParam], 
+                                    &fitParam->elementType[iUserParam],
+                                    fitParam->paramData[iUserParam], 1);
+    compute_matrix(fitParam->target[iUserParam], run, NULL);
+  }
 }
 
 double fit_trace_calibrateMonitors

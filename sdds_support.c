@@ -556,8 +556,9 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
 double tmp_safe_sqrt;
 #define SAFE_SQRT(x) ((tmp_safe_sqrt=(x))<0?(double)0.0:sqrt(tmp_safe_sqrt))
 
-void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, double **particle, long particles, 
-                           long original_particles,  double Po, double revolutionLength)
+void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, double **particle, 
+                           long particles, long original_particles,  double Po, 
+                           double revolutionLength)
 {
     long sample, i, j;
     double tc, tc0, p_sum, gamma_sum, sum, p;
@@ -675,12 +676,25 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
         }
 
     if (sample==(n_passes-1)/watch->interval) {
-        if (!SDDS_WriteTable(&watch->SDDS_table)) {
-            SDDS_SetError("Problem writing data for SDDS table (dump_watch_parameters)");
-            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-            }
+      if (watch->flushInterval>0) {
+        if (sample!=watch->flushSample && !SDDS_UpdatePage(&watch->SDDS_table, 0)) {
+          SDDS_SetError("Problem writing data for SDDS table (dump_watch_parameters)");
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
-
+      }
+      else if (!SDDS_WriteTable(&watch->SDDS_table)) {
+        SDDS_SetError("Problem writing data for SDDS table (dump_watch_parameters)");
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      }
+    } else {
+      if (watch->flushInterval>0 && sample%watch->flushInterval==0 &&
+          !SDDS_UpdatePage(&watch->SDDS_table, 0)) {
+        SDDS_SetError("Problem flushing data for SDDS table (dump_watch_parameters)");
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      }
+      watch->flushSample = sample;
+    }
+    
     log_exit("dump_watch_parameters");
     }
 

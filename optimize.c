@@ -66,6 +66,7 @@ void do_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
 
     /* initialize other elements of the structure */
     optimization_data->new_data_read = 0;
+    optimization_data->balance_terms = balance_terms;
     optimization_data->variables.n_variables = 0;
     optimization_data->covariables.n_covariables = 0;
     optimization_data->constraints.n_constraints = 0;
@@ -179,8 +180,16 @@ void add_optimization_term(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
   if (!(optimization_data->term 
         = SDDS_Realloc(optimization_data->term,
                        sizeof(*optimization_data->term)*(optimization_data->terms+1))) ||
+      !(optimization_data->termWeight 
+        = SDDS_Realloc(optimization_data->termWeight,
+                       sizeof(*optimization_data->termWeight)*(optimization_data->terms+1))) ||
+      !(optimization_data->usersTermWeight 
+        = SDDS_Realloc(optimization_data->usersTermWeight,
+                       sizeof(*optimization_data->usersTermWeight)*(optimization_data->terms+1))) ||
       !SDDS_CopyString(&optimization_data->term[optimization_data->terms], term))
     bomb("memory allocation failure", NULL);
+  optimization_data->termWeight[optimization_data->terms] = 1;
+  optimization_data->usersTermWeight[optimization_data->terms] = weight;
   optimization_data->terms++;
 }
 
@@ -322,9 +331,14 @@ void summarize_optimization_setup(OPTIMIZATION_DATA *optimization_data)
         fprintf(optimization_data->fp_log, "    As many as %ld function evaluations will be performed on each of %ld passes.\n",
             optimization_data->n_evaluations, optimization_data->n_passes);
 
-        fprintf(optimization_data->fp_log, "    The quantity to be optimized is defined by the equation\n        %s\n    subject to %ld constraints%c\n",
-            optimization_data->equation, constraints->n_constraints,
-            constraints->n_constraints>0?':':'.');
+        if (optimization_data->terms==0)
+          fprintf(optimization_data->fp_log, "    The quantity to be optimized is defined by the equation\n        %s\n    subject to %ld constraints%c\n",
+                  optimization_data->equation, constraints->n_constraints,
+                  constraints->n_constraints>0?':':'.');
+        else
+          fprintf(optimization_data->fp_log, "    The quantity to be optimized is defined by the sum of %ld terms,\nsubject to %ld constraints%c\n",
+                  optimization_data->terms, constraints->n_constraints,
+                  constraints->n_constraints>0?':':'.');
         for (i=0; i<constraints->n_constraints; i++)
             fprintf(optimization_data->fp_log, "        %13.6e <= %10s <= %13.6e\n",
                 constraints->lower[i], constraints->quantity[i], constraints->upper[i]);
@@ -438,7 +452,7 @@ typedef struct {
   double *variableValue;
   double result;
 } OPTIM_RECORD;
-static long optimRecords = 0, nextOptimRecordSlot = 0;
+static long optimRecords = 0, nextOptimRecordSlot = 0, balanceTerms = 0;
 static OPTIM_RECORD optimRecord[MAX_OPTIM_RECORDS];
 
 
@@ -457,7 +471,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
     log_entry("do_optimize");
     
     optimRecords = nextOptimRecordSlot = 0;
-
+    
     run               = run1;
     control           = control1;
     error             = error1;
@@ -551,6 +565,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 
     startsLeft = optimization_data->n_restarts+1;
     result = DBL_MAX;
+    balanceTerms = 1;
     while (startsLeft--) {
       lastResult = result;
       switch (optimization_data->method) {
@@ -638,7 +653,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
             covariables->varied_quan_value, covariables->n_covariables);
 
     if (optimization_data->fp_log) {
-        fprintf(optimization_data->fp_log, "Optimization results:\n    '%s' has value %.15g\n", optimization_data->equation, 
+        fprintf(optimization_data->fp_log, "Optimization results:\n  optimization function has value %.15g\n", 
                 optimization_data->mode==OPTIM_MODE_MAXIMUM?-result:result);
         if (optimization_data->terms) {
           fprintf(optimization_data->fp_log, "Terms of equation: \n");
@@ -646,7 +661,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
             rpn_clear();
             fprintf(optimization_data->fp_log, "%20s: %23.15e\n",
                     optimization_data->term[i],
-                    rpn(optimization_data->term[i]));
+                    rpn(optimization_data->term[i])*optimization_data->termWeight[i]);
           }
         }
         fprintf(optimization_data->fp_log, "    A total of %ld function evaluations were made.\n", n_evaluations_made);
@@ -666,7 +681,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
         fflush(optimization_data->fp_log);
         }
     if (!log_file || optimization_data->fp_log!=stdout) {
-        fprintf(stdout, "Optimization results:\n    '%s' has value %.15g\n", optimization_data->equation, 
+        fprintf(stdout, "Optimization results:\n    optimization function has value %.15g\n",
                 optimization_data->mode==OPTIM_MODE_MAXIMUM?-result:result);
         if (optimization_data->terms) {
           fprintf(stdout, "Terms of equation: \n");
@@ -707,7 +722,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 #define SET_BUNCHED_BEAM 6
 #define SET_SDDS_BEAM   33
 
-static char *twiss_name[26] = {
+static char *twiss_name[28] = {
     "betax", "alphax", "nux", "etax", "etapx", 
     "betay", "alphay", "nuy", "etay", "etapy",
     "max.betax", "max.etax", "max.etapx", 
@@ -715,14 +730,16 @@ static char *twiss_name[26] = {
     "min.betax", "min.etax", "min.etapx", 
     "min.betay", "min.etay", "min.etapy",
     "dnux/dp", "dnuy/dp", "alphac", "alphac2",
+    "ave.betax", "ave.betay",
     };
-static long twiss_mem[26] = {
+static long twiss_mem[28] = {
     -1, -1, -1, -1, -1, 
     -1, -1, -1, -1, -1, 
     -1, -1, -1,
     -1, -1, -1, 
     -1, -1, -1,
     -1, -1, -1, 
+    -1, -1,
     -1, -1, -1, -1,
     };
 static char *radint_name[8] = {
@@ -746,12 +763,13 @@ int showTwissMemories(FILE *fp)
 {
   long i;
   
-  for (i=0; i<26; i++) {
+  for (i=0; i<28; i++) {
     if (twiss_mem[i]!=-1)
       fprintf(fp, "%s = %21.15e\n", 
               twiss_name[i], rpn_recall(twiss_mem[i]));
   }
   fflush(fp);
+  return 0;
 }
 
 double optimization_function(double *value, long *invalid)
@@ -884,7 +902,7 @@ double optimization_function(double *value, long *invalid)
       fflush(stdout);
 #endif
         if (twiss_mem[0]==-1) {
-            for (i=0; i<26; i++)
+            for (i=0; i<28; i++)
                 twiss_mem[i] = rpn_create_mem(twiss_name[i]);
             }
         /* get twiss mode and (beta, alpha, eta, etap) for both planes */
@@ -896,7 +914,7 @@ double optimization_function(double *value, long *invalid)
         for (i=0; i<5; i++) {
             rpn_store(*((&beamline->elast->twiss->betax)+i)/(i==2?PIx2:1), twiss_mem[i]);
             rpn_store(*((&beamline->elast->twiss->betay)+i)/(i==2?PIx2:1), twiss_mem[i+5]);
-            }
+        }
         rpn_store(beamline->chromaticity[0], twiss_mem[22]);
         rpn_store(beamline->chromaticity[1], twiss_mem[23]);
         rpn_store(beamline->alpha[0], twiss_mem[24]);
@@ -915,7 +933,9 @@ double optimization_function(double *value, long *invalid)
         rpn_store(twiss_min.betay, twiss_mem[19]);
         rpn_store(twiss_min.etay,  twiss_mem[20]);
         rpn_store(twiss_min.etapy, twiss_mem[21]);
-        }
+        rpn_store(twiss_ave.betax, twiss_mem[26]);
+        rpn_store(twiss_ave.betay, twiss_mem[27]);
+    }
     if (beamline->flags&BEAMLINE_RADINT_WANTED) {
 #if DEBUG
       fprintf(stdout, "optimization_function: Computing radiation integrals\n");
@@ -1019,9 +1039,43 @@ double optimization_function(double *value, long *invalid)
 #endif
     result = 0;
     if (!*invalid) {
-      /* compute and return optimized quantity */
-      rpn_clear();    /* clear rpn stack */
-      result = rpn(optimization_data->UDFname);
+      long i, terms;
+      double value, sum;
+      if (balanceTerms && optimization_data->balance_terms && optimization_data->terms) {
+        for (i=sum=0; i<optimization_data->terms; i++) {
+          rpn_clear();
+          if ((value=rpn(optimization_data->term[i]))!=0) {
+            optimization_data->termWeight[i] = 1/fabs(value);
+            terms ++;
+          }
+          else
+            optimization_data->termWeight[i] = 0;
+          sum += fabs(value);
+        }
+        if (terms)
+          for (i=0; i<optimization_data->terms; i++) {
+            if (optimization_data->termWeight[i])
+              optimization_data->termWeight[i] *= optimization_data->usersTermWeight[i]*sum/terms;
+            else
+              optimization_data->termWeight[i] = optimization_data->usersTermWeight[i]*sum/terms;
+          }
+        balanceTerms = 0;
+        fprintf(stdout, "\nOptimization terms balanced.\n");
+        fflush(stdout);
+      }
+
+      /* compute and return quantity to be optimized */
+      if (optimization_data->terms) {
+        long i;
+        for (i=result=0; i<optimization_data->terms; i++)  {
+          rpn_clear();
+          result += optimization_data->termWeight[i]*rpn(optimization_data->term[i]);
+        }
+      }
+      else {
+        rpn_clear();    /* clear rpn stack */
+        result = rpn(optimization_data->UDFname);
+      }
       if (isnan(result) || isinf(result)) {
         result = sqrt(DBL_MAX);
       }
@@ -1037,7 +1091,7 @@ double optimization_function(double *value, long *invalid)
             rpn_clear();
             fprintf(optimization_data->fp_log, "%20s: %23.15e\n",
                     optimization_data->term[i],
-                    rpn(optimization_data->term[i]));
+                    rpn(optimization_data->term[i])*optimization_data->termWeight[i]);
           }
         }
       }
@@ -1112,8 +1166,8 @@ void optimization_report(double result, double *value, long pass, long n_evals, 
     covariables = &(optimization_data->covariables);
     constraints = &(optimization_data->constraints);
 
-    fprintf(optimization_data->fp_log, "Optimization pass %ld completed:\n    '%s' has value %23.15e\n", 
-        pass, optimization_data->equation, optimization_data->mode==OPTIM_MODE_MAXIMUM?-result:result);
+    fprintf(optimization_data->fp_log, "Optimization pass %ld completed:\n    optimization function has value %23.15e\n", 
+            pass, optimization_data->mode==OPTIM_MODE_MAXIMUM?-result:result);
     n_passes_made = pass;
     if (optimization_data->terms) {
       fprintf(optimization_data->fp_log, "Terms of equation: \n");
@@ -1121,7 +1175,7 @@ void optimization_report(double result, double *value, long pass, long n_evals, 
         rpn_clear();
         fprintf(optimization_data->fp_log, "%20s: %23.15e\n",
                 optimization_data->term[i],
-                rpn(optimization_data->term[i]));
+                rpn(optimization_data->term[i])*optimization_data->termWeight[i]);
       }
     }
     

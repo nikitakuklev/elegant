@@ -753,6 +753,7 @@ void set_up_watch_point(WATCH *watch, RUN *run)
     SDDS_WatchPointSetup(watch, SDDS_BINARY, 1, run->runfile, run->lattice, "set_up_watch_point", qualifier);
     watch->initialized = 1;
     watch->count = 0;
+    watch->flushSample = -1;
     log_exit("set_up_watch_point");
     }
 
