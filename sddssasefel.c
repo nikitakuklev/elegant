@@ -57,6 +57,9 @@ CopyrightNotice001*/
  * Michael Borland, 1999
  *
  $Log: not supported by cvs2svn $
+ Revision 1.6  2001/10/15 20:37:07  soliday
+ Cleaned up for Linux.
+
  Revision 1.5  2001/08/02 14:45:31  borland
  Added search_path feature to run_setup namelist and to many (all?) elements and
  commands that take input files.
@@ -165,14 +168,14 @@ int main(int argc, char **argv)
   long i, i_arg, noWarnings, row, rows;
   SCANNED_ARG *s_arg;
   unsigned long pipeFlags;
-  VALUE_NAME charge = { "charge", "C", "Charge", NULL, 1e-9, 0, 1, 0};
-  VALUE_NAME rmsBunchLength = { "rmsBunchLength", "s", "Dt80", NULL, 1e-12, 0, 1, 0};
-  VALUE_NAME pCentral = { "pCentral", "m$be$nc", "pAverage", NULL, 1e9, 0, 1, 0};
-  VALUE_NAME ex0 = { "ex0", "$gp$rm", "ex", NULL, 1e-12, 0, 1, 0};
-  VALUE_NAME Sdelta0 = { "Sdelta0", "", "Sdelta", NULL, 1e-4, 0, 1, 0};
-  VALUE_NAME undulatorPeriod = { "undulatorPeriod", "m", "undulatorPeriod", NULL, 1e-2, 0, 0, 0};
-  VALUE_NAME undulatorK = { "undulatorK", "", "undulatorK", NULL, 1, 0, 0, 0};
-  VALUE_NAME betax = {"betax", "m", "betax", NULL, 1, 0, 0, 0};
+  VALUE_NAME charge = { "charge", "C", "Charge", NULL, 1e-9, 0, 1, 0, 0};
+  VALUE_NAME rmsBunchLength = { "rmsBunchLength", "s", "Dt80", NULL, 1e-12, 0, 1, 0, 0};
+  VALUE_NAME pCentral = { "pCentral", NULL, "pAverage", NULL, 1e9, 0, 1, 0, 0};
+  VALUE_NAME ex0 = { "ex0", "$gp$rm", "ex", NULL, 1e-12, 0, 1, 0, 0};
+  VALUE_NAME Sdelta0 = { "Sdelta0", "", "Sdelta", NULL, 1e-4, 0, 1, 0, 0};
+  VALUE_NAME undulatorPeriod = { "undulatorPeriod", "m", "undulatorPeriod", NULL, 1e-2, 0, 0, 0, 0};
+  VALUE_NAME undulatorK = { "undulatorK", "", "undulatorK", NULL, 1, 0, 0, 0, 0};
+  VALUE_NAME betax = {"betax", "m", "betax", NULL, 1, 0, 0, 0, 0};
   VALUE_NAME *ValueName[9] ;
   double lightWavelength, saturationLength, gainLength, noisePower, saturationPower;
   double PierceParameter, etaDiffraction, etaEmittance, etaEnergySpread, eyValue;
@@ -449,6 +452,9 @@ void OptimizeSASEFELParameters
    long row)
 {
   short disable[8] = { 0,0,0,0,0,0,0,0 };
+  double lower[8] = { 0,0,0,0,0,0,0,0 };
+  double upper[8] = { DBL_MAX,DBL_MAX,DBL_MAX,DBL_MAX,DBL_MAX,
+		      DBL_MAX,DBL_MAX,DBL_MAX };
   double x0[8], dx[8], result;
   long i;
 
@@ -471,7 +477,7 @@ void OptimizeSASEFELParameters
   fprintf(stdout, " charge=%le, rmsBL=%le, uP=%le, uK=%le, betax=%le, ex0=%le, Sdelta=%le, pC=%le\n",
           x0[0], x0[1], x0[2], x0[3], x0[4], x0[5], x0[6], x0[7]);
   fflush(stdout);
-  if (simplexMin(&result, x0, dx, NULL, NULL, disable, 8, 0.0, 1e-10,
+  if (simplexMin(&result, x0, dx, lower, upper, disable, 8, 0.0, 1e-10,
                  SASEFELOptimFn, NULL, 500, 10, 12, 0)<0) {
     fprintf(stdout, "Optimization unsuccessful\n");
     fflush(stdout);
@@ -527,6 +533,12 @@ double SASEFELOptimFn(double *x, long *invalid)
                            x[6], /* Sdelta */
                            x[7], /* pCentral */
                            1);
+  if (saturationLength<=0 || PierceParameter<=0 ||
+      gainLength<=0 || noisePower<=0 || saturationPower<=0 ||
+      etaDiffraction<=0 || etaEmittance<=0 || etaEnergySpread<=0) {
+    *invalid = 1;
+    return 0;
+  }
 #if DEBUG 
   fprintf(stdout, "opt: Q=%g, BL=%g, UP=%g, UK=%g, BX=%g, EX=%g, SD=%g, PC=%g -> %g\n",
           x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7], saturationLength);
