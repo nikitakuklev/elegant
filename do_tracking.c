@@ -361,7 +361,8 @@ long do_tracking(
        */
       strncpy(trackingContext.elementName, eptr->name, CONTEXT_BUFSIZE);
       trackingContext.elementOccurrence = eptr->occurence;
-      trackingContext.sliceAnalysis = sliceAnalysis;
+      trackingContext.sliceAnalysis = sliceAnalysis?
+	(sliceAnalysis->finalValuesOnly?NULL:sliceAnalysis):NULL;
       trackingContext.zStart = last_z;
       trackingContext.zEnd = z;
       trackingContext.step = step;
