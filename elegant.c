@@ -29,9 +29,9 @@ void traceback_handler(int code);
 char *option[N_OPTIONS] = {
     "describeinput",
         };
-char *USAGE="elegant <inputfile>\n\nProgram by Michael Borland. (This is version 14.2, August 2000.)";
+char *USAGE="elegant <inputfile>\n\nProgram by Michael Borland. (This is version 14.3Beta, August 2000.)";
 
-char *GREETING="This is elegant, by Michael Borland. (This is version 14.2, August 2000.)";
+char *GREETING="This is elegant, by Michael Borland. (This is version 14.3Beta, August 2000.)";
 
 #define RUN_SETUP        0
 #define RUN_CONTROL      1
@@ -636,7 +636,8 @@ char **argv;
           case TWISS_OUTPUT:
             if (!run_setuped)
                 bomb("run_setup must precede twiss_output namelist", NULL);
-            setup_twiss_output(&namelist_text, &run_conditions, beamline, &do_twiss_output);
+            setup_twiss_output(&namelist_text, &run_conditions, beamline, &do_twiss_output,
+                               run_conditions.default_order);
             if (!do_twiss_output) {
                 twiss_computed = 1;
                 run_twiss_output(&run_conditions, beamline, NULL, -1);
