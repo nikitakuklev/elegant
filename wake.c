@@ -136,9 +136,12 @@ void set_up_wake(WAKE *wakeData, RUN *run, long pass, long particles, CHARGE *ch
   if (wakeData->n_bins<2 && wakeData->n_bins!=0)
     bomb("n_bins must be >=2 or else 0 (autoscale) for WAKE element", NULL);
 
-  if (!wakeData->inputFile || !wakeData->tColumn || !wakeData->WColumn ||
-      !strlen(wakeData->inputFile) || !strlen(wakeData->tColumn) || !strlen(wakeData->WColumn))
-    bomb("supply inputFile, tColumn, and WColumn for WAKE element", NULL);
+  if (!wakeData->inputFile || !strlen(wakeData->inputFile))
+    bomb("supply inputFile for WAKE element", NULL);
+  if (!wakeData->tColumn || !strlen(wakeData->tColumn))
+    bomb("supply tColumn for WAKE element", NULL);
+  if (!wakeData->WColumn || !strlen(wakeData->WColumn))
+    bomb("supply WColumn for WAKE element", NULL);
   
   if (!SDDS_InitializeInput(&SDDSin, wakeData->inputFile) || SDDS_ReadPage(&SDDSin)!=1)
     SDDS_Bomb("unable to read WAKE file");

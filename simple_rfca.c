@@ -397,7 +397,7 @@ long track_through_rfcw
     
     if (rfcw->WxColumn || rfcw->WyColumn) {
       if (!rfcw->trWakeFile)
-        SDDS_Bomb("no input file for wake for RFCW element");
+        SDDS_Bomb("no input file for transverse wake for RFCW element");
       SDDS_CopyString(&rfcw->trwake.inputFile, rfcw->trWakeFile);
       if (!rfcw->tColumn)
         SDDS_Bomb("no tColumn value for wake for RFCW element");
@@ -420,9 +420,9 @@ long track_through_rfcw
   rfcw->wake.change_p0 = rfcw->change_p0;
   if (!rfcw->initialized) {
     if (rfcw->WzColumn) {
-      if (!rfcw->wakeFile)
-        SDDS_Bomb("no input file for wake for RFCW element");
-      SDDS_CopyString(&rfcw->wake.inputFile, rfcw->wakeFile);
+      if (!rfcw->zWakeFile)
+        SDDS_Bomb("no input file for z wake for RFCW element");
+      SDDS_CopyString(&rfcw->wake.inputFile, rfcw->zWakeFile);
       if (!rfcw->tColumn)
         SDDS_Bomb("no tColumn value for wake for RFCW element");
       SDDS_CopyString(&rfcw->wake.tColumn, rfcw->tColumn);
