@@ -259,9 +259,12 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
       if (element_missing)
         continue;
       if ((param = confirm_parameter(parameter[j], eptr->type))<0) {
-        fprintf(stderr, "Error: element %s does not have a parameter %s (do_load_parameters)\n",
+        fprintf(stderr, "%s: element %s does not have a parameter %s (do_load_parameters)\n",
+                allow_missing_parameters?"Warning":"Error",
                 eptr->name, parameter[j]);
-        exit(1);
+        if (!allow_missing_parameters)
+          exit(1);
+        continue;
       }
       mode_flags = 0;
       if (mode) 
@@ -461,10 +464,15 @@ void dumpLatticeParameters(char *filename, RUN *run, LINE_LIST *beamline)
   
   eptr = &(beamline->elem);
   for (iElem=0; iElem<beamline->n_elems; iElem++) {
-    parameter = entity_description[eptr->type].parameter;
+    if (!(parameter = entity_description[eptr->type].parameter))
+      SDDS_Bomb("parameter entry is NULL for entity description (dumpLatticeParameters)");
+    if (!(eptr->name))
+      SDDS_Bomb("element name is NULL (dumpLatticeParameters)");
     for (iParam=0; iParam<entity_description[eptr->type].n_params; iParam++) {
       if (parameter[iParam].type==IS_DOUBLE) {
         value = *(double*)(eptr->p_elem+parameter[iParam].offset);
+        if (!(parameter[iParam].name)) 
+          SDDS_Bomb("parameter name is NULL (dumpLatticeParameters)");
         if (row>=maxRows) {
           if (!SDDS_LengthenTable(SDDSout, 1000))
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
