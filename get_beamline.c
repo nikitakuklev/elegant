@@ -618,7 +618,8 @@ void change_defined_parameter_values(char **elem_name, long *param_number, long 
 #endif
                     break;
                 case IS_LONG:
-                    *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) = value[i_elem]+0.5;
+                    *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) = 
+                      nearestInteger(value[i_elem]);
 #if DEBUG
                     fprintf(stdout, "   changing parameter %s of %s #%ld to %ld\n",
                            entity_description[elem_type].parameter[param].name,
@@ -697,9 +698,11 @@ void change_defined_parameter(char *elem_name, long param, long elem_type,
                 *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)));
         fflush(stdout);
       if (mode&LOAD_FLAG_ABSOLUTE)
-        *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) = value+0.5;
+        *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) = 
+          nearestInteger(value);
       else if (mode&LOAD_FLAG_DIFFERENTIAL)
-        *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) += value+0.5;
+        *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) += 
+          nearestInteger(value);
       else if (mode&LOAD_FLAG_FRACTIONAL)
         *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) *= 1+value;
       if (mode&LOAD_FLAG_VERBOSE)

@@ -595,7 +595,8 @@ void assert_parameter_values(char **elem_name, long *param_number, long *type, d
                     *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)) = value[i_elem];
                     break;
                 case IS_LONG:
-                    *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) = value[i_elem]+0.5;
+                    *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) = 
+                      nearestInteger(value[i_elem]);
                     break;
                 case IS_STRING:
                 default:
@@ -746,14 +747,16 @@ void assert_perturbations(char **elem_name, long *param_number, long *type, long
                       if (!(elem_perturb_flags[i_elem]&BIND_ERRORS_MASK) || 
                           (bind_number[i_elem]>=1 && i_group%bind_number[i_elem]==0) ||
                           i_group==0) 
-                        delta = perturbation(amplitude[i_elem], cutoff[i_elem], error_type[i_elem]) + 0.5;
+                        delta = perturbation(amplitude[i_elem], cutoff[i_elem], error_type[i_elem]);
                       if (elem_perturb_flags[i_elem]&FRACTIONAL_ERRORS)
                         *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) *= (1+delta);
                       else {
                         if (elem_perturb_flags[i_elem]&NONADDITIVE_ERRORS)
-                          *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) = delta;
+                          *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) = 
+                            nearestInteger(delta);
                         else
-                          *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) += delta;
+                          *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) += 
+                            nearestInteger(delta);
                       }
                     }
                     break;

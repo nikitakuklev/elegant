@@ -408,7 +408,8 @@ long assert_element_links(ELEMENT_LINKS *links, RUN *run, LINE_LIST *beamline, l
                     *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)) = value;
                     break;
                 case IS_LONG:
-                    *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) = value+0.5;
+                    *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) = 
+                      nearestInteger(value);
                     break;
                 case IS_STRING:
                 default:
@@ -462,7 +463,8 @@ void reset_element_links(ELEMENT_LINKS *links, RUN *run, LINE_LIST *beamline)
                     *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)) = links->initial_value[i_link];
                     break;
                 case IS_LONG:
-                    *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) = links->initial_value[i_link]+0.5;
+                    *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) = 
+                      nearestInteger(links->initial_value[i_link]);
                     break;
                 case IS_STRING:
                 default:

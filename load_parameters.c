@@ -50,6 +50,13 @@ static char *load_mode[LOAD_MODES] = {
     "absolute", "differential", "ignore", "fractional"
     } ;
 
+long nearestInteger(double value)
+{
+  if (value<0)
+    return -1*((long)(-value+0.5));
+  return (long)(value+0.5);
+}
+
 long setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 {
     long i, index;
@@ -187,7 +194,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
           *((double*)(load_request[i].reset_address[j])) = load_request[i].starting_value[j];
           break;
         case IS_LONG:
-          *((long*)(load_request[i].reset_address[j])) = (long)(load_request[i].starting_value[j]);
+          *((long*)(load_request[i].reset_address[j])) = nearestInteger(load_request[i].starting_value[j]);
           break;
         default:
           fprintf(stdout, "internal error: invalid value type for load request value restoration\n");
@@ -384,9 +391,11 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
             = *((long*)(p_elem+entity_description[eptr->type].parameter[param].offset));
           load_request[i].value_type[load_request[i].values] = IS_LONG;
           if (mode_flags&LOAD_FLAG_ABSOLUTE)
-            *((long*)(p_elem+entity_description[eptr->type].parameter[param].offset)) = newValue+0.5;
+            *((long*)(p_elem+entity_description[eptr->type].parameter[param].offset)) = 
+              nearestInteger(newValue);
           else if (mode_flags&LOAD_FLAG_DIFFERENTIAL)
-            *((long*)(p_elem+entity_description[eptr->type].parameter[param].offset)) += newValue+0.5;
+            *((long*)(p_elem+entity_description[eptr->type].parameter[param].offset)) += 
+              nearestInteger(newValue);
           else if (mode_flags&LOAD_FLAG_FRACTIONAL)
             *((long*)(p_elem+entity_description[eptr->type].parameter[param].offset)) *= 1+newValue;
           if (verbose)
