@@ -1254,7 +1254,7 @@ void trackWithChromaticLinearMatrix(double **particle, long particles,
   double alpha[2], beta[2], beta1, alpha1;
   double R11, R22, R12;
   static VMATRIX *M1 = NULL;
-  double lastDPoP = -1;
+  double lastDPoP = DBL_MAX, det;
   if (!M1) {
     M1 = tmalloc(sizeof(*M1));
     initialize_matrices(M1, 1);
@@ -1263,11 +1263,10 @@ void trackWithChromaticLinearMatrix(double **particle, long particles,
   beta[1] = twiss->betay;
   alpha[0] = twiss->alphax;
   alpha[1] = twiss->alphay;
-  for (i=4; i<6; i++) {
-    for (j=0; j<6; j++) {
+  for (i=0; i<6; i++) {
+    M1->C[i] = eptr->matrix->C[i];
+    for (j=0; j<6; j++)
       M1->R[i][j] = eptr->matrix->R[i][j];
-      M1->R[j][i] = eptr->matrix->R[j][i];
-    }
   }
   for (ip=0; ip<particles; ip++) {
     coord = particle[ip];
@@ -1294,8 +1293,14 @@ void trackWithChromaticLinearMatrix(double **particle, long particles,
         else {
           bomb("divided by zero in trackWithChromaticLinearMatrix", NULL);
         }
+        det = M1->R[0+offset][0+offset]*M1->R[1+offset][1+offset] -
+          M1->R[0+offset][1+offset]*M1->R[1+offset][0+offset];
+        if (fabs(det-1)>1e-6) {
+          fprintf(stderr, "Determinant is suspect: %le\n", det);
+          exit(1);
+        }
       }
-    }
+    } 
     lastDPoP = deltaPoP;
     track_particles(&coord, M1, &coord, 1);
   }
