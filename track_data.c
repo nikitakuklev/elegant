@@ -350,6 +350,8 @@ PARAMETER alph_param[N_ALPH_PARAMS] = {
     {"XS2", "M", IS_DOUBLE, 1, (long)((char *)&alph_example.xs2), NULL, 0.0, 0},
     {"DP1", "", IS_DOUBLE, 1, (long)((char *)&alph_example.dp1), NULL, -1, 0},
     {"DP2", "", IS_DOUBLE, 1, (long)((char *)&alph_example.dp2), NULL, 1, 0},
+    {"XPUCK", "M", IS_DOUBLE, 1, (long)((char *)&alph_example.xPuck), NULL, -1, 0},
+    {"WIDTHPUCK", "M", IS_DOUBLE, 1, (long)((char *)&alph_example.widthPuck), NULL, 0, 0},
     {"DX", "M", IS_DOUBLE, 1, (long)((char *)&alph_example.dx), NULL, 0.0, 0},
     {"DY", "M", IS_DOUBLE, 1, (long)((char *)&alph_example.dy), NULL, 0.0, 0},
     {"DZ", "M", IS_DOUBLE, 1, (long)((char *)&alph_example.dz), NULL, 0.0, 0},
