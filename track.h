@@ -1524,6 +1524,7 @@ typedef struct {
     long preload;              /* preload with steady-state voltage for point bunch */
     double preload_factor;     /* factor to multiply preload voltage by--usually 1 */
     long rigid_until_pass;     /* beam is "rigid" until this pass */
+    long detuned_until_pass;   /* cavity is completely detuned until this pass */
     long sample_interval;      /* sample interval for record file */
     char *record;              /* name of file to record (t, V) in */
     long single_pass;          /* controls accumulation of voltage from turn-to-turn */

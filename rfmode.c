@@ -72,7 +72,10 @@ void track_through_rfmode(
     if (rfmode->mp_charge==0) {
       return ;
     }
-
+    if (rfmode->detuned_until_pass>pass) {
+      return ;
+    }
+    
     if (!rfmode->initialized)
         bomb("track_through_rfmode called with uninitialized element", NULL);
 
