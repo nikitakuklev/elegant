@@ -43,5 +43,6 @@
     double distribution_cutoff[3] = {2, 2, 2};
     STRING distribution_type[3] = {"gaussian","gaussian","gaussian"};
     double centroid[6] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    long first_is_fiducial = 0;
 #end
 

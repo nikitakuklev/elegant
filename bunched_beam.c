@@ -23,8 +23,7 @@ static long x_beam_type, y_beam_type, longit_beam_type;
 
 static SDDS_TABLE SDDS_bunch;
 static long SDDS_bunch_initialized;
-static long beamRepeatSeed;
-static long bunchGenerated;
+static long beamRepeatSeed, bunchGenerated, firstIsFiducial, beamCounter;
 static long haltonID[6];
 
 void fill_transverse_structure(TRANSVERSE *trans, double emit, double beta, 
@@ -171,7 +170,9 @@ void setup_bunched_beam(
   
   beam->n_original = beam->n_to_track = beam->n_particle = n_particles_per_bunch;
   beam->n_accepted = beam->n_saved = 0;
-
+  firstIsFiducial = first_is_fiducial;
+  beamCounter = 0;
+  
   if (one_random_bunch) {
     /* make a seed for reinitializing the beam RN generator */
     beamRepeatSeed = 1e8*random_4(1);
@@ -214,7 +215,14 @@ long new_bunched_beam(
     char s[100];
 #endif
 
-    beam->n_original = beam->n_to_track = n_particles_per_bunch;
+    beamCounter++;
+    if (firstIsFiducial && beamCounter==1)
+      beam->n_original = beam->n_to_track = 1;
+    else {
+      if (firstIsFiducial && beamCounter==2)
+        bunchGenerated = 0;
+      beam->n_original = beam->n_to_track = n_particles_per_bunch;
+    }
     beam->n_accepted = 0;
 
     p_central = beam->p0_original = run->p_central;
@@ -246,14 +254,9 @@ long new_bunched_beam(
         fprintf(stdout, "generating bunch %ld.%ld\n", control->i_step, control->i_vary);
         fflush(stdout);
         n_actual_particles = 
-          generate_bunch(beam->original, n_particles_per_bunch, &x_plane,
+          generate_bunch(beam->original, beam->n_to_track, &x_plane,
                          &y_plane, &longit, enforce_rms_values, limit_invariants, 
                          symmetrize, haltonID, randomize_order, limit_in_4d, Po);
-        if (n_actual_particles!=n_particles_per_bunch)
-            fprintf(stdout, "warning: only %ld of %ld requested particles are actually being tracked.\n", n_actual_particles, 
-                    n_particles_per_bunch);
-            fflush(stdout);
-
         if (bunch) {
             if (!SDDS_bunch_initialized)
                 bomb("'bunch' file is uninitialized (new_bunched_beam)", NULL);
