@@ -1133,6 +1133,8 @@ PARAMETER frfmode_param[N_FRFMODE_PARAMS] = {
     {"USE_SYMM_DATA", "", IS_LONG, 0, (long)((char *)&frfmode_example.useSymmData), NULL, 0.0, 0, "use \"Symm\" columns from URMEL output file?"},
     {"FACTOR", "", IS_DOUBLE, 0, (long)((char *)&frfmode_example.factor), NULL, 1.0, 0, "factor by which to multiply shunt impedances"},
     {"CUTOFF", "HZ", IS_DOUBLE, 0, (long)((char *)&frfmode_example.cutoffFrequency), NULL, 0.0, 0, "If >0, cutoff frequency.  Modes above this frequency are ignored."},
+    {"OUTPUT_FILE", "", IS_STRING, 0, (long)((char *)&frfmode_example.outputFile), NULL, 0.0, 0, "Output file for voltage in each mode."},
+    {"FLUSH_INTERVAL", "", IS_LONG, 0, (long)((char *)&frfmode_example.flushInterval), NULL, 0.0, 1, "Interval in passes at which to flush output data."},
     };
 
 TRFMODE trfmode_example;
@@ -1167,6 +1169,8 @@ PARAMETER ftrfmode_param[N_FTRFMODE_PARAMS] = {
     {"XFACTOR", "", IS_DOUBLE, 0, (long)((char *)&ftrfmode_example.xfactor), NULL, 1.0, 0, "factor by which to multiply shunt impedances"},
     {"YFACTOR", "", IS_DOUBLE, 0, (long)((char *)&ftrfmode_example.yfactor), NULL, 1.0, 0, "factor by which to multiply shunt impedances"},
     {"CUTOFF", "HZ", IS_DOUBLE, 0, (long)((char *)&ftrfmode_example.cutoffFrequency), NULL, 0.0, 0, "If >0, cutoff frequency.  Modes above this frequency are ignored."},
+    {"OUTPUT_FILE", "", IS_STRING, 0, (long)((char *)&ftrfmode_example.outputFile), NULL, 0.0, 0, "Output file for voltage in each mode."},
+    {"FLUSH_INTERVAL", "", IS_LONG, 0, (long)((char *)&ftrfmode_example.flushInterval), NULL, 0.0, 1, "Interval in passes at which to flush output data."},
     };
 
 ZLONGIT zlongit_example;

@@ -46,6 +46,8 @@ void track_through_ftrfmode(
   if (!trfmode->initialized)
     bomb("track_through_ftrfmode called with uninitialized element", NULL);
 
+  if (trfmode->outputFile && pass==0 && !SDDS_StartPage(&trfmode->SDDSout, n_passes))
+    SDDS_Bomb("Problem starting page for FTRFMODE output file");
   
   if (trfmode->n_bins>max_n_bins) {
     max_n_bins = trfmode->n_bins;
@@ -156,6 +158,13 @@ void track_through_ftrfmode(
           trfmode->lastPhasey[imode] = atan2(trfmode->Vyi[imode], trfmode->Vyr[imode]);
         trfmode->Vy[imode] = sqrt(sqr(trfmode->Vyr[imode])+sqr(trfmode->Vyi[imode]));
       }
+
+      if (trfmode->outputFile && 
+          !SDDS_SetRowValues(&trfmode->SDDSout, 
+                             SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, pass,
+                             trfmode->xModeIndex[imode], trfmode->Vx[imode],
+                             trfmode->yModeIndex[imode], trfmode->Vy[imode], -1))
+        SDDS_Bomb("Problem writing data to FTRFMODE output file");
     }
     trfmode->last_t = t;
   }
@@ -175,6 +184,11 @@ void track_through_ftrfmode(
     }
   }
 
+  if (trfmode->outputFile && 
+      (trfmode->flushInterval<1 || pass%trfmode->flushInterval==0 || pass==(n_passes-1)) &&
+      !SDDS_UpdatePage(&trfmode->SDDSout, 0))
+    SDDS_Bomb("Problem writing data to FTRFMODE output file");
+
 #if defined(MINIMIZE_MEMORY)
   free(xsum);
   free(ysum);
@@ -193,7 +207,7 @@ void set_up_ftrfmode(FTRFMODE *rfmode, char *element_name, double element_z, lon
                      RUN *run, long n_particles,
                      double Po, double total_length)
 {
-  long i, n, imode;
+  long imode;
   double T;
   SDDS_DATASET SDDSin;
   
@@ -335,6 +349,45 @@ void set_up_ftrfmode(FTRFMODE *rfmode, char *element_name, double element_z, lon
   }
 
   rfmode->last_t = element_z/c_mks;
+
+  if (rfmode->outputFile) {
+    TRACKING_CONTEXT context;
+    char *filename;
+    getTrackingContext(&context);
+    filename = compose_filename(rfmode->outputFile, context.rootname);
+    if (!SDDS_InitializeOutput(&rfmode->SDDSout, SDDS_BINARY, 0, NULL, NULL, 
+                               filename) ||
+        !SDDS_DefineSimpleColumn(&rfmode->SDDSout, "Pass", NULL, SDDS_LONG)) {
+      fprintf(stderr, "Problem initializing file %s for FTRFMODE element\n", filename);
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      exit(1);
+    }
+    if (!(rfmode->xModeIndex = malloc(sizeof(*(rfmode->xModeIndex))*rfmode->modes)) ||
+        !(rfmode->yModeIndex = malloc(sizeof(*(rfmode->yModeIndex))*rfmode->modes))) {
+      fprintf(stderr, "Memory allocation failure for TFRFMODE element\n");
+      exit(1);
+    }
+    for (imode=0; imode<rfmode->modes; imode++) {
+      char sx[100], sy[100];
+      sprintf(sx, "VxMode%03ld", imode);
+      sprintf(sy, "VyMode%03ld", imode);
+      if ((rfmode->xModeIndex[imode]
+           =SDDS_DefineColumn(&rfmode->SDDSout, sx, NULL, "V", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+          ((rfmode->yModeIndex[imode]
+            =SDDS_DefineColumn(&rfmode->SDDSout, sy, NULL, "V", NULL, NULL, SDDS_DOUBLE, 0))<0)) {
+        fprintf(stderr, "Problem initializing file %s for FTRFMODE element\n", filename);
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        exit(1);
+      }
+    }
+    if (!SDDS_WriteLayout(&rfmode->SDDSout)) {
+      fprintf(stderr, "Problem initializing file %s for FTRFMODE element\n", filename);
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      exit(1);
+    }
+    if (filename!=rfmode->outputFile)
+      free(filename);
+  }
 
   rfmode->initialized = 1;
 }

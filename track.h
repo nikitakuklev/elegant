@@ -658,8 +658,8 @@ extern char *entity_text[N_TYPES];
 #define N_LTHINLENS_PARAMS 8
 #define N_LMIRROR_PARAMS 9
 #define N_EMATRIX_PARAMS (1+6+6*6+6*21)
-#define N_FRFMODE_PARAMS  7
-#define N_FTRFMODE_PARAMS 10
+#define N_FRFMODE_PARAMS  9
+#define N_FTRFMODE_PARAMS 12
 #define N_TFBPICKUP_PARAMS 18
 #define N_TFBDRIVER_PARAMS 20
 #define N_LSCDRIFT_PARAMS  9
@@ -1682,6 +1682,8 @@ typedef struct {
     long useSymmData;          /* use Symm data from URMEL output? */
     double factor;             /* multiply impedance by this factor */
     double cutoffFrequency;    /* modes above this frequency are ignored */
+    char *outputFile;          /* output file for voltage in each mode */
+    long flushInterval;       /* interval at which data is flushed */
     /* for internal use: */
     double mp_charge;          /* charge per macroparticle */
     long initialized;          /* indicates that beam has been seen */
@@ -1694,6 +1696,8 @@ typedef struct {
     double *beta;              /* normalized load impedance */
     double last_t;             /* time at which last particle was seen */
     double *last_phase;        /* phase at t=last_t */
+    SDDS_DATASET SDDSout;
+    long *modeIndex;           /* SDDS index of mode column in output file */
     } FRFMODE;
 
 /* names and storage structure for transverse RF mode physical parameters */
@@ -1738,6 +1742,8 @@ typedef struct {
     double xfactor;            /* multiply impedance by this factor */
     double yfactor;            /* multiply impedance by this factor */
     double cutoffFrequency;    /* modes above this frequency are ignored */
+    char *outputFile;          /* output file for voltage in each mode */
+    long flushInterval;       /* interval at which data is flushed */
     /* for internal use: */
     double mp_charge;          /* charge per macroparticle */
     long initialized;          /* indicates that beam has been seen */
@@ -1754,6 +1760,8 @@ typedef struct {
     double last_t;             /* time at which last particle was seen */
     double *lastPhasex;        /* phase at t=last_t */
     double *lastPhasey;        /* phase at t=last_t */
+    SDDS_DATASET SDDSout;
+    long *xModeIndex, *yModeIndex;
     } FTRFMODE;
 
 /* names and storage structure for longitudinal impedance physical parameters */

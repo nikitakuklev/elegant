@@ -46,6 +46,9 @@ void track_through_frfmode(
   if (!rfmode->initialized)
     bomb("track_through_rfmode called with uninitialized element", NULL);
 
+  if (rfmode->outputFile && pass==0 && !SDDS_StartPage(&rfmode->SDDSout, n_passes))
+    SDDS_Bomb("Problem starting page for FRFMODE output file");
+  
   if (rfmode->n_bins>max_n_bins) {
     Ihist = trealloc(Ihist, sizeof(*Ihist)*(max_n_bins=rfmode->n_bins));
     Vbin = trealloc(Vbin, sizeof(*Vbin)*max_n_bins);
@@ -88,6 +91,7 @@ void track_through_frfmode(
   }
 
   for (ib=0; ib<=lastBin; ib++) {
+    t = tmin+(ib+0.5)*dt;           /* middle arrival time for this bin */
     if (!Ihist[ib])
       continue;
     
@@ -109,8 +113,6 @@ void track_through_frfmode(
       VbImagFactor = 1/(2*Qrp);
       omega *= Qrp/Q;
 
-      t = tmin+(ib+0.5)*dt;           /* middle arrival time for this bin */
-      
       /* advance cavity to this time */
       phase = rfmode->last_phase[imode] + omega*(t - rfmode->last_t);
       damping_factor = exp(-(t-rfmode->last_t)/tau);
@@ -132,8 +134,14 @@ void track_through_frfmode(
       V_sum  += Ihist[ib]*rfmode->V[imode];
       Vr_sum += Ihist[ib]*rfmode->Vr[imode];
       phase_sum += Ihist[ib]*rfmode->last_phase[imode];
-      
+
+      if (rfmode->outputFile && 
+          !SDDS_SetRowValues(&rfmode->SDDSout, 
+                             SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, pass,
+                             rfmode->modeIndex[imode], rfmode->V[imode], -1))
+        SDDS_Bomb("Problem writing data to FRFMODE output file");
     }
+
     rfmode->last_t = t;
   }
   
@@ -148,6 +156,11 @@ void track_through_frfmode(
       }
     }
   }
+
+  if (rfmode->outputFile && 
+      (rfmode->flushInterval<1 || pass%rfmode->flushInterval==0 || pass==(n_passes-1)) &&
+      !SDDS_UpdatePage(&rfmode->SDDSout, 0))
+    SDDS_Bomb("Problem writing data to FRFMODE output file");
   
 #if defined(MINIMIZE_MEMORY)
   free(Ihist);
@@ -168,7 +181,7 @@ void set_up_frfmode(FRFMODE *rfmode, char *element_name, double element_z, long 
                     RUN *run, long n_particles,
                     double Po, double total_length)
 {
-  long i, n, imode;
+  long imode;
   double T;
   SDDS_DATASET SDDSin;
   
@@ -275,9 +288,44 @@ void set_up_frfmode(FRFMODE *rfmode, char *element_name, double element_z, long 
       exit(1);
     }
   }
-  
 
   rfmode->last_t = element_z/c_mks;
+
+  if (rfmode->outputFile) {
+    TRACKING_CONTEXT context;
+    char *filename;
+    getTrackingContext(&context);
+    filename = compose_filename(rfmode->outputFile, context.rootname);
+    if (!SDDS_InitializeOutput(&rfmode->SDDSout, SDDS_BINARY, 0, NULL, NULL, 
+                               filename) ||
+        !SDDS_DefineSimpleColumn(&rfmode->SDDSout, "Pass", NULL, SDDS_LONG)) {
+      fprintf(stderr, "Problem initializing file %s for FRFMODE element\n", filename);
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      exit(1);
+    }
+    if (!(rfmode->modeIndex = malloc(sizeof(*(rfmode->modeIndex))*rfmode->modes))) {
+      fprintf(stderr, "Memory allocation failure for FRFMODE element\n");
+      exit(1);
+    }
+    for (imode=0; imode<rfmode->modes; imode++) {
+      char s[100];
+      sprintf(s, "VMode%03ld", imode);
+      if ((rfmode->modeIndex[imode]
+           =SDDS_DefineColumn(&rfmode->SDDSout, s, NULL, "V", NULL, NULL, 
+                              SDDS_DOUBLE, 0))<0) {
+        fprintf(stderr, "Problem initializing file %s for FRFMODE element\n", filename);
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        exit(1);
+      }
+    }
+    if (!SDDS_WriteLayout(&rfmode->SDDSout)) {
+      fprintf(stderr, "Problem initializing file %s for FRFMODE element\n", filename);
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      exit(1);
+    }
+    if (filename!=rfmode->outputFile)
+      free(filename);
+  }
 
   rfmode->initialized = 1;
 }
