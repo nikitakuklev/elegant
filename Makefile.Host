@@ -7,7 +7,7 @@ SYS_DLL_LIBS_Linux =
 
 CMPLR = ANSI
 CC = $($(ANSI)_$(CMPLR))
-HOST_OPT = NO
+#HOST_OPT = NO
 #CC = quantify -cache-dir=/home/oxygen/BORLAND/.quantify-cache $($(ANSI)_$(CMPLR)) 
 #CC = purify $($(ANSI)_$(CMPLR)) 
 #CXX = quantify -cache-dir=/home/oxygen/BORLAND/.quantify-cache $($(CPLUSPLUS)_$(CXXCMPLR)) 
