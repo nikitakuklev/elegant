@@ -386,6 +386,8 @@ VMATRIX *compute_matrix(
         break;
       case T_SOLE:
         sole = (SOLE*) elem->p_elem;
+        if (sole->B && !sole->ks)
+          sole->ks = -sole->B*e_mks/(me_mks*c_mks*elem->Pref_input);
         elem->matrix = solenoid_matrix(sole->length, sole->ks,
                                        sole->order?sole->order:run->default_order);
         if (sole->dx || sole->dy || sole->dz)

@@ -198,7 +198,7 @@ SOLE sole_example;
 /* solenoid physical parameters */
 PARAMETER sole_param[N_SOLE_PARAMS] = {
     {"L", "M", IS_DOUBLE, 1, (long)((char *)&sole_example.length), NULL, 0.0, 0},
-    {"KS", "RAD", IS_DOUBLE, 1, (long)((char *)&sole_example.ks), NULL, 0.0, 0},
+    {"KS", "RAD/M", IS_DOUBLE, 1, (long)((char *)&sole_example.ks), NULL, 0.0, 0},
     {"B", "T", IS_DOUBLE, 1, (long)((char *)&sole_example.B), NULL, 0.0, 0},
     {"DX", "M", IS_DOUBLE, 1, (long)((char *)&sole_example.dx), NULL, 0.0, 0},
     {"DY", "M", IS_DOUBLE, 1, (long)((char *)&sole_example.dy), NULL, 0.0, 0},
@@ -491,7 +491,7 @@ PARAMETER twla_param[N_TWLA_PARAMS] = {
     {"FREQUENCY", "HZ", IS_DOUBLE, 0, (long)((char *)&twla_example.frequency), NULL, DEFAULT_FREQUENCY, 0},
     {"PHASE", "RAD", IS_DOUBLE, 0, (long)((char *)&twla_example.phase), NULL, 0.0, 0},
     {"TIME_OFFSET", "S", IS_DOUBLE, 0, (long)((char *)&twla_example.time_offset), NULL, 0.0, 0},
-    {"EZ", "V", IS_DOUBLE, 0, (long)((char *)&twla_example.Ez), NULL, 0.0, 0},
+    {"EZ", "V/M", IS_DOUBLE, 0, (long)((char *)&twla_example.Ez), NULL, 0.0, 0},
     {"B_SOLENOID", "T", IS_DOUBLE, 0, (long)((char *)&twla_example.B_solenoid), NULL, 0.0, 0},
     {"ACCURACY", "", IS_DOUBLE, 0, (long)((char *)&twla_example.accuracy), NULL, DEFAULT_ACCURACY, 0},
     {"X_MAX", "M", IS_DOUBLE, 0, (long)((char *)&twla_example.x_max), NULL, 0.0, 0},
@@ -825,7 +825,7 @@ PARAMETER twmta_param[N_TWMTA_PARAMS] = {
     {"L", "M", IS_DOUBLE, 0, (long)((char *)&twmta_example.length), NULL, 0.0, 0},
     {"FREQUENCY", "HZ", IS_DOUBLE, 0, (long)((char *)&twmta_example.frequency), NULL, DEFAULT_FREQUENCY, 0},
     {"PHASE", "RAD", IS_DOUBLE, 0, (long)((char *)&twmta_example.phase), NULL, 0.0, 0},
-    {"EZ", "V", IS_DOUBLE, 0, (long)((char *)&twmta_example.Ez), NULL, 0.0, 0},
+    {"EZ", "V/M", IS_DOUBLE, 0, (long)((char *)&twmta_example.Ez), NULL, 0.0, 0},
     {"ACCURACY", "", IS_DOUBLE, 0, (long)((char *)&twmta_example.accuracy), NULL, DEFAULT_ACCURACY, 0},
     {"X_MAX", "M", IS_DOUBLE, 0, (long)((char *)&twmta_example.x_max), NULL, 0.0, 0},
     {"Y_MAX", "M", IS_DOUBLE, 0, (long)((char *)&twmta_example.y_max), NULL, 0.0, 0},

@@ -475,7 +475,8 @@ long do_tracking(
                                 if (!(eptr->matrix = compute_matrix(eptr, run, NULL)))
                                     bomb("no matrix for element that must have matrix", NULL);
                                 }
-                            }
+                            sptr->ks = 0;  /* reset so it is clear that B is fundamental quantity */
+                          }
                         if (!eptr->matrix) {
                             if (!(eptr->matrix=compute_matrix(eptr, run, NULL)))
                                 bomb("no matrix for element that must have matrix", NULL);
