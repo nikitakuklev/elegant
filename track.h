@@ -346,6 +346,7 @@ typedef struct {
     long new_data_read;          /* new data has been read for optimization */
     long n_restarts;
     double restart_worst_term_factor;
+    long restart_worst_terms;
     long matrix_order, *TijkMem, *UijklMem;
     double simplexDivisor, simplexPassRangeFactor;
     } OPTIMIZATION_DATA;
