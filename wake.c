@@ -67,13 +67,14 @@ void track_through_wake(double **part, long np, WAKE *wakeData, double *PoInput,
     fflush(stdout);
   }
   
-  if (wakeData->smoothing && 
-      !SavitzyGolaySmooth(Itime, nb, wakeData->SGOrder, wakeData->SGHalfWidth, wakeData->SGHalfWidth, 0)) {
-    fprintf(stderr, "Problem with smoothing for WAKE element (file %s)\n",
-            wakeData->inputFile);
-    fprintf(stderr, "Parameters: nbins=%ld, order=%ld, half-width=%ld\n",
-            nb, wakeData->SGOrder, wakeData->SGHalfWidth);
-    exit(1);
+  if (wakeData->smoothing && nb>=(2*wakeData->SGHalfWidth+1)) {
+    if (!SavitzyGolaySmooth(Itime, nb, wakeData->SGOrder, wakeData->SGHalfWidth, wakeData->SGHalfWidth, 0)) {
+      fprintf(stderr, "Problem with smoothing for WAKE element (file %s)\n",
+              wakeData->inputFile);
+      fprintf(stderr, "Parameters: nbins=%ld, order=%ld, half-width=%ld\n",
+              nb, wakeData->SGOrder, wakeData->SGHalfWidth);
+      exit(1);
+    }
   }
   
   

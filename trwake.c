@@ -76,14 +76,16 @@ void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
     if (!wakeData->W[plane])
       continue;
     
-    if (wakeData->smoothing && 
-        !SavitzyGolaySmooth(posItime[plane], nb, wakeData->SGOrder, 
-                            wakeData->SGHalfWidth, wakeData->SGHalfWidth, 0)) {
-      fprintf(stderr, "Problem with smoothing for TRWAKE element (file %s)\n",
-              wakeData->inputFile);
-      fprintf(stderr, "Parameters: nbins=%ld, order=%ld, half-width=%ld\n",
-              nb, wakeData->SGOrder, wakeData->SGHalfWidth);
-      exit(1);
+    if (wakeData->smoothing && nb>=(2*wakeData->SGHalfWidth+1)) {
+      if (!SavitzyGolaySmooth(posItime[plane], nb, wakeData->SGOrder, 
+                              wakeData->SGHalfWidth, wakeData->SGHalfWidth, 0)) {
+        fprintf(stderr, "Problem with smoothing for TRWAKE element (file %s)\n",
+                wakeData->inputFile);
+        fprintf(stderr, "Parameters: nbins=%ld, order=%ld, half-width=%ld\n",
+                nb, wakeData->SGOrder, wakeData->SGHalfWidth);
+        exit(1);
+      }
+      
     }
 
     /* Do the convolution of the particle density and the wake function,
@@ -194,7 +196,7 @@ void set_up_trwake(TRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
     if (!SDDS_InitializeInput(&SDDSin, wakeData->inputFile) || SDDS_ReadPage(&SDDSin)!=1 ||
         (wakeData->wakePoints=SDDS_RowCount(&SDDSin))<0 ||
         wakeData->wakePoints<2) {
-      fprintf(stderr, "Error: TRWAKE file is unreadable, or has insufficient data.\n", wakeData->inputFile);
+      fprintf(stderr, "Error: TRWAKE file %s is unreadable, or has insufficient data.\n", wakeData->inputFile);
       exit(1);
     }
     if (SDDS_CheckColumn(&SDDSin, wakeData->tColumn, "s", SDDS_ANY_FLOATING_TYPE, 
