@@ -34,11 +34,12 @@ void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
       name = expand_ranges(name);
     if (!item || !strlen(item))
       bomb("no item given", NULL);
-    if (multiplicative)
-      /* convert to fractional change */
-      value = value-1;
-    if (multiplicative && differential)
-      bomb("can't combine multiplicative and differential modes", NULL);
+    if (multiplicative) {
+      if (!differential)
+	/* convert to fractional change */
+	value = value-1;
+      differential = 0;
+    }
     if (type) {
       long i;
       str_toupper(type);
