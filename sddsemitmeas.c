@@ -9,6 +9,10 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.10  1999/10/12 21:50:01  borland
+ * All printouts now go to the stdout rather than stderr.  fflush statements,
+ * some unnecessary, were added in a mostly automated fashion.
+ *
  * Revision 1.9  1999/08/05 15:41:23  soliday
  * Added WIN32 and Linux support
  *
@@ -195,7 +199,7 @@ int main(
   double emitx_sum, emity_sum;
   double emitx2_sum, emity2_sum;
   double error_level, x_error_level, y_error_level;
-  double md_x, md_y, *dev_limit, md;
+  double md_x, md_y, *dev_limit, md, contrib;
   int i_dev, n_dev_limits;
   int nx_used, nx_used_sum;
   int ny_used, ny_used_sum;
@@ -708,7 +712,11 @@ int main(
           if (find_uncert) {
             md = estimate_uncertainty(uncertx, Sx, sSx, Rx, s2x, Kx, dev_limit[i_dev], n_configs, x_uncert_min, NULL);
           }
-          md_x += solve_normal_form_opt(Sx, sSx, Rx, s2x, Kx, dev_limit[i_dev], &nx_used, x_fit_sig2);
+          if ((contrib = solve_normal_form_opt(Sx, sSx, Rx, s2x, Kx, dev_limit[i_dev], &nx_used, x_fit_sig2))<0) {
+            fprintf(stderr, "Problem fitting for y\n");
+            continue;
+          }
+          md_x += contrib;
           if (nx_used && (emitx = Sx->a[0][0]*Sx->a[2][0]-sqr(Sx->a[1][0]))>0) {
             emitx = sqrt(emitx);
             S11_sum += Sx->a[0][0]; S11_sum2 += sqr(Sx->a[0][0]);
@@ -733,7 +741,11 @@ int main(
           if (find_uncert) {
             md = estimate_uncertainty(uncerty, Sy, sSy, Ry, s2y, Ky, dev_limit[i_dev], n_configs, y_uncert_min, NULL);
           }
-          md_y += solve_normal_form_opt(Sy, sSy, Ry, s2y, Ky, dev_limit[i_dev], &ny_used, y_fit_sig2);
+          if ((contrib = solve_normal_form_opt(Sy, sSy, Ry, s2y, Ky, dev_limit[i_dev], &ny_used, y_fit_sig2))<0) {
+            fprintf(stderr, "Problem fitting for y\n");
+            continue;
+          }
+          md_y += contrib;
           if (ny_used && (emity = Sy->a[0][0]*Sy->a[2][0]-sqr(Sy->a[1][0]))>0) {
             emity = sqrt(emity);
             S33_sum += Sy->a[0][0]; S33_sum2 += sqr(Sy->a[0][0]);
@@ -1041,31 +1053,51 @@ double solve_normal_form(
   m_alloc(&C, K->n, K->m);
 
   /* find the fit */
-  if (!m_trans(Pt, P))
-    bomb("matrix error--call was: m_trans(Pt, P)", NULL);
-  if (!m_mult(Pt_K, Pt, K))
-    bomb("matrix error--call was: m_mult(Pt_K, Pt, K)", NULL);
-  if (!m_mult(Pt_K_P, Pt_K, P))
-    bomb("matrix error--call was: m_mult(Pt_K_P, Pt_K, P)", NULL);
-  if (!m_invert(Inv_Pt_K_P, Pt_K_P))
-    bomb("matrix error--call was: m_invert(Inv_Pt_K_P, Pt_K_P)", NULL);
-  if (!m_mult(Inv_PtKP_PtK, Inv_Pt_K_P, Pt_K))
-    bomb("matrix error--call was: m_mult(Inv_PtKP_PtK, Inv_Pt_K_P, Pt_K)", NULL);
-  if (!m_mult(F, Inv_PtKP_PtK, M))
-    bomb("matrix error--call was: m_mult(F, Inv_PtKP_PtK, M)", NULL);
+  if (!m_trans(Pt, P)) {
+    fprintf(stderr, "matrix error--call was: m_trans(Pt, P)", NULL);
+    return -1;
+  }
+  if (!m_mult(Pt_K, Pt, K)) {
+    fprintf(stderr, "matrix error--call was: m_mult(Pt_K, Pt, K)", NULL);
+    return -1;
+  }
+  if (!m_mult(Pt_K_P, Pt_K, P)) {
+    fprintf(stderr, "matrix error--call was: m_mult(Pt_K_P, Pt_K, P)", NULL);
+    return -1;
+  }
+  if (!m_invert(Inv_Pt_K_P, Pt_K_P)) {
+    fprintf(stderr, "matrix error--call was: m_invert(Inv_Pt_K_P, Pt_K_P)", NULL);
+    return -1;
+  }
+  if (!m_mult(Inv_PtKP_PtK, Inv_Pt_K_P, Pt_K)) {
+    fprintf(stderr, "matrix error--call was: m_mult(Inv_PtKP_PtK, Inv_Pt_K_P, Pt_K)", NULL);
+    return -1;
+  }
+  if (!m_mult(F, Inv_PtKP_PtK, M)) {
+    fprintf(stderr, "matrix error--call was: m_mult(F, Inv_PtKP_PtK, M)", NULL);
+    return -1;
+  }
   m_zero(sF);
   if (m_invert(C, K)) {
-    if (!m_trans(Tt, Inv_PtKP_PtK))
-      bomb("matrix error--call was: m_trans(Tt, Inv_PtKP_PtK)", NULL);
-    if (!m_mult(TC, Inv_PtKP_PtK, C))
-      bomb("matrix error--call was: m_mult(TC, Inv_PtKP_PtK, C)", NULL);
-    if (!m_mult(sF, TC, Tt))
-      bomb("matrix error--call was: m_mult(sF, TC, Tt)", NULL);
+    if (!m_trans(Tt, Inv_PtKP_PtK)) {
+      fprintf(stderr, "matrix error--call was: m_trans(Tt, Inv_PtKP_PtK)", NULL);
+      return -1;
+    }
+    if (!m_mult(TC, Inv_PtKP_PtK, C)) {
+      fprintf(stderr, "matrix error--call was: m_mult(TC, Inv_PtKP_PtK, C)", NULL);
+      return -1;
+    }
+    if (!m_mult(sF, TC, Tt)) {
+      fprintf(stderr, "matrix error--call was: m_mult(sF, TC, Tt)", NULL);
+      return -1;
+    }
   }
 
   /* evaluate the fit */
-  if (!m_mult(Mp, P, F))
-    bomb("matrix error--call was: m_mult(Mp, P, F)", NULL);
+  if (!m_mult(Mp, P, F)) {
+    fprintf(stderr, "matrix error--call was: m_mult(Mp, P, F)", NULL);
+    return -1;
+  }
   for (i=rms_error=0; i<Mp->n; i++) {
     if ((s2_fit[i] = Mp->a[i][0])<0) {
       s2_fit[i] = Mp->a[i][0] = 0;
