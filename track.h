@@ -375,10 +375,10 @@ typedef struct {
   long nSlices;
   /* simulation data */
   double *ecnx, *ecny;
-  double *Cx, *Cy, *Cxp, *Cyp, *Ct, *Cdelta, *Sdelta, *length, *charge;
+  double *Cx, *Cy, *Cxp, *Cyp, *Ct, *Cdelta, *Sdelta, *duration, *charge;
   long *ecnxIndex, *ecnyIndex;
   long *CxIndex, *CyIndex, *CxpIndex, *CypIndex, *CtIndex, *CdeltaIndex, *SdeltaIndex;
-  long *lengthIndex, *chargeIndex;
+  long *durationIndex, *chargeIndex;
   long *sliceFound;
 } SLICE_OUTPUT;
 
@@ -393,6 +393,13 @@ typedef struct {
     SASEFEL_OUTPUT sasefel;
     SLICE_OUTPUT sliceAnalysis;
     } OUTPUT_FILES;
+
+typedef struct {
+  char elementName[1024];
+  long elementOccurrence, step;
+  SLICE_OUTPUT *sliceAnalysis;
+  double zStart, zEnd;
+} TRACKING_CONTEXT;
 
 /* data arrays for awe dumps, found in dump_particlesX.c */
 #define N_BEAM_QUANTITIES 9
@@ -588,8 +595,8 @@ extern char *entity_text[N_TYPES];
 #define N_CHARGE_PARAMS 2
 #define N_PFILTER_PARAMS 5
 #define N_HISTOGRAM_PARAMS 9
-#define N_CSRCSBEND_PARAMS 47
-#define N_CSRDRIFT_PARAMS 18
+#define N_CSRCSBEND_PARAMS 48
+#define N_CSRDRIFT_PARAMS 19
 #define N_REMCOR_PARAMS 6
 #define N_MAPSOLENOID_PARAMS 18
 #define N_RFCW_PARAMS 28
@@ -1416,7 +1423,7 @@ typedef struct {
     double b1, b2, b3, b4;
     long isr, csr, csrBlock;
     char *derbenevCriterionMode, *particleOutputFile;
-    long particleOutputInterval;
+    long particleOutputInterval, sliceAnalysisInterval;
     /* for internal use only: */
     long flags;   /* bend flags */
     short wakeFileActive, particleFileActive;
@@ -1436,7 +1443,7 @@ typedef struct {
   char *normMode, *spreadMode, *wavelengthMode, *bunchlengthMode, *Saldin54Output;
   long useStupakov;
   char *StupakovOutput;
-  long StupakovOutputInterval;
+  long StupakovOutputInterval, sliceAnalysisInterval;
   /* used internally only */
   FILE *fpSaldin;
 } CSRDRIFT;
@@ -1845,9 +1852,10 @@ extern long computeSliceMoments(double C[6], double S[6][6],
 			 double minValue, double maxValue);
 void performSliceAnalysisOutput(SLICE_OUTPUT *sliceOutput, double **particle, long particles, 
 				long newPage, long step, double Po, double charge, 
-				char *elementName, double elementPosition);
+				char *elementName, double elementPosition,
+				long timeGiven);
 void performSliceAnalysis(SLICE_OUTPUT *sliceOutput, double **particle, long particles, 
-			  double Po, double charge);
+			  double Po, double charge, long timeGiven);
 
 /* prototypes for compute_matrices13.c: */
 extern VMATRIX *full_matrix(ELEMENT_LIST *elem, RUN *run, long order);
@@ -1903,7 +1911,7 @@ extern long do_tracking(double **coord, long *n_original, long *effort, LINE_LIS
                         unsigned long flags, long n_passes, SASEFEL_OUTPUT *sasefel,
 			SLICE_OUTPUT *sliceAnalysis,
                         double *finalCharge);
-extern void getTrackingElementInfo(char *buffer, long buflen, long *occurrence);
+extern void getTrackingContext(TRACKING_CONTEXT *trackingContext);
 extern void offset_beam(double **coord, long n_to_track, MALIGN *offset, double P_central);
 extern void do_match_energy(double **coord, long np, double *P_central, long change_beam);
 extern void set_central_energy(double **coord, long np, double new_energy, double *P_central);

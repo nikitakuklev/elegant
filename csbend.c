@@ -13,6 +13,10 @@
 void integrate_csbend_ord2(double *Qf, double *Qi, double s, long n, double rho0, double p0);
 void integrate_csbend_ord4(double *Qf, double *Qi, double s, long n, double rho0, double p0);
 void exactDrift(double **part, long np, double length);
+void convertFromCSBendCoords(double **part, long np, double rho0, 
+			     double cos_ttilt, double sin_ttilt, long ctMode);
+void convertToCSBendCoords(double **part, long np, double rho0, 
+			     double cos_ttilt, double sin_ttilt, long ctMode);
 
 static double Fy_0, Fy_x, Fy_x2, Fy_x3, Fy_x4;
 static double Fy_y2, Fy_x_y2, Fy_x2_y2;
@@ -865,9 +869,11 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   long iBin, iBinBehind;
   long csrInhibit = 0;
   double derbenevRatio = 0;
+  TRACKING_CONTEXT tContext;
 
   reset_driftCSR();
-  
+  getTrackingContext(&tContext);
+
   if (!csbend)
     bomb("null CSBEND pointer (track_through_csbend)", NULL);
 
@@ -1374,7 +1380,21 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
         if (!SDDS_WritePage(&csbend->SDDSpart))
           SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
       }
-      
+
+      if (tContext.sliceAnalysis && tContext.sliceAnalysis->active &&
+	  kick!=(csbend->n_kicks-1) &&
+	  (csbend->sliceAnalysisInterval==0 ||
+	   kick%csbend->sliceAnalysisInterval==0)) {
+	convertFromCSBendCoords(part, n_part, rho0, cos_ttilt, sin_ttilt, 1);
+	performSliceAnalysisOutput(tContext.sliceAnalysis, part, n_part, 
+				   0, tContext.step, Po, 
+				   macroParticleCharge*n_part,
+				   tContext.elementName, 
+				   z_start + (kick*(z_end-z_start))/(csbend->n_kicks-1),
+				   1);
+	convertToCSBendCoords(part, n_part, rho0, cos_ttilt, sin_ttilt, 1);
+      }
+
       if (csbend->wakeFileActive && 
           ((!csbend->outputLastWakeOnly && kick%csbend->outputInterval==0) ||
            (csbend->outputLastWakeOnly && kick==(csbend->n_kicks-1)))) {
@@ -2181,6 +2201,9 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
   double length;
   long nBins1;
   double dsMax, x;
+  TRACKING_CONTEXT tContext;
+
+  getTrackingContext(&tContext);
 
   SolveForPhiStupakovDiffCount = 0;
   SolveForPhiStupakovDiffSum = 0;
@@ -2345,6 +2368,15 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
       beta = p/sqrt(p*p+1);
       coord[4] = beta*coord[4];
     }
+    if (tContext.sliceAnalysis && tContext.sliceAnalysis->active &&
+	(csrDrift->sliceAnalysisInterval==0 ||
+	 iKick%csrDrift->sliceAnalysisInterval==0))  
+	performSliceAnalysisOutput(tContext.sliceAnalysis, part, np, 
+				   0, tContext.step, Po, 
+				   csrWake.MPCharge*np,
+				   tContext.elementName, 
+				   zStart+zTravel,
+				   0);
     if (np!=binned) {
       fprintf(stdout, "only %ld of %ld particles binned for CSR drift\n",
               binned, np);
@@ -2521,5 +2553,69 @@ void apply_edge_effects(
   *xp = xp0 + R21*x0 + T211*sqr(x0) + T221*x0*xp0 + T233*sqr(y0) + T243*y0*yp0;
   *y  = y0  + T331*x0*y0;
   *yp = yp0 + R43*y0 + T441*yp0*x0 + T431*x0*y0 + T432*xp0*y0;
+}
+
+/* this is used solely to convert coordinates inside the element for
+ * the purpose of generating output.  It ignores misalignments.
+ */
+
+void convertFromCSBendCoords(double **part, long np, double rho0, 
+			     double cos_ttilt, double sin_ttilt, 
+			     long ctMode)
+{
+  long ip;
+  double x, y, xp, yp, *coord;
+
+  for (ip=0; ip<np; ip++) {
+    coord = part[ip];
+
+    XP /= (1+X/rho0);
+    YP /= (1+X/rho0);
+    
+    x  =  X*cos_ttilt -  Y*sin_ttilt;
+    y  =  X*sin_ttilt +  Y*cos_ttilt;
+    xp = XP*cos_ttilt - YP*sin_ttilt;
+    yp = XP*sin_ttilt + YP*cos_ttilt;
+
+    X  = x;
+    Y  = y;
+    XP = xp;
+    YP = yp;
+
+    if (ctMode)
+      coord[4] /= c_mks;
+  }
+}
+
+
+/* this is used solely to undo the transformation done by 
+ * convertFromCSBendCoords
+ */
+
+void convertToCSBendCoords(double **part, long np, double rho0, 
+			     double cos_ttilt, double sin_ttilt, long ctMode)
+{
+  long ip;
+  double x, y, xp, yp, *coord;
+
+  for (ip=0; ip<np; ip++) {
+    coord = part[ip];
+
+    x  =   X*cos_ttilt +  Y*sin_ttilt;
+    y  =  -X*sin_ttilt +  Y*cos_ttilt;
+    xp =  XP*cos_ttilt + YP*sin_ttilt;
+    yp = -XP*sin_ttilt + YP*cos_ttilt;
+
+    X  = x;
+    Y  = y;
+    XP = xp;
+    YP = yp;
+
+    XP *= (1+X/rho0);
+    YP *= (1+X/rho0);
+
+    if (ctMode)
+      coord[4] *= c_mks;
+  }
 }
 

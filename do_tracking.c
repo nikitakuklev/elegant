@@ -22,8 +22,7 @@ void trackWithChromaticLinearMatrix(double **particle, long particles,
                                     double *dbeta_dPoP, 
                                     double *dalpha_dPoP);
 
-static char trackingElementName[1024] = "";
-static long trackingElementOccurrence = 0;
+static TRACKING_CONTEXT trackingContext;
 
 double beta_from_delta(double p, double delta)
 {
@@ -289,8 +288,6 @@ long do_tracking(
         }
         abort();
       }
-      strcpy(trackingElementName, eptr->name);
-      trackingElementOccurrence = eptr->occurence;
       if (!eptr->p_elem && !run->concat_order) {
         fprintf(stdout, "element %s has NULL p_elem pointer", eptr->name);
         fflush(stdout);
@@ -326,6 +323,16 @@ long do_tracking(
         else
           z += eptr->end_pos;
       }
+      /* fill a structure that can be used to pass to other routines 
+       * information on the tracking context 
+       */
+      strcpy(trackingContext.elementName, eptr->name);
+      trackingContext.elementOccurrence = eptr->occurence;
+      trackingContext.sliceAnalysis = sliceAnalysis;
+      trackingContext.zStart = last_z;
+      trackingContext.zEnd = z;
+      trackingContext.step = step;
+
       log_exit("do_tracking.2.2.1");
       if (eptr->p_elem || eptr->matrix) {
 #ifdef VAX_VMS
@@ -826,7 +833,7 @@ long do_tracking(
 				   !sliceAnDone, step, 
 				   *P_central, 
 				   charge?charge->macroParticleCharge*n_to_track:0.0, 
-				   eptr->name, eptr->end_pos);
+				   eptr->name, eptr->end_pos, 0);
 	sliceAnDone = 1;
       }
 
@@ -1493,11 +1500,8 @@ void trackLongitudinalOnlyRing(double **part, long np, VMATRIX *M, double *alpha
   }
 }
 
-void getTrackingElementInfo(char *buffer, long buflen, long *occurrence)
+void getTrackingContext(TRACKING_CONTEXT *trackingContext0) 
 {
-  if (buffer)
-    strncpy(buffer, trackingElementName, buflen);
-  if (occurrence)
-    *occurrence = trackingElementOccurrence;
+  memcpy(trackingContext0, &trackingContext, sizeof(trackingContext));
 }
 

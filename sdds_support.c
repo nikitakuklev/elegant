@@ -214,14 +214,14 @@ static SDDS_DEFINITION sigma_matrix_column[SIGMA_MATRIX_COLUMNS] = {
     {"Syp",    "&column name=Syp, symbol=\"$gs$r$by'$n\", type=double &end"},
     {"Ss",    "&column name=Ss, units=m, symbol=\"$gs$r$bs$n\", type=double &end"},
     {"Sdelta",    "&column name=Sdelta, symbol=\"$gs$bd$n$r\", type=double &end"},
-    {"ex", "&column name=ex, symbol=\"$ge$r$bx$n\", units=\"$gp$rm\", type=double &end"},
-    {"enx", "&column name=enx, symbol=\"$ge$r$bx,n$n\", type=double, units=\"$gp$rm$be$ncm\"  &end"},
-    {"ecx", "&column name=ecx, symbol=\"$ge$r$bx,c$n\", units=\"$gp$rm\", type=double &end"},
-    {"ecnx", "&column name=ecnx, symbol=\"$ge$r$bx,cn$n\", type=double, units=\"$gp$rm$be$ncm\"  &end"},
-    {"ey", "&column name=ey, symbol=\"$ge$r$by$n\", units=\"$gp$rm\", type=double &end"},
-    {"eny", "&column name=eny, symbol=\"$ge$r$by,n$n\", type=double, units=\"$gp$rm$be$ncm\"  &end"},
-    {"ecy", "&column name=ecy, symbol=\"$ge$r$by,c$n\", units=\"$gp$rm\", type=double &end"},
-    {"ecny", "&column name=ecny, symbol=\"$ge$r$by,cn$n\", type=double, units=\"$gp$rm$be$ncm\"  &end"},
+    {"ex", "&column name=ex, symbol=\"$ge$r$bx$n\", units=m, type=double &end"},
+    {"enx", "&column name=enx, symbol=\"$ge$r$bx,n$n\", type=double, units=m  &end"},
+    {"ecx", "&column name=ecx, symbol=\"$ge$r$bx,c$n\", units=m, type=double &end"},
+    {"ecnx", "&column name=ecnx, symbol=\"$ge$r$bx,cn$n\", type=double, units=m &end"},
+    {"ey", "&column name=ey, symbol=\"$ge$r$by$n\", units=m, type=double &end"},
+    {"eny", "&column name=eny, symbol=\"$ge$r$by,n$n\", type=double, units=m &end"},
+    {"ecy", "&column name=ecy, symbol=\"$ge$r$by,c$n\", units=m, type=double &end"},
+    {"ecny", "&column name=ecny, symbol=\"$ge$r$by,cn$n\", type=double, units=m &end"},
     } ;
 
 void SDDS_SigmaOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row,
@@ -263,8 +263,8 @@ static SDDS_DEFINITION watch_parameter_mode_column[WATCH_PARAMETER_MODE_COLUMNS]
     {"Ss", "&column name=Ss, symbol=\"$gs$r$bs$n\", units=m, type=double &end"},
     {"Sdelta", "&column name=Sdelta, symbol=\"$gs$bd$n$r\", type=double &end"},
     {"St", "&column name=St, symbol=\"$gs$r$bt$n\", units=s, type=double &end"},
-    {"ex", "&column name=ex, symbol=\"$ge$r$bx$n\", units=\"$gp$rm\", type=double &end"},
-    {"ey", "&column name=ey, symbol=\"$ge$r$by$n\", units=\"$gp$rm\", type=double &end"},
+    {"ex", "&column name=ex, symbol=\"$ge$r$bx$n\", units=m, type=double &end"},
+    {"ey", "&column name=ey, symbol=\"$ge$r$by$n\", units=m, type=double &end"},
     {"el", "&column name=el, symbol=\"$ge$r$bl$n\", units=s, type=double &end"},
     } ;
 
