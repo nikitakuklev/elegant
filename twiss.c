@@ -1965,7 +1965,7 @@ void computeTuneShiftWithAmplitude(double *dnux_dA, double *dnuy_dA,
   static FILE *fpout = NULL;
 #endif
   double result[4], maxResult, minResult;
-  double tune0[2], tune_dx[2], tune_dy[2];
+  double tune0[2], tune_dx[2], tune_dy[2], upperLimit[2], lowerLimit[2];
   long i, tries, lost;
 
   if (tune_shift_with_amplitude_struct.turns==0) {
@@ -1999,6 +1999,8 @@ void computeTuneShiftWithAmplitude(double *dnux_dA, double *dnuy_dA,
 
   result[0] = HUGE_VAL;
   tries = tune_shift_with_amplitude_struct.scaling_iterations;
+  upperLimit[0] = upperLimit[1] = 1;
+  lowerLimit[0] = lowerLimit[1] = 0;
   while (tries--) {
     lost = 0;
     
@@ -2063,19 +2065,37 @@ void computeTuneShiftWithAmplitude(double *dnux_dA, double *dnuy_dA,
         minResult = fabs(result[i]);
     }
     if (maxResult>tune_shift_with_amplitude_struct.scale_down_limit) {
-      tune_shift_with_amplitude_struct.x1 /= tune_shift_with_amplitude_struct.scale_down_factor;
-      tune_shift_with_amplitude_struct.y1 /= tune_shift_with_amplitude_struct.scale_down_factor;
+      if (upperLimit[0]>tune_shift_with_amplitude_struct.x1)
+        upperLimit[0] = tune_shift_with_amplitude_struct.x1;
+      if (upperLimit[1]>tune_shift_with_amplitude_struct.y1)
+        upperLimit[1] = tune_shift_with_amplitude_struct.y1;
+      tune_shift_with_amplitude_struct.x1 = (upperLimit[0] + 2*lowerLimit[0])/3;
+      tune_shift_with_amplitude_struct.y1 = (upperLimit[1] + 2*lowerLimit[1])/3;
       fprintf(stdout, "Warning: the amplitude you specified for tune shift with amplitude is too large.\n");
       fprintf(stdout, "Reducing tune_shift_with_amplitude_struct.x1=%le and tune_shift_with_amplitude_struct.y1=%le\n",
               tune_shift_with_amplitude_struct.x1, tune_shift_with_amplitude_struct.y1);
+      if (tries==0) 
+        tries = 1;   /* ensures we don't exit on amplitude too large */
       continue;
     }
     if (minResult<tune_shift_with_amplitude_struct.scale_up_limit) {
-      tune_shift_with_amplitude_struct.x1 *= tune_shift_with_amplitude_struct.scale_up_factor;
-      tune_shift_with_amplitude_struct.y1 *= tune_shift_with_amplitude_struct.scale_up_factor;
-      fprintf(stdout, "Warning: the amplitude you specified for tune shift with amplitude is too small.\n");
-      fprintf(stdout, "Increasing tune_shift_with_amplitude_struct.x1=%le and tune_shift_with_amplitude_struct.y1=%le\n",
-              tune_shift_with_amplitude_struct.x1, tune_shift_with_amplitude_struct.y1);
+      if (lowerLimit[0]<tune_shift_with_amplitude_struct.x1)
+        lowerLimit[0] = tune_shift_with_amplitude_struct.x1;
+      if (lowerLimit[1]<tune_shift_with_amplitude_struct.y1)
+        lowerLimit[1] = tune_shift_with_amplitude_struct.y1;
+      if (upperLimit[0]<1) 
+        tune_shift_with_amplitude_struct.x1 = (lowerLimit[0] + upperLimit[0])/2;
+      else
+        tune_shift_with_amplitude_struct.x1 *= 2;
+      if (upperLimit[1]<1) 
+        tune_shift_with_amplitude_struct.y1 = (lowerLimit[1] + upperLimit[1])/2;
+      else
+        tune_shift_with_amplitude_struct.y1 *= 2;
+      if (tries) {
+        fprintf(stdout, "Warning: the amplitude you specified for tune shift with amplitude is too small.\n");
+        fprintf(stdout, "Increasing tune_shift_with_amplitude_struct.x1=%le and tune_shift_with_amplitude_struct.y1=%le\n",
+                tune_shift_with_amplitude_struct.x1, tune_shift_with_amplitude_struct.y1);
+      }
       continue;
     }
     break;
