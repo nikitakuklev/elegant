@@ -6,6 +6,9 @@
  *
  * Michael Borland, 1991
  */
+#if defined(_WIN32)
+#define WIN32_LEAN_AND_MEAN
+#endif
 #include "mdb.h"
 #include "track.h"
 #include "error.h"
@@ -211,7 +214,7 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
             if (errcon->error_type[n_items]==PLUS_OR_MINUS_ERRORS)
                 fractional = 1;
             errcon->flags[n_items]  = (fractional?FRACTIONAL_ERRORS:0);
-            errcon->flags[n_items] += (binding==0?0:(binding==-1?ANTIBIND_ERRORS:BIND_ERRORS));
+            errcon->flags[n_items] += (bind==0?0:(bind==-1?ANTIBIND_ERRORS:BIND_ERRORS));
             errcon->flags[n_items] += (post_correction?POST_CORRECTION:PRE_CORRECTION);
             errcon->flags[n_items] += (additive?0:NONADDITIVE_ERRORS);
             errcon->bind_number[n_items] = bind_number;
@@ -276,7 +279,7 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
         if (errcon->error_type[n_items]==PLUS_OR_MINUS_ERRORS)
             fractional = 1;
         errcon->flags[n_items]  = (fractional?FRACTIONAL_ERRORS:0);
-        errcon->flags[n_items] += (binding==0?0:(binding==-1?ANTIBIND_ERRORS:BIND_ERRORS));
+        errcon->flags[n_items] += (bind==0?0:(bind==-1?ANTIBIND_ERRORS:BIND_ERRORS));
         errcon->flags[n_items] += (post_correction?POST_CORRECTION:PRE_CORRECTION);
         errcon->flags[n_items] += (additive?0:NONADDITIVE_ERRORS);
         errcon->bind_number[n_items] = bind_number;
