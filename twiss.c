@@ -21,10 +21,10 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
 void LoadStartingTwissFromFile(double *betax, double *betay, double *alphax, double *alphay,
                                double *etax, double *etay, double *etaxp, double *etayp,
                                char *filename, char *elementName, long elementOccurrence);
-void computeTuneShiftWithAmplitude(double *dnux_dA, double *dnuy_dA,
-                                   TWISS *twiss, double *tune, VMATRIX *M,
-				   double *startingCoord);
-void computeTunesFromTracking(double *tune, VMATRIX  *M,
+void computeTuneShiftWithAmplitude(double *dnux_dA, double *dnuy_dA, 
+                                   TWISS *twiss, double *tune, VMATRIX *M, LINE_LIST *beamline,
+				   RUN *run, double *startingCoord);
+void computeTunesFromTracking(double *tune, VMATRIX *M, LINE_LIST *beamline, RUN *run,
 			      double *startingCoord, 
 			      double xAmplitude, double yAmplitude, long turns);
 
@@ -1140,7 +1140,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
         bomb("logic error: T matrix is NULL in compute_twiss_parameters", NULL);
       computeChromaticities(&chromx, &chromy, &dbetax, &dbetay, &dalphax, &dalphay, beamline->twiss0, M);
       computeTuneShiftWithAmplitude(beamline->dnux_dA, beamline->dnuy_dA,
-                                    beamline->twiss0, beamline->tune, M,
+                                    beamline->twiss0, beamline->tune, M, beamline, run,
 				    starting_coord); 
     }
   }
@@ -1167,7 +1167,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
         bomb("logic error: T matrix is NULL in compute_twiss_parameters", NULL);
       computeChromaticities(&chromx, &chromy, &dbetax, &dbetay, &dalphax, &dalphay, beamline->twiss0, M);
       computeTuneShiftWithAmplitude(beamline->dnux_dA, beamline->dnuy_dA,
-                                    beamline->twiss0, beamline->tune, M,
+                                    beamline->twiss0, beamline->tune, M, beamline, run,
 				    starting_coord); 
 #ifdef DEBUG
       fprintf(stdout, "chomaticities: %e, %e\n", chromx, chromy);
@@ -1768,87 +1768,114 @@ double QElement(double ****Q, long i1, long i2, long i3, long i4)
 
 
 void computeTuneShiftWithAmplitude(double *dnux_dA, double *dnuy_dA,
-                                   TWISS *twiss, double *tune, VMATRIX *M,
-				   double *startingCoord)
+                                   TWISS *twiss, double *tune, VMATRIX *M, LINE_LIST *beamline, 
+                                   RUN *run, double *startingCoord)
 {
-  long turns = 50, trials = 8;
-  double result[4], lastResult[4], maxError, maxResult;
-  double tune0[2], tune_dx[2], tune_dy[2], accuracy;
+  static FILE *fpout = NULL;
+  long turns;
+  double result[4], maxResult;
+  double tune0[2], tune_dx[2], tune_dy[2];
   long i;
 
-  if (tune_shift_with_amplitude_accuracy<=0) {
+  if (tune_shift_with_amplitude_turns==0) {
     dnux_dA[0] = dnux_dA[1] = 0;
     dnuy_dA[0] = dnuy_dA[1] = 0;
     return;
   }
-  accuracy = tune_shift_with_amplitude_accuracy;
 
+  if (!fpout) {
+    fpout = fopen(compose_filename("%s.tswa", run->rootname), "w");
+    fprintf(fpout, "SDDS1\n");
+    fprintf(fpout, "&column name=Ax type=double units=m &end\n");
+    fprintf(fpout, "&column name=Ay type=double units=m &end\n");
+    fprintf(fpout, "&column name=turns type=long &end\n");
+    fprintf(fpout, "&column name=nux0 type=double units=m &end\n");
+    fprintf(fpout, "&column name=nuy0 type=double units=m &end\n");
+    fprintf(fpout, "&column name=nux_x type=double units=m &end\n");
+    fprintf(fpout, "&column name=nuy_x type=double units=m &end\n");
+    fprintf(fpout, "&column name=nux_y type=double units=m &end\n");
+    fprintf(fpout, "&column name=nuy_y type=double units=m &end\n");
+    fprintf(fpout, "&column name=dnux_x type=double units=m &end\n");
+    fprintf(fpout, "&column name=dnuy_x type=double units=m &end\n");
+    fprintf(fpout, "&column name=dnux_y type=double units=m &end\n");
+    fprintf(fpout, "&column name=dnuy_y type=double units=m &end\n");
+    fprintf(fpout, "&data mode=ascii no_row_counts=1 &end\n");
+  }
+  
   /* use tracking and NAFF */
 
-  lastResult[0] = result[0] = -1;
-  while (trials) {
-    if (lastResult[0]>0) {
-      maxError = maxResult = -1;
-      for (i=0; i<4; i++) {
-	if (fabs(result[i])>maxResult)
-	  maxResult = fabs(result[i]);
-	if (fabs(lastResult[i]-result[i])>maxError)
-	  maxError = fabs(lastResult[i]-result[i]);
-      }
-      if (maxResult!=0 && maxError/maxResult<=accuracy)
-	break;
-    }
-    for (i=0; i<4; i++)
-      lastResult[i] = result[i];
+  result[0] = HUGE_VAL;
+  while (1) {
     /* (0, 0) */
-    computeTunesFromTracking(tune0, M, startingCoord,
+    computeTunesFromTracking(tune0, M, beamline, run, startingCoord,
 			     tune_shift_with_amplitude_x0,
 			     tune_shift_with_amplitude_y0,
-			     turns);
+			     tune_shift_with_amplitude_turns);
     /* (dx, 0) */
-    computeTunesFromTracking(tune_dx, M, startingCoord,
+    computeTunesFromTracking(tune_dx, M, beamline, run, startingCoord,
 			     tune_shift_with_amplitude_x1,
 			     tune_shift_with_amplitude_y0,
-			     turns);
+			     tune_shift_with_amplitude_turns);
 
     /* (0, dy) */
-    computeTunesFromTracking(tune_dy, M, startingCoord,
+    computeTunesFromTracking(tune_dy, M, beamline, run, startingCoord,
 			     tune_shift_with_amplitude_x0,
 			     tune_shift_with_amplitude_y1,
-			     turns);
+			     tune_shift_with_amplitude_turns);
 
     result[0] = (tune_dx[0] - tune0[0]);  /* dnux from dx */
     result[1] = (tune_dx[1] - tune0[1]);  /* dnuy from dx */
     result[2] = (tune_dy[0] - tune0[0]);  /* dnux from dy */
     result[3] = (tune_dy[1] - tune0[1]);  /* dnuy from dy */
-    trials --;
-    turns *= 1.5;
+
+    fprintf(fpout, "%e %e %ld %21.15e %21.15e %21.15e %21.15e %21.15e %21.15e %e %e %e %e\n",
+            sqr(tune_shift_with_amplitude_x1)/twiss->betax,
+            sqr(tune_shift_with_amplitude_y1)/twiss->betay,
+            tune_shift_with_amplitude_turns,
+            tune0[0], tune0[1],
+            tune_dx[0], tune_dx[1],
+            tune_dy[0], tune_dy[1],
+            result[0], result[1], result[2], result[3]);
+    
+    maxResult = -1;
+    for (i=0; i<4; i++) {
+      if (fabs(result[i])>maxResult)
+        maxResult = fabs(result[i]);
+    }
+    if (maxResult>0.001) {
+      tune_shift_with_amplitude_x1 /= 10;
+      tune_shift_with_amplitude_y1 /= 10;
+      fprintf(stdout, "Warning: the amplitude you specified for tune shift with amplitude is too large.\n");
+      fprintf(stdout, "Reducing to tune_shift_with_amplitude_x1=%le and tune_shift_with_amplitude_y1=%le\n",
+              tune_shift_with_amplitude_x1, tune_shift_with_amplitude_y1);
+      continue;
+    }
+    break;
   }
-  if (trials==0)
-    fprintf(stderr, "Warning: tune shift computation from tracking didn't converge to required accuracy\n");
+
   dnux_dA[0] 
     = result[0]/(sqr(tune_shift_with_amplitude_x1)-sqr(tune_shift_with_amplitude_x0))
-    *twiss->betax;
+      *twiss->betax;
   dnux_dA[1] 
     = result[2]/(sqr(tune_shift_with_amplitude_y1)-sqr(tune_shift_with_amplitude_y0))
-    *twiss->betay;
+      *twiss->betay;
   dnuy_dA[0] 
     = result[1]/(sqr(tune_shift_with_amplitude_x1)-sqr(tune_shift_with_amplitude_x0))
-    *twiss->betax;
+      *twiss->betax;
   dnuy_dA[1] 
     = result[3]/(sqr(tune_shift_with_amplitude_y1)-sqr(tune_shift_with_amplitude_y0))
-    *twiss->betay;
+      *twiss->betay;
 }
 
 #include "fftpackC.h"
 
-void computeTunesFromTracking(double *tune, VMATRIX  *M,
+void computeTunesFromTracking(double *tune, VMATRIX *M, LINE_LIST *beamline, RUN *run,
 			      double *startingCoord, 
 			      double xAmplitude, double yAmplitude, long turns)
 {
   double **oneParticle, dummy;
-  double *x, *y;
-  long i;
+  double *x, *y, p;
+  long i, one=1;
 
   oneParticle = (double**)zarray_2d(sizeof(**oneParticle), 1, 7);
   if (!startingCoord)
@@ -1865,8 +1892,15 @@ void computeTunesFromTracking(double *tune, VMATRIX  *M,
 
   x[0] = oneParticle[0][0];
   y[0] = oneParticle[0][2];
+  p = run->p_central;
   for (i=1; i<turns; i++) {
-    track_particles(oneParticle, M, oneParticle, 1);
+    if (tune_shift_with_amplitude_concat)
+      track_particles(oneParticle, M, oneParticle, one);
+    else {
+      if (!do_tracking(oneParticle, &one, NULL, beamline, &p,  (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
+                       (TRAJECTORY*)NULL, run, 0, TEST_PARTICLES+TIME_DEPENDENCE_OFF, 1, NULL, NULL, NULL)) 
+        bomb("tracking failed for test particle (computeTunesFromTracking)", NULL);
+    }
     x[i] = oneParticle[0][0];
     y[i] = oneParticle[0][2];
   }

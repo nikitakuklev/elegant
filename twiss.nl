@@ -25,11 +25,12 @@
     STRING reference_element = NULL;
     long reference_element_occurrence = 0;
     long concat_order = 3;
-    double tune_shift_with_amplitude_accuracy = 0;
+    long tune_shift_with_amplitude_turns = 0;
     double tune_shift_with_amplitude_x0 = 1e-7;
     double tune_shift_with_amplitude_y0 = 1e-7;
     double tune_shift_with_amplitude_x1 = 1e-4;
     double tune_shift_with_amplitude_y1 = 1e-4;
+    long tune_shift_with_amplitude_concat = 0;
 #end
 
 
