@@ -47,7 +47,7 @@ void run_subprocess(NAMELIST_TEXT *nltext, RUN *run)
             ptr0 = ptr;
             }
         strcat(buffer, ptr0);
-        fputs(buffer, stderr);
+        fprintf(stderr, "%s\n", buffer);
         fprintf(fp, "%s\nkill -USR1 %d\n", buffer, pid);
         fflush(fp);
         /* pause until SIGUSR1 is received */
