@@ -815,15 +815,17 @@ static long twiss_mem[N_TWISS_QUANS] = {
     -1, -1, -1, -1,
     -1, -1, -1, -1,
     };
-static char *radint_name[8] = {
+static char *radint_name[13] = {
     "ex0", "Sdelta0",
     "Jx", "Jy", "Jdelta",
     "taux", "tauy", "taudelta",
+    "I1", "I2", "I3", "I4", "I5",
   } ;
-static long radint_mem[8] = {
+static long radint_mem[13] = {
   -1, -1, 
   -1, -1, -1,
   -1, -1, -1,
+  -1, -1, -1, -1, -1,
 } ;
 static char *floorCoord_name[7] = {
   "X", "Y", "Z", "theta", "phi", "psi", "sTotal"
@@ -1043,7 +1045,7 @@ double optimization_function(double *value, long *invalid)
       fflush(stdout);
 #endif
       if (radint_mem[0]==-1) {
-        for (i=0; i<8; i++)
+        for (i=0; i<13; i++)
           radint_mem[i] = rpn_create_mem(radint_name[i]);
       }
       /* radiation integrals already updated by update_twiss_parameters above
@@ -1058,6 +1060,8 @@ double optimization_function(double *value, long *invalid)
       rpn_store(beamline->radIntegrals.taux, radint_mem[5]);
       rpn_store(beamline->radIntegrals.tauy, radint_mem[6]);
       rpn_store(beamline->radIntegrals.taudelta, radint_mem[7]);
+      for (i=0; i<5; i++)
+        rpn_store(beamline->radIntegrals.I[i], radint_mem[i+8]);
     }
     if (floorCoord_mem[0]==-1) {
       for (i=0; i<7; i++)
