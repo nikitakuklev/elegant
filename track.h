@@ -324,7 +324,7 @@ typedef struct {
     double p0_original;     /* initial central momentum */
     double **particle;      /* current/final coordinates */
     long n_to_track;        /* initial number of particles being tracked.  Often equal to n_original, but not always. */
-    long p0;                /* current/final central momentum */
+    double p0;                /* current/final central momentum */
     double **accepted;      /* coordinates of accepted particles, with loss info on lost particles */
     long n_accepted;        /* final number of particles being tracked. */
     } BEAM;
