@@ -19,7 +19,6 @@ void setup_track_IBS(IBSCATTER *IBS, ELEMENT_LIST *element);
 void inflateEmittance(double **coord, double Po, 
 		      long offset, long np, double factor);
 
-#define DEBUG 1
 
 #if DEBUG
 static FILE *fpdeb = NULL;
