@@ -321,7 +321,7 @@ long track_beam(
                 )
 {    
   double p_central;
-  long n_left, n_trpoint, effort, *lostOnTurn;
+  long n_left, n_trpoint, effort;
 
   log_entry("track_beam");
 

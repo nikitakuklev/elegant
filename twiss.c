@@ -2000,8 +2000,6 @@ double QElement(double ****Q, long i1, long i2, long i3, long i4)
   return Q[i1][i2][i3][i4];
 }
 
-#define DEBUG
-
 void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_dA[N_TSWA][N_TSWA],
                                    TWISS *twiss, double *tune, VMATRIX *M, LINE_LIST *beamline, 
                                    RUN *run, double *startingCoord)
@@ -2017,8 +2015,15 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
   double upperLimit[2], lowerLimit[2];
   MATRIX *AxAy, *Coef, *Nu, *AxAyTr, *Mf, *MfInv, *AxAyTrNu;
   long i, j, m, n, ix1, iy1;
+
+  if (tune_shift_with_amplitude_struct.turns==0) {
+    /* use the matrix only without tracking */
+    computeTuneShiftWithAmplitudeM(dnux_dA, dnuy_dA, twiss, tune, M);
+    return;
+  }
+
 #ifdef DEBUG
-  FILE *fpd;
+  FILE *fpd = NULL;
   fpd = fopen("tswa.sdds", "w");
   fprintf(fpd, "SDDS1\n");
   fprintf(fpd, "&column name=x type=double units=m &end\n");
@@ -2030,11 +2035,6 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
   fprintf(fpd, "&data mode=ascii no_row_counts=1 &end\n");
 #endif
   
-  if (tune_shift_with_amplitude_struct.turns==0) {
-    /* use the matrix only without tracking */
-    computeTuneShiftWithAmplitudeM(dnux_dA, dnuy_dA, twiss, tune, M);
-    return;
-  }
   if ((gridSize=tune_shift_with_amplitude_struct.grid_size)>TSWA_TRACKING_PTS) {
     gridSize = tune_shift_with_amplitude_struct.grid_size = TSWA_TRACKING_PTS;
     fprintf(stdout, "Warning: grid_size for TSWA is limited to %ld\n", gridSize);
@@ -2206,8 +2206,14 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
     m_free(&MfInv);
     m_free(&AxAyTrNu);
   }
+#ifdef DEBUG
+  if (fpd)
+    fclose(fpd);
+  fpd = NULL;
+#endif
+  
 }
-#undef DEBUG
+
 
 long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *beamline, RUN *run,
 			      double *startingCoord, 
