@@ -1875,7 +1875,7 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
       eta2  = eta0*cos_kl + etap1*sin_kl/k + (1-cos_kl)/(rho*k2);
       alpha1 = alpha0 - beta0/rho*tan(E1);
       gamma1 = (1+sqr(alpha1))/beta0;
-      if (kl>1e-4) {
+      if (kl>1e-2) {
 	etaAve = eta0*sin_kl/kl + etap1*(1-cos_kl)/(k2*length) +
 	  (kl-sin_kl)/(k2*kl*rho);
 	etaK1_rhoAve =  -etaAve*K1/rho + (eta0*tan(E1)+eta2*tan(E2))/(2*length*sqr(rho));
@@ -1886,26 +1886,52 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
 	  + sqr(angle)*(gamma1*(3*kl-4*sin_kl+sin_kl*cos_kl)/(2*k*k2*k2*ipow(length,3)) 
 			- alpha1*sqr(1-cos_kl)/(k2*k2*ipow(length,3))
 			+ beta0*(kl-cos_kl*sin_kl)/(2*kl*k2*sqr(length)));
-      } else {
-	double kl2, kl4, l2;
+      } 
+      if (kl<=1e-2 || HAve<0) {
+	double kl2, kl4, kl6, kl8, l2, l3, l4, h2;
+	double T0, T2, T4, T6, T8;
 	h = 1./rho;
+	h2 = h*h;
 	kl2 = kl*kl;
 	kl4 = kl2*kl2;
+	kl6 = kl4*kl2;
+	kl8 = kl6*kl2;
 	l2 = length*length;
-	etaAve = ((840 - 42*kl2 + kl4)*l2 +
-		  42*eta0*(120 - 20*kl2 + kl4)*rho +
-		  7*etap1*(360 - 30*kl2 + kl4)*length*rho)/(5040.*rho);
+	l3 = l2*length;
+	l4 = l3*length;
+
+	T0 = eta0 + (length*(3*etap1 + h*length))/6.;
+	T2 = (-20*eta0 - length*(5*etap1 + h*length))/120.;
+	T4 = (42*eta0 + length*(7*etap1 + h*length))/5040.;
+	T6 =  (-72*eta0 - length*(9*etap1 + h*length))/362880.;
+	T8 = 2.505210838544172e-8*(110.*eta0 + length*(11.*etap1 + h*length));
+	etaAve = T0 + T2*kl2 + T4*kl4 + T6*kl6 + T8*kl8;
 	etaK1_rhoAve =  -etaAve*K1/rho + (eta0*tan(E1)+eta2*tan(E2))/(2*length*sqr(rho));
-	HAve = (8*beta0*(2520*ipow(etap1,2) +
-			 7*etap1*h*(360 - 30*kl2 + kl4)*length +
-			 8*ipow(h,2)*(105 - 21*kl2 + 2*kl4)*l2)
-		+ gamma1*(20160*ipow(eta0,2) -
-			  8*eta0*h*(840 - 42*kl2 + kl4)*l2 +
-			  ipow(h,2)*(1008 - 120*kl2 + 7*kl4)*ipow(length,4))
-		+ alpha1*(56*eta0*(720*etap1 +
-				   h*(360 - 30*kl2 + kl4)*length) -
-			  h*l2*(8*etap1*(840 - 42*kl2 + kl4) +
-					    21*h*(240 - 40*kl2 + 3*kl4)*length)))/20160.;
+
+	T0 = (ipow(eta0,2)*gamma1 - 
+	      (eta0*gamma1*h*l2)/3. + 
+	      (gamma1*h2*l4)/20. + 
+	      beta0*(ipow(etap1,2) + etap1*h*length + 
+		     (h2*l2)/3.) + 
+	      alpha1*(eta0*(2*etap1 + h*length) - 
+		      (h*l2*(4*etap1 + 3*h*length))/12.));
+	T2 = -(h*l2*
+	       (70*beta0*etap1 - 14*eta0*gamma1*length + 56*beta0*h*length + 
+		5*gamma1*h*l3 + 
+		7*alpha1*(10*eta0 - length*(2*etap1 + 5*h*length))))/(840.*length);
+	T4 = (h*l2*
+	      (-8*eta0*gamma1*length + 7*gamma1*h*l3 + 
+	       8*beta0*(7*etap1 + 16*h*length) + 
+	       alpha1*(56*eta0 - length*(8*etap1 + 63*h*length))))/(20160.*length);
+	T6 =  (-2.505210838544172e-7*h*l2*
+	       (-22.*eta0*gamma1*length + 51.*gamma1*h*l3 + 
+		22.*beta0*(9.*etap1 + 64.*h*length) + 
+		11.*alpha1*(18.*eta0 - 1.*length*(2.*etap1 + 51.*h*length))))/length;
+	T8 = (9.635426302092969e-10*h*l2*
+	      (-52.*eta0*gamma1*length + 341.*gamma1*h*l3 + 
+	       52.*beta0*(11.*etap1 + 256.*h*length) + 
+	       13.*alpha1*(44.*eta0 - 1.*length*(4.*etap1 + 341.*h*length))))/length;
+	HAve = T0 + T2*kl2 + T4*kl4 + T6*kl6 + T8*kl8;
       }
       I1 = etaAve*length/rho;
       I2 = length/sqr(rho);
