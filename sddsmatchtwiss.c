@@ -55,6 +55,9 @@ CopyrightNotice001*/
  * Michael Borland, 2000
  *
  $Log: not supported by cvs2svn $
+ Revision 1.2  2000/08/17 13:45:56  borland
+ Fixed errors in usage message.
+
  Revision 1.1  2000/08/14 21:44:56  borland
  First version.
 
@@ -63,40 +66,45 @@ CopyrightNotice001*/
 #include "scan.h"
 #include "SDDS.h"
 
-#define DEBUG 0
-
 #define SET_PIPE 0
 #define SET_XPLANE 1
 #define SET_YPLANE 2
 #define SET_NOWARNINGS 3
-#define N_OPTIONS 4
+#define SET_ONETRANSFORM 4
+#define SET_VERBOSE 5
+#define N_OPTIONS 6
 
 char *option[N_OPTIONS] = {
-  "pipe", "xplane", "yplane", "nowarnings"
+  "pipe", "xplane", "yplane", "nowarnings", "oneTransform", "verbose",
 } ;
 
 char *USAGE="sddsmatchtwiss [-pipe=[input][,output]] [<SDDSinputfile>] [<SDDSoutputfile>]\n\
   [-xPlane=[beta=<meters>,alpha=<value>][,etaValue=<meters>][,etaSlope=<value>]]\n\
   [-yPlane=[beta=<meters>,alpha=<value>][,etaValue=<meters>][,etaSlope=<value>]]\n\
-  [-nowarnings]\n\
+  [-nowarnings] [-oneTransform]\n\
 The input file must have columns x, xp, y, yp, and p; for example, an elegant\n\
 beam output file is acceptable.\n\
 beta and alpha must be given together, or omitted together.\n\
 etaValue and etaSlope may be given individually or together.  If etaValue is not given,\n\
 the coordinates have no dispersion adjustment.  If etaSlope is not given, then\n\
-slopes have no dispersion adjustment.\n\n\
-Program by Michael Borland.  (This is version 1, August 2000.)\n";
+slopes have no dispersion adjustment.\n\
+If -oneTransform is given, then the transformation is computed for the first page only,\n\
+then reused for all subsequent pages.\n\n\
+Program by Michael Borland.  (This is version 2, January 2001.)\n";
 
 typedef struct {
   double beta, alpha, eta, etap;
   unsigned long flags;
+  double R11, R12, R21, R22;
+  double etaBeam, etapBeam;
 #define BETA_GIVEN  0x0001UL
 #define ALPHA_GIVEN 0x0002UL
 #define ETA_GIVEN   0x0004UL
 #define ETAP_GIVEN  0x0008UL
 } PLANE_SPEC;
 
-long PerformTransformation(double *x, double *xp, double *p, long rows, PLANE_SPEC match);
+long PerformTransformation(double *x, double *xp, double *p, long rows, PLANE_SPEC *match,
+                           long compute);
 long check_sdds_beam_column(SDDS_TABLE *SDDS_table, char *name, char *units);
 
 
@@ -109,6 +117,7 @@ main(int argc, char **argv)
   unsigned long pipeFlags;
   PLANE_SPEC xSpec, ySpec;
   double *x, *xp, *y, *yp, *p;
+  long oneTransform, verbose;
   
   SDDS_RegisterProgramName(argv[0]);
   argc = scanargs(&s_arg, argc, argv);
@@ -118,6 +127,7 @@ main(int argc, char **argv)
   inputfile = outputfile = NULL;
   pipeFlags = noWarnings = 0;
   xSpec.flags = ySpec.flags = 0;
+  verbose = oneTransform = 0;
   
   for (i_arg=1; i_arg<argc; i_arg++) {
     if (s_arg[i_arg].arg_type==OPTION) {
@@ -156,6 +166,12 @@ main(int argc, char **argv)
         break;
       case SET_NOWARNINGS:
         noWarnings = 1;
+        break;
+      case SET_ONETRANSFORM:
+        oneTransform = 1;
+        break;
+      case SET_VERBOSE:
+        verbose = 1;
         break;
       default:
         fprintf(stdout, "error: unknown switch: %s\n", s_arg[i_arg].list[0]);
@@ -205,8 +221,16 @@ main(int argc, char **argv)
         !(yp = SDDS_GetColumnInDoubles(&SDDSin, "yp")) ||
         !(p = SDDS_GetColumnInDoubles(&SDDSin, "p")))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-    PerformTransformation(x, xp, p, rows, xSpec);
-    PerformTransformation(y, yp, p, rows, ySpec);
+    PerformTransformation(x, xp, p, rows, &xSpec, readCode==1?1:!oneTransform);
+    PerformTransformation(y, yp, p, rows, &ySpec, readCode==1?1:!oneTransform);
+    if (verbose) {
+      fprintf(stderr, "x transformation: %le, %le, %le, %le, %le, %le\n",
+              xSpec.R11, xSpec.R12, xSpec.R21, xSpec.R22, xSpec.etaBeam,
+              xSpec.etapBeam);
+      fprintf(stderr, "y transformation: %le, %le, %le, %le, %le, %le\n",
+              ySpec.R11, ySpec.R12, ySpec.R21, ySpec.R22, ySpec.etaBeam,
+              ySpec.etapBeam);
+    }
     if (!SDDS_CopyPage(&SDDSout, &SDDSin) ||
         !(SDDS_SetColumnFromDoubles(&SDDSout, SDDS_SET_BY_NAME, x, rows, "x")) ||
         !(SDDS_SetColumnFromDoubles(&SDDSout, SDDS_SET_BY_NAME, y, rows, "y")) ||
@@ -218,9 +242,11 @@ main(int argc, char **argv)
   }
   if (readCode==0)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  return 0;
 }
 
-long PerformTransformation(double *x, double *xp, double *p, long rows, PLANE_SPEC match)
+long PerformTransformation(double *x, double *xp, double *p, long rows, PLANE_SPEC *match,
+                           long computeTransform)
 {
   long i;
   double pAve;
@@ -229,34 +255,49 @@ long PerformTransformation(double *x, double *xp, double *p, long rows, PLANE_SP
   double x0, xp0;
   double emit, beta1, beta2, alpha1, alpha2;
   double eta1, etap1, eta2, etap2;
-  
+
   pAve = arithmeticAverage(p, rows);
   for (i=0; i<rows; i++)
     p[i] = p[i]/pAve - 1;
-  computeCorrelations(&S11, &S16, &S66, x, p, rows);
-  eta1 = S16/S66;
+
+  if (computeTransform) {
+    computeCorrelations(&S11, &S16, &S66, x, p, rows);
+    match->etaBeam = eta1 = S16/S66;
+    computeCorrelations(&S22, &S26, &S66, xp, p, rows);
+    match->etapBeam = etap1 = S26/S66;
+  } else {
+    eta1 = match->etaBeam;
+    etap1 = match->etapBeam;
+  }
+  
   for (i=0; i<rows; i++)
     x[i] -= p[i]*eta1;
-  computeCorrelations(&S22, &S26, &S66, xp, p, rows);
-  etap1 = S26/S66;
   for (i=0; i<rows; i++)
     xp[i] -= p[i]*etap1;
   
-  if (match.flags&BETA_GIVEN) {
-    computeCorrelations(&S11, &S12, &S22, x, xp,rows);
-    if ((emit = S11*S22-sqr(S12))<0) {
-      SDDS_Bomb("emittance is zero");
+  if (match->flags&BETA_GIVEN) {
+    if (computeTransform) {
+      computeCorrelations(&S11, &S12, &S22, x, xp,rows);
+      if ((emit = S11*S22-sqr(S12))<0) {
+        SDDS_Bomb("emittance is zero");
+      }
+      else
+        emit = sqrt(emit);
+      beta1 = S11/emit;
+      alpha1 = -S12/emit;
+      beta2 = match->beta;
+      alpha2 = match->alpha;
+      match->R11 = R11 = beta2/sqrt(beta1*beta2);
+      match->R12 = R12 = 0;
+      match->R21 = R21 = (alpha1-alpha2)/sqrt(beta1*beta2);
+      match->R22 = R22 = beta1/sqrt(beta1*beta2);
     }
-    else
-      emit = sqrt(emit);
-    beta1 = S11/emit;
-    alpha1 = -S12/emit;
-    beta2 = match.beta;
-    alpha2 = match.alpha;
-    R11 = beta2/sqrt(beta1*beta2);
-    R12 = 0;
-    R21 = (alpha1-alpha2)/sqrt(beta1*beta2);
-    R22 = beta1/sqrt(beta1*beta2);
+    else {
+      R11 = match->R11;
+      R12 = match->R12;
+      R21 = match->R21;
+      R22 = match->R22;
+    }
     for (i=0; i<rows; i++) {
       x0 = x[i];
       xp0 = xp[i];
@@ -265,12 +306,12 @@ long PerformTransformation(double *x, double *xp, double *p, long rows, PLANE_SP
     }
   }
 
-  if (match.flags&ETA_GIVEN)
-    eta2 = match.eta;
+  if (match->flags&ETA_GIVEN)
+    eta2 = match->eta;
   else
     eta2 = eta1;
-  if (match.flags&ETAP_GIVEN)
-    etap2 = match.etap;
+  if (match->flags&ETAP_GIVEN)
+    etap2 = match->etap;
   else
     etap2 = etap1;
   for (i=0; i<rows; i++) {
