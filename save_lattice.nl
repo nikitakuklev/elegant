@@ -7,4 +7,5 @@
 
 #namelist save_lattice static
     STRING filename = NULL;
+    long suppress_defaults = 1;
 #end

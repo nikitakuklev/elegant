@@ -587,7 +587,7 @@ void do_save_lattice(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
           dvalue *= eptr->divisions;
         }
         */
-        if (dvalue!=parameter[j].number) {
+        if (!suppress_defaults || dvalue!=parameter[j].number) {
           /* value is not the default, so add to output */
           sprintf(t, "%s=%.16g", parameter[j].name, dvalue);
           strcat(s, t);
@@ -597,7 +597,7 @@ void do_save_lattice(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
         break;
       case IS_LONG:
         lvalue = *(long *)(eptr->p_elem+parameter[j].offset);
-        if (lvalue!=parameter[j].integer) {
+        if (!suppress_defaults || lvalue!=parameter[j].integer) {
           /* value is not the default, so add to output */
           sprintf(t, "%s=%ld", parameter[j].name, lvalue);
           strcat(s, t);
@@ -608,7 +608,7 @@ void do_save_lattice(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
       case IS_STRING:
         ptr = *(char**)(eptr->p_elem+parameter[j].offset);
         if (ptr &&
-            (!parameter[j].string || strcmp(ptr, parameter[j].string)!=0)) {
+            (!suppress_defaults || !parameter[j].string || strcmp(ptr, parameter[j].string)!=0)) {
           sprintf(t, "%s=\"%s\"", parameter[j].name, ptr);
           strcat(s, t);
           if (j!=entity_description[eptr->type].n_params-1)
