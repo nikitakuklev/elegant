@@ -594,11 +594,10 @@ double computeChromaticDeriv3RElem(long i, long m, TWISS *twiss, VMATRIX *M,
     eta2[j] = eta2q[j];
     eta3[j] = eta3q[j];
   }
-
-  for (j=0; j<6; j++)
-    fprintf(stderr, "eta[%ld] = %e, %e, %e\n",
-	    j, eta[j], eta2[j], eta3[j]);
-    
+  for (j=0; j<6; j++) {
+    fprintf(stderr, "eta[%ld] = %e, %e, ", j, eta[j], eta2[j]);
+    fprintf(stderr, "%e\n", eta3[j]);
+  }
   i--;
   m--;
   sum = count = 0;

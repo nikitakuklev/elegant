@@ -15,7 +15,9 @@
 #include <signal.h>
 #include <time.h>
 #if defined(UNIX) || defined(_WIN32)
+#if !defined(__APPLE__)
 #include <malloc.h>
+#endif
 #endif
 
 #include "chromDefs.h"

@@ -379,8 +379,11 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
           fflush(stdout);
           fprintf(stdout, "element is %s at z=%em\n", elem->name, elem->end_pos);
           fflush(stdout);
-          fprintf(stdout, "%c-plane matrix:  C = %e,  S = %e,  C' = %e,  S' = %e\n",
-                  (plane==0?'x':'y'), C[plane], S[plane], Cp[plane], Sp[plane]);
+          fprintf(stdout, "%c-plane matrix:  C = %e,  S = %e,  ",
+                  (plane==0?'x':'y'), C[plane], S[plane]);
+          fprintf(stdout, "C' = %e,  S' = %e\n", Cp[plane], Sp[plane]);
+/*          fprintf(stdout, "%c-plane matrix:  C = %e,  S = %e,  C' = %e,  S' = %e\n",
+                  (plane==0?'x':'y'), C[plane], S[plane], Cp[plane], Sp[plane]);*/
           fflush(stdout);
           fprintf(stdout, "beta0 = %e, func[0] = %e\n", beta[plane], func[0]);
           fflush(stdout);
