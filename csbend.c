@@ -60,6 +60,13 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   if (csbend->integration_order!=2 && csbend->integration_order!=4)
     bomb("CSBEND integration_order is invalid--must be either 2 or 4", NULL);
 
+  if (csbend->use_bn) {
+    rho0 = csbend->length/csbend->angle;
+    csbend->k2 = csbend->b2/rho0;
+    csbend->k3 = csbend->b3/rho0;
+    csbend->k4 = csbend->b4/rho0;
+  }
+  
   if (csbend->angle<0) {
     angle = -csbend->angle;
     e1    = -csbend->e1;
@@ -832,6 +839,13 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
       (!(beta0=SDDS_Realloc(beta0, sizeof(*beta0)*(maxParticles=n_part))) ||
        !(particleLost=SDDS_Realloc(particleLost, sizeof(*particleLost)*n_part))))
     bomb("Memory allocation failure (track_through_csbendCSR)", NULL);
+
+  if (csbend->use_bn) {
+    rho0 = csbend->length/csbend->angle;
+    csbend->k2 = csbend->b2/rho0;
+    csbend->k3 = csbend->b3/rho0;
+    csbend->k4 = csbend->b4/rho0;
+  }
 
   if (csbend->angle<0) {
     angle = -csbend->angle;

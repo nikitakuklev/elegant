@@ -380,6 +380,8 @@ VMATRIX *compute_matrix(
       case T_RBEN: case T_SBEN:
         bend = (BEND*)elem->p_elem;
         bend_flags = determine_bend_flags(elem, bend->edge1_effects, bend->edge2_effects);
+        if (bend->use_bn)
+          bend->k2 = bend->b2/(bend->length/bend->angle);
         elem->matrix = 
             bend_matrix(bend->length, bend->angle, bend->e1, bend->e2, bend->k1, bend->k2, 
                         bend->tilt, bend->fint, 
@@ -587,6 +589,11 @@ VMATRIX *compute_matrix(
         if (csbend->n_kicks<1)
             bomb("n_kicks must be > 0 for CSBEND element", NULL);
         csbend->flags = determine_bend_flags(elem, csbend->edge1_effects, csbend->edge2_effects);
+        if (csbend->use_bn) {
+          csbend->k2 = csbend->b2/(csbend->length/csbend->angle);
+          csbend->k3 = csbend->b3/(csbend->length/csbend->angle);
+          csbend->k4 = csbend->b4/(csbend->length/csbend->angle);
+        }
         elem->matrix = 
             bend_matrix(csbend->length, csbend->angle, csbend->e1, csbend->e2, csbend->k1, 
                         csbend->k2, csbend->tilt, csbend->fint, 
@@ -603,6 +610,11 @@ VMATRIX *compute_matrix(
         if (csrcsbend->n_kicks<1)
             bomb("n_kicks must be > 0 for CSRCSBEND element", NULL);
         csrcsbend->flags = determine_bend_flags(elem, csrcsbend->edge1_effects, csrcsbend->edge2_effects);
+        if (csrcsbend->use_bn) {
+          csrcsbend->k2 = csrcsbend->b2/(csrcsbend->length/csrcsbend->angle);
+          csrcsbend->k3 = csrcsbend->b3/(csrcsbend->length/csrcsbend->angle);
+          csrcsbend->k4 = csrcsbend->b4/(csrcsbend->length/csrcsbend->angle);
+        }
         elem->matrix = 
             bend_matrix(csrcsbend->length, csrcsbend->angle, csrcsbend->e1, csrcsbend->e2, csrcsbend->k1, 
                         csrcsbend->k2, csrcsbend->tilt, csrcsbend->fint, 

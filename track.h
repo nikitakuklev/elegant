@@ -480,7 +480,7 @@ extern char *entity_text[N_TYPES];
  * a zero indicates an unsupported element
  */
 #define N_QUAD_PARAMS 9
-#define N_BEND_PARAMS 21
+#define N_BEND_PARAMS 23
 #define N_DRIFT_PARAMS 2
 #define N_SEXT_PARAMS 8
 #define N_OCTU_PARAMS 0
@@ -530,7 +530,7 @@ extern char *entity_text[N_TYPES];
 #define N_RAMPP_PARAMS 1
 #define N_NISEPT_PARAMS 9
 #define N_STRAY_PARAMS 7
-#define N_CSBEND_PARAMS 27
+#define N_CSBEND_PARAMS 31
 #define N_MATTER_PARAMS 3
 #define N_RFMODE_PARAMS 17
 #define N_TRFMODE_PARAMS 12
@@ -548,7 +548,7 @@ extern char *entity_text[N_TYPES];
 #define N_CHARGE_PARAMS 2
 #define N_PFILTER_PARAMS 4
 #define N_HISTOGRAM_PARAMS 9
-#define N_CSRCSBEND_PARAMS 32
+#define N_CSRCSBEND_PARAMS 36
 #define N_CSRDRIFT_PARAMS 4
 
 typedef struct {
@@ -624,6 +624,8 @@ typedef struct {
     double etilt;   /* error tilt angle */
     long edge1_effects, edge2_effects;
     long order, edge_order, TRANSPORT;
+    long use_bn;
+    double b2;
     } BEND;
 
 /* names and storage structure for drift length physical parameters */
@@ -1270,6 +1272,8 @@ typedef struct {
     long integration_order;
     double edge1_kick_limit, edge2_kick_limit;
     long kick_limit_scaling;
+    long use_bn;
+    double b2, b3, b4;
     /* for internal use only: */
     long flags;
     } CSBEND;
@@ -1288,6 +1292,8 @@ typedef struct {
     long integration_order, bins, SGHalfWidth, SGOrder, SGDerivHalfWidth, SGDerivOrder;
     char *histogramFile;
     long outputInterval, steadyState;
+    long use_bn;
+    double b2, b3, b4;
     /* for internal use only: */
     long flags, fileActive;
     SDDS_DATASET SDDSout;
