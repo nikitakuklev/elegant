@@ -72,6 +72,7 @@
 #include "track.h"
 
 void lorentz_setup(void *field, long field_type, double Po);
+void lorentz_terminate(void *field, long field_type, double Po);
 void select_lorentz_integrator(char *desired_method);
 long do_lorentz_integration(double *coord, void *field);
 double nibend_trajectory_error(double offsetp);
@@ -273,6 +274,9 @@ long lorentz(
             i_part--;
             }
         }
+
+    lorentz_terminate(field, field_type, P_central);
+    
     log_exit("lorentz");
     return(i_top+1);
     }
@@ -443,11 +447,11 @@ void lorentz_setup(
                 }
             nibend->negative_angle = 0;
             if (nibend->angle<0) {
-                nibend->angle *= -1;
-                nibend->e1    *= -1;
-                nibend->e2    *= -1;
-                nibend->negative_angle = 1;
-                }
+              nibend->angle *= -1;
+              nibend->e1    *= -1;
+              nibend->e2    *= -1;
+              nibend->negative_angle = 1;
+            }
             if (nibend->e1!=nibend->e2 && !warning_given) {
                 fprintf(stdout, "warning: e1!=e2 for NIBEND--this may cause orbit distortions\n");
                 fflush(stdout);
@@ -597,6 +601,31 @@ void lorentz_setup(
     log_exit("lorentz_setup");
     }
 
+void lorentz_terminate(
+    void *field,
+    long field_type,
+    double Po
+    )
+{
+    NIBEND *nibend;
+    NISEPT *nisept;
+    BMAPXY *bmapxy;
+
+    switch (field_type) {
+        case T_NIBEND:
+            nibend = (NIBEND*)field;
+            if (nibend->negative_angle) {
+              nibend->angle *= -1;
+              nibend->e1    *= -1;
+              nibend->e2    *= -1;
+            }
+            break;
+          default:
+            break;
+          }
+  }
+
+    
 
 void select_lorentz_integrator(char *desired_method)
 {
