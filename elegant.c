@@ -1201,7 +1201,7 @@ void do_print_dictionary(char *filename, long latex_form)
   fp = fopen_e(filename, "w", 0);
   if (latex_form) {
     fprintf(fp, "\\newlength{\\descwidth}\n");
-    fprintf(fp, "\\setlength{\\descwidth}{3in}\n");
+    fprintf(fp, "\\setlength{\\descwidth}{2in}\n");
   }
   for (i=0; i<N_TYPES-1; i++)
     print_dictionary_entry(fp, dictList[i].index, latex_form);
