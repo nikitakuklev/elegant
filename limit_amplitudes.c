@@ -635,7 +635,7 @@ long remove_outlier_particles(
 {
   double *ini, beta, p, *sSave;
   long ip, itop, is_out, j, mode;
-  double limit[6], centroid[6], stDev[6], minVal[6], maxVal[6];
+  double limit[6], centroid[6], stDev[6];
   long count;
 #define CLEAN_STDEV 0
 #define CLEAN_ABSDEV 1
@@ -677,8 +677,6 @@ long remove_outlier_particles(
   /* compute centroids for each coordinate */
   for (j=0; j<6; j++) {
     centroid[j] = stDev[j] = 0;
-    minVal[j] = HUGE;
-    maxVal[j] = -HUGE;
   }
   for (ip=count=0; ip<np; ip++) {
     ini = initial[ip];
@@ -695,10 +693,6 @@ long remove_outlier_particles(
     count++;
     for (j=0; j<6; j++) {
       centroid[j] += ini[j];
-      if (ini[j]>maxVal[j])
-	maxVal[j] = ini[j];
-      if (ini[j]<minVal[j])
-	minVal[j] = ini[j];
     }
   }
   if (!count) {
@@ -753,11 +747,6 @@ long remove_outlier_particles(
         break;
     }
     if (is_out) {
-      fprintf(stderr, "Particle lost (%ld) due to coord %ld\n", is_out, j);
-      fprintf(stderr, "coord=%21.15e, centroid=%21.15e\ndelta=%21.15e, limit=%21.15e\nspread = %21.15e\n",
-	      ini[j], centroid[j], 
-	      ini[j]-centroid[j], limit[j],
-	      maxVal[j]-minVal[j]);
       SWAP_PTR(initial[ip], initial[itop]);
       SWAP_DOUBLE(sSave[ip], sSave[itop]);
       if (accepted)
