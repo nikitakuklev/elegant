@@ -1966,38 +1966,47 @@ long findFixedLengthClosedOrbit(TRAJECTORY *clorb, double clorb_acc, long clorb_
         double dp, long start_from_recirc, double *starting_point, double change_fraction,
         double *deviation)
 {
-  long nElems, iterationsLeft, i;
-  double error, ds, last_dp;
+  long nElems, iterationsLeft, i, iterationsDone;
+  double error, ds, last_dp, last_ds;
   
   nElems = beamline->n_elems;
   iterationsLeft = clorb_iter/10+10;
-  last_dp = sqrt(DBL_MAX/10);
-  while (iterationsLeft) {
+  last_ds = last_dp = sqrt(DBL_MAX/10);
+  iterationsDone = 0;
+  while (iterationsDone<iterationsLeft) {
     if (!find_closed_orbit(clorb, clorb_acc, clorb_iter, beamline, M, run, dp, start_from_recirc,
                            0, starting_point, change_fraction, deviation))
       return 0;
     ds = clorb[nElems].centroid[4] - beamline->revolution_length;
     for (i=error=0; i<4; i++) {
-      ds -= M->R[4][i]*clorb[0].centroid[i];
+      ds -= M->R[4][i]*clorb[0].centroid[i]; 
       error += sqr(clorb[nElems].centroid[i]-clorb[0].centroid[i]);
     }
-    error = sqrt(error + sqr(last_dp-dp));
-/*
-    fprintf(stdout, "orbit error for dp=%le  is %le:\n", dp, error);
+    /* The error for delta is scaled by 1/change_fraction so that it
+     * gets a chance to converge even with a small change_fraction.
+     * Otherwise, the delta iteration may not converge even though the
+     * individual orbits are converging.
+     */
+    error = sqrt(error + sqr((last_ds-ds)/(beamline->revolution_length*change_fraction)));
+    /* 
+    fprintf(stdout, "orbit error for dp=%le is %le, ds=%le:\n", dp, error, ds);
     for (i=0; i<6; i++)
       fprintf(stdout, "%10.3e ", clorb[0].centroid[i]);
     fprintf(stdout, "\n");
     for (i=0; i<6; i++)
       fprintf(stdout, "%10.3e ", clorb[nElems].centroid[i]-(i==4?beamline->revolution_length:0));
     fprintf(stdout, "\n");
-*/
+    */
     if (error<clorb_acc)
       break;
+    last_ds = ds;
     last_dp = dp;
-    dp = (1-change_fraction)*dp - change_fraction*ds/M->R[4][5];
-    iterationsLeft--;
+    dp -= change_fraction*ds/M->R[4][5];
+    iterationsDone++;
   }
-  if (iterationsLeft)
+  fprintf(stdout, "%ld iterations done for delta in fixed-length orbit computation\ndelta convergence error was %le\ndelta=%le, length error was %le\n", 
+          iterationsDone, last_dp-dp, dp, ds);
+  if (iterationsDone<iterationsLeft)
     return 1;
   fprintf(stdout, "Warning: fixed length orbit iteration didn't converge (error is %le)\n", error);
   fprintf(stdout, "dp = %le, %le\n", dp, last_dp);
