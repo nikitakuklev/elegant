@@ -79,9 +79,10 @@ void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
                   entity_description[eptr->type].parameter[iParam].name, 
                   *((double*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)));
         /* this step could be very inefficient */
-        if (nMatches==1)
+        if (nMatches==1 || has_wildcards(name))
           change_defined_parameter(eptr->name, iParam, thisType, value, NULL, 
-                                   differential?LOAD_FLAG_DIFFERENTIAL:(multiplicative?LOAD_FLAG_FRACTIONAL:LOAD_FLAG_ABSOLUTE));
+                                   differential?LOAD_FLAG_DIFFERENTIAL:
+                                   (multiplicative?LOAD_FLAG_FRACTIONAL:LOAD_FLAG_ABSOLUTE));
         if (differential)
           *((double*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)) += value;
         else if (multiplicative)
@@ -101,7 +102,7 @@ void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
                   entity_description[eptr->type].parameter[iParam].name, 
                   *((long*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)));
         /* this step could be very inefficient */
-        if (nMatches==1)
+        if (nMatches==1 || has_wildcards(name))
           change_defined_parameter(eptr->name, iParam, thisType, value, NULL, 
                                    differential?LOAD_FLAG_DIFFERENTIAL:(multiplicative?LOAD_FLAG_FRACTIONAL:LOAD_FLAG_ABSOLUTE));
         if (differential)
