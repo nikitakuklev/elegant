@@ -621,7 +621,7 @@ extern char *entity_text[N_TYPES];
 #define N_CLEAN_PARAMS 7
 #define N_TWISSELEMENT_PARAMS 6
 #define N_WIGGLER_PARAMS 3
-#define N_SCRIPT_PARAMS 6
+#define N_SCRIPT_PARAMS 26
 
 typedef struct {
     char *name;            /* parameter name */
@@ -1740,6 +1740,8 @@ typedef struct {
   double length;
   char *command, *rootname, *inputExtension, *outputExtension;
   long keepFiles;
+  double NP[10];
+  char *SP[10];
 } SCRIPT;
 
 /* macros for bending magnets */ 
@@ -1782,7 +1784,8 @@ typedef struct {
 #define SHELL_BEAM 3
 #define DYNAP_BEAM 4
 #define LINE_BEAM 5
-#define N_BEAM_TYPES 6
+#define GAUSSIAN_HALO_BEAM 6
+#define N_BEAM_TYPES 7
 
 extern char *beam_type[N_BEAM_TYPES];
 
@@ -2392,9 +2395,9 @@ extern void SDDS_WatchPointSetup(WATCH *waatch, long mode, long lines_per_row,
 void SDDS_HistogramSetup(HISTOGRAM *histogram, long mode, long lines_per_row,
                          char *command_file, char *lattice_file, char *caller);
 void dump_particle_histogram(HISTOGRAM *histogram, long step, long pass, double **particle, long particles, 
-                             double Po, double length);
+                             double Po, double length, double charge);
 extern void dump_watch_particles(WATCH *watch, long step, long pass, double **particle, long particles, double Po,
-                                 double length);
+                                 double length, double charge);
 extern void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, double **particle, long particles, 
                            long original_particles,  double Po, double revolutionLength);
 extern void dump_watch_FFT(WATCH *watch, long step, long pass, long n_passes, double **particle, long particles,

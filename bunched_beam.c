@@ -14,7 +14,7 @@
 
 char *beam_type[N_BEAM_TYPES] = {
     "gaussian", "hard-edge", "uniform-ellipse", "shell",
-    "dynamic-aperture", "line"
+    "dynamic-aperture", "line", "halo(gaussian)",
     };
 
 static TRANSVERSE x_plane, y_plane;

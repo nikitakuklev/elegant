@@ -30,7 +30,7 @@ long dynap_distribution(double **particle, long n_particles, double sx, double s
             long nx, long ny);
 void gaussian_distribution(double **particle, long n_particles, 
     long offset, double s1, double s2, long symmetrize, long *haltonID, double limit,
-    double limit_invar, double beta);
+    double limit_invar, double beta, long halo);
 void hard_edge_distribution(double **particle, long n_particles, 
     long offset, double max1, double max2, long symmetrize, long *haltonID, double cutoff);
 void uniform_distribution(double **particle, long n_particles, long offset, 
@@ -43,7 +43,7 @@ void transform_from_normalized_coordinates(double **part, long n_part, long offs
 void enforce_sigma_values(double **coord, long n_part, long offset, double s1d, double s2d);
 void couple_coordinates(double **coord, long n_part, long offset, double angle);
 void gaussian_4d_distribution(double **particle, long n_particles, long offset, 
-    double s1, double s2, double s3, double s4, double cutoff);
+    double s1, double s2, double s3, double s4, double cutoff, long halo);
 void uniform_4d_distribution(double **particle, long n_particles, long offset, 
     double max1, double max2, double max3, double max4, double cutoff);
 
@@ -95,7 +95,15 @@ long generate_bunch(
             gaussian_distribution(particle, n_particles, 0, s1, s2, 
                                   symmetrize && (enforce_rms_params[0] || n_particles%4==0), 
                                   haltonID, x_plane->cutoff,
-                                  (limit_invar?sqr(x_plane->cutoff)*x_plane->emit:0.0), x_plane->beta);
+                                  (limit_invar?sqr(x_plane->cutoff)*x_plane->emit:0.0), x_plane->beta, 
+                                  0);
+            break;
+          case GAUSSIAN_HALO_BEAM:
+            gaussian_distribution(particle, n_particles, 0, s1, s2, 
+                                  symmetrize && (enforce_rms_params[0] || n_particles%4==0), 
+                                  haltonID, x_plane->cutoff,
+                                  (limit_invar?sqr(x_plane->cutoff)*x_plane->emit:0.0), x_plane->beta,
+                                  1);
             break;
           case HARD_EDGE_BEAM:
             hard_edge_distribution(particle, n_particles, 0, s1, s2, 
@@ -135,7 +143,14 @@ long generate_bunch(
                                   symmetrize && (enforce_rms_params[1] || n_particles%4==0), 
                                   haltonID,
                                   y_plane->cutoff, (limit_invar?sqr(y_plane->cutoff)*y_plane->emit:0.0),
-                                  y_plane->beta);
+                                  y_plane->beta, 0);
+            break;
+          case GAUSSIAN_HALO_BEAM:
+            gaussian_distribution(particle, n_particles, 2, s1, s2, 
+                                  symmetrize && (enforce_rms_params[1] || n_particles%4==0), 
+                                  haltonID,
+                                  y_plane->cutoff, (limit_invar?sqr(y_plane->cutoff)*y_plane->emit:0.0),
+                                  y_plane->beta, 1);
             break;
           case HARD_EDGE_BEAM:
             hard_edge_distribution(particle, n_particles, 2, s1, s2, 
@@ -175,7 +190,10 @@ long generate_bunch(
         s4 = s3/y_plane->beta;
         switch (x_plane->beam_type) {
           case GAUSSIAN_BEAM:
-            gaussian_4d_distribution(particle, n_particles, 0, s1, s2, s3, s4, x_plane->cutoff);
+            gaussian_4d_distribution(particle, n_particles, 0, s1, s2, s3, s4, x_plane->cutoff, 0);
+            break;
+          case GAUSSIAN_HALO_BEAM:
+            gaussian_4d_distribution(particle, n_particles, 0, s1, s2, s3, s4, x_plane->cutoff, 1);
             break;
           case UNIFORM_ELLIPSE:
             uniform_4d_distribution(particle, n_particles, 0, s1, s2, s3, s4, x_plane->cutoff);
@@ -239,7 +257,13 @@ long generate_bunch(
         gaussian_distribution(particle, n_particles, 4, s1, s2, 
                               symmetrize && (enforce_rms_params[2] || n_particles%4==0),
                               haltonID, longit->cutoff, 
-                              (limit_invar?sqr(longit->cutoff)*emit:0.0), beta);
+                              (limit_invar?sqr(longit->cutoff)*emit:0.0), beta, 0);
+        break;
+      case GAUSSIAN_HALO_BEAM:
+        gaussian_distribution(particle, n_particles, 4, s1, s2, 
+                              symmetrize && (enforce_rms_params[2] || n_particles%4==0),
+                              haltonID, longit->cutoff, 
+                              (limit_invar?sqr(longit->cutoff)*emit:0.0), beta, 1);
         break;
       case HARD_EDGE_BEAM:
         hard_edge_distribution(particle, n_particles, 4, s1, s2, 
@@ -353,12 +377,15 @@ void gaussian_distribution(
                            long *haltonID,
                            double limit,
                            double limit_invar,
-                           double beta
+                           double beta,
+                           long halo
                            )
 {
-  float x1, x2;
-  long i_particle;
-  
+  double x1, x2, limit1, limit2;
+  long i_particle, flag;
+
+  limit1 = s1*limit;
+  limit2 = s2*limit;
   if (haltonID[offset] && haltonID[offset+1]) {
     double s12[2], buffer;
     long dim;
@@ -367,9 +394,10 @@ void gaussian_distribution(
     for (dim=0; dim<2; dim++) {
       for (i_particle=0; i_particle<n_particles; i_particle++) {
         buffer = nextHaltonSequencePoint(haltonID[offset+dim]);
-        if (!convertSequenceToGaussianDistribution(&buffer, 1, limit))
+        convertSequenceToGaussianDistribution(&buffer, 1, 0);
+        if ((halo && fabs(buffer)<=limit) || (!halo && fabs(buffer)>limit))
           i_particle--;
-        else
+        else 
           particle[i_particle][offset+dim] = buffer;
       }
       for (i_particle=0; i_particle<n_particles; i_particle++)
@@ -379,11 +407,15 @@ void gaussian_distribution(
   else {
     for (i_particle=0; i_particle<n_particles; i_particle++) {
       do {
-        x1 = gauss_rn_lim(0.0, s1, limit, random_4);
-        x2 = gauss_rn_lim(0.0, s2, limit, random_4);
-        particle[i_particle][0+offset] = x1;
-        particle[i_particle][1+offset] = x2;
-      } while (limit_invar!=0 && (sqr(x1)+sqr(beta*x2))>limit_invar);
+        particle[i_particle][0+offset] = x1 = gauss_rn_lim(0.0, s1, 0.0, random_4);
+        particle[i_particle][1+offset] = x2 = gauss_rn_lim(0.0, s2, 0.0, random_4);
+        if (limit_invar)
+          flag = (sqr(x1)+sqr(beta*x2))<=limit_invar;
+        else
+          flag = fabs(x1)<=limit1 && fabs(x2)<=limit2;
+        if ((!halo && flag) || (halo && !flag))
+          break;
+      } while (1);
       if (symmetrize) {
         if (++i_particle>=n_particles)
           break;
@@ -715,29 +747,33 @@ void set_beam_centroids(
     }
 
 void gaussian_4d_distribution(
-    double **particle, 
-    long n_particles, 
-    long offset, 
-    double s1, 
-    double s2,
-    double s3, 
-    double s4,
-    double cutoff
+                              double **particle, 
+                              long n_particles, 
+                              long offset, 
+                              double s1, 
+                              double s2,
+                              double s3, 
+                              double s4,
+                              double cutoff,
+                              long halo
     )
 {
     double x1, x2, x3, x4, cutoff2;
-    long i_particle;
+    long i_particle, flag;
 
     log_entry("gaussian_4d_distribution");
 
     cutoff2 = sqr(cutoff);
     for (i_particle=0; i_particle<n_particles; i_particle++) {
         do {
-            x1 = gauss_rn_lim(0.0, 1.0, cutoff, random_4);
-            x2 = gauss_rn_lim(0.0, 1.0, cutoff, random_4);
-            x3 = gauss_rn_lim(0.0, 1.0, cutoff, random_4);
-            x4 = gauss_rn_lim(0.0, 1.0, cutoff, random_4);
-            } while (sqr(x1)+sqr(x2)+sqr(x3)+sqr(x4)>cutoff2);
+            x1 = gauss_rn_lim(0.0, 1.0, 0.0, random_4);
+            x2 = gauss_rn_lim(0.0, 1.0, 0.0, random_4);
+            x3 = gauss_rn_lim(0.0, 1.0, 0.0, random_4);
+            x4 = gauss_rn_lim(0.0, 1.0, 0.0, random_4);
+            flag = sqr(x1)+sqr(x2)+sqr(x3)+sqr(x4)<=cutoff2;
+            if ((!halo && flag) || (halo && !flag))
+              break;
+          } while (1);
         particle[i_particle][0+offset] = x1*s1;
         particle[i_particle][1+offset] = x2*s2;
         particle[i_particle][2+offset] = x3*s3;

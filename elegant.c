@@ -1490,5 +1490,16 @@ void free_beamdata(BEAM *beam)
   beam->n_original = beam->n_to_track = beam->n_accepted = beam->p0 = beam->n_saved = beam->n_particle = 0;
 }  
 
+long getTableFromSearchPath(TABLE *tab, char *file, long sampleInterval, long flags)
+{
+  char *filename;
+  long value;
+  if (!(filename=findFileInSearchPath(file)))
+    return 0;
+  value = get_table(tab, filename, sampleInterval, flags);
+  free(filename);
+  return value;
+}
+
 
 

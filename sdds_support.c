@@ -115,11 +115,12 @@ static SDDS_DEFINITION phase_space_column[PHASE_SPACE_COLUMNS] = {
     {"particleID", "&column name=particleID, type=long &end"},
     } ;
 
-#define PHASE_SPACE_PARAMETERS 3
+#define PHASE_SPACE_PARAMETERS 4
 static SDDS_DEFINITION phase_space_parameter[PHASE_SPACE_PARAMETERS] = {
   {"Step", "&parameter name=Step, type=long, description=\"Simulation step\" &end"},
   {"pCentral", "&parameter name=pCentral, symbol=\"p$bcen$n\", units=\"m$be$nc\", type=double &end"},
   {"Charge", "&parameter name=Charge, type=double, units=C, description=\"Beam charge\" &end"},
+  {"Particles", "&parameter name=Particles, type=long &end"},
 };
   
 void SDDS_PhaseSpaceSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row, char *contents, 
@@ -291,7 +292,7 @@ void SDDS_WatchPointSetup(WATCH *watch, long mode, long lines_per_row,
     case WATCH_COORDINATES:
     SDDS_ElegantOutputSetup(SDDS_table, filename, mode, lines_per_row, "watch-point phase space",
                             command_file, lattice_file,
-                            standard_parameter, STANDARD_PARAMETERS,
+                            phase_space_parameter, PHASE_SPACE_PARAMETERS,
                             NULL, 0, caller, SDDS_EOS_NEWFILE);
     columns = 0;
     if (watch->xData) {
@@ -339,8 +340,6 @@ void SDDS_WatchPointSetup(WATCH *watch, long mode, long lines_per_row,
     }
     
     if (!SDDS_DefineSimpleParameter(SDDS_table, "Pass", NULL, SDDS_LONG) ||
-        !SDDS_DefineSimpleParameter(SDDS_table, "Particles", NULL, SDDS_LONG) ||
-        !SDDS_DefineSimpleParameter(SDDS_table, "pCentral", "m$be$nc", SDDS_DOUBLE) ||
         !SDDS_DefineSimpleParameter(SDDS_table, "PassLength", "m", SDDS_DOUBLE) ||
         !SDDS_DefineSimpleParameter(SDDS_table, "PassCentralTime", "s", SDDS_DOUBLE)) {
       fprintf(stdout, "Unable define SDDS parameter for file %s (%s)\n", filename, caller);
@@ -396,7 +395,7 @@ void SDDS_HistogramSetup(HISTOGRAM *histogram, long mode, long lines_per_row,
   filename = histogram->filename;
   SDDS_ElegantOutputSetup(SDDS_table, filename, mode, lines_per_row, "histograms of phase-space coordinates",
                           command_file, lattice_file,
-                          standard_parameter, STANDARD_PARAMETERS,
+                          phase_space_parameter, PHASE_SPACE_PARAMETERS,
                           NULL, 0, caller, SDDS_EOS_NEWFILE);
   for (column=0; column<7; column++)
     histogram->columnIndex[column][0] = 
@@ -460,7 +459,6 @@ void SDDS_HistogramSetup(HISTOGRAM *histogram, long mode, long lines_per_row,
   if (!columns)
     bomb("no output selected for histogram", NULL);
   if (!SDDS_DefineSimpleParameter(SDDS_table, "Pass", NULL, SDDS_LONG) ||
-      !SDDS_DefineSimpleParameter(SDDS_table, "Particles", NULL, SDDS_LONG) ||
       !SDDS_DefineSimpleParameter(SDDS_table, "pCentral", "m$be$nc", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleParameter(SDDS_table, "PassLength", "m", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleParameter(SDDS_table, "PassCentralTime", "s", SDDS_DOUBLE)) {
@@ -478,7 +476,7 @@ void SDDS_HistogramSetup(HISTOGRAM *histogram, long mode, long lines_per_row,
 }
 
 void dump_watch_particles(WATCH *watch, long step, long pass, double **particle, long particles, 
-                          double Po, double length)
+                          double Po, double length, double charge)
 {
   long i, row;
   double p, t0, t;
@@ -545,6 +543,7 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
   if (!SDDS_SetParameters(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
                           "Step", step, "Pass", pass, "Particles", row, "pCentral", Po,
                           "PassLength", length, 
+                          "Charge", charge,
                           "PassCentralTime", t0, 
                           NULL)) {
     SDDS_SetError("Problem setting SDDS parameters (dump_watch_particles)");
@@ -840,7 +839,7 @@ void do_watch_FFT(double **data, long n_data, long slot, long window_code)
 
 
 void dump_particle_histogram(HISTOGRAM *histogram, long step, long pass, double **particle, long particles, 
-                          double Po, double length)
+                          double Po, double length, double charge)
 {
   long icoord, ipart, ibin;
   double p, t0;
@@ -923,7 +922,7 @@ void dump_particle_histogram(HISTOGRAM *histogram, long step, long pass, double 
   }
   if (!SDDS_SetParameters(&histogram->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
                           "Step", step, "Pass", pass, "Particles", particles, "pCentral", Po,
-                          "PassLength", length, 
+                          "PassLength", length, "Charge", charge,
                           "PassCentralTime", t0, 
                           NULL)) {
     SDDS_SetError("Problem setting SDDS parameters (dump_particle_histogram)");
@@ -958,7 +957,7 @@ void dump_phase_space(SDDS_TABLE *SDDS_table, double **particle, long particles,
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
     if (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
-                            "Step", step, "pCentral", Po,
+                            "Step", step, "pCentral", Po, "Particles", particles,
                             "Charge", charge, NULL)) {
         SDDS_SetError("Problem setting parameter values for SDDS table (dump_phase_space)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
