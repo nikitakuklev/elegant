@@ -127,7 +127,7 @@ void initialize_structures(RUN *run_conditions, VARY *run_control, ERROR *error_
                            CHROM_CORRECTION *chrom_corr_data, TUNE_CORRECTION *tune_corr_data,
                            ELEMENT_LINKS *links);
 
-#define NAMELIST_BUFLEN 4096
+#define NAMELIST_BUFLEN 16384
 
 int main(argc, argv)
 int argc;
