@@ -1776,7 +1776,7 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
     static long initialized = 0, been_warned = 0;
     long i, j, n_iter = 0, bad_orbit;
     long n_part;
-    double p, error, last_error, total_length=0.0, ds, R56=0.0;
+    double p, error, last_error;
 
     log_entry("find_closed_orbit");
 
@@ -1882,8 +1882,7 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
             deviation[i] = diff->a[i][0];
         }
         last_error = error;
-        if ((error = sqrt(sqr(diff->a[0][0]) + sqr(diff->a[1][0]) + sqr(diff->a[2][0]) + sqr(diff->a[3][0]) + 
-                          sqr(ds)))<clorb_acc)
+        if ((error = sqrt(sqr(diff->a[0][0]) + sqr(diff->a[1][0]) + sqr(diff->a[2][0]) + sqr(diff->a[3][0])))<clorb_acc)
             break;
         if (error>2*last_error) {
             fprintf(stdout, "warning: closed orbit diverging--iteration stopped\n");
