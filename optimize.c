@@ -462,6 +462,16 @@ typedef struct {
 static long optimRecords = 0, nextOptimRecordSlot = 0, balanceTerms = 0, ignoreOptimRecords=0;
 static OPTIM_RECORD optimRecord[MAX_OPTIM_RECORDS];
 
+#if defined(UNIX)
+#include <signal.h>
+void traceback_handler(int signal);
+
+void optimizationInterruptHandler(int signal)
+{
+  simplexMinAbort(1);
+  fprintf(stderr, "Aborting optimization...");
+}
+#endif
 
 void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *error1, LINE_LIST *beamline1, 
             BEAM *beam1, OUTPUT_FILES *output1, OPTIMIZATION_DATA *optimization_data1, long beam_type1)
@@ -476,7 +486,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
     long i, startsLeft;
     
     log_entry("do_optimize");
-    
+
     optimRecords = ignoreOptimRecords = nextOptimRecordSlot = 0;
     stopOptimization  = 0;
     run               = run1;
@@ -573,6 +583,10 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
     startsLeft = optimization_data->n_restarts+1;
     result = DBL_MAX;
     balanceTerms = 1;
+#if defined(UNIX)
+    if (optimization_data->method==OPTIM_METHOD_SIMPLEX)
+      signal(SIGINT, optimizationInterruptHandler);
+#endif
     while (startsLeft-- && !stopOptimization) {
       lastResult = result;
       switch (optimization_data->method) {
@@ -658,6 +672,11 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
         fflush(stdout);
       }
     }
+
+#if defined(UNIX)
+    if (optimization_data->method==OPTIM_METHOD_SIMPLEX)
+      signal(SIGINT, traceback_handler);
+#endif
 
     fprintf(stdout, "Exited optimization loop\n");
     fflush(stdout);
@@ -1318,7 +1337,7 @@ void rpnStoreHigherMatrixElements(VMATRIX *M, long **TijkMem, long **UijklMem, l
       for (j=0; j<6; j++)
         for (k=0; k<=j; k++)
           for (l=0; l<=k; l++, count++) {
-            sprintf(buffer, "U%ld%ld%ld", i+1, j+1, k+1, l+1);
+            sprintf(buffer, "U%ld%ld%ld%ld", i+1, j+1, k+1, l+1);
             (*UijklMem)[count] = rpn_create_mem(buffer);
           }
   }
