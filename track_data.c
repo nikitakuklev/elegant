@@ -34,7 +34,7 @@ char *entity_name[N_TYPES] = {
     "CSRCSBEND", "CSRDRIFT", "RFCW", "REMCOR", "MAPSOLENOID",
     "REFLECT", "CLEAN", "TWISS", "WIGGLER", "SCRIPT", "FLOOR",
     "LTHINLENS", "LMIRROR", "EMATRIX", "FRFMODE", "FTRFMODE",
-    "TFBPICKUP", "TFBDRIVER",
+    "TFBPICKUP", "TFBDRIVER", "LSCDRIFT",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -154,6 +154,7 @@ and phase modulation.",
     "One or more beam-driven TM dipole modes of an RF cavity, with data from a file.",
     "Pickup for a transverse feedback loop",
     "Driver for a transverse feedback loop",
+    "Longitudinal space charge impedance---NOT FULLY TESTED!."
     } ;
 
 QUAD quad_example;
@@ -1703,7 +1704,19 @@ PARAMETER tfbdriver_param[N_TFBDRIVER_PARAMS] = {
    {"A13", "", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.a[13]), NULL, 0.0, 0, "Filter coefficient"},
    {"A14", "", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.a[14]), NULL, 0.0, 0, "Filter coefficient"},
 } ;
- 
+
+LSCDRIFT lscdrift_example;
+
+PARAMETER lscdrift_param[N_LSCDRIFT_PARAMS] = {
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lscdrift_example.length), NULL, 0.0, 0, "length"},
+    {"BINS", "", IS_LONG, 0, (long)((char *)&lscdrift_example.bins), NULL, 0.0, 0, "number of bins for current histogram"},
+    {"SMOOTHING", "", IS_LONG, 0, (long)((char *)&lscdrift_example.smoothing), NULL, 0.0, 0, "smooth current histogram?"},
+    {"SG_HALFWIDTH", "", IS_LONG, 0, (long)((char *)&lscdrift_example.SGHalfWidth), NULL, 0.0, 1, "Savitzky-Golay filter half-width for smoothing current histogram"},
+    {"SG_ORDER", "", IS_LONG, 0, (long)((char *)&lscdrift_example.SGOrder), NULL, 0.0, 1, "Savitzky-Golay filter order for smoothing current histogram"},
+    {"SGDERIV_HALFWIDTH", "", IS_LONG, 0, (long)((char *)&lscdrift_example.SGDerivHalfWidth), NULL, 0.0, 0, "Savitzky-Golay filter half-width for taking derivative of current histogram"},
+    {"INTERPOLATE", "", IS_LONG, 0, (long)((char *)&lscdrift_example.interpolate), NULL, 0.0, 1, "Interpolate wake?"},
+};
+
 /* array of parameter structures */
 
 #define MAT_LEN     HAS_MATRIX|HAS_LENGTH
@@ -1810,6 +1823,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_FTRFMODE_PARAMS,         0,     sizeof(FTRFMODE),  ftrfmode_param    },
     { N_TFBPICKUP_PARAMS,         0,     sizeof(TFBPICKUP),  tfbpickup_param    },
     { N_TFBDRIVER_PARAMS,         0,     sizeof(TFBDRIVER),  tfbdriver_param    },
+    { N_LSCDRIFT_PARAMS,         0,     sizeof(LSCDRIFT),  lscdrift_param    },
 } ;
  
 
