@@ -11,6 +11,7 @@
         STRING type = NULL;
         STRING exclude = NULL;
         double value = 0;
+        STRING string_value = NULL;
         long differential = 0;
         long multiplicative = 0;
         long verbose = 0;

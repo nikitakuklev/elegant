@@ -12,7 +12,7 @@ long do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 {
     long i, index, thisType, lastType, iParam, nMatches;
     ELEMENT_LIST *context, *eptr;
-    char *p_elem;
+    char *p_elem, *sdata;
     
     /* process the namelist text */
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
@@ -58,9 +58,6 @@ long do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
         }
       }
       nMatches++;
-      /* this step could be very inefficient */
-      change_defined_parameter(eptr->name, iParam, thisType, value, NULL, 
-                               differential?LOAD_FLAG_DIFFERENTIAL:(multiplicative?LOAD_FLAG_FRACTIONAL:LOAD_FLAG_ABSOLUTE));
       p_elem = eptr->p_elem;
       switch (entity_description[eptr->type].parameter[iParam].type) {
       case IS_DOUBLE:
@@ -69,6 +66,9 @@ long do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
                   eptr->name, 
                   entity_description[eptr->type].parameter[iParam].name, 
                   *((double*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)));
+        /* this step could be very inefficient */
+        change_defined_parameter(eptr->name, iParam, thisType, value, NULL, 
+                                 differential?LOAD_FLAG_DIFFERENTIAL:(multiplicative?LOAD_FLAG_FRACTIONAL:LOAD_FLAG_ABSOLUTE));
         if (differential)
           *((double*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)) += value;
         else if (multiplicative)
@@ -87,6 +87,9 @@ long do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
                   eptr->name, 
                   entity_description[eptr->type].parameter[iParam].name, 
                   *((long*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)));
+        /* this step could be very inefficient */
+        change_defined_parameter(eptr->name, iParam, thisType, value, NULL, 
+                                 differential?LOAD_FLAG_DIFFERENTIAL:(multiplicative?LOAD_FLAG_FRACTIONAL:LOAD_FLAG_ABSOLUTE));
         if (differential)
           *((long*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)) += 
             nearestInteger(value);
@@ -101,8 +104,30 @@ long do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
           fflush(stdout);
         }
         break;
-      default:
-        fprintf(stderr, "Can't alter non-numeric parameter %s for element %s\n", item, eptr->name);
+      case IS_STRING:
+        if (string_value==NULL) {
+          fprintf(stderr, "Error: string_value is NULL for alter_elements, but parameter %s of %s is a string parameter\n",
+                  entity_description[eptr->type].parameter[iParam].name, eptr->name);
+          exit(1);
+        }
+        /* unfortunately, can't free the existing pointer as I can't be sure that it isn't
+         * pointing to static memory
+         */
+        if (verbose)
+          fprintf(stdout, "Changing %s.%s from %s to ",
+                  eptr->name, 
+                  entity_description[eptr->type].parameter[iParam].name, 
+                  *((char**)(p_elem+entity_description[eptr->type].parameter[iParam].offset)));
+        cp_str((char**)(p_elem+entity_description[eptr->type].parameter[iParam].offset),
+               string_value);
+        /* this step could be very inefficient */
+        change_defined_parameter(eptr->name, iParam, thisType, 0, string_value, 
+                                 differential?LOAD_FLAG_DIFFERENTIAL:(multiplicative?LOAD_FLAG_FRACTIONAL:LOAD_FLAG_ABSOLUTE));
+        if (verbose) {
+          fprintf(stdout, "%s\n",
+                  *((char**)(p_elem+entity_description[eptr->type].parameter[iParam].offset)));
+          fflush(stdout);
+        }
         break;
       }
       eptr->flags |= 
