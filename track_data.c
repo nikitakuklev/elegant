@@ -153,7 +153,7 @@ and phase modulation.",
     "One or more beam-driven TM dipole modes of an RF cavity, with data from a file.",
     "Pickup for a transverse feedback loop",
     "Driver for a transverse feedback loop",
-    "Longitudinal space charge impedance---NOT FULLY TESTED!."
+    "Longitudinal space charge impedance",
     } ;
 
 QUAD quad_example;
@@ -259,7 +259,7 @@ SOLE sole_example;
 /* solenoid physical parameters */
 PARAMETER sole_param[N_SOLE_PARAMS] = {
     {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&sole_example.length), NULL, 0.0, 0, "length"},
-    {"KS", "RAD/M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&sole_example.ks), NULL, 0.0, 0, "geometric strength"},
+    {"KS", "RAD/M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&sole_example.ks), NULL, 0.0, 0, "geometric strength, -Bs/(B*Rho)"},
     {"B", "T", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&sole_example.B), NULL, 0.0, 0, "field strength (used if KS is zero)"},
     {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&sole_example.dx), NULL, 0.0, 0, "misalignment"},
     {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&sole_example.dy), NULL, 0.0, 0, "misalignment"},
