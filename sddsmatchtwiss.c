@@ -14,6 +14,9 @@
  * Michael Borland, 2000
  *
  $Log: not supported by cvs2svn $
+ Revision 1.17  2002/08/14 20:23:49  soliday
+ Added Open License
+
  Revision 1.16  2002/07/01 15:58:27  borland
  Optionally takes specification of twiss parameters from an elegant
  twiss output file.
@@ -167,7 +170,7 @@ int main(int argc, char **argv)
   unsigned long pipeFlags;
   PLANE_SPEC xSpec, ySpec;
   ZPLANE_SPEC zSpec;
-  double *x, *xp=NULL, *y=NULL, *yp=NULL, *p=NULL, *t=NULL;
+  double *x=NULL, *xp=NULL, *y=NULL, *yp=NULL, *p=NULL, *t=NULL;
   long oneTransform, verbose;
   
   SDDS_RegisterProgramName(argv[0]);
@@ -620,7 +623,7 @@ long LoadTwissFromFile(PLANE_SPEC *spec, long yPlane)
     SDDS_SetError("Problem getting data for beta function reference.");
     return 0;
   }
-  if (spec->element && spec->occurrence>0)
+  if (spec->flags&ELEMENT_GIVEN && spec->element && spec->occurrence>0)
     rowOfInterest = spec->occurrence-1;
   else
     rowOfInterest = rows-1;
