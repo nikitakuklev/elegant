@@ -418,7 +418,7 @@ long do_tracking(
               print_elem(stdout, eptr);
               print_matrices(stdout, "", eptr->matrix);
             }
-            if (flags&TEST_PARTICLES) {
+            if (flags&CLOSED_ORBIT_TRACKING) {
               switch (eptr->type) {
               case T_MONI:
               case T_HMON:
@@ -490,6 +490,8 @@ long do_tracking(
                                            eptr->occurence, eptr->accumMatrix);
               store_fitpoint_beam_parameters((MARK*)eptr->p_elem, eptr->name,eptr->occurence, 
                                              coord, nToTrack, *P_central); 
+              if (flags&CLOSED_ORBIT_TRACKING)
+                storeMonitorOrbitValues(eptr, coord, nToTrack);
             }
             break;
           case T_RECIRC:
@@ -2306,6 +2308,7 @@ void storeMonitorOrbitValues(ELEMENT_LIST *eptr, double **part, long np)
   MONI *moni;
   HMON *hmon;
   VMON *vmon;
+  MARK *mark;
   char s[1000];
   double centroid[6];
   
@@ -2327,6 +2330,21 @@ void storeMonitorOrbitValues(ELEMENT_LIST *eptr, double **part, long np)
     }
     rpn_store(centroid[0], NULL, moni->coMemoryNumber[0]);
     rpn_store(centroid[2], NULL, moni->coMemoryNumber[1]);
+    break;
+  case T_MARK:
+    mark = (MARK*)eptr->p_elem;
+    if (!mark->fitpoint) 
+      return;
+    compute_centroids(centroid, part, np);
+    if (mark->co_mem==NULL) {
+      mark->co_mem = tmalloc(2*sizeof(*(mark->co_mem)));
+      sprintf(s, "%s#%ld.xco", eptr->name, eptr->occurence);
+      mark->co_mem[0] = rpn_create_mem(s, 0);
+      sprintf(s, "%s#%ld.yco", eptr->name, eptr->occurence);
+      mark->co_mem[1] = rpn_create_mem(s, 0);
+    }
+    rpn_store(centroid[0], NULL, mark->co_mem[0]);
+    rpn_store(centroid[2], NULL, mark->co_mem[1]);
     break;
   case T_HMON:
     hmon = (HMON*)eptr->p_elem;

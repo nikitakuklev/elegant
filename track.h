@@ -969,6 +969,7 @@ typedef struct {
     long *emit_mem;        /* (x, y, z) */
     long *floor_mem;       /* X, Z, theta */
     long *matrix_mem;
+    long *co_mem;          /* closed orbit */
     } MARK;
 
 /* storage structure for alpha magnet */
@@ -2145,6 +2146,7 @@ typedef struct {
 #define PRECORRECTION_BEAM       0x0800UL
 #define RESTRICT_FIDUCIALIZATION 0x1000UL
 #define IBS_ONLY_TRACKING        0x2000UL
+#define CLOSED_ORBIT_TRACKING    0x4000UL
 /* return values for get_reference_phase and check_reference_phase */
 #define REF_PHASE_RETURNED 1
 #define REF_PHASE_NOT_SET  2
