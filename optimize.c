@@ -386,7 +386,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERROR *error1
     OPTIM_CONSTRAINTS *constraints;
     double result;
     long i;
-
+    
     log_entry("do_optimize");
 
     run               = run1;
@@ -454,9 +454,10 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERROR *error1
 
     switch (optimization_data->method) {
         case OPTIM_METHOD_SIMPLEX:
-            fputs("Starting simplex optimization.", stderr);
-            if (simplexMin(&result, variables->varied_quan_value, variables->step, variables->lower_limit,
-                           variables->upper_limit, variables->n_variables, optimization_data->target, 
+            fputs("Starting simplex optimization.\n", stderr);
+            if (simplexMin(&result, variables->varied_quan_value, variables->step, 
+                           variables->lower_limit, variables->upper_limit, NULL, 
+                           variables->n_variables, optimization_data->target, 
                            optimization_data->tolerance, optimization_function, optimization_report,
                            optimization_data->n_evaluations, optimization_data->n_passes)<0) {
                 if (result>optimization_data->tolerance) {
@@ -600,8 +601,10 @@ double optimization_function(double *value, long *invalid)
     fprintf(stderr, "optimization_function: In optimization function\n");
 #endif
     
+    *invalid = 0;
+    unstable = 0;
     n_evaluations_made++;
-
+    
     variables = &(optimization_data->variables);
     constraints = &(optimization_data->constraints);
     covariables = &(optimization_data->covariables);
@@ -700,6 +703,8 @@ double optimization_function(double *value, long *invalid)
             }
         /* get twiss mode and (beta, alpha, eta, etap) for both planes */
         update_twiss_parameters(run, beamline, &unstable);
+        if (unstable)
+          fprintf(stderr, "Beamline is unstable\n");
         /* store twiss parameters for last element */
         for (i=0; i<5; i++) {
             rpn_store(*((&beamline->elast->twiss->betax)+i)/(i==2?PIx2:1), twiss_mem[i]);
@@ -774,7 +779,6 @@ double optimization_function(double *value, long *invalid)
       fprintf(stderr, "optimization_function: Checking constraints\n");
 #endif
     /* check constraints */
-    *invalid = 0;
     if (optimization_data->fp_log && constraints->n_constraints) {
         fprintf(optimization_data->fp_log, "    Constraints:\n");
         fflush(optimization_data->fp_log);
