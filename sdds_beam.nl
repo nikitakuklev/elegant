@@ -7,6 +7,7 @@
 
 #namelist sdds_beam
     STRING input = NULL;
+    STRING input_list = NULL;
     STRING input_type = "elegant";
     STRING selection_parameter = NULL;
     STRING selection_string = NULL;
