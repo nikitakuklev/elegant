@@ -9,6 +9,9 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.3  1998/08/11 18:53:43  borland
+ * Initialized pipeFlags in main() to prevent error in filename parsing.
+ *
  * Revision 1.2  1998/02/26 16:16:29  borland
  * This version works.
  *
@@ -462,6 +465,11 @@ main(
     for (i_variable=0; i_variable<column_names; i_variable++)
       if (column_name[i_variable][0]=='Q')
         break;
+    if (i_variable==column_names) {
+      for (i_variable=0; i_variable<column_names; i_variable++)
+      if (strchr(column_name[i_variable], 'Q'))
+        break;
+    }
     if (i_variable==column_names)
       bomb("you did not specify -variable_name, and there is no obvious choice in the input data", NULL);
     variable_name = column_name[i_variable];
