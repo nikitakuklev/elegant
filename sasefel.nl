@@ -11,6 +11,8 @@
     double beta = 0;
     double undulator_K = 3.1;
     double undulator_period = 0.033;
+    double slice_fraction = 0.0;
+    long n_slices = 0;
 #end
 
 
