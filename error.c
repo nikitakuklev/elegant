@@ -14,7 +14,7 @@ long duplicate_name(char **list, long n_list, char *name);
 
 #define DEBUG 0
 
-void error_setup(ERROR *errcon, NAMELIST_TEXT *nltext, RUN *run_cond, LINE_LIST *beamline)
+void error_setup(ERRORVAL *errcon, NAMELIST_TEXT *nltext, RUN *run_cond, LINE_LIST *beamline)
 {
     long i;
 
@@ -105,7 +105,7 @@ void error_setup(ERROR *errcon, NAMELIST_TEXT *nltext, RUN *run_cond, LINE_LIST 
     log_exit("error_setup");
     }
 
-void add_error_element(ERROR *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beamline)
+void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beamline)
 {
     long n_items, n_added, i_start;
     ELEMENT_LIST *context;
@@ -211,7 +211,7 @@ void add_error_element(ERROR *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beamline
             if (errcon->error_type[n_items]==PLUS_OR_MINUS_ERRORS)
                 fractional = 1;
             errcon->flags[n_items]  = (fractional?FRACTIONAL_ERRORS:0);
-            errcon->flags[n_items] += (bind==0?0:(bind==-1?ANTIBIND_ERRORS:BIND_ERRORS));
+            errcon->flags[n_items] += (binding==0?0:(binding==-1?ANTIBIND_ERRORS:BIND_ERRORS));
             errcon->flags[n_items] += (post_correction?POST_CORRECTION:PRE_CORRECTION);
             errcon->flags[n_items] += (additive?0:NONADDITIVE_ERRORS);
             errcon->bind_number[n_items] = bind_number;
@@ -276,7 +276,7 @@ void add_error_element(ERROR *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beamline
         if (errcon->error_type[n_items]==PLUS_OR_MINUS_ERRORS)
             fractional = 1;
         errcon->flags[n_items]  = (fractional?FRACTIONAL_ERRORS:0);
-        errcon->flags[n_items] += (bind==0?0:(bind==-1?ANTIBIND_ERRORS:BIND_ERRORS));
+        errcon->flags[n_items] += (binding==0?0:(binding==-1?ANTIBIND_ERRORS:BIND_ERRORS));
         errcon->flags[n_items] += (post_correction?POST_CORRECTION:PRE_CORRECTION);
         errcon->flags[n_items] += (additive?0:NONADDITIVE_ERRORS);
         errcon->bind_number[n_items] = bind_number;
