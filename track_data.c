@@ -449,9 +449,9 @@ PARAMETER watch_param[N_WATCH_PARAMS] = {
     {"FILENAME", "", IS_STRING, 0, (long)((char *)&watch_example.filename), "", 0.0, 0},
     {"LABEL", "", IS_STRING, 0, (long)((char *)&watch_example.label), "", 0.0, 0},
     {"MODE", "", IS_STRING, 0, (long)((char *)&watch_example.mode), "coordinates", 0.0, 0},
-    {"XDATA", "", IS_LONG, 0, (long)((char*)&watch_example.xData), NULL, 0.0, 1},
-    {"YDATA", "", IS_LONG, 0, (long)((char*)&watch_example.yData), NULL, 0.0, 1},
-    {"LDATA", "", IS_LONG, 0, (long)((char*)&watch_example.longitData), NULL, 0.0, 1},
+    {"X_DATA", "", IS_LONG, 0, (long)((char*)&watch_example.xData), NULL, 0.0, 1},
+    {"Y_DATA", "", IS_LONG, 0, (long)((char*)&watch_example.yData), NULL, 0.0, 1},
+    {"LONGIT_DATA", "", IS_LONG, 0, (long)((char*)&watch_example.longitData), NULL, 0.0, 1},
     } ;
 
 TW_PLATES twpl_example;

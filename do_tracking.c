@@ -362,7 +362,7 @@ long do_tracking(
                             if (i_pass==0 && (n_passes/watch->interval)==0)
                                 fprintf(stderr, "warning: n_passes = %ld and WATCH interval = %ld--no output will be generated!\n",
                                        n_passes, watch->interval);
-                            if (i_pass%watch->interval==0) {
+                            if ((i_pass-watch->start_pass)%watch->interval==0) {
                                 switch (watch->mode_code) {
                                   case WATCH_COORDINATES:
                                     dump_watch_particles(watch, step, i_pass, coord, n_to_track, *P_central,

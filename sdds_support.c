@@ -373,8 +373,6 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
     bomb("NULL coordinate pointer passed to dump_watch_particles", NULL);
   if (watch->fraction>1)
     bomb("logic error--fraction>1 in dump_watch_particles", NULL);
-  if (watch->start_pass>pass)
-    return;
   for (i=0; i<particles; i++)
     if (!particle[i]) {
       fprintf(stderr, "error: coordinate slot %ld is NULL (dump_watch_particles)\n", i);
