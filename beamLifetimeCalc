@@ -4,6 +4,9 @@ exec oagwish "$0" "$@"
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.9  2004/11/10 20:51:35  borland
+# Decreased tolerance on Haissinski evaluation.
+#
 # Revision 1.8  2004/10/26 16:41:36  borland
 # Added command buttons to file entry boxes.
 #
@@ -153,7 +156,7 @@ set auto_path [linsert $auto_path 0  /usr/local/oag/apps/lib/$env(HOST_ARCH)]
 set auto_path [linsert $auto_path 0 /usr/local/oag/lib_patch/$env(HOST_ARCH)]
 APSDebugPath
 
-set CVSRevisionAuthor "\$Revision: 1.9 $ \$Author: borland $"
+set CVSRevisionAuthor "\$Revision: 1.10 $ \$Author: borland $"
 
 APSApplication . -name beamLifetimeCalc -version $CVSRevisionAuthor -overview \
   "Calculates the gas scattering lifetime due to single Coulomb scattering and
@@ -196,6 +199,7 @@ proc SetGasDefaults {} {
 SetGasDefaults
 set NGas [llength [array names component]]
 set betaAve 13.5
+set aperturePlane y
 set acceptance 1.55e-6
 set energyAperture 0.022
 set effectiveEnergyAperture 0
@@ -312,6 +316,10 @@ APSLabeledEntry .lattice -parent $w -label "Lattice file:" -commandButton 1 -tex
 
 APSLabeledEntry .superperiods -parent $w -label "Superperiods:" -textVariable superperiods -width 10 \
     -contextHelp "Give the number of superperiods.  If the lattice file has the whole ring, set to 1."
+
+APSRadioButtonFrame .plane -parent $w -label "Aperture-limiting plane: " -variable aperturePlane \
+    -buttonList "x y" -valueList "x y" -orientation horizontal -contextHelp \
+    "Select the plane for which the aperture is most limited."
 
 APSLabeledEntry .betaAve -parent $w -label "Average beta (m):" -textVariable betaAve -width 22 \
   -contextHelp "Enter the average beta function in the aperture limiting plane."
@@ -653,7 +661,7 @@ proc NormalizePressureFractions {} {
 }
 
 proc LoadLatticeParameters {} {
-    global referenceValue
+    global referenceValue aperturePlane
     global betaAve acceptance energyAperture energy screening temperature electrons
     global pressure pressureFrac component
     global tauEN tauEE tauIN tauIE tauUser tauTouschek tau tauQuantum
@@ -669,11 +677,11 @@ proc LoadLatticeParameters {} {
         return 0
     }
     lappend twiParameterList \
-      alphac pCentral ex0 taudelta Sdelta0 U0 sLast betayFirst
+      alphac pCentral ex0 taudelta Sdelta0 U0 sLast beta${aperturePlane}First
     lappend tclVarList \
-      alpha pCentral emittance dampingTime energySpread Uo sLast betayFirst
+      alpha pCentral emittance dampingTime energySpread Uo sLast beta${aperturePlane}First
     if [catch {exec sddsprocess $latticeFile -pipe=out \
-                 -process=s,last,sLast -process=betay,first,betayFirst \
+                 -process=s,last,sLast -process=beta${aperturePlane},first,beta${aperturePlane}First \
                  | sdds2stream -pipe=in -parameter=[join $twiParameterList ,] } dataList] {
         setStatus "$dataList"
         return 0
@@ -686,12 +694,12 @@ proc LoadLatticeParameters {} {
     global tcl_precision
     set tcl_precision 12
 
-    if [catch {exec sddsinteg $latticeFile -pipe=out -integrate=betay -versus=s \
+    if [catch {exec sddsinteg $latticeFile -pipe=out -integrate=beta${aperturePlane} -versus=s \
                  |  sddsconvert -pipe -delete=parameter,beta* \
                  | sddsprocess -pipe -process=s,last,sLast \
-                 -process=betayInteg,last,betayIntegLast \
-                 "-define=parameter,betayAve,betayIntegLast sLast /,units=m" \
-                 | sdds2stream -pipe -param=betayAve} result] {
+                 -process=beta${aperturePlane}Integ,last,beta${aperturePlane}IntegLast \
+                 "-define=parameter,beta${aperturePlane}Ave,beta${aperturePlane}IntegLast sLast /,units=m" \
+                 | sdds2stream -pipe -param=beta${aperturePlane}Ave} result] {
         return -code error "$result"
     }
     set betaAve $result
