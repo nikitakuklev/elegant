@@ -556,7 +556,7 @@ extern char *entity_text[N_TYPES];
 /* number of parameters for physical elements
  * a zero indicates an unsupported element
  */
-#define N_QUAD_PARAMS 9
+#define N_QUAD_PARAMS 10
 #define N_BEND_PARAMS 24
 #define N_DRIFT_PARAMS 2
 #define N_SEXT_PARAMS 8
@@ -705,6 +705,7 @@ typedef struct {
     double length, k1, tilt, ffringe;
     double dx, dy, dz, fse;
     long order;
+    char *fringeType;
     } QUAD;
 
 /* names and storage structure for bending magnet physical parameters */
@@ -2218,7 +2219,8 @@ extern void print_elem(FILE *fp, ELEMENT_LIST *eptr);
 extern void print_elem_names(FILE *fp, ELEMENT_LIST *eptr, long width);
 
 /* prototypes for quad_matrix3.c: */
-extern VMATRIX *quadrupole_matrix(double K1, double l, long maximum_order, double tilt, double ffringe, double fse);
+extern VMATRIX *quadrupole_matrix(double K1, double l, long maximum_order, double tilt, double ffringe, double fse,
+                                  char *fringeType);
 extern VMATRIX *quad_fringe(double l, double ko, long order, long reverse, double fse);
 extern void qfringe_R_matrix(double *R11, double *R21, double *R12, double *R22, double dk_dz, double l);
 extern void qfringe_T_matrix(double *T116, double *T126, double *T216, double *T226,
