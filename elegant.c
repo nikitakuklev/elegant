@@ -39,7 +39,7 @@ char *option[N_OPTIONS] = {
     "describeinput",
     "macro",
         };
-char *USAGE="elegant <inputfile> [-macro=<tag>=<value>,[...]]\n\nProgram by Michael Borland. (This is version 15.2Beta, "__DATE__".)";
+char *USAGE="elegant <inputfile> [-macro=<tag>=<value>,[...]]\n\nProgram by Michael Borland. (This is version 15.2, "__DATE__".)";
 
 char *GREETING="This is elegant, by Michael Borland. (This is version 15.2, "__DATE__".)";
 
