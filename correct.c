@@ -712,8 +712,9 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
   start = find_useable_moni_corr(&CM->nmon, &CM->ncor, &CM->mon_index,
                                  &CM->umoni, &CM->ucorr, &CM->kick_coef, &CM->sl_index, coord, SL, run, beamline, 0);
   if (CM->nmon<CM->ncor) {
-    fprintf(stdout, "*** error: more correctors than monitors for %c plane.\n",  (coord==0?'x':'y'));
-    exit(1);
+    fprintf(stdout, "*** Warning: more correctors than monitors for %c plane.\n",  (coord==0?'x':'y'));
+    fprintf(stdout, "*** Correction will probably be unstable!\n");
+    fflush(stdout);
   }
   if (CM->ncor==0) {
     fprintf(stdout, "Warning: no correctors for %c plane.  No correction done.\n",  (coord==0?'x':'y'));
@@ -965,6 +966,11 @@ long global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
     tracking_flags = TEST_PARTICLES+TEST_PARTICLE_LOSSES;
   }
 
+  if (CM->nmon<CM->ncor) {
+    fprintf(stdout, "*** Warning: more correctors than monitors for %c plane.\n",  (coord==0?'x':'y'));
+    fprintf(stdout, "*** Correction will probably be unstable!\n");
+    fflush(stdout);
+  }
   for (iteration=0; iteration<=n_iterations; iteration++) {
     if (!CM->posi[iteration])
       bomb("monitor readout array for this iteration is NULL (global_trajcor_plane)", NULL);
@@ -1413,9 +1419,11 @@ void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN
   fputc('\n', stdout);
 #endif
 
-  if (CM->nmon<CM->ncor)
-    fprintf(stdout, "*** \7\7\7 warning: more correctors than monitors for %c plane.\n",  (coord==0?'x':'y'));
-  fflush(stdout);
+  if (CM->nmon<CM->ncor) {
+    fprintf(stdout, "*** Warning: more correctors than monitors for %c plane.\n",  (coord==0?'x':'y'));
+    fprintf(stdout, "*** Correction will probably be unstable!\n");
+    fflush(stdout);
+  }
   if (CM->ncor==0) {
     fprintf(stdout, "Warning: no correctors for %c plane.  No correction done.\n",  (coord==0?'x':'y'));
     fflush(stdout);
@@ -1598,6 +1606,12 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
   else {
     for (i=0; i<4; i++)
       clorb[0].centroid[i] = 0;
+  }
+
+  if (CM->nmon<CM->ncor) {
+    fprintf(stdout, "*** Warning: more correctors than monitors for %c plane.\n",  (coord==0?'x':'y'));
+    fprintf(stdout, "*** Correction will probably be unstable!\n");
+    fflush(stdout);
   }
 
   best_rms_pos = rms_pos = DBL_MAX/4;
