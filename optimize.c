@@ -742,13 +742,16 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
         }
         if (optimization_data->restart_worst_term_factor!=1 && optimization_data->terms>1) {
           long imax, imin, iworst;
-          double *savedTermValue;
+          double *savedTermValue, newResult;
           if (!(savedTermValue = malloc(sizeof(*savedTermValue)*optimization_data->terms)))
             bomb("memory allocation failure (saving term values)", NULL);
           memcpy(savedTermValue, optimization_data->termValue, optimization_data->terms*sizeof(*savedTermValue));
+          newResult = lastResult;
           for (iworst=0; iworst<optimization_data->restart_worst_terms; iworst++) {
             if (index_min_max(&imin, &imax, optimization_data->termValue, optimization_data->terms)) {
+              newResult -= optimization_data->termValue[imax];
               optimization_data->termWeight[imax] *= optimization_data->restart_worst_term_factor;
+              newResult += optimization_data->termValue[imax]*optimization_data->restart_worst_term_factor;
               fprintf(stdout, "Adjusted weight for term: %s\n",
                       optimization_data->term[imax]);
               /* just to be sure it doesn't get picked as the max again */
@@ -758,12 +761,9 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
               break;
           }
           memcpy(optimization_data->termValue, savedTermValue, optimization_data->terms*sizeof(*savedTermValue));
-          if (index_min_max(&imin, &imax, optimization_data->termWeight, optimization_data->terms) &&
-              optimization_data->termWeight[imin]>0) {
+          if (newResult) {
             for (i=0; i<optimization_data->terms; i++)
-              if (i!=imin)
-                optimization_data->termWeight[i] /= optimization_data->termWeight[imin];
-            optimization_data->termWeight[imin] = 1;
+              optimization_data->termWeight[i] *= lastResult/newResult;
           }
         }
         fprintf(stdout, "Redoing optimization\n");
