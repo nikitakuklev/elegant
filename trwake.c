@@ -76,9 +76,15 @@ void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
     if (!wakeData->W[plane])
       continue;
     
-    if (wakeData->smoothing)
-      SavitzyGolaySmooth(posItime[plane], nb, wakeData->SGOrder, 
-                         wakeData->SGHalfWidth, wakeData->SGHalfWidth, 0);
+    if (wakeData->smoothing && 
+        !SavitzyGolaySmooth(posItime[plane], nb, wakeData->SGOrder, 
+                            wakeData->SGHalfWidth, wakeData->SGHalfWidth, 0)) {
+      fprintf(stderr, "Problem with smoothing for TRWAKE element (file %s)\n",
+              wakeData->inputFile);
+      fprintf(stderr, "Parameters: nbins=%ld, order=%ld, half-width=%ld\n",
+              nb, wakeData->SGOrder, wakeData->SGHalfWidth);
+      exit(1);
+    }
 
     /* Do the convolution of the particle density and the wake function,
        V(T) = Integral[W(T-t)*I(t)dt, t={-infinity, T}]
@@ -185,34 +191,49 @@ void set_up_trwake(TRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
       break;
   }
   if (iw==storedWakes) {
-    if (!SDDS_InitializeInput(&SDDSin, wakeData->inputFile) || SDDS_ReadPage(&SDDSin)!=1)
-      SDDS_Bomb("unable to read TRWAKE file");
-    if ((wakeData->wakePoints=SDDS_RowCount(&SDDSin))<0)
-      bomb("no data in TRWAKE file", NULL);
-    if (wakeData->wakePoints<2)
-      bomb("too little data in TRWAKE file", NULL);
-    
+    if (!SDDS_InitializeInput(&SDDSin, wakeData->inputFile) || SDDS_ReadPage(&SDDSin)!=1 ||
+        (wakeData->wakePoints=SDDS_RowCount(&SDDSin))<0 ||
+        wakeData->wakePoints<2) {
+      fprintf(stderr, "Error: TRWAKE file is unreadable, or has insufficient data.\n", wakeData->inputFile);
+      exit(1);
+    }
     if (SDDS_CheckColumn(&SDDSin, wakeData->tColumn, "s", SDDS_ANY_FLOATING_TYPE, 
-                         stdout)!=SDDS_CHECK_OK)
-      bomb("problem with time column for TRWAKE file---check existence, units, and type", NULL);
-    if (!(wakeData->t=SDDS_GetColumnInDoubles(&SDDSin, wakeData->tColumn)))
-      SDDS_Bomb("unable to read TRWAKE file");
+                         stdout)!=SDDS_CHECK_OK) {
+      fprintf(stderr, "Error: problem with time column for TRWAKE file %s---check existence, units, and type", 
+              wakeData->inputFile);
+      exit(1);
+    }
+    if (!(wakeData->t=SDDS_GetColumnInDoubles(&SDDSin, wakeData->tColumn))) {
+      fprintf(stderr, "Error: unable to retrieve time data from TRWAKE file %s\n", wakeData->inputFile);
+      exit(1);
+    }
 
     wakeData->W[0] = wakeData->W[1] = NULL;
     if (wakeData->WxColumn) {
       if (SDDS_CheckColumn(&SDDSin, wakeData->WxColumn, "V/C/m", SDDS_ANY_FLOATING_TYPE, 
-                           stdout)!=SDDS_CHECK_OK)
-        bomb("problem with Wx wake column for TRWAKE file---check existence, units, and type", NULL);
-      if (!(wakeData->W[0]=SDDS_GetColumnInDoubles(&SDDSin, wakeData->WxColumn)))
-        SDDS_Bomb("unable to read WAKE file");
+                           stdout)!=SDDS_CHECK_OK) {
+        fprintf(stderr, "Error: problem with Wx wake column for TRWAKE file %s---check existence, units, and type", 
+                wakeData->inputFile);
+        exit(1);
+      }
+      if (!(wakeData->W[0]=SDDS_GetColumnInDoubles(&SDDSin, wakeData->WxColumn))) {
+        fprintf(stderr, "Error: unable to retrieve Wx data from TRWAKE file %s\n", wakeData->inputFile);
+        exit(1);
+      }
     }
     if (wakeData->WyColumn) {
       if (SDDS_CheckColumn(&SDDSin, wakeData->WyColumn, "V/C/m", SDDS_ANY_FLOATING_TYPE, 
-                           stdout)!=SDDS_CHECK_OK)
-        bomb("problem with Wy wake column for TRWAKE file---check existence, units, and type", NULL);
-      if (!(wakeData->W[1]=SDDS_GetColumnInDoubles(&SDDSin, wakeData->WyColumn)))
-        SDDS_Bomb("unable to read TRWAKE file");
+                           stdout)!=SDDS_CHECK_OK) {
+        fprintf(stderr, "Error: problem with Wy wake column for TRWAKE file %s---check existence, units, and type", 
+                wakeData->inputFile);
+        exit(1);
+      }
+      if (!(wakeData->W[1]=SDDS_GetColumnInDoubles(&SDDSin, wakeData->WyColumn))) {
+        fprintf(stderr, "Error: unable to retrieve Wy data from TRWAKE file %s\n", wakeData->inputFile);
+        exit(1);
+      }
     }
+
     SDDS_Terminate(&SDDSin);
 
     /* record in wake storage */

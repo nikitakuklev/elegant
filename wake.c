@@ -67,8 +67,15 @@ void track_through_wake(double **part, long np, WAKE *wakeData, double *PoInput,
     fflush(stdout);
   }
   
-  if (wakeData->smoothing)
-    SavitzyGolaySmooth(Itime, nb, wakeData->SGOrder, wakeData->SGHalfWidth, wakeData->SGHalfWidth, 0);
+  if (wakeData->smoothing && 
+      !SavitzyGolaySmooth(Itime, nb, wakeData->SGOrder, wakeData->SGHalfWidth, wakeData->SGHalfWidth, 0)) {
+    fprintf(stderr, "Problem with smoothing for WAKE element (file %s)\n",
+            wakeData->inputFile);
+    fprintf(stderr, "Parameters: nbins=%ld, order=%ld, half-width=%ld\n",
+            nb, wakeData->SGOrder, wakeData->SGHalfWidth);
+    exit(1);
+  }
+  
   
   /* Do the convolution of the particle density and the wake function,
      V(T) = Integral[W(T-t)*I(t)dt, t={-infinity, T}]
@@ -175,23 +182,36 @@ void set_up_wake(WAKE *wakeData, RUN *run, long pass, long particles, CHARGE *ch
   
   if (iw==storedWakes) {
     /* read in a new wake */
-    if (!SDDS_InitializeInput(&SDDSin, wakeData->inputFile) || SDDS_ReadPage(&SDDSin)!=1)
-      SDDS_Bomb("unable to read WAKE file");
-    if ((wakeData->wakePoints=SDDS_RowCount(&SDDSin))<0)
-      bomb("no data in WAKE file", NULL);
-    if (wakeData->wakePoints<2)
-      bomb("too little data in WAKE file", NULL);
+    if (!SDDS_InitializeInput(&SDDSin, wakeData->inputFile) || SDDS_ReadPage(&SDDSin)!=1) {
+      fprintf(stderr, "Error: unable to open or read WAKE file %s\n", wakeData->inputFile);
+      exit(1);
+    }
+    if ((wakeData->wakePoints=SDDS_RowCount(&SDDSin))<0) {
+      fprintf(stderr, "Error: no data in WAKE file %s\n",  wakeData->inputFile);
+      exit(1);
+    }
+    if (wakeData->wakePoints<2) {
+      fprintf(stderr, "Error: too little data in WAKE file %s\n",  wakeData->inputFile);
+      exit(1);
+    }
     if (SDDS_CheckColumn(&SDDSin, wakeData->tColumn, "s", SDDS_ANY_FLOATING_TYPE, 
-                         stdout)!=SDDS_CHECK_OK)
-      bomb("problem with time column for WAKE file---check existence, units, and type", NULL);
-    if (!(wakeData->t=SDDS_GetColumnInDoubles(&SDDSin, wakeData->tColumn)))
-      SDDS_Bomb("unable to read WAKE file");
-    
+                         stdout)!=SDDS_CHECK_OK) {
+      fprintf(stderr, "Error: problem with time column in WAKE file %s.  Check existence, type, and units.\n",  wakeData->inputFile);
+      exit(1);
+    }
+    if (!(wakeData->t=SDDS_GetColumnInDoubles(&SDDSin, wakeData->tColumn))) {
+      fprintf(stderr, "Error: problem retrieving time data from WAKE file %s\n",  wakeData->inputFile);
+      exit(1);
+    }
     if (SDDS_CheckColumn(&SDDSin, wakeData->WColumn, "V/C", SDDS_ANY_FLOATING_TYPE, 
-                         stdout)!=SDDS_CHECK_OK)
-    bomb("problem with wake column for WAKE file---check existence, units, and type", NULL);
-    if (!(wakeData->W=SDDS_GetColumnInDoubles(&SDDSin, wakeData->WColumn)))
-      SDDS_Bomb("unable to read WAKE file");
+                         stdout)!=SDDS_CHECK_OK) {
+      fprintf(stderr, "Error: problem with wake column in WAKE file %s.  Check existence, type, and units.\n",  wakeData->inputFile);
+      exit(1);
+    }
+    if (!(wakeData->W=SDDS_GetColumnInDoubles(&SDDSin, wakeData->WColumn))) {
+      fprintf(stderr, "Error: problem retrieving wake data from WAKE file %s\n",  wakeData->inputFile);
+      exit(1);
+    }
     SDDS_Terminate(&SDDSin);
 
     /* record in wake storage */
@@ -212,10 +232,14 @@ void set_up_wake(WAKE *wakeData, RUN *run, long pass, long particles, CHARGE *ch
     wakeData->isCopy = 1;
   }
   find_min_max(&tmin, &tmax, wakeData->t, wakeData->wakePoints);
-  if (tmin==tmax)
-    bomb("no time span in WAKE data", NULL);
-  if (tmin!=0)
-    bomb("WAKE function does not start at t=0.", NULL);
+  if (tmin>=tmax) {
+    fprintf(stderr, "Error: zero or negative time span in WAKE file %s\n",  wakeData->inputFile);
+    exit(1);
+  }
+  if (tmin!=0) {
+    fprintf(stderr, "Error: WAKE function does not start at t=0 for file %s\n",  wakeData->inputFile);
+    exit(1);
+  }
   wakeData->dt = (tmax-tmin)/(wakeData->wakePoints-1);
 }
 

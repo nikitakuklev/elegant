@@ -1020,7 +1020,7 @@ PARAMETER zlongit_param[N_ZLONGIT_PARAMS] = {
     {"AREA_WEIGHT", "", IS_LONG, 0, (long)((char *)&zlongit_example.area_weight), NULL, 0.0, 0},
     {"INTERPOLATE", "", IS_LONG, 0, (long)((char *)&zlongit_example.interpolate), NULL, 0.0, 0},
     {"SMOOTHING", "", IS_LONG, 0, (long)((char *)&zlongit_example.smoothing), NULL, 0.0, 0},
-    {"SG_ORDER", "", IS_LONG, 0, (long)((char *)&zlongit_example.SGOrder), NULL, 0.0, 2},
+    {"SG_ORDER", "", IS_LONG, 0, (long)((char *)&zlongit_example.SGOrder), NULL, 0.0, 1},
     {"SG_HALFWIDTH", "", IS_LONG, 0, (long)((char *)&zlongit_example.SGHalfWidth), NULL, 0.0, 4},
     };
 
@@ -1085,7 +1085,7 @@ PARAMETER ztransverse_param[N_ZTRANSVERSE_PARAMS] = {
     {"INTERPOLATE", "", IS_LONG, 0, (long)((char *)&ztransverse_example.interpolate), NULL, 0.0, 0},
     {"N_BINS", "", IS_LONG, 0, (long)((char *)&ztransverse_example.n_bins), NULL, 0.0, 128},
     {"SMOOTHING", "", IS_LONG, 0, (long)((char *)&ztransverse_example.smoothing), NULL, 0.0, 0},
-    {"SG_ORDER", "", IS_LONG, 0, (long)((char *)&ztransverse_example.SGOrder), NULL, 0.0, 2},
+    {"SG_ORDER", "", IS_LONG, 0, (long)((char *)&ztransverse_example.SGOrder), NULL, 0.0, 1},
     {"SG_HALFWIDTH", "", IS_LONG, 0, (long)((char *)&ztransverse_example.SGHalfWidth), NULL, 0.0, 4},
     {"DX", "M", IS_DOUBLE, 0, (long)((char *)&ztransverse_example.dx), NULL, 0.0, 0},
     {"DY", "M", IS_DOUBLE, 0, (long)((char *)&ztransverse_example.dy), NULL, 0.0, 0},
@@ -1110,7 +1110,7 @@ PARAMETER wake_param[N_WAKE_PARAMS] = {
     {"INTERPOLATE", "", IS_LONG, 0, (long)((char *)&wake_example.interpolate), NULL, 0.0, 0},
     {"SMOOTHING", "", IS_LONG, 0, (long)((char *)&wake_example.smoothing), NULL, 0.0, 0},
     {"SG_HALFWIDTH", "", IS_LONG, 0, (long)((char *)&wake_example.SGHalfWidth), NULL, 0.0, 4},
-    {"SG_ORDER", "", IS_LONG, 0, (long)((char *)&wake_example.SGOrder), NULL, 0.0, 2},
+    {"SG_ORDER", "", IS_LONG, 0, (long)((char *)&wake_example.SGOrder), NULL, 0.0, 1},
     {"CHANGE_P0", "", IS_LONG, 0, (long)((char *)&wake_example.change_p0), NULL, 0.0, 0},
     };
 
@@ -1127,7 +1127,7 @@ PARAMETER trwake_param[N_TRWAKE_PARAMS] = {
     {"INTERPOLATE", "", IS_LONG, 0, (long)((char *)&trwake_example.interpolate), NULL, 0.0, 0},
     {"SMOOTHING", "", IS_LONG, 0, (long)((char *)&trwake_example.smoothing), NULL, 0.0, 0},
     {"SG_HALFWIDTH", "", IS_LONG, 0, (long)((char *)&trwake_example.SGHalfWidth), NULL, 0.0, 4},
-    {"SG_ORDER", "", IS_LONG, 0, (long)((char *)&trwake_example.SGOrder), NULL, 0.0, 2},
+    {"SG_ORDER", "", IS_LONG, 0, (long)((char *)&trwake_example.SGOrder), NULL, 0.0, 1},
     {"DX", "M", IS_DOUBLE, 0, (long)((char *)&trwake_example.dx), NULL, 0.0, 0},
     {"DY", "M", IS_DOUBLE, 0, (long)((char *)&trwake_example.dy), NULL, 0.0, 0},
     };
@@ -1200,7 +1200,7 @@ PARAMETER rfcw_param[N_RFCW_PARAMS] = {
     {"INTERPOLATE", "", IS_LONG, 0, (long)((char *)&rfcw_example.interpolate), NULL, 0.0, 0},
     {"SMOOTHING", "", IS_LONG, 0, (long)((char *)&rfcw_example.smoothing), NULL, 0.0, 0},
     {"SG_HALFWIDTH", "", IS_LONG, 0, (long)((char *)&rfcw_example.SGHalfWidth), NULL, 0.0, 4},
-    {"SG_ORDER", "", IS_LONG, 0, (long)((char *)&rfcw_example.SGOrder), NULL, 0.0, 2},
+    {"SG_ORDER", "", IS_LONG, 0, (long)((char *)&rfcw_example.SGOrder), NULL, 0.0, 1},
     {"DX", "M", IS_DOUBLE, 1, (long)((char *)&rfcw_example.dx), NULL, 0.0, 0},
     {"DY", "M", IS_DOUBLE, 1, (long)((char *)&rfcw_example.dy), NULL, 0.0, 0},
     };
