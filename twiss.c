@@ -1758,6 +1758,18 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
     radIntegrals->I[2] += I3;
     radIntegrals->I[3] += I4;
     radIntegrals->I[4] += I5;
+  } else if (elem->type==T_CWIGGLER) {
+    CWIGGLER *wiggler;
+    wiggler = (CWIGGLER*)(elem->p_elem);
+    AddWigglerRadiationIntegrals(wiggler->length, wiggler->periods*2, wiggler->radiusInternal, 
+				 eta0, etap0, 
+				 beta0, alpha0,
+				 &I1, &I2, &I3, &I4, &I5);
+    radIntegrals->I[0] += I1;
+    radIntegrals->I[1] += I2;
+    radIntegrals->I[2] += I3;
+    radIntegrals->I[3] += I4;
+    radIntegrals->I[4] += I5;
   } else {
     isBend = 1;
     switch (elem->type) {
