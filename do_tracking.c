@@ -848,7 +848,9 @@ long do_tracking(
             stray = (STRAY*)eptr->p_elem;
             eptr->matrix = stray_field_matrix(stray->length, &stray->lBx, &stray->gBx, 
                                               eptr->end_theta, stray->order?stray->order:run->default_order,
-                                              *P_central);
+                                              *P_central, 
+                                              stray->Wi);
+            track_particles(coord, eptr->matrix, coord, n_to_track);
             break;
           case T_TFBDRIVER:
             if (!(flags&TEST_PARTICLES))

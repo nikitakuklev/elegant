@@ -13,6 +13,7 @@
  */
 #include "track.h"
 #include "mdb.h"
+#include "matlib.h"
 
 #define DEBUG 0
 
@@ -697,9 +698,10 @@ VMATRIX *compute_matrix(
         break;
       case T_STRAY:
         stray = (STRAY*)elem->p_elem;
-        elem->matrix = stray_field_matrix(stray->length, &stray->lBx, &stray->gBx, elem->end_theta,
+        elem->matrix = 
+          stray_field_matrix(stray->length, &stray->lBx, &stray->gBx, elem->end_theta,
                                           (stray->order?stray->order:run->default_order),
-                                          elem->Pref_input);
+                                          elem->Pref_input, stray->WiInitialized?stray->Wi:NULL);
         break;
       case T_CSBEND:
         csbend = (CSBEND*)elem->p_elem;
@@ -1040,7 +1042,8 @@ void reset_special_elements(LINE_LIST *beamline, long includeRF)
     log_exit("reset_special_elements");
     }
 
-VMATRIX *stray_field_matrix(double length, double *lB, double *gB, double theta, long order, double p_central)
+VMATRIX *stray_field_matrix(double length, double *lB, double *gB, double theta, long order, double p_central, 
+                            void *Wi)
 {
     /* factor in equation theta = CTHETA*B(T)*L(m)/(beta*gamma): */
 #define CTHETA 5.8667907921396181e+02
@@ -1059,9 +1062,24 @@ VMATRIX *stray_field_matrix(double length, double *lB, double *gB, double theta,
       fprintf(fp, "&data mode=ascii no_row_counts=1 &end\n");
     }
 #endif
-    
-    Bx = lB[0] + cos(theta)*gB[0] + sin(theta)*gB[3];
-    By = lB[1] + gB[1];
+
+    if (Wi) {
+      /* BLocalTotal = BLocal + Wi*GBlobal */
+      MATRIX *Bg, *Bl;
+      m_alloc(&Bg, 3, 1);
+      m_alloc(&Bl, 3, 1);
+      Bg->a[0][0] = gB[0];
+      Bg->a[1][0] = gB[1];
+      Bg->a[2][0] = gB[2];
+      m_mult(Bl, (MATRIX*)Wi, Bg);
+      Bx = Bl->a[0][0] + lB[0];
+      By = Bl->a[1][0] + lB[1];
+      m_free(&Bg);
+      m_free(&Bl);
+    } else {
+      Bx = lB[0] + cos(theta)*gB[0] + sin(theta)*gB[3];
+      By = lB[1] + gB[1];
+    }
     if (By) {
         rho = p_central/(CTHETA*By);
         xkick = -asin(length/rho);

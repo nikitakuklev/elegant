@@ -164,6 +164,15 @@ void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamli
 
   s = 0;
   while (elem) {
+    if (elem->type==T_STRAY) {
+      STRAY *stray;
+      stray = elem->p_elem;
+      if (!stray->WiInitialized) {
+        m_alloc((MATRIX**)(&(stray->Wi)), 3, 3);
+        stray->WiInitialized = 1;
+      }
+      m_invert((MATRIX*)stray->Wi, W0);
+    }
     row_index = advanceFloorCoordinates(V1, W1, V0, W0, &theta, &phi, &psi, &s, 
                                         elem, last_elem, &SDDS_floor, row_index);
     m_copy(W0, W1);

@@ -113,8 +113,7 @@ given by a mpl-format file of the voltage factor vs time in seconds.",
     "A momentum-ramping element that changes the central momentum according to a mpl\n\
 format file of the momentum factor vs time in seconds.",
     "A stray field element with local and global components.  Global components are\n\
-defined relative to the initial beamline direction.  ** Not correct if there are tilts\n\
-in the beamline. **",
+defined relative to the initial beamline direction.",
     "A canonical kick sector dipole magnet.",
     "A numerically-integrated traveling-wave muffin-tin accelerator.",
     "A Coulomb-scattering and energy-absorbing element simulating material in the\n\
