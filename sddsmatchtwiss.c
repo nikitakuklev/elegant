@@ -55,6 +55,9 @@ CopyrightNotice001*/
  * Michael Borland, 2000
  *
  $Log: not supported by cvs2svn $
+ Revision 1.6  2001/05/15 16:52:54  borland
+ Added to -zPlane option the ability to change the central momentum.
+
  Revision 1.5  2001/05/08 14:07:22  borland
  Added -ztransform option, which permits changing the longitudinal parameters.
 
@@ -94,7 +97,7 @@ char *option[N_OPTIONS] = {
 char *USAGE="sddsmatchtwiss [-pipe=[input][,output]] [<SDDSinputfile>] [<SDDSoutputfile>]\n\
   [-xPlane=[beta=<meters>,alpha=<value>][nemittance=<meters>,][,etaValue=<meters>][,etaSlope=<value>]]\n\
   [-yPlane=[beta=<meters>,alpha=<value>][nemittance=<meters>,][,etaValue=<meters>][,etaSlope=<value>]]\n\
-  [-zPlane=[deltaStDev=<value>][,tStDev=<seconds>][,correlation=<seconds>][,betaGamma=<central-value>]]\n\
+  [-zPlane=[deltaStDev=<value>][,tStDev=<seconds>][,{correlation=<seconds>|alpha=<value>}][,betaGamma=<central-value>]]\n\
   [-nowarnings] [-oneTransform]\n\
 The input file must have columns x, xp, y, yp, and p; for example, an elegant\n\
 beam output file is acceptable.\n\
@@ -119,13 +122,14 @@ typedef struct {
 } PLANE_SPEC;
 
 typedef struct {
-  double deltaStDev, tStDev, correlation, betaGamma;
+  double deltaStDev, tStDev, correlation, alpha, betaGamma;
   unsigned long flags;
   double R11, R12, R21, R22;
 #define DELTASTDEV_GIVEN  0x0001UL
 #define TSTDEV_GIVEN      0x0002UL
 #define CORRELATION_GIVEN 0x0004UL
 #define BETAGAMMA_GIVEN   0x0008UL
+#define ALPHAZ_GIVEN      0x0010UL
 } ZPLANE_SPEC;
 
 long PerformTransformation(double *x, double *xp, double *p, long rows, PLANE_SPEC *match,
@@ -200,9 +204,11 @@ main(int argc, char **argv)
                           "tStDev", SDDS_DOUBLE, &zSpec.tStDev, 1, TSTDEV_GIVEN,
                           "deltaStDev", SDDS_DOUBLE, &zSpec.deltaStDev, 1, DELTASTDEV_GIVEN,
                           "correlation", SDDS_DOUBLE, &zSpec.correlation, 1, CORRELATION_GIVEN,
+                          "alpha", SDDS_DOUBLE, &zSpec.alpha, 1, ALPHAZ_GIVEN,
                           "betagamma", SDDS_DOUBLE, &zSpec.betaGamma, 1, BETAGAMMA_GIVEN,
                           NULL) ||
             bitsSet(zSpec.flags)<1 ||
+            (zSpec.flags&ALPHAZ_GIVEN && zSpec.flags&CORRELATION_GIVEN) ||
             (zSpec.flags&TSTDEV_GIVEN &&  zSpec.tStDev<0) ||
             (zSpec.flags&DELTASTDEV_GIVEN && zSpec.deltaStDev<0) ||
             (zSpec.flags&BETAGAMMA_GIVEN && zSpec.betaGamma<=0))
@@ -422,12 +428,17 @@ long PerformZTransformation(double *t, double *p,
       S22 = sqr(match->deltaStDev);
     if (match->flags&CORRELATION_GIVEN) 
       S12 = match->correlation*sqrt(S11*S22);
+    if (match->flags&ALPHAZ_GIVEN)
+      S12 = -match->alpha*sqrt(S11*S22)/sqrt(1+sqr(match->alpha));
     if ((emit2 = S11*S22-sqr(S12))<=0)
       SDDS_Bomb("longitudinal emittance is zero");
     else
       emit2 = sqrt(emit2);
     beta2 = S11/emit2;
-    alpha2 = -S12/emit2;
+    if (!(match->flags&ALPHAZ_GIVEN))
+      alpha2 = -S12/emit2;
+    else
+      alpha2 = match->alpha;
     ratio = sqrt(emit2/emit1);
     
     match->R11 = R11 = ratio*beta2/sqrt(beta1*beta2);
