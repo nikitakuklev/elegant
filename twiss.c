@@ -2231,12 +2231,14 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
 	yTuneExtrema[1] = yTune[ix][iy];
     }
   }
-  fprintf(stdout, "xTune extrema: %21.15e, %21.15e, delta = %21.15e\n",
-	  xTuneExtrema[0], xTuneExtrema[1], 
-	  fabs(xTuneExtrema[0]-xTuneExtrema[1]));
-  fprintf(stdout, "yTune extrema: %21.15e, %21.15e, delta = %21.15e\n",
-	  yTuneExtrema[0], yTuneExtrema[1], 
-	  fabs(yTuneExtrema[0]-yTuneExtrema[1]));
+  if (tune_shift_with_amplitude_struct.verbose) {
+      fprintf(stdout, "xTune extrema: %21.15e, %21.15e, delta = %21.15e\n",
+	      xTuneExtrema[0], xTuneExtrema[1], 
+	      fabs(xTuneExtrema[0]-xTuneExtrema[1]));
+      fprintf(stdout, "yTune extrema: %21.15e, %21.15e, delta = %21.15e\n",
+	      yTuneExtrema[0], yTuneExtrema[1], 
+	      fabs(yTuneExtrema[0]-yTuneExtrema[1]));
+  }
 
   if (!nLost && !tune_shift_with_amplitude_struct.spread_only) {
     m = gridSize*gridSize;
