@@ -541,11 +541,11 @@ long get_sdds_particles(double ***particle,
         }
       }
       if (input_type_code==SPIFFE_BEAM) {
-        if (!check_sdds_beam_column(&SDDS_input, "r", "m") || 
-            !check_sdds_beam_column(&SDDS_input, "pr", "m$be$nc") ||
-            !check_sdds_beam_column(&SDDS_input, "pz", "m$be$nc") ||
-            !check_sdds_beam_column(&SDDS_input, "pphi", "m$be$nc") ||
-            !check_sdds_beam_column(&SDDS_input, "t", "s")) {
+        if (!check_sdds_column(&SDDS_input, "r", "m") || 
+            !check_sdds_column(&SDDS_input, "pr", "m$be$nc") ||
+            !check_sdds_column(&SDDS_input, "pz", "m$be$nc") ||
+            !check_sdds_column(&SDDS_input, "pphi", "m$be$nc") ||
+            !check_sdds_column(&SDDS_input, "t", "s")) {
           fprintf(stdout, 
                   "necessary data quantities (r, pr, pz, t) have the wrong units or are not present in %s", 
                   inputFile[inputFileIndex]);
@@ -554,19 +554,19 @@ long get_sdds_particles(double ***particle,
         }
       }
       else {
-        if (!check_sdds_beam_column(&SDDS_input, "x", "m") ||
-            !check_sdds_beam_column(&SDDS_input, "y", "m") ||
-            !check_sdds_beam_column(&SDDS_input, "xp", NULL) ||
-            !check_sdds_beam_column(&SDDS_input, "yp", NULL) ||
-            !check_sdds_beam_column(&SDDS_input, "t", "s")) {
+        if (!check_sdds_column(&SDDS_input, "x", "m") ||
+            !check_sdds_column(&SDDS_input, "y", "m") ||
+            !check_sdds_column(&SDDS_input, "xp", NULL) ||
+            !check_sdds_column(&SDDS_input, "yp", NULL) ||
+            !check_sdds_column(&SDDS_input, "t", "s")) {
           fprintf(stdout, 
                   "necessary data quantities (x, x', y, y', t, p) have the wrong units or are not present in %s\n", 
                   inputFile[inputFileIndex]);
           fflush(stdout);
           exit(1);
         }
-        if (!check_sdds_beam_column(&SDDS_input, "p", "m$be$nc")) {
-          if (check_sdds_beam_column(&SDDS_input, "p", NULL)) {
+        if (!check_sdds_column(&SDDS_input, "p", "m$be$nc")) {
+          if (check_sdds_column(&SDDS_input, "p", NULL)) {
             fprintf(stdout, "Warning: p has no units.  Expected m$be$nc\n");
             fflush(stdout);
           }
@@ -693,34 +693,6 @@ long get_sdds_particles(double ***particle,
   log_exit("get_sdds_particles");
   return(np);
 }            
-
-long check_sdds_beam_column(SDDS_TABLE *SDDS_table, char *name, char *units)
-{
-  char *units1;
-  if (SDDS_GetColumnIndex(SDDS_table, name)<0)
-    return(0);
-  if (SDDS_GetColumnInformation(SDDS_table, "units", &units1, SDDS_GET_BY_NAME, name)!=SDDS_STRING) {
-    SDDS_SetError("units field of column has wrong data type!");
-    SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-  }
-  if (!units) {
-    if (!units1)
-      return(1);
-    if (SDDS_StringIsBlank(units1)) {
-      free(units1);
-      return(1);
-    }
-    return(0);
-  }
-  if (!units1)
-    return(0);
-  if (strcmp(units, units1)==0) {
-    free(units1);
-    return(1);
-  }
-  free(units1);
-  return(0);
-}
 
 void adjust_arrival_time_data(double **coord, long np, double Po, long center_t, long flip_t)
 {

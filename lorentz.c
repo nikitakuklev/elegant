@@ -1408,6 +1408,11 @@ void bmapxy_field_setup(BMAPXY *bmapxy)
       !(x=SDDS_GetColumnInDoubles(&SDDSin, "x")) || !(y=SDDS_GetColumnInDoubles(&SDDSin, "y"))) {
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
   }
+  if (!check_sdds_column(&SDDSin, "x", "m") ||
+      !check_sdds_column(&SDDSin, "y", "m")) {
+    fprintf(stderr, "BMAPXY input file must have x and y in m (meters)\n");
+    exit(1);
+  }
   bmapxy->BGiven = 0;
   if (!(Fx=SDDS_GetColumnInDoubles(&SDDSin, "Fx")) || !(Fy=SDDS_GetColumnInDoubles(&SDDSin, "Fy"))) {
     if (!(Fx=SDDS_GetColumnInDoubles(&SDDSin, "Bx")) || !(Fy=SDDS_GetColumnInDoubles(&SDDSin, "By"))) {
@@ -1415,13 +1420,19 @@ void bmapxy_field_setup(BMAPXY *bmapxy)
       exit(1);
     }
     bmapxy->BGiven = 1;
-    if (!check_sdds_beam_column(&SDDSin, "Bx", "T") ||
-        !check_sdds_beam_column(&SDDSin, "By", "T")) {
+    if (!check_sdds_column(&SDDSin, "Bx", "T") ||
+        !check_sdds_column(&SDDSin, "By", "T")) {
       fprintf(stderr, "BMAPXY input file must have Bx and By in T (Tesla)\n");
       exit(1);
     }
+  } else {
+    if (!check_sdds_column(&SDDSin, "Fx", "") ||
+        !check_sdds_column(&SDDSin, "Fy", "")) {
+      fprintf(stderr, "BMAPXY input file must have Fx and Fy with no units\n");
+      exit(1);
+    }
   }
-
+  
   if (!(bmapxy->points=SDDS_CountRowsOfInterest(&SDDSin)) || bmapxy->points<2) {
     fprintf(stdout, "file %s for BMAPXY element has insufficient data\n", bmapxy->filename);
     fflush(stdout);

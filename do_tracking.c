@@ -1846,14 +1846,14 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
     SDDS_SetError("Unable to read script output file");
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
   }
-  if (!check_sdds_beam_column(&SDDSin, "x", "m") ||
-      !check_sdds_beam_column(&SDDSin, "y", "m") ||
-      !check_sdds_beam_column(&SDDSin, "xp", NULL) ||
-      !check_sdds_beam_column(&SDDSin, "yp", NULL) ||
-      !check_sdds_beam_column(&SDDSin, "p", "m$be$nc") ||
-      !check_sdds_beam_column(&SDDSin, "t", "s")) {
-    if (!check_sdds_beam_column(&SDDSin, "p", "m$be$nc") &&
-        check_sdds_beam_column(&SDDSin, "p", NULL)) {
+  if (!check_sdds_column(&SDDSin, "x", "m") ||
+      !check_sdds_column(&SDDSin, "y", "m") ||
+      !check_sdds_column(&SDDSin, "xp", NULL) ||
+      !check_sdds_column(&SDDSin, "yp", NULL) ||
+      !check_sdds_column(&SDDSin, "p", "m$be$nc") ||
+      !check_sdds_column(&SDDSin, "t", "s")) {
+    if (!check_sdds_column(&SDDSin, "p", "m$be$nc") &&
+        check_sdds_column(&SDDSin, "p", NULL)) {
       fprintf(stdout, "Warning: p has no units in script output file.  Expected m$be$nc\n");
       fflush(stdout);
     } else {

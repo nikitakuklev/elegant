@@ -1314,3 +1314,31 @@ void dump_sigma(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, lo
   }
 }
 
+long check_sdds_column(SDDS_TABLE *SDDS_table, char *name, char *units)
+{
+  char *units1;
+  if (SDDS_GetColumnIndex(SDDS_table, name)<0)
+    return(0);
+  if (SDDS_GetColumnInformation(SDDS_table, "units", &units1, SDDS_GET_BY_NAME, name)!=SDDS_STRING) {
+    SDDS_SetError("units field of column has wrong data type!");
+    SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+  }
+  if (!units) {
+    if (!units1)
+      return(1);
+    if (SDDS_StringIsBlank(units1)) {
+      free(units1);
+      return(1);
+    }
+    return(0);
+  }
+  if (!units1)
+    return(0);
+  if (strcmp(units, units1)==0) {
+    free(units1);
+    return(1);
+  }
+  free(units1);
+  return(0);
+}
+

@@ -2147,7 +2147,6 @@ extern void finish_awe_beam(OUTPUT_FILES *output, RUN *run, VARY *control, ERROR
 
 /*prototypes for sdds_beam.c */
 void adjust_arrival_time_data(double **coord, long np, double Po, long center_t, long flip_t);
-long check_sdds_beam_column(SDDS_TABLE *SDDS_table, char *name, char *units);
  
 /* prototypes for bend_matrix6.c: */
 extern VMATRIX *bend_matrix(double length, double angle, double ea1, double ea2, double R1, double R2,
@@ -2731,6 +2730,7 @@ typedef struct {
     } SDDS_DEFINITION;
 #define SDDS_EOS_NEWFILE 1
 #define SDDS_EOS_COMPLETE 2
+long check_sdds_column(SDDS_TABLE *SDDS_table, char *name, char *units);
 extern void SDDS_ElegantOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row,
                              char *contents, char *command_file, char *lattice_file, SDDS_DEFINITION *parameter_definition,
                              long n_parameters, SDDS_DEFINITION *column_definition, long n_columns,
