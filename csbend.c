@@ -1420,7 +1420,6 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
   double zTravel;
   
   if (np<=1 || !csrWake.valid) {
-    fprintf(stdout, "CSR wake invalid, using ordinary drift\n");
     drift_beam(part, np, csrDrift->length, 2);
     return np;
   }
