@@ -52,6 +52,23 @@ void setup_bunched_beam(
     process_namelist(&bunched_beam, nltext);
     if (Po<=0)
         Po = run->p_central;
+    if (use_twiss_command_values) {
+      double xTwiss[5], yTwiss[5];
+      long mode;
+      
+      if (!get_twiss_mode(&mode, xTwiss, yTwiss) && mode!=0)
+        bomb("use_twiss_command_values invalid unless twiss_output command given previously with matched=0.",
+             NULL);
+      beta_x = xTwiss[0];
+      alpha_x = xTwiss[1];
+      eta_x = xTwiss[2];
+      etap_x = xTwiss[3];
+      beta_y = yTwiss[0];
+      alpha_y = yTwiss[1];
+      eta_y = yTwiss[2];
+      etap_y = yTwiss[3];
+    }
+    
     print_namelist(stderr, &bunched_beam);
 
     /* check for validity of namelist inputs */
