@@ -1239,7 +1239,9 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
         }
       }
 
-      if (csbend->fileActive && kick%csbend->outputInterval==0) {
+      if (csbend->fileActive && 
+          ((!csbend->outputLastWakeOnly && kick%csbend->outputInterval==0) ||
+           (csbend->outputLastWakeOnly && kick==(csbend->n_kicks-1)))) {
         /* scale the linear density and its derivative to get C/s and C/s^2 
          * ctHist is already normalized to dct, but ctHistDeriv requires an additional factor
          */
@@ -1444,16 +1446,22 @@ long binParticleCoordinate(double **hist, long *maxBins,
 long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift, 
                             double Po, double **accepted, double zStart)
 {
-  long iPart, iKick, iBin, binned, nKicks;
+  long iPart, iKick, iBin, binned, nKicks, iSpreadMode;
   double *coord, t, p, beta, dz, ct0, factor, dz0, dzFirst;
   double ctmin, ctmax, spreadFactor;
   double zTravel;
+  static char *spreadMode[3] = {"full", "simple", "radiation-only"};
   
   if (np<=1 || !csrWake.valid) {
     drift_beam(part, np, csrDrift->length, 2);
     return np;
   }
-
+  
+  iSpreadMode = 0;
+  if (csrDrift->spreadMode && 
+      (iSpreadMode=match_string(csrDrift->spreadMode, spreadMode, 3, 0))<0)
+    bomb("invalid spread_mode for CSR DRIFT.  Use full, simple, or radiation-only", NULL);
+  
   if (csrDrift->dz>0) {
     if ((nKicks = csrDrift->length/csrDrift->dz)<1)
       nKicks = 1;
@@ -1519,10 +1527,26 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
     if (csrDrift->spread) {
       /* compute loss of on-axis field due to spread of beam using a simple-minded
        * computation of beam sizes */
-      factor *= (spreadFactor =
-                 sqrt(csrWake.S11/(csrWake.S11 + 
-                                   2*zTravel*csrWake.S12 + 
-                                   zTravel*zTravel*(sqr(csrWake.thetaRad)+csrWake.S22))));
+      switch (iSpreadMode) {
+      case 0:  /* full */
+        factor *= (spreadFactor =
+                   sqrt(csrWake.S11/(csrWake.S11 + 
+                                     2*zTravel*csrWake.S12 + 
+                                     zTravel*zTravel*(sqr(csrWake.thetaRad)+csrWake.S22))));
+        break;
+      case 1: /* simple */
+        factor *= (spreadFactor =
+                   sqrt(csrWake.S11/(csrWake.S11 + zTravel*zTravel*(sqr(csrWake.thetaRad)+csrWake.S22))));
+        break;
+      case 2: /* radiation only */
+        factor *= (spreadFactor =
+                   sqrt(csrWake.S11/(csrWake.S11 + sqr(zTravel*csrWake.thetaRad))));
+        break;
+      default:
+        bomb("invalid spread code---programming error!", NULL);
+        break;
+      }
+
 #if 0
 #ifdef DEBUG
       fprintf(stdout, "Spread factor is %21.15le after zTravel=%21.15le\n", spreadFactor, zTravel);

@@ -910,6 +910,7 @@ PARAMETER csrcsbend_param[N_CSRCSBEND_PARAMS] = {
     {"SGDERIV_ORDER", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.SGDerivOrder), NULL, 0.0, 1},
     {"OUTPUT_FILE", "", IS_STRING, 0, (long)((char *)&csrcsbend_example.histogramFile), NULL, 0.0, 0},
     {"OUTPUT_INTERVAL", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.outputInterval), NULL, 0.0, 1},
+    {"OUTPUT_LAST_WAKE_ONLY", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.outputLastWakeOnly), NULL, 0.0, 0},
     {"STEADY_STATE", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.steadyState), NULL, 0.0, 0},
     {"USE_BN", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.use_bn), NULL, 0.0, 0},
     {"B1", "1/M", IS_DOUBLE, 0, (long)((char *)&csrcsbend_example.b1), NULL, 0.0, 0},
@@ -1169,6 +1170,7 @@ PARAMETER csrdrift_param[N_CSRDRIFT_PARAMS] = {
     {"N_KICKS", "", IS_LONG, 1, (long)((char *)&csrdrift_example.nKicks), NULL, 0.0, 1},
     {"SPREAD", "", IS_LONG, 1, (long)((char *)&csrdrift_example.spread), NULL, 0.0, 0},
     {"DZ", "", IS_DOUBLE, 1, (long)((char *)&csrdrift_example.dz), NULL, 0.0, 0},
+    {"SPREAD_MODE", "", IS_STRING, 1, (long)((char *)&csrdrift_example.spreadMode), "full", 0.0, 0},
     };
 
 RFCW rfcw_example;

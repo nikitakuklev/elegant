@@ -561,8 +561,8 @@ extern char *entity_text[N_TYPES];
 #define N_CHARGE_PARAMS 2
 #define N_PFILTER_PARAMS 4
 #define N_HISTOGRAM_PARAMS 9
-#define N_CSRCSBEND_PARAMS 38
-#define N_CSRDRIFT_PARAMS 5
+#define N_CSRCSBEND_PARAMS 39
+#define N_CSRDRIFT_PARAMS 6
 #define N_REMCOR_PARAMS 6
 #define N_RFCW_PARAMS 27
 
@@ -1326,7 +1326,7 @@ typedef struct {
     long edge1_effects, edge2_effects;
     long integration_order, bins, SGHalfWidth, SGOrder, SGDerivHalfWidth, SGDerivOrder;
     char *histogramFile;
-    long outputInterval, steadyState;
+    long outputInterval, outputLastWakeOnly, steadyState;
     long use_bn;
     double b1, b2, b3, b4;
     long isr;
@@ -1343,6 +1343,7 @@ typedef struct {
   double length, attenuationLength;
   long nKicks, spread;
   double dz;
+  char *spreadMode;
 } CSRDRIFT;
 
 /* names and storage structure for top-up bending magnet physical parameters */
