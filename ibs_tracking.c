@@ -7,7 +7,6 @@
 * in the file LICENSE that is included with this distribution. 
 \*************************************************************************/
 
-#if !defined(LYNCEANTECH)
 /* Intra-beam scattering element */
 
 #include "mdb.h"
@@ -17,6 +16,7 @@
 #define DEBUG 0
 
 void setup_track_IBS(IBSCATTER *IBS, ELEMENT_LIST *element);
+void copy_data_IBS(IBSCATTER *IBS, ELEMENT_LIST *element);
 void inflateEmittance(double **coord, double Po, 
 		      long offset, long np, double factor);
 
@@ -41,6 +41,7 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
   
   if (!(IBS->s))
     setup_track_IBS(IBS, element);
+  copy_data_IBS(IBS, element);
 #if DEBUG
   if (!fpdeb) {
     if (!(fpdeb=fopen("ibs.sdds", "w")))
@@ -137,6 +138,9 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
     inflateEmittance(coord, Po, 2, np, (1+dT*yGrowthRate));
     inflateEmittance(coord, Po, 4, np, (1+dT*zGrowthRate));
   }
+  rpn_store(xGrowthRate*emitx, rpn_create_mem("exTimesIBSRate"));
+  rpn_store(yGrowthRate*emity, rpn_create_mem("eyTimesIBSRate"));
+  rpn_store(zGrowthRate*emitl, rpn_create_mem("elTimesIBSRate"));
 #if DEBUG
   fprintf(fpdeb, "%ld %le %le %le %le %le %le %le %le %le %le %le %le %le\n",
 	  pass++, 
@@ -199,7 +203,7 @@ void inflateEmittance(double **coord, double Po,
 /* Set twiss parameter arrays etc. */
 void setup_track_IBS(IBSCATTER *IBS, ELEMENT_LIST *element)
 {
-  long iElement, nElements, offset, count;
+  long nElements, offset, count;
   double startRingPos, endRingPos;
   ELEMENT_LIST *element0, *elementStartRing;
   
@@ -237,6 +241,12 @@ void setup_track_IBS(IBSCATTER *IBS, ELEMENT_LIST *element)
       !(IBS->etaxp = SDDS_Realloc(IBS->etaxp, sizeof(*(IBS->etaxp))*nElements)))
     bomb("memory allocation failure in setup_track_IBS", NULL);
 
+  copy_data_IBS(IBS, element);
+}
+
+void copy_data_IBS(IBSCATTER *IBS, ELEMENT_LIST *element)
+{
+  long iElement;
   iElement = 0;
   while (element) {
     IBS->s[iElement] = element->end_pos;
@@ -250,8 +260,3 @@ void setup_track_IBS(IBSCATTER *IBS, ELEMENT_LIST *element)
     element = element->succ;
   }
 }
-#else
-
-#include "../lynceanExtensions/elegant/ibs_tracking.c"
-
-#endif
