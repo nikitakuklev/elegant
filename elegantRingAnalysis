@@ -208,7 +208,7 @@ proc FillBasicFrame {widget args} {
         -label "Final s for twiss plots (m): " \
 	-textVariable basicComputations(finalSTwiss)
     APSLabeledEntry .le6 -parent $widget -width 20 \
-      -label "Run suffix: " -type integer \
+      -label "Run suffix: " \
       -textVariable basicComputations(userSuffix)
 
     APSButton .bu1 -parent $widget -text "Compute" -command \
