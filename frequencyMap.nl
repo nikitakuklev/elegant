@@ -14,5 +14,6 @@
     long nx = 21;
     long ny = 11;
     long verbosity = 1;
+    long include_changes = 0;
 #end
 

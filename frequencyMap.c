@@ -21,6 +21,7 @@
 #define IC_Y 1
 #define IC_NUX 2
 #define IC_NUY 3
+#define N_NOCHANGE_COLUMNS 4
 #define IC_DNUX 4
 #define IC_DNUY 5
 #define IC_DNU 6
@@ -74,7 +75,9 @@ void setupFrequencyMap(
   output = compose_filename(output, run->rootname);
   SDDS_ElegantOutputSetup(&SDDS_fmap, output, SDDS_BINARY, 1, "frequency map analysis",
                           run->runfile, run->lattice, parameter_definition, N_PARAMETERS,
-                          column_definition, N_COLUMNS, "setup_frequencyMap", SDDS_EOS_NEWFILE);
+                          column_definition, 
+			  include_changes?N_COLUMNS:N_NOCHANGE_COLUMNS, 
+			  "setup_frequencyMap", SDDS_EOS_NEWFILE);
   
   if (control->n_elements_to_vary) 
     if (!SDDS_DefineSimpleParameters(&SDDS_fmap, control->n_elements_to_vary,
@@ -102,7 +105,7 @@ long doFrequencyMap(
   double firstTune[2], secondTune[2], startingCoord[6], endingCoord[6];
   double firstAmplitude[2], secondAmplitude[2];
   double dx, dy, x, y;
-  long ix, iy, ip;
+  long ix, iy, ip, turns;
   
   if (!SDDS_StartPage(&SDDS_fmap, nx*ny) || 
       !SDDS_SetParameters(&SDDS_fmap, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, 0, control->i_step, -1)) {
@@ -127,6 +130,10 @@ long doFrequencyMap(
   else
     dy = 0;
   ip = 0;
+  if (include_changes==0)
+    turns = control->n_passes;
+  else
+    turns = control->n_passes/2;
   for (ix=0; ix<nx; ix++) {
     x = xmin + ix*dx;
     for (iy=0; iy<ny; iy++) {
@@ -134,29 +141,37 @@ long doFrequencyMap(
       memcpy(startingCoord, referenceCoord, sizeof(*startingCoord)*6);
       if (!computeTunesFromTracking(firstTune, firstAmplitude,
 				    beamline->matrix, beamline, run,
-                                    startingCoord, x, y, control->n_passes/2, 
+                                    startingCoord, x, y, turns,
                                     0, endingCoord, NULL, NULL) ||
 	  firstTune[0]>0.5 || firstTune[0]<0 || firstTune[1]>0.5 || firstTune[1]<0) 
-        continue;
-      memcpy(startingCoord, endingCoord, sizeof(*startingCoord)*6);
-      if (!computeTunesFromTracking(secondTune, secondAmplitude,
-				    beamline->matrix, beamline, run,
-                                    startingCoord, 0.0, 0.0, control->n_passes/2, 
-                                    0, endingCoord, NULL, NULL) || 
-	  secondTune[0]>0.5 || secondTune[0]<0 || secondTune[1]>0.5 || secondTune[1]<0) 
         continue;
       if (!SDDS_SetRowValues(&SDDS_fmap, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ip,
                              IC_X, x, IC_Y, y, 
                              IC_NUX, firstTune[0], 
                              IC_NUY, firstTune[1], 
-                             IC_DNUX, fabs(secondTune[0]-firstTune[0]), 
-                             IC_DNUY, fabs(secondTune[1]-firstTune[1]), 
-                             IC_DNU, sqrt(sqr(secondTune[0]-firstTune[0])+sqr(secondTune[1]-firstTune[1])), 
-			     IC_DX, fabs(firstAmplitude[0]-secondAmplitude[0]),
-			     IC_DY, fabs(firstAmplitude[1]-secondAmplitude[1]),
 			     -1)) {
         SDDS_SetError("Problem setting SDDS row values (doFrequencyMap)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      }
+      if (include_changes) {
+	memcpy(startingCoord, endingCoord, sizeof(*startingCoord)*6);
+	if (!computeTunesFromTracking(secondTune, secondAmplitude,
+				      beamline->matrix, beamline, run,
+				      startingCoord, 0.0, 0.0, turns,
+				      0, endingCoord, NULL, NULL) || 
+	    secondTune[0]>0.5 || secondTune[0]<0 || secondTune[1]>0.5 || secondTune[1]<0) 
+	  continue;
+	if (!SDDS_SetRowValues(&SDDS_fmap, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ip,
+			       IC_DNUX, fabs(secondTune[0]-firstTune[0]), 
+			       IC_DNUY, fabs(secondTune[1]-firstTune[1]), 
+			       IC_DNU, 
+			       sqrt(sqr(secondTune[0]-firstTune[0])+sqr(secondTune[1]-firstTune[1])), 
+			       IC_DX, fabs(firstAmplitude[0]-secondAmplitude[0]),
+			       IC_DY, fabs(firstAmplitude[1]-secondAmplitude[1]),
+			       -1)) {
+	  SDDS_SetError("Problem setting SDDS row values (doFrequencyMap)");
+	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+	}
       }
       ip ++;
       if (verbosity) {

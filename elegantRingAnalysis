@@ -1104,10 +1104,10 @@ proc FineDynamicAperturePP {args} {
 
     APSAddToTempFileList $rootname.clo.tmp
     exec sddsprocess $rootname.clo $rootname.clo.tmp -process=x,first,xCO
-    exec sddsxref $rootname.los $rootname.bun -pipe=out \
+    exec sddsxref $rootname.los $rootname.bun -pipe=out -nowarning \
 	-equate=particleID -take=x,y -edit=column,*,ei/0/  -transfer=param,* \
-	| sddsxref -pipe -leave=* -transfer=param,xCO $rootname.clo.tmp \
-	| sddsprocess -pipe "-redefine=column,x0,x0 xCO +,units=m" \
+	| sddsxref -pipe -leave=* -transfer=param,xCO $rootname.clo.tmp -nowarning \
+	| sddsprocess -pipe "-redefine=column,x0,x0 xCO +,units=m" -nowarning \
 	| sddscombine -pipe=in -merge $rootname.da -overwrite
     exec sddsplot -column=x0,y0 $rootname.da -graph=dot,vary,subtype=4 \
 	-order=spect -split=column=Pass,width=1 &
@@ -1202,7 +1202,11 @@ proc FrequencyMapPP {args} {
     set rootname ""
     APSStrictParseArguments {rootname}
 
-    exec sddsplot -column=nux,nuy $rootname.fma -graph=dot,subtype=4 &
+    catch {exec sddsresdiag ${rootname}.resdiag -order=4 }
+    exec sddsplot -filename \
+	-column=nux,nuy $rootname.resdiag -limit=xmax=0.51,ymax=0.51,auto \
+	-column=nux,nuy $rootname.fma -graph=dot,subtype=2,type=1 \
+	&
 }
 
 set tabIndex -1
