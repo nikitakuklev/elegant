@@ -55,6 +55,9 @@ CopyrightNotice001*/
  * Michael Borland, 2000
  *
  $Log: not supported by cvs2svn $
+ Revision 1.4  2001/04/06 14:44:55  borland
+ Added ability to change the emittance of the beam in both planes.
+
  Revision 1.3  2001/01/08 20:22:16  borland
  Added -oneTransform option, which allows computing the transform only for
  the first page, and using it for all pages.
@@ -77,15 +80,18 @@ CopyrightNotice001*/
 #define SET_NOWARNINGS 3
 #define SET_ONETRANSFORM 4
 #define SET_VERBOSE 5
-#define N_OPTIONS 6
+#define SET_ZPLANE 6
+#define N_OPTIONS 7
 
 char *option[N_OPTIONS] = {
-  "pipe", "xplane", "yplane", "nowarnings", "oneTransform", "verbose",
+  "pipe", "xplane", "yplane", "nowarnings", "oneTransform", "verbose", 
+  "zplane",
 } ;
 
 char *USAGE="sddsmatchtwiss [-pipe=[input][,output]] [<SDDSinputfile>] [<SDDSoutputfile>]\n\
   [-xPlane=[beta=<meters>,alpha=<value>][nemittance=<meters>,][,etaValue=<meters>][,etaSlope=<value>]]\n\
   [-yPlane=[beta=<meters>,alpha=<value>][nemittance=<meters>,][,etaValue=<meters>][,etaSlope=<value>]]\n\
+  [-zPlane=[deltaStDev=<value>][,tStDev=<seconds>][,correlation=<seconds>]]\n\
   [-nowarnings] [-oneTransform]\n\
 The input file must have columns x, xp, y, yp, and p; for example, an elegant\n\
 beam output file is acceptable.\n\
@@ -109,8 +115,19 @@ typedef struct {
 #define NEMIT_GIVEN 0x0010UL
 } PLANE_SPEC;
 
+typedef struct {
+  double deltaStDev, tStDev, correlation;
+  unsigned long flags;
+  double R11, R12, R21, R22;
+#define DELTASTDEV_GIVEN  0x0001UL
+#define TSTDEV_GIVEN      0x0002UL
+#define CORRELATION_GIVEN 0x0004UL
+} ZPLANE_SPEC;
+
 long PerformTransformation(double *x, double *xp, double *p, long rows, PLANE_SPEC *match,
                            long compute);
+long PerformZTransformation(double *t, double *p, long rows, ZPLANE_SPEC *match, long compute);
+
 long check_sdds_beam_column(SDDS_TABLE *SDDS_table, char *name, char *units);
 
 
@@ -122,7 +139,8 @@ main(int argc, char **argv)
   SCANNED_ARG *s_arg;
   unsigned long pipeFlags;
   PLANE_SPEC xSpec, ySpec;
-  double *x, *xp, *y, *yp, *p;
+  ZPLANE_SPEC zSpec;
+  double *x, *xp, *y, *yp, *p, *t;
   long oneTransform, verbose;
   
   SDDS_RegisterProgramName(argv[0]);
@@ -132,7 +150,7 @@ main(int argc, char **argv)
 
   inputfile = outputfile = NULL;
   pipeFlags = noWarnings = 0;
-  xSpec.flags = ySpec.flags = 0;
+  xSpec.flags = ySpec.flags = zSpec.flags = 0;
   verbose = oneTransform = 0;
   
   for (i_arg=1; i_arg<argc; i_arg++) {
@@ -169,6 +187,19 @@ main(int argc, char **argv)
             (ySpec.flags&BETA_GIVEN && ySpec.beta<=0) ||
             (ySpec.flags&NEMIT_GIVEN && ySpec.normEmittance<=0))
           SDDS_Bomb("invalid -yPlane syntax/values---watch out for abbreviations of etaValue and etaSlope");
+        break;
+      case SET_ZPLANE:
+        zSpec.flags = 0;
+        s_arg[i_arg].n_items--;
+        if (!scanItemList(&zSpec.flags, s_arg[i_arg].list+1, &s_arg[i_arg].n_items, 0,
+                          "tStDev", SDDS_DOUBLE, &zSpec.tStDev, 1, TSTDEV_GIVEN,
+                          "deltaStDev", SDDS_DOUBLE, &zSpec.deltaStDev, 1, DELTASTDEV_GIVEN,
+                          "correlation", SDDS_DOUBLE, &zSpec.correlation, 1, CORRELATION_GIVEN,
+                          NULL) ||
+            bitsSet(zSpec.flags)<1 ||
+            (zSpec.flags&TSTDEV_GIVEN &&  zSpec.tStDev<0) ||
+            (zSpec.flags&DELTASTDEV_GIVEN && zSpec.deltaStDev<0))
+          SDDS_Bomb("invalid -zPlane syntax/values");
         break;
       case SET_PIPE:
         if (!processPipeOption(s_arg[i_arg].list+1, s_arg[i_arg].n_items-1, &pipeFlags))
@@ -229,23 +260,31 @@ main(int argc, char **argv)
         !(xp = SDDS_GetColumnInDoubles(&SDDSin, "xp")) ||
         !(y = SDDS_GetColumnInDoubles(&SDDSin, "y")) ||
         !(yp = SDDS_GetColumnInDoubles(&SDDSin, "yp")) ||
+        !(t = SDDS_GetColumnInDoubles(&SDDSin, "t")) ||
         !(p = SDDS_GetColumnInDoubles(&SDDSin, "p")))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     PerformTransformation(x, xp, p, rows, &xSpec, readCode==1?1:!oneTransform);
     PerformTransformation(y, yp, p, rows, &ySpec, readCode==1?1:!oneTransform);
+    PerformZTransformation(t, p, rows, &zSpec, readCode==1?1:!oneTransform);
     if (verbose) {
-      fprintf(stderr, "x transformation: %le, %le, %le, %le, %le, %le\n",
-              xSpec.R11, xSpec.R12, xSpec.R21, xSpec.R22, xSpec.etaBeam,
-              xSpec.etapBeam);
-      fprintf(stderr, "y transformation: %le, %le, %le, %le, %le, %le\n",
-              ySpec.R11, ySpec.R12, ySpec.R21, ySpec.R22, ySpec.etaBeam,
-              ySpec.etapBeam);
+      if (xSpec.flags)
+        fprintf(stderr, "x transformation: %le, %le, %le, %le, %le, %le\n",
+                xSpec.R11, xSpec.R12, xSpec.R21, xSpec.R22, xSpec.etaBeam,
+                xSpec.etapBeam);
+      if (ySpec.flags)
+        fprintf(stderr, "y transformation: %le, %le, %le, %le, %le, %le\n",
+                ySpec.R11, ySpec.R12, ySpec.R21, ySpec.R22, ySpec.etaBeam,
+                ySpec.etapBeam);
+      if (zSpec.flags)
+        fprintf(stderr, "z transformation: %le, %le, %le, %le\n",
+                zSpec.R11, zSpec.R12, zSpec.R21, zSpec.R22);
     }
     if (!SDDS_CopyPage(&SDDSout, &SDDSin) ||
         !(SDDS_SetColumnFromDoubles(&SDDSout, SDDS_SET_BY_NAME, x, rows, "x")) ||
         !(SDDS_SetColumnFromDoubles(&SDDSout, SDDS_SET_BY_NAME, y, rows, "y")) ||
         !(SDDS_SetColumnFromDoubles(&SDDSout, SDDS_SET_BY_NAME, xp, rows, "xp")) ||
         !(SDDS_SetColumnFromDoubles(&SDDSout, SDDS_SET_BY_NAME, yp, rows, "yp")) ||
+        !(SDDS_SetColumnFromDoubles(&SDDSout, SDDS_SET_BY_NAME, t, rows, "t")) ||
         !(SDDS_SetColumnFromDoubles(&SDDSout, SDDS_SET_BY_NAME, p, rows, "p")) ||
         !SDDS_WritePage(&SDDSout))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -336,6 +375,73 @@ long PerformTransformation(double *x, double *xp, double *p, long rows, PLANE_SP
     x[i] += eta2*p[i];
     xp[i] += etap2*p[i];
     p[i] = (p[i]+1)*pAve;
+  }
+  return 1;
+}
+
+long PerformZTransformation(double *t, double *p, long rows, ZPLANE_SPEC *match,
+                           long computeTransform)
+{
+  long i;
+  double pAve, tAve;
+  double S11, S22, S12;
+  double R11, R12, R21, R22;
+  double x0, xp0;
+  double emit1, beta1, beta2, alpha1, alpha2;
+  double emit2, ratio;
+
+  pAve = arithmeticAverage(p, rows);
+  for (i=0; i<rows; i++)
+    p[i] = p[i]/pAve - 1;
+  tAve = arithmeticAverage(t, rows);
+  for (i=0; i<rows; i++)
+    t[i] = t[i] - tAve;
+
+  if (computeTransform) {
+    computeCorrelations(&S11, &S12, &S22, t, p, rows);
+    if ((emit1 = S11*S22-sqr(S12))<=0)
+      SDDS_Bomb("longitudinal emittance is zero");
+    else
+      emit1 = sqrt(emit1);
+    beta1 = S11/emit1;
+    alpha1 = -S12/emit1;
+
+    if (match->flags&TSTDEV_GIVEN)
+      S11 = sqr(match->tStDev);
+    if (match->flags&DELTASTDEV_GIVEN)
+      S22 = sqr(match->deltaStDev);
+    if (match->flags&CORRELATION_GIVEN) 
+      S12 = match->correlation*sqrt(S11*S22);
+    if ((emit2 = S11*S22-sqr(S12))<=0)
+      SDDS_Bomb("longitudinal emittance is zero");
+    else
+      emit2 = sqrt(emit2);
+    beta2 = S11/emit2;
+    alpha2 = -S12/emit2;
+    ratio = sqrt(emit2/emit1);
+    
+    match->R11 = R11 = ratio*beta2/sqrt(beta1*beta2);
+    match->R12 = R12 = 0;
+    match->R21 = R21 = ratio*(alpha1-alpha2)/sqrt(beta1*beta2);
+    match->R22 = R22 = ratio*beta1/sqrt(beta1*beta2);
+  }
+  else {
+    R11 = match->R11;
+    R12 = match->R12;
+    R21 = match->R21;
+    R22 = match->R22;
+  }
+
+  for (i=0; i<rows; i++) {
+    x0 = t[i];
+    xp0 = p[i];
+    t[i] = R11*x0 + R12*xp0;
+    p[i] = R21*x0 + R22*xp0;
+  }
+
+  for (i=0; i<rows; i++) {
+    p[i] = (p[i]+1)*pAve;
+    t[i] += tAve;
   }
   return 1;
 }
