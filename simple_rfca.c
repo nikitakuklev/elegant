@@ -33,34 +33,40 @@ unsigned long parseFiducialMode(char *modeString)
 double findFiducialTime(double **part, long np, double s0, double sOffset,
                         double p0, unsigned long mode)
 {
-    if (mode&FID_MODE_LIGHT)
-        return (s0+sOffset)/c_mks;
-    if (!np || mode&FID_MODE_FIRST)
-        return (part[0][4]+sOffset)/(c_mks*beta_from_delta(p0, np?part[0][5]:0.0));
-    if (mode&FID_MODE_PMAX) {
-        long ibest, i;
-        double best;
-        best = part[0][5];
-        ibest = 0;
-        for (i=1; i<np; i++)
-            if (best<part[i][5]) {
-                best = part[i][5];
-                ibest = i;
-                }
-        return (part[ibest][4]+sOffset)/(c_mks*beta_from_delta(p0, part[ibest][5]));
-        }
-    if (mode&FID_MODE_TMEAN) {
-        double tsum;
-        long ip;
-        
-        for (ip=tsum=0; ip<np; ip++) {
-            tsum += (part[ip][4]+sOffset)/(c_mks*beta_from_delta(p0, part[ip][5]));
-            }
-        return tsum/np;
-        }
-    bomb("invalid fiducial mode in findFiducialTime", NULL);
-	return(1);
+  double tFid;
+  
+  if (mode&FID_MODE_LIGHT)
+    tFid =  (s0+sOffset)/c_mks;
+  else if (!np || mode&FID_MODE_FIRST)
+    tFid = (part[0][4]+sOffset)/(c_mks*beta_from_delta(p0, np?part[0][5]:0.0));
+  else if (mode&FID_MODE_PMAX) {
+    long ibest, i;
+    double best;
+    best = part[0][5];
+    ibest = 0;
+    for (i=1; i<np; i++)
+      if (best<part[i][5]) {
+        best = part[i][5];
+        ibest = i;
+      }
+    tFid = (part[ibest][4]+sOffset)/(c_mks*beta_from_delta(p0, part[ibest][5]));
+  }
+  else if (mode&FID_MODE_TMEAN) {
+    double tsum;
+    long ip;
+    
+    for (ip=tsum=0; ip<np; ip++) {
+      tsum += (part[ip][4]+sOffset)/(c_mks*beta_from_delta(p0, part[ip][5]));
     }
+    tFid = tsum/np;
+  }
+  else
+    bomb("invalid fiducial mode in findFiducialTime", NULL);
+#ifdef DEBUG
+  fprintf(stderr, "Fiducial time (mode %x): %21.15e\n", mode, tFid);
+#endif
+  return tFid;
+}
 
 
 long simple_rf_cavity(
@@ -74,6 +80,7 @@ long simple_rf_cavity(
     static long been_warned = 0;
 #ifdef DEBUG
     static FILE *fplog = NULL;
+    static long fplogCounter = 0;
 #endif
 
     log_entry("simple_rf_cavity");
@@ -107,15 +114,6 @@ long simple_rf_cavity(
     if (!rfca)
         bomb("NULL rfca pointer (simple_rf_cavity)", NULL);
 
-#ifdef DEBUG
-    if (!fplog) {
-        fplog = fopen_e("rfca.debug", "w", 0);
-        fprintf(fplog, "11\nnp\nlength\nvoltage\nphase\nQ\nt0\nt\n$gD$rp\nR$b12$n\nR$b22$n\n\n\n1000\n");
-        }
-    fprintf(fplog, "%ld  %le  %le  %le  %le ",
-        np, rfca->length, rfca->volt, rfca->phase, rfca->Q);
-#endif
-
     if (np<=0) {
         log_exit("simple_rf_cavity");
         return(np);
@@ -132,7 +130,7 @@ long simple_rf_cavity(
                 coord = part[ip];
                 coord[0] += coord[1]*length;
                 coord[2] += coord[3]*length;
-                coord[4] += length;
+                coord[4] += length*sqrt(1+sqr(coord[1])+sqr(coord[3]));
                 }
             }
         log_exit("simple_rf_cavity");
@@ -193,6 +191,24 @@ long simple_rf_cavity(
         timeOffset = ((long)(t/To+0.5))*To;
     }
     
+#ifdef DEBUG
+    if (!fplog) {
+        fplog = fopen_e("rfca.debug", "w", 0);
+        fprintf(fplog, "SDDS1\n");
+        fprintf(fplog, "&column name=Row,type=long &end\n");
+        fprintf(fplog, "&column name=zEnd , type=double &end\n");
+        fprintf(fplog, "&column name=pCentral0 , type=double &end\n");
+        fprintf(fplog, "&column name=Voltage , type=double &end\n");
+        fprintf(fplog, "&column name=Phase , type=double &end\n");
+        fprintf(fplog, "&column name=InternalPhase , type=double &end\n");
+        fprintf(fplog, "&column name=Length, type=double &end\n");
+        fprintf(fplog, "&column name=pCentral1 , type=double &end\n");
+        fprintf(fplog, "&data mode=ascii no_row_counts=1 &end\n");
+        }
+    fprintf(fplog, "%ld %21.15e %21.15e %21.15e %21.15e %21.15e %21.15e ",
+            fplogCounter++, zEnd, *P_central, rfca->volt, rfca->phase, phase, rfca->length);
+#endif
+
     for (ip=0; ip<np; ip++) {
         coord = part[ip];
         if (length) {
@@ -243,6 +259,9 @@ long simple_rf_cavity(
 
     if (rfca->change_p0)
         do_match_energy(part, np, P_central, 0);
+#ifdef DEBUG
+    fprintf(fplog, "%21.15e\n", *P_central);
+#endif
 
     log_exit("simple_rf_cavity");
     return(np);
