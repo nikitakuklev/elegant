@@ -338,6 +338,15 @@ void run_matrix_output(
                 tmp = M2;
                 M2  = M1;
                 M1  = tmp;
+                if (fp_printout[i_output] && !print_full_only[i_output]) {
+                  if (M1->order > print_order[i_output]) {
+                    SWAP_LONG(M1->order, print_order[i_output]);
+                    print_matrices(fp_printout[i_output], "Concantenated matrix after last element", M1);
+                    SWAP_LONG(M1->order, print_order[i_output]);
+                  } else {
+                    print_matrices(fp_printout[i_output], "Concantenated matrix after last element", M1);
+                  }
+                }
                 if (SDDS_matrix_initialized[i_output] && 
                     (!SDDS_match[i_output] || wild_match(member->name, SDDS_match[i_output]))) {
                     SDDS_set_matrices(SDDS_matrix+i_output, M1, SDDS_order[i_output], member,
@@ -371,7 +380,7 @@ void run_matrix_output(
             print_matrices(fp_printout[i_output], s, M1);
             SWAP_LONG(M1->order, print_order[i_output]);
             }
-        }
+      }
     log_exit("run_matrix_output");
     }
 
