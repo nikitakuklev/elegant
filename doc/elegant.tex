@@ -1660,6 +1660,24 @@ The equation may be left blank, in which case the user must give one
 or more \verb|optimization_term| commands.  These use the same
 symbols, of course.
 
+There are several {\tt rpn} functions that are useful in constructing
+a good optimization equation.  These are ``soft-edge'' greater-than, less-than,
+and not-equal functions, which have the names {\tt segt}, {\tt selt}, and
+{\tt sene}, respectively.  The usage is as follows:
+\begin{itemize}
+\item {\em V1} {\em V2} {\em T} {\tt segt}.  Returns a
+ nonzero value if and only if value {\em V2} is greater than {\em V1}.  The 
+ returned value is $((V_1-V_2)/T)^2$.  Typically used to constraint a quantity from
+ above.  E.g., to limit the maximum horizontal beta function to 10m with
+ a tolerance of $T=0.1m$, one would use \verb|max.betax 10 .1 segt|.
+\item {\em V1} {\em V2} {\em T} {\tt selt}.  Returns a
+ nonzero value if and only if value {\em V2} is less than value {\em V1}.  The 
+ returned value is $((V_1-V_2)/T)^2$.  
+\item {\em V1} {\em V2} {\em T} {\tt sene}.  Returns a nonzero value
+ if and only if {\em V1} and {\em V2} differ by more than {\em tol}.  If
+ $V_1>V_2$, returns $((V_1-(V_2+T))/T)^2$.  If $V_2>V_1$, returns
+ $((V_2-(V_1+T))/T)^2$.
+\end{itemize}
 \item \verb|mode| --- May be either ``minimize'' or ``maximize''.
 \item \verb|method| --- May be one of ``simplex'', ``grid'', and ``sample''.
 \item \verb|tolerance| --- The convergence criterion for the optimization, with a negative value indicating
@@ -1710,6 +1728,9 @@ added.   The advantage of using this command over giving an equation via
 each term as it performs the optimization (if a \verb|log_file| is given to
 \verb|optimization_setup|).  This permits determination of
 which terms are causing problems for the optimization.
+
+Please see the entry for {\tt equation} under {\tt optimization\_setup} for
+details on designing optimization terms.
 \end{itemize}
 
 \begin{latexonly}
@@ -2273,7 +2294,7 @@ unit parameter change for the element.
 
 \begin{itemize}
 \item type: action/setup command.
-\item function: compute and output Twiss parameters, or set up to do so.
+\item function: compute and output uncoupled Twiss parameters, or set up to do so.
 \end{itemize}
 
 \begin{verbatim}
@@ -2312,7 +2333,8 @@ be output, and not the parameters as a function of s.
 \item \verb|statistics| --- A flag indicating, if set, that minimum, maximum, and average values of
 Twiss parameters should be computed and included in output.
 \item \verb|radiation_integrals| --- A flag indicating, if set, that radiation integrals should be computed
-and included in output.
+and included in output. {\em N.B.: Radiation integral computation is not correct for systems with vertical
+bending, nor does it take into account coupling.}
 \item \verb|beta_X|, \verb|alpha_X|, \verb|eta_X|, \verb|etap_X| --- If \verb|matched| is zero, the initial values for
 the X plane.
 \item \verb|concat_order| --- Order of matrix concatenation to use for determining matrix for
