@@ -55,6 +55,9 @@ CopyrightNotice001*/
  * Michael Borland, 2000
  *
  $Log: not supported by cvs2svn $
+ Revision 1.3  2001/07/02 18:09:46  borland
+ Usage and error messages now mention the requirement for 't' column.
+
  Revision 1.2  2000/12/06 02:14:47  borland
  Now provides "corrected" and "uncorrected" values for beta and alpha.
  The corrected values are the best ones if one really knows the dispersion.
@@ -162,6 +165,9 @@ main(int argc, char **argv)
 
   if (!SetUpOutputFile(&SDDSout, outputfile))
     SDDS_Bomb("problem setting up output file");
+
+  for (i=0; i<6; i++)
+    data[i] = NULL;
   
   row = 0;
   while ((readCode=SDDS_ReadPage(&SDDSin))>0) {
@@ -169,9 +175,12 @@ main(int argc, char **argv)
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     for (i=0; i<2; i++)
       beta[i] = alpha[i] = emit[i] = emitcor[i] = eta[i] = eta[i+2] = 0;
-    for (i=0; i<6; i++)
+    for (i=0; i<6; i++) {
       for (j=C[i]=0; j<=i; j++)
         S[i][j] = 0;
+      if (data[i])
+        free(data[i]);
+    }
     if ((particles=SDDS_RowCount(&SDDSin))>2) {
       if (!(data[0] = x = SDDS_GetColumnInDoubles(&SDDSin, "x")) ||
           !(data[1] = xp = SDDS_GetColumnInDoubles(&SDDSin, "xp")) ||
