@@ -463,7 +463,10 @@ long new_sdds_beam(
  *     for spiffe input:   (*particle)[i] = (r, pr, pz, t) for ith particle
  *     for elegant input:  (*particle)[i] = (x, xp, y, yp, t, p) for ith particle
  */
-long get_sdds_particles(double ***particle, long one_dump, long n_skip)
+long get_sdds_particles(double ***particle, 
+                        long one_dump,   /* read only one page */
+                        long n_skip      /* number of pages to skip */
+                        )
 {
   long i, np_max, np, np_new, rows, ifile, dump_rejected;
   long files_initialized, retval, data_seen;
@@ -551,6 +554,7 @@ long get_sdds_particles(double ***particle, long one_dump, long n_skip)
     else if (retval!=-1) 
       data_seen = 1;
     else 
+      /* end of file */
       break;
     if (one_dump && n_skip>0) {
       n_skip--;
@@ -569,20 +573,21 @@ long get_sdds_particles(double ***particle, long one_dump, long n_skip)
         break;
       }
     }
-    SDDS_SetColumnFlags(&SDDS_input, 0);
-    if (!SDDS_SetColumnsOfInterest(&SDDS_input, SDDS_NAMES_STRING, 
-                                   input_type_code==SPIFFE_BEAM?spiffe_columns:elegant_columns)) {
-      sprintf(s, "Problem setting columns of interest for file %s", input_file);
-      SDDS_SetError(s);
-      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-    }
     if ((rows = SDDS_CountRowsOfInterest(&SDDS_input))<=0) {
       if (rows==-1) {
         sprintf(s, "Problem counting rows of interest for file %s", input_file);
         SDDS_SetError(s);
         SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
       }
-      break;
+      if (!one_dump)
+        continue;
+    }
+    SDDS_SetColumnFlags(&SDDS_input, 0);
+    if (!SDDS_SetColumnsOfInterest(&SDDS_input, SDDS_NAMES_STRING, 
+                                   input_type_code==SPIFFE_BEAM?spiffe_columns:elegant_columns)) {
+      sprintf(s, "Problem setting columns of interest for file %s", input_file);
+      SDDS_SetError(s);
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     }
     if ((np_new=np+rows)>np_max) {
       /* must reallocate to get more space */
