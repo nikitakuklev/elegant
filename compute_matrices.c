@@ -950,7 +950,7 @@ void reset_special_elements(LINE_LIST *beamline, long includeRF)
         switch (eptr->type) {
           case T_NIBEND:
             nibend = (NIBEND*)eptr->p_elem;
-            nibend->zeta_offset = 0;
+            nibend->initialized = 0;
             break;
           case T_NISEPT:
             nisept = (NISEPT*)eptr->p_elem;

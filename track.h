@@ -615,7 +615,7 @@ extern char *entity_text[N_TYPES];
 #define N_SAMPLE_PARAMS 2
 #define N_HVCOR_PARAMS 10
 #define N_SCATTER_PARAMS 5
-#define N_NIBEND_PARAMS 21
+#define N_NIBEND_PARAMS 22
 #define N_KPOLY_PARAMS 8
 #define N_RAMPRF_PARAMS 9
 #define N_RAMPP_PARAMS 1
@@ -1403,13 +1403,14 @@ typedef struct {
     double etilt;               /* error tilt angle */
     double accuracy;
     char *model, *method;
-    long synch_rad, adjustBoundary;
+    long synch_rad, adjustBoundary, adjustField;
     /* for internal use only: */
+    long initialized;       /* initialization done */
     double flen;            /* distance from iron edge to end of fringe field */
     double rho0;            /* central bending radius */ 
-    double zeta_offset;     /* offset of fringe field perpendicular to pole face necessary
-                             * to get correct bend angle */
-    double last_zeta_offset; 
+    double fse_adjust;      /* if adjustField, drho/rho0 to get correct bending angle */
+    double zeta_offset;     /* if adjustBoundary, offset of fringe field perpendicular 
+                             * to pole face to get correct bend angle */
     double x_correction;    /* used to fix spurious central trajectory offsets */
     double s_offset;        /* error in path length, which must be compensated with drifts before and after */
     long angleSign;         /* used internally to keep sign of angle separate from angle */

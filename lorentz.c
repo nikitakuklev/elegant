@@ -75,7 +75,8 @@ void lorentz_setup(void *field, long field_type, double **part, long np, double 
 void lorentz_terminate(void *field, long field_type, double **part, long np, double Po);
 void select_lorentz_integrator(char *desired_method);
 long do_lorentz_integration(double *coord, void *field);
-double nibend_trajectory_error(double offsetp);
+double nibend_trajectory_error_offset(double offsetp);
+double nibend_trajectory_error_fse(double fsep);
 double nisept_trajectory_error(double fsep);
 static double *traj_err_final_coord;
 
@@ -497,7 +498,6 @@ void lorentz_setup(
                 warning_given = 1;
                 }
             nibend->rho0 = nibend->length/nibend->angle;
-            one_plus_fse = 1+nibend->fse;
             S0 = 1/nibend->rho0;
             central_length = nibend->length + flen; 
             tolerance = nibend->accuracy;
@@ -525,75 +525,85 @@ void lorentz_setup(
                 exit_slope = tan(alpha);
             else 
                 exit_slope = DBL_MAX;   
-            /* find zeta offset to give zero slope at midpoint, using Newton's method */
-            offset = nibend->zeta_offset;
-            if (offset==0) {
-                if (!flen)
-                    nibend->zeta_offset = nibend->x_correction = 0;
-                else {
-                    double save[5];
-                    rad_coef = 0;        /* this must be zero for offset adjustment */
-                    x_correction = 0;    /* ditto */
-                    save[0] = nibend->etilt; 
-                    nibend->etilt = 0;
-                    save[1] = nibend->dx;
-                    nibend->dx = 0;
-                    save[2] = nibend->dy;
-                    nibend->dy = 0;
-                    save[3] = nibend->dz;
-                    nibend->dz = 0;
-                    save[4] = nibend->fse;
-                    nibend->fse = 0;
-                    one_plus_fse = 1;
-                    if ((offset = nibend->last_zeta_offset)==0)
-                        offset = last_offset;
-                    if (nibend->adjustBoundary)
-                      offset = zeroNewton(nibend_trajectory_error, 0, offset, 1e-6, 10, 1e-14);
-                    else
-                      offset = 0;
+
+            if (!nibend->initialized) {
+              /* find zeta offset or fse adjustment to give the right bending angle */
+              if (!flen)
+                nibend->zeta_offset = nibend->fse_adjust = nibend->x_correction = nibend->s_offset = 0;
+              else {
+                double save[5];
+                /* set values for offset adjustment (no errors, etc) */
+                rad_coef = 0;          
+                x_correction = offset = 0;
+                save[0] = nibend->etilt; nibend->etilt = 0;
+                save[1] = nibend->dx;    nibend->dx = 0;
+                save[2] = nibend->dy;    nibend->dy = 0;
+                save[3] = nibend->dz;    nibend->dz = 0;
+                save[4] = nibend->fse;   nibend->fse = 0;
+                fse_opt = 0;
+                one_plus_fse = 1;
+                if (nibend->adjustField) {
+                  fse_opt = zeroNewton(nibend_trajectory_error_fse, 0, fse_opt, 1e-6, 10, 1e-14*nibend->rho0);
 #ifdef IEEE_MATH
-                    if (isnan(offset) || isinf(offset))
-                        bomb("Newton's method failed to find coordinate offset for NIBEND--decrease accuracy parameter", NULL);
+                  if (isnan(fse_opt) || isinf(fse_opt))
+                    bomb("Newton's method failed to find strength adjustment for NIBEND--decrease accuracy parameter", NULL);
 #endif
-                    if (offset==0)
-                        offset = 1./DBL_MAX;
-                    if (fringe_code==ENGE1_MODEL || fringe_code==ENGE3_MODEL
-                        || fringe_code==ENGE5_MODEL)
-                      fprintf(stdout, "Enge coefficients: D=%e, a=%e, %e, %e\n", 
-                              engeD, engeCoef[0], engeCoef[1], engeCoef[2]);
-                    fprintf(stdout, "NIBEND offset adjusted to %e to obtain trajectory error of %e\n",
-                        offset, nibend_trajectory_error(offset));
-                    fprintf(stdout, "(Positive offset adjustment means a shorter magnet.)\n");
-                    fprintf(stdout, "final coordinates: %e, %e, %e, %e, %e\n", 
-                        traj_err_final_coord[0], traj_err_final_coord[1], traj_err_final_coord[2],
-                        traj_err_final_coord[3], traj_err_final_coord[4]);
-                    if (fringe_code==ENGE1_MODEL || fringe_code==ENGE3_MODEL
-                        || fringe_code==ENGE5_MODEL) {
-                      fprintf(stdout, "Equivalent Enge coefficients: D=%e, a=%e, %e, %e\n", 
-                              engeD, 
-                              engeCoef[0] + engeCoef[1]*offset/engeD + engeCoef[2]*sqr(offset/engeD), 
-                              engeCoef[1] + 2*engeCoef[2]*offset/engeD, 
-                              engeCoef[2]);
-                    
-                      fflush(stdout);
-                    }
-                    x_correction = traj_err_final_coord[0];
-                    last_offset = nibend->last_zeta_offset = nibend->zeta_offset = offset;
-                    nibend->x_correction = x_correction;
-                    nibend->s_offset = (nibend->length-traj_err_final_coord[4])/2;
-                    nibend->etilt = save[0]; 
-                    nibend->dx = save[1];
-                    nibend->dy = save[2];
-                    nibend->dz = save[3];
-                    nibend->fse = save[4];
-                    one_plus_fse = 1+nibend->fse;
-                    }
+                } else if (nibend->adjustBoundary) {
+                  offset = zeroNewton(nibend_trajectory_error_offset, 0, offset, 1e-6, 10, 1e-14*nibend->rho0);
+#ifdef IEEE_MATH
+                  if (isnan(offset) || isinf(offset))
+                    bomb("Newton's method failed to find coordinate offset for NIBEND--decrease accuracy parameter", NULL);
+#endif
                 }
+                if (fringe_code==ENGE1_MODEL || fringe_code==ENGE3_MODEL
+                    || fringe_code==ENGE5_MODEL)
+                  fprintf(stdout, "Enge coefficients: D=%e, a=%e, %e, %e\n", 
+                          engeD, engeCoef[0], engeCoef[1], engeCoef[2]);
+                if (nibend->adjustField) {
+                  fprintf(stdout, "NIBEND FSE adjusted by %e to obtain trajectory error of %e\n",
+                          fse_opt, nibend_trajectory_error_fse(fse_opt));
+                  fprintf(stdout, "final coordinates: %e, %e, %e, %e, %e\n", 
+                          traj_err_final_coord[0], traj_err_final_coord[1], traj_err_final_coord[2],
+                          traj_err_final_coord[3], traj_err_final_coord[4]);
+                  fflush(stdout);
+                } else if (nibend->adjustBoundary) {
+                  fprintf(stdout, "NIBEND offset adjusted to %e to obtain trajectory error of %e\n",
+                          offset, nibend_trajectory_error_offset(offset));
+                  fprintf(stdout, "(Positive offset adjustment means a shorter magnet.)\n");
+                  fprintf(stdout, "final coordinates: %e, %e, %e, %e, %e\n", 
+                          traj_err_final_coord[0], traj_err_final_coord[1], traj_err_final_coord[2],
+                          traj_err_final_coord[3], traj_err_final_coord[4]);
+                  if (fringe_code==ENGE1_MODEL || fringe_code==ENGE3_MODEL
+                      || fringe_code==ENGE5_MODEL) {
+                    fprintf(stdout, "Equivalent Enge coefficients: D=%e, a=%e, %e, %e\n", 
+                            engeD, 
+                            engeCoef[0] + engeCoef[1]*offset/engeD + engeCoef[2]*sqr(offset/engeD), 
+                            engeCoef[1] + 2*engeCoef[2]*offset/engeD, 
+                            engeCoef[2]);
+                      fflush(stdout);
+                  }
+                }
+                nibend->zeta_offset = offset;
+                nibend->fse_adjust = fse_opt;
+                nibend->x_correction = traj_err_final_coord[0];
+                nibend->s_offset = (nibend->length-traj_err_final_coord[4])/2;
+                nibend->etilt = save[0]; 
+                nibend->dx = save[1];
+                nibend->dy = save[2];
+                nibend->dz = save[3];
+                nibend->fse = save[4];
+              }
+              nibend->initialized = 1;
+            }
+            offset = nibend->zeta_offset;
+            fse_opt = nibend->fse_adjust;
+            one_plus_fse = 1+nibend->fse+nibend->fse_adjust;
             x_correction = nibend->x_correction;
             s_offset = nibend->s_offset;
             if (nibend->synch_rad)
-                rad_coef = sqr(e_mks/c_mks)*ipow(Po,3)/(6*PI*epsilon_o*me_mks);
-
+              rad_coef = sqr(e_mks/c_mks)*ipow(Po,3)/(6*PI*epsilon_o*me_mks);
+            else
+              rad_coef = 0;
 /*
 #ifdef DEBUG
             fprintf(stdout, "entrance: begin fringe intercept = %.16le, end = %.16le, slope = %.16le\n",
@@ -791,7 +801,7 @@ void lorentz_leap_frog(double *Qf, double *Qi, double s, long n_steps, void (*de
 
 /* routines for NIBEND element: */
 
-double nibend_trajectory_error(double offsetp)
+double nibend_trajectory_error_offset(double offsetp)
 {
     static double coord[6];
 
@@ -800,6 +810,20 @@ double nibend_trajectory_error(double offsetp)
     if (!do_lorentz_integration(coord, field_global))
         bomb("integration failure in nibend_trajectory_error", NULL);
     traj_err_final_coord = coord;
+    return(coord[1]);
+    }
+
+double nibend_trajectory_error_fse(double fsep)
+{
+    static double coord[6], opf;
+
+    fill_double_array(coord, 6, 0.0);
+    opf = one_plus_fse;
+    one_plus_fse += fsep;
+    if (!do_lorentz_integration(coord, field_global))
+        bomb("integration failure in nibend_trajectory_error", NULL);
+    traj_err_final_coord = coord;
+    one_plus_fse = opf;
     return(coord[1]);
     }
 
