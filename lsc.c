@@ -287,6 +287,9 @@ void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge,
   }
 
   /* Compute kSC and length to drift */
+  /* - compute values involved in binning and FFTs */
+  df = 1./(dt*nb);
+  dk = df*PIx2/c_mks;
   /* - find maximum current */
   find_min_max(&Imin, &Imax, Itime, nb);
 #if DEBUG
@@ -305,10 +308,16 @@ void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge,
   kSC = 2/beamRadius*sqrt(Imax/ipow(Po,3)/Ia);
 
   /* - compute maximum length that we should be traveling between kicks */
+#if DEBUG
+  fprintf(stdout, "rb=%e m   I0=%e A    kSC=%e 1/m    dt=%e s    df=%e Hz   dk=%e 1/m\n",
+          beamRadius, Imax, kSC, dt, df, dk);
+  fprintf(stdout, "lengthScale=%e m   dgamma/gamma=%e\n", lengthScale, dgammaOverGamma);
+  fflush(stdout);
+#endif
   length = 1/kSC;
   if (dgammaOverGamma) {
     double length2;
-    length2 = lengthScale/dgammaOverGamma;
+    length2 = fabs(lengthScale/dgammaOverGamma);
     if (length2<length)
       length = length2;
   }
@@ -324,16 +333,6 @@ void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge,
             lengthScale/length);
     exit(1);
   }    
-
-  /* - compute values for computing impedance */
-  df = 1./(dt*nb);
-  dk = df*PIx2/c_mks;
-  
-#if DEBUG
-  fprintf(stdout, "rb: %e m   LSC: I0=%e A    kSC=%e 1/m\nlength = %e m   dt = %e s    df = %e Hz   dk = %e 1/m\n",
-          beamRadius, Imax, kSC, length, dt, df, dk);
-  fflush(stdout);
-#endif
 
   /* Take the FFT of I(t) to get I(f) */
   memcpy(Ifreq, Itime, 2*nb*sizeof(*Ifreq));
