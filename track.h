@@ -462,7 +462,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_ZLONGIT 58
 #define T_SREFFECTS 59
 #define T_MODRF 60
-#define N_TYPES 61
+#define T_BMAPXY 61
+#define N_TYPES 62
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -530,6 +531,7 @@ extern char *entity_text[N_TYPES];
 #define N_ZLONGIT_PARAMS 13
 #define N_MODRF_PARAMS 13
 #define N_SREFFECTS_PARAMS 8
+#define N_BMAPXY_PARAMS 5
 
 typedef struct {
     char *name;            /* parameter name */
@@ -1317,6 +1319,19 @@ extern PARAMETER sreffects_param[N_SREFFECTS_PARAMS];
 typedef struct {
     double Jx, Jy, Jdelta, exRef, eyRef, SdeltaRef, DdeltaRef, pRef;
     } SREFFECTS;
+
+/* names and storage structure for SR effects */
+extern PARAMETER bmapxy_param[N_BMAPXY_PARAMS];
+
+typedef struct {
+  double length, strength, accuracy;
+  char *method, *filename;
+  /* these are set by the program when the file is read */
+  long points, nx, ny;
+  double *Fx, *Fy;
+  double xmin, xmax, dx;
+  double ymin, ymax, dy;
+} BMAPXY;
 
 /* macros for bending magnets */ 
 #define SAME_BEND_PRECEDES 1 

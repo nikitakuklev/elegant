@@ -23,7 +23,7 @@ char *entity_name[N_TYPES] = {
     "KSEXT", "KSBEND", "KQUAD", "MAGNIFY", "SAMPLE", "KICKER", "SCATTER",
     "NIBEND", "KPOLY", "NISEPT", "RAMPRF", "RAMPP", "STRAY", "CSBEND",
     "TWMTA", "MATTER", "RFMODE", "TRFMODE", "ZLONGIT", "SREFFECTS",
-    "MODRF",
+    "MODRF", "BMAPXY",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -115,6 +115,7 @@ impedance.",
     "Simulation of synchrotron radiation effects (damping and quantum excitation).",
     "A first-order matrix RF cavity with exact phase dependence, plus optional amplitude\n\
 and phase modulation.",
+    "A map of Bx and By vs x and y.",
     } ;
 
 QUAD quad_example;
@@ -932,6 +933,15 @@ PARAMETER modrf_param[N_MODRF_PARAMS] = {
     {"FIDUCIAL", "", IS_STRING, 0, (long)((char *)&modrf_example.fiducial), NULL, 0.0, 0},
     };    
 
+BMAPXY bmapxy_example;
+PARAMETER bmapxy_param[N_BMAPXY_PARAMS] = {
+{"L", "M", IS_DOUBLE, 0, (long)((char *)&bmapxy_example.length), NULL, 0.0, 0},
+{"STRENGTH", NULL, IS_DOUBLE, 0, (long)((char *)&bmapxy_example.strength), NULL, 0.0, 0},
+{"ACCURACY", NULL, IS_DOUBLE, 0, (long)((char *)&bmapxy_example.accuracy), NULL, 0.0, 0},
+{"METHOD", NULL, IS_STRING, 0, (long)((char*)&bmapxy_example.method), NULL, 0.0, 0},
+{"FILENAME", NULL, IS_STRING, 0, (long)((char*)&bmapxy_example.filename), NULL, 0.0, 0},
+};  
+
 /* array of parameter structures */
 
 #define MAT_LEN     HAS_MATRIX|HAS_LENGTH
@@ -1006,7 +1016,8 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_ZLONGIT_PARAMS,          0,     sizeof(ZLONGIT),  zlongit_param    },
     { N_SREFFECTS_PARAMS,        0,   sizeof(SREFFECTS),  sreffects_param  },
     { N_MODRF_PARAMS, MAT_LEN_NCAT,       sizeof(MODRF),    modrf_param     }, 
-    } ;
+    { N_BMAPXY_PARAMS,     HAS_LENGTH,   sizeof(BMAPXY),  bmapxy_param      },
+} ;
  
 
 void compute_offsets()

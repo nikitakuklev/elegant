@@ -452,6 +452,9 @@ long do_tracking(
                       case T_NISEPT:
                         n_left = lorentz(coord, n_to_track, (NISEPT*)eptr->p_elem, T_NISEPT, *P_central, accepted);
                         break;
+                      case T_BMAPXY:
+                        n_left = lorentz(coord, n_to_track, (BMAPXY*)eptr->p_elem, T_BMAPXY, *P_central, accepted);
+                        break;
                       case T_KPOLY:
                         n_left = polynomial_kicks(coord, n_to_track, (KPOLY*)eptr->p_elem, 0.0,
                                                   *P_central, accepted, z);

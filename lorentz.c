@@ -19,7 +19,7 @@
  * where f is the fractional strength error, dp = (p-po)/po,
  * F is the normalized magnetic field, s is the distance, 
  * q is the coordinate, and w is the rate of change of q with
- * distance.
+ * distance.  I use q = (z, x, y).
  *
  * S0 is a strength parameter.  For a bending magnet, it is 1/rho0,
  * rho0 being the central bending radius.   The charge and central momentum
@@ -52,13 +52,14 @@
  *                The exit plane is
  *                     q0=0
  *                Bo and g are scaled together to get the right bend angle.
- * 3. NIBMAP --- Numerically Integrated Bend MAP.  This element requires
- *               a 2D field map of the midplane of the magnet.
- *               The magnet is assumed to be symmetrical about q0=0.
- *               This element is an adaptation of my program brat (Bend
- *               RAy Trace).
+ * 3. BMAPXYs --- numerically integrated B-field MAPs in XY plane.
+ *                A 2D map of (Fx, Fy) is given as a function of (x, y).
+ *                If the field map is, say, (Fx=y, Fy=x) near x=y=0,
+ *                then the strength parameter (STRENGTH) is equivalent
+ *                to K1.
+ *                There's not much more to it. 
  *
- * Michael Borland, 1991, 1993
+ * Michael Borland, 1991, 1993, 1997
  */
 #include "mdb.h"
 #include "match_string.h"
@@ -162,6 +163,12 @@ void nisept_coord_transform(double *q, double *coord, NISEPT *nisept, long which
 double nisept_exit_function(double *qp, double *q, double s);
 void nisept_deriv_function(double *qp, double *q, double s);
 
+/* prototypes for BMAPXY element */
+void bmapxy_coord_transform(double *q, double *coord, BMAPXY *bmapxy, long which_end);
+double bmapxy_exit_function(double *qp, double *q, double s);
+void bmapxy_deriv_function(double *qp, double *q, double s);
+void bmapxy_field_setup(BMAPXY *bmapxy);
+
 long method_code = 0;
 #define RUNGE_KUTTA 0
 #define BULIRSCH_STOER 1
@@ -180,13 +187,14 @@ void lorentz_leap_frog(double *Qf, double *Qi, double s, long n_steps, void (*de
 
 #ifdef DEBUG
 static FILE *fp_field = NULL;
-static long field_output_on = 0;
+static long field_output_on = 1;
 #endif
 
 static long n_lorentz_calls = 0;
 static long n_deriv_calls = 0;
 static long n_particles_done = 0;
 static double length_mult_sum = 0;
+static long n_invalid_particles = 0;
 
 void lorentz_report(void)
 {
@@ -196,6 +204,8 @@ void lorentz_report(void)
             n_lorentz_calls, n_deriv_calls, n_particles_done);
         if (length_mult_sum && n_particles_done && !integrator) 
             printf("    average length multiplier for non-adaptive integration: %e\n", length_mult_sum/n_particles_done);
+        printf("    %ld calls to derivative module had invalid particles\n",
+               n_invalid_particles);
         }
     n_lorentz_calls = n_deriv_calls = n_particles_done = 0;
     length_mult_sum = 0;
@@ -222,8 +232,15 @@ long lorentz(
 
 #ifdef DEBUG
     if (!fp_field) {
-        fp_field = fopen_e("fields.out", "w", 0);
-        fprintf(fp_field, "7\nq0\nq1\nq2\nz\ns\nF0\nF1\nF2\n\n\n1000\n");
+        fp_field = fopen_e("fields.sdds", "w", 0);
+        fprintf(fp_field, "&column name=q0 type=double units=m &end\n");
+        fprintf(fp_field, "&column name=q1 type=double units=m &end\n");
+        fprintf(fp_field, "&column name=q2 type=double units=m &end\n");
+        fprintf(fp_field, "&column name=s type=double units=m &end\n");
+        fprintf(fp_field, "&column name=F0 type=double  &end\n");
+        fprintf(fp_field, "&column name=F1 type=double  &end\n");
+        fprintf(fp_field, "&column name=F2 type=double  &end\n");
+        fprintf(fp_field, "&data mode=ascii no_row_counts=1 &end\n");
         }
     field_output_on = 0;
 #endif
@@ -296,7 +313,7 @@ long do_lorentz_integration(double *coord, void *field)
                 return(0);
                 break;
             default:
-                if ((exvalue = (*exit_function)(NULL, q, 0.0))>exit_toler)  {
+                if ((exvalue = (*exit_function)(NULL, q, central_length))>exit_toler)  {
                     printf("warning: exit value of %e exceeds tolerance of %e--particle lost.\n", exvalue, exit_toler);
                     log_exit("do_lorentz_integration");
                     return(0);
@@ -306,7 +323,7 @@ long do_lorentz_integration(double *coord, void *field)
         }
     else {
         /* non-adpative integration */
-        length_multiplier = 1.05;
+        length_multiplier = 1+tolerance;
         n_steps = central_length/tolerance+0.5;
         do {
             s_start = 0;
@@ -327,10 +344,10 @@ long do_lorentz_integration(double *coord, void *field)
                     exit(1);
                     break;
                 }
-            if ((exvalue = (*exit_function)(NULL, qout, 0.0))>0)
-                length_multiplier *= 1.01;
+            if ((exvalue = (*exit_function)(NULL, qout, central_length))>0)
+              length_multiplier += exvalue/central_length;
             else
-                break;
+              break;
             } while (1);
         length_mult_sum += length_multiplier;
         copy_doubles(q, qout, 8);
@@ -353,6 +370,7 @@ void lorentz_setup(
 {
     NIBEND *nibend;
     NISEPT *nisept;
+    BMAPXY *bmapxy;
     double alpha, Kg;
     static long warning_given = 0;
     static double last_offset=0;
@@ -541,7 +559,18 @@ void lorentz_setup(
                 last_fse = nisept->last_fse_opt = nisept->fse_opt = fse_opt;
                 }
             break;
-        default:
+          case T_BMAPXY:
+            bmapxy = (BMAPXY*)field;
+            exit_function = bmapxy_exit_function;
+            deriv_function = bmapxy_deriv_function;
+            coord_transform = bmapxy_coord_transform;
+            central_length = bmapxy->length;
+            select_lorentz_integrator(bmapxy->method);
+            tolerance = bmapxy->accuracy;
+            if (!bmapxy->points)
+              bmapxy_field_setup(bmapxy);
+            break;
+          default:
             bomb("invalid field type (lortenz_setup)", NULL);
             break;
         }
@@ -580,47 +609,47 @@ void select_lorentz_integrator(char *desired_method)
 
 void lorentz_leap_frog(double *Qf, double *Qi, double s, long n_steps, void (*derivs)(double *dQds, double *Q, double sd))
 {
-    long step;
-    double h, hh;
-    double *q, *qp, *w, *wp;
-    double F[8];
+  long step;
+  double h, hh;
+  double *q, *qp, *w, *wp;
+  double F[8];
 
-    q = Qf;
-    w = Qf+3;
-    qp = F;
-    wp = F+3;
+  q = Qf;
+  w = Qf+3;
+  qp = F;
+  wp = F+3;
 
-    copy_doubles(Qf, Qi, 8);
+  copy_doubles(Qf, Qi, 8);
 
-    h  = s/n_steps;
-    hh = h/2;
-    for (step=0; step<n_steps; step++) {
-        if (step!=0) {
-            /* advance position variables by two half-steps */
-            q[0] += w[0]*h;
-            q[1] += w[1]*h;
-            q[2] += w[2]*h;
-            }
-        else {
-            /* advance position variables by half-step */
-            q[0] += w[0]*hh;
-            q[1] += w[1]*hh;
-            q[2] += w[2]*hh;
-            }
-        /* find forces */
-        derivs(F, Qf, 0.0);
-        /* advance momentum variables */
-        w[0] += wp[0]*h;
-        w[1] += wp[1]*h;
-        w[2] += wp[2]*h;
-        w[3] += wp[3]*h;
-        w[4] += wp[4]*h;
-        }
-    /* advance position variables by half-step */
-    q[0] += w[0]*hh;
-    q[1] += w[1]*hh;
-    q[2] += w[2]*hh;
+  h  = s/n_steps;
+  hh = h/2;
+  for (step=0; step<n_steps; step++) {
+    if (step!=0) {
+      /* advance position variables by two half-steps */
+      q[0] += w[0]*h;
+      q[1] += w[1]*h;
+      q[2] += w[2]*h;
     }
+    else {
+      /* advance position variables by half-step */
+      q[0] += w[0]*hh;
+      q[1] += w[1]*hh;
+      q[2] += w[2]*hh;
+    }
+    /* find forces */
+    derivs(F, Qf, 0.0);
+    /* advance momentum variables */
+    w[0] += wp[0]*h;
+    w[1] += wp[1]*h;
+    w[2] += wp[2]*h;
+    w[3] += wp[3]*h;
+    w[4] += wp[4]*h;
+  }
+  /* advance position variables by half-step */
+  q[0] += w[0]*hh;
+  q[1] += w[1]*hh;
+  q[2] += w[2]*hh;
+}
 
 
 /* routines for NIBEND element: */
@@ -992,7 +1021,6 @@ double nisept_exit_function(double *qp, double *q, double s)
     return(exit_intercept - q[0]);
     }
 
-
 void nisept_deriv_function(double *qp, double *q, double s)
 {
     static double *w, *wp, F0, F1, F2;
@@ -1054,3 +1082,155 @@ void nisept_deriv_function(double *qp, double *q, double s)
         }
 #endif
     }
+
+double bmapxy_exit_function(double *qp, double *q, double s)
+{
+  static BMAPXY *bmapxy;
+  bmapxy = (BMAPXY*)field_global;
+  
+  /* returns positive if inside or before, negative if after */
+  return(central_length-q[0]);
+}
+
+void bmapxy_deriv_function(double *qp, double *q, double s)
+{
+    double *w, *wp, F0, F1, F2, Fa, Fb, fx, fy;
+    double S, dq0, dq1, x, y;
+    BMAPXY *bmapxy;
+    long ix, iy;
+    
+    bmapxy = (BMAPXY*)field_global;
+    n_deriv_calls++;
+
+    x = q[1];
+    y = q[2];
+    if (isnan(x) || isnan(y) || isinf(x) || isinf(y)) {
+      for (ix=0; ix<7; ix++)
+        qp[ix] = 0;
+      qp[6] = 1;
+      q[0]  = central_length;
+      n_invalid_particles++;
+      return;
+    }
+    
+    /* w is the velocity */
+    w  = q+3;
+    wp = qp+3;
+    qp[0] = w[0];
+    qp[1] = w[1];
+    qp[2] = w[2];
+    qp[6] = 1;
+    qp[7] = 0;
+
+    /* find field components */
+    F0 = 0;  /* z component of field. */
+    ix = (x-bmapxy->xmin)/bmapxy->dx + 0.5;
+    iy = (y-bmapxy->ymin)/bmapxy->dy + 0.5;
+    if (ix<0 || iy<0 || ix>bmapxy->nx-1 || iy>bmapxy->ny-1) {
+      F1 = F2 = 0;
+      n_invalid_particles++;
+      wp[0] = wp[1] = wp[2] = 0;
+    } else {
+      fx = (x-(ix*bmapxy->dx+bmapxy->xmin))/bmapxy->dx;
+      fy = (y-(iy*bmapxy->dy+bmapxy->ymin))/bmapxy->dy;
+      Fa = (1-fy)*bmapxy->Fx[ix+iy*bmapxy->nx] + fy*bmapxy->Fx[ix+(iy+1)*bmapxy->nx];
+      Fb = (1-fy)*bmapxy->Fx[ix+1+iy*bmapxy->nx] + fy*bmapxy->Fx[ix+1+(iy+1)*bmapxy->nx];
+      F1 = (1-fx)*Fa+fx*Fb;
+      Fa = (1-fy)*bmapxy->Fy[ix+iy*bmapxy->nx] + fy*bmapxy->Fy[ix+(iy+1)*bmapxy->nx];
+      Fb = (1-fy)*bmapxy->Fy[ix+1+iy*bmapxy->nx] + fy*bmapxy->Fy[ix+1+(iy+1)*bmapxy->nx];
+      F2 = (1-fx)*Fa+fx*Fb;
+      F1 *= bmapxy->strength;
+      F2 *= bmapxy->strength;
+      /* compute lorentz force */
+      wp[0] = w[1]*F2 - w[2]*F1;
+      wp[1] = w[2]*F0 - w[0]*F2;
+      wp[2] = w[0]*F1 - w[1]*F0;
+    }
+    
+#ifdef DEBUG
+    fprintf(fp_field, "%e %e %e %e %e %e %e\n", q[0], q[1], q[2], s, F0, F1, F2);
+    fflush(fp_field);
+#endif
+}
+
+ 
+void bmapxy_coord_transform(double *q, double *coord, BMAPXY *bmapxy, long which_end)
+{
+  double dzds, *dqds;
+  
+  dqds = q+3;
+  if (which_end==-1) {
+    /* transform coord (x, x', y, y', s, dp/p) into q (q0,q1,q2,d/ds(q0,q1,q2),s,dp/p) */
+    /* convert slopes to normalized velocities */
+    dqds[0] = dzds = 1/sqrt(1+sqr(coord[1])+sqr(coord[3]));
+    dqds[1] = coord[1]*dzds;
+    dqds[2] = coord[3]*dzds;
+    /* find q coordinates of particle at reference plane */
+    q[0] = 0;
+    q[1] = coord[0];
+    q[2] = coord[2];
+    q[6] = coord[4];
+    q[7] = coord[5];
+  } else {
+    /* transform q into coord at exit refence plane */
+    coord[0] = q[1];
+    coord[1] = dqds[1]/dqds[0];
+    coord[2] = q[2];
+    coord[3] = dqds[2]/dqds[0];
+    coord[4] = q[6];
+    coord[5] = q[7];
+  }
+   
+}
+
+void bmapxy_field_setup(BMAPXY *bmapxy)
+{
+  SDDS_DATASET SDDSin;
+  double *x, *y, *Fx, *Fy;
+  long nx;
+
+  if (!fexists(bmapxy->filename)) {
+    fprintf(stderr, "file %s not found for BMAPXY element\n", bmapxy->filename);
+    exit(1);
+  }
+  if (!SDDS_InitializeInput(&SDDSin, bmapxy->filename) ||
+      SDDS_ReadPage(&SDDSin)<=0 ||
+      !(x=SDDS_GetColumnInDoubles(&SDDSin, "x")) ||
+      !(y=SDDS_GetColumnInDoubles(&SDDSin, "y")) ||
+      !(Fx=SDDS_GetColumnInDoubles(&SDDSin, "Fx")) ||
+      !(Fy=SDDS_GetColumnInDoubles(&SDDSin, "Fy"))) {
+    SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+  }
+  if (!(bmapxy->points=SDDS_CountRowsOfInterest(&SDDSin)) || bmapxy->points<2) {
+    fprintf(stderr, "file %s for BMAPXY element has insufficient data\n");
+    exit(1);
+  }
+  SDDS_Terminate(&SDDSin);
+  
+  /* It is assumed that the data is ordered so that x changes fastest.
+   * This can be accomplished with sddssort -column=y,incr -column=x,incr
+   * The points are assumed to be equipspaced.
+   */
+  nx = 1;
+  bmapxy->xmin = x[0];
+  while (nx<bmapxy->points) {
+    if (x[nx-1]>x[nx])
+      break;
+    nx ++;
+  }
+  bmapxy->xmax = x[nx-1];
+  bmapxy->dx = (bmapxy->xmax-bmapxy->xmin)/(nx-1);
+  if ((bmapxy->nx=nx)<=1 || y[0]>y[nx] || (bmapxy->ny = bmapxy->points/nx)<=1) {
+    fprintf(stderr, "file %s for BMAPXY element doesn't have correct structure or amount of data\n",
+            bmapxy->filename);
+    fprintf(stderr, "nx = %ld, ny=%ld\n", bmapxy->nx, bmapxy->ny);
+    exit(1);
+  }
+  bmapxy->ymin = y[0];
+  bmapxy->ymax = y[bmapxy->points-1];
+  bmapxy->dy = (bmapxy->ymax-bmapxy->ymin)/(bmapxy->ny-1);
+  free(x);
+  free(y);
+  bmapxy->Fx = Fx;
+  bmapxy->Fy = Fy;
+}
