@@ -357,8 +357,12 @@ char **argv;
         bomb("default_order is out of range", NULL);
       if (concat_order>3)
         bomb("concat_order is out of range", NULL);
+      if (p_central && p_central_mev)
+        bomb("give only one of p_central and p_central_mev", NULL);
+      if (p_central_mev!=0 && p_central==0)
+        p_central = p_central_mev/me_mev;
       if (p_central<=0 && !expand_for)
-        bomb("p_central <= 0", NULL);
+        bomb("p_central<=0 and p_central_mev<=0", NULL);
       if (expand_for)
         p_central = find_beam_p_central(expand_for);
       if (random_number_seed==0) {
