@@ -193,7 +193,8 @@ char **argv;
   double *starting_coord, finalCharge;
   long namelists_read = 0, failed, firstPass;
   char *semaphoreFile[2];
-  
+  semaphoreFile[0] = semaphoreFile[1] = NULL;
+
 #if defined(UNIX) || defined(_WIN32)
   signal(SIGINT, traceback_handler);
   signal(SIGILL, traceback_handler);
