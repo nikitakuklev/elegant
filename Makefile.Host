@@ -7,7 +7,8 @@ CMPLR = ANSI
 #CC = purify $($(ANSI)_$(CMPLR))
 
 EPICS_EXTENSIONS_LIB = ../../../../../epics/extensions/lib/$(HOST_ARCH)
-PROD = elegant sddsemitmeas madto sddssasefel sddsTouschekInteg ibsEmittance recurseSetup haissinski
+PROD = elegant sddsemitmeas madto sddssasefel sddsTouschekInteg ibsEmittance recurseSetup haissinski \
+        sddsmatchtwiss sddsanalyzebeam
 
 USR_CFLAGS = 	-I../../../../../epics/extensions/src/SDDS/include \
 		$(ZLIB_INC) \
@@ -69,6 +70,10 @@ ibsEmittance_SRCS = ibsEmittance.c zibs.c
 recurseSetup_SRCS = recurseSetup.c
 
 haissinski_SRCS = haissinski.c
+
+sddsmatchtwiss_SRCS = sddsmatchtwiss.c
+
+sddsanalyzebeam_SRCS = sddsanalyzebeam.c
 
 fitTraces_CFLAGS = -I../../../../../epics/extensions/src/SDDS/meschach
 
