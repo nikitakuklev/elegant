@@ -874,7 +874,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 #define SET_BUNCHED_BEAM 6
 #define SET_SDDS_BEAM   33
 
-#define N_TWISS_QUANS 44
+#define N_TWISS_QUANS 48
 static char *twiss_name[N_TWISS_QUANS] = {
     "betax", "alphax", "nux", "etax", "etapx", 
     "betay", "alphay", "nuy", "etay", "etapy", 
@@ -891,6 +891,8 @@ static char *twiss_name[N_TWISS_QUANS] = {
     "dnuy/dp2", "dnuy/dp3",
     "etax2" , "etax3", 
     "etay2" , "etay3", 
+    "nuxChromLower", "nuxChromUpper", 
+    "nuyChromLower", "nuyChromUpper", 
     };
 static long twiss_mem[N_TWISS_QUANS] = {
   -1, -1, -1, -1, -1,  
@@ -906,6 +908,8 @@ static long twiss_mem[N_TWISS_QUANS] = {
   -1, -1, -1, -1, 
   -1, -1, 
   -1, -1, 
+  -1, -1,  
+  -1, -1,  
   -1, -1,  
   -1, -1,  
     };
@@ -1163,6 +1167,11 @@ double optimization_function(double *value, long *invalid)
     rpn_store(beamline->eta3[0], twiss_mem[41]);
     rpn_store(beamline->eta2[2], twiss_mem[42]);
     rpn_store(beamline->eta3[2], twiss_mem[43]);
+    /* limits of tunes due to chromatic effects */
+    rpn_store(beamline->tuneChromLower[0], twiss_mem[44]);
+    rpn_store(beamline->tuneChromUpper[0], twiss_mem[45]);
+    rpn_store(beamline->tuneChromLower[1], twiss_mem[46]);
+    rpn_store(beamline->tuneChromUpper[1], twiss_mem[47]);
 #if DEBUG
     fprintf(stdout, "Twiss parameters done.\n");
     fflush(stdout);
