@@ -594,7 +594,7 @@ extern char *entity_text[N_TYPES];
 /* number of parameters for physical elements
  * a zero indicates an unsupported element
  */
-#define N_QUAD_PARAMS 14
+#define N_QUAD_PARAMS 16
 #define N_BEND_PARAMS 24
 #define N_DRIFT_PARAMS 2
 #define N_SEXT_PARAMS 8
@@ -634,7 +634,7 @@ extern char *entity_text[N_TYPES];
 #define N_KICKER_PARAMS 10
 #define N_KSEXT_PARAMS 15
 #define N_KSBEND_PARAMS 27
-#define N_KQUAD_PARAMS 20
+#define N_KQUAD_PARAMS 22
 #define N_MAGNIFY_PARAMS 6
 #define N_SAMPLE_PARAMS 2
 #define N_HVCOR_PARAMS 10
@@ -758,6 +758,7 @@ extern PARAMETER quad_param[N_QUAD_PARAMS];
 typedef struct {
     double length, k1, tilt, ffringe;
     double dx, dy, dz, fse, xkick, ykick;
+    double xKickCalibration, yKickCalibration;
     long xSteering, ySteering, order;
     char *fringeType;
     } QUAD;
@@ -1390,6 +1391,7 @@ extern PARAMETER kquad_param[N_KQUAD_PARAMS];
 typedef struct {
     double length, k1, tilt, bore, B;
     double dx, dy, dz, fse, xkick, ykick;
+    double xKickCalibration, yKickCalibration;
     long xSteering, ySteering, n_kicks, synch_rad;
     char *systematic_multipoles, *random_multipoles, *steering_multipoles;
     long integration_order, sqrtOrder;

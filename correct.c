@@ -2459,6 +2459,16 @@ double getCorrectorCalibration(ELEMENT_LIST *elem, long coord)
         if (coord)
             return ((HVCOR*)(elem->p_elem))->ycalibration;
         return ((HVCOR*)(elem->p_elem))->xcalibration;
+      case T_QUAD:
+        if (coord) 
+          return ((QUAD*)(elem->p_elem))->yKickCalibration;
+        return ((QUAD*)(elem->p_elem))->xKickCalibration;
+        break;
+      case T_KQUAD:
+        if (coord) 
+          return ((KQUAD*)(elem->p_elem))->yKickCalibration;
+        return ((KQUAD*)(elem->p_elem))->xKickCalibration;
+        break;
       default:
         return 1;
         }
