@@ -2046,7 +2046,7 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
                                    TWISS *twiss, double *tune, VMATRIX *M, LINE_LIST *beamline, 
                                    RUN *run, double *startingCoord)
 {
-#define TSWA_TRACKING_EXTRA_PTS 5
+#define TSWA_TRACKING_EXTRA_PTS 15
 #define TSWA_TRACKING_PTS (N_TSWA+TSWA_TRACKING_EXTRA_PTS)
   double tune1[2];
   double Ax[TSWA_TRACKING_PTS], Ay[TSWA_TRACKING_PTS];
@@ -2219,7 +2219,9 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
       if (tune_shift_with_amplitude_struct.sparse_grid &&
 	  !(ix==0 || iy==0 || ix==iy)) 
 	continue;
-      if (ix==0 || iy==0 || lost[ix][iy]) 
+      if (lost[ix][iy] ||
+	  xTune[ix][iy]<=0.0 || xTune[ix][iy]>=0.5 ||
+	  yTune[ix][iy]<=0.0 || yTune[ix][iy]>=0.5)
 	continue;
       if (xTuneExtrema[0]>xTune[ix][iy])
 	xTuneExtrema[0] = xTune[ix][iy];
