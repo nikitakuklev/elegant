@@ -2334,3 +2334,4 @@ void setupTwissAnalysisRequest(NAMELIST_TEXT *nltext, RUN *run,
                           twiss_analysis_struct.s_start,
                           twiss_analysis_struct.s_end);
 }
+
