@@ -1115,10 +1115,10 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
       for (i=0; i<6; i++)
         M1->R[i][i] = 1;
       fill_in_matrices(beamline->elem_twiss, run);
-      beamline->matrix = append_full_matrix(beamline->elem_twiss, run, M1, run->default_order);
+      beamline->matrix = append_full_matrix(beamline->elem_twiss, run, M1, twissConcatOrder);
     }
     else
-      beamline->matrix = full_matrix(beamline->elem_twiss, run, run->default_order);
+      beamline->matrix = full_matrix(beamline->elem_twiss, run, twissConcatOrder);
   }
 
   beamline->twiss0->betax  = betax;
