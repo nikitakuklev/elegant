@@ -14,6 +14,9 @@
  * Michael Borland, 2000
  *
  $Log: not supported by cvs2svn $
+ Revision 1.12  2004/09/08 20:04:36  borland
+ Fixed problem with units for sij output.
+
  Revision 1.11  2004/08/10 19:02:24  borland
  Fixed uninitialized variable problem that resulted in wrong sigma values
  in output file for single-particle beam.
@@ -55,30 +58,34 @@
 #include "scan.h"
 #include "SDDS.h"
 
-#define DEBUG 0
-
 #define SET_PIPE 0
 #define SET_NOWARNINGS 1
 #define SET_CORRECTED_ONLY 2
-#define N_OPTIONS 3
+#define SET_GENERATE 3
+#define N_OPTIONS 4
 
 char *option[N_OPTIONS] = {
-  "pipe", "nowarnings", "correctedonly",
+  "pipe", "nowarnings", "correctedonly", "generate"
 } ;
 
 char *USAGE="sddsanalyzebeam [-pipe=[input][,output]] [<SDDSinputfile>] [<SDDSoutputfile>]\n\
-  [-nowarnings] [-correctedOnly]\n\
+  [-nowarnings] [-correctedOnly] [-generate=<outputFile>,<particles>,<cutoff>]\n\
 Computes Twiss parameters and other properties of a particle beam.\n\
 The input file must have columns x, xp, y, yp, t, and p; for example, an elegant\n\
 beam output file is acceptable.\nIf -correctedOnly is given, then only the\n\
 \"corrected values\" (with dispersion terms correctly subtracted) are given.\n\
 Use this if you plan to use the output as input to the twiss_output command in\n\
-elegant.\n\n\
-Program by Michael Borland.  (This is version 2, January 2002.)\n";
+elegant.\n\
+If -generate is given, a new gaussian distribution with the specified number of\n\
+particles is generated based on the analysis.\n\n\
+Program by Michael Borland.  (This is version 3, February 2005.)\n";
 
 
 long SetUpOutputFile(SDDS_DATASET *SDDSout, char *outputfile, long correctedOnly, SDDS_DATASET *SDDSin);
 long check_sdds_beam_column(SDDS_TABLE *SDDS_table, char *name, char *units);
+long SetUpGenerateFile(SDDS_DATASET *SDDSgen, char *generateFile);
+void GenerateAndDumpParticles(SDDS_DATASET *SDDSgen, double C[6], double S[6][6], double pAve,
+			      double cutoff, long np);
 
 char *CenName[6];
 char *CorName[6][6];
@@ -89,9 +96,9 @@ char **pColumn;
   
 int main(int argc, char **argv)
 {
-  SDDS_DATASET SDDSin, SDDSout;
-  char *inputfile, *outputfile;
-  long iPart, particles, i_arg, readCode, noWarnings, row;
+  SDDS_DATASET SDDSin, SDDSout, SDDSgen;
+  char *inputfile, *outputfile, *generateFile;
+  long iPart, particles, i_arg, readCode, noWarnings, row, nToGenerate;
   long i, j;
   SCANNED_ARG *s_arg;
   unsigned long pipeFlags;
@@ -101,13 +108,14 @@ int main(int argc, char **argv)
   double betacor[3], alphacor[3];
   double *data[6], Sbeta[6][6];
   long tmpFileUsed, correctedOnly;
+  double cutoff = 3;
 
   SDDS_RegisterProgramName(argv[0]);
   argc = scanargs(&s_arg, argc, argv);
   if (argc<2) 
     bomb(NULL, USAGE);
 
-  inputfile = outputfile = NULL;
+  inputfile = outputfile = generateFile = NULL;
   pipeFlags = noWarnings = correctedOnly = 0;
   
   for (i_arg=1; i_arg<argc; i_arg++) {
@@ -123,6 +131,14 @@ int main(int argc, char **argv)
       case SET_CORRECTED_ONLY:
         correctedOnly = 1;
         break;
+      case SET_GENERATE:
+	if (s_arg[i_arg].n_items!=4 ||
+	    !strlen(generateFile=s_arg[i_arg].list[1]) ||
+	    sscanf(s_arg[i_arg].list[2], "%ld", &nToGenerate)!=1 ||
+	    sscanf(s_arg[i_arg].list[3], "%lf", &cutoff)!=1 ||
+	    nToGenerate<1)
+	  SDDS_Bomb("invalid -generate syntax");
+	break;
       default:
         fprintf(stdout, "error: unknown switch: %s\n", s_arg[i_arg].list[0]);
         fflush(stdout);
@@ -161,9 +177,15 @@ int main(int argc, char **argv)
   if (!SetUpOutputFile(&SDDSout, outputfile, correctedOnly, &SDDSin))
     SDDS_Bomb("problem setting up output file");
 
+  if (generateFile) {
+    if (!SetUpGenerateFile(&SDDSgen, generateFile))
+      SDDS_Bomb("problem setting up -generate output file");
+    random_1(-987654321);
+  }
+
   for (i=0; i<6; i++)
     data[i] = NULL;
-  
+
   row = 0;
   while ((readCode=SDDS_ReadPage(&SDDSin))>0) {
     if (readCode!=1 && !SDDS_LengthenTable(&SDDSout, 1))
@@ -207,6 +229,9 @@ int main(int argc, char **argv)
           S[j][i] = S[i][j] = sum/particles;
         }
       }
+      if (generateFile)
+	GenerateAndDumpParticles(&SDDSgen, C, S, pAve, cutoff, nToGenerate);
+
       for (i=0; i<6; i++)
         beamsize[i] = sqrt(S[i][i]);
 
@@ -440,5 +465,133 @@ long check_sdds_beam_column(SDDS_TABLE *SDDS_table, char *name, char *units)
   }
   free(units1);
   return(0);
+}
+
+typedef struct {
+    char *name, *text; 
+    } SDDS_DEFINITION;
+
+#define PHASE_SPACE_COLUMNS 7
+static SDDS_DEFINITION column_definition[PHASE_SPACE_COLUMNS] = {
+    {"x", "&column name=x, units=m, type=double &end"},
+    {"xp", "&column name=xp, symbol=\"x'\", type=double &end"},
+    {"y", "&column name=y, units=m, type=double &end"},
+    {"yp", "&column name=yp, symbol=\"y'\", type=double &end"},
+    {"t", "&column name=t, units=s, type=double &end"},
+    {"p", "&column name=p, units=\"m$be$nc\", type=double &end"},
+    {"particleID", "&column name=particleID, type=long &end"},
+    } ;
+
+#define PHASE_SPACE_PARAMETERS 2
+static SDDS_DEFINITION parameter_definition[PHASE_SPACE_PARAMETERS] = {
+  {"pCentral", "&parameter name=pCentral, symbol=\"p$bcen$n\", units=\"m$be$nc\", type=double &end"},
+  {"Particles", "&parameter name=Particles, type=long &end"},
+  };
+
+long SetUpGenerateFile(SDDS_DATASET *SDDSgen, char *generateFile)
+{
+  long i;
+
+  if (!SDDS_InitializeOutput(SDDSgen, SDDS_BINARY, 0, NULL, NULL, generateFile)) {
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+    exit(1);
+  }
+  
+  for (i=0; i<PHASE_SPACE_PARAMETERS; i++) 
+    if (!SDDS_ProcessParameterString(SDDSgen, parameter_definition[i].text, 0) ||
+	SDDS_GetParameterIndex(SDDSgen, parameter_definition[i].name)<0) {
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      exit(1);
+    }
+  
+  /* define SDDS columns */
+  for (i=0; i<PHASE_SPACE_COLUMNS; i++) 
+    if (!SDDS_ProcessColumnString(SDDSgen, column_definition[i].text, 0) ||
+	SDDS_GetColumnIndex(SDDSgen, column_definition[i].name)<0) {
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      exit(1);
+    }
+
+  if (!SDDS_WriteLayout(SDDSgen)) {
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+    exit(1);
+  }
+  return 1;
+}
+
+#include       "matrix.h"
+#include       "matrix2.h"   
+#include       <setjmp.h>
+#include        "err.h"
+
+
+void GenerateAndDumpParticles(SDDS_DATASET *SDDSgen, double C[6], double S[6][6], double pAve,
+			      double cutoff, long np)
+{
+  long i, j, ip;
+  MAT *Sigma, *U, *V, *Ut;
+  VEC *SValue, *Coord1, *Coord0;
+  double sigma[6];
+
+  Sigma = m_get(6, 6);
+  for (i=0; i<6; i++)
+    for (j=0; j<6; j++)
+      Sigma->me[i][j] = S[i][j]/sqrt(S[i][i]*S[j][j]);
+
+  U = m_get(6, 6);
+  V = m_get(6, 6);
+  SValue = v_get(6);
+  svd(Sigma, U, V, SValue);
+  Ut = m_transp(U, MNULL);
+
+#ifdef DEBUG
+  for (i=0; i<6; i++) {
+    printf("U%ld: ", i);
+    for (j=0; j<6; j++)
+      printf("%10.3e ", U->me[i][j]);
+    printf("\n");
+  }
+  for (i=0; i<6; i++) {
+    printf("V%ld: ", i);
+    for (j=0; j<6; j++)
+      printf("%10.3e ", V->me[i][j]);
+    printf("\n");
+  }
+  for (i=0; i<6; i++)
+    printf("S%ld: %10.3e\n", i, SValue->ve[i]);
+#endif
+  
+  for (i=0; i<6; i++)
+    sigma[i] = sqrt(SValue->ve[i]);
+
+  if (!SDDS_StartPage(SDDSgen, np)) {
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+    exit(1);
+  }
+
+  Coord0 = v_get(6);
+  Coord1 = v_get(6);
+  for (ip=0; ip<np; ip++) {
+    for (i=0; i<6; i++)
+      Coord0->ve[i] = gauss_rn_lim(0.0, 1.0, cutoff, random_1)*sigma[i];
+    vm_mlt(V, Coord0, Coord1);
+    for (i=0; i<5; i++)
+      if (!SDDS_SetRowValues(SDDSgen, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ip,
+			     i, Coord1->ve[i]*sqrt(S[i][i])+C[i], -1)) {
+	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+	exit(1);
+      }
+
+    if (!SDDS_SetRowValues(SDDSgen, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ip,
+			   i, pAve*(1+Coord1->ve[i]*sqrt(S[i][i])+C[i]), -1)) {
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      exit(1);
+    }
+  }
+  if (!SDDS_WritePage(SDDSgen)) {
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+    exit(1);
+  }
+  
 }
 

@@ -134,6 +134,7 @@ haissinski_SRCS = haissinski.c
 sddsmatchtwiss_SRCS = sddsmatchtwiss.c
 
 sddsanalyzebeam_SRCS = sddsanalyzebeam.c
+sddsanalyzebeam_CFLAGS = -I../../../../../epics/extensions/src/SDDS/meschach
 
 sddsbrightness_SRCS = sddsbrightness.c
 
