@@ -577,6 +577,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERROR *error1
 
     fprintf(stdout, "Exited optimization loop\n");
     fflush(stdout);
+
     /* evaluate once more at the optimimum point to get all parameters right and to get additional output */
     optim_func_flags = 0;
     force_output = 1;
@@ -634,10 +635,10 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERROR *error1
         for (i=0; i<variables->n_variables; i++)
             fprintf(stdout, "%10s: %23.15e  %23.15e\n", variables->varied_quan_name[i], 
                     variables->varied_quan_value[i], variables->varied_quan_value[i]-variables->initial_value[i]);
-            fflush(stdout);
+        fflush(stdout);
         for (i=0; i<covariables->n_covariables; i++)
             fprintf(stdout, "%10s: %23.15e\n", covariables->varied_quan_name[i], covariables->varied_quan_value[i]);
-            fflush(stdout);
+        fflush(stdout);
         }
     for (i=0; i<variables->n_variables; i++)
         variables->initial_value[i] = variables->varied_quan_value[i];
@@ -683,6 +684,18 @@ static char *floorCoord_name[3] = {
 static long floorCoord_mem[3] = {
   -1, -1, -1,
 };
+
+int showTwissMemories(FILE *fp)
+{
+  long i;
+  
+  for (i=0; i<26; i++) {
+    if (twiss_mem[i]!=-1)
+      fprintf(fp, "%s = %21.15e\n", 
+              twiss_name[i], rpn_recall(twiss_mem[i]));
+  }
+  fflush(fp);
+}
 
 double optimization_function(double *value, long *invalid)
 {
