@@ -573,6 +573,9 @@ long get_sdds_particles(double ***particle, long one_dump, long n_skip)
         if (one_dump && !dump_rejected)
             break;
         }
+
+    if (!data_seen && one_dump)
+      return -1;
     
     fprintf(stderr, "a total of %ld data points were read\n\n", np);
     *particle = data;
