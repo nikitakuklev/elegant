@@ -760,7 +760,7 @@ void reset_special_elements(LINE_LIST *beamline, long includeRF)
             nisept->fse_opt = 0;
             break;
           case T_TMCF:
-            if (!includeRF) {
+            if (includeRF) {
               ((TMCF_MODE*)eptr->p_elem)->fiducial_part = NULL;
             }
             break;
@@ -771,41 +771,41 @@ void reset_special_elements(LINE_LIST *beamline, long includeRF)
             ((TW_PLATES*)eptr->p_elem)->fiducial_part = NULL;
             break;
           case T_TWLA:
-            if (!includeRF) {
+            if (includeRF) {
               ((TW_LINAC*)eptr->p_elem)->fiducial_part = NULL;
             }
             break;
           case T_TWMTA:
-            if (!includeRF) {
+            if (includeRF) {
               ((TWMTA*)eptr->p_elem)->fiducial_part = NULL;
             }
             break;
           case T_RFCA:
-            if (!includeRF) {
+            if (includeRF) {
               ((RFCA*)eptr->p_elem)->fiducial_seen = 0;
             }
             break;
           case T_MODRF:
-            if (!includeRF) {
+            if (includeRF) {
               ((MODRF*)eptr->p_elem)->fiducial_seen = 0;
             }
             break;
           case T_RFMODE:
-            if (!includeRF) {
+            if (includeRF) {
               ((RFMODE*)eptr->p_elem)->initialized = 0;
               if (((RFMODE*)eptr->p_elem)->fprec)
                 fclose(((RFMODE*)eptr->p_elem)->fprec);
             }
             break;
           case T_TRFMODE:
-            if (!includeRF) {
+            if (includeRF) {
               ((TRFMODE*)eptr->p_elem)->initialized = 0;
               if (((TRFMODE*)eptr->p_elem)->fprec)
                 fclose(((TRFMODE*)eptr->p_elem)->fprec);
             }
             break;
           case T_RAMPRF:
-            if (!includeRF) {
+            if (includeRF) {
               ((RAMPRF*)eptr->p_elem)->Ts = 0;
               ((RAMPRF*)eptr->p_elem)->fiducial_seen = 0;
             }
