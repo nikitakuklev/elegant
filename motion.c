@@ -715,6 +715,10 @@ void derivatives_rftmEz0(
   double R, Zoffset, BphiOverRG, ErOverR, BrOverRG;
   double X, Y, Z, sinPhase, cosPhase;
   double B1, B2;
+#if defined(DEBUG)
+  double divisor1, divisor2;
+  static FILE *fpField = NULL;
+#endif
   
   derivCalls++;
   P  = q+3;
@@ -748,7 +752,7 @@ void derivatives_rftmEz0(
     Zoffset = Z-iz*rftmEz0->dZ;
     sinPhase = sin(tau);
     cosPhase = cos(tau);
-    E[2] = (rftmEz0->Ez[iz] + Zoffset*rftmEz0->dEzdZ[iz])*sinPhase*rftmEz0->Ez_peak;
+    E[2] = (rftmEz0->Ez[iz] + Zoffset*rftmEz0->dEzdZ[iz])*rftmEz0->Ez_peak;
     ErOverR = -(rftmEz0->dEzdZ[iz] + 
            (rftmEz0->dEzdZ[iz+1]-rftmEz0->dEzdZ[iz])/rftmEz0->dZ*Zoffset)/2*sinPhase*rftmEz0->Ez_peak;
     E[0] = ErOverR*X;
@@ -757,6 +761,7 @@ void derivatives_rftmEz0(
     BOverGamma[0] = -BphiOverRG*Y;
     BOverGamma[1] = BphiOverRG*X;
     BOverGamma[2] = 0;
+    E[2] *= sinPhase;
   }
 
   /* add scaled solenoid fields */
@@ -802,6 +807,38 @@ void derivatives_rftmEz0(
   Pp[0] = -(E[0] + (P[1]*BOverGamma[2]-P[2]*BOverGamma[1]));
   Pp[1] = -(E[1] + (P[2]*BOverGamma[0]-P[0]*BOverGamma[2]));
   Pp[2] = -(E[2] + (P[0]*BOverGamma[1]-P[1]*BOverGamma[0]));
+
+#if defined(DEBUG)
+  if (!fpField) {
+    fpField = fopen("fields.sdds", "w");
+    fprintf(fpField, "SDDS1\n&column name=X type=double &end\n");
+    fprintf(fpField, "&column name=Y type=double &end\n");
+    fprintf(fpField, "&column name=Z type=double &end\n");
+    fprintf(fpField, "&column name=iZ, type=long &end\n");
+    fprintf(fpField, "&column name=Ex type=double &end\n");
+    fprintf(fpField, "&column name=Ey type=double &end\n");
+    fprintf(fpField, "&column name=Ez type=double &end\n");
+    fprintf(fpField, "&column name=Bx type=double &end\n");
+    fprintf(fpField, "&column name=By type=double &end\n");
+    fprintf(fpField, "&column name=Bz type=double &end\n");
+    fprintf(fpField, "&data mode=ascii no_row_counts=1 &end\n");
+  }
+
+  if (fabs(sinPhase)>1e-14)
+    divisor1 = sinPhase;
+  else 
+    divisor2 = 1e300;
+  if (fabs(cosPhase)>1e-14)
+    divisor2 = cosPhase;
+  else 
+    divisor2 = 1e300;
+  fprintf(fpField, "%le %le %le %ld %le %le %le %le %le %le\n",
+          X, Y, Z, iz,
+          E[0]/divisor1, E[1]/divisor1, E[2]/divisor1,
+          BOverGamma[0]*gamma/divisor2, 
+          BOverGamma[1]*gamma/divisor2, 
+          BOverGamma[2]*gamma/divisor2);
+#endif
 }
 
 void derivatives_mapSolenoid(
@@ -1497,7 +1534,7 @@ void setupRftmEz0FromFile(RFTMEZ0 *rftmEz0, double frequency, double length)
   if (SDDS_CheckColumn(&SDDSin, rftmEz0->EzColumn, NULL, SDDS_ANY_FLOATING_TYPE,
                        stderr)!=SDDS_CHECK_OK) {
     fprintf(stderr, "Error: problem with column %s in RFTMEZ0 file %s.  Check existence and type.\n",
-            rftmEz0->zColumn, rftmEz0->inputFile);
+            rftmEz0->EzColumn, rftmEz0->inputFile);
     exit(1);
   }
   if (!(z=SDDS_GetColumnInDoubles(&SDDSin, rftmEz0->zColumn)) ||
@@ -1506,6 +1543,7 @@ void setupRftmEz0FromFile(RFTMEZ0 *rftmEz0, double frequency, double length)
             rftmEz0->inputFile);
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
+  
   rftmEz0->z0 = z[0];
 
   if (!SDDS_Terminate(&SDDSin)) {
