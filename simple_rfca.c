@@ -82,7 +82,7 @@ long simple_rf_cavity(
     long ip, same_dgamma, nKicks, linearize;
     double timeOffset, inverseF, dc4, x, xp;
     double P, gamma, dgamma=0.0, dgammaMax=0.0, phase, length, volt, To;
-    double *coord, t, t0, omega, beta_i, tau, dt;
+    double *coord, t, t0, omega, beta_i, tau, dt, tAve, dgammaAve;
     long useSRSModel = 0;
     static long been_warned = 0, been_warned_kicks=0;
 #ifdef DEBUG
@@ -245,7 +245,18 @@ long simple_rf_cavity(
     if (nKicks>1)
       bomb("n_kicks>1 not yet supported for rfca element", NULL);
 
-    linearize = rfca->linearize;
+    if ((linearize = rfca->linearize)) {
+      tAve = 0;
+      for (ip=0; ip<np; ip++) {
+	coord = part[ip];
+	P     = *P_central*(1+coord[5]);
+	beta_i = P/(gamma=sqrt(sqr(P)+1));
+	t     = coord[4]/(c_mks*beta_i)-timeOffset;
+	tAve += t;
+      }
+      tAve /= np;
+      dgammaAve = volt*sin(omega*tAve+phase);
+    }
 
     for (ip=0; ip<np; ip++) {
         coord = part[ip];
@@ -270,7 +281,7 @@ long simple_rf_cavity(
 	    if (!linearize)
 	      dgamma = volt*sin(omega*t+phase)*(tau?sqrt(1-exp(-dt/tau)):1);
 	    else
-	      dgamma = volt*(PI-fmod(omega*t+phase, PIx2));
+	      dgamma = dgammaAve +  volt*omega*(t-tAve)*cos(omega*tAve+phase);
 	  }
 
           if (rfca->end1Focus && length) {
@@ -318,11 +329,13 @@ long simple_rf_cavity(
 	    if (!linearize) {
 	      sin_phase = sin(omega*t+phase);
 	      cos_phase = cos(omega*t+phase);
+	      dgamma = (dgammaMax=volt*(tau?sqrt(1-exp(-dt/tau)):1))*sin_phase;
 	    } else {
-	      sin_phase = PI-fmod(omega*t+phase, PIx2);
-	      cos_phase = 1;
+	      cos_phase = cos(omega*tAve+phase);
+	      sin_phase = omega*(t-tAve)*cos_phase;
+	      dgamma = (dgammaMax=volt*(tau?sqrt(1-exp(-dt/tau)):1))*sin_phase +
+		dgammaAve;
 	    }
-            dgamma = (dgammaMax=volt*(tau?sqrt(1-exp(-dt/tau)):1))*sin_phase;
           }
           
           if (rfca->end1Focus && length) {
