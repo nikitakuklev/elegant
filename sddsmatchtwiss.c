@@ -55,6 +55,9 @@ CopyrightNotice001*/
  * Michael Borland, 2000
  *
  $Log: not supported by cvs2svn $
+ Revision 1.15  2002/05/29 20:06:03  borland
+ Allow zero emittances.
+
  Revision 1.14  2002/05/20 23:08:39  borland
  Fixed memory leak.
 
@@ -123,16 +126,28 @@ char *option[N_OPTIONS] = {
 } ;
 
 char *USAGE="sddsmatchtwiss [-pipe=[input][,output]] [<SDDSinputfile>] [<SDDSoutputfile>]\n\
-  [-xPlane=[beta=<meters>,alpha=<value>][nemittance=<meters>,][,etaValue=<meters>][,etaSlope=<value>]]\n\
-  [-yPlane=[beta=<meters>,alpha=<value>][nemittance=<meters>,][,etaValue=<meters>][,etaSlope=<value>]]\n\
-  [-zPlane=[deltaStDev=<value>][,tStDev=<seconds>][,{correlation=<seconds>|alpha=<value>}][,chirp=<1/seconds>][,betaGamma=<central-value>]]\n\
+  [-xPlane=[beta=<meters>,alpha=<value>][nemittance=<meters>,]\n\
+           [,etaValue=<meters>][,etaSlope=<value>]\n\
+           [,filename=<filename>[,element=<name>[,occurrence=<number>]]]]\n\
+  [-yPlane=[beta=<meters>,alpha=<value>][nemittance=<meters>,]\n\
+           [,etaValue=<meters>][,etaSlope=<value>]\n\
+           [,filename=<filename>[,element=<name>[,occurrence=<number>]]]]\n\
+  [-zPlane=[deltaStDev=<value>][,tStDev=<seconds>]\n\
+           [,{correlation=<seconds>|alpha=<value>}][,chirp=<1/seconds>]\n\
+           [,betaGamma=<central-value>]]\n\
   [-nowarnings] [-oneTransform]\n\
 The input file must have columns x, xp, y, yp, and p; for example, an\n\
-elegant beam output file is acceptable.  beta and alpha must be given\n\
-together, or omitted together.  etaValue and etaSlope may be given\n\
-individually or together.  If etaValue is not given, the coordinates\n\
-have no dispersion adjustment.  If etaSlope is not given, then slopes\n\
-have no dispersion adjustment.\n\
+elegant beam output file is acceptable.  If filename is not given, then\n\
+beta and alpha must be given together, or omitted together.  etaValue \n\
+and etaSlope may be given individually or together.  If etaValue is not \n\
+given, the coordinates have no dispersion adjustment.  If etaSlope is not \n\
+given, then slopes have no dispersion adjustment.\n\
+If filename is given, the file is expected to be an elegant twiss parameter\n\
+output file.  By default, all twiss parameters are taken from the final row\n\
+of the first page of this file.  If 'element' is given, however, the twiss\n\
+parameters are taken from the last row for which the element name matches the\n\
+given string.  However, if 'occurrence=<n>' is given, then the data is taken from\n\
+the nth matching row.\n\
 For -zPlane, operations are performed as follows: matching of the\n\
 fraction momentum spread, bunch length, and correlation/alpha;\n\
 application of the chirp; adjustment of central beta-gamma.\n\
@@ -148,11 +163,16 @@ typedef struct {
   unsigned long flags;
   double R11, R12, R21, R22;
   double etaBeam, etapBeam;
-#define BETA_GIVEN  0x0001UL
-#define ALPHA_GIVEN 0x0002UL
-#define ETA_GIVEN   0x0004UL
-#define ETAP_GIVEN  0x0008UL
-#define NEMIT_GIVEN 0x0010UL
+  char *filename, *element;
+  long occurrence;
+#define BETA_GIVEN       0x0001UL
+#define ALPHA_GIVEN      0x0002UL
+#define ETA_GIVEN        0x0004UL
+#define ETAP_GIVEN       0x0008UL
+#define NEMIT_GIVEN      0x0010UL
+#define FILENAME_GIVEN   0x0020UL
+#define ELEMENT_GIVEN    0x0040UL
+#define OCCURRENCE_GIVEN 0x0080UL
 } PLANE_SPEC;
 
 typedef struct {
@@ -173,7 +193,7 @@ long PerformZTransformation(double *t, double *p, double *x, double *xp,
                             double *y, double *yp, long rows, ZPLANE_SPEC *match, long compute);
 
 long check_sdds_beam_column(SDDS_TABLE *SDDS_table, char *name, char *units);
-
+long LoadTwissFromFile(PLANE_SPEC *spec, long yPlane);
 
 int main(int argc, char **argv)
 {
@@ -209,12 +229,20 @@ int main(int argc, char **argv)
                           "nemittance", SDDS_DOUBLE, &xSpec.normEmittance, 1, NEMIT_GIVEN,
                           "etavalue", SDDS_DOUBLE, &xSpec.eta, 1, ETA_GIVEN,
                           "etaslope", SDDS_DOUBLE, &xSpec.etap, 1, ETAP_GIVEN,
+			  "filename", SDDS_STRING, &xSpec.filename, 1, FILENAME_GIVEN,
+			  "element", SDDS_STRING, &xSpec.element, 1, ELEMENT_GIVEN,
+			  "occurrence", SDDS_LONG, &xSpec.occurrence, 1, 
+			  OCCURRENCE_GIVEN,
                           NULL) ||
             (xSpec.flags&BETA_GIVEN && !(xSpec.flags&ALPHA_GIVEN)) ||
             (!(xSpec.flags&BETA_GIVEN) && xSpec.flags&ALPHA_GIVEN) ||
             (xSpec.flags&BETA_GIVEN && xSpec.beta<=0) || 
-            (xSpec.flags&NEMIT_GIVEN && xSpec.normEmittance<0))
+            (xSpec.flags&NEMIT_GIVEN && xSpec.normEmittance<0) ||
+	    ((xSpec.flags&ELEMENT_GIVEN || xSpec.flags&OCCURRENCE_GIVEN) &&
+	     !(xSpec.flags&FILENAME_GIVEN)))
           SDDS_Bomb("invalid -xPlane syntax/values---watch out for abbreviations of etaValue and etaSlope");
+	if (xSpec.flags&FILENAME_GIVEN && !LoadTwissFromFile(&xSpec, 0)) 
+	  SDDS_Bomb("invalid -xPlane syntax/values---problem loading data from twiss file");
         break;
       case SET_YPLANE:
         ySpec.flags = 0;
@@ -225,12 +253,20 @@ int main(int argc, char **argv)
                           "nemittance", SDDS_DOUBLE, &ySpec.normEmittance, 1, NEMIT_GIVEN,
                           "etavalue", SDDS_DOUBLE, &ySpec.eta, 1, ETA_GIVEN,
                           "etaslope", SDDS_DOUBLE, &ySpec.etap, 1, ETAP_GIVEN,
+			  "filename", SDDS_STRING, &ySpec.filename, 1, FILENAME_GIVEN,
+			  "element", SDDS_STRING, &ySpec.element, 1, ELEMENT_GIVEN,
+			  "occurrence", SDDS_LONG, &ySpec.occurrence, 1, 
+			  OCCURRENCE_GIVEN,
                           NULL) ||
             (ySpec.flags&BETA_GIVEN && !(ySpec.flags&ALPHA_GIVEN)) ||
             (!(ySpec.flags&BETA_GIVEN) && ySpec.flags&ALPHA_GIVEN) ||
             (ySpec.flags&BETA_GIVEN && ySpec.beta<=0) ||
-            (ySpec.flags&NEMIT_GIVEN && ySpec.normEmittance<0))
+            (ySpec.flags&NEMIT_GIVEN && ySpec.normEmittance<0) ||
+	    ((ySpec.flags&ELEMENT_GIVEN || ySpec.flags&OCCURRENCE_GIVEN) &&
+	     !(ySpec.flags&FILENAME_GIVEN)))
           SDDS_Bomb("invalid -yPlane syntax/values---watch out for abbreviations of etaValue and etaSlope");
+	if (ySpec.flags&FILENAME_GIVEN && !LoadTwissFromFile(&ySpec, 1)) 
+	  SDDS_Bomb("invalid -yPlane syntax/values---problem loading data from twiss file");
         break;
       case SET_ZPLANE:
         zSpec.flags = 0;
@@ -569,5 +605,76 @@ long check_sdds_beam_column(SDDS_TABLE *SDDS_table, char *name, char *units)
   }
   free(units1);
   return(0);
+}
+
+long LoadTwissFromFile(PLANE_SPEC *spec, long yPlane)
+{
+  SDDS_DATASET SDDSin;
+  long rows=0, rowOfInterest;
+  double *betaData=NULL, *alphaData=NULL;
+  double *etaData=NULL, *etapData=NULL;
+  char *name[8] = {"betax", "alphax", "etax", "etaxp",
+		   "betay", "alphay", "etay", "etayp"};
+
+  if (!SDDS_InitializeInput(&SDDSin, spec->filename) || 
+      SDDS_ReadPage(&SDDSin)!=1) {
+    SDDS_SetError("problem reading Twiss reference file");
+    return 0;
+  }
+  if (SDDS_CheckColumn(&SDDSin, name[4*yPlane+0], "m", 
+		       SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK ||
+      SDDS_CheckColumn(&SDDSin, name[4*yPlane+1], NULL, 
+		       SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK ||
+      SDDS_CheckColumn(&SDDSin, name[4*yPlane+2], "m", 
+		       SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK ||
+      SDDS_CheckColumn(&SDDSin, name[4*yPlane+3], NULL, 
+		       SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK ||
+      SDDS_CheckColumn(&SDDSin, "ElementName", NULL, 
+		       SDDS_STRING, stdout)!=SDDS_CHECK_OK) {
+    SDDS_SetError("invalid/missing columns in Twiss reference file");
+    return 0;
+  }
+  if (spec->flags&ELEMENT_GIVEN) {
+    if (!SDDS_SetRowFlags(&SDDSin, 1) ||
+        (rows=SDDS_MatchRowsOfInterest(&SDDSin, "ElementName", spec->element,
+				       SDDS_AND))<=0) {
+      SDDS_SetError("Problem finding data for beta function reference.  Check for existence of element.");
+      return 0;
+    }
+    if (spec->occurrence>0 && spec->occurrence>rows) {
+      SDDS_SetError("Too few occurrences of reference element in beta function reference file.");
+      return 0;
+    }
+  } 
+  if ((rows=SDDS_CountRowsOfInterest(&SDDSin))<1) {
+    SDDS_SetError("No data in beta function reference file.");
+    return 0;
+  }
+  if (!(betaData=SDDS_GetColumnInDoubles(&SDDSin, name[4*yPlane+0])) ||
+      !(alphaData=SDDS_GetColumnInDoubles(&SDDSin, name[4*yPlane+1])) ||
+      !(etaData=SDDS_GetColumnInDoubles(&SDDSin, name[4*yPlane+2])) ||
+      !(etapData=SDDS_GetColumnInDoubles(&SDDSin, name[4*yPlane+3])) ) {
+    SDDS_SetError("Problem getting data for beta function reference.");
+    return 0;
+  }
+  if (spec->element && spec->occurrence>0)
+    rowOfInterest = spec->occurrence-1;
+  else
+    rowOfInterest = rows-1;
+  if (!(spec->flags&BETA_GIVEN))
+    spec->beta = betaData[rowOfInterest];
+  if (!(spec->flags&ALPHA_GIVEN))
+    spec->alpha = alphaData[rowOfInterest];
+  if (!(spec->flags&ETA_GIVEN))
+    spec->eta = etaData[rowOfInterest];
+  if (!(spec->flags&ETAP_GIVEN))
+    spec->etap = etapData[rowOfInterest];
+  spec->flags |= BETA_GIVEN+ALPHA_GIVEN+ETA_GIVEN+ETAP_GIVEN;
+
+  free(betaData);
+  free(alphaData);
+  free(etaData);
+  free(etapData);
+  return 1;
 }
 
