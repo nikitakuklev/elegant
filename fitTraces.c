@@ -3,6 +3,11 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.4  1998/03/19 21:00:55  borland
+ * Removed items from track.h and put them in three new files (correctDefs.h,
+ * tuneDefs.h, chromDefs.h) to isolate references to matlib.h; this is to
+ * allow use of the Meschach matrix library in parts of elegant.
+ *
  * Revision 1.3  1998/03/17 20:02:26  borland
  * All printouts now go to stderr, rather than the previous mix of
  * stderr and stdout.
@@ -22,12 +27,13 @@
 #include "mdb.h"
 #include "track.h"
 #include "fitTraces.h"
-#include "matlib.h"
-/* #include "meschach.h" */
+#include "meschach.h"
+
 
 typedef struct {
   long BPMs, traces;        /* number of BPMs and number of traces */
   char **BPMName;           /* BPM names */
+  long *xParamIndex, *yParamIndex;  /* user parameter index of this BPM for x/y, if used */
   double **x, **y;          /* measured beam position readout at BPMs */
   double **xSim, **ySim;    /* simulated coordinates at BPMs---*not* simulated readout! */
   ELEMENT_LIST **element;   /* pointer to the element structure */
@@ -38,7 +44,7 @@ typedef struct {
 typedef struct {
   long parameters;
   char **elementName, **parameterName;
-  double *delta, *changeLimit;
+  double *delta, *changeLimit, *lowerLimit, *upperLimit;
   double **paramData; /* will point to the actual location used to store the parameter value in
                          the element structure */
   ELEMENT_LIST **target;
@@ -58,8 +64,8 @@ void find_trajectory_bpm_readouts(double *xReadout, double *yReadout, double *xA
                                   long BPMs, LINE_LIST *beamline, RUN *run,
                                   TRAJECTORY *trajBuffer, double *startingCoordinate, double momentum);
 void fit_traces_findDerivatives(FIT_TRACE_DATA *traceData, FIT_TRACE_PARAMETERS *fitParam,
-                                MATRIX *D, LINE_LIST *beamline, RUN *run);
-double fit_trace_findReadbackErrors(MATRIX *readbackError, FIT_TRACE_DATA *traceData,
+                                MAT *D, LINE_LIST *beamline, RUN *run);
+double fit_trace_findReadbackErrors(MAT *readbackError, FIT_TRACE_DATA *traceData,
                                     LINE_LIST *beamline, RUN *run);
 FIT_OUTPUT_DATA *fit_trace_setUpOutputFile(char *filename,
                                            FIT_TRACE_PARAMETERS *fitParam,
@@ -71,23 +77,33 @@ void fit_trace_saveParamValues(double *buffer, FIT_TRACE_DATA *traceData,
 void fit_trace_restoreParamValues(double *buffer, FIT_TRACE_DATA *traceData,
                                   FIT_TRACE_PARAMETERS *fitParam, 
                                   FIT_TRACE_PARAMETERS *bpmCalParam, RUN *run);
-double fit_trace_takeStep(MATRIX *D, MATRIX *Dt, MATRIX *DtD, MATRIX *DtDInv, MATRIX *DtDInvDt, 
-                          MATRIX *readbackVector, MATRIX *paramVector,FIT_TRACE_DATA *traceData, 
+double fit_trace_takeStep(MAT *D, MAT *readbackVector, MAT *paramVector, FIT_TRACE_DATA *traceData, 
                           FIT_TRACE_PARAMETERS *fitParam, LINE_LIST *beamline, RUN *run,
                           double convergenceFactor, double position_change_limit,
-                          double slope_change_limit);
+                          double slope_change_limit, long use_SVD, long singular_values);
 void fit_trace_setRowValues(FIT_OUTPUT_DATA *outputData, long iteration, 
                             double rmsError, double lastRmsError, double pass,
                             double convergenceFactor, FIT_TRACE_DATA *traceData, 
                             FIT_TRACE_PARAMETERS *fitParam, FIT_TRACE_PARAMETERS *bpmCalParam);
-double fit_trace_calibrateMonitors(MATRIX *readbackVector, FIT_TRACE_DATA *traceData, 
+double fit_trace_calibrateMonitors(MAT *readbackVector, FIT_TRACE_DATA *traceData, 
                                    FIT_TRACE_PARAMETERS *fitParam, FIT_TRACE_PARAMETERS *bpmCalData,
                                    LINE_LIST *beamline,
-                                   RUN *run, double bpm_calibration_factor,
-                                   double bpm_calibration_error_limit);
+                                   RUN *run, double convergence_factor, long reject_common_mode);
 long fit_trace_setUpTraceOutput(char *filename);
 void fit_trace_writeTraceOutput(char *filename, FIT_TRACE_DATA *traceData,
-                                LINE_LIST *beamline, RUN *run, MATRIX *readbackError);
+                                LINE_LIST *beamline, RUN *run, MAT *readbackError);
+
+MAT *m_diag( VEC *diagElements, MAT *A ) {
+  long i;
+  if(!diagElements)
+    bomb("Problem with allocation of vector of diagonal elements.\n",NULL);
+  if (!A)
+    A = m_get(diagElements->dim, diagElements->dim);
+  m_zero(A);
+  for(i=0;i<MIN(A->n,A->m);i++)
+    A->me[i][i]=diagElements->ve[i];
+  return A;
+}
 
 void do_fit_trace_data(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 {
@@ -97,8 +113,8 @@ void do_fit_trace_data(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
   double rmsError, lastRmsError;
   FIT_TRACE_PARAMETERS *fitParam, *bpmCalParam;
   FIT_TRACE_DATA *traceData;
-  MATRIX *D, *Dt, *DtD, *DtDInv, *DtDInvDt, *readbackVector, *paramVector;
-  MATRIX *D0, *Dt0, *DtD0, *DtDInv0, *DtDInvDt0, *readbackVector0, *paramVector0;
+  MAT *D, *Dt, *DtD, *DtDInv, *DtDInvDt, *readbackVector, *paramVector;
+  MAT *D0, *Dt0, *DtD0, *DtDInv0, *DtDInvDt0, *readbackVector0, *paramVector0;
   double *lastParameterValues, *startParameterValues;
   FIT_OUTPUT_DATA *outputData;
   double rmsErrorDelta[3];
@@ -183,21 +199,13 @@ void do_fit_trace_data(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
    * parameterVector is organized as follows:
    *   pV(j,0) = jth parameter, where j is as above
    */
-  m_alloc(&D, readbacks, parameters);
-  m_alloc(&Dt, parameters, readbacks);
-  m_alloc(&DtD, parameters, parameters);
-  m_alloc(&DtDInv, parameters, parameters);
-  m_alloc(&DtDInvDt, parameters, readbacks);
-  m_alloc(&readbackVector, readbacks, 1);    /* really the vector of readback errors */
-  m_alloc(&paramVector, parameters, 1);      /* really the vector of parameter deltas */
+  D = m_get(readbacks, parameters);
+  readbackVector = m_get(readbacks, 1);    /* really the vector of readback errors */
+  paramVector = m_get(parameters, 1);      /* really the vector of parameter deltas */
 
-  m_alloc(&D0, readbacks, parameters-fitParam->parameters);
-  m_alloc(&Dt0, parameters-fitParam->parameters, readbacks);
-  m_alloc(&DtD0, parameters-fitParam->parameters, parameters-fitParam->parameters);
-  m_alloc(&DtDInv0, parameters-fitParam->parameters, parameters-fitParam->parameters);
-  m_alloc(&DtDInvDt0, parameters-fitParam->parameters, readbacks);
-  m_alloc(&readbackVector0, readbacks, 1);
-  m_alloc(&paramVector0, parameters-fitParam->parameters, 1);
+  D0 = m_get(readbacks, parameters-fitParam->parameters);
+  readbackVector0 = m_get(readbacks, 1);
+  paramVector0 = m_get(parameters-fitParam->parameters, 1);
 
   lastRmsError = rmsError = 0;
   for (iteration=outputRow=goodSteps=0; iteration<iterations; iteration++) {
@@ -205,74 +213,65 @@ void do_fit_trace_data(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
                            convergence_factor, traceData, fitParam, bpmCalParam);
 
     lastRmsError = fit_trace_findReadbackErrors(readbackVector, traceData, beamline, run);
-    fprintf(stderr, "Doing iteration %ld   error is %le\n", iteration, lastRmsError);
     
-    if (iteration>=0) {
-      passCount = 0;
-      subIteration = sub_iterations;
-      do {
-        /* fit_trace_saveParamValues(lastParameterValues, traceData, fitParam); */
-        rmsError = fit_trace_calibrateMonitors(readbackVector, traceData, fitParam, bpmCalParam,
-                                               beamline, run, convergence_factor,
-                                               bpm_calibration_error_limit);
-        rmsError = fit_trace_takeStep(D, Dt, DtD, DtDInv, DtDInvDt, readbackVector, paramVector,
-                                      traceData, fitParam, beamline, run,
-                                      convergence_factor, position_change_limit,
-                                      slope_change_limit);
-        passCount++;
-        if (rmsError<target)
-          break;
-        if (lastRmsError<rmsError) {
-          convergence_factor /= convergence_factor_divisor;
-          if (convergence_factor<convergence_factor_min)
-            convergence_factor = convergence_factor_min;
+    for (i=passCount=goodSteps=0; i<trace_sub_iterations; i++) {
+      rmsError = fit_trace_takeStep(D0, readbackVector0, paramVector0,
+                                    traceData, NULL, beamline, run,
+                                    trace_convergence_factor, position_change_limit,
+                                    slope_change_limit, use_SVD, singular_values);
+      passCount++;
+      if (lastRmsError<rmsError) {
+        trace_convergence_factor /= convergence_factor_divisor;
+        goodSteps = 0;
+      } else {
+        goodSteps++;
+        if (goodSteps>=convergence_increase_steps) {
+          trace_convergence_factor *= convergence_factor_multiplier;
           goodSteps = 0;
-        } else {
-          goodSteps++;
-          if (goodSteps>=convergence_increase_steps) {
-            convergence_factor *= convergence_factor_multiplier;
-            if (convergence_factor>convergence_factor_max)
-              convergence_factor = convergence_factor_max;
-            goodSteps = 0;
-          }
         }
-        pass++;
-        lastRmsError = rmsError;
-      } while (--subIteration > 0);
-      rmsError = fit_trace_findReadbackErrors(readbackVector, traceData, beamline, run);
-      fprintf(stderr, "rms error is %le  C=%le  %ld passes\n", 
-              rmsError, convergence_factor, passCount);
-    }    
-
-    if (0) {
-      for (i=passCount=goodSteps=0; i<trace_sub_iterations; i++) {
-        rmsError = fit_trace_takeStep(D0, Dt0, DtD0, DtDInv0, DtDInvDt0, 
-                                      readbackVector0, paramVector0,
-                                      traceData, NULL, beamline, run,
-                                      trace_convergence_factor, position_change_limit,
-                                      slope_change_limit);
-        passCount++;
-        if (lastRmsError<rmsError) {
-          trace_convergence_factor /= convergence_factor_divisor;
-          goodSteps = 0;
-        } else {
-          goodSteps++;
-          if (goodSteps>=convergence_increase_steps) {
-            trace_convergence_factor *= convergence_factor_multiplier;
-            goodSteps = 0;
-          }
-        }
-        
-        if (i && fabs(lastRmsError-rmsError)/(rmsError+1e-10)<1e-4)
-          break;
-        lastRmsError = rmsError;
-        fprintf(stderr, "Trace fitting: error is %le   convergence factor is %le\n",
-                rmsError, trace_convergence_factor);
       }
-      fprintf(stderr, "RMS error is %le after trace optimization  %ld passes\n", 
-              rmsError, passCount);    
+      
+      if (i && fabs(lastRmsError-rmsError)/(rmsError+1e-10)<trace_fractional_target)
+        break;
+      lastRmsError = rmsError;
     }
+    fprintf(stderr, "RMS error is %le after trace optimization  %ld passes\n", 
+            rmsError, passCount);    
 
+    passCount = 0;
+    subIteration = sub_iterations;
+    do {
+      /* fit_trace_saveParamValues(lastParameterValues, traceData, fitParam); */
+      rmsError = fit_trace_takeStep(D, readbackVector, paramVector,
+                                    traceData, fitParam, beamline, run,
+                                    convergence_factor, position_change_limit,
+                                    slope_change_limit, use_SVD, singular_values);
+      rmsError = fit_trace_calibrateMonitors(readbackVector, traceData, fitParam, bpmCalParam,
+                                             beamline, run, convergence_factor, 
+                                             reject_BPM_common_mode);
+      passCount++;
+      if (rmsError<target)
+        break;
+      if (lastRmsError<rmsError) {
+        convergence_factor /= convergence_factor_divisor;
+        if (convergence_factor<convergence_factor_min)
+          convergence_factor = convergence_factor_min;
+        goodSteps = 0;
+      } else {
+        goodSteps++;
+        if (goodSteps>=convergence_increase_steps) {
+          convergence_factor *= convergence_factor_multiplier;
+          if (convergence_factor>convergence_factor_max)
+            convergence_factor = convergence_factor_max;
+          goodSteps = 0;
+        }
+      }
+      pass++;
+      lastRmsError = rmsError;
+    } while (--subIteration > 0);
+    rmsError = fit_trace_findReadbackErrors(readbackVector, traceData, beamline, run);
+    fprintf(stderr, "RMS error is %le after full  optimization  %ld passes,  C=%le\n", 
+            rmsError, passCount, convergence_factor);
     if (rmsError<target)
       break;
   }
@@ -292,7 +291,7 @@ void fit_trace_writeTraceOutput
    FIT_TRACE_DATA *traceData,
    LINE_LIST *beamline,
    RUN *run,
-   MATRIX *readbackError
+   MAT *readbackError
    )
 {
   SDDS_TABLE SDDSout;
@@ -319,8 +318,8 @@ void fit_trace_writeTraceOutput
     }
     for (iBPM=0; iBPM<traceData->BPMs; iBPM++) {
       row = 2*iTrace*traceData->BPMs + 2*iBPM ;
-      x = readbackError->a[row  ][0] + traceData->x[iTrace][iBPM];
-      y = readbackError->a[row+1][0] + traceData->y[iTrace][iBPM];
+      x = readbackError->me[row  ][0] + traceData->x[iTrace][iBPM];
+      y = readbackError->me[row+1][0] + traceData->y[iTrace][iBPM];
       if (!SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iBPM,
                              "xFit", x, "yFit", y, 
                              "BPMName", traceData->BPMName[iBPM], NULL)) {
@@ -337,7 +336,7 @@ void fit_trace_writeTraceOutput
 
 double fit_trace_findReadbackErrors
   (
-   MATRIX *readbackError,
+   MAT *readbackError,
    FIT_TRACE_DATA *traceData,
    LINE_LIST *beamline,
    RUN *run
@@ -382,9 +381,9 @@ double fit_trace_findReadbackErrors
                                  beamline, run, trajectory, startingCoord, p);
     for (iBPM=0; iBPM<traceData->BPMs; iBPM++) {
       row = 2*iTrace*traceData->BPMs + 2*iBPM ;
-      readbackError->a[row  ][0] = x[iBPM]-traceData->x[iTrace][iBPM];
-      readbackError->a[row+1][0] = y[iBPM]-traceData->y[iTrace][iBPM];
-      sum += sqr(readbackError->a[row  ][0])+sqr(readbackError->a[row+1][0]);
+      readbackError->me[row  ][0] = x[iBPM]-traceData->x[iTrace][iBPM];
+      readbackError->me[row+1][0] = y[iBPM]-traceData->y[iTrace][iBPM];
+      sum += sqr(readbackError->me[row  ][0])+sqr(readbackError->me[row+1][0]);
       count++;
     }
   }
@@ -395,7 +394,7 @@ void fit_traces_findDerivatives
   (
    FIT_TRACE_DATA *traceData,
    FIT_TRACE_PARAMETERS *fitParam,
-   MATRIX *D,
+   MAT *D,
    LINE_LIST *beamline,
    RUN *run
    )
@@ -428,7 +427,7 @@ void fit_traces_findDerivatives
 
   for (iCoord=0; iCoord<D->n; iCoord++) {
     for (iBPM=0; iBPM<D->m; iBPM++) {
-      D->a[iCoord][iBPM] = 0;
+      D->me[iCoord][iBPM] = 0;
     }
   }
 
@@ -456,8 +455,8 @@ void fit_traces_findDerivatives
       column = iCoord+4*iTrace;
       for (iBPM=0; iBPM<traceData->BPMs; iBPM++) {
         row = 2*iTrace*traceData->BPMs+2*iBPM;
-        D->a[row  ][column] = (x[iBPM]-x0[iBPM])/1e-6;
-        D->a[row+1][column] = (y[iBPM]-y0[iBPM])/1e-6;
+        D->me[row  ][column] = (x[iBPM]-x0[iBPM])/1e-6;
+        D->me[row+1][column] = (y[iBPM]-y0[iBPM])/1e-6;
       }
     }
   }
@@ -488,8 +487,8 @@ void fit_traces_findDerivatives
       column = 4*traceData->traces + iUserParam;
       for (iBPM=0; iBPM<traceData->BPMs; iBPM++) {
         row = 2*iTrace*traceData->BPMs+2*iBPM;
-        D->a[row  ][column] = (x[iBPM]-x0[iBPM])/fitParam->delta[iUserParam];
-        D->a[row+1][column] = (y[iBPM]-y0[iBPM])/fitParam->delta[iUserParam];
+        D->me[row  ][column] = (x[iBPM]-x0[iBPM])/fitParam->delta[iUserParam];
+        D->me[row+1][column] = (y[iBPM]-y0[iBPM])/fitParam->delta[iUserParam];
       }
     }
   }
@@ -552,10 +551,7 @@ FIT_TRACE_PARAMETERS *fit_traces_readFitParametersFile
   long i;
   FIT_TRACE_PARAMETERS *ftp;
   long parameterIndex, elementType, changeLimitsPresent;
-#define CALIBPARAMETERNAMES 3
-  static char *calibParameterName[CALIBPARAMETERNAMES] = {
-    "XCALIBRATION", "YCALIBRATION", "CALIBRATION",
-  };
+  long lowerLimitsPresent, upperLimitsPresent;
   char **name0;
   long names0;
   ELEMENT_LIST *elem;
@@ -584,6 +580,32 @@ FIT_TRACE_PARAMETERS *fit_traces_readFitParametersFile
     exit(1);
     break;
   }
+
+  switch (SDDS_CheckColumn(&SDDSin, "LowerLimit", NULL, SDDS_ANY_NUMERIC_TYPE, NULL)) {
+  case SDDS_CHECK_OKAY:
+    lowerLimitsPresent = 1;
+    break;
+  case SDDS_CHECK_NONEXISTENT:
+    lowerLimitsPresent = 0;
+    break;
+  default:
+    fprintf(stderr, "Problem with column LowerLimit.");
+    exit(1);
+    break;
+  }
+  switch (SDDS_CheckColumn(&SDDSin, "UpperLimit", NULL, SDDS_ANY_NUMERIC_TYPE, NULL)) {
+  case SDDS_CHECK_OKAY:
+    upperLimitsPresent = 1;
+    break;
+  case SDDS_CHECK_NONEXISTENT:
+    upperLimitsPresent = 0;
+    break;
+  default:
+    fprintf(stderr, "Problem with column UpperLimit.");
+    exit(1);
+    break;
+  }
+  
   
   if (SDDS_ReadPage(&SDDSin)<=0) {
     fprintf(stderr, "Problem reading data from file %s\n", dataFile);
@@ -594,6 +616,7 @@ FIT_TRACE_PARAMETERS *fit_traces_readFitParametersFile
     fprintf(stderr, "Error: memory allocation failure (fit_traces_readFitParametersFile)\n");
     exit(1);
   }
+  ftp->changeLimit = ftp->lowerLimit = ftp->upperLimit = NULL;
   if (!(name0=SDDS_GetColumn(&SDDSin, "ElementName"))) {
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
     exit(1);
@@ -629,11 +652,13 @@ FIT_TRACE_PARAMETERS *fit_traces_readFitParametersFile
     fprintf(stderr, "Error: memory allocation failure (fit_traces_readFitParametersFile)\n");
     exit(1);
   }
-  ftp->changeLimit = NULL;
+  ftp->changeLimit = ftp->lowerLimit = ftp->upperLimit = NULL;
   if (!(ftp->elementName = SDDS_GetColumn(&SDDSin, "ElementName")) ||
       !(ftp->parameterName = SDDS_GetColumn(&SDDSin, "ElementParameter")) || 
       !(ftp->delta = SDDS_GetColumnInDoubles(&SDDSin, "Delta")) ||
-      (changeLimitsPresent && !(ftp->changeLimit=SDDS_GetColumnInDoubles(&SDDSin, "ChangeLimit")))) {
+      (changeLimitsPresent && !(ftp->changeLimit=SDDS_GetColumnInDoubles(&SDDSin, "ChangeLimit"))) ||
+      (lowerLimitsPresent && !(ftp->lowerLimit=SDDS_GetColumnInDoubles(&SDDSin, "LowerLimit"))) ||
+      (upperLimitsPresent && !(ftp->upperLimit=SDDS_GetColumnInDoubles(&SDDSin, "UpperLimit")))) {
     fprintf(stderr, "Problem reading data from file %s\n", dataFile);
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
     exit(1);
@@ -663,6 +688,25 @@ FIT_TRACE_PARAMETERS *fit_traces_readFitParametersFile
       = ((double*)(ftp->target[i]->p_elem +
                    entity_description[elementType].parameter[parameterIndex].offset));
     ftp->definedValue[i] = *(ftp->paramData[i]);
+    if (ftp->lowerLimit || ftp->upperLimit) {
+      if (ftp->lowerLimit && ftp->upperLimit) {
+        if (ftp->lowerLimit[i]==ftp->upperLimit[i])
+          continue;
+        if (ftp->lowerLimit[i]>ftp->upperLimit[i]) {
+          fprintf(stderr, "Error: upperLimit<lowerLimit for parameter %s of element %s\n",
+                  ftp->parameterName[i], ftp->elementName[i]);
+          exit(1);
+        }
+      }
+      if (ftp->lowerLimit && ftp->lowerLimit[i]>ftp->definedValue[i]) {
+        fprintf(stderr, "Warning: parameter %s (%e) of element %s is already < lower limit (%e)\n",
+                ftp->parameterName[i], ftp->definedValue[i], ftp->elementName[i], ftp->lowerLimit[i]);
+      }
+      if (ftp->upperLimit && ftp->upperLimit[i]<ftp->definedValue[i]) {
+        fprintf(stderr, "Warning: parameter %s (%e) of element %s is already > upper limit (%e)\n",
+                ftp->parameterName[i], ftp->definedValue[i], ftp->elementName[i], ftp->upperLimit[i]);
+      }
+    }
   }
   
   if (SDDS_ReadPage(&SDDSin)>1)
@@ -727,6 +771,15 @@ FIT_TRACE_DATA *fit_traces_readTraceDataFile
         fprintf(stderr, "No traces on first page of trace file\n");
         exit(1);
       }
+      /* allocate arrays to hold indices of BPM in users list of parameters, if it is used */
+      if (!(trace->xParamIndex = SDDS_Malloc(sizeof(*trace->xParamIndex)*trace->BPMs)) ||
+          !(trace->yParamIndex = SDDS_Malloc(sizeof(*trace->yParamIndex)*trace->BPMs))) {
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        exit(1);
+      }
+      for (iBPM=0; iBPM<trace->BPMs; iBPM++)
+        /* indicate that no search has been done */
+        trace->xParamIndex[iBPM] = trace->yParamIndex[iBPM] = -2;
     } else {
       if (trace->BPMs != SDDS_CountRowsOfInterest(&SDDSin)) {
         fprintf(stderr, "Fit traces have different numbers of data points.");
@@ -931,26 +984,27 @@ void fit_trace_restoreParamValues
 
 double fit_trace_takeStep
   (
-   MATRIX *D, 
-   MATRIX *Dt, 
-   MATRIX *DtD, 
-   MATRIX *DtDInv, 
-   MATRIX *DtDInvDt, 
-   MATRIX *readbackVector, 
-   MATRIX *paramVector,
+   MAT *D, 
+   MAT *readbackVector, 
+   MAT *paramVector,
    FIT_TRACE_DATA *traceData, 
    FIT_TRACE_PARAMETERS *fitParam, 
    LINE_LIST *beamline, 
    RUN *run,
    double convergenceFactor,
    double positionChangeLimit,
-   double slopeChangeLimit
+   double slopeChangeLimit,
+   long use_SVD,
+   long singular_values
    )
 {
-  double rmsError, factor;
-  long iTrace, iCoord, offset, iUserParam, iBPM;
+  double rmsError, factor, minSV, maxSV;
+  long iTrace, iCoord, offset, iUserParam, iBPM, checkLimits, i;
   FIT_TRACE_PARAMETERS fitParam0;
-
+  static MAT *DInv=NULL, *U=NULL, *V=NULL, *T=NULL, *S=NULL;
+  static MAT *DtD=NULL, *DtDInv=NULL, *DtDInvDt=NULL, *Dt=NULL;
+  static VEC *SingValue=NULL;
+  
   if (!fitParam) {
     fitParam = &fitParam0;
     fitParam->parameters = 0;
@@ -961,31 +1015,49 @@ double fit_trace_takeStep
    */
   fit_traces_findDerivatives(traceData, fitParam, D, beamline, run);
   
-  /* solve for the parameter error values.  Parameters must have these
-   * values subtracted off in order to remove the readback errors
-   */
-  if (!m_trans(Dt, D)) 
-    m_error("Tranposing D");
-  if (!m_mult(DtD, Dt, D))
-    m_error("Multiplying Dt.D");
-  if (!m_invert(DtDInv, DtD))
-    m_error("Inverting Dt.D");
-  if (!m_mult(DtDInvDt, DtDInv, Dt))
-    m_error("Multiplying Inv(Dt.D) and Dt");
-  if (!m_mult(paramVector, DtDInvDt, readbackVector))
-    m_error("Multipling DtDInvDt and readbackVector");
-  if (convergenceFactor>0 &&
-      !m_scmul(paramVector, paramVector, convergenceFactor))
-    m_error("Multiplying paramVector by convergenceFactor");
-
+  /* invert the matrix D using SVD */
+  if (use_SVD) {
+    DInv = m_resize(DInv, D->n, D->m);
+    U = m_resize(U, D->m, D->m);
+    V = m_resize(V, D->n, D->n);
+    T = m_resize(T, D->n, D->m);
+    S = m_resize(S, D->n, D->m);
+    SingValue = v_resize(SingValue, D->n);
+    svd(D, U, V, SingValue);
+    for (i=0; i<SingValue->dim; i++)
+      if (SingValue->ve[i])
+        SingValue->ve[i] = 1./SingValue->ve[i];
+    if (singular_values)
+      for (i=singular_values; i<SingValue->dim; i++)
+        SingValue->ve[i] = 0;
+    /* find_min_max(&minSV, &maxSV, SingValue->ve, SingValue->dim); */
+    m_diag(SingValue, S);
+    m_mlt(S, U, T);
+    mtrm_mlt(V, T, DInv);
+    m_mlt(DInv, readbackVector, paramVector);
+  } else {
+    DtD = m_resize(DtD, D->n, D->n);
+    Dt = m_resize(Dt, D->n, D->m);
+    DtDInv = m_resize(DtDInv, D->n, D->n);
+    DtDInvDt = m_resize(DtDInvDt, D->n, D->m);
+    mtrm_mlt(D, D, DtD);
+    m_inverse(DtD, DtDInv);
+    m_transp(D, Dt);
+    m_mlt(DtDInv, Dt, DtDInvDt);
+    m_mlt(DtDInvDt, readbackVector, paramVector);
+  }
+  
+  if (convergenceFactor>0)
+    sm_mlt(convergenceFactor, paramVector, paramVector);
+  
   /* check for changes that exceed allowed limits */
   factor = 1;
   offset = traceData->traces*4;
   if (fitParam->changeLimit) {
     for (iUserParam=0; iUserParam<fitParam->parameters; iUserParam++) {
       if (fitParam->changeLimit[iUserParam] && 
-          fabs(paramVector->a[offset+iUserParam][0])>fitParam->changeLimit[iUserParam]) {
-        factor = MIN(factor, fabs(fitParam->changeLimit[iUserParam]/paramVector->a[offset+iUserParam][0]));
+          fabs(paramVector->me[offset+iUserParam][0])>fitParam->changeLimit[iUserParam]) {
+        factor = MIN(factor, fabs(fitParam->changeLimit[iUserParam]/paramVector->me[offset+iUserParam][0]));
       }
     }
   }
@@ -993,8 +1065,8 @@ double fit_trace_takeStep
   if (positionChangeLimit) {
     for (iTrace=0; iTrace<traceData->traces; iTrace++) {
       for (iCoord=0; iCoord<4; iCoord+=2) {
-        if (fabs(paramVector->a[iTrace*4+iCoord][0])>positionChangeLimit) {
-          factor = MIN(factor, fabs(positionChangeLimit/paramVector->a[iTrace*4+iCoord][0]));
+        if (fabs(paramVector->me[iTrace*4+iCoord][0])>positionChangeLimit) {
+          factor = MIN(factor, fabs(positionChangeLimit/paramVector->me[iTrace*4+iCoord][0]));
         }
       }
     }
@@ -1003,34 +1075,57 @@ double fit_trace_takeStep
   if (slopeChangeLimit) {
     for (iTrace=0; iTrace<traceData->traces; iTrace++) {
       for (iCoord=1; iCoord<4; iCoord+=2) {
-        if (fabs(paramVector->a[iTrace*4+iCoord][0])>slopeChangeLimit) {
-          factor = MIN(factor, fabs(slopeChangeLimit/paramVector->a[iTrace*4+iCoord][0]));
+        if (fabs(paramVector->me[iTrace*4+iCoord][0])>slopeChangeLimit) {
+          factor = MIN(factor, fabs(slopeChangeLimit/paramVector->me[iTrace*4+iCoord][0]));
         }
       }
     }
   }
   
   if (factor<1) {
-    if (!m_scmul(paramVector, paramVector, factor)) {
-      m_error("Multiplying paramVector by limiting factor.");
-    }
+    fprintf(stderr, "changes reduced by factor %lf to stay within change limits\n",
+            factor);
+    sm_mlt(factor, paramVector, paramVector);
   } else if (factor>1) {
     fprintf(stderr, "Error: limiting factor exceeds 1.\n");
   }
-  
 
   /* assert new trajectory starting values */
   for (iTrace=0; iTrace<traceData->traces; iTrace++) {
     for (iCoord=0; iCoord<4; iCoord++) {
       traceData->startingCoord[iTrace][iCoord] -= 
-        paramVector->a[iTrace*4+iCoord][0];
+        paramVector->me[iTrace*4+iCoord][0];
     }
   }
   
   /* assert new element parameter values and recompute matrices */
   for (iUserParam=0; iUserParam<fitParam->parameters; iUserParam++) {
     *(fitParam->paramData[iUserParam]) -= 
-      paramVector->a[offset+iUserParam][0];
+      paramVector->me[offset+iUserParam][0];
+/*
+    fprintf(stderr, "New value for %s[%s] is %e, change of %le\n",
+            fitParam->elementName[iUserParam], fitParam->parameterName[iUserParam],
+            *(fitParam->paramData[iUserParam]), paramVector->me[offset+iUserParam][0]);
+*/
+    checkLimits = 1;
+    if (fitParam->lowerLimit && fitParam->upperLimit && 
+        fitParam->lowerLimit[iUserParam]==fitParam->upperLimit[iUserParam])
+      checkLimits = 0;
+    if (checkLimits && fitParam->lowerLimit &&
+        *(fitParam->paramData[iUserParam])<fitParam->lowerLimit[iUserParam]) {
+      *(fitParam->paramData[iUserParam]) = fitParam->lowerLimit[iUserParam];
+      fprintf(stderr, "Parameter %s of %s limited to %e\n",
+              fitParam->parameterName[iUserParam], fitParam->elementName[iUserParam],
+              *(fitParam->paramData[iUserParam]));
+    }
+    if (checkLimits && fitParam->upperLimit) {
+      if (*(fitParam->paramData[iUserParam])>fitParam->upperLimit[iUserParam]) {
+        *(fitParam->paramData[iUserParam]) = fitParam->upperLimit[iUserParam];
+        fprintf(stderr, "Parameter %s of %s limited to %e\n",
+                fitParam->parameterName[iUserParam], fitParam->elementName[iUserParam],
+                *(fitParam->paramData[iUserParam]));
+      }
+    }
     if (fitParam->target[iUserParam]->matrix) {
       free_matrices(fitParam->target[iUserParam]->matrix);
       free(fitParam->target[iUserParam]->matrix);
@@ -1046,112 +1141,193 @@ double fit_trace_takeStep
 
 double fit_trace_calibrateMonitors
   (
-   MATRIX *readbackVector,
+   MAT *readbackVector,
    FIT_TRACE_DATA *traceData,
    FIT_TRACE_PARAMETERS *fitParam,
    FIT_TRACE_PARAMETERS *bpmCalParam,
    LINE_LIST *beamline,
    RUN *run,
-   double bpmCalibrationFactor,
-   double bpmCalibrationErrorLimit
+   double convergence_factor,
+   long reject_common_mode
    )
 {
   long iBPM, iTrace, iParam;
   double rmsError, calibration;
-  long nCalibrated;
-  
+  long checkLimits, nxCals, nyCals;
+  double sum1, sum2, reading, xCalSum, yCalSum, xCalAverage, yCalAverage;
+
   /* find the new trajectory */
   rmsError = fit_trace_findReadbackErrors(readbackVector, traceData, beamline, run);
-  nCalibrated = 0;
+  nxCals = nyCals = 0;
+  xCalSum = yCalSum = 0;
   for (iBPM=0; iBPM<traceData->BPMs; iBPM++) {
     /* look at each BPM for which there is trace data */
-    double sum1, sum2, reading;
     if (traceData->element[iBPM]->type==T_MONI ||
         traceData->element[iBPM]->type==T_HMON) {
       /* horizontal BPMs */
-      for (iParam=0; iParam<bpmCalParam->parameters; iParam++) {
-        /* see if this bpm is in the list of parameters to be fit */
-        if (traceData->element[iBPM]!=bpmCalParam->target[iParam])
-          continue;
-        if ((traceData->element[iBPM]->type==T_MONI &&
-             strcmp(bpmCalParam->parameterName[iParam], "XCALIBRATION")==0) ||
-            (traceData->element[iBPM]->type==T_HMON &&
-             strcmp(bpmCalParam->parameterName[iParam], "CALIBRATION")==0))
-          break;
+      if (traceData->xParamIndex[iBPM]==-2) {
+        for (iParam=0; iParam<bpmCalParam->parameters; iParam++) {
+          /* see if this bpm is in the list of parameters to be fit */
+          if (traceData->element[iBPM]!=bpmCalParam->target[iParam])
+            continue;
+          if ((traceData->element[iBPM]->type==T_MONI &&
+               strcmp(bpmCalParam->parameterName[iParam], "XCALIBRATION")==0) ||
+              (traceData->element[iBPM]->type==T_HMON &&
+               strcmp(bpmCalParam->parameterName[iParam], "CALIBRATION")==0))
+            break;
+        }
+        if (iParam!=bpmCalParam->parameters)
+          traceData->xParamIndex[iBPM] = iParam;
+        else
+          traceData->xParamIndex[iBPM] = -1;  /* search done, no match found */
       }
-      if (iParam==bpmCalParam->parameters)
-        /* not asked to fit this one */
-        continue;
-      
-      for (iTrace=sum1=sum2=0; iTrace<traceData->traces; iTrace++) {
-        reading = computeMonitorReading(traceData->element[iBPM], 0,
-                                traceData->xSim[iTrace][iBPM],
-                                traceData->ySim[iTrace][iBPM],
-                                COMPUTEMONITORREADING_CAL_1);
-        sum1 += traceData->x[iTrace][iBPM]*reading;
-        sum2 += reading*reading;
-      }
-      if (sum2) {
-        calibration =  sum1/sum2;
-        if (fabs(calibration-1)>bpmCalibrationErrorLimit) 
-          calibration = 1+SIGN(1-calibration)*bpmCalibrationErrorLimit;
-        /*
-        calibration = 
-          (1-bpmCalibrationFactor)*getMonitorCalibration(traceData->element[iBPM], 0) +
-            bpmCalibrationFactor*calibration;
-            */
-        setMonitorCalibration(traceData->element[iBPM], calibration, 0);
-        /*
-          fprintf(stderr, "BPM %s x calibration now %.6f (%.6f)\n", traceData->element[iBPM]->name,
-          getMonitorCalibration(traceData->element[iBPM], 0), calibration);
-          */
-        nCalibrated++;
+      if ((iParam=traceData->xParamIndex[iBPM])>=0) {
+        for (iTrace=sum1=sum2=0; iTrace<traceData->traces; iTrace++) {
+          reading = computeMonitorReading(traceData->element[iBPM], 0,
+                                          traceData->xSim[iTrace][iBPM],
+                                          traceData->ySim[iTrace][iBPM],
+                                          COMPUTEMONITORREADING_CAL_1);
+          sum1 += traceData->x[iTrace][iBPM]*reading;
+          sum2 += reading*reading;
+        }
+        if (sum2) {
+          calibration =  sum1/sum2*convergence_factor + 
+            (1-convergence_factor)*getMonitorCalibration(traceData->element[iBPM], 0);
+          checkLimits = 1;
+          if (bpmCalParam->lowerLimit && bpmCalParam->upperLimit &&
+              bpmCalParam->lowerLimit[iParam]==bpmCalParam->upperLimit[iParam])
+            checkLimits = 0;
+          if (checkLimits && bpmCalParam->lowerLimit &&
+              bpmCalParam->lowerLimit[iParam]>calibration)
+            calibration = bpmCalParam->lowerLimit[iParam];
+          if (checkLimits && bpmCalParam->upperLimit &&
+              bpmCalParam->upperLimit[iParam]<calibration)
+            calibration = bpmCalParam->upperLimit[iParam];
+          setMonitorCalibration(traceData->element[iBPM], calibration, 0);
+          nxCals ++;
+          xCalSum += calibration;
+        }
       }
     }
     if (traceData->element[iBPM]->type==T_MONI ||
         traceData->element[iBPM]->type==T_VMON) {
       /* vertical BPMs */
-      for (iParam=0; iParam<bpmCalParam->parameters; iParam++) {
-        /* see if this bpm is in the list of parameters to be fit */
-        if (traceData->element[iBPM]!=bpmCalParam->target[iParam])
-          continue;
-        if ((traceData->element[iBPM]->type==T_MONI &&
-             strcmp(bpmCalParam->parameterName[iParam], "YCALIBRATION")==0) ||
-            (traceData->element[iBPM]->type==T_VMON &&
-             strcmp(bpmCalParam->parameterName[iParam], "CALIBRATION")==0))
-          break;
+      if (traceData->yParamIndex[iBPM]==-2) {
+        for (iParam=0; iParam<bpmCalParam->parameters; iParam++) {
+          /* see if this bpm is in the list of parameters to be fit */
+          if (traceData->element[iBPM]!=bpmCalParam->target[iParam])
+            continue;
+          if ((traceData->element[iBPM]->type==T_MONI &&
+               strcmp(bpmCalParam->parameterName[iParam], "YCALIBRATION")==0) ||
+              (traceData->element[iBPM]->type==T_VMON &&
+               strcmp(bpmCalParam->parameterName[iParam], "CALIBRATION")==0))
+            break;
+        }
+        if (iParam!=bpmCalParam->parameters) 
+          traceData->yParamIndex[iBPM] = iParam;
+        else
+          traceData->yParamIndex[iBPM] = -1;  /* search done, no match found */
       }
-      if (iParam==bpmCalParam->parameters)
-        /* not asked to fit this one */
-        continue;
-
-      for (iTrace=sum1=sum2=0; iTrace<traceData->traces; iTrace++) {
-        reading = computeMonitorReading(traceData->element[iBPM], 1,
-                                traceData->xSim[iTrace][iBPM],
-                                traceData->ySim[iTrace][iBPM],
-                                COMPUTEMONITORREADING_CAL_1);
-        sum1 += traceData->y[iTrace][iBPM]*reading;
-        sum2 += reading*reading;
-      }
-      if (sum2) {
-        calibration =  sum1/sum2;
-        if (fabs(calibration-1)>bpmCalibrationErrorLimit) 
-          calibration = 1+SIGN(1-calibration)*bpmCalibrationErrorLimit;
-        /*
-        calibration = 
-          (1-bpmCalibrationFactor)*getMonitorCalibration(traceData->element[iBPM], 1) +
-            bpmCalibrationFactor*calibration;
-            */
-        setMonitorCalibration(traceData->element[iBPM], calibration, 1);
-        /*
-        fprintf(stderr, "BPM %s y calibration now %.6f  (%.6f)\n", traceData->element[iBPM]->name,
-                getMonitorCalibration(traceData->element[iBPM], 1), calibration);
-                */
-        nCalibrated++;
+      if ((iParam=traceData->yParamIndex[iBPM])>=0) {
+        for (iTrace=sum1=sum2=0; iTrace<traceData->traces; iTrace++) {
+          reading = computeMonitorReading(traceData->element[iBPM], 1,
+                                          traceData->xSim[iTrace][iBPM],
+                                          traceData->ySim[iTrace][iBPM],
+                                          COMPUTEMONITORREADING_CAL_1);
+          sum1 += traceData->y[iTrace][iBPM]*reading;
+          sum2 += reading*reading;
+        }
+        if (sum2) {
+          calibration =  sum1/sum2*convergence_factor + 
+            (1-convergence_factor)*getMonitorCalibration(traceData->element[iBPM], 1);
+          checkLimits = 1;
+          if (bpmCalParam->lowerLimit && bpmCalParam->upperLimit &&
+              bpmCalParam->lowerLimit[iParam]==bpmCalParam->upperLimit[iParam])
+            checkLimits = 0;
+          if (checkLimits && bpmCalParam->lowerLimit &&
+              bpmCalParam->lowerLimit[iParam]>calibration)
+            calibration = bpmCalParam->lowerLimit[iParam];
+          if (checkLimits && bpmCalParam->upperLimit &&
+              bpmCalParam->upperLimit[iParam]<calibration)
+            calibration = bpmCalParam->upperLimit[iParam];
+          setMonitorCalibration(traceData->element[iBPM], calibration, 1);
+          nyCals ++;
+          yCalSum += calibration;
+        }
       }
     }
   }
 
+  if (reject_common_mode && (nxCals || nyCals)) {
+    if (nxCals)
+      xCalAverage= xCalSum/nxCals-1;
+    if (nyCals)
+      yCalAverage= yCalSum/nyCals-1;
+    for (iBPM=0; iBPM<traceData->BPMs; iBPM++) {
+      /* look at each BPM for which there is trace data */
+      if (nxCals && (traceData->element[iBPM]->type==T_MONI ||
+                     traceData->element[iBPM]->type==T_HMON)) {
+        /* horizontal BPMs */
+        if ((iParam = traceData->xParamIndex[iBPM])>=0) {
+          for (iTrace=sum1=sum2=0; iTrace<traceData->traces; iTrace++) {
+            reading = computeMonitorReading(traceData->element[iBPM], 0,
+                                            traceData->xSim[iTrace][iBPM],
+                                            traceData->ySim[iTrace][iBPM],
+                                            COMPUTEMONITORREADING_CAL_1);
+            sum1 += traceData->x[iTrace][iBPM]*reading;
+            sum2 += reading*reading;
+          }
+          if (sum2) {
+            calibration = getMonitorCalibration(traceData->element[iBPM], 0);
+            calibration = (calibration-xCalAverage)*convergence_factor + 
+              (1-convergence_factor)*calibration;
+            checkLimits = 1;
+            if (bpmCalParam->lowerLimit && bpmCalParam->upperLimit &&
+                bpmCalParam->lowerLimit[iParam]==bpmCalParam->upperLimit[iParam])
+              checkLimits = 0;
+            if (checkLimits && bpmCalParam->lowerLimit &&
+                bpmCalParam->lowerLimit[iParam]>calibration)
+              calibration = bpmCalParam->lowerLimit[iParam];
+            if (checkLimits && bpmCalParam->upperLimit &&
+                bpmCalParam->upperLimit[iParam]<calibration)
+              calibration = bpmCalParam->upperLimit[iParam];
+            setMonitorCalibration(traceData->element[iBPM], calibration, 0);
+          }
+        }
+      }
+      if (nyCals && (traceData->element[iBPM]->type==T_MONI ||
+                     traceData->element[iBPM]->type==T_VMON)) {
+        /* vertical BPMs */
+        if ((iParam = traceData->yParamIndex[iBPM])>=0) {
+          for (iTrace=sum1=sum2=0; iTrace<traceData->traces; iTrace++) {
+            reading = computeMonitorReading(traceData->element[iBPM], 1,
+                                            traceData->xSim[iTrace][iBPM],
+                                            traceData->ySim[iTrace][iBPM],
+                                            COMPUTEMONITORREADING_CAL_1);
+            sum1 += traceData->y[iTrace][iBPM]*reading;
+            sum2 += reading*reading;
+          }
+          if (sum2) {
+            calibration = getMonitorCalibration(traceData->element[iBPM], 1);
+            calibration = (calibration-yCalAverage)*convergence_factor + 
+              (1-convergence_factor)*calibration;
+            checkLimits = 1;
+            if (bpmCalParam->lowerLimit && bpmCalParam->upperLimit &&
+                bpmCalParam->lowerLimit[iParam]==bpmCalParam->upperLimit[iParam])
+              checkLimits = 0;
+            if (checkLimits && bpmCalParam->lowerLimit &&
+                bpmCalParam->lowerLimit[iParam]>calibration)
+              calibration = bpmCalParam->lowerLimit[iParam];
+            if (checkLimits && bpmCalParam->upperLimit &&
+                bpmCalParam->upperLimit[iParam]<calibration)
+              calibration = bpmCalParam->upperLimit[iParam];
+            setMonitorCalibration(traceData->element[iBPM], calibration, 1);
+          }
+        }
+      }
+    }
+  }
+  
   /* find the new trajectory */
   rmsError = fit_trace_findReadbackErrors(readbackVector, traceData, beamline, run);
   return rmsError;

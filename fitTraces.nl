@@ -5,6 +5,11 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.3  1998/03/19 21:00:57  borland
+ * Removed items from track.h and put them in three new files (correctDefs.h,
+ * tuneDefs.h, chromDefs.h) to isolate references to matlib.h; this is to
+ * allow use of the Meschach matrix library in parts of elegant.
+ *
  * Revision 1.2  1997/10/20 14:57:11  borland
  * Improved trace fitting and related routines.  Added output of traces
  * after fitting.  Fixed some output-related bugs.
@@ -21,6 +26,8 @@
         STRING fit_parameters_file = NULL;
         long iterations = 10;
         long sub_iterations = 10;
+        long use_SVD = 1;
+        long singular_values = 3;
         double convergence_factor = 1;
         double convergence_factor_divisor = 2;
         double convergence_factor_multiplier = 1.5;
@@ -31,9 +38,10 @@
         double slope_change_limit = 0;
         long trace_sub_iterations = 500;
         double trace_convergence_factor = 0.9;
-        double bpm_calibration_error_limit = 0.1;
+        double trace_fractional_target = 1e-6;
         STRING fit_output_file = NULL;
         STRING trace_output_file = NULL;
         double target = 1e-12;
+        long reject_BPM_common_mode = 1;
 #end
 
