@@ -2114,6 +2114,7 @@ void derivatives_planarUndulator(double *qp, double *q, double tau)
     fprintf(fppu, "&column name=Py type=double &end\n");
     fprintf(fppu, "&column name=Pz type=double &end\n");
     fprintf(fppu, "&column name=Ex type=double &end\n");
+    fprintf(fppu, "&column name=By type=double &end\n");
     fprintf(fppu, "&data mode=ascii no_row_counts=1 &end\n");
   }
 #endif
@@ -2137,13 +2138,14 @@ void derivatives_planarUndulator(double *qp, double *q, double tau)
   if (x>xMaxSeen)
     xMaxSeen = x;
   
-  poleNumber = 2*z/(plUnd->length/plUnd->periods);
-  factor = 1;
-  if (poleNumber==0 || poleNumber==(2*plUnd->periods-1))
+  poleNumber = z/(plUnd->length/(2*plUnd->periods))+0.5;
+  if (poleNumber>2 && poleNumber<(2*plUnd->periods-2))
+    factor = 1;
+  else if (poleNumber==0 || poleNumber==2*plUnd->periods)
     factor = plUnd->poleFactor1;
-  if (poleNumber==1 || poleNumber==(2*plUnd->periods-2))
+  else if (poleNumber==1 || poleNumber==(2*plUnd->periods-1))
     factor = plUnd->poleFactor2;
-  if (poleNumber==2 || poleNumber==(2*plUnd->periods-3))
+  else 
     factor = plUnd->poleFactor3;
 
   Bfactor = factor*plUnd->Bu*plUnd->Bscale/gamma;
@@ -2181,8 +2183,8 @@ void derivatives_planarUndulator(double *qp, double *q, double tau)
   Pp[2] = -(E[2]+P[0]*BOverGamma[1]-P[1]*BOverGamma[0]);
   
 #ifdef DEBUG
-  fprintf(fppu, "%e %e %e %e %e %e %e %e %e %e\n", tau, tau/plUnd->omega, 
-          plUnd->k*z-tau, x, y, z, P[0], P[1], P[2], E[0]);
+  fprintf(fppu, "%e %e %e %e %e %e %e %e %e %e %e\n", tau, tau/plUnd->omega, 
+          plUnd->k*z-tau, x, y, z, P[0], P[1], P[2], E[0], BOverGamma[1]*gamma);
 #endif
 }
 
