@@ -20,6 +20,8 @@
 #include "twiss.h"
 #include <stddef.h>
 
+void computeResonanceWidths(LINE_LIST *beamline, double *clorb, RUN *run);
+
 void copy_doubles(double *target, double *source, long n);
 double find_acceptance(ELEMENT_LIST *elem, long plane, RUN *run, char **name, double *end_pos);
 void modify_rfca_matrices(ELEMENT_LIST *eptr, long order);
@@ -1278,6 +1280,10 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
         computeTuneShiftWithAmplitude(beamline->dnux_dA, beamline->dnuy_dA,
                                       beamline->twiss0, beamline->tune, M, beamline, run,
                                       starting_coord); 
+      /*
+        if (resonance_widths)
+        computeResonanceWidths(beamline, starting_coord, run);
+        */
     }
   }
   else {
@@ -1309,6 +1315,10 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
         computeTuneShiftWithAmplitude(beamline->dnux_dA, beamline->dnuy_dA,
                                       beamline->twiss0, beamline->tune, M, beamline, run,
                                       starting_coord); 
+      /* 
+      if (resonance_widths)
+        computeResonanceWidths(beamline, starting_coord, run);
+        */
 #ifdef DEBUG
       fprintf(stdout, "chomaticities: %e, %e\n", chromx, chromy);
       fflush(stdout);
@@ -2118,7 +2128,7 @@ void computeTunesFromTracking(double *tune, VMATRIX *M, LINE_LIST *beamline, RUN
 	      0.0, 1, 100, 1e-6);
   free(x);
   free(y);
-  free_zarray_2d(oneParticle, 1, 7);
+  free_zarray_2d((void*)oneParticle, 1, 7);
 }
 
 void computeTuneShiftWithAmplitudeM(double *dnux_dA, double *dnuy_dA,
@@ -2466,4 +2476,9 @@ void AddWigglerRadiationIntegrals(double length, long poles, double radius,
   }
 }
 
+/* compute sextupole resonance widths */
+
+void computeResonanceWidths(LINE_LIST *beamline, double *clorb, RUN *run)
+{
+}
 
