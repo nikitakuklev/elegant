@@ -9,6 +9,10 @@
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.20  2003/02/15 22:57:49  borland
+ * Added SDDS_DoFSync() calls to make sure output files get updated on
+ * file server.
+ *
  * Revision 1.19  2002/08/14 20:23:46  soliday
  * Added Open License
  *
@@ -455,8 +459,7 @@ void doSASEFELAtEndOutput(SASEFEL_OUTPUT *sasefelOutput, long step)
   }
   if (!SDDS_WritePage(SDDSout))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-  if (!SDDS_DoFSync(SDDSout))
-    fprintf(stdout, "Warning: problem fsync'ing SASE output file\n");
+  SDDS_DoFSync(SDDSout);
 }
 
 

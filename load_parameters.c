@@ -670,8 +670,7 @@ void dumpLatticeParameters(char *filename, RUN *run, LINE_LIST *beamline)
   }
   if (!SDDS_WritePage(SDDSout))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-  if (!SDDS_DoFSync(SDDSout))
-    fprintf(stdout, "Warning: problem fsync'ing lattice parameters output file\n");
+  SDDS_DoFSync(SDDSout);
 }
 
 void finishLatticeParametersFile() 

@@ -1458,8 +1458,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
         }
         if (!SDDS_WritePage(&csbend->SDDSpart))
           SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-        if (!SDDS_DoFSync(&csbend->SDDSpart))
-          fprintf(stdout, "Warning: problem fsync'ing CSBEND particle output file\n");
+        SDDS_DoFSync(&csbend->SDDSpart);
       }
 
       if (tContext.sliceAnalysis && tContext.sliceAnalysis->active &&
@@ -1513,8 +1512,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
             !SDDS_SetColumn(&csbend->SDDSout, SDDS_SET_BY_NAME, T2, nBins, "GammaDeriv") ||
             !SDDS_WritePage(&csbend->SDDSout))
           SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-        if (!SDDS_DoFSync(&csbend->SDDSout))
-          fprintf(stdout, "Warning: problem fsync'ing CSBEND wake output file\n");
+        SDDS_DoFSync(&csbend->SDDSout);
       }
     }
   }
@@ -2684,8 +2682,7 @@ void DumpStupakovOutput(char *filename, SDDS_DATASET *SDDSout, long *active,
     SDDS_SetError("Problem writing to output file for CSRDRIFT (Stupakov mode)");
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
   }
-  if (!SDDS_DoFSync(SDDSout))
-    fprintf(stdout, "Warning: problem fsync'ing wake output file\n");
+  SDDS_DoFSync(SDDSout);
     
 }
 

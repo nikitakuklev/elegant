@@ -9,6 +9,10 @@
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.19  2003/02/15 22:57:48  borland
+ * Added SDDS_DoFSync() calls to make sure output files get updated on
+ * file server.
+ *
  * Revision 1.18  2003/01/27 16:46:02  borland
  * Fixed problems with tune-shift-with-amplitude computation in presence
  * of MALIGN elements with ON_PASS!=-1.
@@ -460,8 +464,7 @@ void fit_trace_writeTraceOutput
     }
     if (!SDDS_WritePage(&SDDSout))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-    if (!SDDS_DoFSync(&SDDSout))
-      fprintf(stdout, "Warning: problem fsync'ing trace output file\n");
+    SDDS_DoFSync(&SDDSout);
   }
   if (!SDDS_Terminate(&SDDSout))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);

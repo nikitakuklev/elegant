@@ -406,8 +406,7 @@ long do_aperture_search_mp(
         SDDS_SetError("Problem writing SDDS table (do_aperture_search)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
-    if (!SDDS_DoFSync(&SDDS_aperture))
-      fprintf(stdout, "Warning: problem fsync'ing aperture output file\n");
+    SDDS_DoFSync(&SDDS_aperture);
         
     log_exit("do_aperture_search_mp.5");
 
@@ -641,8 +640,7 @@ long do_aperture_search_sp(
         SDDS_SetError("Problem writing SDDS table (do_aperture_search)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
-    if (!SDDS_DoFSync(&SDDS_aperture))
-      fprintf(stdout, "Warning: problem fsync'ing aperture output file\n");
+    SDDS_DoFSync(&SDDS_aperture);
         
 
     free_zarray_2d((void**)coord, 1, 7);

@@ -154,8 +154,7 @@ void dump_cormon_stats(long verbose, long plane, double **kick, long n_kicks,
             SDDS_SetError("Unable to write corrector data (dump_cormon_stats)");
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
             }
-        if (!SDDS_DoFSync(&SDDS_cormon))
-          fprintf(stdout, "Warning: problem fsync'ing corrector data output file\n");
+        SDDS_DoFSync(&SDDS_cormon);
         if (!SDDS_EraseData(&SDDS_cormon)) {
             SDDS_SetError("Unable to erase corrector data (dump_cormon_stats)");
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);

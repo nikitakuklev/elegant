@@ -134,8 +134,7 @@ void dump_orb_traj(TRAJECTORY *traj, long n_elems, char *description, long step)
         SDDS_SetError("Unable to write orbit/trajectory data (dump_orb_traj)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
-    if (!SDDS_DoFSync(&SDDS_orb))
-      fprintf(stdout, "Warning: problem fsync'ing orbit/trajectory output file\n");
+    SDDS_DoFSync(&SDDS_orb);
     if (!SDDS_EraseData(&SDDS_orb)) {
         SDDS_SetError("Unable to erase orbit/trajectory data (dump_orb_traj)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
