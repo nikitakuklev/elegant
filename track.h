@@ -568,7 +568,7 @@ extern char *entity_text[N_TYPES];
 #define N_CHARGE_PARAMS 2
 #define N_PFILTER_PARAMS 5
 #define N_HISTOGRAM_PARAMS 9
-#define N_CSRCSBEND_PARAMS 41
+#define N_CSRCSBEND_PARAMS 42
 #define N_CSRDRIFT_PARAMS 15
 #define N_REMCOR_PARAMS 6
 #define N_MAPSOLENOID_PARAMS 12
@@ -1371,6 +1371,7 @@ typedef struct {
     long use_bn;
     double b1, b2, b3, b4;
     long isr, csr;
+    char *derbenevCriterionMode;
     /* for internal use only: */
     long flags, fileActive;
     SDDS_DATASET SDDSout;

@@ -806,6 +806,14 @@ typedef struct {
 } CSR_LAST_WAKE;
 CSR_LAST_WAKE csrWake;
 
+
+#define DERBENEV_CRITERION_DISABLE 0
+#define DERBENEV_CRITERION_EVAL 1
+#define DERBENEV_CRITERION_ENFORCE 2
+#define N_DERBENEV_CRITERION_OPTIONS 3
+static char *derbenevCriterionOption[N_DERBENEV_CRITERION_OPTIONS] = {
+  "disable", "evaluate", "enforce"};
+
 long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, double p_error, 
                              double Po, double **accepted, double z_start, double z_end,
                              CHARGE *charge, char *rootname)
@@ -836,6 +844,8 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   double macroParticleCharge, CSRConstant;
   long iBin, iBinBehind;
   double wavelength, criticalWavelength;
+  long csrInhibit = 0;
+  double derbenevRatio = 0;
 
   reset_driftCSR();
   
@@ -1049,6 +1059,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
         !SDDS_DefineSimpleParameter(&csbend->SDDSout, "TotalBunchLength", "m", SDDS_DOUBLE) ||
         !SDDS_DefineSimpleParameter(&csbend->SDDSout, "BinSize", "m", SDDS_DOUBLE) ||
         !SDDS_DefineSimpleParameter(&csbend->SDDSout, "dsKick", "m", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(&csbend->SDDSout, "DerbenevRatio", NULL, SDDS_DOUBLE) ||
         !SDDS_DefineSimpleColumn(&csbend->SDDSout, "s", "m", SDDS_DOUBLE) ||
         !SDDS_DefineSimpleColumn(&csbend->SDDSout, "LinearDensity", "C/s", SDDS_DOUBLE) ||
         !SDDS_DefineSimpleColumn(&csbend->SDDSout, "LinearDensityDeriv", "C/s$a2$n", SDDS_DOUBLE) ||
@@ -1186,7 +1197,38 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
       }
     }
 
-    if (n_part>1) {
+    if (n_part>1 && csbend->derbenevCriterionMode) {
+      /* evaluate Derbenev criterion: sigma_x/sigma_z << (sigma_z/R)^(1/3) */
+      long code;
+      double Sz, Sx;
+      switch (code=match_string(csbend->derbenevCriterionMode, derbenevCriterionOption, N_DERBENEV_CRITERION_OPTIONS, 0)) {
+      case DERBENEV_CRITERION_DISABLE:
+        break;
+      case DERBENEV_CRITERION_EVAL:
+      case DERBENEV_CRITERION_ENFORCE:
+        rms_emittance(part, 4, 5, n_part, &Sz, NULL, NULL);
+        Sz = sqrt(Sz);
+        rms_emittance(part, 0, 1, n_part, &Sx, NULL, NULL);
+        Sx = sqrt(Sx);
+        derbenevRatio = (Sx/Sz)/pow(rho/Sz, 1./3.);
+        if (derbenevRatio>0.1) {
+          if (code==DERBENEV_CRITERION_EVAL)
+            fprintf(stderr, "Warning: Using 1-D CSR formalism but Derbenev criterion not satisfied (%le > 0.1).\n",
+                    derbenevRatio);
+          else {
+            csrInhibit = 1;
+            fprintf(stderr, "Warning: Derbenev criterion not satisfied (%le > 0.1)---not applying CSR\n",
+                    derbenevRatio);
+          }
+        }
+        break;
+      default:
+        fprintf(stderr, "Error: invalid value for DERBENEV_CRITERION_MODE. Give 'disable', 'evaluate', or 'enforce'\n");
+        exit(1);
+        break;
+      }
+    }
+    if (n_part>1 && !csrInhibit) {
       /* compute CSR potential function */
       /* - first make a density histogram */
       ctLower = ctUpper = dct = 0;
@@ -1271,7 +1313,8 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
                                 "Pass", -1, "Kick", kick, "dsKick", csbend->length/csbend->n_kicks,
                                 "pCentral", Po, "Angle", phiBend, "SlippageLength", slippageLength,
                                 "TotalBunchLength", ctUpper-ctLower,
-                                "BinSize", dct, NULL))
+                                "BinSize", dct, 
+                                "DerbenevRatio", derbenevRatio, NULL))
           SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
         /* use T1 array to output s */
         for (iBin=0; iBin<nBins; iBin++)
@@ -1282,8 +1325,8 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
       }
     }
   }
-  
-  if (n_part>1) {
+
+  if (n_part>1 && !csrInhibit) {
     /* prepare some data for use by CSRDRIFT element */
     csrWake.dctBin = dct;
     ctLower = ctUpper = dct = 0;
