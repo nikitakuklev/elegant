@@ -2311,6 +2311,7 @@ void storeMonitorOrbitValues(ELEMENT_LIST *eptr, double **part, long np)
   MARK *mark;
   char s[1000];
   double centroid[6];
+  long i;
   
   if (!np)
     return;
@@ -2324,12 +2325,16 @@ void storeMonitorOrbitValues(ELEMENT_LIST *eptr, double **part, long np)
     if (!moni->initialized) {
       sprintf(s, "%s#%ld.xco", eptr->name, eptr->occurence);
       moni->coMemoryNumber[0] = rpn_create_mem(s, 0);
-      sprintf(s, "%s#%ld.yco", eptr->name, eptr->occurence);
+      sprintf(s, "%s#%ld.xpco", eptr->name, eptr->occurence);
       moni->coMemoryNumber[1] = rpn_create_mem(s, 0);
+      sprintf(s, "%s#%ld.yco", eptr->name, eptr->occurence);
+      moni->coMemoryNumber[2] = rpn_create_mem(s, 0);
+      sprintf(s, "%s#%ld.ypco", eptr->name, eptr->occurence);
+      moni->coMemoryNumber[3] = rpn_create_mem(s, 0);
       moni->initialized = 1;
     }
-    rpn_store(centroid[0], NULL, moni->coMemoryNumber[0]);
-    rpn_store(centroid[2], NULL, moni->coMemoryNumber[1]);
+    for (i=0; i<4; i++) 
+      rpn_store(centroid[i], NULL, moni->coMemoryNumber[i]);
     break;
   case T_MARK:
     mark = (MARK*)eptr->p_elem;
@@ -2337,14 +2342,18 @@ void storeMonitorOrbitValues(ELEMENT_LIST *eptr, double **part, long np)
       return;
     compute_centroids(centroid, part, np);
     if (mark->co_mem==NULL) {
-      mark->co_mem = tmalloc(2*sizeof(*(mark->co_mem)));
+      mark->co_mem = tmalloc(4*sizeof(*(mark->co_mem)));
       sprintf(s, "%s#%ld.xco", eptr->name, eptr->occurence);
       mark->co_mem[0] = rpn_create_mem(s, 0);
-      sprintf(s, "%s#%ld.yco", eptr->name, eptr->occurence);
+      sprintf(s, "%s#%ld.xpco", eptr->name, eptr->occurence);
       mark->co_mem[1] = rpn_create_mem(s, 0);
+      sprintf(s, "%s#%ld.yco", eptr->name, eptr->occurence);
+      mark->co_mem[2] = rpn_create_mem(s, 0);
+      sprintf(s, "%s#%ld.ypco", eptr->name, eptr->occurence);
+      mark->co_mem[3] = rpn_create_mem(s, 0);
     }
-    rpn_store(centroid[0], NULL, mark->co_mem[0]);
-    rpn_store(centroid[2], NULL, mark->co_mem[1]);
+    for (i=0; i<4; i++) 
+      rpn_store(centroid[i], NULL, mark->co_mem[i]);
     break;
   case T_HMON:
     hmon = (HMON*)eptr->p_elem;
@@ -2353,10 +2362,13 @@ void storeMonitorOrbitValues(ELEMENT_LIST *eptr, double **part, long np)
     compute_centroids(centroid, part, np);
     if (!hmon->initialized) {
       sprintf(s, "%s#%ld.xco", eptr->name, eptr->occurence);
-      hmon->coMemoryNumber = rpn_create_mem(s, 0);
+      hmon->coMemoryNumber[0] = rpn_create_mem(s, 0);
+      sprintf(s, "%s#%ld.xpco", eptr->name, eptr->occurence);
+      hmon->coMemoryNumber[1] = rpn_create_mem(s, 0);
       hmon->initialized = 1;
     }
-    rpn_store(centroid[0], NULL, hmon->coMemoryNumber);
+    for (i=0; i<2; i++) 
+      rpn_store(centroid[i], NULL, hmon->coMemoryNumber[i]);
     break;
   case T_VMON:
     vmon = (VMON*)eptr->p_elem;
@@ -2365,10 +2377,13 @@ void storeMonitorOrbitValues(ELEMENT_LIST *eptr, double **part, long np)
     compute_centroids(centroid, part, np);
     if (!vmon->initialized) {
       sprintf(s, "%s#%ld.yco", eptr->name, eptr->occurence);
-      vmon->coMemoryNumber = rpn_create_mem(s, 0);
+      vmon->coMemoryNumber[0] = rpn_create_mem(s, 0);
+      sprintf(s, "%s#%ld.ypco", eptr->name, eptr->occurence);
+      vmon->coMemoryNumber[1] = rpn_create_mem(s, 0);
       vmon->initialized = 1;
     }
-    rpn_store(centroid[2], NULL, vmon->coMemoryNumber);
+    for (i=0; i<2; i++) 
+      rpn_store(centroid[i+2], NULL, vmon->coMemoryNumber[i]);
     break;
   default:
     return ;

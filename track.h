@@ -884,7 +884,7 @@ typedef struct {
     char *readout;   /* rpn equation for x readout as function of x and y */
     long coFitpoint;
     short initialized;
-    long coMemoryNumber;
+    long coMemoryNumber[2];
     } HMON;
 
 /* names and storage structure for vertical monitor physical parameters */
@@ -896,7 +896,7 @@ typedef struct {
     char *readout;   /* rpn equation for y readout as function of x and y */
     long coFitpoint;
     short initialized;
-    long coMemoryNumber;
+    long coMemoryNumber[2];
     } VMON;
 
 /* names and storage structure for two-plane monitor physical parameters */
@@ -908,7 +908,7 @@ typedef struct {
     char *x_readout, *y_readout; /* rpn equations for x and y readouts as function of actual x and y */
     long coFitpoint;
     short initialized;
-    long coMemoryNumber[2];
+    long coMemoryNumber[4];
     } MONI;
 
 /* names and storage structure for rectangular collimator physical parameters */
