@@ -9,6 +9,7 @@
 #include "mdb.h"
 #include "track.h"
 #include "match_string.h"
+#include "correctDefs.h"
 
 #define N_CORRECTION_MODES 2
 char *correction_mode[N_CORRECTION_MODES] = {
@@ -196,7 +197,7 @@ void correction_setup(
 
     /* find correction matrices Qo, T, C, and W for all monitors using all correctors */
     if (verbose)
-        fputs("finding correctors/monitors and/or computing correction matrices", stderr);
+        fputs("finding correctors/monitors and/or computing correction matrices\n", stderr);
 
     if (_correct->SLx.n_corr_types==0) {
         cp_str(&item, "KICK");
@@ -465,7 +466,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
                     if (isnan(rms_before) || isnan(rms_after) || isinf(rms_before) || isinf(rms_after)) {
                         x_failed = 1;
                         if (correct->verbose)
-                            fputs("horizontal trajectory diverged--setting correctors to zero", stderr);
+                            fputs("horizontal trajectory diverged--setting correctors to zero\n", stderr);
                         zero_hcorrectors(&(beamline->elem), run);
                         }
                     else
@@ -473,7 +474,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
                     if (rms_before<=rms_after+correct->CMx->corr_accuracy) {
                         x_failed = 1;
                         if (correct->verbose)
-                            fputs("trajectory not improved--discontinuing horizontal correction", stderr);
+                            fputs("trajectory not improved--discontinuing horizontal correction\n", stderr);
                         }
                     dump_cormon_stats(correct->verbose, 0, correct->CMx->kick, 
                                       correct->CMx->ncor, correct->CMx->posi, correct->CMx->nmon, NULL, 
@@ -497,7 +498,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
                     if (isnan(rms_before) || isnan(rms_after) || isinf(rms_before) || isinf(rms_after)) {
                         y_failed = 1;
                         if (correct->verbose)
-                            fputs("vertical trajectory diverged--setting correctors to zero", stderr);
+                            fputs("vertical trajectory diverged--setting correctors to zero\n", stderr);
                         zero_vcorrectors(&(beamline->elem), run);
                         }
                     else
@@ -505,7 +506,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
                     if (rms_before<=rms_after+correct->CMy->corr_accuracy) {
                         y_failed = 1;
                         if (correct->verbose)
-                            fputs("trajectory not improved--discontinuing vertical correction", stderr);
+                            fputs("trajectory not improved--discontinuing vertical correction\n", stderr);
                         }
                     dump_cormon_stats(correct->verbose, 2, correct->CMy->kick, 
                                       correct->CMy->ncor, correct->CMy->posi, correct->CMy->nmon, NULL, 
@@ -518,7 +519,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
                     dump_orb_traj(correct->traj[0], beamline->n_elems, "uncorrected", sim_step);
                 if (x_failed && y_failed) {
                     if (correct->verbose)
-                        fputs("trajectory correction discontinued", stderr);
+                        fputs("trajectory correction discontinued\n", stderr);
                     break;
                     }
                 }
@@ -556,7 +557,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
                     if (isnan(rms_before) || isnan(rms_after) || isinf(rms_before) || isinf(rms_after)) {
                         x_failed = 1;
                         if (correct->verbose)
-                            fputs("horizontal orbit diverged--setting correctors to zero", stderr);
+                            fputs("horizontal orbit diverged--setting correctors to zero\n", stderr);
                         zero_hcorrectors(&(beamline->elem), run);
                         }
                     else
@@ -564,7 +565,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
                     if (rms_before<=rms_after+correct->CMx->corr_accuracy) {
                         x_failed = 1;
                         if (correct->verbose)
-                            fputs("orbit not improved--discontinuing horizontal correction", stderr);
+                            fputs("orbit not improved--discontinuing horizontal correction\n", stderr);
                         }
                     dump_cormon_stats(correct->verbose, 0, correct->CMx->kick, 
                                       correct->CMx->ncor, correct->CMx->posi, correct->CMx->nmon, NULL, 
@@ -591,7 +592,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
                     if (isnan(rms_before) || isnan(rms_after) || isinf(rms_before) || isinf(rms_after)) {
                         y_failed = 1;
                         if (correct->verbose)
-                            fputs("vertical orbit diverged--setting correctors to zero", stderr);
+                            fputs("vertical orbit diverged--setting correctors to zero\n", stderr);
                         zero_vcorrectors(&(beamline->elem), run);
                         }
                     else
@@ -599,7 +600,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
                     if (rms_before<=rms_after+correct->CMx->corr_accuracy) {
                         y_failed = 1;
                         if (correct->verbose)
-                            fputs("orbit not improved--discontinuing vertical correction", stderr);
+                            fputs("orbit not improved--discontinuing vertical correction\n", stderr);
                         }
                     dump_cormon_stats(correct->verbose, 2, correct->CMy->kick, 
                                       correct->CMy->ncor, correct->CMy->posi, correct->CMy->nmon, NULL, 
@@ -611,7 +612,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
                 dump_orb_traj(correct->traj[0], beamline->n_elems, "uncorrected", sim_step);
                 if (x_failed && y_failed) {
                     if (correct->verbose)
-                        fputs("orbit correction discontinued", stderr);
+                        fputs("orbit correction discontinued\n", stderr);
                     break;
                     }
                 }

@@ -9,7 +9,6 @@
  */
 #include <stdio.h>
 #include "namelist.h"
-#include "matlib.h"
 #include "SDDS.h"
 #include "rpn.h"
 
@@ -218,54 +217,6 @@ typedef struct {
     long new_data_read;          /* new data has been read for control of tracking */
     } ERROR;
 
-/* see correction.c for additional explanation of the next three structures */
-
-typedef struct {
-    /* arrays for information on individual correcting elements */
-    char **corr_name;                      /* names of groups of correcting elements */
-    long *corr_type;                       /* type numbers */
-    char **corr_param;                     /* parameter names */
-    long *param_offset;                    /* offset of correcting parameter in element structure */
-    long *param_index;                     /* index of correcting parameter in entity description */
-    double *corr_tweek;                    /* tweek values--amount to change parameter by to get dkick/dparam */
-    double *corr_limit;                    /* limiting absolute value of the parameter */
-    long n_corr_types;
-    } STEERING_LIST;
-
-typedef struct {
-    /* information on useful monitors and correctors */
-    long *mon_index;                       /* index of monitor in trajectory array */
-    long nmon, ncor;                       /* numbers of monitors and correctors */
-    ELEMENT_LIST **umoni, **ucorr;         /* arrays of pointers to monitor and corrector elements */
-    double *kick_coef;                     /* dkick/dparam (==1 for hkick, vkick, and hvkick elements) */
-    long *sl_index;                        /* index of steering list entry for each corrector */
-
-    /* arrays for holding corrector information for output */
-    double **kick, **posi;
-    /* copies of input specifications for correction */
-    double corr_fraction, corr_accuracy, corr_limit, bpm_noise, default_tweek, bpm_noise_cutoff;
-    long fixed_length, bpm_noise_distribution;
-    /* correction matrix plus working matrices.  dK = T*Qo is the vector of corrector kicks */
-    /* Cij = dX(monitor i)/dK(corrector j) */
-    MATRIX *T, *Qo, *dK, *C; 
-    /* information about last correction */
-    long n_cycles_done, inverse_computed;
-    } CORMON_DATA;
-
-typedef struct {
-    long mode;
-#define TRAJECTORY_CORRECTION 0
-#define ORBIT_CORRECTION 1
-    long method, verbose, track_before_and_after, n_iterations, n_xy_cycles;
-    long prezero_correctors, start_from_centroid, use_actual_beam, response_only;
-    double clorb_accuracy;
-    double clorb_iterations;
-    double clorb_iter_fraction;
-    STEERING_LIST SLx, SLy;
-    CORMON_DATA *CMx, *CMy;
-    TRAJECTORY **traj;
-    } CORRECTION ;
-    
 /* structures containing information for optimization */
 
 typedef struct {
@@ -351,33 +302,6 @@ typedef struct {
     BEAM_SUMS *sums_vs_z;
     long n_z_points;
     } OUTPUT_FILES;
-
-/* structure for chromaticity correction information */
-typedef struct {
-    double chromx, chromy;    /* desired chromaticities */
-    double strengthLimit;     /* maximum absolute value of strength */
-    char **name;              /* names of sextupole families */
-    long n_families;          /* number of families */
-    long n_iterations;        /* number of times to repeat correction */
-    MATRIX *T;                /* Nfx2 matrix to give sextupole strength changes to change 
-                                 chromaticities by given amount */
-    MATRIX *dK2;              /* Nfx1 matrix of sextupole strength changes */
-    MATRIX *dchrom;           /* 2x1 matrix of desired chromaticity changes */
-    } CHROM_CORRECTION;
-
-/* structure for tune correction information */
-typedef struct {
-    double tunex, tuney;    /* desired tunes */
-    char **name;            /* names of quadrupole families */
-    long n_families;        /* number of families */
-    long n_iterations;      /* number of times to repeat correction */
-    double gain;            /* gain for correction */
-    MATRIX *T;              /* Nfx2 matrix to give quadrupole strength changes to change 
-                               chromaticities by given amount */
-    MATRIX *dK1;           /* Nfx1 matrix of quadrupole strength changes */
-    MATRIX *dtune;         /* 2x1 matrix of desired tune changes */
-    } TUNE_CORRECTION;
-
 
 /* data arrays for awe dumps, found in dump_particlesX.c */
 #define N_BEAM_QUANTITIES 9
@@ -1499,7 +1423,7 @@ extern void concat_matrices(VMATRIX *M2, VMATRIX *M1, VMATRIX *M0);
 extern void copy_particles(double **copy, double **original, long n_particles);
  
 /* prototypes for correct.c: */
-extern void correction_setup(CORRECTION *_correct, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
+extern void finish_response_output(void);
 double computeMonitorReading(ELEMENT_LIST *elem, long coord, double x, double y, 
                              unsigned long flags);
 #define COMPUTEMONITORREADING_TILT_0 0x0001UL
@@ -1507,28 +1431,9 @@ double computeMonitorReading(ELEMENT_LIST *elem, long coord, double x, double y,
 void setMonitorCalibration(ELEMENT_LIST *elem, double calib, long coord);
 double getMonitorCalibration(ELEMENT_LIST *elem, long coord);
 
-extern long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *starting_coords, 
-        BEAM *beam, long sim_step);
 extern long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LINE_LIST *beamline, VMATRIX *M, 
     RUN *run, double dp, long start_from_recirc, long fixed_length, double *starting_point, double iter_fraction);
-extern void add_steering_element(CORRECTION *correct, LINE_LIST *beamline, RUN *run, NAMELIST_TEXT *nltext);
 extern void rotate_xy(double *x, double *y, double angle);
-extern void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN *run, LINE_LIST *beamline, long find_only, long invert);
-extern void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN *run, LINE_LIST *beamline, long find_only, long invert, long fixed_length);
-
-extern void setup_corrector_output(char *filename, RUN *run);
-extern void dump_corrector_data(CORMON_DATA *CM, STEERING_LIST *SL, long index, char *plane, long step);
-extern void setup_cormon_stats(char *filename, RUN *run);
-extern void dump_cormon_stats(long verbose, long plane, double **kick, long n_kicks, 
-    double **position, long n_positions, double *Cdp, long n_iterations, long cycle,
-    long final_cycle, long step);
-extern void setup_orb_traj_output(char *filename, char *mode, RUN *run);
-extern void dump_orb_traj(TRAJECTORY *traj, long n_elems, char *description, long step);
-
-extern void setup_correction_matrix_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, CORRECTION *correct,
-                                    long *do_response);
-extern void run_response_output(RUN *run, LINE_LIST *beamline, CORRECTION *correct, long tune_corrected);
-extern void finish_response_output(void);
 
 /* prototypes for counter.c: */
 extern long advance_values1(double *value, long n_values, long *value_index, double *initial, double *step, 
@@ -1797,12 +1702,6 @@ extern long trace_mode;
 /* global particle ID counter */
 extern long particleID;
 
-/* prototypes for chrom.c */
-void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, CHROM_CORRECTION *chrom);
-void do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *beamline, double *clorb,
-        long step, long last_iteration);
-void computeChromaticities(double *chromx, double *chromy, TWISS *twiss, VMATRIX *M);
-
 /* prototypes for lorentz.c */
 long  lorentz(double **part, long n_part, void *field, long field_type, double P_central, double **accepted);
 void lorentz_report(void);
@@ -1836,18 +1735,11 @@ void setup_transport_analysis(NAMELIST_TEXT *nltext, RUN *run, VARY *control, ER
 void do_transport_analysis(RUN *run, VARY *control, ERROR *errcon, LINE_LIST *beamline, double *orbit);
 void finish_transport_analysis(RUN *run, VARY *control, ERROR *errcon, LINE_LIST *beamline);
 
-/* prototypes for tune.c */
-void setup_tune_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, TUNE_CORRECTION *tune);
-void do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline, double *clorb, long step, long last_iteration);
-
 /* prototypes for link_elements.c */
 void element_link_control(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, RUN *run_cond, LINE_LIST *beamline);
 void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *beamline);
 long assert_element_links(ELEMENT_LINKS *links, RUN *run_cond, LINE_LIST *beamline, long flags);
 void reset_element_links(ELEMENT_LINKS *links, RUN *run_cond, LINE_LIST *beamline);
-
-void compute_amplification_factors(NAMELIST_TEXT *nltext, RUN *run, CORRECTION *correct,
-    long closed_orbit, LINE_LIST *beamline);
 
 void track_through_matter(double **part, long np, MATTER *matter, double Po);
 

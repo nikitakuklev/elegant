@@ -9,6 +9,7 @@
 
 #include "mdb.h"
 #include "track.h"
+#include "matlib.h"
 
 static double tmp_safe_sqrt;
 #define SAFE_SQRT(x) ((tmp_safe_sqrt=(x))<0?0.0:sqrt(tmp_safe_sqrt))

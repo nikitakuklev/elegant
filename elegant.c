@@ -17,6 +17,10 @@
 #include <malloc.h>
 #endif
 
+#include "chromDefs.h"
+#include "correctDefs.h"
+#include "tuneDefs.h"
+
 void traceback_handler(int code);
 
 #define DESCRIBE_INPUT 0

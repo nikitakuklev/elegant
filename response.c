@@ -8,6 +8,7 @@
  */
 #include "mdb.h"
 #include "track.h"
+#include "correctDefs.h"
 
 extern char *correction_mode[2];
 

@@ -9,6 +9,7 @@
 #include "mdb.h"
 #include "track.h"
 #include "SDDS.h"
+#include "correctDefs.h"
 
 /* Variables for output of corrector data */
 static long SDDS_cor_initialized = 0;

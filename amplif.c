@@ -9,6 +9,7 @@
 #include "mdb.h"
 #include "track.h"
 #include "match_string.h"
+#include "correctDefs.h"
 
 void compute_amplification_factors(
     NAMELIST_TEXT *nltext,

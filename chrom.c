@@ -8,6 +8,7 @@
  */
 #include "mdb.h"
 #include "track.h"
+#include "chromDefs.h"
 
 static FILE *fp_sl = NULL;
 static long alter_defined_values;
