@@ -169,6 +169,7 @@ PARAMETER bend_param[N_BEND_PARAMS] = {
     {"EDGE_ORDER", "", IS_LONG, 1, (long)((char *)&bend_example.edge_order), NULL, 0.0, 0},
     {"TRANSPORT", "", IS_LONG, 1, (long)((char *)&bend_example.TRANSPORT), NULL, 0.0, 0},
     {"USE_BN", "", IS_LONG, 0, (long)((char *)&bend_example.use_bn), NULL, 0.0, 0},
+    {"B1", "1/M", IS_DOUBLE, 0, (long)((char *)&bend_example.b1), NULL, 0.0, 0},
     {"B2", "1/M$a2$n", IS_DOUBLE, 0, (long)((char *)&bend_example.b2), NULL, 0.0, 0},
     };
 
@@ -866,6 +867,7 @@ PARAMETER csbend_param[N_CSBEND_PARAMS] = {
     {"EDGE2_KICK_LIMIT", "", IS_DOUBLE, 0, (long)((char *)&csbend_example.edge2_kick_limit), NULL, -1., 0},
     {"KICK_LIMIT_SCALING", "", IS_LONG, 0, (long)((char *)&csbend_example.kick_limit_scaling), NULL, 0, 0},
     {"USE_BN", "", IS_LONG, 0, (long)((char *)&csbend_example.use_bn), NULL, 0.0, 0},
+    {"B1", "1/M", IS_DOUBLE, 0, (long)((char *)&csbend_example.b1), NULL, 0.0, 0},
     {"B2", "1/M$a2$n", IS_DOUBLE, 0, (long)((char *)&csbend_example.b2), NULL, 0.0, 0},
     {"B3", "1/M$a3$n", IS_DOUBLE, 0, (long)((char *)&csbend_example.b3), NULL, 0.0, 0},
     {"B4", "1/M$a4$n", IS_DOUBLE, 0, (long)((char *)&csbend_example.b4), NULL, 0.0, 0},
@@ -907,6 +909,7 @@ PARAMETER csrcsbend_param[N_CSRCSBEND_PARAMS] = {
     {"OUTPUT_INTERVAL", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.outputInterval), NULL, 0.0, 1},
     {"STEADY_STATE", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.steadyState), NULL, 0.0, 0},
     {"USE_BN", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.use_bn), NULL, 0.0, 0},
+    {"B1", "1/M", IS_DOUBLE, 0, (long)((char *)&csrcsbend_example.b1), NULL, 0.0, 0},
     {"B2", "1/M$a2$n", IS_DOUBLE, 0, (long)((char *)&csrcsbend_example.b2), NULL, 0.0, 0},
     {"B3", "1/M$a3$n", IS_DOUBLE, 0, (long)((char *)&csrcsbend_example.b3), NULL, 0.0, 0},
     {"B4", "1/M$a4$n", IS_DOUBLE, 0, (long)((char *)&csrcsbend_example.b4), NULL, 0.0, 0},
