@@ -31,8 +31,11 @@ static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
     {"Step", "&parameter name=Step, type=long, description=\"Simulation step\" &end"},
     } ;
 
-static SDDS_TABLE SDDS_aperture;
+static SDDS_DATASET SDDS_aperture;
+static FILE *fpSearchOutput = NULL;
 
+#define MP_MODE 0
+#define SP_MODE 1
 #define N_SEARCH_MODES 2
 static char *search_mode[N_SEARCH_MODES] = {
     "many-particle", "single-particle"
@@ -113,6 +116,22 @@ void setup_aperture_search(
         fclose(fp);
         }
 
+    fpSearchOutput = NULL;
+    if (search_output) {
+      if (mode_code!=SP_MODE) {
+        fprintf(stdout, "Error: search_output field can only be used with single-particle mode\n");
+        exit(1);
+      }
+      search_output = compose_filename(search_output, run->rootname);
+      fpSearchOutput = fopen_e(search_output, "w", 0);
+      fputs("SDDS1\n&parameter name=Step, type=long &end\n", fpSearchOutput);
+      fputs("&parameter name=x0, type=double, units=m &end\n", fpSearchOutput);
+      fputs("&parameter name=y0, type=double, units=m &end\n", fpSearchOutput);
+      fputs("&parameter name=SearchFromRight, type=short &end\n", fpSearchOutput);
+      fputs("&parameter name=IsStable, type=short &end\n", fpSearchOutput);
+      fputs("&data mode=ascii no_row_counts=1 &end\n", fpSearchOutput);
+    }
+    
     log_exit("setup_aperture_search");
     }
 
@@ -424,243 +443,276 @@ long do_aperture_search_mp(
 
 
 long do_aperture_search_sp(
-    RUN *run,
-    VARY *control,
-    ERRORVAL *errcon,
-    LINE_LIST *beamline
-    )
+                           RUN *run,
+                           VARY *control,
+                           ERRORVAL *errcon,
+                           LINE_LIST *beamline
+                           )
 {    
-    double **coord;
-    double x, y, dx, dy;
-    double **xy_left, **xy_right;
-    long n_left, n_right;
-    double last_x_left, last_x_right, x1, x2;
-    double p_central;
-    long n_trpoint, ix, iy, is;
-    long effort, n_stable;
+  double **coord;
+  double x, y, dx, dy;
+  double **xy_left, **xy_right;
+  long n_left, n_right;
+  double last_x_left, last_x_right, x1, x2;
+  double p_central;
+  long n_trpoint, ix, iy, is;
+  long effort, n_stable;
 
-    log_entry("do_aperture_search_sp");
+  log_entry("do_aperture_search_sp");
 
-    coord = (double**)zarray_2d(sizeof(**coord), 1, 7);
-    xy_left   = (double**)zarray_2d(sizeof(**xy_left), ny, 2); 
-    xy_right  = (double**)zarray_2d(sizeof(**xy_right), ny, 2); 
-    n_left = n_right = 0;
+  coord = (double**)zarray_2d(sizeof(**coord), 1, 7);
+  xy_left   = (double**)zarray_2d(sizeof(**xy_left), ny, 2); 
+  xy_right  = (double**)zarray_2d(sizeof(**xy_right), ny, 2); 
+  n_left = n_right = 0;
 
-    dx  = (xmax-xmin)/(nx-1);
-    dy = (ymax-ymin)/(ny-1);
-    last_x_left  = xmin;
-    last_x_right = xmax;
-    effort = 0;
-    n_stable = 0;
-    for (iy=0, y=ymin; iy<ny; iy++, y+=dy) {
-        if (verbosity>0)
-            fprintf(stdout, "searching for aperture for y = %e m\n", y);
-            fflush(stdout);
-        /* search from left */
-        if (verbosity>1) {
-            fprintf(stdout, "    searching from left to right\n");
-            fflush(stdout);
-            }
-        if (assume_nonincreasing && iy!=0) {
-            x = last_x_left;
-            ix = (x - xmin)/dx + 0.5;
-            if (ix>nx-1)
-                ix = nx-1;
-            }
-        else {
-            x = xmin;
-            ix = 0;
-            }
-        for ( ; ix<nx; ix++, x+=dx) {
-            if (verbosity>1) {
-                fprintf(stdout, "    tracking for x = %e m\n", x);
-                fflush(stdout);
-                }
-            coord[0][0] = x;
-            coord[0][2] = y;
-            p_central = run->p_central;
-            coord[0][1] = coord[0][3] = coord[0][4] = coord[0][5] = 0;
-            n_trpoint = 1;
-            if (do_tracking(coord, &n_trpoint, &effort, beamline, &p_central, 
-                            NULL, NULL, NULL, NULL, run, control->i_step, 
-                            SILENT_RUNNING, control->n_passes, 0, NULL, NULL, NULL))
-                break;
-            }
-        if (ix!=nx) {
-            n_stable++;
-            last_x_left = x;
-            if (ix!=0 && n_splits) {
-                /* do secondary search */
-                x1 = x;            /* stable   */
-                x2 = x - dx;       /* unstable */
-                for (is=0; is<n_splits; is++) {
-                    if (fabs(x1-x2)<desired_resolution)
-                        break;
-                    x = (1-split_fraction)*x1 + split_fraction*x2;
-                    if (verbosity>1) {
-                        fprintf(stdout, "    splitting:  %e, %e --> %e \n", x1, x2, x);
-                        fflush(stdout);
-                        }
-                    coord[0][0] = x;
-                    coord[0][2] = y;
-                    p_central = run->p_central;
-                    coord[0][1] = coord[0][3] = coord[0][4] = coord[0][5] = 0;
-                    n_trpoint = 1;
-                    if (do_tracking(coord, &n_trpoint, &effort, beamline, &p_central, 
-                                    NULL, NULL, NULL, NULL, run, control->i_step, 
-                                    SILENT_RUNNING, control->n_passes, 0, NULL, NULL, NULL)) {
-                        n_stable++;
-                        x1 = x;    /* stable */
-                        }
-                    else
-                        x2 = x;    /* unstable */
-                    }
-                x = x1;
-                }
-            xy_left[n_left][0] = x;
-            xy_left[n_left][1] = y;
-            if (verbosity>0) {
-                fprintf(stdout, "    x = %e m is stable\n", x);
-                fflush(stdout);
-                }
-            n_left++;
-            }
-        else {
-            if (verbosity>0) {
-                fprintf(stdout, "    no stable particles seen\n");
-                fflush(stdout);
-                }
-            continue;
-            }
-        /* search from right */
-        if (verbosity>1) {
-            fprintf(stdout, "    searching from right to left\n");
-            fflush(stdout);
-            }
-        if (assume_nonincreasing && iy!=0) {
-            x = last_x_right;
-            ix = (xmax - x)/dx + 0.5;
-            if (ix>nx-1)
-                ix = nx-1;
-            }
-        else {
-            x = xmax;
-            ix = 0;
-            }
-        for ( ; ix<nx; ix++, x-=dx) {
-            if (verbosity>1) {
-                fprintf(stdout, "    tracking for x = %e m\n", x);
-                fflush(stdout);
-                }
-            coord[0][0] = x;
-            coord[0][2] = y;
-            p_central = run->p_central;
-            coord[0][1] = coord[0][3] = coord[0][4] = coord[0][5] = 0;
-            n_trpoint = 1;
-            if (do_tracking(coord, &n_trpoint, &effort, beamline, &p_central, 
-                            NULL, NULL, NULL, NULL, run, control->i_step, 
-                            SILENT_RUNNING, control->n_passes, 0, NULL, NULL, NULL))
-                break;
-            }
-        if (ix!=nx) {
-            n_stable++;
-            last_x_right = x;
-            if (ix!=0 && n_splits) {
-                /* do secondary search */
-                x1 = x;            /* stable   */
-                x2 = x + dx;       /* unstable */
-                for (is=0; is<n_splits; is++) {
-                    if (fabs(x1-x2)<desired_resolution)
-                        break;
-                    x = (1-split_fraction)*x1 + split_fraction*x2;
-                    if (verbosity>1) {
-                        fprintf(stdout, "    splitting:  %e, %e --> %e \n", x1, x2, x);
-                        fflush(stdout);
-                        }
-                    coord[0][0] = x;
-                    coord[0][2] = y;
-                    p_central = run->p_central;
-                    coord[0][1] = coord[0][3] = coord[0][4] = coord[0][5] = 0;
-                    n_trpoint = 1;
-                    if (do_tracking(coord, &n_trpoint, &effort, beamline, &p_central, 
-                                    NULL, NULL, NULL, NULL, run, control->i_step, 
-                                    SILENT_RUNNING, control->n_passes, 0, NULL, NULL, NULL)) {
-                        n_stable++;
-                        x1 = x;    /* stable */
-                        }
-                    else
-                        x2 = x;    /* unstable */
-                    }
-                x = x1;
-                }
-            xy_right[n_right][0] = x;
-            xy_right[n_right][1] = y;
-            if (verbosity>0) {
-                fprintf(stdout, "    x = %e m is stable\n", x);
-                fflush(stdout);
-                }
-            n_right++;
-            }
-        }
-    if (verbosity>0) {
-        fprintf(stdout, "total effort:  %ld particle-turns   %ld stable particles were tracked\n", effort, n_stable);
-        fflush(stdout);
-        }
-
-    if (!SDDS_StartTable(&SDDS_aperture, n_left+n_right)) {
-        SDDS_SetError("Unable to start SDDS table (do_aperture_search)");
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-        }
-    SDDS_SetParameters(&SDDS_aperture, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, 0, control->i_step, -1);
-    if (control->n_elements_to_vary) {
-        for (ix=0; ix<control->n_elements_to_vary; ix++)
-            if (!SDDS_SetParameters(&SDDS_aperture, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ix+1,
-                                    control->varied_quan_value[ix], -1))
-                break;
-        }
-    if (SDDS_NumberOfErrors()) {
-        SDDS_SetError("Problem setting SDDS parameter values (do_aperture_search)");
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-        }
-
-    for (iy=0; iy<n_left; iy++) 
-        if (!SDDS_SetRowValues(&SDDS_aperture, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iy,
-                               IC_X, xy_left[iy][0], IC_Y, xy_left[iy][1], -1)) {
-            SDDS_SetError("Problem setting SDDS row values (do_aperture_search)");
-            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-            }
-    for (iy=0; iy<n_right; iy++) {
-        if (!SDDS_SetRowValues(&SDDS_aperture, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iy+n_left,
-                               IC_X, xy_right[n_right-iy-1][0], IC_Y, xy_right[n_right-iy-1][1], -1)) {
-            SDDS_SetError("Problem setting SDDS row values (do_aperture_search)");
-            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-            }
-        }
-    if (!SDDS_WriteTable(&SDDS_aperture)) {
-        SDDS_SetError("Problem writing SDDS table (do_aperture_search)");
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-        }
-    SDDS_DoFSync(&SDDS_aperture);
-        
-
-    free_zarray_2d((void**)coord, 1, 7);
-    free_zarray_2d((void**)xy_left, ny, 2);
-    free_zarray_2d((void**)xy_right, ny, 2);
-
-    log_exit("do_aperture_search_sp");
-    return(1);
+  dx  = (xmax-xmin)/(nx-1);
+  dy = (ymax-ymin)/(ny-1);
+  last_x_left  = xmin;
+  last_x_right = xmax;
+  effort = 0;
+  n_stable = 0;
+  for (iy=0, y=ymin; iy<ny; iy++, y+=dy) {
+    if (verbosity>0)
+      fprintf(stdout, "searching for aperture for y = %e m\n", y);
+    fflush(stdout);
+    /* search from left */
+    if (verbosity>1) {
+      fprintf(stdout, "    searching from left to right\n");
+      fflush(stdout);
     }
+    if (assume_nonincreasing && iy!=0) {
+      x = last_x_left;
+      ix = (x - xmin)/dx + 0.5;
+      if (ix>nx-1)
+        ix = nx-1;
+    }
+    else {
+      x = xmin;
+      ix = 0;
+    }
+    for ( ; ix<nx; ix++, x+=dx) {
+      if (verbosity>1) {
+        fprintf(stdout, "    tracking for x = %e m\n", x);
+        fflush(stdout);
+      }
+      coord[0][0] = x;
+      coord[0][2] = y;
+      p_central = run->p_central;
+      coord[0][1] = coord[0][3] = coord[0][4] = coord[0][5] = 0;
+      n_trpoint = 1;
+      if (do_tracking(coord, &n_trpoint, &effort, beamline, &p_central, 
+                      NULL, NULL, NULL, NULL, run, control->i_step, 
+                      SILENT_RUNNING, control->n_passes, 0, NULL, NULL, NULL)) {
+        /* stable */
+        if (fpSearchOutput)
+          fprintf(fpSearchOutput, "%ld\n%le\n%le\n0\n1\n", control->i_step, x, y);
+        break;
+      } else {
+        /* unstable */
+        if (fpSearchOutput)
+          fprintf(fpSearchOutput, "%ld\n%le\n%le\n0\n0\n", control->i_step, x, y);
+      }
+    }
+    if (ix!=nx) {
+      n_stable++;
+      last_x_left = x;
+      if (ix!=0 && n_splits) {
+        /* do secondary search */
+        x1 = x;            /* stable   */
+        x2 = x - dx;       /* unstable */
+        for (is=0; is<n_splits; is++) {
+          if (fabs(x1-x2)<desired_resolution)
+            break;
+          x = (1-split_fraction)*x1 + split_fraction*x2;
+          if (verbosity>1) {
+            fprintf(stdout, "    splitting:  %e, %e --> %e \n", x1, x2, x);
+            fflush(stdout);
+          }
+          coord[0][0] = x;
+          coord[0][2] = y;
+          p_central = run->p_central;
+          coord[0][1] = coord[0][3] = coord[0][4] = coord[0][5] = 0;
+          n_trpoint = 1;
+          if (do_tracking(coord, &n_trpoint, &effort, beamline, &p_central, 
+                          NULL, NULL, NULL, NULL, run, control->i_step, 
+                          SILENT_RUNNING, control->n_passes, 0, NULL, NULL, NULL)) {
+            n_stable++;
+            x1 = x;    /* stable */
+            if (fpSearchOutput)
+              fprintf(fpSearchOutput, "%ld\n%le\n%le\n0\n1\n", control->i_step, x, y);
+          }
+          else {
+            x2 = x;    /* unstable */
+            if (fpSearchOutput)
+              fprintf(fpSearchOutput, "%ld\n%le\n%le\n0\n0\n", control->i_step, x, y);
+          }
+        }
+        x = x1;
+      }
+      xy_left[n_left][0] = x;
+      xy_left[n_left][1] = y;
+      if (verbosity>0) {
+        fprintf(stdout, "    x = %e m is stable\n", x);
+        fflush(stdout);
+      }
+      n_left++;
+    }
+    else {
+      if (verbosity>0) {
+        fprintf(stdout, "    no stable particles seen\n");
+        fflush(stdout);
+      }
+      continue;
+    }
+    if (fpSearchOutput)
+      fflush(fpSearchOutput);
+    /* search from right */
+    if (verbosity>1) {
+      fprintf(stdout, "    searching from right to left\n");
+      fflush(stdout);
+    }
+    if (assume_nonincreasing && iy!=0) {
+      x = last_x_right;
+      ix = (xmax - x)/dx + 0.5;
+      if (ix>nx-1)
+        ix = nx-1;
+    }
+    else {
+      x = xmax;
+      ix = 0;
+    }
+    for ( ; ix<nx; ix++, x-=dx) {
+      if (verbosity>1) {
+        fprintf(stdout, "    tracking for x = %e m\n", x);
+        fflush(stdout);
+      }
+      coord[0][0] = x;
+      coord[0][2] = y;
+      p_central = run->p_central;
+      coord[0][1] = coord[0][3] = coord[0][4] = coord[0][5] = 0;
+      n_trpoint = 1;
+      if (do_tracking(coord, &n_trpoint, &effort, beamline, &p_central, 
+                      NULL, NULL, NULL, NULL, run, control->i_step, 
+                      SILENT_RUNNING, control->n_passes, 0, NULL, NULL, NULL)) {
+        /* stable */
+        if (fpSearchOutput)
+          fprintf(fpSearchOutput, "%ld\n%le\n%le\n1\n1\n", control->i_step, x, y);
+        break;
+      } else {
+        /* unstable */
+        if (fpSearchOutput)
+          fprintf(fpSearchOutput, "%ld\n%le\n%le\n1\n0\n", control->i_step, x, y);
+      }
+    }
+    if (ix!=nx) {
+      n_stable++;
+      last_x_right = x;
+      if (ix!=0 && n_splits) {
+        /* do secondary search */
+        x1 = x;            /* stable   */
+        x2 = x + dx;       /* unstable */
+        for (is=0; is<n_splits; is++) {
+          if (fabs(x1-x2)<desired_resolution)
+            break;
+          x = (1-split_fraction)*x1 + split_fraction*x2;
+          if (verbosity>1) {
+            fprintf(stdout, "    splitting:  %e, %e --> %e \n", x1, x2, x);
+            fflush(stdout);
+          }
+          coord[0][0] = x;
+          coord[0][2] = y;
+          p_central = run->p_central;
+          coord[0][1] = coord[0][3] = coord[0][4] = coord[0][5] = 0;
+          n_trpoint = 1;
+          if (do_tracking(coord, &n_trpoint, &effort, beamline, &p_central, 
+                          NULL, NULL, NULL, NULL, run, control->i_step, 
+                          SILENT_RUNNING, control->n_passes, 0, NULL, NULL, NULL)) {
+            n_stable++;
+            x1 = x;    /* stable */
+            if (fpSearchOutput)
+              fprintf(fpSearchOutput, "%ld\n%le\n%le\n1\n1\n", control->i_step, x, y);
+          }
+          else {
+            x2 = x;    /* unstable */
+            if (fpSearchOutput)
+              fprintf(fpSearchOutput, "%ld\n%le\n%le\n1\n0\n", control->i_step, x, y);
+          }
+        }
+        x = x1;
+      }
+      xy_right[n_right][0] = x;
+      xy_right[n_right][1] = y;
+      if (verbosity>0) {
+        fprintf(stdout, "    x = %e m is stable\n", x);
+        fflush(stdout);
+      }
+      n_right++;
+    }
+  }
+  if (fpSearchOutput)
+    fflush(fpSearchOutput);
+  if (verbosity>0) {
+    fprintf(stdout, "total effort:  %ld particle-turns   %ld stable particles were tracked\n", effort, n_stable);
+    fflush(stdout);
+  }
+  
+  if (!SDDS_StartTable(&SDDS_aperture, n_left+n_right)) {
+    SDDS_SetError("Unable to start SDDS table (do_aperture_search)");
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  }
+  SDDS_SetParameters(&SDDS_aperture, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, 0, control->i_step, -1);
+  if (control->n_elements_to_vary) {
+    for (ix=0; ix<control->n_elements_to_vary; ix++)
+      if (!SDDS_SetParameters(&SDDS_aperture, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ix+1,
+                              control->varied_quan_value[ix], -1))
+        break;
+  }
+  if (SDDS_NumberOfErrors()) {
+    SDDS_SetError("Problem setting SDDS parameter values (do_aperture_search)");
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  }
+
+  for (iy=0; iy<n_left; iy++) 
+    if (!SDDS_SetRowValues(&SDDS_aperture, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iy,
+                           IC_X, xy_left[iy][0], IC_Y, xy_left[iy][1], -1)) {
+      SDDS_SetError("Problem setting SDDS row values (do_aperture_search)");
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+  for (iy=0; iy<n_right; iy++) {
+    if (!SDDS_SetRowValues(&SDDS_aperture, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iy+n_left,
+                           IC_X, xy_right[n_right-iy-1][0], IC_Y, xy_right[n_right-iy-1][1], -1)) {
+      SDDS_SetError("Problem setting SDDS row values (do_aperture_search)");
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+  }
+  if (!SDDS_WriteTable(&SDDS_aperture)) {
+    SDDS_SetError("Problem writing SDDS table (do_aperture_search)");
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  }
+  SDDS_DoFSync(&SDDS_aperture);
+  
+  free_zarray_2d((void**)coord, 1, 7);
+  free_zarray_2d((void**)xy_left, ny, 2);
+  free_zarray_2d((void**)xy_right, ny, 2);
+
+  log_exit("do_aperture_search_sp");
+  return(1);
+}
 
 void finish_aperture_search(
-    RUN *run,
-    VARY *control,
-    ERRORVAL *errcon,
-    LINE_LIST *beamline
-    )
+                            RUN *run,
+                            VARY *control,
+                            ERRORVAL *errcon,
+                            LINE_LIST *beamline
+                            )
 {
-    if (SDDS_IsActive(&SDDS_aperture) && !SDDS_Terminate(&SDDS_aperture)) {
-        SDDS_SetError("Problem terminating SDDS output (finish_aperture_search)");
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-        }
-    }
+  if (SDDS_IsActive(&SDDS_aperture) && !SDDS_Terminate(&SDDS_aperture)) {
+    SDDS_SetError("Problem terminating SDDS output (finish_aperture_search)");
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  }
+  if (fpSearchOutput) {
+    fclose(fpSearchOutput);
+    fpSearchOutput = NULL;
+  }
+}
 

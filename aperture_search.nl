@@ -7,6 +7,7 @@
 
 #namelist find_aperture static
     STRING output = NULL;
+    STRING search_output = NULL;
     STRING boundary = NULL;
     STRING mode = "many-particle";
     double xmin = -0.1;
