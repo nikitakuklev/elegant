@@ -232,8 +232,6 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
             errcon->quan_name[n_items] = tmalloc(sizeof(char*)*(strlen(context->name)+strlen(item)+4));
             errcon->quan_final_index[n_items] = -1;
             sprintf(errcon->quan_name[n_items], "d%s.%s", context->name, item);
-            if (errcon->error_type[n_items]==PLUS_OR_MINUS_ERRORS)
-                fractional = 1;
             errcon->flags[n_items]  = (fractional?FRACTIONAL_ERRORS:0);
             errcon->flags[n_items] += (bind==0?0:(bind==-1?ANTIBIND_ERRORS:BIND_ERRORS));
             errcon->flags[n_items] += (post_correction?POST_CORRECTION:PRE_CORRECTION);
@@ -299,8 +297,6 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
         errcon->error_type[n_items] = match_string(type, known_error_type, N_ERROR_TYPES, 0);
         errcon->quan_name[n_items] = tmalloc(sizeof(char*)*(strlen(context->name)+strlen(item)+4));
         sprintf(errcon->quan_name[n_items], "d%s.%s", context->name, item);
-        if (errcon->error_type[n_items]==PLUS_OR_MINUS_ERRORS)
-            fractional = 1;
         errcon->flags[n_items]  = (fractional?FRACTIONAL_ERRORS:0);
         errcon->flags[n_items] += (bind==0?0:(bind==-1?ANTIBIND_ERRORS:BIND_ERRORS));
         errcon->flags[n_items] += (post_correction?POST_CORRECTION:PRE_CORRECTION);
@@ -387,10 +383,8 @@ double perturbation(double xamplitude, double xcutoff, long xerror_type)
         case GAUSSIAN_ERRORS:
             return(gauss_rn_lim(0.0, xamplitude, xcutoff, random_1));
         case PLUS_OR_MINUS_ERRORS:
-            /* return either -x-1 or x-1, which is added to 1 in the calling routine
-             * (since these are implemented as fractional errors)
-             */
-            return(xamplitude*(random_1(0)>0.5?1.0:-1.0) - 1);
+            /* return either -x or x */ 
+            return(xamplitude*(random_1(0)>0.5?1.0:-1.0));
         default:
             bomb("unknown error type in perturbation()", NULL);
             exit(1);
