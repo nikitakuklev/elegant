@@ -16,8 +16,6 @@
 #include "track.h"
 #include "vary.h"
 
-#define DEBUG 0
-
 long load_enumerated_values(double **value, char *file, char *column);
 
 void vary_setup(VARY *_control, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)

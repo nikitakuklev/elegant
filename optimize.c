@@ -288,6 +288,7 @@ void add_optimization_covariable(OPTIMIZATION_DATA *optimization_data, NAMELIST_
     cp_str(&covariables->item[n_covariables], item);
     cp_str(&covariables->varied_quan_unit[n_covariables], 
         entity_description[context->type].parameter[covariables->varied_param[n_covariables]].unit);
+
     if (!get_parameter_value(covariables->varied_quan_value+n_covariables, name, covariables->varied_param[n_covariables],
             context->type, beamline))
         bomb("unable to get initial value for parameter", NULL);
@@ -530,7 +531,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
     OPTIM_COVARIABLES *covariables;
     OPTIM_CONSTRAINTS *constraints;
     double result, lastResult;
-    long i, startsLeft;
+    long i, startsLeft, i_step_saved;
     
     log_entry("do_optimize");
 
@@ -554,7 +555,8 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
     
     n_evaluations_made = 0;
     n_passes_made      = 0;
-    
+    i_step_saved = control->i_step;
+
     variables = &(optimization_data->variables);
     covariables = &(optimization_data->covariables);
     constraints = &(optimization_data->constraints);
@@ -599,19 +601,52 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
         summarize_optimization_setup(optimization_data);
 
     for (i=0; i<variables->n_variables; i++) {
+        if (!get_parameter_value(variables->varied_quan_value+i, 
+				 variables->element[i], 
+				 variables->varied_param[i], 
+				 variables->varied_type[i], beamline))
+            bomb("unable to get initial value for parameter", NULL);
+	variables->initial_value[i] = variables->varied_quan_value[i];
+	fprintf(stdout, "Initial value for %s.%s is %e\n", 
+		variables->element[i], variables->item[i],
+		variables->initial_value[i]);
+	rpn_store(variables->initial_value[i], NULL, variables->memory_number[i]);
+	if (variables->initial_value[i]>variables->upper_limit[i]) {
+	  fprintf(stdout, "Initial value (%e) is greater than upper limit for %s.%s\n", 
+		  variables->initial_value[i],
+		  variables->element[i], variables->item[i]);
+	  exit(1);
+	}
+	if (variables->initial_value[i]<variables->lower_limit[i]) {
+	  fprintf(stdout, "Initial value (%e) is smaller than lower limit for %s.%s\n", 
+		  variables->initial_value[i],
+		  variables->element[i], variables->item[i]);
+	  exit(1);
+	}
         variables->step[i] = variables->orig_step[i];
         if (variables->step[i]==0) {
-            if (variables->lower_limit[i]==variables->upper_limit[i])
-                fprintf(stdout, "Note: step size for %s set to %e.\n", 
+	  if (variables->lower_limit[i]==variables->upper_limit[i])
+	      fprintf(stdout, "Note: step size for %s set to %e.\n", 
                         variables->varied_quan_name[i], 
                         variables->orig_step[i] = variables->step[i] = 1);
             else
-                fprintf(stdout, "Note: step size for %s set to %e.\n", variables->varied_quan_name[i],
+	      fprintf(stdout, "Note: step size for %s set to %e.\n", variables->varied_quan_name[i],
                         variables->orig_step[i] = variables->step[i] = 
                         (variables->upper_limit[i]-variables->lower_limit[i])/10);
             fflush(stdout);
-            }
-        }
+	}
+    }
+
+    for (i=0; i<covariables->n_covariables; i++) {
+      if (!get_parameter_value(covariables->varied_quan_value+i, 
+			       covariables->element[i], 
+			       covariables->varied_param[i],
+			       covariables->varied_type[i],
+			       beamline))
+        bomb("unable to get initial value for parameter", NULL);
+      rpn_store(covariables->varied_quan_value[i] = rpn(covariables->equation[i]), 
+		NULL, covariables->memory_number[i]);
+    }
     
     final_property_values = count_final_properties();
     final_property_value = tmalloc(sizeof(*final_property_value)*final_property_values);
@@ -621,10 +656,9 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
         output->n_z_points = 0;
         }
 
+    i = variables->n_variables;
     variables->varied_quan_value[i] = 0;   /* end-of-optimization indicator */
-    control->i_step = control->n_steps = 1;
-/*    control->n_indices = 0; */
-/*    control->i_vary = 1; */
+    control->i_step = 0;
     optim_func_flags = FINAL_SUMS_ONLY + INHIBIT_FILE_OUTPUT + SILENT_RUNNING;
 
     if (!optimization_data->UDFcreated) {
@@ -902,6 +936,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
         }
     for (i=0; i<variables->n_variables; i++)
         variables->initial_value[i] = variables->varied_quan_value[i];
+    control->i_step = i_step_saved;
     log_exit("do_optimize");
     }
 
