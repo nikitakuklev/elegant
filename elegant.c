@@ -150,7 +150,7 @@ char **argv;
     long correction_setuped, run_setuped, run_controled, error_controled, beam_type;
     long do_chromatic_correction = 0, do_twiss_output = 0, fl_do_tune_correction = 0;
     long do_closed_orbit = 0, do_matrix_output = 0, do_response_output = 0, step;
-    long last_default_order = 0, new_beam_flags, links_present;
+    long last_default_order = 0, new_beam_flags, links_present, twiss_computed = 0;
     double *starting_coord;
     long namelists_read = 0, failed;
 
@@ -392,6 +392,8 @@ char **argv;
             set_print_namelist_flags(0);
             process_namelist(&track, &namelist_text);
             print_namelist(stderr, &track);
+            if (use_linear_chromatic_matrix && !twiss_computed)
+              bomb("you must compute twiss parameters to do linear chromatic matrix tracking", NULL);
             
             if (beam_type==-1)
                 bomb("beam must be defined prior to tracking", NULL);
@@ -562,6 +564,7 @@ char **argv;
                 bomb("run_setup must precede twiss_output namelist", NULL);
             setup_twiss_output(&namelist_text, &run_conditions, beamline, &do_twiss_output);
             if (!do_twiss_output) {
+                twiss_computed = 1;
                 run_twiss_output(&run_conditions, beamline, NULL, -1);
                 finish_twiss_output();
                 }
