@@ -92,6 +92,8 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part, long np, LINE_LIST
   
   if (tfbd->initialized==0)
       initializeTransverseFeedbackDriver(tfbd, beamline, nPasses, rootname);
+  if (pass==0)
+    tfbd->dataWritten = 0;
   
   if (tfbd->delay>tfbd->maxDelay) {
     if (!(tfbd->driverSignal = 
@@ -146,7 +148,19 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part, long np, LINE_LIST
         SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
         SDDS_Bomb("problem writing data for TFBDRIVER output file");
       }
+      tfbd->dataWritten = 1;
     }
+  }
+}
+
+void flushTransverseFeedbackDriverFiles(TFBDRIVER *tfbd)
+{
+  if (!(tfbd->dataWritten)) {
+    if (!SDDS_WritePage(&tfbd->SDDSout)) {
+      SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
+      SDDS_Bomb("problem writing data for TFBDRIVER output file");
+    }
+    tfbd->dataWritten = 1;
   }
 }
 
@@ -189,13 +203,13 @@ void initializeTransverseFeedbackDriver(TFBDRIVER *tfbd, LINE_LIST *beamline, lo
     if (!SDDS_InitializeOutput(&tfbd->SDDSout, SDDS_BINARY, 1, NULL, NULL, tfbd->outputFile) ||
         !SDDS_DefineSimpleColumn(&tfbd->SDDSout, "Pass", NULL, SDDS_LONG) ||
         !SDDS_DefineSimpleColumn(&tfbd->SDDSout, "PickupOutput", NULL, SDDS_DOUBLE) ||
-        !SDDS_DefineSimpleColumn(&tfbd->SDDSout, "DriverOutput", NULL, SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(&tfbd->SDDSout, "DriverOutput", "rad", SDDS_DOUBLE) ||
         !SDDS_WriteLayout(&tfbd->SDDSout) || !SDDS_StartPage(&tfbd->SDDSout, nPasses)) {
       SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
       SDDS_Bomb("Problem setting up TFBDRIVER output file");
     }
   }
-  
+  tfbd->dataWritten = 0;
   tfbd->initialized = 1;
 }
 

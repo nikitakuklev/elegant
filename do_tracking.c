@@ -79,7 +79,7 @@ long do_tracking(
   double dgamma, dP[3], z, z_recirc, last_z;
   long i, j, i_traj=0, i_sums, n_to_track, i_pass, isConcat;
   long i_sums_recirc, saveISR=0;
-  long watch_pt_seen;
+  long watch_pt_seen, feedbackDriverSeen;
   double sum, x_max, y_max;
   long elliptical;
   double et1, et2;
@@ -126,7 +126,7 @@ long do_tracking(
   et1 = -2.0;
   elliptical = isConcat = 0;
   n_left = n_to_track;
-  watch_pt_seen = 0;
+  watch_pt_seen = feedbackDriverSeen = 0;
   
   check_nan = 1;
   eptr = &(beamline->elem);
@@ -855,6 +855,7 @@ long do_tracking(
           case T_TFBDRIVER:
             if (!(flags&TEST_PARTICLES))
               transverseFeedbackDriver((TFBDRIVER*)eptr->p_elem, coord, n_to_track, beamline, i_pass, n_passes, run->rootname);
+            feedbackDriverSeen = 1;
             break;
           default:
             fprintf(stdout, "programming error: no tracking statements for element %s (type %s)\n",
@@ -983,7 +984,7 @@ long do_tracking(
     fflush(stdout);
 #endif
     
-    if (i_pass==0 || watch_pt_seen) {
+    if (i_pass==0 || watch_pt_seen || feedbackDriverSeen) {
       /* if eptr is not NULL, then all particles have been lost */
       /* some work still has to be done, however. */
       while (eptr) {
@@ -1003,6 +1004,9 @@ long do_tracking(
           i_sums++;
         }
         switch (eptr->type) {
+        case T_TFBDRIVER:
+          flushTransverseFeedbackDriverFiles((TFBDRIVER *)(eptr->p_elem));
+          break;
         case T_WATCH:
           if (!(flags&TEST_PARTICLES) && !(flags&INHIBIT_FILE_OUTPUT)) {
             watch = (WATCH*)eptr->p_elem;

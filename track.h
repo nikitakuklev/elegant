@@ -1951,7 +1951,7 @@ typedef struct {
   char *outputFile;
   double a[TFB_FILTER_LENGTH];
   /* internal parameters */
-  long initialized, filterLength;
+  long initialized, filterLength, dataWritten;
   TFBPICKUP *pickup;
   SDDS_DATASET SDDSout;
   /* circular buffer for storing output signal */
