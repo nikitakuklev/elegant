@@ -152,7 +152,7 @@ long doFrequencyMap(
                              IC_DNUX, fabs(secondTune[0]-firstTune[0]), 
                              IC_DNUY, fabs(secondTune[1]-firstTune[1]), 
                              IC_DNU, sqrt(sqr(secondTune[0]-firstTune[0])+sqr(secondTune[1]-firstTune[1])), 
-			     IC_DX, fabs(firstAmplitude[0]-secondAmplitude[1]),
+			     IC_DX, fabs(firstAmplitude[0]-secondAmplitude[0]),
 			     IC_DY, fabs(firstAmplitude[1]-secondAmplitude[1]),
 			     -1)) {
         SDDS_SetError("Problem setting SDDS row values (doFrequencyMap)");
