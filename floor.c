@@ -540,10 +540,12 @@ void computeSurveyAngles(double *theta, double *phi, double *psi, MATRIX *W)
   arg = sqrt( sqr(W->a[1][0]) + sqr(W->a[1][1]));  /* |cos(phi)| */
   arg = SIGN(cos(*phi))*arg;
   *phi = nearbyAngle(atan2(W->a[1][2], arg), *phi);
-  if (arg>1e-20) {
+  if (fabs(arg)>1e-15) {
     *theta = nearbyAngle(atan2(W->a[0][2], W->a[2][2]), *theta);
     *psi   = nearbyAngle(atan2(W->a[1][0], W->a[1][1]), *psi);
   }
-  else
+  else {
     *psi = nearbyAngle(atan2(-W->a[0][1], W->a[0][0])-*theta, *psi);
+  }
+  
 }
