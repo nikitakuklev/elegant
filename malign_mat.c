@@ -32,9 +32,8 @@ void misalign_matrix(VMATRIX *M, double dx, double dy, double dz, double bend_an
      * system at the exit may be rotated relative to that at the exit.  This
      * code is incorrect if the bending magnet is tilted!
      */
-    dz = -dz;
     mal.dx =   dx*cos(bend_angle) + dz*sin(bend_angle);
-    mal.dz =  -dx*sin(bend_angle) + dz*cos(bend_angle);
+    mal.dz =   dx*sin(bend_angle) - dz*cos(bend_angle);
     mal.dy = dy;
     M2 = misalignment_matrix(&mal, M->order);
  

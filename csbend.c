@@ -226,8 +226,8 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   dzi =  csbend->dz;
   dyi = -csbend->dy;
 
-  dxf =  csbend->dx*cos(angle) + (-csbend->dz)*sin(angle);
-  dzf = -csbend->dx*sin(angle) + (-csbend->dz)*cos(angle);
+  dxf =  csbend->dx*cos(angle) + csbend->dz*sin(angle);
+  dzf =  csbend->dx*sin(angle) - csbend->dz*cos(angle);
   dyf = csbend->dy;
 
   i_top = n_part-1;
@@ -986,8 +986,8 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   dzi =  csbend->dz;
   dyi = -csbend->dy;
 
-  dxf =  csbend->dx*cos(angle) + (-csbend->dz)*sin(angle);
-  dzf = -csbend->dx*sin(angle) + (-csbend->dz)*cos(angle);
+  dxf =  csbend->dx*cos(angle) + csbend->dz*sin(angle);
+  dzf =  csbend->dx*sin(angle) - csbend->dz*cos(angle);
   dyf = csbend->dy;
 
   if (csbend->histogramFile && !csbend->fileActive) {
