@@ -300,7 +300,8 @@ typedef struct {
 #define OPTIM_METHOD_SIMPLEX   0
 #define OPTIM_METHOD_GRID      1
 #define OPTIM_METHOD_SAMPLE    2
-#define N_OPTIM_METHODS        3
+#define OPTIM_METHOD_POWELL    3
+#define N_OPTIM_METHODS        4
 
 typedef struct {
     long mode, method;

@@ -586,9 +586,28 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
             fputs("warning: maximum number of passes reached in simplex optimization", stdout);
         }
         break;
+      case OPTIM_METHOD_POWELL:
+        fputs("Starting Powell optimization.\n", stdout);
+        if (powellMin(&result, variables->varied_quan_value, variables->step,
+                      variables->lower_limit, variables->upper_limit,
+                      variables->n_variables, optimization_data->target, 
+                      optimization_data->tolerance, optimization_function, 
+                      optimization_report,  
+                      optimization_data->n_evaluations, optimization_data->n_passes)<0) {
+          if (result>optimization_data->tolerance) {
+            if (!optimization_data->soft_failure)
+              bomb("optimization unsuccessful--aborting", NULL);
+            else
+              fputs("warning: optimization unsuccessful--continuing\n", stdout);
+          }
+          else
+            fputs("warning: maximum number of passes reached in simplex optimization", stdout);
+        }
+        break;
       case OPTIM_METHOD_GRID:
         fputs("Starting grid-search optimization.", stdout);
-        if (!grid_search_min(&result, variables->varied_quan_value, variables->lower_limit, variables->upper_limit, variables->step,
+        if (!grid_search_min(&result, variables->varied_quan_value, variables->lower_limit, 
+                             variables->upper_limit, variables->step,
                              variables->n_variables, optimization_function)) {
           if (!optimization_data->soft_failure)
             bomb("optimization unsuccessful--aborting", NULL);
