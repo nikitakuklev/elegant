@@ -164,12 +164,7 @@ void setup_tune_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline,
     if (strength_log) {
         strength_log = compose_filename(strength_log, run->rootname);
         fp_sl = fopen_e(strength_log, "w", FOPEN_SAVE_IF_EXISTS);
-        fprintf(fp_sl, "SDDS1\n&description text=\"Quadrupole strength log\" &end\n");
-        fprintf(fp_sl, "&associate filename=\"%s\", path=\"%s\", contents=\"elegant input, parent\" &end\n",
-                run->runfile, getenv("PWD"));
-        fprintf(fp_sl, "&associate filename=\"%s\", path=\"%s\", contents=\"elegant lattice, parent\" &end\n",
-                run->lattice, getenv("PWD"));
-        fprintf(fp_sl, "&column name=Step, type=long, description=\"Simulation step\" &end\n");
+        fprintf(fp_sl, "SDDS1\n&column name=Step, type=long, description=\"Simulation step\" &end\n");
         fprintf(fp_sl, "&column name=K1, type=double, units=\"1/m$a2$n\" &end\n");
         fprintf(fp_sl, "&column name=QuadrupoleName, type=string  &end\n");
         fprintf(fp_sl, "&data mode=ascii, no_row_counts=1 &end\n");
