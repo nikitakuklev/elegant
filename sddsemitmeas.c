@@ -15,6 +15,9 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.16  2002/08/14 20:23:48  soliday
+ * Added Open License
+ *
  * Revision 1.15  2002/04/25 21:27:52  borland
  * Fixed an error message. SHould now fit y plane even if x plane fit fails.
  *
@@ -521,6 +524,11 @@ int main(
     if (i_variable==column_names) {
       for (i_variable=0; i_variable<column_names; i_variable++)
       if (strchr(column_name[i_variable], 'Q'))
+        break;
+    }
+    if (i_variable==column_names) {
+      for (i_variable=0; i_variable<column_names; i_variable++)
+      if (strcmp(column_name[i_variable], "Step")==0)
         break;
     }
     if (i_variable==column_names)
