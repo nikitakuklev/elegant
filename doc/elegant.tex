@@ -16,12 +16,12 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 15.1.1\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
+\author{Program Version 15.2\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
 \maketitle
 
-\section{Highlights of What's New in Version 15.1.1}
+\section{Highlights of What's New in Version 15.2}
 
-Here is a summary of what's changed since release 14.9.1.  For details
+Here is a summary of what's changed since release 15.1.1.  For details
 and references, see the specific entries in the manual.
 
 \subsection{Known Bugs and Problems}
@@ -36,98 +36,158 @@ and references, see the specific entries in the manual.
 
 \subsection{Bug Fixes for Elements}
 \begin{itemize}
-\item Added second-order path length matrix elements to the {\tt SOLE}
-        element (matrix-based solenoid).  This was suggested by P. Emma (SLAC),
-        who provided the expressions.
-\item Fixed a bug in the {\tt ECOL} (elliptical collimator), which resulted in
-        corruption of vertical particle coordinates when the element had non-zero
-        length.  This bug was found by P. Emma (SLAC).
-\item Fixed a bug that resulted in potentially undefined results when synchrotron
-        radiation was turned on in {\tt KQUAD} or {\tt KSEXT} elements and the
-        particle positioncoordinates were identically 0.
-\item Fixed error in steering multipole implementation: {\tt elegant} was 
-  incorrectly complaining when {\tt bn} was zero, when it should be zero at all times.
+\item Fixed some problems with radiation integral calculations for dipoles
+ under some conditions:
+ \begin{itemize}
+ \item If a dipole was split into several pieces, edge contributions to the
+ radiation integrals were inappropriately added at the interior ``edges.''
+ This might happen if element division was used, or if the lattice definition
+ contained a series of adjacent dipole elements with the same name.
+ \item In dipoles with gradients, if 
+ $k l = \sqrt{\left|K_1+1/\rho^2\right|} l \ll 1$, 
+ the radiation integral calculations were unreliable.  Fixing this necessitated using
+ a power series expansion for $k l<0.01$, which may result in some very small changes in 
+ radiation integrals (relative to the previous version) for weak dipoles, even if there
+ is no gradient.
+ \end{itemize}
+\item Made a correction to the expression for $I_5$ radiation integral for the
+ {\tt WIGGLER} element, having to do with propagation of the beta function.
+\item Fixed problem with {\tt ZTRANSVERSE}, which used the wrong value for
+ $Z(0)$ for a broad-band impedance.
+\item Fixed bugs in {\tt RFDF} implementation for {\tt N\_KICKS}$>1$ and {\tt LENGTH}$>0$.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item The units of $R_{21}$ in the ``final'' output file were wrong and have been corrected.
-        Added output of the maximum particle amplitudes in each transverse coordinate.
-\item Fixed bug that prevented proper saving of a lattice when the {\tt alter\_elements}
-command was used with wildcards in the name.
-\item Fixed a bug in saving/loading parameters when element division was used on 
-        dipoles with non-zero edge angles.
+\item Fixed bug with fiducialization during matrix computations, which
+impacted the {\tt final} output from the {\tt run\_setup} command and
+the output from the {\tt matrix\_output} command.  For simulations
+with acceleration, this would have shown up as incorrect matrix
+results in the final output file and the output from the {\tt
+matrix\_output} command.  Twiss parameters and tracking were not
+affected.  This bug was found by Philippe Piot.
+
+\item Fixed bug in {\tt matrix\_output}, which resulted in incorrect
+results when there was acceleration and the starting point for the
+matrix was not the start of the beamline.  This bug was found by
+Philippe Piot.
+
+\item Fixed a bug in orbit correction ({\tt correct} command): when {\tt
+prezero\_correctors} was set (the default), {\tt elegant} was
+prezeroing the quadrupole steering parameters {\tt HKICK} and {\tt
+VKICK} even if they were not selected as steering elements.  This
+wouldn't cause any problem unless the {\tt HKICK} or {\tt VKICK}
+parameters of {\tt QUAD} or {\tt KQUAD} elements where given non-zero values. 
+This is unrelated to quadrupole misalignment.
+
+\item Fixed a bug that resulted in no calculations when a {\tt
+load\_parameters} file had no rows in {\tt change\_defined\_values} mode.
+
 \end{itemize}
 
 \subsection{Modified Elements}
 \begin{itemize}
-\item Added super-elliptical apertures for {\tt ECOL} and {\tt MAXAMP}.  A super-elliptical
- aperture is somewhere between an ellipse and a rectangle.
-\item Added one-sided aperture capability to the {\tt ECOL}, {\tt RCOL}, and {\tt MAXAMP}
-        elements.
-\item The {\tt SCATTER} element now includes an optional scattering probability.
-\item Added a radius factor parameter for longitudinal space charge evaluation to the
-  {\tt LSCDRIFT} and {\tt RFCW} element.  The default value for this parameter changes the
-  computations from the previous release, and was computed by J. Wu (SLAC).
-\item Added ability to control expansion of square roots in canonically-integrated
-        elements.  The default is no expansion, as before.
-\item The {\tt FRFMODE} and {\tt FTRFMODE} elements now optionally provide output of
-        voltage in each mode as a function of time.
+\item The {\tt WIGGLER} element was upgraded:
+\begin{itemize}
+\item Includes vertical focusing effects.
+\item Now allows even or odd number of poles.
+\item Wiggler strength can be specified via the K parameter, instead of 
+ the radius.
+\end{itemize}
+
+\item The {\tt SCRIPT} element now allows creation of particles by the script.
+Previously, the number of particles returned by the script had to be
+equal to or less than the original number.  This is useful, for
+example, in simulating shower creation and transport in a beamline using the {\tt
+shower} program.  Also added the {\tt START\_PASS} and {\tt ON\_PASS} parameters
+\item Added the {\tt ON\_PASS} parameter to the {\tt CENTER} element, so that
+the centering can be applied only on the specified pass through the system.
+\item For particle output via {\tt WATCH} elements, the {\tt LABEL} input is now put
+in a parameter (``{\tt Description}'') in the output file. 
+\item The {\tt BMAPXY} eleement will now use {\tt Bx} and {\tt By} columns (field
+in Tesla) if {\tt Fx} and {\tt Fy} (normalized field) are not provided.
+
+\item Upgraded the {\tt ZTRANSVERSE} element.  These improvements were suggested
+ by Yong-Chul Chae:
+\begin{itemize}
+\item Added {\tt WAKES} and {\tt WAKE\_INTERVAL} parameters to allow getting
+ wake data in an SDDS file.
+\item Added {\tt FACTOR}, {\tt XFACTOR}, and {\tt YFACTOR} parameters,
+ which allow multiplying the impedance by factors.
+\end{itemize}
+
 \end{itemize}
 
 \subsection{Modified Commands}
 \begin{itemize}
-\item The {\tt run\_setup} command now optionally accepts the central momentum in MeV/c,
-        instead of just $\beta\gamma$.
-\item The {\tt tune\_shift\_with\_amplitude} command was improved to provide second-order
-        shifts as well as the tune spread for a specified range of amplitudes.
-        These quantities may be optimized.
-\item Added computation of the minimum and maximum tunes for a specified range
- of momentum offsets. These values may be optimized.
-\item Optimization may now include the chromatic derivatives of the beta and alpha Twiss
-        parameters.
-\item The {\tt load\_parameters} command will now accept a list of input files and will
-        optionally ignore non-existent files.
-\item The lost-particles file (requested from {\tt run\_setup}), now includes the turn on
-        which each particle is lost.
-\item Made changes that allow computing closed orbit for the momentum offset
- of the beam distribution and then starting the beam on that orbit.
- The changes are to the {\tt closed\_orbit} and {\tt track\_beam} commands.
-\item Optimization terms with zero weight are now ignored, instead of generating an error.
-\item Added {\tt disable} control for optimization variables and co-variables.
-\item Added {\tt disable} control for {\tt transmute\_elements}.
+\item Frequency map analysis now outputs tunes on range from [0, 1],
+instead of [0, 0.5].  Louis Emery assisted with this improvement and
+provided ideas for the algorithm.
+\item One can now use differential and multiplicative mode simultaneously for
+{\tt alter\_elements}.
+
+\item Added {\tt minimum}{\em n} and {\tt maximum}{\em n} columns to the {\tt sigma}
+output file from {\tt run\_setup}, where {\em n} is 1 to 6.  These columns
+give the minimum and maximum amplitude of the corresponding
+phase-space coordinate.  Fixed problem with units for {\tt s}{\em
+i}{\em j} output.  Fixed a bug that resulted in wrong sigma values in
+the output file for single-particle beam.
+
+\item The {\tt transmute\_elements} command can now transmute an
+element that has the {\tt LENGTH} parameter into an element that doesn't have
+{\tt LENGTH}, as long as the length is zero.
+
 \end{itemize}
 
 \subsection{New Elements}
 \begin{itemize}
-\item {\tt LSRMDLTR} --- A laser/undulator beam modulator, using a numerically-integrated
-        analytical planar undulator field with a laser beam focused to a waist at the
-        center of the undulator.  P. Emma (SLAC) requested this addition and helped with 
-        the development.
-\item {\tt DSCATTER} --- An element for scattering with a user-specified distribution.
-\end{itemize}
-
-\subsection{New Commands} 
-\begin{itemize}
-\item The {\tt frequency\_map} command was added.  It performs Frequency Map Analysis for
- storage rings.
+\item Added the CWIGGLER element, which uses Ying Wu's canonically-integrated 
+ wiggler code for general wiggler fields. 
+\item Added the RFTM110 element, which provides simulation of a TM110 deflecting
+ cavity, using a sixth-order expansion in $k\rho$, where $k$ is the radial
+ wavenumber and $\rho$ is the radius.
 \end{itemize}
 
 \subsection{Changes and Additions to Related Programs}
-With this release, we have begun to supply Tcl/Tk scripts that assist users in
-using elegant or do related computations. 
 \begin{itemize}
-\item A new script, {\tt beamLifetimeCalc} is included that performs
- beam lifetime calculations due to gas scattering and the Touschek
- effect.  It will also perform computations as a function of scanned
- parameters (e.g., rf voltage).
-\item A new script, {\tt elegantRingAnalysis} is included that
- performs various analyses for storage rings, including phase space tracking, higher-order
- dispersion, and dynamic aperture.
-\item A new script, {\tt fin2param} is included.  It can convert a ``final'' output file
- from an optimization run into a parameter-style file that can be used with {\tt load\_parameters}.
-\item {\tt sddsanalyzebeam} now computes the longitudinal emittance.  This was requested by
-        J. Lewellen (ANL).
+\item {\tt beamLifetimeCalc} now optionally uses the {\tt haissinski} program
+ to compute bunch lengthening.  One can now vary additional quantities (beam energy, 
+ energy spread, and rf voltage) using values from an SDDS file.
+\item {\tt elegantRingAnalysis} improvements:
+ \begin{itemize}
+ \item Added collective effects tab with Haissinski equation, IBS, and space-charge
+ tune shift.
+ \item Added floor coordinate computation to basic ring analysis.
+ \item Added printout of radiation integrals for basic ring analysis.
+ \item Added optional auto-creation of PNG files for each plot.
+ \end{itemize}
+\item {\tt haissinski} improvements:
+ \begin{itemize}
+ \item Added {\tt -harmonicCavity} option, allowing inclusion of a second rf cavity with
+ a higher harmonic.
+ \item Added {\tt -superPeriod} option.
+ \item Modified iteration algorithm to actually honor the convergence criterion,
+ resulting in more reliable convergence.
+ \end{itemize}
+\item {\tt ibsEmittance} improvements:
+ \begin{itemize}
+        \item Reduced the default target to $10^{-6}$, and made the 
+         tolerance 1/100 of the target, to get better convergence when IBS is weak.
+        \item Added the rf voltage to the output file.
+ \end{itemize}
+\item {\tt sddsbrightness} improvements:
+ \begin{itemize}
+ \item The default method is now actually Dejus' method, consistent with the usage message.
+  Previously, default method was Borland's method.
+ \item Fixed bug in Dejus method implementation: the value 
+ of $\gamma$ was not being used consistently.  Rather, in some places, a 
+ fixed energy value of 7 GeV was used.
+ \item Fixed a bug that led to multiplication of the current by 1000 for 
+ each pass through the main loop.  This would affect calculations with multipage
+ input files.  Roger Dejus helped in finding this bug.
+ \item Added feature whereby the parameter {\tt ey0} from the twiss file is 
+ accepted for the vertical emittance, if it exists.
+ \end{itemize}
 \end{itemize}
 
 \section{Introduction}
