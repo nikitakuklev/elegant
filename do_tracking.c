@@ -605,6 +605,8 @@ long do_tracking(
                                            accepted, *P_central, z);
             break;
           case T_MATR:
+	    if (!eptr->matrix)
+	      eptr->matrix = &(((MATR*)eptr->p_elem)->M);
             matr_element_tracking(coord, eptr->matrix, (MATR*)eptr->p_elem, n_to_track,
                                   z);
             break;
@@ -1516,6 +1518,7 @@ void matr_element_tracking(double **coord, VMATRIX *M, MATR *matr,
     for (i=0; i<np; i++)
       coord[i][4] += matr->sReference;
   }
+  fprintf(stdout, "Done with matr_element_tracking\n");
 }
 
 long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge, 
