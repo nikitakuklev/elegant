@@ -8,6 +8,7 @@
 #namelist alter_elements static
         STRING name = NULL;
         STRING item = NULL;
+        STRING type = NULL;
         STRING exclude = NULL;
         double value = 0;
         long differential = 0;

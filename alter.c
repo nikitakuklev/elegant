@@ -10,7 +10,7 @@
 
 long do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 {
-    long i, index, type, lastType, iParam, nMatches;
+    long i, index, thisType, lastType, iParam, nMatches;
     ELEMENT_LIST *context, *eptr;
     char *p_elem;
     
@@ -29,16 +29,23 @@ long do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
       value = value-1;
     if (multiplicative && differential)
       bomb("can't combine multiplicative and differential modes", NULL);
-    
+    if (type) {
+      str_toupper(type);
+      if (has_wildcards(type) && strchr(type, '-'))
+        type = expand_ranges(type);
+    }
+
     context = NULL;
     lastType = -1;
     nMatches = 0;
     while (eptr=wfind_element(name, &context, &(beamline->elem))) {
       if (exclude && strlen(exclude) && wild_match(eptr->name, exclude))
         continue;
-      if ((type = eptr->type)!=lastType) {
-        lastType = type;
-        if ((iParam=confirm_parameter(item, type))<0) {
+      if (type && !wild_match(entity_name[context->type], type))
+        continue;
+      if ((thisType = eptr->type)!=lastType) {
+        lastType = thisType;
+        if ((iParam=confirm_parameter(item, thisType))<0) {
           fprintf(stderr, "%s: element %s does not have parameter %s\n", 
                   allow_missing_parameters?"Warning":"Error",
                   eptr->name, item);
@@ -48,7 +55,7 @@ long do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
       }
       nMatches++;
       /* this step could be very inefficient */
-      change_defined_parameter(eptr->name, iParam, type, value, NULL, 
+      change_defined_parameter(eptr->name, iParam, thisType, value, NULL, 
                                differential?LOAD_FLAG_DIFFERENTIAL:(multiplicative?LOAD_FLAG_FRACTIONAL:LOAD_FLAG_ABSOLUTE));
       p_elem = eptr->p_elem;
       switch (entity_description[eptr->type].parameter[iParam].type) {
