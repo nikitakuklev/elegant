@@ -268,7 +268,7 @@ void compute_amplification_factors(
     }
 
     if (correct->mode!=-1) {
-      if (!do_correction(correct, run, beamline, NULL, NULL, 0))
+      if (!do_correction(correct, run, beamline, NULL, NULL, 0, 1))
         bomb("correction failed", NULL);
       traj  = correct->traj[0];
       trajc = correct->traj[2];

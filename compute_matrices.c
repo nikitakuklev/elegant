@@ -167,15 +167,15 @@ long fill_in_matrices(
                    (member->name?member->name:"{null}"), member->end_pos);
             abort();
             }
-        if (member->matrix==NULL || (member->pred && member->pred->Pref_output!=member->Pref_input))
-            compute_matrix(member, run, NULL);
-        n_elements++;
+        if (member->matrix==NULL || (member->pred && member->pred->Pref_output!=member->Pref_input)) {
+          compute_matrix(member, run, NULL);
+          n_elements++;
+        }
         member = member->succ;
         }
     log_exit("fill_in_matrices");    
     return(n_elements);
     }
-
 
 long calculate_matrices(
                         LINE_LIST *line,            /* Beamline to calculate matrices for. */

@@ -69,7 +69,7 @@ void setup_cormon_stats(char *filename, RUN *run)
 
 void dump_cormon_stats(long verbose, long plane, double **kick, long n_kicks, 
     double **position, long n_positions, double *Cdp, long n_iterations, long cycle,
-    long final_cycle, long sim_step)
+    long final_cycle, long sim_step, long textOnly)
 {
     long i, j;
     static double **data = NULL;
@@ -119,7 +119,7 @@ void dump_cormon_stats(long verbose, long plane, double **kick, long n_kicks,
         data[j][IC_CDP] = (Cdp?Cdp[j]:0);
         }
 
-    if (SDDS_cormon_initialized) {
+    if (SDDS_cormon_initialized && !textOnly) {
         if (!SDDS_StartTable(&SDDS_cormon, n_iterations+1)) {
             SDDS_SetError("Unable to start SDDS table (dump_cormon_stats)");
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);

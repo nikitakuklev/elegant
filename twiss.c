@@ -638,7 +638,7 @@ void finish_twiss_output(void)
   log_exit("finish_twiss_output");
 }
 
-void run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, long tune_corrected)
+long run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, long tune_corrected)
 {
   ELEMENT_LIST *eptr, *elast;
   long n_elem, last_n_elem;
@@ -761,6 +761,14 @@ void run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, lon
                           alphac,
                           final_values_only, tune_corrected, run);
   }
+
+  if (isnan(beamline->tune[0]) || 
+      isnan(elast->twiss->betax) ||
+      isnan(elast->twiss->etax) ||
+      isnan(beamline->tune[1]) || 
+      isnan(elast->twiss->betay) ||
+      isnan(elast->twiss->etay))
+    return 0;
 
   log_exit("run_twiss_output");
 }

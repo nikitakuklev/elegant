@@ -1521,7 +1521,7 @@ void dump_twiss_parameters(TWISS *twiss0, ELEMENT_LIST *elem, long n_elem,
     double *tune, RADIATION_INTEGRALS *radIntegrals, double *chromaticity, double *acceptance, double alphac,
     long final_values_only, long tune_corrected, RUN *run);
 void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, long *do_twiss_output);
-void run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, long tune_corrected);
+long run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, long tune_corrected);
 void finish_twiss_output(void);
 void copy_doubles(double *source, double *target, long n);
 
@@ -1725,7 +1725,7 @@ long ramped_rf_cavity(double **part, long np, RAMPRF *ramprf, double P_central,
 /* prototypes for closed_orbit.c */
 extern void dump_closed_orbit(TRAJECTORY *traj, long n_elems, long step);
 void finish_clorb_output(void);
-void run_closed_orbit(RUN *run, LINE_LIST *beamline, double *starting_coord, BEAM *beam, long do_output);
+long run_closed_orbit(RUN *run, LINE_LIST *beamline, double *starting_coord, BEAM *beam, long do_output);
 void setup_closed_orbit(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 
 /* prototypes for aperture_search.c */

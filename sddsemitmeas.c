@@ -9,6 +9,9 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.6  1998/11/16 22:18:27  borland
+ * Added string parameter with emittance label to output file.
+ *
  * Revision 1.5  1998/10/14 17:12:57  borland
  * Modified the output file.  If there are no error sets requested, then the
  * file contains the results (emittances, etc.) as parameters and the
@@ -49,19 +52,18 @@
 #define SET_IGNORE_PLANE 7
 #define SET_UNCERTAINTY_FRAC 8
 #define SET_MINIMUM_UNCERT 9
-#define SET_ADD_RESOLUTION 10
-#define SET_FIND_UNCERT 11
-#define SET_FIXED_UNCERT 12
-#define SET_CONSTANT_WEIGHTING 13
-#define SET_SIGMA_DATA 14
-#define SET_PIPE 15
-#define SET_ENERGYSPREAD 16
-#define N_OPTIONS 17
+#define SET_FIND_UNCERT 10
+#define SET_FIXED_UNCERT 11
+#define SET_CONSTANT_WEIGHTING 12
+#define SET_SIGMA_DATA 13
+#define SET_PIPE 14
+#define SET_ENERGYSPREAD 15
+#define N_OPTIONS 16
 
 char *option[N_OPTIONS] = {
     "errorlevel", "nerrorsets", "seed", "verbosity",
     "deviationlimit", "resolution", "limitmode", "ignoreplane",
-    "uncertaintyfraction", "minimumuncertainty", "addresolution",
+    "uncertaintyfraction", "minimumuncertainty", 
     "finduncertainties", "fixeduncertainty", "constantweighting",
     "sigmadata", "pipe", "energyspread",
     } ;
@@ -73,16 +75,16 @@ char *option[N_OPTIONS] = {
  [-errorLevel=<valueInmm>,[{gaussian,<nSigmas> | uniform}]]\n\
  [-nErrorSets=<number>]\n\
  [-limitMode={resolution | zero}[{,reject}]\n\
- [-deviationLimit=<xLevelmm>,<yLevelmm>]\n\
- [-resolution=<xResolutionmm>,<yResolutionmm>] [-addResolution]\n\
+ [-deviationLimit=<xLevelm>,<yLevelm>]\n\
+ [-resolution=<xResolutionm>,<yResolutionm>]\n\
  [-uncertaintyFraction=<xValue>,<yValue>]\n\
- [-fixedUncertainty=<xValuemm>,<yValuemm>]\n\
+ [-fixedUncertainty=<xValuem>,<yValuem>]\n\
  [-findUncertainties]\n\
- [-minimumUncertainty=<xValuemm>,<yValuemm>]\n\
+ [-minimumUncertainty=<xValuem>,<yValuem>]\n\
  [-constantWeighting]\n\
  [-seed=integer] [-ignorePlane={x | y}]\n\
  [-verbosity=level]\n\n\
-Program by Michael Borland. (This is version 17, September 1997.)"
+Program by Michael Borland. (This is version 3, November 1998.)"
 
 static char *additional_help[] = {
 USAGE,
@@ -101,7 +103,6 @@ USAGE,
 "    with data at or below the resolution limit.",
 "-resolution allows specification of the measurement resolution,",
 "    which is subtracted in quadrature from the sigma or width values.",
-"    -addResolution results in addition rather than subtraction.",
 "-uncertaintyFraction specifies fractional uncertainties in beam sizes.",
 "    -fixedUncertainy specifies fixed values for same, while -findUncertainties",
 "    uses preliminary fit to estimate uncertainties.",
@@ -200,7 +201,7 @@ main(
   double x_fixed_uncert, y_fixed_uncert;
   double energySpread, energySize;
   int equal_weights_x_fit, equal_weights_y_fit, constant_weighting;
-  int add_resolution, find_uncert, verbosity;
+  int find_uncert, verbosity;
   char *x_width_name, *y_width_name;
   unsigned long pipeFlags;
   char emitLabel[256], xEmitLabel[256], yEmitLabel[256];
@@ -229,7 +230,7 @@ main(
   ignore_x = ignore_y = 0;
   x_uncert_frac = y_uncert_frac = 0;
   x_uncert_min = y_uncert_min = 0;
-  add_resolution = find_uncert = constant_weighting = 0;
+  find_uncert = constant_weighting = 0;
   x_fixed_uncert = y_fixed_uncert = verbosity = 0;
   x_width_name = "Sx";
   y_width_name = "Sy";
@@ -323,9 +324,6 @@ main(
             !sscanf(scanned[i_arg].list[1], "%lf", &y_uncert_min) ||
             y_uncert_min<=0)
           bomb("invalid -minimum_uncertainty syntax", USAGE);
-        break;
-      case SET_ADD_RESOLUTION:
-        add_resolution = 1;
         break;
       case SET_FIND_UNCERT:
         find_uncert = 1;
@@ -537,8 +535,6 @@ main(
     
     if (!ignore_x) {
       for (i_config=0; i_config<n_configs; i_config++) {
-        if (add_resolution && x_resol)  
-          sigmax[i_config] = sqrt(sqr(sigmax[i_config]) + sqr(x_resol));
         if (energySpread && etax[i_config]) {
           energySize = sqr(energySpread*etax[i_config]);
           if (energySize>sqr(sigmax[i_config]))
@@ -546,8 +542,6 @@ main(
           sigmax[i_config] = sqrt(sqr(sigmax[i_config]) - energySize);
         }
       }
-      if (x_resol && add_resolution)
-        x_resol = 0;
       if (x_uncert_frac && x_fixed_uncert)
         bomb("can't specify uncertainty fraction and fixed uncertainty together", NULL);
       if (constant_weighting) {
@@ -578,8 +572,6 @@ main(
     }
     if (!ignore_y) {
       for (i_config=0; i_config<n_configs; i_config++) {
-        if (add_resolution && y_resol)  
-          sigmay[i_config] = sqrt(sqr(sigmay[i_config]) + sqr(y_resol));
         if (energySpread && etay[i_config]) {
           energySize = sqr(energySpread*etay[i_config]);
           if (energySize>sqr(sigmay[i_config]))
@@ -588,8 +580,6 @@ main(
         }
         
       }
-      if (y_resol && add_resolution)
-        y_resol = 0;
       if (y_uncert_frac && y_fixed_uncert)
         bomb("can't specify both uncertainty fraction and fixed uncertainty", NULL);
       if (constant_weighting) {
@@ -656,8 +646,8 @@ main(
       n_xresol = n_yresol = 0; 
       for (i_error=0; i_error<n_error_sets; i_error++) {
         for (i_config=0; i_config<n_configs; i_config++) {
-          s2x->a[i_config][0] =  sqr( sigmax[i_config] ) - (add_resolution?0:sqr(x_resol));
-          s2y->a[i_config][0] =  sqr( sigmay[i_config] ) - (add_resolution?0:sqr(y_resol));
+          s2x->a[i_config][0] =  sqr( sigmax[i_config] ) - sqr(x_resol);
+          s2y->a[i_config][0] =  sqr( sigmay[i_config] ) - sqr(y_resol);
         }
 
         if (error_level<0) {
@@ -827,7 +817,7 @@ main(
                   1e6*emitx_sum/n_good_fits_x,
                   1e6*s_emitx);
           if (S11<=0)  S11 = 1e-100;
-          if (S12<=0)  S12 = 1e-100;
+          if (S22<=0)  S22 = 1e-100;
           if (emitx<=0) emitx = 1e-100;
           if (!SDDS_SetParameters
               (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
@@ -861,7 +851,7 @@ main(
                   1e6*emity_sum/n_good_fits_y,
                   1e6*s_emity);
           if (S33<=0) S33 = 1e-100;
-          if (S34<=0) S34 = 1e-100;
+          if (S44<=0) S44 = 1e-100;
           if (emity<=0) emity = 1e-100;
           if (!SDDS_SetParameters
               (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
@@ -1069,8 +1059,10 @@ double solve_normal_form(
   if (!m_mult(Mp, P, F))
     bomb("matrix error--call was: m_mult(Mp, P, F)", NULL);
   for (i=rms_error=0; i<Mp->n; i++) {
-    if ((s2_fit[i] = Mp->a[i][0])<0)
-      bomb("bad fit--negative sigma^2!\n", NULL);
+    if ((s2_fit[i] = Mp->a[i][0])<0) {
+      s2_fit[i] = Mp->a[i][0] = 0;
+      fprintf(stderr, "bad fit--negative sigma^2!\n");
+    }
     error = sqrt(Mp->a[i][0]) - sqrt(M->a[i][0]);
     rms_error += sqr(error);
   }

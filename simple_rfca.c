@@ -222,8 +222,8 @@ void add_to_particle_energy(double *coord, double timeOfFlight, double Po, doubl
 
   P = Po*(1+coord[5]);                    /* old momentum */
   gamma1 = (gamma=sqrt(P*P+1)) + dgamma;  /* new gamma */
-  if (gamma1<-1)
-    gamma1 = 1+1e-6;
+  if (gamma1<=1)
+    gamma1 = 1+1e-7;
   P1 = sqrt(gamma1*gamma1-1);             /* new momentum */
   coord[5] = (P1-Po)/Po;                  
 

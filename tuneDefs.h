@@ -7,6 +7,11 @@ typedef struct {
     long n_families;        /* number of families */
     long n_iterations;      /* number of times to repeat correction */
     double gain;            /* gain for correction */
+    long use_perturbed_matrix;
+    double tolerance;       /* how close to get to desired tunes */
+    long step_up_interval;  /* number of steps to take before increasing gain */
+    double delta_gain;      /* amount by which to change the gain */
+    double maximum_gain;    /* maximum gain to use */
     MATRIX *T;              /* Nfx2 matrix to give quadrupole strength changes to change 
                                chromaticities by given amount */
     MATRIX *dK1;           /* Nfx1 matrix of quadrupole strength changes */
@@ -16,5 +21,5 @@ typedef struct {
 
 /* prototypes for tune.c */
 void setup_tune_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, TUNE_CORRECTION *tune);
-void do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline, double *clorb, long step, long last_iteration);
-
+long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline, double *clorb, long step, long last_iteration);
+void computeTuneCorrectionMatrix(RUN *run, LINE_LIST *beamline, TUNE_CORRECTION *tune, long printout);

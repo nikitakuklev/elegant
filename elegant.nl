@@ -31,6 +31,7 @@
 #namelist track static
     long center_on_orbit = 0;
     long center_momentum_also = 1;
+    long soft_failure = 1;
 #end
 
 #namelist print_dictionary static

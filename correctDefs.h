@@ -57,7 +57,7 @@ extern void dump_corrector_data(CORMON_DATA *CM, STEERING_LIST *SL, long index, 
 extern void setup_cormon_stats(char *filename, RUN *run);
 extern void dump_cormon_stats(long verbose, long plane, double **kick, long n_kicks, 
     double **position, long n_positions, double *Cdp, long n_iterations, long cycle,
-    long final_cycle, long step);
+    long final_cycle, long step, long textOnly);
 extern void setup_orb_traj_output(char *filename, char *mode, RUN *run);
 extern void dump_orb_traj(TRAJECTORY *traj, long n_elems, char *description, long step);
 
@@ -66,7 +66,7 @@ extern void setup_correction_matrix_output(NAMELIST_TEXT *nltext, RUN *run, LINE
 extern void run_response_output(RUN *run, LINE_LIST *beamline, CORRECTION *correct, long tune_corrected);
 extern void correction_setup(CORRECTION *_correct, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 extern long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *starting_coords, 
-        BEAM *beam, long sim_step);
+        BEAM *beam, long sim_step, long initial_correction);
 extern void add_steering_element(CORRECTION *correct, LINE_LIST *beamline, RUN *run, NAMELIST_TEXT *nltext);
 void compute_amplification_factors(NAMELIST_TEXT *nltext, RUN *run, CORRECTION *correct,
     long closed_orbit, LINE_LIST *beamline);

@@ -266,9 +266,11 @@ long do_tracking(
                         if (!(eptr->matrix=compute_matrix(eptr, run, NULL)))
                             bomb("no matrix for element that must have matrix", NULL);
                         }
-                    if (eptr->matrix->C[5]!=0)
-                        bomb("matrix with C5!=0 detected in matrix multiplier--this shouldn't happen", NULL);
-                    track_particles(coord, eptr->matrix, coord, n_to_track);
+                    if (eptr->matrix->C[5]!=0) {
+                      fprintf(stderr, "Warning: matrix with C5!=0 detected in matrix multiplier--this shouldn't happen!\nAll particles considered lost!\n");
+                      n_left = 0;
+                    } else 
+                      track_particles(coord, eptr->matrix, coord, n_to_track);
                     }
                 else {
                     switch (eptr->type) {

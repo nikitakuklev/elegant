@@ -38,8 +38,8 @@ char *correction_method[N_CORRECTION_METHODS] = {
  *   It is not recomputed when errors are added (of course!) or when parameters are varied (sorry!).
  */
 
-void global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **traject, long n_iterations, RUN *run, 
-            LINE_LIST *beamline, double *starting_coord, BEAM *beam);
+long global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **traject, long n_iterations, 
+                          RUN *run, LINE_LIST *beamline, double *starting_coord, BEAM *beam);
 void one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **traject, long n_iterations, RUN *run, 
             LINE_LIST *beamline, double *starting_coord, BEAM *beam);
 long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **orbit, 
@@ -405,227 +405,234 @@ double compute_kick_coefficient(ELEMENT_LIST *elem, long plane, long type, doubl
     return(0.0);
     }
 
-long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *starting_coord, BEAM *beam, long sim_step)
+long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *starting_coord, 
+                   BEAM *beam, long sim_step, long initial_correction)
 {
-    long i, i_cycle, x_failed, y_failed, n_iter_taken, bombed, final_traj;
-    double *closed_orbit, rms_before, rms_after, *Cdp;
+  long i, i_cycle, x_failed, y_failed, n_iter_taken, bombed, final_traj;
+  double *closed_orbit, rms_before, rms_after, *Cdp;
 
-    log_entry("do_correction");
+  log_entry("do_correction");
 
-    if (correct->response_only)
-        return 1;
+  if (correct->response_only)
+    return 1;
 
-    closed_orbit = starting_coord;   /* for return of closed orbit at starting point */
+  closed_orbit = starting_coord;   /* for return of closed orbit at starting point */
 
-    if (correct->verbose && correct->n_iterations>=1 && correct->n_xy_cycles>0) {
-        if (correct->CMx->fixed_length && correct->mode==ORBIT_CORRECTION) {
-            fputs(" plane   iter     rms kick     rms pos.    max kick     max pos.   mom.offset\n", stderr);
-            fputs("                    mrad          mm         mrad          mm           %\n", stderr);
-            fputs("-------  ----    ----------   ---------   ----------   ----------  ----------\n", stderr);
-            }
-        else {
-            fputs(" plane   iter     rms kick     rms pos.    max kick     max pos.\n", stderr);
-            fputs("                    mrad          mm         mrad          mm\n", stderr);
-            fputs("-------  ----    ----------   ---------   ----------   ----------\n", stderr);
-            }
-        }
-
-    if (correct->prezero_correctors) {
-        long changed;
-        if (beamline->elem_recirc)
-            changed = zero_correctors(beamline->elem_recirc, run);
-        else
-            changed = zero_correctors(&(beamline->elem), run);
-        if (changed && beamline->matrix) {
-            free_matrices(beamline->matrix);
-            tfree(beamline->matrix);
-            beamline->matrix = NULL;
-            }
-        }
-
-    correct->CMx->n_cycles_done = correct->CMy->n_cycles_done = 0;
-    final_traj = 1;
-    switch (correct->mode) {
-        case TRAJECTORY_CORRECTION:
-            x_failed = y_failed = 0;
-            for (i_cycle=0; i_cycle<correct->n_xy_cycles; i_cycle++) {
-                final_traj = 1;
-                if (!x_failed && correct->CMx->ncor) {
-                    if (correct->method==GLOBAL_CORRECTION) 
-                        global_trajcor_plane(correct->CMx, &correct->SLx, 0, correct->traj, correct->n_iterations, 
-                            run, beamline, starting_coord, (correct->use_actual_beam?beam:NULL));
-                    else
-                        one_to_one_trajcor_plane(correct->CMx, &correct->SLx, 0, correct->traj, correct->n_iterations, 
-                            run, beamline, starting_coord, (correct->use_actual_beam?beam:NULL));
-                    correct->CMx->n_cycles_done = i_cycle+1;
-                    if (correct->n_iterations<1)
-                        break;
-                    rms_before = rms_value(correct->CMx->posi[0], correct->CMx->nmon);
-                    rms_after  = rms_value(correct->CMx->posi[correct->n_iterations], correct->CMx->nmon);
-#if defined(IEEE_MATH)
-                    if (isnan(rms_before) || isnan(rms_after) || isinf(rms_before) || isinf(rms_after)) {
-                        x_failed = 1;
-                        if (correct->verbose)
-                            fputs("horizontal trajectory diverged--setting correctors to zero\n", stderr);
-                        zero_hcorrectors(&(beamline->elem), run);
-                        }
-                    else
-#endif
-                    if (rms_before<=rms_after+correct->CMx->corr_accuracy) {
-                        x_failed = 1;
-                        if (correct->verbose)
-                            fputs("trajectory not improved--discontinuing horizontal correction\n", stderr);
-                        }
-                    dump_cormon_stats(correct->verbose, 0, correct->CMx->kick, 
-                                      correct->CMx->ncor, correct->CMx->posi, correct->CMx->nmon, NULL, 
-                                      correct->n_iterations, i_cycle, i_cycle==correct->n_xy_cycles-1 || x_failed,
-                                      sim_step);
-                    if (i_cycle==correct->n_xy_cycles-1 || x_failed)
-                        dump_corrector_data(correct->CMx, &correct->SLx, correct->n_iterations, "horizontal", sim_step);
-                    }
-                if (!y_failed && correct->CMy->ncor) {                    
-                    final_traj = 2;
-                    if (correct->method==GLOBAL_CORRECTION)
-                        global_trajcor_plane(correct->CMy, &correct->SLy, 2, correct->traj+1, correct->n_iterations, run, 
-                                             beamline, starting_coord, (correct->use_actual_beam?beam:NULL));
-                    else
-                        one_to_one_trajcor_plane(correct->CMy, &correct->SLy, 2, correct->traj+1, correct->n_iterations, run, 
-                                                 beamline, starting_coord, (correct->use_actual_beam?beam:NULL));
-                    correct->CMy->n_cycles_done = i_cycle+1;
-                    rms_before = rms_value(correct->CMy->posi[0], correct->CMy->nmon);
-                    rms_after  = rms_value(correct->CMy->posi[correct->n_iterations], correct->CMy->nmon);
-#if defined(IEEE_MATH)
-                    if (isnan(rms_before) || isnan(rms_after) || isinf(rms_before) || isinf(rms_after)) {
-                        y_failed = 1;
-                        if (correct->verbose)
-                            fputs("vertical trajectory diverged--setting correctors to zero\n", stderr);
-                        zero_vcorrectors(&(beamline->elem), run);
-                        }
-                    else
-#endif
-                    if (rms_before<=rms_after+correct->CMy->corr_accuracy) {
-                        y_failed = 1;
-                        if (correct->verbose)
-                            fputs("trajectory not improved--discontinuing vertical correction\n", stderr);
-                        }
-                    dump_cormon_stats(correct->verbose, 2, correct->CMy->kick, 
-                                      correct->CMy->ncor, correct->CMy->posi, correct->CMy->nmon, NULL, 
-                                      correct->n_iterations, i_cycle, i_cycle==correct->n_xy_cycles-1 || y_failed,
-                                      sim_step);
-                    if (i_cycle==correct->n_xy_cycles-1 || y_failed)
-                        dump_corrector_data(correct->CMy, &correct->SLy, correct->n_iterations, "vertical", sim_step);
-                    }
-                if (i_cycle==0)
-                    dump_orb_traj(correct->traj[0], beamline->n_elems, "uncorrected", sim_step);
-                if (x_failed && y_failed) {
-                    if (correct->verbose)
-                        fputs("trajectory correction discontinued\n", stderr);
-                    break;
-                    }
-                }
-            if (correct->n_iterations>=1)
-                    dump_orb_traj(correct->traj[final_traj], beamline->n_elems, "corrected", sim_step);
-            if (starting_coord)
-                for (i=0; i<6; i++)
-                    starting_coord[i] = 0;  /* don't want to seem to be returning a closed orbit here */
-            bombed = 0;
-            break;
-        case ORBIT_CORRECTION:
-            if (correct->CMx->fixed_length)
-                Cdp = tmalloc(sizeof(*Cdp)*(correct->n_iterations+1));
-            else
-                Cdp = NULL;
-            x_failed = y_failed = bombed = 0;
-            for (i_cycle=0; i_cycle<correct->n_xy_cycles; i_cycle++) {
-                final_traj = 1;
-                if (!x_failed && correct->CMx->ncor) {
-                    if ((n_iter_taken = orbcor_plane(correct->CMx, &correct->SLx, 0, correct->traj, 
-                                                     correct->n_iterations, correct->clorb_accuracy, 
-                                                     correct->clorb_iterations, 
-                                                     correct->clorb_iter_fraction,
-                                                     run, beamline, 
-                            closed_orbit, Cdp))<0) {
-                        bombed = 1;
-                        break;
-                        }
-                    correct->CMx->n_cycles_done = i_cycle+1;
-                    if (correct->n_iterations<1)
-                        break;
-                    rms_before = rms_value(correct->CMx->posi[0], correct->CMx->nmon);
-                    rms_after  = rms_value(correct->CMx->posi[n_iter_taken], correct->CMx->nmon);
-#if defined(IEEE_MATH)
-                    if (isnan(rms_before) || isnan(rms_after) || isinf(rms_before) || isinf(rms_after)) {
-                        x_failed = 1;
-                        if (correct->verbose)
-                            fputs("horizontal orbit diverged--setting correctors to zero\n", stderr);
-                        zero_hcorrectors(&(beamline->elem), run);
-                        }
-                    else
-#endif
-                    if (rms_before<=rms_after+correct->CMx->corr_accuracy) {
-                        x_failed = 1;
-                        if (correct->verbose)
-                            fputs("orbit not improved--discontinuing horizontal correction\n", stderr);
-                        }
-                    dump_cormon_stats(correct->verbose, 0, correct->CMx->kick, 
-                                      correct->CMx->ncor, correct->CMx->posi, correct->CMx->nmon, Cdp, 
-                                      correct->n_iterations, i_cycle, i_cycle==correct->n_xy_cycles-1 || x_failed,
-                                      sim_step);
-                    if (i_cycle==correct->n_xy_cycles-1 || x_failed)
-                        dump_corrector_data(correct->CMx, &correct->SLx, correct->n_iterations, "horizontal", sim_step);
-                    }
-                if (!y_failed && correct->CMy->ncor) {
-                    final_traj = 2;
-                    if ((n_iter_taken = orbcor_plane(correct->CMy, &correct->SLy, 2, correct->traj+1, 
-                                                     correct->n_iterations, correct->clorb_accuracy, 
-                                                     correct->clorb_iterations, 
-                                                     correct->clorb_iter_fraction,
-                                                     run, beamline, 
-                            closed_orbit, Cdp))<0) {
-                        bombed = 1;
-                        break;
-                        }
-                    correct->CMy->n_cycles_done = i_cycle+1;
-                    rms_before = rms_value(correct->CMy->posi[0], correct->CMy->nmon);
-                    rms_after  = rms_value(correct->CMy->posi[n_iter_taken], correct->CMy->nmon);
-#if defined(IEEE_MATH)
-                    if (isnan(rms_before) || isnan(rms_after) || isinf(rms_before) || isinf(rms_after)) {
-                        y_failed = 1;
-                        if (correct->verbose)
-                            fputs("vertical orbit diverged--setting correctors to zero\n", stderr);
-                        zero_vcorrectors(&(beamline->elem), run);
-                        }
-                    else
-#endif
-                    if (rms_before<=rms_after+correct->CMx->corr_accuracy) {
-                        y_failed = 1;
-                        if (correct->verbose)
-                            fputs("orbit not improved--discontinuing vertical correction\n", stderr);
-                        }
-                    dump_cormon_stats(correct->verbose, 2, correct->CMy->kick, 
-                                      correct->CMy->ncor, correct->CMy->posi, correct->CMy->nmon, Cdp, 
-                                      correct->n_iterations, i_cycle, i_cycle==correct->n_xy_cycles-1 || y_failed,
-                                      sim_step);
-                    if (i_cycle==correct->n_xy_cycles-1 || y_failed) 
-                        dump_corrector_data(correct->CMy, &correct->SLy, correct->n_iterations, "vertical", sim_step);
-                    }
-                dump_orb_traj(correct->traj[0], beamline->n_elems, "uncorrected", sim_step);
-                if (x_failed && y_failed) {
-                    if (correct->verbose)
-                        fputs("orbit correction discontinued\n", stderr);
-                    break;
-                    }
-                }
-            if (!bombed && correct->n_iterations>=1)
-                dump_orb_traj(correct->traj[final_traj], beamline->n_elems, "corrected", sim_step);
-            break;
-	}
-
-    beamline->closed_orbit = correct->traj[final_traj];
-
-    log_exit("do_correction");
-    return(!bombed);
+  if (correct->verbose && correct->n_iterations>=1 && correct->n_xy_cycles>0) {
+    if (correct->CMx->fixed_length && correct->mode==ORBIT_CORRECTION) {
+      fputs(" plane   iter     rms kick     rms pos.    max kick     max pos.   mom.offset\n", stderr);
+      fputs("                    mrad          mm         mrad          mm           %\n", stderr);
+      fputs("-------  ----    ----------   ---------   ----------   ----------  ----------\n", stderr);
     }
+    else {
+      fputs(" plane   iter     rms kick     rms pos.    max kick     max pos.\n", stderr);
+      fputs("                    mrad          mm         mrad          mm\n", stderr);
+      fputs("-------  ----    ----------   ---------   ----------   ----------\n", stderr);
+    }
+  }
+
+  if (correct->prezero_correctors && initial_correction) {
+    long changed;
+    if (beamline->elem_recirc)
+      changed = zero_correctors(beamline->elem_recirc, run);
+    else
+      changed = zero_correctors(&(beamline->elem), run);
+    if (changed && beamline->matrix) {
+      free_matrices(beamline->matrix);
+      tfree(beamline->matrix);
+      beamline->matrix = NULL;
+    }
+  }
+
+  correct->CMx->n_cycles_done = correct->CMy->n_cycles_done = 0;
+  final_traj = 1;
+  switch (correct->mode) {
+  case TRAJECTORY_CORRECTION:
+    x_failed = y_failed = 0;
+    for (i_cycle=0; i_cycle<correct->n_xy_cycles; i_cycle++) {
+      final_traj = 1;
+      if (!x_failed && correct->CMx->ncor) {
+        if (correct->method==GLOBAL_CORRECTION) {
+          if (!global_trajcor_plane(correct->CMx, &correct->SLx, 0, correct->traj, correct->n_iterations, 
+                                    run, beamline, starting_coord, (correct->use_actual_beam?beam:NULL)))
+            return 0;
+        } else
+          one_to_one_trajcor_plane(correct->CMx, &correct->SLx, 0, correct->traj, correct->n_iterations, 
+                                   run, beamline, starting_coord, (correct->use_actual_beam?beam:NULL));
+        correct->CMx->n_cycles_done = i_cycle+1;
+        if (correct->n_iterations<1)
+          break;
+        rms_before = rms_value(correct->CMx->posi[0], correct->CMx->nmon);
+        rms_after  = rms_value(correct->CMx->posi[correct->n_iterations], correct->CMx->nmon);
+#if defined(IEEE_MATH)
+        if (isnan(rms_before) || isnan(rms_after) || isinf(rms_before) || isinf(rms_after)) {
+          x_failed = 1;
+          if (correct->verbose)
+            fputs("horizontal trajectory diverged--setting correctors to zero\n", stderr);
+          zero_hcorrectors(&(beamline->elem), run);
+        }
+        else
+#endif
+          if (rms_before<=rms_after+correct->CMx->corr_accuracy) {
+            x_failed = 1;
+            if (correct->verbose)
+              fputs("trajectory not improved--discontinuing horizontal correction\n", stderr);
+          }
+        dump_cormon_stats(correct->verbose, 0, correct->CMx->kick, 
+                          correct->CMx->ncor, correct->CMx->posi, correct->CMx->nmon, NULL, 
+                          correct->n_iterations, i_cycle, i_cycle==correct->n_xy_cycles-1 || x_failed,
+                          sim_step, initial_correction);
+        if (!initial_correction && (i_cycle==correct->n_xy_cycles-1 || x_failed))
+            dump_corrector_data(correct->CMx, &correct->SLx, correct->n_iterations, "horizontal", sim_step);
+      }
+      if (!y_failed && correct->CMy->ncor) {                    
+        final_traj = 2;
+        if (correct->method==GLOBAL_CORRECTION) {
+          if (!global_trajcor_plane(correct->CMy, &correct->SLy, 2, correct->traj+1, correct->n_iterations, 
+                                    run, beamline, starting_coord, (correct->use_actual_beam?beam:NULL)))
+            return 0;
+        }
+        else
+          one_to_one_trajcor_plane(correct->CMy, &correct->SLy, 2, correct->traj+1, correct->n_iterations, 
+                                   run, beamline, starting_coord, (correct->use_actual_beam?beam:NULL));
+        correct->CMy->n_cycles_done = i_cycle+1;
+        rms_before = rms_value(correct->CMy->posi[0], correct->CMy->nmon);
+        rms_after  = rms_value(correct->CMy->posi[correct->n_iterations], correct->CMy->nmon);
+#if defined(IEEE_MATH)
+        if (isnan(rms_before) || isnan(rms_after) || isinf(rms_before) || isinf(rms_after)) {
+          y_failed = 1;
+          if (correct->verbose)
+            fputs("vertical trajectory diverged--setting correctors to zero\n", stderr);
+          zero_vcorrectors(&(beamline->elem), run);
+        }
+        else
+#endif
+          if (rms_before<=rms_after+correct->CMy->corr_accuracy) {
+            y_failed = 1;
+            if (correct->verbose)
+              fputs("trajectory not improved--discontinuing vertical correction\n", stderr);
+          }
+        dump_cormon_stats(correct->verbose, 2, correct->CMy->kick, 
+                          correct->CMy->ncor, correct->CMy->posi, correct->CMy->nmon, NULL, 
+                          correct->n_iterations, i_cycle, i_cycle==correct->n_xy_cycles-1 || y_failed,
+                          sim_step, initial_correction);
+        if (!initial_correction && (i_cycle==correct->n_xy_cycles-1 || y_failed))
+            dump_corrector_data(correct->CMy, &correct->SLy, correct->n_iterations, "vertical", sim_step);
+      }
+      if (initial_correction && i_cycle==0)
+        dump_orb_traj(correct->traj[0], beamline->n_elems, "uncorrected", sim_step);
+      if (x_failed && y_failed) {
+        if (correct->verbose)
+          fputs("trajectory correction discontinued\n", stderr);
+        break;
+      }
+    }
+    if (!initial_correction && correct->n_iterations>=1)
+      dump_orb_traj(correct->traj[final_traj], beamline->n_elems, "corrected", sim_step);
+    if (starting_coord)
+      for (i=0; i<6; i++)
+        starting_coord[i] = 0;  /* don't want to seem to be returning a closed orbit here */
+    bombed = 0;
+    break;
+  case ORBIT_CORRECTION:
+    if (correct->CMx->fixed_length)
+      Cdp = tmalloc(sizeof(*Cdp)*(correct->n_iterations+1));
+    else
+      Cdp = NULL;
+    x_failed = y_failed = bombed = 0;
+    for (i_cycle=0; i_cycle<correct->n_xy_cycles; i_cycle++) {
+      final_traj = 1;
+      if (!x_failed && correct->CMx->ncor) {
+        if ((n_iter_taken = orbcor_plane(correct->CMx, &correct->SLx, 0, correct->traj, 
+                                         correct->n_iterations, correct->clorb_accuracy, 
+                                         correct->clorb_iterations, 
+                                         correct->clorb_iter_fraction,
+                                         run, beamline, 
+                                         closed_orbit, Cdp))<0) {
+          fprintf(stderr, "Horizontal correction has failed.\n");
+          bombed = 1; 
+          break;
+        }
+        correct->CMx->n_cycles_done = i_cycle+1;
+        if (correct->n_iterations<1)
+          break;
+        rms_before = rms_value(correct->CMx->posi[0], correct->CMx->nmon);
+        rms_after  = rms_value(correct->CMx->posi[n_iter_taken], correct->CMx->nmon);
+#if defined(IEEE_MATH)
+        if (isnan(rms_before) || isnan(rms_after) || isinf(rms_before) || isinf(rms_after)) {
+          x_failed = 1;
+          if (correct->verbose)
+            fputs("horizontal orbit diverged--setting correctors to zero\n", stderr);
+          zero_hcorrectors(&(beamline->elem), run);
+        }
+        else
+#endif
+          if (rms_before<=rms_after+correct->CMx->corr_accuracy) {
+            x_failed = 1;
+            if (correct->verbose)
+              fputs("orbit not improved--discontinuing horizontal correction\n", stderr);
+          }
+        dump_cormon_stats(correct->verbose, 0, correct->CMx->kick, 
+                          correct->CMx->ncor, correct->CMx->posi, correct->CMx->nmon, Cdp, 
+                          correct->n_iterations, i_cycle, i_cycle==correct->n_xy_cycles-1 || x_failed,
+                          sim_step, initial_correction);
+        if (!initial_correction && (i_cycle==correct->n_xy_cycles-1 || x_failed)) 
+            dump_corrector_data(correct->CMx, &correct->SLx, correct->n_iterations, "horizontal", sim_step);
+      }
+      if (!y_failed && correct->CMy->ncor) {
+        final_traj = 2;
+        if ((n_iter_taken = orbcor_plane(correct->CMy, &correct->SLy, 2, correct->traj+1, 
+                                         correct->n_iterations, correct->clorb_accuracy, 
+                                         correct->clorb_iterations, 
+                                         correct->clorb_iter_fraction,
+                                         run, beamline, 
+                                         closed_orbit, Cdp))<0) {
+          bombed = 1;
+          fprintf(stderr, "Vertical correction has failed.\n");
+          break;
+        }
+        correct->CMy->n_cycles_done = i_cycle+1;
+        rms_before = rms_value(correct->CMy->posi[0], correct->CMy->nmon);
+        rms_after  = rms_value(correct->CMy->posi[n_iter_taken], correct->CMy->nmon);
+#if defined(IEEE_MATH)
+        if (isnan(rms_before) || isnan(rms_after) || isinf(rms_before) || isinf(rms_after)) {
+          y_failed = 1;
+          if (correct->verbose)
+            fputs("vertical orbit diverged--setting correctors to zero\n", stderr);
+          zero_vcorrectors(&(beamline->elem), run);
+        }
+        else
+#endif
+          if (rms_before<=rms_after+correct->CMx->corr_accuracy) {
+            y_failed = 1;
+            if (correct->verbose)
+              fputs("orbit not improved--discontinuing vertical correction\n", stderr);
+          }
+        dump_cormon_stats(correct->verbose, 2, correct->CMy->kick, 
+                          correct->CMy->ncor, correct->CMy->posi, correct->CMy->nmon, Cdp, 
+                          correct->n_iterations, i_cycle, i_cycle==correct->n_xy_cycles-1 || y_failed,
+                          sim_step, initial_correction);
+        if (!initial_correction && (i_cycle==correct->n_xy_cycles-1 || y_failed))
+            dump_corrector_data(correct->CMy, &correct->SLy, correct->n_iterations, "vertical", sim_step);
+      }
+      if (initial_correction && i_cycle==0) 
+        dump_orb_traj(correct->traj[0], beamline->n_elems, "uncorrected", sim_step);
+      if (x_failed && y_failed) {
+        if (correct->verbose)
+          fputs("orbit correction discontinued\n", stderr);
+        break;
+      }
+    }
+    if (!initial_correction && !bombed && correct->n_iterations>=1)
+      dump_orb_traj(correct->traj[final_traj], beamline->n_elems, "corrected", sim_step);
+    break;
+  }
+
+  beamline->closed_orbit = correct->traj[final_traj];
+
+  log_exit("do_correction");
+  return(!bombed);
+}
 
 void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN *run, LINE_LIST *beamline, long find_only, long invert)
 {
@@ -853,8 +860,8 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
     log_exit("compute_trajcor_matrices");
     }
 
-void global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **traject, long n_iterations, RUN *run,
-         LINE_LIST *beamline, double *starting_coord, BEAM *beam)
+long global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **traject, long n_iterations, 
+                         RUN *run, LINE_LIST *beamline, double *starting_coord, BEAM *beam)
 {
     ELEMENT_LIST *corr, *eptr;
     TRAJECTORY *traj;
@@ -924,6 +931,8 @@ void global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
                 if (i!=0 && i<beamline->n_elems+1)
                     fprintf(stderr, "---all beam lost before z=%em (element %s)",
                             traj[i].elem->end_pos, traj[i].elem->name);
+                fputc('\n', stderr);
+                return 0;
                 }
             fputc('\n', stderr);
             }
@@ -935,10 +944,12 @@ void global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
             x = traj[CM->mon_index[i_moni]].centroid[0];
             y = traj[CM->mon_index[i_moni]].centroid[2];
             reading = computeMonitorReading(eptr, coord, x, y, 0);
+            if (isnan(reading) || isinf(reading)) 
+              return 0;
             CM->posi[iteration][i_moni] = CM->Qo->a[i_moni][0] =  
                 reading + (CM->bpm_noise?noise_value(CM->bpm_noise, CM->bpm_noise_cutoff, CM->bpm_noise_distribution):0);
 	    }
-
+        
         if (iteration==n_iterations)
             break;
 
@@ -1705,8 +1716,12 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
                 fprintf(stderr, "%14.6e ", R->a[i][j]);
             fputc('\n', stderr);
             }
-        exit(1);
+        for (i=0; i<4; i++) {
+          for (j=0; j<4; j++) {
+            INV_ImR->a[i][j] = 0;
+          }
         }
+      }
 
     if (!starting_point) {
         if (!m_mult(co, INV_ImR, C))
@@ -1812,6 +1827,10 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
     if (n_iter==clorb_iter)  {
         fprintf(stderr, "warning: closed orbit did not converge to better than %e after %ld iterations\n",
             error, n_iter);
+        if (isnan(error) || isinf(error)) {
+          zero_closed_orbit(clorb, beamline->n_elems+1);
+          return 0;
+          }
         fflush(stderr);
         }
 #ifdef DEBUG

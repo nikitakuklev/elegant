@@ -17,9 +17,6 @@ void computeChromaticities(double *chromx, double *chromy, TWISS *twiss, VMATRIX
 void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, CHROM_CORRECTION *chrom)
 {
     VMATRIX *M;
-    double chromx, chromy;
-    double chromx0, chromy0;
-    double K2, *K2ptr;
     static long initial_call = 1;
     ELEMENT_LIST *eptr, *elast, *context;
     long i, n_elem, last_n_elem, count, K2_param;
@@ -50,8 +47,12 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
     chrom->chromx = dnux_dp;
     chrom->chromy = dnuy_dp;
     chrom->n_iterations = n_iterations;
+    chrom->correction_fraction = correction_fraction;
     alter_defined_values = change_defined_values;
     chrom->strengthLimit = strength_limit;
+    chrom->use_perturbed_matrix = use_perturbed_matrix;
+    chrom->sextupole_tweek = sextupole_tweek;
+    chrom->tolerance = tolerance;
     
     if (!beamline->twiss0 || !beamline->matrix) {
         double beta_x, alpha_x, eta_x, etap_x;
@@ -89,7 +90,33 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
 
     if (!(M=beamline->matrix) || !M->C || !M->R || !M->T)
         bomb("something wrong with transfer map for beamline (setup_chromaticity_correction)", NULL);
-    computeChromaticities(&chromx0, &chromy0, beamline->twiss0, M);
+
+    if (!use_perturbed_matrix)
+      computeChromCorrectionMatrix(run, beamline, chrom);
+
+    if (strength_log) {
+        strength_log = compose_filename(strength_log, run->rootname);
+        fp_sl = fopen_e(strength_log, "w", FOPEN_SAVE_IF_EXISTS);
+        fprintf(fp_sl, "SDDS1\n&column name=Step, type=long, description=\"Simulation step\" &end\n");
+        fprintf(fp_sl, "&column name=K2, type=double, units=\"1/m$a2$n\" &end\n");
+        fprintf(fp_sl, "&column name=SextupoleName, type=string  &end\n");
+        fprintf(fp_sl, "&data mode=ascii, no_row_counts=1 &end\n");
+        fflush(fp_sl);
+        }
+
+    log_exit("setup_chromaticity_correction");
+    
+}
+
+void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTION *chrom)
+{    
+    VMATRIX *M;
+    double chromx, chromy;
+    double chromx0, chromy0;
+    double K2, *K2ptr;
+    ELEMENT_LIST *eptr, *elast, *context;
+    long i, n_elem, last_n_elem, count, K2_param;
+    MATRIX *C, *Ct, *CtC, *inv_CtC;
 
     m_alloc(&C, 2, chrom->n_families);
     m_alloc(&Ct, chrom->n_families, 2);
@@ -100,6 +127,7 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
     m_alloc(&(chrom->dchrom), 2, 1);
 
     fprintf(stderr, "Computing chromaticity influence matrix for all named sextupoles.\n");
+    computeChromaticities(&chromx0, &chromy0, beamline->twiss0, M=beamline->matrix);
 
     for (i=0; i<chrom->n_families; i++) {
         count = 0;
@@ -114,7 +142,7 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
                 bomb("K2ptr NULL in setup_chromaticity_correction", NULL);
             if (count==0)
                 K2 = *K2ptr;
-            *K2ptr = K2 + sextupole_tweek;
+            *K2ptr = K2 + chrom->sextupole_tweek;
             if (context->matrix)
                 free_matrices(context->matrix);
             compute_matrix(context, run, NULL);
@@ -129,8 +157,8 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
         M = full_matrix(beamline->elem_twiss, run, 2);
         computeChromaticities(&chromx, &chromy, beamline->twiss0, M);
 
-        C->a[0][i] = (chromx-chromx0)/sextupole_tweek;
-        C->a[1][i] = (chromy-chromy0)/sextupole_tweek;
+        C->a[0][i] = (chromx-chromx0)/chrom->sextupole_tweek;
+        C->a[1][i] = (chromy-chromy0)/chrom->sextupole_tweek;
         if (C->a[0][i]==0 || C->a[1][i]==0) {
             fprintf(stderr, "error: element %s does not change the chromaticity!\n", chrom->name[i]);
             exit(1);
@@ -174,22 +202,11 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
     m_free(&Ct);
     m_free(&CtC);
     m_free(&inv_CtC);
-
-    if (strength_log) {
-        strength_log = compose_filename(strength_log, run->rootname);
-        fp_sl = fopen_e(strength_log, "w", FOPEN_SAVE_IF_EXISTS);
-        fprintf(fp_sl, "SDDS1\n&column name=Step, type=long, description=\"Simulation step\" &end\n");
-        fprintf(fp_sl, "&column name=K2, type=double, units=\"1/m$a2$n\" &end\n");
-        fprintf(fp_sl, "&column name=SextupoleName, type=string  &end\n");
-        fprintf(fp_sl, "&data mode=ascii, no_row_counts=1 &end\n");
-        fflush(fp_sl);
-        }
-
-    log_exit("setup_chromaticity_correction");
-    }
+  }
 
 
-void do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *beamline,
+
+long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *beamline,
             double *clorb, long step, long last_iteration)
 {
     VMATRIX *M;
@@ -235,6 +252,10 @@ void do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
 
     if (!(M = beamline->matrix) || !M->C || !M->R || !M->T)
         bomb("something wrong with transfer map for beamline (do_chromaticity_correction.1)", NULL);
+
+    if (chrom->use_perturbed_matrix)
+      computeChromCorrectionMatrix(run, beamline, chrom);
+    
     computeChromaticities(&chromx0, &chromy0, beamline->twiss0, M);
 
     fprintf(stderr, "\nAdjusting chromaticities:\n");
@@ -243,8 +264,21 @@ void do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
     for (iter=0; iter<chrom->n_iterations; iter++) {
         chrom->dchrom->a[0][0] = chrom->chromx - chromx0;
         chrom->dchrom->a[1][0] = chrom->chromy - chromy0;
-    
+        if (chrom->tolerance>0 &&
+            chrom->tolerance>fabs(chrom->dchrom->a[0][0]) &&
+            chrom->tolerance>fabs(chrom->dchrom->a[1][0]) )
+          break;
+
         m_mult(chrom->dK2, chrom->T, chrom->dchrom);
+        for (i=0; i<chrom->n_families; i++) {
+          if (isnan(chrom->correction_fraction*chrom->dK2->a[i][0]) ||
+              isinf(chrom->correction_fraction*chrom->dK2->a[i][0]))
+            break;
+        }
+        if (i!=chrom->n_families) {
+          fprintf(stderr, "Unable to correct chromaticity---diverged\n");
+          return 0;
+        }
         for (i=0; i<chrom->n_families; i++) {
             context = NULL;
             count = 0;
@@ -256,7 +290,7 @@ void do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
                     }
                 if (!(K2ptr = (double*)(context->p_elem + entity_description[context->type].parameter[K2_param].offset)))
                     bomb("K2ptr NULL in setup_chromaticity_correction", NULL);
-                K2 = (*K2ptr += chrom->dK2->a[i][0]);
+                K2 = (*K2ptr += chrom->correction_fraction*chrom->dK2->a[i][0]);
                 if (chrom->strengthLimit>0 && chrom->strengthLimit<fabs(K2)) {
                   K2 = *K2ptr = SIGN(K2)*chrom->strengthLimit;
                 }
@@ -315,6 +349,7 @@ void do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
 
     propagate_twiss_parameters(beamline->twiss0, beamline->tune, NULL, beamline->elem_twiss, run, clorb);
     log_exit("do_chromaticity_correction");
+    return 1;
     }
 
 void computeChromaticities(double *chromx, double *chromy, TWISS *twiss, VMATRIX *M)

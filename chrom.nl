@@ -10,10 +10,13 @@
     double dnux_dp = 0;
     double dnuy_dp = 0;
     double sextupole_tweek = 1e-3;
+    double correction_fraction = 0.5;
     long n_iterations = 1;
+    double tolerance = 0;
     STRING strength_log = NULL;
     long change_defined_values = 0;
     double strength_limit = 0;
+    long use_perturbed_matrix = 0;    
 #end
 
 

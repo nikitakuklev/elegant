@@ -76,14 +76,12 @@ void setup_closed_orbit(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     log_exit("setup_closed_orbit");
     }
 
-void run_closed_orbit(RUN *run, LINE_LIST *beamline, double *starting_coord, BEAM *beam, long do_output)
+long run_closed_orbit(RUN *run, LINE_LIST *beamline, double *starting_coord, BEAM *beam, long do_output)
 {
     double dp;
     long i, bad_orbit;
     VMATRIX *M;
     
-    log_entry("run_closed_orbit");
-
     if (!starting_coord)
         bomb("starting_coord array is NULL (run_closed_orbit)", NULL);
 
@@ -114,7 +112,7 @@ void run_closed_orbit(RUN *run, LINE_LIST *beamline, double *starting_coord, BEA
     bad_orbit = !find_closed_orbit(clorb, closed_orbit_accuracy, closed_orbit_iterations, beamline, M, run, dp, 
                         start_from_recirc, fixed_length, (start_from_centroid?starting_coord:NULL), iteration_fraction);
     free_matrices(M); tfree(M); M = NULL;
-
+    
     /* return closed orbit at the beginning of the ring */
     for (i=0; i<6; i++)
         starting_coord[i] = clorb[0].centroid[i];
@@ -130,7 +128,7 @@ void run_closed_orbit(RUN *run, LINE_LIST *beamline, double *starting_coord, BEA
     if (do_output && SDDS_clorb_initialized && !bad_orbit) 
         dump_closed_orbit(clorb, beamline->n_elems, clorb_count++);
 
-    log_exit("run_closed_orbit");
+    return !bad_orbit;
     }
         
 void finish_clorb_output(void)
