@@ -109,9 +109,7 @@ void IBSGrowthRates (double gamma, double emitx, double emity,
 */
   double test = 1e-5;
   double SCtuneShiftLimit = 0.25;
-  long maxDecades = 30;
   double simpsonCoeff[2] = {2.,4.};
-  double al[32], bl[32];
   long i, j, k;
   double beta, EMeV, coulombLogReturn, dencon;
   double emityxRatio, emitxyRatio, betaxyRatio, betayxRatio;
@@ -124,11 +122,16 @@ void IBSGrowthRates (double gamma, double emitx, double emity,
   double zintx, zinty, zintz;
   double ccy, td1, td2, tz1, tz2, ty1, ty2, tx1, tx2;
   double h, aloop, term, func, polyx, polyy, polyz, sumz;
-  double alam, bb, cof, f, tmpx, tmpy, tmpz;
+  double alam, bb, cof, f, coff, tmpx, tmpy, tmpz;
   double txi, tyi, tzi, weight, taux, tauy, tauz;
   double epsCheck, epzCheck;  
 
-  long steps = 10; /* number of integration steps per decade */
+#define STEPS 10
+#define MAXDECADES 30
+  long maxDecades = MAXDECADES;
+  long steps = STEPS; /* number of integration steps per decade */
+  double al[MAXDECADES+2], bl[MAXDECADES+2], sqrt_al[MAXDECADES+2];
+  double alam2d[MAXDECADES+2][STEPS+2], sqrtAlam2d[MAXDECADES+2][STEPS+2];
   long nsteps, noWarning;
     
   EMeV = sqrt(sqr(gamma) + 1) * me_mev;
@@ -189,8 +192,39 @@ void IBSGrowthRates (double gamma, double emitx, double emity,
   *xGrowthRate= 0.0; 
   *yGrowthRate= 0.0; 
   *zGrowthRate= 0.0; 
+
+  steps = steps + steps%2;
+  al[0] = 0;
+  for (j=0; j<maxDecades; j++) {
+    bl[j] = pow(10,j);
+    al[j+1] = bl[j];
+    sqrt_al[j] = sqrt(al[j]);
+    h = (bl[j]-al[j])/steps;
+    for (k=1; k<=steps; k++) {
+      alam2d[j][k] = al[j]+k*h;
+      sqrtAlam2d[j][k] = sqrt(alam2d[j][k]);
+    }
+  }
   
   for( i=0; i<elements; i++) {
+    /* Does a better job at trapeze integration than original zap 
+     */
+    if (i==0) {
+      weight = FABS(s[1]-s[0])/ 2.0/ s[elements-1];
+    } else if (i==(elements-1) ) {
+      weight = FABS(s[elements-1]-s[elements-2])/ 2.0/ s[elements-1];
+    } else {
+      weight = FABS(s[i+1]-s[i-1])/ 2.0/ s[elements-1];
+    }
+    /* original zap weighting 
+    if (i==0)
+      weight = 0.0;
+    else
+      weight = FABS(s[i]-s[i-1])/ s[elements-1];
+      */
+    if (!weight)
+      continue;
+    
     betx = betax[i];
     alx = alphax[i];
     bety = betay[i];
@@ -255,15 +289,16 @@ void IBSGrowthRates (double gamma, double emitx, double emity,
     tx1=(2.*a*(cx-c3)-cy*cx-c3*(cy-cz-2.*c3-6.*c2))/cprime;
     tx2=(c3+cx)*((b+c3*cy)/cprime)-6./cscale+3.*c3*cy*(cz/cprime);
     al[0]= 0.0;
-    steps = steps + steps%2;
     for( j=0; j<maxDecades; j++ ) {
       /* 
         It seems that al and bl are integration limits. The
         integration intervals seem to be [0,10], [10,100], [100,1000],
         and so on. j is the index over these intervals.
         */
-      bl[j] = pow(10,j); 
-      al[j+1] = bl[j];
+      /* 
+        bl[j] = pow(10,j); 
+         al[j+1] = bl[j];
+      */
       h = (bl[j]-al[j])/ steps;
       aloop = al[j];
 
@@ -272,7 +307,7 @@ void IBSGrowthRates (double gamma, double emitx, double emity,
          */
       term = sqrt((cy+aloop)*ccy) * 
         sqrt(aloop*ccy*aloop+td1*aloop+td2);
-      func = sqrt(aloop)/pow(term,3);
+      func = sqrt_al[j]/term/term/term;
       polyz = tz1*aloop+tz2;
       polyx = tx1*aloop+tx2;
       polyy = ty1*aloop+ty2;
@@ -286,17 +321,18 @@ void IBSGrowthRates (double gamma, double emitx, double emity,
          of which are treated below.
          */
       for( k=1; k<=steps; k++) {
-        alam = aloop+k*h;
+        alam = alam2d[j][k];
 /* second point (k=1) should have coefficient of 4 */
         cof = simpsonCoeff[k%2]; 
         term = sqrt((cy+alam)*ccy) * sqrt(alam*ccy*alam+td1*alam+td2);
-        f = sqrt(alam)/pow(term,3);
+        f = sqrtAlam2d[j][k]/term/term/term;
+        coff = cof*f;
         polyz = tz1*alam+tz2;
         polyx = tx1*alam+tx2;
         polyy = ty1*alam+ty2;
-        sumz += cof*f*polyz;
-        sumx += cof*f*polyx;
-        sumy += cof*f*polyy;
+        sumz += coff*polyz;
+        sumx += coff*polyx;
+        sumy += coff*polyy;
       }
       /* This is to compensate for the "2" coefficient as
          the coefficient for the last point should be 1.
@@ -325,21 +361,6 @@ void IBSGrowthRates (double gamma, double emitx, double emity,
     tyi = cony * (zinty/cprime);
     tzi = conz * (zintz/cprime);
 
-    /* Does a better job at trapeze integration than original zap 
-     */
-    if (i==0) {
-      weight = FABS(s[1]-s[0])/ 2.0/ s[elements-1];
-    } else if (i==(elements-1) ) {
-      weight = FABS(s[elements-1]-s[elements-2])/ 2.0/ s[elements-1];
-    } else {
-      weight = FABS(s[i+1]-s[i-1])/ 2.0/ s[elements-1];
-    }
-    /* original zap weighting 
-    if (i==0)
-      weight = 0.0;
-    else
-      weight = FABS(s[i]-s[i-1])/ s[elements-1];
-      */
     *xGrowthRate += txi*weight;
     *yGrowthRate += tyi*weight;
     *zGrowthRate += tzi*weight;
