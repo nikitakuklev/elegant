@@ -72,9 +72,9 @@ void delete_spaces(char *s)
             if (*s=='"' && *(s-1)!='\\')
                 s++;
             }
-        else if (*s==' ') {
+        else if (*s==' ' || *s=='\011') {
             ptr = s++;
-            while (*s==' ')
+            while (*s==' ' || *s=='\011')
                 s++;
             strcpy(ptr, s);
             s = ptr;
