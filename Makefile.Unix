@@ -161,8 +161,8 @@ elegant: $(OBJS) $(DEPLIBS)
 sddsemitmeas: sddsemitmeas.o 
 	$(LINK.c) -o $@ sddsemitmeas.o $(LDLIBS)
 
-sddssasefel: sddssasefel.o 
-	$(LINK.c) -o $@ sddssasefel.o $(LDLIBS)
+sddssasefel: sddssasefel.o sasefelmx.o
+	$(LINK.c) -o $@ sddssasefel.o sasefelmx.o $(LDLIBS)
 
 recurseSetup: recurseSetup.o 
 	$(LINK.c) -o $@ recurseSetup.o $(LDLIBS)
