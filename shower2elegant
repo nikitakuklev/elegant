@@ -41,7 +41,7 @@ exec sddsprocess $input -pipe=out \
     "-define=column,xp,u $uref - w /" \
     "-define=column,yp,v $vref - w /" \
     "-define=column,p,Energy mev / sqr 1 - sqrt" \
-    "-define=column,vz,p 1 xp sqr yp sqr + + sqrt / p sqr 1 + sqrt / c_mks *,units=m/s" \
+    "-define=column,vz,w c_mks *,units=m/s" \
     -process=z,max,zMax \
     "-redefine=column,x,x $xref - xp zMax z - * +,units=m" \
     "-redefine=column,y,y $yref - yp zMax z - * +,units=m" \
