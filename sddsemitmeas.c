@@ -15,6 +15,10 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.17  2003/02/10 20:18:55  borland
+ * Will now use Step as the independent variable if no quad-like names are
+ * found.
+ *
  * Revision 1.16  2002/08/14 20:23:48  soliday
  * Added Open License
  *
@@ -467,9 +471,8 @@ int main(
           !SDDS_DefineSimpleParameter(&SDDSout, "betaxSigma", "m", SDDS_DOUBLE) ||
           !SDDS_DefineSimpleParameter(&SDDSout, "alphaxSigma", "m", SDDS_DOUBLE)))) 
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-    if (n_error_sets<=1 &&
-        (!SDDS_DefineSimpleColumn(&SDDSout, "xSigmaData", "m", SDDS_DOUBLE) ||
-         !SDDS_DefineSimpleColumn(&SDDSout, "xSigmaFit", "m", SDDS_DOUBLE))) {
+    if (!SDDS_DefineSimpleColumn(&SDDSout, "xSigmaData", "m", SDDS_DOUBLE) ||
+         !SDDS_DefineSimpleColumn(&SDDSout, "xSigmaFit", "m", SDDS_DOUBLE)) {
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     }
   }
@@ -491,9 +494,8 @@ int main(
           !SDDS_DefineSimpleParameter(&SDDSout, "betaySigma", "m", SDDS_DOUBLE) ||
           !SDDS_DefineSimpleParameter(&SDDSout, "alphaySigma", "m", SDDS_DOUBLE))))
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-    if (n_error_sets<=1 &&
-        (!SDDS_DefineSimpleColumn(&SDDSout, "ySigmaData", "m", SDDS_DOUBLE) ||
-         !SDDS_DefineSimpleColumn(&SDDSout, "ySigmaFit", "m", SDDS_DOUBLE))) {
+    if (!SDDS_DefineSimpleColumn(&SDDSout, "ySigmaData", "m", SDDS_DOUBLE) ||
+         !SDDS_DefineSimpleColumn(&SDDSout, "ySigmaFit", "m", SDDS_DOUBLE)) {
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     }
   }
@@ -825,6 +827,8 @@ int main(
                "alphaxSigma", sqrt(alphax_sum2/n_good_fits_x-sqr(alphax_sum/n_good_fits_x)),
                NULL)))
             SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+          if (i_dev==0 && !SetSigmaData(&SDDSout, "xSigmaData", s2x, "xSigmaFit", x_fit_sig2, n_configs)) 
+            SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
         }
         if (!ignore_y && n_good_fits_y) {
           if (!error_output) 
@@ -851,6 +855,8 @@ int main(
                 "betaySigma", sqrt(betay_sum2/n_good_fits_y-sqr(betay_sum/n_good_fits_y)),
                 "alphaySigma", sqrt(alphay_sum2/n_good_fits_y-sqr(alphay_sum/n_good_fits_y)),
                 NULL)))
+            SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+          if (i_dev==0 && !SetSigmaData(&SDDSout, "ySigmaData", s2y, "ySigmaFit", y_fit_sig2, n_configs)) 
             SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
         }
       } else {
@@ -885,7 +891,7 @@ int main(
                "alphaxSigma", (S12/emitx)*sqrt(sqr(s_emitx/emitx)+sqr(sS12/S12)),
                NULL)))
               SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-          if (!SetSigmaData(&SDDSout, "xSigmaData", s2x, "xSigmaFit", x_fit_sig2, n_configs)) 
+          if (i_dev==0 && !SetSigmaData(&SDDSout, "xSigmaData", s2x, "xSigmaFit", x_fit_sig2, n_configs)) 
             SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
         }
         if (!ignore_y) {
@@ -919,7 +925,7 @@ int main(
                 "alphaySigma", (S34/emity)*sqrt(sqr(s_emity/emity)+sqr(sS34/S34)),
                 NULL)))
             SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-          if (!SetSigmaData(&SDDSout, "ySigmaData", s2y, "ySigmaFit", y_fit_sig2, n_configs)) 
+          if (i_dev==0 && !SetSigmaData(&SDDSout, "ySigmaData", s2y, "ySigmaFit", y_fit_sig2, n_configs)) 
             SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
         }
       }
