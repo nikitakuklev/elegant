@@ -1466,7 +1466,6 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
   static char *wavelengthMode[2] = {"sigmaz", "peak-to-peak"};
     
   if (np<=1 || !csrWake.valid || !csrDrift->csr) {
-    fprintf(stdout, "Skipping csr drift computation\n");
     drift_beam(part, np, csrDrift->length, 2);
     return np;
   }
@@ -1476,20 +1475,16 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
   }
   else
     attenuationLength = csrDrift->attenuationLength;
-  fprintf(stdout, "CSR attenuation length is %le m\n", attenuationLength);
-  fflush(stdout);
   
   if (csrDrift->spread) {
     iSpreadMode = 0;
     if (csrDrift->spreadMode && 
         (iSpreadMode=match_string(csrDrift->spreadMode, spreadMode, 3, 0))<0)
       bomb("invalid spread_mode for CSR DRIFT.  Use full, simple, or radiation-only", NULL);
-    fprintf(stdout, "spread mode is %s\n", spreadMode[iSpreadMode]);
     iWavelengthMode = 0;
     if (csrDrift->wavelengthMode &&
         (iWavelengthMode=match_string(csrDrift->wavelengthMode, wavelengthMode, 2, 0))<0)
       bomb("invalid wavelength_mode for CSR DRIFT.  Use sigmaz or peak-to-peak", NULL);
-    fprintf(stdout, "wavelength mode is %s\n", wavelengthMode[iWavelengthMode]);
     thetaRad = csrWake.thetaRad[iWavelengthMode];
   }
   
