@@ -967,6 +967,7 @@ typedef struct {
     long *twiss_mem;       /* betax, alphax, NUx, etax, etaxp, betay, ... */
     long *centroid_mem;    /* (x, xp, y, yp, s, dp, Pcen, n) */
     long *sigma_mem;       /* (x, xp, y, yp, s, dp) */
+    long *sij_mem;         /* <xi*xj> for 6>=j>i>=1 */
     long *emit_mem;        /* (x, y, z) */
     long *floor_mem;       /* X, Z, theta */
     long *matrix_mem;
