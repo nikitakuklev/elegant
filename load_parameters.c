@@ -162,6 +162,8 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
             continue;
         if (change_definitions && !(load_request[i].flags&COMMAND_FLAG_CHANGE_DEFINITIONS))
             continue;
+
+        allFilesIgnored = 0;
         if (load_request[i].last_code) {
             for (j=0; j<load_request[i].values; j++) {
                 load_request[i].element[j]->flags = load_request[i].element_flags[j];
@@ -190,7 +192,6 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
             }
         allFilesRead = 0;
-        allFilesIgnored = 0;
         SDDS_SetRowFlags(&load_request[i].table, 1);
         if ((rows=SDDS_CountRowsOfInterest(&load_request[i].table))<=0) {
             load_request[i].last_code = 0;
