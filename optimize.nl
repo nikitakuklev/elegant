@@ -38,6 +38,7 @@ static char *optimize_method[N_OPTIM_METHODS] = {
     double simplex_divisor = 3;
     double simplex_pass_range_factor = 1;
     long include_simplex_1d_scans = 1;
+    long start_from_simplex_vertex1 = 0;
 #end
 
 #namelist optimization_variable static

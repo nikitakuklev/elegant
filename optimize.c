@@ -69,6 +69,7 @@ void do_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
     optimization_data->simplexPassRangeFactor = simplex_pass_range_factor;
     optimization_data->simplexDivisor = simplex_divisor;
     optimization_data->includeSimplex1dScans = include_simplex_1d_scans;
+    optimization_data->startFromSimplexVertex1 = start_from_simplex_vertex1;
     if ((optimization_data->restart_worst_term_factor = restart_worst_term_factor)<=0)
       bomb("restart_worst_term_factor <= 0", NULL);
     if ((optimization_data->restart_worst_terms=restart_worst_terms)<=0)
@@ -640,7 +641,10 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
                        optimization_data->n_evaluations, optimization_data->n_passes, 12, 
                        optimization_data->simplexDivisor, 
                        optimization_data->simplexPassRangeFactor, 
-                       optimization_data->includeSimplex1dScans?0:SIMPLEX_NO_1D_SCANS)<0) {
+                       (optimization_data->includeSimplex1dScans?0:SIMPLEX_NO_1D_SCANS)+
+		       (optimization_data->verbose>1?SIMPLEX_VERBOSE_LEVEL1:0)+
+		       (optimization_data->verbose>2?SIMPLEX_VERBOSE_LEVEL2:0)+
+		       (optimization_data->startFromSimplexVertex1?SIMPLEX_START_FROM_VERTEX1:0))<0) {
           if (result>optimization_data->tolerance) {
             if (!optimization_data->soft_failure)
               bomb("optimization unsuccessful--aborting", NULL);

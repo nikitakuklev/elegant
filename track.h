@@ -360,7 +360,7 @@ typedef struct {
     long restart_worst_terms;
     long matrix_order, *TijkMem, *UijklMem;
     double simplexDivisor, simplexPassRangeFactor;
-    long includeSimplex1dScans;
+    long includeSimplex1dScans, startFromSimplexVertex1;
     } OPTIMIZATION_DATA;
 
 /* structure to store particle coordinates */
