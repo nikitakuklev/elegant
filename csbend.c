@@ -811,8 +811,11 @@ typedef struct {
   double lastFdNorm; /* last value obtained from interpolation */
   /* for Stupakov mode */
   long SGOrder, SGHalfWidth, SGDerivHalfWidth, SGDerivOrder;
-  long binRangeFactor;
+  double binRangeFactor;
   double GSConstant, MPCharge;
+  char *StupakovOutput;
+  SDDS_DATASET SDDS_Stupakov;
+  long StupakovFileActive;
 } CSR_LAST_WAKE;
 CSR_LAST_WAKE csrWake;
 
@@ -1055,9 +1058,33 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   dzf =  csbend->dx*sin(csbend->angle) - csbend->dz*cos(csbend->angle);
   dyf = csbend->dy;
 
-  if (csbend->histogramFile && !csbend->fileActive) {
+  if (csbend->particleOutputFile && !csbend->particleFileActive) {
+    /* set up SDDS output file for particle coordinates inside bend */
+    csbend->particleFileActive = 1;
+    csbend->particleOutputFile = compose_filename(csbend->particleOutputFile, rootname);
+    if (!SDDS_InitializeOutput(&csbend->SDDSpart, SDDS_BINARY, 1, 
+                               NULL, NULL, csbend->particleOutputFile) ||
+        !SDDS_DefineSimpleParameter(&csbend->SDDSpart, "Pass", NULL, SDDS_LONG) ||
+        !SDDS_DefineSimpleParameter(&csbend->SDDSpart, "Kick", NULL, SDDS_LONG) ||
+        !SDDS_DefineSimpleParameter(&csbend->SDDSpart, "pCentral", "m$be$nc", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(&csbend->SDDSpart, "Angle", NULL, SDDS_DOUBLE) ||
+        (csbend->xIndex=SDDS_DefineColumn(&csbend->SDDSpart, "x", NULL, "m", 
+                                                NULL, NULL, SDDS_DOUBLE, 0 ))<0 ||
+        (csbend->xpIndex=SDDS_DefineColumn(&csbend->SDDSpart, "xp", NULL, NULL, 
+                                                 NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+        (csbend->tIndex=SDDS_DefineColumn(&csbend->SDDSpart, "t", NULL, "s", 
+                                                NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+        (csbend->pIndex=SDDS_DefineColumn(&csbend->SDDSpart, "p", NULL, "m$be$nc", 
+                                                NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+        !SDDS_WriteLayout(&csbend->SDDSpart)) {
+      SDDS_SetError("Problem setting up particle output file for CSR");
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    }
+  }
+  
+  if (csbend->histogramFile && !csbend->wakeFileActive) {
     /* set up SDDS output file for CSR monitoring */
-    csbend->fileActive = 1;
+    csbend->wakeFileActive = 1;
     csbend->histogramFile = compose_filename(csbend->histogramFile, rootname);
     if (!SDDS_InitializeOutput(&csbend->SDDSout, SDDS_BINARY, 1, NULL, NULL, csbend->histogramFile) ||
         !SDDS_DefineSimpleParameter(&csbend->SDDSout, "Pass", NULL, SDDS_LONG) ||
@@ -1077,7 +1104,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
         !SDDS_DefineSimpleColumn(&csbend->SDDSout, "DeltaGammaT1", NULL, SDDS_DOUBLE) ||
         !SDDS_DefineSimpleColumn(&csbend->SDDSout, "DeltaGammaT2", NULL, SDDS_DOUBLE) ||
         !SDDS_WriteLayout(&csbend->SDDSout)) {
-      SDDS_SetError("Problem setting up output file for CSR");
+      SDDS_SetError("Problem setting up wake output file for CSR");
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     }
   }
@@ -1313,7 +1340,29 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
         }
       }
 
-      if (csbend->fileActive && 
+      if (csbend->particleFileActive && kick%csbend->particleOutputInterval==0) {
+        long ip;
+        /* dump particle data at this location */
+        if (!SDDS_StartPage(&csbend->SDDSpart, n_part) ||
+            !SDDS_SetParameters(&csbend->SDDSpart, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
+                                "Pass", -1, "Kick", kick, "pCentral", Po, "Angle", phiBend, 
+                                NULL))
+          SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+        for (ip=0; ip<n_part; ip++) {
+          if (!SDDS_SetRowValues(&csbend->SDDSpart, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE,
+                                 ip, 
+                                 csbend->xIndex, part[ip][0],
+                                 csbend->xpIndex, part[ip][1],
+                                 csbend->tIndex, part[ip][4],
+                                 csbend->pIndex, Po*(1+part[ip][5]),
+                                 -1)) 
+            SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+        }
+        if (!SDDS_WritePage(&csbend->SDDSpart))
+          SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+      }
+      
+      if (csbend->wakeFileActive && 
           ((!csbend->outputLastWakeOnly && kick%csbend->outputInterval==0) ||
            (csbend->outputLastWakeOnly && kick==(csbend->n_kicks-1)))) {
         /* scale the linear density and its derivative to get C/s and C/s^2 
@@ -1856,6 +1905,11 @@ long reset_driftCSR()
     free(csrWake.xSaldin);
     csrWake.FdNorm = csrWake.xSaldin = NULL;
   }
+  if (csrWake.StupakovFileActive) {
+    if (!SDDS_Terminate(&csrWake.SDDS_Stupakov))
+      bomb("problem terminating data file for Stupakov output from CSRDRIFT", NULL);
+    csrWake.StupakovFileActive = 0;
+  }
   return 1;
 }
 
@@ -2239,8 +2293,11 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
 
     if (csrDrift->StupakovOutput) {
       double x, dsMax, phi0, phi1;
-      if (!csrDrift->StupakovFileActive)
-        csrDrift->StupakovOutput = compose_filename(csrDrift->StupakovOutput, rootname);
+      if (!csrWake.StupakovFileActive) {
+        if (!SDDS_CopyString(&csrWake.StupakovOutput, csrDrift->StupakovOutput))
+          bomb("string copying problem preparing Stupakov output for CSRDRIFT", NULL);
+        csrWake.StupakovOutput = compose_filename(csrWake.StupakovOutput, rootname);
+      }
       x = zTravel/csrWake.rho;
       dsMax = csrWake.rho/24*pow(csrWake.bendingAngle, 3)
         *(csrWake.bendingAngle+4*x)/(csrWake.bendingAngle+x);
@@ -2248,8 +2305,8 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
       phi1 = SolveForPhiStupakov(x, dsMax/csrWake.rho*0.999, csrWake.bendingAngle);
       
       /* note that the contents of ctHist and ctHistDeriv are corrupted by this operation */
-      DumpStupakovOutput(csrDrift->StupakovOutput, &csrDrift->SDDS_Stupakov, 
-                         &csrDrift->StupakovFileActive, zTravel,
+      DumpStupakovOutput(csrWake.StupakovOutput, &csrWake.SDDS_Stupakov, 
+                         &csrWake.StupakovFileActive, zTravel,
                          ctHist, ctHistDeriv, csrWake.dGamma, nBins, dct, csrWake.MPCharge,
                          dz0, nCaseC, nCaseD1, nCaseD2,
                          x, dsMax/csrWake.rho, phi0, phi1);

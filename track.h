@@ -571,7 +571,7 @@ extern char *entity_text[N_TYPES];
 #define N_CHARGE_PARAMS 2
 #define N_PFILTER_PARAMS 5
 #define N_HISTOGRAM_PARAMS 9
-#define N_CSRCSBEND_PARAMS 44
+#define N_CSRCSBEND_PARAMS 46
 #define N_CSRDRIFT_PARAMS 17
 #define N_REMCOR_PARAMS 6
 #define N_MAPSOLENOID_PARAMS 18
@@ -1396,11 +1396,14 @@ typedef struct {
     long use_bn;
     double b1, b2, b3, b4;
     long isr, csr, csrBlock;
-    char *derbenevCriterionMode;
+    char *derbenevCriterionMode, *particleOutputFile;
+    long particleOutputInterval;
     /* for internal use only: */
-    long flags, fileActive;
-    SDDS_DATASET SDDSout;
+    long flags;   /* bend flags */
+    short wakeFileActive, particleFileActive;
+    SDDS_DATASET SDDSout, SDDSpart;
     double k1_internal, k2_internal, k3_internal, k4_internal;
+    short xIndex, xpIndex, tIndex, pIndex;
     } CSRCSBEND;
 
 /* names and storage structure for drift with CSR */
@@ -1416,8 +1419,6 @@ typedef struct {
   char *StupakovOutput;
   /* used internally only */
   FILE *fpSaldin;
-  SDDS_DATASET SDDS_Stupakov;
-  long StupakovFileActive;
 } CSRDRIFT;
 
 /* names and storage structure for top-up bending magnet physical parameters */
