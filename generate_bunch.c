@@ -73,153 +73,150 @@ long generate_bunch(
     double s56, beta, emit, alpha=0.0;
     double *randomizedData = NULL;
     
-    log_entry("generate_bunch");
-    
     if (x_plane->beam_type==DYNAP_BEAM) {
-        if (first_call) {
-            n_particles = dynap_distribution(particle, n_particles, 
-                sqrt(x_plane->emit*x_plane->beta), 
-
-                sqrt(y_plane->emit*y_plane->beta),
-                (long)(x_plane->cutoff+0.5),
-                (long)(y_plane->cutoff+0.5));
-            set_beam_centroids(particle, 0, n_particles, x_plane->cent_posi, x_plane->cent_slope);
-            set_beam_centroids(particle, 2, n_particles, y_plane->cent_posi, y_plane->cent_slope);
-            set_beam_centroids(particle, 4, n_particles, longit->cent_s, longit->cent_dp);
-            }
-        first_call = 0;
-        log_exit("generate_bunch");
-        return(n_particles);
-        }
-
-    if (!limit_in_4d) {
+      if (first_call) {
+        n_particles = dynap_distribution(particle, n_particles, 
+                                         sqrt(x_plane->emit*x_plane->beta), 
+                                         
+                                         sqrt(y_plane->emit*y_plane->beta),
+                                         (long)(x_plane->cutoff+0.5),
+                                         (long)(y_plane->cutoff+0.5));
+        set_beam_centroids(particle, 0, n_particles, x_plane->cent_posi, x_plane->cent_slope);
+        set_beam_centroids(particle, 2, n_particles, y_plane->cent_posi, y_plane->cent_slope);
+        set_beam_centroids(particle, 4, n_particles, longit->cent_s, longit->cent_dp);
+      }
+      first_call = 0;
+    }
+    else {
+      if (!limit_in_4d) {
         /* make mono-energetic distribution in x plane */
         s1 = sqrt(x_plane->emit);
         s2 = s1/x_plane->beta;
         switch (x_plane->beam_type) {
-          case GAUSSIAN_BEAM:
-            gaussian_distribution(particle, n_particles, 0, s1, s2, 
-                                  symmetrize && (enforce_rms_params[0] || n_particles%4==0), 
-                                  haltonID, x_plane->cutoff,
-                                  (limit_invar?sqr(x_plane->cutoff)*x_plane->emit:0.0), x_plane->beta, 
-                                  0);
-            break;
-          case GAUSSIAN_HALO_BEAM:
-            gaussian_distribution(particle, n_particles, 0, s1, s2, 
-                                  symmetrize && (enforce_rms_params[0] || n_particles%4==0), 
-                                  haltonID, x_plane->cutoff,
-                                  (limit_invar?sqr(x_plane->cutoff)*x_plane->emit:0.0), x_plane->beta,
-                                  1);
-            break;
-          case HARD_EDGE_BEAM:
-            hard_edge_distribution(particle, n_particles, 0, s1, s2, 
-                                   symmetrize && (enforce_rms_params[0] || n_particles%4==0), 
-                                   haltonID, x_plane->cutoff);
-            break;
-          case UNIFORM_ELLIPSE:
-            uniform_distribution(particle, n_particles, 0, s1, s2, 
+        case GAUSSIAN_BEAM:
+          gaussian_distribution(particle, n_particles, 0, s1, s2, 
+                                symmetrize && (enforce_rms_params[0] || n_particles%4==0), 
+                                haltonID, x_plane->cutoff,
+                                (limit_invar?sqr(x_plane->cutoff)*x_plane->emit:0.0), x_plane->beta, 
+                                0);
+          break;
+        case GAUSSIAN_HALO_BEAM:
+          gaussian_distribution(particle, n_particles, 0, s1, s2, 
+                                symmetrize && (enforce_rms_params[0] || n_particles%4==0), 
+                                haltonID, x_plane->cutoff,
+                                (limit_invar?sqr(x_plane->cutoff)*x_plane->emit:0.0), x_plane->beta,
+                                1);
+          break;
+        case HARD_EDGE_BEAM:
+          hard_edge_distribution(particle, n_particles, 0, s1, s2, 
                                  symmetrize && (enforce_rms_params[0] || n_particles%4==0), 
                                  haltonID, x_plane->cutoff);
-            break;
-          case SHELL_BEAM:
-            shell_distribution(particle, n_particles, 0, s1, s2, 
-                               symmetrize && (enforce_rms_params[0] || n_particles%4==0), x_plane->cutoff);
-            break;
-          case LINE_BEAM:
-            line_distribution(particle, n_particles, 0, s1, s2);
-            break;
-          default:
-            printf("fatal internal error: unknown x beam-type %ld\n",
-                   x_plane->beam_type);
-            abort();
-            break;
-            }
+          break;
+        case UNIFORM_ELLIPSE:
+          uniform_distribution(particle, n_particles, 0, s1, s2, 
+                               symmetrize && (enforce_rms_params[0] || n_particles%4==0), 
+                               haltonID, x_plane->cutoff);
+          break;
+        case SHELL_BEAM:
+          shell_distribution(particle, n_particles, 0, s1, s2, 
+                             symmetrize && (enforce_rms_params[0] || n_particles%4==0), x_plane->cutoff);
+          break;
+        case LINE_BEAM:
+          line_distribution(particle, n_particles, 0, s1, s2);
+          break;
+        default:
+          printf("fatal internal error: unknown x beam-type %ld\n",
+                 x_plane->beam_type);
+          abort();
+          break;
+        }
         zero_centroid(particle, n_particles, 0);
         zero_centroid(particle, n_particles, 1);
         if (enforce_rms_params[0])
-            enforce_sigma_values(particle, n_particles, 0, s1, s2);
+          enforce_sigma_values(particle, n_particles, 0, s1, s2);
         transform_from_normalized_coordinates(particle, n_particles, 0, x_plane->beta, x_plane->alpha);
         
         /* make mono-energetic distribution in y plane */
         s1 = sqrt(y_plane->emit);
         s2 = s1/y_plane->beta;
         switch (y_plane->beam_type) {
-          case GAUSSIAN_BEAM:
-            gaussian_distribution(particle, n_particles, 2, s1, s2, 
-                                  symmetrize && (enforce_rms_params[1] || n_particles%4==0), 
-                                  haltonID,
-                                  y_plane->cutoff, (limit_invar?sqr(y_plane->cutoff)*y_plane->emit:0.0),
-                                  y_plane->beta, 0);
-            break;
-          case GAUSSIAN_HALO_BEAM:
-            gaussian_distribution(particle, n_particles, 2, s1, s2, 
-                                  symmetrize && (enforce_rms_params[1] || n_particles%4==0), 
-                                  haltonID,
-                                  y_plane->cutoff, (limit_invar?sqr(y_plane->cutoff)*y_plane->emit:0.0),
-                                  y_plane->beta, 1);
-            break;
-          case HARD_EDGE_BEAM:
-            hard_edge_distribution(particle, n_particles, 2, s1, s2, 
-                                   symmetrize && (enforce_rms_params[1] || n_particles%4==0), 
-                                   haltonID, y_plane->cutoff);
-            break;
-          case UNIFORM_ELLIPSE:
-            uniform_distribution(particle, n_particles, 2, s1, s2, 
+        case GAUSSIAN_BEAM:
+          gaussian_distribution(particle, n_particles, 2, s1, s2, 
+                                symmetrize && (enforce_rms_params[1] || n_particles%4==0), 
+                                haltonID,
+                                y_plane->cutoff, (limit_invar?sqr(y_plane->cutoff)*y_plane->emit:0.0),
+                                y_plane->beta, 0);
+          break;
+        case GAUSSIAN_HALO_BEAM:
+          gaussian_distribution(particle, n_particles, 2, s1, s2, 
+                                symmetrize && (enforce_rms_params[1] || n_particles%4==0), 
+                                haltonID,
+                                y_plane->cutoff, (limit_invar?sqr(y_plane->cutoff)*y_plane->emit:0.0),
+                                y_plane->beta, 1);
+          break;
+        case HARD_EDGE_BEAM:
+          hard_edge_distribution(particle, n_particles, 2, s1, s2, 
                                  symmetrize && (enforce_rms_params[1] || n_particles%4==0), 
                                  haltonID, y_plane->cutoff);
-            break;
-          case SHELL_BEAM:
-            shell_distribution(particle, n_particles, 2, s1, s2, 
-                               symmetrize && (enforce_rms_params[1] || n_particles%4==0), y_plane->cutoff);
-            break;
-          case LINE_BEAM:
-            line_distribution(particle, n_particles, 2, s1, s2);
-            break;
-          default:
-            printf("fatal internal error: unknown y beam-type %ld\n",
-                   y_plane->beam_type);
-            abort();
-            break;
-            }
+          break;
+        case UNIFORM_ELLIPSE:
+          uniform_distribution(particle, n_particles, 2, s1, s2, 
+                               symmetrize && (enforce_rms_params[1] || n_particles%4==0), 
+                               haltonID, y_plane->cutoff);
+          break;
+        case SHELL_BEAM:
+          shell_distribution(particle, n_particles, 2, s1, s2, 
+                             symmetrize && (enforce_rms_params[1] || n_particles%4==0), y_plane->cutoff);
+          break;
+        case LINE_BEAM:
+          line_distribution(particle, n_particles, 2, s1, s2);
+          break;
+        default:
+          printf("fatal internal error: unknown y beam-type %ld\n",
+                 y_plane->beam_type);
+          abort();
+          break;
+        }
         zero_centroid(particle, n_particles, 2);
         zero_centroid(particle, n_particles, 3);
         if (enforce_rms_params[1])
-            enforce_sigma_values(particle, n_particles, 2, s1, s2);
+          enforce_sigma_values(particle, n_particles, 2, s1, s2);
         transform_from_normalized_coordinates(particle, n_particles, 2, y_plane->beta, y_plane->alpha);
-        }
-    else {
+      }
+      else {
         if (y_plane->beam_type!=x_plane->beam_type || y_plane->cutoff!=x_plane->cutoff)
-            bomb("distribution types and cutoffs for x and y planes must be the same for limit_in_4d", NULL);
+          bomb("distribution types and cutoffs for x and y planes must be the same for limit_in_4d", NULL);
         s1 = sqrt(x_plane->emit);
         s2 = s1/x_plane->beta;
         s3 = sqrt(y_plane->emit);
         s4 = s3/y_plane->beta;
         switch (x_plane->beam_type) {
-          case GAUSSIAN_BEAM:
-            gaussian_4d_distribution(particle, n_particles, 0, s1, s2, s3, s4, x_plane->cutoff, 0);
-            break;
-          case GAUSSIAN_HALO_BEAM:
-            gaussian_4d_distribution(particle, n_particles, 0, s1, s2, s3, s4, x_plane->cutoff, 1);
-            break;
-          case UNIFORM_ELLIPSE:
-            uniform_4d_distribution(particle, n_particles, 0, s1, s2, s3, s4, x_plane->cutoff);
-            break;
-          default:
-            bomb("limit_in_4d is available only for gaussian and uniform beam distributions", NULL);
-            break;
-            }
+        case GAUSSIAN_BEAM:
+          gaussian_4d_distribution(particle, n_particles, 0, s1, s2, s3, s4, x_plane->cutoff, 0);
+          break;
+        case GAUSSIAN_HALO_BEAM:
+          gaussian_4d_distribution(particle, n_particles, 0, s1, s2, s3, s4, x_plane->cutoff, 1);
+          break;
+        case UNIFORM_ELLIPSE:
+          uniform_4d_distribution(particle, n_particles, 0, s1, s2, s3, s4, x_plane->cutoff);
+          break;
+        default:
+          bomb("limit_in_4d is available only for gaussian and uniform beam distributions", NULL);
+          break;
+        }
         zero_centroid(particle, n_particles, 0);
         zero_centroid(particle, n_particles, 1);
         zero_centroid(particle, n_particles, 2);
         zero_centroid(particle, n_particles, 3);
         if (enforce_rms_params[0])
-            enforce_sigma_values(particle, n_particles, 0, s1, s2);
+          enforce_sigma_values(particle, n_particles, 0, s1, s2);
         if (enforce_rms_params[1])
-            enforce_sigma_values(particle, n_particles, 2, s3, s4);
+          enforce_sigma_values(particle, n_particles, 2, s3, s4);
         transform_from_normalized_coordinates(particle, n_particles, 0, x_plane->beta, x_plane->alpha);
         transform_from_normalized_coordinates(particle, n_particles, 2, y_plane->beta, y_plane->alpha);
-        }
-
+      }
+    }
+    
     /* make energy-distance distribution */
     /* three possibilities for inputs:
      * 1. sigma_s, sigma_dp, and dp_s_coupling
@@ -256,50 +253,52 @@ long generate_bunch(
         s1 = longit->sigma_s;
         s2 = longit->sigma_dp;
         beta = 0;
-        }
+      }
     }
     switch (longit->beam_type) {
-      case GAUSSIAN_BEAM:
-        gaussian_distribution(particle, n_particles, 4, s1, s2, 
-                              symmetrize && (enforce_rms_params[2] || n_particles%4==0),
-                              haltonID, longit->cutoff, 
-                              (limit_invar?sqr(longit->cutoff)*emit:0.0), beta, 0);
-        break;
-      case GAUSSIAN_HALO_BEAM:
-        gaussian_distribution(particle, n_particles, 4, s1, s2, 
-                              symmetrize && (enforce_rms_params[2] || n_particles%4==0),
-                              haltonID, longit->cutoff, 
-                              (limit_invar?sqr(longit->cutoff)*emit:0.0), beta, 1);
-        break;
-      case HARD_EDGE_BEAM:
-        hard_edge_distribution(particle, n_particles, 4, s1, s2, 
-                               symmetrize && (enforce_rms_params[2] || n_particles%4==0), 
-                               haltonID, longit->cutoff);
-        break;
-      case UNIFORM_ELLIPSE:
-        uniform_distribution(particle, n_particles, 4, s1, s2, 
-                             symmetrize && (enforce_rms_params[2] || n_particles%4==0),
+    case GAUSSIAN_BEAM:
+      gaussian_distribution(particle, n_particles, 4, s1, s2, 
+                            symmetrize && (enforce_rms_params[2] || n_particles%4==0),
+                            haltonID, longit->cutoff, 
+                            (limit_invar?sqr(longit->cutoff)*emit:0.0), beta, 0);
+      break;
+    case GAUSSIAN_HALO_BEAM:
+      gaussian_distribution(particle, n_particles, 4, s1, s2, 
+                            symmetrize && (enforce_rms_params[2] || n_particles%4==0),
+                            haltonID, longit->cutoff, 
+                            (limit_invar?sqr(longit->cutoff)*emit:0.0), beta, 1);
+      break;
+    case HARD_EDGE_BEAM:
+      hard_edge_distribution(particle, n_particles, 4, s1, s2, 
+                             symmetrize && (enforce_rms_params[2] || n_particles%4==0), 
                              haltonID, longit->cutoff);
-        break;
-      case SHELL_BEAM:
-        shell_distribution(particle, n_particles, 4, s1, s2, 
-                           symmetrize && (enforce_rms_params[2] || n_particles%4==0), longit->cutoff);
-        break;
-      case LINE_BEAM:
-        line_distribution(particle, n_particles, 4, s1, s2);
-        break;
-      default:
-        printf("fatal internal error: unknown longitudinal beam-type %ld\n",
-               longit->beam_type);
-        abort();
-        break;
-        }
+      break;
+    case UNIFORM_ELLIPSE:
+      uniform_distribution(particle, n_particles, 4, s1, s2, 
+                           symmetrize && (enforce_rms_params[2] || n_particles%4==0),
+                           haltonID, longit->cutoff);
+      break;
+    case SHELL_BEAM:
+      shell_distribution(particle, n_particles, 4, s1, s2, 
+                         symmetrize && (enforce_rms_params[2] || n_particles%4==0), longit->cutoff);
+      break;
+    case LINE_BEAM:
+      line_distribution(particle, n_particles, 4, s1, s2);
+      break;
+    default:
+      printf("fatal internal error: unknown longitudinal beam-type %ld\n",
+             longit->beam_type);
+      abort();
+      break;
+    }
     zero_centroid(particle, n_particles, 4);
     zero_centroid(particle, n_particles, 5);
     if (enforce_rms_params[2])
-        enforce_sigma_values(particle, n_particles, 4, s1, s2);
+      enforce_sigma_values(particle, n_particles, 4, s1, s2);
     if (emit)
-        transform_from_normalized_coordinates(particle, n_particles, 4, beta, alpha);
+      transform_from_normalized_coordinates(particle, n_particles, 4, beta, alpha);
+    if (x_plane->beam_type==DYNAP_BEAM)
+      return(n_particles);
 
     for (i=0; i<3; i++) {
       switch (doRandomizeOrder[i]) {
@@ -346,32 +345,31 @@ long generate_bunch(
     /* incorporate dispersion and centroid shifts into (x, x', y, y') */
     /* also add particle ID */
     for (i_particle=0; i_particle<n_particles; i_particle++) {
-        if (longit->chirp)
-          particle[i_particle][5] += longit->chirp*particle[i_particle][4];
-        particle[i_particle][4] += longit->cent_s;
-        particle[i_particle][5] += longit->cent_dp;
-        delta_p = particle[i_particle][5];
-        particle[i_particle][0] += delta_p*x_plane->eta + x_plane->cent_posi;
-        particle[i_particle][1] += delta_p*x_plane->etap + x_plane->cent_slope;
-        particle[i_particle][2] += delta_p*y_plane->eta + y_plane->cent_posi;
-        particle[i_particle][3] += delta_p*y_plane->etap + y_plane->cent_slope;
-        particle[i_particle][6] = particleID++;
-        }
+      if (longit->chirp)
+        particle[i_particle][5] += longit->chirp*particle[i_particle][4];
+      particle[i_particle][4] += longit->cent_s;
+      particle[i_particle][5] += longit->cent_dp;
+      delta_p = particle[i_particle][5];
+      particle[i_particle][0] += delta_p*x_plane->eta + x_plane->cent_posi;
+      particle[i_particle][1] += delta_p*x_plane->etap + x_plane->cent_slope;
+      particle[i_particle][2] += delta_p*y_plane->eta + y_plane->cent_posi;
+      particle[i_particle][3] += delta_p*y_plane->etap + y_plane->cent_slope;
+      particle[i_particle][6] = particleID++;
+    }
 
 #ifdef IEEE_MATH
     /* check for invalid data */
     for (i_particle=0; i_particle<n_particles; i_particle++) {
-        long i;
-        for (i=0; i<6; i++)
-            if (isnan(particle[i_particle][i]) || isinf(particle[i_particle][i]))
-                bomb("invalid particle data generated in generate_bunch()!", NULL);
-        }
+      long i;
+      for (i=0; i<6; i++)
+        if (isnan(particle[i_particle][i]) || isinf(particle[i_particle][i]))
+          bomb("invalid particle data generated in generate_bunch()!", NULL);
+    }
 #endif
 
     first_call = 0;
-    log_exit("generate_bunch");
     return(n_particles);
-    }
+  }
 
 void gaussian_distribution(
                            double **particle, 
