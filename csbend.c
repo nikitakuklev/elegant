@@ -1692,10 +1692,6 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
 #endif
 
   for (iKick=0; iKick<nKicks; iKick++) {
-    fprintf(stdout, "Tracking through part %ld of %ld of CSRDRIFT\n",
-            iKick, nKicks);
-    fflush(stdout);
-    
     /* first drift is dz=dz0/2, others are dz0 */
     if (iKick==1)
       dz = dz0;
@@ -2296,9 +2292,11 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
   free(ctHist);
   free(ctHistDeriv);
   free(phiSoln);
+#if DEBUG
   if (SolveForPhiStupakovDiffCount)
     fprintf(stdout, "Phi solution accuracy for %ld solutions: %le\n",
             SolveForPhiStupakovDiffCount, SolveForPhiStupakovDiffSum/SolveForPhiStupakovDiffCount);
+#endif
   return np;
 }
 

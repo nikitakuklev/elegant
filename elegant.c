@@ -31,9 +31,9 @@ char *option[N_OPTIONS] = {
     "describeinput",
     "macro",
         };
-char *USAGE="elegant <inputfile> [-macro=<tag>=<value>,[...]]\n\nProgram by Michael Borland. (This is version 14.5 beta 3, "__DATE__".)";
+char *USAGE="elegant <inputfile> [-macro=<tag>=<value>,[...]]\n\nProgram by Michael Borland. (This is version 14.5, "__DATE__".)";
 
-char *GREETING="This is elegant, by Michael Borland. (This is version 14.5 beta 3, "__DATE__".)";
+char *GREETING="This is elegant, by Michael Borland. (This is version 14.5, "__DATE__".)";
 
 #define RUN_SETUP        0
 #define RUN_CONTROL      1
@@ -134,9 +134,6 @@ void initialize_structures(RUN *run_conditions, VARY *run_control, ERRORVAL *err
                            CHROM_CORRECTION *chrom_corr_data, TUNE_CORRECTION *tune_corr_data,
                            ELEMENT_LINKS *links);
 void free_beamdata(BEAM *beam);
-void substituteTagValue(char *input, long buflen, 
-                        char **macroTag, char **macroValue, long macros);
-
 
 #define NAMELIST_BUFLEN 65536
 
@@ -1436,28 +1433,5 @@ void free_beamdata(BEAM *beam)
   beam->particle = beam->accepted = beam->original = NULL;
   beam->n_original = beam->n_to_track = beam->n_accepted = beam->p0 = beam->n_saved = beam->n_particle = 0;
 }  
-
-void substituteTagValue(char *input, long buflen, 
-                        char **macroTag, char **macroValue, long macros)
-{
-  char *buffer;
-  long i;
-  char *ptr;
-  char *version1=NULL, *version2=NULL;
-  if (!(buffer=SDDS_Malloc(sizeof(*buffer)*buflen)))
-    bomb("memory allocation failure doing macro substitution", NULL);
-  for (i=0; i<macros; i++) {
-    if (!(version1 = SDDS_Realloc(version1, sizeof(*version1)*(strlen(macroTag[i])+10))) ||
-        !(version2 = SDDS_Realloc(version2, sizeof(*version2)*(strlen(macroTag[i])+10))))
-      bomb("memory allocation failure doing macro substitution", NULL);
-    sprintf(version1, "<%s>", macroTag[i]);
-    sprintf(version2, "$%s", macroTag[i]);
-    if (replace_string(buffer, input, version1, macroValue[i]))
-      strcpy(input, buffer);
-    if (replace_string(buffer, input, version2, macroValue[i]))
-      strcpy(input, buffer);
-  }
-  free(buffer);
-}
 
 
