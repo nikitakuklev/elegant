@@ -356,7 +356,7 @@ long expand_phys(
             printf("adding element %ld*%s\n", multiplier, entity);
 #endif
             for (i=0; i<multiplier; i++) {
-                copy_element(leptr, elem_list);
+                copy_element(leptr, elem_list, reverse);
                 leptr->part_of = elem_list->part_of?elem_list->part_of:part_of;
                 extend_elem_list(&leptr);
                 }
@@ -398,7 +398,7 @@ long expand_phys(
  * purpose: copy an element 
  */
 
-void copy_element(ELEMENT_LIST *e1, ELEMENT_LIST *e2)
+void copy_element(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long reverse)
 {
     long i;
     char *ptr1, *ptr2;
@@ -415,8 +415,35 @@ void copy_element(ELEMENT_LIST *e1, ELEMENT_LIST *e2)
     ptr2 = e2->p_elem;
     for (i=0; i<entity_description[e1->type].structure_size; i++)
         *ptr1++ = *ptr2++;
-    log_exit("copy_element");
+    if (reverse) {
+      BEND *bptr;
+      KSBEND *ksbptr;
+      CSBEND *csbptr;
+      NIBEND *nibptr;
+      switch (e1->type) {
+      case T_SBEN:
+      case T_RBEN:
+        bptr = (BEND*)e1->p_elem;
+        SWAP_DOUBLE(bptr->e1, bptr->e2);
+        break;
+      case T_KSBEND:
+        ksbptr = (KSBEND*)e1->p_elem;
+        SWAP_DOUBLE(ksbptr->e1, ksbptr->e2);
+        break;
+      case T_NIBEND:
+        nibptr = (NIBEND*)e1->p_elem;
+        SWAP_DOUBLE(nibptr->e1, nibptr->e2);
+        break;
+      case T_CSBEND:
+        csbptr = (CSBEND*)e1->p_elem;
+        SWAP_DOUBLE(csbptr->e1, csbptr->e2);
+        break;
+      default:
+        break;
+      }
     }
+    log_exit("copy_element");
+  }
 
 /* routine: copy_line
  * purpose: copy a series of elements from a linked-list 
@@ -430,7 +457,7 @@ long copy_line(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long ne, long reverse, char *
     
     if (!reverse) {
         for (i=0; i<ne; i++) {
-            copy_element(e1, e2);
+            copy_element(e1, e2, reverse);
             e1->part_of = e2->part_of?e2->part_of:part_of;
             extend_elem_list(&e1);
             e2 = e2->succ;
@@ -440,7 +467,7 @@ long copy_line(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long ne, long reverse, char *
         for (i=0; i<(ne-1); i++)
             e2 = e2->succ;
         for (i=0; i<ne; i++) {
-            copy_element(e1, e2);
+            copy_element(e1, e2, reverse);
             e1->part_of = e2->part_of?e2->part_of:part_of;
             extend_elem_list(&e1);
             e2 = e2->pred;

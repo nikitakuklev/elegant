@@ -1637,7 +1637,7 @@ extern long is_simple(char *s);
 extern void fill_elem(ELEMENT_LIST *eptr, char *s, long type, FILE *fp_input);
 extern long expand_phys(ELEMENT_LIST *leptr, char *entity, ELEMENT_LIST *elem_list,     
     long ne, LINE_LIST *line_list, long nl, long reverse, long multiplier, char *part_of);
-extern void copy_element(ELEMENT_LIST *e1, ELEMENT_LIST *e2);
+extern void copy_element(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long reverse);
 void copy_named_element(ELEMENT_LIST *eptr, char *s, ELEMENT_LIST *elem);
 extern long copy_line(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long ne, long reverse, char *part_of);
 extern long tell_type(char *s, ELEMENT_LIST *elem);
