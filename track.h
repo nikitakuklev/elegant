@@ -2676,3 +2676,5 @@ void initializeTransverseFeedbackPickup(TFBPICKUP *tfbp);
 void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part, long np, LINE_LIST *beamline, long pass, long n_passes, char *rootname);
 void initializeTransverseFeedbackDriver(TFBDRIVER *tfbd, LINE_LIST *beamline, long n_passes, char *rootname);
 
+long computeEngeCoefficients(double *engeCoef, double rho, double length, double gap, double fint);
+

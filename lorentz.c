@@ -79,6 +79,9 @@ double nibend_trajectory_error(double offsetp);
 double nisept_trajectory_error(double fsep);
 static double *traj_err_final_coord;
 
+void engeFunction(double *Fy, double *Fz, double z, double y, double D, double a1, double a2, double a3, long order);
+void writeEngeFunctionToFile(char *filename);
+
 /* pointers to functions to be used in integration.  Set by lorentz_setup()
  * and select_lorentz_integrator() */
 static long (*integrator)();
@@ -98,11 +101,15 @@ static double fse_opt;
 static double entr_slope, entr_intercept;
 /* q0 = q1*entr_slope + fentr_intercept defines end of fringe region at entrance :*/
 static double fentr_intercept;
+/* q0 = q1*entr_slope + rentr_intercept defines the reference plane at the entrance: */
+static double rentr_intercept;
 
 /* q0 = q1*exit_slope + exit_intercept defines exit plane (end of fringe at exit): */
 static double exit_slope, exit_intercept;
 /* q0 = q1*exit_slope + fexit_intercept defines start of fringe region at exit:*/
 static double fexit_intercept;
+/* q0 = q1*exit_slope + rexit_intercept defines the reference plane at the exit: */
+static double rexit_intercept;
 
 static double central_length, tolerance;
 
@@ -117,13 +124,18 @@ static long fringe_code;
 #define CUBIC_MODEL 2
 #define TANH_MODEL 3
 #define QUINTIC_MODEL 4
-#define N_FRINGE_MODELS 5
+#define ENGE1_MODEL 5
+#define ENGE3_MODEL 6
+#define ENGE5_MODEL 7
+#define N_FRINGE_MODELS 8
 static char *fringe_model[N_FRINGE_MODELS] = {
-    "hard-edge", "linear", "cubic-spline", "tanh", "quintic"
+    "hard-edge", "linear", "cubic-spline", "tanh", "quintic", "enge1", "enge3", "enge5",
     } ;
 
 /* parameters for the fringe fields: */
 static double Fa, Fb, Fc, flen;
+static double engeD, engeCoef[3];
+static long engeOrder;
 static double cos_alpha1, cos_alpha2;
 static double sin_alpha1, sin_alpha2;
 /* For NIBENDs, there are various field models available:
@@ -161,6 +173,11 @@ static double sin_alpha1, sin_alpha2;
  *    where Fa = 10/f^3, Fb = -15/f^4, Fc = 6/f^5
  *    f = 231*K*g/25
  *
+ * 5. Enge model with 3 coefficients:
+ *        F0 = 1/(1 + exp(a1 + a2*z/D + a3*(z/D)^2))
+ *        Fy = F0 - 1/2*y^2*F'' + 1/24*y^4*F''''
+ *        Fz = y*F' - 1/6*y^3*F''' + 1/120*y^5*F'''''
+ * 
  * alpha[i] is theta/2-beta[i], where beta[i] is the 
  * edge angle for the ith edge.
  */
@@ -245,9 +262,10 @@ long lorentz(
 #ifdef DEBUG
     if (!fp_field) {
         fp_field = fopen_e("fields.sdds", "w", 0);
-        fprintf(fp_field, "&column name=q0 type=double units=m &end\n");
+        fprintf(fp_field, "SDDS1\n&column name=q0 type=double units=m &end\n");
         fprintf(fp_field, "&column name=q1 type=double units=m &end\n");
         fprintf(fp_field, "&column name=q2 type=double units=m &end\n");
+        fprintf(fp_field, "&column name=z type=double units=m &end\n");
         fprintf(fp_field, "&column name=s type=double units=m &end\n");
         fprintf(fp_field, "&column name=F0 type=double  &end\n");
         fprintf(fp_field, "&column name=F1 type=double  &end\n");
@@ -433,11 +451,23 @@ void lorentz_setup(
                         Fa = 1/nibend->flen;
                         flen = nibend->fp1*nibend->flen;
                         break;
-                    case QUINTIC_MODEL:
+                      case QUINTIC_MODEL:
                         flen = nibend->flen = (231*Kg)/25.;
                         Fa = 10/ipow(nibend->flen, 3);
                         Fb = -15/ipow(nibend->flen, 4);
                         Fc = 6/ipow(nibend->flen, 5);
+                        break;
+                      case ENGE1_MODEL:
+                      case ENGE3_MODEL:
+                      case ENGE5_MODEL:
+                        engeD = nibend->hgap*2;
+                        engeOrder 
+                          = fringe_code==ENGE1_MODEL ? 1 :
+                            (fringe_code==ENGE3_MODEL ? 3 : 5) ;
+                        /* determine a1, a2, and a3 to match FINT, HGAP, and angle */
+                        computeEngeCoefficients(engeCoef, fabs(nibend->length/nibend->angle),
+                                                nibend->length, engeD, nibend->fint);
+                        flen = nibend->flen = nibend->length;
                         break;
                     default:
                         bomb("logic error in fringe field setup for NIBEND (lorentz_setup)", NULL);
@@ -468,8 +498,9 @@ void lorentz_setup(
             
             /* calculate slope and intercept for entrance plane */ 
             alpha = nibend->angle/2-nibend->e1;
-            fentr_intercept = -(nibend->rho0*(sin(nibend->angle/2) - cos(nibend->angle/2)*tan(alpha)) - flen/cos(alpha)/2);
-            entr_intercept = -(nibend->rho0*(sin(nibend->angle/2) - cos(nibend->angle/2)*tan(alpha)) + flen/cos(alpha)/2);
+            rentr_intercept = -nibend->rho0*(sin(nibend->angle/2) - cos(nibend->angle/2)*tan(alpha));
+            fentr_intercept = rentr_intercept + flen/cos(alpha)/2;
+            entr_intercept = rentr_intercept - flen/cos(alpha)/2;
             if (alpha!=PIo2)
                 entr_slope = -tan(alpha);
             else 
@@ -479,8 +510,9 @@ void lorentz_setup(
 
             /* calculate slope and intercept for exit plane */
             alpha = nibend->angle/2-nibend->e2;
-            fexit_intercept = nibend->rho0*(sin(nibend->angle/2) - cos(nibend->angle/2)*tan(alpha)) - flen/cos(alpha)/2;
-            exit_intercept = nibend->rho0*(sin(nibend->angle/2) - cos(nibend->angle/2)*tan(alpha)) + flen/cos(alpha)/2;
+            rexit_intercept = nibend->rho0*(sin(nibend->angle/2) - cos(nibend->angle/2)*tan(alpha));
+            fexit_intercept = rexit_intercept - flen/cos(alpha)/2; 
+            exit_intercept = rexit_intercept + flen/cos(alpha)/2; 
             cos_alpha2 = cos(alpha);
             sin_alpha2 = sin(alpha);
             if (alpha!=PIo2)
@@ -509,7 +541,6 @@ void lorentz_setup(
                     one_plus_fse = 1;
                     if ((offset = nibend->last_zeta_offset)==0)
                         offset = last_offset;
-                    
                     offset = zeroNewton(nibend_trajectory_error, 0, offset, 1e-6, 10, 1e-14);
 #ifdef IEEE_MATH
                     if (isnan(offset) || isinf(offset))
@@ -517,6 +548,10 @@ void lorentz_setup(
 #endif
                     if (offset==0)
                         offset = 1./DBL_MAX;
+                    if (fringe_code==ENGE1_MODEL || fringe_code==ENGE3_MODEL
+                        || fringe_code==ENGE5_MODEL)
+                      fprintf(stdout, "Enge coefficients: D=%e, a=%e, %e, %e\n", 
+                              engeD, engeCoef[0], engeCoef[1], engeCoef[2]);
                     fprintf(stdout, "NIBEND offset adjusted to %e to obtain trajectory error of %e\n",
                         offset, nibend_trajectory_error(offset));
                     fprintf(stdout, "final coordinates: %e, %e, %e, %e, %e\n", 
@@ -880,155 +915,175 @@ double nibend_exit_function(double *qp, double *q, double s)
 
 void nibend_deriv_function(double *qp, double *q, double s)
 {
-    static double *w, *wp, F0, F1, F2;
-    static double S, dq0, z, z2, z3, q22;
-    static NIBEND *nibend;
-    static double Fa_y, Fa_z, tanh_Fa_z, sech_Fa_z, cosh_Fa_z;
-    static double sinh_Fa_z, sinh_3Fa_z, cosh_2Fa_z, cosh_4Fa_z;
-    static double Fa_y_sech, tmp, tmp1;
- 
-    nibend = (NIBEND*)field_global;
-    n_deriv_calls++;
+  static double *w, *wp, F0, F1, F2;
+  static double S, dq0, z, z2, z3, q22;
+  static NIBEND *nibend;
+  static double Fa_y, Fa_z, tanh_Fa_z, sech_Fa_z, cosh_Fa_z;
+  static double sinh_Fa_z, sinh_3Fa_z, cosh_2Fa_z, cosh_4Fa_z;
+  static double Fa_y_sech, tmp, tmp1;
+  
+  nibend = (NIBEND*)field_global;
+  n_deriv_calls++;
 
-    w  = q+3;
-    wp = qp+3;
-    qp[0] = w[0];
-    qp[1] = w[1];
-    qp[2] = w[2];
-
-    S = S0*one_plus_fse/(1+q[7]);
-    qp[6] = 1;
-    qp[7] = 0; 
-
-
-    if (fringe_code==TANH_MODEL) {
-        if (q[0]<0) {
-            /* positive z goes into the magnet */
-            dq0 = q[0] - (q[1]*entr_slope+fentr_intercept);
-            z   = flen/2 + dq0*cos_alpha1 + offset;
-            }
-        else {
-            /* positive z goes out of the magnet */
-            dq0 = q[0] - (q[1]*exit_slope+fexit_intercept);
-            z   = (-flen/2 + dq0*cos_alpha2) - offset;
-            }
-        if ((q[0]<0 && z< -flen/2) || (q[0]>0 && z>flen/2))
-            F0 = F1 = F2 = 0;
-        else {
-            Fa_y = Fa*q[2];
-            Fa_z = Fa*z;
-            tanh_Fa_z = tanh(Fa_z);
-            sech_Fa_z = 1/(cosh_Fa_z=cosh(Fa_z));
-            sinh_Fa_z = tanh_Fa_z*cosh_Fa_z;
-            cosh_2Fa_z = 1 + 2*sqr(sinh_Fa_z);
-            sinh_3Fa_z = sinh(3*Fa_z);
-            cosh_4Fa_z = 2*sqr(cosh_2Fa_z) - 1;
-            Fa_y_sech = Fa_y*sech_Fa_z;
-            F2  = (1+tanh_Fa_z)/2 + (tmp=sqr(Fa_y_sech))*tanh_Fa_z/2; 
-            F2 += sqr(tmp)*sech_Fa_z*(11*sinh_Fa_z - sinh_3Fa_z)/24;
-            F0 = tmp1 = Fa_y_sech*sech_Fa_z/2;
-            F0 += tmp1*(tmp=sqr(Fa_y_sech))*(2-cosh_2Fa_z)/3;
-            F0 += tmp1*sqr(tmp)*(33 - 26*cosh_2Fa_z + cosh_4Fa_z)/60;
-            if (q[0]<0) {
-                F2 *= S;
-                F0 *= S;
-                F1 = F0*sin_alpha1;
-                F0 = F0*cos_alpha1;
-                }
-            else {
-                /* The next two lines account for the fact that tanh(a*z) is reversed for the exit */
-                F2 = S*(1-F2);
-                F0 *= -S;
-                F1 = -F0*sin_alpha2;
-                F0 = F0*cos_alpha2;
-                }
-            }
-        }
+  w  = q+3;
+  wp = qp+3;
+  qp[0] = w[0];
+  qp[1] = w[1];
+  qp[2] = w[2];
+  
+  S = S0*one_plus_fse/(1+q[7]);
+  qp[6] = 1;
+  qp[7] = 0; 
+  
+  
+  if (fringe_code==TANH_MODEL) {
+    if (q[0]<0) {
+      /* positive z goes into the magnet */
+      dq0 = q[0] - (q[1]*entr_slope+fentr_intercept);
+      z   = flen/2 + dq0*cos_alpha1 + offset;
+    }
     else {
-        /* determine which region particle is in */
-        /* determine if inside entrance fringe */
-        dq0 = q[0] - (q[1]*entr_slope+fentr_intercept);
-        z   = flen + dq0*cos_alpha1 + offset;
-        if (z<0)
-            F0 = F1 = F2 = 0;    /* outside of magnet */
-        else if (z<flen) {
-            /* in entrance fringe */
-            switch (fringe_code) {
-                case LINEAR_MODEL:
-                    F2 = S*z/flen;
-                    F0 = S*q[2]/flen;
-                    break;
-                case CUBIC_MODEL:
-                    z2 = sqr(z);
-                    q22 = sqr(q[2]);
-                    F2 = S*( (Fa+Fb*z)*z2 + q22*(-Fa-3*Fb*z) );
-                    F0 = S*q[2]*(2*Fa*z + 3*Fb*z2);
-                    break;
-                case QUINTIC_MODEL:
-                    z2 = sqr(z);
-                    z3 = z2*z;
-                    q22 = sqr(q[2]);
-                    F2 = S*( (Fa+Fb*z+Fc*z2)*z3 - q22*(3*Fa + 6*Fb*z + 10*Fc*z2)*z );
-                    F0 = S*q[2]*( (3*Fa+4*Fb*z+5*Fc*z2)*z2 - q22*(Fa + 4*Fb*z + 10*Fc*z2) );
-                    break;
-                default:
-                    bomb("invalid fringe-field code in nibend_deriv_function", NULL);
-                    break;
-                }
-            F1 = F0*sin_alpha1;
-            F0 = F0*cos_alpha1;
-            }
-        else {
-            /* determine if inside exit fringe region */
-            dq0 = q[0] - (q[1]*exit_slope+fexit_intercept);
-            z   = dq0*cos_alpha2 - offset;
-            if (z>flen)
-                F0 = F1 = F2 = 0;    /* outside of magnet */
-            else if (z>0) {
-                switch (fringe_code) {
-                    case LINEAR_MODEL:
-                        F2 = S*(1-z/flen);
-                        F0 = -S*q[2]/flen;
-                        break;
-                    case CUBIC_MODEL:
-                        z2 = sqr(z);
-                        q22 = sqr(q[2]);
-                        F2 = S*(1 - ( (Fa+Fb*z)*z2 + q22*(-Fa-3*Fb*z) ) );
-                        F0 = -S*q[2]*(2*Fa*z + 3*Fb*z2);
-                        break;
-                    case QUINTIC_MODEL:
-                        z2 = sqr(z);
-                        z3 = z2*z;
-                        q22 = sqr(q[2]);
-                        F2 = S*( 1 - ((Fa+Fb*z+Fc*z2)*z3 - q22*(3*Fa + 6*Fb*z + 10*Fc*z2)*z) );
-                        F0 = -S*q[2]*( (3*Fa+4*Fb*z+5*Fc*z2)*z2 - q22*(Fa + 4*Fb*z + 10*Fc*z2) );
-                        break;
-                    default:
-                        bomb("invalid fringe-field code in nibend_deriv_function", NULL);
-                        break;
-                    }
-                F1 = -F0*sin_alpha2;
-                F0 = F0*cos_alpha2;
-                }
-            else {
-                F0 = F1 = 0;
-                F2 = S;
-                }
-            }
+      /* positive z goes out of the magnet */
+      dq0 = q[0] - (q[1]*exit_slope+fexit_intercept);
+      z   = (-flen/2 + dq0*cos_alpha2) - offset;
+    }
+    if ((q[0]<0 && z< -flen/2) || (q[0]>0 && z>flen/2))
+      F0 = F1 = F2 = 0;
+    else {
+      Fa_y = Fa*q[2];
+      Fa_z = Fa*z;
+      tanh_Fa_z = tanh(Fa_z);
+      sech_Fa_z = 1/(cosh_Fa_z=cosh(Fa_z));
+      sinh_Fa_z = tanh_Fa_z*cosh_Fa_z;
+      cosh_2Fa_z = 1 + 2*sqr(sinh_Fa_z);
+      sinh_3Fa_z = sinh(3*Fa_z);
+      cosh_4Fa_z = 2*sqr(cosh_2Fa_z) - 1;
+      Fa_y_sech = Fa_y*sech_Fa_z;
+      F2  = (1+tanh_Fa_z)/2 + (tmp=sqr(Fa_y_sech))*tanh_Fa_z/2; 
+      F2 += sqr(tmp)*sech_Fa_z*(11*sinh_Fa_z - sinh_3Fa_z)/24;
+      F0 = tmp1 = Fa_y_sech*sech_Fa_z/2;
+      F0 += tmp1*(tmp=sqr(Fa_y_sech))*(2-cosh_2Fa_z)/3;
+      F0 += tmp1*sqr(tmp)*(33 - 26*cosh_2Fa_z + cosh_4Fa_z)/60;
+      if (q[0]<0) {
+        F2 *= S;
+        F0 *= S;
+        F1 = F0*sin_alpha1;
+        F0 = F0*cos_alpha1;
+      }
+      else {
+        /* The next two lines account for the fact that tanh(a*z) is reversed for the exit */
+        F2 = S*(1-F2);
+        F0 *= -S;
+        F1 = -F0*sin_alpha2;
+        F0 = F0*cos_alpha2;
+      }
+    }
+  } else if (fringe_code==ENGE1_MODEL || fringe_code==ENGE3_MODEL || fringe_code==ENGE5_MODEL) {
+    if (q[0]<0) {
+      /* entrance */
+      dq0 = q[0] - (q[1]*entr_slope + rentr_intercept);
+      z   = -dq0*cos_alpha1 + offset;
+      engeFunction(&F2, &F0, z, q[2], engeD, engeCoef[0], engeCoef[1], engeCoef[2], engeOrder);
+      F2 *= S;
+      F0 *= -S;
+      F1 = F0*sin_alpha1;
+      F0 = F0*cos_alpha1;
+    } else {
+      /* exit */
+      dq0 = q[0] - (q[1]*exit_slope + rexit_intercept);
+      z   = dq0*cos_alpha1 + offset;
+      engeFunction(&F2, &F0, z, q[2], engeD, engeCoef[0], engeCoef[1], engeCoef[2], engeOrder);
+      F2 *= S;
+      F0 *= S;
+      F1 = -F0*sin_alpha2;
+      F0 = F0*cos_alpha2;
+    }
+  } else {
+    /* determine which region particle is in */
+    /* determine if inside entrance fringe */
+    dq0 = q[0] - (q[1]*entr_slope+fentr_intercept);
+    z   = flen + dq0*cos_alpha1 + offset;
+    if (z<0)
+      F0 = F1 = F2 = 0;    /* outside of magnet */
+    else if (z<flen) {
+      /* in entrance fringe */
+      switch (fringe_code) {
+      case LINEAR_MODEL:
+        F2 = S*z/flen;
+        F0 = S*q[2]/flen;
+        break;
+      case CUBIC_MODEL:
+        z2 = sqr(z);
+        q22 = sqr(q[2]);
+        F2 = S*( (Fa+Fb*z)*z2 + q22*(-Fa-3*Fb*z) );
+        F0 = S*q[2]*(2*Fa*z + 3*Fb*z2);
+        break;
+      case QUINTIC_MODEL:
+        z2 = sqr(z);
+        z3 = z2*z;
+        q22 = sqr(q[2]);
+        F2 = S*( (Fa+Fb*z+Fc*z2)*z3 - q22*(3*Fa + 6*Fb*z + 10*Fc*z2)*z );
+        F0 = S*q[2]*( (3*Fa+4*Fb*z+5*Fc*z2)*z2 - q22*(Fa + 4*Fb*z + 10*Fc*z2) );
+        break;
+      default:
+        bomb("invalid fringe-field code in nibend_deriv_function", NULL);
+        break;
+      }
+      F1 = F0*sin_alpha1;
+      F0 = F0*cos_alpha1;
+    }
+    else {
+      /* determine if inside exit fringe region */
+      dq0 = q[0] - (q[1]*exit_slope+fexit_intercept);
+      z   = dq0*cos_alpha2 - offset;
+      if (z>flen)
+        F0 = F1 = F2 = 0;    /* outside of magnet */
+      else if (z>0) {
+        switch (fringe_code) {
+        case LINEAR_MODEL:
+          F2 = S*(1-z/flen);
+          F0 = -S*q[2]/flen;
+          break;
+        case CUBIC_MODEL:
+          z2 = sqr(z);
+          q22 = sqr(q[2]);
+          F2 = S*(1 - ( (Fa+Fb*z)*z2 + q22*(-Fa-3*Fb*z) ) );
+          F0 = -S*q[2]*(2*Fa*z + 3*Fb*z2);
+          break;
+        case QUINTIC_MODEL:
+          z2 = sqr(z);
+          z3 = z2*z;
+          q22 = sqr(q[2]);
+          F2 = S*( 1 - ((Fa+Fb*z+Fc*z2)*z3 - q22*(3*Fa + 6*Fb*z + 10*Fc*z2)*z) );
+          F0 = -S*q[2]*( (3*Fa+4*Fb*z+5*Fc*z2)*z2 - q22*(Fa + 4*Fb*z + 10*Fc*z2) );
+          break;
+        default:
+          bomb("invalid fringe-field code in nibend_deriv_function", NULL);
+          break;
         }
+        F1 = -F0*sin_alpha2;
+        F0 = F0*cos_alpha2;
+      }
+      else {
+        F0 = F1 = 0;
+        F2 = S;
+      }
+    }
+  }
+  
+  wp[0] = w[1]*F2 - w[2]*F1;
+  wp[1] = w[2]*F0 - w[0]*F2;
+  wp[2] = w[0]*F1 - w[1]*F0;
+  if (rad_coef)
+    qp[7] = -rad_coef*pow4(1+q[7])*(sqr(wp[0]) + sqr(wp[1]) + sqr(wp[2]));
 
-    wp[0] = w[1]*F2 - w[2]*F1;
-    wp[1] = w[2]*F0 - w[0]*F2;
-    wp[2] = w[0]*F1 - w[1]*F0;
-    if (rad_coef)
-        qp[7] = -rad_coef*pow4(1+q[7])*(sqr(wp[0]) + sqr(wp[1]) + sqr(wp[2]));
 #ifdef DEBUG
-    if (field_output_on) {
-        fprintf(fp_field, "%e %e %e %e %e %e %e %e\n", q[0], q[1], q[2], z, s, F0, F1, F2);
-        fflush(fp_field);
+  if (field_output_on) {
+    fprintf(fp_field, "%e %e %e %e %e %e %e %e\n", q[0], q[1], q[2], z, s, F0, F1, F2);
+    fflush(fp_field);
         }
 #endif
-    }
+}
 
 /* routines for NISEPT element: */
 
@@ -1340,4 +1395,128 @@ void bmapxy_field_setup(BMAPXY *bmapxy)
   bmapxy->Fy = Fy;
 }
 
+
+void engeFunction(double *Fy, double *Fz, double z, double y, double D, double a1, double a2, double a3, long order)
+{
+  double z2;
+  double t1, t2, t3, t4, t5, t6, t7, t8, t9;
+  double t10, t11, t12, t13, t14, t15, t16, t17, t18, t19, t20;
+  double t21, t22, t23;
+  double b1, b2, b3;
+  double y2, y3, y4, y5;
+  
+  b1 = a1;
+  b2 = a2/D;
+  b3 = a3/sqr(D);
+
+  if (order>3) {
+    y2 = y*y;
+    y3 = y2*y;
+    y4 = y2*y2;
+    y5 = y4*y;
+
+    z2 = z*z;
+    t1 = b3*z2+b2*z+b1;
+    t3 = exp(t1);
+    t2 = t3+1;
+    t4 = t3*t3;
+    t5 = t4*t3;
+    t6 = t4*t4;
+    t22 = t4*t3;
+    t7 = 2*b3*z+b2;
+    t8 = t7*t7;
+    t9 = t8*t7;
+    t10 = t8*t8;
+    t11 = t10*t7;
+    t12 = ipow(t2,-2);
+    t13 = t12/t2;
+    t14 = t13/t2;
+    t15 = 4*b3*z+2*b2;
+    t16 = t15*t15;
+    t17 = 6*b3*z+3*b2;
+    t18 = t14/t2;
+    t19 = ipow(b3,2);
+    t20 = t17*t17;
+    t21 = t16*t15;
+    t23 = t18/t2;
+
+    *Fy = y4*(2*t4*t13*t8*t16-t3*t12*t10+2*t4*t13*t10-6*t5*t14*t10+24*t6*t18*t10
+             -6*t5*t14*t17*t9+2*t4*t13*t15*t9-6*t5*t14*t15*t9-12*b3*t3*t12*t8
+             +32*b3*t4*t13*t8-72*b3*t5*t14*t8+20*b3*t4*t13*t7*t15
+             -12*t19*t3*t12+24*t19*t4*t13)/24.0
+               -y2*(-t3*t12*t8+2*t4*t13*t8-2*b3*t3*t12)/2.0
+                 +1/t2;
+
+    *Fz = y5*(-6*t5*t14*t9*t20+2*t4*t13*t8*t21+2*t4*t13*t9*t16-6*t5*t14*t9*t16
+              +28*b3*t4*t13*t7*t16-t3*t12*t11+2*t4*t13*t11-6*t5*t14*t11+24*t6*t18*t11
+              -120*t22*t23*t11+24*t6*t18*(8*b3*z+4*b2)*t10
+              -6*t5*t14*t17*t10+24*t6*t18*t17*t10+2*t4*t13*t15*t10-6*t5*t14*t15*t10
+              +24*t6*t18*t15*t10-6*t5*t14*t15*t17*t9-20*b3*t3*t12*t9+48*b3*t4*t13*t9
+              -204*b3*t5*t14*t9+480*b3*t6*t18*t9-108*b3*t5*t14*t17*t8+60*b3*t4*t13*t15*t8
+              -96*b3*t5*t14*t15*t8+64*t19*t4*t13*t15-60*t19*t3*t12*t7+232*t19*t4*t13*t7
+              -360*t19*t5*t14*t7)/120.0
+                -y3*(-t3*t12*t9+2*t4*t13*t9-6*t5*t14*t9+2*t4*t13*t15*t8-6*b3*t3*t12*t7+12*b3*t4*t13*t7)/6.0
+                  -t3*t12*y*t7;
+  }
+  else if (order>1) {
+    z2 = z*z;
+    y2 = y*y;
+    y3 = y2*y;
+
+    t1 = b3*z2+b2*z+b1;
+    t2 = exp(t1);
+    t3 = 1/(t2+1);
+    t4 = t3*t3;
+    t5 = t3*t4;
+    t6 = t4*t4;
+    t7 = 2*b3*z+b2;
+    t8 = t7*t7;
+    t9 = 2*t7;
+    t10 = t2*t2;
+    t11 = t8*t7;
+    t12 = t2*t10;
+    
+    
+    *Fy = t3
+      -y2*(-t2*t4*t8+2*t10*t5*t8-2*b3*t2*t4)/2.0;
+    
+    
+    *Fz = -y3*(-t2*t4*t11+2*t10*t5*t11-6*t12*t6*t11
+              +2*t10*t5*t9*t8-6*b3*t2*t4*t7+12*b3*t10*t5*t7)/6.0
+                -t2*t4*y*t7;
+    
+  }
+  else {
+    z2 = z*z;
+    t1 = b3*z2+b2*z+b1;
+    t2 = exp(t1);
+    t3 = 1/(t2+1);
+    t4 = t3*t3;
+    t7 = 2*b3*z+b2;
+    
+    *Fy = t3;
+    *Fz = -t2*t4*y*t7;
+  }
+}
+
+void writeEngeFunctionToFile(char *filename)
+{
+  FILE *fp;
+  double dz, z;
+  double Fy, Fz;
+  
+  fp = fopen_e(filename, "w", 0);
+  fprintf(fp, "SDDS1\n");
+  fprintf(fp, "&column name=z units=m type=double &end\n");
+  fprintf(fp, "&column name=Fy type=double &end\n");
+  fprintf(fp, "&data mode=ascii no_row_counts=1 &end\n");
+  z = -flen;
+  dz = flen/100;
+  while (z<flen) {
+    engeFunction(&Fy, &Fz, z, 0.0, engeD, engeCoef[0], engeCoef[1], engeCoef[2], 1);
+    fprintf(fp, "%e %e\n", z, Fy);
+    z += dz;
+  }
+  fclose(fp);
+}
 
