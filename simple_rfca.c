@@ -473,7 +473,7 @@ long track_through_rfcw
   }
 
   rfcw->trwake.charge = 0;
-  rfcw->trwake.factor = 0;
+  rfcw->trwake.xfactor = rfcw->trwake.yfactor = 1;
   rfcw->trwake.n_bins = rfcw->n_bins;
   rfcw->trwake.interpolate = rfcw->interpolate;
   rfcw->trwake.smoothing = rfcw->smoothing;
@@ -481,6 +481,7 @@ long track_through_rfcw
   rfcw->trwake.SGOrder = rfcw->SGOrder;
   rfcw->trwake.dx = rfcw->dx;
   rfcw->trwake.dy = rfcw->dy;
+  rfcw->trwake.xPower = rfcw->trwake.yPower = 1;
   if (!rfcw->initialized) {
     rfcw->trwake.initialized = 0;
     if (rfcw->wakeFile) {
@@ -506,7 +507,6 @@ long track_through_rfcw
   }
   
   rfcw->wake.charge = 0;
-  rfcw->wake.factor = 0;
   rfcw->wake.n_bins = rfcw->n_bins;
   rfcw->wake.interpolate = rfcw->interpolate;
   rfcw->wake.smoothing = rfcw->smoothing;
