@@ -10,6 +10,7 @@
     long n_slices = 0;
     double s_start = 0;
     double s_end = DBL_MAX;
+    long final_values_only = 0;
 #end
 
 
