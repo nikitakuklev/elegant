@@ -21,7 +21,8 @@ void IBSGrowthRates (double gamma, double emitx, double emity,
                      double transSRdampRate, double longSRdampRate,
                      double coupling,
                      double *s, double *betax, double *alphax, double *betay, 
-                     double *alphay, double *etax, double *etaxp, long elements, 
+                     double *alphay, double *etax, double *etaxp,
+                     double *xrate, double *yrate, double *zrate, long elements, 
                      long superperiods, long verbosity,
                      double *xGrowthRate, double *yGrowthRate, double *zGrowthRate);
 

@@ -97,7 +97,8 @@ void IBSGrowthRates (double gamma, double emitx, double emity,
                      double transSRdampRate, double longSRdampRate,
                      double coupling,
                      double *s, double *betax, double *alphax, double *betay, 
-                     double *alphay, double *etax, double *etaxp, long elements, 
+                     double *alphay, double *etax, double *etaxp, 
+                     double *xRateVsS, double *yRateVsS, double *zRateVsS, long elements, 
                      long superperiods, long verbosity,
                      double *xGrowthRate, double *yGrowthRate, double *zGrowthRate) {
 /*
@@ -242,9 +243,17 @@ void IBSGrowthRates (double gamma, double emitx, double emity,
     else
       weight = FABS(s[i]-s[i-1])/ s[elements-1];
       */
-    if (!weight)
+    if (!weight) {
+      if (xRateVsS)
+        xRateVsS[i] = 0;
+      if (yRateVsS)
+        yRateVsS[i] = 0;
+      if (zRateVsS)
+        zRateVsS[i] = 0;
       continue;
+    }
     
+
     betx = betax[i];
     alx = alphax[i];
     bety = betay[i];
@@ -380,6 +389,13 @@ void IBSGrowthRates (double gamma, double emitx, double emity,
     txi = constant * (zintx/cprime);
     tyi = cony * (zinty/cprime);
     tzi = conz * (zintz/cprime);
+
+    if (xRateVsS)
+      xRateVsS[i] = txi*weight;
+    if (yRateVsS)
+      yRateVsS[i] = tyi*weight;
+    if (zRateVsS)
+      zRateVsS[i] = tzi*weight;
 
     *xGrowthRate += txi*weight;
     *yGrowthRate += tyi*weight;
