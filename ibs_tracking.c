@@ -11,6 +11,8 @@
 
 void setup_track_IBS(IBSCATTER *IBS, ELEMENT_LIST *element);
 
+#define DEBUG 1
+
 #if DEBUG
 static FILE *fpdeb = NULL;
 static long pass = 0;
@@ -39,11 +41,15 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
     fprintf(fpdeb, "&column name=xRate type=double &end\n");
     fprintf(fpdeb, "&column name=yRate type=double &end\n");
     fprintf(fpdeb, "&column name=zRate type=double &end\n");
+    fprintf(fpdeb, "&column name=xRN type=double &end\n");
+    fprintf(fpdeb, "&column name=yRN type=double &end\n");
+    fprintf(fpdeb, "&column name=zRN type=double &end\n");
     fprintf(fpdeb, "&column name=emitx type=double &end\n");
     fprintf(fpdeb, "&column name=emity type=double &end\n");
     fprintf(fpdeb, "&column name=emitz type=double &end\n");
     fprintf(fpdeb, "&column name=sigmaz type=double &end\n");
     fprintf(fpdeb, "&column name=sigmaDelta type=double &end\n");
+    fprintf(fpdeb, "&column name=charge type=double &end\n");
     fprintf(fpdeb, "&data mode=ascii no_row_counts=1 &end\n");
     fflush(fpdeb);
   }
@@ -74,20 +80,25 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
                  IBS->etax, IBS->etaxp, IBS->elements, 1, 0, 
                  &xGrowthRate, &yGrowthRate, &zGrowthRate
                  );
-#if DEBUG
-  fprintf(fpdeb, "%ld %le %le %le %le %le %le %le %le\n",
-          pass++, xGrowthRate, yGrowthRate, zGrowthRate, emitx, emity, sigmaz*sigmaDelta, sigmaz, sigmaDelta);
-  fflush(fpdeb);
-#endif
-
   RNSigma[0] = RNSigma[1] = RNSigma[2] = 0;
   dT = IBS->revolutionLength/vz;
   if (xGrowthRate>0)
-    RNSigma[0] = sqrt((sqr(1+dT*xGrowthRate)-1))*emitx/sigmax;
+    RNSigma[0] = sqrt((sqr(1+dT*xGrowthRate)-1))*sqrt(xBeamParam.s22);
   if (yGrowthRate>0)
-    RNSigma[1] = sqrt((sqr(1+dT*yGrowthRate)-1))*emity/sigmay;
+    RNSigma[1] = sqrt((sqr(1+dT*yGrowthRate)-1))*sqrt(yBeamParam.s22);
   if (zGrowthRate>0)
-    RNSigma[2] = sqrt((sqr(1+dT*zGrowthRate)-1))*emitl/sigmat;
+    RNSigma[2] = sqrt((sqr(1+dT*zGrowthRate)-1))*sigmaDelta;
+#if DEBUG
+  fprintf(fpdeb, "%ld %le %le %le %le %le %le %le %le %le %le %le %le\n",
+          pass++, xGrowthRate, yGrowthRate, zGrowthRate, 
+	  RNSigma[0], RNSigma[1], RNSigma[2],
+	  emitx, emity, sigmaz*sigmaDelta, sigmaz, sigmaDelta,
+	  charge?
+	  fabs(charge->macroParticleCharge*np):
+	  fabs(IBS->charge));
+  fflush(fpdeb);
+#endif
+
   for (icoord=1, ihcoord=0; icoord<6; icoord+=2, ihcoord++) {
     if (RNSigma[ihcoord])
       for (ipart=0; ipart<np; ipart++) {
