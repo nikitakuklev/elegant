@@ -182,17 +182,12 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
             else
                 dgam = Vtime[ib]/(1e6*me_mev);
             if (dgam) {
-                P = Po*(1+part[ip][5]);
-                gam = sqrt(sqr(P)+1);
-                P = sqrt(sqr(gam+dgam)-1);
-                part[ip][5] = (P-Po)/Po;
-                part[ip][4] = time[ip]*c_mks*P/gam;
-                }
+              add_to_particle_energy(part[ip], time[ip], Po, dgam);
             }
         }
-
+      }
     log_exit("track_through_zlongit");
-    }
+  }
 
 
 
@@ -353,3 +348,4 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run)
     zlongit->initialized = 1;
     log_exit("set_up_zlongit");
     }
+
