@@ -1314,7 +1314,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     XP /= (1+X/rho0);
     YP /= (1+X/rho0);
 
-    if (particleLost[i_part]) {
+    if (particleLost[i_part] || p1<=0) {
       if (!part[i_top]) {
         fprintf(stdout, "error: couldn't swap particles %ld and %ld--latter is null pointer (track_through_csbend)\n",
                 i_part, i_top);
@@ -1599,7 +1599,6 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
               ctmin, ctmax);
       fprintf(stdout, "wake ct0 = %21.15e, ct1 = %21.15e\n",
               ct0, ct0+csrWake.dctBin*csrWake.bins);
-      fflush(stdout);
 #endif
       fflush(stdout);
     }
