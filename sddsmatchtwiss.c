@@ -55,6 +55,11 @@ CopyrightNotice001*/
  * Michael Borland, 2000
  *
  $Log: not supported by cvs2svn $
+ Revision 1.10  2002/01/21 01:27:02  borland
+ Fixed bug with -xplane and -yplane: previously, didn't allow changing
+ beta and alpha when changing the emittance.
+ Added chirp capability to -zPlane.
+
  Revision 1.9  2001/10/15 20:37:07  soliday
  Cleaned up for Linux.
 
@@ -120,9 +125,8 @@ application of the chirp; adjustment of central beta-gamma.\n\
 If central beta-gamma is adjusted, the normalized emittance is preserved\n\
 in x and y planes while the absolute momentum spread is preserved in\n\
 the longitudinal plane.\n\
-If -oneTransform is given, then the transformation is computed for the
-first page only, then reused for all subsequent pages.
-
+If -oneTransform is given, then the transformation is computed for the\n\
+first page only, then reused for all subsequent pages.\n\n\
 Program by Michael Borland.  (This is version 5, January 2002.)\n";
 
 typedef struct {
