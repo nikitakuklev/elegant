@@ -262,7 +262,8 @@ long new_bunched_beam(
                 bomb("'bunch' file is uninitialized (new_bunched_beam)", NULL);
             fprintf(stdout, "dumping bunch\n");
             fflush(stdout);
-            dump_phase_space(&SDDS_bunch, beam->original, n_actual_particles, control->i_step, Po);
+            dump_phase_space(&SDDS_bunch, beam->original, n_actual_particles, control->i_step, Po,
+                             sqrt(-1.0));
             if (one_random_bunch) {
                 if (!SDDS_Terminate(&SDDS_bunch)) {
                     SDDS_SetError("Problem terminating 'bunch' file (new_bunched_beam)");
@@ -400,7 +401,8 @@ void do_track_beam_output(RUN *run, VARY *control,
     if (!(flags&SILENT_RUNNING)) 
       fprintf(stdout, "Dumping output beam data..."); fflush(stdout);
       fflush(stdout);
-    dump_phase_space(&output->SDDS_output, beam->particle, n_left, control->i_step, p_central);
+    dump_phase_space(&output->SDDS_output, beam->particle, n_left, control->i_step, p_central,
+                     finalCharge);
     if (!(flags&SILENT_RUNNING)) 
       fprintf(stdout, "done.\n"); fflush(stdout);
       fflush(stdout);
@@ -412,7 +414,8 @@ void do_track_beam_output(RUN *run, VARY *control,
     if (!(flags&SILENT_RUNNING)) 
       fprintf(stdout, "Dumping acceptance output..."); fflush(stdout);
       fflush(stdout);
-    dump_phase_space(&output->SDDS_accept, beam->accepted, beam->n_accepted, control->i_step, p_central0);
+    dump_phase_space(&output->SDDS_accept, beam->accepted, beam->n_accepted, control->i_step, p_central0,
+                     finalCharge);
     if (!(flags&SILENT_RUNNING)) 
       fprintf(stdout, "done.\n"); fflush(stdout);
       fflush(stdout);
