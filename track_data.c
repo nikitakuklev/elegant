@@ -986,6 +986,10 @@ PARAMETER matter_param[N_MATTER_PARAMS] = {
     {"L", "M", IS_DOUBLE, 1, (long)((char *)&matter_example.length), NULL, 0.0, 0, "length"},
     {"XO", "M", IS_DOUBLE, 1, (long)((char *)&matter_example.Xo), NULL, 0.0, 0, "radiation length"},
     {"ELASTIC", "", IS_LONG, 0, (long)((char *)&matter_example.elastic), NULL, 0.0, 0, "elastic scattering?"},
+    {"Z", "", IS_LONG, 0, (long)((char *)&matter_example.Z), NULL, 0.0, 0, "Atomic number"},
+    {"A", "AMU", IS_DOUBLE, 0, (long)((char *)&matter_example.A), NULL, 0.0, 0, "Atomic mass"},
+    {"RHO", "1/M^3", IS_DOUBLE, 0, (long)((char *)&matter_example.rho), NULL, 0.0, 0, "Density"},       
+    {"PLIMIT", "", IS_DOUBLE, 0, (long)((char *)&matter_example.pLimit), NULL, 0.05, 0, "Probability cutoff for each slice"},
     };
 
 RFMODE rfmode_example;

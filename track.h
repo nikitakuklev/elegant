@@ -553,7 +553,7 @@ extern char *entity_text[N_TYPES];
 #define N_NISEPT_PARAMS 9
 #define N_STRAY_PARAMS 7
 #define N_CSBEND_PARAMS 33
-#define N_MATTER_PARAMS 3
+#define N_MATTER_PARAMS 7
 #define N_RFMODE_PARAMS 18
 #define N_TRFMODE_PARAMS 12
 #define N_TWMTA_PARAMS 17
@@ -1443,7 +1443,8 @@ extern PARAMETER matter_param[N_MATTER_PARAMS];
 typedef struct {
     double length;
     double Xo;       /* radiation length */
-    long elastic;
+    long elastic, Z;
+    double A, rho, pLimit;
     } MATTER;
 
 /* names and storage structure for RF mode physical parameters */

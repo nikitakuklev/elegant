@@ -9,63 +9,119 @@
 #include "mdb.h"
 #include "track.h"
 
-#define SQRT_3 1.7320508075688772
+#define SQRT_3 (1.7320508075688772)
+#define AMU (1.6605e-27)
+#define SQR_PI (PI*PI)
 
 void track_through_matter(
-    double **part, long np, MATTER *matter, double Po
-    )
+                          double **part, long np, MATTER *matter, double Po
+                          )
 {
-    long ip;
-    double L, Nrad, *coord, theta_rms, beta, P, E;
-    double z1, z2, dx, dy, ds, t;
+  long ip;
+  double L, Nrad, *coord, theta_rms, beta, P, E;
+  double z1, z2, dx, dy, ds, t;
+  double K1, K2, sigmaTotal, probScatter;
+  long nScatters=0;
+  
+  log_entry("track_through_matter");
 
-    log_entry("track_through_matter");
+  if ((L=matter->length)==0)
+    return;
 
-    if ((L=matter->length)==0)
-        return;
-
-    if (matter->Xo==0)
-        Nrad = theta_rms = 0;
-    else {
-        Nrad = matter->length/matter->Xo;
-        beta = Po/sqrt(sqr(Po)+1);
-        theta_rms = 13.6/me_mev/Po/sqr(beta)*sqrt(Nrad)*(1+0.038*log(Nrad));
+  beta = Po/sqrt(sqr(Po)+1);
+  if (matter->Xo==0)
+    Nrad = theta_rms = 0;
+  else {
+    Nrad = matter->length/matter->Xo;
+    theta_rms = 13.6/me_mev/Po/sqr(beta)*sqrt(Nrad)*(1+0.038*log(Nrad));
+  }
+  fprintf(stdout, "Nrad = %le\n", Nrad);
+  
+  if (Nrad<1e-3) {
+    if (matter->Z<1 || matter->A<1 || matter->rho<=0)
+      bomb("MATTER element is too thin---provide Z, A, and rho for single-scattering calculation.", NULL);
+    K1 = 4*sqr(matter->Z*re_mks/(beta*Po));
+    K2 = sqr(pow(matter->Z, 1./3.)/137.036/Po);
+    sigmaTotal = K1*pow(PI, 3)/(sqr(K2)+K2*SQR_PI);
+    probScatter = matter->rho/(AMU*matter->A)*matter->length*sigmaTotal;
+    fprintf(stdout, "K1=%le, K2=%le, Probability of scattering is %le\n", K1, K2, probScatter);
+  }
+  
+  for (ip=0; ip<np; ip++) {
+    coord = part[ip];
+    if (Nrad) {
+      if (!matter->elastic) {
+        P = (1+coord[5])*Po;
+        E = sqrt(sqr(P)+1)-1;
+        beta = P/E;
+        t = coord[4]/beta;
+      }
+      if (Nrad>1e-3) {
+        /* multiple scattering */
+        z1 = gauss_rn(0, random_2);
+        z2 = gauss_rn(0, random_2);
+        coord[0] += (dx=(z1/SQRT_3 + z2)*L*theta_rms/2 + L*coord[1]);
+        coord[1] += z2*theta_rms;
+        z1 = gauss_rn(0, random_2);
+        z2 = gauss_rn(0, random_2);
+        coord[2] += (dy=(z1/SQRT_3 + z2)*L*theta_rms/2 + L*coord[3]);
+        coord[3] += z2*theta_rms;
+        ds = sqrt(sqr(L)+sqr(dx)+sqr(dy));
+      }
+      else {
+        long sections;
+        double F, theta, phi, zs, dxp, dyp, L1, prob;
+        
+        sections = probScatter/matter->pLimit+1;
+        L1 = L/sections;
+        prob = probScatter/sections;
+        ds = 0;
+        while (sections-- > 0) {
+          if (random_2(1)<prob) {
+            nScatters ++;
+            /* single-scattering computation */
+            /* scatter occurs at location 0<=zs<=L */
+            zs = L1*random_2(1);
+            /* pick a value for CDF and get corresponding angle */
+            F = random_2(1);
+            theta = sqrt((1-F)*K2*SQR_PI/(K2+F*SQR_PI));
+            phi = random_2(1)*PIx2;
+            dxp = theta*sin(phi);
+            dyp = theta*cos(phi);
+            /* advance to location of scattering event */
+            ds += zs*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+            /* scatter */
+            coord[1] += dxp;
+            coord[3] += dyp;
+            /* advance to end of slice */
+            coord[0] += dxp*(L1-zs);
+            coord[2] += dyp*(L1-zs);
+            ds += (L1-zs)*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+          } else {
+            ds += L1*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+            coord[0] += coord[1]*L1;
+            coord[2] += coord[3]*L1;
+          }            
         }
-
-    for (ip=0; ip<np; ip++) {
-        coord = part[ip];
-        if (Nrad) {
-            if (!matter->elastic) {
-                P = (1+coord[5])*Po;
-                E = sqrt(sqr(P)+1)-1;
-                beta = P/E;
-                t = coord[4]/beta;
-                }
-            z1 = gauss_rn(0, random_2);
-            z2 = gauss_rn(0, random_2);
-            coord[0] += (dx=(z1/SQRT_3 + z2)*L*theta_rms/2 + L*coord[1]);
-            coord[1] += z2*theta_rms;
-            z1 = gauss_rn(0, random_2);
-            z2 = gauss_rn(0, random_2);
-            coord[2] += (dy=(z1/SQRT_3 + z2)*L*theta_rms/2 + L*coord[3]);
-            coord[3] += z2*theta_rms;
-            ds = sqrt(sqr(L)+sqr(dx)+sqr(dy));
-            if (!matter->elastic) {
-                E *= exp(-ds/matter->Xo);
-                P = sqrt(sqr(E+1)-1);
-                coord[5] = (P-Po)/Po;
-                beta = P/E;
-                coord[4] = t*beta+ds;
-                }
-            else
-                coord[4] += ds;
-            }
-        else {
-            coord[0] += L*coord[1];
-            coord[2] += L*coord[3];
-            coord[4] += L*sqrt(1+sqr(coord[1])+sqr(coord[3]));
-            }
-        }
-
-    log_exit("track_through_matter");
+      }
+      if (!matter->elastic) {
+        E *= exp(-ds/matter->Xo);
+        P = sqrt(sqr(E+1)-1);
+        coord[5] = (P-Po)/Po;
+        beta = P/E;
+        coord[4] = t*beta+ds;
+      }
+      else
+        coord[4] += ds;
     }
+    else {
+      coord[0] += L*coord[1];
+      coord[2] += L*coord[3];
+      coord[4] += L*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+    }
+  }
+  fprintf(stdout, "%e scatters per particle\n",
+          (1.0*nScatters)/np);
+  
+  log_exit("track_through_matter");
+}
