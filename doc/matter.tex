@@ -14,8 +14,8 @@ only specify the material thickness (L) and the radiation length (XO).
 For materials thinner than $0.001 X_o$, the user must specify
 additional parameters, namely, the atomic number (Z), atomic mass (A),
 and mass density (RHO) of the material.  Note that the density is
-given in units of $kG/m^3$.  (Multiply by $10^3$ to convert $g/cm^3$
-to $kG/m^3$.)  In addition, the simulation parameter PLIMIT may be
+given in units of $kg/m^3$.  (Multiply by $10^3$ to convert $g/cm^3$
+to $kg/m^3$.)  In addition, the simulation parameter PLIMIT may be
 modified.  
 
 To understand this parameter, one must understand how {\tt elegant}
@@ -40,7 +40,7 @@ $F$ is chosen from a uniform random distribution on $[0,1]$.
 
 {\bf Energy loss.}  Energy loss simulation is very simple.
 The energy loss per unit distance traveled, $x$, is 
-${\frac dE}{dx} = -E/X_o$.  Hence, in traveling through a
+$\frac{dE}{dx} = -E/X_o$.  Hence, in traveling through a
 material of thickness $L$, the energy of each particle is
 transformed from $E$ to $E e^{-L/X_o}$.  
 

@@ -24,31 +24,32 @@ int integrate_kick_multipole_ord2(double *coord, double cos_tilt, double sin_til
                                   double dx, double dy, double xkick, double ykick,
                                   double Po, double rad_coef,
                                   long order, double KnL, long n_kicks, double drift,
-                                  MULTIPOLE_DATA *multData);
+                                  MULTIPOLE_DATA *multData, MULTIPOLE_DATA *steeringMultData);
 int integrate_kick_multipole_ord4(double *coord, double cos_tilt, double sin_tilt,
                                   double dx, double dy, double xkick, double ykick,
                                   double Po, double rad_coef,
                                   long order, double KnL, long n_kicks, double drift,
-                                  MULTIPOLE_DATA *multData);
+                                  MULTIPOLE_DATA *multData, MULTIPOLE_DATA *steeringMultData);
 void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
                                       MULTIPOLE_DATA *systematicMult,
                                       MULTIPOLE_DATA *randomMult,
+                                      MULTIPOLE_DATA *steeringMult,
                                       double KmL, long rootOrder);
 void randomizeErrorMultipoleFields(MULTIPOLE_DATA *randomMult);
 
 unsigned long multipoleKicksDone = 0;
 
-#define ODD(j) (j%2)
+#define ODD(j) ((j)%2)
 
 void readErrorMultipoleData(MULTIPOLE_DATA *multData,
-                               char *multFile)
+                               char *multFile, long steering)
 {
   SDDS_DATASET SDDSin;
   char buffer[1024];
   if (!multFile) {
     multData->orders = 0;
     multData->initialized = 0;
-    return ;
+    return;
   }
   if (multData->initialized)
     return;
@@ -59,39 +60,93 @@ void readErrorMultipoleData(MULTIPOLE_DATA *multData,
   }
   if (SDDS_CheckColumn(&SDDSin, "order", NULL, SDDS_ANY_INTEGER_TYPE, stdout)!=SDDS_CHECK_OK ||
       SDDS_CheckColumn(&SDDSin, "an", NULL, SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK ||
-      SDDS_CheckColumn(&SDDSin, "bn", NULL, SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK ||
+      (!steering && SDDS_CheckColumn(&SDDSin, "bn", NULL, SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK) ||
       SDDS_CheckParameter(&SDDSin, "referenceRadius", "m", SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK) {
     fprintf(stdout, "Problems with data in multipole file %s\n", multFile);
     fflush(stdout);
     exit(1);
   }
+  if (steering && SDDS_CheckColumn(&SDDSin, "bn", NULL, SDDS_ANY_FLOATING_TYPE, NULL)==SDDS_CHECK_OK) {
+    fprintf(stdout, "Warning: Steering multipole file %s should not have bn.\n",
+            multFile);
+    fprintf(stdout, "Use an to specify multipole content for a horizontal steerer.\n");
+    fprintf(stdout, "Multipole content for vertical steerer is deduced from this.\n");
+    fflush(stdout);
+  }
   if (SDDS_ReadPage(&SDDSin)!=1)  {
     sprintf(buffer, "Problem reading multipole file %s\n", multFile);
     SDDS_SetError(buffer);
-    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+    SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
     exit(1);
   }
   if ((multData->orders = SDDS_RowCount(&SDDSin))<=0) {
     fprintf(stdout, "Warning: no data in multipole file %s\n", multFile);
     fflush(stdout);
     SDDS_Terminate(&SDDSin);
-    return;
   }
   if (!SDDS_GetParameterAsDouble(&SDDSin, "referenceRadius", &multData->referenceRadius) ||
       !(multData->order=SDDS_GetColumnInLong(&SDDSin, "order")) ||
       !(multData->an=SDDS_GetColumnInDoubles(&SDDSin, "an")) || 
-      !(multData->bn=SDDS_GetColumnInDoubles(&SDDSin, "bn"))) {
+      (!steering && !(multData->bn=SDDS_GetColumnInDoubles(&SDDSin, "bn")))) {
     sprintf(buffer, "Unable to read multipole data for file %s\n", multFile);
     SDDS_SetError(buffer);
-    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+    SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
     exit(1);
   }    
+  if (steering &&
+      !(multData->bn=SDDS_Malloc(sizeof(*(multData->bn))*multData->orders))) {
+    fprintf(stdout, "Memory allocation failure (readErrorMultipoleData)\n");
+    exit(1);
+  }
   if (SDDS_ReadPage(&SDDSin)==2) {
     fprintf(stdout, "Warning: multipole file %s has multiple pages, which are ignored\n",
             multFile);
     fflush(stdout);
   }
   SDDS_Terminate(&SDDSin);
+  if (steering) {
+    long i, j;
+    /* check for disallowed multipoles */
+    for (i=0; i<multData->orders; i++) {
+      if (ODD(multData->order[i])) {
+        fprintf(stdout, "Error: steering multipole file %s has disallowed odd orders.\n",
+                multFile);
+        exit(1);
+      }
+    }
+    /* normalize to n=0 if present */
+    /* find i such that order[i] is 0 (dipole) */
+    for (i=0; i<multData->orders; i++) {
+      if (multData->order[i]==0)
+        break;
+    }
+    if (multData->orders>1 && i!=multData->orders) {
+      /* dipole present */
+      if (!multData->an[i] || !multData->bn[i]) {
+        fprintf(stdout, "Steering multipole data in %s is invalid: an or bn is zero for order=0\n",
+                multFile);
+        exit(1);
+      }
+      /* normalize to dipole for normal and skew separately */
+      for (j=0; j<multData->orders; j++)
+        if (j!=i)
+          multData->an[j] /= multData->an[i];
+      /* remove the dipole data */
+      for (j=i+1; j<multData->orders; j++) {
+        multData->an[j-1] = multData->an[j];
+        multData->order[j-1] = multData->order[j];
+      }
+      multData->orders -= 1;
+      for (i=0; i<multData->orders; i++)
+        multData->bn[i] = multData->an[i]*ipow(-1.0, multData->order[i]/2);
+#ifdef DEBUG
+      fprintf(stdout, "Steering multipole data: \n");
+      for (i=0; i<multData->orders; i++)
+        fprintf(stdout, "%ld: %e %e\n", multData->order[i],
+                multData->an[i], multData->bn[i]);
+#endif
+    }
+  }
   multData->initialized = 1;
 }
 
@@ -109,7 +164,7 @@ void initialize_fmultipole(FMULT *multipole)
   if (!SDDS_InitializeInputFromSearchPath(&SDDSin, multipole->filename)) {
     sprintf(buffer, "Problem opening file %s (FMULT)\n", multipole->filename);
     SDDS_SetError(buffer);
-    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+    SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
     exit(1);
   }
   if (SDDS_CheckColumn(&SDDSin, "order", NULL, SDDS_ANY_INTEGER_TYPE, stdout)!=SDDS_CHECK_OK ||
@@ -119,7 +174,7 @@ void initialize_fmultipole(FMULT *multipole)
   if (SDDS_ReadPage(&SDDSin)!=1)  {
     sprintf(buffer, "Problem reading FMULT file %s\n", multipole->filename);
     SDDS_SetError(buffer);
-    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+    SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
     exit(1);
   }
   if ((multData->orders = SDDS_RowCount(&SDDSin))<=0) {
@@ -134,7 +189,7 @@ void initialize_fmultipole(FMULT *multipole)
       !(multData->JnL=SDDS_GetColumnInDoubles(&SDDSin, "JnL"))) {
     sprintf(buffer, "Unable to read data for FMULT file %s\n", multipole->filename);
     SDDS_SetError(buffer);
-    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+    SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
     exit(1);
   }    
   if (SDDS_ReadPage(&SDDSin)==2) {
@@ -216,7 +271,7 @@ long fmultipole_tracking(
     coord[2]  = coord[2] + dz*coord[3];
 
     if (!integrate_kick_multipole_ord4(coord, cos_tilt, sin_tilt, dx, dy, 0.0, 0.0, Po, rad_coef,
-                                       1, 0.0, n_kicks, drift, &multData)) {
+                                       1, 0.0, n_kicks, drift, &multData, NULL)) {
       is_lost = 1;
       break;
     }
@@ -496,13 +551,13 @@ double *expansion_coefficients(long n)
     order[n_expansions] = n;
 
     /* calculate expansion coefficients with signs for (x+iy)^n/n! */
-#if DEBUG
+#ifdef DEBUG
     fprintf(stdout, "coefficients of expansion for multipole of order %ld\n", n);
     fflush(stdout);
 #endif
     for (i=0; i<=n; i++) {
         expansion_coef[n_expansions][i] = (ODD(i/2)?-1.0:1.0)/(dfactorial(i)*dfactorial(n-i));
-#if DEBUG
+#ifdef DEBUG
         fprintf(stdout, "%.16lf*%sx^%ld*y^%ld \n", expansion_coef[n_expansions][i]*dfactorial(n),
                 (ODD(i)?"i*":""), n-i, i);
         fflush(stdout);
@@ -532,7 +587,7 @@ long multipole_tracking2(
   double tilt, rad_coef, xkick, ykick;
   KQUAD *kquad;
   KSEXT *ksext;
-  MULTIPOLE_DATA *multData;
+  MULTIPOLE_DATA *multData, *steeringMultData;
   
   log_entry("multipole_tracking2");
 
@@ -545,6 +600,8 @@ long multipole_tracking2(
     bomb("null p_elem pointer (multipole_tracking2)", NULL);
 
   rad_coef = xkick = ykick = 0;
+  steeringMultData = NULL;
+
   switch (elem->type) {
   case T_KQUAD:
     kquad = ((KQUAD*)elem->p_elem);
@@ -567,16 +624,20 @@ long multipole_tracking2(
     if (!kquad->multipolesInitialized) {
       /* read the data files for the error multipoles */
       readErrorMultipoleData(&(kquad->systematicMultipoleData),
-                             kquad->systematic_multipoles);
+                             kquad->systematic_multipoles, 0);
       readErrorMultipoleData(&(kquad->randomMultipoleData),
-                             kquad->random_multipoles);
+                             kquad->random_multipoles, 0);
+      readErrorMultipoleData(&(kquad->steeringMultipoleData), 
+                             kquad->steering_multipoles, 1);
       kquad->multipolesInitialized = 1;
     }
     computeTotalErrorMultipoleFields(&(kquad->totalMultipoleData),
-                             &(kquad->systematicMultipoleData),
-                             &(kquad->randomMultipoleData),
-                             KnL, 1);
+                                     &(kquad->systematicMultipoleData),
+                                     &(kquad->randomMultipoleData),
+                                     &(kquad->steeringMultipoleData),
+                                     KnL, 1);
     multData = &(kquad->totalMultipoleData);
+    steeringMultData = &(kquad->steeringMultipoleData);
     break;
   case T_KSEXT:
     ksext = ((KSEXT*)elem->p_elem);
@@ -597,15 +658,16 @@ long multipole_tracking2(
     if (!ksext->multipolesInitialized) {
       /* read the data files for the error multipoles */
       readErrorMultipoleData(&(ksext->systematicMultipoleData),
-                             ksext->systematic_multipoles);
+                             ksext->systematic_multipoles, 0);
       readErrorMultipoleData(&(ksext->randomMultipoleData),
-                             ksext->random_multipoles);
+                             ksext->random_multipoles, 0);
       ksext->multipolesInitialized = 1;
     }
     computeTotalErrorMultipoleFields(&(ksext->totalMultipoleData),
-                             &(ksext->systematicMultipoleData),
-                             &(ksext->randomMultipoleData),
-                             KnL, 2);
+                                     &(ksext->systematicMultipoleData),
+                                     &(ksext->randomMultipoleData),
+                                     NULL,
+                                     KnL, 2);
     multData = &(ksext->totalMultipoleData);
     break;
   default:
@@ -655,10 +717,10 @@ long multipole_tracking2(
 
     if ((integ_order==4 &&
          !integrate_kick_multipole_ord4(coord, cos_tilt, sin_tilt, dx, dy, xkick, ykick,
-                                        Po, rad_coef, order, KnL, n_parts, drift, multData)) ||
+                                        Po, rad_coef, order, KnL, n_parts, drift, multData, steeringMultData)) ||
         (integ_order==2 &&
          !integrate_kick_multipole_ord2(coord, cos_tilt, sin_tilt, dx, dy, xkick, ykick,
-                                        Po, rad_coef, order, KnL, n_parts, drift, multData))) {
+                                        Po, rad_coef, order, KnL, n_parts, drift, multData, steeringMultData))) {
       SWAP_PTR(particle[i_part], particle[i_top]);
       if (accepted)
         SWAP_PTR(accepted[i_part], accepted[i_top]);
@@ -677,11 +739,12 @@ int integrate_kick_multipole_ord2(double *coord, double cos_tilt, double sin_til
                                   double dx, double dy, double xkick, double ykick,
                                   double Po, double rad_coef,
                                   long order, double KnL, long n_kicks, double drift,
-                                  MULTIPOLE_DATA *multData) 
+                                  MULTIPOLE_DATA *multData, 
+                                  MULTIPOLE_DATA *steeringMultData) 
 {
   double p, qx, qy, denom, beta0, beta1, dp, s;
   double x, y, xp, yp, sum_Fx, sum_Fy;
-  long i_kick;
+  long i_kick, imult;
   
   drift = drift/n_kicks/2.0;
   KnL = KnL/n_kicks;
@@ -708,13 +771,31 @@ int integrate_kick_multipole_ord2(double *coord, double cos_tilt, double sin_til
     return 0;
   }
 
-  /* allow steering corrector kick */
+  /* apply steering corrector kick */
   xp += xkick/(1+dp)/2;
   yp += ykick/(1+dp)/2;
 
   /* calculate initial canonical momenta */
   qx = (1+dp)*xp/(denom=sqrt(1+sqr(xp)+sqr(yp)));
   qy = (1+dp)*yp/denom;
+
+  if (steeringMultData) {
+    /* apply steering corrector multipoles */
+    for (imult=0; imult<steeringMultData->orders; imult++) {
+      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+                                      steeringMultData->order[imult], 
+                                      steeringMultData->KnL[imult]*xkick/2, 0);
+      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+                                      steeringMultData->order[imult], 
+                                      steeringMultData->JnL[imult]*ykick/2, 1);
+    }
+    if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
+      return 0;
+    }
+    xp = qx/(denom=sqrt(denom));
+    yp = qy/denom;
+  }
+
   for (i_kick=0; i_kick<n_kicks; i_kick++) {
     if (drift) {
       x += xp*drift*(i_kick?2:1);
@@ -725,7 +806,6 @@ int integrate_kick_multipole_ord2(double *coord, double cos_tilt, double sin_til
 
     /* do kicks for spurious multipoles */
     if (multData) {
-      long imult;
       for (imult=0; imult<multData->orders; multData++) {
         if (multData->KnL && multData->KnL[imult]) 
           apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
@@ -758,7 +838,24 @@ int integrate_kick_multipole_ord2(double *coord, double cos_tilt, double sin_til
     s += drift*sqrt(1 + sqr(xp) + sqr(yp));
   }
 
-  /* allow steering corrector kick */
+  if (steeringMultData) {
+    /* apply steering corrector multipoles */
+    for (imult=0; imult<steeringMultData->orders; imult++) {
+      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+                                      steeringMultData->order[imult], 
+                                      steeringMultData->KnL[imult]*xkick/2, 0);
+      apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+                                      steeringMultData->order[imult], 
+                                      steeringMultData->JnL[imult]*ykick/2, 1);
+    }
+    if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
+      return 0;
+    }
+    xp = qx/(denom=sqrt(denom));
+    yp = qy/denom;
+  }
+
+  /* apply steering corrector kick */
   xp += xkick/(1+dp)/2;
   yp += ykick/(1+dp)/2;
 
@@ -799,11 +896,11 @@ int integrate_kick_multipole_ord4(double *coord, double cos_tilt, double sin_til
                                   double dx, double dy, double xkick, double ykick,
                                   double Po, double rad_coef,
                                   long order, double KnL, long n_parts, double drift,
-                                  MULTIPOLE_DATA *multData) 
+                                  MULTIPOLE_DATA *multData, MULTIPOLE_DATA *steeringMultData) 
 {
   double p, qx, qy, denom, beta0, beta1, dp, s;
   double x, y, xp, yp, sum_Fx, sum_Fy;
-  long i_kick, step;
+  long i_kick, step, imult;
   double dsh;
   static double driftFrac[4] = {
     0.5/(2-BETA),  (1-BETA)/(2-BETA)/2,  (1-BETA)/(2-BETA)/2,  0.5/(2-BETA)
@@ -837,13 +934,33 @@ int integrate_kick_multipole_ord4(double *coord, double cos_tilt, double sin_til
     return 0;
   }
 
-  /* allow steering corrector kick */
+  /* apply steering corrector kick */
   xp += xkick/(1+dp)/2;
   yp += ykick/(1+dp)/2;
 
   /* calculate initial canonical momenta */
   qx = (1+dp)*xp/(denom=sqrt(1+sqr(xp)+sqr(yp)));
   qy = (1+dp)*yp/denom;
+
+  if (steeringMultData) {
+    /* apply steering corrector multipoles */
+    for (imult=0; imult<steeringMultData->orders; imult++) {
+      if (steeringMultData->KnL[imult])
+        apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+                                        steeringMultData->order[imult], 
+                                        steeringMultData->KnL[imult]*xkick/2, 0);
+      if (steeringMultData->JnL[imult]) 
+        apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+                                        steeringMultData->order[imult], 
+                                        steeringMultData->JnL[imult]*ykick/2, 1);
+    }
+    if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
+      return 0;
+    }
+    xp = qx/(denom=sqrt(denom));
+    yp = qy/denom;
+  }
+
   for (i_kick=0; i_kick<n_parts; i_kick++) {
     for (step=0; step<4; step++) {
       if (drift) {
@@ -857,7 +974,6 @@ int integrate_kick_multipole_ord4(double *coord, double cos_tilt, double sin_til
       apply_canonical_multipole_kicks(&qx, &qy, &sum_Fx, &sum_Fy, x, y, 
                                       order, KnL*kickFrac[step], 0);
       if (multData) {
-        long imult;
         /* do kicks for spurious multipoles */
         for (imult=0; imult<multData->orders; imult++) {
           if (multData->KnL && multData->KnL[imult]) {
@@ -890,7 +1006,26 @@ int integrate_kick_multipole_ord4(double *coord, double cos_tilt, double sin_til
     }
   }
   
-  /* allow steering corrector kick */
+  if (steeringMultData) {
+    /* apply steering corrector multipoles */
+    for (imult=0; imult<steeringMultData->orders; imult++) {
+      if (steeringMultData->KnL[imult]) 
+        apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+                                        steeringMultData->order[imult], 
+                                        steeringMultData->KnL[imult]*xkick/2, 0);
+      if (steeringMultData->JnL[imult]) 
+        apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
+                                        steeringMultData->order[imult], 
+                                        steeringMultData->JnL[imult]*ykick/2, 1);
+    }
+    if ((denom=sqr(1+dp)-sqr(qx)-sqr(qy))<=0) {
+      return 0;
+    }
+    xp = qx/(denom=sqrt(denom));
+    yp = qy/denom;
+  }
+
+  /* apply steering corrector kick */
   xp += xkick/(1+dp)/2;
   yp += ykick/(1+dp)/2;
 
@@ -986,6 +1121,7 @@ void randomizeErrorMultipoleFields(MULTIPOLE_DATA *randomMult)
 void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
                                       MULTIPOLE_DATA *systematicMult,
                                       MULTIPOLE_DATA *randomMult,
+                                      MULTIPOLE_DATA *steeringMult,
                                       double KmL, long rootOrder)
 {
   long i;
@@ -1002,13 +1138,13 @@ void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
     else
       totalMult->orders = randomMult->orders;
     if (!(totalMult->order=SDDS_Malloc(sizeof(*totalMult->order)*(totalMult->orders))))
-      bomb("memory allocation failure (computeTotalMultipoleFields", NULL);
+      bomb("memory allocation failure (computeTotalMultipoleFields)", NULL);
     if (systematicMult->orders &&
         (!(systematicMult->anMod=SDDS_Malloc(sizeof(*systematicMult->anMod)*systematicMult->orders)) ||
          !(systematicMult->bnMod=SDDS_Malloc(sizeof(*systematicMult->bnMod)*systematicMult->orders)) ||
          !(systematicMult->KnL=SDDS_Malloc(sizeof(*systematicMult->KnL)*systematicMult->orders)) ||
          !(systematicMult->JnL=SDDS_Malloc(sizeof(*systematicMult->JnL)*systematicMult->orders))))
-      bomb("memory allocation failure (computeTotalMultipoleFields", NULL);
+      bomb("memory allocation failure (computeTotalMultipoleFields)", NULL);
     if (randomMult->orders &&
         (!(randomMult->anMod=SDDS_Malloc(sizeof(*randomMult->anMod)*randomMult->orders)) ||
          !(randomMult->bnMod=SDDS_Malloc(sizeof(*randomMult->bnMod)*randomMult->orders)) ||
@@ -1017,7 +1153,12 @@ void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
       bomb("memory allocation failure (computeTotalMultipoleFields", NULL);
     if (!(totalMult->KnL = SDDS_Malloc(sizeof(*totalMult->KnL)*totalMult->orders)) ||
         !(totalMult->JnL = SDDS_Malloc(sizeof(*totalMult->JnL)*totalMult->orders)) )
-      bomb("memory allocation failure (computeTotalMultipoleFields", NULL);
+      bomb("memory allocation failure (computeTotalMultipoleFields)", NULL);
+    if (steeringMult && steeringMult->orders) {
+      if (!(steeringMult->KnL = SDDS_Malloc(sizeof(*steeringMult->KnL)*steeringMult->orders)) ||
+          !(steeringMult->JnL = SDDS_Malloc(sizeof(*steeringMult->JnL)*steeringMult->orders)) )
+        bomb("memory allocation failure (computeTotalMultipoleFields)", NULL);
+    }
     for (i=0; i<totalMult->orders; i++) {
       if (systematicMult->orders && randomMult->orders &&
           systematicMult->order[i]!=randomMult->order[i])
@@ -1041,7 +1182,7 @@ void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
   
   /* compute normal (KnL) and skew (JnL) from an and bn
    * KnL = an*n!/r^n*(KmL*r^m/m!), 
-   * JnL = bn*n!/r^n/(KmL*r^m/m!), where m is the root order 
+   * JnL = bn*n!/r^n*(KmL*r^m/m!), where m is the root order 
    * of the magnet with strength KmL
    */
   if (systematicMult->orders)
@@ -1057,6 +1198,15 @@ void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
     if (randomMult->orders) {
       totalMult->KnL[i] += rFactor*randomMult->anMod[i];
       totalMult->JnL[i] += rFactor*randomMult->bnMod[i];
+    }
+  }
+  if (steeringMult) {
+    /* same for steering multipoles, but compute KnL/theta and JnL/theta (in this case m=0) */
+    for (i=0; i<steeringMult->orders; i++) {
+      steeringMult->KnL[i] = 
+        -1*steeringMult->an[i]*dfactorial(steeringMult->order[i])/ipow(steeringMult->referenceRadius, steeringMult->order[i]);
+      steeringMult->JnL[i] = 
+        -1*steeringMult->bn[i]*dfactorial(steeringMult->order[i])/ipow(steeringMult->referenceRadius, steeringMult->order[i]);
     }
   }
 }

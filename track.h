@@ -607,7 +607,7 @@ extern char *entity_text[N_TYPES];
 #define N_KICKER_PARAMS 10
 #define N_KSEXT_PARAMS 14
 #define N_KSBEND_PARAMS 27
-#define N_KQUAD_PARAMS 16
+#define N_KQUAD_PARAMS 17
 #define N_MAGNIFY_PARAMS 6
 #define N_SAMPLE_PARAMS 2
 #define N_HVCOR_PARAMS 10
@@ -1312,13 +1312,14 @@ typedef struct {
     double length, k1, tilt, bore, B;
     double dx, dy, dz, fse, xkick, ykick;
     long n_kicks, synch_rad;
-    char *systematic_multipoles, *random_multipoles;
+    char *systematic_multipoles, *random_multipoles, *steering_multipoles;
     long integration_order;
     /* for internal use */
     long multipolesInitialized;
     MULTIPOLE_DATA systematicMultipoleData; 
-    MULTIPOLE_DATA randomMultipoleData;      
+    MULTIPOLE_DATA randomMultipoleData;
     MULTIPOLE_DATA totalMultipoleData;  /* generated when randomization takes place */
+    MULTIPOLE_DATA steeringMultipoleData;
     } KQUAD;
 
 /* names and storage structure for magnifier physical parameters */
@@ -2615,8 +2616,7 @@ extern void storeSASEFELAtEndInRPN(SASEFEL_OUTPUT *sasefelOutput);
 extern void SDDS_CentroidOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row, char *contents, char *command_file, char *lattice_file, char *caller);
 extern void SDDS_SigmaOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row,
                            char *command_file, char *lattice_file, char *caller);
-extern void readErrorMultipoleData(MULTIPOLE_DATA *multData,
-                               char *multFile);
+extern void readErrorMultipoleData(MULTIPOLE_DATA *multData, char *multFile, long steering);
 extern void set_up_histogram(HISTOGRAM *histogram, RUN *run);
 extern long track_through_tubend(double **part, long n_part, TUBEND *tubend,
                           double p_error, double Po, double **accepted,

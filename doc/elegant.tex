@@ -2381,6 +2381,17 @@ defined as $\frac{d\beta}{d\delta}$.
 \item {\tt U0} --- Energy loss per turn.
 \end{itemize}
 
+N.B.: the higher-order dispersion and higher-order chromaticity are
+computed using the concatenated third-order matrix.  Since (with the
+exception of alpha magnets) {\tt elegant} doesn't have matrices higher
+than second-order for individual elements, these results are probably
+not very reliable.  That is, while they are reasonably accurate in
+characterizing the concatenated system of second-order matrices, that
+is the limit of their applicability.  Users who are concerned about
+these effects should perform off-energy tracking using canonical
+elements (i.e., CSBEND, KQUAD, KSEXT, and MULT), which include energy
+dependence to all orders.
+
 \begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|track|}\end{center}

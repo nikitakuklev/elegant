@@ -567,9 +567,11 @@ VMATRIX *compute_matrix(
         if (kquad->dx || kquad->dy || kquad->dz)
             misalign_matrix(elem->matrix, kquad->dx, kquad->dy, kquad->dz, 0.0);
         readErrorMultipoleData(&(kquad->systematicMultipoleData),
-                                  kquad->systematic_multipoles);
+                                  kquad->systematic_multipoles, 0);
         readErrorMultipoleData(&(kquad->randomMultipoleData),
-                                  kquad->random_multipoles);
+                                  kquad->random_multipoles, 0);
+        readErrorMultipoleData(&(kquad->steeringMultipoleData),
+                                  kquad->steering_multipoles, 1);
         break;
       case T_KSEXT:
         ksext = (KSEXT*)elem->p_elem;
@@ -583,9 +585,9 @@ VMATRIX *compute_matrix(
         if (ksext->dx || ksext->dy || ksext->dz)
             misalign_matrix(elem->matrix, ksext->dx, ksext->dy, ksext->dz, 0.0);
         readErrorMultipoleData(&(ksext->systematicMultipoleData),
-                                  ksext->systematic_multipoles);
+                                  ksext->systematic_multipoles, 0);
         readErrorMultipoleData(&(ksext->randomMultipoleData),
-                                  ksext->random_multipoles);
+                                  ksext->random_multipoles, 0);
         break;
       case T_MAGNIFY:
         elem->matrix = magnification_matrix((MAGNIFY*)elem->p_elem);

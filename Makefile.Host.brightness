@@ -8,6 +8,9 @@
 #*************************************************************************
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.1  2003/02/20 16:45:16  shang
+# makefile for sddsbrightness
+#
 # Revision 1.11  2003/01/16 20:40:07  soliday
 # Changed the default directories for WIN32
 #
@@ -55,6 +58,7 @@ CC = $($(ANSI)_$(CMPLR))
 
 TARGETS = sddsbrightness$(EXE)
 
+EPICS_EXTENSIONS_LIB = ../../../../../epics/extensions/lib/$(HOST_ARCH)
 USR_CFLAGS = 	-I../../../../../epics/extensions/src/SDDS/include \
 		-I$(EPICS_EXTENSIONS_INCLUDE) \
 		$(ZLIB_INC) \

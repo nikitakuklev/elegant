@@ -773,6 +773,7 @@ PARAMETER kquad_param[N_KQUAD_PARAMS]={
     {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&kquad_example.synch_rad), NULL, 0.0, 0, "include classical synchrotron radiation?"},
     {"SYSTEMATIC_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&kquad_example.systematic_multipoles), NULL, 0.0, 0, "input file for systematic multipoles"},
     {"RANDOM_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&kquad_example.random_multipoles), NULL, 0.0, 0, "input file for random multipoles"},
+    {"STEERING_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&kquad_example.steering_multipoles), NULL, 0.0, 0, "input file for multipole content of steering kicks"},
     {"INTEGRATION_ORDER", "", IS_LONG, 0, (long)((char *)&kquad_example.integration_order), NULL, 0.0, 4, "integration order (2 or 4)"},
     };
 
