@@ -367,6 +367,10 @@ void free_elements(ELEMENT_LIST *elemlist)
                 (eptr->type>=0 && eptr->type<N_TYPES)?entity_name[eptr->type]:"NULL");
         fflush(stdout);
 #endif
+        if (eptr->type==T_MATR) {
+          eptr = eptr->succ;
+          continue;
+        }
         if (eptr->type==T_WATCH) {
             WATCH *wptr;
             if ((wptr = (WATCH*)eptr->p_elem)) {
