@@ -4,6 +4,11 @@ exec oagwish "$0" "$@"
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.2  2004/04/06 22:04:19  borland
+# Uses the DTouschek.sdds file from /usr/local/oag/apps/configData/elegant.
+# No longer has a default lattice in the oagData area.
+# Reorganized some of the tab widgets and entry items to be more logical.
+#
 # Revision 1.1  2004/04/01 16:28:46  borland
 # Moved from tcltkapp/oagapp area.
 #
@@ -128,7 +133,7 @@ set auto_path [linsert $auto_path 0  /usr/local/oag/apps/lib/$env(HOST_ARCH)]
 set auto_path [linsert $auto_path 0 /usr/local/oag/lib_patch/$env(HOST_ARCH)]
 APSDebugPath
 
-set CVSRevisionAuthor "\$Revision: 1.2 $ \$Author: borland $"
+set CVSRevisionAuthor "\$Revision: 1.3 $ \$Author: borland $"
 
 APSApplication . -name beamLifetimeCalc -version $CVSRevisionAuthor -overview \
   "Calculates the gas scattering lifetime due to single Coulomb scattering and
@@ -267,7 +272,8 @@ APSFrame .lattice -parent $widget -label ""
 set w $widget.lattice.frame
 set superperiods 40
 
-APSLabeledEntry .lattice -parent $w -label "Lattice file:" -textVariable latticeFile -width 80 \
+APSLabeledEntry .lattice -parent $w -label "Lattice file:" -textVariable latticeFile -width 75 \
+    -fileSelectButton 1 -fileSelectPattern "*.twi" \
   -contextHelp "Give the name of an elegant twiss output file.  Required for Touschek lifetime calculations."
 
 APSLabeledEntry .superperiods -parent $w -label "Superperiods:" -textVariable superperiods -width 10 \
@@ -361,7 +367,7 @@ APSCheckButtonFrame .merge -parent $w -label ""  -orientation horizontal -contex
   "Select options for variation.  Merge means merge the variation input file into the output file when done." \
   -variableList {mergeAfterVariation} -buttonList {Merge} 
 
-set widget [lindex $widgetList 3] 
+set widget [lindex $widgetList 4] 
 APSFrame .output -parent $widget -label "Output" \
   -contextHelp "Controls output of computations to an SDDS file."
 set w $widget.output.frame
