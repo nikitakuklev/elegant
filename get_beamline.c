@@ -32,189 +32,203 @@ void lfree(void *ptr)
     }
 
 #define MAX_LINE_LENGTH 16384 
-
+#define MAX_FILE_NESTING 10
 LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, long echo)
 {
-    long type, i, i_elem;
-    long occurence;
-    static ELEMENT_LIST *eptr, *eptr1;
-    static LINE_LIST *lptr;
-    static long n_elems, n_lines;
-    FILE *fp_mad;
-    char s[MAX_LINE_LENGTH], *cfgets(), *ptr, t[MAX_LINE_LENGTH];
+  long type, i, i_elem;
+  long occurence, iMad;
+  static ELEMENT_LIST *eptr, *eptr1;
+  static LINE_LIST *lptr;
+  static long n_elems, n_lines;
+  FILE *fp_mad[MAX_FILE_NESTING];
+  char s[MAX_LINE_LENGTH], *cfgets(), *ptr, t[MAX_LINE_LENGTH];
 
-    log_entry("get_beamline");
+  log_entry("get_beamline");
 
-    if (madfile) {
+  if (madfile) {
 #ifdef DEBUG
-        fprintf(stdout, "reading from file %s\n", madfile);
-        fflush(stdout);
+    fprintf(stdout, "reading from file %s\n", madfile);
+    fflush(stdout);
 #endif
-        fp_mad = fopen_e(madfile, "r", 0);
+    fp_mad[0] = fopen_e(madfile, "r", 0);
+    iMad = 0;
     
-        elem = tmalloc(sizeof(*elem));
-        line = tmalloc(sizeof(*line));
+    elem = tmalloc(sizeof(*elem));
+    line = tmalloc(sizeof(*line));
     
-        elem->pred = elem->succ = NULL;
-        elem->name = NULL;
-        eptr      = elem;
-        n_elems   = 0;        /* number of physical elements in linked-list */
-        line->pred = line->succ = NULL;
-        line->name = NULL;
-        lptr      = line;        
-        n_lines   = 0;        /* number of line definitions in linked-list  */
+    elem->pred = elem->succ = NULL;
+    elem->name = NULL;
+    eptr      = elem;
+    n_elems   = 0;        /* number of physical elements in linked-list */
+    line->pred = line->succ = NULL;
+    line->name = NULL;
+    lptr      = line;        
+    n_lines   = 0;        /* number of line definitions in linked-list  */
     
-        /* assemble linked-list of simple elements and a separate linked-list
-           of fully expanded line definitions */
-        while (cfgets(s, MAX_LINE_LENGTH, fp_mad)) {
+    /* assemble linked-list of simple elements and a separate linked-list
+       of fully expanded line definitions */
+    while (iMad>=0) {
+      while (cfgets(s, MAX_LINE_LENGTH, fp_mad[iMad])) {
+        if (echo) {
+          fprintf(stdout, "%s\n", s);
+          fflush(stdout);
+        }
+        if (s[0]=='#' && strncmp(s, "#INCLUDE:", strlen("#INCLUDE:"))==0) {
+          if (++iMad==MAX_FILE_NESTING) 
+            bomb("files nested too deeply", NULL);
+          ptr = get_token(s+strlen("#INCLUDE:"));
           if (echo) {
-            fprintf(stdout, "%s\n", s);
-            fflush(stdout);
+            fprintf(stdout, "reading file %s\n", ptr);
           }
-            strcpy(t, s);
-            if ((type = tell_type(s, elem))==T_NODEF) {
-                if (!is_blank(s))
-                    fprintf(stdout, "warning: no recognized statement on line: %s\n", t);
-                    fflush(stdout);
-                continue;
-                }
-#ifdef DEBUG
-            fprintf(stdout, "type code = %ld\n", type);
-            fflush(stdout);
-#endif
-            if (type==T_RENAME)
-                process_rename_request(s, entity_name, N_TYPES);
-            else if (type==T_TITLE) {
-                fgets(s, MAX_LINE_LENGTH, fp_mad);
-                compressString(s, " ");
-                if (s[i=strlen(s)-1]==' ')
-                    s[i] = 0;
-                }    
-            else if (type==T_USE || type==T_RETURN) 
-                break;
-            else if (type==T_LINE) {
-#ifdef DEBUG
-                fprintf(stdout, "current element list is:\n");
-                fflush(stdout);
-                print_elem_list(stdout, elem);
-#endif
-                fill_line(line, n_lines, elem, n_elems, s);
-                check_duplic_line(line, lptr, n_lines+1);
-#ifdef DEBUG 
-                fprintf(stdout, "\n****** expanded line %s:\n", lptr->name);
-                fflush(stdout);
-                print_line(stdout, lptr); 
-#endif
-                extend_line_list(&lptr);
-                n_lines++;
-                }
-            else {
-                if (type==T_ECOPY) {
-#ifdef DEBUG
-                    fprintf(stdout, "copying existing element\n");
-                    fflush(stdout);
-#endif
-                    strcpy(s, t);
-                    copy_named_element(eptr, s, elem);
-                    }
-                else {
-#ifdef DEBUG
-                    fprintf(stdout, "creating new element\n");
-                    fflush(stdout);
-#endif
-                    fill_elem(eptr, s, type, fp_mad); 
-                    }
-                check_duplic_elem(&elem, &eptr, n_elems);
-#ifdef DEBUG
-                print_elem(stdout, elem);
-#endif
-                extend_elem_list(&eptr);
-                n_elems++;
-                }
-            }
-        if (n_elems==0 || n_lines==0) {
-            fprintf(stdout, "Insufficient (recognizable) data in file.\n");
-            fflush(stdout);
-            exit(1);
-            }
-        /* since the lists were being extended before it was known that
-           the was another object to put in them, must eliminate references
-           to the most recently added nodes. 
-         */
-        (eptr->pred)->succ = NULL;
-        (lptr->pred)->succ = NULL;
-        eptr = eptr->pred;
-        lptr = lptr->pred;
-        fclose(fp_mad);
+          fp_mad[iMad] = fopen_e(ptr, "r", 0);
+          continue;
         }
-    else {
-        s[0] = 0;
-        type = T_NODEF;
+        strcpy(t, s);
+        if ((type = tell_type(s, elem))==T_NODEF) {
+          if (!is_blank(s))
+            fprintf(stdout, "warning: no recognized statement on line: %s\n", t);
+          fflush(stdout);
+          continue;
         }
-    
-
-    if (type!=T_USE && use_beamline==NULL) {
-        if (n_lines==0)
-            bomb("no beam-line defined\n", NULL);
-        fprintf(stdout, "no USE statement--will use line %s\n", lptr->name);
+#ifdef DEBUG
+        fprintf(stdout, "type code = %ld\n", type);
         fflush(stdout);
+#endif
+        if (type==T_RENAME)
+          process_rename_request(s, entity_name, N_TYPES);
+        else if (type==T_TITLE) {
+          fgets(s, MAX_LINE_LENGTH, fp_mad[iMad]);
+          compressString(s, " ");
+          if (s[i=strlen(s)-1]==' ')
+            s[i] = 0;
+        }    
+        else if (type==T_USE || type==T_RETURN) 
+          break;
+        else if (type==T_LINE) {
+#ifdef DEBUG
+          fprintf(stdout, "current element list is:\n");
+          fflush(stdout);
+          print_elem_list(stdout, elem);
+#endif
+          fill_line(line, n_lines, elem, n_elems, s);
+          check_duplic_line(line, lptr, n_lines+1);
+#ifdef DEBUG 
+          fprintf(stdout, "\n****** expanded line %s:\n", lptr->name);
+          fflush(stdout);
+          print_line(stdout, lptr); 
+#endif
+          extend_line_list(&lptr);
+          n_lines++;
         }
-    else {
-        if (!use_beamline) {
-            if ((ptr=get_token(s))==NULL) 
-                bomb("no line named in USE statement", NULL);
-            }
-        else
-            ptr = str_toupper(use_beamline);
-        lptr = line;
-        while (lptr) {
-            if (strcmp(lptr->name, ptr)==0) 
-                break;
-            lptr = lptr->succ;
-            }
-        if (lptr==NULL) {
-            fprintf(stdout, "no definition of beam-line %s\n", ptr);
+        else {
+          if (type==T_ECOPY) {
+#ifdef DEBUG
+            fprintf(stdout, "copying existing element\n");
             fflush(stdout);
-            exit(1);
-            }
+#endif
+            strcpy(s, t);
+            copy_named_element(eptr, s, elem);
+          }
+          else {
+#ifdef DEBUG
+            fprintf(stdout, "creating new element\n");
+            fflush(stdout);
+#endif
+            fill_elem(eptr, s, type, fp_mad[iMad]); 
+          }
+          check_duplic_elem(&elem, &eptr, n_elems);
+#ifdef DEBUG
+          print_elem(stdout, elem);
+#endif
+          extend_elem_list(&eptr);
+          n_elems++;
         }
-
-    /* these really aren't necessary, since I clear memory upon allocation */
-    lptr->elem_recirc = lptr->elem_twiss = lptr->elast = NULL;
-    lptr->twiss0 = NULL;
-    lptr->matrix = NULL;
-
-    /* go through and give occurence numbers to each element */
-    eptr = &(lptr->elem);
-    while (eptr) {
-        eptr->occurence = 0;
-        lptr->elast = eptr;
-        eptr = eptr->succ;
       }
-
-    eptr = &(lptr->elem);
-    lptr->flags = 0;
-    while (eptr) {
-        eptr->Pref_input = eptr->Pref_output = p_central;
-        if (eptr->occurence==0) {
-            /* this is the first occurence of this element--go through and find any others */
-            eptr->occurence = occurence = 1;
-            eptr1 = eptr->succ;
-            while (eptr1) {
-                if (strcmp(eptr->name, eptr1->name)==0)
-                    eptr1->occurence = ++occurence;
-                eptr1 = eptr1->succ;
-                }
-            }
-        if (eptr->type==T_SREFFECTS)
-            lptr->flags |= BEAMLINE_TWISS_WANTED;
-        eptr = eptr->succ;
-        }
-
-    compute_end_positions(lptr);
-    
-    return(lptr);
+      fclose(fp_mad[iMad]);
+      iMad--;
+    }
+    if (n_elems==0 || n_lines==0) {
+      fprintf(stdout, "Insufficient (recognizable) data in file.\n");
+      fflush(stdout);
+      exit(1);
+    }
+    /* since the lists were being extended before it was known that
+       the was another object to put in them, must eliminate references
+       to the most recently added nodes. 
+       */
+    (eptr->pred)->succ = NULL;
+    (lptr->pred)->succ = NULL;
+    eptr = eptr->pred;
+    lptr = lptr->pred;
   }
+  else {
+    s[0] = 0;
+    type = T_NODEF;
+  }
+  
+
+  if (type!=T_USE && use_beamline==NULL) {
+    if (n_lines==0)
+      bomb("no beam-line defined\n", NULL);
+    fprintf(stdout, "no USE statement--will use line %s\n", lptr->name);
+    fflush(stdout);
+  }
+  else {
+    if (!use_beamline) {
+      if ((ptr=get_token(s))==NULL) 
+        bomb("no line named in USE statement", NULL);
+    }
+    else
+      ptr = str_toupper(use_beamline);
+    lptr = line;
+    while (lptr) {
+      if (strcmp(lptr->name, ptr)==0) 
+        break;
+      lptr = lptr->succ;
+    }
+    if (lptr==NULL) {
+      fprintf(stdout, "no definition of beam-line %s\n", ptr);
+      fflush(stdout);
+      exit(1);
+    }
+  }
+
+  /* these really aren't necessary, since I clear memory upon allocation */
+  lptr->elem_recirc = lptr->elem_twiss = lptr->elast = NULL;
+  lptr->twiss0 = NULL;
+  lptr->matrix = NULL;
+
+  /* go through and give occurence numbers to each element */
+  eptr = &(lptr->elem);
+  while (eptr) {
+    eptr->occurence = 0;
+    lptr->elast = eptr;
+    eptr = eptr->succ;
+  }
+
+  eptr = &(lptr->elem);
+  lptr->flags = 0;
+  while (eptr) {
+    eptr->Pref_input = eptr->Pref_output = p_central;
+    if (eptr->occurence==0) {
+      /* this is the first occurence of this element--go through and find any others */
+      eptr->occurence = occurence = 1;
+      eptr1 = eptr->succ;
+      while (eptr1) {
+        if (strcmp(eptr->name, eptr1->name)==0)
+          eptr1->occurence = ++occurence;
+        eptr1 = eptr1->succ;
+      }
+    }
+    if (eptr->type==T_SREFFECTS)
+      lptr->flags |= BEAMLINE_TWISS_WANTED;
+    eptr = eptr->succ;
+  }
+
+  compute_end_positions(lptr);
+  
+  return(lptr);
+}
 
 double compute_end_positions(LINE_LIST *lptr) 
 {
