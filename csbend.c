@@ -766,7 +766,7 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double s, long n, double rho0
 }
 
 typedef struct {
-  long bins, new;
+  long bins, valid;
   double dctBin, s0, ds0, zLast, z0;
   double thetaRad;
   double S11, S12, S22;
@@ -808,6 +808,8 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   double macroParticleCharge, CSRConstant;
   long iBin, iBinBehind;
   double wavelength, criticalWavelength;
+  
+  csrWake.valid = 0;
   
   if (!csbend)
     bomb("null CSBEND pointer (track_through_csbend)", NULL);
@@ -1137,9 +1139,104 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
         CT += Qf[4]/beta0[i_part];  
       }
     }
-    
-    /* compute CSR potential function */
-    /* - first make a density histogram */
+
+    if (n_part>1) {
+      /* compute CSR potential function */
+      /* - first make a density histogram */
+      ctLower = ctUpper = dct = 0;
+      if ((nBinned = 
+           binParticleCoordinate(&ctHist, &maxBins,
+                                 &ctLower, &ctUpper, &dct, &nBins, 
+                                 1.2, part, n_part, 4))!=n_part) {
+        fprintf(stdout, "Only %ld of %ld particles binned for CSR\n", nBinned, n_part);
+        fflush(stdout);
+      }
+      
+      /* - smooth the histogram, normalize to get linear density, and 
+         copy in preparation for taking derivative
+         */
+      SavitzyGolaySmooth(ctHist, nBins, csbend->SGOrder, csbend->SGHalfWidth, csbend->SGHalfWidth,  0);
+      for (iBin=0; iBin<nBins; iBin++) {
+        denom[iBin] = pow(dct*iBin, 1./3.);
+        ctHistDeriv[iBin] = (ctHist[iBin] /= dct);
+      }
+      /* - compute derivative with smoothing.  The deriv is w.r.t. index number and
+       * I won't scale it now as it will just fall out in the integral 
+       */
+      SavitzyGolaySmooth(ctHistDeriv, nBins, csbend->SGDerivOrder, 
+                         csbend->SGDerivHalfWidth, csbend->SGDerivHalfWidth, 1);
+
+      phiBend += angle/csbend->n_kicks;
+      slippageLength = rho0*ipow(phiBend, 3)/24.0;
+      slippageLength13 = pow(slippageLength, 1./3.);
+      diSlippage = slippageLength/dct;
+      diSlippage4 = 4*slippageLength/dct;
+      for (iBin=0; iBin<nBins; iBin++) {
+        T1[iBin] = T2[iBin] = 0;
+        if (CSRConstant) {
+          if (csbend->steadyState) {
+            for (iBinBehind=iBin+1; iBinBehind<nBins; iBinBehind++)
+              T1[iBin] += ctHistDeriv[iBinBehind]/denom[iBinBehind-iBin];
+          } else {
+            for (iBinBehind=iBin+1; iBinBehind<=(iBin+diSlippage) && iBinBehind<nBins; iBinBehind++)
+              T1[iBin] += ctHistDeriv[iBinBehind]/denom[iBinBehind-iBin];
+            if ((iBin+diSlippage)<nBins)
+              T2[iBin] += ctHist[iBin+diSlippage];
+            if ((iBin+diSlippage4)<nBins)
+              T2[iBin] -= ctHist[iBin+diSlippage4];
+          }
+          /* there is no negative sign here because my derivative is w.r.t. -s
+             in notation of Saldin, et. al. */
+          T1[iBin] *= CSRConstant*csbend->length/csbend->n_kicks; 
+          /* keep the negative sign on this term, which has no derivative */
+          T2[iBin] *= -CSRConstant*csbend->length/csbend->n_kicks/slippageLength13;
+        }
+        dGamma[iBin] = T1[iBin]+T2[iBin];
+      }
+      
+      for (i_part=0; i_part<n_part; i_part++) {
+        coord = part[i_part];
+        if (!particleLost[i_part]) {
+          /* apply CSR kick */
+          iBin = (CT-ctLower)/dct;
+          if (iBin>=0 && iBin<nBins)
+            DP += dGamma[iBin]/Po;
+        }
+      }
+
+      if (csbend->fileActive && kick%csbend->outputInterval==0) {
+        /* scale the linear density and its derivative to get C/s and C/s^2 
+         * ctHist is already normalized to dct, but ctHistDeriv requires an additional factor
+         */
+        for (iBin=0; iBin<nBins; iBin++) {
+          ctHist[iBin] *= macroParticleCharge*c_mks;
+          ctHistDeriv[iBin] *= macroParticleCharge*sqr(c_mks)/dct;
+        }
+        if (!SDDS_StartPage(&csbend->SDDSout, nBins) ||
+            !SDDS_SetColumn(&csbend->SDDSout, SDDS_SET_BY_NAME, dGamma, nBins, "DeltaGamma") ||
+            !SDDS_SetColumn(&csbend->SDDSout, SDDS_SET_BY_NAME, T1, nBins, "DeltaGammaT1") ||
+            !SDDS_SetColumn(&csbend->SDDSout, SDDS_SET_BY_NAME, T2, nBins, "DeltaGammaT2") ||
+            !SDDS_SetColumn(&csbend->SDDSout, SDDS_SET_BY_NAME, ctHist, nBins, "LinearDensity") ||
+            !SDDS_SetColumn(&csbend->SDDSout, SDDS_SET_BY_NAME, ctHistDeriv, nBins, "LinearDensityDeriv") ||
+            !SDDS_SetParameters(&csbend->SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
+                                "Pass", -1, "Kick", kick, 
+                                "pCentral", Po, "Angle", phiBend, "SlippageLength", slippageLength,
+                                "TotalBunchLength", ctUpper-ctLower,
+                                "BinSize", dct, NULL))
+          SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+        /* use T1 array to output s */
+        for (iBin=0; iBin<nBins; iBin++)
+          T1[iBin] = ctLower-(ctLower+ctUpper)/2.0+dct*(iBin+0.5);
+        if (!SDDS_SetColumn(&csbend->SDDSout, SDDS_SET_BY_NAME, T1, nBins, "s") ||
+            !SDDS_WritePage(&csbend->SDDSout))
+          SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+      }
+    }
+  }
+  
+  if (n_part>1) {
+    /* prepare soem data for use by CSRDRIFT element */
+    csrWake.dctBin = dct;
     ctLower = ctUpper = dct = 0;
     if ((nBinned = 
          binParticleCoordinate(&ctHist, &maxBins,
@@ -1148,99 +1245,8 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
       fprintf(stdout, "Only %ld of %ld particles binned for CSR\n", nBinned, n_part);
       fflush(stdout);
     }
-    
-    /* - smooth the histogram, normalize to get linear density, and 
-       copy in preparation for taking derivative
-       */
-    SavitzyGolaySmooth(ctHist, nBins, csbend->SGOrder, csbend->SGHalfWidth, csbend->SGHalfWidth,  0);
-    for (iBin=0; iBin<nBins; iBin++) {
-      denom[iBin] = pow(dct*iBin, 1./3.);
-      ctHistDeriv[iBin] = (ctHist[iBin] /= dct);
-    }
-    /* - compute derivative with smoothing.  The deriv is w.r.t. index number and
-     * I won't scale it now as it will just fall out in the integral 
-     */
-    SavitzyGolaySmooth(ctHistDeriv, nBins, csbend->SGDerivOrder, 
-                       csbend->SGDerivHalfWidth, csbend->SGDerivHalfWidth, 1);
-
-    phiBend += angle/csbend->n_kicks;
-    slippageLength = rho0*ipow(phiBend, 3)/24.0;
-    slippageLength13 = pow(slippageLength, 1./3.);
-    diSlippage = slippageLength/dct;
-    diSlippage4 = 4*slippageLength/dct;
-    for (iBin=0; iBin<nBins; iBin++) {
-      T1[iBin] = T2[iBin] = 0;
-      if (CSRConstant) {
-        if (csbend->steadyState) {
-          for (iBinBehind=iBin+1; iBinBehind<nBins; iBinBehind++)
-            T1[iBin] += ctHistDeriv[iBinBehind]/denom[iBinBehind-iBin];
-        } else {
-          for (iBinBehind=iBin+1; iBinBehind<=(iBin+diSlippage) && iBinBehind<nBins; iBinBehind++)
-            T1[iBin] += ctHistDeriv[iBinBehind]/denom[iBinBehind-iBin];
-          if ((iBin+diSlippage)<nBins)
-            T2[iBin] += ctHist[iBin+diSlippage];
-          if ((iBin+diSlippage4)<nBins)
-            T2[iBin] -= ctHist[iBin+diSlippage4];
-        }
-        /* there is no negative sign here because my derivative is w.r.t. -s
-           in notation of Saldin, et. al. */
-        T1[iBin] *= CSRConstant*csbend->length/csbend->n_kicks; 
-        /* keep the negative sign on this term, which has no derivative */
-        T2[iBin] *= -CSRConstant*csbend->length/csbend->n_kicks/slippageLength13;
-      }
-      dGamma[iBin] = T1[iBin]+T2[iBin];
-    }
-    
-    for (i_part=0; i_part<n_part; i_part++) {
-      coord = part[i_part];
-      if (!particleLost[i_part]) {
-        /* apply CSR kick */
-        iBin = (CT-ctLower)/dct;
-        if (iBin>=0 && iBin<nBins)
-          DP += dGamma[iBin]/Po;
-      }
-    }
-
-    if (csbend->fileActive && kick%csbend->outputInterval==0) {
-      /* scale the linear density and its derivative to get C/s and C/s^2 
-       * ctHist is already normalized to dct, but ctHistDeriv requires an additional factor
-       */
-      for (iBin=0; iBin<nBins; iBin++) {
-        ctHist[iBin] *= macroParticleCharge*c_mks;
-        ctHistDeriv[iBin] *= macroParticleCharge*sqr(c_mks)/dct;
-      }
-      if (!SDDS_StartPage(&csbend->SDDSout, nBins) ||
-          !SDDS_SetColumn(&csbend->SDDSout, SDDS_SET_BY_NAME, dGamma, nBins, "DeltaGamma") ||
-          !SDDS_SetColumn(&csbend->SDDSout, SDDS_SET_BY_NAME, T1, nBins, "DeltaGammaT1") ||
-          !SDDS_SetColumn(&csbend->SDDSout, SDDS_SET_BY_NAME, T2, nBins, "DeltaGammaT2") ||
-          !SDDS_SetColumn(&csbend->SDDSout, SDDS_SET_BY_NAME, ctHist, nBins, "LinearDensity") ||
-          !SDDS_SetColumn(&csbend->SDDSout, SDDS_SET_BY_NAME, ctHistDeriv, nBins, "LinearDensityDeriv") ||
-          !SDDS_SetParameters(&csbend->SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
-                              "Pass", -1, "Kick", kick, 
-                              "pCentral", Po, "Angle", phiBend, "SlippageLength", slippageLength,
-                              "TotalBunchLength", ctUpper-ctLower,
-                              "BinSize", dct, NULL))
-        SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-      /* use T1 array to output s */
-      for (iBin=0; iBin<nBins; iBin++)
-        T1[iBin] = ctLower-(ctLower+ctUpper)/2.0+dct*(iBin+0.5);
-      if (!SDDS_SetColumn(&csbend->SDDSout, SDDS_SET_BY_NAME, T1, nBins, "s") ||
-          !SDDS_WritePage(&csbend->SDDSout))
-        SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-    }
+    csrWake.s0 = ctLower;
   }
-  
-  /* prepare soem data for use by CSRDRIFT element */
-  csrWake.dctBin = dct;
-  ctLower = ctUpper = dct = 0;
-  if ((nBinned = 
-       binParticleCoordinate(&ctHist, &maxBins,
-                             &ctLower, &ctUpper, &dct, &nBins, 
-                             1.2, part, n_part, 4))!=n_part) {
-    fprintf(stdout, "Only %ld of %ld particles binned for CSR\n", nBinned, n_part);
-    fflush(stdout);
-  }
-  csrWake.s0 = ctLower;
   
   /* remove lost particles, handle edge effects, and transform coordinates */    
   i_top = n_part-1;
@@ -1315,15 +1321,18 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     coord[4] += dzf*sqrt(1+ sqr(coord[1]) + sqr(coord[3]));
   }
 
-  /* prepare more data for CSRDRIFT */
-  rms_emittance(part, 0, 1, i_top+1, &csrWake.S11, &csrWake.S12, &csrWake.S22);
+  if (n_part>1) {
+    /* prepare more data for CSRDRIFT */
+    rms_emittance(part, 0, 1, i_top+1, &csrWake.S11, &csrWake.S12, &csrWake.S22);
 
-  /* compute angular spread of radiation, using Wiedemann's formula */
-  /* wavelength ~ (sigma z)/2 */
-  wavelength = beam_width(0.6826, part, i_top+1, 4)/2;
-  criticalWavelength = 4.19/ipow(Po, 3)*rho_actual;
-  csrWake.thetaRad = 0.5463e-3/(Po*0.511e-3)/pow(criticalWavelength/wavelength, 1./3.);
-
+    /* compute angular spread of radiation, using Wiedemann's formula */
+    /* wavelength ~ (sigma z)/2 */
+    wavelength = beam_width(0.6826, part, i_top+1, 4)/2;
+    criticalWavelength = 4.19/ipow(Po, 3)*rho_actual;
+    csrWake.thetaRad = 0.5463e-3/(Po*0.511e-3)/pow(criticalWavelength/wavelength, 1./3.);
+    csrWake.valid = 1;
+  }
+  
 #ifdef DEBUG
   fprintf(stdout, "wavelength = %le, critWL = %le, thetaRad = %le\n",
           wavelength, criticalWavelength, csrWake.thetaRad);
@@ -1392,6 +1401,11 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
   double ctmin, ctmax, spreadFactor;
   double zTravel;
 
+  if (np<=1 || !csrWake.valid) {
+    drift_beam(part, np, csrDrift->length, 2);
+    return np;
+  }
+  
   if (csrDrift->dz>0) {
     if ((nKicks = csrDrift->length/csrDrift->dz)<1)
       nKicks = 1;
@@ -1410,7 +1424,6 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
   ctmin = DBL_MAX;
   ctmax = -DBL_MAX;
 
-  
   zTravel = zStart-csrWake.z0;  /* total distance traveled by radiation to reach this point */
   for (iKick=0; iKick<nKicks; iKick++) {
     /* first drift is dz=dz0/2, others are dz0 */
