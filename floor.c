@@ -30,16 +30,19 @@ static SDDS_DEFINITION column_definition[N_COLUMNS] = {
     {"ElementType", "&column name=ElementType, type=string, description=\"Element-type name\", format_string=%10s &end"},
     } ;
 
-void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
-{
-    double *data, length;
-    ELEMENT_LIST *elem, *last_elem;
-    double dX, dZ, dtheta, rho, angle;
-    long is_bend, is_magnet, n_points, row_index;
-    BEND *bend; KSBEND *ksbend; CSBEND *csbend; MALIGN *malign; CSRCSBEND *csrbend;
-    char label[200];
 #include "floor.h"
 
+void advanceFloorCoordinates(double *X, double *Z, double *theta,
+                             ELEMENT_LIST *elem, ELEMENT_LIST *last_elem, 
+                             SDDS_DATASET *SDDS_floor, long row);
+
+
+void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
+{
+    ELEMENT_LIST *elem, *last_elem;
+    long n_points, row_index;
+    double X, Z, theta;
+    
     log_entry("output_floor_coordinates");
 
     /* process namelist input */
@@ -47,7 +50,7 @@ void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamli
     set_print_namelist_flags(0);
     process_namelist(&floor_coordinates, nltext);
     print_namelist(stdout, &floor_coordinates);
-
+    
     if (magnet_centers && vertices_only)
         bomb("you can simultaneously request magnet centers and vertices only output", NULL);
     if (filename)
@@ -97,118 +100,14 @@ void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamli
         }
         
     elem = &(beamline->elem);
-    data = tmalloc(sizeof(*data)*4);
+    X = X0;
+    Z = Z0;
+    theta = theta0;
     while (elem) {
-        dX = dZ = dtheta = length = 0;
-        is_bend = is_magnet = 0;
-        switch (elem->type) {
-          case T_RBEN: case T_SBEN:
-            is_bend = 1;
-            bend = (BEND*)elem->p_elem;
-            dtheta = -(angle=bend->angle);
-            rho = (length=bend->length)/bend->angle;
-            break;
-          case T_KSBEND:
-            is_bend = 1;
-            ksbend = (KSBEND*)elem->p_elem;
-            dtheta = -(angle=ksbend->angle);
-            rho = (length=ksbend->length)/ksbend->angle;
-            break;
-          case T_CSBEND:
-            is_bend = 1;
-            csbend = (CSBEND*)elem->p_elem;
-            dtheta = -(angle=csbend->angle);
-            rho = (length=csbend->length)/csbend->angle;
-            break;
-          case T_CSRCSBEND:
-            is_bend = 1;
-            csrbend = (CSRCSBEND*)elem->p_elem;
-            dtheta = -(angle=csrbend->angle);
-            rho = (length=csrbend->length)/csrbend->angle;
-            break;
-          case T_MALIGN:
-            malign = (MALIGN*)elem->p_elem;
-            dX = malign->dx;
-            dZ = malign->dz;
-            dtheta = atan(malign->dxp);
-            break;
-          default:
-            if (entity_description[elem->type].flags&HAS_LENGTH)
-                length= dZ = *((double*)(elem->p_elem));
-            if (entity_description[elem->type].flags&IS_MAGNET)
-                is_magnet = 1;
-            break;
-            }
-        if (is_bend) {
-            if (include_vertices || vertices_only || magnet_centers) {
-                /* output data for the vertex point */
-                if (angle && !isnan(rho))
-                  data[0] += (dZ=rho*tan(angle/2));
-                else
-                  data[0] += (dZ=length/2);
-                dX = 0;
-                rotate_xy(&dX, &dZ, theta0);
-                data[1] = X0+dX;
-                data[2] = Z0+dZ;
-                data[3] = theta0;
-                sprintf(label, "%s-VP", elem->name);
-                if (!SDDS_SetRowValues(&SDDS_floor, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row_index++,
-                                       IC_S, data[0], IC_X, data[1], IC_Z, data[2], IC_THETA, data[3],
-                                       IC_ELEMENT, label, IC_OCCURENCE, elem->occurence, IC_TYPE, "VERTEX-POINT", -1)) {
-                    SDDS_SetError("Unable to set SDDS row (output_floor_coordinates)");
-                    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-                    }
-                }
-            /* calculate offsets for end of bend magnet */
-            if (angle && !isnan(rho)) {
-              dX = rho*(cos(angle)-1);
-              dZ = rho*sin(angle);
-            } else {
-              dX = 0;
-              dZ = length;
-            }              
-          }
-        if (is_magnet && magnet_centers) {
-            dX /= 2;
-            dZ /= 2;
-            sprintf(label, "%s-C", elem->name);
-            }
-        else
-            strcpy(label, elem->name);
-
-        rotate_xy(&dX, &dZ, theta0);
-        theta0 += dtheta;
-        while (theta0>PIx2)
-            theta0 -= PIx2;
-        while (theta0<-PIx2)
-            theta0 += PIx2;
-        X0 += dX;
-        Z0 += dZ;
-
-        if (!vertices_only || (!last_elem || elem==last_elem)) {
-            if (!is_bend && magnet_centers)
-                data[0] = elem->end_pos - length/2;
-            else
-                data[0] = elem->end_pos;
-            data[1] = X0;
-            data[2] = Z0;
-            data[3] = theta0;
-            if (!SDDS_SetRowValues(&SDDS_floor, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row_index++,
-                                   IC_S, data[0], IC_X, data[1], IC_Z, data[2], IC_THETA, data[3],
-                                   IC_ELEMENT, label, IC_OCCURENCE, elem->occurence, IC_TYPE, 
-                                   entity_name[elem->type], -1)) {
-                SDDS_SetError("Unable to set SDDS row (output_floor_coordinates)");
-                SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-                }
-            }
-
-        if (is_magnet && magnet_centers) {
-            X0 += dX;
-            Z0 += dZ; 
-            }
-
-        elem = elem->succ;
-        }
+      advanceFloorCoordinates(&X, &Z, &theta, elem, last_elem, &SDDS_floor, row_index);
+      row_index++;
+      elem = elem->succ;
+    }
     if (!SDDS_WriteTable(&SDDS_floor)) {
         SDDS_SetError("Unable to write floor coordinate data (output_floor_coordinates)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -220,86 +119,143 @@ void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamli
     log_exit("output_floor_coordinates");
     }
 
-
-void final_floor_coordinates(LINE_LIST *beamline, double *X, double *Z, double *Theta)
+void advanceFloorCoordinates(double *X, double *Z, double *theta,
+                             ELEMENT_LIST *elem, ELEMENT_LIST *last_elem, 
+                             SDDS_DATASET *SDDS_floor, long row_index)
 {
-  double *data, length;
-  ELEMENT_LIST *elem, *last_elem;
+  double data[4], length;
   double dX, dZ, dtheta, rho, angle;
-  double X0, Z0, theta0;
-  long is_bend, is_magnet;
-  BEND *bend; KSBEND *ksbend; CSBEND *csbend; MALIGN *malign;
-  CSRCSBEND *csrbend;
+  long is_bend, is_magnet, n_points;
+  BEND *bend; KSBEND *ksbend; CSBEND *csbend; MALIGN *malign; CSRCSBEND *csrbend;
+  char label[200];
 
-  last_elem = NULL;
-  elem = &(beamline->elem);
-  X0 = Z0 = theta0 = 0;
-  while (elem) {
-    dX = dZ = dtheta = length = 0;
-    is_bend = is_magnet = 0;
-    switch (elem->type) {
-    case T_RBEN: case T_SBEN:
-      is_bend = 1;
-      bend = (BEND*)elem->p_elem;
-      dtheta = -(angle=bend->angle);
-      rho = (length=bend->length)/bend->angle;
-      break;
-    case T_KSBEND:
-      is_bend = 1;
-      ksbend = (KSBEND*)elem->p_elem;
-      dtheta = -(angle=ksbend->angle);
-      rho = (length=ksbend->length)/ksbend->angle;
-      break;
-    case T_CSBEND:
-      is_bend = 1;
-      csbend = (CSBEND*)elem->p_elem;
-      dtheta = -(angle=csbend->angle);
-      rho = (length=csbend->length)/csbend->angle;
-      break;
-    case T_CSRCSBEND:
-      is_bend = 1;
-      csrbend = (CSRCSBEND*)elem->p_elem;
-      dtheta = -(angle=csrbend->angle);
-      rho = (length=csrbend->length)/csrbend->angle;
-      break;
-    case T_MALIGN:
-      malign = (MALIGN*)elem->p_elem;
-      dX = malign->dx;
-      dZ = malign->dz;
-      dtheta = atan(malign->dxp);
-      break;
-    default:
-      if (entity_description[elem->type].flags&HAS_LENGTH)
-        length= dZ = *((double*)(elem->p_elem));
-      if (entity_description[elem->type].flags&IS_MAGNET)
-        is_magnet = 1;
-      break;
-    }
-    if (is_bend) {
-      /* calculate offsets for end of bend magnet */
-      if (angle && !isnan(rho)) {
-        dX = rho*(cos(angle)-1);
-        dZ = rho*sin(angle);
-      } else {
-        dX = 0;
-        dZ = length;
+  dX = dZ = dtheta = length = 0;
+  is_bend = is_magnet = 0;
+  switch (elem->type) {
+  case T_RBEN: case T_SBEN:
+    is_bend = 1;
+    bend = (BEND*)elem->p_elem;
+    dtheta = -(angle=bend->angle);
+    rho = (length=bend->length)/bend->angle;
+    break;
+  case T_KSBEND:
+    is_bend = 1;
+    ksbend = (KSBEND*)elem->p_elem;
+    dtheta = -(angle=ksbend->angle);
+    rho = (length=ksbend->length)/ksbend->angle;
+    break;
+  case T_CSBEND:
+    is_bend = 1;
+    csbend = (CSBEND*)elem->p_elem;
+    dtheta = -(angle=csbend->angle);
+    rho = (length=csbend->length)/csbend->angle;
+    break;
+  case T_CSRCSBEND:
+    is_bend = 1;
+    csrbend = (CSRCSBEND*)elem->p_elem;
+    dtheta = -(angle=csrbend->angle);
+    rho = (length=csrbend->length)/csrbend->angle;
+    break;
+  case T_MALIGN:
+    malign = (MALIGN*)elem->p_elem;
+    dX = malign->dx;
+    dZ = malign->dz;
+    dtheta = atan(malign->dxp);
+    break;
+  default:
+    if (entity_description[elem->type].flags&HAS_LENGTH)
+      length = dZ = *((double*)(elem->p_elem));
+    if (entity_description[elem->type].flags&IS_MAGNET)
+      is_magnet = 1;
+    break;
+  }
+  if (is_bend) {
+    if (SDDS_floor && (include_vertices || vertices_only || magnet_centers)) {
+      /* output data for the vertex point */
+      if (angle && !isnan(rho))
+        data[0] += (dZ=rho*tan(angle/2));
+      else
+        data[0] += (dZ=length/2);
+      dX = 0;
+      rotate_xy(&dX, &dZ, *theta);
+      data[1] = *X+dX;
+      data[2] = *Z+dZ;
+      data[3] = *theta;
+      sprintf(label, "%s-VP", elem->name);
+      if (!SDDS_SetRowValues(SDDS_floor, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row_index++,
+                             IC_S, data[0], IC_X, data[1], IC_Z, data[2], IC_THETA, data[3],
+                             IC_ELEMENT, label, IC_OCCURENCE, elem->occurence, IC_TYPE, "VERTEX-POINT", -1)) {
+        SDDS_SetError("Unable to set SDDS row (output_floor_coordinates)");
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
     }
+    /* calculate offsets for end of bend magnet */
+    if (angle && !isnan(rho)) {
+      dX = rho*(cos(angle)-1);
+      dZ = rho*sin(angle);
+    } else {
+      dX = 0;
+      dZ = length;
+    }              
+  }
+  if (is_magnet && magnet_centers) {
+    dX /= 2;
+    dZ /= 2;
+    sprintf(label, "%s-C", elem->name);
+  }
+  else
+    strcpy(label, elem->name);
 
-    rotate_xy(&dX, &dZ, theta0);
-    theta0 += dtheta;
-    while (theta0>PIx2)
-      theta0 -= PIx2;
-    while (theta0<-PIx2)
-      theta0 += PIx2;
-    X0 += dX;
-    Z0 += dZ;
+  rotate_xy(&dX, &dZ, *theta);
+  *theta += dtheta;
+  while (*theta>PIx2)
+    *theta -= PIx2;
+  while (*theta<-PIx2)
+    *theta += PIx2;
+  *X += dX;
+  *Z += dZ;
 
+  if (SDDS_floor &&
+      (!vertices_only || (!last_elem || elem==last_elem))) {
+    if (!is_bend && magnet_centers)
+      data[0] = elem->end_pos - length/2;
+    else
+      data[0] = elem->end_pos;
+    data[1] = *X;
+    data[2] = *Z;
+    data[3] = *theta;
+    if (!SDDS_SetRowValues(SDDS_floor, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row_index++,
+                           IC_S, data[0], IC_X, data[1], IC_Z, data[2], IC_THETA, data[3],
+                           IC_ELEMENT, label, IC_OCCURENCE, elem->occurence, IC_TYPE, 
+                           entity_name[elem->type], -1)) {
+      SDDS_SetError("Unable to set SDDS row (output_floor_coordinates)");
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+  }
+
+  if (is_magnet && magnet_centers) {
+    *X += dX;
+    *Z += dZ; 
+  }
+}
+
+
+void final_floor_coordinates(LINE_LIST *beamline, double *XRet, double *ZRet, double *ThetaRet)
+{
+  ELEMENT_LIST *elem;
+  double X, Z, theta;
+  
+  elem = &(beamline->elem);
+  X = X0;
+  Z = Z0;
+  theta = theta0;
+  while (elem) {
+    advanceFloorCoordinates(&X, &Z, &theta, elem, NULL, NULL, 0);
     if (elem->type==T_MARK && ((MARK*)elem->p_elem)->fitpoint) {
       MARK *mark;
       char s[100];
       long i;
-      static char *suffix[3] = {"X", "Z", "Theta"};
+      static char *suffix[3] = {"X", "Z", "theta"};
       mark = (MARK*)(elem->p_elem);
       if (!(mark->init_flags&4)) {
         mark->floor_mem = tmalloc(sizeof(*mark->floor_mem)*3);
@@ -310,15 +266,14 @@ void final_floor_coordinates(LINE_LIST *beamline, double *X, double *Z, double *
         }
         mark->init_flags |= 4;
       }
-      rpn_store(X0, mark->floor_mem[0]);
-      rpn_store(Z0, mark->floor_mem[1]);
-      rpn_store(theta0, mark->floor_mem[2]);
+      rpn_store(X, mark->floor_mem[0]);
+      rpn_store(Z, mark->floor_mem[1]);
+      rpn_store(theta, mark->floor_mem[2]);
     }
-    
     elem = elem->succ;
   }
-  *X = X0;
-  *Z = Z0;
-  *Theta = theta0;
+  *XRet = X;
+  *ZRet = Z;
+  *ThetaRet = theta;
 }
 

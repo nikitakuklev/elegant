@@ -655,8 +655,9 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERROR *error1
             }
         fprintf(optimization_data->fp_log, "Optimum values of variables and changes from initial values:\n");
         for (i=0; i<variables->n_variables; i++)
-            fprintf(optimization_data->fp_log, "%10s: %23.15e  %23.15e\n", variables->varied_quan_name[i], 
-                    variables->varied_quan_value[i], variables->varied_quan_value[i]-variables->initial_value[i]);
+            fprintf(optimization_data->fp_log, "%10s: %23.15e  %23.15e (was 23%.15e)\n", variables->varied_quan_name[i], 
+                    variables->varied_quan_value[i], variables->varied_quan_value[i]-variables->initial_value[i],
+                    variables->initial_value[i]);
         for (i=0; i<covariables->n_covariables; i++)
             fprintf(optimization_data->fp_log, "%10s: %23.15e\n", covariables->varied_quan_name[i], covariables->varied_quan_value[i]);
         fflush(optimization_data->fp_log);
@@ -732,7 +733,7 @@ static long radint_mem[8] = {
   -1, -1, -1,
 } ;
 static char *floorCoord_name[3] = {
-  "X", "Z", "Theta", 
+  "X", "Z", "theta", 
 };
 static long floorCoord_mem[3] = {
   -1, -1, -1,
@@ -1038,7 +1039,8 @@ double optimization_function(double *value, long *invalid)
      * to final properties file
      */
     variables->varied_quan_value[variables->n_variables+1] = 
-      optimization_data->mode==OPTIM_MODE_MAXIMUM?-1*result:result;    
+      optimization_data->mode==OPTIM_MODE_MAXIMUM?-1*result:result;
+    compute_end_positions(beamline);
     if (force_output || (control->i_step-2)%output_sparsing_factor==0)
       do_track_beam_output(run, control, error, variables, beamline, beam, output, optim_func_flags,
                            charge);
