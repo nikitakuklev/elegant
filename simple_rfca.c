@@ -156,7 +156,10 @@ long simple_rf_cavity(
                 unsigned long mode;
                 if (!(mode = parseFiducialMode(rfca->fiducial)))
                     bomb("invalid fiducial mode for RFCA element", NULL);
-                t0 = findFiducialTime(part, np, zEnd-length, length/2, *P_central, mode);
+                if (rfca->tReference!=-1)
+                  t0 = rfca->tReference;
+                else 
+                  t0 = findFiducialTime(part, np, zEnd-length, length/2, *P_central, mode);
                 rfca->phase_fiducial = -omega*t0;
                 rfca->fiducial_seen = 1;
                 }

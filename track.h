@@ -488,7 +488,7 @@ extern char *entity_text[N_TYPES];
 #define N_SOLE_PARAMS 7
 #define N_HCOR_PARAMS 8
 #define N_VCOR_PARAMS 8
-#define N_RFCA_PARAMS 14
+#define N_RFCA_PARAMS 15
 #define N_ELSE_PARAMS 0
 #define N_HMON_PARAMS 8
 #define N_VMON_PARAMS 8
@@ -703,6 +703,7 @@ typedef struct {
     char *fiducial;
     long end1Focus, end2Focus, nKicks;
     double dx, dy;
+    double tReference;
     /* for internal use only: */
     long fiducial_seen;
     double phase_fiducial;

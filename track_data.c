@@ -280,6 +280,7 @@ PARAMETER rfca_param[N_RFCA_PARAMS] = {
     {"N_KICKS", "", IS_LONG, 0, (long)((char *)&rfca_example.nKicks), NULL, 0.0, 1},
     {"DX", "M", IS_DOUBLE, 1, (long)((char *)&rfca_example.dx), NULL, 0.0, 0},
     {"DY", "M", IS_DOUBLE, 1, (long)((char *)&rfca_example.dy), NULL, 0.0, 0},
+    {"T_REFERENCE", "S", IS_DOUBLE, 1, (long)((char *)&rfca_example.tReference), NULL, -1.0, 0},
     };
    
 HMON hmon_example;
