@@ -242,6 +242,10 @@ char **argv;
     beam_type = -1;
     
     while (get_namelist(s, NAMELIST_BUFLEN, fp_in)) {
+#if defined(VAX_VMS) || defined(UNIX) || defined(_WIN32)
+        report_stats(stdout, "statistics: ");
+        fflush(stdout);
+#endif
         if (namelists_read)
             free_namelist_text(&namelist_text);
         scan_namelist(&namelist_text, s);
@@ -591,10 +595,6 @@ char **argv;
             concat_order = 0;
             tracking_updates = 1;
             concat_order = print_statistics = p_central = 0;
-#if defined(VAX_VMS) || defined(UNIX) || defined(_WIN32)
-            report_stats(stdout, "statistics: ");
-            fflush(stdout);
-#endif
             run_setuped = run_controled = error_controled = correction_setuped = do_chromatic_correction =
               fl_do_tune_correction = do_closed_orbit = do_twiss_output = do_response_output = 0;
             break;
@@ -792,10 +792,6 @@ char **argv;
             concat_order = 0;
             tracking_updates = 1;
             concat_order = print_statistics = p_central = 0;
-#if defined(VAX_VMS) || defined(UNIX) || defined(_WIN32)
-            report_stats(stdout, "statistics: ");
-            fflush(stdout);
-#endif
             run_setuped = run_controled = error_controled = correction_setuped = do_chromatic_correction =
                 fl_do_tune_correction = do_closed_orbit = do_twiss_output = do_response_output = 0;
             break;
@@ -868,10 +864,6 @@ char **argv;
             concat_order = 0;
             tracking_updates = 1;
             concat_order = print_statistics = p_central = 0;
-#if defined(VAX_VMS) || defined(UNIX) || defined(_WIN32)
-            report_stats(stdout, "statistics: ");
-            fflush(stdout);
-#endif
             run_setuped = run_controled = error_controled = correction_setuped = do_chromatic_correction =
                 fl_do_tune_correction = do_closed_orbit = do_twiss_output = do_matrix_output = do_twiss_output = 0;
             break;
@@ -965,6 +957,10 @@ char **argv;
     if (semaphore_file && !fexists(semaphore_file)) {
       fclose(fopen(semaphore_file, "w"));
     }
+#if defined(VAX_VMS) || defined(UNIX) || defined(_WIN32)
+    report_stats(stdout, "statistics: ");
+    fflush(stdout);
+#endif
     log_exit("main");
     return(0);
     }
