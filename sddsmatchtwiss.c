@@ -55,6 +55,9 @@ CopyrightNotice001*/
  * Michael Borland, 2000
  *
  $Log: not supported by cvs2svn $
+ Revision 1.11  2002/01/22 18:42:46  borland
+ Fixed problem with usage message (missing escapes at end of line).
+
  Revision 1.10  2002/01/21 01:27:02  borland
  Fixed bug with -xplane and -yplane: previously, didn't allow changing
  beta and alpha when changing the emittance.
@@ -369,8 +372,14 @@ long PerformTransformation(double *x, double *xp, double *p, long rows, PLANE_SP
         emit = sqrt(emit);
       beta1 = S11/emit;
       alpha1 = -S12/emit;
-      beta2 = match->beta;
-      alpha2 = match->alpha;
+      if (match->flags&BETA_GIVEN) {
+        beta2 = match->beta;
+        alpha2 = match->alpha;
+      }
+      else {
+        beta2 = beta1;
+        alpha2 = alpha1;
+      }
       match->R11 = R11 = beta2/sqrt(beta1*beta2);
       match->R12 = R12 = 0;
       match->R21 = R21 = (alpha1-alpha2)/sqrt(beta1*beta2);
