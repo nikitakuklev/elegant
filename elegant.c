@@ -237,17 +237,17 @@ char **argv;
               case DEFINE_MACRO:
                 if ((scanned[i].n_items-=1)<1)
                   bomb("invalid -macro syntax", USAGE);
-                if (!(macroTag=SDDS_Realloc(macroTag, sizeof(*macroTag)*scanned[i].n_items)) ||
-                    !(macroValue=SDDS_Realloc(macroValue, sizeof(*macroValue)*scanned[i].n_items)))
+                if (!(macroTag=SDDS_Realloc(macroTag, sizeof(*macroTag)*(macros+scanned[i].n_items))) ||
+                    !(macroValue=SDDS_Realloc(macroValue, sizeof(*macroValue)*(macros+scanned[i].n_items))))
                   bomb("memory allocation failure (-macro)", NULL);
                 else {
                   long j;
                   for (j=0; j<scanned[i].n_items; j++) {
-                    macroTag[j] = scanned[i].list[j+1];
-                    if (!(macroValue[j] = strchr(macroTag[j], '=')))
+                    macroTag[macros] = scanned[i].list[j+1];
+                    if (!(macroValue[macros] = strchr(macroTag[macros], '=')))
                       bomb("invalid -macro syntax", USAGE);
-                    macroValue[j][0] = NULL;
-                    macroValue[j] += 1;
+                    macroValue[macros][0] = NULL;
+                    macroValue[macros] += 1;
                     macros++;
                   }
                 }
