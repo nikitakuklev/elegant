@@ -148,7 +148,7 @@ and phase modulation.",
     "Sets floor coordinates",
     "A thin lens for light optics",
     "A mirror for light optics",
-    "Explicit matrix input with data in the element definition, rather than in a file."
+    "Explicit matrix input with data in the element definition, rather than in a file.",
     "One or more beam-driven TM monopole modes of an RF cavity, with data from a file.",
     "One or more beam-driven TM dipole modes of an RF cavity, with data from a file.",
     } ;
