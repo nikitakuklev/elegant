@@ -689,7 +689,7 @@ long run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, lon
 
   if (tune_corrected==0 && !output_before_tune_correction) {
     log_exit("run_twiss_output");
-    return;
+    return 1;
   }
 
   eptr = beamline->elem_twiss = &(beamline->elem);
@@ -794,6 +794,7 @@ long run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, lon
     return 0;
 
   log_exit("run_twiss_output");
+  return 1;
 }
 
 void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_coord, long periodic,
@@ -885,23 +886,9 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
                              (radiation_integrals?&(beamline->radIntegrals):NULL),
                              beamline->elem_twiss, run, starting_coord);
   
-  if (radiation_integrals) {
-    double Rce, gamma;
-    RADIATION_INTEGRALS *RI;
-    RI = &(beamline->radIntegrals);
-    gamma = sqrt(sqr(run->p_central)+1);
-    Rce = sqr(e_mks)/(1e7*me_mks);
-    RI->Uo = me_mev*Rce*RI->I[1]*2./3.*ipow(gamma,4);
-    RI->Jx = 1 - RI->I[3]/RI->I[1];
-    RI->Jdelta = 3 - RI->Jx;
-    RI->Jy = 1;
-    RI->tauy = 1./(Rce/3*ipow(gamma,3)*c_mks/beamline->revolution_length*RI->I[1]);
-    RI->taux = RI->tauy*RI->Jy/RI->Jx;
-    RI->taudelta = RI->tauy*RI->Jy/RI->Jdelta;
-    RI->sigmadelta = gamma*sqrt(55./32./sqrt(3.)*hbar_mks/(me_mks*c_mks)*RI->I[2]/(2*RI->I[1]+RI->I[3]));
-    RI->ex0 = sqr(gamma)*55./32./sqrt(3.)*hbar_mks/(me_mks*c_mks)*RI->I[4]/(RI->I[1]-RI->I[3]);
-  }
-  
+  if (radiation_integrals)
+    computeRadiationIntegrals(&(beamline->radIntegrals), run->p_central,
+                              beamline->revolution_length);
 #ifdef DEBUG
   fprintf(stderr, "finding acceptance\n");
 #endif
@@ -1362,3 +1349,19 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, ELEMENT_LIST *elem
   }
 }
 
+
+void computeRadiationIntegrals(RADIATION_INTEGRALS *RI, double Po, double revolutionLength)
+{    
+    double Rce, gamma;
+    gamma = sqrt(sqr(Po)+1);
+    Rce = sqr(e_mks)/(1e7*me_mks);
+    RI->Uo = me_mev*Rce*RI->I[1]*2./3.*ipow(gamma,4);
+    RI->Jx = 1 - RI->I[3]/RI->I[1];
+    RI->Jdelta = 3 - RI->Jx;
+    RI->Jy = 1;
+    RI->tauy = 1./(Rce/3*ipow(gamma,3)*c_mks/revolutionLength*RI->I[1]);
+    RI->taux = RI->tauy*RI->Jy/RI->Jx;
+    RI->taudelta = RI->tauy*RI->Jy/RI->Jdelta;
+    RI->sigmadelta = gamma*sqrt(55./32./sqrt(3.)*hbar_mks/(me_mks*c_mks)*RI->I[2]/(2*RI->I[1]+RI->I[3]));
+    RI->ex0 = sqr(gamma)*55./32./sqrt(3.)*hbar_mks/(me_mks*c_mks)*RI->I[4]/(RI->I[1]-RI->I[3]);
+  }
