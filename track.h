@@ -552,7 +552,7 @@ extern char *entity_text[N_TYPES];
 #define N_SOLE_PARAMS 7
 #define N_HCOR_PARAMS 8
 #define N_VCOR_PARAMS 8
-#define N_RFCA_PARAMS 16
+#define N_RFCA_PARAMS 17
 #define N_ELSE_PARAMS 0
 #define N_HMON_PARAMS 8
 #define N_VMON_PARAMS 8
@@ -616,7 +616,7 @@ extern char *entity_text[N_TYPES];
 #define N_CSRDRIFT_PARAMS 20
 #define N_REMCOR_PARAMS 6
 #define N_MAPSOLENOID_PARAMS 18
-#define N_RFCW_PARAMS 28
+#define N_RFCW_PARAMS 29
 #define N_REFLECT_PARAMS 1
 #define N_CLEAN_PARAMS 7
 #define N_TWISSELEMENT_PARAMS 6
@@ -781,6 +781,7 @@ typedef struct {
     long nKicks;
     double dx, dy;
     double tReference;
+    long linearize;
     /* for internal use only: */
     long fiducial_seen;
     double phase_fiducial;
@@ -1674,6 +1675,7 @@ typedef struct {
     long interpolate;          /* flag to turn on interpolation */
     long smoothing, SGHalfWidth, SGOrder;  /* flag to turn on smoothing plus control parameters */
     double dx, dy;
+    long linearize;
     /* for internal use only: */
     long initialized;
     RFCA rfca;

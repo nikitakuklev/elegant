@@ -291,6 +291,7 @@ PARAMETER rfca_param[N_RFCA_PARAMS] = {
     {"DX", "M", IS_DOUBLE, 1, (long)((char *)&rfca_example.dx), NULL, 0.0, 0, "misalignment"},
     {"DY", "M", IS_DOUBLE, 1, (long)((char *)&rfca_example.dy), NULL, 0.0, 0, "misalignment"},
     {"T_REFERENCE", "S", IS_DOUBLE, 1, (long)((char *)&rfca_example.tReference), NULL, -1.0, 0, "arrival time of reference particle"},
+    {"LINEARIZE", "", IS_LONG, 0, (long)((char *)&rfca_example.linearize), NULL, 0.0, 0, "Linearize phase dependence?"},
     };
    
 HMON hmon_example;
@@ -1280,6 +1281,7 @@ PARAMETER rfcw_param[N_RFCW_PARAMS] = {
     {"SG_ORDER", "", IS_LONG, 0, (long)((char *)&rfcw_example.SGOrder), NULL, 0.0, 1, "Savitzky-Golay filter order for smoothing"},
     {"DX", "M", IS_DOUBLE, 1, (long)((char *)&rfcw_example.dx), NULL, 0.0, 0, "misalignment"},
     {"DY", "M", IS_DOUBLE, 1, (long)((char *)&rfcw_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"LINEARIZE", "", IS_LONG, 0, (long)((char *)&rfcw_example.linearize), NULL, 0.0, 0, "Linearize phase dependence?"},
     };
    
 REMCOR remcor_example;

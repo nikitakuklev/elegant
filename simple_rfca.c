@@ -73,7 +73,7 @@ long simple_rf_cavity(
     double **part, long np, RFCA *rfca, double **accepted, double *P_central, double zEnd
     )
 {
-    long ip, same_dgamma, nKicks;
+    long ip, same_dgamma, nKicks, linearize;
     double timeOffset, inverseF, dc4, x, xp;
     double P, gamma, dgamma=0.0, dgammaMax=0.0, phase, length, volt, To;
     double *coord, t, t0, omega, beta_i, tau, dt;
@@ -238,7 +238,9 @@ long simple_rf_cavity(
 
     if (nKicks>1)
       bomb("n_kicks>1 not yet supported for rfca element", NULL);
-    
+
+    linearize = rfca->linearize;
+
     for (ip=0; ip<np; ip++) {
         coord = part[ip];
         coord[0] -= rfca->dx;
@@ -258,9 +260,13 @@ long simple_rf_cavity(
           t     = coord[4]/(c_mks*beta_i)-timeOffset;
           if ((dt = t-t0)<0)
             dt = 0;
-          if  (!same_dgamma)
-            dgamma = volt*sin(omega*t+phase)*(tau?sqrt(1-exp(-dt/tau)):1);
-          
+          if  (!same_dgamma) {
+	    if (!linearize)
+	      dgamma = volt*sin(omega*t+phase)*(tau?sqrt(1-exp(-dt/tau)):1);
+	    else
+	      dgamma = volt*(PI-fmod(omega*t+phase, PIx2));
+	  }
+
           if (rfca->end1Focus && length) {
             /* drift back, apply focus kick, then drift forward again */
             inverseF = dgamma/(2*gamma*length);
@@ -303,8 +309,13 @@ long simple_rf_cavity(
           if ((dt = t-t0)<0)
             dt = 0;
           if  (!same_dgamma) {
-            sin_phase = sin(omega*t+phase);
-            cos_phase = cos(omega*t+phase);
+	    if (!linearize) {
+	      sin_phase = sin(omega*t+phase);
+	      cos_phase = cos(omega*t+phase);
+	    } else {
+	      sin_phase = PI-fmod(omega*t+phase, PIx2);
+	      cos_phase = 1;
+	    }
             dgamma = (dgammaMax=volt*(tau?sqrt(1-exp(-dt/tau)):1))*sin_phase;
           }
           
@@ -433,6 +444,7 @@ long track_through_rfcw
   rfcw->rfca.nKicks = rfcw->nKicks;
   rfcw->rfca.dx = rfcw->dx;
   rfcw->rfca.dy = rfcw->dy;
+  rfcw->rfca.linearize = rfcw->linearize;
   if (!rfcw->initialized) {
     rfcw->rfca.phase_reference = rfcw->phase_reference;
     if (rfcw->fiducial)
