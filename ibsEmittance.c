@@ -9,6 +9,9 @@
 
 /* 
  * $Log: not supported by cvs2svn $
+ * Revision 1.12  2002/08/14 20:23:40  soliday
+ * Added Open License
+ *
  * Revision 1.11  2001/10/15 20:37:03  soliday
  * Cleaned up for Linux.
  *
@@ -121,7 +124,7 @@ void IBSIntegrate(double *exInteg, double *eyInteg, double *elInteg, long *passI
                   double coupling,
                   double *s, double *betax, double *alphax, double *betay, 
                   double *alphay, double *etax, double *etaxp, long elements, 
-                  long superperiods);
+                  long superperiods, long verbosity);
 
 /* global variables */
 double *s, *betax, *alphax, *betay, *alphay, *etax, *etaxp;
@@ -442,7 +445,7 @@ int main( int argc, char **argv)
                    pCentral, emitx, emity, sigmaDelta, sigmaz, particles,
                    emitx0, sigmaDelta0, 2./taux, 2./taudelta, coupling,
                    s, betax, alphax, betay, alphay, etax, etaxp, elements,
-                   superperiods);
+                   superperiods, verbosity);
     }
     
     if (!growthRatesOnly) {
@@ -524,7 +527,7 @@ int main( int argc, char **argv)
     IBSGrowthRates( pCentral, emitx, emity, sigmaDelta, sigmaz, particles,
                    emitx0, sigmaDelta0, 2./taux, 2./taudelta, coupling,
                    s, betax, alphax, betay, alphay, etax, etaxp, elements,
-                   superperiods, 1,
+                   superperiods, verbosity,
                    &xGrowthRate, &yGrowthRate, &zGrowthRate);
     converged = 1;
     if (0>SDDS_StartPage(&resultsPage, integrationPoints) ||
@@ -694,7 +697,7 @@ void IBSIntegrate(double *exInteg, double *eyInteg, double *elInteg, long *passI
                   double coupling,
                   double *s, double *betax, double *alphax, double *betay, 
                   double *alphay, double *etax, double *etaxp, long elements, 
-                  long superperiods)
+                  long superperiods, long verbosity)
 {
   long turn, slot;
   double dT, gamma, vz, emitz, zRatio;
@@ -715,7 +718,7 @@ void IBSIntegrate(double *exInteg, double *eyInteg, double *elInteg, long *passI
     IBSGrowthRates(P, emitx, emity, sigmaDelta, sigmaz, particles,
                    emitx0, sigmaDelta0, transSRdampRate, longitSRdampRate, coupling,
                    s, betax, alphax, betay, alphay, etax, etaxp, elements,
-                   superperiods, 0,
+                   superperiods, verbosity,
                    &xGrowthRate, &yGrowthRate, &zGrowthRate);
     xRateInteg[slot] = xGrowthRate;
     yRateInteg[slot] = yGrowthRate;

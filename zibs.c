@@ -142,7 +142,18 @@ void IBSGrowthRates (double gamma, double emitx, double emity,
   double al[MAXDECADES+2], bl[MAXDECADES+2], sqrt_al[MAXDECADES+2];
   double alam2d[MAXDECADES+2][STEPS+2], sqrtAlam2d[MAXDECADES+2][STEPS+2];
   long nsteps, noWarning;
-    
+
+  if (verbosity>2) {
+    fprintf(stdout, "IBS Rates:\n");
+    fprintf(stdout, "gamma = %le, emitx = %le, emity = %le, sigmaDelta = %le, sigmaz = %le\n",
+            gamma, emitx, emity, sigmaDelta, sigmaz);
+    fprintf(stdout, "emitx0 = %le, sigmaDelta0 = %le, transSRRate = %le, longSRRate = %le\n",
+            emitx0, sigmaDelta0, transSRdampRate, longSRdampRate);
+    fprintf(stdout, "coupling = %le, superperiods = %ld, particles = %le\n",
+            coupling, superperiods, particles);
+  }
+  
+
   EMeV = sqrt(sqr(gamma) + 1) * me_mev;
   betaxAve = 0.0;
   betayAve = 0.0;

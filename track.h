@@ -320,7 +320,9 @@ typedef struct {
 #define OPTIM_METHOD_GRID      1
 #define OPTIM_METHOD_SAMPLE    2
 #define OPTIM_METHOD_POWELL    3
-#define N_OPTIM_METHODS        4
+#define OPTIM_METHOD_RANSAMPLE 4
+#define OPTIM_METHOD_RANWALK   5
+#define N_OPTIM_METHODS        6
 
 typedef struct {
     long mode, method;
@@ -543,7 +545,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_TWISSELEMENT 78
 #define T_WIGGLER 79
 #define T_SCRIPT 80
-#define N_TYPES 81
+#define T_FLOORELEMENT 81
+#define N_TYPES 82
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -612,7 +615,7 @@ extern char *entity_text[N_TYPES];
 #define N_MODRF_PARAMS 13
 #define N_SREFFECTS_PARAMS 13
 #define N_ZTRANSVERSE_PARAMS 19
-#define N_IBSCATTER_PARAMS 7
+#define N_IBSCATTER_PARAMS 8
 #define N_FMULT_PARAMS 9
 #define N_BMAPXY_PARAMS 5
 #define N_WAKE_PARAMS 12
@@ -631,6 +634,7 @@ extern char *entity_text[N_TYPES];
 #define N_TWISSELEMENT_PARAMS 6
 #define N_WIGGLER_PARAMS 3
 #define N_SCRIPT_PARAMS 26
+#define N_FLOORELEMENT_PARAMS 6
 
 typedef struct {
     char *name;            /* parameter name */
@@ -863,6 +867,12 @@ typedef struct {
   double betax, betay, alphax, alphay;
   long fromBeam, onceOnly;
 } TWISSELEMENT;
+
+/* storage structure for floor element (sets floor coordinates) */
+typedef struct {
+  double position[3]; /* X, Y, Z */
+  double angle[3];    /* theta, phi, psi */
+} FLOORELEMENT;
 
 /* storage structure for marker */
 
@@ -1706,7 +1716,7 @@ extern PARAMETER IBSCATTER_param[N_IBSCATTER_PARAMS];
 typedef struct {
   double coupling, factor, charge;
   long do_x, do_y, do_z;
-  long smooth;
+  long smooth, verbosity;
   /* internal use only */
   double *s, *betax, *alphax, *betay, *alphay, *etax, *etaxp;
   long elements;
@@ -1957,8 +1967,9 @@ double computeMonitorReading(ELEMENT_LIST *elem, long coord, double x, double y,
 void setMonitorCalibration(ELEMENT_LIST *elem, double calib, long coord);
 double getMonitorCalibration(ELEMENT_LIST *elem, long coord);
 
-extern long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LINE_LIST *beamline, VMATRIX *M, 
-    RUN *run, double dp, long start_from_recirc, long fixed_length, double *starting_point, double iter_fraction);
+extern long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LINE_LIST *beamline, 
+                              VMATRIX *M, RUN *run, double dp, long start_from_recirc, long fixed_length, 
+                              double *starting_point, double iter_fraction, double *deviation);
 extern void rotate_xy(double *x, double *y, double angle);
 extern void setupRotate3Matrix(void **Rv, double roll, double yaw, double pitch);
 void rotate3(double *data, void *Rv);
@@ -2290,7 +2301,7 @@ long ramped_rf_cavity(double **part, long np, RAMPRF *ramprf, double P_central,
                       double L_central, double z_cavity, long pass);
 
 /* prototypes for closed_orbit.c */
-extern void dump_closed_orbit(TRAJECTORY *traj, long n_elems, long step);
+extern void dump_closed_orbit(TRAJECTORY *traj, long n_elems, long step, double *deviation);
 void finish_clorb_output(void);
 long run_closed_orbit(RUN *run, LINE_LIST *beamline, double *starting_coord, BEAM *beam, long do_output);
 void setup_closed_orbit(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
@@ -2368,7 +2379,8 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
 long reset_driftCSR();
 
 void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
-void final_floor_coordinates(LINE_LIST *beamline, double *XYZ, double *Angle);
+void final_floor_coordinates(LINE_LIST *beamline, double *XYZ, double *Angle,
+                             double *XYZMin, double *XYZMax);
 
 long setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 long do_load_parameters(LINE_LIST *beamline, long change_definitions);

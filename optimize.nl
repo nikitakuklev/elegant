@@ -10,7 +10,7 @@ static char *optimize_mode[N_OPTIM_MODES] = {
     } ;
 
 static char *optimize_method[N_OPTIM_METHODS] = {
-    "simplex", "grid", "sample", "powell",
+    "simplex", "grid", "sample", "powell", "randomsample", "randomwalk",
     } ;
 
 #namelist optimization_term static

@@ -37,9 +37,15 @@ static SDDS_DEFINITION column_definition[N_COLUMNS] = {
     } ;
 
 #define IP_STEP 0
-#define N_PARAMETERS 1
+#define IP_XERROR 1
+#define IP_YERROR 2
+#define IP_DELTA 3
+#define N_PARAMETERS 4
 static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
     {"Step", "&parameter name=Step, type=long, description=\"Simulation step\" &end"},
+    {"xError", "&parameter name=xError, type=double, units=m, description=\"Horizontal closed orbit convergence error\" &end"},
+    {"yError", "&parameter name=yError, type=double, units=m, description=\"Vertical closed orbit convergence error\" &end"},
+    {"delta", "&parameter name=delta, symbol=\"$gd$r\", type=double, description=\"Fractional energy offset of closed orbit\" &end"},
     } ;
 
 #include "closed_orbit.h"
@@ -83,7 +89,7 @@ void setup_closed_orbit(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 
 long run_closed_orbit(RUN *run, LINE_LIST *beamline, double *starting_coord, BEAM *beam, long do_output)
 {
-    double dp;
+    double dp, deviation[4];
     long i, bad_orbit;
     VMATRIX *M;
     
@@ -107,15 +113,11 @@ long run_closed_orbit(RUN *run, LINE_LIST *beamline, double *starting_coord, BEA
         M = full_matrix(beamline->elem_recirc, run, 1);
     else 
         M = full_matrix(&(beamline->elem), run, 1);
-/*
-    if (start_from_centroid) {
-        offset_matrix(M, starting_coord[0], starting_coord[1], starting_coord[2], starting_coord[3]);
-        M->C[0] = M->C[1] = M->C[2] = M->C[3] = 0;
-        }
- */
 
-    bad_orbit = !find_closed_orbit(clorb, closed_orbit_accuracy, closed_orbit_iterations, beamline, M, run, dp, 
-                        start_from_recirc, fixed_length, (start_from_centroid?starting_coord:NULL), iteration_fraction);
+    bad_orbit = !find_closed_orbit(clorb, closed_orbit_accuracy, closed_orbit_iterations, beamline, M, 
+                                   run, dp, start_from_recirc, fixed_length, 
+                                   (start_from_centroid?starting_coord:NULL), iteration_fraction,
+                                   deviation);
     free_matrices(M); tfree(M); M = NULL;
     
     /* return closed orbit at the beginning of the ring */
@@ -132,8 +134,8 @@ long run_closed_orbit(RUN *run, LINE_LIST *beamline, double *starting_coord, BEA
         fputc('\n', stdout);
         }
 
-    if (do_output && SDDS_clorb_initialized && !bad_orbit) 
-        dump_closed_orbit(clorb, beamline->n_elems, clorb_count++);
+    if (do_output && SDDS_clorb_initialized)
+        dump_closed_orbit(clorb, beamline->n_elems, clorb_count++, deviation);
 
     return !bad_orbit;
     }
@@ -150,7 +152,7 @@ void finish_clorb_output(void)
     }
 
 
-void dump_closed_orbit(TRAJECTORY *traj, long n_elems, long step)
+void dump_closed_orbit(TRAJECTORY *traj, long n_elems, long step, double *deviation)
 {
     long i, n, occurence, row;
     double position;
@@ -174,7 +176,11 @@ void dump_closed_orbit(TRAJECTORY *traj, long n_elems, long step)
         }
 
     if (!SDDS_SetParameters(&SDDS_clorb, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE,
-                            IP_STEP, step, -1)) {
+                            IP_STEP, step,
+                            IP_XERROR, deviation[0],
+                            IP_YERROR, deviation[2],
+                            IP_DELTA, traj[0].centroid[5],
+                            -1)) {
         SDDS_SetError("Unable to set SDDS parameters (dump_closed_orbit)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }

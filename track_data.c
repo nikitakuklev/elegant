@@ -32,7 +32,7 @@ char *entity_name[N_TYPES] = {
     "MODRF", "BMAPXY", "ZTRANSVERSE", "IBSCATTER", "FMULT",
     "WAKE", "TRWAKE", "TUBEND", "CHARGE", "PFILTER", "HISTOGRAM",
     "CSRCSBEND", "CSRDRIFT", "RFCW", "REMCOR", "MAPSOLENOID",
-    "REFLECT", "CLEAN", "TWISS", "WIGGLER", "SCRIPT",
+    "REFLECT", "CLEAN", "TWISS", "WIGGLER", "SCRIPT", "FLOOR",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -143,7 +143,8 @@ and phase modulation.",
     "Cleans the beam by removing outlier particles.",
     "Sets Twiss parameter values.",
     "A wiggler or undulator for damping or excitation of the beam.  Does not include focusing effects.",
-    "An element that allows transforming the beam using an external script."
+    "An element that allows transforming the beam using an external script.",
+    "Sets floor coordinates",
     } ;
 
 QUAD quad_example;
@@ -1167,6 +1168,7 @@ PARAMETER ibscatter_param[N_IBSCATTER_PARAMS] = {
   {"DO_Y", "", IS_LONG, 0, (long)((char *)&ibs_example.do_y), NULL, 0.0, 1, "do y-plane scattering?"},
   {"DO_Z", "", IS_LONG, 0, (long)((char *)&ibs_example.do_z), NULL, 0.0, 1, "do z-plane scattering?"},
   {"SMOOTH", "", IS_LONG, 0, (long)((char *)&ibs_example.smooth), NULL, 0.0, 0, "Use smooth method instead of random numbers?"},
+  {"VERBOSITY", "", IS_LONG, 0, (long)((char *)&ibs_example.verbosity), NULL, 0.0, 0, "Set verbosity level"}
 };
 
 WAKE wake_example;
@@ -1378,6 +1380,17 @@ PARAMETER script_param[N_SCRIPT_PARAMS] = {
   {"SP9", "", IS_STRING, 0, (long)((char *)&script_example.SP[9]), NULL, 0.0, 0, "User-defined string parameter for command substitution for sequence %sp9"},
 };
   
+FLOORELEMENT floorElem_example;
+
+PARAMETER floor_param[N_FLOORELEMENT_PARAMS] = {
+  {"X", "", IS_DOUBLE, 0, (long)((char *)&floorElem_example.position[0]), NULL, 0.0, 0, "X coordinate"},
+  {"Y", "", IS_DOUBLE, 0, (long)((char *)&floorElem_example.position[1]), NULL, 0.0, 0, "Y coordinate"},
+  {"Z", "", IS_DOUBLE, 0, (long)((char *)&floorElem_example.position[2]), NULL, 0.0, 0, "Z coordinate"},
+  {"THETA", "", IS_DOUBLE, 0, (long)((char *)&floorElem_example.angle[0]), NULL, 0.0, 0, "theta value"},
+  {"PHI", "", IS_DOUBLE, 0, (long)((char *)&floorElem_example.angle[1]), NULL, 0.0, 0, "phi value"},
+  {"PSI", "", IS_DOUBLE, 0, (long)((char *)&floorElem_example.angle[2]), NULL, 0.0, 0, "psi value"},
+};
+
 /* array of parameter structures */
 
 #define MAT_LEN     HAS_MATRIX|HAS_LENGTH
@@ -1476,6 +1489,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_TWISSELEMENT_PARAMS, HAS_MATRIX|MATRIX_TRACKING, sizeof(TWISSELEMENT), twissElement_param},
     { N_WIGGLER_PARAMS, MAT_LEN|MATRIX_TRACKING, sizeof(WIGGLER), wiggler_param},
     {  N_SCRIPT_PARAMS,           MAT_LEN, sizeof(SCRIPT),    script_param     }, 
+    {  N_FLOORELEMENT_PARAMS,  0, sizeof(FLOORELEMENT),    floor_param     }, 
 } ;
  
 

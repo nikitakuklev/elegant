@@ -76,6 +76,9 @@ double compute_kick_coefficient(ELEMENT_LIST *elem, long plane, long type, doubl
 double noise_value(double xamplitude, double xcutoff, long xerror_type);
 void do_response_matrix_output(char *filename, char *type, RUN *run, char *beamline_name, CORMON_DATA *CM, 
                                STEERING_LIST *SL, long plane);
+long findFixedLengthClosedOrbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LINE_LIST *beamline, 
+                                VMATRIX *M, RUN *run, double dp, long start_from_recirc, double *starting_point, 
+                                double change_fraction, double *deviation);
 
 static long rpn_x_mem= -1, rpn_y_mem= -1;
 static long usePerturbedMatrix = 0, fixedLengthMatrix = 0;
@@ -1590,7 +1593,7 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
         if (iteration==1)
             for (i=0; i<6; i++)
                 orbit[1][0].centroid[i] = orbit[0][0].centroid[i];
-        if (!find_closed_orbit(clorb, clorb_acc, clorb_iter, beamline, M, run, dp, 1, CM->fixed_length, NULL, clorb_iter_frac)) {
+        if (!find_closed_orbit(clorb, clorb_acc, clorb_iter, beamline, M, run, dp, 1, CM->fixed_length, NULL, clorb_iter_frac, NULL)) {
           fprintf(stdout, "Failed to find closed orbit.\n");
           fflush(stdout);
           return(-1);
@@ -1764,7 +1767,8 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
     }
 
 long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LINE_LIST *beamline, VMATRIX *M, RUN *run, 
-        double dp, long start_from_recirc, long fixed_length, double *starting_point, double change_fraction)
+        double dp, long start_from_recirc, long fixed_length, double *starting_point, double change_fraction,
+        double *deviation)
 {
     static MATRIX *R, *ImR, *INV_ImR, *INV_R, *C, *co, *diff, *change;
     static double **one_part;
@@ -1774,6 +1778,10 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
     double p, error, last_error, total_length=0.0, ds, R56=0.0;
 
     log_entry("find_closed_orbit");
+
+    if (fixed_length)
+      return findFixedLengthClosedOrbit(clorb, clorb_acc, clorb_iter, beamline, M, run, dp,
+                                        start_from_recirc, starting_point, change_fraction, deviation);
 
     /* method for finding closed orbit: 
      * 1. solve co[i] = C[i] + R[i][j]*co[j] for co[i]:
@@ -1874,10 +1882,11 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
 	one_part[0][4], one_part[0][5]);
     fflush(stdout);
 #endif
-        diff->a[0][0] = one_part[0][0] - co->a[0][0];
-        diff->a[1][0] = one_part[0][1] - co->a[1][0];
-        diff->a[2][0] = one_part[0][2] - co->a[2][0];
-        diff->a[3][0] = one_part[0][3] - co->a[3][0];
+        for (i=0; i<4; i++) {
+          diff->a[i][0] = one_part[0][i] - co->a[i][0];
+          if (deviation)
+            deviation[i] = diff->a[i][0];
+        }
         if (fixed_length)
             ds = one_part[0][4] - total_length;
         else
@@ -1891,18 +1900,6 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
             fflush(stdout);
             fprintf(stdout, "last error was %e, current is %e\n", last_error, error);
             fflush(stdout);
-/*
-            for (i=0; i<4; i++)
-                if (one_part[0][i]>1e3)
-                    break;
-            if (i!=4) {
-                fprintf(stdout, "orbit is unreasonably large--discarded!\n");
-                fflush(stdout);
-                for (i=0; i<7; i++)
-                    one_part[0][i] = 0;
-                bad_orbit = 1;
-                }
-*/
             n_iter = clorb_iter;
             break;
             }
@@ -1941,7 +1938,6 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
             error, n_iter);
         fflush(stdout);
         if (isnan(error) || isinf(error)) {
-          zero_closed_orbit(clorb, beamline->n_elems+1);
           return 0;
           }
         fflush(stdout);
@@ -1961,11 +1957,60 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
 
     log_exit("find_closed_orbit");
     if (bad_orbit) {
-        zero_closed_orbit(clorb, beamline->n_elems+1);
         return(0);
         }
     return(1);
     }
+
+long findFixedLengthClosedOrbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LINE_LIST *beamline, VMATRIX *M, RUN *run, 
+        double dp, long start_from_recirc, double *starting_point, double change_fraction,
+        double *deviation)
+{
+  long nElems, iterationsLeft, i;
+  double error, ds, last_dp;
+  
+  nElems = beamline->n_elems;
+  iterationsLeft = clorb_iter/10+10;
+  last_dp = sqrt(DBL_MAX/10);
+  while (iterationsLeft) {
+    if (!find_closed_orbit(clorb, clorb_acc, clorb_iter, beamline, M, run, dp, start_from_recirc,
+                           0, starting_point, change_fraction, deviation))
+      return 0;
+    ds = clorb[nElems].centroid[4] - beamline->revolution_length;
+    for (i=error=0; i<4; i++) {
+      ds -= M->R[4][i]*clorb[0].centroid[i];
+      error += sqr(clorb[nElems].centroid[i]-clorb[0].centroid[i]);
+    }
+    error = sqrt(error + sqr(last_dp-dp));
+/*
+    fprintf(stdout, "orbit error for dp=%le  is %le:\n", dp, error);
+    for (i=0; i<6; i++)
+      fprintf(stdout, "%10.3e ", clorb[0].centroid[i]);
+    fprintf(stdout, "\n");
+    for (i=0; i<6; i++)
+      fprintf(stdout, "%10.3e ", clorb[nElems].centroid[i]-(i==4?beamline->revolution_length:0));
+    fprintf(stdout, "\n");
+*/
+    if (error<clorb_acc)
+      break;
+    last_dp = dp;
+    dp = (1-change_fraction)*dp - change_fraction*ds/M->R[4][5];
+    iterationsLeft--;
+  }
+  if (iterationsLeft)
+    return 1;
+  fprintf(stdout, "Warning: fixed length orbit iteration didn't converge (error is %le)\n", error);
+  fprintf(stdout, "dp = %le, %le\n", dp, last_dp);
+  for (i=0; i<6; i++)
+    fprintf(stdout, "%10.3e ", clorb[0].centroid[i]);
+  fprintf(stdout, "\n");
+  for (i=0; i<6; i++)
+    fprintf(stdout, "%10.3e ", clorb[nElems].centroid[i]-(i==4?beamline->revolution_length:0));
+  fprintf(stdout, "\n");
+  
+  return 0;
+}
+
 
 void zero_closed_orbit(TRAJECTORY *clorb, long n)
 {

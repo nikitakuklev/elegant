@@ -790,6 +790,8 @@ long do_tracking(
                                     *P_central, charge, &coord, n_to_track,
 				    run->rootname);
             break;
+	  case T_FLOORELEMENT:
+	    break;
           default:
             fprintf(stdout, "programming error: no tracking statements for element %s (type %s)\n",
                     eptr->name, entity_name[eptr->type]);

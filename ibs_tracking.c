@@ -86,7 +86,7 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
                  2.0/radIntegrals.taux, 2.0/radIntegrals.taudelta,
                  IBS->coupling, 
                  IBS->s, IBS->betax, IBS->alphax, IBS->betay, IBS->alphay,
-                 IBS->etax, IBS->etaxp, IBS->elements, 1, 0, 
+                 IBS->etax, IBS->etaxp, IBS->elements, 1, IBS->verbosity, 
                  &xGrowthRate, &yGrowthRate, &zGrowthRate
                  );
   RNSigma[0] = RNSigma[1] = RNSigma[2] = 0;
