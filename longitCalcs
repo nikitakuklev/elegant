@@ -18,7 +18,7 @@ if ![file exists $twiss] {
     exit 1
 }
 
-set dataItemList [list U0 Sdelta0 ex0 alphac pCentral revFreq]
+set dataItemList [list U0 Sdelta0 ex0 alphac pCentral revFreq sMax]
 if [catch {exec sddsconvert $twiss -pipe=out -topage=1 \
              | sddsprocess -pipe -process=s,max,sMax \
              "-define=parameter,revFreq,sMax pCentral beta.p c_mks * / rec" \
@@ -57,6 +57,10 @@ set rfAcceptance 0
 set rfFrequency 0
 set synchFreq 0
 set coupling 0
+APSLabeledOutput .length -parent .userFrame \
+    -label "Circumference (m): " -textVariable sMax -width 22
+APSLabeledOutput .revFreq -parent .userFrame \
+    -label "Rev. frequency (MHz): " -textVariable revFreq -width 22
 APSLabeledOutput .rfFreq -parent .userFrame \
     -label "RF frequency (MHz): " -textVariable rfFrequency -width 22
 APSLabeledOutput .synchphase -parent .userFrame \
