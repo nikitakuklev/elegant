@@ -55,6 +55,9 @@ CopyrightNotice001*/
  * Michael Borland, 2000
  *
  $Log: not supported by cvs2svn $
+ Revision 1.1  2000/08/14 21:44:56  borland
+ First version.
+
  */
 #include "mdb.h"
 #include "scan.h"
@@ -73,8 +76,8 @@ char *option[N_OPTIONS] = {
 } ;
 
 char *USAGE="sddsmatchtwiss [-pipe=[input][,output]] [<SDDSinputfile>] [<SDDSoutputfile>]\n\
-  -xPlane=[beta=<meters>,alpha=<value>][,etaValue=<meters>][,etaSlope=<value>]\n\
-  -yPlane=[beta=<meters>][,alpha=<value>][,etaValue=<meters>][,etaSlope=<value>]\n\
+  [-xPlane=[beta=<meters>,alpha=<value>][,etaValue=<meters>][,etaSlope=<value>]]\n\
+  [-yPlane=[beta=<meters>,alpha=<value>][,etaValue=<meters>][,etaSlope=<value>]]\n\
   [-nowarnings]\n\
 The input file must have columns x, xp, y, yp, and p; for example, an elegant\n\
 beam output file is acceptable.\n\
