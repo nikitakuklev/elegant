@@ -1164,10 +1164,10 @@ double optimization_function(double *value, long *invalid)
     rpn_store((double)beamline->waists[0], twiss_mem[30]);
     rpn_store((double)beamline->waists[1], twiss_mem[31]);
     /* amplitude-dependent tune shifts */
-    rpn_store(beamline->dnux_dA[0], twiss_mem[32]);
-    rpn_store(beamline->dnux_dA[1], twiss_mem[33]);
-    rpn_store(beamline->dnuy_dA[0], twiss_mem[34]);
-    rpn_store(beamline->dnuy_dA[1], twiss_mem[35]);
+    rpn_store(beamline->dnux_dA[1][0], twiss_mem[32]);
+    rpn_store(beamline->dnux_dA[0][1], twiss_mem[33]);
+    rpn_store(beamline->dnuy_dA[1][0], twiss_mem[34]);
+    rpn_store(beamline->dnuy_dA[0][1], twiss_mem[35]);
     /* higher-order chromaticities */
     rpn_store(beamline->chrom2[0], twiss_mem[36]);
     rpn_store(beamline->chrom3[0], twiss_mem[37]);

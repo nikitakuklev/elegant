@@ -157,7 +157,7 @@ typedef struct {
 } RADIATION_INTEGRALS;
 
 /* Node structure for linked-list of beamline definitions: */
-
+#define N_TSWA 3
 typedef struct line_list {
     char *name;
     char *definition;
@@ -183,8 +183,8 @@ typedef struct line_list {
     double dbeta_dPoP[2];    /* d/d(p/p0) of betax and betay */
     double dalpha_dPoP[2];   /* d/d(p/p0) of alphax and alphay */
     double alpha[2];         /* first and second order momentum compaction: Cs=Cs0+alpha*delta+alpha2*delta^2*/
-    double dnux_dA[2];       /* dNUx/d(Ax) and dNUx/d(Ay) (tune shift with amplitude) */
-    double dnuy_dA[2];       /* dNUy/d(Ax) and dNUy/d(Ay) (tune shift with amplitude) */
+    double dnux_dA[N_TSWA][N_TSWA];    /* tune shift with amplitude [i][j] = dnux/(dAx^i dAy^j) */
+    double dnuy_dA[N_TSWA][N_TSWA];    /* tune shift with amplitude */
     double acceptance[4];    /* in pi-meter-radians for x and y, plus z locations of limits (4 doubles in all) */
     RADIATION_INTEGRALS radIntegrals;
     char *acc_limit_name[2];  /* names of elements at which acceptance is limited, in x and y */
