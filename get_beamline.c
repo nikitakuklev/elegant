@@ -167,9 +167,6 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
                 }
                 length = ((DRIFT*)eptr->p_elem)->length;
               }
-              fprintf(stderr, "Transmuting %s %s into %s\n",
-                          entity_name[eptr->type], eptr->name, 
-                          entity_name[newType]);
               free(eptr->p_elem);
               eptr->p_elem = tmalloc(entity_description[type].structure_size);
               zero_memory(eptr->p_elem, entity_description[type].structure_size);
