@@ -499,15 +499,11 @@ void lorentz_setup(
                         offset = 1./DBL_MAX;
                     fprintf(stdout, "NIBEND offset adjusted to %e to obtain trajectory error of %e\n",
                         offset, nibend_trajectory_error(offset));
-                    fflush(stdout);
                     fprintf(stdout, "final coordinates: %e, %e, %e, %e, %e\n", 
                         traj_err_final_coord[0], traj_err_final_coord[1], traj_err_final_coord[2],
                         traj_err_final_coord[3], traj_err_final_coord[4]);
                     fflush(stdout);
                     x_correction = traj_err_final_coord[0];
-                    if (offset>0)
-                        fprintf(stdout, "\7\7warning: a positive offset is unexpected and is probably incorrect!\n");
-                        fflush(stdout);
                     last_offset = nibend->last_zeta_offset = nibend->zeta_offset = offset;
                     nibend->x_correction = x_correction;
                     }
