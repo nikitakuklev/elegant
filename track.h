@@ -252,6 +252,7 @@ typedef struct {
     long *bind_number;           /* how many consecutive elements to bind */
     double *unperturbed_value;   /* current value without errors */
     double *error_value;         /* current error value */
+    double *sMin, *sMax;         /* limits geographical region of application */
     FILE *fp_log;                /* file to log error values to */
     long new_data_read;          /* new data has been read for control of tracking */
     long no_errors_first_step;   /* if nonzero, first step is perfect lattice */
@@ -1973,7 +1974,8 @@ extern void assert_parameter_values(char **elem_name, long *param_number, long *
 long get_parameter_value(double *value, char *elem_name, long param_number, long type, LINE_LIST *beamline);
 extern void assert_perturbations(char **elem_name, long *param_number, long *type, long n_elems,
     double *amplitude, double *cutoff, long *error_type, double *perturb, long *elem_perturb_flags,
-    long *bind_number, FILE *fp_log, long step, LINE_LIST *beamline, long permit_flags);
+    long *bind_number, double *sMin, double *sMax,
+    FILE *fp_log, long step, LINE_LIST *beamline, long permit_flags);
 extern long compute_changed_matrices(LINE_LIST *beamline, RUN *run);
 
 /* prototypes for routines in optimize.c */

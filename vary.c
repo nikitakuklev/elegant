@@ -392,6 +392,7 @@ long vary_beamline(VARY *_control, ERROR *errcon, RUN *run, LINE_LIST *beamline)
           assert_perturbations(errcon->name, errcon->param_number, errcon->elem_type,
                                errcon->n_items, errcon->error_level, errcon->error_cutoff, errcon->error_type, 
                                errcon->error_value, errcon->flags, errcon->bind_number,
+                               errcon->sMin, errcon->sMax,
                                errcon->fp_log, _control->i_step, beamline, 
                                PRE_CORRECTION+
                                ((_control->i_step==0 && errcon->no_errors_first_step)?FORCE_ZERO_ERRORS:0));
@@ -482,6 +483,7 @@ long perturb_beamline(VARY *_control, ERROR *errcon, RUN *run, LINE_LIST *beamli
         assert_perturbations(errcon->name, errcon->param_number, errcon->elem_type,
             errcon->n_items, errcon->error_level, errcon->error_cutoff, errcon->error_type, 
             errcon->error_value, errcon->flags, errcon->bind_number,
+            errcon->sMin, errcon->sMax,                             
             errcon->fp_log, _control->i_step-1, beamline, POST_CORRECTION+
                              ((_control->i_step==0 && errcon->no_errors_first_step)?FORCE_ZERO_ERRORS:0));
         /* set element flags to indicate perturbation of parameters that change the matrix */
@@ -650,7 +652,8 @@ long get_parameter_value(double *value, char *elem_name, long param_number, long
 
 void assert_perturbations(char **elem_name, long *param_number, long *type, long n_elems,
         double *amplitude, double *cutoff, long *error_type, double *perturb, long *elem_perturb_flags, 
-        long *bind_number, FILE *fp_log, long step, LINE_LIST *beamline, long permit_flags)
+        long *bind_number, double *sMin, double *sMax,
+        FILE *fp_log, long step, LINE_LIST *beamline, long permit_flags)
 {
     ELEMENT_LIST *eptr;
     char *p_elem;
@@ -700,6 +703,9 @@ void assert_perturbations(char **elem_name, long *param_number, long *type, long
         while (find_element(elem_name[i_elem], &eptr, &(beamline->elem))) {
             p_elem = eptr->p_elem;
             if (!(elem_perturb_flags[i_elem]&permit_flags))
+                continue;
+            if ((sMin[i_elem]>=0 && eptr->end_pos<sMin[i_elem]) ||
+                (sMax[i_elem]>=0 && eptr->end_pos>sMax[i_elem]))
                 continue;
             switch (data_type) {
                 case IS_DOUBLE:

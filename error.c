@@ -109,7 +109,8 @@ void add_error_element(ERROR *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beamline
 {
     long n_items, n_added, i_start;
     ELEMENT_LIST *context;
-
+    double sMin = -1, sMax = -1;
+    
     log_entry("add_error_element");
 
     if ((n_items = errcon->n_items)==0) {
@@ -152,6 +153,36 @@ void add_error_element(ERROR *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beamline
     context = NULL;
     n_added = 0;
     i_start = n_items;
+
+    context = NULL;
+    if (after && strlen(after)) {
+      if (!(context=find_element(after, &context, &(beamline->elem)))) {
+        fprintf(stdout, "Element %s not found in beamline.\n", after);
+        exit(1);
+      }
+      sMin = context->end_pos;
+      if (find_element(after, &context, &(beamline->elem))) {
+        fprintf(stdout, "Element %s not found in beamline more than once.\n", after);
+        exit(1);
+      }
+    }
+    context = NULL;
+    if (before && strlen(before)) {
+      if (!(context=find_element(before, &context, &(beamline->elem)))) {
+        fprintf(stdout, "Element %s not found in beamline.\n", before);
+        exit(1);
+      }
+      sMax = context->end_pos;
+      if (find_element(before, &context, &(beamline->elem))) {
+        fprintf(stdout, "Element %s not found in beamline more than once.\n", after);
+        exit(1);
+      }
+    }
+    if (after && before && sMin>sMax) {
+      fprintf(stdout, "Element %s is not upstream of %s!\n",
+              before, after);
+      exit(1);
+    }
     if (has_wildcards(name)) {
         if (strchr(name, '-'))
             name = expand_ranges(name);
@@ -172,6 +203,8 @@ void add_error_element(ERROR *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beamline
             errcon->param_number      = trealloc(errcon->param_number, sizeof(*errcon->param_number)*(n_items+1));
             errcon->bind_number       = trealloc(errcon->bind_number, sizeof(*errcon->bind_number)*(n_items+1));
             errcon->flags             = trealloc(errcon->flags, sizeof(*errcon->flags)*(n_items+1));
+            errcon->sMin             = trealloc(errcon->sMin, sizeof(*errcon->sMin)*(n_items+1));
+            errcon->sMax             = trealloc(errcon->sMax, sizeof(*errcon->sMax)*(n_items+1));
     
             cp_str(errcon->item+n_items, str_toupper(item));
             cp_str(errcon->name+n_items, context->name);
@@ -187,7 +220,9 @@ void add_error_element(ERROR *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beamline
             errcon->flags[n_items] += (post_correction?POST_CORRECTION:PRE_CORRECTION);
             errcon->flags[n_items] += (additive?0:NONADDITIVE_ERRORS);
             errcon->bind_number[n_items] = bind_number;
-        
+            errcon->sMin[n_items] = sMin;
+            errcon->sMax[n_items] = sMax;
+            
             errcon->elem_type[n_items] = context->type;
             if ((errcon->param_number[n_items] = confirm_parameter(item, context->type))<0) {
                 fprintf(stdout, "error: cannot vary %s--no such parameter for %s (wildcard name: %s)\n",item, context->name, name);
@@ -233,6 +268,8 @@ void add_error_element(ERROR *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beamline
         errcon->param_number      = trealloc(errcon->param_number, sizeof(*errcon->param_number)*(n_items+1));
         errcon->bind_number       = trealloc(errcon->bind_number, sizeof(*errcon->bind_number)*(n_items+1));
         errcon->flags             = trealloc(errcon->flags, sizeof(*errcon->flags)*(n_items+1));
+        errcon->sMin             = trealloc(errcon->sMin, sizeof(*errcon->sMin)*(n_items+1));
+        errcon->sMax             = trealloc(errcon->sMax, sizeof(*errcon->sMax)*(n_items+1));
 
         cp_str(errcon->item+n_items, str_toupper(item));
         cp_str(errcon->name+n_items, context->name);
@@ -248,7 +285,9 @@ void add_error_element(ERROR *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beamline
         errcon->flags[n_items] += (post_correction?POST_CORRECTION:PRE_CORRECTION);
         errcon->flags[n_items] += (additive?0:NONADDITIVE_ERRORS);
         errcon->bind_number[n_items] = bind_number;
-    
+        errcon->sMin[n_items] = sMin;
+        errcon->sMax[n_items] = sMax;
+
         errcon->elem_type[n_items] = context->type;
         if ((errcon->param_number[n_items] = confirm_parameter(item, context->type))<0) {
             fprintf(stdout, "error: cannot vary %s--no such parameter for %s\n",item, name);
