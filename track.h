@@ -247,6 +247,7 @@ typedef struct {
     long prezero_correctors, start_from_centroid, use_actual_beam, response_only;
     double clorb_accuracy;
     double clorb_iterations;
+    double clorb_iter_fraction;
     STEERING_LIST SLx, SLy;
     CORMON_DATA *CMx, *CMy;
     TRAJECTORY **traj;

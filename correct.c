@@ -41,8 +41,10 @@ void global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
             LINE_LIST *beamline, double *starting_coord, BEAM *beam);
 void one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **traject, long n_iterations, RUN *run, 
             LINE_LIST *beamline, double *starting_coord, BEAM *beam);
-long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **orbit, long n_iterations, double accuracy,
-           long clorb_iter, RUN *run, LINE_LIST *beamline, double *closed_orbit, double *Cdp);
+long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **orbit, 
+                  long n_iterations, double accuracy,
+                  long clorb_iter, double clorb_iter_frac,
+                  RUN *run, LINE_LIST *beamline, double *closed_orbit, double *Cdp);
 ELEMENT_LIST *find_useable_moni_corr(long *nmon, long *ncor, long **mon_index,
             ELEMENT_LIST ***umoni, ELEMENT_LIST ***ucorr, double **kick_coef, long **sl_index,
             long plane, STEERING_LIST *SL, RUN *run, LINE_LIST *beamline, long recircs);
@@ -151,7 +153,11 @@ void correction_setup(
         setup_corrector_output(corrector_output=compose_filename(corrector_output, run->rootname), run);
     if (closed_orbit_accuracy<=0)
         bomb("closed_orbit_accuracy must be > 0", NULL);
+    if (closed_orbit_iteration_fraction<=0 ||
+        closed_orbit_iteration_fraction>1)
+      bomb("closed_orbit_iteration_fraction must be on (0, 1]", NULL);
     _correct->clorb_accuracy = closed_orbit_accuracy;
+    _correct->clorb_iter_fraction = closed_orbit_iteration_fraction;
     _correct->verbose = verbose;
     _correct->track_before_and_after = track_before_and_after;
     _correct->prezero_correctors = prezero_correctors;
@@ -533,7 +539,10 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
                 final_traj = 1;
                 if (!x_failed && correct->CMx->ncor) {
                     if ((n_iter_taken = orbcor_plane(correct->CMx, &correct->SLx, 0, correct->traj, 
-                            correct->n_iterations, correct->clorb_accuracy, correct->clorb_iterations, run, beamline, 
+                                                     correct->n_iterations, correct->clorb_accuracy, 
+                                                     correct->clorb_iterations, 
+                                                     correct->clorb_iter_fraction,
+                                                     run, beamline, 
                             closed_orbit, Cdp))<0) {
                         bombed = 1;
                         break;
@@ -567,7 +576,10 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
                 if (!y_failed && correct->CMy->ncor) {
                     final_traj = 2;
                     if ((n_iter_taken = orbcor_plane(correct->CMy, &correct->SLy, 2, correct->traj+1, 
-                            correct->n_iterations, correct->clorb_accuracy, correct->clorb_iterations, run, beamline, 
+                                                     correct->n_iterations, correct->clorb_accuracy, 
+                                                     correct->clorb_iterations, 
+                                                     correct->clorb_iter_fraction,
+                                                     run, beamline, 
                             closed_orbit, Cdp))<0) {
                         bombed = 1;
                         break;
@@ -938,7 +950,7 @@ void global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
 #endif
 
         /* step through beamline find any kicks that are over their limits */
-        minFraction = CM->corr_fraction;
+        minFraction = 1;
         for (i_corr=0; i_corr<CM->ncor; i_corr++) {
             corr = CM->ucorr[i_corr];
             sl_index = CM->sl_index[i_corr];
@@ -951,8 +963,8 @@ void global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
                 minFraction = fraction;
             }
           }
-        fraction = minFraction;
-        
+        fraction = minFraction*CM->corr_fraction;
+
 #if defined(DEBUG)
         printf("Changing correctors:");
 #endif
@@ -1413,7 +1425,7 @@ void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN
 }
 
 long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **orbit, long n_iterations, 
-    double clorb_acc, long clorb_iter, RUN *run, LINE_LIST *beamline, double *closed_orbit, double *Cdp)
+    double clorb_acc, long clorb_iter, double clorb_iter_frac, RUN *run, LINE_LIST *beamline, double *closed_orbit, double *Cdp)
 {
     ELEMENT_LIST *corr, *eptr;
     TRAJECTORY *clorb;
@@ -1468,7 +1480,7 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
         if (iteration==1)
             for (i=0; i<6; i++)
                 orbit[1][0].centroid[i] = orbit[0][0].centroid[i];
-        if (!find_closed_orbit(clorb, clorb_acc, clorb_iter, beamline, M, run, dp, 1, CM->fixed_length, NULL, 0.9))
+        if (!find_closed_orbit(clorb, clorb_acc, clorb_iter, beamline, M, run, dp, 1, CM->fixed_length, NULL, clorb_iter_frac))
             return(-1);
         if (Cdp)
             Cdp[iteration] = clorb[0].centroid[5];
@@ -1551,7 +1563,7 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
 #endif
 
         /* see if any correctors are over their limit */
-        minFraction = corr_fraction;
+        minFraction = 1;
         for (i_corr=0; i_corr<CM->ncor; i_corr++) {
             corr = CM->ucorr[i_corr];
             sl_index = CM->sl_index[i_corr];
@@ -1564,7 +1576,7 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
                 minFraction = fraction;
             }
           }
-        fraction = minFraction;
+        fraction = minFraction*corr_fraction;
         
         /* step through beamline and change correctors */
         for (i_corr=0; i_corr<CM->ncor; i_corr++) {
