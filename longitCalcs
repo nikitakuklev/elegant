@@ -51,6 +51,7 @@ foreach item {voltage harmonic sdelta extradE} {
 
 set synchTune 0
 set bunchLength 0
+set bunchDuration 0
 set synchPhaseDeg 0
 set overVoltage 0
 set rfAcceptance 0
@@ -75,6 +76,8 @@ APSLabeledOutput .nuf -parent .userFrame \
   -label "Synchrotron Frequency (Hz): " -textVariable synchFreq  -width 22
 APSLabeledOutput .blen -parent .userFrame \
   -label "Bunch length (m): " -textVariable bunchLength -width 22
+APSLabeledOutput .bdur -parent .userFrame \
+  -label "Bunch duration (s): " -textVariable bunchDuration -width 22
 APSLabeledOutput .coupling -parent .userFrame \
   -label "Longitudinal coupling: " -textVariable coupling -width 22
 
@@ -82,6 +85,7 @@ proc compute {} {
     global dataItemList
     eval global $dataItemList synchTune bunchLength harmonic voltage synchPhaseDeg
     global overVoltage rfAcceptance rfFrequency synchFreq coupling extradE
+    global bunchDuration
     set pi 3.141592653589793
     set cMKS 2.997924580000000e+08
     set U1 [expr $U0+$extradE]
@@ -95,6 +99,7 @@ proc compute {} {
     set omegaRF [expr $harmonic*2*$pi*$revFreq]
     set rfFrequency [expr $omegaRF/(2*$pi*1.0e6)]
     set bunchLength [expr $Sdelta0*$cMKS*sqrt($alphac*$energy/($revFreq*$omegaRF*cos($synchPhase)*$voltage))]
+    set bunchDuration [expr $bunchLength/$cMKS]
     # $Sdelta0*sqrt(2*$pi*$alphac*$harmonic*$cMKS*$cMKS*$energy/($omegaRF*$omegaRF*cos($synchPhase)*$voltage))]
     set coupling [expr sqrt($alphac*$voltage*cos($synchPhase)*$omegaRF/($energy*$revFreq*4.0))]
     update
