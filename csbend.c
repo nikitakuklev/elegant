@@ -2828,7 +2828,7 @@ long applyLowPassFilter(double *histogram, long bins,
   for (i=i1; i<=i2; i++) {
     realimag[2*i  ] *= fraction;
     realimag[2*i+1] *= fraction;
-    if ((fraction -= dfraction)>1)
+    if ((fraction -= dfraction)<0)
       fraction = 0;
   }
   for (; i<frequencies; i++) {
