@@ -21,13 +21,15 @@ void transverseFeedbackPickup(TFBPICKUP *tfbp, double **part, long np, long pass
   
   if (tfbp->initialized==0)
     initializeTransverseFeedbackPickup(tfbp);
-  
+
   position = 0;
   if (np) {
     for (i=0; i<np; i++)
       position += part[i][tfbp->yPlane?2:0];
     position /= np;
   }
+  if (tfbp->rmsNoise)
+    position += gauss_rn_lim(0.0, tfbp->rmsNoise, 2, random_3);
 #ifdef DEBUG
   fprintf(stdout, "TFBPICKUP: Putting value %e in slot %ld\n",
           position, pass%tfbp->filterLength);

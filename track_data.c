@@ -1651,7 +1651,8 @@ TFBPICKUP tfbPickup_example;
 PARAMETER tfbpickup_param[N_TFBPICKUP_PARAMS] = {
    {"ID", "", IS_STRING, 0, (long)((char*)&tfbPickup_example.ID), NULL, 0.0, 0, "System identifier"},
    {"PLANE", "", IS_STRING, 0, (long)((char*)&tfbPickup_example.plane), "x", 0.0, 0, "\"x\" or \"y\""},
-   {"A0", "", IS_DOUBLE, 0, (long)((char*)&tfbPickup_example.a[0]), NULL, 1.0, 0, "Filter coefficient"},
+   {"RMS_NOISE", "M", IS_DOUBLE, 0, (long)((char*)&tfbPickup_example.rmsNoise), NULL, 0.0, 0, "RMS noise to add to position readings."},
+   {"A0", "", IS_DOUBLE, 0, (long)((char*)&tfbPickup_example.a[0]), NULL, 0.0, 0, "Filter coefficient"},
    {"A1", "", IS_DOUBLE, 0, (long)((char*)&tfbPickup_example.a[1]), NULL, 0.0, 0, "Filter coefficient"},
    {"A2", "", IS_DOUBLE, 0, (long)((char*)&tfbPickup_example.a[2]), NULL, 0.0, 0, "Filter coefficient"},
    {"A3", "", IS_DOUBLE, 0, (long)((char*)&tfbPickup_example.a[3]), NULL, 0.0, 0, "Filter coefficient"},
@@ -1673,7 +1674,7 @@ TFBDRIVER tfbDriver_example;
 PARAMETER tfbdriver_param[N_TFBDRIVER_PARAMS] = {
    {"ID", "", IS_STRING, 0, (long)((char*)&tfbDriver_example.ID), NULL, 0.0, 0, "System identifier"},
    {"STRENGTH", "", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.strength), NULL, 0.0, 0, "Strength factor"},
-   {"KICK_LIMIT", "", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.kickLimit), NULL, 0.0, 0, "Limit on applied kick"},
+   {"KICK_LIMIT", "RAD", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.kickLimit), NULL, 0.0, 0, "Limit on applied kick"},
    {"DELAY", "", IS_LONG, 0, (long)((char*)&tfbDriver_example.delay), NULL, 0.0, 0, "Delay (in turns)"},
    {"OUTPUT_FILE", "", IS_STRING, 0, (long)((char*)&tfbDriver_example.outputFile), NULL, 0.0, 0, "File for logging filter output and driver output"},
    {"A0", "", IS_DOUBLE, 0, (long)((char*)&tfbDriver_example.a[0]), NULL, 1.0, 0, "Filter coefficient"},

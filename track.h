@@ -1904,7 +1904,7 @@ typedef struct {
 extern PARAMETER tfbpickup_param[N_TFBPICKUP_PARAMS];
 typedef struct {
   char *ID, *plane;
-  double a[TFB_FILTER_LENGTH];
+  double rmsNoise, a[TFB_FILTER_LENGTH];
   /* internal parameters */
   long initialized, yPlane, filterLength;
   double filterOutput;
