@@ -7,6 +7,7 @@
 * in the file LICENSE that is included with this distribution. 
 \*************************************************************************/
 
+#if !defined(LYNCEANTECH)
 /* Intra-beam scattering element */
 
 #include "mdb.h"
@@ -242,5 +243,8 @@ void setup_track_IBS(IBSCATTER *IBS, ELEMENT_LIST *element)
     element = element->succ;
   }
 }
+#else
 
+#include "../lynceanExtensions/elegant/ibs_tracking.c"
 
+#endif
