@@ -1353,7 +1353,8 @@ void compute_twiss_statistics(LINE_LIST *beamline, TWISS *twiss_ave, TWISS *twis
 {
   ELEMENT_LIST *eptr;
   double dz, end_pos;
-
+  long nElems;
+  
   if (!twiss_ave) {
     fprintf(stdout, "error: NULL twiss_ave pointer in compute_twiss_statistics\n");
     fflush(stdout);
@@ -1377,6 +1378,7 @@ void compute_twiss_statistics(LINE_LIST *beamline, TWISS *twiss_ave, TWISS *twis
   twiss_max->betay = twiss_max->alphay = twiss_max->etay = twiss_max->etapy = -DBL_MAX;
 
   eptr = beamline->elem_twiss;
+  nElems = 0;
   while (eptr) {
     ASSIGN_MINMAX(twiss_min->betax, twiss_max->betax, eptr->twiss->betax);
     ASSIGN_MINMAX(twiss_min->alphax, twiss_max->alphax, eptr->twiss->alphax);
@@ -1396,11 +1398,14 @@ void compute_twiss_statistics(LINE_LIST *beamline, TWISS *twiss_ave, TWISS *twis
       twiss_ave->alphay += (eptr->pred->twiss->alphay + eptr->twiss->alphay)*dz;
       twiss_ave->etay += (eptr->pred->twiss->etay + eptr->twiss->etay)*dz;
       twiss_ave->etapy += (eptr->pred->twiss->etapy + eptr->twiss->etapy)*dz;
+      nElems++;
     }
     end_pos = eptr->end_pos;
     eptr = eptr->succ;
   }
-  if (end_pos) {
+  if (nElems==0)
+    memcpy(twiss_ave, twiss_min, sizeof(*twiss_min));
+  else if (end_pos) {
     twiss_ave->betax  /= end_pos;
     twiss_ave->alphax /= end_pos;
     twiss_ave->etax   /= end_pos;
