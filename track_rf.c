@@ -74,6 +74,10 @@ void track_through_rf_deflector(
     beta = pc/sqrt(1+sqr(pc));
     t_part = initial[ip][4]/(c_mks*beta);
     tLight = 0;
+#ifdef DEBUG
+    fprintf(stderr, "start coord[%ld] = %e, %e, %e, %e, %e, %e\n",
+	    ip, x, xp, y, yp, initial[ip][4], initial[ip][5]);
+#endif
     for (is=0; is<=n_kicks; is++) {
       beta_z = pz/pc;
       if (is==0 || is==n_kicks) {
@@ -107,6 +111,11 @@ void track_through_rf_deflector(
     final[ip][4] = t_part*c_mks*beta;
     final[ip][5] = (pc-pc_central)/pc_central;
     final[ip][6] = initial[ip][6];
+#ifdef DEBUG
+    fprintf(stderr, "stop  coord[%ld] = %e, %e, %e, %e, %e, %e\n",
+	    ip, final[ip][0], final[ip][1], final[ip][2], final[ip][3],
+	    final[ip][4], final[ip][5]);
+#endif
   }
 }
 
