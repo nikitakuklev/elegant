@@ -610,7 +610,7 @@ PARAMETER scraper_param[N_SCRAPER_PARAMS]={
     {"XO", "M", IS_DOUBLE, 0, (long)((char *)&scraper_example.Xo), NULL, 0.0, 0},
     {"INSERT_FROM", "", IS_STRING, 0, (long)((char *)&scraper_example.insert_from), NULL, 0.0, 0},
     {"ELASTIC", "", IS_LONG,  0, (long)((char *)&scraper_example.elastic), NULL, 0.0, 0},
-    {"DIRECTION", "", IS_LONG,  0, (long)((char *)&scraper_example.direction), NULL, 0.0, 0},
+    {"DIRECTION", "", IS_LONG,  0, (long)((char *)&scraper_example.direction), NULL, 0.0, -1},
     };
 
 CENTER center_example;

@@ -40,9 +40,6 @@ long rectangular_collimator(
         return(np);
         }
 
-/*    fprintf(stdout, "rcol: %e by %e at (%e, %e, %le)\n", xsize, ysize, x_center, y_center, z); */
-      fflush(stdout);
-
     itop = np-1;
     for (ip=0; ip<np; ip++) {
         ini = initial[ip];
@@ -219,9 +216,6 @@ long elliptical_collimator(
         return(np);
         }
 
-/*    fprintf(stdout, "ecol: %le by %le at (%e, %e, %le)\n", ecol->x_max, ecol->y_max, dx, dy, z); */
-      fflush(stdout);
-
     itop = np-1;
     for (ip=0; ip<np; ip++) {
         ini = initial[ip];
@@ -296,9 +290,6 @@ long elimit_amplitudes(
         log_exit("elimit_amplitudes");
         return(np);
         }
-
-/*    fprintf(stdout, "elimit: %le by %le at %le\n", xmax, ymax, z); */
-      fflush(stdout);
 
     a2 = sqr(xmax);
     b2 = sqr(ymax);
@@ -377,7 +368,9 @@ long beam_scraper(
             scraper->direction += 2;
         scraper->insert_from = NULL;
         }
-            
+    if (scraper->direction<0 || scraper->direction>3)
+      return np;
+    
     if (scraper->direction==0 || scraper->direction==2) {
         do_x = scraper->direction==0 ? 1 : -1;
         do_y = 0;
@@ -532,6 +525,7 @@ long track_through_pfilter(
           --ip;
         }
       }
+      fprintf(stderr, "%ld particles remain\n", itop+1);
     }
   }
   
