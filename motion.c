@@ -66,6 +66,7 @@ void derivatives_twmta(
     double tau 
     );
 void setupRftmEz0FromFile(RFTMEZ0 *rftmEz0, double frequency, double length, double Ez_peak);
+void setupRftmEz0SolenoidFromFile(RFTMEZ0 *rftmEz0, double k);
 double exit_function(double *qp, double *q, double phase);
 double *select_fiducial(double **part, long n_part, char *mode);
 void select_integrator(char *desired_method);
@@ -78,6 +79,8 @@ static void (*derivatives)(double *xqp, double *xq, double xt);
 static void (*input_impulse)(double *P, double *q);
 static void (*output_impulse)(double *P, double *q);
 static long (*integrator)();
+
+long analyzeSpacing(double *z, long nz, double *dzReturn, FILE *fpError);
 
 #define OUT_OF_APERTURE (-1)
 
@@ -357,8 +360,10 @@ void (*set_up_derivatives(
     *kscale = (omega=PIx2*rftmEz0->frequency)/c_mks;
     if (rftmEz0->change_p0)
       change_p0 = 1;
-    if (!rftmEz0->Ez)
+    if (!rftmEz0->Ez) {
       setupRftmEz0FromFile(rftmEz0, rftmEz0->frequency, rftmEz0->length, rftmEz0->Ez_peak);
+      setupRftmEz0SolenoidFromFile(rftmEz0, *kscale);
+    }
     if (!rftmEz0->fiducial_part) {
       /* This is the fiducial particle--the phase offset is set so 
        * that its phase when it reaches the cavity center will be 
@@ -672,7 +677,10 @@ void derivatives_rftmEz0(
   double gamma, *P, *Pp;
   double E[3], BOverGamma[3];
   RFTMEZ0 *rftmEz0;
-  long iz;
+  long iz, ir;
+  double R, Zoffset, BphiOverRG, ErOverR, BrOverRG;
+  double X, Y, sinPhase, cosPhase;
+  double B1, B2;
   
   derivCalls++;
   P  = q+3;
@@ -683,6 +691,10 @@ void derivatives_rftmEz0(
   qp[1] = P[1]/gamma;
   qp[2] = P[2]/gamma;
   
+  X = q[0]+X_offset;
+  Y = q[1]+Y_offset;
+  R = sqrt(sqr(X)+sqr(Y));
+
   /* get scaled RF fields */
   rftmEz0 = field_global;
   iz = q[2]/rftmEz0->dZ;
@@ -690,14 +702,8 @@ void derivatives_rftmEz0(
     E[0] = E[1] = E[2] = 0;
     BOverGamma[0] = BOverGamma[1] = BOverGamma[2] = 0;
   } else {
-    double R, Zoffset, BphiOverRG, ErOverR;
-    double X, Y, sinPhase, cosPhase;
-    
     if (iz==(rftmEz0->nz-1))
       iz -= 1;
-    X = q[0]+X_offset;
-    Y = q[1]+Y_offset;
-    R = sqrt(sqr(X)+sqr(Y));
     Zoffset = q[2]-iz*rftmEz0->dZ;
     sinPhase = sin(tau);
     cosPhase = cos(tau);
@@ -710,6 +716,37 @@ void derivatives_rftmEz0(
     BOverGamma[0] = -BphiOverRG*Y;
     BOverGamma[1] = BphiOverRG*X;
     BOverGamma[2] = 0;
+  }
+
+  /* add scaled solenoid fields */
+  if (rftmEz0->BzSol) {
+    iz = (q[2] - rftmEz0->Z0Sol)/rftmEz0->dZSol;
+    Zoffset = q[2] - (iz*rftmEz0->dZSol + rftmEz0->Z0Sol);
+    ir = R/rftmEz0->dRSol;
+    
+    if (iz>=0 && iz<rftmEz0->nzSol && ir<rftmEz0->nrSol) {
+      if (iz==rftmEz0->nzSol-1)
+        iz -= 1;
+      if (ir==rftmEz0->nrSol-1)
+        ir -= 1;
+      BrOverRG = 0;
+      if (R>0) {
+        /* compute Br/R */
+        B1 = rftmEz0->BrSol[ir][iz] +
+          (rftmEz0->BrSol[ir+1][iz] - rftmEz0->BrSol[ir][iz])/rftmEz0->dRSol*(R-ir*rftmEz0->dRSol);
+        B2 = rftmEz0->BrSol[ir][iz+1] +
+          (rftmEz0->BrSol[ir+1][iz+1] - rftmEz0->BrSol[ir][iz+1])/rftmEz0->dRSol*(R-ir*rftmEz0->dRSol);
+        BrOverRG = (B1 + (B2-B1)*Zoffset/rftmEz0->dZ)/gamma/R*rftmEz0->solenoidFactor;
+        BOverGamma[0] += X*BrOverRG;
+        BOverGamma[1] += Y*BrOverRG;
+      }
+      /* compute Bz/Gamma */
+      B1 = rftmEz0->BzSol[ir][iz] +
+        (rftmEz0->BzSol[ir+1][iz] - rftmEz0->BzSol[ir][iz])/rftmEz0->dRSol*(R-ir*rftmEz0->dRSol);
+      B2 = rftmEz0->BzSol[ir][iz+1] +
+        (rftmEz0->BzSol[ir+1][iz+1] - rftmEz0->BzSol[ir][iz+1])/rftmEz0->dRSol*(R-ir*rftmEz0->dRSol);
+      BOverGamma[2] = (B1 + (B2-B1)*Zoffset/rftmEz0->dZ)/gamma*rftmEz0->solenoidFactor;
+    }
   }
   
   /* (Px,Py,Pz)' = (Ex,Ey,Ez) + (Px,Py,Pz)x(Bx,By,Bz)/gamma */
@@ -1290,7 +1327,7 @@ void setupRftmEz0FromFile(RFTMEZ0 *rftmEz0, double frequency, double length, dou
 {
   SDDS_DATASET SDDSin;
   long i;
-  double dzMin, dzMax, dzAve, dz, *z;
+  double *z;
   double k, omega, Ez, EzMax;
   
   if (!rftmEz0)
@@ -1334,6 +1371,8 @@ void setupRftmEz0FromFile(RFTMEZ0 *rftmEz0, double frequency, double length, dou
             rftmEz0->inputFile);
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
+  rftmEz0->z0 = z[0];
+
   if (!SDDS_Terminate(&SDDSin)) {
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
@@ -1344,24 +1383,12 @@ void setupRftmEz0FromFile(RFTMEZ0 *rftmEz0, double frequency, double length, dou
   }
 
   /* compute dEz/dz for use in computing Er(z) */
-  dzMin = dzMax = z[1]-z[0];
-  for (i=2; i<rftmEz0->nz; i++) {
-    if ((dz=z[i]-z[i-1])<dzMin)
-      dzMin = dz;
-    if (dz>dzMax)
-      dzMax = dz;
-  }
-  if (dzMin<=0 || dzMax<=0) {
-    fprintf(stderr, "Error: z points in RFTMEZ0 file %s are not monotonically increasing\n",
+  if (!analyzeSpacing(z, rftmEz0->nz, &rftmEz0->dz, stderr)) {
+    fprintf(stderr, "Error: problem with z points from RFTMEZ0 file %s\n",
             rftmEz0->inputFile);
     exit(1);
   }
-  if (fabs(1-dzMin/dzMax)>0.0001) {
-    fprintf(stderr, "Error: spacing of z points in RFTMEZ0 file %s is not uniform (0.01% tolerance)\n",
-            rftmEz0->inputFile);
-    exit(1);
-  }
-  rftmEz0->dz = (z[rftmEz0->nz-1]-z[0])/(rftmEz0->nz-1.0);
+  
   if (fabs((length-(z[rftmEz0->nz-1]-z[0]))/rftmEz0->dz)>1e-6) {
     fprintf(stderr, "Error: declared length and length from fields from RFTMEZ0 file %s do not agree to 1/10^6 tolerance\n",
             rftmEz0->inputFile);
@@ -1394,6 +1421,164 @@ void setupRftmEz0FromFile(RFTMEZ0 *rftmEz0, double frequency, double length, dou
   /* for endpoints, assume field is zero outside region of data */
   rftmEz0->dEzdZ[0] = rftmEz0->Ez[1]/(2*rftmEz0->dZ);
   rftmEz0->dEzdZ[rftmEz0->nz-1] = rftmEz0->Ez[rftmEz0->nz-1]/(2*rftmEz0->dZ);
+
+}
+
+void setupRftmEz0SolenoidFromFile(RFTMEZ0 *rftmEz0, double k) 
+{
+  SDDS_DATASET SDDSin;
+  double *z, *r, dz, dr, *rTemp, z0;
+  long page, ir, iz;
+  
+  if (rftmEz0->initialized)
+    return;
+
+  rftmEz0->BrSol = rftmEz0->BzSol = NULL;
+  
+  /* check for solenoid input file */
+  if (!rftmEz0->solenoidFile)
+    return;
+  
+  if (!rftmEz0->solenoid_zColumn || !rftmEz0->solenoid_rColumn ||
+      !rftmEz0->solenoidBzColumn || !rftmEz0->solenoidBrColumn) 
+    SDDS_Bomb("missing column name for solenoid for RFTMEZ0 element");
+
+  if (!SDDS_InitializeInput(&SDDSin, rftmEz0->solenoidFile)) {
+    fprintf(stderr, "Error: unable to open or read RFTMEZ0 solenoid file %s\n", 
+            rftmEz0->solenoidFile);
+    exit(1);
+  }
+  if (SDDS_CheckColumn(&SDDSin, rftmEz0->solenoid_zColumn, "m", SDDS_ANY_FLOATING_TYPE,
+                       stderr)!=SDDS_CHECK_OK) {
+    fprintf(stderr, "Error: problem with column %s in RFTMEZ0 solenoid file %s.  Check existence, type, and units.\n",
+            rftmEz0->solenoid_zColumn, rftmEz0->solenoidFile);
+    exit(1);
+  }
+  if (SDDS_CheckColumn(&SDDSin, rftmEz0->solenoid_rColumn, "m", SDDS_ANY_FLOATING_TYPE,
+                       stderr)!=SDDS_CHECK_OK) {
+    fprintf(stderr, "Error: problem with column %s in RFTMEZ0 solenoid file %s.  Check existence, type, and units.\n",
+            rftmEz0->solenoid_rColumn, rftmEz0->solenoidFile);
+    exit(1);
+  }
+
+  if (SDDS_CheckColumn(&SDDSin, rftmEz0->solenoidBzColumn, "T", SDDS_ANY_FLOATING_TYPE,
+                       stderr)!=SDDS_CHECK_OK) {
+    fprintf(stderr, "Error: problem with column %s in RFTMEZ0 solenoid file %s.  Check existence, type, and units.\n",
+            rftmEz0->solenoidBzColumn, rftmEz0->solenoidFile);
+    exit(1);
+  }
+  if (SDDS_CheckColumn(&SDDSin, rftmEz0->solenoidBrColumn, "T", SDDS_ANY_FLOATING_TYPE,
+                       stderr)!=SDDS_CHECK_OK) {
+    fprintf(stderr, "Error: problem with column %s in RFTMEZ0 solenoid file %s.  Check existence, type, and units.\n",
+            rftmEz0->solenoidBzColumn, rftmEz0->solenoidFile);
+    exit(1);
+  }
+
+  z = NULL;
+  r = NULL;
+  while ((page=SDDS_ReadPage(&SDDSin))>0) {
+    if (page==1) {
+      if ((rftmEz0->nzSol=SDDS_RowCount(&SDDSin))<0 || rftmEz0->nzSol<2) {
+        fprintf(stderr, "Error: no data or insufficient data in RFTMEZ0 solenoid file %s\n", 
+                rftmEz0->solenoidFile);
+        exit(1);
+      }
+      if (!(z=SDDS_GetColumnInDoubles(&SDDSin, rftmEz0->solenoid_zColumn))) {
+        fprintf(stderr, "Error: problem getting z data from RFTMEZ0 solenoid file %s\n",
+                rftmEz0->solenoidFile);
+        exit(1);
+      }
+      if (!analyzeSpacing(z, rftmEz0->nzSol, &dz, stderr)) {
+        fprintf(stderr, "Problem with z spacing of solenoid data from RFTMEZ0 file %s (page %ld)\n",
+                rftmEz0->solenoidFile, page);
+        exit(1);
+      }
+      z0 = z[0];
+      free(z);
+    } else {
+      if (rftmEz0->nzSol!=SDDS_RowCount(&SDDSin)) {
+        fprintf(stderr, "Error: page %ld of RFTMEZ0 file %s has only %ld rows (%ld expected)\n",
+                page, rftmEz0->solenoidFile, SDDS_RowCount(&SDDSin), rftmEz0->nzSol);
+        exit(1);
+      }
+    }
+
+    if (!(rTemp = SDDS_GetColumnInDoubles(&SDDSin, rftmEz0->solenoid_rColumn))) {
+      fprintf(stderr, "Error: problem getting r data from RFTMEZ0 solenoid file %s\n",
+              rftmEz0->solenoidFile);
+      exit(1);
+    }
+    if (!(r = SDDS_Realloc(r, sizeof(*r)*page)))
+      SDDS_Bomb("memory allocation failure (setupRftmEz0SolenoidFromFile)");
+    r[page-1] = rTemp[0];
+    free(rTemp);
+    
+    if (!(rftmEz0->BzSol = SDDS_Realloc(rftmEz0->BzSol, sizeof(*rftmEz0->BzSol)*page)) ||
+        !(rftmEz0->BrSol = SDDS_Realloc(rftmEz0->BrSol, sizeof(*rftmEz0->BrSol)*page)) )
+      SDDS_Bomb("memory allocation failure (setupRftmEz0SolenoidFromFile)");
+    if (!(rftmEz0->BzSol[page-1] = 
+          SDDS_GetColumnInDoubles(&SDDSin, rftmEz0->solenoidBzColumn)) ||
+        !(rftmEz0->BrSol[page-1] = 
+          SDDS_GetColumnInDoubles(&SDDSin, rftmEz0->solenoidBrColumn)) )  {
+       fprintf(stderr, "Error: problem getting field data from RFTMEZ0 solenoid file %s\n",
+               rftmEz0->solenoidFile);
+       exit(1);
+    }
+    rftmEz0->nrSol = page;
+  }
+
+  SDDS_Terminate(&SDDSin);
+  
+  if (!analyzeSpacing(r, rftmEz0->nrSol, &dr, stderr)) {
+    fprintf(stderr, "Problem with r spacing of solenoid data from RFTMEZ0 file %s\nr values are:\n",
+            rftmEz0->solenoidFile);
+    for (ir=0; ir<rftmEz0->nrSol; ir++)
+      fprintf(stderr, "%le\n", r[ir]);
+    exit(1);
+  }
+  free(r);
+  
+  rftmEz0->dRSol = k*dr;
+  rftmEz0->dZSol = k*dz;
+  rftmEz0->Z0Sol = k*(z0-rftmEz0->z0);
+
+  /* perform scaling */
+  for (ir=0; ir<rftmEz0->nrSol; ir++) 
+    for (iz=0; iz<rftmEz0->nzSol; iz++)  {
+      rftmEz0->BrSol[ir][iz] *= e_mks/(me_mks*k*c_mks);
+      rftmEz0->BzSol[ir][iz] *= e_mks/(me_mks*k*c_mks);
+    }
   
 }
 
+long analyzeSpacing(double *z, long nz, double *dzReturn, FILE *fpError) 
+{
+  double dzMin, dzMax, dz;
+  long i;
+  
+  if (nz<3) {
+    if (fpError)
+      fprintf(fpError, "Problem with point spacing: less than 3 points\n");
+    return 0;
+  }
+  
+  dzMin = dzMax = z[1]-z[0];
+  for (i=2; i<nz; i++) {
+    if ((dz=z[i]-z[i-1])<dzMin)
+      dzMin = dz;
+    if (dz>dzMax)
+      dzMax = dz;
+  }
+  if (dzMin<=0 || dzMax<=0) {
+    if (fpError)
+      fprintf(fpError, "Error: points are not monotonically increasing\n");
+    return 0;
+  }
+  if (fabs(1-dzMin/dzMax)>0.0001) {
+    if (fpError)
+      fprintf(fpError, "Error: spacing of points is not uniform (0.01% tolerance)\n");
+    return 0;
+  }
+  *dzReturn = (z[nz-1]-z[0])/(nz-1.0);
+  return 1;
+}

@@ -517,7 +517,7 @@ extern char *entity_text[N_TYPES];
 #define N_MATR_PARAMS 3
 #define N_ALPH_PARAMS 13
 #define N_RFDF_PARAMS 8
-#define N_RFTMEZ0_PARAMS 17
+#define N_RFTMEZ0_PARAMS 23
 #define N_RMDF_PARAMS 10
 #define N_TMCF_PARAMS 18
 #define N_CEPL_PARAMS 16
@@ -839,7 +839,8 @@ typedef struct {
     double dx, dy;
     long n_steps, radial_order, change_p0;
     char *inputFile, *zColumn, *EzColumn;
-    double accuracy;
+    char *solenoidFile, *solenoid_zColumn, *solenoid_rColumn, *solenoidBzColumn, *solenoidBrColumn;
+    double solenoidFactor, accuracy;
     char *method, *fiducial;
     /* variables for internal use only: */
     long initialized;
@@ -848,7 +849,12 @@ typedef struct {
     double k;  /* omega*c */
     long nz;
     double dz, dZ;  /* actual and scaled point spacing (dZ=k*dz) */
+    double z0;      /* used to align solenoid field */
     double *Ez, *dEzdZ;  /* scaled field Ez*e/(mc) and derivative wrt Z */
+    /* for solenoid: */
+    long nzSol, nrSol;
+    double dRSol, dZSol, Z0Sol;  /* scaled grid spacing and starting point */
+    double **BrSol, **BzSol;
     } RFTMEZ0;
 
 /* names and storage structure for ramped deflector plates using 
