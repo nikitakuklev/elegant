@@ -952,6 +952,9 @@ void reset_special_elements(LINE_LIST *beamline, long includeRF)
     eptr = &(beamline->elem);
     while (eptr) {
         switch (eptr->type) {
+          case T_KICKER:
+            ((KICKER*)eptr->p_elem)->fiducial_seen = 0;
+            break;
           case T_NIBEND:
             nibend = (NIBEND*)eptr->p_elem;
             nibend->initialized = 0;
