@@ -59,7 +59,7 @@ long do_tracking(
   ENERGY *energy;
   MAXAMP *maxamp;
   MALIGN *malign;
-  ELEMENT_LIST *eptr, *eptrCLMatrix=NULL;
+  ELEMENT_LIST *eptr, *eptrPred, *eptrCLMatrix=NULL;
   long n_left, show_dE;
   double dgamma, dP[3], z, z_recirc, last_z;
   long i, j, i_traj=0, i_sums, n_to_track, i_pass, isConcat;
@@ -835,18 +835,29 @@ long do_tracking(
         }
         i_traj++;
       }
-      if (!(flags&TEST_PARTICLES)) {
+      if (!(flags&TEST_PARTICLES) && !sliceAnalysis->finalValuesOnly) {
 	performSliceAnalysisOutput(sliceAnalysis, coord, n_to_track, 
 				   !sliceAnDone, step, 
 				   *P_central, 
 				   charge?charge->macroParticleCharge*n_to_track:0.0, 
-				   eptr->name, eptr->end_pos, 0);
+				   eptr->name, eptr->end_pos, 0); 
 	sliceAnDone = 1;
       }
 
       last_type = eptr->type;
+      eptrPred = eptr;
       eptr = eptr->succ;
       n_to_track = n_left;
+    }
+    
+    if (!(flags&TEST_PARTICLES) && sliceAnalysis->finalValuesOnly) {
+      performSliceAnalysisOutput(sliceAnalysis, coord, n_to_track, 
+				 !sliceAnDone, step, 
+				 *P_central, 
+				 charge?charge->macroParticleCharge*n_to_track:0.0, 
+				 eptrPred->name, eptrPred->end_pos, 0);
+      
+      sliceAnDone = 1;
     }
     
     log_entry("do_tracking.2.2.3");
