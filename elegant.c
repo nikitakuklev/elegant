@@ -28,7 +28,7 @@ void traceback_handler(int code);
 char *option[N_OPTIONS] = {
     "describeinput",
         };
-char *USAGE="elegant <inputfile> [-describeInput]\n\nProgram by Michael Borland. (This is version 13.11, July 1999.)";
+char *USAGE="elegant <inputfile>\n\nProgram by Michael Borland. (This is version 13.11, July 1999.)";
 
 char *GREETING="This is elegant, by Michael Borland. (This is version 13.11, July 1999.)";
 
@@ -855,7 +855,7 @@ char **argv;
             set_print_namelist_flags(0);
             process_namelist(&print_dictionary, &namelist_text);
             print_namelist(stderr, &print_dictionary);
-            do_print_dictionary(filename);
+            do_print_dictionary(filename, latex_form);
             break;
           case FLOOR_COORDINATES:
             output_floor_coordinates(&namelist_text, &run_conditions, beamline);
@@ -976,49 +976,83 @@ void center_beam_on_coords(double **part, long np, double *coord, long center_dp
         }
     }
 
-void do_print_dictionary(char *filename)
+void do_print_dictionary(char *filename, long latex_form)
 {
-    FILE *fp;
-    long i, j;
+  FILE *fp;
+  long i, j;
 
-    if (!filename)
-        bomb("filename invalid (do_print_dictionary)", NULL);
-    fp = fopen_e(filename, "w", 0);
-    for (i=1; i<N_TYPES; i++)
-        print_dictionary_entry(fp, i);
-    }
+  if (!filename)
+    bomb("filename invalid (do_print_dictionary)", NULL);
+  fp = fopen_e(filename, "w", 0);
+  for (i=1; i<N_TYPES; i++)
+    print_dictionary_entry(fp, i, latex_form);
+  fclose(fp);
+}
 
 #define PRINTABLE_NULL(s) (s?s:"NULL")
-void print_dictionary_entry(FILE *fp, long type)
+char *translateUnitsToTex(char *source);
+char *makeTexSafeString(char *source);
+
+void print_dictionary_entry(FILE *fp, long type, long latex_form)
 {
-    char *type_name[3] = {"double", "long", "STRING", };
-    long j;
+  char *type_name[3] = {"double", "long", "STRING", };
+  long j;
+  if (latex_form) {
+    fprintf(fp, "\\begin{latexonly}\n\\newpage\n\\begin{center}{\\Large\\verb|%s|}\\end{center}\n\\end{latexonly}\\subsection{%s}\n", 
+            entity_name[type], entity_name[type]);
+    fprintf(fp, "%s\n\\\\\n", makeTexSafeString(entity_text[type]));
+    fprintf(fp, "\\begin{tabular}{|l|l|l|l|} \\hline\n");
+    fprintf(fp, "Parameter Name & Units & Type & Default \\\\ \\hline \n");
+  }
+  else  {
     fprintf(fp, "***** element type %s:\n", entity_name[type]);
     fprintf(fp, "%s\n", entity_text[type]);
-    for (j=0; j<entity_description[type].n_params; j++) {
-        fprintf(fp, "%20s  %20s  %10s", 
-                PRINTABLE_NULL(entity_description[type].parameter[j].name), 
-                PRINTABLE_NULL(entity_description[type].parameter[j].unit),
-                PRINTABLE_NULL(type_name[entity_description[type].parameter[j].type-1]));
-        switch (entity_description[type].parameter[j].type) {
-          case IS_DOUBLE:
-            fprintf(fp, "  %.15g\n", entity_description[type].parameter[j].number);
-            break;
-          case IS_LONG:
-            fprintf(fp, "  %-15ld\n", entity_description[type].parameter[j].integer);
-            break;
-          case IS_STRING:
-            fprintf(fp, "  %-15s\n", 
-                    PRINTABLE_NULL(entity_description[type].parameter[j].string));
-            break;
-          default:
-            fprintf(stderr, "Invalid parameter type for %s item of %s\n",
-                    PRINTABLE_NULL(entity_description[type].parameter[j].name),
-                    entity_name[type]);
-            exit(1);
-            }
-        }
+  }
+  for (j=0; j<entity_description[type].n_params; j++) {
+    if (!latex_form)
+      fprintf(fp, "%20s %20s %10s", 
+              PRINTABLE_NULL(entity_description[type].parameter[j].name), 
+              PRINTABLE_NULL(entity_description[type].parameter[j].unit),
+              PRINTABLE_NULL(type_name[entity_description[type].parameter[j].type-1]));
+    else {
+      fprintf(fp, "%s ",
+              makeTexSafeString(PRINTABLE_NULL(entity_description[type].parameter[j].name)));
+      fprintf(fp, "& %s ",
+              translateUnitsToTex(PRINTABLE_NULL(entity_description[type].parameter[j].unit)));
+      fprintf(fp, "& %s & ",
+              makeTexSafeString(PRINTABLE_NULL(type_name[entity_description[type].parameter[j].type-1])));
     }
+    switch (entity_description[type].parameter[j].type) {
+    case IS_DOUBLE:
+      if (latex_form && entity_description[type].parameter[j].number==0)
+        fprintf(fp, " 0.0");
+      else 
+        fprintf(fp, "  %.15g", entity_description[type].parameter[j].number);
+      break;
+    case IS_LONG:
+      if (latex_form && entity_description[type].parameter[j].integer==0)
+        fprintf(fp, " \\verb|0|");
+      else      
+        fprintf(fp, "  %-15ld", entity_description[type].parameter[j].integer);
+      break;
+    case IS_STRING:
+      fprintf(fp, "  %-15s", 
+              PRINTABLE_NULL(entity_description[type].parameter[j].string));
+      break;
+    default:
+      fprintf(stderr, "Invalid parameter type for %s item of %s\n",
+              PRINTABLE_NULL(entity_description[type].parameter[j].name),
+              entity_name[type]);
+      exit(1);
+    }
+    if (latex_form)
+      fprintf(fp, " \\\\ \\hline \n");
+    else 
+      fprintf(fp, "\n");
+  }
+  if (latex_form)
+    fprintf(fp, "\\end{tabular}\n\n");
+}
 
 #include <memory.h>
 
@@ -1051,4 +1085,59 @@ void initialize_structures(RUN *run_conditions, VARY *run_control, ERROR *error_
         memset((void*)links, 0, sizeof(*links));
     }
 
+char *makeTexSafeString(char *source)
+{
+  static char buffer[1024];
+  long index = 0;
+  buffer[0] = 0;
+  while (*source) {
+    if (*source=='_')
+      buffer[index++] = '\\';
+    buffer[index++] = *source++;
+  }
+  buffer[index] = 0;
+  return buffer;
+}
 
+char *translateUnitsToTex(char *source)
+{
+  static char buffer[1024];
+  char *ptr, *ptr1;
+
+  if (strlen(source)==0)
+    return source;
+  buffer[0] = '$';
+  buffer[1] = 0;
+  ptr = source;
+  while (*ptr) {
+    if (*ptr=='$') {
+      switch (*(ptr1=ptr+1)) {
+      case 'a':
+      case 'b':
+      case 'A':
+      case 'B':
+        while (*ptr1 && *ptr1!='$')
+          ptr1++;
+        if (*ptr1 && (*(ptr1+1)=='n' || *(ptr1+1)=='N')) {
+          if (*(ptr+1)=='a' || *(ptr+1)=='A')
+            strcat(buffer, "^{");
+          else
+            strcat(buffer, "_{");
+          strncat(buffer, ptr+2, (ptr1-1)-(ptr+2)+1);
+          strcat(buffer, "}");
+          ptr = ptr1+1;
+        } else
+          strncat(buffer, ptr, 1);
+        break;
+      default:
+        fprintf(stderr, "Unrecognized $ sequence: %s\n", ptr);
+        strncat(buffer, ptr, 1);
+        break;
+      }
+    } else 
+      strncat(buffer, ptr, 1);
+    ptr++;
+  }
+  strcat(buffer, "$");
+  return buffer;
+}

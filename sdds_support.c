@@ -420,9 +420,9 @@ void SDDS_HistogramSetup(HISTOGRAM *histogram, long mode, long lines_per_row,
         (histogram->columnIndex[4][1]
          =SDDS_DefineColumn(SDDS_table, "tFrequency", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
         (histogram->columnIndex[5][0]
-         =SDDS_DefineColumn(SDDS_table, "p", NULL, "m$be$nc", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+         =SDDS_DefineColumn(SDDS_table, "delta", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
         (histogram->columnIndex[5][1]
-         =SDDS_DefineColumn(SDDS_table, "pFrequency", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+         =SDDS_DefineColumn(SDDS_table, "deltaFrequency", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
         (histogram->columnIndex[6][0]
          =SDDS_DefineColumn(SDDS_table, "dt", NULL, "s", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
         (histogram->columnIndex[6][1]

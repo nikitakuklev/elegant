@@ -91,7 +91,7 @@ long simple_rf_cavity(
             }
         if (been_warned) {
             fprintf(stderr, "units of parameters for RFCA are as follows:\n");
-            print_dictionary_entry(stderr, T_RFCA);
+            print_dictionary_entry(stderr, T_RFCA, 0);
             }
         }
 

@@ -35,7 +35,7 @@ long modulated_rf_cavity(double **part, long np, MODRF *modrf, double P_central,
             }
         if (been_warned) {
             fprintf(stderr, "units of parameters for MODRF are as follows:\n");
-            print_dictionary_entry(stderr, T_MODRF);
+            print_dictionary_entry(stderr, T_MODRF, 0);
             }
         }
 

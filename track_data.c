@@ -127,6 +127,8 @@ and phase modulation.",
     "An element to establish the total charge of a beam.  Active on first pass only.  If given, overrides all charge specifications on other elements.",
     "An element for energy and momentum filtration.",
     "Request for histograms of particle coordinates to be output to SDDS file.",
+    "Like CSBEND, but incorporates a simulation of Coherent Synchrotron radiation.",
+    
     } ;
 
 QUAD quad_example;

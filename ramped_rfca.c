@@ -42,7 +42,7 @@ long ramped_rf_cavity(
             }
         if (been_warned) {
             fprintf(stderr, "units of parameters for RAMPRF are as follows:\n");
-            print_dictionary_entry(stderr, T_RAMPRF);
+            print_dictionary_entry(stderr, T_RAMPRF, 0);
             }
         }
 

@@ -40,4 +40,5 @@
 
 #namelist print_dictionary static
     STRING filename = NULL;
+    long latex_form = 0;
 #end

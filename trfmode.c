@@ -81,7 +81,7 @@ void track_through_trfmode(
     }
     if (been_warned) {
       fprintf(stderr, "units of parameters for TRFMODE are as follows:\n");
-      print_dictionary_entry(stderr, T_TRFMODE);
+      print_dictionary_entry(stderr, T_TRFMODE, 0);
     }
   }
 

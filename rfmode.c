@@ -64,7 +64,7 @@ void track_through_rfmode(
             }
         if (been_warned) {
             fprintf(stderr, "units of parameters for RFMODE are as follows:\n");
-            print_dictionary_entry(stderr, T_RFMODE);
+            print_dictionary_entry(stderr, T_RFMODE, 0);
             }
         }
 

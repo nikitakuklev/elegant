@@ -1763,8 +1763,8 @@ extern double find_beam_p_central(char *input);
 void center_beam_on_coords(double **particle, long n_part, double *coord, long center_momentum_also);
 void link_date(void);
 void check_heap();
-void do_print_dictionary(char *filename);
-void print_dictionary_entry(FILE *fp, long type);
+void do_print_dictionary(char *filename, long latex_form);
+void print_dictionary_entry(FILE *fp, long type, long latex_form);
 
 /* prototypes for error.c: */
 extern void error_setup(ERROR *errcon, NAMELIST_TEXT *nltext, RUN *run_cond, LINE_LIST *beamline);
