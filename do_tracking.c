@@ -56,7 +56,7 @@ long do_tracking(
   long n_left, show_dE;
   double dgamma, dP[3], z, z_recirc, last_z;
   long i, j, i_traj=0, i_sums, n_to_track, i_pass, isConcat;
-  long i_sums_recirc;
+  long i_sums_recirc, saveISR;
   long watch_pt_seen;
   double sum, x_max, y_max;
   long elliptical;
@@ -599,12 +599,24 @@ long do_tracking(
                                               *P_central, accepted, z);
             break;
           case T_CSBEND:
+            if (flags&TEST_PARTICLES) {
+              saveISR = ((CSBEND*)eptr->p_elem)->isr;
+              ((CSBEND*)eptr->p_elem)->isr = 0;
+            }
             n_left = track_through_csbend(coord, n_to_track, (CSBEND*)eptr->p_elem, 0.0,
                                           *P_central, accepted, last_z);
+            if (flags&TEST_PARTICLES)
+              ((CSBEND*)eptr->p_elem)->isr = saveISR;
             break;
           case T_CSRCSBEND:
+            if (flags&TEST_PARTICLES) {
+              saveISR = ((CSRCSBEND*)eptr->p_elem)->isr;
+              ((CSRCSBEND*)eptr->p_elem)->isr = 0;
+            }
             n_left = track_through_csbendCSR(coord, n_to_track, (CSRCSBEND*)eptr->p_elem, 0.0,
                                              *P_central, accepted, last_z, z, charge, run->rootname);
+            if (flags&TEST_PARTICLES)
+              ((CSRCSBEND*)eptr->p_elem)->isr = saveISR;
             break;
           case T_CSRDRIFT:
             n_left = track_through_driftCSR(coord, n_to_track, (CSRDRIFT*)eptr->p_elem,
