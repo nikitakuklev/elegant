@@ -3,6 +3,22 @@
         new_type = DRIF
 &end
 
+&transmute_elements
+        name = *, type = MAXAMP,
+        new_type = DRIF,
+	ignore = <includeApertures>
+&end
+&transmute_elements
+        name = *, type = ?COL,
+        new_type = DRIF,
+	ignore = <includeApertures>
+&end
+&transmute_elements
+        name = *, type = SCRAPER,
+        new_type = DRIF,
+	ignore = <includeApertures>
+&end
+
 &run_setup
 	lattice = <kickLatticeFile>,
 	use_beamline = <kickBeamline>

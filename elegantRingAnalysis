@@ -170,6 +170,7 @@ proc FillBasicFrame {widget args} {
     set basicComputations(sextDivisions) 1
     set basicComputations(edgeOrder) 1
     set basicComputations(finalSTwiss) 0.0
+    set basicComputations(userSuffix) ""
     APSLabeledEntry .le2 -parent $widget -width 20 \
       -label "Drift divisions: " -type integer \
       -textVariable basicComputations(driftDivisions)
@@ -185,6 +186,9 @@ proc FillBasicFrame {widget args} {
     APSLabeledEntry .le5 -parent $widget -width 20 \
         -label "Final s for twiss plots (m): " \
 	-textVariable basicComputations(finalSTwiss)
+    APSLabeledEntry .le6 -parent $widget -width 20 \
+      -label "Run suffix: " -type integer \
+      -textVariable basicComputations(userSuffix)
 
     APSButton .bu1 -parent $widget -text "Compute" -command \
       "BasicComputations -mode run"
@@ -224,8 +228,9 @@ proc BasicComputations {args} {
     set tag Basic
     if [string compare $mode run]==0 {
         if {![PerformRun -template $sourceDir/BasicTemplate.ele -parameterFileList $parameterFileList \
-		  -tag $tag -order $order -momentum $momentum \
-		  -originalList $origList -replacementList $replList]} {
+		  -tag $tag -order $order -momentum $momentum -suffix $basicComputations(userSuffix) \
+		  -originalList $origList -replacementList $replList \
+		  -suffix $basicComputations(userSuffix) ]} {
             return 
         }
     } else {
@@ -428,6 +433,7 @@ proc FillPhaseSpaceFrame {widget args} {
     set phaseSpaceTracking(otherCoord) 0.0
     set phaseSpaceTracking(sweepPoints) 11
     set phaseSpaceTracking(turns) 1024
+    set phaseSpaceTracking(userSuffix) ""
     APSRadioButtonFrame .rb1 -parent $widget \
       -label "Plane: " -orientation horizontal -buttonList {x y} -valueList {X Y} \
       -commandList {"set phaseSpaceTracking(otherPlane) Y" "set phaseSpaceTracking(otherPlane) X"} \
@@ -455,6 +461,10 @@ proc FillPhaseSpaceFrame {widget args} {
       -label "Turns to track: " -width 20 -textVariable phaseSpaceTracking(turns) \
       -contextHelp \
       "Enter the number of turns to track."
+
+    APSLabeledEntry .le5 -parent $widget \
+      -label "Run suffix: " -width 20 -textVariable phaseSpaceTracking(userSuffix) \
+      -contextHelp "Enter a suffix for this set of runs."
 
     APSButton .bu1 -parent $widget \
       -text "Run" -command "PhaseSpaceTracking -mode run"
@@ -485,14 +495,15 @@ proc PhaseSpaceTracking {args} {
     set rootname $mainDirectory/${mainPrefix}${tag}${Plane}
     set variable offset
     if [string compare $mode run]==0 {
-        if {![PerformRuns -template $sourceDir/PhaseSpaceTrackingTemplate.ele -parameterFileList $parameterFileList \
+	if {![PerformRuns -template $sourceDir/PhaseSpaceTrackingTemplate.ele -parameterFileList $parameterFileList \
 		  -variable $variable \
 		  -startValue $phaseSpaceTracking(initialOffset) \
 		  -endValue $phaseSpaceTracking(finalOffset) \
 		  -points $phaseSpaceTracking(sweepPoints) \
 		  -copyList done -combineList w1 -mergeList [list var ele ele.log] \
 		  -replacementList $replList -originalList $origList \
-		  -tag $tag -suffix $Plane -order 3 -momentum $momentum ]} {
+		  -tag $tag -suffix $phaseSpaceTracking(userSuffix)$Plane \
+		  -order 3 -momentum $momentum ]} {
             return 
         }
     } else {
@@ -518,7 +529,7 @@ proc PhaseSpaceTracking {args} {
 	-title=@${plane}Label -separate=page -split=page -mode=y=log,y=special \
 	-topline=$rootname &
     exec sddsnaff ${rootname}.w1 -pipe=out -columns=Pass,C${plane},C${otherPlane} \
-	-terminateSearch=frequencies=1 -nowarnings \
+	-terminateSearch=frequencies=1 -nowarnings -iterate=cycleLimit=200,accuracyLimit=1e-12 \
 	| sddscombine -pipe -merge \
 	| sddsxref -pipe=in ${rootname}.var -take=* ${rootname}.w1.naff
     exec sddsplot -topline=$rootname \
@@ -570,6 +581,12 @@ proc FillOffMomentumTunesFrame {widget args} {
       -contextHelp \
       "Enter the superperiodicity of the lattice.  This is used only in generating the resonance diagram."
 
+    set offMomentumTuneTracking(userSuffix) ""
+    APSLabeledEntry .le5 -parent $widget \
+      -label "Run suffix: " -width 20 -textVariable offMomentumTuneTracking(userSuffix) \
+      -contextHelp "Enter a suffix for this set of runs."
+
+
     APSButton .bu1 -parent $widget \
       -text "Run" -command "OffMomentumTuneTracking -mode run"
     APSButton .bu2 -parent $widget \
@@ -601,7 +618,7 @@ proc OffMomentumTuneTracking {args} {
         if {![PerformRuns -template $sourceDir/OffMomentumTuneTrackingTemplate.ele \
 		  -parameterFileList $parameterFileList \
 		  -originalList $origList -replacementList $replList \
-		  -variable delta \
+		  -variable delta -suffix $offMomentumTuneTracking(userSuffix) \
 		  -startValue $offMomentumTuneTracking(initialOffset) \
 		  -endValue $offMomentumTuneTracking(finalOffset) \
 		  -points $offMomentumTuneTracking(sweepPoints) \
@@ -641,7 +658,7 @@ proc OffMomentumTuneTracking {args} {
     set rootname $mainDirectory/${mainPrefix}${tag}
     exec sddsexpand ${rootname}.var ${rootname}.vare
     exec sddsnaff ${rootname}.w1 -pipe=out \
-      -columns=Pass,Cx,Cy -terminate=frequencies=1 \
+      -columns=Pass,Cx,Cy -terminate=frequencies=1 -iterate=cycleLimit=200,accuracyLimit=1e-12 \
       | sddsprocess -pipe \
       "-define=column,nuxTracking,CxFrequency $dnuxSign * $nuxInteger +" \
       "-define=column,nuyTracking,CyFrequency $dnuySign * $nuyInteger +" \
@@ -677,6 +694,12 @@ proc FillHigherOrderDispersionFrame {widget args} {
       -contextHelp \
       "Enter the number of offset values in the scan."
 
+    set higherOrderDispersion(userSuffix) ""
+    APSLabeledEntry .le5 -parent $widget \
+      -label "Run suffix: " -width 20 -textVariable higherOrderDispersion(userSuffix) \
+      -contextHelp "Enter a suffix for this set of runs."
+
+
     APSButton .bu1 -parent $widget \
       -text "Run" -command "HigherOrderDispersion -mode run"
     APSButton .bu2 -parent $widget \
@@ -707,7 +730,7 @@ proc HigherOrderDispersion {args} {
         catch {file delete $rootname.done}
         if [catch {PerformRuns -template $sourceDir/HigherOrderDispersionTemplate.ele \
 		       -parameterFileList $parameterFileList \
-		       -variable $variable \
+		       -variable $variable -suffix $higherOrderDispersion(userSuffix) \
 		       -startValue $higherOrderDispersion(initialOffset) \
 		       -endValue $higherOrderDispersion(finalOffset) \
 		       -points $higherOrderDispersion(sweepPoints) \
@@ -748,6 +771,7 @@ proc FillDynamicApertureFrame {widget args} {
     set dynamicAperture(xPoints)   31
     set dynamicAperture(yPoints)   16
     set dynamicAperture(turns) 500
+    set dynamicAperture(includeApertures) 1
 
     APSLabeledEntry .le1 -parent $widget \
       -label "Minimum x coordinate (m): " -width 20 -textVariable dynamicAperture(xMinimum) \
@@ -773,6 +797,16 @@ proc FillDynamicApertureFrame {widget args} {
       -label "Number of turns: " -width 20 -textVariable dynamicAperture(turns) \
       -contextHelp \
       "Enter the number of turns to track."
+
+    set dynamicAperture(userSuffix) ""
+    APSLabeledEntry .le7 -parent $widget \
+      -label "Run suffix: " -width 20 -textVariable dynamicAperture(userSuffix) \
+      -contextHelp "Enter a suffix for this set of runs."
+
+    APSRadioButtonFrame .rb1 -parent $widget \
+      -label "Include apertures: " -orientation horizontal -buttonList {Yes No} -valueList {1 0} \
+      -variable dynamicAperture(includeApertures) -contextHelp \
+      "Choose whether to include the effects of apertures that are defined in the beamline."
     
     APSButton .bu1 -parent $widget \
       -text "Run" -command "DynamicAperture -mode run"
@@ -801,7 +835,7 @@ proc DynamicAperture {args} {
     set rootname $mainDirectory/${mainPrefix}${tag}
     if [string compare $mode run]==0 {
         if {![PerformRun -template $sourceDir/DynamicApertureTemplate.ele \
-		  -parameterFileList $parameterFileList \
+		  -parameterFileList $parameterFileList -suffix $dynamicAperture(userSuffix) \
 		  -originalList $origList -replacementList $replList \
 		  -tag $tag -order 3 -momentum $momentum ]} {
             return 
@@ -864,6 +898,17 @@ proc FillOffMomentumDynamicApertureFrame {widget args} {
       -contextHelp \
       "Enter the number of turns to track."
     
+    set offMomentumDynamicAperture(userSuffix) ""
+    APSLabeledEntry .le10 -parent $widget \
+      -label "Run suffix: " -width 20 -textVariable offMomentumDynamicAperture(userSuffix) \
+      -contextHelp "Enter a suffix for this set of runs."
+
+    set offMomentumDynamicAperture(includeApertures) 1
+    APSRadioButtonFrame .rb1 -parent $widget \
+      -label "Include apertures: " -orientation horizontal -buttonList {Yes No} -valueList {1 0} \
+      -variable offMomentumDynamicAperture(includeApertures) -contextHelp \
+      "Choose whether to include the effects of apertures that are defined in the beamline."
+
     APSButton .bu1 -parent $widget \
       -text "Run" -command "OffMomentumDynamicAperture -mode run"
     APSButton .bu2 -parent $widget \
@@ -893,7 +938,7 @@ proc OffMomentumDynamicAperture {args} {
     if [string compare $mode run]==0 {
         if {![PerformRuns -template $sourceDir/OffMomentumDynamicApertureTemplate.ele \
                 -parameterFileList $parameterFileList \
-                -variable $variable \
+                -variable $variable -suffix $offMomentumDynamicAperture(userSuffix) \
                 -startValue $offMomentumDynamicAperture(deltaMinimum) \
                 -endValue $offMomentumDynamicAperture(deltaMaximum) \
                 -points $offMomentumDynamicAperture(deltaPoints) \
@@ -917,6 +962,103 @@ proc OffMomentumDynamicAperture {args} {
       -column=x,y $rootname.aper -graph=sym,scale=2 -split=page -sep=page \
       "-title=@${variable},edit=i/\$gd\$r = /" \
       -column=x,y $rootname.abnd -graph=line -omnipresent &
+}
+
+proc FillFineDynamicApertureFrame {widget args} {
+    global fineDynamicAperture
+    set fineDynamicAperture(xMinimum) -0.01
+    set fineDynamicAperture(xMaximum)  0.01
+    set fineDynamicAperture(yMaximum)  0.01
+    set fineDynamicAperture(xPoints)   101
+    set fineDynamicAperture(yPoints)   51
+    set fineDynamicAperture(turns)     500
+    set fineDynamicAperture(delta)     0.0
+    set fineDynamicAperture(userSuffix)    ""
+
+    APSLabeledEntry .le1 -parent $widget \
+      -label "Minimum x coordinate (m): " -width 20 -textVariable fineDynamicAperture(xMinimum) \
+      -contextHelp \
+      "Enter the minimum x coordinate for the dynamic aperture run"
+    APSLabeledEntry .le2 -parent $widget \
+      -label "Maximum x coordinate (m): " -width 20 -textVariable fineDynamicAperture(xMaximum) \
+      -contextHelp \
+      "Enter the maximum x coordinate for the dynamic aperture run"
+    APSLabeledEntry .le3 -parent $widget \
+      -label "Number of x points: " -width 20 -textVariable fineDynamicAperture(xPoints) \
+      -contextHelp \
+      "Enter the number of points into which to divide the x interval."
+    APSLabeledEntry .le4 -parent $widget \
+      -label "Maximum y coordinate (m): " -width 20 -textVariable fineDynamicAperture(yMaximum) \
+      -contextHelp \
+      "Enter the maximum y coordinate for the dynamic aperture search"
+    APSLabeledEntry .le5 -parent $widget \
+      -label "Number of y points: " -width 20 -textVariable fineDynamicAperture(yPoints) \
+      -contextHelp \
+      "Enter the number of points into which to divide the y interval."
+    APSLabeledEntry .le6 -parent $widget \
+      -label "Number of turns: " -width 20 -textVariable fineDynamicAperture(turns) \
+      -contextHelp \
+      "Enter the number of turns to track."
+    APSLabeledEntry .le7 -parent $widget \
+      -label "Fractional momentum offset: " -width 20 -textVariable fineDynamicAperture(delta) \
+      -contextHelp "Enter the fractional momentum offset" 
+    APSLabeledEntry .le8 -parent $widget \
+      -label "Run suffix: " -width 20 -textVariable fineDynamicAperture(userSuffix) \
+      -contextHelp "Enter the suffix for the filenames."
+
+    set fineDynamicAperture(includeApertures) 1
+    APSRadioButtonFrame .rb1 -parent $widget \
+      -label "Include apertures: " -orientation horizontal -buttonList {Yes No} -valueList {1 0} \
+      -variable fineDynamicAperture(includeApertures) -contextHelp \
+      "Choose whether to include the effects of apertures that are defined in the beamline."
+
+    APSButton .bu1 -parent $widget \
+      -text "Run" -command "FineDynamicAperture -mode run"
+    APSButton .bu2 -parent $widget \
+      -text "Display" -command "FineDynamicAperture -mode display"
+}
+
+proc FineDynamicAperture {args} {
+    set mode display
+    APSStrictParseArguments {mode}
+
+    global sourceDir 
+    global fineDynamicAperture momentum matrixLatticeFile mainParameterFile mainDirectory mainPrefix
+    global kickOffsetElement
+    set parameterFileList ""
+    foreach item [lsort [array names mainParameterFile]] {
+        if [string length $mainParameterFile($item)] {
+            append parameterFileList "$mainParameterFile($item) "
+        }
+    }
+    foreach item [array names fineDynamicAperture] {
+	lappend origList <$item>
+	lappend replList [set fineDynamicAperture($item)]
+    }
+    set tag FineDynamicAperture
+    set rootname $mainDirectory/${mainPrefix}${tag}$fineDynamicAperture(userSuffix)
+    set variable xOffset
+    if [string compare $mode run]==0 {
+        if {![PerformRuns -template $sourceDir/FineDynamicApertureTemplate.ele \
+                -parameterFileList $parameterFileList \
+                -variable $variable -suffix $fineDynamicAperture(userSuffix) \
+                -startValue $fineDynamicAperture(xMinimum) \
+                -endValue $fineDynamicAperture(xMaximum) \
+                -points $fineDynamicAperture(xPoints) \
+                -copyList done -combineList [list ele ele.log los bun] \
+                -tag $tag -momentum $momentum -originalList $origList -replacementList $replList]} {
+            return 
+        }
+    } else {
+        set runDone [file exists $rootname.done]
+        if !$runDone {
+            return -code error "$rootname not done"
+        }
+    }
+    exec sddsxref $rootname.los $rootname.bun -pipe=out \
+	-equate=particleID -take=x,y -edit=column,*,ei/0/  \
+	| sddscombine -pipe=in -merge $rootname.da -overwrite
+    exec sddsplot -column=x0,y0 $rootname.da -graph=dot,vary -order=spect -split=column=Pass,width=1 &
 }
 
 set tabIndex -1
@@ -949,16 +1091,17 @@ FillHigherOrderDispersionFrame [lindex $tabFrameWidgetList 3]
 FillOffMomentumTunesFrame [lindex $tabFrameWidgetList 4]
 FillDynamicApertureFrame [lindex $tabFrameWidgetList 5]
 FillOffMomentumDynamicApertureFrame [lindex $tabFrameWidgetList 6]
+FillFineDynamicApertureFrame [lindex $tabFrameWidgetList 7]
 
 lappend saveVarList momentum matrixLatticeFile kickLatticeFile mainParameterFile mainDirectory mainPrefix gridEngine
 lappend saveVarList matrixBeamline kickBeamline matrixOffsetElement kickOffsetElement
 lappend saveVarList basicComputations phaseSpaceTracking offMomentumTuneTracking higherOrderDispersion
-lappend saveVarList dynamicAperture offMomentumDynamicAperture
+lappend saveVarList dynamicAperture offMomentumDynamicAperture fineDynamicAperture
 
 set args $argv
 set configuration ""
 set templateDirectory ""
-if {[APSStrictParseArguments {configuration}]} {
+if {[APSStrictParseArguments {configuration templateDirectory}]} {
     return -code error "usage: $argv0 \[-configuration <filename>\] \[-templateDirectory <path>\]"
 }
 if {[string length $configuration]} {
