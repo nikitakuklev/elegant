@@ -563,7 +563,7 @@ extern char *entity_text[N_TYPES];
 #define N_CEPL_PARAMS 16
 #define N_TWPL_PARAMS 16
 #define N_WATCH_PARAMS 11
-#define N_MALIGN_PARAMS 9
+#define N_MALIGN_PARAMS 10
 #define N_TWLA_PARAMS 19
 #define N_PEPPOT_PARAMS 6
 #define N_ENERGY_PARAMS 4
@@ -1070,7 +1070,7 @@ extern PARAMETER malign_param[N_MALIGN_PARAMS] ;
 
 typedef struct {
     double dxp, dyp, dx, dy, dz, dt, dp, de;
-    long on_pass;
+    long on_pass, forceModifyMatrix;
     } MALIGN;
 
 /* Traveling-Wave Linear Accelerator, using NAG and first space harmonic 

@@ -516,7 +516,7 @@ VMATRIX *compute_matrix(
         break;
       case T_MALIGN: 
         malign = (MALIGN*)elem->p_elem;
-        if (malign->on_pass==-1)
+        if (malign->on_pass==-1 || malign->forceModifyMatrix)
             elem->matrix = misalignment_matrix((MALIGN*)elem->p_elem, run->default_order);
         else
             elem->matrix = drift_matrix(0.0, run->default_order);

@@ -553,6 +553,7 @@ PARAMETER malign_param[N_MALIGN_PARAMS] = {
     {"DP", "", IS_DOUBLE, 1, (long)((char *)&malign_example.dp), NULL, 0.0, 0, "delta p/pCentral"},
     {"DE", "", IS_DOUBLE, 1, (long)((char *)&malign_example.de), NULL, 0.0, 0, "delta gamma/gammaCentral"},
     {"ON_PASS", "", IS_LONG, 0, (long)((char *)&malign_example.on_pass), NULL, 0.0, -1, "pass on which to apply"},
+    {"FORCE_MODIFY_MATRIX", "", IS_LONG, 0, (long)((char *)&malign_example.forceModifyMatrix), NULL, 0.0, 0, "modify the matrix even if on_pass>=0"},
     } ;
 
 TW_LINAC twla_example;

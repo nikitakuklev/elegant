@@ -31,9 +31,9 @@ char *option[N_OPTIONS] = {
     "describeinput",
     "macro",
         };
-char *USAGE="elegant <inputfile> [-macro=<tag>=<value>,[...]]\n\nProgram by Michael Borland. (This is version 14.6Beta4, "__DATE__".)";
+char *USAGE="elegant <inputfile> [-macro=<tag>=<value>,[...]]\n\nProgram by Michael Borland. (This is version 14.6.1, "__DATE__".)";
 
-char *GREETING="This is elegant, by Michael Borland. (This is version 14.6Beta4, "__DATE__".)";
+char *GREETING="This is elegant, by Michael Borland. (This is version 14.6.1, "__DATE__".)";
 
 #define RUN_SETUP        0
 #define RUN_CONTROL      1
@@ -1110,11 +1110,12 @@ char **argv;
 
 void printFarewell(FILE *fp)
 {
-  fprintf(stderr, "=================================================================================\n");
-  fprintf(stderr, "Thanks for using elegant.  Please cite the following reference in your publications:\n\n");
-  fprintf(stderr, "M. Borland, \"elegant: A Flexible SDDS-Compliant Code for Accelerator Simulation,\"\n");
-  fprintf(stderr, "Advanced Photon Source LS-287, September 2000.\n\n");
+  fprintf(stderr, "=====================================================================================\n");
+  fprintf(stderr, "Thanks for using elegant.  Please cite the following reference in your publications:\n");
+  fprintf(stderr, "  M. Borland, \"elegant: A Flexible SDDS-Compliant Code for Accelerator Simulation,\"\n");
+  fprintf(stderr, "  Advanced Photon Source LS-287, September 2000.\n");
   fprintf(stderr, "If you use a modified version, please indicate this in all publications.\n");
+  fprintf(stderr, "=====================================================================================\n");
 }
 
 
