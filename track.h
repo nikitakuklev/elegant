@@ -1976,12 +1976,18 @@ extern long get_final_property_index(char *name);
 extern long count_final_properties(void);
 
 extern double beam_width(double fraction, double **coord, long n_part, long sort_coord);
+extern double approximateBeamWidth(double fraction, double **part, long nPart, long iCoord);
 extern double rms_emittance(double **coord, long i1, long i2, long n,
                             double *S11Return, double *S12Return, double *S22Return);
 extern double rms_longitudinal_emittance(double **coord, long n, double Po);
 extern double rms_norm_emittance(double **coord, long i1, long i2, long ip, long n, double Po);
 extern void compute_longitudinal_parameters(ONE_PLANE_PARAMETERS *bp, double **coord, long n, double Po);
 extern void compute_transverse_parameters(ONE_PLANE_PARAMETERS *bp, double **coord, long n, long plane);
+
+long binParticleCoordinate(double **hist, long *maxBins,
+                           double *lower, double *upper, double *binSize, long *bins,
+                           double expansionFactor,
+                           double **particleCoord, long nParticles, long coordinateIndex);
 
 /* prototypes for matrix_output.c: */
 void simplify_units(char *buffer, char **numer, long n_numer, char **denom, long n_denom);

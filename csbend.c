@@ -31,11 +31,6 @@ static long particle_lost;
 static double s_lost;
 extern unsigned long multipoleKicksDone ;
 
-long binParticleCoordinate(double **hist, long *maxBins,
-                           double *lower, double *upper, double *binSize, long *bins,
-                           double expansionFactor,
-                           double **particleCoord, long nParticles, long coordinateIndex);
-
 long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_error, double Po, double **accepted,
                           double z_start)
 {

@@ -12,6 +12,8 @@
 #include "track.h"
 #include "matlib.h"
 
+#define ANALYSIS_BINS 10000
+
 static double tmp_safe_sqrt;
 #define SAFE_SQRT(x) ((tmp_safe_sqrt=(x))<0?0.0:sqrt(tmp_safe_sqrt))
 
@@ -403,8 +405,8 @@ long compute_final_properties
       sum += sqr( tData[i] - tc);
     data[6+F_SIGMA_OFFSET] = sqrt(sum/sums->n_part);
     /* results of these calls used below */
-    compute_percentiles(tPosition, percLevel, 6, tData, sums->n_part);
-    compute_percentiles(deltaPosition, percLevel, 6, deltaData, sums->n_part);
+    approximate_percentiles(tPosition, percLevel, 6, tData, sums->n_part, ANALYSIS_BINS);
+    approximate_percentiles(deltaPosition, percLevel, 6, deltaData, sums->n_part, ANALYSIS_BINS);
   }
   else {
     for (i=0; i<7; i++) 
@@ -440,8 +442,9 @@ long compute_final_properties
   
   /* compute "sigma" from width of particle distributions for x and y */
   if (coord && sums->n_part>3) {
-    data[F_WIDTH_OFFSET] = beam_width(0.6826F, coord, sums->n_part, 0L)/2.;
-    data[F_WIDTH_OFFSET+1] = beam_width(0.6826F, coord, sums->n_part, 2L)/2.;
+    
+    data[F_WIDTH_OFFSET] = approximateBeamWidth(0.6826F, coord, sums->n_part, 0L)/2.;
+    data[F_WIDTH_OFFSET+1] = approximateBeamWidth(0.6826F, coord, sums->n_part, 2L)/2.;
     data[F_WIDTH_OFFSET+2] = dt;
     data[F_WIDTH_OFFSET+3] = Ddp;
     for (i=0; i<3; i++) {
@@ -508,44 +511,44 @@ long compute_final_properties
 double beam_width(double fraction, double **coord, long n_part, 
     long sort_coord)
 {
-    static long i_median, i_lo, i_hi;
-    static double dx0, dx1;
+  static long i_median, i_lo, i_hi;
+  static double dx0, dx1;
 
-    log_entry("beam_width");
+  log_entry("beam_width");
 
-    /* sort data in ascending order by the coordinate for which the
-     * beam width is to be determined */
-    set_up_row_sort(sort_coord, 6L, sizeof(**coord), double_cmpasc);
-    qsort((void*)coord, n_part, sizeof(*coord), row_compare);
-    for (i_median=1; i_median<n_part; i_median++) {
-        if (coord[i_median][sort_coord]<coord[i_median-1][sort_coord])
-            bomb("sort failure in beam_width()", NULL);
-        }
+  /* sort data in ascending order by the coordinate for which the
+   * beam width is to be determined */
+  set_up_row_sort(sort_coord, 6L, sizeof(**coord), double_cmpasc);
+  qsort((void*)coord, n_part, sizeof(*coord), row_compare);
+  for (i_median=1; i_median<n_part; i_median++) {
+    if (coord[i_median][sort_coord]<coord[i_median-1][sort_coord])
+      bomb("sort failure in beam_width()", NULL);
+  }
 
-    /* find indices of particles that are at +/- fraction/2 from the median */
-    i_median = n_part/2;
-    if ((i_lo = i_median - fraction/2.*n_part)<0) {
-        fprintf(stdout, "warning: i_lo < 0 in beam_width\ni_median = %ld, n_part = %ld, fraction = %e\n",
+  /* find indices of particles that are at +/- fraction/2 from the median */
+  i_median = n_part/2;
+  if ((i_lo = i_median - fraction/2.*n_part)<0) {
+    fprintf(stdout, "warning: i_lo < 0 in beam_width\ni_median = %ld, n_part = %ld, fraction = %e\n",
             i_lo, n_part, fraction);
-        fflush(stdout);
-        }
-    if ((i_hi = i_median + fraction/2.*n_part)>=n_part) {
-        fprintf(stdout, "warning: i_hi >= n_part in beam_width!\ni_median = %ld, n_part = %ld, fraction = %e\n",
+    fflush(stdout);
+  }
+  if ((i_hi = i_median + fraction/2.*n_part)>=n_part) {
+    fprintf(stdout, "warning: i_hi >= n_part in beam_width!\ni_median = %ld, n_part = %ld, fraction = %e\n",
             i_hi, n_part, fraction);
-        fflush(stdout);
-        }
+    fflush(stdout);
+  }
 
-    if (i_lo!=0 && i_hi!=(n_part-1)) {
-        dx0 = coord[i_hi][sort_coord]  -coord[i_lo][sort_coord];
-        dx1 = coord[i_hi+1][sort_coord]-coord[i_lo-1][sort_coord];
-        log_exit("beam_width");    
-        return(INTERPOLATE(dx0, dx1, ((double)i_hi-i_lo+1)/n_part, ((double)i_hi-i_lo+3)/n_part, fraction));
-        }
-    else {
-        log_exit("beam_width");    
-        return(coord[i_hi][sort_coord]-coord[i_lo][sort_coord]);
-        }
-    }
+  if (i_lo!=0 && i_hi!=(n_part-1)) {
+    dx0 = coord[i_hi][sort_coord]  -coord[i_lo][sort_coord];
+    dx1 = coord[i_hi+1][sort_coord]-coord[i_lo-1][sort_coord];
+    log_exit("beam_width");    
+    return(INTERPOLATE(dx0, dx1, ((double)i_hi-i_lo+1)/n_part, ((double)i_hi-i_lo+3)/n_part, fraction));
+  }
+  else {
+    log_exit("beam_width");    
+    return(coord[i_hi][sort_coord]-coord[i_lo][sort_coord]);
+  }
+}
 
 double rms_emittance(double **coord, long i1, long i2, long n, 
                      double *s11Return, double *s12Return, double *s22Return)
@@ -797,3 +800,44 @@ long count_final_properties()
 {
     return(FINAL_PROPERTY_PARAMETERS);
     }
+
+double approximateBeamWidth(double fraction, double **part, long nPart, long iCoord)
+{
+  double *hist, *cdf;
+  long maxBins=ANALYSIS_BINS, bins=ANALYSIS_BINS, i50, iLo, iHi, i;
+  double xMin, xMax, dx;
+  xMin = xMax = dx = 0;
+  
+  /* make histogram of the coordinate */
+  hist = tmalloc(sizeof(*hist)*bins);
+  binParticleCoordinate(&hist, &maxBins, &xMin, &xMax, &dx, &bins, 
+                        1.01, part, nPart, iCoord);
+
+  /* sum histogram to get CDF */
+  cdf = hist;
+  for (i=1; i<bins; i++)
+    cdf[i] += cdf[i-1];
+  /* normalize CDF and find 50% point */
+  i50 = bins/2;
+  for (i=0; i<bins; i++) {
+    cdf[i] /= cdf[bins-1];
+    if (cdf[i]<0.50)
+      i50 = i;
+  }
+  /* find locations containing half the indicated area around the 50% point */
+  iLo = iHi = i50;
+  for (i=i50; i<bins; i++) {
+    if ((cdf[i]-0.5)<fraction/2)
+      iHi = i;
+    else 
+      break;
+  }
+  for (i=i50; i>=0; i--) {
+    if ((0.5-cdf[i])<fraction/2)
+      iLo = i;
+    else break;
+  }
+  free(hist);
+  return (iHi-iLo)*dx;
+}
+
