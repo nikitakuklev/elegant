@@ -165,7 +165,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
   char **valueString;
   ELEMENT_LIST *eptr;
   static long warned_about_occurence = 0;
-  long element_missing, numberChanged;
+  long element_missing, numberChanged, totalNumberChanged = 0;
 
   if (!load_requests || !load_parameters_setup)
     return NO_LOAD_PARAMETERS;
@@ -430,7 +430,9 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
       free(parameter[j]);
       if (mode)
         free(mode[j]);
+      totalNumberChanged += numberChanged;
     }
+    
     free(element);
     free(parameter);
     if (mode)
@@ -443,6 +445,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
   }
   if (!allFilesRead || allFilesIgnored) {
     compute_end_positions(beamline);
+    fprintf(stdout, "%ld parameter values loaded\n", totalNumberChanged);
     return PARAMETERS_LOADED;
   }
   return PARAMETERS_ENDED;
