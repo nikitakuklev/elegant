@@ -354,7 +354,7 @@ static SDDS_DEFINITION column_definition[N_COLUMNS] = {
 {"etay", "&column name=etay, type=double, units=m, symbol=\"$gc$r$by$n\", description=\"Vertical dispersion\" &end"},
 {"etayp", "&column name=etayp, type=double, symbol=\"$gc$r$by$n$a'$n\", description=\"Slope of vertical dispersion\" &end"},
 {"yAperture", "&column name=yAperture, type=double, units=m, symbol=\"a$by$n\", description=\"Vertical aperture\" &end"},
-{"pCentral", "&column name=pCentral, type=double, units=\"m$be$nc\", symbol=\"p$bcent$n\", description=\"Central momentum\" &end"},
+{"pCentral0", "&column name=pCentral0, type=double, units=\"m$be$nc\", symbol=\"p$bcent$n\", description=\"Initial central momentum\" &end"},
 {"ElementName", "&column name=ElementName, type=string, description=\"Element name\", format_string=%10s &end"},
 {"ElementOccurence", "&column name=ElementOccurence, type=long, description=\"Occurence of element\", format_string=%6ld &end"},
 {"ElementType", "&column name=ElementType, type=string, description=\"Element-type name\", format_string=%10s &end"},
@@ -368,22 +368,24 @@ static SDDS_DEFINITION column_definition[N_COLUMNS] = {
 #define IP_DNUYDP 5
 #define IP_AY 6
 #define IP_STAGE 7
-#define IP_ALPHAC 8
-#define IP_I1 9
-#define IP_I2 10
-#define IP_I3 11
-#define IP_I4 12
-#define IP_I5 13
-#define IP_EX0 14
-#define IP_TAUX 15
-#define IP_JX 16
-#define IP_TAUY 17
-#define IP_JY 18
-#define IP_SIGMADELTA 19
-#define IP_TAUDELTA 20
-#define IP_JDELTA 21
-#define IP_U0 22
-#define N_PARAMETERS 23
+#define IP_PCENTRAL 8
+#define IP_ALPHAC 9
+#define IP_I1 10
+#define IP_I2 11
+#define IP_I3 12
+#define IP_I4 13
+#define IP_I5 14
+#define IP_EX0 15
+#define IP_ENX0 16
+#define IP_TAUX 17
+#define IP_JX 18
+#define IP_TAUY 19
+#define IP_JY 20
+#define IP_SIGMADELTA 21
+#define IP_TAUDELTA 22
+#define IP_JDELTA 23
+#define IP_U0 24
+#define N_PARAMETERS 25
 static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
 {"Step", "&parameter name=Step, type=long, description=\"Simulation step\" &end"},
 {"nux", "&parameter name=nux, symbol=\"$gn$r$bx$n\", type=double, units=\"1/(2$gp$r)\", description=\"Horizontal tune\" &end"},
@@ -393,6 +395,7 @@ static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
 {"dnuy/dp", "&parameter name=dnuy/dp, symbol=\"$gx$r$by$n\", type=double, units=\"1/(2$gp$r)\", description=\"Vertical chromaticity\" &end"},
 {"Ay", "&parameter name=Ay, symbol=\"A$by$n\", type=double, units=\"$gp$rm\", description=\"Vertical acceptance\" &end"},
 {"Stage", "&parameter name=Stage, type=string, description=\"Stage of computation\" &end"},
+{"pCentral", "&parameter name=pCentral, type=double, units=\"m$be$nc\", description=\"Central momentum\""},
 {"alphac", "&parameter name=alphac, symbol=\"$ga$r$bc$n\", type=double, description=\"Momentum compaction factor\" &end"},
 {"I1", "&parameter name=I1, type=double, description=\"Radiation integral 1\", units=m &end"} ,
 {"I2", "&parameter name=I2, type=double, description=\"Radiation integral 2\", units=1/m &end"} ,
@@ -400,6 +403,7 @@ static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
 {"I4", "&parameter name=I4, type=double, description=\"Radiation integral 4\", units=1/m &end"} ,
 {"I5", "&parameter name=I5, type=double, description=\"Radiation integral 5\", units=1/m &end"} ,
 {"ex0", "&parameter name=ex0, type=double, description=\"Damped horizontal emittance\", units=$gp$rm &end"},
+{"enx0", "&parameter name=enx0, type=double, units=\"m$be$nc $gp$rm\", description=\"Damped normalized horizontal emittance\""},
 {"taux", "&parameter name=taux, type=double, description=\"Horizontal damping time\", units=s &end"},
 {"Jx", "&parameter name=Jx, type=double, description=\"Horizontal damping partition number\" &end"},
 {"tauy", "&parameter name=tauy, type=double, description=\"Vertical damping time\", units=s &end"},
@@ -467,7 +471,10 @@ void dump_twiss_parameters(
                             IP_SIGMADELTA, radIntegrals->sigmadelta,
                             IP_TAUDELTA, radIntegrals->taudelta,
                             IP_JDELTA, radIntegrals->Jdelta,
-                            IP_U0, radIntegrals->Uo, -1)) {
+                            IP_U0, radIntegrals->Uo, 
+                            IP_ENX0, radIntegrals->ex0*sqrt(sqr(run->p_central)+1), 
+                            IP_PCENTRAL, run->p_central, 
+                            -1)) {
       SDDS_SetError("Problem setting SDDS parameters (dump_twiss_parameters 2)");
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
