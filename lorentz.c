@@ -493,7 +493,7 @@ void lorentz_setup(
                 if (!flen)
                     nibend->zeta_offset = nibend->x_correction = 0;
                 else {
-                    double save[4];
+                    double save[5];
                     rad_coef = 0;        /* this must be zero for offset adjustment */
                     x_correction = 0;    /* ditto */
                     save[0] = nibend->etilt; 
@@ -504,6 +504,9 @@ void lorentz_setup(
                     nibend->dy = 0;
                     save[3] = nibend->dz;
                     nibend->dz = 0;
+                    save[4] = nibend->fse;
+                    nibend->fse = 0;
+                    one_plus_fse = 1;
                     if ((offset = nibend->last_zeta_offset)==0)
                         offset = last_offset;
                     
@@ -528,6 +531,8 @@ void lorentz_setup(
                     nibend->dx = save[1];
                     nibend->dy = save[2];
                     nibend->dz = save[3];
+                    nibend->fse = save[4];
+                    one_plus_fse = 1+nibend->fse;
                     }
                 }
             x_correction = nibend->x_correction;
