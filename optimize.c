@@ -12,6 +12,9 @@
 
 #define DEBUG 0
 
+long checkForOptimRecord(double *value, long values);
+void storeOptimRecord(double *value, long values, long invalid, double result);
+
 void do_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 {
 
@@ -374,6 +377,19 @@ static long final_property_values;
 
 static long optim_func_flags;
 
+/* structure to keep results of last N optimization function
+ * evaluations, so we don't track the same thing twice.
+ */
+#define MAX_OPTIM_RECORDS 50
+typedef struct {
+  long invalid;
+  double *variableValue;
+  double result;
+} OPTIM_RECORD;
+static long optimRecords = 0, nextOptimRecordSlot = 0;
+static OPTIM_RECORD optimRecord[MAX_OPTIM_RECORDS];
+
+
 void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERROR *error1, LINE_LIST *beamline1, 
             BEAM *beam1, OUTPUT_FILES *output1, OPTIMIZATION_DATA *optimization_data1, long beam_type1)
 {
@@ -387,6 +403,8 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERROR *error1
     long i;
     
     log_entry("do_optimize");
+    
+    optimRecords = nextOptimRecordSlot = 0;
 
     run               = run1;
     control           = control1;
@@ -406,6 +424,10 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERROR *error1
     if (variables->n_variables==0)
         bomb("no variables specified for optimization", NULL);
 
+    for (i=0; i<MAX_OPTIM_RECORDS; i++)
+      optimRecord[i].variableValue = tmalloc(sizeof(*optimRecord[i].variableValue)*
+                                             variables->n_variables);
+    
     /* set the end-of-optimization hidden variable to 0 */
     variables->varied_quan_value[variables->n_variables] = 0;
 
@@ -496,8 +518,12 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERROR *error1
 
     /* evaluate once more at the optimimum point to get all parameters right and to get additional output */
     optim_func_flags = 0;
+    optimRecords = 0;  /* to force re-evaluation */
     variables->varied_quan_value[variables->n_variables] = 1;   /* indicates end-of-optimization */
     result = optimization_function(variables->varied_quan_value, &i);
+
+    for (i=0; i<MAX_OPTIM_RECORDS; i++)
+      free(optimRecord[i].variableValue);
 
     /* change values in element definitions so that new lattice can be saved */
     change_defined_parameter_values(variables->element, variables->varied_param, variables->varied_type,
@@ -581,6 +607,12 @@ static long radint_mem[8] = {
   -1, -1, -1,
   -1, -1, -1,
 } ;
+static char *floorCoord_name[3] = {
+  "X", "Z", "Theta", 
+};
+static long floorCoord_mem[3] = {
+  -1, -1, -1,
+};
 
 double optimization_function(double *value, long *invalid)
 {
@@ -589,10 +621,11 @@ double optimization_function(double *value, long *invalid)
     OPTIM_CONSTRAINTS *constraints;
     OPTIM_COVARIABLES *covariables;
     double conval, result;
-    long i;
+    long i, iRec;
     unsigned long unstable;
     VMATRIX *M;
     TWISS twiss_ave, twiss_min, twiss_max;
+    double floorCoord[3];
     
     log_entry("optimization_function");
     
@@ -650,6 +683,14 @@ double optimization_function(double *value, long *invalid)
         fflush(optimization_data->fp_log);
         }
 
+    if ((iRec=checkForOptimRecord(value, variables->n_variables))>=0) {
+      if (optimization_data->fp_log)
+        fprintf(optimization_data->fp_log, "Using previously computed value %23.15e\n\n", 
+                optimRecord[iRec].result);
+      *invalid = optimRecord[iRec].invalid;
+      return optimRecord[iRec].result;
+    }
+    
     /* compute matrices for perturbed elements */
 #if DEBUG
       fprintf(stderr, "optimization_function: Computing matrices\n");
@@ -749,6 +790,13 @@ double optimization_function(double *value, long *invalid)
       rpn_store(beamline->radIntegrals.tauy, radint_mem[6]);
       rpn_store(beamline->radIntegrals.taudelta, radint_mem[7]);
     }
+    if (floorCoord_mem[0]==-1) {
+      for (i=0; i<3; i++)
+        floorCoord_mem[i] = rpn_create_mem(floorCoord_name[i]);
+    }
+    final_floor_coordinates(beamline, floorCoord+0, floorCoord+1, floorCoord+2);
+    for (i=0; i<3; i++)
+      rpn_store(floorCoord[i], floorCoord_mem[i]);
     
     for (i=0; i<variables->n_variables; i++)
       variables->varied_quan_value[i] = value[i];
@@ -829,12 +877,44 @@ double optimization_function(double *value, long *invalid)
     if (unstable)
       *invalid = 1;
 
-    log_exit("optimization_function");
 #if DEBUG
     fprintf(stderr, "optimization_function: Returning %le,  invalid=%ld\n", result, *invalid);
 #endif
+    storeOptimRecord(value, variables->n_variables, *invalid, result);
+    
+    log_exit("optimization_function");
     return(result);
     }
+
+long checkForOptimRecord(double *value, long values)
+{
+  long iRecord, iValue;
+  double diff;
+  for (iRecord=0; iRecord<optimRecords; iRecord++) {
+    for (iValue=0; iValue<values; iValue++) {
+      diff = fabs(value[iValue]-optimRecord[iRecord].variableValue[iValue]);
+      if (diff!=0)
+        break;
+    }
+    if (iValue==values) {
+      return iRecord;
+    }
+  }
+  return -1;
+}
+
+void storeOptimRecord(double *value, long values, long invalid, double result)
+{
+  long i;
+  for (i=0; i<values; i++)
+    optimRecord[nextOptimRecordSlot].variableValue[i] = value[i];
+  optimRecord[nextOptimRecordSlot].invalid = invalid;
+  optimRecord[nextOptimRecordSlot].result = result;
+  if (++nextOptimRecordSlot>=MAX_OPTIM_RECORDS)
+    nextOptimRecordSlot = 0;
+  if (++optimRecords>=MAX_OPTIM_RECORDS)
+    optimRecords = MAX_OPTIM_RECORDS;
+}
 
 void optimization_report(double result, double *value, long pass, long n_evals, long n_dim)
 {

@@ -2047,6 +2047,8 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     double z_start);
 
 void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
+void final_floor_coordinates(LINE_LIST *beamline, double *X, double *Z, double *Theta);
+
 
 void setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 long do_load_parameters(LINE_LIST *beamline, long change_definitions);

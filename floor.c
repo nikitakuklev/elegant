@@ -205,3 +205,73 @@ void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamli
     log_exit("output_floor_coordinates");
     }
 
+
+void final_floor_coordinates(LINE_LIST *beamline, double *X, double *Z, double *Theta)
+{
+  double *data, length;
+  ELEMENT_LIST *elem, *last_elem;
+  double dX, dZ, dtheta, rho, angle;
+  double X0, Z0, theta0;
+  long is_bend, is_magnet;
+  BEND *bend; KSBEND *ksbend; CSBEND *csbend; MALIGN *malign;
+
+  last_elem = NULL;
+  elem = &(beamline->elem);
+  X0 = Z0 = theta0 = 0;
+  while (elem) {
+    dX = dZ = dtheta = length = 0;
+    is_bend = is_magnet = 0;
+    switch (elem->type) {
+    case T_RBEN: case T_SBEN:
+      is_bend = 1;
+      bend = (BEND*)elem->p_elem;
+      dtheta = -(angle=bend->angle);
+      rho = (length=bend->length)/bend->angle;
+      break;
+    case T_KSBEND:
+      is_bend = 1;
+      ksbend = (KSBEND*)elem->p_elem;
+      dtheta = -(angle=ksbend->angle);
+      rho = (length=ksbend->length)/ksbend->angle;
+      break;
+    case T_CSBEND:
+      is_bend = 1;
+      csbend = (CSBEND*)elem->p_elem;
+      dtheta = -(angle=csbend->angle);
+      rho = (length=csbend->length)/csbend->angle;
+      break;
+    case T_MALIGN:
+      malign = (MALIGN*)elem->p_elem;
+      dX = malign->dx;
+      dZ = malign->dz;
+      dtheta = atan(malign->dxp);
+      break;
+    default:
+      if (entity_description[elem->type].flags&HAS_LENGTH)
+        length= dZ = *((double*)(elem->p_elem));
+      if (entity_description[elem->type].flags&IS_MAGNET)
+        is_magnet = 1;
+      break;
+    }
+    if (is_bend) {
+      /* calculate offsets for end of bend magnet */
+      dX = rho*(cos(angle)-1);
+      dZ = rho*sin(angle);
+    }
+
+    rotate_xy(&dX, &dZ, theta0);
+    theta0 += dtheta;
+    while (theta0>PIx2)
+      theta0 -= PIx2;
+    while (theta0<-PIx2)
+      theta0 += PIx2;
+    X0 += dX;
+    Z0 += dZ;
+
+    elem = elem->succ;
+  }
+  *X = X0;
+  *Z = Z0;
+  *Theta = theta0;
+}
+
