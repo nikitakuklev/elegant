@@ -14,8 +14,8 @@
 static double tmp_safe_sqrt;
 #define SAFE_SQRT(x) ((tmp_safe_sqrt=(x))<0?0.0:sqrt(tmp_safe_sqrt))
 
-#define FINAL_PROPERTY_PARAMETERS 78
-#define FINAL_PROPERTY_LONG_PARAMETERS 4
+#define FINAL_PROPERTY_PARAMETERS 79
+#define FINAL_PROPERTY_LONG_PARAMETERS 5
 #define F_SIGMA_OFFSET 0
 #define F_SIGMA_QUANS 7
 #define F_CENTROID_OFFSET F_SIGMA_OFFSET+F_SIGMA_QUANS
@@ -33,7 +33,7 @@ static double tmp_safe_sqrt;
 #define F_RMAT_OFFSET F_WIDTH_OFFSET+F_WIDTH_QUANS
 #define F_RMAT_QUANS 31
 #define F_STATS_OFFSET F_RMAT_OFFSET+F_RMAT_QUANS
-#define F_STATS_QUANS 4
+#define F_STATS_QUANS 5
 #define F_N_OFFSET F_STATS_OFFSET+F_STATS_QUANS
 #define F_N_QUANS 1
 #if (F_N_QUANS+F_N_OFFSET)!=FINAL_PROPERTY_PARAMETERS
@@ -120,6 +120,7 @@ static SDDS_DEFINITION final_property_parameter[FINAL_PROPERTY_PARAMETERS] = {
     {"MEM", "&parameter name=MEM, type=long, units=pages &end"},
     {"PF", "&parameter name=PF, type=long, units=pages &end"},
     {"Step",  "&parameter name=Step, type=long &end"},
+    {"Steps",  "&parameter name=Steps, type=long &end"},
     {"Particles", "&parameter name=Particles, description=\"Number of particles\", type=long &end"},
     } ;
 
@@ -155,6 +156,7 @@ void SDDS_FinalOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, lo
 void dump_final_properties
     (SDDS_TABLE *SDDS_table, BEAM_SUMS *sums,
      double *varied_quan, char *first_varied_quan_name, long n_varied_quan,
+     long totalSteps,
      double *perturbed_quan, char *first_perturbed_quan_name, long n_perturbed_quan,
      double *optim_quan, char *first_optim_quan_name, long n_optim_quan,
      long step, double **particle, long n_original, double p_central, VMATRIX *M)
@@ -194,7 +196,8 @@ void dump_final_properties
     computed_properties = tmalloc(sizeof(*computed_properties)*n_properties);
 
     if ((n_computed=compute_final_properties
-                       (computed_properties, sums, n_original, p_central, M, particle, step))!=
+                       (computed_properties, sums, n_original, p_central, M, particle, step,
+                        totalSteps))!=
         (n_properties-(n_varied_quan+n_perturbed_quan+n_optim_quan))) {
         fprintf(stderr, "error: compute_final_properties computed %ld quantities--%ld expected. (dump_final_properties)",
             n_computed, n_properties-(n_varied_quan+n_perturbed_quan+n_optim_quan));
@@ -276,7 +279,8 @@ void dump_final_properties
  */
 
 long compute_final_properties
-    (double *data, BEAM_SUMS *sums, long n_original, double p_central, VMATRIX *M, double **coord, long step)
+    (double *data, BEAM_SUMS *sums, long n_original, double p_central, VMATRIX *M, double **coord, 
+     long step, long steps)
 {
     register long i, j;
     long i_data, index, offset;
@@ -404,7 +408,8 @@ long compute_final_properties
     data[i_data++] = 0;
 #endif
     data[i_data++] = step;
-
+    data[i_data++] = steps;
+    
     /* number of particles */
     data[i_data=F_N_OFFSET] = sums->n_part;
 

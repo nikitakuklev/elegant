@@ -765,8 +765,10 @@ double optimization_function(double *value, long *invalid)
 #endif
     if (!output->sums_vs_z)
         bomb("sums_vs_z element of output structure is NULL--programming error (optimization_function)", NULL);
-    if ((i=compute_final_properties(final_property_value, output->sums_vs_z+output->n_z_points, beam->n_to_track, beam->p0, 
-                                    M=full_matrix(&(beamline->elem), run, 1), beam->particle, control->i_step))
+    if ((i=compute_final_properties(final_property_value, output->sums_vs_z+output->n_z_points, 
+                                    beam->n_to_track, beam->p0, 
+                                    M=full_matrix(&(beamline->elem), run, 1), beam->particle, 
+                                    control->i_step, control->indexLimitProduct*control->n_steps))
         != final_property_values) {
         fprintf(stderr, "error: compute_final_properties computed %ld quantities when %ld were expected (optimization_function)\n",
                 i, final_property_values);

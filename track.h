@@ -25,8 +25,13 @@ typedef struct {
 
 typedef struct {
   long initialized;
+  long randomized;         /* used for random multipoles */
   long orders, *order;
-  double *KnL;
+  double referenceRadius;  /* for KQUAD, KSEXT, etc. */
+  /* normal and skew terms */
+  double *an, *bn;         /* input for KQUAD, KSEXT, etc. */
+  double *anMod, *bnMod;   /* computed for KQUAD, KSEXT, etc.: anMod=an*n!/r^n */
+  double *KnL, *JnL;       /* input for FMULT, computed for KQUAD, KSEXT, etc. */
 } MULTIPOLE_DATA ;
 
 /* structure for storing Twiss parameters */
@@ -179,6 +184,7 @@ typedef struct {
     long at_start;               /* indicates that present state is start of variation */
     long n_indices;              /* number of indices for variation */
     long *index, *index_limit;   /* current indices, index limits */
+    long indexLimitProduct;      /* product of all the index limits */
     long n_elements_to_vary;    
     long *element_index;         /* index used for each element */
     char **element;              /* names of elements being varied, e.g., "Q1" */
@@ -467,9 +473,9 @@ extern char *entity_text[N_TYPES];
 #define N_SCRAPER_PARAMS 8
 #define N_CENTER_PARAMS 4
 #define N_KICKER_PARAMS 9
-#define N_KSEXT_PARAMS 13
+#define N_KSEXT_PARAMS 14
 #define N_KSBEND_PARAMS 27
-#define N_KQUAD_PARAMS 13
+#define N_KQUAD_PARAMS 14
 #define N_MAGNIFY_PARAMS 6
 #define N_SAMPLE_PARAMS 2
 #define N_HVCOR_PARAMS 10
@@ -1007,10 +1013,12 @@ typedef struct {
     double length, k2, tilt, bore, B;
     double dx, dy, dz, fse;
     long n_kicks, synch_rad;
-    char *systematic_multipoles, *error_multipoles;
+    char *systematic_multipoles, *random_multipoles;
+    long integration_order;
     /* for internal use */
+    long multipolesInitialized;
     MULTIPOLE_DATA systematicMultipoleData; 
-    MULTIPOLE_DATA errorMultipoleData;      
+    MULTIPOLE_DATA randomMultipoleData;      
     MULTIPOLE_DATA totalMultipoleData;  /* generated when randomization takes place */
     } KSEXT;
 
@@ -1037,10 +1045,12 @@ typedef struct {
     double length, k1, tilt, bore, B;
     double dx, dy, dz, fse;
     long n_kicks, synch_rad;
-    char *systematic_multipoles, *error_multipoles;
+    char *systematic_multipoles, *random_multipoles;
+    long integration_order;
     /* for internal use */
+    long multipolesInitialized;
     MULTIPOLE_DATA systematicMultipoleData; 
-    MULTIPOLE_DATA errorMultipoleData;      
+    MULTIPOLE_DATA randomMultipoleData;      
     MULTIPOLE_DATA totalMultipoleData;  /* generated when randomization takes place */
     } KQUAD;
 
@@ -1553,12 +1563,13 @@ extern void SDDS_FinalOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long m
                            char **optimization_quantity_name, char **optimization_quantity_unit, long optimization_quantities,
                            char *caller);
 extern void dump_final_properties(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums,
-     double *varied_quan, char *first_varied_quan_name, long n_varied_quan,
+     double *varied_quan, char *first_varied_quan_name, long n_varied_quan, long totalSteps,
      double *perturbed_quan, char *first_perturbed_quan_name, long n_perturbed_quan,
      double *optim_quan, char *first_optim_quan_name, long n_optim_quan,
      long step, double **particle, long n_original, double p_central, VMATRIX *M);
 extern long compute_final_properties
-    (double *data, BEAM_SUMS *sums, long n_original, double p_central, VMATRIX *M, double **coord, long step);
+    (double *data, BEAM_SUMS *sums, long n_original, double p_central, VMATRIX *M, double **coord, 
+     long step, long totalSteps);
 extern void rpn_store_final_properties(double *value, long number);
 extern long get_final_property_index(char *name);
 extern long count_final_properties();

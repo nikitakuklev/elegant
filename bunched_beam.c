@@ -343,7 +343,8 @@ long track_beam(
             fprintf(stderr, "Dumping final propertes data..."); fflush(stderr);
         dump_final_properties
             (&output->SDDS_final, output->sums_vs_z+output->n_z_points, 
-             control->varied_quan_value, control->varied_quan_name?*control->varied_quan_name:NULL, control->n_elements_to_vary,
+             control->varied_quan_value, control->varied_quan_name?*control->varied_quan_name:NULL, 
+             control->n_elements_to_vary, control->n_steps*control->indexLimitProduct,
              errcon->error_value, errcon->quan_name?*errcon->quan_name:NULL, errcon->n_items,
              optim->varied_quan_value, optim->varied_quan_name?*optim->varied_quan_name:NULL,
                  optim->n_variables?optim->n_variables+1:0,
@@ -469,7 +470,8 @@ void finish_output(
             bomb("'final' file is uninitialized (track_beam)", NULL);
         dump_final_properties
             (&output->SDDS_final, output->sums_vs_z+output->n_z_points, 
-             control->varied_quan_value, control->varied_quan_name?*control->varied_quan_name:NULL, control->n_elements_to_vary,
+             control->varied_quan_value, control->varied_quan_name?*control->varied_quan_name:NULL, 
+             control->n_elements_to_vary, control->indexLimitProduct*control->n_steps,
              errcon->error_value, errcon->quan_name?*errcon->quan_name:NULL, errcon->n_items,
              optim->varied_quan_value, optim->varied_quan_name?*optim->varied_quan_name:NULL,
                  optim->n_variables?optim->n_variables+1:0,

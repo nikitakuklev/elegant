@@ -222,6 +222,13 @@ long vary_beamline(VARY *_control, ERROR *errcon, RUN *run, LINE_LIST *beamline)
     if (links && links->n_links) 
         reset_element_links(links, run, beamline);
 
+    for (i=0, _control->indexLimitProduct=1; i<_control->n_indices; i++) {
+      if ((_control->indexLimitProduct *= _control->index_limit[i])<=0) {
+        fprintf(stderr, "index %ld has a limit of <= 0", i);
+        exit(1);
+      }
+    }
+    
     if (_control->n_indices==0 || _control->at_start) {
         do_perturbations = 1;
         if (errcon->n_items) {
