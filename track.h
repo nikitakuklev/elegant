@@ -1821,7 +1821,7 @@ extern long compute_final_properties
      long step, long totalSteps, double finalCharge);
 extern void rpn_store_final_properties(double *value, long number);
 extern long get_final_property_index(char *name);
-extern long count_final_properties();
+extern long count_final_properties(void);
 
 extern double beam_width(double fraction, double **coord, long n_part, long sort_coord);
 extern double rms_emittance(double **coord, long i1, long i2, long n,
@@ -1865,7 +1865,7 @@ extern char *compose_filename(char *template, char *root_name);
 extern double find_beam_p_central(char *input);
 void center_beam_on_coords(double **particle, long n_part, double *coord, long center_momentum_also);
 void link_date(void);
-void check_heap();
+void check_heap(void);
 void do_print_dictionary(char *filename, long latex_form);
 void print_dictionary_entry(FILE *fp, long type, long latex_form);
 
@@ -2153,7 +2153,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions);
 #define NO_LOAD_PARAMETERS 0
 #define PARAMETERS_LOADED 1
 #define PARAMETERS_ENDED 2
-void finish_load_parameters();
+void finish_load_parameters(void);
 /* load parameters modes and indices */
 /* order here must be the same as load_mode array in load_parameters.c */
 #define LOAD_MODE_ABSOLUTE     0
@@ -2219,13 +2219,13 @@ extern long track_through_tubend(double **part, long n_part, TUBEND *tubend,
 extern void setup_sdds_beam(BEAM *beam,NAMELIST_TEXT *nltext,RUN *run, VARY *control,ERRORVAL *errcon,OPTIM_VARIABLES *optim,OUTPUT_FILES *output,LINE_LIST *beamline,long n_elements,
                             long save_original);
 extern long new_sdds_beam(BEAM *beam,RUN *run,VARY *control,OUTPUT_FILES *output,long flags);
-void terminate_sdds_beam();
+void terminate_sdds_beam(void);
 extern void dumpLatticeParameters(char *filename, RUN *run, LINE_LIST *beamline);
 extern void do_fit_trace_data(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
-extern void compute_offsets();
+extern void compute_offsets(void);
 extern void convert_to_xorbit(char *outputfile, LINE_LIST *beamline, long flip_k, 
                     char *header_file, char *ender_file);
-extern void finishLatticeParametersFile();
+extern void finishLatticeParametersFile(void);
 
 extern void doSubprocessCommand(char *command);
 void run_subprocess(NAMELIST_TEXT *nltext, RUN *run);
