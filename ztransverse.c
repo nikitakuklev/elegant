@@ -49,52 +49,37 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
     pz = trealloc(pz, sizeof(*pz)*max_np);
   }
 
-  tmin = DBL_MAX;
-  tmean = 0;
-  for (ip=0; ip<np; ip++) {
-    P = Po*(part[ip][5]+1);
-    time[ip] = part[ip][4]*sqrt(sqr(P)+1)/(c_mks*P);
-    if (time[ip]<tmin)
-      tmin = time[ip];
-    tmean += time[ip];
-  }
-  tmin -= dt;
-  tmax = tmin + ztransverse->bin_size*ztransverse->n_bins;
-  tmean /= np;
-
   for (ib=0; ib<ztransverse->n_bins; ib++)
-    posItime[2*ib][0] = posItime[2*ib+1][0] = 
-      posItime[2*ib][1] = posItime[2*ib+1][1] = 0;
+    posItime[0][2*ib] = posItime[0][2*ib+1] = 
+      posItime[1][2*ib] = posItime[1][2*ib+1] = 0;
 
+  /* Compute time coordinate of each particle */
+  tmean = computeTimeCoordinates(time, Po, part, np);
+  find_min_max(&tmin, &tmax, time, np);
+  tmin -= dt;
+  tmax -= dt;
+  
   /* make arrays of I(t)*x and I(t)*y */
-  for (ip=n_binned=0; ip<np; ip++) {
-    pbin[ip] = -1;
-    ib = (time[ip]-tmin)/dt;
-    if (ib<0 || ib>nb - 1)
-      continue;
-    posItime[0][ib] += part[ip][0]-ztransverse->dx;
-    posItime[1][ib] += part[ip][2]-ztransverse->dy;
-    pbin[ip] = ib;
-    pz[ip] = Po*(1+part[ip][5])/sqrt(1+sqr(part[ip][1])+sqr(part[ip][3]));
-    n_binned++;
-  }
+  n_binned = binTransverseTimeDistribution(posItime, pz, pbin, tmin, dt, nb, time, part, Po, np,
+                                           ztransverse->dx, ztransverse->dy);
+
   if (n_binned!=np)
     fprintf(stderr, "warning: only %ld of %ld particles where binned (ZTRANSVERSE)\n", n_binned, np);
 
-  for (plane=0; plane<1; plane++) {
+  for (plane=0; plane<2; plane++) {
     if (ztransverse->smoothing)
       SavitzyGolaySmooth(posItime[plane], nb, ztransverse->SGOrder,
                          ztransverse->SGHalfWidth, ztransverse->SGHalfWidth, 0);
 
     /* Take the FFT of (x*I)(t) to get (x*I)(f) */
     realFFT(posItime[plane], nb, 0);
-    posIfreq = posItime[plane];
+    posIfreq = posItime[plane]; 
     
     /* Compute V(f) = i*Z(f)*(x*I)(f), putting in a factor 
      * to normalize the current waveform
      */
     Vfreq = Vtime;
-    factor = ztransverse->macroParticleCharge/((tmax-tmin)/nb);
+    factor = ztransverse->macroParticleCharge/dt;
     iZ = ztransverse->iZ[plane];
     Vfreq[0] = posIfreq[0]*iZ[0]*factor;
     nfreq = nb/2 + 1;
@@ -110,27 +95,12 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
     /* Compute inverse FFT of V(f) to get V(t) */
     realFFT(Vfreq, nb, INVERSE_FFT);
     Vtime = Vfreq;
-
-    /* put zero voltage in Vtime[nb] for use in interpolation */
-    Vtime[nb] = 0;
+            
     /* change particle transverse momenta to reflect voltage in relevant bin */
-    offset = 2*plane+1;
-    for (ip=0; ip<np; ip++) {
-      if ((ib=pbin[ip])>=1 && ib<=nb-1) {
-        if (ztransverse->interpolate) {
-          dt1 = time[ip]-(tmin+dt*ib);
-          if (dt1<0)
-            dt1 = dt-dt1;
-          else 
-            ib += 1;
-          Vinterp = Vtime[ib-1]+(Vtime[ib]-Vtime[ib-1])/dt*dt1;
-        }
-        else
-          Vinterp = Vtime[ib];
-        if (Vinterp)
-          part[ip][offset] += Vinterp/(1e6*me_mev)/pz[ip] ;
-      }
-    }
+    applyTransverseWakeKicks(part, time, pz, pbin, np, 
+                             Po, plane, 
+                             Vtime, nb, tmin, dt, ztransverse->interpolate);
+    
   }
 }
 
@@ -195,7 +165,7 @@ void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long part
     if (!ztransverse->ZxReal && !ztransverse->ZxImag &&
         !ztransverse->ZyReal && !ztransverse->ZxImag)
       bomb("you must either give broad_band=1, or Z[xy]Real and/or Z[xy]Imag (ZTRANSVERSE)", NULL);
-    if (!SDDS_InitializeInput(&SDDSin, ztransverse->inputFile)) {
+    if (!SDDS_InitializeInput(&SDDSin, ztransverse->inputFile) || !SDDS_ReadPage(&SDDSin)) {
       fprintf(stderr, "unable to read file %s\n", ztransverse->inputFile);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors); 
       exit(1);
