@@ -1390,6 +1390,7 @@ typedef struct {
                              * to get correct bend angle */
     double last_zeta_offset; 
     double x_correction;    /* used to fix spurious central trajectory offsets */
+    double s_offset;        /* error in path length, which must be compensated with drifts before and after */
     long negative_angle;    /* used to keep track of need to invert signs before and after integration */
     } NIBEND;
 
@@ -2053,6 +2054,7 @@ extern void set_central_momentum(double **coord, long np, double  P_new, double 
 extern void center_beam(double **part, CENTER *center, long np);
 void remove_correlations(double **part, REMCOR *remcor, long np);
 void drift_beam(double **part, long np, double length, long order);
+void exactDrift(double **part, long np, double length);
 void scatter(double **part, long np, double Po, SCATTER *scatter);
 void store_fitpoint_twiss_parameters(MARK *fpt, char *name, long occurence, TWISS *twiss);
 void store_fitpoint_beam_parameters(MARK *fpt, char *name, long occurence, double **coord, long np, double Po);

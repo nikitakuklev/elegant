@@ -71,8 +71,8 @@
 #include "match_string.h"
 #include "track.h"
 
-void lorentz_setup(void *field, long field_type, double Po);
-void lorentz_terminate(void *field, long field_type, double Po);
+void lorentz_setup(void *field, long field_type, double **part, long np, double Po);
+void lorentz_terminate(void *field, long field_type, double **part, long np, double Po);
 void select_lorentz_integrator(char *desired_method);
 long do_lorentz_integration(double *coord, void *field);
 double nibend_trajectory_error(double offsetp);
@@ -90,7 +90,7 @@ static void (*deriv_function)(double *qp, double *q, double s);
 
 /* parameters of element needed for integration--set by lorentz_setup */
 static double S0, one_plus_fse, rad_coef;
-static double offset;
+static double offset, s_offset;
 static double x_correction;
 static double fse_opt;
 
@@ -257,7 +257,7 @@ long lorentz(
     field_output_on = 0;
 #endif
 
-    lorentz_setup(field, field_type, P_central);
+    lorentz_setup(field, field_type, part, n_part, P_central);
 
 #ifdef DEBUG
     field_output_on = 1;
@@ -275,7 +275,7 @@ long lorentz(
             }
         }
 
-    lorentz_terminate(field, field_type, P_central);
+    lorentz_terminate(field, field_type, part, n_part, P_central);
     
     log_exit("lorentz");
     return(i_top+1);
@@ -385,6 +385,8 @@ static void *field_global;
 void lorentz_setup(
     void *field,
     long field_type,
+    double **part,
+    long np,                      
     double Po
     )
 {
@@ -399,7 +401,9 @@ void lorentz_setup(
     log_entry("lorentz_setup");
     field_global = field;
     Fa = Fb = 0;
-
+    x_correction = 0;
+    s_offset = 0;
+    
     switch (field_type) {
         case T_NIBEND:
             nibend = (NIBEND*)field;
@@ -510,9 +514,11 @@ void lorentz_setup(
                     x_correction = traj_err_final_coord[0];
                     last_offset = nibend->last_zeta_offset = nibend->zeta_offset = offset;
                     nibend->x_correction = x_correction;
+                    nibend->s_offset = (nibend->length-traj_err_final_coord[4])/2;
                     }
                 }
             x_correction = nibend->x_correction;
+            s_offset = nibend->s_offset;
             if (nibend->synch_rad)
                 rad_coef = sqr(e_mks/c_mks)*ipow(Po,3)/(6*PI*epsilon_o*me_mks);
 
@@ -598,12 +604,16 @@ void lorentz_setup(
             bomb("invalid field type (lortenz_setup)", NULL);
             break;
         }
+    if (s_offset)
+      exactDrift(part, np, s_offset);
     log_exit("lorentz_setup");
     }
 
 void lorentz_terminate(
     void *field,
     long field_type,
+    double **part,
+    long np,                      
     double Po
     )
 {
@@ -623,6 +633,8 @@ void lorentz_terminate(
           default:
             break;
           }
+    if (s_offset)
+      exactDrift(part, np, s_offset);
   }
 
     
