@@ -1201,12 +1201,16 @@ proc FrequencyMap {args} {
 proc FrequencyMapPP {args} {
     set rootname ""
     APSStrictParseArguments {rootname}
+    source $rootname.runCfg
 
     catch {exec sddsresdiag ${rootname}.resdiag -order=4 }
     exec sddsplot -filename \
 	-column=nux,nuy $rootname.resdiag -limit=xmax=0.51,ymax=0.51,auto \
-	-column=nux,nuy $rootname.fma -graph=dot,subtype=2,type=1 \
-	&
+	-column=nux,nuy $rootname.fma -graph=dot,subtype=2,vary -order=spect \
+	-split=column=x,width=[expr $frequencyMap(xMaximum)/100.0] -end \
+	-column=nux,nuy $rootname.resdiag -limit=xmax=0.51,ymax=0.51,auto \
+	-column=nux,nuy $rootname.fma -graph=dot,subtype=2,vary -order=spect \
+	-split=column=y,width=[expr $frequencyMap(yMaximum)/100.0] &
 }
 
 set tabIndex -1
