@@ -624,9 +624,9 @@ extern char *entity_text[N_TYPES];
 #define N_SCRAPER_PARAMS 13
 #define N_CENTER_PARAMS 5
 #define N_KICKER_PARAMS 10
-#define N_KSEXT_PARAMS 14
+#define N_KSEXT_PARAMS 15
 #define N_KSBEND_PARAMS 27
-#define N_KQUAD_PARAMS 19
+#define N_KQUAD_PARAMS 20
 #define N_MAGNIFY_PARAMS 6
 #define N_SAMPLE_PARAMS 2
 #define N_HVCOR_PARAMS 10
@@ -637,7 +637,7 @@ extern char *entity_text[N_TYPES];
 #define N_RAMPP_PARAMS 1
 #define N_NISEPT_PARAMS 9
 #define N_STRAY_PARAMS 7
-#define N_CSBEND_PARAMS 34
+#define N_CSBEND_PARAMS 35
 #define N_MATTER_PARAMS 8
 #define N_RFMODE_PARAMS 21
 #define N_TRFMODE_PARAMS 14
@@ -647,7 +647,7 @@ extern char *entity_text[N_TYPES];
 #define N_SREFFECTS_PARAMS 13
 #define N_ZTRANSVERSE_PARAMS 19
 #define N_IBSCATTER_PARAMS 9
-#define N_FMULT_PARAMS 9
+#define N_FMULT_PARAMS 10
 #define N_BMAPXY_PARAMS 5
 #define N_WAKE_PARAMS 12
 #define N_TRWAKE_PARAMS 18
@@ -811,6 +811,7 @@ typedef struct {
   double length, tilt, dx, dy, dz, fse;
   long n_kicks, synch_rad;
   char *filename;
+  long sqrtOrder;
   /* For internal use: */
   MULTIPOLE_DATA multData;
 } FMULT;
@@ -1325,7 +1326,7 @@ typedef struct {
     double dx, dy, dz, fse;
     long n_kicks, synch_rad;
     char *systematic_multipoles, *random_multipoles;
-    long integration_order;
+    long integration_order, sqrtOrder;
     /* for internal use */
     long multipolesInitialized;
     MULTIPOLE_DATA systematicMultipoleData; 
@@ -1357,7 +1358,7 @@ typedef struct {
     double dx, dy, dz, fse, xkick, ykick;
     long xSteering, ySteering, n_kicks, synch_rad;
     char *systematic_multipoles, *random_multipoles, *steering_multipoles;
-    long integration_order;
+    long integration_order, sqrtOrder;
     /* for internal use */
     long multipolesInitialized;
     MULTIPOLE_DATA systematicMultipoleData; 
@@ -1547,7 +1548,7 @@ typedef struct {
     long kick_limit_scaling;
     long use_bn;
     double b1, b2, b3, b4;
-    long isr;
+    long isr, sqrtOrder;
     /* for internal use only: */
     long flags;
     double k1_internal, k2_internal, k3_internal, k4_internal;

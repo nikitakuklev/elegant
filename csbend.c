@@ -16,9 +16,10 @@
 #include "mdb.h"
 #include "track.h"
 
+#define EXSQRT(value, order) (order==0?sqrt(value):(1+0.5*((value)-1)))
 
-void integrate_csbend_ord2(double *Qf, double *Qi, double s, long n, double rho0, double p0);
-void integrate_csbend_ord4(double *Qf, double *Qi, double s, long n, double rho0, double p0);
+void integrate_csbend_ord2(double *Qf, double *Qi, double s, long n, long sqrtOrder, double rho0, double p0);
+void integrate_csbend_ord4(double *Qf, double *Qi, double s, long n, long sqrtOrder, double rho0, double p0);
 void exactDrift(double **part, long np, double length);
 void convertFromCSBendCoords(double **part, long np, double rho0, 
 			     double cos_ttilt, double sin_ttilt, long ctMode);
@@ -241,7 +242,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       abort();
     }
 
-    coord[4] += dzi*sqrt(1 + sqr(coord[1]) + sqr(coord[3]));
+    coord[4] += dzi*EXSQRT(1 + sqr(coord[1]) + sqr(coord[3]), csbend->sqrtOrder);
     coord[0]  = coord[0] + dxi + dzi*coord[1];
     coord[2]  = coord[2] + dyi + dzi*coord[3];
 
@@ -277,16 +278,16 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       y2 = y*y;
       Fx = (Fx_y + (Fx_x_y + (Fx_x2_y + Fx_x3_y*x)*x)*x + (Fx_y3 + Fx_x_y3*x)*y2)*y;
       Fy = Fy_0 + (Fy_x + (Fy_x2 + (Fy_x3 + Fy_x4*x)*x)*x)*x + (Fy_y2 + (Fy_x_y2 + Fy_x2_y2*x)*x + Fy_y4*y2)*y2;
-      dp_prime = -rad_coef*(sqr(Fx)+sqr(Fy))*sqr(1+dp)*sqrt(sqr(1+x/rho0)+sqr(xp)+sqr(yp));
+      dp_prime = -rad_coef*(sqr(Fx)+sqr(Fy))*sqr(1+dp)*EXSQRT(sqr(1+x/rho0)+sqr(xp)+sqr(yp), csbend->sqrtOrder);
       Qi[5] -= dp_prime*x*tan(e1);
     }
 
     particle_lost = 0;
     if (!particle_lost) {
       if (csbend->integration_order==4)
-        integrate_csbend_ord4(Qf, Qi, csbend->length, csbend->n_kicks, rho0, Po);
+        integrate_csbend_ord4(Qf, Qi, csbend->length, csbend->n_kicks, csbend->sqrtOrder, rho0, Po);
       else
-        integrate_csbend_ord2(Qf, Qi, csbend->length, csbend->n_kicks, rho0, Po);
+        integrate_csbend_ord2(Qf, Qi, csbend->length, csbend->n_kicks, csbend->sqrtOrder, rho0, Po);
     }
 
     if (particle_lost) {
@@ -324,7 +325,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       y2 = y*y;
       Fx = (Fx_y + (Fx_x_y + (Fx_x2_y + Fx_x3_y*x)*x)*x + (Fx_y3 + Fx_x_y3*x)*y2)*y;
       Fy = Fy_0 + (Fy_x + (Fy_x2 + (Fy_x3 + Fy_x4*x)*x)*x)*x + (Fy_y2 + (Fy_x_y2 + Fy_x2_y2*x)*x + Fy_y4*y2)*y2;
-      dp_prime = -rad_coef*(sqr(Fx)+sqr(Fy))*sqr(1+dp)*sqrt(sqr(1+x/rho0)+sqr(xp)+sqr(yp));
+      dp_prime = -rad_coef*(sqr(Fx)+sqr(Fy))*sqr(1+dp)*EXSQRT(sqr(1+x/rho0)+sqr(xp)+sqr(yp), csbend->sqrtOrder);
       Qf[5] -= dp_prime*x*tan(e2);
     }
 
@@ -371,13 +372,13 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
 
     coord[0] += dxf + dzf*coord[1];
     coord[2] += dyf + dzf*coord[3];
-    coord[4] += dzf*sqrt(1+ sqr(coord[1]) + sqr(coord[3]));
+    coord[4] += dzf*EXSQRT(1+ sqr(coord[1]) + sqr(coord[3]), csbend->sqrtOrder);
   }
 
   return(i_top+1);
 }
 
-void integrate_csbend_ord2(double *Qf, double *Qi, double s, long n, double rho0, double p0)
+void integrate_csbend_ord2(double *Qf, double *Qi, double s, long n, long sqrtOrder, double rho0, double p0)
 {
   long i;
   double factor, f, phi, ds, dsh, dp, dist;
@@ -409,7 +410,7 @@ void integrate_csbend_ord2(double *Qf, double *Qi, double s, long n, double rho0
 
   /* calculate canonical momenta (scaled to central momentum) */
   dp = DPoP0;
-  f = (1+dp)/sqrt(sqr(1+X0/rho0) + sqr(XP0) + sqr(YP0));
+  f = (1+dp)/EXSQRT(sqr(1+X0/rho0) + sqr(XP0) + sqr(YP0), sqrtOrder);
   QX = XP0*f;
   QY = YP0*f;
 
@@ -430,7 +431,7 @@ void integrate_csbend_ord2(double *Qf, double *Qi, double s, long n, double rho0
         s_lost = dist;
         return;
       }
-      f = sqrt(f);
+      f = EXSQRT(f, sqrtOrder);
       if (fabs(QX/f)>1) {
         particle_lost = 1;
         s_lost = dist;
@@ -463,12 +464,12 @@ void integrate_csbend_ord2(double *Qf, double *Qi, double s, long n, double rho0
     QX += -ds*(1+X/rho0)*Fy/rho_actual;
     QY += ds*(1+X/rho0)*Fx/rho_actual;
     if (rad_coef || isrConstant) {
-      denom = sqrt(sqr(1+DPoP)-sqr(QX)-sqr(QY));
+      denom = EXSQRT(sqr(1+DPoP)-sqr(QX)-sqr(QY), sqrtOrder);
       xp = QX/denom;
       yp = QY/denom;
       QX /= (1+DPoP);
       QY /= (1+DPoP);
-      DPoP -= rad_coef*sqr(1+DPoP)*(sqr(Fx)+sqr(Fy))*sqrt(sqr(1+X/rho0)+sqr(xp)+sqr(yp))*ds 
+      DPoP -= rad_coef*sqr(1+DPoP)*(sqr(Fx)+sqr(Fy))*EXSQRT(sqr(1+X/rho0)+sqr(xp)+sqr(yp), sqrtOrder)*ds 
         + isrConstant*sqrt(ds)*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
       QX *= (1+DPoP);
       QY *= (1+DPoP);
@@ -481,7 +482,7 @@ void integrate_csbend_ord2(double *Qf, double *Qi, double s, long n, double rho0
         s_lost = dist;
         return;
       }
-      f = sqrt(f);
+      f = EXSQRT(f, sqrtOrder);
       if (fabs(QX/f)>1) {
         particle_lost = 1;
         s_lost = dist;
@@ -509,7 +510,7 @@ void integrate_csbend_ord2(double *Qf, double *Qi, double s, long n, double rho0
         s_lost = dist;
         return;
       }
-      f = sqrt(f);
+      f = EXSQRT(f, sqrtOrder);
       if (fabs(QX/f)>1) {
         particle_lost = 1;
         s_lost = dist;
@@ -533,14 +534,14 @@ void integrate_csbend_ord2(double *Qf, double *Qi, double s, long n, double rho0
   }
 
   /* convert back to slopes */
-  f = (1+X/rho0)/sqrt(sqr(1+DPoP)-sqr(QX)-sqr(QY));
+  f = (1+X/rho0)/EXSQRT(sqr(1+DPoP)-sqr(QX)-sqr(QY), sqrtOrder);
   Qf[1] *= f;
   Qf[3] *= f;
   Qf[4] += dist;
 }
 
 
-void integrate_csbend_ord4(double *Qf, double *Qi, double s, long n, double rho0, double p0)
+void integrate_csbend_ord4(double *Qf, double *Qi, double s, long n, long sqrtOrder, double rho0, double p0)
 {
   long i;
   double factor, f, phi, ds, dsh, dp, dist;
@@ -575,7 +576,7 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double s, long n, double rho0
 
   /* calculate canonical momenta (scaled to central momentum) */
   dp = DPoP0;
-  f = (1+dp)/sqrt(sqr(1+X0/rho0) + sqr(XP0) + sqr(YP0));
+  f = (1+dp)/EXSQRT(sqr(1+X0/rho0) + sqr(XP0) + sqr(YP0), sqrtOrder);
   QX = XP0*f;
   QY = YP0*f;
 
@@ -597,7 +598,7 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double s, long n, double rho0
       s_lost = dist;
       return;
     }
-    f = sqrt(f);
+    f = EXSQRT(f, sqrtOrder);
     if (fabs(QX/f)>1) {
       particle_lost = 1;
       s_lost = dist;
@@ -645,7 +646,7 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double s, long n, double rho0
       s_lost = dist;
       return;
     }
-    f = sqrt(f);
+    f = EXSQRT(f, sqrtOrder);
     if (fabs(QX/f)>1) {
       particle_lost = 1;
       s_lost = dist;
@@ -693,7 +694,7 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double s, long n, double rho0
       s_lost = dist;
       return;
     }
-    f = sqrt(f);
+    f = EXSQRT(f, sqrtOrder);
     if (fabs(QX/f)>1) {
       particle_lost = 1;
       return;
@@ -740,7 +741,7 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double s, long n, double rho0
       s_lost = dist;
       return;
     }
-    f = sqrt(f);
+    f = EXSQRT(f, sqrtOrder);
     if (fabs(QX/f)>1) {
       particle_lost = 1;
       s_lost = dist;
@@ -763,7 +764,7 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double s, long n, double rho0
   }
 
   /* convert back to slopes */
-  f = (1+X/rho0)/sqrt(sqr(1+DPoP)-sqr(QX)-sqr(QY));
+  f = (1+X/rho0)/EXSQRT(sqr(1+DPoP)-sqr(QX)-sqr(QY), sqrtOrder);
   Qf[1] *= f;
   Qf[3] *= f;
   Qf[4] += dist;
@@ -1257,9 +1258,9 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
         Qi[5] = DP;
         
         if (csbend->integration_order==4)
-          integrate_csbend_ord4(Qf, Qi, csbend->length/csbend->n_kicks, 1, rho0, Po);
+          integrate_csbend_ord4(Qf, Qi, csbend->length/csbend->n_kicks, 0, 1, rho0, Po);
         else
-          integrate_csbend_ord2(Qf, Qi, csbend->length/csbend->n_kicks, 1, rho0, Po);
+          integrate_csbend_ord2(Qf, Qi, csbend->length/csbend->n_kicks, 0, 1, rho0, Po);
         particleLost[i_part] = particle_lost;
       
         /* retrieve coordinates from arrays */
