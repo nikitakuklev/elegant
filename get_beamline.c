@@ -277,6 +277,8 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
   return(lptr);
 }
 
+static long negativeLengthWarningsLeft = 100;
+
 double compute_end_positions(LINE_LIST *lptr) 
 {
     double z, l, theta, z_recirc;
@@ -313,8 +315,10 @@ double compute_end_positions(LINE_LIST *lptr)
             z_recirc = z;
             recircPresent = 1;
             }
-        if (l<0) {
+        if (l<0 && negativeLengthWarningsLeft>0) {
             fprintf(stdout, "warning(1): element %s has negative length = %e\n", eptr->name, l);
+            if (--negativeLengthWarningsLeft==0)
+              fprintf(stdout, "Further negative length warnings will be suppressed.\n");
             fflush(stdout);
           }
         eptr->end_pos = z + l;
