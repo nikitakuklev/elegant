@@ -1,4 +1,8 @@
 /* $Log: not supported by cvs2svn $
+ * Revision 1.3  1999/02/11 20:46:35  borland
+ * Now uses target parameter of simplexMin to accept any solution with
+ * 1e-4 or better convergence.
+ *
  * Revision 1.2  1999/01/27 17:55:15  borland
  * Removed prototypes from ibsEmittance.c and zibs.c and put them in common
  * file zibs.h
@@ -28,7 +32,8 @@ static char *USAGE = "ibsEmittance <twissFile> <resultsFile>\n\
  [-growthRatesOnly] \n\
  [-superperiods=<value>]\n\
  {-RF=Voltage=<MV>,harmonic=<value>|-length=<mm>}\n\
- [-energyRange=initial=<value>,final=<value>,delta=<value>,file=<string>]";
+ [-energyRange=initial=<value>,final=<value>,delta=<value>,file=<string>]\n\
+ [-integrate=turns=<number>[,stepSize=<number>]]";
 
 #define SET_ENERGY 0
 #define VERBOSE 1
@@ -42,7 +47,9 @@ static char *USAGE = "ibsEmittance <twissFile> <resultsFile>\n\
 #define EMITXINPUT 9
 #define DELTAINPUT 10
 #define GROWTHRATESONLY 11
-#define N_OPTIONS 12
+#define SET_TARGET 12
+#define SET_INTEGRATE 13
+#define N_OPTIONS 14
 char *option[N_OPTIONS] = {
   "energyRange",
   "verbose",
@@ -55,12 +62,27 @@ char *option[N_OPTIONS] = {
   "method",
   "emitxInput",
   "deltaInput",
-  "growthRatesOnly"
+  "growthRatesOnly",
+  "target",
+  "integrate",
   };
 
 #include "zibs.h"
 double IBSequations(double *x, long *invalid);
 void IBSsimplexReport(double ymin, double *xmin, long pass, long evals, long dims);
+
+void IBSIntegrate(double *exInteg, double *eyInteg, double *elInteg, long *passInteg,
+                  double *xRateInteg, double *yRateInteg, double *zRateInteg,
+                  long integTurns, long integStepSize, 
+                  double P, double emitx, double emity,
+                  double sigmaDelta, double sigmaz,
+                  double particles,
+                  double emitx0, double sigmaDelta0, 
+                  double transSRdampRate, double longSRdampRate,
+                  double coupling,
+                  double *s, double *betax, double *alphax, double *betay, 
+                  double *alphay, double *etax, double *etaxp, long elements, 
+                  long superperiods);
 
 /* global variables */
 double *s, *betax, *alphax, *betay, *alphay, *etax, *etaxp;
@@ -87,6 +109,10 @@ int main( int argc, char **argv)
   short *disable;
   long dimensions = 14, maxEvaluations = 500, maxPasses = 2;
   double target = 1e-4, tolerance = 1e-6;
+  long integrationTurns, integrationStepSize, integrationPoints = 0;
+  double *exInteg, *eyInteg, *elInteg, *xRateInteg, *yRateInteg, *zRateInteg;
+  long *passInteg;
+  unsigned long dummyFlags;
   
   SDDS_RegisterProgramName(argv[0]);
   argc  =  scanargs(&scanned, argc, argv);
@@ -106,6 +132,7 @@ int main( int argc, char **argv)
   emitxInput = 0;
   sigmaDeltaInput = 0;
   growthRatesOnly = 0;
+  integrationTurns = 0;
   for (i = 1; i<argc; i++) {
     if (scanned[i].arg_type == OPTION) {
       delete_chars(scanned[i].list[0], "_");
@@ -145,9 +172,28 @@ int main( int argc, char **argv)
       case GROWTHRATESONLY:
         growthRatesOnly = 1;
         break;
+      case SET_TARGET:
+        if (scanned[i].n_items!=2 ||
+            !get_double(&target, scanned[i].list[1]) ||
+            target<0)
+          bomb("invalid -target syntax", NULL);
+        break;
       case RF:
       case SET_ENERGY:
         bomb("Option %s not implemented.\n", scanned[i].list[0]);
+        break;
+      case SET_INTEGRATE:
+        if (scanned[i].n_items<2)
+          bomb("invalid -integrate syntax", NULL);
+        integrationTurns = 0;
+        integrationStepSize = 1;
+        scanned[i].n_items--;
+        if (!scanItemList(&dummyFlags, scanned[i].list+1, &scanned[i].n_items, 0,
+                          "turns", SDDS_LONG, &integrationTurns, 1, 0,
+                          "stepsize", SDDS_LONG, &integrationStepSize, 1, 0,
+                          NULL) ||
+            integrationTurns<=0 || integrationStepSize<1) 
+          bomb("invalid -integrate syntax", NULL);
         break;
       default:
         bomb("unknown option given.", NULL);  
@@ -233,18 +279,38 @@ int main( int argc, char **argv)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 
   if (0>SDDS_DefineParameter(&resultsPage, "Convergence", NULL, NULL, "Convergence state of emittance calculations.", NULL, SDDS_STRING, NULL) ||
-      0>SDDS_DefineParameter(&resultsPage, "emitx0", "$ge$r$bx,0$n", "m-rad", "Horizontal emittance with no coupling and no IBS.", NULL, SDDS_DOUBLE, NULL) ||
-      0>SDDS_DefineParameter(&resultsPage, "emitxInput", "$ge$r$bx,Input$n", "m-rad", "Horizontal emittance with coupling and no IBS.", NULL, SDDS_DOUBLE, NULL) ||
-      0>SDDS_DefineParameter(&resultsPage, "emityInput", "$ge$r$by,Input$n", "m-rad", "Vertical emittance with coupling and no IBS.", NULL, SDDS_DOUBLE, NULL) ||
-      0>SDDS_DefineParameter(&resultsPage, "emitx", "$ge$r$bx$n", "m-rad", "Horizontal emittance with coupling and with IBS.", NULL, SDDS_DOUBLE, NULL) ||
-      0>SDDS_DefineParameter(&resultsPage, "emity", "$ge$r$by$n", "m-rad", "Vertical emittance with coupling and with IBS.", NULL, SDDS_DOUBLE, NULL))
+      0>SDDS_DefineParameter(&resultsPage, "emitx0", "$ge$r$bx,0$n", "$gp$rm", "Horizontal emittance with no coupling and no IBS.", NULL, SDDS_DOUBLE, NULL) ||
+      0>SDDS_DefineParameter(&resultsPage, "emitxInput", "$ge$r$bx,Input$n", "$gp$rm", "Horizontal emittance with coupling and no IBS.", NULL, SDDS_DOUBLE, NULL) ||
+      0>SDDS_DefineParameter(&resultsPage, "emityInput", "$ge$r$by,Input$n", "$gp$rm", "Vertical emittance with coupling and no IBS.", NULL, SDDS_DOUBLE, NULL) ||
+      0>SDDS_DefineParameter(&resultsPage, "emitx", "$ge$r$bx$n", "$gp$rm", "Horizontal emittance with coupling and with IBS.", NULL, SDDS_DOUBLE, NULL) ||
+      0>SDDS_DefineParameter(&resultsPage, "emity", "$ge$r$by$n", "$gp$rm", "Vertical emittance with coupling and with IBS.", NULL, SDDS_DOUBLE, NULL))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 
-  if (0>SDDS_DefineParameter(&resultsPage, "sigmaDelta0", "$gs$bd,0$n", NULL, "Relative momentum spread without IBS.", NULL, SDDS_DOUBLE, NULL) ||
-      0>SDDS_DefineParameter(&resultsPage, "sigmaDelta", "$gs$bd$n", NULL, "Relative momentum spread with IBS.", NULL, SDDS_DOUBLE, NULL) ||
+  if (0>SDDS_DefineParameter(&resultsPage, "sigmaDelta0", "$gs$r$bd,0$n", NULL, "Relative momentum spread without IBS.", NULL, SDDS_DOUBLE, NULL) ||
+      0>SDDS_DefineParameter(&resultsPage, "sigmaDelta", "$gs$r$bd$n", NULL, "Relative momentum spread with IBS.", NULL, SDDS_DOUBLE, NULL) ||
       0>SDDS_DefineParameter(&resultsPage, "sigmaz0", "$gs$r$bz,0$n", "m", "Bunch length without IBS.", NULL, SDDS_DOUBLE, NULL) ||
       0>SDDS_DefineParameter(&resultsPage, "sigmaz", "$gs$r$bz$n", "m", "Bunch length with IBS.", NULL, SDDS_DOUBLE, NULL))
     SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+
+  if (integrationTurns) {
+    if (SDDS_DefineColumn(&resultsPage, "ex", "$ge$r$bx$n", "$gp$rm", "Horizontal Emittance", NULL, SDDS_DOUBLE, 0)<0 ||
+        SDDS_DefineColumn(&resultsPage, "ey", "$ge$r$by$n", "$gp$rm", "Vertical Emittance", NULL, SDDS_DOUBLE, 0)<0 ||
+        SDDS_DefineColumn(&resultsPage, "el", "$ge$r$bl$n", "s", "Longitudinal Emittance", NULL, SDDS_DOUBLE, 0)<0 ||
+        SDDS_DefineColumn(&resultsPage, "IBSRatex", NULL, "s", "Horizontal IBS Emittance Growth Rate", NULL, SDDS_DOUBLE, 0)<0 ||
+        SDDS_DefineColumn(&resultsPage, "IBSRatey", NULL, "s", "Vertical IBS Emittance Growth Rate", NULL, SDDS_DOUBLE, 0)<0 ||
+        SDDS_DefineColumn(&resultsPage, "IBSRatel", NULL, "s", "Longitudinal IBS Emittance Growth Rate", NULL, SDDS_DOUBLE, 0)<0 ||
+        SDDS_DefineColumn(&resultsPage, "Pass", NULL, NULL, NULL, NULL, SDDS_LONG, 0)<0)
+      SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    integrationPoints = integrationTurns/integrationStepSize+1;
+    if (!(exInteg = SDDS_Malloc(sizeof(*exInteg)*integrationPoints)) ||
+        !(eyInteg = SDDS_Malloc(sizeof(*eyInteg)*integrationPoints)) ||
+        !(elInteg = SDDS_Malloc(sizeof(*elInteg)*integrationPoints)) ||
+        !(xRateInteg = SDDS_Malloc(sizeof(*xRateInteg)*integrationPoints)) ||
+        !(yRateInteg = SDDS_Malloc(sizeof(*yRateInteg)*integrationPoints)) ||
+        !(zRateInteg = SDDS_Malloc(sizeof(*zRateInteg)*integrationPoints)) ||
+        !(passInteg = SDDS_Malloc(sizeof(*passInteg)*integrationPoints)))
+      bomb("memory allocation failure (integration arrays)", NULL);
+  }
   
   if (verbosity)
     fprintf( stderr, "Opening for reading \"%s\"\n", inputfile);
@@ -295,6 +361,16 @@ int main( int argc, char **argv)
     sigmaDelta = sigmaDeltaInput;
     emity = emityInput;
     emitx = emitxInput;
+
+    if (integrationPoints) {
+      IBSIntegrate(exInteg, eyInteg, elInteg, passInteg,
+                   xRateInteg, yRateInteg, zRateInteg,
+                   integrationTurns, integrationStepSize, 
+                   pCentral, emitx, emity, sigmaDelta, sigmaz, particles,
+                   emitx0, sigmaDelta0, 2./taux, 2./taudelta, coupling,
+                   s, betax, alphax, betay, alphay, etax, etaxp, elements,
+                   superperiods);
+    }
     
     if (!growthRatesOnly) {
       if (verbosity > 1) {
@@ -378,7 +454,7 @@ int main( int argc, char **argv)
                    superperiods, 1,
                    &xGrowthRate, &yGrowthRate, &zGrowthRate);
     converged = 1;
-    if (0>SDDS_StartPage(&resultsPage, 0) ||
+    if (0>SDDS_StartPage(&resultsPage, integrationPoints) ||
         !SDDS_SetParameters(&resultsPage, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
                             "Convergence", converged?"Emittance converged":"Emittance did not converge",
                             "pCentral", pCentral,
@@ -405,9 +481,15 @@ int main( int argc, char **argv)
                             "sigmaDelta0", sigmaDelta0,
                             "sigmaDelta", sigmaDelta,
                             "sigmaz0", sigmaz0,
-                            "sigmaz", sigmaz, NULL))
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-    if (!SDDS_WritePage(&resultsPage))
+                            "sigmaz", sigmaz, NULL) ||
+        !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, exInteg, integrationPoints, "ex") ||
+        !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, eyInteg, integrationPoints, "ey") ||
+        !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, elInteg, integrationPoints, "el") ||
+        !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, xRateInteg, integrationPoints, "IBSRatex") ||
+        !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, yRateInteg, integrationPoints, "IBSRatey") ||
+        !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, zRateInteg, integrationPoints, "IBSRatel") ||
+        !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, passInteg, integrationPoints, "Pass") ||
+        !SDDS_WritePage(&resultsPage))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
   
@@ -527,3 +609,57 @@ void IBSsimplexReport(double ymin, double *xmin, long pass, long evals, long dim
   fprintf( stderr, "    emitx = %le   sigmaDelta = %le.\n", xmin[0], xmin[1]);
   return;
 }
+
+void IBSIntegrate(double *exInteg, double *eyInteg, double *elInteg, long *passInteg,
+                  double *xRateInteg, double *yRateInteg, double *zRateInteg,
+                  long integTurns, long integStepSize, 
+                  double P, double emitx, double emity,
+                  double sigmaDelta, double sigmaz,
+                  double particles,
+                  double emitx0, double sigmaDelta0, 
+                  double transSRdampRate, double longitSRdampRate,
+                  double coupling,
+                  double *s, double *betax, double *alphax, double *betay, 
+                  double *alphay, double *etax, double *etaxp, long elements, 
+                  long superperiods)
+{
+  long turn, slot;
+  double dT, gamma, vz, emitz, zRatio;
+  double xGrowthRate, yGrowthRate, zGrowthRate, emitz0;
+  
+  gamma = sqrt(sqr(P)+1);
+  vz = c_mks*P/gamma;
+  dT = s[elements-1]*superperiods*integStepSize/vz;
+
+  emitz = sigmaDelta*sigmaz;
+  emitz0 = sigmaDelta0*sigmaz;
+  zRatio = sigmaDelta/sigmaz;
+  for (turn=slot=0; turn<integTurns; turn+=integStepSize, slot++) {
+    exInteg[slot] = emitx;
+    eyInteg[slot] = emity;
+    elInteg[slot] = emitz/vz;
+    passInteg[slot] = turn;
+    IBSGrowthRates(P, emitx, emity, sigmaDelta, sigmaz, particles,
+                   emitx0, sigmaDelta0, transSRdampRate, longitSRdampRate, coupling,
+                   s, betax, alphax, betay, alphay, etax, etaxp, elements,
+                   superperiods, 0,
+                   &xGrowthRate, &yGrowthRate, &zGrowthRate);
+    xRateInteg[slot] = xGrowthRate;
+    yRateInteg[slot] = yGrowthRate;
+    zRateInteg[slot] = zGrowthRate;
+    emitx += (xGrowthRate-transSRdampRate)*emitx*dT+transSRdampRate*emitx0*dT/(1+coupling);
+    emity += (yGrowthRate-transSRdampRate)*emity*dT+transSRdampRate*emitx0*coupling*dT/(1+coupling);
+    emitz += (zGrowthRate-longitSRdampRate)*emitz*dT+longitSRdampRate*emitz0*dT;
+    sigmaDelta = sqrt(emitz*zRatio);
+    sigmaz = emitz/sigmaDelta;
+  }
+  exInteg[slot] = emitx;
+  eyInteg[slot] = emity;
+  elInteg[slot] = emitz/vz;
+  passInteg[slot] = turn;
+  xRateInteg[slot] = xGrowthRate;
+  yRateInteg[slot] = yGrowthRate;
+  zRateInteg[slot] = zGrowthRate;
+}
+
+
