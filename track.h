@@ -535,7 +535,7 @@ extern char *entity_text[N_TYPES];
 #define N_CHARGE_PARAMS 1
 #define N_PFILTER_PARAMS 1
 #define N_HISTOGRAM_PARAMS 9
-#define N_CSRCSBEND_PARAMS 30
+#define N_CSRCSBEND_PARAMS 32
 
 typedef struct {
     char *name;            /* parameter name */
@@ -1268,7 +1268,7 @@ typedef struct {
     double etilt;   /* error tilt angle */
     long n_kicks, nonlinear, synch_rad;
     long edge1_effects, edge2_effects;
-    long integration_order, bins, SGHalfWidth, SGOrder;
+    long integration_order, bins, SGHalfWidth, SGOrder, SGDerivHalfWidth, SGDerivOrder;
     char *histogramFile;
     long outputInterval, steadyState;
     /* for internal use only: */

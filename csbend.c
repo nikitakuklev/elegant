@@ -800,6 +800,11 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 
   if ((nBins=csbend->bins)<2)
     bomb("Less than 2 bins for CSR!", NULL);
+
+  if (csbend->SGDerivHalfWidth<=0)
+    csbend->SGDerivHalfWidth = csbend->SGHalfWidth;
+  if (csbend->SGDerivOrder<=0)
+    csbend->SGDerivOrder = csbend->SGOrder;
   
   if (n_part>maxParticles &&
       (!(beta0=SDDS_Realloc(beta0, sizeof(*beta0)*(maxParticles=n_part))) ||
@@ -1108,7 +1113,8 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     /* - compute derivative with smoothing.  The deriv is w.r.t. index number and
      * I won't scale it now as it will just fall out in the integral 
      */
-    SavitzyGolaySmooth(ctHistDeriv, nBins, csbend->SGOrder, csbend->SGHalfWidth, csbend->SGHalfWidth, 1);
+    SavitzyGolaySmooth(ctHistDeriv, nBins, csbend->SGDerivOrder, 
+                       csbend->SGDerivHalfWidth, csbend->SGDerivHalfWidth, 1);
 
     phiBend += angle/csbend->n_kicks;
     slippageLength = rho0*ipow(phiBend, 3)/24.0;
