@@ -31,15 +31,6 @@ void run_subprocess(NAMELIST_TEXT *nltext, RUN *run)
 
   log_entry("run_subprocess");
 
-#if !defined(_WIN32)
-  signal(SIGUSR1, dummy_sigusr1);
-#endif
-  if (!fp) {
-    /* open a pipe and start csh */
-    fp = popen("csh", "w");
-    pid = getpid();
-  }
-
   /* process the namelist text */
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
@@ -70,18 +61,9 @@ void run_subprocess(NAMELIST_TEXT *nltext, RUN *run)
     strcat(buffer, ptr0);
     fprintf(stdout, "%s\n", buffer);
     fflush(stdout);
-    fprintf(fp, "%s\nkill -USR1 %d\n", buffer, pid);
-    fflush(fp);
-#if !defined(_WIN32)
-    /* pause until SIGUSR1 is received */
-    sigpause(SIGUSR1);
-#endif
+    executeCshCommand(buffer);
   }
 
-#if !defined(_WIN32)               
-  /* back to default behavior for sigusr1 */
-  signal(SIGUSR1, SIG_DFL);
-#endif
   log_exit("run_subprocess");
 }
 
@@ -89,3 +71,28 @@ void run_subprocess(NAMELIST_TEXT *nltext, RUN *run)
 void subprocess_sigusr1()
 {
 }
+
+void executeCshCommand(char *cmd)
+{
+#if !defined(_WIN32)
+  signal(SIGUSR1, dummy_sigusr1);
+#endif
+
+  if (!fp) {
+    /* open a pipe and start csh */
+    fp = popen("csh", "w");
+    pid = getpid();
+  }
+  
+  fprintf(fp, "%s\nkill -USR1 %d\n", cmd, pid);
+  fflush(fp);
+
+#if !defined(_WIN32)
+  /* pause until SIGUSR1 is received */
+  sigpause(SIGUSR1);
+
+  /* back to default behavior for sigusr1 */
+  signal(SIGUSR1, SIG_DFL);
+#endif
+}
+

@@ -23,7 +23,8 @@ void trackWithChromaticLinearMatrix(double **particle, long particles,
                                     double *dalpha_dPoP);
 void matr_element_tracking(double **coord, VMATRIX *M, MATR *matr,
                            long np, double z);
-
+long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge, 
+                             double ***part, long *np);
 
 static TRACKING_CONTEXT trackingContext;
 
@@ -753,6 +754,10 @@ long do_tracking(
               track_IBS(coord, n_to_track, (IBSCATTER*)eptr->p_elem,
                         *P_central, &(beamline->elem), &(beamline->radIntegrals),
                         charge);
+            break;
+          case T_SCRIPT:
+            transformBeamWithScript((SCRIPT*)eptr->p_elem,
+                                    *P_central, charge, &coord, &n_to_track);
             break;
           default:
             fprintf(stdout, "programming error: no tracking statements for element %s (type %s)\n",
@@ -1500,3 +1505,124 @@ void matr_element_tracking(double **coord, VMATRIX *M, MATR *matr,
       coord[i][4] += matr->sReference;
   }
 }
+
+long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge, 
+                             double ***part, long *np)
+{
+  char *rootname, *input, *output;
+  char *cmdBuffer0, *cmdBuffer1;
+  SDDS_DATASET SDDSout, SDDSin;
+  double *data;
+  char *dataname[6] = {"x","xp","y","yp","t","p"};
+  long i, j, npNew;
+  
+  /* generate random rootname */
+  if (!(rootname = tmpname(NULL)))
+    bomb("problem generating temporary filename for script", NULL);
+  if (!(input = malloc(sizeof(*input)*(strlen(rootname)+10))) ||
+      !(output = malloc(sizeof(*output)*(strlen(rootname)+10))))
+    bomb("problem generating temporary filename for script", NULL);
+
+  /* prepare command */
+  sprintf(input, "%s.in", rootname);
+  sprintf(output, "%s.out", rootname);
+  if (!(cmdBuffer0=malloc(sizeof(char)*(strlen(script->command)+10*strlen(input)+10*strlen(output)))) ||
+      !(cmdBuffer1=malloc(sizeof(char)*(strlen(script->command)+10*strlen(input)+10*strlen(output)))))
+    bomb("memory allocation failure making command buffer for script", NULL);
+  replaceString(cmdBuffer0, script->command, "%i", input, 9, 0);
+  replaceString(cmdBuffer1, cmdBuffer0, "%o", output, 9, 0);
+  fprintf(stderr, "%s\n", cmdBuffer1);
+  
+  /* dump the data to script input file */
+  SDDS_ForceInactive(&SDDSout);
+  SDDS_PhaseSpaceSetup(&SDDSout, input, SDDS_BINARY, 1, "script input", "unknown", "unknown",
+                       "transformBeamWithScript");
+  dump_phase_space(&SDDSout, *part, *np, 0, pCentral, 
+                   charge?charge->macroParticleCharge*(*np):0.0);
+
+  if (!SDDS_Terminate(&SDDSout))
+    SDDS_Bomb("problem terminating script input file");
+  
+  /* run the script */
+  executeCshCommand(cmdBuffer1);
+  
+  /* read the data from script output file */
+  if (!fexists(output)) 
+    SDDS_Bomb("unable to find script output file");
+  if (!SDDS_InitializeInput(&SDDSin, output)) {
+    SDDS_SetError("Unable to read script output file");
+    SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+  }
+  if (!check_sdds_beam_column(&SDDSin, "x", "m") ||
+      !check_sdds_beam_column(&SDDSin, "y", "m") ||
+      !check_sdds_beam_column(&SDDSin, "xp", NULL) ||
+      !check_sdds_beam_column(&SDDSin, "yp", NULL) ||
+      !check_sdds_beam_column(&SDDSin, "p", "m$be$nc") ||
+      !check_sdds_beam_column(&SDDSin, "t", "s")) {
+    if (!check_sdds_beam_column(&SDDSin, "p", "m$be$nc") &&
+        check_sdds_beam_column(&SDDSin, "p", NULL)) {
+      fprintf(stdout, "Warning: p has no units in script output file.  Expected m$be$nc\n");
+      fflush(stdout);
+    } else {
+      fprintf(stdout, 
+              "necessary data quantities (x, x', y, y', t, p) have the wrong units or are not present in script output");
+      fflush(stdout);
+      exit(1);
+    }
+  }
+  
+  if (SDDS_ReadPage(&SDDSin)!=1) {
+    SDDS_SetError("Unable to read script output file");
+    SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+  }
+  if (!(npNew=SDDS_RowCount(&SDDSin))) {
+    *np = 0;
+    return 1;
+  }
+  if (*np!=npNew 
+      && !(*part = SDDS_Realloc(*part, sizeof(**part)*npNew)))
+    SDDS_Bomb("memory allocation failure loading from script output file");
+  for (i=0; i<6; i++) {
+    if (!(data = SDDS_GetColumnInDoubles(&SDDSin, dataname[i]))) {
+      SDDS_SetError("Unable to read script output file");
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    }
+    for (j=0; j<npNew; j++)
+      (*part)[j][i] = data[j];
+    free(data);
+  }
+  if (charge) {
+    double totalCharge;
+    if (!SDDS_GetParameterAsDouble(&SDDSin, "Charge", &totalCharge)) {
+      SDDS_SetError("Unable to read Charge parameter from script output file");
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    }
+    charge->charge = totalCharge;
+    charge->macroParticleCharge = 0;
+    if (npNew)
+      charge->macroParticleCharge = totalCharge/npNew;
+  }
+  if (SDDS_ReadPage(&SDDSin)!=-1)
+    SDDS_Bomb("Script output file has multiple pages");
+  if (!SDDS_Terminate(&SDDSin))
+    SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    
+  /* convert (t, p) data to (s, delta) */
+  for (j=0; j<npNew; j++) {
+    double p, beta;
+    p = (*part)[j][5];
+    (*part)[j][5] = (p-pCentral)/pCentral;
+    beta = p/sqrt(sqr(p)+1);
+    (*part)[j][4] *= beta*c_mks;
+  }
+
+  /* delete the input and output files */
+  sprintf(cmdBuffer0, "rm -f %s %s", input, output);
+  system(cmdBuffer0);
+  
+  /* clean up */
+  free(cmdBuffer0);
+  
+  return 1;
+}
+

@@ -45,7 +45,6 @@ static char *elegant_columns = "x xp y yp t p";
 #define IEC_P 5
 
 long get_sdds_particles(double ***particle, long one_dump, long n_skip);
-long check_sdds_beam_column(SDDS_TABLE *SDDS_table, char *name, char *units);
 
 static SDDS_TABLE SDDS_input;
 static long input_initialized = 0, has_been_read = 0;

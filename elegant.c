@@ -308,6 +308,7 @@ char **argv;
             
             initialize_structures(NULL, &run_control, &error_control, &correct, &beam, &output_data,
                           &optimize, &chrom_corr_data, &tune_corr_data, &links);
+            finish_load_parameters();
             run_setuped = run_controled = error_controled = correction_setuped = 0;
             
             run_setuped = run_controled = error_controled = correction_setuped = do_closed_orbit = do_chromatic_correction = 

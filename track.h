@@ -529,7 +529,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_CLEAN 77
 #define T_TWISSELEMENT 78
 #define T_WIGGLER 79
-#define N_TYPES 80
+#define T_SCRIPT 80
+#define N_TYPES 81
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -616,6 +617,7 @@ extern char *entity_text[N_TYPES];
 #define N_CLEAN_PARAMS 7
 #define N_TWISSELEMENT_PARAMS 6
 #define N_WIGGLER_PARAMS 3
+#define N_SCRIPT_PARAMS 1
 
 typedef struct {
     char *name;            /* parameter name */
@@ -1728,6 +1730,11 @@ typedef struct {
   long poles;
 } WIGGLER;
 
+/* names and storage structure for SCRIPT element */
+typedef struct {
+  char *command;
+} SCRIPT;
+
 /* macros for bending magnets */ 
 #define SAME_BEND_PRECEDES 1 
 #define SAME_BEND_FOLLOWS 2 
@@ -1814,6 +1821,7 @@ extern void finish_awe_beam(OUTPUT_FILES *output, RUN *run, VARY *control, ERROR
 
 /*prototypes for sdds_beam.c */
 void adjust_arrival_time_data(double **coord, long np, double Po, long center_t, long flip_t);
+long check_sdds_beam_column(SDDS_TABLE *SDDS_table, char *name, char *units);
  
 /* prototypes for bend_matrix6.c: */
 extern VMATRIX *bend_matrix(double length, double angle, double ea1, double ea2, double R1, double R2,
@@ -2416,6 +2424,7 @@ extern void convert_to_xorbit(char *outputfile, LINE_LIST *beamline, long flip_k
                     char *header_file, char *ender_file);
 extern void finishLatticeParametersFile(void);
 
+void executeCshCommand(char *cmd);
 extern void doSubprocessCommand(char *command);
 void run_subprocess(NAMELIST_TEXT *nltext, RUN *run);
 void setSearchPath(char *path);

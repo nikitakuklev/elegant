@@ -26,7 +26,7 @@ char *entity_name[N_TYPES] = {
     "MODRF", "BMAPXY", "ZTRANSVERSE", "IBSCATTER", "FMULT",
     "WAKE", "TRWAKE", "TUBEND", "CHARGE", "PFILTER", "HISTOGRAM",
     "CSRCSBEND", "CSRDRIFT", "RFCW", "REMCOR", "MAPSOLENOID",
-    "REFLECT", "CLEAN", "TWISS", "WIGGLER",
+    "REFLECT", "CLEAN", "TWISS", "WIGGLER", "SCRIPT",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -137,6 +137,7 @@ and phase modulation.",
     "Cleans the beam by removing outlier particles.",
     "Sets Twiss parameter values.",
     "A wiggler or undulator for damping or excitation of the beam.  Does not include focusing effects.",
+    "An element that allows transforming the beam using an external script."
     } ;
 
 QUAD quad_example;
@@ -1329,6 +1330,12 @@ PARAMETER wiggler_param[N_WIGGLER_PARAMS] = {
   {"POLES", "", IS_LONG, 0, (long)((char *)&wiggler_example.poles), NULL, 0.0, 0, "number of wiggler poles"},
 } ;
 
+SCRIPT script_example;
+
+PARAMETER script_param[N_SCRIPT_PARAMS] = {
+  {"COMMAND", "", IS_STRING, 0, (long)((char *)&script_example.command), NULL, 0.0, 0, "SDDS-compliant command to apply to the beam.  Use the sequence %i to represent the input filename and %o to represent the output filename."},
+};
+  
 /* array of parameter structures */
 
 #define MAT_LEN     HAS_MATRIX|HAS_LENGTH
@@ -1426,6 +1433,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_CLEAN_PARAMS,  0, sizeof(CLEAN), clean_param },
     { N_TWISSELEMENT_PARAMS, HAS_MATRIX|MATRIX_TRACKING, sizeof(TWISSELEMENT), twissElement_param},
     { N_WIGGLER_PARAMS, MAT_LEN|MATRIX_TRACKING, sizeof(WIGGLER), wiggler_param},
+    {  N_SCRIPT_PARAMS,           0,       sizeof(SCRIPT),    script_param     }, 
 } ;
  
 
