@@ -166,8 +166,6 @@ long do_tracking(
     if (run->concat_order && !(flags&TEST_PARTICLES) && 
         !(beamline->flags&BEAMLINE_CONCAT_CURRENT) ) {
       /* form concatenated beamline for tracking */
-      fprintf(stdout, "Concatenating lattice into matrices of order %ld where possible.\n", run->concat_order);
-      fflush(stdout);
       concatenate_beamline(beamline, run);
     }
 
@@ -970,80 +968,6 @@ long do_tracking(
   if (charge && finalCharge)
     *finalCharge = n_to_track*charge->macroParticleCharge;
   return(n_to_track);
-}
-
-void do_element_misalignment(ELEMENT_LIST *elem, double **coord, long n, long mode)
-{
-  QUAD *quad; BEND *bend; SEXT *sext; 
-  ECOL *ecol; RCOL *rcol; ALPH *alph;
-  SOLE *sole; QFRING *qfring;
-  double dx, dy;
-  long i;
-  
-  log_entry("do_element_misalignment");
-  
-  dx = dy = 0;
-  
-  switch (elem->type) {
-  case T_RBEN: case T_SBEN:
-    bend = (BEND*)elem->p_elem;
-    dx = bend->dx;
-    dy = bend->dy;
-    break;
-  case T_QUAD:
-    quad = (QUAD*)elem->p_elem;
-    dx = quad->dx;
-    dy = quad->dy;
-    break;
-  case T_SEXT:
-    sext = (SEXT*)elem->p_elem;
-    dx   = sext->dx;
-    dy   = sext->dy;
-    break;
-  case T_ALPH:
-    alph = (ALPH*)elem->p_elem;
-    dx   = alph->dx;
-    dy   = alph->dy;
-    break;  
-  case T_SOLE:
-    sole = (SOLE*) elem->p_elem;
-    dx = sole->dx;
-    dy = sole->dy;
-    break;
-  case T_ECOL:
-    ecol = (ECOL*) elem->p_elem;
-    dx = ecol->dx;
-    dy = ecol->dy;
-    break;
-  case T_RCOL:
-    rcol = (RCOL*) elem->p_elem;
-    dx = rcol->dx;
-    dy = rcol->dy;
-    break;
-  case T_QFRING:
-    qfring = (QFRING*)elem->p_elem;
-    dx = qfring->dx;
-    dy = qfring->dy;
-    break;
-  default:
-    break;
-  }
-  
-  if (dx) {
-    if (mode<0)
-      dx = -dx;
-    for (i=0; i<n; i++)
-      coord[i][0] -= dx;
-  }
-  
-  if (dy) {
-    if (mode<0)
-      dy = -dy;
-    for (i=0; i<n; i++)
-      coord[i][2] -= dy;
-  }
-  
-  log_exit("do_element_misalignment");
 }
 
 void offset_beam(
