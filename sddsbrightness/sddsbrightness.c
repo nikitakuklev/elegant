@@ -14,6 +14,11 @@
  * Michael Borland, 2002
  *
  $Log: not supported by cvs2svn $
+ Revision 1.4  2004/09/28 13:21:26  borland
+ Added feature whereby the parameter ey0 is accepted for the vertical emittance.
+ Fixed bug with multiplication of the current by 1000 for each pass through the main
+ loop.
+
  Revision 1.3  2004/07/06 17:18:20  borland
  Default method is now actually Dejus, consistent with the usage message.
  Previously, default method was Borland.
@@ -61,8 +66,6 @@
 #include "scan.h"
 #include "SDDS.h"
 #include "sddsbrightness.h"
-
-#define DEBUG 0
 
 #define SET_PIPE 0
 #define SET_HARMONICS 1
@@ -309,6 +312,9 @@ int main(int argc, char **argv)
         SDDS_Bomb("too many filenames");
     }
   }
+#ifdef DEBUG
+  fprintf(stderr, "Argument parsing done.\n");
+#endif
 
   if (coupling && emittanceRatio)
     SDDS_Bomb("give only one of -coupling or -emittanceRatio");
@@ -331,6 +337,9 @@ int main(int argc, char **argv)
   if (tmpFileUsed)
     SDDS_Bomb("can't overwrite input file");
   
+#ifdef DEBUG
+  fprintf(stderr, "Checking input file...\n");
+#endif
   if (!SDDS_InitializeInput(&SDDSin, inputfile))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 
@@ -353,31 +362,49 @@ int main(int argc, char **argv)
     SDDS_Bomb("something wrong with ex0, pCentral, or Sdelta0 parameters");
   }
 
+#ifdef DEBUG
+  fprintf(stderr, "Setting up output file...\n");
+#endif
   if (!SetUpOutputFile(&SDDSout, &SDDSin, outputfile, harmonics))
     SDDS_Bomb("problem setting up output file");
 
   dK = (KEnd-KStart)/(KPoints-1);
   if (method)
     current=current*1.0e3;    /*change unit from A to mA for dejus's method */
+#ifdef DEBUG
+  fprintf(stderr, "Entering main loop\n");
+#endif
   while ((readCode=SDDS_ReadPage(&SDDSin))>0) {
     if (!GetTwissValues(&SDDSin, 
                         &betax, &alphax, &etax, &etaxp, 
                         &betay, &alphay, &etay, &etayp, 
                         &ex0, &ey0, &Sdelta0, &pCentral, emittanceRatio, coupling))
       SDDS_Bomb("problem getting twiss parameters and other values from input file");
+#ifdef DEBUG
+    fprintf(stderr, "Twiss values read in.\n");
+#endif
     if (!SDDS_StartPage(&SDDSout, KPoints))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+#ifdef DEBUG
+    fprintf(stderr, "Started output page.\n");
+#endif
     if (method) {
       ihMin=1;
       ihMax=2*(harmonics-1)+1;
       nE=KPoints;
 
+#ifdef DEBUG
+      fprintf(stderr, "Calling Dejus_CalculateBrightness\n");
+#endif
       Dejus_CalculateBrightness(current,nE,periodLength, periods,device,ihMin,ihMax,2,Sdelta0,
                                 pCentral,ex0,ey0,
                                 betax,alphax,etax,etaxp,betay,alphay,etay,etayp,
                                 minNEKS,maxNEKS,neks,KStart,KEnd,method,
                                 &sigmax,&sigmay,&sigmaxp,&sigmayp,
                                 &KK, &FnOut,&Energy,&Brightness,&LamdarOut);
+#ifdef DEBUG
+      fprintf(stderr, "Returned from Dejus_CalculateBrightness\n");
+#endif
       for (ih=0; ih<harmonics; ih++) {
         h = ih*2+1;
         if (h==1 && !SDDS_SetColumn(&SDDSout,SDDS_SET_BY_INDEX,KK,nE,0))
@@ -426,10 +453,16 @@ int main(int argc, char **argv)
       }
     }
     
+#ifdef DEBUG
+    fprintf(stderr, "Writing output page.\n");
+#endif
     if (!SDDS_WritePage(&SDDSout))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
-  
+#ifdef DEBUG
+    fprintf(stderr, "Exiting main loop.\n");
+#endif
+
   if (!SDDS_Terminate(&SDDSin) || !SDDS_Terminate(&SDDSout))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   free_scanargs(&s_arg,argc);
@@ -792,6 +825,10 @@ void Dejus_CalculateBrightness(double current,long nE,
   double sigmaX,sigmaX1,sigmaY,sigmaY1,period;
   double ENERGY;
   
+#ifdef DEBUG
+  fprintf(stderr, "In Dejus_CalculateBrightness\n");
+#endif
+
   tmpE=tmpSpec=pd=ptot=NULL;
   ei=eb=sb=NULL;
   period=period_mks*1.0e2; /*use cm as units */
@@ -804,7 +841,12 @@ void Dejus_CalculateBrightness(double current,long nE,
   *FnOut=*Energy=*Brightness=*LamdarOut=NULL;
   
   if (neks<=nE) neks=nE+50;
-  
+
+
+#ifdef DEBUG
+  fprintf(stderr, "Allocating memory...\n");
+#endif
+
   tmpE=(double*)calloc(MAXIMUM_E,sizeof(*tmpE));
   tmpSpec=(double*)calloc(MAXIMUM_E,sizeof(*tmpSpec));
   kyb=(double*)calloc(neks+100,sizeof(*kyb));
@@ -821,6 +863,10 @@ void Dejus_CalculateBrightness(double current,long nE,
     sb[i]=(double*)calloc(MAXIMUM_H,sizeof(**sb));
   }
   
+#ifdef DEBUG
+  fprintf(stderr, "Done\n");
+#endif
+
   /*gamma1=ENERGY/me_mev*1.0E3; */
   lamdar=period*1.0E8/(2.0*gamma*gamma); /*reduced wavelength A */
   ENERGY = gamma*me_mev/1e3; /* GeV */
@@ -836,7 +882,12 @@ void Dejus_CalculateBrightness(double current,long nE,
   /*determin peak shifts for first and second harmonics at kMin */
   ky=kMin;
   nek=maxNEKS;
+
+
   /*compute electron beam size */
+#ifdef DEBUG
+  fprintf(stderr, "Computing beam sizes...\n");
+#endif
   ComputeBeamSize(period_mks,nP,ex0,ey0,sigmaE,
                   betax,alphax,etax,etaxp,
                   betay, alphay,etay,etayp,&sigmaX, &sigmaY, &sigmaX1, &sigmaY1);
@@ -844,6 +895,9 @@ void Dejus_CalculateBrightness(double current,long nE,
   *sigmay=sigmaY;
   *sigmaxp=sigmaX1;
   *sigmayp=sigmaY1;
+#ifdef DEBUG
+  fprintf(stderr, "Done.\n");
+#endif
 
   dep1 = dep2 = 0;
   for (i=1;i<3;i++) {
@@ -868,6 +922,10 @@ void Dejus_CalculateBrightness(double current,long nE,
     else
       dep2=eMax*i-ep;
   }
+
+#ifdef DEBUG
+  fprintf(stderr, "Entering loop for harmonics\n");
+#endif
   /*Main loop over harmonics and K-values */
   ih=0;
   de=(eMax-eMin)/(nE-1);
@@ -1001,6 +1059,9 @@ void Dejus_CalculateBrightness(double current,long nE,
    /* fprintf(stderr,"Harmonics %d completed.\n",i); */
     ih++;
   } /*end for harmonics loop */
+#ifdef DEBUG
+  fprintf(stderr, "Exited loop for harmonics\n");
+#endif
   
   /*output the result */
   *K=(double*)calloc(nE,sizeof(**K));
@@ -1034,6 +1095,10 @@ void Dejus_CalculateBrightness(double current,long nE,
     }
     ih++;
   }
+#ifdef DEBUG
+  fprintf(stderr, "Copied results to output arrays\n");
+#endif
+
   free(tmpE);
   free(tmpSpec);
   free(kyb);
@@ -1048,5 +1113,8 @@ void Dejus_CalculateBrightness(double current,long nE,
   free(ei);
   free(eb);
   free(sb);
+#ifdef DEBUG
+  fprintf(stderr, "Freed memory.\n");
+#endif
   return;
 }
