@@ -62,13 +62,14 @@ char *cfgets1(char *s, long n, FILE *fpin)
 
 void delete_spaces(char *s)
 {
-    char *ptr;
+    char *ptr, *ptr0;
+    ptr0 = s;
     while (*s) {
-        if (*s=='"') {
+        if (*s=='"' && (ptr0==s || *(s-1)!='\\')) {
             s++;
-            while (*s && *s!='"')
+            while (*s && (*s!='"' || *(s-1)=='\\'))
                 s++;
-            if (*s=='"')
+            if (*s=='"' && *(s-1)!='\\')
                 s++;
             }
         else if (*s==' ') {
@@ -85,11 +86,13 @@ void delete_spaces(char *s)
 
 void str_to_upper_quotes(char *s)
 {
+  char *ptr0;
+  ptr0 = s;
   if (!s)
     return;
   while (*s) {
-    if (*s=='"') {
-      while (*++s && *s!='"')
+    if (*s=='"' && (ptr0==s || *(s-1)!='\\')) {
+      while (*++s && (*s!='"' || *(s-1)=='\\'))
         ;
     }
     else 
