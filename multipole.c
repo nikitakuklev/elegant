@@ -1079,6 +1079,10 @@ void apply_canonical_multipole_kicks(double *qx, double *qy,
   long i;
   double sum_Fx, sum_Fy, xypow, ratio;
   double *coef;
+  if (sum_Fx_return)
+    *sum_Fx_return = 0;
+  if (sum_Fy_return)
+    *sum_Fy_return = 0;
   coef = expansion_coefficients(order);
   if (x==0) {
     if (y==0)
