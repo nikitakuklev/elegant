@@ -141,7 +141,6 @@ void track_through_frfmode(
                              rfmode->modeIndex[imode], rfmode->V[imode], -1))
         SDDS_Bomb("Problem writing data to FRFMODE output file");
     }
-
     rfmode->last_t = t;
   }
   
@@ -157,11 +156,17 @@ void track_through_frfmode(
     }
   }
 
-  if (rfmode->outputFile && 
-      (rfmode->flushInterval<1 || pass%rfmode->flushInterval==0 || pass==(n_passes-1)) &&
-      !SDDS_UpdatePage(&rfmode->SDDSout, 0))
-    SDDS_Bomb("Problem writing data to FRFMODE output file");
+  if (rfmode->outputFile) {
+    if (!SDDS_SetRowValues(&rfmode->SDDSout, 
+                           SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, pass,
+                           "Pass", pass, NULL))
+      SDDS_Bomb("Problem writing data to FRFMODE output file");
+    if ((rfmode->flushInterval<1 || pass%rfmode->flushInterval==0 || pass==(n_passes-1)) &&
+        !SDDS_UpdatePage(&rfmode->SDDSout, 0))
+      SDDS_Bomb("Problem writing data to FRFMODE output file");
+  }
   
+
 #if defined(MINIMIZE_MEMORY)
   free(Ihist);
   free(Vbin);

@@ -184,11 +184,16 @@ void track_through_ftrfmode(
     }
   }
 
-  if (trfmode->outputFile && 
-      (trfmode->flushInterval<1 || pass%trfmode->flushInterval==0 || pass==(n_passes-1)) &&
-      !SDDS_UpdatePage(&trfmode->SDDSout, 0))
-    SDDS_Bomb("Problem writing data to FTRFMODE output file");
-
+  if (trfmode->outputFile) {
+    if (!SDDS_SetRowValues(&trfmode->SDDSout, 
+                           SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, pass,
+                           "Pass", pass, NULL))
+      SDDS_Bomb("Problem writing data to FTRFMODE output file");
+    if ((trfmode->flushInterval<1 || pass%trfmode->flushInterval==0 || pass==(n_passes-1)) &&
+        !SDDS_UpdatePage(&trfmode->SDDSout, 0))
+      SDDS_Bomb("Problem writing data to FTRFMODE output file");
+  }
+  
 #if defined(MINIMIZE_MEMORY)
   free(xsum);
   free(ysum);
