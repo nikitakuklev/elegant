@@ -25,7 +25,7 @@ char *entity_name[N_TYPES] = {
     "TWMTA", "MATTER", "RFMODE", "TRFMODE", "ZLONGIT", "SREFFECTS",
     "MODRF", "BMAPXY", "ZTRANSVERSE", "IBSCATTER", "FMULT",
     "WAKE", "TRWAKE", "TUBEND", "CHARGE", "PFILTER", "HISTOGRAM",
-    "CSRCSBEND",
+    "CSRCSBEND", "CSRDRIFT",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -127,6 +127,7 @@ and phase modulation.",
     "An element for energy and momentum filtration.",
     "Request for histograms of particle coordinates to be output to SDDS file.",
     "Like CSBEND, but incorporates a simulation of Coherent Synchrotron radiation.",
+    "A follow-on element for CSRCSBEND that applies the CSR wake over a drift.",
     } ;
 
 QUAD quad_example;
@@ -1141,6 +1142,15 @@ PARAMETER histogram_param[N_HISTOGRAM_PARAMS] = {
   {"BIN_SIZE_FACTOR", "", IS_DOUBLE, 0, (long)((char*)&histogram_example.binSizeFactor), NULL, 1.0, 0},
 };
   
+CSRDRIFT csrdrift_example;
+/* CSR drift length physical parameters */
+PARAMETER csrdrift_param[N_CSRDRIFT_PARAMS] = {
+    {"L", "M", IS_DOUBLE, 1, (long)((char *)&csrdrift_example.length), NULL, 0.0, 0},
+    {"ATTENUATION_LENGTH", "M", IS_DOUBLE, 1, (long)((char *)&csrdrift_example.attenuationLength), NULL, 0.0, 0},
+    {"N_KICKS", "", IS_LONG, 1, (long)((char *)&csrdrift_example.nKicks), NULL, 0.0, 1},
+    {"SPREAD", "", IS_LONG, 1, (long)((char *)&csrdrift_example.spread), NULL, 0.0, 0},
+    };
+
 /* array of parameter structures */
 
 #define MAT_LEN     HAS_MATRIX|HAS_LENGTH
@@ -1227,6 +1237,8 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_HISTOGRAM_PARAMS, 0, sizeof(HISTOGRAM), histogram_param},
     {  N_CSRCSBEND_PARAMS, MAT_LEN_NCAT|IS_MAGNET,
                                          sizeof(CSRCSBEND),    csrcsbend_param   },
+    {  N_CSRDRIFT_PARAMS, MAT_LEN_NCAT,
+                                         sizeof(CSRDRIFT),    csrdrift_param   },
 } ;
  
 

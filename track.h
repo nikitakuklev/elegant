@@ -469,7 +469,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_PFILTER 69
 #define T_HISTOGRAM 70
 #define T_CSRCSBEND 71
-#define N_TYPES 72
+#define T_CSRDRIFT 72
+#define N_TYPES 73
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -548,6 +549,7 @@ extern char *entity_text[N_TYPES];
 #define N_PFILTER_PARAMS 4
 #define N_HISTOGRAM_PARAMS 9
 #define N_CSRCSBEND_PARAMS 32
+#define N_CSRDRIFT_PARAMS 4
 
 typedef struct {
     char *name;            /* parameter name */
@@ -1290,6 +1292,14 @@ typedef struct {
     long flags, fileActive;
     SDDS_DATASET SDDSout;
     } CSRCSBEND;
+
+/* names and storage structure for drift with CSR */
+extern PARAMETER csrdrift_param[N_CSRDRIFT_PARAMS];
+
+typedef struct {
+  double length, attenuationLength;
+  long nKicks, spread;
+} CSRDRIFT;
 
 /* names and storage structure for top-up bending magnet physical parameters */
 extern PARAMETER tubend_param[N_TUBEND_PARAMS];
@@ -2066,9 +2076,11 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
                CHARGE *charge);
 
 long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, double p_error, double Po, double **accepted,
-    double z_start, CHARGE *charge, char *rootname);
+    double z_start, double z_end, CHARGE *charge, char *rootname);
 long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_error, double Po, double **accepted,
     double z_start);
+long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift, 
+                            double Po, double **accepted, double zStart);
 
 void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 void final_floor_coordinates(LINE_LIST *beamline, double *X, double *Z, double *Theta);

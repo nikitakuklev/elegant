@@ -576,11 +576,15 @@ long do_tracking(
             break;
           case T_CSBEND:
             n_left = track_through_csbend(coord, n_to_track, (CSBEND*)eptr->p_elem, 0.0,
-                                          *P_central, accepted, z);
+                                          *P_central, accepted, last_z);
             break;
           case T_CSRCSBEND:
             n_left = track_through_csbendCSR(coord, n_to_track, (CSRCSBEND*)eptr->p_elem, 0.0,
-                                             *P_central, accepted, z, charge, run->rootname);
+                                             *P_central, accepted, last_z, z, charge, run->rootname);
+            break;
+          case T_CSRDRIFT:
+            n_left = track_through_driftCSR(coord, n_to_track, (CSRDRIFT*)eptr->p_elem,
+                                            *P_central, accepted, last_z);
             break;
           case T_TUBEND:
             n_left = track_through_tubend(coord, n_to_track, 
@@ -716,7 +720,7 @@ long do_tracking(
             fflush(stdout);
             }
             */
-          fprintf(stdout, "central momentum is %e    za = %em   ze = %em\n", *P_central, z, eptr->end_pos);
+          fprintf(stdout, "central momentum is %e    zstart = %em  zend = %em\n", *P_central, last_z, z);
           fflush(stdout);
           if (n_left!=n_to_track)
             fprintf(stdout, "%ld particles left\n", n_left);

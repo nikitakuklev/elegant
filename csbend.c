@@ -758,10 +758,17 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double s, long n, double rho0
   Qf[4] += dist;
 }
 
+typedef struct {
+  long bins, new;
+  double dctBin, s0, ds0, zLast, z0;
+  double S11, S12, S22;
+  double *dGamma;
+} CSR_LAST_WAKE;
+CSR_LAST_WAKE csrWake = {0, 0, 0, 0, 0, 0, NULL};
 
 long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, double p_error, 
-                             double Po, double **accepted, double z_start, CHARGE *charge,
-                             char *rootname)
+                             double Po, double **accepted, double z_start, double z_end,
+                             CHARGE *charge, char *rootname)
 {
   static double nh, betah2, gammah3, deltah4;
   static double h, h2, h3;
@@ -996,6 +1003,11 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
       !(dGamma=SDDS_Realloc(dGamma, sizeof(*dGamma)*nBins)))
       bomb("memory allocation failure (track_through_csbendCSR)", NULL);
 
+  csrWake.dGamma = dGamma;
+  csrWake.bins = nBins;
+  csrWake.ds0 = csbend->length/csbend->n_kicks;
+  csrWake.zLast = csrWake.z0 = z_end;
+  
   multipoleKicksDone += n_part*csbend->n_kicks*(csbend->integration_order==4?4:1);
   /* check particle data, transform coordinates, and handle edge effects */
   for (i_part=0; i_part<n_part; i_part++) {
@@ -1112,9 +1124,11 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     if ((nBinned = 
          binParticleCoordinate(&ctHist, &maxBins,
                                &ctLower, &ctUpper, &dct, &nBins, 
-                               1.2, part, n_part, 4))!=n_part)
+                               1.2, part, n_part, 4))!=n_part) {
       fprintf(stdout, "Only %ld of %ld particles binned for CSR\n", nBinned, n_part);
       fflush(stdout);
+    }
+    
     /* - smooth the histogram, normalize to get linear density, and 
        copy in preparation for taking derivative
        */
@@ -1187,16 +1201,27 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
                               "TotalBunchLength", ctUpper-ctLower,
                               "BinSize", dct, NULL))
         SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-      /* use dGamma array to output s */
+      /* use T1 array to output s */
       for (iBin=0; iBin<nBins; iBin++)
-        dGamma[iBin] = ctLower-(ctLower+ctUpper)/2.0+dct*(iBin+0.5);
-      if (!SDDS_SetColumn(&csbend->SDDSout, SDDS_SET_BY_NAME, dGamma, nBins, "s") ||
+        T1[iBin] = ctLower-(ctLower+ctUpper)/2.0+dct*(iBin+0.5);
+      if (!SDDS_SetColumn(&csbend->SDDSout, SDDS_SET_BY_NAME, T1, nBins, "s") ||
           !SDDS_WritePage(&csbend->SDDSout))
         SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     }
   }
   
-
+  /* prepare soem data for use by CSRDRIFT element */
+  csrWake.dctBin = dct;
+  ctLower = ctUpper = dct = 0;
+  if ((nBinned = 
+       binParticleCoordinate(&ctHist, &maxBins,
+                             &ctLower, &ctUpper, &dct, &nBins, 
+                             1.2, part, n_part, 4))!=n_part) {
+    fprintf(stdout, "Only %ld of %ld particles binned for CSR\n", nBinned, n_part);
+    fflush(stdout);
+  }
+  csrWake.s0 = ctLower;
+  
   /* remove lost particles, handle edge effects, and transform coordinates */    
   i_top = n_part-1;
   for (i_part=0; i_part<=i_top; i_part++) {
@@ -1270,6 +1295,9 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     coord[4] += dzf*sqrt(1+ sqr(coord[1]) + sqr(coord[3]));
   }
 
+  /* prepare more data for CSRDRIFT */
+  rms_emittance(part, 0, 1, i_top+1, &csrWake.S11, &csrWake.S12, &csrWake.S22);
+  
   return(i_top+1);
 }
 
@@ -1324,3 +1352,140 @@ long binParticleCoordinate(double **hist, long *maxBins,
   return nBinned;
 }
 
+#define DEBUG 1
+long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift, 
+                            double Po, double **accepted, double zStart)
+{
+  long iPart, iKick, iBin, binned;
+  double *coord, t, p, beta, dz, ct0, factor, dz0, dzFirst;
+  double ctmin, ctmax, spreadFactor, thetaRad;
+  double zTravel;
+  
+  dz = (dz0=csrDrift->length/csrDrift->nKicks)/2;
+  dzFirst = zStart - csrWake.zLast;
+#ifdef DEBUG
+  fprintf(stdout, "dzFirst = %21.15e\n", dzFirst);
+  fprintf(stdout, "ct0 = %21.15e\n", csrWake.s0+dz+dzFirst);
+#endif
+
+  ctmin = DBL_MAX;
+  ctmax = -DBL_MAX;
+  if (csrDrift->spread)
+    /* compute angular spread of radiation due to spread, using my fit to Wiedemann's data
+     * log(thetaRad*gamma*0.511) = -0.51-0.47*log(lambdaCrit/lambda).
+     * For now lambda=lambdaCrit/10.
+     */
+    thetaRad = pow(10.0, (-0.51-0.47*log10(10.0)))/(Po*0.511);
+
+  zTravel = zStart-csrWake.z0;  /* total distance traveled by radiation to reach this point */
+  for (iKick=0; iKick<csrDrift->nKicks; iKick++) {
+    /* first drift is dz=dz0/2, others are dz0 */
+    if (iKick==1)
+      dz = dz0;
+    zTravel += dz;
+    
+    /* propagate particles forward, converting s to c*t=s/beta */
+    for (iPart=0; iPart<np; iPart++) {
+      coord = part[iPart];
+      coord[0] += coord[1]*dz;
+      coord[2] += coord[3]*dz;
+      p = Po*(1+coord[5]);
+      beta = p/sqrt(p*p+1);
+      coord[4] = (coord[4]+dz*sqrt(1+sqr(coord[1])+sqr(coord[3])))/beta;
+      if (iKick==0) {
+        if (coord[4]>ctmax)
+          ctmax = coord[4];
+        if (coord[4]<ctmin)
+          ctmin = coord[4];
+      }
+    }
+#ifdef DEBUG
+    if (iKick==0) {
+      fprintf(stdout, "ctmin, max = %21.15e, %21.15e\n",
+              ctmin, ctmax);
+      fflush(stdout);
+    }
+#endif
+
+    factor = 1;
+    if (csrWake.dGamma) {
+      /* propagate wake forward */
+      csrWake.s0 += dz+dzFirst;   /* accumulates position of back end of the radiation pulse */
+      ct0 = csrWake.s0;
+      
+      if (csrDrift->attenuationLength>0) {
+        /* attenuate wake */
+        if ((factor = exp(-(dz+dzFirst)/csrDrift->attenuationLength))<1) {
+          for (iBin=0; iBin<csrWake.bins; iBin++)
+            csrWake.dGamma[iBin] *= factor;
+        }
+      }
+      /* factor to account for difference in drift lengths here and in
+       * csrcsbend integration.  Use dz0 here because that is the
+       * length integrated by each kick.  Add dzFirst to account for any
+       * length we may have missed due to intervening non-drift elements.
+       */
+      factor = (dz0+dzFirst)/csrWake.ds0;
+    }
+    if (csrDrift->spread) {
+      /* compute loss of on-axis field due to spread of beam using a simple-minded
+       * computation of beam sizes */
+      factor *= (spreadFactor =
+                 sqrt(csrWake.S11/(csrWake.S11 + 
+                                   2*zTravel*csrWake.S12 + 
+                                   zTravel*zTravel*(sqr(thetaRad)+csrWake.S22))));
+#ifdef DEBUG
+      fprintf(stdout, "Spread factor is %le\n", spreadFactor);
+      fprintf(stdout, "S11 = %le  S12 = %le  S22 = %le\nthetaRad = %le  z = %le\n",
+              csrWake.S11, csrWake.S12, csrWake.S22, thetaRad, zTravel);
+#endif
+    }
+    
+    dzFirst = 0;
+
+    /* apply kick to each particle and convert back to normal coordinates */
+    for (iPart=binned=0; iPart<np; iPart++) {
+      coord = part[iPart];
+      if (csrWake.dGamma) {
+        iBin = (coord[4]-ct0)/csrWake.dctBin;
+        if (iBin>=0 && iBin<csrWake.bins) {
+          coord[5] += csrWake.dGamma[iBin]/Po*factor;
+          binned ++;
+        }
+      }
+      p = (1+coord[5])*Po;
+      beta = p/sqrt(p*p+1);
+      coord[4] = beta*coord[4];
+    }
+    if (csrWake.dGamma && np!=binned) {
+      fprintf(stdout, "only %ld of %ld particles binned for CSR drift\n",
+              binned, np);
+      fflush(stdout);
+    }
+  }
+  /* do final drift of dz0/2 */
+  dz = dz0/2;
+  for (iPart=0; iPart<np; iPart++) {
+    coord = part[iPart];
+    coord[0] += coord[1]*dz;
+    coord[2] += coord[3]*dz;
+    coord[4] += dz*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+  }    
+
+  csrWake.zLast += csrDrift->length;
+
+  if (csrWake.dGamma) {
+    /* propagate wake forward */
+    csrWake.s0 += dz;
+    ct0 = csrWake.s0;
+    
+    if (csrDrift->attenuationLength>0) {
+      /* attenuate wake */
+      if ((factor = exp(-dz/csrDrift->attenuationLength))<1) {
+        for (iBin=0; iBin<csrWake.bins; iBin++)
+            csrWake.dGamma[iBin] *= factor;
+      }
+    }
+  }
+  return np;
+}
