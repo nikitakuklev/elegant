@@ -214,29 +214,29 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
   case T_RBEN: case T_SBEN:
     is_bend = 1;
     bend = (BEND*)elem->p_elem;
-    angle = bend->angle;
-    rho = (length=bend->length)/bend->angle;
+    angle = -bend->angle;
+    rho = (length=bend->length)/angle;
     tilt = bend->tilt;
     break;
   case T_KSBEND:
     is_bend = 1;
     ksbend = (KSBEND*)elem->p_elem;
-    angle = ksbend->angle;
-    rho = (length=ksbend->length)/ksbend->angle;
+    angle = -ksbend->angle;
+    rho = (length=ksbend->length)/angle;
     tilt = ksbend->tilt;
     break;
   case T_CSBEND:
     is_bend = 1;
     csbend = (CSBEND*)elem->p_elem;
-    angle = csbend->angle;
-    rho = (length=csbend->length)/csbend->angle;
+    angle = -csbend->angle;
+    rho = (length=csbend->length)/angle;
     tilt = csbend->tilt;
     break;
   case T_CSRCSBEND:
     is_bend = 1;
     csrbend = (CSRCSBEND*)elem->p_elem;
-    angle = csrbend->angle;
-    rho = (length=csrbend->length)/csrbend->angle;
+    angle = -csrbend->angle;
+    rho = (length=csrbend->length)/angle;
     tilt = csrbend->tilt;
     break;
   case T_MALIGN:
