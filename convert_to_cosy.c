@@ -81,6 +81,7 @@ void convert_to_cosy(char *outputfile, LINE_LIST *beamline,
     CSBEND *csbend;
     CSRCSBEND *csrbend;
     CSRDRIFT *csrdrift;
+    NIBEND *nibend;
     RFCA *rfca;
     FILE *fp;
     double BRho;
@@ -145,6 +146,13 @@ void convert_to_cosy(char *outputfile, LINE_LIST *beamline,
                        bend->e1, bend->e2, bend->h1, bend->h2,
                        bend->k1, bend->k2, 0.0,
                        bend->hgap, bend->fint);
+        break;
+      case T_NIBEND:
+        nibend = (NIBEND*)eptr->p_elem;
+        emitCosyDipole(fp, eptr->name, nibend->length, nibend->angle,
+                       nibend->e1, nibend->e2, 0.0, 0.0,
+                       0.0, 0.0, 0.0,
+                       nibend->hgap, nibend->fint);
         break;
       case T_CSBEND:
         csbend = (CSBEND*)eptr->p_elem;
@@ -229,17 +237,19 @@ void convert_to_cosy(char *outputfile, LINE_LIST *beamline,
       eptr = eptr->succ;
     }
     fprintf(fp, "\n  ENDPROCEDURE ;\n");
-    fprintf(fp, "    OPENF 7 '%s.tunes' 'new' ;\n", outputfile);
+    fprintf(fp, "    OPENF 7 '%s.map' 'new' ;\n", outputfile);
+    fprintf(fp, "    OPENF 8 '%s.tunes' 'new' ;\n", outputfile);
     fprintf(fp, "    OV %ld 2 1 ;\n", cosyOrder);
     fprintf(fp, "    RPE %.15g*PARA(1) ;\n", (sqrt(pCentral*pCentral+1)-1)*me_mks*sqr(c_mks)/e_mks/1e6);
     fprintf(fp, "    UM ; MACH; \n");
-    fprintf(fp, "    TP MU; WRITE 7 ' DELTA-DEPENDENT TUNES: '   MU(1) MU(2) ;\n");
+    fprintf(fp, "    PT 7; CLOSEF 7;\n");
+    fprintf(fp, "    TP MU; WRITE 8 ' DELTA-DEPENDENT TUNES: '   MU(1) MU(2) ;\n");
     fprintf(fp, "    GT MAP F MU A B G R;\n");
-    fprintf(fp, "    WRITE 7 ' DELTA-DEPENDENT FIXED POINT ' F(1) F(2) F(3) F(4) ;\n");
-    fprintf(fp, "    WRITE 7 ' DELTA-DEPENDENT ALPHAS ' A(1) A(2) ;\n");
-    fprintf(fp, "    WRITE 7 ' DELTA-DEPENDENT BETAS  ' B(1) B(2) ;\n");
-    fprintf(fp, "    WRITE 7 ' DELTA-DEPENDENT GAMMAS ' G(1) G(2) ;\n");
-    fprintf(fp, "    CLOSEF 7 ;\n");
+    fprintf(fp, "    WRITE 8 ' DELTA-DEPENDENT FIXED POINT ' F(1) F(2) F(3) F(4) ;\n");
+    fprintf(fp, "    WRITE 8 ' DELTA-DEPENDENT ALPHAS ' A(1) A(2) ;\n");
+    fprintf(fp, "    WRITE 8 ' DELTA-DEPENDENT BETAS  ' B(1) B(2) ;\n");
+    fprintf(fp, "    WRITE 8 ' DELTA-DEPENDENT GAMMAS ' G(1) G(2) ;\n");
+    fprintf(fp, "    CLOSEF 8 ;\n");
     fprintf(fp, "ENDPROCEDURE ;\n");
     fprintf(fp, "RUN ;\n");
     fprintf(fp, "END ;\n");
