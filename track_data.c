@@ -1608,6 +1608,9 @@ PARAMETER lmirror_param[N_LMIRROR_PARAMS]={
 
 EMATRIX ematrix_example;
 PARAMETER ematrix_param[N_EMATRIX_PARAMS]={
+    {"L", "M", IS_DOUBLE, 0, (long)((char *)&ematrix_example.length), NULL, 0.0, 0, "Length (used only for position computation)"},
+    {"ANGLE", "RAD", IS_DOUBLE, 0, (long)((char *)&ematrix_example.angle), NULL, 0.0, 0, "Angle (used only for position computation)"},
+    {"TILT", "RAD", IS_DOUBLE, 0, (long)((char *)&ematrix_example.tilt), NULL, 0.0, 0, "Tilt angle"},
     {"ORDER", "", IS_LONG, 0, (long)((char *)&ematrix_example.order), NULL, 0.0, 0, ""},
     {"C1", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ematrix_example.C[0]), NULL, 0.0, 0, ""},
     {"C2", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ematrix_example.C[1]), NULL, 0.0, 0, ""},
@@ -1961,7 +1964,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     {  N_FLOORELEMENT_PARAMS,  0, sizeof(FLOORELEMENT),    floor_param     }, 
     {  N_LTHINLENS_PARAMS,  HAS_MATRIX|IS_MAGNET|MATRIX_TRACKING,       sizeof(LTHINLENS),    lthinlens_param     },
     {  N_LMIRROR_PARAMS,  HAS_MATRIX|IS_MAGNET|MATRIX_TRACKING,       sizeof(LMIRROR),    lmirror_param     },
-    {  N_EMATRIX_PARAMS,  HAS_MATRIX|HAS_RF_MATRIX,  sizeof(EMATRIX),    ematrix_param     }, 
+    {  N_EMATRIX_PARAMS,  HAS_MATRIX|HAS_RF_MATRIX|HAS_LENGTH,  sizeof(EMATRIX),    ematrix_param     }, 
     {  N_FRFMODE_PARAMS,         0,      sizeof(FRFMODE),   frfmode_param    },
     { N_FTRFMODE_PARAMS,         0,     sizeof(FTRFMODE),  ftrfmode_param    },
     { N_TFBPICKUP_PARAMS,         0,     sizeof(TFBPICKUP),  tfbpickup_param    },

@@ -260,6 +260,7 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
   VMATRIX *M1, *M2;
   MATRIX *dispM, *dispOld, *dispNew;
   ELEMENT_LIST *elemOrig;
+  static long asinWarning = 50;
   
   if (!twiss0)
     bomb("initial Twiss parameters not given (propagate_twiss_parameters())", NULL);
@@ -409,26 +410,26 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
                    S[plane]*Sp[plane]*gamma[plane])/detR[plane];
         /* use R12=S to find sin(dphi) */
         if ((sin_dphi=S[plane]/sqrt(beta[plane]*func[0]))>1) {
-          fprintf(stdout, "warning: argument of asin > 1 by %f (propagate_twiss)\n", sin_dphi-1);
-          fflush(stdout);
-          fprintf(stdout, "element is %s at z=%em\n", elem->name, elem->end_pos);
-          fflush(stdout);
-          fprintf(stdout, "%c-plane matrix:  C = %e,  S = %e,  ",
-                  (plane==0?'x':'y'), C[plane], S[plane]);
-          fprintf(stdout, "C' = %e,  S' = %e\n", Cp[plane], Sp[plane]);
-/*          fprintf(stdout, "%c-plane matrix:  C = %e,  S = %e,  C' = %e,  S' = %e\n",
-                  (plane==0?'x':'y'), C[plane], S[plane], Cp[plane], Sp[plane]);*/
-          fflush(stdout);
-          fprintf(stdout, "beta0 = %e, func[0] = %e\n", beta[plane], func[0]);
-          fflush(stdout);
+          if (asinWarning>0) {
+            asinWarning--;
+            fprintf(stdout, "warning: argument of asin > 1 by %f (propagate_twiss)\n", sin_dphi-1);
+            fprintf(stdout, "element is %s at z=%em\n", elem->name, elem->end_pos);
+            fprintf(stdout, "%c-plane matrix:  C = %e,  S = %e,  ",
+                    (plane==0?'x':'y'), C[plane], S[plane]);
+            fprintf(stdout, "C' = %e,  S' = %e\n", Cp[plane], Sp[plane]);
+            fprintf(stdout, "beta0 = %e, func[0] = %e\n", beta[plane], func[0]);
+            fflush(stdout);
+          }
           sin_dphi = 1;
           cos_dphi = 0;
         }
         else if (sin_dphi<-1) {
-          fprintf(stdout, "warning: argument of asin < -1 by %f (propagate_twiss)\n", sin_dphi+1);
-          fflush(stdout);
-          fprintf(stdout, "element is %s at z=%em\n", elem->name, elem->end_pos);
-          fflush(stdout);
+          if (asinWarning>0) {
+            asinWarning--;
+            fprintf(stdout, "warning: argument of asin < -1 by %f (propagate_twiss)\n", sin_dphi+1);
+            fprintf(stdout, "element is %s at z=%em\n", elem->name, elem->end_pos);
+            fflush(stdout);
+          }
           sin_dphi = -1;
           cos_dphi = 0;
         }

@@ -307,6 +307,8 @@ double compute_end_positions(LINE_LIST *lptr)
             theta += ((NISEPT*)eptr->p_elem)->angle;
         else if (eptr->type==T_CSBEND)
             theta += ((CSBEND*)eptr->p_elem)->angle;
+        else if (eptr->type==T_EMATRIX)
+            theta += ((EMATRIX*)eptr->p_elem)->angle;
         else if (eptr->type==T_RECIRC) {
             if (recircPresent)
                 bomb("multiple recirculation (RECIRC) elements in beamline--this doesn't make sense", NULL);

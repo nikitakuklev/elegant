@@ -1452,6 +1452,9 @@ VMATRIX *matrixFromExplicitMatrix(EMATRIX *emat, long order)
         for (k=0; k<=j; k++)
           T[i][j][k] = emat->T[i][j][k];
 
+  if (emat->tilt)
+    tilt_matrices(M, emat->tilt);
+  
   return M;
 }
 
