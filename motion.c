@@ -1334,6 +1334,9 @@ void setupRftmEz0FromFile(RFTMEZ0 *rftmEz0, double frequency, double length, dou
             rftmEz0->inputFile);
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
+  if (!SDDS_Terminate(&SDDSin)) {
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  }
   if (!(rftmEz0->dEzdZ=SDDS_Malloc(sizeof(*(rftmEz0->dEzdZ))*rftmEz0->nz))) {
     fprintf(stderr, "Error: memory allocation failure setting up RFTMEZ0 file %s\n",
             rftmEz0->inputFile);

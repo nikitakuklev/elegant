@@ -623,7 +623,7 @@ long do_tracking(
             break;
           case T_CSRDRIFT:
             n_left = track_through_driftCSR(coord, n_to_track, (CSRDRIFT*)eptr->p_elem,
-                                            *P_central, accepted, last_z);
+                                            *P_central, accepted, last_z, run->rootname);
             break;
           case T_TUBEND:
             n_left = track_through_tubend(coord, n_to_track, 
@@ -893,6 +893,10 @@ long do_tracking(
       }
     }
   }
+
+  /* do this here to get report of CSR drift normalization */
+  reset_driftCSR();
+
   log_exit("do_tracking.2");
   log_entry("do_tracking.3");
   

@@ -909,6 +909,7 @@ PARAMETER csrcsbend_param[N_CSRCSBEND_PARAMS] = {
     {"EDGE2_EFFECTS", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.edge2_effects), NULL, 0.0, 1, "include exit edge effects?"},
     {"INTEGRATION_ORDER", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.integration_order), NULL, 0.0, 2, "integration order (2 or 4)"},
     {"BINS", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.bins), NULL, 0.0, 0, "number of bins for CSR wake"},
+    {"BIN_RANGE_FACTOR", "", IS_DOUBLE, 0, (long)((char *)&csrcsbend_example.binRangeFactor), NULL, 1.2, 0, "Factor by which to increase the range of histogram compared to total bunch length.  Large value eliminates binning problems in CSRDRIFTs."},
     {"SG_HALFWIDTH", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.SGHalfWidth), NULL, 0.0, 0, "Savitzky-Golay filter half-width for smoothing current histogram"},
     {"SG_ORDER", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.SGOrder), NULL, 0.0, 1, "Savitzky-Golay filter order for smoothing current histogram"},
     {"SGDERIV_HALFWIDTH", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.SGDerivHalfWidth), NULL, 0.0, 0, "Savitzky-Golay filter half-width for taking derivative of current histogram"},
@@ -1173,17 +1174,19 @@ CSRDRIFT csrdrift_example;
 /* CSR drift length physical parameters */
 PARAMETER csrdrift_param[N_CSRDRIFT_PARAMS] = {
     {"L", "M", IS_DOUBLE, 1, (long)((char *)&csrdrift_example.length), NULL, 0.0, 0, "length"},
-    {"ATTENUATION_LENGTH", "M", IS_DOUBLE, 1, (long)((char *)&csrdrift_example.attenuationLength), NULL, 0.0, 0, "exponential attenuation length for wake"},
-    {"DZ", "", IS_DOUBLE, 1, (long)((char *)&csrdrift_example.dz), NULL, 0.0, 0, "interval between kicks"},
-    {"N_KICKS", "", IS_LONG, 1, (long)((char *)&csrdrift_example.nKicks), NULL, 0.0, 1, "number of kicks (if DZ is zero)"},
-    {"SPREAD", "", IS_LONG, 1, (long)((char *)&csrdrift_example.spread), NULL, 0.0, 0, "use spreading function?"},
-    {"USE_OVERTAKING_LENGTH", "", IS_LONG, 1, (long)((char *)&csrdrift_example.useOvertakingLength), NULL, 0.0, 0, "use overtaking length for ATTENUATION_LENGTH?"},
-    {"USE_SALDIN54", "", IS_LONG, 1, (long)((char*)&csrdrift_example.useSaldin54), NULL, 0, 0, "Use Saldin et al eq. 54 (NIM A 398 (1997) 373-394 for decay vs z?"},
-    {"CSR", "", IS_LONG, 1, (long)((char *)&csrdrift_example.csr), NULL, 0.0, 1, "do CSR calcuations"},
-    {"SPREAD_MODE", "", IS_STRING, 1, (long)((char *)&csrdrift_example.spreadMode), "full", 0.0, 0, "full, simple, or radiation-only"},
-    {"WAVELENGTH_MODE", "", IS_STRING, 1, (long)((char *)&csrdrift_example.wavelengthMode), "sigmaz", 0.0, 0, "sigmaz or peak-to-peak"},
-    {"BUNCHLENGTH_MODE", "", IS_STRING, 1, (long)((char *)&csrdrift_example.bunchlengthMode), "68-percentile", 0.0, 0, "rms, 68-percentile, or 90-percentile"},
-    {"OL_MULTIPLIER", "", IS_DOUBLE, 1, (long)((char *)&csrdrift_example.overtakingLengthMultiplier), NULL, 1.0, 0, "factor by which to multiply the overtaking length to get the attenuation length"},
+    {"ATTENUATION_LENGTH", "M", IS_DOUBLE, 0, (long)((char *)&csrdrift_example.attenuationLength), NULL, 0.0, 0, "exponential attenuation length for wake"},
+    {"DZ", "", IS_DOUBLE, 0, (long)((char *)&csrdrift_example.dz), NULL, 0.0, 0, "interval between kicks"},
+    {"N_KICKS", "", IS_LONG, 0, (long)((char *)&csrdrift_example.nKicks), NULL, 0.0, 1, "number of kicks (if DZ is zero)"},
+    {"SPREAD", "", IS_LONG, 0, (long)((char *)&csrdrift_example.spread), NULL, 0.0, 0, "use spreading function?"},
+    {"USE_OVERTAKING_LENGTH", "", IS_LONG, 0, (long)((char *)&csrdrift_example.useOvertakingLength), NULL, 0.0, 0, "use overtaking length for ATTENUATION_LENGTH?"},
+    {"USE_SALDIN54", "", IS_LONG, 0, (long)((char*)&csrdrift_example.useSaldin54), NULL, 0, 0, "Use Saldin et al eq. 54 (NIM A 398 (1997) 373-394 for decay vs z?"},
+    {"SALDIN54POINTS", "", IS_LONG, 0, (long)((char*)&csrdrift_example.nSaldin54Points), NULL, 0.0, 20, "Number of values of position inside bunch to average for Saldin eq 54."},
+    {"CSR", "", IS_LONG, 0, (long)((char *)&csrdrift_example.csr), NULL, 0.0, 1, "do CSR calcuations"},
+    {"SPREAD_MODE", "", IS_STRING, 0, (long)((char *)&csrdrift_example.spreadMode), "full", 0.0, 0, "full, simple, or radiation-only"},
+    {"WAVELENGTH_MODE", "", IS_STRING, 0, (long)((char *)&csrdrift_example.wavelengthMode), "sigmaz", 0.0, 0, "sigmaz or peak-to-peak"},
+    {"BUNCHLENGTH_MODE", "", IS_STRING, 0, (long)((char *)&csrdrift_example.bunchlengthMode), "68-percentile", 0.0, 0, "rms, 68-percentile, or 90-percentile"},
+    {"SALDIN54_OUTPUT", "", IS_STRING, 0, (long)((char*)&csrdrift_example.Saldin54Output), NULL, 0.0, 0, "Filename for output of CSR intensity vs. z as computed using Saldin eq 54."},
+    {"OL_MULTIPLIER", "", IS_DOUBLE, 0, (long)((char *)&csrdrift_example.overtakingLengthMultiplier), NULL, 1.0, 0, "factor by which to multiply the overtaking length to get the attenuation length"},
     };
 
 RFCW rfcw_example;

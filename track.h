@@ -566,8 +566,8 @@ extern char *entity_text[N_TYPES];
 #define N_CHARGE_PARAMS 2
 #define N_PFILTER_PARAMS 5
 #define N_HISTOGRAM_PARAMS 9
-#define N_CSRCSBEND_PARAMS 40
-#define N_CSRDRIFT_PARAMS 12
+#define N_CSRCSBEND_PARAMS 41
+#define N_CSRDRIFT_PARAMS 14
 #define N_REMCOR_PARAMS 6
 #define N_RFCW_PARAMS 27
 
@@ -1334,7 +1334,9 @@ typedef struct {
     double etilt;   /* error tilt angle */
     long n_kicks, nonlinear, synch_rad;
     long edge1_effects, edge2_effects;
-    long integration_order, bins, SGHalfWidth, SGOrder, SGDerivHalfWidth, SGDerivOrder;
+    long integration_order, bins;
+    double binRangeFactor;
+    long SGHalfWidth, SGOrder, SGDerivHalfWidth, SGDerivOrder;
     char *histogramFile;
     long outputInterval, outputLastWakeOnly, steadyState;
     long use_bn;
@@ -1351,9 +1353,11 @@ extern PARAMETER csrdrift_param[N_CSRDRIFT_PARAMS];
 
 typedef struct {
   double length, attenuationLength, dz;
-  long nKicks, spread, useOvertakingLength, useSaldin54, csr;
-  char *spreadMode, *wavelengthMode, *bunchlengthMode;
+  long nKicks, spread, useOvertakingLength;
+  long useSaldin54, nSaldin54Points, csr;
+  char *spreadMode, *wavelengthMode, *bunchlengthMode, *Saldin54Output;
   double overtakingLengthMultiplier;
+  FILE *fpSaldin;
 } CSRDRIFT;
 
 /* names and storage structure for top-up bending magnet physical parameters */
@@ -2171,7 +2175,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_error, double Po, double **accepted,
     double z_start);
 long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift, 
-                            double Po, double **accepted, double zStart);
+                            double Po, double **accepted, double zStart, char *rootname);
 long reset_driftCSR();
 
 void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
