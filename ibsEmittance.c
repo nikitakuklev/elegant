@@ -1,5 +1,8 @@
 /* 
  * $Log: not supported by cvs2svn $
+ * Revision 1.6  1999/08/05 15:35:52  soliday
+ * Added WIN32 and Linux support
+ *
  * Revision 1.5  1999/03/18 21:02:44  borland
  * Implemented the -rf option.
  *
@@ -244,7 +247,7 @@ int main( int argc, char **argv)
    * get parameter information from first input file  *
    \***************************************************/
   if (verbosity)
-    fprintf( stderr, "Opening \"%s\" for checking presence of parameters.\n", inputfile);
+    fprintf( stdout, "Opening \"%s\" for checking presence of parameters.\n", inputfile);
   if (!SDDS_InitializeInput(&twissPage, inputfile))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   /* read first page of input file to get parameters 
@@ -253,10 +256,10 @@ int main( int argc, char **argv)
      */
   SDDS_ReadPage(&twissPage);
   /* parameter Type */
-  switch(SDDS_CheckParameter(&twissPage, "I1", NULL, SDDS_DOUBLE, verbosity?stderr:NULL)) {
+  switch(SDDS_CheckParameter(&twissPage, "I1", NULL, SDDS_DOUBLE, verbosity?stdout:NULL)) {
   case SDDS_CHECK_NONEXISTENT:
     if (verbosity)
-      fprintf( stderr, "\tParameter I1 not found in input file.\n");
+      fprintf( stdout, "\tParameter I1 not found in input file.\n");
     break;
   case SDDS_CHECK_WRONGTYPE:
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -265,13 +268,13 @@ int main( int argc, char **argv)
   case SDDS_CHECK_OKAY:
     break;
   default:
-    fprintf( stderr, "Unexpected result from SDDS_CheckParameter routine while checking parameter Type.\n");
+    fprintf( stdout, "Unexpected result from SDDS_CheckParameter routine while checking parameter Type.\n");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     exit(1);
     break;
   }
   if (verbosity)
-    fprintf( stderr, "Opening \"%s\" for writing...\n", outputfile);
+    fprintf( stdout, "Opening \"%s\" for writing...\n", outputfile);
   if (!SDDS_InitializeOutput(&resultsPage, SDDS_BINARY, 1, "Intra-beam scattering rates",
                              "Intra-beam scattering rates", outputfile))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -307,7 +310,7 @@ int main( int argc, char **argv)
       0>SDDS_DefineParameter(&resultsPage, "sigmaDelta", "$gs$r$bd$n", NULL, "Relative momentum spread with IBS.", NULL, SDDS_DOUBLE, NULL) ||
       0>SDDS_DefineParameter(&resultsPage, "sigmaz0", "$gs$r$bz,0$n", "m", "Bunch length without IBS.", NULL, SDDS_DOUBLE, NULL) ||
       0>SDDS_DefineParameter(&resultsPage, "sigmaz", "$gs$r$bz$n", "m", "Bunch length with IBS.", NULL, SDDS_DOUBLE, NULL))
-    SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 
   if (integrationTurns) {
     if (SDDS_DefineColumn(&resultsPage, "ex", "$ge$r$bx$n", "$gp$rm", "Horizontal Emittance", NULL, SDDS_DOUBLE, 0)<0 ||
@@ -317,7 +320,7 @@ int main( int argc, char **argv)
         SDDS_DefineColumn(&resultsPage, "IBSRatey", NULL, "s", "Vertical IBS Emittance Growth Rate", NULL, SDDS_DOUBLE, 0)<0 ||
         SDDS_DefineColumn(&resultsPage, "IBSRatel", NULL, "s", "Longitudinal IBS Emittance Growth Rate", NULL, SDDS_DOUBLE, 0)<0 ||
         SDDS_DefineColumn(&resultsPage, "Pass", NULL, NULL, NULL, NULL, SDDS_LONG, 0)<0)
-      SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     integrationPoints = integrationTurns/integrationStepSize+1;
     if (!(exInteg = SDDS_Malloc(sizeof(*exInteg)*integrationPoints)) ||
         !(eyInteg = SDDS_Malloc(sizeof(*eyInteg)*integrationPoints)) ||
@@ -330,11 +333,11 @@ int main( int argc, char **argv)
   }
   
   if (verbosity)
-    fprintf( stderr, "Opening for reading \"%s\"\n", inputfile);
+    fprintf( stdout, "Opening for reading \"%s\"\n", inputfile);
   if (!SDDS_InitializeInput(&twissPage, inputfile))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   if (!SDDS_WriteLayout(&resultsPage) )
-    SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   
   while(SDDS_ReadPage(&twissPage)>0) {
     if (!SDDS_GetParameters(&twissPage,
@@ -404,7 +407,7 @@ int main( int argc, char **argv)
     
     if (!growthRatesOnly) {
       if (verbosity > 1) {
-        fprintf (stderr, "Starting values:\nemitx: %10.5g sigmaDelta %10.5g.\n", emitx, sigmaDelta);
+        fprintf (stdout, "Starting values:\nemitx: %10.5g sigmaDelta %10.5g.\n", emitx, sigmaDelta);
       }
       emitxOld = emitx;
       sigmaDeltaOld = sigmaDelta;
@@ -467,7 +470,7 @@ int main( int argc, char **argv)
         disable[i] = 1;
       }
       if (verbosity) {
-        fprintf( stderr, "Doing simplex minimization...\n");
+        fprintf( stdout, "Doing simplex minimization...\n");
       }
       simplexMin( &yReturn, xGuess, dxGuess, xLowerLimit, xUpperLimit, disable, dimensions,
                  target, tolerance, IBSequations, verbosity?IBSsimplexReport:NULL, 
@@ -634,9 +637,9 @@ double IBSequations(double *x, long *invalid) {
 }
 
 void IBSsimplexReport(double ymin, double *xmin, long pass, long evals, long dims) {
-  fprintf( stderr, "IBS Simplex Report:\nMinimum value obtained: %e.\n", ymin);
-  fprintf( stderr, "    %ld passes, %ld evaluations.\n", pass, evals);
-  fprintf( stderr, "    emitx = %e   sigmaDelta = %e.\n", xmin[0], xmin[1]);
+  fprintf( stdout, "IBS Simplex Report:\nMinimum value obtained: %e.\n", ymin);
+  fprintf( stdout, "    %ld passes, %ld evaluations.\n", pass, evals);
+  fprintf( stdout, "    emitx = %e   sigmaDelta = %e.\n", xmin[0], xmin[1]);
   return;
 }
 

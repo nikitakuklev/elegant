@@ -127,7 +127,8 @@ long track_through_tubend(double **part, long n_part, TUBEND *tubend,
           /* less than two solutions means we didn't enter the magnet */ 
           particleLost = 1;
 #if DEBUG
-          fprintf(stderr, "Circle intersection not found: %ld solutions\n", solutions);
+          fprintf(stdout, "Circle intersection not found: %ld solutions\n", solutions);
+          fflush(stdout);
 #endif
         } else {
           /* choose the solution with largest Xint */
@@ -214,17 +215,19 @@ long track_through_tubend(double **part, long n_part, TUBEND *tubend,
     else {
       /* lost particle */
       if (!part[i_top]) {
-        fprintf(stderr, 
+        fprintf(stdout, 
                 "error: couldn't swap particles %ld and %ld--latter is null pointer (track_through_tubend)\n",
                 ip, i_top);
+        fflush(stdout);
         abort();
       }
       SWAP_PTR(part[ip], part[i_top]);
       if (accepted) {
         if (!accepted[i_top]) {
-          fprintf(stderr, 
+          fprintf(stdout, 
                   "error: couldn't swap acceptance data for particles %ld and %ld--latter is null pointer (track_through_tubend)\n",
                   ip, i_top);
+          fflush(stdout);
           abort();
         }
         SWAP_PTR(accepted[ip], accepted[i_top]);

@@ -64,7 +64,8 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
                                            ztransverse->dx, ztransverse->dy);
 
   if (n_binned!=np)
-    fprintf(stderr, "warning: only %ld of %ld particles where binned (ZTRANSVERSE)\n", n_binned, np);
+    fprintf(stdout, "warning: only %ld of %ld particles where binned (ZTRANSVERSE)\n", n_binned, np);
+    fflush(stdout);
 
   for (plane=0; plane<2; plane++) {
     if (ztransverse->smoothing)
@@ -166,12 +167,14 @@ void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long part
         !ztransverse->ZyReal && !ztransverse->ZxImag)
       bomb("you must either give broad_band=1, or Z[xy]Real and/or Z[xy]Imag (ZTRANSVERSE)", NULL);
     if (!SDDS_InitializeInput(&SDDSin, ztransverse->inputFile) || !SDDS_ReadPage(&SDDSin)) {
-      fprintf(stderr, "unable to read file %s\n", ztransverse->inputFile);
+      fprintf(stdout, "unable to read file %s\n", ztransverse->inputFile);
+      fflush(stdout);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors); 
       exit(1);
     }
     if ((n_spect=SDDS_RowCount(&SDDSin))<4) {
-      fprintf(stderr, "too little data in %s\n", ztransverse->inputFile);
+      fprintf(stdout, "too little data in %s\n", ztransverse->inputFile);
+      fflush(stdout);
       exit(1);
     }
     if (!power_of_2(n_spect-1))
@@ -181,23 +184,28 @@ void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long part
     ZReal[1] = getTransverseImpedance(&SDDSin, ztransverse->ZyReal);
     ZImag[1] = getTransverseImpedance(&SDDSin, ztransverse->ZyImag);
     if (!(freqData=SDDS_GetColumnInDoubles(&SDDSin, ztransverse->freqColumn)))
-      fprintf(stderr, "Unable to read column %s (ZTRANSVERSE)\n", ztransverse->freqColumn);
+      fprintf(stdout, "Unable to read column %s (ZTRANSVERSE)\n", ztransverse->freqColumn);
+      fflush(stdout);
     if ((df_spect = (freqData[n_spect-1]-freqData[0])/(n_spect-1))<=0) {
-      fprintf(stderr, "Zero or negative frequency spacing in %s (ZTRANSVERSE)\n",
+      fprintf(stdout, "Zero or negative frequency spacing in %s (ZTRANSVERSE)\n",
               ztransverse->inputFile);
+      fflush(stdout);
       exit(1);
     }
     t_range = ztransverse->n_bins*ztransverse->bin_size;
     ztransverse->n_bins = 2*(n_spect-1);
     ztransverse->bin_size = 1.0/(ztransverse->n_bins*df_spect);
     if (t_range>ztransverse->n_bins*ztransverse->bin_size) {
-      fprintf(stderr, "error for ZTRANSVERSE element:\nimpedance-spectrum-equivalent binning range not sufficient.\n");
-      fprintf(stderr, "consider padding the impedance spectrum\n");
+      fprintf(stdout, "error for ZTRANSVERSE element:\nimpedance-spectrum-equivalent binning range not sufficient.\n");
+      fflush(stdout);
+      fprintf(stdout, "consider padding the impedance spectrum\n");
+      fflush(stdout);
       exit(1);
     }
     if (!SDDS_Terminate(&SDDSin)) {
-      fprintf(stderr, "Error closing data set %s\n",
+      fprintf(stdout, "Error closing data set %s\n",
               ztransverse->inputFile);
+      fflush(stdout);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exit(1);
     }
@@ -241,8 +249,9 @@ double *getTransverseImpedance(SDDS_DATASET *SDDSin,
     return Z;
   }
   if (!(Z=SDDS_GetColumnInDoubles(SDDSin, ZName))) {
-    fprintf(stderr, "Unable to read column %s (ZTRANSVERSE)\n",
+    fprintf(stdout, "Unable to read column %s (ZTRANSVERSE)\n",
             ZName);
+    fflush(stdout);
     exit(1);
   }
   return Z;

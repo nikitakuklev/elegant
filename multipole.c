@@ -45,14 +45,16 @@ void readErrorMultipoleData(MULTIPOLE_DATA *multData,
   if (multData->initialized)
     return;
   if (!SDDS_InitializeInput(&SDDSin, multFile)) {
-    fprintf(stderr, "Problem opening file %s\n", multFile);
+    fprintf(stdout, "Problem opening file %s\n", multFile);
+    fflush(stdout);
     exit(1);
   }
-  if (SDDS_CheckColumn(&SDDSin, "order", NULL, SDDS_ANY_INTEGER_TYPE, stderr)!=SDDS_CHECK_OK ||
-      SDDS_CheckColumn(&SDDSin, "an", NULL, SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OK ||
-      SDDS_CheckColumn(&SDDSin, "bn", NULL, SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OK ||
-      SDDS_CheckParameter(&SDDSin, "referenceRadius", "m", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OK) {
-    fprintf(stderr, "Problems with data in multipole file %s\n", multFile);
+  if (SDDS_CheckColumn(&SDDSin, "order", NULL, SDDS_ANY_INTEGER_TYPE, stdout)!=SDDS_CHECK_OK ||
+      SDDS_CheckColumn(&SDDSin, "an", NULL, SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK ||
+      SDDS_CheckColumn(&SDDSin, "bn", NULL, SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK ||
+      SDDS_CheckParameter(&SDDSin, "referenceRadius", "m", SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK) {
+    fprintf(stdout, "Problems with data in multipole file %s\n", multFile);
+    fflush(stdout);
     exit(1);
   }
   if (SDDS_ReadPage(&SDDSin)!=1)  {
@@ -62,7 +64,8 @@ void readErrorMultipoleData(MULTIPOLE_DATA *multData,
     exit(1);
   }
   if ((multData->orders = SDDS_RowCount(&SDDSin))<=0) {
-    fprintf(stderr, "Warning: no data in FMULT file %s\n", multFile);
+    fprintf(stdout, "Warning: no data in FMULT file %s\n", multFile);
+    fflush(stdout);
     SDDS_Terminate(&SDDSin);
     return;
   }
@@ -76,8 +79,9 @@ void readErrorMultipoleData(MULTIPOLE_DATA *multData,
     exit(1);
   }    
   if (SDDS_ReadPage(&SDDSin)==2) {
-    fprintf(stderr, "Warning: multipole file %s has multiple pages, which are ignored\n",
+    fprintf(stdout, "Warning: multipole file %s has multiple pages, which are ignored\n",
             multFile);
+    fflush(stdout);
   }
   SDDS_Terminate(&SDDSin);
   multData->initialized = 1;
@@ -100,8 +104,8 @@ void initialize_fmultipole(FMULT *multipole)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
     exit(1);
   }
-  if (SDDS_CheckColumn(&SDDSin, "order", NULL, SDDS_ANY_INTEGER_TYPE, stderr)!=SDDS_CHECK_OK ||
-      SDDS_CheckColumn(&SDDSin, "KnL", NULL, SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OK)
+  if (SDDS_CheckColumn(&SDDSin, "order", NULL, SDDS_ANY_INTEGER_TYPE, stdout)!=SDDS_CHECK_OK ||
+      SDDS_CheckColumn(&SDDSin, "KnL", NULL, SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK)
     bomb("problems with data in FMULT input file", NULL);
   if (SDDS_ReadPage(&SDDSin)!=1)  {
     sprintf(buffer, "Problem reading FMULT file %s\n", multipole->filename);
@@ -110,7 +114,8 @@ void initialize_fmultipole(FMULT *multipole)
     exit(1);
   }
   if ((multData->orders = SDDS_RowCount(&SDDSin))<=0) {
-    fprintf(stderr, "Warning: no data in FMULT file %s\n", multipole->filename);
+    fprintf(stdout, "Warning: no data in FMULT file %s\n", multipole->filename);
+    fflush(stdout);
     SDDS_Terminate(&SDDSin);
     return;
   }
@@ -122,8 +127,9 @@ void initialize_fmultipole(FMULT *multipole)
     exit(1);
   }    
   if (SDDS_ReadPage(&SDDSin)==2) {
-    fprintf(stderr, "Warning: FMULT file %s has multiple pages, which are ignored\n",
+    fprintf(stdout, "Warning: FMULT file %s has multiple pages, which are ignored\n",
             multipole->filename);
+    fflush(stdout);
   }
   SDDS_Terminate(&SDDSin);
   multData->initialized = 1;
@@ -180,11 +186,13 @@ long fmultipole_tracking(
   multipoleKicksDone += (i_top+1)*multData->orders*n_kicks*4;
   for (i_part=0; i_part<=i_top; i_part++) {
     if (!(coord = particle[i_part])) {
-      fprintf(stderr, "null coordinate pointer for particle %ld (fmultipole_tracking)", i_part);
+      fprintf(stdout, "null coordinate pointer for particle %ld (fmultipole_tracking)", i_part);
+      fflush(stdout);
       abort();
     }
     if (accepted && !accepted[i_part]) {
-      fprintf(stderr, "null accepted coordinates pointer for particle %ld (fmultipole_tracking)", i_part);
+      fprintf(stdout, "null accepted coordinates pointer for particle %ld (fmultipole_tracking)", i_part);
+      fflush(stdout);
       abort();
     }
 
@@ -300,11 +308,13 @@ long multipole_tracking(
     multipoleKicksDone += (i_top+1)*n_kicks*4;
     for (i_part=0; i_part<=i_top; i_part++) {
         if (!(coord = particle[i_part])) {
-            fprintf(stderr, "null coordinate pointer for particle %ld (multipole_tracking)", i_part);
+            fprintf(stdout, "null coordinate pointer for particle %ld (multipole_tracking)", i_part);
+            fflush(stdout);
             abort();
             }
         if (accepted && !accepted[i_part]) {
-            fprintf(stderr, "null accepted coordinates pointer for particle %ld (multipole_tracking)", i_part);
+            fprintf(stdout, "null accepted coordinates pointer for particle %ld (multipole_tracking)", i_part);
+            fflush(stdout);
             abort();
             }
         if (KnL==0) {
@@ -475,13 +485,15 @@ double *expansion_coefficients(long n)
 
     /* calculate expansion coefficients with signs for (x+iy)^n/n! */
 #if DEBUG
-    fprintf(stderr, "coefficients of expansion for multipole of order %ld\n", n);
+    fprintf(stdout, "coefficients of expansion for multipole of order %ld\n", n);
+    fflush(stdout);
 #endif
     for (i=0; i<=n; i++) {
         expansion_coef[n_expansions][i] = (ODD(i/2)?-1.0:1.0)/(dfactorial(i)*dfactorial(n-i));
 #if DEBUG
-        fprintf(stderr, "%.16lf*%sx^%ld*y^%ld \n", expansion_coef[n_expansions][i]*dfactorial(n),
+        fprintf(stdout, "%.16lf*%sx^%ld*y^%ld \n", expansion_coef[n_expansions][i]*dfactorial(n),
                 (ODD(i)?"i*":""), n-i, i);
+        fflush(stdout);
 #endif
         }             
     log_exit("expansion_coefficients");
@@ -585,7 +597,8 @@ long multipole_tracking2(
     multData = &(ksext->totalMultipoleData);
     break;
   default:
-    fprintf(stderr, "error: multipole_tracking2() called for element %s--not supported!\n", elem->name);
+    fprintf(stdout, "error: multipole_tracking2() called for element %s--not supported!\n", elem->name);
+    fflush(stdout);
     exit(1);
     break;
   }
@@ -618,11 +631,13 @@ long multipole_tracking2(
     multipoleKicksDone += (i_top+1)*n_kicks*multData->orders;
   for (i_part=0; i_part<=i_top; i_part++) {
     if (!(coord = particle[i_part])) {
-      fprintf(stderr, "null coordinate pointer for particle %ld (multipole_tracking)", i_part);
+      fprintf(stdout, "null coordinate pointer for particle %ld (multipole_tracking)", i_part);
+      fflush(stdout);
       abort();
     }
     if (accepted && !accepted[i_part]) {
-      fprintf(stderr, "null accepted coordinates pointer for particle %ld (multipole_tracking)", i_part);
+      fprintf(stdout, "null accepted coordinates pointer for particle %ld (multipole_tracking)", i_part);
+      fflush(stdout);
       abort();
     }
 

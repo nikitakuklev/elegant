@@ -37,7 +37,8 @@ void ramp_momentum(
         rampp->Po = *P_central;
 
 #if defined(DEBUG)
-    fprintf(stderr, "*P_central = %15.8e\n", *P_central);
+    fprintf(stdout, "*P_central = %15.8e\n", *P_central);
+    fflush(stdout);
 #endif
 
     for (ip=t0=0; ip<np; ip++) {
@@ -45,10 +46,12 @@ void ramp_momentum(
 #if defined(IEEE_MATH)
         if (isnan(t) || isinf(t)) {
             long i;
-            fprintf(stderr, "error: bad time coordinate for particle %ld\n", ip);
+            fprintf(stdout, "error: bad time coordinate for particle %ld\n", ip);
+            fflush(stdout);
             for (i=0; i<6; i++)
-                fprintf(stderr, "%15.8e ", coord[ip][i]);
-            fputc('\n', stderr);
+                fprintf(stdout, "%15.8e ", coord[ip][i]);
+                fflush(stdout);
+            fputc('\n', stdout);
             abort();
             }
 #endif
@@ -58,7 +61,8 @@ void ramp_momentum(
     P_new = rampp->Po*linear_interpolation(rampp->Pfactor, rampp->t_Pf, rampp->n_pts, t0, i_time);
 
 #if defined(DEBUG)
-    fprintf(stderr, "new momentum for pass %ld, <t> = %.15e s:  %.15e\n", pass, t0, P_new);
+    fprintf(stdout, "new momentum for pass %ld, <t> = %.15e s:  %.15e\n", pass, t0, P_new);
+    fflush(stdout);
 #endif
 
     for (ip=0; ip<np; ip++)

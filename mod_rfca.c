@@ -26,16 +26,19 @@ long modulated_rf_cavity(double **part, long np, MODRF *modrf, double P_central,
 
     if (!been_warned) {        
         if (modrf->freq<1e3 && modrf->freq)  {
-            fprintf(stderr, "\7\7\7warning: your MODRF frequency is less than 1kHz--this may be an error\n");
+            fprintf(stdout, "\7\7\7warning: your MODRF frequency is less than 1kHz--this may be an error\n");
+            fflush(stdout);
             been_warned = 1;
             }
         if (fabs(modrf->volt)<100 && modrf->volt) {
-            fprintf(stderr, "\7\7\7warning: your MODRF voltage is less than 100V--this may be an error\n");
+            fprintf(stdout, "\7\7\7warning: your MODRF voltage is less than 100V--this may be an error\n");
+            fflush(stdout);
             been_warned = 1;
             }
         if (been_warned) {
-            fprintf(stderr, "units of parameters for MODRF are as follows:\n");
-            print_dictionary_entry(stderr, T_MODRF, 0);
+            fprintf(stdout, "units of parameters for MODRF are as follows:\n");
+            fflush(stdout);
+            print_dictionary_entry(stdout, T_MODRF, 0);
             }
         }
 
@@ -43,7 +46,8 @@ long modulated_rf_cavity(double **part, long np, MODRF *modrf, double P_central,
         bomb("NULL particle data pointer (modulated_rf_cavity)", NULL);
     for (ip=0; ip<np; ip++)
         if (!part[ip]) {
-            fprintf(stderr, "NULL pointer for particle %ld (modulated_rf_cavity)\n", ip);
+            fprintf(stdout, "NULL pointer for particle %ld (modulated_rf_cavity)\n", ip);
+            fflush(stdout);
             abort();
             }
     if (!modrf)

@@ -31,8 +31,9 @@ void check_duplic_elem(
     bomb("new element pointer is null (check_duplic_elem)", NULL);
   
 #ifdef DEBUG    
-  fprintf(stderr, "%ld elements in list\n",
+  fprintf(stdout, "%ld elements in list\n",
          n_elems);
+  fflush(stdout);
 #endif
   if (n_elems>=1) {
     elemArray = trealloc(elemArray, sizeof(*elemArray)*(n_elems+10));
@@ -49,24 +50,27 @@ void check_duplic_elem(
     lo = 0; 
     hi = n_elems-1;
     if ((comparison=strcmp(new_name, elemArray[lo]->name))==0) {
-      fprintf(stderr, "error: duplicate definitions of element %s\n",
+      fprintf(stdout, "error: duplicate definitions of element %s\n",
               new_name);
+      fflush(stdout);
       exit(1);
     }
     else if (comparison<0)
       insertionPoint = elemArray[lo];
     if (!insertionPoint) {
       if ((comparison=strcmp(new_name, elemArray[hi]->name))==0) {
-        fprintf(stderr, "error: duplicate definitions of element %s\n",
+        fprintf(stdout, "error: duplicate definitions of element %s\n",
                 new_name);
+        fflush(stdout);
         exit(1);
       }
       else if (comparison<0) {
         do {
           mid = (lo+hi)/2;
           if ((comparison=strcmp(new_name, elemArray[mid]->name))==0) {
-            fprintf(stderr, "error: duplicate definitions of element %s\n",
+            fprintf(stdout, "error: duplicate definitions of element %s\n",
                     new_name);
+            fflush(stdout);
             exit(1);
           }
           else if (comparison<0)
@@ -80,7 +84,8 @@ void check_duplic_elem(
     }
     if (insertionPoint) {
 #ifdef DEBUG
-      fprintf(stderr, "inserting %s before %s\n", new_name, insertionPoint->name);
+      fprintf(stdout, "inserting %s before %s\n", new_name, insertionPoint->name);
+      fflush(stdout);
 #endif
       elast = (*new_elem)->pred;
       if ((*new_elem)->pred)
@@ -99,10 +104,11 @@ void check_duplic_elem(
 #ifdef DEBUG
   elem  = *elem0;
   while (elem && elem->name) {
-    fprintf(stderr, "  %s\n", elem->name);
+    fprintf(stdout, "  %s\n", elem->name);
+    fflush(stdout);
     elem = elem->succ;
   }
-  fflush(stderr);
+  fflush(stdout);
 #endif
 
 }
@@ -122,8 +128,9 @@ void check_duplic_line(
   for (i=0; i<n_lines; i++) {
     if (strcmp(new_name, line->name)==0) {
       *line->name = 0;
-      fprintf(stderr, "warning: duplicate definitions of line %s\n", 
+      fprintf(stdout, "warning: duplicate definitions of line %s\n", 
              new_name);
+      fflush(stdout);
     }
     line = line->succ;
   }

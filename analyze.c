@@ -105,7 +105,7 @@ void setup_transport_analysis(
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
     process_namelist(&analyze_map, nltext);
-    print_namelist(stderr, &analyze_map);
+    print_namelist(stdout, &analyze_map);
 
     /* check for data errors */
     if (!output)
@@ -230,22 +230,26 @@ void do_transport_analysis(
     if (do_tracking(coord, &n_trpoint, &effort, beamline, &p_central, 
                     NULL, NULL, NULL, NULL, run, control->i_step, SILENT_RUNNING, control->n_passes,
                     NULL, NULL)!=n_track) {
-        fputs("warning: particle(s) lost during transport analysis--continuing with next step", stderr);
+        fputs("warning: particle(s) lost during transport analysis--continuing with next step", stdout);
         log_exit("do_transport_analysis");
         return;
         }
 
     if (verbosity>0){
         if (orbit && center_on_orbit) {
-            fprintf(stderr, "closed orbit: \n");
+            fprintf(stdout, "closed orbit: \n");
+            fflush(stdout);
             for (i=0; i<6; i++)
-                fprintf(stderr, "%15.8e ", orbit[i]);
-            fputc('\n', stderr);
+                fprintf(stdout, "%15.8e ", orbit[i]);
+                fflush(stdout);
+            fputc('\n', stdout);
             }
-        fprintf(stderr, "final coordinates of refence particle: \n");
+        fprintf(stdout, "final coordinates of refence particle: \n");
+        fflush(stdout);
         for (i=0; i<6; i++)
-            fprintf(stderr, "%15.8e ", coord[n_track-1][i]);
-        fputc('\n', stderr);
+            fprintf(stdout, "%15.8e ", coord[n_track-1][i]);
+            fflush(stdout);
+        fputc('\n', stdout);
         }
 
     for (i=0; i<6; i++) 
@@ -269,7 +273,8 @@ void do_transport_analysis(
         }
     /* find NUx */
     if (fabs(cos_phi = (R->a[0][0]+R->a[1][1])/2)>=1) {
-        fprintf(stderr, "warning: beamline unstable for x plane\n");
+        fprintf(stdout, "warning: beamline unstable for x plane\n");
+        fflush(stdout);
         beta = 0;
         tune = 0;
         }
@@ -283,7 +288,8 @@ void do_transport_analysis(
     data[X_BETA_OFFSET+1] = tune;
     /* find NUy */
     if (fabs(cos_phi = (R->a[2][2]+R->a[3][3])/2)>=1) {
-        fprintf(stderr, "warning: beamline unstable for y plane\n");
+        fprintf(stdout, "warning: beamline unstable for y plane\n");
+        fflush(stdout);
         beta = 0;
         tune = 0;
         }
@@ -300,7 +306,8 @@ void do_transport_analysis(
 
     /* compute etax and etax' */
     if ((det = (2 - R->a[0][0] - R->a[1][1]))<=0) {
-        fprintf(stderr, "error: beamline unstable for x plane--can't match dispersion functions\n");
+        fprintf(stdout, "error: beamline unstable for x plane--can't match dispersion functions\n");
+        fflush(stdout);
         det = 1e-6;
         }
     data[X_ETA_OFFSET  ] = ((1-R->a[1][1])*R->a[0][5]+R->a[0][1]*R->a[1][5])/det;
@@ -308,7 +315,8 @@ void do_transport_analysis(
 
     /* compute etay and etay' */
     if ((det = (2 - R->a[2][2] - R->a[3][3]))<=0) {
-        fprintf(stderr, "error: beamline unstable for y plane--can't match dispersion functions\n");
+        fprintf(stdout, "error: beamline unstable for y plane--can't match dispersion functions\n");
+        fflush(stdout);
         det = 1e-6;
         }
     data[Y_ETA_OFFSET  ] = ((1-R->a[3][3])*R->a[2][5]+R->a[2][3]*R->a[3][5])/det;
@@ -337,7 +345,8 @@ void do_transport_analysis(
         data[index] = errcon->error_value[i];
 
     if (!SDDS_StartTable(&SDDS_analyze, 1)) {
-        fprintf(stderr, "Unable to start SDDS table (do_transport_analysis)");
+        fprintf(stdout, "Unable to start SDDS table (do_transport_analysis)");
+        fflush(stdout);
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
         exit(1);
         }
@@ -349,31 +358,39 @@ void do_transport_analysis(
     for (i=0; i<SDDS_analyze.layout.n_columns; i++)
         if (!SDDS_SetRowValues(&SDDS_analyze, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, 0,
                                i, data[i])) {
-            fprintf(stderr, "Unable to set SDDS column %ld (do_transport_analysis)\n", i);
+            fprintf(stdout, "Unable to set SDDS column %ld (do_transport_analysis)\n", i);
+            fflush(stdout);
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
             exit(1);
             }
     if (!SDDS_WriteTable(&SDDS_analyze)) {
-        fprintf(stderr, "Unable to write SDDS table (do_transport_analysis)");
+        fprintf(stdout, "Unable to write SDDS table (do_transport_analysis)");
+        fflush(stdout);
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
         exit(1);
         }
 
     if (verbosity>0) {
         for (i=0; i<6; i++) {
-            fprintf(stderr, "R%ld: ", i+1);
+            fprintf(stdout, "R%ld: ", i+1);
+            fflush(stdout);
             for (j=0; j<6; j++) 
-                fprintf(stderr, "%20.13e ", R->a[i][j]);
-            fputc('\n', stderr);
+                fprintf(stdout, "%20.13e ", R->a[i][j]);
+                fflush(stdout);
+            fputc('\n', stdout);
             }
-        fprintf(stderr, "horizontal:   tune = %20.13e  beta = %20.13e  eta = %20.13e  eta' = %20.13e\n",
+        fprintf(stdout, "horizontal:   tune = %20.13e  beta = %20.13e  eta = %20.13e  eta' = %20.13e\n",
             data[X_BETA_OFFSET+1], data[X_BETA_OFFSET], data[X_ETA_OFFSET], data[X_ETA_OFFSET+1]);
-        fprintf(stderr, "vertical  :   tune = %20.13e  beta = %20.13e  eta = %20.13e  eta' = %20.13e\n",
+        fflush(stdout);
+        fprintf(stdout, "vertical  :   tune = %20.13e  beta = %20.13e  eta = %20.13e  eta' = %20.13e\n",
             data[Y_BETA_OFFSET+1], data[Y_BETA_OFFSET], data[Y_ETA_OFFSET], data[Y_ETA_OFFSET+1]);
-        fprintf(stderr, "determinant of R = 1 + %20.13e\n", data[DETR_OFFSET]-1);
-        fprintf(stderr, "dispersion functions from closed-orbit calculations:\nx: %e m    %e\ny: %e m    %e\n",
+        fflush(stdout);
+        fprintf(stdout, "determinant of R = 1 + %20.13e\n", data[DETR_OFFSET]-1);
+        fflush(stdout);
+        fprintf(stdout, "dispersion functions from closed-orbit calculations:\nx: %e m    %e\ny: %e m    %e\n",
             data[CLORB_ETA_OFFSET  ], data[CLORB_ETA_OFFSET+1],
             data[CLORB_ETA_OFFSET+2], data[CLORB_ETA_OFFSET+3]);
+        fflush(stdout);
         }
 
     log_exit("do_transport_analysis");

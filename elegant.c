@@ -29,9 +29,9 @@ void traceback_handler(int code);
 char *option[N_OPTIONS] = {
     "describeinput",
         };
-char *USAGE="elegant <inputfile>\n\nProgram by Michael Borland. (This is version 13.13, July 1999.)";
+char *USAGE="elegant <inputfile>\n\nProgram by Michael Borland. (This is version 13.13, October 1999.)";
 
-char *GREETING="This is elegant, by Michael Borland. (This is version 13.13, July 1999.)";
+char *GREETING="This is elegant, by Michael Borland. (This is version 13.13, October 1999.)";
 
 #define RUN_SETUP        0
 #define RUN_CONTROL      1
@@ -189,12 +189,14 @@ char **argv;
     
     argc = scanargs(&scanned, argc, argv);
     if (argc<2 || argc>(2+N_OPTIONS)) {
-        fprintf(stderr, "usage: %s\n", USAGE);
+        fprintf(stdout, "usage: %s\n", USAGE);
+        fflush(stdout);
         link_date();
         exit(1);
         }
     
-    fprintf(stderr, "%s\n", GREETING);
+    fprintf(stdout, "%s\n", GREETING);
+    fflush(stdout);
     link_date();
     if (getenv("RPN_DEFNS")) {
         rpn(getenv("RPN_DEFNS"));
@@ -206,7 +208,7 @@ char **argv;
         if (scanned[i].arg_type==OPTION) {
             switch (match_string(scanned[i].list[0], option, N_OPTIONS, 0)) {
               case DESCRIBE_INPUT:
-                show_namelists_fields(stderr, namelist_pointer, namelist_name, n_namelists);
+                show_namelists_fields(stdout, namelist_pointer, namelist_name, n_namelists);
                 if (argc==2)
                     exit(0);
                 break;
@@ -256,7 +258,7 @@ char **argv;
             set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
             set_print_namelist_flags(0);
             process_namelist(&run_setup, &namelist_text);
-            print_namelist(stderr, &run_setup);
+            print_namelist(stdout, &run_setup);
             
             /* check for validity of namelist inputs */
             if (lattice==NULL) {
@@ -282,7 +284,8 @@ char **argv;
             if (random_number_seed==0) {
                 random_number_seed = (long)time((time_t)0);
                 random_number_seed = 2*(random_number_seed/2) + 1;
-                fprintf(stderr, "clock-generated random_number_seed = %ld\n", random_number_seed);
+                fprintf(stdout, "clock-generated random_number_seed = %ld\n", random_number_seed);
+                fflush(stdout);
                 }
             
             /* seed random number generators.  Note that random_1 seeds random_2, and random_3.
@@ -332,7 +335,8 @@ char **argv;
             /* parse the lattice file and create the beamline */
             run_conditions.lattice = compose_filename(saved_lattice, rootname);
             beamline = get_beamline(lattice, use_beamline, p_central);
-            fprintf(stderr, "length of beamline %s per pass: %21.15e m\n", beamline->name, beamline->revolution_length);
+            fprintf(stdout, "length of beamline %s per pass: %21.15e m\n", beamline->name, beamline->revolution_length);
+            fflush(stdout);
             lattice = saved_lattice;
             
             /* output the magnet layout in mpl format */
@@ -378,9 +382,12 @@ char **argv;
             correction_setup(&correct, &namelist_text, &run_conditions, beamline); 
             break;
           case SET_AWE_BEAM: 
-            fprintf(stderr, "This program no longer supports awe-format files.\n");
-            fprintf(stderr, "Use awe2sdds to convert your data files, and use\n");
-            fprintf(stderr, "the sdds_beam command instead of awe_beam.\n");
+            fprintf(stdout, "This program no longer supports awe-format files.\n");
+            fflush(stdout);
+            fprintf(stdout, "Use awe2sdds to convert your data files, and use\n");
+            fflush(stdout);
+            fprintf(stdout, "the sdds_beam command instead of awe_beam.\n");
+            fflush(stdout);
             break;
           case SET_BUNCHED_BEAM:
             if (!run_setuped || !run_controled)
@@ -402,7 +409,7 @@ char **argv;
             set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
             set_print_namelist_flags(0);
             process_namelist(&track, &namelist_text);
-            print_namelist(stderr, &track);
+            print_namelist(stdout, &track);
             if ((use_linear_chromatic_matrix || longitudinal_ring_only) 
                 && (!twiss_computed && !do_twiss_output))
               bomb("you must compute twiss parameters to do linear chromatic matrix tracking or longitudinal ring tracking", NULL);
@@ -447,7 +454,7 @@ char **argv;
                 }
                 if (!do_correction(&correct, &run_conditions, beamline, starting_coord, &beam, 
                                    run_control.i_step, 1) ) {
-                  fputs("warning: orbit correction failed--continuing with next step\n", stderr);
+                  fputs("warning: orbit correction failed--continuing with next step\n", stdout);
                   continue;
                 }
               }
@@ -463,13 +470,15 @@ char **argv;
               if (do_closed_orbit && 
                   !run_closed_orbit(&run_conditions, beamline, starting_coord, &beam, 0) &&
                   !soft_failure) {
-                fprintf(stderr, "Closed orbit not found---continuing to next step\n");
+                fprintf(stdout, "Closed orbit not found---continuing to next step\n");
+                fflush(stdout);
                 continue;
               }
               if (do_twiss_output && 
                   !run_twiss_output(&run_conditions, beamline, starting_coord, 0) &&
                   !soft_failure) {
-                fprintf(stderr, "Twiss parameters not defined---continuing to next step\n");
+                fprintf(stdout, "Twiss parameters not defined---continuing to next step\n");
+                fflush(stdout);
                 continue;
               }
               if (do_response_output)
@@ -477,19 +486,22 @@ char **argv;
               run_matrix_output(&run_conditions, beamline);
               for (i=failed=0; (fl_do_tune_correction || do_chromaticity_correction) && i<correction_iterations; i++) {
                 if (correction_iterations>1)
-                  fprintf(stderr, "\nTune/chromaticity correction iteration %ld\n", i+1);
+                  fprintf(stdout, "\nTune/chromaticity correction iteration %ld\n", i+1);
+                  fflush(stdout);
                 if (fl_do_tune_correction) {
                   if (do_closed_orbit && 
                       !run_closed_orbit(&run_conditions, beamline, starting_coord, &beam, 0) &&
                       !soft_failure) {
-                    fprintf(stderr, "Closed orbit not found---continuing to next step\n");
+                    fprintf(stdout, "Closed orbit not found---continuing to next step\n");
+                    fflush(stdout);
                     failed = 1;
                     break;
                   }
                   if (!do_tune_correction(&tune_corr_data, &run_conditions, beamline, starting_coord,
                                           run_control.i_step, i==correction_iterations-1) &&
                       !soft_failure) {
-                    fprintf(stderr, "Tune correction failed---continuing to next step\n");
+                    fprintf(stdout, "Tune correction failed---continuing to next step\n");
+                    fflush(stdout);
                     failed = 1;
                     break;
                   }
@@ -498,14 +510,16 @@ char **argv;
                   if (do_closed_orbit && 
                       !run_closed_orbit(&run_conditions, beamline, starting_coord, &beam, 0) &&
                       !soft_failure) {
-                    fprintf(stderr, "Closed orbit not found---continuing to next step\n");
+                    fprintf(stdout, "Closed orbit not found---continuing to next step\n");
+                    fflush(stdout);
                     failed = 1;
                     break;
                   }
                   if (!do_chromaticity_correction(&chrom_corr_data, &run_conditions, beamline, starting_coord,
                                                   run_control.i_step, i==correction_iterations-1) &&
                       !soft_failure) {
-                    fprintf(stderr, "Chromaticity correction failed---continuing to next step\n");
+                    fprintf(stdout, "Chromaticity correction failed---continuing to next step\n");
+                    fflush(stdout);
                     failed = 1;
                     break;
                   }
@@ -517,19 +531,21 @@ char **argv;
               if (correct.mode!=-1 &&
                   !do_correction(&correct, &run_conditions, beamline, starting_coord, &beam, run_control.i_step, 0) &&
                   !soft_failure) {
-                fputs("warning: orbit correction failed--continuing with next step\n", stderr);
+                fputs("warning: orbit correction failed--continuing with next step\n", stdout);
                 continue;
               }
               if (do_closed_orbit && 
                   !run_closed_orbit(&run_conditions, beamline, starting_coord, &beam, 1) &&
                   !soft_failure) {
-                fprintf(stderr, "Closed orbit not found---continuing to next step\n");
+                fprintf(stdout, "Closed orbit not found---continuing to next step\n");
+                fflush(stdout);
                 continue;
               }
               if (do_twiss_output && 
                   !run_twiss_output(&run_conditions, beamline, starting_coord, 1) &&
                   !soft_failure) {
-                fprintf(stderr, "Twiss parameters not defined---continuing to next step\n");
+                fprintf(stdout, "Twiss parameters not defined---continuing to next step\n");
+                fflush(stdout);
                 continue;
               }
               if (do_response_output)
@@ -556,7 +572,8 @@ char **argv;
 #ifdef SUNOS4
             check_heap();
 #endif
-            fprintf(stderr, "Finished tracking.\n");
+            fprintf(stdout, "Finished tracking.\n");
+            fflush(stdout);
             /* reassert defaults for namelist run_setup */
             lattice = use_beamline = acceptance = centroid = sigma = final = output = rootname = losses = NULL;
             combine_bunch_statistics = 0;
@@ -567,8 +584,8 @@ char **argv;
             tracking_updates = 1;
             concat_order = print_statistics = p_central = 0;
 #if defined(VAX_VMS) || defined(UNIX) || defined(_WIN32)
-            report_stats(stderr, "statistics: ");
-            fflush(stderr);
+            report_stats(stdout, "statistics: ");
+            fflush(stdout);
 #endif
             run_setuped = run_controled = error_controled = correction_setuped = do_chromatic_correction =
               fl_do_tune_correction = do_closed_orbit = do_twiss_output = do_response_output = 0;
@@ -649,7 +666,8 @@ char **argv;
             setup_closed_orbit(&namelist_text, &run_conditions, beamline);
             do_closed_orbit = 1;
             if (correction_setuped)
-                fprintf(stderr, "warning: you've asked to do both closed-orbit calculation and orbit correction.\nThis may duplicate effort.\n");
+                fprintf(stdout, "warning: you've asked to do both closed-orbit calculation and orbit correction.\nThis may duplicate effort.\n");
+                fflush(stdout);
             break;
           case FIND_APERTURE:
             setup_aperture_search(&namelist_text, &run_conditions, &run_control);
@@ -658,20 +676,22 @@ char **argv;
               if (correct.mode!= -1) {
                 if (!do_correction(&correct, &run_conditions, beamline, starting_coord, &beam, 
                                    run_control.i_step, 1) ) {
-                  fputs("warning: orbit correction failed--continuing with next step\n", stderr);
+                  fputs("warning: orbit correction failed--continuing with next step\n", stdout);
                   continue;
                 }
               }
               if (do_closed_orbit && 
                   !run_closed_orbit(&run_conditions, beamline, starting_coord, &beam, 0) &&
                   !soft_failure) {
-                fprintf(stderr, "Closed orbit not found---continuing to next step\n");
+                fprintf(stdout, "Closed orbit not found---continuing to next step\n");
+                fflush(stdout);
                 continue;
               }
               if (do_twiss_output && 
                   !run_twiss_output(&run_conditions, beamline, starting_coord, 0) &&
                   !soft_failure) {
-                fprintf(stderr, "Twiss parameters not defined---continuing to next step\n");
+                fprintf(stdout, "Twiss parameters not defined---continuing to next step\n");
+                fflush(stdout);
                 continue;
               }
               if (do_response_output)
@@ -679,19 +699,22 @@ char **argv;
               run_matrix_output(&run_conditions, beamline);
               for (i=failed=0; (fl_do_tune_correction || do_chromaticity_correction) && i<correction_iterations; i++) {
                 if (correction_iterations>1)
-                  fprintf(stderr, "\nTune/chromaticity correction iteration %ld\n", i+1);
+                  fprintf(stdout, "\nTune/chromaticity correction iteration %ld\n", i+1);
+                  fflush(stdout);
                 if (fl_do_tune_correction) {
                   if (do_closed_orbit && 
                       !run_closed_orbit(&run_conditions, beamline, starting_coord, &beam, 0) &&
                       !soft_failure) {
-                    fprintf(stderr, "Closed orbit not found---continuing to next step\n");
+                    fprintf(stdout, "Closed orbit not found---continuing to next step\n");
+                    fflush(stdout);
                     failed = 1;
                     break;
                   }
                   if (!do_tune_correction(&tune_corr_data, &run_conditions, beamline, starting_coord,
                                           run_control.i_step, i==correction_iterations-1) &&
                       !soft_failure) {
-                    fprintf(stderr, "Tune correction failed---continuing to next step\n");
+                    fprintf(stdout, "Tune correction failed---continuing to next step\n");
+                    fflush(stdout);
                     failed = 1;
                     break;
                   }
@@ -700,14 +723,16 @@ char **argv;
                   if (do_closed_orbit && 
                       !run_closed_orbit(&run_conditions, beamline, starting_coord, &beam, 0) &&
                       !soft_failure) {
-                    fprintf(stderr, "Closed orbit not found---continuing to next step\n");
+                    fprintf(stdout, "Closed orbit not found---continuing to next step\n");
+                    fflush(stdout);
                     failed = 1;
                     break;
                   }
                   if (!do_chromaticity_correction(&chrom_corr_data, &run_conditions, beamline, starting_coord,
                                                   run_control.i_step, i==correction_iterations-1) &&
                       !soft_failure) {
-                    fprintf(stderr, "Chromaticity correction failed---continuing to next step\n");
+                    fprintf(stdout, "Chromaticity correction failed---continuing to next step\n");
+                    fflush(stdout);
                     failed = 1;
                     break;
                   }
@@ -719,33 +744,37 @@ char **argv;
               if (correct.mode!=-1 &&
                   !do_correction(&correct, &run_conditions, beamline, starting_coord, &beam, run_control.i_step, 0) &&
                   !soft_failure) {
-                fputs("warning: orbit correction failed--continuing with next step\n", stderr);
+                fputs("warning: orbit correction failed--continuing with next step\n", stdout);
                 continue;
               }
               if (do_closed_orbit && 
                   !run_closed_orbit(&run_conditions, beamline, starting_coord, &beam, 1) &&
                   !soft_failure) {
-                fprintf(stderr, "Closed orbit not found---continuing to next step\n");
+                fprintf(stdout, "Closed orbit not found---continuing to next step\n");
+                fflush(stdout);
                 continue;
               }
               if (do_twiss_output && 
                   !run_twiss_output(&run_conditions, beamline, starting_coord, 1) &&
                   !soft_failure) {
-                fprintf(stderr, "Twiss parameters not defined---continuing to next step\n");
+                fprintf(stdout, "Twiss parameters not defined---continuing to next step\n");
+                fflush(stdout);
                 continue;
               }
               if (do_response_output)
                 run_response_output(&run_conditions, beamline, &correct, 1);
               do_aperture_search(&run_conditions, &run_control, &error_control, beamline);
             }
-            fprintf(stderr, "Finished all tracking steps.\n"); fflush(stderr);
+            fprintf(stdout, "Finished all tracking steps.\n"); fflush(stdout);
+            fflush(stdout);
             finish_aperture_search(&run_conditions, &run_control, &error_control, beamline);
             if (do_closed_orbit)
                 finish_clorb_output();
 #ifdef SUNOS4
             check_heap();
 #endif
-            fprintf(stderr, "Finished dynamic aperture search.\n");
+            fprintf(stdout, "Finished dynamic aperture search.\n");
+            fflush(stdout);
             /* reassert defaults for namelist run_setup */
             lattice = use_beamline = acceptance = centroid = sigma = final = output = rootname = losses = NULL;
             combine_bunch_statistics = 0;
@@ -756,8 +785,8 @@ char **argv;
             tracking_updates = 1;
             concat_order = print_statistics = p_central = 0;
 #if defined(VAX_VMS) || defined(UNIX) || defined(_WIN32)
-            report_stats(stderr, "statistics: ");
-            fflush(stderr);
+            report_stats(stdout, "statistics: ");
+            fflush(stdout);
 #endif
             run_setuped = run_controled = error_controled = correction_setuped = do_chromatic_correction =
                 fl_do_tune_correction = do_closed_orbit = do_twiss_output = do_response_output = 0;
@@ -769,7 +798,7 @@ char **argv;
                     fill_double_array(starting_coord, 6, 0.0);
                     if (correct.mode!= -1) {
                         if (!do_correction(&correct, &run_conditions, beamline, starting_coord, NULL, run_control.i_step, 1)) {
-                            fputs("warning: correction failed--continuing with next step", stderr);
+                            fputs("warning: correction failed--continuing with next step", stdout);
                             continue;
                             }
                         }
@@ -780,7 +809,8 @@ char **argv;
                     run_response_output(&run_conditions, beamline, &correct, 0);
                 for (i=0; (fl_do_tune_correction || do_chromaticity_correction) && i<correction_iterations; i++) {
                     if (correction_iterations>1)
-                        fprintf(stderr, "\nTune/chromaticity correction iteration %ld\n", i+1);
+                        fprintf(stdout, "\nTune/chromaticity correction iteration %ld\n", i+1);
+                        fflush(stdout);
                     if (fl_do_tune_correction) {
                         if (do_closed_orbit)
                             run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 0);
@@ -797,7 +827,7 @@ char **argv;
                 perturb_beamline(&run_control, &error_control, &run_conditions, beamline);
                 if (correct.mode!=-1 &&
                     !do_correction(&correct, &run_conditions, beamline, starting_coord, &beam, run_control.i_step, 0)) {
-                  fputs("warning: orbit correction failed--continuing with next step\n", stderr);
+                  fputs("warning: orbit correction failed--continuing with next step\n", stdout);
                   continue;
                 }
                 if (do_closed_orbit)
@@ -819,7 +849,8 @@ char **argv;
 #ifdef SUNOS4
             check_heap();
 #endif
-            fprintf(stderr, "Finished transport analysis.\n");
+            fprintf(stdout, "Finished transport analysis.\n");
+            fflush(stdout);
             /* reassert defaults for namelist run_setup */
             lattice = use_beamline = acceptance = centroid = sigma = final = output = rootname = losses = NULL;
             combine_bunch_statistics = 0;
@@ -830,8 +861,8 @@ char **argv;
             tracking_updates = 1;
             concat_order = print_statistics = p_central = 0;
 #if defined(VAX_VMS) || defined(UNIX) || defined(_WIN32)
-            report_stats(stderr, "statistics: ");
-            fflush(stderr);
+            report_stats(stdout, "statistics: ");
+            fflush(stdout);
 #endif
             run_setuped = run_controled = error_controled = correction_setuped = do_chromatic_correction =
                 fl_do_tune_correction = do_closed_orbit = do_twiss_output = do_matrix_output = do_twiss_output = 0;
@@ -862,7 +893,7 @@ char **argv;
             set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
             set_print_namelist_flags(0);
             process_namelist(&print_dictionary, &namelist_text);
-            print_namelist(stderr, &print_dictionary);
+            print_namelist(stdout, &print_dictionary);
             do_print_dictionary(filename, latex_form);
             break;
           case FLOOR_COORDINATES:
@@ -900,9 +931,11 @@ char **argv;
             setupSASEFELAtEnd(&namelist_text, &run_conditions, &output_data);
             break;
           default:
-            fprintf(stderr, "unknown namelist %s given.  Known namelists are:\n", namelist_text.group_name);
+            fprintf(stdout, "unknown namelist %s given.  Known namelists are:\n", namelist_text.group_name);
+            fflush(stdout);
             for (i=0; i<N_COMMANDS; i++)
-                fprintf(stderr, "%s\n", description[i]);
+                fprintf(stdout, "%s\n", description[i]);
+                fflush(stdout);
             exit(1);
             break;
             }
@@ -910,7 +943,8 @@ char **argv;
         check_heap();
 #endif
         }
-    fprintf(stderr, "End of input data encountered.\n"); fflush(stderr);
+    fprintf(stdout, "End of input data encountered.\n"); fflush(stdout);
+    fflush(stdout);
     lorentz_report();
     finish_load_parameters();
     if (semaphore_file && !fexists(semaphore_file)) {
@@ -940,10 +974,12 @@ double find_beam_p_central(char *input)
   for (i=psum=0; i<rows; i++) 
     psum += p[i];
   if (SDDS_ReadPage(&SDDSin)>0)
-    fprintf(stderr, "Warning: file %s has multiple pages.  Only the first is used for expand_for.\n",
+    fprintf(stdout, "Warning: file %s has multiple pages.  Only the first is used for expand_for.\n",
             input);
+    fflush(stdout);
   SDDS_Terminate(&SDDSin);
-  fprintf(stderr, "Expanding about p = %e\n", psum/rows);
+  fprintf(stdout, "Expanding about p = %e\n", psum/rows);
+  fflush(stdout);
   return psum/rows;
 }
 
@@ -954,33 +990,47 @@ void check_heap()
 {
     struct mallinfo info;
     
-    fprintf(stderr, "Performing memory heap verification..."); fflush(stderr);
+    fprintf(stdout, "Performing memory heap verification..."); fflush(stdout);
+    fflush(stdout);
     if (malloc_verify())
-        fputs("okay.", stderr);
+        fputs("okay.", stdout);
     else
-        fputs("errors, detected.", stderr);
-    fflush(stderr);
+        fputs("errors, detected.", stdout);
+    fflush(stdout);
 #if defined(VAX_VMS) || defined(UNIX) || defined(_WIN32)
-    report_stats(stderr, "statistics: ");
-    fflush(stderr);
+    report_stats(stdout, "statistics: ");
+    fflush(stdout);
 #endif
     return;
     info.arena = info.ordblks = info.smblks = info.hblks = info.hblkhd = info.usmblks = 0;   
     info.fsmblks = info.uordblks = info.fordblks = info.keepcost = info.allocated = info.treeoverhead = 0;
     info = mallinfo();
-    fprintf(stderr, "memory allocation information:\n");
-    fprintf(stderr, "  total space in arena: %ld\n", info.arena);     
-    fprintf(stderr, "  number of ordinary blocks: %ld\n", info.ordblks);   
-    fprintf(stderr, "  number of small blocks: %ld\n", info.smblks);    
-    fprintf(stderr, "  number of holding blocks: %ld\n", info.hblks);     
-    fprintf(stderr, "  space in holding block headers: %ld\n", info.hblkhd);    
-    fprintf(stderr, "  space in small blocks in use: %ld\n", info.usmblks);   
-    fprintf(stderr, "  space in free small blocks: %ld\n", info.fsmblks);   
-    fprintf(stderr, "  space in ordinary blocks in use: %ld\n", info.uordblks);  
-    fprintf(stderr, "  space in free ordinary blocks: %ld\n", info.fordblks);  
-    fprintf(stderr, "  cost of enabling keep option: %ld\n", info.keepcost);  
-    fprintf(stderr, "  number of ordinary blocks allocated: %ld\n", info.allocated);
-    fprintf(stderr, "  bytes used in maintaining the free tree: %ld\n", info.treeoverhead);
+    fprintf(stdout, "memory allocation information:\n");
+    fflush(stdout);
+    fprintf(stdout, "  total space in arena: %ld\n", info.arena);     
+    fflush(stdout);
+    fprintf(stdout, "  number of ordinary blocks: %ld\n", info.ordblks);   
+    fflush(stdout);
+    fprintf(stdout, "  number of small blocks: %ld\n", info.smblks);    
+    fflush(stdout);
+    fprintf(stdout, "  number of holding blocks: %ld\n", info.hblks);     
+    fflush(stdout);
+    fprintf(stdout, "  space in holding block headers: %ld\n", info.hblkhd);    
+    fflush(stdout);
+    fprintf(stdout, "  space in small blocks in use: %ld\n", info.usmblks);   
+    fflush(stdout);
+    fprintf(stdout, "  space in free small blocks: %ld\n", info.fsmblks);   
+    fflush(stdout);
+    fprintf(stdout, "  space in ordinary blocks in use: %ld\n", info.uordblks);  
+    fflush(stdout);
+    fprintf(stdout, "  space in free ordinary blocks: %ld\n", info.fordblks);  
+    fflush(stdout);
+    fprintf(stdout, "  cost of enabling keep option: %ld\n", info.keepcost);  
+    fflush(stdout);
+    fprintf(stdout, "  number of ordinary blocks allocated: %ld\n", info.allocated);
+    fflush(stdout);
+    fprintf(stdout, "  bytes used in maintaining the free tree: %ld\n", info.treeoverhead);
+    fflush(stdout);
     }
 #endif
 
@@ -1092,9 +1142,10 @@ void print_dictionary_entry(FILE *fp, long type, long latex_form)
               PRINTABLE_NULL(entity_description[type].parameter[j].string));
       break;
     default:
-      fprintf(stderr, "Invalid parameter type for %s item of %s\n",
+      fprintf(stdout, "Invalid parameter type for %s item of %s\n",
               PRINTABLE_NULL(entity_description[type].parameter[j].name),
               entity_name[type]);
+      fflush(stdout);
       exit(1);
     }
     if (latex_form)
@@ -1182,7 +1233,8 @@ char *translateUnitsToTex(char *source)
           strncat(buffer, ptr, 1);
         break;
       default:
-        fprintf(stderr, "Unrecognized $ sequence: %s\n", ptr);
+        fprintf(stdout, "Unrecognized $ sequence: %s\n", ptr);
+        fflush(stdout);
         strncat(buffer, ptr, 1);
         break;
       }

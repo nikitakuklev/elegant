@@ -57,6 +57,9 @@ CopyrightNotice001*/
  * Michael Borland, 1999
  *
  $Log: not supported by cvs2svn $
+ Revision 1.1  1999/07/01 19:19:57  borland
+ First versions in repository.
+
  */
 #include "mdb.h"
 #include "scan.h"
@@ -175,7 +178,8 @@ main(int argc, char **argv)
           SDDS_Bomb("invalid -pipe syntax");
         break;
       default:
-        fprintf(stderr, "error: unknown switch: %s\n", s_arg[i_arg].list[0]);
+        fprintf(stdout, "error: unknown switch: %s\n", s_arg[i_arg].list[0]);
+        fflush(stdout);
         exit(1);
         break;
       }
@@ -204,8 +208,9 @@ main(int argc, char **argv)
   while (ValueName[++i]) {
     if (SDDS_GetColumnIndex(&SDDSin, ValueName[i]->name)<0) {
       if (ValueName[i]->requiredInFile) {
-        fprintf(stderr, "Error (sddssasefel): %s is required to be in the input file\n",
+        fprintf(stdout, "Error (sddssasefel): %s is required to be in the input file\n",
                 ValueName[i]->name);
+        fflush(stdout);
         exit(1);
       }
       ValueName[i]->inFile = 0;
@@ -216,7 +221,7 @@ main(int argc, char **argv)
     else {
       ValueName[i]->inFile = 1;
       if (SDDS_CheckColumn(&SDDSin, ValueName[i]->name, ValueName[i]->units, 
-                           SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OK)
+                           SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK)
         exit(1);
       if (!SDDS_TransferColumnDefinition(&SDDSout, &SDDSin, ValueName[i]->name, NULL))
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -313,24 +318,30 @@ void OptimizeSASEFELParameters
   if (i==8)
     return;
 #if DEBUG
-  fprintf(stderr, "Before optimization:\n");
-  fprintf(stderr, " charge=%le, rmsBL=%le, uP=%le, uK=%le, betax=%le, ex0=%le, Sdelta=%le, pC=%le\n",
+  fprintf(stdout, "Before optimization:\n");
+  fflush(stdout);
+  fprintf(stdout, " charge=%le, rmsBL=%le, uP=%le, uK=%le, betax=%le, ex0=%le, Sdelta=%le, pC=%le\n",
           x0[0], x0[1], x0[2], x0[3], x0[4], x0[5], x0[6], x0[7]);
+  fflush(stdout);
   if (simplexMin(&result, x0, dx, NULL, NULL, disable, 8, 0.0, 1e-10,
                  SASEFELOptimFn, NULL, 500, 10)<0) {
-    fprintf(stderr, "Optimization unsuccessful\n");
+    fprintf(stdout, "Optimization unsuccessful\n");
+    fflush(stdout);
   }
 #endif
   for (i=0; i<8; i++)
     dx[i] = 0.1*x0[i];
   if (simplexMin(&result, x0, dx, NULL, NULL, disable, 8, 0.0, 1e-9,
                  SASEFELOptimFn, NULL, 500, 10)<0) {
-    fprintf(stderr, "Optimization unsuccessful\n");
+    fprintf(stdout, "Optimization unsuccessful\n");
+    fflush(stdout);
   }
 #if DEBUG
-  fprintf(stderr, "After optimization:\n");
-  fprintf(stderr, " charge=%le, rmsBL=%le, uP=%le, uK=%le, betax=%le, ex0=%le, Sdelta=%le, pC=%le\n",
+  fprintf(stdout, "After optimization:\n");
+  fflush(stdout);
+  fprintf(stdout, " charge=%le, rmsBL=%le, uP=%le, uK=%le, betax=%le, ex0=%le, Sdelta=%le, pC=%le\n",
           x0[0], x0[1], x0[2], x0[3], x0[4], x0[5], x0[6], x0[7]);
+  fflush(stdout);
 #endif
 
   transferOptimizationParameters(x0, 0, charge, row);
@@ -369,8 +380,9 @@ double SASEFELOptimFn(double *x, long *invalid)
                            x[7], /* pCentral */
                            1);
 #if DEBUG 
-  fprintf(stderr, "opt: Q=%g, BL=%g, UP=%g, UK=%g, BX=%g, EX=%g, SD=%g, PC=%g -> %g\n",
+  fprintf(stdout, "opt: Q=%g, BL=%g, UP=%g, UK=%g, BX=%g, EX=%g, SD=%g, PC=%g -> %g\n",
           x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7], saturationLength);
+  fflush(stdout);
 #endif
   return saturationLength;
 }
@@ -387,7 +399,8 @@ void setOptimizationParameters(double *x0, double *dx, short *disable, long inde
     dx[index] = 0.1*x0[index];
     disable[index] = 0;
 #if DEBUG
-    fprintf(stderr, "optimizing %s\n", data.name);
+    fprintf(stdout, "optimizing %s\n", data.name);
+    fflush(stdout);
 #endif
   }
 }

@@ -37,7 +37,8 @@ int main()
   chop_nl(filename);
   factor = exp(log(result/eacc)/limit);
   if (!(fp = fopen(filename, "w"))) {
-    fprintf(stderr, "Couldn't open: %s\n", filename);
+    fprintf(stdout, "Couldn't open: %s\n", filename);
+    fflush(stdout);
     exit(1);
   }
   fprintf(fp, "SDDS1\n");
@@ -76,7 +77,8 @@ int main()
         break;
       if (lastResult) {
         /* err *= result/lastResult;
-           fprintf(stderr, "err -> %le\n", err);
+           fprintf(stdout, "err -> %le\n", err);
+           fflush(stdout);
            */
       }
       lastResult = result;

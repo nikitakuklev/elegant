@@ -64,7 +64,8 @@ void track_through_trfmode(
 
   omega = PIx2*trfmode->freq;
   if ((Q = trfmode->Q/(1+trfmode->beta))<=0.5) {
-    fprintf(stderr, "The effective Q<=0.5 for TRFMODE.  Use the ZTRANSVERSE element.\n");
+    fprintf(stdout, "The effective Q<=0.5 for TRFMODE.  Use the ZTRANSVERSE element.\n");
+    fflush(stdout);
     exit(1);
   }
   tau = 2*Q/omega;
@@ -76,12 +77,14 @@ void track_through_trfmode(
   
   if (!been_warned) {        
     if (trfmode->freq<1e3 && trfmode->freq)  {
-      fprintf(stderr, "\7\7\7warning: your TRFMODE frequency is less than 1kHz--this may be an error\n");
+      fprintf(stdout, "\7\7\7warning: your TRFMODE frequency is less than 1kHz--this may be an error\n");
+      fflush(stdout);
       been_warned = 1;
     }
     if (been_warned) {
-      fprintf(stderr, "units of parameters for TRFMODE are as follows:\n");
-      print_dictionary_entry(stderr, T_TRFMODE, 0);
+      fprintf(stdout, "units of parameters for TRFMODE are as follows:\n");
+      fflush(stdout);
+      print_dictionary_entry(stdout, T_TRFMODE, 0);
     }
   }
 
@@ -131,8 +134,9 @@ void track_through_trfmode(
     n_binned++;
   }
   if (n_binned!=np) {
-    fprintf(stderr, "Warning: only %ld of %ld particles binned (TRFMODE)\n",
+    fprintf(stdout, "Warning: only %ld of %ld particles binned (TRFMODE)\n",
             n_binned, np);
+    fflush(stdout);
   }
   
   /* These adjustments per Zotter and Kheifets, 3.2.4, 3.3.2 */
@@ -257,8 +261,9 @@ void set_up_trfmode(TRFMODE *trfmode, char *element_name, double element_z,
     T = trfmode->bin_size*trfmode->n_bins;
     trfmode->bin_size = 0.1/trfmode->freq;
     trfmode->n_bins = T/trfmode->bin_size;
-    fprintf(stderr, "The TRFMODE %s bin size is too large--setting to %e and increasing to %ld bins\n",
+    fprintf(stdout, "The TRFMODE %s bin size is too large--setting to %e and increasing to %ld bins\n",
             element_name, trfmode->bin_size, trfmode->n_bins);
+    fflush(stdout);
   }
   trfmode->last_t = element_z/c_mks;
   trfmode->Vxr = trfmode->Vxi = trfmode->Vx = 0;

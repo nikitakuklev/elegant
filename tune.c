@@ -36,7 +36,7 @@ void setup_tune_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline,
     set_print_namelist_flags(0);
     process_namelist(&correct_tunes, nltext);
     str_toupper(quadrupoles);
-    print_namelist(stderr, &correct_tunes);
+    print_namelist(stdout, &correct_tunes);
 
     if (tune->name)
         tfree(tune->name);
@@ -77,7 +77,8 @@ void setup_tune_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline,
         }
 
     if (!tune->use_perturbed_matrix || tune->tunex<0 || tune->tuney<0) {
-      fprintf(stderr, "Computing periodic Twiss parameters.\n");
+      fprintf(stdout, "Computing periodic Twiss parameters.\n");
+      fflush(stdout);
       M = beamline->matrix = compute_periodic_twiss(&beta_x, &alpha_x, &eta_x, &etap_x, beamline->tune,
                                                     &beta_y, &alpha_y, &eta_y, &etap_y, beamline->tune+1, 
                                                     beamline->elem_twiss, NULL, run, &unstable, NULL);
@@ -94,9 +95,11 @@ void setup_tune_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline,
       
       propagate_twiss_parameters(beamline->twiss0, beamline->tune, NULL, beamline->elem_twiss, run, NULL);
       if (tune->tunex<0)
-        fprintf(stderr, "horizontal tune will be held at %f\n", tune->tunex = beamline->tune[0]);
+        fprintf(stdout, "horizontal tune will be held at %f\n", tune->tunex = beamline->tune[0]);
+        fflush(stdout);
       if (tune->tuney<0)
-        fprintf(stderr, "vertical tune will be held at %f\n", tune->tuney = beamline->tune[1]);
+        fprintf(stdout, "vertical tune will be held at %f\n", tune->tuney = beamline->tune[1]);
+        fflush(stdout);
     }
     
     if (strength_log) {
@@ -132,7 +135,8 @@ void computeTuneCorrectionMatrix(RUN *run, LINE_LIST *beamline, TUNE_CORRECTION 
     m_alloc(&(tune->dK1), tune->n_families, 1);
     m_alloc(&(tune->dtune), 2, 1);
 
-    fprintf(stderr, "Computing tune influence matrix for all named quadrupoles.\n");
+    fprintf(stdout, "Computing tune influence matrix for all named quadrupoles.\n");
+    fflush(stdout);
 
     for (i=0; i<tune->n_families; i++) {
         count = 0;
@@ -141,7 +145,8 @@ void computeTuneCorrectionMatrix(RUN *run, LINE_LIST *beamline, TUNE_CORRECTION 
         while ((context=find_element(tune->name[i], &context, &(beamline->elem)))) {
             if (count==0) {
                 if (context->type!=T_QUAD && context->type!=T_KQUAD) {
-                    fprintf(stderr, "%s is not a QUAD or KQUAD element!\n", context->name);
+                    fprintf(stdout, "%s is not a QUAD or KQUAD element!\n", context->name);
+                    fflush(stdout);
                     exit(1);
                     }
                 }
@@ -150,25 +155,30 @@ void computeTuneCorrectionMatrix(RUN *run, LINE_LIST *beamline, TUNE_CORRECTION 
             count++;
             }
         if (count==0) {
-            fprintf(stderr, "error: element %s is not part of the beamline\n", tune->name[i]);
+            fprintf(stdout, "error: element %s is not part of the beamline\n", tune->name[i]);
+            fflush(stdout);
             exit(1);
             }
         if (printout)
-          fprintf(stderr, "%ld instances of %s found\n", count, tune->name[i]); 
+          fprintf(stdout, "%ld instances of %s found\n", count, tune->name[i]); 
+          fflush(stdout);
         
         C->a[0][i] = betax_L_sum/(4*PI);
         C->a[1][i] = -betay_L_sum/(4*PI);
         if (C->a[0][i]==0 || C->a[1][i]==0) {
-            fprintf(stderr, "error: element %s does not change the tune!\n", tune->name[i]);
+            fprintf(stdout, "error: element %s does not change the tune!\n", tune->name[i]);
+            fflush(stdout);
             exit(1);
             }
         }
 
     if (printout) {
-      fprintf(stderr, "\nfamily               dNUx/dK1                  dNUy/dK1\n");
+      fprintf(stdout, "\nfamily               dNUx/dK1                  dNUy/dK1\n");
+      fflush(stdout);
 
       for (i=0; i<tune->n_families; i++)
-        fprintf(stderr, "%10s:    %22.15e     %22.15e\n", tune->name[i], C->a[0][i], C->a[1][i]);
+        fprintf(stdout, "%10s:    %22.15e     %22.15e\n", tune->name[i], C->a[0][i], C->a[1][i]);
+        fflush(stdout);
     }
     
     m_trans(Ct, C);
@@ -177,10 +187,13 @@ void computeTuneCorrectionMatrix(RUN *run, LINE_LIST *beamline, TUNE_CORRECTION 
     m_mult(tune->T, inv_CtC, Ct);
 
     if (printout) {
-      fprintf(stderr, "\nfamily               dK1/dNUx                  dK1/dNUy\n");
+      fprintf(stdout, "\nfamily               dK1/dNUx                  dK1/dNUy\n");
+      fflush(stdout);
       for (i=0; i<tune->n_families; i++)
-        fprintf(stderr, "%10s:    %22.15e     %22.15e\n", tune->name[i], tune->T->a[i][0], tune->T->a[i][1]);
-      fprintf(stderr, "\n");
+        fprintf(stdout, "%10s:    %22.15e     %22.15e\n", tune->name[i], tune->T->a[i][0], tune->T->a[i][1]);
+        fflush(stdout);
+      fprintf(stdout, "\n");
+      fflush(stdout);
     }
     
     m_free(&C);
@@ -228,8 +241,10 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
   if (!M || !M->C || !M->R)
     bomb("something wrong with transfer map for beamline (do_tune_correction.1)", NULL);
 
-  fprintf(stderr, "\nAdjusting tunes:\n");
-  fprintf(stderr, "initial tunes:  %e  %e\n", beamline->tune[0], beamline->tune[1]);
+  fprintf(stdout, "\nAdjusting tunes:\n");
+  fflush(stdout);
+  fprintf(stdout, "initial tunes:  %e  %e\n", beamline->tune[0], beamline->tune[1]);
+  fflush(stdout);
   MsError = sqr(beamline->tune[0]-tune->tunex)+sqr(beamline->tune[1]-tune->tuney);
   
   if (!tunes_saved) {
@@ -246,7 +261,8 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
     MsError = sqr(beamline->tune[0]-tune->tunex)+sqr(beamline->tune[1]-tune->tuney);
     if (MsError>LastMsError) {
       /* reset to minimum gain */
-      fprintf(stderr, "Warning: tune correction diverging---gain reset to minimum\n");
+      fprintf(stdout, "Warning: tune correction diverging---gain reset to minimum\n");
+      fflush(stdout);
       gain = tune->gain;
       steps_since_gain_change = 0;
     }
@@ -268,7 +284,8 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
         break;
     }
     if (i!=tune->n_families) {
-      fprintf(stderr, "Unable to correct tune---diverged.\n");
+      fprintf(stdout, "Unable to correct tune---diverged.\n");
+      fflush(stdout);
       return 0;
     }
     
@@ -281,9 +298,11 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
         compute_matrix(context, run, NULL);
         type = context->type;
       }
-      fprintf(stderr, "change of %s[K1] is  %.15g 1/m^3\n", tune->name[i], tune->dK1->a[i][0]);
+      fprintf(stdout, "change of %s[K1] is  %.15g 1/m^3\n", tune->name[i], tune->dK1->a[i][0]);
+      fflush(stdout);
       if (alter_defined_values) {
-        fprintf(stderr, "new value of %s[K1] is  %.15g 1/m^3\n", tune->name[i], K1);
+        fprintf(stdout, "new value of %s[K1] is  %.15g 1/m^3\n", tune->name[i], K1);
+        fflush(stdout);
         change_defined_parameter(tune->name[i], K1_param, type, K1, NULL, LOAD_FLAG_ABSOLUTE);
       }
     }    
@@ -319,7 +338,8 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
       bomb("something wrong with transfer map for beamline (do_tune_correction.2)", NULL);
 
     propagate_twiss_parameters(beamline->twiss0, beamline->tune, NULL, beamline->elem_twiss, run, clorb);
-    fprintf(stderr, "new tunes: %e %e\n", beamline->tune[0], beamline->tune[1]);
+    fprintf(stdout, "new tunes: %e %e\n", beamline->tune[0], beamline->tune[1]);
+    fflush(stdout);
   }
 
   if (fp_sl && last_iteration) {

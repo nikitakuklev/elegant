@@ -46,7 +46,8 @@ void track_through_rfmode(
       
     omega = PIx2*rfmode->freq;
     if ((Q = rfmode->Q/(1+rfmode->beta))<=0.5) {
-      fprintf(stderr, "The effective Q<=0.5 for RFMODE.  Use the ZLONGIT element.\n");
+      fprintf(stdout, "The effective Q<=0.5 for RFMODE.  Use the ZLONGIT element.\n");
+      fflush(stdout);
       exit(1);
     }
     tau = 2*Q/omega;
@@ -59,12 +60,14 @@ void track_through_rfmode(
 
     if (!been_warned) {        
         if (rfmode->freq<1e3 && rfmode->freq)  {
-            fprintf(stderr, "\7\7\7warning: your RFMODE frequency is less than 1kHz--this may be an error\n");
+            fprintf(stdout, "\7\7\7warning: your RFMODE frequency is less than 1kHz--this may be an error\n");
+            fflush(stdout);
             been_warned = 1;
             }
         if (been_warned) {
-            fprintf(stderr, "units of parameters for RFMODE are as follows:\n");
-            print_dictionary_entry(stderr, T_RFMODE, 0);
+            fprintf(stdout, "units of parameters for RFMODE are as follows:\n");
+            fflush(stdout);
+            print_dictionary_entry(stdout, T_RFMODE, 0);
             }
         }
 
@@ -225,8 +228,9 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
       T = rfmode->bin_size*rfmode->n_bins;
       rfmode->bin_size = 0.1/rfmode->freq;
       rfmode->n_bins = T/rfmode->bin_size;
-      fprintf(stderr, "The RFMODE %s bin size is too large--setting to %e and increasing to %ld bins\n",
+      fprintf(stdout, "The RFMODE %s bin size is too large--setting to %e and increasing to %ld bins\n",
               element_name, rfmode->bin_size, rfmode->n_bins);
+      fflush(stdout);
     }
     if (rfmode->sample_interval<=0)
         rfmode->sample_interval = 1;
@@ -258,10 +262,12 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
         Vc = cmulr(cdiv(cassign(1, 0), cadd(cassign(1, 0), cmulr(cexpi(omega*To), -exp(-To/tau)))), -Vb*exp(-To/tau));
         rfmode->V = sqrt(sqr(Vc.r)+sqr(Vc.i));
         rfmode->last_phase = atan2(Vc.i, Vc.r);
-        fprintf(stderr, "RFMODE %s at z=%fm preloaded:  V = (%e, %e) V  =  %eV at %fdeg \n",
+        fprintf(stdout, "RFMODE %s at z=%fm preloaded:  V = (%e, %e) V  =  %eV at %fdeg \n",
                element_name, element_z, Vc.r, Vc.i,
                rfmode->V, rfmode->last_phase*180/PI);
-        fprintf(stderr, "To = %es, Vb = %eV, tau = %es\n", To, Vb, tau);
+        fflush(stdout);
+        fprintf(stdout, "To = %es, Vb = %eV, tau = %es\n", To, Vb, tau);
+        fflush(stdout);
         }
     else {
         /* calculate phasor for specified initial voltage--convert to V=Vo*sin(phase) convention */

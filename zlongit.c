@@ -100,7 +100,8 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
       n_binned++;
     }
     if (n_binned!=np)
-        fprintf(stderr, "warning: only %ld of %ld particles where binned (ZLONGIT)\n", n_binned, np);
+        fprintf(stdout, "warning: only %ld of %ld particles where binned (ZLONGIT)\n", n_binned, np);
+        fflush(stdout);
     if (zlongit->smoothing)
       SavitzyGolaySmooth(Itime, nb, zlongit->SGOrder, 
                          zlongit->SGHalfWidth, zlongit->SGHalfWidth, 0);
@@ -243,9 +244,11 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
             bomb("can't specify both broad_band impedance and Z(f) files for ZLONGIT element", NULL);
         if (2/(zlongit->freq*zlongit->bin_size)<10) {
           /* want maximum frequency in Z > 10*fResonance */
-          fprintf(stderr, "ZLONGIT has excessive bin size for given frequency\n");
+          fprintf(stdout, "ZLONGIT has excessive bin size for given frequency\n");
+          fflush(stdout);
           zlongit->bin_size = 0.2/zlongit->freq;
-          fprintf(stderr, "  Bin size adjusted to %e\n", zlongit->bin_size);
+          fprintf(stdout, "  Bin size adjusted to %e\n", zlongit->bin_size);
+          fflush(stdout);
         }
         /* Want frequency resolution < fResonance/10 */
         factor1 = 10/(zlongit->n_bins*zlongit->bin_size*zlongit->freq);
@@ -253,15 +256,18 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
         factor2 = 10/(zlongit->n_bins*zlongit->bin_size*zlongit->freq/zlongit->Q);
         factor = MAX(factor1, factor2);
         if (factor>1) {
-          fprintf(stderr, "ZLONGIT has too few bins or excessive bin size for given frequency\n");
+          fprintf(stdout, "ZLONGIT has too few bins or excessive bin size for given frequency\n");
+          fflush(stdout);
           zlongit->n_bins = pow(2, (long)(log(zlongit->n_bins*factor)/log(2)+1));
-          fprintf(stderr, "  Number of bins adjusted to %ld\n",
+          fprintf(stdout, "  Number of bins adjusted to %ld\n",
                   zlongit->n_bins);
+          fflush(stdout);
         }
         df = 1/(zlongit->n_bins*zlongit->bin_size)/(zlongit->freq);
         nfreq = zlongit->n_bins/2 + 1;
-        fprintf(stderr, "ZLONGIT has %ld frequency points with df=%e\n",
+        fprintf(stdout, "ZLONGIT has %ld frequency points with df=%e\n",
                 nfreq, df);
+        fflush(stdout);
         zlongit->Z = tmalloc(sizeof(*(zlongit->Z))*zlongit->n_bins);
         zlongit->Z[0] = 0;
         zlongit->Z[zlongit->n_bins-1] = 0;    /* Nyquist term */
@@ -337,12 +343,15 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
         zlongit->n_bins = 2*(n_spect-1);
         zlongit->bin_size = 1.0/(zlongit->n_bins*df_spect);
         if (t_range>zlongit->n_bins*zlongit->bin_size) {
-            fprintf(stderr, "error for ZLONGIT element:\nimpedance-spectrum-equivalent binning range not sufficient.\n");
-            fprintf(stderr, "consider padding the impedance spectrum\n");
+            fprintf(stdout, "error for ZLONGIT element:\nimpedance-spectrum-equivalent binning range not sufficient.\n");
+            fflush(stdout);
+            fprintf(stdout, "consider padding the impedance spectrum\n");
+            fflush(stdout);
             exit(1);
             }
-        fprintf(stderr, "Using Nb=%ld and dt=%e in ZLONGIT\n",
+        fprintf(stdout, "Using Nb=%ld and dt=%e in ZLONGIT\n",
                 zlongit->n_bins, zlongit->bin_size);
+        fflush(stdout);
         zlongit->Z = tmalloc(sizeof(*zlongit->Z)*2*zlongit->n_bins);
         for (i=0; i<n_spect; i++) {
             if (i==0)
@@ -380,7 +389,8 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
  contents=\"real impedance spectrum, parent\", sdds=0 &end", 
                         zlongit->Zreal, getenv("PWD"));
                 if (!SDDS_ProcessAssociateString(&zlongit->SDDS_wake, associate)) {
-                    fprintf(stderr, "Unable to define SDDS associate (set_up_zlongit)--string was:%s\n", associate);
+                    fprintf(stdout, "Unable to define SDDS associate (set_up_zlongit)--string was:%s\n", associate);
+                    fflush(stdout);
                     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
                     exit(1);
                   }
@@ -389,7 +399,8 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
  contents=\"real impedance spectrum, parent\", sdds=0 &end", 
                         zlongit->Zimag, getenv("PWD"));
                 if (!SDDS_ProcessAssociateString(&zlongit->SDDS_wake, associate)) {
-                  fprintf(stderr, "Unable to define SDDS associate (set_up_zlongit)--string was:%s\n", associate);
+                  fprintf(stdout, "Unable to define SDDS associate (set_up_zlongit)--string was:%s\n", associate);
+                  fflush(stdout);
                   SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
                   exit(1);
                 }

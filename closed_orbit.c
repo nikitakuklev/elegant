@@ -54,7 +54,7 @@ void setup_closed_orbit(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
     process_namelist(&closed_orbit, nltext);
-    print_namelist(stderr, &closed_orbit);
+    print_namelist(stdout, &closed_orbit);
 
     if (output)
         output = compose_filename(output, run->rootname);
@@ -118,10 +118,12 @@ long run_closed_orbit(RUN *run, LINE_LIST *beamline, double *starting_coord, BEA
 
     /* do output, if required */
     if (verbosity && !bad_orbit) {
-        fprintf(stderr, "closed orbit: \n");
+        fprintf(stdout, "closed orbit: \n");
+        fflush(stdout);
         for (i=0; i<7; i++)
-            fprintf(stderr, "%.8e ", starting_coord[i]);
-        fputc('\n', stderr);
+            fprintf(stdout, "%.8e ", starting_coord[i]);
+            fflush(stdout);
+        fputc('\n', stdout);
         }
 
     if (do_output && SDDS_clorb_initialized && !bad_orbit) 
@@ -191,7 +193,8 @@ void dump_closed_orbit(TRAJECTORY *traj, long n_elems, long step)
                                IC_S, position, IC_X, traj[i].centroid[0], IC_Y, traj[i].centroid[2],
                                IC_ELEMENT, name, IC_OCCURENCE, occurence, 
                                IC_TYPE, i==0?"MARK":entity_name[traj[i].elem->type], -1)) {
-            fprintf(stderr, "Unable to set row %ld values (dump_closed_orbit)\n", i);
+            fprintf(stdout, "Unable to set row %ld values (dump_closed_orbit)\n", i);
+            fflush(stdout);
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
             exit(1);
             }

@@ -144,12 +144,14 @@ void SDDS_FinalOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, lo
         (optimization_quantities &&
          !SDDS_DefineSimpleParameters(SDDS_table, optimization_quantities, optimization_quantity_name, optimization_quantity_unit,
                                    SDDS_DOUBLE))) {
-        fprintf(stderr, "Problem defining extra SDDS parameters in file %s (%s)\n", filename, caller);
+        fprintf(stdout, "Problem defining extra SDDS parameters in file %s (%s)\n", filename, caller);
+        fflush(stdout);
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
         exit(1);
         }
     if (!SDDS_WriteLayout(SDDS_table)) {
-        fprintf(stderr, "Unable to write SDDS layout for file %s (%s)\n", filename, caller);
+        fprintf(stdout, "Unable to write SDDS layout for file %s (%s)\n", filename, caller);
+        fflush(stdout);
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
         exit(1);
         }
@@ -192,8 +194,9 @@ void dump_final_properties
 
     if ((n_properties=SDDS_ParameterCount(SDDS_table)) !=
         (FINAL_PROPERTY_PARAMETERS+n_varied_quan+n_perturbed_quan+n_optim_quan)) {
-        fprintf(stderr, "error: the number of parameters (%ld) defined for the SDDS table for the final properties file is not equal to the number of quantities (%ld) for which information is provided (dump_final_properties)\n",
+        fprintf(stdout, "error: the number of parameters (%ld) defined for the SDDS table for the final properties file is not equal to the number of quantities (%ld) for which information is provided (dump_final_properties)\n",
                 n_properties, FINAL_PROPERTY_PARAMETERS+n_varied_quan+n_perturbed_quan+n_optim_quan);
+        fflush(stdout);
         abort();
         }
     computed_properties = tmalloc(sizeof(*computed_properties)*n_properties);
@@ -202,8 +205,9 @@ void dump_final_properties
                        (computed_properties, sums, n_original, p_central, M, particle, step,
                         totalSteps, charge))!=
         (n_properties-(n_varied_quan+n_perturbed_quan+n_optim_quan))) {
-        fprintf(stderr, "error: compute_final_properties computed %ld quantities--%ld expected. (dump_final_properties)",
+        fprintf(stdout, "error: compute_final_properties computed %ld quantities--%ld expected. (dump_final_properties)",
             n_computed, n_properties-(n_varied_quan+n_perturbed_quan+n_optim_quan));
+        fflush(stdout);
         abort();
         }
 
@@ -322,7 +326,8 @@ long compute_final_properties
     tmax = dp_max = -(tmin=dp_min=DBL_MAX);
     for (i=sum=0; i<sums->n_part; i++) {
       if (!coord[i]) {
-        fprintf(stderr, "coordinate element for particle %ld is null (compute_final_properties)\n", i);
+        fprintf(stdout, "coordinate element for particle %ld is null (compute_final_properties)\n", i);
+        fflush(stdout);
         abort();
       }
       if (coord[i][5]>dp_max)
@@ -443,12 +448,14 @@ double beam_width(double fraction, double **coord, long n_part,
     /* find indices of particles that are at +/- fraction/2 from the median */
     i_median = n_part/2;
     if ((i_lo = i_median - fraction/2.*n_part)<0) {
-        fprintf(stderr, "warning: i_lo < 0 in beam_width\ni_median = %ld, n_part = %ld, fraction = %e\n",
+        fprintf(stdout, "warning: i_lo < 0 in beam_width\ni_median = %ld, n_part = %ld, fraction = %e\n",
             i_lo, n_part, fraction);
+        fflush(stdout);
         }
     if ((i_hi = i_median + fraction/2.*n_part)>=n_part) {
-        fprintf(stderr, "warning: i_hi >= n_part in beam_width!\ni_median = %ld, n_part = %ld, fraction = %e\n",
+        fprintf(stdout, "warning: i_hi >= n_part in beam_width!\ni_median = %ld, n_part = %ld, fraction = %e\n",
             i_hi, n_part, fraction);
+        fflush(stdout);
         }
 
     if (i_lo!=0 && i_hi!=(n_part-1)) {
@@ -575,7 +582,8 @@ void compute_longitudinal_parameters(ONE_PLANE_PARAMETERS *bp, double **coord, l
     if (!n)
         return;
     if (!bp) {
-        fprintf(stderr, "NULL ONE_PLANE_PARAMETERS pointer passed to compute_longitudinal_parameters\n");
+        fprintf(stdout, "NULL ONE_PLANE_PARAMETERS pointer passed to compute_longitudinal_parameters\n");
+        fflush(stdout);
         abort();
         }
 
@@ -634,7 +642,8 @@ void compute_transverse_parameters(ONE_PLANE_PARAMETERS *bp, double **coord, lon
   if (!n)
     return;
   if (!bp) {
-    fprintf(stderr, "NULL ONE_PLANE_PARAMETERS pointer passed to compute_transverse_parameters\n");
+    fprintf(stdout, "NULL ONE_PLANE_PARAMETERS pointer passed to compute_transverse_parameters\n");
+    fflush(stdout);
     abort();
   }
   offset = plane?2:0;
@@ -683,8 +692,9 @@ void rpn_store_final_properties(double *value, long number)
     long i;
     log_entry("rpn_store_final_parameters");
     if (number!=FINAL_PROPERTY_PARAMETERS) {
-        fprintf(stderr, "error: number of values (%ld) being stored != FINAL_PROPERTY_PARAMETERS (rpn_store_final_parameters)\n",
+        fprintf(stdout, "error: number of values (%ld) being stored != FINAL_PROPERTY_PARAMETERS (rpn_store_final_parameters)\n",
                 number);
+        fflush(stdout);
         abort();
         }
     if (!memory_number) {

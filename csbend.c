@@ -105,8 +105,9 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     e2_kick_limit *= rho0/rho_actual;
   }
   if (e1_kick_limit>0 || e2_kick_limit>0)
-    fprintf(stderr, "rho0=%e  rho_a=%e fse=%e e1_kick_limit=%e e2_kick_limit=%e\n",
+    fprintf(stdout, "rho0=%e  rho_a=%e fse=%e e1_kick_limit=%e e2_kick_limit=%e\n",
             rho0, rho_actual, csbend->fse, e1_kick_limit, e2_kick_limit);
+    fflush(stdout);
   
   /* angles for fringe-field effects */
   Kg   = 2*csbend->hgap*csbend->fint;
@@ -196,17 +197,19 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     dcoord_etilt[4] = dz*sqrt(1+sqr(qp3));
     dcoord_etilt[5] = 0;
 #ifdef DEBUG
-    fprintf(stderr, "pre-tilt offsets due to ETILT=%le:  %le %le %le %le %le\n",
+    fprintf(stdout, "pre-tilt offsets due to ETILT=%le:  %le %le %le %le %le\n",
             etilt, dcoord_etilt[0], dcoord_etilt[1], dcoord_etilt[2],
             dcoord_etilt[3], dcoord_etilt[4]);
+    fflush(stdout);
 #endif
 
     /* rotate by tilt to get into same frame as bend equations. */
     rotate_coordinates(dcoord_etilt, tilt);
 #ifdef DEBUG
-    fprintf(stderr, "offsets due to ETILT=%le:  %le %le %le %le %le\n",
+    fprintf(stdout, "offsets due to ETILT=%le:  %le %le %le %le %le\n",
             etilt, dcoord_etilt[0], dcoord_etilt[1], dcoord_etilt[2],
             dcoord_etilt[3], dcoord_etilt[4]);
+    fflush(stdout);
 #endif
   }
   else
@@ -225,15 +228,18 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
 
   for (i_part=0; i_part<=i_top; i_part++) {
     if (!part) {
-      fprintf(stderr, "error: null particle array found (working on particle %ld) (track_through_csbend)\n", i_part);
+      fprintf(stdout, "error: null particle array found (working on particle %ld) (track_through_csbend)\n", i_part);
+      fflush(stdout);
       abort();
     }
     if (!(coord = part[i_part])) {
-      fprintf(stderr, "error: null coordinate pointer for particle %ld (track_through_csbend)\n", i_part);
+      fprintf(stdout, "error: null coordinate pointer for particle %ld (track_through_csbend)\n", i_part);
+      fflush(stdout);
       abort();
     }
     if (accepted && !accepted[i_part]) {
-      fprintf(stderr, "error: null accepted particle pointer for particle %ld (track_through_csbend)\n", i_part);
+      fprintf(stdout, "error: null accepted particle pointer for particle %ld (track_through_csbend)\n", i_part);
+      fflush(stdout);
       abort();
     }
 
@@ -284,16 +290,18 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
 
     if (particle_lost) {
       if (!part[i_top]) {
-        fprintf(stderr, "error: couldn't swap particles %ld and %ld--latter is null pointer (track_through_csbend)\n",
+        fprintf(stdout, "error: couldn't swap particles %ld and %ld--latter is null pointer (track_through_csbend)\n",
                 i_part, i_top);
+        fflush(stdout);
         abort();
       }
       SWAP_PTR(part[i_part], part[i_top]);
       if (accepted) {
         if (!accepted[i_top]) {
-          fprintf(stderr, 
+          fprintf(stdout, 
                   "error: couldn't swap acceptance data for particles %ld and %ld--latter is null pointer (track_through_csbend)\n",
                   i_part, i_top);
+          fflush(stdout);
           abort();
         }
         SWAP_PTR(accepted[i_part], accepted[i_top]);
@@ -794,7 +802,8 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   if (charge) {
     macroParticleCharge = charge->macroParticleCharge;
   } else if (csbend->bins && !csrWarning) {
-    fprintf(stderr, "Warning: you asked for CSR on CSBEND but didn't give a CHARGE element\n");
+    fprintf(stdout, "Warning: you asked for CSR on CSBEND but didn't give a CHARGE element\n");
+    fflush(stdout);
     csrWarning = 1;
   }
 
@@ -991,15 +1000,18 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   /* check particle data, transform coordinates, and handle edge effects */
   for (i_part=0; i_part<n_part; i_part++) {
     if (!part) {
-      fprintf(stderr, "error: null particle array found (working on particle %ld) (track_through_csbend)\n", i_part);
+      fprintf(stdout, "error: null particle array found (working on particle %ld) (track_through_csbend)\n", i_part);
+      fflush(stdout);
       abort();
     }
     if (!(coord = part[i_part])) {
-      fprintf(stderr, "error: null coordinate pointer for particle %ld (track_through_csbend)\n", i_part);
+      fprintf(stdout, "error: null coordinate pointer for particle %ld (track_through_csbend)\n", i_part);
+      fflush(stdout);
       abort();
     }
     if (accepted && !accepted[i_part]) {
-      fprintf(stderr, "error: null accepted particle pointer for particle %ld (track_through_csbend)\n", i_part);
+      fprintf(stdout, "error: null accepted particle pointer for particle %ld (track_through_csbend)\n", i_part);
+      fflush(stdout);
       abort();
     }
 
@@ -1101,7 +1113,8 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
          binParticleCoordinate(&ctHist, &maxBins,
                                &ctLower, &ctUpper, &dct, &nBins, 
                                1.2, part, n_part, 4))!=n_part)
-      fprintf(stderr, "Only %ld of %ld particles binned for CSR\n", nBinned, n_part);
+      fprintf(stdout, "Only %ld of %ld particles binned for CSR\n", nBinned, n_part);
+      fflush(stdout);
     /* - smooth the histogram, normalize to get linear density, and 
        copy in preparation for taking derivative
        */
@@ -1212,16 +1225,18 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 
     if (particleLost[i_part]) {
       if (!part[i_top]) {
-        fprintf(stderr, "error: couldn't swap particles %ld and %ld--latter is null pointer (track_through_csbend)\n",
+        fprintf(stdout, "error: couldn't swap particles %ld and %ld--latter is null pointer (track_through_csbend)\n",
                 i_part, i_top);
+        fflush(stdout);
         abort();
       }
       SWAP_PTR(part[i_part], part[i_top]);
       if (accepted) {
         if (!accepted[i_top]) {
-          fprintf(stderr, 
+          fprintf(stdout, 
                   "error: couldn't swap acceptance data for particles %ld and %ld--latter is null pointer (track_through_csbend)\n",
                   i_part, i_top);
+          fflush(stdout);
           abort();
         }
         SWAP_PTR(accepted[i_part], accepted[i_top]);

@@ -80,16 +80,19 @@ long simple_rf_cavity(
 
     if (!been_warned) {        
         if (rfca->freq<1e3 && rfca->freq)  {
-            fprintf(stderr, "\7\7\7warning: your RFCA frequency is less than 1kHz--this may be an error\n");
+            fprintf(stdout, "\7\7\7warning: your RFCA frequency is less than 1kHz--this may be an error\n");
+            fflush(stdout);
             been_warned = 1;
             }
         if (fabs(rfca->volt)<100 && rfca->volt) {
-            fprintf(stderr, "\7\7\7warning: your RFCA voltage is less than 100V--this may be an error\n");
+            fprintf(stdout, "\7\7\7warning: your RFCA voltage is less than 100V--this may be an error\n");
+            fflush(stdout);
             been_warned = 1;
             }
         if (been_warned) {
-            fprintf(stderr, "units of parameters for RFCA are as follows:\n");
-            print_dictionary_entry(stderr, T_RFCA, 0);
+            fprintf(stdout, "units of parameters for RFCA are as follows:\n");
+            fflush(stdout);
+            print_dictionary_entry(stdout, T_RFCA, 0);
             }
         }
 
@@ -97,7 +100,8 @@ long simple_rf_cavity(
         bomb("NULL particle data pointer (simple_rf_cavity)", NULL);
     for (ip=0; ip<np; ip++)
         if (!part[ip]) {
-            fprintf(stderr, "NULL pointer for particle %ld (simple_rf_cavity)\n", ip);
+            fprintf(stdout, "NULL pointer for particle %ld (simple_rf_cavity)\n", ip);
+            fflush(stdout);
             abort();
             }
     if (!rfca)

@@ -60,7 +60,7 @@ void setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
     process_namelist(&load_parameters, nltext);
-    print_namelist(stderr, &load_parameters);
+    print_namelist(stdout, &load_parameters);
 
     if (!filename && !clear_settings)
         bomb("filename must be given for load_parameters", NULL);
@@ -83,31 +83,36 @@ void setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     SDDS_ClearErrors();
 
     if (!SDDS_InitializeInput(&load_request[load_requests].table, filename)) {
-        fprintf(stderr, "error: couldn't initialize SDDS input for load_parameters file %s\n", filename);
+        fprintf(stdout, "error: couldn't initialize SDDS input for load_parameters file %s\n", filename);
+        fflush(stdout);
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
         exit(1);
         }
     if ((index=SDDS_GetColumnIndex(&load_request[load_requests].table, Element_ColumnName))<0 ||
         SDDS_GetColumnType(&load_request[load_requests].table, index)!=SDDS_STRING) {
-        fprintf(stderr, "Column \"%s\" is not in file %s or is not of string type.\n", Element_ColumnName, filename);
+        fprintf(stdout, "Column \"%s\" is not in file %s or is not of string type.\n", Element_ColumnName, filename);
+        fflush(stdout);
         exit(1);
         }
     if ((index=SDDS_GetColumnIndex(&load_request[load_requests].table, Parameter_ColumnName))<0 ||
         SDDS_GetColumnType(&load_request[load_requests].table, index)!=SDDS_STRING) {
-        fprintf(stderr, "Column \"%s\" is not in file %s or is not of string type.\n", Parameter_ColumnName, filename);
+        fprintf(stdout, "Column \"%s\" is not in file %s or is not of string type.\n", Parameter_ColumnName, filename);
+        fflush(stdout);
         exit(1);
         }
     load_request[load_requests].string_data = 0;
     if ((index=SDDS_GetColumnIndex(&load_request[load_requests].table, Value_ColumnName))>=0) {
       if (SDDS_GetColumnType(&load_request[load_requests].table, index)!=SDDS_DOUBLE) {
-        fprintf(stderr, "Column \"%s\" is not in file %s or is not of double-precision type.\n", Value_ColumnName, filename);
+        fprintf(stdout, "Column \"%s\" is not in file %s or is not of double-precision type.\n", Value_ColumnName, filename);
+        fflush(stdout);
         exit(1);
       } 
     } else {
       if ((index=SDDS_GetColumnIndex(&load_request[load_requests].table, ValueString_ColumnName))<0 ||
           SDDS_GetColumnType(&load_request[load_requests].table, index)!=SDDS_STRING) {
-        fprintf(stderr, "Column \"%s\" is not in file %s or is not of string type.\n",
+        fprintf(stdout, "Column \"%s\" is not in file %s or is not of string type.\n",
                 ValueString_ColumnName, filename);
+        fflush(stdout);
         exit(1);
       }
       load_request[load_requests].string_data = 1;
@@ -116,18 +121,21 @@ void setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     /* The Mode column is optional: */
     if ((index=SDDS_GetColumnIndex(&load_request[load_requests].table, Mode_ColumnName))>=0 &&
         SDDS_GetColumnType(&load_request[load_requests].table, index)!=SDDS_STRING) {
-        fprintf(stderr, "Column \"%s\" is in file %s but is not of string type.\n", Mode_ColumnName, filename);
+        fprintf(stdout, "Column \"%s\" is in file %s but is not of string type.\n", Mode_ColumnName, filename);
+        fflush(stdout);
         exit(1);
         }
     /* The Occurence column is optional: */ 
     if ((index=SDDS_GetColumnIndex(&load_request[load_requests].table, Occurence_ColumnName))>=0 && 
         SDDS_GetColumnType(&load_request[load_requests].table, index)!=SDDS_LONG) {
-        fprintf(stderr, "Column \"%s\" is in file %s but is not of long-integer type.\n", Occurence_ColumnName, filename);
+        fprintf(stdout, "Column \"%s\" is in file %s but is not of long-integer type.\n", Occurence_ColumnName, filename);
+        fflush(stdout);
         exit(1);
         }
 
     if (SDDS_NumberOfErrors()) {
-        fprintf(stderr, "error: an uncaught error occured in SDDS routines (setup_load_parameters):\n");
+        fprintf(stdout, "error: an uncaught error occured in SDDS routines (setup_load_parameters):\n");
+        fflush(stdout);
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
         exit(1);
         }
@@ -182,7 +190,8 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
           *((long*)(load_request[i].reset_address[j])) = (long)(load_request[i].starting_value[j]);
           break;
         default:
-          fprintf(stderr, "internal error: invalid value type for load request value restoration\n");
+          fprintf(stdout, "internal error: invalid value type for load request value restoration\n");
+          fflush(stdout);
           exit(1);
           break;
         }
@@ -191,11 +200,13 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
 
     if ((code=load_request[i].last_code=SDDS_ReadTable(&load_request[i].table))<1) {
       if (code<0) {
-        fprintf(stderr, "warning: file %s ends unexpectedly\n", load_request[i].filename);
+        fprintf(stdout, "warning: file %s ends unexpectedly\n", load_request[i].filename);
+        fflush(stdout);
         load_request[i].flags |= COMMAND_FLAG_IGNORE;
         continue;
       }
-      fprintf(stderr, "Error: problem reading data from load_parameters file %s\n", load_request[i].filename);
+      fprintf(stdout, "Error: problem reading data from load_parameters file %s\n", load_request[i].filename);
+      fflush(stdout);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
     allFilesRead = 0;
@@ -209,7 +220,8 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
         !(parameter=(char **)SDDS_GetColumn(&load_request[i].table, Parameter_ColumnName)) || 
         (SDDS_GetColumnIndex(&load_request[i].table, Mode_ColumnName)>=0 &&
          !(mode     =(char **)SDDS_GetColumn(&load_request[i].table, Mode_ColumnName)))) {
-      fprintf(stderr, "Error: problem accessing data from load_parameters file %s\n", load_request[i].filename);
+      fprintf(stdout, "Error: problem accessing data from load_parameters file %s\n", load_request[i].filename);
+      fflush(stdout);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exit(1);
     }
@@ -219,7 +231,8 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
          !(value    =(double*)SDDS_GetColumn(&load_request[i].table, Value_ColumnName))) ||
         (load_request[i].string_data &&
          !(valueString = (char **)SDDS_GetColumn(&load_request[i].table, ValueString_ColumnName)))) {
-      fprintf(stderr, "Error: problem accessing data from load_parameters file %s\n", load_request[i].filename);
+      fprintf(stdout, "Error: problem accessing data from load_parameters file %s\n", load_request[i].filename);
+      fflush(stdout);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exit(1);
     }
@@ -227,7 +240,8 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
     occurence = NULL;
     if (SDDS_GetColumnIndex(&load_request[i].table, Occurence_ColumnName)>=0 &&
         !(occurence = (long *)SDDS_GetColumn(&load_request[i].table, Occurence_ColumnName))) {
-      fprintf(stderr, "Error: problem accessing data from load_parameters file %s\n", load_request[i].filename);
+      fprintf(stdout, "Error: problem accessing data from load_parameters file %s\n", load_request[i].filename);
+      fflush(stdout);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exit(1);
     }
@@ -243,14 +257,17 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
       element_missing = 0;
       while (count-- > 0) {
         if (!find_element(element[j], &eptr, &(beamline->elem))) {
-          if (occurence)
-            fprintf(stderr, "%s: unable to find occurence %ld of element %s (do_load_parameters)\n", 
+          if (occurence) {
+            fprintf(stdout, "%s: unable to find occurence %ld of element %s (do_load_parameters)\n", 
                     allow_missing_elements?"Warning":"Error",
                     occurence[j], element[j]);
-          else
-            fprintf(stderr, "%s: unable to find element %s (do_load_parameters)\n", 
+            fflush(stdout);
+          } else {
+            fprintf(stdout, "%s: unable to find element %s (do_load_parameters)\n", 
                     allow_missing_elements?"Warning":"Error",
                     element[j]);
+            fflush(stdout);
+          }
           if (!allow_missing_elements)
             exit(1);
           element_missing = 1;
@@ -259,9 +276,10 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
       if (element_missing)
         continue;
       if ((param = confirm_parameter(parameter[j], eptr->type))<0) {
-        fprintf(stderr, "%s: element %s does not have a parameter %s (do_load_parameters)\n",
+        fprintf(stdout, "%s: element %s does not have a parameter %s (do_load_parameters)\n",
                 allow_missing_parameters?"Warning":"Error",
                 eptr->name, parameter[j]);
+        fflush(stdout);
         if (!allow_missing_parameters)
           exit(1);
         continue;
@@ -271,10 +289,12 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
         while ((ptr=get_token_t(mode[j], " \t,+"))) {
           long k;
           if ((k=match_string(ptr, load_mode, LOAD_MODES, UNIQUE_MATCH))<0) {
-            fprintf(stderr, "Error: unknown/ambiguous mode specifier %s (do_load_parameters)\nKnown specifiers are:\n",
+            fprintf(stdout, "Error: unknown/ambiguous mode specifier %s (do_load_parameters)\nKnown specifiers are:\n",
                     ptr);
+            fflush(stdout);
             for (k=0; k<LOAD_MODES; k++)
-              fprintf(stderr, "    %s\n", load_mode[k]);
+              fprintf(stdout, "    %s\n", load_mode[k]);
+              fflush(stdout);
             exit(1);
           }
           mode_flags |= 1<<k;
@@ -287,8 +307,9 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
       if (load_request[i].flags&COMMAND_FLAG_CHANGE_DEFINITIONS) {
         if (occurence && !warned_about_occurence) {
           warned_about_occurence = 1;
-          fprintf(stderr, 
+          fprintf(stdout, 
                   "warning: occurence column is necessarily ignored when changing defined values (do_load_parameters)\n");
+          fflush(stdout);
         }
         change_defined_parameter(element[j], param, eptr->type, value?value[j]:0, 
                                  valueString?valueString[j]:NULL, 
@@ -315,17 +336,19 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
         case IS_DOUBLE:
           if (valueString) {
             if (!sscanf(valueString[j], "%lf", &newValue)) {
-              fprintf(stderr, "Error: unable to scan double from \"%s\"\n", valueString[j]);
+              fprintf(stdout, "Error: unable to scan double from \"%s\"\n", valueString[j]);
+              fflush(stdout);
               exit(1);
             }
           } else {
             newValue = value[j];
           }
           if (verbose)
-            fprintf(stderr, "Changing %s.%s #%ld from %21.15e to ",
+            fprintf(stdout, "Changing %s.%s #%ld from %21.15e to ",
                     eptr->name, 
                     entity_description[eptr->type].parameter[param].name, numberChanged,
                     *((double*)(p_elem+entity_description[eptr->type].parameter[param].offset)));
+            fflush(stdout);
           load_request[i].starting_value[load_request[i].values]
             = *((double*)(p_elem+entity_description[eptr->type].parameter[param].offset));
           load_request[i].value_type[load_request[i].values] = IS_DOUBLE;
@@ -336,23 +359,26 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
           else if (mode_flags&LOAD_FLAG_FRACTIONAL)
             *((double*)(p_elem+entity_description[eptr->type].parameter[param].offset)) *= 1+newValue;
           if (verbose)
-            fprintf(stderr, "%21.15e\n",
+            fprintf(stdout, "%21.15e\n",
                     *((double*)(p_elem+entity_description[eptr->type].parameter[param].offset)));
+            fflush(stdout);
           break;
         case IS_LONG:
           if (valueString) {
             if (!sscanf(valueString[j], "%lf", &newValue)) {
-              fprintf(stderr, "Error: unable to scan double from \"%s\"\n", valueString[j]);
+              fprintf(stdout, "Error: unable to scan double from \"%s\"\n", valueString[j]);
+              fflush(stdout);
               exit(1);
             }
           } else {
             newValue = value[j];
           }
           if (verbose)
-            fprintf(stderr, "Changing %s.%s #%ld from %ld to ",
+            fprintf(stdout, "Changing %s.%s #%ld from %ld to ",
                     eptr->name,
                     entity_description[eptr->type].parameter[param].name, numberChanged,
                     *((long*)(p_elem+entity_description[eptr->type].parameter[param].offset)));
+            fflush(stdout);
           load_request[i].starting_value[load_request[i].values]
             = *((long*)(p_elem+entity_description[eptr->type].parameter[param].offset));
           load_request[i].value_type[load_request[i].values] = IS_LONG;
@@ -363,29 +389,34 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
           else if (mode_flags&LOAD_FLAG_FRACTIONAL)
             *((long*)(p_elem+entity_description[eptr->type].parameter[param].offset)) *= 1+newValue;
           if (verbose)
-            fprintf(stderr, "%ld\n",
+            fprintf(stdout, "%ld\n",
                     *((long*)(p_elem+entity_description[eptr->type].parameter[param].offset)));
+            fflush(stdout);
           break;
         case IS_STRING:
           load_request[i].value_type[load_request[i].values] = IS_STRING;
           if (verbose)
-            fprintf(stderr, "Changing %s.%s #%ld from %s to ",
+            fprintf(stdout, "Changing %s.%s #%ld from %s to ",
                     eptr->name,
                     entity_description[eptr->type].parameter[param].name, numberChanged,
                     *((char**)(p_elem+entity_description[eptr->type].parameter[param].offset)));
+            fflush(stdout);
           if (!SDDS_CopyString((char**)(p_elem+entity_description[eptr->type].parameter[param].offset),
                                valueString[j])) {
-            fprintf(stderr, "Error (do_load_parameters): unable to copy value string\n");
+            fprintf(stdout, "Error (do_load_parameters): unable to copy value string\n");
+            fflush(stdout);
             exit(1);
           }
           if (verbose)
-            fprintf(stderr, "%s\n", 
+            fprintf(stdout, "%s\n", 
                     *((char**)(p_elem+entity_description[eptr->type].parameter[param].offset)));
+            fflush(stdout);
           break;
         default:
-          fprintf(stderr,
+          fprintf(stdout,
                   "Error: can't load parameter value for parameter %s of %s--not numeric parameter (do_load_parameters)\n",
                   parameter[j], element[j]);
+          fflush(stdout);
           break;
         }
         eptr->flags |= 
@@ -420,7 +451,8 @@ void finish_load_parameters()
   long i;
   for (i=0; i<load_requests; i++) {
     if (!SDDS_Terminate(&load_request[i].table)) {
-      fprintf(stderr, "Error: unable to terminate load_parameters SDDS file %s\n", load_request[i].filename);
+      fprintf(stdout, "Error: unable to terminate load_parameters SDDS file %s\n", load_request[i].filename);
+      fflush(stdout);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exit(1);
     }
@@ -452,7 +484,8 @@ void dumpLatticeParameters(char *filename, RUN *run, LINE_LIST *beamline)
         (iParameterValue=SDDS_DefineColumn(SDDSout, "ParameterValue", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
         (iElementType=SDDS_DefineColumn(SDDSout, "ElementType", NULL, NULL, NULL, NULL, SDDS_STRING, 0))<0 ||
         !SDDS_WriteLayout(SDDSout)) {
-      fprintf(stderr, "Problem setting up parameter output file\n");
+      fprintf(stdout, "Problem setting up parameter output file\n");
+      fflush(stdout);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exit(1);
     }

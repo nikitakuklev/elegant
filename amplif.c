@@ -45,7 +45,7 @@ void compute_amplification_factors(
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
   process_namelist(&amplification_factors, nltext);
-  print_namelist(stderr, &amplification_factors);
+  print_namelist(stdout, &amplification_factors);
 
   if (plane)
     str_tolower(plane);
@@ -65,10 +65,12 @@ void compute_amplification_factors(
   if (type) {
     str_toupper(type);
     if ((type_code=match_string(type, entity_name, N_TYPES, EXACT_MATCH))<0) {
-      fprintf(stderr, "warning: no exact match for type %s\n", type);
+      fprintf(stdout, "warning: no exact match for type %s\n", type);
+      fflush(stdout);
       if ((type_code=match_string(type, entity_name, N_TYPES, DCL_STYLE_MATCH|RETURN_FIRST_MATCH))<0)
         bomb("unknown type name", NULL);
-      fprintf(stderr, "assuming that you meant type %s\n", entity_name[type_code]);
+      fprintf(stdout, "assuming that you meant type %s\n", entity_name[type_code]);
+      fflush(stdout);
       cp_str(&type, entity_name[type_code]);
     }
   }
@@ -144,14 +146,14 @@ void compute_amplification_factors(
   add_to_standard_headers(name_header, unit_header, printf_string,   "element",  "", "%10s#%ld", 10);
 
   if (correct->mode!=-1) {
-    fputs("Amplification factors with correction for", stderr);
+    fputs("Amplification factors with correction for", stdout);
     if (fpuof) {
       if (correct->n_xy_cycles!=1)
         bomb("n_xy_cycles!=1--can't provide uncorrected amplification function\nuse separate run or set n_xy_cycles=1", NULL);
     }
   }
   else {
-    fputs("Amplification factors", stderr);
+    fputs("Amplification factors", stdout);
     if (fpcof)
       bomb("can't compute corrected-orbit amplification function if you don't do correction", NULL);
     if (fpkf)
@@ -181,7 +183,7 @@ void compute_amplification_factors(
           item, change, entity_description[eptr->type].parameter[iparam].unit);
   strcat(description, s);
 
-  fputs(description, stderr);
+  fputs(description, stdout);
 
   if (fpout) {
     fprintf(fpout, "SDDS1\n&description text=\"Amplification factors for beamline %s from %s\" &end\n",
@@ -232,11 +234,11 @@ void compute_amplification_factors(
     fprintf(fpkf, "&data mode=ascii, no_row_counts=1 &end\n");
   }
 
-  fputs(name_header, stderr);
-  fputc('\n', stderr);
-  fputs(unit_header, stderr);
-  fputc('\n', stderr);
-  fflush(stderr);
+  fputs(name_header, stdout);
+  fputc('\n', stdout);
+  fputs(unit_header, stdout);
+  fputc('\n', stdout);
+  fflush(stdout);
 
   if (!name)
     eptr = &(beamline->elem);
@@ -252,7 +254,8 @@ void compute_amplification_factors(
     if ((iparam=confirm_parameter(item, eptr->type))==-1)
       continue;
     number_to_do--;
-    fprintf(stderr, "\nWorking on element %s#%ld at z=%em\n", eptr->name, eptr->occurence, eptr->end_pos);
+    fprintf(stdout, "\nWorking on element %s#%ld at z=%em\n", eptr->name, eptr->occurence, eptr->end_pos);
+    fflush(stdout);
     if (entity_description[eptr->type].parameter[iparam].type!=IS_DOUBLE)
       bomb("item is not floating-point type", NULL);
 
@@ -349,9 +352,10 @@ void compute_amplification_factors(
           fprintf(fpcof, "0 0 ? 0\n");
     }
     if (correct->mode==-1 && emax) {
-      fprintf(stderr, printf_string,
+      fprintf(stdout, printf_string,
               rms_pos/change, max_pos/change, emax->end_pos, eptr->end_pos, eptr->name, eptr->occurence);
-      fputc('\n', stderr);
+      fflush(stdout);
+      fputc('\n', stdout);
       if (fpout) {
         fprintf(fpout, printf_string,
                 rms_pos/change, max_pos/change, emax->end_pos, eptr->end_pos, eptr->name, eptr->occurence);
@@ -369,10 +373,11 @@ void compute_amplification_factors(
       }
       if (n_kicks)
         rms_kick = sqrt(rms_kick/n_kicks);
-      fprintf(stderr, printf_string,
+      fprintf(stdout, printf_string,
               rms_pos/change, max_pos/change, emax->end_pos, rms_kick/change, 
               max_kick/change, eptr->end_pos, eptr->name, eptr->occurence);
-      fputc('\n', stderr);
+      fflush(stdout);
+      fputc('\n', stdout);
       if (fpout) {
         fprintf(fpout, printf_string,
                 rms_pos/change, max_pos/change, emax->end_pos, rms_kick/change, 
@@ -419,13 +424,15 @@ void compute_amplification_factors(
         emaxu = traj[i].elem;
       }
     }
-    fputc('\n', stderr);
+    fputc('\n', stdout);
     if (emaxc && correct->mode!=-1)
-      fprintf(stderr, "maximum corrected-orbit amplification function is %e %s at %s at z=%em\n",
+      fprintf(stdout, "maximum corrected-orbit amplification function is %e %s at %s at z=%em\n",
               max_Ac, Ai_unit, emaxc->name, emaxc->end_pos);
+      fflush(stdout);
     if (emaxu)
-      fprintf(stderr, "maximum orbit amplification function is %e %s at %s at z=%em\n",
+      fprintf(stdout, "maximum orbit amplification function is %e %s at %s at z=%em\n",
               max_Au, Ai_unit, emax->name, emax->end_pos);
+      fflush(stdout);
   }
   if (fpcof)
     fclose(fpcof);
@@ -446,9 +453,10 @@ void compute_amplification_factors(
     }
     fclose(fpkf);
     if (max_kick)
-      fprintf(stderr, "maximum kick amplification factor is %e %s from %s#%ld.%s at %e m\n",
+      fprintf(stdout, "maximum kick amplification factor is %e %s from %s#%ld.%s at %e m\n",
               max_kick, Cij_unit, CM->ucorr[j]->name, CM->ucorr[j]->occurence,
               SL->corr_param[CM->sl_index[j]], CM->ucorr[j]->end_pos);
+      fflush(stdout);
   }
   if (Cij)
     tfree(Cij);

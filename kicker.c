@@ -101,9 +101,11 @@ void track_through_kicker(
                 if (kicker->t_wf[i]>=time)
                     break;
             if (i==kicker->n_wf) {
-                fprintf(stderr, "error: waveform interpolation problem in track_through_kicker()\n");
-                fprintf(stderr, "particle time is %21.15e\nwaveform limits are %21.15e to %21.15e\n",
+                fprintf(stdout, "error: waveform interpolation problem in track_through_kicker()\n");
+                fflush(stdout);
+                fprintf(stdout, "particle time is %21.15e\nwaveform limits are %21.15e to %21.15e\n",
                         time, kicker->tmin, kicker->tmax);
+                fflush(stdout);
                 exit(1);
                 }
             i--;
@@ -159,7 +161,8 @@ void track_through_kicker(
         }
 /*
     if (np)
-        fprintf(stderr, "average kicker amplitude = %f\n", sum_amp/np);
+        fprintf(stdout, "average kicker amplitude = %f\n", sum_amp/np);
+        fflush(stdout);
  */
 
     log_exit("track_through_kicker");

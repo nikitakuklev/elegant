@@ -3,6 +3,9 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.2  1999/08/05 15:40:23  soliday
+ * Added WIN32 and Linux support
+ *
  * Revision 1.1  1999/07/01 19:19:57  borland
  * First versions in repository.
  *
@@ -18,7 +21,7 @@ void setupSASEFELAtEnd(NAMELIST_TEXT *nltext, RUN *run, OUTPUT_FILES *output_dat
   
   /* process namelist text */
   process_namelist(&sasefel, nltext);
-  print_namelist(stderr, &sasefel);
+  print_namelist(stdout, &sasefel);
 
   if (beta<0)
     bomb("beta < 0", NULL);
@@ -60,7 +63,8 @@ void setupSASEFELAtEnd(NAMELIST_TEXT *nltext, RUN *run, OUTPUT_FILES *output_dat
         !SDDS_DefineSimpleParameter(SDDSout, "etaEmittance", NULL, SDDS_DOUBLE) ||
         !SDDS_DefineSimpleParameter(SDDSout, "etaEnergySpread", NULL, SDDS_DOUBLE) ||
         !SDDS_WriteLayout(SDDSout)) {
-      fprintf(stderr, "Unable define SDDS parameter for file %s\n", sasefelOutput->filename);
+      fprintf(stdout, "Unable define SDDS parameter for file %s\n", sasefelOutput->filename);
+      fflush(stdout);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
     }
   }
@@ -97,7 +101,8 @@ void doSASEFELAtEndOutput(SASEFEL_OUTPUT *sasefelOutput, long step)
                           "etaEnergySpread", sasefelOutput->etaEnergySpread,
                           NULL) ||
       !SDDS_WritePage(SDDSout)) {
-    fprintf(stderr, "Unable write data to file %s\n", sasefelOutput->filename);
+    fprintf(stdout, "Unable write data to file %s\n", sasefelOutput->filename);
+    fflush(stdout);
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
   }
 }
@@ -116,7 +121,8 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
   if (!(delta=SDDS_Malloc(sizeof(*delta)*particles)))
     SDDS_Bomb("memory allocation failure (computeSASEFELAtEnd)");
   if (!particles) {
-    fprintf(stderr, "no particles left---can't compute FEL parameters");
+    fprintf(stdout, "no particles left---can't compute FEL parameters");
+    fflush(stdout);
     sasefelOutput->lightWavelength = sasefelOutput->saturationLength =
         sasefelOutput->gainLength = sasefelOutput->noisePower =
             sasefelOutput->saturationPower = sasefelOutput->PierceParameter = 

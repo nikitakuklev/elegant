@@ -48,7 +48,8 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central)
 
     if (madfile) {
 #ifdef DEBUG
-        fprintf(stderr, "reading from file %s\n", madfile);
+        fprintf(stdout, "reading from file %s\n", madfile);
+        fflush(stdout);
 #endif
         fp_mad = fopen_e(madfile, "r", 0);
     
@@ -68,16 +69,19 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central)
            of fully expanded line definitions */
         while (cfgets(s, MAX_LINE_LENGTH, fp_mad)) {
 #ifdef DEBUG
-            fprintf(stderr, "input line: %s\n", s);
+            fprintf(stdout, "input line: %s\n", s);
+            fflush(stdout);
 #endif
             strcpy(t, s);
             if ((type = tell_type(s, elem))==T_NODEF) {
                 if (!is_blank(s))
-                    fprintf(stderr, "warning: no recognized statement on line: %s\n", t);
+                    fprintf(stdout, "warning: no recognized statement on line: %s\n", t);
+                    fflush(stdout);
                 continue;
                 }
 #ifdef DEBUG
-            fprintf(stderr, "type code = %ld\n", type);
+            fprintf(stdout, "type code = %ld\n", type);
+            fflush(stdout);
 #endif
             if (type==T_RENAME)
                 process_rename_request(s, entity_name, N_TYPES);
@@ -91,14 +95,16 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central)
                 break;
             else if (type==T_LINE) {
 #ifdef DEBUG
-                fprintf(stderr, "current element list is:\n");
-                print_elem_list(stderr, elem);
+                fprintf(stdout, "current element list is:\n");
+                fflush(stdout);
+                print_elem_list(stdout, elem);
 #endif
                 fill_line(line, n_lines, elem, n_elems, s);
                 check_duplic_line(line, lptr, n_lines+1);
 #ifdef DEBUG 
-                fprintf(stderr, "\n****** expanded line %s:\n", lptr->name);
-                print_line(stderr, lptr); 
+                fprintf(stdout, "\n****** expanded line %s:\n", lptr->name);
+                fflush(stdout);
+                print_line(stdout, lptr); 
 #endif
                 extend_line_list(&lptr);
                 n_lines++;
@@ -106,27 +112,30 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central)
             else {
                 if (type==T_ECOPY) {
 #ifdef DEBUG
-                    fprintf(stderr, "copying existing element\n");
+                    fprintf(stdout, "copying existing element\n");
+                    fflush(stdout);
 #endif
                     strcpy(s, t);
                     copy_named_element(eptr, s, elem);
                     }
                 else {
 #ifdef DEBUG
-                    fprintf(stderr, "creating new element\n");
+                    fprintf(stdout, "creating new element\n");
+                    fflush(stdout);
 #endif
                     fill_elem(eptr, s, type, fp_mad); 
                     }
                 check_duplic_elem(&elem, &eptr, n_elems);
 #ifdef DEBUG
-                print_elem(stderr, elem);
+                print_elem(stdout, elem);
 #endif
                 extend_elem_list(&eptr);
                 n_elems++;
                 }
             }
         if (n_elems==0 || n_lines==0) {
-            fprintf(stderr, "Insufficient (recognizable) data in file.\n");
+            fprintf(stdout, "Insufficient (recognizable) data in file.\n");
+            fflush(stdout);
             exit(1);
             }
         /* since the lists were being extended before it was known that
@@ -148,7 +157,8 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central)
     if (type!=T_USE && use_beamline==NULL) {
         if (n_lines==0)
             bomb("no beam-line defined\n", NULL);
-        fprintf(stderr, "no USE statement--will use line %s\n", lptr->name);
+        fprintf(stdout, "no USE statement--will use line %s\n", lptr->name);
+        fflush(stdout);
         }
     else {
         if (!use_beamline) {
@@ -164,7 +174,8 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central)
             lptr = lptr->succ;
             }
         if (lptr==NULL) {
-            fprintf(stderr, "no definition of beam-line %s\n", ptr);
+            fprintf(stdout, "no definition of beam-line %s\n", ptr);
+            fflush(stdout);
             exit(1);
             }
         }
@@ -199,7 +210,8 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central)
         else if (eptr->type==T_CSBEND)
             theta += ((CSBEND*)eptr->p_elem)->angle;
         if (l<0)
-            fprintf(stderr, "warning(1): element %s has negative length = %e\n", eptr->name, l);
+            fprintf(stdout, "warning(1): element %s has negative length = %e\n", eptr->name, l);
+            fflush(stdout);
         eptr->end_pos = z + l;
         eptr->end_theta = theta ;
         z = eptr->end_pos;
@@ -237,8 +249,9 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central)
     eptr = &(lptr->elem);
     while (eptr->succ) {
         if (eptr->succ->end_pos<eptr->end_pos)
-            fprintf(stderr, "warning(2): element %s has negative length of %e\n",
+            fprintf(stdout, "warning(2): element %s has negative length of %e\n",
                 eptr->name, eptr->succ->end_pos-eptr->end_pos);
+            fflush(stdout);
         eptr = eptr->succ;
         }
  */
@@ -256,27 +269,34 @@ void show_elem(ELEMENT_LIST *eptr, long type)
     log_entry("show_elem");
 
     parameter = entity_description[type].parameter;
-    fprintf(stderr,  "%s %s at z=%em:\n", 
+    fprintf(stdout,  "%s %s at z=%em:\n", 
         entity_name[type], eptr->name, eptr->end_pos);
+    fflush(stdout);
     for (j=0; j<entity_description[type].n_params; j++) {
         switch (parameter[j].type) {
             case IS_DOUBLE:
-                fprintf(stderr,  "    %s = %.16e with offset %ld\n", 
+                fprintf(stdout,  "    %s = %.16e with offset %ld\n", 
                     parameter[j].name, 
                     *(double*)(eptr->p_elem+parameter[j].offset),
                     parameter[j].offset);
+                fflush(stdout);
                 break;
             case IS_LONG:
-                fprintf(stderr,  "    %s = %ld with offset %ld\n", 
+                fprintf(stdout,  "    %s = %ld with offset %ld\n", 
                     parameter[j].name, 
                     *(long *)(eptr->p_elem+parameter[j].offset),
                     parameter[j].offset);
+                fflush(stdout);
                 break;
             case IS_STRING:
-                if ((ptr = *(char**)(eptr->p_elem+parameter[j].offset)))
-                    fprintf(stderr,  "    %s = %e\n", parameter[j].name, ptr);
-                else
-                    fprintf(stderr,  "    %s = %e\n", parameter[j].name, ptr);
+                if ((ptr = *(char**)(eptr->p_elem+parameter[j].offset))) {
+                    fprintf(stdout,  "    %s = %e\n", parameter[j].name, ptr);
+                    fflush(stdout);
+                  }
+                else {
+                    fprintf(stdout,  "    %s = %e\n", parameter[j].name, ptr);
+                    fflush(stdout);
+                  }
                 break;
             }
         }
@@ -296,14 +316,16 @@ void free_elements(ELEMENT_LIST *elemlist)
         eptr = elem;
         elem = NULL;
 #ifdef DEBUG
-        fprintf(stderr, "freeing elements in main list\n");
+        fprintf(stdout, "freeing elements in main list\n");
+        fflush(stdout);
 #endif
         }
     while (eptr) {
 #ifdef DEBUG
-        fprintf(stderr, "freeing memory for element %s of type %s\n", 
+        fprintf(stdout, "freeing memory for element %s of type %s\n", 
                 eptr->name?eptr->name:"NULL",
                 (eptr->type>=0 && eptr->type<N_TYPES)?entity_name[eptr->type]:"NULL");
+        fflush(stdout);
 #endif
         if (eptr->type==T_WATCH) {
             WATCH *wptr;
@@ -315,10 +337,12 @@ void free_elements(ELEMENT_LIST *elemlist)
                 }
             }
 #ifdef DEBUG
-        fprintf(stderr, "pointers: p_elem = %x   name = %x   matrix = %x\n",
+        fprintf(stdout, "pointers: p_elem = %x   name = %x   matrix = %x\n",
             eptr->p_elem, eptr->name, eptr->matrix);
-        fprintf(stderr, "          pred = %x     succ = %x  \n",
+        fflush(stdout);
+        fprintf(stdout, "          pred = %x     succ = %x  \n",
             eptr->pred, eptr->succ);
+        fflush(stdout);
 #endif
         tfree(eptr->p_elem);
         eptr->p_elem = NULL;
@@ -360,15 +384,18 @@ void free_beamlines(LINE_LIST *beamline)
         lptr = line;
         line = NULL;
 #ifdef DEBUG
-        fprintf(stderr, "freeing main beamline list\n", NULL);
+        fprintf(stdout, "freeing main beamline list\n", NULL);
+        fflush(stdout);
 #endif
         }
     while (lptr) {
 #ifdef DEBUG
-        fprintf(stderr, "*************************\nfreeing memory for beamline %s with %ld elements\n",
+        fprintf(stdout, "*************************\nfreeing memory for beamline %s with %ld elements\n",
             lptr->name?lptr->name:"NULL", lptr->n_elems);
-        fprintf(stderr, "pointers:   name = %x    succ = %x   pred = %x\n",
+        fflush(stdout);
+        fprintf(stdout, "pointers:   name = %x    succ = %x   pred = %x\n",
             lptr->name, lptr->succ, lptr->pred);
+        fflush(stdout);
 #endif
         if (lptr->definition) {
             tfree(lptr->definition);
@@ -460,7 +487,7 @@ void do_save_lattice(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
     process_namelist(&save_lattice, nltext);
-    print_namelist(stderr, &save_lattice);
+    print_namelist(stdout, &save_lattice);
 
     /* check for valid data */
     if (filename==NULL)
@@ -574,19 +601,21 @@ void change_defined_parameter_values(char **elem_name, long *param_number, long 
                 case IS_DOUBLE:
                     *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)) = value[i_elem];
 #if DEBUG
-                    fprintf(stderr, "   changing parameter %s of %s #%ld to %e\n",
+                    fprintf(stdout, "   changing parameter %s of %s #%ld to %e\n",
                            entity_description[elem_type].parameter[param].name,
                            eptr->name, eptr->occurence,
                            *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)));
+                    fflush(stdout);
 #endif
                     break;
                 case IS_LONG:
                     *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) = value[i_elem]+0.5;
 #if DEBUG
-                    fprintf(stderr, "   changing parameter %s of %s #%ld to %ld\n",
+                    fprintf(stdout, "   changing parameter %s of %s #%ld to %ld\n",
                            entity_description[elem_type].parameter[param].name,
                            eptr->name, eptr->occurence,
                            *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)));
+                    fflush(stdout);
 #endif
                     break;
                 case IS_STRING:
@@ -618,17 +647,19 @@ void change_defined_parameter(char *elem_name, long param, long elem_type,
     case IS_DOUBLE:
       if (valueString) {
         if (!sscanf(valueString, "%lf", &value)) {
-          fprintf(stderr, "Error (change_defined_parameter): unable to scan double from \"%s\"\n", valueString);
+          fprintf(stdout, "Error (change_defined_parameter): unable to scan double from \"%s\"\n", valueString);
+          fflush(stdout);
           exit(1);
         }
       }
       if (mode&LOAD_FLAG_VERBOSE)
-        fprintf(stderr, "Changing definition (mode %s) %s.%s from %e to ", 
+        fprintf(stdout, "Changing definition (mode %s) %s.%s from %e to ", 
                 (mode&LOAD_FLAG_ABSOLUTE)?"absolute":
                 ((mode&LOAD_FLAG_DIFFERENTIAL)?"differential":
                  (mode&LOAD_FLAG_FRACTIONAL)?"fractional":"unknown"),
                 elem_name, entity_description[elem_type].parameter[param].name,
                 *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)));
+        fflush(stdout);
       if (mode&LOAD_FLAG_ABSOLUTE)
         *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)) = value;
       else if (mode&LOAD_FLAG_DIFFERENTIAL)
@@ -636,23 +667,26 @@ void change_defined_parameter(char *elem_name, long param, long elem_type,
       else if (mode&LOAD_FLAG_FRACTIONAL)
         *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)) *= 1+value;
       if (mode&LOAD_FLAG_VERBOSE)
-        fprintf(stderr, "%e\n", 
+        fprintf(stdout, "%e\n", 
                 *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)));
+        fflush(stdout);
       break;
     case IS_LONG:
       if (valueString) {
         if (!sscanf(valueString, "%lf", &value)) {
-          fprintf(stderr, "Error (change_defined_parameter): unable to scan double from \"%s\"\n", valueString);
+          fprintf(stdout, "Error (change_defined_parameter): unable to scan double from \"%s\"\n", valueString);
+          fflush(stdout);
           exit(1);
         }
       }
       if (mode&LOAD_FLAG_VERBOSE)
-        fprintf(stderr, "Changing definition (mode %s) %s.%s from %ld to ",
+        fprintf(stdout, "Changing definition (mode %s) %s.%s from %ld to ",
                 (mode&LOAD_FLAG_ABSOLUTE)?"absolute":
                 ((mode&LOAD_FLAG_DIFFERENTIAL)?"differential":
                  (mode&LOAD_FLAG_FRACTIONAL)?"fractional":"unknown"),
                 elem_name, entity_description[elem_type].parameter[param].name,
                 *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)));
+        fflush(stdout);
       if (mode&LOAD_FLAG_ABSOLUTE)
         *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) = value+0.5;
       else if (mode&LOAD_FLAG_DIFFERENTIAL)
@@ -660,18 +694,21 @@ void change_defined_parameter(char *elem_name, long param, long elem_type,
       else if (mode&LOAD_FLAG_FRACTIONAL)
         *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) *= 1+value;
       if (mode&LOAD_FLAG_VERBOSE)
-        fprintf(stderr, "%ld\n",
+        fprintf(stdout, "%ld\n",
                 *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)));
+        fflush(stdout);
       break;
     case IS_STRING:
       if (mode&LOAD_FLAG_VERBOSE)
-        fprintf(stderr, "Changing definition %s.%s from %s to %s\n",
+        fprintf(stdout, "Changing definition %s.%s from %s to %s\n",
                 elem_name, entity_description[elem_type].parameter[param].name,
                 *((char**)(p_elem+entity_description[elem_type].parameter[param].offset)),
                 valueString);
+        fflush(stdout);
       if (!SDDS_CopyString(((char**)(p_elem+entity_description[elem_type].parameter[param].offset)), 
                            valueString)) {
-        fprintf(stderr, "Error (change_defined_parameter): unable to copy string parameter value\n");
+        fprintf(stdout, "Error (change_defined_parameter): unable to copy string parameter value\n");
+        fflush(stdout);
         exit(1);
       }
       break;
@@ -698,14 +735,17 @@ void process_rename_request(char *s, char **name, long n_names)
         old++;
     str_toupper(trim_spaces(new = ptr));
     if (match_string(new, name, n_names, EXACT_MATCH)>=0) {
-        fprintf(stderr, "error: can't rename to name %s--already exists\n", new);
+        fprintf(stdout, "error: can't rename to name %s--already exists\n", new);
+        fflush(stdout);
         exit(1);
         }
     if ((i=match_string(old, name, n_names, EXACT_MATCH))<0) {
-        fprintf(stderr, "error: can't rename %s to %s--%s not recognized\n", old, new, old);
+        fprintf(stdout, "error: can't rename %s to %s--%s not recognized\n", old, new, old);
+        fflush(stdout);
         exit(1);
         }
-    fprintf(stderr, "warning: element %s now known as %s\n", old, new);
+    fprintf(stdout, "warning: element %s now known as %s\n", old, new);
+    fflush(stdout);
     cp_str(name+i, new);
     log_exit("process_rename_request");
     }

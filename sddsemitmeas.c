@@ -9,6 +9,9 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.9  1999/08/05 15:41:23  soliday
+ * Added WIN32 and Linux support
+ *
  * Revision 1.8  1999/07/02 15:57:55  borland
  * Replaced all instances of the "HUGE" macro with "DBL_MAX".  The former
  * is only defined on Solaris.
@@ -1066,7 +1069,8 @@ double solve_normal_form(
   for (i=rms_error=0; i<Mp->n; i++) {
     if ((s2_fit[i] = Mp->a[i][0])<0) {
       s2_fit[i] = Mp->a[i][0] = 0;
-      fprintf(stderr, "bad fit--negative sigma^2!\n");
+      fprintf(stdout, "bad fit--negative sigma^2!\n");
+      fflush(stdout);
     }
     error = sqrt(Mp->a[i][0]) - sqrt(M->a[i][0]);
     rms_error += sqr(error);

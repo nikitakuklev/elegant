@@ -47,7 +47,8 @@ void track_through_wake(double **part, long np, WAKE *wakeData, double *PoInput,
   
   n_binned = binTimeDistribution(Itime, pbin, tmin, dt, nb, time, part, Po, np);
   if (n_binned!=np)
-    fprintf(stderr, "warning: only %ld of %ld particles where binned (WAKE)\n", n_binned, np);
+    fprintf(stdout, "warning: only %ld of %ld particles where binned (WAKE)\n", n_binned, np);
+    fflush(stdout);
 
   if (wakeData->smoothing)
     SavitzyGolaySmooth(Itime, nb, wakeData->SGOrder, wakeData->SGHalfWidth, wakeData->SGHalfWidth, 0);
@@ -135,13 +136,13 @@ void set_up_wake(WAKE *wakeData, RUN *run, long pass, long particles, CHARGE *ch
     bomb("too little data in WAKE file", NULL);
   
   if (SDDS_CheckColumn(&SDDSin, wakeData->tColumn, "s", SDDS_ANY_FLOATING_TYPE, 
-                       stderr)!=SDDS_CHECK_OK)
+                       stdout)!=SDDS_CHECK_OK)
     bomb("problem with time column for WAKE file---check existence, units, and type", NULL);
   if (!(wakeData->t=SDDS_GetColumnInDoubles(&SDDSin, wakeData->tColumn)))
     SDDS_Bomb("unable to read WAKE file");
   
   if (SDDS_CheckColumn(&SDDSin, wakeData->WColumn, "V/C", SDDS_ANY_FLOATING_TYPE, 
-                       stderr)!=SDDS_CHECK_OK)
+                       stdout)!=SDDS_CHECK_OK)
     bomb("problem with wake column for WAKE file---check existence, units, and type", NULL);
   if (!(wakeData->W=SDDS_GetColumnInDoubles(&SDDSin, wakeData->WColumn)))
     SDDS_Bomb("unable to read WAKE file");
@@ -151,7 +152,8 @@ void set_up_wake(WAKE *wakeData, RUN *run, long pass, long particles, CHARGE *ch
   if (tmin==tmax)
     bomb("no time span in WAKE data", NULL);
   if (tmin!=0)
-    fprintf(stderr, "warning: WAKE function does not start at t=0.  Offseting the function!\n");
+    fprintf(stdout, "warning: WAKE function does not start at t=0.  Offseting the function!\n");
+    fflush(stdout);
   wakeData->dt = (tmax-tmin)/(wakeData->wakePoints-1);
 
 }

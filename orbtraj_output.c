@@ -57,7 +57,8 @@ void setup_orb_traj_output(char *filename, char *mode, RUN *run)
         bomb("NULL RUN pointer passed (setup_orb_traj_output)", NULL);
     if (SDDS_IsActive(&SDDS_orb)==1) {
         if (!SDDS_Terminate(&SDDS_orb)) {
-            fprintf(stderr, "Unable to terminate SDDS output for correctors (setup_orb_traj_output)\n");
+            fprintf(stdout, "Unable to terminate SDDS output for correctors (setup_orb_traj_output)\n");
+            fflush(stdout);
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
             exit(1);
             }
@@ -116,7 +117,8 @@ void dump_orb_traj(TRAJECTORY *traj, long n_elems, char *description, long step)
                                IC_S, position, IC_X, traj[i].centroid[0], IC_Y, traj[i].centroid[2],
                                IC_N, traj[i].n_part, IC_ELEMENT, name, IC_OCCURENCE, occurence, 
                                IC_TYPE, i==0?"MARK":entity_name[traj[i].elem->type], -1)) {
-            fprintf(stderr, "Unable to set row %ld values (dump_orb_traj)\n", i);
+            fprintf(stdout, "Unable to set row %ld values (dump_orb_traj)\n", i);
+            fflush(stdout);
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
             exit(1);
             }
@@ -139,7 +141,8 @@ void finish_orb_traj_output()
     if (!SDDS_orb_initialized)
         return;
     if (!SDDS_Terminate(&SDDS_orb)) {
-        fprintf(stderr, "Unable to terminate SDDS output for orbit/trajectory (finish_orb_traj_output)\n");
+        fprintf(stdout, "Unable to terminate SDDS output for orbit/trajectory (finish_orb_traj_output)\n");
+        fflush(stdout);
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
         exit(1);
         }

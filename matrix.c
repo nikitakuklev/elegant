@@ -137,8 +137,9 @@ void initialize_matrices(VMATRIX *M, long order)
                 }
             break;
         default:
-            fprintf(stderr, "invalid order: %ld  (initialize_matrices)\n", 
+            fprintf(stdout, "invalid order: %ld  (initialize_matrices)\n", 
                 order);
+            fflush(stdout);
             exit(1);
             break;
         }
@@ -194,8 +195,9 @@ void null_matrices(VMATRIX *M)
                 }
             break;
         default:
-            fprintf(stderr, "invalid order: %ld  (null_matrices)\n", 
+            fprintf(stdout, "invalid order: %ld  (null_matrices)\n", 
                 M->order);
+            fflush(stdout);
             exit(1);
             break;
         }
@@ -238,11 +240,13 @@ void track_particles(double **final, VMATRIX *M, double  **initial, long n_part)
             bomb("NULL Q pointer (track_particles)", NULL);
         for (i_part=n_part-1; i_part>=0; i_part--) {
             if (!(fin = final[i_part])) {
-                fprintf(stderr, "error: final coordinate pointer is NULL for particle %ld (track_particles)\n", i_part);
+                fprintf(stdout, "error: final coordinate pointer is NULL for particle %ld (track_particles)\n", i_part);
+                fflush(stdout);
                 abort();
                 }
             if (!(ini = initial[i_part])) {
-                fprintf(stderr, "error: final coordinate pointer is NULL for particle %ld (track_particles)\n", i_part);
+                fprintf(stdout, "error: final coordinate pointer is NULL for particle %ld (track_particles)\n", i_part);
+                fflush(stdout);
                 abort();
                 }
             fin[6] = ini[6];  /* copy particle ID # */
@@ -280,11 +284,13 @@ void track_particles(double **final, VMATRIX *M, double  **initial, long n_part)
             bomb("NULL T pointer (track_particles)", NULL);
         for (i_part=n_part-1; i_part>=0; i_part--) {
             if (!(fin = final[i_part])) {
-                fprintf(stderr, "error: final coordinate pointer is NULL for particle %ld (track_particles)\n", i_part);
+                fprintf(stdout, "error: final coordinate pointer is NULL for particle %ld (track_particles)\n", i_part);
+                fflush(stdout);
                 abort();
                 }
             if (!(ini = initial[i_part])) {
-                fprintf(stderr, "error: final coordinate pointer is NULL for particle %ld (track_particles)\n", i_part);
+                fprintf(stdout, "error: final coordinate pointer is NULL for particle %ld (track_particles)\n", i_part);
+                fflush(stdout);
                 abort();
                 }
             fin[6] = ini[6]; /* copy particle ID # */
@@ -317,11 +323,13 @@ void track_particles(double **final, VMATRIX *M, double  **initial, long n_part)
             bomb("NULL R pointer (track_particles)", NULL);
         for (i_part=n_part-1; i_part>=0; i_part--) {
             if (!(fin = final[i_part])) {
-                fprintf(stderr, "error: final coordinate pointer is NULL for particle %ld (track_particles)\n", i_part);
+                fprintf(stdout, "error: final coordinate pointer is NULL for particle %ld (track_particles)\n", i_part);
+                fflush(stdout);
                 abort();
                 }
             if (!(ini = initial[i_part])) {
-                fprintf(stderr, "error: final coordinate pointer is NULL for particle %ld (track_particles)\n", i_part);
+                fprintf(stdout, "error: final coordinate pointer is NULL for particle %ld (track_particles)\n", i_part);
+                fflush(stdout);
                 abort();
                 }
             fin[6] = ini[6]; /* copy particle ID # */
@@ -338,8 +346,9 @@ void track_particles(double **final, VMATRIX *M, double  **initial, long n_part)
             }
         break;
       default:
-        fprintf(stderr, "invalid order: %ld  (track_particle)\n", 
+        fprintf(stdout, "invalid order: %ld  (track_particle)\n", 
                M->order);
+        fflush(stdout);
         exit(1);
         break;
         }
@@ -426,8 +435,9 @@ void free_matrices(VMATRIX *M)
             tfree(R);
             break;
         default:
-            fprintf(stderr, "invalid order: %ld  (free_matrices)\n", 
+            fprintf(stdout, "invalid order: %ld  (free_matrices)\n", 
                 M->order);
+            fflush(stdout);
             exit(1);
             break;
         }
@@ -478,8 +488,9 @@ void free_nonlinear_matrices(VMATRIX *M)
         case 1:
             break;
         default:
-            fprintf(stderr, "invalid order: %ld  (free_matrices)\n", 
+            fprintf(stdout, "invalid order: %ld  (free_matrices)\n", 
                 M->order);
+            fflush(stdout);
             exit(1);
             break;
         }
@@ -493,7 +504,8 @@ void set_matrix_pointers(double **C, double ***R, double ****T, double *****Q, V
 {
     log_entry("set_matrix_pointers");
     if (!M) {
-        fprintf(stderr, "error: NULL VMATRIX pointer\n");
+        fprintf(stdout, "error: NULL VMATRIX pointer\n");
+        fflush(stdout);
         abort();
         }
     *C = M->C;
@@ -632,8 +644,9 @@ void filter_matrices(VMATRIX *M, double threshold)
                 }
             break;
         default:
-            fprintf(stderr, "invalid order: %ld  (filter_matrices)\n", 
+            fprintf(stdout, "invalid order: %ld  (filter_matrices)\n", 
                 M->order);
+            fflush(stdout);
             exit(1);
             break;
         }
@@ -688,8 +701,9 @@ void random_matrices(VMATRIX *M, double C0, double R0, double T0, double Q0)
                 }
             break;
         default:
-            fprintf(stderr, "invalid order: %ld  (null_matrices)\n", 
+            fprintf(stdout, "invalid order: %ld  (null_matrices)\n", 
                 M->order);
+            fflush(stdout);
             exit(1);
             break;
         }
@@ -734,37 +748,44 @@ long check_matrix(VMATRIX *M, char *comment)
     log_entry("check_matrix");
 
     if (M==NULL) {
-        fprintf(stderr, "error: NULL matrix pointer---%s\n", comment);
+        fprintf(stdout, "error: NULL matrix pointer---%s\n", comment);
+        fflush(stdout);
         abort();
         }
     if (M->order<=0 || M->order>3) {
-        fprintf(stderr, "error: matrix order out of range---%s\n", comment);
+        fprintf(stdout, "error: matrix order out of range---%s\n", comment);
+        fflush(stdout);
         abort();
         }
     if (M->R==NULL) {
-        fprintf(stderr, "error: NULL R matrix---%s\n", comment);
+        fprintf(stdout, "error: NULL R matrix---%s\n", comment);
+        fflush(stdout);
         abort();
         }
     for (i=0; i<6; i++) {
         if (M->R[i]==NULL)
-            fprintf(stderr, "error: NULL R[%ld] row---%s\n", i, comment);
+            fprintf(stdout, "error: NULL R[%ld] row---%s\n", i, comment);
+            fflush(stdout);
         }
     if (M->order==1) {
         log_exit("check_matrix");
         return(1);
         }
     if (M->T==NULL) {
-        fprintf(stderr, "error: NULL Tmatrix---%s\n", comment);
+        fprintf(stdout, "error: NULL Tmatrix---%s\n", comment);
+        fflush(stdout);
         abort();
         }
     for (i=0; i<6; i++) {
         if (M->T[i]==NULL) {
-            fprintf(stderr, "error: NULL T[%ld] row---%s\n", i, comment);
+            fprintf(stdout, "error: NULL T[%ld] row---%s\n", i, comment);
+            fflush(stdout);
             abort();
             }
         for (j=0; j<6; j++) {
             if (M->T[i][j]==NULL) {
-                fprintf(stderr, "error: NULL T[%ld][%ld] row---%s\n", i, j, comment);
+                fprintf(stdout, "error: NULL T[%ld][%ld] row---%s\n", i, j, comment);
+                fflush(stdout);
                 abort();
                 }
             }
@@ -774,22 +795,26 @@ long check_matrix(VMATRIX *M, char *comment)
         return(2);
         }
     if (M->Q==NULL) {
-        fprintf(stderr, "error: NULL Q matrix---%s\n", comment);
+        fprintf(stdout, "error: NULL Q matrix---%s\n", comment);
+        fflush(stdout);
         abort();
         }
     for (i=0; i<6; i++) {
         if (M->Q[i]==NULL) {
-            fprintf(stderr, "error: NULL T[%ld] row---%s\n", i, comment);
+            fprintf(stdout, "error: NULL T[%ld] row---%s\n", i, comment);
+            fflush(stdout);
             abort();
             }
         for (j=0; j<6; j++) {
             if (M->Q[i][j]==NULL) {
-                fprintf(stderr, "error: NULL T[%ld][%ld] row---%s\n", i, j, comment);
+                fprintf(stdout, "error: NULL T[%ld][%ld] row---%s\n", i, j, comment);
+                fflush(stdout);
                 abort();
                 }
             for (k=0; k<=j; k++) {
                 if (M->Q[i][j][k]==NULL) {
-                    fprintf(stderr, "error: NULL Q[%ld][%ld][%ld] row---%s\n", i, j, k, comment);
+                    fprintf(stdout, "error: NULL Q[%ld][%ld][%ld] row---%s\n", i, j, k, comment);
+                    fflush(stdout);
                     abort();
                     }
                 }

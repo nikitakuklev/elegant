@@ -35,9 +35,10 @@ void track_SReffects(double **coord, long np, SREFFECTS *SReffects, double Po,
       SReffects->SdeltaRef = radIntegrals->sigmadelta;
       SReffects->DdeltaRef = -radIntegrals->Uo/me_mev/Po;
 /*
-      fprintf(stderr, "SReffects set up:\nPref=%g, Jx/y/delta=%g/%g/%g\nex/ey=%g/%g  Sdelta=%g  Ddelta=%g\n",
+      fprintf(stdout, "SReffects set up:\nPref=%g, Jx/y/delta=%g/%g/%g\nex/ey=%g/%g  Sdelta=%g  Ddelta=%g\n",
               SReffects->pRef, SReffects->Jx, SReffects->Jy, SReffects->Jdelta,
               SReffects->exRef, SReffects->eyRef, SReffects->SdeltaRef, SReffects->DdeltaRef);
+      fflush(stdout);
 */
     }
 
@@ -86,10 +87,12 @@ void track_SReffects(double **coord, long np, SREFFECTS *SReffects, double Po,
     if (first) {
         first = 0;
         /*
-        fprintf(stderr, "Damping/QE constants:\nFx = %e, Fy = %e, Fd = %e\nSrxp = %e, Sryp = %e, Srd = %e\n",
+        fprintf(stdout, "Damping/QE constants:\nFx = %e, Fy = %e, Fd = %e\nSrxp = %e, Sryp = %e, Srd = %e\n",
                Fx, Fy, Fdelta, Srxp, Sryp, Srdelta);
-        fprintf(stderr, "Twiss parameters: betax = %e, etapx = %e, betay = %e\n",
+        fflush(stdout);
+        fprintf(stdout, "Twiss parameters: betax = %e, etapx = %e, betay = %e\n",
                twiss->betax, twiss->etapx, twiss->betay);
+        fflush(stdout);
                */
         }
     

@@ -49,7 +49,8 @@ void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
   n_binned = binTransverseTimeDistribution(posItime, pz, pbin, tmin, dt, nb, time, part, Po, np,
                                            wakeData->dx, wakeData->dy);
   if (n_binned!=np)
-    fprintf(stderr, "warning: only %ld of %ld particles where binned (WAKE)\n", n_binned, np);
+    fprintf(stdout, "warning: only %ld of %ld particles where binned (WAKE)\n", n_binned, np);
+    fflush(stdout);
 
   for (plane=0; plane<2; plane++) {
     if (!wakeData->W[plane])
@@ -147,7 +148,7 @@ void set_up_trwake(TRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
     bomb("too little data in TRWAKE file", NULL);
   
   if (SDDS_CheckColumn(&SDDSin, wakeData->tColumn, "s", SDDS_ANY_FLOATING_TYPE, 
-                       stderr)!=SDDS_CHECK_OK)
+                       stdout)!=SDDS_CHECK_OK)
     bomb("problem with time column for TRWAKE file---check existence, units, and type", NULL);
   if (!(wakeData->t=SDDS_GetColumnInDoubles(&SDDSin, wakeData->tColumn)))
     SDDS_Bomb("unable to read TRWAKE file");
@@ -155,14 +156,14 @@ void set_up_trwake(TRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
   wakeData->W[0] = wakeData->W[1] = NULL;
   if (wakeData->WxColumn) {
     if (SDDS_CheckColumn(&SDDSin, wakeData->WxColumn, "V/C/m", SDDS_ANY_FLOATING_TYPE, 
-                         stderr)!=SDDS_CHECK_OK)
+                         stdout)!=SDDS_CHECK_OK)
       bomb("problem with Wx wake column for TRWAKE file---check existence, units, and type", NULL);
     if (!(wakeData->W[0]=SDDS_GetColumnInDoubles(&SDDSin, wakeData->WxColumn)))
       SDDS_Bomb("unable to read WAKE file");
   }
   if (wakeData->WyColumn) {
     if (SDDS_CheckColumn(&SDDSin, wakeData->WyColumn, "V/C/m", SDDS_ANY_FLOATING_TYPE, 
-                         stderr)!=SDDS_CHECK_OK)
+                         stdout)!=SDDS_CHECK_OK)
       bomb("problem with Wy wake column for TRWAKE file---check existence, units, and type", NULL);
     if (!(wakeData->W[1]=SDDS_GetColumnInDoubles(&SDDSin, wakeData->WyColumn)))
       SDDS_Bomb("unable to read TRWAKE file");
@@ -176,7 +177,8 @@ void set_up_trwake(TRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
   if (tmin==tmax)
     bomb("no time span in TRWAKE data", NULL);
   if (tmin!=0)
-    fprintf(stderr, "warning: TRWAKE function does not start at t=0.  Offseting the function!\n");
+    fprintf(stdout, "warning: TRWAKE function does not start at t=0.  Offseting the function!\n");
+    fflush(stdout);
   wakeData->dt = (tmax-tmin)/(wakeData->wakePoints-1);
 }
 

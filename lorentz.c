@@ -200,13 +200,17 @@ static long n_invalid_particles = 0;
 void lorentz_report(void)
 {
     if (n_lorentz_calls) {
-        fprintf(stderr, "\nStatistics for numerical integrations by lorentz() module:\n");
-        fprintf(stderr, "    %ld calls to main module\n    %ld derivative evaluations\n    %ld particles integrated\n", 
+        fprintf(stdout, "\nStatistics for numerical integrations by lorentz() module:\n");
+        fflush(stdout);
+        fprintf(stdout, "    %ld calls to main module\n    %ld derivative evaluations\n    %ld particles integrated\n", 
             n_lorentz_calls, n_deriv_calls, n_particles_done);
+        fflush(stdout);
         if (length_mult_sum && n_particles_done && !integrator) 
-            fprintf(stderr, "    average length multiplier for non-adaptive integration: %e\n", length_mult_sum/n_particles_done);
-        fprintf(stderr, "    %ld calls to derivative module had invalid particles\n",
+            fprintf(stdout, "    average length multiplier for non-adaptive integration: %e\n", length_mult_sum/n_particles_done);
+            fflush(stdout);
+        fprintf(stdout, "    %ld calls to derivative module had invalid particles\n",
                n_invalid_particles);
+        fflush(stdout);
         }
     n_lorentz_calls = n_deriv_calls = n_particles_done = 0;
     length_mult_sum = 0;
@@ -306,9 +310,11 @@ long do_lorentz_integration(double *coord, void *field)
             case DIFFEQ_CANT_TAKE_STEP:
             case DIFFEQ_OUTSIDE_INTERVAL:
             case DIFFEQ_XI_GT_XF:
-                fprintf(stderr, "Integration failure---may be program bug: %s\n", diffeq_result_description(int_return));
+                fprintf(stdout, "Integration failure---may be program bug: %s\n", diffeq_result_description(int_return));
+                fflush(stdout);
                 for (i=0; i<6; i++) 
-                    fprintf(stderr, "%11.4e  ", coord[i]);
+                    fprintf(stdout, "%11.4e  ", coord[i]);
+                    fflush(stdout);
                 exit(1);
                 break;
             case DIFFEQ_END_OF_INTERVAL:
@@ -316,7 +322,8 @@ long do_lorentz_integration(double *coord, void *field)
                 return(0);
             default:
                 if ((exvalue = (*exit_function)(NULL, q, central_length))>exit_toler)  {
-                    fprintf(stderr, "warning: exit value of %e exceeds tolerance of %e--particle lost.\n", exvalue, exit_toler);
+                    fprintf(stdout, "warning: exit value of %e exceeds tolerance of %e--particle lost.\n", exvalue, exit_toler);
+                    fflush(stdout);
                     log_exit("do_lorentz_integration");
                     return(0);
                     }
@@ -342,7 +349,8 @@ long do_lorentz_integration(double *coord, void *field)
                     lorentz_leap_frog(qout, q, s_end-s_start, n_steps, deriv_function);
                     break;
                 default:
-                    fprintf(stderr, "error: unknown non-adaptive integration method code: %ld\n", method_code);
+                    fprintf(stdout, "error: unknown non-adaptive integration method code: %ld\n", method_code);
+                    fflush(stdout);
                     exit(1);
                     break;
                 }
@@ -435,7 +443,8 @@ void lorentz_setup(
                 nibend->negative_angle = 1;
                 }
             if (nibend->e1!=nibend->e2 && !warning_given) {
-                fprintf(stderr, "warning: e1!=e2 for NIBEND--this may cause orbit distortions\n");
+                fprintf(stdout, "warning: e1!=e2 for NIBEND--this may cause orbit distortions\n");
+                fflush(stdout);
                 warning_given = 1;
                 }
             nibend->rho0 = nibend->length/nibend->angle;
@@ -482,14 +491,17 @@ void lorentz_setup(
 #endif
                     if (offset==0)
                         offset = 1./DBL_MAX;
-                    fprintf(stderr, "NIBEND offset adjusted to %e to obtain trajectory error of %e\n",
+                    fprintf(stdout, "NIBEND offset adjusted to %e to obtain trajectory error of %e\n",
                         offset, nibend_trajectory_error(offset));
-                    fprintf(stderr, "final coordinates: %e, %e, %e, %e, %e\n", 
+                    fflush(stdout);
+                    fprintf(stdout, "final coordinates: %e, %e, %e, %e, %e\n", 
                         traj_err_final_coord[0], traj_err_final_coord[1], traj_err_final_coord[2],
                         traj_err_final_coord[3], traj_err_final_coord[4]);
+                    fflush(stdout);
                     x_correction = traj_err_final_coord[0];
                     if (offset>0)
-                        fprintf(stderr, "\7\7warning: a positive offset is unexpected and is probably incorrect!\n");
+                        fprintf(stdout, "\7\7warning: a positive offset is unexpected and is probably incorrect!\n");
+                        fflush(stdout);
                     last_offset = nibend->last_zeta_offset = nibend->zeta_offset = offset;
                     nibend->x_correction = x_correction;
                     }
@@ -500,10 +512,12 @@ void lorentz_setup(
 
 /*
 #ifdef DEBUG
-            fprintf(stderr, "entrance: begin fringe intercept = %.16le, end = %.16le, slope = %.16le\n",
+            fprintf(stdout, "entrance: begin fringe intercept = %.16le, end = %.16le, slope = %.16le\n",
                 entr_intercept, fentr_intercept, entr_slope);
-            fprintf(stderr, "exit    : begin fringe intercept = %.16le, end = %.16le, slope = %.16le\n",
+            fflush(stdout);
+            fprintf(stdout, "exit    : begin fringe intercept = %.16le, end = %.16le, slope = %.16le\n",
                 exit_intercept, fexit_intercept, exit_slope);
+            fflush(stdout);
 #endif
 */
             break;
@@ -553,11 +567,13 @@ void lorentz_setup(
 #endif
                 if (fse_opt==0)
                     fse_opt = 1./DBL_MAX;
-                fprintf(stderr, "NISEPT fse_opt adjusted to %e to obtain trajectory error of %e\n",
+                fprintf(stdout, "NISEPT fse_opt adjusted to %e to obtain trajectory error of %e\n",
                     fse_opt, nisept_trajectory_error(fse_opt));
-                fprintf(stderr, "final coordinates: %e, %e, %e, %e, %e\n", 
+                fflush(stdout);
+                fprintf(stdout, "final coordinates: %e, %e, %e, %e, %e\n", 
                     traj_err_final_coord[0], traj_err_final_coord[1], traj_err_final_coord[2],
                     traj_err_final_coord[3], traj_err_final_coord[4]);
+                fflush(stdout);
                 last_fse = nisept->last_fse_opt = nisept->fse_opt = fse_opt;
                 }
             break;
@@ -602,10 +618,13 @@ void select_lorentz_integrator(char *desired_method)
             integrator = NULL;    /* use to indicate that non-adaptive integration will be used--pretty kludgey */
             break;
         default:
-            fprintf(stderr, "error: unknown integration method %s requested.\n", desired_method);
-            fprintf(stderr, "Available methods are:\n");
+            fprintf(stdout, "error: unknown integration method %s requested.\n", desired_method);
+            fflush(stdout);
+            fprintf(stdout, "Available methods are:\n");
+            fflush(stdout);
             for (i=0; i<N_METHODS; i++)
-                fprintf(stderr, "    %s\n", method[i]);
+                fprintf(stdout, "    %s\n", method[i]);
+                fflush(stdout);
             exit(1);
             break;
         }
@@ -1195,7 +1214,8 @@ void bmapxy_field_setup(BMAPXY *bmapxy)
   long nx;
 
   if (!fexists(bmapxy->filename)) {
-    fprintf(stderr, "file %s not found for BMAPXY element\n", bmapxy->filename);
+    fprintf(stdout, "file %s not found for BMAPXY element\n", bmapxy->filename);
+    fflush(stdout);
     exit(1);
   }
   if (!SDDS_InitializeInput(&SDDSin, bmapxy->filename) ||
@@ -1207,7 +1227,8 @@ void bmapxy_field_setup(BMAPXY *bmapxy)
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
   }
   if (!(bmapxy->points=SDDS_CountRowsOfInterest(&SDDSin)) || bmapxy->points<2) {
-    fprintf(stderr, "file %s for BMAPXY element has insufficient data\n", bmapxy->filename);
+    fprintf(stdout, "file %s for BMAPXY element has insufficient data\n", bmapxy->filename);
+    fflush(stdout);
     exit(1);
   }
   SDDS_Terminate(&SDDSin);
@@ -1226,9 +1247,11 @@ void bmapxy_field_setup(BMAPXY *bmapxy)
   bmapxy->xmax = x[nx-1];
   bmapxy->dx = (bmapxy->xmax-bmapxy->xmin)/(nx-1);
   if ((bmapxy->nx=nx)<=1 || y[0]>y[nx] || (bmapxy->ny = bmapxy->points/nx)<=1) {
-    fprintf(stderr, "file %s for BMAPXY element doesn't have correct structure or amount of data\n",
+    fprintf(stdout, "file %s for BMAPXY element doesn't have correct structure or amount of data\n",
             bmapxy->filename);
-    fprintf(stderr, "nx = %ld, ny=%ld\n", bmapxy->nx, bmapxy->ny);
+    fflush(stdout);
+    fprintf(stdout, "nx = %ld, ny=%ld\n", bmapxy->nx, bmapxy->ny);
+    fflush(stdout);
     exit(1);
   }
   bmapxy->ymin = y[0];

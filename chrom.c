@@ -32,7 +32,7 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
     set_print_namelist_flags(0);
     process_namelist(&chromaticity, nltext);
     str_toupper(sextupoles);
-    print_namelist(stderr, &chromaticity);
+    print_namelist(stdout, &chromaticity);
 
     if (run->default_order<2)
         bomb("default order must be >= 2 for chromaticity correction", NULL);
@@ -59,7 +59,8 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
         double beta_x, alpha_x, eta_x, etap_x;
         double beta_y, alpha_y, eta_y, etap_y;
 
-        fprintf(stderr, "Computing periodic Twiss parameters.\n");
+        fprintf(stdout, "Computing periodic Twiss parameters.\n");
+        fflush(stdout);
 
         if (!beamline->twiss0)
           beamline->twiss0 = tmalloc(sizeof(*beamline->twiss0));
@@ -130,7 +131,8 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
     m_alloc(&(chrom->dK2), chrom->n_families, 1);
     m_alloc(&(chrom->dchrom), 2, 1);
 
-    fprintf(stderr, "Computing chromaticity influence matrix for all named sextupoles.\n");
+    fprintf(stdout, "Computing chromaticity influence matrix for all named sextupoles.\n");
+    fflush(stdout);
     computeChromaticities(&chromx0, &chromy0, NULL, NULL, NULL, NULL, beamline->twiss0, M=beamline->matrix);
 
     for (i=0; i<chrom->n_families; i++) {
@@ -138,8 +140,9 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
         context = NULL;
         while ((context=find_element(chrom->name[i], &context, beamline->elem_twiss))) {
             if (!count && !(K2_param=confirm_parameter("K2", context->type))) {
-                fprintf(stderr, "error: element %s does not have K2 parameter\n", 
+                fprintf(stdout, "error: element %s does not have K2 parameter\n", 
                         context->name);
+                fflush(stdout);
                 exit(1);
                 }
             if (!(K2ptr = (double*)(context->p_elem + entity_description[context->type].parameter[K2_param].offset)))
@@ -153,7 +156,8 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
             count++;
             }
         if (count==0) {
-            fprintf(stderr, "error: element %s is not in the beamline.\n",  chrom->name[i]);
+            fprintf(stdout, "error: element %s is not in the beamline.\n",  chrom->name[i]);
+            fflush(stdout);
             exit(1);
             }
         if (beamline->links)
@@ -164,15 +168,17 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
         C->a[0][i] = (chromx-chromx0)/chrom->sextupole_tweek;
         C->a[1][i] = (chromy-chromy0)/chrom->sextupole_tweek;
         if (C->a[0][i]==0 || C->a[1][i]==0) {
-            fprintf(stderr, "error: element %s does not change the chromaticity!\n", chrom->name[i]);
+            fprintf(stdout, "error: element %s does not change the chromaticity!\n", chrom->name[i]);
+            fflush(stdout);
             exit(1);
             }
         count = 0;
         context = NULL;
         while ((context=find_element(chrom->name[i], &context, beamline->elem_twiss))) {
             if (!count && !(K2_param=confirm_parameter("K2", context->type))) {
-                fprintf(stderr, "error: element %s does not have K2 parameter\n", 
+                fprintf(stdout, "error: element %s does not have K2 parameter\n", 
                         context->name);
+                fflush(stdout);
                 exit(1);
                 }
             if (!(K2ptr = (double*)(context->p_elem + entity_description[context->type].parameter[K2_param].offset)))
@@ -188,19 +194,24 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
         }
     beamline->matrix = full_matrix(beamline->elem_twiss, run, run->default_order);
 
-    fprintf(stderr, "\nfamily           dCHROMx/dK2        dCHROMy/dK2\n");
+    fprintf(stdout, "\nfamily           dCHROMx/dK2        dCHROMy/dK2\n");
+    fflush(stdout);
     for (i=0; i<chrom->n_families; i++)
-       fprintf(stderr, "%10s:    %14.7e     %14.7e\n", chrom->name[i], C->a[0][i], C->a[1][i]);
+       fprintf(stdout, "%10s:    %14.7e     %14.7e\n", chrom->name[i], C->a[0][i], C->a[1][i]);
+       fflush(stdout);
 
     m_trans(Ct, C);
     m_mult(CtC, Ct, C);
     m_invert(inv_CtC, CtC);
     m_mult(chrom->T, inv_CtC, Ct);
 
-    fprintf(stderr, "\nfamily           dK2/dCHROMx        dK2/dCHROMy\n");
+    fprintf(stdout, "\nfamily           dK2/dCHROMx        dK2/dCHROMy\n");
+    fflush(stdout);
     for (i=0; i<chrom->n_families; i++)
-       fprintf(stderr, "%10s:    %14.7e     %14.7e\n", chrom->name[i], chrom->T->a[i][0], chrom->T->a[i][1]);
-    fprintf(stderr, "\n");
+       fprintf(stdout, "%10s:    %14.7e     %14.7e\n", chrom->name[i], chrom->T->a[i][0], chrom->T->a[i][1]);
+       fflush(stdout);
+    fprintf(stdout, "\n");
+    fflush(stdout);
 
     m_free(&C);
     m_free(&Ct);
@@ -265,8 +276,10 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
     
     computeChromaticities(&chromx0, &chromy0, NULL, NULL, NULL, NULL, beamline->twiss0, M);
 
-    fprintf(stderr, "\nAdjusting chromaticities:\n");
-    fprintf(stderr, "initial chromaticities:  %e  %e\n", chromx0, chromy0);
+    fprintf(stdout, "\nAdjusting chromaticities:\n");
+    fflush(stdout);
+    fprintf(stdout, "initial chromaticities:  %e  %e\n", chromx0, chromy0);
+    fflush(stdout);
 
     presentError = DBL_MAX;
     for (iter=0; iter<chrom->n_iterations; iter++) {
@@ -275,7 +288,8 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
         lastError = presentError;
         presentError = sqr(chrom->dchrom->a[0][0])+sqr(chrom->dchrom->a[1][0]);
         if (presentError>lastError) {
-          fprintf(stderr, "Error increasing---iteration terminated\n");
+          fprintf(stdout, "Error increasing---iteration terminated\n");
+          fflush(stdout);
           break;
         }
         if (chrom->tolerance>0 &&
@@ -290,7 +304,8 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
             break;
         }
         if (i!=chrom->n_families) {
-          fprintf(stderr, "Unable to correct chromaticity---diverged\n");
+          fprintf(stdout, "Unable to correct chromaticity---diverged\n");
+          fflush(stdout);
           return 0;
         }
         for (i=0; i<chrom->n_families; i++) {
@@ -298,8 +313,9 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
             count = 0;
             while ((context=find_element(chrom->name[i], &context, beamline->elem_twiss))) {
                 if (count==0 && (K2_param = confirm_parameter("K2", context->type))<0) {
-                    fprintf(stderr, "error: element %s doesn't have K2 parameter\n",
+                    fprintf(stdout, "error: element %s doesn't have K2 parameter\n",
                             context->name);
+                    fflush(stdout);
                     exit(1);
                     }
                 if (!(K2ptr = (double*)(context->p_elem + entity_description[context->type].parameter[K2_param].offset)))
@@ -313,12 +329,14 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
                 compute_matrix(context, run, NULL);
                 type = context->type;
                 count++;
-                /* fprintf(stderr, "new value of %s#%ld[K2] is  %.15lg 1/m^3\n", 
+                /* fprintf(stdout, "new value of %s#%ld[K2] is  %.15lg 1/m^3\n", 
                        chrom->name[i], context->occurence, K2);
+                   fflush(stdout);
                        */
               }
-            fprintf(stderr, "Change for family %ld (%ld sextupoles): %e\n",
+            fprintf(stdout, "Change for family %ld (%ld sextupoles): %e\n",
                     i, count, chrom->correction_fraction*chrom->dK2->a[i][0]);
+            fflush(stdout);
             if (alter_defined_values)
               change_defined_parameter(chrom->name[i], K2_param, type, K2, NULL, LOAD_FLAG_ABSOLUTE);
             }    
@@ -346,7 +364,8 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
         computeChromaticities(&chromx0, &chromy0, NULL, NULL, NULL, NULL, beamline->twiss0, M);
         beamline->chromaticity[0] = chromx0;
         beamline->chromaticity[1] = chromy0;
-        fprintf(stderr, "resulting chromaticities:  %e  %e\n", chromx0, chromy0);
+        fprintf(stdout, "resulting chromaticities:  %e  %e\n", chromx0, chromy0);
+        fflush(stdout);
         }
 
     if (fp_sl && last_iteration) {

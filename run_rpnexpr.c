@@ -20,7 +20,7 @@ void run_rpn_expression(NAMELIST_TEXT *nltext)
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
     process_namelist(&rpn_expression, nltext);
-    print_namelist(stderr, &rpn_expression);
+    print_namelist(stdout, &rpn_expression);
 
     if (expression) {
         rpn(expression);

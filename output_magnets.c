@@ -62,8 +62,9 @@ void output_magnets(char *filename, char *line_name, LINE_LIST *beamline)
                 if (entity_description[eptr->type].flags&HAS_LENGTH)
                     n_points += 1;
                 else
-                    fprintf(stderr, "warning: element %s, entity type (%s) will not appear in magnet output.\n",
+                    fprintf(stdout, "warning: element %s, entity type (%s) will not appear in magnet output.\n",
                         eptr->name, entity_name[eptr->type]);
+                    fflush(stdout);
                 break;
             }
         total_length = eptr->end_pos;

@@ -44,7 +44,7 @@ void run_subprocess(NAMELIST_TEXT *nltext, RUN *run)
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
     process_namelist(&subprocess, nltext);
-    print_namelist(stderr, &subprocess);
+    print_namelist(stdout, &subprocess);
 
     if (command) {
         buffer[0] = 0;
@@ -59,7 +59,8 @@ void run_subprocess(NAMELIST_TEXT *nltext, RUN *run)
             ptr0 = ptr;
             }
         strcat(buffer, ptr0);
-        fprintf(stderr, "%s\n", buffer);
+        fprintf(stdout, "%s\n", buffer);
+        fflush(stdout);
         fprintf(fp, "%s\nkill -USR1 %d\n", buffer, pid);
         fflush(fp);
 #if !defined(_WIN32)

@@ -27,12 +27,14 @@ void element_link_control(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, RUN *run_
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
     process_namelist(&link_control, nltext);
-    print_namelist(stderr, &link_control);
+    print_namelist(stdout, &link_control);
     
     if (summarize_links) {
-        fprintf(stderr, "\nsummary of element links:\n");
+        fprintf(stdout, "\nsummary of element links:\n");
+        fflush(stdout);
         if (!links->n_links)
-            fprintf(stderr, "    no links defined\n");
+            fprintf(stdout, "    no links defined\n");
+            fflush(stdout);
         if (!links->target_name || !links->item || !links->source_name || !links->equation ||
                 !links->n_targets || !links->target_elem || !links->source_elem)
             bomb("link structure has null pointers", NULL);
@@ -43,17 +45,19 @@ void element_link_control(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, RUN *run_
                 j ++;
             if (j>=N_LINK_MODES)
                 bomb("unknown link mode detected during link summary", NULL);
-            fprintf(stderr, "%s.%s linked (%s) to %s with equation \"%s\"  --  %ld occurences:\n",
+            fprintf(stdout, "%s.%s linked (%s) to %s with equation \"%s\"  --  %ld occurences:\n",
                 links->target_name[i], links->item[i], 
                 link_mode[j],
                 links->source_name[i], links->equation[i],
                 links->n_targets[i]);
+            fflush(stdout);
             for (j=0; j<links->n_targets[i]; j++)
-                fprintf(stderr, "   %s#%ld at z=%.15gm linked to %s#%ld at z=%.15gm\n", 
+                fprintf(stdout, "   %s#%ld at z=%.15gm linked to %s#%ld at z=%.15gm\n", 
                     links->target_elem[i][j]->name, links->target_elem[i][j]->occurence, links->target_elem[i][j]->end_pos,
                     links->source_elem[i][j]->name, links->source_elem[i][j]->occurence, links->source_elem[i][j]->end_pos);
+                fflush(stdout);
             }
-        fputc('\n', stderr);
+        fputc('\n', stdout);
         log_exit("element_link_control");
         return;
         }
@@ -88,7 +92,7 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
     if (source)          str_toupper(source);
     if (source_position) str_tolower(source_position);
     if (mode)            str_tolower(mode);
-    print_namelist(stderr, &link_elements);
+    print_namelist(stdout, &link_elements);
 
     /* check for valid input */
     if (!target)
@@ -108,11 +112,13 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
     n_links = links->n_links;
 
     if (!(t_context=find_element(target, &t_context, &(beamline->elem)))) {
-        fprintf(stderr, "error: cannot make link with target element %s--not in beamline\n", target);
+        fprintf(stdout, "error: cannot make link with target element %s--not in beamline\n", target);
+        fflush(stdout);
         exit(1);
         }
     if (!(s_context=find_element(source, &s_context, &(beamline->elem)))) {
-        fprintf(stderr, "error: cannot make link with source element %s--not in beamline\n", source);
+        fprintf(stdout, "error: cannot make link with source element %s--not in beamline\n", source);
+        fflush(stdout);
         exit(1);
         }
 
@@ -141,7 +147,8 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
     eptr = tmalloc(sizeof(*eptr));
     eptr[0] = t_context;
     if ((links->target_param[n_links] = confirm_parameter(item, t_context->type))<0) {
-        fprintf(stderr, "error: element %s does not have a parameter %s\n", target, item);
+        fprintf(stdout, "error: element %s does not have a parameter %s\n", target, item);
+        fflush(stdout);
         exit(1);
         }
     n_targets = 1;
@@ -182,8 +189,9 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
                     }
                 }
             if (!eptr1) {
-                fprintf(stderr, "error: no %s element is found with the same occurence number as the %ld-th %s element--can't link as requested\n",
+                fprintf(stdout, "error: no %s element is found with the same occurence number as the %ld-th %s element--can't link as requested\n",
                     source, n_sources, target);
+                fflush(stdout);
                 exit(1);
                 }
             eptr[n_sources++] = eptr1;
@@ -202,8 +210,9 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
                     }
                 }
             if (!eptr1) {
-                fprintf(stderr, "error: no %s element is found near the %ld-th %s element--can't link as requested\n",
+                fprintf(stdout, "error: no %s element is found near the %ld-th %s element--can't link as requested\n",
                     source, n_sources, target);
+                fflush(stdout);
                 exit(1);
                 }
             eptr[n_sources++] = eptr1;
@@ -222,8 +231,9 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
                     eptr1 = NULL;
                 }
             if (!eptr1) {
-                fprintf(stderr, "error: no %s element is found adjacent to the %ld-th %s element--can't link as requested\n",
+                fprintf(stdout, "error: no %s element is found adjacent to the %ld-th %s element--can't link as requested\n",
                     source, n_sources, target);
+                fflush(stdout);
                 exit(1);
                 }
             eptr[n_sources++] = eptr1;
@@ -231,8 +241,9 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
         }
     else if (src_position_code==SRC_POSITION_BEFORE) {
         if (links->target_elem[n_links][0]->end_pos<s_context->end_pos) {
-            fprintf(stderr, "error: there is no %s element before the first %s element--can't link as requested\n",
+            fprintf(stdout, "error: there is no %s element before the first %s element--can't link as requested\n",
                 source, target);
+            fflush(stdout);
             exit(1);
             }
         eptr[0] = s_context;
@@ -250,8 +261,9 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
                     break;
                 } while (find_element(source, &s_context, &(beamline->elem)));
             if (!eptr1) {
-                fprintf(stderr, "error: no %s element is found before the %ld-th %s element--can't link as requested\n",
+                fprintf(stdout, "error: no %s element is found before the %ld-th %s element--can't link as requested\n",
                     source, n_sources, target);
+                fflush(stdout);
                 exit(1);
                 }
             eptr[n_sources++] = eptr1;
@@ -266,8 +278,9 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
                     break;
                 }
             if (!s_context) {
-                fprintf(stderr, "error: no %s element after the first %s element--can't link as requested\n",
+                fprintf(stdout, "error: no %s element after the first %s element--can't link as requested\n",
                     source, target);
+                fflush(stdout);
                 exit(1);
                 }
             }
@@ -280,8 +293,9 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
                     break;
                 }
             if (!s_context) {
-                fprintf(stderr, "error: no %s element is found after the %ld-th %s element--can't link as requested\n",
+                fprintf(stdout, "error: no %s element is found after the %ld-th %s element--can't link as requested\n",
                     source, n_sources, target);
+                fflush(stdout);
                 exit(1);
                 }
             eptr[n_sources++] = s_context;
@@ -291,11 +305,13 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
     links->source_elem[n_links] = eptr;
 
 #if DEBUG
-    fprintf(stderr, "list of targets and sources:\n");
+    fprintf(stdout, "list of targets and sources:\n");
+    fflush(stdout);
     for (i=0; i<n_targets; i++)
-        fprintf(stderr, "%s at z=%em linked to %s at z=%em\n", 
+        fprintf(stdout, "%s at z=%em linked to %s at z=%em\n", 
                 links->target_elem[n_links][i]->name, links->target_elem[n_links][i]->end_pos,
                 links->source_elem[n_links][i]->name, links->source_elem[n_links][i]->end_pos);
+        fflush(stdout);
 #endif
 
     links->n_links += 1;
@@ -318,7 +334,7 @@ long assert_element_links(ELEMENT_LINKS *links, RUN *run, LINE_LIST *beamline, l
 
     if (!links->target_name || !links->item || !links->source_name || !links->equation ||
             !links->n_targets || !links->target_elem || !links->source_elem) {
-        fputs("error: link structure has null pointers (assert_element_links)", stderr);
+        fputs("error: link structure has null pointers (assert_element_links)", stdout);
         abort();
         }
 
@@ -332,14 +348,17 @@ long assert_element_links(ELEMENT_LINKS *links, RUN *run, LINE_LIST *beamline, l
         param     = links->target_param[i_link];
         data_type = entity_description[elem_type].parameter[param].type;
 #if DEBUG
-        fprintf(stderr, "asserting %ld links of %s.%s to %s\n", links->n_targets[i_link],
+        fprintf(stdout, "asserting %ld links of %s.%s to %s\n", links->n_targets[i_link],
             links->target_name[i_link], links->item[i_link], links->source_name[i_link]);
-        fprintf(stderr, "source type is %ld, with %ld parameters\n", sour[0]->type, 
+        fflush(stdout);
+        fprintf(stdout, "source type is %ld, with %ld parameters\n", sour[0]->type, 
                     entity_description[sour[0]->type].n_params);
+        fflush(stdout);
 #endif
         for (i_elem=0; i_elem<links->n_targets[i_link]; i_elem++) {
 #if DEBUG
-            fprintf(stderr, "  working on element %ld\n", i_elem);
+            fprintf(stdout, "  working on element %ld\n", i_elem);
+            fflush(stdout);
 #endif
             p_elem = sour[i_elem]->p_elem;
             for (i_item=0; i_item<entity_description[sour[0]->type].n_params; i_item++) {
@@ -356,7 +375,8 @@ long assert_element_links(ELEMENT_LINKS *links, RUN *run, LINE_LIST *beamline, l
                         break;
                     }
 #if DEBUG
-                fprintf(stderr, "    asserting value %e for %s\n", value, entity_description[sour[0]->type].parameter[i_item].name);
+                fprintf(stdout, "    asserting value %e for %s\n", value, entity_description[sour[0]->type].parameter[i_item].name);
+                fflush(stdout);
 #endif
                 }
             p_elem = targ[i_elem]->p_elem;
@@ -380,8 +400,9 @@ long assert_element_links(ELEMENT_LINKS *links, RUN *run, LINE_LIST *beamline, l
             if (rpn_check_error()) exit(1);
             rpn_clear();
             if (verbosity>0)
-                fprintf(stderr, "asserting value %.15g for %s#%ld.%s at z=%.15gm\n",
+                fprintf(stdout, "asserting value %.15g for %s#%ld.%s at z=%.15gm\n",
                     value, links->target_name[i_link], targ[i_elem]->occurence, links->item[i_link], targ[i_elem]->end_pos);
+                fflush(stdout);
             switch (data_type) {
                 case IS_DOUBLE:
                     *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)) = value;
@@ -405,7 +426,7 @@ long assert_element_links(ELEMENT_LINKS *links, RUN *run, LINE_LIST *beamline, l
             }
         }
 #if DEBUG
-    print_line(stderr, beamline);
+    print_line(stdout, beamline);
 #endif
     log_exit("assert_element_links");
     return(matrices_changed);
@@ -425,7 +446,7 @@ void reset_element_links(ELEMENT_LINKS *links, RUN *run, LINE_LIST *beamline)
 
     if (!links->target_name || !links->item || !links->equation ||
             !links->n_targets || !links->target_elem) {
-        fputs("error: link structure has null pointers (reset_element_links)", stderr);
+        fputs("error: link structure has null pointers (reset_element_links)", stdout);
         abort();
         }
     

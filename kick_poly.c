@@ -43,7 +43,7 @@ long polynomial_kicks(
         yplane = 1;
     else {
         if (kpoly->plane && !(kpoly->plane[0]=='x' || kpoly->plane[0]=='X')) {
-            fputs("warning: KPOLY plane not recognized--x plane assumed.", stderr);
+            fputs("warning: KPOLY plane not recognized--x plane assumed.", stdout);
             cp_str(&kpoly->plane, "x");
             }
         yplane = 0;
@@ -60,11 +60,13 @@ long polynomial_kicks(
     i_top = n_part-1;
     for (i_part=0; i_part<=i_top; i_part++) {
         if (!(coord = particle[i_part])) {
-            fprintf(stderr, "null coordinate pointer for particle %ld (polynomial_kicks)", i_part);
+            fprintf(stdout, "null coordinate pointer for particle %ld (polynomial_kicks)", i_part);
+            fflush(stdout);
             abort();
             }
         if (accepted && !accepted[i_part]) {
-            fprintf(stderr, "null accepted coordinates pointer for particle %ld (polynomial_kicks)", i_part);
+            fprintf(stdout, "null accepted coordinates pointer for particle %ld (polynomial_kicks)", i_part);
+            fflush(stdout);
             abort();
             }
 

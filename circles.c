@@ -75,8 +75,9 @@ int FindLineCircleIntersections2(double *x, double *y,
   double a, b, c, d;
 
 /*
-  fprintf(stderr,"Finding intersection:\nLine: slope=%le, yi=%le\nCircle: c=%le, %le, r=%le\n",
+  fprintf(stdout,"Finding intersection:\nLine: slope=%le, yi=%le\nCircle: c=%le, %le, r=%le\n",
           slope, yi,xc,yc,r);
+  fflush(stdout);
 */
   
   a = 1+sqr(slope);

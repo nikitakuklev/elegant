@@ -95,8 +95,8 @@ void setup_sdds_beam(
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
   process_namelist(&sdds_beam, nltext);
-  print_namelist(stderr, &sdds_beam);
-  fflush(stderr);
+  print_namelist(stdout, &sdds_beam);
+  fflush(stdout);
 
   /* check for validity of namelist inputs */
   if (input==NULL)
@@ -113,7 +113,8 @@ void setup_sdds_beam(
     SDDS_ZeroMemory(SDDS_input+n_input_files, sizeof(*SDDS_input));
     input_initialized[n_input_files] = 0;
     if (!fexists(input_file[n_input_files])) {
-      fprintf(stderr, "error: input file %s does not exist\n", input_file[n_input_files]);
+      fprintf(stdout, "error: input file %s does not exist\n", input_file[n_input_files]);
+      fflush(stdout);
       exit(1);
     }
     n_input_files++;
@@ -164,8 +165,8 @@ long new_sdds_beam(
     if (beam->n_original==0)
       bomb("can't retrack with previous bunch--there isn't one!", NULL);
     if (n_particles_per_ring!=1) {
-      fputs("Warning: can't do retracking with previous bunch when n_particles_per_ring!=1\n", stderr);
-      fputs("Will use a new bunch generated from previously read data.\n", stderr);
+      fputs("Warning: can't do retracking with previous bunch when n_particles_per_ring!=1\n", stdout);
+      fputs("Will use a new bunch generated from previously read data.\n", stdout);
       generate_new_bunch = 1;
     }
     else
@@ -234,7 +235,8 @@ long new_sdds_beam(
         bomb("beam->particle array is NULL (new_sdds_beam-2)", NULL);
       for (i=i_store=0; i<beam->n_original; i+=sample_interval) {
         if (!beam->original[i]) {
-          fprintf(stderr, "error: beam->original[%ld] is NULL (new_sdds_beam-2)\n", i);;
+          fprintf(stdout, "error: beam->original[%ld] is NULL (new_sdds_beam-2)\n", i);;
+          fflush(stdout);
           exit(1);
         }
         if (sample_fraction!=1 && random_2(1)>sample_fraction) {
@@ -256,7 +258,8 @@ long new_sdds_beam(
           cos_theta = cos(theta);
           theta += PIx2/n_particles_per_ring;
           if (!beam->particle[i_store]) {
-            fprintf(stderr, "error: beam->particle[%ld] is NULL (new_sdds_beam-2)\n", i_store);
+            fprintf(stdout, "error: beam->particle[%ld] is NULL (new_sdds_beam-2)\n", i_store);
+            fflush(stdout);
             exit(1);
           }
           beam->particle[i_store][0] = r*cos_theta;
@@ -273,11 +276,13 @@ long new_sdds_beam(
       for (i_store=0; i_store<beam->n_to_track; i_store++) {
         for (i=0; i<6; i++) {
           if (!beam->particle[i_store]) {
-            fprintf(stderr, "error: beam->particle[%ld] is NULL\n", i_store);
+            fprintf(stdout, "error: beam->particle[%ld] is NULL\n", i_store);
+            fflush(stdout);
             exit(1);
           }
           if (isnan(beam->particle[i_store][i]) || isinf(beam->particle[i_store][i])) {
-            fprintf(stderr, "error: NaN or Infinity detected in initial particle data, coordinate %ld\n", i);
+            fprintf(stdout, "error: NaN or Infinity detected in initial particle data, coordinate %ld\n", i);
+            fflush(stdout);
             exit(1);
           }
         }
@@ -305,7 +310,8 @@ long new_sdds_beam(
           continue;
         }
         if (!beam->original[i]) {
-          fprintf(stderr, "error: beam->original[%ld] is NULL (new_sdds_beam.2)\n", i);
+          fprintf(stdout, "error: beam->original[%ld] is NULL (new_sdds_beam.2)\n", i);
+          fflush(stdout);
           exit(1);
         }
         gamma = sqrt(sqr(p=beam->original[i][IEC_P])+1);
@@ -314,7 +320,8 @@ long new_sdds_beam(
           continue;
         }
         if (!beam->particle[i_store]) {
-          fprintf(stderr, "error: beam->particle[%ld] is NULL (new_sdds_beam.2)\n", i_store);
+          fprintf(stdout, "error: beam->particle[%ld] is NULL (new_sdds_beam.2)\n", i_store);
+          fflush(stdout);
           exit(1);
         }
         for (j=0; j<4; j++)
@@ -330,7 +337,8 @@ long new_sdds_beam(
       for (i_store=0; i_store<beam->n_to_track; i_store++) {
         for (i=0; i<6; i++) {
           if (isnan(beam->particle[i_store][i]) || isinf(beam->particle[i_store][i])) {
-            fprintf(stderr, "error: NaN or Infinity detected in initial particle data, coordinate %ld\n", i);
+            fprintf(stdout, "error: NaN or Infinity detected in initial particle data, coordinate %ld\n", i);
+            fflush(stdout);
             exit(1);
           }
         }
@@ -355,11 +363,13 @@ long new_sdds_beam(
       bomb("beam->particle is NULL (new_sdds_beam.3)", NULL);
     for (i=0; i<beam->n_saved; i++) {
       if (!beam->original[i]) {
-        fprintf(stderr, "error: beam->original[%ld] is NULL (new_sdds_beam.3)\n", i);
+        fprintf(stdout, "error: beam->original[%ld] is NULL (new_sdds_beam.3)\n", i);
+        fflush(stdout);
         exit(1);
       }
       if (!beam->particle[i]) {
-        fprintf(stderr, "error: beam->particle[%ld] is NULL (new_sdds_beam.3)\n", i);
+        fprintf(stdout, "error: beam->particle[%ld] is NULL (new_sdds_beam.3)\n", i);
+        fflush(stdout);
         exit(1);
       }
       for (j=0; j<7; j++) 
@@ -382,11 +392,13 @@ long new_sdds_beam(
       bomb("beam->particle is NULL (new_sdds_beam.4)", NULL);
     for (i=0; i<beam->n_to_track; i++) {
       if (!beam->original[i]) {
-        fprintf(stderr, "error: beam->original[%ld] is NULL (new_sdds_beam.4)\n", i);
+        fprintf(stdout, "error: beam->original[%ld] is NULL (new_sdds_beam.4)\n", i);
+        fflush(stdout);
         exit(1);
       }
       if (!beam->particle[i]) {
-        fprintf(stderr, "error: beam->particle[%ld] is NULL (new_sdds_beam.4)\n", i);
+        fprintf(stdout, "error: beam->particle[%ld] is NULL (new_sdds_beam.4)\n", i);
+        fflush(stdout);
         exit(1);
       }
       for (j=0; j<7; j++)
@@ -442,8 +454,9 @@ long get_sdds_particles(double ***particle, long one_dump, long n_skip)
     }
     if (selection_parameter) {
       if ((i=SDDS_GetParameterIndex(SDDS_input+ifile, selection_parameter))<0)
-        fprintf(stderr, "warning: SDDS beam file %s does not contain the selection parameter %s\n",
+        fprintf(stdout, "warning: SDDS beam file %s does not contain the selection parameter %s\n",
                 input_file[ifile], selection_parameter);
+        fflush(stdout);
       if (SDDS_GetParameterType(SDDS_input+ifile, i)!=SDDS_STRING) {
         sprintf(s, "SDDS beam file %s contains parameter %s, but parameter is not a string", 
                 input_file[ifile], selection_parameter);
@@ -456,9 +469,10 @@ long get_sdds_particles(double ***particle, long one_dump, long n_skip)
           !check_sdds_beam_column(SDDS_input+ifile, "pr", "m$be$nc") ||
           !check_sdds_beam_column(SDDS_input+ifile, "pz", "m$be$nc") ||
           !check_sdds_beam_column(SDDS_input+ifile, "t", "s")) {
-        fprintf(stderr, 
+        fprintf(stdout, 
                 "necessary data quantities (r, pr, pz, t) have the wrong units or are not present in %s", 
                 input_file[ifile]);
+        fflush(stdout);
         exit(1);
       }
     }
@@ -471,11 +485,13 @@ long get_sdds_particles(double ***particle, long one_dump, long n_skip)
           !check_sdds_beam_column(SDDS_input+ifile, "t", "s")) {
         if (!check_sdds_beam_column(SDDS_input+ifile, "p", "m$be$nc") &&
             check_sdds_beam_column(SDDS_input+ifile, "p", NULL)) {
-          fprintf(stderr, "Warning: p has no units.  Expected m$be$nc\n");
+          fprintf(stdout, "Warning: p has no units.  Expected m$be$nc\n");
+          fflush(stdout);
         } else {
-          fprintf(stderr, 
+          fprintf(stdout, 
                   "necessary data quantities (x, x', y, y', t, p) have the wrong units or are not present in %s", 
                   input_file[ifile]);
+          fflush(stdout);
           exit(1);
         }
         
@@ -581,7 +597,8 @@ long get_sdds_particles(double ***particle, long one_dump, long n_skip)
   if (!data_seen && one_dump)
     return -1;
   
-  fprintf(stderr, "a total of %ld data points were read\n\n", np);
+  fprintf(stdout, "a total of %ld data points were read\n\n", np);
+  fflush(stdout);
   *particle = data;
 
   log_exit("get_sdds_particles");

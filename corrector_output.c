@@ -98,7 +98,8 @@ void dump_corrector_data(CORMON_DATA *CM, STEERING_LIST *SL, long index, char *p
                                IC_VALUE, value,
                                IC_PARUNITS, entity_description[eptr->type].parameter[SL->param_index[sl_index]].unit,
                                -1)) {
-            fprintf(stderr, "Unable to set row %ld values (dump_corrector_data)\n", i);
+            fprintf(stdout, "Unable to set row %ld values (dump_corrector_data)\n", i);
+            fflush(stdout);
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
             exit(1);
             }
@@ -121,7 +122,8 @@ void finish_corrector_output()
     if (!SDDS_cor_initialized)
         return;
     if (!SDDS_Terminate(&SDDS_cor)) {
-        fprintf(stderr, "Unable to terminate SDDS output for correctors (finished_corrector_output)\n");
+        fprintf(stdout, "Unable to terminate SDDS output for correctors (finished_corrector_output)\n");
+        fflush(stdout);
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
         exit(1);
         }

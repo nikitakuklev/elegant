@@ -31,31 +31,35 @@ void error_setup(ERROR *errcon, NAMELIST_TEXT *nltext, RUN *run_cond, LINE_LIST 
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
     process_namelist(&error_control, nltext);
-    print_namelist(stderr, &error_control);
+    print_namelist(stdout, &error_control);
 
     errcon->no_errors_first_step = no_errors_for_first_step;
     
     if (summarize_error_settings) {
-        fprintf(stderr, "summary of random error settings: \n");
+        fprintf(stdout, "summary of random error settings: \n");
+        fflush(stdout);
         if (errcon->no_errors_first_step)
-          fprintf(stderr, "No errors will be generated for the first step.\n");
+          fprintf(stdout, "No errors will be generated for the first step.\n");
+          fflush(stdout);
         for (i=0; i<errcon->n_items; i++) {
             switch (errcon->error_type[i]) {
                 case UNIFORM_ERRORS:
                 case GAUSSIAN_ERRORS:
-                    fprintf(stderr, "%8s:  %sadditive %s errors with amplitude %e %s and cutoff %e %s\n",
+                    fprintf(stdout, "%8s:  %sadditive %s errors with amplitude %e %s and cutoff %e %s\n",
                         errcon->quan_name[i], (errcon->flags[i]&NONADDITIVE_ERRORS?"non-":""),
                         known_error_type[errcon->error_type[i]], 
                         (errcon->flags[i]&FRACTIONAL_ERRORS?100:1)*errcon->error_level[i],
                         errcon->flags[i]&FRACTIONAL_ERRORS?"%":errcon->quan_unit[i], 
                         errcon->error_cutoff[i], (errcon->flags[i]&POST_CORRECTION?"(post-correction)":""));
+                    fflush(stdout);
                     break;
                 case PLUS_OR_MINUS_ERRORS:
-                    fprintf(stderr, "%8s:  %sadditive %s errors with amplitude %e\n", 
+                    fprintf(stdout, "%8s:  %sadditive %s errors with amplitude %e\n", 
                         errcon->quan_name[i], 
                         (errcon->flags[i]&NONADDITIVE_ERRORS?"non-":""),
                         known_error_type[errcon->error_type[i]],
                         errcon->error_level[i]);
+                    fflush(stdout);
                     break;
                 }
             }
@@ -131,7 +135,7 @@ void add_error_element(ERROR *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beamline
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
     process_namelist(&error, nltext);
-    print_namelist(stderr, &error);
+    print_namelist(stdout, &error);
 
     /* check for valid input and copy to errcon arrays */
     if (name==NULL)
@@ -186,7 +190,8 @@ void add_error_element(ERROR *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beamline
         
             errcon->elem_type[n_items] = context->type;
             if ((errcon->param_number[n_items] = confirm_parameter(item, context->type))<0) {
-                fprintf(stderr, "error: cannot vary %s--no such parameter for %s (wildcard name: %s)\n",item, context->name, name);
+                fprintf(stdout, "error: cannot vary %s--no such parameter for %s (wildcard name: %s)\n",item, context->name, name);
+                fflush(stdout);
                 exit(1);
                 }
             cp_str(&errcon->quan_unit[n_items], 
@@ -197,11 +202,13 @@ void add_error_element(ERROR *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beamline
                 = parameter_value(errcon->name[n_items], errcon->elem_type[n_items], errcon->param_number[n_items],
                             beamline);
             if (errcon->unperturbed_value[n_items]==0 && errcon->flags[n_items]&FRACTIONAL_ERRORS)
-                fprintf(stderr, "***\7\7\7 warning: you've specified fractional errors for %s.%s, but the unperturbed value is zero.\nThis may be an error.\n", 
+                fprintf(stdout, "***\7\7\7 warning: you've specified fractional errors for %s.%s, but the unperturbed value is zero.\nThis may be an error.\n", 
                     errcon->name[n_items], errcon->item[n_items]);
+                fflush(stdout);
             if (duplicate_name(errcon->quan_name, n_items, errcon->quan_name[n_items]))
-                fprintf(stderr, "***\7\7\7 warning: you've specified errors for %s.%s more than once!\n",
+                fprintf(stdout, "***\7\7\7 warning: you've specified errors for %s.%s more than once!\n",
                     errcon->name[n_items], errcon->item[n_items]);
+                fflush(stdout);
             errcon->n_items = ++n_items;
             n_added++;
             }
@@ -209,7 +216,8 @@ void add_error_element(ERROR *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beamline
     else {
         str_toupper(name);
         if (!(context=find_element(name, &context, &(beamline->elem)))) {
-            fprintf(stderr, "error: cannot add errors to element %s--not in beamline\n", name);
+            fprintf(stdout, "error: cannot add errors to element %s--not in beamline\n", name);
+            fflush(stdout);
             exit(1);
             }
         errcon->name              = trealloc(errcon->name, sizeof(*errcon->name)*(n_items+1));
@@ -243,7 +251,8 @@ void add_error_element(ERROR *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beamline
     
         errcon->elem_type[n_items] = context->type;
         if ((errcon->param_number[n_items] = confirm_parameter(item, context->type))<0) {
-            fprintf(stderr, "error: cannot vary %s--no such parameter for %s\n",item, name);
+            fprintf(stdout, "error: cannot vary %s--no such parameter for %s\n",item, name);
+            fflush(stdout);
             exit(1);
             }
         cp_str(&errcon->quan_unit[n_items], 
@@ -254,18 +263,21 @@ void add_error_element(ERROR *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beamline
             = parameter_value(errcon->name[n_items], errcon->elem_type[n_items], errcon->param_number[n_items],
                         beamline);
         if (errcon->unperturbed_value[n_items]==0 && errcon->flags[n_items]&FRACTIONAL_ERRORS)
-            fprintf(stderr, "***\7\7\7 warning: you've specified fractional errors for %s.%s, but the unperturbed value is zero.\nThis may be an error.\n", 
+            fprintf(stdout, "***\7\7\7 warning: you've specified fractional errors for %s.%s, but the unperturbed value is zero.\nThis may be an error.\n", 
                 errcon->name[n_items], errcon->item[n_items]);
+            fflush(stdout);
 
         if (duplicate_name(errcon->quan_name, n_items, errcon->quan_name[n_items]))
-            fprintf(stderr, "***\7\7\7 warning: you've specified errors for %s.%s more than once!\n",
+            fprintf(stdout, "***\7\7\7 warning: you've specified errors for %s.%s more than once!\n",
                 errcon->name[n_items], errcon->item[n_items]);
+            fflush(stdout);
         errcon->n_items = ++n_items;
         n_added++;
         }
 
     if (!n_added) {
-        fprintf(stderr, "error: no match for name %s\n", name);
+        fprintf(stdout, "error: no match for name %s\n", name);
+        fflush(stdout);
         exit(1);
         }
     log_exit("add_error_element");
@@ -300,8 +312,9 @@ double parameter_value(char *pname, long elem_type, long param, LINE_LIST *beaml
                 exit(1);
             }
         }
-    fprintf(stderr, "error: unable to find value of parameter %ld for element %s of type %ld\n",
+    fprintf(stdout, "error: unable to find value of parameter %ld for element %s of type %ld\n",
         param, pname, elem_type);
+    fflush(stdout);
     exit(1);
     return(0.0);
     }

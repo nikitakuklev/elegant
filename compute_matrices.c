@@ -16,13 +16,14 @@ VMATRIX *full_matrix(ELEMENT_LIST *elem, RUN *run, long order)
 {
 
     if (!elem) {
-        fputs("error: NULL element pointer passed to full_matrix", stderr);
+        fputs("error: NULL element pointer passed to full_matrix", stdout);
         abort();
         }
     
 #ifdef WATCH_MEMORY
-    fprintf(stderr, "start full_matrix: CPU: %6.2lf  PF: %6ld  MEM: %6ld\n",
+    fprintf(stdout, "start full_matrix: CPU: %6.2lf  PF: %6ld  MEM: %6ld\n",
            cpu_time()/100.0, page_faults(), memory_count());
+    fflush(stdout);
 #endif
     
     return accumulate_matrices(elem, run, NULL, order, 1);
@@ -36,7 +37,7 @@ VMATRIX *accumulate_matrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long ord
   long i;
   
   if (!elem) {
-    fputs("error: NULL element pointer passed to accumulate_matrices", stderr);
+    fputs("error: NULL element pointer passed to accumulate_matrices", stdout);
     abort();
   }
   
@@ -50,9 +51,11 @@ VMATRIX *accumulate_matrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long ord
   member = elem;
   while (member) {
     if (member->type<0 || member->type>=N_TYPES) {
-      fprintf(stderr, "error: bad element type %ld (accumulate_matrices)\n", member->type);
-      fprintf(stderr, "element name is %s and end position is %em\n", 
+      fprintf(stdout, "error: bad element type %ld (accumulate_matrices)\n", member->type);
+      fflush(stdout);
+      fprintf(stdout, "element name is %s and end position is %em\n", 
              (member->name?member->name:"{null}"), member->end_pos);
+      fflush(stdout);
       abort();
     }
     if (member->pred)
@@ -62,8 +65,9 @@ VMATRIX *accumulate_matrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long ord
     if (!member->matrix || Pref_input!=member->Pref_input)
       compute_matrix(member, run, NULL);
     if ((entity_description[member->type].flags&HAS_MATRIX) && !member->matrix) {
-      fprintf(stderr, "programming error: matrix not computed for element %s\n",
+      fprintf(stdout, "programming error: matrix not computed for element %s\n",
               member->name);
+      fflush(stdout);
       abort();
     }
     if (member->matrix) {
@@ -97,11 +101,11 @@ VMATRIX *append_full_matrix(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long orde
 
     log_entry("append_full_matrix");
     if (!elem) {
-        fputs("error: NULL element pointer passed to append_full_matrix", stderr);
+        fputs("error: NULL element pointer passed to append_full_matrix", stdout);
         abort();
         }
     if (!M0) {
-        fputs("error: NULL initial matrix pointer passed to append_full_matrix", stderr);
+        fputs("error: NULL initial matrix pointer passed to append_full_matrix", stdout);
         abort();
         }
     
@@ -112,9 +116,11 @@ VMATRIX *append_full_matrix(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long orde
     member = elem;
     while (member) {
         if (member->type<0 || member->type>=N_TYPES) {
-            fprintf(stderr, "error: bad element type %ld (full_matrix)\n", member->type);
-            fprintf(stderr, "element name is %s and end position is %em\n", 
+            fprintf(stdout, "error: bad element type %ld (full_matrix)\n", member->type);
+            fflush(stdout);
+            fprintf(stdout, "element name is %s and end position is %em\n", 
                    (member->name?member->name:"{null}"), member->end_pos);
+            fflush(stdout);
             abort();
             }
         if (member->pred)
@@ -124,8 +130,9 @@ VMATRIX *append_full_matrix(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long orde
         if (!member->matrix || Pref_input!=member->Pref_input)
             compute_matrix(member, run, NULL);
         if ((entity_description[member->type].flags&HAS_MATRIX) && !member->matrix) {
-            fprintf(stderr, "programming error: matrix not computed for element %s\n",
+            fprintf(stdout, "programming error: matrix not computed for element %s\n",
                     member->name);
+            fflush(stdout);
             abort();
             }
         if (member->matrix) {
@@ -158,9 +165,11 @@ long fill_in_matrices(
     member = elem;
     while (member) {
         if (member->type<0 || member->type>=N_TYPES) {
-            fprintf(stderr, "error: bad element type %ld (fill_in_matrices)\n", member->type);
-            fprintf(stderr, "element name is %s and end position is %em\n", 
+            fprintf(stdout, "error: bad element type %ld (fill_in_matrices)\n", member->type);
+            fflush(stdout);
+            fprintf(stdout, "element name is %s and end position is %em\n", 
                    (member->name?member->name:"{null}"), member->end_pos);
+            fflush(stdout);
             abort();
             }
         if ((member->matrix==NULL || (member->pred && member->pred->Pref_output!=member->Pref_input)) &&
@@ -402,12 +411,14 @@ VMATRIX *compute_matrix(
       case T_ALPH:
         alph = (ALPH*)elem->p_elem;
 #if DEBUG
-        print_elem(stderr, elem);
-        fprintf(stderr, "part = %ld, threshold = %e, order = %ld\nxmax = %e, xs1 = %e, xs2 = %e\n",
+        print_elem(stdout, elem);
+        fprintf(stdout, "part = %ld, threshold = %e, order = %ld\nxmax = %e, xs1 = %e, xs2 = %e\n",
                alph->part, alph->threshold, alph->order, alph->xs1, alph->xs2);
-        fprintf(stderr, "dp1 = %e, dp2 = %e, dx = %e, dy = %e, gradient = %e\n",
+        fflush(stdout);
+        fprintf(stdout, "dp1 = %e, dp2 = %e, dx = %e, dy = %e, gradient = %e\n",
                alph->dp1, alph->dp2, alph->dx, alph->dy, alph->gradient);
-        print_elem(stderr, elem);
+        fflush(stdout);
+        print_elem(stdout, elem);
 #endif
         if (alph->xmax)
             alph->gradient = run->p_central*sqr(ALPHA_CONST/alph->xmax);
@@ -640,8 +651,9 @@ VMATRIX *compute_matrix(
         if (entity_description[elem->type].flags&HAS_LENGTH)
             elem->matrix = drift_matrix(*((double*)elem->p_elem), run->default_order);
         if ((entity_description[elem->type].flags&HAS_MATRIX) && !elem->matrix) {
-            fprintf(stderr, "error: failed to compute matrix for %s, which should have a matrix.\n",
+            fprintf(stdout, "error: failed to compute matrix for %s, which should have a matrix.\n",
                     elem->name);
+            fflush(stdout);
             abort();
             }
         break;
@@ -857,7 +869,8 @@ VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, doubl
     C = M->C;
     
     if (*P_central<=0) {
-        fprintf(stderr, "error: P_central = %g\n", *P_central);
+        fprintf(stdout, "error: P_central = %g\n", *P_central);
+        fflush(stdout);
         abort();
         }
 

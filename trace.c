@@ -40,13 +40,13 @@ void process_trace_request(NAMELIST_TEXT *nltext)
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
     process_namelist(&trace, nltext);
-    print_namelist(stderr, &trace);
+    print_namelist(stdout, &trace);
 
     if (record_allocation && filename)
         keep_alloc_record(filename);
 
 #if defined(VAX_VMS)
-    fputs("warning: program trace is not supported on this system", stderr);
+    fputs("warning: program trace is not supported on this system", stdout);
     return;
 #endif
 
@@ -83,8 +83,10 @@ void log_entry(char *routine)
     in_trace_routine = 1;
 
     if (trace_level<0) {
-        fprintf(stderr, "error: trace level is negative (log_entry)\n");
-        fprintf(stderr, "calling routine is %s\n", routine);
+        fprintf(stdout, "error: trace level is negative (log_entry)\n");
+        fflush(stdout);
+        fprintf(stdout, "calling routine is %s\n", routine);
+        fflush(stdout);
         exit(1);
         }
 
@@ -145,8 +147,10 @@ void log_exit(char *routine)
         }
     if (trace_mode&TRACE_ENTRY) {
         if (trace_level<=0) {
-            fprintf(stderr, "error: trace level is nonpositive (log_exit)\n");
-            fprintf(stderr, "calling routine is %s\n", routine);
+            fprintf(stdout, "error: trace level is nonpositive (log_exit)\n");
+            fflush(stdout);
+            fprintf(stdout, "calling routine is %s\n", routine);
+            fflush(stdout);
             exit(1);
             }
         fseek(fp, file_pos[trace_level-1], 0);
@@ -162,34 +166,33 @@ void traceback_handler(int sig)
     long i;
     switch (sig) {
 #if !defined(_WIN32)
-        case SIGHUP: fprintf(stderr, "\nTerminated by SIGHUP\n"); break;
-        case SIGQUIT: fprintf(stderr, "\nTerminated by SIGQUIT\n"); break;
-        case SIGTRAP: fprintf(stderr, "\nTerminated by SIGTRAP\n"); break;
+        case SIGHUP: fprintf(stdout, "\nTerminated by SIGHUP\n"); break;
+        case SIGQUIT: fprintf(stdout, "\nTerminated by SIGQUIT\n"); break;
+        case SIGTRAP: fprintf(stdout, "\nTerminated by SIGTRAP\n"); break;
         case SIGBUS: 
-            fprintf(stderr, "\nTerminated by SIGBUS"); 
+            fprintf(stdout, "\nTerminated by SIGBUS"); 
             break;
 #endif
-        case SIGINT: fprintf(stderr, "\nTerminated by SIGINT\n"); break;
-        case SIGABRT: fprintf(stderr, "\nTerminated by SIGABRT\n"); break;
-        case SIGILL: fprintf(stderr, "\nTerminated by SIGILL\n"); break;
+        case SIGINT: fprintf(stdout, "\nTerminated by SIGINT\n"); break;
+        case SIGABRT: fprintf(stdout, "\nTerminated by SIGABRT\n"); break;
+        case SIGILL: fprintf(stdout, "\nTerminated by SIGILL\n"); break;
         case SIGFPE: 
-            fprintf(stderr, "\nTerminated by SIGFPE"); 
+            fprintf(stdout, "\nTerminated by SIGFPE"); 
             break;
         case SIGSEGV: 
-            fprintf(stderr, "\nTerminated by SIGSEGV"); 
+            fprintf(stdout, "\nTerminated by SIGSEGV"); 
             break;
-        default:      fprintf(stderr, "\nTerminated by unknown signal\n"); break;
+        default:      fprintf(stdout, "\nTerminated by unknown signal\n"); break;
         }   
-    fprintf(stderr, "Program trace-back:\n");
+    fprintf(stdout, "Program trace-back:\n");
     for (i=0; i<trace_level; i++) {
-        fputs(routine_name[i], stderr);
-        fputc('\n', stderr);
+        fputs(routine_name[i], stdout);
+        fputc('\n', stdout);
         }
     if (in_trace_routine==1)
-        fprintf(stderr, "log_entry\n");
+        fprintf(stdout, "log_entry\n");
     else if (in_trace_routine==2)
-        fprintf(stderr, "log_exit\n");
-    fflush(stderr);
-    fflush(stderr);    /* to force flushing of output sent to stderr by other parts of the code */
+        fprintf(stdout, "log_exit\n");
+    fflush(stdout);    /* to force flushing of output sent to stdout by other parts of the code */
     exit(1);
     }

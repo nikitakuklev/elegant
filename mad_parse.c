@@ -49,7 +49,8 @@ void fill_line(
     log_entry("fill_line");
 
 #ifdef DEBUG    
-    fprintf(stderr, "expanding beamline: %s\n", s);
+    fprintf(stdout, "expanding beamline: %s\n", s);
+    fflush(stdout);
 #endif
 
     /* get pointer to empty spot in list of LINE definitions */
@@ -64,13 +65,15 @@ void fill_line(
 
     /* get beamline name */
     if ((ptr = strchr(s, ','))==NULL) {
-        fprintf(stderr, "error parsing LINE: %s\n", s);
+        fprintf(stdout, "error parsing LINE: %s\n", s);
+        fflush(stdout);
         exit(1);
         }
     *ptr = 0;
     lptr->name = get_token_t(s, " ,\011");
 #ifdef DEBUG
-    fprintf(stderr, "line name is %s\n", lptr->name);
+    fprintf(stdout, "line name is %s\n", lptr->name);
+    fflush(stdout);
 #endif
     if (strpbrk(lptr->name, ":.,/-_+ "))
         sprintf(lptr->definition, "\"%s\": LINE=%s", lptr->name, ptr+1);
@@ -111,7 +114,8 @@ extern ELEMENT_LIST *expand_line(
     cp_str(&line_save, s);
 
 #ifdef DEBUG
-    fprintf(stderr, "line is %s\n", s);
+    fprintf(stdout, "line is %s\n", s);
+    fflush(stdout);
 #endif
 
     while ((ptr1 = get_token_tq(s, ",", ",", "(\"", ")\""))) {
@@ -122,7 +126,8 @@ extern ELEMENT_LIST *expand_line(
             *ptr = 0;
         delete_bounding(ptr1, "\"");
 #ifdef DEBUG 
-        fprintf(stderr, "ptr1 = %s\n", ptr1);
+        fprintf(stdout, "ptr1 = %s\n", ptr1);
+        fflush(stdout);
 #endif
 
 
@@ -137,8 +142,10 @@ extern ELEMENT_LIST *expand_line(
             if ((ptr=strchr(ptr1, '*'))) {
                 *ptr = 0;
                 if (1!=sscanf(ptr1, "%ld", &multiplier)) {
-                    fprintf(stderr, "problem with line: %s\n", line_save);
-                    fprintf(stderr, "position is %s\n", ptr1);
+                    fprintf(stdout, "problem with line: %s\n", line_save);
+                    fflush(stdout);
+                    fprintf(stdout, "position is %s\n", ptr1);
+                    fflush(stdout);
                     bomb("improper element multiplication", NULL);
                     }
                 ptr1 = ptr+1;
@@ -147,20 +154,25 @@ extern ELEMENT_LIST *expand_line(
                 }
 /** this code was removed to solve problem with names like 17QD 
             else {
-                fprintf(stderr, "problem with line: %s\n", line_save);
-                fprintf(stderr, "position is %s\n", ptr1);
+                fprintf(stdout, "problem with line: %s\n", line_save);
+                fflush(stdout);
+                fprintf(stdout, "position is %s\n", ptr1);
+                fflush(stdout);
                 bomb("improper element multiplication", NULL);
                 }
 ***/
             }
 #ifdef DEBUG
-        fprintf(stderr, "reverse = %ld, multiplier = %ld\n", reverse, multiplier);
-        fprintf(stderr, "ptr1 = %s\n",ptr1);
+        fprintf(stdout, "reverse = %ld, multiplier = %ld\n", reverse, multiplier);
+        fflush(stdout);
+        fprintf(stdout, "ptr1 = %s\n",ptr1);
+        fflush(stdout);
 #endif
 
         simple = is_simple(ptr1);
 #ifdef DEBUG
-            fprintf(stderr, "simple = %ld\n", simple);
+            fprintf(stdout, "simple = %ld\n", simple);
+            fflush(stdout);
 #endif
         if (simple) {
             /* add simple elements to the line's element list */
@@ -183,7 +195,7 @@ extern ELEMENT_LIST *expand_line(
 
 
 #ifdef DEBUG
-    print_line(stderr, lptr);
+    print_line(stdout, lptr);
 #endif
     log_exit("fill_line");
     return(leptr);
@@ -216,15 +228,18 @@ void fill_elem(ELEMENT_LIST *eptr, char *s, long type, FILE *fp_input)
     eptr->end_pos = eptr->flags = 0;
 
     if ((eptr->type = type)>=N_TYPES || type<=0) {
-        fprintf(stderr, "unknown element type %ld in fill_elem()\n", type);
-        fprintf(stderr, "remainder of line is: \n%s\n", s);
+        fprintf(stdout, "unknown element type %ld in fill_elem()\n", type);
+        fflush(stdout);
+        fprintf(stdout, "remainder of line is: \n%s\n", s);
+        fflush(stdout);
         exit(1);
         }
 
     eptr->name = get_token_t(s, " ,\011");
     if (((long)strlen(eptr->name))>max_name_length) {
-        fprintf(stderr, "warning: element name %s truncated to %ld  characters\n",
+        fprintf(stdout, "warning: element name %s truncated to %ld  characters\n",
                 eptr->name, max_name_length);
+        fflush(stdout);
         eptr->name[max_name_length] = 0;
         }
     cp_str(&eptr->definition_text, s);
@@ -256,7 +271,8 @@ void fill_elem(ELEMENT_LIST *eptr, char *s, long type, FILE *fp_input)
         matr->M.order = matr->order;
         initialize_matrices(&(matr->M), matr->order);
         if (!read_matrices(&(matr->M), fpm)) {
-            fprintf(stderr, "error reading matrix from file %s\n", matr->filename);
+            fprintf(stdout, "error reading matrix from file %s\n", matr->filename);
+            fflush(stdout);
             abort();
             }
         fclose(fpm);
@@ -293,14 +309,16 @@ void copy_named_element(ELEMENT_LIST *eptr, char *s, ELEMENT_LIST *elem)
     delete_bounding(match, "\"");
 
     if (((long)strlen(name))>max_name_length) {
-        fprintf(stderr, "warning: element name %s truncated to %ld characters\n",
+        fprintf(stdout, "warning: element name %s truncated to %ld characters\n",
                 eptr->name, max_name_length);
+        fflush(stdout);
         name[max_name_length] = 0;
         }
 
 #ifdef DEBUG
-    fprintf(stderr, "seeking match for name %s to copy for defining name %s\n",
+    fprintf(stdout, "seeking match for name %s to copy for defining name %s\n",
            match, name);
+    fflush(stdout);
 #endif
 
     while (elem && elem->name) {
@@ -310,12 +328,14 @@ void copy_named_element(ELEMENT_LIST *eptr, char *s, ELEMENT_LIST *elem)
         }
     if (!elem->name) {
         log_exit("copy_named_element");
-        fprintf(stderr, "unable to define %s as copy of %s--source element does not exist\n",
+        fprintf(stdout, "unable to define %s as copy of %s--source element does not exist\n",
                 name, match);
+        fflush(stdout);
         exit(1);
         }
 #ifdef DEBUG
-    fprintf(stderr, "match found for %s: %s\n", name, match);
+    fprintf(stdout, "match found for %s: %s\n", name, match);
+    fflush(stdout);
 #endif
 
     eptr->p_elem = tmalloc(entity_description[elem->type].structure_size);
@@ -362,7 +382,8 @@ long expand_phys(
     for (ie=0; ie<ne; ie++) {
         if ((comparison=strcmp(entity, elem_list->name))==0) {
 #ifdef DEBUG
-            fprintf(stderr, "adding element %ld*%s\n", multiplier, entity);
+            fprintf(stdout, "adding element %ld*%s\n", multiplier, entity);
+            fflush(stdout);
 #endif
             for (i=0; i<multiplier; i++) {
                 copy_element(leptr, elem_list, reverse);
@@ -396,9 +417,11 @@ long expand_phys(
         line_list = line_list->succ;
         }
 
-    fprintf(stderr, "no expansion for entity %s\n", entity);
-    fprintf(stderr, "known elements are:\n");
-    print_elem_names(stderr, elem0);
+    fprintf(stdout, "no expansion for entity %s\n", entity);
+    fflush(stdout);
+    fprintf(stdout, "known elements are:\n");
+    fflush(stdout);
+    print_elem_names(stdout, elem0);
     exit(1);
     return(0);
     }
@@ -509,17 +532,21 @@ long tell_type(char *s, ELEMENT_LIST *elem)
         }
     delete_bounding(name, "\"");
 #ifdef DEBUG
-    fprintf(stderr, "first token on line: >%s<\n", name);
-    fprintf(stderr, "remainder of line: >%s<\n", s);
+    fprintf(stdout, "first token on line: >%s<\n", name);
+    fflush(stdout);
+    fprintf(stdout, "remainder of line: >%s<\n", s);
+    fflush(stdout);
 #endif
     ptr = get_token_tq(s, "", ",=", " \"", " \"");
     delete_bounding(ptr, "\"");
 #ifdef DEBUG
-    fprintf(stderr, "second token: >%s<\n", ptr);
+    fprintf(stdout, "second token: >%s<\n", ptr);
+    fflush(stdout);
 #endif
     if (!ptr || is_blank(ptr)) {
 #ifdef DEBUG
-        fprintf(stderr, "second token is blank\n");
+        fprintf(stdout, "second token is blank\n");
+        fflush(stdout);
 #endif
         if ((ptr=strchr(name, ','))) {
             strcpy(s, ptr+1);
@@ -535,7 +562,8 @@ long tell_type(char *s, ELEMENT_LIST *elem)
          * pointed to by ptr, but is not in s. */
         }
 #ifdef DEBUG
-    fprintf(stderr, "seeking to match %s to entity name\n", ptr);
+    fprintf(stdout, "seeking to match %s to entity name\n", ptr);
+    fflush(stdout);
 #endif
     if (entity_name_length==NULL) {
         entity_name_length = tmalloc(sizeof(*entity_name_length)*N_TYPES);
@@ -546,7 +574,8 @@ long tell_type(char *s, ELEMENT_LIST *elem)
     for (i=0; i<N_TYPES; i++) {
         if (strncmp(ptr, entity_name[i], MIN(l, entity_name_length[i]))==0)  {
             if (match_found) {
-                fprintf(stderr, "error: item %s is ambiguous--specify more of the item name\n", ptr);
+                fprintf(stdout, "error: item %s is ambiguous--specify more of the item name\n", ptr);
+                fflush(stdout);
                 exit(1);
                 }
             if (l==entity_name_length[i]) {
@@ -556,17 +585,20 @@ long tell_type(char *s, ELEMENT_LIST *elem)
             return_value = i;
             match_found = 1;
 #ifdef DEBUG
-            fprintf(stderr, "%s matches entity name %s\n", ptr, entity_name[i]);
+            fprintf(stdout, "%s matches entity name %s\n", ptr, entity_name[i]);
+            fflush(stdout);
 #endif
             }
         }
 #ifdef DEBUG
-    fprintf(stderr, "seeking to match %s to command name\n", ptr);
+    fprintf(stdout, "seeking to match %s to command name\n", ptr);
+    fflush(stdout);
 #endif
     for (i=1; i<N_MADCOMS; i++) {
         if (strncmp(ptr, madcom_name[i], MIN(l, strlen(madcom_name[i])))==0) {
             if (match_found) {
-                fprintf(stderr, "error: item %s is ambiguous--specify more of the item name\n", ptr);
+                fprintf(stdout, "error: item %s is ambiguous--specify more of the item name\n", ptr);
+                fflush(stdout);
                 exit(1);
                 }
             if (l==((long)strlen(madcom_name[i]))) {
@@ -576,12 +608,14 @@ long tell_type(char *s, ELEMENT_LIST *elem)
             return_value = -i-1;
             match_found = 1;
 #ifdef DEBUG
-            fprintf(stderr, "%s matches command name %s\n", ptr, madcom_name[i]);
+            fprintf(stdout, "%s matches command name %s\n", ptr, madcom_name[i]);
+            fflush(stdout);
 #endif
             }
         }
 #ifdef DEBUG
-    fprintf(stderr, "seeking to match %s to element name\n", ptr);
+    fprintf(stdout, "seeking to match %s to element name\n", ptr);
+    fflush(stdout);
 #endif
     /* this code depends on the elements being previously sorted into
      * strcmp() order.  This is done by check_duplic_elem
@@ -589,14 +623,17 @@ long tell_type(char *s, ELEMENT_LIST *elem)
     while (elem && elem->name) {
         if ((comparison=strcmp(elem->name, ptr))==0) {
             if (match_found)
-                fprintf(stderr, "warning: reference to item %s is ambiguous--assuming element copy desired\n", ptr);
+                fprintf(stdout, "warning: reference to item %s is ambiguous--assuming element copy desired\n", ptr);
+                fflush(stdout);
             if (!elem->definition_text)
                 bomb("element copy with no definition_text--internal error", NULL);
             buffer = tmalloc(sizeof(*buffer)*(strlen(elem->definition_text)+strlen(s)+1));
             if ((ptr=strchr(s, ','))) {
 #ifdef DEBUG
-                fprintf(stderr, "inserting into: %s\n", s);
-                fprintf(stderr, "inserting: %s\n", elem->definition_text);
+                fprintf(stdout, "inserting into: %s\n", s);
+                fflush(stdout);
+                fprintf(stdout, "inserting: %s\n", elem->definition_text);
+                fflush(stdout);
 #endif
                 insert(ptr, elem->definition_text);
                 }
@@ -606,7 +643,8 @@ long tell_type(char *s, ELEMENT_LIST *elem)
                 }
             free(buffer);
 #ifdef DEBUG
-            fprintf(stderr, "modified input text for element %s:\n%s\n", name, s);
+            fprintf(stdout, "modified input text for element %s:\n%s\n", name, s);
+            fflush(stdout);
 #endif
             log_exit("tell_type");
             return(elem->type);
@@ -633,7 +671,8 @@ char *get_param_name(char *s)
     log_entry("get_param_name");
 
     if ((ptr=strchr(s, '='))==NULL) {
-        fprintf(stderr, "get_param_name(): no parameter name found in string %s\n", s);
+        fprintf(stdout, "get_param_name(): no parameter name found in string %s\n", s);
+        fflush(stdout);
         exit(1);
         }
     *ptr = 0;
@@ -677,8 +716,9 @@ char *find_param(char *s, char *param)
 void unknown_parameter(char *parameter, 
     char *element, char *type_name, char *caller)
 {
-    fprintf(stderr, "error: unknown parameter %s used for %s %s (%s)\n",
+    fprintf(stdout, "error: unknown parameter %s used for %s %s (%s)\n",
             parameter, type_name, element, caller);
+    fflush(stdout);
     exit(1);
     }
 
@@ -698,18 +738,21 @@ void parse_element(
 
     if (!(entity_description[eptr->type].flags&OFFSETS_CHECKED)) {
         if (parameter[0].offset<0) {
-            fprintf(stderr, "error: bad initial parameter offset for element type %s\n", type_name);
+            fprintf(stdout, "error: bad initial parameter offset for element type %s\n", type_name);
+            fflush(stdout);
             exit(1);
             }
         for (i=1; i<n_params; i++) {
             if ((difference=parameter[i].offset-parameter[i-1].offset)<0) {
-                fprintf(stderr, "error: bad parameter offset for element type %s, parameter %ld (%s)\n",
+                fprintf(stdout, "error: bad parameter offset for element type %s, parameter %ld (%s)\n",
                         type_name, i, parameter[i].name?parameter[i].name:"NULL");
+                fflush(stdout);
                 exit(1);
                 }
             else if (difference>8) {
-                fprintf(stderr, "warning: suspicious parameter offset for parameter %s of element type %s\n", 
+                fprintf(stdout, "warning: suspicious parameter offset for parameter %s of element type %s\n", 
                         parameter[i].name, type_name);
+                fflush(stdout);
                 }
             }
         entity_description[eptr->type].flags |= OFFSETS_CHECKED;
@@ -738,26 +781,30 @@ void parse_element(
             if (strcmp(parameter[i].name, ptr1)==0)
                 break;
         if (i==n_params) {
-            fprintf(stderr, "error: unknown parameter %s used for %s %s (%s)\n",
+            fprintf(stdout, "error: unknown parameter %s used for %s %s (%s)\n",
                     ptr1, eptr->name, type_name, "parse_element");
-            fputs("valid parameters are:", stderr);
+            fflush(stdout);
+            fputs("valid parameters are:", stdout);
             for (i=0; i<n_params; i++) {
                 switch (parameter[i].type) {
                     case IS_DOUBLE:
-                        fprintf(stderr, "%s (%.16f %s)\n",
+                        fprintf(stdout, "%s (%.16f %s)\n",
                             parameter[i].name, parameter[i].number,
                             parameter[i].unit);
+                        fflush(stdout);
                         break;
                     case IS_LONG:
-                        fprintf(stderr, "%s (%ld %s)\n",
+                        fprintf(stdout, "%s (%ld %s)\n",
                             parameter[i].name, parameter[i].integer,
                             parameter[i].unit);
+                        fflush(stdout);
                         break;
                     case IS_STRING:
-                        fprintf(stderr, "%s (\"%s\")\n",
+                        fprintf(stdout, "%s (\"%s\")\n",
                             parameter[i].name, 
                             parameter[i].string==NULL?"{null}":
                                     parameter[i].string);
+                        fflush(stdout);
                         break;
                     }
                 }
@@ -767,16 +814,19 @@ void parse_element(
             case IS_DOUBLE:
                 if (!isdigit(*ptr) && *ptr!='.' && *ptr!='-' && *ptr!='+') {
 #if defined(DEBUG)
-                    fprintf(stderr, "non-numeric string for double value: %s\n", ptr);
+                    fprintf(stdout, "non-numeric string for double value: %s\n", ptr);
+                    fflush(stdout);
 #endif
                     rpn_token = get_token(ptr);
 #if defined(DEBUG)
-                    fprintf(stderr, "rpn token : %s\n", rpn_token);
+                    fprintf(stdout, "rpn token : %s\n", rpn_token);
+                    fflush(stdout);
 #endif
                     *((double*)(p_elem+parameter[i].offset)) = rpn(rpn_token);
                     if (rpn_check_error()) exit(1);
-                    fprintf(stderr, "computed value for %s.%s is %.15e\n", eptr->name, parameter[i].name, 
+                    fprintf(stdout, "computed value for %s.%s is %.15e\n", eptr->name, parameter[i].name, 
                            *((double*)(p_elem+parameter[i].offset)));
+                    fflush(stdout);
                     }
                 else
                     get_double((double*)(p_elem+parameter[i].offset), ptr);
@@ -786,9 +836,10 @@ void parse_element(
                     rpn_token = get_token(ptr);
                     *((long*)(p_elem+parameter[i].offset)) = rpn(rpn_token);
                     if (rpn_check_error()) exit(1);
-                    fprintf(stderr, "computed value for %s.%s is %ld\n", 
+                    fprintf(stdout, "computed value for %s.%s is %ld\n", 
                             eptr->name, parameter[i].name, 
                             *((long*)(p_elem+parameter[i].offset)));
+                    fflush(stdout);
                 } 
                 else 
                   get_long((long*)(p_elem+parameter[i].offset), ptr);
@@ -827,8 +878,9 @@ void parse_pepper_pot(
     for (i_hole=0; i_hole<n_holes; i_hole++) {
         if (!fgets(s, 100, fp) ||
                 !get_double(&x, s) || !get_double(&y, s)) {
-            fprintf(stderr, "error: data missing for pepper-pot plate %s\n",
+            fprintf(stdout, "error: data missing for pepper-pot plate %s\n",
                 name);
+            fflush(stdout);
             exit(1);
             }
         xc[i_hole] =  x*cos_tilt + y*sin_tilt;
@@ -836,12 +888,15 @@ void parse_pepper_pot(
         }
 
 /*
-    fprintf(stderr, "pepper pot plate %s:\n", name);
-    fprintf(stderr, "L=%lf  RADII=%lf  N_HOLES=%ld\n", 
+    fprintf(stdout, "pepper pot plate %s:\n", name);
+    fflush(stdout);
+    fprintf(stdout, "L=%lf  RADII=%lf  N_HOLES=%ld\n", 
             peppot->length, peppot->radii, peppot->n_holes);
+    fflush(stdout);
     for (i_hole=0; i_hole<n_holes; i_hole++) 
-        fprintf(stderr, "x = %lf    y = %lf\n",
+        fprintf(stdout, "x = %lf    y = %lf\n",
                 peppot->x[i_hole], peppot->y[i_hole]);
+        fflush(stdout);
  */
     log_exit("parse_pepper_pot");
     }

@@ -40,7 +40,8 @@ long rectangular_collimator(
         return(np);
         }
 
-/*    fprintf(stderr, "rcol: %e by %e at (%e, %e, %le)\n", xsize, ysize, x_center, y_center, z); */
+/*    fprintf(stdout, "rcol: %e by %e at (%e, %e, %le)\n", xsize, ysize, x_center, y_center, z); */
+      fflush(stdout);
 
     itop = np-1;
     for (ip=0; ip<np; ip++) {
@@ -218,7 +219,8 @@ long elliptical_collimator(
         return(np);
         }
 
-/*    fprintf(stderr, "ecol: %le by %le at (%e, %e, %le)\n", ecol->x_max, ecol->y_max, dx, dy, z); */
+/*    fprintf(stdout, "ecol: %le by %le at (%e, %e, %le)\n", ecol->x_max, ecol->y_max, dx, dy, z); */
+      fflush(stdout);
 
     itop = np-1;
     for (ip=0; ip<np; ip++) {
@@ -295,7 +297,8 @@ long elimit_amplitudes(
         return(np);
         }
 
-/*    fprintf(stderr, "elimit: %le by %le at %le\n", xmax, ymax, z); */
+/*    fprintf(stdout, "elimit: %le by %le at %le\n", xmax, ymax, z); */
+      fflush(stdout);
 
     a2 = sqr(xmax);
     b2 = sqr(ymax);
@@ -364,8 +367,9 @@ long beam_scraper(
             scraper->direction = 0;
             break;
           default:
-            fprintf(stderr, "Error: invalid scraper insert_from parameter: %s\n",
+            fprintf(stdout, "Error: invalid scraper insert_from parameter: %s\n",
                     scraper->insert_from);
+            fflush(stdout);
             bomb("scraper insert_from axis letter is not one of x, h, y, or v", NULL);
             break;
             }

@@ -210,13 +210,17 @@ long motion(
                 case DIFFEQ_OUTSIDE_INTERVAL:
                 case DIFFEQ_XI_GT_XF:
                 case DIFFEQ_EXIT_COND_FAILED:
-                    fprintf(stderr, "Integration failure: %s\n", diffeq_result_description(rk_return));
+                    fprintf(stdout, "Integration failure: %s\n", diffeq_result_description(rk_return));
+                    fflush(stdout);
 /*                    for (i=0; i<6; i++) 
-                        fprintf(stderr, "%11.4e  ", coord[i]);
-                    fprintf(stderr, "\ngamma = %.4e,  P=(%.4e, %.4e, %.4e)\n",
+                        fprintf(stdout, "%11.4e  ", coord[i]);
+                        fflush(stdout);
+                    fprintf(stdout, "\ngamma = %.4e,  P=(%.4e, %.4e, %.4e)\n",
                         gamma0, P0[0], P0[1], P0[2]);
-                    fprintf(stderr, "tolerance = %e     end_factor = %e\n",
+                    fflush(stdout);
+                    fprintf(stdout, "tolerance = %e     end_factor = %e\n",
                         tolerance, end_factor);
+                    fflush(stdout);
 */
                     SWAP_PTR(part[i_part], part[i_top]);
                     part[i_top][4] = z_start;
@@ -235,11 +239,15 @@ long motion(
                     dP[1]   += P[1] - P0[1];
                     dP[2]   += P[2] - P0[2];
 #if defined(DEBUG)
-                    fprintf(stderr, "initial, final phase: %21.15e, %21.15e\n", initial_phase, final_phase);
-                    fprintf(stderr, "deriv calls: %ld\n", derivCalls);
-                    fprintf(stderr, "Exit: tau=%le, ef=%le\n", tau, exit_function(dqdt, q, tau));
-                    fprintf(stderr, "Pout = %21.15e  Zout = %21.15le\n", 
+                    fprintf(stdout, "initial, final phase: %21.15e, %21.15e\n", initial_phase, final_phase);
+                    fflush(stdout);
+                    fprintf(stdout, "deriv calls: %ld\n", derivCalls);
+                    fflush(stdout);
+                    fprintf(stdout, "Exit: tau=%le, ef=%le\n", tau, exit_function(dqdt, q, tau));
+                    fflush(stdout);
+                    fprintf(stdout, "Pout = %21.15e  Zout = %21.15le\n", 
                             Po, q[2]/kscale);
+                    fflush(stdout);
 #endif
                     if (!limit_hit) {
                         if (isnan(q[0]) || isinf(q[0]) || isnan(q[1]) || isinf(q[1])) {
@@ -469,12 +477,15 @@ void (*set_up_derivatives(
             X_aperture_center = twp->k*twp->dx;
             Y_aperture_center = twp->k*twp->dy;
 #if defined(DEBUG)
-            fprintf(stderr, "TWPL parameters:\n");
-            fprintf(stderr, "l=%le acc=%le x_max=%le y_max=%le\n",
+            fprintf(stdout, "TWPL parameters:\n");
+            fflush(stdout);
+            fprintf(stdout, "l=%le acc=%le x_max=%le y_max=%le\n",
                   twp->length, twp->accuracy, twp->x_max, twp->y_max);
-            fprintf(stderr, "dx=%le dy=%le method=%s ramp_time=%le phiref=%ld\n",
+            fflush(stdout);
+            fprintf(stdout, "dx=%le dy=%le method=%s ramp_time=%le phiref=%ld\n",
                   twp->dx, twp->dy, twp->method, twp->ramp_time,
                   twp->phase_reference);
+            fflush(stdout);
 #endif
             select_integrator(twp->method);
             log_exit("set_up_derivatives");
@@ -550,9 +561,12 @@ void (*set_up_derivatives(
                 twmta->Ky = twmta->ky/(*kscale);
                 twmta->Kz = twmta->kz/(*kscale);
 /*
-                fprintf(stderr, "TWMTA kx, ky, kz = %e, %e, %e\n", twmta->kx, twmta->ky, twmta->kz);
-                fprintf(stderr, "      Ex, Ey, Ez = %e, %e, %e\n", twmta->ExS, twmta->EyS, twmta->EzS);
-                fprintf(stderr, "      Bx, By, Bz = %e, %e\n", twmta->BxS, twmta->ByS);
+                fprintf(stdout, "TWMTA kx, ky, kz = %e, %e, %e\n", twmta->kx, twmta->ky, twmta->kz);
+                fflush(stdout);
+                fprintf(stdout, "      Ex, Ey, Ez = %e, %e, %e\n", twmta->ExS, twmta->EyS, twmta->EzS);
+                fflush(stdout);
+                fprintf(stdout, "      Bx, By, Bz = %e, %e\n", twmta->BxS, twmta->ByS);
+                fflush(stdout);
  */
                 twmta->fiducial_part = fiducial = select_fiducial(part, n_part, twmta->fiducial);
                 if (fiducial) {
@@ -1063,15 +1077,17 @@ double *select_fiducial(double **part, long n_part, char *var_mode_in)
     } 
     if ((mode=get_token(var_mode))) {
       if ((fid_mode=match_string(mode, known_mode, N_KNOWN_MODES, 0))<0) {
-        fputs("error: no known mode listed for fiducialization--must be one of:\n", stderr);
+        fputs("error: no known mode listed for fiducialization--must be one of:\n", stdout);
         for (i=0; i<N_KNOWN_MODES; i++)
-          fprintf(stderr, "    %s\n", known_mode[i]);
+          fprintf(stdout, "    %s\n", known_mode[i]);
+          fflush(stdout);
         exit(1);
       }
     }
   }
   if (i_var==-1 && fid_mode!=FID_AVERAGE) {
-    fprintf(stderr, "unless you use average mode for fiducialization, you must specify t or p coordinate.\n");
+    fprintf(stdout, "unless you use average mode for fiducialization, you must specify t or p coordinate.\n");
+    fflush(stdout);
     exit(1);
   }
   if (i_var==-1) {
@@ -1162,16 +1178,20 @@ void select_integrator(char *desired_method)
     log_entry("select_integrator");
 
 #if defined(DEBUG)
-    fprintf(stderr, "select_integrator called with pointer %lx\n", (long)(desired_method));
-    fprintf(stderr, "this translates into string %s\n", desired_method);
+    fprintf(stdout, "select_integrator called with pointer %lx\n", (long)(desired_method));
+    fflush(stdout);
+    fprintf(stdout, "this translates into string %s\n", desired_method);
+    fflush(stdout);
 #endif
     switch (match_string(desired_method, method, N_METHODS, 0)) {
       case RUNGE_KUTTA:
-        fprintf(stderr, "Warning: adaptive integrator chosen.  \"non-adaptive runge-kutta\" is recommended.\n");
+        fprintf(stdout, "Warning: adaptive integrator chosen.  \"non-adaptive runge-kutta\" is recommended.\n");
+        fflush(stdout);
         integrator = rk_odeint3;
         break;
       case BULIRSCH_STOER:
-        fprintf(stderr, "Warning: adaptive integrator chosen.  \"non-adaptive runge-kutta\" is recommended.\n");
+        fprintf(stdout, "Warning: adaptive integrator chosen.  \"non-adaptive runge-kutta\" is recommended.\n");
+        fflush(stdout);
         integrator = bs_odeint3;
         break;
       case NA_RUNGE_KUTTA:
@@ -1181,10 +1201,13 @@ void select_integrator(char *desired_method)
         integrator = mmid_odeint3_na;
         break;
       default:
-        fprintf(stderr, "error: unknown integration method %s requested.\n", desired_method);
-        fprintf(stderr, "Available methods are:\n");
+        fprintf(stdout, "error: unknown integration method %s requested.\n", desired_method);
+        fflush(stdout);
+        fprintf(stdout, "Available methods are:\n");
+        fflush(stdout);
         for (i=0; i<N_METHODS; i++)
-            fprintf(stderr, "    %s\n", method[i]);
+            fprintf(stdout, "    %s\n", method[i]);
+            fflush(stdout);
         exit(1);
         break;
         }

@@ -56,7 +56,7 @@ VMATRIX *bend_matrix(
 
     M = sbend_matrix(length, h, ha, n*h, beta*sqr(h), gamma*pow3(h), order);
 #ifdef DEBUG
-    print_matrices(stderr, "pure bend matrix", M);
+    print_matrices(stdout, "pure bend matrix", M);
 #endif
 
     if (edge_order==0)
@@ -87,7 +87,7 @@ VMATRIX *bend_matrix(
         }
 
 #ifdef DEBUG
-    print_matrices(stderr, "concatentated bend matrix", M);
+    print_matrices(stdout, "concatentated bend matrix", M);
 #endif
 
     tilt_matrices(M, tilt+etilt);
@@ -186,7 +186,7 @@ VMATRIX *edge_matrix(
         else
             T[3][5][2] = R[1][0];
         }
-/*    print_matrices(stderr, "edge matrix", M); */
+/*    print_matrices(stdout, "edge matrix", M); */
     log_exit("edge_matrix");
     return(M);
     }
@@ -390,8 +390,9 @@ VMATRIX *sbend_matrix(
     i44426 = i36436 = i46436 = 0;
 
 #ifdef DEBUG
-    fprintf(stderr, "\n*** sbend_matrix called:\n  t0=%.16le, h=%.16le, ha=%.16le, n*h=%.16le, beta*h^2=%.16le, gamma*h^3=%.16le, order=%ld\n",
+    fprintf(stdout, "\n*** sbend_matrix called:\n  t0=%.16le, h=%.16le, ha=%.16le, n*h=%.16le, beta*h^2=%.16le, gamma*h^3=%.16le, order=%ld\n",
         t0, h, ha, nh, betah2, gammah3, order);
+    fflush(stdout);
 #endif
 
     M = tmalloc(sizeof(*M));
@@ -446,9 +447,11 @@ VMATRIX *sbend_matrix(
         } 
 
 #ifdef DEBUG
-    fprintf(stderr, "kx = %.16le, ky = %.16le\ncx = %.16le, cy = %.16le\nsx = %.16le, sy=%.16le\n",
+    fprintf(stdout, "kx = %.16le, ky = %.16le\ncx = %.16le, cy = %.16le\nsx = %.16le, sy=%.16le\n",
         kx, ky, cx, cy, sx, sy);
-    fprintf(stderr, "kx2 = %.16le, ky2 = %.16le\n", kx2, ky2);
+    fflush(stdout);
+    fprintf(stdout, "kx2 = %.16le, ky2 = %.16le\n", kx2, ky2);
+    fflush(stdout);
 #endif
 
     C[0] = C[1] = C[2] = C[3] = C[5] = 0;

@@ -148,7 +148,7 @@ void IBSGrowthRates (double gamma, double emitx, double emity,
   noWarning = 1;
   coulombLogReturn = coulombLog(gamma, emitx, emity, betaxAve, betayAve, sigmaz, particles, noWarning);
   if (verbosity>3)
-    fprintf( stderr, "Coulomb log: %g.\n", coulombLogReturn);
+    fprintf( stdout, "Coulomb log: %g.\n", coulombLogReturn);
   constant = particles * coulombLogReturn * sqr(re_mks) * c_mks /
     (8 * PI * pow(beta,3) * pow(gamma,4) * emitx *  emity * sigmaDelta * sigmaz);
   dencon = particles/ (8 * sigmaz * sqrt(pow(PI,3) * emitx * emity));
@@ -177,12 +177,12 @@ void IBSGrowthRates (double gamma, double emitx, double emity,
   SCtuneShifty = tuneShiftConst * sumy;
   SCtuneShiftMax = MAX(SCtuneShiftx, SCtuneShifty);
   if (verbosity>3)
-    fprintf( stderr, "Space charge tune shifts:\n x: %g y: %g.\n", 
+    fprintf( stdout, "Space charge tune shifts:\n x: %g y: %g.\n", 
             SCtuneShiftx, SCtuneShifty);
   if (SCtuneShiftMax > SCtuneShiftLimit ) {
     particlesSC = SCtuneShiftLimit * particles/ SCtuneShiftMax;
     if (verbosity > 0)
-      fprintf( stderr, "Warning: Space charge tune shift is excessive - should use fewer "
+      fprintf( stdout, "Warning: Space charge tune shift is excessive - should use fewer "
               "than %12.4g particles per bunch.\n", particlesSC);
   }
 
@@ -261,7 +261,7 @@ void IBSGrowthRates (double gamma, double emitx, double emity,
     cony = constant*cy;
 
     if (verbosity>3) {
-      fprintf( stderr, "constant= %12.5g  conz=%12.5g  cony=%12.5g"
+      fprintf( stdout, "constant= %12.5g  conz=%12.5g  cony=%12.5g"
               "   a=%12.5g b=%12.5g\n", constant, conz, cony, a, b);
     }
     
@@ -352,7 +352,7 @@ void IBSGrowthRates (double gamma, double emitx, double emity,
       if( FABS(tmpz/zintz)<test && FABS(tmpx/zintx)<test &&
          FABS(tmpy/zinty)<test ) break;
       if (j == maxDecades) 
-        fprintf( stderr, "**Warning** Integral did not converge in %ld decades.\n",maxDecades);
+        fprintf( stdout, "**Warning** Integral did not converge in %ld decades.\n",maxDecades);
     }
     nsteps = steps * j;
 
@@ -382,9 +382,9 @@ void IBSGrowthRates (double gamma, double emitx, double emity,
   /* output average values 
    */
   if (verbosity > 1) {
-    fprintf( stderr, "(Weighted) average rates (1/sec): longitudinal= %15.6g"
+    fprintf( stdout, "(Weighted) average rates (1/sec): longitudinal= %15.6g"
             "   horizontal= %15.6g   vertical= %15.6g\n", *zGrowthRate, *xGrowthRate, *yGrowthRate);
-/*    fprintf( stderr, "(Weighted) average lifetimes (sec): longitudinal= %15.6g"
+/*    fprintf( stdout, "(Weighted) average lifetimes (sec): longitudinal= %15.6g"
             "   horizontal= %15.6g   vertical= %15.6g\n", tauz, taux, tauy);
 */
   }
@@ -394,8 +394,8 @@ void IBSGrowthRates (double gamma, double emitx, double emity,
     (GSRL-GLIBS(EPLHAT))*EPLHAT/(GSRL*EPS0L) RATIOS
     */
   if (verbosity>1 && transSRdampRate!=0.0) {
-    fprintf( stderr, "coupling = %8.4f\n(transSRdampRate - IBSGrowthRate(emitxTrial)/(1+coupling)) * emitxTrial/(transSRdampRate*emitx0) = %15.6g\n", coupling, epsCheck);
-    fprintf( stderr, "(longSRdampRate - IBSLongGrowthRate(emitzTrial)) * emitzTrial/(longSRdampRate*emitz0)    = %15.6g\n", epzCheck);
+    fprintf( stdout, "coupling = %8.4f\n(transSRdampRate - IBSGrowthRate(emitxTrial)/(1+coupling)) * emitxTrial/(transSRdampRate*emitx0) = %15.6g\n", coupling, epsCheck);
+    fprintf( stdout, "(longSRdampRate - IBSLongGrowthRate(emitzTrial)) * emitzTrial/(longSRdampRate*emitz0)    = %15.6g\n", epzCheck);
   }
   return;
 }
@@ -428,7 +428,7 @@ double coulombLog (double gamma, double emitx, double emity,
   debyeLength = 743.4 * sqrt(tempeV/ density)/ charge;
   rmax = MIN( sigmaxcm, debyeLength);
   if(!noWarning && debyeLength < 2.0 * sigmaxcm )
-    fprintf( stderr, "Warning: The beam density probably corresponds to an unreasonably high space charge tune shift in this case. (debyeLength < 2.0 * sigmaxcm)\n");
+    fprintf( stdout, "Warning: The beam density probably corresponds to an unreasonably high space charge tune shift in this case. (debyeLength < 2.0 * sigmaxcm)\n");
 
   /*
     Calculate rmin as larger of classical distance of closest approach
@@ -440,9 +440,9 @@ double coulombLog (double gamma, double emitx, double emity,
   
   value = log(rmax/ rmin);
   if( !noWarning && (value < 0.0) ) 
-    fprintf( stderr, "Warning: Colomb logarithm is less than zero.\n");
+    fprintf( stdout, "Warning: Colomb logarithm is less than zero.\n");
   if( debug ) {
-    fprintf( stderr, "Coulomb outputs (in cm):\nrminClassical = %10.3g\nrminQuantum = %10.3g\ndebyeLength = %10.3g\nsigmaxcm = %10.3g\n", rminClassical, rminQuantum, debyeLength, sigmaxcm);
+    fprintf( stdout, "Coulomb outputs (in cm):\nrminClassical = %10.3g\nrminQuantum = %10.3g\ndebyeLength = %10.3g\nsigmaxcm = %10.3g\n", rminClassical, rminQuantum, debyeLength, sigmaxcm);
   }
   return value;
 }

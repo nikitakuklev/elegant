@@ -194,17 +194,19 @@ long track_through_kick_sbend(double **part, long n_part, KSBEND *ksbend, double
         dcoord_etilt[4] = dz*sqrt(1+sqr(qp3));
         dcoord_etilt[5] = 0;
 #ifdef DEBUG
-        fprintf(stderr, "pre-tilt offsets due to ETILT=%le:  %le %le %le %le %le\n",
+        fprintf(stdout, "pre-tilt offsets due to ETILT=%le:  %le %le %le %le %le\n",
             etilt, dcoord_etilt[0], dcoord_etilt[1], dcoord_etilt[2],
              dcoord_etilt[3], dcoord_etilt[4]);
+        fflush(stdout);
 #endif
 
         /* rotate by tilt to get into same frame as bend equations. */
         rotate_coordinates(dcoord_etilt, tilt);
 #ifdef DEBUG
-        fprintf(stderr, "offsets due to ETILT=%le:  %le %le %le %le %le\n",
+        fprintf(stdout, "offsets due to ETILT=%le:  %le %le %le %le %le\n",
             etilt, dcoord_etilt[0], dcoord_etilt[1], dcoord_etilt[2],
              dcoord_etilt[3], dcoord_etilt[4]);
+        fflush(stdout);
 #endif
         }
     else
@@ -224,15 +226,18 @@ long track_through_kick_sbend(double **part, long n_part, KSBEND *ksbend, double
     i_top = n_part-1;
     for (i_part=0; i_part<=i_top; i_part++) {
         if (!part) {
-            fprintf(stderr, "error: null particle array found (working on particle %ld) (track_through_kick_sbend)\n", i_part);
+            fprintf(stdout, "error: null particle array found (working on particle %ld) (track_through_kick_sbend)\n", i_part);
+            fflush(stdout);
             abort();
             }
         if (!(coord = part[i_part])) {
-            fprintf(stderr, "error: null coordinate pointer for particle %ld (track_through_kick_sbend)\n", i_part);
+            fprintf(stdout, "error: null coordinate pointer for particle %ld (track_through_kick_sbend)\n", i_part);
+            fflush(stdout);
             abort();
             }
         if (accepted && !accepted[i_part]) {
-            fprintf(stderr, "error: null accepted particle pointer for particle %ld (track_through_kick_sbend)\n", i_part);
+            fprintf(stdout, "error: null accepted particle pointer for particle %ld (track_through_kick_sbend)\n", i_part);
+            fflush(stdout);
             abort();
             }
 
@@ -284,16 +289,18 @@ long track_through_kick_sbend(double **part, long n_part, KSBEND *ksbend, double
 
         if (particle_lost) {
             if (!part[i_top]) {
-                fprintf(stderr, "error: couldn't swap particles %ld and %ld--latter is null pointer (track_through_kick_sbend)\n",
+                fprintf(stdout, "error: couldn't swap particles %ld and %ld--latter is null pointer (track_through_kick_sbend)\n",
                     i_part, i_top);
+                fflush(stdout);
                 abort();
                 }
             SWAP_PTR(part[i_part], part[i_top]);
             if (accepted) {
                 if (!accepted[i_top]) {
-                    fprintf(stderr, 
+                    fprintf(stdout, 
                         "error: couldn't swap acceptance data for particles %ld and %ld--latter is null pointer (track_through_kick_sbend)\n",
                         i_part, i_top);
+                    fflush(stdout);
                     abort();
                     }
                 SWAP_PTR(accepted[i_part], accepted[i_top]);
