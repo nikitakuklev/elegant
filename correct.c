@@ -1468,7 +1468,7 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
         if (iteration==1)
             for (i=0; i<6; i++)
                 orbit[1][0].centroid[i] = orbit[0][0].centroid[i];
-        if (!find_closed_orbit(clorb, clorb_acc, clorb_iter, beamline, M, run, dp, 1, CM->fixed_length, NULL, 1.0))
+        if (!find_closed_orbit(clorb, clorb_acc, clorb_iter, beamline, M, run, dp, 1, CM->fixed_length, NULL, 0.9))
             return(-1);
         if (Cdp)
             Cdp[iteration] = clorb[0].centroid[5];
@@ -1503,8 +1503,8 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
                 break;
             }
         rms_pos = sqrt(rms_pos/CM->nmon);
-        if (iteration==0 && rms_pos>1)
-            /* if the closed orbit has RMS > 1m, I assume correction won't work and routine bombs */
+        if (iteration==0 && rms_pos>1e3)
+            /* if the closed orbit has RMS > 1km, I assume correction won't work and routine bombs */
             return(-1);
         if (rms_pos>best_rms_pos+CM->corr_accuracy) {
             if (corr_fraction==1 || corr_fraction==0)
@@ -1591,7 +1591,7 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
         beamline->matrix = NULL;
         }
 
-    if (rms_pos>1)
+    if (rms_pos>1e3)
         /* if the final closed orbit has RMS > 1m, I assume correction didn't work and routine bombs */
         return(-1);
 
@@ -1744,8 +1744,9 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
         if (error>2*last_error) {
             printf("warning: closed orbit diverging--iteration stopped\n");
             printf("last error was %e, current is %e\n", last_error, error);
+/*
             for (i=0; i<4; i++)
-                if (one_part[0][i]>1)
+                if (one_part[0][i]>1e3)
                     break;
             if (i!=4) {
                 printf("orbit is unreasonably large--discarded!\n");
@@ -1753,6 +1754,7 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
                     one_part[0][i] = 0;
                 bad_orbit = 1;
                 }
+*/
             n_iter = clorb_iter;
             break;
             }
