@@ -14,7 +14,7 @@ set CVSRevisionAuthor "\$Author: borland $"
 APSApplication . -name elegantRingAnalysis \
   -overview "Performs various elegant simulations for a ring."
 
-set sourceDir /home/oxygen/BORLAND/oag/apps/src/elegant/ringAnalysisTemplates
+set sourceDir $env(HOME)/elegantRingAnalysisTemplates
 
 proc setStatus {text} {
     APSSetVarAndUpdate status $text
@@ -54,6 +54,7 @@ set mainParameterFile(3) ""
 set mainParameterFile(4) ""
 set mainDirectory [pwd]
 set mainPrefix ""
+set gridEngine 0
 
 proc SaveConfiguration {} {
     global mainDirectory saveVarList
@@ -139,6 +140,10 @@ proc FillMainFrame {widget args} {
     APSLabeledEntry .le6 -parent $widget -label "Output file prefix (optional): " \
       -width 60 -textVariable mainPrefix \
       -contextHelp "Enter an optional prefix to use in creating output filenames."
+
+    APSRadioButtonFrame .rb1 -parent $widget -label "Use GridEngine? " -orientation horizontal \
+      -variable gridEngine -buttonList "Yes No" -valueList "1 0" \
+      -contextHelp "Select whether or not to use the GridEngine queue to run jobs in parallel."
 }
 
 proc FillBasicFrame {widget args} {
@@ -163,6 +168,7 @@ proc FillBasicFrame {widget args} {
     set basicComputations(dipoleDivisions) 1
     set basicComputations(quadDivisions) 1
     set basicComputations(sextDivisions) 1
+    set basicComputations(finalSTwiss) 0.0
     APSLabeledEntry .le2 -parent $widget -width 20 \
       -label "Drift divisions: " -type integer \
       -textVariable basicComputations(driftDivisions)
@@ -170,8 +176,11 @@ proc FillBasicFrame {widget args} {
       -label "Dipole divisions: " -type integer \
       -textVariable basicComputations(dipoleDivisions)
     APSLabeledEntry .le4 -parent $widget -width 20 \
-      -label "Quad divisions: " -type integer \
-      -textVariable basicComputations(quadDivisions)
+	-label "Quad divisions: " -type integer \
+	-textVariable basicComputations(quadDivisions)
+    APSLabeledEntry .le5 -parent $widget -width 20 \
+        -label "Final s for twiss plots (m): " \
+	-textVariable basicComputations(finalSTwiss)
 
     APSButton .bu1 -parent $widget -text "Compute" -command \
       "BasicComputations -mode run"
@@ -205,12 +214,14 @@ proc BasicComputations {args} {
         }
     }
     foreach item [array names basicComputations] {
-        lappend macroList $item=[set $item]
+	lappend origList <$item>
+	lappend replList [set $item]
     }
     set tag Basic
     if [string compare $mode run]==0 {
         if {![PerformRun -template $sourceDir/BasicTemplate.ele -parameterFileList $parameterFileList \
-                -tag $tag -order $order -momentum $momentum -macroList [join $macroList ,]]} {
+		  -tag $tag -order $order -momentum $momentum \
+		  -originalList $origList -replacementList $replList]} {
             return 
         }
     } else {
@@ -222,7 +233,7 @@ proc BasicComputations {args} {
 
     set tmpRoot /tmp/[APSTmpString]
     APSAddToTempFileList $tmpRoot.p1
-    exec plotTwiss -fileRoot $mainDirectory/${mainPrefix}${tag}  &
+    exec plotTwiss -fileRoot $mainDirectory/${mainPrefix}${tag} -filter=column,s,0,$finalSTwiss &
     set parameterList -parameter=nu?,end 
     if $doChromaticity {
         lappend parameterList -parameter=dnu?/dp,end 
@@ -253,23 +264,38 @@ proc PerformRun {args} {
     set parameterFileList ""
     set order 1
     set momentum 7e3
-    set macroList ""
+    set replacementList ""
+    set originalList ""
     set tag ""
     set suffix ""
-    APSStrictParseArguments {template parameterFileList order momentum macroList tag suffix}
+    APSStrictParseArguments {template parameterFileList order momentum \
+				 replacementList originalList tag suffix}
     global mainDirectory mainPrefix matrixLatticeFile kickLatticeFile sourceDir 
-    global matrixBeamline kickBeamline matrixOffsetElement kickOffsetElement
-    set macroList [split $macroList ,]
+    global matrixBeamline kickBeamline matrixOffsetElement kickOffsetElement gridEngine
     foreach item [list order momentum mainDirectory mainPrefix matrixLatticeFile kickLatticeFile parameterFileList matrixBeamline kickBeamline matrixOffsetElement kickOffsetElement] {
-        lappend macroList $item=[set $item]
+	lappend originalList <$item>
+	lappend replacementList [set $item]
+    }
+    set command elegant
+    if $gridEngine {
+	set command "ssub elegant"
     }
     setStatus "Running elegant..."
     set runDone 0
+    file delete -force $mainDirectory/${mainPrefix}${tag}${suffix}.done
+    exec replaceText $template $mainDirectory/${mainPrefix}${tag}${suffix}.ele \
+	-original=[join $originalList ,] -replacement=[join $replacementList ,]
     APSExecLog [APSUniqueName .] -width 100 \
-      -unixCommand "elegant \"-macro=[join $macroList ,]\" $template" \
-      -callback "set runDone 1" \
-      -cancelCallback "set runDone 2" -abortCallback "set runDone 2"
+	-unixCommand "$command $mainDirectory/${mainPrefix}${tag}${suffix}.ele" \
+	-callback "set runDone 1" \
+	-cancelCallback "set runDone 2" -abortCallback "set runDone 2"
     tkwait variable runDone
+    if $gridEngine {
+	while {![file exists $mainDirectory/${mainPrefix}${tag}${suffix}.done]} {
+	    APSWaitWithUpdate -waitSeconds 10 -updateInterval 1
+	    setStatus "$mainDirectory/${mainPrefix}${tag}${suffix} not done.  Waiting."
+	}
+    }
     set runDone [file exists $mainDirectory/${mainPrefix}${tag}${suffix}.done]
     if !$runDone {
         setStatus "Run failed: $mainDirectory/${mainPrefix}${tag}${suffix}.done not found."
@@ -284,7 +310,8 @@ proc PerformRuns {args} {
     set parameterFileList ""
     set order 1
     set momentum 7e3
-    set macroList ""
+    set replacementList ""
+    set originalList ""
     set tag ""
     set variable ""
     set startValue 0
@@ -293,22 +320,23 @@ proc PerformRuns {args} {
     set copyList ""
     set combineList ""
     set mergeList ""
-    set gridEngine 0
     set suffix ""
-    APSStrictParseArguments {template parameterFileList order momentum macroList tag  \
-        variable startValue endValue  points copyList combineList mergeList gridEngine suffix}
+    APSStrictParseArguments {template parameterFileList order momentum tag  \
+				 variable startValue endValue  points copyList \
+				 combineList mergeList suffix \
+				 replacementList originalList}
     global mainDirectory mainPrefix matrixLatticeFile kickLatticeFile sourceDir 
-    global matrixBeamline kickBeamline matrixOffsetElement kickOffsetElement
-    set macroList [split $macroList ,]
+    global matrixBeamline kickBeamline matrixOffsetElement kickOffsetElement gridEngine
     foreach item [list order momentum mainDirectory mainPrefix matrixLatticeFile kickLatticeFile parameterFileList matrixBeamline kickBeamline matrixOffsetElement kickOffsetElement] {
-        lappend macroList $item=[set $item]
+	lappend originalList <$item>
+	lappend replacementList [set $item]
     }
     set delta [expr ($endValue*1.0-$startValue)/($points-1.0)]
     set w [APSUniqueName .]
     set rootnameList ""
     set command elegant
     if $gridEngine {
-        set command "csub elegant"
+        set command "ssub elegant "
     }
     for {set i 0} {$i<$points} {incr i} {
         set value [expr $startValue + $i*$delta]
@@ -318,8 +346,11 @@ proc PerformRuns {args} {
         set rootname $mainDirectory/${mainPrefix}${tag}${suffix0}
         exec sddsmakedataset $rootname.var -column=$variable,type=double -data=$value
         eval file delete -force $rootname.done
+	exec replaceText $template $rootname.ele \
+	    -original=[join $originalList ,],<suffix>,<$variable> \
+	    -replacement=[join $replacementList ,],$suffix0,$value
         APSExecLog $w -width 100 \
-          -unixCommand "$command \"-macro=[join $macroList ,],$variable=$value,suffix=$suffix0\" $template" \
+          -unixCommand "$command $rootname.ele" \
           -callback "set runDone 1" \
           -cancelCallback "set runDone 2" -abortCallback "set runDone 2"
         if !$gridEngine {
@@ -340,16 +371,17 @@ proc PerformRuns {args} {
         set numDone 0
         set numToDo [llength $doneList]
         while {$numDone!=$numToDo} {
-            after 10000
+	    APSWaitWithUpdate -waitSeconds 10 -updateInterval 1
             set numDone 0
             foreach done $doneList {
                 if [file exists $done] {
                     incr numDone
                 }
             }
-            setStatus "$numDone of $numToDo jobs done"
+            setStatus "$numDone of $numToDo jobs done for $mainDirectory/${mainPrefix}${tag}${suffix}"
         }
     }
+    setStatus "Postprocessing for $mainDirectory/${mainPrefix}${tag}${suffix}"
     set rootname $mainDirectory/${mainPrefix}${tag}${suffix}
     set processedList ""
     lappend copyList done
@@ -357,7 +389,7 @@ proc PerformRuns {args} {
         if [lsearch -exact $processedList $item]!=-1 continue
         lappend processedList $item
         file copy -force [lindex $rootnameList 0].$item $rootname.$item
-        eval file delete -force [affix -itemList $rootnameList -suffix .$item]
+	eval file delete -force [affix -itemList $rootnameList -suffix .$item]
     }
     lappend mergeList var
     foreach item $mergeList {
@@ -374,7 +406,7 @@ proc PerformRuns {args} {
         if [catch {eval exec sddscombine [affix -itemList $rootnameList -suffix .$item] \
                      -overwrite $rootname.$item} result] {
         }
-        eval file delete -force [affix -itemList $rootnameList -suffix .$item]
+	eval file delete -force [affix -itemList $rootnameList -suffix .$item]
     }
     return 1
 }
@@ -388,7 +420,6 @@ proc FillPhaseSpaceFrame {widget args} {
     set phaseSpaceTracking(otherCoord) 0.0
     set phaseSpaceTracking(sweepPoints) 11
     set phaseSpaceTracking(turns) 1024
-    set phaseSpaceTracking(gridEngine) 0
     APSRadioButtonFrame .rb1 -parent $widget \
       -label "Plane: " -orientation horizontal -buttonList {x y} -valueList {X Y} \
       -commandList {"set phaseSpaceTracking(otherPlane) Y" "set phaseSpaceTracking(otherPlane) X"} \
@@ -417,10 +448,6 @@ proc FillPhaseSpaceFrame {widget args} {
       -contextHelp \
       "Enter the number of turns to track."
 
-    APSRadioButtonFrame .rb2 -parent $widget -label "Use GridEngine? " -orientation horizontal \
-      -variable phaseSpaceTracking(gridEngine) -buttonList "Yes No" -valueList "1 0" \
-      -contextHelp "Select whether or not to use the GridEngine queue to run jobs in parallel."
-
     APSButton .bu1 -parent $widget \
       -text "Run" -command "PhaseSpaceTracking -mode run"
     APSButton .bu2 -parent $widget \
@@ -441,7 +468,8 @@ proc PhaseSpaceTracking {args} {
         }
     }
     foreach item [array names phaseSpaceTracking] {
-        lappend macroList $item=[set phaseSpaceTracking($item)]
+	lappend origList <$item>
+	lappend replList [set phaseSpaceTracking($item)]
     }
     set plane [string tolower $phaseSpaceTracking(offsetPlane)]
     set Plane $phaseSpaceTracking(offsetPlane)
@@ -450,12 +478,13 @@ proc PhaseSpaceTracking {args} {
     set variable offset
     if [string compare $mode run]==0 {
         if {![PerformRuns -template $sourceDir/PhaseSpaceTrackingTemplate.ele -parameterFileList $parameterFileList \
-                -variable $variable -gridEngine $phaseSpaceTracking(gridEngine) \
-                -startValue $phaseSpaceTracking(initialOffset) \
-                -endValue $phaseSpaceTracking(finalOffset) \
-                -points $phaseSpaceTracking(sweepPoints) \
-                -copyList done -combineList w1 -mergeList var \
-                -tag $tag -suffix $Plane -order 3 -momentum $momentum -macroList [join $macroList ,]]} {
+		  -variable $variable \
+		  -startValue $phaseSpaceTracking(initialOffset) \
+		  -endValue $phaseSpaceTracking(finalOffset) \
+		  -points $phaseSpaceTracking(sweepPoints) \
+		  -copyList done -combineList w1 -mergeList [list var ele ele.log] \
+		  -replacementList $replList -originalList $origList \
+		  -tag $tag -suffix $Plane -order 3 -momentum $momentum ]} {
             return 
         }
     } else {
@@ -465,24 +494,28 @@ proc PhaseSpaceTracking {args} {
         }
     }
     set otherPlane [string tolower $phaseSpaceTracking(otherPlane)]
-    exec sddsplot -col=C${plane},C${plane}p -graph=dot ${rootname}.w1 &
+    exec sddsplot -col=C${plane},C${plane}p -graph=dot ${rootname}.w1 \
+	"-topline=${rootname}" &
     if [expr $phaseSpaceTracking(otherCoord)!=0.0] {
-        exec sddsplot -col=C${otherPlane},C${otherPlane}p -graph=dot ${rootname}.w1 &
+        exec sddsplot -col=C${otherPlane},C${otherPlane}p -graph=dot ${rootname}.w1 \
+	    "-topline=${rootname}" &
     }
     exec sddsexpand ${rootname}.var ${rootname}.vare
     exec sddsfft ${rootname}.w1 \
-      -column=Pass,C${plane} -window -suppressAverage -pipe=out \
-      | sddsxref -pipe ${rootname}.vare -leave=* -transfer=parameter,* \
-      | sddsprocess -pipe=in ${rootname}.w1.fft \
-      "-print=parameter,${plane}Label,${plane}0 = %.5f,offset"
+	-column=Pass,C${plane} -window -suppressAverage -pipe=out \
+	| sddsxref -pipe ${rootname}.vare -leave=* -transfer=parameter,* \
+	| sddsprocess -pipe=in ${rootname}.w1.fft \
+	"-print=parameter,${plane}Label,${plane}0 = %.5f,offset"
     exec sddsplot -column=f,FFTC${plane} ${rootname}.w1.fft \
-      -title=@${plane}Label -separate=page -split=page -mode=y=log,y=special &
+	-title=@${plane}Label -separate=page -split=page -mode=y=log,y=special \
+	-topline=$rootname &
     exec sddsnaff ${rootname}.w1 -pipe=out -columns=Pass,C${plane},C${otherPlane} \
-      -terminateSearch=frequencies=1 -nowarnings \
-      | sddscombine -pipe -merge \
-      | sddsxref -pipe=in ${rootname}.var -take=* ${rootname}.w1.naff
-    exec sddsplot -column=C${plane}Amplitude,C${plane}Frequency ${rootname}.w1.naff -end \
-      -column=C${plane}Amplitude,C${otherPlane}Frequency ${rootname}.w1.naff &
+	-terminateSearch=frequencies=1 -nowarnings \
+	| sddscombine -pipe -merge \
+	| sddsxref -pipe=in ${rootname}.var -take=* ${rootname}.w1.naff
+    exec sddsplot -topline=$rootname \
+	-column=C${plane}Amplitude,C${plane}Frequency ${rootname}.w1.naff -end \
+	-column=C${plane}Amplitude,C${otherPlane}Frequency ${rootname}.w1.naff &
 }
 
 proc FillOffMomentumTunesFrame {widget args} {
@@ -542,19 +575,30 @@ proc OffMomentumTuneTracking {args} {
     global sourceDir 
     global offMomentumTuneTracking momentum matrixLatticeFile mainParameterFile mainDirectory mainPrefix
     set parameterFileList ""
+    if ![file exists $mainDirectory/${mainPrefix}Basic.twi] {
+	setStatus "Error: please perform Basic run in order to proceed."
+	return
+    }
     foreach item [lsort [array names mainParameterFile]] {
         if [string length $mainParameterFile($item)] {
             append parameterFileList "$mainParameterFile($item) "
         }
     }
     foreach item [array names offMomentumTuneTracking] {
-        lappend macroList $item=[set offMomentumTuneTracking($item)]
+	lappend origList <$item>
+	lappend replList [set offMomentumTuneTracking($item)]
     }
     set tag OffMomentumTuneTracking
     if [string compare $mode run]==0 {
-        if {![PerformRun -template $sourceDir/OffMomentumTuneTrackingTemplate.ele \
-                -parameterFileList $parameterFileList \
-                -tag $tag -order 3 -momentum $momentum -macroList [join $macroList ,]]} {
+        if {![PerformRuns -template $sourceDir/OffMomentumTuneTrackingTemplate.ele \
+		  -parameterFileList $parameterFileList \
+		  -originalList $origList -replacementList $replList \
+		  -variable delta \
+		  -startValue $offMomentumTuneTracking(initialOffset) \
+		  -endValue $offMomentumTuneTracking(finalOffset) \
+		  -points $offMomentumTuneTracking(sweepPoints) \
+		  -tag $tag -order 3 -momentum $momentum \
+		  -copyList done -combineList [list w1 ele ele.log] ]} {
             return 
         }
     } else {
@@ -565,9 +609,9 @@ proc OffMomentumTuneTracking {args} {
     }
     set nux 0
     set nuy 0
-    if {[catch {exec sdds2stream -param=nux $mainDirectory/${mainPrefix}${tag}.twi} nux] || \
-          [catch {exec sdds2stream -param=nuy $mainDirectory/${mainPrefix}${tag}.twi} nuy]} {
-        return -code error "$mainDirectory/${mainPrefix}${tag} $nux $nuy"
+    if {[catch {exec sdds2stream -param=nux $mainDirectory/${mainPrefix}Basic.twi} nux] || \
+          [catch {exec sdds2stream -param=nuy $mainDirectory/${mainPrefix}Basic.twi} nuy]} {
+        return -code error "$mainDirectory/${mainPrefix}Basic $nux $nuy"
     }
     set nuxInteger [expr int($nux)]
     set nuyInteger [expr int($nuy)]
@@ -579,26 +623,31 @@ proc OffMomentumTuneTracking {args} {
     set dnuxSign 1
     set dnuySign 1
     if [expr ($nux-int($nux))>0.5] {
-        set dnuxSign 1
+        set dnuxSign -1
         incr nuxInteger
     }
     if [expr ($nux-int($nux))>0.5] {
-        set nuyUpper 1
+        set dnuySign -1
         incr nuyInteger
     }
-    exec sddsnaff $mainDirectory/${mainPrefix}${tag}.w1 -pipe=out \
+    set rootname $mainDirectory/${mainPrefix}${tag}
+    exec sddsexpand ${rootname}.var ${rootname}.vare
+    exec sddsnaff ${rootname}.w1 -pipe=out \
       -columns=Pass,Cx,Cy -terminate=frequencies=1 \
       | sddsprocess -pipe \
       "-define=column,nuxTracking,CxFrequency $dnuxSign * $nuxInteger +" \
       "-define=column,nuyTracking,CyFrequency $dnuySign * $nuyInteger +" \
       | sddsexpand -pipe \
-      | sddsxref -pipe $mainDirectory/${mainPrefix}${tag}.fin  \
+      | sddsxref -pipe ${rootname}.vare  \
       -leave=* -transfer=parameter,* \
-      | sddscollapse -pipe=in $mainDirectory/${mainPrefix}${tag}.w1.naff
+      | sddscollapse -pipe=in ${rootname}.w1.naff
     
-    exec sddsplot -aspect=1 \
-      -column=nuxTracking,nuyTracking -graph=symbol $mainDirectory/${mainPrefix}${tag}.w1.naff \
-      -column=nux,nuy $mainDirectory/${mainPrefix}${tag}.resdiag &
+    exec sddsplot -aspect=1 -topline=$rootname \
+	-column=nuxTracking,nuyTracking ${rootname}.w1.naff \
+	-split=column=delta,width=1e-4 -graph=symbol,vary=subtype -orderColors=spectral \
+	-column=nux,nuy ${rootname}.resdiag &
+    exec sddsplot -column=delta,nu?Tracking -separate ${rootname}.w1.naff -topline=$rootname \
+	-graph=symbol,connect,scale=2 &
 }
  
 proc FillHigherOrderDispersionFrame {widget args} {
@@ -606,7 +655,7 @@ proc FillHigherOrderDispersionFrame {widget args} {
     set higherOrderDispersion(initialOffset) -0.01
     set higherOrderDispersion(finalOffset) 0.01
     set higherOrderDispersion(sweepPoints) 11
-    set higherOrderDispersion(gridEngine) 0
+    set gridEngine 0
     APSLabeledEntry .le1 -parent $widget \
       -label "Initial momentum offset for scan: " -width 20 -textVariable higherOrderDispersion(initialOffset) \
       -contextHelp \
@@ -619,10 +668,6 @@ proc FillHigherOrderDispersionFrame {widget args} {
       -label "Number of offset values in scan: " -width 20 -textVariable higherOrderDispersion(sweepPoints) \
       -contextHelp \
       "Enter the number of offset values in the scan."
-
-    APSRadioButtonFrame .rb1 -parent $widget -label "Use GridEngine? " -orientation horizontal \
-      -variable higherOrderDispersion(gridEngine) -buttonList "Yes No" -valueList "1 0" \
-      -contextHelp "Select whether or not to use the GridEngine queue to run jobs in parallel."
 
     APSButton .bu1 -parent $widget \
       -text "Run" -command "HigherOrderDispersion -mode run"
@@ -644,7 +689,8 @@ proc HigherOrderDispersion {args} {
         }
     }
     foreach item [array names higherOrderDispersion] {
-        lappend macroList $item=[set higherOrderDispersion($item)]
+	lappend origList <$item>
+	lappend replList [set higherOrderDispersion($item)]
     }
     set tag HigherOrderDispersion
     set rootname $mainDirectory/${mainPrefix}${tag}
@@ -652,14 +698,15 @@ proc HigherOrderDispersion {args} {
     if [string compare $mode run]==0 {
         catch {file delete $rootname.done}
         if [catch {PerformRuns -template $sourceDir/HigherOrderDispersionTemplate.ele \
-                     -parameterFileList $parameterFileList \
-                     -variable $variable -gridEngine $higherOrderDispersion(gridEngine) \
-                     -startValue $higherOrderDispersion(initialOffset) \
-                     -endValue $higherOrderDispersion(finalOffset) \
-                     -points $higherOrderDispersion(sweepPoints) \
-                     -copyList [list mag done] -combineList clo \
-                     -tag $tag -order 3 -momentum $momentum -macroList [join $macroList ,]} runnameList] {
-            return 
+		       -parameterFileList $parameterFileList \
+		       -variable $variable \
+		       -startValue $higherOrderDispersion(initialOffset) \
+		       -endValue $higherOrderDispersion(finalOffset) \
+		       -points $higherOrderDispersion(sweepPoints) \
+		       -copyList [list mag done] -combineList [list clo ele ele.log w1] \
+		       -replacementList $replList -originalList $origList \
+		       -tag $tag -order 3 -momentum $momentum } runnameList] {
+            return -code error "$runnameList"
         }
     } else {
         set runDone [file exists ${rootname}.done]
@@ -682,7 +729,7 @@ proc HigherOrderDispersion {args} {
                 | sddsxref -pipe=in ${rootname}.clo ${rootname}.disp -take=s,Element*} result] {
         return -code error "$result"
     }
-    exec sddsplot -column=s,Coefficient* -separate ${rootname}.disp &
+    exec sddsplot -topline=$rootname -column=s,Coefficient* -separate ${rootname}.disp &
 }
 
 proc FillDynamicApertureFrame {widget args} {
@@ -739,14 +786,16 @@ proc DynamicAperture {args} {
         }
     }
     foreach item [array names dynamicAperture] {
-        lappend macroList $item=[set dynamicAperture($item)]
+	lappend origList <$item>
+	lappend replList [set dynamicAperture($item)]
     }
     set tag DynamicAperture
     set rootname $mainDirectory/${mainPrefix}${tag}
     if [string compare $mode run]==0 {
-        if {![PerformRun -template $sourceDir/HigherOrderDispersionTemplate.ele \
-                -parameterFileList $parameterFileList \
-                -tag $tag -order 3 -momentum $momentum -macroList [join $macroList ,]]} {
+        if {![PerformRun -template $sourceDir/DynamicApertureTemplate.ele \
+		  -parameterFileList $parameterFileList \
+		  -originalList $origList -replacementList $replList \
+		  -tag $tag -order 3 -momentum $momentum ]} {
             return 
         }
     } else {
@@ -755,7 +804,8 @@ proc DynamicAperture {args} {
             return -code error "$rootname not done"
         }
     }
-    exec sddsplot -column=x,y $rootname.abnd -column=x,y $rootname.aper -graph=sym,scale=2 &    
+    exec sddsplot -topline=$rootname \
+	-column=x,y $rootname.abnd -column=x,y $rootname.aper -graph=sym,scale=2 &    
 }
 
 proc FillOffMomentumDynamicApertureFrame {widget args} {
@@ -769,7 +819,6 @@ proc FillOffMomentumDynamicApertureFrame {widget args} {
     set offMomentumDynamicAperture(deltaMaximum) 0.01
     set offMomentumDynamicAperture(deltaPoints) 11
     set offMomentumDynamicAperture(turns) 500
-    set offMomentumDynamicAperture(gridEngine) 0
     APSLabeledEntry .le1 -parent $widget \
       -label "Minimum x coordinate (m): " -width 20 -textVariable offMomentumDynamicAperture(xMinimum) \
       -contextHelp \
@@ -807,10 +856,6 @@ proc FillOffMomentumDynamicApertureFrame {widget args} {
       -contextHelp \
       "Enter the number of turns to track."
     
-    APSRadioButtonFrame .rb1 -parent $widget -label "Use GridEngine? " -orientation horizontal \
-      -variable offMomentumDynamicAperture(gridEngine) -buttonList "Yes No" -valueList "1 0" \
-      -contextHelp "Select whether or not to use the GridEngine queue to run jobs in parallel."
-
     APSButton .bu1 -parent $widget \
       -text "Run" -command "OffMomentumDynamicAperture -mode run"
     APSButton .bu2 -parent $widget \
@@ -831,7 +876,8 @@ proc OffMomentumDynamicAperture {args} {
         }
     }
     foreach item [array names offMomentumDynamicAperture] {
-        lappend macroList $item=[set offMomentumDynamicAperture($item)]
+	lappend origList <$item>
+	lappend replList [set offMomentumDynamicAperture($item)]
     }
     set tag OffMomentumDynamicAperture
     set rootname $mainDirectory/${mainPrefix}${tag}
@@ -839,12 +885,12 @@ proc OffMomentumDynamicAperture {args} {
     if [string compare $mode run]==0 {
         if {![PerformRuns -template $sourceDir/OffMomentumDynamicApertureTemplate.ele \
                 -parameterFileList $parameterFileList \
-                -variable $variable -gridEngine $offMomentumDynamicAperture(gridEngine) \
+                -variable $variable \
                 -startValue $offMomentumDynamicAperture(deltaMinimum) \
                 -endValue $offMomentumDynamicAperture(deltaMaximum) \
                 -points $offMomentumDynamicAperture(deltaPoints) \
-                -copyList done -combineList [list aper abnd] \
-                -tag $tag -momentum $momentum -macroList [join $macroList ,]]} {
+                -copyList done -combineList [list aper abnd ele ele.log] \
+                -tag $tag -momentum $momentum -originalList $origList -replacementList $replList]} {
             return 
         }
         if [catch {exec sddsexpand $rootname.var $rootname.vare
@@ -859,7 +905,7 @@ proc OffMomentumDynamicAperture {args} {
             return -code error "$rootname not done"
         }
     }
-    exec sddsplot -same=x,y,global \
+    exec sddsplot -topline=$rootname -same=x,y,global \
       -column=x,y $rootname.aper -graph=sym,scale=2 -split=page -sep=page \
       "-title=@${variable},edit=i/\$gd\$r = /" \
       -column=x,y $rootname.abnd -graph=line -omnipresent &
@@ -868,7 +914,7 @@ proc OffMomentumDynamicAperture {args} {
 set sectionList [list Main Basic "Phase Space" "Higher-Order Disp." "Off-momentum Tunes" "DA" "Off-Momentum DA"]
 
 set tabFrameWidgetList [APSTabFrame .main -parent .userFrame -label "" \
-    -labelList $sectionList -width 900 -height 365]
+    -labelList $sectionList -width 900 -height 385] 
 
 FillMainFrame  [lindex $tabFrameWidgetList 0]
 FillBasicFrame [lindex $tabFrameWidgetList 1]
@@ -878,24 +924,27 @@ FillOffMomentumTunesFrame [lindex $tabFrameWidgetList 4]
 FillDynamicApertureFrame [lindex $tabFrameWidgetList 5]
 FillOffMomentumDynamicApertureFrame [lindex $tabFrameWidgetList 6]
 
-lappend saveVarList momentum matrixLatticeFile kickLatticeFile mainParameterFile mainDirectory mainPrefix
+lappend saveVarList momentum matrixLatticeFile kickLatticeFile mainParameterFile mainDirectory mainPrefix gridEngine
 lappend saveVarList matrixBeamline kickBeamline matrixOffsetElement kickOffsetElement
 lappend saveVarList basicComputations phaseSpaceTracking offMomentumTuneTracking higherOrderDispersion
 lappend saveVarList dynamicAperture offMomentumDynamicAperture
 
 set args $argv
-set configFile ""
-if {[APSStrictParseArguments {configFile}]} {
-    return -code error "usage: $argv0 \[-configFile <filename>\]"
+set configuration ""
+set templateDirectory ""
+if {[APSStrictParseArguments {configuration}]} {
+    return -code error "usage: $argv0 \[-configuration <filename>\] \[-templateDirectory <path>\]"
 }
-if {[string length $configFile]} {
-    if ![file exists $configFile] {
-        setStatus "not found: $configFile"
+if {[string length $configuration]} {
+    if ![file exists $configuration] {
+        setStatus "not found: $configuration"
     } else {
-        source $configFile
+        source $configuration
     }    
 }
-
+if [string length $templateDirectory] {
+    set sourceDir $templateDirectory
+}
 
 
 setStatus "Ready."
