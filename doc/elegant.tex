@@ -42,9 +42,24 @@ and references, see the specific entries in the manual.
 \item Fixed a bug in the {\tt ECOL} (elliptical collimator), which resulted in
         corruption of vertical particle coordinates when the element had non-zero
         length.  This bug was found by P. Emma (SLAC).
+\item Fixed a bug that resulted in potentially undefined results when synchrotron
+        radiation was turned on in {\tt KQUAD} or {\tt KSEXT} elements and the
+        particle positioncoordinates were identically 0.
+\item Fixed error in steering multipole implementation: {\tt elegant} was 
+  incorrectly complaining when {\tt bn} was zero, when it should be zero at all times.
 \end{itemize}
 
-\subsection{Improvements to Elements}
+\subsection{Bug Fixes for Commands}
+\begin{itemize}
+\item The units of $R_{21}$ in the ``final'' output file were wrong and have been corrected.
+        Added output of the maximum particle amplitudes in each transverse coordinate.
+\item Fixed bug that prevented proper saving of a lattice when the {\tt alter\_elements}
+command was used with wildcards in the name.
+\item Fixed a bug in saving/loading parameters when element division was used on 
+        dipoles with non-zero edge angles.
+\end{itemize}
+
+\subsection{Modified Elements}
 \begin{itemize}
 \item Added super-elliptical apertures for {\tt ECOL} and {\tt MAXAMP}.  A super-elliptical
  aperture is somewhere between an ellipse and a rectangle.
@@ -56,6 +71,31 @@ and references, see the specific entries in the manual.
   computations from the previous release, and was computed by J. Wu (SLAC).
 \item Added ability to control expansion of square roots in canonically-integrated
         elements.  The default is no expansion, as before.
+\item The {\tt FRFMODE} and {\tt FTRFMODE} elements now optionally provide output of
+        voltage in each mode as a function of time.
+\end{itemize}
+
+\subsection{Modified Commands}
+\begin{itemize}
+\item The {\tt run\_setup} command now optionally accepts the central momentum in MeV/c,
+        instead of just $\beta\gamma$.
+\item The {\tt tune\_shift\_with\_amplitude} command was improved to provide second-order
+        shifts as well as the tune spread for a specified range of amplitudes.
+        These quantities may be optimized.
+\item Added computation of the minimum and maximum tunes for a specified range
+ of momentum offsets. These values may be optimized.
+\item Optimization may now include the chromatic derivatives of the beta and alpha Twiss
+        parameters.
+\item The {\tt load\_parameters} command will now accept a list of input files and will
+        optionally ignore non-existent files.
+\item The lost-particles file (requested from {\tt run\_setup}), now includes the turn on
+        which each particle is lost.
+\item Made changes that allow computing closed orbit for the momentum offset
+ of the beam distribution and then starting the beam on that orbit.
+ The changes are to the {\tt closed\_orbit} and {\tt track\_beam} commands.
+\item Optimization terms with zero weight are now ignored, instead of generating an error.
+\item Added {\tt disable} control for optimization variables and co-variables.
+\item Added {\tt disable} control for {\tt transmute\_elements}.
 \end{itemize}
 
 \subsection{New Elements}
@@ -64,11 +104,7 @@ and references, see the specific entries in the manual.
         analytical planar undulator field with a laser beam focused to a waist at the
         center of the undulator.  P. Emma (SLAC) requested this addition and helped with 
         the development.
-\item {\tt TAYLORSERIES} --- A generate Taylor-series map specified as an SDDS file.
-        This element was implemented by L. Emery (ANL), but has yet to be fully
-        integrated into {\tt elegant}.
 \item {\tt DSCATTER} --- An element for scattering with a user-specified distribution.
-
 \end{itemize}
 
 \subsection{New Commands} 
@@ -76,29 +112,6 @@ and references, see the specific entries in the manual.
 \item The {\tt frequency\_map} command was added.  It performs Frequency Map Analysis for
  storage rings.
 \end{itemize}
-
-\subsection{Modified Commands and Bug Fixes to Commands}
-\begin{itemize}
-\item The {\tt run\_setup} command now optionally accepts the central momentum in MeV/c,
-        instead of just $\beta\gamma$.
-\item The {\tt tune\_shift\_with\_amplitude} command was improved to provide second-order
-        shifts as well as the tune spread for a specified range of amplitudes.
-        These quantities may be optimized.
-\item Fixed bug that prevented proper saving of a lattice when the {\tt alter\_elements}
-command was used with wildcards in the name.
-\item The lost-particles file (requested from {\tt run\_setup}), now includes the turn on
-which each particle is lost.
-\item Fixed problem with skewed selection of momentum offset values for higher-order
- chromaticity when the number of points was not 5.
-\item Added computation of the minimum and maximum tunes for a specified range
- of momentum offsets. These values may be optimized.
-\item Made changes that allow computing closed orbit for the momentum offset
- of the beam distribution and then starting the beam on that orbit.
- The changes are to the {\tt closed\_orbit} and {\tt track\_beam} commands.
-\item Optimization may now include the chromatic derivatives of the beta and alpha Twiss
-        parameters.
-\end{itemize}
-
 
 \subsection{Changes and Additions to Related Programs}
 With this release, we have begun to supply Tcl/Tk scripts that assist users in
@@ -113,11 +126,8 @@ using elegant or do related computations.
  dispersion, and dynamic aperture.
 \item A new script, {\tt fin2param} is included.  It can convert a ``final'' output file
  from an optimization run into a parameter-style file that can be used with {\tt load\_parameters}.
-\end{itemize}
-
-
-\subsection{Other New Features and Bug Fixes}
-\begin{itemize}
+\item {\tt sddsanalyzebeam} now computes the longitudinal emittance.  This was requested by
+        J. Lewellen (ANL).
 \end{itemize}
 
 \section{Introduction}
@@ -820,6 +830,7 @@ to obtain correction.  In general, it is not necessary and only slows the simula
     STRING output = NULL;
     long output_monitors_only = 0;
     long start_from_centroid = 1;
+    long start_from_dp_centroid = 1;
     double closed_orbit_accuracy = 1e-12;
     long closed_orbit_iterations = 10;
     double iteration_fraction = 1;
@@ -838,6 +849,14 @@ the beam-position monitors.
 \item \verb|start_from_centroid| --- A flag indicating whether to
 force the computation to start from the centroids of the beam
 distribution.
+\item \verb|start_from_dp_centroid| --- A flag indicating whether to 
+force the computation to use the momentum centroid of the beam 
+for the closed orbit.  This can allow computing the closed orbit
+for an off-momentum beam, then starting the beam on that orbit
+using the \verb|offset_by_orbit| or \verb|center_on_orbit| parameters
+of the \verb|track| command.  In contrast to the \verb|start_from_centroid|,
+this command doesn't force the algorithm to start from the beam
+transverse centroids.
 \item \verb|closed_orbit_accuracy| --- The desired accuracy of the
 closed orbit, in terms of the difference between the start and end
 coordinates, in meters.
@@ -932,7 +951,7 @@ should start from the beam centroid.  For orbit correction, only the
 beam momentum centroid is relevant.
 \item \verb|use_actual_beam| --- Flag indicating that correction
 should employ tracking of the beam distribution rather than a single
-particle.
+particle.  This is valid for trajectory correction only.
 \item \verb|closed_orbit_accuracy| --- Accuracy of closed orbit computation.
 \item \verb|closed_orbit_iterations| --- Number of iterations of closed orbit computation.
 \item \verb|closed_orbit_iteration_fraction| --- Fraction of change in closed orbit to
@@ -1364,6 +1383,7 @@ in capital letters.
 \begin{verbatim}
 &load_parameters
         STRING filename = NULL;
+        STRING filename_list = NULL;
         STRING include_name_pattern = NULL;
         STRING exclude_name_pattern = NULL;
         STRING include_item_pattern = NULL;
@@ -1406,6 +1426,11 @@ elegant} commands generate output that may be used (on a subsequent
 run) with \verb|load_parameters|; among these are the tune and
 chromaticity correction commands and the \verb|run_setup| command
 (parameters output).
+
+\item \verb|filename_list| --- A list of filenames, which may be 
+        given in place of \verb|filename|.  If used, each file
+        in the list is treated as if it was separately supplied
+        with an individual \verb|load_parameters| command.
 
 \item \verb|include_name_pattern|, \verb|exclude_name_pattern| ---
 Wildcard patterns to be used in selecting, respectively, which
@@ -1580,6 +1605,7 @@ allowed for the expression.
     STRING name = NULL;
     STRING item = NULL;
     STRING equation = NULL;
+    long disable = 0;
 &end
 \end{verbatim}
 
@@ -1589,6 +1615,7 @@ allowed for the expression.
 \item \verb|equation| --- An {\tt rpn} equation for the value of the parameter in terms of the
 values of any parameters of any optimization variable.  These latter appear in the equation in the
 form \verb|<element-name>.<parameter-name>|, in all capital letters.
+\item \verb|disable| --- If nonzero, the covariable is ignored.
 \end{itemize}
 
 \begin{latexonly}
@@ -1749,8 +1776,9 @@ a significant difference in the optimization speed.
 \end{itemize}
 
 \begin{verbatim}
-&optimization_
+&optimization_term
     STRING term = NULL;
+    double weight = 1.0;
 &end
 \end{verbatim}
 
@@ -1765,6 +1793,11 @@ which terms are causing problems for the optimization.
 
 Please see the entry for {\tt equation} under {\tt optimization\_setup} for
 details on designing optimization terms.
+
+\item \verb|weight| --- The weight to assign to this term.  If zero, the term
+        is ignored.
+
+
 \end{itemize}
 
 \begin{latexonly}
@@ -1785,6 +1818,7 @@ details on designing optimization terms.
     double lower_limit = 0;
     double upper_limit = 0;
     double step_size = 1;
+    long disable = 0;
 &end
 \end{verbatim}
 
@@ -1794,6 +1828,7 @@ details on designing optimization terms.
 \item \verb|lower_limit|, \verb|upper_limit| --- The lower and upper limits allowed for the parameter.  If these are
 equal, the range of the parameter is unlimited.
 \item \verb|step_size| --- The initial step size (``simplex'' optimization ) or the grid size in this dimension (``grid'' or ``sample'' optimization).
+\item \verb|disable| --- If nonzero, the covariable is ignored.
 \end{itemize}
 
 \begin{latexonly}
@@ -1913,6 +1948,7 @@ fiducialized to the average momentum of the beam.
     long random_number_seed = 987654321;
     long correction_iterations = 1;
     double p_central = 0.0;
+    double p_central_mev = 0.0;
     STRING expand_for = NULL; 
     long tracking_updates = 1;
     long echo_lattice = 0;
@@ -1970,6 +2006,9 @@ information as each element is tracked.
 \item \verb|random_number_seed| --- A seed for the random number generators.  If zero, a seed will be generated from the system clock.
 \item \verb|correction_iterations| --- Number of iterations of tune and chromaticity correction.
 \item \verb|p_central| --- Central momentum of the beamline, about which expansions are done.
+        This is $\beta\gamma$.
+\item \verb|p_central_mev| --- Central momentum of the beamline in
+MeV/c, about which expansions are done.  Ignored if \verb|p_central| is nonzero.
 \item \verb|expand_for| --- Name of an SDDS file containing particle information, from which the central
 momentum will be set.  The file contents are the same as required for {\tt elegant} input with the \verb|sdds_beam| namelist.
 \item \verb|tracking_updates| --- A flag indicating whether to print summary information about
@@ -2267,6 +2306,7 @@ unit parameter change for the element.
 	STRING type = NULL,
 	STRING exclude = NULL,
         STRING new_type = "DRIF",
+        long disable = 0;
         long clear = 0;
 &end
 \end{verbatim}
@@ -2280,6 +2320,7 @@ unit parameter change for the element.
 	elements to be excluded from the specified transmutation.  Does not
 	affect elements transmuted due to other specifications.
 \item \verb|new_type| --- Type into which specified elements will be transmuted.
+\item \verb|disable| --- If nonzero, the command is ignored.
 \item \verb|clear| --- If nonzero, all prior transmutation specifications are deleted.
 \end{itemize}
 
@@ -2343,6 +2384,9 @@ unit parameter change for the element.
     long radiation_integrals = 0;
     long concat_order = 3;
     long higher_order_chromaticity = 0;
+    long higher_order_chromaticity_points = 5;
+    double higher_order_chromaticity_range = 4e-4;
+    double chromatic_tune_spread_half_range = 0;
     double beta_x = 1;
     double alpha_x = 0;
     double eta_x = 0;
@@ -2384,7 +2428,15 @@ orbit, it is much faster to use \verb|concat_order=1|.
 computation of the second- and third-order chromaticity.  To obtain
 reliable values, the user should use \verb|concat_order=3| in this
 namelist and the highest available order for all beamline elements.
+{\tt elegant} computes the higher-order chromaticity by finding the
+trace of off-momentum matrices obtained by concantenation of the
+matrix for \verb|higher_order_chromaticity_points| values of $\delta$
+over the full range \verb|higher_order_chromaticity_range|.
 
+\item \verb|chromatic_tune_spread_half_range| --- Half range of $\delta$ for which the
+        chromatic tune spread is computed.  The results are available in for optimization  and
+        in the twiss output file under the names \verb|nuxChromUpper|, \verb|nuxChromLower|, 
+        and similarly for the y plane.  This computation uses the chromaticities.
 \item \verb|reference_file| --- If given, the name of a file from which twiss parameter data will
         be taken to give the starting values.  Ignored if \verb|matched| is nonzero.  The file
         should have the beta and alpha functions with the same names as the file created by
@@ -2477,6 +2529,8 @@ for alpha magnets, quadrupoles, and sextupoles.  You may also use the
 &track
     long center_on_orbit = 0;
     long center_momentum_also = 1;
+    long offset_by_orbit = 0;
+    long offset_momentum_also = 1;
     long soft_failure = 1;
     long use_linear_chromatic_matrix = 0;
     long longitudinal_ring_only = 0;
@@ -2488,6 +2542,16 @@ for alpha magnets, quadrupoles, and sextupoles.  You may also use the
 the beam transverse coordinates on the closed orbit before tracking.
 \item \verb|center_momentum_also| --- A flag indicating whether to
 center the momentum coordinate also.
+\item \verb|offset_by_orbit| --- A flag indicating whether to offset
+the transverse beam coordinates by the closed orbit before tracking.
+Similar to \verb|center_on_orbit|, but the initial centroids of the
+beam are preserved.  The beam is simply displaced by the closed orbit
+rather than being centered on it.
+\item \verb|offset_momentum_also| --- A flag indicating whether to also
+offset the beam momentum to the momentum of the closed orbit.  If the
+\verb|start_from_centroid| or \verb|start_from_dp_centroid| parameters are 
+used on the \verb|closed_orbit| command, this flag should be set to
+0; otherwise, one will offset the beam central momentum by its own value.
 \item \verb|soft_failure| --- If there is an error during tracking (e.g.,
 a failure of orbit correction), continue to produce file output.  This
 creates essentially empty slots in the files corresponding to the failed
@@ -2511,7 +2575,8 @@ for a ring.
 \item function: prepare for computation of tune shifts with amplitude.
 \item note: must be given prior to the \verb|twiss_output| command.
 \item method: tune shifts with amplitude are computed via tracking a series of
-        particles at different amplitudes.  NAFF is used to determine the tunes
+        particles at different amplitudes or by a matrix method.  NAFF is used to 
+        determine the tunes
         from the tracking data.  It is the user's responsbility to optimize the
         parameters to ensure that results are reasonable.  Using tracking to determine
         tune shifts is more accurate than analytical methods as it includes multi-turn
@@ -2520,38 +2585,64 @@ for a ring.
 
 \begin{verbatim}
 &tune_shift_with_amplitude
-    long turns = 1000;
-    double x0 = 1e-10;
-    double y0 = 1e-10;
-    double x1 = 1e-6;
-    double y1 = 1e-6;
+    long turns = 2048;
+    double x0 = 1e-6;
+    double y0 = 1e-6;
+    double x1 = 3e-4;
+    double y1 = 3e-4;
+    long grid_size = 6;
+    long sparse_grid = 0;
+    long spread_only = 0;
+    double nux_roi_width = 0.02;
+    double nuy_roi_width = 0.02;
     double scale_down_factor = 2;
     double scale_up_factor = 1.05;
     double scale_down_limit = 0.01;
-    double scale_up_limit = 1e-5;
+    double scale_up_limit = 1e-4;
     long scaling_iterations = 10;
-    long use_concatenation = 1;
+    long use_concatenation = 0;
     long verbose = 0;
+    long order = 2;
+    STRING tune_output = NULL;
 &end
 \end{verbatim}
 
 \begin{itemize}
 \item \verb|turns| --- The number of turns to track.  If zero, then the concatenated matrix
-        is used instead of tracking.  This doesn't work well with all lattices.  The order
+        is used instead of tracking, and all other parameters of this command are irrelevant.  
+        The matrix method doesn't work well with all lattices.  The order
         of the concatenated matrix is given by the \verb|concat_order| control in 
         \verb|twiss_output|.
 \item \verb|x0|, \verb|y0| --- The initial x and y amplitudes to use for determining the
         small-amplitude tunes.
 \item \verb|x1|, \verb|y1| --- The initial x and y amplitudes to user for determining the
         tune shifts.  These values should be small enough to ensure linearity in the tune
-        shift.  If the difference in tune is greater than 0.01, \verb|elegant| will automatically
-        reduce these initial values and iterate.
+        shift.  
+\item \verb|grid_size| --- Size of the grid of points in x and y.  
+\item \verb|sparse_grid| --- If nonzero, then instead of a full set of \verb|grid_size|$^2$
+        particles, a sparse grid of particles is tracked.  Will save time at some expense
+        in accuracy.
+\item \verb|spread_only| --- Compute the tune spread only and don't bother with the
+        tune shift coefficients.  These tune spreads can be optimized and appear in the
+        twiss output file under the names \verb|nuxTswaLower|, \verb|nuxTswaUpper|, and
+        similarly for the y plane.  This is the recommended way to reduce tune shift
+        with amplitude, as the tune spread is more reliable than the coefficients of 
+        the expansion.  (Particles that get lost are automatically ignored in both
+        types of computations.)
+\item \verb|nux_roi_width|, \verb|nuy_roi_width| --- Widths of the region of interest for
+        x and y tunes.  As the grid is filled in, {\tt elegant} finds the tune for each
+        tracked particle on the grid.  Successive tune values are looked for in the
+        region of the given width around the previous tune value.  This prevents jumping
+        from the main tune peak to another peak, which can happen when the tune spectrum
+        has many lines.
 \item \verb|scale_down_factor|, \verb|scale_up_factor|, \verb|scale_down_limit|, 
         \verb|scale_up_limit|, \verb|scaling_iterations| --- These control automatic scaling
         of the amplitudes.  If {\tt elegant} sees a tune shift larger than \verb|scale_down_limit|
         it will decrease \verb|x0| (or \verb|y0|) by the factor \verb|scale_down_factor|. 
         If  {\tt elegant} sees a tune shift smaller than \verb|scale_up_limit|
         it will increase \verb|x0| (or \verb|y0|) by the factor \verb|scale_up_factor|. 
+        Suggestion: if you find yourself playing with these values and the initial amplitudes
+        in order to get reliable TSWA coefficients, try just using the tune spread.
 \item \verb|verbose| --- If nonzero, information about the progress of the algorithm is 
         printed to the screen.
 \item \verb|use_concatenation| --- If nonzero, then tracks with the concatenated matrix instead
