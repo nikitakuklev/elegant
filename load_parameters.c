@@ -270,7 +270,8 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
       free(load_request[i].element);
       load_request[i].element = NULL;
       if (code<0) {
-        fprintf(stdout, "warning: file %s ends unexpectedly\n", load_request[i].filename);
+        fprintf(stdout, "warning: file %s ends unexpectedly (code=%ld)\n", load_request[i].filename,
+                code);
         fflush(stdout);
         load_request[i].flags |= COMMAND_FLAG_IGNORE;
         continue;
@@ -283,6 +284,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
     SDDS_SetRowFlags(&load_request[i].table, 1);
     if ((rows=SDDS_CountRowsOfInterest(&load_request[i].table))<=0) {
       load_request[i].last_code = 0;
+      load_request[i].flags |= COMMAND_FLAG_IGNORE;
       continue;
     }
     mode = NULL;
