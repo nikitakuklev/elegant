@@ -1518,7 +1518,6 @@ void matr_element_tracking(double **coord, VMATRIX *M, MATR *matr,
     for (i=0; i<np; i++)
       coord[i][4] += matr->sReference;
   }
-  fprintf(stdout, "Done with matr_element_tracking\n");
 }
 
 long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge, 
@@ -1531,7 +1530,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
   char *dataname[6] = {"x","xp","y","yp","t","p"};
   long i, j, npNew, nameLength;
 
-  if (!script->rootname && !strlen(script->rootname)) {
+  if (!script->rootname || !strlen(script->rootname)) {
     /* generate random rootname */
     if (!(rootname = tmpname(NULL)))
       bomb("problem generating temporary filename for script", NULL);
@@ -1554,8 +1553,49 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
     bomb("memory allocation failure making command buffer for script", NULL);
   replaceString(cmdBuffer0, script->command, "%i", input, 9, 0);
   replaceString(cmdBuffer1, cmdBuffer0, "%o", output, 9, 0);
+
+  /* substitute numerical parameters */
+  for (i=0; i<10; i++) {
+    long count = 0;
+    char tag[10], value[25], *ptr;
+    sprintf(tag, "%%np%ld", i);
+    ptr = cmdBuffer1;
+    while ((ptr=strstr(ptr, tag))) {
+      count ++;
+      ptr += 3;
+    }
+    if (!count) continue;
+    sprintf(value, "%21.15e", script->NP[i]);
+    if (!(cmdBuffer0 = SDDS_Realloc(cmdBuffer0, sizeof(*cmdBuffer1)*(strlen(cmdBuffer1)+count*25+1))) ||
+        !(cmdBuffer1 = SDDS_Realloc(cmdBuffer1, sizeof(*cmdBuffer1)*(strlen(cmdBuffer1)+count*25+1))))
+      SDDS_Bomb("memory allocation failure");
+    replaceString(cmdBuffer0, cmdBuffer1, tag, value, count, 0);
+    strcpy(cmdBuffer1, cmdBuffer0);
+  }
+  /* substitute string parameters */
+  for (i=0; i<10; i++) {
+    long count = 0;
+    char tag[10], *ptr;
+    if (!script->SP[i] || strlen(script->SP[i])==0)
+      continue;
+    sprintf(tag, "%%sp%ld", i);
+    ptr = cmdBuffer1;
+    while ((ptr=strstr(ptr, tag))) {
+      count ++;
+      ptr += 3;
+    }
+    if (!count) continue;
+    if (!(cmdBuffer0 = 
+          SDDS_Realloc(cmdBuffer0, sizeof(*cmdBuffer1)*(strlen(cmdBuffer1)+count*strlen(script->SP[i])+1))) ||
+        !(cmdBuffer1 = 
+          SDDS_Realloc(cmdBuffer1, sizeof(*cmdBuffer1)*(strlen(cmdBuffer1)+count*strlen(script->SP[i])+1))))
+      SDDS_Bomb("memory allocation failure");
+    replaceString(cmdBuffer0, cmdBuffer1, tag, script->SP[i], count, 0);
+    strcpy(cmdBuffer1, cmdBuffer0);
+  }
+
   fprintf(stderr, "%s\n", cmdBuffer1);
-  
+
   /* dump the data to script input file */
   SDDS_ForceInactive(&SDDSout);
   SDDS_PhaseSpaceSetup(&SDDSout, input, SDDS_BINARY, 1, "script input", 
