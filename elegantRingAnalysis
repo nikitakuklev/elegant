@@ -465,6 +465,7 @@ proc PostProcessRuns {args} {
         lappend processedList $item
         if [catch {eval exec sddscombine [affix -itemList $runNameList -suffix .$item] \
                      -merge -overwrite $rootname.$item} result] {
+	    return -code error "$result"
         }
         eval file delete -force [affix -itemList $runNameList -suffix .$item]
     }
@@ -473,6 +474,7 @@ proc PostProcessRuns {args} {
         lappend processedList $item
         if [catch {eval exec sddscombine [affix -itemList $runNameList -suffix .$item] \
                      -overwrite $rootname.$item} result] {
+	    return -code error "$result"
         }
 	eval file delete -force [affix -itemList $runNameList -suffix .$item]
     }

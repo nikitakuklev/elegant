@@ -59,7 +59,7 @@ ELEMENT_LIST *next_element_of_type(ELEMENT_LIST *elem, long type);
 ELEMENT_LIST *next_element_of_type2(ELEMENT_LIST *elem, long type1, long type2);
 ELEMENT_LIST *next_element_of_types(ELEMENT_LIST *elem, long *type, long n_types, long *index);
 long find_parameter_offset(char *param_name, long elem_type);
-long zero_correctors_one_plane(ELEMENT_LIST *elem, RUN *run, STEERING_LIST *SL);
+long zero_correctors_one_plane(ELEMENT_LIST *elem, RUN *run, STEERING_LIST *SL, long plane);
 long zero_correctors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct);
 long zero_hcorrectors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct);
 long zero_vcorrectors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct);
@@ -2157,26 +2157,28 @@ long zero_correctors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct)
       zero_vcorrectors(elem, run, correct);
 }
 
-long zero_correctors_one_plane(ELEMENT_LIST *elem, RUN *run, STEERING_LIST *SL)
+long zero_correctors_one_plane(ELEMENT_LIST *elem, RUN *run, STEERING_LIST *SL, long plane)
 {  
   long n_zeroed = 0, i;
   long paramOffset;
 
   while (elem) {
     paramOffset = -1;
-    for (i=0; i<SL->n_corr_types; i++)
-      if (strcmp(elem->name, SL->corr_name[i])==0)
-        break;
-    if (i!=SL->n_corr_types) {
-      paramOffset = SL->param_offset[i];
-      *((double*)(elem->p_elem+paramOffset)) = 0;
-      if (elem->matrix) {
-        free_matrices(elem->matrix);
-        tfree(elem->matrix);
-        elem->matrix = NULL;
+    if (steering_corrector(elem, SL, plane)) {
+      for (i=0; i<SL->n_corr_types; i++)
+	if (strcmp(elem->name, SL->corr_name[i])==0)
+	  break;
+      if (i!=SL->n_corr_types) {
+	paramOffset = SL->param_offset[i];
+	*((double*)(elem->p_elem+paramOffset)) = 0;
+	if (elem->matrix) {
+	  free_matrices(elem->matrix);
+	  tfree(elem->matrix);
+	  elem->matrix = NULL;
+	}
+	compute_matrix(elem, run, NULL);
+	n_zeroed++;
       }
-      compute_matrix(elem, run, NULL);
-      n_zeroed++;
     }
     elem = elem->succ;
   }
@@ -2186,7 +2188,7 @@ long zero_correctors_one_plane(ELEMENT_LIST *elem, RUN *run, STEERING_LIST *SL)
 long zero_hcorrectors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct)
 {
   long nz;
-  nz = zero_correctors_one_plane(elem, run, &(correct->SLx));
+  nz = zero_correctors_one_plane(elem, run, &(correct->SLx), 0);
   fprintf(stderr, "%ld H correctors set to zero\n", nz);
   return nz;
 }
@@ -2194,7 +2196,7 @@ long zero_hcorrectors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct)
 long zero_vcorrectors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct)
 {
   long nz;
-  nz = zero_correctors_one_plane(elem, run, &(correct->SLy));
+  nz = zero_correctors_one_plane(elem, run, &(correct->SLy), 1);
   fprintf(stderr, "%ld V correctors set to zero\n", nz);
   return nz;
 }
