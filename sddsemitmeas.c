@@ -9,6 +9,10 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.11  2000/05/12 20:59:30  borland
+ * Made some changes to try to accomodate cause when there is a matrix error.
+ * Not successful.
+ *
  * Revision 1.10  1999/10/12 21:50:01  borland
  * All printouts now go to the stdout rather than stderr.  fflush statements,
  * some unnecessary, were added in a mostly automated fashion.
@@ -1101,8 +1105,7 @@ double solve_normal_form(
   for (i=rms_error=0; i<Mp->n; i++) {
     if ((s2_fit[i] = Mp->a[i][0])<0) {
       s2_fit[i] = Mp->a[i][0] = 0;
-      fprintf(stdout, "bad fit--negative sigma^2!\n");
-      fflush(stdout);
+      fprintf(stderr, "bad fit--negative sigma^2!\n");
     }
     error = sqrt(Mp->a[i][0]) - sqrt(M->a[i][0]);
     rms_error += sqr(error);
