@@ -228,6 +228,7 @@ int main(int argc, char **argv)
             }
         } while (--m>=0);
     fclose(fp_out);
+    return 0;
     }
 
 int nearly_equal(double x1, double y1, double x2, double y2)
