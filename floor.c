@@ -437,8 +437,10 @@ void final_floor_coordinates(LINE_LIST *beamline, double *XYZ, double *Angle)
     }
     m_copy(V0, V1);
     m_copy(W0, W1);
+    elem->end_pos = s;
     elem = elem->succ;
   }
+  beamline->revolution_length = s;
   for (i=0; i<3; i++)
     XYZ[i] = V0->a[i][0];
   Angle[0] = theta;
@@ -491,5 +493,3 @@ void computeSurveyAngles(double *theta, double *phi, double *psi, MATRIX *W)
   else
     *psi = nearbyAngle(atan2(-W->a[0][1], W->a[0][0])-*theta, *psi);
 }
-
-

@@ -819,11 +819,11 @@ static long radint_mem[8] = {
   -1, -1, -1,
   -1, -1, -1,
 } ;
-static char *floorCoord_name[6] = {
-  "X", "Y", "Z", "theta", "phi", "psi",
+static char *floorCoord_name[7] = {
+  "X", "Y", "Z", "theta", "phi", "psi", "sTotal"
 };
-static long floorCoord_mem[6] = {
-  -1, -1, -1, -1, -1, -1,
+static long floorCoord_mem[7] = {
+  -1, -1, -1, -1, -1, -1, -1
 };
 
 int showTwissMemories(FILE *fp)
@@ -1054,7 +1054,7 @@ double optimization_function(double *value, long *invalid)
       rpn_store(beamline->radIntegrals.taudelta, radint_mem[7]);
     }
     if (floorCoord_mem[0]==-1) {
-      for (i=0; i<6; i++)
+      for (i=0; i<7; i++)
         floorCoord_mem[i] = rpn_create_mem(floorCoord_name[i]);
     }
     final_floor_coordinates(beamline, XYZ, Angle);
@@ -1062,7 +1062,9 @@ double optimization_function(double *value, long *invalid)
       rpn_store(XYZ[i], floorCoord_mem[i]);
       rpn_store(Angle[i], floorCoord_mem[i+3]);
     }
-    
+    compute_end_positions(beamline);
+    rpn_store(beamline->revolution_length, floorCoord_mem[6]);
+
     for (i=0; i<variables->n_variables; i++)
       variables->varied_quan_value[i] = value[i];
 
@@ -1214,7 +1216,6 @@ double optimization_function(double *value, long *invalid)
      */
     variables->varied_quan_value[variables->n_variables+1] = 
       optimization_data->mode==OPTIM_MODE_MAXIMUM?-1*result:result;
-    compute_end_positions(beamline);
     if (force_output || (control->i_step-2)%output_sparsing_factor==0)
       do_track_beam_output(run, control, error, variables, beamline, beam, output, optim_func_flags,
                            charge);
