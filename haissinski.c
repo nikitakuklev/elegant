@@ -13,7 +13,7 @@
 #include "SDDS.h"
 #include "constants.h"
 
-static char *USAGE = "haissinski <twissFile> <resultsFile>\n\
+static char *USAGE1 = "haissinski <twissFile> <resultsFile>\n\
  {-wakeFunction=<file>,tColumn=<name>,wColumn=<name> |\n\
   -model=[L=<Henry>|Zn=<Ohms>],R=<Ohm>} \n\
  {-charge=<C>|-particles=<value>} {-steps=<number>} \n\
@@ -30,8 +30,8 @@ in an electron storage ring. \n\
                solved bunch distribution.\n\
 wakeFunction   Input the wake function for an impulse response of a 1 C charge.\n\
                Time and wake column names should be specified with \n\
-               units s and V/nC respectively.\n\
-model          Instead of a wake function, a circuit model can be entered. The inductive\n\
+               units s and V/nC respectively.\n";
+static char *USAGE2 = "model          Instead of a wake function, a circuit model can be entered. The inductive\n\
                part may be entered with L (inductance) or with |Z/n| value.\n\
                R is the resistance.\n\
 RF             RF parameters that control the length of the zero-current beam.\n\
@@ -137,8 +137,10 @@ int main( int argc, char **argv)
   
   SDDS_RegisterProgramName(argv[0]);
   argc  =  scanargs(&scanned, argc, argv);
-  if (argc == 1)
-    bomb(NULL, USAGE);
+  if (argc == 1) {
+    fprintf(stderr, "%s%s\n", USAGE1, USAGE2);
+    exit(1);
+  }
 
 /* initialize the FUNCTION structures */
   initializeFunction( &density );
