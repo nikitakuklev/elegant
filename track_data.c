@@ -834,13 +834,16 @@ PARAMETER nibend_param[N_NIBEND_PARAMS] = {
     {"FINT", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&nibend_example.fint), NULL, DEFAULT_FINT, 0, "edge-field integral"},
     {"HGAP", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&nibend_example.hgap), NULL, 0.0, 0, "half-gap between poles"},
     {"FP1", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&nibend_example.fp1), NULL, 10.0, 0, "fringe parameter (tanh model)"},
-    {"FP2", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&nibend_example.fp2), NULL, 1.0, 0, "not used"},
+    {"FP2", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&nibend_example.fp2), NULL, 0.0, 0, "not used"},
+    {"FP3", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&nibend_example.fp3), NULL, 0.0, 0, "not used"},
+    {"FP4", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&nibend_example.fp4), NULL, 0.0, 0, "not used"},
     {"FSE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&nibend_example.fse), NULL, 0.0, 0, "fractional strength error"},
     {"ETILT", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&nibend_example.etilt), NULL, 0.0, 0, "error rotation about incoming longitudinal axis"},
     {"ACCURACY", "", IS_DOUBLE, 0, (long)((char *)&nibend_example.accuracy), NULL, DEFAULT_ACCURACY, 0, "integration accuracy (for nonadaptive integration, used as the step-size)"},
     {"MODEL", "", IS_STRING, 0, (long)((char *)&nibend_example.model), DEFAULT_NIBEND_TYPE, 0.0, 0, "fringe model (hard-edge, linear, cubic-spline, tanh, quintic"},
     {"METHOD", "", IS_STRING, 0, (long)((char *)&nibend_example.method), DEFAULT_INTEG_METHOD, 0.0, 0, "integration method (runge-kutta, bulirsch-stoer, modified-midpoint, two-pass modified-midpoint, leap-frog, non-adaptive runge-kutta)"},
     {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&nibend_example.synch_rad), NULL, 0.0, 0, "include classical synchrotron radiation?"},
+    {"ADJUST_BOUNDARY", "", IS_LONG, 0, (long)((char *)&nibend_example.adjustBoundary), NULL, 0.0, 1, "adjust fringe boundary position to make symmetric trajectory?"},
     };
 
 KPOLY kpoly_example;

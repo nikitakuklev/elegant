@@ -464,9 +464,16 @@ void lorentz_setup(
                         engeOrder 
                           = fringe_code==ENGE1_MODEL ? 1 :
                             (fringe_code==ENGE3_MODEL ? 3 : 5) ;
-                        /* determine a1, a2, and a3 to match FINT, HGAP, and angle */
-                        computeEngeCoefficients(engeCoef, fabs(nibend->length/nibend->angle),
-                                                nibend->length, engeD, nibend->fint);
+                        if (!nibend->fp2) {
+                          /* determine a1, a2, and a3 to match FINT, HGAP, and angle */
+                          fprintf(stdout, "Determining Enge coefficients for NIBEND\n");
+                          computeEngeCoefficients(engeCoef, fabs(nibend->length/nibend->angle),
+                                                  nibend->length, engeD, nibend->fint);
+                        } else {
+                          engeCoef[0] = nibend->fp2;
+                          engeCoef[1] = nibend->fp3;
+                          engeCoef[2] = nibend->fp4;
+                        }
                         flen = nibend->flen = nibend->length;
                         break;
                     default:
@@ -541,7 +548,10 @@ void lorentz_setup(
                     one_plus_fse = 1;
                     if ((offset = nibend->last_zeta_offset)==0)
                         offset = last_offset;
-                    offset = zeroNewton(nibend_trajectory_error, 0, offset, 1e-6, 10, 1e-14);
+                    if (nibend->adjustBoundary)
+                      offset = zeroNewton(nibend_trajectory_error, 0, offset, 1e-6, 10, 1e-14);
+                    else
+                      offset = 0;
 #ifdef IEEE_MATH
                     if (isnan(offset) || isinf(offset))
                         bomb("Newton's method failed to find coordinate offset for NIBEND--decrease accuracy parameter", NULL);
@@ -554,17 +564,20 @@ void lorentz_setup(
                               engeD, engeCoef[0], engeCoef[1], engeCoef[2]);
                     fprintf(stdout, "NIBEND offset adjusted to %e to obtain trajectory error of %e\n",
                         offset, nibend_trajectory_error(offset));
+                    fprintf(stdout, "(Positive offset adjustment means a shorter magnet.)\n");
                     fprintf(stdout, "final coordinates: %e, %e, %e, %e, %e\n", 
                         traj_err_final_coord[0], traj_err_final_coord[1], traj_err_final_coord[2],
                         traj_err_final_coord[3], traj_err_final_coord[4]);
                     if (fringe_code==ENGE1_MODEL || fringe_code==ENGE3_MODEL
-                        || fringe_code==ENGE5_MODEL) 
+                        || fringe_code==ENGE5_MODEL) {
                       fprintf(stdout, "Equivalent Enge coefficients: D=%e, a=%e, %e, %e\n", 
                               engeD, 
                               engeCoef[0] + engeCoef[1]*offset/engeD + engeCoef[2]*sqr(offset/engeD), 
                               engeCoef[1] + 2*engeCoef[2]*offset/engeD, 
                               engeCoef[2]);
-                    fflush(stdout);
+                    
+                      fflush(stdout);
+                    }
                     x_correction = traj_err_final_coord[0];
                     last_offset = nibend->last_zeta_offset = nibend->zeta_offset = offset;
                     nibend->x_correction = x_correction;
@@ -987,7 +1000,7 @@ void nibend_deriv_function(double *qp, double *q, double s)
     }
   } else if (fringe_code==ENGE1_MODEL || fringe_code==ENGE3_MODEL || fringe_code==ENGE5_MODEL) {
     if (q[0]<0) {
-      /* entrance */
+      /* entrance---positive z is out of the magnet */
       dq0 = q[0] - (q[1]*entr_slope + rentr_intercept);
       z   = -dq0*cos_alpha1 + offset;
       engeFunction(&F2, &F0, z, q[2], engeD, engeCoef[0], engeCoef[1], engeCoef[2], engeOrder);
@@ -996,7 +1009,7 @@ void nibend_deriv_function(double *qp, double *q, double s)
       F1 = F0*sin_alpha1;
       F0 = F0*cos_alpha1;
     } else {
-      /* exit */
+      /* exit---positive z is out of the magnet */
       dq0 = q[0] - (q[1]*exit_slope + rexit_intercept);
       z   = dq0*cos_alpha1 + offset;
       engeFunction(&F2, &F0, z, q[2], engeD, engeCoef[0], engeCoef[1], engeCoef[2], engeOrder);
@@ -1014,6 +1027,7 @@ void nibend_deriv_function(double *qp, double *q, double s)
       F0 = F1 = F2 = 0;    /* outside of magnet */
     else if (z<flen) {
       /* in entrance fringe */
+      /* positive z goes into the magnet */
       switch (fringe_code) {
       case LINEAR_MODEL:
         F2 = S*z/flen;
@@ -1046,6 +1060,7 @@ void nibend_deriv_function(double *qp, double *q, double s)
       if (z>flen)
         F0 = F1 = F2 = 0;    /* outside of magnet */
       else if (z>0) {
+        /* positive z goes out of the magnet */
         switch (fringe_code) {
         case LINEAR_MODEL:
           F2 = S*(1-z/flen);

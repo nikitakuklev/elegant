@@ -612,7 +612,7 @@ extern char *entity_text[N_TYPES];
 #define N_SAMPLE_PARAMS 2
 #define N_HVCOR_PARAMS 10
 #define N_SCATTER_PARAMS 5
-#define N_NIBEND_PARAMS 18
+#define N_NIBEND_PARAMS 21
 #define N_KPOLY_PARAMS 8
 #define N_RAMPRF_PARAMS 9
 #define N_RAMPP_PARAMS 1
@@ -1388,13 +1388,13 @@ extern PARAMETER nibend_param[N_NIBEND_PARAMS];
 typedef struct {
     double length, angle, e1, e2, tilt;
     double dx, dy, dz;
-    double fint, hgap;     /* used to calculate flen */
-    double fp1, fp2;       /* fringe-field parameters 1 and 2 */
-    double fse;            /* Fractional Strength Error */
-    double etilt;          /* error tilt angle */
+    double fint, hgap;          /* used to calculate flen */
+    double fp1, fp2, fp3, fp4;  /* fringe-field parameters 1 and 2 */
+    double fse;                 /* Fractional Strength Error */
+    double etilt;               /* error tilt angle */
     double accuracy;
     char *model, *method;
-    long synch_rad;
+    long synch_rad, adjustBoundary;
     /* for internal use only: */
     double flen;            /* distance from iron edge to end of fringe field */
     double rho0;            /* central bending radius */ 
