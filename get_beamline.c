@@ -763,3 +763,10 @@ void process_rename_request(char *s, char **name, long n_names)
     }
 
     
+long nearestInteger(double value)
+{
+  if (value<0)
+    return -1*((long)(-value+0.5));
+  return (long)(value+0.5);
+}
+

@@ -50,13 +50,6 @@ static char *load_mode[LOAD_MODES] = {
     "absolute", "differential", "ignore", "fractional"
     } ;
 
-long nearestInteger(double value)
-{
-  if (value<0)
-    return -1*((long)(-value+0.5));
-  return (long)(value+0.5);
-}
-
 long setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 {
     long i, index;
