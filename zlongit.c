@@ -31,10 +31,11 @@
 #include "table.h"
 #include "fftpackC.h"
 
-#define WAKE_COLUMNS 2
+#define WAKE_COLUMNS 3
 static SDDS_DEFINITION wake_column[WAKE_COLUMNS] = {
     {"Deltat", "&column name=Deltat, symbol=\"$gD$rt\", units=s, type=double, description=\"Time after head of bunch\" &end"},
     {"Wz", "&column name=Wz, symbol=\"W$bz$n\", units=V, type=double, description=\"Longitudinal wake\" &end"},
+    {"LinearDensity", "&column name=LinearDensity, units=C/s, type=double &end"},
     };
 
 #define WAKE_PARAMETERS 5
@@ -57,12 +58,13 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
     )
 {
     static double *Itime = NULL;           /* array for histogram of particle density */
+    static double *Ifreq = NULL;           /* array for FFT of histogram of particle density */
     static double *Vtime = NULL;           /* array for voltage acting on each bin */
     static long max_n_bins = 0;
     static long *pbin = NULL;              /* array to record which bin each particle is in */
     static double *time = NULL;            /* array to record arrival time of each particle */
     static long max_np = 0;
-    double *Ifreq, *Vfreq, *Z;
+    double *Vfreq, *Z;
     long ip, ib, nb, n_binned, nfreq, iReal, iImag;
     double factor, tmin, tmean, dt, dt1, dgam;
 
@@ -72,6 +74,7 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
 
     if (zlongit->n_bins>max_n_bins) {
        Itime = trealloc(Itime, 2*sizeof(*Itime)*(max_n_bins=zlongit->n_bins));
+       Ifreq = trealloc(Ifreq, 2*sizeof(*Ifreq)*(max_n_bins=zlongit->n_bins));
        Vtime = trealloc(Vtime, 2*sizeof(*Vtime)*(max_n_bins+1));
        }
 
@@ -127,8 +130,8 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
 #endif
 
     /* Take the FFT of I(t) to get I(f) */
-    realFFT(Itime, nb, 0);
-    Ifreq = Itime;
+    memcpy(Ifreq, Itime, 2*zlongit->n_bins*sizeof(*Ifreq));
+    realFFT(Ifreq, nb, 0);
 
     /* Compute V(f) = Z(f)*I(f), putting in a factor 
      * to normalize the current waveform.
@@ -160,7 +163,7 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
                 }
             for (ib=0; ib<nb; ib++) {
                 if (!SDDS_SetRowValues(&zlongit->SDDS_wake, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ib,
-                                       0, ib*dt, 1, Vtime[ib], -1)) {
+                                       0, ib*dt, 1, Vtime[ib], 2, Itime[ib]*factor, -1)) {
                     SDDS_SetError("Problem setting rows of SDDS table for wake output (track_through_zlongit)");
                     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
                     }
