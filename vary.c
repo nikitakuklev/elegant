@@ -246,8 +246,9 @@ long vary_beamline(VARY *_control, ERROR *errcon, RUN *run, LINE_LIST *beamline)
     fflush(stdout);
 #endif
 
-    if (_control->bunch_frequency==0 && _control->reset_rf_each_step)
-        delete_phase_references();
+    if ((_control->bunch_frequency==0 && _control->reset_rf_each_step) || 
+        _control->i_step==0)
+      delete_phase_references();
     reset_special_elements(beamline, _control->reset_rf_each_step);
 
     do_perturbations = step_incremented = 0;

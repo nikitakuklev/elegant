@@ -108,6 +108,16 @@ long do_tracking(
   
   check_nan = 1;
   eptr = &(beamline->elem);
+
+  if (flags&FIRST_BEAM_IS_FIDUCIAL && !(flags&FIDUCIAL_BEAM_SEEN)) {
+    /* this is required just in case rf elements etc. have previously
+     * been activated by computation of correction matrices or trajectory
+     * correction.
+     */
+    delete_phase_references();
+    reset_special_elements(beamline, 1);
+  }
+  
   while (eptr && check_nan) {
     switch (eptr->type) {
     case T_RCOL: case T_ECOL: case T_MAXAMP:
