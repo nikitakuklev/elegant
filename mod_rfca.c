@@ -130,14 +130,14 @@ long modulated_rf_cavity(double **part, long np, MODRF *modrf, double P_central,
     dt = t1-t0;
     
     pmPhase = modrf->pmFreq*PIx2*dt + modrf->pmPhase*PI/180;
-    phase = PI/180*(modrf->phase + modrf->pmMag*sin(pmPhase)) + omega0*(t1-t0);
+    phase = PI/180*(modrf->phase + modrf->pmMag*sin(pmPhase)*exp(-modrf->pmDecay*dt)) + omega0*dt;
     if (modrf->pmMag)
         omega = omega0 + PIx2*modrf->pmFreq*(PI/180*modrf->pmMag)*cos(pmPhase);
     else
         omega = omega0;
 
     amPhase = modrf->amFreq*PIx2*dt + modrf->amPhase*PI/180;
-    volt  = modrf->volt/(1e6*me_mev)*(1 + modrf->amMag*sin(amPhase));
+    volt  = modrf->volt/(1e6*me_mev)*(1 + modrf->amMag*sin(amPhase)*exp(-modrf->amDecay*dt));
     if ((tau=modrf->Q/omega0))
         volt *= sqrt(1 - exp(-dt/tau));
 

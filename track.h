@@ -624,7 +624,7 @@ extern char *entity_text[N_TYPES];
 #define N_TRFMODE_PARAMS 14
 #define N_TWMTA_PARAMS 17
 #define N_ZLONGIT_PARAMS 19
-#define N_MODRF_PARAMS 13
+#define N_MODRF_PARAMS 15
 #define N_SREFFECTS_PARAMS 13
 #define N_ZTRANSVERSE_PARAMS 19
 #define N_IBSCATTER_PARAMS 9
@@ -636,7 +636,7 @@ extern char *entity_text[N_TYPES];
 #define N_CHARGE_PARAMS 2
 #define N_PFILTER_PARAMS 5
 #define N_HISTOGRAM_PARAMS 10
-#define N_CSRCSBEND_PARAMS 52
+#define N_CSRCSBEND_PARAMS 56
 #define N_CSRDRIFT_PARAMS 20
 #define N_REMCOR_PARAMS 6
 #define N_MAPSOLENOID_PARAMS 18
@@ -829,7 +829,8 @@ extern PARAMETER modrf_param[N_MODRF_PARAMS] ;
 typedef struct {
     double length, volt, phase, freq, Q;
     long phase_reference;
-    double amMag, amPhase, amFreq, pmMag, pmPhase, pmFreq;
+    double amMag, amPhase, amFreq, amDecay;
+    double pmMag, pmPhase, pmFreq, pmDecay;
     char *fiducial;
     /* for internal use only: */
     long fiducial_seen;
@@ -1509,12 +1510,15 @@ typedef struct {
     char *derbenevCriterionMode, *particleOutputFile;
     long particleOutputInterval, sliceAnalysisInterval;
     double highFrequencyCutoff0, highFrequencyCutoff1;
+    char *wakeFilterFile, *wffFreqColumn, *wffRealColumn, *wffImagColumn;
     /* for internal use only: */
     long flags;   /* bend flags */
     short wakeFileActive, particleFileActive;
     SDDS_DATASET SDDSout, SDDSpart;
     double k1_internal, k2_internal, k3_internal, k4_internal;
     short xIndex, xpIndex, tIndex, pIndex;
+    long wffValues;
+    double *wffFreqValue, *wffRealFactor, *wffImagFactor;
     } CSRCSBEND;
 
 /* names and storage structure for drift with CSR */

@@ -533,7 +533,7 @@ PARAMETER watch_param[N_WATCH_PARAMS] = {
     {"START_PASS", "", IS_LONG, 0, (long)((char*)&watch_example.start_pass), NULL, 0.0, 0, "pass on which to start"},
     {"FILENAME", "", IS_STRING, 0, (long)((char *)&watch_example.filename), "", 0.0, 0, "output filename"},
     {"LABEL", "", IS_STRING, 0, (long)((char *)&watch_example.label), "", 0.0, 0, "output label"},
-    {"MODE", "", IS_STRING, 0, (long)((char *)&watch_example.mode), "coordinates", 0.0, 0, "coordinate, parameter, or centroid"},
+    {"MODE", "", IS_STRING, 0, (long)((char *)&watch_example.mode), "coordinates", 0.0, 0, "coordinate, parameter, centroid, or fft"},
     {"X_DATA", "", IS_LONG, 0, (long)((char*)&watch_example.xData), NULL, 0.0, 1, "include x data in coordinate mode?"},
     {"Y_DATA", "", IS_LONG, 0, (long)((char*)&watch_example.yData), NULL, 0.0, 1, "include y data in coordinate mode?"},
     {"LONGIT_DATA", "", IS_LONG, 0, (long)((char*)&watch_example.longitData), NULL, 0.0, 1, "include longitudinal data in coordinate mode?"},
@@ -996,6 +996,10 @@ PARAMETER csrcsbend_param[N_CSRCSBEND_PARAMS] = {
     {"SLICE_ANALYSIS_INTERVAL", "", IS_LONG, 0, (long)((char*)&csrcsbend_example.sliceAnalysisInterval), NULL, 0.0, 0, "interval (in kicks) of output to slice analysis file (from slice_analysis command)"},    
     {"HIGH_FREQUENCY_CUTOFF0", "", IS_DOUBLE, 0, (long)((char*)&csrcsbend_example.highFrequencyCutoff0), NULL, -1.0, 0, "Spatial frequency at which smoothing filter begins.  If not positive, no frequency filter smoothing is done.  Frequency is in units of Nyquist (0.5/binsize)."},
     {"HIGH_FREQUENCY_CUTOFF1", "", IS_DOUBLE, 0, (long)((char*)&csrcsbend_example.highFrequencyCutoff1), NULL, -1.0, 0, "Spatial frequency at which smoothing filter is 0.  If not given, defaults to HIGH_FREQUENCY_CUTOFF0."},
+    {"WAKE_FILTER_FILE", "", IS_STRING, 0, (long)((char*)&csrcsbend_example.wakeFilterFile), NULL, 0.0, 0, "Name of file supplying wakefield filtering data."},
+    {"WFF_FREQ_COLUMN", "", IS_STRING, 0, (long)((char*)&csrcsbend_example.wffFreqColumn), NULL, 0.0, 0, "Name of column supplying frequency values for wakefield filtering data."},
+    {"WFF_REAL_COLUMN", "", IS_STRING, 0, (long)((char*)&csrcsbend_example.wffRealColumn), NULL, 0.0, 0, "Name of column supplying real values for wakefield filtering data."},
+    {"WFF_IMAG_COLUMN", "", IS_STRING, 0, (long)((char*)&csrcsbend_example.wffImagColumn), NULL, 0.0, 0, "Name of column supplying imaginary values for wakefield filtering data."},
 };
 
 TUBEND tubend_example;
@@ -1170,9 +1174,11 @@ PARAMETER modrf_param[N_MODRF_PARAMS] = {
     {"AMMAG", "", IS_DOUBLE, 0, (long)((char *)&modrf_example.amMag), NULL, 0.0, 0, "magnitude of amplitude modulation"},
     {"AMPHASE", "DEG", IS_DOUBLE, 0, (long)((char *)&modrf_example.amPhase), NULL, 0.0, 0, "phase of amplitude modulation"},
     {"AMFREQ", "Hz", IS_DOUBLE, 0, (long)((char *)&modrf_example.amFreq), NULL, 0.0, 0, "frequency of amplitude modulation"},
+    {"AMDECAY", "1/s", IS_DOUBLE, 0, (long)((char *)&modrf_example.amDecay), NULL, 0.0, 0, "exponetial decay rate of amplitude modulation"},
     {"PMMAG", "DEG", IS_DOUBLE, 0, (long)((char *)&modrf_example.pmMag), NULL, 0.0, 0, "magnitude of phase modulation"},
     {"PMPHASE", "DEG", IS_DOUBLE, 0, (long)((char *)&modrf_example.pmPhase), NULL, 0.0, 0, "phase of phase modulation"},
     {"PMFREQ", "Hz", IS_DOUBLE, 0, (long)((char *)&modrf_example.pmFreq), NULL, 0.0, 0, "frequency of phase modulation"},
+    {"PMDECAY", "1/s", IS_DOUBLE, 0, (long)((char *)&modrf_example.pmDecay), NULL, 0.0, 0, "exponetial decay rate of phase modulation"},
     {"FIDUCIAL", "", IS_STRING, 0, (long)((char *)&modrf_example.fiducial), NULL, 0.0, 0, "mode for determining fiducial arrival time (light, tmean, first, pmaximum)"},
     };    
 

@@ -16,6 +16,7 @@
 #include "mdb.h"
 #include "track.h"
 
+
 void integrate_csbend_ord2(double *Qf, double *Qi, double s, long n, double rho0, double p0);
 void integrate_csbend_ord4(double *Qf, double *Qi, double s, long n, double rho0, double p0);
 void exactDrift(double **part, long np, double length);
@@ -24,6 +25,9 @@ void convertFromCSBendCoords(double **part, long np, double rho0,
 void convertToCSBendCoords(double **part, long np, double rho0, 
 			     double cos_ttilt, double sin_ttilt, long ctMode);
 long applyLowPassFilter(double *histogram, long bins, double dx, double start, double end);
+void applyFilterTable(double *function, long bins, double dt, long fValues,
+                      double *fFreq, double *fReal, double *fImag);
+
 long correctDistribution(double *array, long npoints, double desiredSum);
 
 static double Fy_0, Fy_x, Fy_x2, Fy_x3, Fy_x4;
@@ -793,6 +797,8 @@ typedef struct {
   long StupakovFileActive, StupakovOutputInterval;
   long trapazoidIntegration;
   double highFrequencyCutoff0, highFrequencyCutoff1;
+  long wffValues;
+  double *wffFreqValue, *wffRealFactor, *wffImagFactor;
 } CSR_LAST_WAKE;
 CSR_LAST_WAKE csrWake;
 
@@ -802,6 +808,10 @@ CSR_LAST_WAKE csrWake;
 #define N_DERBENEV_CRITERION_OPTIONS 3
 static char *derbenevCriterionOption[N_DERBENEV_CRITERION_OPTIONS] = {
   "disable", "evaluate", "enforce"};
+
+void readWakeFilterFile(long *values, double **freq, double **real, double **imag, 
+                        char *freqName, char *realName, char *imagName,
+                        char *filename);
 
 long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, double p_error, 
                              double Po, double **accepted, double z_start, double z_end,
@@ -835,7 +845,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   long csrInhibit = 0;
   double derbenevRatio = 0;
   TRACKING_CONTEXT tContext;
-  VMATRIX *Msection, *Me1, *Me2;
+  VMATRIX *Msection=NULL, *Me1=NULL, *Me2=NULL;
   
   reset_driftCSR();
   getTrackingContext(&tContext);
@@ -1113,6 +1123,12 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     }
   }
 
+  if (csbend->wakeFilterFile && !csbend->wffValues) 
+    readWakeFilterFile(&csbend->wffValues,
+                       &csbend->wffFreqValue, &csbend->wffRealFactor, &csbend->wffImagFactor, 
+                       csbend->wffFreqColumn, csbend->wffRealColumn, csbend->wffImagColumn,
+                       csbend->wakeFilterFile);
+  
   /*  prepare arrays for CSR integrals */
   nBins = csbend->bins;
   if (!(ctHist=SDDS_Realloc(ctHist, sizeof(*ctHist)*nBins)) ||
@@ -1123,12 +1139,17 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
       !(dGamma=SDDS_Realloc(dGamma, sizeof(*dGamma)*nBins)))
     bomb("memory allocation failure (track_through_csbendCSR)", NULL);
 
+  /* prepare some data for CSRDRIFT */
   csrWake.dGamma = dGamma;
   csrWake.bins = nBins;
   csrWake.ds0 = csbend->length/csbend->n_kicks;
   csrWake.zLast = csrWake.z0 = z_end;
   csrWake.highFrequencyCutoff0 = csbend->highFrequencyCutoff0;
   csrWake.highFrequencyCutoff1 = csbend->highFrequencyCutoff1;
+  csrWake.wffValues = csbend->wffValues;
+  csrWake.wffFreqValue = csbend->wffFreqValue;
+  csrWake.wffRealFactor = csbend->wffRealFactor;
+  csrWake.wffImagFactor = csbend->wffImagFactor;
   
 #if !defined(PARALLEL)  
   multipoleKicksDone += n_part*csbend->n_kicks*(csbend->integration_order==4?4:1);
@@ -1317,7 +1338,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
           long nz;
           nz = applyLowPassFilter(ctHist, nBins, dct, csbend->highFrequencyCutoff0, csbend->highFrequencyCutoff1);
           if (nz) {
-            fprintf(stdout, "Warning: high pass filter resulted in negative values in %ld bins\n",
+            fprintf(stdout, "Warning: low pass filter resulted in negative values in %ld bins\n",
                     nz);
             fflush(stdout);
           }
@@ -1396,6 +1417,10 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
         }
         dGamma[iBin] = T1[iBin]+T2[iBin];
       }
+
+      if (csbend->wffValues) 
+        applyFilterTable(dGamma, nBins, dct/c_mks, csbend->wffValues, csbend->wffFreqValue,
+                         csbend->wffRealFactor, csbend->wffImagFactor);
 
       if (CSRConstant) {
         for (i_part=0; i_part<n_part; i_part++) {
@@ -1633,7 +1658,6 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     csrWake.MPCharge = macroParticleCharge;
     csrWake.binRangeFactor = csbend->binRangeFactor;
     csrWake.trapazoidIntegration = csbend->trapazoidIntegration;
-
     if (csbend->useMatrix) {
       free_matrices(Msection);
       free_matrices(Me1);
@@ -2388,11 +2412,12 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
       long nz;
       nz = applyLowPassFilter(ctHist, nBins, dct, csrWake.highFrequencyCutoff0, csrWake.highFrequencyCutoff1);
       if (nz) {
-        fprintf(stdout, "Warning: high pass filter resulted in negative values in %ld bins\n",
+        fprintf(stdout, "Warning: low pass filter resulted in negative values in %ld bins\n",
                 nz);
         fflush(stdout);
       }
     }
+
     if (csrWake.SGHalfWidth>0) {
       SavitzkyGolaySmooth(ctHist, nBins, csrWake.SGOrder, csrWake.SGHalfWidth, csrWake.SGHalfWidth,  0);
       correctDistribution(ctHist, nBins, 1.0*nBinned);
@@ -2429,7 +2454,7 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
     }
     for (iBin=0; iBin<nBins; iBin++) {
       long jBin, first, count;
-      double term1, term2;
+      double term1=0, term2=0;
       diBin = dsMax/dct;
       if (iBin+diBin<nBins) {
         nCaseD1 ++;
@@ -2438,7 +2463,7 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
       first = 1;
       count = 0;
       for (jBin=iBin; jBin<nBins; jBin++) {
-        double phi, denom;
+        double phi;
         if ((phi = phiSoln[jBin-iBin])>=0) {
           /* I put in a negative sign here because my s is opposite in direction to 
            * Saldin et al. and Stupakov, so my derivative has the opposite sign.
@@ -2469,6 +2494,10 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
     factor = -4/csrWake.rho*csrWake.GSConstant*dz0;
     for (iBin=0; iBin<nBins; iBin++)
       csrWake.dGamma[iBin] *= factor;
+
+    if (csrWake.wffValues) 
+      applyFilterTable(csrWake.dGamma, nBins, dct/c_mks, csrWake.wffValues, csrWake.wffFreqValue,
+                       csrWake.wffRealFactor, csrWake.wffImagFactor);
 
     if ((csrDrift->StupakovOutput || csrWake.StupakovFileActive) && 
         (csrDrift->StupakovOutputInterval<2 || iKick%csrDrift->StupakovOutputInterval==0)) {
@@ -2894,5 +2923,91 @@ void computeEtiltCentroidOffset(double *dcoord_etilt, double rho0, double angle,
           dcoord_etilt[3], dcoord_etilt[4]);
   fflush(stdout);
 #endif
+}
+
+void readWakeFilterFile(long *values, 
+                        double **freq, double **real, double **imag, 
+                        char *freqName, char *realName, char *imagName,
+                        char *filename)
+{
+  SDDS_DATASET SDDSin;
+  long i;
+  
+  if (!SDDS_InitializeInputFromSearchPath(&SDDSin, filename) || !SDDS_ReadPage(&SDDSin)) {
+    fprintf(stderr, "Error: unable to open or read CSRCSBEND wake filter file %s\n", filename);
+    exit(1);
+  }
+  if ((*values = SDDS_RowCount(&SDDSin))<2) {
+    fprintf(stderr, "Error: too little data in CSRCSBEND wake filter file %s\n", filename);
+    exit(1);
+  }
+  if (!freqName || !strlen(freqName))
+    SDDS_Bomb("WFF_FREQ_COLUMN is blank in CSRCSBEND");
+  if (SDDS_CheckColumn(&SDDSin, freqName, "Hz", SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK) {
+    fprintf(stderr, "Error: column %s invalid in CSRCSBEND wake filter file %s---check existence, type, and units (Hz).\n", 
+            freqName, filename);
+    exit(1);
+  }
+  if (!realName || !strlen(realName))
+    SDDS_Bomb("WFF_REAL_COLUMN is blank in CSRCSBEND");
+  if (SDDS_CheckColumn(&SDDSin, realName, NULL, SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK) {
+    fprintf(stderr, "Error: column %s invalid in CSRCSBEND wake filter file %s---check existence and type.\n", 
+            realName, filename);
+    exit(1);
+  }
+  if (!imagName || !strlen(imagName))
+    SDDS_Bomb("WFF_IMAG_COLUMN is blank in CSRCSBEND");
+  if (SDDS_CheckColumn(&SDDSin, imagName, NULL, SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK) {
+    fprintf(stderr, "Error: column %s invalid in CSRCSBEND wake filter file %s---check existence and type.\n", 
+            imagName, filename);
+    exit(1);
+  }
+  if (!(*freq=SDDS_GetColumnInDoubles(&SDDSin, freqName)) ||
+      !(*real=SDDS_GetColumnInDoubles(&SDDSin, realName)) ||
+      !(*imag=SDDS_GetColumnInDoubles(&SDDSin, imagName))) {
+    fprintf(stderr, "Problem getting data from CSRCSBEND wake filter file %s.\n", filename);
+    SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    exit(1);
+  }
+  for (i=1; i<*values; i++) {
+    if ((*freq)[i-1]>=(*freq)[i]) {
+      fprintf(stderr, "Error: frequency data is not monotonically increasing in CSRCSBEND wake filter file %s.\n", filename);
+      exit(1);
+    }
+  }
+}
+
+void applyFilterTable(double *function, long bins, double dx, long fValues,
+                     double *fFreq, double *fReal, double *fImag)
+{
+  long i, i1, i2;
+  double f;
+  double *realimag, dfrequency, length;
+  long frequencies;
+  double sum;
+  
+  if (!(realimag = (double*)malloc(sizeof(*realimag)*(bins+2))))
+    SDDS_Bomb("allocation failure");
+
+  frequencies = bins/2 + 1;
+  length = dx*(bins-1);
+  dfrequency = 1.0/length;
+  realFFT2(realimag, function, bins, 0);
+  
+  for (i=0; i<frequencies; i++) {
+    long code;
+    i1 = 2*i+0;
+    i2 = 2*i+1;
+    f = i*dfrequency;
+    realimag[i1] *= interp(fReal, fFreq, fValues, f, 0, 1, &code);
+    realimag[i2] *= interp(fImag, fFreq, fValues, f, 0, 1, &code);
+  }
+  realFFT2(realimag, realimag, bins, INVERSE_FFT);
+
+  /* copy data to input buffer.
+   */
+  for (i=sum=0; i<bins; i++) 
+    function[i] = realimag[i];
+  free(realimag);
 }
 
