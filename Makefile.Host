@@ -18,7 +18,7 @@ endif
 
 EPICS_EXTENSIONS_LIB = ../../../../../epics/extensions/lib/$(HOST_ARCH)
 PROD = elegant sddsemitmeas madto sddssasefel sddsTouschekInteg ibsEmittance recurseSetup haissinski \
-        sddsmatchtwiss sddsanalyzebeam sddsbrightness sddsrandmult
+        sddsmatchtwiss sddsanalyzebeam sddsbrightness sddsrandmult sddsresdiag
 
 USR_CFLAGS = 	-I../../../../../epics/extensions/src/SDDS/include \
 		$(ZLIB_INC) \
@@ -85,6 +85,8 @@ madto_SRCS = 	madto.c sdds_strength_output.c convert_to_parmela.c convert_to_pat
 		transmuteElements.c convert_to_cosy.c engeCoef.c
 
 sddsrandmult_SRCS = sddsrandmult.c
+
+sddsresdiag_SRCS = sddsresdiag.c
 
 sddssasefel_SRCS = sddssasefel.c sasefelmx.c
 
