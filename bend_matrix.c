@@ -15,6 +15,9 @@
 #include "track.h"
 #include "mdb.h"
 
+void replaceWithNewMatrix(double *C, double **R, double ***T, double kx2, double ky2, double ha, double h,
+                          double nh, double bh2, double gh3, double s);
+
 VMATRIX *bend_matrix(
     double length,          /* arc length */ 
     double angle,           /* bending angle */
@@ -219,8 +222,7 @@ VMATRIX *hvcorrector_matrix(
     long do_edges, long max_order
     )
 {
-    VMATRIX *M, *Mtot, *Medge, *tmp;
-    double h, kick, tilt2;
+    double kick;
 
     log_entry("hvcorrector_matrix");
 
@@ -1226,7 +1228,11 @@ VMATRIX *sbend_matrix(
                  3*h*sx*t0*kx4*e161 - 6*h*sx*t0*kx2*ha*e111 + 3*h*kx2*ha*e122 + 6*h*kx2*e161 + 10*h*ha*e111 - 3*cx2*kx4*ha +
                  3*kx4*ha)/(6*kx6);
             }
-
+#if defined(TEST_NEW_MATRIX)
+        if (kx2!=0 && ky2!=0)
+          replaceWithNewMatrix(C, R, T, kx2, ky2, ha, h, nh, betah2, 0.0, t0);
+#endif
+        
         T[0][1][0] += h*R[0][1];
         T[0][3][0] += h*R[0][3];
         T[1][0][0] -= h*R[0][0]*R[1][0];
@@ -1277,7 +1283,7 @@ VMATRIX *sbend_matrix(
         T[4][3][0] += h*R[4][3];
         if (h)
           C[4] += sqr((1-ha/h))*T[4][5][5];
-        }
+      }
 
     log_exit("sbend_matrix");
     return(M);
@@ -1317,4 +1323,9 @@ long determine_bend_flags(ELEMENT_LIST *elem, long edge1_effects, long edge2_eff
         bend_flags |= BEND_EDGE2_EFFECTS;
     return(bend_flags);
     }
+
+void replaceWithNewMatrix(double *C, double **R, double ***T, double kx2, double ky2, double ha, double h,
+                          double nh, double bh2, double gh3, double s)
+{
+}
 
