@@ -532,7 +532,7 @@ extern char *entity_text[N_TYPES];
 #define N_STRAY_PARAMS 7
 #define N_CSBEND_PARAMS 32
 #define N_MATTER_PARAMS 3
-#define N_RFMODE_PARAMS 17
+#define N_RFMODE_PARAMS 18
 #define N_TRFMODE_PARAMS 12
 #define N_TWMTA_PARAMS 17
 #define N_ZLONGIT_PARAMS 17
@@ -1367,6 +1367,7 @@ typedef struct {
     double charge;             /* total initial charge */
     double initial_V;          /* initial voltage */
     double initial_phase;      /* phase of initial voltage */
+    double initial_t;          /* time offset (match with the beam arrival time) */
     double beta;               /* the cavity beta (default is 0) */
     double bin_size;           /* size of charge bins */
     long n_bins;               /* number of charge bins */
@@ -1377,6 +1378,7 @@ typedef struct {
     char *record;              /* name of file to record (t, V) in */
     long single_pass;          /* controls accumulation of voltage from turn-to-turn */
     long pass_interval;        /* number of passes between applications of wake */
+    /* values for restarting the cavity */
     /* for internal use: */
     double mp_charge;          /* charge per macroparticle */
     long initialized;          /* indicates that beam has been seen */
@@ -1384,7 +1386,7 @@ typedef struct {
     double Vr, Vi;             /* real, imaginary components of voltage phasor at t=tlast */
     double last_t;             /* time at which last particle was seen */
     double last_phase;         /* phase at t=last_t */
-    FILE *fprec;               /* pointer to file for recording (t, Vr) */
+    SDDS_DATASET SDDSrec;
     } RFMODE;
 
 /* names and storage structure for transverse RF mode physical parameters */

@@ -174,28 +174,28 @@ void track_through_rfmode(
       }
     }
     
-    if (rfmode->record && (pass%rfmode->sample_interval)==0) {
-        long longdata[3];
-        double realdata[6];
-        longdata[0] = pass;
-        longdata[1] = max_hist;
-        longdata[2] = n_occupied;
-        realdata[3] = Vcr;
-        realdata[4] = Vc;
-        realdata[5] = Q_sum;
-        if (n_summed) {
-            realdata[0] = V_sum/n_summed;
-            realdata[1] = Vr_sum/n_summed;
-            realdata[2] = 180/PI*phase_sum/n_summed;
-            } 
-        else
-            realdata[0] = realdata[1] = realdata[2] = 0;
-        fwrite(longdata, sizeof(*longdata), 3, rfmode->fprec);
-        fwrite(realdata, sizeof(*realdata), 6, rfmode->fprec);
-        fflush(rfmode->fprec);
-        }
-    log_exit("track_through_rfmode");
+    if (rfmode->record) {
+      if ((pass%rfmode->sample_interval)==0 && 
+          !SDDS_SetRowValues(&rfmode->SDDSrec, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+                             (pass/rfmode->sample_interval),
+                             "Pass", pass, "NumberOccupied", n_occupied,
+                             "FractionBinned", np?(1.0*n_binned)/np:0.0,
+                             "VPostBeam", rfmode->V, "PhasePostBeam", rfmode->last_phase,
+                             "tPostBeam", rfmode->last_t,
+                             "V", n_summed?V_sum/n_summed:0.0,
+                             "VReal", n_summed?Vr_sum/n_summed:0.0,
+                             "Phase", n_summed?phase_sum/n_summed:0.0, NULL) ||
+          !SDDS_UpdatePage(&rfmode->SDDSrec, 0)) {
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        SDDS_Bomb("problem setting up data for RFMODE record file");
+      }
+      if (pass==n_passes-1 && !SDDS_Terminate(&rfmode->SDDSrec)) {
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        SDDS_Bomb("problem writing data for RFMODE record file");
+      }
     }
+    log_exit("track_through_rfmode");
+  }
 
 
 #include "complex.h"
@@ -204,75 +204,78 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
                    RUN *run, long n_particles,
                    double Po, double total_length)
 {
-    long n;
-    double T;
+  long n;
+  double T;
 
-    if (rfmode->initialized)
-      return;
-    
-    rfmode->initialized = 1;
-    if (rfmode->pass_interval<=0)
-        bomb("pass_interval <= 0 for RFMODE", NULL);
-    if (n_particles<1)
-        bomb("too few particles in set_up_rfmode()", NULL);
-    if (rfmode->n_bins<2)
-        bomb("too few bins for RFMODE", NULL);
-    if (rfmode->bin_size<=0)
-        bomb("bin_size must be positive for RFMODE", NULL);
-    if (rfmode->Ra && rfmode->Rs) 
-      bomb("RFMODE element may have only one of Ra or Rs nonzero.  Ra is just 2*Rs", NULL);
-    if (!rfmode->Ra)
-      rfmode->Ra = 2*rfmode->Rs;
-    if (rfmode->bin_size*rfmode->freq>0.1) {
-      T = rfmode->bin_size*rfmode->n_bins;
-      rfmode->bin_size = 0.1/rfmode->freq;
-      rfmode->n_bins = T/rfmode->bin_size;
-      fprintf(stdout, "The RFMODE %s bin size is too large--setting to %e and increasing to %ld bins\n",
-              element_name, rfmode->bin_size, rfmode->n_bins);
-      fflush(stdout);
+  if (rfmode->initialized)
+    return;
+  
+  rfmode->initialized = 1;
+  if (rfmode->pass_interval<=0)
+    bomb("pass_interval <= 0 for RFMODE", NULL);
+  if (n_particles<1)
+    bomb("too few particles in set_up_rfmode()", NULL);
+  if (rfmode->n_bins<2)
+    bomb("too few bins for RFMODE", NULL);
+  if (rfmode->bin_size<=0)
+    bomb("bin_size must be positive for RFMODE", NULL);
+  if (rfmode->Ra && rfmode->Rs) 
+    bomb("RFMODE element may have only one of Ra or Rs nonzero.  Ra is just 2*Rs", NULL);
+  if (!rfmode->Ra)
+    rfmode->Ra = 2*rfmode->Rs;
+  if (rfmode->bin_size*rfmode->freq>0.1) {
+    T = rfmode->bin_size*rfmode->n_bins;
+    rfmode->bin_size = 0.1/rfmode->freq;
+    rfmode->n_bins = T/rfmode->bin_size;
+    fprintf(stdout, "The RFMODE %s bin size is too large--setting to %e and increasing to %ld bins\n",
+            element_name, rfmode->bin_size, rfmode->n_bins);
+    fflush(stdout);
+  }
+  if (rfmode->sample_interval<=0)
+    rfmode->sample_interval = 1;
+  if (rfmode->record) {
+    rfmode->record = compose_filename(rfmode->record, run->rootname);
+    n = n_passes/rfmode->sample_interval;
+    if (!SDDS_InitializeOutput(&rfmode->SDDSrec, SDDS_BINARY, 1, NULL, NULL, rfmode->record) ||
+        !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, "Pass", NULL, SDDS_LONG) ||
+        !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, "NumberOccupied", NULL, SDDS_LONG) ||
+        !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, "FractionBinned", NULL, SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, "V", NULL, SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, "VReal", NULL, SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, "Phase", NULL, SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, "VPostBeam", NULL, SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, "PhasePostBeam", NULL, SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, "tPostBeam", NULL, SDDS_DOUBLE) ||
+        !SDDS_WriteLayout(&rfmode->SDDSrec) ||
+        !SDDS_StartPage(&rfmode->SDDSrec, n)) {
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      SDDS_Bomb("problem setting up RFMODE record file");
     }
-    if (rfmode->sample_interval<=0)
-        rfmode->sample_interval = 1;
-    if (rfmode->record) {
-        rfmode->record = compose_filename(rfmode->record, run->rootname);
-        rfmode->fprec = fopen_e(rfmode->record, "w", 0);
-        fprintf(rfmode->fprec, "SDDS1\n&column name=Pass, type=long &end\n");
-        fprintf(rfmode->fprec, "&column name=MaximumBin, description=\"Maximum Number of Particles in any Bin\", symbol=\"H$bmax$n\", type=long &end\n");
-        fprintf(rfmode->fprec, "&column name=NumberBinned, description=\"Number of Occupied Bins\", symbol=\"N$bocc$n\", type=long &end\n");
-        fprintf(rfmode->fprec, "&column name=V, description=\"Average Voltage\", type=double &end\n");
-        fprintf(rfmode->fprec, "&column name=VReal, description=\"Average Real[V]\", symbol=\"V$br$n\", type=double &end\n");
-        fprintf(rfmode->fprec, "&column name=Phase, description=\"Average RF Phase\", symbol=\"$gF$r$brf$n\", type=double &end\n");
-        fprintf(rfmode->fprec, "&column name=VRealCentral, description=\"Central Real[V]\", symbol=\"V$brc$n\", type=double &end\n");
-        fprintf(rfmode->fprec, "&column name=VCentral, description=\"Central Voltage\", symbol=\"V$bc$n\", type=double &end\n");
-        fprintf(rfmode->fprec, "&column name=QBinned, description=\"Total Charge Binned\", symbol=\"Q$bbin$n\", type=double &end\n");
-        fprintf(rfmode->fprec, "&parameter name=mplTopline, type=string, fixed_value=\"RFMODE %s at z=%fm\" &end\n", 
-                element_name, element_z);
-        fprintf(rfmode->fprec, "&data mode=binary &end\n");
-        n = n_passes/rfmode->sample_interval;
-        fwrite(&n, sizeof(n), 1, rfmode->fprec);
-        }
-    if (rfmode->preload && rfmode->charge) {
-        double Vb, omega, To, tau;
-        COMPLEX Vc;
-        To = total_length/(Po*c_mks/sqrt(sqr(Po)+1));
-        omega = rfmode->freq*PIx2;
-        Vb = 2 * omega/4*(rfmode->Ra)/rfmode->Q * rfmode->charge * rfmode->preload_factor;
-        tau = 2*rfmode->Q/(omega*(1+rfmode->beta));
-        Vc = cmulr(cdiv(cassign(1, 0), cadd(cassign(1, 0), cmulr(cexpi(omega*To), -exp(-To/tau)))), -Vb*exp(-To/tau));
-        rfmode->V = sqrt(sqr(Vc.r)+sqr(Vc.i));
-        rfmode->last_phase = atan2(Vc.i, Vc.r);
-        fprintf(stdout, "RFMODE %s at z=%fm preloaded:  V = (%e, %e) V  =  %eV at %fdeg \n",
-               element_name, element_z, Vc.r, Vc.i,
-               rfmode->V, rfmode->last_phase*180/PI);
-        fflush(stdout);
-        fprintf(stdout, "To = %es, Vb = %eV, tau = %es\n", To, Vb, tau);
-        fflush(stdout);
-        }
-    else {
-        /* calculate phasor for specified initial voltage--convert to V=Vo*sin(phase) convention */
-        rfmode->last_phase = rfmode->initial_phase*PI/180 - PIo2;
-        rfmode->V  = rfmode->initial_V;
-        }
+  }
+  if (rfmode->preload && rfmode->charge) {
+    double Vb, omega, To, tau;
+    COMPLEX Vc;
+    To = total_length/(Po*c_mks/sqrt(sqr(Po)+1));
+    omega = rfmode->freq*PIx2;
+    Vb = 2 * omega/4*(rfmode->Ra)/rfmode->Q * rfmode->charge * rfmode->preload_factor;
+    tau = 2*rfmode->Q/(omega*(1+rfmode->beta));
+    Vc = cmulr(cdiv(cassign(1, 0), cadd(cassign(1, 0), cmulr(cexpi(omega*To), -exp(-To/tau)))), -Vb*exp(-To/tau));
+    rfmode->V = sqrt(sqr(Vc.r)+sqr(Vc.i));
+    rfmode->last_phase = atan2(Vc.i, Vc.r);
+    fprintf(stdout, "RFMODE %s at z=%fm preloaded:  V = (%e, %e) V  =  %eV at %fdeg \n",
+            element_name, element_z, Vc.r, Vc.i,
+            rfmode->V, rfmode->last_phase*180/PI);
+    fflush(stdout);
+    fprintf(stdout, "To = %es, Vb = %eV, tau = %es\n", To, Vb, tau);
+    fflush(stdout);
     rfmode->last_t = element_z/c_mks;
-    }
+  }
+  else if (rfmode->initial_V) {
+    rfmode->last_phase = rfmode->initial_phase;
+    rfmode->V  = rfmode->initial_V;
+    rfmode->last_t = rfmode->initial_t;
+  }
+  else 
+    rfmode->last_t = element_z/c_mks;
+}
 
