@@ -1352,7 +1352,7 @@ long binParticleCoordinate(double **hist, long *maxBins,
   return nBinned;
 }
 
-#define DEBUG 1
+
 long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift, 
                             double Po, double **accepted, double zStart)
 {
