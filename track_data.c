@@ -35,7 +35,7 @@ char *entity_name[N_TYPES] = {
     "REFLECT", "CLEAN", "TWISS", "WIGGLER", "SCRIPT", "FLOOR",
     "LTHINLENS", "LMIRROR", "EMATRIX", "FRFMODE", "FTRFMODE",
     "TFBPICKUP", "TFBDRIVER", "LSCDRIFT", "DSCATTER", "LSRMDLTR",
-    "TAYLORSERIES", "RFTM110",
+    "TAYLORSERIES", "RFTM110", "CWIGGLER",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -158,7 +158,8 @@ and phase modulation.",
     "A scattering element to add random changes to particle coordinates according to a user-supplied distribution function",
     "A non-symplectic numerically integrated planar undulator including optional co-propagating laser beam for laser modulation of the electron beam."
     "Tracks through a Taylor series map specified by a file containing coefficients.",
-    "Tracks through a TM110-mode (deflecting) rf cavity with all magnetic and electric field components."
+    "Tracks through a TM110-mode (deflecting) rf cavity with all magnetic and electric field components.",
+    "Tracks through a wiggler using canonical integration routines of Y. Wu."
     } ;
 
 QUAD quad_example;
@@ -747,7 +748,7 @@ PARAMETER kicker_param[N_KICKER_PARAMS] = {
     {"TILT", "RAD", IS_DOUBLE, 0, (long)((char *)&kicker_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
     {"B2", "1/M^2", IS_DOUBLE, 0, (long)((char *)&kicker_example.b2), NULL, 0.0, 0, "Sextupole term: By=Bo*(1+b2*x^2)"},
     {"TIME_OFFSET", "S", IS_DOUBLE, 0, (long)((char *)&kicker_example.time_offset), NULL, 0.0, 0, "time offset of waveform"},
-    {"PERIODIC", "", IS_LONG, 0, (long)((char *)&kicker_example.periodic), NULL, 0.0, 0, "is waveform periodic? If so, period is max(t)-min(t)."},
+    {"PERIODIC", "", IS_LONG, 0, (long)((char *)&kicker_example.periodic), NULL, 0.0, 0, "is waveform periodic?"},
     {"PHASE_REFERENCE", "", IS_LONG, 0, (long)((char *)&kicker_example.phase_reference), NULL, 0.0, 0, "phase reference number (to link with other time-dependent elements)"},
     {"FIRE_ON_PASS", "", IS_LONG, 0, (long)((char *)&kicker_example.fire_on_pass), NULL, 0.0, 0, "pass number to fire on"},
     {"N_KICKS", "", IS_LONG, 0, (long)((char *)&kicker_example.n_kicks), NULL, 0.0, 0, "Number of kicks to use for simulation. 0 uses an exact result but ignores b2."},
@@ -1503,7 +1504,27 @@ PARAMETER wiggler_param[N_WIGGLER_PARAMS] = {
   {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&wiggler_example.length), NULL, 0.0, 0, "length"},
   {"RADIUS", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&wiggler_example.radius), NULL, 0.0, 0, "peak bending radius"},
   {"K", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&wiggler_example.K), NULL, 0.0, 0, "Dimensionless strength parameter. Ignored if radius is nonzero."},
+  {"DX", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&wiggler_example.dx), NULL, 0.0, 0, "Misaligment."},
+  {"DY", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&wiggler_example.dy), NULL, 0.0, 0, "Misaligment."},
+  {"DZ", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&wiggler_example.dz), NULL, 0.0, 0, "Misaligment."},
+  {"TILT", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&wiggler_example.tilt), NULL, 0.0, 0, "Rotation about beam axis."},
   {"POLES", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&wiggler_example.poles), NULL, 0.0, 0, "number of wiggler poles"},
+} ;
+
+CWIGGLER cwiggler_example;
+
+PARAMETER cwiggler_param[N_CWIGGLER_PARAMS] = {
+  {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&cwiggler_example.length), NULL, 0.0, 0, "Total length"},
+  {"BMAX", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&cwiggler_example.BMax), NULL, 0.0, 0, "Maximum magnetic field."},
+  {"DX", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&cwiggler_example.dx), NULL, 0.0, 0, "Misaligment."},
+  {"DY", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&cwiggler_example.dy), NULL, 0.0, 0, "Misaligment."},
+  {"DZ", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&cwiggler_example.dz), NULL, 0.0, 0, "Misaligment."},
+  {"TILT", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&cwiggler_example.tilt), NULL, 0.0, 0, "Rotation about beam axis."},
+  {"PERIODS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&cwiggler_example.periods), NULL, 0.0, 0, "Number of wiggler periods."},
+  {"STEPS_PER_PERIOD", "", IS_LONG, 0, (long)((char *)&cwiggler_example.stepsPerPeriod), NULL, 0.0, 10, "Integration steps per period."},
+  {"INTEGRATION_ORDER", "", IS_LONG, 0, (long)((char *)&cwiggler_example.integrationOrder), NULL, 0.0, 4, "Integration order (2 or 4)."},
+  {"BY_FILE", " ", IS_STRING, 0, (long)((char *)&cwiggler_example.ByFile), NULL, 0.0, 0, "Name of SDDS file with By harmonic data."},
+  {"BX_FILE", " ", IS_STRING, 0, (long)((char *)&cwiggler_example.BxFile), NULL, 0.0, 0, "Name of SDDS file with Bx harmonic data."},
 } ;
 
 SCRIPT script_example;
@@ -1942,6 +1963,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_LSRMDLTR_PARAMS,    MAT_LEN_NCAT, sizeof(LSRMDLTR), lsrMdltr_param },
     { N_TAYLORSERIES_PARAMS, MAT_LEN_NCAT|IS_MAGNET|NO_DICT_OUTPUT,    sizeof(TAYLORSERIES),  taylorSeries_param  },
     {    N_RFTM110_PARAMS,  0,       sizeof(RFTM110),    rftm110_param     }, 
+    {   N_CWIGGLER_PARAMS,  MAT_LEN_NCAT|IS_MAGNET, sizeof(CWIGGLER),    cwiggler_param     }, 
 } ;
  
 

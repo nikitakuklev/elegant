@@ -909,6 +909,9 @@ long do_tracking(
                               &dgamma, dP, accepted, last_z);
             show_dE = 1;
             break;
+	  case T_CWIGGLER:
+	    GWigSymplecticPass(coord, nToTrack, *P_central, (CWIGGLER*)eptr->p_elem);
+	    break;
           default:
             fprintf(stdout, "programming error: no tracking statements for element %s (type %s)\n",
                     eptr->name, entity_name[eptr->type]);
@@ -2253,13 +2256,9 @@ void recordLossPass(long *lostOnPass, long *nLost, long nLeft, long nMaximum, lo
   if (nMaximum==(nLeft+*nLost))
     /* no additional losses occurred */
     return;
-  fprintf(stderr, "Marking loss turns after element %s for %ld particles\n", trackingContext.elementName,
-          nMaximum-*nLost-nLeft);
   for (ip=nLeft; ip<nMaximum-*nLost; ip++) {
     lostOnPass[ip] = pass;
   }
   *nLost = nMaximum - nLeft;
-  fprintf(stderr, "nMaximum = %ld, nLeft = %ld, nLost = %ld\n",
-          nMaximum, nLeft, *nLost);
 }
 

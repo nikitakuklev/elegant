@@ -255,7 +255,9 @@ VMATRIX *drift_matrix(double length, long order)
     return(M);
     }
 
-VMATRIX *wiggler_matrix(double length, double radius, long order)
+VMATRIX *wiggler_matrix(double length, double radius, 
+			double dx, double dy, double dz, 
+			double tilt, long order)
 {
     VMATRIX *M;
     double **R, *C;
@@ -277,6 +279,10 @@ VMATRIX *wiggler_matrix(double length, double radius, long order)
       R[2][3] = sin(kl)/(kl/length);
       R[3][2] = -(kl/length)*sin(kl);
     }
+
+    tilt_matrices(M, tilt);
+    if (dx || dy || dz)
+      misalign_matrix(M, dx, dy, dz, 0.0);
 
     return(M);
     }
@@ -483,8 +489,8 @@ VMATRIX *compute_matrix(
     CSRCSBEND *csrcsbend;
     CSRDRIFT *csrdrift;
     LSCDRIFT *lscdrift;
-    WIGGLER *wiggler;
-    double ks, wigglerRadius, Pref_output;
+    WIGGLER *wiggler; CWIGGLER *cwiggler;
+    double ks, Pref_output;
     VARY rcContext;
     long fiducialize;
 
@@ -534,8 +540,23 @@ VMATRIX *compute_matrix(
 		  wiggler->length, wiggler->poles, wiggler->radiusInternal, wiggler->K);
 	}
         elem->matrix = wiggler_matrix(wiggler->length, wiggler->radiusInternal,
+				      wiggler->dx, wiggler->dy, wiggler->dz, wiggler->tilt,
 				      run->default_order);
 	break;
+      case T_CWIGGLER:
+	cwiggler = (CWIGGLER*)elem->p_elem;
+	if (cwiggler->BMax<=0) {
+	  fprintf(stderr, "Error: CWIGGLER has BMAX<=0\n");
+	  exit(1);
+	}
+	/* Basic first-harmonic focusing for a horizontal or vertical planar wiggler */
+	elem->matrix = wiggler_matrix(cwiggler->length,
+				      elem->Pref_input/(e_mks/me_mks/c_mks)/cwiggler->BMax,
+				      cwiggler->dx, cwiggler->dy, cwiggler->dz,
+				      cwiggler->tilt
+				      + (cwiggler->BxFile && !cwiggler->ByFile ? PI/2.0 : 0),
+				      run->default_order);
+        break;
       case T_SCRIPT:
         elem->matrix = drift_matrix(((SCRIPT*)elem->p_elem)->length, 
 				    run->default_order);

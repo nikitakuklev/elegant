@@ -43,6 +43,7 @@ void computeTuneShiftWithAmplitude(double dnuxdA[N_TSWA][N_TSWA], double dnuydA[
 void computeTuneShiftWithAmplitudeM(double dnuxdA[N_TSWA][N_TSWA], double dnuydA[N_TSWA][N_TSWA],
                                     TWISS *twiss, double *tune, VMATRIX *M);
 void processTwissAnalysisRequests(ELEMENT_LIST *elem);
+double adjustTuneHalfPlane(double frequency, double phase0, double phase1);
 
 static long twissConcatOrder = 3;
 static long doTuneShiftWithAmplitude = 0;
@@ -2416,7 +2417,8 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
 			      long allowLosses)
 {
   double **oneParticle, dummy;
-  double *x, *y, p;
+  double frequency[4], amplitude[4], phase[4];
+  double *x, *y, *xp, *yp, p;
   long i, one=1;
   double CSave[6];
   
@@ -2425,7 +2427,7 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
           turns, xAmplitude, yAmplitude, useMatrix);
   fflush(stdout);
 #endif
-  x = y = NULL;
+  x = xp = y = yp = NULL;
   if (useMatrix) {
     /* this is necessary because the concatenated matrix includes the closed orbit in 
      * C.  We don't want to put this in at each turn.
@@ -2459,8 +2461,8 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
 #endif
 
 
-  if (!(x = malloc(sizeof(*x)*turns)) ||
-      !(y = malloc(sizeof(*y)*turns)))
+  if (!(x = malloc(sizeof(*x)*turns)) || !(y = malloc(sizeof(*y)*turns)) ||
+      !(xp = malloc(sizeof(*xp)*turns)) || !(yp = malloc(sizeof(*yp)*turns)))
     bomb("memory allocation failure (computeTunesFromTracking)", NULL);
 
 #ifdef DEBUG
@@ -2469,7 +2471,9 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
 #endif
 
   x[0] = oneParticle[0][0];
+  xp[0] = oneParticle[0][1];
   y[0] = oneParticle[0][2];
+  yp[0] = oneParticle[0][3];
   p = run->p_central;
 
 
@@ -2482,7 +2486,8 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
     if (useMatrix)
       track_particles(oneParticle, M, oneParticle, one);
     else {
-      if (!do_tracking(NULL, oneParticle, 1, NULL, beamline, &p,  (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
+      if (!do_tracking(NULL, oneParticle, 1, NULL, beamline, &p,  (double**)NULL, 
+		       (BEAM_SUMS**)NULL, (long*)NULL,
                        (TRAJECTORY*)NULL, run, 0, 
 		       TEST_PARTICLES+(allowLosses?TEST_PARTICLE_LOSSES:0)+TIME_DEPENDENCE_OFF, 
                        1, i-1, NULL, NULL, NULL, NULL)) {
@@ -2502,12 +2507,10 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
       }
       return 0;
     }
-#ifdef DEBUG
-    fprintf(stdout, "Turn %ld done\n", i);
-    fflush(stdout);
-#endif
     x[i] = oneParticle[0][0];
+    xp[i] = oneParticle[0][1];
     y[i] = oneParticle[0][2];
+    yp[i] = oneParticle[0][3];
   }
   if (endingCoord) {
     for (i=0; i<6; i++)
@@ -2521,12 +2524,26 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
   fflush(stdout);
 #endif
 
-  if (PerformNAFF(tune+0, amp?amp+0:&dummy, &dummy, &dummy, 0.0, 1.0, x, turns, 
+  if (PerformNAFF(&frequency[0], &amplitude[0], &phase[0], 
+		  &dummy, 0.0, 1.0, x, turns, 
 		  NAFF_MAX_FREQUENCIES|NAFF_FREQ_CYCLE_LIMIT|NAFF_FREQ_ACCURACY_LIMIT,
 		  0.0, 1, 200, 1e-12,
 		  tuneLowerLimit?tuneLowerLimit[0]:0,
 		  tuneUpperLimit?tuneUpperLimit[0]:0)!=1 ||
-      PerformNAFF(tune+1, amp?amp+1:&dummy, &dummy, &dummy, 0.0, 1.0, y, turns,
+      PerformNAFF(&frequency[1], &amplitude[1], &phase[1], 
+		  &dummy, 0.0, 1.0, xp, turns, 
+		  NAFF_MAX_FREQUENCIES|NAFF_FREQ_CYCLE_LIMIT|NAFF_FREQ_ACCURACY_LIMIT,
+		  0.0, 1, 200, 1e-12,
+		  tuneLowerLimit?tuneLowerLimit[0]:0,
+		  tuneUpperLimit?tuneUpperLimit[0]:0)!=1 ||
+      PerformNAFF(&frequency[2], &amplitude[2], &phase[2], 
+		  &dummy, 0.0, 1.0, y, turns,
+		  NAFF_MAX_FREQUENCIES|NAFF_FREQ_CYCLE_LIMIT|NAFF_FREQ_ACCURACY_LIMIT,
+		  0.0, 1, 200, 1e-12,
+		  tuneLowerLimit?tuneLowerLimit[1]:0,
+		  tuneUpperLimit?tuneUpperLimit[1]:0)!=1 ||
+      PerformNAFF(&frequency[3], &amplitude[3], &phase[3], 
+		  &dummy, 0.0, 1.0, yp, turns,
 		  NAFF_MAX_FREQUENCIES|NAFF_FREQ_CYCLE_LIMIT|NAFF_FREQ_ACCURACY_LIMIT,
 		  0.0, 1, 200, 1e-12,
 		  tuneLowerLimit?tuneLowerLimit[1]:0,
@@ -2535,16 +2552,44 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
 
 #ifdef DEBUG
   fprintf(stdout, "NAFF done\n");
+  for (i=0; i<4; i++)
+    fprintf(stdout, "%ld: freq=%e, phase=%e, amp=%e\n",
+	    i, frequency[i], phase[i], amplitude[i]);
   fflush(stdout);
+#endif
+
+  tune[0] = adjustTuneHalfPlane(frequency[0], phase[0], phase[1]);
+  tune[1] = adjustTuneHalfPlane(frequency[2], phase[2], phase[3]);
+  if (amp) {
+    amp[0] = amplitude[0];
+    amp[1] = amplitude[2];
+  }
+#ifdef DEBUG
+  fprintf(stdout, "xtune = %e, ytune = %e\n", tune[0], tune[1]);
 #endif
 
   free(x);
   free(y);
+  free(xp);
+  free(yp);
   free_zarray_2d((void*)oneParticle, 1, 7);
   if (useMatrix) {
     M->C[i] = CSave[i];
   }
   return 1;
+}
+
+double adjustTuneHalfPlane(double frequency, double phase0, double phase1)
+{
+  if (fabs(phase0-phase1)>PI) {
+    if (phase0<phase1)
+      phase0 += PIx2;
+    else 
+      phase1 += PIx2;
+  }
+  if (phase0<phase1)
+    return frequency;
+  return 1-frequency;
 }
 
 void computeTuneShiftWithAmplitudeM(double dnux_dA[N_TSWA][N_TSWA], double dnuy_dA[N_TSWA][N_TSWA],
@@ -2862,9 +2907,6 @@ void AddWigglerRadiationIntegrals(double length, long poles, double radius,
   FILE *fpd = NULL;
 #endif
 
-  gamma = (1+alpha*alpha)/beta;
-  poles = 2*(poles/2)+1;
-
   if (poles<3)
     bomb("wiggler must have at least 3 poles", NULL);
   if (radius<=0)
@@ -2889,52 +2931,85 @@ void AddWigglerRadiationIntegrals(double length, long poles, double radius,
   fprintf(fpd, "&data mode=ascii no_row_counts=1 &end\n");
   fprintf(fpd, "0 %e %e %e %e 0 0 0 0 0 0\n", beta, alpha, eta, etap);
 #endif
-
-  fieldSign = 1;
-  for (pole=0; pole<poles; pole++) {
-    fieldSign *= -1;
-    if (pole==0 || pole==poles-1) {
-      h0 = fieldSign*0.5/radius;
-    } else
-      h0 = fieldSign/radius;
-
-    *I1 += (h0*Lp*(h0*ipow(Lp,2) + 4*eta*PI + 2*etap*Lp*PI))/(2.*ipow(PI,2));
-    
-    *I2 += (ipow(h0,2)*Lp)/2.;
-    
-    *I3 += SIGN(h0)*(4*ipow(h0,3)*Lp)/(3.*PI);
-
-    /* I4 should be identically zero because there is no transverse variation to
-     * the energy loss.
-
-     *I4 += (ipow(h0,3)*Lp*(7*h0*ipow(Lp,2) + 16*(2*eta + etap*Lp)*PI))/(24.*ipow(PI,2));
-
-    */
-
-    *I5 += SIGN(h0)*
-      (ipow(h0,3)*Lp*(gamma*
-		      (-50625*eta*h0*ipow(Lp,2)*ipow(PI,3) +
-		       72000*ipow(eta,2)*ipow(PI,4) +
-		       32*ipow(h0,2)*ipow(Lp,4)*(1664 + 225*ipow(PI,2))) +
-		      225*ipow(PI,2)*
-		      (alpha*(-289*ipow(h0,2)*ipow(Lp,3) +
-			       5*h0*Lp*(128*eta - 45*etap*Lp)*PI + 640*eta*etap*ipow(PI,2)
-			       ) + 64*beta*(6*ipow(h0,2)*ipow(Lp,2) + 10*etap*h0*Lp*PI +
+  
+  gamma = (1+alpha*alpha)/beta;
+  if (poles%2) {
+    /* Odd number of poles: use half-strength end-poles to match */
+    /* Integrate a half period at a time */
+    fieldSign = 1;
+    for (pole=0; pole<poles; pole++) {
+      fieldSign *= -1;
+      if (pole==0 || pole==poles-1) {
+	h0 = fieldSign*0.5/radius;
+      } else
+	h0 = fieldSign/radius;
+      
+      *I1 += (h0*Lp*(h0*ipow(Lp,2) + 4*eta*PI + 2*etap*Lp*PI))/(2.*ipow(PI,2));
+      
+      *I2 += (ipow(h0,2)*Lp)/2.;
+      
+      *I3 += SIGN(h0)*(4*ipow(h0,3)*Lp)/(3.*PI);
+      
+      /* I4 should be identically zero because there is no transverse variation to
+       * the energy loss.
+       
+       *I4 += (ipow(h0,3)*Lp*(7*h0*ipow(Lp,2) + 16*(2*eta + etap*Lp)*PI))/(24.*ipow(PI,2));
+       
+      */
+      
+      *I5 += SIGN(h0)*
+	(ipow(h0,3)*Lp*(gamma*
+			(-50625*eta*h0*ipow(Lp,2)*ipow(PI,3) +
+			 72000*ipow(eta,2)*ipow(PI,4) +
+			 32*ipow(h0,2)*ipow(Lp,4)*(1664 + 225*ipow(PI,2))) +
+			225*ipow(PI,2)*
+			(alpha*(-289*ipow(h0,2)*ipow(Lp,3) +
+				5*h0*Lp*(128*eta - 45*etap*Lp)*PI + 640*eta*etap*ipow(PI,2)
+				) + 64*beta*(6*ipow(h0,2)*ipow(Lp,2) + 10*etap*h0*Lp*PI +
 					     5*ipow(etap,2)*ipow(PI,2)))))/(54000.*ipow(PI,5));
-    
-    beta  = beta - 2*Lp*alpha + sqr(Lp)*gamma;
-    alpha = alpha - Lp*gamma;
-    gamma = (1+alpha*alpha)/beta;
-    eta   = eta + (etap + Lp/PI*h0)*Lp ;
-    etap  = etap + 2*Lp/PI*h0;
-    
+      
+      beta  = beta - 2*Lp*alpha + sqr(Lp)*gamma;
+      alpha = alpha - Lp*gamma;
+      gamma = (1+alpha*alpha)/beta;
+      eta   = eta + (etap + Lp/PI*h0)*Lp ;
+      etap  = etap + 2*Lp/PI*h0;
+      
 #ifdef DEBUG
-    fprintf(fpd, "%ld %e %e %e %e %e %e %e %e %e %e\n", pole+1, beta, alpha, eta, etap,
-	    h0, *I1, *I2, *I3, *I4, *I5);
+      fprintf(fpd, "%ld %e %e %e %e %e %e %e %e %e %e\n", pole+1, beta, alpha, eta, etap,
+	      h0, *I1, *I2, *I3, *I4, *I5);
 #endif
+    }
+  } else {
+    /* Even number of poles: use half-length end-poles to match */
+    /* Integrate a full period at a time */
+    double L;
+    L = 2*Lp;
+    h0 = 1./radius;
+    for (pole=0; pole<poles; pole+=2) {
+      *I1 += (ipow(h0,2)*ipow(Lp,3))/ipow(PI,2);
+      *I2 += ipow(h0,2)*Lp;
+      *I3 += (8*ipow(h0,3)*Lp)/(3.*PI);
+      *I5 += (ipow(h0,3)*Lp*
+	      (gamma*
+	       (72000*ipow(eta,2)*ipow(PI,4) +
+		1125*eta*h0*ipow(Lp,2)*ipow(PI,2)*(-128 + 45*PI) +
+		ipow(h0,2)*ipow(Lp,4)*(125248 - 50625*PI + 3600*ipow(PI,2))) +
+	       15*PI*(240*beta*PI*(4*ipow(h0,2)*ipow(Lp,2) - 15*etap*h0*Lp*PI +
+				   20*ipow(etap,2)*ipow(PI,2)) +
+		      alpha*(16*ipow(h0,2)*ipow(Lp,3)*(149 - 60*PI) +
+			     9600*eta*etap*ipow(PI,3) +
+			     75*h0*Lp*PI*(-48*eta*PI + etap*Lp*(-128 + 45*PI))))))/
+	(108000.*ipow(PI,5));
+      
+      beta  = beta - 2*L*alpha + sqr(L)*gamma;
+      alpha = alpha - L*gamma;
+      gamma = (1+alpha*alpha)/beta;
+      eta   = eta + 2*Lp*etap;
+    }
   }
+
 #ifdef DEBUG
-  fclose(fpd);
+    fclose(fpd);
 #endif
 }
 

@@ -1252,7 +1252,7 @@ proc FrequencyMapPP {args} {
     set valueList [QueryValuesDialog -name "FMA Plot" \
 		       -nameList [list "Resonance diagram order" "Minimum nux" \
 				      "Maximum nux" "Minimum nuy" "Maximum nuy"] \
-		       -defaultList [list 4 -0.05 0.55 -0.05 0.55] \
+		       -defaultList [list 4 -0.05 1.05 -0.05 1.05] \
 		       -elementList [list order nux0 nux1 nuy0 nuy1] \
 		       -typeList [list integer real real real real]]
     if ![llength $valueList] return

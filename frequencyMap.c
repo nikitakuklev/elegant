@@ -147,7 +147,7 @@ long doFrequencyMap(
 				    beamline->matrix, beamline, run,
                                     startingCoord, x, y, turns,
                                     0, endingCoord, NULL, NULL, 1) ||
-	  firstTune[0]>0.5 || firstTune[0]<0 || firstTune[1]>0.5 || firstTune[1]<0) 
+	  firstTune[0]>1.0 || firstTune[0]<0 || firstTune[1]>1.0 || firstTune[1]<0) 
         continue;
       if (!SDDS_SetRowValues(&SDDS_fmap, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ip,
                              IC_X, x, IC_Y, y, 
@@ -163,7 +163,7 @@ long doFrequencyMap(
 				      beamline->matrix, beamline, run,
 				      startingCoord, 0.0, 0.0, turns,
 				      0, endingCoord, NULL, NULL, 1) || 
-	    secondTune[0]>0.5 || secondTune[0]<0 || secondTune[1]>0.5 || secondTune[1]<0) 
+	    secondTune[0]>1.0 || secondTune[0]<0 || secondTune[1]>1.0 || secondTune[1]<0) 
 	  continue;
 	if (!SDDS_SetRowValues(&SDDS_fmap, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ip,
 			       IC_DNUX, fabs(secondTune[0]-firstTune[0]), 

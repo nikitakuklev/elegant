@@ -584,7 +584,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_LSRMDLTR     91
 #define T_TAYLORSERIES 92
 #define T_RFTM110  93
-#define N_TYPES     94
+#define T_CWIGGLER 94
+#define N_TYPES     95
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -670,7 +671,7 @@ extern char *entity_text[N_TYPES];
 #define N_REFLECT_PARAMS 1
 #define N_CLEAN_PARAMS 7
 #define N_TWISSELEMENT_PARAMS 6
-#define N_WIGGLER_PARAMS 4
+#define N_WIGGLER_PARAMS 8
 #define N_SCRIPT_PARAMS 30
 #define N_FLOORELEMENT_PARAMS 6
 #define N_LTHINLENS_PARAMS 8
@@ -685,6 +686,7 @@ extern char *entity_text[N_TYPES];
 #define N_LSRMDLTR_PARAMS 14
 #define N_TAYLORSERIES_PARAMS 6
 #define N_RFTM110_PARAMS 5
+#define N_CWIGGLER_PARAMS 11
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -1987,10 +1989,24 @@ typedef struct {
 extern PARAMETER wiggler_param[N_WIGGLER_PARAMS];
 typedef struct {
   double length, radius, K;
+  double dx, dy, dz, tilt;
   long poles;
   /* internal use only */
   double radiusInternal;  /* may be computed from K */
 } WIGGLER;
+
+/* names and storage structure for CWIGGLER element */
+extern PARAMETER cwiggler_param[N_CWIGGLER_PARAMS];
+typedef struct {
+  double length, BMax;
+  double dx, dy, dz, tilt;
+  long periods, stepsPerPeriod, integrationOrder;
+  char *ByFile, *BxFile;
+  /* for internal use */
+  long initialized;
+  double *ByData, *BxData; 
+  long ByHarmonics, BxHarmonics;
+} CWIGGLER;
 
 /* names and storage structure for SCRIPT element */
 extern PARAMETER script_param[N_SCRIPT_PARAMS];
@@ -2260,7 +2276,8 @@ VMATRIX *accumulate_matrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long ord
 extern long fill_in_matrices(ELEMENT_LIST *elem, RUN *run);
 extern long calculate_matrices(LINE_LIST *line, RUN *run);
 extern VMATRIX *drift_matrix(double length, long order);
-extern VMATRIX *wiggler_matrix(double length, double radius, long order);
+extern VMATRIX *wiggler_matrix(double length, double radius, double dx, double dy, double dz,
+			       double tilt, long order);
 extern VMATRIX *sextupole_matrix(double K2, double length, long maximum_order, double tilt, double fse);
 extern VMATRIX *solenoid_matrix(double length, double ks, long max_order);
 extern VMATRIX *compute_matrix(ELEMENT_LIST *elem, RUN *run, VMATRIX *Mspace);
