@@ -71,7 +71,8 @@ char *GREETING="This is elegant, by Michael Borland. (This is version 13.18, Jan
 #define FIT_TRACES      35
 #define SASEFEL_AT_END  36
 #define ALTER_ELEMENTS  37
-#define N_COMMANDS      38
+#define OPTIMIZATION_TERM 38
+#define N_COMMANDS      39
 
 char *command[N_COMMANDS] = {
     "run_setup", "run_control", "vary_element", "error_control", "error_element", "awe_beam", "bunched_beam",
@@ -81,6 +82,7 @@ char *command[N_COMMANDS] = {
     "find_aperture", "analyze_map", "correct_tunes", "link_control", "link_elements",
     "steering_element", "amplification_factors", "print_dictionary", "floor_coordinates", "correction_matrix_output",
     "load_parameters", "sdds_beam", "subprocess", "fit_traces", "sasefel", "alter_elements",
+    "optimization_term",
         } ;
 
 char *description[N_COMMANDS] = {
@@ -101,6 +103,7 @@ char *description[N_COMMANDS] = {
     "optimization_variable       defines an element family and item to vary for optimization",
     "optimization_constraint     defines a constraint on optimization",
     "optimization_covariable     defines an element family and item to compute from optimization variables",
+    "optimization_term           specifies an individual term in the optimization equation",
     "save_lattice                command to save the current lattice",
     "rpn_expression              command to execute an rpn expression (useful for optimization)",
     "trace                       requests tracing of program calls and defines parameters of trace",
@@ -652,6 +655,11 @@ char **argv;
             if (beam_type!=-1)
                 bomb("optimization statements must come before beam definition", NULL);
             add_optimization_covariable(&optimize, &namelist_text, &run_conditions, beamline);
+            break;
+          case OPTIMIZATION_TERM:
+            if (beam_type!=-1)
+                bomb("optimization statements must come before beam definition", NULL);
+            add_optimization_term(&optimize, &namelist_text, &run_conditions, beamline);
             break;
           case SAVE_LATTICE:
             do_save_lattice(&namelist_text, &run_conditions, beamline);

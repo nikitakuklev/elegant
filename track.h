@@ -310,6 +310,8 @@ typedef struct {
     FILE *fp_log;
     long verbose;
     char *equation;              /* rpn equation for thing to optimize */    
+    char **term;                 /* terms that make up the equation, if used */
+    long terms;                  /* number of terms */
     char *UDFname;
     OPTIM_VARIABLES variables;
     OPTIM_CONSTRAINTS constraints;    
@@ -2001,6 +2003,8 @@ extern long compute_changed_matrices(LINE_LIST *beamline, RUN *run);
 
 void do_optimization_setup(OPTIMIZATION_DATA *_optimize, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 void add_optimization_variable(OPTIMIZATION_DATA *_optimize, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
+void add_optimization_term(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *nltext, RUN *run,
+                           LINE_LIST *beamline);
 void add_optimization_constraint(OPTIMIZATION_DATA *_optimize, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 void summarize_optimization_setup(OPTIMIZATION_DATA *_optimize);
 void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERROR *error1, LINE_LIST *beamline1, 

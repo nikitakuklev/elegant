@@ -13,6 +13,10 @@ static char *optimize_method[N_OPTIM_METHODS] = {
     "simplex", "grid", "sample"
     } ;
 
+#namelist optimization_term static
+    STRING term = NULL;
+#end
+
 #namelist optimization_setup static
     STRING equation = NULL;
     STRING mode = "minimize";

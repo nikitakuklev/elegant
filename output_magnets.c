@@ -14,7 +14,7 @@ void output_magnets(char *filename, char *line_name, LINE_LIST *beamline)
     ELEMENT_LIST *eptr;
     QUAD  *qptr; BEND  *bptr; 
     KQUAD *kqptr; KSBEND *kbptr; CSBEND *cbptr; CSRCSBEND *csrbptr;
-    long n_points, iPhase;
+    long iPhase;
     double start, end, total_length, dz, value;
     FILE *fpm;
 
@@ -22,63 +22,14 @@ void output_magnets(char *filename, char *line_name, LINE_LIST *beamline)
 
     total_length = 0;
     eptr = &(beamline->elem);
-    n_points = 0;
-    while (eptr) {
-        switch (eptr->type) {
-            case T_QUAD: case T_KQUAD:
-                n_points += 5;
-                break;
-            case T_RBEN:  case T_SBEN: case T_KSBEND: case T_CSBEND: case T_CSRCSBEND:
-                n_points += 6;
-                break;
-            case T_SEXT: case T_KSEXT:
-                n_points += 5;
-                break;
-            case T_HCOR:
-            case T_VCOR:
-            case T_HVCOR:
-                n_points += 3;
-                break;
-            case T_DRIF:
-                n_points += 1;
-                break;
-            case T_HMON:
-            case T_VMON:
-                n_points += 4;
-                break;
-            case T_MONI:
-                n_points += 5;
-                break;
-            case T_MULT:
-                n_points += 7;
-                break;
-            case T_MARK:    /* zero-length drift */
-                break;
-            case T_RFCA: case T_TWLA: case T_RAMPRF: case T_RFCW:
-            case T_MODRF:
-                n_points += 9;
-                break;
-            default:
-                if (entity_description[eptr->type].flags&HAS_LENGTH)
-                    n_points += 1;
-                else
-                    fprintf(stdout, "warning: element %s, entity type (%s) will not appear in magnet output.\n",
-                        eptr->name, entity_name[eptr->type]);
-                    fflush(stdout);
-                break;
-            }
-        total_length = eptr->end_pos;
-        eptr = eptr->succ;
-        }
 
     fpm = fopen_e(filename, "w", 0);
 
     start = end = 0;
-    n_points += 1;
     fprintf(fpm, "SDDS1\n&description text=\"magnet layout for beamline %s\" &end\n", line_name);
     fprintf(fpm, "&column name=ElementName, type=string &end\n");
     fprintf(fpm, "&column name=s, units=m, type=double &end\n&column name=Profile, type=double &end\n");
-    fprintf(fpm, "&data mode=ascii &end\n%ld\n", n_points);
+    fprintf(fpm, "&data mode=ascii, no_row_counts=1 &end\n");
 
     eptr = &(beamline->elem);
     fprintf(fpm, "_BEGIN_ 0 0\n");

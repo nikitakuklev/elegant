@@ -27,10 +27,9 @@ void do_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
     print_namelist(stdout, &optimization_setup);
 
     /* check validity of input values, and copy into structure */
-    if ((optimization_data->equation=equation)==NULL || strlen(equation)==0)
-        bomb("equation is invalid in optimize namelist", NULL);
     if ((optimization_data->mode=match_string(mode, optimize_mode, N_OPTIM_MODES, EXACT_MATCH))<0)
         bomb("unknown optimization mode", NULL);
+    optimization_data->equation = equation;
     if ((optimization_data->method=match_string(method, optimize_method, N_OPTIM_METHODS, EXACT_MATCH))<0)
         bomb("unknown optimization method", NULL);
     if ((optimization_data->tolerance=tolerance)==0)
@@ -161,6 +160,27 @@ void add_optimization_variable(OPTIMIZATION_DATA *optimization_data, NAMELIST_TE
     log_exit("add_optimization_variable");
     }
 
+void add_optimization_term(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *nltext, RUN *run,
+                           LINE_LIST *beamline)
+{
+  /* process namelist text */
+  set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
+  set_print_namelist_flags(0);
+  process_namelist(&optimization_term, nltext);
+  print_namelist(stdout, &optimization_term);
+  
+  if (term==NULL)
+    bomb("term is invalid", NULL);
+  if (optimization_data->equation)
+    bomb("you've already given an optimization equation, so you can't give individual terms", NULL);
+  if (!(optimization_data->term 
+        = SDDS_Realloc(optimization_data->term,
+                       sizeof(*optimization_data->term)*(optimization_data->terms+1))) ||
+      !SDDS_CopyString(&optimization_data->term[optimization_data->terms], term))
+    bomb("memory allocation failure", NULL);
+  optimization_data->terms++;
+}
+
 void add_optimization_covariable(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 {
 #include "optim_covariable.h"
@@ -187,9 +207,6 @@ void add_optimization_covariable(OPTIMIZATION_DATA *optimization_data, NAMELIST_
     covariables->memory_number = trealloc(covariables->memory_number, sizeof(*covariables->memory_number)*(n_covariables+1));
 
 
-/*    name = item = equation = NULL; 
- */
-    
     /* process namelist text */
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
@@ -226,7 +243,7 @@ void add_optimization_covariable(OPTIMIZATION_DATA *optimization_data, NAMELIST_
     sprintf(covariables->varied_quan_name[n_covariables], "%s.%s", name, item);
     cp_str(&covariables->equation[n_covariables], equation);
     rpn_store(covariables->varied_quan_value[n_covariables] = rpn(equation),
-        covariables->memory_number[n_covariables] = rpn_create_mem(covariables->varied_quan_name[n_covariables]) );
+              covariables->memory_number[n_covariables] = rpn_create_mem(covariables->varied_quan_name[n_covariables]) );
     if (rpn_check_error()) exit(1);
     fprintf(stdout, "Initial value of %s is %e %s\n", 
             covariables->varied_quan_name[n_covariables], covariables->varied_quan_value[n_covariables],
@@ -465,6 +482,24 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERROR *error1
     /* set the optimization function hidden variable to 0 */
     variables->varied_quan_value[variables->n_variables+1] = 0;
     
+    if (optimization_data->equation==NULL || !strlen(optimization_data->equation)) {
+      long i, length;
+      if (optimization_data->terms==0)
+        bomb("give an optimization equation or at least one optimization term", NULL);
+      for (i=length=0; i<optimization_data->terms; i++)
+        length += strlen(optimization_data->term[i])+4;
+      if (!(optimization_data->equation = SDDS_Malloc(sizeof(*optimization_data->equation)*length)))
+        bomb("memory allocation failue", NULL);
+      optimization_data->equation[0] = '\0';
+      for (i=0; i<optimization_data->terms; i++) {
+        strcat(optimization_data->equation, optimization_data->term[i]);
+        if (i)
+          strcat(optimization_data->equation, " + ");
+        else
+          strcat(optimization_data->equation, " ");
+      }
+    }
+    
     /* process namelist text */
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
@@ -620,6 +655,15 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERROR *error1
     if (!log_file || optimization_data->fp_log!=stdout) {
         fprintf(stdout, "Optimization results:\n    '%s' has value %.15g\n", optimization_data->equation, 
                 optimization_data->mode==OPTIM_MODE_MAXIMUM?-result:result);
+        if (optimization_data->terms) {
+          fprintf(optimization_data->fp_log, "Terms of equation: \n");
+          for (i=0; i<optimization_data->terms; i++) {
+            rpn_clear();
+            fprintf(optimization_data->fp_log, "%20s: %23.15e\n",
+                    optimization_data->term[i],
+                    rpn(optimization_data->term[i]));
+          }
+        }
         fflush(stdout);
         fprintf(stdout, "    A total of %ld function evaluations were made.\n", n_evaluations_made);
         fflush(stdout);
@@ -1042,7 +1086,16 @@ void optimization_report(double result, double *value, long pass, long n_evals, 
     fprintf(optimization_data->fp_log, "Optimization pass %ld completed:\n    '%s' has value %23.15e\n", 
         pass, optimization_data->equation, optimization_data->mode==OPTIM_MODE_MAXIMUM?-result:result);
     n_passes_made = pass;
-
+    if (optimization_data->terms) {
+      fprintf(optimization_data->fp_log, "Terms of equation: \n");
+      for (i=0; i<optimization_data->terms; i++) {
+        rpn_clear();
+        fprintf(optimization_data->fp_log, "%20s: %23.15e\n",
+                optimization_data->term[i],
+                rpn(optimization_data->term[i]));
+      }
+    }
+    
     if (constraints->n_constraints) {
         fprintf(optimization_data->fp_log, "    Constraints:\n");
         for (i=0; i<constraints->n_constraints; i++)
