@@ -21,11 +21,13 @@ void apply_canonical_multipole_kicks(double *qx, double *qy,
                                    double x, double y,
                                    long order, double KnL, long skew);
 int integrate_kick_multipole_ord2(double *coord, double cos_tilt, double sin_tilt,
-                                  double dx, double dy, double Po, double rad_coef,
+                                  double dx, double dy, double xkick, double ykick,
+                                  double Po, double rad_coef,
                                   long order, double KnL, long n_kicks, double drift,
                                   MULTIPOLE_DATA *multData);
 int integrate_kick_multipole_ord4(double *coord, double cos_tilt, double sin_tilt,
-                                  double dx, double dy, double Po, double rad_coef,
+                                  double dx, double dy, double xkick, double ykick,
+                                  double Po, double rad_coef,
                                   long order, double KnL, long n_kicks, double drift,
                                   MULTIPOLE_DATA *multData);
 void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
@@ -215,7 +217,7 @@ long fmultipole_tracking(
     coord[0]  = coord[0] + dz*coord[1];
     coord[2]  = coord[2] + dz*coord[3];
 
-    if (!integrate_kick_multipole_ord4(coord, cos_tilt, sin_tilt, dx, dy, Po, rad_coef,
+    if (!integrate_kick_multipole_ord4(coord, cos_tilt, sin_tilt, dx, dy, 0.0, 0.0, Po, rad_coef,
                                        1, 0.0, n_kicks, drift, &multData)) {
       is_lost = 1;
       break;
@@ -526,11 +528,9 @@ long multipole_tracking2(
   long order;         /* order (n) */
   long n_kicks, integ_order;
   long i_part, i_top, n_parts;
-  double *coord;
+  double *coef, *coord;
   double drift, cos_tilt, sin_tilt;
-  double *coef;
-  double tilt;
-  double rad_coef;
+  double tilt, rad_coef, xkick, ykick;
   KQUAD *kquad;
   KSEXT *ksext;
   MULTIPOLE_DATA *multData;
@@ -545,7 +545,7 @@ long multipole_tracking2(
   if (!elem->p_elem)
     bomb("null p_elem pointer (multipole_tracking2)", NULL);
 
-  rad_coef = 0;
+  rad_coef = xkick = ykick = 0;
   switch (elem->type) {
   case T_KQUAD:
     kquad = ((KQUAD*)elem->p_elem);
@@ -560,6 +560,8 @@ long multipole_tracking2(
     tilt = kquad->tilt;
     dx = kquad->dx;
     dy = kquad->dy;
+    xkick = kquad->xkick;
+    ykick = kquad->ykick;
     integ_order = kquad->integration_order;
     if (kquad->synch_rad)
       rad_coef = sqr(e_mks)*pow3(Po)/(6*PI*epsilon_o*sqr(c_mks)*me_mks); 
@@ -653,11 +655,11 @@ long multipole_tracking2(
     }
 
     if ((integ_order==4 &&
-         !integrate_kick_multipole_ord4(coord, cos_tilt, sin_tilt, dx, dy, Po, rad_coef,
-                                        order, KnL, n_parts, drift, multData)) ||
+         !integrate_kick_multipole_ord4(coord, cos_tilt, sin_tilt, dx, dy, xkick, ykick,
+                                        Po, rad_coef, order, KnL, n_parts, drift, multData)) ||
         (integ_order==2 &&
-         !integrate_kick_multipole_ord2(coord, cos_tilt, sin_tilt, dx, dy, Po, rad_coef,
-                                        order, KnL, n_parts, drift, multData))) {
+         !integrate_kick_multipole_ord2(coord, cos_tilt, sin_tilt, dx, dy, xkick, ykick,
+                                        Po, rad_coef, order, KnL, n_parts, drift, multData))) {
       SWAP_PTR(particle[i_part], particle[i_top]);
       if (accepted)
         SWAP_PTR(accepted[i_part], accepted[i_top]);
@@ -673,7 +675,8 @@ long multipole_tracking2(
 }
 
 int integrate_kick_multipole_ord2(double *coord, double cos_tilt, double sin_tilt,
-                                  double dx, double dy, double Po, double rad_coef,
+                                  double dx, double dy, double xkick, double ykick,
+                                  double Po, double rad_coef,
                                   long order, double KnL, long n_kicks, double drift,
                                   MULTIPOLE_DATA *multData) 
 {
@@ -705,6 +708,10 @@ int integrate_kick_multipole_ord2(double *coord, double cos_tilt, double sin_til
       FABS(xp)>SLOPE_LIMIT || FABS(yp)>SLOPE_LIMIT) {
     return 0;
   }
+
+  /* allow steering corrector kick */
+  xp += xkick/(1+dp)/2;
+  yp += ykick/(1+dp)/2;
 
   /* calculate initial canonical momenta */
   qx = (1+dp)*xp/(denom=sqrt(1+sqr(xp)+sqr(yp)));
@@ -752,6 +759,10 @@ int integrate_kick_multipole_ord2(double *coord, double cos_tilt, double sin_til
     s += drift*sqrt(1 + sqr(xp) + sqr(yp));
   }
 
+  /* allow steering corrector kick */
+  xp += xkick/(1+dp)/2;
+  yp += ykick/(1+dp)/2;
+
   /* undo the rotation and store in place of initial coordinates */
   coord[0] = cos_tilt*x  - sin_tilt*y ;
   coord[2] = sin_tilt*x  + cos_tilt*y ;
@@ -786,7 +797,8 @@ int integrate_kick_multipole_ord2(double *coord, double cos_tilt, double sin_til
 #define BETA 1.25992104989487316477
 
 int integrate_kick_multipole_ord4(double *coord, double cos_tilt, double sin_tilt,
-                                  double dx, double dy, double Po, double rad_coef,
+                                  double dx, double dy, double xkick, double ykick,
+                                  double Po, double rad_coef,
                                   long order, double KnL, long n_parts, double drift,
                                   MULTIPOLE_DATA *multData) 
 {
@@ -825,6 +837,10 @@ int integrate_kick_multipole_ord4(double *coord, double cos_tilt, double sin_til
       FABS(xp)>SLOPE_LIMIT || FABS(yp)>SLOPE_LIMIT) {
     return 0;
   }
+
+  /* allow steering corrector kick */
+  xp += xkick/(1+dp)/2;
+  yp += ykick/(1+dp)/2;
 
   /* calculate initial canonical momenta */
   qx = (1+dp)*xp/(denom=sqrt(1+sqr(xp)+sqr(yp)));
@@ -875,6 +891,9 @@ int integrate_kick_multipole_ord4(double *coord, double cos_tilt, double sin_til
     }
   }
   
+  /* allow steering corrector kick */
+  xp += xkick/(1+dp)/2;
+  yp += ykick/(1+dp)/2;
 
   /* undo the rotation and store in place of initial coordinates */
   coord[0] = cos_tilt*x  - sin_tilt*y ;

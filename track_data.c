@@ -158,6 +158,8 @@ PARAMETER quad_param[N_QUAD_PARAMS]={
     {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&quad_example.dy), NULL, 0.0, 0, "misalignment"},
     {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&quad_example.dz), NULL, 0.0, 0, "misalignment"},
     {"FSE", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&quad_example.fse), NULL, 0.0, 0, "fractional strength error"},
+    {"HKICK", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&quad_example.xkick), NULL, 0.0, 0, "horizontal correction kick"},
+    {"VKICK", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&quad_example.ykick), NULL, 0.0, 0, "vertical correction kick"},
     {"ORDER", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&quad_example.order), NULL, 0.0, 0, "matrix order"},
     {"FRINGE_TYPE", "", IS_STRING, 0, (long)((char *)&quad_example.fringeType), "inset", 0.0, 0, "type of fringe: \"inset\" or \"fixed-strength\""},
     };
@@ -755,6 +757,8 @@ PARAMETER kquad_param[N_KQUAD_PARAMS]={
     {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.dy), NULL, 0.0, 0, "misalignment"},
     {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.dz), NULL, 0.0, 0, "misalignment"},
     {"FSE", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.fse), NULL, 0.0, 0, "fractional strength error"},
+    {"HKICK", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.xkick), NULL, 0.0, 0, "horizontal correction kick"},
+    {"VKICK", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.ykick), NULL, 0.0, 0, "vertical correction kick"},
     {"N_KICKS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&kquad_example.n_kicks), NULL, 0.0, DEFAULT_N_KICKS, "number of kicks"},
     {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&kquad_example.synch_rad), NULL, 0.0, 0, "include classical synchrotron radiation?"},
     {"SYSTEMATIC_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&kquad_example.systematic_multipoles), NULL, 0.0, 0, "input file for systematic multipoles"},

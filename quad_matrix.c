@@ -20,9 +20,11 @@ static double swap_tmp;
 
 VMATRIX *quadrupole_matrix(double K1, double lHC, long maximum_order,
                            double tilt, double ffringe, double fse,
+                           double xkick, double ykick,
                            char *fringeType)
 {
     VMATRIX *M;
+    VMATRIX *Mfringe, *Mtot, *Md, *tmp;
     double *C, **R, ***T;
     double kl, k, sin_kl, cos_kl, cosh_kl, sinh_kl;
     double lNominal, lEdge=0;
@@ -32,48 +34,48 @@ VMATRIX *quadrupole_matrix(double K1, double lHC, long maximum_order,
     K1 *= (1+fse);
 
     if (K1==0 || lHC==0) {
-        return(drift_matrix(lHC, maximum_order));
+      M = drift_matrix(lHC, maximum_order);
     }
+    else {
+      M = tmalloc(sizeof(*M));
+      initialize_matrices(M, M->order = MIN(2,maximum_order));
+      R = M->R;
+      C = M->C;
 
-    M = tmalloc(sizeof(*M));
-    initialize_matrices(M, M->order = MIN(2,maximum_order));
-    R = M->R;
-    C = M->C;
-
-    /* lHC is the "hard core" length (wherein K1 is constant)
-     * lNominal is the effective length.
-     * If fringe effects are off, these are the same.
-     */
-    lNominal = lHC;
-    if (ffringe) {
-      /* If mode is fixedStrength, then the sloped area is symmetric about the nominal
-       * entrance and exit points.  This means that the integrated strength is not
-       * changed. 
-       * If the mode is "inset", then the sloped areas end at the nominal ends of
-       * the quad.  The integrated strength changes as the fringe fraction changes.
+      /* lHC is the "hard core" length (wherein K1 is constant)
+       * lNominal is the effective length.
+       * If fringe effects are off, these are the same.
        */
-      if (fringeType) {
-        if ((fixedStrengthFringe = match_string(fringeType, fringeTypeOpt, 2, 0))<0)
-          bomb("unrecognized fringe type for QUAD", NULL);
+      lNominal = lHC;
+      if (ffringe) {
+        /* If mode is fixedStrength, then the sloped area is symmetric about the nominal
+         * entrance and exit points.  This means that the integrated strength is not
+         * changed. 
+         * If the mode is "inset", then the sloped areas end at the nominal ends of
+         * the quad.  The integrated strength changes as the fringe fraction changes.
+         */
+        if (fringeType) {
+          if ((fixedStrengthFringe = match_string(fringeType, fringeTypeOpt, 2, 0))<0)
+            bomb("unrecognized fringe type for QUAD", NULL);
+        }
+        /* length of each edge */
+        lEdge = lNominal*ffringe/2;
+        if (fixedStrengthFringe)
+          /* only half the total edge-field length is inside the nominal length */
+          lHC = lNominal-lEdge;
+        else 
+          lHC = lNominal-2*lEdge;
       }
-      /* length of each edge */
-      lEdge = lNominal*ffringe/2;
-      if (fixedStrengthFringe)
-        /* only half the total edge-field length is inside the nominal length */
-        lHC = lNominal-lEdge;
-      else 
-        lHC = lNominal-2*lEdge;
-    }
 
-    kl = (k=sqrt(fabs(K1)))*lHC;
-    sin_kl  = sin(kl);
-    cos_kl  = cos(kl);
-    cosh_kl = cosh(kl);
-    sinh_kl = sinh(kl);
+      kl = (k=sqrt(fabs(K1)))*lHC;
+      sin_kl  = sin(kl);
+      cos_kl  = cos(kl);
+      cosh_kl = cosh(kl);
+      sinh_kl = sinh(kl);
 
-    R[4][4] = R[5][5] = 1;
-    C[4] = lHC;
-    if (K1>0) {
+      R[4][4] = R[5][5] = 1;
+      C[4] = lHC;
+      if (K1>0) {
         /* focussing in horizontal plane */
         R[0][0] = R[1][1] = cos_kl;
         R[0][1] = sin_kl/k;
@@ -83,23 +85,22 @@ VMATRIX *quadrupole_matrix(double K1, double lHC, long maximum_order,
         R[3][2] = k*sinh_kl;
         
         if (M->order>=2) {
-            T = M->T;
-            T[0][5][0] = T[1][5][1] = kl*sin_kl/2;
-            T[0][5][1] = sin_kl/(2*k) - lHC*cos_kl/2;
-            T[1][5][0] = k/2*(kl*cos_kl + sin_kl);
-            T[2][5][2] = -kl/2*sinh_kl;
-            T[2][5][3] = (sinh_kl/k - lHC*cosh_kl)/2;
-            T[3][5][2] = -k/2*(kl*cosh_kl + sinh_kl);
-            T[3][5][3] = -kl/2*sinh_kl;
-            T[4][0][0] = sqr(k)*(lHC - sin_kl/k*cos_kl)/4;
-            T[4][1][0] = -sqr(sin_kl)/2;
-            T[4][1][1] = (lHC + sin_kl/k*cos_kl)/4;
-            T[4][2][2] = -sqr(k)*(lHC - sinh_kl/k*cosh_kl)/4;
-            T[4][3][2] = sqr(sinh_kl)/2;
-            T[4][3][3] = (lHC + sinh_kl/k*cosh_kl)/4;
-            }
+          T = M->T;
+          T[0][5][0] = T[1][5][1] = kl*sin_kl/2;
+          T[0][5][1] = sin_kl/(2*k) - lHC*cos_kl/2;
+          T[1][5][0] = k/2*(kl*cos_kl + sin_kl);
+          T[2][5][2] = -kl/2*sinh_kl;
+          T[2][5][3] = (sinh_kl/k - lHC*cosh_kl)/2;
+          T[3][5][2] = -k/2*(kl*cosh_kl + sinh_kl);
+          T[3][5][3] = -kl/2*sinh_kl;
+          T[4][0][0] = sqr(k)*(lHC - sin_kl/k*cos_kl)/4;
+          T[4][1][0] = -sqr(sin_kl)/2;
+          T[4][1][1] = (lHC + sin_kl/k*cos_kl)/4;
+          T[4][2][2] = -sqr(k)*(lHC - sinh_kl/k*cosh_kl)/4;
+          T[4][3][2] = sqr(sinh_kl)/2;
+          T[4][3][3] = (lHC + sinh_kl/k*cosh_kl)/4;
         }
-    else {
+      } else {
         /* defocussing in horizontal plane */
         R[2][2] = R[3][3] = cos_kl;
         R[2][3] = sin_kl/k;
@@ -109,62 +110,72 @@ VMATRIX *quadrupole_matrix(double K1, double lHC, long maximum_order,
         R[1][0] = k*sinh_kl;
         
         if (M->order>=2) {
-            T = M->T;
-            T[2][5][2] = T[3][5][3] = kl*sin_kl/2;
-            T[2][5][3] = sin_kl/(2*k) - lHC*cos_kl/2;
-            T[3][5][2] = k/2*(kl*cos_kl + sin_kl);
-            T[0][5][0] = T[1][5][1] = -kl/2*sinh_kl;
-            T[0][5][1] = (sinh_kl/k - lHC*cosh_kl)/2;
-            T[1][5][0] = -k/2*(kl*cosh_kl + sinh_kl);
-            T[4][0][0] = -sqr(k)*(lHC - sinh_kl/k*cosh_kl)/4;
-            T[4][1][0] = sqr(sinh_kl)/2;
-            T[4][1][1] = (lHC + sinh_kl/k*cosh_kl)/4;
-            T[4][2][2] = sqr(k)*(lHC - sin_kl/k*cos_kl)/4;
-            T[4][3][2] = -sqr(sin_kl)/2;
-            T[4][3][3] = (lHC + sin_kl/k*cos_kl)/4;
-            }
+          T = M->T;
+          T[2][5][2] = T[3][5][3] = kl*sin_kl/2;
+          T[2][5][3] = sin_kl/(2*k) - lHC*cos_kl/2;
+          T[3][5][2] = k/2*(kl*cos_kl + sin_kl);
+          T[0][5][0] = T[1][5][1] = -kl/2*sinh_kl;
+          T[0][5][1] = (sinh_kl/k - lHC*cosh_kl)/2;
+          T[1][5][0] = -k/2*(kl*cosh_kl + sinh_kl);
+          T[4][0][0] = -sqr(k)*(lHC - sinh_kl/k*cosh_kl)/4;
+          T[4][1][0] = sqr(sinh_kl)/2;
+          T[4][1][1] = (lHC + sinh_kl/k*cosh_kl)/4;
+          T[4][2][2] = sqr(k)*(lHC - sin_kl/k*cos_kl)/4;
+          T[4][3][2] = -sqr(sin_kl)/2;
+          T[4][3][3] = (lHC + sin_kl/k*cos_kl)/4;
         }
-    
-    if (lEdge) {
-      VMATRIX *Mfringe, *Mtot, *Md, *tmp;
+      }
 
-      Md = NULL;
+      if (lEdge && K1) {
+        Md = NULL;
+        Mtot = tmalloc(sizeof(*Mtot));
+        initialize_matrices(Mtot, M->order);
+        
+        /* entrance fringe fields */
+        Mfringe = quad_fringe(lEdge, K1, M->order, 0, 0.0);
+        
+        if (fixedStrengthFringe) {
+          /* drift back to fringe entrance */
+          Md = drift_matrix(-lEdge/2, M->order);
+          concat_matrices(Mtot, Mfringe, Md, 0);
+          tmp = Mfringe;
+          Mfringe = Mtot;
+          Mtot = tmp;
+        }
+        
+        concat_matrices(Mtot, M, Mfringe, 0);
+        tmp  = Mtot;
+        Mtot = M;
+        M    = tmp;
+        free_matrices(Mfringe); tfree(Mfringe); Mfringe = NULL;
+        
+        /* exit fringe fields */
+        Mfringe = quad_fringe(lEdge, K1, M->order, 1, 0.0);
+        concat_matrices(Mtot, Mfringe, M, 0);
+        tmp  = Mtot;
+        Mtot = M;
+        M    = tmp;
+        
+        if (fixedStrengthFringe) {
+          /* drift back to quad exit plane */
+          concat_matrices(Mtot, Md, M, 0);
+          tmp = M;
+          M = Mtot;
+          Mtot = tmp;
+          free_matrices(Md); tfree(Md); Md = NULL;
+        }
+        free_matrices(Mfringe); tfree(Mfringe); Mfringe = NULL;
+        free_matrices(Mtot); tfree(Mtot); Mtot = NULL;
+      }
+    }
+
+    if (xkick || ykick) {
+      /* put identical kicks at the entrance and exit */
       Mtot = tmalloc(sizeof(*Mtot));
       initialize_matrices(Mtot, M->order);
-      
-      /* entrance fringe fields */
-      Mfringe = quad_fringe(lEdge, K1, M->order, 0, 0.0);
-      
-      if (fixedStrengthFringe) {
-        /* drift back to fringe entrance */
-        Md = drift_matrix(-lEdge/2, M->order);
-        concat_matrices(Mtot, Mfringe, Md, 0);
-        tmp = Mfringe;
-        Mfringe = Mtot;
-        Mtot = tmp;
-      }
-      
-      concat_matrices(Mtot, M, Mfringe, 0);
-      tmp  = Mtot;
-      Mtot = M;
-      M    = tmp;
-      free_matrices(Mfringe); tfree(Mfringe); Mfringe = NULL;
-      
-      /* exit fringe fields */
-      Mfringe = quad_fringe(lEdge, K1, M->order, 1, 0.0);
+      Mfringe = hvcorrector_matrix(0, xkick/2, ykick/2, 0.0, 0.0, 1.0, 1.0, 0, M->order);
       concat_matrices(Mtot, Mfringe, M, 0);
-      tmp  = Mtot;
-      Mtot = M;
-      M    = tmp;
-      
-      if (fixedStrengthFringe) {
-        /* drift back to quad exit plane */
-        concat_matrices(Mtot, Md, M, 0);
-        tmp = M;
-        M = Mtot;
-        Mtot = tmp;
-        free_matrices(Md); tfree(Md); Md = NULL;
-      }
+      concat_matrices(M, Mtot, Mfringe, 0);
       free_matrices(Mfringe); tfree(Mfringe); Mfringe = NULL;
       free_matrices(Mtot); tfree(Mtot); Mtot = NULL;
     }

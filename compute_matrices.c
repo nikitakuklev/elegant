@@ -434,7 +434,7 @@ VMATRIX *compute_matrix(
         quad = (QUAD*)elem->p_elem;
         elem->matrix = quadrupole_matrix(quad->k1, quad->length, 
                                          quad->order?quad->order:run->default_order, quad->tilt, quad->ffringe,
-                                         quad->fse, quad->fringeType);
+                                         quad->fse, quad->xkick, quad->ykick, quad->fringeType); 
         if (quad->dx || quad->dy || quad->dz)
             misalign_matrix(elem->matrix, quad->dx, quad->dy, quad->dz, 0.0);
         break;
@@ -562,7 +562,7 @@ VMATRIX *compute_matrix(
             bomb("n_kicks must by > 0 for KQUAD element", NULL);
         elem->matrix = quadrupole_matrix(kquad->k1, kquad->length, 
                                          (run->default_order?run->default_order:1), kquad->tilt, 0.0,
-                                         kquad->fse, NULL);
+                                         kquad->fse, kquad->xkick, kquad->ykick, NULL);
         if (kquad->dx || kquad->dy || kquad->dz)
             misalign_matrix(elem->matrix, kquad->dx, kquad->dy, kquad->dz, 0.0);
         readErrorMultipoleData(&(kquad->systematicMultipoleData),

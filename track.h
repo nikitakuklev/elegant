@@ -556,7 +556,7 @@ extern char *entity_text[N_TYPES];
 /* number of parameters for physical elements
  * a zero indicates an unsupported element
  */
-#define N_QUAD_PARAMS 10
+#define N_QUAD_PARAMS 12
 #define N_BEND_PARAMS 24
 #define N_DRIFT_PARAMS 2
 #define N_SEXT_PARAMS 8
@@ -596,7 +596,7 @@ extern char *entity_text[N_TYPES];
 #define N_KICKER_PARAMS 9
 #define N_KSEXT_PARAMS 14
 #define N_KSBEND_PARAMS 27
-#define N_KQUAD_PARAMS 14
+#define N_KQUAD_PARAMS 16
 #define N_MAGNIFY_PARAMS 6
 #define N_SAMPLE_PARAMS 2
 #define N_HVCOR_PARAMS 10
@@ -703,7 +703,7 @@ extern PARAMETER quad_param[N_QUAD_PARAMS];
 
 typedef struct {
     double length, k1, tilt, ffringe;
-    double dx, dy, dz, fse;
+    double dx, dy, dz, fse, xkick, ykick;
     long order;
     char *fringeType;
     } QUAD;
@@ -1291,7 +1291,7 @@ extern PARAMETER kquad_param[N_KQUAD_PARAMS];
 
 typedef struct {
     double length, k1, tilt, bore, B;
-    double dx, dy, dz, fse;
+    double dx, dy, dz, fse, xkick, ykick;
     long n_kicks, synch_rad;
     char *systematic_multipoles, *random_multipoles;
     long integration_order;
@@ -2220,7 +2220,7 @@ extern void print_elem_names(FILE *fp, ELEMENT_LIST *eptr, long width);
 
 /* prototypes for quad_matrix3.c: */
 extern VMATRIX *quadrupole_matrix(double K1, double l, long maximum_order, double tilt, double ffringe, double fse,
-                                  char *fringeType);
+                                  double xkick, double ykick, char *fringeType);
 extern VMATRIX *quad_fringe(double l, double ko, long order, long reverse, double fse);
 extern void qfringe_R_matrix(double *R11, double *R21, double *R12, double *R22, double dk_dz, double l);
 extern void qfringe_T_matrix(double *T116, double *T126, double *T216, double *T226,
