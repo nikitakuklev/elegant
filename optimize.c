@@ -1050,6 +1050,7 @@ double optimization_function(double *value, long *invalid)
   
 #if DEBUG
   fprintf(stdout, "optimization_function: In optimization function\n");
+  fprintf(stdout, "Beamline flags: %lx\n", beamline->flags);
   fflush(stdout);
 #endif
   
@@ -1196,7 +1197,10 @@ double optimization_function(double *value, long *invalid)
     fprintf(stdout, "warning: unable to find closed orbit\n");
     return 0;
   }
-  
+
+#if DEBUG
+  fprintf(stdout, "Beamline flags: %lx\n", beamline->flags);
+#endif
   if (beamline->flags&BEAMLINE_TWISS_WANTED) {
     if (twiss_mem[0]==-1) {
       for (i=0; i<N_TWISS_QUANS; i++)

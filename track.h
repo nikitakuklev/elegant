@@ -198,7 +198,7 @@ typedef struct line_list {
     ELEMENT_LINKS *links;   /* pointer to element links for this beamline */
     struct line_list *pred, *succ;
     double revolution_length;
-    long flags;
+    unsigned long flags;
 /* flags to indicate status of operations for beamline
  * X_CURRENT : operation is current
  * X_DONE    : operation has been previously done, but may not be current

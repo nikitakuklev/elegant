@@ -132,8 +132,12 @@ void setup_bunched_beam(
     fputs("Note: you will get better results for enforcing RMS values if n_particles_per_bunch is divisible by 4.\n", stdout);
 
   if (matched_to_cell) {
+    unsigned long flags;
+    flags = beamline->flags;
     if (!(control->cell = get_beamline(NULL, matched_to_cell, run->p_central, 0)))
       bomb("unable to find beamline definition for cell", NULL);
+    if (control->cell==beamline)
+      beamline->flags = flags;
   }
   else
     control->cell = NULL;
@@ -243,10 +247,13 @@ long new_bunched_beam(
             random_4(-beamRepeatSeed);
         if (control->cell) {
             VMATRIX *M;
+	    unsigned long savedFlags;
+	    savedFlags = control->cell->flags;
             M = compute_periodic_twiss(&beta_x, &alpha_x, &eta_x, &etap_x, &dummy,
                                    &beta_y, &alpha_y, &eta_y, &etap_y, &dummy, 
                                    (control->cell->elem_recirc?control->cell->elem_recirc:&(control->cell->elem)), 
                                    NULL, run, &unstable, NULL, NULL);
+	    control->cell->flags = savedFlags;
             free_matrices(M);
             free(M);
 	    fprintf(stdout, "matched Twiss parameters for beam generation:\nbetax = %13.6e m  alphax = %13.6e  etax = %13.6e m  etax' = %13.6e\n",
