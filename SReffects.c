@@ -77,9 +77,9 @@ void track_SReffects(double **coord, long np, SREFFECTS *SReffects, double Po,
       Fy = 1+(Fy-1)*SReffects->fraction;
       Fdelta = 1+(Fdelta-1)*SReffects->fraction;
       Ddelta *= SReffects->fraction;
-      Srdelta *= SReffects->fraction;
-      Srxp *= SReffects->fraction;
-      Sryp *= SReffects->fraction;
+      Srdelta *= sqrt(SReffects->fraction);
+      Srxp *= sqrt(SReffects->fraction);
+      Sryp *= sqrt(SReffects->fraction);
     }
 
     if (first) {
