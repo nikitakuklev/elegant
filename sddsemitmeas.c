@@ -9,6 +9,9 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.14  2001/10/15 20:37:06  soliday
+ * Cleaned up for Linux.
+ *
  * Revision 1.13  2000/08/17 13:45:41  borland
  * Fixed error in usage message for -errorLevels .
  *
@@ -723,27 +726,27 @@ int main(
             md = estimate_uncertainty(uncertx, Sx, sSx, Rx, s2x, Kx, dev_limit[i_dev], n_configs, x_uncert_min, NULL);
           }
           if ((contrib = solve_normal_form_opt(Sx, sSx, Rx, s2x, Kx, dev_limit[i_dev], &nx_used, x_fit_sig2))<0) {
-            fprintf(stderr, "Problem fitting for y\n");
-            continue;
-          }
-          md_x += contrib;
-          if (nx_used && (emitx = Sx->a[0][0]*Sx->a[2][0]-sqr(Sx->a[1][0]))>0) {
-            emitx = sqrt(emitx);
-            S11_sum += Sx->a[0][0]; S11_sum2 += sqr(Sx->a[0][0]);
-            S12_sum += Sx->a[1][0]; S12_sum2 += sqr(Sx->a[1][0]);
-            S22_sum += Sx->a[2][0]; S22_sum2 += sqr(Sx->a[2][0]);
-            betax = Sx->a[0][0]/emitx; 
-            betax_sum += betax;  betax_sum2  += sqr(betax);
-            alphax = -Sx->a[1][0]/emitx;
-            alphax_sum += alphax; alphax_sum2 += sqr(alphax);
-            emitx_sum  += emitx;
-            emitx2_sum += sqr(emitx);
-            if (emitx_max<emitx)
-              emitx_max = emitx;
-            if (emitx_min>emitx)
-              emitx_min = emitx;
-            nx_used_sum += nx_used;
-            n_good_fits_x++;
+            fprintf(stderr, "Problem fitting for x\n");
+          } else {
+              md_x += contrib;
+              if (nx_used && (emitx = Sx->a[0][0]*Sx->a[2][0]-sqr(Sx->a[1][0]))>0) {
+                  emitx = sqrt(emitx);
+                  S11_sum += Sx->a[0][0]; S11_sum2 += sqr(Sx->a[0][0]);
+                  S12_sum += Sx->a[1][0]; S12_sum2 += sqr(Sx->a[1][0]);
+                  S22_sum += Sx->a[2][0]; S22_sum2 += sqr(Sx->a[2][0]);
+                  betax = Sx->a[0][0]/emitx; 
+                  betax_sum += betax;  betax_sum2  += sqr(betax);
+                  alphax = -Sx->a[1][0]/emitx;
+                  alphax_sum += alphax; alphax_sum2 += sqr(alphax);
+                  emitx_sum  += emitx;
+                  emitx2_sum += sqr(emitx);
+                  if (emitx_max<emitx)
+                  emitx_max = emitx;
+                  if (emitx_min>emitx)
+                  emitx_min = emitx;
+                  nx_used_sum += nx_used;
+                  n_good_fits_x++;
+              }
           }
         }
 
@@ -753,26 +756,26 @@ int main(
           }
           if ((contrib = solve_normal_form_opt(Sy, sSy, Ry, s2y, Ky, dev_limit[i_dev], &ny_used, y_fit_sig2))<0) {
             fprintf(stderr, "Problem fitting for y\n");
-            continue;
-          }
-          md_y += contrib;
-          if (ny_used && (emity = Sy->a[0][0]*Sy->a[2][0]-sqr(Sy->a[1][0]))>0) {
-            emity = sqrt(emity);
-            S33_sum += Sy->a[0][0]; S33_sum2 += sqr(Sy->a[0][0]);
-            S34_sum += Sy->a[1][0]; S34_sum2 += sqr(Sy->a[1][0]);
-            S44_sum += Sy->a[2][0]; S44_sum2 += sqr(Sy->a[2][0]);
-            betay = Sy->a[0][0]/emity; 
-            betay_sum += betay;  betay_sum2  += sqr(betay);
-            alphay = -Sy->a[1][0]/emity;
-            alphay_sum += alphay; alphay_sum2 += sqr(alphay);
-            emity_sum  += emity;
-            emity2_sum += sqr(emity);
-            if (emity_max<emity)
-              emity_max = emity;
-            if (emity_min>emity)
-              emity_min = emity;
-            ny_used_sum += ny_used;
-            n_good_fits_y++;
+          } else {
+              md_y += contrib;
+              if (ny_used && (emity = Sy->a[0][0]*Sy->a[2][0]-sqr(Sy->a[1][0]))>0) {
+                  emity = sqrt(emity);
+                  S33_sum += Sy->a[0][0]; S33_sum2 += sqr(Sy->a[0][0]);
+                  S34_sum += Sy->a[1][0]; S34_sum2 += sqr(Sy->a[1][0]);
+                  S44_sum += Sy->a[2][0]; S44_sum2 += sqr(Sy->a[2][0]);
+                  betay = Sy->a[0][0]/emity; 
+                  betay_sum += betay;  betay_sum2  += sqr(betay);
+                  alphay = -Sy->a[1][0]/emity;
+                  alphay_sum += alphay; alphay_sum2 += sqr(alphay);
+                  emity_sum  += emity;
+                  emity2_sum += sqr(emity);
+                  if (emity_max<emity)
+                  emity_max = emity;
+                  if (emity_min>emity)
+                  emity_min = emity;
+                  ny_used_sum += ny_used;
+                  n_good_fits_y++;
+              }
           }
         }
       }
