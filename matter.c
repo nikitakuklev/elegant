@@ -62,7 +62,7 @@ void track_through_matter(
         beta = P/gamma;
         t = coord[4]/beta;
       }
-      if (Nrad>1e-3) {
+      if (Nrad>=1e-3) {
         /* multiple scattering */
         z1 = gauss_rn(0, random_2);
         z2 = gauss_rn(0, random_2);
