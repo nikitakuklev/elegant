@@ -445,6 +445,10 @@ long do_tracking(
             else
               drift_beam(coord, n_to_track, ((TW_LINAC*)eptr->p_elem)->length, run->default_order);
             break;
+          case T_MAPSOLENOID:
+            n_left = motion(coord, n_to_track, eptr->p_elem, eptr->type, P_central, 
+                            &dgamma, dP, accepted, last_z);
+            break;
           case T_TWLA:
           case T_TWMTA:
             n_left = motion(coord, n_to_track, eptr->p_elem, eptr->type, P_central, 

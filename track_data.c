@@ -25,7 +25,7 @@ char *entity_name[N_TYPES] = {
     "TWMTA", "MATTER", "RFMODE", "TRFMODE", "ZLONGIT", "SREFFECTS",
     "MODRF", "BMAPXY", "ZTRANSVERSE", "IBSCATTER", "FMULT",
     "WAKE", "TRWAKE", "TUBEND", "CHARGE", "PFILTER", "HISTOGRAM",
-    "CSRCSBEND", "CSRDRIFT", "RFCW", "REMCOR",
+    "CSRCSBEND", "CSRDRIFT", "RFCW", "REMCOR", "MAPSOLENOID",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -131,6 +131,7 @@ and phase modulation.",
     "A follow-on element for CSRCSBEND that applies the CSR wake over a drift.",
     "A combination of RFCA, WAKE, and TRWAKE.",
     "An element to remove correlations from the tracked beam to simulate certain types of correction.",
+    "A numerically-integrated solenoid specified as a map of (Bz, Br) vs (z, r)."
     } ;
 
 QUAD quad_example;
@@ -1238,6 +1239,23 @@ PARAMETER remcor_param[N_REMCOR_PARAMS]={
     {"ONCE_ONLY", "", IS_LONG, 0, (long)((char *)&remcor_example.onceOnly), NULL, 0.0, 0, "compute correction only for first beam, apply to all?"},
     };
 
+MAP_SOLENOID mapSol_example;
+
+PARAMETER mapSolenoid_param[N_MAPSOLENOID_PARAMS] = {
+    {"L", "M", IS_DOUBLE, 0, (long)((char *)&mapSol_example.length), NULL, 0.0, 0, "length"},
+    {"DX", "M", IS_DOUBLE, 0, (long)((char *)&mapSol_example.dx), NULL, 0.0, 0, "misalignment"},
+    {"DY", "M", IS_DOUBLE, 0, (long)((char *)&mapSol_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"N_STEPS", "", IS_LONG, 0, (long)((char *)&mapSol_example.n_steps), NULL, 0.0, 100, "number of steps (for nonadaptive integration)"},
+    {"INPUTFILE", "", IS_STRING, 0, (long)((char *)&mapSol_example.inputFile), NULL, 0.0, 0, "SDDS file containing (Br, Bz) vs (r, z).  Each page should have values for a fixed r."},
+    {"RCOLUMN", "", IS_STRING, 0, (long)((char *)&mapSol_example.rColumn), NULL, 0.0, 0, "column containing r values"},
+    {"ZCOLUMN", "", IS_STRING, 0, (long)((char *)&mapSol_example.zColumn), NULL, 0.0, 0, "column containing z values"},
+    {"BRCOLUMN", "", IS_STRING, 0, (long)((char *)&mapSol_example.BrColumn), NULL, 0.0, 0, "column containing Br values"},
+    {"BZCOLUMN", "", IS_STRING, 0, (long)((char *)&mapSol_example.BzColumn), NULL, 0.0, 0, "column containing Bz values"},
+    {"FACTOR", "", IS_DOUBLE, 0, (long)((char *)&mapSol_example.factor), NULL, DEFAULT_ACCURACY, 0, "factor by which to multiply fields"},
+    {"ACCURACY", "", IS_DOUBLE, 0, (long)((char *)&mapSol_example.accuracy), NULL, DEFAULT_ACCURACY, 0, "integration accuracy"},
+    {"METHOD", " ", IS_STRING, 0, (long)((char *)&mapSol_example.method), DEFAULT_INTEG_METHOD, 0.0, 0, "integration method (runge-kutta, bulirsch-stoer, non-adaptive runge-kutta, modified midpoint)"},
+    } ;
+
 /* array of parameter structures */
 
 #define MAT_LEN     HAS_MATRIX|HAS_LENGTH
@@ -1328,6 +1346,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
                                          sizeof(CSRDRIFT),    csrdrift_param   },
     {    N_RFCW_PARAMS,     MAT_LEN_NCAT|HAS_RF_MATRIX,       sizeof(RFCW),    rfcw_param     }, 
     {  N_REMCOR_PARAMS,           0,     sizeof(REMCOR),    remcor_param   },
+    { N_MAPSOLENOID_PARAMS,  MAT_LEN_NCAT,    sizeof(MAP_SOLENOID),    mapSolenoid_param    }, 
 } ;
  
 

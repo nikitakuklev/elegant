@@ -65,8 +65,15 @@ void derivatives_twmta(
     double *q,        /* X,Y,Z,Px,Py,Pz */
     double tau 
     );
+void derivatives_mapSolenoid(
+    double *qp,       /* derivatives w.r.t. tau */
+    double *q,        /* X,Y,Z,Px,Py,Pz */
+    double tau     
+    );
+
 void setupRftmEz0FromFile(RFTMEZ0 *rftmEz0, double frequency, double length, double Ez_peak);
-void setupRftmEz0SolenoidFromFile(RFTMEZ0 *rftmEz0, double k);
+void setupRftmEz0SolenoidFromFile(RFTMEZ0 *rftmEz0, double length, double k);
+void setupMapSolenoidFromFile(MAP_SOLENOID *mapSol, double length);
 double exit_function(double *qp, double *q, double phase);
 double *select_fiducial(double **part, long n_part, char *mode);
 void select_integrator(char *desired_method);
@@ -344,17 +351,33 @@ void (*set_up_derivatives(
   TW_LINAC *twla;
   TWMTA *twmta;
   RFTMEZ0 *rftmEz0;
+  MAP_SOLENOID *mapSol;
   
   double *fiducial, gamma, Po, Pz, gamma_w, omega;
   double Escale, Bscale;
 
-  log_entry("set_up_derivatives");
-
   field_global = field;
 
   Escale = (Bscale = e_mks/me_mks)/c_mks;
-
+  change_p0 = 0;
+  
   switch (field_type) {
+  case T_MAPSOLENOID:
+    mapSol = field;
+    *kscale = 1;
+    if (!mapSol->initialized)
+      setupMapSolenoidFromFile(mapSol, mapSol->length);
+    *tau_start = 0;
+    *Z_end = mapSol->length;
+    X_offset = -(X_aperture_center = mapSol->dx);
+    Y_offset = -(Y_aperture_center = mapSol->dy);
+    /* assume 1000m aperture for now */     
+    *X_limit = *Y_limit = 1e3;
+    *accuracy = mapSol->accuracy;
+    *n_steps = mapSol->n_steps;
+    select_integrator(mapSol->method);
+    return(derivatives_mapSolenoid);
+    break;
   case T_RFTMEZ0:
     rftmEz0 = field;
     *kscale = (omega=PIx2*rftmEz0->frequency)/c_mks;
@@ -362,7 +385,8 @@ void (*set_up_derivatives(
       change_p0 = 1;
     if (!rftmEz0->Ez) {
       setupRftmEz0FromFile(rftmEz0, rftmEz0->frequency, rftmEz0->length, rftmEz0->Ez_peak);
-      setupRftmEz0SolenoidFromFile(rftmEz0, *kscale);
+      setupRftmEz0SolenoidFromFile(rftmEz0, rftmEz0->length, *kscale);
+      rftmEz0->initialized = 1;
     }
     if (!rftmEz0->fiducial_part) {
       /* This is the fiducial particle--the phase offset is set so 
@@ -398,7 +422,6 @@ void (*set_up_derivatives(
     *accuracy = rftmEz0->accuracy;
     *n_steps = rftmEz0->n_steps;
     select_integrator(rftmEz0->method);
-    log_exit("set_up_derivatives");
     return(derivatives_rftmEz0);
     break;
   case T_TMCF:
@@ -443,7 +466,6 @@ void (*set_up_derivatives(
     *accuracy = tmcf->accuracy;
     *n_steps = tmcf->n_steps;
     select_integrator(tmcf->method);
-    log_exit("set_up_derivatives");
     return(derivatives_tmcf_mode);
   case T_CEPL:
     cep = field;
@@ -486,7 +508,6 @@ void (*set_up_derivatives(
     X_aperture_center = cep->k*cep->dx;
     Y_aperture_center = cep->k*cep->dy;
     select_integrator(cep->method);
-    log_exit("set_up_derivatives");
     return(derivatives_ce_plates);
   case T_TWPL:
     twp = field;
@@ -540,7 +561,6 @@ void (*set_up_derivatives(
     fflush(stdout);
 #endif
     select_integrator(twp->method);
-    log_exit("set_up_derivatives");
     return(derivatives_tw_plates);
   case T_TWLA:
     twla = (TW_LINAC*)field;
@@ -593,7 +613,6 @@ void (*set_up_derivatives(
     derivatives    = derivatives_tw_linac;
     input_impulse  = input_impulse_tw_linac;
     output_impulse = output_impulse_tw_linac;
-    log_exit("set_up_derivatives");
     return(derivatives_tw_linac);
   case T_TWMTA:
     twmta = field;
@@ -659,7 +678,6 @@ void (*set_up_derivatives(
     select_integrator(twmta->method);
     input_impulse  = input_impulse_twmta;
     output_impulse = output_impulse_twmta;
-    log_exit("set_up_derivatives");
     return(derivatives_twmta);
   default:
     bomb("invalid mode type (set_up_derivatives", NULL);
@@ -736,7 +754,7 @@ void derivatives_rftmEz0(
           (rftmEz0->BrSol[ir+1][iz] - rftmEz0->BrSol[ir][iz])/rftmEz0->dRSol*(R-ir*rftmEz0->dRSol);
         B2 = rftmEz0->BrSol[ir][iz+1] +
           (rftmEz0->BrSol[ir+1][iz+1] - rftmEz0->BrSol[ir][iz+1])/rftmEz0->dRSol*(R-ir*rftmEz0->dRSol);
-        BrOverRG = (B1 + (B2-B1)*Zoffset/rftmEz0->dZ)/gamma/R*rftmEz0->solenoidFactor;
+        BrOverRG = (B1 + (B2-B1)*Zoffset/rftmEz0->dZSol)/gamma/R*rftmEz0->solenoidFactor;
         BOverGamma[0] += X*BrOverRG;
         BOverGamma[1] += Y*BrOverRG;
       }
@@ -745,15 +763,79 @@ void derivatives_rftmEz0(
         (rftmEz0->BzSol[ir+1][iz] - rftmEz0->BzSol[ir][iz])/rftmEz0->dRSol*(R-ir*rftmEz0->dRSol);
       B2 = rftmEz0->BzSol[ir][iz+1] +
         (rftmEz0->BzSol[ir+1][iz+1] - rftmEz0->BzSol[ir][iz+1])/rftmEz0->dRSol*(R-ir*rftmEz0->dRSol);
-      BOverGamma[2] = (B1 + (B2-B1)*Zoffset/rftmEz0->dZ)/gamma*rftmEz0->solenoidFactor;
+      BOverGamma[2] = (B1 + (B2-B1)*Zoffset/rftmEz0->dZSol)/gamma*rftmEz0->solenoidFactor;
     }
   }
   
   /* (Px,Py,Pz)' = (Ex,Ey,Ez) + (Px,Py,Pz)x(Bx,By,Bz)/gamma */
   Pp = qp+3;
-  Pp[0] = -(E[0] + (                  -P[2]*BOverGamma[1]));
-  Pp[1] = -(E[1] + (P[2]*BOverGamma[0]                   ));
+  Pp[0] = -(E[0] + (P[1]*BOverGamma[2]-P[2]*BOverGamma[1]));
+  Pp[1] = -(E[1] + (P[2]*BOverGamma[0]-P[0]*BOverGamma[2]));
   Pp[2] = -(E[2] + (P[0]*BOverGamma[1]-P[1]*BOverGamma[0]));
+}
+
+void derivatives_mapSolenoid(
+    double *qp,       /* derivatives w.r.t. phase */
+    double *q,        /* X,Y,Z,Px,Py,Pz */
+    double tau 
+    )
+{
+  double gamma, *P, *Pp;
+  double BOverGamma[3];
+  MAP_SOLENOID *mapSol;
+  long iz, ir;
+  double R, Zoffset, BphiOverRG, ErOverR, BrOverRG;
+  double X, Y, sinPhase, cosPhase;
+  double B1, B2;
+  
+  derivCalls++;
+  P  = q+3;
+  gamma = sqrt(sqr(P[0])+sqr(P[1])+sqr(P[2])+1);
+  
+  /* X' = Px/gamma, etc. */
+  qp[0] = P[0]/gamma;
+  qp[1] = P[1]/gamma;
+  qp[2] = P[2]/gamma;
+  
+  X = q[0]+X_offset;
+  Y = q[1]+Y_offset;
+  R = sqrt(sqr(X)+sqr(Y));
+
+  mapSol = field_global;
+  iz = q[2]/mapSol->dz;
+  Zoffset = q[2] - iz*mapSol->dz;
+  ir = R/mapSol->dr;
+  
+  BOverGamma[0] = BOverGamma[1] = BOverGamma[2] = 0;
+  if (iz>=0 && iz<mapSol->nz && ir<mapSol->nr) {
+    if (iz==mapSol->nz-1)
+        iz -= 1;
+    if (ir==mapSol->nr-1)
+      ir -= 1;
+    BrOverRG = 0;
+    if (R>0) {
+      /* compute Br/R */
+      B1 = mapSol->Br[ir][iz] +
+        (mapSol->Br[ir+1][iz] - mapSol->Br[ir][iz])/mapSol->dr*(R-ir*mapSol->dr);
+      B2 = mapSol->Br[ir][iz+1] +
+        (mapSol->Br[ir+1][iz+1] - mapSol->Br[ir][iz+1])/mapSol->dr*(R-ir*mapSol->dr);
+      BrOverRG = (B1 + (B2-B1)*Zoffset/mapSol->dz)/gamma/R*mapSol->factor;
+      BOverGamma[0] += X*BrOverRG;
+      BOverGamma[1] += Y*BrOverRG;
+    }
+    /* compute Bz/Gamma */
+    B1 = mapSol->Bz[ir][iz] +
+      (mapSol->Bz[ir+1][iz] - mapSol->Bz[ir][iz])/mapSol->dr*(R-ir*mapSol->dr);
+    B2 = mapSol->Bz[ir][iz+1] +
+      (mapSol->Bz[ir+1][iz+1] - mapSol->Bz[ir][iz+1])/mapSol->dr*(R-ir*mapSol->dr);
+    BOverGamma[2] = (B1 + (B2-B1)*Zoffset/mapSol->dz)/gamma*mapSol->factor;
+  }
+  
+  /* (Px,Py,Pz)' = (Ex,Ey,Ez) + (Px,Py,Pz)x(Bx,By,Bz)/gamma */
+  Pp = qp+3;
+  Pp[0] = P[1]*BOverGamma[2]-P[2]*BOverGamma[1];
+  Pp[1] = P[2]*BOverGamma[0]-P[0]*BOverGamma[2];
+  Pp[2] = P[0]*BOverGamma[1]-P[1]*BOverGamma[0]; 
 }
 
 void derivatives_tmcf_mode(
@@ -1335,7 +1417,7 @@ void setupRftmEz0FromFile(RFTMEZ0 *rftmEz0, double frequency, double length, dou
 
   if (rftmEz0->initialized)
     return;
-
+  
   /* verify input parameters */
   if (!rftmEz0->inputFile || !rftmEz0->zColumn || !rftmEz0->EzColumn)
     bomb("RFTMEZ0 must have INPUTFILE, ZCOLUMN, and EZCOLUMN specified.", NULL);
@@ -1424,7 +1506,7 @@ void setupRftmEz0FromFile(RFTMEZ0 *rftmEz0, double frequency, double length, dou
 
 }
 
-void setupRftmEz0SolenoidFromFile(RFTMEZ0 *rftmEz0, double k) 
+void setupRftmEz0SolenoidFromFile(RFTMEZ0 *rftmEz0, double length, double k) 
 {
   SDDS_DATASET SDDSin;
   double *z, *r, dz, dr, *rTemp, z0;
@@ -1432,7 +1514,7 @@ void setupRftmEz0SolenoidFromFile(RFTMEZ0 *rftmEz0, double k)
   
   if (rftmEz0->initialized)
     return;
-
+  
   rftmEz0->BrSol = rftmEz0->BzSol = NULL;
   
   /* check for solenoid input file */
@@ -1494,6 +1576,12 @@ void setupRftmEz0SolenoidFromFile(RFTMEZ0 *rftmEz0, double k)
         exit(1);
       }
       z0 = z[0];
+      if (fabs((length-(z[rftmEz0->nzSol-1]-z[0]))/dz)>1e-6) {
+        fprintf(stderr, "Error: declared length and length from fields from RFTMEZ0 solenoid file %s do not agree to 1/10^6 tolerance\n",
+                rftmEz0->solenoidFile);
+        
+        exit(1);
+      }
       free(z);
     } else {
       if (rftmEz0->nzSol!=SDDS_RowCount(&SDDSin)) {
@@ -1548,7 +1636,6 @@ void setupRftmEz0SolenoidFromFile(RFTMEZ0 *rftmEz0, double k)
       rftmEz0->BrSol[ir][iz] *= e_mks/(me_mks*k*c_mks);
       rftmEz0->BzSol[ir][iz] *= e_mks/(me_mks*k*c_mks);
     }
-  
 }
 
 long analyzeSpacing(double *z, long nz, double *dzReturn, FILE *fpError) 
@@ -1582,3 +1669,135 @@ long analyzeSpacing(double *z, long nz, double *dzReturn, FILE *fpError)
   *dzReturn = (z[nz-1]-z[0])/(nz-1.0);
   return 1;
 }
+
+void setupMapSolenoidFromFile(MAP_SOLENOID *mapSol, double length)
+{
+  SDDS_DATASET SDDSin;
+  double *z, *r, dz, dr, *rTemp, z0;
+  long page, ir, iz;
+  
+  if (mapSol->initialized)
+    return;
+  mapSol->initialized = 1;
+  
+  mapSol->Br = mapSol->Bz = NULL;
+  
+  /* check for solenoid input file */
+  if (!mapSol->inputFile)
+    return;
+  
+  if (!mapSol->zColumn || !mapSol->rColumn ||
+      !mapSol->BzColumn || !mapSol->BrColumn) 
+    SDDS_Bomb("missing column name for solenoid for MAPSOLENOID element");
+
+  if (!SDDS_InitializeInput(&SDDSin, mapSol->inputFile)) {
+    fprintf(stderr, "Error: unable to open or read MAPSOLENOID file %s\n", 
+            mapSol->inputFile);
+    exit(1);
+  }
+  if (SDDS_CheckColumn(&SDDSin, mapSol->zColumn, "m", SDDS_ANY_FLOATING_TYPE,
+                       stderr)!=SDDS_CHECK_OK) {
+    fprintf(stderr, "Error: problem with column %s in MAPSOLENOID file %s.  Check existence, type, and units.\n",
+            mapSol->zColumn, mapSol->inputFile);
+    exit(1);
+  }
+  if (SDDS_CheckColumn(&SDDSin, mapSol->rColumn, "m", SDDS_ANY_FLOATING_TYPE,
+                       stderr)!=SDDS_CHECK_OK) {
+    fprintf(stderr, "Error: problem with column %s in MAPSOLENOID file %s.  Check existence, type, and units.\n",
+            mapSol->rColumn, mapSol->inputFile);
+    exit(1);
+  }
+
+  if (SDDS_CheckColumn(&SDDSin, mapSol->BzColumn, "T", SDDS_ANY_FLOATING_TYPE,
+                       stderr)!=SDDS_CHECK_OK) {
+    fprintf(stderr, "Error: problem with column %s in MAPSOLENOID file %s.  Check existence, type, and units.\n",
+            mapSol->BzColumn, mapSol->inputFile);
+    exit(1);
+  }
+  if (SDDS_CheckColumn(&SDDSin, mapSol->BrColumn, "T", SDDS_ANY_FLOATING_TYPE,
+                       stderr)!=SDDS_CHECK_OK) {
+    fprintf(stderr, "Error: problem with column %s in MAPSOLENOID file %s.  Check existence, type, and units.\n",
+            mapSol->BzColumn, mapSol->inputFile);
+    exit(1);
+  }
+
+  z = NULL;
+  r = NULL;
+  while ((page=SDDS_ReadPage(&SDDSin))>0) {
+    if (page==1) {
+      if ((mapSol->nz=SDDS_RowCount(&SDDSin))<0 || mapSol->nz<2) {
+        fprintf(stderr, "Error: no data or insufficient data in MAPSOLENOID file %s\n", 
+                mapSol->inputFile);
+        exit(1);
+      }
+      if (!(z=SDDS_GetColumnInDoubles(&SDDSin, mapSol->zColumn))) {
+        fprintf(stderr, "Error: problem getting z data from MAPSOLENOID file %s\n",
+                mapSol->inputFile);
+        exit(1);
+      }
+      if (!analyzeSpacing(z, mapSol->nz, &dz, stderr)) {
+        fprintf(stderr, "Problem with z spacing of solenoid data from MAPSOLENOID file %s (page %ld)\n",
+                mapSol->inputFile, page);
+        exit(1);
+      }
+      if (fabs((length-(z[mapSol->nz-1]-z[0]))/dz)>1e-6) {
+        fprintf(stderr, "Error: declared length and length from fields from MAP_SOLENOID file %s do not agree to 1/10^6 tolerance\n",
+                mapSol->inputFile);
+        
+        exit(1);
+      }
+      free(z);
+    } else {
+      if (mapSol->nz!=SDDS_RowCount(&SDDSin)) {
+        fprintf(stderr, "Error: page %ld of MAPSOLENOID file %s has only %ld rows (%ld expected)\n",
+                page, mapSol->inputFile, SDDS_RowCount(&SDDSin), mapSol->nz);
+        exit(1);
+      }
+    }
+
+    if (!(rTemp = SDDS_GetColumnInDoubles(&SDDSin, mapSol->rColumn))) {
+      fprintf(stderr, "Error: problem getting r data from MAPSOLENOID file %s\n",
+              mapSol->inputFile);
+      exit(1);
+    }
+    if (!(r = SDDS_Realloc(r, sizeof(*r)*page)))
+      SDDS_Bomb("memory allocation failure (setupmapSolSolenoidFromFile)");
+    r[page-1] = rTemp[0];
+    free(rTemp);
+    
+    if (!(mapSol->Bz = SDDS_Realloc(mapSol->Bz, sizeof(*mapSol->Bz)*page)) ||
+        !(mapSol->Br = SDDS_Realloc(mapSol->Br, sizeof(*mapSol->Br)*page)) )
+      SDDS_Bomb("memory allocation failure (setupmapSolSolenoidFromFile)");
+    if (!(mapSol->Bz[page-1] = 
+          SDDS_GetColumnInDoubles(&SDDSin, mapSol->BzColumn)) ||
+        !(mapSol->Br[page-1] = 
+          SDDS_GetColumnInDoubles(&SDDSin, mapSol->BrColumn)) )  {
+       fprintf(stderr, "Error: problem getting field data from MAPSOLENOID file %s\n",
+               mapSol->inputFile);
+       exit(1);
+    }
+    mapSol->nr = page;
+  }
+
+  SDDS_Terminate(&SDDSin);
+  
+  if (!analyzeSpacing(r, mapSol->nr, &dr, stderr)) {
+    fprintf(stderr, "Problem with r spacing of solenoid data from MAPSOLENOID file %s\nr values are:\n",
+            mapSol->inputFile);
+    for (ir=0; ir<mapSol->nr; ir++)
+      fprintf(stderr, "%le\n", r[ir]);
+    exit(1);
+  }
+  free(r);
+  
+  /* perform scaling */
+  for (ir=0; ir<mapSol->nr; ir++) 
+    for (iz=0; iz<mapSol->nz; iz++)  {
+      mapSol->Br[ir][iz] *= e_mks/(me_mks*c_mks);
+      mapSol->Bz[ir][iz] *= e_mks/(me_mks*c_mks);
+    }
+
+  mapSol->dr = dr;
+  mapSol->dz = dz;
+}
+

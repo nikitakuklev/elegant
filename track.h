@@ -488,7 +488,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_CSRDRIFT 72
 #define T_RFCW  73
 #define T_REMCOR 74
-#define N_TYPES 75
+#define T_MAPSOLENOID 75
+#define N_TYPES 76
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -569,6 +570,7 @@ extern char *entity_text[N_TYPES];
 #define N_CSRCSBEND_PARAMS 41
 #define N_CSRDRIFT_PARAMS 14
 #define N_REMCOR_PARAMS 6
+#define N_MAPSOLENOID_PARAMS 12
 #define N_RFCW_PARAMS 27
 
 typedef struct {
@@ -911,6 +913,23 @@ typedef struct {
     double k;           /* 1/(c.ramp_time) */
     double sin_tilt, cos_tilt;
     } CE_PLATES;
+
+/* cylindrically-symmetric solenoid from a map of (Bz, Br) vs (z, r)
+ */
+extern PARAMETER mapSolenoid_param[N_MAPSOLENOID_PARAMS] ;
+
+typedef struct {
+    double length, dx, dy;
+    long n_steps;
+    char *inputFile, *rColumn, *zColumn, *BrColumn, *BzColumn;
+    double factor, accuracy;
+    char *method;
+    /* variables for internal use only: */
+    long initialized;
+    long nz, nr; 
+    double dz, dr;
+    double **Bz, **Br;
+  } MAP_SOLENOID;
 
 /* storage structure for watch points  */
 extern PARAMETER watch_param[N_WATCH_PARAMS];
