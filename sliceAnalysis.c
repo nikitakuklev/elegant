@@ -3,6 +3,9 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.6  2002/01/22 04:33:59  borland
+ * Added alpha and beta computation to slice analysis.
+ *
  * Revision 1.5  2002/01/07 20:38:25  borland
  * Trapazoid rule integratino is now optional for CSRCSBEND and CSRDRIFT.
  *
@@ -41,29 +44,13 @@ static double tmp_safe_sqrt;
 double correctedEmittance(double S[6][6], double eta[4], long i1, long i2,
 			  double *beta, double *alpha);
 
-static SLICE_OUTPUT *sliceOutput;
+static SLICE_OUTPUT *sliceOutput = NULL;
 
 long defineSliceParameters(SLICE_OUTPUT *sliceOutput, long slice);
 
-void setupSliceAnalysis(NAMELIST_TEXT *nltext, RUN *run, 
-			OUTPUT_FILES *output_data)
+void clearSliceAnalysis() 
 {
-  SDDS_DATASET *SDDSout;
-
-  /* process namelist text */
-  process_namelist(&slice_analysis, nltext);
-  print_namelist(stdout, &slice_analysis);
-
-  sliceOutput = &(output_data->sliceAnalysis);
-
-  if (!output || !strlen(output))
-    bomb("provide a filename for slice_analysis output", NULL);
-  if (n_slices<0) 
-    bomb("invalid n_slice value", NULL);
-  if (s_start<0 || s_start>s_end) 
-    bomb("invalid s_start and/or s_end values", NULL);
-
-  if (sliceOutput->active && sliceOutput->filename) {
+  if (sliceOutput && sliceOutput->active && sliceOutput->filename) {
     SDDS_Terminate(&(sliceOutput->SDDSout));
     SDDS_ClearErrors();
     if (sliceOutput->enx) free(sliceOutput->enx);
@@ -104,14 +91,56 @@ void setupSliceAnalysis(NAMELIST_TEXT *nltext, RUN *run,
     if (sliceOutput->CdeltaIndex) free(sliceOutput->CdeltaIndex);
     if (sliceOutput->CtIndex) free(sliceOutput->CtIndex);
 
+    if (sliceOutput->enxMemNum) free(sliceOutput->enxMemNum);
+    if (sliceOutput->enyMemNum) free(sliceOutput->enyMemNum);
+    if (sliceOutput->ecnxMemNum) free(sliceOutput->ecnxMemNum);
+    if (sliceOutput->ecnyMemNum) free(sliceOutput->ecnyMemNum);
+    if (sliceOutput->betacxMemNum) free(sliceOutput->betacxMemNum);
+    if (sliceOutput->betacyMemNum) free(sliceOutput->betacyMemNum);
+    if (sliceOutput->alphacxMemNum) free(sliceOutput->alphacxMemNum);
+    if (sliceOutput->alphacyMemNum) free(sliceOutput->alphacyMemNum);
+    if (sliceOutput->chargeMemNum) free(sliceOutput->chargeMemNum);
+    if (sliceOutput->particlesMemNum) free(sliceOutput->particlesMemNum);
+    if (sliceOutput->durationMemNum) free(sliceOutput->durationMemNum);
+    if (sliceOutput->SdeltaMemNum) free(sliceOutput->SdeltaMemNum);
+    if (sliceOutput->CxMemNum) free(sliceOutput->CxMemNum);
+    if (sliceOutput->CyMemNum) free(sliceOutput->CyMemNum);
+    if (sliceOutput->CxpMemNum) free(sliceOutput->CxpMemNum);
+    if (sliceOutput->CypMemNum) free(sliceOutput->CypMemNum);
+    if (sliceOutput->CdeltaMemNum) free(sliceOutput->CdeltaMemNum);
+    if (sliceOutput->CtMemNum) free(sliceOutput->CtMemNum);
+
     if (sliceOutput->sliceFound) free(sliceOutput->sliceFound);
   }
+}
+
+void setupSliceAnalysis(NAMELIST_TEXT *nltext, RUN *run, 
+			OUTPUT_FILES *output_data)
+{
+  SDDS_DATASET *SDDSout;
+
+  /* process namelist text */
+  process_namelist(&slice_analysis, nltext);
+  print_namelist(stdout, &slice_analysis);
+
+  sliceOutput = &(output_data->sliceAnalysis);
+
+  if (!output || !strlen(output))
+    bomb("provide a filename for slice_analysis output", NULL);
+  if (n_slices<0) 
+    bomb("invalid n_slice value", NULL);
+  if (s_start<0 || s_start>s_end) 
+    bomb("invalid s_start and/or s_end values", NULL);
+  if ((s_start>0 || s_end!=DBL_MAX) && final_values_only)
+    bomb("giving s_start or s_end with final_values_only=1 is not meaningful.", NULL);
+  clearSliceAnalysis();
   
   sliceOutput->active = 1;
   sliceOutput->nSlices = n_slices;
+  sliceOutput->finalValuesOnly = final_values_only;
   sliceOutput->sStart = s_start;
   sliceOutput->sEnd = s_end;
-  
+
   if (!(sliceOutput->enx = malloc(sizeof(*(sliceOutput->enx))*(n_slices+2))) ||
       !(sliceOutput->eny = malloc(sizeof(*(sliceOutput->eny))*(n_slices+2))) ||
       !(sliceOutput->ecnx = malloc(sizeof(*(sliceOutput->ecnx))*(n_slices+2))) ||
@@ -153,6 +182,26 @@ void setupSliceAnalysis(NAMELIST_TEXT *nltext, RUN *run,
       !(sliceOutput->sliceFound = malloc(sizeof(*(sliceOutput->sliceFound))*(n_slices+2))))
     bomb("memory allocation failure (setupSliceAnalysis)", NULL);
   
+  if (!(sliceOutput->enxMemNum = malloc(sizeof(*(sliceOutput->enxMemNum))*(n_slices+2))) ||
+      !(sliceOutput->enyMemNum = malloc(sizeof(*(sliceOutput->enyMemNum))*(n_slices+2))) ||
+      !(sliceOutput->ecnxMemNum = malloc(sizeof(*(sliceOutput->ecnxMemNum))*(n_slices+2))) ||
+      !(sliceOutput->ecnyMemNum = malloc(sizeof(*(sliceOutput->ecnyMemNum))*(n_slices+2))) ||
+      !(sliceOutput->betacxMemNum = malloc(sizeof(*(sliceOutput->betacxMemNum))*(n_slices+2))) ||
+      !(sliceOutput->betacyMemNum = malloc(sizeof(*(sliceOutput->betacyMemNum))*(n_slices+2))) ||
+      !(sliceOutput->alphacxMemNum = malloc(sizeof(*(sliceOutput->alphacxMemNum))*(n_slices+2))) ||
+      !(sliceOutput->alphacyMemNum = malloc(sizeof(*(sliceOutput->alphacyMemNum))*(n_slices+2))) ||
+      !(sliceOutput->chargeMemNum = malloc(sizeof(*(sliceOutput->chargeMemNum))*(n_slices+2))) ||
+      !(sliceOutput->particlesMemNum = malloc(sizeof(*(sliceOutput->particlesMemNum))*(n_slices+2))) ||
+      !(sliceOutput->durationMemNum = malloc(sizeof(*(sliceOutput->durationMemNum))*(n_slices+2))) ||
+      !(sliceOutput->SdeltaMemNum = malloc(sizeof(*(sliceOutput->SdeltaMemNum))*(n_slices+2))) ||
+      !(sliceOutput->CxMemNum = malloc(sizeof(*(sliceOutput->CxMemNum))*(n_slices+2))) ||
+      !(sliceOutput->CyMemNum = malloc(sizeof(*(sliceOutput->CyMemNum))*(n_slices+2))) ||
+      !(sliceOutput->CxpMemNum = malloc(sizeof(*(sliceOutput->CxpMemNum))*(n_slices+2))) ||
+      !(sliceOutput->CypMemNum = malloc(sizeof(*(sliceOutput->CypMemNum))*(n_slices+2))) ||
+      !(sliceOutput->CdeltaMemNum = malloc(sizeof(*(sliceOutput->CdeltaMemNum))*(n_slices+2))) ||
+      !(sliceOutput->CtMemNum = malloc(sizeof(*(sliceOutput->CtMemNum))*(n_slices+2))))
+    bomb("memory allocation failure (setupSliceAnalysis)", NULL);    
+
   sliceOutput->filename = compose_filename(output, run->rootname);
   SDDSout = &(sliceOutput->SDDSout);
   if (!SDDS_InitializeOutput(SDDSout, SDDS_BINARY, 0, NULL, NULL, sliceOutput->filename) ||
@@ -212,78 +261,95 @@ long defineSliceParameters(SLICE_OUTPUT *sliceOutput, long slice)
   if ((sliceOutput->enxIndex[slice] = 
        SDDS_DefineColumn(SDDSout, buffer, NULL, "m", NULL, NULL, SDDS_DOUBLE, 0))<0)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  sliceOutput->enxMemNum[slice] = rpn_create_mem(buffer);
   sprintf(buffer, "eny%s", sliceNumString);
   if ((sliceOutput->enyIndex[slice] = 
        SDDS_DefineColumn(SDDSout, buffer, NULL, "m", NULL, NULL, SDDS_DOUBLE, 0))<0)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  sliceOutput->enyMemNum[slice] = rpn_create_mem(buffer);
   sprintf(buffer, "ecnx%s", sliceNumString);
   if ((sliceOutput->ecnxIndex[slice] = 
        SDDS_DefineColumn(SDDSout, buffer, NULL, "m", NULL, NULL, SDDS_DOUBLE, 0))<0)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  sliceOutput->ecnxMemNum[slice] = rpn_create_mem(buffer);
   sprintf(buffer, "ecny%s", sliceNumString);
   if ((sliceOutput->ecnyIndex[slice] = 
        SDDS_DefineColumn(SDDSout, buffer, NULL, "m", NULL, NULL, SDDS_DOUBLE, 0))<0)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  sliceOutput->ecnyMemNum[slice] = rpn_create_mem(buffer);
 
   sprintf(buffer, "betacx%s", sliceNumString);
   if ((sliceOutput->betacxIndex[slice] = 
        SDDS_DefineColumn(SDDSout, buffer, NULL, "m", NULL, NULL, SDDS_DOUBLE, 0))<0)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  sliceOutput->betacxMemNum[slice] = rpn_create_mem(buffer);
   sprintf(buffer, "betacy%s", sliceNumString);
   if ((sliceOutput->betacyIndex[slice] = 
        SDDS_DefineColumn(SDDSout, buffer, NULL, "m", NULL, NULL, SDDS_DOUBLE, 0))<0)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  sliceOutput->betacyMemNum[slice] = rpn_create_mem(buffer);
   sprintf(buffer, "alphacx%s", sliceNumString);
   if ((sliceOutput->alphacxIndex[slice] = 
        SDDS_DefineColumn(SDDSout, buffer, NULL, "", NULL, NULL, SDDS_DOUBLE, 0))<0)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  sliceOutput->alphacxMemNum[slice] = rpn_create_mem(buffer);
   sprintf(buffer, "alphacy%s", sliceNumString);
   if ((sliceOutput->alphacyIndex[slice] = 
        SDDS_DefineColumn(SDDSout, buffer, NULL, "", NULL, NULL, SDDS_DOUBLE, 0))<0)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  sliceOutput->alphacyMemNum[slice] = rpn_create_mem(buffer);
 
   sprintf(buffer, "charge%s", sliceNumString);
   if ((sliceOutput->chargeIndex[slice] = 
        SDDS_DefineColumn(SDDSout, buffer, NULL, "C", NULL, NULL, SDDS_DOUBLE, 0))<0)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  sliceOutput->chargeMemNum[slice] = rpn_create_mem(buffer);
   sprintf(buffer, "particles%s", sliceNumString);
   if ((sliceOutput->particlesIndex[slice] = 
        SDDS_DefineColumn(SDDSout, buffer, NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  sliceOutput->particlesMemNum[slice] = rpn_create_mem(buffer);
   sprintf(buffer, "duration%s", sliceNumString);
   if ((sliceOutput->durationIndex[slice] = 
        SDDS_DefineColumn(SDDSout, buffer, NULL, "s", NULL, NULL, SDDS_DOUBLE, 0))<0)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  sliceOutput->durationMemNum[slice] = rpn_create_mem(buffer);
   sprintf(buffer, "Sdelta%s", sliceNumString);
   if ((sliceOutput->SdeltaIndex[slice] = 
        SDDS_DefineColumn(SDDSout, buffer, NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-
+  sliceOutput->SdeltaMemNum[slice] = rpn_create_mem(buffer);
 
   sprintf(buffer, "Cx%s", sliceNumString);
   if ((sliceOutput->CxIndex[slice] = 
        SDDS_DefineColumn(SDDSout, buffer, NULL, "m", NULL, NULL, SDDS_DOUBLE, 0))<0)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  sliceOutput->CxMemNum[slice] = rpn_create_mem(buffer);
   sprintf(buffer, "Cy%s", sliceNumString);
   if ((sliceOutput->CyIndex[slice] = 
        SDDS_DefineColumn(SDDSout, buffer, NULL, "m", NULL, NULL, SDDS_DOUBLE, 0))<0)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  sliceOutput->CyMemNum[slice] = rpn_create_mem(buffer);
   sprintf(buffer, "Cxp%s", sliceNumString);
   if ((sliceOutput->CxpIndex[slice] = 
        SDDS_DefineColumn(SDDSout, buffer, NULL, "m", NULL, NULL, SDDS_DOUBLE, 0))<0)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  sliceOutput->CxpMemNum[slice] = rpn_create_mem(buffer);
   sprintf(buffer, "Cyp%s", sliceNumString);
   if ((sliceOutput->CypIndex[slice] = 
        SDDS_DefineColumn(SDDSout, buffer, NULL, "m", NULL, NULL, SDDS_DOUBLE, 0))<0)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  sliceOutput->CypMemNum[slice] = rpn_create_mem(buffer);
   sprintf(buffer, "Cdelta%s", sliceNumString);
   if ((sliceOutput->CdeltaIndex[slice] = 
        SDDS_DefineColumn(SDDSout, buffer, NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  sliceOutput->CdeltaMemNum[slice] = rpn_create_mem(buffer);
   sprintf(buffer, "Ct%s", sliceNumString);
   if ((sliceOutput->CtIndex[slice] = 
        SDDS_DefineColumn(SDDSout, buffer, NULL, "s", NULL, NULL, SDDS_DOUBLE, 0))<0)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  sliceOutput->CtMemNum[slice] = rpn_create_mem(buffer);
 
   return 1;
 }
@@ -296,7 +362,7 @@ void performSliceAnalysisOutput(SLICE_OUTPUT *sliceOutput, double **particle, lo
 {
   SDDS_DATASET *SDDSout;
   long slice;
-  
+
   if (!sliceOutput || !sliceOutput->active) 
     return;
   if (sliceOutput->sStart<sliceOutput->sEnd &&
@@ -354,6 +420,24 @@ void performSliceAnalysisOutput(SLICE_OUTPUT *sliceOutput, double **particle, lo
 			   sliceOutput->CtIndex[slice], sliceOutput->Ct[slice], 
 			   -1))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    rpn_store(sliceOutput->enx[slice], sliceOutput->enxMemNum[slice]);
+    rpn_store(sliceOutput->eny[slice], sliceOutput->enyMemNum[slice]);
+    rpn_store(sliceOutput->ecnx[slice], sliceOutput->ecnxMemNum[slice]);
+    rpn_store(sliceOutput->ecny[slice], sliceOutput->ecnyMemNum[slice]);
+    rpn_store(sliceOutput->betacx[slice], sliceOutput->betacxMemNum[slice]);
+    rpn_store(sliceOutput->betacy[slice], sliceOutput->betacyMemNum[slice]);
+    rpn_store(sliceOutput->alphacx[slice], sliceOutput->alphacxMemNum[slice]);
+    rpn_store(sliceOutput->alphacy[slice], sliceOutput->alphacyMemNum[slice]);
+    rpn_store(sliceOutput->charge[slice], sliceOutput->chargeMemNum[slice]);
+    rpn_store(sliceOutput->particles[slice], sliceOutput->particlesMemNum[slice]);
+    rpn_store(sliceOutput->duration[slice], sliceOutput->durationMemNum[slice]);
+    rpn_store(sliceOutput->Sdelta[slice], sliceOutput->SdeltaMemNum[slice]);
+    rpn_store(sliceOutput->Cx[slice], sliceOutput->CxMemNum[slice]);
+    rpn_store(sliceOutput->Cxp[slice], sliceOutput->CxpMemNum[slice]);
+    rpn_store(sliceOutput->Cy[slice], sliceOutput->CyMemNum[slice]);
+    rpn_store(sliceOutput->Cyp[slice], sliceOutput->CypMemNum[slice]);
+    rpn_store(sliceOutput->Cdelta[slice], sliceOutput->CdeltaMemNum[slice]);
+    rpn_store(sliceOutput->Ct[slice], sliceOutput->CtMemNum[slice]);
   }
   sliceOutput->rows += 1;
   if (!SDDS_UpdatePage(SDDSout, FLUSH_TABLE))
