@@ -404,7 +404,7 @@ long vary_beamline(VARY *_control, ERRORVAL *errcon, RUN *run, LINE_LIST *beamli
     assert_perturbations(errcon->name, errcon->param_number, errcon->elem_type,
                          errcon->n_items, errcon->error_level, errcon->error_cutoff, errcon->error_type, 
                          errcon->error_value, errcon->flags, errcon->bind_number,
-                         errcon->sMin, errcon->sMax,
+                         errcon->boundTo, errcon->sMin, errcon->sMax,
                          errcon->fp_log, _control->i_step, beamline, 
                          PRE_CORRECTION+
                          ((_control->i_step==0 && errcon->no_errors_first_step)?FORCE_ZERO_ERRORS:0));
@@ -493,7 +493,7 @@ long perturb_beamline(VARY *_control, ERRORVAL *errcon, RUN *run, LINE_LIST *bea
            if the parameter is both varied and perturbed) */
         assert_perturbations(errcon->name, errcon->param_number, errcon->elem_type,
             errcon->n_items, errcon->error_level, errcon->error_cutoff, errcon->error_type, 
-            errcon->error_value, errcon->flags, errcon->bind_number,
+            errcon->error_value, errcon->flags, errcon->bind_number, errcon->boundTo,
             errcon->sMin, errcon->sMax,                             
             errcon->fp_log, _control->i_step-1, beamline, POST_CORRECTION+
                              ((_control->i_step==0 && errcon->no_errors_first_step)?FORCE_ZERO_ERRORS:0));
@@ -663,7 +663,7 @@ long get_parameter_value(double *value, char *elem_name, long param_number, long
 
 void assert_perturbations(char **elem_name, long *param_number, long *type, long n_elems,
         double *amplitude, double *cutoff, long *error_type, double *perturb, long *elem_perturb_flags, 
-        long *bind_number, double *sMin, double *sMax,
+        long *bind_number, long *bound_to, double *sMin, double *sMax,
         FILE *fp_log, long step, LINE_LIST *beamline, long permit_flags)
 {
     ELEMENT_LIST *eptr;
@@ -701,6 +701,7 @@ void assert_perturbations(char **elem_name, long *param_number, long *type, long
         param     = param_number[i_elem];
         data_type = entity_description[elem_type].parameter[param].type;
         i_group = 0;
+        delta = DBL_MAX;
         if (!elem_name[i_elem]) {
             fprintf(stdout, "error: name missing for element %ld (assert_perturbations)\n", i_elem);
             fflush(stdout);
@@ -730,6 +731,8 @@ void assert_perturbations(char **elem_name, long *param_number, long *type, long
                           (bind_number[i_elem]>=1 && i_group%bind_number[i_elem]==0) ||
                           i_group==0) 
                         delta = perturbation(amplitude[i_elem], cutoff[i_elem], error_type[i_elem]);
+                      if (bound_to[i_elem]>=0)
+                        delta = perturb[bound_to[i_elem]];
                       if (elem_perturb_flags[i_elem]&FRACTIONAL_ERRORS)
                         *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)) *= (1+delta);
                       else {
@@ -765,6 +768,8 @@ void assert_perturbations(char **elem_name, long *param_number, long *type, long
                           (bind_number[i_elem]>=1 && i_group%bind_number[i_elem]==0) ||
                           i_group==0) 
                         delta = perturbation(amplitude[i_elem], cutoff[i_elem], error_type[i_elem]);
+                      else if (bound_to[i_elem]>=0)
+                        delta = perturb[bound_to[i_elem]];
                       if (elem_perturb_flags[i_elem]&FRACTIONAL_ERRORS)
                         *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) *= (1+delta);
                       else {
@@ -783,7 +788,8 @@ void assert_perturbations(char **elem_name, long *param_number, long *type, long
                     exit(1);
                 }
             if (i_group++==0) 
-                perturb[i_elem] = delta;
+              /* save value if this is the first from a group */
+              perturb[i_elem] = delta;
             if (elem_perturb_flags[i_elem]&ANTIBIND_ERRORS)
                 delta = -delta;
             }

@@ -118,7 +118,7 @@ void error_setup(ERRORVAL *errcon, NAMELIST_TEXT *nltext, RUN *run_cond, LINE_LI
 
 void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beamline)
 {
-    long n_items, n_added, i_start;
+    long n_items, n_added, i_start, firstIndexInGroup;
     ELEMENT_LIST *context;
     double sMin = -DBL_MAX, sMax = DBL_MAX;
     
@@ -194,6 +194,7 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
         if (strchr(name, '-'))
             name = expand_ranges(name);
         str_toupper(name);
+        firstIndexInGroup = -1;
         while ((context=wfind_element(name, &context, &(beamline->elem)))) {
             if (element_type && 
                 !wild_match(entity_name[context->type], element_type))
@@ -223,7 +224,8 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
             errcon->flags             = trealloc(errcon->flags, sizeof(*errcon->flags)*(n_items+1));
             errcon->sMin             = trealloc(errcon->sMin, sizeof(*errcon->sMin)*(n_items+1));
             errcon->sMax             = trealloc(errcon->sMax, sizeof(*errcon->sMax)*(n_items+1));
-    
+            errcon->boundTo          = trealloc(errcon->boundTo, sizeof(*errcon->boundTo)*(n_items+1));
+
             cp_str(errcon->item+n_items, str_toupper(item));
             cp_str(errcon->name+n_items, context->name);
             errcon->error_level[n_items] = amplitude;
@@ -237,10 +239,19 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
             errcon->flags[n_items] += (post_correction?POST_CORRECTION:PRE_CORRECTION);
             errcon->flags[n_items] += (additive?0:NONADDITIVE_ERRORS);
             errcon->bind_number[n_items] = bind_number;
+            /* boundTo must be -1 when there is no cross-name binding or when this element is the
+             * first of a series 
+             */
+            errcon->boundTo[n_items] = bind_across_names?firstIndexInGroup:-1;
+/*
+            if (errcon->boundTo[n_items]!=-1)
+              fprintf(stdout, "%s bound to %s\n", 
+                      errcon->name[n_items], errcon->name[errcon->boundTo[n_items]]);
+*/
             errcon->sMin[n_items] = sMin;
             errcon->sMax[n_items] = sMax;
-            
             errcon->elem_type[n_items] = context->type;
+
             if ((errcon->param_number[n_items] = confirm_parameter(item, context->type))<0) {
                 fprintf(stdout, "error: cannot vary %s--no such parameter for %s (wildcard name: %s)\n",item, context->name, name);
                 fflush(stdout);
@@ -263,6 +274,8 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
                 fflush(stdout);
             errcon->n_items = ++n_items;
             n_added++;
+            if (firstIndexInGroup==-1)
+              firstIndexInGroup = n_items-1;
             }
         }
     else {
@@ -289,6 +302,7 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
         errcon->flags             = trealloc(errcon->flags, sizeof(*errcon->flags)*(n_items+1));
         errcon->sMin             = trealloc(errcon->sMin, sizeof(*errcon->sMin)*(n_items+1));
         errcon->sMax             = trealloc(errcon->sMax, sizeof(*errcon->sMax)*(n_items+1));
+        errcon->boundTo          = trealloc(errcon->boundTo, sizeof(*errcon->boundTo)*(n_items+1));
 
         cp_str(errcon->item+n_items, str_toupper(item));
         cp_str(errcon->name+n_items, context->name);
@@ -304,6 +318,7 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
         errcon->bind_number[n_items] = bind_number;
         errcon->sMin[n_items] = sMin;
         errcon->sMax[n_items] = sMax;
+        errcon->boundTo[n_items] = -1;  /* not used when there are no wildcards */
 
         errcon->elem_type[n_items] = context->type;
         if ((errcon->param_number[n_items] = confirm_parameter(item, context->type))<0) {

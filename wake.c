@@ -43,11 +43,15 @@ void track_through_wake(double **part, long np, WAKE *wakeData, double *PoInput,
   tmean = computeTimeCoordinates(time, Po, part, np);
   find_min_max(&tmin, &tmax, time, np);
   if ((tmax-tmin) > (wakeData->t[wakeData->wakePoints-1]-wakeData->t[0])) {
-    fprintf(stderr, "The beam is longer than the longitudinal wake function.\nThis may produce unphysical results.\n");
-    fprintf(stderr, "The beam length is %le s, while the wake length is %le s\n",
-            tmax-tmin, wakeData->t[wakeData->wakePoints-1]-wakeData->t[0]);
-    if (!wakeData->allowLongBeam) 
+    if (!wakeData->allowLongBeam) {
+      fprintf(stderr, "Error: The beam is longer than the longitudinal wake function.\nThis may produce unphysical results.\n");
+      fprintf(stderr, "The beam length is %le s, while the wake length is %le s\n",
+              tmax-tmin, wakeData->t[wakeData->wakePoints-1]-wakeData->t[0]);
       exit(1);
+    }
+    fprintf(stdout, "Warning: The beam is longer than the longitudinal wake function.\nThis may produce unphysical results.\n");
+    fprintf(stdout, "The beam length is %le s, while the wake length is %le s\n",
+            tmax-tmin, wakeData->t[wakeData->wakePoints-1]-wakeData->t[0]);
     if (abs(tmax-tmean)<abs(tmin-tmean)) 
       tmin = tmax - (wakeData->t[wakeData->wakePoints-1]-wakeData->t[0]);
     else

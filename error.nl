@@ -22,6 +22,7 @@
     double cutoff = 3.0;
     long bind = 1;
     long bind_number = 0;
+    long bind_across_names = 0;
     long fractional = 0;
     long post_correction = 0;
     long additive = 1;
