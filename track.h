@@ -345,7 +345,9 @@ typedef struct {
   long nSlices;
   /* simulation data */
   double *betaToUse, *charge, *pCentral, *rmsBunchLength, *Sdelta, *emit;
+  double *betaxBeam, *alphaxBeam, *betayBeam, *alphayBeam, *enx, *eny;
   long *betaToUseIndex, *chargeIndex, *pCentralIndex, *rmsBunchLengthIndex, *SdeltaIndex, *emitIndex;
+  long *betaxBeamIndex, *alphaxBeamIndex, *betayBeamIndex, *alphayBeamIndex, *enxIndex, *enyIndex;
   /* computed FEL output */
   double *lightWavelength, *saturationLength, *gainLength, *noisePower;
   double *saturationPower, *PierceParameter, *etaDiffraction, *etaEmittance, *etaEnergySpread;

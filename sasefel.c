@@ -3,6 +3,11 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.8  2000/05/11 17:04:12  borland
+ * Added some debugging code for stray-field matrices.
+ * Fixed bug in SASE FEL calculations (the rms bunch length was being
+ * recorded incorrectly in the file.).
+ *
  * Revision 1.7  2000/05/10 01:52:15  borland
  * Now correctly compute matrices for alpha magnet and stray field in the presence
  * of changes in central momentum.
@@ -64,6 +69,12 @@ void setupSASEFELAtEnd(NAMELIST_TEXT *nltext, RUN *run, OUTPUT_FILES *output_dat
     SDDS_Terminate(&(sasefelOutput->SDDSout));
     SDDS_ClearErrors();
     if (sasefelOutput->betaToUse) free(sasefelOutput->betaToUse);
+    if (sasefelOutput->betaxBeam) free(sasefelOutput->betaxBeam);
+    if (sasefelOutput->alphaxBeam) free(sasefelOutput->alphaxBeam);
+    if (sasefelOutput->betayBeam) free(sasefelOutput->betayBeam);
+    if (sasefelOutput->alphayBeam) free(sasefelOutput->alphayBeam);
+    if (sasefelOutput->enx) free(sasefelOutput->enx);
+    if (sasefelOutput->eny) free(sasefelOutput->eny);
     if (sasefelOutput->charge) free(sasefelOutput->charge);
     if (sasefelOutput->pCentral) free(sasefelOutput->pCentral);
     if (sasefelOutput->rmsBunchLength) free(sasefelOutput->rmsBunchLength);
@@ -104,6 +115,12 @@ void setupSASEFELAtEnd(NAMELIST_TEXT *nltext, RUN *run, OUTPUT_FILES *output_dat
   sasefelOutput->sliceFraction = slice_fraction;
 
   if (!(sasefelOutput->betaToUse = malloc(sizeof(*(sasefelOutput->betaToUse))*(n_slices+2))) ||
+      !(sasefelOutput->betaxBeam = malloc(sizeof(*(sasefelOutput->betaxBeam))*(n_slices+2))) ||
+      !(sasefelOutput->alphaxBeam = malloc(sizeof(*(sasefelOutput->alphaxBeam))*(n_slices+2))) ||
+      !(sasefelOutput->betayBeam = malloc(sizeof(*(sasefelOutput->betayBeam))*(n_slices+2))) ||
+      !(sasefelOutput->alphayBeam = malloc(sizeof(*(sasefelOutput->alphayBeam))*(n_slices+2))) ||
+      !(sasefelOutput->enx = malloc(sizeof(*(sasefelOutput->enx))*(n_slices+2))) ||
+      !(sasefelOutput->eny = malloc(sizeof(*(sasefelOutput->eny))*(n_slices+2))) ||
       !(sasefelOutput->charge = malloc(sizeof(*(sasefelOutput->charge))*(n_slices+2))) ||
       !(sasefelOutput->pCentral = malloc(sizeof(*(sasefelOutput->pCentral))*(n_slices+2))) ||
       !(sasefelOutput->rmsBunchLength = malloc(sizeof(*(sasefelOutput->rmsBunchLength))*(n_slices+2))) ||
@@ -121,6 +138,12 @@ void setupSASEFELAtEnd(NAMELIST_TEXT *nltext, RUN *run, OUTPUT_FILES *output_dat
     bomb("memory allocation failure (setupSASEFELAtEnd)", NULL);
 
   if (!(sasefelOutput->betaToUseIndex = malloc(sizeof(*(sasefelOutput->betaToUseIndex))*(n_slices+2))) ||
+      !(sasefelOutput->betaxBeamIndex = malloc(sizeof(*(sasefelOutput->betaxBeamIndex))*(n_slices+2))) ||
+      !(sasefelOutput->alphaxBeamIndex = malloc(sizeof(*(sasefelOutput->alphaxBeamIndex))*(n_slices+2))) ||
+      !(sasefelOutput->betayBeamIndex = malloc(sizeof(*(sasefelOutput->betayBeamIndex))*(n_slices+2))) ||
+      !(sasefelOutput->alphayBeamIndex = malloc(sizeof(*(sasefelOutput->alphayBeamIndex))*(n_slices+2))) ||
+      !(sasefelOutput->enxIndex = malloc(sizeof(*(sasefelOutput->enxIndex))*(n_slices+2))) ||
+      !(sasefelOutput->enyIndex = malloc(sizeof(*(sasefelOutput->enyIndex))*(n_slices+2))) ||
       !(sasefelOutput->chargeIndex = malloc(sizeof(*(sasefelOutput->chargeIndex))*(n_slices+2))) ||
       !(sasefelOutput->pCentralIndex = malloc(sizeof(*(sasefelOutput->pCentralIndex))*(n_slices+2))) ||
       !(sasefelOutput->rmsBunchLengthIndex = malloc(sizeof(*(sasefelOutput->rmsBunchLengthIndex))*(n_slices+2))) ||
@@ -178,7 +201,7 @@ long DefineSASEParameters(SASEFEL_OUTPUT *sasefelOutput, long slice)
 {
   SDDS_DATASET *SDDSout;
   char buffer[100], sliceNumString[20];
-  
+    
   SDDSout = &(sasefelOutput->SDDSout);
   if (slice && sasefelOutput->nSlices>1) {
     if (slice<=sasefelOutput->nSlices) {
@@ -191,10 +214,38 @@ long DefineSASEParameters(SASEFEL_OUTPUT *sasefelOutput, long slice)
   else
     sliceNumString[0] = 0;
 
-  sprintf(buffer, "beta%s", sliceNumString);
+  sprintf(buffer, "betaBeam%s", sliceNumString);
   if ((sasefelOutput->betaToUseIndex[slice] = 
        SDDS_DefineParameter(SDDSout, buffer, NULL, "m", NULL, NULL, SDDS_DOUBLE, NULL))<0)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+
+  sprintf(buffer, "betaxBeam%s", sliceNumString);
+  if ((sasefelOutput->betaxBeamIndex[slice] = 
+       SDDS_DefineParameter(SDDSout, buffer, NULL, "m", NULL, NULL, SDDS_DOUBLE, NULL))<0)
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  sprintf(buffer, "alphaxBeam%s", sliceNumString);
+  if ((sasefelOutput->alphaxBeamIndex[slice] = 
+       SDDS_DefineParameter(SDDSout, buffer, NULL, NULL, NULL, NULL, SDDS_DOUBLE, NULL))<0)
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  sprintf(buffer, "betayBeam%s", sliceNumString);
+  if ((sasefelOutput->betayBeamIndex[slice] = 
+       SDDS_DefineParameter(SDDSout, buffer, NULL, "m", NULL, NULL, SDDS_DOUBLE, NULL))<0)
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  sprintf(buffer, "alphayBeam%s", sliceNumString);
+  if ((sasefelOutput->alphayBeamIndex[slice] = 
+       SDDS_DefineParameter(SDDSout, buffer, NULL, NULL, NULL, NULL, SDDS_DOUBLE, NULL))<0)
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+
+  sprintf(buffer, "enx%s", sliceNumString);
+  if ((sasefelOutput->enxIndex[slice] = 
+       SDDS_DefineParameter(SDDSout, buffer, NULL, "m", NULL, NULL, SDDS_DOUBLE, NULL))<0)
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  sprintf(buffer, "eny%s", sliceNumString);
+  if ((sasefelOutput->enyIndex[slice] = 
+       SDDS_DefineParameter(SDDSout, buffer, NULL, "m", NULL, NULL, SDDS_DOUBLE, NULL))<0)
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  
   sprintf(buffer, "charge%s", sliceNumString);
   if ((sasefelOutput->chargeIndex[slice] = 
        SDDS_DefineParameter(SDDSout, buffer, NULL, "C", NULL, NULL, SDDS_DOUBLE, NULL))<0)
@@ -278,6 +329,12 @@ void doSASEFELAtEndOutput(SASEFEL_OUTPUT *sasefelOutput, long step)
   for (slice=0; slice<=sasefelOutput->nSlices+1; slice++) {
     if (!SDDS_SetParameters(SDDSout, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE,
                             sasefelOutput->betaToUseIndex[slice], sasefelOutput->betaToUse[slice], 
+                            sasefelOutput->betaxBeamIndex[slice], sasefelOutput->betaxBeam[slice], 
+                            sasefelOutput->alphaxBeamIndex[slice], sasefelOutput->alphaxBeam[slice], 
+                            sasefelOutput->betayBeamIndex[slice], sasefelOutput->betayBeam[slice], 
+                            sasefelOutput->alphayBeamIndex[slice], sasefelOutput->alphayBeam[slice], 
+                            sasefelOutput->enxIndex[slice], sasefelOutput->enx[slice], 
+                            sasefelOutput->enyIndex[slice], sasefelOutput->eny[slice], 
                             sasefelOutput->chargeIndex[slice], sasefelOutput->charge[slice], 
                             sasefelOutput->pCentralIndex[slice], sasefelOutput->pCentral[slice], 
                             sasefelOutput->rmsBunchLengthIndex[slice], sasefelOutput->rmsBunchLength[slice], 
@@ -317,6 +374,9 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
     /* fill in some dummy values */
     for (slice=0; slice<sasefelOutput->nSlices+1; slice++) {
       sasefelOutput->betaToUse[slice] = sasefelOutput->charge[slice] = DBL_MAX;
+      sasefelOutput->betaxBeam[slice] = sasefelOutput->alphaxBeam[slice] = DBL_MAX;
+      sasefelOutput->betayBeam[slice] = sasefelOutput->alphayBeam[slice] = DBL_MAX;
+      sasefelOutput->enx[slice] = sasefelOutput->eny[slice] = DBL_MAX;
       sasefelOutput->pCentral[slice] = sasefelOutput->rmsBunchLength[slice] = DBL_MAX;
       sasefelOutput->Sdelta[slice] = sasefelOutput->emit[slice] = DBL_MAX;
       sasefelOutput->lightWavelength[slice] = sasefelOutput->saturationLength[slice] = DBL_MAX;
@@ -362,11 +422,17 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
   sasefelOutput->emit[0] = sqrt(emitx*emity);
   sasefelOutput->pCentral[0] = Po*(1+deltaAve);
   sasefelOutput->charge[0] = charge;  
-  
+  sasefelOutput->enx[0] = emitx*sasefelOutput->pCentral[0];
+  sasefelOutput->eny[0] = emity*sasefelOutput->pCentral[0];
+
   if (sasefelOutput->beta==0)
     sasefelOutput->betaToUse[0] = sqrt(S11*S33/(emitx*emity));
   else
     sasefelOutput->betaToUse[0] = sasefelOutput->beta;
+  sasefelOutput->betaxBeam[0] = sqrt(S11/emitx);
+  sasefelOutput->betayBeam[0] = sqrt(S33/emity);
+  sasefelOutput->alphaxBeam[0] = -S12/emitx;
+  sasefelOutput->alphayBeam[0] = -S34/emity;
   
   ComputeSASEFELParameters(&sasefelOutput->lightWavelength[0], &sasefelOutput->saturationLength[0], 
                            &sasefelOutput->gainLength[0],
@@ -384,6 +450,9 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
     nSlices = sasefelOutput->nSlices;
     
     sasefelOutput->betaToUse[nSlices+1] = sasefelOutput->charge[nSlices+1] = 0;
+    sasefelOutput->betaxBeam[nSlices+1] = sasefelOutput->betayBeam[nSlices+1] =  0;
+    sasefelOutput->alphaxBeam[nSlices+1] = sasefelOutput->alphayBeam[nSlices+1] = 0;
+    sasefelOutput->enx[nSlices+1] = sasefelOutput->eny[nSlices+1] =  0;
     sasefelOutput->pCentral[nSlices+1] = sasefelOutput->rmsBunchLength[nSlices+1] = 0;
     sasefelOutput->Sdelta[nSlices+1] = sasefelOutput->emit[nSlices+1] = 0;
     sasefelOutput->lightWavelength[nSlices+1] = sasefelOutput->saturationLength[nSlices+1] = 0;
@@ -421,6 +490,9 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
       if (count<2) {
         /* fill in some dummy values */
         sasefelOutput->sliceFound[slice] = 0;
+        sasefelOutput->betaxBeam[nSlices+1] = sasefelOutput->betayBeam[nSlices+1] =  DBL_MAX;
+        sasefelOutput->alphaxBeam[nSlices+1] = sasefelOutput->alphayBeam[nSlices+1] = DBL_MAX;
+        sasefelOutput->enx[nSlices+1] = sasefelOutput->eny[nSlices+1] =  DBL_MAX;
         sasefelOutput->betaToUse[slice] = sasefelOutput->charge[slice] = DBL_MAX;
         sasefelOutput->pCentral[slice] = sasefelOutput->rmsBunchLength[slice] = DBL_MAX;
         sasefelOutput->Sdelta[slice] = sasefelOutput->emit[slice] = DBL_MAX;
@@ -454,18 +526,24 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
       S22 = sqr(rmsCoord[1]);
       S33 = sqr(rmsCoord[2]);
       S44 = sqr(rmsCoord[3]);
-      
+
       sasefelOutput->Sdelta[slice] = rmsCoord[5];
       emitx = sqrt(S11*S22-sqr(S12));
       emity = sqrt(S33*S44-sqr(S34));
       sasefelOutput->emit[slice] = sqrt(emitx*emity);
       sasefelOutput->pCentral[slice] = Po*(1+aveCoord[5]);
       sasefelOutput->charge[slice] = charge*sasefelOutput->sliceFraction;  
+      sasefelOutput->enx[slice] = emitx*sasefelOutput->pCentral[0];
+      sasefelOutput->eny[slice] = emity*sasefelOutput->pCentral[0];
 
       if (sasefelOutput->beta==0)
         sasefelOutput->betaToUse[slice] = sqrt(S11*S33/(emitx*emity));
       else
         sasefelOutput->betaToUse[slice] = sasefelOutput->beta;
+      sasefelOutput->betaxBeam[slice] = sqrt(S11/emitx);
+      sasefelOutput->betayBeam[slice] = sqrt(S33/emity);
+      sasefelOutput->alphaxBeam[slice] = -S12/emitx;
+      sasefelOutput->alphayBeam[slice] = -S34/emity;
       
       ComputeSASEFELParameters(&sasefelOutput->lightWavelength[slice], 
                                &sasefelOutput->saturationLength[slice], 
@@ -493,6 +571,12 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
       sasefelOutput->etaEmittance[nSlices+1] += sasefelOutput->etaEmittance[slice];
       sasefelOutput->etaEnergySpread[nSlices+1] += sasefelOutput->etaEnergySpread[slice];
       sasefelOutput->betaToUse[nSlices+1] += sasefelOutput->betaToUse[slice];
+      sasefelOutput->betaxBeam[nSlices+1] += sasefelOutput->betaxBeam[slice];
+      sasefelOutput->betayBeam[nSlices+1] += sasefelOutput->betayBeam[slice];
+      sasefelOutput->alphaxBeam[nSlices+1] += sasefelOutput->alphaxBeam[slice];
+      sasefelOutput->alphayBeam[nSlices+1] += sasefelOutput->alphayBeam[slice];
+      sasefelOutput->enx[nSlices+1] += sasefelOutput->enx[slice];
+      sasefelOutput->eny[nSlices+1] += sasefelOutput->eny[slice];
       sasefelOutput->emit[nSlices+1] += sasefelOutput->emit[slice];
       sasefelOutput->Sdelta[nSlices+1] += sasefelOutput->Sdelta[slice];
       sasefelOutput->pCentral[nSlices+1] += sasefelOutput->pCentral[slice];
@@ -513,12 +597,17 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
     sasefelOutput->etaEmittance[nSlices+1] /= slicesFound;
     sasefelOutput->etaEnergySpread[nSlices+1] /= slicesFound;
     sasefelOutput->betaToUse[nSlices+1] /= slicesFound;
+    sasefelOutput->betaxBeam[nSlices+1] /= slicesFound;
+    sasefelOutput->betayBeam[nSlices+1] /= slicesFound;
+    sasefelOutput->alphaxBeam[nSlices+1] /= slicesFound;
+    sasefelOutput->alphayBeam[nSlices+1] /= slicesFound;
+    sasefelOutput->enx[nSlices+1] /= slicesFound;
+    sasefelOutput->eny[nSlices+1] /= slicesFound;
     sasefelOutput->emit[nSlices+1] /= slicesFound;
     sasefelOutput->Sdelta[nSlices+1] /= slicesFound;
     sasefelOutput->pCentral[nSlices+1] /= slicesFound;
     sasefelOutput->charge[nSlices+1] /= slicesFound;
     sasefelOutput->rmsBunchLength[nSlices+1] /= slicesFound;
-            
   }
   
   free(time);
@@ -535,3 +624,6 @@ void storeSASEFELAtEndInRPN(SASEFEL_OUTPUT *sasefelOutput)
   rpn_store(sasefelOutput->saturationLength[0],
             rpn_create_mem("SASE.saturationLength"));
 }
+
+
+
