@@ -9,4 +9,5 @@
     STRING name = NULL;
     STRING item = NULL;
     STRING equation = NULL;
+    long disable = 0;
 #end

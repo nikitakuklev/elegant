@@ -68,6 +68,7 @@ void do_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
     optimization_data->target = target;
     optimization_data->simplexPassRangeFactor = simplex_pass_range_factor;
     optimization_data->simplexDivisor = simplex_divisor;
+    optimization_data->includeSimplex1dScans = include_simplex_1d_scans;
     if ((optimization_data->restart_worst_term_factor = restart_worst_term_factor)<=0)
       bomb("restart_worst_term_factor <= 0", NULL);
     if ((optimization_data->restart_worst_terms=restart_worst_terms)<=0)
@@ -102,6 +103,19 @@ void add_optimization_variable(OPTIMIZATION_DATA *optimization_data, NAMELIST_TE
     
     log_entry("add_optimization_variable");
 
+    /* process namelist text */
+    /* can't use automatic defaults, because of DBL_MAX being a nonconstant object */
+    set_namelist_processing_flags(0);
+    set_print_namelist_flags(0);
+    name = item = NULL;
+    step_size = 1;
+    lower_limit = -(upper_limit = DBL_MAX);
+    process_namelist(&optimization_variable, nltext);
+    print_namelist(stdout, &optimization_variable);
+
+    if (disable)
+      return;
+    
     if ((n_variables = optimization_data->variables.n_variables)==0) {
         if (optimization_data->new_data_read)
             bomb("improper sequencing of variation and tracking", NULL);
@@ -122,16 +136,6 @@ void add_optimization_variable(OPTIMIZATION_DATA *optimization_data, NAMELIST_TE
     variables->varied_quan_value = trealloc(variables->varied_quan_value, sizeof(*variables->varied_quan_value)*(n_variables+extras+1));
     variables->initial_value = trealloc(variables->initial_value, sizeof(*variables->initial_value)*(n_variables+extras+1));
     variables->memory_number = trealloc(variables->memory_number, sizeof(*variables->memory_number)*(n_variables+extras+1));
-
-    /* process namelist text */
-    /* can't use automatic defaults, because of DBL_MAX being a nonconstant object */
-    set_namelist_processing_flags(0);
-    set_print_namelist_flags(0);
-    name = item = NULL;
-    step_size = 1;
-    lower_limit = -(upper_limit = DBL_MAX);
-    process_namelist(&optimization_variable, nltext);
-    print_namelist(stdout, &optimization_variable);
 
     /* check for valid input */
     if (name==NULL)
@@ -197,6 +201,9 @@ void add_optimization_term(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
   set_print_namelist_flags(0);
   process_namelist(&optimization_term, nltext);
   print_namelist(stdout, &optimization_term);
+
+  if (weight==0)
+    return ;
   
   if (term==NULL)
     bomb("term is invalid", NULL);
@@ -232,6 +239,14 @@ void add_optimization_covariable(OPTIMIZATION_DATA *optimization_data, NAMELIST_
     
     log_entry("add_optimization_covariable");
 
+    /* process namelist text */
+    set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
+    set_print_namelist_flags(0);
+    process_namelist(&optimization_covariable, nltext);
+    print_namelist(stdout, &optimization_covariable);
+    if (disable)
+      return ;
+    
     n_covariables = optimization_data->covariables.n_covariables;
 
     covariables = &(optimization_data->covariables);
@@ -245,13 +260,6 @@ void add_optimization_covariable(OPTIMIZATION_DATA *optimization_data, NAMELIST_
     covariables->varied_param = trealloc(covariables->varied_param, sizeof(*covariables->varied_param)*(n_covariables+1));
     covariables->varied_quan_value = trealloc(covariables->varied_quan_value, sizeof(*covariables->varied_quan_value)*(n_covariables+1));
     covariables->memory_number = trealloc(covariables->memory_number, sizeof(*covariables->memory_number)*(n_covariables+1));
-
-
-    /* process namelist text */
-    set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
-    set_print_namelist_flags(0);
-    process_namelist(&optimization_covariable, nltext);
-    print_namelist(stdout, &optimization_covariable);
 
     /* check for valid input */
     if (name==NULL)
@@ -631,7 +639,8 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
                        optimization_data->tolerance, optimization_function, optimization_report,
                        optimization_data->n_evaluations, optimization_data->n_passes, 12, 
                        optimization_data->simplexDivisor, 
-                       optimization_data->simplexPassRangeFactor, 0)<0) {
+                       optimization_data->simplexPassRangeFactor, 
+                       optimization_data->includeSimplex1dScans?0:SIMPLEX_NO_1D_SCANS)<0) {
           if (result>optimization_data->tolerance) {
             if (!optimization_data->soft_failure)
               bomb("optimization unsuccessful--aborting", NULL);
@@ -661,7 +670,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
               fputs("warning: optimization unsuccessful--continuing\n", stdout);
           }
           else
-            fputs("warning: maximum number of passes reached in simplex optimization", stdout);
+            fputs("warning: maximum number of passes reached in powell optimization", stdout);
         }
         break;
       case OPTIM_METHOD_GRID:

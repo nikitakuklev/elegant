@@ -37,6 +37,7 @@ static char *optimize_method[N_OPTIM_METHODS] = {
     long balance_terms = 0;
     double simplex_divisor = 3;
     double simplex_pass_range_factor = 1;
+    long include_simplex_1d_scans = 1;
 #end
 
 #namelist optimization_variable static
@@ -45,6 +46,7 @@ static char *optimize_method[N_OPTIM_METHODS] = {
     double lower_limit = 0;
     double upper_limit = 0;
     double step_size = 1;
+    long disable = 0;
 #end
 
 #namelist optimization_constraint static
