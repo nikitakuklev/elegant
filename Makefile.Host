@@ -6,7 +6,7 @@ CMPLR = ANSI
 #HOST_OPT = NO
 #CC = purify $($(ANSI)_$(CMPLR))
 
-PROD = elegant sddsemitmeas madto sddssasefel sddsTouschekInteg ibsEmittance recurseSetup
+PROD = elegant sddsemitmeas madto sddssasefel sddsTouschekInteg ibsEmittance recurseSetup haissinski
 
 USR_CFLAGS = 	-I../../../../../epics/extensions/src/SDDS/include \
 		$(ZLIB_INC) \
@@ -66,6 +66,8 @@ sddsTouschekInteg_SRCS = sddsTouschekInteg.c
 ibsEmittance_SRCS = ibsEmittance.c zibs.c 
 
 recurseSetup_SRCS = recurseSetup.c
+
+haissinski_SRCS = haissinski.c
 
 fitTraces_CFLAGS = -I../../../../../epics/extensions/src/SDDS/meschach
 
@@ -212,5 +214,3 @@ fitTraces$(OBJ): fitTraces.h
 
 fitTraces.h: ../fitTraces.nl
 	nlpp ../fitTraces.nl fitTraces.h
-
-
