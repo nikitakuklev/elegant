@@ -575,7 +575,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
                        variables->lower_limit, variables->upper_limit, NULL, 
                        variables->n_variables, optimization_data->target, 
                        optimization_data->tolerance, optimization_function, optimization_report,
-                       optimization_data->n_evaluations, optimization_data->n_passes)<0) {
+                       optimization_data->n_evaluations, optimization_data->n_passes, 0)<0) {
           if (result>optimization_data->tolerance) {
             if (!optimization_data->soft_failure)
               bomb("optimization unsuccessful--aborting", NULL);

@@ -1,5 +1,8 @@
 /* 
  * $Log: not supported by cvs2svn $
+ * Revision 1.8  2000/10/23 18:57:08  borland
+ * Implemented -energy option.
+ *
  * Revision 1.7  1999/10/12 21:49:55  borland
  * All printouts now go to the stdout rather than stderr.  fflush statements,
  * some unnecessary, were added in a mostly automated fashion.
@@ -489,7 +492,7 @@ int main( int argc, char **argv)
       }
       simplexMin( &yReturn, xGuess, dxGuess, xLowerLimit, xUpperLimit, disable, dimensions,
                  target, tolerance, IBSequations, verbosity?IBSsimplexReport:NULL, 
-                 maxEvaluations, maxPasses);
+                 maxEvaluations, maxPasses, 0);
       /* final answers */
       emitx = xGuess[0];
       sigmaDelta = xGuess[1];

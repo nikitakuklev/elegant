@@ -74,9 +74,10 @@ long simple_rf_cavity(
     )
 {
     long ip, same_dgamma, iKick, nKicks;
-    double timeOffset, inverseF, dc4;
-    double P, gamma, dgamma, phase, length, volt, To;
+    double timeOffset, inverseF, dc4, x, xp;
+    double P, gamma, dgamma, dgammaMax, phase, length, volt, To;
     double *coord, t, t0, omega, beta_i, tau, dt;
+    long useSRSModel = 0;
     static long been_warned = 0;
 #ifdef DEBUG
     static FILE *fplog = NULL;
@@ -85,6 +86,21 @@ long simple_rf_cavity(
 
     log_entry("simple_rf_cavity");
 
+    if (rfca->focusModel) {
+      char *modelName[2] = { "neal", "srs" };
+      switch (match_string(rfca->focusModel, modelName, 2, 0)) {
+      case 0:
+        break;
+      case 1:
+        useSRSModel = 1;
+        break;
+      default:
+        fprintf(stderr, "Error: focusModel=%s not understood for RFCA\n", rfca->focusModel);
+        exit(1);
+        break;
+      }
+    }
+    
     if (!been_warned) {        
         if (rfca->freq<1e3 && rfca->freq)  {
             fprintf(stdout, "\7\7\7warning: your RFCA frequency is less than 1kHz--this may be an error\n");
@@ -181,6 +197,7 @@ long simple_rf_cavity(
     same_dgamma = 0;
     if (omega==0 && tau==0) {
         dgamma = volt*sin(phase);
+        dgammaMax = volt;
         same_dgamma = 1;
         }
 
@@ -236,7 +253,7 @@ long simple_rf_cavity(
           if ((dt = t-t0)<0)
             dt = 0;
           if  (!same_dgamma)
-            dgamma = volt*sin(omega*t+phase)*(tau?sqrt(1-exp(-dt/tau)):1);
+            dgamma = volt*sin(phase)*(tau?sqrt(1-exp(-dt/tau)):1);
           
           if (rfca->end1Focus && length) {
             /* drift back, apply focus kick, then drift forward again */
@@ -268,10 +285,9 @@ long simple_rf_cavity(
         }
         else {
           double sin_phase, cos_phase;
-          double R22, R12, dP, ds1;
+          double R11=1, R21=0, R22, R12, dP, ds1;
           
           /* use matrix to propagate particles */
-
           /* compute energy change using phase of arrival at center of cavity */
           P     = *P_central*(1+coord[5]);
           beta_i = P/(gamma=sqrt(sqr(P)+1));
@@ -282,7 +298,7 @@ long simple_rf_cavity(
           if  (!same_dgamma) {
             sin_phase = sin(omega*t+phase);
             cos_phase = cos(omega*t+phase);
-            dgamma = volt*sin_phase*(tau?sqrt(1-exp(-dt/tau)):1);
+            dgamma = (dgammaMax=volt*(tau?sqrt(1-exp(-dt/tau)):1))*sin_phase;
           }
           
           if (rfca->end1Focus && length) {
@@ -293,17 +309,35 @@ long simple_rf_cavity(
           } 
           
           dP = sqrt(sqr(gamma+dgamma)-1) - P;
-          R22 = 1/(1+dP/P);
-          if (fabs(dP/P)>1e-14)
-            R12 = length*(P/dP*log(1+dP/P));
-          else
-            R12 = length;
 
+          if (useSRSModel) {
+            double alpha, sin_alpha, gammaf;
+            gammaf = gamma+dgamma;
+            if (fabs(sin_phase)>1e-6)
+              alpha = log(gammaf/gamma)/(2*SQRT2*sin_phase);
+            else
+              alpha = dgammaMax/gamma/(2*SQRT2);
+            R11 = cos(alpha);
+            R22 = R11*gamma/gammaf;
+            R12 = 2*SQRT2*P*length/dgammaMax*(sin_alpha=sin(alpha));
+            R21 = -sin_alpha*dgammaMax/(length*gammaf*2*SQRT2);
+          } else {
+            R22 = 1/(1+dP/P);
+            if (fabs(dP/P)>1e-14)
+              R12 = length*(P/dP*log(1+dP/P));
+            else
+              R12 = length;
+          }
+            
           coord[4] += ds1;
-          coord[0] = coord[0] + coord[1]*R12;
-          coord[1] = coord[1]*R22;
-          coord[2] = coord[2] + coord[3]*R12;
-          coord[3] = coord[3]*R22;
+          x = coord[0];
+          xp = coord[1];
+          coord[0] = x*R11 + xp*R12;
+          coord[1] = x*R21 + xp*R22;
+          x = coord[2];
+          xp = coord[3];
+          coord[2] = x*R11 + xp*R12;
+          coord[3] = x*R21 + xp*R22;
           coord[4] += length/2*sqrt(1+sqr(coord[1])+sqr(coord[3]));
           coord[5] = (P+dP-(*P_central))/(*P_central);
           
@@ -377,6 +411,10 @@ long track_through_rfcw
   rfcw->rfca.tReference = -1;
   rfcw->rfca.end1Focus = rfcw->end1Focus;
   rfcw->rfca.end2Focus = rfcw->end2Focus;
+  if (rfcw->focusModel) 
+    SDDS_CopyString(&rfcw->rfca.focusModel, rfcw->focusModel);
+  else
+    rfcw->rfca.focusModel = NULL;
   rfcw->rfca.nKicks = rfcw->nKicks;
   rfcw->rfca.dx = rfcw->dx;
   rfcw->rfca.dy = rfcw->dy;

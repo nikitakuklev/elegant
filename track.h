@@ -507,7 +507,7 @@ extern char *entity_text[N_TYPES];
 #define N_SOLE_PARAMS 7
 #define N_HCOR_PARAMS 8
 #define N_VCOR_PARAMS 8
-#define N_RFCA_PARAMS 15
+#define N_RFCA_PARAMS 16
 #define N_ELSE_PARAMS 0
 #define N_HMON_PARAMS 8
 #define N_VMON_PARAMS 8
@@ -571,7 +571,7 @@ extern char *entity_text[N_TYPES];
 #define N_CSRDRIFT_PARAMS 14
 #define N_REMCOR_PARAMS 6
 #define N_MAPSOLENOID_PARAMS 12
-#define N_RFCW_PARAMS 27
+#define N_RFCW_PARAMS 28
 
 typedef struct {
     char *name;            /* parameter name */
@@ -723,7 +723,9 @@ typedef struct {
     double length, volt, phase, freq, Q;
     long phase_reference, change_p0, change_t;
     char *fiducial;
-    long end1Focus, end2Focus, nKicks;
+    long end1Focus, end2Focus;
+    char *focusModel;
+    long nKicks;
     double dx, dy;
     double tReference;
     /* for internal use only: */
@@ -1572,7 +1574,9 @@ typedef struct {
     double length, cellLength, volt, phase, freq, Q;
     long phase_reference, change_p0, change_t;
     char *fiducial;
-    long end1Focus, end2Focus, nKicks;
+    long end1Focus, end2Focus;
+    char *focusModel;
+    long nKicks;
     char *wakeFile, *zWakeFile, *trWakeFile, *tColumn, *WxColumn, *WyColumn, *WzColumn;
     long n_bins;               /* number of charge bins */
     long interpolate;          /* flag to turn on interpolation */
