@@ -95,7 +95,7 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
     Imax *= charge->macroParticleCharge/dt;
     /* - compute beam radius as the average rms beam size in x and y */
     rms_emittance(part, 0, 2, np, &S11, NULL, &S33);
-    if ((beamRadius = (sqrt(S11)+sqrt(S33))/2)==0) {
+    if ((beamRadius = (sqrt(S11)+sqrt(S33))/2*LSC->radiusFactor)==0) {
       fprintf(stdout, "Error: beam radius is zero in LSCDRIFT\n");
       exit(1);
     }
@@ -302,7 +302,7 @@ void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge,
   Imax *= charge->macroParticleCharge/dt;
   /* - compute beam radius as the average rms beam size in x and y */
   rms_emittance(part, 0, 2, np, &S11, NULL, &S33);
-  if ((beamRadius = (sqrt(S11)+sqrt(S33))/2)==0) {
+  if ((beamRadius = (sqrt(S11)+sqrt(S33))/2*LSC->radiusFactor)==0) {
     fprintf(stdout, "Error: beam radius is zero in LSCDRIFT\n");
     exit(1);
   }

@@ -646,7 +646,7 @@ extern char *entity_text[N_TYPES];
 #define N_CSRDRIFT_PARAMS 20
 #define N_REMCOR_PARAMS 6
 #define N_MAPSOLENOID_PARAMS 18
-#define N_RFCW_PARAMS 35
+#define N_RFCW_PARAMS 36
 #define N_REFLECT_PARAMS 1
 #define N_CLEAN_PARAMS 7
 #define N_TWISSELEMENT_PARAMS 6
@@ -660,7 +660,7 @@ extern char *entity_text[N_TYPES];
 #define N_FTRFMODE_PARAMS 10
 #define N_TFBPICKUP_PARAMS 18
 #define N_TFBDRIVER_PARAMS 20
-#define N_LSCDRIFT_PARAMS  8
+#define N_LSCDRIFT_PARAMS  9
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -1826,6 +1826,7 @@ extern PARAMETER rfcw_param[N_RFCW_PARAMS] ;
 typedef struct {
   long bins, interpolate;
   double highFrequencyCutoff0, highFrequencyCutoff1;
+  double radiusFactor;
 } LSCKICK;
 
 typedef struct {
@@ -1841,7 +1842,7 @@ typedef struct {
     long smoothing, SGHalfWidth, SGOrder;  /* flag to turn on smoothing plus control parameters */
     double dx, dy;
     long linearize, doLSC, LSCBins, LSCInterpolate;
-    double LSCHighFrequencyCutoff0, LSCHighFrequencyCutoff1;
+    double LSCHighFrequencyCutoff0, LSCHighFrequencyCutoff1, LSCRadiusFactor;
     long wakesAtEnd;
     /* for internal use only: */
     long initialized;
@@ -1978,7 +1979,7 @@ typedef struct {
   double length;
   long bins;
   long smoothing, SGHalfWidth, SGOrder, interpolate;
-  double highFrequencyCutoff0, highFrequencyCutoff1;
+  double highFrequencyCutoff0, highFrequencyCutoff1, radiusFactor;
 } LSCDRIFT;
 
 /* macros for bending magnets */ 
