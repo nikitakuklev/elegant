@@ -119,7 +119,7 @@ proc FillMainFrame {widget args} {
       -width 60 -textVariable momentum -contextHelp \
       "Enter the beam momentum in MeV/c."
     APSLabeledEntry .le2 -parent $widget -label "Matrix lattice file: " \
-      -width 60 -textVariable matrixLatticeFile -fileSelectButton 1 -fileSelectPattern *.lte \
+      -width 60 -textVariable matrixLatticeFile -fileSelectButton 1 -buttonsOnLeft 1 -fileSelectPattern *.lte \
       -contextHelp \
       "Enter the name of the lattice file that uses matrix-based elements."
     APSLabeledEntry .le2a -parent $widget -label "Matrix beamline: " \
@@ -132,7 +132,7 @@ proc FillMainFrame {widget args} {
       "Enter the name of the offset element (MALIGN) for the beamline for the matrix representation.  It should be at the start of the beamline."
 
     APSLabeledEntry .le3 -parent $widget -label "Tracking lattice file: " \
-      -width 60 -textVariable kickLatticeFile -fileSelectButton 1 -fileSelectPattern *.lte \
+      -width 60 -textVariable kickLatticeFile -fileSelectButton 1 -buttonsOnLeft 1 -fileSelectPattern *.lte \
       -contextHelp \
       "Enter the name of the lattice file that uses kick-based elements for tracking."
     APSLabeledEntry .le3a -parent $widget -label "Kick beamline: " \
@@ -146,13 +146,13 @@ proc FillMainFrame {widget args} {
 
     foreach item {1 2 3 4} {
         APSLabeledEntry .le4$item -parent $widget -label "Parameter file (optional): " \
-          -width 60 -textVariable mainParameterFile($item) -fileSelectButton 1 -fileSelectPattern *.param \
+          -width 60 -textVariable mainParameterFile($item) -fileSelectButton 1 -buttonsOnLeft 1 -fileSelectPattern *.param \
           -contextHelp \
           "Enter the name of the parameter file that contains element parameters.  It will be loaded over the lattice."
     }
     APSLabeledEntry .le5 -parent $widget -label "Output directory: " \
       -width 60 -textVariable mainDirectory \
-      -fileSelectButton 1 -fileSelectDirectory 1 \
+      -fileSelectButton 1 -buttonsOnLeft 1 -fileSelectDirectory 1 \
       -contextHelp \
       "Enter the directory in which to place calculation results." 
     APSLabeledEntry .le6 -parent $widget -label "Output file prefix (optional): " \
@@ -399,7 +399,7 @@ proc PerformRuns {args} {
             setStatus "Run $i submitted."
 	} else {
 	    APSExecLog $w -width 100 \
-		-unixCommand "$command $rootname.ele" \
+		-unixCommand "elegant $rootname.ele" \
 		-callback "set runDone 1" \
 		-cancelCallback "set runDone 2" -abortCallback "set runDone 2"
             tkwait variable runDone
