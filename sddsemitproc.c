@@ -15,6 +15,9 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.2  2004/12/30 03:47:07  borland
+ * Units of emittance are just m, not pi*m.
+ *
  * Revision 1.1  2004/12/30 03:29:45  borland
  * Simplified version of sddsemitmeas, with only the Monte-Carlo-based
  * error analysis.  More reliable and preferred over sddsemitmeas.
@@ -412,17 +415,17 @@ int main(
         !SDDS_DefineSimpleParameter(&SDDSout, "S12", "m", SDDS_DOUBLE) ||
         !SDDS_DefineSimpleParameter(&SDDSout, "S22", "", SDDS_DOUBLE) ||
         !SDDS_DefineSimpleParameter(&SDDSout, "betax", "m", SDDS_DOUBLE) ||
-        !SDDS_DefineSimpleParameter(&SDDSout, "alphax", "m", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(&SDDSout, "alphax", "", SDDS_DOUBLE) ||
         !SDDS_DefineSimpleParameter(&SDDSout, "xRMSDeviation", "m", SDDS_DOUBLE) ||
         !SDDS_DefineSimpleParameter(&SDDSout, "xGoodFits", "", SDDS_LONG) ||
         !SDDS_DefineSimpleParameter(&SDDSout, "xAverageFitPoints", "", SDDS_DOUBLE) ||
         (error_output && 
-         (!SDDS_DefineSimpleParameter(&SDDSout, "exSigma", "m", SDDS_DOUBLE) ||
-          !SDDS_DefineSimpleParameter(&SDDSout, "S11Sigma", "m$a2$n", SDDS_DOUBLE) ||
-          !SDDS_DefineSimpleParameter(&SDDSout, "S12Sigma", "m", SDDS_DOUBLE) ||
-          !SDDS_DefineSimpleParameter(&SDDSout, "S22Sigma", "", SDDS_DOUBLE) ||
-          !SDDS_DefineSimpleParameter(&SDDSout, "betaxSigma", "m", SDDS_DOUBLE) ||
-          !SDDS_DefineSimpleParameter(&SDDSout, "alphaxSigma", "m", SDDS_DOUBLE)))) 
+         (!SDDS_DefineSimpleParameter(&SDDSout, "exStDev", "m", SDDS_DOUBLE) ||
+          !SDDS_DefineSimpleParameter(&SDDSout, "S11StDev", "m$a2$n", SDDS_DOUBLE) ||
+          !SDDS_DefineSimpleParameter(&SDDSout, "S12StDev", "m", SDDS_DOUBLE) ||
+          !SDDS_DefineSimpleParameter(&SDDSout, "S22StDev", "", SDDS_DOUBLE) ||
+          !SDDS_DefineSimpleParameter(&SDDSout, "betaxStDev", "m", SDDS_DOUBLE) ||
+          !SDDS_DefineSimpleParameter(&SDDSout, "alphaxStDev", "", SDDS_DOUBLE)))) 
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     if (!SDDS_DefineSimpleColumn(&SDDSout, "xSigmaData", "m", SDDS_DOUBLE) ||
          !SDDS_DefineSimpleColumn(&SDDSout, "xSigmaFit", "m", SDDS_DOUBLE)) {
@@ -435,17 +438,17 @@ int main(
         !SDDS_DefineSimpleParameter(&SDDSout, "S34", "m", SDDS_DOUBLE) ||
         !SDDS_DefineSimpleParameter(&SDDSout, "S44", "", SDDS_DOUBLE) ||
         !SDDS_DefineSimpleParameter(&SDDSout, "betay", "m", SDDS_DOUBLE) ||
-        !SDDS_DefineSimpleParameter(&SDDSout, "alphay", "m", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(&SDDSout, "alphay", "", SDDS_DOUBLE) ||
         !SDDS_DefineSimpleParameter(&SDDSout, "yRMSDeviation", "m", SDDS_DOUBLE) ||
         !SDDS_DefineSimpleParameter(&SDDSout, "yGoodFits", "", SDDS_LONG) ||
         !SDDS_DefineSimpleParameter(&SDDSout, "yAverageFitPoints", "", SDDS_DOUBLE) ||
         (error_output &&
-         (!SDDS_DefineSimpleParameter(&SDDSout, "eySigma", "m", SDDS_DOUBLE) ||
-          !SDDS_DefineSimpleParameter(&SDDSout, "S33Sigma", "m$a2$n", SDDS_DOUBLE) ||
-          !SDDS_DefineSimpleParameter(&SDDSout, "S34Sigma", "m", SDDS_DOUBLE) ||
-          !SDDS_DefineSimpleParameter(&SDDSout, "S44Sigma", "", SDDS_DOUBLE) ||
-          !SDDS_DefineSimpleParameter(&SDDSout, "betaySigma", "m", SDDS_DOUBLE) ||
-          !SDDS_DefineSimpleParameter(&SDDSout, "alphaySigma", "m", SDDS_DOUBLE))))
+         (!SDDS_DefineSimpleParameter(&SDDSout, "eyStDev", "m", SDDS_DOUBLE) ||
+          !SDDS_DefineSimpleParameter(&SDDSout, "S33StDev", "m$a2$n", SDDS_DOUBLE) ||
+          !SDDS_DefineSimpleParameter(&SDDSout, "S34StDev", "m", SDDS_DOUBLE) ||
+          !SDDS_DefineSimpleParameter(&SDDSout, "S44StDev", "", SDDS_DOUBLE) ||
+          !SDDS_DefineSimpleParameter(&SDDSout, "betayStDev", "m", SDDS_DOUBLE) ||
+          !SDDS_DefineSimpleParameter(&SDDSout, "alphayStDev", "", SDDS_DOUBLE))))
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     if (!SDDS_DefineSimpleColumn(&SDDSout, "ySigmaData", "m", SDDS_DOUBLE) ||
          !SDDS_DefineSimpleColumn(&SDDSout, "ySigmaFit", "m", SDDS_DOUBLE)) {
@@ -706,12 +709,12 @@ int main(
             (error_output &&
              !SDDS_SetParameters
              (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-              "exSigma", sqrt(emitx2_sum/n_good_fits_x-sqr(emitx_sum/n_good_fits_x)),
-              "S11Sigma", sqrt(S11_sum2/n_good_fits_x-sqr(S11_sum/n_good_fits_x)),
-              "S12Sigma", sqrt(S12_sum2/n_good_fits_x-sqr(S12_sum/n_good_fits_x)),
-              "S22Sigma", sqrt(S22_sum2/n_good_fits_x-sqr(S22_sum/n_good_fits_x)),
-              "betaxSigma", sqrt(betax_sum2/n_good_fits_x-sqr(betax_sum/n_good_fits_x)),
-              "alphaxSigma", sqrt(alphax_sum2/n_good_fits_x-sqr(alphax_sum/n_good_fits_x)),
+              "exStDev", sqrt(emitx2_sum/n_good_fits_x-sqr(emitx_sum/n_good_fits_x)),
+              "S11StDev", sqrt(S11_sum2/n_good_fits_x-sqr(S11_sum/n_good_fits_x)),
+              "S12StDev", sqrt(S12_sum2/n_good_fits_x-sqr(S12_sum/n_good_fits_x)),
+              "S22StDev", sqrt(S22_sum2/n_good_fits_x-sqr(S22_sum/n_good_fits_x)),
+              "betaxStDev", sqrt(betax_sum2/n_good_fits_x-sqr(betax_sum/n_good_fits_x)),
+              "alphaxStDev", sqrt(alphax_sum2/n_good_fits_x-sqr(alphax_sum/n_good_fits_x)),
               NULL)))
           SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
         if (SetSigmaData(&SDDSout, "xSigmaData", s2x, "xSigmaFit", x_fit_sig2, n_configs)) 
@@ -735,12 +738,12 @@ int main(
             (error_output && 
              !SDDS_SetParameters
              (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-              "eySigma", sqrt(emity2_sum/n_good_fits_y-sqr(emity_sum/n_good_fits_y)),
-              "S22Sigma", sqrt(S22_sum2/n_good_fits_y-sqr(S22_sum/n_good_fits_y)),
-              "S34Sigma", sqrt(S34_sum2/n_good_fits_y-sqr(S34_sum/n_good_fits_y)),
-              "S44Sigma", sqrt(S44_sum2/n_good_fits_y-sqr(S44_sum/n_good_fits_y)),
-              "betaySigma", sqrt(betay_sum2/n_good_fits_y-sqr(betay_sum/n_good_fits_y)),
-              "alphaySigma", sqrt(alphay_sum2/n_good_fits_y-sqr(alphay_sum/n_good_fits_y)),
+              "eyStDev", sqrt(emity2_sum/n_good_fits_y-sqr(emity_sum/n_good_fits_y)),
+              "S22StDev", sqrt(S22_sum2/n_good_fits_y-sqr(S22_sum/n_good_fits_y)),
+              "S34StDev", sqrt(S34_sum2/n_good_fits_y-sqr(S34_sum/n_good_fits_y)),
+              "S44StDev", sqrt(S44_sum2/n_good_fits_y-sqr(S44_sum/n_good_fits_y)),
+              "betayStDev", sqrt(betay_sum2/n_good_fits_y-sqr(betay_sum/n_good_fits_y)),
+              "alphayStDev", sqrt(alphay_sum2/n_good_fits_y-sqr(alphay_sum/n_good_fits_y)),
               NULL)))
           SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
         if (!SetSigmaData(&SDDSout, "ySigmaData", s2y, "ySigmaFit", y_fit_sig2, n_configs)) 
