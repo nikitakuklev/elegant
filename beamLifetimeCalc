@@ -4,6 +4,9 @@ exec oagwish "$0" "$@"
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.1  2004/04/01 16:28:46  borland
+# Moved from tcltkapp/oagapp area.
+#
 # Revision 1.32  2004/02/18 00:54:27  borland
 # Fixed spelling of Touschek in scan output file.
 #
@@ -125,14 +128,14 @@ set auto_path [linsert $auto_path 0  /usr/local/oag/apps/lib/$env(HOST_ARCH)]
 set auto_path [linsert $auto_path 0 /usr/local/oag/lib_patch/$env(HOST_ARCH)]
 APSDebugPath
 
-set CVSRevisionAuthor "\$Revision: 1.1 $ \$Author: borland $"
+set CVSRevisionAuthor "\$Revision: 1.2 $ \$Author: borland $"
 
 APSApplication . -name beamLifetimeCalc -version $CVSRevisionAuthor -overview \
   "Calculates the gas scattering lifetime due to single Coulomb scattering and
 brehmstrahlung, plus the Touschek lifetime."
 
-set applicationDir /home/helios/oagData/beamLifetimeCalc/
-set latticeFile /home/helios/oagData/sr/lattices/default/sector1.twi
+set applicationDir $OAGGlobal(OAGAppConfigDataDirectory)/elegant
+set latticeFile ""
 set args $argv
 if [llength $args]>1 {
     if {[APSStrictParseArguments {applicationDir latticeFile}]} {
@@ -140,9 +143,10 @@ if [llength $args]>1 {
     }
 }
 
-set status Ready.
+set status Working.
 APSScrolledStatus .status -parent .userFrame -textVariable status -width 80 \
   -height 10
+update
 
 proc SetGasDefaults {} {
     global component pressureFrac pressure temperature
@@ -186,7 +190,7 @@ set touschek 1
 set ZAPTouschek 0
 
 set widgetList [APSTabFrame .parameters -parent .userFrame -label "" \
-                          -labelList {"Gas Input" \
+                          -labelList {"Gas Input" "Calc. Options" \
                                         "Lattice Input" \
                                         "Beam Inputs" \
                                         "Variation" \
@@ -196,15 +200,8 @@ set widgetList [APSTabFrame .parameters -parent .userFrame -label "" \
 
 set widget [lindex $widgetList 0]
 
-set pressureTabWidgetList [APSTabFrame .pressure -parent $widget -label "" \
-                          -labelList {"Pressure Input" \
-                                        "Other Input" } \
-                          -width 800 -height 400 \
-                          -tabPosition n]
-
-set tabwidget [lindex $pressureTabWidgetList 0]
-APSFrame .input -parent $tabwidget -label "Inputs"
-set w $tabwidget.input.frame
+APSFrame .input -parent $widget -label "Inputs"
+set w $widget.input.frame
 frame $w.pt
 pack $w.pt
 APSLabeledEntry .pres -parent $w.pt -label "Pressure (nT):" \
@@ -242,11 +239,9 @@ foreach widget {.pt.pres .pt.temperature} {
     bind $w$widget.entry <Return> RecomputeOutputs
 }
 
-
-set tabwidget [lindex $pressureTabWidgetList 1]
-APSFrame .other -parent $tabwidget -label "Other"
-set w $tabwidget.other.frame
-
+set widget [lindex $widgetList 1]
+APSFrame .calc -parent $widget -label ""
+set w $widget.calc.frame
 APSRadioButtonFrame .electrons -parent $w -label "Electron scattering?:" -variable electrons \
   -buttonList {Yes No} -valueList {1 0} -orientation horizontal \
   -commandList {RecomputeOutputs RecomputeOutputs} -contextHelp \
@@ -262,6 +257,22 @@ APSRadioButtonFrame .touschekZAP -parent $w -label "ZAP-convention Touschek?:" -
   -commandList {RecomputeOutputs RecomputeOutputs} -contextHelp \
   "Select whether to multiply the Touschek rate by log(2) when combining with other rates.  ZAP does this."
 
+#APSRadioButtonFrame .screening -parent $w -label "Include screening:" -variable screening \
+#  -buttonList {Yes No} -valueList {1 0} -orientation horizontal \
+#  -commandList {RecomputeOutputs RecomputeOutputs} -contextHelp \
+#  "Select whether or not to include the effects of screening of the nucleus by atomic electrons."
+
+set widget [lindex $widgetList 2] 
+APSFrame .lattice -parent $widget -label ""
+set w $widget.lattice.frame
+set superperiods 40
+
+APSLabeledEntry .lattice -parent $w -label "Lattice file:" -textVariable latticeFile -width 80 \
+  -contextHelp "Give the name of an elegant twiss output file.  Required for Touschek lifetime calculations."
+
+APSLabeledEntry .superperiods -parent $w -label "Superperiods:" -textVariable superperiods -width 10 \
+    -contextHelp "Give the number of superperiods.  If the lattice file has the whole ring, set to 1."
+
 APSLabeledEntry .betaAve -parent $w -label "Average beta (m):" -textVariable betaAve -width 22 \
   -contextHelp "Enter the average beta function in the aperture limiting plane."
 
@@ -272,30 +283,16 @@ APSLabeledEntry .acceptance -parent $w -label "Betatron acceptance (m):" -textVa
 APSLabeledEntry .energy -parent $w -label "Energy (GeV):" -textVariable energy -width 22 \
   -contextHelp "Enter the beam energy."
 
-#APSRadioButtonFrame .screening -parent $w -label "Include screening:" -variable screening \
-#  -buttonList {Yes No} -valueList {1 0} -orientation horizontal \
-#  -commandList {RecomputeOutputs RecomputeOutputs} -contextHelp \
-#  "Select whether or not to include the effects of screening of the nucleus by atomic electrons."
-
 foreach widget {.betaAve .acceptance .energy } {
     bind $w$widget.entry <Return> RecomputeOutputs
 }
 
-set widget [lindex $widgetList 1] 
-APSFrame .lattice -parent $widget -label ""
-set w $widget.lattice.frame
-set superperiods 40
 
-APSLabeledEntry .lattice -parent $w -label "Lattice file:" -textVariable latticeFile -width 80 \
-  -contextHelp "Give the name of an elegant twiss output file.  Required for Touschek lifetime calculations."
-
-APSLabeledEntry .superperiods -parent $w -label "Superperiods:" -textVariable superperiods -width 10 \
-    -contextHelp "Give the number of superperiods.  If the lattice file has the whole ring, set to 1."
 APSButton .loadlattice -parent $w -text "Load parameters from lattice file" \
     -command "LoadLatticeParameters" -packOption "-side bottom" -contextHelp \
     "Loads lattice parameters from the lattice file."
 
-set widget [lindex $widgetList 2]
+set widget [lindex $widgetList 3]
 APSFrame .input -parent $widget -label "Inputs"
 set w $widget.input.frame
 APSLabeledEntry .emit -parent $w -label "Emittance (m-rad):" -textVariable emittance -width 20 \
@@ -335,7 +332,7 @@ foreach widget {emit coupling energySpread bunchCurrent revolutionFrequency bunc
     bind $w.$widget.entry <Return> RecomputeOutputs
 }
 
-set widget [lindex $widgetList 3] 
+set widget [lindex $widgetList 4] 
 APSFrame .vary -parent $widget -label "Automatic variation"
 set w $widget.vary.frame
 set varyChoice None
@@ -382,7 +379,7 @@ APSButton .quickPlot -parent $w -text "quickSDDSplot" -command {RunQuickSDDSPlot
   -contextHelp "Launches quickSDDSplot utility to plot the named file."
 
 
-set widget [lindex $widgetList 4] 
+set widget [lindex $widgetList 5] 
 APSFrame .xsection -parent $widget -label "Loss Rates (1/h)" \
   -packOption "-side left" \
   -contextHelp "Lists the loss rates due to individual types of scattering, along with the total loss rate."
@@ -410,7 +407,7 @@ APSLabeledOutput .rateUser -parent $w -label "Other:             " \
 APSLabeledOutput .rate -parent $w -label     "Total:             " \
   -textVariable rate -width 25
 
-set widget [lindex $widgetList 4]
+set widget [lindex $widgetList 5]
 APSFrame .lifetimes -parent $widget -label "Lifetimes (hours)" \
   -packOption "-side left" \
   -contextHelp \
@@ -628,7 +625,6 @@ proc LoadLatticeParameters {} {
         incr index
         set $tclVar [format %.12g [lindex $dataList $index]]
     }
-    APSSetVarAndUpdate status "initial betay is $betayFirst"
     global tcl_precision
     set tcl_precision 12
 
@@ -659,6 +655,11 @@ proc RecomputeOutputs {args} {
     global dampingTime bunchLengthFactor
     global effectiveEnergyAperture Uo rfVoltage alpha harmonic syncFrequency
     global touschekIntegralFile ZAPTouschek
+
+    if ![string length $latticeFile] {
+        APSSetVarAndUpdate status "No lattice file given."
+        return
+    }
 
     set statusCallback "APSSetVarAndUpdate status"
     APSStrictParseArguments {statusCallback}
@@ -1005,4 +1006,8 @@ proc APSTouschekLifetime {args} {
 }
 
 update
-RecomputeOutputs
+if [string length $latticeFile] {
+    LoadLatticeParameters
+} else {
+    RecomputeOutputs
+}
