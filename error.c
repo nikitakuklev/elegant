@@ -36,8 +36,6 @@ void error_setup(ERRORVAL *errcon, NAMELIST_TEXT *nltext, RUN *run_cond, LINE_LI
     process_namelist(&error_control, nltext);
     print_namelist(stdout, &error_control);
 
-    errcon->no_errors_first_step = no_errors_for_first_step;
-    
     if (summarize_error_settings) {
         fprintf(stdout, "summary of random error settings: \n");
         fflush(stdout);
@@ -70,6 +68,8 @@ void error_setup(ERRORVAL *errcon, NAMELIST_TEXT *nltext, RUN *run_cond, LINE_LI
         return;
         }
 
+    errcon->no_errors_first_step = no_errors_for_first_step;
+    
     if (errcon->fp_log)
         fclose(errcon->fp_log);
     if (error_log) {
