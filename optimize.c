@@ -746,8 +746,18 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
       result = optimization_function(variables->varied_quan_value, &i);
       ignoreOptimRecords = 0;
       force_output = 0;
-      if (result<=optimization_data->target || fabs(result-lastResult)<optimization_data->tolerance)
+      if (result<=optimization_data->target) {
+	if (optimization_data->verbose>1) {
+	  fprintf(stdout, "Target value reached, terminating optimization\n");
+	}
         break;
+      }
+      if (fabs(result-lastResult)<optimization_data->tolerance) {
+	if (optimization_data->verbose>1) {
+	  fprintf(stdout, "New result (%21.15e) not sufficiently different from old result (%21.15e), terminating optimization\n", result, lastResult);
+	}
+	break;
+      }
       lastResult = result;
       if (startsLeft && !stopOptimization) {
         for (i=0; i<variables->n_variables; i++) {
