@@ -55,6 +55,10 @@ CopyrightNotice001*/
  * Michael Borland, 2000
  *
  $Log: not supported by cvs2svn $
+ Revision 1.2  2000/12/06 02:14:47  borland
+ Now provides "corrected" and "uncorrected" values for beta and alpha.
+ The corrected values are the best ones if one really knows the dispersion.
+
  Revision 1.1  2000/08/14 21:44:57  borland
  First version.
 
@@ -76,7 +80,7 @@ char *option[N_OPTIONS] = {
 char *USAGE="sddsanalyzebeam [-pipe=[input][,output]] [<SDDSinputfile>] [<SDDSoutputfile>]\n\
   [-nowarnings]\n\
 Computes Twiss parameters and other properties of a particle beam.\n\
-The input file must have columns x, xp, y, yp, and p; for example, an elegant\n\
+The input file must have columns x, xp, y, yp, t, and p; for example, an elegant\n\
 beam output file is acceptable.\n\
 Program by Michael Borland.  (This is version 1, August 2000.)\n";
 
@@ -151,7 +155,7 @@ main(int argc, char **argv)
       !check_sdds_beam_column(&SDDSin, "t", "s") ||
       (!check_sdds_beam_column(&SDDSin, "p", "m$be$nc") && !check_sdds_beam_column(&SDDSin, "p", NULL))) {
     fprintf(stderr, 
-            "sddsanalyzebeam: one or more of (x, xp, y, yp, p) have the wrong units or are not present in %s", 
+            "sddsanalyzebeam: one or more of (x, xp, y, yp, t, p) have the wrong units or are not present in %s", 
             inputfile);
     exit(1);
   }
