@@ -409,7 +409,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_SREFFECTS 59
 #define T_MODRF 60
 #define T_BMAPXY 61
-#define N_TYPES 62
+#define T_ZTRANSVERSE 62
+#define N_TYPES 63
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -471,12 +472,13 @@ extern char *entity_text[N_TYPES];
 #define N_STRAY_PARAMS 7
 #define N_CSBEND_PARAMS 24
 #define N_MATTER_PARAMS 3
-#define N_RFMODE_PARAMS 15
+#define N_RFMODE_PARAMS 16
 #define N_TRFMODE_PARAMS 10
 #define N_TWMTA_PARAMS 17
-#define N_ZLONGIT_PARAMS 13
-#define N_MODRF_PARAMS 13
+#define N_ZLONGIT_PARAMS 15
+#define N_MODRF_PARAMS 14
 #define N_SREFFECTS_PARAMS 8
+#define N_ZTRANSVERSE_PARAMS 13
 #define N_BMAPXY_PARAMS 5
 
 typedef struct {
@@ -1189,7 +1191,7 @@ typedef struct {
 extern PARAMETER rfmode_param[N_RFMODE_PARAMS];
 
 typedef struct {
-    double Ra, Q, freq;        /* shunt impedance, Q, frequency */
+    double Ra, Rs, Q, freq;    /* 2*Rs, Rs=shunt impedance, Q, frequency */
     double charge;             /* total initial charge */
     double initial_V;          /* initial voltage */
     double initial_phase;      /* phase of initial voltage */
@@ -1216,15 +1218,15 @@ typedef struct {
 extern PARAMETER trfmode_param[N_TRFMODE_PARAMS];
 
 typedef struct {
-    double Ra, Q, freq;        /* shunt impedance, Q, frequency */
+    double Ra, Rs, Q, freq;    /* 2*Rs, Rs=shunt impedance, Q, frequency */
     double charge;             /* total initial charge */
     double beta;               /* the cavity beta (default is 0) */
     double bin_size;           /* size of charge bins */
     long n_bins;               /* number of charge bins */
-    long sample_interval;      /* sample interval for record file */
-    char *record;              /* name of file to record (t, V) in */
+    char *plane;               /* "x", "y", or "both" */
     long single_pass;          /* controls accumulation of voltage from turn-to-turn */
     /* for internal use: */
+    long doX, doY;
     double mp_charge;          /* charge per macroparticle */
     long initialized;          /* indicates that beam has been seen */
     double Vx;                 /* magnitude of voltage */
@@ -1243,7 +1245,7 @@ extern PARAMETER zlongit_param[N_ZLONGIT_PARAMS];
 typedef struct {
     double charge;             /* total initial charge */
     long broad_band;           /* flag */
-    double Ra, Q, freq;        /* shunt impedance, Q, frequency */
+    double Ra, Rs, Q, freq;    /* 2*Rs, Rs=shunt impedance, Q, frequency */
     char *Zreal, *Zimag;       /* impedance vs frequency files */
     double bin_size;           /* size of charge bins */
     long n_bins;               /* number of charge bins--must be 2^n */
@@ -1251,6 +1253,7 @@ typedef struct {
     long wake_interval;        /* interval (in turns) between outupt of wakes */
     long area_weight;          /* flag to turn on area-weighting */
     long interpolate;          /* flag to turn on interpolation */
+    long smooth_passes;        /* flag to turn on smoothing and specify number of passes */
     /* for internal use: */
     long initialized;          /* indicates that files are loaded */
     double *Z;                 /* n_Z (Re Z, Im Z) pairs */
@@ -1258,6 +1261,23 @@ typedef struct {
     SDDS_TABLE SDDS_wake;
     long SDDS_wake_initialized;
     } ZLONGIT;
+
+/* names and storage structure for transverse impedance physical parameters */
+extern PARAMETER ztransverse_param[N_ZTRANSVERSE_PARAMS];
+
+typedef struct {
+    double charge;             /* total initial charge */
+    long broad_band;           /* flag */
+    double Rs, Q, freq;        /* shunt impedance, Q, frequency */
+    /* input file containing impedance functions */
+    char *inputFile;
+    /* columns from input file */
+    char *freqColumn, *ZxReal, *ZxImag, *ZyReal, *ZyImag;
+    double bin_size;           /* size of charge bins */
+    long n_bins;               /* number of charge bins--must be 2^n */
+    /* for internal use */
+    double *iZ[2];             /* i*Z (Re Z, Im Z) pairs for each plane */
+    } ZTRANSVERSE;
 
 /* names and storage structure for SR effects */
 extern PARAMETER sreffects_param[N_SREFFECTS_PARAMS];

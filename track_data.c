@@ -23,7 +23,7 @@ char *entity_name[N_TYPES] = {
     "KSEXT", "KSBEND", "KQUAD", "MAGNIFY", "SAMPLE", "KICKER", "SCATTER",
     "NIBEND", "KPOLY", "NISEPT", "RAMPRF", "RAMPP", "STRAY", "CSBEND",
     "TWMTA", "MATTER", "RFMODE", "TRFMODE", "ZLONGIT", "SREFFECTS",
-    "MODRF", "BMAPXY",
+    "MODRF", "BMAPXY", "ZTRANSVERSE",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -108,14 +108,15 @@ defined relative to the initial beamline direction.",
     "A numerically-integrated traveling-wave muffin-tin accelerator.",
     "A Coulomb-scattering and energy-absorbing element simulating material in the\n\
 beam path.",
-    "A simulation of a beam-driven TM dipole mode of a RF cavity.",
     "A simulation of a beam-driven TM monopole mode of a RF cavity.",
+    "A simulation of a beam-driven TM dipole mode of a RF cavity.",
     "A simulation of a single-pass broad-band or functionally specified longitudinal\n\
 impedance.",
     "Simulation of synchrotron radiation effects (damping and quantum excitation).",
     "A first-order matrix RF cavity with exact phase dependence, plus optional amplitude\n\
 and phase modulation.",
     "A map of Bx and By vs x and y.",
+    "A simulation of a single-pass broad-band or functionally-specified transverse dipole impedance.",
     } ;
 
 QUAD quad_example;
@@ -854,6 +855,7 @@ RFMODE rfmode_example;
 /* RFMODE physical parameters */
 PARAMETER rfmode_param[N_RFMODE_PARAMS] = {
     {"RA", "Ohm", IS_DOUBLE, 0, (long)((char *)&rfmode_example.Ra), NULL, 0.0, 0},
+    {"RS", "Ohm", IS_DOUBLE, 0, (long)((char *)&rfmode_example.Rs), NULL, 0.0, 0},
     {"Q", "", IS_DOUBLE, 0, (long)((char *)&rfmode_example.Q), NULL, 0.0, 1},
     {"FREQ", "Hz", IS_DOUBLE, 0, (long)((char *)&rfmode_example.freq), NULL, 0.0, 0},
     {"CHARGE", "C", IS_DOUBLE, 0, (long)((char *)&rfmode_example.charge), NULL, 0.0, 0},
@@ -874,15 +876,15 @@ TRFMODE trfmode_example;
 /* TRFMODE physical parameters */
 PARAMETER trfmode_param[N_TRFMODE_PARAMS] = {
     {"RA", "Ohm", IS_DOUBLE, 0, (long)((char *)&trfmode_example.Ra), NULL, 0.0, 0},
+    {"RS", "Ohm", IS_DOUBLE, 0, (long)((char *)&trfmode_example.Rs), NULL, 0.0, 0},
     {"Q", "", IS_DOUBLE, 0, (long)((char *)&trfmode_example.Q), NULL, 0.0, 1},
     {"FREQ", "Hz", IS_DOUBLE, 0, (long)((char *)&trfmode_example.freq), NULL, 0.0, 0},
     {"CHARGE", "C", IS_DOUBLE, 0, (long)((char *)&trfmode_example.charge), NULL, 0.0, 0},
     {"BETA", "", IS_DOUBLE, 0, (long)((char *)&trfmode_example.beta), NULL, 0.0, 0},
     {"BIN_SIZE", "S", IS_DOUBLE, 0, (long)((char *)&trfmode_example.bin_size), NULL, 0.0, 0},
     {"N_BINS", "", IS_LONG, 0, (long)((char *)&trfmode_example.n_bins), NULL, 0.0, 20},
-    {"SAMPLE_INTERVAL", "", IS_LONG, 0, (long)((char *)&trfmode_example.sample_interval), NULL, 0.0, 1},
-    {"RECORD", "", IS_STRING, 0, (long)((char *)&trfmode_example.record), NULL, 0.0, 0},
-    {"SINGLE_PASS", "", IS_LONG, 0, (long)((char *)&rfmode_example.single_pass), NULL, 0.0, 0},
+    {"PLANE", "", IS_STRING, 0, (long)((char *)&trfmode_example.plane), "both", 0.0, 0},
+    {"SINGLE_PASS", "", IS_LONG, 0, (long)((char *)&trfmode_example.single_pass), NULL, 0.0, 0},
     };
 
 ZLONGIT zlongit_example;
@@ -891,6 +893,7 @@ PARAMETER zlongit_param[N_ZLONGIT_PARAMS] = {
     {"CHARGE", "C", IS_DOUBLE, 0, (long)((char *)&zlongit_example.charge), NULL, 0.0, 0},
     {"BROAD_BAND", "", IS_LONG, 0, (long)((char *)&zlongit_example.broad_band), NULL, 0.0, 0},
     {"RA", "Ohm", IS_DOUBLE, 0, (long)((char *)&zlongit_example.Ra), NULL, 0.0, 0},
+    {"RS", "Ohm", IS_DOUBLE, 0, (long)((char *)&zlongit_example.Rs), NULL, 0.0, 0},
     {"Q", "", IS_DOUBLE, 0, (long)((char *)&zlongit_example.Q), NULL, 0.0, 1},
     {"FREQ", "Hz", IS_DOUBLE, 0, (long)((char *)&zlongit_example.freq), NULL, 0.0, 0},
     {"ZREAL", "", IS_STRING, 0, (long)((char *)&zlongit_example.Zreal), NULL, 0.0, 0},
@@ -899,8 +902,9 @@ PARAMETER zlongit_param[N_ZLONGIT_PARAMS] = {
     {"N_BINS", "", IS_LONG, 0, (long)((char *)&zlongit_example.n_bins), NULL, 0.0, 128},
     {"WAKES", "", IS_STRING, 0, (long)((char *)&zlongit_example.wakes), NULL, 0.0, 0},
     {"WAKE_INTERVAL", "", IS_LONG, 0, (long)((char *)&zlongit_example.wake_interval), NULL, 0.0, 1},
-    {"AREA_WEIGHT", "", IS_LONG, 0, (long)((char *)&zlongit_example.area_weight), NULL, 0.0, 1},
-    {"INTERPOLATE", "", IS_LONG, 0, (long)((char *)&zlongit_example.interpolate), NULL, 0.0, 1},
+    {"AREA_WEIGHT", "", IS_LONG, 0, (long)((char *)&zlongit_example.area_weight), NULL, 0.0, 0},
+    {"INTERPOLATE", "", IS_LONG, 0, (long)((char *)&zlongit_example.interpolate), NULL, 0.0, 0},
+    {"SMOOTH_PASSES", "", IS_LONG, 0, (long)((char *)&zlongit_example.smooth_passes), NULL, 0.0, 0},
     };
 
 SREFFECTS SReffects_example;
@@ -941,6 +945,23 @@ PARAMETER bmapxy_param[N_BMAPXY_PARAMS] = {
 {"METHOD", NULL, IS_STRING, 0, (long)((char*)&bmapxy_example.method), NULL, 0.0, 0},
 {"FILENAME", NULL, IS_STRING, 0, (long)((char*)&bmapxy_example.filename), NULL, 0.0, 0},
 };  
+
+ZTRANSVERSE ztransverse_example;
+PARAMETER ztransverse_param[N_ZTRANSVERSE_PARAMS] = {
+    {"CHARGE", "C", IS_DOUBLE, 0, (long)((char *)&ztransverse_example.charge), NULL, 0.0, 0},
+    {"BROAD_BAND", "", IS_LONG, 0, (long)((char *)&ztransverse_example.broad_band), NULL, 0.0, 0},
+    {"RS", "Ohm", IS_DOUBLE, 0, (long)((char *)&ztransverse_example.Rs), NULL, 0.0, 0},
+    {"Q", "", IS_DOUBLE, 0, (long)((char *)&ztransverse_example.Q), NULL, 0.0, 1},
+    {"FREQ", "Hz", IS_DOUBLE, 0, (long)((char *)&ztransverse_example.freq), NULL, 0.0, 0},
+    {"INPUTFILE", "", IS_STRING, 0, (long)((char*)&ztransverse_example.inputFile), NULL, 0.0, 0},
+    {"FREQCOLUMN", "", IS_STRING, 0, (long)((char*)&ztransverse_example.freqColumn), NULL, 0.0, 0},
+    {"ZXREAL", "", IS_STRING, 0, (long)((char *)&ztransverse_example.ZxReal), NULL, 0.0, 0},
+    {"ZXIMAG", "", IS_STRING, 0, (long)((char *)&ztransverse_example.ZxImag), NULL, 0.0, 0},
+    {"ZYREAL", "", IS_STRING, 0, (long)((char *)&ztransverse_example.ZyReal), NULL, 0.0, 0},
+    {"ZYIMAG", "", IS_STRING, 0, (long)((char *)&ztransverse_example.ZyImag), NULL, 0.0, 0},
+    {"BIN_SIZE", "S", IS_DOUBLE, 0, (long)((char *)&ztransverse_example.bin_size), NULL, 0.0, 0},
+    {"N_BINS", "", IS_LONG, 0, (long)((char *)&ztransverse_example.n_bins), NULL, 0.0, 128},
+};
 
 /* array of parameter structures */
 
@@ -1017,6 +1038,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_SREFFECTS_PARAMS,        0,   sizeof(SREFFECTS),  sreffects_param  },
     { N_MODRF_PARAMS, MAT_LEN_NCAT,       sizeof(MODRF),    modrf_param     }, 
     { N_BMAPXY_PARAMS,     HAS_LENGTH,   sizeof(BMAPXY),  bmapxy_param      },
+    { N_ZTRANSVERSE_PARAMS,          0,     sizeof(ZTRANSVERSE),  ztransverse_param    },
 } ;
  
 
