@@ -3,6 +3,9 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.6  2000/04/21 20:52:47  soliday
+ * Added include fdlibm.h for Bessel function with Borland C.
+ *
  * Revision 1.5  2000/04/20 20:22:35  borland
  * Added ability to do computations for slices.
  *
@@ -48,7 +51,7 @@ void setupSASEFELAtEnd(NAMELIST_TEXT *nltext, RUN *run, OUTPUT_FILES *output_dat
   if (n_slices<0 || slice_fraction<0 ||
       (n_slices==0 && slice_fraction>0) ||
       (n_slices>0 && slice_fraction<=0) ||
-      n_slices*slice_fraction>=1)
+      n_slices*slice_fraction>1)
     bomb("invalid slice parameters", NULL);
   sasefelOutput = &(output_data->sasefel);
   if (sasefelOutput->active && sasefelOutput->filename) {
@@ -94,39 +97,39 @@ void setupSASEFELAtEnd(NAMELIST_TEXT *nltext, RUN *run, OUTPUT_FILES *output_dat
   sasefelOutput->nSlices = n_slices;
   sasefelOutput->sliceFraction = slice_fraction;
 
-  if (!(sasefelOutput->betaToUse = malloc(sizeof(*(sasefelOutput->betaToUse))*(n_slices+1))) ||
-      !(sasefelOutput->charge = malloc(sizeof(*(sasefelOutput->charge))*(n_slices+1))) ||
-      !(sasefelOutput->pCentral = malloc(sizeof(*(sasefelOutput->pCentral))*(n_slices+1))) ||
-      !(sasefelOutput->rmsBunchLength = malloc(sizeof(*(sasefelOutput->rmsBunchLength))*(n_slices+1))) ||
-      !(sasefelOutput->Sdelta = malloc(sizeof(*(sasefelOutput->Sdelta))*(n_slices+1))) ||
-      !(sasefelOutput->emit = malloc(sizeof(*(sasefelOutput->emit))*(n_slices+1))) ||
-      !(sasefelOutput->lightWavelength = malloc(sizeof(*(sasefelOutput->lightWavelength))*(n_slices+1))) ||
-      !(sasefelOutput->saturationLength = malloc(sizeof(*(sasefelOutput->saturationLength))*(n_slices+1))) ||
-      !(sasefelOutput->gainLength = malloc(sizeof(*(sasefelOutput->gainLength))*(n_slices+1))) ||
-      !(sasefelOutput->noisePower = malloc(sizeof(*(sasefelOutput->noisePower))*(n_slices+1))) ||
-      !(sasefelOutput->saturationPower = malloc(sizeof(*(sasefelOutput->saturationPower))*(n_slices+1))) ||
-      !(sasefelOutput->PierceParameter = malloc(sizeof(*(sasefelOutput->PierceParameter))*(n_slices+1))) ||
-      !(sasefelOutput->etaDiffraction = malloc(sizeof(*(sasefelOutput->etaDiffraction))*(n_slices+1))) ||
-      !(sasefelOutput->etaEmittance = malloc(sizeof(*(sasefelOutput->etaEmittance))*(n_slices+1))) ||
-      !(sasefelOutput->etaEnergySpread = malloc(sizeof(*(sasefelOutput->etaEnergySpread))*(n_slices+1)))) 
+  if (!(sasefelOutput->betaToUse = malloc(sizeof(*(sasefelOutput->betaToUse))*(n_slices+2))) ||
+      !(sasefelOutput->charge = malloc(sizeof(*(sasefelOutput->charge))*(n_slices+2))) ||
+      !(sasefelOutput->pCentral = malloc(sizeof(*(sasefelOutput->pCentral))*(n_slices+2))) ||
+      !(sasefelOutput->rmsBunchLength = malloc(sizeof(*(sasefelOutput->rmsBunchLength))*(n_slices+2))) ||
+      !(sasefelOutput->Sdelta = malloc(sizeof(*(sasefelOutput->Sdelta))*(n_slices+2))) ||
+      !(sasefelOutput->emit = malloc(sizeof(*(sasefelOutput->emit))*(n_slices+2))) ||
+      !(sasefelOutput->lightWavelength = malloc(sizeof(*(sasefelOutput->lightWavelength))*(n_slices+2))) ||
+      !(sasefelOutput->saturationLength = malloc(sizeof(*(sasefelOutput->saturationLength))*(n_slices+2))) ||
+      !(sasefelOutput->gainLength = malloc(sizeof(*(sasefelOutput->gainLength))*(n_slices+2))) ||
+      !(sasefelOutput->noisePower = malloc(sizeof(*(sasefelOutput->noisePower))*(n_slices+2))) ||
+      !(sasefelOutput->saturationPower = malloc(sizeof(*(sasefelOutput->saturationPower))*(n_slices+2))) ||
+      !(sasefelOutput->PierceParameter = malloc(sizeof(*(sasefelOutput->PierceParameter))*(n_slices+2))) ||
+      !(sasefelOutput->etaDiffraction = malloc(sizeof(*(sasefelOutput->etaDiffraction))*(n_slices+2))) ||
+      !(sasefelOutput->etaEmittance = malloc(sizeof(*(sasefelOutput->etaEmittance))*(n_slices+2))) ||
+      !(sasefelOutput->etaEnergySpread = malloc(sizeof(*(sasefelOutput->etaEnergySpread))*(n_slices+2)))) 
     bomb("memory allocation failure (setupSASEFELAtEnd)", NULL);
 
-  if (!(sasefelOutput->betaToUseIndex = malloc(sizeof(*(sasefelOutput->betaToUseIndex))*(n_slices+1))) ||
-      !(sasefelOutput->chargeIndex = malloc(sizeof(*(sasefelOutput->chargeIndex))*(n_slices+1))) ||
-      !(sasefelOutput->pCentralIndex = malloc(sizeof(*(sasefelOutput->pCentralIndex))*(n_slices+1))) ||
-      !(sasefelOutput->rmsBunchLengthIndex = malloc(sizeof(*(sasefelOutput->rmsBunchLengthIndex))*(n_slices+1))) ||
-      !(sasefelOutput->SdeltaIndex = malloc(sizeof(*(sasefelOutput->SdeltaIndex))*(n_slices+1))) ||
-      !(sasefelOutput->emitIndex = malloc(sizeof(*(sasefelOutput->emitIndex))*(n_slices+1))) ||
-      !(sasefelOutput->lightWavelengthIndex = malloc(sizeof(*(sasefelOutput->lightWavelengthIndex))*(n_slices+1))) ||
-      !(sasefelOutput->saturationLengthIndex = malloc(sizeof(*(sasefelOutput->saturationLengthIndex))*(n_slices+1))) ||
-      !(sasefelOutput->gainLengthIndex = malloc(sizeof(*(sasefelOutput->gainLengthIndex))*(n_slices+1))) ||
-      !(sasefelOutput->noisePowerIndex = malloc(sizeof(*(sasefelOutput->noisePowerIndex))*(n_slices+1))) ||
-      !(sasefelOutput->saturationPowerIndex = malloc(sizeof(*(sasefelOutput->saturationPowerIndex))*(n_slices+1))) ||
-      !(sasefelOutput->PierceParameterIndex = malloc(sizeof(*(sasefelOutput->PierceParameterIndex))*(n_slices+1))) ||
-      !(sasefelOutput->etaDiffractionIndex = malloc(sizeof(*(sasefelOutput->etaDiffractionIndex))*(n_slices+1))) ||
-      !(sasefelOutput->etaEmittanceIndex = malloc(sizeof(*(sasefelOutput->etaEmittanceIndex))*(n_slices+1))) ||
-      !(sasefelOutput->etaEnergySpreadIndex = malloc(sizeof(*(sasefelOutput->etaEnergySpreadIndex))*(n_slices+1))) ||
-      !(sasefelOutput->sliceFound = malloc(sizeof(*(sasefelOutput->sliceFound))*(n_slices+1)))) 
+  if (!(sasefelOutput->betaToUseIndex = malloc(sizeof(*(sasefelOutput->betaToUseIndex))*(n_slices+2))) ||
+      !(sasefelOutput->chargeIndex = malloc(sizeof(*(sasefelOutput->chargeIndex))*(n_slices+2))) ||
+      !(sasefelOutput->pCentralIndex = malloc(sizeof(*(sasefelOutput->pCentralIndex))*(n_slices+2))) ||
+      !(sasefelOutput->rmsBunchLengthIndex = malloc(sizeof(*(sasefelOutput->rmsBunchLengthIndex))*(n_slices+2))) ||
+      !(sasefelOutput->SdeltaIndex = malloc(sizeof(*(sasefelOutput->SdeltaIndex))*(n_slices+2))) ||
+      !(sasefelOutput->emitIndex = malloc(sizeof(*(sasefelOutput->emitIndex))*(n_slices+2))) ||
+      !(sasefelOutput->lightWavelengthIndex = malloc(sizeof(*(sasefelOutput->lightWavelengthIndex))*(n_slices+2))) ||
+      !(sasefelOutput->saturationLengthIndex = malloc(sizeof(*(sasefelOutput->saturationLengthIndex))*(n_slices+2))) ||
+      !(sasefelOutput->gainLengthIndex = malloc(sizeof(*(sasefelOutput->gainLengthIndex))*(n_slices+2))) ||
+      !(sasefelOutput->noisePowerIndex = malloc(sizeof(*(sasefelOutput->noisePowerIndex))*(n_slices+2))) ||
+      !(sasefelOutput->saturationPowerIndex = malloc(sizeof(*(sasefelOutput->saturationPowerIndex))*(n_slices+2))) ||
+      !(sasefelOutput->PierceParameterIndex = malloc(sizeof(*(sasefelOutput->PierceParameterIndex))*(n_slices+2))) ||
+      !(sasefelOutput->etaDiffractionIndex = malloc(sizeof(*(sasefelOutput->etaDiffractionIndex))*(n_slices+2))) ||
+      !(sasefelOutput->etaEmittanceIndex = malloc(sizeof(*(sasefelOutput->etaEmittanceIndex))*(n_slices+2))) ||
+      !(sasefelOutput->etaEnergySpreadIndex = malloc(sizeof(*(sasefelOutput->etaEnergySpreadIndex))*(n_slices+2))) ||
+      !(sasefelOutput->sliceFound = malloc(sizeof(*(sasefelOutput->sliceFound))*(n_slices+2)))) 
     bomb("memory allocation failure (setupSASEFELAtEnd)", NULL);
 
   if (output) {
@@ -149,7 +152,10 @@ void setupSASEFELAtEnd(NAMELIST_TEXT *nltext, RUN *run, OUTPUT_FILES *output_dat
       }
     } else {
       long slice;
-      for (slice=0; slice<=n_slices; slice++) {
+      /* slice 0 is the nominal (no slicing)
+       * slice N+1 is the average over the slices 
+       */
+      for (slice=0; slice<=n_slices+1; slice++) {
         if (!DefineSASEParameters(sasefelOutput, slice)) {
           fprintf(stdout, "Unable define SDDS parameters for file %s\n", sasefelOutput->filename);
           fflush(stdout);
@@ -166,16 +172,18 @@ long DefineSASEParameters(SASEFEL_OUTPUT *sasefelOutput, long slice)
 {
   SDDS_DATASET *SDDSout;
   char buffer[100], sliceNumString[20];
-
+  
   SDDSout = &(sasefelOutput->SDDSout);
-  if (slice && sasefelOutput->nSlices>1)
-    sprintf(sliceNumString, "Slice%02ld", slice);
-  else {
-    if (sasefelOutput->nSlices<=1)
-      sliceNumString[0] = 0;
-    else
+  if (slice && sasefelOutput->nSlices>1) {
+    if (slice<=sasefelOutput->nSlices) {
+      sprintf(sliceNumString, "Slice%02ld", slice);
+    } else {
+      /* "slice" N+1 is the average over all slices */
       sprintf(sliceNumString, "Ave");
+    }
   }
+  else
+    sliceNumString[0] = 0;
 
   sprintf(buffer, "beta%s", sliceNumString);
   if ((sasefelOutput->betaToUseIndex[slice] = 
@@ -261,7 +269,7 @@ void doSASEFELAtEndOutput(SASEFEL_OUTPUT *sasefelOutput, long step)
     fflush(stdout);
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
-  for (slice=0; slice<=sasefelOutput->nSlices; slice++) {
+  for (slice=0; slice<=sasefelOutput->nSlices+1; slice++) {
     if (!SDDS_SetParameters(SDDSout, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE,
                             sasefelOutput->betaToUseIndex[slice], sasefelOutput->betaToUse[slice], 
                             sasefelOutput->chargeIndex[slice], sasefelOutput->charge[slice], 
@@ -292,14 +300,16 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
   double emitx, emity;
   double *time, deltaAve, deltaRMS, tRMS;
   double S11, S12, S22, S33, S34, S44;
-  long i, slice;
+  long i, slice, nSlices;
   double xLimit[2], percentLevel[2];
+  long count, slicesFound=0, j;
+  double aveCoord[6], rmsCoord[6];
   
   if (!particles) {
     fprintf(stdout, "no particles left---can't compute FEL parameters");
     fflush(stdout);
     /* fill in some dummy values */
-    for (slice=0; slice<sasefelOutput->nSlices; slice++) {
+    for (slice=0; slice<sasefelOutput->nSlices+1; slice++) {
       sasefelOutput->betaToUse[slice] = sasefelOutput->charge[slice] = DBL_MAX;
       sasefelOutput->pCentral[slice] = sasefelOutput->rmsBunchLength[slice] = DBL_MAX;
       sasefelOutput->Sdelta[slice] = sasefelOutput->emit[slice] = DBL_MAX;
@@ -315,44 +325,44 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
     SDDS_Bomb("memory allocation failure (computeSASEFELAtEnd)");
   computeTimeCoordinates(time, Po, particle, particles);
 
-  if (sasefelOutput->nSlices<=1) {
-    if (sasefelOutput->nSlices==0) {
-      percentLevel[0] = 10;
-      percentLevel[1] = 90;
-    } else {
-      percentLevel[0] = 50 - 100*sasefelOutput->sliceFraction/2.0;
-      percentLevel[1] = 50 + 100*sasefelOutput->sliceFraction/2.0;
-    }
-    
-    /* find center of energy distribution */
-    for (i=deltaAve=0; i<particles; i++)
-      deltaAve += particle[i][5];
-    deltaAve /= particles;
-    /* compute rms energy spread */
-    for (i=deltaRMS=0; i<particles; i++)
-      deltaRMS += sqr(particle[i][5]-deltaAve);
-    sasefelOutput->Sdelta[0] = deltaRMS = sqrt(deltaRMS/particles);
-    
-    /* compute rms-equivalent time value so that Q/(sqrt(2*PI)*tRMS) is
-     * a good estimate of peak current.  I use the 10% and 90% points of
-     * the distribution to compute peak current, then get equivalent tRMS.
-     */
-    compute_percentiles(xLimit, percentLevel, 2, time, particles);
-    sasefelOutput->rmsBunchLength[0] = tRMS 
-      = (xLimit[1] - xLimit[0])/(0.8*sqrt(2*PI));
-    
-    emitx = rms_emittance(particle, 0, 1, particles, &S11, NULL, NULL);
-    emity = rms_emittance(particle, 2, 3, particles, &S33, NULL, NULL);
-    sasefelOutput->emit[0] = sqrt(emitx*emity);
-    sasefelOutput->pCentral[0] = Po*(1+deltaAve);
-    sasefelOutput->charge[0] = charge;  
-
-    if (sasefelOutput->beta==0)
-      sasefelOutput->betaToUse[0] = sqrt(S11*S33/(emitx*emity));
-    else
-      sasefelOutput->betaToUse[0] = sasefelOutput->beta;
-    
-    ComputeSASEFELParameters(&sasefelOutput->lightWavelength[0], &sasefelOutput->saturationLength[0], 
+  /* compute normal values (over entire beam) */
+  if (sasefelOutput->nSlices==0) {
+    percentLevel[0] = 10;
+    percentLevel[1] = 90;
+  } else {
+    percentLevel[0] = 50 - 100*sasefelOutput->sliceFraction/2.0;
+    percentLevel[1] = 50 + 100*sasefelOutput->sliceFraction/2.0;
+  }
+  
+  /* find center of energy distribution */
+  for (i=deltaAve=0; i<particles; i++)
+    deltaAve += particle[i][5];
+  deltaAve /= particles;
+  /* compute rms energy spread */
+  for (i=deltaRMS=0; i<particles; i++)
+    deltaRMS += sqr(particle[i][5]-deltaAve);
+  sasefelOutput->Sdelta[0] = deltaRMS = sqrt(deltaRMS/particles);
+  
+  /* compute rms-equivalent time value so that Q/(sqrt(2*PI)*tRMS) is
+   * a good estimate of peak current.  I use the 10% and 90% points of
+   * the distribution to compute peak current, then get equivalent tRMS.
+   */
+  compute_percentiles(xLimit, percentLevel, 2, time, particles);
+  sasefelOutput->rmsBunchLength[0] = tRMS 
+    = (xLimit[1] - xLimit[0])/(0.8*sqrt(2*PI));
+  
+  emitx = rms_emittance(particle, 0, 1, particles, &S11, NULL, NULL);
+  emity = rms_emittance(particle, 2, 3, particles, &S33, NULL, NULL);
+  sasefelOutput->emit[0] = sqrt(emitx*emity);
+  sasefelOutput->pCentral[0] = Po*(1+deltaAve);
+  sasefelOutput->charge[0] = charge;  
+  
+  if (sasefelOutput->beta==0)
+    sasefelOutput->betaToUse[0] = sqrt(S11*S33/(emitx*emity));
+  else
+    sasefelOutput->betaToUse[0] = sasefelOutput->beta;
+  
+  ComputeSASEFELParameters(&sasefelOutput->lightWavelength[0], &sasefelOutput->saturationLength[0], 
                            &sasefelOutput->gainLength[0],
                            &sasefelOutput->noisePower[0], &sasefelOutput->saturationPower[0], 
                            &sasefelOutput->PierceParameter[0],
@@ -363,24 +373,28 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
                            sasefelOutput->betaToUse[0], sasefelOutput->emit[0], 
                            sasefelOutput->Sdelta[0], sasefelOutput->pCentral[0],
                            1);
-  } else {
-    long count, slicesFound=0, j;
-    double aveCoord[6], rmsCoord[6];
-
-    sasefelOutput->betaToUse[0] = sasefelOutput->charge[0] = 0;
-    sasefelOutput->pCentral[0] = sasefelOutput->rmsBunchLength[0] = 0;
-    sasefelOutput->Sdelta[0] = sasefelOutput->emit[0] = 0;
-    sasefelOutput->lightWavelength[0] = sasefelOutput->saturationLength[0] = 0;
-    sasefelOutput->gainLength[0] = sasefelOutput->noisePower[0] = 0;
-    sasefelOutput->saturationPower[0] = sasefelOutput->PierceParameter[0] = 0;
-    sasefelOutput->etaDiffraction[0] = sasefelOutput->etaEmittance[0] = 0;
-    sasefelOutput->etaEnergySpread[0] = 0;
-
+  if (sasefelOutput->nSlices>1) {
+    /* compute values for each slice, plus average */
+    nSlices = sasefelOutput->nSlices;
+    
+    sasefelOutput->betaToUse[nSlices+1] = sasefelOutput->charge[nSlices+1] = 0;
+    sasefelOutput->pCentral[nSlices+1] = sasefelOutput->rmsBunchLength[nSlices+1] = 0;
+    sasefelOutput->Sdelta[nSlices+1] = sasefelOutput->emit[nSlices+1] = 0;
+    sasefelOutput->lightWavelength[nSlices+1] = sasefelOutput->saturationLength[nSlices+1] = 0;
+    sasefelOutput->gainLength[nSlices+1] = sasefelOutput->noisePower[nSlices+1] = 0;
+    sasefelOutput->saturationPower[nSlices+1] = sasefelOutput->PierceParameter[nSlices+1] = 0;
+    sasefelOutput->etaDiffraction[nSlices+1] = sasefelOutput->etaEmittance[nSlices+1] = 0;
+    sasefelOutput->etaEnergySpread[nSlices+1] = 0;
+  
     for (slice=1; slice<=sasefelOutput->nSlices; slice++) {
       /* find boundaries of slice in time */
       percentLevel[0] = 100*(0.5-sasefelOutput->nSlices*sasefelOutput->sliceFraction/2.0 + 
                              (slice-1)*sasefelOutput->sliceFraction);
+      if (percentLevel[0]<0)
+        percentLevel[0] = 0;
       percentLevel[1] = percentLevel[0] + 100*sasefelOutput->sliceFraction;
+      if (percentLevel[1]>100)
+        percentLevel[1] = 100;
       
       /* compute rms-equivalent time value so that Q/(sqrt(2*PI)*tRMS) is
        * the average current in the slice
@@ -459,40 +473,41 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
                                sasefelOutput->betaToUse[slice], sasefelOutput->emit[slice], 
                                sasefelOutput->Sdelta[slice], sasefelOutput->pCentral[slice],
                                1);
-      sasefelOutput->lightWavelength[0] += sasefelOutput->lightWavelength[slice];
-      sasefelOutput->saturationLength[0] += sasefelOutput->saturationLength[slice];
-      sasefelOutput->gainLength[0] += sasefelOutput->gainLength[slice];
-      sasefelOutput->noisePower[0] += sasefelOutput->noisePower[slice];
-      sasefelOutput->saturationPower[0] += sasefelOutput->saturationPower[slice];
-      sasefelOutput->PierceParameter[0] += sasefelOutput->PierceParameter[slice];
-      sasefelOutput->etaDiffraction[0] += sasefelOutput->etaDiffraction[slice];
-      sasefelOutput->etaEmittance[0] += sasefelOutput->etaEmittance[slice];
-      sasefelOutput->etaEnergySpread[0] += sasefelOutput->etaEnergySpread[slice];
-      sasefelOutput->betaToUse[0] += sasefelOutput->betaToUse[slice];
-      sasefelOutput->emit[0] += sasefelOutput->emit[slice];
-      sasefelOutput->Sdelta[0] += sasefelOutput->Sdelta[slice];
-      sasefelOutput->pCentral[0] += sasefelOutput->pCentral[slice];
-      sasefelOutput->charge[0] += sasefelOutput->charge[slice];
-      sasefelOutput->rmsBunchLength[0] += sasefelOutput->rmsBunchLength[slice];
+      sasefelOutput->lightWavelength[nSlices+1] += sasefelOutput->lightWavelength[slice];
+      sasefelOutput->saturationLength[nSlices+1] += sasefelOutput->saturationLength[slice];
+      sasefelOutput->gainLength[nSlices+1] += sasefelOutput->gainLength[slice];
+      sasefelOutput->noisePower[nSlices+1] += sasefelOutput->noisePower[slice];
+      sasefelOutput->saturationPower[nSlices+1] += sasefelOutput->saturationPower[slice];
+      sasefelOutput->PierceParameter[nSlices+1] += sasefelOutput->PierceParameter[slice];
+      sasefelOutput->etaDiffraction[nSlices+1] += sasefelOutput->etaDiffraction[slice];
+      sasefelOutput->etaEmittance[nSlices+1] += sasefelOutput->etaEmittance[slice];
+      sasefelOutput->etaEnergySpread[nSlices+1] += sasefelOutput->etaEnergySpread[slice];
+      sasefelOutput->betaToUse[nSlices+1] += sasefelOutput->betaToUse[slice];
+      sasefelOutput->emit[nSlices+1] += sasefelOutput->emit[slice];
+      sasefelOutput->Sdelta[nSlices+1] += sasefelOutput->Sdelta[slice];
+      sasefelOutput->pCentral[nSlices+1] += sasefelOutput->pCentral[slice];
+      sasefelOutput->charge[nSlices+1] += sasefelOutput->charge[slice];
+      sasefelOutput->rmsBunchLength[nSlices+1] += sasefelOutput->rmsBunchLength[slice];
     }
     
     if (!slicesFound)
       bomb("No valid slices found for SASE FEL computation.", NULL);
-    sasefelOutput->lightWavelength[0] /= slicesFound;
-    sasefelOutput->saturationLength[0] /= slicesFound;
-    sasefelOutput->gainLength[0] /= slicesFound;
-    sasefelOutput->noisePower[0] /= slicesFound;
-    sasefelOutput->saturationPower[0] /= slicesFound;
-    sasefelOutput->PierceParameter[0] /= slicesFound;
-    sasefelOutput->etaDiffraction[0] /= slicesFound;
-    sasefelOutput->etaEmittance[0] /= slicesFound;
-    sasefelOutput->etaEnergySpread[0] /= slicesFound;
-    sasefelOutput->betaToUse[0] /= slicesFound;
-    sasefelOutput->emit[0] /= slicesFound;
-    sasefelOutput->Sdelta[0] /= slicesFound;
-    sasefelOutput->pCentral[0] /= slicesFound;
-    sasefelOutput->charge[0] /= slicesFound;
-    sasefelOutput->rmsBunchLength[0] /= slicesFound;
+
+    sasefelOutput->lightWavelength[nSlices+1] /= slicesFound;
+    sasefelOutput->saturationLength[nSlices+1] /= slicesFound;
+    sasefelOutput->saturationPower[nSlices+1] /= slicesFound;
+    sasefelOutput->gainLength[nSlices+1] /= slicesFound;
+    sasefelOutput->noisePower[nSlices+1] /= slicesFound;
+    sasefelOutput->PierceParameter[nSlices+1] /= slicesFound;
+    sasefelOutput->etaDiffraction[nSlices+1] /= slicesFound;
+    sasefelOutput->etaEmittance[nSlices+1] /= slicesFound;
+    sasefelOutput->etaEnergySpread[nSlices+1] /= slicesFound;
+    sasefelOutput->betaToUse[nSlices+1] /= slicesFound;
+    sasefelOutput->emit[nSlices+1] /= slicesFound;
+    sasefelOutput->Sdelta[nSlices+1] /= slicesFound;
+    sasefelOutput->pCentral[nSlices+1] /= slicesFound;
+    sasefelOutput->charge[nSlices+1] /= slicesFound;
+    sasefelOutput->rmsBunchLength[nSlices+1] /= slicesFound;
             
   }
   

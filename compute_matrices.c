@@ -436,7 +436,7 @@ VMATRIX *compute_matrix(
         print_elem(stdout, elem);
 #endif
         if (alph->xmax)
-            alph->gradient = run->p_central*sqr(ALPHA_CONST/alph->xmax);
+            alph->gradient = elem->Pref_input*sqr(ALPHA_CONST/alph->xmax);
         else
             bomb("supply xmax for alpha magnet", NULL);
         elem->matrix = alpha_magnet_matrix(alph->gradient, sqrt(sqr(run->p_central)+1),
@@ -595,7 +595,7 @@ VMATRIX *compute_matrix(
         stray = (STRAY*)elem->p_elem;
         elem->matrix = stray_field_matrix(stray->length, &stray->lBx, &stray->gBx, elem->end_theta,
                                           (stray->order?stray->order:run->default_order),
-                                          run->p_central);
+                                          elem->Pref_input);
         break;
       case T_CSBEND:
         csbend = (CSBEND*)elem->p_elem;
@@ -908,7 +908,7 @@ VMATRIX *stray_field_matrix(double length, double *lB, double *gB, double theta,
         ykick = 0;
     
     M = hvcorrector_matrix(length, xkick, ykick, 0.0, 0.0, 1.0, 1.0, 0, order);
-    
+
     log_exit("stray_field_matrix");
     return(M);
     }
