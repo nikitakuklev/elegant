@@ -128,7 +128,7 @@ void setup_transport_analysis(
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
 
-    if (!SDDS_WriteLayout(&SDDS_analyze)) {
+    if (!SDDS_SaveLayout(&SDDS_analyze) || !SDDS_WriteLayout(&SDDS_analyze)) {
         SDDS_SetError("Unable to write SDDS layout for transport analysis");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
@@ -156,7 +156,7 @@ void do_transport_analysis(
     TRAJECTORY *clorb;
 
     log_entry("do_transport_analysis");
-
+        
     if (center_on_orbit && !orbit)
         bomb("you've asked to center the analysis on the closed orbit, but you didn't issue a closed_orbit command", NULL);
 
@@ -363,10 +363,11 @@ void do_transport_analysis(
         SDDS_SetError("Unable to set SDDS parameter values (do_transport_analysis)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
-    for (i=0; i<SDDS_analyze.layout.n_columns; i++)
+    for (i=0; i<SDDS_ColumnCount(&SDDS_analyze); i++)
         if (!SDDS_SetRowValues(&SDDS_analyze, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, 0,
-                               i, data[i])) {
-            fprintf(stdout, "Unable to set SDDS column %ld (do_transport_analysis)\n", i);
+                               i, data[i], -1)) {
+            fprintf(stdout, "Unable to set SDDS column %s (do_transport_analysis)\n", 
+                    analysis_column[i].name);
             fflush(stdout);
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
             exit(1);
