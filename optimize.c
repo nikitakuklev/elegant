@@ -637,6 +637,15 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERROR *error1
     if (optimization_data->fp_log) {
         fprintf(optimization_data->fp_log, "Optimization results:\n    '%s' has value %.15g\n", optimization_data->equation, 
                 optimization_data->mode==OPTIM_MODE_MAXIMUM?-result:result);
+        if (optimization_data->terms) {
+          fprintf(optimization_data->fp_log, "Terms of equation: \n");
+          for (i=0; i<optimization_data->terms; i++) {
+            rpn_clear();
+            fprintf(optimization_data->fp_log, "%20s: %23.15e\n",
+                    optimization_data->term[i],
+                    rpn(optimization_data->term[i]));
+          }
+        }
         fprintf(optimization_data->fp_log, "    A total of %ld function evaluations were made.\n", n_evaluations_made);
         if (constraints->n_constraints) {
             fprintf(optimization_data->fp_log, "Constraints:\n");
