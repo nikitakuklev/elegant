@@ -92,7 +92,7 @@ tracking",
 directions 0, 1, 2, and 3 are from +x, +y, -x, and -y, respectively.",
     "An element that centers the beam transversely on the ideal trajectory.",
     "A time-dependent uniform-field rectangular kicker magnet with no fringe effects.\n\
-The waveform is in mpl format, with time in seconds and amplitude normalized to 1.",
+The waveform is in SDDS format, with time in seconds and amplitude normalized to 1.",
     "A canonical kick sextupole, which differs from the MULT element with ORDER=2 in\n\
 that it can be used for chromaticity correction.",
     "A kick bending magnet which is NOT canonical, but is better than a 2nd order\n\
@@ -110,8 +110,8 @@ random sampling.",
     "A thin kick element with polynomial dependence on the coordinates in one plane.",
     "A numerically-integrated dipole magnet with a Cartesian gradient.",
     "A voltage-ramped RF cavity, implemented like RFCA.  The voltage ramp pattern is\n\
-given by a mpl-format file of the voltage factor vs time in seconds.",
-    "A momentum-ramping element that changes the central momentum according to a mpl\n\
+given by an SDDS-format file of the voltage factor vs time in seconds.",
+    "A momentum-ramping element that changes the central momentum according to an SDDS-\n\
 format file of the momentum factor vs time in seconds.",
     "A stray field element with local and global components.  Global components are\n\
 defined relative to the initial beamline direction.",
