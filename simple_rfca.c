@@ -103,12 +103,13 @@ long trackRfCavityWithWakes
    )
 {
     long ip, same_dgamma, nKicks, linearize, ik;
-    double timeOffset, inverseF, dc4, x, xp;
-    double P, gamma, dgamma=0.0, dgammaMax=0.0, phase, length, dtLight, volt, To;
+    double timeOffset, dc4, x, xp;
+    double P, gamma, gamma1, dgamma=0.0, dgammaMax=0.0, phase, length, dtLight, volt, To;
     double *coord, t, t0, omega, beta_i, tau, dt, tAve=0, dgammaAve=0;
     long useSRSModel = 0;
     static long been_warned = 0, been_warned_kicks=0;
     double dgammaOverGammaAve = 0;
+    long dgammaOverGammaNp = 0;
     
     if (rfca->bodyFocusModel) {
       char *modelName[2] = { "none", "srs" };
@@ -269,22 +270,24 @@ long trackRfCavityWithWakes
     }
     
     if (nKicks>0) {
+      double *inverseF;
+      inverseF = tmalloc(sizeof(*inverseF)*np);
       for (ik=0; ik<nKicks; ik++) {
+        dgammaOverGammaAve = dgammaOverGammaNp = 0;
         for (ip=0; ip<np; ip++) {
           coord = part[ip];
-          dgammaOverGammaAve = 0;
-          if (length) {
-            /* apply initial drift */
-            coord[0] += coord[1]*length/2;
-            coord[2] += coord[3]*length/2;
-            coord[4] += (dc4=length/2*sqrt(1+sqr(coord[1])+sqr(coord[3])));
-          } else 
+          if (coord[5]==-1)
+            continue;
+          if (length)
+            /* compute distance traveled to center of this section */
+            dc4 = length/2*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+          else 
             dc4 = 0;
           
           /* compute energy kick */
           P     = *P_central*(1+coord[5]);
           beta_i = P/(gamma=sqrt(sqr(P)+1));
-          t     = coord[4]/(c_mks*beta_i)-timeOffset;
+          t     = (coord[4]+dc4)/(c_mks*beta_i)-timeOffset;
           if ((dt = t-t0)<0)
             dt = 0;
           if  (!same_dgamma) {
@@ -293,48 +296,62 @@ long trackRfCavityWithWakes
             else
               dgamma = dgammaAve +  volt*omega*(t-tAve)*cos(omega*tAve+phase);
           }
-          dgammaOverGammaAve += dgamma/gamma;
+          if (gamma) {
+            dgammaOverGammaNp ++;
+            dgammaOverGammaAve += dgamma/gamma;
+          }
           
-          if (rfca->end1Focus && length) {
-            /* drift back, apply focus kick, then drift forward again */
-            inverseF = dgamma/(2*gamma*length);
-            coord[4] -= dc4;
-            coord[0] -= coord[1]*length/2;
-            coord[2] -= coord[3]*length/2;
-            coord[1] -= coord[0]*inverseF;
-            coord[3] -= coord[2]*inverseF;
+          inverseF[ip] = 0;
+          if (length) {
+            if (rfca->end1Focus) {
+              /* apply focus kick */
+              inverseF[ip] = dgamma/(2*gamma*length);
+              coord[1] -= coord[0]*inverseF[ip];
+              coord[3] -= coord[2]*inverseF[ip];
+            } 
+            /* apply initial drift */
             coord[0] += coord[1]*length/2;
             coord[2] += coord[3]*length/2;
             coord[4] += length/2*sqrt(1+sqr(coord[1])+sqr(coord[3]));
           } 
+
           /* apply energy kick */
           add_to_particle_energy(coord, t, *P_central, dgamma);
-          if ((gamma += dgamma)<=1)
+          if ((gamma1 = gamma+dgamma)<=1)
             coord[5] = -1;
-
-          if (length) {
-            /* apply final drift and focus kick if needed */
-            coord[0] += coord[1]*length/2;
-            coord[2] += coord[3]*length/2;
-            coord[4] += length/2.0*sqrt(1+sqr(coord[1])+sqr(coord[3]));
-            if (rfca->end2Focus) {
-              inverseF = -dgamma/(2*gamma*length);
-              coord[1] -= coord[0]*inverseF;
-              coord[3] -= coord[2]*inverseF;
-            }
-          }
+          else 
+            /* compute inverse focal length for exit kick */
+            inverseF[ip] *= -1*gamma/gamma1;
         }
-        dgammaOverGammaAve /= np;
+
         /* do wakes */
         if (wake) 
           track_through_wake(part, np, wake, P_central, run, iPass, charge);
         if (trwake)
           track_through_trwake(part, np, trwake, *P_central, run, iPass, charge);
-        if (LSCKick)
+        if (LSCKick) {
+          if (dgammaOverGammaNp)
+            dgammaOverGammaAve /= dgammaOverGammaNp;
           addLSCKick(part, np, LSCKick, *P_central, charge, length, dgammaOverGammaAve);
+        }
+         
+        if (length) {
+          /* apply final drift and focus kick if needed */
+          for (ip=0; ip<np; ip++) {
+            coord = part[ip];
+            coord[0] += coord[1]*length/2;
+            coord[2] += coord[3]*length/2;
+            coord[4] += length/2*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+            if (rfca->end2Focus) {
+              coord[1] -= coord[0]*inverseF[ip];
+              coord[3] -= coord[2]*inverseF[ip];
+            }
+          }
+        }
       }
+      free(inverseF);
     } else {
-      double sin_phase=0.0, cos_phase;
+      double sin_phase=0.0, cos_phase, inverseF;
       double R11=1, R21=0, R22, R12, dP, ds1;
       if (LSCKick)
         bomb("cannot presently do LSC with RFCW when N_KICKS=0", NULL);
