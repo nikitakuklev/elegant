@@ -776,6 +776,9 @@ void parse_element(
             }
                 
     while ((ptr=get_token(string))) {
+#ifdef DEBUG
+        fprintf(stdout, "Parsing %s\n", ptr);
+#endif
         ptr1 = get_param_name(ptr);
         for (i=0; i<n_params; i++) 
             if (strcmp(parameter[i].name, ptr1)==0)
@@ -818,10 +821,7 @@ void parse_element(
                     fflush(stdout);
 #endif
                     rpn_token = get_token(ptr);
-#if defined(DEBUG)
-                    fprintf(stdout, "rpn token : %s\n", rpn_token);
-                    fflush(stdout);
-#endif
+                    SDDS_UnescapeQuotes(rpn_token, '"');
                     *((double*)(p_elem+parameter[i].offset)) = rpn(rpn_token);
                     if (rpn_check_error()) exit(1);
                     fprintf(stdout, "computed value for %s.%s is %.15e\n", eptr->name, parameter[i].name, 
@@ -834,6 +834,7 @@ void parse_element(
             case IS_LONG:
                 if (!isdigit(*ptr) && *ptr!='-' && *ptr!='+') {
                     rpn_token = get_token(ptr);
+                    SDDS_UnescapeQuotes(rpn_token, '"');
                     *((long*)(p_elem+parameter[i].offset)) = rpn(rpn_token);
                     if (rpn_check_error()) exit(1);
                     fprintf(stdout, "computed value for %s.%s is %ld\n", 
