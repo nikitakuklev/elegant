@@ -9,6 +9,10 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.4  1998/08/11 19:47:39  borland
+ * Fixed bug with variable name (obsolete option that is still needed
+ * internally).  Should remove this.
+ *
  * Revision 1.3  1998/08/11 18:53:43  borland
  * Initialized pipeFlags in main() to prevent error in filename parsing.
  *
@@ -119,6 +123,8 @@ double estimate_uncertainty(double *uncert, MATRIX *S, MATRIX *sS, MATRIX *R, MA
     double dev_limit, int n_configs, double uncert_min, double *fit_sig2_return);
 int make_tweeked_data_set(MATRIX *s2, double *sigma, double error_level, double error_sigmas, int error_type_code, 
     int n_configs, double resol, int reject_at_limit, double limit, int *n_at_resol);
+long SetSigmaData(SDDS_DATASET *SDDSout, char *dataName, MATRIX *s2, char *fitName, double *fitSigSqr, 
+                  long configs);
 
 static char *x_width_symbol = "BS$bx$n (m)";
 static char *y_width_symbol = "BS$by$n (m)";
@@ -145,7 +151,7 @@ main(
      )
 {
   SDDS_TABLE SDDSin, SDDSout;
-  long outputRowLimit, outputRow;
+  long outputRowLimit;
   double *R11;        /* R11 matrix element for ith configuration */
   double *R12;        /* R12 matrix element for ith configuration */
   double *etax, *etay;  /* dispersion at measurement point, if provided */
@@ -402,45 +408,53 @@ main(
   if (!SDDS_InitializeOutput(&SDDSout, SDDS_BINARY, 1, NULL, NULL, output))
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
   if (!ignore_x) {
-    if (!SDDS_DefineSimpleColumn(&SDDSout, "ex", "$gp$rm", SDDS_DOUBLE) ||
-        !SDDS_DefineSimpleColumn(&SDDSout, "S11", "m$a2$n", SDDS_DOUBLE) ||
-        !SDDS_DefineSimpleColumn(&SDDSout, "S12", "m", SDDS_DOUBLE) ||
-        !SDDS_DefineSimpleColumn(&SDDSout, "S22", "", SDDS_DOUBLE) ||
-        !SDDS_DefineSimpleColumn(&SDDSout, "betax", "m", SDDS_DOUBLE) ||
-        !SDDS_DefineSimpleColumn(&SDDSout, "alphax", "m", SDDS_DOUBLE) ||
-        !SDDS_DefineSimpleColumn(&SDDSout, "xRMSDeviation", "m", SDDS_DOUBLE) ||
-        !SDDS_DefineSimpleColumn(&SDDSout, "xGoodFits", "", SDDS_LONG) ||
-        !SDDS_DefineSimpleColumn(&SDDSout, "xAverageFitPoints", "", SDDS_DOUBLE) ||
+    if (!SDDS_DefineSimpleParameter(&SDDSout, "ex", "$gp$rm", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(&SDDSout, "S11", "m$a2$n", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(&SDDSout, "S12", "m", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(&SDDSout, "S22", "", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(&SDDSout, "betax", "m", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(&SDDSout, "alphax", "m", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(&SDDSout, "xRMSDeviation", "m", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(&SDDSout, "xGoodFits", "", SDDS_LONG) ||
+        !SDDS_DefineSimpleParameter(&SDDSout, "xAverageFitPoints", "", SDDS_DOUBLE) ||
         (error_output && 
-         (!SDDS_DefineSimpleColumn(&SDDSout, "exSigma", "$gp$rm", SDDS_DOUBLE) ||
-          !SDDS_DefineSimpleColumn(&SDDSout, "S11Sigma", "m$a2$n", SDDS_DOUBLE) ||
-          !SDDS_DefineSimpleColumn(&SDDSout, "S12Sigma", "m", SDDS_DOUBLE) ||
-          !SDDS_DefineSimpleColumn(&SDDSout, "S22Sigma", "", SDDS_DOUBLE) ||
-          !SDDS_DefineSimpleColumn(&SDDSout, "betaxSigma", "m", SDDS_DOUBLE) ||
-          !SDDS_DefineSimpleColumn(&SDDSout, "alphaxSigma", "m", SDDS_DOUBLE)))) 
+         (!SDDS_DefineSimpleParameter(&SDDSout, "exSigma", "$gp$rm", SDDS_DOUBLE) ||
+          !SDDS_DefineSimpleParameter(&SDDSout, "S11Sigma", "m$a2$n", SDDS_DOUBLE) ||
+          !SDDS_DefineSimpleParameter(&SDDSout, "S12Sigma", "m", SDDS_DOUBLE) ||
+          !SDDS_DefineSimpleParameter(&SDDSout, "S22Sigma", "", SDDS_DOUBLE) ||
+          !SDDS_DefineSimpleParameter(&SDDSout, "betaxSigma", "m", SDDS_DOUBLE) ||
+          !SDDS_DefineSimpleParameter(&SDDSout, "alphaxSigma", "m", SDDS_DOUBLE)))) 
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    if (n_error_sets<=1 &&
+        (!SDDS_DefineSimpleColumn(&SDDSout, "xSigmaData", "m", SDDS_DOUBLE) ||
+         !SDDS_DefineSimpleColumn(&SDDSout, "xSigmaFit", "m", SDDS_DOUBLE))) {
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    }
   }
   if (!ignore_y) {
-    if (!SDDS_DefineSimpleColumn(&SDDSout, "ey", "$gp$rm", SDDS_DOUBLE) ||
-        !SDDS_DefineSimpleColumn(&SDDSout, "S33", "m$a2$n", SDDS_DOUBLE) ||
-        !SDDS_DefineSimpleColumn(&SDDSout, "S34", "m", SDDS_DOUBLE) ||
-        !SDDS_DefineSimpleColumn(&SDDSout, "S44", "", SDDS_DOUBLE) ||
-        !SDDS_DefineSimpleColumn(&SDDSout, "betay", "m", SDDS_DOUBLE) ||
-        !SDDS_DefineSimpleColumn(&SDDSout, "alphay", "m", SDDS_DOUBLE) ||
-        !SDDS_DefineSimpleColumn(&SDDSout, "yRMSDeviation", "m", SDDS_DOUBLE) ||
-        !SDDS_DefineSimpleColumn(&SDDSout, "yGoodFits", "", SDDS_LONG) ||
-        !SDDS_DefineSimpleColumn(&SDDSout, "yAverageFitPoints", "", SDDS_DOUBLE) ||
+    if (!SDDS_DefineSimpleParameter(&SDDSout, "ey", "$gp$rm", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(&SDDSout, "S33", "m$a2$n", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(&SDDSout, "S34", "m", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(&SDDSout, "S44", "", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(&SDDSout, "betay", "m", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(&SDDSout, "alphay", "m", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(&SDDSout, "yRMSDeviation", "m", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleParameter(&SDDSout, "yGoodFits", "", SDDS_LONG) ||
+        !SDDS_DefineSimpleParameter(&SDDSout, "yAverageFitPoints", "", SDDS_DOUBLE) ||
         (error_output &&
-         (!SDDS_DefineSimpleColumn(&SDDSout, "eySigma", "$gp$rm", SDDS_DOUBLE) ||
-          !SDDS_DefineSimpleColumn(&SDDSout, "S33Sigma", "m$a2$n", SDDS_DOUBLE) ||
-          !SDDS_DefineSimpleColumn(&SDDSout, "S34Sigma", "m", SDDS_DOUBLE) ||
-          !SDDS_DefineSimpleColumn(&SDDSout, "S44Sigma", "", SDDS_DOUBLE) ||
-          !SDDS_DefineSimpleColumn(&SDDSout, "betaySigma", "m", SDDS_DOUBLE) ||
-          !SDDS_DefineSimpleColumn(&SDDSout, "alphaySigma", "m", SDDS_DOUBLE))))
+         (!SDDS_DefineSimpleParameter(&SDDSout, "eySigma", "$gp$rm", SDDS_DOUBLE) ||
+          !SDDS_DefineSimpleParameter(&SDDSout, "S33Sigma", "m$a2$n", SDDS_DOUBLE) ||
+          !SDDS_DefineSimpleParameter(&SDDSout, "S34Sigma", "m", SDDS_DOUBLE) ||
+          !SDDS_DefineSimpleParameter(&SDDSout, "S44Sigma", "", SDDS_DOUBLE) ||
+          !SDDS_DefineSimpleParameter(&SDDSout, "betaySigma", "m", SDDS_DOUBLE) ||
+          !SDDS_DefineSimpleParameter(&SDDSout, "alphaySigma", "m", SDDS_DOUBLE))))
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    if (n_error_sets<=1 &&
+        (!SDDS_DefineSimpleColumn(&SDDSout, "ySigmaData", "m", SDDS_DOUBLE) ||
+         !SDDS_DefineSimpleColumn(&SDDSout, "ySigmaFit", "m", SDDS_DOUBLE))) {
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    }
   }
-  if (!SDDS_WriteLayout(&SDDSout) || !SDDS_StartPage(&SDDSout, outputRowLimit=100))
-    SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
   
   if (SDDS_GetColumnIndex(&SDDSin, x_width_name)<0 ||
       SDDS_GetColumnIndex(&SDDSin, y_width_name)<0 ||
@@ -474,16 +488,12 @@ main(
       bomb("you did not specify -variable_name, and there is no obvious choice in the input data", NULL);
     variable_name = column_name[i_variable];
   }
+  if (!SDDS_TransferColumnDefinition(&SDDSout, &SDDSin, variable_name, NULL) ||
+      !SDDS_WriteLayout(&SDDSout))
+    SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
 
   uncertx = uncerty = x_fit_sig2 = y_fit_sig2 = NULL;
-  outputRow = -1;
   while (SDDS_ReadTable(&SDDSin)>0) {
-    outputRow++;
-    if (outputRow+1==outputRowLimit) {
-      if (!SDDS_LengthenTable(&SDDSout, 100))
-        SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-      outputRowLimit += 100;
-    }
     n_configs = SDDS_CountRowsOfInterest(&SDDSin);
     if (!(R11 = SDDS_GetColumn(&SDDSin, "R11")) ||
         !(R12 = SDDS_GetColumn(&SDDSin, "R12")) ||
@@ -514,6 +524,9 @@ main(
     if (n_configs<4)
       continue;
 
+    if (!SDDS_StartPage(&SDDSout, n_configs) || !SDDS_CopyColumns(&SDDSout, &SDDSin)) 
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    
     if (!ignore_x) {
       for (i_config=0; i_config<n_configs; i_config++) {
         if (add_resolution && x_resol)  
@@ -735,11 +748,11 @@ main(
           }
         }
       }
-      
+
       if (n_error_sets>1) {
         if (!ignore_x && n_good_fits_x) {
-          if (!SDDS_SetRowValues
-              (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, outputRow,
+          if (!SDDS_SetParameters
+              (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
                "ex", emitx_sum/n_good_fits_x, "S11", S11_sum/n_good_fits_x,
                "S12", S12_sum/n_good_fits_x, "S22", S22_sum/n_good_fits_x,
                "betax", betax_sum/n_good_fits_x, "alphax", alphax_sum/n_good_fits_x,
@@ -747,8 +760,8 @@ main(
                "xAverageFitPoints", (double)nx_used_sum/n_good_fits_x,
                NULL) ||
               (error_output &&
-               !SDDS_SetRowValues
-               (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, outputRow,
+               !SDDS_SetParameters
+               (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
                "exSigma", sqrt(emitx2_sum/n_good_fits_x-sqr(emitx_sum/n_good_fits_x)),
                "S11Sigma", sqrt(S11_sum2/n_good_fits_x-sqr(S11_sum/n_good_fits_x)),
                "S12Sigma", sqrt(S12_sum2/n_good_fits_x-sqr(S12_sum/n_good_fits_x)),
@@ -759,8 +772,8 @@ main(
             SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
         }
         if (!ignore_y && n_good_fits_y) {
-          if (!SDDS_SetRowValues
-              (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, outputRow,
+          if (!SDDS_SetParameters
+              (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
                "ey", emity_sum/n_good_fits_y, "S22", S22_sum/n_good_fits_y,
                "S34", S34_sum/n_good_fits_y, "S44", S44_sum/n_good_fits_y,
                "betay", betay_sum/n_good_fits_y, "alphay", alphay_sum/n_good_fits_y,
@@ -768,8 +781,8 @@ main(
                "yAverageFitPoints", (double)ny_used_sum/n_good_fits_y,
                NULL) ||
               (error_output && 
-               !SDDS_SetRowValues
-               (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, outputRow,
+               !SDDS_SetParameters
+               (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
                 "eySigma", sqrt(emity2_sum/n_good_fits_y-sqr(emity_sum/n_good_fits_y)),
                 "S22Sigma", sqrt(S22_sum2/n_good_fits_y-sqr(S22_sum/n_good_fits_y)),
                 "S34Sigma", sqrt(S34_sum2/n_good_fits_y-sqr(S34_sum/n_good_fits_y)),
@@ -780,7 +793,7 @@ main(
             SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
         }
       } else {
-        if (!ignore_x && n_good_fits_x) {
+        if (!ignore_x) {
           double S11, S12, S22, sS11, sS12, sS22, s_emitx;
           S11 = Sx->a[0][0]; sS11 = sqrt(sSx->a[0][0]);
           S12 = Sx->a[1][0]; sS12 = sqrt(sSx->a[1][1]);
@@ -789,24 +802,29 @@ main(
             s_emitx = propagate_errors_for_emittance(Sx->a, sSx->a);
           else
             s_emitx = 0;
-          if (!SDDS_SetRowValues
-              (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, outputRow,
+          if (S11<=0)  S11 = 1e-100;
+          if (S12<=0)  S12 = 1e-100;
+          if (emitx<=0) emitx = 1e-100;
+          if (!SDDS_SetParameters
+              (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
                "ex", emitx, "S11", S11, "S12", S12, "S22", S22, 
                "betax", S11/emitx, "alphax", -S12/emitx, 
                "xRMSDeviation", md_x, "xGoodFits", 1, 
                "xAverageFitPoints", (double)nx_used,
                NULL) ||
               (error_output &&
-               !SDDS_SetRowValues
-              (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, outputRow,
+               !SDDS_SetParameters
+              (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
                "exSigma", s_emitx, "S11Sigma", sS11, "S12Sigma", sS12,
                "S22Sigma", sS22,
                "betaxSigma", (S11/emitx)*sqrt(sqr(s_emitx/emitx)+sqr(sS11/S11)),
                "alphaxSigma", (S12/emitx)*sqrt(sqr(s_emitx/emitx)+sqr(sS12/S12)),
                NULL)))
               SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+          if (!SetSigmaData(&SDDSout, "xSigmaData", s2x, "xSigmaFit", x_fit_sig2, n_configs)) 
+            SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
         }
-        if (!ignore_y && n_good_fits_y) {
+        if (!ignore_y) {
           double S33, S34, S44, sS33, sS34, sS44, s_emity;
           S33 = Sy->a[0][0]; sS33 = sqrt(sSy->a[0][0]);
           S34 = Sy->a[1][0]; sS34 = sqrt(sSy->a[1][1]);
@@ -815,25 +833,33 @@ main(
             s_emity = propagate_errors_for_emittance(Sy->a, sSy->a);
           else
             s_emity = 0;
-          if (!SDDS_SetRowValues
-              (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, outputRow,
+          if (S33<=0) S33 = 1e-100;
+          if (S34<=0) S34 = 1e-100;
+          if (emity<=0) emity = 1e-100;
+          if (!SDDS_SetParameters
+              (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
                "ey", emity, "S33", S33, "S34", S34, "S44", S44, 
                "betay", S33/emity, "alphay", -S34/emity, 
                "yRMSDeviation", md_y, "yGoodFits", 1, 
                "yAverageFitPoints", (double)ny_used,
                NULL) ||
               (error_output &&
-               !SDDS_SetRowValues
-               (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, outputRow,
+               !SDDS_SetParameters
+               (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
                 "eySigma", s_emity, "S33Sigma", sS33, "S34Sigma", sS34,
                 "S44Sigma", sS44,
                 "betaySigma", (S33/emity)*sqrt(sqr(s_emity/emity)+sqr(sS33/S33)),
                 "alphaySigma", (S34/emity)*sqrt(sqr(s_emity/emity)+sqr(sS34/S34)),
                 NULL)))
             SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+          if (!SetSigmaData(&SDDSout, "ySigmaData", s2y, "ySigmaFit", y_fit_sig2, n_configs)) 
+            SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
         }
       }
+      if (!SDDS_WritePage(&SDDSout))
+        SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     }
+    
     m_free(&Rx);
     m_free(&Ry);
     m_free(&s2x);
@@ -846,7 +872,7 @@ main(
     m_free(&Ky);
   }
 
-  if (!SDDS_Terminate(&SDDSin) || !SDDS_WritePage(&SDDSout) || !SDDS_Terminate(&SDDSout))
+  if (!SDDS_Terminate(&SDDSin) || !SDDS_Terminate(&SDDSout))
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
 
   exit(0);
@@ -940,7 +966,6 @@ double solve_normal_form_opt(
       i_good++;
     }
   }            
-
 
   *n_used = n_good;
   rms_error = solve_normal_form(F, sF, Pc, Mc, Kc, s2_fit2);
@@ -1133,4 +1158,35 @@ double estimate_uncertainty(double *uncert, MATRIX *S, MATRIX *sS, MATRIX *R, MA
     free(fit_sig2);
 
   return(md);
+}
+
+long SetSigmaData(SDDS_DATASET *SDDSout, char *dataName, MATRIX *s2, 
+                  char *fitName, double *fitSigSqr, long configs)
+{
+  static double *buffer = NULL;
+  double *dataSqr;
+  long i;
+
+  if (!(buffer=SDDS_Realloc(buffer, configs*sizeof(*buffer))))
+    return 0;
+
+  for (i=0; i<configs; i++) {
+    if (s2->a[i][0]<0)
+      buffer[i] = 0;
+    else
+      buffer[i] = sqrt(s2->a[i][0]);
+  }
+  if (!SDDS_SetColumn(SDDSout, SDDS_SET_BY_NAME, buffer, configs, dataName))
+    return 0;
+
+  for (i=0; i<configs; i++) {
+    if (fitSigSqr[i]<0) 
+      buffer[i] = 0;
+    else
+      buffer[i] = sqrt(fitSigSqr[i]);
+  }
+  if (!SDDS_SetColumn(SDDSout, SDDS_SET_BY_NAME, buffer, configs, fitName))
+    return 0;
+  
+  return 1;
 }
