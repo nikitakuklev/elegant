@@ -38,6 +38,7 @@ void ematrix_element_tracking(double **coord, VMATRIX *M, EMATRIX *matr,
 long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge, 
                              double ***part, long np, char *mainRootname);
 void distributionScatter(double **part, long np, double Po, DSCATTER *scat, long iPass);
+void recordLossPass(long *lostOnPass, long *nLost, long nLeft, long nOriginal, long pass);
 
 static TRACKING_CONTEXT trackingContext;
 
