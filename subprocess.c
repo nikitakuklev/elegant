@@ -23,11 +23,15 @@
 static FILE *fp = NULL;
 static int pid;
 
+/* dummy signal handler for use with sigpause */
+void subprocess_sigusr1()
+{
+}
+
 void run_subprocess(NAMELIST_TEXT *nltext, RUN *run)
 {
   static char buffer[1024];
   char *ptr, *ptr0;
-  void dummy_sigusr1();
 
   log_entry("run_subprocess");
 
@@ -67,15 +71,10 @@ void run_subprocess(NAMELIST_TEXT *nltext, RUN *run)
   log_exit("run_subprocess");
 }
 
-/* dummy signal handler for use with sigpause */
-void subprocess_sigusr1()
-{
-}
-
 void executeCshCommand(char *cmd)
 {
 #if !defined(_WIN32)
-  signal(SIGUSR1, dummy_sigusr1);
+  signal(SIGUSR1, subprocess_sigusr1);
 #endif
 
   if (!fp) {
