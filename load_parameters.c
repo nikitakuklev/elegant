@@ -145,7 +145,7 @@ void setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 
 long do_load_parameters(LINE_LIST *beamline, long change_definitions)
 {
-    long i, j, count, matrices_changed, mode_flags, code, rows, *occurence, param, allFilesRead;
+    long i, j, count, matrices_changed, mode_flags, code, rows, *occurence, param, allFilesRead, allFilesIgnored;
     char **element, **parameter, **mode, *p_elem, *ptr;
     double *value;
     ELEMENT_LIST *eptr;
@@ -155,7 +155,8 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
         return NO_LOAD_PARAMETERS;
     log_entry("do_load_parameters");
     allFilesRead = 1;
-
+    allFilesIgnored = 1;
+    
     for (i=0; i<load_requests; i++) {
         if (load_request[i].flags&COMMAND_FLAG_IGNORE)
             continue;
@@ -189,6 +190,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
             }
         allFilesRead = 0;
+        allFilesIgnored = 0;
         SDDS_SetRowFlags(&load_request[i].table, 1);
         if ((rows=SDDS_CountRowsOfInterest(&load_request[i].table))<=0) {
             load_request[i].last_code = 0;
@@ -329,7 +331,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
             load_request[i].flags |= COMMAND_FLAG_IGNORE;   /* ignore hereafter */
         }
     log_exit("do_load_parameters");
-    if (!allFilesRead)
+    if (!allFilesRead || allFilesIgnored)
         return PARAMETERS_LOADED;
     return PARAMETERS_ENDED;
     }
