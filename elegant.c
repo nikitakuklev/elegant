@@ -497,13 +497,13 @@ char **argv;
               }
               if (failed)
                 continue;
+              perturb_beamline(&run_control, &error_control, &run_conditions, beamline); 
               if (correct.mode!=-1 &&
                   !do_correction(&correct, &run_conditions, beamline, starting_coord, &beam, run_control.i_step, 0) &&
                   !soft_failure) {
                 fputs("warning: orbit correction failed--continuing with next step\n", stderr);
                 continue;
               }
-              perturb_beamline(&run_control, &error_control, &run_conditions, beamline); 
               if (do_closed_orbit && 
                   !run_closed_orbit(&run_conditions, beamline, starting_coord, &beam, 1) &&
                   !soft_failure) {
@@ -626,35 +626,41 @@ char **argv;
             while (vary_beamline(&run_control, &error_control, &run_conditions, beamline)) {
               fill_double_array(starting_coord, 6, 0.0);
               if (correct.mode!= -1) {
-                if (!do_correction(&correct, &run_conditions, beamline, starting_coord, &beam, run_control.i_step, 1)) {
-                  fputs("warning: correction failed--continuing with next step", stderr);
+                if (!do_correction(&correct, &run_conditions, beamline, starting_coord, &beam, 
+                                   run_control.i_step, 1) ) {
+                  fputs("warning: orbit correction failed--continuing with next step\n", stderr);
                   continue;
                 }
               }
               if (do_closed_orbit && 
-                  !run_closed_orbit(&run_conditions, beamline, starting_coord, &beam, 0)) {
+                  !run_closed_orbit(&run_conditions, beamline, starting_coord, &beam, 0) &&
+                  !soft_failure) {
                 fprintf(stderr, "Closed orbit not found---continuing to next step\n");
                 continue;
               }
-              if (do_twiss_output &&
-                  !run_twiss_output(&run_conditions, beamline, starting_coord, 0)) {
+              if (do_twiss_output && 
+                  !run_twiss_output(&run_conditions, beamline, starting_coord, 0) &&
+                  !soft_failure) {
                 fprintf(stderr, "Twiss parameters not defined---continuing to next step\n");
                 continue;
               }
               if (do_response_output)
                 run_response_output(&run_conditions, beamline, &correct, 0);
+              run_matrix_output(&run_conditions, beamline);
               for (i=failed=0; (fl_do_tune_correction || do_chromaticity_correction) && i<correction_iterations; i++) {
                 if (correction_iterations>1)
                   fprintf(stderr, "\nTune/chromaticity correction iteration %ld\n", i+1);
                 if (fl_do_tune_correction) {
                   if (do_closed_orbit && 
-                      !run_closed_orbit(&run_conditions, beamline, starting_coord, &beam, 0)) {
+                      !run_closed_orbit(&run_conditions, beamline, starting_coord, &beam, 0) &&
+                      !soft_failure) {
                     fprintf(stderr, "Closed orbit not found---continuing to next step\n");
                     failed = 1;
                     break;
                   }
                   if (!do_tune_correction(&tune_corr_data, &run_conditions, beamline, starting_coord,
-                                          run_control.i_step, i==correction_iterations-1)) {
+                                          run_control.i_step, i==correction_iterations-1) &&
+                      !soft_failure) {
                     fprintf(stderr, "Tune correction failed---continuing to next step\n");
                     failed = 1;
                     break;
@@ -662,13 +668,15 @@ char **argv;
                 }
                 if (do_chromatic_correction) {
                   if (do_closed_orbit && 
-                      !run_closed_orbit(&run_conditions, beamline, starting_coord, &beam, 0)) {
+                      !run_closed_orbit(&run_conditions, beamline, starting_coord, &beam, 0) &&
+                      !soft_failure) {
                     fprintf(stderr, "Closed orbit not found---continuing to next step\n");
                     failed = 1;
                     break;
                   }
                   if (!do_chromaticity_correction(&chrom_corr_data, &run_conditions, beamline, starting_coord,
-                                                  run_control.i_step, i==correction_iterations-1)) {
+                                                  run_control.i_step, i==correction_iterations-1) &&
+                      !soft_failure) {
                     fprintf(stderr, "Chromaticity correction failed---continuing to next step\n");
                     failed = 1;
                     break;
@@ -677,19 +685,22 @@ char **argv;
               }
               if (failed)
                 continue;
-              perturb_beamline(&run_control, &error_control, &run_conditions, beamline);
-              if (correct.mode!=-1 && 
-                  !do_correction(&correct, &run_conditions, beamline, starting_coord, &beam, run_control.i_step, 0)) {
-                fputs("warning: correction failed--continuing with next step", stderr);
+              perturb_beamline(&run_control, &error_control, &run_conditions, beamline); 
+              if (correct.mode!=-1 &&
+                  !do_correction(&correct, &run_conditions, beamline, starting_coord, &beam, run_control.i_step, 0) &&
+                  !soft_failure) {
+                fputs("warning: orbit correction failed--continuing with next step\n", stderr);
                 continue;
               }
               if (do_closed_orbit && 
-                  !run_closed_orbit(&run_conditions, beamline, starting_coord, &beam, 1)) {
+                  !run_closed_orbit(&run_conditions, beamline, starting_coord, &beam, 1) &&
+                  !soft_failure) {
                 fprintf(stderr, "Closed orbit not found---continuing to next step\n");
                 continue;
               }
               if (do_twiss_output && 
-                  !run_twiss_output(&run_conditions, beamline, starting_coord, 1)) {
+                  !run_twiss_output(&run_conditions, beamline, starting_coord, 1) &&
+                  !soft_failure) {
                 fprintf(stderr, "Twiss parameters not defined---continuing to next step\n");
                 continue;
               }
