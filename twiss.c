@@ -1954,9 +1954,9 @@ void computeTuneShiftWithAmplitude(double *dnux_dA, double *dnuy_dA,
 #ifdef DEBUG
   static FILE *fpout = NULL;
 #endif
-  double result[4], maxResult;
+  double result[4], maxResult, minResult;
   double tune0[2], tune_dx[2], tune_dy[2];
-  long i;
+  long i, tries;
 
   if (tune_shift_with_amplitude_struct.turns==0) {
     /* use the matrix only without tracking */
@@ -1988,7 +1988,8 @@ void computeTuneShiftWithAmplitude(double *dnux_dA, double *dnuy_dA,
   /* use tracking and NAFF */
 
   result[0] = HUGE_VAL;
-  while (1) {
+  tries = 20;
+  while (tries--) {
     /* (0, 0) */
     computeTunesFromTracking(tune0, M, beamline, run, startingCoord,
 			     tune_shift_with_amplitude_struct.x0,
@@ -2009,6 +2010,13 @@ void computeTuneShiftWithAmplitude(double *dnux_dA, double *dnuy_dA,
 			     tune_shift_with_amplitude_struct.turns,
                              tune_shift_with_amplitude_struct.use_concatenation);
 
+    if (tune_shift_with_amplitude_struct.verbose) {
+      fprintf(stdout, "Tunes for TSWA: nux0=%e, dnux(x)=%e, dnux(y)=%e\n",
+              tune0[0], tune_dx[0]-tune0[0], tune_dy[0]-tune0[0]);
+      fprintf(stdout, "Tunes for TSWA: nuy0=%e, dnuy(x)=%e, dnuy(y)=%e\n",
+              tune0[1], tune_dx[1]-tune0[1], tune_dy[1]-tune0[1]);
+    }
+    
     result[0] = (tune_dx[0] - tune0[0]);  /* dnux from dx */
     result[1] = (tune_dx[1] - tune0[1]);  /* dnuy from dx */
     result[2] = (tune_dy[0] - tune0[0]);  /* dnux from dy */
@@ -2025,16 +2033,26 @@ void computeTuneShiftWithAmplitude(double *dnux_dA, double *dnuy_dA,
             result[0], result[1], result[2], result[3]);
 #endif
     
-    maxResult = -1;
+    maxResult = -(minResult = DBL_MAX);
     for (i=0; i<4; i++) {
       if (fabs(result[i])>maxResult)
         maxResult = fabs(result[i]);
+      if (fabs(result[i])<minResult)
+        minResult = fabs(result[i]);
     }
-    if (maxResult>0.01) {
-      tune_shift_with_amplitude_struct.x1 /= 3;
-      tune_shift_with_amplitude_struct.y1 /= 3;
+    if (maxResult>tune_shift_with_amplitude_struct.scale_down_limit) {
+      tune_shift_with_amplitude_struct.x1 /= tune_shift_with_amplitude_struct.scale_down_factor;
+      tune_shift_with_amplitude_struct.y1 /= tune_shift_with_amplitude_struct.scale_down_factor;
       fprintf(stdout, "Warning: the amplitude you specified for tune shift with amplitude is too large.\n");
-      fprintf(stdout, "Reducing to tune_shift_with_amplitude_struct.x1=%le and tune_shift_with_amplitude_struct.y1=%le\n",
+      fprintf(stdout, "Reducing tune_shift_with_amplitude_struct.x1=%le and tune_shift_with_amplitude_struct.y1=%le\n",
+              tune_shift_with_amplitude_struct.x1, tune_shift_with_amplitude_struct.y1);
+      continue;
+    }
+    if (minResult<tune_shift_with_amplitude_struct.scale_up_limit) {
+      tune_shift_with_amplitude_struct.x1 *= tune_shift_with_amplitude_struct.scale_up_factor;
+      tune_shift_with_amplitude_struct.y1 *= tune_shift_with_amplitude_struct.scale_up_factor;
+      fprintf(stdout, "Warning: the amplitude you specified for tune shift with amplitude is too small.\n");
+      fprintf(stdout, "Increasing tune_shift_with_amplitude_struct.x1=%le and tune_shift_with_amplitude_struct.y1=%le\n",
               tune_shift_with_amplitude_struct.x1, tune_shift_with_amplitude_struct.y1);
       continue;
     }
@@ -2098,6 +2116,9 @@ void computeTunesFromTracking(double *tune, VMATRIX *M, LINE_LIST *beamline, RUN
   PerformNAFF(tune+1, &dummy, &dummy, 0.0, 1.0, y, turns,
 	      NAFF_MAX_FREQUENCIES|NAFF_FREQ_CYCLE_LIMIT|NAFF_FREQ_ACCURACY_LIMIT,
 	      0.0, 1, 100, 1e-6);
+  free(x);
+  free(y);
+  free_zarray_2d(oneParticle, 1, 7);
 }
 
 void computeTuneShiftWithAmplitudeM(double *dnux_dA, double *dnuy_dA,

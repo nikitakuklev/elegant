@@ -92,9 +92,9 @@ void add_optimization_variable(OPTIMIZATION_DATA *optimization_data, NAMELIST_TE
     OPTIM_VARIABLES *variables;
     ELEMENT_LIST *context;
     /* these are used to append a dummy name to the variables list for use with final parameters output: */
-    static char *extra_name[2] = {"optimized", "optimizationFunction"};
-    static char *extra_unit[2] = {"", ""};
-    long i, extras = 2;
+    static char *extra_name[3] = {"optimized", "optimizationFunction", "bestOptimizationFunction"};
+    static char *extra_unit[3] = {"", "", ""};
+    long i, extras = 3;
     
     log_entry("add_optimization_variable");
 
@@ -478,6 +478,7 @@ typedef struct {
 } OPTIM_RECORD;
 static long optimRecords = 0, nextOptimRecordSlot = 0, balanceTerms = 0, ignoreOptimRecords=0;
 static OPTIM_RECORD optimRecord[MAX_OPTIM_RECORDS];
+static double bestResult = DBL_MAX;
 
 #if defined(UNIX)
 #include <signal.h>
@@ -490,6 +491,7 @@ void optimizationInterruptHandler(int signal)
   fprintf(stdout, "Aborting optimization...");
 }
 #endif
+
 
 void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *error1, 
                  LINE_LIST *beamline1, BEAM *beam1, OUTPUT_FILES *output1, 
@@ -1296,6 +1298,11 @@ double optimization_function(double *value, long *invalid)
    */
   variables->varied_quan_value[variables->n_variables+1] = 
     optimization_data->mode==OPTIM_MODE_MAXIMUM?-1*result:result;
+  if (bestResult>result)
+    bestResult = result;
+  variables->varied_quan_value[variables->n_variables+2] = 
+    optimization_data->mode==OPTIM_MODE_MAXIMUM?-1*bestResult:bestResult;
+
   if (force_output || (control->i_step-2)%output_sparsing_factor==0)
     do_track_beam_output(run, control, error, variables, beamline, beam, output, optim_func_flags,
                          charge);

@@ -11,7 +11,12 @@
     double y0 = 1e-10;
     double x1 = 1e-6;
     double y1 = 1e-6;
+    double scale_down_factor = 2;
+    double scale_up_factor = 1.05;
+    double scale_down_limit = 0.01;
+    double scale_up_limit = 1e-5;
     long use_concatenation = 1;
+    long verbose = 0;
 #end
 
 #namelist twiss_output

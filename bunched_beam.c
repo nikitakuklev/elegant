@@ -488,7 +488,7 @@ void do_track_beam_output(RUN *run, VARY *control,
        control->n_elements_to_vary, control->n_steps*control->indexLimitProduct,
        errcon->error_value, errcon->quan_final_index, errcon->quan_final_duplicates, errcon->n_items,
        optim->varied_quan_value, optim->varied_quan_name?*optim->varied_quan_name:NULL,
-       optim->n_variables?optim->n_variables+2:0,
+       optim->n_variables?optim->n_variables+3:0,
        control->i_step, beam->particle, beam->n_to_track, p_central, M,
        finalCharge);
     if (!(flags&SILENT_RUNNING)) {
@@ -561,7 +561,7 @@ void setup_output(
                               errcon->quan_name, errcon->quan_unit, errcon->n_items, 
                               errcon->quan_final_index, &errcon->quan_final_duplicates,
                               optim->varied_quan_name, optim->varied_quan_unit, 
-                              (optim->n_variables?optim->n_variables+2:0),
+                              (optim->n_variables?optim->n_variables+3:0),
                               "setup_output");
         output->final_initialized = 1;
         }
