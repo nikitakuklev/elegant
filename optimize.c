@@ -865,7 +865,8 @@ double optimization_function(double *value, long *invalid)
         new_bunched_beam(beam, run, control, output, 0);
         break;
       case SET_SDDS_BEAM:
-        new_sdds_beam(beam, run, control, output, 0);
+        if (new_sdds_beam(beam, run, control, output, 0)<0)
+          bomb("unable to get beam for tracking (is file empty or out of pages?)", NULL);
         break;
       default:
         bomb("unknown beam type code in optimization", NULL);

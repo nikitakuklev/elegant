@@ -69,9 +69,9 @@ long do_tracking(
   CHARGE *charge;
   static long warnedAboutChargePosition = 0;
   
-  log_entry("do_tracking");
-  
-  log_entry("do_tracking.1");
+
+  if (!coord)
+    bomb("Null particle coordinate array! (do_tracking)", NULL);
 
 #ifdef WATCH_MEMORY
   fprintf(stdout, "start do_tracking():  CPU: %6.2lf  PF: %6ld  MEM: %6ld\n",
@@ -1078,8 +1078,9 @@ void do_match_energy(
   if (!change_beam) {
     /* change the central momentum so that it matches the beam's centroid */
     P_average = 0;
-    for (ip=0; ip<np; ip++) 
+    for (ip=0; ip<np; ip++) {
       P_average += (*P_central)*(1+coord[ip][5]);
+    }
     P_average /= np;
     if (P_average!= *P_central) {
       for (ip=0; ip<np; ip++)
