@@ -59,7 +59,13 @@ void track_through_wake(double **part, long np, WAKE *wakeData, double *PoInput,
     tmin -= dt;
     tmax += dt;
   }
-  
+  if (nb<=0) {
+    fprintf(stdout, "Warning: Number of wake bins is 0 or negative\n");
+    fprintf(stderr, "probably indicating an extremely long bunch\n");
+    fprintf(stderr, "Wake ignored!\n");
+    return;
+  }
+
   if (nb>max_n_bins) {
     Itime = trealloc(Itime, 2*sizeof(*Itime)*(max_n_bins=nb));
     Vtime = trealloc(Vtime, 2*sizeof(*Vtime)*(max_n_bins+1));
@@ -70,6 +76,7 @@ void track_through_wake(double **part, long np, WAKE *wakeData, double *PoInput,
     fprintf(stdout, "warning: only %ld of %ld particles where binned (WAKE)\n", n_binned, np);
     fprintf(stdout, "consider setting n_bins=0 in WAKE definition to invoke autoscaling\n");
     fflush(stdout);
+    return;
   }
   
   if (wakeData->smoothing && nb>=(2*wakeData->SGHalfWidth+1)) {
