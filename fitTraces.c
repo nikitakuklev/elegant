@@ -3,6 +3,9 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.6  1998/06/08 16:50:43  borland
+ * Fixed problems with SVD.  Added more reporting.
+ *
  * Revision 1.5  1998/04/17 22:15:36  borland
  * Use Meschach matrix library.  Supports SVD or non-SVD.  Removes BPM
  * common mode.
@@ -1030,7 +1033,7 @@ double fit_trace_takeStep
   FIT_TRACE_PARAMETERS fitParam0 = {
     0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
   static MAT *DInv=NULL, *U=NULL, *V=NULL, *T=NULL, *S=NULL;
-  static MAT *DtD=NULL, *DtDInv=NULL, *DtDInvDt=NULL, *Dt=NULL, *DDInv=NULL, *DInvD=NULL;
+  static MAT *DtD=NULL, *DtDInv=NULL, *DtDInvDt=NULL, *Dt=NULL;
   static VEC *SingValue=NULL;
   
   if (!fitParam) {
@@ -1051,7 +1054,6 @@ double fit_trace_takeStep
   if (use_SVD) { 
     /* invert the matrix D using SVD */
     DInv = m_resize(DInv, D->n, D->m);
-    DInvD = m_resize(DDInv, D->n, D->n);
     U = m_resize(U, D->m, D->m);
     V = m_resize(V, D->n, D->n);
     T = m_resize(T, D->n, D->m);
@@ -1224,7 +1226,7 @@ double fit_trace_calibrateMonitors
   long iBPM, iTrace, iParam;
   double rmsError, calibration;
   long checkLimits, nxCals, nyCals;
-  double sum1, sum2, reading, xCalSum, yCalSum, xCalAverage, yCalAverage;
+  double sum1, sum2, reading, xCalSum, yCalSum, xdCalAverage, ydCalAverage;
 
   /* find the new trajectory */
   rmsError = fit_trace_findReadbackErrors(readbackVector, traceData, beamline, run);
@@ -1330,69 +1332,50 @@ double fit_trace_calibrateMonitors
 
   if (reject_common_mode && (nxCals || nyCals)) {
     if (nxCals)
-      xCalAverage= xCalSum/nxCals-1;
+      xdCalAverage = xCalSum/nxCals-1;
     if (nyCals)
-      yCalAverage= yCalSum/nyCals-1;
+      ydCalAverage = yCalSum/nyCals-1;
+    convergence_factor = 1;
     for (iBPM=0; iBPM<traceData->BPMs; iBPM++) {
       /* look at each BPM for which there is trace data */
       if (nxCals && (traceData->element[iBPM]->type==T_MONI ||
                      traceData->element[iBPM]->type==T_HMON)) {
         /* horizontal BPMs */
         if ((iParam = traceData->xParamIndex[iBPM])>=0) {
-          for (iTrace=sum1=sum2=0; iTrace<traceData->traces; iTrace++) {
-            reading = computeMonitorReading(traceData->element[iBPM], 0,
-                                            traceData->xSim[iTrace][iBPM],
-                                            traceData->ySim[iTrace][iBPM],
-                                            COMPUTEMONITORREADING_CAL_1);
-            sum1 += traceData->x[iTrace][iBPM]*reading;
-            sum2 += reading*reading;
-          }
-          if (sum2) {
-            calibration = getMonitorCalibration(traceData->element[iBPM], 0);
-            calibration = (calibration-xCalAverage)*convergence_factor + 
-              (1-convergence_factor)*calibration;
-            checkLimits = 1;
-            if (bpmCalParam->lowerLimit && bpmCalParam->upperLimit &&
-                bpmCalParam->lowerLimit[iParam]==bpmCalParam->upperLimit[iParam])
-              checkLimits = 0;
-            if (checkLimits && bpmCalParam->lowerLimit &&
-                bpmCalParam->lowerLimit[iParam]>calibration)
-              calibration = bpmCalParam->lowerLimit[iParam];
-            if (checkLimits && bpmCalParam->upperLimit &&
-                bpmCalParam->upperLimit[iParam]<calibration)
-              calibration = bpmCalParam->upperLimit[iParam];
-            setMonitorCalibration(traceData->element[iBPM], calibration, 0);
-          }
+          calibration = getMonitorCalibration(traceData->element[iBPM], 0);
+          calibration = (calibration-xdCalAverage)*convergence_factor + 
+            (1-convergence_factor)*calibration;
+          checkLimits = 1;
+          if (bpmCalParam->lowerLimit && bpmCalParam->upperLimit &&
+              bpmCalParam->lowerLimit[iParam]==bpmCalParam->upperLimit[iParam])
+            checkLimits = 0;
+          if (checkLimits && bpmCalParam->lowerLimit &&
+              bpmCalParam->lowerLimit[iParam]>calibration)
+            calibration = bpmCalParam->lowerLimit[iParam];
+          if (checkLimits && bpmCalParam->upperLimit &&
+              bpmCalParam->upperLimit[iParam]<calibration)
+            calibration = bpmCalParam->upperLimit[iParam];
+          setMonitorCalibration(traceData->element[iBPM], calibration, 0);
         }
       }
       if (nyCals && (traceData->element[iBPM]->type==T_MONI ||
                      traceData->element[iBPM]->type==T_VMON)) {
         /* vertical BPMs */
         if ((iParam = traceData->yParamIndex[iBPM])>=0) {
-          for (iTrace=sum1=sum2=0; iTrace<traceData->traces; iTrace++) {
-            reading = computeMonitorReading(traceData->element[iBPM], 1,
-                                            traceData->xSim[iTrace][iBPM],
-                                            traceData->ySim[iTrace][iBPM],
-                                            COMPUTEMONITORREADING_CAL_1);
-            sum1 += traceData->y[iTrace][iBPM]*reading;
-            sum2 += reading*reading;
-          }
-          if (sum2) {
-            calibration = getMonitorCalibration(traceData->element[iBPM], 1);
-            calibration = (calibration-yCalAverage)*convergence_factor + 
-              (1-convergence_factor)*calibration;
-            checkLimits = 1;
-            if (bpmCalParam->lowerLimit && bpmCalParam->upperLimit &&
-                bpmCalParam->lowerLimit[iParam]==bpmCalParam->upperLimit[iParam])
-              checkLimits = 0;
-            if (checkLimits && bpmCalParam->lowerLimit &&
-                bpmCalParam->lowerLimit[iParam]>calibration)
-              calibration = bpmCalParam->lowerLimit[iParam];
-            if (checkLimits && bpmCalParam->upperLimit &&
-                bpmCalParam->upperLimit[iParam]<calibration)
-              calibration = bpmCalParam->upperLimit[iParam];
-            setMonitorCalibration(traceData->element[iBPM], calibration, 1);
-          }
+          calibration = getMonitorCalibration(traceData->element[iBPM], 1);
+          calibration = (calibration-ydCalAverage)*convergence_factor + 
+            (1-convergence_factor)*calibration;
+          checkLimits = 1;
+          if (bpmCalParam->lowerLimit && bpmCalParam->upperLimit &&
+              bpmCalParam->lowerLimit[iParam]==bpmCalParam->upperLimit[iParam])
+            checkLimits = 0;
+          if (checkLimits && bpmCalParam->lowerLimit &&
+              bpmCalParam->lowerLimit[iParam]>calibration)
+            calibration = bpmCalParam->lowerLimit[iParam];
+          if (checkLimits && bpmCalParam->upperLimit &&
+              bpmCalParam->upperLimit[iParam]<calibration)
+            calibration = bpmCalParam->upperLimit[iParam];
+          setMonitorCalibration(traceData->element[iBPM], calibration, 1);
         }
       }
     }
