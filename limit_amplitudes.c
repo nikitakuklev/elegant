@@ -525,7 +525,6 @@ long track_through_pfilter(
           --ip;
         }
       }
-      fprintf(stderr, "%ld particles remain\n", itop+1);
     }
   }
   
