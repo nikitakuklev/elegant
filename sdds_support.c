@@ -1346,7 +1346,7 @@ long check_sdds_column(SDDS_TABLE *SDDS_table, char *name, char *units)
     SDDS_SetError("units field of column has wrong data type!");
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
   }
-  if (!units) {
+  if (!units || SDDS_StringIsBlank(units)) {
     if (!units1)
       return(1);
     if (SDDS_StringIsBlank(units1)) {
