@@ -86,7 +86,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
                 process_rename_request(s, entity_name, N_TYPES);
             else if (type==T_TITLE) {
                 fgets(s, MAX_LINE_LENGTH, fp_mad);
-                compress(s, " ");
+                compressString(s, " ");
                 if (s[i=strlen(s)-1]==' ')
                     s[i] = 0;
                 }    
