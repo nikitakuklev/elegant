@@ -372,7 +372,8 @@ VMATRIX *compute_matrix(
         bend = (BEND*)elem->p_elem;
         bend_flags = determine_bend_flags(elem, bend->edge1_effects, bend->edge2_effects);
         elem->matrix = 
-            bend_matrix(bend->length, bend->angle, bend->e1, bend->e2, bend->k1, bend->k2, bend->tilt, bend->fint, 
+            bend_matrix(bend->length, bend->angle, bend->e1, bend->e2, bend->k1, bend->k2, 
+                        bend->tilt, bend->fint, 
                         bend->hgap*2, bend->fse, bend->etilt,
                         bend->order?bend->order:run->default_order, bend->edge_order, bend_flags,
                         bend->TRANSPORT);

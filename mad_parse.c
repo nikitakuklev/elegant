@@ -237,6 +237,15 @@ void fill_elem(ELEMENT_LIST *eptr, char *s, long type, FILE *fp_input)
             entity_description[type].parameter, 
             entity_description[type].n_params,
             s, eptr, entity_name[type]);
+    if (type==T_RBEN) {
+      BEND *bptr;
+      bptr = (BEND*)(eptr->p_elem);
+      bptr->e1 += bptr->angle/2;
+      bptr->e2 += bptr->angle/2;
+      type = eptr->type = T_SBEN;
+      if (fabs(bptr->angle)>1e-14)
+        bptr->length *= (bptr->angle/2)/sin(bptr->angle/2);
+    }
     if (type==T_PEPPOT) 
         parse_pepper_pot((PEPPOT*)(eptr->p_elem), fp_input, eptr->name);
     else if (type==T_MATR) {
