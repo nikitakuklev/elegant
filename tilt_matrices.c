@@ -159,6 +159,27 @@ void rotate_coordinates(double *coord, double angle)
     coord[3] = -xp*sin_a + yp*cos_a;
     }
 
+void rotateBeamCoordinates(double **part, long np, double angle)
+{
+  double x, xp, y, yp, *coord;
+  double sin_a, cos_a;
+  long i;
+
+  if (!angle)
+    return;
+  sin_a = sin(angle);
+  cos_a = cos(angle);
+  for (i=0; i<np; i++) {
+    coord = part[i];
+    x = coord[0]; xp = coord[1]; y = coord[2]; yp = coord[3];
+    coord[0] =   x*cos_a + y*sin_a;
+    coord[2] =  -x*sin_a + y*cos_a;
+    coord[1] =  xp*cos_a + yp*sin_a;
+    coord[3] = -xp*sin_a + yp*cos_a;
+  }
+}
+
+
 #include "matlib.h"
 
 void setupRotate3Matrix(void **Rv, double roll, double yaw, double pitch)
