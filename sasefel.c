@@ -3,6 +3,9 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.10  2000/05/13 03:09:22  borland
+ * Fixed error in computing beam betax and betay.
+ *
  * Revision 1.9  2000/05/13 02:44:34  borland
  * Added betax, alphax, and enx (plus y) for SASE slices.
  *
@@ -395,13 +398,8 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
   computeTimeCoordinates(time, Po, particle, particles);
 
   /* compute normal values (over entire beam) */
-  if (sasefelOutput->nSlices==0) {
-    percentLevel[0] = 10;
-    percentLevel[1] = 90;
-  } else {
-    percentLevel[0] = 50 - 100*sasefelOutput->sliceFraction/2.0;
-    percentLevel[1] = 50 + 100*sasefelOutput->sliceFraction/2.0;
-  }
+  percentLevel[0] = 10;
+  percentLevel[1] = 90;
   
   /* find center of energy distribution */
   for (i=deltaAve=0; i<particles; i++)
