@@ -47,3 +47,8 @@
     STRING filename = NULL;
     long latex_form = 0;
 #end
+
+#namelist semaphores
+        STRING started = "%s.started";
+        STRING done = "%s.done";
+#end
