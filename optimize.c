@@ -70,6 +70,8 @@ void do_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
     optimization_data->target = target;
     optimization_data->simplexPassRangeFactor = simplex_pass_range_factor;
     optimization_data->simplexDivisor = simplex_divisor;
+    if ((optimization_data->restart_worst_term_factor = restart_worst_term_factor)<=0)
+      bomb("restart_worst_term_factor <= 0", NULL);
     
     /* reset flags for elements that may have been varied previously */
     if (optimization_data->variables.n_variables)
@@ -203,6 +205,9 @@ void add_optimization_term(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
   if (!(optimization_data->term 
         = SDDS_Realloc(optimization_data->term,
                        sizeof(*optimization_data->term)*(optimization_data->terms+1))) ||
+      !(optimization_data->termValue 
+        = SDDS_Realloc(optimization_data->termValue,
+                       sizeof(*optimization_data->termValue)*(optimization_data->terms+1))) ||
       !(optimization_data->termWeight 
         = SDDS_Realloc(optimization_data->termWeight,
                        sizeof(*optimization_data->termWeight)*(optimization_data->terms+1))) ||
@@ -735,6 +740,20 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
         for (i=0; i<variables->n_variables; i++) {
           variables->step[i] = variables->orig_step[i];
         }
+        if (optimization_data->restart_worst_term_factor!=1 && optimization_data->terms>1) {
+          long imax, imin;
+          if (index_min_max(&imin, &imax, optimization_data->termValue, optimization_data->terms))
+            optimization_data->termWeight[imax] *= optimization_data->restart_worst_term_factor;
+          fprintf(stderr, "Adjusted weight for term: %s\n",
+                  optimization_data->term[imax]);
+          if (index_min_max(&imin, &imax, optimization_data->termWeight, optimization_data->terms) &&
+              optimization_data->termWeight[imin]>0) {
+            for (i=0; i<optimization_data->terms; i++)
+              if (i!=imin)
+                optimization_data->termWeight[i] /= optimization_data->termWeight[imin];
+            optimization_data->termWeight[imin] = 1;
+          }
+        }
         fprintf(stdout, "Redoing optimization\n");
         fflush(stdout);
       }
@@ -783,7 +802,6 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
                     rpn(optimization_data->term[i])*optimization_data->termWeight[i]);
             sum += rpn(optimization_data->term[i])*optimization_data->termWeight[i];
           }
-          fprintf(optimization_data->fp_log, "    Error check: %le\n", sum-result);
         }
         fprintf(optimization_data->fp_log, "    A total of %ld function evaluations were made.\n", n_evaluations_made);
         if (constraints->n_constraints) {
@@ -814,7 +832,6 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
                     optimization_data->termWeight[i]*rpn(optimization_data->term[i]));
             sum += optimization_data->termWeight[i]*rpn(optimization_data->term[i]);
           }
-          fprintf(stdout, "    Error check: %le\n", sum-result);
         }
         fflush(stdout);
         fprintf(stdout, "    A total of %ld function evaluations were made.\n", n_evaluations_made);
@@ -984,7 +1001,7 @@ double optimization_function(double *value, long *invalid)
   }
 
   if ((iRec=checkForOptimRecord(value, variables->n_variables, &recordUsedAgain))>=0) {
-    if (recordUsedAgain>5) {
+    if (recordUsedAgain>20) {
       fprintf(stdout, "record used too many times---stopping optimization\n");
       stopOptimization = 1;
       simplexMinAbort(1);
@@ -1259,7 +1276,7 @@ double optimization_function(double *value, long *invalid)
       long i;
       for (i=result=0; i<optimization_data->terms; i++)  {
         rpn_clear();
-        result += optimization_data->termWeight[i]*rpn(optimization_data->term[i]);
+        result += (optimization_data->termValue[i]=optimization_data->termWeight[i]*rpn(optimization_data->term[i]));
       }
     }
     else {
@@ -1282,10 +1299,9 @@ double optimization_function(double *value, long *invalid)
           fprintf(optimization_data->fp_log, "%g*(%20s): %23.15e\n",
                   optimization_data->termWeight[i],
                   optimization_data->term[i],
-                  rpn(optimization_data->term[i])*optimization_data->termWeight[i]);
-          sum += optimization_data->termWeight[i]*rpn(optimization_data->term[i]);
+                  optimization_data->termValue[i]);
+          sum += optimization_data->termValue[i];
         }
-        fprintf(optimization_data->fp_log, "    Error check: %le\n", sum-result);
       }
       fprintf(optimization_data->fp_log, "\n\n");
     }
@@ -1394,7 +1410,6 @@ void optimization_report(double result, double *value, long pass, long n_evals, 
                 rpn(optimization_data->term[i])*optimization_data->termWeight[i]);
         sum += rpn(optimization_data->term[i])*optimization_data->termWeight[i];
       }
-      fprintf(optimization_data->fp_log, "Error check: %le\n", sum-result);
     }
     
     if (constraints->n_constraints) {

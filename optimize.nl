@@ -28,6 +28,7 @@ static char *optimize_method[N_OPTIM_METHODS] = {
     long n_passes = 2;
     long n_evaluations = 500;
     long n_restarts = 0;
+    double restart_worst_term_factor = 1;
     long matrix_order = 1;
     STRING log_file = NULL;
     long verbose = 1;

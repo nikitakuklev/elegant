@@ -336,7 +336,7 @@ typedef struct {
     long balance_terms;
     char *equation;              /* rpn equation for thing to optimize */    
     char **term;                 /* terms that make up the equation, if used */
-    double *termWeight, *usersTermWeight;
+    double *termWeight, *usersTermWeight, *termValue;
     long terms;                  /* number of terms */
     char *UDFname;
     OPTIM_VARIABLES variables;
@@ -345,6 +345,7 @@ typedef struct {
     long update_periodic_twiss_parameters;    /* flag: user must request this */
     long new_data_read;          /* new data has been read for optimization */
     long n_restarts;
+    double restart_worst_term_factor;
     long matrix_order, *TijkMem, *UijklMem;
     double simplexDivisor, simplexPassRangeFactor;
     } OPTIMIZATION_DATA;
