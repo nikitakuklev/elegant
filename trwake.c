@@ -21,20 +21,11 @@ void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
   static double *pz = NULL;
   static long max_np = 0;
   long ib, nb, n_binned, plane;
-  double factor, tmin, tmean, dt;
+  double factor, tmin, tmean, tmax, dt;
 
   log_entry("track_through_wake");
 
   set_up_trwake(wakeData, run, i_pass, np, charge);
-
-  nb = wakeData->n_bins;
-  dt = wakeData->dt;
-
-  if (wakeData->n_bins>max_n_bins) {
-    posItime[0] = trealloc(posItime[0], sizeof(**posItime)*(max_n_bins=wakeData->n_bins));
-    posItime[1] = trealloc(posItime[1], sizeof(**posItime)*(max_n_bins=wakeData->n_bins));
-    Vtime = trealloc(Vtime, sizeof(*Vtime)*(max_n_bins+1));
-  }
 
   if (np>max_np) {
     pbin = trealloc(pbin, sizeof(*pbin)*(max_np=np));
@@ -44,8 +35,25 @@ void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
 
   /* Compute time coordinate of each particle */
   tmean = computeTimeCoordinates(time, Po, part, np);
-  tmin = tmean-dt*wakeData->n_bins/2.0;
+  dt = wakeData->dt;
+  if (wakeData->n_bins) {
+    tmin = tmean-dt*wakeData->n_bins/2.0;
+    nb = wakeData->n_bins;
+  }
+  else {
+    find_min_max(&tmin, &tmax, time, np);
+    nb = (tmax-tmin)/dt+3;
+    tmin -= dt;
+    tmax += dt;
+    fprintf(stderr, "Using %ld bins for trwake\n", nb);
+  }
   
+  if (nb>max_n_bins) {
+    posItime[0] = trealloc(posItime[0], sizeof(**posItime)*(max_n_bins=nb));
+    posItime[1] = trealloc(posItime[1], sizeof(**posItime)*(max_n_bins=nb));
+    Vtime = trealloc(Vtime, sizeof(*Vtime)*(max_n_bins+1));
+  }
+
   n_binned = binTransverseTimeDistribution(posItime, pz, pbin, tmin, dt, nb, time, part, Po, np,
                                            wakeData->dx, wakeData->dy);
   if (n_binned!=np)
@@ -67,12 +75,12 @@ void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
        arguments are later times.
        */
     Vtime[nb] = 0;
-    convolveArrays(Vtime, wakeData->n_bins, 
-                   posItime[plane], wakeData->n_bins,
+    convolveArrays(Vtime, nb, 
+                   posItime[plane], nb,
                    wakeData->W[plane], wakeData->wakePoints);
 
     factor = wakeData->macroParticleCharge*wakeData->factor;
-    for (ib=0; ib<wakeData->n_bins; ib++)
+    for (ib=0; ib<nb; ib++)
       Vtime[ib] *= factor;
 
     /* change particle transverse momenta to reflect voltage in relevant bin */
@@ -127,8 +135,8 @@ void set_up_trwake(TRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
     return;
   wakeData->initialized = 1;
   
-  if (wakeData->n_bins<2)
-    bomb("n_bins must be >=2 for TRWAKE element", NULL);
+  if (wakeData->n_bins<2 && wakeData->n_bins!=0)
+    bomb("n_bins must be >=2 or 0 (autoscale) for TRWAKE element", NULL);
 
   if (!wakeData->inputFile || !wakeData->tColumn || 
       (!wakeData->WxColumn && !wakeData->WyColumn) ||

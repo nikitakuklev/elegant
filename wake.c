@@ -24,18 +24,11 @@ void track_through_wake(double **part, long np, WAKE *wakeData, double *PoInput,
   static double *time = NULL;            /* array to record arrival time of each particle */
   static long max_np = 0;
   long ib, nb, n_binned;
-  double factor, tmin, tmean, dt, Po;
+  double factor, tmin, tmax, tmean, dt, Po;
 
   set_up_wake(wakeData, run, i_pass, np, charge);
-  nb = wakeData->n_bins;
-  dt = wakeData->dt;
   Po = *PoInput;
   
-  if (nb>max_n_bins) {
-    Itime = trealloc(Itime, 2*sizeof(*Itime)*(max_n_bins=nb));
-    Vtime = trealloc(Vtime, 2*sizeof(*Vtime)*(max_n_bins+1));
-  }
-
   if (np>max_np) {
     pbin = trealloc(pbin, sizeof(*pbin)*(max_np=np));
     time = trealloc(time, sizeof(*time)*max_np);
@@ -43,13 +36,29 @@ void track_through_wake(double **part, long np, WAKE *wakeData, double *PoInput,
 
   /* Compute time coordinate of each particle */
   tmean = computeTimeCoordinates(time, Po, part, np);
-  tmin = tmean-dt*nb/2.0;
+  dt = wakeData->dt;
+  if (wakeData->n_bins) {
+    nb = wakeData->n_bins;
+    tmin = tmean-dt*nb/2.0;
+  }
+  else {
+    find_min_max(&tmin, &tmax, time, np);
+    nb = (tmax-tmin)/dt+3;
+    tmin -= dt;
+    tmax += dt;
+  }
   
+  if (nb>max_n_bins) {
+    Itime = trealloc(Itime, 2*sizeof(*Itime)*(max_n_bins=nb));
+    Vtime = trealloc(Vtime, 2*sizeof(*Vtime)*(max_n_bins+1));
+  }
+
   n_binned = binTimeDistribution(Itime, pbin, tmin, dt, nb, time, part, Po, np);
-  if (n_binned!=np)
+  if (n_binned!=np) {
     fprintf(stdout, "warning: only %ld of %ld particles where binned (WAKE)\n", n_binned, np);
     fflush(stdout);
-
+  }
+  
   if (wakeData->smoothing)
     SavitzyGolaySmooth(Itime, nb, wakeData->SGOrder, wakeData->SGHalfWidth, wakeData->SGHalfWidth, 0);
   
@@ -120,8 +129,8 @@ void set_up_wake(WAKE *wakeData, RUN *run, long pass, long particles, CHARGE *ch
     return;
   wakeData->initialized = 1;
   
-  if (wakeData->n_bins<2)
-    bomb("n_bins must be >=2 for WAKE element", NULL);
+  if (wakeData->n_bins<2 && wakeData->n_bins!=0)
+    bomb("n_bins must be >=2 or else 0 (autoscale) for WAKE element", NULL);
 
   if (!wakeData->inputFile || !wakeData->tColumn || !wakeData->WColumn ||
       !strlen(wakeData->inputFile) || !strlen(wakeData->tColumn) || !strlen(wakeData->WColumn))
