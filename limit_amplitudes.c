@@ -11,6 +11,8 @@
 #include "track.h"
 #include "mdb.h"
 
+long evaluateLostWithOpenSides(long code, double dx, double dy, double xsize, double ysize);
+
 /* routine: rectangular_collimator()
  * purpose: eliminate particles that hit the walls of a non-zero length
  *          rectangular collimator
@@ -24,107 +26,114 @@
 #endif
 
 long rectangular_collimator(
-    double **initial, RCOL *rcol, long np, double **accepted, double z,
-    double Po
-    )
+                            double **initial, RCOL *rcol, long np, double **accepted, double z,
+                            double Po
+                            )
 {
-    double length, *ini;
-    long ip, itop, is_out;
-    double xsize, ysize;
-    double x_center, y_center;
-    double x1, y1, zx, zy;
+  double length, *ini;
+  long ip, itop, is_out, lost, openCode;
+  double xsize, ysize;
+  double x_center, y_center;
+  double x1, y1, zx, zy, dx, dy;
 
-    log_entry("rectangular_collimator");
+  log_entry("rectangular_collimator");
 
-    xsize  = rcol->x_max;
-    ysize  = rcol->y_max;
-    x_center = rcol->dx;
-    y_center = rcol->dy;
+  xsize  = rcol->x_max;
+  ysize  = rcol->y_max;
+  x_center = rcol->dx;
+  y_center = rcol->dy;
 
-    if (!(xsize || ysize)) {
-        log_exit("rectangular_collimator");
-        return(np);
-        }
-
-    itop = np-1;
-    for (ip=0; ip<np; ip++) {
-        ini = initial[ip];
-        if ((xsize && fabs(ini[0]-x_center) > xsize) ||
-            (ysize && fabs(ini[2]-y_center) > ysize) ||
-            isinf(ini[0]) || isinf(ini[2]) ||
-            isnan(ini[0]) || isnan(ini[2]) ) {
-            SWAP_PTR(initial[ip], initial[itop]);
-            if (accepted)
-                SWAP_PTR(accepted[ip], accepted[itop]);
-            initial[itop][4] = z; /* record position of particle loss */
-            initial[itop][5] = Po*(1+initial[itop][5]);
-            --itop;
-            --ip;
-            --np;
-            }
-        }
-    if (np==0 || (length=rcol->length)<=0) {
-        log_exit("rectangular_collimator");
-        return(np);
-        }
-
-    itop = np-1;
-    for (ip=0; ip<np; ip++) {
-        ini = initial[ip];
-        x1 = ini[0] + length*ini[1];
-        y1 = ini[2] + length*ini[3];
-        is_out = 0;
-        if (xsize && fabs(x1-x_center)>xsize)
-            is_out = 1;
-        if (ysize && fabs(y1-y_center)>ysize)
-            is_out += 2;
-        if (isinf(x1) || isinf(y1) || isnan(x1) || isnan(y1) )
-            is_out += 4;
-        if (is_out&4) {
-            ini[4] = z+length;
-            ini[0] = x1;
-            ini[2] = y1;
-            ini[5] = Po*(1+ini[5]);
-            SWAP_PTR(initial[ip], initial[itop]);
-            if (accepted)
-                SWAP_PTR(accepted[ip], accepted[itop]);
-            --itop;
-            --ip;
-            --np;
-            }
-        else if (is_out) {
-            zx = zy = DBL_MAX;
-            if (is_out&1 && ini[1]!=0)
-                zx = (SIGN(ini[1])*xsize-(ini[0]-x_center))/ini[1];
-            if (is_out&2 && ini[3]!=0)
-                zx = (SIGN(ini[3])*ysize-(ini[2]-y_center))/ini[3];
-            if (zx<zy) {
-                ini[0] += ini[1]*zx;
-                ini[2] += ini[3]*zx;
-                ini[4] = z+zx; 
-                }
-            else {
-                ini[0] += ini[1]*zy;
-                ini[2] += ini[3]*zy;
-                ini[4] = z+zy;
-                }
-            ini[5] = Po*(1+ini[5]);
-            SWAP_PTR(initial[ip], initial[itop]);
-            if (accepted)
-                SWAP_PTR(accepted[ip], accepted[itop]);
-            --itop;
-            --ip;
-            --np;
-            }
-        else {
-            ini[4] += length*sqrt(1+sqr(ini[1])+sqr(ini[3]));
-            ini[0] = x1;
-            ini[2] = y1;
-            }
-        }
+  if (!(xsize || ysize)) {
     log_exit("rectangular_collimator");
     return(np);
+  }
+  openCode = determineOpenSideCode(rcol->openSide);
+  itop = np-1;
+  for (ip=0; ip<np; ip++) {
+    ini = initial[ip];
+    dx = ini[0] - x_center;
+    dy = ini[2] - y_center;
+    lost = 0;
+    if ((xsize && fabs(dx) > xsize) ||
+        (ysize && fabs(dy) > ysize)) {
+      lost = openCode ? evaluateLostWithOpenSides(openCode, dx, dy, xsize, ysize) : 1;
+    } else if (isinf(ini[0]) || isinf(ini[2]) ||
+               isnan(ini[0]) || isnan(ini[2]) )
+      lost = 1;
+    if (lost) {
+      SWAP_PTR(initial[ip], initial[itop]);
+     if (accepted)
+        SWAP_PTR(accepted[ip], accepted[itop]);
+      initial[itop][4] = z; /* record position of particle loss */
+      initial[itop][5] = Po*(1+initial[itop][5]);
+      --itop;
+      --ip;
+      --np;
     }
+  }
+  if (np==0 || (length=rcol->length)<=0) {
+    log_exit("rectangular_collimator");
+    return(np);
+  }
+
+  itop = np-1;
+  for (ip=0; ip<np; ip++) {
+    ini = initial[ip];
+    x1 = ini[0] + length*ini[1];
+    y1 = ini[2] + length*ini[3];
+    dx = x1 - x_center;
+    dy = y1 - y_center;
+    is_out = 0;
+    if (xsize && fabs(dx)>xsize)
+      is_out += 1*(openCode?evaluateLostWithOpenSides(openCode, dx, 0, xsize, ysize):1);
+    if (ysize && fabs(dy)>ysize)
+      is_out += 2*(openCode?evaluateLostWithOpenSides(openCode, 0, dy, xsize, ysize):1);
+    if (isinf(x1) || isinf(y1) || isnan(x1) || isnan(y1) )
+      is_out += 4;
+    if (is_out&4) {
+      ini[4] = z+length;
+      ini[0] = x1;
+      ini[2] = y1;
+      ini[5] = Po*(1+ini[5]);
+      SWAP_PTR(initial[ip], initial[itop]);
+      if (accepted)
+        SWAP_PTR(accepted[ip], accepted[itop]);
+      --itop;
+      --ip;
+      --np;
+    } else if (is_out) {
+      zx = zy = DBL_MAX;
+      if (is_out&1 && ini[1]!=0)
+        zx = (SIGN(ini[1])*xsize-(ini[0]-x_center))/ini[1];
+      if (is_out&2 && ini[3]!=0)
+        zy = (SIGN(ini[3])*ysize-(ini[2]-y_center))/ini[3];
+      if (zx<zy) {
+        ini[0] += ini[1]*zx;
+        ini[2] += ini[3]*zx;
+        ini[4] = z+zx; 
+      }
+      else {
+        ini[0] += ini[1]*zy;
+        ini[2] += ini[3]*zy;
+        ini[4] = z+zy;
+      }
+      ini[5] = Po*(1+ini[5]);
+      SWAP_PTR(initial[ip], initial[itop]);
+      if (accepted)
+        SWAP_PTR(accepted[ip], accepted[itop]);
+      --itop;
+      --ip;
+      --np;
+    }
+    else {
+      ini[4] += length*sqrt(1+sqr(ini[1])+sqr(ini[3]));
+      ini[0] = x1;
+      ini[2] = y1;
+    }
+  }
+  log_exit("rectangular_collimator");
+  return(np);
+}
 
 
 /* routine: limit_amplitudes()
@@ -135,7 +144,7 @@ long rectangular_collimator(
 
 long limit_amplitudes(
     double **coord, double xmax, double ymax, long np, double **accepted,
-    double z, double Po, long extrapolate_z)
+    double z, double Po, long extrapolate_z, long openCode)
 {
     long ip, itop, is_out;
     double *part;
@@ -157,6 +166,8 @@ long limit_amplitudes(
             is_out += 1;
         if (ymax && fabs(part[2])>ymax)
             is_out += 2;
+        if (openCode)
+          is_out *= evaluateLostWithOpenSides(openCode, part[0], part[2], xmax, ymax);
         if (isinf(part[0]) || isinf(part[2]) || isnan(part[0]) || isnan(part[2]) )
             is_out += 4;
         dz = 0;
@@ -235,70 +246,81 @@ long removeInvalidParticles(
  */
 
 long elliptical_collimator(
-    double **initial, ECOL *ecol, long np, double **accepted, double z,
-    double Po)
+                           double **initial, ECOL *ecol, long np, double **accepted, double z,
+                           double Po)
 {
-    double length, *ini;
-    long ip, itop;
-    double a2, b2;
-    double dx, dy;
+  double length, *ini;
+  long ip, itop, lost, openCode;
+  double a2, b2;
+  double dx, dy, xo, yo, xsize, ysize;
 
-    log_entry("elliptical_collimator");
+  xsize = ecol->x_max;
+  ysize = ecol->y_max;
+  a2 = sqr(ecol->x_max);
+  b2 = sqr(ecol->y_max);
+  dx = ecol->dx;
+  dy = ecol->dy;
 
-    a2 = sqr(ecol->x_max);
-    b2 = sqr(ecol->y_max);
-    dx = ecol->dx;
-    dy = ecol->dy;
-
-    if (!a2 || !b2) {
-        log_exit("elliptical_collimator");
-        return(np);
-        }
-
-    itop = np-1;
-    for (ip=0; ip<np; ip++) {
-        ini = initial[ip];
-        if ((sqr(ini[0]-dx)/a2 + sqr(ini[2]-dy)/b2)>1 ||
-            isinf(ini[0]) || isinf(ini[2]) ||
-            isnan(ini[0]) || isnan(ini[2]) ) {
-            SWAP_PTR(initial[ip], initial[itop]);
-            initial[itop][4] = z;
-            initial[itop][5] = sqrt(sqr(Po*(1+initial[itop][5]))+1);
-            if (accepted)
-                SWAP_PTR(accepted[ip], accepted[itop]);
-            --itop;
-            --ip;
-            np--;
-            }
-        }
-    if (np==0 || (length=ecol->length)<=0) {
-        log_exit("elliptical_collimator");
-        return(np);
-        }
-    z += length;
-
-    itop = np-1;
-    for (ip=0; ip<np; ip++) {
-        ini = initial[ip];
-        ini[0] += ini[1]*length;
-        ini[2] += ini[3]*length;
-        if ((sqr(ini[0]-dx)/a2 + sqr(ini[2]-dy)/b2)>1 ||
-            isnan(ini[0]-dx) || isnan(ini[2]-dy)) {
-            SWAP_PTR(initial[ip], initial[itop]);
-            initial[itop][4] = z;
-            initial[itop][5] = sqrt(sqr(Po*(1+initial[itop][5]))+1);
-            if (accepted)
-                SWAP_PTR(accepted[ip], accepted[itop]);
-            --itop;
-            --ip;
-            np--;
-            }
-        else
-            ini[4] += length*sqrt(1+sqr(ini[1])+sqr(ini[3]));
-        }
-    log_exit("elliptical_collimator");
+  if (!a2 || !b2)
     return(np);
+  openCode = determineOpenSideCode(ecol->openSide);
+
+  itop = np-1;
+  for (ip=0; ip<np; ip++) {
+    ini = initial[ip];
+    lost = 0;
+    xo = ini[0] - dx;
+    yo = ini[2] - dy;
+    if ((sqr(xo)/a2 + sqr(yo)/b2)>1)
+      lost = openCode ? evaluateLostWithOpenSides(openCode, xo, yo, xsize, ysize) : 1;
+    else if (isinf(ini[0]) || isinf(ini[2]) ||
+             isnan(ini[0]) || isnan(ini[2]) )
+      lost = 1;
+    if (lost) {
+      SWAP_PTR(initial[ip], initial[itop]);
+      initial[itop][4] = z;
+      initial[itop][5] = sqrt(sqr(Po*(1+initial[itop][5]))+1);
+      if (accepted)
+        SWAP_PTR(accepted[ip], accepted[itop]);
+      --itop;
+      --ip;
+      np--;
     }
+  }
+
+  if (np==0 || (length=ecol->length)<=0)
+    return(np);
+  
+  itop = np-1;
+  for (ip=0; ip<np; ip++) {
+    ini = initial[ip];
+    lost = 0;
+    ini[0] += length*ini[1];
+    ini[2] += length*ini[2];
+    xo = ini[0]/xsize;
+    yo = ini[2]/ysize;
+    if ((sqr(xo) + sqr(yo))>1)
+      lost = openCode ? evaluateLostWithOpenSides(openCode, xo, yo, 1, 1) : 1;
+    else if (isinf(ini[0]) || isinf(ini[2]) ||
+             isnan(ini[0]) || isnan(ini[2]) )
+      lost = 1;
+    if (lost) {
+      SWAP_PTR(initial[ip], initial[itop]);
+      initial[itop][4] = z + length;
+      initial[itop][5] = sqrt(sqr(Po*(1+initial[itop][5]))+1);
+      if (accepted)
+        SWAP_PTR(accepted[ip], accepted[itop]);
+      --itop;
+      --ip;
+      np--;
+    }
+    else 
+      ini[4] += length*sqrt(1+sqr(ini[1])+sqr(ini[3]));
+  }
+
+  return(np);
+}
+
 
 
 /* routine: elimit_amplitudes()
@@ -316,10 +338,11 @@ long elimit_amplitudes(
     double **accepted,
     double z,
     double Po,
-    long extrapolate_z
+    long extrapolate_z,
+    long openCode                       
     )
 {
-    long ip, itop;
+    long ip, itop, lost;
     double *part;
     double a2, b2, c1, c2, c0, dz, det;
 
@@ -347,33 +370,40 @@ long elimit_amplitudes(
             np--;
             continue;
             }
-        if ((sqr(part[0])/a2 + sqr(part[2])/b2) > 1) {
-            c0 = sqr(part[0])/a2 + sqr(part[2])/b2 - 1;
-            c1 = 2*(part[0]*part[1]/a2 + part[2]*part[3]/b2);
-            c2 = sqr(part[1])/a2 + sqr(part[3])/b2;
-            det = sqr(c1)-4*c0*c2;
-            dz = 0;
-            if (z>0 && extrapolate_z && c2 && det>=0) {
-                if ((dz = (-c1+sqrt(det))/(2*c2))>0)
-                    dz = (-c1-sqrt(det))/(2*c2);
-                if ((z+dz)<0) 
-                    dz = -z;
-                part[0] += dz*part[1];
-                part[2] += dz*part[3];
-                }
-            SWAP_PTR(coord[ip], coord[itop]);
-            coord[itop][4] = z+dz;
-            coord[itop][5] = sqrt(sqr(Po*(1+coord[itop][5]))+1);
-            if (accepted)
-                SWAP_PTR(accepted[ip], accepted[itop]);
-            --itop;
-            --ip;
-            np--;
-            }
+        lost = 0;
+        if ((sqr(part[0])/a2 + sqr(part[2])/b2) > 1)
+          lost = 1;
+        else
+          continue;
+        if (openCode)
+          lost *= evaluateLostWithOpenSides(openCode, part[0], part[2], xmax, ymax);
+        if (lost) {
+          c0 = sqr(part[0])/a2 + sqr(part[2])/b2 - 1;
+          c1 = 2*(part[0]*part[1]/a2 + part[2]*part[3]/b2);
+          c2 = sqr(part[1])/a2 + sqr(part[3])/b2;
+          det = sqr(c1)-4*c0*c2;
+          dz = 0;
+          if (z>0 && extrapolate_z && c2 && det>=0) {
+            if ((dz = (-c1+sqrt(det))/(2*c2))>0)
+              dz = (-c1-sqrt(det))/(2*c2);
+            if ((z+dz)<0) 
+              dz = -z;
+            part[0] += dz*part[1];
+            part[2] += dz*part[3];
+          }
+          SWAP_PTR(coord[ip], coord[itop]);
+          coord[itop][4] = z+dz;
+          coord[itop][5] = sqrt(sqr(Po*(1+coord[itop][5]))+1);
+          if (accepted)
+            SWAP_PTR(accepted[ip], accepted[itop]);
+          --itop;
+          --ip;
+          np--;
         }
+      }
     log_exit("elimit_amplitudes");
     return(np);
-    }
+  }
 
 #define SQRT_3 1.7320508075688772
             
@@ -773,4 +803,61 @@ long remove_outlier_particles(
   return(np);
 }
 
+
+long evaluateLostWithOpenSides(long code, double dx, double dy, double xsize, double ysize)
+{
+  long lost = 1;
+  switch (code) {
+  case OPEN_PLUS_X:
+    if (dx>0 && fabs(dy)<ysize)
+      lost = 0;
+    break;
+  case OPEN_MINUS_X:
+    if (dx<0 && fabs(dy)<ysize)
+      lost = 0;
+    break;
+  case OPEN_PLUS_Y:
+    if (dy>0 && fabs(dx)<xsize)
+      lost = 0;
+    break;
+          case OPEN_MINUS_Y:
+    if (dy<0 && fabs(dx)<xsize)
+      lost = 0;
+    break;
+  default:
+    break;
+  }
+  return lost;
+}
+
+long determineOpenSideCode(char *openSide)
+{
+  TRACKING_CONTEXT context;
+  if (!openSide)
+    return 0;
+  if (strlen(openSide)==2 &&
+      (openSide[0]=='+' || openSide[0]=='-')) {
+    switch (openSide[1]) {
+    case 'x':
+    case 'X':
+    case 'h':
+    case 'H':
+      return openSide[0]=='+' ? OPEN_PLUS_X : OPEN_MINUS_X;
+      break;
+    case 'y':
+    case 'Y':
+    case 'v':
+    case 'V':
+      return openSide[0]=='+' ? OPEN_PLUS_Y : OPEN_MINUS_Y;
+      break;
+    default:
+      break;
+    }
+  }
+  getTrackingContext(&context);
+  fprintf(stderr, "Error for %s: open_side=%s is not valid\n",
+          context.elementName, openSide);
+  exit(1);
+  return 0;
+}
 

@@ -75,7 +75,7 @@ long do_tracking(
   MAXAMP *maxamp;
   MALIGN *malign;
   ELEMENT_LIST *eptr, *eptrPred, *eptrCLMatrix=NULL;
-  long n_left, show_dE;
+  long n_left, show_dE, maxampOpenCode;
   double dgamma, dP[3], z, z_recirc, last_z;
   long i, j, i_traj=0, i_sums, n_to_track, i_pass, isConcat;
   long i_sums_recirc, saveISR=0;
@@ -246,7 +246,8 @@ long do_tracking(
     log_exit("do_tracking.2.1");
     log_entry("do_tracking.2.2");
     if (check_nan) {
-      n_left = n_to_track = limit_amplitudes(coord, DBL_MAX, DBL_MAX, n_to_track, accepted, z, *P_central, 0);
+      n_left = n_to_track = limit_amplitudes(coord, DBL_MAX, DBL_MAX, n_to_track, accepted, z, *P_central, 0,
+                                             0);
     }
     if (!(flags&SILENT_RUNNING) && !is_batch && n_passes!=1 && !(flags&TEST_PARTICLES)
         && !(run->tracking_updates==0)) {
@@ -635,6 +636,7 @@ long do_tracking(
             x_max = maxamp->x_max;
             y_max = maxamp->y_max;
             elliptical = maxamp->elliptical;
+            maxampOpenCode = determineOpenSideCode(maxamp->openSide);
             break;
           case T_TRCOUNT:
             *n_original = n_left;
@@ -868,10 +870,12 @@ long do_tracking(
         if (!(flags&TEST_PARTICLES && !(flags&TEST_PARTICLE_LOSSES)) && (x_max || y_max)) {
           if (!elliptical) 
             n_left = limit_amplitudes(coord, x_max, y_max, n_left, accepted, z, *P_central, 
-                                      eptr->type==T_DRIF || eptr->type==T_STRAY);
+                                      eptr->type==T_DRIF || eptr->type==T_STRAY,
+                                      maxampOpenCode);
           else
             n_left = elimit_amplitudes(coord, x_max, y_max, n_left, accepted, z, *P_central, 
-                                       eptr->type==T_DRIF || eptr->type==T_STRAY);
+                                       eptr->type==T_DRIF || eptr->type==T_STRAY,
+                                       maxampOpenCode);
         }
         if (run->print_statistics && !(flags&TEST_PARTICLES)) {
           report_stats(stdout, ": ");

@@ -587,8 +587,8 @@ extern char *entity_text[N_TYPES];
 #define N_HMON_PARAMS 8
 #define N_VMON_PARAMS 8
 #define N_MONI_PARAMS 10
-#define N_RCOL_PARAMS 5
-#define N_ECOL_PARAMS 5
+#define N_RCOL_PARAMS 6
+#define N_ECOL_PARAMS 6
 #define N_MARK_PARAMS 1
 #define N_MATR_PARAMS 3
 #define N_ALPH_PARAMS 13
@@ -603,7 +603,7 @@ extern char *entity_text[N_TYPES];
 #define N_TWLA_PARAMS 19
 #define N_PEPPOT_PARAMS 6
 #define N_ENERGY_PARAMS 4
-#define N_MAXAMP_PARAMS 3
+#define N_MAXAMP_PARAMS 4
 #define N_ROTATE_PARAMS 1
 #define N_TRCOUNT_PARAMS 1
 #define N_RECIRC_PARAMS 1
@@ -873,9 +873,16 @@ typedef struct {
 
 /* names and storage structure for rectangular collimator physical parameters */
 extern PARAMETER rcol_param[N_RCOL_PARAMS] ;
-   
+
+/* used by RCOL, ECOL, and MAXAMP */
+#define OPEN_PLUS_X 1
+#define OPEN_PLUS_Y 2
+#define OPEN_MINUS_X 3
+#define OPEN_MINUS_Y 4
+
 typedef struct {
     double length, x_max, y_max, dx, dy;
+    char *openSide;
     } RCOL;
 
 /* names and storage structure for elliptical collimator physical parameters */
@@ -883,6 +890,7 @@ extern PARAMETER ecol_param[N_ECOL_PARAMS] ;
    
 typedef struct {
     double length, x_max, y_max, dx, dy;
+    char *openSide;
     } ECOL;
 
 /* storage structure for beam cleaner */
@@ -1189,6 +1197,7 @@ extern PARAMETER maxamp_param[N_MAXAMP_PARAMS];
 typedef struct {
     double x_max, y_max;
     long elliptical;
+    char *openSide;
     } MAXAMP;
 
 /* storage structure for beam rotation */
@@ -2331,10 +2340,10 @@ extern void delete_matrix_data(LINE_LIST *beamline);
 /* prototypes for limit_amplitudes4.c: */
 extern long rectangular_collimator(double **initial, RCOL *rcol, long np, double **accepted, double z, double P_central);
 extern long limit_amplitudes(double **coord, double xmax, double ymax, long np, double **accepted, double z, double P_central,
-                                   long extrapolate_z);
+                                   long extrapolate_z, long openCode);
 extern long elliptical_collimator(double **initial, ECOL *ecol, long np, double **accepted, double z, double P_central);
 extern long elimit_amplitudes(double **coord, double xmax, double ymax, long np, double **accepted, double z,
-    double P_central, long extrapolate_z);
+    double P_central, long extrapolate_z, long openCode);
 extern long remove_outlier_particles(double **initial, CLEAN *clean, long np, 
 				     double **accepted, double z, double Po);  
 extern long beam_scraper(double **initial, SCRAPER *scraper, long np, double **accepted, double z,
@@ -2343,6 +2352,7 @@ extern long track_through_pfilter(double **initial, PFILTER *pfilter, long np,
                                   double **accepted, double z, double Po);
 long removeInvalidParticles(double **coord, long np, double **accepted,
                             double z, double Po);
+extern long determineOpenSideCode(char *openSide);
  
 /* prototypes for kick_sbend.c: */
 long track_through_kick_sbend(double **part, long n_part, KSBEND *ksbend, double p_error, double Po,

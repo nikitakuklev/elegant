@@ -874,7 +874,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 #define SET_BUNCHED_BEAM 6
 #define SET_SDDS_BEAM   33
 
-#define N_TWISS_QUANS 48
+#define N_TWISS_QUANS 52
 static char *twiss_name[N_TWISS_QUANS] = {
     "betax", "alphax", "nux", "etax", "etapx", 
     "betay", "alphay", "nuy", "etay", "etapy", 
@@ -893,6 +893,7 @@ static char *twiss_name[N_TWISS_QUANS] = {
     "etay2" , "etay3", 
     "nuxChromLower", "nuxChromUpper", 
     "nuyChromLower", "nuyChromUpper", 
+    "dbetax/dp", "dbetay/dp", "dalphax/dp", "dalphay/dp",
     };
 static long twiss_mem[N_TWISS_QUANS] = {
   -1, -1, -1, -1, -1,  
@@ -912,6 +913,7 @@ static long twiss_mem[N_TWISS_QUANS] = {
   -1, -1,  
   -1, -1,  
   -1, -1,  
+  -1, -1, -1, -1,
     };
 
 static char *radint_name[13] = {
@@ -1172,6 +1174,11 @@ double optimization_function(double *value, long *invalid)
     rpn_store(beamline->tuneChromUpper[0], twiss_mem[45]);
     rpn_store(beamline->tuneChromLower[1], twiss_mem[46]);
     rpn_store(beamline->tuneChromUpper[1], twiss_mem[47]);
+    /* derivative of beta functions with momentum offset */
+    rpn_store(beamline->dbeta_dPoP[0], twiss_mem[48]);
+    rpn_store(beamline->dbeta_dPoP[1], twiss_mem[49]);
+    rpn_store(beamline->dalpha_dPoP[0], twiss_mem[50]);
+    rpn_store(beamline->dalpha_dPoP[1], twiss_mem[51]);
 #if DEBUG
     fprintf(stdout, "Twiss parameters done.\n");
     fflush(stdout);
