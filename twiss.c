@@ -16,7 +16,7 @@ double find_acceptance(ELEMENT_LIST *elem, long plane, RUN *run, char **name, do
 void modify_rfca_matrices(ELEMENT_LIST *eptr, long order);
 void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, ELEMENT_LIST *elem, 
                            double beta0, double alpha0, double gamma0,
-                           double eta0, double etap0);
+                           double eta0, double etap0, double *coord);
 static long twissConcatOrder = 3;
 
 VMATRIX *compute_periodic_twiss(
@@ -154,7 +154,7 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, RADIATION_INTEGRALS
                                 )
 {
   double beta[2], alpha[2], phi[2], eta[2], etap[2], gamma[2];
-  double *func, *path, detR[2];
+  double *func, path[6], path0[6], detR[2];
   double **R, C[2], S[2], Cp[2], Sp[2], D[2], Dp[2], sin_dphi, cos_dphi, dphi;
   double centroid;
   long n_mat_computed, i, j, plane, otherPlane, hasMatrix;
@@ -178,7 +178,6 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, RADIATION_INTEGRALS
     etap[plane]  = *(&twiss0->etapx+plane*TWISS_Y_OFFSET);
   }
 
-  path = tmalloc(sizeof(*path)*6);
   M1 = tmalloc(sizeof(*M1));
   M2 = tmalloc(sizeof(*M2));
   initialize_matrices(M1, 1);
@@ -214,7 +213,7 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, RADIATION_INTEGRALS
       hasMatrix = 1;
       /* use matrix concatenation to include effect of beam path */
       for (i=0; i<6; i++) 
-        M1->C[i] = path[i];
+        path0[i] = M1->C[i] = path[i];
       concat_matrices(M2, elem->matrix, M1);
       R = M2->R;
       /* record new centroids for beam path */
@@ -247,7 +246,7 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, RADIATION_INTEGRALS
     }
     if (radIntegrals)
       incrementRadIntegrals(radIntegrals, elem, beta[0], alpha[0], gamma[0], 
-                            eta[0], etap[0]);
+                            eta[0], etap[0], path0);
 
     if (!elem->twiss)
       elem->twiss = tmalloc(sizeof(*elem->twiss));
@@ -333,12 +332,8 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, RADIATION_INTEGRALS
   m_free(&dispM);
   m_free(&dispOld);
   
-  if (traj) {
-    tfree(path);
-    free_matrices(M1); tfree(M1);
-    free_matrices(M2); tfree(M2);
-  }
-  
+  free_matrices(M1); tfree(M1);
+  free_matrices(M2); tfree(M2);
 }
 
 
@@ -1004,7 +999,6 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
 void update_twiss_parameters(RUN *run, LINE_LIST *beamline, unsigned long *unstable)
 {
   unsigned long unstable0;
-  log_entry("update_twiss_parameters");
   compute_twiss_parameters(run, beamline, 
                            beamline->closed_orbit?beamline->closed_orbit->centroid:NULL, matched, 
                            radiation_integrals,
@@ -1012,7 +1006,7 @@ void update_twiss_parameters(RUN *run, LINE_LIST *beamline, unsigned long *unsta
                            &unstable0);
   if (unstable)
     *unstable = unstable0;
-  log_exit("update_twiss_parameters");
+  fprintf(stderr, "Twiss parameters updated.\n");
 }
 
 void copy_doubles(double *target, double *source, long n)
@@ -1274,21 +1268,78 @@ void compute_twiss_statistics(LINE_LIST *beamline, TWISS *twiss_ave, TWISS *twis
 
 void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, ELEMENT_LIST *elem, 
                            double beta0, double alpha0, double gamma0,
-                           double eta0, double etap0)
+                           double eta0, double etap0, double *coord)
 {
   /* compute contribution to radiation integrals */
   long isBend;
   BEND *bptr;
   KSBEND *kbptr;
   CSBEND *cbptr;
+  QUAD *qptr;
+  KQUAD *qptrk;
+  SEXT *sptr;
+  KSEXT *sptrk;
   double length, angle, E1, E2, K1;
   double k2, rho, k, kl;
   double I1, I2, I3, I4, I5;
   double alpha1, gamma1, etap1, eta2, sin_kl, cos_kl;
-  double etaAve, etaK1_rhoAve, HAve;
+  double etaAve, etaK1_rhoAve, HAve, h, K2;
   
   isBend = 1;
   switch (elem->type) {
+  case T_QUAD:
+  case T_KQUAD:
+    if (!coord && !coord[0]) {
+      isBend = 0;
+      break;
+    }
+    switch (elem->type) {
+    case T_QUAD:
+      qptr = (QUAD*)(elem->p_elem);
+      length = qptr->length;
+      K1 = qptr->k1;
+      break;
+    case T_KQUAD:
+      qptrk = (KQUAD*)(elem->p_elem);
+      length = qptrk->length;
+      K1 = qptrk->k1;
+      break;
+    }
+    if (!(h = K1*coord[0])) {
+      isBend = 0;
+      break;
+    }
+    angle = length*h;
+    E1 = E2 = 0;
+    isBend = 1;
+    break;
+  case T_SEXT:
+  case T_KSEXT:
+    if (!coord && !coord[0]) {
+      isBend = 0;
+      break;
+    }
+    switch (elem->type) {
+    case T_SEXT:
+      sptr = (SEXT*)(elem->p_elem);
+      length = sptr->length;
+      K2 = sptr->k2;
+      break;
+    case T_KSEXT:
+      sptrk = (KSEXT*)(elem->p_elem);
+      length = sptrk->length;
+      K2 = sptr->k2;
+      break;
+    }
+    if (!(h = K2*sqr(coord[0])/2)) {
+      isBend = 0;
+      break;
+    }
+    K1 = K2*coord[0];
+    angle = length*h;
+    E1 = E2 = 0;
+    isBend = 1;
+    break;
   case T_SBEN:
   case T_RBEN:
     bptr = (BEND*)(elem->p_elem);
