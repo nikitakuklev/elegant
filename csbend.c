@@ -1366,60 +1366,62 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
       slippageLength13 = pow(slippageLength, 1./3.);
       diSlippage = slippageLength/dct;
       diSlippage4 = 4*slippageLength/dct;
-      for (iBin=0; iBin<nBins; iBin++) {
-        double term1, term2;
-        long count;
-        T1[iBin] = T2[iBin] = 0;
-        term1 = term2 = 0;
-        if (CSRConstant) {
-          if (csbend->steadyState) {
-            if (!csbend->trapazoidIntegration) {
-              for (iBinBehind=iBin+1; iBinBehind<nBins; iBinBehind++)
-                T1[iBin] += ctHistDeriv[iBinBehind]/denom[iBinBehind-iBin];
-            }
-            else {
-              if ((iBinBehind=iBin+1)<nBins)
-                term1 = ctHistDeriv[iBinBehind]/denom[iBinBehind-iBin];
-              for (count=0, iBinBehind=iBin+1; iBinBehind<nBins; iBinBehind++, count++)
-                T1[iBin] += (term2=ctHistDeriv[iBinBehind]/denom[iBinBehind-iBin]);
-              if ((iBin+1)<nBins)
-                T1[iBin] += 0.3*sqr(denom[1])*(2*ctHistDeriv[iBin+1]+3*ctHistDeriv[iBin])/dct;
-              if (count>1)
-                T1[iBin] -= (term1+term2)/2;
-            }
-          } else {
-            if (!csbend->trapazoidIntegration) {
-              for (iBinBehind=iBin+1; iBinBehind<=(iBin+diSlippage) && iBinBehind<nBins; iBinBehind++)
-                T1[iBin] += ctHistDeriv[iBinBehind]/denom[iBinBehind-iBin];
-            }
-            else {
-              if ((iBinBehind = iBin+1)<nBins && iBinBehind<=(iBin+diSlippage))
-                term1 = ctHistDeriv[iBinBehind]/denom[iBinBehind-iBin]/2;
-              for (count=0, iBinBehind = iBin+1; iBinBehind<=(iBin+diSlippage) && iBinBehind<nBins; 
-                   count++, iBinBehind++)
-                T1[iBin] += (term2=ctHistDeriv[iBinBehind]/denom[iBinBehind-iBin]);
-              if (diSlippage>0 && (iBin+1)<nBins)
-                T1[iBin] += 0.3*sqr(denom[1])*(2*ctHistDeriv[iBin+1]+3*ctHistDeriv[iBin])/dct;
-              if (count>1)
-                T1[iBin] -= (term1+term2)/2;
-            }
-            if ((iBin+diSlippage)<nBins)
-              T2[iBin] += ctHist[iBin+diSlippage];
-            if ((iBin+diSlippage4)<nBins)
-              T2[iBin] -= ctHist[iBin+diSlippage4];
-          }
-          /* there is no negative sign here because my derivative is w.r.t. -s
-             in notation of Saldin, et. al. */
-          T1[iBin] *= CSRConstant*csbend->length/csbend->n_kicks; 
-          /* keep the negative sign on this term, which has no derivative */
-          T2[iBin] *= -CSRConstant*csbend->length/csbend->n_kicks/slippageLength13;
-        }
-        dGamma[iBin] = T1[iBin]+T2[iBin];
-      }
+      if (kick==0 || !csbend->binOnce) {
+	for (iBin=0; iBin<nBins; iBin++) {
+	  double term1, term2;
+	  long count;
+	  T1[iBin] = T2[iBin] = 0;
+	  term1 = term2 = 0;
+	  if (CSRConstant) {
+	    if (csbend->steadyState) {
+	      if (!csbend->trapazoidIntegration) {
+		for (iBinBehind=iBin+1; iBinBehind<nBins; iBinBehind++)
+		  T1[iBin] += ctHistDeriv[iBinBehind]/denom[iBinBehind-iBin];
+	      }
+	      else {
+		if ((iBinBehind=iBin+1)<nBins)
+		  term1 = ctHistDeriv[iBinBehind]/denom[iBinBehind-iBin];
+		for (count=0, iBinBehind=iBin+1; iBinBehind<nBins; iBinBehind++, count++)
+		  T1[iBin] += (term2=ctHistDeriv[iBinBehind]/denom[iBinBehind-iBin]);
+		if ((iBin+1)<nBins)
+		  T1[iBin] += 0.3*sqr(denom[1])*(2*ctHistDeriv[iBin+1]+3*ctHistDeriv[iBin])/dct;
+		if (count>1)
+		  T1[iBin] -= (term1+term2)/2;
+	      }
+	    } else {
+	      if (!csbend->trapazoidIntegration) {
+		for (iBinBehind=iBin+1; iBinBehind<=(iBin+diSlippage) && iBinBehind<nBins; iBinBehind++)
+		  T1[iBin] += ctHistDeriv[iBinBehind]/denom[iBinBehind-iBin];
+	      }
+	      else {
+		if ((iBinBehind = iBin+1)<nBins && iBinBehind<=(iBin+diSlippage))
+		  term1 = ctHistDeriv[iBinBehind]/denom[iBinBehind-iBin]/2;
+		for (count=0, iBinBehind = iBin+1; iBinBehind<=(iBin+diSlippage) && iBinBehind<nBins; 
+		     count++, iBinBehind++)
+		  T1[iBin] += (term2=ctHistDeriv[iBinBehind]/denom[iBinBehind-iBin]);
+		if (diSlippage>0 && (iBin+1)<nBins)
+		  T1[iBin] += 0.3*sqr(denom[1])*(2*ctHistDeriv[iBin+1]+3*ctHistDeriv[iBin])/dct;
+		if (count>1)
+		  T1[iBin] -= (term1+term2)/2;
+	      }
+	      if ((iBin+diSlippage)<nBins)
+		T2[iBin] += ctHist[iBin+diSlippage];
+	      if ((iBin+diSlippage4)<nBins)
+		T2[iBin] -= ctHist[iBin+diSlippage4];
+	    }
+	    /* there is no negative sign here because my derivative is w.r.t. -s
+	       in notation of Saldin, et. al. */
+	    T1[iBin] *= CSRConstant*csbend->length/csbend->n_kicks; 
+	    /* keep the negative sign on this term, which has no derivative */
+	    T2[iBin] *= -CSRConstant*csbend->length/csbend->n_kicks/slippageLength13;
+	  }
+	  dGamma[iBin] = T1[iBin]+T2[iBin];
+	}
 
-      if (csbend->wffValues) 
-        applyFilterTable(dGamma, nBins, dct/c_mks, csbend->wffValues, csbend->wffFreqValue,
-                         csbend->wffRealFactor, csbend->wffImagFactor);
+	if (csbend->wffValues) 
+	  applyFilterTable(dGamma, nBins, dct/c_mks, csbend->wffValues, csbend->wffFreqValue,
+			   csbend->wffRealFactor, csbend->wffImagFactor);
+      }
 
       if (CSRConstant) {
         for (i_part=0; i_part<n_part; i_part++) {
