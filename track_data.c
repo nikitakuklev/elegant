@@ -463,7 +463,7 @@ PARAMETER rftm110_param[N_RFTM110_PARAMS] = {
     {"PHASE", "DEG", IS_DOUBLE, 0, (long)((char *)&rftm110_example.phase), NULL, 0.0, 0, "phase"},
     {"TILT", "RAD", IS_DOUBLE, 0, (long)((char *)&rftm110_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
     {"FREQUENCY", "HZ", IS_DOUBLE, 0, (long)((char *)&rftm110_example.frequency), NULL, DEFAULT_FREQUENCY, 0, "frequency"},
-    {"VOLTAGE", "V", IS_DOUBLE, 0, (long)((char *)&rftm110_example.voltage), NULL, 0.0, 0, "voltage"},
+    {"VOLTAGE", "V", IS_DOUBLE, 0, (long)((char *)&rftm110_example.voltage), NULL, 0.0, 0, "peak deflecting voltage"},
     {"PHASE_REFERENCE", "", IS_LONG, 0, (long)((char *)&rftm110_example.phase_reference), NULL, 0.0, 0, "phase reference number (to link with other time-dependent elements)"},
     } ;
 
