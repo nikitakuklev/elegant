@@ -9,7 +9,7 @@
 
 /* program: elegant
  * purpose: accelerator simulation
- * Michael Borland, 1989-1994
+ * Michael Borland, 1989-2004
  */
 #include "mdb.h"
 #include "mdbsun.h"
@@ -39,9 +39,9 @@ char *option[N_OPTIONS] = {
     "describeinput",
     "macro",
         };
-char *USAGE="elegant <inputfile> [-macro=<tag>=<value>,[...]]\n\nProgram by Michael Borland. (This is version 15.0Beta1, "__DATE__".)";
+char *USAGE="elegant <inputfile> [-macro=<tag>=<value>,[...]]\n\nProgram by Michael Borland. (This is version 15.0, "__DATE__".)";
 
-char *GREETING="This is elegant, by Michael Borland. (This is version 15.0Beta1, "__DATE__".)";
+char *GREETING="This is elegant, by Michael Borland. (This is version 15.0, "__DATE__".)";
 
 #define RUN_SETUP        0
 #define RUN_CONTROL      1
