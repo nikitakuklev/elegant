@@ -28,7 +28,7 @@ void compute_centroids(
 
     log_entry("compute_centroids");
     for (i_coord=0; i_coord<6; i_coord++)
-        sum[i_coord] = 0;
+        sum[i_coord] = centroid[i_coord] = 0;
 
     for (i_part=0; i_part<n_part; i_part++) {
         part = coordinates[i_part];
@@ -38,6 +38,7 @@ void compute_centroids(
     if (n_part)
         for (i_coord=0; i_coord<6; i_coord++)
             centroid[i_coord] = sum[i_coord]/n_part;
+
     log_exit("compute_centroids");
     }
 

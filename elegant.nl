@@ -34,6 +34,7 @@
     long center_momentum_also = 1;
     long soft_failure = 1;
     long use_linear_chromatic_matrix = 0;
+    long longitudinal_ring_only = 0;
 #end
 
 #namelist print_dictionary static

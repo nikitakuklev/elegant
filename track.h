@@ -433,7 +433,9 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_WAKE 65
 #define T_TRWAKE 66
 #define T_TUBEND 67
-#define N_TYPES 68
+#define T_CHARGE 68
+#define T_PFILTER 69
+#define N_TYPES 70
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -508,6 +510,8 @@ extern char *entity_text[N_TYPES];
 #define N_WAKE_PARAMS 7
 #define N_TRWAKE_PARAMS 8
 #define N_TUBEND_PARAMS 6
+#define N_CHARGE_PARAMS 1
+#define N_PFILTER_PARAMS 1
 
 typedef struct {
     char *name;            /* parameter name */
@@ -1414,6 +1418,18 @@ typedef struct {
   double ymin, ymax, dy;
 } BMAPXY;
 
+/* names and storage structure for CHARGE element */
+typedef struct {
+  double charge;
+  /* for internal use only */
+  double macroParticleCharge;
+} CHARGE;
+
+/* names and storage structure for PFILTER element */
+typedef struct {
+  double deltalimit;
+} PFILTER;
+
 /* macros for bending magnets */ 
 #define SAME_BEND_PRECEDES 1 
 #define SAME_BEND_FOLLOWS 2 
@@ -1427,14 +1443,15 @@ typedef struct {
 #define TRACK_PREVIOUS_BUNCH 1
 
 /* flags for do_tracking/track_beam flag word */
-#define FINAL_SUMS_ONLY         0x0001
-#define TEST_PARTICLES          0x0002
-#define BEGIN_AT_RECIRC         0x0004
-#define TEST_PARTICLE_LOSSES    0x0008
-#define SILENT_RUNNING          0x0010
-#define TIME_DEPENDENCE_OFF     0x0020
-#define INHIBIT_FILE_OUTPUT     0x0040
-#define LINEAR_CHROMATIC_MATRIX 0x0080
+#define FINAL_SUMS_ONLY          0x0001
+#define TEST_PARTICLES           0x0002
+#define BEGIN_AT_RECIRC          0x0004
+#define TEST_PARTICLE_LOSSES     0x0008
+#define SILENT_RUNNING           0x0010
+#define TIME_DEPENDENCE_OFF      0x0020
+#define INHIBIT_FILE_OUTPUT      0x0040
+#define LINEAR_CHROMATIC_MATRIX  0x0080
+#define LONGITUDINAL_RING_ONLY   0x0100
 
 /* return values for get_reference_phase and check_reference_phase */
 #define REF_PHASE_RETURNED 1
@@ -1710,6 +1727,8 @@ extern long elimit_amplitudes(double **coord, double xmax, double ymax, long np,
     double P_central, long extrapolate_z);
 extern long beam_scraper(double **initial, SCRAPER *scraper, long np, double **accepted, double z,
     double P_central);
+extern long track_through_pfilter(double **initial, PFILTER *pfilter, long np, 
+                                  double **accepted, double z, double Po);
  
 /* prototypes for kick_sbend.c: */
 long track_through_kick_sbend(double **part, long n_part, KSBEND *ksbend, double p_error, double Po,
@@ -1897,15 +1916,19 @@ void reset_element_links(ELEMENT_LINKS *links, RUN *run_cond, LINE_LIST *beamlin
 void track_through_matter(double **part, long np, MATTER *matter, double Po);
 
 void track_through_rfmode(double **part, long np, RFMODE *rfmode, double Po,
-    char *element_name, double element_z, long pass, long n_passes);
+    char *element_name, double element_z, long pass, long n_passes, CHARGE *charge);
 void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_passes, RUN *run, long n_particles,
                    double Po, double Lo);
 
 void track_through_trfmode(double **part, long np, TRFMODE *trfmode, double Po,
-    char *element_name, double element_z, long pass, long n_passes);
+    char *element_name, double element_z, long pass, long n_passes, CHARGE *charge);
 void set_up_trfmode(TRFMODE *trfmode, char *element_name, double element_z, 
                     long n_passes, RUN *run, long n_particles);
-void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po, RUN *run, long i_pass);
+void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po, RUN *run, long i_pass,
+                           CHARGE *charge);
+void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse, 
+                               double Po, RUN *run, long i_pass,
+                               CHARGE *charge);
 void convolveArrays(double *output, long outputs, 
                     double *a1, long n1,
                     double *a2, long n2);
@@ -1917,9 +1940,9 @@ void applyTransverseWakeKicks(double **part, double *time, double *pz, long *pbi
                               double *Vtime, long nb, double tmin, double dt, 
                               long interpolate);
 void track_through_wake(double **part, long np, WAKE *wakeData, double Po,
-                        RUN *run, long i_pass);
+                        RUN *run, long i_pass, CHARGE *charge);
 void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
-                          RUN *run, long i_pass);
+                          RUN *run, long i_pass, CHARGE *charge);
 double computeTimeCoordinates(double *time, double Po, double **part, long np);
 long binTransverseTimeDistribution(double **posItime, double *pz, long *pbin, double tmin,
                                    double dt, long nb, double *time, double **part, double Po, long np);
@@ -1930,7 +1953,8 @@ long binTimeDistribution(double *Itime, long *pbin, double tmin,
 void track_SReffects(double **coord, long n, SREFFECTS *SReffects, double Po, 
                              TWISS *twiss, RADIATION_INTEGRALS *radIntegrals);
 void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po, 
-               ELEMENT_LIST *element, RADIATION_INTEGRALS *radIntegrals0);
+               ELEMENT_LIST *element, RADIATION_INTEGRALS *radIntegrals0,
+               CHARGE *charge);
 
 long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_error, double Po, double **accepted,
     double z_start);

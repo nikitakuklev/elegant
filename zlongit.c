@@ -44,10 +44,10 @@ static SDDS_DEFINITION wake_parameter[WAKE_PARAMETERS] = {
 
 #define DEBUG 1
 
-void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles);
+void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARGE *charge);
 
 void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
-    RUN *run, long i_pass
+    RUN *run, long i_pass, CHARGE *charge
     )
 {
     static double *Itime = NULL;           /* array for histogram of particle density */
@@ -60,7 +60,7 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
     long ip, ib, nb, n_binned, nfreq, iReal, iImag;
     double factor, tmin, tmax, tmean, dt, dt1, P, dgam, gam, frac;
 
-    set_up_zlongit(zlongit, run, i_pass, np);
+    set_up_zlongit(zlongit, run, i_pass, np, charge);
     nb = zlongit->n_bins;
     dt = zlongit->bin_size;
 
@@ -206,15 +206,16 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
     }
   }
 
-
-
-void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles)
+void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARGE *charge)
 {
     long i, nfreq;
     double df, t_range;
     static char associate[SDDS_MAXLINE];
 
-    if (pass==0) {
+    if (charge) {
+      zlongit->macroParticleCharge = charge->macroParticleCharge;
+      zlongit->charge = charge->macroParticleCharge*particles;
+    } else if (pass==0) {
       zlongit->macroParticleCharge = 0;
       if (particles)
         zlongit->macroParticleCharge = zlongit->charge/particles;
@@ -269,7 +270,7 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles)
             zlongit->Z[2*i-1] =  zlongit->Ra/2/(1+sqr(term));
             zlongit->Z[2*i  ] =  zlongit->Z[2*i-1]*term;
             }
-        if (1) {
+        if (0) {
             FILE *fp;
             fp = fopen("zbb.debug", "w");
             fputs("SDDS1\n&column name=Index, type=long &end\n", fp);

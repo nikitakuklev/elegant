@@ -396,8 +396,11 @@ char **argv;
             set_print_namelist_flags(0);
             process_namelist(&track, &namelist_text);
             print_namelist(stderr, &track);
-            if (use_linear_chromatic_matrix && (!twiss_computed && !do_twiss_output))
-              bomb("you must compute twiss parameters to do linear chromatic matrix tracking", NULL);
+            if ((use_linear_chromatic_matrix || longitudinal_ring_only) 
+                && (!twiss_computed && !do_twiss_output))
+              bomb("you must compute twiss parameters to do linear chromatic matrix tracking or longitudinal ring tracking", NULL);
+            if (use_linear_chromatic_matrix && longitudinal_ring_only)
+              bomb("can't do linear chromatic tracking and longitudinal-only tracking together", NULL);
             if (beam_type==-1)
                 bomb("beam must be defined prior to tracking", NULL);
             new_beam_flags = 0;
@@ -527,7 +530,8 @@ char **argv;
                 center_beam_on_coords(beam.particle, beam.n_to_track, starting_coord, center_momentum_also);
               track_beam(&run_conditions, &run_control, &error_control, &optimize.variables, 
                          beamline, &beam, &output_data, 
-                         use_linear_chromatic_matrix?LINEAR_CHROMATIC_MATRIX:0);
+                         (use_linear_chromatic_matrix?LINEAR_CHROMATIC_MATRIX:0)+
+                         (longitudinal_ring_only?LONGITUDINAL_RING_ONLY:0));
             }
             finish_output(&output_data, &run_conditions, &run_control, &error_control, &optimize.variables, 
                           beamline, beamline->n_elems, &beam);

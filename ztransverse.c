@@ -11,11 +11,11 @@
 #include "table.h"
 #include "fftpackC.h"
 
-void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long particles);
+void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long particles, CHARGE *charge);
 double *getTransverseImpedance(SDDS_DATASET *SDDSin, char *ZName);
 
 void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse, double Po,
-                               RUN *run, long i_pass
+                               RUN *run, long i_pass, CHARGE *charge
                                )
 {
   static double *posItime[2] = {NULL, NULL};     /* array for histogram of particle density times x, y*/
@@ -33,7 +33,7 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
   FILE *fp;
 #endif
 
-  set_up_ztransverse(ztransverse, run, i_pass, np);
+  set_up_ztransverse(ztransverse, run, i_pass, np, charge);
   nb = ztransverse->n_bins;
   dt = ztransverse->bin_size;
 
@@ -131,12 +131,15 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
 }
 
 
-void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long particles)
+void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long particles, CHARGE *charge)
 {
   long i, nfreq;
   double df, t_range;
 
-  if (pass==0) {
+  if (charge) {
+    ztransverse->macroParticleCharge = charge->macroParticleCharge;
+    ztransverse->charge = charge->macroParticleCharge*particles;
+  } else if (pass==0) {
     ztransverse->macroParticleCharge = 0;
     if (particles)
       ztransverse->macroParticleCharge = ztransverse->charge/particles;

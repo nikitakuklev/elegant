@@ -481,3 +481,27 @@ long beam_scraper(
     return(np);
     }
 
+long track_through_pfilter(
+    double **initial, PFILTER *pfilter, long np, double **accepted, double z,
+    double Po
+    )
+{
+  long ip, itop;
+  if (pfilter->deltalimit<0)
+    return np;
+
+  itop = np-1;
+  for (ip=0; ip<=itop; ip++) {
+    if (fabs(initial[ip][5])<pfilter->deltalimit)
+      continue;
+    SWAP_PTR(initial[ip], initial[itop]);
+    initial[itop][4] = z;  /* record position of particle loss */
+    initial[itop][5] = Po*(1+initial[itop][5]);  /* momentum at loss */
+    if (accepted)
+      SWAP_PTR(accepted[ip], accepted[itop]);
+    --itop;
+    --ip;
+  }
+  return itop+1;
+}
+

@@ -703,8 +703,8 @@ double optimization_function(double *value, long *invalid)
             }
         /* get twiss mode and (beta, alpha, eta, etap) for both planes */
         update_twiss_parameters(run, beamline, &unstable);
-        if (unstable)
-          fprintf(stderr, "Beamline is unstable\n");
+        /* if (unstable)
+          fprintf(stderr, "Beamline is unstable\n"); */
         /* store twiss parameters for last element */
         for (i=0; i<5; i++) {
             rpn_store(*((&beamline->elast->twiss->betax)+i)/(i==2?PIx2:1), twiss_mem[i]);

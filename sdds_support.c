@@ -221,9 +221,10 @@ void SDDS_SigmaOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, lo
     }
 
 
-#define WATCH_PARAMETER_MODE_COLUMNS 24
-#define WATCH_CENTROID_MODE_COLUMNS 14
+#define WATCH_PARAMETER_MODE_COLUMNS 25
+#define WATCH_CENTROID_MODE_COLUMNS 15
 static SDDS_DEFINITION watch_parameter_mode_column[WATCH_PARAMETER_MODE_COLUMNS] = {
+    {"Step", "&column name=Step, type=long &end"},
     {"Pass", "&column name=Pass, type=long &end"},
     {"Cx", "&column name=Cx, symbol=\"<x>\", units=m, type=double &end"},
     {"Cxp", "&column name=Cxp, symbol=\"<x'>\", type=double &end"},
@@ -545,7 +546,8 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
     if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
                            "Particles", particles, 
                            "Transmission", (original_particles?((double)particles)/original_particles:(double)0.0),
-                           "Pass", sample*watch->interval, NULL)) {
+                           "Pass", sample*watch->interval, 
+                           "Step", step, NULL)) {
         SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }

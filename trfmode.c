@@ -13,7 +13,8 @@
 
 void track_through_trfmode(
                            double **part, long np, TRFMODE *trfmode, double Po,
-                           char *element_name, double element_z, long pass, long n_passes
+                           char *element_name, double element_z, long pass, long n_passes,
+                           CHARGE *charge
                            )
 {
   static double *xsum = NULL;              /* sum of x coordinate in each bin = N*<x> */
@@ -38,7 +39,10 @@ void track_through_trfmode(
 
   log_entry("track_through_trfmode");
 
-  if (pass==0) {
+  if (charge) {
+    trfmode->mp_charge = charge->macroParticleCharge;
+    trfmode->charge = charge->macroParticleCharge*np;
+  } else if (pass==0) {
     trfmode->mp_charge = 0;
     if (np)
       trfmode->mp_charge = trfmode->charge/np;

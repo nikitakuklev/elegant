@@ -7,14 +7,14 @@
 #include "table.h"
 #include "fftpackC.h"
 
-void set_up_wake(WAKE *wakeData, RUN *run, long pass, long particles);
+void set_up_wake(WAKE *wakeData, RUN *run, long pass, long particles, CHARGE *charge);
 void convolveArrays(double *output, long outputs, 
                     double *a1, long n1,
                     double *a2, long n2);
 
 
 void track_through_wake(double **part, long np, WAKE *wakeData, double Po,
-                        RUN *run, long i_pass
+                        RUN *run, long i_pass, CHARGE *charge
                         )
 {
   static double *Itime = NULL;           /* array for histogram of particle density */
@@ -26,7 +26,7 @@ void track_through_wake(double **part, long np, WAKE *wakeData, double Po,
   long ip, ib, ib1, ib2, nb, n_binned;
   double factor, tmin, tmean, dt, dt1, P, dgam, gam, frac;
 
-  set_up_wake(wakeData, run, i_pass, np);
+  set_up_wake(wakeData, run, i_pass, np, charge);
   nb = wakeData->n_bins;
   dt = wakeData->dt;
 
@@ -98,12 +98,15 @@ void applyLongitudinalWakeKicks(double **part, double *time, long *pbin, long np
   }
 }
 
-void set_up_wake(WAKE *wakeData, RUN *run, long pass, long particles)
+void set_up_wake(WAKE *wakeData, RUN *run, long pass, long particles, CHARGE *charge)
 {
   SDDS_DATASET SDDSin;
   double tmin, tmax;
   
-  if (pass==0) {
+  if (charge) {
+    wakeData->macroParticleCharge = charge->macroParticleCharge;
+    wakeData->charge = charge->macroParticleCharge*particles;
+  } else if (pass==0) {
     wakeData->macroParticleCharge = 0;
     if (particles)
       wakeData->macroParticleCharge = wakeData->charge/particles;

@@ -10,8 +10,9 @@
 #include "track.h"
 
 void track_through_rfmode(
-    double **part, long np, RFMODE *rfmode, double Po,
-    char *element_name, double element_z, long pass, long n_passes
+                          double **part, long np, RFMODE *rfmode, double Po,
+                          char *element_name, double element_z, long pass, long n_passes,
+                          CHARGE *charge
     )
 {
     static long *Ihist = NULL;               /* array for histogram of particle density */
@@ -31,7 +32,10 @@ void track_through_rfmode(
     
     log_entry("track_through_rfmode");
 
-    if (pass==0) {
+    if (charge) {
+      rfmode->mp_charge = charge->macroParticleCharge;
+      rfmode->charge = charge->macroParticleCharge*np;
+    } else if (pass==0) {
       rfmode->mp_charge = 0;
       if (np)
         rfmode->mp_charge = rfmode->charge/np;
@@ -64,7 +68,7 @@ void track_through_rfmode(
             }
         }
 
-    if (rfmode->charge==0) {
+    if (rfmode->mp_charge==0) {
         log_exit("track_through_rfmode");
         return ;
         }

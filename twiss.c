@@ -51,9 +51,9 @@ VMATRIX *compute_periodic_twiss(
       M1->R[i][i] = 1;
     }
     M = append_full_matrix(elem, run, M1, twissConcatOrder);
+/*
     fprintf(stderr, "Computed revolution matrix on closed orbit to %ld order\n",
             twissConcatOrder);
-/*
     fprintf(stderr, "matrix concatenation for periodic Twiss computation:\n");
     fprintf(stderr, "closed orbit at input:\n  ");
     for (i=0; i<6; i++)
@@ -72,7 +72,9 @@ VMATRIX *compute_periodic_twiss(
   }
   else {
     M = full_matrix(elem, run, twissConcatOrder);
+/*
     fprintf(stderr, "Computed revolution matrix to %ld order\n", twissConcatOrder);
+*/
   }
 
   R = M->R;
@@ -367,7 +369,13 @@ static long twiss_count = 0;
 #define IC_OCCURENCE 15
 #define IC_TYPE 16
 #define N_COLUMNS 17
-static SDDS_DEFINITION column_definition[N_COLUMNS] = {
+#define IC_I1 N_COLUMNS
+#define IC_I2 (N_COLUMNS+1)
+#define IC_I3 (N_COLUMNS+2)
+#define IC_I4 (N_COLUMNS+3)
+#define IC_I5 (N_COLUMNS+4)
+#define N_COLUMNS_WRI (IC_I5+1)
+static SDDS_DEFINITION column_definition[N_COLUMNS_WRI] = {
 {"s", "&column name=s, type=double, units=m, description=Distance &end"},
 {"betax", "&column name=betax, type=double, units=m, symbol=\"$gb$r$bx$n\", description=\"Horizontal beta-function\" &end"},
 {"alphax", "&column name=alphax, type=double, symbol=\"$ga$r$bx$n\", description=\"Horizontal alpha-function\" &end"},
@@ -385,6 +393,11 @@ static SDDS_DEFINITION column_definition[N_COLUMNS] = {
 {"ElementName", "&column name=ElementName, type=string, description=\"Element name\", format_string=%10s &end"},
 {"ElementOccurence", "&column name=ElementOccurence, type=long, description=\"Occurence of element\", format_string=%6ld &end"},
 {"ElementType", "&column name=ElementType, type=string, description=\"Element-type name\", format_string=%10s &end"},
+{"dI1", "&column name=dI1, type=double, description=\"Contribution to radiation integral 1\", units=m &end"} ,
+{"dI2", "&column name=dI2, type=double, description=\"Contribution to radiation integral 2\", units=1/m &end"} ,
+{"dI3", "&column name=dI3, type=double, description=\"Contribution to radiation integral 3\", units=1/m$a2$n &end"} ,
+{"dI4", "&column name=dI4, type=double, description=\"Contribution to radiation integral 4\", units=1/m &end"} ,
+{"dI5", "&column name=dI5, type=double, description=\"Contribution to radiation integral 5\", units=1/m &end"} ,
 };
 
 #define IP_STEP 0
@@ -546,13 +559,26 @@ void dump_twiss_parameters(
           SDDS_SetError("Problem setting SDDS rows (dump_twiss_parameters)");
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
-      if (!SDDS_SetRowValues(&SDDS_twiss, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row_count++, 
+      if (!SDDS_SetRowValues(&SDDS_twiss, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row_count, 
                              IC_ELEMENT, elem->name, IC_OCCURENCE, elem->occurence, 
                              IC_TYPE, entity_name[elem->type], -1)) {
         SDDS_SetError("Problem setting SDDS rows (dump_twiss_parameters)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
-      i++;
+      if (radIntegrals) {
+        if (!SDDS_SetRowValues(&SDDS_twiss, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row_count,
+                               IC_I1, elem->twiss->dI[0],
+                               IC_I2, elem->twiss->dI[1],
+                               IC_I3, elem->twiss->dI[2],
+                               IC_I4, elem->twiss->dI[3], 
+                               IC_I5, elem->twiss->dI[4],
+                               -1)) {
+          SDDS_SetError("Problem setting SDDS rows (dump_twiss_parameters)");
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+        }
+      }
+      i++;      
+      row_count++;
       elem = elem->succ;
     }
     if (i!=n_elem)
@@ -584,6 +610,18 @@ void dump_twiss_parameters(
                            IC_TYPE, entity_name[elem->type], -1)) {
       SDDS_SetError("Problem setting SDDS rows (dump_twiss_parameters)");
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+    if (radIntegrals) {
+      if (!SDDS_SetRowValues(&SDDS_twiss, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, 0,
+                             IC_I1, elem->twiss->dI[0],
+                             IC_I2, elem->twiss->dI[1],
+                             IC_I3, elem->twiss->dI[2],
+                             IC_I4, elem->twiss->dI[3], 
+                             IC_I5, elem->twiss->dI[4],
+                             -1)) {
+        SDDS_SetError("Problem setting SDDS rows (dump_twiss_parameters)");
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      }
     }
   }
 
@@ -649,7 +687,7 @@ void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
     SDDS_ElegantOutputSetup(&SDDS_twiss, filename, SDDS_BINARY, 1, "Twiss parameters",
                             run->runfile, run->lattice, parameter_definition, 
                             (radiation_integrals?N_PARAMETERS:IP_ALPHAC+1),
-                            column_definition, N_COLUMNS, "setup_twiss_output",
+                            column_definition, (radiation_integrals?N_COLUMNS_WRI:N_COLUMNS), "setup_twiss_output",
                             SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
     SDDS_twiss_initialized = 1;
     twiss_count = 0;
@@ -1012,7 +1050,9 @@ void update_twiss_parameters(RUN *run, LINE_LIST *beamline, unsigned long *unsta
                            &unstable0);
   if (unstable)
     *unstable = unstable0;
+/*
   fprintf(stderr, "Twiss parameters updated.\n");
+*/
 }
 
 void copy_doubles(double *target, double *source, long n)
@@ -1291,6 +1331,8 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
   double I1, I2, I3, I4, I5;
   double alpha1, gamma1, etap1, eta2, sin_kl, cos_kl;
   double etaAve, etaK1_rhoAve, HAve, h, K2, dx;
+
+  I1 = I2 = I3 = I4 = I5 = 0;
   
   isBend = 1;
   switch (elem->type) {
@@ -1418,18 +1460,18 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
     I3 = I2/fabs(rho);
     I4 = I2/rho*etaAve - 2*length*etaK1_rhoAve;
     I5 = HAve*I3;
-    if (dI) {
-      dI[0] = I1;
-      dI[1] = I2;
-      dI[2] = I3;
-      dI[3] = I4;
-      dI[4] = I5;
-    }
     radIntegrals->I[0] += I1;
     radIntegrals->I[1] += I2;
     radIntegrals->I[2] += I3;
     radIntegrals->I[3] += I4;
     radIntegrals->I[4] += I5;
+  }
+  if (dI) {
+    dI[0] = I1;
+    dI[1] = I2;
+    dI[2] = I3;
+    dI[3] = I4;
+    dI[4] = I5;
   }
 }
 

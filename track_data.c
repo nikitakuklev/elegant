@@ -24,7 +24,7 @@ char *entity_name[N_TYPES] = {
     "NIBEND", "KPOLY", "NISEPT", "RAMPRF", "RAMPP", "STRAY", "CSBEND",
     "TWMTA", "MATTER", "RFMODE", "TRFMODE", "ZLONGIT", "SREFFECTS",
     "MODRF", "BMAPXY", "ZTRANSVERSE", "IBSCATTER", "FMULT",
-    "WAKE", "TRWAKE", "TUBEND",
+    "WAKE", "TRWAKE", "TUBEND", "CHARGE", "PFILTER",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -123,6 +123,8 @@ and phase modulation.",
     "Longitudinal wake specified as a function of time lag behind the particle.",
     "Transverse wake specified as a function of time lag behind the particle.",
     "A special rectangular bend element for top-up backtracking.",
+    "An element to establish the total charge of a beam.  Active on first pass only.  If given, overrides all charge specifications on other elements.",
+    "An element for energy and momentum filtration.",
     } ;
 
 QUAD quad_example;
@@ -1045,6 +1047,18 @@ PARAMETER trwake_param[N_TRWAKE_PARAMS] = {
     {"SMOOTH_PASSES", "", IS_LONG, 0, (long)((char *)&trwake_example.smooth_passes), NULL, 0.0, 0},
     };
 
+CHARGE charge_example;
+/* CHARGE physical parameters */
+PARAMETER charge_param[N_CHARGE_PARAMS] = {
+    {"TOTAL", "C", IS_DOUBLE, 0, (long)((char *)&charge_example.charge), NULL, 0.0, 0},
+};
+
+PFILTER pfilter_example;
+/* PFILTER physical parameters */
+PARAMETER pfilter_param[N_PFILTER_PARAMS] = {
+    {"DELTALIMIT", "", IS_DOUBLE, 0, (long)((char *)&pfilter_example.deltalimit), NULL, -1.0, 0},
+};
+
 /* array of parameter structures */
 
 #define MAT_LEN     HAS_MATRIX|HAS_LENGTH
@@ -1126,6 +1140,8 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_WAKE_PARAMS, 0, sizeof(WAKE), wake_param},
     { N_TRWAKE_PARAMS, 0, sizeof(TRWAKE), trwake_param},
     { N_TUBEND_PARAMS, 0, sizeof(TUBEND), tubend_param},
+    { N_CHARGE_PARAMS, 0, sizeof(CHARGE), charge_param},
+    { N_PFILTER_PARAMS, 0, sizeof(PFILTER), pfilter_param},
 } ;
  
 

@@ -7,10 +7,10 @@
 #include "table.h"
 #include "fftpackC.h"
 
-void set_up_trwake(TRWAKE *wakeData, RUN *run, long pass, long particles);
+void set_up_trwake(TRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE *charge);
 
 void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
-                        RUN *run, long i_pass
+                        RUN *run, long i_pass, CHARGE *charge
                         )
 {
   static double *posItime[2] = {NULL, NULL};     /* array for histogram of particle density times x, y*/
@@ -25,7 +25,7 @@ void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
 
   log_entry("track_through_wake");
 
-  set_up_trwake(wakeData, run, i_pass, np);
+  set_up_trwake(wakeData, run, i_pass, np, charge);
 
   nb = wakeData->n_bins;
   dt = wakeData->dt;
@@ -106,12 +106,15 @@ void applyTransverseWakeKicks(double **part, double *time, double *pz, long *pbi
   }
 }
 
-void set_up_trwake(TRWAKE *wakeData, RUN *run, long pass, long particles)
+void set_up_trwake(TRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE *charge)
 {
   SDDS_DATASET SDDSin;
   double tmin, tmax;
   
-  if (pass==0) {
+  if (charge) {
+    wakeData->macroParticleCharge = charge->macroParticleCharge;
+    wakeData->charge = charge->macroParticleCharge*particles;
+  } else if (pass==0) {
     wakeData->macroParticleCharge = 0;
     if (particles)
       wakeData->macroParticleCharge = wakeData->charge/particles;
