@@ -14,6 +14,9 @@
  * Michael Borland, 2000
  *
  $Log: not supported by cvs2svn $
+ Revision 1.10  2003/11/24 17:20:07  borland
+ Added computation of longitudinal emittance.
+
  Revision 1.9  2003/02/26 18:00:12  borland
  Copies input parameters through to output columns.
  Think I fixed a memory leak.
@@ -162,9 +165,9 @@ int main(int argc, char **argv)
     if (readCode!=1 && !SDDS_LengthenTable(&SDDSout, 1))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     for (i=0; i<2; i++)
-      beta[i] = alpha[i] = emit[i] = emitcor[i] = eta[i] = eta[i+2] = 0;
+      beta[i] = alpha[i] = emit[i] = emitcor[i] = eta[i] = eta[i+2] = betacor[i] = alphacor[i] = 0;
     for (i=0; i<6; i++) {
-      for (j=C[i]=0; j<=i; j++)
+      for (j=C[i]=beamsize[i]=0; j<=i; j++)
         S[i][j] = 0;
       if (data[i]) {
         free(data[i]);
