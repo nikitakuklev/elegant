@@ -150,6 +150,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
     double *value;
     ELEMENT_LIST *eptr;
     static long warned_about_occurence = 0;
+    long element_missing;
 
     if (!load_requests || !load_parameters_setup)
         return NO_LOAD_PARAMETERS;
@@ -216,23 +217,31 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
             }
             
         load_request[i].values = 0;
+        element_missing = 0;
         for (j=0; j<rows; j++) {
             eptr = NULL;
             if (occurence)
                 count = occurence[j];
             else
                 count = 1;
+            element_missing = 0;
             while (count-- > 0) {
                 if (!find_element(element[j], &eptr, &(beamline->elem))) {
                     if (occurence)
-                        fprintf(stderr, "Error: unable to find occurence %ld of element %s (do_load_parameters)\n", 
+                        fprintf(stderr, "%s: unable to find occurence %ld of element %s (do_load_parameters)\n", 
+                                allow_missing_elements?"Warning":"Error",
                                 occurence[j], element[j]);
                     else
-                        fprintf(stderr, "Error: unable to find element %s (do_load_parameters)\n", 
+                        fprintf(stderr, "%s: unable to find element %s (do_load_parameters)\n", 
+                                allow_missing_elements?"Warning":"Error",
                                 element[j]);
-                    exit(1);
+                    if (!allow_missing_elements)
+                      exit(1);
+                    element_missing = 1;
                     }
                 }
+            if (element_missing)
+              continue;
             if ((param = confirm_parameter(parameter[j], eptr->type))<0) {
                 fprintf(stderr, "Error: element %s does not have a parameter %s (do_load_parameters)\n",
                         eptr->name, parameter[j]);

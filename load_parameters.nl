@@ -9,5 +9,6 @@
         STRING filename = NULL;
         long change_defined_values = 0;
         long clear_settings = 0;
+        long allow_missing_elements = 0;
 #end
 
