@@ -31,7 +31,7 @@
 &end
 
 &alter_elements name=*, type=*SBEN*, item=ORDER, value=<order>, allow_missing_parameters=1 &end
-&alter_elements name=*, type=*SBEN*, item=EDGE_ORDER, value=<order>, allow_missing_parameters=1 &end
+&alter_elements name=*, type=*SBEN*, item=EDGE_ORDER, value=<edgeOrder>, allow_missing_parameters=1 &end
 &alter_elements name=*, type=*SEXT*, item=ORDER, value=<order>, allow_missing_parameters=1 &end
 &alter_elements name=*, type=*QUAD*, item=ORDER, value=<order>, allow_missing_parameters=1 &end
 

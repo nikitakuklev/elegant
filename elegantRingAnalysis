@@ -168,6 +168,7 @@ proc FillBasicFrame {widget args} {
     set basicComputations(dipoleDivisions) 1
     set basicComputations(quadDivisions) 1
     set basicComputations(sextDivisions) 1
+    set basicComputations(edgeOrder) 1
     set basicComputations(finalSTwiss) 0.0
     APSLabeledEntry .le2 -parent $widget -width 20 \
       -label "Drift divisions: " -type integer \
@@ -176,8 +177,11 @@ proc FillBasicFrame {widget args} {
       -label "Dipole divisions: " -type integer \
       -textVariable basicComputations(dipoleDivisions)
     APSLabeledEntry .le4 -parent $widget -width 20 \
-	-label "Quad divisions: " -type integer \
-	-textVariable basicComputations(quadDivisions)
+      -label "Quad divisions: " -type integer \
+      -textVariable basicComputations(quadDivisions)
+    APSLabeledEntry .le41 -parent $widget -width 20 \
+      -label "Edge order for dipoles: " -type integer \
+      -textVariable basicComputations(edgeOrder) 
     APSLabeledEntry .le5 -parent $widget -width 20 \
         -label "Final s for twiss plots (m): " \
 	-textVariable basicComputations(finalSTwiss)
@@ -233,7 +237,11 @@ proc BasicComputations {args} {
 
     set tmpRoot /tmp/[APSTmpString]
     APSAddToTempFileList $tmpRoot.p1
-    exec plotTwiss -fileRoot $mainDirectory/${mainPrefix}${tag} -filter=column,s,0,$finalSTwiss &
+    if [expr $finalSTwiss>0] {
+        exec plotTwiss -fileRoot $mainDirectory/${mainPrefix}${tag} -filter=column,s,0,$finalSTwiss &
+    } else {
+        exec plotTwiss -fileRoot $mainDirectory/${mainPrefix}${tag} &
+    }
     set parameterList -parameter=nu?,end 
     if $doChromaticity {
         lappend parameterList -parameter=dnu?/dp,end 
