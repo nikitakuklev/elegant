@@ -9,20 +9,24 @@ ifeq ($(EPICS_VERSION).$(EPICS_REVISION),3.13)
 CC = $(RATIONAL) -best-effort $($(ANSI)_$(CMPLR))
 CXX = $(RATIONAL) -best-effort $($(CPLUSPLUS)_$(CXXCMPLR))
 else 
-CC = $(RATIONAL) -best-effort $(SPARCWORKS)/bin/cc
-CCC = $(RATIONAL) -best-effort $(SPARCWORKS)/bin/CC
+CC := $(RATIONAL) -best-effort $(CC)
+CCC := $(RATIONAL) -best-effort $(CCC)
 endif
 endif
 
 ifeq ($(CONDOR_COMPILE),1)
 ifeq ($(EPICS_VERSION).$(EPICS_REVISION),3.13)
   CC = condor_compile -condor_standalone $($(ANSI)_$(CMPLR)) -DCONDOR_COMPILE 
-  CXX = condor_compile -condor_standalone $($(ANSI)_$(CMPLR)) -DCONDOR_COMPILE
+  CXX = condor_compile -condor_standalone $($(CPLUSPLUS)_$(CXXCMPLR)) -DCONDOR_COMPILE
 else
   POSIX_LDLIBS_YES = 
   CC := condor_compile -condor_standalone $(CC) -DCONDOR_COMPILE
   CCC := condor_compile -condor_standalone $(CCC) -DCONDOR_COMPILE
 endif
+endif
+
+ifdef VALGRIND
+HOST_OPT=NO
 endif
 
 PRODOAG = elegant sddsemitmeas madto \
