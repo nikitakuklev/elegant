@@ -395,23 +395,26 @@ static SDDS_DEFINITION column_definition[N_COLUMNS] = {
 #define IP_AY 6
 #define IP_STAGE 7
 #define IP_PCENTRAL 8
-#define IP_ALPHAC 9
-#define IP_I1 10
-#define IP_I2 11
-#define IP_I3 12
-#define IP_I4 13
-#define IP_I5 14
-#define IP_EX0 15
-#define IP_ENX0 16
-#define IP_TAUX 17
-#define IP_JX 18
-#define IP_TAUY 19
-#define IP_JY 20
-#define IP_SIGMADELTA 21
-#define IP_TAUDELTA 22
-#define IP_JDELTA 23
-#define IP_U0 24
-#define IP_ALPHAC2 25
+#define IP_ALPHAC2 9
+#define IP_ALPHAC 10
+/* IP_ALPHAC must be the last item before the radiation-integral-related
+ * items!
+ */
+#define IP_I1 11
+#define IP_I2 12
+#define IP_I3 13
+#define IP_I4 14
+#define IP_I5 15
+#define IP_EX0 16
+#define IP_ENX0 17
+#define IP_TAUX 18
+#define IP_JX 19
+#define IP_TAUY 20
+#define IP_JY 21
+#define IP_SIGMADELTA 22
+#define IP_TAUDELTA 23
+#define IP_JDELTA 24
+#define IP_U0 25
 #define N_PARAMETERS 26
 static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
 {"Step", "&parameter name=Step, type=long, description=\"Simulation step\" &end"},
@@ -423,6 +426,7 @@ static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
 {"Ay", "&parameter name=Ay, symbol=\"A$by$n\", type=double, units=\"$gp$rm\", description=\"Vertical acceptance\" &end"},
 {"Stage", "&parameter name=Stage, type=string, description=\"Stage of computation\" &end"},
 {"pCentral", "&parameter name=pCentral, type=double, units=\"m$be$nc\", description=\"Central momentum\""},
+{"alphac2", "&parameter name=alphac2, symbol=\"$ga$r$bc2$n\", type=double, description=\"2nd-order momentum compaction factor\" &end"},
 {"alphac", "&parameter name=alphac, symbol=\"$ga$r$bc$n\", type=double, description=\"Momentum compaction factor\" &end"},
 {"I1", "&parameter name=I1, type=double, description=\"Radiation integral 1\", units=m &end"} ,
 {"I2", "&parameter name=I2, type=double, description=\"Radiation integral 2\", units=1/m &end"} ,
@@ -439,7 +443,6 @@ static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
 {"taudelta", "&parameter name=taudelta, type=double, description=\"Longitudinal damping time\", units=s &end"},
 {"Jdelta", "&parameter name=Jdelta, type=double, description=\"Longitudinal damping partition number\" &end"},
 {"U0", "&parameter name=U0, type=double, units=MeV, description=\"Energy loss per turn\" &end"},
-{"alphac2", "&parameter name=alphac2, symbol=\"$ga$r$bc2$n\", type=double, description=\"2nd-order momentum compaction factor\" &end"},
 } ;
 
 void dump_twiss_parameters(
