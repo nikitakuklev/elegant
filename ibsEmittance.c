@@ -1,4 +1,9 @@
 /* $Log: not supported by cvs2svn $
+ * Revision 1.1  1999/01/25 10:51:05  emery
+ * First installation of ibsEmittance.c zibs.c
+ * for intra-beam scattering rate calculation
+ * and equilibrium emittance calculation.
+ *
  * sdds program to return value of emittance
  * with intra-beam scattering included.
  * Input file is an elegant twiss file with
@@ -49,17 +54,7 @@ char *option[N_OPTIONS] = {
   "growthRatesOnly"
   };
 
-/* prototypes */
-void IBSGrowthRates (double gamma, double emitx, double emity,
-                     double sigmaDelta, double sigmaz,
-                     double particles,
-                     double emitx0, double sigmaDelta0,
-                     double transSRdampRate, double longSRdampRate,
-                     double coupling,
-                     double *s, double *betax, double *alphax, double *betay, 
-                     double *alphay, double *etax, double *etaxp, long elements, 
-                     long superperiods, long printFlag,
-                     double *xGrowthRate, double *yGrowthRate, double *zGrowthRate);
+#include "zibs.h"
 double IBSequations(double *x, long *invalid);
 void IBSsimplexReport(double ymin, double *xmin, long pass, long evals, long dims);
 
