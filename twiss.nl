@@ -14,6 +14,7 @@
     long grid_size = 6;
     long sparse_grid = 0;
     long spread_only = 0;
+    long exclude_lost_particles = 1;
     double nux_roi_width = 0.02;
     double nuy_roi_width = 0.02;
     double scale_down_factor = 2;

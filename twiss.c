@@ -2233,6 +2233,11 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
 	yTuneExtrema[1] = yTune[ix][iy];
     }
   }
+  if (nLost && !tune_shift_with_amplitude_struct.exclude_lost_particles) {
+    xTuneExtrema[0] = yTuneExtrema[0] = 0;
+    xTuneExtrema[1] = yTuneExtrema[1] = 0.5;
+  }
+
   if (tune_shift_with_amplitude_struct.verbose) {
       fprintf(stdout, "xTune extrema: %21.15e, %21.15e, delta = %21.15e\n",
 	      xTuneExtrema[0], xTuneExtrema[1], 
