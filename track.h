@@ -643,7 +643,7 @@ extern char *entity_text[N_TYPES];
 #define N_CSRDRIFT_PARAMS 20
 #define N_REMCOR_PARAMS 6
 #define N_MAPSOLENOID_PARAMS 18
-#define N_RFCW_PARAMS 29
+#define N_RFCW_PARAMS 32
 #define N_REFLECT_PARAMS 1
 #define N_CLEAN_PARAMS 7
 #define N_TWISSELEMENT_PARAMS 6
@@ -1804,7 +1804,12 @@ typedef struct {
 
 /* names and storage structure for RF cavity with wake physical parameters */
 extern PARAMETER rfcw_param[N_RFCW_PARAMS] ;
-   
+
+typedef struct {
+  long bins, interpolate;
+  double highFrequencyCutoff0, highFrequencyCutoff1;
+} LSCKICK;
+
 typedef struct {
     double length, cellLength, volt, phase, freq, Q;
     long phase_reference, change_p0, change_t;
@@ -1817,12 +1822,14 @@ typedef struct {
     long interpolate;          /* flag to turn on interpolation */
     long smoothing, SGHalfWidth, SGOrder;  /* flag to turn on smoothing plus control parameters */
     double dx, dy;
-    long linearize;
+    long linearize, doLSC, LSCBins, LSCInterpolate;
+    double LSCHighFrequencyCutoff0, LSCHighFrequencyCutoff1;
     /* for internal use only: */
     long initialized;
     RFCA rfca;
     TRWAKE trwake;
     WAKE wake;
+    LSCKICK LSCKick;
     } RFCW;
 
 /* names and storage structure for SR effects */
@@ -2554,6 +2561,8 @@ void track_through_wake(double **part, long np, WAKE *wakeData, double *Po,
                         RUN *run, long i_pass, CHARGE *charge);
 void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
                           RUN *run, long i_pass, CHARGE *charge);
+void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge, 
+                double lengthScale, double dgammaOverGamma);
 double computeTimeCoordinates(double *time, double Po, double **part, long np);
 long binTransverseTimeDistribution(double **posItime, double *pz, long *pbin, double tmin,
                                    double dt, long nb, double *time, double **part, double Po, long np,

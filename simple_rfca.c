@@ -21,7 +21,7 @@ static char *fiducialModeChoice[4] = {
 
 long trackRfCavityWithWakes(double **part, long np, RFCA *rfca, double **accepted, 
                             double *P_central, double zEnd, long iPass, RUN *run,
-                            CHARGE *charge, WAKE *wake, TRWAKE *trwake );
+                            CHARGE *charge, WAKE *wake, TRWAKE *trwake, LSCKICK *LSCKick );
 
 
 unsigned long parseFiducialMode(char *modeString)
@@ -85,7 +85,7 @@ long simple_rf_cavity(
     )
 {
   return trackRfCavityWithWakes(part, np, rfca, accepted, P_central, zEnd, 0,
-                         NULL, NULL, NULL, NULL);
+                         NULL, NULL, NULL, NULL, NULL);
 }
 
 long trackRfCavityWithWakes
@@ -98,7 +98,8 @@ long trackRfCavityWithWakes
    RUN *run,
    CHARGE *charge,
    WAKE *wake,
-   TRWAKE *trwake
+   TRWAKE *trwake,
+   LSCKICK *LSCKick
    )
 {
     long ip, same_dgamma, nKicks, linearize, ik;
@@ -107,7 +108,8 @@ long trackRfCavityWithWakes
     double *coord, t, t0, omega, beta_i, tau, dt, tAve=0, dgammaAve=0;
     long useSRSModel = 0;
     static long been_warned = 0, been_warned_kicks=0;
-
+    double dgammaOverGammaAve = 0;
+    
     if (rfca->bodyFocusModel) {
       char *modelName[2] = { "none", "srs" };
       switch (match_string(rfca->bodyFocusModel, modelName, 2, 0)) {
@@ -270,6 +272,7 @@ long trackRfCavityWithWakes
       for (ik=0; ik<nKicks; ik++) {
         for (ip=0; ip<np; ip++) {
           coord = part[ip];
+          dgammaOverGammaAve = 0;
           if (length) {
             /* apply initial drift */
             coord[0] += coord[1]*length/2;
@@ -290,7 +293,8 @@ long trackRfCavityWithWakes
             else
               dgamma = dgammaAve +  volt*omega*(t-tAve)*cos(omega*tAve+phase);
           }
-            
+          dgammaOverGammaAve += dgamma/gamma;
+          
           if (rfca->end1Focus && length) {
             /* drift back, apply focus kick, then drift forward again */
             inverseF = dgamma/(2*gamma*length);
@@ -320,15 +324,21 @@ long trackRfCavityWithWakes
             }
           }
         }
+        dgammaOverGammaAve /= np;
         /* do wakes */
         if (wake) 
           track_through_wake(part, np, wake, P_central, run, iPass, charge);
         if (trwake)
           track_through_trwake(part, np, trwake, *P_central, run, iPass, charge);
+        if (LSCKick)
+          addLSCKick(part, np, LSCKick, *P_central, charge, length, dgammaOverGammaAve);
       }
     } else {
       double sin_phase=0.0, cos_phase;
       double R11=1, R21=0, R22, R12, dP, ds1;
+      if (LSCKick)
+        bomb("cannot presently do LSC with RFCW when N_KICKS=0", NULL);
+      
       for (ip=0; ip<np; ip++) {
         coord = part[ip];
         
@@ -551,6 +561,11 @@ long track_through_rfcw
       rfcw->wake.WColumn = NULL;
   }
 
+  rfcw->LSCKick.bins = rfcw->LSCBins;
+  rfcw->LSCKick.interpolate = rfcw->LSCInterpolate;
+  rfcw->LSCKick.highFrequencyCutoff0 = rfcw->LSCHighFrequencyCutoff0;
+  rfcw->LSCKick.highFrequencyCutoff1 = rfcw->LSCHighFrequencyCutoff1;
+  
   rfcw->initialized = 1;
 
   if (rfcw->WzColumn)
@@ -558,10 +573,11 @@ long track_through_rfcw
   if (rfcw->WxColumn || rfcw->WyColumn)
     rfcw->trwake.factor = rfcw->length/rfcw->cellLength/(rfcw->rfca.nKicks?rfcw->rfca.nKicks:1);
   np = trackRfCavityWithWakes(part, np, &rfcw->rfca, accepted, P_central, zEnd,
-                         i_pass, run, charge, 
-                         rfcw->WzColumn?&rfcw->wake:NULL,
-                         (rfcw->WxColumn || rfcw->WyColumn)?&rfcw->trwake:NULL
-                         );
+                              i_pass, run, charge, 
+                              rfcw->WzColumn?&rfcw->wake:NULL,
+                              (rfcw->WxColumn || rfcw->WyColumn)?&rfcw->trwake:NULL,
+                              rfcw->doLSC?&rfcw->LSCKick:NULL
+                              );
   return np;
 }
 

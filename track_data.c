@@ -138,7 +138,7 @@ and phase modulation.",
     "Request for histograms of particle coordinates to be output to SDDS file.",
     "Like CSBEND, but incorporates a simulation of Coherent Synchrotron radiation.",
     "A follow-on element for CSRCSBEND that applies the CSR wake over a drift.",
-    "A combination of RFCA, WAKE, and TRWAKE.",
+    "A combination of RFCA, WAKE, TRWAKE, and LSCDRIFT.",
     "An element to remove correlations from the tracked beam to simulate certain types of correction.",
     "A numerically-integrated solenoid specified as a map of (Bz, Br) vs (z, r).",
     "Reflects the beam back on itself, which is useful for multiple beamline matching.",
@@ -1370,6 +1370,12 @@ PARAMETER rfcw_param[N_RFCW_PARAMS] = {
     {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rfcw_example.dx), NULL, 0.0, 0, "misalignment"},
     {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&rfcw_example.dy), NULL, 0.0, 0, "misalignment"},
     {"LINEARIZE", "", IS_LONG, 0, (long)((char *)&rfcw_example.linearize), NULL, 0.0, 0, "Linearize phase dependence?"},
+    {"LSC", "", IS_LONG, 0, (long)((char *)&rfcw_example.doLSC), NULL, 0.0, 0, "Include longitudinal space-charge impedance?"},
+    {"LSC_BINS", "", IS_LONG, 0, (long)((char *)&rfcw_example.LSCBins), NULL, 0.0, 1025, "Number of bins for LSC calculations"},
+    {"LSC_INTERPOLATE", "", IS_LONG, 0, (long)((char *)&rfcw_example.LSCInterpolate), NULL, 0.0, 1025, "Interpolate computed LSC wake?"},
+    {"LSC_HIGH_FREQ_CUTOFF0", "", IS_DOUBLE, 0, (long)((char*)&rfcw_example.LSCHighFrequencyCutoff0), NULL, -1.0, 0, "Spatial frequency at which smoothing filter begins for LSC.  If not positive, no frequency filter smoothing is done.  Frequency is in units of Nyquist (0.5/binsize)."},
+    {"LSC_HIGH_FREQ_CUTOFF1", "", IS_DOUBLE, 0, (long)((char*)&rfcw_example.LSCHighFrequencyCutoff1), NULL, -1.0, 0, "Spatial frequency at which smoothing filter is 0 for LSC.  If not given, defaults to HIGH_FREQUENCY_CUTOFF0."},
+    
     };
    
 REMCOR remcor_example;
