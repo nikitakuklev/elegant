@@ -849,7 +849,7 @@ void global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
     long i_moni, i_corr;
     long n_part, i, tracking_flags, sl_index;
     double **particle;
-    double p, x, y, reading, tilt, fraction, min_fraction, param;
+    double p, x, y, reading, tilt, fraction, minFraction, param, change;
 
     log_entry("global_trajcor_plane");
 
@@ -938,19 +938,23 @@ void global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
 #endif
 
         /* step through beamline find any kicks that are over their limits */
-        min_fraction = 1;
+        minFraction = CM->corr_fraction;
         for (i_corr=0; i_corr<CM->ncor; i_corr++) {
             corr = CM->ucorr[i_corr];
             sl_index = CM->sl_index[i_corr];
             kick_offset = SL->param_offset[sl_index];
-            param = fabs(*((double*)(corr->p_elem+kick_offset)) + CM->dK->a[i_corr][0]*CM->corr_fraction);
-            if (param && SL->corr_limit[sl_index] && (fraction=SL->corr_limit[sl_index]/param)<1 &&
-                fraction<min_fraction)
-                fraction = min_fraction;
+            param = fabs(*((double*)(corr->p_elem+kick_offset)) +
+                         (change=CM->dK->a[i_corr][0]/CM->kick_coef[i_corr]*CM->corr_fraction));
+            if (SL->corr_limit[sl_index] && param>SL->corr_limit[sl_index]) {
+              fraction = fabs((SL->corr_limit[sl_index]-fabs(*((double*)(corr->p_elem+kick_offset))))/change);
+              if (fraction<minFraction)
+                minFraction = fraction;
             }
-
+          }
+        fraction = minFraction;
+        
 #if defined(DEBUG)
-        printf("changing correctors:\n");
+        printf("Changing correctors:");
 #endif
         /* step through beamline and change correctors */
         for (i_corr=0; i_corr<CM->ncor; i_corr++) {
@@ -962,7 +966,7 @@ void global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
 #endif
             if (iteration==0)
                 CM->kick[iteration][i_corr] = *((double*)(corr->p_elem+kick_offset))*CM->kick_coef[i_corr];
-            *((double*)(corr->p_elem+kick_offset)) += CM->dK->a[i_corr][0]*CM->corr_fraction*min_fraction;
+            *((double*)(corr->p_elem+kick_offset)) += CM->dK->a[i_corr][0]*fraction;
             CM->kick[iteration+1][i_corr] = *((double*)(corr->p_elem+kick_offset))*CM->kick_coef[i_corr];
 #if defined(DEBUG)
             printf("after = %e\n", *((double*)(corr->p_elem+kick_offset)));
@@ -1418,6 +1422,7 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
     long i_moni, i_corr, i, sl_index;
     double dp, x, y, reading, tilt;
     double last_rms_pos, best_rms_pos, rms_pos, corr_fraction;
+    double fraction, minFraction, param, change;
     
     log_entry("orbcor_plane");
 
@@ -1545,6 +1550,22 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
         m_show(CM->dK, "%13.6le ", "kick matrix\n", stdout);
 #endif
 
+        /* see if any correctors are over their limit */
+        minFraction = corr_fraction;
+        for (i_corr=0; i_corr<CM->ncor; i_corr++) {
+            corr = CM->ucorr[i_corr];
+            sl_index = CM->sl_index[i_corr];
+            kick_offset = SL->param_offset[sl_index];
+            param = fabs(*((double*)(corr->p_elem+kick_offset)) +
+                         (change=CM->dK->a[i_corr][0]/CM->kick_coef[i_corr]*corr_fraction));
+            if (SL->corr_limit[sl_index] && param>SL->corr_limit[sl_index]) {
+              fraction = fabs((SL->corr_limit[sl_index]-fabs(*((double*)(corr->p_elem+kick_offset))))/change);
+              if (fraction<minFraction)
+                minFraction = fraction;
+            }
+          }
+        fraction = minFraction;
+        
         /* step through beamline and change correctors */
         for (i_corr=0; i_corr<CM->ncor; i_corr++) {
             corr = CM->ucorr[i_corr];
@@ -1552,7 +1573,7 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
             kick_offset = SL->param_offset[sl_index];
             if (iteration==0) 
                 CM->kick[iteration][i_corr] = *((double*)(corr->p_elem+kick_offset))*CM->kick_coef[i_corr];
-            *((double*)(corr->p_elem+kick_offset)) += CM->dK->a[i_corr][0]/CM->kick_coef[i_corr]*corr_fraction;
+            *((double*)(corr->p_elem+kick_offset)) += CM->dK->a[i_corr][0]/CM->kick_coef[i_corr]*fraction;
             CM->kick[iteration+1][i_corr] = *((double*)(corr->p_elem+kick_offset))*CM->kick_coef[i_corr];
             if (corr->matrix) {
                 free_matrices(corr->matrix);
