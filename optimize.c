@@ -1298,7 +1298,7 @@ double optimization_function(double *value, long *invalid)
    */
   variables->varied_quan_value[variables->n_variables+1] = 
     optimization_data->mode==OPTIM_MODE_MAXIMUM?-1*result:result;
-  if (bestResult>result)
+  if (!*invalid && bestResult>result)
     bestResult = result;
   variables->varied_quan_value[variables->n_variables+2] = 
     optimization_data->mode==OPTIM_MODE_MAXIMUM?-1*bestResult:bestResult;
