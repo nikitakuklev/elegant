@@ -115,14 +115,12 @@ static SDDS_DEFINITION phase_space_column[PHASE_SPACE_COLUMNS] = {
     {"particleID", "&column name=particleID, type=long &end"},
     } ;
 
-#define PHASE_SPACE_PARAMETERS 2
+#define PHASE_SPACE_PARAMETERS 3
 static SDDS_DEFINITION phase_space_parameter[PHASE_SPACE_PARAMETERS] = {
   {"Step", "&parameter name=Step, type=long, description=\"Simulation step\" &end"},
   {"pCentral", "&parameter name=pCentral, symbol=\"p$bcen$n\", units=\"m$be$nc\", type=double &end"},
+  {"Charge", "&parameter name=Charge, type=double, units=C, description=\"Beam charge\" &end"},
 };
-
- 
-
   
 void SDDS_PhaseSpaceSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row, char *contents, 
                           char *command_file, char *lattice_file, char *caller)
@@ -181,7 +179,7 @@ void SDDS_CentroidOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode,
     log_exit("SDDS_CentroidOutputSetup");
     }
 
-#define SIGMA_MATRIX_COLUMNS 39
+#define SIGMA_MATRIX_COLUMNS 41
 static SDDS_DEFINITION sigma_matrix_column[SIGMA_MATRIX_COLUMNS] = {
     {"s1",    "&column name=s1, symbol=\"$gs$r$b1$n\", units=m, type=double &end"},
     {"s12",    "&column name=s12, symbol=\"$gs$r$b12$n\", units=m, type=double &end"},
@@ -208,6 +206,8 @@ static SDDS_DEFINITION sigma_matrix_column[SIGMA_MATRIX_COLUMNS] = {
     {"ma2",    "&column name=ma2, symbol=\"max$sb$ex'$sb$e\", type=double &end"},
     {"ma3",    "&column name=ma3, symbol=\"max$sb$ey$sb$e\", units=m, type=double &end"},
     {"ma4",    "&column name=ma4, symbol=\"max$sb$ey'$sb$e\", type=double &end"},
+    {"ma5",    "&column name=ma5, symbol=\"max$sb$e$gD$rs$sb$e\", type=double, units=m &end"},
+    {"ma6",    "&column name=ma6, symbol=\"max$sb$e$gd$r$sb$e\", type=double &end"},
     {"Sx",    "&column name=Sx, symbol=\"$gs$r$bx$n\", units=m, type=double &end"},
     {"Sxp",    "&column name=Sxp, symbol=\"$gs$r$bx'$n\", type=double &end"},
     {"Sy",    "&column name=Sy, symbol=\"$gs$r$by$n\", units=m, type=double &end"},
@@ -938,7 +938,8 @@ void dump_particle_histogram(HISTOGRAM *histogram, long step, long pass, double 
 }
 
 
-void dump_phase_space(SDDS_TABLE *SDDS_table, double **particle, long particles, long step, double Po)
+void dump_phase_space(SDDS_TABLE *SDDS_table, double **particle, long particles, long step, double Po,
+        double charge)
 {
     long i;
     double p;
@@ -958,7 +959,8 @@ void dump_phase_space(SDDS_TABLE *SDDS_table, double **particle, long particles,
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
     if (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
-                            "Step", step, "pCentral", Po, NULL)) {
+                            "Step", step, "pCentral", Po,
+                            "Charge", charge, NULL)) {
         SDDS_SetError("Problem setting parameter values for SDDS table (dump_phase_space)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
@@ -1195,7 +1197,7 @@ void dump_sigma(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, lo
       }
       
       /* Set values for maximum amplitudes of transverse coordinates */
-      for (i=0; i<4; i++)
+      for (i=0; i<6; i++)
         if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, ma1_index+i, beam->maxabs[i], -1)) {
           SDDS_SetError("Problem setting SDDS row values (dump_sigma)");
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);

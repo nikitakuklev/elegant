@@ -80,7 +80,7 @@ void zero_beam_sums(
 {
   long i, j, k;
   for (i=0; i<n; i++) {
-    for (j=0; j<4; j++)
+    for (j=0; j<6; j++)
       sums[i].maxabs[j] = 0;
     for (j=0; j<6; j++)
       sums[i].centroid[j] = 0;
@@ -109,7 +109,9 @@ void accumulate_beam_sums(
 
   if (n_part) {
     /* maximum amplitudes */
-    for (i=0; i<4; i++) {
+    for (i=0; i<6; i++) {
+      if (i==4)
+        continue;  /* done below */
       for (i_part=0; i_part<n_part; i_part++) {
         if ((value=fabs(coord[i_part][i]))>sums->maxabs[i])
           sums->maxabs[i] = value;
@@ -122,6 +124,10 @@ void accumulate_beam_sums(
       sums->centroid[i] = (sums->centroid[i]*sums->n_part+centroid[i])/(sums->n_part+n_part);
       centroid[i] /= n_part;
     }
+    i = 4;
+    for (i_part=0; i_part<n_part; i_part++)
+      if ((value=fabs(coord[i_part][i]-centroid[i]))>sums->maxabs[i])
+        sums->maxabs[i] = value;
     /* compute Sigma[i][j] for present beam and add to existing data */
     for (i=0; i<6; i++)
       for (j=i; j<6; j++) {
@@ -141,7 +147,7 @@ void copy_beam_sums(
 {
   long i, j;
 
-  for (i=0; i<4; i++) {
+  for (i=0; i<6; i++) {
     target->maxabs[i] = source->maxabs[i];
   }
   for (i=0; i<6; i++) {
