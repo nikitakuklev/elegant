@@ -37,6 +37,7 @@ void ematrix_element_tracking(double **coord, VMATRIX *M, EMATRIX *matr,
                               long np, double z);
 long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge, 
                              double ***part, long np, char *mainRootname);
+void distributionScatter(double **part, long np, double Po, DSCATTER *scat, long iPass);
 
 static TRACKING_CONTEXT trackingContext;
 
@@ -75,7 +76,7 @@ long do_tracking(
   MAXAMP *maxamp;
   MALIGN *malign;
   ELEMENT_LIST *eptr, *eptrPred, *eptrCLMatrix=NULL;
-  long n_left, show_dE, maxampOpenCode;
+  long n_left, show_dE, maxampOpenCode=0, maxampExponent=0;
   double dgamma, dP[3], z, z_recirc, last_z;
   long i, j, i_traj=0, i_sums, n_to_track, i_pass, isConcat;
   long i_sums_recirc, saveISR=0;
@@ -637,6 +638,7 @@ long do_tracking(
             y_max = maxamp->y_max;
             elliptical = maxamp->elliptical;
             maxampOpenCode = determineOpenSideCode(maxamp->openSide);
+            maxampExponent = maxamp->exponent;
             break;
           case T_TRCOUNT:
             *n_original = n_left;
@@ -725,6 +727,10 @@ long do_tracking(
           case T_SCATTER:
             if (!(flags&TEST_PARTICLES))
               scatter(coord, n_to_track, *P_central, (SCATTER*)eptr->p_elem);
+            break;
+          case T_DSCATTER:
+            if (!(flags&TEST_PARTICLES))
+              distributionScatter(coord, n_to_track, *P_central, (DSCATTER*)eptr->p_elem, i_pass);
             break;
           case T_NIBEND:
             n_left = lorentz(coord, n_to_track, (NIBEND*)eptr->p_elem, T_NIBEND, *P_central, accepted);
@@ -875,7 +881,7 @@ long do_tracking(
           else
             n_left = elimit_amplitudes(coord, x_max, y_max, n_left, accepted, z, *P_central, 
                                        eptr->type==T_DRIF || eptr->type==T_STRAY,
-                                       maxampOpenCode);
+                                       maxampOpenCode, maxampExponent);
         }
         if (run->print_statistics && !(flags&TEST_PARTICLES)) {
           report_stats(stdout, ": ");
@@ -1369,15 +1375,15 @@ void scatter(double **part, long np, double Po, SCATTER *scat)
   sigma[1] = scat->xp;
   sigma[2] = scat->y;
   sigma[3] = scat->yp;
-  for (i=0; i<4; i++) {
-    if (!sigma[i])
+  for (ip=0; ip<np; ip++) {
+    if (scat->probability<1 && random_2(1)>scat->probability)
       continue;
-    for (ip=0; ip<np; ip++)
+    for (i=0; i<4; i++) {
+      if (!sigma[i])
+        continue;
       part[ip][i] += gauss_rn(0, random_2)*sigma[i];
-  }
-
-  if (scat->dp) {
-    for (ip=0; ip<np; ip++) {
+    }
+    if (scat->dp) {
       P = (1+part[ip][5])*Po;
       beta = P/sqrt(sqr(P)+1);
       t = part[ip][4]/beta;
@@ -1387,7 +1393,7 @@ void scatter(double **part, long np, double Po, SCATTER *scat)
       part[ip][4] = t*beta;
     }
   }
-
+  
   log_exit("scatter");
 }
 
@@ -1907,4 +1913,181 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
   
   return npNew;
 }
+
+void distributionScatter(double **part, long np, double Po, DSCATTER *scat, long iPass)
+{
+  static DSCATTER_GROUP *dscatterGroup = NULL;
+  static long dscatterGroups = 0;
+  long i, ip, interpCode, nScattered;
+  double t, P, beta, amplitude, cdf;
+  TRACKING_CONTEXT context;
+    
+  if (!np)
+    return;
+  getTrackingContext(&context);
+
+  if (!scat->initialized) {
+    SDDS_DATASET SDDSin;
+    static char *planeName[3] = {"xp", "yp", "dp"};
+    static short planeIndex[3] = {1, 3, 5};
+    scat->initialized = 1;
+    scat->indepData = scat->cdfData = NULL;
+    scat->groupIndex = -1;
+    if ((i=match_string(scat->plane, planeName, 3, MATCH_WHOLE_STRING))<0) {
+      fprintf(stderr, "Error for %s: plane is not valid.  Give xp, yp, or dp\n",
+              context.elementName);
+      exit(1);
+    }
+    scat->iPlane = planeIndex[i];
+    if (!SDDS_InitializeInputFromSearchPath(&SDDSin, scat->fileName) ||
+        SDDS_ReadPage(&SDDSin)!=1) {
+      fprintf(stderr, "Error for %s: file is not valid.\n", context.elementName);
+      exit(1);
+    }
+    if ((scat->nData=SDDS_RowCount(&SDDSin))<2) {
+      fprintf(stderr, "Error for %s: file contains insufficient data.\n", context.elementName);
+      exit(1);
+    }
+    /* Get independent data */
+    if (!(scat->indepData=SDDS_GetColumnInDoubles(&SDDSin, scat->valueName))) {
+      fprintf(stderr, "Error for %s: independent variable data is invalid.\n",
+              context.elementName);
+      exit(1);
+    }
+    /* Check that independent data is monotonically increasing */
+    for (i=1; i<scat->nData; i++)
+      if (scat->indepData[i]<=scat->indepData[i-1]) {
+        fprintf(stderr, "Error for %s: independent variable data is not monotonically increasing.\n",
+                context.elementName);
+        exit(1);
+      }
+    /* Get CDF or PDF data */
+    if (!(scat->cdfData=SDDS_GetColumnInDoubles(&SDDSin, 
+                                                scat->cdfName?scat->cdfName:scat->pdfName))) {
+      fprintf(stderr, "Error for %s: CDF/PDF data is invalid.\n",
+              context.elementName);
+      exit(1);
+    }
+    SDDS_Terminate(&SDDSin);
+    if (!(scat->cdfName)) {
+      /* must integrate to get the CDF */
+      double *integral, *ptr;
+      if (!(integral=malloc(sizeof(*integral)*scat->nData))) {
+        fprintf(stderr, "Error for %s: memory allocation failure.\n", context.elementName);
+        exit(1);
+      }
+      trapazoidIntegration1(scat->indepData, scat->cdfData, scat->nData, integral);
+      ptr = scat->cdfData;
+      scat->cdfData = integral;
+      free(ptr);
+    }
+    /* Check that CDF is monotonically increasing */
+    for (i=0; i<scat->nData; i++) {
+      if (scat->cdfData[i]<0 || (i && scat->cdfData[i]<=scat->cdfData[i-1])) {
+        long j;
+        fprintf(stderr, "Error for %s: CDF not monotonically increasing at index %ld.\n", context.elementName,
+                i);
+        for (j=0; j<=i+1 && j<scat->nData; j++)
+          fprintf(stderr, "%ld %21.15e\n", j, scat->cdfData[i]);
+        exit(1);
+      }
+    }
+    /* Normalize CDF to 1 */
+    for (i=0; i<scat->nData; i++) 
+      scat->cdfData[i] /= scat->cdfData[scat->nData-1];
+
+    if (scat->oncePerParticle) {
+      /* Figure out scattering group assignment */
+      if (scat->group>=0) {
+        for (i=0; i<dscatterGroups; i++) {
+          if (dscatterGroup[i].group==scat->group)
+            break;
+        }
+      } else
+        i = dscatterGroups;
+      if (i==dscatterGroups) {
+        /* make a new group */
+        fprintf(stderr, "Making new scattering group structure (#%ld, group %ld) for %s #%ld\n",
+                i, scat->group, context.elementName, context.elementOccurrence);
+        if (!(dscatterGroup = SDDS_Realloc(dscatterGroup, sizeof(*dscatterGroup)*(dscatterGroups+1)))) {
+          fprintf(stderr, "Error for %s: memory allocation failure.\n", context.elementName);
+          exit(1);
+        }
+        dscatterGroup[i].particleIDScattered = NULL;
+        dscatterGroup[i].nParticles = 0;
+        dscatterGroup[i].group = scat->group;
+        scat->firstInGroup = 1;
+        dscatterGroups++;
+      } else {
+        fprintf(stderr, "Linking to scattering group structure (#%ld, group %ld) for %s #%ld\n",
+                i, scat->group, context.elementName, context.elementOccurrence);
+        scat->firstInGroup = 0;
+      }
+      scat->groupIndex = i;
+    }
+  }
+  
+  if (iPass==0 && scat->oncePerParticle && scat->firstInGroup) {
+    /* Initialize data for remembering which particles have been scattered */
+    dscatterGroup[scat->groupIndex].nParticles = np;
+    if (dscatterGroup[scat->groupIndex].particleIDScattered)
+      free(dscatterGroup[scat->groupIndex].particleIDScattered);
+    if (!(dscatterGroup[scat->groupIndex].particleIDScattered 
+          = malloc(sizeof(*(dscatterGroup[scat->groupIndex].particleIDScattered))*np))) {
+      fprintf(stderr, "Error for %s: memory allocation failure.\n", context.elementName);
+      exit(1);
+    }
+    dscatterGroup[scat->groupIndex].nScattered = 0;
+    fprintf(stderr, "Initialized group structure for group %ld\n",
+            scat->group);
+  }
+  
+  if (scat->oncePerParticle && dscatterGroup[scat->groupIndex].nParticles<np) {
+    fprintf(stderr, "Error for %s: number of particles is greater than the size of the particle ID array.\n",
+            context.elementName);
+    exit(1);
+  }
+  nScattered = 0;
+  for (ip=0; ip<np; ip++) {
+    if (scat->probability<1 && random_2(1)>scat->probability)
+      continue;
+    if (scat->oncePerParticle) {
+      short found = 0;
+      if (dscatterGroup[scat->groupIndex].nScattered>=np) {
+        fprintf(stderr, "All particles scattered for group %ld (nscattered=%ld, np=%ld)\n",
+                scat->group, dscatterGroup[scat->groupIndex].nScattered, np);
+        break;
+      }
+      for (i=0; i<dscatterGroup[scat->groupIndex].nScattered; i++) {
+        if (dscatterGroup[scat->groupIndex].particleIDScattered[i]==part[ip][6]) {
+          found = 1;
+          break;
+        }
+      }
+      if (found)
+        continue;
+      dscatterGroup[scat->groupIndex].particleIDScattered[i] = part[ip][6];
+      dscatterGroup[scat->groupIndex].nScattered += 1;
+    }
+    nScattered++;
+    cdf = random_2(1);
+    amplitude = scat->factor*interp(scat->indepData, scat->cdfData, scat->nData, cdf, 0, 1, &interpCode);
+    if (!interpCode)
+      fprintf(stderr, "Warning: interpolation error for %s.  cdf=%e\n",
+              context.elementName, cdf);
+    if (scat->iPlane==5) {
+      /* momentum scattering */
+      P = (1+part[ip][5])*Po;
+      beta = P/sqrt(sqr(P)+1);
+      t = part[ip][4]/beta;
+      part[ip][5] += amplitude;
+      P = (1+part[ip][5])*Po;
+      beta = P/sqrt(sqr(P)+1);
+      part[ip][4] = t*beta;
+    } else
+      part[ip][scat->iPlane] += amplitude;
+  }
+  fprintf(stderr, "%ld particles scattered by %s, group %ld, total=%ld\n", nScattered, context.elementName, scat->group, dscatterGroup[scat->groupIndex].nScattered);
+}
+
 
