@@ -18,6 +18,7 @@ void convertFromCSBendCoords(double **part, long np, double rho0,
 void convertToCSBendCoords(double **part, long np, double rho0, 
 			     double cos_ttilt, double sin_ttilt, long ctMode);
 long applyLowPassFilter(double *histogram, long bins, double dx, double start, double end);
+long correctDistribution(double *array, long npoints, double desiredSum);
 
 static double Fy_0, Fy_x, Fy_x2, Fy_x3, Fy_x4;
 static double Fy_y2, Fy_x_y2, Fy_x2_y2;
@@ -1325,8 +1326,10 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
             fflush(stdout);
           }
         }
-        if (csbend->SGHalfWidth>0)
+        if (csbend->SGHalfWidth>0) {
           SavitzyGolaySmooth(ctHist, nBins, csbend->SGOrder, csbend->SGHalfWidth, csbend->SGHalfWidth,  0);
+          correctDistribution(ctHist, nBins, 1.0*nBinned);
+        }
         for (iBin=0; iBin<nBins; iBin++) {
           denom[iBin] = pow(dct*iBin, 1./3.);
           ctHistDeriv[iBin] = (ctHist[iBin] /= dct);
@@ -2343,8 +2346,10 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
         fflush(stdout);
       }
     }
-    if (csrWake.SGHalfWidth>0)
+    if (csrWake.SGHalfWidth>0) {
       SavitzkyGolaySmooth(ctHist, nBins, csrWake.SGOrder, csrWake.SGHalfWidth, csrWake.SGHalfWidth,  0);
+      correctDistribution(ctHist, nBins, 1.0*nBinned);
+    }
     for (iBin=0; iBin<nBins; iBin++)
       ctHistDeriv[iBin] = (ctHist[iBin] /= dct);
     /* - compute derivative with smoothing.  The deriv is w.r.t. index number and
@@ -2707,8 +2712,8 @@ void convertToCSBendCoords(double **part, long np, double rho0,
 #include "fftpackC.h"
 long applyLowPassFilter(double *histogram, long bins, double dx, double start, double end)
 {
-  long i, i1, i2, nz;
-  double fraction, dfraction, sum1, sum2;
+  long i, i1, i2;
+  double fraction, dfraction, sum;
   double *realimag, dfrequency, length;
   long frequencies;
 
@@ -2754,18 +2759,30 @@ long applyLowPassFilter(double *histogram, long bins, double dx, double start, d
    * normalize to keep the sum constant
    * don't allow negative values 
    */
-  for (i=nz=sum1=sum2=0; i<bins; i++) {
-    sum1 += histogram[i];
-    if ((histogram[i] = realimag[i])<0) {
-      nz++;
-      histogram[i] = 0;
-    }
-    sum2 += histogram[i];
+  for (i=sum=0; i<bins; i++) {
+    sum += histogram[i];
+    histogram[i] = realimag[i];
   }
   free(realimag);
-  if (sum2)
-    for (i=0; i<bins; i++)
-      histogram[i] *= sum1/sum2;
+  return correctDistribution(histogram, bins, sum);
+}
+
+long correctDistribution(double *array, long npoints, double desiredSum)
+{
+  double sum, factor;
+  long nz, i;
+  for (i=nz=sum=0; i<npoints; i++) {
+    if (array[i]<0) {
+      nz ++;
+      array[i] = 0;
+    }
+    sum += array[i];
+  }
+  if (!sum)
+    return nz;
+  factor = desiredSum/sum;
+  for (i=0; i<npoints; i++)
+    array[i] *= factor;
   return nz;
 }
 
