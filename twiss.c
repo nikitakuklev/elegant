@@ -190,7 +190,7 @@ VMATRIX *compute_periodic_twiss(
         eta2f[i] = eta2[i] = dispEta->a[i][0];
       eta2f[4] = 0;
       eta2f[5] = 0;
-      
+
       if (eta3) {
         long l;
         /* third-order dispersion */
@@ -239,7 +239,7 @@ VMATRIX *compute_periodic_twiss(
   *alphay = alpha[1];
   *NUx = phi[0]/PIx2;
   *NUy = phi[1]/PIx2;
-  
+
   log_exit("compute_periodic_twiss");
   return(M);
 }
@@ -1107,7 +1107,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
   VMATRIX *M;
   double chromx, chromy, dbetax, dbetay, alpha1, alpha2, dalphax, dalphay;
   double chromx2, chromy2;
-  double x_acc_z, y_acc_z, eta2[4] = {0,0,0,0}, eta3[4]={0,0,0,0};
+  double x_acc_z, y_acc_z;
   ELEMENT_LIST *eptr, *elast;
   char *x_acc_name, *y_acc_name;
   long i;
@@ -1308,7 +1308,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
       eta[4] = 0;
       eta[5] = 1;
       for (j=0; j<4; j++)
-        alpha2 += beamline->matrix->R[4][j]*eta2[j];
+        alpha2 += beamline->matrix->R[4][j]*beamline->eta2[j];
       for (j=0; j<6; j++)
         for (k=0; k<=j; k++) 
           alpha2 += beamline->matrix->T[4][j][k]*eta[j]*eta[k];
