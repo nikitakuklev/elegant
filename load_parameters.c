@@ -22,6 +22,8 @@ typedef struct {
 #define COMMAND_FLAG_CHANGE_DEFINITIONS 0x0001UL
 #define COMMAND_FLAG_IGNORE             0x0002UL
 #define COMMAND_FLAG_IGNORE_OCCURENCE   0x0004UL
+    char *includeNamePattern, *includeItemPattern;
+    char *excludeNamePattern, *excludeItemPattern;
     long last_code;          /* return code from SDDS_ReadTable */
     short string_data;       /* if non-zero, indicates data stored as strings */   
     double *starting_value;  /* only for numerical data */
@@ -80,6 +82,10 @@ long setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     load_request[load_requests].filename = compose_filename(filename, run->rootname);
     if (change_defined_values && !force_occurence_data)
       load_request[load_requests].flags |= COMMAND_FLAG_IGNORE_OCCURENCE;
+    load_request[load_requests].includeNamePattern = include_name_pattern;
+    load_request[load_requests].excludeNamePattern = exclude_name_pattern;
+    load_request[load_requests].includeItemPattern = include_item_pattern;
+    load_request[load_requests].excludeItemPattern = exclude_item_pattern;
     
     SDDS_ClearErrors();
 
@@ -287,6 +293,18 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
         if (strcmp(lastMissingElement, element[j])==0)
           continue;
       }
+      if (load_request[i].includeNamePattern &&
+          !wild_match(element[j], load_request[i].includeNamePattern))
+        continue;
+      if (load_request[i].excludeNamePattern &&
+          wild_match(element[j], load_request[i].excludeNamePattern))
+        continue;
+      if (load_request[i].includeItemPattern &&
+          !wild_match(parameter[j], load_request[i].includeItemPattern))
+        continue;
+      if (load_request[i].excludeItemPattern &&
+          wild_match(parameter[j], load_request[i].excludeItemPattern))
+        continue;
       element_missing = 0;
       while (count-- > 0) {
         if (!find_element(element[j], &eptr, &(beamline->elem))) {
@@ -343,6 +361,9 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
         mode_flags = LOAD_FLAG_ABSOLUTE;
       if (mode_flags&LOAD_FLAG_IGNORE)
         continue;
+      if (verbose)
+        fprintf(stdout, "Working on row %ld of file\n", j);
+      
       if (load_request[i].flags&COMMAND_FLAG_CHANGE_DEFINITIONS) {
         change_defined_parameter(element[j], param, eptr->type, value?value[j]:0, 
                                  valueString?valueString[j]:NULL, 
