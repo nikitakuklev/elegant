@@ -2128,7 +2128,11 @@ void distributionScatter(double **part, long np, double Po, DSCATTER *scat, long
       part[ip][scat->iPlane] += amplitude;
   }
   scat->nLeft -= nScattered;
-  fprintf(stderr, "%ld particles scattered by %s#%ld, group %ld, total=%ld\n", nScattered, context.elementName, context.elementOccurrence, scat->group, dscatterGroup[scat->groupIndex].nScattered);
+  /*
+  fprintf(stderr, "%ld particles scattered by %s#%ld, group %ld, total=%ld\n", 
+          nScattered, context.elementName, context.elementOccurrence, 
+          scat->group, dscatterGroup[scat->groupIndex].nScattered);
+          */
 }
 
 
