@@ -1109,7 +1109,8 @@ proc FineDynamicAperturePP {args} {
 	| sddsxref -pipe -leave=* -transfer=param,xCO $rootname.clo.tmp \
 	| sddsprocess -pipe "-redefine=column,x0,x0 xCO +,units=m" \
 	| sddscombine -pipe=in -merge $rootname.da -overwrite
-    exec sddsplot -column=x0,y0 $rootname.da -graph=dot,vary -order=spect -split=column=Pass,width=1 &
+    exec sddsplot -column=x0,y0 $rootname.da -graph=dot,vary,subtype=4 \
+	-order=spect -split=column=Pass,width=1 &
 }
 
 set tabIndex -1
