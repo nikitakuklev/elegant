@@ -2435,7 +2435,7 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
     if (useMatrix)
       track_particles(oneParticle, M, oneParticle, one);
     else {
-      if (!do_tracking(oneParticle, &one, NULL, beamline, &p,  (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
+      if (!do_tracking(NULL, oneParticle, 1, NULL, beamline, &p,  (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
                        (TRAJECTORY*)NULL, run, 0, TEST_PARTICLES+TIME_DEPENDENCE_OFF, 
                        1, i-1, NULL, NULL, NULL, NULL)) {
         fprintf(stdout, "warning: test particle lost on turn %ld (computeTunesFromTracking)\n", i);
@@ -2468,12 +2468,12 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
   fflush(stdout);
 #endif
 
-  if (PerformNAFF(tune+0, amp?amp+0:&dummy, &dummy, 0.0, 1.0, x, turns, 
+  if (PerformNAFF(tune+0, amp?amp+0:&dummy, &dummy, &dummy, 0.0, 1.0, x, turns, 
 		  NAFF_MAX_FREQUENCIES|NAFF_FREQ_CYCLE_LIMIT|NAFF_FREQ_ACCURACY_LIMIT,
 		  0.0, 1, 200, 1e-12,
 		  tuneLowerLimit?tuneLowerLimit[0]:0,
 		  tuneUpperLimit?tuneUpperLimit[0]:0)!=1 ||
-      PerformNAFF(tune+1, amp?amp+1:&dummy, &dummy, 0.0, 1.0, y, turns,
+      PerformNAFF(tune+1, amp?amp+1:&dummy, &dummy, &dummy, 0.0, 1.0, y, turns,
 		  NAFF_MAX_FREQUENCIES|NAFF_FREQ_CYCLE_LIMIT|NAFF_FREQ_ACCURACY_LIMIT,
 		  0.0, 1, 200, 1e-12,
 		  tuneLowerLimit?tuneLowerLimit[1]:0,

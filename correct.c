@@ -817,7 +817,7 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
   p = p0 = sqrt(sqr(run->ideal_gamma)-1);
   n_part = 1;
   fill_double_array(*one_part, 7, 0.0);
-  if (!do_tracking(one_part, &n_part, NULL, beamline, &p, (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
+  if (!do_tracking(NULL, one_part, n_part, NULL, beamline, &p, (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
                    traj0, run, 0, TEST_PARTICLES+TIME_DEPENDENCE_OFF, 1, 0, NULL, NULL, NULL, NULL))
     bomb("tracking failed for test particle (compute_trajcor_matrices())", NULL);
 
@@ -879,7 +879,7 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
     p = p0;
     n_part = 1;
     fill_double_array(*one_part, 7, 0.0);
-    if (!do_tracking(one_part, &n_part, NULL, beamline, &p, (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
+    if (!do_tracking(NULL, one_part, n_part, NULL, beamline, &p, (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
                      traj1, run, 0, TEST_PARTICLES+TIME_DEPENDENCE_OFF, 1, 0, NULL, NULL, NULL, NULL))
       bomb("tracking failed for test particle (compute_trajcor_matrices())", NULL);
 
@@ -913,7 +913,7 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
     p = p0;
     n_part = 1;
     fill_double_array(*one_part, 7, 0.0);
-    if (!do_tracking(one_part, &n_part, NULL, beamline, &p, (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
+    if (!do_tracking(NULL, one_part, n_part, NULL, beamline, &p, (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
                      traj0, run, 0, TEST_PARTICLES+TIME_DEPENDENCE_OFF, 1, 0, NULL, NULL, NULL, NULL))
       bomb("tracking failed for test particle (compute_trajcor_matrices())", NULL);
 
@@ -1052,7 +1052,7 @@ long global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
     else
       copy_particles(particle, beam->particle, n_part=beam->n_to_track);
 
-    n_part = do_tracking(particle, &n_part, NULL, beamline, &p, (double**)NULL, 
+    n_part = do_tracking(NULL, particle, n_part, NULL, beamline, &p, (double**)NULL, 
                          (BEAM_SUMS**)NULL, (long*)NULL,
                          traj, run, 0, tracking_flags, 1, 0, NULL, NULL, NULL, NULL);
     if (beam) {
@@ -1216,7 +1216,7 @@ void one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TR
       else
         copy_particles(particle, beam->particle, n_part=beam->n_to_track);
       
-      n_part = do_tracking(particle, &n_part, NULL, beamline, &p, (double**)NULL, 
+      n_part = do_tracking(NULL, particle, n_part, NULL, beamline, &p, (double**)NULL, 
                            (BEAM_SUMS**)NULL, (long*)NULL,
                            traj, run, 0, tracking_flags, 1, 0, NULL, NULL, NULL, NULL);
       if (beam) {
@@ -1962,7 +1962,7 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
     deviation[4] = deviation[5] = 0;
   do {
     n_part = 1;
-    do_tracking(one_part, &n_part, NULL, beamline, &p, (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
+    do_tracking(NULL, one_part, n_part, NULL, beamline, &p, (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
                 clorb+1, run, 0, 
                 TEST_PARTICLES+TIME_DEPENDENCE_OFF+(start_from_recirc?BEGIN_AT_RECIRC:0), 1, 0,
                 NULL, NULL, NULL, NULL);

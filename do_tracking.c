@@ -35,11 +35,10 @@ void matr_element_tracking(double **coord, VMATRIX *M, MATR *matr,
                            long np, double z);
 void ematrix_element_tracking(double **coord, VMATRIX *M, EMATRIX *matr,
                               long np, double z);
-long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge, 
-                             double ***part, long **lostOnPass, long np, char *mainRootname, long iPass,
-			     long driftOrder);
+long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge, BEAM *beam, double **part, 
+                             long np, long nLost, char *mainRootname, long iPass, long driftOrder);
 void distributionScatter(double **part, long np, double Po, DSCATTER *scat, long iPass);
-void recordLossPass(long *lostOnPass, long *nLost, long nLeft, long nOriginal, long pass);
+void recordLossPass(long *lostOnPass, long *nLost, long nLeft, long nMaximum, long pass);
 
 static TRACKING_CONTEXT trackingContext;
 
@@ -50,8 +49,10 @@ double beta_from_delta(double p, double delta)
 }
 
 long do_tracking(
+                 /* Either the beam pointer or the coord pointer must be supplied, but not both */
+                 BEAM *beam,  
                  double **coord,
-                 long *n_original,
+                 long nOriginal,   /* Used only if coord is supplied */
                  long *effort,
                  LINE_LIST *beamline,
                  double *P_central,    /* beta*gamma for central particle */
@@ -79,9 +80,13 @@ long do_tracking(
   MAXAMP *maxamp;
   MALIGN *malign;
   ELEMENT_LIST *eptr, *eptrPred, *eptrCLMatrix=NULL;
-  long n_left, nLost=0, show_dE, maxampOpenCode=0, maxampExponent=0;
+  long nToTrack;  /* number of particles being tracked */
+  long nLeft;     /* number of those that are left after a tracking routine returns */
+  long nLost=0;     /* accumulated number lost */
+  long nMaximum=0;  /* maximum number of particles seen */
+  long show_dE, maxampOpenCode=0, maxampExponent=0;
   double dgamma, dP[3], z, z_recirc, last_z;
-  long i, j, i_traj=0, i_sums, n_to_track, i_pass, isConcat;
+  long i, j, i_traj=0, i_sums, i_pass, isConcat;
   long i_sums_recirc, saveISR=0;
   long watch_pt_seen, feedbackDriverSeen;
   double sum, x_max, y_max;
@@ -95,8 +100,14 @@ long do_tracking(
   CHARGE *charge;
   static long warnedAboutChargePosition = 0;
   
-  if (!coord)
-    bomb("Null particle coordinate array! (do_tracking)", NULL);
+  if (!coord && !beam)
+    bomb("Null particle coordinate array and null beam pointer! (do_tracking)", NULL);
+  if (coord && beam)
+    bomb("Particle coordinate array and beam pointer both supplied!  (do_tracking)", NULL);
+  if (beam) {
+    coord = beam->particle;
+    nOriginal = beam->n_to_track;  /* used only for computing macroparticle charge */
+  }
   
 #ifdef WATCH_MEMORY
   fprintf(stdout, "start do_tracking():  CPU: %6.2lf  PF: %6ld  MEM: %6ld\n",
@@ -116,7 +127,7 @@ long do_tracking(
 #endif
   
   if (accepted)
-    copy_particles(accepted, coord, *n_original);
+    copy_particles(accepted, coord, nOriginal);
 
 #ifdef VAX_VMS
   is_batch = job_mode(getpid())==2?1:0;
@@ -125,10 +136,9 @@ long do_tracking(
   z = z_recirc = last_z =  0;
   i_sums = i_sums_recirc = 0;
   x_max = y_max = 0;
-  n_to_track = *n_original;
+  nToTrack = nLeft = nMaximum = nOriginal;
   et1 = -2.0;
   elliptical = isConcat = 0;
-  n_left = n_to_track;
   watch_pt_seen = feedbackDriverSeen = 0;
   
   check_nan = 1;
@@ -249,15 +259,15 @@ long do_tracking(
     log_exit("do_tracking.2.1");
     log_entry("do_tracking.2.2");
     if (check_nan) {
-      n_left = n_to_track = limit_amplitudes(coord, DBL_MAX, DBL_MAX, n_to_track, accepted, z, *P_central, 0,
+      nLeft = nToTrack = limit_amplitudes(coord, DBL_MAX, DBL_MAX, nToTrack, accepted, z, *P_central, 0,
                                              0);
-      recordLossPass(lostOnPass, &nLost, n_left, *n_original, 0);
+      recordLossPass(lostOnPass, &nLost, nLeft, nMaximum, 0);
     }
     if (!(flags&SILENT_RUNNING) && !is_batch && n_passes!=1 && !(flags&TEST_PARTICLES)
         && !(run->tracking_updates==0)) {
 #if defined(VAX_VMS)
       sprintf(s, "%ld particles left after pass %ld        ",
-              n_to_track, i_pass);
+              nToTrack, i_pass);
       fputs(s, stdout);
       if (is_ansi_term)
         backspace(strlen(s));
@@ -269,7 +279,7 @@ long do_tracking(
 #if defined(UNIX) || defined(_WIN32)
       if ((et2=delapsed_time())-et1>2.0) {
         sprintf(s, "%ld particles left after pass %ld        ", 
-                n_to_track, i_pass);
+                nToTrack, i_pass);
         fputs(s, stdout);
         if (is_ansi_term)
           backspace(strlen(s));
@@ -280,7 +290,7 @@ long do_tracking(
       }
 #else
       sprintf(s, "%ld particles left after pass %ld        ", 
-              n_to_track, i_pass);
+              nToTrack, i_pass);
       fputs(s, stdout);
       if (is_ansi_term)
         backspace(strlen(s));
@@ -291,7 +301,7 @@ long do_tracking(
     }
     elementsTracked = -1;
     eptrPred = eptr;
-    while (eptr && n_to_track) {
+    while (eptr && nToTrack) {
       elementsTracked++;
       log_entry("do_tracking.2.2.0");
       if (!eptr->name) {
@@ -323,11 +333,11 @@ long do_tracking(
       if (sums_vs_z && *sums_vs_z && !(flags&FINAL_SUMS_ONLY) && !(flags&TEST_PARTICLES)) {
         if (i_sums<0)
           bomb("attempt to accumulate beam sums with negative index!", NULL);
-        accumulate_beam_sums(*sums_vs_z+i_sums, coord, n_to_track, *P_central);
+        accumulate_beam_sums(*sums_vs_z+i_sums, coord, nToTrack, *P_central);
         (*sums_vs_z)[i_sums].z = z;
 #if defined(BEAM_SUMS_DEBUG)
         fprintf(stdout, "beam sums accumulated in slot %ld for %s at z=%em, sx=%e\n", 
-                i_sums, name, z, sqrt((*sums_vs_z)[i_sums].sum2[0]/n_left));
+                i_sums, name, z, sqrt((*sums_vs_z)[i_sums].sum2[0]/nLeft));
         fflush(stdout);
 #endif
         i_sums++;
@@ -364,22 +374,22 @@ long do_tracking(
           fprintf(stdout, "tracking through %s%c", eptr->name, '\n');
           fflush(stdout);
 #endif
-        n_left = n_to_track;
         show_dE = 0;
+        nLeft = nToTrack;  /* in case it isn't set by the element tracking */
         if (eptr==eptrCLMatrix)  {
           /* This element is the place-holder for the chromatic linear matrix or
            * the longitudinal-only matrix 
            */
           if (flags&LINEAR_CHROMATIC_MATRIX) 
-            n_to_track = trackWithChromaticLinearMatrix(coord, n_to_track, accepted,
-                                                        *P_central, z, eptrCLMatrix,
-                                                        beamline->twiss0, beamline->tune,
-                                                        beamline->chromaticity,
-                                                        beamline->chrom2, beamline->chrom3,
-                                                        beamline->dbeta_dPoP, beamline->dalpha_dPoP,
-                                                        beamline->alpha, beamline->eta2, beamline->eta3);
+            nLeft = trackWithChromaticLinearMatrix(coord, nToTrack, accepted,
+                                                   *P_central, z, eptrCLMatrix,
+                                                   beamline->twiss0, beamline->tune,
+                                                   beamline->chromaticity,
+                                                   beamline->chrom2, beamline->chrom3,
+                                                   beamline->dbeta_dPoP, beamline->dalpha_dPoP,
+                                                   beamline->alpha, beamline->eta2, beamline->eta3);
           else 
-            trackLongitudinalOnlyRing(coord, n_to_track, 
+            trackLongitudinalOnlyRing(coord, nToTrack, 
                                       eptrCLMatrix->matrix,
                                       beamline->alpha);
         }
@@ -395,7 +405,7 @@ long do_tracking(
             fprintf(stdout, "Warning: matrix with C5!=0 detected in matrix multiplier--this shouldn't happen!\nAll particles considered lost!\n");
             fprintf(stdout, "Element in question is %s, C5=%le\n", eptr->name, eptr->matrix->C[5]);
             fflush(stdout);
-            n_left = 0;
+            nLeft = 0;
           } else {
             if (run->print_statistics>1 && !(flags&TEST_PARTICLES)) {
               fprintf(stdout, "Tracking matrix for %s\n", eptr->name);
@@ -403,7 +413,7 @@ long do_tracking(
               print_elem(stdout, eptr);
               print_matrices(stdout, "", eptr->matrix);
             }
-            track_particles(coord, eptr->matrix, coord, n_to_track);
+            track_particles(coord, eptr->matrix, coord, nToTrack);
           }
         }
         else {
@@ -444,8 +454,8 @@ long do_tracking(
               }
               charge = (CHARGE*)eptr->p_elem;
               charge->macroParticleCharge = 0;
-              if (*n_original)
-                charge->macroParticleCharge = charge->charge/(*n_original);
+              if (nOriginal)
+                charge->macroParticleCharge = charge->charge/(nOriginal);
               if (charge->chargePerParticle)
                 charge->macroParticleCharge = charge->chargePerParticle;
             }
@@ -463,7 +473,7 @@ long do_tracking(
               store_fitpoint_matrix_values((MARK*)eptr->p_elem, eptr->name, 
                                            eptr->occurence, eptr->accumMatrix);
               store_fitpoint_beam_parameters((MARK*)eptr->p_elem, eptr->name,eptr->occurence, 
-                                             coord, n_to_track, *P_central); 
+                                             coord, nToTrack, *P_central); 
             }
             break;
           case T_RECIRC:
@@ -476,19 +486,19 @@ long do_tracking(
           case T_RFDF:
             if (!(flags&TIME_DEPENDENCE_OFF))
               track_through_rf_deflector(coord, (RFDF*)eptr->p_elem,
-                                         coord, n_to_track, *P_central);
+                                         coord, nToTrack, *P_central);
             else
-              drift_beam(coord, n_to_track, ((RFDF*)eptr->p_elem)->length, run->default_order);
+              drift_beam(coord, nToTrack, ((RFDF*)eptr->p_elem)->length, run->default_order);
             break;
           case T_RMDF:
             if (!(flags&TIME_DEPENDENCE_OFF))
               track_through_ramped_deflector(coord, (RMDF*)eptr->p_elem,
-                                             coord, n_to_track, *P_central);
+                                             coord, nToTrack, *P_central);
             else
-              drift_beam(coord, n_to_track, ((RMDF*)eptr->p_elem)->length, run->default_order);
+              drift_beam(coord, nToTrack, ((RMDF*)eptr->p_elem)->length, run->default_order);
             break;
           case T_RFTMEZ0:
-              n_left = motion(coord, n_to_track, eptr->p_elem, eptr->type, P_central, 
+              nLeft = motion(coord, nToTrack, eptr->p_elem, eptr->type, P_central, 
                               &dgamma, dP, accepted, last_z);
               show_dE = 1;
             break;
@@ -496,66 +506,66 @@ long do_tracking(
           case T_CEPL:
           case T_TWPL:
             if (!(flags&TIME_DEPENDENCE_OFF)) {
-              n_left = motion(coord, n_to_track, eptr->p_elem, eptr->type, P_central, 
+              nLeft = motion(coord, nToTrack, eptr->p_elem, eptr->type, P_central, 
                               &dgamma, dP, accepted, last_z);
               show_dE = 1;
             }
             else
-              drift_beam(coord, n_to_track, ((TW_LINAC*)eptr->p_elem)->length, run->default_order);
+              drift_beam(coord, nToTrack, ((TW_LINAC*)eptr->p_elem)->length, run->default_order);
             break;
           case T_MAPSOLENOID:
-            n_left = motion(coord, n_to_track, eptr->p_elem, eptr->type, P_central, 
+            nLeft = motion(coord, nToTrack, eptr->p_elem, eptr->type, P_central, 
                             &dgamma, dP, accepted, last_z);
             break;
           case T_TWLA:
           case T_TWMTA:
-            n_left = motion(coord, n_to_track, eptr->p_elem, eptr->type, P_central, 
+            nLeft = motion(coord, nToTrack, eptr->p_elem, eptr->type, P_central, 
                             &dgamma, dP, accepted, last_z);
             show_dE = 1;
             break;
           case T_RCOL:
             if (flags&TEST_PARTICLES && !(flags&TEST_PARTICLE_LOSSES))
-              drift_beam(coord, n_to_track, ((RCOL*)eptr->p_elem)->length, run->default_order);
+              drift_beam(coord, nToTrack, ((RCOL*)eptr->p_elem)->length, run->default_order);
             else {
-              n_left = rectangular_collimator(coord, (RCOL*)eptr->p_elem, n_to_track, accepted, last_z, *P_central);
+              nLeft = rectangular_collimator(coord, (RCOL*)eptr->p_elem, nToTrack, accepted, last_z, *P_central);
             }
             break;
           case T_ECOL:
             if (flags&TEST_PARTICLES && !(flags&TEST_PARTICLE_LOSSES))
-              drift_beam(coord, n_to_track, ((RCOL*)eptr->p_elem)->length, run->default_order);
+              drift_beam(coord, nToTrack, ((RCOL*)eptr->p_elem)->length, run->default_order);
             else
-              n_left = elliptical_collimator(coord, (ECOL*)eptr->p_elem, n_to_track, accepted, z, *P_central);
+              nLeft = elliptical_collimator(coord, (ECOL*)eptr->p_elem, nToTrack, accepted, z, *P_central);
             break;
           case T_CLEAN:
             if (!(flags&TEST_PARTICLES && !(flags&TEST_PARTICLE_LOSSES)))
-              n_left = remove_outlier_particles(coord, (CLEAN*)eptr->p_elem, 
-                                                n_to_track, accepted, z, *P_central);
+              nLeft = remove_outlier_particles(coord, (CLEAN*)eptr->p_elem, 
+                                                nToTrack, accepted, z, *P_central);
             break;
           case T_SCRAPER:
             if (!(flags&TEST_PARTICLES && !(flags&TEST_PARTICLE_LOSSES))) {
-              n_left = beam_scraper(coord, (SCRAPER*)eptr->p_elem, n_to_track, accepted, z, *P_central);
+              nLeft = beam_scraper(coord, (SCRAPER*)eptr->p_elem, nToTrack, accepted, z, *P_central);
             }
             break;
           case T_PFILTER:
             if (!(flags&TEST_PARTICLES && !(flags&TEST_PARTICLE_LOSSES)))
-              n_left = track_through_pfilter(coord, (PFILTER*)eptr->p_elem, n_to_track, 
+              nLeft = track_through_pfilter(coord, (PFILTER*)eptr->p_elem, nToTrack, 
                                              accepted, z, *P_central);
             break;
           case T_CENTER:
-            center_beam(coord, (CENTER*)eptr->p_elem, n_to_track);
+            center_beam(coord, (CENTER*)eptr->p_elem, nToTrack);
             break;
           case T_REMCOR:
-            remove_correlations(coord, (REMCOR*)eptr->p_elem, n_to_track);
+            remove_correlations(coord, (REMCOR*)eptr->p_elem, nToTrack);
             break;
           case T_RFCA:
-            n_left = simple_rf_cavity(coord, n_to_track, (RFCA*)eptr->p_elem, accepted, P_central, z);
+            nLeft = simple_rf_cavity(coord, nToTrack, (RFCA*)eptr->p_elem, accepted, P_central, z);
             break;
           case T_RFCW:
-            n_left = track_through_rfcw(coord, n_to_track, (RFCW*)eptr->p_elem, accepted, P_central, z,
+            nLeft = track_through_rfcw(coord, nToTrack, (RFCW*)eptr->p_elem, accepted, P_central, z,
                                         run, i_pass, charge);
             break;
           case T_MODRF:
-            modulated_rf_cavity(coord, n_to_track, (MODRF*)eptr->p_elem, *P_central, z);
+            modulated_rf_cavity(coord, nToTrack, (MODRF*)eptr->p_elem, *P_central, z);
             break;
           case T_WATCH:
             watch_pt_seen = 1;
@@ -570,17 +580,17 @@ long do_tracking(
               if (i_pass>=watch->start_pass && (i_pass-watch->start_pass)%watch->interval==0) {
                 switch (watch->mode_code) {
                 case WATCH_COORDINATES:
-                  dump_watch_particles(watch, step, i_pass, coord, n_to_track, *P_central,
+                  dump_watch_particles(watch, step, i_pass, coord, nToTrack, *P_central,
                                        beamline->revolution_length, 
-                                       charge?charge->macroParticleCharge*n_to_track:0.0, z);
+                                       charge?charge->macroParticleCharge*nToTrack:0.0, z);
                   break;
                 case WATCH_PARAMETERS:
                 case WATCH_CENTROIDS:
-                  dump_watch_parameters(watch, step, i_pass, n_passes, coord, n_to_track, *n_original, *P_central,
+                  dump_watch_parameters(watch, step, i_pass, n_passes, coord, nToTrack, nOriginal, *P_central,
                                         beamline->revolution_length);
                   break;
                 case WATCH_FFT:
-                  dump_watch_FFT(watch, step, i_pass, n_passes, coord, n_to_track, *n_original, *P_central);
+                  dump_watch_FFT(watch, step, i_pass, n_passes, coord, nToTrack, nOriginal, *P_central);
                   break;
                 }
               }
@@ -597,43 +607,43 @@ long do_tracking(
                         n_passes, histogram->interval);
                 fflush(stdout);
               if (i_pass>=histogram->startPass && (i_pass-histogram->startPass)%histogram->interval==0) {
-                dump_particle_histogram(histogram, step, i_pass, coord, n_to_track, *P_central,
+                dump_particle_histogram(histogram, step, i_pass, coord, nToTrack, *P_central,
                                         beamline->revolution_length, 
-                                        charge?charge->macroParticleCharge*n_to_track:0.0, z);
+                                        charge?charge->macroParticleCharge*nToTrack:0.0, z);
               }
             }
             break;
           case T_MALIGN:
             malign = (MALIGN*)eptr->p_elem;
             if (malign->on_pass==-1 || malign->on_pass==i_pass)
-              offset_beam(coord, n_to_track, (MALIGN*)eptr->p_elem, *P_central);
+              offset_beam(coord, nToTrack, (MALIGN*)eptr->p_elem, *P_central);
             break;
           case T_PEPPOT:
-            n_left = pepper_pot_plate(coord, (PEPPOT*)eptr->p_elem, n_to_track, accepted);
+            nLeft = pepper_pot_plate(coord, (PEPPOT*)eptr->p_elem, nToTrack, accepted);
             break;
           case T_ENERGY:
             energy = (ENERGY*)eptr->p_elem;
             if (energy->match_beamline) {
               if ((flags&FIDUCIAL_BEAM_SEEN) && eptr->Pref_output_fiducial>0)
                 /* Beamline momentum is defined.  Change particle reference momentum to match. */
-                set_central_momentum(coord, n_to_track, eptr->Pref_output_fiducial, P_central);
+                set_central_momentum(coord, nToTrack, eptr->Pref_output_fiducial, P_central);
               else
                 /* Compute new central momentum to match the average momentum of the particles. */
-                do_match_energy(coord, n_to_track, P_central, 0);
+                do_match_energy(coord, nToTrack, P_central, 0);
               if (energy->match_particles)
                 bomb("can't match_beamline AND match_particles for ENERGY element", NULL);
             }
             else if (energy->match_particles) {
               /* change the particle momenta so that the centroid is the central momentum */
-              do_match_energy(coord, n_to_track, P_central, 1);
+              do_match_energy(coord, nToTrack, P_central, 1);
             }
             else if (energy->central_energy)
               /* Change particle reference momentum to match the given energy */
-              set_central_momentum(coord, n_to_track, sqrt(sqr(energy->central_energy+1)-1), 
+              set_central_momentum(coord, nToTrack, sqrt(sqr(energy->central_energy+1)-1), 
                                    P_central);
             else if (energy->central_momentum)
               /* Change particle reference momentum to match the given value */
-              set_central_momentum(coord, n_to_track, energy->central_momentum, P_central);
+              set_central_momentum(coord, nToTrack, energy->central_momentum, P_central);
             break;
           case T_MAXAMP:
             maxamp = (MAXAMP*) eptr->p_elem;
@@ -644,48 +654,51 @@ long do_tracking(
             maxampExponent = maxamp->exponent;
             break;
           case T_TRCOUNT:
-            *n_original = n_left;
-            if (accepted && i_pass==0)
-              copy_particles(accepted, coord, *n_original);
+            /* >>>>> Needs to be updated */
+            /* 
+             *n_original = nLeft; 
+             if (accepted && i_pass==0)
+               copy_particles(accepted, coord, *n_original);
+              */
             break;
           case T_ALPH:
             if (!eptr->matrix && !(eptr->matrix=compute_matrix(eptr, run, NULL)))
               bomb("no matrix for alpha magnet", NULL);
-            n_left = alpha_magnet_tracking(coord, eptr->matrix, (ALPH*)eptr->p_elem, n_to_track,
+            nLeft = alpha_magnet_tracking(coord, eptr->matrix, (ALPH*)eptr->p_elem, nToTrack,
                                            accepted, *P_central, z);
             break;
           case T_MATR:
 	    if (!eptr->matrix)
 	      eptr->matrix = &(((MATR*)eptr->p_elem)->M);
-            matr_element_tracking(coord, eptr->matrix, (MATR*)eptr->p_elem, n_to_track,
+            matr_element_tracking(coord, eptr->matrix, (MATR*)eptr->p_elem, nToTrack,
                                   z);
             break;
           case T_EMATRIX:
 	    if (!eptr->matrix)
 	      eptr->matrix = compute_matrix(eptr, run, NULL);
-            ematrix_element_tracking(coord, eptr->matrix, (EMATRIX*)eptr->p_elem, n_to_track,
+            ematrix_element_tracking(coord, eptr->matrix, (EMATRIX*)eptr->p_elem, nToTrack,
                                      z);
             break;
           case T_MULT:
-            n_left = multipole_tracking(coord, n_to_track, (MULT*)eptr->p_elem, 0.0,
+            nLeft = multipole_tracking(coord, nToTrack, (MULT*)eptr->p_elem, 0.0,
                                         *P_central, accepted, z);
             break;
           case T_FMULT:
-            n_left = fmultipole_tracking(coord, n_to_track, (FMULT*)eptr->p_elem, 0.0,
+            nLeft = fmultipole_tracking(coord, nToTrack, (FMULT*)eptr->p_elem, 0.0,
                                          *P_central, accepted, z);
             break;
 	  case T_TAYLORSERIES:
-	    n_left = taylorSeries_tracking(coord, n_to_track, (TAYLORSERIES*)eptr->p_elem, 0.0,
+	    nLeft = taylorSeries_tracking(coord, nToTrack, (TAYLORSERIES*)eptr->p_elem, 0.0,
                                          *P_central, accepted, z);
 	    break;
           case T_KICKER:
             if (flags&TIME_DEPENDENCE_OFF)
-              drift_beam(coord, n_to_track, ((KICKER*)eptr->p_elem)->length, run->default_order);
+              drift_beam(coord, nToTrack, ((KICKER*)eptr->p_elem)->length, run->default_order);
             else
-              track_through_kicker(coord, n_to_track, (KICKER*)eptr->p_elem, *P_central, i_pass, run->default_order);
+              track_through_kicker(coord, nToTrack, (KICKER*)eptr->p_elem, *P_central, i_pass, run->default_order);
             break;
           case T_KSBEND:
-            n_left = track_through_kick_sbend(coord, n_to_track, (KSBEND*)eptr->p_elem, 0.0,
+            nLeft = track_through_kick_sbend(coord, nToTrack, (KSBEND*)eptr->p_elem, 0.0,
                                               *P_central, accepted, z);
             break;
           case T_CSBEND:
@@ -693,7 +706,7 @@ long do_tracking(
               saveISR = ((CSBEND*)eptr->p_elem)->isr;
               ((CSBEND*)eptr->p_elem)->isr = 0;
             }
-            n_left = track_through_csbend(coord, n_to_track, (CSBEND*)eptr->p_elem, 0.0,
+            nLeft = track_through_csbend(coord, nToTrack, (CSBEND*)eptr->p_elem, 0.0,
                                           *P_central, accepted, last_z);
             if (flags&TEST_PARTICLES)
               ((CSBEND*)eptr->p_elem)->isr = saveISR;
@@ -703,61 +716,61 @@ long do_tracking(
               saveISR = ((CSRCSBEND*)eptr->p_elem)->isr;
               ((CSRCSBEND*)eptr->p_elem)->isr = 0;
             }
-            n_left = track_through_csbendCSR(coord, n_to_track, (CSRCSBEND*)eptr->p_elem, 0.0,
+            nLeft = track_through_csbendCSR(coord, nToTrack, (CSRCSBEND*)eptr->p_elem, 0.0,
                                              *P_central, accepted, last_z, z, charge, run->rootname);
             if (flags&TEST_PARTICLES)
               ((CSRCSBEND*)eptr->p_elem)->isr = saveISR;
             break;
           case T_CSRDRIFT:
-            n_left = track_through_driftCSR(coord, n_to_track, (CSRDRIFT*)eptr->p_elem,
+            nLeft = track_through_driftCSR(coord, nToTrack, (CSRDRIFT*)eptr->p_elem,
                                             *P_central, accepted, last_z, 
 					    beamline->revolution_length,
 					    run->rootname);
             break;
           case T_LSCDRIFT:
-            track_through_lscdrift(coord, n_to_track, (LSCDRIFT*)eptr->p_elem, *P_central, charge);
+            track_through_lscdrift(coord, nToTrack, (LSCDRIFT*)eptr->p_elem, *P_central, charge);
             break;
           case T_TUBEND:
-            n_left = track_through_tubend(coord, n_to_track, 
+            nLeft = track_through_tubend(coord, nToTrack, 
                                           (TUBEND*)eptr->p_elem, 0.0,
                                           *P_central, accepted, z);
             break;
           case T_KQUAD:
           case T_KSEXT:
-            n_left = multipole_tracking2(coord, n_to_track, eptr, 0.0,
+            nLeft = multipole_tracking2(coord, nToTrack, eptr, 0.0,
                                          *P_central, accepted, z);
             break;
           case T_SAMPLE:
             if (!(flags&TEST_PARTICLES))
-              n_left = sample_particles(coord, (SAMPLE*)eptr->p_elem, n_to_track, accepted, z, *P_central);
+              nLeft = sample_particles(coord, (SAMPLE*)eptr->p_elem, nToTrack, accepted, z, *P_central);
             break;
           case T_SCATTER:
             if (!(flags&TEST_PARTICLES))
-              scatter(coord, n_to_track, *P_central, (SCATTER*)eptr->p_elem);
+              scatter(coord, nToTrack, *P_central, (SCATTER*)eptr->p_elem);
             break;
           case T_DSCATTER:
             if (!(flags&TEST_PARTICLES))
-              distributionScatter(coord, n_to_track, *P_central, (DSCATTER*)eptr->p_elem, i_pass);
+              distributionScatter(coord, nToTrack, *P_central, (DSCATTER*)eptr->p_elem, i_pass);
             break;
           case T_NIBEND:
-            n_left = lorentz(coord, n_to_track, (NIBEND*)eptr->p_elem, T_NIBEND, *P_central, accepted);
+            nLeft = lorentz(coord, nToTrack, (NIBEND*)eptr->p_elem, T_NIBEND, *P_central, accepted);
             break;
           case T_NISEPT:
-            n_left = lorentz(coord, n_to_track, (NISEPT*)eptr->p_elem, T_NISEPT, *P_central, accepted);
+            nLeft = lorentz(coord, nToTrack, (NISEPT*)eptr->p_elem, T_NISEPT, *P_central, accepted);
             break;
           case T_BMAPXY:
-            n_left = lorentz(coord, n_to_track, (BMAPXY*)eptr->p_elem, T_BMAPXY, *P_central, accepted);
+            nLeft = lorentz(coord, nToTrack, (BMAPXY*)eptr->p_elem, T_BMAPXY, *P_central, accepted);
             break;
           case T_KPOLY:
-            n_left = polynomial_kicks(coord, n_to_track, (KPOLY*)eptr->p_elem, 0.0,
+            nLeft = polynomial_kicks(coord, nToTrack, (KPOLY*)eptr->p_elem, 0.0,
                                       *P_central, accepted, z);
             break;
           case T_RAMPRF:
-            ramped_rf_cavity(coord, n_to_track, (RAMPRF*)eptr->p_elem, *P_central, beamline->revolution_length,
+            ramped_rf_cavity(coord, nToTrack, (RAMPRF*)eptr->p_elem, *P_central, beamline->revolution_length,
                              eptr->end_pos, i_pass);
             break;
           case T_RAMPP:
-            ramp_momentum(coord, n_to_track, (RAMPP*)eptr->p_elem, P_central, i_pass);
+            ramp_momentum(coord, nToTrack, (RAMPP*)eptr->p_elem, P_central, i_pass);
             break;
           case T_SOLE:
             if (((SOLE*)eptr->p_elem)->B) {
@@ -777,18 +790,18 @@ long do_tracking(
               if (!(eptr->matrix=compute_matrix(eptr, run, NULL)))
                 bomb("no matrix for element that must have matrix", NULL);
             }
-            track_particles(coord, eptr->matrix, coord, n_to_track);
+            track_particles(coord, eptr->matrix, coord, nToTrack);
             break;
           case T_MATTER:
-            track_through_matter(coord, n_to_track, (MATTER*)eptr->p_elem, *P_central);
+            track_through_matter(coord, nToTrack, (MATTER*)eptr->p_elem, *P_central);
             break;
           case T_RFMODE:
             rfmode = (RFMODE*)eptr->p_elem;
             if (!rfmode->initialized)
               set_up_rfmode(rfmode, eptr->name, eptr->end_pos, n_passes, run, 
-                            *n_original, *P_central,
+                            nOriginal, *P_central,
                             beamline->revolution_length);
-            track_through_rfmode(coord, n_to_track, (RFMODE*)eptr->p_elem, *P_central,
+            track_through_rfmode(coord, nToTrack, (RFMODE*)eptr->p_elem, *P_central,
                                  eptr->name, eptr->end_pos, i_pass, n_passes,
                                  charge);
             break;
@@ -796,17 +809,17 @@ long do_tracking(
             frfmode = (FRFMODE*)eptr->p_elem;
             if (!frfmode->initialized)
               set_up_frfmode(frfmode, eptr->name, eptr->end_pos, n_passes, run, 
-                            *n_original, *P_central,
+                            nOriginal, *P_central,
                             beamline->revolution_length);
-            track_through_frfmode(coord, n_to_track, frfmode, *P_central,
+            track_through_frfmode(coord, nToTrack, frfmode, *P_central,
                                  eptr->name, eptr->end_pos, i_pass, n_passes,
                                  charge);
             break;
           case T_TRFMODE:
             trfmode = (TRFMODE*)eptr->p_elem;
             if (!trfmode->initialized)
-              set_up_trfmode(trfmode, eptr->name, eptr->end_pos, n_passes, run, *n_original);
-            track_through_trfmode(coord, n_to_track, (TRFMODE*)eptr->p_elem, *P_central,
+              set_up_trfmode(trfmode, eptr->name, eptr->end_pos, n_passes, run, nOriginal);
+            track_through_trfmode(coord, nToTrack, (TRFMODE*)eptr->p_elem, *P_central,
                                   eptr->name, eptr->end_pos, i_pass, n_passes,
                                   charge);
             break;
@@ -814,48 +827,62 @@ long do_tracking(
             ftrfmode = (FTRFMODE*)eptr->p_elem;
             if (!ftrfmode->initialized)
               set_up_ftrfmode(ftrfmode, eptr->name, eptr->end_pos, n_passes, run, 
-                            *n_original, *P_central,
+                            nOriginal, *P_central,
                             beamline->revolution_length);
-            track_through_ftrfmode(coord, n_to_track, ftrfmode, *P_central,
+            track_through_ftrfmode(coord, nToTrack, ftrfmode, *P_central,
                                  eptr->name, eptr->end_pos, i_pass, n_passes,
                                  charge);
             break;
           case T_ZLONGIT:
-            track_through_zlongit(coord, n_to_track, (ZLONGIT*)eptr->p_elem, *P_central, run, i_pass,
+            track_through_zlongit(coord, nToTrack, (ZLONGIT*)eptr->p_elem, *P_central, run, i_pass,
                                   charge);
             break;
           case T_ZTRANSVERSE:
-            track_through_ztransverse(coord, n_to_track, (ZTRANSVERSE*)eptr->p_elem, *P_central, run, i_pass,
+            track_through_ztransverse(coord, nToTrack, (ZTRANSVERSE*)eptr->p_elem, *P_central, run, i_pass,
                                   charge);
             break;
           case T_WAKE:
-            track_through_wake(coord, n_to_track, (WAKE*)eptr->p_elem, P_central, run, i_pass,
+            track_through_wake(coord, nToTrack, (WAKE*)eptr->p_elem, P_central, run, i_pass,
                                charge);
             break;
           case T_TRWAKE:
-            track_through_trwake(coord, n_to_track, (TRWAKE*)eptr->p_elem, *P_central, run, i_pass, 
+            track_through_trwake(coord, nToTrack, (TRWAKE*)eptr->p_elem, *P_central, run, i_pass, 
                                  charge);
             break;
           case T_SREFFECTS:
             if (!(flags&TEST_PARTICLES))
-              track_SReffects(coord, n_to_track, (SREFFECTS*)eptr->p_elem, *P_central, eptr->twiss, &(beamline->radIntegrals));
+              track_SReffects(coord, nToTrack, (SREFFECTS*)eptr->p_elem, *P_central, eptr->twiss, &(beamline->radIntegrals));
             break;
           case T_IBSCATTER:
             if (!(flags&TEST_PARTICLES))
-              track_IBS(coord, n_to_track, (IBSCATTER*)eptr->p_elem,
+              track_IBS(coord, nToTrack, (IBSCATTER*)eptr->p_elem,
                         *P_central, &(beamline->elem), &(beamline->radIntegrals),
                         charge);
             break;
           case T_SCRIPT:
-            n_left = transformBeamWithScript((SCRIPT*)eptr->p_elem,
-					     *P_central, charge, &coord, &lostOnPass, n_to_track,
-					     run->rootname, i_pass, run->default_order);
+            nLeft = transformBeamWithScript((SCRIPT*)eptr->p_elem, *P_central, charge, 
+                                            beam, coord, nToTrack, nLost, 
+                                            run->rootname, i_pass, run->default_order);
+            fprintf(stderr, "nLost=%ld, beam->n_particle=%ld, nLeft=%ld\n",
+                    nLost, beam->n_particle, nLeft);
+            if (beam && coord!=beam->particle) {
+              /* particles were created and so the particle array was changed */
+              coord = beam->particle;
+              if (nLost != (beam->n_particle - nLeft)) {
+                fprintf(stderr, "Particle accounting problem after return from script.\n");
+                fprintf(stderr, "nLost=%ld, beam->n_particle=%ld, nLeft=%ld\n",
+                        nLost, beam->n_particle, nLeft);
+              }
+            }
+            nToTrack = nLeft;
+            lostOnPass = beam->lostOnPass;
+            nMaximum = beam->n_particle;
             break;
 	  case T_FLOORELEMENT:
 	    break;
           case T_TFBPICKUP:
             if (!(flags&TEST_PARTICLES))
-              transverseFeedbackPickup((TFBPICKUP*)eptr->p_elem, coord, n_to_track, i_pass);
+              transverseFeedbackPickup((TFBPICKUP*)eptr->p_elem, coord, nToTrack, i_pass);
             break;
           case T_STRAY:
             if (eptr->matrix)
@@ -865,15 +892,15 @@ long do_tracking(
                                               eptr->end_theta, stray->order?stray->order:run->default_order,
                                               *P_central, 
                                               stray->Wi);
-            track_particles(coord, eptr->matrix, coord, n_to_track);
+            track_particles(coord, eptr->matrix, coord, nToTrack);
             break;
           case T_TFBDRIVER:
             if (!(flags&TEST_PARTICLES))
-              transverseFeedbackDriver((TFBDRIVER*)eptr->p_elem, coord, n_to_track, beamline, i_pass, n_passes, run->rootname);
+              transverseFeedbackDriver((TFBDRIVER*)eptr->p_elem, coord, nToTrack, beamline, i_pass, n_passes, run->rootname);
             feedbackDriverSeen = 1;
             break;
           case T_LSRMDLTR:
-            n_left = motion(coord, n_to_track, eptr->p_elem, eptr->type, P_central, 
+            nLeft = motion(coord, nToTrack, eptr->p_elem, eptr->type, P_central, 
                               &dgamma, dP, accepted, last_z);
             show_dE = 1;
             break;
@@ -887,31 +914,31 @@ long do_tracking(
         }
         if (!(flags&TEST_PARTICLES && !(flags&TEST_PARTICLE_LOSSES)) && (x_max || y_max)) {
           if (!elliptical) 
-            n_left = limit_amplitudes(coord, x_max, y_max, n_left, accepted, z, *P_central, 
+            nLeft = limit_amplitudes(coord, x_max, y_max, nLeft, accepted, z, *P_central, 
                                       eptr->type==T_DRIF || eptr->type==T_STRAY,
                                       maxampOpenCode);
           else
-            n_left = elimit_amplitudes(coord, x_max, y_max, n_left, accepted, z, *P_central, 
+            nLeft = elimit_amplitudes(coord, x_max, y_max, nLeft, accepted, z, *P_central, 
                                        eptr->type==T_DRIF || eptr->type==T_STRAY,
                                        maxampOpenCode, maxampExponent);
         }
         if (run->print_statistics && !(flags&TEST_PARTICLES)) {
           report_stats(stdout, ": ");
           /*
-            if (show_dE && n_left) {
+            if (show_dE && nLeft) {
             fprintf(stdout, "average energy imparted: %e MeV\n",
-            dgamma*me_mev/n_left);
+            dgamma*me_mev/nLeft);
             fflush(stdout);
             fprintf(stdout, "average x,y,z momentum imparted: %e, %e, %e MeV/c\n",
-            dP[0]*me_mev/n_left, dP[1]*me_mev/n_left,
-            dP[2]*me_mev/n_left);
+            dP[0]*me_mev/nLeft, dP[1]*me_mev/nLeft,
+            dP[2]*me_mev/nLeft);
             fflush(stdout);
             }
             */
           fprintf(stdout, "central momentum is %e    zstart = %em  zend = %em\n", *P_central, last_z, z);
           fflush(stdout);
-          if (n_left!=n_to_track)
-            fprintf(stdout, "%ld particles left\n", n_left);
+          if (nLeft!=nToTrack)
+            fprintf(stdout, "%ld particles left\n", nLeft);
             fflush(stdout);
         }
       }
@@ -923,15 +950,15 @@ long do_tracking(
       if (flags&FIRST_BEAM_IS_FIDUCIAL && !(flags&FIDUCIAL_BEAM_SEEN)) {
         if (!(flags&RESTRICT_FIDUCIALIZATION) ||
             (entity_description[eptr->type].flags&MAY_CHANGE_ENERGY)) {
-          do_match_energy(coord, n_left, P_central, 0);
+          do_match_energy(coord, nLeft, P_central, 0);
         }
         eptr->Pref_output_fiducial = *P_central;
       } else if (flags&FIDUCIAL_BEAM_SEEN) {
         if (*P_central!=eptr->Pref_output_fiducial)
-          set_central_momentum(coord, n_left, eptr->Pref_output_fiducial, P_central);
+          set_central_momentum(coord, nLeft, eptr->Pref_output_fiducial, P_central);
       }
       else if (run->always_change_p0)
-        do_match_energy(coord, n_left, P_central, 0);
+        do_match_energy(coord, nLeft, P_central, 0);
       if (i_pass==0 && traj_vs_z) {
         /* collect trajectory data--used mostly by trajectory correction routines */
         if (!traj_vs_z[i_traj].centroid) {
@@ -941,41 +968,41 @@ long do_tracking(
           exit(1);
         }
         traj_vs_z[i_traj].elem = eptr;
-        if (!(traj_vs_z[i_traj].n_part=n_left)) {
+        if (!(traj_vs_z[i_traj].n_part=nLeft)) {
           for (i=0; i<6; i++)
             traj_vs_z[i_traj].centroid[i] = 0;
         }
         else {
           for (i=0; i<6; i++) {
-            for (j=sum=0; j<n_to_track; j++)
+            for (j=sum=0; j<nToTrack; j++)
               sum += coord[j][i];
-            traj_vs_z[i_traj].centroid[i] = sum/n_left;
+            traj_vs_z[i_traj].centroid[i] = sum/nLeft;
           }
         }
         i_traj++;
       }
       if (!(flags&TEST_PARTICLES) && sliceAnalysis && !sliceAnalysis->finalValuesOnly) {
-	performSliceAnalysisOutput(sliceAnalysis, coord, n_to_track, 
+	performSliceAnalysisOutput(sliceAnalysis, coord, nToTrack, 
 				   !sliceAnDone, step, 
 				   *P_central, 
-				   charge?charge->macroParticleCharge*n_to_track:0.0, 
+				   charge?charge->macroParticleCharge*nToTrack:0.0, 
 				   eptr->name, eptr->end_pos, 0); 
 	sliceAnDone = 1;
       }
 
-      recordLossPass(lostOnPass, &nLost, n_left, *n_original, i_pass);
+      recordLossPass(lostOnPass, &nLost, nLeft, nMaximum, i_pass);
 
       last_type = eptr->type;
       eptrPred = eptr;
       eptr = eptr->succ;
-      n_to_track = n_left;
+      nToTrack = nLeft;
     }
     
     if (!(flags&TEST_PARTICLES) && sliceAnalysis && sliceAnalysis->finalValuesOnly) {
-      performSliceAnalysisOutput(sliceAnalysis, coord, n_to_track, 
+      performSliceAnalysisOutput(sliceAnalysis, coord, nToTrack, 
 				 !sliceAnDone, step, 
 				 *P_central, 
-				 charge?charge->macroParticleCharge*n_to_track:0.0, 
+				 charge?charge->macroParticleCharge*nToTrack:0.0, 
 				 eptrPred->name, eptrPred->end_pos, 0);
       
       sliceAnDone = 1;
@@ -984,17 +1011,17 @@ long do_tracking(
     
     log_entry("do_tracking.2.2.3");
     if (effort)
-      *effort += n_left;
+      *effort += nLeft;
 
     if (sums_vs_z && (*sums_vs_z) && !(flags&FINAL_SUMS_ONLY) && !(flags&TEST_PARTICLES) &&
         (run->wrap_around || i_pass==n_passes-1)) {
       if (i_sums<0)
         bomb("attempt to accumulate beam sums with negative index!", NULL);
-      accumulate_beam_sums(*sums_vs_z+i_sums, coord, n_to_track, *P_central);
+      accumulate_beam_sums(*sums_vs_z+i_sums, coord, nToTrack, *P_central);
       (*sums_vs_z)[i_sums].z = z;
 #if defined(BEAM_SUMS_DEBUG)
       fprintf(stdout, "beam sums accumulated in slot %ld for %s at z=%em, sx=%e\n", 
-              i_sums, name, z, sqrt((*sums_vs_z)[i_sums].sum2[0]/n_left));
+              i_sums, name, z, sqrt((*sums_vs_z)[i_sums].sum2[0]/nLeft));
       fflush(stdout);
 #endif
       i_sums++;
@@ -1023,7 +1050,7 @@ long do_tracking(
         if (sums_vs_z && *sums_vs_z && !(flags&FINAL_SUMS_ONLY) && !(flags&TEST_PARTICLES)) {
           if (i_sums<0)
             bomb("attempt to accumulate beam sums with negative index!", NULL);
-          accumulate_beam_sums(*sums_vs_z+i_sums, coord, n_to_track, *P_central);
+          accumulate_beam_sums(*sums_vs_z+i_sums, coord, nToTrack, *P_central);
           (*sums_vs_z)[i_sums].z = z;
           i_sums++;
         }
@@ -1040,11 +1067,11 @@ long do_tracking(
                 break;
               case WATCH_PARAMETERS:
               case WATCH_CENTROIDS:
-                dump_watch_parameters(watch, step, i_pass, n_passes, coord, n_to_track, *n_original, *P_central,
+                dump_watch_parameters(watch, step, i_pass, n_passes, coord, nToTrack, nOriginal, *P_central,
                                       beamline->revolution_length);
                 break;
               case WATCH_FFT:
-                dump_watch_FFT(watch, step, i_pass, n_passes, coord, n_to_track, *n_original, *P_central);
+                dump_watch_FFT(watch, step, i_pass, n_passes, coord, nToTrack, nOriginal, *P_central);
                 break;
               }
             }
@@ -1078,15 +1105,15 @@ long do_tracking(
   log_exit("do_tracking.2");
   log_entry("do_tracking.3");
   
-  if (n_left && sums_vs_z && *sums_vs_z && !(flags&TEST_PARTICLES)) {
+  if (nLeft && sums_vs_z && *sums_vs_z && !(flags&TEST_PARTICLES)) {
     if (flags&FINAL_SUMS_ONLY) {
       log_entry("do_tracking.3.1");
       i_sums = 0;
-      accumulate_beam_sums(*sums_vs_z+i_sums, coord, n_to_track, *P_central);
+      accumulate_beam_sums(*sums_vs_z+i_sums, coord, nToTrack, *P_central);
       (*sums_vs_z)[i_sums].z = z;
 #if defined(BEAM_SUMS_DEBUG)
       fprintf(stdout, "beam sums accumulated in slot %ld for final sums at z=%em, sx=%e\n", 
-              i_sums, z, sqrt((*sums_vs_z)[i_sums].sum2[0]/n_left));
+              i_sums, z, sqrt((*sums_vs_z)[i_sums].sum2[0]/nLeft));
       fflush(stdout);
 #endif
       log_exit("do_tracking.3.1");
@@ -1096,10 +1123,10 @@ long do_tracking(
       if (i_sums<0)
         bomb("attempt to accumulate beam sums with negative index!", NULL);
       /* accumulate sums for final output */
-      accumulate_beam_sums(*sums_vs_z+i_sums, coord, n_to_track, *P_central);
+      accumulate_beam_sums(*sums_vs_z+i_sums, coord, nToTrack, *P_central);
 #if defined(BEAM_SUMS_DEBUG)
       fprintf(stdout, "beam sums accumulated in slot %ld for final sums at z=%em, sx=%e\n", 
-              i_sums, z, sqrt((*sums_vs_z)[i_sums].sum2[0]/n_left));
+              i_sums, z, sqrt((*sums_vs_z)[i_sums].sum2[0]/nLeft));
       fflush(stdout);
 #endif
       log_exit("do_tracking.3.2");
@@ -1124,14 +1151,14 @@ long do_tracking(
       fflush(stdout);
       exit(1);
     }
-    computeSASEFELAtEnd(sasefel, coord, n_to_track, *P_central, charge->macroParticleCharge*n_to_track);
+    computeSASEFELAtEnd(sasefel, coord, nToTrack, *P_central, charge->macroParticleCharge*nToTrack);
   }
   
   log_exit("do_tracking.3");
   log_entry("do_tracking.4");
   if (!(flags&SILENT_RUNNING) && !is_batch && n_passes!=1 && !(flags&TEST_PARTICLES)) {
     fprintf(stdout, "%ld particles left after pass %ld        \n", 
-            n_to_track, i_pass);
+            nToTrack, i_pass);
     fflush(stdout);
   }
 
@@ -1139,13 +1166,13 @@ long do_tracking(
 
   log_exit("do_tracking");
   if (charge && finalCharge)
-    *finalCharge = n_to_track*charge->macroParticleCharge;
-  return(n_to_track);
+    *finalCharge = nToTrack*charge->macroParticleCharge;
+  return(nToTrack);
 }
 
 void offset_beam(
                  double **coord,
-                 long n_to_track, 
+                 long nToTrack, 
                  MALIGN *offset,
                  double P_central
                  )
@@ -1156,7 +1183,7 @@ void offset_beam(
   
   log_entry("offset_beam");
   
-  for (i_part=n_to_track-1; i_part>=0; i_part--) {
+  for (i_part=nToTrack-1; i_part>=0; i_part--) {
     part = coord[i_part];
     if (offset->dz)
       ds = offset->dz*sqrt(1+sqr(part[1])+sqr(part[3]));
@@ -1732,9 +1759,8 @@ void ematrix_element_tracking(double **coord, VMATRIX *M, EMATRIX *matr,
 }
 
 long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge, 
-                             double ***part, long **lostOnPass, 
-			     long np, char *mainRootname, long iPass,
-			     long driftOrder)
+                             BEAM *beam, double **part, long np, long nLost,
+                             char *mainRootname, long iPass, long driftOrder)
 {
   char *rootname, *input, *output;
   char *cmdBuffer0, *cmdBuffer1;
@@ -1765,7 +1791,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
   }
 
   if (doDrift) {
-    drift_beam(*part, np, script->length, driftOrder);
+    drift_beam(part, np, script->length, driftOrder);
     return np;
   }
 
@@ -1831,8 +1857,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
   SDDS_PhaseSpaceSetup(&SDDSout, input, SDDS_BINARY, 1, "script input", 
 		       "unknown", "unknown",
                        "transformBeamWithScript");
-  dump_phase_space(&SDDSout, *part, np, 0, pCentral, 
-                   charge?charge->macroParticleCharge*np:0.0);
+  dump_phase_space(&SDDSout, part, np, 0, pCentral, charge?charge->macroParticleCharge*np:0.0);
 
   if (!SDDS_Terminate(&SDDSout))
     SDDS_Bomb("problem terminating script input file");
@@ -1894,25 +1919,56 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
     return 0;
   }
   if (npNew>np) {
-    BEAM *beam;
-    beam = getBeamBeingTracked();
-    /* need to copy lost particle data to space above the new particles ! */
-    /* also need to copy lostOnPass data in the same way */
-    if (beam->particle!=beam->original)
-      free_zarray_2d((void**)(*part), beam->n_particle, 7);
-    if (beam->accepted)  {
-      /* this data is invalid, actually */
-      free_zarray_2d((void**)beam->accepted, beam->n_particle, 7);
-      beam->accepted = (double**)zarray_2d(sizeof(double), npNew, 7);
-      for (i=0; i<npNew; i++)
-        for (j=0; j<7; j++)
-          beam->accepted[i][j] = -1;
+    /* We have to resize the arrays in the BEAM structure */
+    fprintf(stderr, "Increasing number of particles from %ld (%ld active) to %ld (%ld active)\n",
+            np+nLost, np, npNew+nLost, npNew);
+    if (!beam) {
+      fprintf(stderr, "Error: script element increased the number of particles from %ld to %ld\n.",
+              np, npNew);
+      fprintf(stderr, "This happened (apparently) during a pre-tracking stage, which isn't allowed\n");
+      fprintf(stderr, "in this version of elegant.\n");
     }
-    if (beam->lostOnPass) 
-      free(beam->lostOnPass);
-    *lostOnPass = beam->lostOnPass = tmalloc(sizeof(*(beam->lostOnPass))*npNew);
-    beam->particle = *part = (double**)zarray_2d(sizeof(double), npNew, 7);
-    beam->n_particle = npNew;
+    if ((np+nLost)!=beam->n_particle) {
+      fprintf(stderr, "Particle accounting problem in SCRIPT element:\n");
+      fprintf(stderr, "np = %ld, nLost = %ld, n_particle = %ld\n",
+              np, nLost, beam->n_particle);
+    }
+    
+    if (beam->original==beam->particle) {
+      /* This means, oddly enough, that the particle array and original array are the same because the
+       * separate original array wasn't needed.  n_original gives the size of both arrays (including
+       * live and lost particles).  To avoid confusion, we'll copy the data to a new array before
+       * doing anything else, even though it means the original array is not used for anything and
+       * contains a useless frozen copy of the present beam.
+       * Use n_original since that's the size of the array, including lost particles. 
+       */
+      beam->particle = (double**)zarray_2d(sizeof(double), beam->n_original, 7);
+      copy_particles(beam->particle, beam->original, beam->n_original);
+    }
+    /* resize the particle array, leaving space for the lost particle data at the top */
+    if (!(beam->particle = realloc(beam->particle, sizeof(*(beam->particle))*(npNew+nLost))) ||
+        !(beam->lostOnPass = realloc(beam->lostOnPass, sizeof(beam->lostOnPass)*(npNew+nLost)))) {
+      fprintf(stderr, "Memory allocation failure increasing particle array size to %ld\n",
+              npNew+nLost);
+    }
+    /* allocate space for new particle pointers */
+    for (i=np+nLost; i<npNew+nLost; i++) 
+      beam->particle[i] = tmalloc(sizeof(**(beam->particle))*7);
+    /* move lost particles into the upper part of the arrays */
+    for (i=nLost-1; i>=0; i--) {
+      SWAP_PTR(beam->particle[np+i], beam->particle[npNew+i]);
+      SWAP_LONG(beam->lostOnPass[np+i], beam->lostOnPass[npNew+i]);
+    }
+    if (beam->accepted)  {
+      /* this data is invalid when particles are added */
+      free_zarray_2d((void**)beam->accepted, np+nLost, 7);
+      beam->accepted = NULL;
+    }
+    beam->n_particle = npNew+nLost;
+    beam->n_to_track = npNew;
+    fprintf(stderr, "beam->n_particle = %ld, beam->n_to_track = %ld\n",
+            beam->n_particle, beam->n_to_track);
+    part = beam->particle;
   }
   for (i=0; i<6; i++) {
     if (!(data = SDDS_GetColumnInDoubles(&SDDSin, dataname[i]))) {
@@ -1920,12 +1976,12 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     }
     for (j=0; j<npNew; j++)
-      (*part)[j][i] = data[j];
+      part[j][i] = data[j];
     free(data);
   }
-  /* assign new particle IDs */
+  /* assign new particle IDs ??? */
   for (j=0; j<npNew; j++)
-    (*part)[j][6] = j;
+    part[j][6] = j;
 
   if (charge) {
     double totalCharge;
@@ -1950,10 +2006,10 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
   /* convert (t, p) data to (s, delta) */
   for (j=0; j<npNew; j++) {
     double p, beta;
-    p = (*part)[j][5];
-    (*part)[j][5] = (p-pCentral)/pCentral;
+    p = part[j][5];
+    part[j][5] = (p-pCentral)/pCentral;
     beta = p/sqrt(sqr(p)+1);
-    (*part)[j][4] *= beta*c_mks;
+    part[j][4] *= beta*c_mks;
   }
 
   if (!script->keepFiles) {
@@ -2181,17 +2237,21 @@ void distributionScatter(double **part, long np, double Po, DSCATTER *scat, long
           */
 }
 
-void recordLossPass(long *lostOnPass, long *nLost, long nLeft, long nOriginal, long pass)
+void recordLossPass(long *lostOnPass, long *nLost, long nLeft, long nMaximum, long pass)
 {
   long ip;
   if (!lostOnPass || !nLost)
     return;
-  if (nOriginal==(nLeft+*nLost))
+  if (nMaximum==(nLeft+*nLost))
     /* no additional losses occurred */
     return;
-  for (ip=nLeft; ip<nOriginal-*nLost; ip++) {
+  fprintf(stderr, "Marking loss turns after element %s for %ld particles\n", trackingContext.elementName,
+          nMaximum-*nLost-nLeft);
+  for (ip=nLeft; ip<nMaximum-*nLost; ip++) {
     lostOnPass[ip] = pass;
   }
-  *nLost = nOriginal - nLeft;
+  *nLost = nMaximum - nLeft;
+  fprintf(stderr, "nMaximum = %ld, nLeft = %ld, nLost = %ld\n",
+          nMaximum, nLeft, *nLost);
 }
 

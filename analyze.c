@@ -233,7 +233,7 @@ void do_transport_analysis(
 
     effort = 0;
     p_central = run->p_central;
-    if (do_tracking(coord, &n_trpoint, &effort, beamline, &p_central, 
+    if (do_tracking(NULL, coord, n_trpoint, &effort, beamline, &p_central, 
                     NULL, NULL, NULL, NULL, run, control->i_step, SILENT_RUNNING, control->n_passes, 0,
                     NULL, NULL, NULL, NULL)!=n_track) {
         fputs("warning: particle(s) lost during transport analysis--continuing with next step", stdout);

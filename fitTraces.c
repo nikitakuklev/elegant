@@ -9,6 +9,10 @@
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.21  2004/03/28 17:00:55  borland
+ * Added output of pass on which particles are lost to the lost particle file.
+ * Not fully tested.
+ *
  * Revision 1.20  2003/05/07 14:48:32  soliday
  * Removed fsync warning message.
  *
@@ -662,7 +666,7 @@ void find_trajectory_bpm_readouts
   for (i=0; i<4; i++)
     particle[0][i] = startingCoordinate[i];
   
-  if (!do_tracking(particle, &nPart, NULL, beamline, &momentum,
+  if (!do_tracking(NULL, particle, nPart, NULL, beamline, &momentum,
                    (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
                    trajBuffer, run, 0, tracking_flags, 1, 0, NULL, NULL, NULL, NULL)) {
     fprintf(stdout, "Error tracking particle to find trajectory at BPMs.\n");

@@ -227,7 +227,7 @@ long new_bunched_beam(
     else {
       if (firstIsFiducial && beamCounter==2)
         bunchGenerated = 0;
-      beam->n_original = beam->n_to_track = n_particles_per_bunch;
+      beam->n_original = beam->n_to_track = beam->n_particle = n_particles_per_bunch;
     }
     beam->n_accepted = 0;
 
@@ -307,19 +307,6 @@ long new_bunched_beam(
     return(beam->n_to_track);
     }
 
-static BEAM *beamBeingTracked = NULL;
-
-/* This is used to return the presently-tracked beam structure.
- * It is used from inside do_tracking when procedures need access to
- * the structure, e.g., to change particle arrays.
- * Could just change do_tracking to take BEAM structure as argument,
- * but that would necessitate changes all over the place.
- */
-BEAM *getBeamBeingTracked () 
-{
-  return beamBeingTracked;
-}
-
 long track_beam(
                 RUN *run,
                 VARY *control,
@@ -337,8 +324,6 @@ long track_beam(
   long n_left, n_trpoint, effort;
 
   log_entry("track_beam");
-
-  beamBeingTracked = NULL;
 
   if (beam->lostOnPass)
     free(beam->lostOnPass);
@@ -363,11 +348,9 @@ long track_beam(
   if (!(flags&SILENT_RUNNING))
     fprintf(stdout, "tracking %ld particles\n", beam->n_to_track);
     fflush(stdout);
-  n_trpoint = beam->n_to_track;
 
   effort = 0;
-  beamBeingTracked = beam;
-  n_left = do_tracking(beam->particle, &n_trpoint, &effort, beamline, &p_central, 
+  n_left = do_tracking(beam, NULL, 0, &effort, beamline, &p_central, 
                        beam->accepted, &output->sums_vs_z, &output->n_z_points,
                        NULL, run, control->i_step,
                        (!(run->centroid || run->sigma)?FINAL_SUMS_ONLY:0)|
@@ -376,7 +359,6 @@ long track_beam(
                          +FIDUCIAL_BEAM_SEEN+RESTRICT_FIDUCIALIZATION+PRECORRECTION_BEAM+IBS_ONLY_TRACKING)),
                        control->n_passes, 0, &(output->sasefel), &(output->sliceAnalysis),
 		       finalCharge, beam->lostOnPass);
-  beamBeingTracked = NULL;
   if (control->fiducial_flag&FIRST_BEAM_IS_FIDUCIAL && !(flags&PRECORRECTION_BEAM))
     control->fiducial_flag |= FIDUCIAL_BEAM_SEEN;
   

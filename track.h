@@ -2275,7 +2275,7 @@ extern long advance_values1(double *value, long n_values, long *value_index, dou
                             double **enumerated_value, long *counter, long *max_count, long *flags, long n_indices);
 
 extern double beta_from_delta(double p, double delta);
-extern long do_tracking(double **coord, long *n_original, long *effort, LINE_LIST *beamline, 
+extern long do_tracking(BEAM *beam, double **coord, long n_original, long *effort, LINE_LIST *beamline, 
                         double *P_central, double **accepted, BEAM_SUMS **sums_vs_z, 
                         long *n_z_points, TRAJECTORY *traj_vs_z, RUN *run, long step,
                         unsigned long flags, long n_passes, long passOffset, SASEFEL_OUTPUT *sasefel,
