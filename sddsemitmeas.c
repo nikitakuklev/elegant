@@ -9,6 +9,13 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.7  1998/12/23 19:47:51  borland
+ * Improved robustness of error handling when, for example, the orbit or
+ * tunes can't be found.  By default, this is turned off, but can be
+ * activated by using the soft_failure=0 flag in the track namelist.
+ * For the find_aperture and analyze_map features, this flag is not
+ * yet implemented, so the behavior has changed.
+ *
  * Revision 1.6  1998/11/16 22:18:27  borland
  * Added string parameter with emittance label to output file.
  *
@@ -635,8 +642,8 @@ main(
     for (i_dev=0; i_dev<n_dev_limits; i_dev++) {
       emitx_sum = emitx2_sum = 0;
       emity_sum = emity2_sum = 0;
-      emitx_max = -(emitx_min = HUGE);
-      emity_max = -(emity_min = HUGE);
+      emitx_max = -(emitx_min = DBL_MAX);
+      emity_max = -(emity_min = DBL_MAX);
       S11_sum = S11_sum2 = S12_sum = S12_sum2 = S22_sum = S22_sum2 = 0;
       S33_sum = S33_sum2 = S34_sum = S34_sum2 = S44_sum = S44_sum2 = 0;
       betax_sum = betax_sum2 = alphax_sum = alphax_sum2 = 0;

@@ -578,8 +578,8 @@ void compute_longitudinal_parameters(ONE_PLANE_PARAMETERS *bp, double **coord, l
         time = trealloc(time, sizeof(*time)*(max_n=n));
 
     /* compute centroids */
-    tmax  = -(tmin  = HUGE);
-    dpmax = -(dpmin = HUGE);
+    tmax  = -(tmin  = DBL_MAX);
+    dpmax = -(dpmin = DBL_MAX);
     for (i=tc=dpc=0; i<n; i++) {
         P = Po*(1+coord[i][5]);
         beta = P/sqrt(P*P+1);
@@ -635,8 +635,8 @@ void compute_transverse_parameters(ONE_PLANE_PARAMETERS *bp, double **coord, lon
   offset = plane?2:0;
   
   /* compute centroids */
-  xmax  = -(xmin  = HUGE);
-  xpmax = -(xpmin = HUGE);
+  xmax  = -(xmin  = DBL_MAX);
+  xpmax = -(xpmin = DBL_MAX);
   for (i=xc=xpc=0; i<n; i++) {
     xc  += coord[i][offset+0];
     xpc += coord[i][offset+1];

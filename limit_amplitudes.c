@@ -88,7 +88,7 @@ long rectangular_collimator(
             --np;
             }
         else if (is_out) {
-            zx = zy = HUGE;
+            zx = zy = DBL_MAX;
             if (is_out&1 && ini[1]!=0)
                 zx = (SIGN(ini[1])*xsize-(ini[0]-x_center))/ini[1];
             if (is_out&2 && ini[3]!=0)
@@ -159,7 +159,7 @@ long limit_amplitudes(
             /* find the actual position of loss, assuming a drift preceded with 
              * the same aperture 
              */
-            dzx = dzy = -HUGE;
+            dzx = dzy = -DBL_MAX;
             if (is_out&1 && part[1]!=0)
                 dzx = (part[0]-SIGN(part[1])*xmax)/part[1];
             if (is_out&2 && part[3]!=0)
@@ -168,7 +168,7 @@ long limit_amplitudes(
                 dz = -dzx;
             else
                 dz = -dzy;
-            if (dz==-HUGE)
+            if (dz==-DBL_MAX)
                 dz = 0;
             part[0] += dz*part[1];
             part[2] += dz*part[3];

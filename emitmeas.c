@@ -9,6 +9,10 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.3  1998/03/17 20:02:22  borland
+ * All printouts now go to stderr, rather than the previous mix of
+ * stderr and stdout.
+ *
  * Revision 1.2  1997/09/05 18:16:12  emery
  * Fixed a non-initialized memory error
  * which occurs when the uncertainty column isn't specified
@@ -827,8 +831,8 @@ main(
             dev_limit[i_dev] = 0;
         emitx_sum = emitx2_sum = 0;
         emity_sum = emity2_sum = 0;
-        emitx_max = -(emitx_min = HUGE);
-        emity_max = -(emity_min = HUGE);
+        emitx_max = -(emitx_min = DBL_MAX);
+        emity_max = -(emity_min = DBL_MAX);
         S11_sum = S11_sum2 = S12_sum = S12_sum2 = S22_sum = S22_sum2 = 0;
         S33_sum = S33_sum2 = S34_sum = S34_sum2 = S44_sum = S44_sum2 = 0;
         betax_sum = betax_sum2 = alphax_sum = alphax_sum2 = 0;

@@ -49,7 +49,7 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
     pz = trealloc(pz, sizeof(*pz)*max_np);
   }
 
-  tmin = HUGE;
+  tmin = DBL_MAX;
   tmean = 0;
   for (ip=0; ip<np; ip++) {
     P = Po*(part[ip][5]+1);

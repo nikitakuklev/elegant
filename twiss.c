@@ -1148,7 +1148,7 @@ double find_acceptance(
         b = ((ECOL*)ap_elem->p_elem)->y_max;
       }
       if ((aperture = sqr(a)*(1 - sqr(other_centroid/b)))<0)
-        aperture = 1/HUGE;
+        aperture = 1/DBL_MAX;
       else
         aperture = sqrt(aperture);
       break;
@@ -1174,7 +1174,7 @@ double find_acceptance(
     default:
       if (a_tube && b_tube) {
         if ((aperture = sqr(a_tube)*(1-sqr(other_centroid/b_tube)))<0)
-          aperture = 1/HUGE;
+          aperture = 1/DBL_MAX;
         else
           aperture = sqrt(aperture);
       }
@@ -1270,10 +1270,10 @@ void compute_twiss_statistics(LINE_LIST *beamline, TWISS *twiss_ave, TWISS *twis
   }
   
   zero_memory(twiss_ave, sizeof(*twiss_ave));
-  twiss_min->betax = twiss_min->alphax = twiss_min->etax = twiss_min->etapx = HUGE;
-  twiss_min->betay = twiss_min->alphay = twiss_min->etay = twiss_min->etapy = HUGE;
-  twiss_max->betax = twiss_max->alphax = twiss_max->etax = twiss_max->etapx = -HUGE;
-  twiss_max->betay = twiss_max->alphay = twiss_max->etay = twiss_max->etapy = -HUGE;
+  twiss_min->betax = twiss_min->alphax = twiss_min->etax = twiss_min->etapx = DBL_MAX;
+  twiss_min->betay = twiss_min->alphay = twiss_min->etay = twiss_min->etapy = DBL_MAX;
+  twiss_max->betax = twiss_max->alphax = twiss_max->etax = twiss_max->etapx = -DBL_MAX;
+  twiss_max->betay = twiss_max->alphay = twiss_max->etay = twiss_max->etapy = -DBL_MAX;
 
   eptr = beamline->elem_twiss;
   while (eptr) {
