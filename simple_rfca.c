@@ -186,7 +186,7 @@ long simple_rf_cavity(
         /* apply initial drift */
         coord[0] += coord[1]*length/2;
         coord[2] += coord[3]*length/2;
-        coord[4] += length/2;
+        coord[4] += length/2*sqrt(1+sqr(coord[1])+sqr(coord[3]));
 
         /* compute energy kick */
         P     = *P_central*(1+coord[5]);
@@ -198,26 +198,14 @@ long simple_rf_cavity(
             dt = 0;
         if  (!same_dgamma)
             dgamma = volt*sin(omega*t+phase)*(tau?sqrt(1-exp(-dt/tau)):1);
-        if ((gamma1=gamma+dgamma)<1)
-            gamma1 = 1;
-        if (fabs(dgamma/gamma1)>1e-12) {
-            dP    = (P1=sqrt(sqr(gamma1)-1))-P;
-            beta_f = P1/gamma1;
-            }
-        else {
-            dP = 0;
-            beta_f = beta_i;
-            }  
+
         /* apply energy kick */
-        coord[5] += dP/(*P_central);
-        PRatio = P/(P+dP);
-        coord[1] *= PRatio;
-        coord[3] *= PRatio;
+        add_to_particle_energy(coord, t, *P_central, dgamma);
 
         /* apply final drift */
         coord[0] += coord[1]*length/2;
         coord[2] += coord[3]*length/2;
-        coord[4] = t*c_mks*beta_f + length/2.0;
+        coord[4] += length/2.0*sqrt(1+sqr(coord[1])+sqr(coord[3]));
 
         }
 
@@ -227,3 +215,25 @@ long simple_rf_cavity(
     log_exit("simple_rf_cavity");
     return(np);
     }
+
+void add_to_particle_energy(double *coord, double timeOfFlight, double Po, double dgamma)
+{
+  double gamma, gamma1, PRatio, P, P1, Pz1, Pz;
+
+  P = Po*(1+coord[5]);                    /* old momentum */
+  gamma1 = (gamma=sqrt(P*P+1)) + dgamma;  /* new gamma */
+  if (gamma1<-1)
+    gamma1 = 1+1e-6;
+  P1 = sqrt(gamma1*gamma1-1);             /* new momentum */
+  coord[5] = (P1-Po)/Po;                  
+
+  /* adjust s for the new particle velocity */
+  coord[4] = timeOfFlight*c_mks*P1/gamma1;
+
+  /* adjust slopes so that Px and Py are conserved */
+  Pz = P/sqrt(1+sqr(coord[1])+sqr(coord[3]));
+  Pz1 = sqrt(Pz*Pz + gamma1*gamma1 - gamma*gamma);
+  PRatio = Pz/Pz1;
+  coord[1] *= PRatio;
+  coord[3] *= PRatio;
+}
