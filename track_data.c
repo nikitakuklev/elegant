@@ -1104,8 +1104,8 @@ PARAMETER frfmode_param[N_FRFMODE_PARAMS] = {
 TRFMODE trfmode_example;
 /* TRFMODE physical parameters */
 PARAMETER trfmode_param[N_TRFMODE_PARAMS] = {
-    {"RA", "Ohm", IS_DOUBLE, 0, (long)((char *)&trfmode_example.Ra), NULL, 0.0, 0, "shunt impedance"},
-    {"RS", "Ohm", IS_DOUBLE, 0, (long)((char *)&trfmode_example.Rs), NULL, 0.0, 0, "shunt impedance (Ra=2*Rs)"},
+    {"RA", "Ohm/m", IS_DOUBLE, 0, (long)((char *)&trfmode_example.Ra), NULL, 0.0, 0, "shunt impedance"},
+    {"RS", "Ohm/m", IS_DOUBLE, 0, (long)((char *)&trfmode_example.Rs), NULL, 0.0, 0, "shunt impedance (Ra=2*Rs)"},
     {"Q", "", IS_DOUBLE, 0, (long)((char *)&trfmode_example.Q), NULL, 0.0, 1, "cavity Q"},
     {"FREQ", "Hz", IS_DOUBLE, 0, (long)((char *)&trfmode_example.freq), NULL, 0.0, 0, "frequency"},
     {"CHARGE", "C", IS_DOUBLE, 0, (long)((char *)&trfmode_example.charge), NULL, 0.0, 0, "beam charge (or use CHARGE element)"},
