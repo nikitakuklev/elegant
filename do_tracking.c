@@ -64,7 +64,8 @@ long do_tracking(
                  long passOffset,
                  SASEFEL_OUTPUT *sasefel,
 		 SLICE_OUTPUT *sliceAnalysis,
-                 double *finalCharge
+                 double *finalCharge,
+		 long *lostOnPass
                  )
 {
   RFMODE *rfmode; TRFMODE *trfmode;
@@ -76,7 +77,7 @@ long do_tracking(
   MAXAMP *maxamp;
   MALIGN *malign;
   ELEMENT_LIST *eptr, *eptrPred, *eptrCLMatrix=NULL;
-  long n_left, show_dE, maxampOpenCode=0, maxampExponent=0;
+  long n_left, nLost=0, show_dE, maxampOpenCode=0, maxampExponent=0;
   double dgamma, dP[3], z, z_recirc, last_z;
   long i, j, i_traj=0, i_sums, n_to_track, i_pass, isConcat;
   long i_sums_recirc, saveISR=0;
@@ -92,10 +93,9 @@ long do_tracking(
   CHARGE *charge;
   static long warnedAboutChargePosition = 0;
   
-
   if (!coord)
     bomb("Null particle coordinate array! (do_tracking)", NULL);
-
+  
 #ifdef WATCH_MEMORY
   fprintf(stdout, "start do_tracking():  CPU: %6.2lf  PF: %6ld  MEM: %6ld\n",
           cpu_time()/100.0, page_faults(), memory_count());
@@ -249,6 +249,7 @@ long do_tracking(
     if (check_nan) {
       n_left = n_to_track = limit_amplitudes(coord, DBL_MAX, DBL_MAX, n_to_track, accepted, z, *P_central, 0,
                                              0);
+      recordLossPass(lostOnPass, &nLost, n_left, *n_original, 0);
     }
     if (!(flags&SILENT_RUNNING) && !is_batch && n_passes!=1 && !(flags&TEST_PARTICLES)
         && !(run->tracking_updates==0)) {
@@ -959,6 +960,8 @@ long do_tracking(
 				   eptr->name, eptr->end_pos, 0); 
 	sliceAnDone = 1;
       }
+
+      recordLossPass(lostOnPass, &nLost, n_left, *n_original, i_pass);
 
       last_type = eptr->type;
       eptrPred = eptr;
@@ -2135,4 +2138,17 @@ void distributionScatter(double **part, long np, double Po, DSCATTER *scat, long
           */
 }
 
+void recordLossPass(long *lostOnPass, long *nLost, long nLeft, long nOriginal, long pass)
+{
+  long ip;
+  if (!lostOnPass || !nLost)
+    return;
+  if (nOriginal==(nLeft+*nLost))
+    /* no additional losses occurred */
+    return;
+  for (ip=nLeft; ip<nOriginal-*nLost; ip++) {
+    lostOnPass[ip] = pass;
+  }
+  *nLost = nOriginal - nLeft;
+}
 

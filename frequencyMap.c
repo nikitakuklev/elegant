@@ -23,7 +23,10 @@
 #define IC_NUY 3
 #define IC_DNUX 4
 #define IC_DNUY 5
-#define N_COLUMNS 6
+#define IC_DNU 6
+#define IC_DX 7
+#define IC_DY 8
+#define N_COLUMNS 9
 static SDDS_DEFINITION column_definition[N_COLUMNS] = {
     {"x", "&column name=x, symbol=x, units=m, type=double &end"},
     {"y", "&column name=y, symbol=y, units=m, type=double &end"},
@@ -31,6 +34,9 @@ static SDDS_DEFINITION column_definition[N_COLUMNS] = {
     {"nuy", "&column name=nuy, symbol=$gn$r$by$n, type=double &end"},
     {"dnux", "&column name=dnux, symbol=$gDn$r$bx$n, type=double &end"},
     {"dnuy", "&column name=dnuy, symbol=$gDn$r$by$n, type=double &end"},
+    {"dnu", "&column name=dnu, symbol=$gDn$r, type=double &end"},
+    {"dx", "&column name=dx, symbol=$gD$rx, units=m, type=double &end"},
+    {"dy", "&column name=dy, symbol=$gD$ry, units=m, type=double &end"},
     } ;
 
 #define IP_STEP 0
@@ -56,15 +62,15 @@ void setupFrequencyMap(
   /* check for data errors */
   if (!output)
     bomb("no output filename specified", NULL);
-  if (xmin>=xmax)
-    bomb("xmin >= xmax", NULL);
-  if (ymin>=ymax)
-    bomb("ymin >= ymax", NULL);
-  if (nx<3)
-    bomb("nx < 3", NULL);
-  if (ny<2)
-    bomb("ny < 2", NULL);
-  
+  if (xmin>xmax)
+    bomb("xmin > xmax", NULL);
+  if (ymin>ymax)
+    bomb("ymin > ymax", NULL);
+  if (nx<1)
+    nx = 1;
+  if (ny<1)
+    ny = 1;
+
   output = compose_filename(output, run->rootname);
   SDDS_ElegantOutputSetup(&SDDS_fmap, output, SDDS_BINARY, 1, "frequency map analysis",
                           run->runfile, run->lattice, parameter_definition, N_PARAMETERS,
@@ -94,6 +100,7 @@ long doFrequencyMap(
                     )
 {
   double firstTune[2], secondTune[2], startingCoord[6], endingCoord[6];
+  double firstAmplitude[2], secondAmplitude[2];
   double dx, dy, x, y;
   long ix, iy, ip;
   
@@ -111,29 +118,43 @@ long doFrequencyMap(
       }
   }
 
-  dx  = (xmax-xmin)/(nx-1);
-  dy = (ymax-ymin)/(ny-1);
+  if (nx>1)
+    dx  = (xmax-xmin)/(nx-1);
+  else
+    dx = 0;
+  if (ny>1)
+    dy = (ymax-ymin)/(ny-1);
+  else
+    dy = 0;
   ip = 0;
   for (ix=0; ix<nx; ix++) {
     x = xmin + ix*dx;
     for (iy=0; iy<ny; iy++) {
       y = ymin + iy*dy;
       memcpy(startingCoord, referenceCoord, sizeof(*startingCoord)*6);
-      if (!computeTunesFromTracking(firstTune, beamline->matrix, beamline, run,
+      if (!computeTunesFromTracking(firstTune, firstAmplitude,
+				    beamline->matrix, beamline, run,
                                     startingCoord, x, y, control->n_passes/2, 
-                                    0, endingCoord)) 
+                                    0, endingCoord) ||
+	  firstTune[0]>0.5 || firstTune[0]<0 || firstTune[1]>0.5 || firstTune[1]<0) 
         continue;
       memcpy(startingCoord, endingCoord, sizeof(*startingCoord)*6);
-      if (!computeTunesFromTracking(secondTune, beamline->matrix, beamline, run,
+      if (!computeTunesFromTracking(secondTune, secondAmplitude,
+				    beamline->matrix, beamline, run,
                                     startingCoord, 0.0, 0.0, control->n_passes/2, 
-                                    0, endingCoord)) 
+                                    0, endingCoord) || 
+	  secondTune[0]>0.5 || secondTune[0]<0 || secondTune[1]>0.5 || secondTune[1]<0) 
         continue;
       if (!SDDS_SetRowValues(&SDDS_fmap, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ip,
                              IC_X, x, IC_Y, y, 
                              IC_NUX, firstTune[0], 
                              IC_NUY, firstTune[1], 
                              IC_DNUX, fabs(secondTune[0]-firstTune[0]), 
-                             IC_DNUY, fabs(secondTune[1]-firstTune[1]), -1)) {
+                             IC_DNUY, fabs(secondTune[1]-firstTune[1]), 
+                             IC_DNU, sqrt(sqr(secondTune[0]-firstTune[0])+sqr(secondTune[1]-firstTune[1])), 
+			     IC_DX, fabs(firstAmplitude[0]-secondAmplitude[1]),
+			     IC_DY, fabs(firstAmplitude[1]-secondAmplitude[1]),
+			     -1)) {
         SDDS_SetError("Problem setting SDDS row values (doFrequencyMap)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }

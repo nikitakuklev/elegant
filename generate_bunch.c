@@ -84,6 +84,8 @@ long generate_bunch(
         set_beam_centroids(particle, 0, n_particles, x_plane->cent_posi, x_plane->cent_slope);
         set_beam_centroids(particle, 2, n_particles, y_plane->cent_posi, y_plane->cent_slope);
         set_beam_centroids(particle, 4, n_particles, longit->cent_s, longit->cent_dp);
+	for (i_particle=0; i_particle<n_particles; i_particle++) 
+	  particle[i_particle][6] = particleID++;
       }
       first_call = 0;
     }

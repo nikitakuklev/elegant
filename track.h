@@ -375,6 +375,7 @@ typedef struct {
     double p0;              /* current/final central momentum */
     double **accepted;      /* coordinates of accepted particles, with loss info on lost particles */
     long n_accepted;        /* final number of particles being tracked. */
+    long *lostOnPass;       /* pass on which a particle is lost */
     } BEAM;
 
 typedef struct {
@@ -2273,7 +2274,7 @@ extern long do_tracking(double **coord, long *n_original, long *effort, LINE_LIS
                         long *n_z_points, TRAJECTORY *traj_vs_z, RUN *run, long step,
                         unsigned long flags, long n_passes, long passOffset, SASEFEL_OUTPUT *sasefel,
 			SLICE_OUTPUT *sliceAnalysis,
-                        double *finalCharge);
+                        double *finalCharge, long *lostOnTurn);
 extern void getTrackingContext(TRACKING_CONTEXT *trackingContext);
 extern void offset_beam(double **coord, long n_to_track, MALIGN *offset, double P_central);
 extern void do_match_energy(double **coord, long np, double *P_central, long change_beam);
@@ -2376,7 +2377,7 @@ void copy_doubles(double *source, double *target, long n);
 void computeRadiationIntegrals(RADIATION_INTEGRALS *RI, double Po, double revolutionLength);
 void setupTwissAnalysisRequest(NAMELIST_TEXT *nltext, RUN *run, 
                                LINE_LIST *beamline);
-long computeTunesFromTracking(double *tune, VMATRIX *M, LINE_LIST *beamline, RUN *run,
+long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *beamline, RUN *run,
 			      double *startingCoord, 
 			      double xAmplitude, double yAmplitude, long turns,
                               long useMatrix, double *endingCoord);
@@ -2748,7 +2749,8 @@ extern void dump_watch_parameters(WATCH *watch, long step, long pass, long n_pas
 extern void dump_watch_FFT(WATCH *watch, long step, long pass, long n_passes, double **particle, long particles,
                            long original_particles,  double Po);
 extern void do_watch_FFT(double **data, long n_data, long slot, long window_code);
-extern void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long particles, long step);
+extern void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long *lostOnPass, 
+				long particles, long step);
 extern void dump_centroid(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, long n_elements, long bunch,
                           double p_central);
 extern void dump_phase_space(SDDS_TABLE *SDDS_table, double **particle, long particles, long step, double Po,

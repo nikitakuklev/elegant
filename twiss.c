@@ -2040,7 +2040,7 @@ void computeTuneShiftWithAmplitude(double *dnux_dA, double *dnuy_dA,
     lost = 0;
     
     /* (0, 0) */
-    if (!computeTunesFromTracking(tune0, M, beamline, run, startingCoord,
+    if (!computeTunesFromTracking(tune0, NULL, M, beamline, run, startingCoord,
                                  tune_shift_with_amplitude_struct.x0,
                                  tune_shift_with_amplitude_struct.y0,
                                  tune_shift_with_amplitude_struct.turns,
@@ -2055,7 +2055,7 @@ void computeTuneShiftWithAmplitude(double *dnux_dA, double *dnuy_dA,
 
     
     /* (dx, 0) */
-    if (!computeTunesFromTracking(tune_dx, M, beamline, run, startingCoord,
+    if (!computeTunesFromTracking(tune_dx, NULL, M, beamline, run, startingCoord,
                                   tune_shift_with_amplitude_struct.x1,
                                   tune_shift_with_amplitude_struct.y0,
                                   tune_shift_with_amplitude_struct.turns, 
@@ -2069,7 +2069,7 @@ void computeTuneShiftWithAmplitude(double *dnux_dA, double *dnuy_dA,
 #endif      
 
     /* (0, dy) */
-    if (!computeTunesFromTracking(tune_dy, M, beamline, run, startingCoord,
+    if (!computeTunesFromTracking(tune_dy, NULL, M, beamline, run, startingCoord,
                                   tune_shift_with_amplitude_struct.x0,
                                   tune_shift_with_amplitude_struct.y1,
                                   tune_shift_with_amplitude_struct.turns,
@@ -2170,7 +2170,7 @@ void computeTuneShiftWithAmplitude(double *dnux_dA, double *dnuy_dA,
   }
 }
 
-long computeTunesFromTracking(double *tune, VMATRIX *M, LINE_LIST *beamline, RUN *run,
+long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *beamline, RUN *run,
 			      double *startingCoord, 
 			      double xAmplitude, double yAmplitude, long turns,
                               long useMatrix,
@@ -2245,7 +2245,7 @@ long computeTunesFromTracking(double *tune, VMATRIX *M, LINE_LIST *beamline, RUN
     else {
       if (!do_tracking(oneParticle, &one, NULL, beamline, &p,  (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
                        (TRAJECTORY*)NULL, run, 0, TEST_PARTICLES+TIME_DEPENDENCE_OFF, 
-                       1, i-1, NULL, NULL, NULL)) {
+                       1, i-1, NULL, NULL, NULL, NULL)) {
         fprintf(stdout, "warning: test particle lost on turn %ld (computeTunesFromTracking)\n", i);
         return 0;
       }
@@ -2276,12 +2276,14 @@ long computeTunesFromTracking(double *tune, VMATRIX *M, LINE_LIST *beamline, RUN
   fflush(stdout);
 #endif
 
-  PerformNAFF(tune+0, &dummy, &dummy, 0.0, 1.0, x, turns, 
+  if (PerformNAFF(tune+0, amp?amp+0:&dummy, &dummy, 0.0, 1.0, x, turns, 
 	      NAFF_MAX_FREQUENCIES|NAFF_FREQ_CYCLE_LIMIT|NAFF_FREQ_ACCURACY_LIMIT,
-	      0.0, 1, 100, 1e-6);
-  PerformNAFF(tune+1, &dummy, &dummy, 0.0, 1.0, y, turns,
-	      NAFF_MAX_FREQUENCIES|NAFF_FREQ_CYCLE_LIMIT|NAFF_FREQ_ACCURACY_LIMIT,
-	      0.0, 1, 100, 1e-6);
+	      0.0, 1, 100, 1e-9)!=1 ||
+      PerformNAFF(tune+1, amp?amp+1:&dummy, &dummy, 0.0, 1.0, y, turns,
+		  NAFF_MAX_FREQUENCIES|NAFF_FREQ_CYCLE_LIMIT|NAFF_FREQ_ACCURACY_LIMIT,
+		  0.0, 1, 100, 1e-9)!=1)
+    return 0;
+
 #ifdef DEBUG
   fprintf(stdout, "NAFF done\n");
   fflush(stdout);

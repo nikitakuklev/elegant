@@ -321,9 +321,13 @@ long track_beam(
                 )
 {    
   double p_central;
-  long n_left, n_trpoint, effort;
+  long n_left, n_trpoint, effort, *lostOnTurn;
 
   log_entry("track_beam");
+
+  if (beam->lostOnPass)
+    free(beam->lostOnPass);
+  beam->lostOnPass = tmalloc(sizeof(*(beam->lostOnPass))*beam->n_to_track);
 
   if (!run)
     bomb("RUN pointer is NULL (track_beam)", NULL);
@@ -355,7 +359,7 @@ long track_beam(
                         (LINEAR_CHROMATIC_MATRIX+LONGITUDINAL_RING_ONLY+FIRST_BEAM_IS_FIDUCIAL
                          +FIDUCIAL_BEAM_SEEN+RESTRICT_FIDUCIALIZATION+PRECORRECTION_BEAM+IBS_ONLY_TRACKING)),
                        control->n_passes, 0, &(output->sasefel), &(output->sliceAnalysis),
-		       finalCharge);
+		       finalCharge, beam->lostOnPass);
   if (control->fiducial_flag&FIRST_BEAM_IS_FIDUCIAL && !(flags&PRECORRECTION_BEAM))
     control->fiducial_flag |= FIDUCIAL_BEAM_SEEN;
   
@@ -435,11 +439,12 @@ void do_track_beam_output(RUN *run, VARY *control,
       bomb("'losses' file is uninitialized (track_beam)", NULL);
     if (!(flags&SILENT_RUNNING)) 
       fprintf(stdout, "Dumping lost-particle data..."); fflush(stdout);
-      fflush(stdout);
-    dump_lost_particles(&output->SDDS_losses, beam->particle+n_left, beam->n_to_track-n_left, control->i_step);
+    fflush(stdout);
+    dump_lost_particles(&output->SDDS_losses, beam->particle+n_left, beam->lostOnPass+n_left,
+			beam->n_to_track-n_left, control->i_step);
     if (!(flags&SILENT_RUNNING)) 
       fprintf(stdout, "done.\n"); fflush(stdout);
-      fflush(stdout);
+    fflush(stdout);
   }
 
   if (run->centroid && !run->combine_bunch_statistics && !(flags&FINAL_SUMS_ONLY)  && !(flags&INHIBIT_FILE_OUTPUT)) {
@@ -568,8 +573,9 @@ void setup_output(
 
     if (run->losses) {
         /* prepare dump of lost particles */
-        SDDS_BeamLossSetup(&output->SDDS_losses, run->losses, SDDS_BINARY, 1, "lost particle coordinates", run->runfile,
-                             run->lattice, "setup_output");
+        SDDS_BeamLossSetup(&output->SDDS_losses, run->losses, SDDS_BINARY, 1, 
+			   "lost particle coordinates", run->runfile,
+			   run->lattice, "setup_output");
         output->losses_initialized = 1;
         }
 

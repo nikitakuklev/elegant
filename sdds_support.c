@@ -140,8 +140,8 @@ void SDDS_PhaseSpaceSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, lon
     }
 
 
-#define BEAM_LOSS_COLUMNS 7
-static SDDS_DEFINITION beam_loss_column[PHASE_SPACE_COLUMNS] = {
+#define BEAM_LOSS_COLUMNS 8
+static SDDS_DEFINITION beam_loss_column[BEAM_LOSS_COLUMNS] = {
     {"x", "&column name=x, units=m, type=double &end"},
     {"xp", "&column name=xp, symbol=\"x'\", type=double &end"},
     {"y", "&column name=y, units=m, type=double &end"},
@@ -149,6 +149,7 @@ static SDDS_DEFINITION beam_loss_column[PHASE_SPACE_COLUMNS] = {
     {"s", "&column name=s, units=m, type=double &end"},
     {"p", "&column name=p, units=\"m$be$nc\", type=double &end"},
     {"particleID", "&column name=particleID, type=long &end"},
+    {"Pass", "&column name=Pass, type=long &end"},
     } ;
 
 void SDDS_BeamLossSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row, char *contents, 
@@ -1012,7 +1013,8 @@ void dump_phase_space(SDDS_TABLE *SDDS_table, double **particle, long particles,
     log_exit("dump_phase_space");
     }
 
-void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long particles, long step)
+void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long *lostOnPass, 
+			 long particles, long step)
 {
     long i;
 
@@ -1034,7 +1036,7 @@ void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long particl
         if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, i,
                                0, particle[i][0], 1, particle[i][1], 2, particle[i][2], 3, particle[i][3],
                                4, particle[i][4], 5, particle[i][5],
-                               6, (long)particle[i][6], -1)) {
+                               6, (long)particle[i][6], 7, lostOnPass[i], -1)) {
             SDDS_SetError("Problem setting SDDS row values (dump_lost_particles)");
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
             }

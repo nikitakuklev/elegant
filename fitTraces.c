@@ -9,6 +9,9 @@
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.20  2003/05/07 14:48:32  soliday
+ * Removed fsync warning message.
+ *
  * Revision 1.19  2003/02/15 22:57:48  borland
  * Added SDDS_DoFSync() calls to make sure output files get updated on
  * file server.
@@ -661,7 +664,7 @@ void find_trajectory_bpm_readouts
   
   if (!do_tracking(particle, &nPart, NULL, beamline, &momentum,
                    (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
-                   trajBuffer, run, 0, tracking_flags, 1, 0, NULL, NULL, NULL)) {
+                   trajBuffer, run, 0, tracking_flags, 1, 0, NULL, NULL, NULL, NULL)) {
     fprintf(stdout, "Error tracking particle to find trajectory at BPMs.\n");
     fflush(stdout);
     exit(1);
