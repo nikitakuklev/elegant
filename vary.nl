@@ -23,6 +23,7 @@
     double final = 0;
     long differential = 0;
     long geometric = 0;
+    long multiplicative = 0;
     STRING enumeration_file = NULL;
     STRING enumeration_column = NULL;
 #end

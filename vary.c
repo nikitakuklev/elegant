@@ -176,6 +176,26 @@ void add_varied_element(VARY *_control, NAMELIST_TEXT *nltext, RUN *run, LINE_LI
     cp_str(&_control->item[n_elements_to_vary], item);
     cp_str(&_control->varied_quan_unit[n_elements_to_vary], 
         entity_description[_control->varied_type[n_elements_to_vary]].parameter[_control->varied_param[n_elements_to_vary]].unit);
+    if (geometric && (multiplicative || differential)) {
+      fprintf(stdout, "error: geometric is incompatible with multiplicative and differential modes\n");
+      exit(1);
+    }
+
+    if (multiplicative) {
+        if (!get_parameter_value(&value, name, _control->varied_param[n_elements_to_vary], 
+                                 _control->varied_type[n_elements_to_vary], beamline))
+            bomb("unable to get preset parameter value for item", NULL);
+        if (enumeration_file) {
+            long i;
+            for (i=0; i<index_limit; i++)
+                _control->enumerated_value[n_elements_to_vary][i] *= value;
+            initial *= value;
+            }
+        else {
+            initial *= value;
+            final   *= value;
+            }
+        }
     if (differential) {
         if (!get_parameter_value(&value, name, _control->varied_param[n_elements_to_vary], 
                                  _control->varied_type[n_elements_to_vary], beamline))
@@ -191,6 +211,7 @@ void add_varied_element(VARY *_control, NAMELIST_TEXT *nltext, RUN *run, LINE_LI
             final   += value;
             }
         }
+    
     _control->initial[n_elements_to_vary] = initial;
     _control->varied_quan_value[n_elements_to_vary] = initial;
     _control->final[n_elements_to_vary]   = final;
