@@ -85,6 +85,11 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
   }
   sigmaz = vz*(sigmat = sqrt(longitBeamParam.s11));
   sigmaDelta = sqrt(longitBeamParam.s22);
+  if (IBS->verbosity) {
+    fprintf(stdout, "IBS beam sizes: x=%e, y=%e, z=%e\n", sigmax, sigmay, sigmaz);
+    fprintf(stdout, "Beta functions: x=%e, y=%e\n",
+            sqr(sigmax)/emitx, sqr(sigmay)/emity);
+  }
   IBSGrowthRates(gamma, 
                  emitx, emity, sigmaDelta, 
                  sigmaz,
@@ -138,6 +143,9 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
     inflateEmittance(coord, Po, 2, np, (1+dT*yGrowthRate));
     inflateEmittance(coord, Po, 4, np, (1+dT*zGrowthRate));
   }
+  rpn_store(xGrowthRate, rpn_create_mem("IBSRatex"));
+  rpn_store(yGrowthRate, rpn_create_mem("IBSRatey"));
+  rpn_store(zGrowthRate, rpn_create_mem("IBSRatel"));
   rpn_store(xGrowthRate*emitx, rpn_create_mem("exTimesIBSRate"));
   rpn_store(yGrowthRate*emity, rpn_create_mem("eyTimesIBSRate"));
   rpn_store(zGrowthRate*emitl, rpn_create_mem("elTimesIBSRate"));
