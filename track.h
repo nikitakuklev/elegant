@@ -490,7 +490,7 @@ extern char *entity_text[N_TYPES];
 #define N_STRAY_PARAMS 7
 #define N_CSBEND_PARAMS 24
 #define N_MATTER_PARAMS 3
-#define N_RFMODE_PARAMS 16
+#define N_RFMODE_PARAMS 17
 #define N_TRFMODE_PARAMS 10
 #define N_TWMTA_PARAMS 17
 #define N_ZLONGIT_PARAMS 15
@@ -1252,6 +1252,7 @@ typedef struct {
     long sample_interval;      /* sample interval for record file */
     char *record;              /* name of file to record (t, V) in */
     long single_pass;          /* controls accumulation of voltage from turn-to-turn */
+    long pass_interval;        /* number of passes between applications of wake */
     /* for internal use: */
     double mp_charge;          /* charge per macroparticle */
     long initialized;          /* indicates that beam has been seen */

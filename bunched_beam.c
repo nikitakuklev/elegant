@@ -262,9 +262,12 @@ long track_beam(
         }
     beam->p0 = p_central;
     beam->n_accepted = n_left;
-    if (!(flags&SILENT_RUNNING))
-        fprintf(stderr, "%ld particles transmitted, total effort of %ld particle-turns\n\n", n_left, effort);
-    fflush(stderr);
+    if (!(flags&SILENT_RUNNING)) {
+      extern unsigned long multipoleKicksDone;
+      fprintf(stderr, "%ld particles transmitted, total effort of %ld particle-turns\n", n_left, effort);
+      fprintf(stderr, "%lu multipole kicks done\n\n", multipoleKicksDone);
+      fflush(stderr);
+    }
 
     log_entry("track_beam.1");
     if (run->output && !(flags&INHIBIT_FILE_OUTPUT)) {

@@ -24,13 +24,14 @@ static double rho0, rho_actual, rad_coef;
 
 static long particle_lost;
 static double s_lost;
+extern unsigned long multipoleKicksDone ;
 
 long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_error, double Po, double **accepted,
     double z_start)
 {
-static double nh, betah2, gammah3, deltah4;
-static double h, h2, h3;
-    long i_part, i_top;
+  static double nh, betah2, gammah3, deltah4;
+  static double h, h2, h3;
+  long i_part, i_top;
     double rho, s, Fx, Fy;
     double x, xp, y, yp, dp, y2, dp0;
     double n, beta, gamma, delta, fse, dp_prime;
@@ -207,6 +208,7 @@ static double h, h2, h3;
 
     log_entry("track_through_csbend.2");
     i_top = n_part-1;
+    multipoleKicksDone += n_part*csbend->n_kicks*(csbend->integration_order==4?4:1);
 
     for (i_part=0; i_part<=i_top; i_part++) {
         if (!part) {

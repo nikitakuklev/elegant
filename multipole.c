@@ -28,7 +28,7 @@ void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
                                       double KmL, long rootOrder);
 void randomizeErrorMultipoleFields(MULTIPOLE_DATA *randomMult);
 
-
+unsigned long multipoleKicksDone = 0;
 
 #define ODD(j) (j%2)
 
@@ -180,6 +180,7 @@ long fmultipole_tracking(
 
   multData = &(multipole->multData);
   i_top = n_part-1;
+  multipoleKicksDone += (i_top+1)*multData->orders*n_kicks*4;
   for (i_part=0; i_part<=i_top; i_part++) {
     if (!(coord = particle[i_part])) {
       fprintf(stderr, "null coordinate pointer for particle %ld (fmultipole_tracking)", i_part);
@@ -297,6 +298,7 @@ long multipole_tracking(
         rad_coef = 0;
 
     i_top = n_part-1;
+    multipoleKicksDone += (i_top+1)*n_kicks*4;
     for (i_part=0; i_part<=i_top; i_part++) {
         if (!(coord = particle[i_part])) {
             fprintf(stderr, "null coordinate pointer for particle %ld (multipole_tracking)", i_part);
@@ -611,9 +613,13 @@ long multipole_tracking2(
   if (integ_order==4) {
     if ((n_parts = ceil(n_kicks/4.0))<1)
       n_parts = 1;
+    n_kicks = n_parts*4;
   }
   else
     n_parts = n_kicks;
+  multipoleKicksDone += (i_top+1)*n_kicks;
+  if (multData)
+    multipoleKicksDone += (i_top+1)*n_kicks*multData->orders;
   for (i_part=0; i_part<=i_top; i_part++) {
     if (!(coord = particle[i_part])) {
       fprintf(stderr, "null coordinate pointer for particle %ld (multipole_tracking)", i_part);
@@ -1015,3 +1021,4 @@ void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
     }
   }
 }
+

@@ -31,6 +31,9 @@ void track_through_rfmode(
     
     log_entry("track_through_rfmode");
 
+    if (pass%rfmode->pass_interval)
+      return;
+      
     omega = PIx2*rfmode->freq;
     if ((Q = rfmode->Q/(1+rfmode->beta))<=0.5) {
       fprintf(stderr, "The effective Q<=0.5 for RFMODE.  Use the ZLONGIT element.\n");
@@ -126,7 +129,7 @@ void track_through_rfmode(
         rfmode->Vi = V*sin(phase);
 
         /* compute beam-induced voltage for this bin */
-        Vb = 2*k*rfmode->mp_charge*Ihist[ib]; 
+        Vb = 2*k*rfmode->mp_charge*rfmode->pass_interval*Ihist[ib]; 
         Vbin[ib] = rfmode->Vr - Vb/2;
         
         /* add beam-induced voltage to cavity voltage */
@@ -192,6 +195,8 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
     double T;
     
     rfmode->initialized = 1;
+    if (rfmode->pass_interval<=0)
+        bomb("pass_interval <= 0 for RFMODE", NULL);
     if (n_particles<1)
         bomb("too few particles in set_up_rfmode()", NULL);
     if (rfmode->n_bins<2)
