@@ -549,63 +549,36 @@ proc FillCollectiveEffectsFrame {widget args} {
 
     APSLabeledEntry .prefix -parent $widget \
 	-label "Run prefix: " -width 30 -textVariable collectiveEffects(prefix)
-    
-    APSLabeledOutput .ibs -parent $widget -label "IBS: " \
-	-width 60 -textVariable collectiveEffects(ibsOutput)
-    APSButton .run -parent $widget.ibs -text "Run" -command RunIBS \
-	-contextHelp "Do scan for intrabeam scattering."
-    APSButton .display -parent $widget.ibs -text "Display" -command DisplayIBS \
-	-contextHelp "Display scan for intrabeam scattering."
-    AddCommandButton .cmd -parent $widget.ibs -variable collectiveEffects(ibsOutput) 
 
-    APSLabeledOutput .hai -parent $widget -label "Haissinski: " \
-	-width 60 -textVariable collectiveEffects(haissinskiOutput) 
-    APSButton .hai -parent $widget.hai -text "Run" -command RunHaissinski \
+    APSFrame .hai -parent $widget -label "" 
+    set w $widget.hai.frame
+    APSLabeledEntry .hai -parent $w -label "Haissinski: " \
+	-width 70 -textVariable collectiveEffects(haissinskiOutput) -commandButton 1 
+    APSButton .run -parent $w -text "Run" -command RunHaissinski \
 	-contextHelp "Do scan for Haissinski equation (bunch lengthening)."
-    AddCommandButton .cmd -parent $widget.hai -variable collectiveEffects(haissinskiOutput)
+    APSButton .display -parent $w -text "Display" -command DisplayHaissinski \
+	-contextHelp "Display scan for intrabeam scattering."
 
-    APSLabeledOutput .scts -parent $widget -label "SC tune shift: " \
-        -width 60 -textVariable collectiveEffects(scTuneShiftOutput)
-    APSButton .scts -parent $widget.scts -text "Run" -command RunSCTuneShift \
-	-contextHelp "Compute space charge tune shifts."
-    AddCommandButton .cmd -parent $widget.scts -variable collectiveEffects(scTuneShiftOutput)
-    
+    APSFrame .ibs -parent $widget -label "" 
+    set w $widget.ibs.frame
+    APSLabeledEntry .ibs -parent $w -label "IBS: " -commandButton 1 \
+	-width 60 -textVariable collectiveEffects(ibsOutput)
+    APSButton .run -parent $w -text "Run" -command RunIBS \
+	-contextHelp "Do scan for intrabeam scattering."
+    APSButton .display -parent $w -text "Display" -command DisplayIBS \
+	-contextHelp "Display scan for intrabeam scattering."
+
+    APSFrame .scts -parent $widget -label ""
+    set w $widget.scts.frame
+    APSLabeledEntry .scts -parent $w -label "SC tune spread: " -commandButton 1\
+        -width 60 -textVariable collectiveEffects(scTuneSpreadOutput)
+    APSButton .run -parent $w -text "Run" -command RunSCTuneSpread \
+	-contextHelp "Compute space charge tune spreads."
+    APSButton .display -parent $w -text "Display" -command DisplaySCTuneSpread \
+	-contextHelp "Display scan for space-charge tune spread."
 }
 
-proc AddCommandButton {widget args} {
-    set variable ""
-    set parent ""
-    APSStrictParseArguments {variable parent}
-
-    set apsFileDisplaySDDSCommandList \
-	[list "sddsedit " \
-	     "quickSDDSplot -dataFileList " \
-	     "quickSDDSFit -filename " \
-	     "quickSDDSStatistics -filename " \
-	     "sddsquery "]
-
-    menubutton $parent$widget -indicatoron 0 \
-	-text "Command..." \
-	-menu $parent$widget.menu \
-	-state normal \
-	-takefocus 1 \
-	-highlightthickness 2 \
-	-relief raised \
-	-bd 2
-    menu $parent$widget.menu -tearoff 0
-    pack $parent${widget} -side left
-    $parent${widget}.menu insert 1 separator
-    foreach program $apsFileDisplaySDDSCommandList {
-	$parent${widget}.menu insert end command -label "$program"  \
-	    -command "exec $program \[set $variable\] &"
-    }
-}
-
-proc ScanCollectiveEffectsProgram {args} {
-    set program ""
-    set template ""
-    set extension ""
-    APSStrictParseArguments {program template extension}
+proc DetermineScanVariableCollectiveEffects {args} {
     global collectiveEffects mainDirectory mainPrefix runDone
     set scanQuantities 0
     foreach item {charge rfVoltage emittanceRatio BBImpedance} {
@@ -617,32 +590,68 @@ proc ScanCollectiveEffectsProgram {args} {
     if $scanQuantities!=1 {
 	return -code error "Scan one and only one quantity.  All others must have the two values equal."
     }
+    return $scanVariable
+}
 
-    set points $collectiveEffects(scanPoints)
-    set outputList ""
-    foreach item {rfHarmonic charge rfVoltage emittanceRatio BBImpedance} {
+proc ScanCollectiveEffectsProgram {args} {
+    set template ""
+    set extension ""
+    set dataFile ""
+    set type ""
+    APSStrictParseArguments {template extension type dataFile}
+    global collectiveEffects mainDirectory mainPrefix runDone
+
+    set isIBS [expr ![string compare $type IBS]]
+    set isSCTS [expr ![string compare $type SCTS]]
+    if {($isIBS || $isSCTS) && ![string length $dataFile]} {
+	return -code error "Need data file for $type"
+    }
+    foreach item {rfHarmonic charge rfVoltage emittanceRatio BBImpedance bunchLength} {
 	set ${item}List ""
     }
+    if {!($isIBS || $isSCTS)} {
+	if [catch {DetermineScanVariableCollectiveEffects} scanVariable] {
+	    return -code error "$scanVariable"
+	}
+	set points $collectiveEffects(scanPoints)
+	setStatus "Will scan $scanVariable over $points values"
+	for {set step 0} {$step<$points} {incr step} {
+	    foreach item {rfHarmonic superPeriods} {
+		set value [set collectiveEffects($item)]
+		lappend ${item}List $value
+	    }
+	    foreach item {charge rfVoltage emittanceRatio BBImpedance} {
+		set value0 [set collectiveEffects(${item}0)]
+		set value1 [set collectiveEffects(${item}1)]
+		lappend ${item}List [expr $value0+(1.0*$value1-$value0)/($points-1.0)*$step]
+	    }
+	    lappend rmsBunchLengthList 0
+	}
+    } else {
+	set points [exec sdds2stream -rows=bare $dataFile]
+	setStatus "$points evaluation points in $dataFile"
+	set scanVariable [exec sdds2stream $dataFile -column=scanVariable -pipe=out | tail -1]
+	foreach item {charge rmsBunchLength rfVoltage emittanceRatio superPeriods rfHarmonic BBImpedance} {
+	    set ${item}List [APSGetSDDSColumn -fileName $dataFile -column $item]
+	}
+    }
+    set outputList ""
+    
     for {set step 0} {$step<$points} {incr step} {
 	set output $mainDirectory/${mainPrefix}$collectiveEffects(prefix)-[format %03d $step].$extension
 	set command [eval os editstring %+<output>+$output+ $template]
-	foreach item {rfHarmonic superPeriods} {
-	    set value [set collectiveEffects($item)]
+	foreach item {charge rmsBunchLength rfVoltage emittanceRatio superPeriods rfHarmonic BBImpedance} {
+	    set value [lindex [set ${item}List] $step]
 	    set command [eval os editstring %/<$item>/$value/ $command]
-	    lappend ${item}List $value
-	}
-	foreach item {charge rfVoltage emittanceRatio BBImpedance} {
-	    set value0 [set collectiveEffects(${item}0)]
-	    set value1 [set collectiveEffects(${item}1)]
-	    set $item  [expr $value0+(1.0*$value1-$value0)/($points-1.0)*$step]
-	    lappend ${item}List [set $item]
-	    set command [eval os editstring %/<$item>/[set $item]/ $command]
 	    switch $item {
 		charge {
-		    set command [eval os editstring %/<charge_nC>/[expr $charge*1e9]/ $command]
+		    set command [eval os editstring %/<charge_nC>/[expr $value*1e9]/ $command]
 		}
 		rfVoltage {
-		    set command [eval os editstring %/<rfVoltage_MV>/[expr $rfVoltage/1e6]/ $command]
+		    set command [eval os editstring %/<rfVoltage_MV>/[expr $value/1e6]/ $command]
+		}
+		rmsBunchLength {
+		    set command [eval os editstring %/<rmsBunchLength_mm>/[expr $value*1e3]/ $command]
 		}
 	    }
 	}
@@ -679,8 +688,13 @@ proc RunIBS {} {
         setStatus "Error: please perform Basic run in order to proceed."
         return
     }
-    if [catch {ScanCollectiveEffectsProgram -extension ibs \
-		   -template "ibsEmittance $mainDirectory/${mainPrefix}Basic.twi <output> -charge=<charge_nC> -coupling=<emittanceRatio> -rf=voltage=<rfVoltage_MV>,harmonic=<rfHarmonic> -superperiods=<superPeriods>"} result] {
+    if ![file exists $mainDirectory/${mainPrefix}$collectiveEffects(prefix).hai] {
+	setStatus "Error: Haissinski must be run first"
+    }
+    
+    if [catch {ScanCollectiveEffectsProgram -extension ibs -type IBS \
+		   -dataFile $mainDirectory/${mainPrefix}$collectiveEffects(prefix).hai \
+		   -template "ibsEmittance $mainDirectory/${mainPrefix}Basic.twi <output> -charge=<charge_nC> -coupling=<emittanceRatio> -length=<rmsBunchLength_mm> -superperiods=<superPeriods>"} result] {
 	return -code error "$result"
     }
     set mainFile [lindex $result 0]
@@ -736,9 +750,9 @@ proc RunHaissinski {} {
     set haissinskiFraction 0.01
     set haissinskiDivisor 100.0
     set haissinskiIterations 1000
-    set haissinskiTolerance 0.001
+    set haissinskiTolerance 0.0001
     set extraOption "-integration=deltaTime=[expr $bunchLength/1e3/$haissinskiDivisor/$cmks],points=$haissinskiPoints,fraction=$haissinskiFraction,iterations=$haissinskiIterations,tolerance=$haissinskiTolerance -steps=1" 
-    if [catch {ScanCollectiveEffectsProgram -extension hai \
+    if [catch {ScanCollectiveEffectsProgram -extension hai -type Haissinski \
 		   -template "haissinski $mainDirectory/${mainPrefix}Basic.twi <output> -model=Zn=<BBImpedance> -charge=<charge> -rf=voltage=<rfVoltage>,harmonic=<rfHarmonic> -superPeriods=<superPeriods> $extraOption"} result] {
 	return -code error "$result"
     }
@@ -755,9 +769,24 @@ proc RunHaissinski {} {
 	| sddsxref $mainFile -pipe=in -take=* $mainDirectory/${mainPrefix}$collectiveEffects(prefix).hai
     eval file delete -force $result
     set collectiveEffects(haissinskiOutput) $mainDirectory/${mainPrefix}$collectiveEffects(prefix).hai
+    DisplayHaissinski
 }
 
-proc RunSCTuneShift {} {
+proc DisplayHaissinski {} {
+    global collectiveEffects 
+    set input $collectiveEffects(haissinskiOutput)
+    if ![file exists $input] {
+	return -code error "not found: $input"
+    }
+    if [catch {exec sdds2stream $input -column=scanVariable \
+		   | tail -1} scanVariable] {
+	return -code error "$scanVariable"
+    }
+    exec sddsplot $input -graph=symbol,vary=type,subtype=type,connect=type -legend \
+	-column=$scanVariable,rmsBunchLength -end &
+}
+
+proc RunSCTuneSpread {} {
     global collectiveEffects mainDirectory mainPrefix
     if ![file exists $mainDirectory/${mainPrefix}Basic.twi] {
         setStatus "Error: please perform Basic run in order to proceed."
@@ -789,12 +818,27 @@ proc RunSCTuneShift {} {
 		   {"-define=parameter,K,charge e_mks / re_mks * 2 pi * 1.5 pow / pCentral 3 pow / rmsBunchLength / emitx / emittanceRatio sqrt /"} \
 		   {"-define=column,SCTSIntegrand,betay sqrt betax sqrt betay emittanceRatio * sqrt + /"} \
 		   -process=SCTSIntegrand,integ,SCTSIntegral,functionOf=s \
-		   {"-define=parameter,spaceChargeTuneShift,SCTSIntegral K *"} \
+		   {"-define=parameter,spaceChargeTuneSpread,SCTSIntegral K *"} \
 		   | sddscollapse -pipe=in \
 		   $mainDirectory/${mainPrefix}$collectiveEffects(prefix).scts } result] {
 	return -code error "$result"
     }
-    set collectiveEffects(scTuneShiftOutput) $mainDirectory/${mainPrefix}$collectiveEffects(prefix).scts
+    set collectiveEffects(scTuneSpreadOutput) $mainDirectory/${mainPrefix}$collectiveEffects(prefix).scts
+    DisplaySCTuneSpread
+}
+
+proc DisplaySCTuneSpread {} {
+    global collectiveEffects
+    set input $collectiveEffects(scTuneSpreadOutput)
+    if ![file exists $input] {
+	return -code error "not found: $input"
+    }
+    if [catch {exec sdds2stream $input -column=scanVariable \
+		   | tail -1} scanVariable] {
+	return -code error "$scanVariable"
+    }
+    exec sddsplot $input -graph=symbol,vary=type,subtype=type,connect=type -legend \
+	-column=$scanVariable,spaceChargeTuneSpread &
 }
 
 proc FillPhaseSpaceFrame {widget args} {
@@ -1634,7 +1678,7 @@ lappend saveVarList momentum matrixLatticeFile kickLatticeFile mainParameterFile
 lappend saveVarList matrixBeamline kickBeamline matrixOffsetElement kickOffsetElement
 lappend saveVarList basicComputations phaseSpaceTracking offMomentumTuneTracking higherOrderDispersion
 lappend saveVarList dynamicAperture offMomentumDynamicAperture fineDynamicAperture
-lappend saveVarList frequencyMap
+lappend saveVarList frequencyMap collectiveEffects
 
 set args $argv
 set configuration ""
