@@ -960,8 +960,8 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
         !SDDS_DefineSimpleParameter(&csbend->SDDSout, "TotalBunchLength", "m", SDDS_DOUBLE) ||
         !SDDS_DefineSimpleParameter(&csbend->SDDSout, "BinSize", "m", SDDS_DOUBLE) ||
         !SDDS_DefineSimpleColumn(&csbend->SDDSout, "s", "m", SDDS_DOUBLE) ||
-        !SDDS_DefineSimpleColumn(&csbend->SDDSout, "LinearDensity", "1/m", SDDS_DOUBLE) ||
-        !SDDS_DefineSimpleColumn(&csbend->SDDSout, "LinearDensityDeriv", NULL, SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(&csbend->SDDSout, "LinearDensity", "C/s", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(&csbend->SDDSout, "LinearDensityDeriv", "C/s$a2$n", SDDS_DOUBLE) ||
         !SDDS_DefineSimpleColumn(&csbend->SDDSout, "DeltaGamma", NULL, SDDS_DOUBLE) ||
         !SDDS_DefineSimpleColumn(&csbend->SDDSout, "DeltaGammaT1", NULL, SDDS_DOUBLE) ||
         !SDDS_DefineSimpleColumn(&csbend->SDDSout, "DeltaGammaT2", NULL, SDDS_DOUBLE) ||
@@ -1105,7 +1105,9 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
       denom[iBin] = pow(dct*iBin, 1./3.);
       ctHistDeriv[iBin] = (ctHist[iBin] /= dct);
     }
-    /* - compute derivative with smoothing */
+    /* - compute derivative with smoothing.  The deriv is w.r.t. index number and
+     * I won't scale it now as it will just fall out in the integral 
+     */
     SavitzyGolaySmooth(ctHistDeriv, nBins, csbend->SGOrder, csbend->SGHalfWidth, csbend->SGHalfWidth, 1);
 
     phiBend += angle/csbend->n_kicks;
@@ -1147,6 +1149,13 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     }
 
     if (csbend->fileActive && kick%csbend->outputInterval==0) {
+      /* scale the linear density and its derivative to get C/s and C/s^2 
+       * ctHist is already normalized to dct, but ctHistDeriv requires an additional factor
+       */
+      for (iBin=0; iBin<nBins; iBin++) {
+        ctHist[iBin] *= macroParticleCharge*c_mks;
+        ctHistDeriv[iBin] *= macroParticleCharge*sqr(c_mks)/dct;
+      }
       if (!SDDS_StartPage(&csbend->SDDSout, nBins) ||
           !SDDS_SetColumn(&csbend->SDDSout, SDDS_SET_BY_NAME, dGamma, nBins, "DeltaGamma") ||
           !SDDS_SetColumn(&csbend->SDDSout, SDDS_SET_BY_NAME, T1, nBins, "DeltaGammaT1") ||
