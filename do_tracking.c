@@ -697,6 +697,9 @@ long do_tracking(
 					    beamline->revolution_length,
 					    run->rootname);
             break;
+          case T_LSCDRIFT:
+            track_through_lscdrift(coord, n_to_track, (LSCDRIFT*)eptr->p_elem, *P_central, charge);
+            break;
           case T_TUBEND:
             n_left = track_through_tubend(coord, n_to_track, 
                                           (TUBEND*)eptr->p_elem, 0.0,

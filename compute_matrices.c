@@ -452,6 +452,7 @@ VMATRIX *compute_matrix(
     MATTER *matter; MALIGN *malign; MATR *matr; MODRF *modrf;
     CSRCSBEND *csrcsbend;
     CSRDRIFT *csrdrift;
+    LSCDRIFT *lscdrift;
     long bend_flags;
     double ks;
     
@@ -811,6 +812,10 @@ VMATRIX *compute_matrix(
             (csrdrift->spread?1:0)+(csrdrift->attenuationLength>0?1:0)>1) 
           bomb("Give one and only one of SPREAD, ATTENUATION_LENGTH, or USE_OVERTAKING_LENGTH for CSRDRIFT", NULL);
         elem->matrix = drift_matrix(csrdrift->length, run->default_order);
+        break;
+      case T_LSCDRIFT:
+        lscdrift = (LSCDRIFT*)elem->p_elem;
+        elem->matrix = drift_matrix(lscdrift->length, run->default_order);
         break;
       case T_TWISSELEMENT:
         elem->matrix = twissTransformMatrix((TWISSELEMENT*)elem->p_elem, NULL);

@@ -558,7 +558,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_FTRFMODE  86
 #define T_TFBPICKUP 87
 #define T_TFBDRIVER 88
-#define N_TYPES     89
+#define T_LSCDRIFT  89
+#define N_TYPES     90
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -654,6 +655,7 @@ extern char *entity_text[N_TYPES];
 #define N_FTRFMODE_PARAMS 10
 #define N_TFBPICKUP_PARAMS 18
 #define N_TFBDRIVER_PARAMS 20
+#define N_LSCDRIFT_PARAMS  7
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -1936,6 +1938,15 @@ typedef struct {
   double *driverSignal;
 } TFBDRIVER;
 
+
+/* Longitudinal space-charge drift */
+extern PARAMETER lscdrift_param[N_LSCDRIFT_PARAMS];
+typedef struct {
+  double length;
+  long bins;
+  long smoothing, SGHalfWidth, SGOrder, SGDerivHalfWidth, interpolate;
+} LSCDRIFT;
+
 /* macros for bending magnets */ 
 #define SAME_BEND_PRECEDES 1 
 #define SAME_BEND_FOLLOWS 2 
@@ -2516,6 +2527,7 @@ void set_up_trfmode(TRFMODE *trfmode, char *element_name, double element_z,
                     long n_passes, RUN *run, long n_particles);
 void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po, RUN *run, long i_pass,
                            CHARGE *charge);
+void track_through_lscdrift(double **part, long np, LSCDRIFT *lscdrift, double Po, CHARGE *charge);
 long checkPointSpacing(double *x, long n, double tolerance);
 void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse, 
                                double Po, RUN *run, long i_pass,
