@@ -119,28 +119,18 @@ void add_error_element(ERROR *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beamline
         errcon->new_data_read = 1;
         }
 
-    /* set namelist variables to defaults */
-/*
-    name = item = NULL;
-    type = known_error_type[GAUSSIAN_ERRORS];
-    amplitude = 0.0;
-    cutoff = 3.0;
-    bind = 1;
-    bind_number = 0;
-    fractional = 0;
-    post_correction = 0;
-    additive = 1;
- */
-
     /* process namelist text */
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
     process_namelist(&error, nltext);
+    if (name==NULL) {
+      if (!element_type)
+        bomb("element name missing in error namelist", NULL);
+      SDDS_CopyString(&name, "*");
+    }
     print_namelist(stdout, &error);
 
     /* check for valid input and copy to errcon arrays */
-    if (name==NULL)
-        bomb("element name missing in error namelist", NULL);
     if (item==NULL)
         bomb("item name missing in error namelist", NULL);
     if (match_string(type, known_error_type, N_ERROR_TYPES, 0)<0)
@@ -183,11 +173,16 @@ void add_error_element(ERROR *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beamline
               before, after);
       exit(1);
     }
+    if (element_type && has_wildcards(element_type) && strchr(element_type, '-'))
+      element_type = expand_ranges(element_type);
     if (has_wildcards(name)) {
         if (strchr(name, '-'))
             name = expand_ranges(name);
         str_toupper(name);
         while ((context=wfind_element(name, &context, &(beamline->elem)))) {
+            if (element_type && 
+                !wild_match(entity_name[context->type], element_type))
+              continue;
             if (i_start!=n_items && duplicate_name(errcon->name+i_start, n_items-i_start, context->name))
                 continue;
             errcon->name              = trealloc(errcon->name, sizeof(*errcon->name)*(n_items+1));

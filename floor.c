@@ -142,7 +142,10 @@ void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamli
         if (is_bend) {
             if (include_vertices || vertices_only || magnet_centers) {
                 /* output data for the vertex point */
-                data[0] += (dZ=rho*tan(angle/2));
+                if (angle && !isnan(rho))
+                  data[0] += (dZ=rho*tan(angle/2));
+                else
+                  data[0] += (dZ=length/2);
                 dX = 0;
                 rotate_xy(&dX, &dZ, theta0);
                 data[1] = X0+dX;
@@ -157,9 +160,14 @@ void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamli
                     }
                 }
             /* calculate offsets for end of bend magnet */
-            dX = rho*(cos(angle)-1);
-            dZ = rho*sin(angle);
-            }
+            if (angle && !isnan(rho)) {
+              dX = rho*(cos(angle)-1);
+              dZ = rho*sin(angle);
+            } else {
+              dX = 0;
+              dZ = length;
+            }              
+          }
         if (is_magnet && magnet_centers) {
             dX /= 2;
             dZ /= 2;
@@ -269,8 +277,13 @@ void final_floor_coordinates(LINE_LIST *beamline, double *X, double *Z, double *
     }
     if (is_bend) {
       /* calculate offsets for end of bend magnet */
-      dX = rho*(cos(angle)-1);
-      dZ = rho*sin(angle);
+      if (angle && !isnan(rho)) {
+        dX = rho*(cos(angle)-1);
+        dZ = rho*sin(angle);
+      } else {
+        dX = 0;
+        dZ = length;
+      }
     }
 
     rotate_xy(&dX, &dZ, theta0);

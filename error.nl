@@ -15,6 +15,7 @@
 #namelist error static
     STRING name = NULL;
     STRING item = NULL;
+    STRING element_type = NULL;
     STRING type = "gaussian";
     double amplitude = 0.0;
     double cutoff = 3.0;
