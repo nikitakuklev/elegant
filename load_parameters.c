@@ -78,7 +78,7 @@ long setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
   else {
     if (!filename && !clear_settings)
       bomb("filename or filename_list must be given for load_parameters unless you are clearing settings", NULL);
-    fprintf(stdout, "Using single filename for parameter loading");
+    fprintf(stdout, "Using single filename for parameter loading\n");
   }
 
   if (clear_settings && load_requests) {
