@@ -149,6 +149,8 @@ long setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     if (load_request[load_requests-1].flags&COMMAND_FLAG_CHANGE_DEFINITIONS) {
         /* do this right away so that it gets propagated into error and vary operations */
         do_load_parameters(beamline, 1);
+        fprintf(stdout, "New length per pass: %21.15e m\n",
+                compute_end_positions(beamline));
         return 1;
       }
     return 0;
@@ -439,8 +441,10 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
     if (load_request[i].flags&COMMAND_FLAG_CHANGE_DEFINITIONS) 
       load_request[i].flags |= COMMAND_FLAG_IGNORE;   /* ignore hereafter */
   }
-  if (!allFilesRead || allFilesIgnored)
+  if (!allFilesRead || allFilesIgnored) {
+    compute_end_positions(beamline);
     return PARAMETERS_LOADED;
+  }
   return PARAMETERS_ENDED;
 }
 

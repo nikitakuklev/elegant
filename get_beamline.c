@@ -37,7 +37,6 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central)
 {
     long type, i, i_elem;
     long occurence;
-    double z, l, theta, z_recirc;
     static ELEMENT_LIST *eptr, *eptr1;
     static LINE_LIST *lptr;
     static long n_elems, n_lines;
@@ -185,6 +184,42 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central)
     lptr->twiss0 = NULL;
     lptr->matrix = NULL;
 
+    /* go through and give occurence numbers to each element */
+    eptr = &(lptr->elem);
+    while (eptr) {
+        eptr->occurence = 0;
+        eptr = eptr->succ;
+      }
+
+    eptr = &(lptr->elem);
+    while (eptr) {
+        eptr->Pref_input = eptr->Pref_output = p_central;
+        if (eptr->occurence==0) {
+            /* this is the first occurence of this element--go through and find any others */
+            eptr->occurence = occurence = 1;
+            eptr1 = eptr->succ;
+            while (eptr1) {
+                if (strcmp(eptr->name, eptr1->name)==0)
+                    eptr1->occurence = ++occurence;
+                eptr1 = eptr1->succ;
+                }
+            }
+        if (eptr->type==T_SREFFECTS)
+            lptr->flags |= BEAMLINE_TWISS_WANTED;
+        eptr = eptr->succ;
+        }
+
+    compute_end_positions(lptr);
+    
+    return(lptr);
+  }
+
+double compute_end_positions(LINE_LIST *lptr) 
+{
+    double z, l, theta, z_recirc;
+    static ELEMENT_LIST *eptr, *eptr1;
+    long i_elem;
+    
     /* use length data to establish z coordinates at end of each element */
     /* also check for duplicate recirculation elements and set occurence numbers to 0 */
     eptr = &(lptr->elem);
@@ -193,7 +228,6 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central)
     i_elem = 0;
     lptr->flags = 0;
     do {
-        eptr->occurence = 0;
         lptr->elast = eptr;
         if (!(entity_description[eptr->type].flags&HAS_LENGTH))
             l = 0;
@@ -209,55 +243,25 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central)
             theta += ((NISEPT*)eptr->p_elem)->angle;
         else if (eptr->type==T_CSBEND)
             theta += ((CSBEND*)eptr->p_elem)->angle;
-        if (l<0)
-            fprintf(stdout, "warning(1): element %s has negative length = %e\n", eptr->name, l);
-            fflush(stdout);
-        eptr->end_pos = z + l;
-        eptr->end_theta = theta ;
-        z = eptr->end_pos;
-        if (eptr->type==T_RECIRC) {
+        else if (eptr->type==T_RECIRC) {
             if (lptr->elem_recirc)
                 bomb("multiple recirculation (RECIRC) elements in beamline--this doesn't make sense", NULL);
             lptr->elem_recirc = eptr;
             lptr->i_recirc = i_elem;
             z_recirc = z;
             }
-        else if (eptr->type==T_SREFFECTS)
-            lptr->flags |= BEAMLINE_TWISS_WANTED;
+        if (l<0) {
+            fprintf(stdout, "warning(1): element %s has negative length = %e\n", eptr->name, l);
+            fflush(stdout);
+          }
+        eptr->end_pos = z + l;
+        eptr->end_theta = theta ;
+        z = eptr->end_pos;
         i_elem++;
         } while ((eptr=eptr->succ));
 
     lptr->revolution_length = z - z_recirc;
-
-    /* go through and give occurence numbers to each element */
-    eptr = &(lptr->elem);
-    while (eptr) {
-        eptr->Pref_input = eptr->Pref_output = p_central;
-        if (eptr->occurence==0) {
-            /* this is the first occurence of this element--go through and find any others */
-            eptr->occurence = occurence = 1;
-            eptr1 = eptr->succ;
-            while (eptr1) {
-                if (strcmp(eptr->name, eptr1->name)==0)
-                    eptr1->occurence = ++occurence;
-                eptr1 = eptr1->succ;
-                }
-            }
-        eptr = eptr->succ;
-        }
-/*
-    eptr = &(lptr->elem);
-    while (eptr->succ) {
-        if (eptr->succ->end_pos<eptr->end_pos)
-            fprintf(stdout, "warning(2): element %s has negative length of %e\n",
-                eptr->name, eptr->succ->end_pos-eptr->end_pos);
-            fflush(stdout);
-        eptr = eptr->succ;
-        }
- */
-
-    log_exit("get_beamline");
-    return(lptr);
+    return lptr->revolution_length;
     }
 
 void show_elem(ELEMENT_LIST *eptr, long type)
