@@ -69,6 +69,7 @@ long do_tracking(
   RFMODE *rfmode; TRFMODE *trfmode;
   FRFMODE *frfmode; FTRFMODE *ftrfmode;
   WATCH *watch;
+  STRAY *stray;
   HISTOGRAM *histogram;
   ENERGY *energy;
   MAXAMP *maxamp;
@@ -482,6 +483,10 @@ long do_tracking(
               drift_beam(coord, n_to_track, ((RMDF*)eptr->p_elem)->length, run->default_order);
             break;
           case T_RFTMEZ0:
+              n_left = motion(coord, n_to_track, eptr->p_elem, eptr->type, P_central, 
+                              &dgamma, dP, accepted, last_z);
+              show_dE = 1;
+            break;
           case T_TMCF:
           case T_CEPL:
           case T_TWPL:
@@ -836,6 +841,14 @@ long do_tracking(
           case T_TFBPICKUP:
             if (!(flags&TEST_PARTICLES))
               transverseFeedbackPickup((TFBPICKUP*)eptr->p_elem, coord, n_to_track, i_pass);
+            break;
+          case T_STRAY:
+            if (eptr->matrix)
+              free_matrices(eptr->matrix);
+            stray = (STRAY*)eptr->p_elem;
+            eptr->matrix = stray_field_matrix(stray->length, &stray->lBx, &stray->gBx, 
+                                              eptr->end_theta, stray->order?stray->order:run->default_order,
+                                              *P_central);
             break;
           case T_TFBDRIVER:
             if (!(flags&TEST_PARTICLES))

@@ -1799,7 +1799,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
                                          sizeof(NISEPT),    nisept_param   },
     {  N_RAMPRF_PARAMS, MAT_LEN_NCAT|HAS_RF_MATRIX|MAY_CHANGE_ENERGY,    sizeof(RAMPRF),    ramprf_param   },
     {   N_RAMPP_PARAMS,          0,       sizeof(RAMPP),    rampp_param    },
-    {   N_STRAY_PARAMS,    MAT_LEN|MATRIX_TRACKING|MAT_CHW_ENERGY,
+    {   N_STRAY_PARAMS,    MAT_LEN|MAT_CHW_ENERGY,
                                           sizeof(STRAY),    stray_param    },
     {  N_CSBEND_PARAMS, MAT_LEN_NCAT|IS_MAGNET,
                                          sizeof(CSBEND),    csbend_param   },
