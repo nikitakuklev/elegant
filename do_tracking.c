@@ -16,6 +16,10 @@
 #include "mdbsun.h"
 #include "track.h"
 /* #include "smath.h" */
+void set_up_frfmode(FRFMODE *rfmode, char *element_name, double element_z, long n_passes,  RUN *run, long n_particles, double Po, double total_length);
+void track_through_frfmode(double **part, long np, FRFMODE *rfmode, double Po,char *element_name, double element_z, long pass, long n_passes,CHARGE *charge);
+void set_up_ftrfmode(FTRFMODE *rfmode, char *element_name, double element_z, long n_passes,RUN *run, long n_particles,double Po, double total_length);
+void track_through_ftrfmode(double **part, long np, FTRFMODE *trfmode, double Po,char *element_name, double element_z, long pass, long n_passes,CHARGE *charge);
 
 ELEMENT_LIST *findBeamlineMatrixElement(ELEMENT_LIST *eptr);
 void trackLongitudinalOnlyRing(double **part, long np, VMATRIX *M, double *alpha);

@@ -16,6 +16,7 @@
 #include "track.h"
 #include "match_string.h"
 #include "correctDefs.h"
+long zero_correctors(ELEMENT_LIST *elem, RUN *run, CORRECTION *correct);
 
 void compute_amplification_factors(
                                    NAMELIST_TEXT *nltext,
