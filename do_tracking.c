@@ -20,13 +20,13 @@
 ELEMENT_LIST *findBeamlineMatrixElement(ELEMENT_LIST *eptr);
 void trackLongitudinalOnlyRing(double **part, long np, VMATRIX *M, double *alpha);
 void store_fitpoint_matrix_values(MARK *fpt, char *name, long occurence, VMATRIX *M);
-void trackWithChromaticLinearMatrix(double **particle, long particles,
+long trackWithChromaticLinearMatrix(double **particle, long particles,
+                                    double **accepted, double Po, double z,
                                     ELEMENT_LIST *eptr,
-                                    TWISS *twiss0,
-                                    double *tune0,
-                                    double *chrom,
-                                    double *dbeta_dPoP, 
-                                    double *dalpha_dPoP);
+                                    TWISS *twiss0, double *tune0,
+                                    double *chrom, double *chrom2, double *chrom3,
+                                    double *dbeta_dPoP, double *dalpha_dPoP,
+                                    double *alphac, double *eta2, double *eta3);
 void matr_element_tracking(double **coord, VMATRIX *M, MATR *matr,
                            long np, double z);
 long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge, 
@@ -186,28 +186,30 @@ long do_tracking(
       eptr = beamline->elem_recirc;
     else
       eptr = &(beamline->elem);
-    
-    if (flags&LINEAR_CHROMATIC_MATRIX) {
-      if (!isConcat) {
-        fprintf(stdout, "Error: in order to use the \"linear chromatic matrix\" for\n");
-        fflush(stdout);
-        fprintf(stdout, "tracking, you must ask for matrix concatenation in the run_setup.\n");
-        fflush(stdout);
-        exit(1);
+
+    if (i_pass==0) {
+      if (flags&LINEAR_CHROMATIC_MATRIX) {
+        if (!isConcat) {
+          fprintf(stdout, "Error: in order to use the \"linear chromatic matrix\" for\n");
+          fflush(stdout);
+          fprintf(stdout, "tracking, you must ask for matrix concatenation in the run_setup.\n");
+          fflush(stdout);
+          exit(1);
+        }
+        eptrCLMatrix = findBeamlineMatrixElement(eptr);
       }
-      eptrCLMatrix = findBeamlineMatrixElement(eptr);
-    }
-    if (flags&LONGITUDINAL_RING_ONLY) {
-      if (!isConcat) {
-        fprintf(stdout, "Error: in order to use the \"longitudinal ring\" mode of\n");
-        fflush(stdout);
-        fprintf(stdout, "tracking, you must ask for matrix concatenation in the run_setup.\n");
-        fflush(stdout);
-        exit(1);
+      if (flags&LONGITUDINAL_RING_ONLY) {
+        if (!isConcat) {
+          fprintf(stdout, "Error: in order to use the \"longitudinal ring\" mode of\n");
+          fflush(stdout);
+          fprintf(stdout, "tracking, you must ask for matrix concatenation in the run_setup.\n");
+          fflush(stdout);
+          exit(1);
+        }
+        eptrCLMatrix = findBeamlineMatrixElement(eptr);
       }
-      eptrCLMatrix = findBeamlineMatrixElement(eptr);
     }
-    
+      
     if (sums_vs_z && n_z_points) {
       if (!sums_allocated || !*sums_vs_z) {
         /* allocate storage for beam sums */
@@ -274,6 +276,7 @@ long do_tracking(
 #endif 
     }
     elementsTracked = -1;
+    eptrPred = eptr;
     while (eptr && n_to_track) {
       elementsTracked++;
       log_entry("do_tracking.2.2.0");
@@ -353,13 +356,13 @@ long do_tracking(
            * the longitudinal-only matrix 
            */
           if (flags&LINEAR_CHROMATIC_MATRIX) 
-            trackWithChromaticLinearMatrix(coord, n_to_track,
-                                           eptrCLMatrix,
-                                           beamline->twiss0,
-                                           beamline->tune,
-                                           beamline->chromaticity,
-                                           beamline->dbeta_dPoP,
-                                           beamline->dalpha_dPoP);
+            n_to_track = trackWithChromaticLinearMatrix(coord, n_to_track, accepted,
+                                                        *P_central, z, eptrCLMatrix,
+                                                        beamline->twiss0, beamline->tune,
+                                                        beamline->chromaticity,
+                                                        beamline->chrom2, beamline->chrom3,
+                                                        beamline->dbeta_dPoP, beamline->dalpha_dPoP,
+                                                        beamline->alpha, beamline->eta2, beamline->eta3);
           else 
             trackLongitudinalOnlyRing(coord, n_to_track, 
                                       eptrCLMatrix->matrix,
@@ -891,6 +894,7 @@ long do_tracking(
       
       sliceAnDone = 1;
     }
+
     
     log_entry("do_tracking.2.2.3");
     if (effort)
@@ -1410,13 +1414,11 @@ void store_fitpoint_beam_parameters(MARK *fpt, char *name, long occurence, doubl
 
 ELEMENT_LIST *findBeamlineMatrixElement(ELEMENT_LIST *eptr)
 {
-  ELEMENT_LIST *eptr0=NULL;
+  ELEMENT_LIST *eptr0=NULL, *eptrPassed;
   long matrixSeen = 0;
+  eptrPassed = eptr;
   while (eptr) {
-    if ((eptr->p_elem || eptr->matrix) && 
-        entity_description[eptr->type].flags&MATRIX_TRACKING) {
-      if (!(entity_description[eptr->type].flags&HAS_MATRIX))
-        bomb("attempt to matrix track for element with no matrix!",  NULL);
+    if (eptr->type==T_MATR) {
       eptr0 = eptr;
       matrixSeen = 1;
       eptr = eptr->succ;
@@ -1427,27 +1429,36 @@ ELEMENT_LIST *findBeamlineMatrixElement(ELEMENT_LIST *eptr)
   if (!matrixSeen)
     bomb("Can't do \"linear chromatic\" or \"longitudinal-only\" matrix tracking---no matrices!", NULL);
   while (eptr) {
-    if ((eptr->p_elem || eptr->matrix) &&
-        entity_description[eptr->type].flags&MATRIX_TRACKING) {
-      bomb("Can't do \"linear chromatic\" or \"longitudinal-only\" matrix tracking---concatenation resulted in more than one matrix",
-           NULL);
+    if ((eptr->p_elem || eptr->matrix) && eptr->type==T_MATR) {
+      fprintf(stderr, "***** WARNING ****\n");
+      fprintf(stderr, "Possible problem with \"linear chromatic\" or \"longitudinal-only\" matrix tracking\n");
+      fprintf(stderr, "Concatenation resulted in more than one matrix.  Make the additional matrices do\n");
+      fprintf(stderr, "not affect the revolution matrix!\n");
+      print_elem_list(stderr, eptrPassed);
+      fprintf(stderr, "***** WARNING ****\n");
+      break;
     }
     eptr = eptr->succ;
   }
   return eptr0;
 }
 
-void trackWithChromaticLinearMatrix(double **particle, long particles,
-                                    ELEMENT_LIST *eptr,
-                                    TWISS *twiss,
-                                    double *tune0,
-                                    double *chrom,
+long trackWithChromaticLinearMatrix(double **particle, long particles, double **accepted,
+                                    double Po, double z, ELEMENT_LIST *eptr,
+                                    TWISS *twiss, double *tune0,
+                                    double *chrom,    /* d   nu /ddelta   */
+                                    double *chrom2,   /* d^2 nu /ddelta^2 */
+                                    double *chrom3,   /* d^3 nu /ddelta^3 */
                                     double *dbeta_dPoP, 
-                                    double *dalpha_dPoP)
+                                    double *dalpha_dPoP,
+                                    double *alphac,   /* Cs = Cs(0) + delta*alphac[0] + delta^2*alphac[1] */
+                                    double *eta2,
+                                    double *eta3      /* x = x(0) + eta*delta + eta2*delta^2 + eta3*delta^3 */
+                                    )
 {
-  long ip, plane, offset, i, j;
+  long ip, plane, offset, i, j, itop, is_lost;
   double *coord, deltaPoP, tune2pi, sin_phi, cos_phi;
-  double alpha[2], beta[2], beta1, alpha1;
+  double alpha[2], beta[2], eta[4], beta1, alpha1;
   double R11, R22, R12;
   static VMATRIX *M1 = NULL;
   double lastDPoP = DBL_MAX, det;
@@ -1459,22 +1470,46 @@ void trackWithChromaticLinearMatrix(double **particle, long particles,
   beta[1] = twiss->betay;
   alpha[0] = twiss->alphax;
   alpha[1] = twiss->alphay;
+  eta[0] = twiss->etax;
+  eta[1] = twiss->etapx;
+  eta[2] = twiss->etay;
+  eta[3] = twiss->etapy;
   for (i=0; i<6; i++) {
     M1->C[i] = eptr->matrix->C[i];
     for (j=0; j<6; j++)
-      M1->R[i][j] = eptr->matrix->R[i][j];
+      M1->R[i][j] = i==j?1:0;
   }
+  itop = particles-1;
   for (ip=0; ip<particles; ip++) {
     coord = particle[ip];
     deltaPoP = coord[5];
+    is_lost = 0;
     if (deltaPoP!=lastDPoP) {
-      for (plane=0; plane<2; plane++) {
-        tune2pi = PIx2*(tune0[plane] + chrom[plane]*deltaPoP);
+      for (plane=0; !is_lost && plane<2; plane++) {
+        tune2pi = PIx2*(tune0[plane] + 
+                        deltaPoP*(chrom[plane] +
+                                  deltaPoP/2*(chrom2[plane] + 
+                                              deltaPoP/3*chrom3[plane])));
         offset = 2*plane;
+        if ((beta1 = beta[plane]+dbeta_dPoP[plane]*deltaPoP)<=0) {
+          fprintf(stdout, "nonpositive beta function for particle with delta=%le\n",
+                  deltaPoP);
+          fprintf(stdout, "particle is lost\n");
+          lastDPoP = DBL_MAX;
+          is_lost = 1;
+          continue;
+        }
+        if (fabs( ((long)(2*tune2pi/PIx2)) - ((long)(2*tune0[plane]))) != 0) {
+          fprintf(stdout, "particle with delta=%le crossed integer or half-integer resonance\n",
+                  deltaPoP);
+          fprintf(stdout, "particle is lost\n");
+          lastDPoP = DBL_MAX;
+          is_lost = 1;
+          continue;
+        }
         /* R11=R22 or R33=R44 */
         sin_phi = sin(tune2pi);
         cos_phi = cos(tune2pi);
-        beta1 = beta[plane]+dbeta_dPoP[plane]*deltaPoP;
         alpha1 = alpha[plane]+dalpha_dPoP[plane]*deltaPoP;
         /* R11 or R33 */
         R11 = M1->R[0+offset][0+offset] = cos_phi + alpha1*sin_phi;
@@ -1483,8 +1518,7 @@ void trackWithChromaticLinearMatrix(double **particle, long particles,
         /* R12 or R34 */
         if ((R12 = M1->R[0+offset][1+offset] = beta1*sin_phi)) {
           /* R21 or R43 */
-          M1->R[1+offset][0+offset] = 
-            (R11*R22-1)/R12;
+          M1->R[1+offset][0+offset] = (R11*R22-1)/R12;
         }
         else {
           bomb("divided by zero in trackWithChromaticLinearMatrix", NULL);
@@ -1492,16 +1526,45 @@ void trackWithChromaticLinearMatrix(double **particle, long particles,
         det = M1->R[0+offset][0+offset]*M1->R[1+offset][1+offset] -
           M1->R[0+offset][1+offset]*M1->R[1+offset][0+offset];
         if (fabs(det-1)>1e-6) {
-          fprintf(stdout, "Determinant is suspect: %e\n", det);
-          fflush(stdout);
-          exit(1);
+          fprintf(stdout, "Determinant is suspect for particle with delta=%e\n", deltaPoP);
+          fprintf(stdout, "particle is lost\n");
+          lastDPoP = DBL_MAX;
+          is_lost = 1;
+          continue;
         }
       }
-    } 
-    lastDPoP = deltaPoP;
-    track_particles(&coord, M1, &coord, 1);
+    }
+    if (is_lost) {
+      SWAP_PTR(particle[ip], particle[itop]);
+      if (accepted)
+        SWAP_PTR(accepted[ip], accepted[itop]);
+      particle[itop][4] = z;
+      particle[itop][5] = Po*(1+deltaPoP);
+      --itop;
+      --ip;
+      --particles;
+    } else {
+      lastDPoP = deltaPoP;
+      for (plane=0; !is_lost && plane<2; plane++) {
+        /* remove the dispersive orbit from the particle coordinates */
+        coord[2*plane]   -= deltaPoP*(eta[2*plane]   + deltaPoP*eta2[2*plane]);
+        coord[2*plane+1] -= deltaPoP*(eta[2*plane+1] + deltaPoP*eta2[2*plane+1]);
+      }
+      /* momentum-dependent pathlength --- note that other path-length terms are ignored ! */
+      M1->C[4] = eptr->matrix->C[4]*(1 + deltaPoP*(alphac[0] + deltaPoP*alphac[1]));
+      coord[5] -= lastDPoP;
+      track_particles(&coord, M1, &coord, 1);
+      coord[5] += lastDPoP;
+      for (plane=0; !is_lost && plane<2; plane++) {
+        /* add back the dispersive orbit to the particle coordinates */
+        coord[2*plane]   += deltaPoP*eta[2*plane]   + sqr(deltaPoP)*eta2[2*plane];
+        coord[2*plane+1] += deltaPoP*eta[2*plane+1] + sqr(deltaPoP)*eta2[2*plane+1];
+      }
+    }
   }
+  return particles;
 }
+  
 
 void trackLongitudinalOnlyRing(double **part, long np, VMATRIX *M, double *alpha)
 {
@@ -1640,11 +1703,19 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
   if (!SDDS_Terminate(&SDDSout))
     SDDS_Bomb("problem terminating script input file");
   
+#if defined(CONDOR_COMPILE)
+  _condor_ckpt_disable();
+#endif
+
   /* run the script */
   if (script->useCsh)
     executeCshCommand(cmdBuffer1);
   else 
     system(cmdBuffer1);
+
+#if defined(CONDOR_COMPILE)
+    _condor_ckpt_enable();
+#endif
 
   if (script->verbosity>0) {
     fprintf(stdout, "Command completed\n");
