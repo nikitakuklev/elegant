@@ -118,7 +118,7 @@ void concatenate_beamline(LINE_LIST *beamline, RUN *run)
                 }
             /* non-matrix element--just copy everything and extend the list */
 #if DEBUG
-            fprintf(stdout, "copying non-matrix element\n");
+            fprintf(stdout, "copying non-matrix element %s\n", elem->name);
             fflush(stdout);
 #endif
             pred = ecat->pred;
