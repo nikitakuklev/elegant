@@ -550,7 +550,7 @@ void computeHigherOrderChromaticities(LINE_LIST *beamline, double *clorb, RUN *r
   eta[4] = 0;
   eta[5] = 1;
   for (p=0; p<deltaPoints; p++) {
-    delta[p] = (p-3)*deltaStep;
+    delta[p] = (p-(deltaPoints/2+1))*deltaStep;
     for (i=0; i<6; i++) {
       M0.C[i] = (clorb?clorb[i]:0)+delta[p]*eta[i] +
 	(i<4? sqr(delta[p])*beamline->eta2[i] + pow3(delta[p])*beamline->eta3[i] : 0);
