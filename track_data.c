@@ -1057,6 +1057,8 @@ PARAMETER rfmode_param[N_RFMODE_PARAMS] = {
     {"RECORD", "", IS_STRING, 0, (long)((char *)&rfmode_example.record), NULL, 0.0, 0, "output file for cavity fields"},
     {"SINGLE_PASS", "", IS_LONG, 0, (long)((char *)&rfmode_example.single_pass), NULL, 0.0, 0, "if nonzero, don't accumulate field from pass to pass"},
     {"PASS_INTERVAL", "", IS_LONG, 0, (long)((char *)&rfmode_example.pass_interval), NULL, 0.0, 1, "interval in passes at which to apply PASS_INTERVAL times the field (may increase speed)"},
+    {"FREQ_WAVEFORM", "", IS_STRING, 0, (long)((char *)&rfmode_example.fwaveform), NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving frequency/f0 vs time, where f0 is the frequency given with the FREQ parameter"},
+    {"Q_WAVEFORM", "", IS_STRING, 0, (long)((char *)&rfmode_example.Qwaveform), NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving qualityFactor/Q0 vs time, where Q0 is the quality factor given the the Q parameter."},
     };
 
 TRFMODE trfmode_example;

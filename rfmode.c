@@ -15,6 +15,10 @@
 #include "mdb.h"
 #include "track.h"
 
+long find_nearby_array_entry(double *entry, long n, double key);
+double linear_interpolation(double *y, double *t, long n, double t0, long i);
+
+
 void track_through_rfmode(
                           double **part, long np, RFMODE *rfmode, double Po,
                           char *element_name, double element_z, long pass, long n_passes,
@@ -47,20 +51,6 @@ void track_through_rfmode(
     if (pass%rfmode->pass_interval)
       return;
       
-    omega = PIx2*rfmode->freq;
-    if ((Q = rfmode->Q/(1+rfmode->beta))<=0.5) {
-      fprintf(stdout, "The effective Q<=0.5 for RFMODE.  Use the ZLONGIT element.\n");
-      fflush(stdout);
-      exit(1);
-    }
-    tau = 2*Q/omega;
-    k = omega/4*(rfmode->Ra)/rfmode->Q;
-
-    /* These adjustments per Zotter and Kheifets, 3.2.4 */
-    Qrp = sqrt(Q*Q - 0.25);
-    VbImagFactor = 1/(2*Qrp);
-    omega *= Qrp/Q;
-
     if (!been_warned) {        
         if (rfmode->freq<1e3 && rfmode->freq)  {
             fprintf(stdout, "\7\7\7warning: your RFMODE frequency is less than 1kHz--this may be an error\n");
@@ -127,7 +117,35 @@ void track_through_rfmode(
     n_summed = max_hist = n_occupied = 0;
     nb2 = rfmode->n_bins/2;
     if (rfmode->single_pass)
-        rfmode->V = 0;
+      rfmode->V = 0;
+    
+    /* find frequency and Q at this time */
+    Q = rfmode->Q;
+    omega = PIx2*rfmode->freq;
+    if (rfmode->nFreq) {
+      double omegaFactor;
+      ib = find_nearby_array_entry(rfmode->tFreq, rfmode->nFreq, tmean);
+      omega *= (omegaFactor=linear_interpolation(rfmode->fFreq, rfmode->tFreq, rfmode->nFreq, tmean, ib));
+      /* keeps stored energy constant for constant R/Q */
+      rfmode->V *= sqrt(omegaFactor);
+    }
+    if (rfmode->nQ) {
+      ib = find_nearby_array_entry(rfmode->tQ, rfmode->nQ, tmean);
+      Q *= linear_interpolation(rfmode->fQ, rfmode->tQ, rfmode->nQ, tmean, ib);
+    }
+    if ((Q = rfmode->Q/(1+rfmode->beta))<=0.5) {
+      fprintf(stdout, "The effective Q<=0.5 for RFMODE.  Use the ZLONGIT element.\n");
+      fflush(stdout);
+      exit(1);
+    }
+    tau = 2*Q/omega;
+    k = omega/4*(rfmode->Ra)/rfmode->Q;
+
+    /* These adjustments per Zotter and Kheifets, 3.2.4 */
+    Qrp = sqrt(Q*Q - 0.25);
+    VbImagFactor = 1/(2*Qrp);
+    omega *= Qrp/Q;
+
     for (ib=0; ib<=lastBin; ib++) {
         if (!Ihist[ib])
             continue;
@@ -220,9 +238,10 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
                    RUN *run, long n_particles,
                    double Po, double total_length)
 {
-  long n;
+  long i, n;
   double T;
-
+  TABLE data;
+  
   if (rfmode->initialized)
     return;
   
@@ -301,5 +320,39 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
   }
   else 
     rfmode->last_t = element_z/c_mks;
+  rfmode->tFreq = rfmode->fFreq = NULL;
+  rfmode->nFreq = 0;
+  if (rfmode->fwaveform) {
+    if (!getTableFromSearchPath(&data, rfmode->fwaveform, 1, 0)) 
+      bomb("unable to read frequency waveform for RFMODE", NULL);
+    if (data.n_data<=1)
+      bomb("RFMODE frequency table contains less than 2 points", NULL);
+    rfmode->tFreq = data.c1;
+    rfmode->fFreq = data.c2;
+    rfmode->nFreq = data.n_data;
+    for (i=1; i<rfmode->nFreq; i++)
+      if (rfmode->tFreq[i-1]>rfmode->tFreq[i])
+        bomb("time values are not monotonically increasing in RFMODE frequency waveform", NULL);
+    tfree(data.xlab); tfree(data.ylab); tfree(data.title); tfree(data.topline);
+    data.xlab = data.ylab = data.title = data.topline = NULL;
+    data.c1 = data.c2 = NULL;
+  }
+  rfmode->tQ = rfmode->fQ = NULL;
+  rfmode->nQ = 0;
+  if (rfmode->Qwaveform) {
+    if (!getTableFromSearchPath(&data, rfmode->Qwaveform, 1, 0)) 
+      bomb("unable to read Q waveform for RFMODE", NULL);
+    if (data.n_data<=1)
+      bomb("RFMODE Q table contains less than 2 points", NULL);
+    rfmode->tQ = data.c1;
+    rfmode->fQ = data.c2;
+    rfmode->nQ = data.n_data;
+    for (i=1; i<rfmode->nQ; i++)
+      if (rfmode->tQ[i-1]>rfmode->tQ[i])
+        bomb("time values are not monotonically increasing in RFMODE Q waveform", NULL);
+    tfree(data.xlab); tfree(data.ylab); tfree(data.title); tfree(data.topline);
+    data.xlab = data.ylab = data.title = data.topline = NULL;
+    data.c1 = data.c2 = NULL;
+  }
 }
 

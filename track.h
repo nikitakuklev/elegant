@@ -609,7 +609,7 @@ extern char *entity_text[N_TYPES];
 #define N_STRAY_PARAMS 7
 #define N_CSBEND_PARAMS 34
 #define N_MATTER_PARAMS 8
-#define N_RFMODE_PARAMS 19
+#define N_RFMODE_PARAMS 21
 #define N_TRFMODE_PARAMS 12
 #define N_TWMTA_PARAMS 17
 #define N_ZLONGIT_PARAMS 19
@@ -634,7 +634,7 @@ extern char *entity_text[N_TYPES];
 #define N_CLEAN_PARAMS 7
 #define N_TWISSELEMENT_PARAMS 6
 #define N_WIGGLER_PARAMS 3
-#define N_SCRIPT_PARAMS 27
+#define N_SCRIPT_PARAMS 28
 #define N_FLOORELEMENT_PARAMS 6
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
@@ -1566,6 +1566,7 @@ typedef struct {
     char *record;              /* name of file to record (t, V) in */
     long single_pass;          /* controls accumulation of voltage from turn-to-turn */
     long pass_interval;        /* number of passes between applications of wake */
+    char *fwaveform, *Qwaveform;  /* waveforms for f/f0 and Q/Q0 vs time */
     /* values for restarting the cavity */
     /* for internal use: */
     double mp_charge;          /* charge per macroparticle */
@@ -1574,6 +1575,14 @@ typedef struct {
     double Vr, Vi;             /* real, imaginary components of voltage phasor at t=tlast */
     double last_t;             /* time at which last particle was seen */
     double last_phase;         /* phase at t=last_t */
+    double last_omega;         /* omega at t=last_t */
+    double last_Q;             /* loaded Q at t=last_t */
+    /* frequency table */
+    double *tFreq, *fFreq;
+    long nFreq;
+    /* Q table */
+    double *tQ, *fQ;
+    long nQ;
     SDDS_DATASET SDDSrec;
     } RFMODE;
 
