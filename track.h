@@ -157,6 +157,8 @@ typedef struct line_list {
     double tune[2];          /* x and y tunes from start of elem_twiss to end of line */
     long waists[2];          /* number of sign changes in alpha */
     double chromaticity[2];  /* dNUx/d(p/p0) and dNUy/d(p/p0) */
+    double eta2[4], eta3[4]; /* second- and third-order dispersion */
+    double chrom2[2], chrom3[2]; /* second- and third-order chromaticity */
     double dbeta_dPoP[2];    /* d/d(p/p0) of betax and betay */
     double dalpha_dPoP[2];   /* d/d(p/p0) of alphax and alphay */
     double alpha[2];         /* first and second order momentum compaction */
@@ -2004,7 +2006,7 @@ void setup_matrix_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 /* prototypes for twiss.c: */
 VMATRIX *compute_periodic_twiss(double *betax, double *alphax, double *etax, double *etaxp,
     double *phix, double *betay, double *alphay, double *etay, double *etayp, double *phiy,
-    ELEMENT_LIST *elem, double *clorb, RUN *run, unsigned long *unstable, double *eta2);
+    ELEMENT_LIST *elem, double *clorb, RUN *run, unsigned long *unstable, double *eta2, double *eta3);
 void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
                                 RADIATION_INTEGRALS *radIntegrals,
                                 ELEMENT_LIST *elem, RUN *run, double *traj);
@@ -2022,6 +2024,7 @@ void dump_twiss_parameters(LINE_LIST *beamline, long n_elem,
                            long final_values_only, long tune_corrected, RUN *run);
 void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, long *do_twiss_output,
                         long default_order);
+void setupTuneShiftWithAmplitude(NAMELIST_TEXT *nltext);
 long run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, long tune_corrected);
 void finish_twiss_output(void);
 void copy_doubles(double *source, double *target, long n);

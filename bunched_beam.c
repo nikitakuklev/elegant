@@ -239,7 +239,7 @@ long new_bunched_beam(
             compute_periodic_twiss(&beta_x, &alpha_x, &eta_x, &etap_x, &dummy,
                                    &beta_y, &alpha_y, &eta_y, &etap_y, &dummy, 
                                    (control->cell->elem_recirc?control->cell->elem_recirc:&(control->cell->elem)), 
-                                   NULL, run, &unstable, NULL);
+                                   NULL, run, &unstable, NULL, NULL);
 	    fprintf(stdout, "matched Twiss parameters for beam generation:\nbetax = %13.6e m  alphax = %13.6e  etax = %13.6e m  etax' = %13.6e\n",
                 beta_x, alpha_x, eta_x, etap_x);
      fflush(stdout);

@@ -24,24 +24,28 @@ void LoadStartingTwissFromFile(double *betax, double *betay, double *alphax, dou
 void computeTuneShiftWithAmplitude(double *dnux_dA, double *dnuy_dA, 
                                    TWISS *twiss, double *tune, VMATRIX *M, LINE_LIST *beamline,
 				   RUN *run, double *startingCoord);
+void computeTuneShiftWithAmplitudeM(double *dnux_dA, double *dnuy_dA,
+                                    TWISS *twiss, double *tune, VMATRIX *M);
 void computeTunesFromTracking(double *tune, VMATRIX *M, LINE_LIST *beamline, RUN *run,
 			      double *startingCoord, 
-			      double xAmplitude, double yAmplitude, long turns);
+			      double xAmplitude, double yAmplitude, long turns,
+                              long useMatrix);
 
 static long twissConcatOrder = 3;
+static long doTuneShiftWithAmplitude = 0;
 
 VMATRIX *compute_periodic_twiss(
                                 double *betax, double *alphax, double *etax, double *etapx, double *NUx,
                                 double *betay, double *alphay, double *etay, double *etapy, double *NUy,
                                 ELEMENT_LIST *elem, double *clorb, RUN *run, unsigned long *unstable,
-                                double *eta2)
+                                double *eta2, double *eta3)
 {
   VMATRIX *M, *M1;
   double cos_phi, sin_phi, **R, beta[2], alpha[2], phi[2];
-  double ***T;
+  double ***T, ****Q, eta2f[6];
   long i, j, k;
   MATRIX *dispR, *dispM, *dispMInv, *dispEta;
-
+  
   log_entry("compute_periodic_twiss");
 
   *unstable = 0;
@@ -99,6 +103,7 @@ VMATRIX *compute_periodic_twiss(
 
   R = M->R;
   T = M->T;
+  Q = M->Q;
   
   /* allocate matrices for computing dispersion, which I do
    * in 4-d using 
@@ -142,10 +147,30 @@ VMATRIX *compute_periodic_twiss(
         }
       }
       m_mult(dispEta, dispMInv, dispR);
-      eta2[0] = dispEta->a[0][0];
-      eta2[1] = dispEta->a[1][0];
-      eta2[2] = dispEta->a[2][0];
-      eta2[3] = dispEta->a[3][0];
+      for (i=0; i<4; i++)
+        eta2f[i] = eta2[i] = dispEta->a[i][0];
+      eta2f[4] = 0;
+      eta2f[5] = 0;
+      
+      if (eta3) {
+        long l;
+        /* third-order dispersion */
+        for (i=0; i<4; i++) {
+          dispR->a[i][0] = 0;
+          if (T) {
+            for (j=0; j<6; j++) 
+              for (k=0; k<=j; k++)  {
+                dispR->a[i][0] += T[i][j][k]*(eta2f[j]*eta[k]+eta[j]*eta2f[k]);
+                if (Q)
+                  for (l=0; l<=k; l++) 
+                    dispR->a[i][0] += Q[i][j][k][l]*eta[j]*eta[k]*eta[l];
+              }
+          }
+        }
+        m_mult(dispEta, dispMInv, dispR);
+        for (i=0; i<4; i++)
+          eta3[i] = dispEta->a[i][0];
+      }
     }
     free(eta);
   }
@@ -469,30 +494,36 @@ static SDDS_DEFINITION column_definition[N_COLUMNS_WRI] = {
 #define IP_STEP 0
 #define IP_NUX 1
 #define IP_DNUXDP 2
-#define IP_AX 3
-#define IP_NUY 4
-#define IP_DNUYDP 5
-#define IP_AY 6
-#define IP_STAGE 7
-#define IP_PCENTRAL 8
-#define IP_DBETAXDP 9
-#define IP_DBETAYDP 10
-#define IP_BETAXMIN 11
-#define IP_BETAXAVE 12
-#define IP_BETAXMAX 13
-#define IP_BETAYMIN 14
-#define IP_BETAYAVE 15
-#define IP_BETAYMAX 16
-#define IP_ETAXMAX 17
-#define IP_ETAYMAX 18
-#define IP_WAISTSX 19
-#define IP_WAISTSY 20
-#define IP_DNUXDAX 21
-#define IP_DNUXDAY 22
-#define IP_DNUYDAX 23
-#define IP_DNUYDAY 24
-#define IP_ALPHAC2 25
-#define IP_ALPHAC  26
+#define IP_DNUXDP2 3
+#define IP_AX 4
+#define IP_NUY 5
+#define IP_DNUYDP 6
+#define IP_DNUYDP2 7
+#define IP_AY 8
+#define IP_STAGE 9
+#define IP_PCENTRAL 10
+#define IP_DBETAXDP 11
+#define IP_DBETAYDP 12
+#define IP_ETAX2    13
+#define IP_ETAY2    14
+#define IP_ETAX3    15
+#define IP_ETAY3    16
+#define IP_BETAXMIN 17
+#define IP_BETAXAVE 18
+#define IP_BETAXMAX 19
+#define IP_BETAYMIN 20
+#define IP_BETAYAVE 21
+#define IP_BETAYMAX 22
+#define IP_ETAXMAX 23
+#define IP_ETAYMAX 24
+#define IP_WAISTSX 25
+#define IP_WAISTSY 26
+#define IP_DNUXDAX 27
+#define IP_DNUXDAY 28
+#define IP_DNUYDAX 29
+#define IP_DNUYDAY 30
+#define IP_ALPHAC2 31
+#define IP_ALPHAC  32
 /* IP_ALPHAC must be the last item before the radiation-integral-related
  * items!
  */
@@ -516,14 +547,20 @@ static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
 {"Step", "&parameter name=Step, type=long, description=\"Simulation step\" &end"},
 {"nux", "&parameter name=nux, symbol=\"$gn$r$bx$n\", type=double, units=\"1/(2$gp$r)\", description=\"Horizontal tune\" &end"},
 {"dnux/dp", "&parameter name=dnux/dp, symbol=\"$gx$r$bx$n\", type=double, units=\"1/(2$gp$r)\", description=\"Horizontal chromaticity\" &end"},
+{"dnux/dp2", "&parameter name=dnux/dp2, symbol=\"$gx$r$bx2$n\", type=double, units=\"1/(2$gp$r)\", description=\"Horizontal 2nd-order chromaticity\" &end"},
 {"Ax", "&parameter name=Ax, symbol=\"A$bx$n\", type=double, units=\"$gp$rm\", description=\"Horizontal acceptance\" &end"},
 {"nuy", "&parameter name=nuy, symbol=\"$gn$r$by$n\", type=double, units=\"1/(2$gp$r)\", description=\"Vertical tune\" &end"},
 {"dnuy/dp", "&parameter name=dnuy/dp, symbol=\"$gx$r$by$n\", type=double, units=\"1/(2$gp$r)\", description=\"Vertical chromaticity\" &end"},
+{"dnuy/dp2", "&parameter name=dnuy/dp2, symbol=\"$gx$r$by2$n\", type=double, units=\"1/(2$gp$r)\", description=\"Vertical 2nd-order chromaticity\" &end"},
 {"Ay", "&parameter name=Ay, symbol=\"A$by$n\", type=double, units=\"$gp$rm\", description=\"Vertical acceptance\" &end"},
 {"Stage", "&parameter name=Stage, type=string, description=\"Stage of computation\" &end"},
 {"pCentral", "&parameter name=pCentral, type=double, units=\"m$be$nc\", description=\"Central momentum\" &end"},
 {"dbetax/dp", "&parameter name=dbetax/dp, units=m, type=double, description=\"Derivative of betax with momentum offset\" &end"},
 {"dbetay/dp", "&parameter name=dbetay/dp, units=m, type=double, description=\"Derivative of betay with momentum offset\" &end"},
+{"etax2", "&parameter name=etax2, symbol=\"$gc$r$bx2$n\", units=m, type=double, description=\"Second-order dispersion\" &end"},
+{"etay2", "&parameter name=etay2, symbol=\"$gc$r$by2$n\", units=m, type=double, description=\"Second-order dispersion\" &end"},
+{"etax3", "&parameter name=etax3, symbol=\"$gc$r$bx3$n\", units=m, type=double, description=\"Third-order dispersion\" &end"},
+{"etay3", "&parameter name=etay3, symbol=\"$gc$r$by3$n\", units=m, type=double, description=\"Third-order dispersion\" &end"},
 {"betaxMin", "&parameter name=betaxMin, type=double, units=m, description=\"Minimum betax\" &end"},
 {"betaxAve", "&parameter name=betaxAve, type=double, units=m, description=\"Average betax\" &end"},
 {"betaxMax", "&parameter name=betaxMax, type=double, units=m, description=\"Maximum betax\" &end"},
@@ -604,6 +641,8 @@ void dump_twiss_parameters(
                           IP_STEP, twiss_count, IP_STAGE, stage, 
                           IP_NUX, tune[0], IP_DNUXDP, chromaticity[0], IP_AX, acceptance[0],
                           IP_NUY, tune[1], IP_DNUYDP, chromaticity[1], IP_AY, acceptance[1], 
+                          IP_DNUXDP2, (double)0.0,
+                          IP_DNUYDP2, (double)0.0,
                           IP_ALPHAC, alphac[0], IP_ALPHAC2, alphac[1], 
                           IP_DBETAXDP, dbeta[0], IP_DBETAYDP, dbeta[1],
                           IP_BETAXMIN, twiss_min.betax, IP_BETAXAVE, twiss_ave.betax, IP_BETAXMAX, twiss_max.betax, 
@@ -616,6 +655,10 @@ void dump_twiss_parameters(
                           IP_DNUXDAY, beamline->dnux_dA[1],
                           IP_DNUYDAX, beamline->dnuy_dA[0],
                           IP_DNUYDAY, beamline->dnuy_dA[1],
+                          IP_ETAX2, beamline->eta2[0],
+                          IP_ETAY2, beamline->eta2[2],
+                          IP_ETAX3, beamline->eta3[0],
+                          IP_ETAY3, beamline->eta3[2],
                           IP_PCENTRAL, run->p_central, -1)) {
     SDDS_SetError("Problem setting SDDS parameters (dump_twiss_parameters 1)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -840,6 +883,7 @@ void finish_twiss_output(void)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
   SDDS_twiss_initialized = twiss_count = 0;
+  doTuneShiftWithAmplitude = 0;
   log_exit("finish_twiss_output");
 }
 
@@ -1008,7 +1052,8 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
 {
   VMATRIX *M;
   double chromx, chromy, dbetax, dbetay, alpha1, alpha2, dalphax, dalphay;
-  double x_acc_z, y_acc_z, eta2[4] = {0,0,0,0};
+  double chromx2, chromy2;
+  double x_acc_z, y_acc_z, eta2[4] = {0,0,0,0}, eta3[4]={0,0,0,0};
   ELEMENT_LIST *eptr, *elast;
   char *x_acc_name, *y_acc_name;
   long i;
@@ -1035,7 +1080,8 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
     beamline->matrix = compute_periodic_twiss(&betax, &alphax, &etax, &etapx, beamline->tune,
                                               &betay, &alphay, &etay, &etapy, beamline->tune+1, 
                                               beamline->elem_twiss, starting_coord, run,
-                                              unstable, eta2);
+                                              unstable, 
+                                              beamline->eta2, beamline->eta3);
 #ifdef DEBUG
     fprintf(stdout, "matched parameters computed--returned to compute_twiss_parameters\n");
     fflush(stdout);
@@ -1124,6 +1170,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
 
   chromx = chromy = 0;
   dbetax = dbetay = 0;
+  chromx2 = chromy2 = 0;
   for (i=0; i<2; i++)
     beamline->dnux_dA[i] = beamline->dnuy_dA[i] = 0;
 
@@ -1138,10 +1185,14 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
 #endif
       if (!(M->T))
         bomb("logic error: T matrix is NULL in compute_twiss_parameters", NULL);
-      computeChromaticities(&chromx, &chromy, &dbetax, &dbetay, &dalphax, &dalphay, beamline->twiss0, M);
-      computeTuneShiftWithAmplitude(beamline->dnux_dA, beamline->dnuy_dA,
-                                    beamline->twiss0, beamline->tune, M, beamline, run,
-				    starting_coord); 
+      computeChromaticities(&chromx, &chromy, 
+                            beamline->chrom2, beamline->chrom3,
+                            &dbetax, &dbetay, &dalphax, &dalphay, beamline->twiss0, M,
+                            beamline->tune, beamline->eta2, beamline->eta3);
+      if (doTuneShiftWithAmplitude)
+        computeTuneShiftWithAmplitude(beamline->dnux_dA, beamline->dnuy_dA,
+                                      beamline->twiss0, beamline->tune, M, beamline, run,
+                                      starting_coord); 
     }
   }
   else {
@@ -1165,10 +1216,14 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
     if (twissConcatOrder>=2) {
       if (!(M->T))
         bomb("logic error: T matrix is NULL in compute_twiss_parameters", NULL);
-      computeChromaticities(&chromx, &chromy, &dbetax, &dbetay, &dalphax, &dalphay, beamline->twiss0, M);
-      computeTuneShiftWithAmplitude(beamline->dnux_dA, beamline->dnuy_dA,
-                                    beamline->twiss0, beamline->tune, M, beamline, run,
-				    starting_coord); 
+      computeChromaticities(&chromx, &chromy, 
+                            beamline->chrom2, beamline->chrom3,
+                            &dbetax, &dbetay, &dalphax, &dalphay, beamline->twiss0, M,
+                            beamline->tune, beamline->eta2, beamline->eta3);
+      if (doTuneShiftWithAmplitude)
+        computeTuneShiftWithAmplitude(beamline->dnux_dA, beamline->dnuy_dA,
+                                      beamline->twiss0, beamline->tune, M, beamline, run,
+                                      starting_coord); 
 #ifdef DEBUG
       fprintf(stdout, "chomaticities: %e, %e\n", chromx, chromy);
       fflush(stdout);
@@ -1753,6 +1808,27 @@ void LoadStartingTwissFromFile(double *betax, double *betay, double *alphax, dou
   free(etaypData);
 }
 
+void setupTuneShiftWithAmplitude(NAMELIST_TEXT *nltext)
+{
+  /* process namelist input */
+  set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
+  set_print_namelist_flags(0);
+  process_namelist(&tune_shift_with_amplitude, nltext);
+  print_namelist(stdout, &tune_shift_with_amplitude);
+
+  if (tune_shift_with_amplitude_struct.turns<100 && tune_shift_with_amplitude_struct.turns!=0)
+    bomb("too few turns requested (tune_shift_with_amplitude)", NULL);
+  if (tune_shift_with_amplitude_struct.turns) {
+    if (tune_shift_with_amplitude_struct.x0<=0 ||
+        tune_shift_with_amplitude_struct.y0<=0)
+      bomb("x0 or y0 is zero or negative (tune_shift_with_amplitude)", NULL);
+    if (tune_shift_with_amplitude_struct.x1<tune_shift_with_amplitude_struct.x0*10 ||
+        tune_shift_with_amplitude_struct.y1<tune_shift_with_amplitude_struct.y0*10)
+      bomb("x1 or y1 is too small (tune_shift_with_amplitude)", NULL);
+  }
+  doTuneShiftWithAmplitude = 1;
+}
+
 double QElement(double ****Q, long i1, long i2, long i3, long i4)
 {
   if (i3<i4)
@@ -1771,18 +1847,21 @@ void computeTuneShiftWithAmplitude(double *dnux_dA, double *dnuy_dA,
                                    TWISS *twiss, double *tune, VMATRIX *M, LINE_LIST *beamline, 
                                    RUN *run, double *startingCoord)
 {
+#ifdef DEBUG
   static FILE *fpout = NULL;
+#endif
   long turns;
   double result[4], maxResult;
   double tune0[2], tune_dx[2], tune_dy[2];
   long i;
 
-  if (tune_shift_with_amplitude_turns==0) {
-    dnux_dA[0] = dnux_dA[1] = 0;
-    dnuy_dA[0] = dnuy_dA[1] = 0;
+  if (tune_shift_with_amplitude_struct.turns==0) {
+    /* use the matrix only without tracking */
+    computeTuneShiftWithAmplitudeM(dnux_dA, dnuy_dA, twiss, tune, M);
     return;
   }
 
+#ifdef DEBUG
   if (!fpout) {
     fpout = fopen(compose_filename("%s.tswa", run->rootname), "w");
     fprintf(fpout, "SDDS1\n");
@@ -1801,6 +1880,7 @@ void computeTuneShiftWithAmplitude(double *dnux_dA, double *dnuy_dA,
     fprintf(fpout, "&column name=dnuy_y type=double units=m &end\n");
     fprintf(fpout, "&data mode=ascii no_row_counts=1 &end\n");
   }
+#endif
   
   /* use tracking and NAFF */
 
@@ -1808,62 +1888,67 @@ void computeTuneShiftWithAmplitude(double *dnux_dA, double *dnuy_dA,
   while (1) {
     /* (0, 0) */
     computeTunesFromTracking(tune0, M, beamline, run, startingCoord,
-			     tune_shift_with_amplitude_x0,
-			     tune_shift_with_amplitude_y0,
-			     tune_shift_with_amplitude_turns);
+			     tune_shift_with_amplitude_struct.x0,
+			     tune_shift_with_amplitude_struct.y0,
+			     tune_shift_with_amplitude_struct.turns,
+                             tune_shift_with_amplitude_struct.use_concatenation);
     /* (dx, 0) */
     computeTunesFromTracking(tune_dx, M, beamline, run, startingCoord,
-			     tune_shift_with_amplitude_x1,
-			     tune_shift_with_amplitude_y0,
-			     tune_shift_with_amplitude_turns);
+			     tune_shift_with_amplitude_struct.x1,
+			     tune_shift_with_amplitude_struct.y0,
+			     tune_shift_with_amplitude_struct.turns, 
+                             tune_shift_with_amplitude_struct.use_concatenation);
 
     /* (0, dy) */
     computeTunesFromTracking(tune_dy, M, beamline, run, startingCoord,
-			     tune_shift_with_amplitude_x0,
-			     tune_shift_with_amplitude_y1,
-			     tune_shift_with_amplitude_turns);
+			     tune_shift_with_amplitude_struct.x0,
+			     tune_shift_with_amplitude_struct.y1,
+			     tune_shift_with_amplitude_struct.turns,
+                             tune_shift_with_amplitude_struct.use_concatenation);
 
     result[0] = (tune_dx[0] - tune0[0]);  /* dnux from dx */
     result[1] = (tune_dx[1] - tune0[1]);  /* dnuy from dx */
     result[2] = (tune_dy[0] - tune0[0]);  /* dnux from dy */
     result[3] = (tune_dy[1] - tune0[1]);  /* dnuy from dy */
 
+#ifdef DEBUG
     fprintf(fpout, "%e %e %ld %21.15e %21.15e %21.15e %21.15e %21.15e %21.15e %e %e %e %e\n",
-            sqr(tune_shift_with_amplitude_x1)/twiss->betax,
-            sqr(tune_shift_with_amplitude_y1)/twiss->betay,
-            tune_shift_with_amplitude_turns,
+            sqr(tune_shift_with_amplitude_struct.x1)/twiss->betax,
+            sqr(tune_shift_with_amplitude_struct.y1)/twiss->betay,
+            tune_shift_with_amplitude_struct.turns,
             tune0[0], tune0[1],
             tune_dx[0], tune_dx[1],
             tune_dy[0], tune_dy[1],
             result[0], result[1], result[2], result[3]);
+#endif
     
     maxResult = -1;
     for (i=0; i<4; i++) {
       if (fabs(result[i])>maxResult)
         maxResult = fabs(result[i]);
     }
-    if (maxResult>0.001) {
-      tune_shift_with_amplitude_x1 /= 10;
-      tune_shift_with_amplitude_y1 /= 10;
+    if (maxResult>0.01) {
+      tune_shift_with_amplitude_struct.x1 /= 3;
+      tune_shift_with_amplitude_struct.y1 /= 3;
       fprintf(stdout, "Warning: the amplitude you specified for tune shift with amplitude is too large.\n");
-      fprintf(stdout, "Reducing to tune_shift_with_amplitude_x1=%le and tune_shift_with_amplitude_y1=%le\n",
-              tune_shift_with_amplitude_x1, tune_shift_with_amplitude_y1);
+      fprintf(stdout, "Reducing to tune_shift_with_amplitude_struct.x1=%le and tune_shift_with_amplitude_struct.y1=%le\n",
+              tune_shift_with_amplitude_struct.x1, tune_shift_with_amplitude_struct.y1);
       continue;
     }
     break;
   }
 
   dnux_dA[0] 
-    = result[0]/(sqr(tune_shift_with_amplitude_x1)-sqr(tune_shift_with_amplitude_x0))
+    = result[0]/(sqr(tune_shift_with_amplitude_struct.x1)-sqr(tune_shift_with_amplitude_struct.x0))
       *twiss->betax;
   dnux_dA[1] 
-    = result[2]/(sqr(tune_shift_with_amplitude_y1)-sqr(tune_shift_with_amplitude_y0))
+    = result[2]/(sqr(tune_shift_with_amplitude_struct.y1)-sqr(tune_shift_with_amplitude_struct.y0))
       *twiss->betay;
   dnuy_dA[0] 
-    = result[1]/(sqr(tune_shift_with_amplitude_x1)-sqr(tune_shift_with_amplitude_x0))
+    = result[1]/(sqr(tune_shift_with_amplitude_struct.x1)-sqr(tune_shift_with_amplitude_struct.x0))
       *twiss->betax;
   dnuy_dA[1] 
-    = result[3]/(sqr(tune_shift_with_amplitude_y1)-sqr(tune_shift_with_amplitude_y0))
+    = result[3]/(sqr(tune_shift_with_amplitude_struct.y1)-sqr(tune_shift_with_amplitude_struct.y0))
       *twiss->betay;
 }
 
@@ -1871,7 +1956,8 @@ void computeTuneShiftWithAmplitude(double *dnux_dA, double *dnuy_dA,
 
 void computeTunesFromTracking(double *tune, VMATRIX *M, LINE_LIST *beamline, RUN *run,
 			      double *startingCoord, 
-			      double xAmplitude, double yAmplitude, long turns)
+			      double xAmplitude, double yAmplitude, long turns,
+                              long useMatrix)
 {
   double **oneParticle, dummy;
   double *x, *y, p;
@@ -1894,7 +1980,7 @@ void computeTunesFromTracking(double *tune, VMATRIX *M, LINE_LIST *beamline, RUN
   y[0] = oneParticle[0][2];
   p = run->p_central;
   for (i=1; i<turns; i++) {
-    if (tune_shift_with_amplitude_concat)
+    if (useMatrix)
       track_particles(oneParticle, M, oneParticle, one);
     else {
       if (!do_tracking(oneParticle, &one, NULL, beamline, &p,  (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
@@ -1912,3 +1998,83 @@ void computeTunesFromTracking(double *tune, VMATRIX *M, LINE_LIST *beamline, RUN
 	      0.0, 1, 100, 1e-6);
 }
 
+void computeTuneShiftWithAmplitudeM(double *dnux_dA, double *dnuy_dA,
+                                    TWISS *twiss, double *tune, VMATRIX *M)
+{
+  VMATRIX M1, M2;
+  long tplane, splane;
+  long it, jt, is, js, ia;
+  double alpha[2], beta[2], shift[2];
+  double turns;  
+  double C, S, theta;
+
+  initialize_matrices(&M1, 3);
+  initialize_matrices(&M2, 3);
+
+  concat_matrices(&M1, M, M, 0);
+  turns = 2;
+
+  while (turns<4096) {
+    copy_matrices(&M2, &M1);
+    concat_matrices(&M1, &M2, &M2, 0);
+    turns *= 2;
+  }
+
+  free_matrices(&M2);
+
+  fprintf(stderr, "Tune check: \n%le %le\n%le %le\n",
+          cos(PIx2*turns*tune[0]), (M1.R[0][0]+M1.R[1][1])/2,
+          cos(PIx2*turns*tune[1]), (M1.R[2][2]+M1.R[3][3])/2);
+  
+  alpha[0] = twiss->alphax;
+  alpha[1] = twiss->alphay;
+  beta[0] = twiss->betax;
+  beta[1] = twiss->betay;
+  
+  for (tplane=0; tplane<2; tplane++) {
+    it = 2*tplane;
+    jt = it+1;
+    for (splane=0; splane<2; splane++) {
+      is = 2*splane;
+      js = is+1;
+      shift[splane] = 0;
+      /*
+      fprintf(stderr, "tplane=%ld splane=%ld\n", tplane, splane);
+      fprintf(stderr, "Q%ld%ld%ld%ld = %e\n",
+              it, it, is, is, QElement(M1.Q, it, it, is, is));
+      fprintf(stderr, "Q%ld%ld%ld%ld = %e\n",
+              jt, jt, is, is, QElement(M1.Q, jt, jt, is, is));
+      fprintf(stderr, "Q%ld%ld%ld%ld = %e\n",
+              it, it, is, js, QElement(M1.Q, it, it, is, js));
+      fprintf(stderr, "Q%ld%ld%ld%ld = %e\n",
+              jt, jt, is, js, QElement(M1.Q, jt, jt, is, js));
+      fprintf(stderr, "Q%ld%ld%ld%ld = %e\n",
+              it, it, js, js, QElement(M1.Q, it, it, js, js));
+      fprintf(stderr, "Q%ld%ld%ld%ld = %e\n",
+              jt, jt, js, js, QElement(M1.Q, jt, jt, js, js));
+      fprintf(stderr, "\n");
+      */    
+      for (ia=0, theta=0; ia<72; ia++, theta+=PIx2/72) {
+        C = cos(theta);
+        S = sin(theta)*alpha[splane] + C;
+        shift[splane] += 
+          (QElement(M1.Q, it, it, is, is) + QElement(M1.Q, jt, jt, is, is))*beta[splane]*sqr(C) 
+            - (QElement(M1.Q, it, it, is, js) + QElement(M1.Q, jt, jt, is, js))*C*S 
+             + (QElement(M1.Q, it, it, js, js) + QElement(M1.Q, jt, jt, js, js))*sqr(S)/beta[splane];
+      }
+      shift[splane] /= 72;
+    }
+    if (tplane==0) {
+      /* nux */
+      dnux_dA[0] = shift[0]/(-2*PIx2*sin(PIx2*tune[0]*turns)*turns);
+      dnux_dA[1] = shift[1]/(-2*PIx2*sin(PIx2*tune[0]*turns)*turns);
+    }
+    else {
+      /* nuy */
+      dnuy_dA[0] = shift[0]/(-2*PIx2*sin(PIx2*tune[1]*turns)*turns);
+      dnuy_dA[1] = shift[1]/(-2*PIx2*sin(PIx2*tune[1]*turns)*turns);
+    }
+  }
+
+  free_matrices(&M1);
+}
