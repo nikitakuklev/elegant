@@ -254,12 +254,12 @@ long track_beam(
                          NULL, run, control->i_step,
                          (!(run->centroid || run->sigma)?FINAL_SUMS_ONLY:0)+
                          (flags&(LINEAR_CHROMATIC_MATRIX+LONGITUDINAL_RING_ONLY)),
-                         control->n_passes);
+                         control->n_passes, &(output->sasefel));
 
     if (!beam) {
-        fprintf(stderr, "error: beam pointer is null on return from do_tracking (track_beam)\n");
-        abort();
-        }
+      fprintf(stderr, "error: beam pointer is null on return from do_tracking (track_beam)\n");
+      abort();
+    }
     beam->p0 = p_central;
     beam->n_accepted = n_left;
     if (!(flags&SILENT_RUNNING)) {
@@ -351,13 +351,25 @@ long track_beam(
              control->n_elements_to_vary, control->n_steps*control->indexLimitProduct,
              errcon->error_value, errcon->quan_name?*errcon->quan_name:NULL, errcon->n_items,
              optim->varied_quan_value, optim->varied_quan_name?*optim->varied_quan_name:NULL,
-                 optim->n_variables?optim->n_variables+1:0,
+             optim->n_variables?optim->n_variables+1:0,
              control->i_step, beam->particle, beam->n_to_track, p_central, M);
-        if (!(flags&SILENT_RUNNING)) 
-            fprintf(stderr, "done.\n"); fflush(stderr);
-        free_matrices(M); free(M); M = NULL;
+        if (!(flags&SILENT_RUNNING)) {
+          fprintf(stderr, "done.\n"); 
+          fflush(stderr);
         }
+        free_matrices(M); free(M); M = NULL;
+      }
     log_exit("track_beam.6");
+
+    if (output->sasefel.active && output->sasefel.filename) {
+      if (!(flags&SILENT_RUNNING)) 
+        fprintf(stderr, "Dumping SASE FEL data...");
+      doSASEFELAtEndOutput(&(output->sasefel), control->i_step);
+      if (!(flags&SILENT_RUNNING)) {
+        fprintf(stderr, "done.\n");
+        fflush(stderr);
+      }
+    }
 
     if (!(flags&SILENT_RUNNING)) {
         report_stats(stderr, "Tracking step completed");

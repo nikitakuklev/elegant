@@ -3,6 +3,9 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.7  1998/08/25 23:54:24  borland
+ * Latest version.  Still has trouble with real SR data.
+ *
  * Revision 1.6  1998/06/08 16:50:43  borland
  * Fixed problems with SVD.  Added more reporting.
  *
@@ -549,7 +552,7 @@ void find_trajectory_bpm_readouts
   
   if (!do_tracking(particle, &nPart, NULL, beamline, &momentum,
                    (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
-                   trajBuffer, run, 0, tracking_flags, 1)) {
+                   trajBuffer, run, 0, tracking_flags, 1, NULL)) {
     fprintf(stderr, "Error tracking particle to find trajectory at BPMs.\n");
     exit(1);
   }

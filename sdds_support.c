@@ -154,7 +154,7 @@ static SDDS_DEFINITION centroid_column[CENTROID_COLUMNS] = {
     {"Cxp", "&column name=Cxp, symbol=\"<x'>\", type=double &end"},
     {"Cy", "&column name=Cy, symbol=\"<y>\", units=m, type=double &end"},
     {"Cyp", "&column name=Cyp, symbol=\"<y'>\", type=double &end"},
-    {"Ct", "&column name=Ct, symbol=\"<t>\", units=s, type=double &end"},
+    {"Cs", "&column name=Cs, symbol=\"<s>\", units=m, type=double &end"},
     {"Cdelta", "&column name=Cdelta, symbol=\"<$gd$r>\", type=double &end"},
     {"Particles", "&column name=Particles, description=\"Number of particles\", type=long &end"},
     {"pCentral", "&column name=pCentral, symbol=\"p$bcen$n\", units=\"m$be$nc\", type=double &end"},
@@ -178,7 +178,7 @@ static SDDS_DEFINITION sigma_matrix_column[SIGMA_MATRIX_COLUMNS] = {
     {"s12",    "&column name=s12, symbol=\"$gs$r$b12$n\", units=m, type=double &end"},
     {"s13",    "&column name=s13, symbol=\"$gs$r$b13$n\", units=\"m$a2$n\", type=double &end"},
     {"s14",    "&column name=s14, symbol=\"$gs$r$b14$n\", units=m, type=double &end"},
-    {"s15",    "&column name=s15, symbol=\"$gs$r$b15$n\", units=\"m^a2$n\", type=double &end"},
+    {"s15",    "&column name=s15, symbol=\"$gs$r$b15$n\", units=\"m$a2$n\", type=double &end"},
     {"s16",    "&column name=s16, symbol=\"$gs$r$b16$n\", units=m, type=double &end"},
     {"s2",    "&column name=s2, symbol=\"$gs$r$b2$n\", type=double &end"},
     {"s23",    "&column name=s23, symbol=\"$gs$r$b23$n\", units=m, type=double &end"},
@@ -187,7 +187,7 @@ static SDDS_DEFINITION sigma_matrix_column[SIGMA_MATRIX_COLUMNS] = {
     {"s26",    "&column name=s26, symbol=\"$gs$r$b26$n\", type=double &end"},
     {"s3",    "&column name=s3, symbol=\"$gs$r$b3$n\", units=m, type=double &end"},
     {"s34",    "&column name=s34, symbol=\"$gs$r$b34$n\", units=m, type=double &end"},
-    {"s35",    "&column name=s35, symbol=\"$gs$r$b35$n\", units=\"m^a2$n\", type=double &end"},
+    {"s35",    "&column name=s35, symbol=\"$gs$r$b35$n\", units=\"m$a2$n\", type=double &end"},
     {"s36",    "&column name=s36, symbol=\"$gs$r$b36$n\", units=m, type=double &end"},
     {"s4",    "&column name=s4, symbol=\"$gs$r$b4$n\", type=double &end"},
     {"s45",    "&column name=s45, symbol=\"$gs$r$b45$n\", units=m, type=double &end"},
@@ -1071,14 +1071,14 @@ void dump_centroid(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline,
 void dump_sigma(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, long n_elements, long step,
                 double p_central)
 {
-  long i, j, ie, index, plane;
+  long i, j, ie, offset, plane, index;
   BEAM_SUMS *beam;
   ELEMENT_LIST *eptr;
   double Sigma[6], sigma[6][6], centroid[6], emit, emitNorm;
   double pSigma[6], psigma[6][6], pcentroid[6];
   char *name, *type_name;
-  long s_index, s1_index, ma1_index, Sx_index, occurence, ex_index;
-  long s2_index, s3_index, s4_index;
+  long s_index, ma1_index, Sx_index, occurence, ex_index;
+  long sNIndex[6];
 
   if (!SDDS_table)
     bomb("SDDS_TABLE pointer is NULL (dump_sigma)", NULL);
@@ -1087,10 +1087,12 @@ void dump_sigma(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, lo
   if (!beamline)
     bomb("LINE_LIST pointer is NULL (dump_centroid)", NULL);
   if ((s_index=SDDS_GetColumnIndex(SDDS_table, "s"))<0 ||
-      (s1_index=SDDS_GetColumnIndex(SDDS_table, "s1"))<0 ||
-      (s2_index=SDDS_GetColumnIndex(SDDS_table, "s2"))<0 ||
-      (s3_index=SDDS_GetColumnIndex(SDDS_table, "s3"))<0 ||
-      (s4_index=SDDS_GetColumnIndex(SDDS_table, "s4"))<0 ||
+      (sNIndex[0]=SDDS_GetColumnIndex(SDDS_table, "s1"))<0 ||
+      (sNIndex[1]=SDDS_GetColumnIndex(SDDS_table, "s2"))<0 ||
+      (sNIndex[2]=SDDS_GetColumnIndex(SDDS_table, "s3"))<0 ||
+      (sNIndex[3]=SDDS_GetColumnIndex(SDDS_table, "s4"))<0 ||
+      (sNIndex[4]=SDDS_GetColumnIndex(SDDS_table, "s5"))<0 ||
+      (sNIndex[5]=SDDS_GetColumnIndex(SDDS_table, "s6"))<0 ||
       (ma1_index=SDDS_GetColumnIndex(SDDS_table, "ma1"))<0 ||
       (Sx_index=SDDS_GetColumnIndex(SDDS_table, "Sx"))<0 ||
       (ex_index=SDDS_GetColumnIndex(SDDS_table, "ex"))<0) {
@@ -1124,8 +1126,9 @@ void dump_sigma(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, lo
     }
     if (beam->n_part) {
       /* compute centroids, sigma matrix, and beam sizes (with centroid term removed) */
-      for (i=index=0; i<6; i++) {
+      for (i=0; i<6; i++)
         centroid[i] = beam->sum[i]/beam->n_part;
+      for (i=0; i<6; i++) {
         sigma[i][i] = beam->sum2[i][i]/beam->n_part;
         Sigma[i] = SAFE_SQRT(beam->sum2[i][i]/beam->n_part-sqr(centroid[i]));
 #if DO_NORMEMIT_SUMS
@@ -1136,19 +1139,21 @@ void dump_sigma(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, lo
         }
 #endif
         if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, 
-                               s1_index+i, sqrt(sigma[i][i]), 
+                               sNIndex[i], sqrt(sigma[i][i]), 
                                Sx_index+i, Sigma[i],
                                -1)) {
           SDDS_SetError("Problem setting SDDS row values (dump_sigma)");
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
-        for (j=i+1; j<6; j++, index++) {
-          sigma[i][j] = beam->sum2[i][j]/beam->n_part; 
+        offset = 1;
+        for (j=i+1; j<6; j++, offset++) {
+          sigma[i][j] = beam->sum2[i][j]/beam->n_part - centroid[i]*centroid[j]; 
 #if DO_NORMEMIT_SUMS
           if (i<4 && j<4)
             psigma[i][j] = beam->psum2[i][j]/beam->n_part; 
 #endif
-          if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, s1_index+i, sigma[i], -1)) {
+          if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, 
+                                 sNIndex[i]+offset, sigma[i][j], -1)) {
             SDDS_SetError("Problem setting SDDS row values (dump_sigma)");
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
           }
@@ -1181,7 +1186,7 @@ void dump_sigma(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, lo
       }
     }
     else {
-      for (index=s1_index; index<s1_index+21; index++) 
+      for (index=sNIndex[0]; index<sNIndex[0]+21; index++) 
         if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, index, (double)0.0, -1)) {
           SDDS_SetError("Problem setting SDDS row values (dump_sigma)");
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);

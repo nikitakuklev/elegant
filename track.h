@@ -323,6 +323,19 @@ typedef struct {
     long n_accepted;        /* final number of particles being tracked. */
     } BEAM;
 
+typedef struct {
+  long active;
+  char *filename;
+  SDDS_DATASET SDDSout;
+  /* input data */
+  double beta, undulatorK, undulatorPeriod;
+  /* simulation data */
+  double betaToUse, charge, pCentral, rmsBunchLength, Sdelta, emit;
+  /* computed FEL output */
+  double lightWavelength, saturationLength, gainLength, noisePower;
+  double saturationPower, PierceParameter, etaDiffraction, etaEmittance, etaEnergySpread;
+} SASEFEL_OUTPUT;
+
 /* structure to hold information for output files specified in run_setup namelist */
 
 typedef struct {
@@ -331,6 +344,7 @@ typedef struct {
          final_initialized, losses_initialized;
     BEAM_SUMS *sums_vs_z;
     long n_z_points;
+    SASEFEL_OUTPUT sasefel;
     } OUTPUT_FILES;
 
 /* data arrays for awe dumps, found in dump_particlesX.c */
@@ -1654,7 +1668,7 @@ extern double beta_from_delta(double p, double delta);
 extern long do_tracking(double **coord, long *n_original, long *effort, LINE_LIST *beamline, 
                         double *P_central, double **accepted, BEAM_SUMS **sums_vs_z, 
                         long *n_z_points, TRAJECTORY *traj_vs_z, RUN *run, long step,
-                        unsigned long flags, long n_passes);
+                        unsigned long flags, long n_passes, SASEFEL_OUTPUT *sasefel);
 extern void do_element_misalignment(ELEMENT_LIST *elem, double **coord, long n, long mode);
 extern void offset_beam(double **coord, long n_to_track, MALIGN *offset, double P_central);
 extern void do_match_energy(double **coord, long np, double *P_central, long change_beam);
@@ -1703,7 +1717,8 @@ extern long get_final_property_index(char *name);
 extern long count_final_properties();
 
 extern double beam_width(double fraction, double **coord, long n_part, long sort_coord);
-extern double rms_emittance(double **coord, long i1, long i2, long n);
+extern double rms_emittance(double **coord, long i1, long i2, long n,
+                            double *S11Return, double *S12Return, double *S22Return);
 extern double rms_longitudinal_emittance(double **coord, long n, double Po);
 extern double rms_norm_emittance(double **coord, long i1, long i2, long ip, long n, double Po);
 extern void compute_longitudinal_parameters(ONE_PLANE_PARAMETERS *bp, double **coord, long n, double Po);
@@ -2065,4 +2080,14 @@ extern void dump_centroid(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *be
 
 extern void doSubprocessCommand(char *command);
 void run_subprocess(NAMELIST_TEXT *nltext, RUN *run);
+
+void ComputeSASEFELParameters
+  (double *lightWavelength, double *saturationLength, double *gainLength,  double *noisePower,
+   double *saturationPower, double *PierceParameter, double *etaDiffraction, double *etaEmittance,
+   double *etaEnergySpread, double charge, double rmsBunchLength, double undulatorPeriod, double undulatorK, 
+   double beta,  double emittance, double sigmaDelta, double pCentral, short planar);
+double FELScalingFunction
+  (double *etaDiffraction, double *etaEmittance,
+   double *etaEnergySpread, double L1D, double beta, double emittance,
+   double lightWavelength, double undulatorPeriod, double sigmaDelta);
 

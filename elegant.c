@@ -68,7 +68,8 @@ char *GREETING="This is elegant version 13.10, by Michael Borland. (This is vers
 #define SET_SDDS_BEAM   33
 #define SUBPROCESS      34
 #define FIT_TRACES      35
-#define N_COMMANDS      36
+#define SASEFEL_AT_END  36
+#define N_COMMANDS      37
 
 char *command[N_COMMANDS] = {
     "run_setup", "run_control", "vary_element", "error_control", "error_element", "awe_beam", "bunched_beam",
@@ -77,7 +78,7 @@ char *command[N_COMMANDS] = {
     "optimization_covariable", "save_lattice", "rpn_expression", "trace", "chromaticity", "closed_orbit",
     "find_aperture", "analyze_map", "correct_tunes", "link_control", "link_elements",
     "steering_element", "amplification_factors", "print_dictionary", "floor_coordinates", "correction_matrix_output",
-    "load_parameters", "sdds_beam", "subprocess", "fit_traces",
+    "load_parameters", "sdds_beam", "subprocess", "fit_traces", "sasefel"
         } ;
 
 char *description[N_COMMANDS] = {
@@ -117,6 +118,7 @@ char *description[N_COMMANDS] = {
     "sdds_beam                   defines name of input beam data file",
     "subprocess                  executes a string in a sub-shell",
     "fit_traces                  obtains a lattice model by fitting to multiple tracks through a beamline",
+    "sasefel                     computes parameters of SASE FEL at end of system",
         } ;
 
 void initialize_structures(RUN *run_conditions, VARY *run_control, ERROR *error_control, CORRECTION *correct, 
@@ -881,6 +883,13 @@ char **argv;
             break;
           case FIT_TRACES:
             do_fit_trace_data(&namelist_text, &run_conditions, beamline);
+            break;
+          case SASEFEL_AT_END:
+            if (!run_setuped)
+              bomb("run_setup must precede sasefel namelist", NULL);
+            if (beam_type!=-1)
+              bomb("sasefel namelist must precede beam definition", NULL);
+            setupSASEFELAtEnd(&namelist_text, &run_conditions, &output_data);
             break;
           default:
             fprintf(stderr, "unknown namelist %s given.  Known namelists are:\n", namelist_text.group_name);

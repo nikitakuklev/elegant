@@ -286,7 +286,7 @@ long compute_final_properties
   long i_data, index, offset;
   double dp_min, dp_max, Ddp;
   double p_sum, gamma_sum, p, sum, tc, tmin, tmax, dt, t;
-  double **R;
+  double **R, centroid[6];
   MATRIX Rmat;
 
   log_entry("compute_final_properties");
@@ -303,18 +303,17 @@ long compute_final_properties
   /* compute centroids and sigmas */
   if (sums->n_part) {
     for (i=0; i<6; i++) 
-      data[i+F_CENTROID_OFFSET] = sums->sum[i]/sums->n_part;
+      centroid[i] = data[i+F_CENTROID_OFFSET] = sums->sum[i]/sums->n_part;
     for (i=0; i<6; i++)
-      /* note that I subtract off the centroid before finding sigma, which I don't do for dump_sigma() */
       data[i+F_SIGMA_OFFSET   ] = 
-        SAFE_SQRT(sums->sum2[i][i]/sums->n_part - sqr(data[i+F_CENTROID_OFFSET]));
+        SAFE_SQRT(sums->sum2[i][i]/sums->n_part - sqr(centroid[i]));
     offset = F_SIGMAT_OFFSET;
     index = 0;
     /* sigma matrix elements sij */
     for (i=0; i<6; i++) {
       /* skip the diagonal element */
       for (j=i+1; j<6; j++) 
-        data[offset++] = sums->sum2[i][j]/sums->n_part;
+        data[offset++] = sums->sum2[i][j]/sums->n_part - centroid[i]*centroid[j] ;
     }
     /* time centroid, sigma, and delta */
     tmax = dp_max = -(tmin=dp_min=DBL_MAX);
@@ -380,8 +379,8 @@ long compute_final_properties
       data[F_WIDTH_OFFSET+4] = 0;
 
   /* compute emittances */
-  data[F_EMIT_OFFSET]   = rms_emittance(coord, 0, 1, sums->n_part);
-  data[F_EMIT_OFFSET+1] = rms_emittance(coord, 2, 3, sums->n_part);
+  data[F_EMIT_OFFSET]   = rms_emittance(coord, 0, 1, sums->n_part, NULL, NULL, NULL);
+  data[F_EMIT_OFFSET+1] = rms_emittance(coord, 2, 3, sums->n_part, NULL, NULL, NULL);
   data[F_EMIT_OFFSET+2] = rms_longitudinal_emittance(coord, sums->n_part, p_central);
 
   /* compute normalized emittances */
@@ -459,38 +458,41 @@ double beam_width(double fraction, double **coord, long n_part,
         }
     }
 
-double rms_emittance(double **coord, long i1, long i2, long n)
+double rms_emittance(double **coord, long i1, long i2, long n, 
+                     double *s11Return, double *s12Return, double *s22Return)
 {
-    double s11, s12, s22, x, xp;
-    double xc, xpc;
-    long i;
-    
-    if (!n)
-        return(0.0);
+  double s11, s12, s22, x, xp;
+  double xc, xpc;
+  long i;
+  
+  if (!n)
+    return(0.0);
 
-    log_entry("rms_emittance");
+  /* compute centroids */
+  for (i=xc=xpc=0; i<n; i++) {
+    xc  += coord[i][i1];
+    xpc += coord[i][i2];
+  }
+  xc  /= n;
+  xpc /= n;
 
-    /* compute centroids */
-    for (i=xc=xpc=0; i<n; i++) {
-        xc  += coord[i][i1];
-        xpc += coord[i][i2];
-        }
-    xc  /= n;
-    xpc /= n;
-
-    for (i=s11=s12=s22=0; i<n; i++) {
-        s11 += sqr(x  = coord[i][i1]-xc );
-        s22 += sqr(xp = coord[i][i2]-xpc);
-        s12 += x*xp;
-        }
-
-    log_exit("rms_emittance");
-    return(SAFE_SQRT(s11*s22-sqr(s12))/n);
-    }
+  for (i=s11=s12=s22=0; i<n; i++) {
+    s11 += sqr(x  = coord[i][i1]-xc );
+    s22 += sqr(xp = coord[i][i2]-xpc);
+    s12 += x*xp;
+  }
+  if (s11Return)
+    *s11Return = s11/n;
+  if (s22Return)
+    *s22Return = s22/n;
+  if (s12Return)
+    *s12Return = s12/n;
+  return(SAFE_SQRT(s11*s22-sqr(s12))/n);
+}
 
 double rms_norm_emittance(double **coord, long i1, long i2, long ip, long n, double Po)
 {
-    return Po*rms_emittance(coord, i1, i2, n);
+    return Po*rms_emittance(coord, i1, i2, n, NULL, NULL, NULL);
 #if 0
     double s11, s12, s22;
     double x, px, xc, pxc;

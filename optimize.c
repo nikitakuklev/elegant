@@ -758,7 +758,9 @@ double optimization_function(double *value, long *invalid)
       fprintf(stderr, "optimization_function: Tracking\n");
 #endif
     track_beam(run, control, error, variables, beamline, beam, output, optim_func_flags);
-
+    if (output->sasefel.active)
+      storeSASEFELAtEndInRPN(&(output->sasefel));
+    
     /* compute final parameters and store in rpn memories */
 #if DEBUG
       fprintf(stderr, "optimization_function: Computing final parameters\n");
@@ -776,7 +778,7 @@ double optimization_function(double *value, long *invalid)
         }
     rpn_store_final_properties(final_property_value, final_property_values);
     free_matrices(M); free(M); M = NULL;
-
+    
 #if DEBUG
       fprintf(stderr, "optimization_function: Checking constraints\n");
 #endif

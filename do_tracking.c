@@ -40,7 +40,8 @@ long do_tracking(
                  RUN *run,
                  long step,
                  unsigned long flags,
-                 long n_passes
+                 long n_passes,
+                 SASEFEL_OUTPUT *sasefel
                  )
 {
   RFMODE *rfmode; TRFMODE *trfmode;
@@ -813,6 +814,14 @@ long do_tracking(
 #endif
       log_exit("do_tracking.3.3");
     }
+  }
+
+  if (sasefel && sasefel->active) {
+    if (!charge) {
+      fprintf(stderr, "Can't compute SASE FEL---no CHARGE element seen");
+      exit(1);
+    }
+    computeSASEFELAtEnd(sasefel, coord, n_to_track, *P_central, charge->macroParticleCharge*n_to_track);
   }
   
   log_exit("do_tracking.3");

@@ -121,6 +121,7 @@ void accumulate_beam_sums(
   beta0 = sums->p0/sqrt(sqr(sums->p0)+1);
   sums->n_part += n_part;
   part0 = coords[0];
+
   for (i_part=n_part-1; i_part>=0; i_part--) {
     part = *coords++;
     for (i=0; i<4; i++)
@@ -128,8 +129,9 @@ void accumulate_beam_sums(
         maxabs[i] = value;
     for (i=0; i<6; i++) {
       sum[i] += (value=part[i]);
-      for (j=i; j<6; j++)
+      for (j=i; j<6; j++) {
         sums->sum2[i][j] += value*part[j];
+      }
     }
 
 #if DO_NORMEMIT_SUMS
