@@ -417,7 +417,8 @@ VMATRIX *compute_matrix(
             bomb("supply xmax for alpha magnet", NULL);
         elem->matrix = alpha_magnet_matrix(alph->gradient, sqrt(sqr(run->p_central)+1),
                                            (alph->order?alph->order:run->default_order), alph->part);
-        if ((alph->xs1 || alph->xs2 || alph->dp1!=-1 || alph->dp2!=1) && alph->part==0)
+        if ((alph->xs1 || alph->xs2 || alph->dp1!=-1 || alph->dp2!=1 ||
+             alph->xPuck!=-1 || alph->widthPuck!=0) && alph->part==0)
             bomb("alpha-magnet scraper not supported for full magnet", NULL);
         if (alph->dx || alph->dy || alph->dz)
             misalign_matrix(elem->matrix, alph->dx, alph->dy, alph->dz, 0.0);

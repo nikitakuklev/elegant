@@ -457,7 +457,7 @@ extern char *entity_text[N_TYPES];
 #define N_ECOL_PARAMS 5
 #define N_MARK_PARAMS 1
 #define N_MATR_PARAMS 3
-#define N_ALPH_PARAMS 10
+#define N_ALPH_PARAMS 12
 #define N_RFDF_PARAMS 12
 #define N_RFTM_PARAMS 15
 #define N_RMDF_PARAMS 10
@@ -730,6 +730,7 @@ typedef struct {
     double xmax;        /* 75.05*sqrt(beta*gamma/gradient) in meters */
     double xs1, xs2;    /* for momentum filtration */
     double dp1, dp2;    /* for momentum filtration */
+    double xPuck, widthPuck;  /* for momentum filtration */
     double dx, dy, dz;
     long part;
     long order;
@@ -1966,3 +1967,7 @@ extern void do_watch_FFT(double **data, long n_data, long slot, long window_code
 extern void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long particles, long step);
 extern void dump_centroid(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, long n_elements, long bunch,
                           double p_central);
+
+extern void doSubprocessCommand(char *command);
+void run_subprocess(NAMELIST_TEXT *nltext, RUN *run);
+
