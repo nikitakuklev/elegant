@@ -510,7 +510,8 @@ long do_tracking(
                   break;
                 case WATCH_PARAMETERS:
                 case WATCH_CENTROIDS:
-                  dump_watch_parameters(watch, step, i_pass, n_passes, coord, n_to_track, *n_original, *P_central);
+                  dump_watch_parameters(watch, step, i_pass, n_passes, coord, n_to_track, *n_original, *P_central,
+                                        beamline->revolution_length);
                   break;
                 case WATCH_FFT:
                   dump_watch_FFT(watch, step, i_pass, n_passes, coord, n_to_track, *n_original, *P_central);
@@ -846,7 +847,8 @@ long do_tracking(
                 break;
               case WATCH_PARAMETERS:
               case WATCH_CENTROIDS:
-                dump_watch_parameters(watch, step, i_pass, n_passes, coord, n_to_track, *n_original, *P_central);
+                dump_watch_parameters(watch, step, i_pass, n_passes, coord, n_to_track, *n_original, *P_central,
+                                      beamline->revolution_length);
                 break;
               case WATCH_FFT:
                 dump_watch_FFT(watch, step, i_pass, n_passes, coord, n_to_track, *n_original, *P_central);

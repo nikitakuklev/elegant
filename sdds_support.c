@@ -500,7 +500,9 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
   row = 0;
-  t0 = pass*length*sqrt(Po*Po+1)/(c_mks*(Po+1e-32));
+  t0 = (pass-watch->passLast)*length*sqrt(Po*Po+1)/(c_mks*(Po+1e-32)) + watch->t0Last;
+  watch->t0Last = t0;
+  watch->passLast = pass;
   for (i=0; i<particles; i++) {
     if (watch->fraction==1 || random_2(0)<watch->fraction) {
       if (watch->xData && 
@@ -555,11 +557,12 @@ double tmp_safe_sqrt;
 #define SAFE_SQRT(x) ((tmp_safe_sqrt=(x))<0?(double)0.0:sqrt(tmp_safe_sqrt))
 
 void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, double **particle, long particles, 
-                           long original_particles,  double Po)
+                           long original_particles,  double Po, double revolutionLength)
 {
     long sample, i, j;
-    double tc, last_tc, p_sum, gamma_sum, sum, p;
-
+    double tc, tc0, p_sum, gamma_sum, sum, p;
+    double revolutionTime;
+    
     log_entry("dump_watch_parameters");
 
     if (!watch->initialized)
@@ -581,6 +584,9 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
         }
 
     sample = pass/watch->interval;
+    tc0 = (pass-watch->passLast)*revolutionLength*sqrt(Po*Po+1)/(c_mks*(Po+1e-32)) + watch->t0Last;
+    watch->t0Last = tc0;
+    watch->passLast = pass;
     if (particles) {
         /* compute centroids, sigmas, and emittances for x, y, and s */
         for (i=0; i<6; i+=2 ) {
@@ -634,13 +640,8 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
             sum += particle[i][4]/(p/sqrt(sqr(p)+1)*c_mks) ;
             }
         tc = sum/particles;
-        last_tc = 0;
-        if (sample && !SDDS_GetValue(&watch->SDDS_table, "Ct", sample-1, &last_tc)) {
-            SDDS_SetError("Problem retrieving row value from SDDS table (dump_watch_parameters)");
-            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-            }
         if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
-                               "Ct", tc, "dCt", tc-last_tc,
+                               "Ct", tc, "dCt", tc-tc0,
                                "pAverage", p_sum/particles, "pCentral", Po, 
                                "KAverage", (gamma_sum/particles-1)*me_mev, NULL)) {
             SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
