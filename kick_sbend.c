@@ -216,9 +216,9 @@ long track_through_kick_sbend(double **part, long n_part, KSBEND *ksbend, double
     dzi =  ksbend->dz;
     dyi = -ksbend->dy;
 
-    dxf =  ksbend->dx*cos(angle) + (-ksbend->dz)*sin(angle);
-    dzf = -ksbend->dx*sin(angle) + (-ksbend->dz)*cos(angle);
-    dyf =  ksbend->dy;
+    dxf = ksbend->dx*cos(angle) + ksbend->dz*sin(angle);
+    dzf = ksbend->dx*sin(angle) - ksbend->dz*cos(angle);
+    dyf = ksbend->dy;
 
     log_exit("track_through_kick_sbend.1");
 
