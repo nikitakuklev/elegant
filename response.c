@@ -69,14 +69,18 @@ void setup_response_output(RESPONSE_OUTPUT *respOutput,
     log_entry("setup_response_output");
     filename = compose_filename(filename, run->rootname);
     if (!inverse) {
-        sprintf(s, "%s-plane %s response matrix for beamline %s of lattice %s", 
-                plane?"vertical":"horizontal", type, beamline_name, run->lattice);
-        sprintf(t, "%s-plane %s response matrix", plane?"vertical":"horizontal", type);
+        sprintf(s, "%s-plane %s %sfixed path-length response matrix for beamline %s of lattice %s", 
+                plane?"vertical":"horizontal", type, 
+                fixed_length?"":"non-", beamline_name, run->lattice);
+        sprintf(t, "%s-plane %s %sfixed path-length response matrix", plane?"vertical":"horizontal", type,
+                fixed_length?"":"non-");
         }
     else {
-        sprintf(s, "%s-plane %s transposed inverse response matrix for beamline %s of lattice %s", 
-                plane?"vertical":"horizontal", type, beamline_name, run->lattice);
-        sprintf(t, "%s-plane %s transposed inverse response matrix", plane?"vertical":"horizontal", type);
+        sprintf(s, "%s-plane %s transposed inverse %sfixed path-length response matrix for beamline %s of lattice %s", 
+                plane?"vertical":"horizontal", type, 
+                fixed_length?"":"non-", beamline_name, run->lattice);
+        sprintf(t, "%s-plane %s transposed inverse %sfixed path-length response matrix", plane?"vertical":"horizontal", 
+                type, fixed_length?"":"non-");
         }
 
     if (!SDDS_InitializeOutput(&respOutput->SDDSout, SDDS_BINARY, 0, s, t, filename)) {
@@ -209,9 +213,11 @@ void run_response_output(RUN *run, LINE_LIST *beamline, CORRECTION *correct, lon
             }
         else if (correct->mode==ORBIT_CORRECTION) {
             compute_orbcor_matrices(correct->CMx, &correct->SLx, 0, run, beamline, 0,
-                                    !(inverse[0]==NULL || SDDS_StringIsBlank(inverse[0])));
+                                    !(inverse[0]==NULL || SDDS_StringIsBlank(inverse[0])),
+                                    fixed_length);
             compute_orbcor_matrices(correct->CMy, &correct->SLy, 2, run, beamline, 0,
-                                    !(inverse[1]==NULL || SDDS_StringIsBlank(inverse[1])));
+                                    !(inverse[1]==NULL || SDDS_StringIsBlank(inverse[1])),
+                                    fixed_length);
             }
         else
             bomb("bad correction mode (run_response_output)", NULL);

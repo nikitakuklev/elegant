@@ -11,5 +11,6 @@
     long KnL_units = 0;
     long output_at_each_step = 0;
     long output_before_tune_correction = 0;
+    long fixed_length = 0;
 #end
 

@@ -218,9 +218,9 @@ void correction_setup(
         }
     else if (_correct->mode==ORBIT_CORRECTION) {
         compute_orbcor_matrices(_correct->CMx, &_correct->SLx, 0, run, beamline, 0, 
-                                !_correct->response_only);
+                                !_correct->response_only, fixed_length_matrix);
         compute_orbcor_matrices(_correct->CMy, &_correct->SLy, 2, run, beamline, 0, 
-                                !_correct->response_only);
+                                !_correct->response_only, fixed_length_matrix);
         }
     else
         bomb("something impossible happened (correction_setup)", NULL);
@@ -1250,149 +1250,158 @@ ELEMENT_LIST *find_useable_moni_corr(long *nmon, long *ncor, long **mon_index,
     return(start);
     }
 
-void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN *run, LINE_LIST *beamline, long find_only, long invert)
+void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN *run, LINE_LIST *beamline, 
+                             long find_only, long invert, long fixed_length)
 {
-    ELEMENT_LIST *start;
-    long i_corr, i_moni, equalW;
-    double coef, htune, moniFactor, *corrFactor, W0;
-    static MATRIX *I1=NULL, *I2=NULL, *I3=NULL, *I4=NULL, *W=NULL;
+  ELEMENT_LIST *start;
+  long i_corr, i_moni, equalW;
+  double coef, htune, moniFactor, *corrFactor, *corrFactorFL, coefFL, W0;
+  static MATRIX *I1=NULL, *I2=NULL, *I3=NULL, *I4=NULL, *W=NULL;
 
-    log_entry("compute_orbcor_matrices");
+  log_entry("compute_orbcor_matrices");
 
-    start = find_useable_moni_corr(&CM->nmon, &CM->ncor, &CM->mon_index, &CM->umoni, &CM->ucorr, 
-                                   &CM->kick_coef, &CM->sl_index, coord, SL, run, beamline, 1);
+  start = find_useable_moni_corr(&CM->nmon, &CM->ncor, &CM->mon_index, &CM->umoni, &CM->ucorr, 
+                                 &CM->kick_coef, &CM->sl_index, coord, SL, run, beamline, 1);
 #ifdef DEBUG
-    printf("finding twiss parameters beginning at %s.\n", start->name);
+  printf("finding twiss parameters beginning at %s.\n", start->name);
 #endif
-    if (!(beamline->flags&BEAMLINE_TWISS_CURRENT)) {
-        fprintf(stderr, "updating twiss parameters...");
-        update_twiss_parameters(run, beamline);
-        report_stats(stderr, "\ndone: ");
-        }
+  if (!(beamline->flags&BEAMLINE_TWISS_CURRENT)) {
+    fprintf(stderr, "updating twiss parameters...");
+    update_twiss_parameters(run, beamline);
+    report_stats(stderr, "\ndone: ");
+  }
 
 #ifdef DEBUG
-    printf("monitors: ");
-    for (i_moni=0; i_moni<CM->nmon; i_moni++)
-        printf("%s ", CM->umoni[i_moni]->name);
-    printf("\ncorrectors: ");
-    for (i_corr=0; i_corr<CM->ncor; i_corr++)
-        printf("%s ", CM->ucorr[i_corr]->name);
-    putchar('\n');
+  printf("monitors: ");
+  for (i_moni=0; i_moni<CM->nmon; i_moni++)
+    printf("%s ", CM->umoni[i_moni]->name);
+  printf("\ncorrectors: ");
+  for (i_corr=0; i_corr<CM->ncor; i_corr++)
+    printf("%s ", CM->ucorr[i_corr]->name);
+  putchar('\n');
 #endif
 
-    if (CM->nmon<CM->ncor)
-        printf("*** \7\7\7 warning: more correctors than monitors for %c plane.\n",  (coord==0?'x':'y'));
-    if (CM->ncor==0) {
-        printf("Warning: no correctors for %c plane.  No correction done.\n",  (coord==0?'x':'y'));
-        return;
-        }
-    if (CM->nmon==0) {
-        printf("Warning: no monitors for %c plane.  No correction done.\n",  (coord==0?'x':'y'));
-        CM->ncor = 0;
-        return;
-        }
+  if (CM->nmon<CM->ncor)
+    printf("*** \7\7\7 warning: more correctors than monitors for %c plane.\n",  (coord==0?'x':'y'));
+  if (CM->ncor==0) {
+    printf("Warning: no correctors for %c plane.  No correction done.\n",  (coord==0?'x':'y'));
+    return;
+  }
+  if (CM->nmon==0) {
+    printf("Warning: no monitors for %c plane.  No correction done.\n",  (coord==0?'x':'y'));
+    CM->ncor = 0;
+    return;
+  }
 
-    log_entry("compute_orbcor_matrices.1");
-    /* allocate correction matrix for this plane, plus others: dK = T*Qo */
-    m_alloc1(&CM->T , CM->ncor, CM->nmon);
-    m_alloc1(&CM->Qo, CM->nmon, 1);
-    m_alloc1(&CM->dK, CM->ncor, 1);
-    m_alloc1(&CM->C , CM->nmon, CM->ncor);
+  log_entry("compute_orbcor_matrices.1");
+  /* allocate correction matrix for this plane, plus others: dK = T*Qo */
+  m_alloc1(&CM->T , CM->ncor, CM->nmon);
+  m_alloc1(&CM->Qo, CM->nmon, 1);
+  m_alloc1(&CM->dK, CM->ncor, 1);
+  m_alloc1(&CM->C , CM->nmon, CM->ncor);
 
-    if (find_only) {
-        log_exit("compute_orbcor_matrices");
-        return;
-        }
+  if (find_only) {
+    log_exit("compute_orbcor_matrices");
+    return;
+  }
 
-    /* intermediate matrices for computations: T = -I4*I2 */
-    m_alloc1(&W , CM->nmon, CM->nmon);
-    m_alloc1(&I1, CM->ncor, CM->nmon);        /* I1 = TRANS(C) */
-    m_alloc1(&I2, CM->ncor, CM->nmon);        /* I2 = TRANS(C).W */
-    m_alloc1(&I3, CM->ncor, CM->ncor);        /* I3 = TRANS(C).W.C */
-    m_alloc1(&I4, CM->ncor, CM->ncor);        /* I4 = INVERSE(I3) */
-    log_exit("compute_orbcor_matrices.1");
+  /* intermediate matrices for computations: T = -I4*I2 */
+  m_alloc1(&W , CM->nmon, CM->nmon);
+  m_alloc1(&I1, CM->ncor, CM->nmon);        /* I1 = TRANS(C) */
+  m_alloc1(&I2, CM->ncor, CM->nmon);        /* I2 = TRANS(C).W */
+  m_alloc1(&I3, CM->ncor, CM->ncor);        /* I3 = TRANS(C).W.C */
+  m_alloc1(&I4, CM->ncor, CM->ncor);        /* I4 = INVERSE(I3) */
+  log_exit("compute_orbcor_matrices.1");
 
-    log_entry("compute_orbcor_matrices.2");
-    /* set up weight matrix */
-    equalW = 1;
+  log_entry("compute_orbcor_matrices.2");
+  /* set up weight matrix */
+  equalW = 1;
+  for (i_moni=0; i_moni<CM->nmon; i_moni++) {
+    W->a[i_moni][i_moni] = getMonitorWeight(CM->umoni[i_moni]);
+    if (!i_moni)
+      W0 = W->a[i_moni][i_moni];
+    else if (W->a[i_moni][i_moni]!=W0)
+      equalW = 0;
+  }
+
+  /* find transfer matrix from correctors to monitors */
+  if ((coef = 2*sin(htune=PIx2*beamline->tune[coord?1:0]/2))==0)
+    bomb("can't compute response matrix--beamline unstable", NULL);
+  coefFL = beamline->matrix->R[4][5];
+  
+  corrFactor   = tmalloc(sizeof(*corrFactor)*CM->ncor);
+  corrFactorFL = tmalloc(sizeof(*corrFactorFL)*CM->ncor);
+  fprintf(stderr, "computing orbit response matrix...");
+  switch (coord) {
+  case 0:
+    for (i_corr=0; i_corr<CM->ncor; i_corr++) {
+      corrFactor[i_corr] = getCorrectorCalibration(CM->ucorr[i_corr], coord)*
+        sqrt(CM->ucorr[i_corr]->twiss->betax)/coef;
+      corrFactorFL[i_corr] = getCorrectorCalibration(CM->ucorr[i_corr], coord)*
+        CM->ucorr[i_corr]->twiss->etax/coefFL;
+    }
     for (i_moni=0; i_moni<CM->nmon; i_moni++) {
-        W->a[i_moni][i_moni] = getMonitorWeight(CM->umoni[i_moni]);
-        if (!i_moni)
-            W0 = W->a[i_moni][i_moni];
-        else if (W->a[i_moni][i_moni]!=W0)
-            equalW = 0;
-        }
-
-    /* find transfer matrix from correctors to monitors */
-    if ((coef = 2*sin(htune=PIx2*beamline->tune[coord?1:0]/2))==0)
-        bomb("can't compute response matrix--beamline unstable", NULL);
-    corrFactor = tmalloc(sizeof(*corrFactor)*CM->ncor);
-    fprintf(stderr, "computing orbit response matrix...");
-    switch (coord) {
-      case 0:
-        for (i_corr=0; i_corr<CM->ncor; i_corr++)
-            corrFactor[i_corr] = getCorrectorCalibration(CM->ucorr[i_corr], coord)*
-                sqrt(CM->ucorr[i_corr]->twiss->betax)/coef;
-        for (i_moni=0; i_moni<CM->nmon; i_moni++) {
-            moniFactor = 
-                getMonitorCalibration(CM->umoni[i_moni], coord)*sqrt(CM->umoni[i_moni]->twiss->betax);
-            for (i_corr=0; i_corr<CM->ncor; i_corr++) {
-                CM->C->a[i_moni][i_corr] 
-                    = moniFactor*corrFactor[i_corr]*
-                        cos(htune-fabs(CM->umoni[i_moni]->twiss->phix -
-                                       CM->ucorr[i_corr]->twiss->phix));
-                }
-            }
-        break;
-      default:
-        for (i_corr=0; i_corr<CM->ncor; i_corr++)
-            corrFactor[i_corr] = getCorrectorCalibration(CM->ucorr[i_corr], coord)*
-                sqrt(CM->ucorr[i_corr]->twiss->betay)/coef;
-        for (i_moni=0; i_moni<CM->nmon; i_moni++) {
-            moniFactor = 
-                getMonitorCalibration(CM->umoni[i_moni], coord)*sqrt(CM->umoni[i_moni]->twiss->betay);
-            for (i_corr=0; i_corr<CM->ncor; i_corr++) {
-                CM->C->a[i_moni][i_corr] 
-                    = moniFactor*corrFactor[i_corr]*
-                        cos(htune-fabs(CM->umoni[i_moni]->twiss->phiy -
-                                       CM->ucorr[i_corr]->twiss->phiy));
-                }
-            }
-        }
-    free(corrFactor);
-    report_stats(stderr, "\ndone");
+      moniFactor = 
+        getMonitorCalibration(CM->umoni[i_moni], coord)*sqrt(CM->umoni[i_moni]->twiss->betax);
+      for (i_corr=0; i_corr<CM->ncor; i_corr++) {
+        CM->C->a[i_moni][i_corr] 
+          = moniFactor*corrFactor[i_corr]*
+            cos(htune-fabs(CM->umoni[i_moni]->twiss->phix -
+                           CM->ucorr[i_corr]->twiss->phix));
+        if (fixed_length)
+          CM->C->a[i_moni][i_corr] += CM->umoni[i_moni]->twiss->etax*corrFactorFL[i_corr];
+      }
+    }
+    break;
+  default:
+    for (i_corr=0; i_corr<CM->ncor; i_corr++)
+      corrFactor[i_corr] = getCorrectorCalibration(CM->ucorr[i_corr], coord)*
+        sqrt(CM->ucorr[i_corr]->twiss->betay)/coef;
+    for (i_moni=0; i_moni<CM->nmon; i_moni++) {
+      moniFactor = 
+        getMonitorCalibration(CM->umoni[i_moni], coord)*sqrt(CM->umoni[i_moni]->twiss->betay);
+      for (i_corr=0; i_corr<CM->ncor; i_corr++) {
+        CM->C->a[i_moni][i_corr] 
+          = moniFactor*corrFactor[i_corr]*
+            cos(htune-fabs(CM->umoni[i_moni]->twiss->phiy -
+                           CM->ucorr[i_corr]->twiss->phiy));
+      }
+    }
+  }
+  free(corrFactor);
+  report_stats(stderr, "\ndone");
 #ifdef DEBUG
-    m_show(CM->C    , "%13.6le ", "influence matrix\n", stdout);
+  m_show(CM->C    , "%13.6le ", "influence matrix\n", stdout);
 #endif
-    log_exit("compute_orbcor_matrices.2");
+  log_exit("compute_orbcor_matrices.2");
 
-    if (invert && !CM->inverse_computed) {
-        /* compute correction matrix T */
-        CM->inverse_computed = 1;
-        fprintf(stderr, "computing correction matrix...");
-        if (!equalW) {
-            m_trans(I1, CM->C);
-            m_mult(I3, I1, CM->C);
-            m_invert(I4, I3);
-            m_mult(CM->T, I4, I2);
-            m_scmul(CM->T, CM->T, -W0); 
-            }
-        else {
-            m_trans(I1, CM->C);
-            m_mult(I2, I1, W);
-            m_mult(I3, I2, CM->C);
-            m_invert(I4, I3);
-            m_mult(CM->T, I4, I2);
-            m_scmul(CM->T, CM->T, -1.0); 
-            }
-        report_stats(stderr, "\ndone");
+  if (invert && !CM->inverse_computed) {
+    /* compute correction matrix T */
+    CM->inverse_computed = 1;
+    fprintf(stderr, "computing correction matrix...");
+    if (!equalW) {
+      m_trans(I1, CM->C);
+      m_mult(I3, I1, CM->C);
+      m_invert(I4, I3);
+      m_mult(CM->T, I4, I2);
+      m_scmul(CM->T, CM->T, -W0); 
+    }
+    else {
+      m_trans(I1, CM->C);
+      m_mult(I2, I1, W);
+      m_mult(I3, I2, CM->C);
+      m_invert(I4, I3);
+      m_mult(CM->T, I4, I2);
+      m_scmul(CM->T, CM->T, -1.0); 
+    }
+    report_stats(stderr, "\ndone");
 #ifdef DEBUG
     m_show(CM->T, "%13.6le ", "correction matrix\n", stdout);
 #endif
-        }
+  }
 
-    log_exit("compute_orbcor_matrices");
-    }
+  log_exit("compute_orbcor_matrices");
+}
 
 long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **orbit, long n_iterations, 
     double clorb_acc, long clorb_iter, RUN *run, LINE_LIST *beamline, double *closed_orbit, double *Cdp)
@@ -2149,4 +2158,3 @@ double getCorrectorCalibration(ELEMENT_LIST *elem, long coord)
         break;
         }
     }
-
