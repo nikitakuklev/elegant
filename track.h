@@ -218,7 +218,7 @@ typedef struct line_list {
 typedef struct {
     double ideal_gamma, p_central;
     long default_order, concat_order, print_statistics;
-    long combine_bunch_statistics, wrap_around, tracking_updates; 
+    long combine_bunch_statistics, wrap_around, tracking_updates, final_pass; 
     long always_change_p0;
     char *runfile, *lattice, *acceptance, *centroid, *sigma, 
          *final, *output, *rootname, *losses;

@@ -39,9 +39,9 @@ char *option[N_OPTIONS] = {
     "describeinput",
     "macro",
         };
-char *USAGE="elegant <inputfile> [-macro=<tag>=<value>,[...]]\n\nProgram by Michael Borland. (This is version 15.2, "__DATE__".)";
+char *USAGE="elegant <inputfile> [-macro=<tag>=<value>,[...]]\n\nProgram by Michael Borland. (This is version 15.3Beta, "__DATE__".)";
 
-char *GREETING="This is elegant, by Michael Borland. (This is version 15.2, "__DATE__".)";
+char *GREETING="This is elegant, by Michael Borland. (This is version 15.3Beta, "__DATE__".)";
 
 #define RUN_SETUP        0
 #define RUN_CONTROL      1
@@ -396,6 +396,8 @@ char **argv;
       run_conditions.print_statistics = print_statistics;
       run_conditions.combine_bunch_statistics = combine_bunch_statistics;
       run_conditions.wrap_around = wrap_around;
+      if (run_conditions.final_pass = final_pass)
+        run_conditions.wrap_around = 1;
       run_conditions.tracking_updates = tracking_updates;
       run_conditions.always_change_p0 = always_change_p0;
       
@@ -714,6 +716,7 @@ char **argv;
       combine_bunch_statistics = 0;
       random_number_seed = 987654321;
       wrap_around = 1;
+      final_pass = 0;
       default_order = 2;
       concat_order = 0;
       tracking_updates = 1;
@@ -960,6 +963,7 @@ char **argv;
       combine_bunch_statistics = 0;
       random_number_seed = 987654321;
       wrap_around = 1;
+      final_pass = 0;
       default_order = 2;
       concat_order = 0;
       tracking_updates = 1;
@@ -1033,6 +1037,7 @@ char **argv;
       combine_bunch_statistics = 0;
       random_number_seed = 987654321;
       wrap_around = 1;
+      final_pass = 0;
       default_order = 2;
       concat_order = 0;
       tracking_updates = 1;
@@ -1114,6 +1119,7 @@ char **argv;
       combine_bunch_statistics = 0;
       random_number_seed = 987654321;
       wrap_around = 1;
+      final_pass = 0;
       default_order = 2;
       concat_order = 0;
       tracking_updates = 1;

@@ -256,6 +256,9 @@ long do_tracking(
       z = z_recirc;            /* ditto */
       last_z = z;
     }
+    if (run->final_pass && sums_vs_z && n_z_points)
+      zero_beam_sums(*sums_vs_z, *n_z_points+1);
+
     log_exit("do_tracking.2.1");
     log_entry("do_tracking.2.2");
     if (check_nan) {
@@ -381,13 +384,14 @@ long do_tracking(
            * the longitudinal-only matrix 
            */
           if (flags&LINEAR_CHROMATIC_MATRIX) 
-            nLeft = trackWithChromaticLinearMatrix(coord, nToTrack, accepted,
-                                                   *P_central, z, eptrCLMatrix,
-                                                   beamline->twiss0, beamline->tune,
-                                                   beamline->chromaticity,
-                                                   beamline->chrom2, beamline->chrom3,
-                                                   beamline->dbeta_dPoP, beamline->dalpha_dPoP,
-                                                   beamline->alpha, beamline->eta2, beamline->eta3);
+            nLeft
+	      = trackWithChromaticLinearMatrix(coord, nToTrack, accepted,
+					       *P_central, z, eptrCLMatrix,
+					       beamline->twiss0, beamline->tune,
+					       beamline->chromaticity,
+					       beamline->chrom2, beamline->chrom3,
+					       beamline->dbeta_dPoP, beamline->dalpha_dPoP,
+					       beamline->alpha, beamline->eta2, beamline->eta3);
           else 
             trackLongitudinalOnlyRing(coord, nToTrack, 
                                       eptrCLMatrix->matrix,
@@ -1934,9 +1938,9 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
   }
   if (npNew>np) {
     /* We have to resize the arrays in the BEAM structure */
-    /* 
-       fprintf(stderr, "Increasing number of particles from %ld (%ld active) to %ld (%ld active)\n",
-       np+nLost, np, npNew+nLost, npNew);
+    /*
+      fprintf(stdout, "Increasing number of particles from %ld (%ld active) to %ld (%ld active)\n",
+	    np+nLost, np, npNew+nLost, npNew);
     */
     if (!beam) {
       fprintf(stderr, "Error: script element increased the number of particles from %ld to %ld\n.",
@@ -1974,6 +1978,9 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
     for (i=np+nLost; i<npNew+nLost; i++) 
       beam->particle[i] = tmalloc(sizeof(**(beam->particle))*7);
     /* move lost particles into the upper part of the arrays */
+    /* fprintf(stdout, "Moving %ld lost particles higher into buffer\n",
+	    nLost);
+    */
     for (i=nLost-1; i>=0; i--) {
       SWAP_PTR(beam->particle[np+i], beam->particle[npNew+i]);
       SWAP_LONG(beam->lostOnPass[np+i], beam->lostOnPass[npNew+i]);
@@ -1985,8 +1992,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
     }
     beam->n_particle = npNew+nLost;
     beam->n_to_track = npNew;
-    /*
-      fprintf(stderr, "beam->n_particle = %ld, beam->n_to_track = %ld\n",
+    /* fprintf(stdout, "beam->n_particle = %ld, beam->n_to_track = %ld\n",
       beam->n_particle, beam->n_to_track);
     */
     part = beam->particle;

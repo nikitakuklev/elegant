@@ -20,6 +20,7 @@
     STRING parameters = NULL;
     long combine_bunch_statistics = 0;
     long wrap_around = 1;
+    long final_pass = 0;
     long default_order = 2;
     long concat_order = 0;
     long print_statistics = 0;
