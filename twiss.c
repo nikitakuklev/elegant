@@ -314,8 +314,18 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, RADIATION_INTEGRALS
         /* use R11=C to find cos(dphi) */
         cos_dphi = sqrt(beta[plane]/func[0])*C[plane] - alpha[plane]*sin_dphi;
       }
-      if ((dphi = atan2(sin_dphi, cos_dphi))<0) 
-        dphi += PIx2;
+      if (entity_description[elem->type].flags&HAS_LENGTH) {
+        if (*((double*)elem->p_elem)>=0) {
+          if ((dphi = atan2(sin_dphi, cos_dphi))<0) 
+            dphi += PIx2;
+        } else {
+          if ((dphi=atan2(sin_dphi, cos_dphi))>0)
+            dphi -= PIx2;
+        }
+      } else {
+          if ((dphi = atan2(sin_dphi, cos_dphi))<0) 
+            dphi += PIx2;
+      }
       phi[plane]  = func[2] = phi[plane] + dphi;
       beta[plane]  = func[0];
       alpha[plane] = func[1];
