@@ -12,6 +12,7 @@
 
 void integrate_csbend_ord2(double *Qf, double *Qi, double s, long n, double rho0, double p0);
 void integrate_csbend_ord4(double *Qf, double *Qi, double s, long n, double rho0, double p0);
+void exactDrift(double **part, long np, double length);
 
 static double Fy_0, Fy_x, Fy_x2, Fy_x3, Fy_x4;
 static double Fy_y2, Fy_x_y2, Fy_x2_y2;
@@ -54,8 +55,10 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   if (!csbend)
     bomb("null CSBEND pointer (track_through_csbend)", NULL);
 
-  if (csbend->angle==0)
-    bomb("angle = 0 for csbend", NULL);
+  if (csbend->angle==0) {
+    exactDrift(part, n_part, csbend->length);
+    return n_part;
+  }
 
   if (csbend->integration_order!=2 && csbend->integration_order!=4)
     bomb("CSBEND integration_order is invalid--must be either 2 or 4", NULL);
@@ -839,8 +842,10 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   if (!csbend)
     bomb("null CSBEND pointer (track_through_csbend)", NULL);
 
-  if (csbend->angle==0)
-    bomb("angle = 0 for csbend", NULL);
+  if (csbend->angle==0) {
+    exactDrift(part, n_part, csbend->length);
+    return n_part;
+  }
 
   if (csbend->integration_order!=2 && csbend->integration_order!=4)
     bomb("CSBEND integration_order is invalid--must be either 2 or 4", NULL);
@@ -1462,7 +1467,7 @@ long binParticleCoordinate(double **hist, long *maxBins,
 }
 
 void computeSaldinFdNorm(double **FdNorm, double **x, long *n, double sMax, long ns,
-                         double Po, double radius, double angle, double dx);
+                         double Po, double radius, double angle, double dx, char *normMode);
 
 long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift, 
                             double Po, double **accepted, double zStart, char *rootname)
@@ -1548,7 +1553,8 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
       if (csrDrift->nSaldin54Points<20) 
         csrDrift->nSaldin54Points = 20;
       computeSaldinFdNorm(&csrWake.FdNorm, &csrWake.xSaldin, &csrWake.nSaldin,
-                          2*sigmaZ, csrDrift->nSaldin54Points, csrWake.Po, csrWake.rho, csrWake.bendingAngle, dz);
+                          2*sigmaZ, csrDrift->nSaldin54Points, csrWake.Po, csrWake.rho, csrWake.bendingAngle, dz,
+                          csrDrift->normMode);
       if (csrDrift->Saldin54Output)  {
         long ix;
         if (!csrDrift->fpSaldin) {
@@ -1745,13 +1751,15 @@ double SolveForPsiSaldin54(double xh, double sh);
 double Saldin5354Factor(double xh, double sh, double phihm, double xhLowerLimit);
 
 void computeSaldinFdNorm(double **FdNorm, double **x, long *n, double sMax, long ns,
-                         double Po, double radius, double bendingAngle, double dx)
+                         double Po, double radius, double bendingAngle, double dx, 
+                         char *normMode)
 {
   double xEnd, sh, beta, gamma, xh, xLimit, dx0;
   long ix, ix1, ix2, scan, try, is;
   double psi, psi2, phihs, phihm, xhLowerLimit, xUpperLimit, s, f, fx;
-  double t1, t2;
-  
+  double t1, t2, f0, fmax;
+  char *allowedNormMode[2] = {"first", "peak"};
+
   gamma = sqrt(sqr(Po)+1);
   beta = Po/gamma;
 
@@ -1802,14 +1810,39 @@ void computeSaldinFdNorm(double **FdNorm, double **x, long *n, double sMax, long
   for (ix=0; ix<*n; ix++)
     (*FdNorm)[ix] /= ns;
   
-  /* normalize to peak value */
-  for (ix=f=0; ix<*n; ix++) {
-    if ((*FdNorm)[ix]>f)
-      f = (*FdNorm)[ix];
+  /* get the first nonzero and also the maximum value of Fd */
+  for (ix=f0=fmax=0; ix<*n; ix++) {
+    f= (*FdNorm)[ix];
+    if (f0==0 && f>0)
+      f0 = f;
+    if (fmax<f)
+      fmax = f;
   }
-  for (ix=0; ix<*n; ix++)
-    (*FdNorm)[ix] /= f;
-
+  if (fmax>f0/0.99) {
+    fprintf(stderr, "Warning: possible problem with SALDIN54 drift mode: too few (%ld) points. Ratio of max/start-1 is %le\n",
+            ns,
+            fmax/f0-1);
+  }
+  switch (match_string(normMode, allowedNormMode, 2, 0)) {
+  case 0:
+    /* first */
+    f = f0;
+    break;
+  case 1:
+    /* peak */
+    f = fmax;
+    break;
+  default:
+    fprintf(stderr, "Error: unknown Saldin-54 normalization mode: %s\n", normMode);
+    exit(1);
+    break;
+  }
+  if (f)
+    for (ix=0; ix<*n; ix++)
+      (*FdNorm)[ix] /= f;
+  else
+    for (ix=0; ix<*n; ix++)
+      (*FdNorm)[ix] = 0;
 }
 
 double SolveForPsiSaldin54(double xh, double sh)
@@ -1928,3 +1961,14 @@ double Saldin5354Factor(double xh, double sh, double phihm, double xhLowerLimit)
   return f;
 }
 
+void exactDrift(double **part, long np, double length)
+{
+  long i;
+  double *coord;
+  for (i=0; i<np; i++) {
+    coord = part[i];
+    coord[0] += coord[1]*length;
+    coord[2] += coord[3]*length;
+    coord[4] += length*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+  }
+}

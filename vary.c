@@ -62,7 +62,8 @@ void vary_setup(VARY *_control, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beam
       bomb("can't have fiducial beam and multiple passes", NULL);
     _control->fiducial_flag = 0;
     if (first_is_fiducial)
-      _control->fiducial_flag = FIRST_BEAM_IS_FIDUCIAL;
+      _control->fiducial_flag = FIRST_BEAM_IS_FIDUCIAL |
+        (restrict_fiducialization?RESTRICT_FIDUCIALIZATION:0); 
     
     /* reset flags for elements that may have been varied previously */
     if (_control->n_elements_to_vary) {

@@ -562,14 +562,14 @@ extern char *entity_text[N_TYPES];
 #define N_IBSCATTER_PARAMS 3
 #define N_FMULT_PARAMS 9
 #define N_BMAPXY_PARAMS 5
-#define N_WAKE_PARAMS 11
+#define N_WAKE_PARAMS 12
 #define N_TRWAKE_PARAMS 13
 #define N_TUBEND_PARAMS 6
 #define N_CHARGE_PARAMS 2
 #define N_PFILTER_PARAMS 5
 #define N_HISTOGRAM_PARAMS 9
 #define N_CSRCSBEND_PARAMS 41
-#define N_CSRDRIFT_PARAMS 14
+#define N_CSRDRIFT_PARAMS 15
 #define N_REMCOR_PARAMS 6
 #define N_MAPSOLENOID_PARAMS 12
 #define N_RFCW_PARAMS 28
@@ -620,6 +620,7 @@ typedef struct {
 #define IS_MAGNET       0x00000010UL
 #define MATRIX_TRACKING 0x00000020UL
 #define HAS_RF_MATRIX   0x00000040UL
+#define MAY_CHANGE_ENERGY  0x00000080UL
 typedef struct {
     long n_params;
     unsigned long flags;
@@ -1383,7 +1384,7 @@ typedef struct {
   double length, attenuationLength, dz;
   long nKicks, spread, useOvertakingLength;
   long useSaldin54, nSaldin54Points, csr;
-  char *spreadMode, *wavelengthMode, *bunchlengthMode, *Saldin54Output;
+  char *normMode, *spreadMode, *wavelengthMode, *bunchlengthMode, *Saldin54Output;
   double overtakingLengthMultiplier;
   FILE *fpSaldin;
 } CSRDRIFT;
@@ -1544,7 +1545,7 @@ typedef struct {
     long n_bins;               /* number of charge bins */
     long interpolate;          /* flag to turn on interpolation */
     long smoothing, SGHalfWidth, SGOrder;  /* flag to turn on smoothing plus control parameters */
-    long change_p0;
+    long change_p0, allowLongBeam;
     /* for internal use: */
     long initialized;          /* indicates that files are loaded */
     long wakePoints, isCopy;
@@ -1664,6 +1665,7 @@ typedef struct {
 #define FIRST_BEAM_IS_FIDUCIAL   0x0200
 #define FIDUCIAL_BEAM_SEEN       0x0400
 #define PRECORRECTION_BEAM       0x0800
+#define RESTRICT_FIDUCIALIZATION 0x1000
 
 /* return values for get_reference_phase and check_reference_phase */
 #define REF_PHASE_RETURNED 1

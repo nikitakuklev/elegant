@@ -12,6 +12,7 @@
     long n_passes = 1;
     long reset_rf_for_each_step = 1;
     long first_is_fiducial = 0;
+    long restrict_fiducialization = 0;
 #end
 
 #namelist vary_element static

@@ -776,7 +776,10 @@ long do_tracking(
         fflush(stdout);
       }
       if (flags&FIRST_BEAM_IS_FIDUCIAL && !(flags&FIDUCIAL_BEAM_SEEN)) {
-        do_match_energy(coord, n_left, P_central, 0);
+        if (!(flags&RESTRICT_FIDUCIALIZATION) ||
+            (entity_description[eptr->type].flags&MAY_CHANGE_ENERGY)) {
+          do_match_energy(coord, n_left, P_central, 0);
+        }
         eptr->Pref_output_fiducial = *P_central;
       } else if (flags&FIDUCIAL_BEAM_SEEN) {
         if (*P_central!=eptr->Pref_output_fiducial)
