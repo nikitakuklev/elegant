@@ -17,7 +17,7 @@
 static double tmp_safe_sqrt;
 #define SAFE_SQRT(x) ((tmp_safe_sqrt=(x))<0?0.0:sqrt(tmp_safe_sqrt))
 
-#define FINAL_PROPERTY_PARAMETERS 96
+#define FINAL_PROPERTY_PARAMETERS (96+9)
 #define FINAL_PROPERTY_LONG_PARAMETERS 5
 #define F_SIGMA_OFFSET 0
 #define F_SIGMA_QUANS 7
@@ -33,7 +33,9 @@ static double tmp_safe_sqrt;
 #define F_NEMIT_QUANS 4
 #define F_WIDTH_OFFSET F_NEMIT_OFFSET+F_NEMIT_QUANS
 #define F_WIDTH_QUANS 16
-#define F_RMAT_OFFSET F_WIDTH_OFFSET+F_WIDTH_QUANS
+#define F_PERC_OFFSET F_WIDTH_OFFSET+F_WIDTH_QUANS
+#define F_PERC_QUANS 9
+#define F_RMAT_OFFSET F_PERC_OFFSET+F_PERC_QUANS
 #define F_RMAT_QUANS 31
 #define F_STATS_OFFSET F_RMAT_OFFSET+F_RMAT_QUANS
 #define F_STATS_QUANS 5
@@ -104,6 +106,15 @@ static SDDS_DEFINITION final_property_parameter[FINAL_PROPERTY_PARAMETERS] = {
     {"Ddelta80", "&parameter name=Ddelta80, type=double, symbol=\"$gDd$r$b80$n\", &end"},
     {"Ddelta90", "&parameter name=Ddelta90, type=double, symbol=\"$gDd$r$b90$n\", &end"},
     {"Ddelta95", "&parameter name=Ddelta95, type=double, symbol=\"$gDd$r$b95$n\", &end"},
+    {"DtPerc10", "&parameter name=DtPerc10, type=double, units=s, &end"},
+    {"DtPerc20", "&parameter name=DtPerc20, type=double, units=s, &end"},
+    {"DtPerc30", "&parameter name=DtPerc30, type=double, units=s, &end"},
+    {"DtPerc40", "&parameter name=DtPerc40, type=double, units=s, &end"},
+    {"DtPerc50", "&parameter name=DtPerc50, type=double, units=s, &end"},
+    {"DtPerc60", "&parameter name=DtPerc60, type=double, units=s, &end"},
+    {"DtPerc70", "&parameter name=DtPerc70, type=double, units=s, &end"},
+    {"DtPerc80", "&parameter name=DtPerc80, type=double, units=s, &end"},
+    {"DtPerc90", "&parameter name=DtPerc90, type=double, units=s, &end"},
     {"R11", "&parameter name=R11, type=double, symbol=\"R$b11$n\" &end"},
     {"R12", "&parameter name=R12, type=double, units=m, symbol=\"R$b12$n\" &end"},
     {"R13", "&parameter name=R13, type=double, symbol=\"R$b13$n\" &end"},
@@ -354,7 +365,8 @@ long compute_final_properties
   static long percDataMax = 0;
   double percLevel[12] = {25, 20, 15, 10, 5, 2.5, 75, 80, 85, 90, 95, 97.5};
   double tPosition[12], deltaPosition[12];
-  
+  double percLevel2[9] = {10,20,30,40,50,60,70,80,90};
+  double tPosition2[9];
   log_entry("compute_final_properties");
 
   if (!data)
@@ -412,12 +424,13 @@ long compute_final_properties
     data[6+F_SIGMA_OFFSET] = sqrt(sum/sums->n_part);
     /* results of these calls used below */
     approximate_percentiles(tPosition, percLevel, 12, tData, sums->n_part, ANALYSIS_BINS);
+    approximate_percentiles(tPosition2, percLevel2, 9, tData, sums->n_part, ANALYSIS_BINS);
     approximate_percentiles(deltaPosition, percLevel, 12, deltaData, sums->n_part, ANALYSIS_BINS);
   }
   else {
     for (i=0; i<7; i++) 
       data[i+F_CENTROID_OFFSET] = data[i+F_SIGMA_OFFSET] = 0;
-    dt = Ddp = 0;
+    dt = Ddp = tmin = tmax = 0;
     for (i=0; i<12; i++)
       tPosition[i] = deltaPosition[i] = 0;
   }
@@ -457,10 +470,15 @@ long compute_final_properties
       data[F_WIDTH_OFFSET+ 4+i] =     tPosition[6+i]-    tPosition[0+i];
       data[F_WIDTH_OFFSET+10+i] = deltaPosition[6+i]-deltaPosition[0+i];
     }
+    for (i=0; i<9; i++)
+      data[F_PERC_OFFSET+i] = tPosition2[i]-tmin;
   }
-  else
+  else {
     for (i=0; i<10; i++)
       data[F_WIDTH_OFFSET] = 0;
+    for (i=0; i<9; i++)
+      data[F_PERC_OFFSET+i] = tPosition2[i]-tmin;
+  }
 
   /* compute emittances */
   data[F_EMIT_OFFSET]   = rms_emittance(coord, 0, 1, sums->n_part, NULL, NULL, NULL);
