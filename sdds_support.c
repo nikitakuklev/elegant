@@ -267,10 +267,17 @@ void SDDS_WatchPointSetup(WATCH *watch, long mode, long lines_per_row,
                                 command_file, lattice_file,
                                 standard_parameter, STANDARD_PARAMETERS, phase_space_column, PHASE_SPACE_COLUMNS,
                                 caller, SDDS_EOS_NEWFILE);
+        if (SDDS_DefineSimpleColumn(SDDS_table, "dt", "s", SDDS_DOUBLE)<0) {
+          fprintf(stderr, "Unable to define SDDS column dt for file %s (%s)\n",
+                  filename, caller);
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+          exit(1);
+        }
         if (!SDDS_DefineSimpleParameter(SDDS_table, "Pass", NULL, SDDS_LONG) ||
             !SDDS_DefineSimpleParameter(SDDS_table, "Particles", NULL, SDDS_LONG) ||
             !SDDS_DefineSimpleParameter(SDDS_table, "pCentral", "m$be$nc", SDDS_DOUBLE) ||
-            !SDDS_DefineSimpleParameter(SDDS_table, "PassLength", "m", SDDS_DOUBLE)) {
+            !SDDS_DefineSimpleParameter(SDDS_table, "PassLength", "m", SDDS_DOUBLE) ||
+            !SDDS_DefineSimpleParameter(SDDS_table, "PassCentralTime", "s", SDDS_DOUBLE)) {
             fprintf(stderr, "Unable define SDDS parameter for file %s (%s)\n", filename, caller);
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
             exit(1);
@@ -316,7 +323,7 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
                           double length)
 {
     long i, row;
-    double p;
+    double p, t0, t, dt;
 
     log_entry("dump_watch_particles");
     if (!watch->initialized)
@@ -336,13 +343,15 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
     row = 0;
+    t0 = pass*length*sqrt(Po*Po+1)/(c_mks*(Po+1e-32));
     for (i=0; i<particles; i++) {
         if (watch->fraction==1 || random_2(0)<watch->fraction) {
             p = Po*(1+particle[i][5]);
+            t = particle[i][4]/(c_mks*p/sqrt(sqr(p)+1));
             if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row++,
                                    0, particle[i][0], 1, particle[i][1], 2, particle[i][2], 3, particle[i][3],
-                                   4, particle[i][4]/(c_mks*p/sqrt(sqr(p)+1)), 5, p,
-                                   6, (long)particle[i][6], -1)) {
+                                   4, t, 5, p,
+                                   6, (long)particle[i][6], 7, t-t0, -1)) {
                 SDDS_SetError("Problem setting SDDS row values (dump_watch_particles)");
                 SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
                 }
@@ -350,7 +359,9 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
         }
     if (!SDDS_SetParameters(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
                             "Step", step, "Pass", pass, "Particles", row, "pCentral", Po,
-                            "PassLength", length, NULL)) {
+                            "PassLength", length, 
+                            "PassCentralTime", t0, 
+                            NULL)) {
         SDDS_SetError("Problem setting SDDS parameters (dump_watch_particles)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
