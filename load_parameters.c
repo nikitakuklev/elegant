@@ -255,9 +255,8 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
     }
 
     occurence = NULL;
-    if (!change_defined_values) {
-      if (SDDS_GetColumnIndex(&load_request[i].table, Occurence_ColumnName)>=0 &&
-          !(occurence = (long *)SDDS_GetColumn(&load_request[i].table, Occurence_ColumnName))) {
+    if (SDDS_GetColumnIndex(&load_request[i].table, Occurence_ColumnName)>=0) {
+      if (!(occurence = (long *)SDDS_GetColumn(&load_request[i].table, Occurence_ColumnName))) {
         fprintf(stdout, "Error: problem accessing data from load_parameters file %s\n", load_request[i].filename);
         fflush(stdout);
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
