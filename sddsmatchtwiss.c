@@ -55,6 +55,10 @@ CopyrightNotice001*/
  * Michael Borland, 2000
  *
  $Log: not supported by cvs2svn $
+ Revision 1.12  2002/01/30 23:46:44  borland
+ Fixed bug in beta/alpha matching when beta and alpha aren't given on the
+ command line.
+
  Revision 1.11  2002/01/22 18:42:46  borland
  Fixed problem with usage message (missing escapes at end of line).
 
@@ -301,9 +305,12 @@ int main(int argc, char **argv)
         !(t = SDDS_GetColumnInDoubles(&SDDSin, "t")) ||
         !(p = SDDS_GetColumnInDoubles(&SDDSin, "p")))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-    PerformTransformation(x, xp, p, rows, &xSpec, readCode==1?1:!oneTransform);
-    PerformTransformation(y, yp, p, rows, &ySpec, readCode==1?1:!oneTransform);
-    PerformZTransformation(t, p, x, xp, y, yp, rows, &zSpec, readCode==1?1:!oneTransform);
+    if (xSpec.flags)
+      PerformTransformation(x, xp, p, rows, &xSpec, readCode==1?1:!oneTransform);
+    if (ySpec.flags)
+      PerformTransformation(y, yp, p, rows, &ySpec, readCode==1?1:!oneTransform);
+    if (zSpec.flags)
+      PerformZTransformation(t, p, x, xp, y, yp, rows, &zSpec, readCode==1?1:!oneTransform);
     if (verbose) {
       if (xSpec.flags)
         fprintf(stderr, "x transformation: %le, %le, %le, %le, %le, %le\n",
@@ -349,9 +356,15 @@ long PerformTransformation(double *x, double *xp, double *p, long rows, PLANE_SP
 
   if (computeTransform) {
     computeCorrelations(&S11, &S16, &S66, x, p, rows);
-    match->etaBeam = eta1 = S16/S66;
+    if (S66)
+      match->etaBeam = eta1 = S16/S66;
+    else
+      match->etaBeam = eta1 = 0;
     computeCorrelations(&S22, &S26, &S66, xp, p, rows);
-    match->etapBeam = etap1 = S26/S66;
+    if (S66)
+      match->etapBeam = etap1 = S26/S66;
+    else
+      match->etapBeam = etap1 = 0;
   } else {
     eta1 = match->etaBeam;
     etap1 = match->etapBeam;
