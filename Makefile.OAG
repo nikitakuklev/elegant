@@ -29,7 +29,7 @@ ifdef VALGRIND
 HOST_OPT=NO
 endif
 
-PRODOAG = elegant sddsemitmeas madto \
+PRODOAG = elegant sddsemitmeas sddsemitproc madto \
           sddssasefel sddsTouschekInteg ibsEmittance \
           recurseSetup haissinski sddsmatchtwiss \
           sddsanalyzebeam sddsrandmult sddsresdiag
@@ -106,6 +106,8 @@ elegant_SRCS = 	alpha_data.c alpha_matrix.c amplif.c analyze.c aperture_search.c
 		sasefel.c alter.c sliceAnalysis.c divideElements.c transmuteElements.c \
 		frfmode.c ftrfmode.c tfeedback.c engeCoef.c lsc.c frequencyMap.c \
 		GWigSymplecticPass.c gwig.c
+
+sddsemitproc_SRCS = sddsemitproc.c
 
 sddsemitmeas_SRCS = sddsemitmeas.c
 
