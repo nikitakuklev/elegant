@@ -124,7 +124,7 @@ void setup_sdds_beam(
     }
   }
   
-  input_initialized = has_been_read = 0;
+  inputFileIndex = input_initialized = has_been_read = 0;
 
 
   if ((input_type_code=match_string(input_type, input_type_name, N_SDDS_INPUT_TYPES, 0))<0)
