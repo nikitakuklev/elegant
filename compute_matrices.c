@@ -71,7 +71,9 @@ VMATRIX *accumulate_matrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long ord
       abort();
     }
     if (member->matrix) {
-      concat_matrices(M2, member->matrix, M1);
+      concat_matrices(M2, member->matrix, M1,
+                      entity_description[member->type].flags&HAS_RF_MATRIX?
+                      CONCAT_EXCLUDE_S0:0);
       tmp = M2;
       M2  = M1;
       M1  = tmp;
@@ -136,13 +138,16 @@ VMATRIX *append_full_matrix(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long orde
             abort();
             }
         if (member->matrix) {
-            concat_matrices(M2, member->matrix, M1);
-            tmp = M2;
-            M2  = M1;
-            M1  = tmp;
-            }
-        member = member->succ;
+          concat_matrices(M2, member->matrix, M1,
+                          entity_description[member->type].flags&HAS_RF_MATRIX?
+                        CONCAT_EXCLUDE_S0:0);
+          tmp = M2;
+          M2  = M1;
+          M1  = tmp;
         }
+        member = member->succ;
+      }
+  
     if (M2) {
         free_matrices(M2); tfree(M2); M2 = NULL;
         }
@@ -933,9 +938,9 @@ VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, doubl
         } else
           continue;
         if (end==0) {
-          concat_matrices(Mtot, M, Medge);
+          concat_matrices(Mtot, M, Medge, CONCAT_EXCLUDE_S0);
         } else {
-          concat_matrices(Mtot, Medge, M);
+          concat_matrices(Mtot, Medge, M, CONCAT_EXCLUDE_S0);
         }
         tmp = Mtot;
         Mtot = M;

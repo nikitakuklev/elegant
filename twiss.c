@@ -234,7 +234,9 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, RADIATION_INTEGRALS
       /* use matrix concatenation to include effect of beam path */
       for (i=0; i<6; i++) 
         path0[i] = M1->C[i] = path[i];
-      concat_matrices(M2, elem->matrix, M1);
+      concat_matrices(M2, elem->matrix, M1,
+                      entity_description[elem->type].flags&HAS_RF_MATRIX?
+                      CONCAT_EXCLUDE_S0:0);
       R = M2->R;
       /* record new centroids for beam path */
       for (i=0; i<6; i++)
@@ -938,7 +940,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
 {
   VMATRIX *M;
   double chromx, chromy, dbetax, dbetay, alpha1, alpha2, dalphax, dalphay;
-  double x_acc_z, y_acc_z, eta2[4];
+  double x_acc_z, y_acc_z, eta2[4] = {0,0,0,0};
   ELEMENT_LIST *eptr, *elast;
   char *x_acc_name, *y_acc_name;
   long i;

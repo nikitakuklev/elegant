@@ -67,7 +67,7 @@ VMATRIX *bend_matrix(
 
         if ((flags&BEND_EDGE1_EFFECTS) && !(flags&SAME_BEND_PRECEDES)) {
             Medge = edge_matrix(ea1, ha, n, -1, fint*gap, order, edge_order>=2, TRANSPORT);
-            concat_matrices(Mtot, M, Medge);
+            concat_matrices(Mtot, M, Medge, 0);
             tmp  = Mtot;
             Mtot = M;
             M    = tmp;
@@ -76,7 +76,7 @@ VMATRIX *bend_matrix(
 
         if ((flags&BEND_EDGE2_EFFECTS) && !(flags&SAME_BEND_FOLLOWS)) {
             Medge = edge_matrix(ea2, ha, n, 1, fint*gap, order, edge_order>=2, TRANSPORT);
-            concat_matrices(Mtot, Medge, M);
+            concat_matrices(Mtot, Medge, M, 0);
             tmp  = Mtot;
             Mtot = M;
             M    = tmp;
@@ -246,14 +246,14 @@ VMATRIX *hvcorrector_matrix(
             Mtot =  tmalloc(sizeof(*Mtot));
             initialize_matrices(Mtot, Mtot->order=max_order);
             Medge = edge_matrix(0.0, h, 0.0, -1, 0.0, M->order, 1, 0);
-            concat_matrices(Mtot, M, Medge);
+            concat_matrices(Mtot, M, Medge, 0);
             tmp  = Mtot;
             Mtot = M;
             M    = tmp;
             free_matrices(Medge); tfree(Medge);
 
             Medge = edge_matrix(kick, h, 0.0, 1, 0.0, M->order, 1, 0);
-            concat_matrices(Mtot, Medge, M);
+            concat_matrices(Mtot, Medge, M, 0);
             tmp  = Mtot;
             Mtot = M;
             M    = tmp;
@@ -315,14 +315,14 @@ VMATRIX *corrector_matrix(
             Mtot =  tmalloc(sizeof(*Mtot));
             initialize_matrices(Mtot, Mtot->order=max_order);
             Medge = edge_matrix(0.0, h, 0.0, -1, 0.0, max_order, 1, 0);
-            concat_matrices(Mtot, M, Medge);
+            concat_matrices(Mtot, M, Medge, 0);
             tmp  = Mtot;
             Mtot = M;
             M    = tmp;
             free_matrices(Medge); tfree(Medge); 
         
             Medge = edge_matrix(kick, h, 0.0, 1, 0.0, max_order, 1, 0);
-            concat_matrices(Mtot, Medge, M);
+            concat_matrices(Mtot, Medge, M, 0);
             tmp  = Mtot;
             Mtot = M;
             M    = tmp;

@@ -595,6 +595,7 @@ typedef struct {
 #define OFFSETS_CHECKED 0x00000008UL
 #define IS_MAGNET       0x00000010UL
 #define MATRIX_TRACKING 0x00000020UL
+#define HAS_RF_MATRIX   0x00000040UL
 typedef struct {
     long n_params;
     unsigned long flags;
@@ -1702,8 +1703,9 @@ extern void free_elements1(ELEMENT_LIST *elemlist);
 extern void concatenate_beamline(LINE_LIST *beamline, RUN *run);
  
 /* prototypes for concat_mat.c: */
-extern void concat_matrices(VMATRIX *M2, VMATRIX *M1, VMATRIX *M0);
- 
+extern void concat_matrices(VMATRIX *M2, VMATRIX *M1, VMATRIX *M0, unsigned long mode);
+#define CONCAT_EXCLUDE_S0 0x0001UL
+
 /* prototypes for copy_particles.c: */
 extern void copy_particles(double **copy, double **original, long n_particles);
  
@@ -2117,6 +2119,8 @@ void finish_load_parameters();
 #define LOAD_FLAG_IGNORE       (1<<LOAD_MODE_IGNORE)
 #define LOAD_FLAG_FRACTIONAL   (1<<LOAD_MODE_FRACTIONAL)
 #define LOAD_FLAG_VERBOSE      (LOAD_FLAG_FRACTIONAL<<1)
+extern long nearestInteger(double value);
+
 
 typedef struct {
     char *name, *text; 

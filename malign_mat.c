@@ -36,12 +36,12 @@ void misalign_matrix(VMATRIX *M, double dx, double dy, double dz, double bend_an
     mal.dz =   dx*sin(bend_angle) - dz*cos(bend_angle);
     mal.dy = dy;
     M2 = misalignment_matrix(&mal, M->order);
- 
+    
     tmp = tmalloc(sizeof(*tmp));
     initialize_matrices(tmp, tmp->order=M->order);
 
-    concat_matrices(tmp, M, M1);
-    concat_matrices(M, M2, tmp);
+    concat_matrices(tmp, M, M1, 0);
+    concat_matrices(M, M2, tmp, 0);
 
     free_matrices(tmp); tfree(tmp); tmp = NULL;
     free_matrices(M1); tfree(M1); M1 = NULL;
@@ -89,7 +89,7 @@ VMATRIX *misalignment_matrix(MALIGN *malign, long order)
             initialize_matrices(M1, M1->order=M->order);
             }
         tmp = drift_matrix(malign->dz, M->order);
-        concat_matrices(M1, M, tmp);
+        concat_matrices(M1, M, tmp, 0);
         free_matrices(tmp); tfree(tmp); tmp = NULL;
         copy_matrices1(M, M1);
         }
@@ -111,7 +111,7 @@ void offset_matrix(VMATRIX *M, double dx, double dxp, double dy, double dyp)
     M1 = misalignment_matrix(&mal, M->order);
 
     copy_matrices(&M2, M);
-    concat_matrices(M, &M2, M1);
+    concat_matrices(M, &M2, M1, 0);
 
     free_matrices(M1); tfree(M1); M1 = NULL;
     free_matrices(&M2); 

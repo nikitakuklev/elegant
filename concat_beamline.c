@@ -79,7 +79,9 @@ void concatenate_beamline(LINE_LIST *beamline, RUN *run)
                 new_seq = 0;
                 }
             else {
-                concat_matrices(M2, elem->matrix, M1);
+                concat_matrices(M2, elem->matrix, M1,
+                                entity_description[elem->type].flags&HAS_RF_MATRIX?
+                                CONCAT_EXCLUDE_S0:0);
                 tmp = M1;  M1 = M2;  M2 = tmp;
                 }
             in_seq = 1;

@@ -338,7 +338,9 @@ void run_matrix_output(
                        entity_name[member->type], member->name);
                 fflush(stdout);
 #endif
-                concat_matrices(M2, member->matrix, M1);
+                concat_matrices(M2, member->matrix, M1, 
+                                entity_description[member->type].flags&HAS_RF_MATRIX?
+                                CONCAT_EXCLUDE_S0:0);
                 tmp = M2;
                 M2  = M1;
                 M1  = tmp;

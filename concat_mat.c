@@ -23,7 +23,7 @@
     C[j]*R[k][n]*T[l][m][p] + C[k]*R[l][n]*T[j][m][p] + C[l]*R[j][n]*T[k][m][p] + \
     C[j]*R[l][n]*T[k][m][p] + C[k]*R[j][n]*T[l][m][p] + C[l]*R[k][n]*T[j][m][p] : 0)
 
-void concat_matrices(VMATRIX *M2, VMATRIX *M1, VMATRIX *M0)
+void concat_matrices(VMATRIX *M2, VMATRIX *M1, VMATRIX *M0, unsigned long mode)
 /* M2 = M1*M0.  M0 is applied to particles first. */
 {
     double *C2, **R2, ***T2, ****Q2;
@@ -49,7 +49,11 @@ void concat_matrices(VMATRIX *M2, VMATRIX *M1, VMATRIX *M0)
         bomb("order<1 in concat_matrices", NULL);
 
     M0C4 = C0[4];
-    C0[4] = 0;  /* necessary because path length is not differential quantity */
+    if (mode&CONCAT_EXCLUDE_S0) {
+      /* necessary with rf elements because path length is not differential quantity */
+      C0[4] = 0; 
+    }
+    
     /* calculate new zero-th order terms */
     for (i=0; i<6; i++) {
         /* sum up contributions to C[i]: */
@@ -67,7 +71,8 @@ void concat_matrices(VMATRIX *M2, VMATRIX *M1, VMATRIX *M0)
             }
         C2[i] = sum + C1[i];
         }
-    C2[4] += M0C4;
+    if (mode&CONCAT_EXCLUDE_S0)
+      C2[4] += M0C4;
     
     /* calculate new first order terms */
     for (i=0; i<6; i++) {
@@ -211,7 +216,8 @@ void concat_matrices(VMATRIX *M2, VMATRIX *M1, VMATRIX *M0)
             }
         }
 
-    C0[4] = M0C4;
+    if (mode&CONCAT_EXCLUDE_S0)
+      C0[4] = M0C4;
 
     log_exit("concat_matrices");
     }

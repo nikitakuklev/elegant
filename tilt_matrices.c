@@ -20,8 +20,8 @@ void tilt_matrices0(VMATRIX *M, double tilt)
     Mr = tmalloc(sizeof(*Mr));
     initialize_matrices(Mr, M->order);
 
-    concat_matrices(Mr,     M, rot);
-    concat_matrices(M  , irot, Mr );
+    concat_matrices(Mr,     M, rot, 0);
+    concat_matrices(M  , irot, Mr , 0);
     free_matrices(rot); tfree(rot); rot = NULL;
     free_matrices(irot); tfree(irot); irot = NULL;
     free_matrices(Mr); tfree(Mr); Mr = NULL;
@@ -82,8 +82,8 @@ void tilt_matrices(VMATRIX *M, double tilt)
 
     IRot.R[4][4] = IRot.R[5][5] = Rot.R[4][4]  = Rot.R[5][5]  = 1;
 
-    concat_matrices(&Mr,     M, &Rot);
-    concat_matrices(M  , &IRot, &Mr );
+    concat_matrices(&Mr,     M, &Rot, 0);
+    concat_matrices(M  , &IRot, &Mr , 0);
 
     free_matrices(&Mr); 
 

@@ -106,7 +106,7 @@ VMATRIX *quadrupole_matrix(double K1, double l, long maximum_order,
 
         /* entrance fringe fields */
         Mfringe = quad_fringe(l, K1, M->order, 0, 0.0);
-        concat_matrices(Mtot, M, Mfringe);
+        concat_matrices(Mtot, M, Mfringe, 0);
         tmp  = Mtot;
         Mtot = M;
         M    = tmp;
@@ -114,7 +114,7 @@ VMATRIX *quadrupole_matrix(double K1, double l, long maximum_order,
 
         /* exit fringe fields */
         Mfringe = quad_fringe(l, K1, M->order, 1, 0.0);
-        concat_matrices(Mtot, Mfringe, M);
+        concat_matrices(Mtot, Mfringe, M, 0);
         tmp  = Mtot;
         Mtot = M;
         M    = tmp;
