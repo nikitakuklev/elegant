@@ -252,13 +252,6 @@ char **argv;
     
     beam_type = -1;
 
-    for (i=0; i<6; i++) {
-      double init = 0.5;
-      /* the ith phase space dimension uses the halton sequence i */
-      if (nextHaltonSequencePoint(-1, &init)!=i)
-        bomb("problem with Halton sequence initialization", NULL);
-    }
-    
     while (get_namelist(s, NAMELIST_BUFLEN, fp_in)) {
 #if defined(VAX_VMS) || defined(UNIX) || defined(_WIN32)
         report_stats(stdout, "statistics: ");

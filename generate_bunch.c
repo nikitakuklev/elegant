@@ -29,12 +29,12 @@ void zero_centroid(double **particle, long n_particles, long coord);
 long dynap_distribution(double **particle, long n_particles, double sx, double sy,
             long nx, long ny);
 void gaussian_distribution(double **particle, long n_particles, 
-    long offset, double s1, double s2, long symmetrize, long haltonSequence, double limit,
+    long offset, double s1, double s2, long symmetrize, long *haltonID, double limit,
     double limit_invar, double beta);
 void hard_edge_distribution(double **particle, long n_particles, 
-    long offset, double max1, double max2, long symmetrize, long haltonSequence, double cutoff);
+    long offset, double max1, double max2, long symmetrize, long *haltonID, double cutoff);
 void uniform_distribution(double **particle, long n_particles, long offset, 
-    double max1, double max2, long symmetrize, long haltonSequence, double cutoff);
+    double max1, double max2, long symmetrize, long *haltonID, double cutoff);
 void shell_distribution(double **particle, long n_particles, long offset, 
     double s1, double s2, long symmetrize, double cutoff);
 void line_distribution(double **particle, long n_particles, long offset, 
@@ -56,7 +56,7 @@ long generate_bunch(
     long *enforce_rms_params,
     long limit_invar,
     long symmetrize,
-    long *haltonSequence,
+    long *haltonID,
     long *doRandomizeOrder,
     long limit_in_4d,
     double Po
@@ -94,18 +94,18 @@ long generate_bunch(
           case GAUSSIAN_BEAM:
             gaussian_distribution(particle, n_particles, 0, s1, s2, 
                                   symmetrize && (enforce_rms_params[0] || n_particles%4==0), 
-                                  haltonSequence[0], x_plane->cutoff,
+                                  haltonID, x_plane->cutoff,
                                   (limit_invar?sqr(x_plane->cutoff)*x_plane->emit:0.0), x_plane->beta);
             break;
           case HARD_EDGE_BEAM:
             hard_edge_distribution(particle, n_particles, 0, s1, s2, 
                                    symmetrize && (enforce_rms_params[0] || n_particles%4==0), 
-                                   haltonSequence[0], x_plane->cutoff);
+                                   haltonID, x_plane->cutoff);
             break;
           case UNIFORM_ELLIPSE:
             uniform_distribution(particle, n_particles, 0, s1, s2, 
                                  symmetrize && (enforce_rms_params[0] || n_particles%4==0), 
-                                 haltonSequence[0], x_plane->cutoff);
+                                 haltonID, x_plane->cutoff);
             break;
           case SHELL_BEAM:
             shell_distribution(particle, n_particles, 0, s1, s2, 
@@ -133,20 +133,19 @@ long generate_bunch(
           case GAUSSIAN_BEAM:
             gaussian_distribution(particle, n_particles, 2, s1, s2, 
                                   symmetrize && (enforce_rms_params[1] || n_particles%4==0), 
-                                  haltonSequence[1], 
+                                  haltonID,
                                   y_plane->cutoff, (limit_invar?sqr(y_plane->cutoff)*y_plane->emit:0.0),
                                   y_plane->beta);
             break;
           case HARD_EDGE_BEAM:
             hard_edge_distribution(particle, n_particles, 2, s1, s2, 
                                    symmetrize && (enforce_rms_params[1] || n_particles%4==0), 
-                                   haltonSequence[1], 
-                                   y_plane->cutoff);
+                                   haltonID, y_plane->cutoff);
             break;
           case UNIFORM_ELLIPSE:
             uniform_distribution(particle, n_particles, 2, s1, s2, 
                                  symmetrize && (enforce_rms_params[1] || n_particles%4==0), 
-                                 haltonSequence[1], y_plane->cutoff);
+                                 haltonID, y_plane->cutoff);
             break;
           case SHELL_BEAM:
             shell_distribution(particle, n_particles, 2, s1, s2, 
@@ -219,18 +218,18 @@ long generate_bunch(
       case GAUSSIAN_BEAM:
         gaussian_distribution(particle, n_particles, 4, s1, s2, 
                               symmetrize && (enforce_rms_params[2] || n_particles%4==0),
-                              haltonSequence[2], longit->cutoff, 
+                              haltonID, longit->cutoff, 
                               (limit_invar?sqr(longit->cutoff)*emit:0.0), beta);
         break;
       case HARD_EDGE_BEAM:
         hard_edge_distribution(particle, n_particles, 4, s1, s2, 
                                symmetrize && (enforce_rms_params[2] || n_particles%4==0), 
-                               haltonSequence[2], longit->cutoff);
+                               haltonID, longit->cutoff);
         break;
       case UNIFORM_ELLIPSE:
         uniform_distribution(particle, n_particles, 4, s1, s2, 
                              symmetrize && (enforce_rms_params[2] || n_particles%4==0),
-                             haltonSequence[2], longit->cutoff);
+                             haltonID, longit->cutoff);
         break;
       case SHELL_BEAM:
         shell_distribution(particle, n_particles, 4, s1, s2, 
@@ -329,7 +328,7 @@ void gaussian_distribution(
                            double s1, 
                            double s2,
                            long symmetrize,
-                           long haltonSequence,
+                           long *haltonID,
                            double limit,
                            double limit_invar,
                            double beta
@@ -338,14 +337,14 @@ void gaussian_distribution(
   float x1, x2;
   long i_particle;
   
-  if (haltonSequence) {
+  if (haltonID[offset] && haltonID[offset+1]) {
     double s12[2], buffer;
     long dim;
     s12[0] = s1;
     s12[1] = s2;
     for (dim=0; dim<2; dim++) {
       for (i_particle=0; i_particle<n_particles; i_particle++) {
-        nextHaltonSequencePoint(offset+dim, &buffer);
+        buffer = nextHaltonSequencePoint(haltonID[offset+dim]);
         if (!convertSequenceToGaussianDistribution(&buffer, 1, limit))
           i_particle--;
         else
@@ -388,7 +387,7 @@ void uniform_distribution(
                           double max1, 
                           double max2, 
                           long symmetrize,
-                          long haltonSequence,
+                          long *haltonID,
                           double cutoff
                           )
 {
@@ -404,9 +403,9 @@ void uniform_distribution(
 
   for (i_particle=0; i_particle<n_particles; i_particle++) {
     do {
-      if (haltonSequence) {
-        if (!nextHaltonSequencePoint(offset, &rnd1) ||
-            !nextHaltonSequencePoint(offset+1, &rnd2))
+      if (haltonID[offset] && haltonID[offset+1]) {
+        if ((rnd1=nextHaltonSequencePoint(haltonID[offset]))<0 ||
+            (rnd2=nextHaltonSequencePoint(haltonID[offset+1]))<0)
           bomb("problem determining Halton sequence", NULL);
         rnd1 -= 0.5;
         rnd2 -= 0.5;
@@ -477,7 +476,7 @@ void hard_edge_distribution(
                             double max1, 
                             double max2, 
                             long symmetrize,
-                            long haltonSequence,
+                            long *haltonID,
                             double cutoff
                             )
 {
@@ -493,9 +492,9 @@ void hard_edge_distribution(
   range2 = 2*max2*cutoff;
 
   for (i_particle=0; i_particle<n_particles; i_particle++) {
-    if (haltonSequence) {
-      nextHaltonSequencePoint(offset, &rnd1);
-      nextHaltonSequencePoint(offset+1, &rnd2);
+    if (haltonID[offset] && haltonID[offset+1]) {
+      rnd1 = nextHaltonSequencePoint(haltonID[offset]);
+      rnd2 = nextHaltonSequencePoint(haltonID[offset+1]);
       rnd1 -= 0.5;
       rnd2 -= 0.5;
     } else {

@@ -25,6 +25,7 @@ static SDDS_TABLE SDDS_bunch;
 static long SDDS_bunch_initialized;
 static long beamRepeatSeed;
 static long bunchGenerated;
+static long haltonID[6];
 
 void fill_transverse_structure(TRANSVERSE *trans, double emit, double beta, 
     double alpha, double eta, double etap, long xbeam_type, double cutoff,
@@ -46,123 +47,138 @@ void setup_bunched_beam(
     long save_original
     )
 {
+  long i, offset;
+  log_entry("setup_bunched_beam");
 
-    log_entry("setup_bunched_beam");
+  /* process namelist input */
+  set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
+  set_print_namelist_flags(0);
+  process_namelist(&bunched_beam, nltext);
+  if (Po<=0)
+    Po = run->p_central;
+  if (use_twiss_command_values) {
+    double xTwiss[5], yTwiss[5];
+    long mode;
+    
+    if (!get_twiss_mode(&mode, xTwiss, yTwiss) && mode!=0)
+      bomb("use_twiss_command_values invalid unless twiss_output command given previously with matched=0.",
+           NULL);
+    beta_x = xTwiss[0];
+    alpha_x = xTwiss[1];
+    eta_x = xTwiss[2];
+    etap_x = xTwiss[3];
+    beta_y = yTwiss[0];
+    alpha_y = yTwiss[1];
+    eta_y = yTwiss[2];
+    etap_y = yTwiss[3];
+  }
+  
+  print_namelist(stdout, &bunched_beam);
 
-    /* process namelist input */
-    set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
-    set_print_namelist_flags(0);
-    process_namelist(&bunched_beam, nltext);
-    if (Po<=0)
-        Po = run->p_central;
-    if (use_twiss_command_values) {
-      double xTwiss[5], yTwiss[5];
-      long mode;
-      
-      if (!get_twiss_mode(&mode, xTwiss, yTwiss) && mode!=0)
-        bomb("use_twiss_command_values invalid unless twiss_output command given previously with matched=0.",
-             NULL);
-      beta_x = xTwiss[0];
-      alpha_x = xTwiss[1];
-      eta_x = xTwiss[2];
-      etap_x = xTwiss[3];
-      beta_y = yTwiss[0];
-      alpha_y = yTwiss[1];
-      eta_y = yTwiss[2];
-      etap_y = yTwiss[3];
+  /* check for validity of namelist inputs */
+  if (emit_nx && !emit_x)
+    emit_x = emit_nx/Po;
+  if (emit_ny && !emit_y)
+    emit_y = emit_ny/Po;
+  if (n_particles_per_bunch<=0)
+    bomb("n_particles_per_bunch is invalid", NULL);
+  if (emit_x<0 || beta_x<=0)
+    bomb("emit_x<=0 or beta_x<=0", NULL);
+  if (emit_y<0 || beta_y<=0)
+    bomb("emit_y<=0 or beta_y<=0", NULL);
+  if (sigma_dp<0 || sigma_s<0) 
+    bomb("sigma_dp<0 or sigma_s<0", NULL);
+  if (fabs(dp_s_coupling)>1)
+    bomb("|dp_s_coupling| > 1", NULL);
+  if (!distribution_type[0] || 
+      (x_beam_type=match_string(distribution_type[0], beam_type, 
+                                N_BEAM_TYPES, 0))<0)
+    bomb("missing or unknown x distribution type", NULL);
+  if (!distribution_type[1] || 
+      (y_beam_type=match_string(distribution_type[1], beam_type,
+                                N_BEAM_TYPES, 0))<0)
+    bomb("missing or unknown y distribution type", NULL);
+  if (!distribution_type[2] ||
+      (longit_beam_type=match_string(distribution_type[2], beam_type,
+                                     N_BEAM_TYPES, 0))<0)
+    bomb("missing or unknown longitudinal distribution type", NULL);
+  if (distribution_cutoff[0]<0)
+    bomb("x distribution cutoff < 0", NULL);
+  if (distribution_cutoff[1]<0)
+    bomb("y distribution cutoff < 0", NULL);
+  if (distribution_cutoff[2]<0)
+    bomb("longitudinal distribution cutoff < 0", NULL);
+  if ((enforce_rms_values[0] || enforce_rms_values[1] || enforce_rms_values[2]) && n_particles_per_bunch%4)
+    fputs("Note: you will get better results for enforcing RMS values if n_particles_per_bunch is divisible by 4.\n", stdout);
+
+  if (matched_to_cell) {
+    if (!(control->cell = get_beamline(NULL, matched_to_cell, run->p_central, 0)))
+      bomb("unable to find beamline definition for cell", NULL);
+  }
+  else
+    control->cell = NULL;
+
+  if (bunch) {
+    /* prepare dump of input particles */
+    bunch = compose_filename(bunch, run->rootname);
+    SDDS_PhaseSpaceSetup(&SDDS_bunch, bunch, SDDS_BINARY, 1, "bunched-beam phase space", run->runfile,
+                         run->lattice, "setup_bunched_beam");
+    SDDS_bunch_initialized = 1;
+  }
+
+  /* set up structures for creating initial particle distributions */ 
+  if (!control->cell) {
+    fill_transverse_structure(&x_plane, emit_x, beta_x, alpha_x, eta_x, etap_x,
+                              x_beam_type, distribution_cutoff[0], centroid);
+    fill_transverse_structure(&y_plane, emit_y, beta_y, alpha_y, eta_y, etap_y,
+                              y_beam_type, distribution_cutoff[1], centroid+2);
+  }
+  fill_longitudinal_structure(&longit, sigma_dp, sigma_s, dp_s_coupling,
+                              longit_beam_type, distribution_cutoff[2], centroid+4);
+
+  save_initial_coordinates = save_original || save_initial_coordinates;
+  if (n_particles_per_bunch==1)
+    one_random_bunch = 1;
+  if (!one_random_bunch)
+    save_initial_coordinates = save_original;
+  
+  beam->particle = (double**)zarray_2d(sizeof(double), n_particles_per_bunch, 7);
+  if (!save_initial_coordinates)
+    beam->original = beam->particle;
+  else
+    beam->original = (double**)zarray_2d(sizeof(double), n_particles_per_bunch, 7);
+  if (run->acceptance) 
+    beam->accepted = (double**)zarray_2d(sizeof(double), n_particles_per_bunch, 7);
+  else
+    beam->accepted = NULL;
+  
+  beam->n_original = beam->n_to_track = beam->n_particle = n_particles_per_bunch;
+  beam->n_accepted = beam->n_saved = 0;
+
+  if (one_random_bunch) {
+    /* make a seed for reinitializing the beam RN generator */
+    beamRepeatSeed = 1e8*random_4(1);
+    random_4(-beamRepeatSeed);
+  }
+  bunchGenerated = 0;
+  
+  for (i=0; i<3; i++) {
+    for (offset=0; offset<2; offset++) {
+      haltonID[2*i+offset] = 0;
+      if (halton_sequence[i]) {
+        if (halton_radix[2*i+offset]<0)
+          bomb("Radix for Halton sequence can't be negative", NULL);
+        if ((haltonID[2*i+offset] = startHaltonSequence(&halton_radix[2*i+offset], 0.5))<0) 
+          bomb("problem starting Halton sequence", NULL);
+        fprintf(stdout, "Using radix %ld for Halton sequence for coordinate %ld\n",
+                halton_radix[2*i+offset], 2*i+offset);
+      }
     }
-    
-    print_namelist(stdout, &bunched_beam);
-
-    /* check for validity of namelist inputs */
-    if (emit_nx && !emit_x)
-      emit_x = emit_nx/Po;
-    if (emit_ny && !emit_y)
-      emit_y = emit_ny/Po;
-    if (n_particles_per_bunch<=0)
-        bomb("n_particles_per_bunch is invalid", NULL);
-    if (emit_x<0 || beta_x<=0)
-        bomb("emit_x<=0 or beta_x<=0", NULL);
-    if (emit_y<0 || beta_y<=0)
-        bomb("emit_y<=0 or beta_y<=0", NULL);
-    if (sigma_dp<0 || sigma_s<0) 
-        bomb("sigma_dp<0 or sigma_s<0", NULL);
-    if (fabs(dp_s_coupling)>1)
-        bomb("|dp_s_coupling| > 1", NULL);
-    if (!distribution_type[0] || 
-        (x_beam_type=match_string(distribution_type[0], beam_type, 
-                            N_BEAM_TYPES, 0))<0)
-        bomb("missing or unknown x distribution type", NULL);
-    if (!distribution_type[1] || 
-        (y_beam_type=match_string(distribution_type[1], beam_type,
-                            N_BEAM_TYPES, 0))<0)
-        bomb("missing or unknown y distribution type", NULL);
-    if (!distribution_type[2] ||
-        (longit_beam_type=match_string(distribution_type[2], beam_type,
-                        N_BEAM_TYPES, 0))<0)
-        bomb("missing or unknown longitudinal distribution type", NULL);
-    if (distribution_cutoff[0]<0)
-        bomb("x distribution cutoff < 0", NULL);
-    if (distribution_cutoff[1]<0)
-        bomb("y distribution cutoff < 0", NULL);
-    if (distribution_cutoff[2]<0)
-        bomb("longitudinal distribution cutoff < 0", NULL);
-    if ((enforce_rms_values[0] || enforce_rms_values[1] || enforce_rms_values[2]) && n_particles_per_bunch%4)
-        fputs("Note: you will get better results for enforcing RMS values if n_particles_per_bunch is divisible by 4.\n", stdout);
-
-    if (matched_to_cell) {
-        if (!(control->cell = get_beamline(NULL, matched_to_cell, run->p_central, 0)))
-            bomb("unable to find beamline definition for cell", NULL);
-        }
-    else
-        control->cell = NULL;
-
-    if (bunch) {
-        /* prepare dump of input particles */
-        bunch = compose_filename(bunch, run->rootname);
-        SDDS_PhaseSpaceSetup(&SDDS_bunch, bunch, SDDS_BINARY, 1, "bunched-beam phase space", run->runfile,
-                             run->lattice, "setup_bunched_beam");
-        SDDS_bunch_initialized = 1;
-        }
-
-    /* set up structures for creating initial particle distributions */ 
-    if (!control->cell) {
-        fill_transverse_structure(&x_plane, emit_x, beta_x, alpha_x, eta_x, etap_x,
-                x_beam_type, distribution_cutoff[0], centroid);
-        fill_transverse_structure(&y_plane, emit_y, beta_y, alpha_y, eta_y, etap_y,
-                y_beam_type, distribution_cutoff[1], centroid+2);
-        }
-    fill_longitudinal_structure(&longit, sigma_dp, sigma_s, dp_s_coupling,
-            longit_beam_type, distribution_cutoff[2], centroid+4);
-
-    save_initial_coordinates = save_original || save_initial_coordinates;
-    if (n_particles_per_bunch==1)
-      one_random_bunch = 1;
-    if (!one_random_bunch)
-      save_initial_coordinates = save_original;
-    
-    beam->particle = (double**)zarray_2d(sizeof(double), n_particles_per_bunch, 7);
-    if (!save_initial_coordinates)
-      beam->original = beam->particle;
-    else
-      beam->original = (double**)zarray_2d(sizeof(double), n_particles_per_bunch, 7);
-    if (run->acceptance) 
-        beam->accepted = (double**)zarray_2d(sizeof(double), n_particles_per_bunch, 7);
-    else
-        beam->accepted = NULL;
-    
-    beam->n_original = beam->n_to_track = beam->n_particle = n_particles_per_bunch;
-    beam->n_accepted = beam->n_saved = 0;
-
-    if (one_random_bunch) {
-      /* make a seed for reinitializing the beam RN generator */
-      beamRepeatSeed = 1e8*random_4(1);
-      random_4(-beamRepeatSeed);
-    }
-    bunchGenerated = 0;
-    
-    log_exit("setup_bunched_beam");
-    }
+  }
+  fflush(stdout);
+  
+  log_exit("setup_bunched_beam");
+}
 
 long new_bunched_beam(
     BEAM *beam,
@@ -215,7 +231,7 @@ long new_bunched_beam(
         n_actual_particles = 
           generate_bunch(beam->original, n_particles_per_bunch, &x_plane,
                          &y_plane, &longit, enforce_rms_values, limit_invariants, 
-                         symmetrize, halton_sequence, randomize_order, limit_in_4d, Po);
+                         symmetrize, haltonID, randomize_order, limit_in_4d, Po);
         if (n_actual_particles!=n_particles_per_bunch)
             fprintf(stdout, "warning: only %ld of %ld requested particles are actually being tracked.\n", n_actual_particles, 
                     n_particles_per_bunch);
