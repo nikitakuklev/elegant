@@ -769,10 +769,13 @@ typedef struct {
 typedef struct {
     long fitpoint;
     /* values for internal use: */
-    long init_flags;       /* 1==twiss_mem initialized, 2===centroid_mem initialized */
+    unsigned long init_flags; /* 1:twiss_mem initialized, 
+                                 2:centroid_mem and sigma_mem initialized,
+                                 4:floor_mem initialized */
     long *twiss_mem;       /* betax, alphax, NUx, etax, etaxp, betay, ... */
     long *centroid_mem;    /* (x, xp, y, yp, s, dp, Pcen, n) */
     long *sigma_mem;       /* (x, xp, y, yp, s, dp) */
+    long *floor_mem;       /* X, Z, theta */
     } MARK;
 
 /* storage structure for alpha magnet */

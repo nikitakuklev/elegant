@@ -295,6 +295,26 @@ void final_floor_coordinates(LINE_LIST *beamline, double *X, double *Z, double *
     X0 += dX;
     Z0 += dZ;
 
+    if (elem->type==T_MARK && ((MARK*)elem->p_elem)->fitpoint) {
+      MARK *mark;
+      char s[100];
+      long i;
+      static char *suffix[3] = {"X", "Z", "Theta"};
+      mark = (MARK*)(elem->p_elem);
+      if (!(mark->init_flags&4)) {
+        mark->floor_mem = tmalloc(sizeof(*mark->floor_mem)*3);
+        for (i=0; i<3; i++) {
+          sprintf(s, "%s#%ld.%s", elem->name, elem->occurence,
+                  suffix[i]);
+          mark->floor_mem[i] = rpn_create_mem(s);
+        }
+        mark->init_flags |= 4;
+      }
+      rpn_store(X0, mark->floor_mem[0]);
+      rpn_store(Z0, mark->floor_mem[1]);
+      rpn_store(theta0, mark->floor_mem[2]);
+    }
+    
     elem = elem->succ;
   }
   *X = X0;

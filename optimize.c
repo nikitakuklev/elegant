@@ -948,6 +948,11 @@ double optimization_function(double *value, long *invalid)
       fprintf(stdout, "optimization_function: Tracking\n");
       fflush(stdout);
 #endif
+    output->n_z_points = 0;
+    if (output->sums_vs_z) {
+      free(output->sums_vs_z);
+      output->sums_vs_z = NULL;
+    }
     track_beam(run, control, error, variables, beamline, beam, output, optim_func_flags, 1,
                &charge);
     if (output->sasefel.active)
@@ -1037,7 +1042,7 @@ double optimization_function(double *value, long *invalid)
     if (force_output || (control->i_step-2)%output_sparsing_factor==0)
       do_track_beam_output(run, control, error, variables, beamline, beam, output, optim_func_flags,
                            charge);
-    
+
 #if DEBUG
     fprintf(stdout, "optimization_function: Returning %le,  invalid=%ld\n", result, *invalid);
     fflush(stdout);

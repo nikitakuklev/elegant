@@ -302,7 +302,7 @@ long track_beam(
   n_left = do_tracking(beam->particle, &n_trpoint, &effort, beamline, &p_central, 
                        beam->accepted, &output->sums_vs_z, &output->n_z_points,
                        NULL, run, control->i_step,
-                       (!(run->centroid || run->sigma)?FINAL_SUMS_ONLY:0)+
+                       (!(run->centroid || run->sigma)?FINAL_SUMS_ONLY:0)|
                        ((control->fiducial_flag|flags)&
                         (LINEAR_CHROMATIC_MATRIX+LONGITUDINAL_RING_ONLY+FIRST_BEAM_IS_FIDUCIAL
                          +FIDUCIAL_BEAM_SEEN+PRECORRECTION_BEAM)),
@@ -521,6 +521,8 @@ void setup_output(
         output->losses_initialized = 1;
         }
 
+    if (output->sums_vs_z)
+      free(output->sums_vs_z);
     output->sums_vs_z = NULL;
     output->n_z_points = 0;
     }
