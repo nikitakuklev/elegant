@@ -345,7 +345,8 @@ long track_beam(
                        ((control->fiducial_flag|flags)&
                         (LINEAR_CHROMATIC_MATRIX+LONGITUDINAL_RING_ONLY+FIRST_BEAM_IS_FIDUCIAL
                          +FIDUCIAL_BEAM_SEEN+RESTRICT_FIDUCIALIZATION+PRECORRECTION_BEAM)),
-                       control->n_passes, &(output->sasefel), finalCharge);
+                       control->n_passes, &(output->sasefel), &(output->sliceAnalysis),
+		       finalCharge);
   if (control->fiducial_flag&FIRST_BEAM_IS_FIDUCIAL && !(flags&PRECORRECTION_BEAM))
     control->fiducial_flag |= FIDUCIAL_BEAM_SEEN;
   

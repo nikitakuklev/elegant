@@ -367,6 +367,21 @@ typedef struct {
   long *sliceFound;
 } SASEFEL_OUTPUT;
 
+typedef struct {
+  long active, rows;
+  char *filename;
+  SDDS_DATASET SDDSout;
+  /* input data */
+  long nSlices;
+  /* simulation data */
+  double *ecnx, *ecny;
+  double *Cx, *Cy, *Cxp, *Cyp, *Ct, *Cdelta, *Sdelta, *length, *charge;
+  long *ecnxIndex, *ecnyIndex;
+  long *CxIndex, *CyIndex, *CxpIndex, *CypIndex, *CtIndex, *CdeltaIndex, *SdeltaIndex;
+  long *lengthIndex, *chargeIndex;
+  long *sliceFound;
+} SLICE_OUTPUT;
+
 /* structure to hold information for output files specified in run_setup namelist */
 
 typedef struct {
@@ -376,6 +391,7 @@ typedef struct {
     BEAM_SUMS *sums_vs_z;
     long n_z_points;
     SASEFEL_OUTPUT sasefel;
+    SLICE_OUTPUT sliceAnalysis;
     } OUTPUT_FILES;
 
 /* data arrays for awe dumps, found in dump_particlesX.c */
@@ -1824,7 +1840,15 @@ extern void compute_sigmas(double *emit, double *sigma, double *centroid, double
 extern void zero_beam_sums(BEAM_SUMS *sums, long n);
 extern void accumulate_beam_sums(BEAM_SUMS *sums, double **coords, long n_part, double p_central);
 extern void copy_beam_sums(BEAM_SUMS *target, BEAM_SUMS *source);
- 
+extern long computeSliceMoments(double C[6], double S[6][6], 
+			 double **part, long np, 
+			 double minValue, double maxValue);
+void performSliceAnalysisOutput(SLICE_OUTPUT *sliceOutput, double **particle, long particles, 
+				long newPage, long step, double Po, double charge, 
+				char *elementName, double elementPosition);
+void performSliceAnalysis(SLICE_OUTPUT *sliceOutput, double **particle, long particles, 
+			  double Po, double charge);
+
 /* prototypes for compute_matrices13.c: */
 extern VMATRIX *full_matrix(ELEMENT_LIST *elem, RUN *run, long order);
 extern VMATRIX *append_full_matrix(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long order);
@@ -1877,6 +1901,7 @@ extern long do_tracking(double **coord, long *n_original, long *effort, LINE_LIS
                         double *P_central, double **accepted, BEAM_SUMS **sums_vs_z, 
                         long *n_z_points, TRAJECTORY *traj_vs_z, RUN *run, long step,
                         unsigned long flags, long n_passes, SASEFEL_OUTPUT *sasefel,
+			SLICE_OUTPUT *sliceAnalysis,
                         double *finalCharge);
 extern void getTrackingElementInfo(char *buffer, long buflen, long *occurrence);
 extern void offset_beam(double **coord, long n_to_track, MALIGN *offset, double P_central);

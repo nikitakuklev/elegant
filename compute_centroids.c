@@ -176,3 +176,49 @@ void copy_beam_sums(
   target->p0     = source->p0;
 }
 
+long computeSliceMoments(double C[6], double S[6][6], 
+			 double **part, long np, 
+			 double sMin, double sMax)
+{
+  long i, j, k, count = 0;
+  if (!part)
+    bomb("NULL pointer passed to computeSliceMoments", NULL);
+  for (j=0; j<6; j++) {
+    C[j] = 0;
+    for (k=0; k<6; k++)
+      S[j][k] = 0;
+  }
+  if (!np)
+    return 0;
+
+  for (i=0; i<np; i++) {
+    if (sMin!=sMax && (part[i][4]<sMin || part[i][4]>sMax))
+      continue;
+    count++;
+    for (j=0; j<6; j++) {
+      C[j] += part[i][j];
+    }
+  }
+  if (!count)
+    return 0;
+
+  for (j=0; j<6; j++)
+    C[j] /= count;
+
+  for (i=0; i<np; i++) {
+    if (sMin!=sMax && (part[i][4]<sMin || part[i][4]>sMax))
+      continue;
+    for (j=0; j<6; j++)
+      for (k=0; k<=j; k++)
+	S[j][k] += (part[i][j]-C[j])*(part[i][k]-C[k]);
+  }
+
+  for (j=0; j<6; j++)
+    for (k=0; k<=j; k++) {
+      S[j][k] /= count; 
+      S[k][j] = S[j][k];
+    }
+  return count;
+}
+
+	 

@@ -74,7 +74,8 @@ char *GREETING="This is elegant, by Michael Borland. (This is version 14.6Beta2,
 #define SASEFEL_AT_END  36
 #define ALTER_ELEMENTS  37
 #define OPTIMIZATION_TERM 38
-#define N_COMMANDS      39
+#define SLICE_ANALYSIS  39
+#define N_COMMANDS      40
 
 char *command[N_COMMANDS] = {
     "run_setup", "run_control", "vary_element", "error_control", "error_element", "awe_beam", "bunched_beam",
@@ -84,7 +85,7 @@ char *command[N_COMMANDS] = {
     "find_aperture", "analyze_map", "correct_tunes", "link_control", "link_elements",
     "steering_element", "amplification_factors", "print_dictionary", "floor_coordinates", "correction_matrix_output",
     "load_parameters", "sdds_beam", "subprocess", "fit_traces", "sasefel", "alter_elements",
-    "optimization_term",
+    "optimization_term", "slice_analysis",
         } ;
 
 char *description[N_COMMANDS] = {
@@ -127,6 +128,7 @@ char *description[N_COMMANDS] = {
     "fit_traces                  obtains a lattice model by fitting to multiple tracks through a beamline",
     "sasefel                     computes parameters of SASE FEL at end of system",
     "alter_elements              alters a common parameter for one or more elements",
+    "slice_analysis              computes and outputs slice analysis of the beam",
         } ;
 
 void initialize_structures(RUN *run_conditions, VARY *run_control, ERRORVAL *error_control, CORRECTION *correct, 
@@ -178,10 +180,12 @@ char **argv;
     signal(SIGSEGV, traceback_handler);
 #endif
 #if defined(UNIX)
+    /*
     signal(SIGHUP, traceback_handler);
     signal(SIGQUIT, traceback_handler);
     signal(SIGTRAP, traceback_handler);
     signal(SIGBUS, traceback_handler);
+    */
 #endif
     
     log_entry("main");
@@ -1035,6 +1039,13 @@ char **argv;
             if (!run_setuped)
               bomb("run_setup must precede alter_element namelist", NULL);
             do_alter_element(&namelist_text, &run_conditions, beamline);
+            break;
+    	  case SLICE_ANALYSIS:
+            if (!run_setuped)
+              bomb("run_setup must precede slice_analysis namelist", NULL);
+            if (beam_type!=-1)
+              bomb("slice_analysis namelist must precede beam definition", NULL);
+            setupSliceAnalysis(&namelist_text, &run_conditions, &output_data);
             break;
           default:
             fprintf(stdout, "unknown namelist %s given.  Known namelists are:\n", namelist_text.group_name);

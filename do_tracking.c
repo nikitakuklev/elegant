@@ -46,6 +46,7 @@ long do_tracking(
                  unsigned long flags,
                  long n_passes,
                  SASEFEL_OUTPUT *sasefel,
+		 SLICE_OUTPUT *sliceAnalysis,
                  double *finalCharge
                  )
 {
@@ -68,7 +69,7 @@ long do_tracking(
   static long is_ansi_term = -1;
   char s[100], *name;
   long check_nan, sums_allocated = 0;
-  long elementsTracked;
+  long elementsTracked, sliceAnDone = 0;
   CHARGE *charge;
   static long warnedAboutChargePosition = 0;
   
@@ -820,6 +821,15 @@ long do_tracking(
         }
         i_traj++;
       }
+      if (!(flags&TEST_PARTICLES)) {
+	performSliceAnalysisOutput(sliceAnalysis, coord, n_to_track, 
+				   !sliceAnDone, step, 
+				   *P_central, 
+				   charge?charge->macroParticleCharge*n_to_track:0.0, 
+				   eptr->name, eptr->end_pos);
+	sliceAnDone = 1;
+      }
+
       last_type = eptr->type;
       eptr = eptr->succ;
       n_to_track = n_left;

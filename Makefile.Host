@@ -55,9 +55,11 @@ elegant_SRCS = 	alpha_data.c alpha_matrix.c amplif.c analyze.c aperture_search.c
 		orbtraj_output.c optimize.c output_magnets.c pepper_pot.c phase_reference.c \
 		print_line.c quad_matrix.c ramp_momentum.c ramped_rfca.c response.c rfmode.c \
 		run_rpnexpr.c sample.c sdds_beam.c sdds_support.c simple_rfca.c  subprocess.c \
-		tune.c tilt_matrices.c trace.c track_data.c track_ramp.c track_rf.c trfmode.c ztransverse.c \
-		twiss.c vary.c zlongit.c SReffects.c mod_rfca.c fitTraces.c ibs_tracking.c zibs.c wake.c \
-		trwake.c circles.c tubend.c sasefelmx.c sasefel.c alter.c searchPath.c
+		tune.c tilt_matrices.c trace.c track_data.c track_ramp.c track_rf.c trfmode.c \
+		ztransverse.c twiss.c vary.c zlongit.c SReffects.c mod_rfca.c fitTraces.c \
+		ibs_tracking.c zibs.c wake.c \
+		trwake.c circles.c tubend.c sasefelmx.c sasefel.c alter.c searchPath.c \
+		sliceAnalysis.c
 
 sddsemitmeas_SRCS = sddsemitmeas.c
 
@@ -190,6 +192,11 @@ sdds_beam$(OBJ): sdds_beam.h
 
 sdds_beam.h: ../sdds_beam.nl
 	nlpp ../sdds_beam.nl sdds_beam.h
+
+sliceAnalysis$(OBJ): sliceAnalysis.h
+
+sliceAnalysis.h: ../sliceAnalysis.nl
+	nlpp ../sliceAnalysis.nl sliceAnalysis.h
 
 steer_elem$(OBJ): steer_elem.h
 

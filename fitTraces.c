@@ -3,6 +3,9 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.15  2001/10/15 20:37:02  soliday
+ * Cleaned up for Linux.
+ *
  * Revision 1.14  2001/10/15 15:42:28  soliday
  * Cleaned up for WIN32.
  *
@@ -636,7 +639,7 @@ void find_trajectory_bpm_readouts
   
   if (!do_tracking(particle, &nPart, NULL, beamline, &momentum,
                    (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
-                   trajBuffer, run, 0, tracking_flags, 1, NULL, NULL)) {
+                   trajBuffer, run, 0, tracking_flags, 1, NULL, NULL, NULL)) {
     fprintf(stdout, "Error tracking particle to find trajectory at BPMs.\n");
     fflush(stdout);
     exit(1);

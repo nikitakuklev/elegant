@@ -299,7 +299,7 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, RADIATION_INTEGRALS
           fprintf(stdout, "element is %s at z=%em\n", elem->name, elem->end_pos);
           fflush(stdout);
           fprintf(stdout, "%c-plane matrix:  C = %e,  S = %e,  C' = %e,  S' = %e\n",
-                  (plane==0?'x':'y'), C, S, Cp, Sp);
+                  (plane==0?'x':'y'), C[plane], S[plane], Cp[plane], Sp[plane]);
           fflush(stdout);
           fprintf(stdout, "beta0 = %e, func[0] = %e\n", beta[plane], func[0]);
           fflush(stdout);
