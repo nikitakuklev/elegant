@@ -1,0 +1,23 @@
+This element simulates a wiggler or undulator.  There are two aspects
+to the simulation: the effect on radiation integrals and the vertical
+focusing.  Both are included as of release 15.2 of elegant.  Also, we
+include the half-strength end poles, but only on the radiation
+integrals.  These half-poles ensure that the dispersion contribution
+of the wiggler matches back to zero at the end of the device.
+
+The radiation integrals are computed by summing the contributions for
+a series of half-poles.  The integrals for a single half-pole were
+computed analytically using Mathematica, using a sinusoidal field
+variation.  The horizontal beta function and dispersion are propogated
+correctly for these computations.  Of course, the beta function
+propagates as in a drift space.
+
+The vertical focusing is implemented as a distributed quadrupole-like
+term (affecting ony the vertical, unlike a true quadrupole).  The
+strength of the quadrupole is (see Wiedemann, {\em Particle Accelerator
+Physics II}, section 2.3.2)
+\begin{equation}
+K_1 = \frac{1}{2\rho^2},
+\end{equation}
+where $\rho$ is the bending radius at the center of a pole.  The
+undulator is focusing in the vertical plane.
