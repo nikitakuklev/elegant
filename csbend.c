@@ -1862,7 +1862,7 @@ void computeSaldinFdNorm(double **FdNorm, double **x, long *n, double sMax, long
       fmax = f;
   }
   if (fmax>f0/0.99) {
-    fprintf(stderr, "Warning: possible problem with SALDIN54 drift mode: too few (%ld) points. Ratio of max/start-1 is %le\n",
+    fprintf(stderr, "Warning: possible problem with SALDIN54 drift mode: too few (%ld) points. Max/start-1 is %le\n",
             ns,
             fmax/f0-1);
   }
