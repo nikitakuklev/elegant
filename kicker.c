@@ -81,11 +81,6 @@ void track_through_kicker(
     cos_tilt = cos(kicker->tilt);
     sin_tilt = sin(kicker->tilt);
 
-    if (kicker->spatial_dependence) {
-        xmem = rpn_create_mem("x");
-        ymem = rpn_create_mem("y");
-        }
-
     sum_amp = 0;
     for (ip=0; ip<np; ip++) {
         angle  = kicker->angle;
@@ -136,29 +131,48 @@ void track_through_kicker(
         s  = coord[4];
         dp = coord[5];
 
-        if (kicker->spatial_dependence) {
-            rpn_store(x, xmem);
-            rpn_store(y, ymem);
-            angle *= rpn(kicker->spatial_dependence);
-            if (rpn_check_error()) exit(1);
-            rpn_clear();
-            }
-
-        curv = sin(-angle)/kicker->length/(1+dp);
-
-        theta_i = atan(xp);
-        alpha_i = -theta_i;
-        alpha_f = asin(kicker->length*curv + sin(alpha_i));
-        if (fabs(curv*kicker->length)<1e-12) {
+        if (kicker->n_kicks<=0) {
+          curv = sin(-angle)/kicker->length/(1+dp);
+          theta_i = atan(xp);
+          alpha_i = -theta_i;
+          alpha_f = asin(kicker->length*curv + sin(alpha_i));
+          if (fabs(curv*kicker->length)<1e-12) {
             x += (dx=kicker->length*xp);
             s += (ds=fabs(kicker->length/cos(alpha_i)));
-            }
-        else {
+          }
+          else {
             x += (dx=(cos(alpha_f)  - cos(alpha_i))/curv);
             s += (ds=fabs((alpha_f-alpha_i)/curv));
+          }
+          xp = tan(theta_i - (alpha_f - alpha_i));
+          y += kicker->length*yp;
+        }
+        else {
+          double l1, x0, y0;
+          l1 = kicker->length/kicker->n_kicks;
+          for (i=0; i<kicker->n_kicks; i++) {
+            curv = sin(-angle)/kicker->length/(1+dp)*(1+kicker->b2*(x*x-y*y));
+            theta_i = atan(xp);
+            alpha_i = -theta_i;
+            alpha_f = asin(l1*curv + sin(alpha_i));
+            x0 = x;
+            if (fabs(curv*l1)<1e-12) {
+              x += (dx=l1*xp);
+              s += (ds=fabs(l1/cos(alpha_i)));
             }
-        xp = tan(theta_i - (alpha_f - alpha_i));
-        y += kicker->length*yp;
+            else {
+              x += (dx=(cos(alpha_f)  - cos(alpha_i))/curv);
+              s += (ds=fabs((alpha_f-alpha_i)/curv));
+            }
+            xp = tan(theta_i - (alpha_f - alpha_i));
+            x0 = (x+x0)/2;
+            y0 = y;
+            y += l1*yp ;
+            y0 = (y+y0)/2;
+            yp += -2*curv*ds*x0*y0*kicker->b2;
+          }
+        }
+        
         coord[0] = x*cos_tilt - y*sin_tilt;
         coord[2] = x*sin_tilt + y*cos_tilt;
         coord[1] = xp*cos_tilt - yp*sin_tilt;

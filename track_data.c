@@ -686,12 +686,13 @@ PARAMETER kicker_param[N_KICKER_PARAMS] = {
     {"L", "M", IS_DOUBLE, 0, (long)((char *)&kicker_example.length), NULL, 0.0, 0, "length"},
     {"ANGLE", "RAD", IS_DOUBLE, 0, (long)((char *)&kicker_example.angle), NULL, 0.0, 0, "kick angle"},
     {"TILT", "RAD", IS_DOUBLE, 0, (long)((char *)&kicker_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
+    {"B2", "1/M^2", IS_DOUBLE, 0, (long)((char *)&kicker_example.b2), NULL, 0.0, 0, "Sextupole term: By=Bo*(1+b2*x^2)"},
     {"TIME_OFFSET", "S", IS_DOUBLE, 0, (long)((char *)&kicker_example.time_offset), NULL, 0.0, 0, "time offset of waveform"},
     {"PERIODIC", "", IS_LONG, 0, (long)((char *)&kicker_example.periodic), NULL, 0.0, 0, "is waveform periodic?"},
     {"PHASE_REFERENCE", "", IS_LONG, 0, (long)((char *)&kicker_example.phase_reference), NULL, 0.0, 0, "phase reference number (to link with other time-dependent elements)"},
     {"FIRE_ON_PASS", "", IS_LONG, 0, (long)((char *)&kicker_example.fire_on_pass), NULL, 0.0, 0, "pass number to fire on"},
+    {"N_KICKS", "", IS_LONG, 0, (long)((char *)&kicker_example.n_kicks), NULL, 0.0, 0, "Number of kicks to use for simulation. 0 uses an exact result but ignores b2."},
     {"WAVEFORM", "", IS_STRING, 0, (long)((char *)&kicker_example.waveform), NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving kick factor vs time"},
-    {"SPATIAL_DEPENDENCE", "", IS_STRING, 0, (long)((char *)&kicker_example.spatial_dependence), NULL, 0.0, 0, "rpn function of x and y giving spatial dependence of kick"},
     } ;
 
 KSEXT ksext_example;

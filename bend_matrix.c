@@ -292,68 +292,182 @@ VMATRIX *hvcorrector_matrix(
  */
 
 VMATRIX *corrector_matrix(
-    double length,         /* straight-through length--i.e., not arc length */
-    double kick,           /* actually an angle */
-    double tilt, 
-    double b2,             /* By = Bo*(1+b2*x^2) */
-    double calibration,
-    long do_edges,
-    long max_order
-    )
+                          double length,         /* straight-through length--i.e., not arc length */
+                          double kick,           /* actually an angle */
+                          double tilt, 
+                          double b2,             /* By = Bo*(1+b2*x^2) */
+                          double calibration,
+                          long do_edges,
+                          long max_order
+                          )
 {
-    VMATRIX *M, *Mtot, *Medge, *tmp;
-    double h;
+  VMATRIX *M, *Mtot, *Medge, *tmp;
+  double h;
+  double *C, **R, ***T;
+  
+  log_entry("corrector_matrix");
 
-    log_entry("corrector_matrix");
+  kick *= calibration;
 
-    kick *= calibration;
-
-    if (kick==0) {
-        log_exit("corrector_matrix");
-        return(drift_matrix(length, max_order));
-        }
-    
-    if (length==0) {
-        M = tmalloc(sizeof(*M));
-        initialize_matrices(M, 1);
-        M->C[0] = M->C[2] = M->C[3] = M->C[4] = M->C[5] = 0;
-        M->C[1] = kick;
-        M->R[0][0] = M->R[1][1] = M->R[2][2] = M->R[3][3] = M->R[4][4] = M->R[5][5] = 1;
-        M->R[1][5] = -sin(kick);
-        }
-    else {
-        /* convert length to arc length */
-        length *= kick/sin(kick);
-        h = -kick/length;
-        M = sbend_matrix(length, 0.0, h, 0.0, b2, 0.0, max_order);
-
-        if (do_edges) {
-            Mtot =  tmalloc(sizeof(*Mtot));
-            initialize_matrices(Mtot, Mtot->order=max_order);
-            Medge = edge_matrix(0.0, h, 0.0, 0.0, -1, 0.0, max_order, 1, 0);
-            concat_matrices(Mtot, M, Medge, 0);
-            tmp  = Mtot;
-            Mtot = M;
-            M    = tmp;
-            free_matrices(Medge); tfree(Medge); 
-        
-            Medge = edge_matrix(kick, h, 0.0, 0.0, 1, 0.0, max_order, 1, 0);
-            concat_matrices(Mtot, Medge, M, 0);
-            tmp  = Mtot;
-            Mtot = M;
-            M    = tmp;
-            free_matrices(Medge); tfree(Medge); Medge = NULL;
-            free_matrices(Mtot); tfree(Mtot); Mtot = NULL; 
-            }
-        }
-
-    if (tilt)
-        tilt_matrices(M, tilt);
-
+  if (kick==0) {
     log_exit("corrector_matrix");
-    return(M);
+    return(drift_matrix(length, max_order));
+  }
+  
+  if (length==0) {
+    M = tmalloc(sizeof(*M));
+    initialize_matrices(M, 1);
+    M->C[0] = M->C[2] = M->C[3] = M->C[4] = M->C[5] = 0;
+    M->C[1] = kick;
+    M->R[0][0] = M->R[1][1] = M->R[2][2] = M->R[3][3] = M->R[4][4] = M->R[5][5] = 1;
+    M->R[1][5] = -sin(kick);
+  }
+  else {
+    double s1, K;
+    M = tmalloc(sizeof(*M));
+    initialize_matrices(M, max_order);
+    C = M->C;
+    s1 = length;
+    K = tan(kick)/length;
+    C[0] = (99*pow(b2,3)*pow(K,7)*pow(s1,14)+24024*pow(b2,2)*pow(K,5)*
+            pow(s1,10)+2162160*b2*pow(K,3)*pow(s1,6)+129729600*K*pow(s1,2))/2.594592E+8;
+    C[1] = (693*pow(b2,3)*pow(K,7)*pow(s1,13)+120120*pow(b2,2)*pow(K,5)*
+            pow(s1,9)+6486480*b2*pow(K,3)*pow(s1,5)+129729600*K*s1)/1.297296E+8;
+    R = M->R;
+    R[0][0] = (2730*ipow(b2,3)*ipow(K,6)*ipow(s1,12)+463320*ipow(b2,2)*ipow(K,4)*
+               ipow(s1,8)+21621600*b2*ipow(K,2)*ipow(s1,4))/2.594592E+8+1;
+    R[0][1] = (1386*ipow(b2,3)*ipow(K,6)*ipow(s1,13)+240240*ipow(b2,2)*ipow(K,4)
+               *ipow(s1,9)+12972960*b2*ipow(K,2)*ipow(s1,5)+259459200*s1)/2.594592E+8;
+    R[0][5] = K*ipow(s1,2)-(99*ipow(b2,3)*ipow(K,7)*ipow(s1,14)+24024*ipow(b2,2)
+                            *ipow(K,5)*ipow(s1,10)+2162160*b2*ipow(K,3)*ipow(s1,6)+129729600*K
+                            *ipow(s1,2))/1.297296E+8;
+    R[1][0] = (16380*ipow(b2,3)*ipow(K,6)*ipow(s1,11)+1853280*ipow(b2,2)*ipow(K,4)*
+               ipow(s1,7)+43243200*b2*ipow(K,2)*ipow(s1,3))/1.297296E+8;
+    R[1][1] = (9009*ipow(b2,3)*ipow(K,6)*ipow(s1,12)+1081080*ipow(b2,2)*ipow(K,4)*
+               ipow(s1,8)+32432400*b2*ipow(K,2)*ipow(s1,4))/1.297296E+8+1;
+    R[1][5] = 2*K*s1-(693*ipow(b2,3)*ipow(K,7)*ipow(s1,13)+120120*ipow(b2,2)*
+                      ipow(K,5)*ipow(s1,9)+6486480*b2*ipow(K,3)*ipow(s1,5)+129729600*K*s1)/6.48648E+7;
+    R[2][2] = 1-(-1365*ipow(b2,3)*ipow(K,6)*ipow(s1,12)-154440*ipow(b2,2)*ipow(K,4)*
+                 ipow(s1,8)+10810800*b2*ipow(K,2)*ipow(s1,4))/1.297296E+8;
+    R[2][3] = -(-693*ipow(b2,3)*ipow(K,6)*ipow(s1,13)-60060*ipow(b2,2)*ipow(K,4)*
+                ipow(s1,9)+6486480*b2*ipow(K,2)*ipow(s1,5)-129729600*s1)/1.297296E+8;
+    R[3][2] = -(-1260*ipow(b2,3)*ipow(K,6)*ipow(s1,11)-95040*ipow(b2,2)*ipow(K,4)*
+                ipow(s1,7)+3326400*b2*ipow(K,2)*ipow(s1,3))/9979200.0;
+    R[3][3] = 1-(-693*ipow(b2,3)*ipow(K,6)*ipow(s1,12)-41580*ipow(b2,2)*ipow(K,4)
+                 *ipow(s1,8)+2494800*b2*ipow(K,2)*ipow(s1,4))/9979200.0;
+    if (max_order>1) {
+      T = M->T;
+      T[0][0][0] = 3.854170520837187E-9*(44044*ipow(b2,3)*ipow(K,5)*ipow(s1,10)+
+                                         5765760*ipow(b2,2)*ipow(K,3)*ipow(s1,6)+129729600*b2*K*ipow(s1,2));
+      T[0][1][0] = (32760*ipow(b2,3)*ipow(K,5)*ipow(s1,11)+3706560*ipow(b2,2)*ipow(K,3)*
+                    ipow(s1,7)+86486400*b2*K*ipow(s1,3))/1.297296E+8/2;
+      T[0][1][1] = 3.854170520837187E-9*(7644*ipow(b2,3)*ipow(K,5)*ipow(s1,12)+
+                                         849420*ipow(b2,2)*ipow(K,3)*ipow(s1,8)+21621600*b2*K*ipow(s1,4));
+      T[0][2][2] = 3.854170520837187E-9*(-44044*ipow(b2,3)*ipow(K,5)*ipow(s1,10)-
+                                         2882880*ipow(b2,2)*ipow(K,3)*ipow(s1,6)-129729600*b2*K*ipow(s1,2));
+      T[0][3][2] = (-32760*ipow(b2,3)*ipow(K,5)*ipow(s1,11)-411840*ipow(b2,2)*
+                    ipow(K,3)*ipow(s1,7)-86486400*b2*K*ipow(s1,3))/1.297296E+8/2;
+      T[0][3][3] = 3.854170520837187E-9*(-7644*ipow(b2,3)*ipow(K,5)*ipow(s1,12)+
+                                         77220*ipow(b2,2)*ipow(K,3)*ipow(s1,8)-21621600*b2*K*ipow(s1,4));
+      T[0][5][0] = 2*((77220*ipow(b2,2)*ipow(K,4)*ipow(s1,8)+21621600*b2*ipow(K,2)
+                       *ipow(s1,4))/2.594592E+8-(2730*ipow(b2,3)*ipow(K,6)*ipow(s1,12)+
+                                                 463320*ipow(b2,2)*ipow(K,4)*ipow(s1,8)+21621600*b2*ipow(K,2)*ipow(s1,4)
+                                                 )/1.297296E+8)/2;
+      T[0][5][1] = 2*((60060*ipow(b2,2)*ipow(K,4)*ipow(s1,9)+12972960*b2*ipow(K,2)
+                       *ipow(s1,5)+518918400*s1)/2.594592E+8-
+                      (1386*ipow(b2,3)*ipow(K,6)*
+                       ipow(s1,13)+240240*ipow(b2,2)*ipow(K,4)*ipow(s1,9)+12972960*b2*
+                       ipow(K,2)*ipow(s1,5)+259459200*s1)/1.297296E+8)/2;
+      T[0][5][5] = 0.5*((99*ipow(b2,3)*ipow(K,7)*ipow(s1,14)+24024*ipow(b2,2)*ipow(K,5)*
+                         ipow(s1,10)+2162160*b2*ipow(K,3)*ipow(s1,6)+129729600*K*
+                         ipow(s1,2))/4.32432E+7-3*K*ipow(s1,2));
+      T[1][0][0] = 7.708341041674376E-9*(220220*ipow(b2,3)*ipow(K,5)*ipow(s1,9)+
+                                         17297280*ipow(b2,2)*ipow(K,3)*ipow(s1,5)+129729600*b2*K*s1);
+      T[1][1][0] = (180180*ipow(b2,3)*ipow(K,5)*ipow(s1,10)+12972960*ipow(b2,2)*
+                    ipow(K,3)*ipow(s1,6)+129729600*b2*K*ipow(s1,2))/6.48648E+7/2;
+      T[1][1][1] = 7.708341041674376E-9*(45864*ipow(b2,3)*ipow(K,5)*ipow(s1,11)+
+                                         3397680*ipow(b2,2)*ipow(K,3)*ipow(s1,7)+43243200*b2*K*ipow(s1,3));
+      T[1][2][2] = 7.708341041674376E-9*(-220220*ipow(b2,3)*ipow(K,5)*ipow(s1,9)-
+                                         8648640*ipow(b2,2)*ipow(K,3)*ipow(s1,5)-129729600*b2*K*s1);
+      T[1][3][2] = (-180180*ipow(b2,3)*ipow(K,5)*ipow(s1,10)-1441440*ipow(b2,2)*
+                    ipow(K,3)*ipow(s1,6)-129729600*b2*K*ipow(s1,2))/6.48648E+7/2;
+      T[1][3][3] = 7.708341041674376E-9*(-45864*ipow(b2,3)*ipow(K,5)*ipow(s1,11)+
+                                         308880*ipow(b2,2)*ipow(K,3)*ipow(s1,7)-43243200*b2*K*ipow(s1,3));
+      T[1][5][0] = 2*((308880*ipow(b2,2)*ipow(K,4)*ipow(s1,7)+43243200*b2*ipow(K,2)*
+                       ipow(s1,3))/1.297296E+8-
+                      (16380*ipow(b2,3)*ipow(K,6)*ipow(s1,11)+
+                       1853280*ipow(b2,2)*ipow(K,4)*ipow(s1,7)+43243200*b2*ipow(K,2)*
+                       ipow(s1,3))/6.48648E+7)/2;
+      T[1][5][1] = 2*((270270*ipow(b2,2)*ipow(K,4)*ipow(s1,8)+32432400*b2*ipow(K,2)*
+                       ipow(s1,4))/1.297296E+8-
+                      (9009*ipow(b2,3)*ipow(K,6)*ipow(s1,12)+
+                       1081080*ipow(b2,2)*ipow(K,4)*ipow(s1,8)+32432400*b2*ipow(K,2)*ipow(s1,4))/6.48648E+7)/2;
+      T[1][5][5] = 0.5*((693*ipow(b2,3)*ipow(K,7)*ipow(s1,13)+120120*ipow(b2,2)*ipow(K,5)*
+                         ipow(s1,9)+6486480*b2*ipow(K,3)*ipow(s1,5)+129729600*K*s1)/
+                        2.16216E+7-6*K*s1);
+      T[2][2][0] = -(-44044*ipow(b2,3)*ipow(K,5)*ipow(s1,10)-4324320*ipow(b2,2)*ipow(K,3)*
+                     ipow(s1,6)+129729600*b2*K*ipow(s1,2))/6.48648E+7/2;
+      T[2][2][1] = -(-16380*ipow(b2,3)*ipow(K,5)*ipow(s1,11)-1235520*ipow(b2,2)*ipow(K,3)*
+                     ipow(s1,7)+43243200*b2*K*ipow(s1,3))/6.48648E+7/2;
+      T[2][3][0] = -(-16380*ipow(b2,3)*ipow(K,5)*ipow(s1,11)-823680*ipow(b2,2)*ipow(K,3)*
+                     ipow(s1,7)+43243200*b2*K*ipow(s1,3))/6.48648E+7/2;
+      T[2][3][1] = -(-7644*ipow(b2,3)*ipow(K,5)*ipow(s1,12)-386100*ipow(b2,2)*
+                     ipow(K,3)*ipow(s1,8)+21621600*b2*K*ipow(s1,4))/6.48648E+7/2;
+      T[2][5][2] = 2*((-1365*ipow(b2,3)*ipow(K,6)*ipow(s1,12)-154440*ipow(b2,2)*ipow(K,4)*
+                       ipow(s1,8)+10810800*b2*ipow(K,2)*ipow(s1,4))/6.48648E+7-
+                      (38610*ipow(b2,2)*ipow(K,4)*ipow(s1,8)+10810800*b2*ipow(K,2)*ipow(s1,4)
+                       )/1.297296E+8)/2;
+      T[2][5][3] = 2*((-693*ipow(b2,3)*ipow(K,6)*ipow(s1,13)-60060*ipow(b2,2)*ipow(K,4)*
+                       ipow(s1,9)+6486480*b2*ipow(K,2)*ipow(s1,5)-129729600*s1)/6.48648E+7-
+                      (30030*ipow(b2,2)*ipow(K,4)*ipow(s1,9)+6486480*b2*ipow(K,2)*
+                       ipow(s1,5)-259459200*s1)/1.297296E+8)/2;
+      T[3][2][0] = -(-33880*ipow(b2,3)*ipow(K,5)*ipow(s1,9)-1995840*ipow(b2,2)*
+                     ipow(K,3)*ipow(s1,5)+19958400*b2*K*s1)/4989600.0/2;
+      T[3][2][1] = -(-13860*ipow(b2,3)*ipow(K,5)*ipow(s1,10)-665280*ipow(b2,2)*
+                     ipow(K,3)*ipow(s1,6)+9979200*b2*K*ipow(s1,2))/4989600.0/2;
+      T[3][3][0] = -(-13860*ipow(b2,3)*ipow(K,5)*ipow(s1,10)-443520*ipow(b2,2)*
+                     ipow(K,3)*ipow(s1,6)+9979200*b2*K*ipow(s1,2))/4989600.0/2;
+      T[3][3][1] = -(-7056*ipow(b2,3)*ipow(K,5)*ipow(s1,11)-237600*ipow(b2,2)*
+                     ipow(K,3)*ipow(s1,7)+6652800*b2*K*ipow(s1,3))/4989600.0/2;
+      T[3][5][2] = 2*((-1260*ipow(b2,3)*ipow(K,6)*ipow(s1,11)-95040*ipow(b2,2)*
+                       ipow(K,4)*ipow(s1,7)+3326400*b2*ipow(K,2)*ipow(s1,3))/4989600.0-
+                      (23760*ipow(b2,2)*ipow(K,4)*ipow(s1,7)+3326400*b2*ipow(K,2)*ipow(s1,3))/9979200.0)/2;
+      T[3][5][3] = 2*((-693*ipow(b2,3)*ipow(K,6)*ipow(s1,12)-41580*ipow(b2,2)*
+                       ipow(K,4)*ipow(s1,8)+2494800*b2*ipow(K,2)*ipow(s1,4))/4989600.0-
+                      (20790*ipow(b2,2)*ipow(K,4)*ipow(s1,8)+2494800*b2*ipow(K,2)*ipow(s1,4))/9979200.0)/2;
     }
- 
+    
+
+    if (do_edges) {
+      double arc;
+      arc = length*kick/sin(kick);
+      h = kick/length;
+      Mtot =  tmalloc(sizeof(*Mtot));
+      initialize_matrices(Mtot, Mtot->order=max_order);
+      Medge = edge_matrix(0.0, h, 0.0, 0.0, -1, 0.0, max_order, 1, 0);
+      concat_matrices(Mtot, M, Medge, 0);
+      tmp  = Mtot;
+      Mtot = M;
+      M    = tmp;
+      free_matrices(Medge); tfree(Medge); 
+      
+      Medge = edge_matrix(kick, h, 0.0, 0.0, 1, 0.0, max_order, 1, 0);
+      concat_matrices(Mtot, Medge, M, 0);
+      tmp  = Mtot;
+      Mtot = M;
+      M    = tmp;
+      free_matrices(Medge); tfree(Medge); Medge = NULL;
+      free_matrices(Mtot); tfree(Mtot); Mtot = NULL; 
+    }
+  }
+
+  if (tilt)
+    tilt_matrices(M, tilt);
+
+  log_exit("corrector_matrix");
+  return(M);
+}
+
 
 /* routine: sbend_matrix
  * purpose: third-order sector bending magnet matrix calculation
@@ -362,72 +476,72 @@ VMATRIX *corrector_matrix(
  */
 
 VMATRIX *sbend_matrix(
-    double t0,        /* length of central trajectory with no errors */
-    double h,         /* curvature of bend with no errors--a positive quantity! */
-    double ha,        /* actual curvature of bend */
-    /* in midplane:  B = Bo*ha/h*(1 - n*h*x + beta*(h*x)^2 + gamma*(h*x)^3, h = e*Bo/Po */
-    double nh,        /* (field index)*h       K1 = -n*h^2      */
-    double betah2,    /* (setupole term)*h^2   K2 = 2*beta*h^3  */
-    double gammah3,   /* (octupole term)*h^3   K3 = 6*gamma*h^4 */
-    long order
-    )
+                      double t0,        /* length of central trajectory with no errors */
+                      double h,         /* curvature of bend with no errors--a positive quantity! */
+                      double ha,        /* actual curvature of bend */
+                      /* in midplane:  B = Bo*ha/h*(1 - n*h*x + beta*(h*x)^2 + gamma*(h*x)^3, h = e*Bo/Po */
+                      double nh,        /* (field index)*h       K1 = -n*h^2      */
+                      double betah2,    /* (setupole term)*h^2   K2 = 2*beta*h^3  */
+                      double gammah3,   /* (octupole term)*h^3   K3 = 6*gamma*h^4 */
+                      long order
+                      )
 {
-    static double kx, cx, sx, kx2, kx4, kx6, cx2, cx3, cx4, sx2, sx3, sx4;
-    static double ky, cy, sy, ky2, ky4, cy2, cy3, cy4, sy2, sy3, sy4;
-    static double h2, ha2;
-    static double e111, e122, e133, e144, e161, e166, e331, e342, e363;
-    double i11111, i21111, i12121, i22121, i11211, i21211, i12221, i22221, i11611, i21611, i12621, i22621, i16611,
-        i26611, i11112, i21112, i12122, i22122, i11212, i21212, i12222, i22222, i11612, i21612, i12622, i22622,
-        i16612, i26612, i13333, i23333, i14343, i24343, i13433, i23433, i14443, i24443, i13334, i23334, i14344,
-        i24344, i13434, i23434, i14444, i24444, i11116, i21116, i12126, i22126, i16116, i26116, i11216, i21216,
-        i12226, i22226, i16216, i26216, i11616, i21616, i12626, i22626, i16616, i26616, i16666, i26666, i33311,
-        i43311, i34321, i44321, i33411, i43411, i34421, i44421, i33312, i43312, i34322, i44322, i33412, i43412,
-        i34422, i44422, i33113, i43113, i34123, i44123, i33213, i43213, i34223, i44223, i33613, i43613, i34623,
-        i44623, i36633, i46633, i33114, i43114, i34124, i44124, i33214, i43214, i34224, i44224, i33614, i43614,
-        i34624, i44624, i36634, i46634, i33316, i43316, i34326, i44326, i36336, i46336, i33416, i43416, i34426,
-        i44426, i36436, i46436;
-    double small3;
-    double t0_2, t0_3, t0_4, t0_5, t0_6;
-    long ky2_is_zero, kx2_is_zero;
-    double *C, **R, ***T, ****U;
-    VMATRIX *M;
+  static double kx, cx, sx, kx2, kx4, kx6, cx2, cx3, cx4, sx2, sx3, sx4;
+  static double ky, cy, sy, ky2, ky4, cy2, cy3, cy4, sy2, sy3, sy4;
+  static double h2, ha2;
+  static double e111, e122, e133, e144, e161, e166, e331, e342, e363;
+  double i11111, i21111, i12121, i22121, i11211, i21211, i12221, i22221, i11611, i21611, i12621, i22621, i16611,
+  i26611, i11112, i21112, i12122, i22122, i11212, i21212, i12222, i22222, i11612, i21612, i12622, i22622,
+  i16612, i26612, i13333, i23333, i14343, i24343, i13433, i23433, i14443, i24443, i13334, i23334, i14344,
+  i24344, i13434, i23434, i14444, i24444, i11116, i21116, i12126, i22126, i16116, i26116, i11216, i21216,
+  i12226, i22226, i16216, i26216, i11616, i21616, i12626, i22626, i16616, i26616, i16666, i26666, i33311,
+  i43311, i34321, i44321, i33411, i43411, i34421, i44421, i33312, i43312, i34322, i44322, i33412, i43412,
+  i34422, i44422, i33113, i43113, i34123, i44123, i33213, i43213, i34223, i44223, i33613, i43613, i34623,
+  i44623, i36633, i46633, i33114, i43114, i34124, i44124, i33214, i43214, i34224, i44224, i33614, i43614,
+  i34624, i44624, i36634, i46634, i33316, i43316, i34326, i44326, i36336, i46336, i33416, i43416, i34426,
+  i44426, i36436, i46436;
+  double small3;
+  double t0_2, t0_3, t0_4, t0_5, t0_6;
+  long ky2_is_zero, kx2_is_zero;
+  double *C, **R, ***T, ****U;
+  VMATRIX *M;
 
-    log_entry("sbend_matrix");
+  log_entry("sbend_matrix");
 
-    i11111 = i21111 = i12121 = i22121 = i11211 = i21211 = i12221 = i22221 = i11611 = i21611 = i12621 = i22621 = i16611 = 0;
-    i26611 = i11112 = i21112 = i12122 = i22122 = i11212 = i21212 = i12222 = i22222 = i11612 = i21612 = i12622 = i22622 = 0;
-    i16612 = i26612 = i13333 = i23333 = i14343 = i24343 = i13433 = i23433 = i14443 = i24443 = i13334 = i23334 = i14344 = 0;
-    i24344 = i13434 = i23434 = i14444 = i24444 = i11116 = i21116 = i12126 = i22126 = i16116 = i26116 = i11216 = i21216 = 0;
-    i12226 = i22226 = i16216 = i26216 = i11616 = i21616 = i12626 = i22626 = i16616 = i26616 = i16666 = i26666 = i33311 = 0;
-    i43311 = i34321 = i44321 = i33411 = i43411 = i34421 = i44421 = i33312 = i43312 = i34322 = i44322 = i33412 = i43412 = 0;
-    i34422 = i44422 = i33113 = i43113 = i34123 = i44123 = i33213 = i43213 = i34223 = i44223 = i33613 = i43613 = i34623 = 0;
-    i44623 = i36633 = i46633 = i33114 = i43114 = i34124 = i44124 = i33214 = i43214 = i34224 = i44224 = i33614 = i43614 = 0;
-    i34624 = i44624 = i36634 = i46634 = i33316 = i43316 = i34326 = i44326 = i36336 = i46336 = i33416 = i43416 = i34426 = 0;
-    i44426 = i36436 = i46436 = 0;
+  i11111 = i21111 = i12121 = i22121 = i11211 = i21211 = i12221 = i22221 = i11611 = i21611 = i12621 = i22621 = i16611 = 0;
+  i26611 = i11112 = i21112 = i12122 = i22122 = i11212 = i21212 = i12222 = i22222 = i11612 = i21612 = i12622 = i22622 = 0;
+  i16612 = i26612 = i13333 = i23333 = i14343 = i24343 = i13433 = i23433 = i14443 = i24443 = i13334 = i23334 = i14344 = 0;
+  i24344 = i13434 = i23434 = i14444 = i24444 = i11116 = i21116 = i12126 = i22126 = i16116 = i26116 = i11216 = i21216 = 0;
+  i12226 = i22226 = i16216 = i26216 = i11616 = i21616 = i12626 = i22626 = i16616 = i26616 = i16666 = i26666 = i33311 = 0;
+  i43311 = i34321 = i44321 = i33411 = i43411 = i34421 = i44421 = i33312 = i43312 = i34322 = i44322 = i33412 = i43412 = 0;
+  i34422 = i44422 = i33113 = i43113 = i34123 = i44123 = i33213 = i43213 = i34223 = i44223 = i33613 = i43613 = i34623 = 0;
+  i44623 = i36633 = i46633 = i33114 = i43114 = i34124 = i44124 = i33214 = i43214 = i34224 = i44224 = i33614 = i43614 = 0;
+  i34624 = i44624 = i36634 = i46634 = i33316 = i43316 = i34326 = i44326 = i36336 = i46336 = i33416 = i43416 = i34426 = 0;
+  i44426 = i36436 = i46436 = 0;
 
 #ifdef DEBUG
-    fprintf(stdout, "\n*** sbend_matrix called:\n  t0=%.16le, h=%.16le, ha=%.16le, n*h=%.16le, beta*h^2=%.16le, gamma*h^3=%.16le, order=%ld\n",
-        t0, h, ha, nh, betah2, gammah3, order);
-    fflush(stdout);
+  fprintf(stdout, "\n*** sbend_matrix called:\n  t0=%.16le, h=%.16le, ha=%.16le, n*h=%.16le, beta*h^2=%.16le, gamma*h^3=%.16le, order=%ld\n",
+          t0, h, ha, nh, betah2, gammah3, order);
+  fflush(stdout);
 #endif
 
-    M = tmalloc(sizeof(*M));
-    initialize_matrices(M, M->order=MIN(2,order));
+  M = tmalloc(sizeof(*M));
+  initialize_matrices(M, M->order=MIN(2,order));
 
-    C = M->C;
-    R = M->R;
-    T = M->T;
-    U = M->Q;
-        
-    h2 = h*h;
-    ha2 = ha*ha;
+  C = M->C;
+  R = M->R;
+  T = M->T;
+  U = M->Q;
+  
+  h2 = h*h;
+  ha2 = ha*ha;
 
-    kx2 = -(h2 - 2*h*ha + nh*ha);
-    ky2 = nh*ha;
-    ky2_is_zero = (ky2==0);
-    kx2_is_zero = (kx2==0);
+  kx2 = -(h2 - 2*h*ha + nh*ha);
+  ky2 = nh*ha;
+  ky2_is_zero = (ky2==0);
+  kx2_is_zero = (kx2==0);
 
-    small3 = pow(1e-16, 1./3.);
+  small3 = pow(1e-16, 1./3.);
 
     if (sqrt(FABS(kx2))*t0<small3) {
       kx2 = sqr(small3/t0);

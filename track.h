@@ -593,7 +593,7 @@ extern char *entity_text[N_TYPES];
 #define N_QFRING_PARAMS 9
 #define N_SCRAPER_PARAMS 8
 #define N_CENTER_PARAMS 5
-#define N_KICKER_PARAMS 9
+#define N_KICKER_PARAMS 10
 #define N_KSEXT_PARAMS 14
 #define N_KSBEND_PARAMS 27
 #define N_KQUAD_PARAMS 16
@@ -1242,9 +1242,9 @@ typedef struct {
 extern PARAMETER kicker_param[N_KICKER_PARAMS];
 
 typedef struct {
-    double length, angle, tilt, time_offset;
-    long periodic, phase_reference, fire_on_pass;
-    char *waveform, *spatial_dependence;
+    double length, angle, tilt, b2, time_offset;
+    long periodic, phase_reference, fire_on_pass, n_kicks;
+    char *waveform;
     /* for internal use only: */
     double *t_wf, *amp_wf;         /* amplitude vs time for waveform */
     double tmin, tmax;
