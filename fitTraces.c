@@ -3,6 +3,10 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.5  1998/04/17 22:15:36  borland
+ * Use Meschach matrix library.  Supports SVD or non-SVD.  Removes BPM
+ * common mode.
+ *
  * Revision 1.4  1998/03/19 21:00:55  borland
  * Removed items from track.h and put them in three new files (correctDefs.h,
  * tuneDefs.h, chromDefs.h) to isolate references to matlib.h; this is to
@@ -80,7 +84,9 @@ void fit_trace_restoreParamValues(double *buffer, FIT_TRACE_DATA *traceData,
 double fit_trace_takeStep(MAT *D, MAT *readbackVector, MAT *paramVector, FIT_TRACE_DATA *traceData, 
                           FIT_TRACE_PARAMETERS *fitParam, LINE_LIST *beamline, RUN *run,
                           double convergenceFactor, double position_change_limit,
-                          double slope_change_limit, long use_SVD, long singular_values);
+                          double slope_change_limit, long use_SVD, 
+                          long SVs_to_keep, long SVs_to_remove,
+                          double *minSV, double *maxSV);
 void fit_trace_setRowValues(FIT_OUTPUT_DATA *outputData, long iteration, 
                             double rmsError, double lastRmsError, double pass,
                             double convergenceFactor, FIT_TRACE_DATA *traceData, 
@@ -115,7 +121,7 @@ void do_fit_trace_data(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
   FIT_TRACE_DATA *traceData;
   MAT *D, *Dt, *DtD, *DtDInv, *DtDInvDt, *readbackVector, *paramVector;
   MAT *D0, *Dt0, *DtD0, *DtDInv0, *DtDInvDt0, *readbackVector0, *paramVector0;
-  double *lastParameterValues, *startParameterValues;
+  double *lastParameterValues, *startParameterValues, minSV, maxSV;
   FIT_OUTPUT_DATA *outputData;
   double rmsErrorDelta[3];
   long iMin, iMax, pass=0, passCount;
@@ -140,7 +146,11 @@ void do_fit_trace_data(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     fprintf(stderr, "fit_traces: fit_output_file file not given\n");
     exit(1);
   }
-
+  if (use_SVD && SVs_to_remove && SVs_to_keep) {
+    fprintf(stderr, "Can't have both SVs_to_remove and SVs_to_keep nonzero.\n");
+    exit(1);
+  }
+  
   /* trace_data_file file contains column data giving
    * x readings, y readings, and BPM name.
    * Each page is a separate trace.
@@ -174,8 +184,7 @@ void do_fit_trace_data(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
   startParameterValues = tmalloc(sizeof(*startParameterValues)*(parameters+bpmCalParam->parameters));
   
   /* check that there are enough traces for the given number of parameters */
-  if (2*traceData->BPMs*traceData->traces<(4*traceData->traces+fitParam->parameters+
-                                           bpmCalParam->parameters)) {
+  if (readbacks<(parameters+bpmCalParam->parameters)) {
     fprintf(stderr, "fit_traces: too few traces for given number of fit parameters.\n");
     exit(1);
   }
@@ -204,7 +213,6 @@ void do_fit_trace_data(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
   paramVector = m_get(parameters, 1);      /* really the vector of parameter deltas */
 
   D0 = m_get(readbacks, parameters-fitParam->parameters);
-  readbackVector0 = m_get(readbacks, 1);
   paramVector0 = m_get(parameters-fitParam->parameters, 1);
 
   lastRmsError = rmsError = 0;
@@ -214,38 +222,53 @@ void do_fit_trace_data(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 
     lastRmsError = fit_trace_findReadbackErrors(readbackVector, traceData, beamline, run);
     
-    for (i=passCount=goodSteps=0; i<trace_sub_iterations; i++) {
-      rmsError = fit_trace_takeStep(D0, readbackVector0, paramVector0,
-                                    traceData, NULL, beamline, run,
-                                    trace_convergence_factor, position_change_limit,
-                                    slope_change_limit, use_SVD, singular_values);
-      passCount++;
-      if (lastRmsError<rmsError) {
-        trace_convergence_factor /= convergence_factor_divisor;
-        goodSteps = 0;
-      } else {
-        goodSteps++;
-        if (goodSteps>=convergence_increase_steps) {
-          trace_convergence_factor *= convergence_factor_multiplier;
+    minSV = DBL_MAX;
+    maxSV = -DBL_MAX;
+    if (iteration==0) {
+      for (i=passCount=goodSteps=0; i<trace_sub_iterations; i++) {
+        rmsError = fit_trace_takeStep(D0, readbackVector, paramVector0,
+                                      traceData, NULL, beamline, run,
+                                      trace_convergence_factor, position_change_limit,
+                                      slope_change_limit, 0, 0, 0,
+                                      &minSV, &maxSV);
+        passCount++;
+        if (lastRmsError<rmsError) {
+          trace_convergence_factor /= convergence_factor_divisor;
           goodSteps = 0;
+        } else {
+          goodSteps++;
+          if (goodSteps>=convergence_increase_steps) {
+            trace_convergence_factor *= convergence_factor_multiplier;
+            goodSteps = 0;
+          }
         }
+        
+        if (i && fabs(lastRmsError-rmsError)/(rmsError+1e-10)<trace_fractional_target)
+          break;
+        lastRmsError = rmsError;
       }
-      
-      if (i && fabs(lastRmsError-rmsError)/(rmsError+1e-10)<trace_fractional_target)
-        break;
-      lastRmsError = rmsError;
+      fprintf(stderr, "RMS error is %le after trace optimization  %ld passes\n", 
+              rmsError, passCount);
     }
-    fprintf(stderr, "RMS error is %le after trace optimization  %ld passes\n", 
-            rmsError, passCount);    
+    
+/*
+    if (use_SVD) 
+      fprintf(stderr, "  min/max inverse SVs: %le %le\n",
+              minSV, maxSV);
+*/
 
     passCount = 0;
     subIteration = sub_iterations;
+    minSV = DBL_MAX;
+    maxSV = -DBL_MAX;
     do {
       /* fit_trace_saveParamValues(lastParameterValues, traceData, fitParam); */
       rmsError = fit_trace_takeStep(D, readbackVector, paramVector,
                                     traceData, fitParam, beamline, run,
                                     convergence_factor, position_change_limit,
-                                    slope_change_limit, use_SVD, singular_values);
+                                    slope_change_limit, use_SVD,
+                                    SVs_to_keep, SVs_to_remove,
+                                    &minSV, &maxSV);
       rmsError = fit_trace_calibrateMonitors(readbackVector, traceData, fitParam, bpmCalParam,
                                              beamline, run, convergence_factor, 
                                              reject_BPM_common_mode);
@@ -272,6 +295,9 @@ void do_fit_trace_data(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     rmsError = fit_trace_findReadbackErrors(readbackVector, traceData, beamline, run);
     fprintf(stderr, "RMS error is %le after full  optimization  %ld passes,  C=%le\n", 
             rmsError, passCount, convergence_factor);
+    if (use_SVD) 
+      fprintf(stderr, "  min/max inverse SVs: %le %le\n",
+              minSV, maxSV);
     if (rmsError<target)
       break;
   }
@@ -995,14 +1021,16 @@ double fit_trace_takeStep
    double positionChangeLimit,
    double slopeChangeLimit,
    long use_SVD,
-   long singular_values
+   long SVs_to_keep, long SVs_to_remove,
+   double *minSV, double *maxSV
    )
 {
-  double rmsError, factor, minSV, maxSV;
-  long iTrace, iCoord, offset, iUserParam, iBPM, checkLimits, i;
-  FIT_TRACE_PARAMETERS fitParam0;
+  double rmsError, factor;
+  long iTrace, iCoord, offset, iUserParam, iBPM, checkLimits, i, j;
+  FIT_TRACE_PARAMETERS fitParam0 = {
+    0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
   static MAT *DInv=NULL, *U=NULL, *V=NULL, *T=NULL, *S=NULL;
-  static MAT *DtD=NULL, *DtDInv=NULL, *DtDInvDt=NULL, *Dt=NULL;
+  static MAT *DtD=NULL, *DtDInv=NULL, *DtDInvDt=NULL, *Dt=NULL, *DDInv=NULL, *DInvD=NULL;
   static VEC *SingValue=NULL;
   
   if (!fitParam) {
@@ -1014,27 +1042,59 @@ double fit_trace_takeStep
    * and the starting trajectory values 
    */
   fit_traces_findDerivatives(traceData, fitParam, D, beamline, run);
+
+#ifdef DEBUG
+  fprintf(stderr, "D:\n");
+  m_foutput(stderr, D);
+#endif
   
-  /* invert the matrix D using SVD */
-  if (use_SVD) {
+  if (use_SVD) { 
+    /* invert the matrix D using SVD */
     DInv = m_resize(DInv, D->n, D->m);
+    DInvD = m_resize(DDInv, D->n, D->n);
     U = m_resize(U, D->m, D->m);
     V = m_resize(V, D->n, D->n);
     T = m_resize(T, D->n, D->m);
     S = m_resize(S, D->n, D->m);
     SingValue = v_resize(SingValue, D->n);
     svd(D, U, V, SingValue);
+#ifdef DEBUG
+    fprintf(stderr, "U:\n");
+    m_foutput(stderr, U);
+    fprintf(stderr, "V:\n");
+    m_foutput(stderr, V);
+    fprintf(stderr, "SingValue (raw): \n");
+    v_foutput(stderr, SingValue);
+#endif
     for (i=0; i<SingValue->dim; i++)
       if (SingValue->ve[i])
         SingValue->ve[i] = 1./SingValue->ve[i];
-    if (singular_values)
-      for (i=singular_values; i<SingValue->dim; i++)
+    SVs_to_keep = SingValue->dim;
+    if (SVs_to_remove>0)
+      SVs_to_keep -= SVs_to_remove;
+    for (i=SVs_to_keep; i<SingValue->dim; i++)
         SingValue->ve[i] = 0;
-    /* find_min_max(&minSV, &maxSV, SingValue->ve, SingValue->dim); */
+    for (i=0; i<SVs_to_keep; i++) {
+      if (SingValue->ve[i]< *minSV)
+        *minSV = SingValue->ve[i];
+      if (SingValue->ve[i]> *maxSV)
+        *maxSV = SingValue->ve[i];
+    }
     m_diag(SingValue, S);
     m_mlt(S, U, T);
     mtrm_mlt(V, T, DInv);
     m_mlt(DInv, readbackVector, paramVector);
+
+#ifdef DEBUG
+    fprintf(stderr, "SingValue:\n");
+    v_foutput(stderr, SingValue);
+    fprintf(stderr, "S:\n");
+    m_foutput(stderr, S);
+    fprintf(stderr, "T:\n");
+    m_foutput(stderr, T);
+    fprintf(stderr, "DInv:\n");
+    m_foutput(stderr, DInv);
+#endif
   } else {
     DtD = m_resize(DtD, D->n, D->n);
     Dt = m_resize(Dt, D->n, D->m);
@@ -1045,7 +1105,17 @@ double fit_trace_takeStep
     m_transp(D, Dt);
     m_mlt(DtDInv, Dt, DtDInvDt);
     m_mlt(DtDInvDt, readbackVector, paramVector);
+#ifdef DEBUG
+    fprintf(stderr, "DtDInv:\n");
+    m_foutput(stderr, DtDInv);
+#endif
   }
+#ifdef DEBUG
+  fprintf(stderr, "readbackVector:\n");
+  m_foutput(stderr, readbackVector);
+  fprintf(stderr, "paramVector:\n");
+  m_foutput(stderr, paramVector);
+#endif
   
   if (convergenceFactor>0)
     sm_mlt(convergenceFactor, paramVector, paramVector);

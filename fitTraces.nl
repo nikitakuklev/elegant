@@ -5,6 +5,10 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.4  1998/04/17 22:15:37  borland
+ * Use Meschach matrix library.  Supports SVD or non-SVD.  Removes BPM
+ * common mode.
+ *
  * Revision 1.3  1998/03/19 21:00:57  borland
  * Removed items from track.h and put them in three new files (correctDefs.h,
  * tuneDefs.h, chromDefs.h) to isolate references to matlib.h; this is to
@@ -26,8 +30,9 @@
         STRING fit_parameters_file = NULL;
         long iterations = 10;
         long sub_iterations = 10;
-        long use_SVD = 1;
-        long singular_values = 3;
+        long use_SVD = 0;
+        long SVs_to_keep = 0;
+        long SVs_to_remove = 0;
         double convergence_factor = 1;
         double convergence_factor_divisor = 2;
         double convergence_factor_multiplier = 1.5;
