@@ -160,13 +160,14 @@ long setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 long do_load_parameters(LINE_LIST *beamline, long change_definitions)
 {
   long i, j, count, mode_flags, code, rows, *occurence, param, allFilesRead, allFilesIgnored;
-  char **element, **parameter, **mode, *p_elem, *ptr;
+  char **element, **parameter, **mode, *p_elem, *ptr, lastMissingElement[100];
   double *value, newValue;
   char **valueString;
   ELEMENT_LIST *eptr;
   static long warned_about_occurence = 0;
   long element_missing, numberChanged, totalNumberChanged = 0;
-
+  long lastMissingOccurence = 0;
+  
   if (!load_requests || !load_parameters_setup)
     return NO_LOAD_PARAMETERS;
   allFilesRead = 1;
@@ -258,12 +259,20 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
     
     load_request[i].values = 0;
     element_missing = 0;
+    lastMissingElement[0] = 0;
+    lastMissingOccurence = 0;
     for (j=0; j<rows; j++) {
       eptr = NULL;
-      if (occurence)
+      if (occurence) {
         count = occurence[j];
-      else
+        if (occurence[j]<=lastMissingOccurence &&
+            strcmp(lastMissingElement, element[j])==0)
+          continue;
+      } else {
         count = 1;
+        if (strcmp(lastMissingElement, element[j])==0)
+          continue;
+      }
       element_missing = 0;
       while (count-- > 0) {
         if (!find_element(element[j], &eptr, &(beamline->elem))) {
@@ -283,8 +292,14 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
           element_missing = 1;
         }
       }
-      if (element_missing)
+      if (element_missing) {
+        if (occurence)
+          lastMissingOccurence = occurence[j];
+        strncpy(lastMissingElement, element[j], 99);
         continue;
+      }
+      lastMissingElement[0] = 0;
+      lastMissingOccurence = 0;
       if ((param = confirm_parameter(parameter[j], eptr->type))<0) {
         fprintf(stdout, "%s: element %s does not have a parameter %s (do_load_parameters)\n",
                 allow_missing_parameters?"Warning":"Error",
@@ -498,7 +513,7 @@ void finish_load_parameters()
 }
 
 static long dumpingLatticeParameters = 0;
-static long iElementName, iElementParameter, iParameterValue, iElementType;
+static long iElementName, iElementParameter, iParameterValue, iElementType, iOccurence;
 static SDDS_DATASET SDDS_dumpLattice;
 void dumpLatticeParameters(char *filename, RUN *run, LINE_LIST *beamline)
 {
@@ -516,6 +531,7 @@ void dumpLatticeParameters(char *filename, RUN *run, LINE_LIST *beamline)
         (iElementParameter=SDDS_DefineColumn(SDDSout, "ElementParameter", NULL, NULL, NULL, NULL, SDDS_STRING, 0))<0 ||
         (iParameterValue=SDDS_DefineColumn(SDDSout, "ParameterValue", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
         (iElementType=SDDS_DefineColumn(SDDSout, "ElementType", NULL, NULL, NULL, NULL, SDDS_STRING, 0))<0 ||
+        (iOccurence=SDDS_DefineColumn(SDDSout, "ElementOccurence", NULL, NULL, NULL, NULL, SDDS_LONG, 0))<0 ||
         !SDDS_WriteLayout(SDDSout)) {
       fprintf(stdout, "Problem setting up parameter output file\n");
       fflush(stdout);
@@ -564,6 +580,7 @@ void dumpLatticeParameters(char *filename, RUN *run, LINE_LIST *beamline)
           maxRows += 1000;
         }
         if (!SDDS_SetRowValues(SDDSout, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row,
+                               iOccurence, eptr->occurence,
                                iElementName, eptr->name,
                                iElementParameter, parameter[iParam].name,
                                iParameterValue, value, 
