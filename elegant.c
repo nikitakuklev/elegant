@@ -292,6 +292,11 @@ char **argv;
   
   if (!inputfile)
     bomb("no input file was given", USAGE);
+
+#if defined(CONDOR_COMPILE)
+    sprintf(s, "%s.ckpt", inputfile);
+    init_image_with_file_name(s);
+#endif
   
   initialize_structures(&run_conditions, &run_control, &error_control, &correct, &beam, &output_data,
                         &optimize, &chrom_corr_data, &tune_corr_data, &links);
