@@ -364,7 +364,7 @@ long compute_final_properties
     Ddp = dp_max - dp_min;
     data[6+F_CENTROID_OFFSET] = (tc = sum/sums->n_part);
     for (i=sum=0; i<sums->n_part; i++)
-      sum += sqr(coord[i][4]/(p/sqrt(sqr(p)+1)*c_mks) - tc);
+      sum += sqr( tData[i] - tc);
     data[6+F_SIGMA_OFFSET] = sqrt(sum/sums->n_part);
     /* results of these calls used below */
     compute_percentiles(tPosition, percLevel, 6, tData, sums->n_part);
