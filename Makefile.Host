@@ -1,112 +1,6 @@
 TOP = ../../..
-ARCH_DEP_LDLIBS = 
-SYS_DLL_LIBS_Linux = 
 include $(TOP)/config/CONFIG_APPS
-ARCH_DEP_LDLIBS = 
-SYS_DLL_LIBS_Linux = 
-
-CMPLR = ANSI
-CC = $($(ANSI)_$(CMPLR))
-#HOST_OPT = NO
-#CC = quantify -cache-dir=/home/oxygen/BORLAND/.quantify-cache $($(ANSI)_$(CMPLR)) 
-#CC = purify $($(ANSI)_$(CMPLR)) 
-#CXX = quantify -cache-dir=/home/oxygen/BORLAND/.quantify-cache $($(CPLUSPLUS)_$(CXXCMPLR)) 
-#CXX = purify $($(CPLUSPLUS)_$(CXXCMPLR)) 
-ifeq ($(CONDOR_COMPILE),1)
-  CC = condor_compile -condor_standalone $($(ANSI)_$(CMPLR)) -DCONDOR_COMPILE 
-  CXX = condor_compile -condor_standalone $($(ANSI)_$(CMPLR)) -DCONDOR_COMPILE
-endif
-
-EPICS_EXTENSIONS_LIB = ../../../../../epics/extensions/lib/$(HOST_ARCH)
-PROD = elegant sddsemitmeas madto sddssasefel sddsTouschekInteg ibsEmittance recurseSetup haissinski \
-  sddsmatchtwiss sddsanalyzebeam sddsrandmult sddsresdiag sddsbrightness \
-  ../elegantRingAnalysis ../beamLifetimeCalc ../fin2param
-
-USR_CFLAGS = 	-I../../../../../epics/extensions/src/SDDS/include \
-		$(ZLIB_INC) \
-		-I$(EPICS_EXTENSIONS_INCLUDE) \
-		-DIEEE_MATH \
-		$(ZLIB_CFLAG)
-
-USR_CFLAGS_DEFAULT += 	-DUNIX -DMINIMIZE_MEMORY
-
-ifeq ($(LYNCEANTECH),1) 
-        USR_CFLAGS += -DLYNCEANTECH
-endif
-USR_CFLAGS_WIN32 = -nil-
-
-PROD_LIBS = 	mdbcommon matlib fftpack SDDS1 \
-		rpnlib mdbmth namelist mdblib \
-		meschach $(ZLIB_PROD_LIB)
-PROD_LIBS_WIN32 += fdlibm
-
-MAKE = make
-ifeq ($(HOST_ARCH),solaris)
-MAKE = gnumake
-ACC_DEP_CFLAGS = -KPIC -v
-CCC_DEP_CFLAGS = -KPIC -v
-GCC_DEP_CFLAGS += -D__EXTENSIONS__
-endif
-
-SDDS1_DIR = $(EPICS_EXTENSIONS_LIB)
-namelist_DIR = $(EPICS_EXTENSIONS_LIB)
-fftpack_DIR = $(EPICS_EXTENSIONS_LIB)
-mdbmth_DIR = $(EPICS_EXTENSIONS_LIB)
-matlib_DIR = $(EPICS_EXTENSIONS_LIB)
-mdblib_DIR = $(EPICS_EXTENSIONS_LIB)
-mdbcommon_DIR = $(EPICS_EXTENSIONS_LIB)
-rpnlib_DIR = $(EPICS_EXTENSIONS_LIB)
-meschach_DIR = $(EPICS_EXTENSIONS_LIB)
-fdlibm_DIR = $(EPICS_EXTENSIONS_LIB)
-
-elegant_SRCS = 	alpha_data.c alpha_matrix.c amplif.c analyze.c aperture_search.c bend_matrix.c \
-		bunched_beam.c cfgets.c check_duplic.c chrom.c closed_orbit.c compose_fn.c \
-		compute_centroids.c compute_matrices.c concat_beamline.c concat_mat.c counter.c \
-		copy_particles.c cormon_stats_output.c correct.c corrector_output.c csbend.c \
-		do_tracking.c elegant.c error.c extend_list.c final_props.c find_elem.c floor.c \
-		generate_bunch.c get_beamline.c kicker.c kick_poly.c kick_sbend.c \
-		limit_amplitudes.c link_date.c link_elements.c load_parameters.c lorentz.c mad_parse.c \
-		malign_mat.c matrix_output.c matrix.c matter.c motion.c multipole.c \
-		orbtraj_output.c optimize.c output_magnets.c pepper_pot.c phase_reference.c \
-		print_line.c quad_matrix.c ramp_momentum.c ramped_rfca.c response.c rfmode.c \
-		run_rpnexpr.c sample.c sdds_beam.c sdds_support.c simple_rfca.c  subprocess.c \
-		tune.c tilt_matrices.c trace.c track_data.c track_ramp.c track_rf.c trfmode.c \
-		ztransverse.c twiss.c vary.c zlongit.c SReffects.c mod_rfca.c fitTraces.c \
-		ibs_tracking.c zibs.c wake.c taylorSeries.c \
-		trwake.c circles.c tubend.c sasefelmx.c sasefel.c alter.c \
-		sliceAnalysis.c divideElements.c transmuteElements.c \
-		frfmode.c ftrfmode.c tfeedback.c engeCoef.c lsc.c frequencyMap.c
-
-sddsemitmeas_SRCS = sddsemitmeas.c
-
-madto_SRCS = 	madto.c sdds_strength_output.c convert_to_parmela.c convert_to_patpet.c convert_to_matlab.c \
-		convert_to_patricia.c convert_to_transport.c convert_to_xorbit.c track_data.c \
-		get_beamline.c mad_parse.c output_magnets.c cfgets.c trace.c check_duplic.c \
-		extend_list.c matrix.c compose_fn.c find_elem.c print_line.c divideElements.c \
-		transmuteElements.c convert_to_cosy.c engeCoef.c
-
-sddsrandmult_SRCS = sddsrandmult.c
-
-sddsresdiag_SRCS = sddsresdiag.c
-
-sddssasefel_SRCS = sddssasefel.c sasefelmx.c
-
-sddsTouschekInteg_SRCS = sddsTouschekInteg.c
-
-ibsEmittance_SRCS = ibsEmittance.c zibs.c 
-
-recurseSetup_SRCS = recurseSetup.c
-
-haissinski_SRCS = haissinski.c
-
-sddsmatchtwiss_SRCS = sddsmatchtwiss.c
-
-sddsanalyzebeam_SRCS = sddsanalyzebeam.c
-
-sddsbrightness_SRCS = sddsbrightness.c
-
-fitTraces_CFLAGS = -I../../../../../epics/extensions/src/SDDS/meschach
-
+include $(TOP)/src/elegant/Makefile.OAG
 include $(TOP)/config/RULES.Host
 
 sddsbrightness$(OBJ):
@@ -279,3 +173,5 @@ sddsrandmult$(OBJ): sddsrandmult.h
 sddsrandmult.h: ../sddsrandmult.nl
 	nlpp ../sddsrandmult.nl sddsrandmult.h
 
+clean::
+	$(RM) sddsrandmult.h fitTraces.h vary.h twiss.h tune.h trace.h subprocess.h steer_elem.h sliceAnalysis.h sdds_beam.h save_lattice.h sasefel.h run_rpnexpr.h response.h optimize.h optim_covariable.h matrix_output.h load_parameters.h link_elements.h frequencyMap.h floor.h error.h elegant.h transmuteElements.h divideElements.h correct.h steer_elem.h closed_orbit.h chrom.h bunched_beam.h aperture_search.h analyze.h amplif.h alter.h
