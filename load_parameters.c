@@ -50,11 +50,9 @@ static char *load_mode[LOAD_MODES] = {
     "absolute", "differential", "ignore", "fractional"
     } ;
 
-void setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
+long setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 {
     long i, index;
-
-    log_entry("setup_load_parameters");
 
     /* process the namelist text */
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
@@ -73,7 +71,7 @@ void setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
         load_requests = 0;
         }
     if (clear_settings)
-        return;
+        return 0;
     load_parameters_setup = 1;
 
     load_request = trealloc(load_request, sizeof(*load_request)*(load_requests+1));
@@ -148,11 +146,12 @@ void setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     load_request[load_requests].element_flags = NULL;
     load_request[load_requests].values = 0;
     load_requests++;
-    if (load_request[load_requests-1].flags&COMMAND_FLAG_CHANGE_DEFINITIONS)
+    if (load_request[load_requests-1].flags&COMMAND_FLAG_CHANGE_DEFINITIONS) {
         /* do this right away so that it gets propagated into error and vary operations */
         do_load_parameters(beamline, 1);
-
-    log_exit("setup_load_parameters");
+        return 1;
+      }
+    return 0;
     }
 
 
@@ -168,7 +167,6 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
 
   if (!load_requests || !load_parameters_setup)
     return NO_LOAD_PARAMETERS;
-  log_entry("do_load_parameters");
   allFilesRead = 1;
   allFilesIgnored = 1;
   
@@ -441,7 +439,6 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
     if (load_request[i].flags&COMMAND_FLAG_CHANGE_DEFINITIONS) 
       load_request[i].flags |= COMMAND_FLAG_IGNORE;   /* ignore hereafter */
   }
-  log_exit("do_load_parameters");
   if (!allFilesRead || allFilesIgnored)
     return PARAMETERS_LOADED;
   return PARAMETERS_ENDED;
