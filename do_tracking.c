@@ -477,6 +477,9 @@ long do_tracking(
           case T_CENTER:
             center_beam(coord, (CENTER*)eptr->p_elem, n_to_track);
             break;
+          case T_REMCOR:
+            remove_correlations(coord, (REMCOR*)eptr->p_elem, n_to_track);
+            break;
           case T_RFCA:
             n_left = simple_rf_cavity(coord, n_to_track, (RFCA*)eptr->p_elem, accepted, P_central, z);
             break;
@@ -1156,6 +1159,46 @@ void set_central_momentum(
     *P_central =  P_new;
   }
 }
+
+void remove_correlations(double **part, REMCOR *remcor, long np)
+{
+  double sumxy, sumy2, ratio;
+  long ip, ic, wc;
+  long removeFrom[4];
+  
+  if (!np) 
+    return;
+  
+  removeFrom[0] = remcor->x;
+  removeFrom[1] = remcor->xp;
+  removeFrom[2] = remcor->y;
+  removeFrom[3] = remcor->yp;
+  wc = remcor->with-1;
+
+  for (ip=sumy2=0; ip<np; ip++)
+    sumy2 += part[ip][wc]*part[ip][wc];
+  if (!sumy2)
+    return;
+  
+  for (ic=0; ic<4; ic++) {
+    if (!removeFrom[ic] || ic==wc)
+      continue;
+    if (!remcor->ratioSet[ic]) {
+      for (ip=sumxy=0; ip<np; ip++)
+        sumxy += part[ip][ic]*part[ip][wc];
+      ratio = sumxy/sumy2;
+      if (remcor->onceOnly) {
+        remcor->ratio[ic] = ratio;
+        remcor->ratioSet[ic] = 1;
+      }
+    }
+    else 
+      ratio = remcor->ratio[ic];
+    for (ip=0; ip<np; ip++)
+      part[ip][ic] -= part[ip][wc]*ratio;
+  }
+}
+
 
 void center_beam(double **part, CENTER *center, long np)
 {

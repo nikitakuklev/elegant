@@ -25,7 +25,7 @@ char *entity_name[N_TYPES] = {
     "TWMTA", "MATTER", "RFMODE", "TRFMODE", "ZLONGIT", "SREFFECTS",
     "MODRF", "BMAPXY", "ZTRANSVERSE", "IBSCATTER", "FMULT",
     "WAKE", "TRWAKE", "TUBEND", "CHARGE", "PFILTER", "HISTOGRAM",
-    "CSRCSBEND", "CSRDRIFT", "RFCW",
+    "CSRCSBEND", "CSRDRIFT", "RFCW", "REMCOR",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -129,6 +129,7 @@ and phase modulation.",
     "Like CSBEND, but incorporates a simulation of Coherent Synchrotron radiation.",
     "A follow-on element for CSRCSBEND that applies the CSR wake over a drift.",
     "A combination of RFCA, WAKE, and TRWAKE.",
+    "An element to remove correlations from the tracked beam to simulate certain types of correction.",
     } ;
 
 QUAD quad_example;
@@ -1206,6 +1207,17 @@ PARAMETER rfcw_param[N_RFCW_PARAMS] = {
     {"DY", "M", IS_DOUBLE, 1, (long)((char *)&rfcw_example.dy), NULL, 0.0, 0},
     };
    
+REMCOR remcor_example;
+/* beam centering physical parameters */
+PARAMETER remcor_param[N_REMCOR_PARAMS]={
+    {"X" , "", IS_LONG, 0, (long)((char *)&remcor_example.x), NULL, 0.0, 1},
+    {"XP", "", IS_LONG, 0, (long)((char *)&remcor_example.xp), NULL, 0.0, 1},
+    {"Y" , "", IS_LONG, 0, (long)((char *)&remcor_example.y), NULL, 0.0, 1},
+    {"YP", "", IS_LONG, 0, (long)((char *)&remcor_example.yp), NULL, 0.0, 1},
+    {"WITH", "", IS_LONG, 0, (long)((char *)&remcor_example.with), NULL, 0.0, 6},
+    {"ONCE_ONLY", "", IS_LONG, 0, (long)((char *)&remcor_example.onceOnly), NULL, 0.0, 0},
+    };
+
 /* array of parameter structures */
 
 #define MAT_LEN     HAS_MATRIX|HAS_LENGTH
@@ -1295,6 +1307,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     {  N_CSRDRIFT_PARAMS, MAT_LEN_NCAT,
                                          sizeof(CSRDRIFT),    csrdrift_param   },
     {    N_RFCW_PARAMS,     MAT_LEN_NCAT|HAS_RF_MATRIX,       sizeof(RFCW),    rfcw_param     }, 
+    {  N_REMCOR_PARAMS,           0,     sizeof(REMCOR),    remcor_param   },
 } ;
  
 

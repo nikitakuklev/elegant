@@ -478,7 +478,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_CSRCSBEND 71
 #define T_CSRDRIFT 72
 #define T_RFCW  73
-#define N_TYPES 74
+#define T_REMCOR 74
+#define N_TYPES 75
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -558,6 +559,7 @@ extern char *entity_text[N_TYPES];
 #define N_HISTOGRAM_PARAMS 9
 #define N_CSRCSBEND_PARAMS 38
 #define N_CSRDRIFT_PARAMS 5
+#define N_REMCOR_PARAMS 6
 #define N_RFCW_PARAMS 27
 
 typedef struct {
@@ -1082,6 +1084,16 @@ typedef struct {
     long deltaSet[4];
     double delta[4];
     } CENTER;
+
+/* names and storage structure for beam correlation remover parameters */
+extern PARAMETER remcor_param[N_REMCOR_PARAMS];
+
+typedef struct {
+    long x, xp, y, yp, with, onceOnly;
+    /* for internal use only */
+    long ratioSet[4];
+    double ratio[4];
+    } REMCOR;
 
 /* names and storage structure for time-dependent kicker */
 extern PARAMETER kicker_param[N_KICKER_PARAMS];
@@ -1779,6 +1791,7 @@ extern void do_match_energy(double **coord, long np, double *P_central, long cha
 extern void set_central_energy(double **coord, long np, double new_energy, double *P_central);
 extern void set_central_momentum(double **coord, long np, double  P_new, double *P_central);
 extern void center_beam(double **part, CENTER *center, long np);
+void remove_correlations(double **part, REMCOR *remcor, long np);
 void drift_beam(double **part, long np, double length, long order);
 void scatter(double **part, long np, double Po, SCATTER *scatter);
 void store_fitpoint_twiss_parameters(MARK *fpt, char *name, long occurence, TWISS *twiss);

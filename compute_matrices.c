@@ -701,7 +701,7 @@ VMATRIX *compute_matrix(
       case T_KPOLY: case T_RFDF:  case T_RFTM:  case T_RMDF:  case T_TMCF: case T_CEPL:  case T_TWPL:  case T_TWLA:  
       case T_TWMTA: case T_RCOL:  case T_PEPPOT: case T_MAXAMP: case T_ECOL: case T_TRCOUNT: 
       case T_RECIRC: case T_SCRAPER: case T_CENTER: case T_MULT: case T_SCATTER: case T_RAMPRF: case T_RAMPP: 
-      case T_KICKER: case T_RFMODE:
+      case T_KICKER: case T_RFMODE: case T_REMCOR:
       default:
         if (entity_description[elem->type].flags&HAS_LENGTH)
             elem->matrix = drift_matrix(*((double*)elem->p_elem), run->default_order);
