@@ -484,7 +484,7 @@ void lorentz_setup(
                     x_correction = 0;    /* ditto */
                     if ((offset = nibend->last_zeta_offset)==0)
                         offset = last_offset;
-                    offset = zeroNewton(nibend_trajectory_error, offset, 1e-6, 10, 1e-14);
+                    offset = zeroNewton(nibend_trajectory_error, 0, offset, 1e-6, 10, 1e-14);
 #ifdef IEEE_MATH
                     if (isnan(offset) || isinf(offset))
                         bomb("Newton's method failed to find coordinate offset for NIBEND--decrease accuracy parameter", NULL);
@@ -560,7 +560,7 @@ void lorentz_setup(
                 nisept->q1_offset = nisept->rho0*cos(nisept->e1);
                 if ((fse_opt = nisept->last_fse_opt)==0)
                     fse_opt = last_fse;
-                fse_opt = zeroNewton(nisept_trajectory_error, fse_opt, 1e-6, 10, 1e-14);
+                fse_opt = zeroNewton(nisept_trajectory_error, 0, fse_opt, 1e-6, 10, 1e-14);
 #ifdef IEEE_MATH
                 if (isnan(fse_opt) || isinf(fse_opt))
                     bomb("Newton's method failed to find coordinate fse_opt for NISEPT--decrease accuracy parameter", NULL);
