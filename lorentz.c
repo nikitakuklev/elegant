@@ -557,6 +557,13 @@ void lorentz_setup(
                     fprintf(stdout, "final coordinates: %e, %e, %e, %e, %e\n", 
                         traj_err_final_coord[0], traj_err_final_coord[1], traj_err_final_coord[2],
                         traj_err_final_coord[3], traj_err_final_coord[4]);
+                    if (fringe_code==ENGE1_MODEL || fringe_code==ENGE3_MODEL
+                        || fringe_code==ENGE5_MODEL) 
+                      fprintf(stdout, "Equivalent Enge coefficients: D=%e, a=%e, %e, %e\n", 
+                              engeD, 
+                              engeCoef[0] + engeCoef[1]*offset/engeD + engeCoef[2]*sqr(offset/engeD), 
+                              engeCoef[1] + 2*engeCoef[2]*offset/engeD, 
+                              engeCoef[2]);
                     fflush(stdout);
                     x_correction = traj_err_final_coord[0];
                     last_offset = nibend->last_zeta_offset = nibend->zeta_offset = offset;
