@@ -220,7 +220,7 @@ VMATRIX *compute_periodic_twiss(
   
   for (i=0; i<4; i+=2 ) {
     if (fabs(cos_phi = (R[i][i] + R[i+1][i+1])/2)>1) {
-      fprintf(stdout, "warning: beamline unstable for %c plane--can't match beta functions.\n", 'x'+i/2);
+      fprintf(stdout, "warning: beamline unstable for %c plane--can't match beta functions.\n", (char)('x'+i/2));
       fflush(stdout);
       *unstable |= (i==0?1:2);
       sin_phi = 1e-6;
@@ -1923,7 +1923,6 @@ void computeTuneShiftWithAmplitude(double *dnux_dA, double *dnuy_dA,
 #ifdef DEBUG
   static FILE *fpout = NULL;
 #endif
-  long turns;
   double result[4], maxResult;
   double tune0[2], tune_dx[2], tune_dy[2];
   long i;
@@ -2033,7 +2032,8 @@ void computeTunesFromTracking(double *tune, VMATRIX *M, LINE_LIST *beamline, RUN
   double **oneParticle, dummy;
   double *x, *y, p;
   long i, one=1;
-
+  x = y = NULL;
+  
   oneParticle = (double**)zarray_2d(sizeof(**oneParticle), 1, 7);
   if (!startingCoord)
     fill_double_array(oneParticle[0], 7, 0.0);
