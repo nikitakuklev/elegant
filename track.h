@@ -467,7 +467,7 @@ extern char *entity_text[N_TYPES];
 #define N_SCRAPER_PARAMS 8
 #define N_CENTER_PARAMS 4
 #define N_KICKER_PARAMS 9
-#define N_KSEXT_PARAMS 11
+#define N_KSEXT_PARAMS 13
 #define N_KSBEND_PARAMS 27
 #define N_KQUAD_PARAMS 13
 #define N_MAGNIFY_PARAMS 6
@@ -1007,6 +1007,11 @@ typedef struct {
     double length, k2, tilt, bore, B;
     double dx, dy, dz, fse;
     long n_kicks, synch_rad;
+    char *systematic_multipoles, *error_multipoles;
+    /* for internal use */
+    MULTIPOLE_DATA systematicMultipoleData; 
+    MULTIPOLE_DATA errorMultipoleData;      
+    MULTIPOLE_DATA totalMultipoleData;  /* generated when randomization takes place */
     } KSEXT;
 
 /* names and storage structure for symplectic bending magnet physical parameters */

@@ -692,8 +692,8 @@ void parse_element(
             }
         for (i=1; i<n_params; i++) {
             if ((difference=parameter[i].offset-parameter[i-1].offset)<0) {
-                fprintf(stderr, "error: bad parameter offset for parameter %s of element type %s\n", 
-                        parameter[i].name, type_name);
+                fprintf(stderr, "error: bad parameter offset for element type %s, parameter %ld (%s)\n",
+                        type_name, i, parameter[i].name?parameter[i].name:"NULL");
                 exit(1);
                 }
             else if (difference>8) {
