@@ -54,7 +54,10 @@ OBJ12 = tune.o tilt_matrices.o trace.o track_data.o track_ramp.o track_rf.o trfm
 OBJ13 = twiss.o vary.o zlongit.o SReffects.o mod_rfca.o fitTraces.o
 OBJS =  $(OBJ1) $(OBJ2) $(OBJ3) $(OBJ4) $(OBJ5) $(OBJ6) $(OBJ7) $(OBJ8) $(OBJ9) $(OBJ10) $(OBJ11) $(OBJ12) $(OBJ13)
 
-PROD = elegant sddsemitmeas
+MADTOSRCS = sdds_strength_output.c convert_to_parmela.c convert_to_patpet.c convert_to_patricia.c convert_to_transport.c convert_to_xorbit.c track_data.c get_beamline.c mad_parse.c output_magnets.c cfgets.c trace.c check_duplic.c extend_list.c matrix.c compose_fn.c find_elem.c print_line.c
+MADTOOBJS = sdds_strength_output.o convert_to_parmela.o convert_to_patpet.o convert_to_patricia.o convert_to_transport.o convert_to_xorbit.o track_data.o get_beamline.o mad_parse.o output_magnets.o cfgets.o trace.o check_duplic.o extend_list.o matrix.o compose_fn.o find_elem.o print_line.o
+
+PROD = elegant sddsemitmeas madto
 
 include $(EPICS)/config/RULES.Unix
 
@@ -149,4 +152,7 @@ elegant: $(OBJS) $(DEPLIBS)
 
 sddsemitmeas: sddsemitmeas.o 
 	$(LINK.c) -o $@ sddsemitmeas.o $(LDLIBS)
+
+madto: madto.o $(MADTOOBJS)
+	$(LINK.c) -o $@ madto.o $(MADTOOBJS) $(LDLIBS)
 
