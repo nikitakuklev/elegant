@@ -634,7 +634,7 @@ extern char *entity_text[N_TYPES];
 #define N_CLEAN_PARAMS 7
 #define N_TWISSELEMENT_PARAMS 6
 #define N_WIGGLER_PARAMS 3
-#define N_SCRIPT_PARAMS 26
+#define N_SCRIPT_PARAMS 27
 #define N_FLOORELEMENT_PARAMS 6
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
@@ -1767,7 +1767,9 @@ typedef struct {
 /* names and storage structure for SCRIPT element */
 typedef struct {
   double length;
-  char *command, *rootname, *inputExtension, *outputExtension;
+  char *command;
+  long useCsh, verbosity;
+  char *rootname, *inputExtension, *outputExtension;
   long keepFiles;
   double NP[10];
   char *SP[10];

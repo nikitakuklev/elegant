@@ -1624,8 +1624,11 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
     strcpy(cmdBuffer1, cmdBuffer0);
   }
 
-  fprintf(stderr, "%s\n", cmdBuffer1);
-
+  if (script->verbosity>0) {
+    fprintf(stdout, "%s\n", cmdBuffer1);
+    fflush(stdout);
+  }
+  
   /* dump the data to script input file */
   SDDS_ForceInactive(&SDDSout);
   SDDS_PhaseSpaceSetup(&SDDSout, input, SDDS_BINARY, 1, "script input", 
@@ -1638,9 +1641,16 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
     SDDS_Bomb("problem terminating script input file");
   
   /* run the script */
-  executeCshCommand(cmdBuffer1);
-  fprintf(stderr, "Command completed\n");
+  if (script->useCsh)
+    executeCshCommand(cmdBuffer1);
+  else 
+    system(cmdBuffer1);
 
+  if (script->verbosity>0) {
+    fprintf(stdout, "Command completed\n");
+    fflush(stdout);
+  }
+  
   /* read the data from script output file */
   if (!fexists(output)) 
     SDDS_Bomb("unable to find script output file");
@@ -1703,7 +1713,10 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
     SDDS_Bomb("Script output file has multiple pages");
   if (!SDDS_Terminate(&SDDSin))
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-  fprintf(stderr, "done with file\n");
+  if (script->verbosity) {
+    fprintf(stdout, "done with file\n");
+    fflush(stdout);
+  }
     
   /* convert (t, p) data to (s, delta) */
   for (j=0; j<npNew; j++) {

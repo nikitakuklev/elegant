@@ -169,7 +169,7 @@ void track_through_kicker(
             y0 = y;
             y += l1*yp ;
             y0 = (y+y0)/2;
-            yp += -2*curv*ds*x0*y0*kicker->b2;
+            yp += -2*sin(angle)/kicker->length/(1+dp)*ds*x0*y0*kicker->b2;
           }
         }
         

@@ -233,57 +233,17 @@ VMATRIX *hvcorrector_matrix(
         }
     if (xkick==0) {
         log_exit("hvcorrector_matrix");
-        return(corrector_matrix(length, ykick, PIo2, b2, 1.0, do_edges, max_order));
+        return(corrector_matrix(length, ykick, PIo2+tilt, b2, 1.0, do_edges, max_order));
         }
     if (ykick==0) {
         log_exit("hvcorrector_matrix");
-        return(corrector_matrix(length, xkick, 0.0, b2, 1.0, do_edges, max_order));
+        return(corrector_matrix(length, xkick, tilt, b2, 1.0, do_edges, max_order));
         }
     
     kick = atan(sqrt(sqr(tan(xkick))+sqr(tan(ykick))));
-    tilt2 = atan2(tan(ykick), tan(xkick));
+    tilt += atan2(tan(ykick), tan(xkick));
 
-    if (length==0) {
-        M = tmalloc(sizeof(*M));
-        initialize_matrices(M, 1);
-        M->C[0] = M->C[2] = M->C[3] = M->C[4] = M->C[5] = 0;
-        M->C[1] = kick;
-        M->R[0][0] = M->R[1][1] = M->R[2][2] = M->R[3][3] = M->R[4][4] = M->R[5][5] = 1;
-        M->R[1][5] = -sin(kick);
-        }
-    else {
-        /* convert length to arc length */
-        length *= kick/sin(kick);
-
-        h = -kick/length;
-        M = sbend_matrix(length, 0.0, h, 0.0, b2, 0.0, max_order);
-
-        if (do_edges) {
-            Mtot =  tmalloc(sizeof(*Mtot));
-            initialize_matrices(Mtot, Mtot->order=max_order);
-            Medge = edge_matrix(0.0, h, 0.0, 0.0, -1, 0.0, M->order, 1, 0);
-            concat_matrices(Mtot, M, Medge, 0);
-            tmp  = Mtot;
-            Mtot = M;
-            M    = tmp;
-            free_matrices(Medge); tfree(Medge);
-
-            Medge = edge_matrix(kick, h, 0.0, 0.0, 1, 0.0, M->order, 1, 0);
-            concat_matrices(Mtot, Medge, M, 0);
-            tmp  = Mtot;
-            Mtot = M;
-            M    = tmp;
-            free_matrices(Medge); tfree(Medge); Medge = NULL;
-            free_matrices(Mtot); tfree(Mtot); Mtot = NULL;
-            }
-        }
-
-    tilt += tilt2;
-    if (tilt)
-        tilt_matrices(M, tilt);
-
-    log_exit("hvcorrector_matrix");
-    return(M);
+    return corrector_matrix(length, kick, tilt, b2, 1.0, do_edges, max_order);
     }
  
 
@@ -323,120 +283,224 @@ VMATRIX *corrector_matrix(
     M->R[1][5] = -sin(kick);
   }
   else {
-    double s1, K;
+    double s1, K, e2;
     M = tmalloc(sizeof(*M));
     initialize_matrices(M, max_order);
-    C = M->C;
     s1 = length;
-    K = tan(kick)/length;
-    C[0] = (99*pow(b2,3)*pow(K,7)*pow(s1,14)+24024*pow(b2,2)*pow(K,5)*
-            pow(s1,10)+2162160*b2*pow(K,3)*pow(s1,6)+129729600*K*pow(s1,2))/2.594592E+8;
-    C[1] = (693*pow(b2,3)*pow(K,7)*pow(s1,13)+120120*pow(b2,2)*pow(K,5)*
-            pow(s1,9)+6486480*b2*pow(K,3)*pow(s1,5)+129729600*K*s1)/1.297296E+8;
+    K = sin(kick)/length;
+    e2 = b2;
+    C = M->C;
     R = M->R;
-    R[0][0] = (2730*ipow(b2,3)*ipow(K,6)*ipow(s1,12)+463320*ipow(b2,2)*ipow(K,4)*
-               ipow(s1,8)+21621600*b2*ipow(K,2)*ipow(s1,4))/2.594592E+8+1;
-    R[0][1] = (1386*ipow(b2,3)*ipow(K,6)*ipow(s1,13)+240240*ipow(b2,2)*ipow(K,4)
-               *ipow(s1,9)+12972960*b2*ipow(K,2)*ipow(s1,5)+259459200*s1)/2.594592E+8;
-    R[0][5] = K*ipow(s1,2)-(99*ipow(b2,3)*ipow(K,7)*ipow(s1,14)+24024*ipow(b2,2)
-                            *ipow(K,5)*ipow(s1,10)+2162160*b2*ipow(K,3)*ipow(s1,6)+129729600*K
-                            *ipow(s1,2))/1.297296E+8;
-    R[1][0] = (16380*ipow(b2,3)*ipow(K,6)*ipow(s1,11)+1853280*ipow(b2,2)*ipow(K,4)*
-               ipow(s1,7)+43243200*b2*ipow(K,2)*ipow(s1,3))/1.297296E+8;
-    R[1][1] = (9009*ipow(b2,3)*ipow(K,6)*ipow(s1,12)+1081080*ipow(b2,2)*ipow(K,4)*
-               ipow(s1,8)+32432400*b2*ipow(K,2)*ipow(s1,4))/1.297296E+8+1;
-    R[1][5] = 2*K*s1-(693*ipow(b2,3)*ipow(K,7)*ipow(s1,13)+120120*ipow(b2,2)*
-                      ipow(K,5)*ipow(s1,9)+6486480*b2*ipow(K,3)*ipow(s1,5)+129729600*K*s1)/6.48648E+7;
-    R[2][2] = 1-(-1365*ipow(b2,3)*ipow(K,6)*ipow(s1,12)-154440*ipow(b2,2)*ipow(K,4)*
-                 ipow(s1,8)+10810800*b2*ipow(K,2)*ipow(s1,4))/1.297296E+8;
-    R[2][3] = -(-693*ipow(b2,3)*ipow(K,6)*ipow(s1,13)-60060*ipow(b2,2)*ipow(K,4)*
-                ipow(s1,9)+6486480*b2*ipow(K,2)*ipow(s1,5)-129729600*s1)/1.297296E+8;
-    R[3][2] = -(-1260*ipow(b2,3)*ipow(K,6)*ipow(s1,11)-95040*ipow(b2,2)*ipow(K,4)*
-                ipow(s1,7)+3326400*b2*ipow(K,2)*ipow(s1,3))/9979200.0;
-    R[3][3] = 1-(-693*ipow(b2,3)*ipow(K,6)*ipow(s1,12)-41580*ipow(b2,2)*ipow(K,4)
-                 *ipow(s1,8)+2494800*b2*ipow(K,2)*ipow(s1,4))/9979200.0;
+    R[4][4] = R[5][5] = 1;
+    C[0] = pow(e2,3)*pow(K,7)*pow(s1,14)/2620800.0+pow(e2,2)*pow(K,5)*
+      pow(s1,10)/10800.0+e2*pow(K,3)*pow(s1,6)/120.0+K*pow(s1,2)/2.0 ;
+    C[1] = pow(e2,3)*pow(K,7)*pow(s1,13)/187200.0+pow(e2,2)*pow(K,5)*
+      pow(s1,9)/1080.0+e2*pow(K,3)*pow(s1,5)/20.0+K*s1 ;
+    C[2] = 0 ;
+    C[3] = 0 ;
+    C[4] = pow(e2,6)*pow(K,14)*pow(s1,27)/1.89236736E+12+pow(e2,5)*pow(K,12)*
+      pow(s1,23)/4.650048E+9+211.0*pow(e2,4)*pow(K,10)*
+        pow(s1,19)/5.762016E+9+29.0*pow(e2,3)*pow(K,8)*
+          pow(s1,15)/8424000.0+47.0*pow(e2,2)*pow(K,6)*pow(s1,11)/237600.0+e2*
+            pow(K,4)*pow(s1,7)/140.0+pow(K,2)*pow(s1,3)/6.0+s1 ;
+    R[0][0] = pow(e2,3)*pow(K,6)*pow(s1,12)/95040.0+pow(e2,2)*pow(K,4)*
+      pow(s1,8)/560.0+e2*pow(K,2)*pow(s1,4)/12.0+1 ;
+    R[0][1] = pow(e2,3)*pow(K,6)*pow(s1,13)/187200.0+pow(e2,2)*pow(K,4)*
+      pow(s1,9)/1080.0+e2*pow(K,2)*pow(s1,5)/20.0+s1 ;
+    R[0][2] = 0 ;
+    R[0][3] = 0 ;
+    R[0][5] = -pow(e2,3)*pow(K,7)*pow(s1,14)/374400.0-pow(e2,2)*pow(K,5)*
+      pow(s1,10)/2160.0-e2*pow(K,3)*pow(s1,6)/40.0-K*pow(s1,2)/2.0 ;
+    R[1][0] = pow(e2,3)*pow(K,6)*pow(s1,11)/7920.0+pow(e2,2)*pow(K,4)*
+      pow(s1,7)/70.0+e2*pow(K,2)*pow(s1,3)/3.0 ;
+    R[1][1] = pow(e2,3)*pow(K,6)*pow(s1,12)/14400.0+pow(e2,2)*pow(K,4)*
+      pow(s1,8)/120.0+e2*pow(K,2)*pow(s1,4)/4.0+1 ;
+    R[1][2] = 0 ;
+    R[1][3] = 0 ;
+    R[1][5] = (-7.0)*pow(e2,3)*pow(K,7)*pow(s1,13)/187200.0-pow(e2,2)*pow(K,5)*
+      pow(s1,9)/216.0+(-3.0)*e2*pow(K,3)*pow(s1,5)/20.0-K*s1 ;
+    R[2][0] = 0 ;
+    R[2][1] = 0 ;
+    R[2][2] = pow(e2,3)*pow(K,6)*pow(s1,12)/95040.0+pow(e2,2)*pow(K,4)*
+      pow(s1,8)/840.0-e2*pow(K,2)*pow(s1,4)/12.0+1 ;
+    R[2][3] = pow(e2,3)*pow(K,6)*pow(s1,13)/187200.0+pow(e2,2)*pow(K,4)*
+      pow(s1,9)/2160.0-e2*pow(K,2)*pow(s1,5)/20.0+s1 ;
+    R[2][5] = 0 ;
+    R[3][0] = 0 ;
+    R[3][1] = 0 ;
+    R[3][2] = pow(e2,3)*pow(K,6)*pow(s1,11)/7920.0+pow(e2,2)*pow(K,4)*
+      pow(s1,7)/105.0-e2*pow(K,2)*pow(s1,3)/3.0 ;
+    R[3][3] = pow(e2,3)*pow(K,6)*pow(s1,12)/14400.0+pow(e2,2)*pow(K,4)*
+      pow(s1,8)/240.0-e2*pow(K,2)*pow(s1,4)/4.0+1 ;
+    R[3][5] = 0 ;
+    R[4][0] = pow(e2,6)*pow(K,13)*pow(s1,25)/3.70656E+10+47.0*pow(e2,5)*pow(K,11)*
+      pow(s1,21)/5.108102999999999E+9+461.0*pow(e2,4)*pow(K,9)*
+        pow(s1,17)/3.675672E+8+2867.0*pow(e2,3)*pow(K,7)*
+          pow(s1,13)/3.24324E+7+13.0*pow(e2,2)*pow(K,5)*pow(s1,9)/3780.0+e2*
+            pow(K,3)*pow(s1,5)/15.0 ;
+    R[4][1] = pow(e2,6)*pow(K,13)*pow(s1,26)/7.008768E+10+pow(e2,5)*pow(K,11)*
+      pow(s1,22)/2.02176E+8+211.0*pow(e2,4)*pow(K,9)*
+        pow(s1,18)/3.03264E+8+29.0*pow(e2,3)*pow(K,7)*pow(s1,14)/561600.0+47.0*
+          pow(e2,2)*pow(K,5)*pow(s1,10)/21600.0+e2*pow(K,3)*pow(s1,6)/20.0+K*
+            pow(s1,2)/2.0 ;
+    R[4][2] = 0 ;
+    R[4][3] = 0 ;
+    R[4][5] = (-7.0)*pow(e2,6)*pow(K,14)*pow(s1,27)/9.4618368E+11-pow(e2,5)*
+      pow(K,12)*pow(s1,23)/3.87504E+8+(-211.0)*pow(e2,4)*pow(K,10)*
+        pow(s1,19)/5.762016E+8+(-29.0)*pow(e2,3)*pow(K,8)*
+          pow(s1,15)/1053000.0+(-47.0)*pow(e2,2)*pow(K,6)*pow(s1,11)/39600.0-e2*
+            pow(K,4)*pow(s1,7)/35.0-pow(K,2)*pow(s1,3)/3.0 ;
     if (max_order>1) {
       T = M->T;
-      T[0][0][0] = 3.854170520837187E-9*(44044*ipow(b2,3)*ipow(K,5)*ipow(s1,10)+
-                                         5765760*ipow(b2,2)*ipow(K,3)*ipow(s1,6)+129729600*b2*K*ipow(s1,2));
-      T[0][1][0] = (32760*ipow(b2,3)*ipow(K,5)*ipow(s1,11)+3706560*ipow(b2,2)*ipow(K,3)*
-                    ipow(s1,7)+86486400*b2*K*ipow(s1,3))/1.297296E+8/2;
-      T[0][1][1] = 3.854170520837187E-9*(7644*ipow(b2,3)*ipow(K,5)*ipow(s1,12)+
-                                         849420*ipow(b2,2)*ipow(K,3)*ipow(s1,8)+21621600*b2*K*ipow(s1,4));
-      T[0][2][2] = 3.854170520837187E-9*(-44044*ipow(b2,3)*ipow(K,5)*ipow(s1,10)-
-                                         2882880*ipow(b2,2)*ipow(K,3)*ipow(s1,6)-129729600*b2*K*ipow(s1,2));
-      T[0][3][2] = (-32760*ipow(b2,3)*ipow(K,5)*ipow(s1,11)-411840*ipow(b2,2)*
-                    ipow(K,3)*ipow(s1,7)-86486400*b2*K*ipow(s1,3))/1.297296E+8/2;
-      T[0][3][3] = 3.854170520837187E-9*(-7644*ipow(b2,3)*ipow(K,5)*ipow(s1,12)+
-                                         77220*ipow(b2,2)*ipow(K,3)*ipow(s1,8)-21621600*b2*K*ipow(s1,4));
-      T[0][5][0] = 2*((77220*ipow(b2,2)*ipow(K,4)*ipow(s1,8)+21621600*b2*ipow(K,2)
-                       *ipow(s1,4))/2.594592E+8-(2730*ipow(b2,3)*ipow(K,6)*ipow(s1,12)+
-                                                 463320*ipow(b2,2)*ipow(K,4)*ipow(s1,8)+21621600*b2*ipow(K,2)*ipow(s1,4)
-                                                 )/1.297296E+8)/2;
-      T[0][5][1] = 2*((60060*ipow(b2,2)*ipow(K,4)*ipow(s1,9)+12972960*b2*ipow(K,2)
-                       *ipow(s1,5)+518918400*s1)/2.594592E+8-
-                      (1386*ipow(b2,3)*ipow(K,6)*
-                       ipow(s1,13)+240240*ipow(b2,2)*ipow(K,4)*ipow(s1,9)+12972960*b2*
-                       ipow(K,2)*ipow(s1,5)+259459200*s1)/1.297296E+8)/2;
-      T[0][5][5] = 0.5*((99*ipow(b2,3)*ipow(K,7)*ipow(s1,14)+24024*ipow(b2,2)*ipow(K,5)*
-                         ipow(s1,10)+2162160*b2*ipow(K,3)*ipow(s1,6)+129729600*K*
-                         ipow(s1,2))/4.32432E+7-3*K*ipow(s1,2));
-      T[1][0][0] = 7.708341041674376E-9*(220220*ipow(b2,3)*ipow(K,5)*ipow(s1,9)+
-                                         17297280*ipow(b2,2)*ipow(K,3)*ipow(s1,5)+129729600*b2*K*s1);
-      T[1][1][0] = (180180*ipow(b2,3)*ipow(K,5)*ipow(s1,10)+12972960*ipow(b2,2)*
-                    ipow(K,3)*ipow(s1,6)+129729600*b2*K*ipow(s1,2))/6.48648E+7/2;
-      T[1][1][1] = 7.708341041674376E-9*(45864*ipow(b2,3)*ipow(K,5)*ipow(s1,11)+
-                                         3397680*ipow(b2,2)*ipow(K,3)*ipow(s1,7)+43243200*b2*K*ipow(s1,3));
-      T[1][2][2] = 7.708341041674376E-9*(-220220*ipow(b2,3)*ipow(K,5)*ipow(s1,9)-
-                                         8648640*ipow(b2,2)*ipow(K,3)*ipow(s1,5)-129729600*b2*K*s1);
-      T[1][3][2] = (-180180*ipow(b2,3)*ipow(K,5)*ipow(s1,10)-1441440*ipow(b2,2)*
-                    ipow(K,3)*ipow(s1,6)-129729600*b2*K*ipow(s1,2))/6.48648E+7/2;
-      T[1][3][3] = 7.708341041674376E-9*(-45864*ipow(b2,3)*ipow(K,5)*ipow(s1,11)+
-                                         308880*ipow(b2,2)*ipow(K,3)*ipow(s1,7)-43243200*b2*K*ipow(s1,3));
-      T[1][5][0] = 2*((308880*ipow(b2,2)*ipow(K,4)*ipow(s1,7)+43243200*b2*ipow(K,2)*
-                       ipow(s1,3))/1.297296E+8-
-                      (16380*ipow(b2,3)*ipow(K,6)*ipow(s1,11)+
-                       1853280*ipow(b2,2)*ipow(K,4)*ipow(s1,7)+43243200*b2*ipow(K,2)*
-                       ipow(s1,3))/6.48648E+7)/2;
-      T[1][5][1] = 2*((270270*ipow(b2,2)*ipow(K,4)*ipow(s1,8)+32432400*b2*ipow(K,2)*
-                       ipow(s1,4))/1.297296E+8-
-                      (9009*ipow(b2,3)*ipow(K,6)*ipow(s1,12)+
-                       1081080*ipow(b2,2)*ipow(K,4)*ipow(s1,8)+32432400*b2*ipow(K,2)*ipow(s1,4))/6.48648E+7)/2;
-      T[1][5][5] = 0.5*((693*ipow(b2,3)*ipow(K,7)*ipow(s1,13)+120120*ipow(b2,2)*ipow(K,5)*
-                         ipow(s1,9)+6486480*b2*ipow(K,3)*ipow(s1,5)+129729600*K*s1)/
-                        2.16216E+7-6*K*s1);
-      T[2][2][0] = -(-44044*ipow(b2,3)*ipow(K,5)*ipow(s1,10)-4324320*ipow(b2,2)*ipow(K,3)*
-                     ipow(s1,6)+129729600*b2*K*ipow(s1,2))/6.48648E+7/2;
-      T[2][2][1] = -(-16380*ipow(b2,3)*ipow(K,5)*ipow(s1,11)-1235520*ipow(b2,2)*ipow(K,3)*
-                     ipow(s1,7)+43243200*b2*K*ipow(s1,3))/6.48648E+7/2;
-      T[2][3][0] = -(-16380*ipow(b2,3)*ipow(K,5)*ipow(s1,11)-823680*ipow(b2,2)*ipow(K,3)*
-                     ipow(s1,7)+43243200*b2*K*ipow(s1,3))/6.48648E+7/2;
-      T[2][3][1] = -(-7644*ipow(b2,3)*ipow(K,5)*ipow(s1,12)-386100*ipow(b2,2)*
-                     ipow(K,3)*ipow(s1,8)+21621600*b2*K*ipow(s1,4))/6.48648E+7/2;
-      T[2][5][2] = 2*((-1365*ipow(b2,3)*ipow(K,6)*ipow(s1,12)-154440*ipow(b2,2)*ipow(K,4)*
-                       ipow(s1,8)+10810800*b2*ipow(K,2)*ipow(s1,4))/6.48648E+7-
-                      (38610*ipow(b2,2)*ipow(K,4)*ipow(s1,8)+10810800*b2*ipow(K,2)*ipow(s1,4)
-                       )/1.297296E+8)/2;
-      T[2][5][3] = 2*((-693*ipow(b2,3)*ipow(K,6)*ipow(s1,13)-60060*ipow(b2,2)*ipow(K,4)*
-                       ipow(s1,9)+6486480*b2*ipow(K,2)*ipow(s1,5)-129729600*s1)/6.48648E+7-
-                      (30030*ipow(b2,2)*ipow(K,4)*ipow(s1,9)+6486480*b2*ipow(K,2)*
-                       ipow(s1,5)-259459200*s1)/1.297296E+8)/2;
-      T[3][2][0] = -(-33880*ipow(b2,3)*ipow(K,5)*ipow(s1,9)-1995840*ipow(b2,2)*
-                     ipow(K,3)*ipow(s1,5)+19958400*b2*K*s1)/4989600.0/2;
-      T[3][2][1] = -(-13860*ipow(b2,3)*ipow(K,5)*ipow(s1,10)-665280*ipow(b2,2)*
-                     ipow(K,3)*ipow(s1,6)+9979200*b2*K*ipow(s1,2))/4989600.0/2;
-      T[3][3][0] = -(-13860*ipow(b2,3)*ipow(K,5)*ipow(s1,10)-443520*ipow(b2,2)*
-                     ipow(K,3)*ipow(s1,6)+9979200*b2*K*ipow(s1,2))/4989600.0/2;
-      T[3][3][1] = -(-7056*ipow(b2,3)*ipow(K,5)*ipow(s1,11)-237600*ipow(b2,2)*
-                     ipow(K,3)*ipow(s1,7)+6652800*b2*K*ipow(s1,3))/4989600.0/2;
-      T[3][5][2] = 2*((-1260*ipow(b2,3)*ipow(K,6)*ipow(s1,11)-95040*ipow(b2,2)*
-                       ipow(K,4)*ipow(s1,7)+3326400*b2*ipow(K,2)*ipow(s1,3))/4989600.0-
-                      (23760*ipow(b2,2)*ipow(K,4)*ipow(s1,7)+3326400*b2*ipow(K,2)*ipow(s1,3))/9979200.0)/2;
-      T[3][5][3] = 2*((-693*ipow(b2,3)*ipow(K,6)*ipow(s1,12)-41580*ipow(b2,2)*
-                       ipow(K,4)*ipow(s1,8)+2494800*b2*ipow(K,2)*ipow(s1,4))/4989600.0-
-                      (20790*ipow(b2,2)*ipow(K,4)*ipow(s1,8)+2494800*b2*ipow(K,2)*ipow(s1,4))/9979200.0)/2;
+      T[0][0][0] = 1.697530864197531E-4*pow(e2,3)*pow(K,5)*pow(s1,10)+.0222222222222222*
+        pow(e2,2)*pow(K,3)*pow(s1,6)+0.5*e2*K*pow(s1,2) ;
+      T[0][1][0] = pow(e2,3)*pow(K,5)*pow(s1,11)/7920.0+pow(e2,2)*pow(K,3)*
+        pow(s1,7)/70.0+e2*K*pow(s1,3)/3.0 ;
+      T[0][1][1] = 2.946127946127946E-5*pow(e2,3)*pow(K,5)*pow(s1,12)+.0032738095238095*
+        pow(e2,2)*pow(K,3)*pow(s1,8)+.0833333333333333*e2*K*pow(s1,4) ;
+      T[0][2][0] = 0 ;
+      T[0][2][1] = 0 ;
+      T[0][2][2] = -1.697530864197531E-4*pow(e2,3)*pow(K,5)*
+        pow(s1,10)-.0111111111111111*pow(e2,2)*pow(K,3)*pow(s1,6)-0.5*e2*K*pow(s1,2) ;
+      T[0][3][0] = 0 ;
+      T[0][3][1] = 0 ;
+      T[0][3][2] = -pow(e2,3)*pow(K,5)*pow(s1,11)/7920.0-pow(e2,2)*pow(K,3)*
+        pow(s1,7)/630.0-e2*K*pow(s1,3)/3.0 ;
+      T[0][3][3] = -2.946127946127946E-5*pow(e2,3)*pow(K,5)*
+        pow(s1,12)+2.976190476190476E-4*pow(e2,2)*pow(K,3)*
+          pow(s1,8)-.0833333333333333*e2*K*pow(s1,4) ;
+      T[0][5][0] = -pow(e2,3)*pow(K,6)*pow(s1,12)/15840.0-pow(e2,2)*pow(K,4)*
+        pow(s1,8)/140.0-e2*pow(K,2)*pow(s1,4)/6.0 ;
+      T[0][5][1] = -pow(e2,3)*pow(K,6)*pow(s1,13)/31200.0-pow(e2,2)*pow(K,4)*
+        pow(s1,9)/270.0-e2*pow(K,2)*pow(s1,5)/10.0 ;
+      T[0][5][2] = 0 ;
+      T[0][5][3] = 0 ;
+      T[0][5][5] = 9.157509157509157E-6*pow(e2,3)*pow(K,7)*pow(s1,14)+.0012037037037037*
+        pow(e2,2)*pow(K,5)*pow(s1,10)+0.05*e2*pow(K,3)*pow(s1,6)+0.5*K*pow(s1,2) ;
+      T[1][0][0] = .0016975308641975*pow(e2,3)*pow(K,5)*pow(s1,9)+.1333333333333333*
+        pow(e2,2)*pow(K,3)*pow(s1,5)+e2*K*s1 ;
+      T[1][1][0] = pow(e2,3)*pow(K,5)*pow(s1,10)/720.0+pow(e2,2)*pow(K,3)*
+        pow(s1,6)/10.0+e2*K*pow(s1,2) ;
+      T[1][1][1] = 3.535353535353535E-4*pow(e2,3)*pow(K,5)*pow(s1,11)+.0261904761904762*
+        pow(e2,2)*pow(K,3)*pow(s1,7)+.3333333333333333*e2*K*pow(s1,3) ;
+      T[1][2][0] = 0 ;
+      T[1][2][1] = 0 ;
+      T[1][2][2] = -.0016975308641975*pow(e2,3)*pow(K,5)*pow(s1,9)-.0666666666666667*
+        pow(e2,2)*pow(K,3)*pow(s1,5)-1.0*e2*K*s1 ;
+      T[1][3][0] = 0 ;
+      T[1][3][1] = 0 ;
+      T[1][3][2] = -pow(e2,3)*pow(K,5)*pow(s1,10)/720.0-pow(e2,2)*pow(K,3)*
+        pow(s1,6)/90.0-e2*K*pow(s1,2) ;
+      T[1][3][3] = -3.535353535353535E-4*pow(e2,3)*pow(K,5)*
+        pow(s1,11)+.0023809523809524*pow(e2,2)*pow(K,3)*
+          pow(s1,7)-.3333333333333333*e2*K*pow(s1,3) ;
+      T[1][5][0] = -pow(e2,3)*pow(K,6)*pow(s1,11)/1320.0+(-2.0)*pow(e2,2)*pow(K,4)*
+        pow(s1,7)/35.0+(-2.0)*e2*pow(K,2)*pow(s1,3)/3.0 ;
+      T[1][5][1] = -pow(e2,3)*pow(K,6)*pow(s1,12)/2400.0-pow(e2,2)*pow(K,4)*
+        pow(s1,8)/30.0-e2*pow(K,2)*pow(s1,4)/2.0 ;
+      T[1][5][2] = 0 ;
+      T[1][5][3] = 0 ;
+      T[1][5][5] = 1.282051282051282E-4*pow(e2,3)*pow(K,7)*pow(s1,13)+0.012037037037037*
+        pow(e2,2)*pow(K,5)*pow(s1,9)+0.3*e2*pow(K,3)*pow(s1,5)+K*s1 ;
+      T[2][0][0] = 0 ;
+      T[2][1][0] = 0 ;
+      T[2][1][1] = 0 ;
+      T[2][2][0] = 11.0*pow(e2,3)*pow(K,5)*pow(s1,10)/32400.0+pow(e2,2)*pow(K,3)*
+        pow(s1,6)/30.0-e2*K*pow(s1,2) ;
+      T[2][2][1] = pow(e2,3)*pow(K,5)*pow(s1,11)/7920.0+pow(e2,2)*pow(K,3)*
+        pow(s1,7)/105.0-e2*K*pow(s1,3)/3.0 ;
+      T[2][2][2] = 0 ;
+      T[2][3][0] = pow(e2,3)*pow(K,5)*pow(s1,11)/7920.0+2.0*pow(e2,2)*pow(K,3)*
+        pow(s1,7)/315.0-e2*K*pow(s1,3)/3.0 ;
+      T[2][3][1] = 7.0*pow(e2,3)*pow(K,5)*pow(s1,12)/118800.0+pow(e2,2)*pow(K,3)*
+        pow(s1,8)/336.0-e2*K*pow(s1,4)/6.0 ;
+      T[2][3][2] = 0 ;
+      T[2][3][3] = 0 ;
+      T[2][5][0] = 0 ;
+      T[2][5][1] = 0 ;
+      T[2][5][2] = -pow(e2,3)*pow(K,6)*pow(s1,12)/15840.0-pow(e2,2)*pow(K,4)*
+        pow(s1,8)/210.0+e2*pow(K,2)*pow(s1,4)/6.0 ;
+      T[2][5][3] = -pow(e2,3)*pow(K,6)*pow(s1,13)/31200.0-pow(e2,2)*pow(K,4)*
+        pow(s1,9)/540.0+e2*pow(K,2)*pow(s1,5)/10.0 ;
+      T[2][5][5] = 0 ;
+      T[3][0][0] = 0 ;
+      T[3][1][0] = 0 ;
+      T[3][1][1] = 0 ;
+      T[3][2][0] = 11.0*pow(e2,3)*pow(K,5)*pow(s1,9)/3240.0+pow(e2,2)*pow(K,3)*
+        pow(s1,5)/5.0-2*e2*K*s1 ;
+      T[3][2][1] = pow(e2,3)*pow(K,5)*pow(s1,10)/720.0+pow(e2,2)*pow(K,3)*
+        pow(s1,6)/15.0-e2*K*pow(s1,2) ;
+      T[3][2][2] = 0 ;
+      T[3][3][0] = pow(e2,3)*pow(K,5)*pow(s1,10)/720.0+2.0*pow(e2,2)*pow(K,3)*
+        pow(s1,6)/45.0-e2*K*pow(s1,2) ;
+      T[3][3][1] = 7.0*pow(e2,3)*pow(K,5)*pow(s1,11)/9900.0+pow(e2,2)*pow(K,3)*
+        pow(s1,7)/42.0+(-2.0)*e2*K*pow(s1,3)/3.0 ;
+      T[3][3][2] = 0 ;
+      T[3][3][3] = 0 ;
+      T[3][5][0] = 0 ;
+      T[3][5][1] = 0 ;
+      T[3][5][2] = -pow(e2,3)*pow(K,6)*pow(s1,11)/1320.0+(-4.0)*pow(e2,2)*pow(K,4)*
+        pow(s1,7)/105.0+2.0*e2*pow(K,2)*pow(s1,3)/3.0 ;
+      T[3][5][3] = -pow(e2,3)*pow(K,6)*pow(s1,12)/2400.0-pow(e2,2)*pow(K,4)*
+        pow(s1,8)/60.0+e2*pow(K,2)*pow(s1,4)/2.0 ;
+      T[3][5][5] = 0 ;
+      T[4][0][0] = 7.40831832546076E-10*pow(e2,6)*pow(K,12)*
+        pow(s1,23)+2.151468606959185E-7*pow(e2,5)*pow(K,10)*
+          pow(s1,19)+2.385357147261909E-5*pow(e2,4)*pow(K,8)*
+            pow(s1,15)+.0012774571107904*pow(e2,3)*pow(K,6)*
+              pow(s1,11)+.0341269841269841*pow(e2,2)*pow(K,4)*
+                pow(s1,7)+.3333333333333333*e2*pow(K,2)*pow(s1,3) ;
+      T[4][1][0] = pow(e2,6)*pow(K,12)*pow(s1,24)/1.482624E+9+47.0*pow(e2,5)*pow(K,10)*
+        pow(s1,20)/2.43243E+8+461.0*pow(e2,4)*pow(K,8)*
+          pow(s1,16)/2.16216E+7+2867.0*pow(e2,3)*pow(K,6)*
+            pow(s1,12)/2494800.0+13.0*pow(e2,2)*pow(K,4)*pow(s1,8)/420.0+e2*
+              pow(K,2)*pow(s1,4)/3.0 ;
+      T[4][1][1] = 1.71992359492359E-10*pow(e2,6)*pow(K,12)*
+        pow(s1,25)+4.980750681808883E-8*pow(e2,5)*pow(K,10)*
+          pow(s1,21)+5.634774629872669E-6*pow(e2,4)*pow(K,8)*
+            pow(s1,17)+3.172676089342756E-4*pow(e2,3)*pow(K,6)*
+              pow(s1,13)+.0091600529100529*pow(e2,2)*pow(K,4)*
+                pow(s1,9)+.1166666666666667*e2*pow(K,2)*pow(s1,5)+0.5*s1 ;
+      T[4][2][0] = 0 ;
+      T[4][2][1] = 0 ;
+      T[4][2][2] = -4.76904938184399E-11*pow(e2,6)*pow(K,12)*
+        pow(s1,23)-3.81795784654784E-8*pow(e2,5)*pow(K,10)*
+          pow(s1,19)-9.91219245187499E-6*pow(e2,4)*pow(K,8)*
+            pow(s1,15)-8.301266634599969E-4*pow(e2,3)*pow(K,6)*
+              pow(s1,11)-.0087301587301587*pow(e2,2)*pow(K,4)*
+                pow(s1,7)-.3333333333333333*e2*pow(K,2)*pow(s1,3) ;
+      T[4][3][0] = 0 ;
+      T[4][3][1] = 0 ;
+      T[4][3][2] = pow(e2,6)*pow(K,12)*pow(s1,24)/1.7791488E+10+(-1229.0)*pow(e2,5)*
+        pow(K,10)*pow(s1,20)/1.5567552E+11+(-487.0)*pow(e2,4)*pow(K,8)*
+          pow(s1,16)/7.783776E+7+(-5417.0)*pow(e2,3)*pow(K,6)*
+            pow(s1,12)/9979200.0+pow(e2,2)*pow(K,4)*pow(s1,8)/252.0-e2*pow(K,2)*
+              pow(s1,4)/3.0 ;
+      T[4][3][3] = 2.09088750755417E-11*pow(e2,6)*pow(K,12)*
+        pow(s1,25)-1.203663571388439E-9*pow(e2,5)*pow(K,10)*
+          pow(s1,21)-1.525492027943008E-6*pow(e2,4)*pow(K,8)*
+            pow(s1,17)-1.165655332321999E-4*pow(e2,3)*pow(K,6)*
+              pow(s1,13)+.0023478835978836*pow(e2,2)*pow(K,4)*
+                pow(s1,9)-.1166666666666667*e2*pow(K,2)*pow(s1,5)+0.5*s1 ;
+      T[4][5][0] = -pow(e2,6)*pow(K,13)*pow(s1,25)/2.8512E+9+(-47.0)*pow(e2,5)*
+        pow(K,11)*pow(s1,21)/4.64373E+8+(-461.0)*pow(e2,4)*pow(K,9)*
+          pow(s1,17)/4.08408E+7+(-2867.0)*pow(e2,3)*pow(K,7)*
+            pow(s1,13)/4633200.0+(-13.0)*pow(e2,2)*pow(K,5)*pow(s1,9)/756.0-e2*
+              pow(K,3)*pow(s1,5)/5.0 ;
+      T[4][5][1] = -pow(e2,6)*pow(K,13)*pow(s1,26)/5.39136E+9+(-11.0)*pow(e2,5)*
+        pow(K,11)*pow(s1,22)/2.02176E+8+(-211.0)*pow(e2,4)*pow(K,9)*
+          pow(s1,18)/3.3696E+7+(-203.0)*pow(e2,3)*pow(K,7)*
+            pow(s1,14)/561600.0+(-47.0)*pow(e2,2)*pow(K,5)*
+              pow(s1,10)/4320.0+(-3.0)*e2*pow(K,3)*pow(s1,6)/20.0-K*pow(s1,2)/2.0 ;
+      T[4][5][2] = 0 ;
+      T[4][5][3] = 0 ;
+      T[4][5][5] = 5.12585463321456E-11*pow(e2,6)*pow(K,14)*
+        pow(s1,27)+1.548371113588505E-8*pow(e2,5)*pow(K,12)*
+          pow(s1,23)+1.867575515236334E-6*pow(e2,4)*pow(K,10)*
+            pow(s1,19)+1.163342830009497E-4*pow(e2,3)*pow(K,8)*
+              pow(s1,15)+.0039856902356902*pow(e2,2)*pow(K,6)*
+                pow(s1,11)+.0714285714285714*e2*pow(K,4)*pow(s1,7)+0.5*pow(K,2)*pow(s1,3) ;
     }
-    
 
     if (do_edges) {
       double arc;
