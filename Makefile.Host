@@ -10,18 +10,22 @@ CMPLR = ANSI
 PROD = elegant sddsemitmeas madto sddssasefel sddsTouschekInteg ibsEmittance recurseSetup
 
 USR_CFLAGS_DEFAULT = 	-I../../../../../epics/extensions/src/SDDS/include \
+			$(ZLIB_INC) \
                         -L../../../../../epics/extensions/lib/$(HOST_ARCH) \
 			-I$(EPICS_EXTENSIONS_INCLUDE) \
-			-DIEEE_MATH -DUNIX
+			-DIEEE_MATH -DUNIX \
+			$(ZLIB_CFLAG)
 
 USR_CFLAGS_WIN32 =	-I../../../../../epics/extensions/src/SDDS/include \
+			$(ZLIB_INC) \
 			-I$(EPICS_EXTENSIONS_INCLUDE) \
-			-DIEEE_MATH
+			-DIEEE_MATH \
+			$(ZLIB_CFLAG)
 
 PROD_LIBS_DEFAULT = 	mdbmth SDDS1 namelist matlib rpnlib fftpack mdbmth mdblib meschach \
-			mdbmth SDDS1 namelist matlib rpnlib fftpack mdbmth mdblib meschach
+			mdbmth SDDS1 namelist matlib rpnlib fftpack mdbmth mdblib meschach $(ZLIB_PROD_LIB)
 
-PROD_LIBS_WIN32 = 	mdbmth SDDS1 namelist matlib rpnlib fftpack mdbmth mdblib meschach fdlibm
+PROD_LIBS_WIN32 = 	mdbmth SDDS1 namelist matlib rpnlib fftpack mdbmth mdblib meschach fdlibm $(ZLIB_PROD_LIB)
 
 SYS_PROD_LIBS_solaris += sunmath
 
