@@ -11,6 +11,7 @@
     long n_indices = 0;
     long n_passes = 1;
     long reset_rf_for_each_step = 1;
+    long first_is_fiducial = 0;
 #end
 
 #namelist vary_element static
