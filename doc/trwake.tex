@@ -1,0 +1,22 @@
+The input file for this element gives the transverse-wake Green
+functions, $W_x(t)$ and $W_y(t)$, versus time behind the particle. The
+units of the wakes are V/C/m, so this element simulates the integrated
+wake of some structure (e.g., a cell or series of cells).  If you
+have, for example, the wake for a cell and you need the wake for N
+cells, then you may use the {\tt FACTOR} parameter to make the
+appropriate multiplication.  The values of the time coordinate should
+begin at 0 and be equi-spaced.  A positive value of time represents
+the distance behind the exciting particle.
+
+Use of the {\tt CHARGE} parameter on the {\tt TRWAKE} element is
+disparaged.  It is preferred to use the {\tt CHARGE} element as part
+of your beamline to define the charge.  
+
+Setting the {\tt N\_BINS} paramater to 0 is recommended.  This results
+in auto-scaling of the number of bins to accomodate the beam.  The bin
+size is fixed by the spacing of the time points in the wake.
+
+The default degree of smoothing ({\tt SG\_HALFWIDTH=4}) may be excessive.
+It is suggested that users vary this parameter to verify that results
+are reliable if smoothing is employed ({\tt SMOOTHING=1}).
+

@@ -1,0 +1,1800 @@
+\newlength{\descwidth}
+\setlength{\descwidth}{2in}
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|ALPH|}\end{center}
+\end{latexonly}\subsection{ALPH}
+An alpha magnet implemented as a matrix, up to 3rd order.  PART is used to split
+the magnet into halves.  XS$<$n$>$ and DP$<$n$>$ allow momentum filtration at the midpoint.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+XMAX & $M$ & double &  0.0 & size of alpha  \\ \hline 
+XS1 & $M$ & double &  0.0 & inner scraper position  \\ \hline 
+XS2 & $M$ & double &  0.0 & outer scraper position  \\ \hline 
+DP1 &  & double &   -1 & inner scraper momentum deviation  \\ \hline 
+DP2 &  & double &   1 & outer scraper momentum deviation  \\ \hline 
+XPUCK & $M$ & double &   -1 & position of scraper puck  \\ \hline 
+WIDTHPUCK & $M$ & double &  0.0 & size of scraper puck  \\ \hline 
+DX & $M$ & double &  0.0 & misalignment  \\ \hline 
+DY & $M$ & double &  0.0 & misalignment  \\ \hline 
+DZ & $M$ & double &  0.0 & misalignment  \\ \hline 
+TILT &  & double &  0.0 & rotation about incoming longitudinal axis  \\ \hline 
+PART &  & long &  \verb|0| & 0=full, 1=first half, 2=second half  \\ \hline 
+ORDER &  & long &  \verb|0| & matrix order [1,3]  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|BMAPXY|}\end{center}
+\end{latexonly}\subsection{BMAPXY}
+A map of Bx and By vs x and y.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+L & $M$ & double &  0.0 & length  \\ \hline 
+STRENGTH & $NULL$ & double &  0.0 & factor by which to multiply field  \\ \hline 
+ACCURACY & $NULL$ & double &  0.0 & integration accuracy  \\ \hline 
+METHOD & $NULL$ & STRING &   NULL            & integration method (runge-kutta, bulirsch-stoer, modified-midpoint, two-pass modified-midpoint, leap-frog, non-adaptive runge-kutta  \\ \hline 
+FILENAME & $NULL$ & STRING &   NULL            & name of file containing columns (x, y, Fx, Fy) giving normalized field (Fx, Fy) vs (x, y)  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|BUMPER|}\end{center}
+\end{latexonly}\subsection{BUMPER}
+A time-dependent uniform-field rectangular kicker magnet with no fringe effects.
+The waveform is in mpl format, with time in seconds and amplitude normalized to 1.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+L & $M$ & double &  0.0 & length  \\ \hline 
+ANGLE & $RAD$ & double &  0.0 & kick angle  \\ \hline 
+TILT & $RAD$ & double &  0.0 & rotation about longitudinal axis  \\ \hline 
+TIME\_OFFSET & $S$ & double &  0.0 & time offset of waveform  \\ \hline 
+PERIODIC &  & long &  \verb|0| & is waveform periodic?  \\ \hline 
+PHASE\_REFERENCE &  & long &  \verb|0| & phase reference number (to link with other time-dependent elements)  \\ \hline 
+FIRE\_ON\_PASS &  & long &  \verb|0| & pass number to fire on  \\ \hline 
+WAVEFORM &  & STRING &   NULL            & $<$filename$>$=$<$x$>$+$<$y$>$ form specification of input file giving kick factor vs time  \\ \hline 
+SPATIAL\_DEPENDENCE &  & STRING &   NULL            & rpn function of x and y giving spatial dependence of kick  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|CENTER|}\end{center}
+\end{latexonly}\subsection{CENTER}
+An element that centers the beam transversely on the ideal trajectory.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+X &  & long &   1               & center x coordinates?  \\ \hline 
+XP &  & long &   1               & center x' coordinates?  \\ \hline 
+Y &  & long &   1               & center y coordinates?  \\ \hline 
+YP &  & long &   1               & center y' coordinates?  \\ \hline 
+ONCE\_ONLY &  & long &  \verb|0| & compute centering offsets for first beam only, apply to all?  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|CEPL|}\end{center}
+\end{latexonly}\subsection{CEPL}
+A numerically-integrated linearly-ramped electric field deflector.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+L & $M$ & double &  0.0 & length  \\ \hline 
+RAMP\_TIME & $S$ & double &   1e-09 & time to ramp to full strenth  \\ \hline 
+TIME\_OFFSET & $S$ & double &  0.0 & offset of ramp-start time  \\ \hline 
+VOLTAGE & $V$ & double &  0.0 & maximum voltage between plates due to ramp  \\ \hline 
+GAP & $M$ & double &   0.01 & gap between plates  \\ \hline 
+STATIC\_VOLTAGE & $V$ & double &  0.0 & static component of voltage  \\ \hline 
+TILT & $RAD$ & double &  0.0 & rotation about longitudinal axis  \\ \hline 
+ACCURACY &  & double &   0.0001 & integration accuracy  \\ \hline 
+X\_MAX & $M$ & double &  0.0 & x half-aperture  \\ \hline 
+Y\_MAX & $M$ & double &  0.0 & y half-aperture  \\ \hline 
+DX & $M$ & double &  0.0 & misalignment  \\ \hline 
+DY & $M$ & double &  0.0 & misalignment  \\ \hline 
+PHASE\_REFERENCE &  & long &  \verb|0| & phase reference number (to link with other time-dependent elements)  \\ \hline 
+N\_STEPS &  & long &   100             & number of steps (for nonadaptive integration)  \\ \hline 
+METHOD & $ $ & STRING &   runge-kutta     & integration method (runge-kutta, bulirsch-stoer, non-adaptive runge-kutta, modified midpoint)  \\ \hline 
+FIDUCIAL &  & STRING &   t,median        & \{t$|$p\},\{median$|$min$|$max$|$ave$|$first$|$light\} (e.g., "t,median")  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|CHARGE|}\end{center}
+\end{latexonly}\subsection{CHARGE}
+An element to establish the total charge of a beam.  Active on first pass only.  If given, overrides all charge specifications on other elements.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+TOTAL & $C$ & double &  0.0 & total charge in beam  \\ \hline 
+PER\_PARTICLE & $C$ & double &  0.0 & charge per macroparticle  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|CLEAN|}\end{center}
+\end{latexonly}\subsection{CLEAN}
+Cleans the beam by removing outlier particles.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+MODE &  & STRING &   stdeviation     & stdeviation, absdeviation, or absvalue  \\ \hline 
+XLIMIT &  & double &  0.0 & Limit for x  \\ \hline 
+XPLIMIT &  & double &  0.0 & Limit for x'  \\ \hline 
+YLIMIT &  & double &  0.0 & Limit for y  \\ \hline 
+YPLIMIT &  & double &  0.0 & Limit for y'  \\ \hline 
+TLIMIT &  & double &  0.0 & Limit for t  \\ \hline 
+DELTALIMIT &  & double &  0.0 & Limit for (p-p0)/p0  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|CSBEND|}\end{center}
+\end{latexonly}\subsection{CSBEND}
+A canonical kick sector dipole magnet.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+L & $M$ & double &  0.0 & arc length  \\ \hline 
+ANGLE & $RAD$ & double &  0.0 & bend angle  \\ \hline 
+K1 & $1/M^{2}$ & double &  0.0 & geometric quadrupole strength  \\ \hline 
+K2 & $1/M^{3}$ & double &  0.0 & geometric sextupole strength  \\ \hline 
+K3 & $1/M^{3}$ & double &  0.0 & geometric octupole strength  \\ \hline 
+K4 & $1/M^{4}$ & double &  0.0 & geometric decapole strength  \\ \hline 
+E1 & $RAD$ & double &  0.0 & entrance edge angle  \\ \hline 
+E2 & $RAD$ & double &  0.0 & exit edge angle  \\ \hline 
+TILT & $RAD$ & double &  0.0 & rotation about incoming longitudinal axis  \\ \hline 
+H1 & $1/M$ & double &  0.0 & entrance pole-face curvature  \\ \hline 
+H2 & $1/M$ & double &  0.0 & exit pole-face curvature  \\ \hline 
+HGAP & $M$ & double &  0.0 & half-gap between poles  \\ \hline 
+FINT &  & double &   0.5 & edge-field integral  \\ \hline 
+DX & $M$ & double &  0.0 & misalignment  \\ \hline 
+DY & $M$ & double &  0.0 & misalignment  \\ \hline 
+DZ & $M$ & double &  0.0 & misalignment  \\ \hline 
+FSE &  & double &  0.0 & fractional strength error  \\ \hline 
+ETILT &  & double &  0.0 & error rotation about incoming longitudinal axis  \\ \hline 
+N\_KICKS &  & long &   4               & number of kicks  \\ \hline 
+NONLINEAR &  & long &   1               & include nonlinear field components?  \\ \hline 
+SYNCH\_RAD &  & long &  \verb|0| & include classical synchrotron radiation?  \\ \hline 
+EDGE1\_EFFECTS &  & long &   1               & include entrace edge effects?  \\ \hline 
+EDGE2\_EFFECTS &  & long &   1               & include exit edge effects?  \\ \hline 
+EDGE\_ORDER &  & long &   1               & order to which to include edge effects  \\ \hline 
+INTEGRATION\_ORDER &  & long &   2               & integration order (2 or 4)  \\ \hline 
+EDGE1\_KICK\_LIMIT &  & double &   -1 & maximum kick entrance edge can deliver  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|CSBEND| continued}\end{center}
+\end{latexonly}
+A canonical kick sector dipole magnet.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+EDGE2\_KICK\_LIMIT &  & double &   -1 & maximum kick exit edge can deliver  \\ \hline 
+KICK\_LIMIT\_SCALING &  & long &  \verb|0| & scale maximum edge kick with FSE?  \\ \hline 
+USE\_BN &  & long &  \verb|0| & use B$<$n$>$ instead of K$<$n$>$?  \\ \hline 
+B1 & $1/M$ & double &  0.0 & K1 = B1*rho, where rho is bend radius  \\ \hline 
+B2 & $1/M^{2}$ & double &  0.0 & K2 = B2*rho  \\ \hline 
+B3 & $1/M^{3}$ & double &  0.0 & K3 = B3*rho  \\ \hline 
+B4 & $1/M^{4}$ & double &  0.0 & K4 = B4*rho  \\ \hline 
+ISR &  & long &  \verb|0| & include incoherent synchrotron radiation (scattering)?  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|CSRCSBEND|}\end{center}
+\end{latexonly}\subsection{CSRCSBEND}
+Like CSBEND, but incorporates a simulation of Coherent Synchrotron radiation.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+L & $M$ & double &  0.0 & arc length  \\ \hline 
+ANGLE & $RAD$ & double &  0.0 & bend angle  \\ \hline 
+K1 & $1/M^{2}$ & double &  0.0 & geometric quadrupole strength  \\ \hline 
+K2 & $1/M^{3}$ & double &  0.0 & geometric sextupole strength  \\ \hline 
+K3 & $1/M^{3}$ & double &  0.0 & geometric octupole strength  \\ \hline 
+K4 & $1/M^{4}$ & double &  0.0 & geometric decapole strength  \\ \hline 
+E1 & $RAD$ & double &  0.0 & entrance edge angle  \\ \hline 
+E2 & $RAD$ & double &  0.0 & exit edge angle  \\ \hline 
+TILT & $RAD$ & double &  0.0 & rotation about incoming longitudinal axis  \\ \hline 
+H1 & $1/M$ & double &  0.0 & entrance pole-face curvature  \\ \hline 
+H2 & $1/M$ & double &  0.0 & exit pole-face curvature  \\ \hline 
+HGAP & $M$ & double &  0.0 & half-gap between poles  \\ \hline 
+FINT &  & double &   0.5 & edge-field integral  \\ \hline 
+DX & $M$ & double &  0.0 & misalignment  \\ \hline 
+DY & $M$ & double &  0.0 & misalignment  \\ \hline 
+DZ & $M$ & double &  0.0 & misalignment  \\ \hline 
+FSE &  & double &  0.0 & fractional strength error  \\ \hline 
+ETILT &  & double &  0.0 & error rotation about incoming longitudinal axis  \\ \hline 
+N\_KICKS &  & long &   4               & number of kicks  \\ \hline 
+NONLINEAR &  & long &   1               & include nonlinear field components?  \\ \hline 
+LINEARIZE &  & long &  \verb|0| & use linear matrix instead of symplectic integrator?  \\ \hline 
+SYNCH\_RAD &  & long &  \verb|0| & include classical synchrotron radiation?  \\ \hline 
+EDGE1\_EFFECTS &  & long &   1               & include entrace edge effects?  \\ \hline 
+EDGE2\_EFFECTS &  & long &   1               & include exit edge effects?  \\ \hline 
+EDGE\_ORDER &  & long &   1               & order to which to include edge effects  \\ \hline 
+INTEGRATION\_ORDER &  & long &   2               & integration order (2 or 4)  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|CSRCSBEND| continued}\end{center}
+\end{latexonly}
+Like CSBEND, but incorporates a simulation of Coherent Synchrotron radiation.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+BINS &  & long &  \verb|0| & number of bins for CSR wake  \\ \hline 
+BIN\_ONCE &  & long &  \verb|0| & bin only at the start of the dipole?  \\ \hline 
+BIN\_RANGE\_FACTOR &  & double &   1.2 & Factor by which to increase the range of histogram compared to total bunch length.  Large value eliminates binning problems in CSRDRIFTs.  \\ \hline 
+SG\_HALFWIDTH &  & long &  \verb|0| & Savitzky-Golay filter half-width for smoothing current histogram  \\ \hline 
+SG\_ORDER &  & long &   1               & Savitzky-Golay filter order for smoothing current histogram  \\ \hline 
+SGDERIV\_HALFWIDTH &  & long &  \verb|0| & Savitzky-Golay filter half-width for taking derivative of current histogram  \\ \hline 
+SGDERIV\_ORDER &  & long &   1               & Savitzky-Golay filter order for taking derivative of current histogram  \\ \hline 
+TRAPAZOID\_INTEGRATION &  & long &   1               & Select whether to use trapazoid-rule integration (default) or a simple sum.  \\ \hline 
+OUTPUT\_FILE &  & STRING &   NULL            & output file for CSR wakes  \\ \hline 
+OUTPUT\_INTERVAL &  & long &   1               & interval (in kicks) of output to OUTPUT\_FILE  \\ \hline 
+OUTPUT\_LAST\_WAKE\_ONLY &  & long &  \verb|0| & output final wake only?  \\ \hline 
+STEADY\_STATE &  & long &  \verb|0| & use steady-state wake equations?  \\ \hline 
+USE\_BN &  & long &  \verb|0| & use B$<$n$>$ instead of K$<$n$>$?  \\ \hline 
+B1 & $1/M$ & double &  0.0 & K1 = B1*rho, where rho is bend radius  \\ \hline 
+B2 & $1/M^{2}$ & double &  0.0 & K2 = B2*rho  \\ \hline 
+B3 & $1/M^{3}$ & double &  0.0 & K3 = B3*rho  \\ \hline 
+B4 & $1/M^{4}$ & double &  0.0 & K4 = B4*rho  \\ \hline 
+ISR &  & long &  \verb|0| & include incoherent synchrotron radiation (scattering)?  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|CSRCSBEND| continued}\end{center}
+\end{latexonly}
+Like CSBEND, but incorporates a simulation of Coherent Synchrotron radiation.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+CSR &  & long &   1               & enable CSR computations?  \\ \hline 
+BLOCK\_CSR &  & long &  \verb|0| & block CSR from entering CSRDRIFT?  \\ \hline 
+DERBENEV\_CRITERION\_MODE &  & STRING &   disable         & disable, evaluate, or enforce  \\ \hline 
+PARTICLE\_OUTPUT\_FILE &  & STRING &   NULL            & name of file for phase-space output  \\ \hline 
+PARTICLE\_OUTPUT\_INTERVAL &  & long &  \verb|0| & interval (in kicks) of output to PARTICLE\_OUTPUT\_FILE  \\ \hline 
+SLICE\_ANALYSIS\_INTERVAL &  & long &  \verb|0| & interval (in kicks) of output to slice analysis file (from slice\_analysis command)  \\ \hline 
+HIGH\_FREQUENCY\_CUTOFF0 &  & double &   -1 & Spatial frequency at which smoothing filter begins.  If not positive, no frequency filter smoothing is done.  Frequency is in units of Nyquist (0.5/binsize).  \\ \hline 
+HIGH\_FREQUENCY\_CUTOFF1 &  & double &   -1 & Spatial frequency at which smoothing filter is 0.  If not given, defaults to HIGH\_FREQUENCY\_CUTOFF0.  \\ \hline 
+\end{tabular}
+
+\vspace*{0.5in}
+\input{csrcsbend.tex}
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|CSRDRIFT|}\end{center}
+\end{latexonly}\subsection{CSRDRIFT}
+A follow-on element for CSRCSBEND that applies the CSR wake over a drift.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+L & $M$ & double &  0.0 & length  \\ \hline 
+ATTENUATION\_LENGTH & $M$ & double &  0.0 & exponential attenuation length for wake  \\ \hline 
+DZ &  & double &  0.0 & interval between kicks  \\ \hline 
+N\_KICKS &  & long &   1               & number of kicks (if DZ is zero)  \\ \hline 
+SPREAD &  & long &  \verb|0| & use spreading function?  \\ \hline 
+USE\_OVERTAKING\_LENGTH &  & long &  \verb|0| & use overtaking length for ATTENUATION\_LENGTH?  \\ \hline 
+OL\_MULTIPLIER &  & double &   1 & factor by which to multiply the overtaking length to get the attenuation length  \\ \hline 
+USE\_SALDIN54 &  & long &  \verb|0| & Use Saldin et al eq. 54 (NIM A 398 (1997) 373-394 for decay vs z?  \\ \hline 
+SALDIN54POINTS &  & long &   1000            & Number of values of position inside bunch to average for Saldin eq 54.  \\ \hline 
+CSR &  & long &   1               & do CSR calcuations  \\ \hline 
+SALDIN54NORM\_MODE &  & STRING &   peak            & peak or first  \\ \hline 
+SPREAD\_MODE &  & STRING &   full            & full, simple, or radiation-only  \\ \hline 
+WAVELENGTH\_MODE &  & STRING &   sigmaz          & sigmaz or peak-to-peak  \\ \hline 
+BUNCHLENGTH\_MODE &  & STRING &   68-percentile   & rms, 68-percentile, or 90-percentile  \\ \hline 
+SALDIN54\_OUTPUT &  & STRING &   NULL            & Filename for output of CSR intensity vs. z as computed using Saldin eq 54.  \\ \hline 
+USE\_STUPAKOV &  & long &  \verb|0| & Use treatment from G. Stupakov's note of 9/12/2001?  \\ \hline 
+STUPAKOV\_OUTPUT &  & STRING &   NULL            & Filename for output of CSR wake vs. s as computed using Stupakov's equations.  \\ \hline 
+STUPAKOV\_OUTPUT\_INTERVAL &  & long &   1               & Interval (in kicks) between output of Stupakov wakes.  \\ \hline 
+SLICE\_ANALYSIS\_INTERVAL &  & long &  \verb|0| & interval (in kicks) of output to slice analysis file (from slice\_analysis command)  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|CSRDRIFT| continued}\end{center}
+\end{latexonly}
+A follow-on element for CSRCSBEND that applies the CSR wake over a drift.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+LINEARIZE &  & long &  \verb|0| & use linear optics for drift pieces?  \\ \hline 
+\end{tabular}
+
+\vspace*{0.5in}
+\input{csrdrift.tex}
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|DRIF|}\end{center}
+\end{latexonly}\subsection{DRIF}
+A drift space implemented as a matrix, up to 2nd order
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+L & $M$ & double &  0.0 & length  \\ \hline 
+ORDER &  & long &  \verb|0| & matrix order  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|ECOL|}\end{center}
+\end{latexonly}\subsection{ECOL}
+An elliptical collimator.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+L & $M$ & double &  0.0 & length  \\ \hline 
+X\_MAX & $M$ & double &  0.0 & half-axis in x  \\ \hline 
+Y\_MAX & $M$ & double &  0.0 & half-axis in y  \\ \hline 
+DX & $M$ & double &  0.0 & misalignment  \\ \hline 
+DY & $M$ & double &  0.0 & misalignment  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|ELSE|}\end{center}
+\end{latexonly}\subsection{ELSE}
+Not implemented.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|ENERGY|}\end{center}
+\end{latexonly}\subsection{ENERGY}
+An element that matches the central momentum to the beam momentum, or changes
+the central momentum or energy to a specified value.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+CENTRAL\_ENERGY & $MC^{2}$ & double &  0.0 & desired central gamma  \\ \hline 
+CENTRAL\_MOMENTUM & $MC$ & double &  0.0 & desired central beta*gamma  \\ \hline 
+MATCH\_BEAMLINE &  & long &  \verb|0| & if nonzero, beamline reference momentum is set to beam average momentum  \\ \hline 
+MATCH\_PARTICLES &  & long &  \verb|0| & if nonzero, beam average momentum is set to beamline reference momentum  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|FMULT|}\end{center}
+\end{latexonly}\subsection{FMULT}
+Multipole kick element with coefficient input from an SDDS file.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+L & $M$ & double &  0.0 & length  \\ \hline 
+TILT & $RAD$ & double &  0.0 & rotation about longitudinal axis  \\ \hline 
+DX & $M$ & double &  0.0 & misalignment  \\ \hline 
+DY & $M$ & double &  0.0 & misalignment  \\ \hline 
+DZ & $M$ & double &  0.0 & misalignment  \\ \hline 
+FSE &  & double &  0.0 & fractional strength error  \\ \hline 
+N\_KICKS &  & long &   1               & number of kicks  \\ \hline 
+SYNCH\_RAD &  & long &  \verb|0| & include classical synchrotron radiation?  \\ \hline 
+FILENAME &  & STRING &   NULL            & name of file containing multipole data  \\ \hline 
+\end{tabular}
+
+\vspace*{0.5in}
+\input{fmult.tex}
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|HISTOGRAM|}\end{center}
+\end{latexonly}\subsection{HISTOGRAM}
+Request for histograms of particle coordinates to be output to SDDS file.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+FILENAME &  & STRING &                   & filename for histogram output  \\ \hline 
+INTERVAL &  & long &   1               & interval in passes between output  \\ \hline 
+START\_PASS &  & long &  \verb|0| & starting pass for output  \\ \hline 
+BINS &  & long &   50              & number of bins  \\ \hline 
+FIXED\_BIN\_SIZE &  & long &  \verb|0| & if nonzero, bin size is fixed at given value  \\ \hline 
+X\_DATA &  & long &   1               & histogram x and x'?  \\ \hline 
+Y\_DATA &  & long &   1               & histogram y and y'?  \\ \hline 
+LONGIT\_DATA &  & long &   1               & histogram t and p?  \\ \hline 
+BIN\_SIZE\_FACTOR &  & double &   1 & multiply computed bin size by this factor before histogramming  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|HKICK|}\end{center}
+\end{latexonly}\subsection{HKICK}
+A horizontal steering dipole implemented as a matrix, up to 2nd order.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+L & $M$ & double &  0.0 & length  \\ \hline 
+KICK & $RAD$ & double &  0.0 & kick strength  \\ \hline 
+TILT & $RAD$ & double &  0.0 & rotation about longitudinal axis  \\ \hline 
+B2 & $1/M^{2}$ & double &  0.0 & normalized sextupole strength (kick = KICK*(1+B2*x\^2))  \\ \hline 
+CALIBRATION &  & double &   1 & strength multiplier  \\ \hline 
+EDGE\_EFFECTS &  & long &  \verb|0| & include edge effects?  \\ \hline 
+ORDER &  & long &  \verb|0| & matrix order  \\ \hline 
+STEERING &  & long &   1               & use for steering?  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|HMON|}\end{center}
+\end{latexonly}\subsection{HMON}
+A horizontal position monitor, accepting a rpn equation for the readout as a
+function of the actual position (x).
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+L & $M$ & double &  0.0 & length  \\ \hline 
+DX & $M$ & double &  0.0 & misalignment  \\ \hline 
+DY & $M$ & double &  0.0 & misalignment  \\ \hline 
+WEIGHT &  & double &   1 & weight in correction  \\ \hline 
+TILT &  & double &  0.0 & rotation about longitudinal axis  \\ \hline 
+CALIBRATION &  & double &   1 & calibration factor for readout  \\ \hline 
+ORDER &  & long &  \verb|0| & matrix order  \\ \hline 
+READOUT &  & STRING &   NULL            & rpn expression for readout (actual position supplied in variable x)  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|IBSCATTER|}\end{center}
+\end{latexonly}\subsection{IBSCATTER}
+A simulation of intra-beam scattering.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+COUPLING &  & double &   1 & x-y coupling  \\ \hline 
+FACTOR &  & double &   1 & factor by which to multiply growth rates before using  \\ \hline 
+CHARGE & $C$ & double &  0.0 & beam charge (or use CHARGE element)  \\ \hline 
+DO\_X &  & long &   1               & do x-plane scattering?  \\ \hline 
+DO\_Y &  & long &   1               & do y-plane scattering?  \\ \hline 
+DO\_Z &  & long &   1               & do z-plane scattering?  \\ \hline 
+SMOOTH &  & long &  \verb|0| & Use smooth method instead of random numbers?  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|KICKER|}\end{center}
+\end{latexonly}\subsection{KICKER}
+A combined horizontal-vertical steering magnet implemented as a matrix, up to
+2nd order.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+L & $M$ & double &  0.0 & length  \\ \hline 
+HKICK & $RAD$ & double &  0.0 & x kick angle  \\ \hline 
+VKICK & $RAD$ & double &  0.0 & y kick angle  \\ \hline 
+TILT & $RAD$ & double &  0.0 & rotation about longitudinal axis  \\ \hline 
+B2 & $1/M^{2}$ & double &  0.0 & normalized sextupole strength (e.g., kick = KICK*(1+B2*x\^2))  \\ \hline 
+HCALIBRATION &  & double &   1 & factor applied to obtain x kick  \\ \hline 
+VCALIBRATION &  & double &   1 & factor applied to obtain y kick  \\ \hline 
+EDGE\_EFFECTS &  & long &  \verb|0| & include edge effects?  \\ \hline 
+ORDER &  & long &  \verb|0| & matrix order  \\ \hline 
+STEERING &  & long &   1               & use for steering?  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|KPOLY|}\end{center}
+\end{latexonly}\subsection{KPOLY}
+A thin kick element with polynomial dependence on the coordinates in one plane.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+COEFFICIENT & $M^{-ORDER}$ & double &  0.0 & coefficient of polynomial  \\ \hline 
+TILT & $RAD$ & double &  0.0 & rotation about longitudinal axis  \\ \hline 
+DX & $M$ & double &  0.0 & misalignment  \\ \hline 
+DY & $M$ & double &  0.0 & misalignment  \\ \hline 
+DZ & $M$ & double &  0.0 & misalignment  \\ \hline 
+FACTOR &  & double &   1 & additional factor to apply  \\ \hline 
+ORDER &  & long &  \verb|0| & order of polynomial  \\ \hline 
+PLANE &  & STRING &   x               & plane to kick (x, y)  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|KQUAD|}\end{center}
+\end{latexonly}\subsection{KQUAD}
+A canonical kick quadrupole, which differs from the MULT element with ORDER=1 in
+that it can be used for tune correction.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+L & $M$ & double &  0.0 & length  \\ \hline 
+K1 & $1/M^{2}$ & double &  0.0 & geometric strength  \\ \hline 
+TILT & $RAD$ & double &  0.0 & rotation about longitudinal axis  \\ \hline 
+BORE & $M$ & double &  0.0 & bore radius  \\ \hline 
+B & $T$ & double &  0.0 & pole tip field (used if bore nonzero)  \\ \hline 
+DX & $M$ & double &  0.0 & misalignment  \\ \hline 
+DY & $M$ & double &  0.0 & misalignment  \\ \hline 
+DZ & $M$ & double &  0.0 & misalignment  \\ \hline 
+FSE & $M$ & double &  0.0 & fractional strength error  \\ \hline 
+N\_KICKS &  & long &   4               & number of kicks  \\ \hline 
+SYNCH\_RAD &  & long &  \verb|0| & include classical synchrotron radiation?  \\ \hline 
+SYSTEMATIC\_MULTIPOLES &  & STRING &   NULL            & input file for systematic multipoles  \\ \hline 
+RANDOM\_MULTIPOLES &  & STRING &   NULL            & input file for random multipoles  \\ \hline 
+INTEGRATION\_ORDER &  & long &   4               & integration order (2 or 4)  \\ \hline 
+\end{tabular}
+
+\vspace*{0.5in}
+\input{kquad.tex}
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|KSBEND|}\end{center}
+\end{latexonly}\subsection{KSBEND}
+A kick bending magnet which is NOT canonical, but is better than a 2nd order
+matrix implementation.  Recommend using CSBEND instead.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+L & $M$ & double &  0.0 & arc length  \\ \hline 
+ANGLE & $RAD$ & double &  0.0 & bend angle  \\ \hline 
+K1 & $1/M^{2}$ & double &  0.0 & geometric quadrupole strength  \\ \hline 
+K2 & $1/M^{3}$ & double &  0.0 & geometric sextupole strength  \\ \hline 
+K3 & $1/M^{3}$ & double &  0.0 & geometric octupole strength  \\ \hline 
+K4 & $1/M^{4}$ & double &  0.0 & geometric decapole strength  \\ \hline 
+E1 & $RAD$ & double &  0.0 & entrance edge angle  \\ \hline 
+E2 & $RAD$ & double &  0.0 & exit edge angle  \\ \hline 
+TILT & $RAD$ & double &  0.0 & rotation about incoming longitudinal axis  \\ \hline 
+H1 & $1/M$ & double &  0.0 & entrance pole-face curvature  \\ \hline 
+H2 & $1/M$ & double &  0.0 & exit pole-face curvature  \\ \hline 
+HGAP & $M$ & double &  0.0 & half-gap between poles  \\ \hline 
+FINT &  & double &   0.5 & edge-field integral  \\ \hline 
+DX & $M$ & double &  0.0 & misalignment  \\ \hline 
+DY & $M$ & double &  0.0 & misalignment  \\ \hline 
+DZ & $M$ & double &  0.0 & misalignment  \\ \hline 
+FSE &  & double &  0.0 & fractional strength error  \\ \hline 
+ETILT &  & double &  0.0 & error rotation about incoming longitudinal axis  \\ \hline 
+N\_KICKS &  & long &   4               & number of kicks  \\ \hline 
+NONLINEAR &  & long &   1               & include nonlinear field components?  \\ \hline 
+SYNCH\_RAD &  & long &  \verb|0| & include classical synchrotron radiation?  \\ \hline 
+EDGE1\_EFFECTS &  & long &   1               & include entrace edge effects?  \\ \hline 
+EDGE2\_EFFECTS &  & long &   1               & include exit edge effects?  \\ \hline 
+EDGE\_ORDER &  & long &   1               & edge matrix order  \\ \hline 
+PARAXIAL &  & long &  \verb|0| & use paraxial approximation?  \\ \hline 
+TRANSPORT &  & long &  \verb|0| & use (incorrect) TRANSPORT equations for T436 of edge?  \\ \hline 
+METHOD &  & STRING &   modified-midpoint & integration method (modified-midpoint, leap-frog  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|KSEXT|}\end{center}
+\end{latexonly}\subsection{KSEXT}
+A canonical kick sextupole, which differs from the MULT element with ORDER=2 in
+that it can be used for chromaticity correction.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+L & $M$ & double &  0.0 & length  \\ \hline 
+K2 & $1/M^{3}$ & double &  0.0 & geometric strength  \\ \hline 
+TILT & $RAD$ & double &  0.0 & rotation about longitudinal axis  \\ \hline 
+BORE & $M$ & double &  0.0 & bore radius  \\ \hline 
+B & $T$ & double &  0.0 & field at pole tip (used if bore nonzero)  \\ \hline 
+DX & $M$ & double &  0.0 & misalignment  \\ \hline 
+DY & $M$ & double &  0.0 & misalignment  \\ \hline 
+DZ & $M$ & double &  0.0 & misalignment  \\ \hline 
+FSE & $M$ & double &  0.0 & fractional strength error  \\ \hline 
+N\_KICKS &  & long &   4               & number of kicks  \\ \hline 
+SYNCH\_RAD &  & long &  \verb|0| & include classical synchrotron radiation?  \\ \hline 
+SYSTEMATIC\_MULTIPOLES &  & STRING &   NULL            & input file for systematic multipoles  \\ \hline 
+RANDOM\_MULTIPOLES &  & STRING &   NULL            & input file for random multipoles  \\ \hline 
+INTEGRATION\_ORDER &  & long &   4               & integration order (2 or 4)  \\ \hline 
+\end{tabular}
+
+\vspace*{0.5in}
+\input{ksext.tex}
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|MAGNIFY|}\end{center}
+\end{latexonly}\subsection{MAGNIFY}
+An element that allows multiplication of phase-space coordinates of all particles
+by constants.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+MX &  & double &   1 & factor for x coordinates  \\ \hline 
+MXP &  & double &   1 & factor for x' coordinates  \\ \hline 
+MY &  & double &   1 & factor for y coordinates  \\ \hline 
+MYP &  & double &   1 & factor for y' coordinates  \\ \hline 
+MS &  & double &   1 & factor for s coordinates  \\ \hline 
+MDP &  & double &   1 & factor for (p-pCentral)/pCentral  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|MALIGN|}\end{center}
+\end{latexonly}\subsection{MALIGN}
+A misalignment of the beam, implemented as a zero-order matrix.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+DXP &  & double &  0.0 & delta x'  \\ \hline 
+DYP &  & double &  0.0 & delta y'  \\ \hline 
+DX & $M$ & double &  0.0 & delta x  \\ \hline 
+DY & $M$ & double &  0.0 & delta y  \\ \hline 
+DZ & $M$ & double &  0.0 & delta z  \\ \hline 
+DT & $S$ & double &  0.0 & delta t  \\ \hline 
+DP &  & double &  0.0 & delta p/pCentral  \\ \hline 
+DE &  & double &  0.0 & delta gamma/gammaCentral  \\ \hline 
+ON\_PASS &  & long &   -1              & pass on which to apply  \\ \hline 
+FORCE\_MODIFY\_MATRIX &  & long &  \verb|0| & modify the matrix even if on\_pass$>$=0  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|MAPSOLENOID|}\end{center}
+\end{latexonly}\subsection{MAPSOLENOID}
+A numerically-integrated solenoid specified as a map of (Bz, Br) vs (z, r).
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+L & $M$ & double &  0.0 & length  \\ \hline 
+DX & $M$ & double &  0.0 & misalignment  \\ \hline 
+DY & $M$ & double &  0.0 & misalignment  \\ \hline 
+ETILT & $RAD$ & double &  0.0 & misalignment  \\ \hline 
+EYAW & $RAD$ & double &  0.0 & misalignment  \\ \hline 
+EPITCH & $RAD$ & double &  0.0 & misalignment  \\ \hline 
+N\_STEPS &  & long &   100             & number of steps (for nonadaptive integration)  \\ \hline 
+INPUTFILE &  & STRING &   NULL            & SDDS file containing (Br, Bz) vs (r, z).  Each page should have values for a fixed r.  \\ \hline 
+RCOLUMN &  & STRING &   NULL            & column containing r values  \\ \hline 
+ZCOLUMN &  & STRING &   NULL            & column containing z values  \\ \hline 
+BRCOLUMN &  & STRING &   NULL            & column containing Br values  \\ \hline 
+BZCOLUMN &  & STRING &   NULL            & column containing Bz values  \\ \hline 
+FACTOR &  & double &   0.0001 & factor by which to multiply fields in file  \\ \hline 
+BXUNIFORM &  & double &  0.0 & uniform horizontal field to superimpose on solenoid field  \\ \hline 
+BYUNIFORM &  & double &  0.0 & uniform vertical field to superimpose on solenoid field  \\ \hline 
+LUNIFORM &  & double &  0.0 & length of uniform field superimposed on solenoid field  \\ \hline 
+ACCURACY &  & double &   0.0001 & integration accuracy  \\ \hline 
+METHOD & $ $ & STRING &   runge-kutta     & integration method (runge-kutta, bulirsch-stoer, non-adaptive runge-kutta, modified midpoint)  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|MARK|}\end{center}
+\end{latexonly}\subsection{MARK}
+A marker, equivalent to a zero-length drift space.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+FITPOINT &  & long &  \verb|0| & supply Twiss parameters, moments, floor coordinates for optimization?  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|MATR|}\end{center}
+\end{latexonly}\subsection{MATR}
+Explicit matrix input from a text file, in the format written by the print\_matrix
+command.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+L & $M$ & double &  0.0 & length  \\ \hline 
+FILENAME &  & STRING &                   & input file  \\ \hline 
+ORDER &  & long &   1               & matrix order  \\ \hline 
+\end{tabular}
+
+\vspace*{0.5in}
+\input{matr.tex}
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|MATTER|}\end{center}
+\end{latexonly}\subsection{MATTER}
+A Coulomb-scattering and energy-absorbing element simulating material in the
+beam path.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+L & $M$ & double &  0.0 & length  \\ \hline 
+XO & $M$ & double &  0.0 & radiation length  \\ \hline 
+ELASTIC &  & long &  \verb|0| & elastic scattering?  \\ \hline 
+ENERGY\_STRAGGLE &  & long &  \verb|0| & use simple-minded energy straggling model?  \\ \hline 
+Z &  & long &  \verb|0| & Atomic number  \\ \hline 
+A & $AMU$ & double &  0.0 & Atomic mass  \\ \hline 
+RHO & $KG/M^3$ & double &  0.0 & Density  \\ \hline 
+PLIMIT &  & double &   0.05 & Probability cutoff for each slice  \\ \hline 
+\end{tabular}
+
+\vspace*{0.5in}
+\input{matter.tex}
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|MAXAMP|}\end{center}
+\end{latexonly}\subsection{MAXAMP}
+A collimating element that sets the maximum transmitted particle amplitudes for
+all following elements, until the next MAXAMP.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+X\_MAX & $M$ & double &  0.0 & x half-aperture  \\ \hline 
+Y\_MAX & $M$ & double &  0.0 & y half-aperture  \\ \hline 
+ELLIPTICAL &  & long &  \verb|0| & is aperture elliptical?  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|MODRF|}\end{center}
+\end{latexonly}\subsection{MODRF}
+A first-order matrix RF cavity with exact phase dependence, plus optional amplitude
+and phase modulation.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+L & $M$ & double &  0.0 & length  \\ \hline 
+VOLT & $V$ & double &  0.0 & nominal voltage  \\ \hline 
+PHASE & $DEG$ & double &  0.0 & nominal phase  \\ \hline 
+FREQ & $Hz$ & double &   500000000 & nominal frequency  \\ \hline 
+Q &  & double &  0.0 & cavity Q  \\ \hline 
+PHASE\_REFERENCE &  & long &  \verb|0| & phase reference number (to link with other time-dependent elements)  \\ \hline 
+AMMAG &  & double &  0.0 & magnitude of amplitude modulation  \\ \hline 
+AMPHASE & $DEG$ & double &  0.0 & phase of amplitude modulation  \\ \hline 
+AMFREQ & $Hz$ & double &  0.0 & frequency of amplitude modulation  \\ \hline 
+PMMAG & $DEG$ & double &  0.0 & magnitude of phase modulation  \\ \hline 
+PMPHASE & $DEG$ & double &  0.0 & phase of phase modulation  \\ \hline 
+PMFREQ & $Hz$ & double &  0.0 & frequency of phase modulation  \\ \hline 
+FIDUCIAL &  & STRING &   NULL            & mode for determining fiducial arrival time (light, tmean, first, pmaximum)  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|MONI|}\end{center}
+\end{latexonly}\subsection{MONI}
+A two-plane position monitor, accepting two rpn equations for the readouts
+as a function of the actual positions (x and y).
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+L & $M$ & double &  0.0 & length  \\ \hline 
+DX & $M$ & double &  0.0 & misalignment  \\ \hline 
+DY & $M$ & double &  0.0 & misalignment  \\ \hline 
+WEIGHT &  & double &   1 & weight in correction  \\ \hline 
+TILT &  & double &  0.0 & rotation about longitudinal axis  \\ \hline 
+XCALIBRATION &  & double &   1 & calibration factor for x readout  \\ \hline 
+YCALIBRATION &  & double &   1 & calibration factor for y readout  \\ \hline 
+ORDER &  & long &  \verb|0| & matrix order  \\ \hline 
+XREADOUT &  & STRING &   NULL            & rpn expression for x readout (actual position supplied in variables x, y  \\ \hline 
+YREADOUT &  & STRING &   NULL            & rpn expression for y readout (actual position supplied in variables x, y  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|MULT|}\end{center}
+\end{latexonly}\subsection{MULT}
+A canonical kick multipole.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+L & $M$ & double &  0.0 & length  \\ \hline 
+KNL & $M^{(1-ORDER)}$ & double &  0.0 & integrated geometric strength  \\ \hline 
+TILT & $RAD$ & double &  0.0 & rotation about longitudinal axis  \\ \hline 
+BORE & $M$ & double &  0.0 & bore radius  \\ \hline 
+BNL & $T M$ & double &  0.0 & integrated field at pole tip, used if BORE nonzero  \\ \hline 
+DX & $M$ & double &  0.0 & misalignment  \\ \hline 
+DY & $M$ & double &  0.0 & misalignment  \\ \hline 
+DZ & $M$ & double &  0.0 & misalignment  \\ \hline 
+FACTOR &  & double &   1 & factor by which to multiply strength  \\ \hline 
+ORDER &  & long &   1               & multipole order  \\ \hline 
+N\_KICKS &  & long &   4               & number of kicks  \\ \hline 
+SYNCH\_RAD &  & long &  \verb|0| & include classical synchrotron radiation?  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|NIBEND|}\end{center}
+\end{latexonly}\subsection{NIBEND}
+A numerically-integrated dipole magnet with various extended-fringe-field models.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+L & $M$ & double &  0.0 & arc length  \\ \hline 
+ANGLE & $RAD$ & double &  0.0 & bending angle  \\ \hline 
+E1 & $RAD$ & double &  0.0 & entrance edge angle  \\ \hline 
+E2 & $RAD$ & double &  0.0 & exit edge angle  \\ \hline 
+TILT &  & double &  0.0 & rotation about incoming longitudinal axis  \\ \hline 
+DX & $M$ & double &  0.0 & misalignment  \\ \hline 
+DY & $M$ & double &  0.0 & misalignment  \\ \hline 
+DZ & $M$ & double &  0.0 & misalignment  \\ \hline 
+FINT &  & double &   0.5 & edge-field integral  \\ \hline 
+HGAP & $M$ & double &  0.0 & half-gap between poles  \\ \hline 
+FP1 & $M$ & double &   10 & fringe parameter (tanh model)  \\ \hline 
+FP2 & $M$ & double &   1 & not used  \\ \hline 
+FSE &  & double &  0.0 & fractional strength error  \\ \hline 
+ETILT &  & double &  0.0 & error rotation about incoming longitudinal axis  \\ \hline 
+ACCURACY &  & double &   0.0001 & integration accuracy  \\ \hline 
+MODEL &  & STRING &   linear          & fringe model (hard-edge, linear, cubic-spline, tanh, quintic  \\ \hline 
+METHOD &  & STRING &   runge-kutta     & integration method (runge-kutta, bulirsch-stoer, modified-midpoint, two-pass modified-midpoint, leap-frog, non-adaptive runge-kutta  \\ \hline 
+SYNCH\_RAD &  & long &  \verb|0| & include classical synchrotron radiation?  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|NISEPT|}\end{center}
+\end{latexonly}\subsection{NISEPT}
+A numerically-integrated dipole magnet with a Cartesian gradient.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+L & $M$ & double &  0.0 & arc length  \\ \hline 
+ANGLE & $RAD$ & double &  0.0 & bend angle  \\ \hline 
+E1 & $RAD$ & double &  0.0 & entrance edge angle  \\ \hline 
+B1 & $1/M$ & double &  0.0 & normalized gradient (K1=B1*L/ANGLE)  \\ \hline 
+Q1REF & $M$ & double &  0.0 & distance from septum at which bending radius is L/ANGLE  \\ \hline 
+FLEN & $M$ & double &  0.0 & fringe field length  \\ \hline 
+ACCURACY &  & double &   0.0001 & integration accuracy  \\ \hline 
+METHOD &  & STRING &   runge-kutta     & integration method (runge-kutta, bulirsch-stoer, modified-midpoint, two-pass modified-midpoint, leap-frog, non-adaptive runge-kutta  \\ \hline 
+MODEL &  & STRING &   linear          & fringe model (hard-edge, linear, cubic-spline, tanh, quintic  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|OCTU|}\end{center}
+\end{latexonly}\subsection{OCTU}
+Not implemented--use the MULT element.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|PEPPOT|}\end{center}
+\end{latexonly}\subsection{PEPPOT}
+A pepper-pot plate.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+L & $M$ & double &  0.0 & length  \\ \hline 
+RADII & $M$ & double &  0.0 & hole radius  \\ \hline 
+TRANSMISSION &  & double &  0.0 & transmission of material  \\ \hline 
+TILT & $RAD$ & double &  0.0 & rotation about longitudinal axis  \\ \hline 
+THETA\_RMS & $RAD$ & double &  0.0 & rms scattering from material  \\ \hline 
+N\_HOLES &  & long &  \verb|0| & number of holes  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|PFILTER|}\end{center}
+\end{latexonly}\subsection{PFILTER}
+An element for energy and momentum filtration.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+DELTALIMIT &  & double &   -1 & maximum fractional momentum deviation  \\ \hline 
+LOWERFRACTION &  & double &  0.0 & fraction of lowest-momentum particles to remove  \\ \hline 
+UPPERFRACTION &  & double &  0.0 & fraction of highest-momentum particles to remove  \\ \hline 
+FIXPLIMITS &  & long &  \verb|0| & fix the limits in p from LOWERFRACTION and UPPERFRACTION applied to first beam  \\ \hline 
+BEAMCENTERED &  & long &  \verb|0| & if nonzero, center for DELTALIMIT is average beam momentum  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|QUAD|}\end{center}
+\end{latexonly}\subsection{QUAD}
+A quadrupole implemented as a matrix, up to 2nd order.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+L & $M$ & double &  0.0 & length  \\ \hline 
+K1 & $1/M^{2}$ & double &  0.0 & geometric strength  \\ \hline 
+TILT & $RAD$ & double &  0.0 & rotation about longitudinal axis  \\ \hline 
+FFRINGE &  & double &  0.0 & fraction of length occupied by linear fringe region  \\ \hline 
+DX & $M$ & double &  0.0 & misalignment  \\ \hline 
+DY & $M$ & double &  0.0 & misalignment  \\ \hline 
+DZ & $M$ & double &  0.0 & misalignment  \\ \hline 
+FSE & $M$ & double &  0.0 & fractional strength error  \\ \hline 
+ORDER &  & long &  \verb|0| & matrix order  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|QUFRINGE|}\end{center}
+\end{latexonly}\subsection{QUFRINGE}
+An element consisting of a linearly increasing or decreasing quadrupole field.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+L & $M$ & double &  0.0 & length  \\ \hline 
+K1 & $1/M^{2}$ & double &  0.0 & peak geometric strength  \\ \hline 
+TILT & $RAD$ & double &  0.0 & rotation about longitudinal axis  \\ \hline 
+DX & $M$ & double &  0.0 & misalignment  \\ \hline 
+DY & $M$ & double &  0.0 & misalignment  \\ \hline 
+DZ & $M$ & double &  0.0 & misalignment  \\ \hline 
+FSE & $M$ & double &  0.0 & fractional strength error  \\ \hline 
+DIRECTION &  & long &  \verb|0| & 1=entrance, -1=exit  \\ \hline 
+ORDER &  & long &  \verb|0| & matrix order  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|RAMPP|}\end{center}
+\end{latexonly}\subsection{RAMPP}
+A momentum-ramping element that changes the central momentum according to a mpl
+format file of the momentum factor vs time in seconds.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+WAVEFORM &  & STRING &   NULL            & $<$filename$>$=$<$x$>$+$<$y$>$ form specification of input file giving momentum factor vs time  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|RAMPRF|}\end{center}
+\end{latexonly}\subsection{RAMPRF}
+A voltage-ramped RF cavity, implemented like RFCA.  The voltage ramp pattern is
+given by a mpl-format file of the voltage factor vs time in seconds.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+L & $M$ & double &  0.0 & length  \\ \hline 
+VOLT & $V$ & double &  0.0 & nominal voltage  \\ \hline 
+PHASE & $DEG$ & double &  0.0 & nominal phase  \\ \hline 
+FREQ & $Hz$ & double &   500000000 & nominal frequency  \\ \hline 
+PHASE\_REFERENCE &  & long &  \verb|0| & phase reference number (to link with other time-dependent elements)  \\ \hline 
+VOLT\_WAVEFORM &  & STRING &   NULL            & $<$filename$>$=$<$x$>$+$<$y$>$ form specification of input file giving voltage waveform factor vs time  \\ \hline 
+PHASE\_WAVEFORM &  & STRING &   NULL            & $<$filename$>$=$<$x$>$+$<$y$>$ form specification of input file giving phase offset vs time (requires FREQ\_WAVEFORM)  \\ \hline 
+FREQ\_WAVEFORM &  & STRING &   NULL            & $<$filename$>$=$<$x$>$+$<$y$>$ form specification of input file giving frequency factor vs time (requires PHASE\_WAVEFORM)  \\ \hline 
+FIDUCIAL &  & STRING &   NULL            & mode for determining fiducial arrival time (light, tmean, first, pmaximum)  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|RBEN|}\end{center}
+\end{latexonly}\subsection{RBEN}
+A rectangular dipole, implemented as a SBEND with edge angles.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+L & $M$ & double &  0.0 & arc length  \\ \hline 
+ANGLE & $RAD$ & double &  0.0 & bend angle  \\ \hline 
+K1 & $1/M^{2}$ & double &  0.0 & geometric focusing strength  \\ \hline 
+E1 & $RAD$ & double &  0.0 & entrance edge angle  \\ \hline 
+E2 & $RAD$ & double &  0.0 & exit edge angle  \\ \hline 
+TILT & $RAD$ & double &  0.0 & rotation about incoming longitudinal axis  \\ \hline 
+K2 & $1/M^{3}$ & double &  0.0 & geometric sextupole strength  \\ \hline 
+H1 & $1/M$ & double &  0.0 & entrace pole-face curvature  \\ \hline 
+H2 & $1/M$ & double &  0.0 & exit pole-face curvature  \\ \hline 
+HGAP & $M$ & double &  0.0 & half-gap between poles  \\ \hline 
+FINT &  & double &   0.5 & edge-field integral  \\ \hline 
+DX & $M$ & double &  0.0 & misaligment of entrance  \\ \hline 
+DY & $M$ & double &  0.0 & misalignment of entrace  \\ \hline 
+DZ & $M$ & double &  0.0 & misalignment of entrance  \\ \hline 
+FSE &  & double &  0.0 & fractional strength error  \\ \hline 
+ETILT & $RAD$ & double &  0.0 & error rotation about incoming longitudinal axis  \\ \hline 
+EDGE1\_EFFECTS &  & long &   1               & include entrace edge effects?  \\ \hline 
+EDGE2\_EFFECTS &  & long &   1               & include exit edge effects?  \\ \hline 
+ORDER &  & long &  \verb|0| & matrix order  \\ \hline 
+EDGE\_ORDER &  & long &  \verb|0| & edge matrix order  \\ \hline 
+TRANSPORT &  & long &  \verb|0| & use (incorrect) TRANSPORT equations for T436 of edge?  \\ \hline 
+USE\_BN &  & long &  \verb|0| & use B1 and B2 instead of K1 and K2 values?  \\ \hline 
+B1 & $1/M$ & double &  0.0 & K1 = B1*rho, where rho is bend radius  \\ \hline 
+B2 & $1/M^{2}$ & double &  0.0 & K2 = B2*rho  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|RCOL|}\end{center}
+\end{latexonly}\subsection{RCOL}
+A rectangular collimator.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+L & $M$ & double &  0.0 & length  \\ \hline 
+X\_MAX & $M$ & double &  0.0 & half-width in x  \\ \hline 
+Y\_MAX & $M$ & double &  0.0 & half-width in y  \\ \hline 
+DX & $M$ & double &  0.0 & misalignment  \\ \hline 
+DY & $M$ & double &  0.0 & misalignment  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|RECIRC|}\end{center}
+\end{latexonly}\subsection{RECIRC}
+An element that defines the point to which particles recirculate in multi-pass
+tracking
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+I\_RECIRC\_ELEMENT &  & long &  \verb|0| & \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|REFLECT|}\end{center}
+\end{latexonly}\subsection{REFLECT}
+Reflects the beam back on itself, which is useful for multiple beamline matching.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+DUMMY &  & long &  \verb|0| & \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|REMCOR|}\end{center}
+\end{latexonly}\subsection{REMCOR}
+An element to remove correlations from the tracked beam to simulate certain types of correction.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+X &  & long &   1               & remove correlations in x?  \\ \hline 
+XP &  & long &   1               & remove correlations in x'?  \\ \hline 
+Y &  & long &   1               & remove correlations in y?  \\ \hline 
+YP &  & long &   1               & remove correlations in y'?  \\ \hline 
+WITH &  & long &   6               & coordinate to remove correlations with (1,2,3,4,5,6)=(x,x',y,y',s,dP/Po)  \\ \hline 
+ONCE\_ONLY &  & long &  \verb|0| & compute correction only for first beam, apply to all?  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|RFCA|}\end{center}
+\end{latexonly}\subsection{RFCA}
+A first-order matrix RF cavity with exact phase dependence.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+L & $M$ & double &  0.0 & length  \\ \hline 
+VOLT & $V$ & double &  0.0 & peak voltage  \\ \hline 
+PHASE & $DEG$ & double &  0.0 & phase  \\ \hline 
+FREQ & $Hz$ & double &   500000000 & frequency  \\ \hline 
+Q &  & double &  0.0 & cavity Q  \\ \hline 
+PHASE\_REFERENCE &  & long &  \verb|0| & phase reference number (to link with other time-dependent elements)  \\ \hline 
+CHANGE\_P0 &  & long &  \verb|0| & does cavity change central momentum?  \\ \hline 
+CHANGE\_T &  & long &  \verb|0| & not recommended  \\ \hline 
+FIDUCIAL &  & STRING &   NULL            & mode for determining fiducial arrival time (light, tmean, first, pmaximum)  \\ \hline 
+END1\_FOCUS &  & long &  \verb|0| & include focusing at entrance?  \\ \hline 
+END2\_FOCUS &  & long &  \verb|0| & include focusing at exit?  \\ \hline 
+BODY\_FOCUS\_MODEL &  & STRING &   NULL            & None (default) or SRS (simplified Rosenzweig/Serafini for standing wave)  \\ \hline 
+N\_KICKS &  & long &   1               & number of kicks to use.  Set to zero for matrix method.  \\ \hline 
+DX & $M$ & double &  0.0 & misalignment  \\ \hline 
+DY & $M$ & double &  0.0 & misalignment  \\ \hline 
+T\_REFERENCE & $S$ & double &   -1 & arrival time of reference particle  \\ \hline 
+LINEARIZE &  & long &  \verb|0| & Linearize phase dependence?  \\ \hline 
+\end{tabular}
+
+\vspace*{0.5in}
+\input{rfca.tex}
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|RFCW|}\end{center}
+\end{latexonly}\subsection{RFCW}
+A combination of RFCA, WAKE, and TRWAKE.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+L & $M$ & double &  0.0 & length  \\ \hline 
+CELL\_LENGTH & $M$ & double &  0.0 & cell length (used to scale wakes)  \\ \hline 
+VOLT & $V$ & double &  0.0 & voltage  \\ \hline 
+PHASE & $DEG$ & double &  0.0 & phase  \\ \hline 
+FREQ & $Hz$ & double &   500000000 & frequency  \\ \hline 
+Q &  & double &  0.0 & cavity Q  \\ \hline 
+PHASE\_REFERENCE &  & long &  \verb|0| & phase reference number (to link with other time-dependent elements)  \\ \hline 
+CHANGE\_P0 &  & long &  \verb|0| & does element change central momentum?  \\ \hline 
+CHANGE\_T &  & long &  \verb|0| & not recommended  \\ \hline 
+FIDUCIAL &  & STRING &   NULL            & mode for determining fiducial arrival time (light, tmean, first, pmaximum)  \\ \hline 
+END1\_FOCUS &  & long &  \verb|0| & include focusing at entrance?  \\ \hline 
+END2\_FOCUS &  & long &  \verb|0| & include focusing at exit?  \\ \hline 
+BODY\_FOCUS\_MODEL &  & STRING &   NULL            & None (default) or SRS (simplified Rosenzweig/Serafini for standing wave)  \\ \hline 
+N\_KICKS &  & long &   1               & number of kicks to use.  Set to zero for matrix method.  \\ \hline 
+WAKEFILE &  & STRING &   NULL            & name of file containing Green functions  \\ \hline 
+ZWAKEFILE &  & STRING &   NULL            & if WAKEFILE=NULL, optional name of file containing longitudinal Green function  \\ \hline 
+TRWAKEFILE &  & STRING &   NULL            & if WAKEFILE=NULL, optional name of file containing transverse Green functions  \\ \hline 
+TCOLUMN &  & STRING &   NULL            & column containing time data  \\ \hline 
+WXCOLUMN &  & STRING &   NULL            & column containing x Green function  \\ \hline 
+WYCOLUMN &  & STRING &   NULL            & column containing y Green function  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|RFCW| continued}\end{center}
+\end{latexonly}
+A combination of RFCA, WAKE, and TRWAKE.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+WZCOLUMN &  & STRING &   NULL            & column containing longitudinal Green function  \\ \hline 
+N\_BINS &  & long &  \verb|0| & number of bins for current histogram  \\ \hline 
+INTERPOLATE &  & long &  \verb|0| & interpolate wake?  \\ \hline 
+SMOOTHING &  & long &  \verb|0| & smooth current histogram?  \\ \hline 
+SG\_HALFWIDTH &  & long &   4               & Savitzky-Golay filter half-width for smoothing  \\ \hline 
+SG\_ORDER &  & long &   1               & Savitzky-Golay filter order for smoothing  \\ \hline 
+DX & $M$ & double &  0.0 & misalignment  \\ \hline 
+DY & $M$ & double &  0.0 & misalignment  \\ \hline 
+LINEARIZE &  & long &  \verb|0| & Linearize phase dependence?  \\ \hline 
+\end{tabular}
+
+\vspace*{0.5in}
+\input{rfcw.tex}
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|RFDF|}\end{center}
+\end{latexonly}\subsection{RFDF}
+A simple traveling-wave (beta=1) deflecting RF cavity.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+L & $M$ & double &  0.0 & length  \\ \hline 
+PHASE & $DEG$ & double &  0.0 & phase  \\ \hline 
+TILT & $RAD$ & double &  0.0 & rotation about longitudinal axis  \\ \hline 
+FREQUENCY & $HZ$ & double &   2856000000 & frequency  \\ \hline 
+VOLTAGE & $V$ & double &  0.0 & voltage  \\ \hline 
+TIME\_OFFSET & $S$ & double &  0.0 & time offset (adds to phase)  \\ \hline 
+N\_KICKS &  & long &   1               & number of kicks  \\ \hline 
+PHASE\_REFERENCE &  & long &  \verb|0| & phase reference number (to link with other time-dependent elements)  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|RFMODE|}\end{center}
+\end{latexonly}\subsection{RFMODE}
+A simulation of a beam-driven TM monopole mode of a RF cavity.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+RA & $Ohm$ & double &  0.0 & shunt impedance  \\ \hline 
+RS & $Ohm$ & double &  0.0 & shunt impedance (Ra=2*Rs)  \\ \hline 
+Q &  & double &  0.0 & cavity Q  \\ \hline 
+FREQ & $Hz$ & double &  0.0 & frequency  \\ \hline 
+CHARGE & $C$ & double &  0.0 & beam charge (or use CHARGE element)  \\ \hline 
+INITIAL\_V & $V$ & double &  0.0 & initial voltage  \\ \hline 
+INITIAL\_PHASE & $RAD$ & double &  0.0 & initial phase  \\ \hline 
+INITIAL\_T & $S$ & double &  0.0 & time at which INITIAL\_V and INITIAL\_PHASE held  \\ \hline 
+BETA &  & double &  0.0 & normalized load impedance  \\ \hline 
+BIN\_SIZE & $S$ & double &  0.0 & bin size for current histogram (use 0 for autosize)  \\ \hline 
+N\_BINS &  & long &   20              & number of bins for current histogram  \\ \hline 
+PRELOAD &  & long &  \verb|0| & preload cavity with steady-state field  \\ \hline 
+PRELOAD\_FACTOR &  & double &   1 & multiply preloaded field by this value  \\ \hline 
+RIGID\_UNTIL\_PASS &  & long &  \verb|0| & don't affect the beam until this pass  \\ \hline 
+DETUNED\_UNTIL\_PASS &  & long &  \verb|0| & cavity is completely detuned until this pass  \\ \hline 
+SAMPLE\_INTERVAL &  & long &   1               & passes between output to RECORD file  \\ \hline 
+RECORD &  & STRING &   NULL            & output file for cavity fields  \\ \hline 
+SINGLE\_PASS &  & long &  \verb|0| & if nonzero, don't accumulate field from pass to pass  \\ \hline 
+PASS\_INTERVAL &  & long &   1               & interval in passes at which to apply PASS\_INTERVAL times the field (may increase speed)  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|RFTMEZ0|}\end{center}
+\end{latexonly}\subsection{RFTMEZ0}
+A TM-mode RF cavity specified by the on-axis Ez field.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+L & $M$ & double &  0.0 & length  \\ \hline 
+FREQUENCY & $HZ$ & double &   2856000000 & frequency  \\ \hline 
+PHASE & $RAD$ & double &  0.0 & phase  \\ \hline 
+EZ\_PEAK & $V$ & double &  0.0 & Peak on-axis longitudinal electric field  \\ \hline 
+TIME\_OFFSET & $S$ & double &  0.0 & time offset (adds to phase)  \\ \hline 
+PHASE\_REFERENCE &  & long &  \verb|0| & phase reference number (to link to other time-dependent elements)  \\ \hline 
+DX & $M$ & double &  0.0 & misalignment  \\ \hline 
+DY & $M$ & double &  0.0 & misalignment  \\ \hline 
+ETILT & $RAD$ & double &  0.0 & misalignment  \\ \hline 
+EYAW & $RAD$ & double &  0.0 & misalignment  \\ \hline 
+EPITCH & $RAD$ & double &  0.0 & misalignment  \\ \hline 
+N\_STEPS &  & long &   100             & number of steps (for nonadaptive integration)  \\ \hline 
+RADIAL\_ORDER &  & long &   1               & highest order in off-axis expansion  \\ \hline 
+CHANGE\_P0 &  & long &  \verb|0| & does element change central momentum?  \\ \hline 
+INPUTFILE &  & STRING &   NULL            & file containing Ez vs z at r=0  \\ \hline 
+ZCOLUMN &  & STRING &   NULL            & column containing z values  \\ \hline 
+EZCOLUMN &  & STRING &   NULL            & column containing Ez values  \\ \hline 
+SOLENOID\_FILE &  & STRING &   NULL            & file containing map of Bz and Br vs z and r.  Each page contains values for a single r.  \\ \hline 
+SOLENOID\_ZCOLUMN &  & STRING &   NULL            & column containing z values for solenoid map.  \\ \hline 
+SOLENOID\_RCOLUMN &  & STRING &   NULL            & column containing r values for solenoid map.  \\ \hline 
+SOLENOID\_BZCOLUMN &  & STRING &   NULL            & column containing Bz values for solenoid map.  \\ \hline 
+SOLENOID\_BRCOLUMN &  & STRING &   NULL            & column containing Br values for solenoid map.  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|RFTMEZ0| continued}\end{center}
+\end{latexonly}
+A TM-mode RF cavity specified by the on-axis Ez field.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+SOLENOID\_FACTOR &  & double &   1 & factor by which to multiply solenoid fields.  \\ \hline 
+ACCURACY &  & double &   0.0001 & integration accuracy  \\ \hline 
+METHOD & $ $ & STRING &   runge-kutta     & integration method (runge-kutta, bulirsch-stoer, non-adaptive runge-kutta, modified midpoint)  \\ \hline 
+FIDUCIAL &  & STRING &   t,median        & \{t$|$p\},\{median$|$min$|$max$|$ave$|$first$|$light\} (e.g., "t,median")  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|RMDF|}\end{center}
+\end{latexonly}\subsection{RMDF}
+A linearly-ramped electric field deflector, using an approximate analytical solution FOR LOW ENERGY PARTICLES.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+L & $M$ & double &  0.0 & length  \\ \hline 
+TILT & $RAD$ & double &  0.0 & rotation about longitudinal axis  \\ \hline 
+RAMP\_TIME & $S$ & double &   1e-09 & length of ramp  \\ \hline 
+VOLTAGE & $V$ & double &  0.0 & full voltage  \\ \hline 
+GAP & $M$ & double &   0.01 & gap between plates  \\ \hline 
+TIME\_OFFSET & $S$ & double &  0.0 & time offset of ramp start  \\ \hline 
+N\_SECTIONS &  & long &   10              & number of sections  \\ \hline 
+PHASE\_REFERENCE &  & long &  \verb|0| & phase reference number (to link with other time-dependent elements)  \\ \hline 
+DX & $M$ & double &  0.0 & misalignment  \\ \hline 
+DY & $M$ & double &  0.0 & misalignment  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|ROTATE|}\end{center}
+\end{latexonly}\subsection{ROTATE}
+An element that rotates the beam coordinates about the longitudinal axis.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+TILT & $RAD$ & double &  0.0 & rotation about longitudinal axis  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|SAMPLE|}\end{center}
+\end{latexonly}\subsection{SAMPLE}
+An element that reduces the number of particles in the beam by interval-based or
+random sampling.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+FRACTION &  & double &   1 & fraction to keep  \\ \hline 
+INTERVAL &  & long &   1               & interval between sampled particles  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|SBEN|}\end{center}
+\end{latexonly}\subsection{SBEN}
+A sector dipole implemented as a matrix, up to 2nd order.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+L & $M$ & double &  0.0 & arc length  \\ \hline 
+ANGLE & $RAD$ & double &  0.0 & bend angle  \\ \hline 
+K1 & $1/M^{2}$ & double &  0.0 & geometric focusing strength  \\ \hline 
+E1 & $RAD$ & double &  0.0 & entrance edge angle  \\ \hline 
+E2 & $RAD$ & double &  0.0 & exit edge angle  \\ \hline 
+TILT & $RAD$ & double &  0.0 & rotation about incoming longitudinal axis  \\ \hline 
+K2 & $1/M^{3}$ & double &  0.0 & geometric sextupole strength  \\ \hline 
+H1 & $1/M$ & double &  0.0 & entrace pole-face curvature  \\ \hline 
+H2 & $1/M$ & double &  0.0 & exit pole-face curvature  \\ \hline 
+HGAP & $M$ & double &  0.0 & half-gap between poles  \\ \hline 
+FINT &  & double &   0.5 & edge-field integral  \\ \hline 
+DX & $M$ & double &  0.0 & misaligment of entrance  \\ \hline 
+DY & $M$ & double &  0.0 & misalignment of entrace  \\ \hline 
+DZ & $M$ & double &  0.0 & misalignment of entrance  \\ \hline 
+FSE &  & double &  0.0 & fractional strength error  \\ \hline 
+ETILT & $RAD$ & double &  0.0 & error rotation about incoming longitudinal axis  \\ \hline 
+EDGE1\_EFFECTS &  & long &   1               & include entrace edge effects?  \\ \hline 
+EDGE2\_EFFECTS &  & long &   1               & include exit edge effects?  \\ \hline 
+ORDER &  & long &  \verb|0| & matrix order  \\ \hline 
+EDGE\_ORDER &  & long &  \verb|0| & edge matrix order  \\ \hline 
+TRANSPORT &  & long &  \verb|0| & use (incorrect) TRANSPORT equations for T436 of edge?  \\ \hline 
+USE\_BN &  & long &  \verb|0| & use B1 and B2 instead of K1 and K2 values?  \\ \hline 
+B1 & $1/M$ & double &  0.0 & K1 = B1*rho, where rho is bend radius  \\ \hline 
+B2 & $1/M^{2}$ & double &  0.0 & K2 = B2*rho  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|SCATTER|}\end{center}
+\end{latexonly}\subsection{SCATTER}
+A scattering element to add gaussian random numbers to particle coordinates.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+X & $M$ & double &  0.0 & rms scattering level for x  \\ \hline 
+XP & $M$ & double &  0.0 & rms scattering level for x'  \\ \hline 
+Y & $M$ & double &  0.0 & rms scattering level for y  \\ \hline 
+YP & $M$ & double &  0.0 & rms scattering level for y'  \\ \hline 
+DP & $M$ & double &  0.0 & rms scattering level for (p-pCentral)/pCentral  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|SCRAPER|}\end{center}
+\end{latexonly}\subsection{SCRAPER}
+A collimating element that sticks into the beam from one side only.  The
+directions 0, 1, 2, and 3 are from +x, +y, -x, and -y, respectively.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+L & $M$ & double &  0.0 & length  \\ \hline 
+POSITION & $M$ & double &  0.0 & position of edge  \\ \hline 
+DX & $M$ & double &  0.0 & misalignment  \\ \hline 
+DY & $M$ & double &  0.0 & misalignment  \\ \hline 
+XO & $M$ & double &  0.0 & radiation length  \\ \hline 
+INSERT\_FROM &  & STRING &   NULL            & direction from which inserted (+x, -x, +y, -y  \\ \hline 
+ELASTIC &  & long &  \verb|0| & elastic scattering?  \\ \hline 
+DIRECTION &  & long &   -1              & obsolete  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|SCRIPT|}\end{center}
+\end{latexonly}\subsection{SCRIPT}
+An element that allows transforming the beam using an external script.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+L & $M$ & double &  0.0 & Length to be used for matrix-based operations such as twiss parameter computation.  \\ \hline 
+COMMAND &  & STRING &   NULL            & SDDS-compliant command to apply to the beam.  Use the sequence \%i to represent the input filename and \%o to represent the output filename.  \\ \hline 
+ROOTNAME &  & STRING &   NULL            & Rootname for use in naming input and output files.  \%s may be used to represent the run rootname.  \\ \hline 
+INPUT\_EXTENSION &  & STRING &   in              & Extension for the script input file.  \\ \hline 
+OUTPUT\_EXTENSION &  & STRING &   out             & Extension for the script output file.  \\ \hline 
+KEEP\_FILES &  & long &  \verb|0| & If nonzero, then script input and output files are not deleted after use.  By default, they are deleted.  \\ \hline 
+NP0 &  & double &  0.0 & User-defined numerical parameter for command substitution for sequence \%np0  \\ \hline 
+NP1 &  & double &  0.0 & User-defined numerical parameter for command substitution for sequence \%np1  \\ \hline 
+NP2 &  & double &  0.0 & User-defined numerical parameter for command substitution for sequence \%np2  \\ \hline 
+NP3 &  & double &  0.0 & User-defined numerical parameter for command substitution for sequence \%np3  \\ \hline 
+NP4 &  & double &  0.0 & User-defined numerical parameter for command substitution for sequence \%np4  \\ \hline 
+NP5 &  & double &  0.0 & User-defined numerical parameter for command substitution for sequence \%np5  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|SCRIPT| continued}\end{center}
+\end{latexonly}
+An element that allows transforming the beam using an external script.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+NP6 &  & double &  0.0 & User-defined numerical parameter for command substitution for sequence \%np6  \\ \hline 
+NP7 &  & double &  0.0 & User-defined numerical parameter for command substitution for sequence \%np7  \\ \hline 
+NP8 &  & double &  0.0 & User-defined numerical parameter for command substitution for sequence \%np8  \\ \hline 
+NP9 &  & double &  0.0 & User-defined numerical parameter for command substitution for sequence \%np9  \\ \hline 
+SP0 &  & STRING &   NULL            & User-defined string parameter for command substitution for sequence \%sp0  \\ \hline 
+SP1 &  & STRING &   NULL            & User-defined string parameter for command substitution for sequence \%sp1  \\ \hline 
+SP2 &  & STRING &   NULL            & User-defined string parameter for command substitution for sequence \%sp2  \\ \hline 
+SP3 &  & STRING &   NULL            & User-defined string parameter for command substitution for sequence \%sp3  \\ \hline 
+SP4 &  & STRING &   NULL            & User-defined string parameter for command substitution for sequence \%sp4  \\ \hline 
+SP5 &  & STRING &   NULL            & User-defined string parameter for command substitution for sequence \%sp5  \\ \hline 
+SP6 &  & STRING &   NULL            & User-defined string parameter for command substitution for sequence \%sp6  \\ \hline 
+SP7 &  & STRING &   NULL            & User-defined string parameter for command substitution for sequence \%sp7  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|SCRIPT| continued}\end{center}
+\end{latexonly}
+An element that allows transforming the beam using an external script.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+SP8 &  & STRING &   NULL            & User-defined string parameter for command substitution for sequence \%sp8  \\ \hline 
+SP9 &  & STRING &   NULL            & User-defined string parameter for command substitution for sequence \%sp9  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|SEXT|}\end{center}
+\end{latexonly}\subsection{SEXT}
+A sextupole implemented as a matrix, up to 2nd order
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+L & $M$ & double &  0.0 & length  \\ \hline 
+K2 & $1/M^{3}$ & double &  0.0 & geometric strength  \\ \hline 
+TILT & $RAD$ & double &  0.0 & rotation about longitudinal axis  \\ \hline 
+DX & $M$ & double &  0.0 & misalignment  \\ \hline 
+DY & $M$ & double &  0.0 & misalignment  \\ \hline 
+DZ & $M$ & double &  0.0 & misalignment  \\ \hline 
+FSE & $M$ & double &  0.0 & fractional strength error  \\ \hline 
+ORDER &  & long &  \verb|0| & matrix order  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|SOLE|}\end{center}
+\end{latexonly}\subsection{SOLE}
+A solenoid implemented as a matrix, up to 2nd order.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+L & $M$ & double &  0.0 & length  \\ \hline 
+KS & $RAD/M$ & double &  0.0 & geometric strength  \\ \hline 
+B & $T$ & double &  0.0 & field strength (used if KS is zero)  \\ \hline 
+DX & $M$ & double &  0.0 & misalignment  \\ \hline 
+DY & $M$ & double &  0.0 & misalignment  \\ \hline 
+DZ & $M$ & double &  0.0 & misalignment  \\ \hline 
+ORDER &  & long &  \verb|0| & matrix order  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|SREFFECTS|}\end{center}
+\end{latexonly}\subsection{SREFFECTS}
+Simulation of synchrotron radiation effects (damping and quantum excitation).
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+JX &  & double &   1 & x damping partition number  \\ \hline 
+JY &  & double &   1 & y damping partition number  \\ \hline 
+JDELTA &  & double &   2 & momentum damping partition number  \\ \hline 
+EXREF & $m$ & double &  0.0 & reference equilibrium x emittance  \\ \hline 
+EYREF & $m$ & double &  0.0 & reference equilibrium y emittance  \\ \hline 
+SDELTAREF & $m$ & double &  0.0 & reference equilibrium fractional momentum spread  \\ \hline 
+DDELTAREF &  & double &  0.0 & reference fractional momentum loss (per turn)  \\ \hline 
+PREF & $m_{e}c$ & double &  0.0 & reference momentum (to which other reference values pertain)  \\ \hline 
+COUPLING &  & double &  0.0 & x-y coupling  \\ \hline 
+FRACTION &  & double &   1 & fraction of implied SR effect to simulate with each instance  \\ \hline 
+DAMPING &  & long &   1               & include damping?  \\ \hline 
+QEXCITATION &  & long &   1               & include quantum excitation?  \\ \hline 
+LOSSES &  & long &   1               & include average losses?  \\ \hline 
+\end{tabular}
+
+\vspace*{0.5in}
+\input{sreffects.tex}
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|STRAY|}\end{center}
+\end{latexonly}\subsection{STRAY}
+A stray field element with local and global components.  Global components are
+defined relative to the initial beamline direction.  ** Not correct if there are tilts
+in the beamline. **
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+L & $M$ & double &  0.0 & length  \\ \hline 
+LBX & $T$ & double &  0.0 & local Bx  \\ \hline 
+LBY & $T$ & double &  0.0 & local By  \\ \hline 
+GBX & $T$ & double &  0.0 & global Bx  \\ \hline 
+GBY & $T$ & double &  0.0 & global By  \\ \hline 
+GBZ & $T$ & double &  0.0 & global Bz  \\ \hline 
+ORDER &  & long &  \verb|0| & matrix order  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|TMCF|}\end{center}
+\end{latexonly}\subsection{TMCF}
+A numerically-integrated accelerating TM RF cavity with spatially-constant fields.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+L & $M$ & double &  0.0 & length  \\ \hline 
+FREQUENCY & $HZ$ & double &   2856000000 & frequency  \\ \hline 
+PHASE & $S$ & double &  0.0 & phase  \\ \hline 
+TIME\_OFFSET & $S$ & double &  0.0 & time offset (adds to phase)  \\ \hline 
+RADIAL\_OFFSET & $M$ & double &   1 & not recommended  \\ \hline 
+TILT & $RAD$ & double &  0.0 & rotation about longitudinal axis  \\ \hline 
+ER & $V$ & double &  0.0 & radial electric field  \\ \hline 
+BPHI & $T$ & double &  0.0 & azimuthal magnetic field  \\ \hline 
+EZ & $V$ & double &  0.0 & longitudinal electric field  \\ \hline 
+ACCURACY &  & double &   0.0001 & integration accuracy  \\ \hline 
+X\_MAX & $M$ & double &  0.0 & x half-aperture  \\ \hline 
+Y\_MAX & $M$ & double &  0.0 & y half-aperture  \\ \hline 
+DX & $M$ & double &  0.0 & misalignment  \\ \hline 
+DY & $M$ & double &  0.0 & misalignment  \\ \hline 
+PHASE\_REFERENCE &  & long &  \verb|0| & phase reference number (to link with other time-dependent elements)  \\ \hline 
+N\_STEPS &  & long &   100             & number of steps (for nonadaptive integration)  \\ \hline 
+METHOD & $ $ & STRING &   runge-kutta     & integration method (runge-kutta, bulirsch-stoer, non-adaptive runge-kutta, modified midpoint)  \\ \hline 
+FIDUCIAL &  & STRING &   t,median        & \{t$|$p\},\{median$|$min$|$max$|$ave$|$first$|$light\} (e.g., "t,median")  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|TRCOUNT|}\end{center}
+\end{latexonly}\subsection{TRCOUNT}
+An element that defines the point from which transmission calculations are made.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+DUMMY &  & long &  \verb|0| & \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|TRFMODE|}\end{center}
+\end{latexonly}\subsection{TRFMODE}
+A simulation of a beam-driven TM dipole mode of a RF cavity.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+RA & $Ohm$ & double &  0.0 & shunt impedance  \\ \hline 
+RS & $Ohm$ & double &  0.0 & shunt impedance (Ra=2*Rs)  \\ \hline 
+Q &  & double &  0.0 & cavity Q  \\ \hline 
+FREQ & $Hz$ & double &  0.0 & frequency  \\ \hline 
+CHARGE & $C$ & double &  0.0 & beam charge (or use CHARGE element)  \\ \hline 
+BETA &  & double &  0.0 & normalized load impedance  \\ \hline 
+BIN\_SIZE & $S$ & double &  0.0 & bin size for current histogram (use 0 for autosize)  \\ \hline 
+N\_BINS &  & long &   20              & number of bins for current histogram  \\ \hline 
+PLANE &  & STRING &   both            & x, y, or both  \\ \hline 
+SINGLE\_PASS &  & long &  \verb|0| & if nonzero, don't accumulate field from pass to pass  \\ \hline 
+DX & $M$ & double &  0.0 & misalignment  \\ \hline 
+DY & $M$ & double &  0.0 & misalignment  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|TRWAKE|}\end{center}
+\end{latexonly}\subsection{TRWAKE}
+Transverse wake specified as a function of time lag behind the particle.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+INPUTFILE &  & STRING &   NULL            & name of file giving Green functions  \\ \hline 
+TCOLUMN &  & STRING &   NULL            & column in INPUTFILE containing time data  \\ \hline 
+WXCOLUMN &  & STRING &   NULL            & column in INPUTFILE containing x Green function  \\ \hline 
+WYCOLUMN &  & STRING &   NULL            & column in INPUTFILE containing y Green function  \\ \hline 
+CHARGE & $C$ & double &  0.0 & beam charge (or use CHARGE element)  \\ \hline 
+FACTOR & $C$ & double &   1 & factor to multiply wake by  \\ \hline 
+N\_BINS &  & long &   128             & number of bins for current histogram  \\ \hline 
+INTERPOLATE &  & long &  \verb|0| & interpolate wake?  \\ \hline 
+SMOOTHING &  & long &  \verb|0| & smooth current histogram?  \\ \hline 
+SG\_HALFWIDTH &  & long &   4               & Savitzky-Golay filter half-width for smoothing  \\ \hline 
+SG\_ORDER &  & long &   1               & Savitzky-Golay filter order for smoothing  \\ \hline 
+DX & $M$ & double &  0.0 & misalignment  \\ \hline 
+DY & $M$ & double &  0.0 & misalignmnet  \\ \hline 
+\end{tabular}
+
+\vspace*{0.5in}
+\input{trwake.tex}
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|TUBEND|}\end{center}
+\end{latexonly}\subsection{TUBEND}
+A special rectangular bend element for top-up backtracking.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+L & $M$ & double &  0.0 & arc length  \\ \hline 
+ANGLE & $RAD$ & double &  0.0 & bend angle  \\ \hline 
+FSE &  & double &  0.0 & fractional strength error  \\ \hline 
+OFFSET &  & double &  0.0 & horizontal offset of magnet center from arc center  \\ \hline 
+MAGNET\_WIDTH &  & double &  0.0 & horizontal width of the magnet pole  \\ \hline 
+MAGNET\_ANGLE &  & double &  0.0 & angle that the magnet was designed for  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|TWISS|}\end{center}
+\end{latexonly}\subsection{TWISS}
+Sets Twiss parameter values.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+BETAX & $M$ & double &   1 & horizontal beta function  \\ \hline 
+BETAY & $M$ & double &   1 & vertical beta function  \\ \hline 
+ALPHAX &  & double &  0.0 & horizontal alpha function  \\ \hline 
+ALPHAY &  & double &  0.0 & vertical alpha function  \\ \hline 
+FROM\_BEAM &  & long &  \verb|0| & compute correction from tracked beam properties instead of Twiss parameters?  \\ \hline 
+ONCE\_ONLY &  & long &  \verb|0| & compute correction only for first beam or input twiss parameters, apply to all?  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|TWLA|}\end{center}
+\end{latexonly}\subsection{TWLA}
+A numerically-integrated first-space-harmonic traveling-wave linear accelerator.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+L & $M$ & double &  0.0 & length  \\ \hline 
+FREQUENCY & $HZ$ & double &   2856000000 & frequency  \\ \hline 
+PHASE & $RAD$ & double &  0.0 & phase  \\ \hline 
+TIME\_OFFSET & $S$ & double &  0.0 & time offset (adds to phase)  \\ \hline 
+EZ & $V/M$ & double &  0.0 & electric field  \\ \hline 
+B\_SOLENOID & $T$ & double &  0.0 & solenoid field  \\ \hline 
+ACCURACY &  & double &   0.0001 & integration accuracy  \\ \hline 
+X\_MAX & $M$ & double &  0.0 & x half-aperture  \\ \hline 
+Y\_MAX & $M$ & double &  0.0 & y half-aperture  \\ \hline 
+DX & $M$ & double &  0.0 & misalignment  \\ \hline 
+DY & $M$ & double &  0.0 & misalignment  \\ \hline 
+BETA\_WAVE &  & double &   1 & (phase velocity)/c  \\ \hline 
+ALPHA & $1/M$ & double &  0.0 & field attenuation factor  \\ \hline 
+PHASE\_REFERENCE &  & long &  \verb|0| & phase reference number (to link with other time-dependent elements)  \\ \hline 
+N\_STEPS &  & long &   100             & number of steps (for nonadaptive integration)  \\ \hline 
+FOCUSSING &  & long &   1               & include focusing effects?  \\ \hline 
+METHOD & $ $ & STRING &   runge-kutta     & integration method (runge-kutta, bulirsch-stoer, non-adaptive runge-kutta, modified midpoint)  \\ \hline 
+FIDUCIAL &  & STRING &   t,median        & \{t$|$p\},\{median$|$min$|$max$|$ave$|$first$|$light\} (e.g., "t,median")  \\ \hline 
+CHANGE\_P0 &  & long &  \verb|0| & does element change central momentum?  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|TWMTA|}\end{center}
+\end{latexonly}\subsection{TWMTA}
+A numerically-integrated traveling-wave muffin-tin accelerator.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+L & $M$ & double &  0.0 & length  \\ \hline 
+FREQUENCY & $HZ$ & double &   2856000000 & frequency  \\ \hline 
+PHASE & $RAD$ & double &  0.0 & phase  \\ \hline 
+EZ & $V/M$ & double &  0.0 & electric field  \\ \hline 
+ACCURACY &  & double &   0.0001 & integration accuracy  \\ \hline 
+X\_MAX & $M$ & double &  0.0 & x half-aperture  \\ \hline 
+Y\_MAX & $M$ & double &  0.0 & y half-aperture  \\ \hline 
+DX & $M$ & double &  0.0 & misalignment  \\ \hline 
+DY & $M$ & double &  0.0 & misalignment  \\ \hline 
+KX & $1/M$ & double &  0.0 & horizontal wave number  \\ \hline 
+BETA\_WAVE &  & double &   1 & (phase velocity)/c  \\ \hline 
+BSOL &  & double &  0.0 & solenoid field  \\ \hline 
+ALPHA & $1/M$ & double &  0.0 & field attenuation factor  \\ \hline 
+PHASE\_REFERENCE &  & long &  \verb|0| & phase reference number (to link with other time-dependent elements)  \\ \hline 
+N\_STEPS &  & long &   100             & number of kicks  \\ \hline 
+METHOD & $ $ & STRING &   runge-kutta     & integration method (runge-kutta, bulirsch-stoer, non-adaptive runge-kutta, modified midpoint)  \\ \hline 
+FIDUCIAL &  & STRING &   t,median        & \{t$|$p\},\{median$|$min$|$max$|$ave$|$first$|$light\} (e.g., "t,median")  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|TWPL|}\end{center}
+\end{latexonly}\subsection{TWPL}
+A numerically-integrated traveling-wave stripline deflector.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+L & $M$ & double &  0.0 & length  \\ \hline 
+RAMP\_TIME & $S$ & double &   1e-09 & time to ramp to full strenth  \\ \hline 
+TIME\_OFFSET & $S$ & double &  0.0 & offset of ramp-start time  \\ \hline 
+VOLTAGE & $V$ & double &  0.0 & maximum voltage between plates due to ramp  \\ \hline 
+GAP & $M$ & double &   0.01 & gap between plates  \\ \hline 
+STATIC\_VOLTAGE & $V$ & double &  0.0 & static component of voltage  \\ \hline 
+TILT & $RAD$ & double &  0.0 & rotation about longitudinal axis  \\ \hline 
+ACCURACY &  & double &   0.0001 & integration accuracy  \\ \hline 
+X\_MAX & $M$ & double &  0.0 & x half-aperture  \\ \hline 
+Y\_MAX & $M$ & double &  0.0 & y half-aperture  \\ \hline 
+DX & $M$ & double &  0.0 & misalignment  \\ \hline 
+DY & $M$ & double &  0.0 & misalignment  \\ \hline 
+PHASE\_REFERENCE &  & long &  \verb|0| & phase reference number (to link with other time-dependent elements)  \\ \hline 
+N\_STEPS &  & long &   100             & number of steps (for nonadaptive integration)  \\ \hline 
+METHOD & $ $ & STRING &   runge-kutta     & integration method (runge-kutta, bulirsch-stoer, non-adaptive runge-kutta, modified midpoint)  \\ \hline 
+FIDUCIAL &  & STRING &   t,median        & \{t$|$p\},\{median$|$min$|$max$|$ave$|$first$|$light\} (e.g., "t,median")  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|VKICK|}\end{center}
+\end{latexonly}\subsection{VKICK}
+A vertical steering dipole implemented as a matrix, up to 2nd order.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+L & $M$ & double &  0.0 & length  \\ \hline 
+KICK & $RAD$ & double &  0.0 & kick strength  \\ \hline 
+TILT & $RAD$ & double &  0.0 & rotation about longitudinal axis  \\ \hline 
+B2 & $1/M^{2}$ & double &  0.0 & normalized sextupole strength (kick = KICK*(1+B2*y\^2))  \\ \hline 
+CALIBRATION &  & double &   1 & strength multiplier  \\ \hline 
+EDGE\_EFFECTS &  & long &  \verb|0| & include edge effects?  \\ \hline 
+ORDER &  & long &  \verb|0| & matrix order  \\ \hline 
+STEERING &  & long &   1               & use for steering?  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|VMON|}\end{center}
+\end{latexonly}\subsection{VMON}
+A vertical position monitor, accepting a rpn equation for the readout as a
+function of the actual position (y).
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+L & $M$ & double &  0.0 & length  \\ \hline 
+DX & $M$ & double &  0.0 & misalignment  \\ \hline 
+DY & $M$ & double &  0.0 & misalignment  \\ \hline 
+WEIGHT &  & double &   1 & weight in correction  \\ \hline 
+TILT &  & double &  0.0 & rotation about longitudinal axis  \\ \hline 
+CALIBRATION &  & double &   1 & calibration factor for readout  \\ \hline 
+ORDER &  & long &  \verb|0| & matrix order  \\ \hline 
+READOUT &  & STRING &   NULL            & rpn expression for readout (actual position supplied in variable y)  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|WAKE|}\end{center}
+\end{latexonly}\subsection{WAKE}
+Longitudinal wake specified as a function of time lag behind the particle.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+INPUTFILE &  & STRING &   NULL            & name of file giving Green function  \\ \hline 
+TCOLUMN &  & STRING &   NULL            & column in INPUTFILE containing time data  \\ \hline 
+WCOLUMN &  & STRING &   NULL            & column in INPUTFILE containing Green function  \\ \hline 
+CHARGE & $C$ & double &  0.0 & beam charge (or use CHARGE element)  \\ \hline 
+FACTOR & $C$ & double &   1 & factor to multiply wake by  \\ \hline 
+N\_BINS &  & long &   128             & number of bins for current histogram  \\ \hline 
+INTERPOLATE &  & long &  \verb|0| & interpolate wake?  \\ \hline 
+SMOOTHING &  & long &  \verb|0| & smooth current histogram?  \\ \hline 
+SG\_HALFWIDTH &  & long &   4               & Savitzky-Golay filter half-width for smoothing  \\ \hline 
+SG\_ORDER &  & long &   1               & Savitzky-Golay filter order for smoothing  \\ \hline 
+CHANGE\_P0 &  & long &  \verb|0| & change central momentum?  \\ \hline 
+ALLOW\_LONG\_BEAM &  & long &  \verb|0| & allow beam longer than wake data?  \\ \hline 
+\end{tabular}
+
+\vspace*{0.5in}
+\input{wake.tex}
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|WATCH|}\end{center}
+\end{latexonly}\subsection{WATCH}
+A beam property/motion monitor--allowed modes are centroid, parameter, coordinate, and fft.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+FRACTION &  & double &   1 & fraction of particles to dump (coordinate mode)  \\ \hline 
+INTERVAL &  & long &   1               & interval for data output (in turns)  \\ \hline 
+START\_PASS &  & long &  \verb|0| & pass on which to start  \\ \hline 
+FILENAME &  & STRING &                   & output filename  \\ \hline 
+LABEL &  & STRING &                   & output label  \\ \hline 
+MODE &  & STRING &   coordinates     & coordinate, parameter, or centroid  \\ \hline 
+X\_DATA &  & long &   1               & include x data in coordinate mode?  \\ \hline 
+Y\_DATA &  & long &   1               & include y data in coordinate mode?  \\ \hline 
+LONGIT\_DATA &  & long &   1               & include longitudinal data in coordinate mode?  \\ \hline 
+EXCLUDE\_SLOPES &  & long &  \verb|0| & exclude slopes in coordinate mode?  \\ \hline 
+FLUSH\_INTERVAL &  & long &  \verb|0| & file flushing interval (parameter or centroid mode)  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|WIGGLER|}\end{center}
+\end{latexonly}\subsection{WIGGLER}
+A wiggler or undulator for damping or excitation of the beam.  Does not include focusing effects.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+L & $M$ & double &  0.0 & length  \\ \hline 
+RADIUS & $M$ & double &  0.0 & peak bending radius  \\ \hline 
+POLES &  & long &  \verb|0| & number of wiggler poles  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|ZLONGIT|}\end{center}
+\end{latexonly}\subsection{ZLONGIT}
+A simulation of a single-pass broad-band or functionally specified longitudinal
+impedance.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+CHARGE & $C$ & double &  0.0 & beam charge (or use CHARGE element)  \\ \hline 
+BROAD\_BAND &  & long &  \verb|0| & broad-band impedance?  \\ \hline 
+RA & $Ohm$ & double &  0.0 & shunt impedance  \\ \hline 
+RS & $Ohm$ & double &  0.0 & shunt impedance (Ra=2*Rs)  \\ \hline 
+Q &  & double &  0.0 & cavity Q  \\ \hline 
+FREQ & $Hz$ & double &  0.0 & frequency (BROAD\_BAND=1)  \\ \hline 
+ZREAL &  & STRING &   NULL            & $<$filename$>$=$<$x$>$+$<$y$>$ form specification of input file giving real part of impedance vs f (BROAD\_BAND=0)  \\ \hline 
+ZIMAG &  & STRING &   NULL            & $<$filename$>$=$<$x$>$+$<$y$>$ form specification of input file giving imaginary part of impedance vs f (BROAD\_BAND=0)  \\ \hline 
+BIN\_SIZE & $S$ & double &  0.0 & bin size for current histogram (use 0 for autosize)  \\ \hline 
+N\_BINS &  & long &   128             & number of bins for current histogram  \\ \hline 
+WAKES &  & STRING &   NULL            & filename for output of wake  \\ \hline 
+WAKE\_INTERVAL &  & long &   1               & interval in passes at which to output wake  \\ \hline 
+AREA\_WEIGHT &  & long &  \verb|0| & use area-weighting in assigning charge to histogram?  \\ \hline 
+INTERPOLATE &  & long &  \verb|0| & interpolate wake?  \\ \hline 
+SMOOTHING &  & long &  \verb|0| & smooth current histogram?  \\ \hline 
+SG\_ORDER &  & long &   1               & Savitzky-Golay filter order for smoothing  \\ \hline 
+SG\_HALFWIDTH &  & long &   4               & Savitzky-Golay filter halfwidth for smoothing  \\ \hline 
+\end{tabular}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|ZTRANSVERSE|}\end{center}
+\end{latexonly}\subsection{ZTRANSVERSE}
+A simulation of a single-pass broad-band or functionally-specified transverse dipole impedance.
+\\
+\begin{tabular}{|l|l|l|l|p{\descwidth}|} \hline
+Parameter Name & Units & Type & Default & Description \\ \hline 
+CHARGE & $C$ & double &  0.0 & beam charge (or use CHARGE element)  \\ \hline 
+BROAD\_BAND &  & long &  \verb|0| & broad-band impedance?  \\ \hline 
+RS & $Ohm$ & double &  0.0 & shunt impedance (Ra=2*Rs)  \\ \hline 
+Q &  & double &  0.0 & cavity Q  \\ \hline 
+FREQ & $Hz$ & double &  0.0 & frequency (BROAD\_BAND=1)  \\ \hline 
+INPUTFILE &  & STRING &   NULL            & name of file giving impedance (BROAD\_BAND=0)  \\ \hline 
+FREQCOLUMN &  & STRING &   NULL            & column in INPUTFILE containing frequency  \\ \hline 
+ZXREAL &  & STRING &   NULL            & column in INPUTFILE containing real impedance for x plane  \\ \hline 
+ZXIMAG &  & STRING &   NULL            & column in INPUTFILE containing imaginary impedance for x plane  \\ \hline 
+ZYREAL &  & STRING &   NULL            & column in INPUTFILE containing real impedance for y plane  \\ \hline 
+ZYIMAG &  & STRING &   NULL            & column in INPUTFILE containing imaginary impedance for y plane  \\ \hline 
+BIN\_SIZE & $S$ & double &  0.0 & bin size for current histogram (use 0 for autosize)  \\ \hline 
+INTERPOLATE &  & long &  \verb|0| & interpolate wake?  \\ \hline 
+N\_BINS &  & long &   128             & number of bins for current histogram  \\ \hline 
+SMOOTHING &  & long &  \verb|0| & smooth current histogram?  \\ \hline 
+SG\_ORDER &  & long &   1               & Savitzky-Golay filter order for smoothing  \\ \hline 
+SG\_HALFWIDTH &  & long &   4               & Savitzky-Golay filter halfwidth for smoothing  \\ \hline 
+DX & $M$ & double &  0.0 & misalignment  \\ \hline 
+DY & $M$ & double &  0.0 & misalignment  \\ \hline 
+\end{tabular}
+

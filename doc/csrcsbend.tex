@@ -1,0 +1,21 @@
+For a discussion of the method behind this element, see M. Borland,
+``Simple method for particle tracking with coherent synchrotron
+radiation,'' Phys. Rev. ST Accel. Beams 4, 070701 (2001).
+
+{\bf Recommendations for using this element.}  The default values for
+this element are not the best ones to use.  They are retained only for
+consistency through upgrades.  In using this element, it is
+recommended to have 50 to 100 k particle in the simulation.  Setting
+{\tt BINS=600} and {\tt SG\_HALFWIDTH=1} is also recommended to allow
+resolution of fine structure in the beam and to avoid excessive
+smoothing.  It is strongly suggested that the user vary these
+parameters and view the histogram output to verify that the
+longitudinal distribution is well represented by the histograms (use
+{\tt OUTPUT\_FILE} to obtain the histograms).  For LCLS simulations,
+we find that the above parameters give essentially the same results as
+obtained with 500 k particles and up to 3000 bins.
+
+In order to verify that the 1D approximation is valid, the user should
+also set {\tt DERBENEV\_CRITERION\_MODE = ``evaluate''} and view
+the data in {\tt OUTPUT\_FILE}.  Generally, the criterion should be
+much less than 1.
