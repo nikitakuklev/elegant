@@ -16,8 +16,6 @@
 
 #include "fftpackC.h"
 
-#define DEBUG 1
-
 void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CHARGE *charge)
 {
   static double *Itime = NULL;           /* array for histogram of particle density */
@@ -33,8 +31,10 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
   double lengthLeft, Imin, Imax, kSC, Zmax;
   double Ia = 17045, Z0, length, k;
   double S11, S33, beamRadius;
+#if DEBUG
   FILE *fpd = NULL;
-  
+#endif
+
   Z0 = sqrt(mu_o/epsilon_o);
   nb = LSC->bins;
 
@@ -242,7 +242,7 @@ void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge,
   double *Vfreq, ZImag;
   long ib, nb, n_binned, nfreq, iReal, iImag;
   double factor, tmin, tmax, tmean, dt, df, dk, a1, a2;
-  double lengthLeft, Imin, Imax, kSC, Zmax;
+  double Imin, Imax, kSC, Zmax;
   double Ia = 17045, Z0, length, k;
   double S11, S33, beamRadius;
   
