@@ -1181,6 +1181,7 @@ PARAMETER csrdrift_param[N_CSRDRIFT_PARAMS] = {
     {"CSR", "", IS_LONG, 1, (long)((char *)&csrdrift_example.csr), NULL, 0.0, 1, "do CSR calcuations"},
     {"SPREAD_MODE", "", IS_STRING, 1, (long)((char *)&csrdrift_example.spreadMode), "full", 0.0, 0, "full, simple, or radiation-only"},
     {"WAVELENGTH_MODE", "", IS_STRING, 1, (long)((char *)&csrdrift_example.wavelengthMode), "sigmaz", 0.0, 0, "sigmaz or peak-to-peak"},
+    {"OL_MULTIPLIER", "", IS_DOUBLE, 1, (long)((char *)&csrdrift_example.overtakingLengthMultiplier), NULL, 1.0, 0, "factor by which to multiply the overtaking length to get the attenuation length"},
     };
 
 RFCW rfcw_example;

@@ -1471,7 +1471,7 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
   }
 
   if (csrDrift->useOvertakingLength) {
-    attenuationLength = csrWake.overtakingLength;
+    attenuationLength = csrWake.overtakingLength*csrDrift->overtakingLengthMultiplier;
   }
   else
     attenuationLength = csrDrift->attenuationLength;
@@ -1498,13 +1498,15 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
   
   dz = (dz0=csrDrift->length/nKicks)/2;
   dzFirst = zStart - csrWake.zLast;
-#ifdef DEBUG
-  fprintf(stdout, "CSR in drift:\n");
-  fprintf(stdout, "zStart = %21.15le, zLast = %21.15le, ", zStart, csrWake.zLast);
-  fprintf(stdout, "dzFirst = %21.15e, s0 = %21.15e", dzFirst, csrWake.s0);
-#endif
 
   zTravel = zStart-csrWake.z0;  /* total distance traveled by radiation to reach this point */
+#ifdef DEBUG
+  fprintf(stdout, "CSR in drift:\n");
+  fprintf(stdout, "zStart = %21.15le, zLast = %21.15le, zTravel = %21.15le\n", zStart, csrWake.zLast,
+          zTravel);
+  fprintf(stdout, "dzFirst = %21.15e, s0 = %21.15e\n", dzFirst, csrWake.s0);
+#endif
+
   for (iKick=0; iKick<nKicks; iKick++) {
     /* first drift is dz=dz0/2, others are dz0 */
     if (iKick==1)
