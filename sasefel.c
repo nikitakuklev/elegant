@@ -3,6 +3,9 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.9  2000/05/13 02:44:34  borland
+ * Added betax, alphax, and enx (plus y) for SASE slices.
+ *
  * Revision 1.8  2000/05/11 17:04:12  borland
  * Added some debugging code for stray-field matrices.
  * Fixed bug in SASE FEL calculations (the rms bunch length was being
@@ -429,8 +432,8 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
     sasefelOutput->betaToUse[0] = sqrt(S11*S33/(emitx*emity));
   else
     sasefelOutput->betaToUse[0] = sasefelOutput->beta;
-  sasefelOutput->betaxBeam[0] = sqrt(S11/emitx);
-  sasefelOutput->betayBeam[0] = sqrt(S33/emity);
+  sasefelOutput->betaxBeam[0] = S11/emitx;
+  sasefelOutput->betayBeam[0] = S33/emity;
   sasefelOutput->alphaxBeam[0] = -S12/emitx;
   sasefelOutput->alphayBeam[0] = -S34/emity;
   
@@ -540,8 +543,8 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
         sasefelOutput->betaToUse[slice] = sqrt(S11*S33/(emitx*emity));
       else
         sasefelOutput->betaToUse[slice] = sasefelOutput->beta;
-      sasefelOutput->betaxBeam[slice] = sqrt(S11/emitx);
-      sasefelOutput->betayBeam[slice] = sqrt(S33/emity);
+      sasefelOutput->betaxBeam[slice] = S11/emitx;
+      sasefelOutput->betayBeam[slice] = S33/emity;
       sasefelOutput->alphaxBeam[slice] = -S12/emitx;
       sasefelOutput->alphayBeam[slice] = -S34/emity;
       
