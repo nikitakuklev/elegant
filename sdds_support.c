@@ -651,8 +651,10 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
             }
 
         if (watch->mode_code==WATCH_PARAMETERS) {
-            for (i=sum=0; i<particles; i++)
+            for (i=sum=0; i<particles; i++) {
+	        p = Po*(1+particle[i][5]);
                 sum += sqr(particle[i][4]/(p/sqrt(sqr(p)+1)*c_mks) - tc);
+	    }
             if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
                                "St", sqrt(sum/particles), NULL)) {
                 SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
