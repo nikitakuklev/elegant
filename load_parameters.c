@@ -319,7 +319,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
       if (load_request[i].includeItemPattern &&
           !wild_match(parameter[j], load_request[i].includeItemPattern))
         continue;
-      if (load_request[i].includeItemPattern &&
+      if (load_request[i].includeTypePattern &&
           !wild_match(type[j], load_request[i].includeTypePattern))
         continue;
       if (load_request[i].excludeNamePattern &&
