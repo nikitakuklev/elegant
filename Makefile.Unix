@@ -1,0 +1,140 @@
+
+EPICS = ../../../..
+include Target.include
+include $(EPICS)/config/CONFIG_APPS
+
+EXTENSIONS_LIBS=$(EPICS_EXTENSIONS_LIB)/libSDDS1.a \
+	$(EPICS_EXTENSIONS_LIB)/libnamelist.a \
+	$(EPICS_EXTENSIONS_LIB)/libfftpack.a \
+	$(EPICS_EXTENSIONS_LIB)/libmdbmth.a \
+	$(EPICS_EXTENSIONS_LIB)/libmatlib.a \
+	$(EPICS_EXTENSIONS_LIB)/libmdblib.a \
+	$(EPICS_EXTENSIONS_LIB)/librpnlib.a
+
+DEPLIBS = $(EXTENSIONS_LIBS)
+
+USR_CFLAGS = 	-I$(EPICS_EXTENSIONS_INCLUDE) -DUNIX -DIEEE_MATH
+USR_LDFLAGS = -L. -L$(EPICS_EXTENSIONS_LIB)
+USR_LDLIBS = -lSDDS1 -lnamelist -lmatlib -lrpnlib -lfftpack -lmdbmth -lmdblib -lm
+ifeq ($(HOST_ARCH),solaris)
+	USR_LDLIBS += -lsunmath
+endif
+
+SRC1 = ../alpha_data.c ../alpha_matrix.c ../amplif.c ../analyze.c ../aperture_search.c ../bend_matrix.c
+SRC2 = ../bunched_beam.c ../cfgets.c ../check_duplic.c ../chrom.c ../closed_orbit.c ../compose_fn.c 
+SRC3 = ../compute_centroids.c ../compute_matrices.c ../concat_beamline.c ../concat_mat.c ../counter.c 
+SRC4 = ../copy_particles.c ../cormon_stats_output.c ../correct.c ../corrector_output.c ../csbend.c 
+SRC5 = ../do_tracking.c ../elegant.c ../error.c ../extend_list.c ../final_props.c ../find_elem.c ../floor.c 
+SRC6 = ../generate_bunch.c ../get_beamline.c ../kicker.c ../kick_poly.c ../kick_sbend.c 
+SRC6 = ../limit_amplitudes.c ../link_elements.c ../load_parameters.c ../lorentz.c ../mad_parse.c 
+SRC7 = ../malign_mat.c ../matrix_output.c ../matrix.c ../matter.c ../motion.c ../multipole.c 
+SRC8 = ../orbtraj_output.c ../optimize.c ../output_magnets.c ../pepper_pot.c ../phase_reference.c 
+SRC8 = ../print_line.c ../quad_matrix.c ../ramp_momentum.c ../ramped_rfca.c ../response.c ../rfmode.c 
+SRC9 = ../run_rpnexpr.c ../sample.c ../sdds_beam.c ../sdds_support.c ../simple_rfca.c  ../subprocess.c
+SRC10 = ../tune.c ../tilt_matrices.c ../trace.c ../track_data.c ../track_ramp.c ../track_rf.c ../trfmode.c 
+SRC11 = ../twiss.c ../vary.c ../zlongit.c ../SReffects.c ../mod_rfca.c
+SRCS.c = $(SRC1) $(SRC2) $(SRC3) $(SRC4) $(SRC5) $(SRC6) $(SRC7) $(SRC8) $(SRC9) $(SRC10) $(SRC11)
+
+OBJ1 = alpha_data.o alpha_matrix.o amplif.o analyze.o aperture_search.o bend_matrix.o
+OBJ2 = bunched_beam.o cfgets.o check_duplic.o chrom.o closed_orbit.o compose_fn.o 
+OBJ3 = compute_centroids.o compute_matrices.o concat_beamline.o concat_mat.o counter.o 
+OBJ4 = copy_particles.o cormon_stats_output.o correct.o corrector_output.o csbend.o 
+OBJ5 = do_tracking.o elegant.o error.o extend_list.o final_props.o find_elem.o floor.o 
+OBJ6 = generate_bunch.o get_beamline.o kicker.o kick_poly.o kick_sbend.o 
+OBJ6 = limit_amplitudes.o link_elements.o load_parameters.o lorentz.o mad_parse.o 
+OBJ7 = malign_mat.o matrix_output.o matrix.o matter.o motion.o multipole.o 
+OBJ8 = orbtraj_output.o optimize.o output_magnets.o pepper_pot.o phase_reference.o 
+OBJ8 = print_line.o quad_matrix.o ramp_momentum.o ramped_rfca.o response.o rfmode.o 
+OBJ9 = run_rpnexpr.o sample.o sdds_beam.o sdds_support.o simple_rfca.o  subprocess.o
+OBJ10 = tune.o tilt_matrices.o trace.o track_data.o track_ramp.o track_rf.o trfmode.o 
+OBJ11 = twiss.o vary.o zlongit.o SReffects.o mod_rfca.o
+OBJS =  $(OBJ1) $(OBJ2) $(OBJ3) $(OBJ4) $(OBJ5) $(OBJ6) $(OBJ7) $(OBJ8) $(OBJ9) $(OBJ10) $(OBJ11)
+
+pre_build: amplif.h analyze.h aperture_search.h awe_beam.h bunched_beam.h chrom.h closed_orbit.h correct.nl \
+elegant.h error.h floor.h link_elements.h load_parameters.h matrix_output.h optim_covariable.h optimize.nl \
+response.h run_rpnexpr.h save_lattice.h sdds_beam.h steer_elem.h subprocess.h trace.h tune.h twiss.h vary.h 
+
+amplif.h : ../amplif.h
+	$(INSTALL_BIN)/nlpp ../amplif.nl amplif.h
+
+analyze.h : ../analyze.h
+	$(INSTALL_BIN)/nlpp ../analyze.nl analyze.h
+
+aperture_search.h : ../aperture_search.h
+	$(INSTALL_BIN)/nlpp ../aperture_search.nl aperture_search.h
+
+awe_beam.h : ../awe_beam.h
+	$(INSTALL_BIN)/nlpp ../awe_beam.nl awe_beam.h
+
+bunched_beam.h : ../bunched_beam.h
+	$(INSTALL_BIN)/nlpp ../bunched_beam.nl bunched_beam.h
+
+chrom.h : ../chrom.h
+	$(INSTALL_BIN)/nlpp ../chrom.nl chrom.h
+
+closed_orbit.h : ../closed_orbit.h
+	$(INSTALL_BIN)/nlpp ../closed_orbit.nl closed_orbit.h
+
+correct.h : ../correct.h
+	$(INSTALL_BIN)/nlpp ../correct.nl correct.h
+
+elegant.h : ../elegant.h
+	$(INSTALL_BIN)/nlpp ../elegant.nl elegant.h
+
+error.h : ../error.h
+	$(INSTALL_BIN)/nlpp ../error.nl error.h
+
+floor.h : ../floor.h
+	$(INSTALL_BIN)/nlpp ../floor.nl floor.h
+
+link_elements.h : ../link_elements.h
+	$(INSTALL_BIN)/nlpp ../link_elements.nl link_elements.h
+
+load_parameters.h : ../load_parameters.h
+	$(INSTALL_BIN)/nlpp ../load_parameters.nl load_parameters.h
+
+matrix_output.h : ../matrix_output.h
+	$(INSTALL_BIN)/nlpp ../matrix_output.nl matrix_output.h
+
+optim_covariable.h : ../optim_covariable.h
+	$(INSTALL_BIN)/nlpp ../optim_covariable.nl optim_covariable.h
+
+optimize.h : ../optimize.h
+	$(INSTALL_BIN)/nlpp ../optimize.nl optimize.h
+
+response.h : ../response.h
+	$(INSTALL_BIN)/nlpp ../response.nl response.h
+
+run_rpnexpr.h : ../run_rpnexpr.h
+	$(INSTALL_BIN)/nlpp ../run_rpnexpr.nl run_rpnexpr.h
+
+save_lattice.h : ../save_lattice.h
+	$(INSTALL_BIN)/nlpp ../save_lattice.nl save_lattice.h
+
+sdds_beam.h : ../sdds_beam.h
+	$(INSTALL_BIN)/nlpp ../sdds_beam.nl sdds_beam.h
+
+steer_elem.h : ../steer_elem.h
+	$(INSTALL_BIN)/nlpp ../steer_elem.nl steer_elem.h
+
+subprocess.h : ../subprocess.h
+	$(INSTALL_BIN)/nlpp ../subprocess.nl subprocess.h
+
+trace.h : ../trace.h
+	$(INSTALL_BIN)/nlpp ../trace.nl trace.h
+
+tune.h : ../tune.h
+	$(INSTALL_BIN)/nlpp ../tune.nl tune.h
+
+twiss.h : ../twiss.h
+	$(INSTALL_BIN)/nlpp ../twiss.nl twiss.h
+
+vary.h : ../vary.h
+	$(INSTALL_BIN)/nlpp ../vary.nl vary.h
+
+PROD = elegant
+
+include $(EPICS)/config/RULES.Unix
+
+elegant: $(OBJS) $(DEPLIBS)
+	$(LINK.c) -o $@ $(OBJS) $(LDLIBS)
