@@ -67,7 +67,10 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
     double *Vfreq, *Z;
     long ip, ib, nb, n_binned, nfreq, iReal, iImag;
     double factor, tmin, tmean, dt, dt1, dgam;
-
+    static long not_first_call = -1;
+    
+    not_first_call += 1;
+    
     set_up_zlongit(zlongit, run, i_pass, np, charge);
     nb = zlongit->n_bins;
     dt = zlongit->bin_size;
@@ -112,9 +115,14 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
       pbin[ip] = ib;
       n_binned++;
     }
-    if (n_binned!=np)
-        fprintf(stdout, "warning: only %ld of %ld particles where binned (ZLONGIT)\n", n_binned, np);
-        fflush(stdout);
+    if (n_binned!=np) {
+      fprintf(stdout, "Warning: only %ld of %ld particles were binned (ZLONGIT)!\n", n_binned, np);
+      if (!not_first_call) {
+        fprintf(stdout, "*** This may produce unphysical results.  Your wake needs smaller frequency\n");
+        fprintf(stdout, "    spacing to cover a longer time span.\n");
+      }
+      fflush(stdout);
+    }
     if (zlongit->smoothing)
       SavitzyGolaySmooth(Itime, nb, zlongit->SGOrder, 
                          zlongit->SGHalfWidth, zlongit->SGHalfWidth, 0);
@@ -174,7 +182,7 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
                     }
                 }
             if (!SDDS_SetParameters(&zlongit->SDDS_wake, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-                                    "Pass", i_pass, "q", zlongit->charge, NULL)) {
+                                    "Pass", i_pass, "q", zlongit->macroParticleCharge*np, NULL)) {
                 SDDS_SetError("Problem setting parameters of SDDS table for wake output (track_through_zlongit)");
                 SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
                 }
@@ -239,8 +247,7 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
 void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARGE *charge)
 {
     long i, nfreq;
-    double df, t_range;
-    static char associate[SDDS_MAXLINE];
+    double df;
 
     if (charge) {
       zlongit->macroParticleCharge = charge->macroParticleCharge;
@@ -254,14 +261,14 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
       return ;
     zlongit->initialized = 1;
 
-    if (zlongit->bin_size<=0)
-        bomb("bin_size must be positive for ZLONGIT element", NULL);
     if (zlongit->broad_band) {
       /* compute impedance for a resonator.  Recall that I use V(t) = Vo*exp(i*w*t) convention,
        * so the impedance is Z(w) = (Ra/2)*(1 + i*T)/(1+T^2), where T=Q*(wo/w-w/wo).
        * The imaginary and real parts are positive for small w.
        */
         double term, factor1, factor2, factor;
+        if (zlongit->bin_size<=0)
+          bomb("bin_size must be positive for ZLONGIT element", NULL);
         if (zlongit->Ra && zlongit->Rs) 
           bomb("ZLONGIT element broad-band resonator may have only one of Ra or Rs nonzero.  Ra is just 2*Rs", NULL);
         if (!zlongit->Ra)
@@ -324,8 +331,6 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
         double *Zr=NULL, *Zi=NULL;
         double df_spect=0.0;
         long n_spect=0;
-        if (zlongit->n_bins<1)
-            bomb("ZLONGIT element must have n_bins>=1", NULL);
         if (!zlongit->Zreal && !zlongit->Zimag)
             bomb("you must either give broad_band=1, or Zreal and/or Zimag (ZLONGIT)", NULL);
         if (zlongit->Zreal && !getTableFromSearchPath(&Zr_data, zlongit->Zreal, 1, 0))
@@ -372,21 +377,10 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
             bomb("impedance spectrum has non-zero imaginary DC term (ZLONGIT)", NULL);
         if (!power_of_2(n_spect-1))
             bomb("number of spectrum points must be 2^n+1, n>1 (ZLONGIT)", NULL);
-        /* Recalculate the bin size and number of bins for consistency with the given
-         * frequency range and spacing.  Try to maintain sufficient range of time binning. 
-         */
-        t_range = zlongit->n_bins*zlongit->bin_size;
         zlongit->n_bins = 2*(n_spect-1);
         zlongit->bin_size = 1.0/(zlongit->n_bins*df_spect);
-        if (t_range>zlongit->n_bins*zlongit->bin_size) {
-            fprintf(stdout, "error for ZLONGIT element:\nimpedance-spectrum-equivalent binning range not sufficient.\n");
-            fflush(stdout);
-            fprintf(stdout, "consider padding the impedance spectrum\n");
-            fflush(stdout);
-            exit(1);
-            }
-        fprintf(stdout, "Using Nb=%ld and dt=%e in ZLONGIT\n",
-                zlongit->n_bins, zlongit->bin_size);
+        fprintf(stdout, "Using Nb=%ld and dt=%e s (span of %e s) in ZLONGIT\n",
+                zlongit->n_bins, zlongit->bin_size, zlongit->n_bins*zlongit->bin_size);
         fflush(stdout);
         zlongit->Z = tmalloc(sizeof(*zlongit->Z)*2*zlongit->n_bins);
         for (i=0; i<n_spect; i++) {
@@ -412,41 +406,14 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
     if (zlongit->wakes) {
         zlongit->wakes = compose_filename(zlongit->wakes, run->rootname);
         if (zlongit->broad_band) 
-            SDDS_ElegantOutputSetup(&zlongit->SDDS_wake, zlongit->wakes, SDDS_BINARY, 1, "longitudinal wake",
-                                    run->runfile, run->lattice, wake_parameter, BB_WAKE_PARAMETERS,
-                                    wake_column, WAKE_COLUMNS, "set_up_zlongit", SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
+          SDDS_ElegantOutputSetup(&zlongit->SDDS_wake, zlongit->wakes, SDDS_BINARY, 1, "longitudinal wake",
+                                  run->runfile, run->lattice, wake_parameter, BB_WAKE_PARAMETERS,
+                                  wake_column, WAKE_COLUMNS, "set_up_zlongit", SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
         else {
-            SDDS_ElegantOutputSetup(&zlongit->SDDS_wake, zlongit->wakes, SDDS_BINARY, 1, "longitudinal wake",
-                                    run->runfile, run->lattice, wake_parameter, NBB_WAKE_PARAMETERS,
-                                    wake_column, WAKE_COLUMNS, "set_up_zlongit", SDDS_EOS_NEWFILE);
-            if (zlongit->Zreal) {
-                sprintf(associate, 
-                        "&associate filename=\"%s\", path=\"%s\", description=\"Real part of impedance spectrum\",\
- contents=\"real impedance spectrum, parent\", sdds=0 &end", 
-                        zlongit->Zreal, getenv("PWD"));
-                if (!SDDS_ProcessAssociateString(&zlongit->SDDS_wake, associate)) {
-                    fprintf(stdout, "Unable to define SDDS associate (set_up_zlongit)--string was:%s\n", associate);
-                    fflush(stdout);
-                    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-                    exit(1);
-                  }
-                sprintf(associate, 
-                        "&associate filename=\"%s\", path=\"%s\", description=\"Imaginary part of impedance spectrum\",\
- contents=\"real impedance spectrum, parent\", sdds=0 &end", 
-                        zlongit->Zimag, getenv("PWD"));
-                if (!SDDS_ProcessAssociateString(&zlongit->SDDS_wake, associate)) {
-                  fprintf(stdout, "Unable to define SDDS associate (set_up_zlongit)--string was:%s\n", associate);
-                  fflush(stdout);
-                  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-                  exit(1);
-                }
-              }
-            if (!SDDS_WriteLayout(&zlongit->SDDS_wake)) {
-              SDDS_SetError("Unable to write SDDS layout (set_up_zlongit)");
-              SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-              exit(1);
-            }
-          }
+          SDDS_ElegantOutputSetup(&zlongit->SDDS_wake, zlongit->wakes, SDDS_BINARY, 1, "longitudinal wake",
+                                  run->runfile, run->lattice, wake_parameter, NBB_WAKE_PARAMETERS,
+                                  wake_column, WAKE_COLUMNS, "set_up_zlongit", SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
+        }
         zlongit->SDDS_wake_initialized = 1;
       }
     zlongit->initialized = 1;

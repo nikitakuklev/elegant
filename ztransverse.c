@@ -34,11 +34,12 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
   double *posIfreq, *Vfreq, *iZ;
   long ib, nb, n_binned, nfreq, iReal, iImag, plane;
   double factor, tmin, tmax, tmean, dt;
+  static long not_first_call = -1;
 #if defined(DEBUG)
-  static long first_call = 1;
   FILE *fp;
 #endif
-
+  not_first_call += 1;
+  
   set_up_ztransverse(ztransverse, run, i_pass, np, charge);
   nb = ztransverse->n_bins;
   dt = ztransverse->bin_size;
@@ -69,9 +70,14 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
   n_binned = binTransverseTimeDistribution(posItime, pz, pbin, tmin, dt, nb, time, part, Po, np,
                                            ztransverse->dx, ztransverse->dy, 1, 1);
 
-  if (n_binned!=np)
-    fprintf(stdout, "warning: only %ld of %ld particles where binned (ZTRANSVERSE)\n", n_binned, np);
+  if (n_binned!=np) {
+    fprintf(stdout, "Warning: only %ld of %ld particles were binned (ZTRANSVERSE)!\n", n_binned, np);
+    if (!not_first_call) {
+      fprintf(stdout, "*** This may produce unphysical results.  Your wake needs smaller frequency\n");
+      fprintf(stdout, "    spacing to cover a longer time span.\n");
+    }
     fflush(stdout);
+  }  
 
   for (plane=0; plane<2; plane++) {
     if (ztransverse->smoothing)
@@ -132,7 +138,7 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
 void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long particles, CHARGE *charge)
 {
   long i, nfreq;
-  double df, t_range;
+  double df;
 
   if (charge) {
     ztransverse->macroParticleCharge = charge->macroParticleCharge;
@@ -145,12 +151,12 @@ void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long part
   if (ztransverse->initialized)
     return;
 
-  if (ztransverse->bin_size<=0)
-    bomb("bin_size must be positive for ZTRANSVERSE element", NULL);
   if (ztransverse->broad_band) {
     /* Use impedance Z = j*wr/w*Rs/(1 + j*Q(w/wr-wr/w))
        */
     double term;
+    if (ztransverse->bin_size<=0)
+      bomb("bin_size must be positive for ZTRANSVERSE element", NULL);
     if (ztransverse->n_bins%2!=0)
       bomb("ZTRANSVERSE element must have n_bins divisible by 2", NULL);
     if (ztransverse->ZxReal || ztransverse->ZxImag ||
@@ -185,8 +191,6 @@ void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long part
     double df_spect;
     long n_spect;
     SDDS_DATASET SDDSin;
-    if (ztransverse->n_bins<1)
-      bomb("ZTRANSVERSE element must have n_bins>=1", NULL);
     if (!ztransverse->freqColumn || !ztransverse->inputFile)
       bomb("you must give an inputFile and freqColumn, or use a broad band model (ZTRANSVERSE)", NULL);
     if (!ztransverse->ZxReal && !ztransverse->ZxImag &&
@@ -227,16 +231,8 @@ void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long part
     }
     df = df_spect;
     nfreq = n_spect;
-    t_range = ztransverse->n_bins*ztransverse->bin_size;
     ztransverse->n_bins = 2*(n_spect-1);
     ztransverse->bin_size = 1.0/(ztransverse->n_bins*df_spect);
-    if (t_range>ztransverse->n_bins*ztransverse->bin_size) {
-      fprintf(stdout, "error for ZTRANSVERSE element:\nimpedance-spectrum-equivalent binning range not sufficient.\n");
-      fflush(stdout);
-      fprintf(stdout, "consider padding the impedance spectrum\n");
-      fflush(stdout);
-      exit(1);
-    }
     if (!SDDS_Terminate(&SDDSin)) {
       fprintf(stdout, "Error closing data set %s\n",
               ztransverse->inputFile);
