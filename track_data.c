@@ -379,7 +379,7 @@ RFDF rfdf_example;
 /* names for rf deflector parameters */
 PARAMETER rfdf_param[N_RFDF_PARAMS] = {
     {"L", "M", IS_DOUBLE, 0, (long)((char *)&rfdf_example.length), NULL, 0.0, 0},
-    {"PHASE", "RAD", IS_DOUBLE, 0, (long)((char *)&rfdf_example.phase), NULL, 0.0, 0},
+    {"PHASE", "DEG", IS_DOUBLE, 0, (long)((char *)&rfdf_example.phase), NULL, 0.0, 0},
     {"TILT", "RAD", IS_DOUBLE, 0, (long)((char *)&rfdf_example.tilt), NULL, 0.0, 0},
     {"FREQUENCY", "HZ", IS_DOUBLE, 0, (long)((char *)&rfdf_example.frequency), NULL, DEFAULT_FREQUENCY, 0},
     {"VOLTAGE", "V", IS_DOUBLE, 0, (long)((char *)&rfdf_example.voltage), NULL, 0.0, 0},
