@@ -592,8 +592,8 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
                       variables->lower_limit, variables->upper_limit,
                       variables->n_variables, optimization_data->target, 
                       optimization_data->tolerance, optimization_function, 
-                      optimization_report,  
-                      optimization_data->n_evaluations, optimization_data->n_passes)<0) {
+                      optimization_report, optimization_data->n_passes,
+                      optimization_data->n_passes*optimization_data->n_evaluations, 3)<0) {
           if (result>optimization_data->tolerance) {
             if (!optimization_data->soft_failure)
               bomb("optimization unsuccessful--aborting", NULL);
@@ -771,11 +771,11 @@ static long radint_mem[8] = {
   -1, -1, -1,
   -1, -1, -1,
 } ;
-static char *floorCoord_name[3] = {
-  "X", "Z", "theta", 
+static char *floorCoord_name[6] = {
+  "X", "Y", "Z", "theta", "phi", "psi",
 };
-static long floorCoord_mem[3] = {
-  -1, -1, -1,
+static long floorCoord_mem[6] = {
+  -1, -1, -1, -1, -1, -1,
 };
 
 int showTwissMemories(FILE *fp)
@@ -802,7 +802,7 @@ double optimization_function(double *value, long *invalid)
     unsigned long unstable;
     VMATRIX *M;
     TWISS twiss_ave, twiss_min, twiss_max;
-    double floorCoord[3];
+    double XYZ[3], Angle[3];
     
     log_entry("optimization_function");
     
@@ -978,12 +978,14 @@ double optimization_function(double *value, long *invalid)
       rpn_store(beamline->radIntegrals.taudelta, radint_mem[7]);
     }
     if (floorCoord_mem[0]==-1) {
-      for (i=0; i<3; i++)
+      for (i=0; i<6; i++)
         floorCoord_mem[i] = rpn_create_mem(floorCoord_name[i]);
     }
-    final_floor_coordinates(beamline, floorCoord+0, floorCoord+1, floorCoord+2);
-    for (i=0; i<3; i++)
-      rpn_store(floorCoord[i], floorCoord_mem[i]);
+    final_floor_coordinates(beamline, XYZ, Angle);
+    for (i=0; i<3; i++) {
+      rpn_store(XYZ[i], floorCoord_mem[i]);
+      rpn_store(Angle[i], floorCoord_mem[i+3]);
+    }
     
     for (i=0; i<variables->n_variables; i++)
       variables->varied_quan_value[i] = value[i];

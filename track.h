@@ -2168,8 +2168,7 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
 long reset_driftCSR();
 
 void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
-void final_floor_coordinates(LINE_LIST *beamline, double *X, double *Z, double *Theta);
-
+void final_floor_coordinates(LINE_LIST *beamline, double *XYZ, double *Angle);
 
 long setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 long do_load_parameters(LINE_LIST *beamline, long change_definitions);

@@ -8,159 +8,237 @@
  */
 #include "mdb.h"
 #include "track.h"
+#include "matlib.h"
 
 static SDDS_TABLE SDDS_floor;
 
 #define IC_S 0
 #define IC_X 1
-#define IC_Z 2
-#define IC_THETA 3
-#define IC_ELEMENT 4
-#define IC_OCCURENCE 5
-#define IC_TYPE 6
-#define N_COLUMNS 7
+#define IC_Y 2
+#define IC_Z 3
+#define IC_THETA 4
+#define IC_PHI 5
+#define IC_PSI 6
+#define IC_ELEMENT 7
+#define IC_OCCURENCE 8
+#define IC_TYPE 9
+#define N_COLUMNS 10
 static SDDS_DEFINITION column_definition[N_COLUMNS] = {
     {"s", "&column name=s, units=m, type=double, description=\"Distance\" &end"},
     {"X", "&column name=X, units=m, type=double, description=\"Transverse survey coordinate\" &end"},
+    {"Y", "&column name=Y, units=m, type=double, description=\"Transverse survey coordinate\" &end"},
     {"Z", "&column name=Z, units=m, type=double, description=\"Longitudinal survey coordinate\" &end"},
-    {"theta", "&column name=theta, symbol=\"$gQ$r\", units=radians, type=double, description=\"Survey angle\" &end"},
+    {"theta", "&column name=theta, symbol=\"$gq$r\", units=radians, type=double, description=\"Survey angle\" &end"},
+    {"phi", "&column name=phi, symbol=\"$gf$r\", units=radians, type=double, description=\"Survey angle\" &end"},
+    {"psi", "&column name=psi, symbol=\"$gy$r\", units=radians, type=double, description=\"Roll angle\" &end"},
     {"ElementName", "&column name=ElementName, type=string, description=\"Element name\", format_string=%10s &end"},
     {"ElementOccurence", 
          "&column name=ElementOccurence, type=long, description=\"Occurence of element\", format_string=%6ld &end"},
     {"ElementType", "&column name=ElementType, type=string, description=\"Element-type name\", format_string=%10s &end"},
-    } ;
+} ;
 
 #include "floor.h"
 
-void advanceFloorCoordinates(double *X, double *Z, double *theta,
+long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
+                             double *theta, double *phi, double *psi, double *s,
                              ELEMENT_LIST *elem, ELEMENT_LIST *last_elem, 
-                             SDDS_DATASET *SDDS_floor, long row);
-
+                             SDDS_DATASET *SDDS_floor, long row_index);
+void computeSurveyAngles(double *theta, double *phi, double *psi, MATRIX *W);
+double nearbyAngle(double angle, double reference);
 
 void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 {
-    ELEMENT_LIST *elem, *last_elem;
-    long n_points, row_index;
-    double X, Z, theta;
-    
-    log_entry("output_floor_coordinates");
+  ELEMENT_LIST *elem, *last_elem;
+  long n_points, row_index;
+  MATRIX *V0, *V1;
+  MATRIX *Theta, *Phi, *Psi, *W0, *W1, *temp;
+  double theta, phi, psi, s;
+  
+  log_entry("output_floor_coordinates");
 
-    /* process namelist input */
-    set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
-    set_print_namelist_flags(0);
-    process_namelist(&floor_coordinates, nltext);
-    print_namelist(stdout, &floor_coordinates);
-    
-    if (magnet_centers && vertices_only)
-        bomb("you can simultaneously request magnet centers and vertices only output", NULL);
-    if (filename)
-        filename = compose_filename(filename, run->rootname);
-    else
-        bomb("filename must be given for floor coordinates", NULL);
-    
-    SDDS_ElegantOutputSetup(&SDDS_floor, filename, SDDS_BINARY, 1, "floor coordinates", 
-                            run->runfile, run->lattice, NULL, 0,
-                            column_definition, N_COLUMNS, "floor coordinates", 
-                            SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
+  /* process namelist input */
+  set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
+  set_print_namelist_flags(0);
+  process_namelist(&floor_coordinates, nltext);
+  print_namelist(stdout, &floor_coordinates);
+  
+  if (magnet_centers && vertices_only)
+    bomb("you can simultaneously request magnet centers and vertices only output", NULL);
+  if (filename)
+    filename = compose_filename(filename, run->rootname);
+  else
+    bomb("filename must be given for floor coordinates", NULL);
+  
+  SDDS_ElegantOutputSetup(&SDDS_floor, filename, SDDS_BINARY, 1, "floor coordinates", 
+                          run->runfile, run->lattice, NULL, 0,
+                          column_definition, N_COLUMNS, "floor coordinates", 
+                          SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
 
-    n_points = beamline->n_elems+1;
-    if (vertices_only)
-        n_points = 2;
-    last_elem = NULL;
-    if (include_vertices || vertices_only) {
-        elem = &(beamline->elem);
-        while (elem) {
-            switch (elem->type) {
-              case T_RBEN: 
-              case T_SBEN: 
-              case T_KSBEND: 
-              case T_CSBEND:
-              case T_CSRCSBEND:
-                n_points ++;
-                break;
-              default:
-                break;
-                }
-            last_elem = elem;
-            elem = elem->succ;
-            }
-        }
-
-    if (!SDDS_StartTable(&SDDS_floor, 2*n_points)) {
-        SDDS_SetError("Unable to start SDDS table (output_floor_coordinates)");
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-        }
-
-    row_index = 0;
-    if (!SDDS_SetRowValues(&SDDS_floor, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row_index++,
-                           IC_S, (double)0.0, IC_X, X0, IC_Z, Z0, IC_THETA, theta0,
-                           IC_ELEMENT, "_BEG_", IC_OCCURENCE, (long)1, IC_TYPE, "MARK", -1)) {
-        SDDS_SetError("Unable to set SDDS row (output_floor_coordinates)");
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-        }
-        
+  n_points = beamline->n_elems+1;
+  if (vertices_only)
+    n_points = 2;
+  last_elem = NULL;
+  if (include_vertices || vertices_only) {
     elem = &(beamline->elem);
-    X = X0;
-    Z = Z0;
-    theta = theta0;
     while (elem) {
-      advanceFloorCoordinates(&X, &Z, &theta, elem, last_elem, &SDDS_floor, row_index);
-      row_index++;
+      switch (elem->type) {
+      case T_RBEN: 
+      case T_SBEN: 
+      case T_KSBEND: 
+      case T_CSBEND:
+      case T_CSRCSBEND:
+        n_points ++;
+        break;
+      default:
+        break;
+      }
+      last_elem = elem;
       elem = elem->succ;
     }
-    if (!SDDS_WriteTable(&SDDS_floor)) {
-        SDDS_SetError("Unable to write floor coordinate data (output_floor_coordinates)");
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-        }
-    if (!SDDS_Terminate(&SDDS_floor)) {
-        SDDS_SetError("Unable to terminate SDDS file (output_floor_coordinates)");
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-        }
-    log_exit("output_floor_coordinates");
-    }
+  }
 
-void advanceFloorCoordinates(double *X, double *Z, double *theta,
+  if (!SDDS_StartTable(&SDDS_floor, 2*n_points)) {
+    SDDS_SetError("Unable to start SDDS table (output_floor_coordinates)");
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  }
+
+  row_index = 0;
+  if (!SDDS_SetRowValues(&SDDS_floor, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row_index++,
+                         IC_S, (double)0.0, IC_X, X0, IC_Y, Y0, IC_Z, Z0, 
+                         IC_THETA, theta0, IC_PHI, phi0, IC_PSI, psi0,
+                         IC_ELEMENT, "_BEG_", IC_OCCURENCE, (long)1, IC_TYPE, "MARK", -1)) {
+    SDDS_SetError("Unable to set SDDS row (output_floor_coordinates)");
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  }
+  
+  elem = &(beamline->elem);
+
+  m_alloc(&V0, 3, 1);
+  m_alloc(&V1, 3, 1);
+  V0->a[0][0] = X0;
+  V0->a[1][0] = Y0;
+  V0->a[2][0] = Z0;
+
+  m_alloc(&Theta, 3, 3);
+  m_alloc(&Phi, 3, 3);
+  m_alloc(&Psi, 3, 3);
+  m_zero(Theta);
+  m_zero(Phi);
+  m_zero(Psi);
+
+  theta = theta0;
+  Theta->a[0][0] = Theta->a[2][2] = cos(theta0);
+  Theta->a[0][2] = -(Theta->a[2][0] = -sin(theta0));
+  Theta->a[1][1] = 1;
+
+  phi = phi0;
+  Phi->a[1][1] = Phi->a[2][2] = cos(phi0);
+  Phi->a[1][2] = -(Phi->a[2][1] = -sin(phi0));
+  Phi->a[0][0] = 1;
+
+  psi = psi0;
+  Psi->a[0][0] = Psi->a[1][1] = cos(psi0);
+  Psi->a[0][1] = -(Psi->a[1][0] = sin(psi0));
+  Psi->a[2][2] = 1;
+  
+  m_alloc(&W0, 3, 3);
+  m_alloc(&temp, 3, 3);
+  m_mult(temp, Theta, Phi);
+  m_mult(W0, temp, Psi);
+  m_alloc(&W1, 3, 3);
+  s = 0;
+  while (elem) {
+    row_index = advanceFloorCoordinates(V1, W1, V0, W0, &theta, &phi, &psi, &s, elem, last_elem, &SDDS_floor, row_index);
+    m_copy(W0, W1);
+    m_copy(V0, V1);
+    elem = elem->succ;
+  }
+  if (!SDDS_WriteTable(&SDDS_floor)) {
+    SDDS_SetError("Unable to write floor coordinate data (output_floor_coordinates)");
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  }
+  if (!SDDS_Terminate(&SDDS_floor)) {
+    SDDS_SetError("Unable to terminate SDDS file (output_floor_coordinates)");
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  }
+  m_free(&V0);
+  m_free(&V1);
+  m_free(&Theta);
+  m_free(&Phi);
+  m_free(&Psi);
+  m_free(&W0);
+  m_free(&temp);
+  m_free(&W1);
+}
+
+long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
+                             double *theta, double *phi, double *psi, double *s,
                              ELEMENT_LIST *elem, ELEMENT_LIST *last_elem, 
                              SDDS_DATASET *SDDS_floor, long row_index)
 {
-  double data[4], length;
-  double dX, dZ, dtheta, rho, angle;
-  long is_bend, is_magnet, n_points;
+  double dX, dY, dZ, rho, angle, coord[3], sangle[3], length;
+  long is_bend, is_misalignment, is_magnet, is_rotation, n_points, i;
   BEND *bend; KSBEND *ksbend; CSBEND *csbend; MALIGN *malign; CSRCSBEND *csrbend;
+  ROTATE *rotate;
   char label[200];
-
-  dX = dZ = dtheta = length = 0;
-  is_bend = is_magnet = 0;
+  static MATRIX *temp33, *tempV, *R, *S, *T, *TInv, *V0s, *V1s;
+  static long matricesAllocated = 0;
+  double theta0, phi0, psi0, tilt;
+  
+  if (!matricesAllocated) {
+    m_alloc(&temp33, 3, 3);
+    m_alloc(&tempV, 3, 1);
+    m_alloc(&R, 3, 1);
+    m_alloc(&S, 3, 3);
+    m_alloc(&T, 3, 3);
+    m_alloc(&TInv, 3, 3);
+    matricesAllocated = 1;
+  }
+  
+  is_bend = is_magnet = is_rotation = is_misalignment = 0;
+  length = dX = dY = dZ = tilt = 0;
   switch (elem->type) {
   case T_RBEN: case T_SBEN:
     is_bend = 1;
     bend = (BEND*)elem->p_elem;
-    dtheta = -(angle=bend->angle);
+    angle = bend->angle;
     rho = (length=bend->length)/bend->angle;
+    tilt = bend->tilt;
     break;
   case T_KSBEND:
     is_bend = 1;
     ksbend = (KSBEND*)elem->p_elem;
-    dtheta = -(angle=ksbend->angle);
+    angle = ksbend->angle;
     rho = (length=ksbend->length)/ksbend->angle;
+    tilt = ksbend->tilt;
     break;
   case T_CSBEND:
     is_bend = 1;
     csbend = (CSBEND*)elem->p_elem;
-    dtheta = -(angle=csbend->angle);
+    angle = csbend->angle;
     rho = (length=csbend->length)/csbend->angle;
+    tilt = csbend->tilt;
     break;
   case T_CSRCSBEND:
     is_bend = 1;
     csrbend = (CSRCSBEND*)elem->p_elem;
-    dtheta = -(angle=csrbend->angle);
+    angle = csrbend->angle;
     rho = (length=csrbend->length)/csrbend->angle;
+    tilt = csrbend->tilt;
     break;
   case T_MALIGN:
     malign = (MALIGN*)elem->p_elem;
     dX = malign->dx;
+    dY = malign->dy;
     dZ = malign->dz;
-    dtheta = atan(malign->dxp);
+    angle = atan(sqrt(sqr(malign->dxp)+sqr(malign->dyp)));
+    tilt = atan2(malign->dyp, -malign->dxp);
+    is_misalignment = 1;
+    break;
+  case T_ROTATE:
+    rotate = (ROTATE*)elem->p_elem;
+    tilt = rotate->tilt;
+    is_rotation = 1;
     break;
   default:
     if (entity_description[elem->type].flags&HAS_LENGTH)
@@ -169,96 +247,160 @@ void advanceFloorCoordinates(double *X, double *Z, double *theta,
       is_magnet = 1;
     break;
   }
+  theta0 = *theta;
+  phi0 = *phi;
+  psi0 = *psi;
+  m_identity(S);
   if (is_bend) {
-    if (SDDS_floor && (include_vertices || vertices_only || magnet_centers)) {
-      /* output data for the vertex point */
-      if (angle && !isnan(rho))
-        data[0] += (dZ=rho*tan(angle/2));
+    if (SDDS_floor && (include_vertices || vertices_only)) {
+      /* vertex point is reached by drifting by distance rho*tan(angle/2) */
+      R->a[0][0] = R->a[1][0] = 0;
+      if (angle && rho)
+        R->a[2][0] = rho*tan(angle/2);
       else
-        data[0] += (dZ=length/2);
-      dX = 0;
-      rotate_xy(&dX, &dZ, *theta);
-      data[1] = *X+dX;
-      data[2] = *Z+dZ;
-      data[3] = *theta;
+        R->a[2][0] = length/2;
+      m_mult(tempV, W0, R);
+      m_add(V1, tempV, V0);
       sprintf(label, "%s-VP", elem->name);
       if (!SDDS_SetRowValues(SDDS_floor, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row_index++,
-                             IC_S, data[0], IC_X, data[1], IC_Z, data[2], IC_THETA, data[3],
+                             IC_S, *s+R->a[2][0],
+                             IC_X, V1->a[0][0], IC_Y, V1->a[1][0], IC_Z, V1->a[2][0], 
+                             IC_THETA, *theta, IC_PHI, *phi, IC_PSI, *psi,
                              IC_ELEMENT, label, IC_OCCURENCE, elem->occurence, IC_TYPE, "VERTEX-POINT", -1)) {
-        SDDS_SetError("Unable to set SDDS row (output_floor_coordinates)");
+        SDDS_SetError("Unable to set SDDS row (output_floor_coordinates.1)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
     }
-    /* calculate offsets for end of bend magnet */
     if (angle && !isnan(rho)) {
-      dX = rho*(cos(angle)-1);
-      dZ = rho*sin(angle);
+      R->a[0][0] = rho*(cos(angle)-1);
+      R->a[1][0] = 0;
+      R->a[2][0] = rho*sin(angle);
+      S->a[0][0] = S->a[2][2] = cos(angle);
+      S->a[2][0] = -(S->a[0][2] = -sin(angle));
     } else {
-      dX = 0;
-      dZ = length;
-    }              
+      R->a[0][0] = R->a[1][0] = 0;
+      R->a[2][0] = length;
+    }
+  } else if (is_misalignment) {
+    R->a[0][0] = dX;
+    R->a[1][0] = dY;
+    R->a[2][0] = dZ;
+    S->a[0][0] = S->a[2][2] = cos(angle);
+    S->a[2][0] = -(S->a[0][2] = -sin(angle));
+  } else {
+    R->a[0][0] = R->a[1][0] = 0;
+    R->a[2][0] = length;
   }
+
+  if (tilt) {
+    m_identity(T);
+    T->a[0][0] = T->a[1][1] = cos(tilt);
+    T->a[1][0] = -(T->a[0][1] = -sin(tilt));
+    if (!m_mult(tempV, T, R) ||
+        !m_copy(R, tempV) ||
+        !m_mult(temp33, T, S) ||
+        !m_invert(TInv, T) ||
+        !m_mult(S, temp33, TInv))
+      m_error("making tilt transformation");
+  }
+
+  m_mult(tempV, W0, R);
+  m_add(V1, tempV, V0);
+  m_mult(W1, W0, S);
+  computeSurveyAngles(theta, phi, psi, W1);
   if (is_magnet && magnet_centers) {
-    dX /= 2;
-    dZ /= 2;
+    for (i=0; i<3; i++)
+      coord[i] = V0->a[i][0] + (V1->a[i][0] - V0->a[i][0])/2;
+    sangle[0] = (*theta+theta0)/2;
+    sangle[1] = (*phi+phi0)/2;
+    sangle[2] = (*psi+psi0)/2;
+    *s += length/2;
     sprintf(label, "%s-C", elem->name);
   }
-  else
+  else {
+    for (i=0; i<3; i++)
+      coord[i] = V1->a[i][0];
+    sangle[0] = *theta;
+    sangle[1] = *phi;
+    sangle[2] = *psi;
+    *s += length;
+    length = 0;
     strcpy(label, elem->name);
-
-  rotate_xy(&dX, &dZ, *theta);
-  *theta += dtheta;
-  while (*theta>PIx2)
-    *theta -= PIx2;
-  while (*theta<-PIx2)
-    *theta += PIx2;
-  *X += dX;
-  *Z += dZ;
-
+  }
+  
   if (SDDS_floor &&
       (!vertices_only || (!last_elem || elem==last_elem))) {
-    if (!is_bend && magnet_centers)
-      data[0] = elem->end_pos - length/2;
-    else
-      data[0] = elem->end_pos;
-    data[1] = *X;
-    data[2] = *Z;
-    data[3] = *theta;
     if (!SDDS_SetRowValues(SDDS_floor, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row_index++,
-                           IC_S, data[0], IC_X, data[1], IC_Z, data[2], IC_THETA, data[3],
+                           IC_S, *s, IC_X, coord[0], IC_Y, coord[1], IC_Z, coord[2],
+                           IC_THETA, sangle[0], IC_PHI, sangle[1], IC_PSI, sangle[2],
                            IC_ELEMENT, label, IC_OCCURENCE, elem->occurence, IC_TYPE, 
                            entity_name[elem->type], -1)) {
-      SDDS_SetError("Unable to set SDDS row (output_floor_coordinates)");
+      SDDS_SetError("Unable to set SDDS row (output_floor_coordinates.2)");
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
   }
-
-  if (is_magnet && magnet_centers) {
-    *X += dX;
-    *Z += dZ; 
-  }
+  *s += length/2;
+  return row_index;
 }
 
 
-void final_floor_coordinates(LINE_LIST *beamline, double *XRet, double *ZRet, double *ThetaRet)
+void final_floor_coordinates(LINE_LIST *beamline, double *XYZ, double *Angle)
 {
   ELEMENT_LIST *elem;
-  double X, Z, theta;
-  
+  double X, Y, Z, theta, phi, psi, s;
+  MATRIX *V0, *V1;
+  MATRIX *Theta, *Phi, *Psi, *W0, *W1, *temp;
+  long i;
+
   elem = &(beamline->elem);
   X = X0;
+  Y = Y0;
   Z = Z0;
+  s = 0;
+  
+  m_alloc(&V0, 3, 1);
+  m_alloc(&V1, 3, 1);
+  V0->a[0][0] = X0;
+  V0->a[1][0] = Y0;
+  V0->a[2][0] = Z0;
+
+  m_alloc(&Theta, 3, 3);
+  m_alloc(&Phi, 3, 3);
+  m_alloc(&Psi, 3, 3);
+  m_zero(Theta);
+  m_zero(Phi);
+  m_zero(Psi);
+
   theta = theta0;
+  Theta->a[0][0] = Theta->a[2][2] = cos(theta0);
+  Theta->a[0][2] = -(Theta->a[2][0] = -sin(theta0));
+  Theta->a[1][1] = 1;
+
+  phi = phi0;
+  Phi->a[1][1] = Phi->a[2][2] = cos(phi0);
+  Phi->a[1][2] = -(Phi->a[2][1] = -sin(phi0));
+  Phi->a[0][0] = 1;
+
+  psi = psi0;
+  Psi->a[0][0] = Psi->a[1][1] = cos(psi0);
+  Psi->a[0][1] = -(Psi->a[1][0] = sin(psi0));
+  Psi->a[2][2] = 1;
+  
+  m_alloc(&W0, 3, 3);
+  m_alloc(&temp, 3, 3);
+  m_mult(temp, Theta, Phi);
+  m_mult(W0, temp, Psi);
+  m_alloc(&W1, 3, 3);
+  
   while (elem) {
-    advanceFloorCoordinates(&X, &Z, &theta, elem, NULL, NULL, 0);
+    advanceFloorCoordinates(V1, W1, V0, W0, &theta, &phi, &psi, &s, elem, NULL, NULL, 0);
     if (elem->type==T_MARK && ((MARK*)elem->p_elem)->fitpoint) {
       MARK *mark;
       char s[100];
-      long i;
-      static char *suffix[3] = {"X", "Z", "theta"};
+      static char *suffix[6] = {"X", "Y", "Z", "theta", "phi", "psi"};
       mark = (MARK*)(elem->p_elem);
       if (!(mark->init_flags&4)) {
-        mark->floor_mem = tmalloc(sizeof(*mark->floor_mem)*3);
+        mark->floor_mem = tmalloc(sizeof(*mark->floor_mem)*6);
         for (i=0; i<3; i++) {
           sprintf(s, "%s#%ld.%s", elem->name, elem->occurence,
                   suffix[i]);
@@ -266,14 +408,67 @@ void final_floor_coordinates(LINE_LIST *beamline, double *XRet, double *ZRet, do
         }
         mark->init_flags |= 4;
       }
-      rpn_store(X, mark->floor_mem[0]);
-      rpn_store(Z, mark->floor_mem[1]);
-      rpn_store(theta, mark->floor_mem[2]);
+      rpn_store(V1->a[0][0], mark->floor_mem[0]);
+      rpn_store(V1->a[1][0], mark->floor_mem[1]);
+      rpn_store(V1->a[2][0], mark->floor_mem[2]);
+      rpn_store(theta, mark->floor_mem[3]);
+      rpn_store(phi, mark->floor_mem[4]);
+      rpn_store(psi, mark->floor_mem[5]);
     }
+    m_copy(V0, V1);
+    m_copy(W0, W1);
     elem = elem->succ;
   }
-  *XRet = X;
-  *ZRet = Z;
-  *ThetaRet = theta;
+  for (i=0; i<3; i++)
+    XYZ[i] = V0->a[i][0];
+  Angle[0] = theta;
+  Angle[1] = phi;
+  Angle[2] = psi;
+  m_free(&V0);
+  m_free(&V1);
+  m_free(&Theta);
+  m_free(&Phi);
+  m_free(&Psi);
+  m_free(&W0);
+  m_free(&temp);
+  m_free(&W1);
 }
+
+
+double nearbyAngle(double angle, double reference)
+{
+  double minDiff, bestAngle, diff;
+  bestAngle = angle;
+  minDiff = fabs(reference-angle);
+
+  angle += PIx2;
+  diff = fabs(reference-angle);
+  if (diff<minDiff) {
+    minDiff = diff;
+    bestAngle = angle;
+  }
+
+  angle -= 2*PIx2;
+  diff = fabs(reference-angle);
+  if (diff<minDiff) {
+    minDiff = diff;
+    bestAngle = angle;
+  }
+  return bestAngle;
+}
+
+void computeSurveyAngles(double *theta, double *phi, double *psi, MATRIX *W)
+{
+  double arg;
+  
+  arg = sqrt( sqr(W->a[1][0]) + sqr(W->a[1][1]));  /* |cos(phi)| */
+  *phi = nearbyAngle(atan2(W->a[1][2], arg), *phi);
+  if (arg>1e-20) {
+    *theta = nearbyAngle(atan2(W->a[0][2], W->a[2][2]), *theta);
+    *psi   = nearbyAngle(atan2(W->a[1][0], W->a[1][1]), *psi);
+  }
+  else
+    *psi = nearbyAngle(atan2(-W->a[0][1], W->a[0][0])-*theta, *psi);
+}
+
 
