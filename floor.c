@@ -256,7 +256,7 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
       /* vertex point is reached by drifting by distance rho*tan(angle/2) */
       R->a[0][0] = R->a[1][0] = 0;
       if (angle && rho)
-        R->a[2][0] = rho*tan(angle/2);
+        R->a[2][0] = fabs(rho*tan(angle/2));
       else
         R->a[2][0] = length/2;
       m_mult(tempV, W0, R);
@@ -308,7 +308,7 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
   m_add(V1, tempV, V0);
   m_mult(W1, W0, S);
   computeSurveyAngles(theta, phi, psi, W1);
-  if (is_magnet && magnet_centers) {
+  if ((is_bend || is_magnet) && magnet_centers) {
     for (i=0; i<3; i++)
       coord[i] = V0->a[i][0] + (V1->a[i][0] - V0->a[i][0])/2;
     sangle[0] = (*theta+theta0)/2;
@@ -401,7 +401,7 @@ void final_floor_coordinates(LINE_LIST *beamline, double *XYZ, double *Angle)
       mark = (MARK*)(elem->p_elem);
       if (!(mark->init_flags&4)) {
         mark->floor_mem = tmalloc(sizeof(*mark->floor_mem)*6);
-        for (i=0; i<3; i++) {
+        for (i=0; i<6; i++) {
           sprintf(s, "%s#%ld.%s", elem->name, elem->occurence,
                   suffix[i]);
           mark->floor_mem[i] = rpn_create_mem(s);
