@@ -493,7 +493,7 @@ extern char *entity_text[N_TYPES];
 #define N_TWPL_PARAMS 16
 #define N_WATCH_PARAMS 9
 #define N_MALIGN_PARAMS 9
-#define N_TWLA_PARAMS 18
+#define N_TWLA_PARAMS 19
 #define N_PEPPOT_PARAMS 6
 #define N_ENERGY_PARAMS 4
 #define N_MAXAMP_PARAMS 3
@@ -529,7 +529,7 @@ extern char *entity_text[N_TYPES];
 #define N_IBSCATTER_PARAMS 3
 #define N_FMULT_PARAMS 9
 #define N_BMAPXY_PARAMS 5
-#define N_WAKE_PARAMS 10
+#define N_WAKE_PARAMS 11
 #define N_TRWAKE_PARAMS 13
 #define N_TUBEND_PARAMS 6
 #define N_CHARGE_PARAMS 1
@@ -947,6 +947,8 @@ typedef struct {
     double dx, dy, beta_wave, alpha;
     long phase_reference, n_steps, focussing;
     char *method, *fiducial; 
+    long change_p0;
+
     /* variables for internal use only: */
     double *fiducial_part;            
     double EzS, BsolS;
@@ -1430,6 +1432,7 @@ typedef struct {
     long n_bins;               /* number of charge bins */
     long interpolate;          /* flag to turn on interpolation */
     long smoothing, SGHalfWidth, SGOrder;  /* flag to turn on smoothing plus control parameters */
+    long change_p0;
     /* for internal use: */
     long initialized;          /* indicates that files are loaded */
     long wakePoints;
@@ -1845,7 +1848,7 @@ extern void copy_matrices(VMATRIX *M1, VMATRIX *M0);
 extern long check_matrix(VMATRIX *M, char *comment);
  
 /* prototypes for motion4.c: */
-extern long motion(double **part, long n_part, void *field, long field_type, double P_central, double *dgamma,
+extern long motion(double **part, long n_part, void *field, long field_type, double *P_central, double *dgamma,
     double *dP, double **accepted, double z_start);
  
 /* prototypes for multipole.c: */
@@ -2008,7 +2011,7 @@ void applyTransverseWakeKicks(double **part, double *time, double *pz, long *pbi
                               double Po, long plane,
                               double *Vtime, long nb, double tmin, double dt, 
                               long interpolate);
-void track_through_wake(double **part, long np, WAKE *wakeData, double Po,
+void track_through_wake(double **part, long np, WAKE *wakeData, double *Po,
                         RUN *run, long i_pass, CHARGE *charge);
 void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
                           RUN *run, long i_pass, CHARGE *charge);

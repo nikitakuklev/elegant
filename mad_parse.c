@@ -774,11 +774,15 @@ void parse_element(
                 break;
             case IS_LONG:
                 if (!isdigit(*ptr) && *ptr!='-' && *ptr!='+') {
-                    fprintf(stderr, "error: non-integer value given for parameter %s of %s\n",
-                        parameter[i].name, eptr->name);
-                    exit(1);
-                    }
-                get_long((long*)(p_elem+parameter[i].offset), ptr);
+                    rpn_token = get_token(ptr);
+                    *((long*)(p_elem+parameter[i].offset)) = rpn(rpn_token);
+                    if (rpn_check_error()) exit(1);
+                    fprintf(stderr, "computed value for %s.%s is %ld\n", 
+                            eptr->name, parameter[i].name, 
+                            *((long*)(p_elem+parameter[i].offset)));
+                } 
+                else 
+                  get_long((long*)(p_elem+parameter[i].offset), ptr);
                 break;
             case IS_STRING:
                 *(char**)(p_elem+parameter[i].offset) = get_token(ptr);

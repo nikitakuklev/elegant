@@ -538,7 +538,8 @@ PARAMETER twla_param[N_TWLA_PARAMS] = {
     {"N_STEPS", "", IS_LONG, 0, (long)((char *)&twla_example.n_steps), NULL, 0.0, 100},
     {"FOCUSSING", "", IS_LONG, 0, (long)((char *)&twla_example.focussing), NULL, 0.0, 1},
     {"METHOD", " ", IS_STRING, 0, (long)((char *)&twla_example.method), DEFAULT_INTEG_METHOD, 0.0, 0},
-    {"FIDUCIAL", "", IS_STRING, 0, (long)((char *)&twla_example.fiducial), DEFAULT_FIDUCIAL_MODE, 0.0, 0}
+    {"FIDUCIAL", "", IS_STRING, 0, (long)((char *)&twla_example.fiducial), DEFAULT_FIDUCIAL_MODE, 0.0, 0},
+    {"CHANGE_P0", "", IS_LONG, 0, (long)((char *)&twla_example.change_p0), NULL, 0.0, 0},
     } ;
 
 PEPPOT peppot_example;
@@ -1088,6 +1089,7 @@ PARAMETER wake_param[N_WAKE_PARAMS] = {
     {"SMOOTHING", "", IS_LONG, 0, (long)((char *)&wake_example.smoothing), NULL, 0.0, 0},
     {"SG_HALFWIDTH", "", IS_LONG, 0, (long)((char *)&wake_example.SGHalfWidth), NULL, 0.0, 4},
     {"SG_ORDER", "", IS_LONG, 0, (long)((char *)&wake_example.SGOrder), NULL, 0.0, 2},
+    {"CHANGE_P0", "", IS_LONG, 0, (long)((char *)&wake_example.change_p0), NULL, 0.0, 0},
     };
 
 TRWAKE trwake_example;

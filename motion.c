@@ -74,6 +74,9 @@ double X_limit, Y_limit;
 double X_out, Y_out, Z_out;
 long limit_hit, radial_limit;
 
+/* flag to indicate that element changes the central momentum */
+static long change_p0;
+
 #if defined(DEBUG)
 static long starting_integration;
 static double initial_phase=0, final_phase=0;
@@ -84,14 +87,14 @@ long motion(
     long n_part,
     void *field,
     long field_type,
-    double P_central,
+    double *pCentral,
     double *dgamma,
     double *dP,
     double **accepted,
     double z_start
     )
 {
-    double tau, tau_limit;
+    double tau, tau_limit, P_central;
     double tau_start;
     long n_eq = 6;
     static double q[6];         /* X,Y,Z,Px,Py,Pz */
@@ -108,7 +111,9 @@ long motion(
 
     if (!n_part)
         return(0);
-
+    change_p0 = 0;
+    P_central = *pCentral;
+    
     log_entry("motion");
 
     X_aperture_center = Y_aperture_center = 0;
@@ -178,13 +183,15 @@ long motion(
                 case DIFFEQ_CANT_TAKE_STEP:
                 case DIFFEQ_OUTSIDE_INTERVAL:
                 case DIFFEQ_XI_GT_XF:
-                    fprintf(stderr, "Integration failure---may be program bug: %s\n", diffeq_result_description(rk_return));
-                    for (i=0; i<6; i++) 
+                case DIFFEQ_EXIT_COND_FAILED:
+                    fprintf(stderr, "Integration failure: %s\n", diffeq_result_description(rk_return));
+/*                    for (i=0; i<6; i++) 
                         fprintf(stderr, "%11.4e  ", coord[i]);
                     fprintf(stderr, "\ngamma = %.4e,  P=(%.4e, %.4e, %.4e)\n",
                         gamma0, P0[0], P0[1], P0[2]);
                     fprintf(stderr, "tolerance = %e     end_factor = %e\n",
                         tolerance, end_factor);
+*/
                     SWAP_PTR(part[i_part], part[i_top]);
                     part[i_top][4] = z_start;
                     part[i_top][5] = sqrt(sqr(P_central*(1+part[i_top][5]))+1);
@@ -256,6 +263,9 @@ long motion(
                 }
             }
         }
+    if (change_p0)
+      do_match_energy(part, n_part, pCentral, 0);
+    
     log_exit("motion");
     return(i_top+1);
     }
@@ -446,6 +456,8 @@ void (*set_up_derivatives(
             radial_limit = 1;
             *kscale = (omega=twla->frequency*PIx2)/c_mks;
             twla->alphaS = twla->alpha/(*kscale);
+            if (twla->change_p0)
+              change_p0 = 1;
             if (!twla->fiducial_part) {
                 /* This is the fiducial particle--the phase offset phase0 is 
                  * set so that its initial phase will be twla->phase + 
@@ -1105,9 +1117,11 @@ void select_integrator(char *desired_method)
 #endif
     switch (match_string(desired_method, method, N_METHODS, 0)) {
       case RUNGE_KUTTA:
+        fprintf(stderr, "Warning: adaptive integrator chosen.  \"non-adaptive runge-kutta\" is recommended.\n");
         integrator = rk_odeint3;
         break;
       case BULIRSCH_STOER:
+        fprintf(stderr, "Warning: adaptive integrator chosen.  \"non-adaptive runge-kutta\" is recommended.\n");
         integrator = bs_odeint3;
         break;
       case NA_RUNGE_KUTTA:

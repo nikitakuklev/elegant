@@ -392,7 +392,7 @@ long do_tracking(
           case T_CEPL:
           case T_TWPL:
             if (!(flags&TIME_DEPENDENCE_OFF)) {
-              n_left = motion(coord, n_to_track, eptr->p_elem, eptr->type, *P_central, 
+              n_left = motion(coord, n_to_track, eptr->p_elem, eptr->type, P_central, 
                               &dgamma, dP, accepted, last_z);
               show_dE = 1;
             }
@@ -401,7 +401,7 @@ long do_tracking(
             break;
           case T_TWLA:
           case T_TWMTA:
-            n_left = motion(coord, n_to_track, eptr->p_elem, eptr->type, *P_central, 
+            n_left = motion(coord, n_to_track, eptr->p_elem, eptr->type, P_central, 
                             &dgamma, dP, accepted, last_z);
             show_dE = 1;
             break;
@@ -633,7 +633,7 @@ long do_tracking(
                                   charge);
             break;
           case T_WAKE:
-            track_through_wake(coord, n_to_track, (WAKE*)eptr->p_elem, *P_central, run, i_pass,
+            track_through_wake(coord, n_to_track, (WAKE*)eptr->p_elem, P_central, run, i_pass,
                                charge);
             break;
           case T_TRWAKE:

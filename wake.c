@@ -13,7 +13,7 @@ void convolveArrays(double *output, long outputs,
                     double *a2, long n2);
 
 
-void track_through_wake(double **part, long np, WAKE *wakeData, double Po,
+void track_through_wake(double **part, long np, WAKE *wakeData, double *PoInput,
                         RUN *run, long i_pass, CHARGE *charge
                         )
 {
@@ -24,12 +24,13 @@ void track_through_wake(double **part, long np, WAKE *wakeData, double Po,
   static double *time = NULL;            /* array to record arrival time of each particle */
   static long max_np = 0;
   long ip, ib, ib1, ib2, nb, n_binned;
-  double factor, tmin, tmean, dt, dt1, P, dgam, gam, frac;
+  double factor, tmin, tmean, dt, dt1, P, dgam, gam, frac, Po;
 
   set_up_wake(wakeData, run, i_pass, np, charge);
   nb = wakeData->n_bins;
   dt = wakeData->dt;
-
+  Po = *PoInput;
+  
   if (nb>max_n_bins) {
     Itime = trealloc(Itime, 2*sizeof(*Itime)*(max_n_bins=nb));
     Vtime = trealloc(Vtime, 2*sizeof(*Vtime)*(max_n_bins+1));
@@ -68,7 +69,9 @@ void track_through_wake(double **part, long np, WAKE *wakeData, double Po,
   
   applyLongitudinalWakeKicks(part, time, pbin, np, Po, 
                              Vtime, nb, tmin, dt, wakeData->interpolate);
-  
+
+  if (wakeData->change_p0)
+    do_match_energy(part, np, PoInput, 0);
 }
 
 void applyLongitudinalWakeKicks(double **part, double *time, long *pbin, long np, double Po,
