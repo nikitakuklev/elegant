@@ -27,6 +27,7 @@
     double sigma_s = 0.0;
     double dp_s_coupling = 0;
     long one_random_bunch = 1;
+    long save_initial_coordinates = 1;
     long limit_invariants = 0;
     long symmetrize = 0;
     long limit_in_4d = 0;

@@ -24,6 +24,7 @@ static long x_beam_type, y_beam_type, longit_beam_type;
 static SDDS_TABLE SDDS_bunch;
 static long SDDS_bunch_initialized;
 static long beamRepeatSeed;
+static long bunchGenerated;
 
 void fill_transverse_structure(TRANSVERSE *trans, double emit, double beta, 
     double alpha, double eta, double etap, long xbeam_type, double cutoff,
@@ -131,8 +132,14 @@ void setup_bunched_beam(
     fill_longitudinal_structure(&longit, sigma_dp, sigma_s, dp_s_coupling,
             longit_beam_type, distribution_cutoff[2], centroid+4);
 
+    save_initial_coordinates = save_original || save_initial_coordinates;
+    if (n_particles_per_bunch==1)
+      one_random_bunch = 1;
+    if (!one_random_bunch)
+      save_initial_coordinates = save_original;
+    
     beam->particle = (double**)zarray_2d(sizeof(double), n_particles_per_bunch, 7);
-    if (!save_original)
+    if (!save_initial_coordinates)
       beam->original = beam->particle;
     else
       beam->original = (double**)zarray_2d(sizeof(double), n_particles_per_bunch, 7);
@@ -149,6 +156,7 @@ void setup_bunched_beam(
       beamRepeatSeed = 1e8*random_4(1);
       random_4(-beamRepeatSeed);
     }
+    bunchGenerated = 0;
     
     log_exit("setup_bunched_beam");
     }
@@ -170,8 +178,6 @@ long new_bunched_beam(
     char s[100];
 #endif
 
-    log_entry("new_bunched_beam");
-
     beam->n_original = beam->n_to_track = n_particles_per_bunch;
     beam->n_accepted = 0;
 
@@ -180,7 +186,7 @@ long new_bunched_beam(
     if (flags&TRACK_PREVIOUS_BUNCH && beam->original==beam->particle)
       bomb("programming error: original beam coordinates needed but not saved", NULL);
     
-    if (!(flags&TRACK_PREVIOUS_BUNCH)) {
+    if (!bunchGenerated || !save_initial_coordinates) {
         if (one_random_bunch)
             /* reseed the random number generator to get the same sequence again */
             /* means we don't have to store the original coordinates */
@@ -248,7 +254,7 @@ long new_bunched_beam(
         beam->particle[i_particle][4] += s_offset;
         }
 
-    log_exit("new_bunched_beam");
+    bunchGenerated = 1;
     return(beam->n_to_track);
     }
 
