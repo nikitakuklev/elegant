@@ -36,7 +36,7 @@ void matr_element_tracking(double **coord, VMATRIX *M, MATR *matr,
 void ematrix_element_tracking(double **coord, VMATRIX *M, EMATRIX *matr,
                               long np, double z);
 long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge, 
-                             double ***part, long np, char *mainRootname, long iPass,
+                             double ***part, long **lostOnPass, long np, char *mainRootname, long iPass,
 			     long driftOrder);
 void distributionScatter(double **part, long np, double Po, DSCATTER *scat, long iPass);
 void recordLossPass(long *lostOnPass, long *nLost, long nLeft, long nOriginal, long pass);
@@ -848,8 +848,8 @@ long do_tracking(
             break;
           case T_SCRIPT:
             n_left = transformBeamWithScript((SCRIPT*)eptr->p_elem,
-                                    *P_central, charge, &coord, n_to_track,
-				    run->rootname, i_pass, run->default_order);
+					     *P_central, charge, &coord, &lostOnPass, n_to_track,
+					     run->rootname, i_pass, run->default_order);
             break;
 	  case T_FLOORELEMENT:
 	    break;
@@ -1732,7 +1732,8 @@ void ematrix_element_tracking(double **coord, VMATRIX *M, EMATRIX *matr,
 }
 
 long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge, 
-                             double ***part, long np, char *mainRootname, long iPass,
+                             double ***part, long **lostOnPass, 
+			     long np, char *mainRootname, long iPass,
 			     long driftOrder)
 {
   char *rootname, *input, *output;
@@ -1884,7 +1885,12 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
     SDDS_SetError("Unable to read script output file");
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
   }
-  if (!(npNew=SDDS_RowCount(&SDDSin))) {
+  npNew = SDDS_RowCount(&SDDSin);
+  if (script->verbosity>0) {
+    fprintf(stdout, "%ld particles in script output file\n", npNew);
+    fflush(stdout);
+  }
+  if (!npNew) {
     return 0;
   }
   if (npNew>np) {
@@ -1900,6 +1906,9 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
         for (j=0; j<7; j++)
           beam->accepted[i][j] = -1;
     }
+    if (beam->lostOnPass) 
+      free(beam->lostOnPass);
+    *lostOnPass = beam->lostOnPass = tmalloc(sizeof(*(beam->lostOnPass))*npNew);
     beam->particle = *part = (double**)zarray_2d(sizeof(double), npNew, 7);
     beam->n_particle = npNew;
   }
