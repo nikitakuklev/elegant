@@ -3,6 +3,10 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.3  1999/10/12 21:50:00  borland
+ * All printouts now go to the stdout rather than stderr.  fflush statements,
+ * some unnecessary, were added in a mostly automated fashion.
+ *
  * Revision 1.2  1999/08/05 15:40:23  soliday
  * Added WIN32 and Linux support
  *
@@ -112,14 +116,10 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
                          double Po, double charge)
 {
   double emitx, emity;
-  double *time, *delta, deltaAve, deltaRMS, tRMS, S11, S33;
+  double *time, deltaAve, deltaRMS, tRMS, S11, S33;
   long i;
   double xLimit[2], percentLevel[2] = {10, 90};
   
-  if (!(time=SDDS_Malloc(sizeof(*time)*particles)))
-    SDDS_Bomb("memory allocation failure (computeSASEFELAtEnd)");
-  if (!(delta=SDDS_Malloc(sizeof(*delta)*particles)))
-    SDDS_Bomb("memory allocation failure (computeSASEFELAtEnd)");
   if (!particles) {
     fprintf(stdout, "no particles left---can't compute FEL parameters");
     fflush(stdout);
@@ -130,10 +130,12 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
                 sasefelOutput->etaEnergySpread = DBL_MAX;
     return;
   }
+  if (!(time=SDDS_Malloc(sizeof(*time)*particles)))
+    SDDS_Bomb("memory allocation failure (computeSASEFELAtEnd)");
   
   /* find center of energy distribution */
   for (i=deltaAve=0; i<particles; i++)
-    deltaAve += (delta[i] = particle[i][5]);
+    deltaAve += particle[i][5];
   deltaAve /= particles;
   /* compute rms energy spread */
   for (i=deltaRMS=0; i<particles; i++)
@@ -146,13 +148,14 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
    */
   computeTimeCoordinates(time, Po, particle, particles);
   compute_percentiles(xLimit, percentLevel, 2, time, particles);
+  free(time);
   sasefelOutput->rmsBunchLength = tRMS 
     = (xLimit[1] - xLimit[0])/(0.8*sqrt(2*PI));
 
   emitx = rms_emittance(particle, 0, 1, particles, &S11, NULL, NULL);
   emity = rms_emittance(particle, 2, 3, particles, &S33, NULL, NULL);
   sasefelOutput->emit = sqrt(emitx*emity);
-  sasefelOutput->pCentral = Po;
+  sasefelOutput->pCentral = Po*(1+deltaAve);
   sasefelOutput->charge = charge;  
 
   if (sasefelOutput->beta==0)
@@ -169,7 +172,7 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
                            charge, tRMS, sasefelOutput->undulatorPeriod,
                            sasefelOutput->undulatorK, 
                            sasefelOutput->betaToUse, sasefelOutput->emit, 
-                           sasefelOutput->Sdelta, sasefelOutput->pCentral=Po,
+                           sasefelOutput->Sdelta, sasefelOutput->pCentral,
                            1);
 }
 
