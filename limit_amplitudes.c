@@ -102,20 +102,22 @@ long rectangular_collimator(
       --ip;
       --np;
     } else if (is_out) {
-      zx = zy = DBL_MAX;
-      if (is_out&1 && ini[1]!=0)
-        zx = (SIGN(ini[1])*xsize-(ini[0]-x_center))/ini[1];
-      if (is_out&2 && ini[3]!=0)
-        zy = (SIGN(ini[3])*ysize-(ini[2]-y_center))/ini[3];
-      if (zx<zy) {
-        ini[0] += ini[1]*zx;
-        ini[2] += ini[3]*zx;
-        ini[4] = z+zx; 
-      }
-      else {
-        ini[0] += ini[1]*zy;
-        ini[2] += ini[3]*zy;
-        ini[4] = z+zy;
+      if (!openCode) {
+        zx = zy = DBL_MAX;
+        if (is_out&1 && ini[1]!=0)
+          zx = (SIGN(ini[1])*xsize-(ini[0]-x_center))/ini[1];
+        if (is_out&2 && ini[3]!=0)
+          zy = (SIGN(ini[3])*ysize-(ini[2]-y_center))/ini[3];
+        if (zx<zy) {
+          ini[0] += ini[1]*zx;
+          ini[2] += ini[3]*zx;
+          ini[4] = z+zx; 
+        }
+        else {
+          ini[0] += ini[1]*zy;
+          ini[2] += ini[3]*zy;
+          ini[4] = z+zy;
+        }
       }
       ini[5] = Po*(1+ini[5]);
       SWAP_PTR(initial[ip], initial[itop]);
@@ -171,7 +173,7 @@ long limit_amplitudes(
         if (isinf(part[0]) || isinf(part[2]) || isnan(part[0]) || isnan(part[2]) )
             is_out += 4;
         dz = 0;
-        if (is_out && !(is_out&4) && extrapolate_z) {
+        if (is_out && !(is_out&4) && !openCode && extrapolate_z) {
             /* find the actual position of loss, assuming a drift preceded with 
              * the same aperture 
              */
@@ -253,11 +255,18 @@ long elliptical_collimator(
   long ip, itop, lost, openCode;
   double a2, b2;
   double dx, dy, xo, yo, xsize, ysize;
+  TRACKING_CONTEXT context;
 
   xsize = ecol->x_max;
   ysize = ecol->y_max;
-  a2 = sqr(ecol->x_max);
-  b2 = sqr(ecol->y_max);
+  if (ecol->exponent<2 || ecol->exponent%2) {
+    getTrackingContext(&context);
+    fprintf(stderr, "Error for %s: exponent=%d is not valid.  Give even integer >=2\n",
+            context.elementName, ecol->exponent);
+    exit(1);
+  }
+  a2 = ipow(ecol->x_max, ecol->exponent);
+  b2 = ipow(ecol->y_max, ecol->exponent);
   dx = ecol->dx;
   dy = ecol->dy;
 
@@ -271,7 +280,7 @@ long elliptical_collimator(
     lost = 0;
     xo = ini[0] - dx;
     yo = ini[2] - dy;
-    if ((sqr(xo)/a2 + sqr(yo)/b2)>1)
+    if ((ipow(xo, ecol->exponent)/a2 + ipow(yo, ecol->exponent)/b2)>1)
       lost = openCode ? evaluateLostWithOpenSides(openCode, xo, yo, xsize, ysize) : 1;
     else if (isinf(ini[0]) || isinf(ini[2]) ||
              isnan(ini[0]) || isnan(ini[2]) )
@@ -299,7 +308,7 @@ long elliptical_collimator(
     ini[2] += length*ini[2];
     xo = ini[0]/xsize;
     yo = ini[2]/ysize;
-    if ((sqr(xo) + sqr(yo))>1)
+    if ((ipow(xo, ecol->exponent) + ipow(yo, ecol->exponent))>1)
       lost = openCode ? evaluateLostWithOpenSides(openCode, xo, yo, 1, 1) : 1;
     else if (isinf(ini[0]) || isinf(ini[2]) ||
              isnan(ini[0]) || isnan(ini[2]) )
@@ -339,22 +348,30 @@ long elimit_amplitudes(
     double z,
     double Po,
     long extrapolate_z,
-    long openCode                       
+    long openCode,
+    long exponent                       
     )
 {
     long ip, itop, lost;
     double *part;
     double a2, b2, c1, c2, c0, dz, det;
+    TRACKING_CONTEXT context;
 
     log_entry("elimit_amplitudes");
 
+    if (exponent<2 || exponent%2) {
+      getTrackingContext(&context);
+      fprintf(stderr, "Error for %s: exponent=%d is not valid.  Give even integer >=2\n",
+              context.elementName, exponent);
+      exit(1);
+    }
     if (!(xmax || ymax)) {
         log_exit("elimit_amplitudes");
         return(np);
         }
 
-    a2 = sqr(xmax);
-    b2 = sqr(ymax);
+    a2 = ipow(xmax, exponent);
+    b2 = ipow(ymax, exponent);
     itop = np-1;
 
     for (ip=0; ip<np; ip++) {
@@ -371,25 +388,27 @@ long elimit_amplitudes(
             continue;
             }
         lost = 0;
-        if ((sqr(part[0])/a2 + sqr(part[2])/b2) > 1)
+        if ((ipow(part[0], exponent)/a2 + ipow(part[2], exponent)/b2) > 1)
           lost = 1;
         else
           continue;
         if (openCode)
           lost *= evaluateLostWithOpenSides(openCode, part[0], part[2], xmax, ymax);
         if (lost) {
-          c0 = sqr(part[0])/a2 + sqr(part[2])/b2 - 1;
-          c1 = 2*(part[0]*part[1]/a2 + part[2]*part[3]/b2);
-          c2 = sqr(part[1])/a2 + sqr(part[3])/b2;
-          det = sqr(c1)-4*c0*c2;
           dz = 0;
-          if (z>0 && extrapolate_z && c2 && det>=0) {
-            if ((dz = (-c1+sqrt(det))/(2*c2))>0)
-              dz = (-c1-sqrt(det))/(2*c2);
-            if ((z+dz)<0) 
-              dz = -z;
-            part[0] += dz*part[1];
-            part[2] += dz*part[3];
+          if (extrapolate_z && !openCode && exponent==2) {
+            c0 = sqr(part[0])/a2 + sqr(part[2])/b2 - 1;
+            c1 = 2*(part[0]*part[1]/a2 + part[2]*part[3]/b2);
+            c2 = sqr(part[1])/a2 + sqr(part[3])/b2;
+            det = sqr(c1)-4*c0*c2;
+            if (z>0 && c2 && det>=0) {
+              if ((dz = (-c1+sqrt(det))/(2*c2))>0)
+                dz = (-c1-sqrt(det))/(2*c2);
+              if ((z+dz)<0) 
+                dz = -z;
+              part[0] += dz*part[1];
+              part[2] += dz*part[3];
+            }
           }
           SWAP_PTR(coord[ip], coord[itop]);
           coord[itop][4] = z+dz;
@@ -408,145 +427,125 @@ long elimit_amplitudes(
 #define SQRT_3 1.7320508075688772
             
 long beam_scraper(
-    double **initial, SCRAPER *scraper, long np, double **accepted, double z,
-    double Po
-    )
+                  double **initial, SCRAPER *scraper, long np, double **accepted, double z,
+                  double Po
+                  )
 {
-    double length, *ini;
-    long do_x, do_y, ip, itop;
-    double limit;
+  double length, *ini;
+  long do_x, do_y, ip, itop;
+  double limit;
 
-    log_entry("beam_scraper");
+  log_entry("beam_scraper");
 
-    if (scraper->insert_from) {
-        switch (toupper(scraper->insert_from[1])) {
-          case 'Y': case 'V':
-            scraper->direction = 1;
-            break;
-          case 'X': case 'H':
-            scraper->direction = 0;
-            break;
-          default:
-            fprintf(stdout, "Error: invalid scraper insert_from parameter: %s\n",
-                    scraper->insert_from);
-            fflush(stdout);
-            bomb("scraper insert_from axis letter is not one of x, h, y, or v", NULL);
-            break;
-            }
-        if (scraper->insert_from[0]=='-')
-            scraper->direction += 2;
-        scraper->insert_from = NULL;
-        }
-    if (scraper->direction<0 || scraper->direction>3)
-      return np;
+  if (scraper->insert_from) {
+    switch (toupper(scraper->insert_from[1])) {
+    case 'Y': case 'V':
+      scraper->direction = 1;
+      break;
+    case 'X': case 'H':
+      scraper->direction = 0;
+      break;
+    default:
+      fprintf(stdout, "Error: invalid scraper insert_from parameter: %s\n",
+              scraper->insert_from);
+      fflush(stdout);
+      bomb("scraper insert_from axis letter is not one of x, h, y, or v", NULL);
+      break;
+    }
+    if (scraper->insert_from[0]=='-')
+      scraper->direction += 2;
+    scraper->insert_from = NULL;
+  }
+  if (scraper->direction<0 || scraper->direction>3)
+    return np;
+  
+  if (scraper->direction==0 || scraper->direction==2) {
+    do_x = scraper->direction==0 ? 1 : -1;
+    do_y = 0;
+    limit = scraper->position*do_x;
+  }
+  else {
+    do_x = 0;
+    do_y = scraper->direction==1 ? 1 : -1;
+    limit = scraper->position*do_y;
+  }    
+
+  if (scraper->length && (scraper->Xo || scraper->Z)) {
+    /* scraper has material properties that scatter beam and
+     * absorb energy
+     */
+    double x1, y1, z1, z2, dx, dy, ds, t=0.0;
+
+    MATTER matter;
+    matter.length = scraper->length;
+    matter.Xo = scraper->Xo;
+    matter.elastic = scraper->elastic;
+    matter.energyStraggle = scraper->energyStraggle;
+    matter.Z = scraper->Z;
+    matter.A = scraper->A;
+    matter.rho = scraper->rho;
+    matter.pLimit = scraper->pLimit;
     
-    if (scraper->direction==0 || scraper->direction==2) {
-        do_x = scraper->direction==0 ? 1 : -1;
-        do_y = 0;
-        limit = scraper->position*do_x;
-        }
-    else {
-        do_x = 0;
-        do_y = scraper->direction==1 ? 1 : -1;
-        limit = scraper->position*do_y;
-        }    
-
-    if (scraper->length && scraper->Xo) {
-        /* scraper has material properties that scatter beam and
-         * absorb energy--method is the same as track_through_matter()
-         */
-        double Nrad, theta_rms, beta, P, E=0.0;
-        double x1, y1, z1, z2, dx, dy, ds, t=0.0;
-        
-        beta = Po/sqrt(sqr(Po)+1);
-        Nrad = scraper->length/scraper->Xo;
-        theta_rms = 13.6/(me_mev*Po*sqr(beta))*sqrt(Nrad)*(1+0.038*log(Nrad));
-        itop = np-1;
-        for (ip=0; ip<np; ip++) {
-            ini = initial[ip];
-            x1  = ini[0] + ini[1]*scraper->length;
-            y1  = ini[2] + ini[3]*scraper->length;
-            if ((do_x && (do_x*(ini[0]-scraper->dx)>limit || do_x*(x1-scraper->dx)>limit)) ||
-                (do_y && (do_y*(ini[2]-scraper->dy)>limit || do_y*(y1-scraper->dy)>limit)) ) {
-                /* scatter and/or absorb energy */
-                if (!scraper->elastic) {
-                    P = (1+ini[5])*Po;
-                    E = sqrt(sqr(P)+1)-1;
-                    beta = P/E;
-                    t = ini[4]/beta;
-                    }
-                z1 = gauss_rn(0, random_2);
-                z2 = gauss_rn(0, random_2);
-                ini[0] += (dx=(z1/SQRT_3 + z2)*scraper->length*theta_rms/2 + scraper->length*ini[1]);
-                ini[1] += z2*theta_rms;
-                z1 = gauss_rn(0, random_2);
-                z2 = gauss_rn(0, random_2);
-                ini[2] += (dy=(z1/SQRT_3 + z2)*scraper->length*theta_rms/2 + scraper->length*ini[3]);
-                ini[3] += z2*theta_rms;
-                ds = sqrt(sqr(scraper->length)+sqr(dx)+sqr(dy));
-                if (!scraper->elastic) {
-                    E *= exp(-ds/scraper->Xo);
-                    P = sqrt(sqr(E+1)-1);
-                    ini[5] = (P-Po)/Po;
-                    beta = P/E;
-                    ini[4] = t*beta+ds;
-                    }
-                else
-                    ini[4] += ds;
-                }
-            else {
-                ini[0] = x1;
-                ini[2] = y1;
-                ini[4] += scraper->length*sqrt(1+sqr(ini[1])+sqr(ini[3]));
-                }
-            }
-        log_exit("beam_scraper");
-        return(np);
-        }
-
-    itop = np-1;
     for (ip=0; ip<np; ip++) {
-        ini = initial[ip];
-        if ((do_x && do_x*(ini[0]-scraper->dx) > limit) ||
-            (do_y && do_y*(ini[2]-scraper->dy) > limit) ) {
-            SWAP_PTR(initial[ip], initial[itop]);
-            if (accepted)
-                SWAP_PTR(accepted[ip], accepted[itop]);
-            initial[itop][4] = z; /* record position of particle loss */
-            initial[itop][5] = Po*(1+initial[itop][5]);
-            --itop;
-            --ip;
-            --np;
-            }
-        }
-    if (np==0 || (length=scraper->length)<=0) {
-        log_exit("beam_scraper");
-        return(np);
-        }
-
-    z += length;
-    itop = np-1;
-    for (ip=0; ip<np; ip++) {
-        ini = initial[ip];
-        ini[0] += length*ini[1];
-        ini[2] += length*ini[3];
-        if ((do_x && do_x*(ini[0]-scraper->dx) > limit) ||
-            (do_y && do_y*(ini[2]-scraper->dy) > limit) ) {
-            SWAP_PTR(initial[ip], initial[itop]);
-            initial[itop][4] = z; /* record position of particle loss */
-            initial[itop][5] = Po*(1+initial[itop][5]);
-            if (accepted)
-                SWAP_PTR(accepted[ip], accepted[itop]);
-            --itop;
-            --ip;
-            --np;
-            }
-        else
-            ini[4] += length*sqrt(1+sqr(ini[1])+sqr(ini[3]));
-        }
+      ini = initial[ip];
+      if ((do_x && do_x*(ini[0]-scraper->dx)>limit) ||
+          (do_y && do_y*(ini[2]-scraper->dy)>limit)) {
+        /* scatter and/or absorb energy */
+        track_through_matter(&ini, 1, &matter, Po);
+      } else {
+        ini[0] = ini[0] + ini[1]*scraper->length;
+        ini[2] = ini[2] + ini[3]*scraper->length;
+        ini[4] += scraper->length*sqrt(1+sqr(ini[1])+sqr(ini[3]));
+      }
+    }
     log_exit("beam_scraper");
     return(np);
+  }
+
+  /* come here for idealized scraper that just absorbs particles */
+  itop = np-1;
+  for (ip=0; ip<np; ip++) {
+    ini = initial[ip];
+    if ((do_x && do_x*(ini[0]-scraper->dx) > limit) ||
+        (do_y && do_y*(ini[2]-scraper->dy) > limit) ) {
+      SWAP_PTR(initial[ip], initial[itop]);
+      if (accepted)
+        SWAP_PTR(accepted[ip], accepted[itop]);
+      initial[itop][4] = z; /* record position of particle loss */
+      initial[itop][5] = Po*(1+initial[itop][5]);
+      --itop;
+      --ip;
+      --np;
     }
+  }
+  if (np==0 || (length=scraper->length)<=0) {
+    log_exit("beam_scraper");
+    return(np);
+  }
+
+  z += length;
+  itop = np-1;
+  for (ip=0; ip<np; ip++) {
+    ini = initial[ip];
+    ini[0] += length*ini[1];
+    ini[2] += length*ini[3];
+    if ((do_x && do_x*(ini[0]-scraper->dx) > limit) ||
+        (do_y && do_y*(ini[2]-scraper->dy) > limit) ) {
+      SWAP_PTR(initial[ip], initial[itop]);
+      initial[itop][4] = z; /* record position of particle loss */
+      initial[itop][5] = Po*(1+initial[itop][5]);
+      if (accepted)
+        SWAP_PTR(accepted[ip], accepted[itop]);
+      --itop;
+      --ip;
+      --np;
+    }
+    else
+      ini[4] += length*sqrt(1+sqr(ini[1])+sqr(ini[3]));
+  }
+  log_exit("beam_scraper");
+  return(np);
+}
 
 long track_through_pfilter(
     double **initial, PFILTER *pfilter, long np, double **accepted, double z,
@@ -833,6 +832,8 @@ long evaluateLostWithOpenSides(long code, double dx, double dy, double xsize, do
 long determineOpenSideCode(char *openSide)
 {
   TRACKING_CONTEXT context;
+  long value;
+  
   if (!openSide)
     return 0;
   if (strlen(openSide)==2 &&
@@ -842,22 +843,25 @@ long determineOpenSideCode(char *openSide)
     case 'X':
     case 'h':
     case 'H':
-      return openSide[0]=='+' ? OPEN_PLUS_X : OPEN_MINUS_X;
+      value = (openSide[0]=='+' ? OPEN_PLUS_X : OPEN_MINUS_X);
       break;
     case 'y':
     case 'Y':
     case 'v':
     case 'V':
-      return openSide[0]=='+' ? OPEN_PLUS_Y : OPEN_MINUS_Y;
+      value = (openSide[0]=='+' ? OPEN_PLUS_Y : OPEN_MINUS_Y);
       break;
     default:
+      value = -1;
       break;
     }
   }
-  getTrackingContext(&context);
-  fprintf(stderr, "Error for %s: open_side=%s is not valid\n",
-          context.elementName, openSide);
-  exit(1);
-  return 0;
+  if (value==-1) {
+    getTrackingContext(&context);
+    fprintf(stderr, "Error for %s: open_side=%s is not valid\n",
+            context.elementName, openSide);
+    exit(1);
+  }
+  return value;
 }
 
