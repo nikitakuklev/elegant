@@ -1276,7 +1276,10 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
       computeChromaticities(&chromx, &chromy, 
                             &dbetax, &dbetay, &dalphax, &dalphay, beamline->twiss0, M);
       if (twissConcatOrder>1 && higher_order_chromaticity)
-	computeHigherOrderChromaticities(beamline, starting_coord, run, twissConcatOrder);
+	computeHigherOrderChromaticities(beamline, starting_coord, run, twissConcatOrder,
+                                         higher_order_chromaticity_range/
+                                         (higher_order_chromaticity_points-1),
+                                         higher_order_chromaticity_points);
       if (doTuneShiftWithAmplitude)
         computeTuneShiftWithAmplitude(beamline->dnux_dA, beamline->dnuy_dA,
                                       beamline->twiss0, beamline->tune, M, beamline, run,
@@ -1311,7 +1314,10 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
       computeChromaticities(&chromx, &chromy, 
                             &dbetax, &dbetay, &dalphax, &dalphay, beamline->twiss0, M);
       if (twissConcatOrder>1 && higher_order_chromaticity)
-	computeHigherOrderChromaticities(beamline, starting_coord, run, twissConcatOrder);
+	computeHigherOrderChromaticities(beamline, starting_coord, run, twissConcatOrder,
+                                         higher_order_chromaticity_range/
+                                         (higher_order_chromaticity_points-1),
+                                         higher_order_chromaticity_points);
       if (doTuneShiftWithAmplitude)
         computeTuneShiftWithAmplitude(beamline->dnux_dA, beamline->dnuy_dA,
                                       beamline->twiss0, beamline->tune, M, beamline, run,

@@ -525,16 +525,21 @@ void computeChromaticities(double *chromx, double *chromy,
 }
 
 void computeHigherOrderChromaticities(LINE_LIST *beamline, double *clorb, RUN *run,
-				      long concatOrder)
+				      long concatOrder, double deltaStep, long deltaPoints)
 {
-#define NDELTA_VALUES 5   /* must be at least 5 */
-  double trace[2][NDELTA_VALUES], delta[NDELTA_VALUES];
+#define MAX_NDELTA_VALUES 11   /* must be at least 5 */
+  double trace[2][MAX_NDELTA_VALUES], delta[MAX_NDELTA_VALUES];
   double eta[6];
-  double coef[NDELTA_VALUES], sCoef[NDELTA_VALUES], chi;
+  double coef[MAX_NDELTA_VALUES], sCoef[MAX_NDELTA_VALUES], chi;
   long i, p;
   double c1;
   VMATRIX *M1, M0;
 
+  if (deltaPoints>MAX_NDELTA_VALUES)
+    bomb("too many points for higher-order chromaticity", NULL);
+  if (deltaPoints<5)
+    deltaPoints = 5;
+  
   beamline->chrom2[0] = beamline->chrom2[1] = 0;
   beamline->chrom3[0] = beamline->chrom3[1] = 0;
   initialize_matrices(&M0, 1);
@@ -544,8 +549,8 @@ void computeHigherOrderChromaticities(LINE_LIST *beamline, double *clorb, RUN *r
   eta[3] = beamline->twiss0->etapy;
   eta[4] = 0;
   eta[5] = 1;
-  for (p=0; p<NDELTA_VALUES; p++) {
-    delta[p] = (p-3)*1e-4;
+  for (p=0; p<deltaPoints; p++) {
+    delta[p] = (p-3)*deltaStep;
     for (i=0; i<6; i++) {
       M0.C[i] = (clorb?clorb[i]:0)+delta[p]*eta[i] +
 	(i<4? sqr(delta[p])*beamline->eta2[i] + pow3(delta[p])*beamline->eta3[i] : 0);
@@ -559,7 +564,8 @@ void computeHigherOrderChromaticities(LINE_LIST *beamline, double *clorb, RUN *r
     free(M1);
   }
   for (i=0; i<2; i++) {
-    lsfn(delta, trace[i], NULL, NDELTA_VALUES, NDELTA_VALUES-2, coef, sCoef, &chi, NULL);
+    lsfn(delta, trace[i], NULL, deltaPoints, (long)(MIN(deltaPoints-2,5)), 
+         coef, sCoef, &chi, NULL);
     c1 = -coef[1]/(4*PI*sin(PIx2*beamline->tune[i]));
     beamline->chrom2[i] = (
 		 2*coef[2]
@@ -567,7 +573,7 @@ void computeHigherOrderChromaticities(LINE_LIST *beamline, double *clorb, RUN *r
 		 )/(-4*PI*sin(PIx2*beamline->tune[i]));
     beamline->chrom3[i] = (
 		 6*coef[3] 
-		 - 16*pow3(PI*c1)*sin(PIx2*beamline->tune[i]) 
+                 - 16*pow3(PI*c1)*sin(PIx2*beamline->tune[i]) 
 		 + 24*sqr(PI)*c1*beamline->chrom2[i]*cos(PIx2*beamline->tune[i])
 		 )/(-4*PI*sin(PIx2*beamline->tune[i]));
   }
@@ -733,3 +739,6 @@ double computeChromaticDeriv3RElem(long i, long m, TWISS *twiss, VMATRIX *M,
   fprintf(stdout, "sum of %ld terms is %e\n", count, sum);
   return sum;
 }  
+
+
+
