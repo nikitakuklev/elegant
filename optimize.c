@@ -1098,28 +1098,6 @@ double optimization_function(double *value, long *invalid)
     fflush(optimization_data->fp_log);
   }
 
-#if DEBUG
-  fprintf(stdout, "optimization_function: Generating beam\n");
-  fflush(stdout);
-#endif
-  /* generate initial beam distribution and track it */
-  switch (beam_type_code) {
-  case SET_AWE_BEAM:
-    bomb("beam type code of SET_AWE_BEAM in optimization_function--this shouldn't happen", NULL);
-    break;
-  case SET_BUNCHED_BEAM:
-    new_bunched_beam(beam, run, control, output, 0);
-    break;
-  case SET_SDDS_BEAM:
-    if (new_sdds_beam(beam, run, control, output, 0)<0)
-      bomb("unable to get beam for tracking (is file empty or out of pages?)", NULL);
-    break;
-  default:
-    bomb("unknown beam type code in optimization", NULL);
-    break;
-  }
-
-  control->i_step++;       /* to prevent automatic regeneration of beam */
   zero_beam_sums(output->sums_vs_z, output->n_z_points+1);
   if (doClosedOrbit &&
       !run_closed_orbit(run, beamline, startingOrbitCoord, NULL, 0)) {
@@ -1269,6 +1247,28 @@ double optimization_function(double *value, long *invalid)
 
   for (i=0; i<variables->n_variables; i++)
     variables->varied_quan_value[i] = value[i];
+
+#if DEBUG
+  fprintf(stdout, "optimization_function: Generating beam\n");
+  fflush(stdout);
+#endif
+  /* generate initial beam distribution and track it */
+  switch (beam_type_code) {
+  case SET_AWE_BEAM:
+    bomb("beam type code of SET_AWE_BEAM in optimization_function--this shouldn't happen", NULL);
+    break;
+  case SET_BUNCHED_BEAM:
+    new_bunched_beam(beam, run, control, beamline, output, 0);
+    break;
+  case SET_SDDS_BEAM:
+    if (new_sdds_beam(beam, run, control, output, 0)<0)
+      bomb("unable to get beam for tracking (is file empty or out of pages?)", NULL);
+    break;
+  default:
+    bomb("unknown beam type code in optimization", NULL);
+    break;
+  }
+  control->i_step++;       /* to prevent automatic regeneration of beam  (???) */
 
 #if DEBUG
   fprintf(stdout, "optimization_function: Tracking\n");

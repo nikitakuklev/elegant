@@ -24,6 +24,7 @@
     double eta_y   = 0.0;
     double etap_y  = 0.0;
     long use_twiss_command_values = 0;
+    long use_twiss_command_match = 0;
     double Po = 0.0;
     double sigma_dp = 0.0;
     double sigma_s = 0.0;

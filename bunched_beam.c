@@ -208,6 +208,7 @@ long new_bunched_beam(
     BEAM *beam,
     RUN *run,
     VARY *control,
+    LINE_LIST *beamline,
     OUTPUT_FILES *output,
     long flags
     )
@@ -260,6 +261,16 @@ long new_bunched_beam(
             fill_transverse_structure(&y_plane, emit_y, beta_y, alpha_y, eta_y, etap_y,
                     y_beam_type, distribution_cutoff[1], centroid+2);
             }
+        if (use_twiss_command_match) {
+            fill_transverse_structure(&x_plane, emit_x, 
+                                      beamline->twiss0->betax, beamline->twiss0->alphax,
+                                      beamline->twiss0->etax, beamline->twiss0->etapx,
+                                      x_beam_type, distribution_cutoff[0], centroid);
+            fill_transverse_structure(&y_plane, emit_y, 
+                                      beamline->twiss0->betay, beamline->twiss0->alphay,
+                                      beamline->twiss0->etay, beamline->twiss0->etapy,
+                                      y_beam_type, distribution_cutoff[1], centroid+2);
+        }
         fprintf(stdout, "generating bunch %ld.%ld\n", control->i_step, control->i_vary);
         fflush(stdout);
         n_actual_particles = 
