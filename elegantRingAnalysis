@@ -716,11 +716,19 @@ proc DisplayIBS {} {
 		   | tail -1} scanVariable] {
 	return -code error "$scanVariable"
     }
-    exec sddsplot $input -graph=symbol,vary=type,subtype=type,connect=type -legend \
+    exec sddsplot $input -graph=symbol,vary=type,subtype=type,connect=type,scale=2 \
+	-legend \
 	-column=$scanVariable,(emitxInput,emitx) -end \
 	-column=$scanVariable,(emityInput,emity) -end \
 	-column=$scanVariable,(sigmaDelta0,sigmaDelta) -end \
 	-column=$scanVariable,(sigmaz0,sigmaz) -end &
+    exec sddsplot -thick=2 -device=png,onwhite,template=$input-%ld.png \
+	$input -graph=symbol,vary=type,subtype=type,connect=type,scale=2 -legend \
+	-column=$scanVariable,(emitxInput,emitx) -end \
+	-column=$scanVariable,(emityInput,emity) -end \
+	-column=$scanVariable,(sigmaDelta0,sigmaDelta) -end \
+	-column=$scanVariable,(sigmaz0,sigmaz) -end &
+    setStatus "PNG files: $input-\[0123\].png"
 }
 
 proc RunHaissinski {} {
@@ -782,8 +790,13 @@ proc DisplayHaissinski {} {
 		   | tail -1} scanVariable] {
 	return -code error "$scanVariable"
     }
-    exec sddsplot $input -graph=symbol,vary=type,subtype=type,connect=type -legend \
+    exec sddsplot $input -legend \
+	-graph=symbol,vary=type,subtype=type,connect=type,scale=2 \
 	-column=$scanVariable,rmsBunchLength -end &
+    exec sddsplot -thickness=2 -device=png,onwhite -output=$input.png \
+	$input -graph=symbol,vary=type,subtype=type,connect=type,scale=2 -legend \
+	-column=$scanVariable,rmsBunchLength -end &
+    setStatus "PNG file: $input.png"
 }
 
 proc RunSCTuneSpread {} {
@@ -839,8 +852,13 @@ proc DisplaySCTuneSpread {} {
 		   | tail -1} scanVariable] {
 	return -code error "$scanVariable"
     }
-    exec sddsplot $input -graph=symbol,vary=type,subtype=type,connect=type -legend \
+    exec sddsplot $input -graph=symbol,vary=type,subtype=type,connect=type,scale=2 \
+	-legend \
 	-column=$scanVariable,spaceChargeTuneSpread &
+    exec sddsplot -thickness=2 -device=png,onwhite -output=$input.png \
+	$input -graph=symbol,vary=type,subtype=type,connect=type,scale=2 -legend \
+	-column=$scanVariable,spaceChargeTuneSpread &
+    setStatus "PNG file: $input.png"
 }
 
 proc FillPhaseSpaceFrame {widget args} {
@@ -926,20 +944,43 @@ proc PhaseSpaceTracking {} {
 	-postProcessProc PhaseSpaceTrackingPP
 }
 
-proc PhaseSpaceTrackingPP {args} {
+proc MakePhaseSpacePlot {args} {
+    set plane x
     set rootname ""
-    APSStrictParseArguments {rootname}
+    APSStrictParseArguments {plane rootname}
 
-    source $rootname.runCfg
-    set plane [string tolower $phaseSpaceTracking(offsetPlane)]
-    set otherPlane [string tolower $phaseSpaceTracking(otherPlane)]
-    exec sddsplot -col=C${plane},C${plane}p -graph=dot ${rootname}.w1 \
-	"-topline=${rootname}" &
-    if [expr $phaseSpaceTracking(otherCoord)!=0.0] {
-        exec sddsplot -col=C${otherPlane},C${otherPlane}p -graph=dot ${rootname}.w1 \
-	    "-topline=${rootname}" &
+    set arrayList \
+	[QueryValuesDialog \
+	     -nameList "${plane}Min ${plane}Max ${plane}pMin ${plane}pMax" \
+	     -elementList "xmin xmax ymin ymax" \
+	     -defaultList "-0.1 0.1 -0.1 0.1" -typeList "real real real real" \
+	     -name "Phase Space Plot Limits"]
+
+    if ![llength $arrayList] return
+    array set limit $arrayList
+    set limitOptList ""
+    foreach item [array names limit] {
+	lappend limitOptList $item=[set limit($item)]
     }
-    exec sddsexpand ${rootname}.var ${rootname}.vare
+    
+    exec sddsplot \
+	-col=C${plane},C${plane}p -graph=dot ${rootname}.w1 \
+	"-topline=${rootname}" \
+	-limit=[join $limitOptList ,] &
+    exec sddsplot -thickness=2 -device=png,onwhite \
+	-output=${rootname}-${plane}-${plane}p.png \
+	-col=C${plane},C${plane}p -graph=dot ${rootname}.w1 \
+	"-topline=${rootname}" \
+	-limit=[join $limitOptList ,] &
+
+    setStatus "PNG: ${rootname}-${plane}-${plane}p.png"
+}
+
+proc MakeFFTPhaseSpacePlot {args} {
+    set plane x
+    set rootname ""
+    APSStrictParseArguments {plane rootname}
+
     exec sddsfft ${rootname}.w1 \
 	-column=Pass,C${plane} -window -suppressAverage -pipe=out \
 	| sddsxref -pipe ${rootname}.vare -leave=* -transfer=parameter,* \
@@ -948,6 +989,36 @@ proc PhaseSpaceTrackingPP {args} {
     exec sddsplot -column=f,FFTC${plane} ${rootname}.w1.fft \
 	-title=@${plane}Label -separate=page -split=page -mode=y=log,y=special \
 	-topline=$rootname &
+    exec sddsplot -thickness=2 \
+	-device=png,onwhite,template=${rootname}-$plane-fft-%ld.png \
+	-column=f,FFTC${plane} ${rootname}.w1.fft \
+	-title=@${plane}Label -separate=page -split=page -mode=y=log,y=special \
+	-topline=$rootname &
+    setStatus "PNG: ${rootname}-${plane}-fft-*.png"
+}
+
+
+proc PhaseSpaceTrackingPP {args} {
+    set rootname ""
+    APSStrictParseArguments {rootname}
+
+    source $rootname.runCfg
+    set plane [string tolower $phaseSpaceTracking(offsetPlane)]
+    set otherPlane [string tolower $phaseSpaceTracking(otherPlane)]
+
+    exec sddsexpand ${rootname}.var ${rootname}.vare
+
+    # plot phase space and FFT for main plane
+    MakePhaseSpacePlot -rootname $rootname -plane $plane
+    MakeFFTPhaseSpacePlot -rootname $rootname -plane $plane
+
+    if [expr $phaseSpaceTracking(otherCoord)!=0.0] {
+	# plot phase space and FFT for other plane
+	MakePhaseSpacePlot -rootname $rootname -plane $otherPlane 
+	MakeFFTPhaseSpacePlot -rootname $rootname -plane $otherPlane
+    }
+
+    # Do NAFF analysis 
     exec sddsprocess ${rootname}.w1 -pipe=out \
 	-process=C${plane},first,%sFirst \
 	| sddsnaff -pipe \
@@ -956,9 +1027,16 @@ proc PhaseSpaceTrackingPP {args} {
 	| sddsprocess -pipe -define=column,C${plane}0,C${plane}First,units=m \
 	| sddscombine -pipe -merge \
 	| sddsxref -pipe=in ${rootname}.var -take=* ${rootname}.w1.naff
+
     exec sddsplot -topline=$rootname \
 	-column=C${plane}0,C${plane}Frequency ${rootname}.w1.naff -end \
 	-column=C${plane}0,C${otherPlane}Frequency ${rootname}.w1.naff &
+    exec sddsplot -thickness=2 \
+	-device=png,onwhite,template=${rootname}-naff.png \
+	-topline=$rootname \
+	-column=C${plane}0,C${plane}Frequency ${rootname}.w1.naff -end \
+	-column=C${plane}0,C${otherPlane}Frequency ${rootname}.w1.naff &
+    setStatus "PNG: $rootname-naff.png"
 }
 
 proc FillOffMomentumTunesFrame {widget args} {
@@ -1080,21 +1158,39 @@ proc OffMomentumTuneTrackingPP {args} {
     }
     exec sddsexpand ${rootname}.var ${rootname}.vare
     exec sddsnaff ${rootname}.w1 -pipe=out \
-      -columns=Pass,Cx,Cy -terminate=frequencies=1 -iterate=cycleLimit=200,accuracyLimit=1e-12 \
-      | sddsprocess -pipe \
-      "-define=column,nuxTracking,CxFrequency $dnuxSign * $nuxInteger +" \
-      "-define=column,nuyTracking,CyFrequency $dnuySign * $nuyInteger +" \
-      | sddsexpand -pipe \
-      | sddsxref -pipe ${rootname}.vare  \
-      -leave=* -transfer=parameter,* \
-      | sddscollapse -pipe=in ${rootname}.w1.naff
+	-columns=Pass,Cx,Cy -terminate=frequencies=1 \
+	-iterate=cycleLimit=200,accuracyLimit=1e-12 \
+	| sddsprocess -pipe \
+	"-define=column,nuxTracking,CxFrequency $dnuxSign * $nuxInteger +" \
+	"-define=column,nuyTracking,CyFrequency $dnuySign * $nuyInteger +" \
+	| sddsexpand -pipe \
+	| sddsxref -pipe ${rootname}.vare  \
+	-leave=* -transfer=parameter,* \
+	| sddscollapse -pipe=in ${rootname}.w1.naff
     
-    exec sddsplot -aspect=1 -topline=$rootname \
+    exec sddsplot \
+	-aspect=1 -topline=$rootname \
 	-column=nuxTracking,nuyTracking ${rootname}.w1.naff \
-	-split=column=delta,width=1e-4 -graph=symbol,vary=subtype -orderColors=spectral \
+	-split=column=delta,width=1e-4 -graph=symbol,vary=subtype \
+	-orderColors=spectral \
 	-column=nux,nuy ${rootname}.resdiag &
-    exec sddsplot -column=delta,nu?Tracking -separate ${rootname}.w1.naff -topline=$rootname \
+    exec sddsplot -thickness=2 -device=png,onwhite -output=${rootname}-tunes.png \
+	-aspect=1 -topline=$rootname \
+	-column=nuxTracking,nuyTracking ${rootname}.w1.naff \
+	-split=column=delta,width=1e-4 -graph=symbol,vary=subtype \
+	-orderColors=spectral \
+	-column=nux,nuy ${rootname}.resdiag &
+    setStatus "PNG: ${rootname}-tunes.png"
+
+    exec sddsplot \
+	-column=delta,nu?Tracking -separate ${rootname}.w1.naff \
+	-topline=$rootname \
 	-graph=symbol,connect,scale=2 &
+    exec sddsplot -thickness=2 -device=png,onwhite,template=${rootname}-vsDelta-%ld.png \
+	-column=delta,nu?Tracking -separate ${rootname}.w1.naff \
+	-topline=$rootname \
+	-graph=symbol,connect,scale=2 &
+    setStatus "PNG: ${rootname}-vsDelta-*.png"
 }
  
 proc FillHigherOrderDispersionFrame {widget args} {
@@ -1184,6 +1280,9 @@ proc HigherOrderDispersionPP {args} {
         return -code error "$result"
     }
     exec sddsplot -topline=$rootname -column=s,Coefficient* -separate ${rootname}.disp &
+    exec sddsplot -thickness=2 -device=png,onwhite,template=$rootname-disp-%ld.png \
+	-topline=$rootname -column=s,Coefficient* -separate ${rootname}.disp &
+    setStatus "PNG: $rootname-disp-*.png"
 }
 
 proc FillDynamicApertureFrame {widget args} {
@@ -1269,6 +1368,10 @@ proc DynamicAperturePP {args} {
 
     exec sddsplot -topline=$rootname \
 	-column=x,y $rootname.abnd -column=x,y $rootname.aper -graph=sym,scale=2 &    
+    exec sddsplot -device=png,onwhite -thickness=2 -output=$rootname.png \
+	-topline=$rootname \
+	-column=x,y $rootname.abnd -column=x,y $rootname.aper -graph=sym,scale=2 &    
+    setStatus "PNG: $rootname.png"
 }
 
 proc FillOffMomentumDynamicApertureFrame {widget args} {
@@ -1384,6 +1487,13 @@ proc OffMomentumDynamicAperturePP {args} {
       -column=x,y $rootname.aper -graph=sym,scale=2 -split=page -sep=page \
       "-title=@${variable},edit=i/\$gd\$r = /" \
       -column=x,y $rootname.abnd -graph=line -omnipresent &
+
+    exec sddsplot -device=png,onwhite,template=$rootname-%ld.png -thickness=2 \
+      -topline=$rootname -same=x,y,global \
+      -column=x,y $rootname.aper -graph=sym,scale=2 -split=page -sep=page \
+      "-title=@${variable},edit=i/\$gd\$r = /" \
+      -column=x,y $rootname.abnd -graph=line -omnipresent &
+    setStatus "PNG: $rootname-*.png"
 }
 
 proc FillFineDynamicApertureFrame {widget args} {
@@ -1485,6 +1595,11 @@ proc FineDynamicAperturePP {args} {
 	| sddscombine -pipe=in -merge $rootname.da -overwrite
     exec sddsplot -column=x0,y0 $rootname.da -graph=dot,vary,subtype=4 \
 	-order=spect -split=column=Pass,width=1 &
+
+    exec sddsplot -device=png,onwhite -thickness=2 -output=$rootname.png \
+	-column=x0,y0 $rootname.da -graph=dot,vary,subtype=1 \
+	-order=spect -split=column=Pass,width=1 &
+    setStatus "PNG: $rootname.png"
 }
 
 proc FillFrequencyMapFrame {widget args} {
@@ -1628,15 +1743,25 @@ proc FrequencyMapPP {args} {
     if ![llength $valueList] return
     array set parameter $valueList
     catch {exec sddsresdiag $rootname.resdiag -order=$parameter(order)}
-    APSExecLog .plot -unixCommand \
-	"sddsplot -filename \
+    exec sddsplot -filename \
 	-limit=xmin=$parameter(nux0),xmax=$parameter(nux1),ymin=$parameter(nuy0),ymax=$parameter(nuy1),auto \
 	-column=nux,nuy $rootname.resdiag \
 	-column=nux,nuy $rootname.fma -graph=dot,subtype=2,vary -order=spect \
 	-split=column=x,width=[expr $frequencyMap(xMaximum)/100.0] -end \
 	-column=nux,nuy $rootname.resdiag \
 	-column=nux,nuy $rootname.fma -graph=dot,subtype=2,vary -order=spect \
-	-split=column=y,width=[expr $frequencyMap(yMaximum)/100.0] "
+	-split=column=y,width=[expr $frequencyMap(yMaximum)/100.0]
+
+    exec sddsplot -device=png,onwhite -thickness=2 -output=$rootname.png \
+	-filename \
+	-limit=xmin=$parameter(nux0),xmax=$parameter(nux1),ymin=$parameter(nuy0),ymax=$parameter(nuy1),auto \
+	-column=nux,nuy $rootname.resdiag \
+	-column=nux,nuy $rootname.fma -graph=dot,subtype=2,vary -order=spect \
+	-split=column=x,width=[expr $frequencyMap(xMaximum)/100.0] -end \
+	-column=nux,nuy $rootname.resdiag \
+	-column=nux,nuy $rootname.fma -graph=dot,subtype=2,vary -order=spect \
+	-split=column=y,width=[expr $frequencyMap(yMaximum)/100.0]
+    setStatus "PNG: $rootname.png"
 }
 
 set tabIndex -1
