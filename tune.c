@@ -269,15 +269,17 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
     }
 
     LastMsError = MsError;
-    MsError = sqr(beamline->tune[0]-tune->tunex)+sqr(beamline->tune[1]-tune->tuney);
-    if (MsError>LastMsError) {
-      /* reset to minimum gain */
-      fprintf(stdout, "Warning: tune correction diverging---gain reset to minimum\n");
-      fflush(stdout);
-      gain = tune->gain;
-      steps_since_gain_change = 0;
+    if (iter) {
+      MsError = sqr(beamline->tune[0]-tune->tunex)+sqr(beamline->tune[1]-tune->tuney);
+      if (MsError>LastMsError) {
+	/* reset to minimum gain */
+	fprintf(stdout, "Warning: tune correction diverging---gain reduced 10-fold\n");
+	fflush(stdout);
+	gain /= 10;
+	steps_since_gain_change = 0;
+      }
     }
-    
+
     if (( K1_param = confirm_parameter("K1", T_QUAD))<0)
       bomb("confirm_parameter doesn't return offset for K1 parameter of quadrupole!\n", NULL);
     
