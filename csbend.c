@@ -1258,9 +1258,9 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
         Qi[5] = DP;
         
         if (csbend->integration_order==4)
-          integrate_csbend_ord4(Qf, Qi, csbend->length/csbend->n_kicks, 0, 1, rho0, Po);
+          integrate_csbend_ord4(Qf, Qi, csbend->length/csbend->n_kicks, 1, 0, rho0, Po);
         else
-          integrate_csbend_ord2(Qf, Qi, csbend->length/csbend->n_kicks, 0, 1, rho0, Po);
+          integrate_csbend_ord2(Qf, Qi, csbend->length/csbend->n_kicks, 1, 0, rho0, Po);
         particleLost[i_part] = particle_lost;
       
         /* retrieve coordinates from arrays */
