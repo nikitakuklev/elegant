@@ -1525,6 +1525,8 @@ extern long simple_rf_cavity(double **part, long np, RFCA *rfca, double **accept
                              double zEnd);
 extern long modulated_rf_cavity(double **part, long np, MODRF *modrf, double P_central, double zEnd);
 extern void set_up_kicker(KICKER *kicker);
+void add_to_particle_energy(double *coord, double timeOfFlight, double Po, double dgamma);
+
 
 #define FID_MODE_LIGHT   0x001UL
 #define FID_MODE_TMEAN   0x002UL
