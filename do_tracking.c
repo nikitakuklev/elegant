@@ -1257,7 +1257,7 @@ void store_fitpoint_matrix_values(MARK *fpt, char *name, long occurence, VMATRIX
   long i, j, k, count;
 
   if (!M) 
-    bomb("NULL matrix passed to store_fitpoint_matrix_values", NULL);
+    return;
   if (!M->R)
     bomb("NULL R matrix passed to store_fitpoint_matrix_values", NULL);
 
