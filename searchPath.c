@@ -1,6 +1,7 @@
 /* Copyright Argonne National Lab and Michael Borland, 2001 */
 
 #include "track.h"
+#include "mdb.h"
 
 static char *search_path = NULL;
 long setSearchPath(char *input)

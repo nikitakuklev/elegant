@@ -792,31 +792,38 @@ void assert_perturbations(char **elem_name, long *param_number, long *type, long
 
 long compute_changed_matrices(LINE_LIST *beamline, RUN *run)
 {
-    ELEMENT_LIST *eptr;
-    long n_changed;
+  ELEMENT_LIST *eptr;
+  long n_changed;
+  double Pref_input;
+  
+  log_entry("compute_changed_matrices");
 
-    log_entry("compute_changed_matrices");
-
-    n_changed = 0;
-    eptr = &(beamline->elem);
-    while (eptr) {
-        if (eptr->flags&VMATRIX_IS_VARIED || eptr->flags&VMATRIX_IS_PERTURBED || 
-                (entity_description[eptr->type].flags&HAS_MATRIX && eptr->matrix==NULL)) {
-            if (eptr->matrix) {
-                free_matrices(eptr->matrix);
-                tfree(eptr->matrix);
-                eptr->matrix = NULL;
-                }
-            compute_matrix(eptr, run, NULL);
-            n_changed++;
-            eptr->flags &= ~VMATRIX_IS_PERTURBED;
-            eptr->flags &= ~VMATRIX_IS_VARIED;
-            }
-        eptr = eptr->succ;
-        }
-    log_exit("compute_changed_matrices");
-    return(n_changed);
-    }
+  n_changed = 0;
+  eptr = &(beamline->elem);
+  while (eptr) {
+    if (eptr->pred)
+      Pref_input = eptr->pred->Pref_output;
+    else
+      Pref_input = run->p_central;
+    if (eptr->flags&VMATRIX_IS_VARIED || eptr->flags&VMATRIX_IS_PERTURBED || 
+        (entity_description[eptr->type].flags&HAS_MATRIX && eptr->matrix==NULL) ||
+        (Pref_input!=eptr->Pref_input && entity_description[eptr->type].flags&MAT_CHW_ENERGY)) {
+      if (eptr->matrix) {
+        free_matrices(eptr->matrix);
+        tfree(eptr->matrix);
+        eptr->matrix = NULL;
+      }
+      compute_matrix(eptr, run, NULL);
+      n_changed++;
+      eptr->flags &= ~VMATRIX_IS_PERTURBED;
+      eptr->flags &= ~VMATRIX_IS_VARIED;
+    } else if (Pref_input!=eptr->Pref_input)
+        eptr->Pref_input = eptr->Pref_output = Pref_input;
+    eptr = eptr->succ;
+  }
+  log_exit("compute_changed_matrices");
+  return(n_changed);
+}
 
 void check_VARY_structure(VARY *vary, char *caller)
 {

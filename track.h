@@ -616,14 +616,15 @@ typedef struct {
 #define DEFAULT_N_KICKS 4
 
 /* bit definitions for flags word in ELEMENT_DESCRIPTION */
-#define HAS_MATRIX      0x00000001UL
-#define HAS_LENGTH      0x00000002UL
-#define DONT_CONCAT     0x00000004UL
-#define OFFSETS_CHECKED 0x00000008UL
-#define IS_MAGNET       0x00000010UL
-#define MATRIX_TRACKING 0x00000020UL
-#define HAS_RF_MATRIX   0x00000040UL
-#define MAY_CHANGE_ENERGY  0x00000080UL
+#define HAS_MATRIX        0x00000001UL
+#define HAS_LENGTH        0x00000002UL
+#define DONT_CONCAT       0x00000004UL
+#define OFFSETS_CHECKED   0x00000008UL
+#define IS_MAGNET         0x00000010UL
+#define MATRIX_TRACKING   0x00000020UL
+#define HAS_RF_MATRIX     0x00000040UL
+#define MAY_CHANGE_ENERGY 0x00000080UL
+#define MAT_CHW_ENERGY    0x00000100UL
 typedef struct {
     long n_params;
     unsigned long flags;
@@ -1739,7 +1740,7 @@ extern void finish_awe_beam(OUTPUT_FILES *output, RUN *run, VARY *control, ERROR
 */
 
 /*prototypes for sdds_beam.c */
-extern void adjust_arrival_time_data(double **coord, long np, double Po);
+void adjust_arrival_time_data(double **coord, long np, double Po, long center_t, long flip_t);
  
 /* prototypes for bend_matrix6.c: */
 extern VMATRIX *bend_matrix(double length, double angle, double ea1, double ea2,             
