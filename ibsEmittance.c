@@ -9,6 +9,9 @@
 
 /* 
  * $Log: not supported by cvs2svn $
+ * Revision 1.19  2004/10/08 07:17:29  borland
+ * Added rf voltage to the output file.
+ *
  * Revision 1.18  2003/05/07 03:11:14  emery
  * For growthRateOnly option, omit from the outputfile
  * the emittance, energy spread and bunch length, which are not changed.
@@ -170,7 +173,7 @@ int main( int argc, char **argv)
   double yReturn, *xGuess, *dxGuess, *xLowerLimit, *xUpperLimit;
   short *disable;
   long dimensions = 14, maxEvaluations = 500, maxPasses = 2;
-  double target = 1e-4, tolerance = 1e-6;
+  double target = 1e-6, tolerance = 1e-8;
   long integrationTurns, integrationStepSize, integrationPoints = 0;
   double *exInteg=NULL, *eyInteg=NULL, *elInteg=NULL, *xRateInteg=NULL, *yRateInteg=NULL, *zRateInteg=NULL;
   double *SdeltaInteg=NULL, *SzInteg=NULL;
@@ -567,7 +570,7 @@ int main( int argc, char **argv)
         fprintf( stdout, "Doing simplex minimization...\n");
       }
       simplexMin( &yReturn, xGuess, dxGuess, xLowerLimit, xUpperLimit, disable, dimensions,
-                 target, tolerance, IBSequations, verbosity?IBSsimplexReport:NULL, 
+                 target, target/100.0, IBSequations, verbosity?IBSsimplexReport:NULL, 
                  maxEvaluations, maxPasses, 12, 3.0, 1.0, 0);
       /* final answers */
       emitx = xGuess[0];
