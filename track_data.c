@@ -128,6 +128,7 @@ and phase modulation.",
     "Request for histograms of particle coordinates to be output to SDDS file.",
     "Like CSBEND, but incorporates a simulation of Coherent Synchrotron radiation.",
     "A follow-on element for CSRCSBEND that applies the CSR wake over a drift.",
+    "A combination of RFCA, WAKE, and TRWAKE.",
     } ;
 
 QUAD quad_example;

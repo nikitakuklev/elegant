@@ -13,6 +13,7 @@
     
 #namelist link_elements static
     STRING target = NULL;
+    STRING exclude = NULL;
     STRING item = NULL;
     STRING source = NULL;
     STRING source_position = "before";

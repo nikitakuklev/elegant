@@ -1592,19 +1592,21 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
             fprintf(stdout, "orbit diverging on iteration %ld: RMS=%e m (was %e m)--redoing with correction fraction of %e\n", 
                 iteration, rms_pos, best_rms_pos, corr_fraction = sqr(corr_fraction));
             fflush(stdout);
-            /* step through beamline and change correctors back to last values */
-            for (i_corr=0; i_corr<CM->ncor; i_corr++) {
+            if (iteration>=1) {
+              /* step through beamline and change correctors back to last values */
+              for (i_corr=0; i_corr<CM->ncor; i_corr++) {
                 corr = CM->ucorr[i_corr];
                 sl_index = CM->sl_index[i_corr];
                 kick_offset = SL->param_offset[sl_index];
                 *((double*)(corr->p_elem+kick_offset)) = CM->kick[iteration-1][i_corr]/CM->kick_coef[i_corr];
                 if (corr->matrix) {
-                    free_matrices(corr->matrix);
-                    tfree(corr->matrix);
-                    corr->matrix = NULL;
-                    }
-                compute_matrix(corr, run, NULL);
+                  free_matrices(corr->matrix);
+                  tfree(corr->matrix);
+                  corr->matrix = NULL;
                 }
+                compute_matrix(corr, run, NULL);
+              }
+            }
             if (beamline->links)
                 assert_element_links(beamline->links, run, beamline, DYNAMIC_LINK);
 
@@ -1612,7 +1614,7 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
             free_matrices(beamline->matrix);
             tfree(beamline->matrix);
             beamline->matrix = NULL;
-            iteration -= 2;
+            iteration -= 1;
             rms_pos = last_rms_pos;
             continue;
             }

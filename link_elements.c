@@ -72,6 +72,8 @@ void element_link_control(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, RUN *run_
 void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *beamline)
 {
     long n_links, src_position_code, n_targets, n_sources, mode_code;
+    long targets, iTarget;
+    char **targetList;
     ELEMENT_LIST *t_context, *s_context, **eptr, *eptr1;
     double dz_min, dz;
 #if DEBUG
@@ -81,13 +83,14 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
     log_entry("add_element_links");
 
     /* set namelist variables to defaults */
-    target = item = source = equation = NULL;
+    target = item = source = equation = exclude = NULL;
     cp_str(&source_position, "nearest");
     cp_str(&mode, "dynamic");
 
     /* process namelist text */
     process_namelist(&link_elements, nltext);
     if (target)          str_toupper(target);
+    if (exclude)         str_toupper(exclude);
     if (item)            str_toupper(item);
     if (source)          str_toupper(source);
     if (source_position) str_tolower(source_position);
@@ -109,212 +112,247 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
         bomb("link mode not known", NULL);
 
     t_context = s_context = NULL;
-    n_links = links->n_links;
 
-    if (!(t_context=find_element(target, &t_context, &(beamline->elem)))) {
-        fprintf(stdout, "error: cannot make link with target element %s--not in beamline\n", target);
-        fflush(stdout);
-        exit(1);
-        }
+    if (has_wildcards(target) && strchr(target, '-'))
+      target = expand_ranges(target);
+    if (exclude && strlen(exclude) && has_wildcards(exclude) && strchr(exclude, '-'))
+      exclude = expand_ranges(exclude);
+    
+    if (!(t_context=wfind_element(target, &t_context, &(beamline->elem)))) {
+      fprintf(stdout, "error: cannot make link with target element %s--not in beamline\n", target);
+      fflush(stdout);
+      exit(1);
+    }
     if (!(s_context=find_element(source, &s_context, &(beamline->elem)))) {
-        fprintf(stdout, "error: cannot make link with source element %s--not in beamline\n", source);
-        fflush(stdout);
-        exit(1);
-        }
+      fprintf(stdout, "error: cannot make link with source element %s--not in beamline\n", source);
+      fflush(stdout);
+      exit(1);
+    }
 
-    /* expand the arrays */
-    links->target_name     = trealloc(links->target_name, sizeof(*links->target_name)*(n_links+1));
-    links->target_elem     = trealloc(links->target_elem, sizeof(*links->target_elem)*(n_links+1));
-    links->item            = trealloc(links->item, sizeof(*links->item)*(n_links+1));
-    links->target_param    = trealloc(links->target_param, sizeof(*links->target_param)*(n_links+1));
-    links->source_name     = trealloc(links->source_name, sizeof(*links->source_name)*(n_links+1));
-    links->source_position = trealloc(links->source_position, sizeof(*links->source_position)*(n_links+1));
-    links->flags           = trealloc(links->flags, sizeof(*links->flags)*(n_links+1));
-    links->source_elem     = trealloc(links->source_elem, sizeof(*links->source_elem)*(n_links+1));
-    links->equation        = trealloc(links->equation, sizeof(*links->equation)*(n_links+1));
-    links->n_targets       = trealloc(links->n_targets, sizeof(*links->n_targets)*(n_links+1));
-    links->initial_value   = trealloc(links->initial_value, sizeof(*links->initial_value)*(n_links+1));
+    targets = 0;
+    targetList = NULL;
+    /* make a list of all the unique element names that match this (possibly wildcard) target */
+    do {
+      long duplic;
+      if (!exclude || !strlen(exclude) || !wild_match(t_context->name, exclude)) {
+        targetList = SDDS_Realloc(targetList, sizeof(*targetList)*(targets+1));
+        binaryInsert((void**)targetList, targets, t_context->name, strcmp, &duplic);
+        if (!duplic)
+          targets++;
+      }
+    } while (t_context=wfind_element(target, &t_context, &(beamline->elem)));
+    if (!targets)
+      bomb("cannot make link--no targets found\n", NULL);
+      
+    for (iTarget=0; iTarget<targets; iTarget++) {
+      n_links = links->n_links;
+      target = targetList[iTarget];
+      t_context = NULL;
+      t_context = find_element(target, &t_context, &(beamline->elem));
 
-    /* copy the basic data */
-    cp_str(links->target_name+n_links, target);
-    cp_str(links->item+n_links, item);
-    cp_str(links->source_name+n_links, source);
-    cp_str(links->equation+n_links, equation);
-    links->source_position[n_links] = src_position_code;
-    links->flags[n_links] = link_mode_flag[mode_code];
+      /* expand the arrays */
+      links->target_name     = trealloc(links->target_name, sizeof(*links->target_name)*(n_links+1));
+      links->target_elem     = trealloc(links->target_elem, sizeof(*links->target_elem)*(n_links+1));
+      links->item            = trealloc(links->item, sizeof(*links->item)*(n_links+1));
+      links->target_param    = trealloc(links->target_param, sizeof(*links->target_param)*(n_links+1));
+      links->source_name     = trealloc(links->source_name, sizeof(*links->source_name)*(n_links+1));
+      links->source_position = trealloc(links->source_position, sizeof(*links->source_position)*(n_links+1));
+      links->flags           = trealloc(links->flags, sizeof(*links->flags)*(n_links+1));
+      links->source_elem     = trealloc(links->source_elem, sizeof(*links->source_elem)*(n_links+1));
+      links->equation        = trealloc(links->equation, sizeof(*links->equation)*(n_links+1));
+      links->n_targets       = trealloc(links->n_targets, sizeof(*links->n_targets)*(n_links+1));
+      links->initial_value   = trealloc(links->initial_value, sizeof(*links->initial_value)*(n_links+1));
 
-    /* make the list of pointers to targets */
-    eptr = tmalloc(sizeof(*eptr));
-    eptr[0] = t_context;
-    if ((links->target_param[n_links] = confirm_parameter(item, t_context->type))<0) {
+      /* copy the basic data */
+      cp_str(links->target_name+n_links, target);
+      cp_str(links->item+n_links, item);
+      cp_str(links->source_name+n_links, source);
+      cp_str(links->equation+n_links, equation);
+      links->source_position[n_links] = src_position_code;
+      links->flags[n_links] = link_mode_flag[mode_code];
+
+      /* make the list of pointers to targets */
+      eptr = tmalloc(sizeof(*eptr));
+      eptr[0] = t_context;
+      if ((links->target_param[n_links] = confirm_parameter(item, t_context->type))<0) {
         fprintf(stdout, "error: element %s does not have a parameter %s\n", target, item);
         fflush(stdout);
         exit(1);
-        }
-    n_targets = 1;
-    while ((t_context=find_element(target, &t_context, &(beamline->elem)))) {
+      }
+      n_targets = 1;
+      while ((t_context=find_element(target, &t_context, &(beamline->elem)))) {
         eptr = trealloc(eptr, sizeof(*eptr)*(n_targets+1));
         eptr[n_targets] = t_context;
         n_targets++;
-        }
-    links->n_targets[n_links] = n_targets;
-    links->target_elem[n_links] = eptr;
-    t_context = links->target_elem[n_links][0];
-    switch (entity_description[eptr[0]->type].parameter[links->target_param[n_links]].type) {
+      }
+      links->n_targets[n_links] = n_targets;
+      links->target_elem[n_links] = eptr;
+      t_context = links->target_elem[n_links][0];
+      switch (entity_description[eptr[0]->type].parameter[links->target_param[n_links]].type) {
       case IS_DOUBLE:
         links->initial_value[n_links] = 
-            *((double*)(eptr[0]->p_elem+entity_description[eptr[0]->type].parameter[links->target_param[n_links]].offset));
+          *((double*)(eptr[0]->p_elem+entity_description[eptr[0]->type].parameter[links->target_param[n_links]].offset));
         break;
       case IS_LONG:
         links->initial_value[n_links] = 
-            *((long*)(eptr[0]->p_elem+entity_description[eptr[0]->type].parameter[links->target_param[n_links]].offset));
+          *((long*)(eptr[0]->p_elem+entity_description[eptr[0]->type].parameter[links->target_param[n_links]].offset));
         break;
       default:
         bomb("invalid type of item for target of link", NULL);
         break;
-        }
-    
+      }
+      
 
-    /* make the list of pointers to sources */
-    eptr = tmalloc(sizeof(*eptr)*(n_targets));
-    if (src_position_code==SRC_POSITION_SAME_OCCURENCE) {
+      /* make the list of pointers to sources */
+      if (iTarget) {
+        s_context = NULL;
+        if (!(s_context=find_element(source, &s_context, &(beamline->elem)))) {
+          fprintf(stdout, "error: cannot make link with source element %s--not in beamline\n", source);
+          fflush(stdout);
+          exit(1);
+        }
+      }
+      eptr = tmalloc(sizeof(*eptr)*(n_targets));
+      if (src_position_code==SRC_POSITION_SAME_OCCURENCE) {
         n_sources = 0;
         while (n_sources<n_targets) {
-            eptr1 = NULL;
-            s_context = NULL;
-            while (find_element(source, &s_context, &(beamline->elem))) {
-                if (s_context->occurence==links->target_elem[n_links][n_sources]->occurence) {
-                    eptr1 = s_context;
-                    break;
-                    }
-                }
-            if (!eptr1) {
-                fprintf(stdout, "error: no %s element is found with the same occurence number as the %ld-th %s element--can't link as requested\n",
-                    source, n_sources, target);
-                fflush(stdout);
-                exit(1);
-                }
-            eptr[n_sources++] = eptr1;
+          eptr1 = NULL;
+          s_context = NULL;
+          while (find_element(source, &s_context, &(beamline->elem))) {
+            if (s_context->occurence==links->target_elem[n_links][n_sources]->occurence) {
+              eptr1 = s_context;
+              break;
             }
-        }
-    else if (src_position_code==SRC_POSITION_NEAREST) {
-        n_sources = 0;
-        while (n_sources<n_targets) {
-            dz_min = DBL_MAX;
-            eptr1 = NULL;
-            s_context = NULL;
-            while (find_element(source, &s_context, &(beamline->elem))) {
-                if ((dz = fabs(s_context->end_pos-links->target_elem[n_links][n_sources]->end_pos))<dz_min) {
-                    eptr1 = s_context;
-                    dz_min = dz;
-                    }
-                }
-            if (!eptr1) {
-                fprintf(stdout, "error: no %s element is found near the %ld-th %s element--can't link as requested\n",
+          }
+          if (!eptr1) {
+            fprintf(stdout, "error: no %s element is found with the same occurence number as the %ld-th %s element--can't link as requested\n",
                     source, n_sources, target);
-                fflush(stdout);
-                exit(1);
-                }
-            eptr[n_sources++] = eptr1;
-            }
-        }
-    else if (src_position_code==SRC_POSITION_ADJACENT) {
-        n_sources = 0;
-        while (n_sources<n_targets) {
-            eptr1 = NULL;
-            if ((eptr1=links->target_elem[n_links][n_sources]->pred)) {
-                if (strcmp(eptr1->name, source)!=0)
-                    eptr1 = NULL;
-                }
-            if (!eptr1 && (eptr1=links->target_elem[n_links][n_sources]->succ)) {
-                if (strcmp(eptr1->name, source)!=0)
-                    eptr1 = NULL;
-                }
-            if (!eptr1) {
-                fprintf(stdout, "error: no %s element is found adjacent to the %ld-th %s element--can't link as requested\n",
-                    source, n_sources, target);
-                fflush(stdout);
-                exit(1);
-                }
-            eptr[n_sources++] = eptr1;
-            }
-        }
-    else if (src_position_code==SRC_POSITION_BEFORE) {
-        if (links->target_elem[n_links][0]->end_pos<s_context->end_pos) {
-            fprintf(stdout, "error: there is no %s element before the first %s element--can't link as requested\n",
-                source, target);
             fflush(stdout);
             exit(1);
-            }
-        eptr[0] = s_context;
-        n_sources = 1;
-        while (n_sources<n_targets) {
-            eptr1 = NULL;
-            do {
-                if (s_context->end_pos<links->target_elem[n_links][n_sources]->end_pos)
-                    eptr1 = s_context;
-                else if (s_context->end_pos==links->target_elem[n_links][n_sources]->end_pos) {
-                    eptr1 = s_context;
-                    break;
-                    }
-                else
-                    break;
-                } while (find_element(source, &s_context, &(beamline->elem)));
-            if (!eptr1) {
-                fprintf(stdout, "error: no %s element is found before the %ld-th %s element--can't link as requested\n",
-                    source, n_sources, target);
-                fflush(stdout);
-                exit(1);
-                }
-            eptr[n_sources++] = eptr1;
-            s_context = eptr[n_sources-1];
-            }
+          }
+          eptr[n_sources++] = eptr1;
         }
-    else if (src_position_code==SRC_POSITION_AFTER) {
+      }
+      else if (src_position_code==SRC_POSITION_NEAREST) {
+        n_sources = 0;
+        while (n_sources<n_targets) {
+          dz_min = DBL_MAX;
+          eptr1 = NULL;
+          s_context = NULL;
+          while (find_element(source, &s_context, &(beamline->elem))) {
+            if ((dz = fabs(s_context->end_pos-links->target_elem[n_links][n_sources]->end_pos))<dz_min) {
+              eptr1 = s_context;
+              dz_min = dz;
+            }
+          }
+          if (!eptr1) {
+            fprintf(stdout, "error: no %s element is found near the %ld-th %s element--can't link as requested\n",
+                    source, n_sources, target);
+            fflush(stdout);
+            exit(1);
+          }
+          eptr[n_sources++] = eptr1;
+        }
+      }
+      else if (src_position_code==SRC_POSITION_ADJACENT) {
+        n_sources = 0;
+        while (n_sources<n_targets) {
+          eptr1 = NULL;
+          if ((eptr1=links->target_elem[n_links][n_sources]->pred)) {
+            if (strcmp(eptr1->name, source)!=0)
+              eptr1 = NULL;
+          }
+          if (!eptr1 && (eptr1=links->target_elem[n_links][n_sources]->succ)) {
+            if (strcmp(eptr1->name, source)!=0)
+              eptr1 = NULL;
+          }
+          if (!eptr1) {
+            fprintf(stdout, "error: no %s element is found adjacent to the %ld-th %s element--can't link as requested\n",
+                    source, n_sources, target);
+            fflush(stdout);
+            exit(1);
+          }
+          eptr[n_sources++] = eptr1;
+        }
+      }
+      else if (src_position_code==SRC_POSITION_BEFORE) {
+        if (links->target_elem[n_links][0]->end_pos<s_context->end_pos) {
+          fprintf(stdout, "error: there is no %s element before the first %s element--can't link as requested\n",
+                  source, target);
+          fflush(stdout);
+          exit(1);
+        }
+        eptr[0] = s_context;
+        n_sources = 0;
+        while (n_sources<n_targets) {
+          eptr1 = NULL;
+          do {
+            if (s_context->end_pos<links->target_elem[n_links][n_sources]->end_pos)
+              eptr1 = s_context;
+            else if (s_context->end_pos==links->target_elem[n_links][n_sources]->end_pos) {
+              eptr1 = s_context;
+              break;
+            }
+            else
+              break;
+          } while (find_element(source, &s_context, &(beamline->elem)));
+          if (!eptr1) {
+            fprintf(stdout, "error: no %s element is found before the %ld-th %s element--can't link as requested\n",
+                    source, n_sources, target);
+            fflush(stdout);
+            exit(1);
+          }
+          eptr[n_sources++] = eptr1;
+          s_context = eptr[n_sources-1];
+        }
+      }
+      else if (src_position_code==SRC_POSITION_AFTER) {
         if (links->target_elem[n_links][0]->end_pos>=s_context->end_pos) {
-            /* search for first source element after first target element */
-            while (find_element(source, &s_context, &(beamline->elem))) {
-                if (links->target_elem[n_links][0]->end_pos<s_context->end_pos)
-                    break;
-                }
-            if (!s_context) {
-                fprintf(stdout, "error: no %s element after the first %s element--can't link as requested\n",
+          /* search for first source element after first target element */
+          while (find_element(source, &s_context, &(beamline->elem))) {
+            if (links->target_elem[n_links][0]->end_pos<s_context->end_pos)
+              break;
+          }
+          if (!s_context) {
+            fprintf(stdout, "error: no %s element after the first %s element--can't link as requested\n",
                     source, target);
-                fflush(stdout);
-                exit(1);
-                }
-            }
+            fflush(stdout);
+            exit(1);
+          }
+        }
         eptr[0] = s_context;
         n_sources = 1;
         while (n_sources<n_targets) {
-            s_context = links->target_elem[n_links][n_sources-1];
-            while (find_element(source, &s_context, &(beamline->elem))) {
-                if (s_context->end_pos>links->target_elem[n_links][n_sources]->end_pos)
-                    break;
-                }
-            if (!s_context) {
-                fprintf(stdout, "error: no %s element is found after the %ld-th %s element--can't link as requested\n",
+          s_context = links->target_elem[n_links][n_sources-1];
+          while (find_element(source, &s_context, &(beamline->elem))) {
+            if (s_context->end_pos>links->target_elem[n_links][n_sources]->end_pos)
+              break;
+          }
+          if (!s_context) {
+            fprintf(stdout, "error: no %s element is found after the %ld-th %s element--can't link as requested\n",
                     source, n_sources, target);
-                fflush(stdout);
-                exit(1);
-                }
-            eptr[n_sources++] = s_context;
-            }
+            fflush(stdout);
+            exit(1);
+          }
+          eptr[n_sources++] = s_context;
         }
+      }
 
-    links->source_elem[n_links] = eptr;
+      links->source_elem[n_links] = eptr;
 
 #if DEBUG
-    fprintf(stdout, "list of targets and sources:\n");
-    fflush(stdout);
-    for (i=0; i<n_targets; i++)
+      fprintf(stdout, "list of targets and sources:\n");
+      fflush(stdout);
+      for (i=0; i<n_targets; i++)
         fprintf(stdout, "%s at z=%em linked to %s at z=%em\n", 
                 links->target_elem[n_links][i]->name, links->target_elem[n_links][i]->end_pos,
                 links->source_elem[n_links][i]->name, links->source_elem[n_links][i]->end_pos);
-        fflush(stdout);
+      fflush(stdout);
 #endif
 
-    links->n_links += 1;
+      links->n_links += 1;
+    }
+    
     log_exit("add_element_links");
     }
 
