@@ -761,10 +761,15 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double s, long n, double rho0
 typedef struct {
   long bins, new;
   double dctBin, s0, ds0, zLast, z0;
+  double thetaRad;
   double S11, S12, S22;
   double *dGamma;
 } CSR_LAST_WAKE;
-CSR_LAST_WAKE csrWake = {0, 0, 0, 0, 0, 0, NULL};
+CSR_LAST_WAKE csrWake = {
+  0, 0, 
+  0.0, 0.0, 0.0, 0.0, 0.0,
+  0.0, 0.0, 0.0, 0.0,
+  NULL};
 
 long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, double p_error, 
                              double Po, double **accepted, double z_start, double z_end,
@@ -795,7 +800,8 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   double delta_xp;
   double macroParticleCharge, CSRConstant;
   long iBin, iBinBehind;
-
+  double wavelength, criticalWavelength;
+  
   if (!csbend)
     bomb("null CSBEND pointer (track_through_csbend)", NULL);
 
@@ -1297,7 +1303,18 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 
   /* prepare more data for CSRDRIFT */
   rms_emittance(part, 0, 1, i_top+1, &csrWake.S11, &csrWake.S12, &csrWake.S22);
-  
+
+  /* compute angular spread of radiation, using Wiedemann's formula */
+  /* wavelength ~ (sigma z)/2 */
+  wavelength = beam_width(0.6826, part, i_top+1, 4)/2;
+  criticalWavelength = 4.19/ipow(Po, 3)*rho_actual;
+  csrWake.thetaRad = 0.5463e-3/(Po*0.511e-3)/pow(criticalWavelength/wavelength, 1./3.);
+
+#ifdef DEBUG
+  fprintf(stdout, "wavelength = %le, critWL = %le, thetaRad = %le\n",
+          wavelength, criticalWavelength, csrWake.thetaRad);
+#endif
+
   return(i_top+1);
 }
 
@@ -1358,7 +1375,7 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
 {
   long iPart, iKick, iBin, binned;
   double *coord, t, p, beta, dz, ct0, factor, dz0, dzFirst;
-  double ctmin, ctmax, spreadFactor, thetaRad;
+  double ctmin, ctmax, spreadFactor;
   double zTravel;
   
   dz = (dz0=csrDrift->length/csrDrift->nKicks)/2;
@@ -1370,13 +1387,8 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
 
   ctmin = DBL_MAX;
   ctmax = -DBL_MAX;
-  if (csrDrift->spread)
-    /* compute angular spread of radiation due to spread, using my fit to Wiedemann's data
-     * log(thetaRad*gamma*0.511) = -0.51-0.47*log(lambdaCrit/lambda).
-     * For now lambda=lambdaCrit/10.
-     */
-    thetaRad = pow(10.0, (-0.51-0.47*log10(10.0)))/(Po*0.511);
 
+  
   zTravel = zStart-csrWake.z0;  /* total distance traveled by radiation to reach this point */
   for (iKick=0; iKick<csrDrift->nKicks; iKick++) {
     /* first drift is dz=dz0/2, others are dz0 */
@@ -1433,11 +1445,11 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
       factor *= (spreadFactor =
                  sqrt(csrWake.S11/(csrWake.S11 + 
                                    2*zTravel*csrWake.S12 + 
-                                   zTravel*zTravel*(sqr(thetaRad)+csrWake.S22))));
+                                   zTravel*zTravel*(sqr(csrWake.thetaRad)+csrWake.S22))));
 #ifdef DEBUG
       fprintf(stdout, "Spread factor is %le\n", spreadFactor);
       fprintf(stdout, "S11 = %le  S12 = %le  S22 = %le\nthetaRad = %le  z = %le\n",
-              csrWake.S11, csrWake.S12, csrWake.S22, thetaRad, zTravel);
+              csrWake.S11, csrWake.S12, csrWake.S22, csrWake.thetaRad, zTravel);
 #endif
     }
     
