@@ -88,14 +88,14 @@ VMATRIX *accumulate_matrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long ord
           free_matrices(member->accumMatrix);
         else 
           member->accumMatrix = tmalloc(sizeof(*(member->accumMatrix)));
-        copy_matrices(member->accumMatrix, M2);
+        copy_matrices(member->accumMatrix, M1);
       }
     } else if (!full_matrix_only) {
       if (member->accumMatrix)
         free_matrices(member->accumMatrix);
       else 
         member->accumMatrix = tmalloc(sizeof(*(member->accumMatrix)));
-      copy_matrices(member->accumMatrix, M2);
+      copy_matrices(member->accumMatrix, M1);
     }
     member = member->succ;
   }
