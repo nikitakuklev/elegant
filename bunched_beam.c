@@ -582,125 +582,144 @@ void finish_output(
     double finalCharge                   
     )
 {
-    log_entry("finish_output.1");
+  ELEMENT_LIST *eptr;
 
-    if (!output)
-        bomb("null OUTPUT_FILES pointer (finish_output)", NULL);
-    if (!run)
-        bomb("null RUN pointer (finish_output)", NULL);
-    if (!control)
-        bomb("null VARY pointer (finish_output)", NULL);
-    if (!errcon)
-        bomb("null ERROR pointer (finish_output)", NULL);
-    if (!beam)
-        bomb("null BEAM pointer (finish_output)", NULL);
+  log_entry("finish_output.1");
+  
+  if (!output)
+    bomb("null OUTPUT_FILES pointer (finish_output)", NULL);
+  if (!run)
+    bomb("null RUN pointer (finish_output)", NULL);
+  if (!control)
+    bomb("null VARY pointer (finish_output)", NULL);
+  if (!errcon)
+    bomb("null ERROR pointer (finish_output)", NULL);
+  if (!beam)
+    bomb("null BEAM pointer (finish_output)", NULL);
+  if (!beamline)
+    bomb("null BEAMLINE pointer (finish_output)", NULL);
 
-    if (run->centroid && run->combine_bunch_statistics) {
-        if (!output->centroid_initialized)
-            bomb("'centroid' file is uninitialized (finish_output)", NULL);
-        if (!output->sums_vs_z)
-            bomb("missing beam sums pointer (finish_output)", NULL);
-        dump_centroid(&output->SDDS_centroid, output->sums_vs_z, beamline, output->n_z_points, 0, beam->p0);
-        }
-    if (run->sigma && run->combine_bunch_statistics) {
-        if (!output->sigma_initialized)
-            bomb("'sigma' file is uninitialized (finish_output)", NULL);
-        if (!output->sums_vs_z)
-            bomb("missing beam sums pointer (finish_output)", NULL);
-        dump_sigma(&output->SDDS_sigma, output->sums_vs_z, beamline, output->n_z_points, 0, beam->p0);
-        }
-    if (run->final && run->combine_bunch_statistics) {
-        VMATRIX *M;
-        if (!output->final_initialized)
-            bomb("'final' file is uninitialized (track_beam)", NULL);
-        dump_final_properties
-            (&output->SDDS_final, output->sums_vs_z+output->n_z_points, 
-             control->varied_quan_value, control->varied_quan_name?*control->varied_quan_name:NULL, 
-             control->n_elements_to_vary, control->indexLimitProduct*control->n_steps,
-             errcon->error_value, errcon->quan_final_index, errcon->quan_final_duplicates,
-             errcon->n_items,
-             optim->varied_quan_value, optim->varied_quan_name?*optim->varied_quan_name:NULL,
-             optim->n_variables?optim->n_variables+2:0,
-             0, beam->particle, beam->n_to_track, beam->p0, M=full_matrix(&(beamline->elem), run, 1),
-             finalCharge);
-        free_matrices(M);
-        free(M);
-        }
-    log_exit("finish_output.1");
-
-    log_entry("finish_output.2");
-    if (run->output) {
-        if (!output->output_initialized)
-            bomb("'output' file is uninitialized (finish_output)", NULL);
-        if (!SDDS_Terminate(&output->SDDS_output)) {
-            SDDS_SetError("Problem terminating 'output' file (finish_output)");
-            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-            }
-        output->output_initialized = 0;
-        }
-    if (run->acceptance) {
-        if (!output->accept_initialized)
-            bomb("'acceptance' file is uninitialized (finish_output)", NULL);
-        if (!SDDS_Terminate(&output->SDDS_accept)) {
-            SDDS_SetError("Problem terminating 'acceptance' file (finish_output)");
-            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-            }
-        output->accept_initialized = 0;
-        }
-    if (run->centroid) {
-        if (!output->centroid_initialized)
-            bomb("'centroid' file is uninitialized (finish_output)", NULL);
-        if (!SDDS_Terminate(&output->SDDS_centroid)) {
-            SDDS_SetError("Problem terminating 'centroid' file (finish_output)");
-            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-            }
-        output->centroid_initialized = 0;
-        }
-    if (run->sigma) {
-        if (!output->sigma_initialized)
-            bomb("'sigma' file is uninitialized (finish_output)", NULL);
-        if (!SDDS_Terminate(&output->SDDS_sigma)) {
-            SDDS_SetError("Problem terminating 'sigma' file (finish_output)");
-            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-            }
-        output->sigma_initialized = 0;
-        }
-    if (run->final) {
-        if (!output->final_initialized)
-            bomb("'final' file is uninitialized (finish_output)", NULL);
-        if (!SDDS_Terminate(&output->SDDS_final)) {
-            SDDS_SetError("Problem terminating 'final' file (finish_output)");
-            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-            }
-        output->final_initialized = 0;
-        }
-    if (bunch) {
-        if (!SDDS_bunch_initialized)
-            bomb("'bunch' file is uninitialized (finish_output)", NULL);
-        if (!SDDS_Terminate(&SDDS_bunch)) {
-            SDDS_SetError("Problem terminating 'bunch' file (finish_output)");
-            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-            }
-        SDDS_bunch_initialized = 0;
-        }
-    if (run->losses) {
-        if (!output->losses_initialized)
-            bomb("'losses' file is uninitialized (finish_output)", NULL);
-        if (!SDDS_Terminate(&output->SDDS_losses)) {
-            SDDS_SetError("Problem terminating 'losses' file (finish_output)");
-            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-            }
-        output->losses_initialized = 0;
-        }
-    log_exit("finish_output.2");
-
-    log_entry("finish_output.3");
-    if (output->sums_vs_z) {
-        tfree(output->sums_vs_z);
-        output->sums_vs_z = NULL;
-        }
-    log_exit("finish_output.3");
+  eptr = &(beamline->elem);
+  while (eptr) {
+    if (eptr->type==T_WATCH) {
+      WATCH *watch;
+      watch = (WATCH*)eptr->p_elem;
+      if (watch->initialized && !SDDS_Terminate(&watch->SDDS_table)) {
+        char s[1024];
+        sprintf(s, "Warning: error terminating watch file %s\n", 
+                watch->filename);
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      }
     }
+    eptr = eptr->succ;
+  }
+  
+  if (run->centroid && run->combine_bunch_statistics) {
+    if (!output->centroid_initialized)
+      bomb("'centroid' file is uninitialized (finish_output)", NULL);
+    if (!output->sums_vs_z)
+      bomb("missing beam sums pointer (finish_output)", NULL);
+    dump_centroid(&output->SDDS_centroid, output->sums_vs_z, beamline, output->n_z_points, 0, beam->p0);
+  }
+  if (run->sigma && run->combine_bunch_statistics) {
+    if (!output->sigma_initialized)
+      bomb("'sigma' file is uninitialized (finish_output)", NULL);
+    if (!output->sums_vs_z)
+      bomb("missing beam sums pointer (finish_output)", NULL);
+    dump_sigma(&output->SDDS_sigma, output->sums_vs_z, beamline, output->n_z_points, 0, beam->p0);
+  }
+  if (run->final && run->combine_bunch_statistics) {
+    VMATRIX *M;
+    if (!output->final_initialized)
+      bomb("'final' file is uninitialized (track_beam)", NULL);
+    dump_final_properties
+      (&output->SDDS_final, output->sums_vs_z+output->n_z_points, 
+       control->varied_quan_value, control->varied_quan_name?*control->varied_quan_name:NULL, 
+       control->n_elements_to_vary, control->indexLimitProduct*control->n_steps,
+       errcon->error_value, errcon->quan_final_index, errcon->quan_final_duplicates,
+       errcon->n_items,
+       optim->varied_quan_value, optim->varied_quan_name?*optim->varied_quan_name:NULL,
+       optim->n_variables?optim->n_variables+2:0,
+       0, beam->particle, beam->n_to_track, beam->p0, M=full_matrix(&(beamline->elem), run, 1),
+       finalCharge);
+    free_matrices(M);
+    free(M);
+  }
+  log_exit("finish_output.1");
+
+  log_entry("finish_output.2");
+  if (run->output) {
+    if (!output->output_initialized)
+      bomb("'output' file is uninitialized (finish_output)", NULL);
+    if (!SDDS_Terminate(&output->SDDS_output)) {
+      SDDS_SetError("Problem terminating 'output' file (finish_output)");
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+    }
+    output->output_initialized = 0;
+  }
+  if (run->acceptance) {
+    if (!output->accept_initialized)
+      bomb("'acceptance' file is uninitialized (finish_output)", NULL);
+    if (!SDDS_Terminate(&output->SDDS_accept)) {
+      SDDS_SetError("Problem terminating 'acceptance' file (finish_output)");
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+    output->accept_initialized = 0;
+  }
+  if (run->centroid) {
+    if (!output->centroid_initialized)
+      bomb("'centroid' file is uninitialized (finish_output)", NULL);
+    if (!SDDS_Terminate(&output->SDDS_centroid)) {
+      SDDS_SetError("Problem terminating 'centroid' file (finish_output)");
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+    output->centroid_initialized = 0;
+  }
+  if (run->sigma) {
+    if (!output->sigma_initialized)
+      bomb("'sigma' file is uninitialized (finish_output)", NULL);
+    if (!SDDS_Terminate(&output->SDDS_sigma)) {
+      SDDS_SetError("Problem terminating 'sigma' file (finish_output)");
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+    output->sigma_initialized = 0;
+  }
+  if (run->final) {
+    if (!output->final_initialized)
+      bomb("'final' file is uninitialized (finish_output)", NULL);
+    if (!SDDS_Terminate(&output->SDDS_final)) {
+      SDDS_SetError("Problem terminating 'final' file (finish_output)");
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+    output->final_initialized = 0;
+  }
+  if (bunch) {
+    if (!SDDS_bunch_initialized)
+      bomb("'bunch' file is uninitialized (finish_output)", NULL);
+    if (!SDDS_Terminate(&SDDS_bunch)) {
+      SDDS_SetError("Problem terminating 'bunch' file (finish_output)");
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+    SDDS_bunch_initialized = 0;
+  }
+  if (run->losses) {
+    if (!output->losses_initialized)
+      bomb("'losses' file is uninitialized (finish_output)", NULL);
+    if (!SDDS_Terminate(&output->SDDS_losses)) {
+      SDDS_SetError("Problem terminating 'losses' file (finish_output)");
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+    output->losses_initialized = 0;
+  }
+  log_exit("finish_output.2");
+
+  log_entry("finish_output.3");
+  if (output->sums_vs_z) {
+    tfree(output->sums_vs_z);
+    output->sums_vs_z = NULL;
+  }
+  log_exit("finish_output.3");
+}
 
 void fill_transverse_structure(
     TRANSVERSE *trans, 
