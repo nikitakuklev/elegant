@@ -3,6 +3,9 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.5  2000/04/20 20:22:35  borland
+ * Added ability to do computations for slices.
+ *
  * Revision 1.4  2000/01/25 19:49:16  borland
  * Removed unnecessary array and inserted free statement for another.
  * Now uses average momentum rather than central momentum.
@@ -21,6 +24,9 @@
 #include "mdb.h"
 #include "track.h"
 #include "sasefel.h"
+#if defined(__BORLANDC__)
+#include <fdlibm.h>
+#endif
 
 long DefineSASEParameters(SASEFEL_OUTPUT *sasefelOutput, long slice);
 
