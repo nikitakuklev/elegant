@@ -889,8 +889,6 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     fflush(stdout);
     csrWarning = 1;
   }
-  if (csbend->csr==0)
-    macroParticleCharge = 0;
   
   if ((nBins=csbend->bins)<2)
     bomb("Less than 2 bins for CSR!", NULL);
@@ -1215,7 +1213,10 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     }
   }
 
-  CSRConstant = 2*macroParticleCharge*e_mks/pow(3*rho0*rho0, 1./3.)/(4*PI*epsilon_o*me_mks*sqr(c_mks));
+  if (csbend->csr)
+    CSRConstant = 2*macroParticleCharge*e_mks/pow(3*rho0*rho0, 1./3.)/(4*PI*epsilon_o*me_mks*sqr(c_mks));
+  else
+    CSRConstant = 0;
   /* Now do the body of the sector dipole */
   for (kick=phiBend=0; kick<csbend->n_kicks; kick++) {
     for (i_part=0; i_part<n_part; i_part++) {
@@ -2357,8 +2358,11 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
            * Saldin et al. and Stupakov, so my derivative has the opposite sign.
            * Note lack of ds factor here as I use the same one in my unnormalized derivative.
            */
-          if ((denom=phi+2*x)>0) {
-            term2 = ctHistDeriv[jBin]/denom;
+          if (phi>0) {
+            /* ^^^ If I test phi+2*x here, I get noisy, unphysical results very close
+             * to the dipole exit 
+             */
+            term2 = ctHistDeriv[jBin]/(phi+2*x);
             csrWake.dGamma[iBin] -= term2;
             if (first) {
               term1 = term2;
