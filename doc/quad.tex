@@ -9,13 +9,13 @@ the total length of fringe field from both ends combined is {\tt FFRINGE*L}.
 
 Depending on the value of {\tt FRINGE\_TYPE}, the fringe fields are
 modeled as contained within the length {\tt L} (``inset'' type) or
-extending symmetrically outside the length {\tt L} (``symmetric''
+extending symmetrically outside the length {\tt L} (``fixed-strength''
 type).
 
 For ``inset'' type fringe fields, the length of the ``hard core'' part of
-the quadrupole is {\tt L*(1-FFRINGE)}.  For ``symmetric'' type fringe fields,
+the quadrupole is {\tt L*(1-FFRINGE)}.  For ``fixed-strength'' type fringe fields,
 the length of the hard core is {\tt L*(1-FFRINGE/2)}.  In the latter case,
-the fringe gradient reaches 50% of the hard core value at the nominal boundaries
+the fringe gradient reaches 50\% of the hard core value at the nominal boundaries
 of the magnet. This means that the integrated strength of the magnet does not
 change as the {\tt FFRINGE} parameter is varied. This is not the case with
 ``inset'' type fringe fields.
