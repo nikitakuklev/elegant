@@ -3,6 +3,11 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.12  2000/05/15 19:52:21  borland
+ * Added CSRDRIFT reset routine (for multipass tracking with CSRDRIFTS upstream
+ * of CSR bends).
+ * Fixed computation of alpha's for whole beam in SASE FEL.
+ *
  * Revision 1.11  2000/05/13 04:06:04  borland
  * Fixed bugs in evaluation for whole beam.
  *
@@ -89,6 +94,10 @@ void setupSASEFELAtEnd(NAMELIST_TEXT *nltext, RUN *run, OUTPUT_FILES *output_dat
     if (sasefelOutput->rmsBunchLength) free(sasefelOutput->rmsBunchLength);
     if (sasefelOutput->Sdelta) free(sasefelOutput->Sdelta);
     if (sasefelOutput->emit) free(sasefelOutput->emit);
+    if (sasefelOutput->Cx) free(sasefelOutput->Cx);
+    if (sasefelOutput->Cy) free(sasefelOutput->Cy);
+    if (sasefelOutput->Cxp) free(sasefelOutput->Cxp);
+    if (sasefelOutput->Cyp) free(sasefelOutput->Cyp);
     if (sasefelOutput->lightWavelength) free(sasefelOutput->lightWavelength);
     if (sasefelOutput->saturationLength) free(sasefelOutput->saturationLength);
     if (sasefelOutput->gainLength) free(sasefelOutput->gainLength);
@@ -135,6 +144,10 @@ void setupSASEFELAtEnd(NAMELIST_TEXT *nltext, RUN *run, OUTPUT_FILES *output_dat
       !(sasefelOutput->rmsBunchLength = malloc(sizeof(*(sasefelOutput->rmsBunchLength))*(n_slices+2))) ||
       !(sasefelOutput->Sdelta = malloc(sizeof(*(sasefelOutput->Sdelta))*(n_slices+2))) ||
       !(sasefelOutput->emit = malloc(sizeof(*(sasefelOutput->emit))*(n_slices+2))) ||
+      !(sasefelOutput->Cx = malloc(sizeof(*(sasefelOutput->Cx))*(n_slices+2))) ||
+      !(sasefelOutput->Cy = malloc(sizeof(*(sasefelOutput->Cy))*(n_slices+2))) ||
+      !(sasefelOutput->Cxp = malloc(sizeof(*(sasefelOutput->Cxp))*(n_slices+2))) ||
+      !(sasefelOutput->Cyp = malloc(sizeof(*(sasefelOutput->Cyp))*(n_slices+2))) ||
       !(sasefelOutput->lightWavelength = malloc(sizeof(*(sasefelOutput->lightWavelength))*(n_slices+2))) ||
       !(sasefelOutput->saturationLength = malloc(sizeof(*(sasefelOutput->saturationLength))*(n_slices+2))) ||
       !(sasefelOutput->gainLength = malloc(sizeof(*(sasefelOutput->gainLength))*(n_slices+2))) ||
@@ -158,6 +171,10 @@ void setupSASEFELAtEnd(NAMELIST_TEXT *nltext, RUN *run, OUTPUT_FILES *output_dat
       !(sasefelOutput->rmsBunchLengthIndex = malloc(sizeof(*(sasefelOutput->rmsBunchLengthIndex))*(n_slices+2))) ||
       !(sasefelOutput->SdeltaIndex = malloc(sizeof(*(sasefelOutput->SdeltaIndex))*(n_slices+2))) ||
       !(sasefelOutput->emitIndex = malloc(sizeof(*(sasefelOutput->emitIndex))*(n_slices+2))) ||
+      !(sasefelOutput->CxIndex = malloc(sizeof(*(sasefelOutput->CxIndex))*(n_slices+2))) ||
+      !(sasefelOutput->CyIndex = malloc(sizeof(*(sasefelOutput->CyIndex))*(n_slices+2))) ||
+      !(sasefelOutput->CxpIndex = malloc(sizeof(*(sasefelOutput->CxpIndex))*(n_slices+2))) ||
+      !(sasefelOutput->CypIndex = malloc(sizeof(*(sasefelOutput->CypIndex))*(n_slices+2))) ||
       !(sasefelOutput->lightWavelengthIndex = malloc(sizeof(*(sasefelOutput->lightWavelengthIndex))*(n_slices+2))) ||
       !(sasefelOutput->saturationLengthIndex = malloc(sizeof(*(sasefelOutput->saturationLengthIndex))*(n_slices+2))) ||
       !(sasefelOutput->gainLengthIndex = malloc(sizeof(*(sasefelOutput->gainLengthIndex))*(n_slices+2))) ||
@@ -225,6 +242,24 @@ long DefineSASEParameters(SASEFEL_OUTPUT *sasefelOutput, long slice)
 
   sprintf(buffer, "betaBeam%s", sliceNumString);
   if ((sasefelOutput->betaToUseIndex[slice] = 
+       SDDS_DefineParameter(SDDSout, buffer, NULL, "m", NULL, NULL, SDDS_DOUBLE, NULL))<0)
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+
+
+  sprintf(buffer, "Cx%s", sliceNumString);
+  if ((sasefelOutput->CxIndex[slice] = 
+       SDDS_DefineParameter(SDDSout, buffer, NULL, "m", NULL, NULL, SDDS_DOUBLE, NULL))<0)
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  sprintf(buffer, "Cy%s", sliceNumString);
+  if ((sasefelOutput->CyIndex[slice] = 
+       SDDS_DefineParameter(SDDSout, buffer, NULL, "m", NULL, NULL, SDDS_DOUBLE, NULL))<0)
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  sprintf(buffer, "Cxp%s", sliceNumString);
+  if ((sasefelOutput->CxpIndex[slice] = 
+       SDDS_DefineParameter(SDDSout, buffer, NULL, "m", NULL, NULL, SDDS_DOUBLE, NULL))<0)
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  sprintf(buffer, "Cyp%s", sliceNumString);
+  if ((sasefelOutput->CypIndex[slice] = 
        SDDS_DefineParameter(SDDSout, buffer, NULL, "m", NULL, NULL, SDDS_DOUBLE, NULL))<0)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 
@@ -349,6 +384,10 @@ void doSASEFELAtEndOutput(SASEFEL_OUTPUT *sasefelOutput, long step)
                             sasefelOutput->rmsBunchLengthIndex[slice], sasefelOutput->rmsBunchLength[slice], 
                             sasefelOutput->SdeltaIndex[slice], sasefelOutput->Sdelta[slice], 
                             sasefelOutput->emitIndex[slice], sasefelOutput->emit[slice], 
+                            sasefelOutput->CxIndex[slice], sasefelOutput->Cx[slice],
+                            sasefelOutput->CyIndex[slice], sasefelOutput->Cy[slice],
+                            sasefelOutput->CxpIndex[slice], sasefelOutput->Cxp[slice],
+                            sasefelOutput->CypIndex[slice], sasefelOutput->Cyp[slice],
                             sasefelOutput->lightWavelengthIndex[slice], sasefelOutput->lightWavelength[slice], 
                             sasefelOutput->saturationLengthIndex[slice], sasefelOutput->saturationLength[slice], 
                             sasefelOutput->gainLengthIndex[slice], sasefelOutput->gainLength[slice], 
@@ -386,6 +425,8 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
       sasefelOutput->betaxBeam[slice] = sasefelOutput->alphaxBeam[slice] = DBL_MAX;
       sasefelOutput->betayBeam[slice] = sasefelOutput->alphayBeam[slice] = DBL_MAX;
       sasefelOutput->enx[slice] = sasefelOutput->eny[slice] = DBL_MAX;
+      sasefelOutput->Cx[slice] = sasefelOutput->Cy[slice] = DBL_MAX;
+      sasefelOutput->Cxp[slice] = sasefelOutput->Cyp[slice] = DBL_MAX;
       sasefelOutput->pCentral[slice] = sasefelOutput->rmsBunchLength[slice] = DBL_MAX;
       sasefelOutput->Sdelta[slice] = sasefelOutput->emit[slice] = DBL_MAX;
       sasefelOutput->lightWavelength[slice] = sasefelOutput->saturationLength[slice] = DBL_MAX;
@@ -401,13 +442,20 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
   computeTimeCoordinates(time, Po, particle, particles);
 
   /* compute normal values (over entire beam) */
-  percentLevel[0] = 10;
-  percentLevel[1] = 90;
-  
   /* find center of energy distribution */
-  for (i=deltaAve=0; i<particles; i++)
-    deltaAve += particle[i][5];
-  deltaAve /= particles;
+  for (j=0; j<6; j++)
+    aveCoord[j] = 0;
+  for (i=0; i<particles; i++) {
+    for (j=0; j<6; j++)
+      aveCoord[j] += particle[i][j];
+  }
+  for (j=0; j<6; j++)
+    aveCoord[j] /= particles;
+  deltaAve = aveCoord[5];
+  sasefelOutput->Cx[0] = aveCoord[0];
+  sasefelOutput->Cxp[0] = aveCoord[1];
+  sasefelOutput->Cy[0] = aveCoord[2];
+  sasefelOutput->Cyp[0] = aveCoord[3];
   /* compute rms energy spread */
   for (i=deltaRMS=0; i<particles; i++)
     deltaRMS += sqr(particle[i][5]-deltaAve);
@@ -417,6 +465,8 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
    * a good estimate of peak current.  I use the 10% and 90% points of
    * the distribution to compute peak current, then get equivalent tRMS.
    */
+  percentLevel[0] = 10;
+  percentLevel[1] = 90;
   compute_percentiles(xLimit, percentLevel, 2, time, particles);
   sasefelOutput->rmsBunchLength[0] = tRMS 
     = (xLimit[1] - xLimit[0])/(0.8*sqrt(2*PI));
@@ -513,6 +563,10 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
         rmsCoord[j] = 0;
       }
       S12 = S34 = 0;
+      sasefelOutput->Cx[slice] = aveCoord[0];
+      sasefelOutput->Cxp[slice] = aveCoord[1];
+      sasefelOutput->Cy[slice] = aveCoord[2];
+      sasefelOutput->Cyp[slice] = aveCoord[3];
       
       /* compute rms energy spread and transverse moments */
       for (i=deltaRMS=0; i<particles; i++)

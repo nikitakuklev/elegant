@@ -346,8 +346,10 @@ typedef struct {
   /* simulation data */
   double *betaToUse, *charge, *pCentral, *rmsBunchLength, *Sdelta, *emit;
   double *betaxBeam, *alphaxBeam, *betayBeam, *alphayBeam, *enx, *eny;
+  double *Cx, *Cy, *Cxp, *Cyp;
   long *betaToUseIndex, *chargeIndex, *pCentralIndex, *rmsBunchLengthIndex, *SdeltaIndex, *emitIndex;
   long *betaxBeamIndex, *alphaxBeamIndex, *betayBeamIndex, *alphayBeamIndex, *enxIndex, *enyIndex;
+  long *CxIndex, *CyIndex, *CxpIndex, *CypIndex;
   /* computed FEL output */
   double *lightWavelength, *saturationLength, *gainLength, *noisePower;
   double *saturationPower, *PierceParameter, *etaDiffraction, *etaEmittance, *etaEnergySpread;
