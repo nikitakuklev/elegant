@@ -457,6 +457,7 @@ VMATRIX *compute_matrix(
     CSRCSBEND *csrcsbend;
     CSRDRIFT *csrdrift;
     LSCDRIFT *lscdrift;
+    LSRMDLTR *lsrMdltr;
     long bend_flags;
     double ks;
     
@@ -821,6 +822,10 @@ VMATRIX *compute_matrix(
       case T_LSCDRIFT:
         lscdrift = (LSCDRIFT*)elem->p_elem;
         elem->matrix = drift_matrix(lscdrift->length, run->default_order);
+        break;
+      case T_LSRMDLTR:
+        lsrMdltr = (LSRMDLTR*)elem->p_elem;
+        elem->matrix = drift_matrix(lsrMdltr->length, run->default_order);
         break;
       case T_TWISSELEMENT:
         elem->matrix = twissTransformMatrix((TWISSELEMENT*)elem->p_elem, NULL);

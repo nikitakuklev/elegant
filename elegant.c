@@ -1296,8 +1296,11 @@ void do_print_dictionary(char *filename, long latex_form)
     fprintf(fp, "\\newlength{\\descwidth}\n");
     fprintf(fp, "\\setlength{\\descwidth}{2in}\n");
   }
-  for (i=0; i<N_TYPES-1; i++)
+  for (i=0; i<N_TYPES-1; i++) {
+    if (entity_description[dictList[i].index].flags&NO_DICT_OUTPUT)
+      continue;
     print_dictionary_entry(fp, dictList[i].index, latex_form);
+  }
   free(dictList);
   fclose(fp);
 }

@@ -34,7 +34,8 @@ char *entity_name[N_TYPES] = {
     "CSRCSBEND", "CSRDRIFT", "RFCW", "REMCOR", "MAPSOLENOID",
     "REFLECT", "CLEAN", "TWISS", "WIGGLER", "SCRIPT", "FLOOR",
     "LTHINLENS", "LMIRROR", "EMATRIX", "FRFMODE", "FTRFMODE",
-    "TFBPICKUP", "TFBDRIVER", "LSCDRIFT", "DSCATTER",
+    "TFBPICKUP", "TFBDRIVER", "LSCDRIFT", "DSCATTER", "LSRMDLTR",
+    "TAYLORSERIES",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -154,7 +155,9 @@ and phase modulation.",
     "Pickup for a transverse feedback loop",
     "Driver for a transverse feedback loop",
     "Longitudinal space charge impedance",
-    "A scattering element to add random changes to particle coordinates according to a user-supplied distribution function"
+    "A scattering element to add random changes to particle coordinates according to a user-supplied distribution function",
+    "A simple laser/undulator beam modulator based on an algorithm by P. Emma.",
+    "Tracks through a Taylor series map specified by a file containing coefficients."
     } ;
 
 QUAD quad_example;
@@ -254,6 +257,17 @@ PARAMETER fmult_param[N_FMULT_PARAMS] = {
     {"N_KICKS", "", IS_LONG, 0, (long)((char *)&fmult_example.n_kicks), NULL, 0.0, 1, "number of kicks"},
     {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&fmult_example.synch_rad), NULL, 0.0, 0, "include classical synchrotron radiation?"},
     {"FILENAME", "", IS_STRING, 0, (long)((char *)&fmult_example.filename), NULL, 0.0, 0, "name of file containing multipole data"},
+    };
+
+TAYLORSERIES taylorSeries_example;
+/* taylor series physical parameters */
+PARAMETER taylorSeries_param[N_TAYLORSERIES_PARAMS] = {
+    {"L", "M", IS_DOUBLE, 0, (long)((char *)&taylorSeries_example.length), NULL, 0.0, 0, "length"},
+    {"TILT", "RAD", IS_DOUBLE, 0, (long)((char *)&taylorSeries_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
+    {"DX", "M", IS_DOUBLE, 0, (long)((char *)&taylorSeries_example.dx), NULL, 0.0, 0, "misalignment"},
+    {"DY", "M", IS_DOUBLE, 0, (long)((char *)&taylorSeries_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"DZ", "M", IS_DOUBLE, 0, (long)((char *)&taylorSeries_example.dz), NULL, 0.0, 0, "misalignment"},
+    {"FILENAME", "", IS_STRING, 0, (long)((char *)&taylorSeries_example.filename), NULL, 0.0, 0, "name of file containing talor series map data"},
     };
 
 SOLE sole_example;
@@ -1774,6 +1788,17 @@ PARAMETER lscdrift_param[N_LSCDRIFT_PARAMS] = {
     {"RADIUS_FACTOR", "", IS_DOUBLE, 0, (long)((char*)&lscdrift_example.radiusFactor), NULL, 1.7, 0, "LSC radius is (Sx+Sy)/2*RADIUS_FACTOR"},
 };
 
+LSRMDLTR lsrMdltr_example;
+
+PARAMETER lsrMdltr_param[N_LSRMDLTR_PARAMS] = {
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lsrMdltr_example.length), NULL, 0.0, 0, "length"},
+    {"PERIODS", "", IS_LONG, 0, (long)((char *)&lsrMdltr_example.undulatorPeriods), NULL, 0.0, 0, "undulator periods---an even number is required"},
+    {"LASER_WAVELENGTH", "M", IS_DOUBLE, 0, (long)((char *)&lsrMdltr_example.laserWavelength), NULL, 0.0, 0, "laser wavelength"},
+    {"LASER_PEAK_POWER", "W", IS_DOUBLE, 0, (long)((char *)&lsrMdltr_example.laserPeakPower), NULL, 0.0, 0, "laser peak power"},
+    {"LASER_W0", "M", IS_DOUBLE, 0, (long)((char *)&lsrMdltr_example.laserW0), NULL, 0.0, 0, "laser spot size at waist"},
+    {"LASER_PHASE", "RAD", IS_DOUBLE, 0, (long)((char *)&lsrMdltr_example.laserPhase), NULL, 0.0, 0, "laser phase"},
+};
+
 /* array of parameter structures */
 
 #define MAT_LEN     HAS_MATRIX|HAS_LENGTH
@@ -1882,6 +1907,8 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_TFBDRIVER_PARAMS,         0,     sizeof(TFBDRIVER),  tfbdriver_param    },
     { N_LSCDRIFT_PARAMS, MAT_LEN_NCAT,     sizeof(LSCDRIFT),  lscdrift_param    },
     { N_DSCATTER_PARAMS,          0,     sizeof(DSCATTER),    dscatter_param  },
+    { N_LSRMDLTR_PARAMS, MAT_LEN_NCAT|NO_DICT_OUTPUT,  sizeof(LSRMDLTR), lsrMdltr_param},
+    { N_TAYLORSERIES_PARAMS, MAT_LEN_NCAT|IS_MAGNET|NO_DICT_OUTPUT,    sizeof(TAYLORSERIES),  taylorSeries_param  },
 } ;
  
 

@@ -671,6 +671,10 @@ long do_tracking(
             n_left = fmultipole_tracking(coord, n_to_track, (FMULT*)eptr->p_elem, 0.0,
                                          *P_central, accepted, z);
             break;
+	  case T_TAYLORSERIES:
+	    n_left = taylorSeries_tracking(coord, n_to_track, (TAYLORSERIES*)eptr->p_elem, 0.0,
+                                         *P_central, accepted, z);
+	    break;
           case T_KICKER:
             if (flags&TIME_DEPENDENCE_OFF)
               drift_beam(coord, n_to_track, ((KICKER*)eptr->p_elem)->length, run->default_order);
@@ -864,6 +868,12 @@ long do_tracking(
             if (!(flags&TEST_PARTICLES))
               transverseFeedbackDriver((TFBDRIVER*)eptr->p_elem, coord, n_to_track, beamline, i_pass, n_passes, run->rootname);
             feedbackDriverSeen = 1;
+            break;
+          case T_LSRMDLTR:
+            if (!(flags&TEST_PARTICLES))
+              trackLaserModulator(coord, n_to_track, (LSRMDLTR*)eptr->p_elem, *P_central);
+            else
+              drift_beam(coord, n_to_track, ((LSRMDLTR*)eptr->p_elem)->length, run->default_order);
             break;
           default:
             fprintf(stdout, "programming error: no tracking statements for element %s (type %s)\n",

@@ -48,6 +48,14 @@ typedef struct {
   double *KnL, *JnL;       /* input for FMULT, computed for KQUAD, KSEXT, etc. */
 } MULTIPOLE_DATA ;
 
+/* structure used by taylor series map element */
+typedef struct {
+  long mapInitialized;
+  long terms;
+  long *Ix, *Iqx, *Iy, *Iqy, *Icdt, *Idelta;
+  double *Coefficient;
+} TAYLORSERIES_DATA ;
+
 /* structure for storing Twiss parameters */
 typedef struct {
   /* the order of the items in this structure should not be
@@ -566,7 +574,9 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_TFBDRIVER 88
 #define T_LSCDRIFT  89
 #define T_DSCATTER  90
-#define N_TYPES     91
+#define T_LSRMDLTR  91
+#define T_TAYLORSERIES 92
+#define N_TYPES     93
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -664,6 +674,8 @@ extern char *entity_text[N_TYPES];
 #define N_TFBDRIVER_PARAMS 20
 #define N_LSCDRIFT_PARAMS  9
 #define N_DSCATTER_PARAMS 13
+#define N_LSRMDLTR_PARAMS 6
+#define N_TAYLORSERIES_PARAMS 6
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -717,6 +729,9 @@ typedef struct {
 #define MAY_CHANGE_ENERGY 0x00000080UL
 #define MAT_CHW_ENERGY    0x00000100UL
 #define DIVIDE_OK         0x00000200UL
+/* set this flag to prevent dictionary output of experimental elements */
+#define NO_DICT_OUTPUT    0x00000400UL
+
 typedef struct {
     long n_params;
     unsigned long flags;
@@ -2012,6 +2027,26 @@ typedef struct {
   double highFrequencyCutoff0, highFrequencyCutoff1, radiusFactor;
 } LSCDRIFT;
 
+/* laser/undulator modulator */
+extern PARAMETER lsrMdltr_param[N_LSRMDLTR_PARAMS];
+typedef struct {
+  double length;
+  long undulatorPeriods;
+  double laserWavelength, laserPeakPower, laserW0, laserPhase;
+} LSRMDLTR;
+
+/* names and storage structure for Taylor-series map physical parameters */
+extern PARAMETER taylorSeries_param[N_TAYLORSERIES_PARAMS];
+
+typedef struct {
+  double length;
+  double tilt, dx, dy, dz;
+  char *filename;
+  /* for internal use */
+  long elementInitialized;
+  TAYLORSERIES_DATA coord[6];
+} TAYLORSERIES;
+
 /* macros for bending magnets */ 
 #define SAME_BEND_PRECEDES 1 
 #define SAME_BEND_FOLLOWS 2 
@@ -2440,6 +2475,10 @@ extern long motion(double **part, long n_part, void *field, long field_type, dou
 extern long multipole_tracking(double **particle, long n_part, MULT *multipole, double p_error, double Po, double **accepted, double z_start);
 extern long multipole_tracking2(double **particle, long n_part, ELEMENT_LIST *elem, double p_error, double Po, double **accepted, double z_start);
 extern long fmultipole_tracking(double **particle,  long n_part, FMULT *multipole,
+                                double p_error, double Po, double **accepted, double z_start);
+
+/* prototypes for taylorseries.c: */
+extern long taylorSeries_tracking(double **particle,  long n_part, TAYLORSERIES *taylorSeries,
                                 double p_error, double Po, double **accepted, double z_start);
 
 /* prototypes for output_magnets.c: */
