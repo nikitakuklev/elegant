@@ -32,7 +32,7 @@ SRC9 = ../orbtraj_output.c ../optimize.c ../output_magnets.c ../pepper_pot.c ../
 SRC10 = ../print_line.c ../quad_matrix.c ../ramp_momentum.c ../ramped_rfca.c ../response.c ../rfmode.c 
 SRC11 = ../run_rpnexpr.c ../sample.c ../sdds_beam.c ../sdds_support.c ../simple_rfca.c  ../subprocess.c
 SRC12 = ../tune.c ../tilt_matrices.c ../trace.c ../track_data.c ../track_ramp.c ../track_rf.c ../trfmode.c 
-SRC13 = ../twiss.c ../vary.c ../zlongit.c ../SReffects.c ../mod_rfca.c
+SRC13 = ../twiss.c ../vary.c ../zlongit.c ../SReffects.c ../mod_rfca.c ../fitTraces.c
 MYSRCS = $(SRC1) $(SRC2) $(SRC3) $(SRC4) $(SRC5) $(SRC6) $(SRC7) $(SRC8) $(SRC9) $(SRC10) $(SRC11) $(SRC12) $(SRC13)
 # sources are 1 directory up
 SRCS.c=$(MYSRCS:%=../%) 
@@ -49,7 +49,7 @@ OBJ9 = orbtraj_output.o optimize.o output_magnets.o pepper_pot.o phase_reference
 OBJ10 = print_line.o quad_matrix.o ramp_momentum.o ramped_rfca.o response.o rfmode.o 
 OBJ11 = run_rpnexpr.o sample.o sdds_beam.o sdds_support.o simple_rfca.o  subprocess.o
 OBJ12 = tune.o tilt_matrices.o trace.o track_data.o track_ramp.o track_rf.o trfmode.o 
-OBJ13 = twiss.o vary.o zlongit.o SReffects.o mod_rfca.o
+OBJ13 = twiss.o vary.o zlongit.o SReffects.o mod_rfca.o fitTraces.o
 OBJS =  $(OBJ1) $(OBJ2) $(OBJ3) $(OBJ4) $(OBJ5) $(OBJ6) $(OBJ7) $(OBJ8) $(OBJ9) $(OBJ10) $(OBJ11) $(OBJ12) $(OBJ13)
 
 PROD = elegant
@@ -58,7 +58,8 @@ include $(EPICS)/config/RULES.Unix
 
 pre_build: amplif.h analyze.h aperture_search.h awe_beam.h bunched_beam.h chrom.h closed_orbit.h correct.h \
 elegant.h error.h floor.h link_elements.h load_parameters.h matrix_output.h optim_covariable.h optimize.h \
-response.h run_rpnexpr.h save_lattice.h sdds_beam.h steer_elem.h subprocess.h trace.h tune.h twiss.h vary.h 
+response.h run_rpnexpr.h save_lattice.h sdds_beam.h steer_elem.h subprocess.h trace.h tune.h twiss.h vary.h \
+fitTraces.h
 
 amplif.h: ../amplif.nl
 	nlpp ../amplif.nl amplif.h
@@ -137,6 +138,9 @@ twiss.h: ../twiss.nl
 
 vary.h: ../vary.nl
 	nlpp ../vary.nl vary.h
+
+fitTraces.h: ../fitTraces.nl
+	nlpp ../fitTraces.nl fitTraces.h
 
 elegant: $(OBJS) $(DEPLIBS)
 	$(LINK.c) -o $@ $(OBJS) $(LDLIBS)
