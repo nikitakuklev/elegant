@@ -29,7 +29,11 @@ static double rho0, rho_actual, rad_coef, isrConstant;
 
 static long particle_lost;
 static double s_lost;
+
+#if !defined(PARALLEL)
+/* to avoid problems with HP parallel compiler */
 extern unsigned long multipoleKicksDone ;
+#endif
 
 long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_error, double Po, double **accepted,
                           double z_start)
@@ -251,7 +255,9 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   dyf = csbend->dy;
 
   i_top = n_part-1;
+#if !defined(PARALLEL)
   multipoleKicksDone += n_part*csbend->n_kicks*(csbend->integration_order==4?4:1);
+#endif
 
   for (i_part=0; i_part<=i_top; i_part++) {
     if (!part) {
@@ -1137,8 +1143,11 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   csrWake.bins = nBins;
   csrWake.ds0 = csbend->length/csbend->n_kicks;
   csrWake.zLast = csrWake.z0 = z_end;
-  
+
+#if !defined(PARALLEL)  
   multipoleKicksDone += n_part*csbend->n_kicks*(csbend->integration_order==4?4:1);
+#endif
+
   /* check particle data, transform coordinates, and handle edge effects */
   for (i_part=0; i_part<n_part; i_part++) {
     if (!part) {
