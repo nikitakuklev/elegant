@@ -11,10 +11,11 @@
     double y0 = 1e-6;
     double x1 = 3e-4;
     double y1 = 3e-4;
-    double nux_roi_width = 2e-3;
-    double nuy_roi_width = 2e-3;
     long grid_size = 6;
     long sparse_grid = 0;
+    long spread_only = 0;
+    double nux_roi_width = 0.02;
+    double nuy_roi_width = 0.02;
     double scale_down_factor = 2;
     double scale_up_factor = 1.05;
     double scale_down_limit = 0.01;
@@ -22,6 +23,7 @@
     long scaling_iterations = 10;
     long use_concatenation = 0;
     long verbose = 0;
+    long order = 2;
     STRING tune_output = NULL;
 #end
 

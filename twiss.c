@@ -37,6 +37,7 @@ void LoadStartingTwissFromFile(double *betax, double *betay, double *alphax, dou
                                double *etax, double *etay, double *etaxp, double *etayp,
                                char *filename, char *elementName, long elementOccurrence);
 void computeTuneShiftWithAmplitude(double dnuxdA[N_TSWA][N_TSWA], double dnuydA[N_TSWA][N_TSWA],
+				   double *nuxExtrema, double *nuyExtrema,
                                    TWISS *twiss, double *tune, VMATRIX *M, LINE_LIST *beamline,
 				   RUN *run, double *startingCoord);
 void computeTuneShiftWithAmplitudeM(double dnuxdA[N_TSWA][N_TSWA], double dnuydA[N_TSWA][N_TSWA],
@@ -610,8 +611,12 @@ static SDDS_DEFINITION column_definition[N_COLUMNS_WRI] = {
 #define IP_DNUYDAX2 41
 #define IP_DNUYDAY2 42
 #define IP_DNUYDAXAY 43
-#define IP_ALPHAC2 44
-#define IP_ALPHAC  45
+#define IP_NUXTSWAMIN 44
+#define IP_NUXTSWAMAX 45
+#define IP_NUYTSWAMIN 46
+#define IP_NUYTSWAMAX 47
+#define IP_ALPHAC2 48
+#define IP_ALPHAC  49
 /* IP_ALPHAC must be the last item before the radiation-integral-related
  * items!
  */
@@ -676,6 +681,10 @@ static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
 {"dnuy/dAx2", "&parameter name=dnuy/dAx2, type=double, description=\"Vertical tune shift with horizontal amplitude\", units=1/m$a2$n &end"},
 {"dnuy/dAy2", "&parameter name=dnuy/dAy2, type=double, description=\"Vertical tune shift with vertical amplitude\", units=1/m$a2$n &end"},
 {"dnuy/dAxAy", "&parameter name=dnuy/dAxAy, type=double, description=\"Vertical tune shift with horizontal and vertical amplitude\", units=1/m$a2$n &end"},
+{"nuxTswaMin", "&parameter name=nuxTswaMin, type=double, description=\"Minimum horizontal tune from tune-shift-with-amplitude calculations\", &end"},
+{"nuxTswaMax", "&parameter name=nuxTswaMax, type=double, description=\"Maximum horizontal tune from tune-shift-with-amplitude calculations\", &end"},
+{"nuyTswaMin", "&parameter name=nuyTswaMin, type=double, description=\"Minimum vertical tune from tune-shift-with-amplitude calculations\", &end"},
+{"nuyTswaMax", "&parameter name=nuyTswaMax, type=double, description=\"Maximum vertical tune from tune-shift-with-amplitude calculations\", &end"},
 {"alphac2", "&parameter name=alphac2, symbol=\"$ga$r$bc2$n\", type=double, description=\"2nd-order momentum compaction factor\" &end"},
 {"alphac", "&parameter name=alphac, symbol=\"$ga$r$bc$n\", type=double, description=\"Momentum compaction factor\" &end"},
 {"I1", "&parameter name=I1, type=double, description=\"Radiation integral 1\", units=m &end"} ,
@@ -769,6 +778,10 @@ void dump_twiss_parameters(
                           IP_DNUYDAX2, beamline->dnuy_dA[2][0],
                           IP_DNUYDAY2, beamline->dnuy_dA[0][2],
                           IP_DNUYDAXAY, beamline->dnuy_dA[1][1],
+			  IP_NUXTSWAMIN, beamline->nuxTswaExtrema[0],
+			  IP_NUXTSWAMAX, beamline->nuxTswaExtrema[1],
+			  IP_NUYTSWAMIN, beamline->nuyTswaExtrema[0],
+			  IP_NUYTSWAMAX, beamline->nuyTswaExtrema[1],
                           IP_ETAX2, beamline->eta2[0],
                           IP_ETAY2, beamline->eta2[2],
                           IP_ETAX3, beamline->eta3[0],
@@ -1321,6 +1334,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
       computeChromaticTuneLimits(beamline);
       if (doTuneShiftWithAmplitude)
         computeTuneShiftWithAmplitude(beamline->dnux_dA, beamline->dnuy_dA,
+				      beamline->nuxTswaExtrema, beamline->nuyTswaExtrema,
                                       beamline->twiss0, beamline->tune, M, beamline, run,
                                       starting_coord); 
       /*
@@ -1362,6 +1376,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
       computeChromaticTuneLimits(beamline);
       if (doTuneShiftWithAmplitude)
         computeTuneShiftWithAmplitude(beamline->dnux_dA, beamline->dnuy_dA,
+				      beamline->nuxTswaExtrema, beamline->nuyTswaExtrema,
                                       beamline->twiss0, beamline->tune, M, beamline, run,
                                       starting_coord); 
       /* 
@@ -1979,6 +1994,8 @@ void setupTuneShiftWithAmplitude(NAMELIST_TEXT *nltext, RUN *run)
 
   if (tune_shift_with_amplitude_struct.turns<100 && tune_shift_with_amplitude_struct.turns!=0)
     bomb("too few turns requested (tune_shift_with_amplitude)", NULL);
+  if (!tune_shift_with_amplitude_struct.turns && tune_shift_with_amplitude_struct.spread_only)
+    bomb("spread_only requires turns!=0", NULL);
   if (tune_shift_with_amplitude_struct.turns) {
     if (tune_shift_with_amplitude_struct.x0<=0 ||
         tune_shift_with_amplitude_struct.y0<=0)
@@ -2025,6 +2042,7 @@ double QElement(double ****Q, long i1, long i2, long i3, long i4)
 }
 
 void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_dA[N_TSWA][N_TSWA],
+				   double *xTuneExtrema, double *yTuneExtrema, 
                                    TWISS *twiss, double *tune, VMATRIX *M, LINE_LIST *beamline, 
                                    RUN *run, double *startingCoord)
 {
@@ -2034,16 +2052,19 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
   double Ax[TSWA_TRACKING_PTS], Ay[TSWA_TRACKING_PTS];
   double x0[TSWA_TRACKING_PTS], y0[TSWA_TRACKING_PTS];
   double xTune[TSWA_TRACKING_PTS][TSWA_TRACKING_PTS], yTune[TSWA_TRACKING_PTS][TSWA_TRACKING_PTS];
+  short lost[TSWA_TRACKING_PTS][TSWA_TRACKING_PTS];
   double tuneLowerLimit[2], tuneUpperLimit[2];
   double result, maxResult;
   double x, y;
-  long ix, iy, tries, lost=0, gridSize;
+  long ix, iy, tries, gridSize, nLost=0;
   double upperLimit[2], lowerLimit[2];
   MATRIX *AxAy, *Coef, *Nu, *AxAyTr, *Mf, *MfInv, *AxAyTrNu;
-  long i, j, m, n, ix1, iy1;
+  long i, j, m, n, ix1, iy1, nTSWA, order;
 
   if (tune_shift_with_amplitude_struct.turns==0) {
     /* use the matrix only without tracking */
+    xTuneExtrema[0] = xTuneExtrema[1] = 0;
+    yTuneExtrema[0] = yTuneExtrema[1] = 0;
     computeTuneShiftWithAmplitudeM(dnux_dA, dnuy_dA, twiss, tune, M);
     return;
   }
@@ -2066,17 +2087,18 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
   upperLimit[0] = upperLimit[1] = 1;
   lowerLimit[0] = lowerLimit[1] = 0;
   while (tries--) {
-    lost = 0;
     m = 0;  /* number of tune points */
     tuneLowerLimit[0] = tuneLowerLimit[1] = 0;
     tuneUpperLimit[0] = tuneUpperLimit[1] = 0;
-    for (ix=0; !lost && ix<gridSize; ix++) {
+    nLost = 0;
+    for (ix=0; ix<gridSize; ix++) {
       x0[ix] = 
 	x = sqrt(ix*
 		 sqr((tune_shift_with_amplitude_struct.x1-tune_shift_with_amplitude_struct.x0))/(gridSize-1)
 		 + sqr(tune_shift_with_amplitude_struct.x0));
       Ax[ix] = sqr(x)/twiss->betax;
       for (iy=0; iy<gridSize; iy++) {
+	lost[ix][iy] = 0;
         if (tune_shift_with_amplitude_struct.sparse_grid &&
             !(ix==0 || iy==0 || ix==iy)) 
           continue;
@@ -2086,104 +2108,161 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
 		   sqr((tune_shift_with_amplitude_struct.y1-tune_shift_with_amplitude_struct.y0))/(gridSize-1)
 		   + sqr(tune_shift_with_amplitude_struct.y0));
         Ay[iy] = sqr(y)/twiss->betay;
+	if (ix==0 && iy==0) {
+	  tuneLowerLimit[0] = tuneLowerLimit[1] = 0;
+	  tuneUpperLimit[0] = tuneUpperLimit[1] = 0;
+	} else {
+	  if ((ix1 = ix-1)<0)
+	    ix1 = 0;
+	  if ((iy1 = iy-1)<0)
+	    iy1 = 0;
+	  tuneLowerLimit[0] = xTune[ix1][iy1] - tune_shift_with_amplitude_struct.nux_roi_width/2;
+	  tuneUpperLimit[0] = xTune[ix1][iy1] + tune_shift_with_amplitude_struct.nux_roi_width/2;
+	  tuneLowerLimit[1] = yTune[ix1][iy1] - tune_shift_with_amplitude_struct.nux_roi_width/2;
+	  tuneUpperLimit[1] = yTune[ix1][iy1] + tune_shift_with_amplitude_struct.nux_roi_width/2;
+	}
         if (!computeTunesFromTracking(tune1, NULL, M, beamline, run, startingCoord,
                                       x, y,
                                       tune_shift_with_amplitude_struct.turns, 0, NULL,
 				      tuneLowerLimit, tuneUpperLimit)) {
-          lost = 1;
-          break;
+	  lost[ix][iy] = 1;
+	  nLost ++;
         }
-	if (ix==0 && iy==0) {
-	  tuneLowerLimit[0] = tune1[0] - tune_shift_with_amplitude_struct.nux_roi_width/2;
-	  tuneLowerLimit[1] = tune1[1] - tune_shift_with_amplitude_struct.nuy_roi_width/2;
-	  tuneUpperLimit[0] = tune1[0] + tune_shift_with_amplitude_struct.nux_roi_width/2;
-	  tuneUpperLimit[1] = tune1[1] + tune_shift_with_amplitude_struct.nuy_roi_width/2;
-	}
         xTune[ix][iy] = tune1[0];
         yTune[ix][iy] = tune1[1];
         if (tune_shift_with_amplitude_struct.verbose)
           fprintf(stdout, "Tunes for TSWA: x=%e, y=%e, nux=%.15e, nuy=%.15e\n",
                   x, y, tune1[0], tune1[1]);
-#ifdef DEBUG
-        fprintf(fpd, "%e %e %e %e %.15e %15e\n",
-                x, Ax[ix], y, Ay[iy], tune1[0], tune1[1]);
-#endif
       }
     }
     if (tune_shift_with_amplitude_struct.verbose)
       fprintf(stdout, "All tunes computed for TSWA\n");
-    
+
     maxResult = -DBL_MAX;
-    for (ix=0; ix<gridSize; ix++) {
-      for (iy=0; iy<gridSize; iy++) {
-        if (ix==0 && iy==0)
-          continue;
-        if (tune_shift_with_amplitude_struct.sparse_grid &&
-            !(ix==0 || iy==0 || ix==iy)) 
-          continue;
-        result = fabs(xTune[ix][iy] - xTune[0][0]);
-        if (result>maxResult)
-          maxResult = result;
-        result = fabs(yTune[ix][iy] - yTune[0][0]);
-        if (result>maxResult)
-          maxResult = result;
+    if (!tune_shift_with_amplitude_struct.spread_only) {
+      if (nLost) {
+	fprintf(stdout, "Amplitude too large for TSWA computation---particles lost\n");
+      } else {
+	for (ix=0; ix<gridSize; ix++) {
+	  for (iy=0; iy<gridSize; iy++) {
+	    if (ix==0 && iy==0)
+	      continue;
+	    if (tune_shift_with_amplitude_struct.sparse_grid &&
+		!(ix==0 || iy==0 || ix==iy)) 
+	      continue;
+	    result = fabs(xTune[ix][iy] - xTune[0][0]);
+	    if (result>maxResult)
+	      maxResult = result;
+	    result = fabs(yTune[ix][iy] - yTune[0][0]);
+	    if (result>maxResult)
+	      maxResult = result;
+	  }
+	}
+	if (tune_shift_with_amplitude_struct.verbose) 
+	  fprintf(stdout, "maximum tune change: %e\n", maxResult);
       }
-    }
-    if (tune_shift_with_amplitude_struct.verbose) 
-     fprintf(stdout, "maximum tune change: %e\n", maxResult);
-    if (maxResult>tune_shift_with_amplitude_struct.scale_down_limit) {
-      if (upperLimit[0]>tune_shift_with_amplitude_struct.x1)
-        upperLimit[0] = tune_shift_with_amplitude_struct.x1;
-      if (upperLimit[1]>tune_shift_with_amplitude_struct.y1)
-        upperLimit[1] = tune_shift_with_amplitude_struct.y1;
-      tune_shift_with_amplitude_struct.x1 = (upperLimit[0] + 2*lowerLimit[0])/3;
-      tune_shift_with_amplitude_struct.y1 = (upperLimit[1] + 2*lowerLimit[1])/3;
-      fprintf(stdout, "Warning: the amplitude you specified for tune shift with amplitude is too large.\n");
-      fprintf(stdout, "Reducing tune_shift_with_amplitude_struct.x1=%le and tune_shift_with_amplitude_struct.y1=%le\n",
-              tune_shift_with_amplitude_struct.x1, tune_shift_with_amplitude_struct.y1);
-      if (tries==0) 
-        tries = 1;   /* ensures we don't exit on amplitude too large */
-      continue;
+      if (nLost || maxResult>tune_shift_with_amplitude_struct.scale_down_limit) {
+	if (upperLimit[0]>tune_shift_with_amplitude_struct.x1)
+	  upperLimit[0] = tune_shift_with_amplitude_struct.x1;
+	if (upperLimit[1]>tune_shift_with_amplitude_struct.y1)
+	  upperLimit[1] = tune_shift_with_amplitude_struct.y1;
+	tune_shift_with_amplitude_struct.x1 = (upperLimit[0] + 2*lowerLimit[0])/3;
+	tune_shift_with_amplitude_struct.y1 = (upperLimit[1] + 2*lowerLimit[1])/3;
+	fprintf(stdout, "Warning: the amplitude you specified for tune shift with amplitude is too large.\n");
+	fprintf(stdout, "Reducing tune_shift_with_amplitude_struct.x1=%le and tune_shift_with_amplitude_struct.y1=%le\n",
+		tune_shift_with_amplitude_struct.x1, tune_shift_with_amplitude_struct.y1);
+	if (tries==0) 
+	  tries = 1;   /* ensures we don't exit on amplitude too large */
+	continue;
+      }
     }
     break;
   }
 
-  if (lost) {
+  if (nLost)
     for (ix=0; ix<N_TSWA; ix++)
       for (iy=0; iy<N_TSWA; iy++)
         dnux_dA[ix][iy] = dnuy_dA[ix][iy] = sqrt(DBL_MAX);
-  } else {
-    if (tune_shift_with_amplitude_struct.tune_output) {
-      for (ix=j=0; ix<gridSize; ix++) {
-	for (iy=0; iy<gridSize; iy++, j++) {
-	  if (!SDDS_SetRowValues(&SDDSTswaTunes, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, j,
-				 "x", x0[ix], "Ax", Ax[ix],
-				 "nux", xTune[ix][iy],
-				 "y", y0[iy], "Ay", Ay[iy],
-				 "nuy", yTune[ix][iy],
-				 NULL)) {
-	    fprintf(stdout, "Problem filling SDDS page for TSWA tune output\n");
-	    SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
-	    exit(1);
-	  }
+  else
+    for (ix=0; ix<N_TSWA; ix++)
+      for (iy=0; iy<N_TSWA; iy++)
+	dnux_dA[ix][iy] = dnuy_dA[ix][iy] = 0;
+
+  if (tune_shift_with_amplitude_struct.tune_output) {
+    for (ix=j=0; ix<gridSize; ix++) {
+      for (iy=0; iy<gridSize; iy++, j++) {
+	if (lost[ix][iy])
+	  continue;
+	if (!SDDS_SetRowValues(&SDDSTswaTunes, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, j,
+			       "x", x0[ix], "Ax", Ax[ix],
+			       "nux", xTune[ix][iy],
+			       "y", y0[iy], "Ay", Ay[iy],
+			       "nuy", yTune[ix][iy],
+			       NULL)) {
+	  fprintf(stdout, "Problem filling SDDS page for TSWA tune output\n");
+	  SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
+	  exit(1);
 	}
       }
-      if (!SDDS_WritePage(&SDDSTswaTunes)) {
-	fprintf(stdout, "Problem writing SDDS page for TSWA tune output\n");
-	SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
-	exit(1);
-      }
     }
-    /* the expansion is
-       nu = Ax^0 (TS00 + Ay*TS01 + Ay^2*TS02) +
-            Ax^1 (TS10 + Ay*TS11 + Ay^2*TS12) +
-            Ax^2 (TS20 + Ay*TS21 + Ay^2*TS22) 
-            where TSij = 1/(i!j!) dnu/(dAx^i dAy^j)
-     */
+    if (!SDDS_WritePage(&SDDSTswaTunes)) {
+      fprintf(stdout, "Problem writing SDDS page for TSWA tune output\n");
+      SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
+      exit(1);
+    }
+  }
+
+  xTuneExtrema[0] = -(xTuneExtrema[1] = -DBL_MAX);
+  yTuneExtrema[0] = -(yTuneExtrema[1] = -DBL_MAX);
+  for (ix=0; ix<gridSize; ix++) {
+    for (iy=0; iy<gridSize; iy++) {
+      if (tune_shift_with_amplitude_struct.sparse_grid &&
+	  !(ix==0 || iy==0 || ix==iy)) 
+	continue;
+      if (ix==0 || iy==0 || lost[ix][iy]) 
+	continue;
+      if (xTuneExtrema[0]>xTune[ix][iy])
+	xTuneExtrema[0] = xTune[ix][iy];
+      if (xTuneExtrema[1]<xTune[ix][iy])
+	xTuneExtrema[1] = xTune[ix][iy];
+      if (yTuneExtrema[0]>yTune[ix][iy])
+	yTuneExtrema[0] = yTune[ix][iy];
+      if (yTuneExtrema[1]<yTune[ix][iy])
+	yTuneExtrema[1] = yTune[ix][iy];
+    }
+  }
+  fprintf(stdout, "xTune extrema: %21.15e, %21.15e, delta = %21.15e\n",
+	  xTuneExtrema[0], xTuneExtrema[1], 
+	  fabs(xTuneExtrema[0]-xTuneExtrema[1]));
+  fprintf(stdout, "yTune extrema: %21.15e, %21.15e, delta = %21.15e\n",
+	  yTuneExtrema[0], yTuneExtrema[1], 
+	  fabs(yTuneExtrema[0]-yTuneExtrema[1]));
+
+  if (!nLost && !tune_shift_with_amplitude_struct.spread_only) {
     m = gridSize*gridSize;
-    n = N_TSWA*N_TSWA;
+    order = tune_shift_with_amplitude_struct.order<=1?1:2;
+    if (order==1) {
+      /* the expansion is
+	 nu = Ax^0 (TS00 + Ay*TS01) +
+	 Ax^1 (TS10 ) 
+	 where TSij = 1/(i!j!) dnu/(dAx^i dAy^j)
+      */
+      nTSWA = 2;
+      n = 4;
+    }
+    else {
+      /* the expansion is
+	 nu = Ax^0 (TS00 + Ay*TS01 + Ay^2*TS02) +
+	 Ax^1 (TS10 + Ay*TS11 ) +
+	 Ax^2 (TS20 )
+	 where TSij = 1/(i!j!) dnu/(dAx^i dAy^j)
+      */
+      nTSWA = N_TSWA;
+      n = (N_TSWA*N_TSWA + N_TSWA)/2;
+    }
     /* Nu = AxAy*Coef 
-     * Nu is mx1, AxAy is mxn, Coef is nx1 */
+     * Nu is (m-1)x1, AxAy is mxn, Coef is nx1 */
+    m --;  /* won't use [0][0] from tune arrays due to NAFF issues */
     m_alloc(&AxAy, m, n);
     m_alloc(&Coef, n, 1);
     m_alloc(&Nu, m, 1);
@@ -2193,15 +2272,19 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
     m_alloc(&AxAyTrNu, n, 1);
     for (ix=i=0; ix<gridSize; ix++) {
       for (iy=0; iy<gridSize; iy++) {
-        if (tune_shift_with_amplitude_struct.sparse_grid &&
-            !(ix==0 || iy==0 || ix==iy)) 
-          continue;
-        for (ix1=j=0; ix1<N_TSWA; ix1++) {
-          for (iy1=0; iy1<N_TSWA; iy1++, j++) {
-            AxAy->a[i][j] = ipow(Ax[ix], ix1)*ipow(Ay[iy], iy1);
-          }
-        }
-        i++;
+	if (tune_shift_with_amplitude_struct.sparse_grid &&
+	    !(ix==0 || iy==0 || ix==iy)) 
+	  continue;
+	if (ix==0 && iy==0)
+	  continue;
+	for (ix1=j=0; ix1<nTSWA; ix1++) {
+	  for (iy1=0; (ix1+iy1)<=order; iy1++, j++) {
+	    if (j>=n)
+	      bomb("indexing problem for TSWA calculation", NULL);
+	    AxAy->a[i][j] = ipow(Ax[ix], ix1)*ipow(Ay[iy], iy1);
+	  }
+	}
+	i++;
       }
     }
     m_trans(AxAyTr, AxAy);
@@ -2212,45 +2295,49 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
         if (tune_shift_with_amplitude_struct.sparse_grid &&
             !(ix==0 || iy==0 || ix==iy)) 
           continue;
+	if (ix==0 && iy==0)
+	  continue;
         Nu->a[i][0] = xTune[ix][iy];
         i++;
       }
     m_mult(AxAyTrNu, AxAyTr, Nu);
     m_mult(Coef, MfInv, AxAyTrNu);
-    for (ix=i=0; ix<N_TSWA; ix++) 
-      for (iy=0; iy<N_TSWA; iy++, i++)
+    for (ix=i=0; ix<nTSWA; ix++) 
+      for (iy=0; (ix+iy)<=order; iy++, i++)
         dnux_dA[ix][iy] = Coef->a[i][0]*factorial(ix)*factorial(iy);
     if (tune_shift_with_amplitude_struct.verbose) {
       fprintf(stdout, "dnux/(dAx^i dAy^j):\n");
-      for (ix=0; ix<N_TSWA; ix++) {
-        for (iy=0; iy<N_TSWA; iy++) {
-          fprintf(stdout, "%10.3g%c", dnux_dA[ix][iy], iy==(N_TSWA-1)?'\n':' ');
-        }
+      for (ix=0; ix<nTSWA; ix++) {
+	for (iy=0; iy<nTSWA; iy++) {
+	  fprintf(stdout, "%10.3g%c", dnux_dA[ix][iy], iy==(nTSWA-1)?'\n':' ');
+	}
       }
     }
-
+      
     for (ix=i=0; ix<gridSize; ix++)
       for (iy=0; iy<gridSize; iy++) {
-        if (tune_shift_with_amplitude_struct.sparse_grid &&
-            !(ix==0 || iy==0 || ix==iy)) 
-          continue;
-        Nu->a[i][0] = yTune[ix][iy];
-        i++;
+	if (tune_shift_with_amplitude_struct.sparse_grid &&
+	    !(ix==0 || iy==0 || ix==iy)) 
+	  continue;
+	if (ix==0 && iy==0)
+	  continue;
+	Nu->a[i][0] = yTune[ix][iy];
+	i++;
       }
     m_mult(AxAyTrNu, AxAyTr, Nu);
     m_mult(Coef, MfInv, AxAyTrNu);
-    for (ix=i=0; ix<N_TSWA; ix++) 
-      for (iy=0; iy<N_TSWA; iy++, i++)
-        dnuy_dA[ix][iy] = Coef->a[i][0]*factorial(ix)*factorial(iy);
+    for (ix=i=0; ix<nTSWA; ix++) 
+      for (iy=0; (ix+iy)<=order; iy++, i++)
+	dnuy_dA[ix][iy] = Coef->a[i][0]*factorial(ix)*factorial(iy);
     if (tune_shift_with_amplitude_struct.verbose) {
       fprintf(stdout, "dnuy/(dAx^i dAy^j):\n");
-      for (ix=0; ix<N_TSWA; ix++) {
-        for (iy=0; iy<N_TSWA; iy++) {
-          fprintf(stdout, "%10.3g%c", dnuy_dA[ix][iy], iy==(N_TSWA-1)?'\n':' ');
-        }
+      for (ix=0; ix<nTSWA; ix++) {
+	for (iy=0; iy<nTSWA; iy++) {
+	  fprintf(stdout, "%10.3g%c", dnuy_dA[ix][iy], iy==(nTSWA-1)?'\n':' ');
+	}
       }
     }
-
+      
     m_free(&AxAy);
     m_free(&Coef);
     m_free(&Nu);
@@ -2259,12 +2346,6 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
     m_free(&MfInv);
     m_free(&AxAyTrNu);
   }
-#ifdef DEBUG
-  if (fpd)
-    fclose(fpd);
-  fpd = NULL;
-#endif
-  
 }
 
 

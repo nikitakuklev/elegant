@@ -897,7 +897,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 #define SET_BUNCHED_BEAM 6
 #define SET_SDDS_BEAM   33
 
-#define N_TWISS_QUANS 58
+#define N_TWISS_QUANS 62
 static char *twiss_name[N_TWISS_QUANS] = {
     "betax", "alphax", "nux", "etax", "etapx", 
     "betay", "alphay", "nuy", "etay", "etapy", 
@@ -919,6 +919,8 @@ static char *twiss_name[N_TWISS_QUANS] = {
     "dbetax/dp", "dbetay/dp", "dalphax/dp", "dalphay/dp",
     "dnux/dAx2", "dnux/dAy2", "dnuy/dAx2", "dnuy/dAy2",
     "dnux/dAxAy", "dnuy/dAxAy",
+    "nuxTswaLower", "nuxTswaUpper", 
+    "nuyTswaLower", "nuyTswaUpper", 
     };
 static long twiss_mem[N_TWISS_QUANS] = {
   -1, -1, -1, -1, -1,  
@@ -941,6 +943,7 @@ static long twiss_mem[N_TWISS_QUANS] = {
   -1, -1, -1, -1,
   -1, -1, -1, -1,
   -1, -1,
+  -1, -1, -1, -1,
     };
 
 static char *radint_name[13] = {
@@ -1213,6 +1216,11 @@ double optimization_function(double *value, long *invalid)
     rpn_store(beamline->dnuy_dA[0][2], twiss_mem[55]);
     rpn_store(beamline->dnux_dA[1][1], twiss_mem[56]);
     rpn_store(beamline->dnuy_dA[1][1], twiss_mem[57]);
+    /* tune extrema due to TSWA */
+    rpn_store(beamline->nuxTswaExtrema[0], twiss_mem[58]);
+    rpn_store(beamline->nuxTswaExtrema[1], twiss_mem[59]);
+    rpn_store(beamline->nuyTswaExtrema[0], twiss_mem[60]);
+    rpn_store(beamline->nuyTswaExtrema[1], twiss_mem[61]);
 #if DEBUG
     fprintf(stdout, "Twiss parameters done.\n");
     fflush(stdout);
