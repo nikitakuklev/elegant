@@ -47,3 +47,7 @@
         higher_order_chromaticity = <doHigherOrderChromaticity>,
         chromatic_tune_spread_half_range = <chromaticTuneSpreadMomentumSpread>,
 &end
+
+&floor_coordinates
+	filename = %s.flr,
+&end

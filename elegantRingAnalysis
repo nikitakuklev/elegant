@@ -292,6 +292,8 @@ proc BasicComputationsPP {args} {
         lappend parameterList -parameter=ex0 -parameter=Sdelta0 -parameter=U0,end
         lappend parameterList -parameter=J? -parameter=Jdelta,end
         lappend parameterList -parameter=tau? -parameter=taudelta,end
+        lappend parameterList -parameter=I1 -parameter=I2 -parameter=I3,end
+        lappend parameterList -parameter=I4 -parameter=I5,end
     }
     eval exec sddsprocess ${rootname}.twi -pipe=out \
       {"-define=parameter,dnuxChrom,nuxChromUpper nuxChromLower -"} \
