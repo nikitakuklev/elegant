@@ -141,37 +141,67 @@ void SDDS_FinalOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, lo
                            char *contents, char *command_file, char *lattice_file, 
                            char **varied_quantity_name, char **varied_quantity_unit, long varied_quantities,
                            char **error_element_name, char **error_element_unit, long error_elements,
-                           char **optimization_quantity_name, char **optimization_quantity_unit, long optimization_quantities,
+                           long *error_element_index, long *error_element_duplicates,
+                           char **optimization_quantity_name, char **optimization_quantity_unit, 
+                           long optimization_quantities,
                            char *caller)
 {
-    SDDS_ElegantOutputSetup(SDDS_table, filename, mode, lines_per_row, contents, command_file, 
-                            lattice_file, final_property_parameter, FINAL_PROPERTY_PARAMETERS, NULL, 0,
-                            caller, SDDS_EOS_NEWFILE);
-    if ((varied_quantities &&
-         !SDDS_DefineSimpleParameters(SDDS_table, varied_quantities, varied_quantity_name, varied_quantity_unit, SDDS_DOUBLE)) ||
-        (error_elements &&
-         !SDDS_DefineSimpleParameters(SDDS_table, error_elements, error_element_name, error_element_unit, SDDS_DOUBLE)) ||
-        (optimization_quantities &&
-         !SDDS_DefineSimpleParameters(SDDS_table, optimization_quantities, optimization_quantity_name, optimization_quantity_unit,
-                                   SDDS_DOUBLE))) {
-        fprintf(stdout, "Problem defining extra SDDS parameters in file %s (%s)\n", filename, caller);
+  long i, duplicates=0;
+  SDDS_ElegantOutputSetup(SDDS_table, filename, mode, lines_per_row, contents, command_file, 
+                          lattice_file, final_property_parameter, FINAL_PROPERTY_PARAMETERS, NULL, 0,
+                          caller, SDDS_EOS_NEWFILE);
+  if ((varied_quantities &&
+       !SDDS_DefineSimpleParameters(SDDS_table, varied_quantities, varied_quantity_name, varied_quantity_unit, SDDS_DOUBLE)) ||
+      (optimization_quantities &&
+       !SDDS_DefineSimpleParameters(SDDS_table, optimization_quantities, optimization_quantity_name, optimization_quantity_unit,
+                                    SDDS_DOUBLE))) {
+    fprintf(stdout, "Problem defining extra SDDS parameters in file %s (%s)\n", filename, caller);
+    fflush(stdout);
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+    exit(1);
+  }
+  for (i=0; i<error_elements; i++) {
+    if (!SDDS_DefineSimpleParameter(SDDS_table, error_element_name[i], 
+                                    error_element_unit[i], SDDS_DOUBLE)) {
+      /* determine if the error is just because of a duplication */
+      long j;
+      for (j=0; j<i; j++)
+        if (strcmp(error_element_name[i], error_element_name[j])==0)
+          break;
+      if (i==j) {
+        fprintf(stdout, "Problem defining extra SDDS parameter %s in file %s (%s)\n", error_element_name[i],
+                filename, caller);
         fflush(stdout);
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
         exit(1);
-        }
-    if (!SDDS_WriteLayout(SDDS_table)) {
-        fprintf(stdout, "Unable to write SDDS layout for file %s (%s)\n", filename, caller);
-        fflush(stdout);
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-        exit(1);
-        }
+      }
+      duplicates++;
     }
+    if ((error_element_index[i] = SDDS_GetParameterIndex(SDDS_table, error_element_name[i]))<0) {
+      fprintf(stdout, "Problem defining extra SDDS parameter %s in file %s (%s): couldn't retrieve index\n",
+               error_element_name[i],
+              filename, caller);
+      fflush(stdout);
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      exit(1);
+    }
+  }
+  *error_element_duplicates = duplicates;
+  
+  if (!SDDS_WriteLayout(SDDS_table)) {
+    fprintf(stdout, "Unable to write SDDS layout for file %s (%s)\n", filename, caller);
+    fflush(stdout);
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+    exit(1);
+  }
+}
 
 void dump_final_properties
     (SDDS_TABLE *SDDS_table, BEAM_SUMS *sums,
      double *varied_quan, char *first_varied_quan_name, long n_varied_quan,
      long totalSteps,
-     double *perturbed_quan, char *first_perturbed_quan_name, long n_perturbed_quan,
+     double *perturbed_quan, long *perturbed_quan_index, 
+     long perturbed_quan_duplicates, long n_perturbed_quan,
      double *optim_quan, char *first_optim_quan_name, long n_optim_quan,
      long step, double **particle, long n_original, double p_central, VMATRIX *M,
      double charge)
@@ -188,7 +218,7 @@ void dump_final_properties
         bomb("NULL beam sums pointer (dump_final_properites)", NULL);
     if (n_varied_quan && (!varied_quan || !first_varied_quan_name))
         bomb("Unexpected NULL pointer for varied quanitity values/names (dump_final_properties)", NULL);
-    if (n_perturbed_quan && (!perturbed_quan || !first_perturbed_quan_name))
+    if (n_perturbed_quan && (!perturbed_quan || !perturbed_quan_index))
         bomb("Unexpected NULL pointer for perturbed quantity values/names (dump_final_properties)", NULL);
     if (n_optim_quan && (!optim_quan || !first_optim_quan_name)) 
         bomb("Unexpected NULL pointer for optimization quantity values/names (dump_final_properties)", NULL);
@@ -203,9 +233,10 @@ void dump_final_properties
         }
 
     if ((n_properties=SDDS_ParameterCount(SDDS_table)) !=
-        (FINAL_PROPERTY_PARAMETERS+n_varied_quan+n_perturbed_quan+n_optim_quan)) {
+        (FINAL_PROPERTY_PARAMETERS+n_varied_quan+n_perturbed_quan+n_optim_quan-perturbed_quan_duplicates)) {
         fprintf(stdout, "error: the number of parameters (%ld) defined for the SDDS table for the final properties file is not equal to the number of quantities (%ld) for which information is provided (dump_final_properties)\n",
-                n_properties, FINAL_PROPERTY_PARAMETERS+n_varied_quan+n_perturbed_quan+n_optim_quan);
+                n_properties, 
+                FINAL_PROPERTY_PARAMETERS+n_varied_quan+n_perturbed_quan+n_optim_quan-perturbed_quan_duplicates);
         fflush(stdout);
         abort();
         }
@@ -214,9 +245,9 @@ void dump_final_properties
     if ((n_computed=compute_final_properties
                        (computed_properties, sums, n_original, p_central, M, particle, step,
                         totalSteps, charge))!=
-        (n_properties-(n_varied_quan+n_perturbed_quan+n_optim_quan))) {
+        (n_properties-(n_varied_quan+n_perturbed_quan+n_optim_quan-perturbed_quan_duplicates))) {
         fprintf(stdout, "error: compute_final_properties computed %ld quantities--%ld expected. (dump_final_properties)",
-            n_computed, n_properties-(n_varied_quan+n_perturbed_quan+n_optim_quan));
+            n_computed, n_properties-(n_varied_quan+n_perturbed_quan+n_optim_quan-perturbed_quan_duplicates));
         fflush(stdout);
         abort();
         }
@@ -256,18 +287,23 @@ void dump_final_properties
                 }
         }
 
-    if (first_perturbed_quan_name) {
-        if ((index=SDDS_GetParameterIndex(SDDS_table, first_perturbed_quan_name))<0) {
-            SDDS_SetError("Problem getting SDDS index of first perturbed quantity parameter (dump_final_properties)");
-            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-            }
-        for (i=0; i<n_perturbed_quan; i++)
-            if (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE,
-                                   i+index, perturbed_quan[i], -1)) {
-                SDDS_SetError("Problem setting SDDS parameter values for perturbed quantities (dump_final_properties)");
-                SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-                }
+    if (perturbed_quan_index) {
+      for (i=0; i<n_perturbed_quan; i++)
+        if (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE,
+                                perturbed_quan_index[i], (double)0.0, -1)) {
+          SDDS_SetError("Problem setting SDDS parameter values for perturbed quantities (dump_final_properties)");
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
+      for (i=0; i<n_perturbed_quan; i++) {
+        double value;
+        if (!SDDS_GetParameterByIndex(SDDS_table, perturbed_quan_index[i], &value) ||
+            !SDDS_SetParameters(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE,
+                                perturbed_quan_index[i], perturbed_quan[i]+value, -1)) {
+          SDDS_SetError("Problem setting SDDS parameter values for perturbed quantities (dump_final_properties)");
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+        }
+      }
+    }
 
     if (first_optim_quan_name) {
         if ((index=SDDS_GetParameterIndex(SDDS_table, first_optim_quan_name))<0) {

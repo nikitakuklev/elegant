@@ -1167,9 +1167,11 @@ void do_print_dictionary(char *filename, long latex_form)
   }
   qsort((void*)dictList, N_TYPES-1, sizeof(*dictList), dictionaryEntryCmp);
   fp = fopen_e(filename, "w", 0);
-  fprintf(fp, "\\newlength{\\descwidth}\n");
-  fprintf(fp, "%% first argument is latex command the second the html command\n");
-  fprintf(fp, "\\latexhtml{\\setlength{\\descwidth}{2in}}{\\setlength{\\descwidth}{4in}}\n");
+  if (latex_form) {
+    fprintf(fp, "\\newlength{\\descwidth}\n");
+    fprintf(fp, "%% first argument is latex command the second the html command\n");
+    fprintf(fp, "\\latexhtml{\\setlength{\\descwidth}{2in}}{\\setlength{\\descwidth}{4in}}\n");
+  }
   for (i=0; i<N_TYPES-1; i++)
     print_dictionary_entry(fp, dictList[i].index, latex_form);
   free(dictList);

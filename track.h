@@ -230,6 +230,8 @@ typedef struct {
     char **item;                 /* name of item to vary for each element, e.g., "K1" */
     char **quan_name;            /* full name of perturbed quantity, e.g., dQ1[K1] */
     char **quan_unit;
+    long *quan_final_index;      /* SDDS index in 'final' output file */
+    long quan_final_duplicates;  /* also used with final output */
     double *error_level;         /* e.g., sigma for gaussian errors */
     double *error_cutoff;        /* e.g., 3 sigma */
     long *error_type;
@@ -1830,12 +1832,14 @@ extern unsigned long parseFiducialMode(char *mode);
 extern void SDDS_FinalOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row,
                            char *contents, char *command_file, char *lattice_file, 
                            char **varied_quantity_name, char **varied_quantity_unit, long varied_quantities,
-                           char **error_element_name, char **error_element_unit, long error_elements,
+                           char **error_element_name, char **error_element_unit, 
+                           long error_elements, long *error_element_index,
+                           long *error_element_duplicates,
                            char **optimization_quantity_name, char **optimization_quantity_unit, long optimization_quantities,
                            char *caller);
 extern void dump_final_properties(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums,
      double *varied_quan, char *first_varied_quan_name, long n_varied_quan, long totalSteps,
-     double *perturbed_quan, char *first_perturbed_quan_name, long n_perturbed_quan,
+     double *perturbed_quan, long *perturbed_quan_index, long perturbed_duplicates, long n_perturbed_quan,
      double *optim_quan, char *first_optim_quan_name, long n_optim_quan,
      long step, double **particle, long n_original, double p_central, VMATRIX *M,
      double finalCharge);

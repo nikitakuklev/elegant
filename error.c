@@ -192,6 +192,9 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
             if (element_type && 
                 !wild_match(entity_name[context->type], element_type))
               continue;
+            if (exclude &&
+                wild_match(context->name, exclude))
+              continue;
             if (i_start!=n_items && duplicate_name(errcon->name+i_start, n_items-i_start, context->name))
                 continue;
             if ((sMin>=0 && context->end_pos<sMin) ||
@@ -200,6 +203,8 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
             errcon->name              = trealloc(errcon->name, sizeof(*errcon->name)*(n_items+1));
             errcon->item              = trealloc(errcon->item, sizeof(*errcon->item)*(n_items+1));
             errcon->quan_name         = trealloc(errcon->quan_name, sizeof(*errcon->quan_name)*(n_items+1));
+            errcon->quan_final_index  
+              = trealloc(errcon->quan_final_index, sizeof(*errcon->quan_final_index)*(n_items+1));
             errcon->quan_unit         = trealloc(errcon->quan_unit, sizeof(*errcon->quan_unit)*(n_items+1));
             errcon->error_level       = trealloc(errcon->error_level, sizeof(*errcon->error_level)*(n_items+1));
             errcon->error_cutoff      = trealloc(errcon->error_cutoff, sizeof(*errcon->error_cutoff)*(n_items+1));
@@ -219,6 +224,7 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
             errcon->error_cutoff[n_items] = cutoff;
             errcon->error_type[n_items] = match_string(type, known_error_type, N_ERROR_TYPES, 0);
             errcon->quan_name[n_items] = tmalloc(sizeof(char*)*(strlen(context->name)+strlen(item)+4));
+            errcon->quan_final_index[n_items] = -1;
             sprintf(errcon->quan_name[n_items], "d%s.%s", context->name, item);
             if (errcon->error_type[n_items]==PLUS_OR_MINUS_ERRORS)
                 fractional = 1;
@@ -265,6 +271,8 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
         errcon->name              = trealloc(errcon->name, sizeof(*errcon->name)*(n_items+1));
         errcon->item              = trealloc(errcon->item, sizeof(*errcon->item)*(n_items+1));
         errcon->quan_name         = trealloc(errcon->quan_name, sizeof(*errcon->quan_name)*(n_items+1));
+        errcon->quan_final_index  
+          = trealloc(errcon->quan_final_index, sizeof(*errcon->quan_final_index)*(n_items+1));
         errcon->quan_unit         = trealloc(errcon->quan_unit, sizeof(*errcon->quan_unit)*(n_items+1));
         errcon->error_level       = trealloc(errcon->error_level, sizeof(*errcon->error_level)*(n_items+1));
         errcon->error_cutoff      = trealloc(errcon->error_cutoff, sizeof(*errcon->error_cutoff)*(n_items+1));

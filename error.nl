@@ -14,6 +14,7 @@
 
 #namelist error static
     STRING name = NULL;
+    STRING exclude = NULL;
     STRING item = NULL;
     STRING element_type = NULL;
     STRING type = "gaussian";

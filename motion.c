@@ -1357,7 +1357,7 @@ void setupRftmEz0FromFile(RFTMEZ0 *rftmEz0, double frequency, double length, dou
     exit(1);
   }
   rftmEz0->dz = (z[rftmEz0->nz-1]-z[0])/(rftmEz0->nz-1.0);
-  if (fabs((length-z[rftmEz0->nz-1])/rftmEz0->dz)>1e-6) {
+  if (fabs((length-(z[rftmEz0->nz-1]-z[0]))/rftmEz0->dz)>1e-6) {
     fprintf(stderr, "Error: declared length and length from fields from RFTMEZ0 file %s do not agree to 1/10^6 tolerance\n",
             rftmEz0->inputFile);
     exit(1);
