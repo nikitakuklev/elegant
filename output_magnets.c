@@ -14,7 +14,7 @@ void output_magnets(char *filename, char *line_name, LINE_LIST *beamline)
     ELEMENT_LIST *eptr;
     QUAD  *qptr; BEND  *bptr; 
     KQUAD *kqptr; KSBEND *kbptr; CSBEND *cbptr;
-    long n_points;
+    long n_points, iPhase;
     double start, end, total_length, dz, value;
     FILE *fpm;
 
@@ -53,6 +53,10 @@ void output_magnets(char *filename, char *line_name, LINE_LIST *beamline)
                 n_points += 7;
                 break;
             case T_MARK:    /* zero-length drift */
+                break;
+            case T_RFCA: case T_TWLA: case T_RAMPRF:
+            case T_MODRF:
+                n_points += 9;
                 break;
             default:
                 if (entity_description[eptr->type].flags&HAS_LENGTH)
@@ -209,6 +213,17 @@ void output_magnets(char *filename, char *line_name, LINE_LIST *beamline)
                             eptr->name, start, eptr->name, end, eptr->name, end, 
                             eptr->name, start, eptr->name, start, eptr->name, end);
                 start = end;
+                break;
+            case T_RFCA: case T_TWLA: case T_RAMPRF:
+            case T_MODRF:
+                dz = ((DRIFT*)eptr->p_elem)->length;
+                dz /= 8;
+                for (iPhase=0; iPhase<9; iPhase++) {
+                  fprintf(fpm, "%s %e %e\n",
+                          eptr->name, start+dz*iPhase,
+                          0.5*sin((iPhase/8.0)*PIx2));
+                }
+                start += dz*8;
                 break;
             default:
                 if (entity_description[eptr->type].flags&HAS_LENGTH) {
