@@ -290,6 +290,8 @@ long trackRfCavityWithWakes
           P     = *P_central*(1+coord[5]);
           beta_i = P/(gamma=sqrt(sqr(P)+1));
           t     = (coord[4]+dc4)/(c_mks*beta_i)-timeOffset;
+          if (ik==0 && timeOffset && rfca->change_t) 
+            coord[4] = t*c_mks*beta_i-dc4;
           if ((dt = t-t0)<0)
             dt = 0;
           if  (!same_dgamma) {
@@ -382,6 +384,8 @@ long trackRfCavityWithWakes
         beta_i = P/(gamma=sqrt(sqr(P)+1));
         ds1 = length/2*sqrt(1+sqr(coord[1])+sqr(coord[3]));
         t     = (coord[4]+ds1)/(c_mks*beta_i)-timeOffset;
+        if (timeOffset && rfca->change_t) 
+          coord[4] = t*c_mks*beta_i-ds1;
         if ((dt = t-t0)<0)
           dt = 0;
         if  (!same_dgamma) {
