@@ -23,10 +23,15 @@ typedef struct {
 
 /* structure for storing Twiss parameters */
 typedef struct {
-    double betax, alphax, phix, etax, etapx, apx;
-    double betay, alphay, phiy, etay, etapy, apy;
-    double Cx, Cy;
-    } TWISS;
+  /* the order of the items in this structure should not be
+   * changed! 
+   */
+  double betax, alphax, phix, etax, etapx, apx;
+#define TWISS_Y_OFFSET 6
+  double betay, alphay, phiy, etay, etapy, apy;
+#define TWISS_CENT_OFFSET 12
+  double Cx, Cy;
+} TWISS;
 
 /* structure for accumulating beam moments */
 
@@ -1506,7 +1511,7 @@ VMATRIX *compute_periodic_twiss(double *betax, double *alphax, double *etax, dou
     double *phix, double *betay, double *alphay, double *etay, double *etayp, double *phiy,
     ELEMENT_LIST *elem, double *clorb, RUN *run);
 void propagate_twiss_parameters(TWISS *twiss0, double *tune, RADIATION_INTEGRALS *radIntegrals,
-                                ELEMENT_LIST *elem, long plane, RUN *run, double *traj);
+                                ELEMENT_LIST *elem, RUN *run, double *traj);
 long get_twiss_mode(long *mode, double *x_twiss, double *y_twiss);
 void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_coord, long matched, 
                               long radiation_integrals,

@@ -10,8 +10,6 @@
 #include "optimize.h"
 #include "match_string.h"
 
-char *gen_pcode(char *s);
-
 #define DEBUG 0
 
 void do_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
@@ -141,7 +139,8 @@ void add_optimization_variable(OPTIMIZATION_DATA *optimization_data, NAMELIST_TE
     variables->lower_limit[n_variables] = lower_limit;
     variables->upper_limit[n_variables] = upper_limit;
     rpn_store(variables->initial_value[n_variables], 
-              variables->memory_number[n_variables] = rpn_create_mem(variables->varied_quan_name[n_variables]));
+              variables->memory_number[n_variables] = 
+              rpn_create_mem(variables->varied_quan_name[n_variables]));
 
     variables->varied_quan_name[n_variables+1] = extra_name;
     variables->varied_quan_unit[n_variables+1] = extra_unit;
@@ -156,7 +155,9 @@ void add_optimization_covariable(OPTIMIZATION_DATA *optimization_data, NAMELIST_
     long n_covariables;
     OPTIM_COVARIABLES *covariables;
     ELEMENT_LIST *context;
-
+    char nameBuffer[100], *ptr;
+    static long nameIndex = 0;
+    
     log_entry("add_optimization_covariable");
 
     n_covariables = optimization_data->covariables.n_covariables;
@@ -213,9 +214,14 @@ void add_optimization_covariable(OPTIMIZATION_DATA *optimization_data, NAMELIST_
     rpn_store(covariables->varied_quan_value[n_covariables] = rpn(equation),
         covariables->memory_number[n_covariables] = rpn_create_mem(covariables->varied_quan_name[n_covariables]) );
     if (rpn_check_error()) exit(1);
-    fprintf(stderr, "Initial value of %s is %e %s\n", covariables->varied_quan_name[n_covariables], covariables->varied_quan_value[n_covariables],
-        covariables->varied_quan_unit[n_covariables]);
-    covariables->pcode[n_covariables] = gen_pcode(covariables->equation[n_covariables]);
+    fprintf(stderr, "Initial value of %s is %e %s\n", 
+            covariables->varied_quan_name[n_covariables], covariables->varied_quan_value[n_covariables],
+            covariables->varied_quan_unit[n_covariables]);
+    sprintf(nameBuffer, "AOCEqn%ld", nameIndex++);
+    create_udf(nameBuffer, equation);
+    if (!SDDS_CopyString(&ptr, nameBuffer)) 
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    covariables->pcode[n_covariables] = ptr;
     optimization_data->covariables.n_covariables += 1;
     log_exit("add_optimization_covariable");
     }
