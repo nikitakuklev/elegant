@@ -487,7 +487,7 @@ void dump_twiss_parameters(
                             IP_NUX, tune[0], IP_DNUXDP, chromaticity[0], IP_AX, acceptance[0],
                             IP_NUY, tune[1], IP_DNUYDP, chromaticity[1], IP_AY, acceptance[1], 
                             IP_ALPHAC, alphac, -1)) {
-        SDDS_SetError("Problem setting SDDS parameters (dump_twiss_parameters)");
+        SDDS_SetError("Problem setting SDDS parameters (dump_twiss_parameters 1)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
     if (radIntegrals) {
@@ -506,7 +506,7 @@ void dump_twiss_parameters(
                               IP_TAUDELTA, radIntegrals->taudelta,
                               IP_JDELTA, radIntegrals->Jdelta,
                               IP_U0, radIntegrals->Uo, -1)) {
-        SDDS_SetError("Problem setting SDDS parameters (dump_twiss_parameters)");
+        SDDS_SetError("Problem setting SDDS parameters (dump_twiss_parameters 2)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
     }
@@ -641,7 +641,7 @@ void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
     if (filename) {
         SDDS_ElegantOutputSetup(&SDDS_twiss, filename, SDDS_BINARY, 1, "Twiss parameters",
                                 run->runfile, run->lattice, parameter_definition, 
-                                (radiation_integrals?N_PARAMETERS:IP_I1),
+                                (radiation_integrals?N_PARAMETERS:IP_ALPHAC+1),
                                 column_definition, N_COLUMNS, "setup_twiss_output",
                                 SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
         SDDS_twiss_initialized = 1;
@@ -778,8 +778,9 @@ void run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, lon
 
     if (SDDS_twiss_initialized) {
         dump_twiss_parameters(beamline->twiss0, beamline->elem_twiss, n_elem,
-                              beamline->tune, &(beamline->radIntegrals), beamline->chromaticity,
-                              beamline->acceptance, 
+                              beamline->tune, 
+                              radiation_integrals?&(beamline->radIntegrals):NULL, 
+                              beamline->chromaticity, beamline->acceptance, 
                               (beamline->matrix->C[4]?
                                beamline->matrix->R[4][5]/beamline->matrix->C[4]:
                                0.0),
@@ -967,7 +968,8 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
 void update_twiss_parameters(RUN *run, LINE_LIST *beamline)
 {
     log_entry("update_twiss_parameters");
-    compute_twiss_parameters(run, beamline, beamline->closed_orbit?beamline->closed_orbit->centroid:NULL, matched, 
+    compute_twiss_parameters(run, beamline, 
+                             beamline->closed_orbit?beamline->closed_orbit->centroid:NULL, matched, 
                              radiation_integrals,
                              beta_x, alpha_x, eta_x, etap_x, beta_y, alpha_y, eta_y, etap_y);
     log_exit("update_twiss_parameters");
