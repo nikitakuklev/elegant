@@ -68,7 +68,9 @@ void do_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
     if (optimization_data->mode==OPTIM_MODE_MAXIMUM && target!=-DBL_MAX)
       target = -target;
     optimization_data->target = target;
-
+    optimization_data->simplexPassRangeFactor = simplex_pass_range_factor;
+    optimization_data->simplexDivisor = simplex_divisor;
+    
     /* reset flags for elements that may have been varied previously */
     if (optimization_data->variables.n_variables)
         set_element_flags(beamline, optimization_data->variables.element, NULL, NULL, 
@@ -623,7 +625,8 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
                        variables->n_variables, optimization_data->target, 
                        optimization_data->tolerance, optimization_function, optimization_report,
                        optimization_data->n_evaluations, optimization_data->n_passes, 12, 
-                       optimization_data->simplexDivisor, 0)<0) {
+                       optimization_data->simplexDivisor, 
+                       optimization_data->simplexPassRangeFactor, 0)<0) {
           if (result>optimization_data->tolerance) {
             if (!optimization_data->soft_failure)
               bomb("optimization unsuccessful--aborting", NULL);
@@ -1296,6 +1299,8 @@ double optimization_function(double *value, long *invalid)
   /* copy the result into the "hidden" slot in the varied quantities array for output
    * to final properties file
    */
+  if (*invalid)
+    result = sqrt(DBL_MAX);
   variables->varied_quan_value[variables->n_variables+1] = 
     optimization_data->mode==OPTIM_MODE_MAXIMUM?-1*result:result;
   if (!*invalid && bestResult>result)

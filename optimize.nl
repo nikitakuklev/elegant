@@ -34,6 +34,7 @@ static char *optimize_method[N_OPTIM_METHODS] = {
     long output_sparsing_factor = 1;
     long balance_terms = 0;
     double simplex_divisor = 3;
+    double simplex_pass_range_factor = 1;
 #end
 
 #namelist optimization_variable static
