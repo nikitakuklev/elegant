@@ -34,8 +34,8 @@ long binParticleCoordinate(double **hist, long *maxBins,
 long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_error, double Po, double **accepted,
                           double z_start)
 {
-  static double nh, betah2, gammah3, deltah4;
-  static double h, h2, h3;
+  double nh, betah2, gammah3, deltah4;
+  double h, h2, h3;
   long i_part, i_top;
   double rho, s, Fx, Fy;
   double x, xp, y, yp, dp, y2, dp0;
@@ -76,12 +76,13 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     e1    = -csbend->e1;
     e2    = -csbend->e2;
     etilt = csbend->etilt;
-    tilt  = csbend->tilt + PI;
-    rho0  = -csbend->length/angle;
+    tilt  = csbend->tilt + PI;      /* work in rotated system */
+    rho0  = -csbend->length/angle;  /* temporarily keep the sign */
     n     = -sqr(rho0)*csbend->k1;
     beta  = 0.5*csbend->k2_internal*pow3(rho0);
     gamma = csbend->k3_internal*pow4(rho0)/6.;
     delta = csbend->k4_internal*pow5(rho0)/24.;
+    /* this is always a postive value now */
     rho0  = -rho0;
   }
   else {
@@ -229,9 +230,12 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   dxi = -csbend->dx;
   dzi =  csbend->dz;
   dyi = -csbend->dy;
-
-  dxf =  csbend->dx*cos(angle) + csbend->dz*sin(angle);
-  dzf =  csbend->dx*sin(angle) - csbend->dz*cos(angle);
+  
+  /* must use the original angle here because the translation is done after
+   * the final rotation back
+   */
+  dxf =  csbend->dx*cos(csbend->angle) + csbend->dz*sin(csbend->angle);
+  dzf =  csbend->dx*sin(csbend->angle) - csbend->dz*cos(csbend->angle);
   dyf = csbend->dy;
 
   i_top = n_part-1;
@@ -776,18 +780,14 @@ typedef struct {
   double S11, S12, S22;
   double *dGamma;
 } CSR_LAST_WAKE;
-CSR_LAST_WAKE csrWake = {
-  0, 0, 
-  0.0, 0.0, 0.0, 0.0, 0.0,
-  0.0, 0.0, 0.0, 0.0,
-  NULL};
+CSR_LAST_WAKE csrWake;
 
 long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, double p_error, 
                              double Po, double **accepted, double z_start, double z_end,
                              CHARGE *charge, char *rootname)
 {
-  static double nh, betah2, gammah3, deltah4;
-  static double h, h2, h3;
+  double nh, betah2, gammah3, deltah4;
+  double h, h2, h3;
   static long csrWarning = 0;
   static double *beta0=NULL, *ctHist=NULL, *ctHistDeriv=NULL;
   static double *dGamma=NULL, *T1=NULL, *T2=NULL, *denom=NULL;
@@ -813,7 +813,10 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   long iBin, iBinBehind;
   double wavelength, criticalWavelength;
   
-  csrWake.valid = 0;
+  csrWake.valid = csrWake.bins = 0;
+  csrWake.dctBin = csrWake.s0 = csrWake.ds0 = csrWake.zLast =
+    csrWake.z0 = csrWake.thetaRad = csrWake.S11 = csrWake.S12 = csrWake.S22 = 0;
+  csrWake.dGamma = NULL;
   
   if (!csbend)
     bomb("null CSBEND pointer (track_through_csbend)", NULL);
@@ -856,7 +859,6 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     csbend->k3_internal = csbend->k3;
     csbend->k4_internal = csbend->k4;
   }
-  
 
   if (csbend->angle<0) {
     angle = -csbend->angle;
@@ -995,8 +997,11 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   dzi =  csbend->dz;
   dyi = -csbend->dy;
 
-  dxf =  csbend->dx*cos(angle) + csbend->dz*sin(angle);
-  dzf =  csbend->dx*sin(angle) - csbend->dz*cos(angle);
+  /* must use the original angle here because the translation is done after
+   * the final rotation back
+   */
+  dxf =  csbend->dx*cos(csbend->angle) + csbend->dz*sin(csbend->angle);
+  dzf =  csbend->dx*sin(csbend->angle) - csbend->dz*cos(csbend->angle);
   dyf = csbend->dy;
 
   if (csbend->histogramFile && !csbend->fileActive) {
@@ -1244,7 +1249,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   }
   
   if (n_part>1) {
-    /* prepare soem data for use by CSRDRIFT element */
+    /* prepare some data for use by CSRDRIFT element */
     csrWake.dctBin = dct;
     ctLower = ctUpper = dct = 0;
     if ((nBinned = 
@@ -1254,7 +1259,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
       fprintf(stdout, "Only %ld of %ld particles binned for CSR\n", nBinned, n_part);
       fflush(stdout);
     }
-    csrWake.s0 = ctLower;
+    csrWake.s0 = ctLower + dzf;
   }
   
   /* remove lost particles, handle edge effects, and transform coordinates */    
@@ -1409,12 +1414,13 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
   double *coord, t, p, beta, dz, ct0, factor, dz0, dzFirst;
   double ctmin, ctmax, spreadFactor;
   double zTravel;
-
+  
   if (np<=1 || !csrWake.valid) {
+    fprintf(stdout, "CSR wake invalid, using ordinary drift\n");
     drift_beam(part, np, csrDrift->length, 2);
     return np;
   }
-  
+
   if (csrDrift->dz>0) {
     if ((nKicks = csrDrift->length/csrDrift->dz)<1)
       nKicks = 1;
@@ -1426,8 +1432,14 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
   dz = (dz0=csrDrift->length/nKicks)/2;
   dzFirst = zStart - csrWake.zLast;
 #ifdef DEBUG
+  fprintf(stdout, "CSR in drift:\n");
+  fprintf(stdout, "zStart = %21.15le, Po = %21.15le\n", zStart, Po);
+  fprintf(stdout, "dz = %21.15le, nKicks = %ld\n", dz, nKicks);
   fprintf(stdout, "dzFirst = %21.15e\n", dzFirst);
-  fprintf(stdout, "ct0 = %21.15e\n", csrWake.s0+dz+dzFirst);
+  fprintf(stdout, "s0 = %21.15e\n", csrWake.s0);
+  for (iBin=0; iBin<csrWake.bins; iBin++)
+    fprintf(stdout, "%21.15e\n", 
+            csrWake.dGamma[iBin]);
 #endif
 
   ctmin = DBL_MAX;
@@ -1491,8 +1503,8 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
                                    2*zTravel*csrWake.S12 + 
                                    zTravel*zTravel*(sqr(csrWake.thetaRad)+csrWake.S22))));
 #ifdef DEBUG
-      fprintf(stdout, "Spread factor is %le\n", spreadFactor);
-      fprintf(stdout, "S11 = %le  S12 = %le  S22 = %le\nthetaRad = %le  z = %le\n",
+      fprintf(stdout, "Spread factor is %21.15le after zTravel=%21.15le\n", spreadFactor, zTravel);
+      fprintf(stdout, "S11 = %21.15le  S12 = %21.15le  S22 = %21.15le\nthetaRad = %21.15le  z = %21.15le\n",
               csrWake.S11, csrWake.S12, csrWake.S22, csrWake.thetaRad, zTravel);
 #endif
     }
@@ -1543,5 +1555,10 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
       }
     }
   }
+
   return np;
 }
+
+
+
+
