@@ -9,6 +9,10 @@
 
 /* 
  * $Log: not supported by cvs2svn $
+ * Revision 1.18  2003/05/07 03:11:14  emery
+ * For growthRateOnly option, omit from the outputfile
+ * the emittance, energy spread and bunch length, which are not changed.
+ *
  * Revision 1.17  2003/01/21 18:48:07  borland
  * Now output dIBSRate in 1/(m*s), which is more useful.
  * Also, fixed units on IBSRate parameters (should be 1/s).
@@ -351,6 +355,7 @@ int main( int argc, char **argv)
       0>SDDS_DefineParameter(&resultsPage, "Particles", NULL, NULL, "Particles", NULL, SDDS_DOUBLE, NULL) ||
       0>SDDS_DefineParameter(&resultsPage, "Charge", NULL, "nC", "Charge", NULL, SDDS_DOUBLE, NULL) ||
       0>SDDS_DefineParameter(&resultsPage, "PeakCurrent", "I$bp$n", "A", "Peak Current", NULL, SDDS_DOUBLE, NULL) ||
+      0>SDDS_DefineParameter(&resultsPage, "RfVoltage", NULL, "MV", "Rf Voltage", NULL, SDDS_DOUBLE, NULL) ||
       0>SDDS_DefineParameter(&resultsPage, "xGrowthRate", "g$bIBS,x$n", "1/s", "IBS emittance growth rate in the horizontal plane", NULL, SDDS_DOUBLE, NULL) ||
       0>SDDS_DefineParameter(&resultsPage, "yGrowthRate", "g$bIBS,y$n", "1/s", "IBS emittance growth rate in the vertical plane", NULL, SDDS_DOUBLE, NULL) ||
       0>SDDS_DefineParameter(&resultsPage, "zGrowthRate", "g$bIBS,z$n", "1/s", "IBS emittance growth rate in the longitudinal plane", NULL, SDDS_DOUBLE, NULL))
@@ -580,7 +585,7 @@ int main( int argc, char **argv)
     if (0>SDDS_StartPage(&resultsPage, integrationPoints?integrationPoints:elements) ||
         !SDDS_SetParameters(&resultsPage, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
                             "Convergence", converged?"Emittance converged":"Emittance did not converge",
-                            "pCentral", pCentral,
+                            "pCentral", pCentral, "RfVoltage", rfVoltage,
                             "I1", I1,
                             "I2", I2,
                             "I3", I3,
