@@ -2558,11 +2558,9 @@ and/or momentum errors.  However, for on-momentum conditions with zero
 orbit, it is much faster to use \verb|concat_order=1|.
 
 \item \verb|higher_order_chromaticity| --- If nonzero, requests
-computation of the second- and third-order chromaticity.  {\em The
-third-order chromaticity is not reliable and should be disregarded at
-this time.}  To obtain reliable values, the user should use
-\verb|concat_order=3| in this namelist and the highest available order
-for all beamline elements.
+computation of the second- and third-order chromaticity.  To obtain
+reliable values, the user should use \verb|concat_order=3| in this
+namelist and the highest available order for all beamline elements.
 
 \item \verb|reference_file| --- If given, the name of a file from which twiss parameter data will
         be taken to give the starting values.  Ignored if \verb|matched| is nonzero.  The file
