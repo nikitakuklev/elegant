@@ -1307,31 +1307,39 @@ end are given.
 
 \begin{itemize}
 \item type: action command.  
-        The number of turns tracked is set by the \verb|run\_control| command.
+        The number of turns tracked is set by the \verb|run_control| command.
 \item function: compute frequency map from tracking
 \end{itemize}
 
 \begin{verbatim}
-&floor_coordinates
+&frequency_map
     STRING output = NULL;
-    double xmin = 0.0;
+    double xmin = 1e-6;
     double xmax = 0.1;
-    double ymin = 0.0;
+    double ymin = 1e-6;
     double ymax = 0.1;
     long nx = 21;
-    long ny = 11;
+    long ny = 21;
     long verbosity = 1;
+    long include_changes = 0;
 &end
 \end{verbatim}
 
 \begin{itemize}
 \item \verb|output| --- The (incomplete) name of an SDDS file to send output to.  
  Recommended value: ``\%s.fma''.
-\item \verb|xmin|, \verb|xmax| --- Limits of grid of initial x coordinates for tracking.
-\item \verb|ymin|, \verb|ymax| --- Limits of grid of initial y coordinates for tracking.
+\item \verb|xmin|, \verb|xmax| --- Limits of grid of initial x coordinates for tracking.             
+ \verb|xmin| should typically be a small, positive value so that there                               
+ is some betatron oscillation from which to get the tune.                                            
+\item \verb|ymin|, \verb|ymax| --- Limits of grid of initial y coordinates for tracking.             
+ \verb|ymin| should typically be a small, positive value so that there                               
+ is some betatron oscillation from which to get the tune.                       
 \item \verb|nx| --- Number of values of x coordinate in the grid.
 \item \verb|ny| --- Number of values of y coordinate in the grid.
 \item \verb|verbosity| --- If nonzero, prints possibly useful information while running.
+\item \verb|include_changes| --- If nonozero, then computes not only the tunes, but also
+        the changes in the tunes.  It is recommended to leave this at the default value of
+        0, since the resolution of the tunes is higher then.
 \end{itemize}
 
 \begin{latexonly}
