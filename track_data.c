@@ -33,7 +33,7 @@ char *entity_name[N_TYPES] = {
     "WAKE", "TRWAKE", "TUBEND", "CHARGE", "PFILTER", "HISTOGRAM",
     "CSRCSBEND", "CSRDRIFT", "RFCW", "REMCOR", "MAPSOLENOID",
     "REFLECT", "CLEAN", "TWISS", "WIGGLER", "SCRIPT", "FLOOR",
-    "LTHINLENS", "LMIRROR", "EMATRIX",
+    "LTHINLENS", "LMIRROR", "EMATRIX", "FRFMODE", "FTRFMODE",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -118,8 +118,8 @@ in the beamline. **",
     "A numerically-integrated traveling-wave muffin-tin accelerator.",
     "A Coulomb-scattering and energy-absorbing element simulating material in the\n\
 beam path.",
-    "A simulation of a beam-driven TM monopole mode of a RF cavity.",
-    "A simulation of a beam-driven TM dipole mode of a RF cavity.",
+    "A simulation of a beam-driven TM monopole mode of an RF cavity.",
+    "A simulation of a beam-driven TM dipole mode of an RF cavity.",
     "A simulation of a single-pass broad-band or functionally specified longitudinal\n\
 impedance.",
     "Simulation of synchrotron radiation effects (damping and quantum excitation).",
@@ -149,6 +149,8 @@ and phase modulation.",
     "A thin lens for light optics",
     "A mirror for light optics",
     "Explicit matrix input with data in the element definition, rather than in a file."
+    "One or more beam-driven TM monopole modes of an RF cavity, with data from a file.",
+    "One or more beam-driven TM dipole modes of an RF cavity, with data from a file.",
     } ;
 
 QUAD quad_example;
@@ -1065,6 +1067,18 @@ PARAMETER rfmode_param[N_RFMODE_PARAMS] = {
     {"Q_WAVEFORM", "", IS_STRING, 0, (long)((char *)&rfmode_example.Qwaveform), NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving qualityFactor/Q0 vs time, where Q0 is the quality factor given the the Q parameter."},
     };
 
+FRFMODE frfmode_example;
+/* FRFMODE physical parameters */
+PARAMETER frfmode_param[N_FRFMODE_PARAMS] = {
+    {"FILENAME", "", IS_STRING, 0, (long)((char *)&frfmode_example.filename), NULL, 0.0, 0, "input file"},
+    {"BIN_SIZE", "S", IS_DOUBLE, 0, (long)((char *)&frfmode_example.bin_size), NULL, 0.0, 0, "bin size for current histogram (use 0 for autosize)"},
+    {"N_BINS", "", IS_LONG, 0, (long)((char *)&frfmode_example.n_bins), NULL, 0.0, 20, "number of bins for current histogram"},
+    {"RIGID_UNTIL_PASS", "", IS_LONG, 0, (long)((char *)&frfmode_example.rigid_until_pass), NULL, 0.0, 0, "don't affect the beam until this pass"},
+    {"USE_SYMM_DATA", "", IS_LONG, 0, (long)((char *)&frfmode_example.useSymmData), NULL, 0.0, 0, "use \"Symm\" columns from URMEL output file?"},
+    {"FACTOR", "", IS_DOUBLE, 0, (long)((char *)&frfmode_example.factor), NULL, 1.0, 0, "factor by which to multiply shunt impedances"},
+    {"CUTOFF", "HZ", IS_DOUBLE, 0, (long)((char *)&frfmode_example.cutoffFrequency), NULL, 0.0, 0, "If >0, cutoff frequency.  Modes above this frequency are ignored."},
+    };
+
 TRFMODE trfmode_example;
 /* TRFMODE physical parameters */
 PARAMETER trfmode_param[N_TRFMODE_PARAMS] = {
@@ -1080,6 +1094,23 @@ PARAMETER trfmode_param[N_TRFMODE_PARAMS] = {
     {"SINGLE_PASS", "", IS_LONG, 0, (long)((char *)&trfmode_example.single_pass), NULL, 0.0, 0, "if nonzero, don't accumulate field from pass to pass"},
     {"DX", "M", IS_DOUBLE, 0, (long)((char *)&trfmode_example.dx), NULL, 0.0, 0, "misalignment"},
     {"DY", "M", IS_DOUBLE, 0, (long)((char *)&trfmode_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"XFACTOR", "", IS_DOUBLE, 0, (long)((char *)&trfmode_example.xfactor), NULL, 1.0, 0, "factor by which to multiply shunt impedances"},
+    {"YFACTOR", "", IS_DOUBLE, 0, (long)((char *)&trfmode_example.yfactor), NULL, 1.0, 0, "factor by which to multiply shunt impedances"},
+    };
+
+FTRFMODE ftrfmode_example;
+/* FTRFMODE physical parameters */
+PARAMETER ftrfmode_param[N_FTRFMODE_PARAMS] = {
+    {"FILENAME", "", IS_STRING, 0, (long)((char *)&ftrfmode_example.filename), NULL, 0.0, 0, "input file"},
+    {"BIN_SIZE", "S", IS_DOUBLE, 0, (long)((char *)&ftrfmode_example.bin_size), NULL, 0.0, 0, "bin size for current histogram (use 0 for autosize)"},
+    {"N_BINS", "", IS_LONG, 0, (long)((char *)&ftrfmode_example.n_bins), NULL, 0.0, 20, "number of bins for current histogram"},
+    {"RIGID_UNTIL_PASS", "", IS_LONG, 0, (long)((char *)&ftrfmode_example.rigid_until_pass), NULL, 0.0, 0, "don't affect the beam until this pass"},
+    {"USE_SYMM_DATA", "", IS_LONG, 0, (long)((char *)&ftrfmode_example.useSymmData), NULL, 0.0, 0, "use \"Symm\" columns from URMEL output file?"},
+    {"DX", "M", IS_DOUBLE, 0, (long)((char *)&ftrfmode_example.dx), NULL, 0.0, 0, "misalignment"},
+    {"DY", "M", IS_DOUBLE, 0, (long)((char *)&ftrfmode_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"XFACTOR", "", IS_DOUBLE, 0, (long)((char *)&ftrfmode_example.xfactor), NULL, 1.0, 0, "factor by which to multiply shunt impedances"},
+    {"YFACTOR", "", IS_DOUBLE, 0, (long)((char *)&ftrfmode_example.yfactor), NULL, 1.0, 0, "factor by which to multiply shunt impedances"},
+    {"CUTOFF", "HZ", IS_DOUBLE, 0, (long)((char *)&ftrfmode_example.cutoffFrequency), NULL, 0.0, 0, "If >0, cutoff frequency.  Modes above this frequency are ignored."},
     };
 
 ZLONGIT zlongit_example;
@@ -1713,6 +1744,8 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     {  N_LTHINLENS_PARAMS,  HAS_MATRIX|IS_MAGNET|MATRIX_TRACKING,       sizeof(LTHINLENS),    lthinlens_param     },
     {  N_LMIRROR_PARAMS,  HAS_MATRIX|IS_MAGNET|MATRIX_TRACKING,       sizeof(LMIRROR),    lmirror_param     },
     {  N_EMATRIX_PARAMS,  HAS_MATRIX|HAS_RF_MATRIX,  sizeof(EMATRIX),    ematrix_param     }, 
+    {  N_FRFMODE_PARAMS,         0,      sizeof(FRFMODE),   frfmode_param    },
+    { N_FTRFMODE_PARAMS,         0,     sizeof(FTRFMODE),  ftrfmode_param    },
 } ;
  
 

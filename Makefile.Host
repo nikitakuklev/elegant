@@ -3,10 +3,14 @@ include $(TOP)/config/CONFIG_APPS
 
 CMPLR = ANSI
 CC = $($(ANSI)_$(CMPLR))
-HOST_OPT = NO
+#HOST_OPT = NO
 #CC = quantify -cache-dir=/home/oxygen/BORLAND/.quantify-cache $($(ANSI)_$(CMPLR)) 
 #CC = purify $($(ANSI)_$(CMPLR)) 
 #CXX = purify $($(CPLUSPLUS)_$(CXXCMPLR)) 
+ifeq ($(CONDOR_COMPILE),1)
+  CC = condor_compile -condor_standalone $($(ANSI)_$(CMPLR)) -DCONDOR_COMPILE 
+  CXX = condor_compile -condor_standalone $($(ANSI)_$(CMPLR)) -DCONDOR_COMPILE
+endif
 
 EPICS_EXTENSIONS_LIB = ../../../../../epics/extensions/lib/$(HOST_ARCH)
 PROD = elegant sddsemitmeas madto sddssasefel sddsTouschekInteg ibsEmittance recurseSetup haissinski \
@@ -21,6 +25,9 @@ USR_CFLAGS = 	-I../../../../../epics/extensions/src/SDDS/include \
 USR_CFLAGS_DEFAULT += 	-L../../../../../epics/extensions/lib/$(HOST_ARCH) \
 			-DUNIX -DMINIMIZE_MEMORY
 
+ifeq ($(LYNCEANTECH),1) 
+        USR_CFLAGS += -DLYNCEANTECH
+endif
 USR_CFLAGS_WIN32 = -nil-
 
 PROD_LIBS = 	mdbcommon matlib fftpack SDDS1 \
@@ -62,7 +69,8 @@ elegant_SRCS = 	alpha_data.c alpha_matrix.c amplif.c analyze.c aperture_search.c
 		ztransverse.c twiss.c vary.c zlongit.c SReffects.c mod_rfca.c fitTraces.c \
 		ibs_tracking.c zibs.c wake.c \
 		trwake.c circles.c tubend.c sasefelmx.c sasefel.c alter.c \
-		sliceAnalysis.c divideElements.c transmuteElements.c
+		sliceAnalysis.c divideElements.c transmuteElements.c \
+		frfmode.c ftrfmode.c 
 
 sddsemitmeas_SRCS = sddsemitmeas.c
 

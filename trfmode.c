@@ -179,7 +179,7 @@ void track_through_trfmode(
     /* compute beam-induced voltage for this bin */
     if (trfmode->doX) {
       /* -- x plane */
-      Vxb = 2*k*trfmode->mp_charge*xsum[ib]; 
+      Vxb = 2*k*trfmode->mp_charge*xsum[ib]*trfmode->xfactor; 
       Vxbin[ib] = trfmode->Vxr;
       /* add beam-induced voltage to cavity voltage---it is imaginary as
        * the voltage is 90deg out of phase 
@@ -193,7 +193,7 @@ void track_through_trfmode(
     }
     if (trfmode->doY) {
       /* -- y plane */
-      Vyb = 2*k*trfmode->mp_charge*ysum[ib]; 
+      Vyb = 2*k*trfmode->mp_charge*ysum[ib]*trfmode->yfactor; 
       Vybin[ib] = trfmode->Vyr;
       /* add beam-induced voltage to cavity voltage---it is imaginary as
        * the voltage is 90deg out of phase 

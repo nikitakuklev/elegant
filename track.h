@@ -554,7 +554,9 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_LTHINLENS 82
 #define T_LMIRROR   83
 #define T_EMATRIX   84
-#define N_TYPES 85
+#define T_FRFMODE   85
+#define T_FTRFMODE  86
+#define N_TYPES     87
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -617,7 +619,7 @@ extern char *entity_text[N_TYPES];
 #define N_CSBEND_PARAMS 34
 #define N_MATTER_PARAMS 8
 #define N_RFMODE_PARAMS 21
-#define N_TRFMODE_PARAMS 12
+#define N_TRFMODE_PARAMS 14
 #define N_TWMTA_PARAMS 17
 #define N_ZLONGIT_PARAMS 19
 #define N_MODRF_PARAMS 13
@@ -646,6 +648,9 @@ extern char *entity_text[N_TYPES];
 #define N_LTHINLENS_PARAMS 8
 #define N_LMIRROR_PARAMS 9
 #define N_EMATRIX_PARAMS (1+6+6*6+6*21)
+#define N_FRFMODE_PARAMS  7
+#define N_FTRFMODE_PARAMS 10
+
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
 
@@ -1607,6 +1612,31 @@ typedef struct {
     SDDS_DATASET SDDSrec;
     } RFMODE;
 
+/* names and storage structure for RF-mode-from-file physical parameters */
+extern PARAMETER frfmode_param[N_FRFMODE_PARAMS];
+
+typedef struct {
+    char *filename;
+    double bin_size;           /* size of charge bins */
+    long n_bins;               /* number of charge bins */
+    long rigid_until_pass;     /* beam is "rigid" until this pass */
+    long useSymmData;          /* use Symm data from URMEL output? */
+    double factor;             /* multiply impedance by this factor */
+    double cutoffFrequency;    /* modes above this frequency are ignored */
+    /* for internal use: */
+    double mp_charge;          /* charge per macroparticle */
+    long initialized;          /* indicates that beam has been seen */
+    long modes;                /* number of modes */
+    double *V;                 /* magnitude of voltage */
+    double *Vr, *Vi;           /* real, imaginary components of voltage phasor at t=tlast */
+    double *omega;             /* frequency */
+    double *Q;                 /* loaded quality factor */
+    double *Rs;                /* shunt impedance */
+    double *beta;              /* normalized load impedance */
+    double last_t;             /* time at which last particle was seen */
+    double *last_phase;        /* phase at t=last_t */
+    } FRFMODE;
+
 /* names and storage structure for transverse RF mode physical parameters */
 extern PARAMETER trfmode_param[N_TRFMODE_PARAMS];
 
@@ -1619,6 +1649,7 @@ typedef struct {
     char *plane;               /* "x", "y", or "both" */
     long single_pass;          /* controls accumulation of voltage from turn-to-turn */
     double dx, dy;
+    double xfactor, yfactor;
     /* for internal use: */
     long doX, doY;
     double mp_charge;          /* charge per macroparticle */
@@ -1632,6 +1663,38 @@ typedef struct {
     double last_yphase;        /* phase at t=last_t */
     FILE *fprec;               /* pointer to file for recording (t, Vr) */
     } TRFMODE;
+
+
+/* names and storage structure for transverse-RF-mode-from-file physical parameters */
+extern PARAMETER ftrfmode_param[N_FTRFMODE_PARAMS];
+
+typedef struct {
+    char *filename;
+    double bin_size;           /* size of charge bins */
+    long n_bins;               /* number of charge bins */
+    long rigid_until_pass;     /* beam is "rigid" until this pass */
+    long useSymmData;          /* use "Symm" columns from URMEL file? */
+    double dx, dy;
+    double xfactor;            /* multiply impedance by this factor */
+    double yfactor;            /* multiply impedance by this factor */
+    double cutoffFrequency;    /* modes above this frequency are ignored */
+    /* for internal use: */
+    double mp_charge;          /* charge per macroparticle */
+    long initialized;          /* indicates that beam has been seen */
+    long modes;                /* number of modes */
+    long *doX, *doY;           /* plane of mode */
+    double *Vx;                /* magnitude of voltage */
+    double *Vxr, *Vxi;         /* real, imaginary components of voltage phasor at t=tlast */
+    double *Vy;                /* magnitude of voltage */
+    double *Vyr, *Vyi;         /* real, imaginary components of voltage phasor at t=tlast */
+    double *omega;             /* frequency */
+    double *Q;                 /* loaded quality factor */
+    double *beta;              /* normalized load impedance */
+    double *Rs;                /* shunt impedance */
+    double last_t;             /* time at which last particle was seen */
+    double *lastPhasex;        /* phase at t=last_t */
+    double *lastPhasey;        /* phase at t=last_t */
+    } FTRFMODE;
 
 /* names and storage structure for longitudinal impedance physical parameters */
 extern PARAMETER zlongit_param[N_ZLONGIT_PARAMS];

@@ -63,6 +63,7 @@ long do_tracking(
                  )
 {
   RFMODE *rfmode; TRFMODE *trfmode;
+  FRFMODE *frfmode; FTRFMODE *ftrfmode;
   WATCH *watch;
   HISTOGRAM *histogram;
   ENERGY *energy;
@@ -763,6 +764,16 @@ long do_tracking(
                                  eptr->name, eptr->end_pos, i_pass, n_passes,
                                  charge);
             break;
+          case T_FRFMODE:
+            frfmode = (FRFMODE*)eptr->p_elem;
+            if (!frfmode->initialized)
+              set_up_frfmode(frfmode, eptr->name, eptr->end_pos, n_passes, run, 
+                            *n_original, *P_central,
+                            beamline->revolution_length);
+            track_through_frfmode(coord, n_to_track, frfmode, *P_central,
+                                 eptr->name, eptr->end_pos, i_pass, n_passes,
+                                 charge);
+            break;
           case T_TRFMODE:
             trfmode = (TRFMODE*)eptr->p_elem;
             if (!trfmode->initialized)
@@ -770,6 +781,16 @@ long do_tracking(
             track_through_trfmode(coord, n_to_track, (TRFMODE*)eptr->p_elem, *P_central,
                                   eptr->name, eptr->end_pos, i_pass, n_passes,
                                   charge);
+            break;
+          case T_FTRFMODE:
+            ftrfmode = (FTRFMODE*)eptr->p_elem;
+            if (!ftrfmode->initialized)
+              set_up_ftrfmode(ftrfmode, eptr->name, eptr->end_pos, n_passes, run, 
+                            *n_original, *P_central,
+                            beamline->revolution_length);
+            track_through_ftrfmode(coord, n_to_track, ftrfmode, *P_central,
+                                 eptr->name, eptr->end_pos, i_pass, n_passes,
+                                 charge);
             break;
           case T_ZLONGIT:
             track_through_zlongit(coord, n_to_track, (ZLONGIT*)eptr->p_elem, *P_central, run, i_pass,
