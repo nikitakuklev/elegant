@@ -149,6 +149,8 @@ VMATRIX *compute_periodic_twiss(
    * eta[i] = Inv(I - R)[i][j] R[j][5]
    * eta2[i] = Inv(I-R)[i][j] Sum[0<=k<=j<=5] T[i][j][k]*eta[i]*eta[k]
    *  with eta[4]=0 and eta[5]=1
+   * The dispersion is defined by, for example, 
+   *  x = x(delta=0) + delta*eta + delta^2*eta2 + delta^3*eta3 ... 
    */
   m_alloc(&dispM, 4, 4);
   m_alloc(&dispMInv, 4, 4);
