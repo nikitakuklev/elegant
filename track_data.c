@@ -26,6 +26,7 @@ char *entity_name[N_TYPES] = {
     "MODRF", "BMAPXY", "ZTRANSVERSE", "IBSCATTER", "FMULT",
     "WAKE", "TRWAKE", "TUBEND", "CHARGE", "PFILTER", "HISTOGRAM",
     "CSRCSBEND", "CSRDRIFT", "RFCW", "REMCOR", "MAPSOLENOID",
+    "REFLECT",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -131,7 +132,8 @@ and phase modulation.",
     "A follow-on element for CSRCSBEND that applies the CSR wake over a drift.",
     "A combination of RFCA, WAKE, and TRWAKE.",
     "An element to remove correlations from the tracked beam to simulate certain types of correction.",
-    "A numerically-integrated solenoid specified as a map of (Bz, Br) vs (z, r)."
+    "A numerically-integrated solenoid specified as a map of (Bz, Br) vs (z, r).",
+    "Reflects the beam back on itself, which is useful for multiple beamline matching."
     } ;
 
 QUAD quad_example;
@@ -600,6 +602,11 @@ PARAMETER rotate_param[N_ROTATE_PARAMS] = {
 
 /* names for transmission count */
 PARAMETER trcount_param[N_TRCOUNT_PARAMS] = {
+    {"DUMMY", "", IS_LONG, 0, 0, NULL, 0.0, 0, ""},
+    } ;
+
+/* names for reflection */
+PARAMETER reflect_param[N_REFLECT_PARAMS] = {
     {"DUMMY", "", IS_LONG, 0, 0, NULL, 0.0, 0, ""},
     } ;
 
@@ -1361,6 +1368,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     {    N_RFCW_PARAMS,     MAT_LEN_NCAT|HAS_RF_MATRIX|MAY_CHANGE_ENERGY,       sizeof(RFCW),    rfcw_param     }, 
     {  N_REMCOR_PARAMS,           0,     sizeof(REMCOR),    remcor_param   },
     { N_MAPSOLENOID_PARAMS,  MAT_LEN_NCAT,    sizeof(MAP_SOLENOID),    mapSolenoid_param    }, 
+    { N_REFLECT_PARAMS,      HAS_MATRIX|MATRIX_TRACKING,    sizeof(REFLECT),    reflect_param  },
 } ;
  
 

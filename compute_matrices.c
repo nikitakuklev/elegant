@@ -712,9 +712,19 @@ VMATRIX *compute_matrix(
           bomb("Give one and only one of SPREAD, ATTENUATION_LENGTH, or USE_OVERTAKING_LENGTH for CSRDRIFT", NULL);
         elem->matrix = drift_matrix(csrdrift->length, run->default_order);
         break;
-      case T_KPOLY: case T_RFDF:  case T_RFTMEZ0:  case T_RMDF:  case T_TMCF: case T_CEPL:  case T_TWPL:  case T_TWLA:  
-      case T_TWMTA: case T_RCOL:  case T_PEPPOT: case T_MAXAMP: case T_ECOL: case T_TRCOUNT: 
-      case T_RECIRC: case T_SCRAPER: case T_CENTER: case T_MULT: case T_SCATTER: case T_RAMPRF: case T_RAMPP: 
+      case T_REFLECT:
+        elem->matrix = tmalloc(sizeof(*(elem->matrix)));
+        initialize_matrices(elem->matrix, elem->matrix->order = 1);
+        elem->matrix->R[0][0] = elem->matrix->R[2][2] = 
+          elem->matrix->R[4][4] = elem->matrix->R[5][5] = 1;
+        elem->matrix->R[1][1] = elem->matrix->R[3][3] = -1;
+        break;
+      case T_KPOLY: case T_RFDF:  case T_RFTMEZ0:  case T_RMDF:  case T_TMCF: case T_CEPL:  
+      case T_TWPL:  case T_TWLA:  
+      case T_TWMTA: case T_RCOL:  case T_PEPPOT: case T_MAXAMP: 
+      case T_ECOL: case T_TRCOUNT: 
+      case T_RECIRC: case T_SCRAPER: case T_CENTER: case T_MULT: 
+      case T_SCATTER: case T_RAMPRF: case T_RAMPP: 
       case T_KICKER: case T_RFMODE: case T_REMCOR: case T_MAPSOLENOID:
       default:
         if (entity_description[elem->type].flags&HAS_LENGTH)

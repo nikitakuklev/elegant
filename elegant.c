@@ -31,9 +31,9 @@ char *option[N_OPTIONS] = {
     "describeinput",
     "macro",
         };
-char *USAGE="elegant <inputfile> [-macro=<tag>=<value>,[...]]\n\nProgram by Michael Borland. (This is version 14.5 beta 1, "__DATE__".)";
+char *USAGE="elegant <inputfile> [-macro=<tag>=<value>,[...]]\n\nProgram by Michael Borland. (This is version 14.5 beta 2, "__DATE__".)";
 
-char *GREETING="This is elegant, by Michael Borland. (This is version 14.5 beta 1, "__DATE__".)";
+char *GREETING="This is elegant, by Michael Borland. (This is version 14.5 beta 2, "__DATE__".)";
 
 #define RUN_SETUP        0
 #define RUN_CONTROL      1
@@ -1075,7 +1075,7 @@ double find_beam_p_central(char *input)
   double *p, psum;
   long i, rows;
   
-  if (!SDDS_InitializeInput(&SDDSin, input) || !SDDS_ReadPage(&SDDSin)) {
+  if (!SDDS_InitializeInputFromSearchPath(&SDDSin, input) || !SDDS_ReadPage(&SDDSin)) {
     sprintf(s, "Problem opening beam input file %s", input);
     SDDS_SetError(s);
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);

@@ -282,52 +282,58 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, RADIATION_INTEGRALS
       /* store centroid position */
       *(((double*)elem->twiss) + (plane?1:0) + TWISS_CENT_OFFSET) = path[plane?2:0];
       /* calculate new beta and alpha */
-      func[0] = (sqr(C[plane])*beta[plane] - 2*C[plane]*S[plane]*alpha[plane] 
-                 + sqr(S[plane])*gamma[plane])/detR[plane];
-      func[1] = (-C[plane]*Cp[plane]*beta[plane] + 
-                 (Sp[plane]*C[plane]+S[plane]*Cp[plane])*alpha[plane] - 
-                 S[plane]*Sp[plane]*gamma[plane])/detR[plane];
-      
-      /* use R12=S to find sin(dphi) */
-      if ((sin_dphi=S[plane]/sqrt(beta[plane]*func[0]))>1) {
-        fprintf(stdout, "warning: argument of asin > 1 by %f (propagate_twiss)\n", sin_dphi-1);
-        fflush(stdout);
-        fprintf(stdout, "element is %s at z=%em\n", elem->name, elem->end_pos);
-        fflush(stdout);
-        fprintf(stdout, "%c-plane matrix:  C = %e,  S = %e,  C' = %e,  S' = %e\n",
-                (plane==0?'x':'y'), C, S, Cp, Sp);
-        fflush(stdout);
-        fprintf(stdout, "beta0 = %e, func[0] = %e\n", beta[plane], func[0]);
-        fflush(stdout);
-        sin_dphi = 1;
-        cos_dphi = 0;
-      }
-      else if (sin_dphi<-1) {
-        fprintf(stdout, "warning: argument of asin < -1 by %f (propagate_twiss)\n", sin_dphi+1);
-        fflush(stdout);
-        fprintf(stdout, "element is %s at z=%em\n", elem->name, elem->end_pos);
-        fflush(stdout);
-        sin_dphi = -1;
-        cos_dphi = 0;
-      }
-      else {
-        /* use R11=C to find cos(dphi) */
-        cos_dphi = sqrt(beta[plane]/func[0])*C[plane] - alpha[plane]*sin_dphi;
-      }
-      if (entity_description[elem->type].flags&HAS_LENGTH) {
-        if (*((double*)elem->p_elem)>=0) {
-          if ((dphi = atan2(sin_dphi, cos_dphi))<0) 
-            dphi += PIx2;
-        } else {
-          if ((dphi=atan2(sin_dphi, cos_dphi))>0)
-            dphi -= PIx2;
-        }
+      if (elem->type==T_REFLECT) {
+        func[0] = beta[plane];
+        func[1] = -alpha[plane];
+        dphi = 0;
       } else {
+        func[0] = (sqr(C[plane])*beta[plane] - 2*C[plane]*S[plane]*alpha[plane] 
+                   + sqr(S[plane])*gamma[plane])/detR[plane];
+        func[1] = (-C[plane]*Cp[plane]*beta[plane] + 
+                   (Sp[plane]*C[plane]+S[plane]*Cp[plane])*alpha[plane] - 
+                   S[plane]*Sp[plane]*gamma[plane])/detR[plane];
+        /* use R12=S to find sin(dphi) */
+        if ((sin_dphi=S[plane]/sqrt(beta[plane]*func[0]))>1) {
+          fprintf(stdout, "warning: argument of asin > 1 by %f (propagate_twiss)\n", sin_dphi-1);
+          fflush(stdout);
+          fprintf(stdout, "element is %s at z=%em\n", elem->name, elem->end_pos);
+          fflush(stdout);
+          fprintf(stdout, "%c-plane matrix:  C = %e,  S = %e,  C' = %e,  S' = %e\n",
+                  (plane==0?'x':'y'), C, S, Cp, Sp);
+          fflush(stdout);
+          fprintf(stdout, "beta0 = %e, func[0] = %e\n", beta[plane], func[0]);
+          fflush(stdout);
+          sin_dphi = 1;
+          cos_dphi = 0;
+        }
+        else if (sin_dphi<-1) {
+          fprintf(stdout, "warning: argument of asin < -1 by %f (propagate_twiss)\n", sin_dphi+1);
+          fflush(stdout);
+          fprintf(stdout, "element is %s at z=%em\n", elem->name, elem->end_pos);
+          fflush(stdout);
+          sin_dphi = -1;
+          cos_dphi = 0;
+        }
+        else {
+          /* use R11=C to find cos(dphi) */
+          cos_dphi = sqrt(beta[plane]/func[0])*C[plane] - alpha[plane]*sin_dphi;
+        }
+        if (entity_description[elem->type].flags&HAS_LENGTH) {
+          if (*((double*)elem->p_elem)>=0) {
+            if ((dphi = atan2(sin_dphi, cos_dphi))<0) 
+              dphi += PIx2;
+          } else {
+            if ((dphi=atan2(sin_dphi, cos_dphi))>0)
+              dphi -= PIx2;
+          }
+        } else {
           if ((dphi = atan2(sin_dphi, cos_dphi))<0) 
             dphi += PIx2;
+        }
       }
+      
       phi[plane]  = func[2] = phi[plane] + dphi;
-      beta[plane]  = func[0];
+      beta[plane]  = fabs(func[0]);
       alpha[plane] = func[1];
     }
     

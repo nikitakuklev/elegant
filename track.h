@@ -491,7 +491,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_RFCW  73
 #define T_REMCOR 74
 #define T_MAPSOLENOID 75
-#define N_TYPES 76
+#define T_REFLECT 76
+#define N_TYPES 77
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -574,6 +575,7 @@ extern char *entity_text[N_TYPES];
 #define N_REMCOR_PARAMS 6
 #define N_MAPSOLENOID_PARAMS 18
 #define N_RFCW_PARAMS 28
+#define N_REFLECT_PARAMS 1
 
 typedef struct {
     char *name;            /* parameter name */
@@ -1081,6 +1083,13 @@ extern PARAMETER trcount_param[N_TRCOUNT_PARAMS];
 typedef struct {
     long dummy;
     } TRCOUNT;
+
+/* storage structure for reflection */
+extern PARAMETER reflect_param[N_REFLECT_PARAMS];
+
+typedef struct {
+    long dummy;
+    } REFLECT;
 
 /* storage structure for recirculation point */
 extern PARAMETER recirc_param[N_RECIRC_PARAMS];
