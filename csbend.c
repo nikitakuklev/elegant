@@ -2783,6 +2783,8 @@ long correctDistribution(double *array, long npoints, double desiredSum)
   factor = desiredSum/sum;
   for (i=0; i<npoints; i++)
     array[i] *= factor;
+  fprintf(stdout, "Distribution corrected by factor %le with %ld points set to zero\n",
+	  factor, nz);
   return nz;
 }
 
