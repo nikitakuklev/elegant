@@ -495,35 +495,37 @@ static SDDS_DEFINITION column_definition[N_COLUMNS_WRI] = {
 #define IP_NUX 1
 #define IP_DNUXDP 2
 #define IP_DNUXDP2 3
-#define IP_AX 4
-#define IP_NUY 5
-#define IP_DNUYDP 6
-#define IP_DNUYDP2 7
-#define IP_AY 8
-#define IP_STAGE 9
-#define IP_PCENTRAL 10
-#define IP_DBETAXDP 11
-#define IP_DBETAYDP 12
-#define IP_ETAX2    13
-#define IP_ETAY2    14
-#define IP_ETAX3    15
-#define IP_ETAY3    16
-#define IP_BETAXMIN 17
-#define IP_BETAXAVE 18
-#define IP_BETAXMAX 19
-#define IP_BETAYMIN 20
-#define IP_BETAYAVE 21
-#define IP_BETAYMAX 22
-#define IP_ETAXMAX 23
-#define IP_ETAYMAX 24
-#define IP_WAISTSX 25
-#define IP_WAISTSY 26
-#define IP_DNUXDAX 27
-#define IP_DNUXDAY 28
-#define IP_DNUYDAX 29
-#define IP_DNUYDAY 30
-#define IP_ALPHAC2 31
-#define IP_ALPHAC  32
+#define IP_DNUXDP3 4
+#define IP_AX 5
+#define IP_NUY 6
+#define IP_DNUYDP 7
+#define IP_DNUYDP2 8
+#define IP_DNUYDP3 9
+#define IP_AY 10
+#define IP_STAGE 11
+#define IP_PCENTRAL 12
+#define IP_DBETAXDP 13
+#define IP_DBETAYDP 14
+#define IP_ETAX2    15
+#define IP_ETAY2    16
+#define IP_ETAX3    17
+#define IP_ETAY3    18
+#define IP_BETAXMIN 19
+#define IP_BETAXAVE 20
+#define IP_BETAXMAX 21
+#define IP_BETAYMIN 22
+#define IP_BETAYAVE 23
+#define IP_BETAYMAX 24
+#define IP_ETAXMAX 25
+#define IP_ETAYMAX 26
+#define IP_WAISTSX 27
+#define IP_WAISTSY 28
+#define IP_DNUXDAX 29
+#define IP_DNUXDAY 30
+#define IP_DNUYDAX 31
+#define IP_DNUYDAY 32
+#define IP_ALPHAC2 33
+#define IP_ALPHAC  34
 /* IP_ALPHAC must be the last item before the radiation-integral-related
  * items!
  */
@@ -548,10 +550,12 @@ static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
 {"nux", "&parameter name=nux, symbol=\"$gn$r$bx$n\", type=double, units=\"1/(2$gp$r)\", description=\"Horizontal tune\" &end"},
 {"dnux/dp", "&parameter name=dnux/dp, symbol=\"$gx$r$bx$n\", type=double, units=\"1/(2$gp$r)\", description=\"Horizontal chromaticity\" &end"},
 {"dnux/dp2", "&parameter name=dnux/dp2, symbol=\"$gx$r$bx2$n\", type=double, units=\"1/(2$gp$r)\", description=\"Horizontal 2nd-order chromaticity\" &end"},
+{"dnux/dp3", "&parameter name=dnux/dp3, symbol=\"$gx$r$bx3$n\", type=double, units=\"1/(2$gp$r)\", description=\"Horizontal 3rd-order chromaticity\" &end"},
 {"Ax", "&parameter name=Ax, symbol=\"A$bx$n\", type=double, units=\"$gp$rm\", description=\"Horizontal acceptance\" &end"},
 {"nuy", "&parameter name=nuy, symbol=\"$gn$r$by$n\", type=double, units=\"1/(2$gp$r)\", description=\"Vertical tune\" &end"},
 {"dnuy/dp", "&parameter name=dnuy/dp, symbol=\"$gx$r$by$n\", type=double, units=\"1/(2$gp$r)\", description=\"Vertical chromaticity\" &end"},
 {"dnuy/dp2", "&parameter name=dnuy/dp2, symbol=\"$gx$r$by2$n\", type=double, units=\"1/(2$gp$r)\", description=\"Vertical 2nd-order chromaticity\" &end"},
+{"dnuy/dp3", "&parameter name=dnuy/dp3, symbol=\"$gx$r$by3$n\", type=double, units=\"1/(2$gp$r)\", description=\"Vertical 3rd-order chromaticity\" &end"},
 {"Ay", "&parameter name=Ay, symbol=\"A$by$n\", type=double, units=\"$gp$rm\", description=\"Vertical acceptance\" &end"},
 {"Stage", "&parameter name=Stage, type=string, description=\"Stage of computation\" &end"},
 {"pCentral", "&parameter name=pCentral, type=double, units=\"m$be$nc\", description=\"Central momentum\" &end"},
@@ -641,8 +645,10 @@ void dump_twiss_parameters(
                           IP_STEP, twiss_count, IP_STAGE, stage, 
                           IP_NUX, tune[0], IP_DNUXDP, chromaticity[0], IP_AX, acceptance[0],
                           IP_NUY, tune[1], IP_DNUYDP, chromaticity[1], IP_AY, acceptance[1], 
-                          IP_DNUXDP2, (double)0.0,
-                          IP_DNUYDP2, (double)0.0,
+                          IP_DNUXDP2, beamline->chrom2[0],
+                          IP_DNUYDP2, beamline->chrom2[1],
+                          IP_DNUXDP3, beamline->chrom3[0],
+                          IP_DNUYDP3, beamline->chrom3[1],
                           IP_ALPHAC, alphac[0], IP_ALPHAC2, alphac[1], 
                           IP_DBETAXDP, dbeta[0], IP_DBETAYDP, dbeta[1],
                           IP_BETAXMIN, twiss_min.betax, IP_BETAXAVE, twiss_ave.betax, IP_BETAXMAX, twiss_max.betax, 
@@ -1044,7 +1050,8 @@ long run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, lon
   return 1;
 }
 
-void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_coord, long periodic,
+void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_coord, 
+			      long periodic,
                               long radiation_integrals,
                               double betax, double alphax, double etax, double etapx, 
                               double betay, double alphay, double etay, double etapy, 
@@ -1186,9 +1193,9 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
       if (!(M->T))
         bomb("logic error: T matrix is NULL in compute_twiss_parameters", NULL);
       computeChromaticities(&chromx, &chromy, 
-                            beamline->chrom2, beamline->chrom3,
-                            &dbetax, &dbetay, &dalphax, &dalphay, beamline->twiss0, M,
-                            beamline->tune, beamline->eta2, beamline->eta3);
+                            &dbetax, &dbetay, &dalphax, &dalphay, beamline->twiss0, M);
+      if (twissConcatOrder>1 && higher_order_chromaticity)
+	computeHigherOrderChromaticities(beamline, starting_coord, run, twissConcatOrder);
       if (doTuneShiftWithAmplitude)
         computeTuneShiftWithAmplitude(beamline->dnux_dA, beamline->dnuy_dA,
                                       beamline->twiss0, beamline->tune, M, beamline, run,
@@ -1217,9 +1224,9 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
       if (!(M->T))
         bomb("logic error: T matrix is NULL in compute_twiss_parameters", NULL);
       computeChromaticities(&chromx, &chromy, 
-                            beamline->chrom2, beamline->chrom3,
-                            &dbetax, &dbetay, &dalphax, &dalphay, beamline->twiss0, M,
-                            beamline->tune, beamline->eta2, beamline->eta3);
+                            &dbetax, &dbetay, &dalphax, &dalphay, beamline->twiss0, M);
+      if (twissConcatOrder>1 && higher_order_chromaticity)
+	computeHigherOrderChromaticities(beamline, starting_coord, run, twissConcatOrder);
       if (doTuneShiftWithAmplitude)
         computeTuneShiftWithAmplitude(beamline->dnux_dA, beamline->dnuy_dA,
                                       beamline->twiss0, beamline->tune, M, beamline, run,
@@ -1281,10 +1288,6 @@ void update_twiss_parameters(RUN *run, LINE_LIST *beamline, unsigned long *unsta
                            &unstable0);
   if (unstable)
     *unstable = unstable0;
-/*
-  fprintf(stdout, "Twiss parameters updated.\n");
-  fflush(stdout);
-*/
 }
 
 void copy_doubles(double *target, double *source, long n)

@@ -34,5 +34,6 @@
     STRING reference_element = NULL;
     long reference_element_occurrence = 0;
     long concat_order = 3;
+    long higher_order_chromaticity = 0;
 #end
 

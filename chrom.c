@@ -135,8 +135,8 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
     fprintf(stdout, "Computing chromaticity influence matrix for all named sextupoles.\n");
     fflush(stdout);
     computeChromaticities(&chromx0, &chromy0, 
-                          NULL, NULL, NULL, NULL, NULL, NULL, beamline->twiss0, M=beamline->matrix,
-                          beamline->tune, NULL, NULL);
+                          NULL, NULL, NULL, NULL, 
+			  beamline->twiss0, M=beamline->matrix);
 
     for (i=0; i<chrom->n_families; i++) {
         count = 0;
@@ -167,8 +167,7 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
             assert_element_links(beamline->links, run, beamline, STATIC_LINK+DYNAMIC_LINK);
         M = full_matrix(beamline->elem_twiss, run, 2);
         computeChromaticities(&chromx, &chromy, 
-                              NULL, NULL, NULL, NULL, NULL, NULL, beamline->twiss0, M,
-                              beamline->tune, NULL, NULL);
+                              NULL, NULL, NULL, NULL, beamline->twiss0, M);
 
         C->a[0][i] = (chromx-chromx0)/chrom->sextupole_tweek;
         C->a[1][i] = (chromy-chromy0)/chrom->sextupole_tweek;
@@ -277,8 +276,8 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
     if (!(M = beamline->matrix) || !M->C || !M->R || !M->T)
         bomb("something wrong with transfer map for beamline (do_chromaticity_correction.1)", NULL);
 
-    computeChromaticities(&chromx0, &chromy0, NULL, NULL, NULL, NULL, NULL, NULL, beamline->twiss0, M,
-                          beamline->tune, NULL, NULL);
+    computeChromaticities(&chromx0, &chromy0, 
+			  NULL, NULL, NULL, NULL, beamline->twiss0, M);
 
     fprintf(stdout, "\nAdjusting chromaticities:\n");
     fflush(stdout);
@@ -371,8 +370,8 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
         
         if (!M || !M->C || !M->R || !M->T)
             bomb("something wrong with transfer map for beamline (do_chromaticity_correction.2)", NULL);
-        computeChromaticities(&chromx0, &chromy0, NULL, NULL, NULL, NULL, NULL, NULL, beamline->twiss0, M,
-                              beamline->tune, NULL, NULL);
+        computeChromaticities(&chromx0, &chromy0, 
+			      NULL, NULL, NULL, NULL, beamline->twiss0, M);
         beamline->chromaticity[0] = chromx0;
         beamline->chromaticity[1] = chromy0;
         fprintf(stdout, "resulting chromaticities:  %e  %e\n", chromx0, chromy0);
@@ -402,27 +401,23 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
     }
 
 void computeChromaticities(double *chromx, double *chromy, 
-                           double *chrom2, double *chrom3,
                            double *dbetax, double *dbetay,
                            double *dalphax, double *dalphay,
-                           TWISS *twiss, VMATRIX *M, double *tune, 
-                           double *eta2, double *eta3)
+                           TWISS *twiss, VMATRIX *M)
 {
   double computeChromaticDerivRElem(long i, long j, TWISS *twiss, VMATRIX *M);
-  double computeChromaticDeriv2RElem(long i, long j, TWISS *twiss, VMATRIX *M, double *eta2q);
-  double computeChromaticDeriv3RElem(long i, long j, TWISS *twiss, VMATRIX *M, double *eta2q, double *eta3q);
   double dR11, dR22, dR12, dR33, dR34, dR44;
-  double d2R11, d2R22, d2R33, d2R44;
-  double d3R11, d3R22, d3R33, d3R44;
-  
+
   dR11 = computeChromaticDerivRElem(1, 1, twiss, M);
   dR12 = computeChromaticDerivRElem(1, 2, twiss, M);
   dR22 = computeChromaticDerivRElem(2, 2, twiss, M);
   dR33 = computeChromaticDerivRElem(3, 3, twiss, M);
   dR34 = computeChromaticDerivRElem(3, 4, twiss, M);
   dR44 = computeChromaticDerivRElem(4, 4, twiss, M);
+
   *chromx = -(dR11 + dR22)/M->R[0][1]*twiss->betax/(2*PIx2);
   *chromy = -(dR33 + dR44)/M->R[2][3]*twiss->betay/(2*PIx2);
+
   if (dbetax) {
     if (M->R[0][1])
       *dbetax = twiss->betax*(dR12 - PI*twiss->betax*(*chromx)*(M->R[0][0]+M->R[1][1]))/M->R[0][1];
@@ -449,51 +444,55 @@ void computeChromaticities(double *chromx, double *chromy,
     else
       *dalphay = DBL_MAX;
   }
-  
-  if (chrom3 && !chrom2)
-    bomb("programming error: asked for chrom3 but not chrom2!", NULL);
-  if (chrom2) {
-    chrom2[0] = chrom2[1] = 0;
-    if (M->T || M->Q) {
-      d2R11 = computeChromaticDeriv2RElem(1,1, twiss, M, eta3);
-      d2R22 = computeChromaticDeriv2RElem(2,2, twiss, M, eta3);
-      d2R33 = computeChromaticDeriv2RElem(3,3, twiss, M, eta3);
-      d2R44 = computeChromaticDeriv2RElem(4,4, twiss, M, eta3);
-      chrom2[0] = 
-        (
-         (d2R11+d2R22) 
-         + 8*sqr(*chromx*PI)*cos(PIx2*tune[0])
-         )
-          /(-4*PI*sin(PIx2*tune[0]));
-      chrom2[1] = 
-        (
-         (d2R33+d2R44) 
-         + 8*sqr(*chromy*PI)*cos(PIx2*tune[1]) 
-         )
-          /(-4*PI*sin(PIx2*tune[1]));
+}
+
+void computeHigherOrderChromaticities(LINE_LIST *beamline, double *clorb, RUN *run,
+				      long concatOrder)
+{
+#define NDELTA_VALUES 5   /* must be at least 5 */
+  double trace[2][NDELTA_VALUES], delta[NDELTA_VALUES];
+  double eta[6];
+  double coef[NDELTA_VALUES], sCoef[NDELTA_VALUES], chi;
+  long i, p;
+  double c1;
+  VMATRIX *M1, M0;
+
+  beamline->chrom2[0] = beamline->chrom2[1] = 0;
+  beamline->chrom3[0] = beamline->chrom3[1] = 0;
+  initialize_matrices(&M0, 1);
+  eta[0] = beamline->twiss0->etax;
+  eta[1] = beamline->twiss0->etapx;
+  eta[2] = beamline->twiss0->etay;
+  eta[3] = beamline->twiss0->etapy;
+  eta[4] = 0;
+  eta[5] = 1;
+  for (p=0; p<NDELTA_VALUES; p++) {
+    delta[p] = (p-3)*1e-4;
+    for (i=0; i<6; i++) {
+      M0.C[i] = (clorb?clorb[i]:0)+delta[p]*eta[i] +
+	(i<4? sqr(delta[p])*beamline->eta2[i] + pow3(delta[p])*beamline->eta3[i] : 0);
+      M0.R[i][i] = 1;
     }
-  }  
-  if (chrom3) {
-    chrom2[0] = chrom2[1] = 0;
-    if (M->T || M->Q) {
-      d3R11 = computeChromaticDeriv3RElem(1,1, twiss, M, eta2, eta3);
-      d3R22 = computeChromaticDeriv3RElem(2,2, twiss, M, eta2, eta3);
-      d3R33 = computeChromaticDeriv3RElem(3,3, twiss, M, eta2, eta3);
-      d3R44 = computeChromaticDeriv3RElem(4,4, twiss, M, eta2, eta3);
-      chrom3[0] = 
-        (
-         (d3R11+d3R22) 
-         - 16*cube(*chromx*PI)*sin(PIx2*tune[0]) 
-         + 24*PI*(*chromx)*chrom2[0]*cos(PIx2*tune[0])
-         )/(-4*PI*sin(PIx2*tune[0]));
-      chrom3[1] = 
-        (
-         (d3R33+d3R44) 
-         - 16*cube(*chromy*PI)*sin(PIx2*tune[1]) 
-         + 24*PI*(*chromy)*chrom2[0]*cos(PIx2*tune[1])
-         )/(-4*PI*sin(PIx2*tune[1]));
-    }
+    M1 = append_full_matrix(beamline->elem_twiss, run, &M0, concatOrder);
+    for (i=0; i<2; i++)
+      /* Tr[0,1][p] is the trace for x,y plane for point p */
+      trace[i][p] = M1->R[2*i][2*i] + M1->R[2*i+1][2*i+1];
+    free_matrices(M1);
   }
+  for (i=0; i<2; i++) {
+    lsfn(delta, trace[i], NULL, NDELTA_VALUES, NDELTA_VALUES-2, coef, sCoef, &chi, NULL);
+    c1 = -coef[1]/(4*PI*sin(PIx2*beamline->tune[i]));
+    beamline->chrom2[i] = (
+		 2*coef[2]
+		 + 8*sqr(PI)*sqr(c1)*cos(PIx2*beamline->tune[i])
+		 )/(-4*PI*sin(PIx2*beamline->tune[i]));
+    beamline->chrom3[i] = (
+		 6*coef[3] 
+		 - 16*pow3(PI*c1)*sin(PIx2*beamline->tune[i]) 
+		 + 24*sqr(PI)*c1*beamline->chrom2[i]*cos(PIx2*beamline->tune[i])
+		 )/(-4*PI*sin(PIx2*beamline->tune[i]));
+  }
+  free_matrices(&M0);
 }
 
 double computeChromaticDerivRElem(long i, long j, TWISS *twiss, VMATRIX *M)
@@ -526,21 +525,23 @@ double computeChromaticDerivRElem(long i, long j, TWISS *twiss, VMATRIX *M)
 double computeChromaticDeriv2RElem(long i, long m, TWISS *twiss, VMATRIX *M,
                                    double *eta2q)
 {
-  long j, k, l;
+  long j, k, l, count;
   double sum, eta[6] = {0,0,0,0,0,0};
   double eta2[6] = {0,0,0,0,0,0};
    
+  fprintf(stderr, "Computing d2R%ld%ld:\n", i, m);
   eta[0] = twiss->etax;
   eta[1] = twiss->etapx;
   eta[2] = twiss->etay;
   eta[3] = twiss->etapy;
   eta[5] = 1;
-  for (i=0; i<4; i++)
-    eta2[i] = eta2q[i];
+  for (j=0; j<4; j++)
+    eta2[j] = eta2q[j];
+
   i--;
   m--;
   sum = 0;
-
+  count = 0;
   if (M->T)
     for (k=0; k<6; k++) {
       if (k>m) {
@@ -550,65 +551,103 @@ double computeChromaticDeriv2RElem(long i, long m, TWISS *twiss, VMATRIX *M,
       } else {
         sum += eta2[k]*M->T[i][m][k];
       }
+      count ++;
     }
   if (M->Q) {
-    for (k=0; k<=m; k++)
-      for (l=0; l<=k; l++)
-        sum += M->Q[i][m][k][l]*eta[k]*eta[l];
-    for (j=m; j<6; j++) 
-      for (l=0; l<=m; l++) 
-        sum += M->Q[i][j][m][l]*eta[j]*eta[l];
-    for (j=m; j<6; j++)
-      for (k=m; k<=j; k++)
-        sum += M->Q[i][j][k][m]*eta[j]*eta[k];
+    for (j=0; j<6; j++)
+      for (k=0; k<=j; k++)
+	for (l=0; l<=k; l++) {
+	  if (j==m) {
+	    sum += M->Q[i][m][k][l]*eta[k]*eta[l];
+	    count ++;
+	  }
+	  if (k==m) {
+	    sum += M->Q[i][j][m][l]*eta[j]*eta[l];
+	    count ++;
+	  }
+	  if (l==m) {
+	    sum += M->Q[i][j][k][l]*eta[j]*eta[k];
+	    count ++;
+	  }
+	}
   }
-  
+  fprintf(stderr, "sum is %e from %ld terms\n",
+	  sum, count);
   return sum;
 }  
 
 double computeChromaticDeriv3RElem(long i, long m, TWISS *twiss, VMATRIX *M,
                                    double *eta2q, double *eta3q)
 {
-  long j, k, l;
+  long j, k, l, count;
   double sum, eta[6] = {0,0,0,0,0,0};
   double eta2[6] = {0,0,0,0,0,0};
   double eta3[6] = {0,0,0,0,0,0};
    
+  fprintf(stderr, "Computing d3R%ld%ld:\n", i, m);
   eta[0] = twiss->etax;
   eta[1] = twiss->etapx;
   eta[2] = twiss->etay;
   eta[3] = twiss->etapy;
   eta[5] = 1;
-  for (i=0; i<4; i++) {
-    eta2[i] = eta2q[i];
-    eta3[i] = eta3q[i];
+  for (j=0; j<4; j++) {
+    eta2[j] = eta2q[j];
+    eta3[j] = eta3q[j];
   }
-  
+
+  for (j=0; j<6; j++)
+    fprintf(stderr, "eta[%ld] = %e, %e, %e\n",
+	    j, eta[j], eta2[j], eta3[j]);
+    
   i--;
   m--;
-  sum = 0;
-
+  sum = count = 0;
   if (M->T)
     for (k=0; k<6; k++) {
       if (k>m) {
+	count ++;
         sum += eta3[k]*M->T[i][k][m];
+	fprintf(stderr, "term eta3[%ld]*T[%ld][%ld][%ld] = %e*%e\n",
+		k, i, k, m, eta3[k], M->T[i][k][m]);
       } else if (k==m) {
+	count ++;
         sum += eta3[k]*M->T[i][k][k]*2;
+	fprintf(stderr, "term eta3[%ld]*T[%ld][%ld][%ld] = %e*%e\n",
+		k, i, k, k, eta3[k], M->T[i][k][k]);
       } else {
+	count ++;
         sum += eta3[k]*M->T[i][m][k];
+	fprintf(stderr, "term eta3[%ld]*T[%ld][%ld][%ld] = %e*%e\n",
+		k, i, m, k, eta3[k], M->T[i][m][k]);
       }
     }
   if (M->Q) {
-    for (k=0; k<=m; k++)
-      for (l=0; l<=k; l++)
-        sum += M->Q[i][m][k][l]*(eta2[k]*eta[l]+eta[k]*eta2[k])
-    for (j=m; j<6; j++) 
-      for (l=0; l<=m; l++) 
-        sum += M->Q[i][j][m][l]*(eta2[j]*eta[l]+eta[j]*eta2[l]);
-    for (j=m; j<6; j++)
-      for (k=m; k<=j; k++)
-        sum += M->Q[i][j][k][m]*(eta2[j]*eta[k]+eta[j]*eta2[k]);
+    for (j=0; j<6; j++)
+      for (k=0; k<=j; k++)
+	for (l=0; l<=k; l++) {
+	  if (j==m) {
+	    count ++;
+	    sum += M->Q[i][j][k][l]*(eta2[k]*eta[l]+eta[k]*eta2[l]);
+	    fprintf(stderr, "term eta*U[%ld][%ld][%ld][%ld] = %e*%e\n",
+		    i, j, k, l, (eta2[k]*eta[l]+eta[k]*eta2[l]), 
+		    M->Q[i][j][k][l]);
+	  }
+	  if (k==m) {
+	    count ++;
+	    sum += M->Q[i][j][k][l]*(eta2[j]*eta[l]+eta[j]*eta2[l]);
+	    fprintf(stderr, "term eta*U[%ld][%ld][%ld][%ld] = %e*%e\n",
+		    i, j, k, l, (eta2[j]*eta[l]+eta[j]*eta2[l]),
+		    M->Q[i][j][k][l]);
+	  }
+	  if (l==m) {
+	    count ++;
+	    sum += M->Q[i][j][k][l]*(eta2[j]*eta[k]+eta[j]*eta2[k]);
+	    fprintf(stderr, "term eta*U[%ld][%ld][%ld][%ld] = %e*%e\n",
+		    i, j, k, l, (eta2[j]*eta[k]+eta[j]*eta2[k]),
+		    M->Q[i][j][k][l]);
+	  }
+	}
   }
-  
+  fprintf(stderr, "sum of %ld terms is %e\n", count, sum);
   return sum;
 }  
