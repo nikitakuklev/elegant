@@ -9,6 +9,9 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.12  2000/08/02 01:36:17  borland
+ * Fixed an error message that was sent to stdout.
+ *
  * Revision 1.11  2000/05/12 20:59:30  borland
  * Made some changes to try to accomodate cause when there is a matrix error.
  * Not successful.
@@ -94,7 +97,7 @@ char *option[N_OPTIONS] = {
  [<inputfile>] [<outputfile>] [-pipe=[input][,output]]\n\
  -sigmaData=<xName>,<yName>\n\
  [-energySpread=<fractionalRMSValue>]\n\
- [-errorLevel=<valueInmm>,[{gaussian,<nSigmas> | uniform}]]\n\
+ [-errorLevel=<valueInm>,[{gaussian,<nSigmas> | uniform}]]\n\
  [-nErrorSets=<number>]\n\
  [-limitMode={resolution | zero}[{,reject}]\n\
  [-deviationLimit=<xLevelm>,<yLevelm>]\n\
