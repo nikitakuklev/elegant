@@ -15,7 +15,8 @@
 
 #define DEBUG 0
 
-long checkForOptimRecord(double *value, long values);
+static long stopOptimization = 0;
+long checkForOptimRecord(double *value, long values, long *again);
 void storeOptimRecord(double *value, long values, long invalid, double result);
 void rpnStoreHigherMatrixElements(VMATRIX *M, long **TijkMem, long **UijklMem, long maxOrder);
 
@@ -456,6 +457,7 @@ typedef struct {
   long invalid;
   double *variableValue;
   double result;
+  long usedBefore;
 } OPTIM_RECORD;
 static long optimRecords = 0, nextOptimRecordSlot = 0, balanceTerms = 0, ignoreOptimRecords=0;
 static OPTIM_RECORD optimRecord[MAX_OPTIM_RECORDS];
@@ -476,7 +478,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
     log_entry("do_optimize");
     
     optimRecords = ignoreOptimRecords = nextOptimRecordSlot = 0;
-    
+    stopOptimization  = 0;
     run               = run1;
     control           = control1;
     error             = error1;
@@ -571,7 +573,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
     startsLeft = optimization_data->n_restarts+1;
     result = DBL_MAX;
     balanceTerms = 1;
-    while (startsLeft--) {
+    while (startsLeft-- && !stopOptimization) {
       lastResult = result;
       switch (optimization_data->method) {
       case OPTIM_METHOD_SIMPLEX:
@@ -590,6 +592,8 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
           else
             fputs("warning: maximum number of passes reached in simplex optimization", stdout);
         }
+        if (simplexMinAbort(0))
+          stopOptimization = 1;
         break;
       case OPTIM_METHOD_POWELL:
         fputs("Starting Powell optimization.\n", stdout);
@@ -646,7 +650,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
       if (result<=optimization_data->target || fabs(result-lastResult)<optimization_data->tolerance)
         break;
       lastResult = result;
-      if (startsLeft) {
+      if (startsLeft && !stopOptimization) {
         for (i=0; i<variables->n_variables; i++) {
           variables->step[i] = variables->orig_step[i];
         }
@@ -816,7 +820,7 @@ double optimization_function(double *value, long *invalid)
     OPTIM_CONSTRAINTS *constraints;
     OPTIM_COVARIABLES *covariables;
     double conval, result;
-    long i, iRec;
+    long i, iRec, recordUsedAgain;
     unsigned long unstable;
     VMATRIX *M;
     TWISS twiss_ave, twiss_min, twiss_max;
@@ -856,6 +860,7 @@ double optimization_function(double *value, long *invalid)
 #endif
         /* calculate values of covariables and assert these as well */
         for (i=0; i<covariables->n_covariables; i++) {
+            rpn_clear();
             rpn_store(covariables->varied_quan_value[i]=rpn(covariables->pcode[i]), covariables->memory_number[i]);
             if (rpn_check_error()) exit(1);
             }
@@ -880,7 +885,12 @@ double optimization_function(double *value, long *invalid)
         fflush(optimization_data->fp_log);
         }
 
-    if ((iRec=checkForOptimRecord(value, variables->n_variables))>=0) {
+    if ((iRec=checkForOptimRecord(value, variables->n_variables, &recordUsedAgain))>=0) {
+      if (recordUsedAgain>5) {
+        fprintf(stderr, "record used too many times---stopping optimization\n");
+        stopOptimization = 1;
+        simplexMinAbort(1);
+      }
       if (optimization_data->verbose && optimization_data->fp_log)
         fprintf(optimization_data->fp_log, "Using previously computed value %23.15e\n\n", 
                 optimRecord[iRec].result);
@@ -1091,6 +1101,7 @@ double optimization_function(double *value, long *invalid)
       fflush(stdout);
 #endif
     result = 0;
+    rpn_clear();
     if (!*invalid) {
       long i, terms=0;
       double value, sum;
@@ -1179,9 +1190,9 @@ double optimization_function(double *value, long *invalid)
     return(result);
     }
 
-long checkForOptimRecord(double *value, long values)
+long checkForOptimRecord(double *value, long values, long *again)
 {
-  long iRecord, iValue;
+  long iRecord, iValue, jRecord;
   double diff;
   if (ignoreOptimRecords)
     return -1;
@@ -1191,11 +1202,16 @@ long checkForOptimRecord(double *value, long values)
       if (diff!=0)
         break;
     }
-    if (iValue==values) {
-      return iRecord;
-    }
+    if (iValue==values)
+      break;
   }
-  return -1;
+  if (iRecord==optimRecords)  {
+    *again = 0;
+    return -1;
+  }
+  optimRecord[iRecord].usedBefore += 1;
+  *again = optimRecord[iRecord].usedBefore - 1;
+  return iRecord;
 }
 
 void storeOptimRecord(double *value, long values, long invalid, double result)
@@ -1205,6 +1221,7 @@ void storeOptimRecord(double *value, long values, long invalid, double result)
     return ;
   for (i=0; i<values; i++)
     optimRecord[nextOptimRecordSlot].variableValue[i] = value[i];
+  optimRecord[nextOptimRecordSlot].usedBefore = 0;
   optimRecord[nextOptimRecordSlot].invalid = invalid;
   optimRecord[nextOptimRecordSlot].result = result;
   if (++nextOptimRecordSlot>=MAX_OPTIM_RECORDS)
