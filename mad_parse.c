@@ -400,8 +400,10 @@ long expand_phys(
 	  entity_description[elem_list->type].flags&HAS_LENGTH &&
 	  (length = *(double*)(elem_list->p_elem))>0)
 	div = elementDivisions(entity, entity_name[elem_list->type], length);
+#ifdef DEBUG
       fprintf(stderr,  "Dividing %s %ld times\n",
 	      entity, div);
+#endif
       for (i=0; i<multiplier; i++) {
 	long j;
 	for (j=0; j<div; j++) {
