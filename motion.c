@@ -77,6 +77,8 @@ void derivatives_mapSolenoid(
     double *q,        /* X,Y,Z,Px,Py,Pz */
     double tau     
     );
+void derivatives_planarUndulator(double *qp, double *q, double tau);
+
 void computeFields_rftmEz0(double *E, double *BOverGamma, double *BOverGammaSol, 
                            double q0, double q1, double q2, double tau, double gamma);
 void makeRftmEz0FieldTestFile(RFTMEZ0 *rftmEz0);
@@ -175,7 +177,7 @@ long motion(
     log_entry("motion");
 
     X_aperture_center = Y_aperture_center = 0;
-    X_limit = Y_limit = 0;
+    X_limit = Y_limit = 0; 
     X_offset = Y_offset = 0;
     radial_limit = 0;
     input_impulse = output_impulse = NULL;
@@ -221,7 +223,7 @@ long motion(
             P0[1] = P[1] = coord[3]*P[2];            
             X_out = Y_out = Z_out = 0;
             tau_limit = end_factor*Z_end*gamma/P[2] +
-                      (tau = tau_start + coord[4]*kscale*gamma/Po);
+              (tau = tau_start + coord[4]*kscale*gamma/Po);
             hmax = (tau_limit - tau)/n_steps;
             if (integrator==rk_odeint3_na || integrator==mmid_odeint3_na)
                 hrec = (tau_limit-tau)/n_steps;
@@ -369,9 +371,10 @@ void (*set_up_derivatives(
   TWMTA *twmta;
   RFTMEZ0 *rftmEz0;
   MAP_SOLENOID *mapSol;
+  PLUND *plUnd;
   
   double *fiducial, gamma, Po, Pz, gamma_w, omega;
-  double Escale, Bscale;
+  double Escale, Bscale, Ku, beta;
 
   field_global = field;
 
@@ -401,6 +404,36 @@ void (*set_up_derivatives(
     setupRotate3Matrix((void**)&partRot, -mapSol->eTilt, -mapSol->eYaw, -mapSol->ePitch);
     setupRotate3Matrix((void**)&fieldRot, mapSol->eTilt, mapSol->eYaw, mapSol->ePitch);
     return(derivatives_mapSolenoid);
+    break;
+  case T_PLUND:
+    plUnd = (PLUND*)field;
+    *tau_start = 0;
+    select_integrator(plUnd->method);
+    *accuracy = plUnd->accuracy;
+    *n_steps = plUnd->nSteps;
+    plUnd->ku = 2*PI/(plUnd->length/plUnd->periods);
+    gamma = sqrt(sqr(P_central)+1);
+    beta = P_central/gamma;
+    Ku = plUnd->Bu*e_mks/(me_mks*c_mks)/(beta*plUnd->ku);
+    if (plUnd->usersLaserWavelength)
+      plUnd->laserWavelength = plUnd->usersLaserWavelength;
+    else
+      plUnd->laserWavelength = plUnd->length/plUnd->periods/(2*sqr(gamma))*(1 + sqr(Ku)/2);
+    plUnd->k = *kscale = PIx2/plUnd->laserWavelength;
+    plUnd->omega = omega = *kscale*c_mks;
+    plUnd->Escale = e_mks/(me_mks*omega*c_mks);
+    plUnd->Bscale = e_mks/(me_mks*omega);
+    plUnd->Ef0Laser = 2/plUnd->laserW0*sqrt(sqrt(mu_o/epsilon_o)*plUnd->laserPeakPower/PI);
+    fprintf(stderr, "laser wavelength is %e \n", plUnd->laserWavelength);
+    fprintf(stderr, "Ef0Laser = %e V/m\n", plUnd->Ef0Laser);
+    X_offset = Ku/(gamma*plUnd->ku)*(*kscale);
+    X_aperture_center = X_center = 0;
+    Y_aperture_center = Y_center = 0;
+    Y_offset = 0;
+    *Z_end = plUnd->length*(*kscale);
+    Z_center = plUnd->length/2*(*kscale);
+    *X_limit = *Y_limit = 1e300;
+    return(derivatives_planarUndulator);
     break;
   case T_RFTMEZ0:
     rftmEz0 = field;
@@ -2027,3 +2060,121 @@ void makeRftmEz0FieldTestFile(RFTMEZ0 *rftmEz0)
   }
 }
 
+void computeLaserField(double *Ef, double *Bf, double phase, double Ef0, 
+                       double k, double w0, double x, double y, double dz) ;
+
+
+#ifdef DEBUG
+FILE *fppu = NULL;
+#endif
+
+void derivatives_planarUndulator(double *qp, double *q, double tau)
+{
+  PLUND *plUnd; 
+  double gamma, *P, *Pp;
+  double BOverGamma[3]={0,0,0}, E[3]={0,0,0}, Blaser[3]={0,0,0};
+  double x, y, z;
+  long i;
+  
+#ifdef DEBUG
+  if (!fppu) {
+    fppu = fopen("plund.sdds", "w");
+    fprintf(fppu, "SDDS1\n");
+    fprintf(fppu, "&column name=tau type=double &end\n");
+    fprintf(fppu, "&column name=t type=double units=s &end\n");
+    fprintf(fppu, "&column name=phi type=double &end\n");
+    fprintf(fppu, "&column name=x type=double units=m &end\n");
+    fprintf(fppu, "&column name=y type=double units=m &end\n");
+    fprintf(fppu, "&column name=z type=double units=m &end\n");
+    fprintf(fppu, "&column name=Px type=double &end\n");
+    fprintf(fppu, "&column name=Py type=double &end\n");
+    fprintf(fppu, "&column name=Pz type=double &end\n");
+    fprintf(fppu, "&column name=Ex type=double &end\n");
+    fprintf(fppu, "&data mode=ascii no_row_counts=1 &end\n");
+  }
+#endif
+  
+  derivCalls++;
+  P  = q+3;
+  gamma = sqrt(sqr(P[0])+sqr(P[1])+sqr(P[2])+1);
+
+  /* X' = Px/gamma, etc. */
+  qp[0] = P[0]/gamma;
+  qp[1] = P[1]/gamma;
+  qp[2] = P[2]/gamma;
+    
+  plUnd = (PLUND*)field_global;
+
+  x = (q[0] - X_offset)/plUnd->k;
+  y = q[1]/plUnd->k;
+  z = q[2]/plUnd->k;
+  
+  BOverGamma[1] = plUnd->Bu*cos(plUnd->ku*z)*cosh(plUnd->ku*y)*plUnd->Bscale/gamma;
+  BOverGamma[2] = plUnd->Bu*sin(plUnd->ku*z)*sinh(plUnd->ku*y)*plUnd->Bscale/gamma;
+
+  if (plUnd->Ef0Laser>0 && plUnd->laserW0>0) {
+    computeLaserField(E, Blaser, -tau+plUnd->k*z - Z_center + plUnd->laserPhase,
+                      plUnd->Ef0Laser, plUnd->k, plUnd->laserW0,
+                      x, y, z-Z_center/plUnd->k);
+    for (i=0; i<3; i++) {
+      E[i] *= plUnd->Escale;
+      BOverGamma[i] += Blaser[i]*plUnd->Bscale/gamma;
+    }
+    /* Could use these uniform-field values instead.
+       E[0] = plUnd->Ef0Laser*plUnd->Escale
+       *cos(-tau + plUnd->k*z - Z_center + plUnd->laserPhase);
+       BOverGamma[1] += E[0]/gamma;
+       */
+  }
+  
+
+  /* (Px,Py,Pz)' = (Ex,Ey,Ez) + (Px,Py,Pz)x(Bx,By,Bz)/gamma */
+  Pp = qp+3;
+  Pp[0] = -(E[0]+P[1]*BOverGamma[2]-P[2]*BOverGamma[1]);
+  Pp[1] = -(E[1]+P[2]*BOverGamma[0]-P[0]*BOverGamma[2]);
+  Pp[2] = -(E[2]+P[0]*BOverGamma[1]-P[1]*BOverGamma[0]);
+  
+#ifdef DEBUG
+  fprintf(fppu, "%e %e %e %e %e %e %e %e %e %e\n", tau, tau/plUnd->omega, 
+          plUnd->k*z-tau, x, y, z, P[0], P[1], P[2], E[0]);
+#endif
+}
+
+#include "complex.h"
+
+void computeLaserField(double *Ef, double *Bf, double phase, double Ef0, 
+                       double k, double w0, double x, double y, double dz) 
+{
+  /* Based on P. Emma's MATLAB routine */
+
+  COMPLEX Q, Efx, ctmp1, ctmp2;
+  COMPLEX Efz, Bfx, Bfy, Bfz;
+  double ZR, r2;
+
+  ZR = k/2*sqr(w0);                                        /*  % Raleigh range [m] */
+  r2 = sqr(x)+sqr(y);
+  
+  /* % Alex Chao's complex-Q [m]                */
+  /* Q = 1/(dz -i*ZR) */
+  Q = cdiv(cassign(1, 0), cassign(dz, -ZR));
+
+  /* % complex x-E-field [V/m] */
+  /* Efx  = Ef0*exp(-i*w*t+i*k*z+i*phi0+i*k/2*r2.*Q)./(1+i*z/ZR)  */
+  ctmp1 = cadd(cassign(0, phase), cmul(cassign(0, k/2*r2), Q));
+  ctmp2 = cdiv(cexp(ctmp1), cassign(1, dz/ZR));
+  Efx = cmulr(ctmp2, Ef0);
+  /* Ef   = [Efx, zeros(size(x)), -Efx.*Q.*x];             % 3D E-field vector due to laser [GV/m] */
+  Efz = cmulr(cmul(Efx, Q), -x);
+  Ef[0] = Efx.r;
+  Ef[1] = 0;
+  Ef[2] = Efz.r;
+  /* Bf   = real([-Efx.*Q.^2.*x.*y, Efx.*(Q.^2.*x.^2-i*Q/k+1), -Efx.*Q.*y]); */
+  Bfx = cmulr(cmul(Efx, cipowr(Q, 2)), -x*y);
+  ctmp1 = cmulr(cmul(Q, cassign(0, 1)), -1./k);
+  ctmp2 = cadd(cadd(cmulr(cipowr(Q, 2), sqr(x)), ctmp1), cassign(1, 0));
+  Bfy = cmul(Efx, ctmp2);
+  Bfz = cmulr(cmul(Efx, Q), -y);
+  Bf[0] = Bfx.r/c_mks;
+  Bf[1] = Bfy.r/c_mks;
+  Bf[2] = Bfz.r/c_mks;
+}

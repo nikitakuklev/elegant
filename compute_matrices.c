@@ -457,7 +457,6 @@ VMATRIX *compute_matrix(
     CSRCSBEND *csrcsbend;
     CSRDRIFT *csrdrift;
     LSCDRIFT *lscdrift;
-    LSRMDLTR *lsrMdltr;
     long bend_flags;
     double ks;
     
@@ -823,10 +822,6 @@ VMATRIX *compute_matrix(
         lscdrift = (LSCDRIFT*)elem->p_elem;
         elem->matrix = drift_matrix(lscdrift->length, run->default_order);
         break;
-      case T_LSRMDLTR:
-        lsrMdltr = (LSRMDLTR*)elem->p_elem;
-        elem->matrix = drift_matrix(lsrMdltr->length, run->default_order);
-        break;
       case T_TWISSELEMENT:
         elem->matrix = twissTransformMatrix((TWISSELEMENT*)elem->p_elem, NULL);
         break;
@@ -853,7 +848,7 @@ VMATRIX *compute_matrix(
       case T_RECIRC: case T_SCRAPER: case T_CENTER: case T_MULT: 
       case T_SCATTER: case T_RAMPRF: case T_RAMPP: 
       case T_KICKER: case T_RFMODE: case T_REMCOR: case T_MAPSOLENOID:
-      case T_DSCATTER:
+      case T_DSCATTER: case T_PLUND: 
       default:
         if (entity_description[elem->type].flags&HAS_LENGTH)
             elem->matrix = drift_matrix(*((double*)elem->p_elem), run->default_order);

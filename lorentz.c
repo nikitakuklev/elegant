@@ -65,7 +65,7 @@
  *                to K1.
  *                There's not much more to it. 
  *
- * Michael Borland, 1991, 1993, 1997
+ * Michael Borland, 1991, 1993, 1997, 2004
  */
 #include "mdb.h"
 #include "match_string.h"
@@ -194,6 +194,7 @@ double bmapxy_exit_function(double *qp, double *q, double s);
 void bmapxy_deriv_function(double *qp, double *q, double s);
 void bmapxy_field_setup(BMAPXY *bmapxy);
 
+
 long method_code = 0;
 #define RUNGE_KUTTA 0
 #define BULIRSCH_STOER 1
@@ -210,6 +211,8 @@ void lorentz_leap_frog(double *Qf, double *Qi, double s, long n_steps, void (*de
 
 /* minimum number of steps to take */
 #define N_INTERIOR_STEPS 100
+
+#define DEBUG 1
 
 #ifdef DEBUG
 static FILE *fp_field = NULL;
@@ -412,7 +415,7 @@ void lorentz_setup(
     NIBEND *nibend;
     NISEPT *nisept;
     BMAPXY *bmapxy;
-    double alpha, Kg;
+    double alpha, Kg, gamma, beta;
     static long warning_given = 0;
     static double last_offset=0;
     static double last_fse=0;
@@ -1126,7 +1129,7 @@ void nibend_deriv_function(double *qp, double *q, double s)
   if (field_output_on) {
     fprintf(fp_field, "%e %e %e %e %e %e %e %e\n", q[0], q[1], q[2], z, s, F0, F1, F2);
     fflush(fp_field);
-        }
+  }
 #endif
 }
 
@@ -1278,9 +1281,9 @@ void nisept_deriv_function(double *qp, double *q, double s)
 
 #ifdef DEBUG
     if (field_output_on) {
-        fprintf(fp_field, "%e %e %e %e %e %e %e %e\n", q[0], q[1], q[2], dq0, s, F0, F1, F2);
-        fflush(fp_field);
-        }
+      fprintf(fp_field, "%e %e %e %e %e %e %e %e\n", q[0], q[1], q[2], 0.0, s, F0, F1, F2);
+      fflush(fp_field);
+    }
 #endif
     }
 
@@ -1349,7 +1352,7 @@ void bmapxy_deriv_function(double *qp, double *q, double s)
     }
     
 #ifdef DEBUG
-    fprintf(fp_field, "%e %e %e %e %e %e %e\n", q[0], q[1], q[2], s, F0, F1, F2);
+    fprintf(fp_field, "%e %e %e %e %e %e %e %e\n", q[0], q[1], q[2], 0.0, s, F0, F1, F2);
     fflush(fp_field);
 #endif
 }

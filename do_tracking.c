@@ -869,11 +869,10 @@ long do_tracking(
               transverseFeedbackDriver((TFBDRIVER*)eptr->p_elem, coord, n_to_track, beamline, i_pass, n_passes, run->rootname);
             feedbackDriverSeen = 1;
             break;
-          case T_LSRMDLTR:
-            if (!(flags&TEST_PARTICLES))
-              trackLaserModulator(coord, n_to_track, (LSRMDLTR*)eptr->p_elem, *P_central);
-            else
-              drift_beam(coord, n_to_track, ((LSRMDLTR*)eptr->p_elem)->length, run->default_order);
+          case T_PLUND:
+            n_left = motion(coord, n_to_track, eptr->p_elem, eptr->type, P_central, 
+                              &dgamma, dP, accepted, last_z);
+            show_dE = 1;
             break;
           default:
             fprintf(stdout, "programming error: no tracking statements for element %s (type %s)\n",
