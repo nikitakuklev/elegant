@@ -14,6 +14,10 @@
  * Michael Borland, 2002
  *
  $Log: not supported by cvs2svn $
+ Revision 1.3  2004/07/06 17:18:20  borland
+ Default method is now actually Dejus, consistent with the usage message.
+ Previously, default method was Borland.
+
  Revision 1.2  2004/07/06 15:43:47  borland
  Fixed bug in Dejus method implementation: the gamma value was not being used consistently.
  Rather, in some places, a fixed energy value of 7 GeV was still used.
@@ -110,8 +114,7 @@ Program by Michael Borland.  (This is version 2, April 2002.)\n";
 
 long SetUpOutputFile(SDDS_DATASET *SDDSout, SDDS_DATASET *SDDSin, char *outputfile, long harmonics);
 double ComputeBrightness(double period, long Nu, double K, long n,
-                         double gamma, double ex0, double Sdelta0, 
-                         double coupling, double emitRatio, 
+                         double gamma, double ex, double ey, double Sdelta0, 
                          double current, 
                          double betax, double alphax, double etax, double etaxp,
                          double betay, double alphay, double etay, double etayp,
@@ -120,7 +123,8 @@ double ComputeBrightness(double period, long Nu, double K, long n,
 long GetTwissValues(SDDS_DATASET *SDDSin, 
                     double *betax, double *alphax, double *etax, double *etaxp, 
                     double *betay, double *alphay, double *etay, double *etayp, 
-                    double *ex0, double *Sdelta0, double *pCentral);
+                    double *ex0, double *ey0, double *Sdelta0, double *pCentral, double emitRatio,
+		    double coupling);
 double computeFactorOfConvolution(long periods, long harmonic, double Sdelta0);
 double convolutionFunc(double x);
 double delta0,sincNu; /*two constants used in convolutionFunc() */
@@ -132,7 +136,7 @@ int Gauss_Convolve(double *E,double *spec,long *ns,double sigmaE);
 void Dejus_CalculateBrightness(double current,long nE,
                                double period_mks, long nP, long device,
                                long ihMin,long ihMax,long ihStep,double sigmaE,
-                               double gamma, double ex0,double coupling, double emitRatio, 
+                               double gamma, double ex0, double ey0, 
                                double betax, double alphax, double etax, double etaxp,
                                double betay, double alphay, double etay, double etayp,
                                long minNEKS, long maxNEKS, long neks,
@@ -140,12 +144,10 @@ void Dejus_CalculateBrightness(double current,long nE,
                                double *sigmax,double *sigmay,double *sigmaxp,double *sigmayp,
                                double **K, double ***FnOut,
                                double ***Energy, double ***Brightness, double ***LamdarOut);
-void ComputeBeamSize(double period, long Nu, double ex0, double Sdelta0, 
-                     double coupling, double emitRatio,
+void ComputeBeamSize(double period, long Nu, double ex0, double ey0, double Sdelta0, 
                      double betax, double alphax, double etax, double etaxp,
                      double betay, double alphay, double etay, double etayp,
                      double *Sx, double *Sy, double *Sxp, double *Syp);
-
 
 /*fortran subroutine*/
 void usb_();
@@ -163,8 +165,8 @@ int main(int argc, char **argv)
   long KPoints, harmonics, tmpFileUsed, iK, i_arg, readCode, h, ih, periods;
   unsigned long dummyFlags;
   double betax, alphax, betay, alphay, etax, etaxp, etay, etayp, lambda, energy;
-  double pCentral, ex0, Bn, Fn, K, Sdelta0, conFactor=1.0; /*the factor from convolution of
-                                                             sinc() and gaussian() */
+  double pCentral, ex0, ey0, Bn, Fn, K, Sdelta0, conFactor=1.0; /*the factor from convolution of
+								  sinc() and gaussian() */
   short spectralBroadening;
   long method, device,nE,ihMin,ihMax;
   double *KK,**FnOut,**Energy,**Brightness,**LamdarOut;
@@ -355,11 +357,13 @@ int main(int argc, char **argv)
     SDDS_Bomb("problem setting up output file");
 
   dK = (KEnd-KStart)/(KPoints-1);
+  if (method)
+    current=current*1.0e3;    /*change unit from A to mA for dejus's method */
   while ((readCode=SDDS_ReadPage(&SDDSin))>0) {
     if (!GetTwissValues(&SDDSin, 
                         &betax, &alphax, &etax, &etaxp, 
                         &betay, &alphay, &etay, &etayp, 
-                        &ex0, &Sdelta0, &pCentral))
+                        &ex0, &ey0, &Sdelta0, &pCentral, emittanceRatio, coupling))
       SDDS_Bomb("problem getting twiss parameters and other values from input file");
     if (!SDDS_StartPage(&SDDSout, KPoints))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -367,9 +371,9 @@ int main(int argc, char **argv)
       ihMin=1;
       ihMax=2*(harmonics-1)+1;
       nE=KPoints;
-      current=current*1.0e3; /*change unit from A to mA for dejus's method */
+
       Dejus_CalculateBrightness(current,nE,periodLength, periods,device,ihMin,ihMax,2,Sdelta0,
-                                pCentral,ex0,coupling,emittanceRatio, 
+                                pCentral,ex0,ey0,
                                 betax,alphax,etax,etaxp,betay,alphay,etay,etayp,
                                 minNEKS,maxNEKS,neks,KStart,KEnd,method,
                                 &sigmax,&sigmay,&sigmaxp,&sigmayp,
@@ -385,9 +389,10 @@ int main(int argc, char **argv)
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
       if (!SDDS_SetParameters(&SDDSout,SDDS_BY_NAME|SDDS_PASS_BY_VALUE,"current",current,
-                             "EnergySpread",Sdelta0,"sigmax",sigmax,"sigmay",sigmay,
-                             "sigmaxprime",sigmaxp,"sigmayprime",sigmayp,
-                             "period",periodLength,"numberOfPeriods",periods,NULL))
+			      "EnergySpread",Sdelta0,"sigmax",sigmax,"sigmay",sigmay,
+			      "sigmaxprime",sigmaxp,"sigmayprime",sigmayp,
+			      "period",periodLength,"numberOfPeriods",periods,
+			      "emitx",ex0,"emity",ey0,NULL))
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     } else {    
       for (ih=0; ih<harmonics; ih++) {
@@ -399,8 +404,7 @@ int main(int argc, char **argv)
         } 
         for (K=KStart, iK=0; iK<KPoints; iK++, K+=dK) {
           Bn = conFactor*ComputeBrightness(periodLength, periods, K, h,
-                                           pCentral, ex0, Sdelta0,
-                                           coupling, emittanceRatio, current,
+                                           pCentral, ex0, ey0, Sdelta0, current,
                                            betax, alphax, etax, etayp, 
                                            betay, alphay, etay, etaxp, 
                                            &lambda, &Fn, spectralBroadening);
@@ -414,6 +418,11 @@ int main(int argc, char **argv)
                !SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, iK, 0, K, -1)))
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
+      if (!SDDS_SetParameters(&SDDSout,SDDS_BY_NAME|SDDS_PASS_BY_VALUE,"current",current,
+			      "EnergySpread",Sdelta0,
+			      "period",periodLength,"numberOfPeriods",periods,
+			      "emitx",ex0,"emity",ey0,NULL))
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
     }
     
@@ -455,7 +464,9 @@ long SetUpOutputFile(SDDS_DATASET *SDDSout, SDDS_DATASET *SDDSin, char *outputfi
       SDDS_DefineParameter(SDDSout,"sigmaxprime",NULL,"mrad", NULL,NULL,SDDS_DOUBLE, 0)<0 ||
       SDDS_DefineParameter(SDDSout,"sigmayprime",NULL,"mrad", NULL,NULL,SDDS_DOUBLE, 0)<0 ||
       SDDS_DefineParameter(SDDSout,"period",NULL, "m", NULL,NULL,SDDS_DOUBLE, 0)<0 ||
-      SDDS_DefineParameter(SDDSout,"numberOfPeriods",NULL, NULL, NULL,NULL,SDDS_LONG, 0)<0)
+      SDDS_DefineParameter(SDDSout,"numberOfPeriods",NULL, NULL, NULL,NULL,SDDS_LONG, 0)<0 ||
+      SDDS_DefineParameter(SDDSout,"emitx","m",NULL,NULL,NULL,SDDS_DOUBLE, 0)<0 ||
+      SDDS_DefineParameter(SDDSout,"emity","m",NULL,NULL,NULL,SDDS_DOUBLE, 0)<0 )
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   for (h=1; h<2*harmonics; h+=2) {
     sprintf(buffer, "Brightness%ld", h);
@@ -477,8 +488,7 @@ long SetUpOutputFile(SDDS_DATASET *SDDSout, SDDS_DATASET *SDDSin, char *outputfi
 }
 
 double ComputeBrightness(double period, long Nu, double K, long n, 
-                         double gamma, double ex0, double Sdelta0, 
-                         double coupling, double emitRatio, 
+                         double gamma, double ex, double ey, double Sdelta0, 
                          double current, 
                          double betax, double alphax, double etax, double etaxp,
                          double betay, double alphay, double etay, double etayp,
@@ -487,20 +497,13 @@ double ComputeBrightness(double period, long Nu, double K, long n,
 {
   double JArg, Nn;
   double Sx, Sy, Sxp, Syp, Srp2, Sr2;
-  double ex, ey, lambda, Fn;
+  double lambda, Fn;
   double gammax, gammay, length, broadening;
   double sincWidth;
   
   JArg = n*K*K/(4+2*K*K);
   Fn = sqr(n*K/(1+K*K/2)*(jn((n+1)/2, JArg) - jn((n-1)/2, JArg)));
   
-  if (coupling) {
-    ex = ex0/(1+coupling);
-    ey = coupling*ex;
-  } else {
-    ex = ex0;
-    ey = ex0*emitRatio;
-  }
   lambda = period/(2*n*sqr(gamma))*(1+sqr(K)/2);
 
   /* 0.001 is for 0.1% bandwidth */
@@ -579,11 +582,12 @@ double convolutionFunc(double x)
 long GetTwissValues(SDDS_DATASET *SDDSin, 
                     double *betax, double *alphax, double *etax, double *etaxp, 
                     double *betay, double *alphay, double *etay, double *etayp, 
-                    double *ex0, double *Sdelta0, double *pCentral)
+                    double *ex0, double *ey0, double *Sdelta0, double *pCentral, 
+		    double emitRatio, double coupling)
 {
   double *data;
   long rows;
-  
+
   if (!(rows=SDDS_RowCount(SDDSin)))
     return 0;
 
@@ -631,6 +635,18 @@ long GetTwissValues(SDDS_DATASET *SDDSin,
       !SDDS_GetParameterAsDouble(SDDSin, "Sdelta0", Sdelta0) ||
       !SDDS_GetParameterAsDouble(SDDSin, "pCentral", pCentral) )
     SDDS_Bomb("unable to get parameters from twiss file");
+
+  /* get ey0 if it is there */
+  if (!SDDS_GetParameterAsDouble(SDDSin, "ey0", ey0)) {
+    SDDS_ClearErrors();
+    if (coupling) {
+      *ex0 = *ex0/(1+coupling);
+      *ey0 = coupling*(*ex0);
+    } else {
+      *ey0 = *ex0*emitRatio;
+    }
+  }
+
   return 1;
 }
 
@@ -715,30 +731,25 @@ int Gauss_Convolve(double *E,double *spec,long *ns,double sigmaE)
           Sxp --- sigmaX prime
           Syp --- sigmaY prime
 */
-void ComputeBeamSize(double period, long Nu, double ex0, double Sdelta0, 
-                         double coupling, double emitRatio,
-                         double betax, double alphax, double etax, double etaxp,
-                         double betay, double alphay, double etay, double etayp,
-                         double *Sx, double *Sy, double *Sxp, double *Syp)
+void ComputeBeamSize(double period, long Nu, double ex, double ey, double Sdelta0, 
+		     double betax, double alphax, double etax, double etaxp,
+		     double betay, double alphay, double etay, double etayp,
+		     double *Sx, double *Sy, double *Sxp, double *Syp)
 {
-  double ex, ey;
   double gammax, gammay, length;
   
-  if (coupling) {
-    ex = ex0/(1+coupling);
-    ey = coupling*ex;
-  } else {
-    ex = ex0;
-    ey = ex0*emitRatio;
-  }
   length = Nu*period;
   
   gammax = (1+sqr(alphax))/betax;
   gammay = (1+sqr(alphay))/betay;
-  *Sxp = sqrt(ex*gammax + sqr(Sdelta0*etaxp))*1.0e3;
-  *Syp = sqrt(ey*gammay + sqr(Sdelta0*etayp))*1.0e3;
-  *Sx = sqrt(ex*betax + sqr(Sdelta0*etax))*1.0e3;
-  *Sy = sqrt(ey*betay + sqr(Sdelta0*etay))*1.0e3;
+  if (Sxp)
+    *Sxp = sqrt(ex*gammax + sqr(Sdelta0*etaxp))*1.0e3;
+  if (Syp)
+    *Syp = sqrt(ey*gammay + sqr(Sdelta0*etayp))*1.0e3;
+  if (Sx)
+    *Sx = sqrt(ex*betax + sqr(Sdelta0*etax))*1.0e3;
+  if (Sy)
+    *Sy = sqrt(ey*betay + sqr(Sdelta0*etay))*1.0e3;
 }
 
 /*caculate brightness by calling fortran subroutine usb(), written by Dejus */
@@ -763,7 +774,7 @@ void ComputeBeamSize(double period, long Nu, double ex0, double Sdelta0,
 void Dejus_CalculateBrightness(double current,long nE,
                                double period_mks, long nP, long device,
                                long ihMin,long ihMax,long ihStep,double sigmaE,
-                               double gamma, double ex0,double coupling, double emitRatio, 
+                               double gamma, double ex0, double ey0, 
                                double betax, double alphax, double etax, double etaxp,
                                double betay, double alphay, double etay, double etayp,
                                long minNEKS, long maxNEKS, long neks,
@@ -826,7 +837,7 @@ void Dejus_CalculateBrightness(double current,long nE,
   ky=kMin;
   nek=maxNEKS;
   /*compute electron beam size */
-  ComputeBeamSize(period_mks,nP, ex0,sigmaE,coupling,emitRatio,
+  ComputeBeamSize(period_mks,nP,ex0,ey0,sigmaE,
                   betax,alphax,etax,etaxp,
                   betay, alphay,etay,etayp,&sigmaX, &sigmaY, &sigmaX1, &sigmaY1);
   *sigmax=sigmaX;
