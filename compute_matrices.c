@@ -515,6 +515,10 @@ VMATRIX *compute_matrix(
                                          kquad->fse);
         if (kquad->dx || kquad->dy || kquad->dz)
             misalign_matrix(elem->matrix, kquad->dx, kquad->dy, kquad->dz, 0.0);
+        readErrorMultipoleData(&(kquad->systematicMultipoleData),
+                                  kquad->systematic_multipoles);
+        readErrorMultipoleData(&(kquad->randomMultipoleData),
+                                  kquad->random_multipoles);
         break;
       case T_KSEXT:
         ksext = (KSEXT*)elem->p_elem;
@@ -527,6 +531,10 @@ VMATRIX *compute_matrix(
                                         ksext->fse);
         if (ksext->dx || ksext->dy || ksext->dz)
             misalign_matrix(elem->matrix, ksext->dx, ksext->dy, ksext->dz, 0.0);
+        readErrorMultipoleData(&(ksext->systematicMultipoleData),
+                                  ksext->systematic_multipoles);
+        readErrorMultipoleData(&(ksext->randomMultipoleData),
+                                  ksext->random_multipoles);
         break;
       case T_MAGNIFY:
         elem->matrix = magnification_matrix((MAGNIFY*)elem->p_elem);
@@ -741,6 +749,12 @@ void reset_special_elements(LINE_LIST *beamline)
           case T_RAMPRF:
             ((RAMPRF*)eptr->p_elem)->Ts = 0;
             ((RAMPRF*)eptr->p_elem)->fiducial_seen = 0;
+            break;
+          case T_KQUAD:
+            ((KQUAD*)eptr->p_elem)->randomMultipoleData.randomized = 0;
+            break;
+          case T_KSEXT:
+            ((KSEXT*)eptr->p_elem)->randomMultipoleData.randomized = 0;
             break;
           default:
             break;
