@@ -39,9 +39,9 @@ char *option[N_OPTIONS] = {
     "describeinput",
     "macro",
         };
-char *USAGE="elegant <inputfile> [-macro=<tag>=<value>,[...]]\n\nProgram by Michael Borland. (This is version 15.1, "__DATE__".)";
+char *USAGE="elegant <inputfile> [-macro=<tag>=<value>,[...]]\n\nProgram by Michael Borland. (This is version 15.1.1, "__DATE__".)";
 
-char *GREETING="This is elegant, by Michael Borland. (This is version 15.1, "__DATE__".)";
+char *GREETING="This is elegant, by Michael Borland. (This is version 15.1.1, "__DATE__".)";
 
 #define RUN_SETUP        0
 #define RUN_CONTROL      1
@@ -298,6 +298,8 @@ char **argv;
 #if defined(CONDOR_COMPILE)
     sprintf(s, "%s.ckpt", inputfile);
     init_image_with_file_name(s);
+#else
+    signal(SIGUSR2, SIG_IGN);
 #endif
   
   initialize_structures(&run_conditions, &run_control, &error_control, &correct, &beam, &output_data,
