@@ -9,6 +9,13 @@
 
 /* 
  * $Log: not supported by cvs2svn $
+ * Revision 1.13  2002/09/24 22:01:48  borland
+ * Added FLOOR element for setting floor coordinates inside a beamline.
+ * Improved algorithm for finding closed orbit with path-length constraint.
+ * Added x and y error plus delta value to closed orbit output.
+ * Added verbosity features for IBS.
+ * Added optimization methods (random walk and random sample).
+ *
  * Revision 1.12  2002/08/14 20:23:40  soliday
  * Added Open License
  *
@@ -114,6 +121,7 @@ double IBSequations(double *x, long *invalid);
 void IBSsimplexReport(double ymin, double *xmin, long pass, long evals, long dims);
 
 void IBSIntegrate(double *exInteg, double *eyInteg, double *elInteg, long *passInteg,
+                  double *SdeltaInteg, double *SzInteg,
                   double *xRateInteg, double *yRateInteg, double *zRateInteg,
                   long integTurns, long integStepSize, 
                   double P, double emitx, double emity,
@@ -149,6 +157,7 @@ int main( int argc, char **argv)
   double target = 1e-4, tolerance = 1e-6;
   long integrationTurns, integrationStepSize, integrationPoints = 0;
   double *exInteg=NULL, *eyInteg=NULL, *elInteg=NULL, *xRateInteg=NULL, *yRateInteg=NULL, *zRateInteg=NULL;
+  double *SdeltaInteg=NULL, *SzInteg=NULL;
   long *passInteg=NULL;
   unsigned long dummyFlags;
   double rfVoltage, rfHarmonic;
@@ -350,6 +359,8 @@ int main( int argc, char **argv)
     if (SDDS_DefineColumn(&resultsPage, "ex", "$ge$r$bx$n", "$gp$rm", "Horizontal Emittance", NULL, SDDS_DOUBLE, 0)<0 ||
         SDDS_DefineColumn(&resultsPage, "ey", "$ge$r$by$n", "$gp$rm", "Vertical Emittance", NULL, SDDS_DOUBLE, 0)<0 ||
         SDDS_DefineColumn(&resultsPage, "el", "$ge$r$bl$n", "s", "Longitudinal Emittance", NULL, SDDS_DOUBLE, 0)<0 ||
+        SDDS_DefineColumn(&resultsPage, "Sdelta", "$gs$bd$n$r", "", "Fractional RMS Energy Spread", NULL, SDDS_DOUBLE, 0)<0 ||
+        SDDS_DefineColumn(&resultsPage, "Sz", "$gs$r$bz$n", "m", "RMS Bunch Length", NULL, SDDS_DOUBLE, 0)<0 ||
         SDDS_DefineColumn(&resultsPage, "IBSRatex", NULL, "s", "Horizontal IBS Emittance Growth Rate", NULL, SDDS_DOUBLE, 0)<0 ||
         SDDS_DefineColumn(&resultsPage, "IBSRatey", NULL, "s", "Vertical IBS Emittance Growth Rate", NULL, SDDS_DOUBLE, 0)<0 ||
         SDDS_DefineColumn(&resultsPage, "IBSRatel", NULL, "s", "Longitudinal IBS Emittance Growth Rate", NULL, SDDS_DOUBLE, 0)<0 ||
@@ -359,6 +370,8 @@ int main( int argc, char **argv)
     if (!(exInteg = SDDS_Malloc(sizeof(*exInteg)*integrationPoints)) ||
         !(eyInteg = SDDS_Malloc(sizeof(*eyInteg)*integrationPoints)) ||
         !(elInteg = SDDS_Malloc(sizeof(*elInteg)*integrationPoints)) ||
+        !(SdeltaInteg = SDDS_Malloc(sizeof(*SdeltaInteg)*integrationPoints)) ||
+        !(SzInteg = SDDS_Malloc(sizeof(*SzInteg)*integrationPoints)) ||
         !(xRateInteg = SDDS_Malloc(sizeof(*xRateInteg)*integrationPoints)) ||
         !(yRateInteg = SDDS_Malloc(sizeof(*yRateInteg)*integrationPoints)) ||
         !(zRateInteg = SDDS_Malloc(sizeof(*zRateInteg)*integrationPoints)) ||
@@ -440,6 +453,7 @@ int main( int argc, char **argv)
 
     if (integrationPoints) {
       IBSIntegrate(exInteg, eyInteg, elInteg, passInteg,
+                   SdeltaInteg, SzInteg,
                    xRateInteg, yRateInteg, zRateInteg,
                    integrationTurns, integrationStepSize, 
                    pCentral, emitx, emity, sigmaDelta, sigmaz, particles,
@@ -562,6 +576,8 @@ int main( int argc, char **argv)
          (!SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, exInteg, integrationPoints, "ex") ||
           !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, eyInteg, integrationPoints, "ey") ||
           !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, elInteg, integrationPoints, "el") ||
+          !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, SdeltaInteg, integrationPoints, "Sdelta") ||
+          !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, SzInteg, integrationPoints, "Sz") ||
           !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, xRateInteg, integrationPoints, "IBSRatex") ||
           !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, yRateInteg, integrationPoints, "IBSRatey") ||
           !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, zRateInteg, integrationPoints, "IBSRatel") ||
@@ -687,6 +703,7 @@ void IBSsimplexReport(double ymin, double *xmin, long pass, long evals, long dim
 }
 
 void IBSIntegrate(double *exInteg, double *eyInteg, double *elInteg, long *passInteg,
+                  double *SdeltaInteg, double *SzInteg,
                   double *xRateInteg, double *yRateInteg, double *zRateInteg,
                   long integTurns, long integStepSize, 
                   double P, double emitx, double emity,
@@ -714,6 +731,8 @@ void IBSIntegrate(double *exInteg, double *eyInteg, double *elInteg, long *passI
     exInteg[slot] = emitx;
     eyInteg[slot] = emity;
     elInteg[slot] = emitz/vz;
+    SdeltaInteg[slot] = sigmaDelta;
+    SzInteg[slot] = sigmaz;
     passInteg[slot] = turn;
     IBSGrowthRates(P, emitx, emity, sigmaDelta, sigmaz, particles,
                    emitx0, sigmaDelta0, transSRdampRate, longitSRdampRate, coupling,
@@ -732,6 +751,8 @@ void IBSIntegrate(double *exInteg, double *eyInteg, double *elInteg, long *passI
   exInteg[slot] = emitx;
   eyInteg[slot] = emity;
   elInteg[slot] = emitz/vz;
+  SdeltaInteg[slot] = sigmaDelta;
+  SzInteg[slot] = sigmaz;
   passInteg[slot] = turn;
   xRateInteg[slot] = xGrowthRate;
   yRateInteg[slot] = yGrowthRate;
