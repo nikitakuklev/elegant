@@ -36,10 +36,14 @@ set revFreq1 [expr $revFreq]
 set sMax1 [expr $sMax]
 
 APSApplication . -name longitCalcs 
-set voltage 9
 set harmonic 1296
 set extradE 0
 set superPeriods 1
+# initial start with overvoltage of 1.5
+# to avoid problem with arcsin function
+set voltage [expr $superPeriods*($U0+$extradE) * 1.5]
+if {$voltage < 9} {set voltage 9}
+
 APSLabeledEntry .voltage -parent .userFrame \
   -label "Voltage (MV): " -textVariable voltage -width 22
 APSLabeledEntry .harmonic -parent .userFrame \
@@ -114,4 +118,3 @@ proc compute {} {
 
 compute
 APSButton .compute -parent .userFrame -text Compute -command compute
-
