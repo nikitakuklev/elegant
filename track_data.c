@@ -1371,7 +1371,7 @@ PARAMETER rfcw_param[N_RFCW_PARAMS] = {
     {"LINEARIZE", "", IS_LONG, 0, (long)((char *)&rfcw_example.linearize), NULL, 0.0, 0, "Linearize phase dependence?"},
     {"LSC", "", IS_LONG, 0, (long)((char *)&rfcw_example.doLSC), NULL, 0.0, 0, "Include longitudinal space-charge impedance?"},
     {"LSC_BINS", "", IS_LONG, 0, (long)((char *)&rfcw_example.LSCBins), NULL, 0.0, 1025, "Number of bins for LSC calculations"},
-    {"LSC_INTERPOLATE", "", IS_LONG, 0, (long)((char *)&rfcw_example.LSCInterpolate), NULL, 0.0, 1025, "Interpolate computed LSC wake?"},
+    {"LSC_INTERPOLATE", "", IS_LONG, 0, (long)((char *)&rfcw_example.LSCInterpolate), NULL, 0.0, 1, "Interpolate computed LSC wake?"},
     {"LSC_HIGH_FREQUENCY_CUTOFF0", "", IS_DOUBLE, 0, (long)((char*)&rfcw_example.LSCHighFrequencyCutoff0), NULL, -1.0, 0, "Spatial frequency at which smoothing filter begins for LSC.  If not positive, no frequency filter smoothing is done.  Frequency is in units of Nyquist (0.5/binsize)."},
     {"LSC_HIGH_FREQUENCY_CUTOFF1", "", IS_DOUBLE, 0, (long)((char*)&rfcw_example.LSCHighFrequencyCutoff1), NULL, -1.0, 0, "Spatial frequency at which smoothing filter is 0 for LSC.  If not given, defaults to HIGH_FREQUENCY_CUTOFF0."},
     {"WAKES_AT_END", "", IS_LONG, 0, (long)((char *)&rfcw_example.wakesAtEnd), NULL, 0.0, 0, "Do wake kicks at end of segment (for backward compatibility)?"},
