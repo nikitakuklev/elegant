@@ -31,9 +31,9 @@ char *option[N_OPTIONS] = {
     "describeinput",
     "macro",
         };
-char *USAGE="elegant <inputfile> [-macro=<tag>=<value>,[...]]\n\nProgram by Michael Borland. (This is version 14.4, "__DATE__".)";
+char *USAGE="elegant <inputfile> [-macro=<tag>=<value>,[...]]\n\nProgram by Michael Borland. (This is version 14.5 beta 1, "__DATE__".)";
 
-char *GREETING="This is elegant, by Michael Borland. (This is version 14.4, "__DATE__".)";
+char *GREETING="This is elegant, by Michael Borland. (This is version 14.5 beta 1, "__DATE__".)";
 
 #define RUN_SETUP        0
 #define RUN_CONTROL      1
@@ -1443,6 +1443,7 @@ void substituteTagValue(char *input, long buflen,
     if (replace_string(buffer, input, version2, macroValue[i]))
       strcpy(input, buffer);
   }
+  free(buffer);
 }
 
 
