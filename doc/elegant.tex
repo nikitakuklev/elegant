@@ -16,114 +16,278 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 14.8\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
+\author{Program Version 14.9\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
 \maketitle
 
-\section{Highlights of What's New in Version 14.8}
+\section{Highlights of What's New in Version 14.9}
 
-Here is a summary of what's changed since version 14.7.1.  For details
+Here is a summary of what's changed since version 14.8.  For details
 and references, see the specific entries in the manual.
 
-One notable change is that {\tt elegant} now runs on MAC OS-X, thanks to
-the efforts of Robert Soliday (ANL).  Also thanks to Bob's efforts, 
-{\tt elegant} is now distributed under an Open Source license.
+As many of you know, I was on leave of absence from ANL for one year,
+and worked at Lyncean Technologies, Inc.  LTI generously agreed that
+all the changes I made to {\tt elegant} and related programs while
+there would be shared with the accelerator physics community.
 
 \subsection{New Elements}
+\begin{itemize}
+\item Added LSCDRIFT, which provides simulation of longitudinal space charge
+  in a drift space, based on an impedance provided by Z. Huang (SLAC). 
+\item Added FRFMODE and FTRFMODE elements. These are similar to RFMODE and
+  TRFMODE, in that they simulate cavity modes.  However, FRFMODE and
+  FTRFMODE take the mode data from a file.  If there are several modes
+  to be simulated, this is {\em much} faster than using several
+  RFMODE or TRFMODE elements.
+\item Added TFBPICKUP and TFBDRIVER, a pair of elements for simulation of
+  single-bunch transverse digital feedback systems.
+\item Added FLOOR element for setting floor coordinates inside a beamline.
+  This can be used, for example, to optimize the initial coordinate and
+  direction of a beamline so that it terminates at a required location and
+  direction.
+\item Added LTHINLENS and LMIRROR elements, which provide modeling of 
+  thin lenses and mirrors for light beams.
+\item Added EMATRIX element, allowing explicit matrix input on the element
+  definition line (instead of in a file as in MATR element).  This was suggested
+  by P. Emma (SLAC).
+\end{itemize}
 
+\subsection{Bug Fixes for Elements}
 \begin{itemize}
 
-\item Added {\tt SCRIPT} element to allow transforming the beam with an
-external script.  For example, the external script might run the
-{\tt shower} program to simulate interaction with matter.
+\item Fixed the units for K3 and K4 parameters on CSBEND and CSRCSBEND.
 
-\item Added {\tt WIGGLER} element for damping wiggler simulation.  Does not
-include edge focusing and has had limited testing.
+\item Fixed a bug in the low-pass filter function for CSRCSBEND, which may have resulted
+ in noise in the highest frequency bin.  (I haven't seen any effect on simulation results.)
+
+\item Fixed a bug in the FMULT (file multipole) element
+ implementation. Results were incorrect for non-zero-length elements.
+ Also, now requires both KnL (normal) and JnL (skew) data in the input file.
+
+\item Fixed dispersion and path-length terms in the corrector matrix for HKICK, 
+  VKICK, and HVKICK.   Previous versions used the terms for a sector magnet.
+  In this revision, these terms are computed correctly for a straight reference
+  trajectory and a rectangular magnet.  The changes are probably significant only if
+  one had sextupole included in the corrector field.
+
+\item Fixed problem with the MATTER elements that occurred with length
+ was exactly a radiation length (there was no scattering!).  This bug was 
+ discovered by P. Emma (SLAC).
+
+\item The BNL parameter of the MULT element has been renamed BTIPL, which is a more
+ accurate description.
+
+\item RFTMEZ0 (TM-mode rf cavity from on-axis longitudinal field):'
+ \begin{itemize}
+ \item Now allows independent misalignment of cavity and solenoid fields.
+ \item Added stray magentic fields.
+ \item Is now active during trajectory correction.
+ \end{itemize}
+
+\item Twiss parameter computation is now correct when the ROTATE
+element is used with an angle of 90 or 270 degrees.
+
+\item The SREFFECTS element (which simulates lumped quantum excitation
+ and radiation damping in storage rings), now works correctly when $\alpha_x$ or 
+ $\alpha_y$ are nonzero.
+
+\item The STRAY element (stray fields) now works for tilted beamlines.  The matrix
+ for this element is now recomputed before each use to ensure that it is correct,
+ since the beamline momentum may have changed.
 
 \end{itemize}
 
-\subsection{Improvements and Bug Fixes for Elements}
+\subsection{Improvements to Elements}
 \begin{itemize}
-\item Added fiducialization to {\tt MATR} element to resolve problems with
-        matrices that have nonzero $R_{n5}$ or $T_{n5m}$ elements.
-        This bug was found by Paul Emma (SLAC).
-\item The {\tt SREFFECTS} element (which does synchrotron radiation 
-        effects in tracking) had several bug fixes.  
-        \begin{itemize}
-        \item Fixed problems with quantum excitation when the element was placed in 
-        a region with high dispersion.
-        \item Fixed problems with quantum excitation when the 
-        of {\tt FRACTION} parameter was used.
-        \end{itemize}
-\item Fixed bugs and added features to {\tt IBSCATTER} (intrabeam 
-        scattering):
-        \begin{itemize}
-        \item Added {\tt SMOOTH} parameter to allow selecting a nonrandom
-        simulation of IBS (simply does inflation of the emittances according
-        to the growth factor).
-        \item Added {\tt FACTOR} parameter to allow multiplying IBS effects by
-        a chosen factor.
-        \item Fixed problem with energy scattering that
-        caused false exponential growth in energy spread for low-energy beams.
-        \end{itemize}
-\item Fixed problem with \verb|tlimit| implementation for {\tt CLEAN}
-         element that caused incorrect results for low-energy beams.
-\item In prior versions, when tracking a circular machine with CSR in
-        bends and drifts, the first CSR drift would not be handled properly.
-        This has been fixed.
-\item Added {\tt LINEARIZE} control for 
-        {\tt CSRCSBEND} and {\tt CSRDRIFT}, which allows using purely
-        linear transport between CSR wake kicks.
-\item Added low-pass filter capability for {\tt CSRCSBEND} element.
-        This allows applying a low-pass filter to the density histogram,
-        as a form of noise control.  The filter is also applied to the
-        {\tt CSRDRIFT} elements downstream of each {\tt CSRCSBEND}
-        element.
-\item Added renormalization of density histograms after smoothing and filtering
-        in {\tt CSRCSBEND} and {\tt CSRDRIFT}.  This enforces conservation of charge
-        and prevents negative values of the particle density.
-\item Added {\tt LINEARIZE} control for {\tt RFCA} and {\tt RFCW},
-        which results in a linear dependence of energy gain on
-        phase deviation.
+\item Added GROUP parameter to all elements.  It allows assigning a common tag to
+ elements.  The tags are saved in the lattice and parameter files.
+
+\item The B2 (sextupole) parameter was added to the BUMPER element (which does
+ time-dependent kicker simulation).  Also, the N\_KICKS parameter was added
+ and must be non-zero if B2 is to have any effect.
+
+\item The CSRCSBEND now has a wake filter file capability, allowing the user to 
+ specify a filter function as a way to add, for example, shielding effects.
+
+\item The HISTOGRAM and WATCH (coordinate mode) now input parameter ``s'' giving the position
+ of the element in the beamline.  The HISTOGRAM element has a new parameter NORMALIZE
+ with a default value of 1, which results in normalization of the histogram with the
+ number of particles.
+
+\item Added steering capability to KQUAD and QUAD using an imposed dipole field,
+ including (in the case of KQUAD) higher multipoles.  (KQUAD and QUAD
+ could already be used for steering by adjusting transverse position.)
+
+\item The MODRF (modulated rf cavity) now supports damping rates for AM and PM 
+ modulations.
+
+\item Several improvements were made to the NIBEND (Numerically Integrated BEND) element:
+ \begin{itemize}
+ \item Added new fringe models: enge1, enge3, and enge5.  These
+ give 1st, 3rd, and 5th order expansions of three-coefficient Enge functions.
+ \item Added FP2 through FP4 parameters for NIBEND.  They are used for
+ direct input of Enge coefficients.  
+ \item Added ADJUST\_FIELD parameter, which provides a way to adjust
+ the deflection angle to compensate for over- or under-bending due to fringe fields.
+ \item Added ADJUST\_BOUNDARY parameter to allow turning off boundary position adjustment,
+ which is the default method for adjusting the deflecting angle.
+ \item Misalignments are now supported.
+ \end{itemize}
+
+\item Matrices for the QUAD and SEXT elements may now have order up to 3.  This
+ can make a difference in momentum-dependent tune shifts and nonlinear dispersion
+ computations.  
+
+\item The RFCW element was changed extensively:
+ \begin{itemize}
+ \item The N\_KICKS parameter can now have a value other than 0 or 1.  A non-zero value
+ results in a drfit-kick-drift simulation with N\_KICKS segments.  
+ \item By default, the longitudinal and tranverse wakes are now applied at the location of
+ the rf kick, which is a change from previous versions.  Use the WAKES\_AT\_END parameter
+ (set to 1) to revert to the previous behavior.
+ \item Added LSC parameter to the RFCW element, to provide
+ simulation of longitudinal space charge in an accelerating cavity.
+ \end{itemize}
+
+\item Added FREQ\_WAVEFORM and Q\_WAVEFORM support to the RFMODE element, allowing
+ a rudimentary method of detuning or tuning a mode at a programmed point in a simulation.
+ This was requested by N. Sereno (ANL).
+
+\item The SCRIPT element has new USE\_CSH and VERBOSITY controls.  Setting
+ USE\_CSH=0 is much faster and should be used if C-shell is not needed. 
+
+\item TRWAKE: 
+ \begin{itemize} 
+ \item Added XFACTOR and YFACTOR parameters (which default to 1).  These allow multiplying
+ the wakes by factors.
+ \item Added TILT parameter.
+ \item Added XPOWER and YPOWER fields, which allows simulating transverse wakes
+ due to asymmetric chambers (by setting XPOWER=0 and/or YPOWER=0).  By default, 
+ XPOWER=1 and YPOWER=1.
+ \end{itemize}
+
+\item The ZLONGIT and ZTRANSVERSE elements now check that the input data is equispaced
+ in frequency.  This bug was found by T. Shaftan (BNL).
+\item Added FACTOR and REVERSE\_TIME\_ORDER parameters to ZLONGIT.  The latter allows
+ compensating for different sign conventions for the meaning of the longitudinal coordinate.
+ (Recall that in {\tt elegant}, a negative longitudinal coordinate indicates the head of the
+ bunch.)
+
 \end{itemize}
 
-\subsection{New Commands}
+\subsection{Modified Commands and Bug Fixes to Commands}
 \begin{itemize}
-\item Added {\tt semaphores} command to provide better semaphore functionality.
-Previously, one could use the {\tt semaphore\_file} entry on the {\tt run\_setup}
-command to cause {\tt elegant} to create a file when the run terminated successfully.
-The {\tt semaphores} command improves on this, allowing specification of files
-that mark the start and finish of a run.  The {\tt semaphore\_file} entry on the {\tt run\_setup}
-command is still functional.
+ \item {\tt amplification\_factors}
+ \begin{itemize}
+ \item Now sets all correctors to zero before computing a new amplification factor.
+ \item Output now includes kick amplification function for each
+ actuator as well as useful parameters in all the output files.
+ \item Added amplification factor output for slopes.
+ \end{itemize}
+
+\item {\tt bunched\_beam}: Previous versions did not generate
+longitudinal phase space for dynamic aperture beam type.  This version
+does.
+
+\item Several improvements where made to orbit correction and closed orbit
+ computation:
+ \begin{itemize}
+ \item  The orbit correction matrix is now computing using the average
+ Twiss parameters at the entrance and exit of the elements.  The previous
+ version used just the exit parameters.
+ \item BPM-weighted correction works properly now.  In past versions, the
+ weight was basically either 0 (exclude) or 1 (include).
+ \item Added output of the orbit slopes to the closed orbit output file.
+ \item The fixed-path-length orbit computation algorithm now has improved
+ convergence.
+ \item Pre-correction corrector zeroing now includes objects other than HKICK, VKICK,
+ and KICKER.
+ \end{itemize}
+
+\item {\tt error\_element}: 
+ \begin{itemize} 
+ \item Added {\tt bind\_across\_names} parameter, which permits
+ giving the same error to many elements that match a wild-card pattern but have different
+ names.  In previous versions, error binding only applied to elements with the same name.
+ \item Previously, the "plus\_or\_minus" error type was also necessarily and
+ by default a fractional error.  This is no longer the case.  One
+ must explicitly ask for fractional mode, just as with other error
+ types.
+ \end{itemize}
+
+\item {\tt find\_aperture}: Added {\tt search\_output} parameter, which gives a filename
+ to which details on each tracked particle will be written.
+
+\item {\tt load\_parameters}
+ \begin{itemize}
+ \item Now correctly handles loading and saving parameters when element division is used.
+ \end{itemize}
+
+\item Optimization
+ \begin{itemize}
+ \item Added two new optimization methods: ``randomwalk'' and ``randomsample''.
+ These are very useful when starting from scratch with a system that is, for example,
+ unstable.
+ \item Added {\tt bestOptimizationFunction} parameter to final output file.  This 
+ gives the best value of the optimization function obtained so far.
+ \item Chromaticity correction is now optionally performed while doing an optimization.
+ (One can also include the chromaticity in the optimization literally, of course.)
+ \item Added the ability to automatically change the weights of different optimization
+ function terms to emphasize the most difficult terms.  Paradoxically, this can often
+ result in convergence for all terms.  
+ \item Added controls for adjustment of initial simplex size on restart of simplex
+ optimization. 
+ \item Higher-order dispersion and chromaticities are now available for optimization expressions.
+ \end{itemize}
+
+\item {\tt sdds\_beam}:
+ \begin{itemize} 
+ \item Fixed bug in the code that checks units for elegant-style input
+files.  In previous versions, if the units of p were blank (an allowed
+``error''), other units errors were ignored.
+ \item Now read $p_\phi$ data for {\tt spiffe} input files. ({\tt spiffe} is
+a particle-in-cell code for rf gun simulation, available from the OAG web site.)
+ \end{itemize}
+
+\item {\tt track}: Fixed bug that prevented linear chromatic matrix tracking (LCMT) from
+working in some cases.  LCMT now uses higher-order chromaticity and dispersion, if these
+are computed.  Also, now uses second-order momentum compaction for longitudinal motion.
+
+\item {\tt tune\_shift\_with\_amplitude}:
+ \begin{itemize}
+ \item Added controls for adjustment of the initial particle amplitude.
+ \item Fixed problems with computation in presence of MALIGN elements with ON\_PASS parameters
+ not equal to -1.
+ \end{itemize}
+
 \end{itemize}
 
-\subsection{Modified Commands}
+
+\subsection{Changes to Related Programs}
+
 \begin{itemize}
-\item For \verb|bunched_beam|, added a new beam type, ``halo(gaussian)'', which
-        permits generating only the halo particles from a gaussian
-        beam.  This entailed rewriting the beam generation subroutines,
-        so you will find that the exact particle coordinates generated
-        for most beam types are different in this version of {\tt elegant}.
-\item For \verb|slice_analysis|,  added \verb|final_values_only| control.
-        If set, this directs {\tt elegant} to perform slice analysis only
-        at the end of the beamline.  These final values are also now available
-        for use in optimization expressions (regardless of whether
-        \verb|final_values_only| is set).
-\item For \verb|load_parameters|, added \verb|include_type_pattern| and
-        \verb|exclude_type_pattern| controls.  These allow providing a
-        list of patterns (strings containing wildcards) to use in
-        selecting what element types will be loaded from a file.
+\item The program {\tt ibsEmittance} now provides IBS scattering rate contributions
+  as a function of position in the ring.
+\item The program {\tt madto} now attempts to output COSY format.  Users should
+ check the results carefully!
+\item The program {\tt sddsanalyzebeam} now copies input parameters through to output columns.
+ It also has a new option, {\tt -correctedOnly}, which results in computation of {\em only} 
+ the dispersion-corrected twiss parameters. 
+\item Added the program {\tt sddsrandmult}, which computes random error multipole
+ levels for specified quadrupole and sextupole construction errors.  The output
+ of {\tt sddsrandmult} is accepted by the KQUAD and KSEXT elements.
 \end{itemize}
+
 
 \subsection{Other New Features and Bug Fixes}
 \begin{itemize}
-\item Particle output files from the {\tt WATCH} element now include the
-        Charge parameter.
-\item Symbol {\tt sTotal} is now available in optimization equations, providing 
- the total arc length of the system.
-\item Parameters {\tt DtPercXX} added to {\tt final} output file (from
- \verb|run_setup|), providing percentile locations for time coordinates.
-\item Fixed problem with setting of the {\tt optimized} parameter in the 
-        {\tt final} output file at the end of optimization.
+
+\item {\tt elegant} now builds on the IBM AIX platform, but has not 
+been tested.  This was done by R. Soliday (ANL).
+
+\item Added support for checkpointing using the CONDOR checkpointing
+library.  Contact the author if you need to use this feature (Linux 
+only, gcc 2.9X).
+
 \end{itemize}
 
 \subsection{Known Bugs and Problems}
@@ -133,9 +297,6 @@ command is still functional.
 	chromaticity as well as the tune shifts with amplitude, 
 	{\em even when these are not calculated}, which is potentially
 	misleading. 
-\item Loading parameters when using element division doesn't work unless 
-	element lengths, bending angles, and edge angles are excluded from
-	the load.
 \end{itemize}
 
 \section{Introduction}
@@ -1135,6 +1296,7 @@ to obtain correction.  In general, it is not necessary and only slows the simula
     double cutoff = 3.0;
     long bind = 1;
     long bind_number = 0;
+    longn bind_across_names = 0;
     long post_correction = 0;
     long fractional = 0;
     long additive = 1;
@@ -1153,9 +1315,22 @@ to obtain correction.  In general, it is not necessary and only slows the simula
 A ``plus\_or\_minus'' error is equal in magnitude to the amplitude given, with the sign randomly chosen.
 \item \verb|amplitude| --- The amplitude of the errors.
 \item \verb|cutoff| --- The cutoff for the random distribution.
-\item \verb|bind|, \verb|bind_number| --- If \verb|bind_number| is positive, then a positive value of \verb|bind|
-indicates that \verb|bind_number| successive elements having the same name will have the same error value.  If
-\verb|bind| is negative, then the sign of the error is alternated between successive elements.
+
+\item \verb|bind|, \verb|bind_number|, \verb|bind_across_names| ---
+These parameters control ``binding'' of errors among elements, which
+means assigning the same error contribution to several elements.  This
+occurs if \verb|bind| is nonzero; if \verb|bind| is negative, then the
+sign of the error will alternate between successive elements.
+\verb|bind_number| can be used to limit the number of elements bound
+together. In particular, if \verb|bind_number| is positive, then a
+positive value of \verb|bind| indicates that \verb|bind_number|
+successive elements having the same name will have the same error
+value.  Finally, by default, {\tt elegant} only binds the errors of
+objects having the same name, even if they are assigned errors by 
+the same \verb|error_element| command (i.e., through a wildcard \verb|name|).
+If \verb|bind_across_names| is nonzero, then binding is done even for elements
+with different names.
+
 \item \verb|post_correction| --- A flag indicating whether the errors should be added after orbit, tune, and chromaticity correction.
 \item \verb|fractional| --- A flag indicating whether the errors are fractional, in which case the amplitude refers to
 the amplitude of the fractional error.
@@ -1206,6 +1381,7 @@ parameter.  If zero, then the errors replace the prior value of the parameter.
 \begin{verbatim}
 &find_aperture
     STRING output = NULL;
+    STRING search_output = NULL;
     STRING boundary = NULL;
     STRING mode = "many-particle";
     double xmin = -0.1;
@@ -1225,6 +1401,9 @@ parameter.  If zero, then the errors replace the prior value of the parameter.
 \begin{itemize}
 \item \verb|output| --- The (incomplete) name of an SDDS file to send output to.  
  Recommended value: ``\%s.aper''.
+\item \verb|search_output| --- The (incomplete) name of an SDDS file for output of detailed
+ information on each tracked particle (single-particle mode only).  Recommended value:
+ ``\%s.apso''.
 \item \verb|boundary| --- The (incomplete) name of an SDDS 
 file for the boundary points of the aperture search.  Recommended value: ``\%s.bnd''.
 \item \verb|xmin|, \verb|xmax|, \verb|ymin|, \verb|ymax| --- Region of the aperture search.
@@ -1371,6 +1550,7 @@ in capital letters.
         long change_defined_values = 0;
         long clear_settings = 0;
         long allow_missing_elements = 0;
+        long allow_missing_parameters = 0;
 	long force_occurence_data = 0;
         long verbose = 0;
 &end
@@ -1438,6 +1618,9 @@ being used for loading parameters.
 \item \verb|allow_missing_elements| --- If set, allow elements in the
 file that are not in the lattice.  In this case, the nonapplicable
 data is simply ignored.
+
+\item \verb|allow_missing_parameters| --- If set, it is not an error
+if any element in the lattice lacks a parameter that exists in the file.
 
 \item \verb|verbose| --- If set, provide informational printouts about
 changes to parameters.
@@ -1609,6 +1792,9 @@ form \verb|<element-name>.<parameter-name>|, in all capital letters.
     long matrix_order = 1;
     STRING log_file = NULL;
     long output_sparsing_factor = 0;
+    long balance_terms = 0;
+    double restart_worst_term_factor = 1;
+    long restart_worst_terms = 1;
 &end
 \end{verbatim}
 
@@ -1679,16 +1865,40 @@ and not-equal functions, which have the names {\tt segt}, {\tt selt}, and
  $((V_2-(V_1+T))/T)^2$.
 \end{itemize}
 \item \verb|mode| --- May be either ``minimize'' or ``maximize''.
-\item \verb|method| --- May be one of ``simplex'', ``grid'', and ``sample''.
+
+\item \verb|method| --- May be one of ``simplex'', ``grid'', ``powell'', ``randomwalk'', ``randomsample'', or ``sample''.  Recommended methods are ``simplex'' and ``randomwalk''. The latter is very useful when the lattice is unstable or nearly so.
+
 \item \verb|tolerance| --- The convergence criterion for the optimization, with a negative value indicating
 a fractional criterion.
 \item \verb|target| --- The value which, if reached, results in immediate termination of the optimization,
 whether it has converged or not.
 \item \verb|soft_failure| --- A flag indicating, if set, that failure of an optimization pass should not
 result in termination of the optimization.
-\item \verb|n_passes| --- The number of optimization passes made to achieve convergence (``simplex'' only).
-\item \verb|n_evaluations| --- The number of allowed evaluations of the optimization function.  If simplex
-optimization is used, this is the number of allowed evaluations per pass.
+
+\item \verb|n_passes| --- The number of optimization passes made to
+achieve convergence (``simplex'' only).  A pass ends (roughly) when
+the number of evaluations is completed or the function doesn't change
+within the tolerance.  A new pass involves starting the optimization
+again using step sizes given determined from the range of the simplex
+and the factor \verb|simplex_pass_factor|.
+
+\item \verb|n_evaluations| --- The number of allowed evaluations of
+the optimization function.  If simplex optimization is used, this is
+the number of allowed evaluations per pass.
+
+\item \verb|n_restarts| --- The number of complete restarts of the
+optimization (simplex only).  This is an additional loop around the
+\verb|n_passes| loop.  The difference is that a restart involves using
+the optimized result but the original step sizes.  It is highly
+recommended that this feature be used if convergence problems are seen.
+
+\item \verb|restart_worst_term_factor|, \verb|restart_worst_terms| --- Often
+when there are convergence problems, it is because a few terms are causing 
+difficulty.  Convergence can often be obtained by {\em increasing} the weighting
+of these terms.  If  \verb|restart_worst_term_factor| is positive, then \verb|elegant|
+will multiply the weight of the \verb|restart_worst_terms| largest terms by this
+factor at the beginning of a restart.
+
 \item \verb|matrix_order| --- Specifies the highest order of matrix elements that
 should be available for fitting.  Elements up to third order are available for
 the terminal point of the beamline, and up to secod order for interior fit points.
@@ -2054,8 +2264,9 @@ program that wrote the input file.  The expected data quantities for the differe
     \item {\tt elegant}:  ${\rm (x, xp, y, yp, t, p)}$, where x and y are in meters, ${\rm xp=x^\prime}$
 and ${\rm xp=y^\prime}$ are dimensionless, t is in seconds, and ${\rm p=\beta\gamma}$ is the dimensionless
 momentum.
-\item {\tt spiffe}: ${\rm (r, z, pr, pz, t)}$, where r and z are in meters, ${\rm pr=\beta_r \gamma}$,
-  ${\rm pz = \beta_z \gamma}$, and t is in seconds.
+\item {\tt spiffe}: ${\rm (r, z, pr, pz, pphi, t)}$, where r and z are
+  in meters, ${\rm pr=\beta_r \gamma}$, ${\rm pz = \beta_z \gamma}$,
+  ${\rm p_\phi = \omega r \gamma/c}$,  and t is in seconds.
 \end{itemize}
 \item \verb|n_particles_per_ring| --- For {\tt spiffe} data, gives the number of particles to
 generate for each ring of charge.
@@ -2481,7 +2692,13 @@ for a ring.
     double y0 = 1e-10;
     double x1 = 1e-6;
     double y1 = 1e-6;
+    double scale_down_factor = 2;
+    double scale_up_factor = 1.05;
+    double scale_down_limit = 0.01;
+    double scale_up_limit = 1e-5;
+    long scaling_iterations = 10;
     long use_concatenation = 1;
+    long verbose = 0;
 &end
 \end{verbatim}
 
@@ -2496,6 +2713,14 @@ for a ring.
         tune shifts.  These values should be small enough to ensure linearity in the tune
         shift.  If the difference in tune is greater than 0.01, \verb|elegant| will automatically
         reduce these initial values and iterate.
+\item \verb|scale_down_factor|, \verb|scale_up_factor|, \verb|scale_down_limit|, 
+        \verb|scale_up_limit|, \verb|scaling_iterations| --- These control automatic scaling
+        of the amplitudes.  If {\tt elegant} sees a tune shift larger than \verb|scale_down_limit|
+        it will decrease \verb|x0| (or \verb|y0|) by the factor \verb|scale_down_factor|. 
+        If  {\tt elegant} sees a tune shift smaller than \verb|scale_up_limit|
+        it will increase \verb|x0| (or \verb|y0|) by the factor \verb|scale_up_factor|. 
+\item \verb|verbose| --- If nonzero, information about the progress of the algorithm is 
+        printed to the screen.
 \item \verb|use_concatenation| --- If nonzero, then tracks with the concatenated matrix instead
         of element-by-element.  The order
         of the concatenated matrix is given by the \verb|concat_order| control in
@@ -2626,17 +2851,58 @@ on subsequent pages.
 \subsection{ibsEmittance}
 
 \begin{itemize}
-\item {\bf description:} 
+\item {\bf description:} \verb|ibsEmittance| computes growth rates and
+equilibrium emittances for electron rings due to intrabeam scattering
+(IBS).  It will also integrate the growth rates to show the time
+evolution of the emittances.  The IBS algorithm is based on an
+extension of the ZIBS routine in the program ZAP (Zisman, {\em et
+al.}).
 
 \item {\bf examples:}
+This example computes the IBS equilibrium parameters and the contributions to the
+growth rates vs position in the APS lattice.
+\begin{flushleft}{\tt 
+ibsEmittance aps.twi aps.ibs -charge=5 -coupling=0.02 -rf=voltage=9,harmonic=1296
+}\end{flushleft}
 
 \item {\bf synopsis:}
+\begin{flushleft}{\tt 
+ibsEmittance {\em twissFile} {\em resultsFile}
+{-charge={\em nC}|-particles={\em value}} -coupling={\em value}
+[-emitxInput={\em value}] [-deltaInput={\em value}] 
+[-growthRatesOnly] [-superperiods={\em value}]
+{-RF=Voltage={\em MV},harmonic={\em value}|-length={\em mm}}
+[-energy={\em MeV}] [-integrate=turns={\em number}[,stepSize={\em number}]]
+}\end{flushleft}
 
 \item {\bf files:}
+{\em twissFile} is a twiss parameter file from the \verb|twiss_output| command of
+{\tt elegant}.    You must use the \verb|radiation_integrals| flag in \verb|twiss_output|.
 
 \item {\bf switches:}
+\begin{itemize}
+\item {\bf -charge}, {\bf -particles} --- Give the charge (in nanocoulombs) or the
+ number of electrons.
+\item {\bf -coupling} --- Give the emittance coupling ratio, $\epsilon_y/\epsilon_x$.
+\item {\bf -emitxInput} --- Give the initial x emittance in meters.  If not specified,
+the value from the parameter \verb|ex0| in {\em twissFile} is used.
+\item {\bf -deltaInput} --- Give the initial rms fractional momentum spread.  If not
+specified, the value from the parameter \verb|Sdelta0| in {\em twissFile} is used.
+\item {\bf -growthRatesOnly} --- If given, only the growth rates are computed.  Equilibrium
+values are not computed.
+\item {\bf -superperiods={\em value}} --- If given, the number of superperiods in the 
+lattice.  {\em twissFile} is taken to pertain to a single sector.
+\item {\bf -RF=Voltage={\em MV},harmonic={\em value}} --- Specify rf voltage and harmonic number.
+\item {\bf -length={\em mm}} --- Specify the rms bunch length.
+\item {\bf -energy={\em MeV}} --- Specify the beam energy.  By default, this is taken from
+ the {\tt pCentral} parameter in {\em twissFile}.
+\item -integrate=turns={\em number}[,stepSize={\em number}] --- If given, then {\em resultsFile}
+ contains the result of integrating the differential equations for the emittances for 
+ the given number of turns.  The step size is the number of turns for each integration step,
+ and can be adjusted to get faster results.
+\end{itemize}
 
-\item {\bf author:} L. Emery, ANL/APS.
+\item {\bf author:} L. Emery, M. Borland, ANL/APS.
 \end{itemize}
 
 \begin{latexonly}
@@ -2683,7 +2949,7 @@ madto {\em inputfile} {\em outputfile}
 \begin{itemize}
 \item {\bf -cosy} --- Provide data for the program COSY INFINITY.  This can take a little while
   as the program must figure out the Enge coefficients that correspond to the {\tt FINT} and
-  {\tt HGAP} values for all the dipoles.
+  {\tt HGAP} values for all the dipoles.  The user should test the output carefully.
 \item {\bf -patricia} --- Provide data for the program PATRICIA.
 \item {\bf -patpet} --- Provide data for the program PATPET, a merging of the programs
         PATRICIA and PETROS.
@@ -2735,7 +3001,7 @@ sddsanalyzebeam run.out run.analysis
 \item {\bf synopsis:}
 \begin{flushleft}{\tt
 sddsanalyzebeam [-pipe=[input][,output]] [{\em inputfile}] [{\em outputfile}]
-[-nowarnings]
+[-nowarnings] [-correctedOnly]
 }\end{flushleft}
 
 \item {\bf files:}
@@ -2761,6 +3027,9 @@ to that convention, use the SDDS toolkit program {\tt sddsexpand}.
 \begin{itemize}
 \item {\tt pipe} --- The standard SDDS Toolkit pipe option.
 \item {\tt nowarnings} --- Suppressses warning messages.
+\item {\tt correctedOnly} --- If given, only the corrected twiss parameters are computed and
+ output.  These parameters are the correct ones to match a beamline to, since they have the
+ dispersive and mono-energetic terms properly separated.
 \end{itemize}
 
 \item {\bf author:} M. Borland, ANL/APS.
