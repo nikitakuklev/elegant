@@ -1456,6 +1456,8 @@ char *makeTexSafeString(char *source)
 {
   static char buffer[1024];
   long index = 0;
+  if (!source)
+    return source;
   buffer[0] = 0;
   while (*source) {
     if (*source=='_' || *source=='^' || *source=='{' || *source=='}' || *source=='%') {
