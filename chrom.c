@@ -220,7 +220,7 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
     double beta_x, alpha_x, eta_x, etap_x;
     double beta_y, alpha_y, eta_y, etap_y;
     unsigned long unstable;
-
+    double lastError, presentError;
     
     log_entry("do_chromaticity_correction");
 
@@ -267,9 +267,16 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
     fprintf(stderr, "\nAdjusting chromaticities:\n");
     fprintf(stderr, "initial chromaticities:  %e  %e\n", chromx0, chromy0);
 
+    presentError = DBL_MAX;
     for (iter=0; iter<chrom->n_iterations; iter++) {
         chrom->dchrom->a[0][0] = chrom->chromx - chromx0;
         chrom->dchrom->a[1][0] = chrom->chromy - chromy0;
+        lastError = presentError;
+        presentError = sqr(chrom->dchrom->a[0][0])+sqr(chrom->dchrom->a[1][0]);
+        if (presentError>lastError) {
+          fprintf(stderr, "Error increasing---iteration terminated\n");
+          break;
+        }
         if (chrom->tolerance>0 &&
             chrom->tolerance>fabs(chrom->dchrom->a[0][0]) &&
             chrom->tolerance>fabs(chrom->dchrom->a[1][0]) )
@@ -305,9 +312,12 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
                 compute_matrix(context, run, NULL);
                 type = context->type;
                 count++;
-                fprintf(stderr, "new value of %s#%ld[K2] is  %.15lg 1/m^3\n", 
+                /* fprintf(stderr, "new value of %s#%ld[K2] is  %.15lg 1/m^3\n", 
                        chrom->name[i], context->occurence, K2);
-                }
+                       */
+              }
+            fprintf(stderr, "Change for family %ld (%ld sextupoles): %e\n",
+                    i, count, chrom->correction_fraction*chrom->dK2->a[i][0]);
             if (alter_defined_values)
               change_defined_parameter(chrom->name[i], K2_param, type, K2, NULL, LOAD_FLAG_ABSOLUTE);
             }    
