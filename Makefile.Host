@@ -23,8 +23,10 @@ endif
 
 #EPICS_EXTENSIONS_LIB = ../../../../../epics/extensions/lib/$(HOST_ARCH)
 PROD = elegant sddsemitmeas madto sddssasefel sddsTouschekInteg ibsEmittance recurseSetup haissinski \
-        sddsmatchtwiss sddsanalyzebeam sddsbrightness sddsresdiag ../longitCalcs ../longitCmd
-
+        sddsmatchtwiss sddsanalyzebeam sddsbrightness sddsresdiag
+ifndef WIN32
+PROD += ../longitCalcs ../longitCmd
+endif
 USR_CFLAGS = 	-I../../../../../epics/extensions/src/SDDS/include \
 		$(ZLIB_INC) \
 		-I$(EPICS_EXTENSIONS_INCLUDE) \
