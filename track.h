@@ -44,6 +44,8 @@ typedef struct {
   double betay, alphay, phiy, etay, etapy, apy;
 #define TWISS_CENT_OFFSET 12
   double Cx, Cy;
+#define TWISS_RAD_INTEGRALS_OFFSET 13
+  double dI[6];
 } TWISS;
 
 /* structure for accumulating beam moments */
@@ -430,7 +432,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_FMULT 64
 #define T_WAKE 65
 #define T_TRWAKE 66
-#define N_TYPES 67
+#define T_TUBEND 67
+#define N_TYPES 68
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -490,7 +493,7 @@ extern char *entity_text[N_TYPES];
 #define N_RAMPP_PARAMS 1
 #define N_NISEPT_PARAMS 9
 #define N_STRAY_PARAMS 7
-#define N_CSBEND_PARAMS 24
+#define N_CSBEND_PARAMS 27
 #define N_MATTER_PARAMS 3
 #define N_RFMODE_PARAMS 17
 #define N_TRFMODE_PARAMS 10
@@ -504,6 +507,7 @@ extern char *entity_text[N_TYPES];
 #define N_BMAPXY_PARAMS 5
 #define N_WAKE_PARAMS 7
 #define N_TRWAKE_PARAMS 8
+#define N_TUBEND_PARAMS 6
 
 typedef struct {
     char *name;            /* parameter name */
@@ -1203,9 +1207,20 @@ typedef struct {
     long n_kicks, nonlinear, synch_rad;
     long edge1_effects, edge2_effects;
     long integration_order;
+    double edge1_kick_limit, edge2_kick_limit;
+    long kick_limit_scaling;
     /* for internal use only: */
     long flags;
     } CSBEND;
+
+/* names and storage structure for top-up bending magnet physical parameters */
+extern PARAMETER tubend_param[N_TUBEND_PARAMS];
+
+typedef struct {
+  double length, angle;
+  double fse;
+  double offset, magnet_width, magnet_angle;
+} TUBEND;
 
 /* names and storage structure for traveling-wave muffin-tin accelerator */
 extern PARAMETER twmta_param[N_TWMTA_PARAMS];

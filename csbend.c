@@ -32,19 +32,21 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   static double nh, betah2, gammah3, deltah4;
   static double h, h2, h3;
   long i_part, i_top;
-    double rho, s, Fx, Fy;
-    double x, xp, y, yp, dp, y2, dp0;
-    double n, beta, gamma, delta, fse, dp_prime;
-    double tilt, etilt, cos_ttilt, sin_ttilt, ttilt;
-    double *coord;
-    double angle, e1, e2, Kg;
-    double psi1, psi2;
-    double Qi[6], Qf[6];
-    double dcoord_etilt[6];
-    double dxi, dyi, dzi;
-    double dxf, dyf, dzf;
-
-    log_entry("track_through_csbend");
+  double rho, s, Fx, Fy;
+  double x, xp, y, yp, dp, y2, dp0;
+  double n, beta, gamma, delta, fse, dp_prime;
+  double tilt, etilt, cos_ttilt, sin_ttilt, ttilt;
+  double *coord;
+  double angle, e1, e2, Kg;
+  double psi1, psi2;
+  double Qi[6], Qf[6];
+  double dcoord_etilt[6];
+  double dxi, dyi, dzi;
+  double dxf, dyf, dzf;
+  double delta_xp, fabs_theta_actual;
+  double e1_kick_limit, e2_kick_limit;
+  
+  log_entry("track_through_csbend");
 
     if (!csbend)
         bomb("null CSBEND pointer (track_through_csbend)", NULL);
@@ -88,12 +90,25 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     betah2 = beta*h2;
     gammah3 = gamma*h3;
     deltah4 = delta*h2*h2;
+  if (fse>-1)
     rho_actual = 1/((1+fse)*h);
+  else
+    rho_actual = 1e16/h;
 
+  e1_kick_limit = csbend->edge1_kick_limit;
+  e2_kick_limit = csbend->edge2_kick_limit;
+  if (csbend->kick_limit_scaling) {
+    e1_kick_limit *= rho0/rho_actual;
+    e2_kick_limit *= rho0/rho_actual;
+  }
+  if (e1_kick_limit>0 || e2_kick_limit>0)
+    fprintf(stderr, "rho0=%le  rho_a=%le fse=%le e1_kick_limit=%le e2_kick_limit=%le\n",
+            rho0, rho_actual, csbend->fse, e1_kick_limit, e2_kick_limit);
+  
     /* angles for fringe-field effects */
     Kg   = 2*csbend->hgap*csbend->fint;
-    psi1 = Kg/rho0/cos(e1)*(1+sqr(sin(e1)));
-    psi2 = Kg/rho0/cos(e2)*(1+sqr(sin(e2)));
+    psi1 = Kg/rho_actual/cos(e1)*(1+sqr(sin(e1)));
+    psi2 = Kg/rho_actual/cos(e2)*(1+sqr(sin(e2)));
 
     /* rad_coef is d((P-Po)/Po)/ds for the on-axis, on-momentum particle, where po is the momentum of
      * the central particle.
@@ -237,8 +252,11 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
 
         if (csbend->edge1_effects) {
             /* apply edge focusing */
-            rho = (1+dp)*rho0;
-            xp += tan(e1)/rho*x;
+            rho = (1+dp)*rho_actual;
+            delta_xp = tan(e1)/rho*x;
+            if (e1_kick_limit>0 && fabs(delta_xp)>e1_kick_limit)
+              delta_xp = SIGN(delta_xp)*e1_kick_limit;
+            xp += delta_xp;
             yp -= tan(e1-psi1/(1+dp))/rho*y;
             }
 
@@ -326,8 +344,11 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
 
         if (csbend->edge2_effects) {
             /* apply edge focusing */
-            rho = (1+dp)*rho0;
-            xp += tan(e2)/rho*x;
+            rho = (1+dp)*rho_actual;
+            delta_xp = tan(e2)/rho*x;
+            if (e2_kick_limit>0 && fabs(delta_xp)>e2_kick_limit)
+              delta_xp = SIGN(delta_xp)*e2_kick_limit;
+            xp += delta_xp;
             yp -= tan(e2-psi2/(1+dp))/rho*y;
             }
        

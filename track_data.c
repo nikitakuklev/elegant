@@ -24,7 +24,7 @@ char *entity_name[N_TYPES] = {
     "NIBEND", "KPOLY", "NISEPT", "RAMPRF", "RAMPP", "STRAY", "CSBEND",
     "TWMTA", "MATTER", "RFMODE", "TRFMODE", "ZLONGIT", "SREFFECTS",
     "MODRF", "BMAPXY", "ZTRANSVERSE", "IBSCATTER", "FMULT",
-    "WAKE", "TRWAKE",
+    "WAKE", "TRWAKE", "TUBEND",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -122,6 +122,7 @@ and phase modulation.",
     "Multipole kick element with coefficient input from an SDDS file.",
     "Longitudinal wake specified as a function of time lag behind the particle.",
     "Transverse wake specified as a function of time lag behind the particle.",
+    "A special rectangular bend element for top-up backtracking.",
     } ;
 
 QUAD quad_example;
@@ -849,6 +850,20 @@ PARAMETER csbend_param[N_CSBEND_PARAMS] = {
     {"EDGE1_EFFECTS", "", IS_LONG, 0, (long)((char *)&csbend_example.edge1_effects), NULL, 0.0, 1},
     {"EDGE2_EFFECTS", "", IS_LONG, 0, (long)((char *)&csbend_example.edge2_effects), NULL, 0.0, 1},
     {"INTEGRATION_ORDER", "", IS_LONG, 0, (long)((char *)&csbend_example.integration_order), NULL, 0.0, 2},
+    {"EDGE1_KICK_LIMIT", "", IS_DOUBLE, 0, (long)((char *)&csbend_example.edge1_kick_limit), NULL, -1, 0},
+    {"EDGE2_KICK_LIMIT", "", IS_DOUBLE, 0, (long)((char *)&csbend_example.edge2_kick_limit), NULL, -1, 0},
+    {"KICK_LIMIT_SCALING", "", IS_LONG, 0, (long)((char *)&csbend_example.kick_limit_scaling), NULL, 0, 0},
+    };
+
+TUBEND tubend_example;
+/* special bending magnet for top-up with entry through the side! */
+PARAMETER tubend_param[N_TUBEND_PARAMS] = {
+    {"L", "M", IS_DOUBLE, 1, (long)((char *)&tubend_example.length), NULL, 0.0, 0},
+    {"ANGLE", "RAD", IS_DOUBLE, 1, (long)((char *)&tubend_example.angle), NULL, 0.0, 0},
+    {"FSE", "", IS_DOUBLE, 1, (long)((char *)&tubend_example.fse), NULL, 0.0, 0},
+    {"OFFSET", "", IS_DOUBLE, 1, (long)((char *)&tubend_example.offset), NULL, 0.0, 0},
+    {"MAGNET_WIDTH", "", IS_DOUBLE, 1, (long)((char *)&tubend_example.magnet_width), NULL, 0.0, 0},
+    {"MAGNET_ANGLE", "", IS_DOUBLE, 1, (long)((char *)&tubend_example.magnet_angle), NULL, 0.0, 0},
     };
 
 TWMTA twmta_example;
@@ -1110,6 +1125,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_FMULT_PARAMS,  MAT_LEN_NCAT|IS_MAGNET,       sizeof(FMULT),    fmult_param     }, 
     { N_WAKE_PARAMS, 0, sizeof(WAKE), wake_param},
     { N_TRWAKE_PARAMS, 0, sizeof(TRWAKE), trwake_param},
+    { N_TUBEND_PARAMS, 0, sizeof(TUBEND), tubend_param},
 } ;
  
 

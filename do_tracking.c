@@ -472,6 +472,11 @@ long do_tracking(
                         n_left = track_through_csbend(coord, n_to_track, (CSBEND*)eptr->p_elem, 0.0,
                                                       *P_central, accepted, z);
                         break;
+                      case T_TUBEND:
+                        n_left = track_through_tubend(coord, n_to_track, 
+                                                      (TUBEND*)eptr->p_elem, 0.0,
+                                                      *P_central, accepted, z);
+                        break;
                       case T_KQUAD:
                       case T_KSEXT:
                         n_left = multipole_tracking2(coord, n_to_track, eptr, 0.0,
