@@ -3,6 +3,12 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.7  2000/05/10 01:52:15  borland
+ * Now correctly compute matrices for alpha magnet and stray field in the presence
+ * of changes in central momentum.
+ * SASE FEL now gives slice average plus non-slice computation when slices are
+ * requested.
+ *
  * Revision 1.6  2000/04/21 20:52:47  soliday
  * Added include fdlibm.h for Bessel function with Borland C.
  *
@@ -400,8 +406,7 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
        * the average current in the slice
        */
       compute_percentiles(xLimit, percentLevel, 2, time, particles);
-      sasefelOutput->rmsBunchLength[slice] = tRMS 
-        = (xLimit[1] - xLimit[0])/(sasefelOutput->sliceFraction*sqrt(2*PI));
+      sasefelOutput->rmsBunchLength[slice] = (xLimit[1] - xLimit[0])/sqrt(2*PI);
       
       /* find center of energy distribution */
       for (j=0; j<6; j++)
@@ -462,13 +467,18 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
       else
         sasefelOutput->betaToUse[slice] = sasefelOutput->beta;
       
-      ComputeSASEFELParameters(&sasefelOutput->lightWavelength[slice], &sasefelOutput->saturationLength[slice], 
+      ComputeSASEFELParameters(&sasefelOutput->lightWavelength[slice], 
+                               &sasefelOutput->saturationLength[slice], 
                                &sasefelOutput->gainLength[slice],
-                               &sasefelOutput->noisePower[slice], &sasefelOutput->saturationPower[slice], 
+                               &sasefelOutput->noisePower[slice],
+                               &sasefelOutput->saturationPower[slice], 
                                &sasefelOutput->PierceParameter[slice],
-                               &sasefelOutput->etaDiffraction[slice], &sasefelOutput->etaEmittance[slice], 
+                               &sasefelOutput->etaDiffraction[slice],
+                               &sasefelOutput->etaEmittance[slice], 
                                &sasefelOutput->etaEnergySpread[slice],
-                               charge, tRMS, sasefelOutput->undulatorPeriod,
+                               sasefelOutput->charge[slice], 
+                               sasefelOutput->rmsBunchLength[slice], 
+                               sasefelOutput->undulatorPeriod,
                                sasefelOutput->undulatorK, 
                                sasefelOutput->betaToUse[slice], sasefelOutput->emit[slice], 
                                sasefelOutput->Sdelta[slice], sasefelOutput->pCentral[slice],

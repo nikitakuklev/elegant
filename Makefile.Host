@@ -6,6 +6,7 @@ CMPLR = ANSI
 #HOST_OPT = NO
 #CC = purify $($(ANSI)_$(CMPLR))
 
+EPICS_EXTENSIONS_LIB = ../../../../../epics/extensions/lib/$(HOST_ARCH)
 PROD = elegant sddsemitmeas madto sddssasefel sddsTouschekInteg ibsEmittance recurseSetup haissinski
 
 USR_CFLAGS = 	-I../../../../../epics/extensions/src/SDDS/include \

@@ -889,8 +889,18 @@ VMATRIX *stray_field_matrix(double length, double *lB, double *gB, double theta,
     VMATRIX *M;
     double xkick, ykick, Bx, By;
     double rho;
-    
-    log_entry("stray_field_matrix");
+#ifdef DEBUG_STRAY
+    static FILE *fp=NULL;
+    if (!fp) {
+      fp = fopen_e("stray.erl", "w", 0);
+      fprintf(fp, "SDDS1\n&column name=xKick type=double &end\n");
+      fprintf(fp, "&column name=yKick type=double &end\n");
+      fprintf(fp, "&column name=p type=double &end\n");
+      fprintf(fp, "&column name=By type=double &end\n");
+      fprintf(fp, "&column name=Bx type=double &end\n");
+      fprintf(fp, "&data mode=ascii no_row_counts=1 &end\n");
+    }
+#endif
     
     Bx = lB[0] + cos(theta)*gB[0] + sin(theta)*gB[3];
     By = lB[1] + gB[1];
@@ -906,10 +916,13 @@ VMATRIX *stray_field_matrix(double length, double *lB, double *gB, double theta,
         }
     else
         ykick = 0;
-    
+#ifdef DEBUG_STRAY
+    fprintf(fp, "%le %le %le %le %le\n", xkick, ykick, p_central, By, Bx);
+    fflush(fp);
+#endif
+
     M = hvcorrector_matrix(length, xkick, ykick, 0.0, 0.0, 1.0, 1.0, 0, order);
 
-    log_exit("stray_field_matrix");
     return(M);
     }
 
