@@ -26,9 +26,6 @@
 #define popen(command, mode) _popen(command, mode)
 #endif
 
-static FILE *fp = NULL;
-static int pid;
-
 /* dummy signal handler for use with sigpause */
 void subprocess_sigusr1()
 {
@@ -79,25 +76,25 @@ void run_subprocess(NAMELIST_TEXT *nltext, RUN *run)
 
 void executeCshCommand(char *cmd)
 {
-#if !defined(_WIN32)
-  signal(SIGUSR1, subprocess_sigusr1);
+  FILE *fp;
+  char *filename;
+  char cmd2[1000];
+  
+#if defined(CONDOR_COMPILE)
+  _condor_ckpt_disable();
 #endif
 
-  if (!fp) {
-    /* open a pipe and start csh */
-    fp = popen("csh", "w");
-    pid = getpid();
-  }
-  
-  fprintf(fp, "%s\nsleep 2\nkill -USR1 %d\n", cmd, pid);
-  fflush(fp);
+  filename = tmpname(NULL);
+  fp = fopen(filename, "w");
+  fprintf(fp, "set nonomatch\n");
+  fprintf(fp, "%s\n", cmd);
+  fclose(fp);
+  sprintf(cmd2, "csh %s\n", filename);
+  system(cmd2);
+  remove(filename);
 
-#if !defined(_WIN32)
-  /* pause until SIGUSR1 is received */
-  sigpause(SIGUSR1);
-
-  /* back to default behavior for sigusr1 */
-  signal(SIGUSR1, SIG_DFL);
+#if defined(CONDOR_COMPILE)
+  _condor_ckpt_enable();
 #endif
 }
 
