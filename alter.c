@@ -77,11 +77,13 @@ long do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
                   entity_description[eptr->type].parameter[iParam].name, 
                   *((long*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)));
         if (differential)
-          *((long*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)) += value;
+          *((long*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)) += 
+            nearestInteger(value);
         else if (multiplicative)
           *((long*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)) *= 1+value;
         else
-          *((long*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)) = value;
+          *((long*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)) =
+            nearestInteger(value);
         if (verbose) {
           fprintf(stdout, "%ld\n",
                   *((long*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)));
