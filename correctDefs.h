@@ -61,8 +61,9 @@ extern void dump_cormon_stats(long verbose, long plane, double **kick, long n_ki
 extern void setup_orb_traj_output(char *filename, char *mode, RUN *run);
 extern void dump_orb_traj(TRAJECTORY *traj, long n_elems, char *description, long step);
 
-extern void setup_correction_matrix_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, CORRECTION *correct,
-                                    long *do_response);
+extern void setup_correction_matrix_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, 
+                                           CORRECTION *correct,
+                                           long *do_response, long BnLUnitsOk);
 extern void run_response_output(RUN *run, LINE_LIST *beamline, CORRECTION *correct, long tune_corrected);
 extern void correction_setup(CORRECTION *_correct, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 extern long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *starting_coords, 

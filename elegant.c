@@ -614,6 +614,7 @@ char **argv;
             if (!run_setuped)
                 bomb("run_setup must precede matrix_output namelist", NULL);
             setup_matrix_output(&namelist_text, &run_conditions, beamline);
+            do_matrix_output = 1;
             break;
           case TWISS_OUTPUT:
             if (!run_setuped)
@@ -623,7 +624,7 @@ char **argv;
                 twiss_computed = 1;
                 run_twiss_output(&run_conditions, beamline, NULL, -1);
                 finish_twiss_output();
-                }
+            }
             break;
           case STOP:
             lorentz_report();
@@ -919,7 +920,9 @@ char **argv;
           case CORRECTION_MATRIX_OUTPUT:
             if (!run_setuped)
                 bomb("run setup must precede correction_matrix_output namelist", NULL);
-            setup_correction_matrix_output(&namelist_text, &run_conditions, beamline, &correct, &do_response_output);
+            setup_correction_matrix_output(&namelist_text, &run_conditions, beamline, &correct,
+                                           &do_response_output, 
+                                           do_twiss_output+do_matrix_output+twiss_computed);
             if (!do_response_output) {
                 run_response_output(&run_conditions, beamline, &correct, -1);
                 finish_response_output();

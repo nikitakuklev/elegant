@@ -20,16 +20,22 @@ typedef struct {
     } RESPONSE_OUTPUT;
 RESPONSE_OUTPUT xRespOutput, yRespOutput, xInvRespOutput, yInvRespOutput;
 
+#define NORMAL_UNITS 0
+#define KNL_UNITS 1
+#define BNL_UNITS 2
+
 void setup_response_output(RESPONSE_OUTPUT *respOutput,
                            char *filename, char *type, RUN *run, char *beamline_name, CORMON_DATA *CM, STEERING_LIST *SL, 
-                           long plane, long inverse, long KnL_units);
+                           long plane, long inverse, long unitsType);
 void do_response_output(RESPONSE_OUTPUT *respOutput, CORMON_DATA *CM, STEERING_LIST *SL, long plane,
                    long inverse, long KnL_units, long tune_corrected);
 #include "response.h"
 
 void setup_correction_matrix_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, CORRECTION *correct,
-                                    long *do_response)
+                                    long *do_response,
+                                    long BnLUnitsOK)
 {
+    long unitsCode;
     log_entry("setup_correction_matrix_output");
     if (correct->mode==-1)
         bomb("can't do response matrix output--orbit/trajectory correction not requested", NULL);
@@ -41,26 +47,30 @@ void setup_correction_matrix_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *
     print_namelist(stdout, &correction_matrix_output);
     *do_response = output_at_each_step;
 
+    unitsCode = KnL_units?KNL_UNITS:(BnL_units?BNL_UNITS:0);
+    if (unitsCode==BNL_UNITS && !BnLUnitsOK)
+      bomb("At present you must give the matrix_output or twiss_output command to use BnL_units=1.  Sorry.", NULL);
+    
     if (response[0])
         setup_response_output(&xRespOutput, response[0], correction_mode[correct->mode], run, beamline->name,
-                              correct->CMx, &correct->SLx, 0, 0, KnL_units);
+                              correct->CMx, &correct->SLx, 0, 0, unitsCode);
     if (response[1])
         setup_response_output(&yRespOutput, response[1], correction_mode[correct->mode], run, beamline->name,
-                              correct->CMy, &correct->SLy, 1, 0, KnL_units);
+                              correct->CMy, &correct->SLy, 1, 0, unitsCode);
 
     if (inverse[0])
         setup_response_output(&xInvRespOutput, inverse[0], correction_mode[correct->mode], run, beamline->name,
-                              correct->CMx, &correct->SLx, 0, 1, KnL_units);
+                              correct->CMx, &correct->SLx, 0, 1, unitsCode);
     if (inverse[1])
         setup_response_output(&yInvRespOutput, inverse[1], correction_mode[correct->mode], run, beamline->name,
-                              correct->CMy, &correct->SLy, 1, 1, KnL_units);
+                              correct->CMy, &correct->SLy, 1, 1, unitsCode);
 
     log_exit("setup_correction_matrix_output");
     }
 
 void setup_response_output(RESPONSE_OUTPUT *respOutput,
                            char *filename, char *type, RUN *run, char *beamline_name, CORMON_DATA *CM, STEERING_LIST *SL, 
-                           long plane, long inverse, long KnL_units)
+                           long plane, long inverse, long unitsCode)
 {
     ELEMENT_LIST *eptr;
     static char s[256], t[256], units[32];
@@ -133,8 +143,10 @@ void setup_response_output(RESPONSE_OUTPUT *respOutput,
             if (is_blank(entity_description[eptr->type].parameter[SL->param_index[sl_index]].unit))
                 strcpy(units, "m");
             else {
-                if (KnL_units && (eptr->type==T_HCOR || eptr->type==T_HVCOR || eptr->type==T_VCOR))
+                if (unitsCode==KNL_UNITS && (eptr->type==T_HCOR || eptr->type==T_HVCOR || eptr->type==T_VCOR))
                     sprintf(units, "m/K0L");
+                else if (unitsCode==BNL_UNITS && (eptr->type==T_HCOR || eptr->type==T_HVCOR || eptr->type==T_VCOR))
+                    sprintf(units, "1/T");
                 else {
                     sprintf(units, "m/%s", entity_description[eptr->type].parameter[SL->param_index[sl_index]].unit);
                     str_tolower(units);
@@ -146,8 +158,12 @@ void setup_response_output(RESPONSE_OUTPUT *respOutput,
             if (is_blank(entity_description[eptr->type].parameter[SL->param_index[sl_index]].unit))
                 strcpy(units, "1/m");
             else {
-                if (KnL_units && (eptr->type==T_HCOR || eptr->type==T_HVCOR || eptr->type==T_VCOR))
-                    sprintf(units, "K0L/m");
+                if (unitsCode==KNL_UNITS 
+                    && (eptr->type==T_HCOR || eptr->type==T_HVCOR || eptr->type==T_VCOR))
+                  sprintf(units, "K0L/m");
+                else if (unitsCode==BNL_UNITS 
+                         && (eptr->type==T_HCOR || eptr->type==T_HVCOR || eptr->type==T_VCOR))
+                  sprintf(units, "T");
                 else {
                     sprintf(units, "%s/m", entity_description[eptr->type].parameter[SL->param_index[sl_index]].unit);
                     str_tolower(units);
@@ -200,6 +216,8 @@ void setup_response_output(RESPONSE_OUTPUT *respOutput,
 
 void run_response_output(RUN *run, LINE_LIST *beamline, CORRECTION *correct, long tune_corrected)
 {
+    long unitsCode;
+    unitsCode = KnL_units?KNL_UNITS:(BnL_units?BNL_UNITS:0);
     if (tune_corrected==0 && !output_before_tune_correction)
         return;
     log_entry("run_response_output");
@@ -224,25 +242,27 @@ void run_response_output(RUN *run, LINE_LIST *beamline, CORRECTION *correct, lon
         }
 
     if (response[1])
-        do_response_output(&yRespOutput, correct->CMy, &correct->SLy, 1, 0, KnL_units, tune_corrected);
+        do_response_output(&yRespOutput, correct->CMy, &correct->SLy, 1, 0, unitsCode, tune_corrected);
     if (response[0])
-        do_response_output(&xRespOutput, correct->CMx, &correct->SLx, 0, 0, KnL_units, tune_corrected);
+        do_response_output(&xRespOutput, correct->CMx, &correct->SLx, 0, 0, unitsCode, tune_corrected);
 
     if (inverse[0])
-        do_response_output(&xInvRespOutput, correct->CMx, &correct->SLx, 0, 1, KnL_units, tune_corrected);
+        do_response_output(&xInvRespOutput, correct->CMx, &correct->SLx, 0, 1, unitsCode, tune_corrected);
     if (inverse[1])
-        do_response_output(&yInvRespOutput, correct->CMy, &correct->SLy, 1, 1, KnL_units, tune_corrected);
+        do_response_output(&yInvRespOutput, correct->CMy, &correct->SLy, 1, 1, unitsCode, tune_corrected);
 
     log_exit("run_response_output");
     }
 
 void do_response_output(RESPONSE_OUTPUT *respOutput, CORMON_DATA *CM, STEERING_LIST *SL, long plane,
-                   long inverse, long KnL_units, long tune_corrected)
+                   long inverse, long unitsCode, long tune_corrected)
 {
     long i, j;
     ELEMENT_LIST *eptr;
     double value;
 
+    fprintf(stderr, "unitCode = %ld\n", unitsCode);
+    
     log_entry("do_response_output");
     if (!SDDS_StartTable(&respOutput->SDDSout, CM->nmon) ||
         !SDDS_SetParameters(&respOutput->SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
@@ -255,7 +275,19 @@ void do_response_output(RESPONSE_OUTPUT *respOutput, CORMON_DATA *CM, STEERING_L
                                respOutput->monitorNameIndex, respOutput->monitorName[i],
                                respOutput->sIndex, CM->umoni[i]->end_pos, -1))
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-        if (KnL_units && plane==0) 
+        if (unitsCode==BNL_UNITS) 
+            for (j=0; j<CM->ncor; j++) {
+                eptr = CM->ucorr[j];
+                value = (inverse?CM->T->a[j][i]:CM->C->a[i][j]);
+                if (eptr->type==T_HCOR || eptr->type==T_HVCOR || eptr->type==T_VCOR) {
+                    value *= (inverse?eptr->Pref_output/586.679:586.679/(eptr->Pref_output+1e-10));
+                    fprintf(stderr, "At %s, Pref = %e\n", eptr->name, eptr->Pref_output);
+                  }
+                if (!SDDS_SetRowValues(&respOutput->SDDSout, SDDS_PASS_BY_VALUE|SDDS_SET_BY_INDEX, i,
+                                       respOutput->correctorIndex[j], value, -1))
+                    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+                }
+        else if (unitsCode==KNL_UNITS && plane==0) 
             for (j=0; j<CM->ncor; j++) {
                 eptr = CM->ucorr[j];
                 value = (inverse?CM->T->a[j][i]:CM->C->a[i][j]);
