@@ -872,7 +872,7 @@ static long floorCoord_mem[7] = {
   -1, -1, -1, -1, -1, -1, -1
 };
 static char *floorStat_name[6] = {
-  "min.X", "min.Y", "min.Z", "max.X", "maxY", "max.Z",
+  "min.X", "min.Y", "min.Z", "max.X", "max.Y", "max.Z",
 };
 static long floorStat_mem[6] = {
   -1, -1, -1, -1, -1, -1,
