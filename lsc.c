@@ -93,15 +93,6 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
       fflush(stdout);
 #endif
     }
-    if (LSC->highFrequencyCutoff0>0) {
-      long nz;
-      nz = applyLowPassFilter(Itime, nb, LSC->highFrequencyCutoff0, LSC->highFrequencyCutoff1);
-      if (nz) {
-	fprintf(stdout, "Warning: low pass filter resulted in negative values in %ld bins\n",
-		nz);
-	fflush(stdout);
-      }
-    }
 
     /* Compute kSC and length to drift */
     /* - find maximum current */
@@ -137,6 +128,33 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
     /* Take the FFT of I(t) to get I(f) */
     memcpy(Ifreq, Itime, 2*nb*sizeof(*Ifreq));
     realFFT(Ifreq, nb, 0);
+    nfreq = nb/2 + 1;
+
+    if (LSC->highFrequencyCutoff0>0) {
+      /* apply low-pass filter */
+      long i, i1, i2;
+      double dfraction, fraction;
+      i1 = LSC->highFrequencyCutoff0*nfreq;
+      if (i1<1)
+	i1 = 1;
+      i2 = LSC->highFrequencyCutoff1*nfreq;
+      if (i2>=nfreq)
+	i2 = nfreq-1;
+      dfraction = i1==i2 ? 0 : 1./(i2-i1);
+      fraction = 1;
+      for (i=i1; i<i2; i++) {
+	Ifreq[2*i-1] *= fraction;
+	Ifreq[2*i  ] *= fraction;
+	if ((fraction -= dfraction)<0)
+	  fraction = 0;
+      }
+      for ( ; i<nfreq-1; i++) {
+	Ifreq[2*i-1] = 0;
+	Ifreq[2*i  ] = 0;
+      }
+      /* kill the Nyquist term */
+      Ifreq[nb-1] = 0;
+    }
     
     /* Compute V(f) = Z(f)*I(f), putting in a factor 
      * to normalize the current waveform.
@@ -153,7 +171,6 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
     if (nb%2==0)
       Vfreq[nb-1] = 0;
     
-    nfreq = nb/2 + 1;
     factor = charge->macroParticleCharge/dt;
     a2 = Z0/(PI*sqr(beamRadius))*length;
 #if DEBUG
