@@ -1132,11 +1132,11 @@ proc FillFrequencyMapFrame {widget args} {
     APSLabeledEntry .le1 -parent $widget \
       -label "Minimum x coordinate (m): " -width 20 -textVariable frequencyMap(xMinimum) \
       -contextHelp \
-      "Enter the minimum x coordinate for the dynamic aperture run"
+      "Enter the minimum x coordinate for the frequency map run"
     APSLabeledEntry .le2 -parent $widget \
       -label "Maximum x coordinate (m): " -width 20 -textVariable frequencyMap(xMaximum) \
       -contextHelp \
-      "Enter the maximum x coordinate for the dynamic aperture run"
+      "Enter the maximum x coordinate for the frequency map run"
     APSLabeledEntry .le3 -parent $widget \
       -label "Number of x points: " -width 20 -textVariable frequencyMap(xPoints) \
       -contextHelp \
@@ -1144,11 +1144,11 @@ proc FillFrequencyMapFrame {widget args} {
     APSLabeledEntry .le4a -parent $widget \
       -label "Minimum y coordinate (m): " -width 20 -textVariable frequencyMap(yMinimum) \
       -contextHelp \
-      "Enter the maximum y coordinate for the dynamic aperture search"
+      "Enter the maximum y coordinate for the frequency map search"
     APSLabeledEntry .le4 -parent $widget \
       -label "Maximum y coordinate (m): " -width 20 -textVariable frequencyMap(yMaximum) \
       -contextHelp \
-      "Enter the maximum y coordinate for the dynamic aperture search"
+      "Enter the maximum y coordinate for the frequency map search"
     APSLabeledEntry .le5 -parent $widget \
       -label "Number of y points: " -width 20 -textVariable frequencyMap(yPoints) \
       -contextHelp \
@@ -1160,6 +1160,11 @@ proc FillFrequencyMapFrame {widget args} {
     APSLabeledEntry .le7 -parent $widget \
 	-label "Fractional momentum offset: " -width 20 -textVariable frequencyMap(delta) \
 	-contextHelp "Enter the fractional momentum offset" 
+    set frequencyMap(includeApertures) 1
+    APSRadioButtonFrame .rb1 -parent $widget \
+      -label "Include apertures: " -orientation horizontal -buttonList {Yes No} -valueList {1 0} \
+      -variable frequencyMap(includeApertures) -contextHelp \
+      "Choose whether to include the effects of apertures that are defined in the beamline."
     APSLabeledEntry .le8 -parent $widget \
       -label "Run suffix: " -width 20 -textVariable frequencyMap(userSuffix) \
       -contextHelp "Enter the suffix for the filenames."
@@ -1253,14 +1258,15 @@ proc FrequencyMapPP {args} {
     if ![llength $valueList] return
     array set parameter $valueList
     catch {exec sddsresdiag $rootname.resdiag -order=$parameter(order)}
-    exec sddsplot -filename \
+    APSExecLog .plot -unixCommand \
+	"sddsplot -filename \
 	-limit=xmin=$parameter(nux0),xmax=$parameter(nux1),ymin=$parameter(nuy0),ymax=$parameter(nuy1),auto \
 	-column=nux,nuy $rootname.resdiag \
 	-column=nux,nuy $rootname.fma -graph=dot,subtype=2,vary -order=spect \
 	-split=column=x,width=[expr $frequencyMap(xMaximum)/100.0] -end \
 	-column=nux,nuy $rootname.resdiag \
 	-column=nux,nuy $rootname.fma -graph=dot,subtype=2,vary -order=spect \
-	-split=column=y,width=[expr $frequencyMap(yMaximum)/100.0] &
+	-split=column=y,width=[expr $frequencyMap(yMaximum)/100.0] "
 }
 
 set tabIndex -1
