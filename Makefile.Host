@@ -27,8 +27,7 @@ USR_CFLAGS = 	-I../../../../../epics/extensions/src/SDDS/include \
 		-DIEEE_MATH \
 		$(ZLIB_CFLAG)
 
-USR_CFLAGS_DEFAULT += 	-L../../../../../epics/extensions/lib/$(HOST_ARCH) \
-			-DUNIX -DMINIMIZE_MEMORY
+USR_CFLAGS_DEFAULT += 	-DUNIX -DMINIMIZE_MEMORY
 
 ifeq ($(LYNCEANTECH),1) 
         USR_CFLAGS += -DLYNCEANTECH

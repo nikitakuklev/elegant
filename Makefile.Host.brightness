@@ -8,6 +8,9 @@
 #*************************************************************************
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.5  2003/10/13 20:48:38  soliday
+# Use g77 on solaris.
+#
 # Revision 1.4  2003/06/16 18:04:45  soliday
 # Added support for AIX
 #
@@ -122,14 +125,15 @@ brighte$(OBJ) :
 hunt$(OBJ) :
 	f77 /compile_only /threads /libs:dll /fast ..\\hunt.f
 else
+F77 = f77
 ifdef AIX
 F77 = g77
-else
+endif
 ifeq ($(HOST_ARCH),solaris)
 F77 = g77
-else
-F77 = f77
 endif
+ifeq ($(HOST_ARCH),solaris-sparc)
+F77 = g77
 endif
 usb$(OBJ) : 
 	$(F77) ../usb.f -c -o usb$(OBJ)	
