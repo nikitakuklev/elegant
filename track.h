@@ -581,7 +581,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_DSCATTER  90
 #define T_LSRMDLTR     91
 #define T_TAYLORSERIES 92
-#define N_TYPES     93
+#define T_RFTM110  93
+#define N_TYPES     94
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -681,6 +682,7 @@ extern char *entity_text[N_TYPES];
 #define N_DSCATTER_PARAMS 13
 #define N_LSRMDLTR_PARAMS 14
 #define N_TAYLORSERIES_PARAMS 6
+#define N_RFTM110_PARAMS 5
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -975,7 +977,7 @@ typedef struct {
     } ALPH;
 
 /* names and storage structure for RF deflector cavity done with
- * semi-analytical method
+ * inaccurate method (electric field)
  */
 extern PARAMETER rfdf_param[N_RFDF_PARAMS] ;
    
@@ -987,6 +989,19 @@ typedef struct {
     double t_first_particle;        
     long   initialized;             
     } RFDF;
+
+/* names and storage structure for RF deflector cavity done with
+ * correct TM110 mode fields
+ */
+extern PARAMETER rftm110_param[N_RFTM110_PARAMS] ;
+   
+typedef struct {
+    double phase, tilt, frequency, voltage;
+    long phase_reference;
+    /* for internal use only */
+    double t_first_particle;        
+    long   initialized;             
+    } RFTM110;
 
 /* TM-mode RF-cavity using Ez(z,r=0)
  */
@@ -2553,6 +2568,9 @@ void yaw_matrices(VMATRIX *M, double yaw);
 
 /* prototypes for track_ramp.c: */
 extern void track_through_ramped_deflector(double **final, RMDF *ramp_param, double **initial, long n_particles, double pc_central);
+extern void track_through_rftm110_deflector(double **final, RFTM110 *rf_param,
+					    double **initial, long n_particles,
+					    double pc_central);
  
 /* prototypes for track_rf2.c: */
 extern void track_through_rf_deflector(double **final, RFDF *rf_param, double **initial, long n_particles, double pc_central);

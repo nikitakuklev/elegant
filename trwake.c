@@ -70,7 +70,7 @@ void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
   }
 
   if (wakeData->tilt)
-    rotateBeamCoordinates(part, np, -1*wakeData->tilt);
+    rotateBeamCoordinates(part, np, wakeData->tilt);
   
   n_binned = binTransverseTimeDistribution(posItime, pz, pbin, tmin, dt, nb, time, part, Po, np,
                                            wakeData->dx, wakeData->dy,
@@ -127,7 +127,7 @@ void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
   }
 
   if (wakeData->tilt)
-    rotateBeamCoordinates(part, np, wakeData->tilt);
+    rotateBeamCoordinates(part, np, -wakeData->tilt);
 
 #if defined(MINIMIZE_MEMORY)
   free(posItime[0]);

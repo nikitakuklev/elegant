@@ -15,25 +15,6 @@
 #include "track.h"
 #include "mdb.h"
 
-void tilt_matrices0(VMATRIX *M, double tilt)
-{
-    VMATRIX *rot, *irot, *Mr;
-
-    log_entry("tilt_matrices0");
-
-    rot  = rotation_matrix(tilt);
-    irot = rotation_matrix(-tilt);
-    Mr = tmalloc(sizeof(*Mr));
-    initialize_matrices(Mr, M->order);
-
-    concat_matrices(Mr,     M, rot, 0);
-    concat_matrices(M  , irot, Mr , 0);
-    free_matrices(rot); tfree(rot); rot = NULL;
-    free_matrices(irot); tfree(irot); irot = NULL;
-    free_matrices(Mr); tfree(Mr); Mr = NULL;
-    log_exit("tilt_matrices0");
-    }
-
 void tilt_matrices(VMATRIX *M, double tilt)
 {
     static VMATRIX Rot, IRot;
@@ -143,6 +124,10 @@ VMATRIX *rotation_matrix(double tilt)
     return(Rot);
     }
 
+/* The name is a misnomer: we rotate the coordinates of a particle
+ * to emulate rotation of the upcoming element by the given angle
+ */
+
 void rotate_coordinates(double *coord, double angle)
 {
     static double x, xp, y, yp;
@@ -172,6 +157,10 @@ void rotate_coordinates(double *coord, double angle)
     coord[1] =  xp*cos_a + yp*sin_a;
     coord[3] = -xp*sin_a + yp*cos_a;
     }
+
+/* The name is a misnomer: we rotate the coordinates of a particle
+ * to emulate rotation of the upcoming element by the given angle
+ */
 
 void rotateBeamCoordinates(double **part, long np, double angle)
 {

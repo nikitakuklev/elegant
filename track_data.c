@@ -35,7 +35,7 @@ char *entity_name[N_TYPES] = {
     "REFLECT", "CLEAN", "TWISS", "WIGGLER", "SCRIPT", "FLOOR",
     "LTHINLENS", "LMIRROR", "EMATRIX", "FRFMODE", "FTRFMODE",
     "TFBPICKUP", "TFBDRIVER", "LSCDRIFT", "DSCATTER", "LSRMDLTR",
-    "TAYLORSERIES", 
+    "TAYLORSERIES", "RFTM110",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -69,7 +69,7 @@ as a function of the actual positions (x and y).",
 command.",
     "An alpha magnet implemented as a matrix, up to 3rd order.  PART is used to split\n\
 the magnet into halves.  XS<n> and DP<n> allow momentum filtration at the midpoint.",
-    "A simple traveling wave deflecting RF cavity.",
+    "A simple traveling wave deflecting RF cavity.   See also RFTM110.",
     "A TM-mode RF cavity specified by the on-axis Ez field.",
     "A linearly-ramped electric field deflector, using an approximate analytical solution FOR LOW ENERGY PARTICLES.",
     "A numerically-integrated accelerating TM RF cavity with spatially-constant fields.",
@@ -158,6 +158,7 @@ and phase modulation.",
     "A scattering element to add random changes to particle coordinates according to a user-supplied distribution function",
     "A non-symplectic numerically integrated planar undulator including optional co-propagating laser beam for laser modulation of the electron beam."
     "Tracks through a Taylor series map specified by a file containing coefficients.",
+    "Tracks through a TM110-mode (deflecting) rf cavity with all magnetic and electric field components."
     } ;
 
 QUAD quad_example;
@@ -450,6 +451,16 @@ PARAMETER rfdf_param[N_RFDF_PARAMS] = {
     {"TIME_OFFSET", "S", IS_DOUBLE, 0, (long)((char *)&rfdf_example.time_offset), NULL, 0.0, 0, "time offset (adds to phase)"},
     {"N_KICKS", "", IS_LONG, 0, (long)((char *)&rfdf_example.n_kicks), NULL, 0.0, 1, "number of kicks (odd integer)"},
     {"PHASE_REFERENCE", "", IS_LONG, 0, (long)((char *)&rfdf_example.phase_reference), NULL, 0.0, 0, "phase reference number (to link with other time-dependent elements)"},
+    } ;
+
+RFTM110 rftm110_example;
+/* names for rf tm110 deflecting cavity parameters */
+PARAMETER rftm110_param[N_RFTM110_PARAMS] = {
+    {"PHASE", "DEG", IS_DOUBLE, 0, (long)((char *)&rftm110_example.phase), NULL, 0.0, 0, "phase"},
+    {"TILT", "RAD", IS_DOUBLE, 0, (long)((char *)&rftm110_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
+    {"FREQUENCY", "HZ", IS_DOUBLE, 0, (long)((char *)&rftm110_example.frequency), NULL, DEFAULT_FREQUENCY, 0, "frequency"},
+    {"VOLTAGE", "V", IS_DOUBLE, 0, (long)((char *)&rftm110_example.voltage), NULL, 0.0, 0, "voltage"},
+    {"PHASE_REFERENCE", "", IS_LONG, 0, (long)((char *)&rftm110_example.phase_reference), NULL, 0.0, 0, "phase reference number (to link with other time-dependent elements)"},
     } ;
 
 RFTMEZ0 rftmez0_example;
@@ -1924,6 +1935,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_DSCATTER_PARAMS,          0,     sizeof(DSCATTER),    dscatter_param  },
     { N_LSRMDLTR_PARAMS,    MAT_LEN_NCAT, sizeof(LSRMDLTR), lsrMdltr_param },
     { N_TAYLORSERIES_PARAMS, MAT_LEN_NCAT|IS_MAGNET|NO_DICT_OUTPUT,    sizeof(TAYLORSERIES),  taylorSeries_param  },
+    {    N_RFTM110_PARAMS,  0,       sizeof(RFTM110),    rftm110_param     }, 
 } ;
  
 

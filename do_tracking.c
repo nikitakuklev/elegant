@@ -489,6 +489,10 @@ long do_tracking(
                                          coord, nToTrack, *P_central);
             else
               drift_beam(coord, nToTrack, ((RFDF*)eptr->p_elem)->length, run->default_order);
+          case T_RFTM110:
+            if (!(flags&TIME_DEPENDENCE_OFF))
+              track_through_rftm110_deflector(coord, (RFTM110*)eptr->p_elem,
+                                         coord, nToTrack, *P_central);
             break;
           case T_RMDF:
             if (!(flags&TIME_DEPENDENCE_OFF))

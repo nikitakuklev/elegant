@@ -367,6 +367,13 @@ void SDDS_WatchPointSetup(WATCH *watch, long mode, long lines_per_row,
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exit(1);
     }
+    if (SDDS_DefineParameter(SDDS_table, "Description", NULL, NULL, NULL, "%s", SDDS_STRING,
+			     watch->label?watch->label:"")<0) {
+      fprintf(stdout, "Unable define SDDS parameter for file %s (%s)\n", filename, caller);
+      fflush(stdout);
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      exit(1);
+    }
     if (!SDDS_WriteLayout(SDDS_table)) {
       fprintf(stdout, "Unable to write SDDS layout for file %s (%s)\n", filename, caller);
       fflush(stdout);
