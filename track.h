@@ -1807,7 +1807,7 @@ extern void extend_elem_list(ELEMENT_LIST **eptr);
  
 /* prototypes for get_beamline5.c: */
 extern void show_elem(ELEMENT_LIST *eptr, long type);
-extern LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central);
+extern LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, long echo);
 double compute_end_positions(LINE_LIST *lptr) ;
 extern void show_elem(ELEMENT_LIST *eptr, long type);
 extern void free_elements(ELEMENT_LIST *elemlist);

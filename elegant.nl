@@ -25,6 +25,7 @@
     long print_statistics = 0;
     long random_number_seed = 987654321;
     long correction_iterations = 1;
+    long echo_lattice = 0;
     double p_central = 0.0;
     long always_change_p0 = 0;
     STRING expand_for = NULL;

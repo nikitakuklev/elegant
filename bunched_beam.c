@@ -105,7 +105,7 @@ void setup_bunched_beam(
         fputs("Note: you will get better results for enforcing RMS values if n_particles_per_bunch is divisible by 4.\n", stdout);
 
     if (matched_to_cell) {
-        if (!(control->cell = get_beamline(NULL, matched_to_cell, run->p_central)))
+        if (!(control->cell = get_beamline(NULL, matched_to_cell, run->p_central, 0)))
             bomb("unable to find beamline definition for cell", NULL);
         }
     else

@@ -33,7 +33,7 @@ void lfree(void *ptr)
 
 #define MAX_LINE_LENGTH 16384 
 
-LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central)
+LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, long echo)
 {
     long type, i, i_elem;
     long occurence;
@@ -67,10 +67,10 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central)
         /* assemble linked-list of simple elements and a separate linked-list
            of fully expanded line definitions */
         while (cfgets(s, MAX_LINE_LENGTH, fp_mad)) {
-#ifdef DEBUG
-            fprintf(stdout, "input line: %s\n", s);
+          if (echo) {
+            fprintf(stdout, "%s\n", s);
             fflush(stdout);
-#endif
+          }
             strcpy(t, s);
             if ((type = tell_type(s, elem))==T_NODEF) {
                 if (!is_blank(s))
