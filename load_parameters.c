@@ -164,7 +164,6 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
   double *value, newValue;
   char **valueString;
   ELEMENT_LIST *eptr;
-  static long warned_about_occurence = 0;
   long element_missing, numberChanged, totalNumberChanged = 0;
   long lastMissingOccurence = 0;
   
@@ -247,14 +246,16 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exit(1);
     }
-    
+
     occurence = NULL;
-    if (SDDS_GetColumnIndex(&load_request[i].table, Occurence_ColumnName)>=0 &&
-        !(occurence = (long *)SDDS_GetColumn(&load_request[i].table, Occurence_ColumnName))) {
-      fprintf(stdout, "Error: problem accessing data from load_parameters file %s\n", load_request[i].filename);
-      fflush(stdout);
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      exit(1);
+    if (!change_defined_values) {
+      if (SDDS_GetColumnIndex(&load_request[i].table, Occurence_ColumnName)>=0 &&
+          !(occurence = (long *)SDDS_GetColumn(&load_request[i].table, Occurence_ColumnName))) {
+        fprintf(stdout, "Error: problem accessing data from load_parameters file %s\n", load_request[i].filename);
+        fflush(stdout);
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        exit(1);
+      }
     }
     
     load_request[i].values = 0;
@@ -330,12 +331,6 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
       if (mode_flags&LOAD_FLAG_IGNORE)
         continue;
       if (load_request[i].flags&COMMAND_FLAG_CHANGE_DEFINITIONS) {
-        if (occurence && !warned_about_occurence) {
-          warned_about_occurence = 1;
-          fprintf(stdout, 
-                  "warning: occurence column is necessarily ignored when changing defined values (do_load_parameters)\n");
-          fflush(stdout);
-        }
         change_defined_parameter(element[j], param, eptr->type, value?value[j]:0, 
                                  valueString?valueString[j]:NULL, 
                                  mode_flags+(verbose?LOAD_FLAG_VERBOSE:0));
