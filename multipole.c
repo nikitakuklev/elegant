@@ -70,7 +70,7 @@ void readErrorMultipoleData(MULTIPOLE_DATA *multData,
     exit(1);
   }
   if ((multData->orders = SDDS_RowCount(&SDDSin))<=0) {
-    fprintf(stdout, "Warning: no data in FMULT file %s\n", multFile);
+    fprintf(stdout, "Warning: no data in multipole file %s\n", multFile);
     fflush(stdout);
     SDDS_Terminate(&SDDSin);
     return;
@@ -111,7 +111,8 @@ void initialize_fmultipole(FMULT *multipole)
     exit(1);
   }
   if (SDDS_CheckColumn(&SDDSin, "order", NULL, SDDS_ANY_INTEGER_TYPE, stdout)!=SDDS_CHECK_OK ||
-      SDDS_CheckColumn(&SDDSin, "KnL", NULL, SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK)
+      SDDS_CheckColumn(&SDDSin, "KnL", NULL, SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK ||
+      SDDS_CheckColumn(&SDDSin, "JnL", NULL, SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK)
     bomb("problems with data in FMULT input file", NULL);
   if (SDDS_ReadPage(&SDDSin)!=1)  {
     sprintf(buffer, "Problem reading FMULT file %s\n", multipole->filename);
@@ -125,8 +126,10 @@ void initialize_fmultipole(FMULT *multipole)
     SDDS_Terminate(&SDDSin);
     return;
   }
+  multData->JnL = NULL;
   if (!(multData->order=SDDS_GetColumnInLong(&SDDSin, "order")) ||
-      !(multData->KnL=SDDS_GetColumnInDoubles(&SDDSin, "KnL"))) {
+      !(multData->KnL=SDDS_GetColumnInDoubles(&SDDSin, "KnL")) ||
+      !(multData->JnL=SDDS_GetColumnInDoubles(&SDDSin, "JnL"))) {
     sprintf(buffer, "Unable to read data for FMULT file %s\n", multipole->filename);
     SDDS_SetError(buffer);
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
@@ -161,7 +164,7 @@ long fmultipole_tracking(
   double drift, cos_tilt, sin_tilt;
   double x=0.0, xp=0.0, y=0.0, yp=0.0;
   double rad_coef;
-  MULTIPOLE_DATA *multData;
+  MULTIPOLE_DATA multData;
   
   if (!particle)
     bomb("particle array is null (fmultipole_tracking)", NULL);
@@ -175,7 +178,7 @@ long fmultipole_tracking(
   if ((n_kicks=multipole->n_kicks)<=0)
     bomb("n_kicks<=0 in multipole()", NULL);
 
-  drift = multipole->length/n_kicks/2;
+  drift = multipole->length;
 
   cos_tilt = cos(multipole->tilt);
   sin_tilt = sin(multipole->tilt);
@@ -187,9 +190,15 @@ long fmultipole_tracking(
   else
     rad_coef = 0;
 
-  multData = &(multipole->multData);
+  multData = multipole->multData;
+  for (i_order=0; i_order<multData.orders; i_order++) {
+    multData.KnL[i_order] *= (1+multipole->fse);
+    if (multData.JnL)
+      multData.JnL[i_order] *= (1+multipole->fse);
+  }
+  
   i_top = n_part-1;
-  multipoleKicksDone += (i_top+1)*multData->orders*n_kicks*4;
+  multipoleKicksDone += (i_top+1)*multData.orders*n_kicks*4;
   for (i_part=0; i_part<=i_top; i_part++) {
     if (!(coord = particle[i_part])) {
       fprintf(stdout, "null coordinate pointer for particle %ld (fmultipole_tracking)", i_part);
@@ -206,22 +215,18 @@ long fmultipole_tracking(
     coord[0]  = coord[0] + dz*coord[1];
     coord[2]  = coord[2] + dz*coord[3];
 
-    for (i_order=0; i_order<multData->orders; i_order++) {
-      order = multData->order[i_order];
-      KnL = multData->KnL[i_order];
-      if (!integrate_kick_multipole_ord4(coord, cos_tilt, sin_tilt, dx, dy, Po, rad_coef,
-                                         order, KnL, n_kicks, drift, NULL)) {
-        is_lost = 1;
-        break;
-      }
+    if (!integrate_kick_multipole_ord4(coord, cos_tilt, sin_tilt, dx, dy, Po, rad_coef,
+                                       1, 0.0, n_kicks, drift, &multData)) {
+      is_lost = 1;
+      break;
     }
     
     if (!is_lost) {
       coord[4] -= dz*sqrt(1 + sqr(coord[1]) + sqr(coord[3]));
       x = coord[0]  = coord[0] - dz*coord[1];
       y = coord[2]  = coord[2] - dz*coord[3];
-	  xp = coord[1];
-	  yp = coord[3];
+      xp = coord[1];
+      yp = coord[3];
 
 #if defined(IEEE_MATH)
       if (isnan(x) || isnan(xp) || isnan(y) || isnan(yp)) {
@@ -716,11 +721,11 @@ int integrate_kick_multipole_ord2(double *coord, double cos_tilt, double sin_til
     if (multData) {
       long imult;
       for (imult=0; imult<multData->orders; multData++) {
-        if (multData->KnL[imult]) 
+        if (multData->KnL && multData->KnL[imult]) 
           apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
                                           multData->order[imult], 
                                           multData->KnL[imult]/n_kicks, 0);
-        if (multData->JnL[imult]) 
+        if (multData->JnL && multData->JnL[imult]) 
           apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
                                           multData->order[imult], 
                                           multData->JnL[imult]/n_kicks, 1);
@@ -840,13 +845,13 @@ int integrate_kick_multipole_ord4(double *coord, double cos_tilt, double sin_til
         long imult;
         /* do kicks for spurious multipoles */
         for (imult=0; imult<multData->orders; imult++) {
-          if (multData->KnL[imult]) {
+          if (multData->KnL && multData->KnL[imult]) {
             apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
                                             multData->order[imult], 
                                             multData->KnL[imult]*kickFrac[step]/n_parts,
                                             0);
           }
-          if (multData->JnL[imult]) {
+          if (multData->JnL && multData->JnL[imult]) {
             apply_canonical_multipole_kicks(&qx, &qy, NULL, NULL, x, y, 
                                             multData->order[imult], 
                                             multData->JnL[imult]*kickFrac[step]/n_parts,

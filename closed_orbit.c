@@ -40,12 +40,14 @@ static SDDS_DEFINITION column_definition[N_COLUMNS] = {
 #define IP_XERROR 1
 #define IP_YERROR 2
 #define IP_DELTA 3
-#define N_PARAMETERS 4
+#define IP_SERROR 4
+#define N_PARAMETERS 5
 static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
     {"Step", "&parameter name=Step, type=long, description=\"Simulation step\" &end"},
     {"xError", "&parameter name=xError, type=double, units=m, description=\"Horizontal closed orbit convergence error\" &end"},
     {"yError", "&parameter name=yError, type=double, units=m, description=\"Vertical closed orbit convergence error\" &end"},
     {"delta", "&parameter name=delta, symbol=\"$gd$r\", type=double, description=\"Fractional energy offset of closed orbit\" &end"},
+    {"lengthError", "&parameter name=lengthError, type=double, units=m, description=\"Deviation of orbit length from reference orbit length\" &end"},
     } ;
 
 #include "closed_orbit.h"
@@ -89,7 +91,7 @@ void setup_closed_orbit(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 
 long run_closed_orbit(RUN *run, LINE_LIST *beamline, double *starting_coord, BEAM *beam, long do_output)
 {
-    double dp, deviation[4];
+    double dp, deviation[6];
     long i, bad_orbit;
     VMATRIX *M;
     
@@ -180,6 +182,7 @@ void dump_closed_orbit(TRAJECTORY *traj, long n_elems, long step, double *deviat
                             IP_XERROR, deviation[0],
                             IP_YERROR, deviation[2],
                             IP_DELTA, traj[0].centroid[5],
+                            IP_SERROR, deviation[4],
                             -1)) {
         SDDS_SetError("Unable to set SDDS parameters (dump_closed_orbit)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);

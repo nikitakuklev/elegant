@@ -1593,7 +1593,8 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
         if (iteration==1)
             for (i=0; i<6; i++)
                 orbit[1][0].centroid[i] = orbit[0][0].centroid[i];
-        if (!find_closed_orbit(clorb, clorb_acc, clorb_iter, beamline, M, run, dp, 1, CM->fixed_length, NULL, clorb_iter_frac, NULL)) {
+        if (!find_closed_orbit(clorb, clorb_acc, clorb_iter, beamline, M, run, dp, 1, CM->fixed_length, NULL, 
+                               clorb_iter_frac, NULL)) {
           fprintf(stdout, "Failed to find closed orbit.\n");
           fflush(stdout);
           return(-1);
@@ -1782,7 +1783,7 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
     if (fixed_length)
       return findFixedLengthClosedOrbit(clorb, clorb_acc, clorb_iter, beamline, M, run, dp,
                                         start_from_recirc, starting_point, change_fraction, deviation);
-
+    
     /* method for finding closed orbit: 
      * 1. solve co[i] = C[i] + R[i][j]*co[j] for co[i]:
      *        co = INV(I-R)*C
@@ -1856,18 +1857,11 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
         one_part[0][5] = dp;
         }
 
-    if (fixed_length) {
-        ELEMENT_LIST *eptr;
-        eptr = &(beamline->elem);
-        while (eptr && eptr->succ)
-            eptr = eptr->succ;
-        total_length = eptr->end_pos;
-        R56 = M->R[4][5];
-        }
-
     p = run->p_central;
     error = DBL_MAX/4;
     bad_orbit = 0;
+    if (deviation)
+      deviation[4] = deviation[5] = 0;
     do {
         n_part = 1;
         do_tracking(one_part, &n_part, NULL, beamline, &p, (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
@@ -1887,10 +1881,6 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
           if (deviation)
             deviation[i] = diff->a[i][0];
         }
-        if (fixed_length)
-            ds = one_part[0][4] - total_length;
-        else
-            ds = 0;
         last_error = error;
         if ((error = sqrt(sqr(diff->a[0][0]) + sqr(diff->a[1][0]) + sqr(diff->a[2][0]) + sqr(diff->a[3][0]) + 
                           sqr(ds)))<clorb_acc)
@@ -1917,21 +1907,8 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
                 one_part[0][i] = co->a[i][0];
                 }
             }
-        if (fixed_length)
-            ds = one_part[0][4] - total_length;
-        else
-            ds = 0;
         one_part[0][4] = 0;
-        if (fixed_length && R56) {
-            if (n_iter==0 && one_part[0][5]!=dp && !been_warned) {
-                fprintf(stdout, "\7\7warning: you have requested fixed-path-length closed orbits,\nbut the momentum is changing within the beamline.\nThis won't be done correctly and it probably doesn't make sense either.\n");
-                fflush(stdout);
-                been_warned = 1;
-                }
-            dp = one_part[0][5] = ((dp-ds/R56)+dp)/2;
-            }
-        else
-            one_part[0][5] = dp;
+        one_part[0][5] = dp;
         } while (++n_iter<clorb_iter);
     if (n_iter==clorb_iter)  {
         fprintf(stdout, "warning: closed orbit did not converge to better than %e after %ld iterations\n",
@@ -1956,9 +1933,8 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
     clorb[0].centroid[5] = dp;
 
     log_exit("find_closed_orbit");
-    if (bad_orbit) {
+    if (bad_orbit)
         return(0);
-        }
     return(1);
     }
 
@@ -1978,10 +1954,10 @@ long findFixedLengthClosedOrbit(TRAJECTORY *clorb, double clorb_acc, long clorb_
                            0, starting_point, change_fraction, deviation))
       return 0;
     ds = clorb[nElems].centroid[4] - beamline->revolution_length;
-    for (i=error=0; i<4; i++) {
-      ds -= M->R[4][i]*clorb[0].centroid[i]; 
+    if (deviation)
+      deviation[4] = ds;
+    for (i=error=0; i<4; i++)
       error += sqr(clorb[nElems].centroid[i]-clorb[0].centroid[i]);
-    }
     /* The error for delta is scaled by 1/change_fraction so that it
      * gets a chance to converge even with a small change_fraction.
      * Otherwise, the delta iteration may not converge even though the
@@ -2004,8 +1980,10 @@ long findFixedLengthClosedOrbit(TRAJECTORY *clorb, double clorb_acc, long clorb_
     dp -= change_fraction*ds/M->R[4][5];
     iterationsDone++;
   }
+#if DEBUG
   fprintf(stdout, "%ld iterations done for delta in fixed-length orbit computation\ndelta convergence error was %le\ndelta=%le, length error was %le\n", 
           iterationsDone, last_dp-dp, dp, ds);
+#endif
   if (iterationsDone<iterationsLeft)
     return 1;
   fprintf(stdout, "Warning: fixed length orbit iteration didn't converge (error is %le)\n", error);
