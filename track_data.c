@@ -624,6 +624,7 @@ PARAMETER center_param[N_CENTER_PARAMS]={
     {"XP", "", IS_LONG, 0, (long)((char *)&center_example.xp), NULL, 0.0, 1},
     {"Y" , "M", IS_LONG, 0, (long)((char *)&center_example.y), NULL, 0.0, 1},
     {"YP", "", IS_LONG, 0, (long)((char *)&center_example.yp), NULL, 0.0, 1},
+    {"ONCE_ONLY", "", IS_LONG, 0, (long)((char *)&center_example.onceOnly), NULL, 0.0, 0},
     };
 
 KICKER kicker_example;

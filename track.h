@@ -515,7 +515,7 @@ extern char *entity_text[N_TYPES];
 #define N_RECIRC_PARAMS 1
 #define N_QFRING_PARAMS 9
 #define N_SCRAPER_PARAMS 8
-#define N_CENTER_PARAMS 4
+#define N_CENTER_PARAMS 5
 #define N_KICKER_PARAMS 9
 #define N_KSEXT_PARAMS 14
 #define N_KSBEND_PARAMS 27
@@ -1061,7 +1061,10 @@ typedef struct {
 extern PARAMETER center_param[N_CENTER_PARAMS];
 
 typedef struct {
-    long x, xp, y, yp;
+    long x, xp, y, yp, onceOnly;
+    /* for internal use only */
+    long deltaSet[4];
+    double delta[4];
     } CENTER;
 
 /* names and storage structure for time-dependent kicker */

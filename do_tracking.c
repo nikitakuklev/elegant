@@ -1126,47 +1126,32 @@ void set_central_momentum(
 void center_beam(double **part, CENTER *center, long np)
 {
   double sum, offset;
-  long i;
-  
-  log_entry("center_beam");
-  
+  long i, ic;
+  long centerCoord[4];
+
   if (!np) {
-    log_exit("center_beam");
     return;
   }
-  
-  if (center->x) {
-    for (i=sum=0; i<np; i++)
-      sum += part[i][0];
-    offset = sum/np;
-    for (i=0; i<np; i++)
-      part[i][0] -= offset;
+
+  centerCoord[0] = center->x;
+  centerCoord[1] = center->xp;
+  centerCoord[2] = center->y;
+  centerCoord[3] = center->yp;
+
+  for (ic=0; ic<4; ic++) {
+    if (centerCoord[ic]) {
+      if (!center->deltaSet[ic]) {
+        for (i=sum=0; i<np; i++)
+          sum += part[i][ic];
+        center->delta[ic] = offset = sum/np;
+        if (center->onceOnly)
+          center->deltaSet[ic] = 1;
+      } else 
+        offset = center->delta[ic];
+      for (i=0; i<np; i++)
+        part[i][ic] -= offset;
+    }
   }
-  
-  if (center->xp) {
-    for (i=sum=0; i<np; i++)
-      sum += part[i][1];
-    offset = sum/np;
-    for (i=0; i<np; i++)
-      part[i][1] -= offset;
-  }
-  
-  if (center->y) {
-    for (i=sum=0; i<np; i++)
-      sum += part[i][2];
-    offset = sum/np;
-    for (i=0; i<np; i++)
-      part[i][2] -= offset;
-  }
-  
-  if (center->yp) {
-    for (i=sum=0; i<np; i++)
-      sum += part[i][3];
-    offset = sum/np;
-    for (i=0; i<np; i++)
-      part[i][3] -= offset;
-  }
-  log_exit("center_beam");
 }
 
 
