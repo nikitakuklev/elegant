@@ -105,7 +105,7 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, RADIATION_INTEGRALS
 {
     double beta0, alpha0, phi0, eta0, etap0, gamma0;
     double *func, *path, detR;
-    double **R, C, S, Cp, Sp, D, Dp, sin_dphi, cos_dphi;
+    double **R, C, S, Cp, Sp, D, Dp, sin_dphi, cos_dphi, dphi;
     double centroid;
     long n_mat_computed, i;
     VMATRIX *M1, *M2;
@@ -331,8 +331,10 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, RADIATION_INTEGRALS
         else {
             /* use R11=C to find cos(dphi) */
             cos_dphi = sqrt(beta0/func[0])*C - alpha0*sin_dphi;
-            }
-        phi0   = func[2] = phi0 + atan2(sin_dphi, cos_dphi);
+          }
+        if ((dphi = atan2(sin_dphi, cos_dphi))<0) 
+          dphi += PIx2;
+        phi0   = func[2] = phi0 + dphi;
         beta0  = func[0];
         alpha0 = func[1];
         /* compute new dispersion function and slope */
