@@ -19,6 +19,7 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
                            double beta0, double alpha0, double gamma0,
                            double eta0, double etap0, double *coord);
 void LoadStartingTwissFromFile(double *betax, double *betay, double *alphax, double *alphay,
+                               double *etax, double *etay, double *etaxp, double *etayp,
                                char *filename, char *elementName, long elementOccurrence);
 
 static long twissConcatOrder = 3;
@@ -733,10 +734,13 @@ void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
       if (reference_element && reference_element_occurrence<0)
         bomb("invalid value of reference_element_occurrence---use 0 for last occurrence, >=1 for specific occurrence.", NULL);
       LoadStartingTwissFromFile(&beta_x, &beta_y, &alpha_x, &alpha_y, 
+                                &eta_x, &etap_x, &eta_y, &etap_y,
                                 reference_file, reference_element,
                                 reference_element_occurrence);
       fprintf(stdout, "Starting twiss parameters from reference file:\nbeta, alpha x: %le, %le\nbeta, alpha y: %le, %le\n",
               beta_x, alpha_x, beta_y, alpha_y);
+      fprintf(stdout, "eta, eta' x: %le, %le\neta, eta' y: %le, %le\n",
+              eta_x, etap_x, eta_y, etap_y);
       fflush(stdout);
     }
     if (beta_x<=0 || beta_y<=0)
@@ -1614,11 +1618,13 @@ void computeRadiationIntegrals(RADIATION_INTEGRALS *RI, double Po, double revolu
   }
 
 void LoadStartingTwissFromFile(double *betax, double *betay, double *alphax, double *alphay,
+                               double *etax, double *etaxp, double *etay, double *etayp,
                                char *filename, char *elementName, long elementOccurrence)
 {
   SDDS_DATASET SDDSin;
   long rows, rowOfInterest;
   double *betaxData, *betayData, *alphaxData, *alphayData;
+  double *etaxData, *etayData, *etaxpData, *etaypData;
   
   if (!SDDS_InitializeInput(&SDDSin, filename) || 
       SDDS_ReadPage(&SDDSin)!=1)
@@ -1627,6 +1633,10 @@ void LoadStartingTwissFromFile(double *betax, double *betay, double *alphax, dou
       SDDS_CheckColumn(&SDDSin, "betay", "m", SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK ||
       SDDS_CheckColumn(&SDDSin, "alphax", NULL, SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK ||
       SDDS_CheckColumn(&SDDSin, "alphay", NULL, SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK ||
+      SDDS_CheckColumn(&SDDSin, "etax", "m", SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK ||
+      SDDS_CheckColumn(&SDDSin, "etay", "m", SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK ||
+      SDDS_CheckColumn(&SDDSin, "etaxp", NULL, SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK ||
+      SDDS_CheckColumn(&SDDSin, "etayp", NULL, SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK ||
       SDDS_CheckColumn(&SDDSin, "ElementName", NULL, SDDS_STRING, stdout)!=SDDS_CHECK_OK)
     SDDS_Bomb("invalid/missing columns in Twiss reference file");
   if (elementName) {
@@ -1642,7 +1652,11 @@ void LoadStartingTwissFromFile(double *betax, double *betay, double *alphax, dou
   if (!(betaxData=SDDS_GetColumnInDoubles(&SDDSin, "betax")) ||
       !(betayData=SDDS_GetColumnInDoubles(&SDDSin, "betay")) ||
       !(alphaxData=SDDS_GetColumnInDoubles(&SDDSin, "alphax")) ||
-      !(alphayData=SDDS_GetColumnInDoubles(&SDDSin, "alphay")) )
+      !(alphayData=SDDS_GetColumnInDoubles(&SDDSin, "alphay")) || 
+      !(etaxData=SDDS_GetColumnInDoubles(&SDDSin, "etax")) ||
+      !(etayData=SDDS_GetColumnInDoubles(&SDDSin, "etay")) ||
+      !(etaxpData=SDDS_GetColumnInDoubles(&SDDSin, "etaxp")) ||
+      !(etaypData=SDDS_GetColumnInDoubles(&SDDSin, "etayp")) )
     SDDS_Bomb("Problem getting data for beta function reference.");
   if (elementName && elementOccurrence>0)
     rowOfInterest = elementOccurrence-1;
@@ -1652,8 +1666,16 @@ void LoadStartingTwissFromFile(double *betax, double *betay, double *alphax, dou
   *betay = betayData[rowOfInterest];
   *alphax = alphaxData[rowOfInterest];
   *alphay = alphayData[rowOfInterest];
+  *etax = etaxData[rowOfInterest];
+  *etay = etayData[rowOfInterest];
+  *etaxp = etaxpData[rowOfInterest];
+  *etayp = etaypData[rowOfInterest];
   free(betaxData);
   free(betayData);
   free(alphaxData);
   free(alphayData);
+  free(etaxData);
+  free(etayData);
+  free(etaxpData);
+  free(etaypData);
 }

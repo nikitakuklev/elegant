@@ -35,9 +35,13 @@ void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
   tmean = computeTimeCoordinates(time, Po, part, np);
   find_min_max(&tmin, &tmax, time, np);
   
-  if ((tmax-tmin) > (wakeData->t[wakeData->wakePoints-1]-wakeData->t[0]))
-    bomb("the beam is longer than the transverse wake function.  This would produce unphysical results.",
-         NULL);
+  if ((tmax-tmin) > (wakeData->t[wakeData->wakePoints-1]-wakeData->t[0])) {
+    fprintf(stderr, "The beam is longer than the transverse wake function.\nThis would produce unphysical results.\n");
+    fprintf(stderr, "The beam length is %le s, while the wake length is %le s\n",
+            tmax-tmin, wakeData->t[wakeData->wakePoints-1]-wakeData->t[0]);
+    exit(1);
+  }
+
   dt = wakeData->dt;
   if (wakeData->n_bins) {
     tmin = tmean-dt*wakeData->n_bins/2.0;

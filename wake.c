@@ -37,9 +37,12 @@ void track_through_wake(double **part, long np, WAKE *wakeData, double *PoInput,
   /* Compute time coordinate of each particle */
   tmean = computeTimeCoordinates(time, Po, part, np);
   find_min_max(&tmin, &tmax, time, np);
-  if ((tmax-tmin) > (wakeData->t[wakeData->wakePoints-1]-wakeData->t[0]))
-    bomb("the beam is longer than the longitudinal wake function.  This would produce unphysical results.",
-         NULL);
+  if ((tmax-tmin) > (wakeData->t[wakeData->wakePoints-1]-wakeData->t[0])) {
+    fprintf(stderr, "The beam is longer than the longitudinal wake function.\nThis would produce unphysical results.\n");
+    fprintf(stderr, "The beam length is %le s, while the wake length is %le s\n",
+            tmax-tmin, wakeData->t[wakeData->wakePoints-1]-wakeData->t[0]);
+    exit(1);
+  }
 
   dt = wakeData->dt;
   if (wakeData->n_bins) {

@@ -217,7 +217,7 @@ long simple_rf_cavity(
       bomb("n_kicks>1 not yet supported for rfca element", NULL);
     
     for (ip=0; ip<np; ip++) {
-      coord = part[ip];
+        coord = part[ip];
         coord[0] -= rfca->dx;
         coord[2] -= rfca->dy;
         if (nKicks>0) {
@@ -374,6 +374,7 @@ long track_through_rfcw
   rfcw->rfca.Q = rfcw->Q;
   rfcw->rfca.change_p0 = rfcw->change_p0;
   rfcw->rfca.change_t = rfcw->change_t;
+  rfcw->rfca.tReference = -1;
   rfcw->rfca.end1Focus = rfcw->end1Focus;
   rfcw->rfca.end2Focus = rfcw->end2Focus;
   rfcw->rfca.nKicks = rfcw->nKicks;
@@ -441,7 +442,7 @@ long track_through_rfcw
     } else
       rfcw->wake.WColumn = NULL;
   }
-  
+
   rfcw->initialized = 1;
 
   simple_rf_cavity(part, np, &rfcw->rfca, accepted, P_central, zEnd);
