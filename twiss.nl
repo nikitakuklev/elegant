@@ -21,6 +21,7 @@
     double alpha_y = 0;
     double eta_y = 0;
     double etap_y = 0;
+    long concat_order = 3;
 #end
 
 

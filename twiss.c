@@ -17,6 +17,7 @@ void modify_rfca_matrices(ELEMENT_LIST *eptr, long order);
 void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, ELEMENT_LIST *elem, 
                            double beta0, double alpha0, double gamma0,
                            double eta0, double etap0);
+static long twissConcatOrder = 3;
 
 VMATRIX *compute_periodic_twiss(
                                 double *betax, double *alphax, double *etax, double *etapx, double *NUx,
@@ -48,8 +49,7 @@ VMATRIX *compute_periodic_twiss(
       M1->C[i] = clorb[i];
       M1->R[i][i] = 1;
     }
-    /* use 3rd order here to get as close to tracked closed orbit as possible */
-    M = append_full_matrix(elem, run, M1, 3);
+    M = append_full_matrix(elem, run, M1, twissConcatOrder);
     
 /*
     fprintf(stderr, "matrix concatenation for periodic Twiss computation:\n");
@@ -69,7 +69,7 @@ VMATRIX *compute_periodic_twiss(
 */
   }
   else
-    M = full_matrix(elem, run, 3);
+    M = full_matrix(elem, run, twissConcatOrder);
   R = M->R;
   T = M->T;
   
@@ -630,7 +630,7 @@ void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
 
   if (filename)
     filename = compose_filename(filename, run->rootname);
-
+  twissConcatOrder = concat_order;
   *do_twiss_output = output_at_each_step;
 
   if (!matched) {
