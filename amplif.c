@@ -34,9 +34,9 @@ void compute_amplification_factors(
   static long n_traj = 0;
   static FILE *fpout = NULL, *fpcof = NULL, *fpuof = NULL, *fpkf = NULL;
   double *kick, *CijRMS, actuatorPosition;
-  static char name_header[256], unit_header[256], printf_string[256], unit_pos[32], unit_kick[32], *Ai_unit, *Cij_unit;
+  static char name_header[256], unit_header[256], printf_string[256], unit_pos[32], unit_slope[32], unit_kick[32], *Ai_unit, *Cij_unit;
   static char s[256], description[256];
-  double *Ac_vs_z, *Au_vs_z;
+  double *Ac_vs_z, *Au_vs_z, *Acp_vs_z, *Aup_vs_z;
   CORMON_DATA *CM=NULL;
   STEERING_LIST *SL=NULL;
   long changed;
@@ -48,9 +48,16 @@ void compute_amplification_factors(
 
   /* array to store uncorrected amplification function */
   Au_vs_z = tmalloc(sizeof(*Au_vs_z)*(n_traj=beamline->n_elems+1));
+  zero_memory(Au_vs_z, sizeof(*Au_vs_z)*n_traj);
+  Aup_vs_z = tmalloc(sizeof(*Aup_vs_z)*(n_traj=beamline->n_elems+1));
+  zero_memory(Aup_vs_z, sizeof(*Aup_vs_z)*n_traj);
+
   /* array to store corrected amplification function */
   Ac_vs_z = tmalloc(sizeof(*Ac_vs_z)*(n_traj=beamline->n_elems+1));
-
+  zero_memory(Ac_vs_z, sizeof(*Ac_vs_z)*n_traj);
+  Acp_vs_z = tmalloc(sizeof(*Acp_vs_z)*(n_traj=beamline->n_elems+1));
+  zero_memory(Acp_vs_z, sizeof(*Acp_vs_z)*n_traj);
+  
   /* process namelist input */
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
@@ -145,6 +152,7 @@ void compute_amplification_factors(
   /* prepare labels */
   name_header[0] = unit_header[0] = printf_string[0] = 0;
   sprintf(unit_pos, "m/%s", entity_description[eptr->type].parameter[iparam].unit);
+  sprintf(unit_slope, "1/%s", entity_description[eptr->type].parameter[iparam].unit);
   cp_str(&Ai_unit, unit_pos);
   add_to_standard_headers(name_header, unit_header, printf_string,  "rms pos.", unit_pos, "%13.6le", 15);
   add_to_standard_headers(name_header, unit_header, printf_string,  "max pos.", unit_pos, "%13.6le", 15);
@@ -223,6 +231,7 @@ void compute_amplification_factors(
     fprintf(fpuof, "&parameter name=ActuatorPosition, type=double units=m &end\n");
     fprintf(fpuof, "&column name=s, units=m, type=double &end\n");
     fprintf(fpuof, "&column name=%sResponse, units=%s, type=double &end\n", iplane==0?"x":"y", unit_pos);
+    fprintf(fpuof, "&column name=%spResponse, units=%s, type=double &end\n", iplane==0?"x":"y", unit_slope);
     fprintf(fpuof, "&column name=ElementName, type=string &end\n&column name=ElementOccurence, type=long &end\n");
     fprintf(fpuof, "&data mode=ascii &end\n");
   }
@@ -235,6 +244,7 @@ void compute_amplification_factors(
     fprintf(fpcof, "&parameter name=ActuatorPosition, type=double units=m &end\n");
     fprintf(fpcof, "&column name=s, units=m, type=double &end\n");
     fprintf(fpcof, "&column name=%sResponse, units=%s, type=double &end\n", iplane==0?"x":"y", unit_pos);
+    fprintf(fpcof, "&column name=%spResponse, units=%s, type=double &end\n", iplane==0?"x":"y", unit_slope);
     fprintf(fpcof, "&column name=ElementName, type=string &end\n&column name=ElementOccurence, type=long &end\n");
     fprintf(fpcof, "&data mode=ascii &end\n");
   }
@@ -344,14 +354,16 @@ void compute_amplification_factors(
     for (i=nsum=rms_pos=0; i<=beamline->n_elems; i++) {
       if (!traj[i].n_part)
         continue;
-      Au_vs_z[i] += sqr(traj[i].centroid[iplane]);
+      Au_vs_z[i]  += sqr(traj[i].centroid[iplane]);
+      Aup_vs_z[i] += sqr(traj[i].centroid[iplane+1]);
       if (trajc) {
         if (fabs(trajc[i].centroid[iplane])>max_pos) {
           max_pos = fabs(trajc[i].centroid[iplane]);
           emax = trajc[i].elem;
         }
         rms_pos += sqr(trajc[i].centroid[iplane]);
-        Ac_vs_z[i] += sqr(trajc[i].centroid[iplane]);
+        Ac_vs_z[i]  += sqr(trajc[i].centroid[iplane]);
+        Acp_vs_z[i] += sqr(trajc[i].centroid[iplane+1]);
       }
       else {
         if (fabs(traj[i].centroid[iplane])>max_pos) {
@@ -368,20 +380,22 @@ void compute_amplification_factors(
       fprintf(fpuof, "%s#%ld\n%le\n%ld\n", eptr->name, eptr->occurence, actuatorPosition, n_traj-2);
       for (i=1; i<n_traj-1; i++)
         if (traj[i].elem)
-          fprintf(fpuof, "%e %e %s %ld\n", traj[i].elem->end_pos, traj[i].centroid[iplane]/change, 
+          fprintf(fpuof, "%e %e %e %s %ld\n", traj[i].elem->end_pos, traj[i].centroid[iplane]/change, 
+                  traj[i].centroid[iplane+1]/change,
                   traj[i].elem->name, traj[i].elem->occurence);
         else
-          fprintf(fpuof, "0 0 ? 0\n");
+          fprintf(fpuof, "0 0 0 ? 0\n");
     }
     
     if (fpcof) {
       fprintf(fpcof, "%s#%ld\n%le\n%ld\n", eptr->name, eptr->occurence, actuatorPosition, n_traj-2);
       for (i=1; i<n_traj-1; i++) 
         if (trajc[i].elem)
-          fprintf(fpcof, "%e %e %s %ld\n", trajc[i].elem->end_pos, trajc[i].centroid[iplane]/change, 
+          fprintf(fpcof, "%e %e %e %s %ld\n", trajc[i].elem->end_pos, trajc[i].centroid[iplane]/change, 
+                  trajc[i].centroid[iplane+1]/change,
                   trajc[i].elem->name, trajc[i].elem->occurence);
         else
-          fprintf(fpcof, "0 0 ? 0\n");
+          fprintf(fpcof, "0 0 0 ? 0\n");
     }
     if (correct->mode==-1 && emax) {
       fprintf(stdout, printf_string,
@@ -447,12 +461,14 @@ void compute_amplification_factors(
       }
       Au_vs_z[i] = sqrt(Au_vs_z[i])/change;
       Ac_vs_z[i] = sqrt(Ac_vs_z[i])/change;
+      Aup_vs_z[i] = sqrt(Aup_vs_z[i])/change;
+      Acp_vs_z[i] = sqrt(Acp_vs_z[i])/change;
       if (fpuof && i<n_traj-1)
-        fprintf(fpuof, "%e %e %s %ld\n", traj[i].elem->end_pos, Au_vs_z[i],
-                traj[i].elem->name, traj[i].elem->occurence);
+        fprintf(fpuof, "%e %e %e %s %ld\n", traj[i].elem->end_pos, Au_vs_z[i],
+                Aup_vs_z[i], traj[i].elem->name, traj[i].elem->occurence);
       if (fpcof && i<n_traj-1)
-        fprintf(fpcof, "%e %e %s %ld\n", traj[i].elem->end_pos, Ac_vs_z[i], 
-                traj[i].elem->name, traj[i].elem->occurence);
+        fprintf(fpcof, "%e %e %e %s %ld\n", traj[i].elem->end_pos, Ac_vs_z[i], 
+                Acp_vs_z[i], traj[i].elem->name, traj[i].elem->occurence);
       if (Ac_vs_z[i]>max_Ac) {
         max_Ac = Ac_vs_z[i];
         emaxc = trajc[i].elem;
@@ -477,7 +493,9 @@ void compute_amplification_factors(
   if (fpuof)
     fclose(fpuof);
   tfree(Au_vs_z);
+  tfree(Aup_vs_z);
   tfree(Ac_vs_z);
+  tfree(Acp_vs_z);
 
   if (n_kicks && fpkf) {
     fprintf(fpkf, "RMSResponse\n0\n%ld\n", n_kicks);
