@@ -35,7 +35,7 @@ char *entity_name[N_TYPES] = {
     "REFLECT", "CLEAN", "TWISS", "WIGGLER", "SCRIPT", "FLOOR",
     "LTHINLENS", "LMIRROR", "EMATRIX", "FRFMODE", "FTRFMODE",
     "TFBPICKUP", "TFBDRIVER", "LSCDRIFT", "DSCATTER", "LSRMDLTR",
-    "TAYLORSERIES", "RFTM110", "CWIGGLER",
+    "TAYLORSERIES", "RFTM110", "CWIGGLER", "EDRIFT",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -159,7 +159,8 @@ and phase modulation.",
     "A non-symplectic numerically integrated planar undulator including optional co-propagating laser beam for laser modulation of the electron beam.",
     "Tracks through a Taylor series map specified by a file containing coefficients.",
     "Tracks through a TM110-mode (deflecting) rf cavity with all magnetic and electric field components.",
-    "Tracks through a wiggler using canonical integration routines of Y. Wu (Duke University)."
+    "Tracks through a wiggler using canonical integration routines of Y. Wu (Duke University).",
+    "Tracks through a drift with no approximations (Exact DRIFT).",
     } ;
 
 QUAD quad_example;
@@ -1863,6 +1864,10 @@ PARAMETER lsrMdltr_param[N_LSRMDLTR_PARAMS] = {
     {"LASER_PHASE", "RAD", IS_DOUBLE, 0, (long)((char *)&lsrMdltr_example.laserPhase), NULL, 0.0, 0, "laser phase"},
 };  
 
+EDRIFT edrift_example;
+PARAMETER edrift_param[N_EDRIFT_PARAMS] = {
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&edrift_example.length), NULL, 0.0, 0, "length"},
+};
 
 /* array of parameter structures */
 
@@ -1976,6 +1981,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_TAYLORSERIES_PARAMS, MAT_LEN_NCAT|IS_MAGNET|NO_DICT_OUTPUT,    sizeof(TAYLORSERIES),  taylorSeries_param  },
     {    N_RFTM110_PARAMS,  0,       sizeof(RFTM110),    rftm110_param     }, 
     {   N_CWIGGLER_PARAMS,  MAT_LEN_NCAT|IS_MAGNET, sizeof(CWIGGLER),    cwiggler_param     }, 
+    {   N_EDRIFT_PARAMS, MAT_LEN, sizeof(EDRIFT),    edrift_param   },
 } ;
  
 

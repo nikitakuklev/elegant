@@ -585,7 +585,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_TAYLORSERIES 92
 #define T_RFTM110  93
 #define T_CWIGGLER 94
-#define N_TYPES     95
+#define T_EDRIFT 95
+#define N_TYPES     96
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -687,6 +688,7 @@ extern char *entity_text[N_TYPES];
 #define N_TAYLORSERIES_PARAMS 6
 #define N_RFTM110_PARAMS 5
 #define N_CWIGGLER_PARAMS 11
+#define N_EDRIFT_PARAMS 1
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -788,6 +790,13 @@ typedef struct {
     double length;
     long order;
     } DRIFT;
+
+/* names and storage structure for exact drift physical parameters */
+extern PARAMETER edrift_param[N_EDRIFT_PARAMS];
+
+typedef struct {
+    double length;
+    } EDRIFT;
 
 /* names and storage structure for sextupole physical parameters */
 extern PARAMETER sext_param[N_SEXT_PARAMS];

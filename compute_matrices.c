@@ -487,8 +487,7 @@ VMATRIX *compute_matrix(
     RFCW *rfcw; 
     MATTER *matter; MALIGN *malign; MATR *matr; MODRF *modrf;
     CSRCSBEND *csrcsbend;
-    CSRDRIFT *csrdrift;
-    LSCDRIFT *lscdrift;
+    CSRDRIFT *csrdrift; LSCDRIFT *lscdrift; EDRIFT *edrift;
     WIGGLER *wiggler; CWIGGLER *cwiggler;
     double ks, Pref_output;
     VARY rcContext;
@@ -897,6 +896,10 @@ VMATRIX *compute_matrix(
       case T_LSCDRIFT:
         lscdrift = (LSCDRIFT*)elem->p_elem;
         elem->matrix = drift_matrix(lscdrift->length, run->default_order);
+        break;
+      case T_EDRIFT:
+        edrift = (EDRIFT*)elem->p_elem;
+        elem->matrix = drift_matrix(edrift->length, run->default_order);
         break;
       case T_TWISSELEMENT:
         elem->matrix = twissTransformMatrix((TWISSELEMENT*)elem->p_elem, NULL);

@@ -754,6 +754,9 @@ long do_tracking(
           case T_LSCDRIFT:
             track_through_lscdrift(coord, nToTrack, (LSCDRIFT*)eptr->p_elem, *P_central, charge);
             break;
+	  case T_EDRIFT:
+	    exactDrift(coord, nToTrack, ((EDRIFT*)eptr->p_elem)->length);
+	    break;
           case T_TUBEND:
             nLeft = track_through_tubend(coord, nToTrack, 
                                           (TUBEND*)eptr->p_elem, 0.0,
