@@ -1929,7 +1929,7 @@ typedef struct {
   double length, strength, accuracy;
   char *method, *filename;
   /* these are set by the program when the file is read */
-  long points, nx, ny;
+  long points, nx, ny, BGiven;
   double *Fx, *Fy;
   double xmin, xmax, dx;
   double ymin, ymax, dy;

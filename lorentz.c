@@ -93,7 +93,7 @@ static double (*exit_function)(double *qp, double *q, double s);
 static void (*deriv_function)(double *qp, double *q, double s);
 
 /* parameters of element needed for integration--set by lorentz_setup */
-static double S0, one_plus_fse, rad_coef;
+static double S0, P0, one_plus_fse, rad_coef;
 static double offset, s_offset;
 static double x_correction;
 static double fse_opt;
@@ -293,7 +293,7 @@ long lorentz(
             i_top--;
             i_part--;
             }
-        }
+      }
 
     lorentz_terminate(field, field_type, part, n_part, P_central);
     
@@ -422,6 +422,7 @@ void lorentz_setup(
     field_global = field;
     Fa = Fb = 0;
     x_correction = s_offset = 0;
+    P0 = Po;
     
     switch (field_type) {
         case T_NIBEND:
@@ -1330,6 +1331,8 @@ void bmapxy_deriv_function(double *qp, double *q, double s)
     iy = (y-bmapxy->ymin)/bmapxy->dy + 0.5;
     if (ix<0 || iy<0 || ix>bmapxy->nx-1 || iy>bmapxy->ny-1) {
       F1 = F2 = 0;
+      fprintf(stdout, "invalid particle: x=%e, y=%e, ix=%ld, iy=%ld\n",
+              x, y, ix, iy);
       n_invalid_particles++;
       wp[0] = wp[1] = wp[2] = 0;
     } else {
@@ -1347,6 +1350,10 @@ void bmapxy_deriv_function(double *qp, double *q, double s)
       wp[0] = w[1]*F2 - w[2]*F1;
       wp[1] = w[2]*F0 - w[0]*F2;
       wp[2] = w[0]*F1 - w[1]*F0;
+      if (bmapxy->BGiven) {
+        for (ix=0; ix<3; ix++) 
+          wp[ix] *= e_mks/(me_mks*c_mks*P0);
+      }
     }
     
 #ifdef DEBUG
@@ -1398,12 +1405,23 @@ void bmapxy_field_setup(BMAPXY *bmapxy)
   }
   if (!SDDS_InitializeInputFromSearchPath(&SDDSin, bmapxy->filename) ||
       SDDS_ReadPage(&SDDSin)<=0 ||
-      !(x=SDDS_GetColumnInDoubles(&SDDSin, "x")) ||
-      !(y=SDDS_GetColumnInDoubles(&SDDSin, "y")) ||
-      !(Fx=SDDS_GetColumnInDoubles(&SDDSin, "Fx")) ||
-      !(Fy=SDDS_GetColumnInDoubles(&SDDSin, "Fy"))) {
+      !(x=SDDS_GetColumnInDoubles(&SDDSin, "x")) || !(y=SDDS_GetColumnInDoubles(&SDDSin, "y"))) {
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
   }
+  bmapxy->BGiven = 0;
+  if (!(Fx=SDDS_GetColumnInDoubles(&SDDSin, "Fx")) || !(Fy=SDDS_GetColumnInDoubles(&SDDSin, "Fy"))) {
+    if (!(Fx=SDDS_GetColumnInDoubles(&SDDSin, "Bx")) || !(Fy=SDDS_GetColumnInDoubles(&SDDSin, "By"))) {
+      fprintf(stderr, "BMAPXY input file must have both (Fx, Fy) or both (Bx, By)\n");
+      exit(1);
+    }
+    bmapxy->BGiven = 1;
+    if (!check_sdds_beam_column(&SDDSin, "Bx", "T") ||
+        !check_sdds_beam_column(&SDDSin, "By", "T")) {
+      fprintf(stderr, "BMAPXY input file must have Bx and By in T (Tesla)\n");
+      exit(1);
+    }
+  }
+
   if (!(bmapxy->points=SDDS_CountRowsOfInterest(&SDDSin)) || bmapxy->points<2) {
     fprintf(stdout, "file %s for BMAPXY element has insufficient data\n", bmapxy->filename);
     fflush(stdout);
@@ -1435,6 +1453,10 @@ void bmapxy_field_setup(BMAPXY *bmapxy)
   bmapxy->ymin = y[0];
   bmapxy->ymax = y[bmapxy->points-1];
   bmapxy->dy = (bmapxy->ymax-bmapxy->ymin)/(bmapxy->ny-1);
+  fprintf(stdout, "BMAPXY element from file %s: nx=%ld, ny=%ld, dx=%e, dy=%e, x:[%e, %e], y:[%e, %e]\n",
+          bmapxy->filename, bmapxy->nx, bmapxy->ny, bmapxy->dx, bmapxy->dy, 
+          bmapxy->xmin, bmapxy->xmax, 
+          bmapxy->ymin, bmapxy->ymax);
   free(x);
   free(y);
   bmapxy->Fx = Fx;
