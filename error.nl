@@ -19,7 +19,7 @@
     STRING type = "gaussian";
     double amplitude = 0.0;
     double cutoff = 3.0;
-    long bind = 1;
+    long binding = 1;
     long bind_number = 0;
     long fractional = 0;
     long post_correction = 0;
