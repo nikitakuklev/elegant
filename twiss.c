@@ -1887,21 +1887,25 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
 			- alpha1*sqr(1-cos_kl)/(k2*k2*ipow(length,3))
 			+ beta0*(kl-cos_kl*sin_kl)/(2*kl*k2*sqr(length)));
       } else {
+	double kl2, kl4, l2;
 	h = 1./rho;
-	etaAve = ((840 - 42*ipow(kl,2) + ipow(kl,4))*ipow(length,2) +
-		  42*eta0*(120 - 20*ipow(kl,2) + ipow(kl,4))*rho +
-		  7*etap1*(360 - 30*ipow(kl,2) + ipow(kl,4))*length*rho)/(5040.*rho);
+	kl2 = kl*kl;
+	kl4 = kl2*kl2;
+	l2 = length*length;
+	etaAve = ((840 - 42*kl2 + kl4)*l2 +
+		  42*eta0*(120 - 20*kl2 + kl4)*rho +
+		  7*etap1*(360 - 30*kl2 + kl4)*length*rho)/(5040.*rho);
 	etaK1_rhoAve =  -etaAve*K1/rho + (eta0*tan(E1)+eta2*tan(E2))/(2*length*sqr(rho));
 	HAve = (8*beta0*(2520*ipow(etap1,2) +
-			 7*etap1*h*(360 - 30*ipow(kl,2) + ipow(kl,4))*length +
-			 8*ipow(h,2)*(105 - 21*ipow(kl,2) + 2*ipow(kl,4))*ipow(length,2))
+			 7*etap1*h*(360 - 30*kl2 + kl4)*length +
+			 8*ipow(h,2)*(105 - 21*kl2 + 2*kl4)*l2)
 		+ gamma1*(20160*ipow(eta0,2) -
-			  8*eta0*h*(840 - 42*ipow(kl,2) + ipow(kl,4))*ipow(length,2) +
-			  ipow(h,2)*(1008 - 120*ipow(kl,2) + 7*ipow(kl,4))*ipow(length,4))
+			  8*eta0*h*(840 - 42*kl2 + kl4)*l2 +
+			  ipow(h,2)*(1008 - 120*kl2 + 7*kl4)*ipow(length,4))
 		+ alpha1*(56*eta0*(720*etap1 +
-				   h*(360 - 30*ipow(kl,2) + ipow(kl,4))*length) -
-			  h*ipow(length,2)*(8*etap1*(840 - 42*ipow(kl,2) + ipow(kl,4)) +
-					    21*h*(240 - 40*ipow(kl,2) + 3*ipow(kl,4))*length)))/20160.;
+				   h*(360 - 30*kl2 + kl4)*length) -
+			  h*l2*(8*etap1*(840 - 42*kl2 + kl4) +
+					    21*h*(240 - 40*kl2 + 3*kl4)*length)))/20160.;
       }
       I1 = etaAve*length/rho;
       I2 = length/sqr(rho);
