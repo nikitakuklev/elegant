@@ -65,8 +65,9 @@ typedef struct element_list {
 #define VMATRIX_IS_VARIED 4
 #define VMATRIX_IS_PERTURBED 8
     double Pref_input, Pref_output;
-    VMATRIX *matrix;
+    VMATRIX *matrix;      /* matrix of this element */
     TWISS *twiss;
+    VMATRIX *accumMatrix; /* accumulated matrix to the end of this element */
     char *part_of;     /* name of lowest-level line that this element is part of */
     struct element_list *pred, *succ;
     } ELEMENT_LIST;
@@ -1442,6 +1443,7 @@ extern void copy_beam_sums(BEAM_SUMS *target, BEAM_SUMS *source);
 /* prototypes for compute_matrices13.c: */
 extern VMATRIX *full_matrix(ELEMENT_LIST *elem, RUN *run, long order);
 extern VMATRIX *append_full_matrix(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long order);
+VMATRIX *accumulate_matrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long order, long full_matrix_only);
 extern long fill_in_matrices(ELEMENT_LIST *elem, RUN *run);
 extern long calculate_matrices(LINE_LIST *line, RUN *run);
 extern VMATRIX *drift_matrix(double length, long order);
@@ -1467,6 +1469,7 @@ extern void copy_particles(double **copy, double **original, long n_particles);
  
 /* prototypes for correct.c: */
 extern void correction_setup(CORRECTION *_correct, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
+double computeMonitorReading(ELEMENT_LIST *elem, long coord, double x, double y);
 extern long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *starting_coords, 
         BEAM *beam, long sim_step);
 extern long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LINE_LIST *beamline, VMATRIX *M, 
@@ -1708,6 +1711,7 @@ extern long vary_beamline(VARY *_control, ERROR *errcon, RUN *run, LINE_LIST *be
 extern long perturb_beamline(VARY *_control, ERROR *errcon, RUN *run, LINE_LIST *beamline);
 extern ELEMENT_LIST *find_element(char *elem_name,  ELEMENT_LIST **context, ELEMENT_LIST *elem);
 extern ELEMENT_LIST *wfind_element(char *elem_name,  ELEMENT_LIST **context, ELEMENT_LIST *elem);
+ELEMENT_LIST *find_element_index(char *elem_name,  ELEMENT_LIST **context,  ELEMENT_LIST *elem, long *index);
 extern long confirm_parameter(char *item_name, long type);
 extern void set_element_flags(LINE_LIST *beamline, char **elem_name, long *elem_perturb_flags,
     long *type, long *param, long n_elems,

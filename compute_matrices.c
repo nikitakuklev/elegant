@@ -19,7 +19,6 @@ VMATRIX *full_matrix(ELEMENT_LIST *elem, RUN *run, long order)
     long i;
     double Pref_input;
 
-    log_entry("full_matrix");
     if (!elem) {
         puts("error: NULL element pointer passed to full_matrix()");
         abort();
@@ -30,20 +29,73 @@ VMATRIX *full_matrix(ELEMENT_LIST *elem, RUN *run, long order)
            cpu_time()/100.0, page_faults(), memory_count());
 #endif
     
-    initialize_matrices(M1=tmalloc(sizeof(*M1)), order);
-    for (i=0; i<6; i++)
-        M1->R[i][i] = 1;
-    M2 = append_full_matrix(elem, run, M1, order);
-    free_matrices(M1);
-    free(M1);
-
-    log_exit("full_matrix");
-    return(M2);
+    return accumulate_matrices(elem, run, NULL, order, 1);
     }
+
+VMATRIX *accumulate_matrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long order, long full_matrix_only)
+{
+  VMATRIX *M1, *M2, *tmp;
+  ELEMENT_LIST *member;
+  double Pref_input;
+  long i;
+  
+  if (!elem) {
+    puts("error: NULL element pointer passed to accumulate_matrices()");
+    abort();
+  }
+  
+  initialize_matrices(M1=tmalloc(sizeof(*M1)), order);
+  initialize_matrices(M2=tmalloc(sizeof(*M2)), order);
+  for (i=0; i<6; i++)
+    M1->R[i][i] = M2->R[i][i] = 1;
+  if (M0)
+    copy_matrices1(M1, M0);
+  
+  member = elem;
+  while (member) {
+    if (member->type<0 || member->type>=N_TYPES) {
+      printf("error: bad element type %ld (accumulate_matrices)\n", member->type);
+      printf("element name is %s and end position is %em\n", 
+             (member->name?member->name:"{null}"), member->end_pos);
+      abort();
+    }
+    if (member->pred)
+      Pref_input = member->pred->Pref_output;
+    else
+      Pref_input = member->Pref_input;
+    if (!member->matrix || Pref_input!=member->Pref_input)
+      compute_matrix(member, run, NULL);
+    if ((entity_description[member->type].flags&HAS_MATRIX) && !member->matrix) {
+      fprintf(stderr, "programming error: matrix not computed for element %s\n",
+              member->name);
+      abort();
+    }
+    if (member->matrix) {
+      concat_matrices(M2, member->matrix, M1);
+      tmp = M2;
+      M2  = M1;
+      M1  = tmp;
+      if (!full_matrix_only) {
+        if (member->accumMatrix)
+          free_matrices(member->accumMatrix);
+        else 
+          member->accumMatrix = tmalloc(sizeof(*(member->accumMatrix)));
+        copy_matrices(member->accumMatrix, M2);
+      }
+    }
+    member = member->succ;
+  }
+  if (M2) {
+    free_matrices(M2); tfree(M2); M2 = NULL;
+  }
+  return M1;
+}
 
 VMATRIX *append_full_matrix(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long order) 
 {
-    VMATRIX *M1, *M2, *tmp, *Md;
+  return accumulate_matrices(elem, run, M0, order, 1);
+#if 0  
+  VMATRIX *M1, *M2, *tmp, *Md;
     ELEMENT_LIST *member;
     double Pref_input;
 
@@ -93,6 +145,7 @@ VMATRIX *append_full_matrix(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long orde
         }
     log_exit("append_full_matrix");
     return(M1);
+#endif
     }
 
 long fill_in_matrices(

@@ -326,16 +326,21 @@ void free_elements(ELEMENT_LIST *elemlist)
         eptr->name = NULL;
         if (entity_description[eptr->type].flags&HAS_MATRIX && eptr->matrix) {
             free_matrices(eptr->matrix);
-            tfree(eptr->matrix);
+            free(eptr->matrix);
             eptr->matrix = NULL;
             }
+        if (eptr->accumMatrix) {
+          free_matrices(eptr->accumMatrix);
+          free(eptr->accumMatrix);
+          eptr->accumMatrix = NULL;
+        }
         if (eptr->succ) {
             eptr = eptr->succ;
-            tfree(eptr->pred);
+            free(eptr->pred);
             eptr->pred = NULL;
             }
         else {
-            tfree(eptr);
+            free(eptr);
             break;
             }
         }
@@ -414,6 +419,11 @@ void delete_matrix_data(LINE_LIST *beamline)
                     tfree(eptr->matrix);
                     eptr->matrix = NULL;
                     }
+                if (eptr->accumMatrix) {
+                  free_matrices(eptr->accumMatrix);
+                  tfree(eptr->accumMatrix);
+                  eptr->accumMatrix = NULL;
+                }
                 eptr = eptr->succ;
                 }
             lptr->n_elems = 0;

@@ -67,7 +67,6 @@ void do_response_matrix_output(char *filename, char *type, RUN *run, char *beaml
                                STEERING_LIST *SL, long plane);
 
 static long rpn_x_mem= -1, rpn_y_mem= -1;
-double computeMonitorReading(ELEMENT_LIST *elem, long coord, double x, double y);
 double getMonitorWeight(ELEMENT_LIST *elem);
 double getMonitorCalibration(ELEMENT_LIST *elem, long coord);
 double getCorrectorCalibration(ELEMENT_LIST *elem, long coord);
@@ -1349,6 +1348,7 @@ void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN
       moniFactor = 
         getMonitorCalibration(CM->umoni[i_moni], coord)*sqrt(CM->umoni[i_moni]->twiss->betax);
       for (i_corr=0; i_corr<CM->ncor; i_corr++) {
+        CM->C->a[i_moni][i_corr] = 0;
         CM->C->a[i_moni][i_corr] 
           = moniFactor*corrFactor[i_corr]*
             cos(htune-fabs(CM->umoni[i_moni]->twiss->phix -
@@ -2044,6 +2044,7 @@ double noise_value(double xamplitude, double xcutoff, long xerror_type)
     }
 
 double computeMonitorReading(ELEMENT_LIST *elem, long coord, double x, double y)
+/* coord = 0 is x, otherwise y */
 {
     double calibration, tilt, reading;
     char *equation;
@@ -2080,7 +2081,7 @@ double computeMonitorReading(ELEMENT_LIST *elem, long coord, double x, double y)
         if (tilt=((VMON*)(elem->p_elem))->tilt)
             rotate_xy(&x, &y, tilt);   
         equation = ((VMON*)(elem->p_elem))->readout; 
-        if (coord!=2)
+        if (!coord)
             bomb("element in vertical monitor list is not a vertical monitor--internal logic error", NULL);
         break;
       default:
@@ -2102,7 +2103,7 @@ double computeMonitorReading(ELEMENT_LIST *elem, long coord, double x, double y)
           case 0: 
             reading = x*calibration;
             break;
-          case 2:
+          default:
             reading = y*calibration;
             break;
             }
