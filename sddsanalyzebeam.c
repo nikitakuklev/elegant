@@ -14,6 +14,10 @@
  * Michael Borland, 2000
  *
  $Log: not supported by cvs2svn $
+ Revision 1.11  2004/08/10 19:02:24  borland
+ Fixed uninitialized variable problem that resulted in wrong sigma values
+ in output file for single-particle beam.
+
  Revision 1.10  2003/11/24 17:20:07  borland
  Added computation of longitudinal emittance.
 
@@ -322,7 +326,7 @@ int main(int argc, char **argv)
 long SetUpOutputFile(SDDS_DATASET *SDDSout, char *outputfile, long correctedOnly, SDDS_DATASET *SDDSin)
 {
   char units[128], name[128];
-  char *ppUnits[6] = {"m", "", "m", "", "s", ""} ;
+  char *ppUnits[6] = {"m", 0, "m", 0, "s", 0} ;
   long i, j;
   
   if (!SDDS_InitializeOutput(SDDSout, SDDS_BINARY, 1, NULL, NULL, outputfile) ||
