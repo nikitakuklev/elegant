@@ -2416,7 +2416,8 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
 			      double *startingCoord, 
 			      double xAmplitude, double yAmplitude, long turns,
                               long useMatrix, double *endingCoord,
-			      double *lowerLimit, double *upperLimit);
+			      double *lowerLimit, double *upperLimit,
+			      long allowLosses);
 /* frequencyMap.c */
 void setupFrequencyMap(NAMELIST_TEXT *nltext, RUN *run, VARY *control);
 long doFrequencyMap(RUN *run, VARY *control, double *referenceCoord,

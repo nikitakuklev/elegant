@@ -2174,7 +2174,7 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
         if (!computeTunesFromTracking(tune1, NULL, M, beamline, run, startingCoord,
                                       x, y,
                                       tune_shift_with_amplitude_struct.turns, 0, NULL,
-				      tuneLowerLimit, tuneUpperLimit)) {
+				      tuneLowerLimit, tuneUpperLimit, 0)) {
 	  lost[ix][iy] = 1;
 	  nLost ++;
         }
@@ -2412,7 +2412,8 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
 			      double *startingCoord, 
 			      double xAmplitude, double yAmplitude, long turns,
                               long useMatrix,
-                              double *endingCoord, double *tuneLowerLimit, double *tuneUpperLimit)
+                              double *endingCoord, double *tuneLowerLimit, double *tuneUpperLimit,
+			      long allowLosses)
 {
   double **oneParticle, dummy;
   double *x, *y, p;
@@ -2482,17 +2483,23 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
       track_particles(oneParticle, M, oneParticle, one);
     else {
       if (!do_tracking(NULL, oneParticle, 1, NULL, beamline, &p,  (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
-                       (TRAJECTORY*)NULL, run, 0, TEST_PARTICLES+TIME_DEPENDENCE_OFF, 
+                       (TRAJECTORY*)NULL, run, 0, 
+		       TEST_PARTICLES+(allowLosses?TEST_PARTICLE_LOSSES:0)+TIME_DEPENDENCE_OFF, 
                        1, i-1, NULL, NULL, NULL, NULL)) {
-        fprintf(stdout, "warning: test particle lost on turn %ld (computeTunesFromTracking)\n", i);
+	if (!allowLosses) {
+	  fprintf(stdout, "warning: test particle lost on turn %ld (computeTunesFromTracking)\n", i);
+	  fflush(stdout);
+	}
         return 0;
       }
     }
     if (isnan(oneParticle[0][0]) || isnan(oneParticle[0][1]) ||
         isnan(oneParticle[0][2]) || isnan(oneParticle[0][3]) ||
         isnan(oneParticle[0][4]) || isnan(oneParticle[0][5])) {
-      fprintf(stdout, "warning: test particle lost on turn %ld (computeTunesFromTracking)\n", i);
-      fflush(stdout);
+      if (!allowLosses) {
+	fprintf(stdout, "warning: test particle lost on turn %ld (computeTunesFromTracking)\n", i);
+	fflush(stdout);
+      }
       return 0;
     }
 #ifdef DEBUG
