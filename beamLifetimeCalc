@@ -4,6 +4,9 @@ exec oagwish "$0" "$@"
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.6  2004/07/22 20:33:29  borland
+# Now recalculates lifetimes when the bunch current is changed.
+#
 # Revision 1.5  2004/06/23 22:26:24  borland
 # Default values now give approximately the right Touschek lifetime for APS.
 # Added control of iteration parameters for Haissinski equation.
@@ -143,7 +146,7 @@ set auto_path [linsert $auto_path 0  /usr/local/oag/apps/lib/$env(HOST_ARCH)]
 set auto_path [linsert $auto_path 0 /usr/local/oag/lib_patch/$env(HOST_ARCH)]
 APSDebugPath
 
-set CVSRevisionAuthor "\$Revision: 1.6 $ \$Author: borland $"
+set CVSRevisionAuthor "\$Revision: 1.7 $ \$Author: borland $"
 
 APSApplication . -name beamLifetimeCalc -version $CVSRevisionAuthor -overview \
   "Calculates the gas scattering lifetime due to single Coulomb scattering and
@@ -765,14 +768,16 @@ proc RecomputeOutputs {args} {
         global haissinskiSteps haissinskiPoints haissinskiFraction haissinskiDivisor
         set Q [expr $bunchCurrent/1000.0/$revolutionFrequency]
         set tmpRoot /tmp/[APSTmpString]
-        APSAddToTempFileList $tmpRoot.1
+        APSAddToTempFileList $tmpRoot.0 $tmpRoot.1
         set haissinskiDone 0
         set extraOption -outputLastStepOnly
         if $useHaissinski==2 {
             set extraOption -verbose
         }
+	exec sddsprocess $latticeFile $tmpRoot.0 \
+	    -redefine=parameter,Sdelta0,$energySpread
         set unixCommand \
-          "haissinski $latticeFile $tmpRoot.1 -model=Zn=$broadBandImpedance \
+          "haissinski $tmpRoot.0 $tmpRoot.1 -model=Zn=$broadBandImpedance \
             -charge=$Q -rf=voltage=[expr $rfVoltage*1e6],harmonic=$harmonic \
             -steps=$haissinskiSteps \
             $extraOption -superPeriods=$superperiods -energy=$energy \
@@ -978,9 +983,9 @@ proc RunVariationFromFile {} {
         return
     }
     lappend possibleName Pressure betaAve Acceptance EnergyAperture Coupling BunchLength BunchCurrent Emittance \
-      EnergySpread
+      EnergySpread rfVoltage Energy
     lappend internalName pressure betaAve acceptance energyAperture coupling bunchLength bunchCurrent emittance \
-      energySpread
+      energySpread rfVoltage Energy
     eval global $internalName
     set variableColumn ""
     set variableVariable ""
@@ -1013,7 +1018,9 @@ proc RunVariationFromFile {} {
             set [lindex $variableVariable $index] [expr [lindex [subst \$${elem}Data] $row]]
             incr index
         }
-        RecomputeOutputs -statusCallback ""
+        if [catch {RecomputeOutputs -statusCallback "setStatus"} result]  {
+	    setStatus "$result"
+	}
     }
     setStatus "Done with variation."
     if [catch {sdds close $fid} result] {
