@@ -84,8 +84,6 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
 
     /* set namelist variables to defaults */
     target = item = source = equation = exclude = NULL;
-    cp_str(&source_position, "nearest");
-    cp_str(&mode, "dynamic");
 
     /* process namelist text */
     process_namelist(&link_elements, nltext);
@@ -93,8 +91,14 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
     if (exclude)         str_toupper(exclude);
     if (item)            str_toupper(item);
     if (source)          str_toupper(source);
-    if (source_position) str_tolower(source_position);
-    if (mode)            str_tolower(mode);
+    if (source_position) 
+      str_tolower(source_position);
+    else
+      cp_str(&source_position, "nearest");
+    if (mode) 
+      str_tolower(mode);
+    else
+      cp_str(&mode, "dynamic");
     print_namelist(stdout, &link_elements);
 
     /* check for valid input */
