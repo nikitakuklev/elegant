@@ -41,9 +41,11 @@ void track_SReffects(double **coord, long np, SREFFECTS *SReffects, double Po,
       SReffects->eyRef = SReffects->exRef*SReffects->coupling;
       SReffects->SdeltaRef = radIntegrals->sigmadelta;
       SReffects->DdeltaRef = -radIntegrals->Uo/me_mev/Po;
-      fprintf(stdout, "SReffects set up:\nPref=%g, Jx/y/delta=%g/%g/%g\nex/ey=%g/%g  Sdelta=%g  Ddelta=%g\n",
+      /*
+        fprintf(stdout, "SReffects set up:\nPref=%g, Jx/y/delta=%g/%g/%g\nex/ey=%g/%g  Sdelta=%g  Ddelta=%g\n",
               SReffects->pRef, SReffects->Jx, SReffects->Jy, SReffects->Jdelta,
               SReffects->exRef, SReffects->eyRef, SReffects->SdeltaRef, SReffects->DdeltaRef);
+              */
       fflush(stdout);
     }
 
