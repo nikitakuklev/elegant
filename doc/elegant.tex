@@ -29,6 +29,20 @@ and worked at Lyncean Technologies, Inc.  LTI generously agreed that
 all the changes I made to {\tt elegant} and related programs while
 there would be shared with the accelerator physics community.
 
+\subsection{Known Bugs and Problems}
+\begin{itemize}
+\item The Twiss output contains values for the second- and third- order
+        dispersion and chromaticities.  While the second-order values are
+        believed reliable, the third-order values are not and should be
+        disregarded.
+\item Twiss output contains entries for the higher-order dispersion and
+	chromaticity as well as the tune shifts with amplitude, 
+	{\em even when these are not calculated}, which is potentially
+	misleading.   The values are zero when the calculation is not
+        requested.
+\item Use of the perturbed matrix for chromaticity correction does not work.
+\end{itemize}
+
 \subsection{New Elements}
 \begin{itemize}
 \item Added LSCDRIFT, which provides simulation of longitudinal space charge
@@ -288,15 +302,6 @@ been tested.  This was done by R. Soliday (ANL).
 library.  Contact the author if you need to use this feature (Linux 
 only, gcc 2.9X).
 
-\end{itemize}
-
-\subsection{Known Bugs and Problems}
-\begin{itemize}
-\item Use of the perturbed matrix for chromaticity correction does not work.
-\item Twiss output contains entries for the higher-order dispersion and
-	chromaticity as well as the tune shifts with amplitude, 
-	{\em even when these are not calculated}, which is potentially
-	misleading. 
 \end{itemize}
 
 \section{Introduction}
