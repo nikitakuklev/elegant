@@ -378,7 +378,7 @@ typedef struct {
   SDDS_DATASET SDDSout;
   /* input data */
   char *filename;
-  long nSlices;
+  long nSlices, finalValuesOnly;
   double sStart, sEnd;
   /* simulation data */
   double *enx, *eny, *ecnx, *ecny, eta[4];
@@ -389,6 +389,10 @@ typedef struct {
   long *betacxIndex, *betacyIndex, *alphacxIndex, *alphacyIndex;
   long *CxIndex, *CyIndex, *CxpIndex, *CypIndex, *CtIndex, *CdeltaIndex, *SdeltaIndex;
   long *durationIndex, *chargeIndex, *particlesIndex;
+  long *enxMemNum, *enyMemNum, *ecnxMemNum, *ecnyMemNum;
+  long *betacxMemNum, *betacyMemNum, *alphacxMemNum, *alphacyMemNum;
+  long *CxMemNum, *CyMemNum, *CxpMemNum, *CypMemNum, *CtMemNum, *CdeltaMemNum, *SdeltaMemNum;
+  long *durationMemNum, *chargeMemNum, *particlesMemNum;
   long *sliceFound;
 } SLICE_OUTPUT;
 
@@ -608,7 +612,7 @@ extern char *entity_text[N_TYPES];
 #define N_CHARGE_PARAMS 2
 #define N_PFILTER_PARAMS 5
 #define N_HISTOGRAM_PARAMS 9
-#define N_CSRCSBEND_PARAMS 51
+#define N_CSRCSBEND_PARAMS 49
 #define N_CSRDRIFT_PARAMS 19
 #define N_REMCOR_PARAMS 6
 #define N_MAPSOLENOID_PARAMS 18
@@ -1447,7 +1451,6 @@ typedef struct {
     long isr, csr, csrBlock;
     char *derbenevCriterionMode, *particleOutputFile;
     long particleOutputInterval, sliceAnalysisInterval;
-    double highFrequencyCutoff0, highFrequencyCutoff1;
     /* for internal use only: */
     long flags;   /* bend flags */
     short wakeFileActive, particleFileActive;
@@ -1893,6 +1896,7 @@ void performSliceAnalysisOutput(SLICE_OUTPUT *sliceOutput, double **particle, lo
 				long newPage, long step, double Po, double charge, 
 				char *elementName, double elementPosition,
 				long timeGiven);
+void clearSliceAnalysis();
 void performSliceAnalysis(SLICE_OUTPUT *sliceOutput, double **particle, long particles, 
 			  double Po, double charge, long timeGiven);
 void setupSliceAnalysis(NAMELIST_TEXT *nltext, RUN *run, 
