@@ -497,168 +497,170 @@ void delete_matrix_data(LINE_LIST *beamline)
 
 void do_save_lattice(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 {
-    FILE *fp;
-    ELEMENT_LIST *eptr;
-    LINE_LIST *lptr;
-    long j;
-    double dvalue;
-    long lvalue;
-    char *ptr;
-    PARAMETER *parameter;
-    char s[16384], t[1024], name[1024];
+  FILE *fp;
+  ELEMENT_LIST *eptr;
+  LINE_LIST *lptr;
+  long j;
+  double dvalue;
+  long lvalue;
+  char *ptr;
+  PARAMETER *parameter;
+  char s[16384], t[1024], name[1024];
 
-    log_entry("do_save_lattice");
+  log_entry("do_save_lattice");
 
-    /* process the namelist text */
-    set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
-    set_print_namelist_flags(0);
-    process_namelist(&save_lattice, nltext);
-    print_namelist(stdout, &save_lattice);
+  /* process the namelist text */
+  set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
+  set_print_namelist_flags(0);
+  process_namelist(&save_lattice, nltext);
+  print_namelist(stdout, &save_lattice);
 
-    /* check for valid data */
-    if (filename==NULL)
-        bomb("no filename given to save lattice to", NULL);
-    if (str_in(filename, "%s"))
-        filename = compose_filename(filename, run->rootname);
-    fp = fopen_e(filename, "w", FOPEN_INFORM_OF_OPEN);
+  /* check for valid data */
+  if (filename==NULL)
+    bomb("no filename given to save lattice to", NULL);
+  if (str_in(filename, "%s"))
+    filename = compose_filename(filename, run->rootname);
+  fp = fopen_e(filename, "w", FOPEN_INFORM_OF_OPEN);
 
-    eptr = elem;
-    while (eptr) {
-        parameter = entity_description[eptr->type].parameter;
-        if (strpbrk(eptr->name, ":.,/-_+ "))
-            sprintf(name, "\"%s\"", eptr->name);
-        else
-            strcpy(name, eptr->name);
-        sprintf(s, "%s: %s,", name, entity_name[eptr->type]);
-        for (j=0; j<entity_description[eptr->type].n_params; j++) {
-            switch (parameter[j].type) {
-                case IS_DOUBLE:
-                    dvalue = *(double*)(eptr->p_elem+parameter[j].offset);
-                    if (dvalue!=parameter[j].number) {
-                        /* value is not the default, so add to output */
-                        sprintf(t, "%s=%.16g", parameter[j].name, dvalue);
-                        strcat(s, t);
-                        if (j!=entity_description[eptr->type].n_params-1)
-                            strcat(s, ",");
-                        }
-                    break;
-                case IS_LONG:
-                    lvalue = *(long *)(eptr->p_elem+parameter[j].offset);
-                    if (lvalue!=parameter[j].integer) {
-                        /* value is not the default, so add to output */
-                        sprintf(t, "%s=%ld", parameter[j].name, lvalue);
-                        strcat(s, t);
-                        if (j!=entity_description[eptr->type].n_params-1)
-                            strcat(s, ",");
-                        }
-                    break;
-                case IS_STRING:
-                    if ((ptr = *(char**)(eptr->p_elem+parameter[j].offset))) {
-                        sprintf(t, "%s=\"%s\"", parameter[j].name, ptr);
-                        strcat(s, t);
-                        if (j!=entity_description[eptr->type].n_params-1)
-                            strcat(s, ",");
-                        }                    
-                    break;
-                }
-            }
-        if (s[j=strlen(s)-1]==',')
-            s[j] = 0;
-        print_with_continuation(fp, s, 79);
-        eptr = eptr->succ;
+  eptr = elem;
+  while (eptr) {
+    parameter = entity_description[eptr->type].parameter;
+    if (strpbrk(eptr->name, ":.,/-_+ "))
+      sprintf(name, "\"%s\"", eptr->name);
+    else
+      strcpy(name, eptr->name);
+    sprintf(s, "%s: %s,", name, entity_name[eptr->type]);
+    for (j=0; j<entity_description[eptr->type].n_params; j++) {
+      switch (parameter[j].type) {
+      case IS_DOUBLE:
+        dvalue = *(double*)(eptr->p_elem+parameter[j].offset);
+        if (dvalue!=parameter[j].number) {
+          /* value is not the default, so add to output */
+          sprintf(t, "%s=%.16g", parameter[j].name, dvalue);
+          strcat(s, t);
+          if (j!=entity_description[eptr->type].n_params-1)
+            strcat(s, ",");
         }
-    lptr = line;
-    while (lptr) {
-        print_with_continuation(fp, lptr->definition, 79);
-        lptr = lptr->succ;
+        break;
+      case IS_LONG:
+        lvalue = *(long *)(eptr->p_elem+parameter[j].offset);
+        if (lvalue!=parameter[j].integer) {
+          /* value is not the default, so add to output */
+          sprintf(t, "%s=%ld", parameter[j].name, lvalue);
+          strcat(s, t);
+          if (j!=entity_description[eptr->type].n_params-1)
+            strcat(s, ",");
         }
-
-    if (beamline && beamline->name)
-        fprintf(fp, "USE,%s\n", beamline->name);
-
-    fprintf(fp, "RETURN\n");
-    fclose(fp);
-
-    log_exit("do_save_lattice");
+        break;
+      case IS_STRING:
+        ptr = *(char**)(eptr->p_elem+parameter[j].offset);
+        if (ptr &&
+            (!parameter[j].string || strcmp(ptr, parameter[j].string)!=0)) {
+          sprintf(t, "%s=\"%s\"", parameter[j].name, ptr);
+          strcat(s, t);
+          if (j!=entity_description[eptr->type].n_params-1)
+            strcat(s, ",");
+        }
+        break;
+      }
     }
+    if (s[j=strlen(s)-1]==',')
+      s[j] = 0;
+    print_with_continuation(fp, s, 79);
+    eptr = eptr->succ;
+  }
+  lptr = line;
+  while (lptr) {
+    print_with_continuation(fp, lptr->definition, 79);
+    lptr = lptr->succ;
+  }
+
+  if (beamline && beamline->name)
+    fprintf(fp, "USE,%s\n", beamline->name);
+
+  fprintf(fp, "RETURN\n");
+  fclose(fp);
+
+  log_exit("do_save_lattice");
+}
 
 void print_with_continuation(FILE *fp, char *s, long endcol)
 {
-    char c, *ptr;
-    long l;
+  char c, *ptr;
+  long l;
 
-    while ((l=strlen(s))) {
-        if (l>endcol) {
-          ptr = s+endcol-2;
-          while (ptr!=s && *ptr!=',')
-            ptr--;
-          if (ptr==s)
-            c = *(ptr = s + endcol - 1);
-          else {
-            ptr++;
-            c = *ptr;
-          }
-          *ptr = 0;
-          fputs(s, fp);
-          fputs("&\n", fp);
-          s = ptr;
-          *ptr = c;
-        }
-        else {
-          fputs(s, fp);
-          fputc('\n', fp);
-          log_exit("print_with_continuation");
-          return;
-        }
+  while ((l=strlen(s))) {
+    if (l>endcol) {
+      ptr = s+endcol-2;
+      while (ptr!=s && *ptr!=',')
+        ptr--;
+      if (ptr==s)
+        c = *(ptr = s + endcol - 1);
+      else {
+        ptr++;
+        c = *ptr;
       }
+      *ptr = 0;
+      fputs(s, fp);
+      fputs("&\n", fp);
+      s = ptr;
+      *ptr = c;
+    }
+    else {
+      fputs(s, fp);
+      fputc('\n', fp);
+      log_exit("print_with_continuation");
+      return;
+    }
   }
+}
 
 void change_defined_parameter_values(char **elem_name, long *param_number, long *type, double *value, long n_elems)
 {
-    ELEMENT_LIST *eptr;
-    char *p_elem;
-    long i_elem, elem_type, data_type, param;
+  ELEMENT_LIST *eptr;
+  char *p_elem;
+  long i_elem, elem_type, data_type, param;
 
-    log_entry("change_defined_parameter_values");
+  log_entry("change_defined_parameter_values");
 
-    for (i_elem=0; i_elem<n_elems; i_elem++) {
-        eptr = NULL;
-        elem_type = type[i_elem];
-        param     = param_number[i_elem];
-        data_type = entity_description[elem_type].parameter[param].type;
-        while (find_element(elem_name[i_elem], &eptr, elem)) {
-            p_elem = eptr->p_elem;
-            switch (data_type) {
-                case IS_DOUBLE:
-                    *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)) = value[i_elem];
+  for (i_elem=0; i_elem<n_elems; i_elem++) {
+    eptr = NULL;
+    elem_type = type[i_elem];
+    param     = param_number[i_elem];
+    data_type = entity_description[elem_type].parameter[param].type;
+    while (find_element(elem_name[i_elem], &eptr, elem)) {
+      p_elem = eptr->p_elem;
+      switch (data_type) {
+      case IS_DOUBLE:
+        *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)) = value[i_elem];
 #if DEBUG
-                    fprintf(stdout, "   changing parameter %s of %s #%ld to %e\n",
-                           entity_description[elem_type].parameter[param].name,
-                           eptr->name, eptr->occurence,
-                           *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)));
-                    fflush(stdout);
+        fprintf(stdout, "   changing parameter %s of %s #%ld to %e\n",
+                entity_description[elem_type].parameter[param].name,
+                eptr->name, eptr->occurence,
+                *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)));
+        fflush(stdout);
 #endif
-                    break;
-                case IS_LONG:
-                    *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) = 
-                      nearestInteger(value[i_elem]);
+        break;
+      case IS_LONG:
+        *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) = 
+          nearestInteger(value[i_elem]);
 #if DEBUG
-                    fprintf(stdout, "   changing parameter %s of %s #%ld to %ld\n",
-                           entity_description[elem_type].parameter[param].name,
-                           eptr->name, eptr->occurence,
-                           *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)));
-                    fflush(stdout);
+        fprintf(stdout, "   changing parameter %s of %s #%ld to %ld\n",
+                entity_description[elem_type].parameter[param].name,
+                eptr->name, eptr->occurence,
+                *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)));
+        fflush(stdout);
 #endif
-                    break;
-                case IS_STRING:
-                default:
-                    bomb("unknown/invalid variable quantity", NULL);
-                    exit(1);
-                }
-            }
-        }
-    log_exit("change_defined_parameter_values");
+        break;
+      case IS_STRING:
+      default:
+        bomb("unknown/invalid variable quantity", NULL);
+        exit(1);
+      }
     }
+  }
+  log_exit("change_defined_parameter_values");
+}
 
 void change_defined_parameter(char *elem_name, long param, long elem_type, 
                               double value, char *valueString, unsigned long mode)
@@ -691,7 +693,7 @@ void change_defined_parameter(char *elem_name, long param, long elem_type,
                  (mode&LOAD_FLAG_FRACTIONAL)?"fractional":"unknown"),
                 elem_name, entity_description[elem_type].parameter[param].name,
                 *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)));
-        fflush(stdout);
+      fflush(stdout);
       if (mode&LOAD_FLAG_ABSOLUTE)
         *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)) = value;
       else if (mode&LOAD_FLAG_DIFFERENTIAL)
@@ -701,7 +703,7 @@ void change_defined_parameter(char *elem_name, long param, long elem_type,
       if (mode&LOAD_FLAG_VERBOSE)
         fprintf(stdout, "%e\n", 
                 *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)));
-        fflush(stdout);
+      fflush(stdout);
       break;
     case IS_LONG:
       if (valueString) {
@@ -718,7 +720,7 @@ void change_defined_parameter(char *elem_name, long param, long elem_type,
                  (mode&LOAD_FLAG_FRACTIONAL)?"fractional":"unknown"),
                 elem_name, entity_description[elem_type].parameter[param].name,
                 *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)));
-        fflush(stdout);
+      fflush(stdout);
       if (mode&LOAD_FLAG_ABSOLUTE)
         *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) = 
           nearestInteger(value);
@@ -730,7 +732,7 @@ void change_defined_parameter(char *elem_name, long param, long elem_type,
       if (mode&LOAD_FLAG_VERBOSE)
         fprintf(stdout, "%ld\n",
                 *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)));
-        fflush(stdout);
+      fflush(stdout);
       break;
     case IS_STRING:
       if (mode&LOAD_FLAG_VERBOSE)
@@ -738,7 +740,7 @@ void change_defined_parameter(char *elem_name, long param, long elem_type,
                 elem_name, entity_description[elem_type].parameter[param].name,
                 *((char**)(p_elem+entity_description[elem_type].parameter[param].offset)),
                 valueString);
-        fflush(stdout);
+      fflush(stdout);
       if (!SDDS_CopyString(((char**)(p_elem+entity_description[elem_type].parameter[param].offset)), 
                            valueString)) {
         fprintf(stdout, "Error (change_defined_parameter): unable to copy string parameter value\n");
@@ -756,35 +758,35 @@ void change_defined_parameter(char *elem_name, long param, long elem_type,
 
 void process_rename_request(char *s, char **name, long n_names)
 {
-    long i;
-    char *old, *new, *ptr;
+  long i;
+  char *old, *new, *ptr;
 
-    log_entry("process_rename_request");
-    if (!(ptr=strchr(s, '='))) 
-        bomb("invalid syntax for RENAME", NULL);
-    *ptr++ = 0;
-    old = s;
-    str_toupper(trim_spaces(old = s));
-    while (*old==',' || *old==' ')
-        old++;
-    str_toupper(trim_spaces(new = ptr));
-    if (match_string(new, name, n_names, EXACT_MATCH)>=0) {
-        fprintf(stdout, "error: can't rename to name %s--already exists\n", new);
-        fflush(stdout);
-        exit(1);
-        }
-    if ((i=match_string(old, name, n_names, EXACT_MATCH))<0) {
-        fprintf(stdout, "error: can't rename %s to %s--%s not recognized\n", old, new, old);
-        fflush(stdout);
-        exit(1);
-        }
-    fprintf(stdout, "warning: element %s now known as %s\n", old, new);
+  log_entry("process_rename_request");
+  if (!(ptr=strchr(s, '='))) 
+    bomb("invalid syntax for RENAME", NULL);
+  *ptr++ = 0;
+  old = s;
+  str_toupper(trim_spaces(old = s));
+  while (*old==',' || *old==' ')
+    old++;
+  str_toupper(trim_spaces(new = ptr));
+  if (match_string(new, name, n_names, EXACT_MATCH)>=0) {
+    fprintf(stdout, "error: can't rename to name %s--already exists\n", new);
     fflush(stdout);
-    cp_str(name+i, new);
-    log_exit("process_rename_request");
-    }
+    exit(1);
+  }
+  if ((i=match_string(old, name, n_names, EXACT_MATCH))<0) {
+    fprintf(stdout, "error: can't rename %s to %s--%s not recognized\n", old, new, old);
+    fflush(stdout);
+    exit(1);
+  }
+  fprintf(stdout, "warning: element %s now known as %s\n", old, new);
+  fflush(stdout);
+  cp_str(name+i, new);
+  log_exit("process_rename_request");
+}
 
-    
+
 long nearestInteger(double value)
 {
   if (value<0)
