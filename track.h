@@ -409,7 +409,7 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_MATR  19
 /* Alpha magnet, or one half thereof: */
 #define T_ALPH  20
-/* TM RF DeFlector with spatially constant fields--semi-analytical solution: */
+/* RF DeFlector */
 #define T_RFDF  21
 /* TM-mode RF cavity using fields from SUPERFISH and NAG integrator: */
 #define T_RFTM  22
@@ -511,7 +511,7 @@ extern char *entity_text[N_TYPES];
 #define N_MARK_PARAMS 1
 #define N_MATR_PARAMS 3
 #define N_ALPH_PARAMS 12
-#define N_RFDF_PARAMS 12
+#define N_RFDF_PARAMS 8
 #define N_RFTM_PARAMS 15
 #define N_RMDF_PARAMS 10
 #define N_TMCF_PARAMS 18
@@ -814,11 +814,9 @@ typedef struct {
 extern PARAMETER rfdf_param[N_RFDF_PARAMS] ;
    
 typedef struct {
-    double length, phase, tilt, frequency, voltage, gap;
+    double length, phase, tilt, frequency, voltage;
     double time_offset;             /* equivalent to phase */
-    double B_field;
-    long n_sections, phase_reference;
-    double dx, dy;
+    long n_kicks, phase_reference;
     /* for internal use only */
     double t_first_particle;        /* not to be set by user! */
     long   initialized;             /* ditto */

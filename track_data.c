@@ -59,9 +59,9 @@ as a function of the actual positions (x and y).",
 command.",
     "An alpha magnet implemented as a matrix, up to 3rd order.  PART is used to split\n\
 the magnet into halves.  XSN and DPN allow momentum filtration at the midpoint.",
-    "A deflecting TM RF cavity, using an approximate analytical solution.",
+    "A simple traveling-wave (beta=1) deflecting RF cavity.",
     "Not implemented.",
-    "A linearly-ramped electric field deflector, using an approximate analytical solution.",
+    "A linearly-ramped electric field deflector, using an approximate analytical solution FOR LOW ENERGY PARTICLES.",
     "A numerically-integrated accelerating TM RF cavity with spatially-constant fields.",
     "A numerically-integrated linearly-ramped electric field deflector.",
     "A beam property/motion monitor--allowed modes are centroid, parameter, coordinate, and fft.",
@@ -384,13 +384,9 @@ PARAMETER rfdf_param[N_RFDF_PARAMS] = {
     {"TILT", "RAD", IS_DOUBLE, 0, (long)((char *)&rfdf_example.tilt), NULL, 0.0, 0},
     {"FREQUENCY", "HZ", IS_DOUBLE, 0, (long)((char *)&rfdf_example.frequency), NULL, DEFAULT_FREQUENCY, 0},
     {"VOLTAGE", "V", IS_DOUBLE, 0, (long)((char *)&rfdf_example.voltage), NULL, 0.0, 0},
-    {"GAP", "M", IS_DOUBLE, 0, (long)((char *)&rfdf_example.gap), NULL, DEFAULT_GAP, 0},
     {"TIME_OFFSET", "S", IS_DOUBLE, 0, (long)((char *)&rfdf_example.time_offset), NULL, 0.0, 0},
-    {"B_FIELD", "T", IS_DOUBLE, 0, (long)((char *)&rfdf_example.B_field), NULL, 0.0, 0},
-    {"N_SECTIONS", "", IS_LONG, 0, (long)((char *)&rfdf_example.n_sections), NULL, 0.0, DEFAULT_N_SECTIONS},
+    {"N_KICKS", "", IS_LONG, 0, (long)((char *)&rfdf_example.n_kicks), NULL, 0.0, 1},
     {"PHASE_REFERENCE", "", IS_LONG, 0, (long)((char *)&rfdf_example.phase_reference), NULL, 0.0, 0},
-    {"DX", "M", IS_DOUBLE, 0, (long)((char *)&rfdf_example.dx), NULL, 0.0, 0},
-    {"DY", "M", IS_DOUBLE, 0, (long)((char *)&rfdf_example.dy), NULL, 0.0, 0},
     } ;
 
 TM_MODE rftm_example;
