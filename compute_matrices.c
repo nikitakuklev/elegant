@@ -531,7 +531,8 @@ VMATRIX *compute_matrix(
                         ksbend->h1, ksbend->h2, ksbend->k1, 
                         ksbend->k2, ksbend->tilt, ksbend->fint, 
                         ksbend->hgap*2, ksbend->fse, ksbend->etilt,
-                        (run->default_order?run->default_order:1), ksbend->edge_order, ksbend->flags,
+                        ksbend->nonlinear?2:(run->default_order?run->default_order:1),
+                        ksbend->edge_order, ksbend->flags,
                         ksbend->TRANSPORT);
         if (ksbend->dx || ksbend->dy || ksbend->dz) {
             if (ksbend->tilt)
@@ -631,7 +632,8 @@ VMATRIX *compute_matrix(
                         csbend->h1, csbend->h2, csbend->k1_internal, 
                         csbend->k2_internal, csbend->tilt, csbend->fint, 
                         csbend->hgap*2, csbend->fse, csbend->etilt,
-                        (run->default_order?run->default_order:1), 1L, csbend->flags, 0);
+                        csbend->nonlinear?2:(run->default_order?run->default_order:1),
+                        csbend->edge_order, csbend->flags, 0);
         if (csbend->dx || csbend->dy || csbend->dz) {
           if (csbend->tilt)
               bomb("can't misalign tilted bending magnet", NULL);
@@ -659,7 +661,8 @@ VMATRIX *compute_matrix(
                         csrcsbend->h1, csrcsbend->h2, csrcsbend->k1_internal, 
                         csrcsbend->k2_internal, csrcsbend->tilt, csrcsbend->fint, 
                         csrcsbend->hgap*2, csrcsbend->fse, csrcsbend->etilt,
-                        (run->default_order?run->default_order:1), 1L, csrcsbend->flags, 0);
+                        csrcsbend->nonlinear?2:(run->default_order?run->default_order:1),
+                        csrcsbend->edge_order, csrcsbend->flags, 0);
         if (csrcsbend->dx || csrcsbend->dy || csrcsbend->dz) {
             if (csrcsbend->tilt)
                 bomb("can't misalign tilted bending magnet", NULL);
