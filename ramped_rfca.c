@@ -92,9 +92,10 @@ long ramped_rf_cavity(
 
     volt = ramprf->volt/(1e6*me_mev)*linear_interpolation(ramprf->Vfactor, ramprf->t_Vf, ramprf->n_Vpts, t0, i_volt);
     if (!fixed_freq) {
-        phase = (ramprf->phase + linear_interpolation(ramprf->dPhase, ramprf->t_dP, ramprf->n_Ppts, t0, i_phase))*PI/180.;
-        omega = PIx2*ramprf->freq*linear_interpolation(ramprf->ffactor, ramprf->t_ff, ramprf->n_fpts, t0, i_freq);
-        }
+      omega = PIx2*ramprf->freq*linear_interpolation(ramprf->ffactor, ramprf->t_ff, ramprf->n_fpts, t0, i_freq);
+      phase = linear_interpolation(ramprf->dPhase, ramprf->t_dP, ramprf->n_Ppts, t0, i_phase)*PI/180.0 -
+        omega*t0;
+    }
     else {
         omega = PIx2*ramprf->freq;
         if (ramprf->phase_reference==0) 
@@ -119,15 +120,15 @@ long ramped_rf_cavity(
             bomb("unknown return value from get_phase_reference()", NULL);
             break;
             }
+        if (omega) {
+          t0 = -ramprf->phase_fiducial/omega;
+        }
+        else
+          t0 = 0;
         }
 
-    if (omega) {
-        t0 = -ramprf->phase_fiducial/omega;
-        }
-    else
-        t0 = 0;
     phase += ramprf->phase*PI/180.0;
-    
+
 #ifdef DEBUG
     if (!debugInitialized) {
         debugInitialized = 1;
