@@ -208,7 +208,7 @@ long motion(
     xMaxSeen=-1e300;
     xMinSeen=1e300;
     if (xMotionCenterVar<0)
-      xMotionCenterVar = rpn_create_mem("xMotionCenter");
+      xMotionCenterVar = rpn_create_mem("xMotionCenter", 0);
     
     for (i_part=0; i_part<=i_top; i_part++) {
         tol_factor = 1;
@@ -352,7 +352,7 @@ long motion(
                 }
             }
         if (i_part==0) 
-          rpn_store((xMaxSeen+xMinSeen)/2, xMotionCenterVar);
+          rpn_store((xMaxSeen+xMinSeen)/2, NULL, xMotionCenterVar);
       }
     
     if (change_p0)

@@ -422,11 +422,11 @@ long assert_element_links(ELEMENT_LINKS *links, RUN *run, LINE_LIST *beamline, l
                 switch (entity_description[sour[0]->type].parameter[i_item].type) {
                     case IS_DOUBLE:
                         value = *((double*)(p_elem+entity_description[sour[0]->type].parameter[i_item].offset));
-                        rpn_store(value, rpn_create_mem(entity_description[sour[0]->type].parameter[i_item].name));
+                        rpn_store(value, NULL, rpn_create_mem(entity_description[sour[0]->type].parameter[i_item].name, 0));
                         break;
                     case IS_LONG:
                         value = *((long*)(p_elem+entity_description[sour[0]->type].parameter[i_item].offset));
-                        rpn_store(value, rpn_create_mem(entity_description[sour[0]->type].parameter[i_item].name));
+                        rpn_store(value, NULL, rpn_create_mem(entity_description[sour[0]->type].parameter[i_item].name, 0));
                         break;
                     default:
                         break;

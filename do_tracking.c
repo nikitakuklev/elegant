@@ -1477,7 +1477,7 @@ void store_fitpoint_matrix_values(MARK *fpt, char *name, long occurence, VMATRIX
     for (i=count=0; i<6; i++) {
       for (j=0; j<6; j++) {
         sprintf(buffer, "%s#%ld.R%ld%ld", name, occurence, i+1, j+1);
-        fpt->matrix_mem[count++] = rpn_create_mem(buffer);
+        fpt->matrix_mem[count++] = rpn_create_mem(buffer, 0);
       }
     }
     if (M->order>1) {
@@ -1485,7 +1485,7 @@ void store_fitpoint_matrix_values(MARK *fpt, char *name, long occurence, VMATRIX
         for (j=0; j<6; j++) {
           for (k=0; k<=j; k++) {
             sprintf(buffer, "%s#%ld.T%ld%ld%ld", name, occurence, i+1, j+1, k+1);
-            fpt->matrix_mem[count++] = rpn_create_mem(buffer);
+            fpt->matrix_mem[count++] = rpn_create_mem(buffer, 0);
           }
         }
       }
@@ -1495,12 +1495,12 @@ void store_fitpoint_matrix_values(MARK *fpt, char *name, long occurence, VMATRIX
   
   for (i=count=0; i<6; i++)
     for (j=0; j<6; j++)
-      rpn_store(M->R[i][j], fpt->matrix_mem[count++]);
+      rpn_store(M->R[i][j], NULL, fpt->matrix_mem[count++]);
   if (M->order>1)
     for (i=0; i<6; i++)
       for (j=0; j<6; j++)
         for (k=0; k<=j; k++) 
-          rpn_store(M->T[i][j][k], fpt->matrix_mem[count++]);
+          rpn_store(M->T[i][j][k], NULL, fpt->matrix_mem[count++]);
 }
 
 
@@ -1524,26 +1524,26 @@ void store_fitpoint_beam_parameters(MARK *fpt, char *name, long occurence, doubl
     fpt->emit_mem = tmalloc(sizeof(*fpt->emit_mem)*3);
     for (i=0; i<8; i++) {
       sprintf(s, "%s#%ld.%s", name, occurence, centroid_name_suffix[i]);
-      fpt->centroid_mem[i] = rpn_create_mem(s);
+      fpt->centroid_mem[i] = rpn_create_mem(s, 0);
     }
     for (i=0; i<6; i++) {
       sprintf(s, "%s#%ld.%s", name, occurence, sigma_name_suffix[i]);
-      fpt->sigma_mem[i] = rpn_create_mem(s);
+      fpt->sigma_mem[i] = rpn_create_mem(s, 0);
     }
     for (i=0; i<3; i++) {
       sprintf(s, "%s#%ld.%s", name, occurence, emit_name_suffix[i]);
-      fpt->emit_mem[i] = rpn_create_mem(s);
+      fpt->emit_mem[i] = rpn_create_mem(s, 0);
     }
     fpt->init_flags |= 2;
   }
   for (i=0; i<6; i++) {
-    rpn_store(centroid[i], fpt->centroid_mem[i]);
-    rpn_store(sigma[i], fpt->sigma_mem[i]);
+    rpn_store(centroid[i], NULL, fpt->centroid_mem[i]);
+    rpn_store(sigma[i], NULL, fpt->sigma_mem[i]);
   }
   for (i=0; i<3; i++)
-    rpn_store(emit[i], fpt->emit_mem[i]);
-  rpn_store(Po, fpt->centroid_mem[6]);
-  rpn_store((double)np, fpt->centroid_mem[7]);
+    rpn_store(emit[i], NULL, fpt->emit_mem[i]);
+  rpn_store(Po, NULL, fpt->centroid_mem[6]);
+  rpn_store((double)np, NULL, fpt->centroid_mem[7]);
 }
 
 ELEMENT_LIST *findBeamlineMatrixElement(ELEMENT_LIST *eptr)

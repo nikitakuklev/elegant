@@ -819,10 +819,10 @@ void rpn_store_final_properties(double *value, long number)
     if (!memory_number) {
         memory_number = tmalloc(sizeof(*memory_number)*number);
         for (i=0; i<number; i++) 
-            memory_number[i] = rpn_create_mem(final_property_parameter[i].name);
+            memory_number[i] = rpn_create_mem(final_property_parameter[i].name, 0);
         }
     for (i=0; i<number; i++)
-        rpn_store(value[i], memory_number[i]);
+        rpn_store(value[i], NULL, memory_number[i]);
     log_exit("rpn_store_final_parameters");
     }
 

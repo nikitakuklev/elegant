@@ -282,8 +282,8 @@ void correction_setup(
               _correct->CMy->nmon, _correct->CMy->ncor);
       fflush(stdout);
     }
-    rpn_x_mem = rpn_create_mem("x");
-    rpn_y_mem = rpn_create_mem("y");
+    rpn_x_mem = rpn_create_mem("x", 0);
+    rpn_y_mem = rpn_create_mem("y", 0);
 
     log_exit("correction_setup");
   }
@@ -2350,8 +2350,8 @@ double computeMonitorReading(ELEMENT_LIST *elem, long coord, double x, double y,
 
   if (equation) {
     rpn_clear();
-    rpn_store(x, rpn_x_mem);
-    rpn_store(y, rpn_y_mem);
+    rpn_store(x, NULL, rpn_x_mem);
+    rpn_store(y, NULL, rpn_y_mem);
     reading = rpn(equation)*calibration;
     if (rpn_check_error()) exit(1);
   }

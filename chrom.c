@@ -383,7 +383,7 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
                   K2 = *K2ptr = SIGN(K2)*chrom->strengthLimit;
                 }
                 sprintf(buffer, "%s#%ld.K2", context->name, context->occurence);
-                rpn_store(K2, rpn_create_mem(buffer));
+                rpn_store(K2, NULL, rpn_create_mem(buffer, 0));
                 if (K2>K2_max)
                   K2_max = K2;
                 if (K2<K2_min)

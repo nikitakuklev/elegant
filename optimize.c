@@ -183,9 +183,9 @@ void add_optimization_variable(OPTIMIZATION_DATA *optimization_data, NAMELIST_TE
     sprintf(variables->varied_quan_name[n_variables], "%s.%s", name, item);
     variables->lower_limit[n_variables] = lower_limit;
     variables->upper_limit[n_variables] = upper_limit;
-    rpn_store(variables->initial_value[n_variables], 
+    rpn_store(variables->initial_value[n_variables], NULL, 
               variables->memory_number[n_variables] = 
-              rpn_create_mem(variables->varied_quan_name[n_variables]));
+              rpn_create_mem(variables->varied_quan_name[n_variables], 0));
 
     for (i=0; i<extras; i++) {
       variables->varied_quan_name[n_variables+i+1] = extra_name[i];
@@ -293,8 +293,8 @@ void add_optimization_covariable(OPTIMIZATION_DATA *optimization_data, NAMELIST_
     covariables->varied_quan_name[n_covariables]  = tmalloc(sizeof(char)*(strlen(name)+strlen(item)+3));
     sprintf(covariables->varied_quan_name[n_covariables], "%s.%s", name, item);
     cp_str(&covariables->equation[n_covariables], equation);
-    rpn_store(covariables->varied_quan_value[n_covariables] = rpn(equation),
-              covariables->memory_number[n_covariables] = rpn_create_mem(covariables->varied_quan_name[n_covariables]) );
+    rpn_store(covariables->varied_quan_value[n_covariables] = rpn(equation), NULL,
+              covariables->memory_number[n_covariables] = rpn_create_mem(covariables->varied_quan_name[n_covariables], 0) );
     if (rpn_check_error()) exit(1);
     fprintf(stdout, "Initial value of %s is %e %s\n", 
             covariables->varied_quan_name[n_covariables], covariables->varied_quan_value[n_covariables],
@@ -1025,7 +1025,7 @@ double optimization_function(double *value, long *invalid)
   assert_parameter_values(variables->element, variables->varied_param, variables->varied_type,
                           value, variables->n_variables, beamline);
   for (i=0; i<variables->n_variables; i++)
-    rpn_store(value[i], variables->memory_number[i]);
+    rpn_store(value[i], NULL, variables->memory_number[i]);
   /* set element flags to indicate variation of parameters */
   set_element_flags(beamline, variables->element, NULL, variables->varied_type, variables->varied_param, 
                     variables->n_variables, PARAMETERS_ARE_VARIED, VMATRIX_IS_VARIED, 0, 0);
@@ -1038,7 +1038,7 @@ double optimization_function(double *value, long *invalid)
     /* calculate values of covariables and assert these as well */
     for (i=0; i<covariables->n_covariables; i++) {
       rpn_clear();
-      rpn_store(covariables->varied_quan_value[i]=rpn(covariables->pcode[i]), covariables->memory_number[i]);
+      rpn_store(covariables->varied_quan_value[i]=rpn(covariables->pcode[i]), NULL, covariables->memory_number[i]);
       if (rpn_check_error()) exit(1);
     }
     assert_parameter_values(covariables->element, covariables->varied_param, covariables->varied_type,
@@ -1140,7 +1140,7 @@ double optimization_function(double *value, long *invalid)
   if (beamline->flags&BEAMLINE_TWISS_WANTED) {
     if (twiss_mem[0]==-1) {
       for (i=0; i<N_TWISS_QUANS; i++)
-        twiss_mem[i] = rpn_create_mem(twiss_name[i]);
+        twiss_mem[i] = rpn_create_mem(twiss_name[i], 0);
     }
     /* get twiss mode and (beta, alpha, eta, etap) for both planes */
 #if DEBUG
@@ -1154,75 +1154,75 @@ double optimization_function(double *value, long *invalid)
 #endif
     /* store twiss parameters for last element */
     for (i=0; i<5; i++) {
-      rpn_store(*((&beamline->elast->twiss->betax)+i)/(i==2?PIx2:1), twiss_mem[i]);
-      rpn_store(*((&beamline->elast->twiss->betay)+i)/(i==2?PIx2:1), twiss_mem[i+5]);
+      rpn_store(*((&beamline->elast->twiss->betax)+i)/(i==2?PIx2:1), NULL, twiss_mem[i]);
+      rpn_store(*((&beamline->elast->twiss->betay)+i)/(i==2?PIx2:1), NULL, twiss_mem[i+5]);
     }
     /* store statistics */
     compute_twiss_statistics(beamline, &twiss_ave, &twiss_min, &twiss_max);
-    rpn_store(twiss_max.betax, twiss_mem[10]);
-    rpn_store(twiss_max.etax,  twiss_mem[11]);
-    rpn_store(twiss_max.etapx, twiss_mem[12]);
-    rpn_store(twiss_max.betay, twiss_mem[13]);
-    rpn_store(twiss_max.etay,  twiss_mem[14]);
-    rpn_store(twiss_max.etapy, twiss_mem[15]);
-    rpn_store(twiss_min.betax, twiss_mem[16]);
-    rpn_store(twiss_min.etax,  twiss_mem[17]);
-    rpn_store(twiss_min.etapx, twiss_mem[18]);
-    rpn_store(twiss_min.betay, twiss_mem[19]);
-    rpn_store(twiss_min.etay,  twiss_mem[20]);
-    rpn_store(twiss_min.etapy, twiss_mem[21]);
+    rpn_store(twiss_max.betax, NULL, twiss_mem[10]);
+    rpn_store(twiss_max.etax, NULL,  twiss_mem[11]);
+    rpn_store(twiss_max.etapx, NULL, twiss_mem[12]);
+    rpn_store(twiss_max.betay, NULL, twiss_mem[13]);
+    rpn_store(twiss_max.etay, NULL,  twiss_mem[14]);
+    rpn_store(twiss_max.etapy, NULL, twiss_mem[15]);
+    rpn_store(twiss_min.betax, NULL, twiss_mem[16]);
+    rpn_store(twiss_min.etax, NULL,  twiss_mem[17]);
+    rpn_store(twiss_min.etapx, NULL, twiss_mem[18]);
+    rpn_store(twiss_min.betay, NULL, twiss_mem[19]);
+    rpn_store(twiss_min.etay, NULL,  twiss_mem[20]);
+    rpn_store(twiss_min.etapy, NULL, twiss_mem[21]);
     /* chromaticity */
-    rpn_store(beamline->chromaticity[0], twiss_mem[22]);
-    rpn_store(beamline->chromaticity[1], twiss_mem[23]);
+    rpn_store(beamline->chromaticity[0], NULL, twiss_mem[22]);
+    rpn_store(beamline->chromaticity[1], NULL, twiss_mem[23]);
     /* first and second-order momentum compaction */
-    rpn_store(beamline->alpha[0], twiss_mem[24]);
-    rpn_store(beamline->alpha[1], twiss_mem[25]);
+    rpn_store(beamline->alpha[0], NULL, twiss_mem[24]);
+    rpn_store(beamline->alpha[1], NULL, twiss_mem[25]);
     /* more statistics */
-    rpn_store(twiss_ave.betax, twiss_mem[26]);
-    rpn_store(twiss_ave.betay, twiss_mem[27]);
+    rpn_store(twiss_ave.betax, NULL, twiss_mem[26]);
+    rpn_store(twiss_ave.betay, NULL, twiss_mem[27]);
     /* alternate names for etapx and etapy */
-    rpn_store(beamline->elast->twiss->etapx, twiss_mem[28]);
-    rpn_store(beamline->elast->twiss->etapy, twiss_mem[29]);
+    rpn_store(beamline->elast->twiss->etapx, NULL, twiss_mem[28]);
+    rpn_store(beamline->elast->twiss->etapy, NULL, twiss_mem[29]);
     /* number of waists per plane */
-    rpn_store((double)beamline->waists[0], twiss_mem[30]);
-    rpn_store((double)beamline->waists[1], twiss_mem[31]);
+    rpn_store((double)beamline->waists[0], NULL, twiss_mem[30]);
+    rpn_store((double)beamline->waists[1], NULL, twiss_mem[31]);
     /* amplitude-dependent tune shifts */
-    rpn_store(beamline->dnux_dA[1][0], twiss_mem[32]);
-    rpn_store(beamline->dnux_dA[0][1], twiss_mem[33]);
-    rpn_store(beamline->dnuy_dA[1][0], twiss_mem[34]);
-    rpn_store(beamline->dnuy_dA[0][1], twiss_mem[35]);
+    rpn_store(beamline->dnux_dA[1][0], NULL, twiss_mem[32]);
+    rpn_store(beamline->dnux_dA[0][1], NULL, twiss_mem[33]);
+    rpn_store(beamline->dnuy_dA[1][0], NULL, twiss_mem[34]);
+    rpn_store(beamline->dnuy_dA[0][1], NULL, twiss_mem[35]);
     /* higher-order chromaticities */
-    rpn_store(beamline->chrom2[0], twiss_mem[36]);
-    rpn_store(beamline->chrom3[0], twiss_mem[37]);
-    rpn_store(beamline->chrom2[1], twiss_mem[38]);
-    rpn_store(beamline->chrom3[1], twiss_mem[39]);
+    rpn_store(beamline->chrom2[0], NULL, twiss_mem[36]);
+    rpn_store(beamline->chrom3[0], NULL, twiss_mem[37]);
+    rpn_store(beamline->chrom2[1], NULL, twiss_mem[38]);
+    rpn_store(beamline->chrom3[1], NULL, twiss_mem[39]);
     /* higher-order dispersion */
-    rpn_store(beamline->eta2[0], twiss_mem[40]);
-    rpn_store(beamline->eta3[0], twiss_mem[41]);
-    rpn_store(beamline->eta2[2], twiss_mem[42]);
-    rpn_store(beamline->eta3[2], twiss_mem[43]);
+    rpn_store(beamline->eta2[0], NULL, twiss_mem[40]);
+    rpn_store(beamline->eta3[0], NULL, twiss_mem[41]);
+    rpn_store(beamline->eta2[2], NULL, twiss_mem[42]);
+    rpn_store(beamline->eta3[2], NULL, twiss_mem[43]);
     /* limits of tunes due to chromatic effects */
-    rpn_store(beamline->tuneChromLower[0], twiss_mem[44]);
-    rpn_store(beamline->tuneChromUpper[0], twiss_mem[45]);
-    rpn_store(beamline->tuneChromLower[1], twiss_mem[46]);
-    rpn_store(beamline->tuneChromUpper[1], twiss_mem[47]);
+    rpn_store(beamline->tuneChromLower[0], NULL, twiss_mem[44]);
+    rpn_store(beamline->tuneChromUpper[0], NULL, twiss_mem[45]);
+    rpn_store(beamline->tuneChromLower[1], NULL, twiss_mem[46]);
+    rpn_store(beamline->tuneChromUpper[1], NULL, twiss_mem[47]);
     /* derivative of beta functions with momentum offset */
-    rpn_store(beamline->dbeta_dPoP[0], twiss_mem[48]);
-    rpn_store(beamline->dbeta_dPoP[1], twiss_mem[49]);
-    rpn_store(beamline->dalpha_dPoP[0], twiss_mem[50]);
-    rpn_store(beamline->dalpha_dPoP[1], twiss_mem[51]);
+    rpn_store(beamline->dbeta_dPoP[0], NULL, twiss_mem[48]);
+    rpn_store(beamline->dbeta_dPoP[1], NULL, twiss_mem[49]);
+    rpn_store(beamline->dalpha_dPoP[0], NULL, twiss_mem[50]);
+    rpn_store(beamline->dalpha_dPoP[1], NULL, twiss_mem[51]);
     /* higher-order tune shifts with amplitude */
-    rpn_store(beamline->dnux_dA[2][0], twiss_mem[52]);
-    rpn_store(beamline->dnux_dA[0][2], twiss_mem[53]);
-    rpn_store(beamline->dnuy_dA[2][0], twiss_mem[54]);
-    rpn_store(beamline->dnuy_dA[0][2], twiss_mem[55]);
-    rpn_store(beamline->dnux_dA[1][1], twiss_mem[56]);
-    rpn_store(beamline->dnuy_dA[1][1], twiss_mem[57]);
+    rpn_store(beamline->dnux_dA[2][0], NULL, twiss_mem[52]);
+    rpn_store(beamline->dnux_dA[0][2], NULL, twiss_mem[53]);
+    rpn_store(beamline->dnuy_dA[2][0], NULL, twiss_mem[54]);
+    rpn_store(beamline->dnuy_dA[0][2], NULL, twiss_mem[55]);
+    rpn_store(beamline->dnux_dA[1][1], NULL, twiss_mem[56]);
+    rpn_store(beamline->dnuy_dA[1][1], NULL, twiss_mem[57]);
     /* tune extrema due to TSWA */
-    rpn_store(beamline->nuxTswaExtrema[0], twiss_mem[58]);
-    rpn_store(beamline->nuxTswaExtrema[1], twiss_mem[59]);
-    rpn_store(beamline->nuyTswaExtrema[0], twiss_mem[60]);
-    rpn_store(beamline->nuyTswaExtrema[1], twiss_mem[61]);
+    rpn_store(beamline->nuxTswaExtrema[0], NULL, twiss_mem[58]);
+    rpn_store(beamline->nuxTswaExtrema[1], NULL, twiss_mem[59]);
+    rpn_store(beamline->nuyTswaExtrema[0], NULL, twiss_mem[60]);
+    rpn_store(beamline->nuyTswaExtrema[1], NULL, twiss_mem[61]);
 #if DEBUG
     fprintf(stdout, "Twiss parameters done.\n");
     fflush(stdout);
@@ -1235,39 +1235,39 @@ double optimization_function(double *value, long *invalid)
 #endif
     if (radint_mem[0]==-1) {
       for (i=0; i<13; i++)
-        radint_mem[i] = rpn_create_mem(radint_name[i]);
+        radint_mem[i] = rpn_create_mem(radint_name[i], 0);
     }
     /* radiation integrals already updated by update_twiss_parameters above
        which is guaranteed to be called
        */
-    rpn_store(beamline->radIntegrals.ex0>0?beamline->radIntegrals.ex0:sqrt(DBL_MAX), 
+    rpn_store(beamline->radIntegrals.ex0>0?beamline->radIntegrals.ex0:sqrt(DBL_MAX), NULL, 
               radint_mem[0]);
-    rpn_store(beamline->radIntegrals.sigmadelta, radint_mem[1]);
-    rpn_store(beamline->radIntegrals.Jx, radint_mem[2]);
-    rpn_store(beamline->radIntegrals.Jy, radint_mem[3]);
-    rpn_store(beamline->radIntegrals.Jdelta, radint_mem[4]);
-    rpn_store(beamline->radIntegrals.taux, radint_mem[5]);
-    rpn_store(beamline->radIntegrals.tauy, radint_mem[6]);
-    rpn_store(beamline->radIntegrals.taudelta, radint_mem[7]);
+    rpn_store(beamline->radIntegrals.sigmadelta, NULL, radint_mem[1]);
+    rpn_store(beamline->radIntegrals.Jx, NULL, radint_mem[2]);
+    rpn_store(beamline->radIntegrals.Jy, NULL, radint_mem[3]);
+    rpn_store(beamline->radIntegrals.Jdelta, NULL, radint_mem[4]);
+    rpn_store(beamline->radIntegrals.taux, NULL, radint_mem[5]);
+    rpn_store(beamline->radIntegrals.tauy, NULL, radint_mem[6]);
+    rpn_store(beamline->radIntegrals.taudelta, NULL, radint_mem[7]);
     for (i=0; i<5; i++)
-      rpn_store(beamline->radIntegrals.I[i], radint_mem[i+8]);
+      rpn_store(beamline->radIntegrals.I[i], NULL, radint_mem[i+8]);
   }
 
   if (floorCoord_mem[0]==-1) 
     for (i=0; i<7; i++)
-      floorCoord_mem[i] = rpn_create_mem(floorCoord_name[i]);
+      floorCoord_mem[i] = rpn_create_mem(floorCoord_name[i], 0);
   if (floorStat_mem[0]==-1)
     for (i=0; i<6; i++)
-      floorStat_mem[i] = rpn_create_mem(floorStat_name[i]);
+      floorStat_mem[i] = rpn_create_mem(floorStat_name[i], 0);
   final_floor_coordinates(beamline, XYZ, Angle, XYZMin, XYZMax);
   for (i=0; i<3; i++) {
-    rpn_store(XYZ[i], floorCoord_mem[i]);
-    rpn_store(Angle[i], floorCoord_mem[i+3]);
-    rpn_store(XYZMin[i], floorStat_mem[i]);
-    rpn_store(XYZMax[i], floorStat_mem[i+3]);
+    rpn_store(XYZ[i], NULL, floorCoord_mem[i]);
+    rpn_store(Angle[i], NULL, floorCoord_mem[i+3]);
+    rpn_store(XYZMin[i], NULL, floorStat_mem[i]);
+    rpn_store(XYZMax[i], NULL, floorStat_mem[i+3]);
   }
   compute_end_positions(beamline);
-  rpn_store(beamline->revolution_length, floorCoord_mem[6]);
+  rpn_store(beamline->revolution_length, NULL, floorCoord_mem[6]);
 
   for (i=0; i<variables->n_variables; i++)
     variables->varied_quan_value[i] = value[i];
@@ -1544,7 +1544,7 @@ void rpnStoreHigherMatrixElements(VMATRIX *M, long **TijkMem, long **UijklMem, l
       for (j=0; j<6; j++)
         for (k=0; k<=j; k++, count++) {
           sprintf(buffer, "T%ld%ld%ld", i+1, j+1, k+1);
-          (*TijkMem)[count] = rpn_create_mem(buffer);
+          (*TijkMem)[count] = rpn_create_mem(buffer, 0);
         }
   }
   if (!*UijklMem && maxOrder>=3) {
@@ -1560,7 +1560,7 @@ void rpnStoreHigherMatrixElements(VMATRIX *M, long **TijkMem, long **UijklMem, l
         for (k=0; k<=j; k++)
           for (l=0; l<=k; l++, count++) {
             sprintf(buffer, "U%ld%ld%ld%ld", i+1, j+1, k+1, l+1);
-            (*UijklMem)[count] = rpn_create_mem(buffer);
+            (*UijklMem)[count] = rpn_create_mem(buffer, 0);
           }
   }
     
@@ -1572,7 +1572,7 @@ void rpnStoreHigherMatrixElements(VMATRIX *M, long **TijkMem, long **UijklMem, l
       for (i=count=0; i<6; i++)
         for (j=0; j<6; j++)
           for (k=0; k<=j; k++, count++)
-            rpn_store(M->T[i][j][k], (*TijkMem)[count]);
+            rpn_store(M->T[i][j][k], NULL, (*TijkMem)[count]);
       break;
     case 3:
       if (!M->Q)
@@ -1581,7 +1581,7 @@ void rpnStoreHigherMatrixElements(VMATRIX *M, long **TijkMem, long **UijklMem, l
         for (j=0; j<6; j++)
           for (k=0; k<=j; k++)
             for (l=0; l<=k; l++, count++)
-              rpn_store(M->Q[i][j][k][l], (*UijklMem)[count]);
+              rpn_store(M->Q[i][j][k][l], NULL, (*UijklMem)[count]);
       break;
     default:
       break;

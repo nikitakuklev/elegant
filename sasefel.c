@@ -9,6 +9,9 @@
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.22  2003/07/24 01:42:52  borland
+ * Added Ct and Cdelta output for SASE FEL computations.
+ *
  * Revision 1.21  2003/05/07 14:48:34  soliday
  * Removed fsync warning message.
  *
@@ -778,14 +781,14 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
 
 void storeSASEFELAtEndInRPN(SASEFEL_OUTPUT *sasefelOutput)
 {
-  rpn_store(sasefelOutput->lightWavelength[0],
-            rpn_create_mem("SASE.lightWavelength"));
-  rpn_store(sasefelOutput->gainLength[0],
-            rpn_create_mem("SASE.gainLength"));
-  rpn_store(sasefelOutput->saturationPower[0],
-            rpn_create_mem("SASE.saturationPower"));
-  rpn_store(sasefelOutput->saturationLength[0],
-            rpn_create_mem("SASE.saturationLength"));
+  rpn_store(sasefelOutput->lightWavelength[0], NULL,
+            rpn_create_mem("SASE.lightWavelength", 0));
+  rpn_store(sasefelOutput->gainLength[0], NULL,
+            rpn_create_mem("SASE.gainLength", 0));
+  rpn_store(sasefelOutput->saturationPower[0], NULL,
+            rpn_create_mem("SASE.saturationPower", 0));
+  rpn_store(sasefelOutput->saturationLength[0], NULL,
+            rpn_create_mem("SASE.saturationLength", 0));
 }
 
 

@@ -2712,7 +2712,7 @@ void store_fitpoint_twiss_parameters(MARK *fpt, char *name, long occurence,TWISS
     fpt->init_flags |= 1;
     for (i=0; i<12; i++) {
       sprintf(s, "%s#%ld.%s", name, occurence, twiss_name_suffix[i]);
-      fpt->twiss_mem[i] = rpn_create_mem(s);
+      fpt->twiss_mem[i] = rpn_create_mem(s, 0);
     }
   }
   if (!twiss) {
@@ -2721,13 +2721,13 @@ void store_fitpoint_twiss_parameters(MARK *fpt, char *name, long occurence,TWISS
     abort();
   }
   for (i=0; i<5; i++) {
-    rpn_store(*((&twiss->betax)+i)/(i==2?PIx2:1), fpt->twiss_mem[i]);
-    rpn_store(*((&twiss->betay)+i)/(i==2?PIx2:1), fpt->twiss_mem[i+6]);
+    rpn_store(*((&twiss->betax)+i)/(i==2?PIx2:1), NULL, fpt->twiss_mem[i]);
+    rpn_store(*((&twiss->betay)+i)/(i==2?PIx2:1), NULL, fpt->twiss_mem[i+6]);
   }
   /* store etaxp and etayp in under two names each: etapx and etaxp */
   i = 4;
-  rpn_store(*((&twiss->betax)+i), fpt->twiss_mem[i+1]);
-  rpn_store(*((&twiss->betay)+i), fpt->twiss_mem[i+7]);
+  rpn_store(*((&twiss->betax)+i), NULL, fpt->twiss_mem[i+1]);
+  rpn_store(*((&twiss->betay)+i), NULL, fpt->twiss_mem[i+7]);
 }
 
 
@@ -2791,7 +2791,7 @@ void processTwissAnalysisRequests(ELEMENT_LIST *elem)
         if (!twissAnalysisRequest[i].initialized) {
           sprintf(buffer, "%s.%s.%s", twissAnalysisRequest[i].tag,
                   twissAnalysisStatName[is], twissAnalysisQuantityName[iq]);
-          twissAnalysisRequest[i].twissMem[is][iq] = rpn_create_mem(buffer);
+          twissAnalysisRequest[i].twissMem[is][iq] = rpn_create_mem(buffer, 0);
         }
       twissData[TWISS_ANALYSIS_AVE][iq] = 0;
       twissData[TWISS_ANALYSIS_MIN][iq] = DBL_MAX;
@@ -2863,7 +2863,7 @@ void processTwissAnalysisRequests(ELEMENT_LIST *elem)
       else
         twissData[TWISS_ANALYSIS_AVE][iq] = 0;
       for (is=0; is<TWISS_ANALYSIS_STATS; is++) {
-        rpn_store(twissData[is][iq], twissAnalysisRequest[i].twissMem[is][iq]);
+        rpn_store(twissData[is][iq], NULL, twissAnalysisRequest[i].twissMem[is][iq]);
       }
     }
     elem = elemOrig;

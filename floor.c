@@ -497,17 +497,17 @@ void final_floor_coordinates(LINE_LIST *beamline, double *XYZ, double *Angle,
         for (i=0; i<7; i++) {
           sprintf(t, "%s#%ld.%s", elem->name, elem->occurence,
                   suffix[i]);
-          mark->floor_mem[i] = rpn_create_mem(t);
+          mark->floor_mem[i] = rpn_create_mem(t, 0);
         }
         mark->init_flags |= 4;
       }
-      rpn_store(V1->a[0][0], mark->floor_mem[0]);
-      rpn_store(V1->a[1][0], mark->floor_mem[1]);
-      rpn_store(V1->a[2][0], mark->floor_mem[2]);
-      rpn_store(theta, mark->floor_mem[3]);
-      rpn_store(phi, mark->floor_mem[4]);
-      rpn_store(psi, mark->floor_mem[5]);
-      rpn_store(s, mark->floor_mem[6]);
+      rpn_store(V1->a[0][0], NULL, mark->floor_mem[0]);
+      rpn_store(V1->a[1][0], NULL, mark->floor_mem[1]);
+      rpn_store(V1->a[2][0], NULL, mark->floor_mem[2]);
+      rpn_store(theta, NULL, mark->floor_mem[3]);
+      rpn_store(phi, NULL, mark->floor_mem[4]);
+      rpn_store(psi, NULL, mark->floor_mem[5]);
+      rpn_store(s, NULL, mark->floor_mem[6]);
     }
     m_copy(V0, V1);
     m_copy(W0, W1);

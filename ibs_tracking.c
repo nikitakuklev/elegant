@@ -143,12 +143,12 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
     inflateEmittance(coord, Po, 2, np, (1+dT*yGrowthRate));
     inflateEmittance(coord, Po, 4, np, (1+dT*zGrowthRate));
   }
-  rpn_store(xGrowthRate, rpn_create_mem("IBSRatex"));
-  rpn_store(yGrowthRate, rpn_create_mem("IBSRatey"));
-  rpn_store(zGrowthRate, rpn_create_mem("IBSRatel"));
-  rpn_store(xGrowthRate*emitx, rpn_create_mem("exTimesIBSRate"));
-  rpn_store(yGrowthRate*emity, rpn_create_mem("eyTimesIBSRate"));
-  rpn_store(zGrowthRate*emitl, rpn_create_mem("elTimesIBSRate"));
+  rpn_store(xGrowthRate, NULL, rpn_create_mem("IBSRatex", 0));
+  rpn_store(yGrowthRate, NULL, rpn_create_mem("IBSRatey", 0));
+  rpn_store(zGrowthRate, NULL, rpn_create_mem("IBSRatel", 0));
+  rpn_store(xGrowthRate*emitx, NULL, rpn_create_mem("exTimesIBSRate", 0));
+  rpn_store(yGrowthRate*emity, NULL, rpn_create_mem("eyTimesIBSRate", 0));
+  rpn_store(zGrowthRate*emitl, NULL, rpn_create_mem("elTimesIBSRate", 0));
 #if DEBUG
   fprintf(fpdeb, "%ld %le %le %le %le %le %le %le %le %le %le %le %le %le\n",
 	  pass++, 
