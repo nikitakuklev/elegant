@@ -674,7 +674,7 @@ extern char *entity_text[N_TYPES];
 #define N_TFBDRIVER_PARAMS 20
 #define N_LSCDRIFT_PARAMS  9
 #define N_DSCATTER_PARAMS 13
-#define N_PLUND_PARAMS 13
+#define N_PLUND_PARAMS 14
 #define N_TAYLORSERIES_PARAMS 6
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
@@ -2032,7 +2032,7 @@ extern PARAMETER plund_param[N_PLUND_PARAMS];
 typedef struct {
   double length, Bu;
   long periods;
-  char *method;
+  char *method, *fieldExpansion;
   double accuracy; 
   long nSteps;
   double poleFactor1, poleFactor2, poleFactor3;
@@ -2040,7 +2040,8 @@ typedef struct {
   /* internal variables */
   double laserWavelength, Ef0Laser, omega, k;
   double Escale, Bscale;
-  double ku, xOffset, BuScaled;
+  double ku, xOffset, BuScaled, ZRayleigh;
+  short fieldCode;
 } PLUND;
 
 /* names and storage structure for Taylor-series map physical parameters */

@@ -156,7 +156,7 @@ and phase modulation.",
     "Driver for a transverse feedback loop",
     "Longitudinal space charge impedance",
     "A scattering element to add random changes to particle coordinates according to a user-supplied distribution function",
-    "Ideal Planar Undulator via numerical integration."
+    "Planar Undulator via numerical integration, including optional co-propagating laser beam."
     "Tracks through a Taylor series map specified by a file containing coefficients.",
     } ;
 
@@ -1793,8 +1793,9 @@ PARAMETER plund_param[N_PLUND_PARAMS] = {
     {"L", "M", IS_DOUBLE, 0, (long)((char *)&plund_example.length), NULL, 0.0, 0, "length"},
     {"BU", "T", IS_DOUBLE, 0, (long)((char *)&plund_example.Bu), NULL, 0.0, 0, "Undulator peak field"},
     {"PERIODS", "", IS_LONG, 0, (long)((char *)&plund_example.periods), NULL, 0.0, 0, "Number of undulator periods."},
-    {"METHOD", NULL, IS_STRING, 0, (long)((char*)&plund_example.method), DEFAULT_INTEG_METHOD, 0.0, 0, "integration method (runge-kutta, bulirsch-stoer, modified-midpoint, two-pass modified-midpoint, leap-frog, non-adaptive runge-kutta"},
-    {"ACCURACY", NULL, IS_DOUBLE, 0, (long)((char *)&plund_example.accuracy), NULL, 0.0, 0, "Integration accuracy for adaptive integration."},
+    {"METHOD", NULL, IS_STRING, 0, (long)((char*)&plund_example.method), DEFAULT_INTEG_METHOD, 0.0, 0, "integration method (runge-kutta, bulirsch-stoer, modified-midpoint, two-pass modified-midpoint, leap-frog, non-adaptive runge-kutta)"},
+    {"FIELD_EXPANSION", NULL, IS_STRING, 0, (long)((char*)&plund_example.fieldExpansion), "ideal", 0.0, 0, "ideal, exact, or \"leading terms\""},
+    {"ACCURACY", NULL, IS_DOUBLE, 0, (long)((char *)&plund_example.accuracy), NULL, 0.0, 0, "Integration accuracy for adaptive integration. (Not recommended)"},
     {"N_STEPS", "", IS_LONG, 0, (long)((char *)&plund_example.nSteps), NULL, 0.0, 0, "Number of integration steps for non-adaptive integration."},
      {"POLE_FACTOR1", "", IS_DOUBLE, 0, (long)((char *)&plund_example.poleFactor1), NULL, 3.019671e-01, 0, "Strength factor for the first and last pole."},
     {"POLE_FACTOR2", "", IS_DOUBLE, 0, (long)((char *)&plund_example.poleFactor2), NULL, 4.529505e-01, 0, "Strength factor for the second and second-to-last pole."},
@@ -1914,7 +1915,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_TFBDRIVER_PARAMS,         0,     sizeof(TFBDRIVER),  tfbdriver_param    },
     { N_LSCDRIFT_PARAMS, MAT_LEN_NCAT,     sizeof(LSCDRIFT),  lscdrift_param    },
     { N_DSCATTER_PARAMS,          0,     sizeof(DSCATTER),    dscatter_param  },
-    { N_PLUND_PARAMS,    MAT_LEN_NCAT|NO_DICT_OUTPUT, sizeof(PLUND), plund_param },
+    { N_PLUND_PARAMS,    MAT_LEN_NCAT, sizeof(PLUND), plund_param },
     { N_TAYLORSERIES_PARAMS, MAT_LEN_NCAT|IS_MAGNET|NO_DICT_OUTPUT,    sizeof(TAYLORSERIES),  taylorSeries_param  },
 } ;
  
