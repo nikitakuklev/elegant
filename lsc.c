@@ -412,11 +412,6 @@ void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge,
   applyLongitudinalWakeKicks(part, time, pbin, np, Po, Vtime, 
                              nb, tmin, dt, LSC->interpolate);
   
-  /* advance particles to the next step */
-  for (ib=0; ib<np; ib++) {
-    part[ib][4] += length;
-  }
-
 #if defined(MINIMIZE_MEMORY)
   free(Itime);
   free(Vtime);
