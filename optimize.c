@@ -1118,12 +1118,13 @@ double optimization_function(double *value, long *invalid)
         fflush(optimization_data->fp_log);
         if (optimization_data->terms) {
           fprintf(optimization_data->fp_log, "Terms of equation: \n");
-          for (i=0; i<optimization_data->terms; i++) {
+          for (i=sum=0; i<optimization_data->terms; i++) {
             rpn_clear();
             fprintf(optimization_data->fp_log, "%g*(%20s): %23.15e\n",
                     optimization_data->termWeight[i],
                     optimization_data->term[i],
                     rpn(optimization_data->term[i])*optimization_data->termWeight[i]);
+            sum += optimization_data->termWeight[i]*rpn(optimization_data->term[i]);
           }
           fprintf(optimization_data->fp_log, "    Error check: %le\n", sum-result);
         }
