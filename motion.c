@@ -77,7 +77,7 @@ void derivatives_mapSolenoid(
     double *q,        /* X,Y,Z,Px,Py,Pz */
     double tau     
     );
-void derivatives_planarUndulator(double *qp, double *q, double tau);
+void derivatives_laserModulator(double *qp, double *q, double tau);
 
 void computeFields_rftmEz0(double *E, double *BOverGamma, double *BOverGammaSol, 
                            double q0, double q1, double q2, double tau, double gamma);
@@ -145,11 +145,11 @@ static double initial_phase=0, final_phase=0;
 static double xMaxSeen=-1e300, xMinSeen=1e300;
 static long xMotionCenterVar = -1;
 
-#define PLUND_IDEAL 0
-#define PLUND_EXACT 1
-#define PLUND_LEADING 2
-#define N_PLUND_FIELD_EXPANSIONS 3
-static char *plUndFieldExpansion[N_PLUND_FIELD_EXPANSIONS] = {
+#define LSRMDLTR_IDEAL 0
+#define LSRMDLTR_EXACT 1
+#define LSRMDLTR_LEADING 2
+#define N_LSRMDLTR_FIELD_EXPANSIONS 3
+static char *lsrMdltrFieldExpansion[N_LSRMDLTR_FIELD_EXPANSIONS] = {
   "ideal", "exact", "leading terms"
   };
 
@@ -389,7 +389,7 @@ void (*set_up_derivatives(
   TWMTA *twmta;
   RFTMEZ0 *rftmEz0;
   MAP_SOLENOID *mapSol;
-  PLUND *plUnd;
+  LSRMDLTR *lsrMdltr;
   
   double *fiducial, gamma, Po, Pz, gamma_w, omega;
   double Escale, Bscale, Ku, beta;
@@ -423,42 +423,42 @@ void (*set_up_derivatives(
     setupRotate3Matrix((void**)&fieldRot, mapSol->eTilt, mapSol->eYaw, mapSol->ePitch);
     return(derivatives_mapSolenoid);
     break;
-  case T_PLUND:
-    plUnd = (PLUND*)field;
+  case T_LSRMDLTR:
+    lsrMdltr = (LSRMDLTR*)field;
     *tau_start = 0;
-    select_integrator(plUnd->method);
-    *accuracy = plUnd->accuracy;
-    *n_steps = plUnd->nSteps;
-    plUnd->ku = 2*PI/(plUnd->length/plUnd->periods);
+    select_integrator(lsrMdltr->method);
+    *accuracy = lsrMdltr->accuracy;
+    *n_steps = lsrMdltr->nSteps;
+    lsrMdltr->ku = 2*PI/(lsrMdltr->length/lsrMdltr->periods);
     gamma = sqrt(sqr(P_central)+1);
     beta = P_central/gamma;
-    Ku = plUnd->Bu*e_mks/(me_mks*c_mks)/(beta*plUnd->ku);
-    if ((plUnd->fieldCode = match_string(plUnd->fieldExpansion, 
-                                         plUndFieldExpansion, N_PLUND_FIELD_EXPANSIONS, 0)),0) {
+    Ku = lsrMdltr->Bu*e_mks/(me_mks*c_mks)/(beta*lsrMdltr->ku);
+    if ((lsrMdltr->fieldCode = match_string(lsrMdltr->fieldExpansion, 
+                                         lsrMdltrFieldExpansion, N_LSRMDLTR_FIELD_EXPANSIONS, 0)),0) {
       long i;
-      fputs("Error: field expansion for PLUND elements must be one of:\n", stdout);
-      for (i=0; i<N_PLUND_FIELD_EXPANSIONS; i++)
-        fprintf(stdout, "    %s\n", plUndFieldExpansion[i]);
+      fputs("Error: field expansion for LSRMDLTR elements must be one of:\n", stdout);
+      for (i=0; i<N_LSRMDLTR_FIELD_EXPANSIONS; i++)
+        fprintf(stdout, "    %s\n", lsrMdltrFieldExpansion[i]);
       exit(1);
     }
-    if (plUnd->usersLaserWavelength)
-      plUnd->laserWavelength = plUnd->usersLaserWavelength;
+    if (lsrMdltr->usersLaserWavelength)
+      lsrMdltr->laserWavelength = lsrMdltr->usersLaserWavelength;
     else
-      plUnd->laserWavelength = plUnd->length/plUnd->periods/(2*sqr(gamma))*(1 + sqr(Ku)/2);
-    plUnd->k = *kscale = PIx2/plUnd->laserWavelength;
-    plUnd->ZRayleigh = plUnd->k/2*sqr(plUnd->laserW0); 
-    plUnd->omega = omega = *kscale*c_mks;
-    plUnd->Escale = e_mks/(me_mks*omega*c_mks);
-    plUnd->Bscale = e_mks/(me_mks*omega);
-    plUnd->Ef0Laser = 2/plUnd->laserW0*sqrt(sqrt(mu_o/epsilon_o)*plUnd->laserPeakPower/PI);
+      lsrMdltr->laserWavelength = lsrMdltr->length/lsrMdltr->periods/(2*sqr(gamma))*(1 + sqr(Ku)/2);
+    lsrMdltr->k = *kscale = PIx2/lsrMdltr->laserWavelength;
+    lsrMdltr->ZRayleigh = lsrMdltr->k/2*sqr(lsrMdltr->laserW0); 
+    lsrMdltr->omega = omega = *kscale*c_mks;
+    lsrMdltr->Escale = e_mks/(me_mks*omega*c_mks);
+    lsrMdltr->Bscale = e_mks/(me_mks*omega);
+    lsrMdltr->Ef0Laser = 2/lsrMdltr->laserW0*sqrt(sqrt(mu_o/epsilon_o)*lsrMdltr->laserPeakPower/PI);
     X_offset = 0;
     X_aperture_center = X_center = 0;
     Y_aperture_center = Y_center = 0;
     Y_offset = 0;
-    *Z_end = plUnd->length*(*kscale);
-    Z_center = plUnd->length/2*(*kscale);
+    *Z_end = lsrMdltr->length*(*kscale);
+    Z_center = lsrMdltr->length/2*(*kscale);
     *X_limit = *Y_limit = 1e300;
-    return(derivatives_planarUndulator);
+    return(derivatives_laserModulator);
     break;
   case T_RFTMEZ0:
     rftmEz0 = field;
@@ -2092,9 +2092,9 @@ void computeLaserField(double *Ef, double *Bf, double phase, double Ef0, double 
 FILE *fppu = NULL;
 #endif
 
-void derivatives_planarUndulator(double *qp, double *q, double tau)
+void derivatives_laserModulator(double *qp, double *q, double tau)
 {
-  PLUND *plUnd; 
+  LSRMDLTR *lsrMdltr; 
   double gamma, *P, *Pp;
   double BOverGamma[3]={0,0,0}, E[3]={0,0,0}, Blaser[3]={0,0,0};
   double x, y, z, factor, Bfactor, kuz, kuy;
@@ -2102,7 +2102,7 @@ void derivatives_planarUndulator(double *qp, double *q, double tau)
   
 #ifdef DEBUG
   if (!fppu) {
-    fppu = fopen("plund.sdds", "w");
+    fppu = fopen("lsrMdltr.sdds", "w");
     fprintf(fppu, "SDDS1\n");
     fprintf(fppu, "&column name=tau type=double &end\n");
     fprintf(fppu, "&column name=t type=double units=s &end\n");
@@ -2128,33 +2128,33 @@ void derivatives_planarUndulator(double *qp, double *q, double tau)
   qp[1] = P[1]/gamma;
   qp[2] = P[2]/gamma;
     
-  plUnd = (PLUND*)field_global;
+  lsrMdltr = (LSRMDLTR*)field_global;
 
-  x = (q[0] - X_offset)/plUnd->k;
-  y = q[1]/plUnd->k;
-  z = q[2]/plUnd->k;
+  x = (q[0] - X_offset)/lsrMdltr->k;
+  y = q[1]/lsrMdltr->k;
+  z = q[2]/lsrMdltr->k;
   if (x<xMinSeen)
     xMinSeen = x;
   if (x>xMaxSeen)
     xMaxSeen = x;
   
-  poleNumber = z/(plUnd->length/(2*plUnd->periods))+0.5;
-  if (poleNumber>2 && poleNumber<(2*plUnd->periods-2))
+  poleNumber = z/(lsrMdltr->length/(2*lsrMdltr->periods))+0.5;
+  if (poleNumber>2 && poleNumber<(2*lsrMdltr->periods-2))
     factor = 1;
-  else if (poleNumber==0 || poleNumber==2*plUnd->periods)
-    factor = plUnd->poleFactor1;
-  else if (poleNumber==1 || poleNumber==(2*plUnd->periods-1))
-    factor = plUnd->poleFactor2;
+  else if (poleNumber==0 || poleNumber==2*lsrMdltr->periods)
+    factor = lsrMdltr->poleFactor1;
+  else if (poleNumber==1 || poleNumber==(2*lsrMdltr->periods-1))
+    factor = lsrMdltr->poleFactor2;
   else 
-    factor = plUnd->poleFactor3;
+    factor = lsrMdltr->poleFactor3;
 
-  Bfactor = factor*plUnd->Bu*plUnd->Bscale/gamma;
-  kuz = plUnd->ku*z;
-  kuy = plUnd->ku*y;
-  if (plUnd->fieldCode==PLUND_IDEAL) {
+  Bfactor = factor*lsrMdltr->Bu*lsrMdltr->Bscale/gamma;
+  kuz = lsrMdltr->ku*z;
+  kuy = lsrMdltr->ku*y;
+  if (lsrMdltr->fieldCode==LSRMDLTR_IDEAL) {
     BOverGamma[1] = Bfactor*cos(kuz);
     BOverGamma[2] = 0;
-  } else if (plUnd->fieldCode==PLUND_EXACT) {
+  } else if (lsrMdltr->fieldCode==LSRMDLTR_EXACT) {
     BOverGamma[1] = Bfactor*cos(kuz)*cosh(kuy);
     BOverGamma[2] = Bfactor*sin(kuz)*sinh(kuy);
   } else {
@@ -2163,14 +2163,14 @@ void derivatives_planarUndulator(double *qp, double *q, double tau)
     BOverGamma[2] = Bfactor*sin(kuz)*kuy;
   }
   
-  if (plUnd->Ef0Laser>0 && plUnd->laserW0>0) {
+  if (lsrMdltr->Ef0Laser>0 && lsrMdltr->laserW0>0) {
     double Bscale;
-    computeLaserField(E, Blaser, -tau + q[2] - Z_center + plUnd->laserPhase,
-                      plUnd->Ef0Laser, plUnd->ZRayleigh, plUnd->k, plUnd->laserW0,
-                      x, y, z-Z_center/plUnd->k);
-    Bscale = plUnd->Bscale/gamma;
+    computeLaserField(E, Blaser, -tau + q[2] - Z_center + lsrMdltr->laserPhase,
+                      lsrMdltr->Ef0Laser, lsrMdltr->ZRayleigh, lsrMdltr->k, lsrMdltr->laserW0,
+                      x, y, z-Z_center/lsrMdltr->k);
+    Bscale = lsrMdltr->Bscale/gamma;
     for (i=0; i<3; i++) {
-      E[i] *= plUnd->Escale;
+      E[i] *= lsrMdltr->Escale;
       BOverGamma[i] += Blaser[i]*Bscale;
     }
   }
@@ -2183,8 +2183,8 @@ void derivatives_planarUndulator(double *qp, double *q, double tau)
   Pp[2] = -(E[2]+P[0]*BOverGamma[1]-P[1]*BOverGamma[0]);
   
 #ifdef DEBUG
-  fprintf(fppu, "%e %e %e %e %e %e %e %e %e %e %e\n", tau, tau/plUnd->omega, 
-          plUnd->k*z-tau, x, y, z, P[0], P[1], P[2], E[0], BOverGamma[1]*gamma);
+  fprintf(fppu, "%e %e %e %e %e %e %e %e %e %e %e\n", tau, tau/lsrMdltr->omega, 
+          lsrMdltr->k*z-tau, x, y, z, P[0], P[1], P[2], E[0], BOverGamma[1]*gamma);
 #endif
 }
 

@@ -869,7 +869,7 @@ long do_tracking(
               transverseFeedbackDriver((TFBDRIVER*)eptr->p_elem, coord, n_to_track, beamline, i_pass, n_passes, run->rootname);
             feedbackDriverSeen = 1;
             break;
-          case T_PLUND:
+          case T_LSRMDLTR:
             n_left = motion(coord, n_to_track, eptr->p_elem, eptr->type, P_central, 
                               &dgamma, dP, accepted, last_z);
             show_dE = 1;

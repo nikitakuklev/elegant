@@ -34,7 +34,7 @@ char *entity_name[N_TYPES] = {
     "CSRCSBEND", "CSRDRIFT", "RFCW", "REMCOR", "MAPSOLENOID",
     "REFLECT", "CLEAN", "TWISS", "WIGGLER", "SCRIPT", "FLOOR",
     "LTHINLENS", "LMIRROR", "EMATRIX", "FRFMODE", "FTRFMODE",
-    "TFBPICKUP", "TFBDRIVER", "LSCDRIFT", "DSCATTER", "PLUND",
+    "TFBPICKUP", "TFBDRIVER", "LSCDRIFT", "DSCATTER", "LSRMDLTR",
     "TAYLORSERIES", 
     };
 
@@ -156,7 +156,7 @@ and phase modulation.",
     "Driver for a transverse feedback loop",
     "Longitudinal space charge impedance",
     "A scattering element to add random changes to particle coordinates according to a user-supplied distribution function",
-    "Planar Undulator via numerical integration, including optional co-propagating laser beam."
+    "A non-symplectic numerically integrated planar undulator including optional co-propagating laser beam for laser modulation of the electron beam."
     "Tracks through a Taylor series map specified by a file containing coefficients.",
     } ;
 
@@ -1788,22 +1788,22 @@ PARAMETER lscdrift_param[N_LSCDRIFT_PARAMS] = {
     {"RADIUS_FACTOR", "", IS_DOUBLE, 0, (long)((char*)&lscdrift_example.radiusFactor), NULL, 1.7, 0, "LSC radius is (Sx+Sy)/2*RADIUS_FACTOR"},
 };
 
-PLUND plund_example;
-PARAMETER plund_param[N_PLUND_PARAMS] = {
-    {"L", "M", IS_DOUBLE, 0, (long)((char *)&plund_example.length), NULL, 0.0, 0, "length"},
-    {"BU", "T", IS_DOUBLE, 0, (long)((char *)&plund_example.Bu), NULL, 0.0, 0, "Undulator peak field"},
-    {"PERIODS", "", IS_LONG, 0, (long)((char *)&plund_example.periods), NULL, 0.0, 0, "Number of undulator periods."},
-    {"METHOD", NULL, IS_STRING, 0, (long)((char*)&plund_example.method), DEFAULT_INTEG_METHOD, 0.0, 0, "integration method (runge-kutta, bulirsch-stoer, modified-midpoint, two-pass modified-midpoint, leap-frog, non-adaptive runge-kutta)"},
-    {"FIELD_EXPANSION", NULL, IS_STRING, 0, (long)((char*)&plund_example.fieldExpansion), "ideal", 0.0, 0, "ideal, exact, or \"leading terms\""},
-    {"ACCURACY", NULL, IS_DOUBLE, 0, (long)((char *)&plund_example.accuracy), NULL, 0.0, 0, "Integration accuracy for adaptive integration. (Not recommended)"},
-    {"N_STEPS", "", IS_LONG, 0, (long)((char *)&plund_example.nSteps), NULL, 0.0, 0, "Number of integration steps for non-adaptive integration."},
-     {"POLE_FACTOR1", "", IS_DOUBLE, 0, (long)((char *)&plund_example.poleFactor1), NULL, 1.557175339644387e-01, 0, "Strength factor for the first and last pole."},
-    {"POLE_FACTOR2", "", IS_DOUBLE, 0, (long)((char *)&plund_example.poleFactor2), NULL, 3.806876151926928e-01, 0, "Strength factor for the second and second-to-last pole."},
-    {"POLE_FACTOR3", "", IS_DOUBLE, 0, (long)((char *)&plund_example.poleFactor3), NULL, 8.028299996984605e-01, 0, "Strength factor for the third and third-to-last pole."},
-    {"LASER_WAVELENGTH", "M", IS_DOUBLE, 0, (long)((char *)&plund_example.usersLaserWavelength), NULL, 0.0, 0, "Laser wavelength. If zero, the wavelength is calculated from the resonance condition."},
-    {"LASER_PEAK_POWER", "W", IS_DOUBLE, 0, (long)((char *)&plund_example.laserPeakPower), NULL, 0.0, 0, "laser peak power"},
-    {"LASER_W0", "M", IS_DOUBLE, 0, (long)((char *)&plund_example.laserW0), NULL, 1.0, 0, "laser spot size at waist"},
-    {"LASER_PHASE", "RAD", IS_DOUBLE, 0, (long)((char *)&plund_example.laserPhase), NULL, 0.0, 0, "laser phase"},
+LSRMDLTR lsrMdltr_example;
+PARAMETER lsrMdltr_param[N_LSRMDLTR_PARAMS] = {
+    {"L", "M", IS_DOUBLE, 0, (long)((char *)&lsrMdltr_example.length), NULL, 0.0, 0, "length"},
+    {"BU", "T", IS_DOUBLE, 0, (long)((char *)&lsrMdltr_example.Bu), NULL, 0.0, 0, "Undulator peak field"},
+    {"PERIODS", "", IS_LONG, 0, (long)((char *)&lsrMdltr_example.periods), NULL, 0.0, 0, "Number of undulator periods."},
+    {"METHOD", NULL, IS_STRING, 0, (long)((char*)&lsrMdltr_example.method), DEFAULT_INTEG_METHOD, 0.0, 0, "integration method (runge-kutta, bulirsch-stoer, modified-midpoint, two-pass modified-midpoint, leap-frog, non-adaptive runge-kutta)"},
+    {"FIELD_EXPANSION", NULL, IS_STRING, 0, (long)((char*)&lsrMdltr_example.fieldExpansion), "ideal", 0.0, 0, "ideal, exact, or \"leading terms\""},
+    {"ACCURACY", NULL, IS_DOUBLE, 0, (long)((char *)&lsrMdltr_example.accuracy), NULL, 0.0, 0, "Integration accuracy for adaptive integration. (Not recommended)"},
+    {"N_STEPS", "", IS_LONG, 0, (long)((char *)&lsrMdltr_example.nSteps), NULL, 0.0, 0, "Number of integration steps for non-adaptive integration."},
+     {"POLE_FACTOR1", "", IS_DOUBLE, 0, (long)((char *)&lsrMdltr_example.poleFactor1), NULL, 1.557175339644387e-01, 0, "Strength factor for the first and last pole."},
+    {"POLE_FACTOR2", "", IS_DOUBLE, 0, (long)((char *)&lsrMdltr_example.poleFactor2), NULL, 3.806876151926928e-01, 0, "Strength factor for the second and second-to-last pole."},
+    {"POLE_FACTOR3", "", IS_DOUBLE, 0, (long)((char *)&lsrMdltr_example.poleFactor3), NULL, 8.028299996984605e-01, 0, "Strength factor for the third and third-to-last pole."},
+    {"LASER_WAVELENGTH", "M", IS_DOUBLE, 0, (long)((char *)&lsrMdltr_example.usersLaserWavelength), NULL, 0.0, 0, "Laser wavelength. If zero, the wavelength is calculated from the resonance condition."},
+    {"LASER_PEAK_POWER", "W", IS_DOUBLE, 0, (long)((char *)&lsrMdltr_example.laserPeakPower), NULL, 0.0, 0, "laser peak power"},
+    {"LASER_W0", "M", IS_DOUBLE, 0, (long)((char *)&lsrMdltr_example.laserW0), NULL, 1.0, 0, "laser spot size at waist"},
+    {"LASER_PHASE", "RAD", IS_DOUBLE, 0, (long)((char *)&lsrMdltr_example.laserPhase), NULL, 0.0, 0, "laser phase"},
 };  
 
 
@@ -1915,7 +1915,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_TFBDRIVER_PARAMS,         0,     sizeof(TFBDRIVER),  tfbdriver_param    },
     { N_LSCDRIFT_PARAMS, MAT_LEN_NCAT,     sizeof(LSCDRIFT),  lscdrift_param    },
     { N_DSCATTER_PARAMS,          0,     sizeof(DSCATTER),    dscatter_param  },
-    { N_PLUND_PARAMS,    MAT_LEN_NCAT, sizeof(PLUND), plund_param },
+    { N_LSRMDLTR_PARAMS,    MAT_LEN_NCAT, sizeof(LSRMDLTR), lsrMdltr_param },
     { N_TAYLORSERIES_PARAMS, MAT_LEN_NCAT|IS_MAGNET|NO_DICT_OUTPUT,    sizeof(TAYLORSERIES),  taylorSeries_param  },
 } ;
  

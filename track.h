@@ -574,7 +574,7 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_TFBDRIVER 88
 #define T_LSCDRIFT  89
 #define T_DSCATTER  90
-#define T_PLUND     91
+#define T_LSRMDLTR     91
 #define T_TAYLORSERIES 92
 #define N_TYPES     93
 
@@ -674,7 +674,7 @@ extern char *entity_text[N_TYPES];
 #define N_TFBDRIVER_PARAMS 20
 #define N_LSCDRIFT_PARAMS  9
 #define N_DSCATTER_PARAMS 13
-#define N_PLUND_PARAMS 14
+#define N_LSRMDLTR_PARAMS 14
 #define N_TAYLORSERIES_PARAMS 6
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
@@ -2028,7 +2028,7 @@ typedef struct {
 } LSCDRIFT;
 
 /* PLanar Undulator with optional laser heater */
-extern PARAMETER plund_param[N_PLUND_PARAMS];
+extern PARAMETER lsrMdltr_param[N_LSRMDLTR_PARAMS];
 typedef struct {
   double length, Bu;
   long periods;
@@ -2042,7 +2042,7 @@ typedef struct {
   double Escale, Bscale;
   double ku, xOffset, BuScaled, ZRayleigh;
   short fieldCode;
-} PLUND;
+} LSRMDLTR;
 
 /* names and storage structure for Taylor-series map physical parameters */
 extern PARAMETER taylorSeries_param[N_TAYLORSERIES_PARAMS];
