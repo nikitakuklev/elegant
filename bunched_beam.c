@@ -136,6 +136,7 @@ long new_bunched_beam(
 {    
     static long n_actual_particles;
     long i_particle, i_coord;
+    unsigned long unstable;
     double s_offset, beta;
     double p_central, dummy, p, gamma;
 #ifdef VAX_VMS
@@ -153,9 +154,9 @@ long new_bunched_beam(
                 (control->i_step==1 && (control->n_indices==0 || control->i_vary==1)))) {
         if (control->cell) {
             compute_periodic_twiss(&beta_x, &alpha_x, &eta_x, &etap_x, &dummy,
-                &beta_y, &alpha_y, &eta_y, &etap_y, &dummy, 
-                (control->cell->elem_recirc?control->cell->elem_recirc:&(control->cell->elem)), 
-                NULL, run);
+                                   &beta_y, &alpha_y, &eta_y, &etap_y, &dummy, 
+                                   (control->cell->elem_recirc?control->cell->elem_recirc:&(control->cell->elem)), 
+                                   NULL, run, &unstable, NULL);
 	    fprintf(stderr, "matched Twiss parameters for beam generation:\nbetax = %13.6e m  alphax = %13.6e  etax = %13.6e m  etax' = %13.6e\n",
                 beta_x, alpha_x, eta_x, etap_x);
             fprintf(stderr, "betay = %13.6e m  alphay = %13.6e  etay = %13.6e m  etay' = %13.6e\n",

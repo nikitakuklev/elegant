@@ -22,7 +22,8 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
     long i, n_elem, last_n_elem, count, K2_param;
     MATRIX *C, *Ct, *CtC, *inv_CtC;
 #include "chrom.h"
-
+    unsigned long unstable;
+    
     log_entry("setup_chromaticity_correction");
 
     cp_str(&sextupoles, "sf sd");
@@ -73,7 +74,9 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
             }
     
         M = beamline->matrix = compute_periodic_twiss(&beta_x, &alpha_x, &eta_x, &etap_x, beamline->tune,
-                &beta_y, &alpha_y, &eta_y, &etap_y, beamline->tune+1, beamline->elem_twiss, NULL, run);
+                                                      &beta_y, &alpha_y, &eta_y, &etap_y, beamline->tune+1, 
+                                                      beamline->elem_twiss, NULL, run, 
+                                                      &unstable, NULL);
         beamline->twiss0->betax  = beta_x;
         beamline->twiss0->alphax = alpha_x;
         beamline->twiss0->phix   = 0;
@@ -216,7 +219,9 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
     long i, K2_param, type, iter, count;
     double beta_x, alpha_x, eta_x, etap_x;
     double beta_y, alpha_y, eta_y, etap_y;
+    unsigned long unstable;
 
+    
     log_entry("do_chromaticity_correction");
 
     if (!beamline->matrix || !beamline->twiss0) {
@@ -233,7 +238,8 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
             }
     
         M = beamline->matrix = compute_periodic_twiss(&beta_x, &alpha_x, &eta_x, &etap_x, beamline->tune,
-                &beta_y, &alpha_y, &eta_y, &etap_y, beamline->tune+1, beamline->elem_twiss, clorb, run);
+                                                      &beta_y, &alpha_y, &eta_y, &etap_y, beamline->tune+1, 
+                                                      beamline->elem_twiss, clorb, run, &unstable, NULL);
         beamline->twiss0->betax  = beta_x;
         beamline->twiss0->alphax = alpha_x;
         beamline->twiss0->phix   = 0;
@@ -311,7 +317,8 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
                                  STATIC_LINK+DYNAMIC_LINK+(alter_defined_values?LINK_ELEMENT_DEFINITION:0));
 
         M = beamline->matrix = compute_periodic_twiss(&beta_x, &alpha_x, &eta_x, &etap_x, beamline->tune,
-                &beta_y, &alpha_y, &eta_y, &etap_y, beamline->tune+1, beamline->elem_twiss, clorb, run);
+                                                      &beta_y, &alpha_y, &eta_y, &etap_y, beamline->tune+1, 
+                                                      beamline->elem_twiss, clorb, run, &unstable, NULL);
         beamline->twiss0->betax  = beta_x;
         beamline->twiss0->alphax = alpha_x;
         beamline->twiss0->phix   = 0;

@@ -157,7 +157,7 @@ long do_tracking(
             }
         if (beamline->flags&BEAMLINE_TWISS_WANTED && !(beamline->flags&BEAMLINE_TWISS_CURRENT)
             && !(flags&TEST_PARTICLES)) {
-            update_twiss_parameters(run, beamline);
+            update_twiss_parameters(run, beamline, NULL);
             }
         if (run->concat_order && !(flags&TEST_PARTICLES) && !(beamline->flags&BEAMLINE_CONCAT_CURRENT) ) {
             /* form concatenated beamline for tracking */
@@ -278,7 +278,7 @@ long do_tracking(
                         if (((MARK*)eptr->p_elem)->fitpoint && i_pass==n_passes-1) {
                           if (beamline->flags&BEAMLINE_TWISS_WANTED) {
                             if (!(beamline->flags&BEAMLINE_TWISS_DONE))
-                              update_twiss_parameters(run, beamline);
+                              update_twiss_parameters(run, beamline, NULL);
                             store_fitpoint_twiss_parameters((MARK*)eptr->p_elem, eptr->name, eptr->occurence, eptr->twiss);
                             }
                             store_fitpoint_beam_parameters((MARK*)eptr->p_elem, eptr->name,eptr->occurence, 

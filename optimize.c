@@ -553,23 +553,23 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERROR *error1
 #define SET_BUNCHED_BEAM 6
 #define SET_SDDS_BEAM   33
 
-static char *twiss_name[24] = {
+static char *twiss_name[26] = {
     "betax", "alphax", "nux", "etax", "etapx", 
     "betay", "alphay", "nuy", "etay", "etapy",
     "max.betax", "max.etax", "max.etapx", 
     "max.betay", "max.etay", "max.etapy",
     "min.betax", "min.etax", "min.etapx", 
     "min.betay", "min.etay", "min.etapy",
-    "dnux/dp", "dnuy/dp",
+    "dnux/dp", "dnuy/dp", "alphac", "alphac2",
     };
-static long twiss_mem[24] = {
+static long twiss_mem[26] = {
     -1, -1, -1, -1, -1, 
     -1, -1, -1, -1, -1, 
     -1, -1, -1,
     -1, -1, -1, 
     -1, -1, -1,
     -1, -1, -1, 
-    -1, -1,
+    -1, -1, -1, -1,
     };
 static char *radint_name[8] = {
     "ex0", "Sdelta0",
@@ -590,6 +590,7 @@ double optimization_function(double *value, long *invalid)
     OPTIM_COVARIABLES *covariables;
     double conval, result;
     long i;
+    unsigned long unstable;
     VMATRIX *M;
     TWISS twiss_ave, twiss_min, twiss_max;
     
@@ -694,11 +695,11 @@ double optimization_function(double *value, long *invalid)
       fprintf(stderr, "optimization_function: Computing twiss parameters\n");
 #endif
         if (twiss_mem[0]==-1) {
-            for (i=0; i<24; i++)
+            for (i=0; i<26; i++)
                 twiss_mem[i] = rpn_create_mem(twiss_name[i]);
             }
         /* get twiss mode and (beta, alpha, eta, etap) for both planes */
-        update_twiss_parameters(run, beamline);
+        update_twiss_parameters(run, beamline, &unstable);
         /* store twiss parameters for last element */
         for (i=0; i<5; i++) {
             rpn_store(*((&beamline->elast->twiss->betax)+i)/(i==2?PIx2:1), twiss_mem[i]);
@@ -706,6 +707,8 @@ double optimization_function(double *value, long *invalid)
             }
         rpn_store(beamline->chromaticity[0], twiss_mem[22]);
         rpn_store(beamline->chromaticity[1], twiss_mem[23]);
+        rpn_store(beamline->alpha[0], twiss_mem[24]);
+        rpn_store(beamline->alpha[1], twiss_mem[25]);
         /* store statistics */
         compute_twiss_statistics(beamline, &twiss_ave, &twiss_min, &twiss_max);
         rpn_store(twiss_max.betax, twiss_mem[10]);
@@ -816,10 +819,12 @@ double optimization_function(double *value, long *invalid)
 
     if (optimization_data->mode==OPTIM_MODE_MAXIMUM)
         result *= -1;
+    if (unstable)
+      *invalid = 1;
+
     log_exit("optimization_function");
-    
 #if DEBUG
-      fprintf(stderr, "optimization_function: Returning\n");
+    fprintf(stderr, "optimization_function: Returning %le,  invalid=%ld\n", result, *invalid);
 #endif
     return(result);
     }

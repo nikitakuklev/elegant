@@ -20,7 +20,8 @@ void setup_tune_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline,
     double beta_x, alpha_x, eta_x, etap_x;
     double beta_y, alpha_y, eta_y, etap_y;
     long i, n_elem, last_n_elem, count;
-
+    unsigned long unstable;
+    
 #include "tune.h"
 
     log_entry("setup_tune_correction");
@@ -77,7 +78,8 @@ void setup_tune_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline,
 
     fprintf(stderr, "Computing periodic Twiss parameters.\n");
     M = beamline->matrix = compute_periodic_twiss(&beta_x, &alpha_x, &eta_x, &etap_x, beamline->tune,
-            &beta_y, &alpha_y, &eta_y, &etap_y, beamline->tune+1, beamline->elem_twiss, NULL, run);
+                                                  &beta_y, &alpha_y, &eta_y, &etap_y, beamline->tune+1, 
+                                                  beamline->elem_twiss, NULL, run, &unstable, NULL);
     beamline->twiss0->betax  = beta_x;
     beamline->twiss0->alphax = alpha_x;
     beamline->twiss0->phix   = 0;
@@ -201,13 +203,14 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
   double beta_y, alpha_y, eta_y, etap_y;
   static long tunes_saved=0;
   static double nux_orig, nuy_orig;
+  unsigned long unstable;
   
   if (tune->use_perturbed_matrix)
     computeTuneCorrectionMatrix(run, beamline, tune, 0);
   
   M = beamline->matrix = compute_periodic_twiss(&beta_x, &alpha_x, &eta_x, &etap_x, beamline->tune,
                                                 &beta_y, &alpha_y, &eta_y, &etap_y, beamline->tune+1, 
-                                                beamline->elem_twiss, clorb, run);
+                                                beamline->elem_twiss, clorb, run, &unstable, NULL);
   beamline->twiss0->betax  = beta_x;
   beamline->twiss0->alphax = alpha_x;
   beamline->twiss0->phix   = 0;
@@ -294,7 +297,8 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
                            STATIC_LINK+DYNAMIC_LINK+(alter_defined_values?LINK_ELEMENT_DEFINITION:0));
 
     M = beamline->matrix = compute_periodic_twiss(&beta_x, &alpha_x, &eta_x, &etap_x, beamline->tune,
-                                                  &beta_y, &alpha_y, &eta_y, &etap_y, beamline->tune+1, beamline->elem_twiss, clorb, run);
+                                                  &beta_y, &alpha_y, &eta_y, &etap_y, beamline->tune+1, 
+                                                  beamline->elem_twiss, clorb, run, &unstable, NULL);
 
     beamline->twiss0->betax  = beta_x;
     beamline->twiss0->alphax = alpha_x;

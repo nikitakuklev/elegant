@@ -131,6 +131,7 @@ typedef struct line_list {
     ELEMENT_LIST *elast;    /* pointer to last element &elem list */
     double tune[2];          /* x and y tunes from start of elem_twiss to end of line */
     double chromaticity[2];  /* dNUx/dp and dNUy/dp */
+    double alpha[2];         /* first and second order momentum compaction */
     double acceptance[4];    /* in pi-meter-radians for x and y, plus z locations of limits (4 doubles in all) */
     RADIATION_INTEGRALS radIntegrals;
     char *acc_limit_name[2];  /* names of elements at which acceptance is limited, in x and y */
@@ -1509,16 +1510,19 @@ void setup_matrix_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 /* prototypes for twiss.c: */
 VMATRIX *compute_periodic_twiss(double *betax, double *alphax, double *etax, double *etaxp,
     double *phix, double *betay, double *alphay, double *etay, double *etayp, double *phiy,
-    ELEMENT_LIST *elem, double *clorb, RUN *run);
+    ELEMENT_LIST *elem, double *clorb, RUN *run, unsigned long *unstable, double *eta2);
 void propagate_twiss_parameters(TWISS *twiss0, double *tune, RADIATION_INTEGRALS *radIntegrals,
                                 ELEMENT_LIST *elem, RUN *run, double *traj);
 long get_twiss_mode(long *mode, double *x_twiss, double *y_twiss);
 void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_coord, long matched, 
                               long radiation_integrals,
                               double beta_x, double alpha_x, double eta_x, double etap_x, 
-                              double beta_y, double alpha_y, double eta_y, double etap_y);
+                              double beta_y, double alpha_y, double eta_y, double etap_y,
+                              unsigned long *unstable);
+void update_twiss_parameters(RUN *run, LINE_LIST *beamline, unsigned long *unstable);
+void compute_twiss_statistics(LINE_LIST *beamline, TWISS *twiss_ave, TWISS *twiss_min, TWISS *twiss_max);
 void dump_twiss_parameters(TWISS *twiss0, ELEMENT_LIST *elem, long n_elem, 
-    double *tune, RADIATION_INTEGRALS *radIntegrals, double *chromaticity, double *acceptance, double alphac,
+    double *tune, RADIATION_INTEGRALS *radIntegrals, double *chromaticity, double *acceptance, double *alphac,
     long final_values_only, long tune_corrected, RUN *run);
 void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, long *do_twiss_output);
 long run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, long tune_corrected);

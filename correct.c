@@ -1299,7 +1299,7 @@ void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN
 #endif
   if (!(beamline->flags&BEAMLINE_TWISS_CURRENT)) {
     fprintf(stderr, "updating twiss parameters...");
-    update_twiss_parameters(run, beamline);
+    update_twiss_parameters(run, beamline, NULL);
 #ifdef DEBUG
     fprintf(stderr, "Tunes: %e, %e\n", beamline->tune[0], beamline->tune[1]);
     fprintf(stderr, "Initial eta: %e, %e\n", 

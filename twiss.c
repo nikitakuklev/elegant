@@ -14,25 +14,27 @@
 void copy_doubles(double *target, double *source, long n);
 double find_acceptance(ELEMENT_LIST *elem, long plane, RUN *run, char **name, double *end_pos);
 void modify_rfca_matrices(ELEMENT_LIST *eptr, long order);
-void compute_twiss_statistics(LINE_LIST *beamline, TWISS *twiss_ave, TWISS *twiss_min, TWISS *twiss_max);
 void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, ELEMENT_LIST *elem, 
                            double beta0, double alpha0, double gamma0,
                            double eta0, double etap0);
 
-
 VMATRIX *compute_periodic_twiss(
                                 double *betax, double *alphax, double *etax, double *etapx, double *NUx,
                                 double *betay, double *alphay, double *etay, double *etapy, double *NUy,
-                                ELEMENT_LIST *elem, double *clorb, RUN *run)
+                                ELEMENT_LIST *elem, double *clorb, RUN *run, unsigned long *unstable,
+                                double *eta2)
 {
   VMATRIX *M, *M1;
   double cos_phi, sin_phi, **R, beta[2], alpha[2], eta[2], etap[2], phi[2];
+  double ***T;
   double det;
-  long i, j;
+  long i, j, k;
   double eta0, etap0, eta1, etap1;
   MATRIX *dispR, *dispM, *dispMInv, *dispEta;
-  
+
   log_entry("compute_periodic_twiss");
+
+  *unstable = 0;
 
   if ((i = fill_in_matrices(elem, run)))
     fprintf(stderr, "%ld matrices recomputed for periodic Twiss parameter computation\n", i);
@@ -69,10 +71,13 @@ VMATRIX *compute_periodic_twiss(
   else
     M = full_matrix(elem, run, 3);
   R = M->R;
-
+  T = M->T;
+  
   /* allocate matrices for computing dispersion, which I do
    * in 4-d using 
    * eta[i] = Inv(I - R)[i][j] R[j][5]
+   * eta2[i] = Inv(I-R)[i][j] Sum[0<=k<=j<=5] T[i][j][k]*eta[i]*eta[k]
+   *  with eta[4]=0 and eta[5]=1
    */
   m_alloc(&dispM, 4, 4);
   m_alloc(&dispMInv, 4, 4);
@@ -86,13 +91,33 @@ VMATRIX *compute_periodic_twiss(
   }
   if (m_det(dispM)==0) {
     fprintf(stderr, "Unable to compute dispersion: unstable\n");
+    *unstable = 3; /* both planes */
   } else {
+    double *eta;
     m_invert(dispMInv, dispM);
     m_mult(dispEta, dispMInv, dispR);
-    *etax = dispEta->a[0][0];
-    *etapx = dispEta->a[1][0];
-    *etay = dispEta->a[2][0];    
-    *etapy = dispEta->a[3][0];
+    eta = tmalloc(sizeof(*eta)*6);
+    eta[0] = *etax = dispEta->a[0][0];
+    eta[1] = *etapx = dispEta->a[1][0];
+    eta[2] = *etay = dispEta->a[2][0];    
+    eta[3] = *etapy = dispEta->a[3][0];
+    eta[4] = 0;
+    eta[5] = 1;
+    if (eta2) {
+      /* now do the second-order dispersion */
+      for (i=0; i<4; i++) {
+        dispR->a[i][0] = 0;
+        for (j=0; j<6; j++) 
+          for (k=0; k<=j; k++) 
+            dispR->a[i][0] += T[i][j][k]*eta[j]*eta[k];
+      }
+      m_mult(dispEta, dispMInv, dispR);
+      eta2[0] = dispEta->a[0][0];
+      eta2[1] = dispEta->a[1][0];
+      eta2[2] = dispEta->a[2][0];
+      eta2[3] = dispEta->a[3][0];
+    }
+    free(eta);
   }
   m_free(&dispM);
   m_free(&dispEta);
@@ -102,6 +127,7 @@ VMATRIX *compute_periodic_twiss(
   for (i=0; i<4; i+=2 ) {
     if (fabs(cos_phi = (R[i][i] + R[i+1][i+1])/2)>1) {
       fprintf(stderr, "warning: beamline unstable for %c plane--can't match beta functions.\n", 'x'+i/2);
+      *unstable |= (i==0?1:2);
       sin_phi = 1e-6;
     }
     beta[i/2] = fabs(R[i][i+1]/sin(acos(cos_phi)));
@@ -385,7 +411,8 @@ static SDDS_DEFINITION column_definition[N_COLUMNS] = {
 #define IP_TAUDELTA 22
 #define IP_JDELTA 23
 #define IP_U0 24
-#define N_PARAMETERS 25
+#define IP_ALPHAC2 25
+#define N_PARAMETERS 26
 static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
 {"Step", "&parameter name=Step, type=long, description=\"Simulation step\" &end"},
 {"nux", "&parameter name=nux, symbol=\"$gn$r$bx$n\", type=double, units=\"1/(2$gp$r)\", description=\"Horizontal tune\" &end"},
@@ -412,6 +439,7 @@ static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
 {"taudelta", "&parameter name=taudelta, type=double, description=\"Longitudinal damping time\", units=s &end"},
 {"Jdelta", "&parameter name=Jdelta, type=double, description=\"Longitudinal damping partition number\" &end"},
 {"U0", "&parameter name=U0, type=double, units=MeV, description=\"Energy loss per turn\" &end"},
+{"alphac2", "&parameter name=alphac2, symbol=\"$ga$r$bc2$n\", type=double, description=\"2nd-order momentum compaction factor\" &end"},
 } ;
 
 void dump_twiss_parameters(
@@ -422,7 +450,7 @@ void dump_twiss_parameters(
   RADIATION_INTEGRALS *radIntegrals,                           
   double *chromaticity,
   double *acceptance,
-  double alphac,
+  double *alphac,
   long final_values_only,
   long tune_corrected,
   RUN *run
@@ -452,7 +480,7 @@ void dump_twiss_parameters(
                           IP_STEP, twiss_count, IP_STAGE, stage, 
                           IP_NUX, tune[0], IP_DNUXDP, chromaticity[0], IP_AX, acceptance[0],
                           IP_NUY, tune[1], IP_DNUYDP, chromaticity[1], IP_AY, acceptance[1], 
-                          IP_ALPHAC, alphac, -1)) {
+                          IP_ALPHAC, alphac[0], IP_ALPHAC2, alphac[1], -1)) {
     SDDS_SetError("Problem setting SDDS parameters (dump_twiss_parameters 1)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
@@ -642,6 +670,7 @@ long run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, lon
 {
   ELEMENT_LIST *eptr, *elast;
   long n_elem, last_n_elem;
+  unsigned long unstable;
   TWISS twiss_ave, twiss_min, twiss_max;
 
   /*
@@ -674,7 +703,7 @@ long run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, lon
   
   compute_twiss_parameters(run, beamline, starting_coord, matched, radiation_integrals,
                            beta_x, alpha_x, eta_x, etap_x,
-                           beta_y, alpha_y, eta_y, etap_y);
+                           beta_y, alpha_y, eta_y, etap_y, &unstable);
   elast = beamline->elast;
 
   if (run->default_order>=2) {
@@ -746,20 +775,11 @@ long run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, lon
     fprintf(stderr, "y acceptance limited by %s ending at %e m\n", beamline->acc_limit_name[1], beamline->acceptance[3]);
 
   if (SDDS_twiss_initialized) {
-    double alphac = 0;
-    if (beamline->matrix->C[4]!=0) {
-      alphac = (beamline->matrix->R[4][5] + 
-                beamline->matrix->R[4][0]*elast->twiss->etax +
-                beamline->matrix->R[4][1]*elast->twiss->etapx +
-                beamline->matrix->R[4][2]*elast->twiss->etay +
-                beamline->matrix->R[4][3]*elast->twiss->etapy)/beamline->matrix->C[4];
-    }
     dump_twiss_parameters(beamline->twiss0, beamline->elem_twiss, n_elem,
                           beamline->tune, 
                           radiation_integrals?&(beamline->radIntegrals):NULL, 
                           beamline->chromaticity, beamline->acceptance, 
-                          alphac,
-                          final_values_only, tune_corrected, run);
+                          beamline->alpha, final_values_only, tune_corrected, run);
   }
 
   if (isnan(beamline->tune[0]) || 
@@ -776,11 +796,12 @@ long run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, lon
 void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_coord, long periodic,
                               long radiation_integrals,
                               double betax, double alphax, double etax, double etapx, 
-                              double betay, double alphay, double etay, double etapy)
+                              double betay, double alphay, double etay, double etapy, 
+                              unsigned long *unstable)
 {
   VMATRIX *M;
-  double chromx, chromy;
-  double x_acc_z, y_acc_z;
+  double chromx, chromy, alpha1, alpha2;
+  double x_acc_z, y_acc_z, eta2[4];
   ELEMENT_LIST *eptr, *elast;
   char *x_acc_name, *y_acc_name;
   long i;
@@ -803,7 +824,9 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
 
   if (periodic) {
     beamline->matrix = compute_periodic_twiss(&betax, &alphax, &etax, &etapx, beamline->tune,
-                                              &betay, &alphay, &etay, &etapy, beamline->tune+1, beamline->elem_twiss, starting_coord, run);
+                                              &betay, &alphay, &etay, &etapy, beamline->tune+1, 
+                                              beamline->elem_twiss, starting_coord, run,
+                                              unstable, eta2);
 #ifdef DEBUG
     fprintf(stderr, "matched parameters computed--returned to compute_twiss_parameters\n");
     fprintf(stderr, "beamline matrix has order %ld\n", beamline->matrix->order);
@@ -941,6 +964,37 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
   beamline->chromaticity[0] = chromx;
   beamline->chromaticity[1] = chromy;
 
+  alpha1 = alpha2 = 0;
+  if (beamline->matrix->C[4]!=0) {
+    alpha1 = (beamline->matrix->R[4][5] +
+              beamline->matrix->R[4][0]*elast->twiss->etax +
+              beamline->matrix->R[4][1]*elast->twiss->etapx +
+              beamline->matrix->R[4][2]*elast->twiss->etay +
+              beamline->matrix->R[4][3]*elast->twiss->etapy)/beamline->matrix->C[4];
+    if (beamline->matrix->T) {
+      double eta[6];
+      long j, k;
+      eta[0] = elast->twiss->etax;
+      eta[1] = elast->twiss->etapx;
+      eta[2] = elast->twiss->etay;
+      eta[3] = elast->twiss->etapy;
+      eta[4] = 0;
+      eta[5] = 1;
+      fprintf(stderr, "eta:  %le, %le, %le, %le\n",
+              eta[0], eta[1], eta[2], eta[3]);
+      fprintf(stderr, "eta2: %le, %le, %le, %le\n",
+              eta2[0], eta2[1], eta2[2], eta2[3]);
+      for (j=0; j<4; j++)
+        alpha2 += beamline->matrix->R[4][j]*eta2[j];
+      for (j=0; j<6; j++)
+        for (k=0; k<=j; k++) 
+          alpha2 += beamline->matrix->T[4][j][k]*eta[j]*eta[k];
+      alpha2 /= beamline->matrix->C[4];
+    }
+  }
+  beamline->alpha[0] = alpha1;
+  beamline->alpha[1] = alpha2;
+
   beamline->flags |= BEAMLINE_TWISS_DONE+BEAMLINE_TWISS_CURRENT;
   if (radiation_integrals) 
     beamline->flags |= BEAMLINE_RADINT_DONE+BEAMLINE_RADINT_CURRENT;
@@ -948,13 +1002,17 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
   log_exit("compute_twiss_parameters");
 }
 
-void update_twiss_parameters(RUN *run, LINE_LIST *beamline)
+void update_twiss_parameters(RUN *run, LINE_LIST *beamline, unsigned long *unstable)
 {
+  unsigned long unstable0;
   log_entry("update_twiss_parameters");
   compute_twiss_parameters(run, beamline, 
                            beamline->closed_orbit?beamline->closed_orbit->centroid:NULL, matched, 
                            radiation_integrals,
-                           beta_x, alpha_x, eta_x, etap_x, beta_y, alpha_y, eta_y, etap_y);
+                           beta_x, alpha_x, eta_x, etap_x, beta_y, alpha_y, eta_y, etap_y,
+                           &unstable0);
+  if (unstable)
+    *unstable = unstable0;
   log_exit("update_twiss_parameters");
 }
 
