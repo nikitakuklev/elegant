@@ -1074,21 +1074,29 @@ VMATRIX *stray_field_matrix(double length, double *lB, double *gB, double theta,
       m_mult(Bl, (MATRIX*)Wi, Bg);
       Bx = Bl->a[0][0] + lB[0];
       By = Bl->a[1][0] + lB[1];
+#ifdef DEBUG_STRAY
+      m_show(Bg, "%10.3e", "Bg: \n", stdout);
+      m_show(Wi, "%10.3e", "Wi: \n", stdout);
+      m_show(Bl, "%10.3e", "Wi*Bg: \n", stdout);
+      fprintf(stdout, "Bx = %e, By = %e\n", Bx, By);
+#endif
       m_free(&Bg);
       m_free(&Bl);
     } else {
-      Bx = lB[0] + cos(theta)*gB[0] + sin(theta)*gB[3];
-      By = lB[1] + gB[1];
+      if (gB[0] || gB[1] || gB[2]) 
+        bomb("to use global stray fields, you must do a floor coordinate computation", NULL);
+      Bx = lB[0];
+      By = lB[1];
     }
     if (By) {
         rho = p_central/(CTHETA*By);
-        xkick = -asin(length/rho);
+        xkick = asin(length/rho);
         }
     else
         xkick = 0;
     if (Bx) {
         rho = p_central/(CTHETA*Bx);
-        ykick = asin(length/rho);
+        ykick = -asin(length/rho);
         }
     else
         ykick = 0;
