@@ -31,7 +31,7 @@ void fill_transverse_structure(TRANSVERSE *trans, double emit, double beta,
     double *xcentroid);
 void fill_longitudinal_structure(LONGITUDINAL *xlongit, double xsigma_dp,
                                  double xsigma_s, double xcoupling_angle, 
-                                 double xemit, double xbeta, double xalpha,
+                                 double xemit, double xbeta, double xalpha, double xchirp,
                                  long xbeam_type, double xcutoff,
                                  double *xcentroid);
 
@@ -99,8 +99,8 @@ void setup_bunched_beam(
     bomb("give emit_z or both sigma_dp and sigma_s", NULL);
   if (emit_z && beta_z<=0)
     bomb("give beta_z with emit_z", NULL);
-  if (alpha_z && dp_s_coupling)
-    bomb("give alpha_z or dp_s_coupling", NULL);
+  if ( ((alpha_z?1:0)+(dp_s_coupling?1:0)+(momentum_chirp?1:0))>1)
+    bomb("give only one of alpha_z, dp_s_coupling, or momentum_chirp", NULL);
   if (emit_z && dp_s_coupling)
     bomb("give alpha_z not dp_s_coupling with emit_z", NULL);
   
@@ -149,7 +149,7 @@ void setup_bunched_beam(
   }
   fill_longitudinal_structure(&longit, 
                               sigma_dp, sigma_s, dp_s_coupling,
-                              emit_z, beta_z, alpha_z, 
+                              emit_z, beta_z, alpha_z, momentum_chirp,
                               longit_beam_type, distribution_cutoff[2], centroid+4);
 
   save_initial_coordinates = save_original || save_initial_coordinates;
@@ -753,6 +753,7 @@ void fill_longitudinal_structure(
     double xemit_z,
     double xbeta_z,
     double xalpha_z,
+    double xchirp,
     long xbeam_type,
     double xcutoff,
     double *xcentroid
@@ -769,6 +770,7 @@ void fill_longitudinal_structure(
     xlongit->cutoff     = xcutoff;
     xlongit->cent_s     = xcentroid[0];
     xlongit->cent_dp    = xcentroid[1];
+    xlongit->chirp      = xchirp;
     log_exit("fill_longitudinal_structure");
     }
 

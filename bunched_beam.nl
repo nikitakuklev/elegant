@@ -31,6 +31,7 @@
     double emit_z = 0;
     double beta_z = 0;
     double alpha_z = 0;
+    double momentum_chirp = 0;
     long one_random_bunch = 1;
     long save_initial_coordinates = 1;
     long limit_invariants = 0;

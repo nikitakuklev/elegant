@@ -572,7 +572,7 @@ extern char *entity_text[N_TYPES];
 #define N_PFILTER_PARAMS 5
 #define N_HISTOGRAM_PARAMS 9
 #define N_CSRCSBEND_PARAMS 46
-#define N_CSRDRIFT_PARAMS 17
+#define N_CSRDRIFT_PARAMS 18
 #define N_REMCOR_PARAMS 6
 #define N_MAPSOLENOID_PARAMS 18
 #define N_RFCW_PARAMS 28
@@ -1417,6 +1417,7 @@ typedef struct {
   char *normMode, *spreadMode, *wavelengthMode, *bunchlengthMode, *Saldin54Output;
   long useStupakov;
   char *StupakovOutput;
+  long StupakovOutputInterval;
   /* used internally only */
   FILE *fpSaldin;
 } CSRDRIFT;
@@ -1726,7 +1727,7 @@ typedef struct {
 
 typedef struct {
     double sigma_dp, sigma_s, dp_s_coupling;
-    double beta, emit, alpha;
+    double beta, emit, alpha, chirp;
     double cutoff;
     long beam_type;
     double cent_s, cent_dp;
@@ -1870,6 +1871,7 @@ extern long do_tracking(double **coord, long *n_original, long *effort, LINE_LIS
                         long *n_z_points, TRAJECTORY *traj_vs_z, RUN *run, long step,
                         unsigned long flags, long n_passes, SASEFEL_OUTPUT *sasefel,
                         double *finalCharge);
+extern void getTrackingElementInfo(char *buffer, long buflen, long *occurrence);
 extern void offset_beam(double **coord, long n_to_track, MALIGN *offset, double P_central);
 extern void do_match_energy(double **coord, long np, double *P_central, long change_beam);
 extern void set_central_energy(double **coord, long np, double new_energy, double *P_central);

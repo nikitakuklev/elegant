@@ -21,6 +21,8 @@ void trackWithChromaticLinearMatrix(double **particle, long particles,
                                     double *dbeta_dPoP, 
                                     double *dalpha_dPoP);
 
+static char trackingElementName[1024] = "";
+static long trackingElementOccurrence = 0;
 
 double beta_from_delta(double p, double delta)
 {
@@ -285,6 +287,8 @@ long do_tracking(
         }
         abort();
       }
+      strcpy(trackingElementName, eptr->name);
+      trackingElementOccurrence = eptr->occurence;
       if (!eptr->p_elem && !run->concat_order) {
         fprintf(stdout, "element %s has NULL p_elem pointer", eptr->name);
         fflush(stdout);
@@ -1425,5 +1429,13 @@ void trackLongitudinalOnlyRing(double **part, long np, VMATRIX *M, double *alpha
     coord[0] = coord[1] = coord[2] = coord[3] = 0;
     coord[4] += length*(1+(alpha1+alpha2*coord[5])*coord[5]);
   }
+}
+
+void getTrackingElementInfo(char *buffer, long buflen, long *occurrence)
+{
+  if (buffer)
+    strncpy(buffer, trackingElementName, buflen);
+  if (occurrence)
+    *occurrence = trackingElementOccurrence;
 }
 

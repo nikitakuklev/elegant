@@ -316,13 +316,15 @@ long generate_bunch(
     /* incorporate dispersion and centroid shifts into (x, x', y, y') */
     /* also add particle ID */
     for (i_particle=0; i_particle<n_particles; i_particle++) {
+        if (longit->chirp)
+          particle[i_particle][5] += longit->chirp*particle[i_particle][4];
+        particle[i_particle][4] += longit->cent_s;
+        particle[i_particle][5] += longit->cent_dp;
         delta_p = particle[i_particle][5];
         particle[i_particle][0] += delta_p*x_plane->eta + x_plane->cent_posi;
         particle[i_particle][1] += delta_p*x_plane->etap + x_plane->cent_slope;
         particle[i_particle][2] += delta_p*y_plane->eta + y_plane->cent_posi;
         particle[i_particle][3] += delta_p*y_plane->etap + y_plane->cent_slope;
-        particle[i_particle][4] += longit->cent_s;
-        particle[i_particle][5] += longit->cent_dp;
         particle[i_particle][6] = particleID++;
         }
 

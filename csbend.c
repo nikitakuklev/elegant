@@ -815,10 +815,9 @@ typedef struct {
   double GSConstant, MPCharge;
   char *StupakovOutput;
   SDDS_DATASET SDDS_Stupakov;
-  long StupakovFileActive;
+  long StupakovFileActive, StupakovOutputInterval;
 } CSR_LAST_WAKE;
 CSR_LAST_WAKE csrWake;
-
 
 #define DERBENEV_CRITERION_DISABLE 0
 #define DERBENEV_CRITERION_EVAL 1
@@ -2209,7 +2208,6 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
     x = zTravel/csrWake.rho;
     dsMax = csrWake.rho/24*pow(csrWake.bendingAngle, 3)
       *(csrWake.bendingAngle+4*x)/(csrWake.bendingAngle+x);
-
     /* propagate particles forward, converting s to c*t=s/beta */
     for (iPart=0; iPart<np; iPart++) {
       coord = part[iPart];
@@ -2279,8 +2277,10 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
            * Saldin et al. and Stupakov, so my derivative has the opposite sign.
            * Note lack of ds factor here as I use the same one in my unnormalized derivative.
            */
-          csrWake.dGamma[iBin] -= ctHistDeriv[jBin]/(phi+2*x);
-          nCaseD2 ++;
+          if (phi) {
+            csrWake.dGamma[iBin] -= ctHistDeriv[jBin]/(phi+2*x);
+            nCaseD2 ++;
+          }
         } else
           break;
       }
@@ -2291,7 +2291,8 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
     for (iBin=0; iBin<nBins; iBin++)
       csrWake.dGamma[iBin] *= factor;
 
-    if (csrDrift->StupakovOutput) {
+    if ((csrDrift->StupakovOutput || csrWake.StupakovFileActive) && 
+        (csrDrift->StupakovOutputInterval<2 || iKick%csrDrift->StupakovOutputInterval==0)) {
       double x, dsMax, phi0, phi1;
       if (!csrWake.StupakovFileActive) {
         if (!SDDS_CopyString(&csrWake.StupakovOutput, csrDrift->StupakovOutput))
