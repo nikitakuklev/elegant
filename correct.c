@@ -42,7 +42,6 @@ char *correction_method[N_CORRECTION_METHODS] = {
  *   W is NMON x NMON, and W(i,j) = delta(i,j)*wi.  A monitor with a zero or negative weight is
  *       ignored.
  *   T is NCOR x NMON, and is computed before any errors are added and before any parameters are varied
- *   It is not recomputed when errors are added (of course!) or when parameters are varied (sorry!).
  */
 
 long global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **traject, long n_iterations, 
@@ -776,13 +775,16 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
     moniCalibration = tmalloc(sizeof(*moniCalibration)*CM->nmon);
     equalW = 1;
     for (i_moni=0; i_moni<CM->nmon; i_moni++) {
-        W->a[i_moni][i_moni] = getMonitorWeight(CM->umoni[i_moni]);
-        if (!i_moni)
-            W0 = W->a[i_moni][i_moni];
-        else if (W0!=W->a[i_moni][i_moni])
-            equalW = 0;
-        moniCalibration[i_moni] = getMonitorCalibration(CM->umoni[i_moni], coord);
-        }
+      long j;
+      for (j=0; j<CM->nmon; j++) 
+        W->a[i_moni][j] = 0.0;
+      W->a[i_moni][i_moni] = getMonitorWeight(CM->umoni[i_moni]);
+      if (!i_moni)
+	W0 = W->a[i_moni][i_moni];
+      else if (W0!=W->a[i_moni][i_moni])
+	equalW = 0;
+      moniCalibration[i_moni] = getMonitorCalibration(CM->umoni[i_moni], coord);
+    }
 
     for (i_corr = 0; i_corr<CM->ncor; i_corr++) {
         corr = CM->ucorr[i_corr];
@@ -900,11 +902,11 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
         report_stats(stdout, "start");
         /* compute correction matrix T */
         CM->inverse_computed = 1;
-        if (!equalW) {
+        if (equalW) {
             m_trans(I1, CM->C);
             m_mult(I3, I1, CM->C);
             m_invert(I4, I3);
-            m_mult(CM->T, I4, I2);
+            m_mult(CM->T, I4, I1);
             m_scmul(CM->T, CM->T, -W0); 
             }
         else {
@@ -914,7 +916,7 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
             m_invert(I4, I3);
             m_mult(CM->T, I4, I2);
             m_scmul(CM->T, CM->T, -1.0); 
-            }
+	}
         report_stats(stdout, "done");
 #ifdef DEBUG
         m_show(CM->T, "%13.6le ", "correction matrix\n", stdout);
@@ -1448,6 +1450,9 @@ void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN
   /* set up weight matrix */
   equalW = 1;
   for (i_moni=0; i_moni<CM->nmon; i_moni++) {
+    long j;
+    for (j=0; j<CM->nmon; j++)
+      W->a[i_moni][j] = 0;
     W->a[i_moni][i_moni] = getMonitorWeight(CM->umoni[i_moni]);
     if (!i_moni)
       W0 = W->a[i_moni][i_moni];
@@ -1513,14 +1518,13 @@ void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN
     CM->inverse_computed = 1;
     fprintf(stdout, "computing correction matrix...");
     fflush(stdout);
-    if (!equalW) {
+    if (equalW) {
       m_trans(I1, CM->C);
       m_mult(I3, I1, CM->C);
       m_invert(I4, I3);
-      m_mult(CM->T, I4, I2);
+      m_mult(CM->T, I4, I1);
       m_scmul(CM->T, CM->T, -W0); 
-    }
-    else {
+    } else {
       m_trans(I1, CM->C);
       m_mult(I2, I1, W);
       m_mult(I3, I2, CM->C);
