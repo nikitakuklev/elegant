@@ -980,10 +980,6 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
       eta[3] = elast->twiss->etapy;
       eta[4] = 0;
       eta[5] = 1;
-      fprintf(stderr, "eta:  %le, %le, %le, %le\n",
-              eta[0], eta[1], eta[2], eta[3]);
-      fprintf(stderr, "eta2: %le, %le, %le, %le\n",
-              eta2[0], eta2[1], eta2[2], eta2[3]);
       for (j=0; j<4; j++)
         alpha2 += beamline->matrix->R[4][j]*eta2[j];
       for (j=0; j<6; j++)
