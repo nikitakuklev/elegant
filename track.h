@@ -167,11 +167,11 @@ typedef struct line_list {
     double tune[2];          /* x and y tunes from start of elem_twiss to end of line */
     long waists[2];          /* number of sign changes in alpha */
     double chromaticity[2];  /* dNUx/d(p/p0) and dNUy/d(p/p0) */
-    double eta2[4], eta3[4]; /* second- and third-order dispersion */
-    double chrom2[2], chrom3[2]; /* second- and third-order chromaticity */
+    double eta2[4], eta3[4]; /* second- and third-order dispersion (x=x0+eta*delta+eta2*delta^2+eta3*delta^3 */
+    double chrom2[2], chrom3[2]; /* second- and third-order chromaticity (derivatives, not polynomial coefs) */
     double dbeta_dPoP[2];    /* d/d(p/p0) of betax and betay */
     double dalpha_dPoP[2];   /* d/d(p/p0) of alphax and alphay */
-    double alpha[2];         /* first and second order momentum compaction */
+    double alpha[2];         /* first and second order momentum compaction: Cs=Cs0+alpha*delta+alpha2*delta^2*/
     double dnux_dA[2];       /* dNUx/d(Ax) and dNUx/d(Ay) (tune shift with amplitude) */
     double dnuy_dA[2];       /* dNUy/d(Ax) and dNUy/d(Ay) (tune shift with amplitude) */
     double acceptance[4];    /* in pi-meter-radians for x and y, plus z locations of limits (4 doubles in all) */
@@ -620,7 +620,7 @@ extern char *entity_text[N_TYPES];
 #define N_FMULT_PARAMS 9
 #define N_BMAPXY_PARAMS 5
 #define N_WAKE_PARAMS 12
-#define N_TRWAKE_PARAMS 13
+#define N_TRWAKE_PARAMS 16
 #define N_TUBEND_PARAMS 6
 #define N_CHARGE_PARAMS 2
 #define N_PFILTER_PARAMS 5
@@ -1686,10 +1686,11 @@ typedef struct {
     char *inputFile, *tColumn, *WxColumn, *WyColumn;
     double charge;             /* total initial charge */
     double factor;             /* factor to multiply by (e.g., number of cells) */
+    double xfactor, yfactor;   /* individual factors for x and y */
     long n_bins;               /* number of charge bins */
     long interpolate;          /* flag to turn on interpolation */
     long smoothing, SGHalfWidth, SGOrder;  /* flag to turn on smoothing plus control parameters */
-    double dx, dy;
+    double dx, dy, tilt;
     /* for internal use: */
     long initialized;          /* indicates that files are loaded */
     long wakePoints, isCopy;
@@ -2246,6 +2247,7 @@ extern void tilt_matrices0(VMATRIX *M, double tilt);
 extern void tilt_matrices(VMATRIX *M, double tilt);
 extern VMATRIX *rotation_matrix(double tilt);
 extern void rotate_coordinates(double *coord, double angle);
+extern void rotateBeamCoordinates(double **part, long np, double angle);
 
 /* prototypes for track_ramp.c: */
 extern void track_through_ramped_deflector(double **final, RMDF *ramp_param, double **initial, long n_particles, double pc_central);

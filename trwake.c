@@ -69,6 +69,9 @@ void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
     Vtime = trealloc(Vtime, sizeof(*Vtime)*(max_n_bins+1));
   }
 
+  if (wakeData->tilt)
+    rotateBeamCoordinates(part, np, -1*wakeData->tilt);
+  
   n_binned = binTransverseTimeDistribution(posItime, pz, pbin, tmin, dt, nb, time, part, Po, np,
                                            wakeData->dx, wakeData->dy);
   if (n_binned!=np) {
@@ -79,6 +82,14 @@ void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
   
   for (plane=0; plane<2; plane++) {
     if (!wakeData->W[plane])
+      continue;
+    
+    factor = wakeData->macroParticleCharge*wakeData->factor;
+    if (plane==0)
+      factor *= wakeData->xfactor;
+    else
+      factor *= wakeData->yfactor;
+    if (!factor)
       continue;
     
     if (wakeData->smoothing && nb>=(2*wakeData->SGHalfWidth+1)) {
@@ -104,7 +115,6 @@ void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
                    posItime[plane], nb,
                    wakeData->W[plane], wakeData->wakePoints);
 
-    factor = wakeData->macroParticleCharge*wakeData->factor;
     for (ib=0; ib<nb; ib++)
       Vtime[ib] *= factor;
 
@@ -114,6 +124,10 @@ void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
                              Vtime, nb, tmin, dt, wakeData->interpolate);
     
   }
+
+  if (wakeData->tilt)
+    rotateBeamCoordinates(part, np, wakeData->tilt);
+
 #if defined(MINIMIZE_MEMORY)
   free(posItime[0]);
   free(posItime[1]);
