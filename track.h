@@ -1870,7 +1870,8 @@ void dump_twiss_parameters(LINE_LIST *beamline, long n_elem,
                            double *tune, RADIATION_INTEGRALS *radIntegrals, double *chromaticity, 
                            double *dbeta, double *acceptance, double *alphac,
                            long final_values_only, long tune_corrected, RUN *run);
-void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, long *do_twiss_output);
+void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, long *do_twiss_output,
+                        long default_order);
 long run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, long tune_corrected);
 void finish_twiss_output(void);
 void copy_doubles(double *source, double *target, long n);

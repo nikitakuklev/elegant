@@ -93,7 +93,6 @@ VMATRIX *compute_periodic_twiss(
 
   R = M->R;
   T = M->T;
-
   
   /* allocate matrices for computing dispersion, which I do
    * in 4-d using 
@@ -130,9 +129,11 @@ VMATRIX *compute_periodic_twiss(
       /* now do the second-order dispersion */
       for (i=0; i<4; i++) {
         dispR->a[i][0] = 0;
-        for (j=0; j<6; j++) 
-          for (k=0; k<=j; k++) 
-            dispR->a[i][0] += T[i][j][k]*eta[j]*eta[k];
+        if (T) {
+          for (j=0; j<6; j++) 
+            for (k=0; k<=j; k++) 
+              dispR->a[i][0] += T[i][j][k]*eta[j]*eta[k];
+        }
       }
       m_mult(dispEta, dispMInv, dispR);
       eta2[0] = dispEta->a[0][0];
@@ -711,7 +712,8 @@ long get_twiss_mode(long *mode, double *x_twiss, double *y_twiss)
   return(1);
 }
 
-void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, long *do_twiss_output)
+void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, long *do_twiss_output,
+                        long default_order)
 {
 
   log_entry("setup_twiss_output");
@@ -725,6 +727,8 @@ void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
   if (filename)
     filename = compose_filename(filename, run->rootname);
   twissConcatOrder = concat_order;
+  if (twissConcatOrder<default_order)
+    twissConcatOrder = default_order;
   *do_twiss_output = output_at_each_step;
 
   if (reference_file && matched)
