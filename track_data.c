@@ -1238,11 +1238,12 @@ PARAMETER histogram_param[N_HISTOGRAM_PARAMS] = {
   {"INTERVAL", "", IS_LONG, 0, (long)((char *)&histogram_example.interval), NULL, 0.0, 1, "interval in passes between output"},
   {"START_PASS", "", IS_LONG, 0, (long)((char*)&histogram_example.startPass), NULL, 0.0, 0, "starting pass for output"},
   {"BINS", "", IS_LONG, 0, (long)((char*)&histogram_example.bins), NULL, 0.0, 50, "number of bins"},
-  {"FIXED_BIN_SIZE", "", IS_LONG, 0, (long)((char*)&histogram_example.fixedBinSize), NULL, 0.0, 0, "if nonzero, bin size is fixed at given value"},
+  {"FIXED_BIN_SIZE", "", IS_LONG, 0, (long)((char*)&histogram_example.fixedBinSize), NULL, 0.0, 0, "if nonzero, bin size is fixed after the first histogram is made"},
   {"X_DATA", "", IS_LONG, 0, (long)((char*)&histogram_example.xData), NULL, 0.0, 1, "histogram x and x'?"},
   {"Y_DATA", "", IS_LONG, 0, (long)((char*)&histogram_example.yData), NULL, 0.0, 1, "histogram y and y'?"},
   {"LONGIT_DATA", "", IS_LONG, 0, (long)((char*)&histogram_example.longitData), NULL, 0.0, 1, "histogram t and p?"},
   {"BIN_SIZE_FACTOR", "", IS_DOUBLE, 0, (long)((char*)&histogram_example.binSizeFactor), NULL, 1.0, 0, "multiply computed bin size by this factor before histogramming"},
+  {"NORMALIZE", "", IS_LONG, 0, (long)((char*)&histogram_example.normalize), NULL, 0.0, 1, "normalize histogram with bin size and number of particles?"},
 };
   
 CSRDRIFT csrdrift_example;

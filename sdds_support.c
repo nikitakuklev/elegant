@@ -396,7 +396,7 @@ void SDDS_HistogramSetup(HISTOGRAM *histogram, long mode, long lines_per_row,
   SDDS_TABLE *SDDS_table;
   char *filename;
   long column, columns;
-  
+
   SDDS_table = &histogram->SDDS_table;
   filename = histogram->filename;
   SDDS_ElegantOutputSetup(SDDS_table, filename, mode, lines_per_row, "histograms of phase-space coordinates",
@@ -411,11 +411,13 @@ void SDDS_HistogramSetup(HISTOGRAM *histogram, long mode, long lines_per_row,
     if ((histogram->columnIndex[0][0]
          =SDDS_DefineColumn(SDDS_table, "x", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
         (histogram->columnIndex[0][1]
-         =SDDS_DefineColumn(SDDS_table, "xFrequency", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+         =SDDS_DefineColumn(SDDS_table, "xFrequency", NULL, 
+                            histogram->normalize?"1/m":"Particles/Bin", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
         (histogram->columnIndex[1][0]
          =SDDS_DefineColumn(SDDS_table, "xp", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
         (histogram->columnIndex[1][1]
-         =SDDS_DefineColumn(SDDS_table, "xpFrequency", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0) {
+         =SDDS_DefineColumn(SDDS_table, "xpFrequency", NULL, 
+                            histogram->normalize?NULL:"Particles/Bin", NULL, NULL, SDDS_DOUBLE, 0))<0) {
       fprintf(stdout, "Unable to define SDDS columns x and xp for file %s (%s)\n",
               filename, caller);
       fflush(stdout);
@@ -428,11 +430,13 @@ void SDDS_HistogramSetup(HISTOGRAM *histogram, long mode, long lines_per_row,
     if ((histogram->columnIndex[2][0]
          =SDDS_DefineColumn(SDDS_table, "y", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
         (histogram->columnIndex[2][1]
-         =SDDS_DefineColumn(SDDS_table, "yFrequency", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+         =SDDS_DefineColumn(SDDS_table, "yFrequency", NULL, 
+                            histogram->normalize?"1/m":"Particles/Bin", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
         (histogram->columnIndex[3][0]
          =SDDS_DefineColumn(SDDS_table, "yp", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
         (histogram->columnIndex[3][1]
-         =SDDS_DefineColumn(SDDS_table, "ypFrequency", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0) {
+         =SDDS_DefineColumn(SDDS_table, "ypFrequency", NULL, 
+                            histogram->normalize?NULL:"Particles/Bin", NULL, NULL, SDDS_DOUBLE, 0))<0) {
       fprintf(stdout, "Unable to define SDDS columns y and yp for file %s (%s)\n",
               filename, caller);
       fflush(stdout);
@@ -445,15 +449,18 @@ void SDDS_HistogramSetup(HISTOGRAM *histogram, long mode, long lines_per_row,
     if ((histogram->columnIndex[4][0]
          =SDDS_DefineColumn(SDDS_table, "t", NULL, "s", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
         (histogram->columnIndex[4][1]
-         =SDDS_DefineColumn(SDDS_table, "tFrequency", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+         =SDDS_DefineColumn(SDDS_table, "tFrequency", NULL, 
+                            histogram->normalize?"1/s":"Particles/Bin", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
         (histogram->columnIndex[5][0]
          =SDDS_DefineColumn(SDDS_table, "delta", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
         (histogram->columnIndex[5][1]
-         =SDDS_DefineColumn(SDDS_table, "deltaFrequency", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+         =SDDS_DefineColumn(SDDS_table, "deltaFrequency", NULL, 
+                            histogram->normalize?NULL:"Particles/Bin", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
         (histogram->columnIndex[6][0]
          =SDDS_DefineColumn(SDDS_table, "dt", NULL, "s", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
         (histogram->columnIndex[6][1]
-         =SDDS_DefineColumn(SDDS_table, "dtFrequency", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ) {
+         =SDDS_DefineColumn(SDDS_table, "dtFrequency", NULL, 
+                            histogram->normalize?"1/s":"Particles/Bin", NULL, NULL, SDDS_DOUBLE, 0))<0 ) {
       fprintf(stdout, "Unable to define SDDS columns t, dt, and p for file %s (%s)\n",
               filename, caller);
       fflush(stdout);
@@ -920,6 +927,9 @@ void dump_particle_histogram(HISTOGRAM *histogram, long step, long pass, double 
     for (ibin=0; ibin<histogram->bins; ibin++) 
       coordinate[ibin] = (ibin+0.5)*histogram->binSize[icoord] + lower;
     make_histogram(frequency, histogram->bins, lower, upper, histData, particles, 1);
+    if (histogram->normalize)
+      for (ibin=0; ibin<histogram->bins; ibin++)
+        frequency[ibin] /= particles*(upper-lower)/histogram->bins;
     if (!SDDS_SetColumn(&histogram->SDDS_table, SDDS_SET_BY_INDEX, 
                         coordinate, histogram->bins, histogram->columnIndex[icoord][0]) ||
         !SDDS_SetColumn(&histogram->SDDS_table, SDDS_SET_BY_INDEX,
