@@ -917,11 +917,11 @@ PARAMETER csbend_param[N_CSBEND_PARAMS] = {
     {"EDGE1_KICK_LIMIT", "", IS_DOUBLE, 0, (long)((char *)&csbend_example.edge1_kick_limit), NULL, -1., 0, "maximum kick entrance edge can deliver"},
     {"EDGE2_KICK_LIMIT", "", IS_DOUBLE, 0, (long)((char *)&csbend_example.edge2_kick_limit), NULL, -1., 0, "maximum kick exit edge can deliver"},
     {"KICK_LIMIT_SCALING", "", IS_LONG, 0, (long)((char *)&csbend_example.kick_limit_scaling), NULL, 0, 0, "scale maximum edge kick with FSE?"},
-    {"USE_BN", "", IS_LONG, 0, (long)((char *)&csbend_example.use_bn), NULL, 0.0, 0, "use B<n> instead of K<n>?"},
-    {"B1", "1/M", IS_DOUBLE, 0, (long)((char *)&csbend_example.b1), NULL, 0.0, 0, "K1 = B1*rho, where rho is bend radius"},
-    {"B2", "1/M$a2$n", IS_DOUBLE, 0, (long)((char *)&csbend_example.b2), NULL, 0.0, 0, "K2 = B2*rho"},
-    {"B3", "1/M$a3$n", IS_DOUBLE, 0, (long)((char *)&csbend_example.b3), NULL, 0.0, 0, "K3 = B3*rho"},
-    {"B4", "1/M$a4$n", IS_DOUBLE, 0, (long)((char *)&csbend_example.b4), NULL, 0.0, 0, "K4 = B4*rho"},
+    {"USE_BN", "", IS_LONG, 0, (long)((char *)&csbend_example.use_bn), NULL, 0.0, 0, "use b<n> instead of K<n>?"},
+    {"B1", "1/M", IS_DOUBLE, 0, (long)((char *)&csbend_example.b1), NULL, 0.0, 0, "K1 = b1*rho, where rho is bend radius"},
+    {"B2", "1/M$a2$n", IS_DOUBLE, 0, (long)((char *)&csbend_example.b2), NULL, 0.0, 0, "K2 = b2*rho"},
+    {"B3", "1/M$a3$n", IS_DOUBLE, 0, (long)((char *)&csbend_example.b3), NULL, 0.0, 0, "K3 = b3*rho"},
+    {"B4", "1/M$a4$n", IS_DOUBLE, 0, (long)((char *)&csbend_example.b4), NULL, 0.0, 0, "K4 = b4*rho"},
     {"ISR", "", IS_LONG, 0, (long)((char *)&csbend_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (scattering)?"},
     };
 
