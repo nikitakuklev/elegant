@@ -1,0 +1,400 @@
+/*CopyrightNotice001
+
+*****************************************************************
+                          COPYRIGHT NOTIFICATION
+*****************************************************************
+
+THE FOLLOWING IS A NOTICE OF COPYRIGHT, AVAILABILITY OF THE CODE,
+AND DISCLAIMER WHICH MUST BE INCLUDED IN THE PROLOGUE OF THE CODE
+AND IN ALL SOURCE LISTINGS OF THE CODE.
+ 
+(C)  COPYRIGHT 1998 UNIVERSITY OF CHICAGO
+ 
+Argonne National Laboratory (ANL), with facilities in the States of 
+Illinois and Idaho, is owned by the United States Government, and
+operated by the University of Chicago under provision of a contract
+with the Department of Energy.
+
+Portions of this material resulted from work developed under a U.S.
+Government contract and are subject to the following license:  For
+a period of five years from December 30, 1998, the Government is
+granted for itself and others acting on its behalf a paid-up,
+nonexclusive, irrevocable worldwide license in this computer
+software to reproduce, prepare derivative works, and perform
+publicly and display publicly.  With the approval of DOE, this
+period may be renewed for two additional five year periods. 
+Following the expiration of this period or periods, the Government
+is granted for itself and others acting on its behalf, a paid-up,
+nonexclusive, irrevocable worldwide license in this computer
+software to reproduce, prepare derivative works, distribute copies
+to the public, perform publicly and display publicly, and to permit
+others to do so.
+
+*****************************************************************
+                                DISCLAIMER
+*****************************************************************
+
+NEITHER THE UNITED STATES GOVERNMENT NOR ANY AGENCY THEREOF, NOR
+THE UNIVERSITY OF CHICAGO, NOR ANY OF THEIR EMPLOYEES OR OFFICERS,
+MAKES ANY WARRANTY, EXPRESS OR IMPLIED, OR ASSUMES ANY LEGAL
+LIABILITY OR RESPONSIBILITY FOR THE ACCURACY, COMPLETENESS, OR
+USEFULNESS OF ANY INFORMATION, APPARATUS, PRODUCT, OR PROCESS
+DISCLOSED, OR REPRESENTS THAT ITS USE WOULD NOT INFRINGE PRIVATELY
+OWNED RIGHTS.  
+
+*****************************************************************
+LICENSING INQUIRIES MAY BE DIRECTED TO THE INDUSTRIAL TECHNOLOGY
+DEVELOPMENT CENTER AT ARGONNE NATIONAL LABORATORY.
+
+CopyrightNotice001*/
+
+/* program: sddsexpand
+ * purpose: take a SDDS file and create a new file with the
+ *          columns turned into parameters. Each page of the
+ *          new file corresponds to a row of the old file.
+ *          This is basically an inverse of sddscollapse.
+ *
+ * Michael Borland, 1999
+ *
+ $Log: not supported by cvs2svn $
+ */
+#include "mdb.h"
+#include "scan.h"
+#include "SDDS.h"
+
+#define DEBUG 0
+
+#define SET_PIPE 0
+#define SET_UNDULATORPERIOD 1
+#define SET_UNDULATORK 2
+#define SET_BETAX 3
+#define N_OPTIONS 4
+
+char *option[N_OPTIONS] = {
+  "pipe", "undulatorperiod", "undulatork", "betax",
+} ;
+
+char *USAGE="sddssasefel [-pipe=[input][,output]] [<SDDSinputfile>] [<SDDSoutputfile>]\n\
+[-undulatorPeriod=<inMeters>] [-undulatorK=<value>] [-betax=<value>]\n\
+Uses formulae of Ming Xie to compute performance of a SASE FEL.\n\
+The computations are done on the following columns of the input file:\n\
+   charge (C)\n\
+   rmsBunchLength (s)\n\
+   pCentral (momentum in mc units)\n\
+   ex0 (emittance, m-radians)\n\
+   Sdelta0 (rms fractional energy spread)\n\
+   undulatorPeriod (m) *\n\
+   undulatorK *\n\
+   betax (m) *\n\
+Quantities marked with * may be omitted.  If omitted, the quantity may\n\
+be specified on the commandline; otherwise, it will be optimized to \n\
+minimize the gain length.\n\
+Program by Michael Borland.  (This is version 1, January 1999.)\n";
+
+double FELScalingFunction
+(double *etaDiffraction, double *etaEmittance, double *etaEnergySpread,
+ double L1D, double beta, double emittance, double lightWavelength, double undulatorPeriod,
+ double sigmaDelta);
+void ComputeSASEFELParameters
+  (double *lightWavelength, double *saturationLength, double *gainLength,  
+   double *noisePower, double *saturationPower, double *PierceParameter, double *etaDiffraction, 
+   double *etaEmittance, double *etaEnergySpread, double charge, double rmsBunchLength, double undulatorPeriod, 
+   double undulatorK, double beta, double emittance, double sigmaDelta, double pCentral, short planar); 
+
+
+/* This structure holds an array of values and a flag telling whether to
+ * optimize the quantity.  If the flag is on, then the values are *set*
+ * by the optimization.  Otherwise, the values are inputs.
+ */
+typedef struct {
+  char *name, *units;
+  double *value, guess;
+  short inFile, requiredInFile;
+} VALUE_NAME;
+
+void OptimizeSASEFELParameters
+  (VALUE_NAME charge, VALUE_NAME rmsBunchLength, VALUE_NAME undulatorPeriod,
+   VALUE_NAME undulatorK, VALUE_NAME betax, VALUE_NAME ex0, VALUE_NAME Sdelta0, VALUE_NAME pCentral,
+   long row);
+double SASEFELOptimFn(double *x, long *invalid);
+void setOptimizationParameters(double *x0, double *dx, short *disable, long index, VALUE_NAME data, long row);
+void transferOptimizationParameters(double *x0, long index, VALUE_NAME data, long row);
+void ComputeSASEFELParameters
+  (double *lightWavelength, double *saturationLength, double *gainLength,  double *noisePower,
+   double *saturationPower, double *PierceParameter, double *etaDiffraction, double *etaEmittance,
+   double *etaEnergySpread, double charge, double rmsBunchLength, double undulatorPeriod, double undulatorK, 
+   double beta,  double emittance, double sigmaDelta, double pCentral, short planar);
+double FELScalingFunction
+  (double *etaDiffraction, double *etaEmittance,
+   double *etaEnergySpread, double L1D, double beta, double emittance,
+   double lightWavelength, double undulatorPeriod, double sigmaDelta);
+
+
+main(int argc, char **argv)
+{
+  SDDS_DATASET SDDSin, SDDSout;
+  char *inputfile, *outputfile;
+  long i, i_arg, noWarnings, row, rows;
+  SCANNED_ARG *s_arg;
+  unsigned long pipeFlags;
+  VALUE_NAME charge = { "charge", "C", NULL, 1e-9, 0, 1};
+  VALUE_NAME rmsBunchLength = { "rmsBunchLength", "s", NULL, 1e-12, 0, 1};
+  VALUE_NAME pCentral = { "pCentral", "m$be$nc", NULL, 1e9, 0, 1};
+  VALUE_NAME ex0 = { "ex0", "$gp$rm", NULL, 1e-12, 0, 1};
+  VALUE_NAME Sdelta0 = { "Sdelta0", "", NULL, 1e-4, 0, 1};
+  VALUE_NAME undulatorPeriod = { "undulatorPeriod", "m", NULL, 1e-2, 0, 0};
+  VALUE_NAME undulatorK = { "undulatorK", "", NULL, 1, 0, 0};
+  VALUE_NAME betax = {"betax", "m", NULL, 1, 0, 0};
+  VALUE_NAME *ValueName[9] ;
+  double lightWavelength, saturationLength, gainLength, noisePower, saturationPower;
+  double PierceParameter, etaDiffraction, etaEmittance, etaEnergySpread;
+  
+  ValueName[0] = &charge;
+  ValueName[1] = &rmsBunchLength;
+  ValueName[2] = &pCentral;
+  ValueName[3] = &ex0;
+  ValueName[4] = &Sdelta0;
+  ValueName[5] = &undulatorPeriod;
+  ValueName[6] = &undulatorK;
+  ValueName[7] = &betax;
+  ValueName[8] = NULL;
+
+  SDDS_RegisterProgramName(argv[0]);
+  argc = scanargs(&s_arg, argc, argv);
+  if (argc<2) 
+    bomb(NULL, USAGE);
+
+  inputfile = outputfile = NULL;
+  pipeFlags = noWarnings = 0;
+
+  for (i_arg=1; i_arg<argc; i_arg++) {
+    if (s_arg[i_arg].arg_type==OPTION) {
+      switch (match_string(s_arg[i_arg].list[0], option, N_OPTIONS, 0)) {
+      case SET_PIPE:
+        if (!processPipeOption(s_arg[i_arg].list+1, s_arg[i_arg].n_items-1, &pipeFlags))
+          SDDS_Bomb("invalid -pipe syntax");
+        break;
+      default:
+        fprintf(stderr, "error: unknown switch: %s\n", s_arg[i_arg].list[0]);
+        exit(1);
+        break;
+      }
+    }
+    else {
+      if (inputfile==NULL)
+        inputfile = s_arg[i_arg].list[0];
+      else if (outputfile==NULL)
+        outputfile = s_arg[i_arg].list[0];
+      else
+        SDDS_Bomb("too many filenames");
+    }
+  }
+  
+  processFilenames("sddssasefel", &inputfile, &outputfile, pipeFlags, noWarnings, NULL);
+
+  if (!SDDS_InitializeInput(&SDDSin, inputfile) ||
+      !SDDS_InitializeOutput(&SDDSout, SDDS_BINARY, 1, NULL, NULL, outputfile)) 
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+
+
+  /* Check the input file for required data.  Simultaneously set up the output file
+   * to reflect the input plus any optimized input parameters 
+   */
+  i = -1;
+  while (ValueName[++i]) {
+    if (SDDS_GetColumnIndex(&SDDSin, ValueName[i]->name)<0) {
+      if (ValueName[i]->requiredInFile) {
+        fprintf(stderr, "Error (sddssasefel): %s is required to be in the input file\n",
+                ValueName[i]->name);
+        exit(1);
+      }
+      ValueName[i]->inFile = 0;
+      if (!SDDS_DefineSimpleColumn(&SDDSout, ValueName[i]->name, 
+                                   ValueName[i]->units, SDDS_DOUBLE))
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+    else {
+      ValueName[i]->inFile = 1;
+      if (SDDS_CheckColumn(&SDDSin, ValueName[i]->name, ValueName[i]->units, 
+                           SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OK)
+        exit(1);
+      if (!SDDS_TransferColumnDefinition(&SDDSout, &SDDSin, ValueName[i]->name, NULL))
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+  }
+
+  /* Set up the output parameters in the output file. */
+  if (!SDDS_DefineSimpleColumn(&SDDSout, "lightWavelength", "m", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleColumn(&SDDSout, "saturationLength", "m", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleColumn(&SDDSout, "gainLength", "m", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleColumn(&SDDSout, "noisePower", "W", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleColumn(&SDDSout, "saturationPower", "W", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleColumn(&SDDSout, "PierceParameter", NULL, SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleColumn(&SDDSout, "etaDiffraction", NULL, SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleColumn(&SDDSout, "etaEmittance", NULL, SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleColumn(&SDDSout, "etaEnergySpread", NULL, SDDS_DOUBLE) ||
+      !SDDS_SaveLayout(&SDDSout) || !SDDS_WriteLayout(&SDDSout))
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+
+  while (SDDS_ReadPage(&SDDSin)>0) {
+    if (!SDDS_CopyPage(&SDDSout, &SDDSin))
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    if ((rows=SDDS_RowCount(&SDDSin))>0) {
+      i = -1;
+      while (ValueName[++i]) {
+        if (ValueName[i]->inFile) {
+          if (!(ValueName[i]->value 
+                = SDDS_GetColumnInDoubles(&SDDSin, ValueName[i]->name)))
+            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+        } else
+          ValueName[i]->value = tmalloc(sizeof(*ValueName[i]->value)*rows);
+      }
+      for (row=0; row<rows; row++) {
+        OptimizeSASEFELParameters(charge, rmsBunchLength, undulatorPeriod, undulatorK,
+                                  betax, ex0, Sdelta0, pCentral, row);
+        ComputeSASEFELParameters(&lightWavelength, &saturationLength,
+                                 &gainLength, &noisePower, &saturationPower,
+                                 &PierceParameter, &etaDiffraction, &etaEmittance,
+                                 &etaEnergySpread,
+                                 charge.value[row], rmsBunchLength.value[row],
+                                 undulatorPeriod.value[row], undulatorK.value[row],
+                                 betax.value[row], ex0.value[row],
+                                 Sdelta0.value[row], pCentral.value[row], 1);
+        if (!SDDS_SetRowValues(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, row,
+                               "charge", charge.value[row],
+                               "rmsBunchLength", rmsBunchLength.value[row],
+                               "pCentral", pCentral.value[row],
+                               "ex0", ex0.value[row],
+                               "Sdelta0", Sdelta0.value[row],
+                               "undulatorPeriod", undulatorPeriod.value[row],
+                               "undulatorK", undulatorK.value[row],
+                               "betax", betax.value[row],
+                               "lightWavelength", lightWavelength,
+                               "saturationLength", saturationLength,
+                               "gainLength", gainLength, 
+                               "noisePower", noisePower,
+                               "saturationPower", saturationPower,
+                               "PierceParameter", PierceParameter,
+                               "etaDiffraction", etaDiffraction,
+                               "etaEmittance", etaEmittance,
+                               "etaEnergySpread", etaEnergySpread,
+                               NULL)) 
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      }
+    }
+    if (!SDDS_WritePage(&SDDSout))
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  }
+  if (!SDDS_Terminate(&SDDSin) || !SDDS_Terminate(&SDDSout))
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  exit(0);
+}
+
+void OptimizeSASEFELParameters
+  (VALUE_NAME charge, VALUE_NAME rmsBunchLength, VALUE_NAME undulatorPeriod,
+   VALUE_NAME undulatorK, VALUE_NAME betax, VALUE_NAME ex0, VALUE_NAME Sdelta0, VALUE_NAME pCentral,
+   long row)
+{
+  short disable[8] = { 0,0,0,0,0,0,0,0 };
+  double x0[8], dx[8], result;
+  long i;
+
+  setOptimizationParameters(x0, dx, disable, 0, charge, row);
+  setOptimizationParameters(x0, dx, disable, 1, rmsBunchLength, row);
+  setOptimizationParameters(x0, dx, disable, 2, undulatorPeriod, row);
+  setOptimizationParameters(x0, dx, disable, 3, undulatorK, row);
+  setOptimizationParameters(x0, dx, disable, 4, betax, row);
+  setOptimizationParameters(x0, dx, disable, 5, ex0, row);
+  setOptimizationParameters(x0, dx, disable, 6, Sdelta0, row);
+  setOptimizationParameters(x0, dx, disable, 7, pCentral, row);
+  for (i=0; i<8; i++)
+    if (!disable[i])
+      break;
+  if (i==8)
+    return;
+#if DEBUG
+  fprintf(stderr, "Before optimization:\n");
+  fprintf(stderr, " charge=%le, rmsBL=%le, uP=%le, uK=%le, betax=%le, ex0=%le, Sdelta=%le, pC=%le\n",
+          x0[0], x0[1], x0[2], x0[3], x0[4], x0[5], x0[6], x0[7]);
+  if (simplexMin(&result, x0, dx, NULL, NULL, disable, 8, 0.0, 1e-10,
+                 SASEFELOptimFn, NULL, 500, 10)<0) {
+    fprintf(stderr, "Optimization unsuccessful\n");
+  }
+#endif
+  for (i=0; i<8; i++)
+    dx[i] = 0.1*x0[i];
+  if (simplexMin(&result, x0, dx, NULL, NULL, disable, 8, 0.0, 1e-9,
+                 SASEFELOptimFn, NULL, 500, 10)<0) {
+    fprintf(stderr, "Optimization unsuccessful\n");
+  }
+#if DEBUG
+  fprintf(stderr, "After optimization:\n");
+  fprintf(stderr, " charge=%le, rmsBL=%le, uP=%le, uK=%le, betax=%le, ex0=%le, Sdelta=%le, pC=%le\n",
+          x0[0], x0[1], x0[2], x0[3], x0[4], x0[5], x0[6], x0[7]);
+#endif
+
+  transferOptimizationParameters(x0, 0, charge, row);
+  transferOptimizationParameters(x0, 1, rmsBunchLength, row);
+  transferOptimizationParameters(x0, 2, undulatorPeriod, row);
+  transferOptimizationParameters(x0, 3, undulatorK, row);
+  transferOptimizationParameters(x0, 4, betax, row);
+  transferOptimizationParameters(x0, 5, ex0, row);
+  transferOptimizationParameters(x0, 6, Sdelta0, row);
+  transferOptimizationParameters(x0, 7, pCentral, row);
+}
+
+double SASEFELOptimFn(double *x, long *invalid)
+{
+  double lightWavelength, saturationLength, gainLength, noisePower, saturationPower;
+  double PierceParameter, etaDiffraction, etaEmittance, etaEnergySpread;
+  long i;
+  *invalid = 0;
+  for (i=0; i<7; i++) {
+    if (x[i]<0) {
+      *invalid = 1;
+      return 0;
+    }
+  }
+  ComputeSASEFELParameters(&lightWavelength, &saturationLength,
+                           &gainLength, &noisePower, &saturationPower,
+                           &PierceParameter, &etaDiffraction, &etaEmittance,
+                           &etaEnergySpread,
+                           x[0], /* charge */
+                           x[1], /* bunch length */
+                           x[2], /* undulator period */
+                           x[3], /* undulator K */
+                           x[4], /* betax */
+                           x[5], /* ex0 */
+                           x[6], /* Sdelta */
+                           x[7], /* pCentral */
+                           1);
+#if DEBUG 
+  fprintf(stderr, "opt: Q=%g, BL=%g, UP=%g, UK=%g, BX=%g, EX=%g, SD=%g, PC=%g -> %g\n",
+          x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7], saturationLength);
+#endif
+  return saturationLength;
+}
+
+void setOptimizationParameters(double *x0, double *dx, short *disable, long index, VALUE_NAME data, long row)
+{
+  if (data.inFile) {
+    x0[index] = data.value[row];
+    dx[index] = 0.0;
+    disable[index] = 1;
+  }
+  else {
+    x0[index] = data.guess;
+    dx[index] = 0.1*x0[index];
+    disable[index] = 0;
+#if DEBUG
+    fprintf(stderr, "optimizing %s\n", data.name);
+#endif
+  }
+}
+
+void transferOptimizationParameters(double *x0, long index, VALUE_NAME data, long row)
+{
+  if (!data.inFile)
+    data.value[row] = x0[index];
+}
+                               
