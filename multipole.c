@@ -122,8 +122,8 @@ void readErrorMultipoleData(MULTIPOLE_DATA *multData,
     }
     if (multData->orders>1 && i!=multData->orders) {
       /* dipole present */
-      if (!multData->an[i] || !multData->bn[i]) {
-        fprintf(stdout, "Steering multipole data in %s is invalid: an or bn is zero for order=0\n",
+      if (!multData->an[i]) {
+        fprintf(stdout, "Steering multipole data in %s is invalid: an is zero for order=0\n",
                 multFile);
         exit(1);
       }
