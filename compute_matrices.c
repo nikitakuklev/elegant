@@ -508,15 +508,15 @@ VMATRIX *compute_matrix(
 	  double period;
 	  poles = 2*(wiggler->poles/2)+1;
 	  period = 2*(wiggler->length/poles);
-	  wigglerRadius = sqrt(sqr(elem->Pref_input)+1)*period/(PIx2*wiggler->K);
+	  wiggler->radiusInternal = sqrt(sqr(elem->Pref_input)+1)*period/(PIx2*wiggler->K);
 	} else
-	  wigglerRadius = wiggler->radius;
-	if (wigglerRadius==0) {
+	  wiggler->radiusInternal = wiggler->radius;
+	if (wiggler->radiusInternal==0) {
 	  fprintf(stderr, "Error: wiggler radius is zero\n");
 	  fprintf(stderr, "Parameters are length=%e, poles=%ld, radius=%e, K=%e\n",
-		  wiggler->length, wiggler->poles, wiggler->radius, wiggler->K);
+		  wiggler->length, wiggler->poles, wiggler->radiusInternal, wiggler->K);
 	}
-        elem->matrix = wiggler_matrix(wiggler->length, wigglerRadius, 
+        elem->matrix = wiggler_matrix(wiggler->length, wiggler->radiusInternal,
 				      run->default_order);
 	break;
       case T_SCRIPT:

@@ -1965,6 +1965,8 @@ extern PARAMETER wiggler_param[N_WIGGLER_PARAMS];
 typedef struct {
   double length, radius, K;
   long poles;
+  /* internal use only */
+  double radiusInternal;  /* may be computed from K */
 } WIGGLER;
 
 /* names and storage structure for SCRIPT element */
