@@ -33,7 +33,7 @@ void lfree(void *ptr)
 
 #define MAX_LINE_LENGTH 128*16384 
 #define MAX_FILE_NESTING 10
-LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, long echo, long divisions)
+LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, long echo)
 {
   long type=0, i;
   long occurence, iMad;
@@ -128,7 +128,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
           fflush(stdout);
           print_elem_list(stdout, elem);
 #endif
-          fill_line(line, n_lines, elem, n_elems, s, divisions);
+          fill_line(line, n_lines, elem, n_elems, s);
           check_duplic_line(line, lptr, n_lines+1);
 #ifdef DEBUG 
           fprintf(stdout, "\n****** expanded line %s:\n", lptr->name);
@@ -330,11 +330,11 @@ void show_elem(ELEMENT_LIST *eptr, long type)
                 break;
             case IS_STRING:
                 if ((ptr = *(char**)(eptr->p_elem+parameter[j].offset))) {
-                    fprintf(stdout,  "    %s = %e\n", parameter[j].name, ptr);
+                    fprintf(stdout,  "    %s = %s\n", parameter[j].name, ptr);
                     fflush(stdout);
                   }
                 else {
-                    fprintf(stdout,  "    %s = %e\n", parameter[j].name, ptr);
+                    fprintf(stdout,  "    %s = %s\n", parameter[j].name, ptr);
                     fflush(stdout);
                   }
                 break;

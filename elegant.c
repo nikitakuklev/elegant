@@ -75,7 +75,8 @@ char *GREETING="This is elegant, by Michael Borland. (This is version 14.6Beta4,
 #define ALTER_ELEMENTS  37
 #define OPTIMIZATION_TERM 38
 #define SLICE_ANALYSIS  39
-#define N_COMMANDS      40
+#define DIVIDE_ELEMENTS 40
+#define N_COMMANDS      41
 
 char *command[N_COMMANDS] = {
     "run_setup", "run_control", "vary_element", "error_control", "error_element", "awe_beam", "bunched_beam",
@@ -85,7 +86,7 @@ char *command[N_COMMANDS] = {
     "find_aperture", "analyze_map", "correct_tunes", "link_control", "link_elements",
     "steering_element", "amplification_factors", "print_dictionary", "floor_coordinates", "correction_matrix_output",
     "load_parameters", "sdds_beam", "subprocess", "fit_traces", "sasefel", "alter_elements",
-    "optimization_term", "slice_analysis",
+    "optimization_term", "slice_analysis", "divide_elements",
         } ;
 
 char *description[N_COMMANDS] = {
@@ -129,6 +130,7 @@ char *description[N_COMMANDS] = {
     "sasefel                     computes parameters of SASE FEL at end of system",
     "alter_elements              alters a common parameter for one or more elements",
     "slice_analysis              computes and outputs slice analysis of the beam",
+    "divide_elements             sets up parser to automatically divide specified elements into parts",
         } ;
 
 void initialize_structures(RUN *run_conditions, VARY *run_control, ERRORVAL *error_control, CORRECTION *correct, 
@@ -387,7 +389,9 @@ char **argv;
 
             /* parse the lattice file and create the beamline */
             run_conditions.lattice = compose_filename(saved_lattice, rootname);
-            beamline = get_beamline(lattice, use_beamline, p_central, echo_lattice, element_divisions);
+	    if (element_divisions>1)
+	      addDivisionSpec("*", NULL, NULL, element_divisions, 0.0);
+            beamline = get_beamline(lattice, use_beamline, p_central, echo_lattice);
             fprintf(stdout, "length of beamline %s per pass: %21.15e m\n", beamline->name, beamline->revolution_length);
             fflush(stdout);
             lattice = saved_lattice;
@@ -1044,6 +1048,11 @@ char **argv;
             if (beam_type!=-1)
               bomb("slice_analysis namelist must precede beam definition", NULL);
             setupSliceAnalysis(&namelist_text, &run_conditions, &output_data);
+            break;
+    	  case DIVIDE_ELEMENTS: 
+            if (run_setuped)
+              bomb("divide_elements must precede run_setup", NULL);
+	    setupDivideElements(&namelist_text, &run_conditions, beamline);
             break;
           default:
             fprintf(stdout, "unknown namelist %s given.  Known namelists are:\n", namelist_text.group_name);

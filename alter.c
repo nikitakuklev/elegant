@@ -32,10 +32,16 @@ void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     if (multiplicative && differential)
       bomb("can't combine multiplicative and differential modes", NULL);
     if (type) {
+      long i;
       str_toupper(type);
       if (has_wildcards(type) && strchr(type, '-'))
         type = expand_ranges(type);
-    }
+      for (i=0; i<N_TYPES; i++)
+	if (wild_match(entity_name[i], type))
+	  break;
+      if (i==N_TYPES)
+	bomb("type pattern does not match any known type", NULL);
+    }    
     if (exclude && has_wildcards(exclude) && strchr(exclude, '-'))
       exclude = expand_ranges(exclude);
       

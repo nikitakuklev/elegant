@@ -177,7 +177,7 @@ int main(int argc, char **argv)
 
     switch (output_mode) {
       case TRANSPORT_OUTPUT: 
-        beamline = get_beamline(input, NULL, p_cent/(1e6*me_mev), 0, 0);
+        beamline = get_beamline(input, NULL, p_cent/(1e6*me_mev), 0);
         if (magnets)
             output_magnets(magnets, beamline->name, beamline);
         convert_to_transport(output, beamline, flip_k_signs, angle_tolerance,
@@ -185,20 +185,20 @@ int main(int argc, char **argv)
         break;
       case PATRICIA_OUTPUT:
         set_max_name_length(4);
-        beamline = get_beamline(input, NULL, p_cent/(1e6*me_mev), 0, 0);
+        beamline = get_beamline(input, NULL, p_cent/(1e6*me_mev), 0);
         if (magnets)
             output_magnets(magnets, beamline->name, beamline);
         convert_to_patricia(output, beamline, flip_k_signs, angle_tolerance, header_file, ender_file); 
         break;
       case PATPET_OUTPUT:
         set_max_name_length(4);
-        beamline = get_beamline(input, NULL, p_cent/(1e6*me_mev), 0, 0);
+        beamline = get_beamline(input, NULL, p_cent/(1e6*me_mev), 0);
         if (magnets)
             output_magnets(magnets, beamline->name, beamline);
         convert_to_patpet(output, beamline, flip_k_signs, angle_tolerance, header_file, ender_file); 
         break;
       case PARMELA_OUTPUT:
-        beamline = get_beamline(input, NULL, p_cent/(1e6*me_mev), 0, 0);
+        beamline = get_beamline(input, NULL, p_cent/(1e6*me_mev), 0);
         if (magnets)
             output_magnets(magnets, beamline->name, beamline);
         convert_to_parmela(output, beamline, flip_k_signs, angle_tolerance, header_file, ender_file,
@@ -206,13 +206,13 @@ int main(int argc, char **argv)
         break;
       case SDDS_OUTPUT:
         set_max_name_length(12);
-        beamline = get_beamline(input, NULL, p_cent/(1e6*me_mev), 0, 0);
+        beamline = get_beamline(input, NULL, p_cent/(1e6*me_mev), 0);
         if (magnets)
             output_magnets(magnets, beamline->name, beamline);
         sdds_strength_output(output, beamline, input);
         break;
       case XORBIT_OUTPUT:
-        beamline = get_beamline(input, NULL, p_cent/(1e6*me_mev), 0, 0);
+        beamline = get_beamline(input, NULL, p_cent/(1e6*me_mev), 0);
         if (magnets)
             output_magnets(magnets, beamline->name, beamline);
         convert_to_xorbit(output, beamline, flip_k_signs, header_file, ender_file);

@@ -1869,6 +1869,8 @@ void performSliceAnalysisOutput(SLICE_OUTPUT *sliceOutput, double **particle, lo
 				long timeGiven);
 void performSliceAnalysis(SLICE_OUTPUT *sliceOutput, double **particle, long particles, 
 			  double Po, double charge, long timeGiven);
+void setupSliceAnalysis(NAMELIST_TEXT *nltext, RUN *run, 
+			OUTPUT_FILES *output_data);
 
 /* prototypes for compute_matrices13.c: */
 extern VMATRIX *full_matrix(ELEMENT_LIST *elem, RUN *run, long order);
@@ -2043,7 +2045,7 @@ extern void extend_elem_list(ELEMENT_LIST **eptr);
  
 /* prototypes for get_beamline5.c: */
 extern void show_elem(ELEMENT_LIST *eptr, long type);
-extern LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, long echo, long divisions);
+extern LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, long echo);
 double compute_end_positions(LINE_LIST *lptr) ;
 extern void show_elem(ELEMENT_LIST *eptr, long type);
 extern void free_elements(ELEMENT_LIST *elemlist);
@@ -2076,13 +2078,13 @@ void bend_edge_kicks(double *x, double *xp, double *y, double *yp, double rho, d
 
 /* prototypes for mad_parse4.c: */
 extern long is_simple(char *s);
-extern void fill_line(LINE_LIST *line, long nl, ELEMENT_LIST *elem, long ne, char *s, long divisions);
+extern void fill_line(LINE_LIST *line, long nl, ELEMENT_LIST *elem, long ne, char *s);
 extern ELEMENT_LIST *expand_line(ELEMENT_LIST *leptr, LINE_LIST *lptr,
-    char *s, LINE_LIST *line, long nl, ELEMENT_LIST *elem, long ne, char *part_of, long divisions);
+    char *s, LINE_LIST *line, long nl, ELEMENT_LIST *elem, long ne, char *part_of);
 extern long is_simple(char *s);
 extern void fill_elem(ELEMENT_LIST *eptr, char *s, long type, FILE *fp_input);
 extern long expand_phys(ELEMENT_LIST *leptr, char *entity, ELEMENT_LIST *elem_list,     
-    long ne, LINE_LIST *line_list, long nl, long reverse, long multiplier, char *part_of, long divisions);
+    long ne, LINE_LIST *line_list, long nl, long reverse, long multiplier, char *part_of);
 extern void copy_element(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long reverse, long division,
                          long divisions);
 void copy_named_element(ELEMENT_LIST *eptr, char *s, ELEMENT_LIST *elem);
@@ -2415,3 +2417,9 @@ void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 
 VMATRIX *twissTransformMatrix(TWISSELEMENT *twissWanted, TWISS *twissInput);
 
+void setupDivideElements(NAMELIST_TEXT *nltext, RUN *run, 
+			 LINE_LIST *beamline);
+void addDivisionSpec(char *name, char *type, char *exclude,
+		     long divisions,
+		     double maximum_length);
+long elementDivisions(char *name, char *type, double length);

@@ -39,8 +39,7 @@ void fill_line(
     long nl,                 /* number of line definitions so far */
     ELEMENT_LIST *elem,      /* linked list of element definitions */
     long ne,                 /* number of element definitions so far */
-    char *s,                 /* text to parse into a new line definition */
-    long divisions           /* number of pieces to divide elements into */
+    char *s                  /* text to parse into a new line definition */
     )
 {
     register char *ptr;
@@ -87,7 +86,7 @@ void fill_line(
     lptr->n_elems = 0;
     lptr->flags = 0;
 
-    expand_line(leptr, lptr, ptr, line, nl, elem, ne, lptr->name, divisions);
+    expand_line(leptr, lptr, ptr, line, nl, elem, ne, lptr->name);
     while (leptr->succ!=NULL) {
       leptr = leptr->succ;
     }
@@ -105,8 +104,7 @@ extern ELEMENT_LIST *expand_line(
     long nl,                 /* number of existing lines */
     ELEMENT_LIST *elem,      /* pointer to linked-list of element structures for defined elements */
     long ne,                 /* number of defined elements */
-    char *part_of,           /* name of the group that elements will be part of if they are not members of sub-lines */
-    long divisions           /* number of pieces to divide elements into */
+    char *part_of           /* name of the group that elements will be part of if they are not members of sub-lines */
     )
 {
     register char *ptr, *ptr1;
@@ -174,7 +172,7 @@ extern ELEMENT_LIST *expand_line(
         if (simple) {
             /* add simple elements to the line's element list */
             lptr->n_elems += 
-                (l=expand_phys(leptr, ptr1, elem, ne, line, nl, reverse, multiplier, part_of, divisions));
+	      (l=expand_phys(leptr, ptr1, elem, ne, line, nl, reverse, multiplier, part_of));
 #ifdef DEBUG
             fprintf(stdout, "number of elements now %ld\n", lptr->n_elems);
 #endif
@@ -186,7 +184,7 @@ extern ELEMENT_LIST *expand_line(
             cp_str(&ptrs, ptr1);
             for (i=0; i<multiplier; i++) {
                 strcpy(ptr1, ptrs);
-                leptr = expand_line(leptr, lptr, ptr1, line, nl, elem, ne, part_of, divisions);
+                leptr = expand_line(leptr, lptr, ptr1, line, nl, elem, ne, part_of);
                 }
 #ifdef DEBUG
             fprintf(stdout, "number of elements now %ld\n", lptr->n_elems);
@@ -373,78 +371,79 @@ long expand_phys(
     long nl,                     /* number of same */
     long reverse, 
     long multiplier,
-    char *part_of,               /* name of line this is to be part of */
-    long divisions
+    char *part_of                /* name of line this is to be part of */
     )
 {
-    long ie, il, i, j, comparison, div=0;
-    char trunc_char;
-    ELEMENT_LIST *elem0;
+  long ie, il, i, j, comparison, div;
+  char trunc_char;
+  ELEMENT_LIST *elem0;
+  double length;
 
-    log_entry("expand_phys");
-
-    /* search for truncated name, for the case that it turns out
-     * to be an element */
-    trunc_char = 0;
-    if (divisions<1)
-      divisions = 1;
-    if (((long)strlen(entity))>max_name_length) {
-        trunc_char = entity[max_name_length];
-        entity[max_name_length] = 0;
-        }
-    elem0 = elem_list;
-    for (ie=0; ie<ne; ie++) {
-        if ((comparison=strcmp(entity, elem_list->name))==0) {
+  log_entry("expand_phys");
+  
+  /* search for truncated name, for the case that it turns out
+   * to be an element */
+  trunc_char = 0;
+  if (((long)strlen(entity))>max_name_length) {
+    trunc_char = entity[max_name_length];
+    entity[max_name_length] = 0;
+  }
+  elem0 = elem_list;
+  div = 1;
+  for (ie=0; ie<ne; ie++) {
+    if ((comparison=strcmp(entity, elem_list->name))==0) {
 #ifdef DEBUG
-            fprintf(stdout, "adding element %ld*%s\n", multiplier, entity);
-            fflush(stdout);
+      fprintf(stdout, "adding element %ld*%s\n", multiplier, entity);
+      fflush(stdout);
 #endif
-            for (i=0; i<multiplier; i++) {
-              long j;
-              if (entity_description[elem_list->type].flags&DIVIDE_OK)
-                div = divisions;
-              else 
-                div = 1;
-              for (j=0; j<div; j++) {
-                copy_element(leptr, elem_list, reverse, j, div);
-                leptr->part_of = elem_list->part_of?elem_list->part_of:part_of;
-                extend_elem_list(&leptr);
-              }
-            }
-            return(multiplier*div);
-            }
-        if (comparison<0)
-            break;
-        elem_list = elem_list->succ;
-        }
-
-    /* it isn't an element, so search list of beam-lines for occurence
-     * of the full name 
-     */
-    if (trunc_char)
-        entity[max_name_length] = trunc_char;
-    for (il=0; il<nl; il++) {
-        if (strcmp(line_list->name, entity)==0) {
-            ie = 0;
-            for (i=0; i<multiplier; i++) {
-                ie += copy_line(leptr, &(line_list->elem), line_list->n_elems, reverse, entity);
-                for (j=0; j<line_list->n_elems; j++) 
-                    leptr = leptr->succ;
-                }
-            log_exit("expand_phys");
-            return(ie);
-            }
-        line_list = line_list->succ;
-        }
-
-    fprintf(stdout, "no expansion for entity %s\n", entity);
-    fflush(stdout);
-    fprintf(stdout, "known elements are:\n");
-    fflush(stdout);
-    print_elem_names(stdout, elem0, 100);
-    exit(1);
-    return(0);
+      if (entity_description[elem_list->type].flags&DIVIDE_OK &&
+	  entity_description[elem_list->type].flags&HAS_LENGTH &&
+	  (length = *(double*)(elem_list->p_elem))>0)
+	div = elementDivisions(entity, entity_name[elem_list->type], length);
+      fprintf(stderr,  "Dividing %s %ld times\n",
+	      entity, div);
+      for (i=0; i<multiplier; i++) {
+	long j;
+	for (j=0; j<div; j++) {
+	  copy_element(leptr, elem_list, reverse, j, div);
+	  leptr->part_of = elem_list->part_of?elem_list->part_of:part_of;
+	  extend_elem_list(&leptr);
+	}
+      }
+      return(multiplier*div);
     }
+    if (comparison<0)
+      break;
+      elem_list = elem_list->succ;
+  }
+  
+  /* it isn't an element, so search list of beam-lines for occurence
+   * of the full name 
+   */
+  if (trunc_char)
+    entity[max_name_length] = trunc_char;
+  for (il=0; il<nl; il++) {
+    if (strcmp(line_list->name, entity)==0) {
+      ie = 0;
+      for (i=0; i<multiplier; i++) {
+	ie += copy_line(leptr, &(line_list->elem), line_list->n_elems, reverse, entity);
+	for (j=0; j<line_list->n_elems; j++) 
+	  leptr = leptr->succ;
+      }
+      log_exit("expand_phys");
+      return(ie);
+    }
+    line_list = line_list->succ;
+  }
+  
+  fprintf(stdout, "no expansion for entity %s\n", entity);
+  fflush(stdout);
+  fprintf(stdout, "known elements are:\n");
+  fflush(stdout);
+  print_elem_names(stdout, elem0, 100);
+  exit(1);
+  return(0);
+}
 
 /* routine: copy_element()
  * purpose: copy an element 
