@@ -736,6 +736,7 @@ PARAMETER center_param[N_CENTER_PARAMS]={
     {"Y" , "", IS_LONG, 0, (long)((char *)&center_example.y), NULL, 0.0, 1, "center y coordinates?" },
     {"YP", "", IS_LONG, 0, (long)((char *)&center_example.yp), NULL, 0.0, 1, "center y' coordinates?"},
     {"ONCE_ONLY", "", IS_LONG, 0, (long)((char *)&center_example.onceOnly), NULL, 0.0, 0, "compute centering offsets for first beam only, apply to all?"},
+    {"ON_PASS", "", IS_LONG, 0, (long)((char *)&center_example.onPass), NULL, 0.0, -1, "If nonnegative, do centering on the nth pass only."},
     };
 
 KICKER kicker_example;

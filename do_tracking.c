@@ -557,7 +557,7 @@ long do_tracking(
                                              accepted, z, *P_central);
             break;
           case T_CENTER:
-            center_beam(coord, (CENTER*)eptr->p_elem, nToTrack);
+            center_beam(coord, (CENTER*)eptr->p_elem, nToTrack, i_pass);
             break;
           case T_REMCOR:
             remove_correlations(coord, (REMCOR*)eptr->p_elem, nToTrack);
@@ -1359,7 +1359,7 @@ void remove_correlations(double **part, REMCOR *remcor, long np)
 }
 
 
-void center_beam(double **part, CENTER *center, long np)
+void center_beam(double **part, CENTER *center, long np, long iPass)
 {
   double sum, offset;
   long i, ic;
@@ -1368,6 +1368,9 @@ void center_beam(double **part, CENTER *center, long np)
   if (!np) {
     return;
   }
+
+  if (center->onPass>=0 && iPass!=center->onPass)
+    return;
 
   centerCoord[0] = center->x;
   centerCoord[1] = center->xp;

@@ -627,7 +627,7 @@ extern char *entity_text[N_TYPES];
 #define N_RECIRC_PARAMS 1
 #define N_QFRING_PARAMS 9
 #define N_SCRAPER_PARAMS 13
-#define N_CENTER_PARAMS 5
+#define N_CENTER_PARAMS 6
 #define N_KICKER_PARAMS 10
 #define N_KSEXT_PARAMS 15
 #define N_KSBEND_PARAMS 27
@@ -1306,7 +1306,7 @@ typedef struct {
 extern PARAMETER center_param[N_CENTER_PARAMS];
 
 typedef struct {
-    long x, xp, y, yp, onceOnly;
+    long x, xp, y, yp, onceOnly, onPass;
     /* for internal use only */
     long deltaSet[4];
     double delta[4];
@@ -2313,7 +2313,7 @@ extern void offset_beam(double **coord, long n_to_track, MALIGN *offset, double 
 extern void do_match_energy(double **coord, long np, double *P_central, long change_beam);
 extern void set_central_energy(double **coord, long np, double new_energy, double *P_central);
 extern void set_central_momentum(double **coord, long np, double  P_new, double *P_central);
-extern void center_beam(double **part, CENTER *center, long np);
+extern void center_beam(double **part, CENTER *center, long np, long iPass);
 void remove_correlations(double **part, REMCOR *remcor, long np);
 void drift_beam(double **part, long np, double length, long order);
 void exactDrift(double **part, long np, double length);
