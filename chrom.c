@@ -6,7 +6,7 @@
  *
  * Michael Borland, 1992
  */
-#if !defined(_WIN32) && !defined(linux)
+#if defined(SOLARIS) && !defined(__GNUC__)
 #include <sunmath.h>
 #endif
 #include "mdb.h"

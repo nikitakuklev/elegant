@@ -8,7 +8,7 @@
 #include <float.h>
 #define isnan(x) _isnan(x)
 #else
-#if !defined(linux)
+#if defined(SOLARIS) && !defined(__GNUC__)
 #include <sunmath.h>
 #endif
 #endif
