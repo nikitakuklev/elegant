@@ -48,10 +48,8 @@ void do_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
         else if ((optimization_data->fp_log=fopen_e(log_file, "w", FOPEN_RETURN_ON_ERROR|FOPEN_SAVE_IF_EXISTS))==NULL)
             bomb("unable to open log file", NULL);
         }
-    if (target!=-DBL_MAX) {
-        if (optimization_data->mode==OPTIM_MODE_MAXIMUM)
-            target = -target;
-        }
+    if (optimization_data->mode==OPTIM_MODE_MAXIMUM && target!=-DBL_MAX)
+      target = -target;
     optimization_data->target = target;
 
     /* reset flags for elements that may have been varied previously */
@@ -662,7 +660,6 @@ double optimization_function(double *value, long *invalid)
             }
         /* get twiss mode and (beta, alpha, eta, etap) for both planes */
         update_twiss_parameters(run, beamline);
-
         /* store twiss parameters for last element */
         for (i=0; i<5; i++) {
             rpn_store(*((&beamline->elast->twiss->betax)+i)/(i==2?PIx2:1), twiss_mem[i]);
@@ -677,10 +674,10 @@ double optimization_function(double *value, long *invalid)
         rpn_store(twiss_max.etay,  twiss_mem[14]);
         rpn_store(twiss_max.etapy, twiss_mem[15]);
         }
-/*
+
     for (i=0; i<variables->n_variables; i++)
       variables->varied_quan_value[i] = value[i];
-*/
+
     track_beam(run, control, error, variables, beamline, beam, output, optim_func_flags);
 
     /* compute final parameters and store in rpn memories */
@@ -740,6 +737,7 @@ double optimization_function(double *value, long *invalid)
     if (optimization_data->mode==OPTIM_MODE_MAXIMUM)
         result *= -1;
     log_exit("optimization_function");
+    
     return(result);
     }
 

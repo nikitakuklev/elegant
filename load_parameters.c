@@ -326,7 +326,8 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
             newValue = value[j];
           }
           if (verbose) {
-            fprintf(stderr, "Changing %s from %21.15e to %21.15e\n",
+            fprintf(stderr, "Changing %s[%s] from %21.15e to %21.15e\n",
+                    eptr->name,
                     entity_description[eptr->type].parameter[param].name,
                     *((double*)(p_elem+entity_description[eptr->type].parameter[param].offset)),
                     newValue);
@@ -351,7 +352,8 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
             newValue = value[j];
           }
           if (verbose) {
-            fprintf(stderr, "Changing %s from %ld to %.0f\n",
+            fprintf(stderr, "Changing %s[%s] from %ld to %.0f\n",
+                    eptr->name,
                     entity_description[eptr->type].parameter[param].name,
                     *((long*)(p_elem+entity_description[eptr->type].parameter[param].offset)),
                     newValue);
@@ -369,7 +371,8 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
         case IS_STRING:
           load_request[i].value_type[load_request[i].values] = IS_STRING;
           if (verbose) {
-            fprintf(stderr, "Changing %s from %s to %s\n",
+            fprintf(stderr, "Changing %s[%s] from %s to %s\n",
+                    eptr->name,
                     entity_description[eptr->type].parameter[param].name,
                     *((char**)(p_elem+entity_description[eptr->type].parameter[param].offset)),
                     valueString[j]);
