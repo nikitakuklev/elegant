@@ -459,7 +459,6 @@ void SDDS_HistogramSetup(HISTOGRAM *histogram, long mode, long lines_per_row,
   if (!columns)
     bomb("no output selected for histogram", NULL);
   if (!SDDS_DefineSimpleParameter(SDDS_table, "Pass", NULL, SDDS_LONG) ||
-      !SDDS_DefineSimpleParameter(SDDS_table, "pCentral", "m$be$nc", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleParameter(SDDS_table, "PassLength", "m", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleParameter(SDDS_table, "PassCentralTime", "s", SDDS_DOUBLE)) {
     fprintf(stdout, "Unable define SDDS parameter for file %s (%s)\n", filename, caller);
