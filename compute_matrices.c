@@ -1191,7 +1191,7 @@ VMATRIX *lightMirrorMatrix(LMIRROR *lm)
   if (lm->tilt)
     tilt_matrices(M, lm->tilt);
   if (lm->dx || lm->dy || lm->dz) 
-    misalign_matrix(M, lm->dx, lm->dy, lm->dz, 0.0);
+    misalign_matrix(M, lm->dx, lm->dy, lm->dz, PI-2*lm->theta);
   return M;
 }
 
