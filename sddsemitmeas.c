@@ -9,6 +9,12 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.5  1998/10/14 17:12:57  borland
+ * Modified the output file.  If there are no error sets requested, then the
+ * file contains the results (emittances, etc.) as parameters and the
+ * data+fit as columns.  If there are error sets requested, the file contains
+ * just results as parameters.
+ *
  * Revision 1.4  1998/08/11 19:47:39  borland
  * Fixed bug with variable name (obsolete option that is still needed
  * internally).  Should remove this.
@@ -197,6 +203,7 @@ main(
   int add_resolution, find_uncert, verbosity;
   char *x_width_name, *y_width_name;
   unsigned long pipeFlags;
+  char emitLabel[256], xEmitLabel[256], yEmitLabel[256];
   
   argc = scanargs(&scanned, argc, argv);
   if (argc<2 || argc>(2+N_OPTIONS)) {
@@ -489,6 +496,7 @@ main(
     variable_name = column_name[i_variable];
   }
   if (!SDDS_TransferColumnDefinition(&SDDSout, &SDDSin, variable_name, NULL) ||
+      !SDDS_DefineSimpleParameter(&SDDSout, "EmittanceLabel", "", SDDS_STRING) ||
       !SDDS_WriteLayout(&SDDSout))
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
 
@@ -749,8 +757,15 @@ main(
         }
       }
 
+      xEmitLabel[0] = yEmitLabel[1] = 0;
       if (n_error_sets>1) {
         if (!ignore_x && n_good_fits_x) {
+          if (!error_output) 
+            sprintf(xEmitLabel, "$ge$r$bx$n = %.3g um", emitx_sum/n_good_fits_x*1e6);
+          else 
+            sprintf(xEmitLabel, "$ge$r$bx$n = %.3g $sa$e %.3g um",
+                    1e6*emitx_sum/n_good_fits_x, 
+                    1e6*sqrt(emitx2_sum/n_good_fits_x-sqr(emitx_sum/n_good_fits_x)));
           if (!SDDS_SetParameters
               (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
                "ex", emitx_sum/n_good_fits_x, "S11", S11_sum/n_good_fits_x,
@@ -772,6 +787,12 @@ main(
             SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
         }
         if (!ignore_y && n_good_fits_y) {
+          if (!error_output) 
+            sprintf(yEmitLabel, "$ge$r$by$n = %.3g um", emity_sum/n_good_fits_y*1e6);
+          else 
+            sprintf(yEmitLabel, "$ge$r$by$n = %.3g $sa$e %.3g um",
+                    1e6*emity_sum/n_good_fits_y, 
+                    1e6*sqrt(emity2_sum/n_good_fits_y-sqr(emity_sum/n_good_fits_y)));
           if (!SDDS_SetParameters
               (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
                "ey", emity_sum/n_good_fits_y, "S22", S22_sum/n_good_fits_y,
@@ -802,6 +823,9 @@ main(
             s_emitx = propagate_errors_for_emittance(Sx->a, sSx->a);
           else
             s_emitx = 0;
+          sprintf(xEmitLabel, "$ge$r$bx$n = %.3g $sa$e %.3g um", 
+                  1e6*emitx_sum/n_good_fits_x,
+                  1e6*s_emitx);
           if (S11<=0)  S11 = 1e-100;
           if (S12<=0)  S12 = 1e-100;
           if (emitx<=0) emitx = 1e-100;
@@ -833,6 +857,9 @@ main(
             s_emity = propagate_errors_for_emittance(Sy->a, sSy->a);
           else
             s_emity = 0;
+          sprintf(yEmitLabel, "$ge$r$by$n = %.3g $sa$e %.3g um", 
+                  1e6*emity_sum/n_good_fits_y,
+                  1e6*s_emity);
           if (S33<=0) S33 = 1e-100;
           if (S34<=0) S34 = 1e-100;
           if (emity<=0) emity = 1e-100;
@@ -856,7 +883,10 @@ main(
             SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
         }
       }
-      if (!SDDS_WritePage(&SDDSout))
+      sprintf(emitLabel, "%s %s", xEmitLabel, yEmitLabel);
+      if (!SDDS_SetParameters(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+                              "EmittanceLabel", emitLabel, NULL) ||
+          !SDDS_WritePage(&SDDSout))
         SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     }
     
