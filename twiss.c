@@ -2851,7 +2851,10 @@ void AddWigglerRadiationIntegrals(double length, long poles, double radius,
   double h0, gamma;
   double Lp;
   long pole, fieldSign;
-  
+#ifdef DEBUG
+  FILE *fpd = NULL;
+#endif
+
   gamma = (1+alpha*alpha)/beta;
   poles = 2*(poles/2)+1;
 
@@ -2862,7 +2865,24 @@ void AddWigglerRadiationIntegrals(double length, long poles, double radius,
 
   /* length of each pole */
   Lp = length/poles;
-  
+
+#ifdef DEBUG
+  fpd = fopen_e("wiggler.sdds", "w", 0);
+  fprintf(fpd, "SDDS1\n&column name=Pole type=long &end\n");
+  fprintf(fpd, "&column name=beta type=double units=m &end\n");
+  fprintf(fpd, "&column name=alpha type=double &end\n");
+  fprintf(fpd, "&column name=eta type=double units=m &end\n");
+  fprintf(fpd, "&column name=etap type=double units=m &end\n");
+  fprintf(fpd, "&column name=h0 type=double units=1/m &end\n");
+  fprintf(fpd, "&column name=I1 type=double units=m &end\n");
+  fprintf(fpd, "&column name=I2 type=double units=1/m &end\n");
+  fprintf(fpd, "&column name=I3 type=double units=1/m$a2$n &end\n");
+  fprintf(fpd, "&column name=I4 type=double units=1/m &end\n");
+  fprintf(fpd, "&column name=I5 type=double units=1/m &end\n");
+  fprintf(fpd, "&data mode=ascii no_row_counts=1 &end\n");
+  fprintf(fpd, "0 %e %e %e %e 0 0 0 0 0 0\n", beta, alpha, eta, etap);
+#endif
+
   fieldSign = 1;
   for (pole=0; pole<poles; pole++) {
     fieldSign *= -1;
@@ -2870,18 +2890,19 @@ void AddWigglerRadiationIntegrals(double length, long poles, double radius,
       h0 = fieldSign*0.5/radius;
     } else
       h0 = fieldSign/radius;
-#ifdef DEBUG
-    fprintf(stderr, "Wiggler: pole=%4ld beta=%14.6e alpha=%14.6e gamma=%14.6e eta=%14.6e etap=%14.6e\n",
-	    pole, beta, alpha, gamma, eta, etap);
-#endif
 
     *I1 += (h0*Lp*(h0*ipow(Lp,2) + 4*eta*PI + 2*etap*Lp*PI))/(2.*ipow(PI,2));
     
     *I2 += (ipow(h0,2)*Lp)/2.;
     
     *I3 += SIGN(h0)*(4*ipow(h0,3)*Lp)/(3.*PI);
-    
-    *I4 += (ipow(h0,3)*Lp*(7*h0*ipow(Lp,2) + 16*(2*eta + etap*Lp)*PI))/(24.*ipow(PI,2));
+
+    /* I4 should be identically zero because there is no transverse variation to
+     * the energy loss.
+
+     *I4 += (ipow(h0,3)*Lp*(7*h0*ipow(Lp,2) + 16*(2*eta + etap*Lp)*PI))/(24.*ipow(PI,2));
+
+    */
 
     *I5 += SIGN(h0)*
       (ipow(h0,3)*Lp*(gamma*
@@ -2899,7 +2920,15 @@ void AddWigglerRadiationIntegrals(double length, long poles, double radius,
     gamma = (1+alpha*alpha)/beta;
     eta   = eta + (etap + Lp/PI*h0)*Lp ;
     etap  = etap + 2*Lp/PI*h0;
+    
+#ifdef DEBUG
+    fprintf(fpd, "%ld %e %e %e %e %e %e %e %e %e %e\n", pole+1, beta, alpha, eta, etap,
+	    h0, *I1, *I2, *I3, *I4, *I5);
+#endif
   }
+#ifdef DEBUG
+  fclose(fpd);
+#endif
 }
 
 /* compute sextupole resonance widths */
