@@ -1492,6 +1492,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     }
     csrWake.s0 = ctLower + dzf;
   } else {
+    ctLower = ctUpper = dct = 0;
     csrWake.dctBin = dct;
     csrWake.s0 = ctLower + dzf;
   }
