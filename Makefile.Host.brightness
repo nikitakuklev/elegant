@@ -8,6 +8,9 @@
 #*************************************************************************
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.2  2003/04/17 02:00:07  borland
+# Added steering multipoles for KQUAD element.
+#
 # Revision 1.1  2003/02/20 16:45:16  shang
 # makefile for sddsbrightness
 #
@@ -105,13 +108,13 @@ sddsbrightness$(OBJ): ../sddsbrightness.h
 
 ifdef WIN32
 usb$(OBJ) :
-	f77 /compile_only /threads /libs:dll /fast ../usb.f
+	f77 /compile_only /threads /libs:dll /fast ..\\usb.f
 
 brighte$(OBJ) :
-	f77 /compile_only /threads /libs:dll /fast ../brighte.f
+	f77 /compile_only /threads /libs:dll /fast ..\\brighte.f
 
 hunt$(OBJ) :
-	f77 /compile_only /threads /libs:dll /fast ../hunt.f
+	f77 /compile_only /threads /libs:dll /fast ..\\hunt.f
 else
 usb$(OBJ) : 
 	f77 ../usb.f -c -o usb$(OBJ)	
@@ -123,7 +126,7 @@ endif
 
 ifdef WIN32
 sddsbrightness$(EXE) : $(OBJS)
-	f77 /exe /threads /libs:dll /link /WARN:3 /incremental:no /opt:ref /release \
+	f77 /exe /threads /libs:dll /link /WARN:3 /incremental:no /opt:ref /release usb.obj \
 	c:\\epics\\extensions\\lib\\$(T_A)\\mdbcommon.lib \
 	c:\\epics\\extensions\\lib\\$(T_A)\\matlib.lib \
 	c:\\epics\\extensions\\lib\\$(T_A)\\fftpack.lib \
@@ -133,7 +136,7 @@ sddsbrightness$(EXE) : $(OBJS)
 	c:\\epics\\extensions\\lib\\$(T_A)\\mdbmth.lib \
 	c:\\epics\\extensions\\lib\\$(T_A)\\mdblib.lib \
 	c:\\epics\\extensions\\lib\\$(T_A)\\z.lib \
-	-out:shower$(EXE) $(OBJS)
+	-out:sddsbrightness$(EXE) $(OBJS)
 
 else
 sddsbrightness$(EXE): $(OBJS)

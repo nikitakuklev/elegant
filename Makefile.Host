@@ -15,7 +15,7 @@ endif
 EPICS_EXTENSIONS_LIB = ../../../../../epics/extensions/lib/$(HOST_ARCH)
 PROD = elegant sddsemitmeas madto sddssasefel sddsTouschekInteg ibsEmittance recurseSetup haissinski \
         sddsmatchtwiss sddsanalyzebeam sddsbrightness sddsrandmult
-#PROD = sddsbrightness
+
 USR_CFLAGS = 	-I../../../../../epics/extensions/src/SDDS/include \
 		$(ZLIB_INC) \
 		-I$(EPICS_EXTENSIONS_INCLUDE) \
@@ -102,7 +102,7 @@ fitTraces_CFLAGS = -I../../../../../epics/extensions/src/SDDS/meschach
 
 include $(TOP)/config/RULES.Host
 
-sddsbrightness:
+sddsbrightness$(OBJ):
 	$(MAKE) -f ../Makefile.Host.brightness
 
 alter$(OBJ): alter.h
@@ -262,7 +262,7 @@ fitTraces$(OBJ): fitTraces.h
 fitTraces.h: ../fitTraces.nl
 	nlpp ../fitTraces.nl fitTraces.h
 
-sddsrandmult.c: sddsrandmult.h
+sddsrandmult$(OBJ): sddsrandmult.h
 
 sddsrandmult.h: ../sddsrandmult.nl
 	nlpp ../sddsrandmult.nl sddsrandmult.h

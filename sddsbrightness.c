@@ -14,6 +14,10 @@
  * Michael Borland, 2002
  *
  $Log: not supported by cvs2svn $
+ Revision 1.6  2003/02/24 20:00:11  shang
+ added -method option which includes dejus and walker's method for calculating
+ the on-axis brightness.
+
  Revision 1.5  2002/08/14 20:23:48  soliday
  Added Open License
 
@@ -132,6 +136,9 @@ void ComputeBeamSize(double period, long Nu, double ex0, double Sdelta0,
 
 /*fortran subroutine*/
 void usb_();
+#if defined(_WIN32)
+#define usb_() USB()
+#endif
 
 int main(int argc, char **argv)
 {
