@@ -55,6 +55,10 @@ CopyrightNotice001*/
  * Michael Borland, 2000
  *
  $Log: not supported by cvs2svn $
+ Revision 1.13  2002/05/20 21:33:16  borland
+ No longer attempts to perform transformation when it isn't requested.
+ Fixed bug that resulted when energy spread was exactly zero.
+
  Revision 1.12  2002/01/30 23:46:44  borland
  Fixed bug in beta/alpha matching when beta and alpha aren't given on the
  command line.
@@ -333,6 +337,12 @@ int main(int argc, char **argv)
         !(SDDS_SetColumnFromDoubles(&SDDSout, SDDS_SET_BY_NAME, p, rows, "p")) ||
         !SDDS_WritePage(&SDDSout))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    free(x);
+    free(xp);
+    free(y);
+    free(yp);
+    free(t);
+    free(p);
   }
   if (readCode==0)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
