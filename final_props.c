@@ -17,7 +17,7 @@
 static double tmp_safe_sqrt;
 #define SAFE_SQRT(x) ((tmp_safe_sqrt=(x))<0?0.0:sqrt(tmp_safe_sqrt))
 
-#define FINAL_PROPERTY_PARAMETERS 90
+#define FINAL_PROPERTY_PARAMETERS 96
 #define FINAL_PROPERTY_LONG_PARAMETERS 5
 #define F_SIGMA_OFFSET 0
 #define F_SIGMA_QUANS 7
@@ -32,7 +32,7 @@ static double tmp_safe_sqrt;
 #define F_NEMIT_OFFSET F_EMIT_OFFSET+F_EMIT_QUANS
 #define F_NEMIT_QUANS 4
 #define F_WIDTH_OFFSET F_NEMIT_OFFSET+F_NEMIT_QUANS
-#define F_WIDTH_QUANS 10
+#define F_WIDTH_QUANS 16
 #define F_RMAT_OFFSET F_WIDTH_OFFSET+F_WIDTH_QUANS
 #define F_RMAT_QUANS 31
 #define F_STATS_OFFSET F_RMAT_OFFSET+F_RMAT_QUANS
@@ -92,9 +92,15 @@ static SDDS_DEFINITION final_property_parameter[FINAL_PROPERTY_PARAMETERS] = {
     {"Wy", "&parameter name=Wy, type=double, units=m, symbol=\"W$by$n\" &end"},
     {"Dt", "&parameter name=Dt, type=double, units=s, symbol=\"$gD$rt\" &end"},
     {"Ddelta", "&parameter name=Ddelta, type=double, symbol=\"$gDd$r\" &end"},
+    {"Dt50", "&parameter name=Dt50, type=double, units=s, symbol=\"$gD$rt$b50$n\", &end"},
+    {"Dt60", "&parameter name=Dt60, type=double, units=s, symbol=\"$gD$rt$b60$n\", &end"},
+    {"Dt70", "&parameter name=Dt70, type=double, units=s, symbol=\"$gD$rt$b70$n\", &end"},
     {"Dt80", "&parameter name=Dt80, type=double, units=s, symbol=\"$gD$rt$b80$n\", &end"},
     {"Dt90", "&parameter name=Dt90, type=double, units=s, symbol=\"$gD$rt$b90$n\", &end"},
     {"Dt95", "&parameter name=Dt95, type=double, units=s, symbol=\"$gD$rt$b95$n\", &end"},
+    {"Ddelta50", "&parameter name=Ddelta50, type=double, symbol=\"$gDd$r$b50$n\", &end"},
+    {"Ddelta60", "&parameter name=Ddelta60, type=double, symbol=\"$gDd$r$b60$n\", &end"},
+    {"Ddelta70", "&parameter name=Ddelta70, type=double, symbol=\"$gDd$r$b70$n\", &end"},
     {"Ddelta80", "&parameter name=Ddelta80, type=double, symbol=\"$gDd$r$b80$n\", &end"},
     {"Ddelta90", "&parameter name=Ddelta90, type=double, symbol=\"$gDd$r$b90$n\", &end"},
     {"Ddelta95", "&parameter name=Ddelta95, type=double, symbol=\"$gDd$r$b95$n\", &end"},
@@ -346,8 +352,8 @@ long compute_final_properties
   MATRIX Rmat;
   static double *tData = NULL, *deltaData = NULL;
   static long percDataMax = 0;
-  double percLevel[6] = {10, 5, 2.5, 90, 95, 97.5};
-  double tPosition[6], deltaPosition[6];
+  double percLevel[12] = {25, 20, 15, 10, 5, 2.5, 75, 80, 85, 90, 95, 97.5};
+  double tPosition[12], deltaPosition[12];
   
   log_entry("compute_final_properties");
 
@@ -405,14 +411,14 @@ long compute_final_properties
       sum += sqr( tData[i] - tc);
     data[6+F_SIGMA_OFFSET] = sqrt(sum/sums->n_part);
     /* results of these calls used below */
-    approximate_percentiles(tPosition, percLevel, 6, tData, sums->n_part, ANALYSIS_BINS);
-    approximate_percentiles(deltaPosition, percLevel, 6, deltaData, sums->n_part, ANALYSIS_BINS);
+    approximate_percentiles(tPosition, percLevel, 12, tData, sums->n_part, ANALYSIS_BINS);
+    approximate_percentiles(deltaPosition, percLevel, 12, deltaData, sums->n_part, ANALYSIS_BINS);
   }
   else {
     for (i=0; i<7; i++) 
       data[i+F_CENTROID_OFFSET] = data[i+F_SIGMA_OFFSET] = 0;
     dt = Ddp = 0;
-    for (i=0; i<6; i++)
+    for (i=0; i<12; i++)
       tPosition[i] = deltaPosition[i] = 0;
   }
 
@@ -447,9 +453,9 @@ long compute_final_properties
     data[F_WIDTH_OFFSET+1] = approximateBeamWidth(0.6826F, coord, sums->n_part, 2L)/2.;
     data[F_WIDTH_OFFSET+2] = dt;
     data[F_WIDTH_OFFSET+3] = Ddp;
-    for (i=0; i<3; i++) {
-      data[F_WIDTH_OFFSET+4+i] = tPosition[3+i]-tPosition[0+i];
-      data[F_WIDTH_OFFSET+7+i] = deltaPosition[3+i]-deltaPosition[0+i];
+    for (i=0; i<6; i++) {
+      data[F_WIDTH_OFFSET+ 4+i] =     tPosition[6+i]-    tPosition[0+i];
+      data[F_WIDTH_OFFSET+10+i] = deltaPosition[6+i]-deltaPosition[0+i];
     }
   }
   else
