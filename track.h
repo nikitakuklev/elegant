@@ -377,9 +377,11 @@ typedef struct {
   double sStart, sEnd;
   /* simulation data */
   double *enx, *eny, *ecnx, *ecny, eta[4];
+  double *betacx, *betacy, *alphacx, *alphacy;
   double *Cx, *Cy, *Cxp, *Cyp, *Ct, *Cdelta, *Sdelta, *duration, *charge;
   double *particles;
   long *enxIndex, *enyIndex, *ecnxIndex, *ecnyIndex;
+  long *betacxIndex, *betacyIndex, *alphacxIndex, *alphacyIndex;
   long *CxIndex, *CyIndex, *CxpIndex, *CypIndex, *CtIndex, *CdeltaIndex, *SdeltaIndex;
   long *durationIndex, *chargeIndex, *particlesIndex;
   long *sliceFound;

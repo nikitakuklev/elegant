@@ -3,6 +3,9 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.5  2002/01/07 20:38:25  borland
+ * Trapazoid rule integratino is now optional for CSRCSBEND and CSRDRIFT.
+ *
  * Revision 1.4  2002/01/07 03:42:14  borland
  * Removed purify and no-optimization from Makefile.
  * Slice analysis now uses the eta values computed from the whole beam rather
@@ -35,7 +38,8 @@
 static double tmp_safe_sqrt;
 #define SAFE_SQRT(x) ((tmp_safe_sqrt=(x))<0?0.0:sqrt(tmp_safe_sqrt))
 
-double correctedEmittance(double S[6][6], double eta[4], long i1, long i2);
+double correctedEmittance(double S[6][6], double eta[4], long i1, long i2,
+			  double *beta, double *alpha);
 
 static SLICE_OUTPUT *sliceOutput;
 
@@ -66,6 +70,10 @@ void setupSliceAnalysis(NAMELIST_TEXT *nltext, RUN *run,
     if (sliceOutput->eny) free(sliceOutput->eny);
     if (sliceOutput->ecnx) free(sliceOutput->ecnx);
     if (sliceOutput->ecny) free(sliceOutput->ecny);
+    if (sliceOutput->betacx) free(sliceOutput->betacx);
+    if (sliceOutput->betacy) free(sliceOutput->betacy);
+    if (sliceOutput->alphacx) free(sliceOutput->alphacx);
+    if (sliceOutput->alphacy) free(sliceOutput->alphacy);
     if (sliceOutput->charge) free(sliceOutput->charge);
     if (sliceOutput->particles) free(sliceOutput->particles);
     if (sliceOutput->duration) free(sliceOutput->duration);
@@ -81,6 +89,10 @@ void setupSliceAnalysis(NAMELIST_TEXT *nltext, RUN *run,
     if (sliceOutput->enyIndex) free(sliceOutput->enyIndex);
     if (sliceOutput->ecnxIndex) free(sliceOutput->ecnxIndex);
     if (sliceOutput->ecnyIndex) free(sliceOutput->ecnyIndex);
+    if (sliceOutput->betacxIndex) free(sliceOutput->betacxIndex);
+    if (sliceOutput->betacyIndex) free(sliceOutput->betacyIndex);
+    if (sliceOutput->alphacxIndex) free(sliceOutput->alphacxIndex);
+    if (sliceOutput->alphacyIndex) free(sliceOutput->alphacyIndex);
     if (sliceOutput->chargeIndex) free(sliceOutput->chargeIndex);
     if (sliceOutput->particlesIndex) free(sliceOutput->particlesIndex);
     if (sliceOutput->durationIndex) free(sliceOutput->durationIndex);
@@ -104,6 +116,10 @@ void setupSliceAnalysis(NAMELIST_TEXT *nltext, RUN *run,
       !(sliceOutput->eny = malloc(sizeof(*(sliceOutput->eny))*(n_slices+2))) ||
       !(sliceOutput->ecnx = malloc(sizeof(*(sliceOutput->ecnx))*(n_slices+2))) ||
       !(sliceOutput->ecny = malloc(sizeof(*(sliceOutput->ecny))*(n_slices+2))) ||
+      !(sliceOutput->betacx = malloc(sizeof(*(sliceOutput->betacx))*(n_slices+2))) ||
+      !(sliceOutput->betacy = malloc(sizeof(*(sliceOutput->betacy))*(n_slices+2))) ||
+      !(sliceOutput->alphacx = malloc(sizeof(*(sliceOutput->alphacx))*(n_slices+2))) ||
+      !(sliceOutput->alphacy = malloc(sizeof(*(sliceOutput->alphacy))*(n_slices+2))) ||
       !(sliceOutput->charge = malloc(sizeof(*(sliceOutput->charge))*(n_slices+2))) ||
       !(sliceOutput->particles = malloc(sizeof(*(sliceOutput->particles))*(n_slices+2))) ||
       !(sliceOutput->duration = malloc(sizeof(*(sliceOutput->duration))*(n_slices+2))) ||
@@ -120,6 +136,10 @@ void setupSliceAnalysis(NAMELIST_TEXT *nltext, RUN *run,
       !(sliceOutput->enyIndex = malloc(sizeof(*(sliceOutput->enyIndex))*(n_slices+2))) ||
       !(sliceOutput->ecnxIndex = malloc(sizeof(*(sliceOutput->ecnxIndex))*(n_slices+2))) ||
       !(sliceOutput->ecnyIndex = malloc(sizeof(*(sliceOutput->ecnyIndex))*(n_slices+2))) ||
+      !(sliceOutput->betacxIndex = malloc(sizeof(*(sliceOutput->betacxIndex))*(n_slices+2))) ||
+      !(sliceOutput->betacyIndex = malloc(sizeof(*(sliceOutput->betacyIndex))*(n_slices+2))) ||
+      !(sliceOutput->alphacxIndex = malloc(sizeof(*(sliceOutput->alphacxIndex))*(n_slices+2))) ||
+      !(sliceOutput->alphacyIndex = malloc(sizeof(*(sliceOutput->alphacyIndex))*(n_slices+2))) ||
       !(sliceOutput->chargeIndex = malloc(sizeof(*(sliceOutput->chargeIndex))*(n_slices+2))) ||
       !(sliceOutput->particlesIndex = malloc(sizeof(*(sliceOutput->particlesIndex))*(n_slices+2))) ||
       !(sliceOutput->durationIndex = malloc(sizeof(*(sliceOutput->durationIndex))*(n_slices+2))) ||
@@ -170,6 +190,7 @@ void setupSliceAnalysis(NAMELIST_TEXT *nltext, RUN *run,
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 }
 
+
 long defineSliceParameters(SLICE_OUTPUT *sliceOutput, long slice)
 {
   SDDS_DATASET *SDDSout;
@@ -203,6 +224,24 @@ long defineSliceParameters(SLICE_OUTPUT *sliceOutput, long slice)
   if ((sliceOutput->ecnyIndex[slice] = 
        SDDS_DefineColumn(SDDSout, buffer, NULL, "m", NULL, NULL, SDDS_DOUBLE, 0))<0)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+
+  sprintf(buffer, "betacx%s", sliceNumString);
+  if ((sliceOutput->betacxIndex[slice] = 
+       SDDS_DefineColumn(SDDSout, buffer, NULL, "m", NULL, NULL, SDDS_DOUBLE, 0))<0)
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  sprintf(buffer, "betacy%s", sliceNumString);
+  if ((sliceOutput->betacyIndex[slice] = 
+       SDDS_DefineColumn(SDDSout, buffer, NULL, "m", NULL, NULL, SDDS_DOUBLE, 0))<0)
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  sprintf(buffer, "alphacx%s", sliceNumString);
+  if ((sliceOutput->alphacxIndex[slice] = 
+       SDDS_DefineColumn(SDDSout, buffer, NULL, "", NULL, NULL, SDDS_DOUBLE, 0))<0)
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  sprintf(buffer, "alphacy%s", sliceNumString);
+  if ((sliceOutput->alphacyIndex[slice] = 
+       SDDS_DefineColumn(SDDSout, buffer, NULL, "", NULL, NULL, SDDS_DOUBLE, 0))<0)
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+
   sprintf(buffer, "charge%s", sliceNumString);
   if ((sliceOutput->chargeIndex[slice] = 
        SDDS_DefineColumn(SDDSout, buffer, NULL, "C", NULL, NULL, SDDS_DOUBLE, 0))<0)
@@ -261,8 +300,8 @@ void performSliceAnalysisOutput(SLICE_OUTPUT *sliceOutput, double **particle, lo
   if (!sliceOutput || !sliceOutput->active) 
     return;
   if (sliceOutput->sStart<sliceOutput->sEnd &&
-      sliceOutput->sStart>elementPosition ||
-      sliceOutput->sEnd<elementPosition)
+      (sliceOutput->sStart>elementPosition ||
+       sliceOutput->sEnd<elementPosition))
     return;
   SDDSout = &(sliceOutput->SDDSout);
   if (newPage) {
@@ -279,7 +318,7 @@ void performSliceAnalysisOutput(SLICE_OUTPUT *sliceOutput, double **particle, lo
 
   performSliceAnalysis(sliceOutput, particle, particles, Po, charge, timeGiven);
   if (!SDDS_SetRowValues(SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sliceOutput->rows,
-			   "ElementName", elementName,
+			 "ElementName", elementName,
 			 "s", elementPosition, 
                          "etax", sliceOutput->eta[0], 
                          "etaxp", sliceOutput->eta[1], 
@@ -299,6 +338,10 @@ void performSliceAnalysisOutput(SLICE_OUTPUT *sliceOutput, double **particle, lo
 			   sliceOutput->enyIndex[slice], sliceOutput->eny[slice], 
 			   sliceOutput->ecnxIndex[slice], sliceOutput->ecnx[slice], 
 			   sliceOutput->ecnyIndex[slice], sliceOutput->ecny[slice], 
+			   sliceOutput->betacxIndex[slice], sliceOutput->betacx[slice], 
+			   sliceOutput->betacyIndex[slice], sliceOutput->betacy[slice], 
+			   sliceOutput->alphacxIndex[slice], sliceOutput->alphacx[slice], 
+			   sliceOutput->alphacyIndex[slice], sliceOutput->alphacy[slice], 
 			   sliceOutput->chargeIndex[slice], sliceOutput->charge[slice], 
 			   sliceOutput->particlesIndex[slice], sliceOutput->particles[slice], 
 			   sliceOutput->durationIndex[slice], sliceOutput->duration[slice], 
@@ -334,11 +377,13 @@ void performSliceAnalysis(SLICE_OUTPUT *sliceOutput, double **particle, long par
     for (slice=0; slice<sliceOutput->nSlices+1; slice++) {
       sliceOutput->enx[slice] = sliceOutput->eny[slice] = 
         sliceOutput->ecnx[slice] = sliceOutput->ecny[slice] = 
-          sliceOutput->Cx[slice] = sliceOutput->Cy[slice] =
-            sliceOutput->Cxp[slice] = sliceOutput->Cyp[slice] = 
-              sliceOutput->Cdelta[slice] = sliceOutput->duration[slice] = 
-                sliceOutput->Sdelta[slice] = sliceOutput->charge[slice] = 
-                  sliceOutput->particles[slice] = DBL_MAX;
+	sliceOutput->betacx[slice] = sliceOutput->betacy[slice] = 
+	sliceOutput->alphacx[slice] = sliceOutput->alphacy[slice] = 
+	sliceOutput->Cx[slice] = sliceOutput->Cy[slice] =
+	sliceOutput->Cxp[slice] = sliceOutput->Cyp[slice] = 
+	sliceOutput->Cdelta[slice] = sliceOutput->duration[slice] = 
+	sliceOutput->Sdelta[slice] = sliceOutput->charge[slice] = 
+	sliceOutput->particles[slice] = DBL_MAX;
     }
     return;
   }
@@ -372,9 +417,12 @@ void performSliceAnalysis(SLICE_OUTPUT *sliceOutput, double **particle, long par
       sliceOutput->eta[i] = S[i][5]/S[5][5];
   sliceOutput->enx[0] = Po*SAFE_SQRT(S[0][0]*S[1][1]-sqr(S[0][1]));
   sliceOutput->eny[0] = Po*SAFE_SQRT(S[2][2]*S[3][3]-sqr(S[2][3]));
-  sliceOutput->ecnx[0] = Po*correctedEmittance(S, sliceOutput->eta, 0, 1);
-  sliceOutput->ecny[0] = Po*correctedEmittance(S, sliceOutput->eta, 2, 3);
-  
+  sliceOutput->ecnx[0] = Po*correctedEmittance(S, sliceOutput->eta, 0, 1,
+					       &sliceOutput->betacx[0],
+					       &sliceOutput->alphacx[0]);
+  sliceOutput->ecny[0] = Po*correctedEmittance(S, sliceOutput->eta, 2, 3,
+					       &sliceOutput->betacy[0],
+					       &sliceOutput->alphacy[0]);
   /* find total bunch duration */
   tMaxAll = -(tMinAll = DBL_MAX);
   for (i=0; i<particles; i++) {
@@ -389,7 +437,10 @@ void performSliceAnalysis(SLICE_OUTPUT *sliceOutput, double **particle, long par
     /* compute values for each slice, plus average */
     nSlices = sliceOutput->nSlices;
 
+    sliceOutput->enx[nSlices+1] = sliceOutput->eny[nSlices+1] =  0;
     sliceOutput->ecnx[nSlices+1] = sliceOutput->ecny[nSlices+1] =  0;
+    sliceOutput->betacx[nSlices+1] = sliceOutput->betacy[nSlices+1] =  0;
+    sliceOutput->alphacx[nSlices+1] = sliceOutput->alphacy[nSlices+1] =  0;
     sliceOutput->charge[nSlices+1] = sliceOutput->duration[nSlices+1] = 0;
     sliceOutput->particles[nSlices+1] = sliceOutput->Sdelta[nSlices+1] = 0;
     sliceOutput->Cx[nSlices+1] = sliceOutput->Cxp[nSlices+1] = 0;
@@ -421,13 +472,20 @@ void performSliceAnalysis(SLICE_OUTPUT *sliceOutput, double **particle, long par
 	sliceOutput->Sdelta[slice] = sqrt(S[5][5]);
         sliceOutput->enx[slice] = Po*SAFE_SQRT(S[0][0]*S[1][1]-sqr(S[0][1]));
         sliceOutput->eny[slice] = Po*SAFE_SQRT(S[2][2]*S[3][3]-sqr(S[2][3]));
-        sliceOutput->ecnx[slice] = Po*correctedEmittance(S, sliceOutput->eta, 0, 1);
-        sliceOutput->ecny[slice] = Po*correctedEmittance(S, sliceOutput->eta, 2, 3);
-
+        sliceOutput->ecnx[slice] = Po*correctedEmittance(S, sliceOutput->eta, 0, 1,
+							 &sliceOutput->betacx[slice],
+							 &sliceOutput->alphacx[slice]);
+        sliceOutput->ecny[slice] = Po*correctedEmittance(S, sliceOutput->eta, 2, 3,
+							 &sliceOutput->betacy[slice],
+							 &sliceOutput->alphacy[slice]);
 	sliceOutput->enx[nSlices+1] += sliceOutput->enx[slice];
 	sliceOutput->eny[nSlices+1] += sliceOutput->eny[slice];
 	sliceOutput->ecnx[nSlices+1] += sliceOutput->ecnx[slice];
 	sliceOutput->ecny[nSlices+1] += sliceOutput->ecny[slice];
+	sliceOutput->betacx[nSlices+1] += sliceOutput->betacx[slice];
+	sliceOutput->betacy[nSlices+1] += sliceOutput->betacy[slice];
+	sliceOutput->alphacx[nSlices+1] += sliceOutput->alphacx[slice];
+	sliceOutput->alphacy[nSlices+1] += sliceOutput->alphacy[slice];
 	sliceOutput->charge[nSlices+1] += sliceOutput->charge[slice];
 	sliceOutput->particles[nSlices+1] += sliceOutput->particles[slice];
 	sliceOutput->duration[nSlices+1] += sliceOutput->duration[slice];
@@ -448,6 +506,10 @@ void performSliceAnalysis(SLICE_OUTPUT *sliceOutput, double **particle, long par
     sliceOutput->eny[nSlices+1] /= slicesFound;
     sliceOutput->ecnx[nSlices+1] /= slicesFound;
     sliceOutput->ecny[nSlices+1] /= slicesFound;
+    sliceOutput->betacx[nSlices+1] /= slicesFound;
+    sliceOutput->betacy[nSlices+1] /= slicesFound;
+    sliceOutput->alphacx[nSlices+1] /= slicesFound;
+    sliceOutput->alphacy[nSlices+1] /= slicesFound;
     sliceOutput->Sdelta[nSlices+1] /= slicesFound;
     sliceOutput->charge[nSlices+1] /= slicesFound;
     sliceOutput->particles[nSlices+1] /= slicesFound;
@@ -467,14 +529,28 @@ void performSliceAnalysis(SLICE_OUTPUT *sliceOutput, double **particle, long par
   }
 }
 
-double correctedEmittance(double S[6][6], double eta[4], long i1, long i2)
+double correctedEmittance(double S[6][6], double eta[4], long i1, long i2,
+			  double *beta, double *alpha)
 {
-  double T1, T2, T3, ec2;
+  double T1, T2, T3, ec2, denom;
   T1 = S[i1][i1] + sqr(eta[i1])*S[5][5] - 2*eta[i1]*S[i1][5];
   T2 = S[i2][i2] + sqr(eta[i2])*S[5][5] - 2*eta[i2]*S[i2][5];
   T3 = S[i1][i2] - S[i2][5]*eta[i1] - S[i1][5]*eta[i2] + S[5][5]*eta[i1]*eta[i2];
-  if ((ec2 = T1*T2-sqr(T3))>0)
-    return sqrt(ec2);
-  return 0;
+  if ((ec2 = T1*T2-sqr(T3))<0)
+    ec2 = 0;
+  if (beta) {
+    if (ec2)
+      *beta = (S[i1][i1] + sqr(eta[i1])*S[5][5] - 2*eta[i1]*S[i1][5])/sqrt(ec2);
+    else 
+      *beta = DBL_MAX;
+  }
+  if (alpha) {
+    if (ec2)
+      *alpha = -(S[i1][i2] + eta[i1]*eta[i2]*S[5][5] -
+		eta[i1]*S[i2][5] - eta[i2]*S[i1][5])/sqrt(ec2);
+    else
+      *alpha = DBL_MAX;
+  }
+  return sqrt(ec2);
 }
 
