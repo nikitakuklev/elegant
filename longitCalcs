@@ -86,7 +86,7 @@ proc compute {} {
     set overVoltage [expr $voltage/$U1]
     set rfAcceptance [expr sqrt(2*$U1/($pi*$alphac*$harmonic*$energy)*(sqrt($overVoltage*$overVoltage-1)-acos(1/$overVoltage)))]
     set synchPhaseDeg [expr 180-180.0*$synchPhase/$pi]
-    set synchTune [expr $alphac*$harmonic*cos($synchPhase)*$voltage/(2*$pi*$energy)]
+    set synchTune [expr sqrt($alphac*$harmonic*cos($synchPhase)*$voltage/(2*$pi*$energy))]
     set synchFreq [expr $synchTune*$revFreq]
     set omegaRF [expr $harmonic*2*$pi*$revFreq]
     set rfFrequency [expr $omegaRF/(2*$pi*1.0e6)]
