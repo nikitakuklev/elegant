@@ -253,9 +253,9 @@ void correction_setup(
     }
     else if (_correct->mode==ORBIT_CORRECTION) {
       compute_orbcor_matrices(_correct->CMx, &_correct->SLx, 0, run, beamline, 0, 
-                              !_correct->response_only, fixed_length_matrix);
+                              !_correct->response_only, fixed_length_matrix, verbose);
       compute_orbcor_matrices(_correct->CMy, &_correct->SLy, 2, run, beamline, 0, 
-                              !_correct->response_only, fixed_length_matrix);
+                              !_correct->response_only, fixed_length_matrix, verbose);
     }
     else
       bomb("something impossible happened (correction_setup)", NULL);
@@ -648,10 +648,12 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
       Cdp = NULL;
     x_failed = y_failed = bombed = 0;
     if (usePerturbedMatrix) {
+      if (correct->verbose)
+        fprintf(stdout, "Computing orbit correction matrices\n");
       compute_orbcor_matrices(correct->CMx, &correct->SLx, 0, run, beamline, 0, 
-                              !correct->response_only, fixedLengthMatrix);
+                              !correct->response_only, fixedLengthMatrix, correct->verbose);
       compute_orbcor_matrices(correct->CMy, &correct->SLy, 2, run, beamline, 0, 
-                              !correct->response_only, fixedLengthMatrix);
+                              !correct->response_only, fixedLengthMatrix, correct->verbose);
     }
     for (i_cycle=0; i_cycle<correct->n_xy_cycles; i_cycle++) {
       final_traj = 1;
@@ -1430,38 +1432,42 @@ ELEMENT_LIST *find_useable_moni_corr(long *nmon, long *ncor, long **mon_index,
 }
 
 void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN *run, LINE_LIST *beamline, 
-                             long find_only, long invert, long fixed_length)
+                             long find_only, long invert, long fixed_length, long verbose)
 {
   ELEMENT_LIST *start;
   long i_corr, i_moni, equalW;
   double coef, htune, moniFactor, *corrFactor, *corrFactorFL, coefFL, W0=0.0;
   static MATRIX *I1=NULL, *I2=NULL, *I3=NULL, *I4=NULL, *W=NULL;
+  char memName[1024];
 
   log_entry("compute_orbcor_matrices");
 
   start = find_useable_moni_corr(&CM->nmon, &CM->ncor, &CM->mon_index, &CM->umoni, &CM->ucorr, 
                                  &CM->kick_coef, &CM->sl_index, coord, SL, run, beamline, 1);
+
 #ifdef DEBUG
   fprintf(stdout, "finding twiss parameters beginning at %s.\n", start->name);
   fflush(stdout);
 #endif
   if (!(beamline->flags&BEAMLINE_TWISS_CURRENT)) {
-    fprintf(stdout, "updating twiss parameters...");
-    fflush(stdout);
+    if (verbose) {
+      fprintf(stdout, "updating twiss parameters...");
+      fflush(stdout);
+    }
     update_twiss_parameters(run, beamline, NULL);
+
 #ifdef DEBUG
     fprintf(stdout, "Tunes: %e, %e\n", beamline->tune[0], beamline->tune[1]);
-    fflush(stdout);
     fprintf(stdout, "Initial eta: %e, %e\n", 
             beamline->elem.twiss->etax, 
             beamline->elem.twiss->etay);
-    fflush(stdout);
     fprintf(stdout, "Final eta: %e, %e\n", 
             beamline->elast->twiss->etax, 
             beamline->elast->twiss->etay);
     fflush(stdout);
 #endif
-    report_stats(stdout, "\ndone: ");
+    if (verbose)
+      report_stats(stdout, "\ndone: ");
   }
 
 #ifdef DEBUG
@@ -1536,8 +1542,10 @@ void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN
   
   corrFactor   = tmalloc(sizeof(*corrFactor)*CM->ncor);
   corrFactorFL = tmalloc(sizeof(*corrFactorFL)*CM->ncor);
-  fprintf(stdout, "computing orbit response matrix...");
-  fflush(stdout);
+  if (verbose) {
+    fprintf(stdout, "computing orbit response matrix...");
+    fflush(stdout);
+  }
   switch (coord) {
   case 0:
     for (i_corr=0; i_corr<CM->ncor; i_corr++) {
@@ -1566,6 +1574,11 @@ void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN
             cos(htune-fabs(CM->umoni[i_moni]->twiss->phix - phi));
         if (fixed_length)
           CM->C->a[i_moni][i_corr] += CM->umoni[i_moni]->twiss->etax*corrFactorFL[i_corr];
+        sprintf(memName, "HR_%s#%ld_%s#%ld.%s",
+                CM->umoni[i_moni]->name, CM->umoni[i_moni]->occurence,
+                CM->ucorr[i_corr]->name, CM->ucorr[i_corr]->occurence, 
+                SL->corr_param[CM->sl_index[i_corr]]);
+        rpn_store(CM->C->a[i_moni][i_corr], NULL, rpn_create_mem(memName, 0));
       }
     }
     break;
@@ -1589,11 +1602,19 @@ void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN
         CM->C->a[i_moni][i_corr] 
           = moniFactor*corrFactor[i_corr]*
             cos(htune-fabs(CM->umoni[i_moni]->twiss->phiy - phi));
+        sprintf(memName, "VR_%s#%ld_%s#%ld.%s",
+                CM->umoni[i_moni]->name, CM->umoni[i_moni]->occurence,
+                CM->ucorr[i_corr]->name, CM->ucorr[i_corr]->occurence,
+                SL->corr_param[CM->sl_index[i_corr]]);
+        rpn_store(CM->C->a[i_moni][i_corr], NULL, rpn_create_mem(memName, 0));
       }
     }
   }
   free(corrFactor);
-  report_stats(stdout, "\ndone");
+  if (verbose) {
+    report_stats(stdout, "\ndone");
+    fflush(stdout);
+  }
 #ifdef DEBUG
   m_show(CM->C    , "%13.6le ", "influence matrix\n", stdout);
 #endif
@@ -1602,8 +1623,10 @@ void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN
   if (invert && !CM->inverse_computed) {
     /* compute correction matrix T */
     CM->inverse_computed = 1;
-    fprintf(stdout, "computing correction matrix...");
-    fflush(stdout);
+    if (verbose) {
+      fprintf(stdout, "computing correction matrix...");
+      fflush(stdout);
+    }
     if (equalW) {
       m_trans(I1, CM->C);
       m_mult(I3, I1, CM->C);
@@ -1618,7 +1641,10 @@ void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN
       m_mult(CM->T, I4, I2);
       m_scmul(CM->T, CM->T, -1.0); 
     }
-    report_stats(stdout, "\ndone");
+    if (verbose) {
+      report_stats(stdout, "\ndone");
+      fflush(stdout);
+    }
 #ifdef DEBUG
     m_show(CM->T, "%13.6le ", "correction matrix\n", stdout);
 #endif
@@ -1872,7 +1898,7 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
 {
   static MATRIX *R, *ImR, *INV_ImR, *INV_R, *C, *co, *diff, *change;
   static double **one_part;
-  static long initialized = 0, been_warned = 0;
+  static long initialized = 0;
   long i, j, n_iter = 0, bad_orbit;
   long n_part;
   double p, error, last_error;
@@ -2042,7 +2068,7 @@ long findFixedLengthClosedOrbit(TRAJECTORY *clorb, double clorb_acc, long clorb_
                                 double *deviation)
 {
   long nElems, iterationsLeft, i, iterationsDone;
-  double error, ds, last_dp, last_ds;
+  double error=0, ds, last_dp, last_ds;
   
   nElems = beamline->n_elems;
   iterationsLeft = clorb_iter/10+10;

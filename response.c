@@ -238,10 +238,10 @@ void run_response_output(RUN *run, LINE_LIST *beamline, CORRECTION *correct, lon
         else if (correct->mode==ORBIT_CORRECTION) {
             compute_orbcor_matrices(correct->CMx, &correct->SLx, 0, run, beamline, 0,
                                     !(inverse[0]==NULL || SDDS_StringIsBlank(inverse[0])),
-                                    fixed_length);
+                                    fixed_length, 1);
             compute_orbcor_matrices(correct->CMy, &correct->SLy, 2, run, beamline, 0,
                                     !(inverse[1]==NULL || SDDS_StringIsBlank(inverse[1])),
-                                    fixed_length);
+                                    fixed_length, 1);
             }
         else
             bomb("bad correction mode (run_response_output)", NULL);
