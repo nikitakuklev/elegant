@@ -25,11 +25,12 @@
 static char *USAGE1 = "haissinski <twissFile> <resultsFile>\n\
  {-wakeFunction=<file>,tColumn=<name>,wColumn=<name> |\n\
   -model=[L=<Henry>|Zn=<Ohms>],R=<Ohm>} \n\
- {-charge=<C>|-particles=<value>} {-steps=<number>} \n\
+ {-charge=<C>|-particles=<value>}\n\
+ {-steps=<numberOfChargeSteps>} {-outputLastStepOnly}\n\
  {-RF=Voltage=<V>,harmonic=<value>|-length=<s>}\n\
- {-superPeriods=<number>}\n\
+ {-superPeriods=<number>} {-energy=<GeV>} \n\
  -integrationParameters=deltaTime=<s>,points=<number>,startTime=<s>,\n\
-iterations=<number>,fraction=<value>,tolerance==<value> \n\
+iterations=<number>,fraction=<value>,tolerance=<value> \n\
 Calculation of steady-state longitudinal bunch density distribution \n\
 in an electron storage ring. \n\
 <twissFile>    Elegant twiss file that contains ring parameters required\n\
@@ -47,8 +48,10 @@ static char *USAGE2 = "model          Instead of a wake function, a circuit mode
 RF             RF parameters that control the length of the zero-current beam.\n\
 length         Alternatively, one can specify the zero-current bunch length (rms)\n\
                in seconds directly.\n\
-superPeriods   number of superiods of lattice file in the actual machine.\n\
+superPeriods   The number of superiods of lattice file in the actual machine.\n\
                Default is 1.\n\
+energy         The beam energy at which to perform computations, if it is desired\n\
+               that this be different than the energy in the Twiss file.\n\
 intermediateSolutions   write all intermediate solutions to the results file.\n\
                Used for debugging.\n\
 integrationParameters   Specifies integration parameters for solving the \n\
@@ -72,7 +75,9 @@ integrationParameters   Specifies integration parameters for solving the \n\
 #define MODEL 8
 #define INTERMEDIATE_SOLUTIONS 9
 #define SUPERPERIODS 10
-#define N_OPTIONS 11
+#define ENERGY 11
+#define OUTPUT_LAST_STEP_ONLY 12
+#define N_OPTIONS 13
 char *option[N_OPTIONS] = {
   "verbose",
   "charge",
@@ -84,7 +89,9 @@ char *option[N_OPTIONS] = {
   "wakeFunction",
   "model",
   "intermediateSolutions",
-  "superperiods"  };
+  "superperiods",
+  "energy",
+  "outputlaststeponly" };
 
 typedef struct {
   double *y, xStart, xDelta;
@@ -101,8 +108,8 @@ typedef struct {
 
 void printFunction( char *label, FUNCTION *data);
 void initializeFunction( FUNCTION *data);
-void readRingParameters( char *twissFile, long superPeriods, double *energyMeV, 
-                        double *momentumCompaction,
+void readRingParameters( char *twissFile, long superPeriods, double desiredEnergyMeV,
+                        double *energyMeV, double *momentumCompaction,
                         double *U0, double *sigmaDelta,
                         double *circumference);
 /* returned results is the first parameter. */
@@ -131,7 +138,7 @@ long verbosity;
 int main( int argc, char **argv)
 {
   SCANNED_ARG *scanned;
-  long i, j, k;
+  long i, j, k, outputLastStepOnly;
   char *twissFile, *resultsFile;
   SDDS_DATASET resultsPage;
   double particles, charge, finalCharge, length;
@@ -147,7 +154,8 @@ int main( int argc, char **argv)
   double revFrequency, syncPhase, syncTune, syncAngFrequency;
   double VrfDot, ZoverN, inductance, resistance;
   double maxDifference, rmsDifference, madDifference, maxTolerance, fraction;
-  double averageCurrent=0.0;
+  double maxDensity;
+  double averageCurrent=0.0, desiredEnergy;
   
   SDDS_RegisterProgramName(argv[0]);
   argc  =  scanargs(&scanned, argc, argv);
@@ -178,11 +186,13 @@ int main( int argc, char **argv)
   points=0.0;
   startTime=0.0;
   deltaTime=0.0;
-  maxTolerance = 0.1; /*units of A */
+  maxTolerance = 0.001; /* fraction of maximum */
   intermediateSolutions=0;
   fraction = 1.0;
   wakeFile = tCol = wCol = NULL;
   superPeriods = 1;
+  desiredEnergy = 0.0;
+  outputLastStepOnly = 0;
   
   for (i = 1; i<argc; i++) {
     if (scanned[i].arg_type == OPTION) {
@@ -196,12 +206,18 @@ int main( int argc, char **argv)
         }
         break;
       case CHARGE:
+        if (scanned[i].n_items<2)
+          bomb("invalid -charge syntax", NULL);
         get_double(&finalCharge, scanned[i].list[1]);
         break;
       case PARTICLES:
+        if (scanned[i].n_items<2)
+          bomb("invalid -particles syntax", NULL);
         get_double(&particles, scanned[i].list[1]);
         break;
       case STEPS:
+        if (scanned[i].n_items<2)
+          bomb("invalid -steps syntax", NULL);
         get_long(&steps, scanned[i].list[1]);
         break;
       case SUPERPERIODS:
@@ -209,10 +225,20 @@ int main( int argc, char **argv)
           bomb("invalid -superPeriods syntax", NULL);
         get_long(&superPeriods, scanned[i].list[1]);
         break;
+      case ENERGY:
+        if (scanned[i].n_items<2)
+          bomb("invalid -energy syntax", NULL);
+        get_double(&desiredEnergy, scanned[i].list[1]);
+        break;
       case INTERMEDIATE_SOLUTIONS:
         intermediateSolutions = 1;
         break;
+      case OUTPUT_LAST_STEP_ONLY:
+        outputLastStepOnly = 1;
+        break;
       case LENGTH:
+        if (scanned[i].n_items<2)
+          bomb("invalid -length syntax", NULL);
         get_double(&length, scanned[i].list[1]);
         break;
       case RF:
@@ -296,7 +322,8 @@ int main( int argc, char **argv)
   if (length && rfVoltage) {
     bomb("Options length and RF cannot be both specified.",NULL);
   }
-  readRingParameters( twissFile, superPeriods, &energyMeV, &momentumCompaction,
+  readRingParameters( twissFile, superPeriods, desiredEnergy*1e3,
+                     &energyMeV, &momentumCompaction,
                      &U0, &sigmaE, &circumference);
   revFrequency = c_mks/ circumference;
   if (!length) {
@@ -388,7 +415,10 @@ int main( int argc, char **argv)
       rmsDifference = 0.0;
       diff = density;
       diff.y = SDDS_Malloc( sizeof(*diff.y) * diff.points);
+      maxDensity = 0.0;
       for (k=0; k<diff.points;k++) {
+        if (density.y[k]>maxDensity)
+          maxDensity = density.y[k];
         diff.y[k] = density.y[k] - densityOld.y[k];
         if (FABS(diff.y[k]) > maxDifference) {
           maxDifference = FABS(diff.y[k]);
@@ -400,16 +430,17 @@ int main( int argc, char **argv)
       rmsDifference = sqrt(rmsDifference);
       madDifference /= points;
       if (verbosity) {
-        fprintf(stdout, "maxDifference %10.2g madDifference %10.2g rmsDifference %10.2g.\n", maxDifference, madDifference, rmsDifference);
+        fprintf(stdout, "maxDifference %10.2g madDifference %10.2g rmsDifference %10.2g.\n", 
+                maxDifference/maxDensity, madDifference/maxDensity, rmsDifference/maxDensity);
         fflush(stdout);
       }
-      if (maxDifference < maxTolerance) {
+      if (maxDifference/maxDensity < maxTolerance) {
         if (verbosity) {
           fprintf(stdout, "Converged for charge %g after %ld iterations.\n", charge, j);
           fflush(stdout);
         }
         converged = 1;
-        continue;
+        break;
       }
       free(diff.y);
       if (intermediateSolutions) {
@@ -419,8 +450,9 @@ int main( int argc, char **argv)
     }
     /* write results whether converged or not */
     averageCurrent = charge * revFrequency;
-    writeResults( &resultsPage, &density, &potential, &potentialDistortion, 
-                 &Vinduced, charge, averageCurrent, converged );
+    if (!outputLastStepOnly || i==steps) 
+      writeResults( &resultsPage, &density, &potential, &potentialDistortion, 
+                   &Vinduced, charge, averageCurrent, converged );
   }
   if (!SDDS_Terminate(&resultsPage))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
@@ -435,7 +467,8 @@ void initializeFunction( FUNCTION *data) {
   data->xFactor = data->yFactor = 0.0;
 }
 
-void readRingParameters( char *twissFile, long superPeriods, double *energyMeV, 
+void readRingParameters( char *twissFile, long superPeriods, 
+                        double desiredEnergyMeV, double *energyMeV, 
                         double *momentumCompaction,
                         double *U0, double *sigmaE,
                         double *circumference) {
@@ -465,6 +498,18 @@ void readRingParameters( char *twissFile, long superPeriods, double *energyMeV,
   s = SDDS_GetColumnInDoubles(&twissPage, "s");
   *circumference = s[elements-1]*superPeriods;
   *U0 *= 1e6*superPeriods; /* units in eV */
+
+  if (desiredEnergyMeV>0) {
+    if (verbosity) {
+      fprintf(stdout, "Scaling from %f MeV to %f MeV\n",
+              *energyMeV, desiredEnergyMeV);
+      fflush(stdout);
+    }
+    *U0 *= ipow(desiredEnergyMeV/(*energyMeV), 4);
+    *sigmaE *= desiredEnergyMeV/(*energyMeV);
+    *energyMeV = desiredEnergyMeV;
+  }
+
   if (!SDDS_Terminate(&twissPage))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
   free(s);
