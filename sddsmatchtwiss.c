@@ -55,6 +55,11 @@ CopyrightNotice001*/
  * Michael Borland, 2000
  *
  $Log: not supported by cvs2svn $
+ Revision 1.3  2001/01/08 20:22:16  borland
+ Added -oneTransform option, which allows computing the transform only for
+ the first page, and using it for all pages.
+ Also, added hidden -verbose option.
+
  Revision 1.2  2000/08/17 13:45:56  borland
  Fixed errors in usage message.
 
@@ -79,8 +84,8 @@ char *option[N_OPTIONS] = {
 } ;
 
 char *USAGE="sddsmatchtwiss [-pipe=[input][,output]] [<SDDSinputfile>] [<SDDSoutputfile>]\n\
-  [-xPlane=[beta=<meters>,alpha=<value>][,etaValue=<meters>][,etaSlope=<value>]]\n\
-  [-yPlane=[beta=<meters>,alpha=<value>][,etaValue=<meters>][,etaSlope=<value>]]\n\
+  [-xPlane=[beta=<meters>,alpha=<value>][nemittance=<meters>,][,etaValue=<meters>][,etaSlope=<value>]]\n\
+  [-yPlane=[beta=<meters>,alpha=<value>][nemittance=<meters>,][,etaValue=<meters>][,etaSlope=<value>]]\n\
   [-nowarnings] [-oneTransform]\n\
 The input file must have columns x, xp, y, yp, and p; for example, an elegant\n\
 beam output file is acceptable.\n\
@@ -90,10 +95,10 @@ the coordinates have no dispersion adjustment.  If etaSlope is not given, then\n
 slopes have no dispersion adjustment.\n\
 If -oneTransform is given, then the transformation is computed for the first page only,\n\
 then reused for all subsequent pages.\n\n\
-Program by Michael Borland.  (This is version 2, January 2001.)\n";
+Program by Michael Borland.  (This is version 3, April 2001.)\n";
 
 typedef struct {
-  double beta, alpha, eta, etap;
+  double beta, alpha, eta, etap, normEmittance;
   unsigned long flags;
   double R11, R12, R21, R22;
   double etaBeam, etapBeam;
@@ -101,6 +106,7 @@ typedef struct {
 #define ALPHA_GIVEN 0x0002UL
 #define ETA_GIVEN   0x0004UL
 #define ETAP_GIVEN  0x0008UL
+#define NEMIT_GIVEN 0x0010UL
 } PLANE_SPEC;
 
 long PerformTransformation(double *x, double *xp, double *p, long rows, PLANE_SPEC *match,
@@ -138,12 +144,14 @@ main(int argc, char **argv)
         if (!scanItemList(&xSpec.flags, s_arg[i_arg].list+1, &s_arg[i_arg].n_items, 0,
                           "beta", SDDS_DOUBLE, &xSpec.beta, 1, BETA_GIVEN,
                           "alpha", SDDS_DOUBLE, &xSpec.alpha, 1, ALPHA_GIVEN,
+                          "nemittance", SDDS_DOUBLE, &xSpec.normEmittance, 1, NEMIT_GIVEN,
                           "etavalue", SDDS_DOUBLE, &xSpec.eta, 1, ETA_GIVEN,
                           "etaslope", SDDS_DOUBLE, &xSpec.etap, 1, ETAP_GIVEN,
                           NULL) ||
             (xSpec.flags&BETA_GIVEN && !(xSpec.flags&ALPHA_GIVEN)) ||
             (!(xSpec.flags&BETA_GIVEN) && xSpec.flags&ALPHA_GIVEN) ||
-            (xSpec.flags&BETA_GIVEN && xSpec.beta<=0))
+            (xSpec.flags&BETA_GIVEN && xSpec.beta<=0) || 
+            (xSpec.flags&NEMIT_GIVEN && xSpec.normEmittance<=0))
           SDDS_Bomb("invalid -xPlane syntax/values---watch out for abbreviations of etaValue and etaSlope");
         break;
       case SET_YPLANE:
@@ -152,12 +160,14 @@ main(int argc, char **argv)
         if (!scanItemList(&ySpec.flags, s_arg[i_arg].list+1, &s_arg[i_arg].n_items, 0,
                           "beta", SDDS_DOUBLE, &ySpec.beta, 1, BETA_GIVEN,
                           "alpha", SDDS_DOUBLE, &ySpec.alpha, 1, ALPHA_GIVEN,
+                          "nemittance", SDDS_DOUBLE, &ySpec.normEmittance, 1, NEMIT_GIVEN,
                           "etavalue", SDDS_DOUBLE, &ySpec.eta, 1, ETA_GIVEN,
                           "etaslope", SDDS_DOUBLE, &ySpec.etap, 1, ETAP_GIVEN,
                           NULL) ||
             (ySpec.flags&BETA_GIVEN && !(ySpec.flags&ALPHA_GIVEN)) ||
             (!(ySpec.flags&BETA_GIVEN) && ySpec.flags&ALPHA_GIVEN) ||
-            (ySpec.flags&BETA_GIVEN && ySpec.beta<=0))
+            (ySpec.flags&BETA_GIVEN && ySpec.beta<=0) ||
+            (ySpec.flags&NEMIT_GIVEN && ySpec.normEmittance<=0))
           SDDS_Bomb("invalid -yPlane syntax/values---watch out for abbreviations of etaValue and etaSlope");
         break;
       case SET_PIPE:
@@ -275,22 +285,30 @@ long PerformTransformation(double *x, double *xp, double *p, long rows, PLANE_SP
   for (i=0; i<rows; i++)
     xp[i] -= p[i]*etap1;
   
-  if (match->flags&BETA_GIVEN) {
-    if (computeTransform) {
+  if (match->flags&BETA_GIVEN || match->flags&NEMIT_GIVEN) {
+    if (computeTransform || match->flags&NEMIT_GIVEN) {
       computeCorrelations(&S11, &S12, &S22, x, xp,rows);
-      if ((emit = S11*S22-sqr(S12))<0) {
+      if ((emit = S11*S22-sqr(S12))<=0) {
         SDDS_Bomb("emittance is zero");
       }
       else
         emit = sqrt(emit);
       beta1 = S11/emit;
       alpha1 = -S12/emit;
-      beta2 = match->beta;
-      alpha2 = match->alpha;
-      match->R11 = R11 = beta2/sqrt(beta1*beta2);
-      match->R12 = R12 = 0;
-      match->R21 = R21 = (alpha1-alpha2)/sqrt(beta1*beta2);
-      match->R22 = R22 = beta1/sqrt(beta1*beta2);
+      if (match->flags&NEMIT_GIVEN) {
+        match->R11 = R11 = match->R22 = R22 = 
+          sqrt(match->normEmittance/(emit*pAve));
+        match->R12 = R12 = match->R21 = R21 = 0;
+        beta2 = beta1;
+        alpha2 = alpha1;
+      } else {
+        beta2 = match->beta;
+        alpha2 = match->alpha;
+        match->R11 = R11 = beta2/sqrt(beta1*beta2);
+        match->R12 = R12 = 0;
+        match->R21 = R21 = (alpha1-alpha2)/sqrt(beta1*beta2);
+        match->R22 = R22 = beta1/sqrt(beta1*beta2);
+      }
     }
     else {
       R11 = match->R11;
