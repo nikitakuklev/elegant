@@ -972,7 +972,9 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
     beamline->chromaticity[1] = chromy;
 
     beamline->flags |= BEAMLINE_TWISS_DONE+BEAMLINE_TWISS_CURRENT;
-
+    if (radiation_integrals) 
+      beamline->flags |= BEAMLINE_RADINT_DONE+BEAMLINE_RADINT_CURRENT;
+    
     log_exit("compute_twiss_parameters");
     }
 
