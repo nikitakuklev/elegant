@@ -4,6 +4,9 @@ exec oagwish "$0" "$@"
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.10  2004/12/09 20:25:53  borland
+# Added selection of the aperture-limiting plane.
+#
 # Revision 1.9  2004/11/10 20:51:35  borland
 # Decreased tolerance on Haissinski evaluation.
 #
@@ -156,7 +159,7 @@ set auto_path [linsert $auto_path 0  /usr/local/oag/apps/lib/$env(HOST_ARCH)]
 set auto_path [linsert $auto_path 0 /usr/local/oag/lib_patch/$env(HOST_ARCH)]
 APSDebugPath
 
-set CVSRevisionAuthor "\$Revision: 1.10 $ \$Author: borland $"
+set CVSRevisionAuthor "\$Revision: 1.11 $ \$Author: emery $"
 
 APSApplication . -name beamLifetimeCalc -version $CVSRevisionAuthor -overview \
   "Calculates the gas scattering lifetime due to single Coulomb scattering and
@@ -215,7 +218,7 @@ set harmonic 1296
 set rfVoltage 9.5
 set coupling 0.01
 set energySpread 9.6e-4
-set bunchCurrent [expr 102.0/(23.0)]
+set bunchCurrent [expr 102.0/(24.0)]
 set bunchLength 7.0
 set bunchLengthFactor [expr 10.0/7.0]
 set useHaissinski 0
