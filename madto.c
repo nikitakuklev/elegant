@@ -16,14 +16,13 @@
 #include "madto.h"
 
 char *USAGE = "madto inputfile outputfile \n\
- {-patricia | -patpet | -transport[=quad_ap(mm),sext_ap(mm),p(GeV/c)]\n\
-            | -parmela[=quad_ap(mm),sext_ap(mm),p(MeV/c)]\n\
-            | -sdds=[p(GeV/c)] | [-xorbit]}\n\
+ { -EmmaMatlab | -patpet | -patricia | -parmela[=quad_ap(mm),sext_ap(mm),p(MeV/c)]\n\
+  -transport[=quad_ap(mm),sext_ap(mm),p(GeV/c)] | -sdds=[p(GeV/c)] | [-xorbit] }\n\
  [-angle_tolerance=value] [-flip_k_signs] [-magnets=filename]\n\
  [-header=filename] [-ender=filename]\n\n\
 madto converts MAD accelerator lattice format to various other formats.\n\
 The required input format is the dialect of MAD format used by elegant.\n\
-Program by Michael Borland.  (This is Version 4, October 1993.)\n";
+Program by Michael Borland.  (This is Version 5, February 2002.)\n";
 
 #define SET_CONVERT_TO_PATRICIA 0
 #define SET_CONVERT_TO_TRANSPORT 1
@@ -36,10 +35,12 @@ Program by Michael Borland.  (This is Version 4, October 1993.)\n";
 #define SET_MAGNET_OUTPUT 8
 #define SET_HEADER_FILE 9
 #define SET_ENDER_FILE 10
-#define N_OPTIONS 11
+#define SET_CONVERT_TO_EMMAMATLAB 11
+#define N_OPTIONS 12
 char *option[N_OPTIONS] = {
     "patricia", "transport", "parmela", "patpet", "sdds", "xorbit",
     "angle_tolerance", "flip_k_signs", "magnets", "header", "ender", 
+    "emmamatlab",
     } ;
 
 #define TRANSPORT_OUTPUT 1
@@ -48,6 +49,7 @@ char *option[N_OPTIONS] = {
 #define PARMELA_OUTPUT 4
 #define SDDS_OUTPUT 5
 #define XORBIT_OUTPUT 6
+#define EMMAMATLAB_OUTPUT 7
 
 int main(int argc, char **argv)
 {
@@ -145,10 +147,18 @@ int main(int argc, char **argv)
                 if (ender_file) 
                     bomb("duplicate -ender argument", USAGE);
                 ender_file = scanned[i].list[1];
+                break;
               case SET_HEADER_FILE:
                 if (header_file) 
                     bomb("duplicate -header argument", USAGE);
                 header_file = scanned[i].list[1];
+                break;
+              case SET_CONVERT_TO_EMMAMATLAB:
+                if (output_mode)
+                    bomb("can only convert to one format at a time", USAGE);
+                output_mode = EMMAMATLAB_OUTPUT;
+                if (scanned[i].n_items!=1)
+                    bomb("wrong number of values with -EmmaMatlab option", USAGE);
                 break;
               default:
                 bomb("unknown option given", USAGE);
@@ -217,6 +227,12 @@ int main(int argc, char **argv)
             output_magnets(magnets, beamline->name, beamline);
         convert_to_xorbit(output, beamline, flip_k_signs, header_file, ender_file);
         break;
+      case EMMAMATLAB_OUTPUT: 
+        beamline = get_beamline(input, NULL, p_cent/(1e6*me_mev), 0);
+        if (magnets)
+            output_magnets(magnets, beamline->name, beamline);
+        convert_to_EmmaMatlab(output, beamline, header_file, ender_file);
+        break;
       default:
         bomb("internal error--unknown output mode", NULL);
         break;
@@ -261,3 +277,5 @@ long nearly_equal(double x1, double x2, double frac)
         return(1);
     return(0);
     }
+
+
