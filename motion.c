@@ -35,7 +35,7 @@ void (*set_up_derivatives(void *field, long field_type, double *kscale,
         double z_start, double *Z_end, double *tau_start, double **part, long n_part, 
         double Po, double *X_limit, double *Y_limit, double *accuracy,
         long *n_steps))();
-double exit_function(double *qp, double *q, double *phase);
+double exit_function(double *qp, double *q, double phase);
 double *select_fiducial(double **part, long n_part, char *mode);
 void select_integrator(char *desired_method);
 void input_impulse_tw_linac(double *P, double *q);
@@ -72,7 +72,7 @@ double X_limit, Y_limit;
  * aperture center of element, when lost.
  */
 double X_out, Y_out, Z_out;
-long limit_hit, radial_limit;
+long limit_hit, radial_limit, derivCalls=0;
 
 /* flag to indicate that element changes the central momentum */
 static long change_p0;
@@ -97,7 +97,7 @@ long motion(
     double tau, tau_limit, P_central;
     double tau_start;
     long n_eq = 6;
-    static double q[6];         /* X,Y,Z,Px,Py,Pz */
+    static double q[6], dqdt[6];         /* X,Y,Z,Px,Py,Pz */
     static long misses[6], accmode[6];
     static double accuracy[6], tiny[6];
     double tolerance, hmax, hrec;
@@ -165,7 +165,7 @@ long motion(
             tau_limit = end_factor*Z_end*gamma/P[2] +
                       (tau = tau_start + coord[4]*kscale*gamma/Po);
             hmax = (tau_limit - tau)/n_steps;
-            if (integrator==rk_odeint3_na)
+            if (integrator==rk_odeint3_na || integrator==mmid_odeint3_na)
                 hrec = (tau_limit-tau)/n_steps;
             if (hrec<=0)
                 hrec = hmax;
@@ -176,6 +176,7 @@ long motion(
 #endif
             if (input_impulse)
                 input_impulse(P, q);
+            derivCalls = 0;
             switch (rk_return = (*integrator)(q, derivatives, n_eq, accuracy, accmode, tiny, misses,
                   &tau, tau_limit, sqr(tolerance)*(tau_limit-tau), hrec, hmax, &hrec, exit_function, 
                   sqr(tolerance)*kscale)) {
@@ -201,15 +202,20 @@ long motion(
                     i_part--;
                     break;
                 default:
-#if defined(DEBUG)
-                    fprintf(stderr, "initial, final phase: %e, %e\n", initial_phase, final_phase);
-#endif
+                    (*derivatives)(dqdt, q, tau);
                     Po      = sqrt(sqr(P[0])+sqr(P[1])+sqr(P[2]));
                     gamma   = sqrt(1+sqr(Po));
                     *dgamma += gamma-gamma0;
                     dP[0]   += P[0] - P0[0];
                     dP[1]   += P[1] - P0[1];
                     dP[2]   += P[2] - P0[2];
+#if defined(DEBUG)
+                    fprintf(stderr, "initial, final phase: %21.15e, %21.15e\n", initial_phase, final_phase);
+                    fprintf(stderr, "deriv calls: %ld\n", derivCalls);
+                    fprintf(stderr, "Exit: tau=%le, ef=%le\n", tau, exit_function(dqdt, q, tau));
+                    fprintf(stderr, "Pout = %21.15e  Zout = %21.15le\n", 
+                            Po, q[2]/kscale);
+#endif
                     if (!limit_hit) {
                         if (isnan(q[0]) || isinf(q[0]) || isnan(q[1]) || isinf(q[1])) {
                             X_out = Y_out = DBL_MAX;
@@ -584,6 +590,7 @@ void derivatives_tm_mode(
     register double gamma, *P, *Pp;
     static double E[3], B[3];
 
+    derivCalls++;
     /* gamma = sqrt(P^2+1) */
     P  = q+3;
     gamma = sqrt(sqr(P[0])+sqr(P[1])+sqr(P[2])+1);
@@ -618,6 +625,7 @@ void derivatives_tmcf_mode(
     static double E[3], B[3];
     TMCF_MODE *tmcf;
 
+    derivCalls++;
     /* gamma = sqrt(P^2+1) */
     P  = q+3;
     gamma = sqrt(sqr(P[0])+sqr(P[1])+sqr(P[2])+1);
@@ -668,6 +676,7 @@ void derivatives_ce_plates(
     double E, z;
     CE_PLATES *cep;
 
+    derivCalls++;
     /* gamma = sqrt(P^2+1) */
     P  = q+3;
     gamma = sqrt(sqr(P[0])+sqr(P[1])+sqr(P[2])+1);
@@ -713,6 +722,7 @@ void derivatives_tw_plates(
     double E, z, B;
     TW_PLATES *twp;
 
+    derivCalls++;
     /* gamma = sqrt(P^2+1) */
     P  = q+3;
     gamma = sqrt(sqr(P[0])+sqr(P[1])+sqr(P[2])+1);
@@ -759,6 +769,7 @@ void derivatives_tw_linac(
     double phase, X, Y, Z, cos_phase, sin_phase, droop;
     TW_LINAC *twla;
 
+    derivCalls++;
     /* gamma = sqrt(P^2+1) */
     P  = q+3;
     gamma = sqrt(sqr(P[0])+sqr(P[1])+sqr(P[2])+1);
@@ -766,7 +777,7 @@ void derivatives_tw_linac(
     /* X' = Px/gamma, etc. */
     qp[0] = P[0]/gamma;
     qp[1] = P[1]/gamma;
-    qp[2] = P[2]/gamma;
+    qp[2] = P[2]/gamma; 
 
     /* get scaled RF fields E and B, for which                */
     /* (Px,Py,Pz)' = (Ex,Ey,Ez) + (Px,Py,Pz)x(Bx,By,Bz)/gamma */
@@ -862,6 +873,7 @@ void derivatives_twmta(
     double sin_phase, cos_phase, cosh_KyY, sinh_KyY, cos_KxX, sin_KxX;
     TWMTA *twmta;
 
+    derivCalls++;
     /* gamma = sqrt(P^2+1) */
     P  = q+3;
     gamma = sqrt(sqr(P[0])+sqr(P[1])+sqr(P[2])+1);
@@ -961,7 +973,7 @@ void output_impulse_twmta(double *P, double *q)
 double exit_function(
     double *qp,
     double *q,
-    double *phase
+    double phase
     )
 {
     double X, Y, dZ;
@@ -1007,102 +1019,124 @@ static char *known_mode[N_KNOWN_MODES] = {
 
 double *select_fiducial(double **part, long n_part, char *var_mode_in)
 {
-    long i;
-    long i_best, i_var, fid_mode;
-    double value, best_value, sum;
-    char *var, *mode, *var_mode;
+  long i;
+  long i_best, i_var, fid_mode;
+  double value, best_value, sum;
+  char *var, *mode, *var_mode, *ptr;
 
-    log_entry("select_fiducial");
+  log_entry("select_fiducial");
 
-    fid_mode = FID_MEDIAN;
-    i_var = 4;    /* time */
-    cp_str(&var_mode, var_mode_in==NULL?"t,med":var_mode_in);
+  fid_mode = FID_AVERAGE;
+  i_var = -1;    /* t, p average */
+  cp_str(&var_mode, var_mode_in==NULL?"average":var_mode_in);
 
-    if (n_part<=1) {
-        log_exit("select_fiducial");
-        return(part[0]);
-        }
-
-    if (strlen(var_mode)!=0) {
-        if (!(var=get_token(var_mode)) || (*var!='t' && *var!='p'))
-            bomb("no known variable listed for fiducial--must be 't' or 'p'\n", NULL);
-        if (*var=='t')
-            i_var = 4;
-        else
-            i_var = 5;
-        if (mode=get_token(var_mode)) {
-            if ((fid_mode=match_string(mode, known_mode, N_KNOWN_MODES, 0))<0) {
-                fputs("error: no known mode listed for fiducialization--must be one of:\n", stderr);
-                for (i=0; i<N_KNOWN_MODES; i++)
-                    fprintf(stderr, "    %s\n", known_mode[i]);
-                exit(1);
-                }
-            }
-        }
-
-    switch (fid_mode) {
-      case FID_MEDIAN:
-        if ((i_best = find_median_of_row(&best_value, part, i_var, n_part))<0)
-            bomb("error: computation of median failed (select_fiducial)", NULL);
-        break;
-      case FID_MINIMUM:
-        i_best = 0;
-        best_value = DBL_MAX;
-        for (i=0; i<n_part; i++) {
-            if (best_value>(value=part[i][i_var])) {
-                best_value = value;
-                i_best = i;
-                }
-            }
-        break;
-      case FID_MAXIMUM:
-        i_best = 0;
-        best_value = -DBL_MAX;
-        for (i=0; i<n_part; i++) {
-            if (best_value<(value=part[i][i_var])) {
-                best_value = value;
-                i_best = i;
-                }
-            }
-        break;
-      case FID_AVERAGE:
-        for (i=sum=0; i<n_part; i++)
-            sum += part[i][i_var];
-        sum /= n_part;
-        best_value = DBL_MAX;
-        for (i=0; i<n_part; i++) {
-            if (best_value>(value=fabs(sum-part[i][i_var]))) {
-                best_value = value;
-                i_best = i;
-                }
-            }
-        break;
-      case FID_FIRST:
-        i_best = 0;
-        break;
-      case FID_LIGHT:
-        /* special case--return NULL pointer to indicate that phasing is to v=c */
-        log_exit("select_fiducial");
-        return(NULL);
-        break;
-      default:
-        bomb("apparent programming error in select_fiducial", NULL);
-        break;
-        }
-    if (i_best<0 || i_best>n_part)
-        bomb("fiducial particle selection returned invalid value!", NULL);
-    
+  if (n_part<=1) {
     log_exit("select_fiducial");
-    return(part[i_best]);
+    return(part[0]);
+  }
+
+  if (strlen(var_mode)!=0) {
+    if ((ptr=strchr(var_mode, ',')) && (var=get_token(var_mode))) {
+      if (*var!='t' && *var!='p')
+        bomb("no known variable listed for fiducial--must be 't' or 'p'\n", NULL);
+      if (*var=='t')
+        i_var = 4;
+      else
+        i_var = 5;
+    } 
+    if (mode=get_token(var_mode)) {
+      if ((fid_mode=match_string(mode, known_mode, N_KNOWN_MODES, 0))<0) {
+        fputs("error: no known mode listed for fiducialization--must be one of:\n", stderr);
+        for (i=0; i<N_KNOWN_MODES; i++)
+          fprintf(stderr, "    %s\n", known_mode[i]);
+        exit(1);
+      }
     }
+  }
+  if (i_var==-1 && fid_mode!=FID_AVERAGE) {
+    fprintf(stderr, "unless you use average mode for fiducialization, you must specify t or p coordinate.\n");
+    exit(1);
+  }
+  if (i_var==-1) {
+    double deltaAve, tAve;
+    static double coord[6];
+    for (i=deltaAve=tAve=0; i<n_part; i++) {
+      deltaAve += part[i][5];
+      tAve += part[i][4];
+    }
+    deltaAve /= n_part;
+    tAve /= n_part;
+    coord[0] = coord[1] = coord[2] = coord[3] = 0;
+    coord[4] = tAve;
+    coord[5] = deltaAve;
+    return coord;
+  }
+  else {
+    switch (fid_mode) {
+    case FID_MEDIAN:
+      if ((i_best = find_median_of_row(&best_value, part, i_var, n_part))<0)
+        bomb("error: computation of median failed (select_fiducial)", NULL);
+      break;
+    case FID_MINIMUM:
+      i_best = 0;
+      best_value = DBL_MAX;
+      for (i=0; i<n_part; i++) {
+        if (best_value>(value=part[i][i_var])) {
+          best_value = value;
+          i_best = i;
+        }
+      }
+      break;
+    case FID_MAXIMUM:
+      i_best = 0;
+      best_value = -DBL_MAX;
+      for (i=0; i<n_part; i++) {
+        if (best_value<(value=part[i][i_var])) {
+          best_value = value;
+          i_best = i;
+        }
+      }
+      break;
+    case FID_AVERAGE:
+      for (i=sum=0; i<n_part; i++)
+        sum += part[i][i_var];
+      sum /= n_part;
+      best_value = DBL_MAX;
+      for (i=0; i<n_part; i++) {
+        if (best_value>(value=fabs(sum-part[i][i_var]))) {
+          best_value = value;
+          i_best = i;
+        }
+      }
+      break;
+    case FID_FIRST:
+      i_best = 0;
+      break;
+    case FID_LIGHT:
+      /* special case--return NULL pointer to indicate that phasing is to v=c */
+      log_exit("select_fiducial");
+      return(NULL);
+      break;
+    default:
+      bomb("apparent programming error in select_fiducial", NULL);
+      break;
+    }
+    if (i_best<0 || i_best>n_part)
+      bomb("fiducial particle selection returned invalid value!", NULL);
+  }
+  
+  log_exit("select_fiducial");
+  return(part[i_best]);
+}
 
 
 #define RUNGE_KUTTA 0
 #define BULIRSCH_STOER 1
 #define NA_RUNGE_KUTTA 2
-#define N_METHODS 3
+#define MODIFIED_MIDPOINT 3
+#define N_METHODS 4
 static char *method[N_METHODS] = {
-    "runge-kutta", "bulirsch-stoer", "non-adaptive runge-kutta"
+    "runge-kutta", "bulirsch-stoer", "non-adaptive runge-kutta", "modified midpoint"
     } ;
 
 void select_integrator(char *desired_method)
@@ -1126,6 +1160,9 @@ void select_integrator(char *desired_method)
         break;
       case NA_RUNGE_KUTTA:
         integrator = rk_odeint3_na;
+        break;
+      case MODIFIED_MIDPOINT:
+        integrator = mmid_odeint3_na;
         break;
       default:
         fprintf(stderr, "error: unknown integration method %s requested.\n", desired_method);

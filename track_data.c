@@ -64,8 +64,7 @@ the magnet into halves.  XSN and DPN allow momentum filtration at the midpoint."
     "A linearly-ramped electric field deflector, using an approximate analytical solution.",
     "A numerically-integrated accelerating TM RF cavity with spatially-constant fields.",
     "A numerically-integrated linearly-ramped electric field deflector.",
-    "A beam property/motion monitor--allowed modes are centroid, coordinate, and fft.\n\
-Output is in SDDS format.",
+    "A beam property/motion monitor--allowed modes are centroid, parameter, coordinate, and fft.",
     "A numerically-integrated traveling-wave stripline deflector.",
     "A misalignment of the beam, implemented as a zero-order matrix.",
     "A numerically-integrated first-space-harmonic traveling-wave linear accelerator.",
@@ -128,7 +127,6 @@ and phase modulation.",
     "An element for energy and momentum filtration.",
     "Request for histograms of particle coordinates to be output to SDDS file.",
     "Like CSBEND, but incorporates a simulation of Coherent Synchrotron radiation.",
-    
     } ;
 
 QUAD quad_example;
