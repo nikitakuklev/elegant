@@ -1530,7 +1530,7 @@ void compute_twiss_statistics(LINE_LIST *beamline, TWISS *twiss_ave, TWISS *twis
     ASSIGN_MINMAX(twiss_min->alphay, twiss_max->alphay, eptr->twiss->alphay);
     ASSIGN_MINMAX(twiss_min->etay, twiss_max->etay, eptr->twiss->etay);
     ASSIGN_MINMAX(twiss_min->etapy, twiss_max->etapy, eptr->twiss->etapy);
-    if (eptr->pred) {
+    if (eptr->pred && eptr->pred->twiss && eptr->twiss) {
       dz = (eptr->end_pos - eptr->pred->end_pos)/2;
       twiss_ave->betax += (eptr->pred->twiss->betax + eptr->twiss->betax)*dz;
       twiss_ave->alphax += (eptr->pred->twiss->alphax + eptr->twiss->alphax)*dz;
