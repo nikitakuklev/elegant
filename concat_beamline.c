@@ -179,9 +179,6 @@ void concatenate_beamline(LINE_LIST *beamline, RUN *run)
     print_elem_list(stdout, &(beamline->ecat));
 #endif
 
-    fprintf(stdout, "Beamline concatenated into %ld matrices and %ld other objects (%ld total).\n",
-        n_matrices, n_nonmatrices, beamline->ncat_elems);
-    fflush(stdout);
     beamline->flags |= BEAMLINE_CONCAT_CURRENT+BEAMLINE_CONCAT_DONE;
     log_exit("concatenate_beamline");
     }
