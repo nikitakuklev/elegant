@@ -1201,8 +1201,7 @@ void do_print_dictionary(char *filename, long latex_form)
   fp = fopen_e(filename, "w", 0);
   if (latex_form) {
     fprintf(fp, "\\newlength{\\descwidth}\n");
-    fprintf(fp, "%% first argument is latex command the second the html command\n");
-    fprintf(fp, "\\latexhtml{\\setlength{\\descwidth}{2in}}{\\setlength{\\descwidth}{4in}}\n");
+    fprintf(fp, "\\setlength{\\descwidth}{3in}\n");
   }
   for (i=0; i<N_TYPES-1; i++)
     print_dictionary_entry(fp, dictList[i].index, latex_form);
@@ -1315,8 +1314,18 @@ void print_dictionary_entry(FILE *fp, long type, long latex_form)
     else 
       fprintf(fp, "  %s\n", entity_description[type].parameter[j].description);
   }
-  if (latex_form)
+  if (latex_form) {
+    char physicsFile[1024];
+    
     fprintf(fp, "\\end{tabular}\n\n");
+
+    sprintf(physicsFile, "%s.tex", entity_name[type]);
+    str_tolower(physicsFile);
+    if (fexists(physicsFile)) {
+      fprintf(stderr, "Including file %s\n", physicsFile);
+      fprintf(fp, "\\vspace*{0.5in}\n\\input{%s}\n", physicsFile);
+    }
+  }
 }
 
 #include <memory.h>
