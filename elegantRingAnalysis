@@ -2014,11 +2014,11 @@ proc FrequencyMapPP {args} {
 	-column=nux,nuy $rootname.resdiag \
 	-column=nux,nuy $rootname.fma -graph=dot,subtype=2,vary -order=spect \
 	"-title=Color indicates initial x amplitude" \
-	-split=column=x,width=[expr $frequencyMap(xMaximum)/100.0] -end \
+	-split=column=x,width=[expr $frequencyMap(xMaximum)/101.0] -end \
 	-column=nux,nuy $rootname.resdiag \
 	-column=nux,nuy $rootname.fma -graph=dot,subtype=2,vary -order=spect \
 	"-title=Color indicates initial y amplitude" \
-	-split=column=y,width=[expr $frequencyMap(yMaximum)/100.0] &
+	-split=column=y,width=[expr $frequencyMap(yMaximum)/101.0] &
 
 
     global makePngFiles
@@ -2029,12 +2029,16 @@ proc FrequencyMapPP {args} {
 	    -column=nux,nuy $rootname.resdiag \
 	    -column=nux,nuy $rootname.fma -graph=dot,subtype=2,vary -order=spect \
 	    "-title=Color indicates initial x amplitude" \
-	    -split=column=x,width=[expr $frequencyMap(xMaximum)/100.0] -end \
+	    -split=column=x,width=[expr $frequencyMap(xMaximum)/100.0] -end 
+	setStatus "PNG file: $rootname-fma1.png"
+	exec sddsplot -device=png,onwhite -thickness=2 -output=$rootname-fma2.png \
+	    -filename \
+	    -limit=xmin=$parameter(nux0),xmax=$parameter(nux1),ymin=$parameter(nuy0),ymax=$parameter(nuy1),auto \
 	    -column=nux,nuy $rootname.resdiag \
 	    -column=nux,nuy $rootname.fma -graph=dot,subtype=2,vary -order=spect \
 	    "-title=Color indicates initial y amplitude" \
 	    -split=column=y,width=[expr $frequencyMap(yMaximum)/100.0]
-	setStatus "PNG file: $rootname-fma1.png"
+	setStatus "PNG file: $rootname-fma2.png"
     }
 
     set xmin [expr $frequencyMap(xMinimum)<0 ? 1.05*$frequencyMap(xMinimum) : 0]
@@ -2046,23 +2050,27 @@ proc FrequencyMapPP {args} {
 	-limit=xmin=$xmin,xmax=$xmax,ymin=$ymin,ymax=$ymax \
 	-column=x,y $rootname.fma -graph=dot,subtype=2,vary -order=spect \
 	"-title=Color indicates x tune" \
-	-split=column=nux,width=0.01,start=0 -end \
+	-split=column=nux,width=0.0101,start=0 -end \
 	-column=x,y $rootname.fma -graph=dot,subtype=2,vary -order=spect \
 	"-title=Color indicates y tune" \
-	-split=column=nuy,width=0.01,start=0 -end &
+	-split=column=nuy,width=0.0101,start=0 -end &
 
     global makePngFiles
     if $makePngFiles {
-	exec sddsplot -device=png,onwhite -thickness=2 -output=$rootname-fma2.png \
+	exec sddsplot -device=png,onwhite -thickness=2 -output=$rootname-fma3.png \
 	    -filename \
 	    -limit=xmin=$xmin,xmax=$xmax,ymin=$ymin,ymax=$ymax \
 	    -column=x,y $rootname.fma -graph=dot,subtype=2,vary -order=spect \
 	    "-title=Color indicates x tune" \
-	    -split=column=nux,width=0.01,start=0 -end \
+	    -split=column=nux,width=0.0101,start=0 
+	setStatus "PNG file: $rootname-fma3.png"
+	exec sddsplot -device=png,onwhite -thickness=2 -output=$rootname-fma4.png \
+	    -filename \
+	    -limit=xmin=$xmin,xmax=$xmax,ymin=$ymin,ymax=$ymax \
 	    -column=x,y $rootname.fma -graph=dot,subtype=2,vary -order=spect \
 	    "-title=Color indicates y tune" \
-	    -split=column=nuy,width=0.01,start=0 -end &
-	setStatus "PNG file: $rootname-fma2.png"
+	    -split=column=nuy,width=0.0101,start=0 -end &
+	setStatus "PNG file: $rootname-fma4.png"
     }
 }
 
@@ -2106,7 +2114,7 @@ FillFineDynamicApertureFrame [lindex $tabFrameWidgetList $i]; incr i
 FillFrequencyMapFrame [lindex $tabFrameWidgetList $i]; incr i
 FillCollectiveEffectsFrame [lindex $tabFrameWidgetList $i]; incr i
 
-lappend saveVarList momentum matrixLatticeFile kickLatticeFile mainParameterFile mainDirectory mainPrefix gridEngine
+lappend saveVarList momentum matrixLatticeFile kickLatticeFile mainParameterFile mainDirectory mainPrefix gridEngine forceOccurence
 lappend saveVarList matrixBeamline kickBeamline matrixOffsetElement kickOffsetElement
 lappend saveVarList basicComputations phaseSpaceTracking offMomentumTuneTracking higherOrderDispersion
 lappend saveVarList dynamicAperture offMomentumDynamicAperture fineDynamicAperture
