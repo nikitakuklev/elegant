@@ -69,6 +69,8 @@ void error_setup(ERRORVAL *errcon, NAMELIST_TEXT *nltext, RUN *run_cond, LINE_LI
         }
 
     errcon->no_errors_first_step = no_errors_for_first_step;
+
+    compute_end_positions(beamline);
     
     if (errcon->fp_log)
         fclose(errcon->fp_log);
@@ -112,7 +114,7 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
 {
     long n_items, n_added, i_start;
     ELEMENT_LIST *context;
-    double sMin = -1, sMax = -1;
+    double sMin = -DBL_MAX, sMax = DBL_MAX;
     
     log_entry("add_error_element");
 
@@ -155,9 +157,11 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
       }
       sMin = context->end_pos;
       if (find_element(after, &context, &(beamline->elem))) {
-        fprintf(stdout, "Element %s not found in beamline more than once.\n", after);
+        fprintf(stdout, "Element %s found in beamline more than once.\n", after);
         exit(1);
       }
+      fprintf(stdout, "%s found at s = %le m\n", after, sMin);
+      fflush(stdout);
     }
     context = NULL;
     if (before && strlen(before)) {
@@ -167,9 +171,11 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
       }
       sMax = context->end_pos;
       if (find_element(before, &context, &(beamline->elem))) {
-        fprintf(stdout, "Element %s not found in beamline more than once.\n", after);
+        fprintf(stdout, "Element %s found in beamline more than once.\n", after);
         exit(1);
       }
+      fprintf(stdout, "%s found at s = %le m\n", before, sMax);
+      fflush(stdout);
     }
     if (after && before && sMin>sMax) {
       fprintf(stdout, "Element %s is not upstream of %s!\n",
@@ -188,6 +194,9 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
               continue;
             if (i_start!=n_items && duplicate_name(errcon->name+i_start, n_items-i_start, context->name))
                 continue;
+            if ((sMin>=0 && context->end_pos<sMin) ||
+                (sMax>=0 && context->end_pos>sMax)) 
+              continue;
             errcon->name              = trealloc(errcon->name, sizeof(*errcon->name)*(n_items+1));
             errcon->item              = trealloc(errcon->item, sizeof(*errcon->item)*(n_items+1));
             errcon->quan_name         = trealloc(errcon->quan_name, sizeof(*errcon->quan_name)*(n_items+1));
