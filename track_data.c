@@ -158,7 +158,8 @@ PARAMETER quad_param[N_QUAD_PARAMS]={
     {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&quad_example.dy), NULL, 0.0, 0, "misalignment"},
     {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&quad_example.dz), NULL, 0.0, 0, "misalignment"},
     {"FSE", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&quad_example.fse), NULL, 0.0, 0, "fractional strength error"},
-    {"ORDER", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&quad_example.order), NULL, 0.0, 0, "matrix order"}
+    {"ORDER", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&quad_example.order), NULL, 0.0, 0, "matrix order"},
+    {"FRINGE_TYPE", "", IS_STRING, 0, (long)((char *)&quad_example.fringeType), "inset", 0.0, 0, "type of fringe: \"inset\" or \"fixed-strength\""},
     };
 
 BEND bend_example;
