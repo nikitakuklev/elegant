@@ -436,7 +436,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_CHARGE 68
 #define T_PFILTER 69
 #define T_HISTOGRAM 70
-#define N_TYPES 71
+#define T_CSRCSBEND 71
+#define N_TYPES 72
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -514,6 +515,7 @@ extern char *entity_text[N_TYPES];
 #define N_CHARGE_PARAMS 1
 #define N_PFILTER_PARAMS 1
 #define N_HISTOGRAM_PARAMS 9
+#define N_CSRCSBEND_PARAMS 30
 
 typedef struct {
     char *name;            /* parameter name */
@@ -1234,6 +1236,25 @@ typedef struct {
     /* for internal use only: */
     long flags;
     } CSBEND;
+
+/* names and storage structure for canonically-integrated bending magnet with CSR physical parameters */
+extern PARAMETER csrcsbend_param[N_CSRCSBEND_PARAMS];
+
+typedef struct {
+    double length, angle, k1, k2, k3, k4, e1, e2, tilt;
+    double h1, h2, hgap, fint;
+    double dx, dy, dz;
+    double fse;     /* Fractional Strength Error */
+    double etilt;   /* error tilt angle */
+    long n_kicks, nonlinear, synch_rad;
+    long edge1_effects, edge2_effects;
+    long integration_order, bins, SGHalfWidth, SGOrder;
+    char *histogramFile;
+    long outputInterval, steadyState;
+    /* for internal use only: */
+    long flags, fileActive;
+    SDDS_DATASET SDDSout;
+    } CSRCSBEND;
 
 /* names and storage structure for top-up bending magnet physical parameters */
 extern PARAMETER tubend_param[N_TUBEND_PARAMS];
@@ -1974,6 +1995,8 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
                ELEMENT_LIST *element, RADIATION_INTEGRALS *radIntegrals0,
                CHARGE *charge);
 
+long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, double p_error, double Po, double **accepted,
+    double z_start, CHARGE *charge, char *rootname);
 long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_error, double Po, double **accepted,
     double z_start);
 

@@ -25,6 +25,7 @@ char *entity_name[N_TYPES] = {
     "TWMTA", "MATTER", "RFMODE", "TRFMODE", "ZLONGIT", "SREFFECTS",
     "MODRF", "BMAPXY", "ZTRANSVERSE", "IBSCATTER", "FMULT",
     "WAKE", "TRWAKE", "TUBEND", "CHARGE", "PFILTER", "HISTOGRAM",
+    "CSRCSBEND",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -853,9 +854,44 @@ PARAMETER csbend_param[N_CSBEND_PARAMS] = {
     {"EDGE1_EFFECTS", "", IS_LONG, 0, (long)((char *)&csbend_example.edge1_effects), NULL, 0.0, 1},
     {"EDGE2_EFFECTS", "", IS_LONG, 0, (long)((char *)&csbend_example.edge2_effects), NULL, 0.0, 1},
     {"INTEGRATION_ORDER", "", IS_LONG, 0, (long)((char *)&csbend_example.integration_order), NULL, 0.0, 2},
-    {"EDGE1_KICK_LIMIT", "", IS_DOUBLE, 0, (long)((char *)&csbend_example.edge1_kick_limit), NULL, -1, 0},
-    {"EDGE2_KICK_LIMIT", "", IS_DOUBLE, 0, (long)((char *)&csbend_example.edge2_kick_limit), NULL, -1, 0},
+    {"EDGE1_KICK_LIMIT", "", IS_DOUBLE, 0, (long)((char *)&csbend_example.edge1_kick_limit), NULL, -1., 0},
+    {"EDGE2_KICK_LIMIT", "", IS_DOUBLE, 0, (long)((char *)&csbend_example.edge2_kick_limit), NULL, -1., 0},
     {"KICK_LIMIT_SCALING", "", IS_LONG, 0, (long)((char *)&csbend_example.kick_limit_scaling), NULL, 0, 0},
+    };
+
+CSRCSBEND csrcsbend_example;
+/* canonically-integrated sector bending magnet with CSR physical parameters */
+PARAMETER csrcsbend_param[N_CSRCSBEND_PARAMS] = {
+    {"L", "M", IS_DOUBLE, 1, (long)((char *)&csrcsbend_example.length), NULL, 0.0, 0},
+    {"ANGLE", "RAD", IS_DOUBLE, 1, (long)((char *)&csrcsbend_example.angle), NULL, 0.0, 0},
+    {"K1", "1/M$a2$n", IS_DOUBLE, 1, (long)((char *)&csrcsbend_example.k1), NULL, 0.0, 0},
+    {"K2", "1/M$a3$n", IS_DOUBLE, 1, (long)((char *)&csrcsbend_example.k2), NULL, 0.0, 0},
+    {"K3", "1/M$a3$n", IS_DOUBLE, 0, (long)((char *)&csrcsbend_example.k3), NULL, 0.0, 0},
+    {"K4", "1/M$a4$n", IS_DOUBLE, 0, (long)((char *)&csrcsbend_example.k4), NULL, 0.0, 0},
+    {"E1", "RAD", IS_DOUBLE, 1, (long)((char *)&csrcsbend_example.e1), NULL, 0.0, 0},
+    {"E2", "RAD", IS_DOUBLE, 1, (long)((char *)&csrcsbend_example.e2), NULL, 0.0, 0},
+    {"TILT", "RAD", IS_DOUBLE, 1, (long)((char *)&csrcsbend_example.tilt), NULL, 0.0, 0},
+    {"H1", "1/M", IS_DOUBLE, 1, (long)((char *)&csrcsbend_example.h1), NULL, 0.0, 0},
+    {"H2", "1/M", IS_DOUBLE, 1, (long)((char *)&csrcsbend_example.h2), NULL, 0.0, 0},
+    {"HGAP", "M", IS_DOUBLE, 1, (long)((char *)&csrcsbend_example.hgap), NULL, 0.0, 0},
+    {"FINT", "", IS_DOUBLE, 1, (long)((char *)&csrcsbend_example.fint), NULL, DEFAULT_FINT, 0},
+    {"DX", "M", IS_DOUBLE, 1, (long)((char *)&csrcsbend_example.dx), NULL, 0.0, 0},
+    {"DY", "M", IS_DOUBLE, 1, (long)((char *)&csrcsbend_example.dy), NULL, 0.0, 0},
+    {"DZ", "M", IS_DOUBLE, 1, (long)((char *)&csrcsbend_example.dz), NULL, 0.0, 0},
+    {"FSE", "", IS_DOUBLE, 1, (long)((char *)&csrcsbend_example.fse), NULL, 0.0, 0},
+    {"ETILT", "", IS_DOUBLE, 1, (long)((char *)&csrcsbend_example.etilt), NULL, 0.0, 0},
+    {"N_KICKS", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.n_kicks), NULL, 0.0, DEFAULT_N_KICKS},
+    {"NONLINEAR", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.nonlinear), NULL, 0.0, 1},
+    {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.synch_rad), NULL, 0.0, 0},
+    {"EDGE1_EFFECTS", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.edge1_effects), NULL, 0.0, 1},
+    {"EDGE2_EFFECTS", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.edge2_effects), NULL, 0.0, 1},
+    {"INTEGRATION_ORDER", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.integration_order), NULL, 0.0, 2},
+    {"BINS", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.bins), NULL, 0.0, 0},
+    {"SG_HALFWIDTH", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.SGHalfWidth), NULL, 0.0, 0},
+    {"SG_ORDER", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.SGOrder), NULL, 0.0, 1},
+    {"OUTPUT_FILE", "", IS_STRING, 0, (long)((char *)&csrcsbend_example.histogramFile), NULL, 0.0, 0},
+    {"OUTPUT_INTERVAL", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.outputInterval), NULL, 0.0, 1},
+    {"STEADY_STATE", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.steadyState), NULL, 0.0, 0},
     };
 
 TUBEND tubend_example;
@@ -1158,6 +1194,8 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_CHARGE_PARAMS, 0, sizeof(CHARGE), charge_param},
     { N_PFILTER_PARAMS, 0, sizeof(PFILTER), pfilter_param},
     { N_HISTOGRAM_PARAMS, 0, sizeof(HISTOGRAM), histogram_param},
+    {  N_CSRCSBEND_PARAMS, MAT_LEN_NCAT|IS_MAGNET,
+                                         sizeof(CSRCSBEND),    csrcsbend_param   },
 } ;
  
 

@@ -172,7 +172,7 @@ void SDDS_CentroidOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode,
     log_exit("SDDS_CentroidOutputSetup");
     }
 
-#define SIGMA_MATRIX_COLUMNS 31
+#define SIGMA_MATRIX_COLUMNS 35
 static SDDS_DEFINITION sigma_matrix_column[SIGMA_MATRIX_COLUMNS] = {
     {"s1",    "&column name=s1, symbol=\"$gs$r$b1$n\", units=m, type=double &end"},
     {"s12",    "&column name=s12, symbol=\"$gs$r$b12$n\", units=m, type=double &end"},
@@ -205,6 +205,10 @@ static SDDS_DEFINITION sigma_matrix_column[SIGMA_MATRIX_COLUMNS] = {
     {"Syp",    "&column name=Syp, symbol=\"$gs$r$by'$n\", type=double &end"},
     {"Ss",    "&column name=Ss, units=m, symbol=\"$gs$r$bs$n\", type=double &end"},
     {"Sdelta",    "&column name=Sdelta, symbol=\"$gs$bd$n$r\", type=double &end"},
+    {"ex", "&column name=ex, symbol=\"$ge$r$bx$n\", units=\"$gp$rm\", type=double &end"},
+    {"enx", "&column name=enx, symbol=\"$ge$r$bx,n$n\", type=double, units=\"$gp$rm$be$ncm\"  &end"},
+    {"ey", "&column name=ey, symbol=\"$ge$r$by$n\", units=\"$gp$rm\", type=double &end"},
+    {"eny", "&column name=eny, symbol=\"$ge$r$by,n$n\", type=double, units=\"$gp$rm$be$ncm\"  &end"},
     } ;
 
 void SDDS_SigmaOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row,
@@ -1067,124 +1071,150 @@ void dump_centroid(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline,
 void dump_sigma(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, long n_elements, long step,
                 double p_central)
 {
-    long i, j, ie, index;
-    BEAM_SUMS *beam;
-    ELEMENT_LIST *eptr;
-    double *sigma;
-    char *name, *type_name;
-    long s_index, s1_index, ma1_index, Sx_index, occurence;
+  long i, j, ie, index;
+  BEAM_SUMS *beam;
+  ELEMENT_LIST *eptr;
+  double *sigma, emit;
+  char *name, *type_name;
+  long s_index, s1_index, ma1_index, Sx_index, occurence, ex_index;
+  long s2_index, s3_index, s4_index;
 
-    log_entry("dump_sigma");
-    if (!SDDS_table)
-        bomb("SDDS_TABLE pointer is NULL (dump_sigma)", NULL);
-    if (!sums)
-        bomb("BEAM_SUMS pointer is NULL (dump_centroid)", NULL);
-    if (!beamline)
-        bomb("LINE_LIST pointer is NULL (dump_centroid)", NULL);
-    if ((s_index=SDDS_GetColumnIndex(SDDS_table, "s"))<0 ||
-        (s1_index=SDDS_GetColumnIndex(SDDS_table, "s1"))<0 ||
-        (ma1_index=SDDS_GetColumnIndex(SDDS_table, "ma1"))<0 ||
-        (Sx_index=SDDS_GetColumnIndex(SDDS_table, "Sx"))<0 ) {
-        SDDS_SetError("Problem getting index of SDDS columns (dump_sigma)");
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-        }
+  log_entry("dump_sigma");
+  if (!SDDS_table)
+    bomb("SDDS_TABLE pointer is NULL (dump_sigma)", NULL);
+  if (!sums)
+    bomb("BEAM_SUMS pointer is NULL (dump_centroid)", NULL);
+  if (!beamline)
+    bomb("LINE_LIST pointer is NULL (dump_centroid)", NULL);
+  if ((s_index=SDDS_GetColumnIndex(SDDS_table, "s"))<0 ||
+      (s1_index=SDDS_GetColumnIndex(SDDS_table, "s1"))<0 ||
+      (s2_index=SDDS_GetColumnIndex(SDDS_table, "s2"))<0 ||
+      (s3_index=SDDS_GetColumnIndex(SDDS_table, "s3"))<0 ||
+      (s4_index=SDDS_GetColumnIndex(SDDS_table, "s4"))<0 ||
+      (ma1_index=SDDS_GetColumnIndex(SDDS_table, "ma1"))<0 ||
+      (Sx_index=SDDS_GetColumnIndex(SDDS_table, "Sx"))<0 ||
+      (ex_index=SDDS_GetColumnIndex(SDDS_table, "ex"))<0) {
+    SDDS_SetError("Problem getting index of SDDS columns (dump_sigma)");
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  }
 
-    if (!SDDS_StartTable(SDDS_table, n_elements+1)) {
-        SDDS_SetError("Problem starting SDDS table (dump_sigma)");
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-        }
-    if (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
-                            "Step", step, NULL)) {
-        SDDS_SetError("Problem setting parameter values for SDDS table (dump_sigma)");
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-        }
+  if (!SDDS_StartTable(SDDS_table, n_elements+1)) {
+    SDDS_SetError("Problem starting SDDS table (dump_sigma)");
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  }
+  if (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
+                          "Step", step, NULL)) {
+    SDDS_SetError("Problem setting parameter values for SDDS table (dump_sigma)");
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  }
 
-    if (!(beamline->flags&BEAMLINE_CONCAT_DONE))
-        eptr = &(beamline->elem);
-    else 
-        eptr = &(beamline->ecat);
-    name = "_BEG_";
-    type_name = "MARK";
-    occurence = 1;
-    sigma = tmalloc(sizeof(*sigma)*21);
-    for (ie=0; ie<n_elements; ie++) {
-        beam  = sums+ie;
-        if (!beam->sum || !beam->sum2) {
-            fprintf(stderr, "error: sum or sum2 element of BEAM_SUMS is undefined for element %ld (%s)\n",
-                ie, name);
-            exit(1);
-            }
-        if (beam->n_part) {
-            for (i=index=0; i<6; i++) {
-                sigma[index] = sqrt(beam->sum2[index]/beam->n_part) ; 
-                index++;
-                for (j=i+1; j<6; j++, index++)
-                    sigma[index] = beam->sum2[index]/beam->n_part; 
-                }
-            if (index!=21)
-                bomb("indexing problem (dump_sigma)", NULL);
-            for (i=0; i<21; i++)
-                if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, s1_index+i, sigma[i], -1)) {
-                    SDDS_SetError("Problem setting SDDS row values (dump_sigma)");
-                    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-                    }
-            for (i=0; i<4; i++)
-                if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, ma1_index+i, beam->maxabs[i], -1)) {
-                    SDDS_SetError("Problem setting SDDS row values (dump_sigma)");
-                    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-                    }
-            for (i=j=0; j<6; i+=(6-j), j++)
-                if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, Sx_index+j, 
-                                       SAFE_SQRT(sqr(sigma[i]) - sqr(beam->sum[j]/beam->n_part)), -1)) {
-                    SDDS_SetError("Problem setting SDDS row values (dump_sigma)");
-                    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-                    }
-            }
-        else {
-            for (index=s1_index; index<s1_index+21; index++) 
-                if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, index, (double)0.0, -1)) {
-                    SDDS_SetError("Problem setting SDDS row values (dump_sigma)");
-                    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-                    }
-            for (index=ma1_index; index<ma1_index+4; index++) 
-                if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, index, (double)0.0, -1)) {
-                    SDDS_SetError("Problem setting SDDS row values (dump_sigma)");
-                    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-                    }
-            for (index=Sx_index; index<Sx_index+6; index++) 
-                if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, index, (double)0.0, -1)) {
-                    SDDS_SetError("Problem setting SDDS row values (dump_sigma)");
-                    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-                    }
-            }
-        
-        if (!SDDS_SetRowValues(SDDS_table,  SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, 
-                               s_index, beam->z, s_index+1, name, s_index+2, occurence,
-                               s_index+3, type_name, -1)) {
-            SDDS_SetError("Problem setting row values for SDDS table (dump_sigma)");
-            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-            }
- 
-        name = eptr->name;
-        type_name = entity_name[eptr->type];
-        occurence = eptr->occurence;
-        if (eptr->succ)
-            eptr = eptr->succ;
-        else if (beamline->elem_recirc)
-            eptr = beamline->elem_recirc;
-        else
-            eptr = &(beamline->elem);
-        }
-
-    if (!SDDS_WriteTable(SDDS_table)) {
-        SDDS_SetError("Unable to write sigma data (dump_sigma)");
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-        }
-    if (!SDDS_EraseData(SDDS_table)) {
-        SDDS_SetError("Unable to erase sigma data (dump_sigma)");
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-        }
-    free(sigma);
-    log_exit("dump_sigma");
+  if (!(beamline->flags&BEAMLINE_CONCAT_DONE))
+    eptr = &(beamline->elem);
+  else 
+    eptr = &(beamline->ecat);
+  name = "_BEG_";
+  type_name = "MARK";
+  occurence = 1;
+  sigma = tmalloc(sizeof(*sigma)*21);
+  for (ie=0; ie<n_elements; ie++) {
+    beam  = sums+ie;
+    if (!beam->sum || !beam->sum2) {
+      fprintf(stderr, "error: sum or sum2 element of BEAM_SUMS is undefined for element %ld (%s)\n",
+              ie, name);
+      exit(1);
     }
+    if (beam->n_part) {
+      for (i=index=0; i<6; i++) {
+        sigma[index] = sqrt(beam->sum2[index]/beam->n_part) ; 
+        index++;
+        for (j=i+1; j<6; j++, index++)
+          sigma[index] = beam->sum2[index]/beam->n_part; 
+      }
+      if (index!=21)
+        bomb("indexing problem (dump_sigma)", NULL);
+      for (i=0; i<21; i++)
+        if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, s1_index+i, sigma[i], -1)) {
+          SDDS_SetError("Problem setting SDDS row values (dump_sigma)");
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+        }
+      for (i=0; i<4; i++)
+        if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, ma1_index+i, beam->maxabs[i], -1)) {
+          SDDS_SetError("Problem setting SDDS row values (dump_sigma)");
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+        }
+      for (i=j=0; j<6; i+=(6-j), j++)
+        if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, Sx_index+j, 
+                               SAFE_SQRT(sqr(sigma[i]) - sqr(beam->sum[j]/beam->n_part)), -1)) {
+          SDDS_SetError("Problem setting SDDS row values (dump_sigma)");
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+        }
+      /* x emittance = sqrt(sqr(s1*s2)-sqr(s12)) */
+      emit = sqrt(sqr(sigma[0]*sigma[s2_index-s1_index])-sqr(sigma[1]));
+      if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, 
+                             ex_index, emit, ex_index+1, emit*beam->p0*(1+beam->sum[5]/beam->n_part),
+                             -1)) {
+        SDDS_SetError("Problem setting SDDS row values (dump_sigma)");
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      }
+      /* y emittance = sqrt(sqr(s3*s4)-sqr(s34)) */
+      emit = sqrt(sqr(sigma[s3_index-s1_index]*sigma[s4_index-s1_index])-sqr(sigma[s3_index-s1_index+1]));
+      if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, 
+                             ex_index+2, emit, ex_index+3, emit*beam->p0*(1+beam->sum[5]/beam->n_part),
+                             -1)) {
+        SDDS_SetError("Problem setting SDDS row values (dump_sigma)");
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      }
+    }
+    else {
+      for (index=s1_index; index<s1_index+21; index++) 
+        if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, index, (double)0.0, -1)) {
+          SDDS_SetError("Problem setting SDDS row values (dump_sigma)");
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+        }
+      for (index=ma1_index; index<ma1_index+4; index++) 
+        if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, index, (double)0.0, -1)) {
+          SDDS_SetError("Problem setting SDDS row values (dump_sigma)");
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+        }
+      for (index=Sx_index; index<Sx_index+6; index++) 
+        if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, index, (double)0.0, -1)) {
+          SDDS_SetError("Problem setting SDDS row values (dump_sigma)");
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+        }
+      for (index=ex_index; index<ex_index+4; index++)
+        if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, index, (double)0.0, -1)) {
+          SDDS_SetError("Problem setting SDDS row values (dump_sigma)");
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+        }
+    }
+    
+    if (!SDDS_SetRowValues(SDDS_table,  SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, 
+                           s_index, beam->z, s_index+1, name, s_index+2, occurence,
+                           s_index+3, type_name, -1)) {
+      SDDS_SetError("Problem setting row values for SDDS table (dump_sigma)");
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+    
+    name = eptr->name;
+    type_name = entity_name[eptr->type];
+    occurence = eptr->occurence;
+    if (eptr->succ)
+      eptr = eptr->succ;
+    else if (beamline->elem_recirc)
+      eptr = beamline->elem_recirc;
+    else
+      eptr = &(beamline->elem);
+  }
+
+  if (!SDDS_WriteTable(SDDS_table)) {
+    SDDS_SetError("Unable to write sigma data (dump_sigma)");
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  }
+  if (!SDDS_EraseData(SDDS_table)) {
+    SDDS_SetError("Unable to erase sigma data (dump_sigma)");
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  }
+  free(sigma);
+  log_exit("dump_sigma");
+}
 

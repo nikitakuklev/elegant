@@ -531,6 +531,10 @@ long do_tracking(
             n_left = track_through_csbend(coord, n_to_track, (CSBEND*)eptr->p_elem, 0.0,
                                           *P_central, accepted, z);
             break;
+          case T_CSRCSBEND:
+            n_left = track_through_csbendCSR(coord, n_to_track, (CSRCSBEND*)eptr->p_elem, 0.0,
+                                             *P_central, accepted, z, charge, run->rootname);
+            break;
           case T_TUBEND:
             n_left = track_through_tubend(coord, n_to_track, 
                                           (TUBEND*)eptr->p_elem, 0.0,

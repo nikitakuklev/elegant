@@ -354,6 +354,7 @@ VMATRIX *compute_matrix(
     KSEXT *ksext; KSBEND *ksbend; KQUAD *kquad; NIBEND *nibend; NISEPT *nisept;
     SAMPLE *sample; STRAY *stray; CSBEND *csbend; RFCA *rfca; ENERGY *energy;
     MATTER *matter; MALIGN *malign; MATR *matr; MODRF *modrf;
+    CSRCSBEND *csrcsbend;
     long bend_flags;
     
     log_entry("compute_matrix");
@@ -587,6 +588,22 @@ VMATRIX *compute_matrix(
             if (csbend->tilt)
                 bomb("can't misalign tilted bending magnet", NULL);
             misalign_matrix(elem->matrix, csbend->dx, csbend->dy, csbend->dz, csbend->angle);
+            }
+        break;
+      case T_CSRCSBEND:
+        csrcsbend = (CSRCSBEND*)elem->p_elem;
+        if (csrcsbend->n_kicks<1)
+            bomb("n_kicks must be > 0 for CSRCSBEND element", NULL);
+        csrcsbend->flags = determine_bend_flags(elem, csrcsbend->edge1_effects, csrcsbend->edge2_effects);
+        elem->matrix = 
+            bend_matrix(csrcsbend->length, csrcsbend->angle, csrcsbend->e1, csrcsbend->e2, csrcsbend->k1, 
+                        csrcsbend->k2, csrcsbend->tilt, csrcsbend->fint, 
+                        csrcsbend->hgap*2, csrcsbend->fse, csrcsbend->etilt,
+                        (run->default_order?run->default_order:1), 1L, csrcsbend->flags, 0);
+        if (csrcsbend->dx || csrcsbend->dy || csrcsbend->dz) {
+            if (csrcsbend->tilt)
+                bomb("can't misalign tilted bending magnet", NULL);
+            misalign_matrix(elem->matrix, csrcsbend->dx, csrcsbend->dy, csrcsbend->dz, csrcsbend->angle);
             }
         break;
       case T_RFCA: 
