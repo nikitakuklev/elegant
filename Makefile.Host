@@ -19,7 +19,8 @@ endif
 
 EPICS_EXTENSIONS_LIB = ../../../../../epics/extensions/lib/$(HOST_ARCH)
 PROD = elegant sddsemitmeas madto sddssasefel sddsTouschekInteg ibsEmittance recurseSetup haissinski \
-        sddsmatchtwiss sddsanalyzebeam sddsrandmult sddsresdiag sddsbrightness ../elegantRingAnalysis ../beamLifetimeCalc
+  sddsmatchtwiss sddsanalyzebeam sddsrandmult sddsresdiag sddsbrightness \
+  ../elegantRingAnalysis ../beamLifetimeCalc ../fin2param
 
 USR_CFLAGS = 	-I../../../../../epics/extensions/src/SDDS/include \
 		$(ZLIB_INC) \
