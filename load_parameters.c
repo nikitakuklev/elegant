@@ -76,32 +76,37 @@ long setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 
     load_request = trealloc(load_request, sizeof(*load_request)*(load_requests+1));
     load_request[load_requests].flags = change_defined_values?COMMAND_FLAG_CHANGE_DEFINITIONS:0;
-    load_request[load_requests].filename = filename;
+    load_request[load_requests].filename = compose_filename(filename, run->rootname);
 
     SDDS_ClearErrors();
 
-    if (!SDDS_InitializeInputFromSearchPath(&load_request[load_requests].table, filename)) {
-        fprintf(stdout, "error: couldn't initialize SDDS input for load_parameters file %s\n", filename);
+    if (!SDDS_InitializeInputFromSearchPath(&load_request[load_requests].table, 
+                                            load_request[load_requests].filename)) {
+        fprintf(stdout, "error: couldn't initialize SDDS input for load_parameters file %s\n", 
+                load_request[load_requests].filename);
         fflush(stdout);
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
         exit(1);
         }
     if ((index=SDDS_GetColumnIndex(&load_request[load_requests].table, Element_ColumnName))<0 ||
         SDDS_GetColumnType(&load_request[load_requests].table, index)!=SDDS_STRING) {
-        fprintf(stdout, "Column \"%s\" is not in file %s or is not of string type.\n", Element_ColumnName, filename);
+        fprintf(stdout, "Column \"%s\" is not in file %s or is not of string type.\n", Element_ColumnName,
+                load_request[load_requests].filename);
         fflush(stdout);
         exit(1);
         }
     if ((index=SDDS_GetColumnIndex(&load_request[load_requests].table, Parameter_ColumnName))<0 ||
         SDDS_GetColumnType(&load_request[load_requests].table, index)!=SDDS_STRING) {
-        fprintf(stdout, "Column \"%s\" is not in file %s or is not of string type.\n", Parameter_ColumnName, filename);
+        fprintf(stdout, "Column \"%s\" is not in file %s or is not of string type.\n", Parameter_ColumnName, 
+                load_request[load_requests].filename);
         fflush(stdout);
         exit(1);
         }
     load_request[load_requests].string_data = 0;
     if ((index=SDDS_GetColumnIndex(&load_request[load_requests].table, Value_ColumnName))>=0) {
       if (SDDS_GetColumnType(&load_request[load_requests].table, index)!=SDDS_DOUBLE) {
-        fprintf(stdout, "Column \"%s\" is not in file %s or is not of double-precision type.\n", Value_ColumnName, filename);
+        fprintf(stdout, "Column \"%s\" is not in file %s or is not of double-precision type.\n", 
+                Value_ColumnName, load_request[load_requests].filename);
         fflush(stdout);
         exit(1);
       } 
@@ -109,7 +114,7 @@ long setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
       if ((index=SDDS_GetColumnIndex(&load_request[load_requests].table, ValueString_ColumnName))<0 ||
           SDDS_GetColumnType(&load_request[load_requests].table, index)!=SDDS_STRING) {
         fprintf(stdout, "Column \"%s\" is not in file %s or is not of string type.\n",
-                ValueString_ColumnName, filename);
+                ValueString_ColumnName, load_request[load_requests].filename);
         fflush(stdout);
         exit(1);
       }
@@ -119,14 +124,16 @@ long setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     /* The Mode column is optional: */
     if ((index=SDDS_GetColumnIndex(&load_request[load_requests].table, Mode_ColumnName))>=0 &&
         SDDS_GetColumnType(&load_request[load_requests].table, index)!=SDDS_STRING) {
-        fprintf(stdout, "Column \"%s\" is in file %s but is not of string type.\n", Mode_ColumnName, filename);
+        fprintf(stdout, "Column \"%s\" is in file %s but is not of string type.\n", 
+                Mode_ColumnName, load_request[load_requests].filename);
         fflush(stdout);
         exit(1);
         }
     /* The Occurence column is optional: */ 
     if ((index=SDDS_GetColumnIndex(&load_request[load_requests].table, Occurence_ColumnName))>=0 && 
         SDDS_GetColumnType(&load_request[load_requests].table, index)!=SDDS_LONG) {
-        fprintf(stdout, "Column \"%s\" is in file %s but is not of long-integer type.\n", Occurence_ColumnName, filename);
+        fprintf(stdout, "Column \"%s\" is in file %s but is not of long-integer type.\n", 
+                Occurence_ColumnName, load_request[load_requests].filename);
         fflush(stdout);
         exit(1);
         }
