@@ -319,6 +319,8 @@ char **argv;
             run_conditions.losses     = compose_filename(losses, rootname);
             magnets                   = compose_filename(magnets, rootname);
             semaphore_file            = compose_filename(semaphore_file, rootname);
+            parameters                = compose_filename(parameters, rootname);
+            
             if (semaphore_file && fexists(semaphore_file))
               remove(semaphore_file);
 
@@ -532,6 +534,8 @@ char **argv;
                          beamline, &beam, &output_data, 
                          (use_linear_chromatic_matrix?LINEAR_CHROMATIC_MATRIX:0)+
                          (longitudinal_ring_only?LONGITUDINAL_RING_ONLY:0));
+              if (parameters)
+                dumpLatticeParameters(parameters, &run_conditions, beamline);
             }
             finish_output(&output_data, &run_conditions, &run_control, &error_control, &optimize.variables, 
                           beamline, beamline->n_elems, &beam);
@@ -541,6 +545,8 @@ char **argv;
               finish_twiss_output();
             if (do_response_output)
               finish_response_output();
+            if (parameters)
+              finishLatticeParametersFile();
 #ifdef SUNOS4
             check_heap();
 #endif

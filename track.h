@@ -435,7 +435,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_TUBEND 67
 #define T_CHARGE 68
 #define T_PFILTER 69
-#define N_TYPES 70
+#define T_HISTOGRAM 70
+#define N_TYPES 71
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -512,6 +513,7 @@ extern char *entity_text[N_TYPES];
 #define N_TUBEND_PARAMS 6
 #define N_CHARGE_PARAMS 1
 #define N_PFILTER_PARAMS 1
+#define N_HISTOGRAM_PARAMS 9
 
 typedef struct {
     char *name;            /* parameter name */
@@ -864,6 +866,22 @@ typedef struct {
     long xIndex[2], yIndex[2], longitIndex[3], IDIndex;
     SDDS_TABLE SDDS_table;
     } WATCH;
+
+/* histogram element */
+
+extern PARAMETER histogram_param[N_HISTOGRAM_PARAMS];
+
+typedef struct {
+    char *filename;
+    long interval, startPass, bins, fixedBinSize;
+    long xData, yData, longitData;
+    double binSizeFactor;
+    /* internal variables for SDDS output */
+    long initialized, count;
+    long columnIndex[7][2];  /* x, xp, y, yp, t, p, dt */
+    double binSize[7];
+    SDDS_TABLE SDDS_table;
+    } HISTOGRAM;
 
 /* Traveling wave (TEM) deflector plates using NAG integrator.
  */
@@ -1996,6 +2014,10 @@ extern void SDDS_SigmaMatrixSetup(SDDS_TABLE *SDDS_table, char *filename, long m
                            char *command_file, char *lattice_file, char *caller);
 extern void SDDS_WatchPointSetup(WATCH *waatch, long mode, long lines_per_row,
                                  char *command_file, char *lattice_file, char *caller, char *qualifier);
+void SDDS_HistogramSetup(HISTOGRAM *histogram, long mode, long lines_per_row,
+                         char *command_file, char *lattice_file, char *caller);
+void dump_particle_histogram(HISTOGRAM *histogram, long step, long pass, double **particle, long particles, 
+                             double Po, double length);
 extern void dump_watch_particles(WATCH *watch, long step, long pass, double **particle, long particles, double Po,
                                  double length);
 extern void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, double **particle, long particles, 

@@ -266,7 +266,6 @@ void SDDS_WatchPointSetup(WATCH *watch, long mode, long lines_per_row,
   SDDS_TABLE *SDDS_table;
   char *filename;
   long watch_mode, columns;
-  SDDS_DEFINITION columnDef[PHASE_SPACE_COLUMNS+2];
   
   SDDS_table = &watch->SDDS_table;
   filename = watch->filename;
@@ -358,6 +357,94 @@ void SDDS_WatchPointSetup(WATCH *watch, long mode, long lines_per_row,
     break;
   default:
     break;
+  }
+}
+
+void SDDS_HistogramSetup(HISTOGRAM *histogram, long mode, long lines_per_row,
+                          char *command_file, char *lattice_file, char *caller)
+{
+  char s[100];
+  SDDS_TABLE *SDDS_table;
+  char *filename;
+  long column, columns;
+  
+  SDDS_table = &histogram->SDDS_table;
+  filename = histogram->filename;
+  SDDS_ElegantOutputSetup(SDDS_table, filename, mode, lines_per_row, "histograms of phase-space coordinates",
+                          command_file, lattice_file,
+                          standard_parameter, STANDARD_PARAMETERS,
+                          NULL, 0, caller, SDDS_EOS_NEWFILE);
+  for (column=0; column<7; column++)
+    histogram->columnIndex[column][0] = 
+      histogram->columnIndex[column][1] = -1;
+  columns = 0;
+  if (histogram->xData) {
+    if ((histogram->columnIndex[0][0]
+         =SDDS_DefineColumn(SDDS_table, "x", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+        (histogram->columnIndex[0][1]
+         =SDDS_DefineColumn(SDDS_table, "xFrequency", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+        (histogram->columnIndex[1][0]
+         =SDDS_DefineColumn(SDDS_table, "xp", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+        (histogram->columnIndex[1][1]
+         =SDDS_DefineColumn(SDDS_table, "xpFrequency", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0) {
+      fprintf(stderr, "Unable to define SDDS columns x and xp for file %s (%s)\n",
+              filename, caller);
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      exit(1);
+    }
+    columns += 4;
+  }
+  if (histogram->yData) {
+    if ((histogram->columnIndex[2][0]
+         =SDDS_DefineColumn(SDDS_table, "y", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+        (histogram->columnIndex[2][1]
+         =SDDS_DefineColumn(SDDS_table, "yFrequency", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+        (histogram->columnIndex[3][0]
+         =SDDS_DefineColumn(SDDS_table, "yp", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+        (histogram->columnIndex[3][1]
+         =SDDS_DefineColumn(SDDS_table, "ypFrequency", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0) {
+      fprintf(stderr, "Unable to define SDDS columns y and yp for file %s (%s)\n",
+              filename, caller);
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      exit(1);
+    }
+    columns += 4;
+  }
+  if (histogram->longitData) {
+    if ((histogram->columnIndex[4][0]
+         =SDDS_DefineColumn(SDDS_table, "t", NULL, "s", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+        (histogram->columnIndex[4][1]
+         =SDDS_DefineColumn(SDDS_table, "tFrequency", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+        (histogram->columnIndex[5][0]
+         =SDDS_DefineColumn(SDDS_table, "p", NULL, "m$be$nc", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+        (histogram->columnIndex[5][1]
+         =SDDS_DefineColumn(SDDS_table, "pFrequency", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+        (histogram->columnIndex[6][0]
+         =SDDS_DefineColumn(SDDS_table, "dt", NULL, "s", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+        (histogram->columnIndex[6][1]
+         =SDDS_DefineColumn(SDDS_table, "dtFrequency", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ) {
+      fprintf(stderr, "Unable to define SDDS columns t, dt, and p for file %s (%s)\n",
+              filename, caller);
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      exit(1);
+    }
+    columns += 6;
+  }
+  if (!columns)
+    bomb("no output selected for histogram", NULL);
+  if (!SDDS_DefineSimpleParameter(SDDS_table, "Pass", NULL, SDDS_LONG) ||
+      !SDDS_DefineSimpleParameter(SDDS_table, "Particles", NULL, SDDS_LONG) ||
+      !SDDS_DefineSimpleParameter(SDDS_table, "pCentral", "m$be$nc", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleParameter(SDDS_table, "PassLength", "m", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleParameter(SDDS_table, "PassCentralTime", "s", SDDS_DOUBLE)) {
+    fprintf(stderr, "Unable define SDDS parameter for file %s (%s)\n", filename, caller);
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+    exit(1);
+  }
+  if (!SDDS_WriteLayout(SDDS_table)) {
+    fprintf(stderr, "Unable to write SDDS layout for file %s (%s)\n", filename, caller);
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+    exit(1);
   }
 }
 
@@ -701,6 +788,103 @@ void do_watch_FFT(double **data, long n_data, long slot, long window_code)
     free(real_imag); 
     log_exit("do_watch_FFT");
     }
+
+
+void dump_particle_histogram(HISTOGRAM *histogram, long step, long pass, double **particle, long particles, 
+                          double Po, double length)
+{
+  long icoord, ipart, row, ibin;
+  double p, t0;
+  static long maxBins = 0, maxParticles = 0;
+  static double *frequency=NULL, *coordinate=NULL, *histData=NULL;
+  double center, range, lower, upper;
+  
+  log_entry("dump_particle_histogram");
+  if (!histogram->initialized)
+    bomb("uninitialized histogram encountered (dump_particle_histogram)", NULL);
+  if (!particle)
+    bomb("NULL coordinate pointer passed to dump_particle_histogram", NULL);
+  for (ipart=0; ipart<particles; ipart++)
+    if (!particle[ipart]) {
+      fprintf(stderr, "error: coordinate slot %ld is NULL (dump_particle_histogram)\n", ipart);
+      abort();
+    }
+
+  if (!SDDS_StartTable(&histogram->SDDS_table, histogram->bins)) {
+    SDDS_SetError("Problem starting SDDS table (dump_particle_histogram)");
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  }
+  if (histogram->bins>maxBins) {
+    maxBins = histogram->bins;
+    if (!(frequency=SDDS_Realloc(frequency, sizeof(*frequency)*maxBins)) ||
+        !(coordinate=SDDS_Realloc(coordinate, sizeof(*coordinate)*maxBins))) {
+      SDDS_Bomb("Memory allocation failure (dump_particle_histogram)");
+    }
+  }
+  if (particles>maxParticles) {
+    maxParticles = particles;
+    if (!(histData = SDDS_Realloc(histData, sizeof(*histData)*maxParticles)))
+      SDDS_Bomb("Memory allocation failure (dump_particle_histogram)");
+  }
+  
+  t0 = pass*length*sqrt(Po*Po+1)/(c_mks*(Po+1e-32));
+  for (icoord=0; icoord<7; icoord++) {
+    upper = -(lower=DBL_MAX);
+    if (histogram->columnIndex[icoord][0]==-1)
+      continue;
+    if (icoord==4) {
+      /* t */
+      for (ipart=0; ipart<particles; ipart++) {
+        p = Po*(1+particle[ipart][5]);
+        histData[ipart] = particle[ipart][4]/(c_mks*p/sqrt(sqr(p)+1));
+      }
+    } else if (icoord==6) {
+      /* dt (could reuse computations for t, but would need to store another array) */
+      for (ipart=0; ipart<particles; ipart++) {
+        p = Po*(1+particle[ipart][5]);
+        histData[ipart] = particle[ipart][4]/(c_mks*p/sqrt(sqr(p)+1)) - t0;
+      }
+    } else {
+      for (ipart=0; ipart<particles; ipart++)
+        histData[ipart] = particle[ipart][icoord];
+    }
+    find_min_max(&lower, &upper, histData, particles);
+    if (lower==upper) {
+      lower -= 1e-16;
+      upper += 1e-16;
+    }
+    if (histogram->count==0 || !histogram->fixedBinSize) {
+      range = histogram->binSizeFactor*(upper-lower);
+      histogram->binSize[icoord] = range/histogram->bins;
+    } else
+      range = histogram->binSize[icoord]*histogram->bins;
+    center = (lower+upper)/2;
+    lower = center-range/2;
+    upper = center+range/2;
+    for (ibin=0; ibin<histogram->bins; ibin++) 
+      coordinate[ibin] = (ibin+0.5)*histogram->binSize[icoord] + lower;
+    make_histogram(frequency, histogram->bins, lower, upper, histData, particles, 1);
+    if (!SDDS_SetColumn(&histogram->SDDS_table, SDDS_SET_BY_INDEX, 
+                        coordinate, histogram->bins, histogram->columnIndex[icoord][0]) ||
+        !SDDS_SetColumn(&histogram->SDDS_table, SDDS_SET_BY_INDEX,
+                        frequency, histogram->bins, histogram->columnIndex[icoord][1])) {
+      SDDS_Bomb("Problem setting column values (dump_particle_histogram)");
+    }
+  }
+  if (!SDDS_SetParameters(&histogram->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
+                          "Step", step, "Pass", pass, "Particles", particles, "pCentral", Po,
+                          "PassLength", length, 
+                          "PassCentralTime", t0, 
+                          NULL)) {
+    SDDS_SetError("Problem setting SDDS parameters (dump_particle_histogram)");
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  }
+  if (!SDDS_WriteTable(&histogram->SDDS_table)) {
+    SDDS_SetError("Problem writing SDDS table (dump_particle_histogram)");
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  } 
+  histogram->count++;
+}
 
 
 void dump_phase_space(SDDS_TABLE *SDDS_table, double **particle, long particles, long step, double Po)

@@ -429,4 +429,67 @@ void finish_load_parameters()
   load_requests = 0;
 }
 
+static long dumpingLatticeParameters = 0;
+static long iElementName, iElementParameter, iParameterValue;
+static SDDS_DATASET SDDS_dumpLattice;
+void dumpLatticeParameters(char *filename, RUN *run, LINE_LIST *beamline)
+{
+  SDDS_DATASET *SDDSout;
+  long iElem, iParam;
+  ELEMENT_LIST *eptr;
+  PARAMETER *parameter;
+  long row, maxRows;
+  double value;
+  
+  SDDSout = &SDDS_dumpLattice;
+  if (!dumpingLatticeParameters) {
+    if (!SDDS_InitializeOutput(SDDSout, SDDS_BINARY, 0, NULL, NULL, filename) ||
+        (iElementName=SDDS_DefineColumn(SDDSout, "ElementName", NULL, NULL, NULL, NULL, SDDS_STRING, 0))<0 ||
+        (iElementParameter=SDDS_DefineColumn(SDDSout, "ElementParameter", NULL, NULL, NULL, NULL, SDDS_STRING, 0))<0 ||
+        (iParameterValue=SDDS_DefineColumn(SDDSout, "ParameterValue", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+        !SDDS_WriteLayout(SDDSout)) {
+      fprintf(stderr, "Problem setting up parameter output file\n");
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      exit(1);
+    }
+    dumpingLatticeParameters = 1;
+  }
+
+  if (!SDDS_StartPage(SDDSout, maxRows=beamline->n_elems*10))
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  row = 0;
+  
+  eptr = &(beamline->elem);
+  for (iElem=0; iElem<beamline->n_elems; iElem++) {
+    parameter = entity_description[eptr->type].parameter;
+    for (iParam=0; iParam<entity_description[eptr->type].n_params; iParam++) {
+      if (parameter[iParam].type==IS_DOUBLE) {
+        value = *(double*)(eptr->p_elem+parameter[iParam].offset);
+        if (row>=maxRows) {
+          if (!SDDS_LengthenTable(SDDSout, 1000))
+            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+          maxRows += 1000;
+        }
+        if (!SDDS_SetRowValues(SDDSout, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row,
+                               iElementName, eptr->name,
+                               iElementParameter, parameter[iParam].name,
+                               iParameterValue, value, 
+                               -1)) {
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+        }
+        row++;
+      }
+    }
+    eptr = eptr->succ;
+  }
+  if (!SDDS_WritePage(SDDSout))
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+}
+
+finishLatticeParametersFile() 
+{
+  if (dumpingLatticeParameters && !SDDS_Terminate(&SDDS_dumpLattice))
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  dumpingLatticeParameters = 0;
+}
 

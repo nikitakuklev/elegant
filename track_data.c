@@ -24,7 +24,7 @@ char *entity_name[N_TYPES] = {
     "NIBEND", "KPOLY", "NISEPT", "RAMPRF", "RAMPP", "STRAY", "CSBEND",
     "TWMTA", "MATTER", "RFMODE", "TRFMODE", "ZLONGIT", "SREFFECTS",
     "MODRF", "BMAPXY", "ZTRANSVERSE", "IBSCATTER", "FMULT",
-    "WAKE", "TRWAKE", "TUBEND", "CHARGE", "PFILTER",
+    "WAKE", "TRWAKE", "TUBEND", "CHARGE", "PFILTER", "HISTOGRAM",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -125,6 +125,7 @@ and phase modulation.",
     "A special rectangular bend element for top-up backtracking.",
     "An element to establish the total charge of a beam.  Active on first pass only.  If given, overrides all charge specifications on other elements.",
     "An element for energy and momentum filtration.",
+    "Request for histograms of particle coordinates to be output to SDDS file.",
     } ;
 
 QUAD quad_example;
@@ -1059,6 +1060,20 @@ PARAMETER pfilter_param[N_PFILTER_PARAMS] = {
     {"DELTALIMIT", "", IS_DOUBLE, 0, (long)((char *)&pfilter_example.deltalimit), NULL, -1.0, 0},
 };
 
+HISTOGRAM histogram_example;
+/* HISTOGRAM physical parameters */
+PARAMETER histogram_param[N_HISTOGRAM_PARAMS] = {
+  {"FILENAME", "", IS_STRING, 0, (long)((char *)&histogram_example.filename), "", 0.0, 0},
+  {"INTERVAL", "", IS_LONG, 0, (long)((char *)&histogram_example.interval), NULL, 0.0, 1},
+  {"START_PASS", "", IS_LONG, 0, (long)((char*)&histogram_example.startPass), NULL, 0.0, 0},
+  {"BINS", "", IS_LONG, 0, (long)((char*)&histogram_example.bins), NULL, 0.0, 50},
+  {"FIXED_BIN_SIZE", "", IS_LONG, 0, (long)((char*)&histogram_example.fixedBinSize), NULL, 0.0, 0},
+  {"X_DATA", "", IS_LONG, 0, (long)((char*)&histogram_example.xData), NULL, 0.0, 1},
+  {"Y_DATA", "", IS_LONG, 0, (long)((char*)&histogram_example.yData), NULL, 0.0, 1},
+  {"LONGIT_DATA", "", IS_LONG, 0, (long)((char*)&histogram_example.longitData), NULL, 0.0, 1},
+  {"BIN_SIZE_FACTOR", "", IS_DOUBLE, 0, (long)((char*)&histogram_example.binSizeFactor), NULL, 1.0, 0},
+};
+  
 /* array of parameter structures */
 
 #define MAT_LEN     HAS_MATRIX|HAS_LENGTH
@@ -1142,6 +1157,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_TUBEND_PARAMS, 0, sizeof(TUBEND), tubend_param},
     { N_CHARGE_PARAMS, 0, sizeof(CHARGE), charge_param},
     { N_PFILTER_PARAMS, 0, sizeof(PFILTER), pfilter_param},
+    { N_HISTOGRAM_PARAMS, 0, sizeof(HISTOGRAM), histogram_param},
 } ;
  
 

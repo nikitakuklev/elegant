@@ -467,11 +467,8 @@ VMATRIX *compute_matrix(
         elem->matrix = &(((MATR*)elem->p_elem)->M);
         break;
       case T_WATCH:
-        watch = (WATCH*)elem->p_elem;
-        if (!watch->initialized) {
-            elem->matrix = NULL;
-            set_up_watch_point(watch, run);
-            }
+        break;
+      case T_HISTOGRAM:
         break;
       case T_QFRING:
         qfring = (QFRING*)elem->p_elem;
@@ -677,6 +674,24 @@ void set_up_watch_point(WATCH *watch, RUN *run)
     watch->count = 0;
     log_exit("set_up_watch_point");
     }
+
+void set_up_histogram(HISTOGRAM *histogram, RUN *run)
+{
+  if (histogram->interval<=0)
+    bomb("interval is non-positive for HISTOGRAM element", NULL);
+  if (histogram->bins<=2)
+    bomb("number of bins is less than 2 for HISTOGRAM element", NULL);
+  if (!histogram->xData && !histogram->yData && !histogram->longitData)
+    bomb("no data selected for HISTOGRAM element", NULL);
+  if (histogram->binSizeFactor<=0)
+    bomb("bin_size_factor is non-positive for HISTOGRAM element", NULL);
+  
+  histogram->filename = compose_filename(histogram->filename, run->rootname);
+  
+  SDDS_HistogramSetup(histogram, SDDS_BINARY, 1, run->runfile, run->lattice, "set_up_histogram");
+  histogram->initialized = 1;
+  histogram->count = 0;
+}
 
 VMATRIX *magnification_matrix(MAGNIFY *magnif)
 {

@@ -10,8 +10,6 @@
 #include "track.h"
 /* #include "smath.h" */
 
-#pragma inline beta_from_delta
-
 ELEMENT_LIST *findBeamlineMatrixElement(ELEMENT_LIST *eptr);
 void trackLongitudinalOnlyRing(double **part, long np, VMATRIX *M, double *alpha);
 void trackWithChromaticLinearMatrix(double **particle, long particles,
@@ -47,6 +45,7 @@ long do_tracking(
 {
   RFMODE *rfmode; TRFMODE *trfmode;
   WATCH *watch;
+  HISTOGRAM *histogram;
   ENERGY *energy;
   MAXAMP *maxamp;
   MALIGN *malign;
@@ -451,6 +450,21 @@ long do_tracking(
                   dump_watch_FFT(watch, step, i_pass, n_passes, coord, n_to_track, *n_original, *P_central);
                   break;
                 }
+              }
+            }
+            break;
+          case T_HISTOGRAM:
+            watch_pt_seen = 1;   /* yes, this should be here */
+            if (!(flags&TEST_PARTICLES) && !(flags&INHIBIT_FILE_OUTPUT)) {
+              histogram = (HISTOGRAM*)eptr->p_elem;
+              if (!histogram->initialized) 
+                set_up_histogram(histogram, run);
+              if (i_pass==0 && (n_passes/histogram->interval)==0)
+                fprintf(stderr, "warning: n_passes = %ld and HISTOGRAM interval = %ld--no output will be generated!\n",
+                        n_passes, histogram->interval);
+              if (i_pass>=histogram->startPass && (i_pass-histogram->startPass)%histogram->interval==0) {
+                dump_particle_histogram(histogram, step, i_pass, coord, n_to_track, *P_central,
+                                       beamline->revolution_length);
               }
             }
             break;
