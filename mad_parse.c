@@ -464,6 +464,7 @@ void copy_element(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long reverse, long divisio
     e1->matrix  = NULL;
     e1->type    = e2->type;
     e1->p_elem  = tmalloc(entity_description[e1->type].structure_size);
+    e1->divisions = 1;
     ptr1 = e1->p_elem;
     ptr2 = e2->p_elem;
     for (i=0; i<entity_description[e1->type].structure_size; i++)
@@ -509,6 +510,7 @@ void copy_element(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long reverse, long divisio
         if (division!=(divisions-1))
           bptr->e2 = 0;
       }
+      e1->divisions = divisions;
     }
     log_exit("copy_element");
   }
