@@ -298,7 +298,7 @@ long compute_final_properties
   register long i, j;
   long i_data, index, offset;
   double dp_min, dp_max, Ddp;
-  double p_sum, gamma_sum, p, sum, tc, tmin, tmax, dt, t;
+  double p_sum, gamma_sum, p, sum, tc, tmin, tmax, dt, t, pAverage;
   double **R, centroid[6];
   MATRIX Rmat;
   static double *tData = NULL, *deltaData = NULL;
@@ -384,12 +384,13 @@ long compute_final_properties
 
   /* compute average momentum and kinetic energy */
   p_sum = gamma_sum = 0;
+  pAverage = p_central;
   for (i=0; i<sums->n_part; i++) {
     p_sum     += (p = (1+coord[i][5])*p_central);
     gamma_sum += sqrt(sqr(p)+1);
   }
   if (sums->n_part) {
-    data[F_T_OFFSET+2] = p_sum/sums->n_part;
+    pAverage = data[F_T_OFFSET+2] = p_sum/sums->n_part;
     data[F_T_OFFSET+3] = (gamma_sum/sums->n_part-1)*me_mev;
   }
   else
@@ -418,8 +419,8 @@ long compute_final_properties
   data[F_EMIT_OFFSET+2] = rms_longitudinal_emittance(coord, sums->n_part, p_central);
 
   /* compute normalized emittances */
-  data[F_NEMIT_OFFSET]   = rms_norm_emittance(coord, 0, 1, 5, sums->n_part, p_central);
-  data[F_NEMIT_OFFSET+1] = rms_norm_emittance(coord, 2, 3, 5, sums->n_part, p_central);
+  data[F_NEMIT_OFFSET]   = rms_norm_emittance(coord, 0, 1, 5, sums->n_part, pAverage);
+  data[F_NEMIT_OFFSET+1] = rms_norm_emittance(coord, 2, 3, 5, sums->n_part, pAverage);
 
   R = M->R;
   i_data = F_RMAT_OFFSET;
@@ -450,7 +451,6 @@ long compute_final_properties
   log_exit("compute_final_properties");
   return(i_data+1);
 }
-
 
 double beam_width(double fraction, double **coord, long n_part, 
     long sort_coord)

@@ -1202,7 +1202,7 @@ void dump_sigma(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, lo
         emitNorm = SAFE_SQRT(sqr(pSigma[0+plane]*pSigma[1+plane]) 
                          - sqr(psigma[0+plane][1+plane]-pcentroid[0+plane]*pcentroid[1+plane]));
 #else
-        emitNorm = emit*beam->p0;
+        emitNorm = emit*beam->p0*(1+centroid[5]);
 #endif
         if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, 
                                ex_index+plane, emit, 
