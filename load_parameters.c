@@ -346,7 +346,8 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
           if (verbose)
             fprintf(stdout, "Changing %s.%s #%ld from %21.15e to ",
                     eptr->name, 
-                    entity_description[eptr->type].parameter[param].name, numberChanged,
+                    entity_description[eptr->type].parameter[param].name, 
+                    occurence?occurence[j]:numberChanged,
                     *((double*)(p_elem+entity_description[eptr->type].parameter[param].offset)));
             fflush(stdout);
           load_request[i].starting_value[load_request[i].values]
