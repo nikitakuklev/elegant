@@ -448,6 +448,7 @@ static long final_property_values;
 static double charge;
 static long optim_func_flags;
 static long force_output;
+static long doClosedOrbit;
 
 /* structure to keep results of last N optimization function
  * evaluations, so we don't track the same thing twice.
@@ -473,8 +474,10 @@ void optimizationInterruptHandler(int signal)
 }
 #endif
 
-void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *error1, LINE_LIST *beamline1, 
-            BEAM *beam1, OUTPUT_FILES *output1, OPTIMIZATION_DATA *optimization_data1, long beam_type1)
+void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *error1, 
+                 LINE_LIST *beamline1, BEAM *beam1, OUTPUT_FILES *output1, 
+                 OPTIMIZATION_DATA *optimization_data1, long beam_type1,
+                 long doClosedOrbit1)
 {
     static long optUDFcount = 0;
     double optimization_function(double *values, long *invalid);
@@ -496,7 +499,8 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
     beam              = beam1;
     output            = output1,
     optimization_data = optimization_data1;
-    beam_type_code   = beam_type1;
+    beam_type_code    = beam_type1;
+    doClosedOrbit     = doClosedOrbit1;
     n_evaluations_made = 0;
     n_passes_made      = 0;
     
@@ -847,7 +851,8 @@ double optimization_function(double *value, long *invalid)
     VMATRIX *M;
     TWISS twiss_ave, twiss_min, twiss_max;
     double XYZ[3], Angle[3];
-    
+    double startingOrbitCoord[6] = {0,0,0,0,0,0};
+      
     log_entry("optimization_function");
     
 #if DEBUG
@@ -965,6 +970,13 @@ double optimization_function(double *value, long *invalid)
 
     control->i_step++;       /* to prevent automatic regeneration of beam */
     zero_beam_sums(output->sums_vs_z, output->n_z_points+1);
+    if (doClosedOrbit &&
+        !run_closed_orbit(run, beamline, startingOrbitCoord, NULL, 0)) {
+      *invalid = 1;
+      fprintf(stderr, "warning: unable to find closed orbit\n");
+      return 0;
+    }
+
     if (beamline->flags&BEAMLINE_TWISS_WANTED) {
 #if DEBUG
       fprintf(stdout, "optimization_function: Computing twiss parameters\n");
