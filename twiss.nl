@@ -21,6 +21,9 @@
     double alpha_y = 0;
     double eta_y = 0;
     double etap_y = 0;
+    STRING reference_file = NULL;
+    STRING reference_element = NULL;
+    long reference_element_occurrence = 0;
     long concat_order = 3;
 #end
 

@@ -18,6 +18,9 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
                            ELEMENT_LIST *elem, 
                            double beta0, double alpha0, double gamma0,
                            double eta0, double etap0, double *coord);
+void LoadStartingTwissFromFile(double *betax, double *betay, double *alphax, double *alphay,
+                               char *filename, char *elementName, long elementOccurrence);
+
 static long twissConcatOrder = 3;
 
 VMATRIX *compute_periodic_twiss(
@@ -673,7 +676,18 @@ void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
   twissConcatOrder = concat_order;
   *do_twiss_output = output_at_each_step;
 
+  if (reference_file && matched)
+    bomb("reference_file and matched=1 are incompatible", NULL);
   if (!matched) {
+    if (reference_file) {
+      if (reference_element && reference_element_occurrence<0)
+        bomb("invalid value of reference_element_occurrence---use 0 for last occurrence, >=1 for specific occurrence.", NULL);
+      LoadStartingTwissFromFile(&beta_x, &beta_y, &alpha_x, &alpha_y, 
+                                reference_file, reference_element,
+                                reference_element_occurrence);
+      fprintf(stderr, "Starting twiss parameters from reference file:\nbeta, alpha x: %le, %le\nbeta, alpha y: %le, %le\n",
+              beta_x, alpha_x, beta_y, alpha_y);
+    }
     if (beta_x<=0 || beta_y<=0)
       bomb("invalid initial beta-functions given in twiss_output namelist", NULL);
   }
@@ -1486,3 +1500,48 @@ void computeRadiationIntegrals(RADIATION_INTEGRALS *RI, double Po, double revolu
     RI->sigmadelta = gamma*sqrt(55./32./sqrt(3.)*hbar_mks/(me_mks*c_mks)*RI->I[2]/(2*RI->I[1]+RI->I[3]));
     RI->ex0 = sqr(gamma)*55./32./sqrt(3.)*hbar_mks/(me_mks*c_mks)*RI->I[4]/(RI->I[1]-RI->I[3]);
   }
+
+void LoadStartingTwissFromFile(double *betax, double *betay, double *alphax, double *alphay,
+                               char *filename, char *elementName, long elementOccurrence)
+{
+  SDDS_DATASET SDDSin;
+  long rows, rowOfInterest;
+  double *betaxData, *betayData, *alphaxData, *alphayData;
+  
+  if (!SDDS_InitializeInput(&SDDSin, filename) || 
+      SDDS_ReadPage(&SDDSin)!=1)
+    SDDS_Bomb("problem reading Twiss reference file");
+  if (SDDS_CheckColumn(&SDDSin, "betax", "m", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OK ||
+      SDDS_CheckColumn(&SDDSin, "betay", "m", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OK ||
+      SDDS_CheckColumn(&SDDSin, "alphax", NULL, SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OK ||
+      SDDS_CheckColumn(&SDDSin, "alphay", NULL, SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OK ||
+      SDDS_CheckColumn(&SDDSin, "ElementName", NULL, SDDS_STRING, stderr)!=SDDS_CHECK_OK)
+    SDDS_Bomb("invalid/missing columns in Twiss reference file");
+  if (elementName) {
+    if (!SDDS_SetRowFlags(&SDDSin, 1) ||
+        (rows=SDDS_MatchRowsOfInterest(&SDDSin, "ElementName", elementName, SDDS_AND))<=0)
+      SDDS_Bomb("Problem finding data for beta function reference.  Check for existence of element.");
+    if (elementOccurrence>0 && elementOccurrence>rows)
+      SDDS_Bomb("Too few occurrences of reference element in beta function reference file.");
+  } 
+  if ((rows=SDDS_CountRowsOfInterest(&SDDSin))<1)
+    SDDS_Bomb("No data in beta function reference file.");
+    
+  if (!(betaxData=SDDS_GetColumnInDoubles(&SDDSin, "betax")) ||
+      !(betayData=SDDS_GetColumnInDoubles(&SDDSin, "betay")) ||
+      !(alphaxData=SDDS_GetColumnInDoubles(&SDDSin, "alphax")) ||
+      !(alphayData=SDDS_GetColumnInDoubles(&SDDSin, "alphay")) )
+    SDDS_Bomb("Problem getting data for beta function reference.");
+  if (elementName && elementOccurrence>0)
+    rowOfInterest = elementOccurrence-1;
+  else
+    rowOfInterest = rows-1;
+  *betax = betaxData[rowOfInterest];
+  *betay = betayData[rowOfInterest];
+  *alphax = alphaxData[rowOfInterest];
+  *alphay = alphayData[rowOfInterest];
+  free(betaxData);
+  free(betayData);
+  free(alphaxData);
+  free(alphayData);
+}
