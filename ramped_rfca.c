@@ -119,10 +119,15 @@ long ramped_rf_cavity(
             bomb("unknown return value from get_phase_reference()", NULL);
             break;
             }
-        t0 = 0;
-        phase += ramprf->phase*PI/180.0;
         }
 
+    if (omega) {
+        t0 = -ramprf->phase_fiducial/omega;
+        }
+    else
+        t0 = 0;
+    phase += ramprf->phase*PI/180.0;
+    
 #ifdef DEBUG
     if (!debugInitialized) {
         debugInitialized = 1;
@@ -143,35 +148,21 @@ long ramped_rf_cavity(
         /* apply initial drift */
         coord[0] += coord[1]*length/2;
         coord[2] += coord[3]*length/2;
-        coord[4] += length/2;
+        coord[4] += length/2*sqrt(1+sqr(coord[1])+sqr(coord[3]));
 
         /* compute energy kick */
         P     = P_central*(1+coord[5]);
         beta_i = P/(gamma=sqrt(sqr(P)+1));
         t     = coord[4]/(c_mks*beta_i);
-        gamma = P/beta_i;
-        dgamma = volt*sin(omega*(t-t0)+phase);
-        if ((gamma1=gamma+dgamma)<1)
-            gamma1 = 1;
-        if (fabs(dgamma/gamma1)>1e-12) {
-            dP    = sqrt(sqr(gamma1)-1)-P;
-            beta_f = (P+dP)/(gamma1);
-            }
-        else {
-            dP = 0;
-            beta_f = beta_i;
-            }  
-
+        dgamma = volt*sin(omega*t+phase);
+        
         /* apply energy kick */
-        coord[5] += dP/(P_central);
-        PRatio = P/(P+dP);
-        coord[1] *= PRatio;
-        coord[3] *= PRatio;
+        add_to_particle_energy(coord, t, P_central, dgamma);
 
         /* apply final drift */
         coord[0] += coord[1]*length/2;
         coord[2] += coord[3]*length/2;
-        coord[4] = t*c_mks*beta_f + length/2.0;
+        coord[4] += length/2.0*sqrt(1+sqr(coord[1])+sqr(coord[3]));
 
 #if defined(IEEE_MATH)
         for (i=0; i<6; i++)
