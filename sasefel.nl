@@ -8,6 +8,7 @@
 #namelist sasefel static
     STRING output = NULL;
     STRING model = "Ming Xie";
+    STRING beamsize_mode = "geometric mean";
     double beta = 0;
     double undulator_K = 3.1;
     double undulator_period = 0.033;

@@ -348,7 +348,7 @@ typedef struct {
   /* input data */
   double beta, undulatorK, undulatorPeriod;
   double sliceFraction;
-  long nSlices;
+  long nSlices, beamsizeMode;
   /* simulation data */
   double *betaToUse, *charge, *pCentral, *rmsBunchLength, *Sdelta, *emit;
   double *betaxBeam, *alphaxBeam, *betayBeam, *alphayBeam, *enx, *eny;

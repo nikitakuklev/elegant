@@ -3,6 +3,11 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.15  2001/05/26 23:28:42  borland
+ * Added longitudinal twiss parameter input for bunched_beam namelist.
+ * Fixed problems with R&S focusing model in rf cavity elements.
+ * Added dsKick parameter to CSR wake output.
+ *
  * Revision 1.14  2000/06/21 22:01:18  borland
  * Fixed a bug in data storage to file for 0 slices.
  *
@@ -62,7 +67,23 @@
 #include <fdlibm.h>
 #endif
 
+#define BEAMSIZE_GEOMETRIC_MEAN  0
+#define BEAMSIZE_ARITHMETIC_MEAN 1
+#define BEAMSIZE_HORIZONTAL 2
+#define BEAMSIZE_VERTICAL   3
+#define BEAMSIZE_MAXIMUM    4
+#define BEAMSIZE_OPTIONS    5
+
+char *beamsizeOption[BEAMSIZE_OPTIONS] = {
+  "geometric mean", "arithmetic mean", "horizontal", "vertical", "maximum"
+  };
+
+
 long DefineSASEParameters(SASEFEL_OUTPUT *sasefelOutput, long slice);
+void SetSASEBetaEmitValues(double *emitToUse, double *betaToUse,
+                           long beamsizeMode, 
+                           double emitx, double S11, double S12,
+                           double emity, double S33, double S34, double userBeta);
 
 void setupSASEFELAtEnd(NAMELIST_TEXT *nltext, RUN *run, OUTPUT_FILES *output_data)
 {
@@ -72,6 +93,8 @@ void setupSASEFELAtEnd(NAMELIST_TEXT *nltext, RUN *run, OUTPUT_FILES *output_dat
   /* process namelist text */
   process_namelist(&sasefel, nltext);
   print_namelist(stdout, &sasefel);
+
+  sasefelOutput = &(output_data->sasefel);
 
   if (beta<0)
     bomb("beta < 0", NULL);
@@ -84,7 +107,12 @@ void setupSASEFELAtEnd(NAMELIST_TEXT *nltext, RUN *run, OUTPUT_FILES *output_dat
       (n_slices>0 && slice_fraction<=0) ||
       n_slices*slice_fraction>1)
     bomb("invalid slice parameters", NULL);
-  sasefelOutput = &(output_data->sasefel);
+  sasefelOutput->beamsizeMode = 0;
+  if (strlen(beamsize_mode) &&
+      (sasefelOutput->beamsizeMode=match_string(beamsize_mode, beamsizeOption, BEAMSIZE_OPTIONS, 0))<0)
+    bomb("beamsize_mode not 'geometric mean', 'arithmetic mean', 'horizontal', 'vertical', or 'maximum'", 
+         NULL);
+
   if (sasefelOutput->active && sasefelOutput->filename) {
     SDDS_Terminate(&(sasefelOutput->SDDSout));
     SDDS_ClearErrors();
@@ -352,8 +380,8 @@ long DefineSASEParameters(SASEFEL_OUTPUT *sasefelOutput, long slice)
   if ((sasefelOutput->etaEnergySpreadIndex[slice] = 
        SDDS_DefineParameter(SDDSout, buffer, NULL, NULL, NULL, NULL, SDDS_DOUBLE, NULL))<0)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  return 1;
 }
-
 
 void doSASEFELAtEndOutput(SASEFEL_OUTPUT *sasefelOutput, long step)
 {
@@ -481,16 +509,17 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
   
   emitx = rms_emittance(particle, 0, 1, particles, &S11, &S12, NULL);
   emity = rms_emittance(particle, 2, 3, particles, &S33, &S34, NULL);
-  sasefelOutput->emit[0] = sqrt(emitx*emity);
+
+  SetSASEBetaEmitValues(sasefelOutput->emit+0, sasefelOutput->betaToUse+0,
+                        sasefelOutput->beamsizeMode,
+                        emitx, S11, S12, 
+                        emity, S33, S34, sasefelOutput->beta);
+
   sasefelOutput->pCentral[0] = Po*(1+deltaAve);
   sasefelOutput->charge[0] = charge;  
   sasefelOutput->enx[0] = emitx*sasefelOutput->pCentral[0];
   sasefelOutput->eny[0] = emity*sasefelOutput->pCentral[0];
 
-  if (sasefelOutput->beta==0)
-    sasefelOutput->betaToUse[0] = sqrt(S11*S33/(emitx*emity));
-  else
-    sasefelOutput->betaToUse[0] = sasefelOutput->beta;
   sasefelOutput->betaxBeam[0] = S11/emitx;
   sasefelOutput->betayBeam[0] = S33/emity;
   sasefelOutput->alphaxBeam[0] = -S12/emitx;
@@ -565,6 +594,8 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
         sasefelOutput->saturationPower[slice] = sasefelOutput->PierceParameter[slice] = DBL_MAX;
         sasefelOutput->etaDiffraction[slice] = sasefelOutput->etaEmittance[slice] = DBL_MAX;
         sasefelOutput->etaEnergySpread[slice] = DBL_MAX;
+        sasefelOutput->Cx[nSlices+1] = sasefelOutput->Cxp[nSlices+1] = DBL_MAX;
+        sasefelOutput->Cy[nSlices+1] = sasefelOutput->Cyp[nSlices+1] = DBL_MAX;
       }
       slicesFound++;
       sasefelOutput->sliceFound[slice] = 1;
@@ -598,16 +629,17 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
       sasefelOutput->Sdelta[slice] = rmsCoord[5];
       emitx = sqrt(S11*S22-sqr(S12));
       emity = sqrt(S33*S44-sqr(S34));
-      sasefelOutput->emit[slice] = sqrt(emitx*emity);
+
+      SetSASEBetaEmitValues(sasefelOutput->emit+slice, sasefelOutput->betaToUse+slice,
+                            sasefelOutput->beamsizeMode,
+                            emitx, S11, S12, 
+                            emity, S33, S34, sasefelOutput->beta);
+
       sasefelOutput->pCentral[slice] = Po*(1+aveCoord[5]);
       sasefelOutput->charge[slice] = charge*sasefelOutput->sliceFraction;  
       sasefelOutput->enx[slice] = emitx*sasefelOutput->pCentral[0];
       sasefelOutput->eny[slice] = emity*sasefelOutput->pCentral[0];
 
-      if (sasefelOutput->beta==0)
-        sasefelOutput->betaToUse[slice] = sqrt(S11*S33/(emitx*emity));
-      else
-        sasefelOutput->betaToUse[slice] = sasefelOutput->beta;
       sasefelOutput->betaxBeam[slice] = S11/emitx;
       sasefelOutput->betayBeam[slice] = S33/emity;
       sasefelOutput->alphaxBeam[slice] = -S12/emitx;
@@ -629,6 +661,7 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
                                sasefelOutput->betaToUse[slice], sasefelOutput->emit[slice], 
                                sasefelOutput->Sdelta[slice], sasefelOutput->pCentral[slice],
                                1);
+
       sasefelOutput->lightWavelength[nSlices+1] += sasefelOutput->lightWavelength[slice];
       sasefelOutput->saturationLength[nSlices+1] += sasefelOutput->saturationLength[slice];
       sasefelOutput->gainLength[nSlices+1] += sasefelOutput->gainLength[slice];
@@ -680,6 +713,10 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
     sasefelOutput->pCentral[nSlices+1] /= slicesFound;
     sasefelOutput->charge[nSlices+1] /= slicesFound;
     sasefelOutput->rmsBunchLength[nSlices+1] /= slicesFound;
+    sasefelOutput->Cx[nSlices+1] /= slicesFound;
+    sasefelOutput->Cxp[nSlices+1] /= slicesFound;
+    sasefelOutput->Cy[nSlices+1] /= slicesFound;
+    sasefelOutput->Cyp[nSlices+1] /= slicesFound;
   }
   
   free(time);
@@ -698,4 +735,62 @@ void storeSASEFELAtEndInRPN(SASEFEL_OUTPUT *sasefelOutput)
 }
 
 
+void SetSASEBetaEmitValues(double *emitToUse, double *betaToUse,
+                           long beamsizeMode, 
+                           double emitx, double S11, double S12,
+                           double emity, double S33, double S34, double userBeta)
+{
+  if (userBeta)  {
+    switch (beamsizeMode) {
+    case BEAMSIZE_GEOMETRIC_MEAN:
+      *emitToUse = sqrt(emitx*emity);
+      break;
+    case BEAMSIZE_ARITHMETIC_MEAN:
+      *emitToUse = (emitx+emity)/2;
+      break;
+    case BEAMSIZE_HORIZONTAL:
+      *emitToUse = emitx;
+      break;
+    case BEAMSIZE_VERTICAL:
+      *emitToUse = emity;
+      break;
+    case BEAMSIZE_MAXIMUM:
+      *emitToUse = emitx>emity ? emitx : emity;
+      break;
+    default:
+      bomb("invalid beamsize mode (SetSASEBetaEmitValues)", NULL);
+      break;
+    }
+    *betaToUse = userBeta;
+  }
+  else {
+    double Sx, Sy, S;
+    Sx = sqrt(S11);
+    Sy = sqrt(S33);
+    switch (beamsizeMode) {
+    case BEAMSIZE_GEOMETRIC_MEAN:
+      S = sqrt(Sx*Sy);
+      break;
+    case BEAMSIZE_ARITHMETIC_MEAN:
+      S = (Sx+Sy)/2;
+      break;
+    case BEAMSIZE_HORIZONTAL:
+      S = Sx;
+      break;
+    case BEAMSIZE_VERTICAL:
+      S = Sy;
+      break;
+    case BEAMSIZE_MAXIMUM:
+      S = Sx>Sy ? Sx : Sy;
+      break;
+    default:
+      bomb("invalid beamsize mode (SetSASEBetaEmitValues)", NULL);
+      break;
+    }
+    /* sase fel code just computes beamsize from sqrt(emit*beta),
+     * so to some extent it is arbitrary what we choose */
+    *emitToUse = sqrt(emitx*emity);
+    *betaToUse = S*S/(*emitToUse);
+  }
+}
 
