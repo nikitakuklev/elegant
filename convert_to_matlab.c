@@ -97,8 +97,8 @@ void convert_to_EmmaMatlab(char *outputfile, LINE_LIST *beamline, char *header_f
                entity_name[eptr->type]);
         break;
       }
-      fprintf(fp, "%s %21.15g %21.15g %21.15g %21.15g %21.15g %ld 0\n",
-              eptr->name, length, angle, k1, E1, E2, slices);
+      fprintf(fp, "%21.15g %21.15g %21.15g %21.15g %21.15g %ld 0\n",
+              length, angle, k1, E1, E2, slices);
       eptr = eptr->succ;
     }
 
