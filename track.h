@@ -2069,6 +2069,8 @@ extern long beam_scraper(double **initial, SCRAPER *scraper, long np, double **a
     double P_central);
 extern long track_through_pfilter(double **initial, PFILTER *pfilter, long np, 
                                   double **accepted, double z, double Po);
+long removeInvalidParticles(double **coord, long np, double **accepted,
+                            double z, double Po);
  
 /* prototypes for kick_sbend.c: */
 long track_through_kick_sbend(double **part, long n_part, KSBEND *ksbend, double p_error, double Po,

@@ -275,7 +275,8 @@ long simple_rf_cavity(
           } 
           /* apply energy kick */
           add_to_particle_energy(coord, t, *P_central, dgamma);
-          gamma += dgamma;
+          if ((gamma += dgamma)<=1)
+            coord[5] = -1;
           
           if (length) {
             /* apply final drift and focus kick if needed */
@@ -354,7 +355,8 @@ long simple_rf_cavity(
           coord[4] += length/2*sqrt(1+sqr(coord[1])+sqr(coord[3]));
           coord[5] = (P+dP-(*P_central))/(*P_central);
           
-          gamma += dgamma;
+          if ((gamma += dgamma)<=1)
+            coord[5] = -1;
           if (rfca->end2Focus && length) {
             inverseF = -dgamma/(2*gamma*length);
             coord[1] -= coord[0]*inverseF;
@@ -367,7 +369,7 @@ long simple_rf_cavity(
         coord[2] += rfca->dy;
       }
     
-    
+    np = removeInvalidParticles(part, np, accepted, zEnd, *P_central);
     if (rfca->change_p0)
         do_match_energy(part, np, P_central, 0);
 #ifdef DEBUG

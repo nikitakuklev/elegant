@@ -187,6 +187,39 @@ long limit_amplitudes(
     return(np);
     }
 
+
+long removeInvalidParticles(
+    double **coord, long np, double **accepted,
+    double z, double Po)
+{
+    long ip, itop, is_out, ic;
+    double *part;
+
+    itop = np-1;
+    for (ip=0; ip<np; ip++) {
+        part = coord[ip];
+        is_out = 0;
+        for (ic=0; ic<6; ic++)
+          if (isnan(part[ic])) {
+            is_out = 1;
+            break;
+          }
+        if (part[5]<=-1)
+          is_out = 1;
+        if (is_out) {
+          SWAP_PTR(coord[ip], coord[itop]);
+          coord[itop][4] = z; 
+          coord[itop][5] = Po*(1+coord[itop][5]);
+          if (accepted)
+            SWAP_PTR(accepted[ip], accepted[itop]);
+          --itop;
+          --ip;
+          np--;
+        }
+      }
+    return(np);
+  }
+
             
 /* routine: elliptical_collimator()
  * purpose: eliminate particles that hit the walls of a non-zero length
@@ -643,12 +676,15 @@ long remove_outlier_particles(
     centroid[j] = stDev[j] = 0;
   for (ip=count=0; ip<np; ip++) {
     ini = initial[ip];
-    for (j=0; j<6; j++) {
-      if (!isnan(ini[j]) && !isinf(ini[j])) {
+    for (j=0; j<6; j++)
+      if (isnan(ini[j]) && isinf(ini[j]))
+        break;
+    if (j!=6)
+      continue;
+    count++;
+    for (j=0; j<6; j++)
+      if (!isnan(ini[j]) && !isinf(ini[j]))
         centroid[j] += ini[j];
-        count++;
-      }
-    }
   }
   if (!count) {
     for (ip=0; ip<np; ip++) {
