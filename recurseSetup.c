@@ -5,7 +5,10 @@
  * purpose: work out recursion relations for SLAC 75 for input into mathematica
  * 
  * Michael Borland, 1991, 1996
- $Log: not supported by cvs2svn $ 
+ $Log: not supported by cvs2svn $
+ Revision 1.1  1999/03/02 03:48:11  borland
+ First version in repository.
+ 
  */
 #include "mdb.h"
 #include "scan.h"
@@ -42,7 +45,7 @@ main(int argc, char **argv)
                 sprintf(s2, "%c", 'A'+n-9);
             else
                 sprintf(s2, "%d", n);
-            fprintf(fpo, "F%s%s = -(", s1, s2);
+            fprintf(fpo, "F%s%s := -(", s1, s2);
             test_and_print(fpo, 2*m+1, n+2, 1, "");
             test_and_print(fpo, 2*m+1, n+1, 3*n+1, "h*");
             test_and_print(fpo, 2*m+1,   n, (3*n-1)*n, "h^2*");
@@ -55,7 +58,7 @@ main(int argc, char **argv)
         }
 
     /* expression for A */
-    fprintf(fpo, "A = (");
+    fprintf(fpo, "A := (");
     for (n=0; n<=nx; n++) {
         fprintf(fpo, "%sx^%d/%.0f*(", (n==0?" ":"\n      + "), n, dfactorial(n));
         for (m=0; m<=ny/2; m++) {
@@ -75,20 +78,24 @@ main(int argc, char **argv)
         }
     fprintf(fpo, "    )\n\n");
 
-    fprintf(fpo, "Fx = D[A, x]\nFy = D[A, y]\n");
-    fprintf(fpo, "F0100 = 1\n");
-    fprintf(fpo, "F0101 = -nh\n");
-    fprintf(fpo, "F0102 = 2*bh2\n");
-    fprintf(fpo, "F0103 = 6*gh3\n");
-    fprintf(fpo, "F0104 = 24*eh4\n");
-    fprintf(fpo, "F0105 = 120*dh5\n");
-    fprintf(fpo, "F0106 = 720*fh6\n");
+    fprintf(fpo, "Fx := D[A, x]\nFy := D[A, y]\n");
+    fprintf(fpo, "F10 := 1\n");
+    fprintf(fpo, "F11 := -nh\n");
+    for (n=2; n<20; n++) {
+      if (n>9)
+        fprintf(fpo, "F1%c := %.0f*%ch%ld\n", 
+                'A'+n-9, dfactorial(n), 'A'+n-1, n);
+      else 
+        fprintf(fpo, "F1%ld := %.0f*%ch%ld\n", 
+                n, dfactorial(n), 'A'+n-1, n);
+    }
+    
     fprintf(fpo, "rfile = OpenWrite[\"%sout\"]\n", filename);
 
     /* expressions for Fx coefficients of powers of x and y */
     for (iy=0; iy<=maxord; iy++)
         for (ix=0; ix<=maxord-iy; ix++) {
-            fprintf(fpo, "Fx%02d%02d = Simplify[D[Fx, {x, %d}, {y, %d}]/%.0f /. {x->0, y->0}]\n",
+            fprintf(fpo, "Fx%02d%02d := Simplify[D[Fx, {x, %d}, {y, %d}]/%.0f /. {x->0, y->0}]\n",
                     ix, iy, ix, iy, dfactorial(ix)*dfactorial(iy));
             fprintf(fpo, "WriteString[rfile, \"Fx%02d%02d = \"]\n", ix, iy);
             fprintf(fpo, "Write[rfile, CForm[Fx%02d%02d]]\n", ix, iy);
@@ -97,7 +104,7 @@ main(int argc, char **argv)
     /* expressions for Fy coefficients of powers of x and y */
     for (iy=0; iy<=maxord; iy++)
         for (ix=0; ix<=maxord-iy; ix++) {
-            fprintf(fpo, "Fy%02d%02d = Simplify[D[Fy, {x, %d}, {y, %d}]/%.0f /. {x->0, y->0}]\n",
+            fprintf(fpo, "Fy%02d%02d := Simplify[D[Fy, {x, %d}, {y, %d}]/%.0f /. {x->0, y->0}]\n",
                     ix, iy, ix, iy, dfactorial(ix)*dfactorial(iy));
             fprintf(fpo, "WriteString[rfile, \"Fy%02d%02d = \"]\n", ix, iy);
             fprintf(fpo, "Write[rfile, CForm[Fy%02d%02d]]\n", ix, iy);
