@@ -2171,8 +2171,7 @@ extern void setup_bunched_beam(BEAM *beam, NAMELIST_TEXT *nltext, RUN *run, VARY
                                ERRORVAL *errcon, OPTIM_VARIABLES *optim, OUTPUT_FILES *output, 
                                LINE_LIST *beamline, long n_elements,
                                long save_original);
-extern long new_bunched_beam(BEAM *beam, RUN *run, VARY *control, LINE_LIST *beamline, 
-                             OUTPUT_FILES *output, long flags);
+extern long new_bunched_beam(BEAM *beam, RUN *run, VARY *control, OUTPUT_FILES *output, long flags);
 extern long run_bunched_beam(RUN *run, VARY *control, ERRORVAL *errcon, OPTIM_VARIABLES *optim, 
                              LINE_LIST *beamline, long n_elements,
                              BEAM *beam, OUTPUT_FILES *output, long flags);

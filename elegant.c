@@ -547,7 +547,7 @@ char **argv;
                 break;
             }
             else
-              new_bunched_beam(&beam, &run_conditions, &run_control, beamline, &output_data, 0);
+              new_bunched_beam(&beam, &run_conditions, &run_control, &output_data, 0);
             new_beam_flags = TRACK_PREVIOUS_BUNCH;
             if (correct.start_from_centroid)
               compute_centroids(starting_coord, beam.particle, beam.n_to_track);
@@ -566,7 +566,7 @@ char **argv;
                 break;
             }
             else
-              new_bunched_beam(&beam, &run_conditions, &run_control, beamline, &output_data, 0);
+              new_bunched_beam(&beam, &run_conditions, &run_control, &output_data, 0);
             new_beam_flags = TRACK_PREVIOUS_BUNCH;
           }
           if (!do_correction(&correct, &run_conditions, beamline, starting_coord, &beam, 
@@ -585,7 +585,7 @@ char **argv;
             break;
         }
         else
-          new_bunched_beam(&beam, &run_conditions, &run_control, beamline, &output_data, new_beam_flags);
+          new_bunched_beam(&beam, &run_conditions, &run_control, &output_data, new_beam_flags);
         if (do_closed_orbit && 
             !run_closed_orbit(&run_conditions, beamline, starting_coord, &beam, 0) &&
             !soft_failure) {
