@@ -226,7 +226,7 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
             double *clorb, long step, long last_iteration)
 {
     VMATRIX *M;
-    double chromx0, chromy0;
+    double chromx0, chromy0, dchromx, dchromy;
     double K2=0.0, *K2ptr;
     ELEMENT_LIST *context;
     long i, K2_param=0, type=0, iter, count;
@@ -273,9 +273,6 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
     if (!(M = beamline->matrix) || !M->C || !M->R || !M->T)
         bomb("something wrong with transfer map for beamline (do_chromaticity_correction.1)", NULL);
 
-    if (chrom->use_perturbed_matrix)
-      computeChromCorrectionMatrix(run, beamline, chrom);
-    
     computeChromaticities(&chromx0, &chromy0, NULL, NULL, NULL, NULL, beamline->twiss0, M);
 
     fprintf(stdout, "\nAdjusting chromaticities:\n");
@@ -285,19 +282,25 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
 
     presentError = DBL_MAX;
     for (iter=0; iter<chrom->n_iterations; iter++) {
-        chrom->dchrom->a[0][0] = chrom->chromx - chromx0;
-        chrom->dchrom->a[1][0] = chrom->chromy - chromy0;
-        lastError = presentError;
-        presentError = sqr(chrom->dchrom->a[0][0])+sqr(chrom->dchrom->a[1][0]);
-        if (presentError>lastError) {
-          fprintf(stdout, "Error increasing---iteration terminated\n");
-          fflush(stdout);
-          break;
-        }
+        dchromx = chrom->chromx - chromx0;
+        dchromy = chrom->chromy - chromy0;
         if (chrom->tolerance>0 &&
-            chrom->tolerance>fabs(chrom->dchrom->a[0][0]) &&
-            chrom->tolerance>fabs(chrom->dchrom->a[1][0]) )
+            chrom->tolerance>fabs(dchromx) &&
+            chrom->tolerance>fabs(dchromy) )
           break;
+
+        lastError = presentError;
+        presentError = sqr(dchromx)+sqr(dchromy);
+        if (iter && presentError>lastError) {
+          fprintf(stdout, "Error increasing---reducing gain\n");
+          fflush(stdout);
+          chrom->correction_fraction /= 10;
+        }
+
+        if (chrom->use_perturbed_matrix)
+          computeChromCorrectionMatrix(run, beamline, chrom);
+        chrom->dchrom->a[0][0] = dchromx;
+        chrom->dchrom->a[1][0] = dchromy;
 
         m_mult(chrom->dK2, chrom->T, chrom->dchrom);
         for (i=0; i<chrom->n_families; i++) {
