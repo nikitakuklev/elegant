@@ -1752,7 +1752,7 @@ proc FrequencyMapPP {args} {
 	-split=column=x,width=[expr $frequencyMap(xMaximum)/100.0] -end \
 	-column=nux,nuy $rootname.resdiag \
 	-column=nux,nuy $rootname.fma -graph=dot,subtype=2,vary -order=spect \
-	-split=column=y,width=[expr $frequencyMap(yMaximum)/100.0]
+	-split=column=y,width=[expr $frequencyMap(yMaximum)/100.0] &
 
     exec sddsplot -device=png,onwhite -thickness=2 -output=$rootname.png \
 	-filename \
