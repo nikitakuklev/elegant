@@ -377,9 +377,10 @@ long compute_final_properties
   static double *tData = NULL, *deltaData = NULL;
   static long percDataMax = 0;
   double percLevel[12] = {25, 20, 15, 10, 5, 2.5, 75, 80, 85, 90, 95, 97.5};
-  double tPosition[12], deltaPosition[12];
+  double tPosition[12]={0,0,0,0,0,0,0,0,0,0,0,0};
+  double deltaPosition[12]={0,0,0,0,0,0,0,0,0,0,0,0};
   double percLevel2[9] = {10,20,30,40,50,60,70,80,90};
-  double tPosition2[9];
+  double tPosition2[9] = {0,0,0,0,0,0,0,0,0};
   log_entry("compute_final_properties");
 
   if (!data)
