@@ -9,6 +9,10 @@
 
 /* 
  * $Log: not supported by cvs2svn $
+ * Revision 1.17  2003/01/21 18:48:07  borland
+ * Now output dIBSRate in 1/(m*s), which is more useful.
+ * Also, fixed units on IBSRate parameters (should be 1/s).
+ *
  * Revision 1.16  2003/01/18 03:04:53  borland
  * Include contribution to total rate vs s in columns.
  *
@@ -355,15 +359,20 @@ int main( int argc, char **argv)
   if (0>SDDS_DefineParameter(&resultsPage, "Convergence", NULL, NULL, "Convergence state of emittance calculations.", NULL, SDDS_STRING, NULL) ||
       0>SDDS_DefineParameter(&resultsPage, "emitx0", "$ge$r$bx,0$n", "$gp$rm", "Horizontal emittance with no coupling and no IBS.", NULL, SDDS_DOUBLE, NULL) ||
       0>SDDS_DefineParameter(&resultsPage, "emitxInput", "$ge$r$bx,Input$n", "$gp$rm", "Horizontal emittance with coupling and no IBS.", NULL, SDDS_DOUBLE, NULL) ||
-      0>SDDS_DefineParameter(&resultsPage, "emityInput", "$ge$r$by,Input$n", "$gp$rm", "Vertical emittance with coupling and no IBS.", NULL, SDDS_DOUBLE, NULL) ||
-      0>SDDS_DefineParameter(&resultsPage, "emitx", "$ge$r$bx$n", "$gp$rm", "Horizontal emittance with coupling and with IBS.", NULL, SDDS_DOUBLE, NULL) ||
-      0>SDDS_DefineParameter(&resultsPage, "emity", "$ge$r$by$n", "$gp$rm", "Vertical emittance with coupling and with IBS.", NULL, SDDS_DOUBLE, NULL))
+      0>SDDS_DefineParameter(&resultsPage, "emityInput", "$ge$r$by,Input$n", "$gp$rm", "Vertical emittance with coupling and no IBS.", NULL, SDDS_DOUBLE, NULL))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-
+  
+  if (!growthRatesOnly) {
+    if (0>SDDS_DefineParameter(&resultsPage, "emitx", "$ge$r$bx$n", "$gp$rm", "Horizontal emittance with coupling and with IBS.", NULL, SDDS_DOUBLE, NULL) ||
+        0>SDDS_DefineParameter(&resultsPage, "emity", "$ge$r$by$n", "$gp$rm", "Vertical emittance with coupling and with IBS.", NULL, SDDS_DOUBLE, NULL) ||
+        0>SDDS_DefineParameter(&resultsPage, "sigmaDelta", "$gs$r$bd$n", NULL, "Relative momentum spread with IBS.", NULL, SDDS_DOUBLE, NULL) || 
+        0>SDDS_DefineParameter(&resultsPage, "sigmaz", "$gs$r$bz$n", "m", "Bunch length with IBS.", NULL, SDDS_DOUBLE, NULL))
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  }
+  
+  
   if (0>SDDS_DefineParameter(&resultsPage, "sigmaDelta0", "$gs$r$bd,0$n", NULL, "Relative momentum spread without IBS.", NULL, SDDS_DOUBLE, NULL) ||
-      0>SDDS_DefineParameter(&resultsPage, "sigmaDelta", "$gs$r$bd$n", NULL, "Relative momentum spread with IBS.", NULL, SDDS_DOUBLE, NULL) ||
-      0>SDDS_DefineParameter(&resultsPage, "sigmaz0", "$gs$r$bz,0$n", "m", "Bunch length without IBS.", NULL, SDDS_DOUBLE, NULL) ||
-      0>SDDS_DefineParameter(&resultsPage, "sigmaz", "$gs$r$bz$n", "m", "Bunch length with IBS.", NULL, SDDS_DOUBLE, NULL))
+      0>SDDS_DefineParameter(&resultsPage, "sigmaz0", "$gs$r$bz,0$n", "m", "Bunch length without IBS.", NULL, SDDS_DOUBLE, NULL))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 
   if (verbosity)
@@ -590,15 +599,17 @@ int main( int argc, char **argv)
                             "xGrowthRate", xGrowthRate,
                             "yGrowthRate", yGrowthRate,
                             "zGrowthRate", zGrowthRate,
-                            "emitx", emitx,
-                            "emity", emity,
                             "sigmaDelta0", sigmaDelta0,
-                            "sigmaDelta", sigmaDelta,
-                            "sigmaz0", sigmaz0,
-                            "sigmaz", sigmaz, NULL) ||
-        (integrationPoints && 
-         (!SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, exInteg, integrationPoints, "ex") ||
-          !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, eyInteg, integrationPoints, "ey") ||
+                            "sigmaz0", sigmaz0, NULL) ||
+        (!growthRatesOnly && 
+         !SDDS_SetParameters(&resultsPage, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+                             "emitx", emitx,
+                             "emity", emity,
+                             "sigmaDelta", sigmaDelta,
+                             "sigmaz", sigmaz, NULL)) ||
+         (integrationPoints && 
+          (!SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, exInteg, integrationPoints, "ex") ||
+           !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, eyInteg, integrationPoints, "ey") ||
           !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, elInteg, integrationPoints, "el") ||
           !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, SdeltaInteg, integrationPoints, "Sdelta") ||
           !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, SzInteg, integrationPoints, "Sz") ||
