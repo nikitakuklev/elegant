@@ -57,7 +57,8 @@ void vary_setup(VARY *_control, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beam
     _control->n_steps = n_steps;
     _control->bunch_frequency = bunch_frequency;
     _control->n_passes = n_passes;
-
+    _control->reset_rf_each_step = reset_rf_each_step;
+    
     /* reset flags for elements that may have been varied previously */
     if (_control->n_elements_to_vary) {
         set_element_flags(beamline, _control->element, NULL, NULL, NULL, _control->n_elements_to_vary,
@@ -213,9 +214,9 @@ long vary_beamline(VARY *_control, ERROR *errcon, RUN *run, LINE_LIST *beamline)
         _control->i_step, _control->i_vary);
 #endif
 
-    if (_control->bunch_frequency==0)
+    if (_control->bunch_frequency==0 && _control->reset_rf_each_step)
         delete_phase_references();
-    reset_special_elements(beamline);
+    reset_special_elements(beamline, _control->reset_rf_each_step);
 
     do_perturbations = step_incremented = 0;
 
@@ -338,23 +339,25 @@ long vary_beamline(VARY *_control, ERROR *errcon, RUN *run, LINE_LIST *beamline)
         }
     if (errcon->n_items && do_perturbations) {
 #if DEBUG
-        fputs("doing perturbation", stderr);
+          fputs("doing perturbation", stderr);
 #endif
-        log_entry("vary_beamline.3");
-        /* calculate random errors and add them to the existing value (which may not be the unperturbed value
-           if the parameter is both varied and perturbed) */
-        if (_control->n_steps && (_control->i_step-(step_incremented?1:0))>=_control->n_steps) {
+          log_entry("vary_beamline.3");
+          /* calculate random errors and add them to the existing value (which may not be the unperturbed value
+             if the parameter is both varied and perturbed) */
+          if (_control->n_steps && (_control->i_step-(step_incremented?1:0))>=_control->n_steps) {
             log_exit("vary_beamline.3");
             log_exit("vary_beamline");
             return(0);
-            }
-        assert_perturbations(errcon->name, errcon->param_number, errcon->elem_type,
-            errcon->n_items, errcon->error_level, errcon->error_cutoff, errcon->error_type, 
-            errcon->error_value, errcon->flags, errcon->bind_number,
-            errcon->fp_log, _control->i_step, beamline, PRE_CORRECTION);
-        /* set element flags to indicate perturbation of parameters that change the matrix */
-        set_element_flags(beamline, errcon->name, errcon->flags, errcon->elem_type, errcon->param_number,
-                    errcon->n_items, PARAMETERS_ARE_PERTURBED, VMATRIX_IS_PERTURBED, 0, PRE_CORRECTION);
+          }
+          assert_perturbations(errcon->name, errcon->param_number, errcon->elem_type,
+                               errcon->n_items, errcon->error_level, errcon->error_cutoff, errcon->error_type, 
+                               errcon->error_value, errcon->flags, errcon->bind_number,
+                               errcon->fp_log, _control->i_step, beamline, 
+                               PRE_CORRECTION+
+                               ((_control->i_step==0 && errcon->no_errors_first_step)?FORCE_ZERO_ERRORS:0));
+          /* set element flags to indicate perturbation of parameters that change the matrix */
+          set_element_flags(beamline, errcon->name, errcon->flags, errcon->elem_type, errcon->param_number,
+                            errcon->n_items, PARAMETERS_ARE_PERTURBED, VMATRIX_IS_PERTURBED, 0, PRE_CORRECTION);
         if (!step_incremented) {
             _control->i_step++;
             step_incremented = 1;
@@ -435,7 +438,8 @@ long perturb_beamline(VARY *_control, ERROR *errcon, RUN *run, LINE_LIST *beamli
         assert_perturbations(errcon->name, errcon->param_number, errcon->elem_type,
             errcon->n_items, errcon->error_level, errcon->error_cutoff, errcon->error_type, 
             errcon->error_value, errcon->flags, errcon->bind_number,
-            errcon->fp_log, _control->i_step-1, beamline, POST_CORRECTION);
+            errcon->fp_log, _control->i_step-1, beamline, POST_CORRECTION+
+                             ((_control->i_step==0 && errcon->no_errors_first_step)?FORCE_ZERO_ERRORS:0));
         /* set element flags to indicate perturbation of parameters that change the matrix */
         set_element_flags(beamline, errcon->name, errcon->flags, errcon->elem_type, errcon->param_number,
                     errcon->n_items, PARAMETERS_ARE_PERTURBED, VMATRIX_IS_PERTURBED, 0, POST_CORRECTION);
@@ -624,7 +628,7 @@ void assert_perturbations(char **elem_name, long *param_number, long *type, long
         bomb("beamline structure pointer is NULL (assert_perturbations)", NULL);
 
     first_output = 1;
-
+    
     for (i_elem=0; i_elem<n_elems; i_elem++) {
         eptr = NULL;
         elem_type = type[i_elem];
@@ -644,18 +648,25 @@ void assert_perturbations(char **elem_name, long *param_number, long *type, long
                 continue;
             switch (data_type) {
                 case IS_DOUBLE:
-                    if (!(elem_perturb_flags[i_elem]&BIND_ERRORS_MASK) || 
-                            (bind_number[i_elem]>=1 && i_group%bind_number[i_elem]==0) ||
-                            i_group==0) 
+                    if (permit_flags&FORCE_ZERO_ERRORS) {
+                      delta = 0;
+                      if (elem_perturb_flags[i_elem]&NONADDITIVE_ERRORS)
+                        delta = *((double*)(p_elem+entity_description[elem_type].parameter[param].offset));
+                    }
+                    else  {
+                      if (!(elem_perturb_flags[i_elem]&BIND_ERRORS_MASK) || 
+                          (bind_number[i_elem]>=1 && i_group%bind_number[i_elem]==0) ||
+                          i_group==0) 
                         delta = perturbation(amplitude[i_elem], cutoff[i_elem], error_type[i_elem]);
-                    if (elem_perturb_flags[i_elem]&FRACTIONAL_ERRORS)
+                      if (elem_perturb_flags[i_elem]&FRACTIONAL_ERRORS)
                         *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)) *= (1+delta);
-                    else {
+                      else {
                         if (elem_perturb_flags[i_elem]&NONADDITIVE_ERRORS)
-                           *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)) = delta;
+                          *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)) = delta;
                         else
-                           *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)) += delta;
-                        }
+                          *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)) += delta;
+                      }
+                    }
                     if (fp_log) {
                         if (first_output) {
                             first_output = 0;
@@ -672,18 +683,25 @@ void assert_perturbations(char **elem_name, long *param_number, long *type, long
                         }
                     break;
                 case IS_LONG:
-                    if (!(elem_perturb_flags[i_elem]&BIND_ERRORS_MASK) || 
-                            (bind_number[i_elem]>=1 && i_group%bind_number[i_elem]==0) ||
-                            i_group==0) 
-                        delta = perturbation(amplitude[i_elem], cutoff[i_elem], error_type[i_elem]) + 0.5;
-                    if (elem_perturb_flags[i_elem]&FRACTIONAL_ERRORS)
-                        *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) *= (1+delta);
+                    if (permit_flags&FORCE_ZERO_ERRORS) {
+                      delta = 0;
+                      if (elem_perturb_flags[i_elem]&NONADDITIVE_ERRORS)
+                        delta = *((long*)(p_elem+entity_description[elem_type].parameter[param].offset));
+                    }
                     else {
+                      if (!(elem_perturb_flags[i_elem]&BIND_ERRORS_MASK) || 
+                          (bind_number[i_elem]>=1 && i_group%bind_number[i_elem]==0) ||
+                          i_group==0) 
+                        delta = perturbation(amplitude[i_elem], cutoff[i_elem], error_type[i_elem]) + 0.5;
+                      if (elem_perturb_flags[i_elem]&FRACTIONAL_ERRORS)
+                        *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) *= (1+delta);
+                      else {
                         if (elem_perturb_flags[i_elem]&NONADDITIVE_ERRORS)
-                            *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) = delta;
+                          *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) = delta;
                         else
-                            *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) += delta;
-                        }
+                          *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) += delta;
+                      }
+                    }
                     break;
                 case IS_STRING:
                 default:

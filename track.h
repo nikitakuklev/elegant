@@ -217,6 +217,7 @@ typedef struct {
     long i_step;
     long n_steps;                /* number of error sets/bunches levels */
     double bunch_frequency;      /* bunch interval, if timing is varied */
+    long reset_rf_each_step;     /* whether to reset rf element phases/timing */
     long n_passes;               /* number of times to go through beamline */
     long new_data_read;          /* new data has been read for variation of elements */
     LINE_LIST *cell;             /* cell to be varied along with main beamline */
@@ -244,11 +245,13 @@ typedef struct {
 #define POST_CORRECTION 16
 #define NAME_IS_LINE 32
 #define NONADDITIVE_ERRORS 64
+#define FORCE_ZERO_ERRORS 128
     long *bind_number;           /* how many consecutive elements to bind */
     double *unperturbed_value;   /* current value without errors */
     double *error_value;         /* current error value */
     FILE *fp_log;                /* file to log error values to */
     long new_data_read;          /* new data has been read for control of tracking */
+    long no_errors_first_step;   /* if nonzero, first step is perfect lattice */
     } ERROR;
 
 /* structures containing information for optimization */
@@ -1653,7 +1656,7 @@ extern VMATRIX *solenoid_matrix(double length, double ks, long max_order);
 extern VMATRIX *compute_matrix(ELEMENT_LIST *elem, RUN *run, VMATRIX *Mspace);
 extern void set_up_watch_point(WATCH *watch, RUN *run);
 extern VMATRIX *magnification_matrix(MAGNIFY *magnif);
-extern void reset_special_elements(LINE_LIST *beamline);
+extern void reset_special_elements(LINE_LIST *beamline, long includeRF);
 extern VMATRIX *stray_field_matrix(double length, double *lB, double *gB, double theta, long order, double p_central);
 extern VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, double phase, double *P_central, long order);
 

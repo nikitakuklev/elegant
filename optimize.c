@@ -649,7 +649,7 @@ double optimization_function(double *value, long *invalid)
 
     /* assert variable values and store in rpn memories */
     delete_phase_references();
-    reset_special_elements(beamline);
+    reset_special_elements(beamline, 1);
 
     assert_parameter_values(variables->element, variables->varied_param, variables->varied_type,
         value, variables->n_variables, beamline);

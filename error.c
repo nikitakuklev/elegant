@@ -32,9 +32,13 @@ void error_setup(ERROR *errcon, NAMELIST_TEXT *nltext, RUN *run_cond, LINE_LIST 
     set_print_namelist_flags(0);
     process_namelist(&error_control, nltext);
     print_namelist(stderr, &error_control);
+
+    errcon->no_errors_first_step = no_errors_first_step;
     
     if (summarize_error_settings) {
         fprintf(stderr, "summary of random error settings: \n");
+        if (errcon->no_errors_first_step)
+          fprintf(stderr, "No errors will be generated for the first step.\n");
         for (i=0; i<errcon->n_items; i++) {
             switch (errcon->error_type[i]) {
                 case UNIFORM_ERRORS:
@@ -72,6 +76,7 @@ void error_setup(ERROR *errcon, NAMELIST_TEXT *nltext, RUN *run_cond, LINE_LIST 
         fprintf(errcon->fp_log, "&associate filename=\"%s\", path=\"%s\", contents=\"elegant lattice, parent\" &end\n",
                 run_cond->lattice, getenv("PWD"));
         fprintf(errcon->fp_log, "&parameter name=Step, type=long, description=\"simulation step\" &end\n");
+
         fprintf(errcon->fp_log, "&parameter name=When, type=string, description=\"phase of simulation when errors were asserted\" &end\n");
         fprintf(errcon->fp_log, "&column name=ParameterValue, type=double, description=\"Perturbed value\" &end\n");
         fprintf(errcon->fp_log, "&column name=ParameterError, type=double, description=\"Perturbation value\" &end\n");

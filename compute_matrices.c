@@ -726,13 +726,13 @@ VMATRIX *magnification_matrix(MAGNIFY *magnif)
     }
 
 
-void reset_special_elements(LINE_LIST *beamline)
+void reset_special_elements(LINE_LIST *beamline, long includeRF)
 {
     ELEMENT_LIST *eptr;
     NIBEND *nibend; NISEPT *nisept;
     
     log_entry("reset_special_elements");
-    
+
     eptr = &(beamline->elem);
     while (eptr) {
         switch (eptr->type) {
@@ -745,7 +745,9 @@ void reset_special_elements(LINE_LIST *beamline)
             nisept->fse_opt = 0;
             break;
           case T_TMCF:
-            ((TMCF_MODE*)eptr->p_elem)->fiducial_part = NULL;
+            if (!includeRF) {
+              ((TMCF_MODE*)eptr->p_elem)->fiducial_part = NULL;
+            }
             break;
           case T_CEPL:
             ((CE_PLATES*)eptr->p_elem)->fiducial_part = NULL;
@@ -754,30 +756,44 @@ void reset_special_elements(LINE_LIST *beamline)
             ((TW_PLATES*)eptr->p_elem)->fiducial_part = NULL;
             break;
           case T_TWLA:
-            ((TW_LINAC*)eptr->p_elem)->fiducial_part = NULL;
+            if (!includeRF) {
+              ((TW_LINAC*)eptr->p_elem)->fiducial_part = NULL;
+            }
             break;
           case T_TWMTA:
-            ((TWMTA*)eptr->p_elem)->fiducial_part = NULL;
+            if (!includeRF) {
+              ((TWMTA*)eptr->p_elem)->fiducial_part = NULL;
+            }
             break;
           case T_RFCA:
-            ((RFCA*)eptr->p_elem)->fiducial_seen = 0;
+            if (!includeRF) {
+              ((RFCA*)eptr->p_elem)->fiducial_seen = 0;
+            }
             break;
           case T_MODRF:
-            ((MODRF*)eptr->p_elem)->fiducial_seen = 0;
+            if (!includeRF) {
+              ((MODRF*)eptr->p_elem)->fiducial_seen = 0;
+            }
             break;
           case T_RFMODE:
-            ((RFMODE*)eptr->p_elem)->initialized = 0;
-            if (((RFMODE*)eptr->p_elem)->fprec)
+            if (!includeRF) {
+              ((RFMODE*)eptr->p_elem)->initialized = 0;
+              if (((RFMODE*)eptr->p_elem)->fprec)
                 fclose(((RFMODE*)eptr->p_elem)->fprec);
+            }
             break;
           case T_TRFMODE:
-            ((TRFMODE*)eptr->p_elem)->initialized = 0;
-            if (((TRFMODE*)eptr->p_elem)->fprec)
+            if (!includeRF) {
+              ((TRFMODE*)eptr->p_elem)->initialized = 0;
+              if (((TRFMODE*)eptr->p_elem)->fprec)
                 fclose(((TRFMODE*)eptr->p_elem)->fprec);
+            }
             break;
           case T_RAMPRF:
-            ((RAMPRF*)eptr->p_elem)->Ts = 0;
-            ((RAMPRF*)eptr->p_elem)->fiducial_seen = 0;
+            if (!includeRF) {
+              ((RAMPRF*)eptr->p_elem)->Ts = 0;
+              ((RAMPRF*)eptr->p_elem)->fiducial_seen = 0;
+            }
             break;
           case T_KQUAD:
             ((KQUAD*)eptr->p_elem)->randomMultipoleData.randomized = 0;
