@@ -2,7 +2,8 @@
 %   latex elegant1
 %   dvi2ps elegant1 | lpr [-P<postscript-printer-name>]
 %
-\documentstyle[11pt,html]{article}
+\documentclass[11pt]{article}
+\usepackage{html}
 \pagestyle{plain}
 %\voffset=-0.75in
 \newenvironment{req}{\begin{equation} \rm}{\end{equation}}
@@ -11,7 +12,7 @@
 \setlength{\evensidemargin}{0 in} % not applicable anyway
 \setlength{\textwidth}{6.5 in}
 \setlength{\headheight}{-0.5 in} % for 11pt font size
-\setlength{\footheight}{0 in}
+%\setlength{\footheight}{0 in}
 \setlength{\textheight}{9 in}
 \begin{document}
 
