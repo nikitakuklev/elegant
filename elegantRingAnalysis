@@ -13,6 +13,11 @@ set CVSRevisionAuthor "\$Author: borland $"
 
 APSApplication . -name elegantRingAnalysis \
   -overview "Performs various elegant simulations for a ring."
+.menu.file.menu insert 1 command -label "Save as..." -command SaveConfiguration
+.menu.file.menu insert 1 command -label "Read..." -command ReadConfiguration
+
+set status "Working..."
+APSScrolledStatus .status -parent .userFrame -textVariable status -height 10 -width 95 
 
 set sourceDir $env(HOME)/elegantRingAnalysisTemplates
 
@@ -34,12 +39,6 @@ proc affix {args} {
     }
     return $returnList
 }
-
-setStatus "Working..."
-APSScrolledStatus .status -parent .userFrame -textVariable status -height 10 -width 95
-update
-.menu.file.menu insert 1 command -label "Save as..." -command SaveConfiguration
-.menu.file.menu insert 1 command -label "Read..." -command ReadConfiguration
 
 set momentum 7.0e3
 set matrixLatticeFile ""
@@ -921,8 +920,8 @@ proc OffMomentumDynamicAperture {args} {
 
 set sectionList [list Main Basic "Phase Space" "Higher-Order Disp." "Off-momentum Tunes" "DA" "Off-Momentum DA"]
 
-set tabFrameWidgetList [APSTabFrame .main -parent .userFrame -label "" \
-    -labelList $sectionList -width 900 -height 385] 
+set tabFrameWidgetList [APSTabFrame .main -parent .userFrame \
+    -labelList $sectionList -width 900 -height 395] 
 
 FillMainFrame  [lindex $tabFrameWidgetList 0]
 FillBasicFrame [lindex $tabFrameWidgetList 1]
@@ -953,7 +952,6 @@ if {[string length $configuration]} {
 if [string length $templateDirectory] {
     set sourceDir $templateDirectory
 }
-
 
 setStatus "Ready."
 update
