@@ -265,7 +265,7 @@ long track_beam(
     fflush(stdout);
 
     log_entry("track_beam.1");
-    if (run->output && n_left && !(flags&INHIBIT_FILE_OUTPUT)) {
+    if (run->output && !(flags&INHIBIT_FILE_OUTPUT)) {
         if (!output->output_initialized)
             bomb("'output' file is uninitialized (track_beam)", NULL);
         if (!(flags&SILENT_RUNNING)) 
@@ -277,7 +277,7 @@ long track_beam(
     log_exit("track_beam.1");
 
     log_entry("track_beam.2");
-    if (run->acceptance && beam->n_accepted && !(flags&INHIBIT_FILE_OUTPUT)) {
+    if (run->acceptance && !(flags&INHIBIT_FILE_OUTPUT)) {
         if (!output->accept_initialized)
             bomb("'acceptance' file is uninitialized (track_beam)", NULL);
         if (!(flags&SILENT_RUNNING)) 

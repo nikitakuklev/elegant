@@ -201,7 +201,7 @@ long new_sdds_beam(
                     free_zarray_2d((void**)beam->original, beam->n_original, 7);
                 }
             beam->particle = beam->accepted = beam->original = NULL;
-            if (beam->n_original=get_sdds_particles(&beam->original, prebunched, n_tables_to_skip)) { 
+            if ((beam->n_original=get_sdds_particles(&beam->original, prebunched, n_tables_to_skip))>=0) { 
                 n_tables_to_skip = 0;    /* use the user's parameter only the first time */
                 beam->particle = (double**)zarray_2d(sizeof(double), beam->n_original, 7);
                 if (run->acceptance) 
@@ -209,7 +209,7 @@ long new_sdds_beam(
                 }
             else { 
                 log_exit("new_sdds_beam");
-                return(0);
+                return(-1);
                 }
             new_particle_data = 1;
             }
@@ -291,7 +291,7 @@ long new_sdds_beam(
         else {
             /* In this case, the data is for point particles already,
              * so I just copy the data for the most part. */
-            if (!beam->original)
+            if (!beam->original && beam->n_original)
                 bomb("beam->original array is NULL (new_sdds_beam)", NULL);
             if (!beam->particle)
                 bomb("beam->particle array is NULL (new_sdds_beam)", NULL);
@@ -422,7 +422,7 @@ long get_sdds_particles(double ***particle, long one_dump, long n_skip)
             input_initialized[ifile] = 0;
             }
         log_exit("get_sdds_particles");
-        return(0);
+        return(-1);
         }
 
     files_initialized = 0;
@@ -441,11 +441,12 @@ long get_sdds_particles(double ***particle, long one_dump, long n_skip)
                 fprintf(stderr, "warning: SDDS beam file %s does not contain the selection parameter %s\n",
                         selection_parameter);
             if (SDDS_GetParameterType(SDDS_input+ifile, i)!=SDDS_STRING) {
-                SDDS_SetError(sprintf(s, "SDDS beam file %s contains parameter %s, but parameter is not a string",
-                                      selection_parameter));
-                SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-                }
+              sprintf(s, "SDDS beam file %s contains parameter %s, but parameter is not a string", 
+                      selection_parameter);
+              SDDS_SetError(s);
+              SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
             }
+          }
         if (input_type_code==SPIFFE_BEAM) {
             if (!check_sdds_beam_column(SDDS_input+ifile, "r", "m") || 
                 !check_sdds_beam_column(SDDS_input+ifile, "pr", "m$be$nc") ||

@@ -451,7 +451,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERROR *error1
     switch (optimization_data->method) {
         case OPTIM_METHOD_SIMPLEX:
             puts("Starting simplex optimization.");
-            if (simplexMin(&result, variables->initial_value, variables->step, variables->lower_limit,
+            if (simplexMin(&result, variables->varied_quan_value, variables->step, variables->lower_limit,
                            variables->upper_limit, variables->n_variables, optimization_data->target, 
                            optimization_data->tolerance, optimization_function, optimization_report,
                            optimization_data->n_evaluations, optimization_data->n_passes)<0) {
@@ -467,7 +467,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERROR *error1
             break;
         case OPTIM_METHOD_GRID:
             puts("Starting grid-search optimization.");
-            if (!grid_search_min(&result, variables->initial_value, variables->lower_limit, variables->upper_limit, variables->step,
+            if (!grid_search_min(&result, variables->varied_quan_value, variables->lower_limit, variables->upper_limit, variables->step,
                     variables->n_variables, optimization_function)) {
                 if (!optimization_data->soft_failure)
                     bomb("optimization unsuccessful--aborting", NULL);
@@ -477,7 +477,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERROR *error1
             break;
         case OPTIM_METHOD_SAMPLE:
             puts("Starting grid-sample optimization.");
-            if (!grid_sample_min(&result, variables->initial_value, variables->lower_limit, variables->upper_limit, variables->step,
+            if (!grid_sample_min(&result, variables->varied_quan_value, variables->lower_limit, variables->upper_limit, variables->step,
                     variables->n_variables, optimization_function, optimization_data->n_evaluations*1.0)) {
                 if (!optimization_data->soft_failure)
                     bomb("optimization unsuccessful--aborting", NULL);
@@ -493,11 +493,11 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERROR *error1
     /* evaluate once more at the optimimum point to get all parameters right and to get additional output */
     optim_func_flags = 0;
     variables->varied_quan_value[variables->n_variables] = 1;   /* indicates end-of-optimization */
-    result = optimization_function(variables->initial_value, &i);
+    result = optimization_function(variables->varied_quan_value, &i);
 
     /* change values in element definitions so that new lattice can be saved */
     change_defined_parameter_values(variables->element, variables->varied_param, variables->varied_type,
-            variables->initial_value, variables->n_variables);
+            variables->varied_quan_value, variables->n_variables);
     if (control->n_elements_to_vary)
         change_defined_parameter_values(control->element, control->varied_param, control->varied_type, 
             control->varied_quan_value, control->n_elements_to_vary);
@@ -518,7 +518,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERROR *error1
         fprintf(optimization_data->fp_log, "Optimum values of variables and changes from initial values:\n");
         for (i=0; i<variables->n_variables; i++)
             fprintf(optimization_data->fp_log, "%10s: %23.15e  %23.15e\n", variables->varied_quan_name[i], 
-                    variables->initial_value[i], variables->initial_value[i]-variables->varied_quan_value[i]);
+                    variables->varied_quan_value[i], variables->varied_quan_value[i]-variables->initial_value[i]);
         for (i=0; i<covariables->n_covariables; i++)
             fprintf(optimization_data->fp_log, "%10s: %23.15e\n", covariables->varied_quan_name[i], covariables->varied_quan_value[i]);
         fflush(optimization_data->fp_log);
@@ -535,12 +535,12 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERROR *error1
         fprintf(stdout, "Optimum values of variables and changes from initial values:\n");
         for (i=0; i<variables->n_variables; i++)
             fprintf(stdout, "%10s: %23.15e  %23.15e\n", variables->varied_quan_name[i], 
-                    variables->initial_value[i], variables->initial_value[i]-variables->varied_quan_value[i]);
+                    variables->varied_quan_value[i], variables->varied_quan_value[i]-variables->initial_value[i]);
         for (i=0; i<covariables->n_covariables; i++)
             fprintf(stdout, "%10s: %23.15e\n", covariables->varied_quan_name[i], covariables->varied_quan_value[i]);
         }
     for (i=0; i<variables->n_variables; i++)
-        variables->varied_quan_value[i] = variables->initial_value[i];
+        variables->initial_value[i] = variables->varied_quan_value[i];
     log_exit("do_optimize");
     }
 
@@ -677,6 +677,10 @@ double optimization_function(double *value, long *invalid)
         rpn_store(twiss_max.etay,  twiss_mem[14]);
         rpn_store(twiss_max.etapy, twiss_mem[15]);
         }
+/*
+    for (i=0; i<variables->n_variables; i++)
+      variables->varied_quan_value[i] = value[i];
+*/
     track_beam(run, control, error, variables, beamline, beam, output, optim_func_flags);
 
     /* compute final parameters and store in rpn memories */
@@ -721,6 +725,10 @@ double optimization_function(double *value, long *invalid)
     /* compute and return optimized quantity */
     rpn_clear();    /* clear rpn stack */
     result = rpn(optimization_data->UDFname);
+    if (isnan(result) || isinf(result)) {
+      result = sqrt(DBL_MAX);
+    }
+    
     if (rpn_check_error())
         exit(1);
 

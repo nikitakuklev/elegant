@@ -325,8 +325,6 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
         bomb("NULL coordinate pointer passed to dump_watch_particles", NULL);
     if (watch->fraction>1)
         bomb("logic error--fraction>1 in dump_watch_particles", NULL);
-    if (!particles)
-        return;
     for (i=0; i<particles; i++)
         if (!particle[i]) {
             fprintf(stderr, "error: coordinate slot %ld is NULL (dump_watch_particles)\n", i);
@@ -637,8 +635,6 @@ void dump_phase_space(SDDS_TABLE *SDDS_table, double **particle, long particles,
     log_entry("dump_phase_space");
     if (!particle)
         bomb("NULL coordinate pointer passed to dump_phase_space", NULL);
-    if (!particles)
-        return;
     for (i=0; i<particles; i++)
         if (!particle[i]) {
             fprintf(stderr, "error: coordinate slot %ld is NULL (dump_phase_space)\n", i);
@@ -683,8 +679,6 @@ void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long particl
     log_entry("dump_lost_particles");
     if (!particle)
         bomb("NULL coordinate pointer passed to dump_lost_particles", NULL);
-    if (!particles)
-        return;
     for (i=0; i<particles; i++)
         if (!particle[i]) {
             fprintf(stderr, "error: coordinate slot %ld is NULL (dump_lost_particles)\n", i);

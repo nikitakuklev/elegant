@@ -404,7 +404,7 @@ char **argv;
                             bomb("beam type of SET_AWE_BEAM in main routine--this shouldn't happen", NULL);
                             }
                         else if (beam_type==SET_SDDS_BEAM) {
-                            if (!new_sdds_beam(&beam, &run_conditions, &run_control, &output_data, 0))
+                            if (new_sdds_beam(&beam, &run_conditions, &run_control, &output_data, 0)<0)
                                 break;
                             }
                         else
@@ -422,7 +422,7 @@ char **argv;
                             bomb("beam type of SET_AWE_BEAM in main routine--this shouldn't happen", NULL);
                             }
                         else if (beam_type==SET_SDDS_BEAM) {
-                            if (!new_sdds_beam(&beam, &run_conditions, &run_control, &output_data, 0))
+                            if (new_sdds_beam(&beam, &run_conditions, &run_control, &output_data, 0)<0)
                                 break;
                             }
                         else
@@ -438,7 +438,7 @@ char **argv;
                     bomb("beam type of SET_AWE_BEAM in main routine--this shouldn't happen", NULL);
                     }
                 else if (beam_type==SET_SDDS_BEAM) {
-                    if (!new_sdds_beam(&beam, &run_conditions, &run_control, &output_data, new_beam_flags))
+                    if (new_sdds_beam(&beam, &run_conditions, &run_control, &output_data, new_beam_flags)<0)
                         break;
                     }
                 else
@@ -524,7 +524,7 @@ char **argv;
           case STOP:
             lorentz_report();
             finish_load_parameters();
-            exit(1);
+            exit(0);
             break;
           case OPTIMIZATION_SETUP:
             if (beam_type!=-1)

@@ -268,7 +268,7 @@ void do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
                        chrom->name[i], context->occurence, K2);
                 }
             if (alter_defined_values)
-                change_defined_parameter(chrom->name[i], K2_param, type, K2);
+              change_defined_parameter(chrom->name[i], K2_param, type, K2, NULL);
             }    
 
         if (beamline->links)

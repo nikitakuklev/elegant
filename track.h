@@ -1626,7 +1626,7 @@ extern void free_beamlines(LINE_LIST *beamline);
 extern void do_save_lattice(NAMELIST_TEXT *nl, RUN *run, LINE_LIST *beamline);
 void print_with_continuation(FILE *fp, char *s, long endcol);
 void change_defined_parameter_values(char **elem_name, long *param_number, long *type, double *value, long n_elems);
-void change_defined_parameter(char *elem_name, long param_number, long type, double value);
+void change_defined_parameter(char *elem_name, long param_number, long type, double value, char *valueString);
 
 /* prototypes for limit_amplitudes4.c: */
 extern long rectangular_collimator(double **initial, RCOL *rcol, long np, double **accepted, double z, double P_central);

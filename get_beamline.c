@@ -599,33 +599,51 @@ void change_defined_parameter_values(char **elem_name, long *param_number, long 
     log_exit("change_defined_parameter_values");
     }
 
-void change_defined_parameter(char *elem_name, long param, long elem_type, double value)
+void change_defined_parameter(char *elem_name, long param, long elem_type, double value, char *valueString)
 {
-    ELEMENT_LIST *eptr;
-    char *p_elem;
-    long data_type;
+  ELEMENT_LIST *eptr;
+  char *p_elem;
+  long data_type;
 
-    log_entry("change_defined_parameter");
+  log_entry("change_defined_parameter");
 
-    eptr = NULL;
-    data_type = entity_description[elem_type].parameter[param].type;
-    while (find_element(elem_name, &eptr, elem)) {
-        p_elem = eptr->p_elem;
-        switch (data_type) {
-            case IS_DOUBLE:
-                *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)) = value;
-                break;
-            case IS_LONG:
-                *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) = value+0.5;
-                break;
-            case IS_STRING:
-            default:
-                bomb("unknown/invalid variable quantity", NULL);
-                exit(1);
-            }
+  eptr = NULL;
+  data_type = entity_description[elem_type].parameter[param].type;
+  while (find_element(elem_name, &eptr, elem)) {
+    p_elem = eptr->p_elem;
+    switch (data_type) {
+    case IS_DOUBLE:
+      if (valueString) {
+        if (!sscanf(valueString, "%lf", &value)) {
+          fprintf(stderr, "Error (change_defined_parameter): unable to scan double from \"%s\"\n", valueString);
+          exit(1);
         }
-    log_exit("change_defined_parameter");
+      }
+      *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)) = value;
+      break;
+    case IS_LONG:
+      if (valueString) {
+        if (!sscanf(valueString, "%lf", &value)) {
+          fprintf(stderr, "Error (change_defined_parameter): unable to scan double from \"%s\"\n", valueString);
+          exit(1);
+        }
+      }
+      *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) = value+0.5;
+      break;
+    case IS_STRING:
+      if (!SDDS_CopyString(((char**)(p_elem+entity_description[elem_type].parameter[param].offset)), 
+                           valueString)) {
+        fprintf(stderr, "Error (change_defined_parameter): unable to copy string parameter value\n");
+        exit(1);
+      }
+      break;
+    default:
+      bomb("unknown/invalid variable quantity", NULL);
+      exit(1);
     }
+  }
+  log_exit("change_defined_parameter");
+}
 
 void process_rename_request(char *s, char **name, long n_names)
 {
