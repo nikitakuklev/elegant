@@ -1467,17 +1467,11 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
   dzFirst = zStart - csrWake.zLast;
 #ifdef DEBUG
   fprintf(stdout, "CSR in drift:\n");
-  fprintf(stdout, "zStart = %21.15le, Po = %21.15le\n", zStart, Po);
+  fprintf(stdout, "zStart = %21.15le, zLast = %21.15le, Po = %21.15le\n", zStart, csrWake.zLast, Po);
   fprintf(stdout, "dz = %21.15le, nKicks = %ld\n", dz, nKicks);
   fprintf(stdout, "dzFirst = %21.15e\n", dzFirst);
   fprintf(stdout, "s0 = %21.15e\n", csrWake.s0);
-  for (iBin=0; iBin<csrWake.bins; iBin++)
-    fprintf(stdout, "%21.15e\n", 
-            csrWake.dGamma[iBin]);
 #endif
-
-  ctmin = DBL_MAX;
-  ctmax = -DBL_MAX;
 
   zTravel = zStart-csrWake.z0;  /* total distance traveled by radiation to reach this point */
   for (iKick=0; iKick<nKicks; iKick++) {
@@ -1486,6 +1480,9 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
       dz = dz0;
     zTravel += dz;
     
+    ctmin = DBL_MAX;
+    ctmax = -DBL_MAX;
+
     /* propagate particles forward, converting s to c*t=s/beta */
     for (iPart=0; iPart<np; iPart++) {
       coord = part[iPart];
@@ -1494,19 +1491,17 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
       p = Po*(1+coord[5]);
       beta = p/sqrt(p*p+1);
       coord[4] = (coord[4]+dz*sqrt(1+sqr(coord[1])+sqr(coord[3])))/beta;
-      if (iKick==0) {
-        if (coord[4]>ctmax)
-          ctmax = coord[4];
-        if (coord[4]<ctmin)
-          ctmin = coord[4];
-      }
+#ifdef DEBUG
+      if (coord[4]>ctmax)
+        ctmax = coord[4];
+      if (coord[4]<ctmin)
+        ctmin = coord[4];
+#endif
     }
 #ifdef DEBUG
-    if (iKick==0) {
-      fprintf(stdout, "ctmin, max = %21.15e, %21.15e\n",
+    fprintf(stdout, "beam ct min, max = %21.15e, %21.15e\n",
               ctmin, ctmax);
-      fflush(stdout);
-    }
+    fflush(stdout);
 #endif
 
     factor = 1;
@@ -1536,14 +1531,22 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
                  sqrt(csrWake.S11/(csrWake.S11 + 
                                    2*zTravel*csrWake.S12 + 
                                    zTravel*zTravel*(sqr(csrWake.thetaRad)+csrWake.S22))));
+#if 0
 #ifdef DEBUG
       fprintf(stdout, "Spread factor is %21.15le after zTravel=%21.15le\n", spreadFactor, zTravel);
       fprintf(stdout, "S11 = %21.15le  S12 = %21.15le  S22 = %21.15le\nthetaRad = %21.15le  z = %21.15le\n",
               csrWake.S11, csrWake.S12, csrWake.S22, csrWake.thetaRad, zTravel);
 #endif
+#endif
     }
     
     dzFirst = 0;
+
+#ifdef DEBUG
+    fprintf(stdout, "wake ct0 = %21.15e, ct1 = %21.15e\n",
+            ct0, ct0+csrWake.dctBin*csrWake.bins);
+    fflush(stdout);
+#endif
 
     /* apply kick to each particle and convert back to normal coordinates */
     for (iPart=binned=0; iPart<np; iPart++) {
@@ -1574,7 +1577,7 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
     coord[4] += dz*sqrt(1+sqr(coord[1])+sqr(coord[3]));
   }    
 
-  csrWake.zLast += csrDrift->length;
+  csrWake.zLast = zStart+csrDrift->length;
 
   if (csrWake.dGamma) {
     /* propagate wake forward */
