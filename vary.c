@@ -57,7 +57,7 @@ void vary_setup(VARY *_control, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beam
     _control->n_steps = n_steps;
     _control->bunch_frequency = bunch_frequency;
     _control->n_passes = n_passes;
-    _control->reset_rf_each_step = reset_rf_each_step;
+    _control->reset_rf_each_step = reset_rf_for_each_step;
     
     /* reset flags for elements that may have been varied previously */
     if (_control->n_elements_to_vary) {

@@ -33,7 +33,7 @@ void error_setup(ERROR *errcon, NAMELIST_TEXT *nltext, RUN *run_cond, LINE_LIST 
     process_namelist(&error_control, nltext);
     print_namelist(stderr, &error_control);
 
-    errcon->no_errors_first_step = no_errors_first_step;
+    errcon->no_errors_first_step = no_errors_for_first_step;
     
     if (summarize_error_settings) {
         fprintf(stderr, "summary of random error settings: \n");

@@ -9,7 +9,7 @@
     long clear_error_settings = 1;
     long summarize_error_settings = 0;
     STRING error_log = NULL;
-    long no_errors_first_step = 0;
+    long no_errors_for_first_step = 0;
 #end
 
 #namelist error static

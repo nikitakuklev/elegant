@@ -10,7 +10,7 @@
     double bunch_frequency = 0;
     long n_indices = 0;
     long n_passes = 1;
-    long reset_rf_each_step = 1;
+    long reset_rf_for_each_step = 1;
 #end
 
 #namelist vary_element static
