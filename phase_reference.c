@@ -90,7 +90,7 @@ long set_phase_reference(
             return(1);
             }
         }
-    if (phase_ref_number>MAX_LONG/2)
+    if (phase_ref_number>LONG_MAX/2)
         bomb("please use a small integer for the phase_reference number", NULL);
     reference = trealloc(reference, sizeof(*reference)*(++n_references));
     reference[i].ref_number = phase_ref_number;
@@ -119,7 +119,7 @@ void delete_phase_references(void)
 
 long unused_phase_reference()
 {
-    static long big=MAX_LONG;
+    static long big=LONG_MAX;
 
     log_entry("unused_phase_reference");
 

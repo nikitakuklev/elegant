@@ -156,8 +156,7 @@ void log_exit(char *routine)
     in_trace_routine = 0;
     }
 
-#ifdef UNIX
-void traceback_handler(int sig, int code, struct sigcontext *scp, char *addr)
+void traceback_handler(int sig)
 {
     long i;
     switch (sig) {
@@ -169,30 +168,12 @@ void traceback_handler(int sig, int code, struct sigcontext *scp, char *addr)
         case SIGTRAP: fprintf(stderr, "\nTerminated by SIGTRAP\n"); break;
         case SIGFPE: 
             fprintf(stderr, "\nTerminated by SIGFPE"); 
-            switch (code) {
-                case FPE_INTDIV_TRAP: fputs(", code FPE_INTDIV_TRAP: Integer division by zero \n", stderr); break;
-                case FPE_INTOVF_TRAP: fputs(", code FPE_INTOVF_TRAP: Integer overflow\n", stderr);
-                case FPE_FLTINEX_TRAP: fputs(", code FPE_FLTINEX_TRAP: IEEE floating point inexact\n", stderr); break;
-                case FPE_FLTDIV_TRAP: fputs(", code FPE_FLTDIV_TRAP: IEEE floating point division by zero\n", stderr); break;
-                case FPE_FLTUND_TRAP: fputs(", code FPE_FLTUND_TRAP: IEEE floating point underflow\n", stderr); break;
-                case FPE_FLTOPERR_TRAP: fputs(", code FPE_FLTOPERR_TRAP: IEEE floating point operand error\n", stderr); break;
-                default: fputc('\n', stderr); break;
-                }
+            break;
         case SIGBUS: 
             fprintf(stderr, "\nTerminated by SIGBUS"); 
-            switch (code) {
-                case BUS_HWERR: fputs(", code BUS_HWERR\n", stderr); break;
-                case BUS_ALIGN: fputs(", code BUS_ALIGN\n", stderr); break;
-                default:        fputc('\n', stderr); break;
-                }
             break;
         case SIGSEGV: 
             fprintf(stderr, "\nTerminated by SIGSEGV"); 
-            switch (code) {
-                case SEGV_NOMAP: fputs(", code SEGV_NOMAP\n", stderr); break;
-                case SEGV_PROT: fputs(", code SEGV_PROT\n", stderr); break;
-                default: fputc('\n', stderr); break;
-                }
             break;
         default:      fprintf(stderr, "\nTerminated by unknown signal\n"); break;
         }   
@@ -209,4 +190,3 @@ void traceback_handler(int sig, int code, struct sigcontext *scp, char *addr)
     fflush(stdout);    /* to force flushing of output sent to stdout by other parts of the code */
     exit(1);
     }
-#endif

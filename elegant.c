@@ -17,7 +17,7 @@
 #include <malloc.h>
 #endif
 
-void traceback_handler(int sig, int code, struct sigcontext *scp, char *addr);
+void traceback_handler(int code);
 
 #define N_OPTIONS  0
 /*
@@ -167,14 +167,14 @@ char **argv;
 #if defined(VAX_VMS) || defined(UNIX)
     init_stats();
 #endif
-    
+
+/*
 #ifdef SUNOS4
     malloc_debug(1);
-    /*
       mallopt(M_MXFAST, 1024);
       mallopt(M_NLBLKS, 8);
-      */
 #endif
+ */
     
     argc = scanargs(&scanned, argc, argv);
     if (argc<2 || argc>(2+N_OPTIONS)) {
