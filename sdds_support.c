@@ -977,7 +977,7 @@ void dump_phase_space(SDDS_TABLE *SDDS_table, double **particle, long particles,
         SDDS_SetError("Problem setting SDDS parameters (dump_phase_space)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
-    if (!SDDS_WriteTable(SDDS_table)) {
+    if (!SDDS_WriteTable(SDDS_table) || !SDDS_ShortenTable(SDDS_table, 1)) {
         SDDS_SetError("Problem writing SDDS table (dump_phase_space)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         } 
