@@ -206,7 +206,9 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
 
     /* advance particles to the next step */
     for (ib=0; ib<np; ib++) {
-      part[ib][4] += length;
+      part[ib][4] += length*sqrt(1+sqr(part[ib][1])+sqr(part[ib][3]));
+      part[ib][0] += length*part[ib][1];
+      part[ib][2] += length*part[ib][3];
     }
     
     lengthLeft -= length;
