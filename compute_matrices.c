@@ -17,6 +17,7 @@
 #define DEBUG 0
 
 long determine_bend_flags(ELEMENT_LIST *eptr, long edge1_effects, long edge2_effects);
+VMATRIX *matrixFromExplicitMatrix(EMATRIX *emat, long order);
 
 VMATRIX *full_matrix(ELEMENT_LIST *elem, RUN *run, long order) 
 {
@@ -753,6 +754,9 @@ VMATRIX *compute_matrix(
       case T_LMIRROR:
         elem->matrix = lightMirrorMatrix((LMIRROR*)elem->p_elem);
         break;
+      case T_EMATRIX:
+        elem->matrix = matrixFromExplicitMatrix((EMATRIX*)elem->p_elem, run->default_order);
+        break;
       case T_KPOLY: case T_RFDF:  case T_RFTMEZ0:  case T_RMDF:  case T_TMCF: case T_CEPL:  
       case T_TWPL:  case T_TWLA:  
       case T_TWMTA: case T_RCOL:  case T_PEPPOT: case T_MAXAMP: 
@@ -936,6 +940,10 @@ void reset_special_elements(LINE_LIST *beamline, long includeRF)
           case T_MATR:
             if (includeRF)
               ((MATR*)eptr->p_elem)->fiducialSeen = 0;
+            break;
+          case T_EMATRIX:
+            if (includeRF)
+              ((EMATRIX*)eptr->p_elem)->fiducialSeen = 0;
             break;
           default:
             break;
@@ -1186,3 +1194,37 @@ VMATRIX *lightMirrorMatrix(LMIRROR *lm)
     misalign_matrix(M, lm->dx, lm->dy, lm->dz, 0.0);
   return M;
 }
+
+/* explicit matrix input from user */
+VMATRIX *matrixFromExplicitMatrix(EMATRIX *emat, long order)
+{
+  long i, j, k;
+  VMATRIX  *M;
+  double *C, **R, ***T;
+
+  if (emat->order!=0)
+    order = emat->order;
+  M = tmalloc(sizeof(*M));
+  initialize_matrices(M, M->order=order);
+  C = M->C;
+  R = M->R;
+  T = M->T;
+  
+  for (i=0; i<6; i++) 
+    C[i] = emat->C[i];
+
+  if (order>=1)
+    for (i=0; i<6; i++) 
+      for (j=0; j<6; j++) 
+        R[i][j] = emat->R[i][j];
+
+  if (order>=2)
+    for (i=0; i<6; i++) 
+      for (j=0; j<6; j++) 
+        for (k=0; k<=j; k++)
+          T[i][j][k] = emat->T[i][j][k];
+
+  return M;
+}
+
+

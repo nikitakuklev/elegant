@@ -29,6 +29,8 @@ long trackWithChromaticLinearMatrix(double **particle, long particles,
                                     double *alphac, double *eta2, double *eta3);
 void matr_element_tracking(double **coord, VMATRIX *M, MATR *matr,
                            long np, double z);
+void ematrix_element_tracking(double **coord, VMATRIX *M, EMATRIX *matr,
+                              long np, double z);
 long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge, 
                              double ***part, long np, char *mainRootname);
 
@@ -639,6 +641,12 @@ long do_tracking(
 	      eptr->matrix = &(((MATR*)eptr->p_elem)->M);
             matr_element_tracking(coord, eptr->matrix, (MATR*)eptr->p_elem, n_to_track,
                                   z);
+            break;
+          case T_EMATRIX:
+	    if (!eptr->matrix)
+	      eptr->matrix = compute_matrix(eptr, run, NULL);
+            ematrix_element_tracking(coord, eptr->matrix, (EMATRIX*)eptr->p_elem, n_to_track,
+                                     z);
             break;
           case T_MULT:
             n_left = multipole_tracking(coord, n_to_track, (MULT*)eptr->p_elem, 0.0,
@@ -1597,6 +1605,35 @@ void matr_element_tracking(double **coord, VMATRIX *M, MATR *matr,
   if (!np)
     return;
   if (!matr) {
+    track_particles(coord, M, coord, np);
+  } else {
+    if (!matr->fiducialSeen) {
+      double sum = 0;
+      for (i=0; i<np; i++)
+        sum += coord[i][4];
+      matr->sReference = sum/np;
+      matr->fiducialSeen = 1;
+    }
+    for (i=0; i<np; i++)
+      coord[i][4] -= matr->sReference;
+    track_particles(coord, M, coord, np);
+    for (i=0; i<np; i++)
+      coord[i][4] += matr->sReference;
+  }
+}
+
+void ematrix_element_tracking(double **coord, VMATRIX *M, EMATRIX *matr,
+                           long np, double z)
+/* subtract off <s> prior to using a user-supplied matrix to avoid possible
+ * problems with R5? and T?5? elements
+ */
+{
+  long i;
+  if (!np)
+    return;
+  if (!matr) {
+    fprintf(stderr, "ematrix_element_tracking: matr=NULL, tracking with M (%ld order)\n",
+            M->order);
     track_particles(coord, M, coord, np);
   } else {
     if (!matr->fiducialSeen) {

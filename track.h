@@ -463,7 +463,7 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_RCOL  16
 #define T_ECOL  17
 #define T_MARK  18
-/* Explicit matrix input: */
+/* Explicit matrix input from a file: */
 #define T_MATR  19
 /* Alpha magnet, or one half thereof: */
 #define T_ALPH  20
@@ -550,7 +550,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_FLOORELEMENT 81
 #define T_LTHINLENS 82
 #define T_LMIRROR   83
-#define N_TYPES 84
+#define T_EMATRIX   84
+#define N_TYPES 85
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -641,7 +642,7 @@ extern char *entity_text[N_TYPES];
 #define N_FLOORELEMENT_PARAMS 6
 #define N_LTHINLENS_PARAMS 8
 #define N_LMIRROR_PARAMS 9
-
+#define N_EMATRIX_PARAMS (1+6+6*6+6*21)
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
 
@@ -1327,9 +1328,8 @@ typedef struct {
     long edge_effects, order, steering;
     } HVCOR;
 
-/* names and storage structure for matrix input from a file */
+/* names and storage structure for explicit matrix input from a file */
 extern PARAMETER matr_param[N_MATR_PARAMS] ;
-   
 typedef struct {
     double length;
     char *filename;
@@ -1339,6 +1339,18 @@ typedef struct {
     double sReference;
     VMATRIX M;
     } MATR;
+
+/* names and storage structure for explicit matrix input */
+extern PARAMETER ematrix_param[N_EMATRIX_PARAMS] ;
+typedef struct {
+    long order;
+    double C[6];
+    double R[6][6];
+    double T[6][6][6];
+    /* for internal use only */
+    long fiducialSeen;
+    double sReference;
+    } EMATRIX;
 
 /* names and storage structure for scattering element physical parameters */
 typedef struct {

@@ -810,7 +810,7 @@ void parse_element(
         fflush(stdout);
         exit(1);
       }
-      else if (difference>8) {
+      else if (difference>8 && eptr->type!=T_EMATRIX) {
         fprintf(stdout, "warning: suspicious parameter offset for parameter %s of element type %s\n", 
                 parameter[i].name, type_name);
         fflush(stdout);
