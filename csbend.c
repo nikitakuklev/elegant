@@ -1375,21 +1375,23 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
         }
         dGamma[iBin] = T1[iBin]+T2[iBin];
       }
-      
-      for (i_part=0; i_part<n_part; i_part++) {
-        long nBins1;
-        nBins1 = nBins-1;
-        coord = part[i_part];
-        if (!particleLost[i_part]) {
-          double f;
-          /* apply CSR kick */
-          iBin = (f=(CT-ctLower)/dct);
-          f -= iBin;
-          if (iBin>=0 && iBin<nBins1)
-            DP += ((1-f)*dGamma[iBin]+f*dGamma[iBin+1])/Po;
+
+      if (CSRConstant) {
+        for (i_part=0; i_part<n_part; i_part++) {
+          long nBins1;
+          nBins1 = nBins-1;
+          coord = part[i_part];
+          if (!particleLost[i_part]) {
+            double f;
+            /* apply CSR kick */
+            iBin = (f=(CT-ctLower)/dct);
+            f -= iBin;
+            if (iBin>=0 && iBin<nBins1)
+              DP += ((1-f)*dGamma[iBin]+f*dGamma[iBin+1])/Po;
+          }
         }
       }
-
+      
       if (csbend->particleFileActive && kick%csbend->particleOutputInterval==0) {
         long ip;
         /* dump particle data at this location */
