@@ -60,7 +60,7 @@ MADTOOBJS = sdds_strength_output.o convert_to_parmela.o convert_to_patpet.o conv
 IBSSRC = ibsEmittance.c zibs.c
 IBSOBJ = ibsEmittance.o zibs.o
 
-PROD = elegant sddsemitmeas madto sddssasefel sddsTouschekInteg ibsEmittance
+PROD = elegant sddsemitmeas madto sddssasefel sddsTouschekInteg ibsEmittance recurseSetup
 
 include $(EPICS)/config/RULES.Unix
 
@@ -158,6 +158,9 @@ sddsemitmeas: sddsemitmeas.o
 
 sddssasefel: sddssasefel.o 
 	$(LINK.c) -o $@ sddssasefel.o $(LDLIBS)
+
+recurseSetup: recurseSetup.o 
+	$(LINK.c) -o $@ recurseSetup.o $(LDLIBS)
 
 sddsTouschekInteg: sddsTouschekInteg.o 
 	$(LINK.c) -o $@ sddsTouschekInteg.o $(LDLIBS)
