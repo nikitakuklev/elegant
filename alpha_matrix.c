@@ -265,6 +265,35 @@ long alpha_magnet_tracking(
     if (alpha->part==1) 
         track_particles(particle, M, particle, n_part);
 
+    if (alpha->xPuck>0) {
+      /* do filtering of particles with a "puck" scraper of length widthPuck 
+       * ending at position xPuck */
+      if ((xl = alpha->xPuck-alpha->widthPuck)<0)
+        xl = 0;
+      if ((xu = alpha->xPuck)<0)
+        xu = 0;
+      if (xu>xl) {
+        xmax = ALPHA_CONST*sqrt(P_central/alpha->gradient);
+        xl = xmax-xl;
+        xu = xmax-xu;
+        SWAP_DOUBLE(xl, xu);
+        itop = n_part - 1;
+        for (ip=0; ip<n_part; ip++) {
+          coord = particle[ip];
+          if (coord[0]>=xl && coord[0]<=xu) {
+            if (accepted)
+              SWAP_PTR(accepted[ip], accepted[itop]);
+            /* record position and momentum of lost particle */
+            SWAP_PTR(particle[ip], particle[itop]);
+            particle[itop][4] = z;
+            particle[itop][5] = P_central*(1+particle[itop][5]);
+            itop--;
+            ip--;
+            n_part--;
+          }
+        }
+      }
+    }
     if (alpha->xs1 || alpha->xs2 || alpha->dp1!=-1 || alpha->dp2!=1) {
         /* do filtering of particles with slits from the high and low momentum sides */
         do_xu = do_xl = 1;
