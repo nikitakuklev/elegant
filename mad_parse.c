@@ -731,131 +731,132 @@ void parse_element(
     char *type_name
     )
 {
-    long i, difference;
-    char *ptr, *ptr1, *rpn_token;
+  long i, difference;
+  char *ptr, *ptr1, *rpn_token;
 
-    log_entry("parse_element");
+  log_entry("parse_element");
 
-    if (!(entity_description[eptr->type].flags&OFFSETS_CHECKED)) {
-        if (parameter[0].offset<0) {
-            fprintf(stdout, "error: bad initial parameter offset for element type %s\n", type_name);
-            fflush(stdout);
-            exit(1);
-            }
-        for (i=1; i<n_params; i++) {
-            if ((difference=parameter[i].offset-parameter[i-1].offset)<0) {
-                fprintf(stdout, "error: bad parameter offset for element type %s, parameter %ld (%s)\n",
-                        type_name, i, parameter[i].name?parameter[i].name:"NULL");
-                fflush(stdout);
-                exit(1);
-                }
-            else if (difference>8) {
-                fprintf(stdout, "warning: suspicious parameter offset for parameter %s of element type %s\n", 
-                        parameter[i].name, type_name);
-                fflush(stdout);
-                }
-            }
-        entity_description[eptr->type].flags |= OFFSETS_CHECKED;
-        }
-
-    for (i=0; i<n_params; i++) 
-        switch (parameter[i].type) {
-            case IS_DOUBLE:
-                *(double*)(p_elem+parameter[i].offset) = parameter[i].number;
-                break;
-            case IS_LONG:
-                *(long*)(p_elem+parameter[i].offset) = parameter[i].integer;
-                break;
-            case IS_STRING:
-                if (parameter[i].string==NULL)
-                    *(char**)(p_elem+parameter[i].offset) = NULL;
-                else
-                    cp_str((char**)(p_elem+parameter[i].offset), 
-                                    parameter[i].string);
-                break;
-            }
-                
-    while ((ptr=get_token(string))) {
-#ifdef DEBUG
-        fprintf(stdout, "Parsing %s\n", ptr);
-#endif
-        ptr1 = get_param_name(ptr);
-        for (i=0; i<n_params; i++) 
-            if (strcmp(parameter[i].name, ptr1)==0)
-                break;
-        if (i==n_params) {
-            fprintf(stdout, "error: unknown parameter %s used for %s %s (%s)\n",
-                    ptr1, eptr->name, type_name, "parse_element");
-            fflush(stdout);
-            fputs("valid parameters are:", stdout);
-            for (i=0; i<n_params; i++) {
-                switch (parameter[i].type) {
-                    case IS_DOUBLE:
-                        fprintf(stdout, "%s (%.16f %s)\n",
-                            parameter[i].name, parameter[i].number,
-                            parameter[i].unit);
-                        fflush(stdout);
-                        break;
-                    case IS_LONG:
-                        fprintf(stdout, "%s (%ld %s)\n",
-                            parameter[i].name, parameter[i].integer,
-                            parameter[i].unit);
-                        fflush(stdout);
-                        break;
-                    case IS_STRING:
-                        fprintf(stdout, "%s (\"%s\")\n",
-                            parameter[i].name, 
-                            parameter[i].string==NULL?"{null}":
-                                    parameter[i].string);
-                        fflush(stdout);
-                        break;
-                    }
-                }
-            exit(1);
-            }
-        switch (parameter[i].type) {
-            case IS_DOUBLE:
-                if (!isdigit(*ptr) && *ptr!='.' && *ptr!='-' && *ptr!='+') {
-#if defined(DEBUG)
-                    fprintf(stdout, "non-numeric string for double value: %s\n", ptr);
-                    fflush(stdout);
-#endif
-                    rpn_token = get_token(ptr);
-                    SDDS_UnescapeQuotes(rpn_token, '"');
-                    *((double*)(p_elem+parameter[i].offset)) = rpn(rpn_token);
-                    if (rpn_check_error()) exit(1);
-                    fprintf(stdout, "computed value for %s.%s is %.15e\n", eptr->name, parameter[i].name, 
-                           *((double*)(p_elem+parameter[i].offset)));
-                    fflush(stdout);
-                    }
-                else
-                    get_double((double*)(p_elem+parameter[i].offset), ptr);
-                break;
-            case IS_LONG:
-                if (!isdigit(*ptr) && *ptr!='-' && *ptr!='+') {
-                    rpn_token = get_token(ptr);
-                    SDDS_UnescapeQuotes(rpn_token, '"');
-                    *((long*)(p_elem+parameter[i].offset)) = rpn(rpn_token);
-                    if (rpn_check_error()) exit(1);
-                    fprintf(stdout, "computed value for %s.%s is %ld\n", 
-                            eptr->name, parameter[i].name, 
-                            *((long*)(p_elem+parameter[i].offset)));
-                    fflush(stdout);
-                } 
-                else 
-                  get_long((long*)(p_elem+parameter[i].offset), ptr);
-                break;
-            case IS_STRING:
-                *(char**)(p_elem+parameter[i].offset) = get_token(ptr);
-                break;
-            default:
-                bomb("unknown data type in parse_element!", NULL);
-                break;
-            }
-        free(ptr);
-        }
-    log_exit("parse_element");
+  if (!(entity_description[eptr->type].flags&OFFSETS_CHECKED)) {
+    if (parameter[0].offset<0) {
+      fprintf(stdout, "error: bad initial parameter offset for element type %s\n", type_name);
+      fflush(stdout);
+      exit(1);
     }
+    for (i=1; i<n_params; i++) {
+      if ((difference=parameter[i].offset-parameter[i-1].offset)<0) {
+        fprintf(stdout, "error: bad parameter offset for element type %s, parameter %ld (%s)\n",
+                type_name, i, parameter[i].name?parameter[i].name:"NULL");
+        fflush(stdout);
+        exit(1);
+      }
+      else if (difference>8) {
+        fprintf(stdout, "warning: suspicious parameter offset for parameter %s of element type %s\n", 
+                parameter[i].name, type_name);
+        fflush(stdout);
+      }
+    }
+    entity_description[eptr->type].flags |= OFFSETS_CHECKED;
+  }
+
+  for (i=0; i<n_params; i++)  {
+    switch (parameter[i].type) {
+    case IS_DOUBLE:
+      *(double*)(p_elem+parameter[i].offset) = parameter[i].number;
+      break;
+    case IS_LONG:
+      *(long*)(p_elem+parameter[i].offset) = parameter[i].integer;
+      break;
+    case IS_STRING:
+      if (parameter[i].string==NULL)
+        *(char**)(p_elem+parameter[i].offset) = NULL;
+      else
+        cp_str((char**)(p_elem+parameter[i].offset), 
+               parameter[i].string);
+      break;
+    }
+  }
+  
+  while ((ptr=get_token(string))) {
+#ifdef DEBUG
+    fprintf(stdout, "Parsing %s\n", ptr);
+#endif
+    ptr1 = get_param_name(ptr);
+    for (i=0; i<n_params; i++) 
+      if (strcmp(parameter[i].name, ptr1)==0)
+        break;
+    if (i==n_params) {
+      fprintf(stdout, "error: unknown parameter %s used for %s %s (%s)\n",
+              ptr1, eptr->name, type_name, "parse_element");
+      fflush(stdout);
+      fputs("valid parameters are:", stdout);
+      for (i=0; i<n_params; i++) {
+        switch (parameter[i].type) {
+        case IS_DOUBLE:
+          fprintf(stdout, "%s (%.16f %s)\n",
+                  parameter[i].name, parameter[i].number,
+                  parameter[i].unit);
+          fflush(stdout);
+          break;
+        case IS_LONG:
+          fprintf(stdout, "%s (%ld %s)\n",
+                  parameter[i].name, parameter[i].integer,
+                  parameter[i].unit);
+          fflush(stdout);
+          break;
+        case IS_STRING:
+          fprintf(stdout, "%s (\"%s\")\n",
+                  parameter[i].name, 
+                  parameter[i].string==NULL?"{null}":
+                  parameter[i].string);
+          fflush(stdout);
+          break;
+        }
+      }
+      exit(1);
+    }
+    switch (parameter[i].type) {
+    case IS_DOUBLE:
+      if (!isdigit(*ptr) && *ptr!='.' && *ptr!='-' && *ptr!='+') {
+#if defined(DEBUG)
+        fprintf(stdout, "non-numeric string for double value: %s\n", ptr);
+        fflush(stdout);
+#endif
+        rpn_token = get_token(ptr);
+        SDDS_UnescapeQuotes(rpn_token, '"');
+        *((double*)(p_elem+parameter[i].offset)) = rpn(rpn_token);
+        if (rpn_check_error()) exit(1);
+        fprintf(stdout, "computed value for %s.%s is %.15e\n", eptr->name, parameter[i].name, 
+                *((double*)(p_elem+parameter[i].offset)));
+        fflush(stdout);
+      }
+      else
+        get_double((double*)(p_elem+parameter[i].offset), ptr);
+      break;
+    case IS_LONG:
+      if (!isdigit(*ptr) && *ptr!='-' && *ptr!='+') {
+        rpn_token = get_token(ptr);
+        SDDS_UnescapeQuotes(rpn_token, '"');
+        *((long*)(p_elem+parameter[i].offset)) = rpn(rpn_token);
+        if (rpn_check_error()) exit(1);
+        fprintf(stdout, "computed value for %s.%s is %ld\n", 
+                eptr->name, parameter[i].name, 
+                *((long*)(p_elem+parameter[i].offset)));
+        fflush(stdout);
+      } 
+      else 
+        get_long((long*)(p_elem+parameter[i].offset), ptr);
+      break;
+    case IS_STRING:
+      *(char**)(p_elem+parameter[i].offset) = get_token(ptr);
+      break;
+    default:
+      bomb("unknown data type in parse_element!", NULL);
+      break;
+    }
+    free(ptr);
+  }
+  log_exit("parse_element");
+}
 
 void parse_pepper_pot(
     PEPPOT *peppot,
