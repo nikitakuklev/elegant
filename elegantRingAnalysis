@@ -917,6 +917,7 @@ proc FillPhaseSpaceFrame {widget args} {
     set phaseSpaceTracking(initialOffset) 1e-6
     set phaseSpaceTracking(finalOffset)   1e-3
     set phaseSpaceTracking(otherCoord) 0.0
+    set phaseSpaceTracking(delta) 0.0
     set phaseSpaceTracking(sweepPoints) 11
     set phaseSpaceTracking(turns) 1024
     set phaseSpaceTracking(userSuffix) ""
@@ -943,6 +944,11 @@ proc FillPhaseSpaceFrame {widget args} {
       -width 20 -textVariable phaseSpaceTracking(otherCoord) \
       -contextHelp \
       "Enter the fixed offset value for the unscanned plane."
+    APSLabeledEntry .le3a -parent $widget \
+      -label "Fixed fractional momentum offset: " \
+      -width 20 -textVariable phaseSpaceTracking(delta) \
+      -contextHelp \
+      "Enter the fixed fractional momentum offset."
     APSLabeledEntry .le4 -parent $widget \
       -label "Turns to track: " -width 20 -textVariable phaseSpaceTracking(turns) \
       -contextHelp \
