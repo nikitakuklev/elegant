@@ -35,6 +35,7 @@
 &alter_elements name=<kickOffsetElement>, item=ON_PASS, value=0 &end
 &alter_elements name=<kickOffsetElement>, item=D<otherPlane>, value=<otherCoord> &end
 &alter_elements name=<kickOffsetElement>, item=D<offsetPlane>, value=<offset> &end
+&alter_elements name=<kickOffsetElement>, item=DP, value=<delta> &end
 
 &run_control
         n_passes = <turns>,
