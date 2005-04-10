@@ -18,7 +18,7 @@ APSApplication . -name elegantRingAnalysis \
 .menu.file.menu insert 1 command -label "Read..." -command ReadConfiguration
 
 set status "Working..."
-APSScrolledStatus .status -parent .userFrame -textVariable status -height 10 -width 95 
+APSScrolledStatus .status -parent .userFrame -textVariable status -height 10 -width 135 
 
 set sourceDir $OAGGlobal(OAGAppConfigDataDirectory)/elegant/ringAnalysisTemplates
 
