@@ -1854,6 +1854,13 @@ proc FineDynamicAperturePP {args} {
     set rootname ""
     APSStrictParseArguments {rootname}
 
+    set valueList [QueryValuesDialog -name "Fine DA Plot" \
+	-nameList [list "Point size (X11)" "Point size (PNG)" "Filename on plot?" "Autotitle?"] \
+	-defaultList [list 4 1 1 1] \
+	-elementList [list pointSizeX11 pointSizePng filenameTitle autoTitle] \
+	-typeList [list integer integer yesNo yesNo]]
+    array set parameter $valueList
+
     APSAddToTempFileList $rootname.clo.tmp
     exec sddsprocess $rootname.clo $rootname.clo.tmp -process=x,first,xCO
     exec sddsxref $rootname.los $rootname.bun -pipe=out -nowarning \
@@ -1861,14 +1868,23 @@ proc FineDynamicAperturePP {args} {
 	| sddsxref -pipe -leave=* -transfer=param,xCO $rootname.clo.tmp -nowarning \
 	| sddsprocess -pipe "-redefine=column,x0,x0 xCO +,units=m" -nowarning \
 	| sddscombine -pipe=in -merge $rootname.da -overwrite
-    exec sddsplot -column=x0,y0 $rootname.da -graph=dot,vary,subtype=4 \
-	-order=spect -split=column=Pass,width=1 &
+
+    set topline ""
+    if $parameter(filenameTitle) {
+	set topline $rootname.da
+    }
+    set titleOption ""
+    if !$parameter(autoTitle) {
+	set titleOption "-title="
+    }
+    eval exec sddsplot -column=x0,y0 $rootname.da -graph=dot,vary,subtype=$parameter(pointSizeX11) \
+	-order=spect -split=column=Pass,width=1 $titleOption -topline=$topline &
 
     global makePngFiles
     if $makePngFiles {
-	exec sddsplot -device=png,onwhite -thickness=2 -output=$rootname.png \
-	    -column=x0,y0 $rootname.da -graph=dot,vary,subtype=1 \
-	    -order=spect -split=column=Pass,width=1 &
+	eval exec sddsplot -device=png,onwhite -thickness=2 -output=$rootname.png \
+	    -column=x0,y0 $rootname.da -graph=dot,vary,subtype=$parameter(pointSizePng) \
+	    -order=spect -split=column=Pass,width=1 $titleOption -topline=$topline &
 	setStatus "PNG file: $rootname.png"
     }
 }
@@ -1982,10 +1998,17 @@ proc QueryValuesDialog {args} {
     set index 0
     foreach name $nameList default $defaultList type $typeList {
 	set queryValuesDialogArray($name) $default
-	APSLabeledEntry .le$index -parent $w.userFrame  \
-	    -label "$name: " \
-	    -textVariable queryValuesDialogArray($name) \
-	    -type $type
+	if [string compare $type yesNo]==0 {
+	    APSRadioButtonFrame .rb$index -parent $w.userFrame \
+		-label "$name: " -orientation horizontal \
+		-variable queryValuesDialogArray($name) \
+		-buttonList "Yes No" -valueList "1 0"
+	} else {
+	    APSLabeledEntry .le$index -parent $w.userFrame  \
+		-label "$name: " \
+		-textVariable queryValuesDialogArray($name) \
+		-type $type
+	}
 	incr index
     }
     tkwait variable queryValuesDialogDone
@@ -2007,42 +2030,46 @@ proc FrequencyMapPP {args} {
 
     set valueList [QueryValuesDialog -name "FMA Plot" \
 		       -nameList [list "Resonance diagram order" "Minimum nux" \
-				      "Maximum nux" "Minimum nuy" "Maximum nuy"] \
-		       -defaultList [list 4 -0.05 1.05 -0.05 1.05] \
-		       -elementList [list order nux0 nux1 nuy0 nuy1] \
-		       -typeList [list integer real real real real]]
+				      "Maximum nux" "Minimum nuy" "Maximum nuy" "Point size (X11)" "Point size (PNG)" "Filename on plot?"] \
+		       -defaultList [list 4 -0.05 1.05 -0.05 1.05 4 1 1] \
+		       -elementList [list order nux0 nux1 nuy0 nuy1 pointSizeX11 pointSizePng filenameTitle] \
+		       -typeList [list integer real real real real integer integer yesNo]]
     if ![llength $valueList] return
     array set parameter $valueList
     catch {exec sddsresdiag $rootname.resdiag -order=$parameter(order)}
 
-    exec sddsplot -filename \
+    set title1 "Color indicates initial x amplitude"
+    set title2 "Color indicates initial y amplitude"
+    set topline ""
+    if $parameter(filenameTitle) {
+	set topline "$rootname.fma"
+    }
+    exec sddsplot "-topline=$topline" \
 	-limit=xmin=$parameter(nux0),xmax=$parameter(nux1),ymin=$parameter(nuy0),ymax=$parameter(nuy1),auto \
 	-column=nux,nuy $rootname.resdiag \
-	-column=nux,nuy $rootname.fma -graph=dot,subtype=2,vary -order=spect \
-	"-title=Color indicates initial x amplitude" \
+	-column=nux,nuy $rootname.fma -graph=dot,subtype=$parameter(pointSizeX11),vary -order=spect \
+	"-title=$title1" \
 	-split=column=x,width=[expr $frequencyMap(xMaximum)/101.0] -end \
 	-column=nux,nuy $rootname.resdiag \
-	-column=nux,nuy $rootname.fma -graph=dot,subtype=2,vary -order=spect \
-	"-title=Color indicates initial y amplitude" \
+	-column=nux,nuy $rootname.fma -graph=dot,subtype=$parameter(pointSizeX11),vary -order=spect \
+	"-title=$title2" \
 	-split=column=y,width=[expr $frequencyMap(yMaximum)/101.0] &
 
 
     global makePngFiles
     if $makePngFiles {
-	exec sddsplot -device=png,onwhite -thickness=2 -output=$rootname-fma1.png \
-	    -filename \
+	exec sddsplot -device=png,onwhite -thickness=2 -output=$rootname-fma1.png "-topline=$topline" \
 	    -limit=xmin=$parameter(nux0),xmax=$parameter(nux1),ymin=$parameter(nuy0),ymax=$parameter(nuy1),auto \
 	    -column=nux,nuy $rootname.resdiag \
-	    -column=nux,nuy $rootname.fma -graph=dot,vary -order=spect \
-	    "-title=Color indicates initial x amplitude" \
+	    -column=nux,nuy $rootname.fma -graph=dot,subtype=$parameter(pointSizePng),vary -order=spect \
+	    "-title=$title1" \
 	    -split=column=x,width=[expr $frequencyMap(xMaximum)/100.0] -end 
 	setStatus "PNG file: $rootname-fma1.png"
-	exec sddsplot -device=png,onwhite -thickness=2 -output=$rootname-fma2.png \
-	    -filename \
+	exec sddsplot -device=png,onwhite -thickness=2 -output=$rootname-fma2.png "-topline=$topline" \
 	    -limit=xmin=$parameter(nux0),xmax=$parameter(nux1),ymin=$parameter(nuy0),ymax=$parameter(nuy1),auto \
 	    -column=nux,nuy $rootname.resdiag \
-	    -column=nux,nuy $rootname.fma -graph=dot,vary -order=spect \
-	    "-title=Color indicates initial y amplitude" \
+	    -column=nux,nuy $rootname.fma -graph=dot,subtype=$parameter(pointSizePng),vary -order=spect \
+	    "-title=$title2" \
 	    -split=column=y,width=[expr $frequencyMap(yMaximum)/100.0]
 	setStatus "PNG file: $rootname-fma2.png"
     }
@@ -2052,29 +2079,29 @@ proc FrequencyMapPP {args} {
     set ymin [expr $frequencyMap(yMinimum)<0 ? 1.05*$frequencyMap(yMinimum) : 0]
     set ymax [expr 1.05*$frequencyMap(yMaximum)]
 
-    exec sddsplot -filename \
+    exec sddsplot "-topline=$topline" \
 	-limit=xmin=$xmin,xmax=$xmax,ymin=$ymin,ymax=$ymax \
-	-column=x,y $rootname.fma -graph=dot,subtype=2,vary -order=spect \
-	"-title=Color indicates x tune" \
+	-column=x,y $rootname.fma -graph=dot,subtype=$parameter(pointSizeX11),vary -order=spect \
+	"-title=$title1" \
 	-split=column=nux,width=0.0101,start=0 -end \
-	-column=x,y $rootname.fma -graph=dot,subtype=2,vary -order=spect \
-	"-title=Color indicates y tune" \
+	-column=x,y $rootname.fma -graph=dot,subtype=$parameter(pointSizeX11),vary -order=spect \
+	"-title=$title2" \
 	-split=column=nuy,width=0.0101,start=0 -end &
 
     global makePngFiles
     if $makePngFiles {
 	exec sddsplot -device=png,onwhite -thickness=2 -output=$rootname-fma3.png \
-	    -filename \
+	    "-topline=$topline" \
 	    -limit=xmin=$xmin,xmax=$xmax,ymin=$ymin,ymax=$ymax \
-	    -column=x,y $rootname.fma -graph=dot,vary -order=spect \
-	    "-title=Color indicates x tune" \
+	    -column=x,y $rootname.fma -graph=dot,subtype=$parameter(pointSizePng),vary -order=spect \
+	    "-title=$title1" \
 	    -split=column=nux,width=0.0101,start=0 
 	setStatus "PNG file: $rootname-fma3.png"
 	exec sddsplot -device=png,onwhite -thickness=2 -output=$rootname-fma4.png \
-	    -filename \
+	    "-topline=$topline" \
 	    -limit=xmin=$xmin,xmax=$xmax,ymin=$ymin,ymax=$ymax \
-	    -column=x,y $rootname.fma -graph=dot,vary -order=spect \
-	    "-title=Color indicates y tune" \
+	    -column=x,y $rootname.fma -graph=dot,subtype=$parameter(pointSizePng),vary -order=spect \
+	    "-title=$title2" \
 	    -split=column=nuy,width=0.0101,start=0 -end &
 	setStatus "PNG file: $rootname-fma4.png"
     }
