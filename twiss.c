@@ -2065,8 +2065,9 @@ void setupTuneShiftWithAmplitude(NAMELIST_TEXT *nltext, RUN *run)
     if (tune_shift_with_amplitude_struct.x0<=0 ||
         tune_shift_with_amplitude_struct.y0<=0)
       bomb("x0 or y0 is zero or negative (tune_shift_with_amplitude)", NULL);
-    if (tune_shift_with_amplitude_struct.x1<tune_shift_with_amplitude_struct.x0*10 ||
-        tune_shift_with_amplitude_struct.y1<tune_shift_with_amplitude_struct.y0*10)
+    if (!tune_shift_with_amplitude_struct.spread_only &&
+	(tune_shift_with_amplitude_struct.x1<tune_shift_with_amplitude_struct.x0*10 ||
+	 tune_shift_with_amplitude_struct.y1<tune_shift_with_amplitude_struct.y0*10))
       bomb("x1 or y1 is too small (tune_shift_with_amplitude)", NULL);
   }
   doTuneShiftWithAmplitude = 1;
