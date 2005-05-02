@@ -50,9 +50,9 @@ char *cfgets1(char *s, long n, FILE *fpin, long strip, long start)
   while (fgets(s, n, fpin)) {
     if (start && s[0]=='%')
       strip = 0;
-    start = 0;
     if (s[0]=='!')
       continue;
+    start = 0;
     chop_nl(s);
     if (strip)
       delete_spaces(s);
