@@ -1007,32 +1007,71 @@ proc MakePhaseSpacePlot {args} {
 
     set arrayList \
 	[QueryValuesDialog \
-	     -nameList "${plane}Min ${plane}Max ${plane}pMin ${plane}pMax" \
-	     -elementList "xmin xmax ymin ymax" \
-	     -defaultList "-0.1 0.1 -0.1 0.1" -typeList "real real real real" \
+	     -nameList "${plane}Min ${plane}Max ${plane}pMin ${plane}pMax TuneColor" \
+	     -elementList "xmin xmax ymin ymax tuneColor" \
+	     -defaultList "-0.1 0.1 -0.1 0.1 1" -typeList "real real real real yesNo" \
 	     -name "Phase Space Plot Limits"]
 
     if ![llength $arrayList] return
     array set limit $arrayList
     set limitOptList ""
     foreach item [array names limit] {
+	if [string match ?m* $item]==0 continue
 	lappend limitOptList $item=[set limit($item)]
     }
-    
-    exec sddsplot \
-	-col=C${plane},C${plane}p -graph=dot ${rootname}.w1 \
-	"-topline=${rootname}" \
-	-limit=[join $limitOptList ,] &
+    if $limit(tuneColor) {
+	set input ${rootname}.w1
+	exec sddsnaff $input -pipe=out -column=Pass,C${plane},C${plane}p -terminate=freq=1 \
+	    | sddscombine -pipe -merge \
+	    | sddsprocess -pipe -filter=column,C${plane}Frequency,0,0.5 \
+	    -filter=column,C${plane}pFrequency,0,0.5 \
+	    -define=column,Phase0,C${plane}Phase \
+	    -define=column,Phase1,C${plane}pPhase \
+	    | sddsprocess -pipe \
+	    "-redefine=column,Phase0,Phase0 Phase1 - abs pi < ? Phase0 : Phase0 Phase1 < ? Phase0 pi 2 * + : Phase0 $ $" \
+	    "-redefine=column,Phase1,Phase0 Phase1 - abs pi < ? Phase1 : Phase0 Phase1 < ? Phase1 : Phase1 pi 2 * + $ $" \
+	    "-define=column,TuneP,Phase0 Phase1 < ? C${plane}Frequency : 1 C${plane}Frequency - $ " \
+	    | sddsexpand -pipe=in $input.naff.tmp
 
-    global makePngFiles
-    if $makePngFiles {
-	exec sddsplot -thickness=2 -device=png,onwhite \
-	    -output=${rootname}-${plane}-${plane}p.png \
+	exec sddsxref $input $input.naff.tmp -pipe=out -leave=* -transfer=parameter,TuneP -nowarning \
+	    | sddsprocess -pipe=in $input.withNaff -define=column,Tune,TuneP
+	file delete $input.naff.tmp
+
+	exec sddsplot $input.withNaff -split=column=Tune,width=0.01 \
+	    -graph=dot,vary -order=spect \
+	    -col=C${plane},C${plane}p \
+	    "-topline=${rootname}" \
+	    -limit=[join $limitOptList ,] &
+	
+	global makePngFiles
+	if $makePngFiles {
+	    exec sddsplot -thickness=2 -device=png,onwhite \
+		-output=${rootname}-${plane}-${plane}p.png \
+		$input.withNaff -split=column=Tune,width=0.01 \
+		-graph=dot,vary -order=spect \
+		-col=C${plane},C${plane}p \
+		"-topline=${rootname}" \
+		-limit=[join $limitOptList ,] &
+	    
+	    setStatus "PNG file: ${rootname}-${plane}-${plane}p.png"
+	}
+
+    } else {
+	exec sddsplot \
 	    -col=C${plane},C${plane}p -graph=dot ${rootname}.w1 \
 	    "-topline=${rootname}" \
 	    -limit=[join $limitOptList ,] &
 	
-	setStatus "PNG file: ${rootname}-${plane}-${plane}p.png"
+	global makePngFiles
+	if $makePngFiles {
+	    exec sddsplot -thickness=2 -device=png,onwhite \
+		-output=${rootname}-${plane}-${plane}p.png \
+		-col=C${plane},C${plane}p -graph=dot ${rootname}.w1 \
+		"-topline=${rootname}" \
+		-limit=[join $limitOptList ,] &
+	    
+	    setStatus "PNG file: ${rootname}-${plane}-${plane}p.png"
+	}
     }
 }
 
