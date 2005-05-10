@@ -153,7 +153,8 @@ proc FillMainFrame {widget args} {
           "Enter the name of the parameter file that contains element parameters.  It will be loaded over the lattice."
     }
     APSRadioButtonFrame .rb4 -parent $widget -label "Force occurence data on parameter files: " \
-	-variable forceOccurence -valueList "1 0" -buttonList "Yes No" -orientation horizontal
+	-variable forceOccurence -valueList "1 0" -buttonList "Yes No" -orientation horizontal \
+	-contextHelp "If Yes, then when elements have the same name in the lattice file, elegant is forced to honor the occurence number of elements when loading parameters.  Not only is this faster, but it is necessary if there is any variation in properties among like-named elements.  If the parameter file only covers one sector of the ring, then No should be selected so that the element properties are loaded into all occurences of the same-named element."
     APSLabeledEntry .le5 -parent $widget -label "Output directory: " \
       -width 60 -textVariable mainDirectory \
       -fileSelectButton 1 -buttonsOnLeft 1 -fileSelectDirectory 1 \
