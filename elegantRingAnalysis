@@ -1034,10 +1034,11 @@ proc MakePhaseSpacePlot {args} {
 	    | sddsexpand -pipe=in $input.naff.tmp
 
 	exec sddsxref $input $input.naff.tmp -pipe=out -leave=* -transfer=parameter,TuneP -nowarning \
-	    | sddsprocess -pipe=in $input.withNaff -define=column,Tune,TuneP
+	    | sddssort -pipe -parameter=TuneP \
+	    | sddsprocess -pipe=in $input.${plane}withNaff -define=column,Tune,TuneP
 	file delete $input.naff.tmp
 
-	exec sddsplot $input.withNaff -split=column=Tune,width=0.01 \
+	exec sddsplot $input.${plane}withNaff -split=column=Tune,width=0.01 \
 	    -graph=dot,vary -order=spect \
 	    -col=C${plane},C${plane}p \
 	    "-topline=${rootname}" \
@@ -1047,7 +1048,7 @@ proc MakePhaseSpacePlot {args} {
 	if $makePngFiles {
 	    exec sddsplot -thickness=2 -device=png,onwhite \
 		-output=${rootname}-${plane}-${plane}p.png \
-		$input.withNaff -split=column=Tune,width=0.01 \
+		$input.${plane}withNaff -split=column=Tune,width=0.01 \
 		-graph=dot,vary -order=spect \
 		-col=C${plane},C${plane}p \
 		"-topline=${rootname}" \
@@ -1240,41 +1241,37 @@ proc OffMomentumTuneTrackingPP {args} {
     APSStrictParseArguments {rootname}
     source $rootname.runCfg
 
-    set nux 0
-    set nuy 0
-    if {[catch {exec sdds2stream -param=nux $mainDirectory/${mainPrefix}Basic.twi} nux] || \
-          [catch {exec sdds2stream -param=nuy $mainDirectory/${mainPrefix}Basic.twi} nuy]} {
-        return -code error "$mainDirectory/${mainPrefix}Basic $nux $nuy"
-    }
-    set nuxInteger [expr int($nux)]
-    set nuyInteger [expr int($nuy)]
-    catch {exec sddsresdiag ${rootname}.resdiag \
-	-superperiodicity=$offMomentumTuneTracking(superperiodicity) \
-	-order=3 -integerTunes=$nuxInteger,$nuyInteger} 
-    set dnuxSign 1
-    set dnuySign 1
-    if [expr ($nux-int($nux))>0.5] {
-        set dnuxSign -1
-        incr nuxInteger
-    }
-    if [expr ($nux-int($nux))>0.5] {
-        set dnuySign -1
-        incr nuyInteger
-    }
     exec sddsexpand ${rootname}.var ${rootname}.vare
-    exec sddsnaff ${rootname}.w1 -pipe=out \
-	-columns=Pass,Cx,Cy -terminate=frequencies=1 \
+
+    exec sddsnaff $rootname.w1 -pipe=out \
+	-column=Pass,C\[xy\],C\[xy\]p -terminate=freq=1 \
 	-iterate=cycleLimit=200,accuracyLimit=1e-12 \
+	| sddscombine -pipe -merge \
 	| sddsprocess -pipe \
-	"-define=column,nuxTracking,CxFrequency $dnuxSign * $nuxInteger +" \
-	"-define=column,nuyTracking,CyFrequency $dnuySign * $nuyInteger +" \
+	-filter=column,CxFrequency,0,0.5 -filter=column,CxpFrequency,0,0.5 \
+	-filter=column,CyFrequency,0,0.5 -filter=column,CypFrequency,0,0.5 \
+	-define=column,xPhase0,CxPhase \
+	-define=column,xPhase1,CxpPhase \
+	-define=column,yPhase0,CyPhase \
+	-define=column,yPhase1,CypPhase \
+	| sddsprocess -pipe \
+	"-redefine=column,xPhase0,xPhase0 xPhase1 - abs pi < ? xPhase0 : xPhase0 xPhase1 < ? xPhase0 pi 2 * + : xPhase0 $ $" \
+	"-redefine=column,xPhase1,xPhase0 xPhase1 - abs pi < ? xPhase1 : xPhase0 xPhase1 < ? xPhase1 : xPhase1 pi 2 * + $ $" \
+	"-define=column,nuxTracking,xPhase0 xPhase1 < ? CxFrequency : 1 CxFrequency - $ " \
+	"-redefine=column,yPhase0,yPhase0 yPhase1 - abs pi < ? yPhase0 : yPhase0 yPhase1 < ? yPhase0 pi 2 * + : yPhase0 $ $" \
+	"-redefine=column,yPhase1,yPhase0 yPhase1 - abs pi < ? yPhase1 : yPhase0 yPhase1 < ? yPhase1 : yPhase1 pi 2 * + $ $" \
+	"-define=column,nuyTracking,yPhase0 yPhase1 < ? CyFrequency : 1 CyFrequency - $ " \
 	| sddsexpand -pipe \
 	| sddsxref -pipe ${rootname}.vare  \
 	-leave=* -transfer=parameter,* \
 	| sddscollapse -pipe=in ${rootname}.w1.naff
     
+    catch {exec sddsresdiag ${rootname}.resdiag \
+	       -superperiodicity=$offMomentumTuneTracking(superperiodicity) \
+	       -order=3 }
+    
     exec sddsplot \
-	-aspect=1 -topline=$rootname \
+	-aspect=1 -topline=$rootname -xlabel=\$gn\$r\$bx\$n -ylabel=\$gn\$r\$by\$n \
 	-column=nuxTracking,nuyTracking ${rootname}.w1.naff \
 	-split=column=delta,width=1e-4 -graph=symbol,vary=subtype \
 	-orderColors=spectral \
@@ -1283,7 +1280,7 @@ proc OffMomentumTuneTrackingPP {args} {
     global makePngFiles
     if $makePngFiles {
 	exec sddsplot -thickness=2 -device=png,onwhite -output=${rootname}-tunes.png \
-	    -aspect=1 -topline=$rootname \
+	    -aspect=1 -topline=$rootname -xlabel=\$gn\$r\$bx\$n -ylabel=\$gn\$r\$by\$n \
 	    -column=nuxTracking,nuyTracking ${rootname}.w1.naff \
 	    -split=column=delta,width=1e-4 -graph=symbol,vary=subtype \
 	    -orderColors=spectral \
@@ -2118,6 +2115,9 @@ proc FrequencyMapPP {args} {
     set xmax [expr 1.05*$frequencyMap(xMaximum)]
     set ymin [expr $frequencyMap(yMinimum)<0 ? 1.05*$frequencyMap(yMinimum) : 0]
     set ymax [expr 1.05*$frequencyMap(yMaximum)]
+
+    set title1 "Color indicates x tune"
+    set title2 "Color indicates y tune"
 
     exec sddsplot "-topline=$topline" \
 	-limit=xmin=$xmin,xmax=$xmax,ymin=$ymin,ymax=$ymax \
