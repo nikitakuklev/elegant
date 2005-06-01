@@ -2337,7 +2337,7 @@ proc FrequencyMapDeltaPP {args} {
 	-split=column=nux,start=0,width=0.0101 -end \
 	-column=$frequencyMapDelta(plane),delta $tmpRoot.1 \
 	-graph=dot,subtype=$parameter(pointSizeX11),vary -order=spect \
-	"-title=$title1" \
+	"-title=$title2" \
 	-split=column=nuy,start=0,width=0.0101 -end &
 
     if $makePngFiles {
@@ -2353,7 +2353,7 @@ proc FrequencyMapDeltaPP {args} {
 	    "-topline=$topline" \
 	    -column=$frequencyMapDelta(plane),delta $tmpRoot.1 \
 	    -graph=dot,subtype=$parameter(pointSizePng),vary -order=spect \
-	    "-title=$title1" \
+	    "-title=$title2" \
 	    -split=column=nuy,start=0,width=0.0101 -end 
 	setStatus "PNG file: $rootname-fma4.png"
     }
