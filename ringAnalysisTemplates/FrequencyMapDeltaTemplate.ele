@@ -1,0 +1,71 @@
+&transmute_elements
+        name = *, type = WATCH, 
+        new_type = DRIF
+&end
+
+&transmute_elements
+        name = *, type = MAXAMP,
+        new_type = DRIF,
+	disable = <includeApertures>
+&end
+&transmute_elements
+        name = *, type = ?COL,
+        new_type = DRIF,
+	disable = <includeApertures>
+&end
+&transmute_elements
+        name = *, type = SCRAPER,
+        new_type = DRIF,
+	disable = <includeApertures>
+&end
+
+&run_setup
+	lattice = <kickLatticeFile>,
+	use_beamline = <kickBeamline>
+	p_central_mev = <momentum>,
+        rootname = <mainDirectory>/<mainPrefix>FrequencyMapDelta<suffix>,
+        semaphore_file = %s.done,
+	losses = %s.los,
+        tracking_updates = 0,
+	default_order = 1,
+	concat_order = 1
+&end
+
+&load_parameters
+        filename_list = " <parameterFileList>",
+	force_occurence_data = <forceOccurence>,
+        change_defined_values = 1,
+        allow_missing_elements = 1,
+        allow_missing_parameters = 1,
+        allow_missing_files = 1,
+&end
+
+&alter_elements name=*, type=*SBEN*, item=EDGE_ORDER, value=1, allow_missing_elements=1 &end
+
+&run_control
+        n_passes = <turns>,
+&end
+
+&alter_elements name=<kickOffsetElement>, item=ON_PASS, value=0 &end
+&alter_elements name=<kickOffsetElement>, item=DP, value=<delta> &end
+
+&closed_orbit
+	output = %s.clo,
+        iteration_fraction = 0.5,
+        closed_orbit_iterations = 500,
+&end
+
+&frequency_map
+        output = %s.fma,       
+        verbosity  = 1,
+        xmin = <xMinimum>
+        xmax = <xMaximum>
+        ymin = <yMinimum>
+        ymax = <yMaximum>
+        nx = <xPoints>,
+        ny = <yPoints>,
+&end
+
+
+
+    
