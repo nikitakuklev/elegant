@@ -126,12 +126,18 @@ void track_through_rf_deflector(
  * Michael Borland, 2004
  */
 
+void set_up_rftm110(RFTM110 *rf_param, double **initial, long n_particles, double pc_central);
+double linear_interpolation(double *y, double *t, long n, double t0, long i);
+
 void track_through_rftm110_deflector(
                                 double **final, 
                                 RFTM110 *rf_param,
                                 double **initial,
                                 long n_particles,
-                                double pc_central
+                                double pc_central,
+				double L_central,
+				double zEnd,
+				long pass
                                 )
 {
   double t_first;     /* time when first particle crosses cavity center */
@@ -141,30 +147,48 @@ void track_through_rftm110_deflector(
   double omega, phase, phase0, Ez, cBx, cBy;
   double cos_phi, sin_phi, voltTimes2;
   double krho2, krho4, krho6, cos_2phi;
-  long ip;
+  long ip, i_volt;
+  double gamma, t0;
 
-  if (!rf_param->initialized) {
-    rf_param->initialized = 1;
-    for (ip=rf_param->t_first_particle=0; ip<n_particles; ip++) {
-      pc = pc_central*(1+initial[ip][5]);
-      beta = pc/sqrt(1+sqr(pc));
-      rf_param->t_first_particle += initial[ip][4]/beta/c_mks;
-    }
-    if (n_particles)
-      rf_param->t_first_particle /= n_particles;
-    rf_param->initialized = 1;
-    if (rf_param->frequency==0) 
-      bomb("RFTM110 cannot have frequency=0", NULL);
+  if (rf_param->frequency==0) 
+    bomb("RFTM110 cannot have frequency=0", NULL);
+
+  if (rf_param->voltage==0)
+    return;
+
+  if (!rf_param->initialized) 
+    set_up_rftm110(rf_param, initial, n_particles, pc_central);
+
+  gamma = sqrt(sqr(pc_central)+1);
+  beta  = pc_central/gamma;
+  if (pass==0)
+    rf_param->Ts = zEnd/(beta*c_mks);
+  else
+    rf_param->Ts += L_central/(beta*c_mks);
+  t0 = rf_param->Ts;
+
+  if (rf_param->n_Vpts) {
+    if (rf_param->vperiodic && t0>rf_param->V_tFinal) 
+      t0 = fmod(t0-rf_param->V_tInitial, rf_param->V_tFinal-rf_param->V_tInitial)+rf_param->V_tInitial;
+
+    /* find position within voltage waveform array */
+    i_volt = find_nearby_array_entry(rf_param->t_Vf, rf_param->n_Vpts, t0);
+    voltTimes2 = linear_interpolation(rf_param->Vfactor, rf_param->t_Vf, rf_param->n_Vpts, t0, i_volt);
+    fprintf(stderr, "Voltage factor is %e for t0=%e, i_volt=%ld, pass=%ld\n", voltTimes2, t0, i_volt, pass);
+    if (voltTimes2==0)
+      return;
+  } else {
+    voltTimes2 = 1;
   }
 
   /* using 2*volt in expressions gives us theta=V/E */
-  if ((voltTimes2=(2*rf_param->voltage/(1e6*me_mev)))==0)
-    return;
+  voltTimes2 *= 2*rf_param->voltage/(1e6*me_mev);
 
   omega = 2*PI*rf_param->frequency;
   k = omega/c_mks;
   t_first = rf_param->t_first_particle;
   phase0 = rf_param->phase*PI/180.0 - omega*t_first;
+  
   if (rf_param->tilt)
     rotateBeamCoordinates(initial, n_particles, rf_param->tilt);
   for (ip=0; ip<n_particles; ip++) {
@@ -222,3 +246,44 @@ void track_through_rftm110_deflector(
     rotateBeamCoordinates(initial, n_particles, -rf_param->tilt);
 }
 
+
+void set_up_rftm110(RFTM110 *rf_param, double **initial, long n_particles, double pc_central)
+{
+  long ip, i;
+  double pc, beta;
+  TABLE data;
+  if (rf_param->initialized)
+    return;
+
+  rf_param->initialized = 1;
+  for (ip=rf_param->t_first_particle=0; ip<n_particles; ip++) {
+    pc = pc_central*(1+initial[ip][5]);
+    beta = pc/sqrt(1+sqr(pc));
+    rf_param->t_first_particle += initial[ip][4]/beta/c_mks;
+  }
+  if (n_particles)
+    rf_param->t_first_particle /= n_particles;
+  rf_param->initialized = 1;
+
+  rf_param->Ts = 0;
+  rf_param->n_Vpts = 0;
+
+  if (rf_param->vwaveform) {
+    if (!getTableFromSearchPath(&data, rf_param->vwaveform, 1, 0))
+        bomb("unable to read voltage waveform for rftm110", NULL);
+
+    if (data.n_data<=1)
+        bomb("rftm110 voltage waveform contains less than 2 points", NULL);
+
+    rf_param->t_Vf    = data.c1;
+    rf_param->Vfactor = data.c2;
+    rf_param->n_Vpts  = data.n_data;
+    for (i=0; i<rf_param->n_Vpts-1; i++)
+        if (rf_param->t_Vf[i]>rf_param->t_Vf[i+1])
+            bomb("time values are not monotonically increasing in rftm110 voltage waveform", NULL);
+    rf_param->V_tInitial = rf_param->t_Vf[0];
+    rf_param->V_tFinal = rf_param->t_Vf[rf_param->n_Vpts-1];
+    tfree(data.xlab); tfree(data.ylab); tfree(data.title); tfree(data.topline);
+    data.xlab = data.ylab = data.title = data.topline = NULL;
+  }
+}

@@ -512,7 +512,9 @@ long do_tracking(
           case T_RFTM110:
             if (!(flags&TIME_DEPENDENCE_OFF))
               track_through_rftm110_deflector(coord, (RFTM110*)eptr->p_elem,
-                                         coord, nToTrack, *P_central);
+					      coord, nToTrack, *P_central,
+					      beamline->revolution_length, eptr->end_pos,
+					      i_pass);
             break;
           case T_RMDF:
             if (!(flags&TIME_DEPENDENCE_OFF))

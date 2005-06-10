@@ -468,6 +468,8 @@ PARAMETER rftm110_param[N_RFTM110_PARAMS] = {
     {"FREQUENCY", "HZ", IS_DOUBLE, 0, (long)((char *)&rftm110_example.frequency), NULL, DEFAULT_FREQUENCY, 0, "frequency"},
     {"VOLTAGE", "V", IS_DOUBLE, 0, (long)((char *)&rftm110_example.voltage), NULL, 0.0, 0, "peak deflecting voltage"},
     {"PHASE_REFERENCE", "", IS_LONG, 0, (long)((char *)&rftm110_example.phase_reference), NULL, 0.0, 0, "phase reference number (to link with other time-dependent elements)"},
+    {"VOLT_WAVEFORM", "", IS_STRING, 0, (long)((char *)&rftm110_example.vwaveform), NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving voltage waveform factor vs time"},
+    {"VOLT_PERIODIC", "", IS_LONG, 0, (long)((char *)&rftm110_example.vperiodic), NULL, 0.0, 0, "If non-zero, voltage waveform is periodic with period given by time span."},
     } ;
 
 RFTMEZ0 rftmez0_example;

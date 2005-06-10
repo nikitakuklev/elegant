@@ -686,7 +686,7 @@ extern char *entity_text[N_TYPES];
 #define N_DSCATTER_PARAMS 13
 #define N_LSRMDLTR_PARAMS 14
 #define N_TAYLORSERIES_PARAMS 6
-#define N_RFTM110_PARAMS 5
+#define N_RFTM110_PARAMS 7
 #define N_CWIGGLER_PARAMS 11
 #define N_EDRIFT_PARAMS 1
 
@@ -1021,12 +1021,18 @@ typedef struct {
 extern PARAMETER rftm110_param[N_RFTM110_PARAMS] ;
    
 typedef struct {
-    double phase, tilt, frequency, voltage;
-    long phase_reference;
-    /* for internal use only */
-    double t_first_particle;        
-    long   initialized;             
-    } RFTM110;
+  double phase, tilt, frequency, voltage;
+  long phase_reference;
+  char *vwaveform;
+  long vperiodic;
+  /* for internal use only */
+  double t_first_particle;        
+  long   initialized;             
+  double Ts;                          /* accumulated time-of-flight of central particle */
+  double *t_Vf, *Vfactor, VPeriod;    /* (time, V/volt) pairs */
+  double V_tFinal, V_tInitial;
+  long n_Vpts;
+} RFTM110;
 
 /* TM-mode RF-cavity using Ez(z,r=0)
  */
@@ -2624,7 +2630,8 @@ void yaw_matrices(VMATRIX *M, double yaw);
 extern void track_through_ramped_deflector(double **final, RMDF *ramp_param, double **initial, long n_particles, double pc_central);
 extern void track_through_rftm110_deflector(double **final, RFTM110 *rf_param,
 					    double **initial, long n_particles,
-					    double pc_central);
+					    double pc_central, double L_central, double zEnd,
+					    long pass);
  
 /* prototypes for track_rf2.c: */
 extern void track_through_rf_deflector(double **final, RFDF *rf_param, double **initial, long n_particles, double pc_central);
