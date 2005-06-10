@@ -64,13 +64,15 @@ void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
         continue;
       if ((thisType = eptr->type)!=lastType) {
         lastType = thisType;
-        if ((iParam=confirm_parameter(item, thisType))<0) {
-          fprintf(stderr, "%s: element %s does not have parameter %s\n", 
-                  allow_missing_parameters?"Warning":"Error",
-                  eptr->name, item);
-          if (!allow_missing_parameters)
-            exit(1);
-        }
+        iParam = confirm_parameter(item, thisType);
+      }
+      if (iParam<0) {
+	fprintf(stderr, "%s: element %s does not have parameter %s\n", 
+		allow_missing_parameters?"Warning":"Error",
+		eptr->name, item);
+	if (!allow_missing_parameters)
+	  exit(1);
+	continue;
       }
       nMatches++;
       p_elem = eptr->p_elem;
