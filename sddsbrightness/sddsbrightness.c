@@ -14,6 +14,9 @@
  * Michael Borland, 2002
  *
  $Log: not supported by cvs2svn $
+ Revision 1.5  2004/09/28 13:49:26  borland
+ Added debugging statements.
+
  Revision 1.4  2004/09/28 13:21:26  borland
  Added feature whereby the parameter ey0 is accepted for the vertical emittance.
  Fixed bug with multiplication of the current by 1000 for each pass through the main
@@ -96,8 +99,10 @@ totalLength      total length of the undulator in meters\n\
 periodLength     length of the undulator period in meters\n\
 emittanceRatio   ratio of y emittance to x emittance.  x emittance is\n\
                  ex0 from input file. y emittance is ratio*ex0\n\
+                 Ignored if ey0 parameter or ey column is found in file.\n\
 coupling         x emittance is ex0/(1+coupling), while y emittance is\n\
                  coupling*ex0/(1+coupling).\n\
+                 Ignored if ey0 parameter or ey column is found in file.\n\
 noSpectralBroadening\n\
                  Turns off the default inclusion of spectral broadening in\n\
                  the calculation.  Gives an over-estimate of the brightness.\n\
@@ -355,12 +360,27 @@ int main(int argc, char **argv)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     SDDS_Bomb("something wrong with twiss parameter columns");
   }
+  if (SDDS_CheckParameter(&SDDSin, "ex0", "$gp$rm", SDDS_ANY_FLOATING_TYPE, NULL)!=SDDS_CHECK_OK) {
+    if (SDDS_CheckColumn(&SDDSin,"ex", "$gp$rm", SDDS_ANY_FLOATING_TYPE, NULL)!=SDDS_CHECK_OK &&
+        SDDS_CheckColumn(&SDDSin,"ex", "m", SDDS_ANY_FLOATING_TYPE, NULL)!=SDDS_CHECK_OK) {
+      SDDS_Bomb("Something wrong with both ex0 parameter and ex column, one of them has to exist");
+    }
+  }
+  if (SDDS_CheckParameter(&SDDSin, "pCentral", "m$be$nc", SDDS_ANY_FLOATING_TYPE, NULL)!=SDDS_CHECK_OK &&
+      SDDS_CheckColumn(&SDDSin, "pCentral", "m$be$nc", SDDS_ANY_FLOATING_TYPE, NULL)!=SDDS_CHECK_OK) {
+    SDDS_Bomb("Something wrong with both pCentral parameter and pCentral column, one of them has to exist");
+  }
+  if (SDDS_CheckParameter(&SDDSin, "Sdelta0", "", SDDS_ANY_FLOATING_TYPE, NULL)!=SDDS_CHECK_OK &&
+      SDDS_CheckColumn(&SDDSin, "Sdelta", "", SDDS_ANY_FLOATING_TYPE, NULL)!=SDDS_CHECK_OK) {
+    SDDS_Bomb("Something wrong with both Sdelta0 parameter and Sdelta column, one of them has to exist");
+  }
+  /*
   if (SDDS_CheckParameter(&SDDSin, "ex0", "$gp$rm", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OK || 
       SDDS_CheckParameter(&SDDSin, "pCentral", "m$be$nc", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OK ||
       SDDS_CheckParameter(&SDDSin, "Sdelta0", "", SDDS_ANY_FLOATING_TYPE, stderr)!=SDDS_CHECK_OK) {
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     SDDS_Bomb("something wrong with ex0, pCentral, or Sdelta0 parameters");
-  }
+  } */
 
 #ifdef DEBUG
   fprintf(stderr, "Setting up output file...\n");
@@ -619,7 +639,7 @@ long GetTwissValues(SDDS_DATASET *SDDSin,
 		    double emitRatio, double coupling)
 {
   double *data;
-  long rows;
+  long rows, ey0Exist=0;
 
   if (!(rows=SDDS_RowCount(SDDSin)))
     return 0;
@@ -663,15 +683,46 @@ long GetTwissValues(SDDS_DATASET *SDDSin,
     SDDS_Bomb("unable to get etay");
   *etayp = data[rows-1];
   free(data);
-
-  if (!SDDS_GetParameterAsDouble(SDDSin, "ex0", ex0) ||
-      !SDDS_GetParameterAsDouble(SDDSin, "Sdelta0", Sdelta0) ||
-      !SDDS_GetParameterAsDouble(SDDSin, "pCentral", pCentral) )
-    SDDS_Bomb("unable to get parameters from twiss file");
-
+  if (SDDS_CheckParameter(SDDSin, "ex0", "$gp$rm", SDDS_ANY_FLOATING_TYPE, NULL)==SDDS_CHECK_OK) {
+    if (!SDDS_GetParameterAsDouble(SDDSin, "ex0", ex0))
+      SDDS_Bomb("unable to get ex0 parameter from input file");
+  } else {
+    if (!(data=SDDS_GetColumnInDoubles(SDDSin, "ex")))
+      SDDS_Bomb("unable to get ex");
+    *ex0 = data[0];
+    free(data);
+  }
+  if (SDDS_CheckParameter(SDDSin, "pCentral", "m$be$nc", SDDS_ANY_FLOATING_TYPE, NULL)==SDDS_CHECK_OK) {
+    if (!SDDS_GetParameterAsDouble(SDDSin, "pCentral", pCentral))
+      SDDS_Bomb("unable to get pCentral parameter from input file");
+  } else {
+    if (!(data=SDDS_GetColumnInDoubles(SDDSin, "pCentral")))
+      SDDS_Bomb("unable to get pCentral");
+    *pCentral = data[0];
+    free(data);
+  }
+  if (SDDS_CheckParameter(SDDSin, "Sdelta0", "", SDDS_ANY_FLOATING_TYPE, NULL)==SDDS_CHECK_OK) {
+    if (!SDDS_GetParameterAsDouble(SDDSin, "Sdelta0", Sdelta0))
+      SDDS_Bomb("unable to get Sdelta0 parameter from input file");
+  } else {
+    if (!(data=SDDS_GetColumnInDoubles(SDDSin, "Sdelta")))
+      SDDS_Bomb("unable to get pCentral");
+    *Sdelta0 = data[0];
+    free(data);
+  }
   /* get ey0 if it is there */
-  if (!SDDS_GetParameterAsDouble(SDDSin, "ey0", ey0)) {
-    SDDS_ClearErrors();
+  if (SDDS_GetParameterAsDouble(SDDSin, "ey0", ey0)) {
+    ey0Exist=1;
+  } else if (data=SDDS_GetColumnInDoubles(SDDSin, "ey")) {
+    ey0Exist=1;
+    *ey0 = data[0];
+    free(data);
+  }
+  if (*ex0<=0.0)
+    SDDS_Bomb("ex0 should be greater than zero.");
+  if (!ey0Exist) {
+    if (emitRatio==0 && coupling==0)
+      SDDS_Bomb("No vertical emittance data in file: give -emittanceRatio or -coupling");
     if (coupling) {
       *ex0 = *ex0/(1+coupling);
       *ey0 = coupling*(*ex0);
@@ -679,7 +730,6 @@ long GetTwissValues(SDDS_DATASET *SDDSin,
       *ey0 = *ex0*emitRatio;
     }
   }
-
   return 1;
 }
 
@@ -828,7 +878,7 @@ void Dejus_CalculateBrightness(double current,long nE,
 #ifdef DEBUG
   fprintf(stderr, "In Dejus_CalculateBrightness\n");
 #endif
-
+  
   tmpE=tmpSpec=pd=ptot=NULL;
   ei=eb=sb=NULL;
   period=period_mks*1.0e2; /*use cm as units */
@@ -961,6 +1011,7 @@ void Dejus_CalculateBrightness(double current,long nE,
         if (i> (ek/dep1)) {
           fprintf(stderr,"Warning: overlapping range for initial peak search for harmonic %ld\n",i);
           exitLoop=1;
+          ih++;
           break;
         }
       } else {
