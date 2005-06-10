@@ -4,6 +4,10 @@ exec oagwish "$0" "$@"
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.11  2005/02/04 15:26:14  emery
+# Changed default number of bunches from 23 to 24, which will
+# change the default value of bunch current.
+#
 # Revision 1.10  2004/12/09 20:25:53  borland
 # Added selection of the aperture-limiting plane.
 #
@@ -159,7 +163,7 @@ set auto_path [linsert $auto_path 0  /usr/local/oag/apps/lib/$env(HOST_ARCH)]
 set auto_path [linsert $auto_path 0 /usr/local/oag/lib_patch/$env(HOST_ARCH)]
 APSDebugPath
 
-set CVSRevisionAuthor "\$Revision: 1.11 $ \$Author: emery $"
+set CVSRevisionAuthor "\$Revision: 1.12 $ \$Author: borland $"
 
 APSApplication . -name beamLifetimeCalc -version $CVSRevisionAuthor -overview \
   "Calculates the gas scattering lifetime due to single Coulomb scattering and
@@ -241,7 +245,7 @@ set widgetList [APSTabFrame .parameters -parent .userFrame -label "" \
                                         "Beam Inputs" \
                                         "Variation" \
                                         "Loss Rates and Lifetimes" } \
-                          -width 900 -height 340 \
+                          -width 900 -height 360 \
                           -tabPosition n]
 
 set widget [lindex $widgetList 0]
@@ -375,6 +379,10 @@ APSLabeledEntry .syncFrequency -parent $w -label "Synchrotron frequency (kHz):" 
   -contextHelp "Shows the synchrotron frequency."
 APSLabeledEntry .dtime -parent $w -label "Long. damping time (ms):" -textVariable dampingTime -width 22 \
   -contextHelp "Enter the longitudinal damping time."
+APSLabeledEntry .xdtime -parent $w -label "H damping time (ms):" -textVariable dampingTimeH -width 22 \
+  -contextHelp "Enter the horizontal damping time."
+APSLabeledEntry .ydtime -parent $w -label "V damping time (ms):" -textVariable dampingTimeV -width 22 \
+  -contextHelp "Enter the vertical damping time."
 APSLabeledEntry .bunchCurrent -parent $w -label "Bunch current (mA):" -textVariable bunchCurrent -width 22 \
   -contextHelp "Enter the current per bunch."
 APSLabeledEntry .bunchLengthFactor -parent $w -label "Bunch length factor:" \
@@ -671,7 +679,7 @@ proc LoadLatticeParameters {} {
     global rateEN rateEE rateIN rateIE rateUser rateTouschek rate rateQuantum
     global outputFile outputFID touschek
     global emittance coupling energySpread bunchLength bunchCurrent revolutionFrequency latticeFile
-    global dampingTime bunchLengthFactor
+    global dampingTime bunchLengthFactor dampingTimeH dampingTimeV
     global effectiveEnergyAperture Uo rfVoltage alpha harmonic 
     global superperiods
 
@@ -680,9 +688,10 @@ proc LoadLatticeParameters {} {
         return 0
     }
     lappend twiParameterList \
-      alphac pCentral ex0 taudelta Sdelta0 U0 sLast beta${aperturePlane}First
+      alphac pCentral ex0 taudelta Sdelta0 U0 sLast beta${aperturePlane}First taux tauy
     lappend tclVarList \
-      alpha pCentral emittance dampingTime energySpread Uo sLast beta${aperturePlane}First
+      alpha pCentral emittance dampingTime energySpread Uo sLast beta${aperturePlane}First \
+	dampingTimeH dampingTimeV
     if [catch {exec sddsprocess $latticeFile -pipe=out \
                  -process=s,last,sLast -process=beta${aperturePlane},first,beta${aperturePlane}First \
                  | sdds2stream -pipe=in -parameter=[join $twiParameterList ,] } dataList] {
@@ -707,6 +716,8 @@ proc LoadLatticeParameters {} {
     }
     set betaAve $result
     set dampingTime [expr $dampingTime*1e3]
+    set dampingTimeH [expr $dampingTimeH*1e3]
+    set dampingTimeV [expr $dampingTimeV*1e3]
     set energy [expr $pCentral*0.51099906e-3]
     set revolutionFrequency [expr 2.9979825e8/($superperiods*$sLast)]
     set Uo [expr $Uo*$superperiods]
@@ -725,7 +736,7 @@ proc RecomputeOutputs {args} {
     global rateEN rateEE rateIN rateIE rateUser rateTouschek rate rateQuantum
     global outputFile outputFID touschek
     global emittance coupling energySpread bunchLength bunchCurrent revolutionFrequency latticeFile
-    global dampingTime bunchLengthFactor
+    global dampingTime bunchLengthFactor dampingTimeH dampingTimeV aperturePlane
     global effectiveEnergyAperture Uo rfVoltage alpha harmonic syncFrequency
     global touschekIntegralFile ZAPTouschek
     global useHaissinski broadBandImpedance
@@ -752,6 +763,8 @@ proc RecomputeOutputs {args} {
         set emittance [expr $referenceValue(emittance)*pow($ERatio, 2)]
         set energySpread [expr $referenceValue(energySpread)*$ERatio]
         set dampingTime [expr $referenceValue(dampingTime)/pow($ERatio, 3)]
+        set dampingTimeH [expr $referenceValue(dampingTimeH)/pow($ERatio, 3)]
+        set dampingTimeV [expr $referenceValue(dampingTimeV)/pow($ERatio, 3)]
         set Uo [expr $referenceValue(Uo)*pow($ERatio, 4)]
     }
 
@@ -949,6 +962,20 @@ proc RecomputeOutputs {args} {
         set tauQuantum 1e10
     }
     set rateQuantum [expr 1./$tauQuantum]
+
+    if [string compare $aperturePlane "x"]==0 {
+	set x [expr $acceptance/(2*$emittance/(1+$coupling))]
+	set dtime $dampingTimeH
+    } else {
+	set x [expr $acceptance/(2*$emittance*$coupling/(1+$coupling))]
+	set dtime $dampingTimeV
+    }
+    if {[catch {set tauQT [expr ($dtime*0.001)/(2*3600)*exp($x)/$x]} result] || \
+	    [expr $tauQT>1e10]} {
+	set tauQT 1e10
+    }
+    set rateQuantum [expr $rateQuantum+1./$tauQT]
+    set tauQuantum [expr 1./$rateQuantum]
 
     if $ZAPTouschek {
         set TouschekFactor [expr log(2.0)]
