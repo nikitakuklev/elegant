@@ -2149,31 +2149,31 @@ proc FrequencyMapPP {args} {
 
 proc FillFrequencyMapDeltaFrame {widget args} {
     global frequencyMapDelta
-    set frequencyMapDelta(xMinimum)  -0.01
-    set frequencyMapDelta(xMaximum)   0.01
+    set frequencyMapDelta(xyMinimum)  -0.01
+    set frequencyMapDelta(xyMaximum)   0.01
     set frequencyMapDelta(deltaMinimum) -0.02
     set frequencyMapDelta(deltaMaximum)  0.02
-    set frequencyMapDelta(xPoints)   51
+    set frequencyMapDelta(xyPoints)   51
     set frequencyMapDelta(deltaPoints)   51
     set frequencyMapDelta(turns)     500
     set frequencyMapDelta(userSuffix)    ""
     set frequencyMapDelta(otherCoordinate) 1e-6
-    set frequencyMapDelta(plane) x
+    set frequencyMapDelta(plane) X
     
     APSRadioButtonFrame .rbxy -parent $widget \
-	-label "Plane: " -orientation horizontal -buttonList {x y} -valueList {x y} \
+	-label "Plane: " -orientation horizontal -buttonList {x y} -valueList {X Y} \
 	-variable frequencyMapDelta(plane) -contextHelp \
 	"Choose the plane for which the initial coordinate will be varied."
     APSLabeledEntry .le1 -parent $widget \
-	-label "Minimum x/y coordinate (m): " -width 20 -textVariable frequencyMapDelta(xMinimum) \
+	-label "Minimum x/y coordinate (m): " -width 20 -textVariable frequencyMapDelta(xyMinimum) \
 	-contextHelp \
 	"Enter the minimum x (or y) coordinate for the frequency map run"
     APSLabeledEntry .le2 -parent $widget \
-	-label "Maximum x/y coordinate (m): " -width 20 -textVariable frequencyMapDelta(xMaximum) \
+	-label "Maximum x/y coordinate (m): " -width 20 -textVariable frequencyMapDelta(xyMaximum) \
 	-contextHelp \
 	"Enter the maximum x (or y) coordinate for the frequency map run"
     APSLabeledEntry .le3 -parent $widget \
-	-label "Number of x/y points: " -width 20 -textVariable frequencyMapDelta(xPoints) \
+	-label "Number of x/y points: " -width 20 -textVariable frequencyMapDelta(xyPoints) \
 	-contextHelp \
 	"Enter the number of points into which to divide the x interval."
     APSLabeledEntry .le3a -parent $widget \
@@ -2209,7 +2209,7 @@ proc FillFrequencyMapDeltaFrame {widget args} {
 	-text "Run" -command "FrequencyMapDelta"
     APSButton .bu2 -parent $widget \
 	-text "Display" -command \
-	{FrequencyMapDeltaPP -rootname $mainDirectory/${mainPrefix}FrequencyMapDelta$frequencyMapDelta(userSuffix)}
+	{FrequencyMapDeltaPP -rootname $mainDirectory/${mainPrefix}FrequencyMapDelta$frequencyMapDelta(userSuffix)$frequencyMapDelta(plane)}
 }
 
 proc FrequencyMapDelta {args} {
@@ -2217,8 +2217,13 @@ proc FrequencyMapDelta {args} {
     global frequencyMapDelta momentum matrixLatticeFile mainParameterFile mainDirectory mainPrefix
     global kickOffsetElement
 
+    set plane y
+    set Plane $frequencyMapDelta(plane)
+    if [string compare $Plane X]==0 {
+	set plane x
+    }
     set tag FrequencyMapDelta
-    set rootname $mainDirectory/${mainPrefix}${tag}$frequencyMapDelta(userSuffix)
+    set rootname $mainDirectory/${mainPrefix}${tag}$frequencyMapDelta(userSuffix)$Plane
     SaveJobConfiguration -filename $rootname.runCfg
 
     set parameterFileList ""
@@ -2231,11 +2236,11 @@ proc FrequencyMapDelta {args} {
 	lappend origList <$item>
 	lappend replList [set frequencyMapDelta($item)]
     }
-    if [string compare $frequencyMapDelta(plane) "x"]==0 {
+    if [string compare $plane "x"]==0 {
 	lappend origList <xMinimum> <xMaximum> <xPoints>
-	lappend replList $frequencyMapDelta(xMinimum) 
-	lappend replList $frequencyMapDelta(xMaximum)
-	lappend replList $frequencyMapDelta(xPoints)
+	lappend replList $frequencyMapDelta(xyMinimum) 
+	lappend replList $frequencyMapDelta(xyMaximum)
+	lappend replList $frequencyMapDelta(xyPoints)
 
 	lappend origList <yMinimum> <yMaximum> <yPoints>
 	lappend replList $frequencyMapDelta(otherCoordinate)
@@ -2243,9 +2248,9 @@ proc FrequencyMapDelta {args} {
 	lappend replList 1
     } else {
 	lappend origList <yMinimum> <yMaximum> <yPoints>
-	lappend replList $frequencyMapDelta(xMinimum) 
-	lappend replList $frequencyMapDelta(xMaximum)
-	lappend replList $frequencyMapDelta(xPoints)
+	lappend replList $frequencyMapDelta(xyMinimum) 
+	lappend replList $frequencyMapDelta(xyMaximum)
+	lappend replList $frequencyMapDelta(xyPoints)
 
 	lappend origList <xMinimum> <xMaximum> <xPoints>
 	lappend replList $frequencyMapDelta(otherCoordinate)
@@ -2255,7 +2260,7 @@ proc FrequencyMapDelta {args} {
     set variable delta
     PerformRuns -template $sourceDir/FrequencyMapDeltaTemplate.ele \
 	-parameterFileList $parameterFileList -forceOccurence $forceOccurence \
-	-variable $variable -suffix $frequencyMapDelta(userSuffix) \
+	-variable $variable -suffix $frequencyMapDelta(userSuffix)$Plane \
 	-startValue $frequencyMapDelta(deltaMinimum) \
 	-endValue $frequencyMapDelta(deltaMaximum) \
 	-points $frequencyMapDelta(deltaPoints) \
@@ -2280,7 +2285,9 @@ proc FrequencyMapDeltaPP {args} {
     array set parameter $valueList
     catch {exec sddsresdiag $rootname.resdiag -order=$parameter(order)}
 
-    set title1 "Color indicates initial $frequencyMapDelta(plane) amplitude"
+    set plane [string tolower $frequencyMapDelta(plane)]
+    
+    set title1 "Color indicates initial $plane amplitude"
     set title2 "Color indicates initial delta amplitude"
     set topline ""
     if $parameter(filenameTitle) {
@@ -2293,14 +2300,14 @@ proc FrequencyMapDeltaPP {args} {
     exec sddsexpand ${rootname}.var -pipe=out \
 	| sddsconvert -pipe=in $tmpRoot.0 -rename=parameter,delta=deltaP 
     exec sddsxref $rootname.fma $tmpRoot.0 -pipe=out -leave=* -transfer=parameter,deltaP \
-	| sddsprocess -pipe=in $tmpRoot.1 -define=column,delta,deltaP,symbol=\$gd\$r
+	| sddsprocess -pipe=in -nowarning $tmpRoot.1 -define=column,delta,deltaP,symbol=\$gd\$r
 
     exec sddsplot "-topline=$topline" \
 	-limit=xmin=$parameter(nux0),xmax=$parameter(nux1),ymin=$parameter(nuy0),ymax=$parameter(nuy1),auto \
 	-column=nux,nuy $rootname.resdiag \
 	-column=nux,nuy $tmpRoot.1 -graph=dot,subtype=$parameter(pointSizeX11),vary -order=spect \
 	"-title=$title1" \
-	-split=column=x,start=$frequencyMapDelta(xMinimum),width=[expr ($frequencyMapDelta(xMaximum)-$frequencyMapDelta(xMinimum))/101.0] -end \
+	-split=column=$plane,start=$frequencyMapDelta(xyMinimum),width=[expr ($frequencyMapDelta(xyMaximum)-$frequencyMapDelta(xyMinimum))/101.0] -end \
 	-column=nux,nuy $rootname.resdiag \
 	-column=nux,nuy $tmpRoot.1 -graph=dot,subtype=$parameter(pointSizeX11),vary -order=spect \
 	"-title=$title2" \
@@ -2314,7 +2321,7 @@ proc FrequencyMapDeltaPP {args} {
 	    -column=nux,nuy $rootname.resdiag \
 	    -column=nux,nuy $tmpRoot.1 -graph=dot,subtype=$parameter(pointSizePng),vary -order=spect \
 	    "-title=$title1" \
-	    -split=column=x,start=$frequencyMapDelta(xMinimum),width=[expr ($frequencyMapDelta(xMaximum)-$frequencyMapDelta(xMinimum))/101.0] 
+	    -split=column=$plane,start=$frequencyMapDelta(xyMinimum),width=[expr ($frequencyMapDelta(xyMaximum)-$frequencyMapDelta(xyMinimum))/101.0] 
 	setStatus "PNG file: $rootname-fma1.png"
 
 	exec sddsplot -device=png,onwhite -thickness=2 -output=$rootname-fma2.png \
@@ -2331,11 +2338,11 @@ proc FrequencyMapDeltaPP {args} {
     set title2 "Color indicates y tune"
 
     exec sddsplot "-topline=$topline" \
-	-column=$frequencyMapDelta(plane),delta $tmpRoot.1 \
+	-column=$plane,delta $tmpRoot.1 \
 	-graph=dot,subtype=$parameter(pointSizeX11),vary -order=spect \
 	"-title=$title1" \
 	-split=column=nux,start=0,width=0.0101 -end \
-	-column=$frequencyMapDelta(plane),delta $tmpRoot.1 \
+	-column=$plane,delta $tmpRoot.1 \
 	-graph=dot,subtype=$parameter(pointSizeX11),vary -order=spect \
 	"-title=$title2" \
 	-split=column=nuy,start=0,width=0.0101 -end &
@@ -2343,7 +2350,7 @@ proc FrequencyMapDeltaPP {args} {
     if $makePngFiles {
 	exec sddsplot -device=png,onwhite -thickness=2 -output=$rootname-fma3.png \
 	    "-topline=$topline" \
-	    -column=$frequencyMapDelta(plane),delta $tmpRoot.1 \
+	    -column=$plane,delta $tmpRoot.1 \
 	    -graph=dot,subtype=$parameter(pointSizePng),vary -order=spect \
 	    "-title=$title1" \
 	    -split=column=nux,start=0,width=0.0101 -end 
@@ -2351,7 +2358,7 @@ proc FrequencyMapDeltaPP {args} {
 
 	exec sddsplot -device=png,onwhite -thickness=2 -output=$rootname-fma4.png \
 	    "-topline=$topline" \
-	    -column=$frequencyMapDelta(plane),delta $tmpRoot.1 \
+	    -column=$plane,delta $tmpRoot.1 \
 	    -graph=dot,subtype=$parameter(pointSizePng),vary -order=spect \
 	    "-title=$title2" \
 	    -split=column=nuy,start=0,width=0.0101 -end 
