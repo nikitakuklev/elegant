@@ -316,10 +316,8 @@ void run_matrix_output(
       member = first_member;
       n_SDDS_output = 1;        /* for the beginning element */
       while (member) {
-	if (entity_description[member->type].flags&HAS_MATRIX) {
-	  if (!SDDS_match[i_output] || wild_match(member->name, SDDS_match[i_output]))
-	    n_SDDS_output++;
-	}
+	if (!SDDS_match[i_output] || wild_match(member->name, SDDS_match[i_output]))
+	  n_SDDS_output++;
 	member = member->succ;
       }
     }
@@ -371,14 +369,13 @@ void run_matrix_output(
 	    print_matrices(fp_printout[i_output], "Concantenated matrix after last element", M1);
 	  }
 	}
-	if (SDDS_matrix_initialized[i_output] && 
-	    (!SDDS_match[i_output] || wild_match(member->name, SDDS_match[i_output]))) {
-	  SDDS_set_matrices(SDDS_matrix+i_output, M1, SDDS_order[i_output], member,
-			    i_SDDS_output++, n_SDDS_output);
-	}
-      }
-      else {
+      } else {
 	n_elem_no_matrix++;
+      }
+      if (SDDS_matrix_initialized[i_output] && 
+	  (!SDDS_match[i_output] || wild_match(member->name, SDDS_match[i_output]))) {
+	SDDS_set_matrices(SDDS_matrix+i_output, M1, SDDS_order[i_output], member,
+			  i_SDDS_output++, n_SDDS_output);
       }
       member = member->succ;
     }
