@@ -161,8 +161,11 @@ void track_through_rftm110_deflector(
 
   gamma = sqrt(sqr(pc_central)+1);
   beta  = pc_central/gamma;
-  if (pass==0)
-    rf_param->Ts = zEnd/(beta*c_mks);
+  if (pass==0) {
+    rf_param->Ts = rf_param->t_first_particle;
+    if (rf_param->alignWaveforms)
+      rf_param->Ts = 0;
+  }
   else
     rf_param->Ts += L_central/(beta*c_mks);
   t0 = rf_param->Ts;

@@ -686,7 +686,7 @@ extern char *entity_text[N_TYPES];
 #define N_DSCATTER_PARAMS 13
 #define N_LSRMDLTR_PARAMS 14
 #define N_TAYLORSERIES_PARAMS 6
-#define N_RFTM110_PARAMS 7
+#define N_RFTM110_PARAMS 8
 #define N_CWIGGLER_PARAMS 11
 #define N_EDRIFT_PARAMS 1
 
@@ -1024,7 +1024,7 @@ typedef struct {
   double phase, tilt, frequency, voltage;
   long phase_reference;
   char *vwaveform;
-  long vperiodic;
+  long vperiodic, alignWaveforms;
   /* for internal use only */
   double t_first_particle;        
   long   initialized;             
