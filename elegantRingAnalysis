@@ -401,21 +401,25 @@ proc PerformRuns {args} {
     set rootnameList ""
     for {set i 0} {$i<$points} {incr i} {
         set value [expr $startValue + $i*$delta]
-        setStatus "Running elegant..."
         set runDone 0
         set suffix0 $suffix-[format %03d $i]
         set rootname $mainDirectory/${mainPrefix}${tag}${suffix0}
-        exec sddsmakedataset $rootname.var -column=$variable,type=double -data=$value
-        eval file delete -force $rootname.done
+	file delete -force $rootname.done
 	exec replaceText $template $rootname.ele \
 	    -original=[join $originalList ,],<suffix>,<$variable> \
 	    -replacement=[join $replacementList ,],$suffix0,$value
         if $gridEngine {
-	    if [catch {exec ssub elegant $rootname.ele} result] {
-		return -code error "$result"
-	    }
-            setStatus "Run $i submitted."
+	    set fd [open $rootname.sh w]
+	    file attributes $rootname.sh -permission +x
+	    puts $fd "sddsmakedataset $rootname.var -column=$variable,type=double -data=$value"
+	    puts $fd "elegant $rootname.ele >& $rootname.ele.log"
+	    close $fd
+	    catch {exec csub $rootname.sh} result
+	    setStatus "$result"
 	} else {
+	    setStatus "Running elegant..."
+	    exec sddsmakedataset $rootname.var -column=$variable,type=double -data=$value
+	    eval file delete -force $rootname.done
 	    APSExecLog $w -width 100 \
 		-unixCommand "elegant $rootname.ele" \
 		-callback "set runDone 1" \
@@ -692,14 +696,14 @@ proc ScanCollectiveEffectsProgram {args} {
 	set waitingFor 1
 	while {$waitingFor} {
 	    set waitingFor 0
+	    if $waitingFor {
+		setStatus "Waiting for $waitingFor jobs"
+		APSWaitWithUpdate -updateInterval 1 -waitSeconds 10
+	    }
 	    foreach done $doneList {
 		if ![file exists $done] {
 		    incr waitingFor 
 		}
-	    }
-	    if $waitingFor {
-		setStatus "Waiting for $waitingFor jobs"
-		APSWaitWithUpdate -updateInterval 1 -waitSeconds 10
 	    }
 	}
 	setStatus "All jobs completed."
@@ -993,7 +997,7 @@ proc PhaseSpaceTracking {} {
 	-startValue $phaseSpaceTracking(initialOffset) \
 	-endValue $phaseSpaceTracking(finalOffset) \
 	-points $phaseSpaceTracking(sweepPoints) \
-	-copyList done -combineList w1 -mergeList [list var ele ele.log] \
+	-copyList [list sh done] -combineList w1 -mergeList [list var ele ele.log] \
 	-replacementList $replList -originalList $origList \
 	-tag $tag -suffix $phaseSpaceTracking(userSuffix)$Plane \
 	-order 3 -momentum $momentum \
@@ -1021,21 +1025,16 @@ proc MakePhaseSpacePlot {args} {
     }
     if $limit(tuneColor) {
 	set input ${rootname}.w1
-	exec sddsnaff $input -pipe=out -column=Pass,C${plane},C${plane}p -terminate=freq=1 \
+	exec sddsnaff $input -pipe=out -column=Pass -pair=C${plane},C${plane}p -terminate=freq=1 \
 	    | sddscombine -pipe -merge \
-	    | sddsprocess -pipe -filter=column,C${plane}Frequency,0,0.5 \
-	    -filter=column,C${plane}pFrequency,0,0.5 \
-	    -define=column,Phase0,C${plane}Phase \
-	    -define=column,Phase1,C${plane}pPhase \
 	    | sddsprocess -pipe \
-	    "-redefine=column,Phase0,Phase0 Phase1 - abs pi < ? Phase0 : Phase0 Phase1 < ? Phase0 pi 2 * + : Phase0 $ $" \
-	    "-redefine=column,Phase1,Phase0 Phase1 - abs pi < ? Phase1 : Phase0 Phase1 < ? Phase1 : Phase1 pi 2 * + $ $" \
-	    "-define=column,TuneP,Phase0 Phase1 < ? C${plane}Frequency : 1 C${plane}Frequency - $ " \
+	    "-define=column,TuneP,C${plane}Frequency" \
 	    | sddsexpand -pipe=in $input.naff.tmp
 
 	exec sddsxref $input $input.naff.tmp -pipe=out -leave=* -transfer=parameter,TuneP -nowarning \
 	    | sddssort -pipe -parameter=TuneP \
-	    | sddsprocess -pipe=in $input.${plane}withNaff -define=column,Tune,TuneP
+	    | sddsprocess -pipe=in $input.${plane}withNaff -define=column,Tune,TuneP \
+	    -filter=parameter,TuneP,0,1 
 	file delete $input.naff.tmp
 
 	exec sddsplot $input.${plane}withNaff -split=column=Tune,width=0.01 \
@@ -1125,11 +1124,14 @@ proc PhaseSpaceTrackingPP {args} {
     exec sddsprocess ${rootname}.w1 -pipe=out \
 	-process=C${plane},first,%sFirst \
 	| sddsnaff -pipe \
-	-columns=Pass,C${plane},C${otherPlane} \
+	-columns=Pass -pair=C${plane},C${plane}p -pair=C${otherPlane},C${otherPlane}p \
 	-terminateSearch=frequencies=1 -nowarnings -iterate=cycleLimit=200,accuracyLimit=1e-12 \
 	| sddsprocess -pipe -define=column,C${plane}0,C${plane}First,units=m \
 	| sddscombine -pipe -merge \
-	| sddsxref -pipe=in ${rootname}.var -take=* ${rootname}.w1.naff
+	| sddsxref -pipe ${rootname}.var -take=* \
+	| sddsprocess -pipe=in ${rootname}.w1.naff \
+	-filter=column,C${plane}Frequency,0,1 \
+	-filter=column,C${otherPlane}Frequency,0,1 
 
     exec sddsplot -topline=$rootname \
 	-column=C${plane}0,C${plane}Frequency ${rootname}.w1.naff -end \
@@ -1138,6 +1140,8 @@ proc PhaseSpaceTrackingPP {args} {
     if $makePngFiles {
 	exec sddsplot -thickness=2 \
 	    -device=png,onwhite,template=${rootname}-naff.png \
+	    -filter=column,C${plane}Frequency,0,1 \
+	    -filter=column,C${otherPlane}Frequency,0,1 \
 	    -topline=$rootname \
 	    -column=C${plane}0,C${plane}Frequency ${rootname}.w1.naff -end \
 	    -column=C${plane}0,C${otherPlane}Frequency ${rootname}.w1.naff &
@@ -1232,7 +1236,7 @@ proc OffMomentumTuneTracking {} {
 	-endValue $offMomentumTuneTracking(finalOffset) \
 	-points $offMomentumTuneTracking(sweepPoints) \
 	-tag $tag -order 3 -momentum $momentum \
-	-copyList done -combineList [list w1 ele ele.log] \
+	-copyList [list sh done] -combineList [list w1 ele ele.log] \
 	-postProcessProc OffMomentumTuneTrackingPP
 }
 
@@ -1244,27 +1248,18 @@ proc OffMomentumTuneTrackingPP {args} {
     exec sddsexpand ${rootname}.var ${rootname}.vare
 
     exec sddsnaff $rootname.w1 -pipe=out \
-	-column=Pass,C\[xy\],C\[xy\]p -terminate=freq=1 \
+	-column=Pass -pair=Cx,Cxp -pair=Cy,Cyp -terminate=freq=1 \
 	-iterate=cycleLimit=200,accuracyLimit=1e-12 \
 	| sddscombine -pipe -merge \
 	| sddsprocess -pipe \
-	-filter=column,CxFrequency,0,0.5 -filter=column,CxpFrequency,0,0.5 \
-	-filter=column,CyFrequency,0,0.5 -filter=column,CypFrequency,0,0.5 \
-	-define=column,xPhase0,CxPhase \
-	-define=column,xPhase1,CxpPhase \
-	-define=column,yPhase0,CyPhase \
-	-define=column,yPhase1,CypPhase \
-	| sddsprocess -pipe \
-	"-redefine=column,xPhase0,xPhase0 xPhase1 - abs pi < ? xPhase0 : xPhase0 xPhase1 < ? xPhase0 pi 2 * + : xPhase0 $ $" \
-	"-redefine=column,xPhase1,xPhase0 xPhase1 - abs pi < ? xPhase1 : xPhase0 xPhase1 < ? xPhase1 : xPhase1 pi 2 * + $ $" \
-	"-define=column,nuxTracking,xPhase0 xPhase1 < ? CxFrequency : 1 CxFrequency - $ " \
-	"-redefine=column,yPhase0,yPhase0 yPhase1 - abs pi < ? yPhase0 : yPhase0 yPhase1 < ? yPhase0 pi 2 * + : yPhase0 $ $" \
-	"-redefine=column,yPhase1,yPhase0 yPhase1 - abs pi < ? yPhase1 : yPhase0 yPhase1 < ? yPhase1 : yPhase1 pi 2 * + $ $" \
-	"-define=column,nuyTracking,yPhase0 yPhase1 < ? CyFrequency : 1 CyFrequency - $ " \
+	"-define=column,nuxTracking,CxFrequency" \
+	"-define=column,nuyTracking,CyFrequency" \
 	| sddsexpand -pipe \
 	| sddsxref -pipe ${rootname}.vare  \
 	-leave=* -transfer=parameter,* \
-	| sddscollapse -pipe=in ${rootname}.w1.naff
+	| sddscollapse -pipe \
+	| sddsprocess -pipe=in ${rootname}.w1.naff -filter=column,nuxTracking,0,1 \
+	-filter=column,nuyTracking,0,1
     
     catch {exec sddsresdiag ${rootname}.resdiag \
 	       -superperiodicity=$offMomentumTuneTracking(superperiodicity) \
@@ -1581,7 +1576,7 @@ proc OffMomentumDynamicAperture {args} {
 	-startValue $offMomentumDynamicAperture(deltaMinimum) \
 	-endValue $offMomentumDynamicAperture(deltaMaximum) \
 	-points $offMomentumDynamicAperture(deltaPoints) \
-	-copyList done -combineList [list aper abnd ele ele.log] \
+	-copyList [list sh done] -combineList [list aper abnd ele ele.log] \
 	-tag $tag -momentum $momentum -originalList $origList \
 	-replacementList $replList -postProcessProc OffMomentumDynamicAperturePP
 }
@@ -1735,7 +1730,7 @@ proc DynamicApertureErrors {args} {
 	-startValue $firstSeed \
 	-endValue $lastSeed \
 	-points $dynamicApertureErrors(seeds) \
-	-copyList [list done mag] -combineList [list twi orb cor scor aper abnd ele ele.log] \
+	-copyList [list done mag sh] -combineList [list twi orb cor scor aper abnd ele ele.log] \
 	-tag $tag -momentum $momentum -originalList $origList \
 	-replacementList $replList -postProcessProc DynamicApertureErrorsPP
 }
@@ -1882,7 +1877,7 @@ proc FineDynamicAperture {args} {
 	-startValue $fineDynamicAperture(xMinimum) \
 	-endValue $fineDynamicAperture(xMaximum) \
 	-points $fineDynamicAperture(xPoints) \
-	-copyList done -combineList [list ele ele.log los bun clo] \
+	-copyList [list sh done] -combineList [list ele ele.log los bun clo] \
 	-tag $tag -momentum $momentum -originalList $origList -replacementList $replList \
 	-postProcessProc FineDynamicAperturePP
 }
@@ -2011,7 +2006,7 @@ proc FrequencyMap {args} {
 	-startValue $frequencyMap(xMinimum) \
 	-endValue $frequencyMap(xMaximum) \
 	-points $frequencyMap(xPoints) \
-	-copyList done -combineList [list ele ele.log clo fma] \
+	-copyList [list done sh] -combineList [list ele ele.log clo fma] \
 	-tag $tag -momentum $momentum -originalList $origList -replacementList $replList \
 	-postProcessProc FrequencyMapPP
 }
@@ -2264,7 +2259,7 @@ proc FrequencyMapDelta {args} {
 	-startValue $frequencyMapDelta(deltaMinimum) \
 	-endValue $frequencyMapDelta(deltaMaximum) \
 	-points $frequencyMapDelta(deltaPoints) \
-	-copyList done -combineList [list ele ele.log clo fma] \
+	-copyList [list sh done] -combineList [list ele ele.log clo fma] \
 	-tag $tag -momentum $momentum -originalList $origList -replacementList $replList \
 	-postProcessProc FrequencyMapDeltaPP
 }
