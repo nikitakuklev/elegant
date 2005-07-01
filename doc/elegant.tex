@@ -679,16 +679,23 @@ indicates that a 1mm long bunch has a linear variation in momentum of
 compression of a bunch with an ordinary $R_{56}<0$ four-dipole
 chicane.
 
-\item \verb|one_random_bunch| --- If non-zero, then only one random particle distribution is generated.  Otherwise,
-a new distribution will be generated for every simulation step.
-\item \verb|enforce_rms_values[3]| --- Flags, one for each plane, indicating whether to force the distribution to have the 
-specified RMS properties.
+\item \verb|one_random_bunch| --- If non-zero, then only one random
+particle distribution is generated.  Otherwise, a new distribution
+will be generated for every simulation step.
+
+\item \verb|enforce_rms_values[3]| --- Flags, one for each plane,
+indicating whether to force the distribution to have the specified RMS
+properties.
 
 \item \verb|distribution_cutoff[3]| --- Distribution cutoff parameters
 for each plane.  For gaussian distributions, this is the number of
-sigmas to use.  For other distributions, this number simply multiplies
-the sizes.  This is potentially confusing and hence it is suggested
-that the distribution cutoff be set to 1 for nongaussian beams.
+sigmas to use.  For other distributions (except dynamic aperture),
+this number simply multiplies the sizes.  This is potentially
+confusing and hence it is suggested that the distribution cutoff be
+set to 1 for nongaussian beams.
+
+The exception is ``dynamic-aperture'' distribution type.  In this case,
+the cutoff value is the number of grid points in the dimension in question.
 
 \item \verb|distribution_type[3]| --- Distribution type for each
 plane.  May be ``gaussian'', ``hard-edge'', ``uniform-ellipse'',
