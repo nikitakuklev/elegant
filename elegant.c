@@ -932,7 +932,8 @@ char **argv;
           run_response_output(&run_conditions, beamline, &correct, 1);
         switch (commandCode) {
         case FIND_APERTURE:
-          do_aperture_search(&run_conditions, &run_control, &error_control, beamline);
+          do_aperture_search(&run_conditions, &run_control, starting_coord,
+			     &error_control, beamline);
           break;
         case FREQUENCY_MAP:
           doFrequencyMap(&run_conditions, &run_control, starting_coord, &error_control, beamline);

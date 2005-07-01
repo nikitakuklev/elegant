@@ -45,6 +45,10 @@
         n_passes = <turns>,
 &end
 
+&closed_orbit
+	output = %s.clo
+&end
+
 &find_aperture
         output = %s.aper,
         boundary = %s.abnd,
@@ -54,5 +58,6 @@
         nx = <xPoints>,
         ny = <yPoints>,
         verbosity = 1,
+	offset_by_orbit = 1
 &end
 

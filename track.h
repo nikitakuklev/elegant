@@ -2719,10 +2719,16 @@ void setup_closed_orbit(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 
 /* prototypes for aperture_search.c */
 void setup_aperture_search(NAMELIST_TEXT *nltext, RUN *run, VARY *control);
-long do_aperture_search(RUN *run, VARY *control, ERRORVAL *errcon, LINE_LIST *beamline);
-long do_aperture_search_mp(RUN *run, VARY *control, ERRORVAL *errcon, LINE_LIST *beamline);
-long do_aperture_search_sp(RUN *run, VARY *control, ERRORVAL *errcon, LINE_LIST *beamline);
-void finish_aperture_search(RUN *run, VARY *control, ERRORVAL *errcon, LINE_LIST *beamline);
+long do_aperture_search(RUN *run, VARY *control, double *referenceCoord, 
+			ERRORVAL *errcon, LINE_LIST *beamline);
+long do_aperture_search_mp(RUN *run, VARY *control, double *referenceCoord,
+			   ERRORVAL *errcon, LINE_LIST *beamline);
+long do_aperture_search_sp(RUN *run, VARY *control, double *referenceCoord, 
+			   ERRORVAL *errcon, LINE_LIST *beamline);
+long do_aperture_search_line(RUN *run, VARY *control, double *referenceCoord,
+			     ERRORVAL *errcon, LINE_LIST *beamline,
+			     long three);
+void finish_aperture_search(RUN *run, VARY *control,  ERRORVAL *errcon, LINE_LIST *beamline);
 
 /* prototypes for analyze.c */
 void setup_transport_analysis(NAMELIST_TEXT *nltext, RUN *run, VARY *control, ERRORVAL *errcon);
