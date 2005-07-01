@@ -177,6 +177,8 @@ long do_tracking(
   for (i_pass=passOffset; i_pass<n_passes+passOffset; i_pass++) {
     log_entry("do_tracking.2.1");
 
+    ResetNoiseGroupValues();
+
     if (beamline->links) {
       sprintf(s, "%.15e sto p_central  %ld sto turn", *P_central, i_pass);
       rpn(s);

@@ -171,7 +171,7 @@ void track_through_rftm110_deflector(
   t0 = rf_param->Ts;
 
   if (rf_param->n_Vpts) {
-    if (rf_param->vperiodic && t0>rf_param->V_tFinal) 
+    if (rf_param->voltageIsPeriodic && t0>rf_param->V_tFinal) 
       t0 = fmod(t0-rf_param->V_tInitial, rf_param->V_tFinal-rf_param->V_tInitial)+rf_param->V_tInitial;
 
     /* find position within voltage waveform array */
@@ -185,12 +185,22 @@ void track_through_rftm110_deflector(
   }
 
   /* using 2*volt in expressions gives us theta=V/E */
-  voltTimes2 *= 2*rf_param->voltage/(1e6*me_mev);
+  voltTimes2 *= 2*rf_param->voltage/(1e6*me_mev)*
+    (gauss_rn_lim(1.0, rf_param->voltageNoise, 2, random_3) +
+     (rf_param->voltageNoiseGroup
+      ? rf_param->groupVoltageNoise*GetNoiseGroupValue(rf_param->voltageNoiseGroup)
+      : 0));
 
   omega = 2*PI*rf_param->frequency;
   k = omega/c_mks;
   t_first = rf_param->t_first_particle;
-  phase0 = rf_param->phase*PI/180.0 - omega*t_first;
+  phase0 = (rf_param->phase
+	    + gauss_rn_lim(0.0, rf_param->phaseNoise, 2, random_3)
+	    + (rf_param->phaseNoiseGroup
+	       ? rf_param->groupPhaseNoise*GetNoiseGroupValue(rf_param->phaseNoiseGroup)
+	       : 0)
+	    )*PI/180.0 
+    - omega*t_first;
   
   if (rf_param->tilt)
     rotateBeamCoordinates(initial, n_particles, rf_param->tilt);
@@ -255,10 +265,36 @@ void set_up_rftm110(RFTM110 *rf_param, double **initial, long n_particles, doubl
   long ip, i;
   double pc, beta;
   TABLE data;
+  TRACKING_CONTEXT tContext;
+
   if (rf_param->initialized)
     return;
 
   rf_param->initialized = 1;
+
+  getTrackingContext(&tContext);
+
+  if (rf_param->voltageNoiseGroup) {
+    DefineNoiseGroup(rf_param->voltageNoiseGroup);
+    if (rf_param->phaseNoiseGroup==rf_param->voltageNoiseGroup) {
+      printf("*** Warning: VOLTAGE_NOISE_GROUP and PHASE_NOISE_GROUP are identical for %s\n",
+	     tContext.elementName);
+      printf("This is probably a mistake!\n");
+    }
+  } else if (rf_param->groupVoltageNoise) {
+    printf("Error: GROUP_VOLTAGE_NOISE is nonzero but VOLTAGE_NOISE_GROUP is zero for %s\n",
+	   tContext.elementName);
+    exit(1);
+  }
+
+  if (rf_param->phaseNoiseGroup) {
+    DefineNoiseGroup(rf_param->phaseNoiseGroup);
+  } else if (rf_param->groupPhaseNoise) {
+    printf("Error: GROUP_PHASE_NOISE is nonzero but PHASE_NOISE_GROUP is zero for %s\n",
+	   tContext.elementName);
+    exit(1);
+  }
+
   for (ip=rf_param->t_first_particle=0; ip<n_particles; ip++) {
     pc = pc_central*(1+initial[ip][5]);
     beta = pc/sqrt(1+sqr(pc));
@@ -271,8 +307,8 @@ void set_up_rftm110(RFTM110 *rf_param, double **initial, long n_particles, doubl
   rf_param->Ts = 0;
   rf_param->n_Vpts = 0;
 
-  if (rf_param->vwaveform) {
-    if (!getTableFromSearchPath(&data, rf_param->vwaveform, 1, 0))
+  if (rf_param->voltageWaveform) {
+    if (!getTableFromSearchPath(&data, rf_param->voltageWaveform, 1, 0))
         bomb("unable to read voltage waveform for rftm110", NULL);
 
     if (data.n_data<=1)
@@ -290,3 +326,4 @@ void set_up_rftm110(RFTM110 *rf_param, double **initial, long n_particles, doubl
     data.xlab = data.ylab = data.title = data.topline = NULL;
   }
 }
+

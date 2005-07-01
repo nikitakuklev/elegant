@@ -686,7 +686,7 @@ extern char *entity_text[N_TYPES];
 #define N_DSCATTER_PARAMS 13
 #define N_LSRMDLTR_PARAMS 14
 #define N_TAYLORSERIES_PARAMS 6
-#define N_RFTM110_PARAMS 8
+#define N_RFTM110_PARAMS 14
 #define N_CWIGGLER_PARAMS 11
 #define N_EDRIFT_PARAMS 1
 
@@ -1023,8 +1023,11 @@ extern PARAMETER rftm110_param[N_RFTM110_PARAMS] ;
 typedef struct {
   double phase, tilt, frequency, voltage;
   long phase_reference;
-  char *vwaveform;
-  long vperiodic, alignWaveforms;
+  char *voltageWaveform;
+  long voltageIsPeriodic, alignWaveforms;
+  double voltageNoise, phaseNoise;
+  double groupVoltageNoise, groupPhaseNoise;
+  long voltageNoiseGroup, phaseNoiseGroup;
   /* for internal use only */
   double t_first_particle;        
   long   initialized;             
@@ -2922,3 +2925,6 @@ void initializeTransverseFeedbackDriver(TFBDRIVER *tfbd, LINE_LIST *beamline, lo
 
 long computeEngeCoefficients(double *engeCoef, double rho, double length, double gap, double fint);
 
+long DefineNoiseGroup(long groupId);
+long ResetNoiseGroupValues();
+double GetNoiseGroupValue(long groupId);
