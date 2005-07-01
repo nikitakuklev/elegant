@@ -2202,7 +2202,7 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
       }
     }
     if (tune_shift_with_amplitude_struct.verbose)
-      fprintf(stdout, "All tunes computed for TSWA\n");
+      fprintf(stdout, "All tunes computed for TSWA (%ld particles lost)\n", nLost);
 
     maxResult = -DBL_MAX;
     if (!tune_shift_with_amplitude_struct.spread_only) {
@@ -2257,8 +2257,6 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
   if (tune_shift_with_amplitude_struct.tune_output) {
     for (ix=j=0; ix<gridSize; ix++) {
       for (iy=0; iy<gridSize; iy++, j++) {
-	if (lost[ix][iy])
-	  continue;
 	if (!SDDS_SetRowValues(&SDDSTswaTunes, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, j,
 			       "x", x0[ix], "Ax", Ax[ix],
 			       "nux", xTune[ix][iy],
@@ -2300,6 +2298,7 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
     }
   }
   if (nLost && !tune_shift_with_amplitude_struct.exclude_lost_particles) {
+    fprintf(stdout, "%ld particles in tune tracking: setting spreads to 1\n", nLost);
     xTuneExtrema[0] = yTuneExtrema[0] = 0;
     xTuneExtrema[1] = yTuneExtrema[1] = 1.0;
   }
@@ -2544,26 +2543,49 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
 		  NAFF_MAX_FREQUENCIES|NAFF_FREQ_CYCLE_LIMIT|NAFF_FREQ_ACCURACY_LIMIT,
 		  0.0, 1, 200, 1e-12,
 		  tuneLowerLimit?(tuneLowerLimit[0]>0.5 ? 1-tuneLowerLimit[0] : tuneLowerLimit[0]):0,
-		  tuneUpperLimit?(tuneUpperLimit[0]>0.5 ? 1-tuneUpperLimit[0] : tuneUpperLimit[0]):0)!=1 ||
-      PerformNAFF(&frequency[1], &amplitude[1], &phase[1], 
+		  tuneUpperLimit?(tuneUpperLimit[0]>0.5 ? 1-tuneUpperLimit[0] : tuneUpperLimit[0]):0)!=1) {
+    fprintf(stdout, "Warning: NAFF failed for tune analysis from tracking (x).\n");
+    fprintf(stdout, "Limits: %e, %e\n",
+	    tuneLowerLimit?(tuneLowerLimit[0]>0.5 ? 1-tuneLowerLimit[0] : tuneLowerLimit[0]):0,
+	    tuneUpperLimit?(tuneUpperLimit[0]>0.5 ? 1-tuneUpperLimit[0] : tuneUpperLimit[0]):0);
+    return 0;
+  }
+  if (PerformNAFF(&frequency[1], &amplitude[1], &phase[1], 
 		  &dummy, 0.0, 1.0, xp, turns, 
 		  NAFF_MAX_FREQUENCIES|NAFF_FREQ_CYCLE_LIMIT|NAFF_FREQ_ACCURACY_LIMIT,
 		  0.0, 1, 200, 1e-12,
 		  tuneLowerLimit?(tuneLowerLimit[0]>0.5 ? 1-tuneLowerLimit[0] : tuneLowerLimit[0]):0,
-		  tuneUpperLimit?(tuneUpperLimit[0]>0.5 ? 1-tuneUpperLimit[0] : tuneUpperLimit[0]):0)!=1 ||
-      PerformNAFF(&frequency[2], &amplitude[2], &phase[2], 
+		  tuneUpperLimit?(tuneUpperLimit[0]>0.5 ? 1-tuneUpperLimit[0] : tuneUpperLimit[0]):0)!=1) {
+    fprintf(stdout, "Warning: NAFF failed for tune analysis from tracking (xp).\n");
+    fprintf(stdout, "Limits: %e, %e\n",
+	    tuneLowerLimit?(tuneLowerLimit[0]>0.5 ? 1-tuneLowerLimit[0] : tuneLowerLimit[0]):0,
+	    tuneUpperLimit?(tuneUpperLimit[0]>0.5 ? 1-tuneUpperLimit[0] : tuneUpperLimit[0]):0);
+    return 0;
+  }
+  if (PerformNAFF(&frequency[2], &amplitude[2], &phase[2], 
 		  &dummy, 0.0, 1.0, y, turns,
 		  NAFF_MAX_FREQUENCIES|NAFF_FREQ_CYCLE_LIMIT|NAFF_FREQ_ACCURACY_LIMIT,
 		  0.0, 1, 200, 1e-12,
 		  tuneLowerLimit?(tuneLowerLimit[1]>0.5 ? 1-tuneLowerLimit[1] : tuneLowerLimit[1]):0,
-		  tuneUpperLimit?(tuneUpperLimit[1]>0.5 ? 1-tuneUpperLimit[1] : tuneUpperLimit[1]):0)!=1 ||
-      PerformNAFF(&frequency[3], &amplitude[3], &phase[3], 
+		  tuneUpperLimit?(tuneUpperLimit[1]>0.5 ? 1-tuneUpperLimit[1] : tuneUpperLimit[1]):0)!=1) {
+    fprintf(stdout, "Warning: NAFF failed for tune analysis from tracking (y).\n");
+    fprintf(stdout, "Limits: %e, %e\n",
+	    tuneLowerLimit?(tuneLowerLimit[0]>0.5 ? 1-tuneLowerLimit[0] : tuneLowerLimit[0]):0,
+	    tuneUpperLimit?(tuneUpperLimit[0]>0.5 ? 1-tuneUpperLimit[0] : tuneUpperLimit[0]):0);
+    return 0;
+  }
+  if (PerformNAFF(&frequency[3], &amplitude[3], &phase[3], 
 		  &dummy, 0.0, 1.0, yp, turns,
 		  NAFF_MAX_FREQUENCIES|NAFF_FREQ_CYCLE_LIMIT|NAFF_FREQ_ACCURACY_LIMIT,
 		  0.0, 1, 200, 1e-12,
 		  tuneLowerLimit?(tuneLowerLimit[1]>0.5 ? 1-tuneLowerLimit[1] : tuneLowerLimit[1]):0,
-		  tuneUpperLimit?(tuneUpperLimit[1]>0.5 ? 1-tuneUpperLimit[1] : tuneUpperLimit[1]):0)!=1 )
+		  tuneUpperLimit?(tuneUpperLimit[1]>0.5 ? 1-tuneUpperLimit[1] : tuneUpperLimit[1]):0)!=1 ) {
+    fprintf(stdout, "Warning: NAFF failed for tune analysis from tracking (yp).\n");
+    fprintf(stdout, "Limits: %e, %e\n",
+	    tuneLowerLimit?(tuneLowerLimit[0]>0.5 ? 1-tuneLowerLimit[0] : tuneLowerLimit[0]):0,
+	    tuneUpperLimit?(tuneUpperLimit[0]>0.5 ? 1-tuneUpperLimit[0] : tuneUpperLimit[0]):0);
     return 0;
+  }
 
 #ifdef DEBUG
   fprintf(stdout, "NAFF done\n");
