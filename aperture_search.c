@@ -36,11 +36,14 @@ static FILE *fpSearchOutput = NULL;
 
 #define MP_MODE 0
 #define SP_MODE 1
-#define N_SEARCH_MODES 2
+#define LINE_MODE 2
+#define N_SEARCH_MODES 3
 static char *search_mode[N_SEARCH_MODES] = {
-    "many-particle", "single-particle"
+  "many-particle", "single-particle", "particle-line"
     } ;
 static long mode_code = 0;
+
+long do_aperture_search_line(RUN *run, VARY *control, ERRORVAL *errcon, LINE_LIST *beamline);
 
 void setup_aperture_search(
     NAMELIST_TEXT *nltext,
@@ -146,13 +149,20 @@ long do_aperture_search(
     long retcode;
 
     log_entry("do_aperture_search");
-    if (mode_code==0)
-        retcode = do_aperture_search_mp(run, control, errcon, beamline);
-    else
-        retcode = do_aperture_search_sp(run, control, errcon, beamline);
-    log_exit("do_aperture_search");
-    return(retcode);
+    switch (mode_code) {
+    case MP_MODE:
+      retcode = do_aperture_search_mp(run, control, errcon, beamline);
+      break;
+    case LINE_MODE:
+      retcode = do_aperture_search_line(run, control, errcon, beamline);
+      break;
+    case SP_MODE:
+    default:
+      retcode = do_aperture_search_sp(run, control, errcon, beamline);
+      break;
     }
+    return(retcode);
+}
 
 /* many-particle search routine */
 
@@ -714,5 +724,111 @@ void finish_aperture_search(
     fclose(fpSearchOutput);
     fpSearchOutput = NULL;
   }
+}
+
+/* line search routine */
+
+long do_aperture_search_line(
+    RUN *run,
+    VARY *control,
+    ERRORVAL *errcon,
+    LINE_LIST *beamline
+    )
+{
+    double **coord;
+    double x0, y0, dx, dy;
+    double p_central;
+    long index, iSplit, nSteps;
+    long effort, n_trpoint;
+    double xSurvived, ySurvived ;
+
+    coord     = (double**)zarray_2d(sizeof(**coord), 1, 7);
+
+    effort = 0;
+    xSurvived = ySurvived = -1;
+    dx = dy = 0;
+
+    for (iSplit=0; iSplit<=n_splits; iSplit++) {
+      if (iSplit==0) {
+	x0 = y0 = 0;
+	dx  = xmax/(nx-1);
+	dy = ymax/(nx-1);
+	nSteps = nx;
+      } else {
+	if ((x0 = xSurvived)<=0 || (y0 = ySurvived)<=0) 
+	  x0 = y0 = 0;
+	dx *= split_fraction;
+	dy *= split_fraction;
+	x0 += dx;
+	y0 += dy;
+	nSteps = nx/split_fraction;
+	if (verbosity>=1) {
+	  printf("divided search interval to %e, %e\n", dx, dy);
+	  fflush(stdout);
+	}
+      }
+
+      for (index=0; index<nx; index++) {
+	coord[0][1] = coord[0][3] = coord[0][4] = coord[0][5] = 0;
+	coord[0][0] = index*dx + x0;
+	coord[0][2] = index*dy + y0;
+	
+	p_central = run->p_central;
+	n_trpoint = 1;
+	if (do_tracking(NULL, coord, n_trpoint, &effort, beamline, &p_central, 
+			  NULL, NULL, NULL, NULL, run, control->i_step, 
+			  SILENT_RUNNING, control->n_passes, 0, NULL, NULL, NULL, NULL)!=1) {
+	  if (verbosity>=2) {
+	    fprintf(stdout, "particle lost for x=%e, y=%e\n", index*dx + x0, index*dy + y0);
+	    fflush(stdout);
+	  }
+	  break;
+	}
+	if (verbosity>=2) {
+	  fprintf(stdout, "particle survived for x=%e, y=%e\n", x0+index*dx, y0+index*dy);
+	  fflush(stdout);
+	}
+	if (xSurvived<(x0+index*dx)) {
+	  xSurvived = x0+index*dx;
+	  ySurvived = y0+index*dy;      
+	}
+      }
+      
+      if (verbosity>=1) {
+        fprintf(stdout, "Sweep done, particle survived up to x=%e, y=%e\n", xSurvived, ySurvived);
+        fflush(stdout);
+      }
+    }
+    
+    if (!SDDS_StartTable(&SDDS_aperture, 1)) {
+      SDDS_SetError("Unable to start SDDS table (do_aperture_search)");
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+    SDDS_SetParameters(&SDDS_aperture, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, 0, control->i_step, -1);
+    if (control->n_elements_to_vary) {
+      for (index=0; index<control->n_elements_to_vary; index++)
+	if (!SDDS_SetParameters(&SDDS_aperture, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, index+1,
+				control->varied_quan_value[index], -1))
+	  break;
+    }
+    if (SDDS_NumberOfErrors()) {
+      SDDS_SetError("Problem setting SDDS parameter values (do_aperture_search)");
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+    
+    if (!SDDS_SetRowValues(&SDDS_aperture, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, 0,
+			   IC_X, xSurvived, IC_Y, ySurvived, -1)) {
+      SDDS_SetError("Problem setting SDDS row values (do_aperture_search)");
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+    
+    if (!SDDS_WriteTable(&SDDS_aperture)) {
+      SDDS_SetError("Problem writing SDDS table (do_aperture_search)");
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+    SDDS_DoFSync(&SDDS_aperture);
+    
+    free_zarray_2d((void**)coord, 1, 7);
+    return(1);
 }
 
