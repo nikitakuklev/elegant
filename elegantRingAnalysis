@@ -3,7 +3,7 @@
 exec oagwish "$0" "$@"
 
 #
-# $Log: elegantRingAnalysis,v
+# $Log: not supported by cvs2svn $
 #
 
 set auto_path [linsert $auto_path 0  /usr/local/oag/apps/lib/$env(HOST_ARCH)]
@@ -26,20 +26,7 @@ proc setStatus {text} {
     APSSetVarAndUpdate status $text
     update
 }
-
-proc affix {args} {
-    set prefix ""
-    set itemList ""
-    set suffix ""
-    if [APSStrictParseArguments {prefix itemList suffix}] {
-        return -code error "affix: Invalid arguments"
-    }
-    set returnList ""
-    foreach item $itemList {
-        lappend returnList ${prefix}${item}${suffix}
-    }
-    return $returnList
-}
+APSSetElegantGlobals
 
 set momentum 7.0e3
 set matrixLatticeFile ""
@@ -59,7 +46,8 @@ set gridEngine 0
 set makePngFiles 0
 
 proc SaveConfiguration {} {
-    global mainDirectory saveVarList
+    global elegantSaveVarList
+    eval global $elegantSaveVarList
     set configFile [APSFileSelectDialog .saveDialog -listDir $mainDirectory \
                      -checkValidity 0]
     if ![string length $configFile] return
@@ -71,39 +59,15 @@ proc SaveConfiguration {} {
             return
         }
     }
-    SaveJobConfiguration -filename $configFile
+    APSElegantSaveJobConfiguration -filename $configFile \
+	-statusCallback setStatus -momentum $momentum \
+	-matrixLatticeFile  $matrixLatticeFile -matrixBeamline $matrixBeamline \
+	-matrixOffsetElement $matrixOffsetElement -kickLatticeFile $kickLatticeFile \
+	-kickBeamline $kickBeamline -kickOffsetElement $kickOffsetElement \
+	-forceOccurence $forceOccurence -mainDirectory $mainDirectory \
+	-mainPrefix $mainPrefix -gridEngine $gridEngine -makePngFiles $makePngFiles
 }
 
-proc SaveJobConfiguration {args} {
-    set filename ""
-    APSStrictParseArguments {filename}
-    global mainDirectory saveVarList
-    
-    set fd [open $filename w]
-    eval global $saveVarList
-    foreach variable $saveVarList {
-        set names [array names $variable]
-        if ![llength $names] {
-	    set value [set $variable]
-	    if [string length $value] {
-		puts $fd "set $variable $value"
-	    } else {
-		puts $fd "set $variable \"\""
-	    }
-        } else {
-            foreach name $names {
-		set value [set $variable\($name\)]
-		if [string length $value] {
-		    puts $fd "set $variable\($name\) $value"
-		} else {
-		    puts $fd "set $variable\($name\) \"\""
-		}
-            }
-        }
-    }
-    close $fd
-    setStatus "Configuration $filename written."
-}
 
 proc ReadConfiguration {} {
     global mainDirectory saveVarList
@@ -114,6 +78,52 @@ proc ReadConfiguration {} {
     if ![file exists $configFile] return
     source $configFile
     setStatus "Configuration $configFile read."
+}
+
+proc Run {args} {
+    set computation ""
+    APSStrictParseArguments {computation}
+    global sourceDir elegantSaveVarList makePngFiles
+    eval global $elegantSaveVarList
+    APSElegant$computation -sourceDir $sourceDir -statusCallback setStatus \
+	-momentum $momentum -matrixLatticeFile $matrixLatticeFile \
+	-matrixBeamline $matrixBeamline -matrixOffsetElement $matrixOffsetElement \
+	-kickLatticeFile $kickLatticeFile -kickBeamline  $kickBeamline \
+	-kickOffsetElement $kickOffsetElement -forceOccurence $forceOccurence \
+	-mainDirectory $mainDirectory -mainPrefix $mainPrefix \
+	-gridEngine $gridEngine  -makePngFiles $makePngFiles
+}
+
+proc Display {args} {
+    set type ""
+    APSStrictParseArguments {type}
+    if ![string length $type] {
+	return
+    }
+    global mainDirectory mainPrefix elegantGlobalArrays makePngFiles
+    eval global $elegantGlobalArrays
+    set rootname ""
+    set suffix ""
+    if [regexp {Display} $type] {
+	set rootname ""
+	set suffix ""
+    } else {
+	set suffix PP
+	if [regexp {Basic} $type] {
+	    set prefix Basic
+	} else {
+	    set prefix $type
+	}
+	set variable [string tolower $type 0 0]
+	set rootname $mainDirectory/${mainPrefix}${prefix}[set ${variable}(userSuffix)]
+	if ![string compare $type "PhaseSpaceTracking"] {
+	    set rootname ${rootname}[set ${variable}(offsetPlane)]
+	}
+	if ![string compare $type "FrequencyMapDelta"] {
+	    set rootname ${rootname}[set ${variable}(plane)]
+	}
+    }
+    APSElegant${type}${suffix} -rootname $rootname -makePngFiles $makePngFiles -statusCallback setStatus
 }
 
 proc FillMainFrame {widget args} {
@@ -179,7 +189,6 @@ proc FillBasicFrame {widget args} {
     global basicComputations
     foreach item [list Chromaticity HigherOrderChromaticity ChromaticTuneSpread \
                     RadiationIntegrals ] {
-        set basicComputations(do$item) 0
         lappend variableList basicComputations(do$item) 
     }
     APSCheckButtonFrame .cb1 -parent $widget \
@@ -188,18 +197,10 @@ proc FillBasicFrame {widget args} {
                      "Radiation Integrals" ] \
       -variableList $variableList 
 
-    set basicComputations(chromaticTuneSpreadMomentumSpread) 0.015
     APSLabeledEntry .le1 -parent $widget -width 20 \
       -label "Momentum fractional half-range for chromatic tune spread: " \
       -textVariable basicComputations(chromaticTuneSpreadMomentumSpread) 
 
-    set basicComputations(driftDivisions) 1
-    set basicComputations(dipoleDivisions) 1
-    set basicComputations(quadDivisions) 1
-    set basicComputations(sextDivisions) 1
-    set basicComputations(edgeOrder) 1
-    set basicComputations(finalSTwiss) 0.0
-    set basicComputations(userSuffix) ""
     APSLabeledEntry .le2 -parent $widget -width 20 \
       -label "Drift divisions: " -type integer \
       -textVariable basicComputations(driftDivisions)
@@ -220,321 +221,14 @@ proc FillBasicFrame {widget args} {
       -textVariable basicComputations(userSuffix)
 
     APSButton .bu1 -parent $widget -text "Compute" -command \
-      "BasicComputations"
+      "Run -computation BasicComputations"
     APSButton .bu2 -parent $widget -text "Display" -command \
-	{BasicComputationsPP -rootname $mainDirectory/${mainPrefix}Basic$basicComputations(userSuffix)}
-}
-
-proc BasicComputations {args} {
-    global sourceDir  forceOccurence
-    global basicComputations momentum matrixLatticeFile mainParameterFile mainDirectory mainPrefix matrixBeamline
-    
-    set tag Basic
-    set rootname $mainDirectory/${mainPrefix}${tag}$basicComputations(userSuffix)
-    SaveJobConfiguration -filename $rootname.runCfg
-
-    foreach name [array names basicComputations] {
-        set $name $basicComputations($name)
-    }
-    set order 1
-    if $doChromaticity {
-        set order 2
-    }
-    if {$doHigherOrderChromaticity || $doChromaticTuneSpread} {
-        set order 3
-    }
-    if {$doChromaticTuneSpread && [expr $chromaticTuneSpreadMomentumSpread<=0]} {
-        return -code error "momentum spread must be positive for chromatic tune spread computations"        
-    }
-    set parameterFileList ""
-    foreach item [lsort [array names mainParameterFile]] {
-        if [string length $mainParameterFile($item)] {
-            append parameterFileList "$mainParameterFile($item) "
-        }
-    }
-    foreach item [array names basicComputations] {
-	lappend origList <$item>
-	lappend replList [set $item]
-    }
-    PerformRun -template $sourceDir/BasicTemplate.ele -parameterFileList $parameterFileList \
-	-forceOccurence $forceOccurence \
-	-tag $tag -order $order -momentum $momentum -suffix $basicComputations(userSuffix) \
-	-originalList $origList -replacementList $replList \
-	-suffix $basicComputations(userSuffix) -postProcessProc BasicComputationsPP 
-}
-
-proc BasicComputationsPP {args} {
-    set rootname ""
-    APSStrictParseArguments {rootname}
-    source $rootname.runCfg
-
-    foreach name [array names basicComputations] {
-        set $name $basicComputations($name)
-    }
-    set order 1
-    if $doChromaticity {
-        set order 2
-    }
-    if {$doHigherOrderChromaticity || $doChromaticTuneSpread} {
-        set order 3
-    }
-
-    set tmpRoot /tmp/[APSTmpString]
-    APSAddToTempFileList $tmpRoot.p1
-    if [expr $finalSTwiss>0] {
-        exec plotTwiss -fileRoot ${rootname} -filter=column,s,0,$finalSTwiss &
-    } else {
-        exec plotTwiss -fileRoot ${rootname} &
-    }
-    set parameterList -parameter=nu?,end 
-    if $doChromaticity {
-        lappend parameterList -parameter=dnu?/dp,end 
-    }
-    if $doHigherOrderChromaticity {
-        lappend parameterList -parameter=dnu?/dp2,end -parameter=dnu?/dp3,end 
-    }
-    if $doChromaticTuneSpread {
-        lappend parameterList -parameter=dnu?Chrom,end
-    }
-    if $basicComputations(doRadiationIntegrals) {
-        lappend parameterList -parameter=ex0 -parameter=Sdelta0 -parameter=U0,end
-        lappend parameterList -parameter=J? -parameter=Jdelta,end
-        lappend parameterList -parameter=tau? -parameter=taudelta,end
-        lappend parameterList -parameter=I1 -parameter=I2 -parameter=I3,end
-        lappend parameterList -parameter=I4 -parameter=I5,end
-    }
-    eval exec sddsprocess ${rootname}.twi -pipe=out \
-      {"-define=parameter,dnuxChrom,nuxChromUpper nuxChromLower -"} \
-      {"-define=parameter,dnuyChrom,nuyChromUpper nuyChromLower -"} \
-      | sddsprintout -pipe=in $tmpRoot.p1 -title=${rootname}.twi \
-      $parameterList -parameter=beta?Max,end -parameter=beta?Min,end \
-      -parameter=etaxM*,end 
-    APSFileDisplayWindow [APSUniqueName .] -fileName $tmpRoot.p1 -deleteOnClose 1 \
-      -height [llength $parameterList] -width 120 -height 10
-}
-
-proc PerformRun {args} {
-    set template ""
-    set parameterFileList ""
-    set forceOccurence 0
-    set order 1
-    set momentum 7e3
-    set replacementList ""
-    set originalList ""
-    set tag ""
-    set suffix ""
-    set postProcessProc ""
-    APSStrictParseArguments {template parameterFileList order momentum \
-	replacementList originalList tag suffix postProcessProc \
-	forceOccurence}
-    global mainDirectory mainPrefix matrixLatticeFile kickLatticeFile sourceDir 
-    global matrixBeamline kickBeamline matrixOffsetElement kickOffsetElement gridEngine
-    foreach item [list order momentum mainDirectory mainPrefix matrixLatticeFile kickLatticeFile parameterFileList matrixBeamline kickBeamline matrixOffsetElement kickOffsetElement forceOccurence] {
-	lappend originalList <$item>
-	lappend replacementList [set $item]
-    }
-    setStatus "Running elegant..."
-    set runDone 0
-    file delete -force $mainDirectory/${mainPrefix}${tag}${suffix}.done
-    exec replaceText $template $mainDirectory/${mainPrefix}${tag}${suffix}.ele \
-	-original=[join $originalList ,] -replacement=[join $replacementList ,]
-    if $gridEngine {
-	if [catch {exec ssub elegant $mainDirectory/${mainPrefix}${tag}${suffix}.ele} result] {
-	    return -code error "$result"
-	}
-    } else {
-	APSExecLog [APSUniqueName .] -width 100 \
-	    -unixCommand "elegant $mainDirectory/${mainPrefix}${tag}${suffix}.ele" \
-	    -callback "set runDone 1" \
-	    -cancelCallback "set runDone 2" -abortCallback "set runDone 2"
-	tkwait variable runDone
-    }
-    set rootname $mainDirectory/${mainPrefix}${tag}${suffix}
-    PostProcessRun -rootname $rootname -postProcessProc $postProcessProc 
-}
-
-proc PostProcessRun {args} {
-    set rootname ""
-    set postProcessProc ""
-    APSStrictParseArguments {rootname postProcessProc}
-    
-    if ![file exists $rootname.done] {
-	setStatus "Waiting for $rootname"
-	after 10000 "PostProcessRun -rootname $rootname -postProcessProc $postProcessProc"
-	return
-    }
-    setStatus "Run $rootname completed"
-    $postProcessProc -rootname $rootname
-}
-
-
-proc PerformRuns {args} {
-    set template ""
-    set parameterFileList ""
-    set forceOccurence 0
-    set order 1
-    set momentum 7e3
-    set replacementList ""
-    set originalList ""
-    set tag ""
-    set variable ""
-    set startValue 0
-    set endValue 0
-    set points 0
-    set copyList ""
-    set combineList ""
-    set mergeList ""
-    set suffix ""
-    set postProcessProc ""
-    APSStrictParseArguments {template parameterFileList order momentum tag  \
-				 variable startValue endValue  points copyList \
-				 combineList mergeList suffix forceOccurence \
-				 replacementList originalList postProcessProc}
-    global mainDirectory mainPrefix matrixLatticeFile kickLatticeFile sourceDir 
-    global matrixBeamline kickBeamline matrixOffsetElement kickOffsetElement gridEngine
-    foreach item [list order momentum mainDirectory mainPrefix matrixLatticeFile kickLatticeFile parameterFileList matrixBeamline kickBeamline matrixOffsetElement kickOffsetElement forceOccurence] {
-	lappend originalList <$item>
-	lappend replacementList [set $item]
-    }
-    set delta [expr ($endValue*1.0-$startValue)/($points-1.0)]
-    set w [APSUniqueName .]
-    set rootnameList ""
-    for {set i 0} {$i<$points} {incr i} {
-        set value [expr $startValue + $i*$delta]
-        set runDone 0
-        set suffix0 $suffix-[format %03d $i]
-        set rootname $mainDirectory/${mainPrefix}${tag}${suffix0}
-	file delete -force $rootname.done
-	exec replaceText $template $rootname.ele \
-	    -original=[join $originalList ,],<suffix>,<$variable> \
-	    -replacement=[join $replacementList ,],$suffix0,$value
-        if $gridEngine {
-	    set fd [open $rootname.sh w]
-	    file attributes $rootname.sh -permission +x
-	    puts $fd "sddsmakedataset $rootname.var -column=$variable,type=double -data=$value"
-	    puts $fd "elegant $rootname.ele >& $rootname.ele.log"
-	    close $fd
-	    catch {exec csub $rootname.sh} result
-	    setStatus "$result"
-	} else {
-	    setStatus "Running elegant..."
-	    exec sddsmakedataset $rootname.var -column=$variable,type=double -data=$value
-	    eval file delete -force $rootname.done
-	    APSExecLog $w -width 100 \
-		-unixCommand "elegant $rootname.ele" \
-		-callback "set runDone 1" \
-		-cancelCallback "set runDone 2" -abortCallback "set runDone 2"
-            tkwait variable runDone
-            set runDone [file exists $rootname.done]
-            if !$runDone {
-                setStatus "Run failed: $rootname.done not found."
-                return 0
-            }
-            setStatus "Run $i finished."
-        }
-        lappend rootnameList $rootname
-    }
-    set rootname $mainDirectory/${mainPrefix}${tag}${suffix}
-    PostProcessRuns -rootname $rootname -postProcessProc $postProcessProc \
-	-runNameList $rootnameList \
-	-copyList $copyList -mergeList $mergeList -combineList $combineList 
-    return 1
-}
-
-proc PostProcessRuns {args} {
-    set rootname ""
-    set runNameList ""
-    set copyList ""
-    set mergeList ""
-    set combineList ""
-    set postProcessProc ""
-    APSStrictParseArguments {rootname runNameList copyList mergeList combineList postProcessProc}
-
-    set doneList [affix -itemList $runNameList -suffix .done]
-    set numToDo [llength $doneList]
-    set numDone 0
-    foreach done $doneList {
-	if [file exists $done] {
-		incr numDone
-	    }
-    }
-    if $numDone!=$numToDo  {
-	setStatus "$numDone/$numToDo done for $rootname"
-	after 10000 \
-	    "PostProcessRuns -rootname $rootname -postProcessProc $postProcessProc -runNameList \"$runNameList\" -copyList \"$copyList\" -mergeList \"$mergeList\" -combineList \"$combineList\" "
-	return
-    }
-
-    setStatus "Postprocessing for ${rootname}"
-    set processedList ""
-    lappend copyList done
-    foreach item $copyList {
-        if [lsearch -exact $processedList $item]!=-1 continue
-	setStatus "Copying [lindex $runNameList 0].$item to $rootname.$item"
-        file copy -force [lindex $runNameList 0].$item $rootname.$item
-	eval file delete -force [affix -itemList $runNameList -suffix .$item]
-        lappend processedList $item
-    }
-    lappend mergeList var
-    foreach item $mergeList {
-        if [lsearch -exact $processedList $item]!=-1 continue
-	setStatus "Merging [llength $runNameList] files into $rootname.$item"
-	if [catch {exec sddscheck [lindex $runNameList 0].$item} result] {
-	    return -code error "$result"
-	}
-	if [string compare $result ok]==0 {
-	    if [catch {eval exec sddscombine [affix -itemList $runNameList -suffix .$item] \
-			   -merge -overwrite $rootname.$item} result] {
-		return -code error "$result"
-	    }
-	} else {
-	    if [catch {eval exec cat [affix -itemList $runNameList -suffix .$item] \
-			   > $rootname.$item} result] {
-		return -code error "$result"
-	    }
-	}
-        lappend processedList $item
-        eval file delete -force [affix -itemList $runNameList -suffix .$item]
-    }
-    foreach item $combineList {
-        if [lsearch -exact $processedList $item]!=-1 continue
-	setStatus "Combining [llength $runNameList] files into $rootname.$item"
-	if [catch {exec sddscheck [lindex $runNameList 0].$item} result] {
-	    return -code error "$result"
-	}
-	if [string compare $result ok]==0 {
-	    if [catch {eval exec sddscombine [affix -itemList $runNameList -suffix .$item] \
-			   -overwrite $rootname.$item} result] {
-		return -code error "$result"
-	    }
-	} else {
-	    if [catch {eval exec cat [affix -itemList $runNameList -suffix .$item] \
-			   > $rootname.$item} result] {
-		return -code error "$result"
-	    }
-	}
-        lappend processedList $item
-	eval file delete -force [affix -itemList $runNameList -suffix .$item]
-    }
-    $postProcessProc -rootname $rootname
-    setStatus "Done postprocessing for ${rootname}"
+	{Display -type BasicComputations}
 }
 
 proc FillCollectiveEffectsFrame {widget args} {
     global collectiveEffects
-    set collectiveEffects(scanPoints) 10
-    set collectiveEffects(charge0) 1.0e-9
-    set collectiveEffects(charge1) 1.0e-9
-    set collectiveEffects(rfVoltage0) 9.5e6
-    set collectiveEffects(rfVoltage1) 9.5e6
-    set collectiveEffects(emittanceRatio0) 0.01
-    set collectiveEffects(emittanceRatio1) 0.01
-    set collectiveEffects(BBImpedance0) 0.5
-    set collectiveEffects(BBImpedance1) 0.5
-    set collectiveEffects(rfHarmonic) 1296
-    set collectiveEffects(superPeriods) 1
-    set collectiveEffects(prefix) ""
-
+    
     APSLabeledEntry .number -parent $widget \
 	-label "Number of scan points: " -width 30 \
 	-textVariable collectiveEffects(scanPoints) -type integer
@@ -546,19 +240,19 @@ proc FillCollectiveEffectsFrame {widget args} {
 	-type integer
 
     APSLabeledEntryFrame .charge -parent $widget -type real \
-	-label "Charge limits (C):                                                  " \
+	-label "Charge limits (C):                                                     " \
 	-width 10 -orientation horizontal \
 	-variableList [list collectiveEffects(charge0) collectiveEffects(charge1)]
     APSLabeledEntryFrame .rfVolt -parent $widget -type real \
-	-label "Rf voltage limits (V):                                              " \
+	-label "Rf voltage limits (V):                                                 " \
 	-width 10 -orientation horizontal \
 	-variableList [list collectiveEffects(rfVoltage0) collectiveEffects(rfVoltage1)]
     APSLabeledEntryFrame .emitRatio -parent $widget -type real \
-	-label "Emittance ratio limits (ey/ex):                                     " \
+	-label "Emittance ratio limits (ey/ex):                                        " \
 	-width 10 -orientation horizontal \
 	-variableList [list collectiveEffects(emittanceRatio0) collectiveEffects(emittanceRatio1)]
     APSLabeledEntryFrame .bbimp -parent $widget -type real \
-	-label "Broad-band impedance limits (Ohm):                                  " \
+	-label "Broad-band impedance limits (Ohm):                                     " \
 	-width 10 -orientation horizontal \
 	-variableList [list collectiveEffects(BBImpedance0) collectiveEffects(BBImpedance1)]
 
@@ -569,363 +263,33 @@ proc FillCollectiveEffectsFrame {widget args} {
     set w $widget.hai.frame
     APSLabeledEntry .hai -parent $w -label "Haissinski: " \
 	-width 70 -textVariable collectiveEffects(haissinskiOutput) -commandButton 1 
-    APSButton .run -parent $w -text "Run" -command RunHaissinski \
+    APSButton .run -parent $w -text "Run" -command "Run -computation RunHaissinski" \
 	-contextHelp "Do scan for Haissinski equation (bunch lengthening)."
-    APSButton .display -parent $w -text "Display" -command DisplayHaissinski \
+    APSButton .display -parent $w -text "Display" -command "Display -type DisplayHaissinski" \
 	-contextHelp "Display scan for intrabeam scattering."
 
     APSFrame .ibs -parent $widget -label "" 
     set w $widget.ibs.frame
     APSLabeledEntry .ibs -parent $w -label "IBS: " -commandButton 1 \
 	-width 60 -textVariable collectiveEffects(ibsOutput)
-    APSButton .run -parent $w -text "Run" -command RunIBS \
+    APSButton .run -parent $w -text "Run" -command "Run -computation RunIBS" \
 	-contextHelp "Do scan for intrabeam scattering."
-    APSButton .display -parent $w -text "Display" -command DisplayIBS \
+    APSButton .display -parent $w -text "Display" -command "Display -type DisplayIBS" \
 	-contextHelp "Display scan for intrabeam scattering."
 
     APSFrame .scts -parent $widget -label ""
     set w $widget.scts.frame
     APSLabeledEntry .scts -parent $w -label "SC tune spread: " -commandButton 1\
         -width 60 -textVariable collectiveEffects(scTuneSpreadOutput)
-    APSButton .run -parent $w -text "Run" -command RunSCTuneSpread \
+    APSButton .run -parent $w -text "Run" -command "Run -computation RunSCTuneSpread" \
 	-contextHelp "Compute space charge tune spreads."
-    APSButton .display -parent $w -text "Display" -command DisplaySCTuneSpread \
+    APSButton .display -parent $w -text "Display" -command "Display -type DisplaySCTuneSpread" \
 	-contextHelp "Display scan for space-charge tune spread."
-}
-
-proc DetermineScanVariableCollectiveEffects {args} {
-    global collectiveEffects mainDirectory mainPrefix runDone
-    set scanQuantities 0
-    foreach item {charge rfVoltage emittanceRatio BBImpedance} {
-	if [expr [set collectiveEffects(${item}0)]!=[set collectiveEffects(${item}1)]] {
-	    incr scanQuantities 1
-	    set scanVariable $item
-	}
-    }
-    if $scanQuantities!=1 {
-	return -code error "Scan one and only one quantity.  All others must have the two values equal."
-    }
-    return $scanVariable
-}
-
-proc ScanCollectiveEffectsProgram {args} {
-    set template ""
-    set extension ""
-    set dataFile ""
-    set type ""
-    APSStrictParseArguments {template extension type dataFile}
-    global collectiveEffects mainDirectory mainPrefix runDone gridEngine
-
-    set isIBS [expr ![string compare $type IBS]]
-    set isSCTS [expr ![string compare $type SCTS]]
-    if {($isIBS || $isSCTS) && ![string length $dataFile]} {
-	return -code error "Need data file for $type"
-    }
-    foreach item {rfHarmonic charge rfVoltage emittanceRatio BBImpedance bunchLength} {
-	set ${item}List ""
-    }
-    if {!($isIBS || $isSCTS)} {
-	if [catch {DetermineScanVariableCollectiveEffects} scanVariable] {
-	    return -code error "$scanVariable"
-	}
-	set points $collectiveEffects(scanPoints)
-	setStatus "Will scan $scanVariable over $points values"
-	for {set step 0} {$step<$points} {incr step} {
-	    foreach item {rfHarmonic superPeriods} {
-		set value [set collectiveEffects($item)]
-		lappend ${item}List $value
-	    }
-	    foreach item {charge rfVoltage emittanceRatio BBImpedance} {
-		set value0 [set collectiveEffects(${item}0)]
-		set value1 [set collectiveEffects(${item}1)]
-		lappend ${item}List [expr $value0+(1.0*$value1-$value0)/($points-1.0)*$step]
-	    }
-	    lappend rmsBunchLengthList 0
-	}
-    } else {
-	set points [exec sdds2stream -rows=bare $dataFile]
-	setStatus "$points evaluation points in $dataFile"
-	set scanVariable [exec sdds2stream $dataFile -column=scanVariable -pipe=out | tail -1]
-	foreach item {charge rmsBunchLength rfVoltage emittanceRatio superPeriods rfHarmonic BBImpedance} {
-	    set ${item}List [APSGetSDDSColumn -fileName $dataFile -column $item]
-	}
-    }
-    set outputList ""
-    
-    for {set step 0} {$step<$points} {incr step} {
-	set output $mainDirectory/${mainPrefix}$collectiveEffects(prefix)-[format %03d $step].$extension
-	set command [eval os editstring %+<output>+$output+ $template]
-	foreach item {charge rmsBunchLength rfVoltage emittanceRatio superPeriods rfHarmonic BBImpedance} {
-	    set value [lindex [set ${item}List] $step]
-	    set command [eval os editstring %/<$item>/$value/ $command]
-	    switch $item {
-		charge {
-		    set command [eval os editstring %/<charge_nC>/[expr $value*1e9]/ $command]
-		}
-		rfVoltage {
-		    set command [eval os editstring %/<rfVoltage_MV>/[expr $value/1e6]/ $command]
-		}
-		rmsBunchLength {
-		    set command [eval os editstring %/<rmsBunchLength_mm>/[expr $value*1e3]/ $command]
-		}
-	    }
-	}
-	if $gridEngine {
-	    set scriptName $output.sh
-	    set fd [open $scriptName w]
-	    puts $fd "$command"
-	    puts $fd "echo done > $output.done"
-	    close $fd
-	    file attributes $output.sh -permission +x
-	    catch {exec csub $output.sh} result
-	    setStatus "$result"
-	    lappend scriptList $output.sh
-	} else {
-	    APSExecLog .scan -unixCommand "$command" -width 100 -height 30 \
-		-callback "set runDone 1" -cancelCallback "set runDone 2" \
-		-abortCallback "set runDone 2"
-	    tkwait variable runDone
-	    if $runDone==2 {
-		break
-	    }
-	}
-	lappend doneList $output.done
-	lappend outputList $output
-    }
-    if $gridEngine {
-	set waitingFor 1
-	while {$waitingFor} {
-	    set waitingFor 0
-	    if $waitingFor {
-		setStatus "Waiting for $waitingFor jobs"
-		APSWaitWithUpdate -updateInterval 1 -waitSeconds 10
-	    }
-	    foreach done $doneList {
-		if ![file exists $done] {
-		    incr waitingFor 
-		}
-	    }
-	}
-	setStatus "All jobs completed."
-	eval file delete $scriptList $doneList
-    }
-    if [llength $outputList] {
-	set prefix $collectiveEffects(prefix)
-	if [catch {exec sddsmakedataset $mainDirectory/${mainPrefix}${prefix}.${extension}.settings \
-		       -column=charge,type=double,units=C -data=[join $chargeList ,] \
-		       -column=rfVoltage,type=double,units=V -data=[join $rfVoltageList ,] \
-		       -column=emittanceRatio,type=double -data=[join $emittanceRatioList ,] \
-		       -column=BBImpedance,type=double,units=Ohms -data=[join $BBImpedanceList ,] \
-		       -column=rfHarmonic,type=long -data=[join $rfHarmonicList ,] \
-		       -column=superPeriods,type=long -data=[join $superPeriodsList ,] \
-		       -column=scanVariable,type=string \
-		       -data=[join [APSReplicateItem -item $scanVariable -number $points] ,]} result] {
-	    return -code error "$result"
-	}
-	return [concat $mainDirectory/${mainPrefix}${prefix}.${extension}.settings $outputList]
-    }
-    return -code error ""
-}
-
-proc RunIBS {} {
-    global collectiveEffects mainDirectory mainPrefix
-    if ![file exists $mainDirectory/${mainPrefix}Basic.twi] {
-        setStatus "Error: please perform Basic run in order to proceed."
-        return
-    }
-    if ![file exists $mainDirectory/${mainPrefix}$collectiveEffects(prefix).hai] {
-	setStatus "Error: Haissinski must be run first"
-    }
-    
-    if [catch {ScanCollectiveEffectsProgram -extension ibs -type IBS \
-		   -dataFile $mainDirectory/${mainPrefix}$collectiveEffects(prefix).hai \
-		   -template "ibsEmittance $mainDirectory/${mainPrefix}Basic.twi <output> -charge=<charge_nC> -coupling=<emittanceRatio> -length=<rmsBunchLength_mm> -superperiods=<superPeriods>"} result] {
-	return -code error "$result"
-    }
-    set mainFile [lindex $result 0]
-    set indivFileList [lrange $result 1 end]
-    eval exec sddscombine $indivFileList -collapse -pipe=out \
-	| sddsxref $mainFile -pipe=in -take=* $mainDirectory/${mainPrefix}$collectiveEffects(prefix).ibs
-    eval file delete -force $result
-    set collectiveEffects(ibsOutput) $mainDirectory/${mainPrefix}$collectiveEffects(prefix).ibs
-    DisplayIBS
-}
-
-proc DisplayIBS {} {
-    global collectiveEffects 
-    set input $collectiveEffects(ibsOutput)
-    if ![file exists $input] {
-	return -code error "not found: $input"
-    }
-    if [catch {exec sdds2stream $input -column=scanVariable \
-		   | tail -1} scanVariable] {
-	return -code error "$scanVariable"
-    }
-    exec sddsplot $input -graph=symbol,vary=type,subtype=type,connect=type,scale=2 \
-	-legend \
-	-column=$scanVariable,(emitxInput,emitx) -end \
-	-column=$scanVariable,(emityInput,emity) -end \
-	-column=$scanVariable,(sigmaDelta0,sigmaDelta) -end \
-	-column=$scanVariable,(sigmaz0,sigmaz) -end &
-    global makePngFiles
-    if $makePngFiles {
-	exec sddsplot -thick=2 -device=png,onwhite,template=$input-%ld.png \
-	    $input -graph=symbol,vary=type,subtype=type,connect=type,scale=2 -legend \
-	    -column=$scanVariable,(emitxInput,emitx) -end \
-	    -column=$scanVariable,(emityInput,emity) -end \
-	    -column=$scanVariable,(sigmaDelta0,sigmaDelta) -end \
-	    -column=$scanVariable,(sigmaz0,sigmaz) -end &
-	setStatus "PNG files: $input-\[0123\].png"
-    }
-}
-
-proc RunHaissinski {} {
-    global collectiveEffects mainDirectory mainPrefix
-    if ![file exists $mainDirectory/${mainPrefix}Basic.twi] {
-        setStatus "Error: please perform Basic run in order to proceed."
-        return
-    }
-    set cmks 2.99792458e8 
-    set h $collectiveEffects(rfHarmonic)
-    set V [expr $collectiveEffects(rfVoltage1)/1e6]
-    if [catch {exec sddsprocess $mainDirectory/${mainPrefix}Basic.twi -pipe=out \
-		   -process=s,max,sMax \
-		   | sdds2stream -pipe -parameter=pCentral,Sdelta0,sMax,U0,alphac} dataList] {
-	return -code error "$dataList"
-    }
-    APSSetVarsFromList -variableList "pCentral energySpread sMax Uo alphac" \
-	-valueList $dataList
-    set revolutionFrequency [expr $cmks/($sMax*$collectiveEffects(superPeriods))]
-    set energy [expr $pCentral*0.511]
-    set bunchLength [expr 1e3*$energySpread*$cmks* \
-                       sqrt($alphac/(2*3.1415926*$h))/$revolutionFrequency* \
-                       sqrt($energy/sqrt($V*$V-$Uo*$Uo))]
-    setStatus "Initial bunch length $bunchLength mm"
-
-    set haissinskiPoints 4000
-    set haissinskiFraction 0.01
-    set haissinskiDivisor 100.0
-    set haissinskiIterations 1000
-    set haissinskiTolerance 0.0001
-    set extraOption "-integration=deltaTime=[expr $bunchLength/1e3/$haissinskiDivisor/$cmks],points=$haissinskiPoints,fraction=$haissinskiFraction,iterations=$haissinskiIterations,tolerance=$haissinskiTolerance -steps=1" 
-    if [catch {ScanCollectiveEffectsProgram -extension hai -type Haissinski \
-		   -template "nice -19 haissinski $mainDirectory/${mainPrefix}Basic.twi <output> -model=Zn=<BBImpedance> -charge=<charge> -rf=voltage=<rfVoltage>,harmonic=<rfHarmonic> -superPeriods=<superPeriods> $extraOption"} result] {
-	return -code error "$result"
-    }
-    set mainFile [lindex $result 0]
-    set indivFileList [lrange $result 1 end]
-    eval exec sddscombine $indivFileList -pipe=out \
-	| sddsprocess -pipe \
-	{"-define=column,Time2Density,Time sqr Density *"} \
-	-process=Density,integ,DensityInteg,functionOf=Time \
-	-process=Time2Density,integ,Time2DensityInteg,functionOf=Time \
-	{"-define=parameter,rmsBunchDuration,Time2DensityInteg DensityInteg / sqrt ,units=s"} \
-	{"-define=parameter,rmsBunchLength,rmsBunchDuration c_mks *,units=m"} \
-	| sddscollapse -pipe \
-	| sddsxref $mainFile -pipe=in -take=* $mainDirectory/${mainPrefix}$collectiveEffects(prefix).hai
-    eval file delete -force $result
-    set collectiveEffects(haissinskiOutput) $mainDirectory/${mainPrefix}$collectiveEffects(prefix).hai
-    DisplayHaissinski
-}
-
-proc DisplayHaissinski {} {
-    global collectiveEffects 
-    set input $collectiveEffects(haissinskiOutput)
-    if ![file exists $input] {
-	return -code error "not found: $input"
-    }
-    if [catch {exec sdds2stream $input -column=scanVariable \
-		   | tail -1} scanVariable] {
-	return -code error "$scanVariable"
-    }
-    exec sddsplot $input -legend \
-	-graph=symbol,vary=type,subtype=type,connect=type,scale=2 \
-	-column=$scanVariable,rmsBunchLength -end &
-    global makePngFiles
-    if $makePngFiles {
-	exec sddsplot -thickness=2 -device=png,onwhite -output=$input.png \
-	    $input -graph=symbol,vary=type,subtype=type,connect=type,scale=2 -legend \
-	    -column=$scanVariable,rmsBunchLength -end &
-	setStatus "PNG file: $input.png"
-    }
-}
-
-proc RunSCTuneSpread {} {
-    global collectiveEffects mainDirectory mainPrefix
-    if ![file exists $mainDirectory/${mainPrefix}Basic.twi] {
-        setStatus "Error: please perform Basic run in order to proceed."
-        return
-    }
-    if ![file exists $mainDirectory/${mainPrefix}$collectiveEffects(prefix).ibs] {
-	setStatus "Error: IBS must be run first"
-    }
-    if ![file exists $mainDirectory/${mainPrefix}$collectiveEffects(prefix).hai] {
-	setStatus "Error: Haissinski must be run first"
-    }
-    set tmpRoot /tmp/[APSTmpString]
-    APSAddToTempFileList $tmpRoot.1 $tmpRoot.2
-    if [catch {exec sddsexpand $mainDirectory/${mainPrefix}$collectiveEffects(prefix).hai -pipe=out \
-		   | tee $tmpRoot.1 \
-		   | sdds2stream -pipe -npages=bare} pages] {
-	return -code error "$pages"
-    }
-    if [catch {exec sddsexpand \
-		   $mainDirectory/${mainPrefix}$collectiveEffects(prefix).ibs $tmpRoot.2} result] {
-	return -code error "$result"
-    }
-    if [catch {eval exec nice -19 sddscombine \
-		   [APSReplicateItem -item $mainDirectory/${mainPrefix}Basic.twi \
-			-number $pages] -pipe=out \
-		   | sddsxref $tmpRoot.1 -pipe -leave=* -transfer=parameter,* \
-		   | sddsxref $tmpRoot.2 -pipe -leave=* -transfer=parameter,* \
-		   | sddsprocess -pipe \
-		   {"-define=parameter,K,charge e_mks / re_mks * 2 pi * 1.5 pow / pCentral 3 pow / rmsBunchLength /"} \
-		   {"-define=column,Sx,betax emitx * sigmaDelta etax * sqr + sqrt,units=m"} \
-		   {"-define=column,Sy,betay emity * sqrt,units=m"} \
-		   {"-define=column,SCTSIntegrand,betay Sy / Sx Sy + /,units=1/m"} \
-		   -process=SCTSIntegrand,integ,SCTSIntegral,functionOf=s \
-		   {"-define=parameter,spaceChargeTuneSpread,SCTSIntegral K *"} \
-		   | sddscollapse -pipe=in \
-		   $mainDirectory/${mainPrefix}$collectiveEffects(prefix).scts } result] {
-	return -code error "$result"
-    }
-    set collectiveEffects(scTuneSpreadOutput) $mainDirectory/${mainPrefix}$collectiveEffects(prefix).scts
-    DisplaySCTuneSpread
-}
-
-proc DisplaySCTuneSpread {} {
-    global collectiveEffects
-    set input $collectiveEffects(scTuneSpreadOutput)
-    if ![file exists $input] {
-	return -code error "not found: $input"
-    }
-    if [catch {exec sdds2stream $input -column=scanVariable \
-		   | tail -1} scanVariable] {
-	return -code error "$scanVariable"
-    }
-    exec sddsplot $input -graph=symbol,vary=type,subtype=type,connect=type,scale=2 \
-	-legend \
-	-column=$scanVariable,spaceChargeTuneSpread &
-    global makePngFiles
-    if $makePngFiles {
-	exec sddsplot -thickness=2 -device=png,onwhite -output=$input.png \
-	    $input -graph=symbol,vary=type,subtype=type,connect=type,scale=2 -legend \
-	    -column=$scanVariable,spaceChargeTuneSpread &
-	setStatus "PNG file: $input.png"
-    }
 }
 
 proc FillPhaseSpaceFrame {widget args} {
     global phaseSpaceTracking
-    set phaseSpaceTracking(offsetPlane) X
-    set phaseSpaceTracking(otherPlane) Y
-    set phaseSpaceTracking(initialOffset) 1e-6
-    set phaseSpaceTracking(finalOffset)   1e-3
-    set phaseSpaceTracking(otherCoord) 0.0
-    set phaseSpaceTracking(delta) 0.0
-    set phaseSpaceTracking(sweepPoints) 11
-    set phaseSpaceTracking(turns) 1024
-    set phaseSpaceTracking(userSuffix) ""
+    
     APSRadioButtonFrame .rb1 -parent $widget \
       -label "Plane: " -orientation horizontal -buttonList {x y} -valueList {X Y} \
       -commandList {"set phaseSpaceTracking(otherPlane) Y" "set phaseSpaceTracking(otherPlane) X"} \
@@ -964,200 +328,15 @@ proc FillPhaseSpaceFrame {widget args} {
       -contextHelp "Enter a suffix for this set of runs."
 
     APSButton .bu1 -parent $widget \
-      -text "Run" -command "PhaseSpaceTracking"
+      -text "Run" -command "Run -computation PhaseSpaceTracking"
     APSButton .bu2 -parent $widget \
       -text "Display" -command \
-	{PhaseSpaceTrackingPP -rootname $mainDirectory/${mainPrefix}PhaseSpaceTracking$phaseSpaceTracking(userSuffix)$phaseSpaceTracking(offsetPlane)}
-}
-
-proc PhaseSpaceTracking {} {
-    global sourceDir forceOccurence
-    global phaseSpaceTracking momentum matrixLatticeFile mainParameterFile mainDirectory mainPrefix
-    global kickOffsetElement
-
-    set Plane $phaseSpaceTracking(offsetPlane)
-    set tag PhaseSpaceTracking
-    set rootname $mainDirectory/${mainPrefix}${tag}$phaseSpaceTracking(userSuffix)$Plane
-    SaveJobConfiguration -filename $rootname.runCfg
-
-    set parameterFileList ""
-    foreach item [lsort [array names mainParameterFile]] {
-        if [string length $mainParameterFile($item)] {
-            append parameterFileList "$mainParameterFile($item) "
-        }
-    }
-    foreach item [array names phaseSpaceTracking] {
-	lappend origList <$item>
-	lappend replList [set phaseSpaceTracking($item)]
-    }
-    set plane [string tolower $phaseSpaceTracking(offsetPlane)]
-    set variable offset
-    PerformRuns -template $sourceDir/PhaseSpaceTrackingTemplate.ele -parameterFileList $parameterFileList \
-	-variable $variable -forceOccurence $forceOccurence \
-	-startValue $phaseSpaceTracking(initialOffset) \
-	-endValue $phaseSpaceTracking(finalOffset) \
-	-points $phaseSpaceTracking(sweepPoints) \
-	-copyList [list sh done] -combineList w1 -mergeList [list var ele ele.log] \
-	-replacementList $replList -originalList $origList \
-	-tag $tag -suffix $phaseSpaceTracking(userSuffix)$Plane \
-	-order 3 -momentum $momentum \
-	-postProcessProc PhaseSpaceTrackingPP
-}
-
-proc MakePhaseSpacePlot {args} {
-    set plane x
-    set rootname ""
-    APSStrictParseArguments {plane rootname}
-
-    set arrayList \
-	[QueryValuesDialog \
-	     -nameList "${plane}Min ${plane}Max ${plane}pMin ${plane}pMax TuneColor" \
-	     -elementList "xmin xmax ymin ymax tuneColor" \
-	     -defaultList "-0.1 0.1 -0.1 0.1 1" -typeList "real real real real yesNo" \
-	     -name "Phase Space Plot Limits"]
-
-    if ![llength $arrayList] return
-    array set limit $arrayList
-    set limitOptList ""
-    foreach item [array names limit] {
-	if [string match ?m* $item]==0 continue
-	lappend limitOptList $item=[set limit($item)]
-    }
-    if $limit(tuneColor) {
-	set input ${rootname}.w1
-	exec sddsnaff $input -pipe=out -column=Pass -pair=C${plane},C${plane}p -terminate=freq=1 \
-	    | sddscombine -pipe -merge \
-	    | sddsprocess -pipe \
-	    "-define=column,TuneP,C${plane}Frequency" \
-	    | sddsexpand -pipe=in $input.naff.tmp
-
-	exec sddsxref $input $input.naff.tmp -pipe=out -leave=* -transfer=parameter,TuneP -nowarning \
-	    | sddssort -pipe -parameter=TuneP \
-	    | sddsprocess -pipe=in $input.${plane}withNaff -define=column,Tune,TuneP \
-	    -filter=parameter,TuneP,0,1 
-	file delete $input.naff.tmp
-
-	exec sddsplot $input.${plane}withNaff -split=column=Tune,width=0.01 \
-	    -graph=dot,vary -order=spect \
-	    -col=C${plane},C${plane}p \
-	    "-topline=${rootname}" \
-	    -limit=[join $limitOptList ,] &
-	
-	global makePngFiles
-	if $makePngFiles {
-	    exec sddsplot -thickness=2 -device=png,onwhite \
-		-output=${rootname}-${plane}-${plane}p.png \
-		$input.${plane}withNaff -split=column=Tune,width=0.01 \
-		-graph=dot,vary -order=spect \
-		-col=C${plane},C${plane}p \
-		"-topline=${rootname}" \
-		-limit=[join $limitOptList ,] &
-	    
-	    setStatus "PNG file: ${rootname}-${plane}-${plane}p.png"
-	}
-
-    } else {
-	exec sddsplot \
-	    -col=C${plane},C${plane}p -graph=dot ${rootname}.w1 \
-	    "-topline=${rootname}" \
-	    -limit=[join $limitOptList ,] &
-	
-	global makePngFiles
-	if $makePngFiles {
-	    exec sddsplot -thickness=2 -device=png,onwhite \
-		-output=${rootname}-${plane}-${plane}p.png \
-		-col=C${plane},C${plane}p -graph=dot ${rootname}.w1 \
-		"-topline=${rootname}" \
-		-limit=[join $limitOptList ,] &
-	    
-	    setStatus "PNG file: ${rootname}-${plane}-${plane}p.png"
-	}
-    }
-}
-
-proc MakeFFTPhaseSpacePlot {args} {
-    set plane x
-    set rootname ""
-    APSStrictParseArguments {plane rootname}
-
-    exec sddsfft ${rootname}.w1 \
-	-column=Pass,Cx*,Cy* -window -suppressAverage -pipe=out \
-	| sddsxref -pipe ${rootname}.vare -leave=* -transfer=parameter,* \
-	| sddsprocess -pipe=in ${rootname}.w1.fft \
-	"-print=parameter,${plane}Label,${plane}0 = %.5f,offset"
-    exec sddsplot -column=f,FFTC${plane} ${rootname}.w1.fft \
-	-title=@${plane}Label -separate=page -split=page -mode=y=log,y=special \
-	-topline=$rootname &
-    global makePngFiles
-    if $makePngFiles {
-	exec sddsplot -thickness=2 \
-	    -device=png,onwhite,template=${rootname}-$plane-fft-%ld.png \
-	    -column=f,FFTC${plane} ${rootname}.w1.fft \
-	    -title=@${plane}Label -separate=page -split=page -mode=y=log,y=special \
-	    -topline=$rootname &
-	setStatus "PNG files: ${rootname}-${plane}-fft-*.png"
-    }
-}
-
-
-proc PhaseSpaceTrackingPP {args} {
-    set rootname ""
-    APSStrictParseArguments {rootname}
-
-    source $rootname.runCfg
-    set plane [string tolower $phaseSpaceTracking(offsetPlane)]
-    set otherPlane [string tolower $phaseSpaceTracking(otherPlane)]
-
-    exec sddsexpand ${rootname}.var ${rootname}.vare
-
-    # plot phase space and FFT for main plane
-    MakePhaseSpacePlot -rootname $rootname -plane $plane
-    MakeFFTPhaseSpacePlot -rootname $rootname -plane $plane
-
-    if [expr $phaseSpaceTracking(otherCoord)!=0.0] {
-	# plot phase space and FFT for other plane
-	MakePhaseSpacePlot -rootname $rootname -plane $otherPlane 
-	MakeFFTPhaseSpacePlot -rootname $rootname -plane $otherPlane
-    }
-
-    # Do NAFF analysis 
-    exec sddsprocess ${rootname}.w1 -pipe=out \
-	-process=C${plane},first,%sFirst \
-	| sddsnaff -pipe \
-	-columns=Pass -pair=C${plane},C${plane}p -pair=C${otherPlane},C${otherPlane}p \
-	-terminateSearch=frequencies=1 -nowarnings -iterate=cycleLimit=200,accuracyLimit=1e-12 \
-	| sddsprocess -pipe -define=column,C${plane}0,C${plane}First,units=m \
-	| sddscombine -pipe -merge \
-	| sddsxref -pipe ${rootname}.var -take=* \
-	| sddsprocess -pipe=in ${rootname}.w1.naff \
-	-filter=column,C${plane}Frequency,0,1 \
-	-filter=column,C${otherPlane}Frequency,0,1 
-
-    exec sddsplot -topline=$rootname \
-	-column=C${plane}0,C${plane}Frequency ${rootname}.w1.naff -end \
-	-column=C${plane}0,C${otherPlane}Frequency ${rootname}.w1.naff &
-    global makePngFiles
-    if $makePngFiles {
-	exec sddsplot -thickness=2 \
-	    -device=png,onwhite,template=${rootname}-naff.png \
-	    -filter=column,C${plane}Frequency,0,1 \
-	    -filter=column,C${otherPlane}Frequency,0,1 \
-	    -topline=$rootname \
-	    -column=C${plane}0,C${plane}Frequency ${rootname}.w1.naff -end \
-	    -column=C${plane}0,C${otherPlane}Frequency ${rootname}.w1.naff &
-	setStatus "PNG file: $rootname-naff.png"
-    }
+	{Display -type PhaseSpaceTracking}
 }
 
 proc FillOffMomentumTunesFrame {widget args} {
     global offMomentumTuneTracking
-    set offMomentumTuneTracking(initialOffset) -0.01
-    set offMomentumTuneTracking(finalOffset) 0.01
-    set offMomentumTuneTracking(xOffset) 1e-6
-    set offMomentumTuneTracking(yOffset) 1e-6
-    set offMomentumTuneTracking(sweepPoints) 11
-    set offMomentumTuneTracking(turns) 1024
-    set offMomentumTuneTracking(superperiodicity) 1
+    
     APSLabeledEntry .le1 -parent $widget \
       -label "Initial momentum offset for scan: " -width 20 -textVariable offMomentumTuneTracking(initialOffset) \
       -contextHelp \
@@ -1193,116 +372,23 @@ proc FillOffMomentumTunesFrame {widget args} {
       -contextHelp \
       "Enter the superperiodicity of the lattice.  This is used only in generating the resonance diagram."
 
-    set offMomentumTuneTracking(userSuffix) ""
+  
     APSLabeledEntry .le5 -parent $widget \
       -label "Run suffix: " -width 20 -textVariable offMomentumTuneTracking(userSuffix) \
       -contextHelp "Enter a suffix for this set of runs."
 
 
     APSButton .bu1 -parent $widget \
-      -text "Run" -command "OffMomentumTuneTracking"
+      -text "Run" -command "Run -computation OffMomentumTuneTracking"
     APSButton .bu2 -parent $widget \
       -text "Display" -command \
-	{OffMomentumTuneTrackingPP -rootname $mainDirectory/${mainPrefix}OffMomentumTuneTracking$offMomentumTuneTracking(userSuffix)}
+	{Display -type OffMomentumTuneTracking}
 }
 
-proc OffMomentumTuneTracking {} {
-    global sourceDir forceOccurence
-    global offMomentumTuneTracking momentum matrixLatticeFile mainParameterFile mainDirectory mainPrefix
 
-    set tag OffMomentumTuneTracking
-    set rootname $mainDirectory/${mainPrefix}${tag}$offMomentumTuneTracking(userSuffix)
-    SaveJobConfiguration -filename $rootname.runCfg
-
-    set parameterFileList ""
-    if ![file exists $mainDirectory/${mainPrefix}Basic.twi] {
-	setStatus "Error: please perform Basic run in order to proceed."
-	return
-    }
-    foreach item [lsort [array names mainParameterFile]] {
-        if [string length $mainParameterFile($item)] {
-            append parameterFileList "$mainParameterFile($item) "
-        }
-    }
-    foreach item [array names offMomentumTuneTracking] {
-	lappend origList <$item>
-	lappend replList [set offMomentumTuneTracking($item)]
-    }
-    PerformRuns -template $sourceDir/OffMomentumTuneTrackingTemplate.ele \
-	-parameterFileList $parameterFileList -forceOccurence $forceOccurence \
-	-originalList $origList -replacementList $replList \
-	-variable delta -suffix $offMomentumTuneTracking(userSuffix) \
-	-startValue $offMomentumTuneTracking(initialOffset) \
-	-endValue $offMomentumTuneTracking(finalOffset) \
-	-points $offMomentumTuneTracking(sweepPoints) \
-	-tag $tag -order 3 -momentum $momentum \
-	-copyList [list sh done] -combineList [list w1 ele ele.log] \
-	-postProcessProc OffMomentumTuneTrackingPP
-}
-
-proc OffMomentumTuneTrackingPP {args} {
-    set rootname ""
-    APSStrictParseArguments {rootname}
-    source $rootname.runCfg
-
-    exec sddsexpand ${rootname}.var ${rootname}.vare
-
-    exec sddsnaff $rootname.w1 -pipe=out \
-	-column=Pass -pair=Cx,Cxp -pair=Cy,Cyp -terminate=freq=1 \
-	-iterate=cycleLimit=200,accuracyLimit=1e-12 \
-	| sddscombine -pipe -merge \
-	| sddsprocess -pipe \
-	"-define=column,nuxTracking,CxFrequency" \
-	"-define=column,nuyTracking,CyFrequency" \
-	| sddsexpand -pipe \
-	| sddsxref -pipe ${rootname}.vare  \
-	-leave=* -transfer=parameter,* \
-	| sddscollapse -pipe \
-	| sddsprocess -pipe=in ${rootname}.w1.naff -filter=column,nuxTracking,0,1 \
-	-filter=column,nuyTracking,0,1
-    
-    catch {exec sddsresdiag ${rootname}.resdiag \
-	       -superperiodicity=$offMomentumTuneTracking(superperiodicity) \
-	       -order=3 }
-    
-    exec sddsplot \
-	-aspect=1 -topline=$rootname -xlabel=\$gn\$r\$bx\$n -ylabel=\$gn\$r\$by\$n \
-	-column=nuxTracking,nuyTracking ${rootname}.w1.naff \
-	-split=column=delta,width=1e-4 -graph=symbol,vary=subtype \
-	-orderColors=spectral \
-	-column=nux,nuy ${rootname}.resdiag &
-
-    global makePngFiles
-    if $makePngFiles {
-	exec sddsplot -thickness=2 -device=png,onwhite -output=${rootname}-tunes.png \
-	    -aspect=1 -topline=$rootname -xlabel=\$gn\$r\$bx\$n -ylabel=\$gn\$r\$by\$n \
-	    -column=nuxTracking,nuyTracking ${rootname}.w1.naff \
-	    -split=column=delta,width=1e-4 -graph=symbol,vary=subtype \
-	    -orderColors=spectral \
-	    -column=nux,nuy ${rootname}.resdiag &
-	setStatus "PNG file: ${rootname}-tunes.png"
-    }
-
-    exec sddsplot \
-	-column=delta,nu?Tracking -separate ${rootname}.w1.naff \
-	-topline=$rootname \
-	-graph=symbol,connect,scale=2 &
-
-    if $makePngFiles {
-	exec sddsplot -thickness=2 -device=png,onwhite,template=${rootname}-vsDelta-%ld.png \
-	    -column=delta,nu?Tracking -separate ${rootname}.w1.naff \
-	    -topline=$rootname \
-	    -graph=symbol,connect,scale=2 &
-	setStatus "PNG files: ${rootname}-vsDelta-*.png"
-    }
-}
- 
 proc FillHigherOrderDispersionFrame {widget args} {
-    global higherOrderDispersion
-    set higherOrderDispersion(initialOffset) -0.01
-    set higherOrderDispersion(finalOffset) 0.01
-    set higherOrderDispersion(sweepPoints) 11
-    set gridEngine 0
+    global higherOrderDispersion gridEngine
+   
     APSLabeledEntry .le1 -parent $widget \
       -label "Initial momentum offset for scan: " -width 20 -textVariable higherOrderDispersion(initialOffset) \
       -contextHelp \
@@ -1316,92 +402,23 @@ proc FillHigherOrderDispersionFrame {widget args} {
       -contextHelp \
       "Enter the number of offset values in the scan."
 
-    set higherOrderDispersion(userSuffix) ""
+  
     APSLabeledEntry .le5 -parent $widget \
       -label "Run suffix: " -width 20 -textVariable higherOrderDispersion(userSuffix) \
       -contextHelp "Enter a suffix for this set of runs."
 
 
     APSButton .bu1 -parent $widget \
-      -text "Run" -command "HigherOrderDispersion"
+      -text "Run" -command "Run -computation HigherOrderDispersion"
     APSButton .bu2 -parent $widget \
       -text "Display" -command \
-	{HigherOrderDispersionPP -rootname $mainDirectory/${mainPrefix}HigherOrderDispersion$higherOrderDispersion(userSuffix)}
+	{Display -type HigherOrderDispersion}
 }
 
-proc HigherOrderDispersion {args} {
-    global sourceDir forceOccurence 
-    global higherOrderDispersion momentum matrixLatticeFile mainParameterFile mainDirectory mainPrefix
-    global kickOffsetElement
-
-    set tag HigherOrderDispersion
-    set rootname $mainDirectory/${mainPrefix}${tag}$higherOrderDispersion(userSuffix)
-    SaveJobConfiguration -filename $rootname.runCfg
-
-    set parameterFileList ""
-    foreach item [lsort [array names mainParameterFile]] {
-        if [string length $mainParameterFile($item)] {
-            append parameterFileList "$mainParameterFile($item) "
-        }
-    }
-    foreach item [array names higherOrderDispersion] {
-	lappend origList <$item>
-	lappend replList [set higherOrderDispersion($item)]
-    }
-    set variable delta
-    catch {file delete $rootname.done}
-    PerformRuns -template $sourceDir/HigherOrderDispersionTemplate.ele \
-	-parameterFileList $parameterFileList -forceOccurence $forceOccurence \
-	-variable $variable -suffix $higherOrderDispersion(userSuffix) \
-	-startValue $higherOrderDispersion(initialOffset) \
-	-endValue $higherOrderDispersion(finalOffset) \
-	-points $higherOrderDispersion(sweepPoints) \
-	-copyList [list mag done] -combineList [list clo ele ele.log w1] \
-	-replacementList $replList -originalList $origList \
-	-tag $tag -order 3 -momentum $momentum \
-	-postProcessProc HigherOrderDispersionPP
-}
-
-proc HigherOrderDispersionPP {args} {
-    set rootname ""
-    APSStrictParseArguments {rootname}
-    source $rootname.runCfg
-    set variable delta
-
-    if [catch {exec sddsconvert -retain=col,s,x,ElementName,ElementType ${rootname}.clo -pipe=out \
-                 | sddsregroup -pipe \
-                 | sddsxref -pipe=in $rootname.var $rootname.tmp -take=$variable -reuse=page} result] {
-        return -code error "$result"
-    }
-    set terms [expr int($higherOrderDispersion(sweepPoints)/2)]
-    if [catch {exec sddspfit $rootname.tmp -pipe=out -terms=$terms -column=$variable,x \
-                | sddsconvert -pipe -delete=column,* \
-                | sddsarray2column -pipe -convert=Coefficient \
-                | sddstranspose -pipe -root=Coefficient \
-                | sddsprocess -pipe -process=Coef*,first,%s \
-                | sddscollapse -pipe \
-                | sddsxref -pipe=in ${rootname}.clo ${rootname}.disp -take=s,Element*} result] {
-        return -code error "$result"
-    }
-    exec sddsplot -topline=$rootname -column=s,Coefficient* -separate ${rootname}.disp &
-    global makePngFiles
-    if $makePngFiles {
-	exec sddsplot -thickness=2 -device=png,onwhite,template=$rootname-disp-%ld.png \
-	    -topline=$rootname -column=s,Coefficient* -separate ${rootname}.disp &
-	setStatus "PNG files: $rootname-disp-*.png"
-    }
-}
 
 proc FillDynamicApertureFrame {widget args} {
     global dynamicAperture
-    set dynamicAperture(xMinimum) -0.01
-    set dynamicAperture(xMaximum)  0.01
-    set dynamicAperture(yMaximum)  0.01
-    set dynamicAperture(xPoints)   31
-    set dynamicAperture(yPoints)   16
-    set dynamicAperture(turns) 500
-    set dynamicAperture(includeApertures) 1
-
+   
     APSLabeledEntry .le1 -parent $widget \
       -label "Minimum x coordinate (m): " -width 20 -textVariable dynamicAperture(xMinimum) \
       -contextHelp \
@@ -1427,7 +444,7 @@ proc FillDynamicApertureFrame {widget args} {
       -contextHelp \
       "Enter the number of turns to track."
 
-    set dynamicAperture(userSuffix) ""
+ 
     APSLabeledEntry .le7 -parent $widget \
       -label "Run suffix: " -width 20 -textVariable dynamicAperture(userSuffix) \
       -contextHelp "Enter a suffix for this set of runs."
@@ -1438,63 +455,16 @@ proc FillDynamicApertureFrame {widget args} {
       "Choose whether to include the effects of apertures that are defined in the beamline."
     
     APSButton .bu1 -parent $widget \
-      -text "Run" -command "DynamicAperture"
+      -text "Run" -command "Run -computation DynamicAperture"
     APSButton .bu2 -parent $widget \
       -text "Display" -command \
-	{DynamicAperturePP -rootname $mainDirectory/${mainPrefix}DynamicAperture$dynamicAperture(userSuffix)}
+	{Display -type DynamicAperture}
 }
 
-proc DynamicAperture {args} {
-    global sourceDir forceOccurence 
-    global dynamicAperture momentum matrixLatticeFile mainParameterFile mainDirectory mainPrefix
-    global kickOffsetElement
-
-    set tag DynamicAperture
-    set rootname $mainDirectory/${mainPrefix}${tag}$dynamicAperture(userSuffix)
-    SaveJobConfiguration -filename $rootname.runCfg
-
-    set parameterFileList ""
-    foreach item [lsort [array names mainParameterFile]] {
-        if [string length $mainParameterFile($item)] {
-            append parameterFileList "$mainParameterFile($item) "
-        }
-    }
-    foreach item [array names dynamicAperture] {
-	lappend origList <$item>
-	lappend replList [set dynamicAperture($item)]
-    }
-    PerformRun -template $sourceDir/DynamicApertureTemplate.ele \
-	-parameterFileList $parameterFileList -suffix $dynamicAperture(userSuffix) \
-	-originalList $origList -replacementList $replList \
-	-tag $tag -order 3 -momentum $momentum -postProcessProc DynamicAperturePP
-}
-
-proc DynamicAperturePP {args} {
-    set rootname ""
-    APSStrictParseArguments {rootname}
-
-    exec sddsplot -topline=$rootname \
-	-column=x,y $rootname.abnd -column=x,y $rootname.aper -graph=sym,scale=2 &    
-    global makePngFiles
-    if $makePngFiles {
-	exec sddsplot -device=png,onwhite -thickness=2 -output=$rootname.png \
-	    -topline=$rootname \
-	    -column=x,y $rootname.abnd -column=x,y $rootname.aper -graph=sym,scale=2 &    
-	setStatus "PNG file: $rootname.png"
-    }
-}
 
 proc FillOffMomentumDynamicApertureFrame {widget args} {
     global offMomentumDynamicAperture
-    set offMomentumDynamicAperture(xMinimum) -0.01
-    set offMomentumDynamicAperture(xMaximum)  0.01
-    set offMomentumDynamicAperture(yMaximum)  0.01
-    set offMomentumDynamicAperture(xPoints)   31
-    set offMomentumDynamicAperture(yPoints)   16
-    set offMomentumDynamicAperture(deltaMinimum) -0.01
-    set offMomentumDynamicAperture(deltaMaximum) 0.01
-    set offMomentumDynamicAperture(deltaPoints) 11
-    set offMomentumDynamicAperture(turns) 500
+   
     APSLabeledEntry .le1 -parent $widget \
       -label "Minimum x coordinate (m): " -width 20 -textVariable offMomentumDynamicAperture(xMinimum) \
       -contextHelp \
@@ -1532,106 +502,26 @@ proc FillOffMomentumDynamicApertureFrame {widget args} {
       -contextHelp \
       "Enter the number of turns to track."
     
-    set offMomentumDynamicAperture(userSuffix) ""
     APSLabeledEntry .le10 -parent $widget \
       -label "Run suffix: " -width 20 -textVariable offMomentumDynamicAperture(userSuffix) \
       -contextHelp "Enter a suffix for this set of runs."
 
-    set offMomentumDynamicAperture(includeApertures) 1
+ 
     APSRadioButtonFrame .rb1 -parent $widget \
       -label "Include apertures: " -orientation horizontal -buttonList {Yes No} -valueList {1 0} \
       -variable offMomentumDynamicAperture(includeApertures) -contextHelp \
       "Choose whether to include the effects of apertures that are defined in the beamline."
 
     APSButton .bu1 -parent $widget \
-      -text "Run" -command "OffMomentumDynamicAperture"
+      -text "Run" -command "Run -computation OffMomentumDynamicAperture"
     APSButton .bu2 -parent $widget \
       -text "Display" -command \
-	{OffMomentumDynamicAperturePP -rootname $mainDirectory/${mainPrefix}OffMomentumDynamicAperture$offMomentumDynamicAperture(userSuffix)}
+	{Display -type OffMomentumDynamicAperture}
 }
 
-proc OffMomentumDynamicAperture {args} {
-    global sourceDir forceOccurence 
-    global offMomentumDynamicAperture momentum matrixLatticeFile mainParameterFile mainDirectory mainPrefix
-    global kickOffsetElement
-
-    set tag OffMomentumDynamicAperture
-    set rootname $mainDirectory/${mainPrefix}${tag}$offMomentumDynamicAperture(userSuffix)
-    SaveJobConfiguration -filename $rootname.runCfg
-
-    set parameterFileList ""
-    foreach item [lsort [array names mainParameterFile]] {
-        if [string length $mainParameterFile($item)] {
-            append parameterFileList "$mainParameterFile($item) "
-        }
-    }
-    foreach item [array names offMomentumDynamicAperture] {
-	lappend origList <$item>
-	lappend replList [set offMomentumDynamicAperture($item)]
-    }
-    set variable delta
-    PerformRuns -template $sourceDir/OffMomentumDynamicApertureTemplate.ele \
-	-parameterFileList $parameterFileList -forceOccurence $forceOccurence \
-	-variable $variable -suffix $offMomentumDynamicAperture(userSuffix) \
-	-startValue $offMomentumDynamicAperture(deltaMinimum) \
-	-endValue $offMomentumDynamicAperture(deltaMaximum) \
-	-points $offMomentumDynamicAperture(deltaPoints) \
-	-copyList [list sh done] -combineList [list aper abnd ele ele.log] \
-	-tag $tag -momentum $momentum -originalList $origList \
-	-replacementList $replList -postProcessProc OffMomentumDynamicAperturePP
-}
-
-proc OffMomentumDynamicAperturePP {args} {
-    set rootname ""
-    APSStrictParseArguments {rootname}
-    source $rootname.runCfg
-    
-    if [catch {exec sddsexpand $rootname.var $rootname.vare
-	exec sddsxref $rootname.aper $rootname.vare -leave=* -transfer=param,delta -nowarning
-	file delete -force $rootname.vare $rootname.aper~} result] {
-	return -code error "$result"
-    }
-    set variable delta
-
-    exec sddsplot -topline=$rootname -same=x,y,global \
-      -column=x,y $rootname.aper -graph=sym,scale=2 -split=page -sep=page \
-      "-title=@${variable},edit=i/\$gd\$r = /" \
-      -column=x,y $rootname.abnd -graph=line -omnipresent &
-
-    global makePngFiles
-    if $makePngFiles {
-	exec sddsplot -device=png,onwhite,template=$rootname-%ld.png -thickness=2 \
-	    -topline=$rootname -same=x,y,global \
-	    -column=x,y $rootname.aper -graph=sym,scale=2 -split=page -sep=page \
-	    "-title=@${variable},edit=i/\$gd\$r = /" \
-	    -column=x,y $rootname.abnd -graph=line -omnipresent &
-	setStatus "PNG file: $rootname-*.png"
-    }
-}
 
 proc FillDynamicApertureErrorsFrame {widget args} {
     global dynamicApertureErrors
-    set dynamicApertureErrors(xMinimum) -0.01
-    set dynamicApertureErrors(xMaximum)  0.01
-    set dynamicApertureErrors(yMaximum)  0.01
-    set dynamicApertureErrors(delta)  0.0
-    set dynamicApertureErrors(xPoints)   31
-    set dynamicApertureErrors(yPoints)   16
-    set dynamicApertureErrors(turns) 500
-    set dynamicApertureErrors(includeApertures) 1
-    set dynamicApertureErrors(seeds) 50
-    set dynamicApertureErrors(dxBend) 1e-4
-    set dynamicApertureErrors(dyBend) 1e-4
-    set dynamicApertureErrors(dtiltBend) 1e-4
-    set dynamicApertureErrors(fseBend) 1e-4
-    set dynamicApertureErrors(dxQuad) 1e-4
-    set dynamicApertureErrors(dyQuad) 1e-4
-    set dynamicApertureErrors(dtiltQuad) 1e-4
-    set dynamicApertureErrors(fseQuad) 1e-4
-    set dynamicApertureErrors(dxSext) 1e-4
-    set dynamicApertureErrors(dySext) 1e-4
-    set dynamicApertureErrors(dtiltSext) 1e-4
-    set dynamicApertureErrors(fseSext) 1e-4
 
     APSLabeledEntry .le1 -parent $widget \
       -label "Minimum x coordinate (m): " -width 20 -textVariable dynamicApertureErrors(xMinimum) \
@@ -1685,7 +575,6 @@ proc FillDynamicApertureErrorsFrame {widget args} {
 	}
     }
 
-    set dynamicApertureErrors(userSuffix) ""
     APSLabeledEntry .le7 -parent $widget \
       -label "Run suffix: " -width 20 -textVariable dynamicApertureErrors(userSuffix) \
       -contextHelp "Enter a suffix for this set of runs."
@@ -1696,116 +585,16 @@ proc FillDynamicApertureErrorsFrame {widget args} {
       "Choose whether to include the effects of apertures that are defined in the beamline."
     
     APSButton .bu1 -parent $widget \
-      -text "Run" -command "DynamicApertureErrors"
+      -text "Run" -command "Run -computation DynamicApertureErrors"
     APSButton .bu2 -parent $widget \
       -text "Display" -command \
-	{DynamicApertureErrorsPP -rootname $mainDirectory/${mainPrefix}DynamicApertureErrors$dynamicApertureErrors(userSuffix)}
+	{Display -type DynamicApertureErrors}
 }
 
-proc DynamicApertureErrors {args} {
-    global sourceDir forceOccurence 
-    global dynamicApertureErrors momentum matrixLatticeFile mainParameterFile mainDirectory mainPrefix
-    global kickOffsetElement
 
-    set tag DynamicApertureErrors
-    set rootname $mainDirectory/${mainPrefix}${tag}$dynamicApertureErrors(userSuffix)
-    SaveJobConfiguration -filename $rootname.runCfg
-
-    set parameterFileList ""
-    foreach item [lsort [array names mainParameterFile]] {
-        if [string length $mainParameterFile($item)] {
-            append parameterFileList "$mainParameterFile($item) "
-        }
-    }
-    foreach item [array names dynamicApertureErrors] {
-	lappend origList <$item>
-	lappend replList [set dynamicApertureErrors($item)]
-    }
-    set variable seed
-    set firstSeed [expr 2*int([clock seconds]/2)+1]
-    set lastSeed [expr $firstSeed+10*($dynamicApertureErrors(seeds)-1)]
-    PerformRuns -template $sourceDir/DynamicApertureErrorsTemplate.ele \
-	-parameterFileList $parameterFileList -forceOccurence $forceOccurence \
-	-variable $variable -suffix $dynamicApertureErrors(userSuffix) \
-	-startValue $firstSeed \
-	-endValue $lastSeed \
-	-points $dynamicApertureErrors(seeds) \
-	-copyList [list done mag sh] -combineList [list twi orb cor scor aper abnd ele ele.log] \
-	-tag $tag -momentum $momentum -originalList $origList \
-	-replacementList $replList -postProcessProc DynamicApertureErrorsPP
-}
-
-proc DynamicApertureErrorsPP {args} {
-    set rootname ""
-    APSStrictParseArguments {rootname}
-    source $rootname.runCfg
-
-    if [catch {exec sddscombine $rootname.aper -pipe=out -merge \
-		   | sddsprocess -pipe -process=x,spread,xSpread -process=y,spread,ySpread \
-		   | sdds2stream -pipe -parameter=xSpread,ySpread} result] {
-	return -code error "$result"
-    }
-    set xSpread [lindex $result 0]
-    set ySpread [lindex $result 1]
-    set dx [expr ($dynamicApertureErrors(xMaximum)-$dynamicApertureErrors(xMinimum))/($dynamicApertureErrors(xPoints)-1)]
-    set dy [expr ($dynamicApertureErrors(yMaximum)-0.0)/($dynamicApertureErrors(yPoints)-1)]
-
-    set xPoints [expr int(1+$xSpread/$dx)]
-    set yPoints [expr int(1+$ySpread/$dy)]
-		 
-    exec sddscombine $rootname.aper -pipe=out -merge \
-	| sddshist2d -pipe=in $rootname.aper.h2d -columns=x,y -xparameter=$xPoints -yparameter=$yPoints
-
-    exec sddscontour -shade $rootname.aper.h2d &
-
-    global makePngFiles
-    if $makePngFiles {
-	exec sddscontour -device=png,onwhite -output=$rootname-aper.png -shade $rootname-aper.h2d &
-	setStatus "PNG file: $rootname-aper.png"
-    }
-    
-    exec sddsenvelope $rootname.twi $rootname.twi.env \
-	-copy=s -minimum=beta*,etax -maximum=beta*,etax -mean=beta*,etax 
-    exec sddsplot -graph=line,vary -unsup=y \
-	-column=s,(betaxMin,betaxMean,betaxMax) $rootname.twi.env -end \
-	-column=s,(betayMin,betayMean,betayMax) $rootname.twi.env -end \
-	-column=s,(etaxMin,etaxMean,etaxMax) $rootname.twi.env -end \
-	-column=s,Profile $rootname.mag -overlay=xmode=norm,yfact=0.04 -omnipresent &
-    if $makePngFiles {
-	exec sddsplot \
-	    -device=png,onwhite,template=$rootname-twi-%ld.png \
-	    -graph=line,vary -unsup=y \
-	    -column=s,(betaxMin,betaxMean,betaxMax) $rootname.twi.env -end \
-	    -column=s,(betayMin,betayMean,betayMax) $rootname.twi.env -end \
-	    -column=s,(etaxMin,etaxMean,etaxMax) $rootname.twi.env -end \
-	    -column=s,Profile $rootname.mag -overlay=xmode=norm,yfact=0.04 -omnipresent &
-	setStatus "PNG file: $rootname-twi-*.png"
-    }
-
-    exec sddsenvelope $rootname.orb $rootname.orb.env \
-	-copy=s -rms=x,y 
-    exec sddsplot -graph=line,vary -unsup=y \
-	-column=s,(xRms,yRms) $rootname.orb.env \
-	-column=s,Profile $rootname.mag -overlay=xmode=norm,yfact=0.04 &
-    if $makePngFiles {
-	exec sddsplot -device=png,onwhite -output=$rootname-orb.png \
-	    -graph=line,vary -unsup=y \
-	    -column=s,(xRms,yRms) $rootname.orb.env \
-	    -column=s,Profile $rootname.mag -overlay=xmode=norm,yfact=0.04 &
-	setStatus "PNG file: $rootname-orb.png"
-    }
-}
 
 proc FillFineDynamicApertureFrame {widget args} {
     global fineDynamicAperture
-    set fineDynamicAperture(xMinimum) -0.01
-    set fineDynamicAperture(xMaximum)  0.01
-    set fineDynamicAperture(yMaximum)  0.01
-    set fineDynamicAperture(xPoints)   101
-    set fineDynamicAperture(yPoints)   51
-    set fineDynamicAperture(turns)     500
-    set fineDynamicAperture(delta)     0.0
-    set fineDynamicAperture(userSuffix)    ""
 
     APSLabeledEntry .le1 -parent $widget \
       -label "Minimum x coordinate (m): " -width 20 -textVariable fineDynamicAperture(xMinimum) \
@@ -1838,101 +627,22 @@ proc FillFineDynamicApertureFrame {widget args} {
       -label "Run suffix: " -width 20 -textVariable fineDynamicAperture(userSuffix) \
       -contextHelp "Enter the suffix for the filenames."
 
-    set fineDynamicAperture(includeApertures) 1
     APSRadioButtonFrame .rb1 -parent $widget \
       -label "Include apertures: " -orientation horizontal -buttonList {Yes No} -valueList {1 0} \
       -variable fineDynamicAperture(includeApertures) -contextHelp \
       "Choose whether to include the effects of apertures that are defined in the beamline."
 
     APSButton .bu1 -parent $widget \
-      -text "Run" -command "FineDynamicAperture"
+      -text "Run" -command "Run -computation FineDynamicAperture"
     APSButton .bu2 -parent $widget \
       -text "Display" -command \
-	{FineDynamicAperturePP -rootname $mainDirectory/${mainPrefix}FineDynamicAperture$fineDynamicAperture(userSuffix)}
+	{Display -type FineDynamicAperture}
 }
 
-proc FineDynamicAperture {args} {
-    global sourceDir forceOccurence 
-    global fineDynamicAperture momentum matrixLatticeFile mainParameterFile mainDirectory mainPrefix
-    global kickOffsetElement
-
-    set tag FineDynamicAperture
-    set rootname $mainDirectory/${mainPrefix}${tag}$fineDynamicAperture(userSuffix)
-    SaveJobConfiguration -filename $rootname.runCfg
-
-    set parameterFileList ""
-    foreach item [lsort [array names mainParameterFile]] {
-        if [string length $mainParameterFile($item)] {
-            append parameterFileList "$mainParameterFile($item) "
-        }
-    }
-    foreach item [array names fineDynamicAperture] {
-	lappend origList <$item>
-	lappend replList [set fineDynamicAperture($item)]
-    }
-    set variable xOffset
-    PerformRuns -template $sourceDir/FineDynamicApertureTemplate.ele \
-	-parameterFileList $parameterFileList -forceOccurence $forceOccurence \
-	-variable $variable -suffix $fineDynamicAperture(userSuffix) \
-	-startValue $fineDynamicAperture(xMinimum) \
-	-endValue $fineDynamicAperture(xMaximum) \
-	-points $fineDynamicAperture(xPoints) \
-	-copyList [list sh done] -combineList [list ele ele.log los bun clo] \
-	-tag $tag -momentum $momentum -originalList $origList -replacementList $replList \
-	-postProcessProc FineDynamicAperturePP
-}
-
-proc FineDynamicAperturePP {args} {
-    set rootname ""
-    APSStrictParseArguments {rootname}
-
-    set valueList [QueryValuesDialog -name "Fine DA Plot" \
-	-nameList [list "Point size (X11)" "Point size (PNG)" "Filename on plot?" "Autotitle?"] \
-	-defaultList [list 4 1 1 1] \
-	-elementList [list pointSizeX11 pointSizePng filenameTitle autoTitle] \
-	-typeList [list integer integer yesNo yesNo]]
-    array set parameter $valueList
-
-    APSAddToTempFileList $rootname.clo.tmp
-    exec sddsprocess $rootname.clo $rootname.clo.tmp -process=x,first,xCO
-    exec sddsxref $rootname.los $rootname.bun -pipe=out -nowarning \
-	-equate=particleID -take=x,y -edit=column,*,ei/0/  -transfer=param,* \
-	| sddsxref -pipe -leave=* -transfer=param,xCO $rootname.clo.tmp -nowarning \
-	| sddsprocess -pipe "-redefine=column,x0,x0 xCO +,units=m" -nowarning \
-	| sddscombine -pipe=in -merge $rootname.da -overwrite
-
-    set topline ""
-    if $parameter(filenameTitle) {
-	set topline $rootname.da
-    }
-    set titleOption ""
-    if !$parameter(autoTitle) {
-	set titleOption "-title="
-    }
-    eval exec sddsplot -column=x0,y0 $rootname.da -graph=dot,vary,subtype=$parameter(pointSizeX11) \
-	-order=spect -split=column=Pass,width=1 $titleOption -topline=$topline &
-
-    global makePngFiles
-    if $makePngFiles {
-	eval exec sddsplot -device=png,onwhite -thickness=2 -output=$rootname.png \
-	    -column=x0,y0 $rootname.da -graph=dot,vary,subtype=$parameter(pointSizePng) \
-	    -order=spect -split=column=Pass,width=1 $titleOption -topline=$topline &
-	setStatus "PNG file: $rootname.png"
-    }
-}
 
 proc FillFrequencyMapFrame {widget args} {
     global frequencyMap
-    set frequencyMap(xMinimum)  1e-6
-    set frequencyMap(xMaximum)  0.01
-    set frequencyMap(yMinimum)  1e-6
-    set frequencyMap(yMaximum)  0.01
-    set frequencyMap(xPoints)   101
-    set frequencyMap(yPoints)   51
-    set frequencyMap(turns)     500
-    set frequencyMap(delta)     0.0
-    set frequencyMap(userSuffix)    ""
-
+  
     APSLabeledEntry .le1 -parent $widget \
       -label "Minimum x coordinate (m): " -width 20 -textVariable frequencyMap(xMinimum) \
       -contextHelp \
@@ -1964,7 +674,7 @@ proc FillFrequencyMapFrame {widget args} {
     APSLabeledEntry .le7 -parent $widget \
 	-label "Fractional momentum offset: " -width 20 -textVariable frequencyMap(delta) \
 	-contextHelp "Enter the fractional momentum offset" 
-    set frequencyMap(includeApertures) 1
+   
     APSRadioButtonFrame .rb1 -parent $widget \
       -label "Include apertures: " -orientation horizontal -buttonList {Yes No} -valueList {1 0} \
       -variable frequencyMap(includeApertures) -contextHelp \
@@ -1974,187 +684,16 @@ proc FillFrequencyMapFrame {widget args} {
       -contextHelp "Enter the suffix for the filenames."
 
     APSButton .bu1 -parent $widget \
-      -text "Run" -command "FrequencyMap"
+      -text "Run" -command "Run -computation FrequencyMap"
     APSButton .bu2 -parent $widget \
       -text "Display" -command \
-	{FrequencyMapPP -rootname $mainDirectory/${mainPrefix}FrequencyMap$frequencyMap(userSuffix)}
+	{Display -type FrequencyMap}
 }
 
-proc FrequencyMap {args} {
-    global sourceDir forceOccurence 
-    global frequencyMap momentum matrixLatticeFile mainParameterFile mainDirectory mainPrefix
-    global kickOffsetElement
-
-    set tag FrequencyMap
-    set rootname $mainDirectory/${mainPrefix}${tag}$frequencyMap(userSuffix)
-    SaveJobConfiguration -filename $rootname.runCfg
-
-    set parameterFileList ""
-    foreach item [lsort [array names mainParameterFile]] {
-        if [string length $mainParameterFile($item)] {
-            append parameterFileList "$mainParameterFile($item) "
-        }
-    }
-    foreach item [array names frequencyMap] {
-	lappend origList <$item>
-	lappend replList [set frequencyMap($item)]
-    }
-    set variable xOffset
-    PerformRuns -template $sourceDir/FrequencyMapTemplate.ele \
-	-parameterFileList $parameterFileList -forceOccurence $forceOccurence \
-	-variable $variable -suffix $frequencyMap(userSuffix) \
-	-startValue $frequencyMap(xMinimum) \
-	-endValue $frequencyMap(xMaximum) \
-	-points $frequencyMap(xPoints) \
-	-copyList [list done sh] -combineList [list ele ele.log clo fma] \
-	-tag $tag -momentum $momentum -originalList $origList -replacementList $replList \
-	-postProcessProc FrequencyMapPP
-}
-
-proc QueryValuesDialog {args} {
-    set nameList ""
-    set defaultList ""
-    set typeList ""
-    set elementList ""
-    set name ""
-    APSStrictParseArguments {nameList defaultList typeList name elementList}
-
-    global queryValuesDialogDone queryValuesDialogArray
-    set queryValuesDialogDone 0
-
-    set w [APSUniqueName .]
-    APSDialogBox $w -name $name \
-	-okCommand "set queryValuesDialogDone 1" \
-	-cancelCommand "set queryValuesDialogDone 2"
-
-    set index 0
-    foreach name $nameList default $defaultList type $typeList {
-	set queryValuesDialogArray($name) $default
-	if [string compare $type yesNo]==0 {
-	    APSRadioButtonFrame .rb$index -parent $w.userFrame \
-		-label "$name: " -orientation horizontal \
-		-variable queryValuesDialogArray($name) \
-		-buttonList "Yes No" -valueList "1 0"
-	} else {
-	    APSLabeledEntry .le$index -parent $w.userFrame  \
-		-label "$name: " \
-		-textVariable queryValuesDialogArray($name) \
-		-type $type
-	}
-	incr index
-    }
-    tkwait variable queryValuesDialogDone
-    if $queryValuesDialogDone==2 {
-	return ""
-    }
-    set arrayList ""
-    foreach element $elementList name $nameList {
-	lappend arrayList $element
-	lappend arrayList $queryValuesDialogArray($name)
-    }
-    return $arrayList
-}
-
-proc FrequencyMapPP {args} {
-    set rootname ""
-    APSStrictParseArguments {rootname}
-    source $rootname.runCfg
-
-    set valueList [QueryValuesDialog -name "FMA Plot" \
-		       -nameList [list "Resonance diagram order" "Minimum nux" \
-				      "Maximum nux" "Minimum nuy" "Maximum nuy" "Point size (X11)" "Point size (PNG)" "Filename on plot?"] \
-		       -defaultList [list 4 -0.05 1.05 -0.05 1.05 4 1 1] \
-		       -elementList [list order nux0 nux1 nuy0 nuy1 pointSizeX11 pointSizePng filenameTitle] \
-		       -typeList [list integer real real real real integer integer yesNo]]
-    if ![llength $valueList] return
-    array set parameter $valueList
-    catch {exec sddsresdiag $rootname.resdiag -order=$parameter(order)}
-
-    set title1 "Color indicates initial x amplitude"
-    set title2 "Color indicates initial y amplitude"
-    set topline ""
-    if $parameter(filenameTitle) {
-	set topline "$rootname.fma"
-    }
-    exec sddsplot "-topline=$topline" \
-	-limit=xmin=$parameter(nux0),xmax=$parameter(nux1),ymin=$parameter(nuy0),ymax=$parameter(nuy1),auto \
-	-column=nux,nuy $rootname.resdiag \
-	-column=nux,nuy $rootname.fma -graph=dot,subtype=$parameter(pointSizeX11),vary -order=spect \
-	"-title=$title1" \
-	-split=column=x,start=$frequencyMap(xMinimum),width=[expr ($frequencyMap(xMaximum)-$frequencyMap(xMinimum))/101.0] -end \
-	-column=nux,nuy $rootname.resdiag \
-	-column=nux,nuy $rootname.fma -graph=dot,subtype=$parameter(pointSizeX11),vary -order=spect \
-	"-title=$title2" \
-	-split=column=y,start=$frequencyMap(yMinimum),width=[expr ($frequencyMap(yMaximum)-$frequencyMap(yMinimum))/101.0] &
-
-
-    global makePngFiles
-    if $makePngFiles {
-	exec sddsplot -device=png,onwhite -thickness=2 -output=$rootname-fma1.png "-topline=$topline" \
-	    -limit=xmin=$parameter(nux0),xmax=$parameter(nux1),ymin=$parameter(nuy0),ymax=$parameter(nuy1),auto \
-	    -column=nux,nuy $rootname.resdiag \
-	    -column=nux,nuy $rootname.fma -graph=dot,subtype=$parameter(pointSizePng),vary -order=spect \
-	    "-title=$title1" \
-	-split=column=x,start=$frequencyMap(xMinimum),width=[expr ($frequencyMap(xMaximum)-$frequencyMap(xMinimum))/101.0] -end 
-	setStatus "PNG file: $rootname-fma1.png"
-	exec sddsplot -device=png,onwhite -thickness=2 -output=$rootname-fma2.png "-topline=$topline" \
-	    -limit=xmin=$parameter(nux0),xmax=$parameter(nux1),ymin=$parameter(nuy0),ymax=$parameter(nuy1),auto \
-	    -column=nux,nuy $rootname.resdiag \
-	    -column=nux,nuy $rootname.fma -graph=dot,subtype=$parameter(pointSizePng),vary -order=spect \
-	    "-title=$title2" \
-	    -split=column=y,start=$frequencyMap(yMinimum),width=[expr ($frequencyMap(yMaximum)-$frequencyMap(yMinimum))/101.0] &
-	setStatus "PNG file: $rootname-fma2.png"
-    }
-
-    set xmin [expr $frequencyMap(xMinimum)<0 ? 1.05*$frequencyMap(xMinimum) : 0]
-    set xmax [expr 1.05*$frequencyMap(xMaximum)]
-    set ymin [expr $frequencyMap(yMinimum)<0 ? 1.05*$frequencyMap(yMinimum) : 0]
-    set ymax [expr 1.05*$frequencyMap(yMaximum)]
-
-    set title1 "Color indicates x tune"
-    set title2 "Color indicates y tune"
-
-    exec sddsplot "-topline=$topline" \
-	-limit=xmin=$xmin,xmax=$xmax,ymin=$ymin,ymax=$ymax \
-	-column=x,y $rootname.fma -graph=dot,subtype=$parameter(pointSizeX11),vary -order=spect \
-	"-title=$title1" \
-	-split=column=nux,width=0.0101,start=0 -end \
-	-column=x,y $rootname.fma -graph=dot,subtype=$parameter(pointSizeX11),vary -order=spect \
-	"-title=$title2" \
-	-split=column=nuy,width=0.0101,start=0 -end &
-
-    global makePngFiles
-    if $makePngFiles {
-	exec sddsplot -device=png,onwhite -thickness=2 -output=$rootname-fma3.png \
-	    "-topline=$topline" \
-	    -limit=xmin=$xmin,xmax=$xmax,ymin=$ymin,ymax=$ymax \
-	    -column=x,y $rootname.fma -graph=dot,subtype=$parameter(pointSizePng),vary -order=spect \
-	    "-title=$title1" \
-	    -split=column=nux,width=0.0101,start=0 
-	setStatus "PNG file: $rootname-fma3.png"
-	exec sddsplot -device=png,onwhite -thickness=2 -output=$rootname-fma4.png \
-	    "-topline=$topline" \
-	    -limit=xmin=$xmin,xmax=$xmax,ymin=$ymin,ymax=$ymax \
-	    -column=x,y $rootname.fma -graph=dot,subtype=$parameter(pointSizePng),vary -order=spect \
-	    "-title=$title2" \
-	    -split=column=nuy,width=0.0101,start=0 -end &
-	setStatus "PNG file: $rootname-fma4.png"
-    }
-}
 
 proc FillFrequencyMapDeltaFrame {widget args} {
     global frequencyMapDelta
-    set frequencyMapDelta(xyMinimum)  -0.01
-    set frequencyMapDelta(xyMaximum)   0.01
-    set frequencyMapDelta(deltaMinimum) -0.02
-    set frequencyMapDelta(deltaMaximum)  0.02
-    set frequencyMapDelta(xyPoints)   51
-    set frequencyMapDelta(deltaPoints)   51
-    set frequencyMapDelta(turns)     500
-    set frequencyMapDelta(userSuffix)    ""
-    set frequencyMapDelta(otherCoordinate) 1e-6
-    set frequencyMapDelta(plane) X
-    
+ 
     APSRadioButtonFrame .rbxy -parent $widget \
 	-label "Plane: " -orientation horizontal -buttonList {x y} -valueList {X Y} \
 	-variable frequencyMapDelta(plane) -contextHelp \
@@ -2191,7 +730,6 @@ proc FillFrequencyMapDeltaFrame {widget args} {
 	-label "Number of turns: " -width 20 -textVariable frequencyMapDelta(turns) \
 	-contextHelp \
 	"Enter the number of turns to track."
-    set frequencyMapDelta(includeApertures) 1
     APSRadioButtonFrame .rb1 -parent $widget \
 	-label "Include apertures: " -orientation horizontal -buttonList {Yes No} -valueList {1 0} \
 	-variable frequencyMapDelta(includeApertures) -contextHelp \
@@ -2201,164 +739,10 @@ proc FillFrequencyMapDeltaFrame {widget args} {
 	-contextHelp "Enter the suffix for the filenames."
     
     APSButton .bu1 -parent $widget \
-	-text "Run" -command "FrequencyMapDelta"
+	-text "Run" -command "Run -computation FrequencyMapDelta"
     APSButton .bu2 -parent $widget \
 	-text "Display" -command \
-	{FrequencyMapDeltaPP -rootname $mainDirectory/${mainPrefix}FrequencyMapDelta$frequencyMapDelta(userSuffix)$frequencyMapDelta(plane)}
-}
-
-proc FrequencyMapDelta {args} {
-    global sourceDir forceOccurence 
-    global frequencyMapDelta momentum matrixLatticeFile mainParameterFile mainDirectory mainPrefix
-    global kickOffsetElement
-
-    set plane y
-    set Plane $frequencyMapDelta(plane)
-    if [string compare $Plane X]==0 {
-	set plane x
-    }
-    set tag FrequencyMapDelta
-    set rootname $mainDirectory/${mainPrefix}${tag}$frequencyMapDelta(userSuffix)$Plane
-    SaveJobConfiguration -filename $rootname.runCfg
-
-    set parameterFileList ""
-    foreach item [lsort [array names mainParameterFile]] {
-        if [string length $mainParameterFile($item)] {
-            append parameterFileList "$mainParameterFile($item) "
-        }
-    }
-    foreach item [array names frequencyMapDelta] {
-	lappend origList <$item>
-	lappend replList [set frequencyMapDelta($item)]
-    }
-    if [string compare $plane "x"]==0 {
-	lappend origList <xMinimum> <xMaximum> <xPoints>
-	lappend replList $frequencyMapDelta(xyMinimum) 
-	lappend replList $frequencyMapDelta(xyMaximum)
-	lappend replList $frequencyMapDelta(xyPoints)
-
-	lappend origList <yMinimum> <yMaximum> <yPoints>
-	lappend replList $frequencyMapDelta(otherCoordinate)
-	lappend replList $frequencyMapDelta(otherCoordinate)
-	lappend replList 1
-    } else {
-	lappend origList <yMinimum> <yMaximum> <yPoints>
-	lappend replList $frequencyMapDelta(xyMinimum) 
-	lappend replList $frequencyMapDelta(xyMaximum)
-	lappend replList $frequencyMapDelta(xyPoints)
-
-	lappend origList <xMinimum> <xMaximum> <xPoints>
-	lappend replList $frequencyMapDelta(otherCoordinate)
-	lappend replList $frequencyMapDelta(otherCoordinate)
-	lappend replList 1
-    }
-    set variable delta
-    PerformRuns -template $sourceDir/FrequencyMapDeltaTemplate.ele \
-	-parameterFileList $parameterFileList -forceOccurence $forceOccurence \
-	-variable $variable -suffix $frequencyMapDelta(userSuffix)$Plane \
-	-startValue $frequencyMapDelta(deltaMinimum) \
-	-endValue $frequencyMapDelta(deltaMaximum) \
-	-points $frequencyMapDelta(deltaPoints) \
-	-copyList [list sh done] -combineList [list ele ele.log clo fma] \
-	-tag $tag -momentum $momentum -originalList $origList -replacementList $replList \
-	-postProcessProc FrequencyMapDeltaPP
-}
-
-proc FrequencyMapDeltaPP {args} {
-    set rootname ""
-    APSStrictParseArguments {rootname}
-    source $rootname.runCfg
-
-    set valueList [QueryValuesDialog -name "FMA Plot" \
-		       -nameList [list "Resonance diagram order" "Minimum nux" \
-				      "Maximum nux" "Minimum nuy" "Maximum nuy" \
-				      "Point size (X11)" "Point size (PNG)" "Filename on plot?"] \
-		       -defaultList [list 4 -0.05 1.05 -0.05 1.05 4 1 1] \
-		       -elementList [list order nux0 nux1 nuy0 nuy1 pointSizeX11 pointSizePng filenameTitle] \
-		       -typeList [list integer real real real real integer integer yesNo]]
-    if ![llength $valueList] return
-    array set parameter $valueList
-    catch {exec sddsresdiag $rootname.resdiag -order=$parameter(order)}
-
-    set plane [string tolower $frequencyMapDelta(plane)]
-    
-    set title1 "Color indicates initial $plane amplitude"
-    set title2 "Color indicates initial delta amplitude"
-    set topline ""
-    if $parameter(filenameTitle) {
-	set topline "$rootname.fma"
-    }
-
-    set tmpRoot /tmp/[APSTmpString]
-    APSAddToTempFileList $tmpRoot.0 $tmpRoot.1
-
-    exec sddsexpand ${rootname}.var -pipe=out \
-	| sddsconvert -pipe=in $tmpRoot.0 -rename=parameter,delta=deltaP 
-    exec sddsxref $rootname.fma $tmpRoot.0 -pipe=out -leave=* -transfer=parameter,deltaP \
-	| sddsprocess -pipe=in -nowarning $tmpRoot.1 -define=column,delta,deltaP,symbol=\$gd\$r
-
-    exec sddsplot "-topline=$topline" \
-	-limit=xmin=$parameter(nux0),xmax=$parameter(nux1),ymin=$parameter(nuy0),ymax=$parameter(nuy1),auto \
-	-column=nux,nuy $rootname.resdiag \
-	-column=nux,nuy $tmpRoot.1 -graph=dot,subtype=$parameter(pointSizeX11),vary -order=spect \
-	"-title=$title1" \
-	-split=column=$plane,start=$frequencyMapDelta(xyMinimum),width=[expr ($frequencyMapDelta(xyMaximum)-$frequencyMapDelta(xyMinimum))/101.0] -end \
-	-column=nux,nuy $rootname.resdiag \
-	-column=nux,nuy $tmpRoot.1 -graph=dot,subtype=$parameter(pointSizeX11),vary -order=spect \
-	"-title=$title2" \
-	-split=column=delta,start=$frequencyMapDelta(deltaMinimum),width=[expr ($frequencyMapDelta(deltaMaximum)-$frequencyMapDelta(deltaMinimum))/101.0] &
-
-    global makePngFiles
-    if $makePngFiles {
-	exec sddsplot -device=png,onwhite -thickness=2 -output=$rootname-fma1.png \
-	    "-topline=$topline" \
-	    -limit=xmin=$parameter(nux0),xmax=$parameter(nux1),ymin=$parameter(nuy0),ymax=$parameter(nuy1),auto \
-	    -column=nux,nuy $rootname.resdiag \
-	    -column=nux,nuy $tmpRoot.1 -graph=dot,subtype=$parameter(pointSizePng),vary -order=spect \
-	    "-title=$title1" \
-	    -split=column=$plane,start=$frequencyMapDelta(xyMinimum),width=[expr ($frequencyMapDelta(xyMaximum)-$frequencyMapDelta(xyMinimum))/101.0] 
-	setStatus "PNG file: $rootname-fma1.png"
-
-	exec sddsplot -device=png,onwhite -thickness=2 -output=$rootname-fma2.png \
-	    "-topline=$topline" \
-	    -limit=xmin=$parameter(nux0),xmax=$parameter(nux1),ymin=$parameter(nuy0),ymax=$parameter(nuy1),auto \
-	-column=nux,nuy $rootname.resdiag \
-	-column=nux,nuy $tmpRoot.1 -graph=dot,subtype=$parameter(pointSizePng),vary -order=spect \
-	"-title=$title2" \
-	-split=column=delta,start=$frequencyMapDelta(deltaMinimum),width=[expr ($frequencyMapDelta(deltaMaximum)-$frequencyMapDelta(deltaMinimum))/101.0] 
-	setStatus "PNG file: $rootname-fma2.png"
-    }
-
-    set title1 "Color indicates x tune"
-    set title2 "Color indicates y tune"
-
-    exec sddsplot "-topline=$topline" \
-	-column=$plane,delta $tmpRoot.1 \
-	-graph=dot,subtype=$parameter(pointSizeX11),vary -order=spect \
-	"-title=$title1" \
-	-split=column=nux,start=0,width=0.0101 -end \
-	-column=$plane,delta $tmpRoot.1 \
-	-graph=dot,subtype=$parameter(pointSizeX11),vary -order=spect \
-	"-title=$title2" \
-	-split=column=nuy,start=0,width=0.0101 -end &
-
-    if $makePngFiles {
-	exec sddsplot -device=png,onwhite -thickness=2 -output=$rootname-fma3.png \
-	    "-topline=$topline" \
-	    -column=$plane,delta $tmpRoot.1 \
-	    -graph=dot,subtype=$parameter(pointSizePng),vary -order=spect \
-	    "-title=$title1" \
-	    -split=column=nux,start=0,width=0.0101 -end 
-	setStatus "PNG file: $rootname-fma3.png"
-
-	exec sddsplot -device=png,onwhite -thickness=2 -output=$rootname-fma4.png \
-	    "-topline=$topline" \
-	    -column=$plane,delta $tmpRoot.1 \
-	    -graph=dot,subtype=$parameter(pointSizePng),vary -order=spect \
-	    "-title=$title2" \
-	    -split=column=nuy,start=0,width=0.0101 -end 
-	setStatus "PNG file: $rootname-fma4.png"
-    }
+	{Display -type FrequencyMapDelta}
 }
 
 set tabIndex -1
