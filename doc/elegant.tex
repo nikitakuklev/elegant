@@ -1250,31 +1250,60 @@ parameter.  If zero, then the errors replace the prior value of the parameter.
     long n_splits = 0;
     double split_fraction = 0.5;
     double desired_resolution = 0.01;
-    long verbosity = 0;    
     long assume_nonincreasing = 0;
+    long verbosity = 0;    
+    long offset_by_orbit = 0;
 &end
 \end{verbatim}
 
 \begin{itemize}
 \item \verb|output| --- The (incomplete) name of an SDDS file to send output to.  
  Recommended value: ``\%s.aper''.
+
+\item \verb|mode| --- May be ``many-particle'', ``single-particle'', ``one-line'', ``three-line'',
+``five-line'', ``seven-line'', ``nine-line'', or ``eleven-line''.  Many-particle searching is
+much faster than single-particle, but does not allow interval splitting to search for the aperture boundary. 
+Both ``many-particle'' and ``single-particle'' modes involve searching from the outside inward, which
+improves speed but may result in including islands.
+The {\em n}-line modes avoid this by searching form the origin outward.  In these modes, $n$ lines are
+explored from $(0,0)$ to $(x_{max}*cos(\theta), y_{max}*sin(\theta))$, where $\theta$ takes values
+from $0$ to $\pi/2$. The exception is one-line mode, where $\theta=$pi/4$.
+
 \item \verb|search_output| --- The (incomplete) name of an SDDS file for output of detailed
  information on each tracked particle (single-particle mode only).  Recommended value:
- ``\%s.apso''.
+ ``\%s.apso''.  Valid for many- and single-particle modes.
+
 \item \verb|boundary| --- The (incomplete) name of an SDDS 
 file for the boundary points of the aperture search.  Recommended value: ``\%s.bnd''.
+Valid for many- and single-particle modes.
+
 \item \verb|xmin|, \verb|xmax|, \verb|ymin|, \verb|ymax| --- Region of the aperture search.
-\item \verb|mode| --- May be ``many-particle'' or ``single-particle''.  Many-particle searching is
-much faster, but does not allow interval splitting to search for the aperture boundary. 
-\item \verb|nx| --- Number of x values to take in initial search.
-\item \verb|ny| --- Number of y values to take in search.
+The minimum values are relevant only for many- and single-particle modes.
+
+\item \verb|nx| --- For many- and single-particle modes, the number of x values to take in initial search.
+  For line modes, this determines the initial x and y step sizes via $\Delta x = x_{max}/n_x$ and
+  $\Delta y = y_{max}/n_x$.
+\item \verb|ny| --- For many- and single-particle modes, the number of y values to take in search.
+  Ignored for line modes.
+
 \item \verb|n_splits| --- If positive, the number of times to do interval splitting.  Interval splitting
 refers to searching between the original grid points in order to refine the results.
+
 \item \verb|split_fraction| --- If interval splitting is done, how the interval is split.
-\item \verb|desired_resolution| --- If interval splitting is done, fraction of \verb|xmax-xmin| to which to resolve the aperture.
+
+\item \verb|desired_resolution| --- If interval splitting is done,
+fraction of \verb|xmax-xmin| to which to resolve the aperture.  Ignored for all but single-particle
+mode.
+
 \item \verb|assume_nonincreasing| --- If this variable is non-zero, the search assumes that the aperture
 at ${\rm y+sign(y)*\Delta y}$ is no larger than that at ${\rm y}$.  This results in tracking of
-fewer particles but may give a pessimistic result.
+fewer particles but may give a pessimistic result.    Used only for single- and multi-particle
+modes.
+
+\item \verb|offset_by_orbit| --- A flag indicating whether to offset
+the transverse beam coordinates by the closed orbit before tracking.  The default value is
+zero for backward compatibility, but the recommended value is 1.
+
 \item \verb|verbosity| --- A larger value results in more printouts during computations.
 \end{itemize}
 
