@@ -26,9 +26,11 @@ static SDDS_DEFINITION column_definition[N_COLUMNS] = {
     } ;
 
 #define IP_STEP 0
-#define N_PARAMETERS 1
+#define IP_AREA 1
+#define N_PARAMETERS 2
 static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
     {"Step", "&parameter name=Step, type=long, description=\"Simulation step\" &end"},
+    {"Area", "&parameter name=Area, type=double, units=\"m$a2$n\" &end"},
     } ;
 
 static SDDS_DATASET SDDS_aperture;
@@ -38,10 +40,15 @@ static FILE *fpSearchOutput = NULL;
 #define SP_MODE 1
 #define ONE_LINE_MODE 2
 #define THREE_LINE_MODE 3
-#define LINE_MODE 4
-#define N_SEARCH_MODES 5
+#define FIVE_LINE_MODE 4
+#define SEVEN_LINE_MODE 5
+#define NINE_LINE_MODE 6
+#define ELEVEN_LINE_MODE 7
+#define LINE_MODE 8
+#define N_SEARCH_MODES 9
 static char *search_mode[N_SEARCH_MODES] = {
-  "many-particle", "single-particle", "one-line", "three-line", "particle-line"
+  "many-particle", "single-particle", "one-line", "three-line", "five-line", 
+  "seven-line", "nine-line", "eleven-line", "particle-line"
     } ;
 static long mode_code = 0;
 
@@ -51,6 +58,7 @@ void setup_aperture_search(
 			   VARY *control
 			   )
 {
+  char description[200];
 
   log_entry("setup_aperture_search");
 
@@ -87,9 +95,10 @@ void setup_aperture_search(
     bomb("can't presently offset_by_orbit for that mode", NULL);
 
   output = compose_filename(output, run->rootname);
+  sprintf(description, "%s aperture search", search_mode[mode_code]);
   SDDS_ElegantOutputSetup(&SDDS_aperture, output, SDDS_BINARY, 1, 
-			  (mode_code==0?"multi-particle aperture search":"single-particle aperture search"),
-			  run->runfile, run->lattice, parameter_definition, N_PARAMETERS,
+			  description, run->runfile, run->lattice, parameter_definition, 
+			  N_PARAMETERS-(mode_code>=ONE_LINE_MODE && mode_code<=LINE_MODE?0:1),
 			  column_definition, N_COLUMNS, "setup_aperture_search", SDDS_EOS_NEWFILE);
 
   if (control->n_elements_to_vary) 
@@ -158,10 +167,22 @@ long do_aperture_search(
     break;
   case ONE_LINE_MODE:
   case LINE_MODE:
-    retcode = do_aperture_search_line(run, control, referenceCoord, errcon, beamline, 0);
+    retcode = do_aperture_search_line(run, control, referenceCoord, errcon, beamline, 1);
     break;
   case THREE_LINE_MODE:
-    retcode = do_aperture_search_line(run, control, referenceCoord, errcon, beamline, 1);
+    retcode = do_aperture_search_line(run, control, referenceCoord, errcon, beamline, 3);
+    break;
+  case FIVE_LINE_MODE:
+    retcode = do_aperture_search_line(run, control, referenceCoord, errcon, beamline, 5);
+    break;
+  case SEVEN_LINE_MODE:
+    retcode = do_aperture_search_line(run, control, referenceCoord, errcon, beamline, 7);
+    break;
+  case NINE_LINE_MODE:
+    retcode = do_aperture_search_line(run, control, referenceCoord, errcon, beamline, 9);
+    break;
+  case ELEVEN_LINE_MODE:
+    retcode = do_aperture_search_line(run, control, referenceCoord, errcon, beamline, 11);
     break;
   case SP_MODE:
   default:
@@ -734,20 +755,39 @@ long do_aperture_search_line(
 			     double *referenceCoord,
 			     ERRORVAL *errcon,
 			     LINE_LIST *beamline,
-			     long three
+			     long lines
 			     )
 {
   double **coord;
   double x0, y0, dx, dy;
   double p_central;
   long index, split, nSteps;
-  long effort, n_trpoint, line, lines;
-  double xSurvived, ySurvived ;
-  double dxFactor[3] = {1, 1, 0};
-  double dyFactor[3] = {1, 0, 1};
+  long effort, n_trpoint, line;
+  double xSurvived, ySurvived, area;
+  double dxFactor[11], dyFactor[11], dtheta;
   double orbit[6] = {0,0,0,0,0,0};
+  double xLimit[11], yLimit[11];
 
   coord = (double**)zarray_2d(sizeof(**coord), 1, 7);
+
+  if (lines>11) 
+    bomb("too many lines requested for DA line search", NULL);
+
+  switch (lines) {
+  case 1:
+    dxFactor[0] = 1; dyFactor[0] = 1;
+    break;
+  default:
+    dtheta = PI/2.0/(lines-1);
+    for (line=1; line<lines-1; line++) {
+      dxFactor[line] = sin(dtheta*line);
+      dyFactor[line] = cos(dtheta*line);
+    }
+    /* to avoid any numerical errors, we give these explicitly */
+    dxFactor[0]       = 0; dyFactor[0]       = 1;
+    dxFactor[lines-1] = 1; dyFactor[lines-1] = 0;
+    break;
+  }
 
   effort = 0;
   xSurvived = ySurvived = -1;
@@ -755,7 +795,6 @@ long do_aperture_search_line(
   if (offset_by_orbit)
     memcpy(orbit, referenceCoord, sizeof(*referenceCoord)*6);
     
-  lines = three?3:1;
   if (verbosity>=1) {
     printf("** Starting %ld-line aperture search\n", lines);
     fflush(stdout);
@@ -843,12 +882,39 @@ long do_aperture_search_line(
 	fflush(stdout);
       }
     }
-
+    xLimit[line] = xSurvived;
+    yLimit[line] = ySurvived;
     if (!SDDS_SetRowValues(&SDDS_aperture, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, line,
 			   IC_X, xSurvived, IC_Y, ySurvived, -1)) {
       SDDS_SetError("Problem setting SDDS row values (do_aperture_search)");
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
+  }
+
+  area = 0;
+  if (lines>1) {
+    /* compute the area */
+    
+    /* first clip off any portions that stick out like islands */
+    /* the y values must be monotonically decreasing and the x values
+     * must be monotonically increasing 
+     */
+    for (line=0; line<lines-1; line++)
+      if (yLimit[line+1]>yLimit[line])
+	yLimit[line+1] = yLimit[line];
+    for (line=lines-1; line>0; line--)
+      if (xLimit[line-1]>xLimit[line])
+	xLimit[line-1] = xLimit[line];
+
+    /* perform trapazoid rule integration */
+    for (line=0; line<lines-1; line++) 
+      area += (xLimit[line+1]-xLimit[line])*(yLimit[line+1]+yLimit[line])/2;
+  }
+
+  if (!SDDS_SetParameters(&SDDS_aperture, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+			  "Area", area, NULL)) {
+    SDDS_SetError("Problem setting parameters values in SDDS table (do_aperture_search)");
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
 
   if (!SDDS_WriteTable(&SDDS_aperture)) {
