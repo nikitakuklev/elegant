@@ -1265,9 +1265,16 @@ parameter.  If zero, then the errors replace the prior value of the parameter.
 much faster than single-particle, but does not allow interval splitting to search for the aperture boundary. 
 Both ``many-particle'' and ``single-particle'' modes involve searching from the outside inward, which
 improves speed but may result in including islands.
-The {\em n}-line modes avoid this by searching form the origin outward.  In these modes, $n$ lines are
-explored from $(0,0)$ to $(x_{max}*cos(\theta), y_{max}*sin(\theta))$, where $\theta$ takes values
-from $0$ to $\pi/2$. The exception is one-line mode, where $\theta=$pi/4$.
+
+The {\em n}-line modes avoid this by searching form the origin
+outward.  Of these, the one-line and three-line modes are special:
+one-line mode searches the line from the origin to $(x_{max},
+y_{max})$.  three-line mode searches this line, plus the lines from
+the origin to $(x_{max}, 0)$ and $(0, y_{max})$.  For $n$-line modes
+with $n>3$, $n$ lines are explored from $(0,0)$ to
+$(x_{max}*sin(\theta), y_{max}*cos(\theta))$, where $\theta$ takes
+values from $-pi/2$ to $\pi/2$.   In these modes, the output file contains
+a parameter called ``Area,'' which gives the area of the dynamic aperture.
 
 \item \verb|search_output| --- The (incomplete) name of an SDDS file for output of detailed
  information on each tracked particle (single-particle mode only).  Recommended value:
