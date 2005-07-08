@@ -50,7 +50,6 @@
 &alter_elements name=<kickOffsetElement>, item=DP, value=<delta> &end
 
 &closed_orbit
-	output = %s.clo,
         iteration_fraction = 0.5,
         closed_orbit_iterations = 500,
 &end
