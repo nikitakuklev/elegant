@@ -4,6 +4,10 @@ exec oagwish "$0" "$@"
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.50  2005/07/06 13:01:47  borland
+# New version by Shang.  Many procedures are moved to elegant.tcl in
+# ../tcltklib.
+#
 #
 
 set auto_path [linsert $auto_path 0  /usr/local/oag/apps/lib/$env(HOST_ARCH)]
@@ -70,8 +74,8 @@ proc SaveConfiguration {} {
 
 
 proc ReadConfiguration {} {
-    global mainDirectory saveVarList
-    eval global $saveVarList
+    global mainDirectory elegantSaveVarList
+    eval global $elegantSaveVarList
     set configFile [APSFileSelectDialog .saveDialog -listDir $mainDirectory \
                      -checkValidity 1]
     if ![string length $configFile] return
@@ -787,12 +791,12 @@ FillFrequencyMapFrame [lindex $tabFrameWidgetList $i]; incr i
 FillFrequencyMapDeltaFrame [lindex $tabFrameWidgetList $i]; incr i
 FillCollectiveEffectsFrame [lindex $tabFrameWidgetList $i]; incr i
 
-lappend saveVarList momentum matrixLatticeFile kickLatticeFile mainParameterFile mainDirectory
-lappend saveVarList mainPrefix gridEngine forceOccurence
-lappend saveVarList matrixBeamline kickBeamline matrixOffsetElement kickOffsetElement
-lappend saveVarList basicComputations phaseSpaceTracking offMomentumTuneTracking higherOrderDispersion
-lappend saveVarList dynamicAperture offMomentumDynamicAperture fineDynamicAperture
-lappend saveVarList frequencyMap collectiveEffects dynamicApertureErrors frequencyMapDelta
+lappend elegantSaveVarList momentum matrixLatticeFile kickLatticeFile mainParameterFile mainDirectory
+lappend elegantSaveVarList mainPrefix gridEngine forceOccurence makePngFiles
+lappend elegantSaveVarList matrixBeamline kickBeamline matrixOffsetElement kickOffsetElement
+lappend elegantSaveVarList basicComputations phaseSpaceTracking offMomentumTuneTracking higherOrderDispersion
+lappend elegantSaveVarList dynamicAperture offMomentumDynamicAperture fineDynamicAperture
+lappend elegantSaveVarList frequencyMap collectiveEffects dynamicApertureErrors frequencyMapDelta
 
 set args $argv
 set configuration ""
