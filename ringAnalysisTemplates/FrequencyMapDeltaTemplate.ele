@@ -49,6 +49,14 @@
 &alter_elements name=<kickOffsetElement>, item=ON_PASS, value=0 &end
 &alter_elements name=<kickOffsetElement>, item=DP, value=<delta> &end
 
+&twiss_output
+	filename = %s.twi,
+	final_values_only = 1,
+	statistics = 1,
+	output_at_each_step = 1
+	radiation_integrals = 1
+&end
+
 &closed_orbit
         iteration_fraction = 0.5,
         closed_orbit_iterations = 500,
