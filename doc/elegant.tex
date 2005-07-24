@@ -1293,8 +1293,10 @@ The minimum values are relevant only for many- and single-particle modes.
 \item \verb|ny| --- For many- and single-particle modes, the number of y values to take in search.
   Ignored for line modes.
 
-\item \verb|n_splits| --- If positive, the number of times to do interval splitting.  Interval splitting
-refers to searching between the original grid points in order to refine the results.
+\item \verb|n_splits| --- If positive, the number of times to do
+interval splitting.  Interval splitting refers to searching between
+the original grid points in order to refine the results.  This is done
+only for single-particle and line modes.
 
 \item \verb|split_fraction| --- If interval splitting is done, how the interval is split.
 
