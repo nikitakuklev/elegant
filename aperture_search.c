@@ -39,16 +39,17 @@ static FILE *fpSearchOutput = NULL;
 #define MP_MODE 0
 #define SP_MODE 1
 #define ONE_LINE_MODE 2
-#define THREE_LINE_MODE 3
-#define FIVE_LINE_MODE 4
-#define SEVEN_LINE_MODE 5
-#define NINE_LINE_MODE 6
-#define ELEVEN_LINE_MODE 7
-#define LINE_MODE 8
-#define N_SEARCH_MODES 9
+#define TWO_LINE_MODE 3
+#define THREE_LINE_MODE 4
+#define FIVE_LINE_MODE 5
+#define SEVEN_LINE_MODE 6
+#define NINE_LINE_MODE 7
+#define ELEVEN_LINE_MODE 8
+#define LINE_MODE 9
+#define N_SEARCH_MODES 10
 static char *search_mode[N_SEARCH_MODES] = {
-  "many-particle", "single-particle", "one-line", "three-line", "five-line", 
-  "seven-line", "nine-line", "eleven-line", "particle-line"
+  "many-particle", "single-particle", "one-line", "two-line", "three-line", "five-line", 
+  "seven-line", "nine-line", "eleven-line",  "particle-line"
     } ;
 static long mode_code = 0;
 
@@ -98,7 +99,7 @@ void setup_aperture_search(
   sprintf(description, "%s aperture search", search_mode[mode_code]);
   SDDS_ElegantOutputSetup(&SDDS_aperture, output, SDDS_BINARY, 1, 
 			  description, run->runfile, run->lattice, parameter_definition, 
-			  N_PARAMETERS-(mode_code>=ONE_LINE_MODE && mode_code<=LINE_MODE?0:1),
+			  N_PARAMETERS-(mode_code>=TWO_LINE_MODE && mode_code<=LINE_MODE?0:1),
 			  column_definition, N_COLUMNS, "setup_aperture_search", SDDS_EOS_NEWFILE);
 
   if (control->n_elements_to_vary) 
@@ -113,7 +114,7 @@ void setup_aperture_search(
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
 
-  if (boundary) {
+  if (boundary && (mode_code==SP_MODE || mode_code==MP_MODE)) {
     FILE *fp;
     boundary = compose_filename(boundary, run->rootname);
     fp = fopen_e(boundary, "w", 0);
@@ -168,6 +169,9 @@ long do_aperture_search(
   case ONE_LINE_MODE:
   case LINE_MODE:
     retcode = do_aperture_search_line(run, control, referenceCoord, errcon, beamline, 1);
+    break;
+  case TWO_LINE_MODE:
+    retcode = do_aperture_search_line(run, control, referenceCoord, errcon, beamline, 2);
     break;
   case THREE_LINE_MODE:
     retcode = do_aperture_search_line(run, control, referenceCoord, errcon, beamline, 3);
@@ -767,6 +771,7 @@ long do_aperture_search_line(
   double dxFactor[11], dyFactor[11], dtheta;
   double orbit[6] = {0,0,0,0,0,0};
   double xLimit[11], yLimit[11];
+  long originStable;
 
   coord = (double**)zarray_2d(sizeof(**coord), 1, 7);
 
@@ -777,15 +782,23 @@ long do_aperture_search_line(
   case 1:
     dxFactor[0] = 1; dyFactor[0] = 1;
     break;
+  case 2:
+    dxFactor[0] = -1; dyFactor[0] = 1;
+    dxFactor[1] =  1; dyFactor[1] = 1;
+    break;
+  case 3:
+    dxFactor[0] = 0;   dyFactor[0] = 1;
+    dxFactor[1] = dyFactor[1] = 1/sqrt(2);
+    dxFactor[2] = 1;   dyFactor[2] = 0;
+    break;
   default:
-    dtheta = PI/2.0/(lines-1);
-    for (line=1; line<lines-1; line++) {
-      dxFactor[line] = sin(dtheta*line);
-      dyFactor[line] = cos(dtheta*line);
+    dtheta = PI/(lines-1);
+    for (line=0; line<lines; line++) {
+      if (fabs(dxFactor[line] = sin(-PI/2+dtheta*line))<1e-6)
+	dxFactor[line] = 0;
+      if (fabs(dyFactor[line] = cos(-PI/2+dtheta*line))<1e-6)
+	dyFactor[line] = 0;
     }
-    /* to avoid any numerical errors, we give these explicitly */
-    dxFactor[0]       = 0; dyFactor[0]       = 1;
-    dxFactor[lines-1] = 1; dyFactor[lines-1] = 0;
     break;
   }
 
@@ -816,21 +829,23 @@ long do_aperture_search_line(
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
     
+  originStable = 0;
   for (line=0; line<lines; line++) {
-    xSurvived = ySurvived = -1;
+    if (dxFactor[line]>0)
+      xSurvived = ySurvived = -1;
+    else 
+      xSurvived = -(ySurvived = -1);
     printf("* Searching line %ld\n", line);
     fflush(stdout);
     for (split=0; split<=n_splits; split++) {
       if (split==0) {
-	x0 = y0 = 0;
 	dx = xmax/(nx-1)*dxFactor[line];
 	dy = ymax/(nx-1)*dyFactor[line];
+	x0 = y0 = 0;
 	nSteps = nx;
       } else {
-	if ((x0 = xSurvived)<0)
-	  x0 = 0;
-	if ((y0 = ySurvived)<0) 
-	  y0 = 0;
+	x0 = xSurvived;
+	y0 = ySurvived;
 	dx *= split_fraction;
 	dy *= split_fraction;
 	x0 += dx;
@@ -845,27 +860,32 @@ long do_aperture_search_line(
       }
 	
       for (index=0; index<nSteps; index++) {
-	memcpy(coord[0], orbit, sizeof(*orbit)*6);
-	coord[0][0] = index*dx + x0 + orbit[0];
-	coord[0][2] = index*dy + y0 + orbit[2];
+	if (index!=0 || split!=0 || !originStable) {
+	  memcpy(coord[0], orbit, sizeof(*orbit)*6);
+	  coord[0][0] = index*dx + x0 + orbit[0];
+	  coord[0][2] = index*dy + y0 + orbit[2];
 	  
-	p_central = run->p_central;
-	n_trpoint = 1;
-	if (do_tracking(NULL, coord, n_trpoint, &effort, beamline, &p_central, 
-			NULL, NULL, NULL, NULL, run, control->i_step, 
-			SILENT_RUNNING, control->n_passes, 0, NULL, NULL, NULL, NULL)!=1) {
-	  if (verbosity>=2) {
-	    fprintf(stdout, "particle lost for x=%e, y=%e\n", index*dx + x0, index*dy + y0);
-	    fflush(stdout);
+	  p_central = run->p_central;
+	  n_trpoint = 1;
+	  if (do_tracking(NULL, coord, n_trpoint, &effort, beamline, &p_central, 
+			  NULL, NULL, NULL, NULL, run, control->i_step, 
+			  SILENT_RUNNING, control->n_passes, 0, NULL, NULL, NULL, NULL)!=1) {
+	    if (verbosity>=2) {
+	      fprintf(stdout, "particle lost for x=%e, y=%e\n", index*dx + x0, index*dy + y0);
+	      fflush(stdout);
+	    }
+	    break;
 	  }
-	  break;
 	}
+	if (index==0 && split==0)
+	  originStable = 1;
 	if (verbosity>=2) {
 	  fprintf(stdout, "particle survived for x=%e, y=%e\n", x0+index*dx, y0+index*dy);
 	  fflush(stdout);
 	}
 	if (dxFactor[line]) {
-	  if (xSurvived<(x0+index*dx)) {
+	  if ((dxFactor[line]>0 && (xSurvived<(x0+index*dx))) ||
+	      (dxFactor[line]<0 && (xSurvived>(x0+index*dx)))) {
 	    xSurvived = x0+index*dx;
 	    ySurvived = y0+index*dy;      
 	  }
@@ -895,13 +915,9 @@ long do_aperture_search_line(
   if (lines>1) {
     /* compute the area */
     
-    /* first clip off any portions that stick out like islands */
-    /* the y values must be monotonically decreasing and the x values
-     * must be monotonically increasing 
+    /* First clip off any portions that stick out like islands.
+     * To do this, we insist that the x values must be monotonically increasing.
      */
-    for (line=0; line<lines-1; line++)
-      if (yLimit[line+1]>yLimit[line])
-	yLimit[line+1] = yLimit[line];
     for (line=lines-1; line>0; line--)
       if (xLimit[line-1]>xLimit[line])
 	xLimit[line-1] = xLimit[line];
