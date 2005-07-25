@@ -4,6 +4,9 @@ exec oagwish "$0" "$@"
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.51  2005/07/14 17:58:00  borland
+# Renamed saveVarList to elegantSaveVarList.
+#
 # Revision 1.50  2005/07/06 13:01:47  borland
 # New version by Shang.  Many procedures are moved to elegant.tcl in
 # ../tcltklib.
@@ -284,10 +287,10 @@ proc FillCollectiveEffectsFrame {widget args} {
     APSFrame .scts -parent $widget -label ""
     set w $widget.scts.frame
     APSLabeledEntry .scts -parent $w -label "SC tune spread: " -commandButton 1\
-        -width 60 -textVariable collectiveEffects(scTuneSpreadOutput)
-    APSButton .run -parent $w -text "Run" -command "Run -computation RunSCTuneSpread" \
+        -width 60 -textVariable collectiveEffects(scTuneShiftOutput)
+    APSButton .run -parent $w -text "Run" -command "Run -computation RunSCTuneShift" \
 	-contextHelp "Compute space charge tune spreads."
-    APSButton .display -parent $w -text "Display" -command "Display -type DisplaySCTuneSpread" \
+    APSButton .display -parent $w -text "Display" -command "Display -type DisplaySCTuneShift" \
 	-contextHelp "Display scan for space-charge tune spread."
 }
 
