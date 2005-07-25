@@ -4,6 +4,9 @@ exec oagwish "$0" "$@"
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.12  2005/06/10 15:52:34  borland
+# Quantum lifetime now includes the transverse aperture limit.
+#
 # Revision 1.11  2005/02/04 15:26:14  emery
 # Changed default number of bunches from 23 to 24, which will
 # change the default value of bunch current.
@@ -163,7 +166,7 @@ set auto_path [linsert $auto_path 0  /usr/local/oag/apps/lib/$env(HOST_ARCH)]
 set auto_path [linsert $auto_path 0 /usr/local/oag/lib_patch/$env(HOST_ARCH)]
 APSDebugPath
 
-set CVSRevisionAuthor "\$Revision: 1.12 $ \$Author: borland $"
+set CVSRevisionAuthor "\$Revision: 1.13 $ \$Author: borland $"
 
 APSApplication . -name beamLifetimeCalc -version $CVSRevisionAuthor -overview \
   "Calculates the gas scattering lifetime due to single Coulomb scattering and
@@ -747,7 +750,8 @@ proc RecomputeOutputs {args} {
     }
 
     set statusCallback setStatus
-    APSStrictParseArguments {statusCallback}
+    set variableList ""
+    APSStrictParseArguments {statusCallback variableList}
     if [string length $statusCallback] {
         eval $statusCallback {"Working."}
     }
@@ -785,63 +789,65 @@ proc RecomputeOutputs {args} {
         set effectiveEnergyAperture $eRF
     }
 
-    # compute zero-current rms equilbrium bunch length in mm
-    set bunchLength [expr 1e3*$energySpread*$cmks* \
-                       sqrt($alpha/(2*3.1415926*$harmonic*$revolutionFrequency*$revolutionFrequency))* \
-                       sqrt($energy*1.0e3/sqrt($rfVoltage*$rfVoltage-$Uo*$Uo))]
-    if {!$useHaissinski} {
-        set bunchLength [expr $bunchLength*$bunchLengthFactor]
-    } else {
-        if [expr $broadBandImpedance<=0] {
-            eval $statusCallback {"Broad-band impedance <= 0!"}
-        }
-        global haissinskiDone superperiods haissinskiIterations haissinskiTolerance
-        global haissinskiSteps haissinskiPoints haissinskiFraction haissinskiDivisor
-        set Q [expr $bunchCurrent/1000.0/$revolutionFrequency]
-        set tmpRoot /tmp/[APSTmpString]
-        APSAddToTempFileList $tmpRoot.0 $tmpRoot.1
-        set haissinskiDone 0
-        set extraOption -outputLastStepOnly
-        if $useHaissinski==2 {
-            set extraOption -verbose
-        }
-	exec sddsprocess $latticeFile $tmpRoot.0 \
-	    -redefine=parameter,Sdelta0,$energySpread
-        set unixCommand \
-          "haissinski $tmpRoot.0 $tmpRoot.1 -model=Zn=$broadBandImpedance \
+    if [lsearch -exact $variableList BunchLength]==-1 {
+	# compute zero-current rms equilbrium bunch length in mm
+	set bunchLength [expr 1e3*$energySpread*$cmks* \
+			     sqrt($alpha/(2*3.1415926*$harmonic*$revolutionFrequency*$revolutionFrequency))* \
+			     sqrt($energy*1.0e3/sqrt($rfVoltage*$rfVoltage-$Uo*$Uo))]
+	if {!$useHaissinski} {
+	    set bunchLength [expr $bunchLength*$bunchLengthFactor]
+	} else {
+	    if [expr $broadBandImpedance<=0] {
+		eval $statusCallback {"Broad-band impedance <= 0!"}
+	    }
+	    global haissinskiDone superperiods haissinskiIterations haissinskiTolerance
+	    global haissinskiSteps haissinskiPoints haissinskiFraction haissinskiDivisor
+	    set Q [expr $bunchCurrent/1000.0/$revolutionFrequency]
+	    set tmpRoot /tmp/[APSTmpString]
+	    APSAddToTempFileList $tmpRoot.0 $tmpRoot.1
+	    set haissinskiDone 0
+	    set extraOption -outputLastStepOnly
+	    if $useHaissinski==2 {
+		set extraOption -verbose
+	    }
+	    exec sddsprocess $latticeFile $tmpRoot.0 \
+		-redefine=parameter,Sdelta0,$energySpread
+	    set unixCommand \
+		"haissinski $tmpRoot.0 $tmpRoot.1 -model=Zn=$broadBandImpedance \
             -charge=$Q -rf=voltage=[expr $rfVoltage*1e6],harmonic=$harmonic \
             -steps=$haissinskiSteps \
             $extraOption -superPeriods=$superperiods -energy=$energy \
             -integration=deltaTime=[expr $bunchLength/1e3/$haissinskiDivisor/$cmks],points=$haissinskiPoints,fraction=$haissinskiFraction,iterations=$haissinskiIterations,tolerance=$haissinskiTolerance" 
-        if $useHaissinski==2 {
-            APSExecLog .haissinskiExec -unixCommand $unixCommand \
-              -width 80 -height 20 -callback "set haissinskiDone 1"
-        } else {
-            APSExec -unixCommand $unixCommand -callback "set haissinskiDone 1"
-        }
-        APSWaitWithUpdate -waitSeconds 120 -updateInterval 5 -abortVariable haissinskiDone \
-          -updateCommand "eval $statusCallback {\"Waiting for Haissinski run...\"}"
-        if !$haissinskiDone {
-            eval $statusCallback {"Error: Haissinski run didn't complete in 120s."}
-            return
-        }
-        if [catch {exec sddsprocess $tmpRoot.1 -pipe=out \
-                     "-define=column,Time2Density,Time sqr Density *" \
-                     -process=Density,integ,DensityInteg,functionOf=Time \
-                     -process=Time2Density,integ,Time2DensityInteg,functionOf=Time \
-                     "-define=parameter,bunchLength,Time2DensityInteg DensityInteg / sqrt c_mks * 1e3 *,units=mm" \
-                     | sddscollapse -pipe=in $tmpRoot.2} result] {
-            eval $statusCallback {"Error: Haissinski postprocessing error: $result"}
-            return
-        }
-        if $useHaissinski==2 {
-            exec sddsplot -column=Time,Density $tmpRoot.1 -split=page -separate=page &
-            exec sddsplot -column=Charge,bunchLength $tmpRoot.2 -graph=sym,scale=2,connect &
-        }           
-        set bunchLength [exec sddsprocess $tmpRoot.2 -pipe=out -clip=0,1,invert \
-                           | sdds2stream -pipe=in -column=bunchLength]
-        eval $statusCallback {"Bunch length is $bunchLength mm"}
-    }
+	    if $useHaissinski==2 {
+		APSExecLog .haissinskiExec -unixCommand $unixCommand \
+		    -width 80 -height 20 -callback "set haissinskiDone 1"
+	    } else {
+		APSExec -unixCommand $unixCommand -callback "set haissinskiDone 1"
+	    }
+	    APSWaitWithUpdate -waitSeconds 120 -updateInterval 5 -abortVariable haissinskiDone \
+		-updateCommand "eval $statusCallback {\"Waiting for Haissinski run...\"}"
+	    if !$haissinskiDone {
+		eval $statusCallback {"Error: Haissinski run didn't complete in 120s."}
+		return
+	    }
+	    if [catch {exec sddsprocess $tmpRoot.1 -pipe=out \
+			   "-define=column,Time2Density,Time sqr Density *" \
+			   -process=Density,integ,DensityInteg,functionOf=Time \
+			   -process=Time2Density,integ,Time2DensityInteg,functionOf=Time \
+			   "-define=parameter,bunchLength,Time2DensityInteg DensityInteg / sqrt c_mks * 1e3 *,units=mm" \
+			   | sddscollapse -pipe=in $tmpRoot.2} result] {
+		eval $statusCallback {"Error: Haissinski postprocessing error: $result"}
+		return
+	    }
+	    if $useHaissinski==2 {
+		exec sddsplot -column=Time,Density $tmpRoot.1 -split=page -separate=page &
+		exec sddsplot -column=Charge,bunchLength $tmpRoot.2 -graph=sym,scale=2,connect &
+	    }           
+	    set bunchLength [exec sddsprocess $tmpRoot.2 -pipe=out -clip=0,1,invert \
+				 | sdds2stream -pipe=in -column=bunchLength]
+	    eval $statusCallback {"Bunch length is $bunchLength mm"}
+	}
+    } 
 
     set syncFrequency [expr 1e-3 * $revolutionFrequency * \
                          sqrt($alpha*$harmonic/(2*3.1415926)) * \
@@ -1063,7 +1069,7 @@ proc RunVariationFromFile {} {
             set [lindex $variableVariable $index] [expr [lindex [subst \$${elem}Data] $row]]
             incr index
         }
-        if [catch {RecomputeOutputs -statusCallback "setStatus"} result]  {
+        if [catch {RecomputeOutputs -statusCallback "setStatus" -variableList $variableColumn} result]  {
 	    setStatus "$result"
 	}
     }
