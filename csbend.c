@@ -18,6 +18,11 @@
 
 #define EXSQRT(value, order) (order==0?sqrt(value):(1+0.5*((value)-1)))
 
+
+void addRadiationKick(double *Qx, double *Qy, double *dPoP, long sqrtOrder,
+		      double x, double h0, double Fx, double Fy,
+		      double ds, double radCoef, double dsISR, double isrCoef);
+
 void integrate_csbend_ord2(double *Qf, double *Qi, double s, long n, long sqrtOrder, double rho0, double p0);
 void integrate_csbend_ord4(double *Qf, double *Qi, double s, long n, long sqrtOrder, double rho0, double p0);
 void exactDrift(double **part, long np, double length);
@@ -330,7 +335,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     }
 
     /* get final coordinates */
-    if (rad_coef) {
+    if (rad_coef || isrConstant) {
       double p0, p1;
       double beta0, beta1;
       /* fix previous distance information to reflect new velocity--since distance
@@ -385,7 +390,6 @@ void integrate_csbend_ord2(double *Qf, double *Qi, double s, long n, long sqrtOr
   double Fx, Fy, x, y, y2;
   double sine, cosi, tang;
   double sin_phi, cos_phi;
-  double xp, yp, denom;
 
 #define X0 Qi[0]
 #define XP0 Qi[1]
@@ -463,17 +467,10 @@ void integrate_csbend_ord2(double *Qf, double *Qi, double s, long n, long sqrtOr
     /* do kicks */
     QX += -ds*(1+X/rho0)*Fy/rho_actual;
     QY += ds*(1+X/rho0)*Fx/rho_actual;
-    if (rad_coef || isrConstant) {
-      denom = EXSQRT(sqr(1+DPoP)-sqr(QX)-sqr(QY), sqrtOrder);
-      xp = QX/denom;
-      yp = QY/denom;
-      QX /= (1+DPoP);
-      QY /= (1+DPoP);
-      DPoP -= rad_coef*sqr(1+DPoP)*(sqr(Fx)+sqr(Fy))*EXSQRT(sqr(1+X/rho0)+sqr(xp)+sqr(yp), sqrtOrder)*ds 
-        + isrConstant*sqrt(ds)*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
-      QX *= (1+DPoP);
-      QY *= (1+DPoP);
-    }
+    if (rad_coef || isrConstant)
+      addRadiationKick(&QX, &QY, &DPoP, sqrtOrder, 
+		       X, 1./rho0, Fx, Fy, 
+		       ds, rad_coef, ds, isrConstant);
     
     if (i==n-1) {
       /* do half-length drift */
@@ -548,7 +545,6 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double s, long n, long sqrtOr
   double Fx, Fy, x, y, y2;
   double sine, cosi, tang;
   double sin_phi, cos_phi;
-  double isrFactor;
   
 #define X0 Qi[0]
 #define XP0 Qi[1]
@@ -588,7 +584,6 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double s, long n, long sqrtOr
   dist = 0;
 
   s /= n;
-  isrFactor = isrConstant*sqrt(s/3);
   for (i=0; i<n; i++) {
     
     /* do first drift */
@@ -631,12 +626,9 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double s, long n, long sqrtOr
     QX += -ds*(1+X/rho0)*Fy/rho_actual;
     QY += ds*(1+X/rho0)*Fx/rho_actual;
     if (rad_coef || isrConstant) {
-      QX /= (1+DPoP);
-      QY /= (1+DPoP);
-      DPoP -= rad_coef*sqr(1+DPoP)*(sqr(Fx)+sqr(Fy))*(1+X/rho0)*ds 
-        + isrFactor*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
-      QX *= (1+DPoP);
-      QY *= (1+DPoP);
+      addRadiationKick(&QX, &QY, &DPoP, sqrtOrder,
+		       X, 1./rho0, Fx, Fy, 
+		       ds, rad_coef, s/3, isrConstant);
     }
 
     /* do second drift */
@@ -678,14 +670,10 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double s, long n, long sqrtOr
     /* --do kicks */
     QX += -ds*(1+X/rho0)*Fy/rho_actual;
     QY += ds*(1+X/rho0)*Fx/rho_actual;
-    if (rad_coef || isrConstant) {
-      QX /= (1+DPoP);
-      QY /= (1+DPoP);
-      DPoP -= rad_coef*sqr(1+DPoP)*(sqr(Fx)+sqr(Fy))*(1+X/rho0)*ds +
-        isrFactor*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
-      QX *= (1+DPoP);
-      QY *= (1+DPoP);
-    }
+    if (rad_coef || isrConstant)
+      addRadiationKick(&QX, &QY, &DPoP, sqrtOrder,
+		       X, 1./rho0, Fx, Fy, 
+		       ds, rad_coef, s/3, isrConstant);
     
     /* do third drift */
     dsh = s*(1-BETA)/(2-BETA)/2;
@@ -725,14 +713,10 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double s, long n, long sqrtOr
     /* --do kicks */
     QX += -ds*(1+X/rho0)*Fy/rho_actual;
     QY += ds*(1+X/rho0)*Fx/rho_actual;
-    if (rad_coef || isrConstant) {
-      QX /= (1+DPoP);
-      QY /= (1+DPoP);
-      DPoP -= rad_coef*sqr(1+DPoP)*(sqr(Fx)+sqr(Fy))*(1+X/rho0)*ds +
-        isrFactor*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
-      QX *= (1+DPoP);
-      QY *= (1+DPoP);
-    }
+    if (rad_coef || isrConstant) 
+      addRadiationKick(&QX, &QY, &DPoP, sqrtOrder,
+		       X, 1./rho0, Fx, Fy, 
+		       ds, rad_coef, s/3, isrConstant);
     
     /* do fourth drift */
     dsh = s/2/(2-BETA);
@@ -1270,7 +1254,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
         YP = Qf[3];  
         DP = Qf[5];
 
-        if (rad_coef) {
+        if (rad_coef || isrConstant) {
           /* convert additional distance traveled to ct using mean velocity */
           p1 = Po*(1+DP);
           beta1 = p1/sqrt(p1*p1+1);
@@ -3010,3 +2994,24 @@ void applyFilterTable(double *function, long bins, double dx, long fValues,
   free(realimag);
 }
 
+void addRadiationKick(double *Qx, double *Qy, double *dPoP, long sqrtOrder,
+		      double x, double h0, double Fx, double Fy,
+		      double ds, double radCoef, double dsISR, double isrCoef)
+{
+  double denom, xp, yp, F2, deltaFactor, dsFactor;
+
+  denom = EXSQRT(sqr(1+*dPoP)-sqr(*Qx)-sqr(*Qy), sqrtOrder);
+  xp = *Qx/denom;
+  yp = *Qy/denom;
+  *Qx /= (1 + *dPoP);
+  *Qy /= (1 + *dPoP);
+  deltaFactor = sqr(1 + *dPoP);
+  F2 = sqr(Fx)+sqr(Fy);
+  dsFactor = EXSQRT(sqr(1+x*h0)+sqr(xp)+sqr(yp), sqrtOrder);
+  if (radCoef)
+    *dPoP -= radCoef*deltaFactor*F2*ds*dsFactor;
+  if (isrCoef)
+    *dPoP += isrCoef*deltaFactor*pow(F2,1.5)*sqrt(dsISR*dsFactor)*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
+  *Qx *= (1 + *dPoP);
+  *Qy *= (1 + *dPoP);
+}
