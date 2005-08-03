@@ -620,7 +620,7 @@ extern char *entity_text[N_TYPES];
 #define N_TMCF_PARAMS 18
 #define N_CEPL_PARAMS 16
 #define N_TWPL_PARAMS 16
-#define N_WATCH_PARAMS 11
+#define N_WATCH_PARAMS 12
 #define N_MALIGN_PARAMS 10
 #define N_TWLA_PARAMS 19
 #define N_PEPPOT_PARAMS 6
@@ -633,9 +633,9 @@ extern char *entity_text[N_TYPES];
 #define N_SCRAPER_PARAMS 13
 #define N_CENTER_PARAMS 6
 #define N_KICKER_PARAMS 10
-#define N_KSEXT_PARAMS 15
+#define N_KSEXT_PARAMS 16
 #define N_KSBEND_PARAMS 27
-#define N_KQUAD_PARAMS 22
+#define N_KQUAD_PARAMS 23
 #define N_MAGNIFY_PARAMS 6
 #define N_SAMPLE_PARAMS 2
 #define N_HVCOR_PARAMS 10
@@ -1165,7 +1165,7 @@ typedef struct {
     double fraction;
     long interval, start_pass;
     char *filename, *label, *mode;
-    long xData, yData, longitData, excludeSlopes, flushInterval;
+    long xData, yData, longitData, excludeSlopes, flushInterval, disable;
     /* internal variables for SDDS output */
     long initialized, count, mode_code, window_code;
     long xIndex[2], yIndex[2], longitIndex[3], IDIndex;
@@ -1183,7 +1183,7 @@ typedef struct {
     long interval, startPass, bins, fixedBinSize;
     long xData, yData, longitData;
     double binSizeFactor;
-    long normalize;
+    long normalize, disable;
     /* internal variables for SDDS output */
     long initialized, count;
     long columnIndex[7][2];  /* x, xp, y, yp, t, p, dt */
@@ -1380,7 +1380,7 @@ typedef struct {
     double dx, dy, dz, fse;
     long n_kicks, synch_rad;
     char *systematic_multipoles, *random_multipoles;
-    long integration_order, sqrtOrder;
+    long integration_order, sqrtOrder, isr;
     /* for internal use */
     long multipolesInitialized;
     MULTIPOLE_DATA systematicMultipoleData; 
@@ -1413,7 +1413,7 @@ typedef struct {
     double xKickCalibration, yKickCalibration;
     long xSteering, ySteering, n_kicks, synch_rad;
     char *systematic_multipoles, *random_multipoles, *steering_multipoles;
-    long integration_order, sqrtOrder;
+    long integration_order, sqrtOrder, isr;
     /* for internal use */
     long multipolesInitialized;
     MULTIPOLE_DATA systematicMultipoleData; 

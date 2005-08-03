@@ -597,6 +597,7 @@ PARAMETER watch_param[N_WATCH_PARAMS] = {
     {"LONGIT_DATA", "", IS_LONG, 0, (long)((char*)&watch_example.longitData), NULL, 0.0, 1, "include longitudinal data in coordinate mode?"},
     {"EXCLUDE_SLOPES", "", IS_LONG, 0, (long)((char*)&watch_example.excludeSlopes), NULL, 0.0, 0, "exclude slopes in coordinate mode?"},
     {"FLUSH_INTERVAL", "", IS_LONG, 0, (long)((char *)&watch_example.flushInterval), NULL, 0.0, 0, "file flushing interval (parameter or centroid mode)"},    
+    {"DISABLE", "", IS_LONG, 0, (long)((char *)&watch_example.disable), NULL, 0.0, 0, "If nonzero, no output will be generated."},    
     } ;
 
 TW_PLATES twpl_example;
@@ -788,6 +789,7 @@ PARAMETER ksext_param[N_KSEXT_PARAMS] = {
     {"RANDOM_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&ksext_example.random_multipoles), NULL, 0.0, 0, "input file for random multipoles"},
     {"INTEGRATION_ORDER", "", IS_LONG, 0, (long)((char *)&ksext_example.integration_order), NULL, 0.0, 4, "integration order (2 or 4)"},
     {"SQRT_ORDER", "", IS_LONG, 0, (long)((char *)&ksext_example.sqrtOrder), NULL, 0.0, 0, "Order of expansion of square-root in Hamiltonian.  0 means no expansion."},
+    {"ISR", "", IS_LONG, 0, (long)((char *)&ksext_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (scattering)?"},
     };
 
 KSBEND ksbend_example;
@@ -847,6 +849,7 @@ PARAMETER kquad_param[N_KQUAD_PARAMS]={
     {"STEERING_MULTIPOLES", "", IS_STRING, 0, (long)((char *)&kquad_example.steering_multipoles), NULL, 0.0, 0, "input file for multipole content of steering kicks"},
     {"INTEGRATION_ORDER", "", IS_LONG, 0, (long)((char *)&kquad_example.integration_order), NULL, 0.0, 4, "integration order (2 or 4)"},
     {"SQRT_ORDER", "", IS_LONG, 0, (long)((char *)&kquad_example.sqrtOrder), NULL, 0.0, 0, "Order of expansion of square-root in Hamiltonian.  0 means no expansion."},
+    {"ISR", "", IS_LONG, 0, (long)((char *)&kquad_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (scattering)?"},
     };
 
 MAGNIFY magnify_example;
@@ -1403,6 +1406,7 @@ PARAMETER histogram_param[N_HISTOGRAM_PARAMS] = {
   {"LONGIT_DATA", "", IS_LONG, 0, (long)((char*)&histogram_example.longitData), NULL, 0.0, 1, "histogram t and p?"},
   {"BIN_SIZE_FACTOR", "", IS_DOUBLE, 0, (long)((char*)&histogram_example.binSizeFactor), NULL, 1.0, 0, "multiply computed bin size by this factor before histogramming"},
   {"NORMALIZE", "", IS_LONG, 0, (long)((char*)&histogram_example.normalize), NULL, 0.0, 1, "normalize histogram with bin size and number of particles?"},
+  {"DISABLE", "", IS_LONG, 0, (long)((char *)&histogram_example.disable), NULL, 0.0, 0, "If nonzero, no output will be generated."},    
 };
   
 CSRDRIFT csrdrift_example;

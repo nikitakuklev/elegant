@@ -955,7 +955,9 @@ void set_up_watch_point(WATCH *watch, RUN *run)
     char *mode, *qualifier;
 
     log_entry("set_up_watch_point");
-    
+
+    if (watch->disable)
+      return;
     if (watch->interval<=0 || watch->fraction<=0)
         bomb("interval or fraction is non-positive for WATCH element", NULL);
     if (!watch->mode || watch->mode[0]==0)
@@ -984,6 +986,8 @@ void set_up_watch_point(WATCH *watch, RUN *run)
 
 void set_up_histogram(HISTOGRAM *histogram, RUN *run)
 {
+  if (histogram->disable)
+    return;
   if (histogram->interval<=0)
     bomb("interval is non-positive for HISTOGRAM element", NULL);
   if (histogram->bins<=2)

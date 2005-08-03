@@ -596,50 +596,54 @@ long do_tracking(
             modulated_rf_cavity(coord, nToTrack, (MODRF*)eptr->p_elem, *P_central, z);
             break;
           case T_WATCH:
-            watch_pt_seen = 1;
             if (!(flags&TEST_PARTICLES) && !(flags&INHIBIT_FILE_OUTPUT)) {
               watch = (WATCH*)eptr->p_elem;
-              if (!watch->initialized) 
-                set_up_watch_point(watch, run);
-              if (i_pass==0 && (n_passes/watch->interval)==0)
-                fprintf(stdout, "warning: n_passes = %ld and WATCH interval = %ld--no output will be generated!\n",
-                        n_passes, watch->interval);
+	      if (!watch->disable) {
+		watch_pt_seen = 1;
+		if (!watch->initialized) 
+		  set_up_watch_point(watch, run);
+		if (i_pass==0 && (n_passes/watch->interval)==0)
+		  fprintf(stdout, "warning: n_passes = %ld and WATCH interval = %ld--no output will be generated!\n",
+			  n_passes, watch->interval);
                 fflush(stdout);
-              if (i_pass>=watch->start_pass && (i_pass-watch->start_pass)%watch->interval==0) {
-                switch (watch->mode_code) {
-                case WATCH_COORDINATES:
-                  dump_watch_particles(watch, step, i_pass, coord, nToTrack, *P_central,
-                                       beamline->revolution_length, 
-                                       charge?charge->macroParticleCharge*nToTrack:0.0, z);
-                  break;
-                case WATCH_PARAMETERS:
-                case WATCH_CENTROIDS:
-                  dump_watch_parameters(watch, step, i_pass, n_passes, coord, nToTrack, nOriginal, *P_central,
-                                        beamline->revolution_length);
-                  break;
-                case WATCH_FFT:
-                  dump_watch_FFT(watch, step, i_pass, n_passes, coord, nToTrack, nOriginal, *P_central);
-                  break;
-                }
-              }
-            }
+		if (i_pass>=watch->start_pass && (i_pass-watch->start_pass)%watch->interval==0) {
+		  switch (watch->mode_code) {
+		  case WATCH_COORDINATES:
+		    dump_watch_particles(watch, step, i_pass, coord, nToTrack, *P_central,
+					 beamline->revolution_length, 
+					 charge?charge->macroParticleCharge*nToTrack:0.0, z);
+		    break;
+		  case WATCH_PARAMETERS:
+		  case WATCH_CENTROIDS:
+		    dump_watch_parameters(watch, step, i_pass, n_passes, coord, nToTrack, nOriginal, *P_central,
+					  beamline->revolution_length);
+		    break;
+		  case WATCH_FFT:
+		    dump_watch_FFT(watch, step, i_pass, n_passes, coord, nToTrack, nOriginal, *P_central);
+		    break;
+		  }
+		}
+	      }
+	    }
             break;
           case T_HISTOGRAM:
-            watch_pt_seen = 1;   /* yes, this should be here */
             if (!(flags&TEST_PARTICLES) && !(flags&INHIBIT_FILE_OUTPUT)) {
               histogram = (HISTOGRAM*)eptr->p_elem;
-              if (!histogram->initialized) 
-                set_up_histogram(histogram, run);
-              if (i_pass==0 && (n_passes/histogram->interval)==0)
-                fprintf(stdout, "warning: n_passes = %ld and HISTOGRAM interval = %ld--no output will be generated!\n",
-                        n_passes, histogram->interval);
+	      if (!histogram->disable) {
+		watch_pt_seen = 1;   /* yes, this should be here */
+		if (!histogram->initialized) 
+		  set_up_histogram(histogram, run);
+		if (i_pass==0 && (n_passes/histogram->interval)==0)
+		  fprintf(stdout, "warning: n_passes = %ld and HISTOGRAM interval = %ld--no output will be generated!\n",
+			  n_passes, histogram->interval);
                 fflush(stdout);
-              if (i_pass>=histogram->startPass && (i_pass-histogram->startPass)%histogram->interval==0) {
-                dump_particle_histogram(histogram, step, i_pass, coord, nToTrack, *P_central,
+		if (i_pass>=histogram->startPass && (i_pass-histogram->startPass)%histogram->interval==0) {
+		  dump_particle_histogram(histogram, step, i_pass, coord, nToTrack, *P_central,
                                         beamline->revolution_length, 
-                                        charge?charge->macroParticleCharge*nToTrack:0.0, z);
-              }
-            }
+					  charge?charge->macroParticleCharge*nToTrack:0.0, z);
+		}
+	      }
+	    }
             break;
           case T_MALIGN:
             malign = (MALIGN*)eptr->p_elem;
@@ -1098,21 +1102,23 @@ long do_tracking(
         case T_WATCH:
           if (!(flags&TEST_PARTICLES) && !(flags&INHIBIT_FILE_OUTPUT)) {
             watch = (WATCH*)eptr->p_elem;
-            if (i_pass%watch->interval==0) {
-              switch (watch->mode_code) {
-              case WATCH_COORDINATES:
-                break;
-              case WATCH_PARAMETERS:
-              case WATCH_CENTROIDS:
-                dump_watch_parameters(watch, step, i_pass, n_passes, coord, nToTrack, nOriginal, *P_central,
-                                      beamline->revolution_length);
-                break;
-              case WATCH_FFT:
-                dump_watch_FFT(watch, step, i_pass, n_passes, coord, nToTrack, nOriginal, *P_central);
-                break;
-              }
-            }
-          }
+	    if (!watch->disable) {
+	      if (i_pass%watch->interval==0) {
+		switch (watch->mode_code) {
+		case WATCH_COORDINATES:
+		  break;
+		case WATCH_PARAMETERS:
+		case WATCH_CENTROIDS:
+		  dump_watch_parameters(watch, step, i_pass, n_passes, coord, nToTrack, nOriginal, *P_central,
+					beamline->revolution_length);
+		  break;
+		case WATCH_FFT:
+		  dump_watch_FFT(watch, step, i_pass, n_passes, coord, nToTrack, nOriginal, *P_central);
+		  break;
+		}
+	      }
+	    }
+	  }
           break;
         default:
           break;
