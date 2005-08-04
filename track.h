@@ -744,6 +744,8 @@ typedef struct {
 #define DIVIDE_OK         0x00000200UL
 /* set this flag to prevent dictionary output of experimental elements */
 #define NO_DICT_OUTPUT    0x00000400UL
+/* indicates element that can only be done by a single processor at this time */
+#define UNIPROCESSOR      0x00000800UL
 
 typedef struct {
     long n_params;
