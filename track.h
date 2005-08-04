@@ -663,7 +663,7 @@ extern char *entity_text[N_TYPES];
 #define N_TUBEND_PARAMS 6
 #define N_CHARGE_PARAMS 2
 #define N_PFILTER_PARAMS 5
-#define N_HISTOGRAM_PARAMS 10
+#define N_HISTOGRAM_PARAMS 11
 #define N_CSRCSBEND_PARAMS 56
 #define N_CSRDRIFT_PARAMS 20
 #define N_REMCOR_PARAMS 6
