@@ -1915,7 +1915,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     {    N_RMDF_PARAMS,  MAT_LEN_NCAT|UNIPROCESSOR,       sizeof(RMDF),    rmdf_param     }, 
     {    N_TMCF_PARAMS,  MAT_LEN_NCAT|UNIPROCESSOR,  sizeof(TMCF_MODE),    tmcf_param     }, 
     {    N_CEPL_PARAMS,  MAT_LEN_NCAT|UNIPROCESSOR,  sizeof(CE_PLATES),    cepl_param     }, 
-    {   N_WATCH_PARAMS,           0,      sizeof(WATCH),    watch_param    }, 
+    {   N_WATCH_PARAMS,           UNIPROCESSOR,      sizeof(WATCH),    watch_param    }, 
     {    N_TWPL_PARAMS,  MAT_LEN_NCAT|UNIPROCESSOR,  sizeof(TW_PLATES),    twpl_param     }, 
     {  N_MALIGN_PARAMS,  HAS_MATRIX|DONT_CONCAT,
                                          sizeof(MALIGN),    malign_param   },
