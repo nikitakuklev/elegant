@@ -14,6 +14,11 @@
  * Michael Borland, 2002
  *
  $Log: not supported by cvs2svn $
+ Revision 1.6  2005/06/10 17:46:41  borland
+ Changes by Shang: now optionally uses data produced by sddsanalyzebeam.
+ Also, requires -coupling or -emittanceRatio if vertical emittance data is
+ not given.
+
  Revision 1.5  2004/09/28 13:49:26  borland
  Added debugging statements.
 
@@ -713,7 +718,7 @@ long GetTwissValues(SDDS_DATASET *SDDSin,
   /* get ey0 if it is there */
   if (SDDS_GetParameterAsDouble(SDDSin, "ey0", ey0)) {
     ey0Exist=1;
-  } else if (data=SDDS_GetColumnInDoubles(SDDSin, "ey")) {
+  } else if ((data=SDDS_GetColumnInDoubles(SDDSin, "ey"))) {
     ey0Exist=1;
     *ey0 = data[0];
     free(data);
@@ -1033,7 +1038,7 @@ void Dejus_CalculateBrightness(double current,long nE,
       eb[je][ih]=i*ek;
       sb[je][ih]=0.0;
       
-    } while (smax<minB && je>=0);
+    } while (smax<minB && je>0);
     if (exitLoop)
       break;
     if (smax < minB ) {
