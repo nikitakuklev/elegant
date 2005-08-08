@@ -1020,16 +1020,18 @@ int integrate_kick_multipole_ord4(double *coord, double cos_tilt, double sin_til
       xp = qx/(denom=EXSQRT(denom, sqrtOrder));
       yp = qy/denom;
       if ((rad_coef || isr_coef) && drift) {
-	double deltaFactor, F2, dsFactor;
+	double deltaFactor, F2, dsFactor, dsISRFactor;
         qx /= (1+dp);
         qy /= (1+dp);
 	deltaFactor = sqr(1+dp);
 	F2 = (sqr(sum_Fy)+sqr(sum_Fx))*sqr(KnL/drift);
-	dsFactor = EXSQRT(1+sqr(xp)+sqr(yp), sqrtOrder)*drift*kickFrac[step];
+	dsFactor = EXSQRT(1+sqr(xp)+sqr(yp), sqrtOrder);
+	dsISRFactor = dsFactor*drift/3;   /* recall that kickFrac may be negative */
+	dsFactor *= drift*kickFrac[step]; /* that's ok here, since we don't take sqrt */
 	if (rad_coef)
 	  dp -= rad_coef*deltaFactor*F2*dsFactor;
 	if (isr_coef)
-	  bomb("ISR not implemented for fourth-order integrator for quads and sextupoles", NULL);
+	  dp -= isr_coef*deltaFactor*pow(F2, 1.5)*sqrt(dsISRFactor)*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
         qx *= (1+dp);
         qy *= (1+dp);
       }

@@ -50,6 +50,7 @@
 #namelist print_dictionary static
     STRING filename = NULL;
     long latex_form = 0;
+    long SDDS_form = 0;
 #end
 
 #namelist semaphores

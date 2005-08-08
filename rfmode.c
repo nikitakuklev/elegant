@@ -60,7 +60,7 @@ void track_through_rfmode(
         if (been_warned) {
             fprintf(stdout, "units of parameters for RFMODE are as follows:\n");
             fflush(stdout);
-            print_dictionary_entry(stdout, T_RFMODE, 0);
+            print_dictionary_entry(stdout, T_RFMODE, 0, 0);
             }
         }
 

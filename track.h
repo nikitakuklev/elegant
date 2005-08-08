@@ -2487,8 +2487,8 @@ void center_beam_on_coords(double **particle, long n_part, double *coord, long c
 void offset_beam_by_coords(double **part, long np, double *coord, long offset_dp);
 void link_date(void);
 void check_heap(void);
-void do_print_dictionary(char *filename, long latex_form);
-void print_dictionary_entry(FILE *fp, long type, long latex_form);
+void do_print_dictionary(char *filename, long latex_form, long SDDS_form);
+void print_dictionary_entry(FILE *fp, long type, long latex_form, long SDDS_form);
 
 /* prototypes for error.c: */
 extern void error_setup(ERRORVAL *errcon, NAMELIST_TEXT *nltext, RUN *run_cond, LINE_LIST *beamline);

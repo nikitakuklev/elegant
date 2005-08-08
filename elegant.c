@@ -396,7 +396,7 @@ char **argv;
       run_conditions.print_statistics = print_statistics;
       run_conditions.combine_bunch_statistics = combine_bunch_statistics;
       run_conditions.wrap_around = wrap_around;
-      if (run_conditions.final_pass = final_pass)
+      if ((run_conditions.final_pass = final_pass))
         run_conditions.wrap_around = 1;
       run_conditions.tracking_updates = tracking_updates;
       run_conditions.always_change_p0 = always_change_p0;
@@ -864,7 +864,7 @@ char **argv;
         if (do_response_output)
           run_response_output(&run_conditions, beamline, &correct, 0);
         run_matrix_output(&run_conditions, beamline);
-        for (i=failed=0; (fl_do_tune_correction || do_chromaticity_correction) && i<correction_iterations; i++) {
+        for (i=failed=0; (fl_do_tune_correction || do_chromatic_correction) && i<correction_iterations; i++) {
           if (correction_iterations>1)
             fprintf(stdout, "\nTune/chromaticity correction iteration %ld\n", i+1);
           fflush(stdout);
@@ -989,7 +989,7 @@ char **argv;
           run_twiss_output(&run_conditions, beamline, starting_coord, 0);
         if (do_response_output)
           run_response_output(&run_conditions, beamline, &correct, 0);
-        for (i=0; (fl_do_tune_correction || do_chromaticity_correction) && i<correction_iterations; i++) {
+        for (i=0; (fl_do_tune_correction || do_chromatic_correction) && i<correction_iterations; i++) {
           if (correction_iterations>1)
             fprintf(stdout, "\nTune/chromaticity correction iteration %ld\n", i+1);
           fflush(stdout);
@@ -1045,7 +1045,7 @@ char **argv;
       tracking_updates = 1;
       concat_order = print_statistics = p_central = 0;
       run_setuped = run_controled = error_controled = correction_setuped = do_chromatic_correction =
-        fl_do_tune_correction = do_closed_orbit = do_twiss_output = do_matrix_output = do_twiss_output = 0;
+        fl_do_tune_correction = do_closed_orbit = do_matrix_output = do_twiss_output = 0;
       break;
     case LINK_CONTROL:
       if (!run_setuped || !run_controled)
@@ -1076,7 +1076,7 @@ char **argv;
       set_print_namelist_flags(0);
       process_namelist(&print_dictionary, &namelist_text);
       print_namelist(stdout, &print_dictionary);
-      do_print_dictionary(filename, latex_form);
+      do_print_dictionary(filename, latex_form, SDDS_form);
       break;
     case FLOOR_COORDINATES:
       output_floor_coordinates(&namelist_text, &run_conditions, beamline);
@@ -1311,7 +1311,6 @@ void center_beam_on_coords(double **part, long np, double *coord, long center_dp
 
 void offset_beam_by_coords(double **part, long np, double *coord, long offset_dp)
 {
-    double sum, offset;
     long i, j, lim;
     
     if (!np)
@@ -1341,7 +1340,7 @@ int dictionaryEntryCmp(const void *p1, const void *p2)
   return strcmp(de1->elementName, de2->elementName);
 }
 
-void do_print_dictionary(char *filename, long latex_form)
+void do_print_dictionary(char *filename, long latex_form, long SDDS_form)
 {
   FILE *fp;
   long i;
@@ -1349,6 +1348,9 @@ void do_print_dictionary(char *filename, long latex_form)
   
   if (!filename)
     bomb("filename invalid (do_print_dictionary)", NULL);
+  if (latex_form && SDDS_form)
+    bomb("give latex_form=1 or SDDS_form=1, not both", NULL); 
+
   if (!(dictList = malloc(sizeof(*dictList)*N_TYPES)))
     bomb("memory allocation failure", NULL);
   for (i=1; i<N_TYPES; i++) {
@@ -1363,6 +1365,16 @@ void do_print_dictionary(char *filename, long latex_form)
   if (latex_form) {
     fprintf(fp, "\\newlength{\\descwidth}\n");
     fprintf(fp, "\\setlength{\\descwidth}{2in}\n");
+  } 
+  if (SDDS_form) {
+    fprintf(fp, "SDDS1\n");
+    fprintf(fp, "&parameter name=ElementType, type=string &end\n");
+    fprintf(fp, "&column name=ParameterName, type=string &end\n");
+    fprintf(fp, "&column name=Units, type=string &end\n");
+    fprintf(fp, "&column name=Type, type=string &end\n");
+    fprintf(fp, "&column name=Default, type=string &end\n");
+    fprintf(fp, "&column name=Description, type=string &end\n");
+    fprintf(fp, "&data mode=ascii &end\n");
   }
 #if DEBUG
   fprintf(stderr, "Beginning loop to print dictionary entries\n");
@@ -1374,7 +1386,7 @@ void do_print_dictionary(char *filename, long latex_form)
 #endif
     if (entity_description[dictList[i].index].flags&NO_DICT_OUTPUT)
       continue;
-    print_dictionary_entry(fp, dictList[i].index, latex_form);
+    print_dictionary_entry(fp, dictList[i].index, latex_form, SDDS_form);
   }
 #if DEBUG
   fprintf(stderr, "Free'ing dictList\n");
@@ -1393,20 +1405,27 @@ void do_print_dictionary(char *filename, long latex_form)
 char *translateUnitsToTex(char *source);
 char *makeTexSafeString(char *source);
 
-void print_dictionary_entry(FILE *fp, long type, long latex_form)
+void print_dictionary_entry(FILE *fp, long type, long latex_form, long SDDS_form)
 {
   char *type_name[3] = {"double", "long", "STRING", };
   long j, texLines;
+  char buffer[16384];
   if (latex_form) {
     fprintf(fp, "\\begin{latexonly}\n\\newpage\n\\begin{center}{\\Large\\verb|%s|}\\end{center}\n\\end{latexonly}\\subsection{%s}\n", 
             entity_name[type], entity_name[type]);
     fprintf(fp, "%s\n\\\\\n", makeTexSafeString(entity_text[type]));
     fprintf(fp, "\\begin{tabular}{|l|l|l|l|p{\\descwidth}|} \\hline\n");
     fprintf(fp, "Parameter Name & Units & Type & Default & Description \\\\ \\hline \n");
-  }
-  else  {
-    fprintf(fp, "***** element type %s:\n", entity_name[type]);
-    fprintf(fp, "%s\n", entity_text[type]);
+  } else {
+    fprintf(fp, "%c***** element type %s:\n", SDDS_form?'!':'*', entity_name[type]);
+    if (SDDS_form) {
+      strcpy(buffer, entity_text[type]);
+      replace_chars(buffer, "\n\t", "  ");
+      fprintf(fp, "%s\n", buffer);
+      fprintf(fp, "%ld\n", entity_description[type].n_params);
+    }
+    else 
+      fprintf(fp, "%s\n", entity_text[type]);
   }
   for (j=texLines=0; j<entity_description[type].n_params; j++) {
     /* 35 lines fits on a latex page */
@@ -1419,7 +1438,12 @@ void print_dictionary_entry(FILE *fp, long type, long latex_form)
       fprintf(fp, "\\begin{tabular}{|l|l|l|l|p{\\descwidth}|} \\hline\n");
       fprintf(fp, "Parameter Name & Units & Type & Default & Description \\\\ \\hline \n");
     }
-    if (!latex_form)
+    if (SDDS_form) {
+      fprintf(fp, "\"%s\" \"%s\" \"%s\"", 
+              PRINTABLE_NULL(entity_description[type].parameter[j].name), 
+              PRINTABLE_NULL(entity_description[type].parameter[j].unit),
+              PRINTABLE_NULL(type_name[entity_description[type].parameter[j].type-1]));
+    } else if (!latex_form)
       fprintf(fp, "%20s %20s %10s", 
               PRINTABLE_NULL(entity_description[type].parameter[j].name), 
               PRINTABLE_NULL(entity_description[type].parameter[j].unit),
@@ -1446,7 +1470,11 @@ void print_dictionary_entry(FILE *fp, long type, long latex_form)
         fprintf(fp, "  %-15ld", entity_description[type].parameter[j].integer);
       break;
     case IS_STRING:
-      fprintf(fp, "  %-15s", 
+      if (SDDS_form)
+	fprintf(fp, " \"%s\"", 
+		PRINTABLE_NULL(entity_description[type].parameter[j].string));
+      else 
+	  fprintf(fp, "  %-15s", 
               PRINTABLE_NULL(entity_description[type].parameter[j].string));
       break;
     default:
@@ -1491,7 +1519,9 @@ void print_dictionary_entry(FILE *fp, long type, long latex_form)
         texLines++;
       }
     }
-    else 
+    else if (SDDS_form)
+      fprintf(fp, "  \"%s\"\n", entity_description[type].parameter[j].description);
+    else
       fprintf(fp, "  %s\n", entity_description[type].parameter[j].description);
   }
   if (latex_form) {
