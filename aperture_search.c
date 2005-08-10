@@ -805,9 +805,20 @@ long do_aperture_search_line(
   effort = 0;
   xSurvived = ySurvived = -1;
   dx = dy = 0;
-  if (offset_by_orbit)
+  if (offset_by_orbit) {
+    /* N.B.: for an off-momentum orbit that is created with an initial
+     * MALIGN element, the momentum offset will not appear in the
+     * referenceCoord array.  So this works if the user sets ON_PASS=0
+     * for the MALIGN.
+     */
     memcpy(orbit, referenceCoord, sizeof(*referenceCoord)*6);
-    
+    /*
+      fprintf(stderr, "offseting by orbit: %e, %e, %e, %e, %e, %e \n",
+      orbit[0], orbit[1], orbit[2],
+	    orbit[3], orbit[4], orbit[5]);
+    */
+  }
+
   if (verbosity>=1) {
     printf("** Starting %ld-line aperture search\n", lines);
     fflush(stdout);
@@ -931,6 +942,13 @@ long do_aperture_search_line(
 			  "Area", area, NULL)) {
     SDDS_SetError("Problem setting parameters values in SDDS table (do_aperture_search)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  }
+  if (control->n_elements_to_vary) {
+    long i;
+    for (i=0; i<control->n_elements_to_vary; i++)
+      if (!SDDS_SetParameters(&SDDS_aperture, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, i+N_PARAMETERS,
+			      control->varied_quan_value[i], -1))
+	break;
   }
 
   if (!SDDS_WriteTable(&SDDS_aperture)) {
