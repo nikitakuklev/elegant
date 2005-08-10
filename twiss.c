@@ -1739,7 +1739,7 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
   double k2, rho, k, kl;
   double I1, I2, I3, I4, I5;
   double alpha1, gamma1, etap1, eta2, sin_kl, cos_kl;
-  double etaAve, etaK1_rhoAve, HAve, h, K2=0.0, dx=0.0;
+  double etaAve=0, etaK1_rhoAve=0, HAve=0, h, K2=0.0, dx=0.0;
 
   I1 = I2 = I3 = I4 = I5 = 0;
 
@@ -1870,10 +1870,13 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
       break;
     }
     if (isBend && angle!=0) {
-      if (coord) {
-	K1 /= 1+coord[5];
-	angle /= 1+coord[5];
-      }
+      /* This code seems like it should be here, but including it makes the
+	 deviations from tracking results larger.
+	 if (coord) {
+	 K1 /= 1+coord[5];
+	 angle /= 1+coord[5];
+	 }
+      */
       rho = length/angle;
       k2 = K1+1./(rho*rho);
       /* equations are from SLAC 1193 */
