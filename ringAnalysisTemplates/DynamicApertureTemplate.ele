@@ -27,7 +27,9 @@
         rootname = <mainDirectory>/<mainPrefix>DynamicAperture,
         final = %s.fin,
         semaphore_file = %s.done,
-        tracking_updates = 0
+        tracking_updates = 0,
+	default_order = 1,
+	concat_order = 1
 &end
 
 &load_parameters
