@@ -1719,7 +1719,6 @@ void compute_twiss_statistics(LINE_LIST *beamline, TWISS *twiss_ave, TWISS *twis
   }
 }
 
-
 void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI, 
                            ELEMENT_LIST *elem, 
                            double beta0, double alpha0, double gamma0,

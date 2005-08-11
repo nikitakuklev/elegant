@@ -41,20 +41,23 @@ void track_SReffects(double **coord, long np, SREFFECTS *SReffects, double Po,
       SReffects->eyRef = SReffects->exRef*SReffects->coupling;
       SReffects->SdeltaRef = radIntegrals->sigmadelta;
       SReffects->DdeltaRef = -radIntegrals->Uo/me_mev/Po;
-/*
-      fprintf(stdout, "SReffects set up:ex0=%g, Sdelta0=%g, U0=%g\nPref=%g, Jx/y/delta=%g/%g/%g\nex/ey=%g/%g  Sdelta=%g  Ddelta=%g\n",
-              radIntegrals->ex0, radIntegrals->sigmadelta, radIntegrals->Uo,
+      fprintf(stdout, "SReffects set up:\nPref=%g, Jx/y/delta=%g/%g/%g\nex/ey=%g/%g  Sdelta=%g  Ddelta=%g\n",
               SReffects->pRef, SReffects->Jx, SReffects->Jy, SReffects->Jdelta,
               SReffects->exRef, SReffects->eyRef, SReffects->SdeltaRef, SReffects->DdeltaRef);
-*/
       fflush(stdout);
     }
 
     gamma2Ratio = (sqr(Po)+1)/(sqr(SReffects->pRef)+1);
     gammaRatio = sqrt(gamma2Ratio);
 
-    if (SReffects->DdeltaRef>0)
-        bomb("DdeltaRef>0 in track_SReffects", NULL);
+    if (SReffects->DdeltaRef>0) {
+      /* this is a temporary kludge to ensure that all particles get lost when this happens */
+      for (ip=0; ip<np; ip++)
+	coord[ip][5] = -1;
+      printf("Warning: SReffects parameters are unphysical, particles being dumped.\n");
+      fflush(stdout);
+      return;
+    }
     /* compute P/Po change per turn due to SR losses at the present momentum */
     Ddelta = SReffects->DdeltaRef*gammaRatio*gamma2Ratio;
 
