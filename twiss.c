@@ -660,10 +660,10 @@ static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
 {"pCentral", "&parameter name=pCentral, type=double, units=\"m$be$nc\", description=\"Central momentum\" &end"},
 {"dbetax/dp", "&parameter name=dbetax/dp, units=m, type=double, description=\"Derivative of betax with momentum offset\" &end"},
 {"dbetay/dp", "&parameter name=dbetay/dp, units=m, type=double, description=\"Derivative of betay with momentum offset\" &end"},
-{"etax2", "&parameter name=etax2, symbol=\"$gc$r$bx2$n\", units=m, type=double, description=\"Second-order dispersion\" &end"},
-{"etay2", "&parameter name=etay2, symbol=\"$gc$r$by2$n\", units=m, type=double, description=\"Second-order dispersion\" &end"},
-{"etax3", "&parameter name=etax3, symbol=\"$gc$r$bx3$n\", units=m, type=double, description=\"Third-order dispersion\" &end"},
-{"etay3", "&parameter name=etay3, symbol=\"$gc$r$by3$n\", units=m, type=double, description=\"Third-order dispersion\" &end"},
+{"etax2", "&parameter name=etax2, symbol=\"$gc$r$bx2$n\", units=m, type=double, description=\"Second-order dispersion (for matched or periodic case only)\" &end"},
+{"etay2", "&parameter name=etay2, symbol=\"$gc$r$by2$n\", units=m, type=double, description=\"Second-order dispersion (for matched or periodic case only)\" &end"},
+{"etax3", "&parameter name=etax3, symbol=\"$gc$r$bx3$n\", units=m, type=double, description=\"Third-order dispersion (for matched or periodic case only)\" &end"},
+{"etay3", "&parameter name=etay3, symbol=\"$gc$r$by3$n\", units=m, type=double, description=\"Third-order dispersion (for matched or periodic case only)\" &end"},
 {"betaxMin", "&parameter name=betaxMin, type=double, units=m, description=\"Minimum betax\" &end"},
 {"betaxAve", "&parameter name=betaxAve, type=double, units=m, description=\"Average betax\" &end"},
 {"betaxMax", "&parameter name=betaxMax, type=double, units=m, description=\"Maximum betax\" &end"},
@@ -963,6 +963,8 @@ void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
   if (twissConcatOrder<default_order)
     twissConcatOrder = default_order;
   *do_twiss_output = output_at_each_step;
+  if (higher_order_chromaticity && !matched) 
+    bomb("higher order chromaticity calculations available only for a matched (periodic) beamline", NULL);
 
   if (reference_file && matched)
     bomb("reference_file and matched=1 are incompatible", NULL);
