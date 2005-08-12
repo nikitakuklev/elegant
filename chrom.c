@@ -19,6 +19,16 @@
 #include "track.h"
 #include "chromDefs.h"
 
+double computeChromaticityValue(double dR11, double dR12, double dR22, double R11, double R12, double R22,
+				double beta0, double beta1, double alpha0, double alpha1,
+				double phi1, short periodic);
+double computeChromaticBetaValue(double dR11, double dR12, double dR22, double R11, double R12, double R22,
+				 double beta0, double beta1, double alpha0, double alpha1,
+				 double phi1, double chrom, short periodic);
+double computeChromaticAlphaValue(double dR11, double dR12, double dR22, double R11, double R12, double R22,
+				 double beta0, double beta1, double alpha0, double alpha1,
+				 double phi1, double chrom, short periodic);
+
 static FILE *fp_sl = NULL;
 static long alter_defined_values;
 static long verbosityLevel = 2;
@@ -154,7 +164,7 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
 
     computeChromaticities(&chromx0, &chromy0, 
                           NULL, NULL, NULL, NULL, 
-			  beamline->twiss0, M=beamline->matrix);
+			  beamline->twiss0, beamline->elast->twiss, M=beamline->matrix);
     M = NULL;
     for (i=0; i<chrom->n_families; i++) {
         count = 0;
@@ -191,7 +201,7 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
         }
         M = full_matrix(beamline->elem_twiss, run, 2);
         computeChromaticities(&chromx, &chromy, 
-                              NULL, NULL, NULL, NULL, beamline->twiss0, M);
+                              NULL, NULL, NULL, NULL, beamline->twiss0, beamline->elast->twiss, M);
 
         C->a[0][i] = (chromx-chromx0)/chrom->sextupole_tweek;
         C->a[1][i] = (chromy-chromy0)/chrom->sextupole_tweek;
@@ -323,7 +333,8 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
         bomb("something wrong with transfer map for beamline (do_chromaticity_correction.1)", NULL);
 
     computeChromaticities(&chromx0, &chromy0, 
-			  NULL, NULL, NULL, NULL, beamline->twiss0, M);
+			  NULL, NULL, NULL, NULL, beamline->twiss0,
+			  beamline->elast->twiss, M);
 
     if (verbosityLevel>0) {
       fprintf(stdout, "\nAdjusting chromaticities:\n");
@@ -434,7 +445,8 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
         if (!M || !M->C || !M->R || !M->T)
             bomb("something wrong with transfer map for beamline (do_chromaticity_correction.2)", NULL);
         computeChromaticities(&chromx0, &chromy0, 
-			      NULL, NULL, NULL, NULL, beamline->twiss0, M);
+			      NULL, NULL, NULL, NULL, beamline->twiss0, 
+			      beamline->elast->twiss, M);
         beamline->chromaticity[0] = chromx0;
         beamline->chromaticity[1] = chromy0;
         if (verbosityLevel>0) {
@@ -469,55 +481,65 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
 void computeChromaticities(double *chromx, double *chromy, 
                            double *dbetax, double *dbetay,
                            double *dalphax, double *dalphay,
-                           TWISS *twiss, VMATRIX *M)
+                           TWISS *twiss0, TWISS *twiss1, VMATRIX *M)
 {
   double computeChromaticDerivRElem(long i, long j, TWISS *twiss, VMATRIX *M);
   double dR11, dR22, dR12, dR33, dR34, dR44;
 
-  dR11 = computeChromaticDerivRElem(1, 1, twiss, M);
-  dR12 = computeChromaticDerivRElem(1, 2, twiss, M);
-  dR22 = computeChromaticDerivRElem(2, 2, twiss, M);
-  dR33 = computeChromaticDerivRElem(3, 3, twiss, M);
-  dR34 = computeChromaticDerivRElem(3, 4, twiss, M);
-  dR44 = computeChromaticDerivRElem(4, 4, twiss, M);
-  
-  *chromx = -(dR11 + dR22)/M->R[0][1]*twiss->betax/(2*PIx2);
-  *chromy = -(dR33 + dR44)/M->R[2][3]*twiss->betay/(2*PIx2);
+  dR11 = computeChromaticDerivRElem(1, 1, twiss1, M);
+  dR12 = computeChromaticDerivRElem(1, 2, twiss1, M);
+  dR22 = computeChromaticDerivRElem(2, 2, twiss1, M);
+  dR33 = computeChromaticDerivRElem(3, 3, twiss1, M);
+  dR34 = computeChromaticDerivRElem(3, 4, twiss1, M);
+  dR44 = computeChromaticDerivRElem(4, 4, twiss1, M);
+
+  *chromx = computeChromaticityValue(dR11, dR12, dR22, 
+				     M->R[0][0], M->R[0][1], M->R[1][1],
+				     twiss0->betax, twiss1->betax,
+				     twiss0->alphax, twiss1->alphax,
+				     twiss1->phix, twiss1->periodic);
+  *chromy = computeChromaticityValue(dR33, dR34, dR44, 
+				     M->R[2][2], M->R[2][3], M->R[3][3],
+				     twiss0->betay, twiss1->betay,
+				     twiss0->alphay, twiss1->alphay,
+				     twiss1->phiy, twiss1->periodic);
 
   if (dbetax) {
-    if (M->R[0][1])
-      *dbetax = twiss->betax*(dR12 - PI*twiss->betax*(*chromx)*(M->R[0][0]+M->R[1][1]))/M->R[0][1];
-    else
-      *dbetax = DBL_MAX;
+    *dbetax = computeChromaticBetaValue(dR11, dR12, dR22, 
+					M->R[0][0], M->R[0][1], M->R[1][1],
+					twiss0->betax, twiss1->betax,
+					twiss0->alphax, twiss1->alphax,
+					twiss1->phix, *chromx, twiss1->periodic);
 #ifdef DEBUG
     fprintf(stdout, "dbetax/dp = %e\n", *dbetax);
 #endif
   }
   if (dalphax) {
-    if (M->R[0][1])
-      *dalphax = twiss->betax/(2*M->R[0][1])*
-        (-twiss->alphax*(M->R[0][0]+M->R[1][1])*PIx2*(*chromx) + dR11-dR22);
-    else
-      *dalphax = DBL_MAX;
+    *dalphax = computeChromaticBetaValue(dR11, dR12, dR22, 
+					M->R[0][0], M->R[0][1], M->R[1][1],
+					twiss0->betax, twiss1->betax,
+					twiss0->alphax, twiss1->alphax,
+					twiss1->phix, *chromx, twiss1->periodic);
 #ifdef DEBUG
     fprintf(stdout, "dalphax/dp = %e\n", *dalphax);
 #endif
   }
   if (dbetay) {
-    if (M->R[2][3])
-      *dbetay = twiss->betay*(dR34 - PI*twiss->betay*(*chromy)*(M->R[2][2]+M->R[3][3]))/M->R[2][3];
-    else
-      *dbetay = DBL_MAX;
+    *dbetay = computeChromaticBetaValue(dR33, dR34, dR44,
+					M->R[2][2], M->R[2][3], M->R[3][3],
+					twiss0->betay, twiss1->betay,
+					twiss0->alphay, twiss1->alphay,
+					twiss1->phiy, *chromy, twiss1->periodic);
 #ifdef DEBUG
     fprintf(stdout, "dbetay/dp = %e\n", *dbetay);
 #endif
   }
   if (dalphay) {
-    if (M->R[2][3])
-      *dalphay = twiss->betay/(2*M->R[2][3])*
-        (-twiss->alphay*(M->R[2][2]+M->R[3][3])*PIx2*(*chromy) + dR33-dR44);
-    else
-      *dalphay = DBL_MAX;
+    *dalphay = computeChromaticAlphaValue(dR33, dR34, dR44,
+					M->R[2][2], M->R[2][3], M->R[3][3],
+					twiss0->betay, twiss1->betay,
+					twiss0->alphay, twiss1->alphay,
+					twiss1->phiy, *chromy, twiss1->periodic);
 #ifdef DEBUG
     fprintf(stdout, "dalphay/dp = %e\n", *dalphay);
 #endif
@@ -776,5 +798,62 @@ void computeChromaticTuneLimits(LINE_LIST *beamline)
       find_min_max(beamline->tuneChromLower+i, beamline->tuneChromUpper+i, 
                    tuneValue, p);
     }
+  }
+}
+
+double computeChromaticityValue(double dR11, double dR12, double dR22,
+				double R11, double R12, double R22,
+				double beta0, double beta1,
+				double alpha0, double alpha1,
+				double phi1, short periodic)
+{
+  if (periodic) {
+    if (R12==0)
+      return DBL_MAX;
+    return -(dR11+dR22)/R12*beta0/(2*PIx2);
+  }
+  else
+    return 
+      ((dR12*(cos(phi1)+alpha0*sin(phi1)))/sqrt(beta0*beta1) 
+       - dR11*sin(phi1)*sqrt(beta0/beta1))/(PIx2) ;
+}
+
+double computeChromaticBetaValue(double dR11, double dR12, double dR22,
+				 double R11, double R12, double R22,
+				 double beta0, double beta1,
+				 double alpha0, double alpha1,
+				 double phi1, double chrom, short periodic)
+{
+  if (periodic) {
+    if (R12==0)
+      return DBL_MAX;
+    return beta0*(dR12 - PI*beta0*chrom*(R11+R22))/R12;
+  } else 
+    return 
+      2*(
+	 dR11*cos(phi1)*sqrt(beta0*beta1) +
+	 dR12*sqrt(beta1/beta0)*(sin(phi1) - cos(phi1)*alpha0)
+       );
+}
+
+double computeChromaticAlphaValue(double dR11, double dR12, double dR22,
+				 double R11, double R12, double R22,
+				 double beta0, double beta1,
+				 double alpha0, double alpha1,
+				 double phi1, double chrom, short periodic)
+{
+  if (periodic) {
+    if (R12==0)
+      return DBL_MAX;
+    return beta0/(2*R12)*(-alpha0*(R11+R22)*PIx2*chrom + dR11-dR22);
+  } else {
+    if (sin(phi1)==0)
+      return DBL_MAX;
+    return 
+      /* this ugly, inefficient expression was created by Mathematica(TM) */
+      -((-(sqrt(beta0*beta1)*dR12*cos(phi1)) 
+	 + sqr(beta0)*sqrt(beta1/beta0)*dR11*sin(phi1) 
+	 - alpha0*sqrt(beta0*beta1)*dR12*sin(phi1))/
+	(beta0*beta1));
   }
 }

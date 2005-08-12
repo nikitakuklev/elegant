@@ -68,6 +68,7 @@ typedef struct {
   double Cx, Cy;
 #define TWISS_RAD_INTEGRALS_OFFSET 13
   double dI[6];
+  short periodic;  /* kind of wasteful... */
 } TWISS;
 
 /* structure for accumulating beam moments */

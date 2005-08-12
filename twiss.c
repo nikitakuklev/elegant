@@ -251,7 +251,7 @@ VMATRIX *compute_periodic_twiss(
 void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
                                 RADIATION_INTEGRALS *radIntegrals, 
                                 ELEMENT_LIST *elem,  RUN *run, double *traj
-                                )
+				)
 {
   double beta[2], alpha[2], phi[2], eta[2], etap[2], gamma[2], refAlpha[2];
   double *func, path[6], path0[6], detR[2];
@@ -362,6 +362,7 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
     }
     if (!elem->twiss)
       elem->twiss = tmalloc(sizeof(*elem->twiss));
+    elem->twiss->periodic = matched;
     if (radIntegrals)
       incrementRadIntegrals(radIntegrals, elem->twiss->dI, 
                             elem, beta[0], alpha[0], gamma[0], 
@@ -1325,7 +1326,8 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
       if (!(M->T))
         bomb("logic error: T matrix is NULL in compute_twiss_parameters", NULL);
       computeChromaticities(&chromx, &chromy, 
-                            &dbetax, &dbetay, &dalphax, &dalphay, beamline->twiss0, M);
+                            &dbetax, &dbetay, &dalphax, &dalphay, beamline->twiss0, 
+			    beamline->elast->twiss, M);
       beamline->chromaticity[0] = chromx;
       beamline->chromaticity[1] = chromy;
       if (twissConcatOrder>1 && higher_order_chromaticity)
@@ -1367,7 +1369,8 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
       if (!(M->T))
         bomb("logic error: T matrix is NULL in compute_twiss_parameters", NULL);
       computeChromaticities(&chromx, &chromy, 
-                            &dbetax, &dbetay, &dalphax, &dalphay, beamline->twiss0, M);
+                            &dbetax, &dbetay, &dalphax, &dalphay, beamline->twiss0, 
+			    beamline->elast->twiss, M);
       beamline->chromaticity[0] = chromx;
       beamline->chromaticity[1] = chromy;
       if (twissConcatOrder>1 && higher_order_chromaticity)

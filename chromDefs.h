@@ -34,7 +34,7 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
 void computeChromaticities(double *chromx, double *chromy, 
                            double *dbetax, double *dbetay,
                            double *dalphax, double *dalphay,
-                           TWISS *twiss, VMATRIX *M);
+                           TWISS *twiss0, TWISS *twiss1, VMATRIX *M);
 void computeHigherOrderChromaticities(LINE_LIST *beamline, double *clorb, RUN *run,
 				      long concatOrder, double deltaStep, long deltaPoints);
 void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTION *chrom);
