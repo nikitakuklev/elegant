@@ -1740,7 +1740,7 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
   SEXT *sptr;
   KSEXT *sptrk;
   double length=0.0, angle=0.0, E1=0.0, E2=0.0, K1=0.0;
-  double k2, rho, k, kl;
+  double k2, rho, k, kl, kick=0.0;
   double I1, I2, I3, I4, I5;
   double alpha1, gamma1, etap1, eta2, sin_kl, cos_kl;
   double etaAve=0, etaK1_rhoAve=0, HAve=0, h, K2=0.0, dx=0.0;
@@ -1789,12 +1789,14 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
       case T_QUAD:
 	qptr = (QUAD*)(elem->p_elem);
 	length = qptr->length;
+	kick = qptr->xkick*qptr->xKickCalibration;
 	K1 = qptr->k1;
 	dx = qptr->dx;
 	break;
       case T_KQUAD:
 	qptrk = (KQUAD*)(elem->p_elem);
 	length = qptrk->length;
+	kick = qptrk->xkick*qptrk->xKickCalibration;
 	K1 = qptrk->k1;
 	dx = qptrk->dx;
 	break;
@@ -1803,7 +1805,10 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
 	isBend = 0;
 	break;
       }
-      angle = length*h;
+      /* The kick is subtracted because a positive angle bends toward the
+       * right (negative x) 
+       */
+      angle = length*h - kick;
       E1 = E2 = 0;
       isBend = 1;
       break;
