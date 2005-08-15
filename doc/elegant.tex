@@ -1889,10 +1889,16 @@ a significant difference in the optimization speed.
 
 \item \verb|simplex_pass_range_factor| --- When starting a new pass, the simplex optimizer takes
  the range over the previous simplex of each variable times this factor
- as the starting step size for that variable.
+ as the starting step size for that variable.  This can be useful if the optimization brings
+ the system close to an instability.  In such a case, the simplex routine may have trouble
+ constructing an initial simplex if the range of the variables is large. Setting this control
+ to a value less than 1 may help.
  
 \item \verb|include_simplex_1d_scans| --- If nonzero, optimizer performs single-variable scans prior to 
- starting simplex optimization.
+ starting simplex optimization.  This is usually a good idea, but in some cases it will cause problems.
+ For example, if your design is on the edge of being unstable, you may get some many errors from the
+ initial steps that the single-variable optimizer can't continue.  Disabling the
+ single-variable scans will sometimes solve this.
 
 \item \verb|start_from_simplex_vertex1| --- If nonzero, optimizer uses the initial simplex vertex as the
  starting point for each new 1d scan.  Otherwise, it uses the result of the previous scan.
