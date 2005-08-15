@@ -1131,11 +1131,11 @@ double optimization_function(double *value, long *invalid)
     rebaseline_element_links(beamline->links, run, beamline);
   i = compute_changed_matrices(beamline, run) +
     assert_element_links(beamline->links, run, beamline, STATIC_LINK+DYNAMIC_LINK);
-  if (i) {
-    beamline->flags &= ~BEAMLINE_CONCAT_CURRENT;
-    beamline->flags &= ~BEAMLINE_TWISS_CURRENT;
-    beamline->flags &= ~BEAMLINE_RADINT_CURRENT;
-  }
+  /* if (i) { */
+  beamline->flags &= ~(BEAMLINE_CONCAT_CURRENT+BEAMLINE_CONCAT_DONE+
+		       BEAMLINE_TWISS_CURRENT+BEAMLINE_TWISS_DONE+
+		       BEAMLINE_RADINT_CURRENT+BEAMLINE_RADINT_DONE);
+  /* } */
   if (i && beamline->matrix) {
     free_matrices(beamline->matrix);
     free(beamline->matrix);
@@ -1175,30 +1175,35 @@ double optimization_function(double *value, long *invalid)
       !do_correction(orbitCorrData, run, beamline, startingOrbitCoord, beam, control->i_step, 0)) {
     *invalid = 1;
     fprintf(stdout, "warning: unable to perform orbit correction\n");
-    return 0;
   }
   if (doTuneCorr &&
       !do_tune_correction(tuneCorrData, run, beamline, startingOrbitCoord, 
                                   0, 0)) {
     *invalid = 1;
     fprintf(stdout, "warning: unable to do tune correction\n");
-    return 0;
   }
   if (doChromCorr &&
       !do_chromaticity_correction(chromCorrData, run, beamline, startingOrbitCoord, 
                                   0, 0)) {
     *invalid = 1;
     fprintf(stdout, "warning: unable to do chromaticity correction\n");
-    return 0;
   }
   if (doClosedOrbit &&
       !run_closed_orbit(run, beamline, startingOrbitCoord, NULL, 0)) {
     *invalid = 1;
     fprintf(stdout, "warning: unable to find closed orbit\n");
-    return 0;
   }
 
 #if DEBUG
+  if (doClosedOrbit) {
+    fprintf(stdout, "Closed orbit: %g, %g, %g, %g, %g, %g\n",
+	    beamline->closed_orbit->centroid[0],
+	    beamline->closed_orbit->centroid[1],
+	    beamline->closed_orbit->centroid[2],
+	    beamline->closed_orbit->centroid[3],
+	    beamline->closed_orbit->centroid[4],
+	    beamline->closed_orbit->centroid[5]);
+  }
   fprintf(stdout, "Beamline flags: %lx\n", beamline->flags);
 #endif
   if (beamline->flags&BEAMLINE_TWISS_WANTED) {
@@ -1214,6 +1219,14 @@ double optimization_function(double *value, long *invalid)
     update_twiss_parameters(run, beamline, &unstable);
 #if DEBUG
     fprintf(stdout, "Twiss parameters done.\n");
+    fprintf(stdout, "betax=%g, alphax=%g, etax=%g\n", 
+	    beamline->elast->twiss->betax,
+	    beamline->elast->twiss->alphax,
+	    beamline->elast->twiss->etax);
+    fprintf(stdout, "betay=%g, alphay=%g, etay=%g\n", 
+	    beamline->elast->twiss->betay,
+	    beamline->elast->twiss->alphay,
+	    beamline->elast->twiss->etay);
     fflush(stdout);
 #endif
     /* store twiss parameters for last element */
@@ -1482,11 +1495,14 @@ double optimization_function(double *value, long *invalid)
    * to final properties file
    */
   if (*invalid)
-    result = sqrt(DBL_MAX);
+    result = (optimization_data->mode==OPTIM_MODE_MAXIMUM?-1:1)*sqrt(DBL_MAX);
   variables->varied_quan_value[variables->n_variables+1] = 
     optimization_data->mode==OPTIM_MODE_MAXIMUM?-1*result:result;
-  if (!*invalid && bestResult>result)
+  if (!*invalid && bestResult>result) {
+    if (optimization_data->verbose)
+      fprintf(optimization_data->fp_log, "** Result is new best\n");
     bestResult = result;
+  }
   variables->varied_quan_value[variables->n_variables+2] = 
     optimization_data->mode==OPTIM_MODE_MAXIMUM?-1*bestResult:bestResult;
 
