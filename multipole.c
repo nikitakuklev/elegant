@@ -287,9 +287,9 @@ long fmultipole_tracking(
 
 #if defined(IEEE_MATH)
       if (isnan(x) || isnan(xp) || isnan(y) || isnan(yp)) {
-        SWAP_PTR(particle[i_part], particle[i_top]);
+        swapParticles(particle[i_part], particle[i_top]);
         if (accepted)
-          SWAP_PTR(accepted[i_part], accepted[i_top]);
+          swapParticles(accepted[i_part], accepted[i_top]);
         particle[i_top][4] = z_start;
         particle[i_top][5] = Po*(1+particle[i_top][5]);
         i_top--;
@@ -300,9 +300,9 @@ long fmultipole_tracking(
     }
     if (is_lost || FABS(x)>COORD_LIMIT || FABS(y)>COORD_LIMIT ||
         FABS(xp)>SLOPE_LIMIT || FABS(yp)>SLOPE_LIMIT) {
-      SWAP_PTR(particle[i_part], particle[i_top]);
+      swapParticles(particle[i_part], particle[i_top]);
       if (accepted)
-        SWAP_PTR(accepted[i_part], accepted[i_top]);
+        swapParticles(accepted[i_part], accepted[i_top]);
       particle[i_top][4] = z_start;
       particle[i_top][5] = Po*(1+particle[i_top][5]);
       i_top--;
@@ -409,9 +409,9 @@ long multipole_tracking(
 
 #if defined(IEEE_MATH)
         if (isnan(x) || isnan(xp) || isnan(y) || isnan(yp)) {
-            SWAP_PTR(particle[i_part], particle[i_top]);
+            swapParticles(particle[i_part], particle[i_top]);
             if (accepted)
-                SWAP_PTR(accepted[i_part], accepted[i_top]);
+                swapParticles(accepted[i_part], accepted[i_top]);
             particle[i_top][4] = z_start;
             particle[i_top][5] = Po*(1+particle[i_top][5]);
             i_top--;
@@ -421,9 +421,9 @@ long multipole_tracking(
 #endif
         if (FABS(x)>COORD_LIMIT || FABS(y)>COORD_LIMIT ||
             FABS(xp)>SLOPE_LIMIT || FABS(yp)>SLOPE_LIMIT) {
-            SWAP_PTR(particle[i_part], particle[i_top]);
+            swapParticles(particle[i_part], particle[i_top]);
             if (accepted)
-                SWAP_PTR(accepted[i_part], accepted[i_top]);
+                swapParticles(accepted[i_part], accepted[i_top]);
             particle[i_top][4] = z_start;
             particle[i_top][5] = Po*(1+particle[i_top][5]);
             i_top--;
@@ -503,9 +503,9 @@ long multipole_tracking(
 
 #if defined(IEEE_MATH)
         if (isnan(x) || isnan(xp) || isnan(y) || isnan(yp)) {
-            SWAP_PTR(particle[i_part], particle[i_top]);
+            swapParticles(particle[i_part], particle[i_top]);
             if (accepted)
-                SWAP_PTR(accepted[i_part], accepted[i_top]);
+                swapParticles(accepted[i_part], accepted[i_top]);
             particle[i_top][4] = z_start;
             particle[i_top][5] = Po*(1+particle[i_top][5]);
             i_top--;
@@ -515,9 +515,9 @@ long multipole_tracking(
 #endif
         if (FABS(x)>COORD_LIMIT || FABS(y)>COORD_LIMIT ||
             FABS(xp)>SLOPE_LIMIT || FABS(yp)>SLOPE_LIMIT || is_lost) {
-            SWAP_PTR(particle[i_part], particle[i_top]);
+            swapParticles(particle[i_part], particle[i_top]);
             if (accepted)
-                SWAP_PTR(accepted[i_part], accepted[i_top]);
+                swapParticles(accepted[i_part], accepted[i_top]);
             particle[i_top][4] = z_start;
             particle[i_top][5] = Po*(1+particle[i_top][5]);
             i_top--;
@@ -733,9 +733,9 @@ long multipole_tracking2(
          !integrate_kick_multipole_ord2(coord, cos_tilt, sin_tilt, dx, dy, xkick, ykick,
                                         Po, rad_coef, isr_coef, order, sqrtOrder, KnL, n_parts, drift,
                                         multData, steeringMultData))) {
-      SWAP_PTR(particle[i_part], particle[i_top]);
+      swapParticles(particle[i_part], particle[i_top]);
       if (accepted)
-        SWAP_PTR(accepted[i_part], accepted[i_top]);
+        swapParticles(accepted[i_part], accepted[i_top]);
       particle[i_top][4] = z_start;
       particle[i_top][5] = Po*(1+particle[i_top][5]);
       i_top--;

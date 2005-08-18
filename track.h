@@ -2937,3 +2937,9 @@ long computeEngeCoefficients(double *engeCoef, double rho, double length, double
 long DefineNoiseGroup(long groupId);
 long ResetNoiseGroupValues();
 double GetNoiseGroupValue(long groupId);
+
+/* from elegant.c */
+void **czarray_2d(long size, long n1, long n2);
+int free_czarray_2d(void **array, long n1, long n2);
+void swapParticles(double *p1, double *p2);
+

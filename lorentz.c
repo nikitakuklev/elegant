@@ -286,10 +286,10 @@ long lorentz(
     for (i_part=0; i_part<=i_top; i_part++) {
         coord = part[i_part];
         if (!do_lorentz_integration(coord, field)) {
-            SWAP_PTR(part[i_part], part[i_top]);
+            swapParticles(part[i_part], part[i_top]);
             part[i_top][5] = P_central*(1+part[i_top][5]);
             if (accepted)
-                SWAP_PTR(accepted[i_part], accepted[i_top]);
+                swapParticles(accepted[i_part], accepted[i_top]);
             i_top--;
             i_part--;
             }

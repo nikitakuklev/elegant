@@ -1640,11 +1640,11 @@ char *translateUnitsToTex(char *source)
 void free_beamdata(BEAM *beam)
 {
   if (beam->particle)
-    free_zarray_2d((void**)beam->particle, beam->n_particle, 7);
+    free_czarray_2d((void**)beam->particle, beam->n_particle, 7);
   if (beam->accepted)
-    free_zarray_2d((void**)beam->accepted, beam->n_particle, 7);
+    free_czarray_2d((void**)beam->accepted, beam->n_particle, 7);
   if (beam->original && beam->original!=beam->particle)
-    free_zarray_2d((void**)beam->original, beam->n_original, 7);
+    free_czarray_2d((void**)beam->original, beam->n_original, 7);
   beam->particle = beam->accepted = beam->original = NULL;
   beam->n_original = beam->n_to_track = beam->n_accepted = beam->p0 = beam->n_saved = beam->n_particle = 0;
 }  
@@ -1679,4 +1679,36 @@ void do_semaphore_setup(char **semaphoreFile,
 void getRunControlContext (VARY *context)
 {
   *context = run_control;
+}
+
+/* allocate Continguous Zero-offset 2D array */
+
+void **czarray_2d(long size, long n1, long n2)
+{
+  char **ptr0;
+  char *buffer;
+  long i;
+
+  ptr0 = (char**)tmalloc((unsigned)(sizeof(*ptr0)*n1));
+  buffer =  (char*)tmalloc((unsigned)(sizeof(*buffer)*size*n1*n2));
+  for (i=0; i<n1; i++)
+    ptr0[i] = buffer+i*size*n2;
+  return((void**)ptr0);
+}
+
+/* arguments are for compatibility with free_zarray_2d */
+
+int free_czarray_2d(void **array, long n1, long n2)
+{
+  free(*array);
+  free(array);
+  return 0;
+}
+
+void swapParticles(double *p1, double *p2)
+{
+  double buffer[7];
+  memcpy(buffer,     p1, sizeof(double)*7);
+  memcpy(p1    ,     p2, sizeof(double)*7);
+  memcpy(p2    , buffer, sizeof(double)*7);
 }

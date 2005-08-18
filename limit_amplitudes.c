@@ -61,9 +61,9 @@ long rectangular_collimator(
                isnan(ini[0]) || isnan(ini[2]) )
       lost = 1;
     if (lost) {
-      SWAP_PTR(initial[ip], initial[itop]);
+      swapParticles(initial[ip], initial[itop]);
      if (accepted)
-        SWAP_PTR(accepted[ip], accepted[itop]);
+        swapParticles(accepted[ip], accepted[itop]);
       initial[itop][4] = z; /* record position of particle loss */
       initial[itop][5] = Po*(1+initial[itop][5]);
       --itop;
@@ -95,9 +95,9 @@ long rectangular_collimator(
       ini[0] = x1;
       ini[2] = y1;
       ini[5] = Po*(1+ini[5]);
-      SWAP_PTR(initial[ip], initial[itop]);
+      swapParticles(initial[ip], initial[itop]);
       if (accepted)
-        SWAP_PTR(accepted[ip], accepted[itop]);
+        swapParticles(accepted[ip], accepted[itop]);
       --itop;
       --ip;
       --np;
@@ -120,9 +120,9 @@ long rectangular_collimator(
         }
       }
       ini[5] = Po*(1+ini[5]);
-      SWAP_PTR(initial[ip], initial[itop]);
+      swapParticles(initial[ip], initial[itop]);
       if (accepted)
-        SWAP_PTR(accepted[ip], accepted[itop]);
+        swapParticles(accepted[ip], accepted[itop]);
       --itop;
       --ip;
       --np;
@@ -192,11 +192,11 @@ long limit_amplitudes(
             part[2] += dz*part[3];
             }
         if (is_out) {
-            SWAP_PTR(coord[ip], coord[itop]);
+            swapParticles(coord[ip], coord[itop]);
             coord[itop][4] = z+dz;  /* record position of loss */
             coord[itop][5] = Po*(1+coord[itop][5]);
             if (accepted)
-                SWAP_PTR(accepted[ip], accepted[itop]);
+                swapParticles(accepted[ip], accepted[itop]);
             --itop;
             --ip;
             np--;
@@ -226,11 +226,11 @@ long removeInvalidParticles(
         if (part[5]<=-1)
           is_out = 1;
         if (is_out) {
-          SWAP_PTR(coord[ip], coord[itop]);
+          swapParticles(coord[ip], coord[itop]);
           coord[itop][4] = z; 
           coord[itop][5] = Po*(1+coord[itop][5]);
           if (accepted)
-            SWAP_PTR(accepted[ip], accepted[itop]);
+            swapParticles(accepted[ip], accepted[itop]);
           --itop;
           --ip;
           np--;
@@ -286,11 +286,11 @@ long elliptical_collimator(
              isnan(ini[0]) || isnan(ini[2]) )
       lost = 1;
     if (lost) {
-      SWAP_PTR(initial[ip], initial[itop]);
+      swapParticles(initial[ip], initial[itop]);
       initial[itop][4] = z;
       initial[itop][5] = sqrt(sqr(Po*(1+initial[itop][5]))+1);
       if (accepted)
-        SWAP_PTR(accepted[ip], accepted[itop]);
+        swapParticles(accepted[ip], accepted[itop]);
       --itop;
       --ip;
       np--;
@@ -314,11 +314,11 @@ long elliptical_collimator(
              isnan(ini[0]) || isnan(ini[2]) )
       lost = 1;
     if (lost) {
-      SWAP_PTR(initial[ip], initial[itop]);
+      swapParticles(initial[ip], initial[itop]);
       initial[itop][4] = z + length;
       initial[itop][5] = sqrt(sqr(Po*(1+initial[itop][5]))+1);
       if (accepted)
-        SWAP_PTR(accepted[ip], accepted[itop]);
+        swapParticles(accepted[ip], accepted[itop]);
       --itop;
       --ip;
       np--;
@@ -377,11 +377,11 @@ long elimit_amplitudes(
     for (ip=0; ip<np; ip++) {
         part = coord[ip];
         if (isinf(part[0]) || isinf(part[2]) || isnan(part[0]) || isnan(part[2]) ) {
-            SWAP_PTR(coord[ip], coord[itop]);
+            swapParticles(coord[ip], coord[itop]);
             coord[itop][4] = z;
             coord[itop][5] = sqrt(sqr(Po*(1+coord[itop][5]))+1);
             if (accepted)
-                SWAP_PTR(accepted[ip], accepted[itop]);
+                swapParticles(accepted[ip], accepted[itop]);
             --itop;
             --ip;
             np--;
@@ -410,11 +410,11 @@ long elimit_amplitudes(
               part[2] += dz*part[3];
             }
           }
-          SWAP_PTR(coord[ip], coord[itop]);
+          swapParticles(coord[ip], coord[itop]);
           coord[itop][4] = z+dz;
           coord[itop][5] = sqrt(sqr(Po*(1+coord[itop][5]))+1);
           if (accepted)
-            SWAP_PTR(accepted[ip], accepted[itop]);
+            swapParticles(accepted[ip], accepted[itop]);
           --itop;
           --ip;
           np--;
@@ -508,9 +508,9 @@ long beam_scraper(
     ini = initial[ip];
     if ((do_x && do_x*(ini[0]-scraper->dx) > limit) ||
         (do_y && do_y*(ini[2]-scraper->dy) > limit) ) {
-      SWAP_PTR(initial[ip], initial[itop]);
+      swapParticles(initial[ip], initial[itop]);
       if (accepted)
-        SWAP_PTR(accepted[ip], accepted[itop]);
+        swapParticles(accepted[ip], accepted[itop]);
       initial[itop][4] = z; /* record position of particle loss */
       initial[itop][5] = Po*(1+initial[itop][5]);
       --itop;
@@ -531,11 +531,11 @@ long beam_scraper(
     ini[2] += length*ini[3];
     if ((do_x && do_x*(ini[0]-scraper->dx) > limit) ||
         (do_y && do_y*(ini[2]-scraper->dy) > limit) ) {
-      SWAP_PTR(initial[ip], initial[itop]);
+      swapParticles(initial[ip], initial[itop]);
       initial[itop][4] = z; /* record position of particle loss */
       initial[itop][5] = Po*(1+initial[itop][5]);
       if (accepted)
-        SWAP_PTR(accepted[ip], accepted[itop]);
+        swapParticles(accepted[ip], accepted[itop]);
       --itop;
       --ip;
       --np;
@@ -597,11 +597,11 @@ long track_through_pfilter(
         for (ip=0; ip<=itop; ip++) {
           if ((upper[i] && initial[ip][5]>limit[i]) ||
               (!upper[i] && initial[ip][5]<limit[i])) {
-            SWAP_PTR(initial[ip], initial[itop]);
+            swapParticles(initial[ip], initial[itop]);
             initial[itop][4] = z;  /* record position of particle loss */
             initial[itop][5] = Po*(1+initial[itop][5]);  /* momentum at loss */
             if (accepted)
-              SWAP_PTR(accepted[ip], accepted[itop]);
+              swapParticles(accepted[ip], accepted[itop]);
             --itop;
             --ip;
           }
@@ -618,11 +618,11 @@ long track_through_pfilter(
       p = (1+initial[ip][5])*Po;
       if ((pfilter->hasUpper && p>pfilter->pUpper) ||
           (pfilter->hasLower && p<pfilter->pLower)) {
-        SWAP_PTR(initial[ip], initial[itop]);
+        swapParticles(initial[ip], initial[itop]);
         initial[itop][4] = z;  /* record position of particle loss */
         initial[itop][5] = p;  /* momentum at loss */
           if (accepted)
-            SWAP_PTR(accepted[ip], accepted[itop]);
+            swapParticles(accepted[ip], accepted[itop]);
         --itop;
         --ip;
       }
@@ -647,11 +647,11 @@ long track_through_pfilter(
   for (ip=0; ip<=itop; ip++) {
     if (fabs(initial[ip][5]-reference)<pfilter->deltaLimit)
       continue;
-    SWAP_PTR(initial[ip], initial[itop]);
+    swapParticles(initial[ip], initial[itop]);
     initial[itop][4] = z;  /* record position of particle loss */
     initial[itop][5] = Po*(1+initial[itop][5]);  /* momentum at loss */
     if (accepted)
-      SWAP_PTR(accepted[ip], accepted[itop]);
+      swapParticles(accepted[ip], accepted[itop]);
     --itop;
     --ip;
   }
@@ -782,10 +782,10 @@ long remove_outlier_particles(
         break;
     }
     if (is_out) {
-      SWAP_PTR(initial[ip], initial[itop]);
+      swapParticles(initial[ip], initial[itop]);
       SWAP_DOUBLE(sSave[ip], sSave[itop]);
       if (accepted)
-        SWAP_PTR(accepted[ip], accepted[itop]);
+        swapParticles(accepted[ip], accepted[itop]);
       initial[itop][4] = z; /* record position of particle loss */
       initial[itop][5] = Po*(1+initial[itop][5]);
       --itop;

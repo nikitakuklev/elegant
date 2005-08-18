@@ -9,6 +9,10 @@
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.22  2004/08/19 06:42:36  borland
+ * Should fix bugs in particle creation in SCRIPT element, but needs
+ * more testing.
+ *
  * Revision 1.21  2004/03/28 17:00:55  borland
  * Added output of pass on which particles are lost to the lost particle file.
  * Not fully tested.
@@ -660,7 +664,7 @@ void find_trajectory_bpm_readouts
   long iBPM, i;
   
   if (!particle) {
-    particle = (double**)zarray_2d(sizeof(**particle), 1, 7);
+    particle = (double**)czarray_2d(sizeof(**particle), 1, 7);
     particle[0][4] = particle[0][5] = 0;
   }
   for (i=0; i<4; i++)
@@ -998,7 +1002,7 @@ FIT_TRACE_DATA *fit_traces_readTraceDataFile
   }
 
   trace->traces = iTrace;
-  trace->startingCoord = (double**)zarray_2d(sizeof(**trace->startingCoord), trace->traces, 4);
+  trace->startingCoord = (double**)czarray_2d(sizeof(**trace->startingCoord), trace->traces, 4);
   
   indexFirst = LONG_MAX;
   iBPMFirst = 0;
@@ -1053,7 +1057,7 @@ FIT_OUTPUT_DATA *fit_trace_setUpOutputFile(char *filename,
   
   if (!(outputData = malloc(sizeof(*outputData))) ||
       !(outputData->traceDataIndex 
-        = (long**)zarray_2d(sizeof(**outputData->traceDataIndex), 
+        = (long**)czarray_2d(sizeof(**outputData->traceDataIndex), 
                             traceData->traces, 4)) ||
       !(outputData->paramDataIndex
         = malloc(sizeof(*outputData->paramDataIndex)*

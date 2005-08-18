@@ -49,9 +49,9 @@ long pepper_pot_plate(double **initial, PEPPOT *peppot, long np, double **accept
         if (i_hole==n_holes) {
             if (transmission==0 || random_2(0)>transmission) { 
                 if (itop!=ip) {
-                    SWAP_PTR(initial[ip], initial[itop]);
+                    swapParticles(initial[ip], initial[itop]);
                     if (accepted)
-                        SWAP_PTR(accepted[ip], accepted[itop]);
+                        swapParticles(accepted[ip], accepted[itop]);
                     --itop;
                     --ip;
                     }
@@ -84,9 +84,9 @@ long pepper_pot_plate(double **initial, PEPPOT *peppot, long np, double **accept
         if (i_hole==n_holes) {
             if (transmission==0 || random_2(1)>transmission) { 
                 if (itop!=ip) {
-                    SWAP_PTR(initial[ip], initial[itop]);
+                    swapParticles(initial[ip], initial[itop]);
                     if (accepted)
-                        SWAP_PTR(accepted[ip], accepted[itop]);
+                        swapParticles(accepted[ip], accepted[itop]);
                     --itop;
                     --ip;
                     }

@@ -167,7 +167,7 @@ void do_transport_analysis(
         bomb("you've asked to center the analysis on the closed orbit, but you didn't issue a closed_orbit command", NULL);
 
     if (!initialized) {
-        coord = (double**)zarray_2d(sizeof(**coord), 1+6*n_points, 7);
+        coord = (double**)czarray_2d(sizeof(**coord), 1+6*n_points, 7);
         data  = (double*)tmalloc(sizeof(*data)*SDDS_analyze.layout.n_columns);
         offset = (double*)tmalloc(sizeof(*offset)*6);
         m_alloc(&R , 6, 6);

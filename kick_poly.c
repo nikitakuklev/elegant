@@ -91,9 +91,9 @@ long polynomial_kicks(
 
 #if defined(IEEE_MATH)
         if (isnan(x) || isnan(xp) || isnan(y) || isnan(yp)) {
-            SWAP_PTR(particle[i_part], particle[i_top]);
+            swapParticles(particle[i_part], particle[i_top]);
             if (accepted)
-                SWAP_PTR(accepted[i_part], accepted[i_top]);
+                swapParticles(accepted[i_part], accepted[i_top]);
             particle[i_top][4] = z_start;
             particle[i_top][5] = Po*(1+particle[i_top][5]);
             i_top--;
@@ -103,9 +103,9 @@ long polynomial_kicks(
 #endif
         if (FABS(x)>COORD_LIMIT || FABS(y)>COORD_LIMIT ||
             FABS(xp)>SLOPE_LIMIT || FABS(yp)>SLOPE_LIMIT) {
-            SWAP_PTR(particle[i_part], particle[i_top]);
+            swapParticles(particle[i_part], particle[i_top]);
             if (accepted)
-                SWAP_PTR(accepted[i_part], accepted[i_top]);
+                swapParticles(accepted[i_part], accepted[i_top]);
             particle[i_top][4] = z_start;
             particle[i_top][5] = Po*(1+particle[i_top][5]);
             i_top--;

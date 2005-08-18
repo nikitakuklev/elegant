@@ -218,11 +218,11 @@ long motion(
         q[1] = coord[2]*kscale;
         if ((X_limit && fabs(q[0]-X_aperture_center)>X_limit) || isnan(q[0]) || isinf(q[0]) ||
             (Y_limit && fabs(q[1]-Y_aperture_center)>Y_limit) || isnan(q[1]) || isinf(q[1])) {
-            SWAP_PTR(part[i_part], part[i_top]);
+            swapParticles(part[i_part], part[i_top]);
             part[i_top][4] = z_start;   /* record position of loss */
             part[i_top][5] = P_central*(1+part[i_top][5]);
             if (accepted)
-                SWAP_PTR(accepted[i_part], accepted[i_top]);
+                swapParticles(accepted[i_part], accepted[i_top]);
             i_top--;
             i_part--;
             }
@@ -272,11 +272,11 @@ long motion(
                         tolerance, end_factor);
                     fflush(stdout);
 */
-                    SWAP_PTR(part[i_part], part[i_top]);
+                    swapParticles(part[i_part], part[i_top]);
                     part[i_top][4] = z_start;
                     part[i_top][5] = sqrt(sqr(P_central*(1+part[i_top][5]))+1);
                     if (accepted)
-                        SWAP_PTR(accepted[i_part], accepted[i_top]);
+                        swapParticles(accepted[i_part], accepted[i_top]);
                     i_top--;
                     i_part--;
                     break;
@@ -328,14 +328,14 @@ long motion(
                             }
                         }
                     if (limit_hit || P[2]<=0) {
-                         SWAP_PTR(part[i_part], part[i_top]);
+                         swapParticles(part[i_part], part[i_top]);
                          /* record position of loss */
                          part[i_top][0] = (X_out + X_aperture_center)/kscale;
                          part[i_top][2] = (Y_out + Y_aperture_center)/kscale;
                          part[i_top][4] = Z_out/kscale + z_start;
                          part[i_top][5] = Po;
                          if (accepted)
-                             SWAP_PTR(accepted[i_part], accepted[i_top]);
+                             swapParticles(accepted[i_part], accepted[i_top]);
                          i_top--;
                          i_part--;
                          continue;

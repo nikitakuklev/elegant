@@ -1499,7 +1499,7 @@ double optimization_function(double *value, long *invalid)
   variables->varied_quan_value[variables->n_variables+1] = 
     optimization_data->mode==OPTIM_MODE_MAXIMUM?-1*result:result;
   if (!*invalid && bestResult>result) {
-    if (optimization_data->verbose)
+    if (optimization_data->verbose && optimization_data->fp_log)
       fprintf(optimization_data->fp_log, "** Result is new best\n");
     bestResult = result;
   }

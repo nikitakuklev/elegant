@@ -45,7 +45,7 @@ void compute_amplification_factors(
   log_entry("compute_amplification_factors");
 
   if (!one_part)
-    one_part = (double**)zarray_2d(sizeof(**one_part), 1, 7);
+    one_part = (double**)czarray_2d(sizeof(**one_part), 1, 7);
 
   /* array to store uncorrected amplification function */
   Au_vs_z = tmalloc(sizeof(*Au_vs_z)*(n_traj=beamline->n_elems+1));

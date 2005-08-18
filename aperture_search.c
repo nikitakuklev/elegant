@@ -219,13 +219,13 @@ long do_aperture_search_mp(
   log_entry("do_aperture_search_mp");
 
   log_entry("do_aperture_search_mp.1");
-  coord     = (double**)zarray_2d(sizeof(**coord), ny+1, 7);
+  coord     = (double**)czarray_2d(sizeof(**coord), ny+1, 7);
   coord[ny] = NULL;
-  accepted  = (double**)zarray_2d(sizeof(**accepted), ny+1, 7);
+  accepted  = (double**)czarray_2d(sizeof(**accepted), ny+1, 7);
   accepted[ny] = NULL;
-  xy_left   = (double**)zarray_2d(sizeof(**xy_left), ny+1, 2); 
+  xy_left   = (double**)czarray_2d(sizeof(**xy_left), ny+1, 2); 
   xy_left[ny] = NULL;
-  xy_right  = (double**)zarray_2d(sizeof(**xy_right), ny+1, 2); 
+  xy_right  = (double**)czarray_2d(sizeof(**xy_right), ny+1, 2); 
   xy_right[ny] = NULL;
   found     = (long*)tmalloc(sizeof(*found)*ny);
   n_left = n_right = 0;
@@ -464,10 +464,10 @@ long do_aperture_search_mp(
   log_exit("do_aperture_search_mp.5");
 
   log_entry("do_aperture_search_mp.8");
-  free_zarray_2d((void**)coord, ny, 7);
-  free_zarray_2d((void**)accepted, ny, 7);
-  free_zarray_2d((void**)xy_left, ny, 2);
-  free_zarray_2d((void**)xy_right, ny, 2);
+  free_czarray_2d((void**)coord, ny, 7);
+  free_czarray_2d((void**)accepted, ny, 7);
+  free_czarray_2d((void**)xy_left, ny, 2);
+  free_czarray_2d((void**)xy_right, ny, 2);
   free(found);
   log_exit("do_aperture_search_mp.8");
 
@@ -495,9 +495,9 @@ long do_aperture_search_sp(
 
   log_entry("do_aperture_search_sp");
 
-  coord = (double**)zarray_2d(sizeof(**coord), 1, 7);
-  xy_left   = (double**)zarray_2d(sizeof(**xy_left), ny, 2); 
-  xy_right  = (double**)zarray_2d(sizeof(**xy_right), ny, 2); 
+  coord = (double**)czarray_2d(sizeof(**coord), 1, 7);
+  xy_left   = (double**)czarray_2d(sizeof(**xy_left), ny, 2); 
+  xy_right  = (double**)czarray_2d(sizeof(**xy_right), ny, 2); 
   n_left = n_right = 0;
 
   dx  = (xmax-xmin)/(nx-1);
@@ -726,9 +726,9 @@ long do_aperture_search_sp(
   }
   SDDS_DoFSync(&SDDS_aperture);
   
-  free_zarray_2d((void**)coord, 1, 7);
-  free_zarray_2d((void**)xy_left, ny, 2);
-  free_zarray_2d((void**)xy_right, ny, 2);
+  free_czarray_2d((void**)coord, 1, 7);
+  free_czarray_2d((void**)xy_left, ny, 2);
+  free_czarray_2d((void**)xy_right, ny, 2);
 
   log_exit("do_aperture_search_sp");
   return(1);
@@ -773,7 +773,7 @@ long do_aperture_search_line(
   double xLimit[11], yLimit[11];
   long originStable;
 
-  coord = (double**)zarray_2d(sizeof(**coord), 1, 7);
+  coord = (double**)czarray_2d(sizeof(**coord), 1, 7);
 
   if (lines>11) 
     bomb("too many lines requested for DA line search", NULL);
@@ -957,7 +957,7 @@ long do_aperture_search_line(
   }
   SDDS_DoFSync(&SDDS_aperture);
     
-  free_zarray_2d((void**)coord, 1, 7);
+  free_czarray_2d((void**)coord, 1, 7);
   return(1);
 }
 

@@ -168,13 +168,13 @@ void setup_bunched_beam(
   if (!one_random_bunch)
     save_initial_coordinates = save_original;
   
-  beam->particle = (double**)zarray_2d(sizeof(double), n_particles_per_bunch, 7);
+  beam->particle = (double**)czarray_2d(sizeof(double), n_particles_per_bunch, 7);
   if (!save_initial_coordinates)
     beam->original = beam->particle;
   else
-    beam->original = (double**)zarray_2d(sizeof(double), n_particles_per_bunch, 7);
+    beam->original = (double**)czarray_2d(sizeof(double), n_particles_per_bunch, 7);
   if (run->acceptance) 
-    beam->accepted = (double**)zarray_2d(sizeof(double), n_particles_per_bunch, 7);
+    beam->accepted = (double**)czarray_2d(sizeof(double), n_particles_per_bunch, 7);
   else
     beam->accepted = NULL;
   

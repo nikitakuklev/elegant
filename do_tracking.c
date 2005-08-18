@@ -1717,9 +1717,9 @@ long trackWithChromaticLinearMatrix(double **particle, long particles, double **
       }
     }
     if (is_lost) {
-      SWAP_PTR(particle[ip], particle[itop]);
+      swapParticles(particle[ip], particle[itop]);
       if (accepted)
-        SWAP_PTR(accepted[ip], accepted[itop]);
+        swapParticles(accepted[ip], accepted[itop]);
       particle[itop][4] = z;
       particle[itop][5] = Po*(1+deltaPoP);
       --itop;
@@ -2023,7 +2023,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
        * contains a useless frozen copy of the present beam.
        * Use n_original since that's the size of the array, including lost particles. 
        */
-      beam->particle = (double**)zarray_2d(sizeof(double), beam->n_original, 7);
+      beam->particle = (double**)czarray_2d(sizeof(double), beam->n_original, 7);
       copy_particles(beam->particle, beam->original, beam->n_original);
     }
     /* resize the particle array, leaving space for the lost particle data at the top */
@@ -2041,12 +2041,12 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
 	    nLost);
     */
     for (i=nLost-1; i>=0; i--) {
-      SWAP_PTR(beam->particle[np+i], beam->particle[npNew+i]);
+      swapParticles(beam->particle[np+i], beam->particle[npNew+i]);
       SWAP_LONG(beam->lostOnPass[np+i], beam->lostOnPass[npNew+i]);
     }
     if (beam->accepted)  {
       /* this data is invalid when particles are added */
-      free_zarray_2d((void**)beam->accepted, np+nLost, 7);
+      free_czarray_2d((void**)beam->accepted, np+nLost, 7);
       beam->accepted = NULL;
     }
     beam->n_particle = npNew+nLost;

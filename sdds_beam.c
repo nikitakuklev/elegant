@@ -205,9 +205,9 @@ long new_sdds_beam(
         /* no beam has been read before, or else it was purged from memory to save RAM */
         /* free any arrays we may have from previous pass */
         if (beam->particle)
-          free_zarray_2d((void**)beam->particle, beam->n_particle, 7);
+          free_czarray_2d((void**)beam->particle, beam->n_particle, 7);
         if (beam->accepted)
-          free_zarray_2d((void**)beam->accepted, beam->n_particle, 7);
+          free_czarray_2d((void**)beam->accepted, beam->n_particle, 7);
         beam->particle = beam->accepted = beam->original = NULL;
         /* read the particle data */
         if ((beam->n_original=get_sdds_particles(&beam->original, prebunched, 0))<0) {
@@ -217,14 +217,14 @@ long new_sdds_beam(
         }
         has_been_read = 1;
         if (save_initial_coordinates || n_particles_per_ring!=1)
-          beam->particle = (double**)zarray_2d
+          beam->particle = (double**)czarray_2d
             (sizeof(double), beam->n_particle=n_particles_per_ring*beam->n_original, 7);
         else {
           beam->particle = beam->original;
           beam->n_particle = beam->n_original;
         }
         if (run->acceptance)
-          beam->accepted = (double**)zarray_2d
+          beam->accepted = (double**)czarray_2d
             (sizeof(double), beam->n_particle, 7);
         new_particle_data = 1;
       }
@@ -238,24 +238,24 @@ long new_sdds_beam(
        */
       /* Free arrays from previous pass */
       if (beam->particle)
-        free_zarray_2d((void**)beam->particle, beam->n_particle, 7);
+        free_czarray_2d((void**)beam->particle, beam->n_particle, 7);
       if (beam->accepted)
-        free_zarray_2d((void**)beam->accepted, beam->n_particle, 7);
+        free_czarray_2d((void**)beam->accepted, beam->n_particle, 7);
       if (beam->original && beam->original!=beam->particle)
-        free_zarray_2d((void**)beam->original, beam->n_original, 7);
+        free_czarray_2d((void**)beam->original, beam->n_original, 7);
       beam->particle = beam->accepted = beam->original = NULL;
       /* read the new page */
       if ((beam->n_original=get_sdds_particles(&beam->original, prebunched, n_tables_to_skip))>=0) { 
         n_tables_to_skip = 0;    /* use the user's parameter only the first time */
         if (save_initial_coordinates || n_particles_per_ring!=1)
-          beam->particle = (double**)zarray_2d
+          beam->particle = (double**)czarray_2d
             (sizeof(double), beam->n_particle=n_particles_per_ring*beam->n_original, 7);
         else {
           beam->particle = beam->original;
           beam->n_particle = beam->n_original;
         }
         if (run->acceptance) 
-          beam->accepted = (double**)zarray_2d
+          beam->accepted = (double**)czarray_2d
             (sizeof(double), beam->n_particle, 7);
       }
       else { 
@@ -475,7 +475,7 @@ long new_sdds_beam(
     }
     /* free the 'original' particle data array */
     if (beam->original && beam->original!=beam->particle) {
-      free_zarray_2d((void**)beam->original, beam->n_original, 7);
+      free_czarray_2d((void**)beam->original, beam->n_original, 7);
       beam->original = NULL;
       beam->n_original = 0;
     }

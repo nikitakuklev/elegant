@@ -87,10 +87,10 @@ void dump_cormon_stats(long verbose, long plane, double **kick, long n_kicks,
 
     if (!data || n_iterations>n_iter) {
         if (data)
-            free_zarray_2d((void**)data, n_iter+1, N_COLUMNS);
+            free_czarray_2d((void**)data, n_iter+1, N_COLUMNS);
         if (stage)
             free(stage);
-        data = (double**)zarray_2d(sizeof(**data), n_iterations+1, N_COLUMNS);    
+        data = (double**)czarray_2d(sizeof(**data), n_iterations+1, N_COLUMNS);    
         stage = tmalloc(sizeof(*stage)*(n_iterations+1));
         n_iter = n_iterations;
         }

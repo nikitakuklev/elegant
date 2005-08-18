@@ -107,7 +107,7 @@ void correction_setup(
     log_entry("correction_setup");
 
     if (_correct->traj) {
-        free_zarray_2d((void**)_correct->traj, 3, beamline->n_elems+1);
+        free_czarray_2d((void**)_correct->traj, 3, beamline->n_elems+1);
         _correct->traj = NULL;
         }
 
@@ -116,8 +116,8 @@ void correction_setup(
         m_free(&_correct->CMx->dK);
         m_free(&_correct->CMx->Qo);
         _correct->CMx->T = _correct->CMx->dK = _correct->CMx->Qo = _correct->CMx->C = NULL;
-        free_zarray_2d((void**)_correct->CMx->kick, _correct->n_iterations+1, _correct->CMx->ncor);
-        free_zarray_2d((void**)_correct->CMx->posi, _correct->n_iterations+1, _correct->CMx->nmon);
+        free_czarray_2d((void**)_correct->CMx->kick, _correct->n_iterations+1, _correct->CMx->ncor);
+        free_czarray_2d((void**)_correct->CMx->posi, _correct->n_iterations+1, _correct->CMx->nmon);
         tfree(_correct->CMx->mon_index); _correct->CMx->mon_index = NULL;
         tfree(_correct->CMx); _correct->CMx = NULL;
         _correct->CMx->ncor = _correct->CMx->nmon = _correct->CMx->inverse_computed = 0;
@@ -128,8 +128,8 @@ void correction_setup(
         m_free(&_correct->CMy->dK);
         m_free(&_correct->CMy->Qo);
         _correct->CMy->T = _correct->CMy->dK = _correct->CMy->Qo = _correct->CMy->C = NULL;
-        free_zarray_2d((void**)_correct->CMy->kick, _correct->n_iterations+1, _correct->CMy->ncor);
-        free_zarray_2d((void**)_correct->CMy->posi, _correct->n_iterations+1, _correct->CMy->nmon);
+        free_czarray_2d((void**)_correct->CMy->kick, _correct->n_iterations+1, _correct->CMy->ncor);
+        free_czarray_2d((void**)_correct->CMy->posi, _correct->n_iterations+1, _correct->CMy->nmon);
         tfree(_correct->CMy->mon_index); _correct->CMy->mon_index = NULL;
         tfree(_correct->CMy); _correct->CMy = NULL;
         _correct->CMy->ncor = _correct->CMy->nmon = _correct->CMy->inverse_computed = 0;
@@ -262,16 +262,16 @@ void correction_setup(
 
     if (n_iterations!=0) {
       /* allocate space to store before/after data for correctors and monitors */
-      _correct->CMx->kick = (double**)zarray_2d(sizeof(**(_correct->CMx->kick)), _correct->n_iterations+1, _correct->CMx->ncor);
-      _correct->CMx->posi = (double**)zarray_2d(sizeof(**(_correct->CMx->posi)), _correct->n_iterations+1, _correct->CMx->nmon);
-      _correct->CMy->kick = (double**)zarray_2d(sizeof(**(_correct->CMy->kick)), _correct->n_iterations+1, _correct->CMy->ncor);
-      _correct->CMy->posi = (double**)zarray_2d(sizeof(**(_correct->CMy->posi)), _correct->n_iterations+1, _correct->CMy->nmon);
+      _correct->CMx->kick = (double**)czarray_2d(sizeof(**(_correct->CMx->kick)), _correct->n_iterations+1, _correct->CMx->ncor);
+      _correct->CMx->posi = (double**)czarray_2d(sizeof(**(_correct->CMx->posi)), _correct->n_iterations+1, _correct->CMx->nmon);
+      _correct->CMy->kick = (double**)czarray_2d(sizeof(**(_correct->CMy->kick)), _correct->n_iterations+1, _correct->CMy->ncor);
+      _correct->CMy->posi = (double**)czarray_2d(sizeof(**(_correct->CMy->posi)), _correct->n_iterations+1, _correct->CMy->nmon);
       
       /* Allocate space to store before/after trajectories/closed orbits.
        * After each correction pass through x and y, the first trajectory is the initial one,
        * the second is after x correction, and the third is after x and y correction.
        */
-      _correct->traj = (TRAJECTORY**)zarray_2d(sizeof(**_correct->traj), 3, beamline->n_elems+1);
+      _correct->traj = (TRAJECTORY**)czarray_2d(sizeof(**_correct->traj), 3, beamline->n_elems+1);
       
     }
     if (verbose) {
@@ -813,7 +813,7 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
   /* arrays for trajectory data */
   traj0 = tmalloc(sizeof(*traj0)*beamline->n_elems);
   traj1 = tmalloc(sizeof(*traj1)*beamline->n_elems);
-  one_part = (double**)zarray_2d(sizeof(**one_part), 1, 7);
+  one_part = (double**)czarray_2d(sizeof(**one_part), 1, 7);
 
   /* find initial trajectory */
   p = p0 = sqrt(sqr(run->ideal_gamma)-1);
@@ -954,7 +954,7 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
   free(moniCalibration);
   tfree(traj0); traj0 = NULL;
   tfree(traj1); traj1 = NULL;
-  free_zarray_2d((void**)one_part, 1, 7); one_part = NULL;
+  free_czarray_2d((void**)one_part, 1, 7); one_part = NULL;
 #ifdef DEBUG
   m_show(CM->C    , "%13.6le ", "influence matrix\n", stdout);
 #endif
@@ -1017,13 +1017,13 @@ long global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
     bomb("no inverse matrix computed (global_trajcor_plane)", NULL);
 
   if (!beam) {
-    particle = (double**)zarray_2d(sizeof(**particle), 1, 7);
+    particle = (double**)czarray_2d(sizeof(**particle), 1, 7);
     tracking_flags = TEST_PARTICLES;
   }
   else {
     if (beam->n_to_track==0)
       bomb("no particles to track in global_trajcor_plane()", NULL);
-    particle = (double**)zarray_2d(sizeof(**particle), beam->n_to_track, 7);
+    particle = (double**)czarray_2d(sizeof(**particle), beam->n_to_track, 7);
     tracking_flags = TEST_PARTICLES+TEST_PARTICLE_LOSSES;
   }
 
@@ -1152,9 +1152,9 @@ long global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
   beamline->flags &= ~BEAMLINE_TWISS_CURRENT;
 
   if (!beam)
-    free_zarray_2d((void**)particle, 1, 7);
+    free_czarray_2d((void**)particle, 1, 7);
   else
-    free_zarray_2d((void**)particle, beam->n_to_track, 7);
+    free_czarray_2d((void**)particle, beam->n_to_track, 7);
   particle = NULL;
   log_exit("global_trajcor_plane");
   return(1);
@@ -1185,13 +1185,13 @@ void one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TR
     bomb("no trajectory arrays supplied (one_to_one_trajcor_plane)", NULL);
   
   if (!beam) {
-    particle = (double**)zarray_2d(sizeof(**particle), 1, 7);
+    particle = (double**)czarray_2d(sizeof(**particle), 1, 7);
     tracking_flags = TEST_PARTICLES;
   }
   else {
     if (beam->n_to_track==0)
       bomb("no particles to track in one_to_one_trajcor_plane()", NULL);
-    particle = (double**)zarray_2d(sizeof(**particle), beam->n_to_track, 7);
+    particle = (double**)czarray_2d(sizeof(**particle), beam->n_to_track, 7);
     tracking_flags = TEST_PARTICLES+TEST_PARTICLE_LOSSES;
   }
   
@@ -1291,9 +1291,9 @@ void one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TR
   }
 
   if (!beam)
-    free_zarray_2d((void**)particle, 1, 7);
+    free_czarray_2d((void**)particle, 1, 7);
   else
-    free_zarray_2d((void**)particle, beam->n_to_track, 7);
+    free_czarray_2d((void**)particle, beam->n_to_track, 7);
   particle = NULL;
   log_exit("one_to_one_trajcor_plane");
 }
@@ -1932,7 +1932,7 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
     m_alloc(&co, 4, 1);
     m_alloc(&diff, 4, 1);
     m_alloc(&change, 4, 1);
-    one_part = (double**)zarray_2d(sizeof(**one_part), 1, 7);
+    one_part = (double**)czarray_2d(sizeof(**one_part), 1, 7);
     initialized = 1;
   }
 

@@ -26,9 +26,9 @@ long sample_particles(double **initial, SAMPLE *samp, long np, double **accepted
     if (samp->interval!=1) {
         for (ip=ic=0; ip<np; ip++, ic++) {
             if (ic%samp->interval!=0) {
-                SWAP_PTR(initial[ip], initial[itop]);
+                swapParticles(initial[ip], initial[itop]);
                 if (accepted)
-                    SWAP_PTR(accepted[ip], accepted[itop]);
+                    swapParticles(accepted[ip], accepted[itop]);
                 initial[itop][4] = z; /* record position of particle loss */
                 initial[itop][5] = p0*(1+initial[itop][5]);
                 --itop;
@@ -40,9 +40,9 @@ long sample_particles(double **initial, SAMPLE *samp, long np, double **accepted
     else if (samp->fraction!=1) {
         for (ip=0; ip<np; ip++) {
             if (random_2(1)>samp->fraction) {
-                SWAP_PTR(initial[ip], initial[itop]);
+                swapParticles(initial[ip], initial[itop]);
                 if (accepted)
-                    SWAP_PTR(accepted[ip], accepted[itop]);
+                    swapParticles(accepted[ip], accepted[itop]);
                 initial[itop][4] = z; /* record position of particle loss */
                 initial[itop][5] = p0*(1+initial[itop][5]);
                 --itop;

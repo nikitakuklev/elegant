@@ -288,9 +288,9 @@ long alpha_magnet_tracking(
           coord = particle[ip];
           if (coord[0]>=xl && coord[0]<=xu) {
             if (accepted)
-              SWAP_PTR(accepted[ip], accepted[itop]);
+              swapParticles(accepted[ip], accepted[itop]);
             /* record position and momentum of lost particle */
-            SWAP_PTR(particle[ip], particle[itop]);
+            swapParticles(particle[ip], particle[itop]);
             particle[itop][4] = z;
             particle[itop][5] = P_central*(1+particle[itop][5]);
             itop--;
@@ -339,9 +339,9 @@ long alpha_magnet_tracking(
             coord = particle[ip];
             if ((do_xl && coord[0]<=xl) || (do_xu && coord[0]>=xu)) {
                 if (accepted)
-                    SWAP_PTR(accepted[ip], accepted[itop]);
+                    swapParticles(accepted[ip], accepted[itop]);
                 /* record position and momentum of lost particle */
-                SWAP_PTR(particle[ip], particle[itop]);
+                swapParticles(particle[ip], particle[itop]);
                 particle[itop][4] = z;
                 particle[itop][5] = P_central*(1+particle[itop][5]);
                 itop--;

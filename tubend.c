@@ -227,7 +227,7 @@ long track_through_tubend(double **part, long n_part, TUBEND *tubend,
         fflush(stdout);
         abort();
       }
-      SWAP_PTR(part[ip], part[i_top]);
+      swapParticles(part[ip], part[i_top]);
       if (accepted) {
         if (!accepted[i_top]) {
           fprintf(stdout, 
@@ -236,7 +236,7 @@ long track_through_tubend(double **part, long n_part, TUBEND *tubend,
           fflush(stdout);
           abort();
         }
-        SWAP_PTR(accepted[ip], accepted[i_top]);
+        swapParticles(accepted[ip], accepted[i_top]);
       }
       part[i_top][4] = z_start;
       part[i_top][5] = Po*(1+part[i_top][5]);

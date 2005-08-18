@@ -42,7 +42,7 @@ static double Fy_y4;
 static double Fx_y, Fx_x_y, Fx_x2_y, Fx_x3_y;
 static double Fx_y3, Fx_x_y3;
 
-static double rho0, rho_actual, rad_coef, isrConstant;
+static double rho0, rho_actual, rad_coef=0, isrConstant=0;
 
 static long particle_lost;
 static double s_lost;
@@ -302,7 +302,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
         fflush(stdout);
         abort();
       }
-      SWAP_PTR(part[i_part], part[i_top]);
+      swapParticles(part[i_part], part[i_top]);
       if (accepted) {
         if (!accepted[i_top]) {
           fprintf(stdout, 
@@ -311,7 +311,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
           fflush(stdout);
           abort();
         }
-        SWAP_PTR(accepted[i_part], accepted[i_top]);
+        swapParticles(accepted[i_part], accepted[i_top]);
       }
       part[i_top][4] = z_start + s_lost;
       part[i_top][5] = Po*(1+part[i_top][5]);
@@ -1561,7 +1561,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
         fflush(stdout);
         abort();
       }
-      SWAP_PTR(part[i_part], part[i_top]);
+      swapParticles(part[i_part], part[i_top]);
       if (accepted) {
         if (!accepted[i_top]) {
           fprintf(stdout, 
@@ -1570,7 +1570,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
           fflush(stdout);
           abort();
         }
-        SWAP_PTR(accepted[i_part], accepted[i_top]);
+        swapParticles(accepted[i_part], accepted[i_top]);
       }
       part[i_top][4] = z_start + s_lost;
       part[i_top][5] = Po*(1+part[i_top][5]);
