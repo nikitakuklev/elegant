@@ -15,4 +15,8 @@ frequency, this will result in the time coordinates being relative to
 the ideal revolution period, $T_{rf}*h$.  If you have multiple rf
 cavities in a ring, you need only use this feature on one of them.
 Also, you can use \verb|CHANGE_T=1| if you simply prefer to have the
-offset time coordinates in output files and analysis.
+offset time coordinates in output files and analysis. 
+
+N.B.: {\em Do not use \verb|CHANGE_T=1| if you have rf cavities that
+are not at harmonics of one another or if you have other
+time-dependent elements that are not resonant.}
