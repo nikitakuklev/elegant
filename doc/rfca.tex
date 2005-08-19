@@ -12,7 +12,7 @@ coordinates of the particles to subtract off $N T_{rf}$, where
 $T_{tf}$ is the rf period and $N = \lfloor t/T_{tf}+0.5\rfloor$.  If
 you are tracking a ring with rf at some harmonic $h$ of the revolution
 frequency, this will result in the time coordinates being relative to
-the ideal revolution period, $T_{rf}/h$.  If you have multiple rf
+the ideal revolution period, $T_{rf}*h$.  If you have multiple rf
 cavities in a ring, you need only use this feature on one of them.
 Also, you can use \verb|CHANGE_T=1| if you simply prefer to have the
 offset time coordinates in output files and analysis.
