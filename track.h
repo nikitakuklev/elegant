@@ -747,6 +747,8 @@ typedef struct {
 #define NO_DICT_OUTPUT    0x00000400UL
 /* indicates element that can only be done by a single processor at this time */
 #define UNIPROCESSOR      0x00000800UL
+/* indicates that element is a uni-processor diagnostic (uniprocessor but requires no scatter) */
+#define UNIDIAGNOSTIC     (0x00001000UL|UNIPROCESSOR)
 
 typedef struct {
     long n_params;
