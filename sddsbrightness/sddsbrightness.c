@@ -14,6 +14,9 @@
  * Michael Borland, 2002
  *
  $Log: not supported by cvs2svn $
+ Revision 1.7  2005/08/08 14:48:43  borland
+ Changed a loop termination condition to prevent use of negative indices.
+
  Revision 1.6  2005/06/10 17:46:41  borland
  Changes by Shang: now optionally uses data produced by sddsanalyzebeam.
  Also, requires -coupling or -emittanceRatio if vertical emittance data is
@@ -185,7 +188,7 @@ int main(int argc, char **argv)
   double *KK,**FnOut,**Energy,**Brightness,**LamdarOut;
   long minNEKS,maxNEKS,neks;
   double sigmax,sigmay,sigmaxp,sigmayp;
-  char *deviceOption;
+  char *deviceOption, *Units=NULL;
 
   SDDS_RegisterProgramName(argv[0]);
   argc = scanargs(&s_arg, argc, argv);
@@ -371,10 +374,18 @@ int main(int argc, char **argv)
       SDDS_Bomb("Something wrong with both ex0 parameter and ex column, one of them has to exist");
     }
   }
-  if (SDDS_CheckParameter(&SDDSin, "pCentral", "m$be$nc", SDDS_ANY_FLOATING_TYPE, NULL)!=SDDS_CHECK_OK &&
-      SDDS_CheckColumn(&SDDSin, "pCentral", "m$be$nc", SDDS_ANY_FLOATING_TYPE, NULL)!=SDDS_CHECK_OK) {
+  if (SDDS_CheckParameter(&SDDSin, "pCentral", NULL, SDDS_ANY_FLOATING_TYPE, NULL)==SDDS_CHECK_OK) {
+    if (!SDDS_GetParameterInformation(&SDDSin, "units", &Units, SDDS_GET_BY_NAME, "pCentral"))
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    if (Units && !is_blank(Units) && strcmp(Units, "m$be$nc"))
+      SDDS_Bomb("Invalid units of pCentral parameter");
+  } else if (SDDS_CheckColumn(&SDDSin, "pCentral", NULL, SDDS_ANY_FLOATING_TYPE, NULL)==SDDS_CHECK_OK) {
+    if (!SDDS_GetColumnInformation(&SDDSin, "units", &Units, SDDS_GET_BY_NAME, "pCentral"))
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    if (Units && !is_blank(Units) && strcmp(Units, "m$be$nc"))
+      SDDS_Bomb("Invalid units of pCentral column");
+  } else 
     SDDS_Bomb("Something wrong with both pCentral parameter and pCentral column, one of them has to exist");
-  }
   if (SDDS_CheckParameter(&SDDSin, "Sdelta0", "", SDDS_ANY_FLOATING_TYPE, NULL)!=SDDS_CHECK_OK &&
       SDDS_CheckColumn(&SDDSin, "Sdelta", "", SDDS_ANY_FLOATING_TYPE, NULL)!=SDDS_CHECK_OK) {
     SDDS_Bomb("Something wrong with both Sdelta0 parameter and Sdelta column, one of them has to exist");
@@ -697,7 +708,7 @@ long GetTwissValues(SDDS_DATASET *SDDSin,
     *ex0 = data[0];
     free(data);
   }
-  if (SDDS_CheckParameter(SDDSin, "pCentral", "m$be$nc", SDDS_ANY_FLOATING_TYPE, NULL)==SDDS_CHECK_OK) {
+  if (SDDS_CheckParameter(SDDSin, "pCentral", NULL, SDDS_ANY_FLOATING_TYPE, NULL)==SDDS_CHECK_OK) {
     if (!SDDS_GetParameterAsDouble(SDDSin, "pCentral", pCentral))
       SDDS_Bomb("unable to get pCentral parameter from input file");
   } else {
