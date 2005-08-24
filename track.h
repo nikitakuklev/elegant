@@ -733,22 +733,24 @@ typedef struct {
 #define DEFAULT_N_KICKS 4
 
 /* bit definitions for flags word in ELEMENT_DESCRIPTION */
-#define HAS_MATRIX        0x00000001UL
-#define HAS_LENGTH        0x00000002UL
-#define DONT_CONCAT       0x00000004UL
-#define OFFSETS_CHECKED   0x00000008UL
-#define IS_MAGNET         0x00000010UL
-#define MATRIX_TRACKING   0x00000020UL
-#define HAS_RF_MATRIX     0x00000040UL
-#define MAY_CHANGE_ENERGY 0x00000080UL
-#define MAT_CHW_ENERGY    0x00000100UL
-#define DIVIDE_OK         0x00000200UL
+#define HAS_MATRIX         0x00000001UL
+#define HAS_LENGTH         0x00000002UL
+#define DONT_CONCAT        0x00000004UL
+#define OFFSETS_CHECKED    0x00000008UL
+#define IS_MAGNET          0x00000010UL
+#define MATRIX_TRACKING    0x00000020UL
+#define HAS_RF_MATRIX      0x00000040UL
+#define MAY_CHANGE_ENERGY  0x00000080UL
+#define MAT_CHW_ENERGY     0x00000100UL
+#define DIVIDE_OK          0x00000200UL
 /* set this flag to prevent dictionary output of experimental elements */
-#define NO_DICT_OUTPUT    0x00000400UL
+#define NO_DICT_OUTPUT     0x00000400UL
 /* indicates element that can only be done by a single processor at this time */
-#define UNIPROCESSOR      0x00000800UL
+#define UNIPROCESSOR       0x00000800UL
 /* indicates that element is a uni-processor diagnostic (uniprocessor but requires no scatter) */
 #define UNIDIAGNOSTIC     (0x00001000UL|UNIPROCESSOR)
+/* indicates that element should be processed even with 0 particles */
+#define RUN_ZERO_PARTICLES 0x00002000UL
 
 typedef struct {
     long n_params;
