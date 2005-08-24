@@ -17,12 +17,12 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 15.3\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
+\author{Program Version 15.4.1\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
 \maketitle
 
-\section{Highlights of What's New in Version 15.3}
+\section{Highlights of What's New in Version 15.4.1}
 
-Here is a summary of what's changed since release 15.2.  For details
+Here is a summary of what's changed since release 15.3.  For details
 and references, see the specific entries in the manual.
 
 \subsection{Known Bugs and Problems}
@@ -37,106 +37,120 @@ and references, see the specific entries in the manual.
 
 \subsection{Bug Fixes for Elements}
 \begin{itemize}
-\item Fixed error in creating the matrix for {\tt RFCA} elements when the {\tt SRS}
- focusing model was invoked.  The $R_{5j}$ matrix elements of the downstream system
- (reported in the {\tt final} output from {\tt run\_setup} or the output of 
- {\tt matrix\_output}) would be incorrect.  Tracking was not affected by this 
- bug, which was discovered by M. Cornacchia.
+\item Fixed bug in synchrotron radiation simulation for {\tt KQUAD} and {\tt KSEXT}
+ when the (default) 4$^{th}$-order integrator was used.  This would have impacted
+ off-momentum tracking simulations with synchrotron radiation.  The error amounted
+ to applying only half the required energy loss.  Note that tracking with energy
+ oscillations was not really affected, since in this case there is no average effect
+ from the quadrupoles or sextupoles.  Also, gradient dipole simulation was not affected.
+
+\item The {\tt SREFFECTS} element (synchrotron radiation effects) will now mark
+ all particles as lost in the event that the computed energy loss per turn is positive.
+ This odd condition can happen, for example, when the closed orbit iteration
+ doesn't converge, usually because the lattice is unstable.
+ In previous versions, {\tt elegant} would simply exit.  This bug was reported by
+ V. Sajaev (ANL).
+
+\item Fixed bug in the lattice input parser, which resulted in embedded {\tt rpn} commands
+ being ignored if they directly followed a comment.  (This was reported by a user but
+ I've lost track of who.  Sorry about that.)
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item Fixed a bug that occurred when optimization of twiss parameters was performed
- and the {\tt matched\_to\_cell} feature of {\tt bunched\_beam} was used.  The
- bug resulted in twiss variables not getting defined.  This bug was discovered by
- V. Sajaev.
-\item Fixed bug in accounting for lost particles for the {\tt losses} output file of
- {\tt run\_setup}.  The problem would be seen when particles were created by a 
- {\tt SCRIPT} element on multiple turns.
-\item Multi-step runs (i.e., {\tt n\_steps}>1 in {\tt run\_control})
-can now be done with optimization.  This bug was found by P. Emma.
-\item Fixed bug in {\tt slice\_analysis} command.  If the {\tt final\_values\_only} parameter
- was nonzero and if a {\tt CSBEND} element was in the lattice, {\tt elegant} would exit with
- a cryptic error.  This bug was found by X. Zhu.
+\item Fixed a bug in the {\tt matrix\_output} command for the SDDS output option.
+ In the past, no data was provided at the exit of elements (e.g., markers, BPMs)
+ that did not have a non-trivial matrix.  This bug was reported by A. Xiao (FNAL).
+
+\item Improved chromaticity calculations from {\tt twiss\_output} so that 
+ chromaticity and the chromatic derivative of the beta function for transport lines
+ is now correct.   The previous code assumed a periodic solution.  This deficiency
+ was reported by V. Sajaev (ANL).  Users may notice very small changes in chromaticity
+ calculations for rings due to reorganization of some expressions. Also, if higher-order
+ chromaticity is requested by a periodic (``matched'') solution is not, {\tt elegant}
+ will abort.
+
+\item The {\tt tune\_shift\_with\_amplitude} command no longer aborts if the ratios
+ of the minimum and maximum amplitudes are inadequate for tune {\em shift} calculation
+ if only tune {\em spreads} are requested.
+
+\item Fixed bug in {\tt find\_aperture} command that resulted in varied parameter values
+ not being set in the output files.
+
+\item Fixed several bugs in radiation integral calculations:
+ \begin{itemize}
+ \item The effect of steering kicks from quadrupoles on the radiation
+ integrals are now included.  (This is not the same as the effect of misalignments,
+ which was already there.)
+ \item An adjustment factor that modified the focusing and angle of bending
+ magnets in the radiation integral calculation according to the momentum deviation
+ was removed.  It was found to cause greater disagreement with tracking results from
+ element-by-element simulation for large momentum deviations.
+ \end{itemize}
+
 \end{itemize}
 
 \subsection{Modified Elements}
 \begin{itemize}
-\item The {\tt SCRIPT} element now has a {\tt DIRECTORY} parameter.  If given, input
- and output files are created and retrieved from the specified directory.  For example,
- to increase speed on a cluster one can use {\tt DIRECTORY=/tmp}, forcing the script mechanism to
- use the local temporary drive.
-\item Added the {\tt CUTOFF} parameter to {\tt SREFFECTS}, allowing restriction of the number 
- of $\sigma$'s used for the random numbers.
-\item Added length, angle, and tilt parameters to the {\tt EMATRIX}
-(Explicit MATRIX) element.
-\item {\tt MARK} elements with {\tt FITPOINT=1} now produce {\tt rpn} variables with the
- $\Sigma_{ij} = \langle x_i x_j \rangle$ parameters of the tracked beam. The variables are
- named {\em markName}\verb|#|{\em occurrence}.{\tt s}{\em i}{\em j}.
-\item Added calibration factors for correctors embedded in quadrupoles ({\tt QUAD} and {\tt KQUAD}).
+
+\item Added noise-group feature to the {\tt RFTM110} element to allow imparting correlated
+ phase and voltage noise to multiple cavities.  Also added voltage ramping option using
+ a user-specified table.
+
+\item Added quantum excitation simulation for the {\tt KQUAD} and {\tt KSEXT} elements.
+
+\item Improved quantum excitation simulation for the {\tt CSBEND} and {\tt CSRCSBEND} elements
+ by including the variation of quantum excitation with path-length, local field, and individual
+ particle momentum.  Note that this is a small effect.  The variation of the classical component
+ of the radiation with these factors was always there, and is what determines the damping
+ partition factors.
+
+\item Added the {\tt DISABLE} parameter for {\tt WATCH} elements.  Using this is easier than,
+ for example, using the {\tt transmute\_elements} command to turn them into zero-length drift spaces.
 \end{itemize}
 
 \subsection{Modified Commands}
 \begin{itemize}
-\item Added the {\tt final\_pass} control to {\tt run\_setup}.  If nonzero, the {\tt centroid}
- and {\tt sigma} output is computed for the final pass only.  By default, these outputs give
- statistics over all passes.  
-
-\item The lattice file may now contain {\tt rpn} sequences.  For example, if you need to define some
-physical, mathematical, or other constants for use in element definitions, you may use the following
-syntax
-\begin{verbatim}
-! Define pi
-% 1 atan 4 * sto Pi
-% Pi 40 / sto myAngle
-! Define a rectangular bend for a ring with 80 equal bends
-B1: SBEN,L=1.0,ANGLE=''myAngle'',E1=''myAngle 2 /'',E2=''myAngle 2 /''
-\end{verbatim}
-(Note that {\tt pi} is already defined in the standard {\tt defns.rpn}
-file.)  This feature was suggested by M. Cornacchia.
-\item The ``\%s'' syntax for the rootname may now be used in the input files of {\tt sdds\_beam}.
-
-\item Orbit and tune correction will, if set up, take place inside the optimization loop.
-
-\item Closed orbit values at monitors are now stored in {\tt rpn} variables for use in optimization, provided
- the {\tt CO\_FITPOINT} parameter of the {\tt MONI}, {\tt HMON}, or {\tt VMON} element is set to 1.
- The variable names are\\ {\em bpmName}\verb|#|{\em occurence}.{\em plane}{\tt co}, where {\em plane} is {\tt x} or
- {\tt y}.  This also works for {\tt MARK} elements if {\tt FITPOINT=1} is set.  In addition to {\tt xco} 
- and {\tt yco}, one may refer to {\tt xpco} and {\tt ypco} to get the slopes.
-
-\item Response matrix values (computed by {\tt
- correction\_matrix\_output}) are now stored in {\tt rpn} variables
- for use in optimization.  The variable names are of the form \\ {\em
- Plane}{\tt R\_}{\em bpmName}\verb|#|{\em occurence}{\tt \_}{\em
- corrName}\verb|#|{\em occurence}{\tt .}{\em corrParam}, where {\em
- Plane} is {\tt H} (horizontal) or {\tt V} (vertical) and {\em
- corrParam} is the parameter of the corrector used for changing the
- orbit (e.g., {\tt HKICK} or {\tt VKICK} for a {\tt KICKER} element).
-
-\end{itemize}
-
-\subsection{New Elements}
-\begin{itemize}
-
-\item {\tt EDRIFT} --- This is an Exact DRIFT space.  In particular, path length computations
- are good to all orders in $x^\prime$ and $y^\prime$.
-
+\item The {\tt find\_aperture} command now includes the method of searching along one or more
+ lines starting at the origin.  In previous versions, the search always started from the outside,
+ which is faster but may be misleading due to islands.  This was suggested by V. Sajaev (ANL).
+ The ability to offset the aperture region with the closed orbit was also added.
+\item The {\tt print\_dictionary} command will now output data to an SDDS file.  This is useful
+ if for some reason you need to automatically process the element dictionary.
 \end{itemize}
 
 \subsection{Changes and Additions to Related Programs}
 \begin{itemize}
-\item Added the program {\tt sddsemitproc}.  This is a simplified version of {\tt sddsemitmeas}.
- Both programs analyze emittance measurement data from multi-quadrupole scans.  {\tt sddsemitproc}
- is preferred as it lacks ``features'' of {\tt sddsemitmeas} that are not in fact useful.
-\item {\tt sddsanalyzebeam} can now generate a new beam file matching the six-dimensional
- phase space of the beam it is analyzing.  This allows, for example, creating a new beam
- file with more particles than the one analyzed.  This is done with the {\tt -generate}
- option.
-\item {\tt elegantRingAnalysis} collective effects calculations now use cluster resources if
- requested.
-\item {\tt haissinski} now accepts negative values for the harmonic cavity voltage, to allow
- simulation of a bunch lengthening cavity.
+\item The program {\tt sddsbrightness} now optionally uses data produced by {\tt sddsanalyzebeam}.
+ Hence, one can easily compute the x-ray brightness from phase space data produced by tracking.
+ This change was implemented by H. Shang (ANL).
+\item The GUI front-end {\tt elegantRingAnalysis} had several upgrades:
+ \begin{itemize}
+ \item Added frequency maps in $(\delta, x)$ and $(\delta, y)$ planes.  This was suggested by
+ L. Nadolski (SOLEIL)
+ \item Added color-coding of phase space plots with the tune.
+ \item Added more controls on plotting for FMA and fine dynamic aperture.
+ \item Added optional $\delta$ offset for phase space tracking.
+ \item The default matrix order for all tracking using the kick lattice is now 1.  That means that
+ if one supplies a lattice with a mixture of kick and matrix-based elements, the matrix-based
+ elements will be simulated to first order. This is to ensure symplecticity.  It can be changed
+ with an additional parameter file or by editing the lattice file to explicitly add {\tt ORDER}
+ values to the elements in question.
+ \end{itemize}
+\item Quantum lifetime calculations from {\tt beamLifetimeCalc} now include the transverse
+ aperture limit.  Previous versions only looked at the longitudinal limit.
+ Also, problems reading bunch  length data  from a scan input file were fixed.
 \end{itemize}
+
+\subsection{Other Changes to This Document} 
+\begin{itemize}
+\item Added manual page for {\tt haissinski} program.
+\item Added manual page for {\tt sddsbrightness} program.
+\item Improved discussion of simplex optimizer controls for {\tt optimization\_setup} command.
+\item Added warning about using the {\tt CHANGE\_T} feature of {\tt RFCA} in the case
+ of multiple cavities that are not harmonically-related.
+\end{itemize}
+
 
 \section{Introduction}
 
@@ -1260,11 +1274,13 @@ parameter.  If zero, then the errors replace the prior value of the parameter.
 \item \verb|output| --- The (incomplete) name of an SDDS file to send output to.  
  Recommended value: ``\%s.aper''.
 
-\item \verb|mode| --- May be ``many-particle'', ``single-particle'', ``one-line'', ``three-line'',
-``five-line'', ``seven-line'', ``nine-line'', or ``eleven-line''.  Many-particle searching is
-much faster than single-particle, but does not allow interval splitting to search for the aperture boundary. 
-Both ``many-particle'' and ``single-particle'' modes involve searching from the outside inward, which
-improves speed but may result in including islands.
+\item \verb|mode| --- May be ``many-particle'', ``single-particle'',
+``one-line'', ``three-line'', ``five-line'', ``seven-line'',
+``nine-line'', or ``eleven-line''.  Many-particle searching is much
+faster than single-particle, but does not allow interval splitting to
+search for the aperture boundary.  Both ``many-particle'' and
+``single-particle'' modes involve searching from the outside inward,
+which improves speed but may result in including islands.
 
 The {\em n}-line modes avoid this by searching form the origin
 outward.  Of these, the one-line and three-line modes are special:
@@ -2885,6 +2901,8 @@ on subsequent pages.
         containing beam moments, emittances, equivalent beta functions, etc.  The beam file
         is of the type written by {\tt elegant} using the {\tt output} field of the {\tt run\_setup}
         command, or the WATCH element.
+\item {\tt sddsbrightness} --- Uses twiss parameter output or data from {\tt sddsanalyzebeam} to
+  compute undulator brightness curves.  
 \item {\tt sddsemitmeas} --- Analyzes quadrupole scan emittance measurement data.  Accepts a
         file containing the transport matrix for each point and measured beam sizes.  
         The file may, for example, be the file produced
@@ -2910,17 +2928,65 @@ on subsequent pages.
 \subsection{haissinski}
 
 \begin{itemize}
-\item {\bf description:}
-
-\item {\bf examples:}
+\item {\bf description:}  {\tt haissinski} solves the Haissinski equation for the bunch
+ steady-state longitudinal distribution in the presence of various impedances.
 
 \item {\bf synopsis:}
+\begin{flushleft}{\tt
+haissinski {\em twissFile} {\em resultsFile}
+ {-wakeFunction={\em file},tColumn={\em name},wColumn={\em name} |
+  -model=[L={\em Henry}|Zn={\em Ohms}],R={\em Ohm}} 
+ {-charge={\em C} | -particles={\em value} | -bunchCurrent={\em A}}
+ {-steps={\em numberOfChargeSteps}}
+ {-outputLastStepOnly}
+ {-RF=Voltage={\em V},harmonic={\em value} | -length={\em s}}
+ {-harmonicCavity=Voltage={\em V},factor={\em harmonicFactor}}
+ {-superPeriods={\em number}}
+ {-energy={\em GeV}} 
+ -integrationParameters=deltaTime={\em s},points={\em number},startTime={\em s},
+iterations={\em number},fraction={\em value},tolerance={\em value} 
+}\end{flushleft}
 
 \item {\bf files:}
+\begin{itemize}
+\item {\em twissFile} --- Twiss output file from {\tt elegant}, including radiation
+ integral calculations.
+\item {\tt resultsFile} --- SDDS file containing computed bunch longitudinal distributions
+ as columns, along with analysis and conditions as parameters.
+\end{itemize}
 
 \item {\bf switches:}
+\begin{itemize}
+\item {\tt -wakeFunction={\em file},tColumn={\em name},wColumn={\em name}} --- Optionally
+ specifies the impedance as a Greens function using values in an SDDS file.  The time points
+ must be equi-spaced.
+\item {\tt -model=[L={\em Henry}|Zn={\em Ohms}],R={\em Ohm}} --- Optionally specifies the
+ impedance as an inductor {\tt L} or broad-band value {\tt  Zn}, along with  a resistance {\tt R}.
+\item {\tt -charge={\em C} | -particles={\em value} | -bunchCurrent={\em A}} --- Various 
+ ways to specify the charge in each bunch.
+\item {\tt -steps={\em numberOfChargeSteps}} --- Number of values of bunch charge to compute 
+ up to the value specified with on the just-described options.  Using more values can help
+ convergence, as the result of each prior step is used as the starting point for the new step.
+\item {\tt -outputLastStepOnly}  --- Requests output for the last charge step (full charge) only.
+\item {\tt -RF=Voltage={\em V},harmonic={\em value} | -length={\em s}} --- Two ways to specify 
+ the nominal bunch length.
+\item {\tt -harmonicCavity=Voltage={\em V},factor={\em harmonicFactor}} --- Specifies a harmonic
+ cavity voltage and the ratio of the harmonic cavity frequency to the main frequency.
+\item {\tt -superPeriods={\em number}} --- Number of superiods of the lattice specified in
+ {\em twissfile} to simulate.  If one has an N cell ring but only gives 1 cell in the input,
+ this value should be N.  If one gives the whole ring, this value should be 1.
+\item {\tt -energy={\em GeV}} --- Beam energy. If not given, the value in the {\em twissfile} 
+ is used.
+\item {\tt -integrationParameters=deltaTime={\em s},points={\em number},startTime={\em s},}
+ {\tt iterations={\em number},fraction={\em value},tolerance={\em value} } --- Integration 
+ parameters, which must be set.  {\tt deltaTime} is the time interval for wake function and
+ charge density evaluation.  {\tt points} is the number of time points, while {\tt startTime}
+ is the time (relative to synchronous phase) at which the time region starts.  These values
+ must be set by the user based on knowledge of the likely bunch length.  For the others, 
+ we suggest 1000 iterations, a fraction of 0.01, and a tolerance of $10^{-4}$. 
+\end{itemize}
 
-\item {\bf author:} L. Emery, ANL/APS.
+\item {\bf authors:} L. Emery, M. Borland, ANL/APS.
 \end{itemize}
 
 \begin{latexonly}
@@ -3112,6 +3178,82 @@ to that convention, use the SDDS toolkit program {\tt sddsexpand}.
 \end{itemize}
 
 \item {\bf author:} M. Borland, ANL/APS.
+\end{itemize}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|sddsbrightness|}\end{center}
+\end{latexonly}
+\subsection{sddsbrightness}
+
+\begin{itemize}
+\item {\bf description:} {\tt sddsbrightness} computes undulator brightness curves using
+Twiss parameter data from {\tt elegant} or {\tt sddsanalyzebeam}. Several calculation
+methods are available.
+
+\item {\bf examples:}
+\begin{flushleft}{\tt
+sddsbrightness run.twi run.bri -harmonics=3 -Krange=start=0.2,end=2.2,points=100 \\
+  -current=0.1 -totalLength=2.4 -periodLength=0.027 -coupling=0.01
+
+sddsanalyzebeam run.out -pipe=out -correctedOnly \\ 
+ | sddsbrightness -pipe=in run.bri -harmonics=3 -Krange=start=0.2,end=2.2,points=100 \\
+  -current=0.1 -totalLength=2.4 -periodLength=0.027 -coupling=0.01
+}\end{flushleft}
+
+\item {\bf synopsis:}
+\begin{flushleft}{\tt
+sddsbrightness [-pipe=[input][,output]] [{\em twissFile}] [{\em SDDSoutputfile}]
+ -harmonics={\em integer} -Krange=start={\em value},end={\em value},points={\em integer}
+ -current={\em Amps} -totalLength={\em meters} -periodLength={\em meters}
+ [-emittanceRatio={\em value} | -coupling={\em value}] [-noSpectralBroadening]
+ [-method={\em string},device={\em string},neks={\em value}]] 
+}\end{flushleft}
+
+\item {\bf files:}
+\begin{itemize}
+\item {\em twissFile} --- A Twiss output file from {\tt elegant}, with radiation integral 
+calculations included, or an output from {\tt sddsanalyzebeam}. In the latter case, the
+{\tt -correctedOnly} option should be used.
+\item {\em SDDSoutputFile} --- Contains the brightness data in column form.  For each 
+requested harmonic {\em i}, there are columns {\tt photonEnergy{\em i}}, {\tt wavelength{\em i}},
+and {\tt Brightness{\em i}}.
+\end{itemize}
+
+\item {\bf switches:}
+\begin{itemize}
+\item {\tt pipe} --- The standard SDDS Toolkit pipe option.
+\item {\tt harmonics} --- The number of harmonics to compute.
+\item {\tt Krange=start={\em value},end={\em value},points={\em integer}} --- The range of the
+ K parameter for the undulator and the number of points to compute on that range.
+\item {\tt -current={\em Amps}} --- The current in amperes.  If one gives the average current,
+ one gets the average brightness.  
+\item {\tt -totalLength={\em meters}} --- The total length of the undulator, in meters.
+\item {\tt -periodLength={\em meters}} ---  The period length of the undulator, in meters.
+\item {\tt -emittanceRatio={\em value} | -coupling={\em value}} --- In the case of a twiss
+ output file from {\tt elegant}, which does not contain the vertical emittance, one must
+ supply one of these options.  If {\tt -emittanceRatio={\em R}} is given, $\epsilon_y = \epsilon_0*R$ 
+ and $\epsilon_x = \epsilon_0$. If {\tt -coupling={\em k}} is given, $\epsilon_x = \epsilon_0/(1+k)$
+ and $\epsilon_y = k*\epsilon_x$.  $\epsilon_0$ is the equilibrium emittance from the twiss output
+ of {\tt elegant}.  
+
+ In the case of twiss output from {\tt sddsanalyzebeam}, both emittances are present and these options
+ are ignored.
+\item {\tt -method={\em string},device={\em string},neks={\em value}]} --- Choose which method to
+ use for brightness calculations.  Options are
+ \begin{itemize} 
+ \item {\tt borland} --- M. Borland's approximation method. Fast, but not as reliable as others.
+ \item {\tt dejus} --- R. Dejus' non-zero emittance, infinite-N+convolution method.  This is the
+   default.
+ \item {\tt walkerinfinite} --- R. Walker's method.  Dejus' method is derived from this method.
+ \item {\tt walkerfinite} --- R. Walker's method using finite N without convolution.  This is 
+   quite slow.
+ \end{itemize}
+ The {\tt device} qualifier may be {\tt planar} or {\tt helical}.  {\tt neks} is used to 
+ change the number of points used for finding the peak of the distribution.
+\end{itemize}
+
+\item {\bf authors:} M. Borland, H. Shang, R. Dejus (ANL).
 \end{itemize}
 
 \begin{latexonly}
