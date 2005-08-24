@@ -31,7 +31,7 @@ if [catch {exec sddsprocess $twiss $output \
              "-define=parameter,Superperiods,$superperiods,type=long" \
              "-define=parameter,h,$harmonic,type=long" \
              "-define=parameter,rfVolt,$voltage,type=double,units=MV" \
-             "-define=parameter,revFreq,sMax pCentral beta.p c_mks * / rec,units=Hz" \
+             "-define=parameter,revFreq,sMax Superperiods * pCentral beta.p c_mks * / rec,units=Hz" \
              "-define=parameter,rfFreq,revFreq h *,units=Hz" \
              "-redefine=parameter,U0,U0 Superperiods *,units=MeV" \
              "-define=parameter,q,rfVolt U0 /" \
@@ -39,6 +39,6 @@ if [catch {exec sddsprocess $twiss $output \
              "-define=parameter,E,pCentral mev *,units=MeV" \
              "-define=parameter,rfAcceptance,q sqr 1 - sqrt q rec acos - 2 * U0 * E / pi / h / alphac / sqrt" \
              "-define=parameter,nuSynch,alphac h * phiSynch dcos chs * 2 / pi / rfVolt * E / sqrt" \
-             "-define=parameter,Ss0,Sdelta0 c_mks * alphac * nuSynch / 2 pi * revFreq * /,units=m"} result] {
+             "-define=parameter,Ss0,Sdelta0 c_mks * alphac * nuSynch 2 * pi * revFreq * /,units=m"} result] {
              return -code error "$result"
 }
