@@ -4,6 +4,9 @@ exec oagwish "$0" "$@"
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.52  2005/07/25 21:00:56  borland
+# Corrected to "space charge tune spread" to "space charge tune shift".
+#
 # Revision 1.51  2005/07/14 17:58:00  borland
 # Renamed saveVarList to elegantSaveVarList.
 #
@@ -30,7 +33,7 @@ APSScrolledStatus .status -parent .userFrame -textVariable status -height 10 -wi
 set sourceDir $OAGGlobal(OAGAppConfigDataDirectory)/elegant/ringAnalysisTemplates
 
 proc setStatus {text} {
-    APSSetVarAndUpdate status $text
+    APSSetVarAndUpdate status "[clock format [clock seconds] -format %T]: $text"
     update
 }
 APSSetElegantGlobals
