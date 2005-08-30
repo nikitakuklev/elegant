@@ -14,6 +14,9 @@
  * Michael Borland, 2002
  *
  $Log: not supported by cvs2svn $
+ Revision 1.8  2005/08/23 17:40:49  shang
+ the pCentral units now can be m$be$nc, or NULL, or blank.
+
  Revision 1.7  2005/08/08 14:48:43  borland
  Changed a loop termination condition to prevent use of negative indices.
 
@@ -95,7 +98,7 @@ char *option[N_OPTIONS] = {
   "emittanceratio", "coupling", "nospectralbroadening","method",
 } ;
 
-char *USAGE="sddsbrightness [-pipe=[input][,output]] [<twissFile>] [<SDDSoutputfile>]\n\
+char *USAGE1="sddsbrightness [-pipe=[input][,output]] [<twissFile>] [<SDDSoutputfile>]\n\
  -harmonics=<integer> -Krange=start=<value>,end=<value>,points=<integer>\n\
  -current=<Amps> -totalLength=<meters> -periodLength=<meters>\n\
  [-emittanceRatio=<value> | -coupling=<value>] [-noSpectralBroadening]\n\
@@ -110,8 +113,8 @@ emittanceRatio   ratio of y emittance to x emittance.  x emittance is\n\
                  Ignored if ey0 parameter or ey column is found in file.\n\
 coupling         x emittance is ex0/(1+coupling), while y emittance is\n\
                  coupling*ex0/(1+coupling).\n\
-                 Ignored if ey0 parameter or ey column is found in file.\n\
-noSpectralBroadening\n\
+                 Ignored if ey0 parameter or ey column is found in file.\n";
+char *USAGE2="noSpectralBroadening\n\
                  Turns off the default inclusion of spectral broadening in\n\
                  the calculation.  Gives an over-estimate of the brightness.\n\
 method           choose method for calculating brightness \n\
@@ -192,8 +195,10 @@ int main(int argc, char **argv)
 
   SDDS_RegisterProgramName(argv[0]);
   argc = scanargs(&s_arg, argc, argv);
-  if (argc<2) 
-    bomb(NULL, USAGE);
+  if (argc<2) {
+    fprintf(stderr, "%s%s", USAGE1, USAGE2);
+    return(1);
+  }
 
   KK=NULL;
   FnOut=Energy=Brightness=LamdarOut=NULL;
