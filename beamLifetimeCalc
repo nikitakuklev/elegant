@@ -4,6 +4,9 @@ exec oagwish "$0" "$@"
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.13  2005/07/25 16:54:55  borland
+# Fixed problems with BunchLength read in from variation file.
+#
 # Revision 1.12  2005/06/10 15:52:34  borland
 # Quantum lifetime now includes the transverse aperture limit.
 #
@@ -166,7 +169,7 @@ set auto_path [linsert $auto_path 0  /usr/local/oag/apps/lib/$env(HOST_ARCH)]
 set auto_path [linsert $auto_path 0 /usr/local/oag/lib_patch/$env(HOST_ARCH)]
 APSDebugPath
 
-set CVSRevisionAuthor "\$Revision: 1.13 $ \$Author: borland $"
+set CVSRevisionAuthor "\$Revision: 1.14 $ \$Author: borland $"
 
 APSApplication . -name beamLifetimeCalc -version $CVSRevisionAuthor -overview \
   "Calculates the gas scattering lifetime due to single Coulomb scattering and
@@ -1158,9 +1161,9 @@ proc APSTouschekLifetime {args} {
       -pipe=out -column=zeta,LnD \
       -fileValues=$tmpFile.1,column=zeta \
       | sddsxref -pipe $tmpFile.1 -transfer=param,* \
-      | sddsprocess -pipe {-define=column,factor,LnD exp sigmaxp / sigmax / sigmay /} \
-      | tee $tmpFile.2 \
-      | sddsinteg -integrate=factor -versus=s -pipe \
+      | sddsprocess -pipe=in $tmpFile.2 {-define=column,factor,LnD exp sigmaxp / sigmax / sigmay /} 
+
+    exec sddsinteg $tmpFile.2 -integrate=factor -versus=s -pipe=out \
       | sddsxref $tmpFile.2 -pipe -transfer=param,* \
       | sddsprocess -pipe \
       -process=s,spread,sSpread -process=factorInteg,last,factorIntegTotal \
