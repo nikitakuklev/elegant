@@ -1210,6 +1210,9 @@ VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, doubl
     double inverseF[2] = {0,0};
     long end, useSRSModel;
 
+    if (voltage==0)
+      return drift_matrix(length, order);
+
     M = tmalloc(sizeof(*M));
     M->order = 1;
     initialize_matrices(M, M->order);
