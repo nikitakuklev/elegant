@@ -145,8 +145,11 @@ long doFrequencyMap(
 				    beamline->matrix, beamline, run,
                                     startingCoord, x, y, turns,
                                     0, endingCoord, NULL, NULL, 1) ||
-	  firstTune[0]>1.0 || firstTune[0]<0 || firstTune[1]>1.0 || firstTune[1]<0) 
+	  firstTune[0]>1.0 || firstTune[0]<0 || firstTune[1]>1.0 || firstTune[1]<0) {
+	if (verbosity) 
+	  fprintf(stdout, "Problem with particle %ld tune determination\n", ip);
         continue;
+      }
       if (!SDDS_SetRowValues(&SDDS_fmap, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ip,
                              IC_X, x, IC_Y, y, 
                              IC_NUX, firstTune[0], 
@@ -161,8 +164,11 @@ long doFrequencyMap(
 				      beamline->matrix, beamline, run,
 				      startingCoord, 0.0, 0.0, turns,
 				      0, endingCoord, NULL, NULL, 1) || 
-	    secondTune[0]>1.0 || secondTune[0]<0 || secondTune[1]>1.0 || secondTune[1]<0) 
+	    secondTune[0]>1.0 || secondTune[0]<0 || secondTune[1]>1.0 || secondTune[1]<0) {
+	  if (verbosity)
+	    fprintf(stdout, "Problem with particle %ld tune determination\n", ip);
 	  continue;
+	}
 	if (!SDDS_SetRowValues(&SDDS_fmap, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ip,
 			       IC_DNUX, fabs(secondTune[0]-firstTune[0]), 
 			       IC_DNUY, fabs(secondTune[1]-firstTune[1]), 
@@ -175,10 +181,10 @@ long doFrequencyMap(
 	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 	}
       }
-      ip ++;
+      ip++;
       if (verbosity) {
         fprintf(stdout, "Done with particle %ld of %ld\n",
-                ip, nx*ny);
+                ix*ny+iy+1, nx*ny);
         fflush(stdout);
       }
     }
