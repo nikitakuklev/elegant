@@ -7,7 +7,7 @@
 # in the file LICENSE that is included with this distribution. 
 #*************************************************************************
 #
-# $Id: Makefile,v 1.1 2004-04-08 16:10:28 soliday Exp $
+# $Id: Makefile,v 1.2 2005-09-21 15:46:09 soliday Exp $
 #
 #
 #
@@ -41,12 +41,18 @@ ifdef AIX
 F77 = g77
 endif
 ifeq ($(HOST_ARCH),solaris)
-F77 = g77
+F77 = f77
 solaris_libs = -lcurses -lrt
+ifdef RATIONAL
+F77 = $(RATIONAL) f77
+endif
 endif
 ifeq ($(HOST_ARCH),solaris-sparc)
-F77 = g77
+F77 = f77
 solaris_libs = -lcurses -lrt
+ifdef RATIONAL
+F77 = $(RATIONAL) f77
+endif
 endif
 usb$(OBJ) : 
 	$(F77) ../usb.f -c -o usb$(OBJ)	
