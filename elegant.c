@@ -31,6 +31,7 @@
 #include "tuneDefs.h"
 
 void traceback_handler(int code);
+void createSemaphoreFile(char *filename);
 
 #define DESCRIBE_INPUT 0
 #define DEFINE_MACRO 1
@@ -429,7 +430,7 @@ char **argv;
         remove(semaphore_file);
       if (semaphoreFile[0]) {
         semaphoreFile[0] = compose_filename(semaphoreFile[0], rootname);
-        fclose(fopen(semaphoreFile[0], "w"));
+	createSemaphoreFile(semaphoreFile[0]);
       }
       if (semaphoreFile[1]) {
         semaphoreFile[1] = compose_filename(semaphoreFile[1], rootname);
@@ -758,9 +759,9 @@ char **argv;
       lorentz_report();
       finish_load_parameters();
       if (semaphore_file)
-        fclose(fopen(semaphore_file, "w"));
+        createSemaphoreFile(semaphore_file);
       if (semaphoreFile[1])
-        fclose(fopen(semaphoreFile[1], "w"));
+        createSemaphoreFile(semaphoreFile[1]);
       free_beamdata(&beam);
       printFarewell(stdout);
       exit(0);
@@ -839,6 +840,9 @@ char **argv;
         break;
       }
       while (vary_beamline(&run_control, &error_control, &run_conditions, beamline)) {
+#if DEBUG
+	fprintf(stdout, "semaphore_file = %s\n", semaphore_file?semaphore_file:NULL);
+#endif  
         fill_double_array(starting_coord, 6, 0.0);
         if (correct.mode!= -1) {
           if (!do_correction(&correct, &run_conditions, beamline, starting_coord, &beam, 
@@ -958,6 +962,9 @@ char **argv;
 	fprintf(stdout, "Finished dynamic aperture search.\n");
       else
 	fprintf(stdout, "Finished frequency map analysis.\n");
+#if DEBUG
+      fprintf(stdout, "semaphore_file = %s\n", semaphore_file?semaphore_file:NULL);
+#endif  
       fflush(stdout);
       /* reassert defaults for namelist run_setup */
       lattice = use_beamline = acceptance = centroid = sigma = final = output = rootname = losses =
@@ -1176,16 +1183,17 @@ char **argv;
     check_heap();
 #endif
   }
-  
-  
+#if DEBUG
+  fprintf(stdout, "semaphore_file = %s\n", semaphore_file?semaphore_file:NULL);
+#endif  
   fprintf(stdout, "End of input data encountered.\n"); fflush(stdout);
   fflush(stdout);
   lorentz_report();
   finish_load_parameters();
   if (semaphore_file)
-    fclose(fopen(semaphore_file, "w"));
+    createSemaphoreFile(semaphore_file);
   if (semaphoreFile[1])
-    fclose(fopen(semaphoreFile[1], "w"));
+    createSemaphoreFile(semaphoreFile[1]);
   free_beamdata(&beam);
 #if defined(VAX_VMS) || defined(UNIX) || defined(_WIN32)
   report_stats(stdout, "statistics: ");
@@ -1711,4 +1719,18 @@ void swapParticles(double *p1, double *p2)
   memcpy(buffer,     p1, sizeof(double)*7);
   memcpy(p1    ,     p2, sizeof(double)*7);
   memcpy(p2    , buffer, sizeof(double)*7);
+}
+
+void createSemaphoreFile(char *filename)
+{
+  FILE *fp;
+  if (filename) {
+    fprintf(stdout, "Creating semaphore file %s\n", filename);
+  } else 
+    return;
+  if (!(fp = fopen(filename, "w"))) {
+    fprintf(stdout, "Problem creating semaphore file %s\n", filename);
+    exit(1);
+  }
+  fclose(fp);
 }
