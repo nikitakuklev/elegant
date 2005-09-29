@@ -7,10 +7,13 @@
 # in the file LICENSE that is included with this distribution. 
 #*************************************************************************
 #
-# $Id: Makefile,v 1.5 2004-04-08 16:09:36 soliday Exp $
+# $Id: Makefile,v 1.6 2005-09-29 20:50:43 ywang25 Exp $
 #
 #  Lowest Level Directroy Makefile
 # $Log: not supported by cvs2svn $
+# Revision 1.5  2004/04/08 16:09:36  soliday
+# Build rules are now compatible with Base 3.14
+#
 # Revision 1.4  2002/08/14 20:23:30  soliday
 # Added Open License
 #
@@ -208,7 +211,75 @@ sddsrandmult$(OBJ): sddsrandmult.h
 sddsrandmult.h: ../sddsrandmult.nl
 	nlpp ../sddsrandmult.nl sddsrandmult.h
 
+elegantLocation = $(wildcard O.linux-x86/elegant elegant)
+PelegantLocation = $(wildcard O.linux-x86/Pelegant Pelegant)
+
+elegant = $(words $(notdir $(elegantLocation)))
+Pelegant = $(words $(notdir $(PelegantLocation)))
+
+
+PelegantNewer=0
+ifeq ($(Pelegant), 1)
+PelegantTime=$(shell stat --format=%Y $(PelegantLocation))
+ifeq ($(elegant), 1)
+elegantTime=$(shell stat --format=%Y $(elegantLocation))
+PelegantNewer=$(shell rpnl "$(elegantTime) $(PelegantTime) < ? 1 : 0 $$")
+else
+PelegantNewer=1
 endif
+endif
+
+ifeq ($(PelegantNewer), 0)
+Pelegant:
+	$(RM) *.o O.linux-x86/*.o
+	$(MV) $(TOP)/src/elegant/Makefile $(TOP)/src/elegant/Makefile.TMP
+	$(CP) $(TOP)/src/elegant/Makefile.Pelegant $(TOP)/src/elegant/Makefile
+	$(MAKE) MPI=1 -f Makefile
+	$(RM) $(TOP)/src/elegant/Makefile
+	$(MV) $(TOP)/src/elegant/Makefile.TMP $(TOP)/src/elegant/Makefile
+
+Selegant:
+	$(MV) $(TOP)/src/elegant/Makefile $(TOP)/src/elegant/Makefile.TMP
+	$(CP) $(TOP)/src/elegant/Makefile.Pelegant $(TOP)/src/elegant/Makefile
+	$(MAKE) NOMPI=1 -f Makefile
+	$(RM) $(TOP)/src/elegant/Makefile
+	$(MV) $(TOP)/src/elegant/Makefile.TMP $(TOP)/src/elegant/Makefile
+
+all buildInstall:
+	$(MV) $(TOP)/src/elegant/Makefile $(TOP)/src/elegant/Makefile.TMP
+	$(CP) $(TOP)/src/elegant/Makefile.Pelegant $(TOP)/src/elegant/Makefile
+	$(MAKE) NOMPI=1 -f Makefile
+	$(RM) $(TOP)/src/elegant/Makefile
+	$(MV) $(TOP)/src/elegant/Makefile.TMP $(TOP)/src/elegant/Makefile
+
+else
+Pelegant:
+	$(MV) $(TOP)/src/elegant/Makefile $(TOP)/src/elegant/Makefile.TMP
+	$(CP) $(TOP)/src/elegant/Makefile.Pelegant $(TOP)/src/elegant/Makefile
+	$(MAKE) MPI=1 -f Makefile
+	$(RM) $(TOP)/src/elegant/Makefile
+	$(MV) $(TOP)/src/elegant/Makefile.TMP $(TOP)/src/elegant/Makefile
+
+Selegant:
+	$(RM) *.o O.linux-x86/*.o
+	$(MV) $(TOP)/src/elegant/Makefile $(TOP)/src/elegant/Makefile.TMP
+	$(CP) $(TOP)/src/elegant/Makefile.Pelegant $(TOP)/src/elegant/Makefile
+	$(MAKE) NOMPI=1 -f Makefile
+	$(RM) $(TOP)/src/elegant/Makefile
+	$(MV) $(TOP)/src/elegant/Makefile.TMP $(TOP)/src/elegant/Makefile
+
+all buildInstall:
+	$(RM) *.o O.linux-x86/*.o
+	$(MV) $(TOP)/src/elegant/Makefile $(TOP)/src/elegant/Makefile.TMP
+	$(CP) $(TOP)/src/elegant/Makefile.Pelegant $(TOP)/src/elegant/Makefile
+	$(MAKE) NOMPI=1 -f Makefile
+	$(RM) $(TOP)/src/elegant/Makefile
+	$(MV) $(TOP)/src/elegant/Makefile.TMP $(TOP)/src/elegant/Makefile
+
+endif
+
+endif
+
 
 clean::
 	$(RM) sddsrandmult.h fitTraces.h vary.h twiss.h tune.h trace.h subprocess.h steer_elem.h sliceAnalysis.h sdds_beam.h save_lattice.h sasefel.h run_rpnexpr.h response.h optimize.h optim_covariable.h matrix_output.h load_parameters.h link_elements.h frequencyMap.h floor.h error.h elegant.h transmuteElements.h divideElements.h correct.h steer_elem.h closed_orbit.h chrom.h bunched_beam.h aperture_search.h analyze.h amplif.h alter.h

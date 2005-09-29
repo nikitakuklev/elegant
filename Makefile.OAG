@@ -1,4 +1,6 @@
 CMPLR = ANSI
+# turn off the -g option
+OP_SYS_CFLAGS =
 
 #RATIONAL = purify
 #RATIONAL = quantify
@@ -11,6 +13,33 @@ CXX = $(RATIONAL) -best-effort $($(CPLUSPLUS)_$(CXXCMPLR))
 else 
 CC := $(RATIONAL) -best-effort $(CC)
 CCC := $(RATIONAL) -best-effort $(CCC)
+endif
+endif
+
+ifeq ($(MPI),1)
+   USER_MPI_FLAGS = -DUSE_MPI=1 \      # 1 for parallel elegant, 0 for sequential elegant 
+                    # -mpilog \        # visualize the performance of the parallel elegant 
+	            # -DMPI_DEBUG \    # print debugging information for MPI 
+                    # -DCHECKFLAGS=1   # optimize by checking balance only once
+  CC = /share/mpich/ch_p4/bin/mpicc   $(USER_MPI_FLAGS)   
+  CCC = /share/mpich/ch_p4/bin/mpicxx $(USER_MPI_FLAGS)
+  PRODOAG = Pelegant
+
+endif
+
+ifeq ($(NOMPI),1)
+  PRODOAG = elegant
+endif
+
+
+ifneq ($(MPI),1)
+ifneq ($(NOMPI),1)
+PRODOAG = sddsemitmeas sddsemitproc madto \
+          sddssasefel sddsTouschekInteg ibsEmittance \
+          recurseSetup haissinski sddsmatchtwiss \
+          sddsanalyzebeam sddsrandmult sddsresdiag
+
+SCRIPTS = elegantRingAnalysis beamLifetimeCalc fin2param elegant2shower shower2elegant longitCmd longitCalcs
 endif
 endif
 
@@ -29,12 +58,6 @@ ifdef VALGRIND
 HOST_OPT=NO
 endif
 
-PRODOAG = elegant sddsemitmeas sddsemitproc madto \
-          sddssasefel sddsTouschekInteg ibsEmittance \
-          recurseSetup haissinski sddsmatchtwiss \
-          sddsanalyzebeam sddsrandmult sddsresdiag
-
-SCRIPTS = elegantRingAnalysis beamLifetimeCalc fin2param elegant2shower shower2elegant longitCmd longitCalcs
 
 ifeq ($(EPICS_VERSION).$(EPICS_REVISION),3.13)
 PROD = $(PRODOAG)
@@ -106,6 +129,8 @@ elegant_SRCS = 	alpha_data.c alpha_matrix.c amplif.c analyze.c aperture_search.c
 		sasefel.c alter.c sliceAnalysis.c divideElements.c transmuteElements.c \
 		frfmode.c ftrfmode.c tfeedback.c engeCoef.c lsc.c frequencyMap.c \
 		GWigSymplecticPass.c gwig.c noiseGroup.c
+
+Pelegant_SRCS = $(elegant_SRCS)
 
 sddsemitproc_SRCS = sddsemitproc.c
 

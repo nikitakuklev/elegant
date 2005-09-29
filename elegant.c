@@ -40,9 +40,15 @@ char *option[N_OPTIONS] = {
     "describeinput",
     "macro",
         };
+#if USE_MPI
+char *USAGE="mpirun -np <number of processes> Pelegant <inputfile> [-macro=<tag>=<value>,[...]]\n\nProgram by Yusong Wang, Michael Borland. (This is version 15.4.1, "__DATE__".)";
+
+char *GREETING="This is parallel elegant, by Yusong Wang, Michael Borland. (This is version 15.4.1, "__DATE__".)";
+#else
 char *USAGE="elegant <inputfile> [-macro=<tag>=<value>,[...]]\n\nProgram by Michael Borland. (This is version 15.4.1, "__DATE__".)";
 
 char *GREETING="This is elegant, by Michael Borland. (This is version 15.4.1, "__DATE__".)";
+#endif
 
 #define RUN_SETUP        0
 #define RUN_CONTROL      1
@@ -198,6 +204,22 @@ char **argv;
   long namelists_read = 0, failed, firstPass;
   char *semaphoreFile[2];
   semaphoreFile[0] = semaphoreFile[1] = NULL;
+ 
+#if USE_MPI
+  int n_processors = 1, myid;
+
+  MPI_Init(&argc,&argv);
+  /* get the total number of processors */
+  MPI_Comm_size(MPI_COMM_WORLD, &n_processors);
+  MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+  if (myid!=0) {
+    /* redirect output, only the master processor will write on screen */
+    freopen("/dev/null","w",stdout); 
+  }
+  if (sizeof(int)<4) { /* The size of integer is assumed to be 4 bytes to handle a large number of particles */
+    printf("Warning!!! The INT_MAX could be too small to record the number of particles.\n"); 
+  }
+#endif
 
 #if defined(UNIX) || defined(_WIN32)
   signal(SIGINT, traceback_handler);
@@ -401,7 +423,9 @@ char **argv;
         run_conditions.wrap_around = 1;
       run_conditions.tracking_updates = tracking_updates;
       run_conditions.always_change_p0 = always_change_p0;
-      
+#if USE_MPI
+      run_conditions.n_processors = n_processors;
+#endif
       /* extract the root filename from the input filename */
       strcpy(s, inputfile);
       if (rootname==NULL) {
@@ -1201,6 +1225,9 @@ char **argv;
 #endif
   log_exit("main");
   printFarewell(stdout);
+#if USE_MPI
+  MPI_Finalize();
+#endif
   return(0);
 }
 

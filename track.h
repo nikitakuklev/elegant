@@ -16,6 +16,16 @@
  *
  * Michael Borland, 1987
  */
+
+/* Define USE_MPI to be 1 in the Makefile for compiling parallel elegant. */
+#ifndef USE_MPI
+#define USE_MPI 0
+#endif
+
+#if USE_MPI 
+#include "mpi.h" /* Defines the interface to MPI allowing the use of all MPI functions. */
+#endif 
+
 #include <stdio.h>
 #include "namelist.h"
 #include "SDDS.h"
@@ -25,6 +35,8 @@
 #include <float.h>
 #define isnan(x) _isnan(x)
 #endif
+
+#define COORDINATES_PER_PARTICLE 7
 
 #define malloc_verify(n) 1
 
@@ -223,6 +235,9 @@ typedef struct {
     long always_change_p0;
     char *runfile, *lattice, *acceptance, *centroid, *sigma, 
          *final, *output, *rootname, *losses;
+#if USE_MPI
+    int n_processors;
+#endif
     } RUN;
 
 /* structure containing information for variation of parameters */
@@ -450,6 +465,9 @@ typedef struct {
   SLICE_OUTPUT *sliceAnalysis;
   double zStart, zEnd;
   char rootname[CONTEXT_BUFSIZE+1];
+#if USE_MPI
+  int myid;
+#endif
 } TRACKING_CONTEXT;
 
 
@@ -2946,4 +2964,5 @@ double GetNoiseGroupValue(long groupId);
 void **czarray_2d(long size, long n1, long n2);
 int free_czarray_2d(void **array, long n1, long n2);
 void swapParticles(double *p1, double *p2);
+
 

@@ -17,6 +17,8 @@
 #include "track.h"
 #include "SDDS.h"
 
+static int myid = -1;
+
 void SDDS_ElegantOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row,
                              char *contents, char *command_file, char *lattice_file, SDDS_DEFINITION *parameter_definition,
                              long n_parameters, SDDS_DEFINITION *column_definition, long n_columns,
@@ -27,6 +29,13 @@ void SDDS_ElegantOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, 
 
     log_entry("SDDS_ElegantOutputSetup");
     last_index = -1;
+
+#if USE_MPI  
+    if (myid<0) 
+      MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+    if (myid!=0)
+      return;
+#endif
 
     if (flags&SDDS_EOS_NEWFILE) {
         if (SDDS_IsActive(SDDS_table)==1) {
@@ -156,6 +165,13 @@ void SDDS_BeamLossSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long 
                           char *command_file, char *lattice_file, char *caller)
 {
     log_entry("SDDS_BeamLossSetup");
+#if USE_MPI  
+    if (myid<0)
+      MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+    if (myid!=0)
+      return;
+#endif
+
     SDDS_ElegantOutputSetup(SDDS_table, filename, mode, lines_per_row, contents, command_file, lattice_file,
                             standard_parameter, STANDARD_PARAMETERS, beam_loss_column, BEAM_LOSS_COLUMNS,
                             caller, SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
@@ -179,6 +195,13 @@ void SDDS_CentroidOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode,
                           char *command_file, char *lattice_file, char *caller)
 {
     log_entry("SDDS_CentroidOutputSetup");
+#if USE_MPI  
+    if (myid<0)   
+      MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+    if (myid!=0)
+      return;
+#endif
+
     SDDS_ElegantOutputSetup(SDDS_table, filename, mode, lines_per_row, contents, command_file, lattice_file,
                             standard_parameter, STANDARD_PARAMETERS, element_column, ELEMENT_COLUMNS,
                             caller, SDDS_EOS_NEWFILE);
@@ -248,6 +271,13 @@ void SDDS_SigmaOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, lo
                            char *command_file, char *lattice_file, char *caller)
 {
     log_entry("SDDS_SigmaOutputSetup");
+#if USE_MPI  
+    if (myid<0)
+      MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+    if (myid!=0)
+      return;
+#endif
+
     SDDS_ElegantOutputSetup(SDDS_table, filename, mode, lines_per_row, "sigma matrix", command_file, lattice_file, 
                             standard_parameter, STANDARD_PARAMETERS, element_column, ELEMENT_COLUMNS,
                             caller, SDDS_EOS_NEWFILE);
@@ -304,6 +334,13 @@ void SDDS_WatchPointSetup(WATCH *watch, long mode, long lines_per_row,
   char *filename;
   long watch_mode, columns;
   
+#if USE_MPI  
+    if (myid<0)
+      MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+    if (myid!=0)
+      return;
+#endif
+
   SDDS_table = &watch->SDDS_table;
   filename = watch->filename;
   watch_mode = watch->mode_code;
@@ -418,6 +455,13 @@ void SDDS_HistogramSetup(HISTOGRAM *histogram, long mode, long lines_per_row,
   char *filename;
   long column, columns;
 
+#if USE_MPI  
+    if (myid<0) 
+      MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+    if (myid!=0)
+      return;
+#endif
+
   SDDS_table = &histogram->SDDS_table;
   filename = histogram->filename;
   SDDS_ElegantOutputSetup(SDDS_table, filename, mode, lines_per_row, "histograms of phase-space coordinates",
@@ -515,6 +559,13 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
   long i, row;
   double p, t0, t;
 
+#if USE_MPI  
+    if (myid<0)
+      MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+    if (myid!=0)
+      return;
+#endif
+
   log_entry("dump_watch_particles");
   if (!watch->initialized)
     bomb("uninitialized watch-point (coordinate mode) encountered (dump_watch_particles)", NULL);
@@ -601,6 +652,13 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
     long sample, i, j;
     double tc, tc0, p_sum, gamma_sum, sum, p=0.0;
     
+#if USE_MPI  
+    if (myid<0)
+      MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+    if (myid!=0)
+      return;
+#endif
+
     log_entry("dump_watch_parameters");
 
     if (!watch->initialized)
@@ -749,6 +807,13 @@ void dump_watch_FFT(WATCH *watch, long step, long pass, long n_passes, double **
     long sample_index, i, samples;
     double sum_x, sum_y, sum_dp, *sample[4];
 
+#if USE_MPI  
+    if (myid<0)
+      MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+    if (myid!=0)
+      return;
+#endif
+
     log_entry("dump_watch_FFT");
 
     samples = n_passes/watch->interval;
@@ -829,6 +894,13 @@ void do_watch_FFT(double **data, long n_data, long slot, long window_code)
     double *real_imag, r1, r2;
     long i;
 
+#if USE_MPI  
+    if (myid<0)
+      MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+    if (myid!=0)
+      return;
+#endif
+
     log_entry("do_watch_FFT");
     if (!data[slot])
         bomb("data pointer for specified slot is NULL (do_watch_FFT)", NULL);
@@ -890,6 +962,13 @@ void dump_particle_histogram(HISTOGRAM *histogram, long step, long pass, double 
   static double *frequency=NULL, *coordinate=NULL, *histData=NULL;
   double center, range, lower, upper;
   
+#if USE_MPI  
+    if (myid<0)
+      MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+    if (myid!=0)
+      return;
+#endif
+
   log_entry("dump_particle_histogram");
   if (!histogram->initialized)
     bomb("uninitialized histogram encountered (dump_particle_histogram)", NULL);
@@ -989,6 +1068,13 @@ void dump_phase_space(SDDS_TABLE *SDDS_table, double **particle, long particles,
     long i;
     double p;
 
+#if USE_MPI  
+    if (myid<0) 
+      MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+    if (myid!=0)
+      return;
+#endif
+
     log_entry("dump_phase_space");
     if (!particle)
         bomb("NULL coordinate pointer passed to dump_phase_space", NULL);
@@ -1037,6 +1123,13 @@ void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long *lostOn
 {
     long i;
 
+#if USE_MPI  
+    if (myid<0)
+      MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+    if (myid!=0)
+      return;
+#endif
+
     log_entry("dump_lost_particles");
     if (!particle)
         bomb("NULL coordinate pointer passed to dump_lost_particles", NULL);
@@ -1082,6 +1175,13 @@ void dump_centroid(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline,
     double *cent;
     char *name, *type_name;
     long s_index, Cx_index=0, occurence;
+
+#if USE_MPI  
+    if (myid<0)
+      MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+    if (myid!=0)
+      return;
+#endif
 
     log_entry("dump_centroid");
 
@@ -1180,6 +1280,13 @@ void dump_sigma(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, lo
   char *name, *type_name;
   long s_index=0, ma1_index=0, min1_index=0, max1_index=0, Sx_index=0, occurence, ex_index=0;
   long sNIndex[6]={0,0,0,0,0,0};
+
+#if USE_MPI  
+    if (myid<0)
+      MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+    if (myid!=0)
+      return;
+#endif
 
   if (!SDDS_table)
     bomb("SDDS_TABLE pointer is NULL (dump_sigma)", NULL);
