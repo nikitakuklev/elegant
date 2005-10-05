@@ -627,7 +627,7 @@ long get_sdds_particles(double ***particle,
       if ((np_new=np+rows)>np_max) {
         /* must reallocate to get more space */
         np_max = np + 2*rows;
-        data = trealloc(data, np_max*sizeof(*data));
+	data = (double**)resize_czarray_2d((void**)data, sizeof(double), np_max, 7);
       }
       if (!(new_data=SDDS_GetCastMatrixOfRows(&SDDS_input, &i, SDDS_DOUBLE))) {
         sprintf(s, "Problem getting matrix of rows for file %s", inputFile[inputFileIndex]);
@@ -639,9 +639,13 @@ long get_sdds_particles(double ***particle,
         SDDS_SetError(s);
         SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
       }
-      for (i=np; i<np_new; i++)
-        /* will want to use this storage for 6D+1 phase space latter */
-        data[i] = trealloc(new_data[i-np], sizeof(**new_data)*7);
+      for (i=np; i<np_new; i++) {
+	memcpy(data[i], new_data[i], sizeof(double)*6);
+	free(new_data[i]);
+	data[i][6] = 0;
+      }
+      free(new_data);
+      new_data = NULL;
       if ((indexID=SDDS_GetColumnIndex(&SDDS_input, "particleID"))>=0) {
         double *index;
         if (!(index=SDDS_GetColumnInDoubles(&SDDS_input, "particleID"))) {
@@ -656,7 +660,6 @@ long get_sdds_particles(double ***particle,
       else if (input_type_code!=SPIFFE_BEAM)
         for (i=np; i<np_new; i++)
           data[i][6] = particleID++;
-      free(new_data);
       np = np_new;
       
       if (one_dump && !dump_rejected)
