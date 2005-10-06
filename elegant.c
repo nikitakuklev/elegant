@@ -1739,8 +1739,8 @@ void **resize_czarray_2d(void **data, long size, long n1, long n2)
 
   if (!data)
     return czarray_2d(size, n1, n2);
-  ptr0 = (char**)trealloc(data, sizeof(*ptr0)*n1);
-  buffer =  (char*)trealloc(*data, sizeof(*buffer)*size*n1*n2);
+  buffer =  (char*)trealloc(*data, (unsigned)(sizeof(char)*size*n1*n2));
+  ptr0 = (char**)trealloc(data, (unsigned)(sizeof(char*)*n1));
   for (i=0; i<n1; i++)
     ptr0[i] = buffer+i*size*n2;
   return((void**)ptr0);

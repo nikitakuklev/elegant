@@ -626,7 +626,7 @@ long get_sdds_particles(double ***particle,
       }
       if ((np_new=np+rows)>np_max) {
         /* must reallocate to get more space */
-        np_max = np + 2*rows;
+        np_max = np + rows;
 	data = (double**)resize_czarray_2d((void**)data, sizeof(double), np_max, 7);
       }
       if (!(new_data=SDDS_GetCastMatrixOfRows(&SDDS_input, &i, SDDS_DOUBLE))) {
@@ -640,8 +640,8 @@ long get_sdds_particles(double ***particle,
         SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
       }
       for (i=np; i<np_new; i++) {
-	memcpy(data[i], new_data[i], sizeof(double)*6);
-	free(new_data[i]);
+	memcpy(data[i], new_data[i-np], sizeof(double)*6);
+	free(new_data[i-np]);
 	data[i][6] = 0;
       }
       free(new_data);
