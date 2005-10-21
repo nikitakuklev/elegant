@@ -202,7 +202,8 @@ typedef struct line_list {
     double dnuy_dA[N_TSWA][N_TSWA];    /* tune shift with amplitude */
     double nuxTswaExtrema[2];  /* min, max tunes from TSWA calculations */ 
     double nuyTswaExtrema[2];  /* min, max tunes from TSWA calculations */ 
-    double acceptance[4];    /* in pi-meter-radians for x and y, plus z locations of limits (4 doubles in all) */
+    double acceptance[4];      /* in pi-meter-radians for x and y, plus z locations of limits (4 doubles in all) */
+    double couplingFactor[3];  /* kappa, delta, r from pg 187 of HAPE */
     RADIATION_INTEGRALS radIntegrals;
     char *acc_limit_name[2];  /* names of elements at which acceptance is limited, in x and y */
     TRAJECTORY *closed_orbit;  /* closed orbit, if previously calculated, starting at recirc element */
@@ -2468,7 +2469,8 @@ VMATRIX *compute_periodic_twiss(double *betax, double *alphax, double *etax, dou
     ELEMENT_LIST *elem, double *clorb, RUN *run, unsigned long *unstable, double *eta2, double *eta3);
 void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
                                 RADIATION_INTEGRALS *radIntegrals,
-                                ELEMENT_LIST *elem, RUN *run, double *traj);
+                                ELEMENT_LIST *elem, RUN *run, double *traj,
+				double *couplingFactor);
 long get_twiss_mode(long *mode, double *x_twiss, double *y_twiss);
 void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_coord, long matched, 
                               long radiation_integrals,

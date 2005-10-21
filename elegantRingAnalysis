@@ -4,6 +4,9 @@ exec oagwish "$0" "$@"
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.53  2005/08/24 13:44:43  borland
+# Now show the time for all status messages.
+#
 # Revision 1.52  2005/07/25 21:00:56  borland
 # Corrected to "space charge tune spread" to "space charge tune shift".
 #
@@ -59,7 +62,7 @@ proc SaveConfiguration {} {
     global elegantSaveVarList
     eval global $elegantSaveVarList
     set configFile [APSFileSelectDialog .saveDialog -listDir $mainDirectory \
-                     -checkValidity 0]
+                     -checkValidity 0 -pattern *.config]
     if ![string length $configFile] return
     if [file exists $configFile] {
         if {[APSMultipleChoice [APSUniqueName .] \
@@ -83,7 +86,7 @@ proc ReadConfiguration {} {
     global mainDirectory elegantSaveVarList
     eval global $elegantSaveVarList
     set configFile [APSFileSelectDialog .saveDialog -listDir $mainDirectory \
-                     -checkValidity 1]
+                     -checkValidity 1 -pattern *.config]
     if ![string length $configFile] return
     if ![file exists $configFile] return
     source $configFile
@@ -168,7 +171,7 @@ proc FillMainFrame {widget args} {
 
     foreach item {1 2 3 4} {
         APSLabeledEntry .le4$item -parent $widget -label "Parameter file (optional): " \
-          -width 60 -textVariable mainParameterFile($item) -fileSelectButton 1 -buttonsOnLeft 1 -fileSelectPattern *.param \
+          -width 60 -textVariable mainParameterFile($item) -fileSelectButton 1 -buttonsOnLeft 1 -fileSelectPattern *.param* \
           -contextHelp \
           "Enter the name of the parameter file that contains element parameters.  It will be loaded over the lattice."
     }

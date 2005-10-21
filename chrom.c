@@ -108,7 +108,8 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
         beamline->twiss0->etapy  = etap_y;
         
         propagate_twiss_parameters(beamline->twiss0, beamline->tune, beamline->waists,
-                                   NULL, beamline->elem_twiss, run, NULL);
+                                   NULL, beamline->elem_twiss, run, NULL,
+				   beamline->couplingFactor);
       }
 
       if (!(M=beamline->matrix) || !M->C || !M->R || !M->T)
@@ -305,8 +306,9 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
           free(beamline->matrix);
         }
         beamline->matrix = compute_periodic_twiss(&beta_x, &alpha_x, &eta_x, &etap_x, beamline->tune,
-                                                      &beta_y, &alpha_y, &eta_y, &etap_y, beamline->tune+1, 
-                                                      beamline->elem_twiss, clorb, run, &unstable, NULL, NULL);
+						  &beta_y, &alpha_y, &eta_y, &etap_y, beamline->tune+1, 
+						  beamline->elem_twiss, clorb, run, &unstable, NULL, NULL);
+
         beamline->twiss0->betax  = beta_x;
         beamline->twiss0->alphax = alpha_x;
         beamline->twiss0->phix   = 0;
@@ -319,7 +321,8 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
         beamline->twiss0->etapy  = etap_y;
         
         propagate_twiss_parameters(beamline->twiss0, beamline->tune, beamline->waists,
-                                   NULL, beamline->elem_twiss, run, clorb);
+                                   NULL, beamline->elem_twiss, run, clorb, 
+				   beamline->couplingFactor);
         }
     else if (beamline->matrix->order<2) {
       if (beamline->matrix) {
@@ -473,7 +476,8 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
     
 
     propagate_twiss_parameters(beamline->twiss0, beamline->tune, 
-                               beamline->waists, NULL, beamline->elem_twiss, run, clorb);
+                               beamline->waists, NULL, beamline->elem_twiss, run, clorb,
+			       beamline->couplingFactor);
     log_exit("do_chromaticity_correction");
     return 1;
     }

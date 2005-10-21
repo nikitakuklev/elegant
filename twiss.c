@@ -250,11 +250,12 @@ VMATRIX *compute_periodic_twiss(
 
 void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
                                 RADIATION_INTEGRALS *radIntegrals, 
-                                ELEMENT_LIST *elem,  RUN *run, double *traj
+                                ELEMENT_LIST *elem,  RUN *run, double *traj,
+				double *couplingFactor
 				)
 {
   double beta[2], alpha[2], phi[2], eta[2], etap[2], gamma[2], refAlpha[2];
-  double *func, path[6], path0[6], detR[2];
+  double *func, path[6], path0[6], detR[2], kappa[2], length, sTotal;
   double **R=NULL, C[2], S[2], Cp[2], Sp[2], D[2], Dp[2], sin_dphi, cos_dphi, dphi;
   long n_mat_computed, i, j, plane, otherPlane, hasMatrix;
   VMATRIX *M1, *M2;
@@ -302,7 +303,9 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
       radIntegrals->I[i] = 0;
   }
   waists[0] = waists[1] = 0;
-  
+
+  elem = elemOrig;
+  sTotal = 0;
   while (elem) {
     for (plane=0; plane<2; plane++) 
       gamma[plane] = (1+sqr(alpha[plane]))/beta[plane];
@@ -498,11 +501,59 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
     if (elem->type==T_MARK && ((MARK*)elem->p_elem)->fitpoint)
       store_fitpoint_twiss_parameters((MARK*)elem->p_elem, elem->name, elem->occurence,
                                       elem->twiss);
+
+    sTotal = elem->end_pos;
     elem = elem->succ;
   }
   
   tune[0] = phi[0]/PIx2;
   tune[1] = phi[1]/PIx2;
+
+  if (couplingFactor) {
+    double ks, phase, y;
+    long q;
+    /* See page 187 of Handbook of Accelerator Physics and Engineering */
+    kappa[0] = kappa[1] = 0;  /* coupling factor */
+    elem = elemOrig;
+    q = tune[0] - tune[1] + 0.5;
+    couplingFactor[1] = (tune[0] - tune[1]) - q;
+    while (elem) {
+      if ((elem->type==T_QUAD || elem->type==T_KQUAD || elem->type==T_SEXT ||
+	   elem->type==T_KSEXT) &&
+	  elem->pred &&
+	  (length = *((double*)elem->p_elem))) {
+	beta[0] = (elem->twiss->betax + elem->pred->twiss->betax)/2;
+	beta[1] = (elem->twiss->betay + elem->pred->twiss->betay)/2;
+	phi[0]  = (elem->twiss->phix + elem->pred->twiss->phix)/2;
+	phi[1]  = (elem->twiss->phiy + elem->pred->twiss->phiy)/2;
+	y = (elem->twiss->Cy + elem->pred->twiss->Cy)/2;
+	ks = 0;
+	switch (elem->type) {
+	case T_QUAD:
+	  ks = ((QUAD*)(elem->p_elem))->k1 * sin(2*((QUAD*)(elem->p_elem))->tilt);
+	  break;
+	case T_KQUAD:
+	  ks = ((KQUAD*)(elem->p_elem))->k1 * sin(2*((KQUAD*)(elem->p_elem))->tilt);
+	  break;
+	case T_SEXT:
+	  ks = ((SEXT*)(elem->p_elem))->k2 * (y - ((SEXT*)(elem->p_elem))->dy);
+	  break;
+	case T_KSEXT:
+	  ks = ((KSEXT*)(elem->p_elem))->k2 * (y - ((SEXT*)(elem->p_elem))->dy);
+	  break;
+	}
+	phase = phi[0] - phi[1] 
+	  + (tune[0] - tune[1] - q)*2*PI*(elem->pred->end_pos +elem->end_pos)/sTotal;
+	kappa[0] += ks*sqrt(beta[0]*beta[1])*cos(phase)*length/PIx2;
+	kappa[1] += ks*sqrt(beta[0]*beta[1])*sin(phase)*length/PIx2;
+      }
+      elem = elem->succ;
+    }
+    if ((couplingFactor[0] = sqrt(sqr(kappa[0])+sqr(kappa[1]))))
+      couplingFactor[2] = sqr(couplingFactor[0])/(sqr(couplingFactor[0]) + sqr(couplingFactor[1]));
+    else
+      couplingFactor[2] = 0;
+  }
 
   m_free(&dispNew);
   m_free(&dispM);
@@ -618,8 +669,11 @@ static SDDS_DEFINITION column_definition[N_COLUMNS_WRI] = {
 #define IP_NUXTSWAMAX 45
 #define IP_NUYTSWAMIN 46
 #define IP_NUYTSWAMAX 47
-#define IP_ALPHAC2 48
-#define IP_ALPHAC  49
+#define IP_COUPLINGINTEGRAL 48
+#define IP_COUPLINGOFFSET 49
+#define IP_EMITRATIO 50
+#define IP_ALPHAC2 51
+#define IP_ALPHAC  52
 /* IP_ALPHAC must be the last item before the radiation-integral-related
  * items!
  */
@@ -688,6 +742,9 @@ static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
 {"nuxTswaUpper", "&parameter name=nuxTswaUpper, type=double, description=\"Maximum horizontal tune from tune-shift-with-amplitude calculations\", &end"},
 {"nuyTswaLower", "&parameter name=nuyTswaLower, type=double, description=\"Minimum vertical tune from tune-shift-with-amplitude calculations\", &end"},
 {"nuyTswaUpper", "&parameter name=nuyTswaUpper, type=double, description=\"Maximum vertical tune from tune-shift-with-amplitude calculations\", &end"},
+{"couplingIntegral", "&parameter name=couplingIntegral, type=double, description=\"Coupling integral for difference resonance\" &end"},
+{"couplingDelta", "&parameter name=couplingDelta, type=double, description=\"Distance from difference resonance\" &end"},
+{"emittanceRatio", "&parameter name=emittanceRatio, type=double, description=\"Emittance ratio from coupling integral\" &end"},
 {"alphac2", "&parameter name=alphac2, symbol=\"$ga$r$bc2$n\", type=double, description=\"2nd-order momentum compaction factor\" &end"},
 {"alphac", "&parameter name=alphac, symbol=\"$ga$r$bc$n\", type=double, description=\"Momentum compaction factor\" &end"},
 {"I1", "&parameter name=I1, type=double, description=\"Radiation integral 1\", units=m &end"} ,
@@ -763,6 +820,9 @@ void dump_twiss_parameters(
                           IP_NUYUPPER, beamline->tuneChromUpper[1],
                           IP_NUXLOWER, beamline->tuneChromLower[0],
                           IP_NUYLOWER, beamline->tuneChromLower[1],
+                          IP_COUPLINGINTEGRAL, beamline->couplingFactor[0],
+			  IP_COUPLINGOFFSET, beamline->couplingFactor[1],
+	                  IP_EMITRATIO, beamline->couplingFactor[2],
                           IP_ALPHAC, alphac[0], IP_ALPHAC2, alphac[1], 
                           IP_DBETAXDP, dbeta[0], IP_DBETAYDP, dbeta[1],
                           IP_BETAXMIN, twiss_min.betax, IP_BETAXAVE, twiss_ave.betax, IP_BETAXMAX, twiss_max.betax, 
@@ -1278,7 +1338,8 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
 
   propagate_twiss_parameters(beamline->twiss0, beamline->tune, beamline->waists,
                              (radiation_integrals?&(beamline->radIntegrals):NULL),
-                             beamline->elem_twiss, run, starting_coord);
+                             beamline->elem_twiss, run, starting_coord,
+			     beamline->couplingFactor);
   
   if (radiation_integrals)
     computeRadiationIntegrals(&(beamline->radIntegrals), run->p_central,
