@@ -110,7 +110,11 @@ void setup_tune_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline,
         fflush(stdout);
     }
     
-    if (strength_log) {
+#if USE_MPI
+    if (!writePermitted)
+       strength_log = NULL;
+#endif
+        if (strength_log) {
         strength_log = compose_filename(strength_log, run->rootname);
         fp_sl = fopen_e(strength_log, "w", 0);
         fprintf(fp_sl, "SDDS1\n&column name=Step, type=long, description=\"Simulation step\" &end\n");

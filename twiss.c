@@ -1016,6 +1016,11 @@ void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
   set_print_namelist_flags(0);
   process_namelist(&twiss_output, nltext);
   print_namelist(stdout, &twiss_output);
+  
+#if USE_MPI
+    if (!writePermitted)
+      filename = NULL;
+#endif 
 
   if (filename)
     filename = compose_filename(filename, run->rootname);
