@@ -20,7 +20,7 @@ OP_SYS_CFLAGS+= -DSORT                 # sort for comparing the results of two e
                                        # -g should be turned off for comparison
 ifeq ($(MPI),1)
   USER_MPI_FLAGS = -DUSE_MPI=1         # 1 for parallel elegant, 0 for sequential elegant  
-  USER_MPI_FLAGS+= -mpilog             # visualize the performance of the parallel elegant 
+  #USER_MPI_FLAGS+= -mpilog             # visualize the performance of the parallel elegant 
   #USER_MPI_FLAGS+=  -mpianim -L/usr/X11R6/lib -lX11   # animate MPI program in real-time
   #USER_MPI_FLAGS+= -DMPI_DEBUG         # print debugging information for MPI 
   #USER_MPI_FLAGS+= -DCHECKFLAGS=1      # optimize by checking balance only once
