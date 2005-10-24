@@ -172,7 +172,10 @@ void printFarewell(FILE *fp);
 #define DEBUG 0
 
 static VARY run_control;
-
+ 
+long writePermitted = 1;
+long isMaster = 1;
+  
 int main(argc, argv)
 int argc;
 char **argv;
@@ -208,13 +211,29 @@ char **argv;
 #if USE_MPI
   int n_processors = 1, myid;
 
+#ifdef MPI_DEBUG
+  FILE *fpError; 
+  char fileName[15];
+  char processor_name[MPI_MAX_PROCESSOR_NAME];
+  int namelen;  
+#endif 
+
   MPI_Init(&argc,&argv);
   /* get the total number of processors */
   MPI_Comm_size(MPI_COMM_WORLD, &n_processors);
   MPI_Comm_rank(MPI_COMM_WORLD, &myid);
   if (myid!=0) {
-    /* redirect output, only the master processor will write on screen */
+#ifdef MPI_DEBUG
+    sprintf(fileName, "error.%d", myid);
+    fpError = fopen(fileName, "w");
+    freopen(fileName, "w", stdout);
+    MPI_Get_processor_name(processor_name,&namelen);
+    fprintf(stdout, "Process %d on %s\n", myid, processor_name);
+#else
+    /* redirect output, only the master processor will write on screen or files */
     freopen("/dev/null","w",stdout); 
+#endif    
+    writePermitted = isMaster = 0;
   }
   if (sizeof(int)<4) { /* The size of integer is assumed to be 4 bytes to handle a large number of particles */
     printf("Warning!!! The INT_MAX could be too small to record the number of particles.\n"); 
@@ -443,15 +462,25 @@ char **argv;
       run_conditions.acceptance = compose_filename(acceptance, rootname);
       run_conditions.centroid   = compose_filename(centroid, rootname);
       run_conditions.sigma      = compose_filename(sigma, rootname);
-      run_conditions.final      = compose_filename(final, rootname);
-      run_conditions.output     = compose_filename(output, rootname);
-      run_conditions.losses     = compose_filename(losses, rootname);
-      magnets                   = compose_filename(magnets, rootname);
-      semaphore_file            = compose_filename(semaphore_file, rootname);
-      parameters                = compose_filename(parameters, rootname);
+
+      /* Only the master processor will be allowed to write to output files */
+      if (writePermitted) {
+	run_conditions.final      = compose_filename(final, rootname);
+	run_conditions.output     = compose_filename(output, rootname);
+	run_conditions.losses     = compose_filename(losses, rootname);
+	magnets                   = compose_filename(magnets, rootname);
+	semaphore_file            = compose_filename(semaphore_file, rootname);
+	parameters                = compose_filename(parameters, rootname);
+      }
+      else {
+        run_conditions.final = run_conditions.output = run_conditions.losses =
+	magnets = semaphore_file = parameters = NULL;
+      }
+        
       
       if (semaphore_file && fexists(semaphore_file))
         remove(semaphore_file);
+		
       if (semaphoreFile[0]) {
         semaphoreFile[0] = compose_filename(semaphoreFile[0], rootname);
 	createSemaphoreFile(semaphoreFile[0]);
@@ -1705,10 +1734,12 @@ void do_semaphore_setup(char **semaphoreFile,
   print_namelist(stdout, &semaphores);
  
   semaphoreFile[0] = semaphoreFile[1] = NULL;
-  if (started)
-    SDDS_CopyString(&semaphoreFile[0], started);
-  if (done)
-    SDDS_CopyString(&semaphoreFile[1], done);
+  if (writePermitted) {
+    if (started)
+      SDDS_CopyString(&semaphoreFile[0], started);
+    if (done)
+      SDDS_CopyString(&semaphoreFile[1], done);
+  }
 }
 
 void getRunControlContext (VARY *context)

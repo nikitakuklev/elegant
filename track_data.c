@@ -1907,7 +1907,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     {    N_MONI_PARAMS,     MAT_LEN_NCAT|MATRIX_TRACKING,       sizeof(MONI),    moni_param     }, 
     {    N_RCOL_PARAMS,  MAT_LEN_NCAT,       sizeof(RCOL),    rcol_param     }, 
     {    N_ECOL_PARAMS,  MAT_LEN_NCAT,       sizeof(ECOL),    ecol_param     }, 
-    {    N_MARK_PARAMS,           0,       sizeof(MARK),    mark_param     }, 
+    {    N_MARK_PARAMS,           0|UNIDIAGNOSTIC,       sizeof(MARK),    mark_param     }, 
     {    N_MATR_PARAMS,  MAT_LEN|HAS_RF_MATRIX,  sizeof(MATR),    matr_param     }, 
     {    N_ALPH_PARAMS,  HAS_MATRIX|IS_MAGNET|MAT_CHW_ENERGY,  sizeof(ALPH),    alph_param     }, 
     {    N_RFDF_PARAMS,  MAT_LEN_NCAT|UNIPROCESSOR,       sizeof(RFDF),    rfdf_param     }, 
