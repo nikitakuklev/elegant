@@ -118,7 +118,10 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
       computeChromCorrectionMatrix(run, beamline, chrom);
     }
     
-
+#if USE_MPI
+    if (!writePermitted)
+       strength_log = NULL;
+#endif
     if (strength_log) {
         strength_log = compose_filename(strength_log, run->rootname);
         fp_sl = fopen_e(strength_log, "w", 0);
