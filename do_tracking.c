@@ -48,13 +48,16 @@ typedef enum balanceMode {badBalance, startMode, goodBalance} balance;
 void scatterParticles(double **coord, long *nToTrack, double **accepted,
                       long n_processors, int myid, balance balanceStatus, 
                       double my_rate, double nParPerElements, double round,
-                      int lostSinceSeqMod);
+                      int lostSinceSeqMod,int *distributed);
 void gatherParticles(double **coord, long *lostOnPass, long *nToTrack, 
                      long *nLost, double **accepted, long n_processors, 
                      int myid, double *round);
 balance checkBalance(double my_wtime, int myid, long n_processors);
 #endif
 
+#ifdef SORT   
+int comp_IDs(const void *coord1, const void *coord2);
+#endif
 static TRACKING_CONTEXT trackingContext;
 
 double beta_from_delta(double p, double delta)
@@ -127,6 +130,7 @@ long do_tracking(
   parallelStatus = initialMode;
   balance balanceStatus;
   balanceStatus = startMode;
+  int distributed = 0; /* identify if the particles have been scattered */ 
   MPI_Comm_rank(MPI_COMM_WORLD, &myid); /* get ID number for each processor */
   trackingContext.myid = myid;
 #endif 
@@ -171,6 +175,10 @@ long do_tracking(
   et1 = -2.0;
   elliptical = isConcat = 0;
   watch_pt_seen = feedbackDriverSeen = 0;
+
+#ifdef SORT
+  int nToTrackAtLastSort = nToTrack;
+#endif
   
   check_nan = 1;
   eptr = &(beamline->elem);
@@ -458,7 +466,7 @@ long do_tracking(
         /* Particles will be scattered in startMode, bad balancing status or notParallel state */  
         if ((balanceStatus==badBalance) || (parallelStatus==notParallel)) { 
           scatterParticles(coord, &nToTrack, accepted, n_processors, myid,
-                           balanceStatus, my_rate, nParPerElements, round, lostSinceSeqMode);
+                           balanceStatus, my_rate, nParPerElements, round, lostSinceSeqMode, &distributed);
           if (myid != 0) {
            /* update the nMaximum for recording the nLost on all the slave processors */
            nMaximum = nToTrack;  
@@ -470,7 +478,7 @@ long do_tracking(
 	  /* For the first pass, scatter when it is not in parallel mode */
 	  if (parallelStatus!=trueParallel) {
 	    scatterParticles(coord, &nToTrack, accepted, n_processors, myid,
-                             balanceStatus, my_rate, nParPerElements, round, lostSinceSeqMode); 
+                             balanceStatus, my_rate, nParPerElements, round, lostSinceSeqMode, &distributed); 
             if (myid != 0) {
               /* update the nMaximum for recording the nLost on all the slave processors */
               nMaximum = nToTrack; 
@@ -486,7 +494,16 @@ long do_tracking(
         start_wtime = MPI_Wtime();        
       }
 #endif
-   
+
+#ifdef SORT
+      if (!USE_MPI)
+	if (nToTrackAtLastSort != nToTrack) {/* indicates more particles are lost, need sort */
+          qsort(coord[0], nToTrack, COORDINATES_PER_PARTICLE*sizeof(double), comp_IDs);
+          if (accepted!=NULL)
+            qsort(accepted[0], nToTrack, COORDINATES_PER_PARTICLE*sizeof(double), comp_IDs);
+	  nToTrackAtLastSort = nToTrack;
+	}   
+#endif   
       log_exit("do_tracking.2.2.1");
       if (eptr->p_elem || eptr->matrix) {
 #ifdef VAX_VMS
@@ -1330,7 +1347,7 @@ long do_tracking(
   } /* end of the for loop for n_passes*/
 
 #if USE_MPI
-  /* change back to sequential mode before leaving the function */
+  /* change back to sequential mode before leaving the do_tracking function */
   if (parallelStatus!=notParallel) {
     gatherParticles(coord, lostOnPass, &nToTrack, &nLost, accepted, n_processors, myid, &round);
     parallelStatus = notParallel ;
@@ -1400,7 +1417,7 @@ long do_tracking(
     fflush(stdout);
   }
 
-#if USE_MPI  
+#ifdef MPI_DEBUG  
   #ifdef CHECKFLAGS 
     printf("Balance is checked for the first pass and when particles are lost only.\n"); 
     fflush(stdout);
@@ -2639,17 +2656,16 @@ void storeMonitorOrbitValues(ELEMENT_LIST *eptr, double **part, long np)
 void scatterParticles(double **coord, long *nToTrack, double **accepted,
                       long n_processors, int myid, balance balanceStatus, 
                       double my_rate, double nParPerElements, double round, 
-                      int lostSinceSeqMode)
+                      int lostSinceSeqMode, int *distributed)
 {
   long work_processors = n_processors-1; 
   int root = 0, i;
   int my_nToTrack, nItems, nToTrackCounts[n_processors], nRemainParticles;
   double total_rate, constTime;
-  static int distributed = 0; /* identify if the particles have been scattered */ 
   MPI_Status status;
 
   /* The particles will be distributed to slave processors evenly for the first pass */
-  if ((balanceStatus==startMode) && (!distributed))  {
+  if ((balanceStatus==startMode) && (!*distributed))  {
     if (myid==0) 
       my_nToTrack = 0;
     else {
@@ -2657,7 +2673,7 @@ void scatterParticles(double **coord, long *nToTrack, double **accepted,
       if (myid<=(*nToTrack%work_processors)) 
 	my_nToTrack++;
     } 
-    distributed = 1; 
+    *distributed = 1; 
   }
   else if ((balanceStatus == badBalance) || lostSinceSeqMode) { 
    /* calculating the number of jobs to be sent according to the speed of each processors */
@@ -2716,7 +2732,7 @@ void scatterParticles(double **coord, long *nToTrack, double **accepted,
   if (myid==0) {
     nRemainParticles = *nToTrack-my_nToTrack;
 #ifdef MPI_DEBUG
-    if (((balanceStatus==startMode) && (!distributed)) || 
+    if (((balanceStatus==startMode) && (!*distributed)) || 
 	(balanceStatus == badBalance) || lostSinceSeqMode)
       printf("%d will be computed on %ld\n",nRemainParticles,work_processors);
 #endif
@@ -2758,6 +2774,14 @@ void gatherParticles(double **coord, long *lostOnPass, long *nToTrack, long *nLo
   /* gather nToTrack and nLost from all of the slave processors to the master processors */ 
   MPI_Gather(&my_nToTrack, 1, MPI_INT, nToTrackCounts, 1, MPI_INT, root, MPI_COMM_WORLD);
   MPI_Gather(&my_nLost, 1, MPI_INT, nLostCounts, 1, MPI_INT, root, MPI_COMM_WORLD);
+
+#ifdef SORT
+  if ((myid!=0) && (my_nLost != 0)) {/* indicates more particles are lost, need sort */
+    qsort(coord[0], my_nToTrack, COORDINATES_PER_PARTICLE*sizeof(double), comp_IDs);  
+    if (accepted!=NULL)
+      qsort(accepted[0], my_nToTrack, COORDINATES_PER_PARTICLE*sizeof(double), comp_IDs);  
+  }
+#endif
 
   if (myid==0) {
     for (i=1; i<=work_processors; i++) {
@@ -2858,4 +2882,16 @@ balance checkBalance (double my_wtime, int myid, long n_processors)
     return badBalance;
 }   
 
+#endif
+
+#ifdef SORT
+  int comp_IDs(const void *coord1, const void *coord2)
+  {
+    if (((double*) coord1)[6] <((double*) coord2)[6]) 
+      return -1;
+    else if (((double*) coord1)[6] > ((double*) coord2)[6]) 
+      return  1;
+    else 
+      return 0;
+  }
 #endif

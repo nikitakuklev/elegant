@@ -16,15 +16,17 @@ CCC := $(RATIONAL) -best-effort $(CCC)
 endif
 endif
 
+OP_SYS_CFLAGS+= -DSORT                 # sort for comparing the results of two elegants
+                                       # -g should be turned off for comparison
 ifeq ($(MPI),1)
-   USER_MPI_FLAGS = -DUSE_MPI=1 \      # 1 for parallel elegant, 0 for sequential elegant 
-                    # -mpilog \        # visualize the performance of the parallel elegant 
-	            # -DMPI_DEBUG \    # print debugging information for MPI 
-                    # -DCHECKFLAGS=1   # optimize by checking balance only once
-  CC = /share/mpich/ch_p4/bin/mpicc   $(USER_MPI_FLAGS)   
-  CCC = /share/mpich/ch_p4/bin/mpicxx $(USER_MPI_FLAGS)
+  USER_MPI_FLAGS = -DUSE_MPI=1         # 1 for parallel elegant, 0 for sequential elegant  
+  USER_MPI_FLAGS+= -mpilog             # visualize the performance of the parallel elegant 
+  #USER_MPI_FLAGS+=  -mpianim -L/usr/X11R6/lib -lX11   # animate MPI program in real-time
+  #USER_MPI_FLAGS+= -DMPI_DEBUG         # print debugging information for MPI 
+  #USER_MPI_FLAGS+= -DCHECKFLAGS=1      # optimize by checking balance only once
+  CC = mpicc   $(USER_MPI_FLAGS)   
+  CCC = mpicxx $(USER_MPI_FLAGS)
   PRODOAG = Pelegant
-
 endif
 
 ifeq ($(NOMPI),1)
