@@ -38,6 +38,11 @@
 
 #define COORDINATES_PER_PARTICLE 7
 
+/* flag used to identify which processor is allowed to write to a file */
+extern long writePermitted;
+/* flag used to identify if it is the master processor */
+extern long isMaster;
+
 #define malloc_verify(n) 1
 
 /* Variable-order transport matrix structure */
