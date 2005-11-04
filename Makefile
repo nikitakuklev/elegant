@@ -7,10 +7,13 @@
 # in the file LICENSE that is included with this distribution. 
 #*************************************************************************
 #
-# $Id: Makefile,v 1.6 2005-09-29 20:50:43 ywang25 Exp $
+# $Id: Makefile,v 1.7 2005-11-04 16:27:05 borland Exp $
 #
 #  Lowest Level Directroy Makefile
 # $Log: not supported by cvs2svn $
+# Revision 1.6  2005/09/29 20:50:43  ywang25
+# Modifications for parallelization.  Verified to be identical to sequential version when run in non-MPI mode.
+#
 # Revision 1.5  2004/04/08 16:09:36  soliday
 # Build rules are now compatible with Base 3.14
 #
@@ -113,6 +116,11 @@ frequencyMap$(OBJ): frequencyMap.h
 
 frequencyMap.h: ../frequencyMap.nl
 	nlpp ../frequencyMap.nl frequencyMap.h
+
+insertSCeffects$(OBJ): insertSCeffects.h
+
+insertSCeffects.h: ../insertSCeffects.nl
+	nlpp ../insertSCeffects.nl insertSCeffects.h
 
 link_elements$(OBJ): link_elements.h
 

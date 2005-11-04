@@ -35,7 +35,7 @@ char *entity_name[N_TYPES] = {
     "REFLECT", "CLEAN", "TWISS", "WIGGLER", "SCRIPT", "FLOOR",
     "LTHINLENS", "LMIRROR", "EMATRIX", "FRFMODE", "FTRFMODE",
     "TFBPICKUP", "TFBDRIVER", "LSCDRIFT", "DSCATTER", "LSRMDLTR",
-    "TAYLORSERIES", "RFTM110", "CWIGGLER", "EDRIFT",
+    "TAYLORSERIES", "RFTM110", "CWIGGLER", "EDRIFT", "SCMULT",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -161,6 +161,7 @@ and phase modulation.",
     "Tracks through a TM110-mode (deflecting) rf cavity with all magnetic and electric field components.",
     "Tracks through a wiggler using canonical integration routines of Y. Wu (Duke University).",
     "Tracks through a drift with no approximations (Exact DRIFT).",
+    "Tracks through a zero length multipole to simulate space charge effects",  
     } ;
 
 QUAD quad_example;
@@ -1882,6 +1883,10 @@ PARAMETER edrift_param[N_EDRIFT_PARAMS] = {
     {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&edrift_example.length), NULL, 0.0, 0, "length"},
 };
 
+SCMULT scmult_example;   
+PARAMETER scmult_param[N_SCMULT_PARAMS] = {
+};
+
 /* array of parameter structures */
 
 #define MAT_LEN     HAS_MATRIX|HAS_LENGTH
@@ -1997,6 +2002,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     {    N_RFTM110_PARAMS,  UNIPROCESSOR,       sizeof(RFTM110),    rftm110_param     }, 
     {   N_CWIGGLER_PARAMS,  MAT_LEN_NCAT|IS_MAGNET, sizeof(CWIGGLER),    cwiggler_param     }, 
     {   N_EDRIFT_PARAMS, MAT_LEN, sizeof(EDRIFT),    edrift_param   },
+    {   N_SCMULT_PARAMS,    0,       sizeof(SCMULT),    scmult_param     },   
 } ;
  
 

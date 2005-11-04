@@ -98,7 +98,7 @@ char *option[N_OPTIONS] = {
   "emittanceratio", "coupling", "nospectralbroadening","method",
 } ;
 
-char *USAGE1="sddsbrightness [-pipe=[input][,output]] [<twissFile>] [<SDDSoutputfile>]\n\
+char *USAGE="sddsbrightness [-pipe=[input][,output]] [<twissFile>] [<SDDSoutputfile>]\n\
  -harmonics=<integer> -Krange=start=<value>,end=<value>,points=<integer>\n\
  -current=<Amps> -totalLength=<meters> -periodLength=<meters>\n\
  [-emittanceRatio=<value> | -coupling=<value>] [-noSpectralBroadening]\n\
@@ -113,8 +113,8 @@ emittanceRatio   ratio of y emittance to x emittance.  x emittance is\n\
                  Ignored if ey0 parameter or ey column is found in file.\n\
 coupling         x emittance is ex0/(1+coupling), while y emittance is\n\
                  coupling*ex0/(1+coupling).\n\
-                 Ignored if ey0 parameter or ey column is found in file.\n";
-char *USAGE2="noSpectralBroadening\n\
+                 Ignored if ey0 parameter or ey column is found in file.\n\
+noSpectralBroadening\n\
                  Turns off the default inclusion of spectral broadening in\n\
                  the calculation.  Gives an over-estimate of the brightness.\n\
 method           choose method for calculating brightness \n\
@@ -195,10 +195,8 @@ int main(int argc, char **argv)
 
   SDDS_RegisterProgramName(argv[0]);
   argc = scanargs(&s_arg, argc, argv);
-  if (argc<2) {
-    fprintf(stderr, "%s%s", USAGE1, USAGE2);
-    return(1);
-  }
+  if (argc<2) 
+    bomb(NULL, USAGE);
 
   KK=NULL;
   FnOut=Energy=Brightness=LamdarOut=NULL;

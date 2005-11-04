@@ -133,7 +133,7 @@ elegant_SRCS = 	alpha_data.c alpha_matrix.c amplif.c analyze.c aperture_search.c
 		ibs_tracking.c zibs.c wake.c taylorSeries.c trwake.c circles.c tubend.c sasefelmx.c \
 		sasefel.c alter.c sliceAnalysis.c divideElements.c transmuteElements.c \
 		frfmode.c ftrfmode.c tfeedback.c engeCoef.c lsc.c frequencyMap.c \
-		GWigSymplecticPass.c gwig.c noiseGroup.c
+		GWigSymplecticPass.c gwig.c noiseGroup.c insertSCeffects.c
 
 Pelegant_SRCS = $(elegant_SRCS)
 
@@ -145,7 +145,7 @@ madto_SRCS = 	madto.c sdds_strength_output.c convert_to_parmela.c convert_to_pat
 		convert_to_patricia.c convert_to_transport.c convert_to_xorbit.c track_data.c \
 		get_beamline.c mad_parse.c output_magnets.c cfgets.c trace.c check_duplic.c \
 		extend_list.c matrix.c compose_fn.c find_elem.c print_line.c divideElements.c \
-		transmuteElements.c convert_to_cosy.c engeCoef.c
+		transmuteElements.c convert_to_cosy.c engeCoef.c  insertSCeffects.c
 
 sddsrandmult_SRCS = sddsrandmult.c
 

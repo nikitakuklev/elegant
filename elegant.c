@@ -96,7 +96,8 @@ char *GREETING="This is elegant, by Michael Borland. (This is version 15.4.1, "_
 #define TWISS_ANALYSIS 43
 #define SEMAPHORES     44
 #define FREQUENCY_MAP  45
-#define N_COMMANDS      46
+#define INSERT_SCEFFECTS 46 
+#define N_COMMANDS      47
 
 char *command[N_COMMANDS] = {
     "run_setup", "run_control", "vary_element", "error_control", "error_element", "awe_beam", "bunched_beam",
@@ -107,7 +108,7 @@ char *command[N_COMMANDS] = {
     "steering_element", "amplification_factors", "print_dictionary", "floor_coordinates", "correction_matrix_output",
     "load_parameters", "sdds_beam", "subprocess", "fit_traces", "sasefel", "alter_elements",
     "optimization_term", "slice_analysis", "divide_elements", "tune_shift_with_amplitude",
-    "transmute_elements", "twiss_analysis", "semaphores", "frequency_map"
+    "transmute_elements", "twiss_analysis", "semaphores", "frequency_map", "insert_sceffects" 
         } ;
 
 char *description[N_COMMANDS] = {
@@ -157,6 +158,7 @@ char *description[N_COMMANDS] = {
     "twiss_analysis              requests twiss analysis of regions of a beamline (for optimization)",
     "semaphores                  requests use of semaphore files to indicate run start and end",
     "frequency_map               command to perform frequency map analysis",
+    "insert_sceffects            add space charge element to beamline and set calculation flags", 
         } ;
 
 void initialize_structures(RUN *run_conditions, VARY *run_control, ERRORVAL *error_control, CORRECTION *correct, 
@@ -1217,6 +1219,11 @@ char **argv;
       if (run_setuped)
         bomb("transmute_elements must precede run_setup", NULL);
       setupTransmuteElements(&namelist_text, &run_conditions, beamline);
+      break;
+    case INSERT_SCEFFECTS:
+      if (run_setuped)
+        bomb("transmute_elements must precede run_setup", NULL);
+      setupSCEffect(&namelist_text, &run_conditions, beamline);
       break;
     case TWISS_ANALYSIS:
       if (do_twiss_output)

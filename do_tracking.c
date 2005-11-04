@@ -362,6 +362,11 @@ long do_tracking(
     nParElements = 0;
 #endif
     nParticlesStartPass = nToTrack;
+
+    if (getSCMULTSpecCount()) 
+      /* prepare space charge effects calculation  */
+      initializeSCMULT(eptr, coord, nToTrack, *P_central, i_pass);
+
     while (eptr && (nToTrack || USE_MPI)) {
       classFlags = entity_description[eptr->type].flags;
       elementsTracked++;
@@ -903,6 +908,9 @@ long do_tracking(
 	    case T_LSCDRIFT:
 	      track_through_lscdrift(coord, nToTrack, (LSCDRIFT*)eptr->p_elem, *P_central, charge);
 	      break;
+	    case T_SCMULT:
+	      trackThroughSCMULT(coord, nToTrack, eptr);
+	      break;
 	    case T_EDRIFT:
 	      exactDrift(coord, nToTrack, ((EDRIFT*)eptr->p_elem)->length);
 	      break;
@@ -1191,6 +1199,14 @@ long do_tracking(
 			       0);
         recordLossPass(lostOnPass, &nLost, nLeft, nMaximum, i_pass, myid, lostSinceSeqMode);
       }  
+
+      if (getSCMULTSpecCount() && entity_description[eptr->type].flags&HAS_LENGTH) {
+	/* calcaulate beam size at exit of element for use in space  charge calculation with SCMULT */
+	/* need special care for element with 0 length but phase space rotation */
+      	if (((DRIFT*)eptr->p_elem)->length > 0.0) 
+        	accumulateSCMULT(coord, nToTrack, eptr);
+      }
+
       last_type = eptr->type;
       eptrPred = eptr;
       eptr = eptr->succ;

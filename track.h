@@ -430,6 +430,17 @@ typedef struct {
 } SASEFEL_OUTPUT;
 
 typedef struct {
+	char *name;
+	long nskip;
+	long horizontal, vertical, longitudinal;
+	long nonlinear;
+	double sigmax, sigmay, sigmaz, sigmap; 
+	double c0;   			/* c0=re*np/(2*Pi)^(3/2) -> calculate once.  */
+	double c1;	 			/* c1=c0/p0^3/sigmaz -> calculate every turn */
+	double dmux, dmuy;
+} SPACE_CHARGE;
+
+typedef struct {
   long active, rows;
   SDDS_DATASET SDDSout;
   /* input data */
@@ -611,7 +622,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_RFTM110  93
 #define T_CWIGGLER 94
 #define T_EDRIFT 95
-#define N_TYPES     96
+#define T_SCMULT 96						
+#define N_TYPES     97
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -714,6 +726,7 @@ extern char *entity_text[N_TYPES];
 #define N_RFTM110_PARAMS 14
 #define N_CWIGGLER_PARAMS 11
 #define N_EDRIFT_PARAMS 1
+#define N_SCMULT_PARAMS 0		
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -2017,6 +2030,12 @@ typedef struct {
   double revolutionLength;
 } IBSCATTER;
 
+/* space charge multipole element */
+typedef struct {
+    /* values for internal use: */
+    long flag;
+} SCMULT;          
+
 /* names and storage structure for SR effects */
 extern PARAMETER bmapxy_param[N_BMAPXY_PARAMS];
 
@@ -2546,6 +2565,10 @@ void change_defined_parameter_divopt(char *elem_name, long param, long elem_type
 void change_defined_parameter(char *elem_name, long param_number, long type, double value, char *valueString, unsigned long mode);
 extern void delete_matrix_data(LINE_LIST *beamline);
 
+extern ELEMENT_LIST *generate_elem(char *s, long type); 
+extern void add_element(ELEMENT_LIST *elem0, ELEMENT_LIST *elem1);
+extern void rm_element(ELEMENT_LIST *elem); 
+
 /* prototypes for limit_amplitudes4.c: */
 extern long rectangular_collimator(double **initial, RCOL *rcol, long np, double **accepted, double z, double P_central);
 extern long limit_amplitudes(double **coord, double xmax, double ymax, long np, double **accepted, double z, double P_central,
@@ -2955,6 +2978,17 @@ long elementTransmutation(char *name, long type) ;
 void setupTransmuteElements(NAMELIST_TEXT *nltext, RUN *run, 
                             LINE_LIST *beamline);
 
+
+void setupSCEffect(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline); 
+void addSCSpec(char *name, char *type, char *exclude);
+void clearSCSpecs();
+long getSCMULTSpecCount();
+char *getSCMULTName();
+long insertSCMULT(char *name, long type, long *occurrence);
+void trackThroughSCMULT(double **part, long np, ELEMENT_LIST *eptr);
+void initializeSCMULT(ELEMENT_LIST *eptr, double **part, long np, double Po, long i_pass );
+void accumulateSCMULT(double **part, long np, ELEMENT_LIST *eptr);
+double computeRmsCoordinate(double **coord, long i1, long np);
 
 void transverseFeedbackPickup(TFBPICKUP *tfbp, double **part, long np, long pass);
 void initializeTransverseFeedbackPickup(TFBPICKUP *tfbp);

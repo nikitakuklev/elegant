@@ -43,7 +43,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
 {
   long type=0, i;
   long occurence, iMad;
-  static ELEMENT_LIST *eptr, *eptr1;
+  static ELEMENT_LIST *eptr, *eptr1, *eptr_sc;
   static LINE_LIST *lptr;
   static long n_elems, n_lines;
   FILE *fp_mad[MAX_FILE_NESTING];
@@ -202,7 +202,16 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
       fflush(stdout);
       exit(1);
     }
-    /* since the lists were being extended before it was known that
+
+    if (getSCMULTSpecCount()) {
+      fill_elem(eptr, getSCMULTName(), T_SCMULT, NULL);
+      eptr_sc = eptr;
+      check_duplic_elem(&elem, &eptr, n_elems);
+      extend_elem_list(&eptr);
+      n_elems++;  	
+    }
+    
+/* since the lists were being extended before it was known that
        the was another object to put in them, must eliminate references
        to the most recently added nodes. 
        */
@@ -247,6 +256,30 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
   lptr->elem_recirc = lptr->elem_twiss = lptr->elast = NULL;
   lptr->twiss0 = NULL;
   lptr->matrix = NULL;
+
+  if (getSCMULTSpecCount()) {
+  	long skip = 0;
+  	long nelem = 0;
+  	eptr = &(lptr->elem);
+  	while (eptr) {
+  		if (eptr->type == T_SCMULT) {					/* the code allow user put scmult explicitly */
+  			eptr = eptr->succ;
+  			continue;
+  		}
+  		if (insertSCMULT(eptr->name, eptr->type, &skip)) {
+  			add_element(eptr, eptr_sc); 
+  			eptr = eptr->succ;							/* move pointer to new added element */
+  			nelem++;
+   		}
+  		if (eptr->succ==NULL && skip!=0) {				/* add space charge element to the end of line */
+  			add_element(eptr, eptr_sc);
+  			eptr = eptr->succ;							/* this is very impotant to get off the loop */
+  			nelem++;
+ 		}   			
+  		eptr = eptr->succ; 
+  	}
+  	lptr->n_elems += nelem;
+  } 
 
   /* go through and give occurence numbers to each element */
   eptr = &(lptr->elem);
@@ -410,14 +443,14 @@ void free_elements(ELEMENT_LIST *elemlist)
           continue;
         }
         if (eptr->type==T_WATCH) {
-            WATCH *wptr;
-            if ((wptr = (WATCH*)eptr->p_elem)) {
-                if (wptr->initialized && !SDDS_Terminate(&wptr->SDDS_table)) {
-                    SDDS_SetError("Problem terminate watch-point SDDS file (free_elements)");
-                    SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-                    }
-                }
-            }
+	  WATCH *wptr;
+	  if ((wptr = (WATCH*)eptr->p_elem)) {
+	    if (wptr->initialized && !SDDS_Terminate(&wptr->SDDS_table)) {
+	      SDDS_SetError("Problem terminate watch-point SDDS file (free_elements)");
+	      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+	    }
+	  }
+	}
 #ifdef DEBUG
         fprintf(stdout, "pointers: p_elem = %x   name = %x   matrix = %x\n",
             eptr->p_elem, eptr->name, eptr->matrix);
@@ -883,4 +916,38 @@ long nearestInteger(double value)
     return -1*((long)(-value+0.5));
   return (long)(value+0.5);
 }
+
+/* generate scmult element */
+ELEMENT_LIST *generate_elem(char *s, long type) 
+{
+  ELEMENT_LIST *elem;
+  elem = tmalloc(sizeof(*elem));
+  elem->pred = elem->succ = NULL;
+  elem->name = NULL;
+  fill_elem(elem, s, type, NULL);
+  return(elem);
+}
+
+/* add element "elem1" after "elem0" */
+void add_element(ELEMENT_LIST *elem0, ELEMENT_LIST *elem1) 
+{
+  ELEMENT_LIST *eptr;
+  eptr = tmalloc(sizeof(*eptr));
+  copy_element(eptr, elem1, 0, 0, 0);
+  
+  eptr->pred = elem0;
+  eptr->succ = elem0->succ;
+  if (elem0->succ) {
+    (elem0->succ)->pred = eptr;
+  }
+  elem0->succ = eptr;
+}
+
+/* remove element "elem" from the list */
+void rm_element(ELEMENT_LIST *elem) 		
+{
+  if (elem->pred) 							/* never can remove the first element */
+    (elem->pred)->succ=elem->succ;
+}
+
 
