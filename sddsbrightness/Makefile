@@ -7,7 +7,7 @@
 # in the file LICENSE that is included with this distribution. 
 #*************************************************************************
 #
-# $Id: Makefile,v 1.3 2005-11-04 16:27:07 borland Exp $
+# $Id: Makefile,v 1.4 2005-11-10 16:19:03 soliday Exp $
 #
 #
 #
@@ -46,6 +46,14 @@ solaris_libs = -lcurses -lrt
 endif
 ifeq ($(HOST_ARCH),solaris-sparc)
 F77 = g77
+solaris_libs = -lcurses -lrt
+endif
+ifeq ($(EPICS_HOST_ARCH),solaris-sparc)
+F77 = g77
+solaris_libs = -lcurses -lrt
+endif
+ifeq ($(EPICS_HOST_ARCH),solaris-sparc64)
+F77 = g77 -m64
 solaris_libs = -lcurses -lrt
 endif
 usb$(OBJ) : 

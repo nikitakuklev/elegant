@@ -14,6 +14,9 @@
  * Michael Borland, 2002
  *
  $Log: not supported by cvs2svn $
+ Revision 1.10  2005/11/04 16:27:07  borland
+ Added Xiao's code for space charge element SCMULT.
+
  Revision 1.8  2005/08/23 17:40:49  shang
  the pCentral units now can be m$be$nc, or NULL, or blank.
 
@@ -181,7 +184,8 @@ int main(int argc, char **argv)
   SCANNED_ARG *s_arg;
   unsigned long pipeFlags;
   double current, totalLength, periodLength, KStart, KEnd, coupling, emittanceRatio, dK;
-  long KPoints, harmonics, tmpFileUsed, iK, i_arg, readCode, h, ih, periods;
+  int32_t KPoints;
+  long harmonics, tmpFileUsed, iK, i_arg, readCode, h, ih, periods;
   unsigned long dummyFlags;
   double betax, alphax, betay, alphay, etax, etaxp, etay, etayp, lambda, energy;
   double pCentral, ex0, ey0, Bn, Fn, K, Sdelta0, conFactor=1.0; /*the factor from convolution of
@@ -189,7 +193,8 @@ int main(int argc, char **argv)
   short spectralBroadening;
   long method, device,nE,ihMin,ihMax;
   double *KK,**FnOut,**Energy,**Brightness,**LamdarOut;
-  long minNEKS,maxNEKS,neks;
+  long minNEKS,maxNEKS;
+  int32_t neks;
   double sigmax,sigmay,sigmaxp,sigmayp;
   char *deviceOption, *Units=NULL;
 
