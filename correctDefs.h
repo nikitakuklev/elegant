@@ -26,7 +26,7 @@ typedef struct {
 typedef struct {
     /* information on useful monitors and correctors */
     long *mon_index;                       /* index of monitor in trajectory array */
-    long nmon, ncor;                       /* numbers of monitors and correctors */
+    int32_t nmon, ncor;                       /* numbers of monitors and correctors */
     ELEMENT_LIST **umoni, **ucorr;         /* arrays of pointers to monitor and corrector elements */
     double *kick_coef;                     /* dkick/dparam (==1 for hkick, vkick, and hvkick elements) */
     long *sl_index;                        /* index of steering list entry for each corrector */

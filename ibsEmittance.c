@@ -9,6 +9,10 @@
 
 /* 
  * $Log: not supported by cvs2svn $
+ * Revision 1.20  2004/11/10 20:50:14  borland
+ * Reduced the default target to 1e-6, and made the tolerance 1/100 of
+ * the target.
+ *
  * Revision 1.19  2004/10/08 07:17:29  borland
  * Added rf voltage to the output file.
  *
@@ -174,7 +178,8 @@ int main( int argc, char **argv)
   short *disable;
   long dimensions = 14, maxEvaluations = 500, maxPasses = 2;
   double target = 1e-6, tolerance = 1e-8;
-  long integrationTurns, integrationStepSize, integrationPoints = 0;
+  int32_t integrationTurns, integrationStepSize;
+  long integrationPoints = 0;
   double *exInteg=NULL, *eyInteg=NULL, *elInteg=NULL, *xRateInteg=NULL, *yRateInteg=NULL, *zRateInteg=NULL;
   double *SdeltaInteg=NULL, *SzInteg=NULL;
   long *passInteg=NULL;

@@ -14,6 +14,11 @@
  * Michael Borland, 2000
  *
  $Log: not supported by cvs2svn $
+ Revision 1.18  2003/05/26 17:54:23  borland
+ Supplied a missing variable initializatin (x in main()).
+ Fixed bug from improper use of spec->element to test for user input of
+ an element name (should use spec->flags).
+
  Revision 1.17  2002/08/14 20:23:49  soliday
  Added Open License
 
@@ -130,7 +135,7 @@ typedef struct {
   double R11, R12, R21, R22;
   double etaBeam, etapBeam;
   char *filename, *element;
-  long occurrence;
+  int32_t occurrence;
 #define BETA_GIVEN       0x0001UL
 #define ALPHA_GIVEN      0x0002UL
 #define ETA_GIVEN        0x0004UL

@@ -198,7 +198,7 @@ void setup_bunched_beam(
           bomb("Radix for Halton sequence can't be negative", NULL);
         if ((haltonID[2*i+offset] = startHaltonSequence(&halton_radix[2*i+offset], 0.5))<0) 
           bomb("problem starting Halton sequence", NULL);
-        fprintf(stdout, "Using radix %ld for Halton sequence for coordinate %ld\n",
+        fprintf(stdout, "Using radix %" PRId32 " for Halton sequence for coordinate %ld\n",
                 halton_radix[2*i+offset], 2*i+offset);
       }
     }

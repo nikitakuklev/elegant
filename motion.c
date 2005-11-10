@@ -422,7 +422,6 @@ void (*set_up_derivatives(
     setupRotate3Matrix((void**)&partRot, -mapSol->eTilt, -mapSol->eYaw, -mapSol->ePitch);
     setupRotate3Matrix((void**)&fieldRot, mapSol->eTilt, mapSol->eYaw, mapSol->ePitch);
     return(derivatives_mapSolenoid);
-    break;
   case T_LSRMDLTR:
     lsrMdltr = (LSRMDLTR*)field;
     *tau_start = 0;
@@ -459,7 +458,6 @@ void (*set_up_derivatives(
     Z_center = lsrMdltr->length/2*(*kscale);
     *X_limit = *Y_limit = 1e300;
     return(derivatives_laserModulator);
-    break;
   case T_RFTMEZ0:
     rftmEz0 = field;
     *kscale = (omega=PIx2*rftmEz0->frequency)/c_mks;
@@ -518,7 +516,6 @@ void (*set_up_derivatives(
       rftmEz0->initialized = 1;
     }
     return(derivatives_rftmEz0);
-    break;
   case T_TMCF:
     tmcf = field;
     *kscale = (omega=PIx2*tmcf->frequency)/c_mks;
@@ -1775,7 +1772,7 @@ void setupRftmEz0SolenoidFromFile(RFTMEZ0 *rftmEz0, double length, double k)
         exit(1);
       }
       if (rftmEz0->nzSol!=SDDS_RowCount(&SDDSin)) {
-        fprintf(stderr, "Error: page %ld of RFTMEZ0 file %s has only %ld rows (%ld expected)\n",
+        fprintf(stderr, "Error: page %ld of RFTMEZ0 file %s has only %" PRId32 " rows (%ld expected)\n",
                 page, rftmEz0->solenoidFile, SDDS_RowCount(&SDDSin), rftmEz0->nzSol);
         exit(1);
       }
@@ -1972,7 +1969,7 @@ void setupMapSolenoidFromFile(MAP_SOLENOID *mapSol, double length)
       free(z);
     } else {
       if (mapSol->nz!=SDDS_RowCount(&SDDSin)) {
-        fprintf(stderr, "Error: page %ld of MAPSOLENOID file %s has only %ld rows (%ld expected)\n",
+        fprintf(stderr, "Error: page %ld of MAPSOLENOID file %s has only %" PRId32 " rows (%ld expected)\n",
                 page, mapSol->inputFile, SDDS_RowCount(&SDDSin), mapSol->nz);
         exit(1);
       }

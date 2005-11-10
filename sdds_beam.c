@@ -497,7 +497,8 @@ long get_sdds_particles(double ***particle,
                         long n_skip      /* number of pages to skip */
                         )
 {
-  long i, np_max, np, np_new, rows, dump_rejected;
+  int32_t i;
+  long np_max, np, np_new, rows, dump_rejected;
   long retval, data_seen;
   double **data=NULL, **new_data;
   static char s[200];

@@ -150,7 +150,8 @@ int main( int argc, char **argv)
   char *twissFile, *resultsFile;
   SDDS_DATASET resultsPage;
   double particles, charge, finalCharge, length;
-  long steps, points, iterationLimits, converged, superPeriods;
+  long steps, converged, superPeriods;
+  int32_t points, iterationLimits;
   long useWakeFunction=0, intermediateSolutions;
   double rfVoltage, rfHarmonic;
   double energyMeV, momentumCompaction, U0, sigmaE, circumference;

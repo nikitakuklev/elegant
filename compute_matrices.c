@@ -17,6 +17,7 @@
 
 #define DEBUG 0
 
+void InitializeCWiggler(CWIGGLER *cwiggler);
 long determine_bend_flags(ELEMENT_LIST *eptr, long edge1_effects, long edge2_effects);
 VMATRIX *matrixFromExplicitMatrix(EMATRIX *emat, long order);
 

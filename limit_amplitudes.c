@@ -261,7 +261,7 @@ long elliptical_collimator(
   ysize = ecol->y_max;
   if (ecol->exponent<2 || ecol->exponent%2) {
     getTrackingContext(&context);
-    fprintf(stderr, "Error for %s: exponent=%d is not valid.  Give even integer >=2\n",
+    fprintf(stderr, "Error for %s: exponent=%ld is not valid.  Give even integer >=2\n",
             context.elementName, ecol->exponent);
     exit(1);
   }
@@ -361,7 +361,7 @@ long elimit_amplitudes(
 
     if (exponent<2 || exponent%2) {
       getTrackingContext(&context);
-      fprintf(stderr, "Error for %s: exponent=%d is not valid.  Give even integer >=2\n",
+      fprintf(stderr, "Error for %s: exponent=%ld is not valid.  Give even integer >=2\n",
               context.elementName, exponent);
       exit(1);
     }

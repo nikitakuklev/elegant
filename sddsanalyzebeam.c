@@ -14,6 +14,11 @@
  * Michael Borland, 2000
  *
  $Log: not supported by cvs2svn $
+ Revision 1.13  2005/02/24 19:27:53  borland
+ Added -generate option to sddsanalyzebeam.  This option can generate a new
+ phase-space distribution with the same 6D rms properties as the input beam.
+ Uses meschach library.
+
  Revision 1.12  2004/09/08 20:04:36  borland
  Fixed problem with units for sij output.
 
@@ -91,7 +96,7 @@ char *CenName[6];
 char *CorName[6][6];
 char *psName[6] = {"x", "xp", "y", "yp", "t", "delta" };
 /* columns in output file derived from parameters in input file */
-long pColumns;
+int32_t pColumns;
 char **pColumn;
   
 int main(int argc, char **argv)

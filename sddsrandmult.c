@@ -62,7 +62,7 @@ MULTIPOLE_COEFS coefs[N_FUNDAMENTAL_TYPES] = {
 #define N_COMMANDS 1
 char *command[N_COMMANDS] = { "perturbations" };
 
-main(int argc, char **argv)
+int main(int argc, char **argv)
 {
   FILE *fpin;
   char s[1024];

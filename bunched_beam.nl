@@ -37,7 +37,7 @@
     long limit_invariants = 0;
     long symmetrize = 0;
     long halton_sequence[3] = {0, 0, 0};
-    long halton_radix[6] = {0, 0, 0, 0, 0, 0};
+    int32_t halton_radix[6] = {0, 0, 0, 0, 0, 0};
     long randomize_order[3] = {0, 0, 0};
     long limit_in_4d = 0;
     long enforce_rms_values[3] = {0, 0, 0};

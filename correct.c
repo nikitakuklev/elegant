@@ -52,7 +52,7 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
                   long n_iterations, double accuracy,
                   long clorb_iter, double clorb_iter_frac,
                   RUN *run, LINE_LIST *beamline, double *closed_orbit, double *Cdp);
-ELEMENT_LIST *find_useable_moni_corr(long *nmon, long *ncor, long **mon_index,
+ELEMENT_LIST *find_useable_moni_corr(int32_t *nmon, int32_t *ncor, long **mon_index,
             ELEMENT_LIST ***umoni, ELEMENT_LIST ***ucorr, double **kick_coef, long **sl_index,
             long plane, STEERING_LIST *SL, RUN *run, LINE_LIST *beamline, long recircs);
 ELEMENT_LIST *next_element_of_type(ELEMENT_LIST *elem, long type);
@@ -275,10 +275,10 @@ void correction_setup(
       
     }
     if (verbose) {
-      fprintf(stdout, "there are %ld useable horizontal monitors and %ld useable horizontal correctors\n",
+      fprintf(stdout, "there are %" PRId32 " useable horizontal monitors and %" PRId32 " useable horizontal correctors\n",
               _correct->CMx->nmon, _correct->CMx->ncor);
       fflush(stdout);
-      fprintf(stdout, "there are %ld useable   vertical monitors and %ld useable   vertical correctors\n",
+      fprintf(stdout, "there are %" PRId32 " useable   vertical monitors and %" PRId32 " useable   vertical correctors\n",
               _correct->CMy->nmon, _correct->CMy->ncor);
       fflush(stdout);
     }
@@ -1299,7 +1299,7 @@ void one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TR
 }
 
 
-ELEMENT_LIST *find_useable_moni_corr(long *nmon, long *ncor, long **mon_index,
+ELEMENT_LIST *find_useable_moni_corr(int32_t *nmon, int32_t *ncor, long **mon_index,
                                      ELEMENT_LIST ***umoni, ELEMENT_LIST ***ucorr,
                                      double **kick_coef, long **sl_index, long plane, STEERING_LIST *SL, 
                                      RUN *run, LINE_LIST *beamline, long recircs)
@@ -2260,26 +2260,20 @@ long steering_corrector(ELEMENT_LIST *eptr, STEERING_LIST *SL, long plane)
       switch (eptr->type) {
       case T_HVCOR:
         return ((HVCOR*)(eptr->p_elem))->steering;
-        break;
       case T_HCOR:
         return ((HCOR*)(eptr->p_elem))->steering;
-        break;
       case T_VCOR:
         return ((VCOR*)(eptr->p_elem))->steering;
-        break;
       case T_QUAD:
         if (plane==0)
           return ((QUAD*)(eptr->p_elem))->xSteering;
         return ((QUAD*)(eptr->p_elem))->ySteering;
-        break;
       case T_KQUAD:
         if (plane==0)
           return ((KQUAD*)(eptr->p_elem))->xSteering;
         return ((KQUAD*)(eptr->p_elem))->ySteering;
-        break;
       default:
         return 1;
-        break;
       }
     }
   return 0;
@@ -2463,12 +2457,10 @@ double getCorrectorCalibration(ELEMENT_LIST *elem, long coord)
         if (coord) 
           return ((QUAD*)(elem->p_elem))->yKickCalibration;
         return ((QUAD*)(elem->p_elem))->xKickCalibration;
-        break;
       case T_KQUAD:
         if (coord) 
           return ((KQUAD*)(elem->p_elem))->yKickCalibration;
         return ((KQUAD*)(elem->p_elem))->xKickCalibration;
-        break;
       default:
         return 1;
         }

@@ -57,7 +57,8 @@ typedef struct {
 typedef struct {
   long initialized;
   long randomized;         /* used for random multipoles */
-  long orders, *order;
+  long orders;
+  int32_t *order;
   double referenceRadius;  /* for KQUAD, KSEXT, etc. */
   /* normal and skew terms */
   double *an, *bn;         /* input for KQUAD, KSEXT, etc. */
@@ -69,7 +70,7 @@ typedef struct {
 typedef struct {
   long mapInitialized;
   long terms;
-  long *Ix, *Iqx, *Iy, *Iqy, *Icdt, *Idelta;
+  int32_t *Ix, *Iqx, *Iy, *Iqy, *Icdt, *Idelta;
   double *Coefficient;
 } TAYLORSERIES_DATA ;
 
@@ -1868,7 +1869,7 @@ typedef struct {
     double mp_charge;          /* charge per macroparticle */
     long initialized;          /* indicates that beam has been seen */
     long modes;                /* number of modes */
-    long *doX, *doY;           /* plane of mode */
+    int32_t *doX, *doY;           /* plane of mode */
     double *Vx;                /* magnitude of voltage */
     double *Vxr, *Vxi;         /* real, imaginary components of voltage phasor at t=tlast */
     double *Vy;                /* magnitude of voltage */
@@ -2946,7 +2947,7 @@ void run_subprocess(NAMELIST_TEXT *nltext, RUN *run);
 void setSearchPath(char *path);
 char *findFileInSearchPath(char *filename);
 long getTableFromSearchPath(TABLE *tab, char *file, long sampleInterval, long flags);
-long SDDS_InitializeInputFromSearchPath(SDDS_DATASET *SDDSin, char *file);
+/*long SDDS_InitializeInputFromSearchPath(SDDS_DATASET *SDDSin, char *file);*/
 
 void ComputeSASEFELParameters
   (double *lightWavelength, double *saturationLength, double *gainLength,  double *noisePower,

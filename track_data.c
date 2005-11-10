@@ -1884,9 +1884,12 @@ PARAMETER edrift_param[N_EDRIFT_PARAMS] = {
 };
 
 SCMULT scmult_example;   
+/*
 PARAMETER scmult_param[N_SCMULT_PARAMS] = {
 };
-
+*/
+PARAMETER scmult_param[] = {
+};
 /* array of parameter structures */
 
 #define MAT_LEN     HAS_MATRIX|HAS_LENGTH

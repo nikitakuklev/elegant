@@ -15,6 +15,9 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.20  2004/12/30 03:31:17  borland
+ * Added comment to the usage message suggesting use of sddsemitproc instead.
+ *
  * Revision 1.19  2004/12/29 23:33:56  borland
  * Fixed bug in previous change.
  *
@@ -525,7 +528,7 @@ int main(
   }
   else {
     char **column_name;
-    long column_names;
+    int32_t column_names;
     if (!(column_name = SDDS_GetColumnNames(&SDDSin, &column_names)))
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     for (i_variable=0; i_variable<column_names; i_variable++)
@@ -698,7 +701,7 @@ int main(
       n_xresol = n_yresol = 0; 
       for (i_error=0; i_error<n_error_sets; i_error++) {
         if (verbosity>1) {
-          fprintf(stderr, "Error set %ld...\n", i_error);
+          fprintf(stderr, "Error set %d...\n", i_error);
         }
         for (i_config=0; i_config<n_configs; i_config++) {
           s2x->a[i_config][0] =  sqr( sigmax[i_config] ) - sqr(x_resol);

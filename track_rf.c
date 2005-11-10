@@ -15,6 +15,8 @@
 #include "track.h"
 #include "mdb.h"
 
+long find_nearby_array_entry(double *entry, long n, double key);
+
 void track_through_rf_deflector(
                                 double **final, 
                                 RFDF *rf_param,

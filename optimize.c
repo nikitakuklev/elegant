@@ -20,6 +20,7 @@
 #include "match_string.h"
 #include "chromDefs.h"
 #include "tuneDefs.h"
+#include "correctDefs.h"
 
 static long stopOptimization = 0;
 long checkForOptimRecord(double *value, long values, long *again);
