@@ -1358,7 +1358,7 @@ zero for backward compatibility, but the recommended value is 1.
 \begin{itemize}
 \item \verb|filename| --- The (incomplete) name of an SDDS file to send output to.  
  Recommended value: ``\%s.flr''.
-\item \verb|X0|, \verb|Z0|, \verb|theta0| --- Initial X, Z, and angle coordinate of the
+\item \verb|X0|, \verb|Z0|, \verb|theta0| --- Initial X, Z, and angle coordinate of the beamline.
 \item \verb|include_vertices| --- Flag that, if set, specifies including  in the output
 the coordinates of the vertices of bending magnets.
 \item \verb|vertices_only| --- Flag that, if set, specifies that output will contain only
@@ -1784,6 +1784,7 @@ closed orbit value ({\tt xco}, {\tt xpco}, etc) if closed orbit
 calculations are requested.  The parameter names are the same as those
 used in the corresponding output files.  Beam sizes, centroids, and
 sigma-matrix elements are from tracking the particle distribution.
+See the documentation for the MARK element for a more detailed listing.
 
 If closed orbit calculations are requested, data from {\tt MONI}, {\tt
 HMON}, and {\tt VMON} elements that have {\tt CO\_FITPOINT=1} is
