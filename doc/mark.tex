@@ -1,0 +1,31 @@
+If {\tt FITPOINT=0}, this element results only in generation of additional output rows in the various 
+files that contain output vs s.  For example, Twiss parameters, closed orbits, and matrices vs s will
+all contain a row for each occurrence of  each marker element.
+
+If {\tt FITPOINT=1}, the element has additional functionality in the context of optimizations.  In particular,
+for occurrence {\em N} of the defined element {\em Element}, a series of symbols are created of the
+form {\em Element}\#{\em N}.{\em quantity}, where {\em quantity} has the following values:
+\begin{itemize}
+\item The quantity {\tt pCentral} will be created, giving the reference value of $\beta\gamma$ at the marker location.
+\item The quantities {\tt Cx}, {\tt Cxp}, {\tt Cy}, {\tt Cyp}, {\tt Cs}, and {\tt Cdelta} will be created,
+ giving coordinate centroid values from tracking to the marker location.
+\item The quantity {\tt Particles} will be created, giving the number of particles tracked to the marker location.
+\item The quantities {\tt s{\em i}{\em j}} will be created, giving $\langle ( x_i -\langle x_i\rangle)( x_j -langle x_j \rangle)\rangle$
+ at the marker location, where $1\leq i\leq 6$ and $i<j\leq 6$.
+\item The quantities {\tt R{\em i}{\em j}} will be created, for $1\leq i \leq 6$ and $1\leq j \leq 6$,
+  giving the accumulated first-order transport matrix to the marker location.
+\item If the default matrix order (as set in {\tt run\_setup}) is 2 or greater, the quantities {\tt T{\em i}{\em j}{\em k}} 
+  will be created, for $1\leq i \leq 6$, $1\leq j \leq 6$, and $1\leq k \leq j$,
+  giving the accumulated second-order transport matrix to the marker location.
+\item If Twiss parameter calculations are being performed (via {\tt twiss\_output}), then the quantities
+  {\tt alphax}, {\tt betax}, {\tt nux}, {\tt etax}, {\tt etapx}, and {\tt etaxp}, along with similarly-named
+  quantities for the vertical plane, will be created, giving twiss parameter values at the marker location.
+  Note that {\tt etapx} and {\tt etaxp} are the same, being alternate names for $\eta_x^\prime$.
+\item If closed orbit calculations are being performed (via {\tt correct} or {\tt closed\_orbit}), then
+  the quantities {\tt xco}, {\tt yco}, {\tt xpco}, and {\tt ypco} will be created, giving the
+  x and y closed orbits and their slopes, respectively, at the marker location.
+\item If floor coordinate calculations are begin performed (via {\tt floor\_coordinates}), then the quantities
+  {\tt X}, {\tt Y}, {\tt Z}, {\tt theta}, {\tt phi}, {\tt psi}, and {\tt s} will be created.  These are,
+  respectively, the three position coordinates, the three angle coordinates, and the total arc length
+  at the marker location.
+\end{itemize}
