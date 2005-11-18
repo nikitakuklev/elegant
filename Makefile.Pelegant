@@ -7,10 +7,13 @@
 # in the file LICENSE that is included with this distribution. 
 #*************************************************************************
 #
-# $Id: Makefile.Pelegant,v 1.1 2005-09-29 20:54:49 ywang25 Exp $
+# $Id: Makefile.Pelegant,v 1.2 2005-11-18 22:14:28 soliday Exp $
 #
 #  Lowest Level Directroy Makefile
 # $Log: not supported by cvs2svn $
+# Revision 1.1  2005/09/29 20:54:49  ywang25
+# First version for parallel elegant
+#
 # Revision 1.5  2004/04/08 16:09:36  soliday
 # Build rules are now compatible with Base 3.14
 #
@@ -31,6 +34,24 @@
 #
 
 TOP=../..
+
+ifneq ($(MPI), 1)
+ifneq ($(NOMPI), 1)
+
+include $(TOP)/configure/CONFIG
+
+LEFTOVER_MAKEFILE=1
+
+all buildInstall Pelegant Selegant:
+	$(RM) $(TOP)/src/elegant/Makefile
+	$(MV) $(TOP)/src/elegant/Makefile.TMP $(TOP)/src/elegant/Makefile
+	$(MAKE) -f Makefile
+
+endif
+endif
+
+ifneq ($(LEFTOVER_MAKEFILE), 1)
+
 include $(TOP)/configure/CONFIG
 include $(TOP)/src/elegant/Makefile.OAG
 include $(TOP)/configure/RULES
@@ -210,3 +231,5 @@ sddsrandmult.h: ../sddsrandmult.nl
 
 clean::
 	$(RM) sddsrandmult.h fitTraces.h vary.h twiss.h tune.h trace.h subprocess.h steer_elem.h sliceAnalysis.h sdds_beam.h save_lattice.h sasefel.h run_rpnexpr.h response.h optimize.h optim_covariable.h matrix_output.h load_parameters.h link_elements.h frequencyMap.h floor.h error.h elegant.h transmuteElements.h divideElements.h correct.h steer_elem.h closed_orbit.h chrom.h bunched_beam.h aperture_search.h analyze.h amplif.h alter.h
+
+endif
