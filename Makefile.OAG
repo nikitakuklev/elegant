@@ -39,7 +39,7 @@ ifneq ($(NOMPI),1)
 PRODOAG = sddsemitmeas sddsemitproc madto \
           sddssasefel sddsTouschekInteg ibsEmittance \
           recurseSetup haissinski sddsmatchtwiss \
-          sddsanalyzebeam sddsrandmult sddsresdiag
+          sddsanalyzebeam sddsrandmult sddsresdiag sddsfindresonances
 
 SCRIPTS = elegantRingAnalysis beamLifetimeCalc fin2param elegant2shower shower2elegant longitCmd longitCalcs
 endif
@@ -162,6 +162,8 @@ recurseSetup_SRCS = recurseSetup.c
 haissinski_SRCS = haissinski.c
 
 sddsmatchtwiss_SRCS = sddsmatchtwiss.c
+
+sddsfindresonances_SRCS = sddsfindresonances.c
 
 sddsanalyzebeam_SRCS = sddsanalyzebeam.c
 sddsanalyzebeam_CFLAGS = -I../../../../../epics/extensions/src/SDDS/meschach
