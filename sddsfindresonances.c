@@ -11,6 +11,9 @@
    Hairong Shang, Oct 2005
    *
    $Log: not supported by cvs2svn $
+   Revision 1.1  2005/11/18 20:58:51  shang
+   first version.
+
    */
 
 
@@ -108,6 +111,8 @@ int SDDS_CompareDoubleRows(const void *vrow1, const void *vrow2);
                          #find the resonace of following equation
                          #multx *nux + multy * nuy = offset
                          for (i_data=0; i_data<datapoints-1; i++) {
+                             #skip if the two consecutive values of x (first set data)
+                               or y (second set data) are different.
                              delta = multx *nux[i_data] + multy * nuy[i_data] - offset
                              delta1 = multx *nux[i_data+1] + multy * nuy[i_data+1] - offset
                              if delta and delta1 have different signs -- interpolate the values of
