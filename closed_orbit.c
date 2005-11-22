@@ -108,13 +108,15 @@ long run_closed_orbit(RUN *run, LINE_LIST *beamline, double *starting_coord, BEA
     }
 
     if (start_from_centroid || start_from_dp_centroid) {
-        if (!beam)
-            bomb("no beam present for closed-orbit calculation starting from centroid", NULL);
-        compute_centroids(starting_coord, beam->particle, beam->n_to_track);
-        dp = starting_coord[5];
-        }
-    else
-        dp = 0;
+      double initial[6];
+      if (!beam)
+        bomb("no beam present for closed-orbit calculation starting from centroid", NULL);
+      compute_centroids(initial, beam->particle, beam->n_to_track);
+      if (start_from_centroid)
+        memcpy(starting_coord, initial, 6*sizeof(*starting_coord));
+      dp = initial[5];
+    } else
+      dp = 0;
 
     if (!clorb)
         bomb("TRAJECTORY array for closed orbit not allocated (run_closed_orbit)", NULL);
