@@ -821,7 +821,7 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
   fill_double_array(*one_part, 7, 0.0);
   if (!do_tracking(NULL, one_part, n_part, NULL, beamline, &p, (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
                    traj0, run, 0, 
-                   TEST_PARTICLES+TIME_DEPENDENCE_OFF, 1, 0, NULL, NULL, NULL, NULL))
+                   TEST_PARTICLES+TIME_DEPENDENCE_OFF, 1, 0, NULL, NULL, NULL, NULL, NULL))
     bomb("tracking failed for test particle (compute_trajcor_matrices())", NULL);
 
 #if  DEBUG
@@ -883,7 +883,7 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
     n_part = 1;
     fill_double_array(*one_part, 7, 0.0);
     if (!do_tracking(NULL, one_part, n_part, NULL, beamline, &p, (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
-                     traj1, run, 0, TEST_PARTICLES+TIME_DEPENDENCE_OFF, 1, 0, NULL, NULL, NULL, NULL))
+                     traj1, run, 0, TEST_PARTICLES+TIME_DEPENDENCE_OFF, 1, 0, NULL, NULL, NULL, NULL, NULL))
       bomb("tracking failed for test particle (compute_trajcor_matrices())", NULL);
 
 #ifdef DEBUG
@@ -917,7 +917,7 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
     n_part = 1;
     fill_double_array(*one_part, 7, 0.0);
     if (!do_tracking(NULL, one_part, n_part, NULL, beamline, &p, (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
-                     traj0, run, 0, TEST_PARTICLES+TIME_DEPENDENCE_OFF, 1, 0, NULL, NULL, NULL, NULL))
+                     traj0, run, 0, TEST_PARTICLES+TIME_DEPENDENCE_OFF, 1, 0, NULL, NULL, NULL, NULL, NULL))
       bomb("tracking failed for test particle (compute_trajcor_matrices())", NULL);
 
     /* compute coefficients of array C that are driven by this corrector */
@@ -1057,7 +1057,7 @@ long global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
 
     n_part = do_tracking(NULL, particle, n_part, NULL, beamline, &p, (double**)NULL, 
                          (BEAM_SUMS**)NULL, (long*)NULL,
-                         traj, run, 0, tracking_flags, 1, 0, NULL, NULL, NULL, NULL);
+                         traj, run, 0, tracking_flags, 1, 0, NULL, NULL, NULL, NULL, NULL);
     if (beam) {
       fprintf(stdout, "%ld particles survived tracking", n_part);
       fflush(stdout);
@@ -1221,7 +1221,7 @@ void one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TR
       
       n_part = do_tracking(NULL, particle, n_part, NULL, beamline, &p, (double**)NULL, 
                            (BEAM_SUMS**)NULL, (long*)NULL,
-                           traj, run, 0, tracking_flags, 1, 0, NULL, NULL, NULL, NULL);
+                           traj, run, 0, tracking_flags, 1, 0, NULL, NULL, NULL, NULL, NULL);
       if (beam) {
         fprintf(stdout, "%ld particles survived tracking", n_part);
         fflush(stdout);
@@ -1899,8 +1899,8 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
   static MATRIX *R, *ImR, *INV_ImR, *INV_R, *C, *co, *diff, *change;
   static double **one_part;
   static long initialized = 0;
-  long i, j, n_iter = 0, bad_orbit;
-  long n_part;
+  long i, j, n_iter = 0, bad_orbit = 0;
+  long n_part, method;
   double p, error, last_error;
 
   log_entry("find_closed_orbit");
@@ -1965,85 +1965,117 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
   if (!starting_point) {
     if (!m_mult(co, INV_ImR, C))
       bomb("unable to solve for closed orbit--matrix multiplication error", NULL);
-    
-    one_part[0][0] = co->a[0][0];
-    one_part[0][1] = co->a[1][0];
-    one_part[0][2] = co->a[2][0];
-    one_part[0][3] = co->a[3][0];
+    for (i=0; i<4; i++)
+      one_part[0][i] = co->a[i][0];
     one_part[0][4] = 0;
     one_part[0][5] = dp;
   }
   else {
-    one_part[0][0] = co->a[0][0] = starting_point[0];
-    one_part[0][1] = co->a[1][0] = starting_point[1];
-    one_part[0][2] = co->a[2][0] = starting_point[2];
-    one_part[0][3] = co->a[3][0] = starting_point[3];
+    for (i=0; i<4; i++)
+      one_part[0][i] = co->a[i][0] = starting_point[i];
     one_part[0][4] = 0;
     one_part[0][5] = dp;
   }
 
   p = run->p_central;
-  error = DBL_MAX/4;
-  bad_orbit = 0;
   if (deviation)
     deviation[4] = deviation[5] = 0;
-  do {
-    n_part = 1;
-    do_tracking(NULL, one_part, n_part, NULL, beamline, &p, (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
-                clorb+1, run, 0, 
-                CLOSED_ORBIT_TRACKING+TEST_PARTICLES+TIME_DEPENDENCE_OFF+(start_from_recirc?BEGIN_AT_RECIRC:0), 
-                1, 0,
-                NULL, NULL, NULL, NULL);
-    if (n_part==0)
-      bomb("tracking failed for closed-orbit test particle", NULL);
-#ifdef DEBUG
-    fprintf(stdout, "particle coordinates at end of closed-orbit tracking:\n%e %e %e %e %e %e\n",
-            one_part[0][0], one_part[0][1], one_part[0][2], one_part[0][3],
-            one_part[0][4], one_part[0][5]);
-    fflush(stdout);
-#endif
-    for (i=0; i<4; i++) {
-      diff->a[i][0] = one_part[0][i] - co->a[i][0];
-      if (deviation)
-        deviation[i] = diff->a[i][0];
-    }
-    last_error = error;
-    if ((error = sqrt(sqr(diff->a[0][0]) + sqr(diff->a[1][0]) + sqr(diff->a[2][0]) + sqr(diff->a[3][0])))<clorb_acc)
-      break;
-    if (error>2*last_error) {
-      fprintf(stdout, "warning: closed orbit diverging--iteration stopped\n");
+  for (method=0; method<3; method++) {
+    if (method==0 || method==2) {
+      n_iter = 0;
+      error = DBL_MAX/4;
+      bad_orbit = 0;
+      do {
+        n_part = 1;
+        if (!do_tracking(NULL, one_part, n_part, NULL, beamline, &p, (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
+                         clorb+1, run, 0, 
+                         CLOSED_ORBIT_TRACKING+TEST_PARTICLES+TIME_DEPENDENCE_OFF+(start_from_recirc?BEGIN_AT_RECIRC:0), 
+                         1, 0,
+                         NULL, NULL, NULL, NULL, NULL)) {
+          n_iter = clorb_iter;
+          break;
+        }
+        for (i=0; i<4; i++) {
+          diff->a[i][0] = one_part[0][i] - co->a[i][0];
+          if (deviation)
+            deviation[i] = diff->a[i][0];
+        }
+        last_error = error;
+        if ((error = sqrt(sqr(diff->a[0][0]) + sqr(diff->a[1][0]) + sqr(diff->a[2][0]) + sqr(diff->a[3][0])))<clorb_acc)
+          break;
+        if (error>2*last_error) {
+          fprintf(stdout, "warning: closed orbit diverging--iteration stopped\n");
+          fflush(stdout);
+          fprintf(stdout, "last error was %e, current is %e\n", last_error, error);
+          fflush(stdout);
+          if (method==2)
+            bad_orbit = 1;
+          n_iter = clorb_iter;
+          break;
+        }
+        if (change_fraction) {
+          m_mult(change, INV_ImR, diff);
+          if (change_fraction!=1)
+            m_scmul(change, change, change_fraction);
+          m_add(co, co, change);
+          for (i=0; i<4; i++)
+            one_part[0][i] = co->a[i][0];
+        }
+        else {
+          for (i=0; i<4; i++) {
+            co->a[i][0] = (co->a[i][0]+one_part[0][i])/2;
+            one_part[0][i] = co->a[i][0];
+          }
+        }
+        one_part[0][4] = 0;
+        one_part[0][5] = dp;
+      } while (++n_iter<clorb_iter);
+      if (n_iter==clorb_iter)  {
+        fprintf(stdout, "warning: closed orbit did not converge to better than %e after %ld iterations\n",
+                error, n_iter);
+        fflush(stdout);
+        if (isnan(error) || isinf(error)) {
+          return 0;
+        }
+      } else
+        break;
+    } else {
+      /* try to find a good starting point by tracking several turns */
+      long turn;
+      double buffer[4];
+      fprintf(stdout, "Trying secondary method for orbit determination.\n");
       fflush(stdout);
-      fprintf(stdout, "last error was %e, current is %e\n", last_error, error);
-      fflush(stdout);
-      n_iter = clorb_iter;
-      break;
-    }
-    if (change_fraction) {
-      m_mult(change, INV_ImR, diff);
-      if (change_fraction!=1)
-        m_scmul(change, change, change_fraction);
-      m_add(co, co, change);
       for (i=0; i<4; i++)
-        one_part[0][i] = co->a[i][0];
-    }
-    else {
-      for (i=0; i<4; i++) {
-        co->a[i][0] = (co->a[i][0]+one_part[0][i])/2;
-        one_part[0][i] = co->a[i][0];
+        one_part[0][i] = buffer[i] = 0;
+      one_part[0][5] = dp;
+      bad_orbit = 0;
+      for (turn=0; turn<clorb_iter/10; turn++)  {
+        n_part = 1;
+        if (do_tracking(NULL, one_part, n_part, NULL, beamline, &p, (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
+                        (TRAJECTORY*)NULL, run, 0, 
+                        CLOSED_ORBIT_TRACKING+TEST_PARTICLES+TIME_DEPENDENCE_OFF+(start_from_recirc?BEGIN_AT_RECIRC:0), 
+                        1, 0, NULL, NULL, NULL, NULL, NULL)) {
+          for (i=0; i<4; i++)
+            one_part[0][i] = (buffer[i] + one_part[0][i])/2;
+          one_part[0][5] = dp;
+        } else {
+          bad_orbit = 1;
+          break;
+        }
       }
+      if (!bad_orbit) {
+        for (i=0; i<4; i++)
+          co->a[i][0] = one_part[0][i];
+        one_part[0][4] = 0;
+        one_part[0][5] = dp;
+        fprintf(stdout, "New CO starting point (%ld turns): %e, %e, %e, %e, %e, %e\n",
+                turn, one_part[0][0], one_part[0][1], one_part[0][2], one_part[0][3], 
+                one_part[0][4], one_part[0][5]);
+      } else
+        break;
     }
-    one_part[0][4] = 0;
-    one_part[0][5] = dp;
-  } while (++n_iter<clorb_iter);
-  if (n_iter==clorb_iter)  {
-    fprintf(stdout, "warning: closed orbit did not converge to better than %e after %ld iterations\n",
-            error, n_iter);
-    fflush(stdout);
-    if (isnan(error) || isinf(error)) {
-      return 0;
-    }
-    fflush(stdout);
   }
+  
 #ifdef DEBUG
   fprintf(stdout, "final closed-orbit after %ld iterations:\n%e %e %e %e %e %e\n",
           n_iter, one_part[0][0], one_part[0][1], one_part[0][2], one_part[0][3],

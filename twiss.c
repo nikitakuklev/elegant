@@ -2582,7 +2582,7 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
 		       (BEAM_SUMS**)NULL, (long*)NULL,
                        (TRAJECTORY*)NULL, run, 0, 
 		       TEST_PARTICLES+(allowLosses?TEST_PARTICLE_LOSSES:0)+TIME_DEPENDENCE_OFF, 
-                       1, i-1, NULL, NULL, NULL, NULL)) {
+                       1, i-1, NULL, NULL, NULL, NULL, NULL)) {
 	if (!allowLosses) {
 	  fprintf(stdout, "warning: test particle lost on turn %ld (computeTunesFromTracking)\n", i);
 	  fflush(stdout);

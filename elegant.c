@@ -97,7 +97,8 @@ char *GREETING="This is elegant, by Michael Borland. (This is version 15.4.1, "_
 #define SEMAPHORES     44
 #define FREQUENCY_MAP  45
 #define INSERT_SCEFFECTS 46 
-#define N_COMMANDS      47
+#define MOMENTUM_APERTURE 47
+#define N_COMMANDS      48
 
 char *command[N_COMMANDS] = {
     "run_setup", "run_control", "vary_element", "error_control", "error_element", "awe_beam", "bunched_beam",
@@ -108,8 +109,8 @@ char *command[N_COMMANDS] = {
     "steering_element", "amplification_factors", "print_dictionary", "floor_coordinates", "correction_matrix_output",
     "load_parameters", "sdds_beam", "subprocess", "fit_traces", "sasefel", "alter_elements",
     "optimization_term", "slice_analysis", "divide_elements", "tune_shift_with_amplitude",
-    "transmute_elements", "twiss_analysis", "semaphores", "frequency_map", "insert_sceffects" 
-        } ;
+    "transmute_elements", "twiss_analysis", "semaphores", "frequency_map", "insert_sceffects", "momentum_aperture", 
+  } ;
 
 char *description[N_COMMANDS] = {
     "run_setup                   defines lattice input file, primary output files, tracking order, etc.",
@@ -159,7 +160,8 @@ char *description[N_COMMANDS] = {
     "semaphores                  requests use of semaphore files to indicate run start and end",
     "frequency_map               command to perform frequency map analysis",
     "insert_sceffects            add space charge element to beamline and set calculation flags", 
-        } ;
+    "momentum_aperture           determine momentum aperture from tracking as a function of position in the ring",
+  } ;
 
 void initialize_structures(RUN *run_conditions, VARY *run_control, ERRORVAL *error_control, CORRECTION *correct, 
                            BEAM *beam, OUTPUT_FILES *output_data, OPTIMIZATION_DATA *optimize,
@@ -646,7 +648,7 @@ char **argv;
         }
         else
           new_bunched_beam(&beam, &run_conditions, &run_control, &output_data, new_beam_flags);
-        if (do_closed_orbit && 
+        if (do_closed_orbit && (fl_do_tune_correction || do_chromatic_correction) &&
             !run_closed_orbit(&run_conditions, beamline, starting_coord, &beam, 0) &&
             !soft_failure) {
           fprintf(stdout, "Closed orbit not found---continuing to next step\n");
@@ -663,51 +665,53 @@ char **argv;
         if (do_response_output)
           run_response_output(&run_conditions, beamline, &correct, 0);
         run_matrix_output(&run_conditions, beamline);
-        for (i=failed=0; (fl_do_tune_correction || do_chromatic_correction) && i<correction_iterations; i++) {
-          correctionDone = 0;
-          if (correction_iterations>1) {
-            fprintf(stdout, "\nTune/chromaticity correction iteration %ld\n", i+1);
-            fflush(stdout);
+        if (fl_do_tune_correction || do_chromatic_correction) {
+          for (i=failed=0; (fl_do_tune_correction || do_chromatic_correction) && i<correction_iterations; i++) {
+            correctionDone = 0;
+            if (correction_iterations>1) {
+              fprintf(stdout, "\nTune/chromaticity correction iteration %ld\n", i+1);
+              fflush(stdout);
+            }
+            if (fl_do_tune_correction) {
+              if (do_closed_orbit && 
+                  !run_closed_orbit(&run_conditions, beamline, starting_coord, &beam, 0) &&
+                  !soft_failure) {
+                fprintf(stdout, "Closed orbit not found---continuing to next step\n");
+                fflush(stdout);
+                failed = 1;
+                break;
+              }
+              if (!do_tune_correction(&tune_corr_data, &run_conditions, beamline, starting_coord,
+                                      run_control.i_step, i==correction_iterations-1) &&
+                  !soft_failure) {
+                fprintf(stdout, "Tune correction failed---continuing to next step\n");
+                fflush(stdout);
+                failed = 1;
+                break;
+              }
+            }
+            if (do_chromatic_correction) {
+              if (do_closed_orbit && 
+                  !run_closed_orbit(&run_conditions, beamline, starting_coord, &beam, 0) &&
+                  !soft_failure) {
+                fprintf(stdout, "Closed orbit not found---continuing to next step\n");
+                fflush(stdout);
+                failed = 1;
+                break;
+              }
+              if (!do_chromaticity_correction(&chrom_corr_data, &run_conditions, beamline, starting_coord,
+                                              run_control.i_step, i==correction_iterations-1) &&
+                  !soft_failure) {
+                fprintf(stdout, "Chromaticity correction failed---continuing to next step\n");
+                fflush(stdout);
+                failed = 1;
+                break;
+              }
+            }
           }
-          if (fl_do_tune_correction) {
-            if (do_closed_orbit && 
-                !run_closed_orbit(&run_conditions, beamline, starting_coord, &beam, 0) &&
-                !soft_failure) {
-              fprintf(stdout, "Closed orbit not found---continuing to next step\n");
-              fflush(stdout);
-              failed = 1;
-              break;
-            }
-            if (!do_tune_correction(&tune_corr_data, &run_conditions, beamline, starting_coord,
-                                    run_control.i_step, i==correction_iterations-1) &&
-                !soft_failure) {
-              fprintf(stdout, "Tune correction failed---continuing to next step\n");
-              fflush(stdout);
-              failed = 1;
-              break;
-            }
-          }
-          if (do_chromatic_correction) {
-            if (do_closed_orbit && 
-                !run_closed_orbit(&run_conditions, beamline, starting_coord, &beam, 0) &&
-                !soft_failure) {
-              fprintf(stdout, "Closed orbit not found---continuing to next step\n");
-              fflush(stdout);
-              failed = 1;
-              break;
-            }
-            if (!do_chromaticity_correction(&chrom_corr_data, &run_conditions, beamline, starting_coord,
-                                            run_control.i_step, i==correction_iterations-1) &&
-                !soft_failure) {
-              fprintf(stdout, "Chromaticity correction failed---continuing to next step\n");
-              fflush(stdout);
-              failed = 1;
-              break;
-            }
-          }
+          if (failed)
+            continue;
         }
-        if (failed)
-          continue;
         perturb_beamline(&run_control, &error_control, &run_conditions, beamline); 
         if (correct.mode!=-1 && !correctionDone &&
             !do_correction(&correct, &run_conditions, beamline, starting_coord, &beam, run_control.i_step, 0) &&
@@ -886,12 +890,16 @@ char **argv;
       break;
     case FIND_APERTURE:
     case FREQUENCY_MAP:
+    case MOMENTUM_APERTURE:
       switch (commandCode) {
       case FIND_APERTURE:
         setup_aperture_search(&namelist_text, &run_conditions, &run_control);
         break;
       case FREQUENCY_MAP:
         setupFrequencyMap(&namelist_text, &run_conditions, &run_control);
+        break;
+      case MOMENTUM_APERTURE:
+        setupMomentumApertureSearch(&namelist_text, &run_conditions, &run_control);
         break;
       }
       while (vary_beamline(&run_control, &error_control, &run_conditions, beamline)) {
@@ -996,6 +1004,10 @@ char **argv;
           break;
         case FREQUENCY_MAP:
           doFrequencyMap(&run_conditions, &run_control, starting_coord, &error_control, beamline);
+          break;
+        case MOMENTUM_APERTURE:
+          doMomentumApertureSearch(&run_conditions, &run_control, &error_control, beamline);
+          break;
         }
       }
       fprintf(stdout, "Finished all tracking steps.\n"); fflush(stdout);
@@ -1007,16 +1019,26 @@ char **argv;
       case FREQUENCY_MAP:
         finishFrequencyMap();
         break;
+      case MOMENTUM_APERTURE:
+        finishMomentumApertureSearch();
+        break;
       }
       if (do_closed_orbit)
         finish_clorb_output();
 #ifdef SUNOS4
       check_heap();
 #endif
-      if (commandCode==FIND_APERTURE)
+      switch (commandCode) {
+      case FIND_APERTURE:
 	fprintf(stdout, "Finished dynamic aperture search.\n");
-      else
+        break;
+      case FREQUENCY_MAP:
 	fprintf(stdout, "Finished frequency map analysis.\n");
+        break;
+      case MOMENTUM_APERTURE:
+	fprintf(stdout, "Finished momentum aperture search.\n");
+        break;
+      }
 #if DEBUG
       fprintf(stdout, "semaphore_file = %s\n", semaphore_file?semaphore_file:NULL);
 #endif  

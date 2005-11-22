@@ -239,7 +239,7 @@ void do_transport_analysis(
 		     (FIRST_BEAM_IS_FIDUCIAL+RESTRICT_FIDUCIALIZATION))
 		    +SILENT_RUNNING,
 		    control->n_passes, 0,
-                    NULL, NULL, NULL, NULL)!=n_track) {
+                    NULL, NULL, NULL, NULL, NULL)!=n_track) {
         fputs("warning: particle(s) lost during transport analysis--continuing with next step", stdout);
         log_exit("do_transport_analysis");
         return;

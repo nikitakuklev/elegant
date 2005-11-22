@@ -15,6 +15,9 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.4  2005/11/10 15:38:49  soliday
+ * Added changes to get it to compile properly with 64 bit compilers.
+ *
  * Revision 1.3  2004/12/30 04:39:04  borland
  * Standard deviations in the output are no longer labeled "Sigma".
  *
@@ -116,19 +119,18 @@
 #define SET_IGNORE_PLANE 7
 #define SET_SIGMA_DATA 8
 #define SET_PIPE 9
-#define SET_ENERGYSPREAD 10
+#define SET_INCLUDE_DISPERSION 10
 #define N_OPTIONS 11
 
 char *option[N_OPTIONS] = {
     "errorlevel", "nerrorsets", "seed", "verbosity",
     "deviationlimit", "resolution", "limitmode", "ignoreplane",
-    "sigmadata", "pipe", "energyspread",
+    "sigmadata", "pipe", "includedispersion",
     } ;
 
 #define USAGE "sddsemitproc\n\
  [<inputfile>] [<outputfile>] [-pipe=[input][,output]]\n\
- -sigmaData=<xName>,<yName>\n\
- [-energySpread=<fractionalRMSValue>]\n\
+ -sigmaData=<xName>,<yName> [-includeDispersion[=vertical]] \n\
  [-errorLevel=<x_valueInm>,<y_valueInm>,[{gaussian,<nSigmas> | uniform}]]\n\
  [-nErrorSets=<number>]\n\
  [-limitMode={resolution | zero}[{,reject}]\n\
@@ -136,7 +138,7 @@ char *option[N_OPTIONS] = {
  [-resolution=<xResolutionm>,<yResolutionm>]\n\
  [-seed=integer] [-ignorePlane={x | y}]\n\
  [-verbosity=level]\n\n\
-Program by Michael Borland. (This is version 1, December 2004.)"
+Program by Michael Borland. (This is version 2, November 2005.)"
 
 static char *additional_help[] = {
 USAGE,
@@ -155,10 +157,9 @@ USAGE,
 "    with data at or below the resolution limit.",
 "-resolution allows specification of the measurement resolution,",
 "    which is subtracted in quadrature from the sigma or width values.",
-"-energySpread is used if there is dispersion at the measurement point.",
-"    In this case, you must put the dispersion (etax, etay) at the measurement",
-"    point in <inputfile>.  This can be done using the elegant twiss",
-"    output plus some SDDS tools.",
+"-includeDispersion is used if there is dispersion in the system. For this\n",
+"    to work, you must have a dipole in the beamline that you are simulating.\n",
+"    Otherwise, the program cannot separate dispersive effects from emittance.\n",
 NULL
     } ; 
 
@@ -201,15 +202,17 @@ int main(
 {
   SDDS_TABLE SDDSin, SDDSout;
   double *R11;        /* R11 matrix element for ith configuration */
-  double *R12=NULL;        /* R12 matrix element for ith configuration */
-  double *etax=NULL, *etay=NULL;  /* dispersion at measurement point, if provided */
+  double *R12=NULL;   /* R12 matrix element for ith configuration */
+  double *R16=NULL;   /* R16 matrix element for ith configuration */
   double *sigmax, *uncertx;               /* sigma in x plane for ith configuration */
-  double *R33=NULL, *R34=NULL, *sigmay, *uncerty;   /* similar data for y plane */
+  double *R33=NULL, *R34=NULL, *R36=NULL, *sigmay, *uncerty;   /* similar data for y plane */
   int n_configs, i_config;
   MATRIX *Rx, *Ry, *s2x, *s2y;
   MATRIX *Sx, *Sy, *sSx, *sSy, *Kx, *Ky;
   double S11_sum, S11_sum2, S12_sum, S12_sum2, S22_sum, S22_sum2;
+  double S66_sum, S66_sum2, S16_sum, S16_sum2, S26_sum, S26_sum2;
   double S33_sum, S33_sum2, S34_sum, S34_sum2, S44_sum, S44_sum2;
+  double S36_sum, S46_sum, S36_sum2, S46_sum2;
   double betax, alphax, betax_sum, betax_sum2, alphax_sum, alphax_sum2;
   double betay, alphay, betay_sum, betay_sum2, alphay_sum, alphay_sum2;
   int i_variable;
@@ -238,7 +241,7 @@ int main(
   double x_uncert_frac, y_uncert_frac;
   double x_uncert_min, y_uncert_min;
   double x_fixed_uncert, y_fixed_uncert;
-  double energySpread, energySize;
+  double includeDispersion;
   int equal_weights_x_fit=0, equal_weights_y_fit=0, constant_weighting;
   int find_uncert, verbosity;
   char *x_width_name, *y_width_name;
@@ -274,7 +277,7 @@ int main(
   x_fixed_uncert = y_fixed_uncert = verbosity = 0;
   x_width_name = "Sx";
   y_width_name = "Sy";
-  energySpread = 0;
+  includeDispersion = 0;
   pipeFlags = 0;
   
   for (i_arg=1; i_arg<argc; i_arg++) {
@@ -362,11 +365,15 @@ int main(
 	if (!processPipeOption(scanned[i_arg].list+1, scanned[i_arg].n_items-1, &pipeFlags))
 	  SDDS_Bomb("invalid -pipe syntax");
 	break;
-      case SET_ENERGYSPREAD:
-        if (scanned[i_arg].n_items!=2 ||
-            !sscanf(scanned[i_arg].list[1], "%lf", &energySpread) ||
-            energySpread<0)
-          SDDS_Bomb("invalid -energySpread syntax");
+      case SET_INCLUDE_DISPERSION:
+        includeDispersion = 1;
+        if (scanned[i_arg].n_items==2) {
+          if (strncmp(scanned[i_arg].list[1], "vertical", strlen(scanned[i_arg].list[1]))==0)
+            includeDispersion = 2;
+          else
+            SDDS_Bomb("invalid -includeDispersion syntax");
+         } else if (scanned[i_arg].n_items>2)  
+           SDDS_Bomb("invalid -includeDispersion syntax");
         break;
       default:
         bomb("unknown option given", USAGE);
@@ -458,17 +465,21 @@ int main(
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     }
   }
-  
+  if (includeDispersion && 
+      (!SDDS_DefineSimpleParameter(&SDDSout, "Sdelta", NULL, SDDS_DOUBLE) ||
+       (error_output && !SDDS_DefineSimpleParameter(&SDDSout, "SdeltaSigma", NULL, SDDS_DOUBLE))))
+      SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+
   if (SDDS_GetColumnIndex(&SDDSin, x_width_name)<0 ||
       SDDS_GetColumnIndex(&SDDSin, y_width_name)<0 ||
       SDDS_GetColumnIndex(&SDDSin, "R11")<0 ||
       SDDS_GetColumnIndex(&SDDSin, "R12")<0 ||
       SDDS_GetColumnIndex(&SDDSin, "R33")<0 ||
       SDDS_GetColumnIndex(&SDDSin, "R34")<0)
-  if (energySpread && 
-      (SDDS_GetColumnIndex(&SDDSin, "etax")<0 ||
-       SDDS_GetColumnIndex(&SDDSin, "etay")<0))
-      SDDS_Bomb("input file missing etax or etay");
+  if (includeDispersion &&
+      (SDDS_GetColumnIndex(&SDDSin, "R16")<0 ||
+       SDDS_GetColumnIndex(&SDDSin, "R36")<0))
+      SDDS_Bomb("input file missing R16 or R36");
   
   if (variable_name) {
     if ((i_variable=SDDS_GetColumnIndex(&SDDSin, variable_name))<0)
@@ -509,9 +520,9 @@ int main(
         !(R33 = SDDS_GetColumn(&SDDSin, "R33")) ||
         !(R34 = SDDS_GetColumn(&SDDSin, "R34")) ) 
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-    if (energySpread &&
-        (!(etax = SDDS_GetColumn(&SDDSin, "etax")) ||
-         !(etay = SDDS_GetColumn(&SDDSin, "etay"))))
+    if (includeDispersion &&
+        (!(R16 = SDDS_GetColumn(&SDDSin, "R16")) ||
+         !(R36 = SDDS_GetColumn(&SDDSin, "R36"))))
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     
     if (!(sigmax = SDDS_GetColumn(&SDDSin, x_width_name)))
@@ -537,42 +548,38 @@ int main(
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     
     if (!ignore_x) {
-      for (i_config=0; i_config<n_configs; i_config++) {
-        if (energySpread && etax[i_config]) {
-          energySize = sqr(energySpread*etax[i_config]);
-          if (energySize>sqr(sigmax[i_config]))
-            SDDS_Bomb("size due to energy spread exceeds measured horizontal size");
-          sigmax[i_config] = sqrt(sqr(sigmax[i_config]) - energySize);
-        }
+      if (includeDispersion==1) {
+        for (i_config=0; i_config<n_configs; i_config++) 
+          if (R16[i_config]) 
+            break;
+        if (i_config==n_configs)
+          SDDS_Bomb("you asked to include dispersion, but R16=0 for all configurations");
       }
       equal_weights_x_fit = 0;
       for (i_config=0; i_config<n_configs; i_config++)
         uncertx[i_config] = 1;
-      }
     }
     if (!ignore_y) {
-      for (i_config=0; i_config<n_configs; i_config++) {
-        if (energySpread && etay[i_config]) {
-          energySize = sqr(energySpread*etay[i_config]);
-          if (energySize>sqr(sigmay[i_config]))
-            SDDS_Bomb("size due to energy spread exceeds measured vertical size");
-          sigmay[i_config] = sqrt(sqr(sigmay[i_config]) - energySize);
-        }
-        
+      if (includeDispersion==2) {
+        for (i_config=0; i_config<n_configs; i_config++) 
+          if (R36[i_config]) 
+            break;
+        if (i_config==n_configs)
+          SDDS_Bomb("you asked to include vertical dispersion, but R36=0 for all configurations");
       }
       equal_weights_y_fit = 0;
-      for (i_config=0; i_config<n_configs; i_config++) {
+      for (i_config=0; i_config<n_configs; i_config++)
         uncerty[i_config] = 1;
     }
 
-    m_alloc(&Rx,  n_configs, 3);
-    m_alloc(&Ry,  n_configs, 3);
+    m_alloc(&Rx,  n_configs, includeDispersion==1?6:3);
+    m_alloc(&Ry,  n_configs, includeDispersion==2?6:3);
     m_alloc(&s2x, n_configs, 1);
     m_alloc(&s2y, n_configs, 1);
-    m_alloc(&Sx,  3, 1);
-    m_alloc(&Sy,  3, 1);
-    m_alloc(&sSx,  3, 3);
-    m_alloc(&sSy,  3, 3);
+    m_alloc(&Sx,  includeDispersion==1?6:3, 1);
+    m_alloc(&Sy,  includeDispersion==2?6:3, 1);
+    m_alloc(&sSx,  includeDispersion==1?6:3, includeDispersion==1?6:3); 
+    m_alloc(&sSy,  includeDispersion==2?6:3, includeDispersion==2?6:3); 
     m_alloc(&Kx,  n_configs, n_configs);  m_zero(Kx);
     m_alloc(&Ky,  n_configs, n_configs);  m_zero(Ky);
 
@@ -580,9 +587,19 @@ int main(
       Rx->a[i_config][0]  =  sqr(R11[i_config]);
       Rx->a[i_config][1]  =  2*R11[i_config]*R12[i_config];
       Rx->a[i_config][2]  =  sqr(R12[i_config]);
+      if (includeDispersion==1) {
+        Rx->a[i_config][3] = sqr(R16[i_config]);
+        Rx->a[i_config][4] = 2*R11[i_config]*R16[i_config];
+        Rx->a[i_config][5] = 2*R12[i_config]*R16[i_config];
+      }
       Ry->a[i_config][0]  =  sqr(R33[i_config]);
       Ry->a[i_config][1]  =  2*R33[i_config]*R34[i_config];
       Ry->a[i_config][2]  =  sqr(R34[i_config]);
+      if (includeDispersion==2) {
+        Ry->a[i_config][3] = sqr(R36[i_config]);
+        Ry->a[i_config][4] = 2*R33[i_config]*R36[i_config];
+        Ry->a[i_config][5] = 2*R34[i_config]*R36[i_config];
+      }
     }
 
     for (i_dev=0; i_dev<n_dev_limits; i_dev++) {
@@ -592,6 +609,9 @@ int main(
       emity_max = -(emity_min = DBL_MAX);
       S11_sum = S11_sum2 = S12_sum = S12_sum2 = S22_sum = S22_sum2 = 0;
       S33_sum = S33_sum2 = S34_sum = S34_sum2 = S44_sum = S44_sum2 = 0;
+      S16_sum = S16_sum2 = S26_sum = S26_sum2 = 0;
+      S36_sum = S36_sum2 = S46_sum = S46_sum2 = 0;
+      S66_sum = S66_sum2 = 0;
       betax_sum = betax_sum2 = alphax_sum = alphax_sum2 = 0;
       betay_sum = betay_sum2 = alphay_sum = alphay_sum2 = 0;
       md_x = md_y = nx_used_sum = ny_used_sum = 0;
@@ -604,6 +624,10 @@ int main(
         for (i_config=0; i_config<n_configs; i_config++) {
           s2x->a[i_config][0] =  sqr( sigmax[i_config] ) - sqr(x_resol);
           s2y->a[i_config][0] =  sqr( sigmay[i_config] ) - sqr(y_resol);
+	  if (verbosity>3) 
+	    fprintf(stderr, "Data point %ld: sigmax^2=%e, s2x=%e, sigmay^2=%e, s2y=%e\n",
+		    i_config, sqr(sigmax[i_config]),  s2x->a[i_config][0],
+		    sqr(sigmay[i_config]), s2y->a[i_config][0]);
         }
 
         if (!ignore_x) {
@@ -612,7 +636,9 @@ int main(
             set_up_covariance_matrix(Kx, sigmax, uncertx, n_configs, equal_weights_x_fit);
             x_error_level = estimate_uncertainty(uncertx, Sx, sSx, Rx, s2x, Kx, dev_limit[i_dev], 
                                                  n_configs, x_uncert_min, x_fit_sig2);
-          }
+	    if (verbosity>2) 
+	      fprintf(stderr, "x error level estimate: %le\n", x_error_level);
+	  }
           if (!make_tweeked_data_set(s2x, sigmax, x_error_level, error_sigmas, error_type_code, n_configs, 
                                      x_resol, reject_at_limit, x_limit, &n_xresol))  {
             bomb("fatal error: failed to get acceptable error set\n", NULL);
@@ -626,6 +652,8 @@ int main(
             set_up_covariance_matrix(Ky, sigmay, uncerty, n_configs, equal_weights_y_fit);
             y_error_level = estimate_uncertainty(uncerty, Sy, sSy, Ry, s2y, Ky, dev_limit[i_dev], 
                                                  n_configs,  y_uncert_min, y_fit_sig2);
+	    if (verbosity>2) 
+	      fprintf(stderr, "y error level estimate: %le\n", y_error_level);
           }
           if (!make_tweeked_data_set(s2y, sigmay, y_error_level, error_sigmas, error_type_code, n_configs, 
                                      y_resol, reject_at_limit, y_limit, &n_yresol))  {
@@ -638,61 +666,95 @@ int main(
           if ((contrib = solve_normal_form_opt(Sx, sSx, Rx, s2x, Kx, dev_limit[i_dev], &nx_used, x_fit_sig2))<0) {
             fprintf(stderr, "Problem fitting for x\n");
           } else {
-              md_x += contrib;
-              if (nx_used && (emitx = Sx->a[0][0]*Sx->a[2][0]-sqr(Sx->a[1][0]))>0) {
-                  emitx = sqrt(emitx);
-                  if (verbosity>2) {
-                    fprintf(stderr, "Vertical emittance: %e\n", emitx);
-                  }
-                  S11_sum += Sx->a[0][0]; S11_sum2 += sqr(Sx->a[0][0]);
-                  S12_sum += Sx->a[1][0]; S12_sum2 += sqr(Sx->a[1][0]);
-                  S22_sum += Sx->a[2][0]; S22_sum2 += sqr(Sx->a[2][0]);
-                  betax = Sx->a[0][0]/emitx; 
-                  betax_sum += betax;  betax_sum2  += sqr(betax);
-                  alphax = -Sx->a[1][0]/emitx;
-                  alphax_sum += alphax; alphax_sum2 += sqr(alphax);
-                  emitx_sum  += emitx;
-                  emitx2_sum += sqr(emitx);
-                  if (emitx_max<emitx)
-                  emitx_max = emitx;
-                  if (emitx_min>emitx)
-                  emitx_min = emitx;
-                  nx_used_sum += nx_used;
-                  n_good_fits_x++;
+            md_x += contrib;
+            if (nx_used) {
+	      if (verbosity>3) {
+		long it;
+		for (it=0; it<(includeDispersion==1?6:3); it++)
+		  fprintf(stderr, "Sx->a[%ld][0] = %e\n", it, Sx->a[it][0]);
+	      }
+              if (includeDispersion==1) {
+                Sx->a[0][0] -= sqr(Sx->a[4][0])/Sx->a[3][0];
+                Sx->a[1][0] -= Sx->a[4][0]*Sx->a[5][0]/Sx->a[3][0];
+                Sx->a[2][0] -= sqr(Sx->a[5][0])/Sx->a[3][0];
               }
+              S11_sum += Sx->a[0][0]; S11_sum2 += sqr(Sx->a[0][0]);
+              S12_sum += Sx->a[1][0]; S12_sum2 += sqr(Sx->a[1][0]);
+              S22_sum += Sx->a[2][0]; S22_sum2 += sqr(Sx->a[2][0]);
+              if ((emitx = Sx->a[0][0]*Sx->a[2][0]-sqr(Sx->a[1][0]))>0) {
+                emitx = sqrt(emitx);
+                if (verbosity>2) {
+                  fprintf(stderr, "Horizontal emittance: %e\n", emitx);
+                }
+                if (includeDispersion==1) {
+                  S66_sum += Sx->a[3][0]; S66_sum2 += sqr(Sx->a[3][0]);
+                  S16_sum += Sx->a[4][0]; S16_sum2 += sqr(Sx->a[4][0]);
+                  S26_sum += Sx->a[5][0]; S26_sum2 += sqr(Sx->a[5][0]);
+                }
+                betax = Sx->a[0][0]/emitx; 
+                betax_sum += betax;  betax_sum2  += sqr(betax);
+                alphax = -Sx->a[1][0]/emitx;
+                alphax_sum += alphax; alphax_sum2 += sqr(alphax);
+                emitx_sum  += emitx;
+                emitx2_sum += sqr(emitx);
+                if (emitx_max<emitx)
+                  emitx_max = emitx;
+                if (emitx_min>emitx)
+                  emitx_min = emitx;
+                nx_used_sum += nx_used;
+                n_good_fits_x++;
+	      } else {
+		fprintf(stderr, "Horizontal emittance couldn't be determined\n");
+              }
+	    }
           }
         }
+        
 
         if (!ignore_y) {       
           if ((contrib = solve_normal_form_opt(Sy, sSy, Ry, s2y, Ky, dev_limit[i_dev], &ny_used, y_fit_sig2))<0) {
             fprintf(stderr, "Problem fitting for y\n");
           } else {
-              md_y += contrib;
-              if (ny_used && (emity = Sy->a[0][0]*Sy->a[2][0]-sqr(Sy->a[1][0]))>0) {
-                  emity = sqrt(emity);
-                  if (verbosity>2) {
-                    fprintf(stderr, "Vertical emittance: %e\n", emity);
-                  }
-                  S33_sum += Sy->a[0][0]; S33_sum2 += sqr(Sy->a[0][0]);
-                  S34_sum += Sy->a[1][0]; S34_sum2 += sqr(Sy->a[1][0]);
-                  S44_sum += Sy->a[2][0]; S44_sum2 += sqr(Sy->a[2][0]);
-                  betay = Sy->a[0][0]/emity; 
-                  betay_sum += betay;  betay_sum2  += sqr(betay);
-                  alphay = -Sy->a[1][0]/emity;
-                  alphay_sum += alphay; alphay_sum2 += sqr(alphay);
-                  emity_sum  += emity;
-                  emity2_sum += sqr(emity);
-                  if (emity_max<emity)
-                  emity_max = emity;
-                  if (emity_min>emity)
-                  emity_min = emity;
-                  ny_used_sum += ny_used;
-                  n_good_fits_y++;
+            md_y += contrib;
+            if (ny_used) {
+              if (includeDispersion==2) {
+                Sy->a[0][0] -= sqr(Sy->a[4][0])/Sy->a[3][0];
+                Sy->a[1][0] -= Sy->a[4][0]*Sy->a[5][0]/Sy->a[3][0];
+                Sy->a[2][0] -= sqr(Sy->a[5][0])/Sy->a[3][0];
               }
+              S33_sum += Sy->a[0][0]; S33_sum2 += sqr(Sy->a[0][0]);
+              S34_sum += Sy->a[1][0]; S34_sum2 += sqr(Sy->a[1][0]);
+              S44_sum += Sy->a[2][0]; S44_sum2 += sqr(Sy->a[2][0]);
+              if ((emity = Sy->a[0][0]*Sy->a[2][0]-sqr(Sy->a[1][0]))>0) {
+                emity = sqrt(emity);
+                if (verbosity>2) {
+                  fprintf(stderr, "Vertical emittance: %e\n", emity);
+                }
+                if (includeDispersion==2) {
+                  S66_sum += Sy->a[3][0]; S66_sum2 += sqr(Sy->a[3][0]);
+                  S36_sum += Sy->a[4][0]; S36_sum2 += sqr(Sy->a[4][0]);
+                  S46_sum += Sy->a[5][0]; S46_sum2 += sqr(Sy->a[5][0]);
+                }
+                betay = Sy->a[0][0]/emity; 
+                betay_sum += betay;  betay_sum2  += sqr(betay);
+                alphay = -Sy->a[1][0]/emity;
+                alphay_sum += alphay; alphay_sum2 += sqr(alphay);
+                emity_sum  += emity;
+                emity2_sum += sqr(emity);
+                if (emity_max<emity)
+                  emity_max = emity;
+                if (emity_min>emity)
+                  emity_min = emity;
+                ny_used_sum += ny_used;
+                n_good_fits_y++;
+	      } else {
+		fprintf(stderr, "Vertical emittance couldn't be determined\n");
+              }
+            }
           }
         }
       }
-
+      
       xEmitLabel[0] = yEmitLabel[1] = 0;
       if (!ignore_x && n_good_fits_x) {
         if (!error_output) 
@@ -752,6 +814,15 @@ int main(
         if (!SetSigmaData(&SDDSout, "ySigmaData", s2y, "ySigmaFit", y_fit_sig2, n_configs)) 
           SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
       }
+      if (includeDispersion &&
+          (!SDDS_SetParameters(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+                               "Sdelta", sqrt(S66_sum/(includeDispersion==1?n_good_fits_x:n_good_fits_y)), NULL) ||
+           (error_output &&
+            !SDDS_SetParameters(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+                                "SdeltaSigma", 
+                                sqrt(S66_sum2/(includeDispersion==1?n_good_fits_x:n_good_fits_y)
+                                     -sqr(S66_sum/(includeDispersion==1?n_good_fits_x:n_good_fits_y))),
+                                NULL))))SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
       sprintf(emitLabel, "%s %s", xEmitLabel, yEmitLabel);
       if (!SDDS_SetParameters(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
                               "EmittanceLabel", emitLabel, NULL) ||
@@ -883,7 +954,7 @@ double solve_normal_form_opt(
 
 double solve_normal_form(
                          MATRIX *F,       /* Mx1 matrix of Fit coefficients (returned) */
-                         MATRIX *sF,       /* MxM covariance matrix for Fit coefficients (returned) */
+                         MATRIX *sF,      /* MxM covariance matrix for Fit coefficients (returned) */
                          MATRIX *P,       /* NxM matrix of Parameters of fit (provided) */
                          MATRIX *M,       /* Nx1 column matrix of Measured sigma^2 (provided) */
                          MATRIX *K,       /* NxN inverse covariance matrix for Measured quantities (provided) .
@@ -900,7 +971,7 @@ double solve_normal_form(
   double error, rms_error;
 
   n = M->n;        /* n is the number of experimental measurements */
-  m = P->m;        /* m is 3 */
+  m = P->m;        /* m is 3 or 6, the number of unknowns to determine */
   m_alloc(&Pt , m, n);
   m_alloc(&Pt_K, m, n);
   m_alloc(&Pt_K_P, m, m);
@@ -913,54 +984,59 @@ double solve_normal_form(
 
   /* find the fit */
   if (!m_trans(Pt, P)) {
-    fprintf(stderr, "matrix error--call was: m_trans(Pt, P)");
+    fprintf(stderr, "matrix error--call was: m_trans(Pt, P)\n");
     return -1;
   }
   if (!m_mult(Pt_K, Pt, K)) {
-    fprintf(stderr, "matrix error--call was: m_mult(Pt_K, Pt, K)");
+    fprintf(stderr, "matrix error--call was: m_mult(Pt_K, Pt, K)\n");
     return -1;
   }
   if (!m_mult(Pt_K_P, Pt_K, P)) {
-    fprintf(stderr, "matrix error--call was: m_mult(Pt_K_P, Pt_K, P)");
+    fprintf(stderr, "matrix error--call was: m_mult(Pt_K_P, Pt_K, P)\n");
     return -1;
   }
   if (!m_invert(Inv_Pt_K_P, Pt_K_P)) {
-    fprintf(stderr, "matrix error--call was: m_invert(Inv_Pt_K_P, Pt_K_P)");
+    fprintf(stderr, "matrix error--call was: m_invert(Inv_Pt_K_P, Pt_K_P)\n");
     return -1;
   }
+
   if (!m_mult(Inv_PtKP_PtK, Inv_Pt_K_P, Pt_K)) {
-    fprintf(stderr, "matrix error--call was: m_mult(Inv_PtKP_PtK, Inv_Pt_K_P, Pt_K)");
+    fprintf(stderr, "matrix error--call was: m_mult(Inv_PtKP_PtK, Inv_Pt_K_P, Pt_K)\n");
     return -1;
   }
   if (!m_mult(F, Inv_PtKP_PtK, M)) {
-    fprintf(stderr, "matrix error--call was: m_mult(F, Inv_PtKP_PtK, M)");
+    fprintf(stderr, "matrix error--call was: m_mult(F, Inv_PtKP_PtK, M)\n");
     return -1;
   }
   m_zero(sF);
   if (m_invert(C, K)) {
     if (!m_trans(Tt, Inv_PtKP_PtK)) {
-      fprintf(stderr, "matrix error--call was: m_trans(Tt, Inv_PtKP_PtK)");
+      fprintf(stderr, "matrix error--call was: m_trans(Tt, Inv_PtKP_PtK)\n");
       return -1;
     }
     if (!m_mult(TC, Inv_PtKP_PtK, C)) {
-      fprintf(stderr, "matrix error--call was: m_mult(TC, Inv_PtKP_PtK, C)");
+      fprintf(stderr, "matrix error--call was: m_mult(TC, Inv_PtKP_PtK, C)\n");
       return -1;
     }
     if (!m_mult(sF, TC, Tt)) {
-      fprintf(stderr, "matrix error--call was: m_mult(sF, TC, Tt)");
+      fprintf(stderr, "matrix error--call was: m_mult(sF, TC, Tt)\n");
+      fprintf(stderr, "sF: %ld x %ld\n", sF->n, sF->m);
+      fprintf(stderr, "TC: %ld x %ld\n", TC->n, TC->m);
+      fprintf(stderr, "Tt: %ld x %ld\n", Tt->n, Tt->m);
       return -1;
     }
   }
 
   /* evaluate the fit */
   if (!m_mult(Mp, P, F)) {
-    fprintf(stderr, "matrix error--call was: m_mult(Mp, P, F)");
+    fprintf(stderr, "matrix error--call was: m_mult(Mp, P, F)\n");
     return -1;
   }
   for (i=rms_error=0; i<Mp->n; i++) {
     if ((s2_fit[i] = Mp->a[i][0])<0) {
+      fprintf(stderr, "bad fit--negative sigma^2!: fit is %e, data is %e\n",
+	      s2_fit[i], M->a[i][0]);
       s2_fit[i] = Mp->a[i][0] = 0;
-      fprintf(stderr, "bad fit--negative sigma^2!\n");
     }
     error = sqrt(Mp->a[i][0]) - sqrt(M->a[i][0]);
     rms_error += sqr(error);

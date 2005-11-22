@@ -89,7 +89,8 @@ long do_tracking(
                  SASEFEL_OUTPUT *sasefel,
 		 SLICE_OUTPUT *sliceAnalysis,
                  double *finalCharge,
-		 long *lostOnPass
+		 long *lostOnPass,
+		 ELEMENT_LIST *startElem
                  )
 {
   RFMODE *rfmode; TRFMODE *trfmode;
@@ -369,6 +370,9 @@ long do_tracking(
     if (getSCMULTSpecCount()) 
       /* prepare space charge effects calculation  */
       initializeSCMULT(eptr, coord, nToTrack, *P_central, i_pass);
+
+    if (i_pass==0 && startElem)
+      eptr = startElem;  /* start tracking from an interior point in the beamline */
 
     while (eptr && (nToTrack || USE_MPI)) {
       classFlags = entity_description[eptr->type].flags;
@@ -1279,6 +1283,8 @@ long do_tracking(
         case T_WATCH:
           if (!(flags&TEST_PARTICLES) && !(flags&INHIBIT_FILE_OUTPUT)) {
             watch = (WATCH*)eptr->p_elem;
+            if (!watch->initialized) 
+              set_up_watch_point(watch, run);
 	    if (!watch->disable) {
 	      if (i_pass%watch->interval==0) {
 		switch (watch->mode_code) {

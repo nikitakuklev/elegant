@@ -2413,7 +2413,7 @@ extern long do_tracking(BEAM *beam, double **coord, long n_original, long *effor
                         long *n_z_points, TRAJECTORY *traj_vs_z, RUN *run, long step,
                         unsigned long flags, long n_passes, long passOffset, SASEFEL_OUTPUT *sasefel,
 			SLICE_OUTPUT *sliceAnalysis,
-                        double *finalCharge, long *lostOnTurn);
+                        double *finalCharge, long *lostOnTurn, ELEMENT_LIST *startElem);
 extern void getTrackingContext(TRACKING_CONTEXT *trackingContext);
 extern void offset_beam(double **coord, long n_to_track, MALIGN *offset, double P_central);
 extern void do_match_energy(double **coord, long np, double *P_central, long change_beam);
@@ -3008,4 +3008,7 @@ int free_czarray_2d(void **array, long n1, long n2);
 void **resize_czarray_2d(void **data, long size, long n1, long n2);
 void swapParticles(double *p1, double *p2);
 
-
+/* prototypes for momentumAperture.c */
+void setupMomentumApertureSearch(NAMELIST_TEXT *nltext, RUN *run, VARY *control);
+void finishMomentumApertureSearch();
+long doMomentumApertureSearch(RUN *run, VARY *control, ERRORVAL *errcon, LINE_LIST *beamline);

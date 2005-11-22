@@ -9,6 +9,10 @@
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.23  2005/08/18 02:49:10  borland
+ * Particle allocation is now guaranteed to put particles in contiguous memory.
+ * This means we don't swap pointers anymore, but must copy coordinates.
+ *
  * Revision 1.22  2004/08/19 06:42:36  borland
  * Should fix bugs in particle creation in SCRIPT element, but needs
  * more testing.
@@ -672,7 +676,7 @@ void find_trajectory_bpm_readouts
   
   if (!do_tracking(NULL, particle, nPart, NULL, beamline, &momentum,
                    (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
-                   trajBuffer, run, 0, tracking_flags, 1, 0, NULL, NULL, NULL, NULL)) {
+                   trajBuffer, run, 0, tracking_flags, 1, 0, NULL, NULL, NULL, NULL, NULL)) {
     fprintf(stdout, "Error tracking particle to find trajectory at BPMs.\n");
     fflush(stdout);
     exit(1);

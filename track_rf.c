@@ -201,8 +201,7 @@ void track_through_rftm110_deflector(
 	    + (rf_param->phaseNoiseGroup
 	       ? rf_param->groupPhaseNoise*GetNoiseGroupValue(rf_param->phaseNoiseGroup)
 	       : 0)
-	    )*PI/180.0 
-    - omega*t_first;
+	    )*PI/180.0 ;
   
   if (rf_param->tilt)
     rotateBeamCoordinates(initial, n_particles, rf_param->tilt);
@@ -225,7 +224,7 @@ void track_through_rftm110_deflector(
     py = yp*pz;
     beta = pc/sqrt(1+sqr(pc));
     t_part = initial[ip][4]/(c_mks*beta);
-    phase = omega*t_part + phase0;
+    phase = omega*(t_part - t_first) + phase0;
 
     krho2 = sqr(k*rho);
     krho4 = sqr(krho2);

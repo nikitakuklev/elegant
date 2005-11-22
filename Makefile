@@ -7,10 +7,13 @@
 # in the file LICENSE that is included with this distribution. 
 #*************************************************************************
 #
-# $Id: Makefile,v 1.7 2005-11-04 16:27:05 borland Exp $
+# $Id: Makefile,v 1.8 2005-11-22 23:21:19 borland Exp $
 #
 #  Lowest Level Directroy Makefile
 # $Log: not supported by cvs2svn $
+# Revision 1.7  2005/11/04 16:27:05  borland
+# Added Xiao's code for space charge element SCMULT.
+#
 # Revision 1.6  2005/09/29 20:50:43  ywang25
 # Modifications for parallelization.  Verified to be identical to sequential version when run in non-MPI mode.
 #
@@ -136,6 +139,11 @@ matrix_output$(OBJ): matrix_output.h
 
 matrix_output.h: ../matrix_output.nl
 	nlpp ../matrix_output.nl matrix_output.h
+
+momentumAperture$(OBJ): momentumAperture.h
+
+momentumAperture.h: ../momentumAperture.nl
+	nlpp ../momentumAperture.nl momentumAperture.h
 
 optim_covariable$(OBJ): optim_covariable.h
 
@@ -290,4 +298,4 @@ endif
 
 
 clean::
-	$(RM) sddsrandmult.h fitTraces.h vary.h twiss.h tune.h trace.h subprocess.h steer_elem.h sliceAnalysis.h sdds_beam.h save_lattice.h sasefel.h run_rpnexpr.h response.h optimize.h optim_covariable.h matrix_output.h load_parameters.h link_elements.h frequencyMap.h floor.h error.h elegant.h transmuteElements.h divideElements.h correct.h steer_elem.h closed_orbit.h chrom.h bunched_beam.h aperture_search.h analyze.h amplif.h alter.h
+	$(RM) sddsrandmult.h fitTraces.h vary.h twiss.h tune.h trace.h subprocess.h steer_elem.h sliceAnalysis.h sdds_beam.h save_lattice.h sasefel.h run_rpnexpr.h response.h optimize.h optim_covariable.h matrix_output.h load_parameters.h link_elements.h frequencyMap.h floor.h error.h elegant.h transmuteElements.h divideElements.h correct.h steer_elem.h closed_orbit.h chrom.h bunched_beam.h aperture_search.h analyze.h amplif.h alter.h insertSCeffects.h momentumAperture.h

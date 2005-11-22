@@ -325,7 +325,7 @@ void compute_amplification_factors(
       p = sqrt(sqr(run->ideal_gamma)-1);
       fill_double_array(*one_part, 7, 0.0);
       if (!do_tracking(NULL, one_part, n_part, NULL, beamline, &p, (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
-                       traj, run, 0, TEST_PARTICLES+TIME_DEPENDENCE_OFF, 1, 0, NULL, NULL, NULL, NULL))
+                       traj, run, 0, TEST_PARTICLES+TIME_DEPENDENCE_OFF, 1, 0, NULL, NULL, NULL, NULL, NULL))
         bomb("tracking failed for test particle (compute_amplification_factors)", NULL);
     }
 
