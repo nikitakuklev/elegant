@@ -27,8 +27,6 @@
         semaphore_file = %s.done,
 	losses = %s.los,
         tracking_updates = 0,
-	default_order = 1,
-	concat_order = 1
 &end
 
 &load_parameters
@@ -58,8 +56,9 @@
 &end
 
 &closed_orbit
-        iteration_fraction = 0.5,
-        closed_orbit_iterations = 500,
+        output = %s.clo,
+	closed_orbit_iterations = 500,
+	iteration_fraction = 0.1,
 &end
 
 &frequency_map

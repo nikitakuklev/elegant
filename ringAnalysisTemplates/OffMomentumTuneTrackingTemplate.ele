@@ -20,8 +20,6 @@
         rootname = <mainDirectory>/<mainPrefix>OffMomentumTuneTracking<suffix>,
         semaphore_file = %s.done,
         tracking_updates = 0,
-	default_order = 1,
-	concat_order = 1
 &end
 
 &load_parameters
@@ -49,7 +47,8 @@
 &end
 
 &closed_orbit
-        iteration_fraction = 0.75,
+        output = %s.clo,
+        iteration_fraction = 0.1,
         closed_orbit_iterations = 500,
 &end
 

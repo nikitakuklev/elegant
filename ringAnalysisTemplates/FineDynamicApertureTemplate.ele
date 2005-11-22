@@ -27,8 +27,6 @@
         semaphore_file = %s.done,
 	losses = %s.los,
         tracking_updates = 0,
-	default_order = 1,
-	concat_order = 1
 &end
 
 &load_parameters
@@ -61,7 +59,7 @@
 	start_from_centroid = 0,
 	output = %s.clo,
 	start_from_dp_centroid = 1,
-        iteration_fraction = 0.5,
+        iteration_fraction = 0.1,
         closed_orbit_iterations = 500,
 &end
 
