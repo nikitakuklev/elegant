@@ -11,6 +11,9 @@
    Hairong Shang, Oct 2005
    *
    $Log: not supported by cvs2svn $
+   Revision 1.2  2005/11/18 21:05:19  shang
+   updated the comments.
+
    Revision 1.1  2005/11/18 20:58:51  shang
    first version.
 
@@ -24,9 +27,10 @@
 #define SET_PIPE 0
 #define SET_MULTIPOLES 1
 #define SET_TYPE 2
-#define N_OPTIONS 3
+#define SET_VARIABLES 3
+#define N_OPTIONS 4
 char *option[N_OPTIONS] = {
-  "pipe",  "multipoles", "type",
+  "pipe",  "multipoles", "type", "variables",
 } ;
 
 #define USE_DIPOLE 0x0001UL
@@ -40,12 +44,14 @@ char *option[N_OPTIONS] = {
 
 char *USAGE="sddsfindresonances [-pipe=[input][,output]] [<inputFile>] [<outputfile>]\n\
  -multipoles=[all]|[dipole,][quadrupole,][sextupole,][octupole,] \n\
- [-type=[normal,][skew]] \n\
+ [-type=[normal,][skew]] [-variables=<firstColumn>,<secondColumn>]\n\
 -multipoles    for user to choose which multipoles (dipole, quadrupole, \n\
                sextupole, and/or octupole) to use or compute all multipoles by choosing all.\n\
                By default, all multipoles will be computed.\n\
 -type          for user to choose to use normal and/or skew for each \n\
-               multipoles. default is normal and skew. \n";
+               multipoles. default is normal and skew. \n\
+-variables     Give names for the variable columns.  The defaults are x and y.\n\n\
+Program by H. Shang, November 2005 (This is Version 2, November 2005.) \n";
 
 static double *sortData[2];
 int SDDS_CompareDoubleRows(const void *vrow1, const void *vrow2);
@@ -134,7 +140,7 @@ int main(int argc, char **argv)
   char *inputFile, *outputFile;
   SDDS_DATASET inData, outData;
   long i_arg, tmpFileUsed, rows, i, k, sign, signs, multx, multy, start, end, offset,count,datapoints=0, outputpoints=0, **sortIndex, plane, index, index1, *pole=NULL, i_pole, poles;
-  char *columnName[4]={"x", "y", "nux", "nuy"};
+  char *columnName[4] = {NULL, NULL, "nux", "nuy"};  
   char *multipole[4]={"dipole", "quadrupole", "sextupole", "octupole"};
   double **outputData, *tmpData, **indepData, slope, delta, delta1;  
   unsigned long multipoleFlags, typeFlags, pipeFlags;
@@ -187,6 +193,12 @@ int main(int argc, char **argv)
            SDDS_Bomb("Invalid -multipoles type");
          s_arg[i_arg].n_items++;
          break;
+       case SET_VARIABLES:
+         if (s_arg[i_arg].n_items!=3)
+           SDDS_Bomb("Invalid -variables syntax");
+         columnName[0] = s_arg[i_arg].list[1];
+         columnName[1] = s_arg[i_arg].list[2];
+         break;
        default:
          fprintf(stderr, "unknown option - %s provided.\n%s", s_arg[i_arg].list[0], USAGE);
          exit(1);
@@ -204,6 +216,8 @@ int main(int argc, char **argv)
     typeFlags |= USE_NORMAL_TYPE | USE_SKEW_TYPE;
   if (!multipoleFlags || multipoleFlags&USE_ALL_MULTIPOLES) 
     multipoleFlags |= USE_DIPOLE | USE_QUADRUPOLE | USE_SEXTUPOLE | USE_OCTUPOLE;
+  if (columnName[0]==NULL && (!SDDS_CopyString(columnName+0, "x") || !SDDS_CopyString(columnName+1, "y")))
+    SDDS_Bomb("Problem copying column name strings");
   
   poles=4;
   pole=calloc(sizeof(*pole), poles);
@@ -370,7 +384,7 @@ int main(int argc, char **argv)
             } /*end of for plane loop */
 	  } /* end of for offset loop */
 	  if (rows) {
-	    sprintf(label, "%d*$gn$r$bx$n + %d*$gn$r$by$n", multx, multy);
+	    sprintf(label, "%ld*$gn$r$bx$n + %ld*$gn$r$by$n", multx, multy);
 	    if (!SDDS_StartPage(&outData, rows))
 	      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 	    if (!SDDS_SetParameters(&outData, SDDS_BY_NAME|SDDS_PASS_BY_VALUE,
