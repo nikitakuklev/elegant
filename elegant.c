@@ -51,13 +51,13 @@ char *option[N_OPTIONS] = {
     "macro",
         };
 #if USE_MPI
-char *USAGE="mpirun -np <number of processes> Pelegant <inputfile> [-macro=<tag>=<value>,[...]]\n\nProgram by Yusong Wang, Michael Borland. (This is version 15.4.1, "__DATE__".)";
+char *USAGE="mpirun -np <number of processes> Pelegant <inputfile> [-macro=<tag>=<value>,[...]]\n\nProgram by Yusong Wang, Michael Borland. (This is version 15.5Beta, "__DATE__".)";
 
-char *GREETING="This is parallel elegant, by Yusong Wang, Michael Borland. (This is version 15.4.1, "__DATE__".)";
+char *GREETING="This is parallel elegant, by Yusong Wang, Michael Borland. (This is version 15.5Beta, "__DATE__".)";
 #else
-char *USAGE="elegant <inputfile> [-macro=<tag>=<value>,[...]]\n\nProgram by Michael Borland. (This is version 15.4.1, "__DATE__".)";
+char *USAGE="elegant <inputfile> [-macro=<tag>=<value>,[...]]\n\nProgram by Michael Borland. (This is version 15.5Beta, "__DATE__".)";
 
-char *GREETING="This is elegant, by Michael Borland. (This is version 15.4.1, "__DATE__".)";
+char *GREETING="This is elegant, by Michael Borland. (This is version 15.5Beta, "__DATE__".)";
 #endif
 
 #define RUN_SETUP        0
