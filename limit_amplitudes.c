@@ -10,6 +10,7 @@
 #include <ctype.h>
 #include "track.h"
 #include "mdb.h"
+#include "sort.h"
 
 long evaluateLostWithOpenSides(long code, double dx, double dy, double xsize, double ysize);
 
@@ -474,8 +475,6 @@ long beam_scraper(
     /* scraper has material properties that scatter beam and
      * absorb energy
      */
-    double x1, y1, z1, z2, dx, dy, ds, t=0.0;
-
     MATTER matter;
     matter.length = scraper->length;
     matter.Xo = scraper->Xo;
@@ -863,5 +862,75 @@ long determineOpenSideCode(char *openSide)
     exit(1);
   }
   return value;
+}
+
+
+/* routine: imposeApertureData()
+ * purpose: eliminate particles with (x,y) larger than values given in aperture input file.
+ *
+ * Michael Borland, 2005
+ */
+
+long imposeApertureData(
+                        double **initial, long np, double **accepted,
+                        double z, double Po, long extrapolate_z, APERTURE_DATA *apData)
+{
+  long ip, itop, iz, lost;
+  double *ini;
+  double z0, period;
+  double xSize, ySize;
+  double xCenter, yCenter;
+  double dx, dy;
+  
+  itop = np-1;
+
+  z0 = z;
+  if (apData->s[apData->points-1]<z) {
+    if (apData->periodic) {
+      period = apData->s[apData->points-1]-apData->s[0];
+      z0 -= period*((long) ((z0 - apData->s[0])/period));
+    } else
+      return np;
+  }
+  if ((iz = binaryArraySearch(apData->s, sizeof(apData->s[0]), apData->points, &z0, 
+                              double_cmpasc, 1))<0)
+    return np;
+  if (iz==apData->points-1)
+    iz -= 1;
+
+  if (apData->s[iz]==apData->s[iz+1]) {
+    xCenter = apData->dx[iz];
+    yCenter = apData->dy[iz];
+    xSize = apData->xMax[iz];
+    ySize = apData->yMax[iz];
+  }
+  else {
+    xCenter = INTERPOLATE(apData->dx[iz], apData->dx[iz+1], apData->s[iz], apData->s[iz+1], z0);
+    yCenter = INTERPOLATE(apData->dy[iz], apData->dy[iz+1], apData->s[iz], apData->s[iz+1], z0);
+    xSize = INTERPOLATE(apData->xMax[iz], apData->xMax[iz+1], apData->s[iz], apData->s[iz+1], z0);
+    ySize = INTERPOLATE(apData->yMax[iz], apData->yMax[iz+1], apData->s[iz], apData->s[iz+1], z0);
+  }
+    
+  itop = np-1;
+  for (ip=0; ip<np; ip++) {
+    ini = initial[ip];
+    dx = ini[0] - xCenter;
+    dy = ini[2] - yCenter;
+    lost = 0;
+    if ((xSize && fabs(dx) > xSize) ||
+        (ySize && fabs(dy) > ySize))
+      lost = 1;
+    if (lost) {
+      swapParticles(initial[ip], initial[itop]);
+     if (accepted)
+        swapParticles(accepted[ip], accepted[itop]);
+      initial[itop][4] = z; /* record position of particle loss */
+      initial[itop][5] = Po*(1+initial[itop][5]);
+      --itop;
+      --ip;
+      --np;
+    }
+  }
+  return(np);
 }
 

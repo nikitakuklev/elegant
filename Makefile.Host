@@ -56,10 +56,13 @@ transmuteElements$(OBJ): transmuteElements.h
 transmuteElements.h: ../transmuteElements.nl
 	nlpp ../transmuteElements.nl transmuteElements.h
 
-elegant$(OBJ): elegant.h
+elegant$(OBJ): elegant.h aperture_data.h
 
 elegant.h: ../elegant.nl
 	nlpp ../elegant.nl elegant.h
+
+aperture_data.h: ../aperture_data.nl
+	nlpp ../aperture_data.nl aperture_data.h
 
 error$(OBJ): error.h
 
@@ -174,4 +177,5 @@ sddsrandmult.h: ../sddsrandmult.nl
 	nlpp ../sddsrandmult.nl sddsrandmult.h
 
 clean::
-	$(RM) sddsrandmult.h fitTraces.h vary.h twiss.h tune.h trace.h subprocess.h steer_elem.h sliceAnalysis.h sdds_beam.h save_lattice.h sasefel.h run_rpnexpr.h response.h optimize.h optim_covariable.h matrix_output.h load_parameters.h link_elements.h frequencyMap.h floor.h error.h elegant.h transmuteElements.h divideElements.h correct.h steer_elem.h closed_orbit.h chrom.h bunched_beam.h aperture_search.h analyze.h amplif.h alter.h
+	$(RM) sddsrandmult.h fitTraces.h vary.h twiss.h tune.h trace.h subprocess.h steer_elem.h sliceAnalysis.h sdds_beam.h save_lattice.h sasefel.h run_rpnexpr.h response.h optimize.h optim_covariable.h matrix_output.h load_parameters.h link_elements.h frequencyMap.h floor.h error.h elegant.h transmuteElements.h divideElements.h correct.h steer_elem.h closed_orbit.h chrom.h bunched_beam.h aperture_search.h analyze.h amplif.h alter.h aperture_data.h
+

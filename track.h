@@ -45,6 +45,11 @@ extern long isMaster;
 
 #define malloc_verify(n) 1
 
+typedef struct {
+  double *s, *xMax, *yMax, *dx, *dy;
+  long points, periodic, initialized;
+} APERTURE_DATA;
+
 /* Variable-order transport matrix structure */
 
 typedef struct {
@@ -242,6 +247,7 @@ typedef struct {
     long always_change_p0;
     char *runfile, *lattice, *acceptance, *centroid, *sigma, 
          *final, *output, *rootname, *losses;
+    APERTURE_DATA apertureData;
 #if USE_MPI
     int n_processors;
 #endif
@@ -2586,6 +2592,8 @@ extern long track_through_pfilter(double **initial, PFILTER *pfilter, long np,
 long removeInvalidParticles(double **coord, long np, double **accepted,
                             double z, double Po);
 extern long determineOpenSideCode(char *openSide);
+long imposeApertureData(double **coord, long np, double **accepted,
+                        double z, double Po, long extrapolate_z, APERTURE_DATA *apData);
  
 /* prototypes for kick_sbend.c: */
 long track_through_kick_sbend(double **part, long n_part, KSBEND *ksbend, double p_error, double Po,

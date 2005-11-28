@@ -7,10 +7,16 @@
 # in the file LICENSE that is included with this distribution. 
 #*************************************************************************
 #
-# $Id: Makefile,v 1.8 2005-11-22 23:21:19 borland Exp $
+# $Id: Makefile,v 1.9 2005-11-28 22:07:09 borland Exp $
 #
 #  Lowest Level Directroy Makefile
 # $Log: not supported by cvs2svn $
+# Revision 1.8  2005/11/22 23:21:19  borland
+# Added momentum aperture search, which necessitated adding an argument to
+# do_tracking, resulting in changes in many files.
+# Also improved convergence of orbit finder, adding a second iteration using
+# tracking if the matrix-based method fails.
+#
 # Revision 1.7  2005/11/04 16:27:05  borland
 # Added Xiao's code for space charge element SCMULT.
 #
@@ -100,10 +106,13 @@ transmuteElements$(OBJ): transmuteElements.h
 transmuteElements.h: ../transmuteElements.nl
 	nlpp ../transmuteElements.nl transmuteElements.h
 
-elegant$(OBJ): elegant.h
+elegant$(OBJ): elegant.h aperture_data.h
 
 elegant.h: ../elegant.nl
 	nlpp ../elegant.nl elegant.h
+
+aperture_data.h: ../aperture_data.nl
+	nlpp ../aperture_data.nl aperture_data.h
 
 error$(OBJ): error.h
 
@@ -298,4 +307,5 @@ endif
 
 
 clean::
-	$(RM) sddsrandmult.h fitTraces.h vary.h twiss.h tune.h trace.h subprocess.h steer_elem.h sliceAnalysis.h sdds_beam.h save_lattice.h sasefel.h run_rpnexpr.h response.h optimize.h optim_covariable.h matrix_output.h load_parameters.h link_elements.h frequencyMap.h floor.h error.h elegant.h transmuteElements.h divideElements.h correct.h steer_elem.h closed_orbit.h chrom.h bunched_beam.h aperture_search.h analyze.h amplif.h alter.h insertSCeffects.h momentumAperture.h
+	$(RM) sddsrandmult.h fitTraces.h vary.h twiss.h tune.h trace.h subprocess.h steer_elem.h sliceAnalysis.h sdds_beam.h save_lattice.h sasefel.h run_rpnexpr.h response.h optimize.h optim_covariable.h matrix_output.h load_parameters.h link_elements.h frequencyMap.h floor.h error.h elegant.h transmuteElements.h divideElements.h correct.h steer_elem.h closed_orbit.h chrom.h bunched_beam.h aperture_search.h analyze.h amplif.h alter.h insertSCeffects.h momentumAperture.h aperture_data.h
+

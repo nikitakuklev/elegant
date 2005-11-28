@@ -1111,15 +1111,21 @@ long do_tracking(
 	    }
 	  }
 	}
-        if (!(flags&TEST_PARTICLES && !(flags&TEST_PARTICLE_LOSSES)) && (x_max || y_max)) {
-          if (!elliptical) 
-            nLeft = limit_amplitudes(coord, x_max, y_max, nLeft, accepted, z, *P_central, 
-				     eptr->type==T_DRIF || eptr->type==T_STRAY,
-				     maxampOpenCode);
-          else
-            nLeft = elimit_amplitudes(coord, x_max, y_max, nLeft, accepted, z, *P_central, 
-				      eptr->type==T_DRIF || eptr->type==T_STRAY,
-				      maxampOpenCode, maxampExponent);
+        if (!(flags&TEST_PARTICLES && !(flags&TEST_PARTICLE_LOSSES))) {
+          if (x_max || y_max) {
+            if (!elliptical) 
+              nLeft = limit_amplitudes(coord, x_max, y_max, nLeft, accepted, z, *P_central, 
+                                       eptr->type==T_DRIF || eptr->type==T_STRAY,
+                                       maxampOpenCode);
+            else
+              nLeft = elimit_amplitudes(coord, x_max, y_max, nLeft, accepted, z, *P_central, 
+                                        eptr->type==T_DRIF || eptr->type==T_STRAY,
+                                        maxampOpenCode, maxampExponent);
+          }
+          if (run->apertureData.initialized) 
+            nLeft = imposeApertureData(coord, nLeft, accepted, z, *P_central, 
+                                       eptr->type==T_DRIF || eptr->type==T_STRAY,
+                                       &(run->apertureData));
         }
         if (run->print_statistics && !(flags&TEST_PARTICLES)) {
           report_stats(stdout, ": ");
