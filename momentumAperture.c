@@ -102,7 +102,7 @@ long doMomentumApertureSearch(
   long **lostOnPass, **loserFound, **survivorFound, lostOnPass0, side;
   double deltaStart[2], **deltaSurvived, delta, delta0;
   double **xLost, **yLost, **deltaLost, **sLost;
-  double *sStart;
+  double *sStart, length;
   char **ElementName;
   long points, splitsLeft;
   
@@ -111,12 +111,15 @@ long doMomentumApertureSearch(
   elem0 = NULL;
   nElem = 0;
   while (elem) {
-    if (elem->end_pos>=s_start && elem->end_pos<=s_end &&
+    length = 0;
+    if (entity_description[elem->type].flags&HAS_LENGTH)
+      length = ((DRIFT*)(elem->p_elem))->length;
+    if ((elem->end_pos-length)>=s_start && (elem->end_pos-length)<=s_end &&
         (!include_name_pattern || wild_match(elem->name, include_name_pattern))) {
       if (!elem0)
 	elem0 = elem;
       nElem++;
-    } else if (elem->end_pos>s_end)
+    } else if ((elem->end_pos-length)>s_end)
       break;
     elem = elem->succ;
   }
@@ -149,15 +152,20 @@ long doMomentumApertureSearch(
 
   elem = elem0;
   iElem = 0;
-  while (elem && elem->end_pos<=s_end) {
+  while (elem) {
     if (!include_name_pattern || wild_match(elem->name, include_name_pattern)) {
+      length = 0;
+      if (entity_description[elem->type].flags&HAS_LENGTH)
+        length = ((DRIFT*)(elem->p_elem))->length;
+      if ((elem->end_pos-length)>s_end) 
+        break;
       pCentral = run->p_central;
       if (verbosity>0) {
-        fprintf(stdout, "Searching for energy aperture for %s #%ld at s=%em\n", elem->name, elem->occurence, elem->end_pos);
+        fprintf(stdout, "Searching for energy aperture for %s #%ld at s=%em\n", elem->name, elem->occurence, elem->end_pos-length);
         fflush(stdout);
       }
       ElementName[iElem] = elem->name;
-      sStart[iElem] = elem->end_pos;
+      sStart[iElem] = elem->end_pos-length;
       for (side=0; side<2; side++) {
         deltaInterval = -deltaStart[side]/(delta_points-1);
         lostOnPass[side][iElem] = -1;
@@ -231,14 +239,14 @@ long doMomentumApertureSearch(
   if (!SDDS_StartPage(&SDDSma, nElem) ||
       !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, ElementName, nElem, "ElementName") ||
       !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, sStart, nElem, "s") ||
-      !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, survivorFound[1], nElem, "deltaPositiveFound") ||
+      !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, loserFound[1], nElem, "deltaPositiveFound") ||
       !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, deltaSurvived[1], nElem, "deltaPositive") ||
       !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, lostOnPass[1], nElem, "lostOnPassPositive") ||
       !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, sLost[1], nElem, "sLostPositive") ||
       !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, xLost[1], nElem, "xLostPositive") ||
       !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, yLost[1], nElem, "yLostPositive") ||
       !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, deltaLost[1], nElem, "deltaLostPositive") ||
-      !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, survivorFound[0], nElem, "deltaNegativeFound") ||
+      !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, loserFound[0], nElem, "deltaNegativeFound") ||
       !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, deltaSurvived[0], nElem, "deltaNegative") ||
       !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, lostOnPass[0], nElem, "lostOnPassNegative") ||
       !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, sLost[0], nElem, "sLostNegative") ||
