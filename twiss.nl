@@ -55,8 +55,11 @@
 #end
 
 #namelist twiss_analysis,struct
+        STRING match_name = NULL;
         STRING start_name = NULL;
         STRING end_name = NULL;
+        long start_occurence = 1;
+        long end_occurence = 1;
         double s_start = -1;
         double s_end = -1;
         STRING tag = NULL;

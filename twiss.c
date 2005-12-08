@@ -63,8 +63,9 @@ static long twissAnalysisStatCode[TWISS_ANALYSIS_STATS] = {
   TWISS_ANALYSIS_AVE, TWISS_ANALYSIS_MIN, TWISS_ANALYSIS_MAX };
 
 typedef struct {
-  char *startName, *endName, *tag;
+  char *startName, *endName, *matchName, *tag;
   double sStart, sEnd;
+  long startOccurence, endOccurence;
   short initialized;
   long count;
   double twissMem[TWISS_ANALYSIS_STATS][TWISS_ANALYSIS_QUANTITIES];
@@ -2841,20 +2842,28 @@ void clearTwissAnalysisRequests()
       free(twissAnalysisRequest[i].startName);
     if (twissAnalysisRequest[i].endName)
       free(twissAnalysisRequest[i].endName);
-    free(twissAnalysisRequest[i].tag);
+    if (twissAnalysisRequest[i].matchName)
+      free(twissAnalysisRequest[i].matchName);
+    if (twissAnalysisRequest[i].tag)
+      free(twissAnalysisRequest[i].tag);
   }
   free(twissAnalysisRequest);
   twissAnalysisRequests = 0;
 }
 
 void addTwissAnalysisRequest(char *tag, char *startName, char *endName, 
+                             char *matchName,
+                             long startOccurence, long endOccurence,
                              double sStart, double sEnd)
 {
   long i;
   if (!tag || !strlen(tag))
     bomb("NULL or blank tag passed to addTwissAnalysisRequest", NULL);
-  if (!(startName && strlen(startName) && endName && strlen(endName)) && sStart==sEnd)
-    bomb("must have both startName and endName, or sStart!=sEnd (addTwissAnalysisRequest)", NULL);
+  if (!(startName && strlen(startName) && endName && strlen(endName)) 
+      && !(matchName && strlen(matchName)) && sStart==sEnd)
+    bomb("must have both startName and endName, or matchName, or sStart!=sEnd (addTwissAnalysisRequest)", NULL);
+  if ((startName || endName) && matchName)
+    bomb("can't have startName or endName with matchName (addTwissAnalysisRequest)", NULL);
   for (i=0; i<twissAnalysisRequests; i++)
     if (strcmp(twissAnalysisRequest[i].tag, tag)==0)
       bomb("duplicate tag names seen (addTwissAnalysisRequest)", NULL);
@@ -2863,14 +2872,23 @@ void addTwissAnalysisRequest(char *tag, char *startName, char *endName,
       !SDDS_CopyString(&twissAnalysisRequest[twissAnalysisRequests].tag, tag))
     bomb("memory allocation failure (addTwissAnalysisRequest)", NULL);
   twissAnalysisRequest[twissAnalysisRequests].startName = 
-    twissAnalysisRequest[twissAnalysisRequests].endName = NULL;
+    twissAnalysisRequest[twissAnalysisRequests].endName = 
+      twissAnalysisRequest[twissAnalysisRequests].matchName = NULL;
   if ((startName &&
        !SDDS_CopyString(&twissAnalysisRequest[twissAnalysisRequests].startName, startName)) ||
       (endName &&
-       !SDDS_CopyString(&twissAnalysisRequest[twissAnalysisRequests].endName, endName)))
+       !SDDS_CopyString(&twissAnalysisRequest[twissAnalysisRequests].endName, endName)) ||
+      (matchName &&
+       !SDDS_CopyString(&twissAnalysisRequest[twissAnalysisRequests].matchName, matchName)))
     bomb("memory allocation failure (addTwissAnalysisRequest)", NULL);
+  if (has_wildcards(twissAnalysisRequest[twissAnalysisRequests].matchName) &&
+      strchr(twissAnalysisRequest[twissAnalysisRequests].matchName, '-'))
+    twissAnalysisRequest[twissAnalysisRequests].matchName = 
+      expand_ranges(twissAnalysisRequest[twissAnalysisRequests].matchName);
   twissAnalysisRequest[twissAnalysisRequests].sStart = sStart;
   twissAnalysisRequest[twissAnalysisRequests].sEnd = sEnd;
+  twissAnalysisRequest[twissAnalysisRequests].startOccurence = startOccurence;
+  twissAnalysisRequest[twissAnalysisRequests].endOccurence = endOccurence;
   twissAnalysisRequest[twissAnalysisRequests].initialized = 0;
   twissAnalysisRequests++;
 }
@@ -2903,12 +2921,25 @@ void processTwissAnalysisRequests(ELEMENT_LIST *elem)
     
     count = end_pos = 0;
     while (elem) {
-      if (!count) {
-        /* check for starting condition */
-        if ((twissAnalysisRequest[i].startName && 
-             strcmp(twissAnalysisRequest[i].startName, elem->name)!=0) ||
-            (twissAnalysisRequest[i].sStart<twissAnalysisRequest[i].sEnd &&
-             elem->end_pos<twissAnalysisRequest[i].sStart)) {
+      if (twissAnalysisRequest[i].sStart<twissAnalysisRequest[i].sEnd &&
+              elem->end_pos>twissAnalysisRequest[i].sEnd) 
+        break;
+      if (twissAnalysisRequest[i].sStart<twissAnalysisRequest[i].sEnd &&
+          elem->end_pos<twissAnalysisRequest[i].sStart) {
+        elem = elem->succ;
+        continue;
+      }
+      if (twissAnalysisRequest[i].matchName) {
+        if (!wild_match(elem->name, twissAnalysisRequest[i].matchName)) {
+          elem = elem->succ;
+          continue;
+        } 
+      } else {
+        if (!count &&
+            !(twissAnalysisRequest[i].startName && 
+              strcmp(twissAnalysisRequest[i].startName, elem->name)==0 &&
+              (twissAnalysisRequest[i].startOccurence<=1 ||
+               twissAnalysisRequest[i].startOccurence==elem->occurence))) {
           elem = elem->succ;
           continue;
         }
@@ -2947,15 +2978,15 @@ void processTwissAnalysisRequests(ELEMENT_LIST *elem)
           }
         }
       }
-      if ((twissAnalysisRequest[i].endName && 
-           strcmp(twissAnalysisRequest[i].endName, elem->name)==0) ||
-          (twissAnalysisRequest[i].sStart<twissAnalysisRequest[i].sEnd &&
-           elem->end_pos>=twissAnalysisRequest[i].sEnd) ||
-          !(elem = elem->succ)) 
+      if (twissAnalysisRequest[i].endName && 
+           strcmp(twissAnalysisRequest[i].endName, elem->name)==0 &&
+          (twissAnalysisRequest[i].endOccurence<=1 ||
+           twissAnalysisRequest[i].endOccurence==elem->occurence))
         break;
+      elem = elem->succ;
     }
     if (!count) {
-      fprintf(stderr, "error: twiss analysis conditions never satisfied for request with tag %s\n",
+      fprintf(stdout, "error: twiss analysis conditions never satisfied for request with tag %s\n",
               twissAnalysisRequest[i].tag);
       exit(1);
     }
@@ -2968,6 +2999,23 @@ void processTwissAnalysisRequests(ELEMENT_LIST *elem)
         rpn_store(twissData[is][iq], NULL, twissAnalysisRequest[i].twissMem[is][iq]);
       }
     }
+#if DEBUG
+    if (twissAnalysisRequest[i].matchName) {
+      fprintf(stdout, "%ld matches for %s, dz = %e\n",
+              count, twissAnalysisRequest[i].tag,
+              end_pos-start_pos
+              );
+      for (iq=0; iq<TWISS_ANALYSIS_QUANTITIES; iq++) {
+        fprintf(stdout, "%s: ", twissAnalysisQuantityName[iq]);
+        for (is=0; is<TWISS_ANALYSIS_STATS; is++) 
+          fprintf(stdout, "%s=%e%s",
+                  twissAnalysisStatName[is],
+                  twissData[is][iq],
+                  (is==TWISS_ANALYSIS_STATS-1?"\n":", "));
+      }
+      fflush(stdout);
+    }
+#endif
     elem = elemOrig;
   }
 }
@@ -2983,6 +3031,7 @@ void setupTwissAnalysisRequest(NAMELIST_TEXT *nltext, RUN *run,
   if (twiss_analysis_struct.clear) {
     clearTwissAnalysisRequests();
     if (!(twiss_analysis_struct.start_name && twiss_analysis_struct.end_name) &&
+        !twiss_analysis_struct.match_name &&
         twiss_analysis_struct.s_start==twiss_analysis_struct.s_end)
       return;
   }
@@ -2993,19 +3042,26 @@ void setupTwissAnalysisRequest(NAMELIST_TEXT *nltext, RUN *run,
   if (twiss_analysis_struct.end_name &&
       !strlen(trim_spaces(str_toupper(twiss_analysis_struct.end_name))))
     bomb("end_name is blank", NULL);
+  if (twiss_analysis_struct.match_name &&
+      !strlen(trim_spaces(str_toupper(twiss_analysis_struct.match_name))))
+    bomb("match_name is blank", NULL);
   if ((twiss_analysis_struct.tag &&
        !strlen(trim_spaces(twiss_analysis_struct.tag))) ||
       !twiss_analysis_struct.tag)
     bomb("tag is blank", NULL);
   
-  if (!(twiss_analysis_struct.start_name && twiss_analysis_struct.end_name) &&
+  if (!(twiss_analysis_struct.start_name && twiss_analysis_struct.end_name)
+        && !twiss_analysis_struct.match_name &&
       twiss_analysis_struct.s_start==twiss_analysis_struct.s_end)
-    bomb("you must give start_name and end_name, or s_start different from s_end", NULL);
+    bomb("you must give start_name and end_name, or match_name, or s_start different from s_end", NULL);
   if (twiss_analysis_struct.s_start>twiss_analysis_struct.s_end)
     bomb("s_start>s_end", NULL);
   addTwissAnalysisRequest(twiss_analysis_struct.tag,
                           twiss_analysis_struct.start_name,
                           twiss_analysis_struct.end_name,
+                          twiss_analysis_struct.match_name,
+                          twiss_analysis_struct.start_occurence,
+                          twiss_analysis_struct.end_occurence,
                           twiss_analysis_struct.s_start,
                           twiss_analysis_struct.s_end);
 }
