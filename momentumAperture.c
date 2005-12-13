@@ -167,20 +167,24 @@ long doMomentumApertureSearch(
       ElementName[iElem] = elem->name;
       sStart[iElem] = elem->end_pos-length;
       for (side=0; side<2; side++) {
-        deltaInterval = -deltaStart[side]/(delta_points-1);
+        deltaInterval = deltaStart[side]/(delta_points-1);
         lostOnPass[side][iElem] = -1;
         loserFound[side][iElem] = survivorFound[side][iElem] = 0;
         xLost[side][iElem] = yLost[side][iElem] = 
           deltaLost[side][iElem] = sLost[side][iElem] = 
             deltaSurvived[side][iElem] =  0;
         if (verbosity>1) {
-          fprintf(stdout, " Searching for %s side from %e to 0 with interval %e\n", side==0?"negative":"positive",
-                  deltaStart[side], fabs(deltaInterval));
+          fprintf(stdout, " Searching for %s side from 0 to %e with interval %e\n", side==0?"negative":"positive",
+                  deltaStart[side], deltaInterval);
           fflush(stdout);
         }
         points = delta_points;
         splitsLeft = n_splits;
-        delta0 = deltaStart[side]; 
+        delta0 = 0;
+        if (scan_from_outside) {
+          delta0 = deltaStart[side];
+          deltaInterval *= -1;
+        }
         do {
           for (ip=0; ip<points; ip++) {
             memset(coord[0], 0, sizeof(double)*7);
@@ -188,7 +192,8 @@ long doMomentumApertureSearch(
             coord[0][2] = y_initial;
             coord[0][5] = delta = delta0 + ip*deltaInterval;
             if (verbosity>3) {
-              fprintf(stdout, "  Tracking with delta0 = %e\n", delta);
+              fprintf(stdout, "  Tracking with delta0 = %e (%e, %e, %e, %e, %e, %e)\n", 
+                      delta, coord[0][0], coord[0][1], coord[0][2], coord[0][3], coord[0][4], coord[0][5]);
               fflush(stdout);
             }
             delete_phase_references();
@@ -202,9 +207,14 @@ long doMomentumApertureSearch(
                 fprintf(stdout, "  Particle survived with delta0 = %e, sf = %e m\n", delta, coord[0][4]);
                 fflush(stdout);
               }
-              deltaSurvived[side][iElem] = delta;
+              if (!survivorFound[side][iElem] || fabs(delta)>fabs(deltaSurvived[side][iElem]))  {
+                if (verbosity>4)
+                  fprintf(stdout, "  New survivor-of-record for this scan\n");
+                deltaSurvived[side][iElem] = delta;
+              }
               survivorFound[side][iElem] = 1;
-              break;
+              if (scan_from_outside)
+                break;
             } else {
               /* particle lost */
               if (verbosity>3) {
@@ -221,12 +231,14 @@ long doMomentumApertureSearch(
               sLost[side][iElem] = coord[0][4];
               deltaLost[side][iElem] = (coord[0][5]-pCentral)/pCentral;
               loserFound[side][iElem] = 1;
+              if (!scan_from_outside)
+                break;
             }
           }
           points = 1;
           deltaInterval /= 2;
           if (survivorFound[side][iElem]) 
-            delta0 = deltaSurvived[side][iElem] - deltaInterval;
+            delta0 = deltaSurvived[side][iElem] + (scan_from_outside?-1:1)*deltaInterval;
           else
             break;
         } while (--splitsLeft >= 0);
