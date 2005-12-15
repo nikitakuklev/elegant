@@ -15,6 +15,12 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.5  2005/11/22 23:21:20  borland
+ * Added momentum aperture search, which necessitated adding an argument to
+ * do_tracking, resulting in changes in many files.
+ * Also improved convergence of orbit finder, adding a second iteration using
+ * tracking if the matrix-based method fails.
+ *
  * Revision 1.4  2005/11/10 15:38:49  soliday
  * Added changes to get it to compile properly with 64 bit compilers.
  *
@@ -296,7 +302,7 @@ int main(
             bomb("unknown error type (invalid error type)", USAGE);
           if (scanned[i_arg].n_items==5) {
             if (error_type_code!=GAUSSIAN_ERRORS || 
-                !sscanf(scanned[i_arg].list[3], "%lf", &error_sigmas) ||
+                !sscanf(scanned[i_arg].list[4], "%lf", &error_sigmas) ||
                 error_sigmas<0)
               bomb("invalid -errorLevel syntax (invalid error sigmas level)", USAGE);
           }
@@ -794,7 +800,7 @@ int main(
                   1e6*sqrt(emity2_sum/n_good_fits_y-sqr(emity_sum/n_good_fits_y)));
         if (!SDDS_SetParameters
             (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
-             "ey", emity_sum/n_good_fits_y, "S22", S22_sum/n_good_fits_y,
+             "ey", emity_sum/n_good_fits_y, "S33", S33_sum/n_good_fits_y,
              "S34", S34_sum/n_good_fits_y, "S44", S44_sum/n_good_fits_y,
              "betay", betay_sum/n_good_fits_y, "alphay", alphay_sum/n_good_fits_y,
              "yRMSDeviation", md_y/n_good_fits_y, "yGoodFits", n_good_fits_y,
@@ -804,7 +810,7 @@ int main(
              !SDDS_SetParameters
              (&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
               "eyStDev", sqrt(emity2_sum/n_good_fits_y-sqr(emity_sum/n_good_fits_y)),
-              "S22StDev", sqrt(S22_sum2/n_good_fits_y-sqr(S22_sum/n_good_fits_y)),
+              "S33StDev", sqrt(S33_sum2/n_good_fits_y-sqr(S33_sum/n_good_fits_y)),
               "S34StDev", sqrt(S34_sum2/n_good_fits_y-sqr(S34_sum/n_good_fits_y)),
               "S44StDev", sqrt(S44_sum2/n_good_fits_y-sqr(S44_sum/n_good_fits_y)),
               "betayStDev", sqrt(betay_sum2/n_good_fits_y-sqr(betay_sum/n_good_fits_y)),
