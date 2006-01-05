@@ -3019,4 +3019,4 @@ void swapParticles(double *p1, double *p2);
 /* prototypes for momentumAperture.c */
 void setupMomentumApertureSearch(NAMELIST_TEXT *nltext, RUN *run, VARY *control);
 void finishMomentumApertureSearch();
-long doMomentumApertureSearch(RUN *run, VARY *control, ERRORVAL *errcon, LINE_LIST *beamline);
+long doMomentumApertureSearch(RUN *run, VARY *control, ERRORVAL *errcon, LINE_LIST *beamline, double *startingCoord);

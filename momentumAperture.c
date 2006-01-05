@@ -72,6 +72,12 @@ void setupMomentumApertureSearch(
       SDDS_DefineColumn(&SDDSma, "xLostNegative", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
       SDDS_DefineColumn(&SDDSma, "yLostNegative", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
       SDDS_DefineColumn(&SDDSma, "deltaLostNegative", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+#if defined(DEBUG)
+      SDDS_DefineColumn(&SDDSma, "xco", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+      SDDS_DefineColumn(&SDDSma, "xpco", NULL, "", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+      SDDS_DefineColumn(&SDDSma, "yco", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+      SDDS_DefineColumn(&SDDSma, "ypco", NULL, "", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+#endif
       !SDDS_SaveLayout(&SDDSma) || !SDDS_WriteLayout(&SDDSma)) {
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
     exit(1);
@@ -92,7 +98,8 @@ long doMomentumApertureSearch(
                               RUN *run,
                               VARY *control,
                               ERRORVAL *errcon,
-                              LINE_LIST *beamline
+                              LINE_LIST *beamline,
+                              double *startingCoord
                               )
 {    
   double **coord;
@@ -104,8 +111,12 @@ long doMomentumApertureSearch(
   double **xLost, **yLost, **deltaLost, **sLost;
   double *sStart, length;
   char **ElementName;
-  long points, splitsLeft;
-  
+  long points, splitsLeft, iTraj;
+  TRAJECTORY *traj;
+#if defined(DEBUG)
+  double *xco, *xpco, *yco, *ypco;
+#endif
+
   /* determine how many elements will be tracked */
   elem = &(beamline->elem);
   elem0 = NULL;
@@ -140,6 +151,12 @@ long doMomentumApertureSearch(
   sLost = (double**)czarray_2d(sizeof(**sLost), 2, nElem);
   sStart = (double*)tmalloc(sizeof(*sStart)*nElem);
   ElementName = (char**)tmalloc(sizeof(*ElementName)*nElem);
+#if defined(DEBUG)
+  xco = (double*)tmalloc(sizeof(*xco)*nElem);
+  xpco = (double*)tmalloc(sizeof(*xpco)*nElem);
+  yco = (double*)tmalloc(sizeof(*yco)*nElem);
+  ypco = (double*)tmalloc(sizeof(*ypco)*nElem);
+#endif
 
   /* start the output page */
   if (!SDDS_StartTable(&SDDSma, nElem)) {
@@ -150,22 +167,47 @@ long doMomentumApertureSearch(
   deltaStart[0] = delta_negative_limit;
   deltaStart[1] = delta_positive_limit;
 
+  /* track to get the closed orbit vs s */
+  traj = tmalloc(sizeof(*traj)*(beamline->n_elems+1));
+  memcpy(coord[0], startingCoord, sizeof(**coord)*6);
+  memcpy(traj[0].centroid, startingCoord, sizeof(**coord)*6);
+  traj[0].elem = NULL;
+  delete_phase_references();
+  reset_special_elements(beamline, 1);
+  pCentral = run->p_central;
+  if (!do_tracking(NULL, coord, 1, NULL, beamline, &pCentral, 
+                  NULL, NULL, NULL, traj+1, run, control->i_step, 
+                  0*SILENT_RUNNING, 1, 0, NULL, NULL, NULL, &lostOnPass0,
+                  elem0)) {
+    fprintf(stdout, "Error: particle lost while determining central trajectory!\n");
+    return 0;
+  }
+  
   elem = elem0;
   iElem = 0;
+  iTraj = -1;
   while (elem) {
+    iTraj++;
     if (!include_name_pattern || wild_match(elem->name, include_name_pattern)) {
       length = 0;
       if (entity_description[elem->type].flags&HAS_LENGTH)
         length = ((DRIFT*)(elem->p_elem))->length;
       if ((elem->end_pos-length)>s_end) 
         break;
-      pCentral = run->p_central;
       if (verbosity>0) {
         fprintf(stdout, "Searching for energy aperture for %s #%ld at s=%em\n", elem->name, elem->occurence, elem->end_pos-length);
         fflush(stdout);
       }
       ElementName[iElem] = elem->name;
       sStart[iElem] = elem->end_pos-length;
+      if (iTraj && traj[iTraj].elem!=elem->pred) {
+        fprintf(stdout, "Fatal error: book-keeping error for central trajectory.\n");
+        fprintf(stdout, "iTraj = %ld, traj.elem = %p, traj.elem->pred = %p, traj.elem->succ = %p, elem = %p\n",
+                iTraj, traj[iTraj].elem, 
+                traj[iTraj].elem->pred, 
+                traj[iTraj].elem->succ, elem);
+        exit(1);
+      }
       for (side=0; side<2; side++) {
         deltaInterval = deltaStart[side]/(delta_points-1);
         lostOnPass[side][iElem] = -1;
@@ -187,10 +229,18 @@ long doMomentumApertureSearch(
         }
         do {
           for (ip=0; ip<points; ip++) {
-            memset(coord[0], 0, sizeof(double)*7);
-            coord[0][0] = x_initial;
-            coord[0][2] = y_initial;
-            coord[0][5] = delta = delta0 + ip*deltaInterval;
+            memcpy(coord[0], traj[iTraj].centroid, sizeof(double)*6);
+            coord[0][6] = 1;
+            coord[0][0] += x_initial;
+            coord[0][2] += y_initial;
+            delta = delta0 + ip*deltaInterval;
+            coord[0][5] += delta;
+#if defined(DEBUG)
+            xco[iElem] = coord[0][0];
+            xpco[iElem] = coord[0][1];
+            yco[iElem] = coord[0][2];
+            ypco[iElem] = coord[0][3];
+#endif
             if (verbosity>3) {
               fprintf(stdout, "  Tracking with delta0 = %e (%e, %e, %e, %e, %e, %e)\n", 
                       delta, coord[0][0], coord[0][1], coord[0][2], coord[0][3], coord[0][4], coord[0][5]);
@@ -198,6 +248,7 @@ long doMomentumApertureSearch(
             }
             delete_phase_references();
             reset_special_elements(beamline, 1);
+            pCentral = run->p_central;
             if (do_tracking(NULL, coord, 1, NULL, beamline, &pCentral, 
                             NULL, NULL, NULL, NULL, run, control->i_step, 
                             SILENT_RUNNING, control->n_passes, 0, NULL, NULL, NULL, &lostOnPass0,
@@ -265,6 +316,12 @@ long doMomentumApertureSearch(
       !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, xLost[0], nElem, "xLostNegative") ||
       !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, yLost[0], nElem, "yLostNegative") ||
       !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, deltaLost[0], nElem, "deltaLostNegative") ||
+#if defined(DEBUG)
+      !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, xco, nElem, "xco") ||
+      !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, xpco, nElem, "xpco") ||
+      !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, yco, nElem, "yco") ||
+      !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, ypco, nElem, "ypco") ||
+#endif
       !SDDS_WritePage(&SDDSma)) {
     SDDS_SetError("Problem writing SDDS table (doMomentumApertureSearch)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -283,7 +340,8 @@ long doMomentumApertureSearch(
   free_czarray_2d((void**)sLost, 2, nElem);
   free(sStart);
   free(ElementName);
-
+  free(traj);
+  
   return 1;
 }
 

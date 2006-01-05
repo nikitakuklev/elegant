@@ -371,8 +371,11 @@ long do_tracking(
       /* prepare space charge effects calculation  */
       initializeSCMULT(eptr, coord, nToTrack, *P_central, i_pass);
 
-    if (i_pass==0 && startElem)
+    if (i_pass==0 && startElem) {
+      z = startElem->end_pos;
       eptr = startElem;  /* start tracking from an interior point in the beamline */
+      startElem = NULL; 
+    }
 
     while (eptr && (nToTrack || USE_MPI)) {
       classFlags = entity_description[eptr->type].flags;
