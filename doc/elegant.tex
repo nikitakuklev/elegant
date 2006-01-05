@@ -1634,6 +1634,62 @@ number of the occurrence of the named element from which to start.
 
 \begin{latexonly}
 \newpage
+\begin{center}{\Large\verb|momentum_aperture|}\end{center}
+\end{latexonly}
+\subsection{momentum\_aperture}
+
+\begin{itemize}
+\item type: action command.
+\item function: determine momentum aperture as a function of position in the lattice by tracking
+\end{itemize}
+
+\begin{verbatim}
+&momentum_aperture
+    STRING output = NULL;
+    double x_initial = 1e-6;
+    double y_initial = 1e-6;
+    double delta_negative_limit = -0.03;
+    double delta_positive_limit = 0.03;
+    long delta_points = 10;
+    long n_splits = 3;
+    long scan_from_outside = 0;
+    double s_start = 0;
+    double s_end = DBL_MAX;
+    STRING include_name_pattern = NULL;
+    long verbosity = 0;        
+&end
+\end{verbatim}
+
+\begin{itemize}
+\item \verb|output| --- The (incomplete) name of a file to which the momentum aperture results will be written.
+  Recommended value: ``\%s.mmap''.
+\item \verb|x_initial|, \verb|y_initial| --- The initial x and y coordinate values for tracking. It is particularly
+ important that \verb|y_initial| be nonzero if one wants to see losses due to resonances.
+\item \verb|delta_negative_limit|, \verb|delta_positive_limit| --- Limits of scans in the negative and positive direction.
+  By default, scanning begins at zero and moves toward these limits.  
+\item \verb|delta_points| --- Initial number of values of $\delta$ to use.  This is used to determine the initial step size.
+ It is important to make this value large enough that one doesn't skip over a narrow region where particles get lost. 
+\item \verb|n_splits| --- Number of times to split the step size in order to refine the location of the maximum surviving
+ momentum offsets.  One additional particle will be tracked for each split made.
+\item \verb|scan_from_outside| --- By default, scanning begins from 0 and moves outward.   Setting
+ this parameter to 1 results in a scan from the outside toward zero, which is faster but potentially unreliable,
+ in that the results may be affected by stable islands.
+\item \verb|s_start|, \verb|s_end| --- Limiting s coordinates of the elements from which tracking will start.  The
+ default values will exclude no elements.
+\item \verb|include_name_pattern| --- If given, tracking will start only at the entrance to elements that match the given wildcard pattern.
+\item \verb|verbosity| --- Larger values result in more detailed printouts as calculations proceed.  Mostly for debugging.
+\end{itemize}
+
+The algorithm for this command is based on M. Belgrounne {\em et al.}, ``Refined Tracking Procedure for the SOLEIL Energy Acceptance Calculation,''
+Proceedings of PAC 2003, p 896.   In particular, the energy aperture as a function of position around the ring is determined by tracking.
+Starting at the beginning of the lattice and working downstream, particles are tracked from the entrance of each element.  The betatron
+coordinates are initially zero (or very small), while the momentum deviation is gradually increased until loss of the particle is observed.
+This defines the momentum aperture at that location.
+
+N.B.: The present version of the code does not center the particles on the closed orbit!  This will be added in the next version.
+
+\begin{latexonly}
+\newpage
 \begin{center}{\Large\verb|optimize|}\end{center}
 \end{latexonly}
 \subsection{optimize}
