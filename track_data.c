@@ -434,10 +434,10 @@ ALPH alph_example;
 /* names for alpha magnet parameters */
 PARAMETER alph_param[N_ALPH_PARAMS] = {
     {"XMAX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&alph_example.xmax), NULL, 0.0, 0, "size of alpha"},
-    {"XS1", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&alph_example.xs1), NULL, 0.0, 0, "inner scraper position"},
-    {"XS2", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&alph_example.xs2), NULL, 0.0, 0, "outer scraper position"},
-    {"DP1", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&alph_example.dp1), NULL, -1, 0, "inner scraper momentum deviation"},
-    {"DP2", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&alph_example.dp2), NULL, 1, 0, "outer scraper momentum deviation"},
+    {"XS1", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&alph_example.xs1), NULL, 0.0, 0, "inner scraper position relative to XMAX"},
+    {"XS2", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&alph_example.xs2), NULL, 0.0, 0, "outer scraper position relative to XMAX"},
+    {"DP1", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&alph_example.dp1), NULL, -1, 0, "inner scraper fractional momentum deviation"},
+    {"DP2", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&alph_example.dp2), NULL, 1, 0, "outer scraper fractional momentum deviation"},
     {"XPUCK", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&alph_example.xPuck), NULL, -1, 0, "position of scraper puck"},
     {"WIDTHPUCK", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&alph_example.widthPuck), NULL, 0, 0, "size of scraper puck"},
     {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&alph_example.dx), NULL, 0.0, 0, "misalignment"},
