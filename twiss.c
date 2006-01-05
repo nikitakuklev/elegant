@@ -2241,7 +2241,7 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
 	x = sqrt(ix*
 		 sqr((tune_shift_with_amplitude_struct.x1-tune_shift_with_amplitude_struct.x0))/(gridSize-1)
 		 + sqr(tune_shift_with_amplitude_struct.x0));
-      Ax[ix] = sqr(x)/twiss->betax;
+      Ax[ix] = sqr(x)*(1+sqr(twiss->alphax))/twiss->betax;
       for (iy=0; iy<gridSize; iy++) {
 	lost[ix][iy] = 0;
         if (tune_shift_with_amplitude_struct.sparse_grid &&
@@ -2252,7 +2252,7 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
 	  y = sqrt(iy*
 		   sqr((tune_shift_with_amplitude_struct.y1-tune_shift_with_amplitude_struct.y0))/(gridSize-1)
 		   + sqr(tune_shift_with_amplitude_struct.y0));
-        Ay[iy] = sqr(y)/twiss->betay;
+        Ay[iy] = sqr(y)*(1+sqr(twiss->alphay))/twiss->betay;
 	if (ix==0 && iy==0) {
 	  tuneLowerLimit[0] = tuneLowerLimit[1] = 0;
 	  tuneUpperLimit[0] = tuneUpperLimit[1] = 0;
