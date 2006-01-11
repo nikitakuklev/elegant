@@ -2037,8 +2037,11 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
         if (isnan(error) || isinf(error)) {
           return 0;
         }
-      } else
+        bad_orbit = 1;
+      } else {
+        bad_orbit = 0;
         break;
+      }
     } else {
       /* try to find a good starting point by tracking several turns */
       long turn;
@@ -2049,7 +2052,7 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
         one_part[0][i] = buffer[i] = 0;
       one_part[0][5] = dp;
       bad_orbit = 0;
-      for (turn=0; turn<clorb_iter/10; turn++)  {
+      for (turn=0; turn<clorb_iter/10+10; turn++)  {
         n_part = 1;
         if (do_tracking(NULL, one_part, n_part, NULL, beamline, &p, (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
                         (TRAJECTORY*)NULL, run, 0, 
@@ -2071,8 +2074,13 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
         fprintf(stdout, "New CO starting point (%ld turns): %e, %e, %e, %e, %e, %e\n",
                 turn, one_part[0][0], one_part[0][1], one_part[0][2], one_part[0][3], 
                 one_part[0][4], one_part[0][5]);
-      } else
-        break;
+      } else {
+        /* use the previous answer and iterate more */
+        for (i=0; i<4; i++) 
+          one_part[0][i] = co->a[i][0];
+        one_part[0][4] = 0;
+        one_part[0][5] = dp;
+      }
     }
   }
   
