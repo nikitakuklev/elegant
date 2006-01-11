@@ -69,6 +69,19 @@ double beta_from_delta(double p, double delta)
   return( p/sqrt(p*p+1));
 }
 
+
+/* This is used if one needs to wedge a function into the lattice at a specific
+ * location
+ */
+
+static void (*trackingWedgeFunction)(double **part, long np) = NULL;
+static ELEMENT_LIST *trackingWedgeElement = NULL;
+void setTrackingWedgeFunction(void (*wedgeFunc)(double **part, long np), ELEMENT_LIST *eptr)
+{
+  trackingWedgeFunction = wedgeFunc;
+  trackingWedgeElement = eptr;
+}
+
 long do_tracking(
                  /* Either the beam pointer or the coord pointer must be supplied, but not both */
                  BEAM *beam,  
@@ -372,12 +385,28 @@ long do_tracking(
       initializeSCMULT(eptr, coord, nToTrack, *P_central, i_pass);
 
     if (i_pass==0 && startElem) {
+      /* start tracking from an interior point in the beamline */
+      while (eptr && eptr!=startElem) {
+        if (eptr->type==T_MAXAMP) {
+          maxamp = (MAXAMP*) eptr->p_elem;
+          x_max = maxamp->x_max;
+          y_max = maxamp->y_max;
+          elliptical = maxamp->elliptical;
+          maxampOpenCode = determineOpenSideCode(maxamp->openSide);
+          maxampExponent = maxamp->exponent;
+        }
+        eptr = eptr->succ;
+      }
       z = startElem->end_pos;
-      eptr = startElem;  /* start tracking from an interior point in the beamline */
       startElem = NULL; 
     }
 
     while (eptr && (nToTrack || USE_MPI)) {
+      if (trackingWedgeFunction && eptr==trackingWedgeElement) {
+        (*trackingWedgeFunction)(coord, nToTrack);
+        trackingWedgeFunction = NULL;
+      }
+      
       classFlags = entity_description[eptr->type].flags;
       elementsTracked++;
       log_entry("do_tracking.2.2.0");
