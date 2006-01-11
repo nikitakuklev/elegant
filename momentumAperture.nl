@@ -7,8 +7,8 @@
 
 #namelist momentum_aperture static
     STRING output = NULL;
-    double x_initial = 1e-6;
-    double y_initial = 1e-6;
+    double x_initial = 0;
+    double y_initial = 0;
     double delta_negative_limit = -0.03;
     double delta_positive_limit = 0.03;
     long delta_points = 10;
