@@ -908,7 +908,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
         fflush(optimization_data->fp_log);
       }
       if (!log_file || optimization_data->fp_log!=stdout) {
-        fprintf(stdout, "Optimization results:\n    optimization function has value %.15g\n",
+        fprintf(stdout, "Optimization results:\n    optimization function has value %.15g\n", 
                 optimization_data->mode==OPTIM_MODE_MAXIMUM?-result:result);
         if (optimization_data->terms) {
           double sum;
@@ -1050,7 +1050,7 @@ double optimization_function(double *value, long *invalid)
   OPTIM_VARIABLES *variables;
   OPTIM_CONSTRAINTS *constraints;
   OPTIM_COVARIABLES *covariables;
-  double conval, result;
+  double conval, result=0;
   long i, iRec, recordUsedAgain;
   unsigned long unstable;
   VMATRIX *M;
@@ -1143,11 +1143,10 @@ double optimization_function(double *value, long *invalid)
     rebaseline_element_links(beamline->links, run, beamline);
   i = compute_changed_matrices(beamline, run) +
     assert_element_links(beamline->links, run, beamline, STATIC_LINK+DYNAMIC_LINK);
-  /* if (i) { */
   beamline->flags &= ~(BEAMLINE_CONCAT_CURRENT+BEAMLINE_CONCAT_DONE+
 		       BEAMLINE_TWISS_CURRENT+BEAMLINE_TWISS_DONE+
 		       BEAMLINE_RADINT_CURRENT+BEAMLINE_RADINT_DONE);
-  /* } */
+
   if (i && beamline->matrix) {
     free_matrices(beamline->matrix);
     free(beamline->matrix);
@@ -1187,23 +1186,27 @@ double optimization_function(double *value, long *invalid)
       !do_correction(orbitCorrData, run, beamline, startingOrbitCoord, beam, control->i_step, 0)) {
     *invalid = 1;
     fprintf(stdout, "warning: unable to perform orbit correction\n");
+    fflush(stdout);
   }
-  if (doTuneCorr &&
+  if (!*invalid && doTuneCorr &&
       !do_tune_correction(tuneCorrData, run, beamline, startingOrbitCoord, 
                                   0, 0)) {
     *invalid = 1;
     fprintf(stdout, "warning: unable to do tune correction\n");
+    fflush(stdout);
   }
-  if (doChromCorr &&
+  if (!*invalid && doChromCorr &&
       !do_chromaticity_correction(chromCorrData, run, beamline, startingOrbitCoord, 
                                   0, 0)) {
     *invalid = 1;
     fprintf(stdout, "warning: unable to do chromaticity correction\n");
+    fflush(stdout);
   }
-  if (doClosedOrbit &&
+  if (!*invalid && doClosedOrbit &&
       !run_closed_orbit(run, beamline, startingOrbitCoord, NULL, 0)) {
     *invalid = 1;
     fprintf(stdout, "warning: unable to find closed orbit\n");
+    fflush(stdout);
   }
 
 #if DEBUG
@@ -1218,27 +1221,30 @@ double optimization_function(double *value, long *invalid)
   }
   fprintf(stdout, "Beamline flags: %lx\n", beamline->flags);
 #endif
-  if (beamline->flags&BEAMLINE_TWISS_WANTED) {
+
+  if (!*invalid && beamline->flags&BEAMLINE_TWISS_WANTED) {
     if (twiss_mem[0]==-1) {
       for (i=0; i<N_TWISS_QUANS; i++)
         twiss_mem[i] = rpn_create_mem(twiss_name[i], 0);
     }
     /* get twiss mode and (beta, alpha, eta, etap) for both planes */
-#if DEBUG
-    fprintf(stdout, "optimization_function: Computing twiss parameters\n");
-    fflush(stdout);
-#endif
+    if (optimization_data->verbose && optimization_data->fp_log) {
+      fprintf(optimization_data->fp_log, "Computing twiss parameters for optimization\n");
+      fflush(optimization_data->fp_log);
+    }
     update_twiss_parameters(run, beamline, &unstable);
+    if (unstable)
+      *invalid = 1;
 #if DEBUG
     fprintf(stdout, "Twiss parameters done.\n");
     fprintf(stdout, "betax=%g, alphax=%g, etax=%g\n", 
-	    beamline->elast->twiss->betax,
-	    beamline->elast->twiss->alphax,
-	    beamline->elast->twiss->etax);
+            beamline->elast->twiss->betax,
+            beamline->elast->twiss->alphax,
+            beamline->elast->twiss->etax);
     fprintf(stdout, "betay=%g, alphay=%g, etay=%g\n", 
-	    beamline->elast->twiss->betay,
-	    beamline->elast->twiss->alphay,
-	    beamline->elast->twiss->etay);
+            beamline->elast->twiss->betay,
+            beamline->elast->twiss->alphay,
+            beamline->elast->twiss->etay);
     fflush(stdout);
 #endif
     /* store twiss parameters for last element */
@@ -1320,11 +1326,12 @@ double optimization_function(double *value, long *invalid)
     fflush(stdout);
 #endif
   }
-  if (beamline->flags&BEAMLINE_RADINT_WANTED) {
-#if DEBUG
-    fprintf(stdout, "optimization_function: Computing radiation integrals\n");
-    fflush(stdout);
-#endif
+
+  if (!*invalid && beamline->flags&BEAMLINE_RADINT_WANTED) {
+    if (optimization_data->verbose && optimization_data->fp_log) {
+      fprintf(optimization_data->fp_log, "Updating radiation integral values for optimization\n");
+      fflush(optimization_data->fp_log);
+    }
     if (radint_mem[0]==-1) {
       for (i=0; i<13; i++)
         radint_mem[i] = rpn_create_mem(radint_name[i], 0);
@@ -1364,154 +1371,164 @@ double optimization_function(double *value, long *invalid)
   for (i=0; i<variables->n_variables; i++)
     variables->varied_quan_value[i] = value[i];
 
-#if DEBUG
-  fprintf(stdout, "optimization_function: Tracking\n");
-  fflush(stdout);
-#endif
-  output->n_z_points = 0;
-  if (output->sums_vs_z) {
-    free(output->sums_vs_z);
-    output->sums_vs_z = NULL;
-  }
-  M = accumulate_matrices(&(beamline->elem), run, NULL,
-                          optimization_data->matrix_order<1?1:optimization_data->matrix_order, 0);
-  track_beam(run, control, error, variables, beamline, beam, output, optim_func_flags, 1,
-             &charge);
-  if (writePermitted){ /* Only the master will execute the block */
-    if (output->sasefel.active)
-      storeSASEFELAtEndInRPN(&(output->sasefel));
-
-    /* compute final parameters and store in rpn memories */
-#if DEBUG
-    fprintf(stdout, "optimization_function: Computing final parameters\n");
-    fflush(stdout);
-#endif
-    if (!output->sums_vs_z)
-      bomb("sums_vs_z element of output structure is NULL--programming error (optimization_function)", NULL);
-    if ((i=compute_final_properties(final_property_value, output->sums_vs_z+output->n_z_points, 
-				    beam->n_to_track, beam->p0, M, beam->particle, 
-				    control->i_step, control->indexLimitProduct*control->n_steps,
-				    charge))
-	!= final_property_values) {
-      fprintf(stdout, "error: compute_final_properties computed %ld quantities when %ld were expected (optimization_function)\n",
-	      i, final_property_values);
-      fflush(stdout);
-      abort();
+  if (!*invalid) {
+    output->n_z_points = 0;
+    if (output->sums_vs_z) {
+      free(output->sums_vs_z);
+      output->sums_vs_z = NULL;
     }
-    rpn_store_final_properties(final_property_value, final_property_values);
-    if (optimization_data->matrix_order>1)
-      rpnStoreHigherMatrixElements(M, &optimization_data->TijkMem,
-				   &optimization_data->UijklMem,
-				   optimization_data->matrix_order);
-    free_matrices(M); free(M); M = NULL;
-
-#if DEBUG
-    fprintf(stdout, "optimization_function: Checking constraints\n");
-    fflush(stdout);
-#endif
-    /* check constraints */
-    if (optimization_data->verbose && optimization_data->fp_log && constraints->n_constraints) {
-      fprintf(optimization_data->fp_log, "    Constraints:\n");
+    M = accumulate_matrices(&(beamline->elem), run, NULL,
+                            optimization_data->matrix_order<1?1:optimization_data->matrix_order, 0);
+    
+    if (optimization_data->verbose && optimization_data->fp_log) {
+      fprintf(optimization_data->fp_log, "Tracking for optimization\n");
       fflush(optimization_data->fp_log);
     }
-    for (i=0; i<constraints->n_constraints; i++) {
-      if (optimization_data->verbose && optimization_data->fp_log)
-	fprintf(optimization_data->fp_log, "    %10s: %23.15e", constraints->quantity[i], 
-		final_property_value[constraints->index[i]]);
-      if ((conval=final_property_value[constraints->index[i]])<constraints->lower[i] ||
-	  conval>constraints->upper[i]) {
-	*invalid = 1;
-	if (optimization_data->verbose && optimization_data->fp_log) {
-	  fprintf(optimization_data->fp_log, " ---- invalid\n\n");
-	  fflush(optimization_data->fp_log);
-	}
-	log_exit("optimization_function");
-	break;
+    track_beam(run, control, error, variables, beamline, beam, output, optim_func_flags, 1,
+               &charge);
+  }
+  
+  if (writePermitted) { /* Only the master will execute the block */
+    if (!*invalid) {
+      if (output->sasefel.active)
+        storeSASEFELAtEndInRPN(&(output->sasefel));
+
+      /* compute final parameters and store in rpn memories */
+#if DEBUG
+      fprintf(stdout, "optimization_function: Computing final parameters\n");
+      fflush(stdout);
+#endif
+      if (!output->sums_vs_z)
+        bomb("sums_vs_z element of output structure is NULL--programming error (optimization_function)", NULL);
+      if ((i=compute_final_properties(final_property_value, output->sums_vs_z+output->n_z_points, 
+                                      beam->n_to_track, beam->p0, M, beam->particle, 
+                                      control->i_step, control->indexLimitProduct*control->n_steps,
+                                      charge))
+          != final_property_values) {
+        fprintf(stdout, "error: compute_final_properties computed %ld quantities when %ld were expected (optimization_function)\n",
+                i, final_property_values);
+        fflush(stdout);
+        abort();
       }
-      if (optimization_data->verbose && optimization_data->fp_log) {
-	fputc('\n', optimization_data->fp_log);
-	fflush(optimization_data->fp_log);
-      }
-    }
+      rpn_store_final_properties(final_property_value, final_property_values);
+      if (optimization_data->matrix_order>1)
+        rpnStoreHigherMatrixElements(M, &optimization_data->TijkMem,
+                                     &optimization_data->UijklMem,
+                                     optimization_data->matrix_order);
+      free_matrices(M); free(M); M = NULL;
 
 #if DEBUG
-    fprintf(stdout, "optimization_function: Computing rpn function\n");
-    fflush(stdout);
+      fprintf(stdout, "optimization_function: Checking constraints\n");
+      fflush(stdout);
 #endif
-    result = 0;
-    rpn_clear();
-    if (!*invalid) {
-      long i, terms=0;
-      double value, sum;
-      if (balanceTerms && optimization_data->balance_terms && optimization_data->terms) {
-	for (i=sum=0; i<optimization_data->terms; i++) {
-	  rpn_clear();
-	  if ((value=rpn(optimization_data->term[i]))!=0) {
-	    optimization_data->termWeight[i] = 1/fabs(value);
-	    terms ++;
-	  }
-	  else
-	    optimization_data->termWeight[i] = 0;
-	  sum += fabs(value);
-	}
-	if (terms)
-	  for (i=0; i<optimization_data->terms; i++) {
-	    if (optimization_data->termWeight[i])
-	      optimization_data->termWeight[i] *= optimization_data->usersTermWeight[i]*sum/terms;
-	    else
-	      optimization_data->termWeight[i] = optimization_data->usersTermWeight[i]*sum/terms;
-	  }
-	balanceTerms = 0;
-	fprintf(stdout, "\nOptimization terms balanced.\n");
-	fflush(stdout);
+      /* check constraints */
+      if (optimization_data->verbose && optimization_data->fp_log && constraints->n_constraints) {
+        fprintf(optimization_data->fp_log, "    Constraints:\n");
+        fflush(optimization_data->fp_log);
       }
-
-      /* compute and return quantity to be optimized */
-      if (optimization_data->terms) {
-	long i;
-	for (i=result=0; i<optimization_data->terms; i++)  {
-	  rpn_clear();
-	  result += (optimization_data->termValue[i]=optimization_data->termWeight[i]*rpn(optimization_data->term[i]));
-	}
+      for (i=0; i<constraints->n_constraints; i++) {
+        if (optimization_data->verbose && optimization_data->fp_log)
+          fprintf(optimization_data->fp_log, "    %10s: %23.15e", constraints->quantity[i], 
+                  final_property_value[constraints->index[i]]);
+        if ((conval=final_property_value[constraints->index[i]])<constraints->lower[i] ||
+            conval>constraints->upper[i]) {
+          *invalid = 1;
+          if (optimization_data->verbose && optimization_data->fp_log) {
+            fprintf(optimization_data->fp_log, " ---- invalid\n\n");
+            fflush(optimization_data->fp_log);
+          }
+          log_exit("optimization_function");
+          break;
+        }
+        if (optimization_data->verbose && optimization_data->fp_log) {
+          fputc('\n', optimization_data->fp_log);
+          fflush(optimization_data->fp_log);
+        }
       }
-      else {
-	rpn_clear();    /* clear rpn stack */
-	result = rpn(optimization_data->UDFname);
+      
+#if DEBUG
+      fprintf(stdout, "optimization_function: Computing rpn function\n");
+      fflush(stdout);
+#endif
+      result = 0;
+      rpn_clear();
+      if (!*invalid) {
+        long i, terms=0;
+        double value, sum;
+        if (balanceTerms && optimization_data->balance_terms && optimization_data->terms) {
+          for (i=sum=0; i<optimization_data->terms; i++) {
+            rpn_clear();
+            if ((value=rpn(optimization_data->term[i]))!=0) {
+              optimization_data->termWeight[i] = 1/fabs(value);
+              terms ++;
+            }
+            else
+              optimization_data->termWeight[i] = 0;
+            sum += fabs(value);
+          }
+          if (terms)
+            for (i=0; i<optimization_data->terms; i++) {
+              if (optimization_data->termWeight[i])
+                optimization_data->termWeight[i] *= optimization_data->usersTermWeight[i]*sum/terms;
+              else
+                optimization_data->termWeight[i] = optimization_data->usersTermWeight[i]*sum/terms;
+            }
+          balanceTerms = 0;
+          fprintf(stdout, "\nOptimization terms balanced.\n");
+          fflush(stdout);
+        }
+        
+        /* compute and return quantity to be optimized */
+        if (optimization_data->terms) {
+          long i;
+          for (i=result=0; i<optimization_data->terms; i++)  {
+            rpn_clear();
+            result += (optimization_data->termValue[i]=optimization_data->termWeight[i]*rpn(optimization_data->term[i]));
+          }
+        }
+        else {
+          rpn_clear();    /* clear rpn stack */
+          result = rpn(optimization_data->UDFname);
+        }
+        if (rpn_check_error())
+          exit(1);
+        if (isnan(result) || isinf(result)) {
+          *invalid = 1;
+        } else {
+          if (optimization_data->verbose && optimization_data->fp_log) {
+            fprintf(optimization_data->fp_log, "equation evaluates to %23.15e\n", result);
+            fflush(optimization_data->fp_log);
+            if (optimization_data->terms && !*invalid) {
+              fprintf(optimization_data->fp_log, "Terms of equation: \n");
+              for (i=sum=0; i<optimization_data->terms; i++) {
+                rpn_clear();
+                fprintf(optimization_data->fp_log, "%g*(%20s): %23.15e\n",
+                        optimization_data->termWeight[i],
+                        optimization_data->term[i],
+                        optimization_data->termValue[i]);
+                sum += optimization_data->termValue[i];
+              }
+            }
+            fprintf(optimization_data->fp_log, "\n\n");
+          }
+        }
       }
-      if (isnan(result) || isinf(result)) {
-	result = sqrt(DBL_MAX);
-      }
-      if (rpn_check_error())
-	exit(1);
-
-      if (optimization_data->verbose && optimization_data->fp_log) {
-	fprintf(optimization_data->fp_log, "equation evaluates to %23.15e\n", result);
-	fflush(optimization_data->fp_log);
-	if (optimization_data->terms) {
-	  fprintf(optimization_data->fp_log, "Terms of equation: \n");
-	  for (i=sum=0; i<optimization_data->terms; i++) {
-	    rpn_clear();
-	    fprintf(optimization_data->fp_log, "%g*(%20s): %23.15e\n",
-		    optimization_data->termWeight[i],
-		    optimization_data->term[i],
-		    optimization_data->termValue[i]);
-	    sum += optimization_data->termValue[i];
-	  }
-	}
-	fprintf(optimization_data->fp_log, "\n\n");
-      }
-    
-      if (optimization_data->mode==OPTIM_MODE_MAXIMUM)
-	result *= -1;
-      if (unstable)
-	*invalid = 1;
     }
-
+    
+    if (*invalid) {
+      result = sqrt(DBL_MAX);
+      if (*invalid && optimization_data->verbose && optimization_data->fp_log) {
+        fprintf(optimization_data->fp_log, "Result is invalid\n");
+        fflush(optimization_data->fp_log);
+      }
+    }
+    
+    if (optimization_data->mode==OPTIM_MODE_MAXIMUM)
+      result *= -1;
+    
     /* copy the result into the "hidden" slot in the varied quantities array for output
      * to final properties file
      */
-    if (*invalid)
-      result = (optimization_data->mode==OPTIM_MODE_MAXIMUM?-1:1)*sqrt(DBL_MAX);
     variables->varied_quan_value[variables->n_variables+1] = 
       optimization_data->mode==OPTIM_MODE_MAXIMUM?-1*result:result;
     if (!*invalid && bestResult>result) {
@@ -1522,10 +1539,12 @@ double optimization_function(double *value, long *invalid)
     variables->varied_quan_value[variables->n_variables+2] = 
       optimization_data->mode==OPTIM_MODE_MAXIMUM?-1*bestResult:bestResult;
 
-    if (force_output || (control->i_step-2)%output_sparsing_factor==0)
+    if (!*invalid && (force_output || (control->i_step-2)%output_sparsing_factor==0))
       do_track_beam_output(run, control, error, variables, beamline, beam, output, optim_func_flags,
 			   charge);
   }
+  
+  
 #if DEBUG
   fprintf(stdout, "optimization_function: Returning %le,  invalid=%ld\n", result, *invalid);
   fflush(stdout);
