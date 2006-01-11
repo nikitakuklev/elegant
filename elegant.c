@@ -1011,7 +1011,8 @@ char **argv;
           doFrequencyMap(&run_conditions, &run_control, starting_coord, &error_control, beamline);
           break;
         case MOMENTUM_APERTURE:
-          doMomentumApertureSearch(&run_conditions, &run_control, &error_control, beamline, starting_coord);
+          doMomentumApertureSearch(&run_conditions, &run_control, &error_control, beamline, 
+                                   (correct.mode!=-1 || do_closed_orbit)?starting_coord:NULL);
           break;
         }
       }

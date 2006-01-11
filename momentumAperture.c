@@ -19,6 +19,14 @@
 #include "momentumAperture.h"
 
 static SDDS_DATASET SDDSma;
+static double momentumOffsetValue = 0;
+
+static void momentumOffsetFunction(double **coord, long np)
+{
+  long i;
+  for (i=0; i<np; i++)
+    coord[i][5] += momentumOffsetValue;
+}
 
 void setupMomentumApertureSearch(
                                  NAMELIST_TEXT *nltext,
@@ -167,22 +175,26 @@ long doMomentumApertureSearch(
   deltaStart[0] = delta_negative_limit;
   deltaStart[1] = delta_positive_limit;
 
-  /* track to get the closed orbit vs s */
-  traj = tmalloc(sizeof(*traj)*(beamline->n_elems+1));
-  memcpy(coord[0], startingCoord, sizeof(**coord)*6);
-  memcpy(traj[0].centroid, startingCoord, sizeof(**coord)*6);
-  traj[0].elem = NULL;
-  delete_phase_references();
-  reset_special_elements(beamline, 1);
-  pCentral = run->p_central;
-  if (!do_tracking(NULL, coord, 1, NULL, beamline, &pCentral, 
-                  NULL, NULL, NULL, traj+1, run, control->i_step, 
-                  0*SILENT_RUNNING, 1, 0, NULL, NULL, NULL, &lostOnPass0,
-                  elem0)) {
-    fprintf(stdout, "Error: particle lost while determining central trajectory!\n");
-    return 0;
+  traj = NULL;
+  if (startingCoord) {
+    /* track to get the closed orbit vs s */
+    traj = tmalloc(sizeof(*traj)*(beamline->n_elems+1));
+    memcpy(coord[0], startingCoord, sizeof(**coord)*6);
+    memcpy(traj[0].centroid, startingCoord, sizeof(**coord)*6);
+    traj[0].elem = NULL;
+    delete_phase_references();
+    reset_special_elements(beamline, 1);
+    pCentral = run->p_central;
+    if (!do_tracking(NULL, coord, 1, NULL, beamline, &pCentral, 
+                     NULL, NULL, NULL, traj+1, run, control->i_step, 
+                     0*SILENT_RUNNING, 1, 0, NULL, NULL, NULL, &lostOnPass0,
+                     elem0)) {
+      fprintf(stdout, "Error: particle lost while determining central trajectory!\n");
+      return 0;
+    }
   }
   
+
   elem = elem0;
   iElem = 0;
   iTraj = -1;
@@ -200,7 +212,7 @@ long doMomentumApertureSearch(
       }
       ElementName[iElem] = elem->name;
       sStart[iElem] = elem->end_pos-length;
-      if (iTraj && traj[iTraj].elem!=elem->pred) {
+      if (startingCoord && iTraj && traj[iTraj].elem!=elem->pred) {
         fprintf(stdout, "Fatal error: book-keeping error for central trajectory.\n");
         fprintf(stdout, "iTraj = %ld, traj.elem = %p, traj.elem->pred = %p, traj.elem->succ = %p, elem = %p\n",
                 iTraj, traj[iTraj].elem, 
@@ -229,12 +241,15 @@ long doMomentumApertureSearch(
         }
         do {
           for (ip=0; ip<points; ip++) {
-            memcpy(coord[0], traj[iTraj].centroid, sizeof(double)*6);
+            if (startingCoord)
+              memcpy(coord[0], traj[iTraj].centroid, sizeof(double)*6);
+            else
+              memset(coord[0], 0, sizeof(**coord)*6);
             coord[0][6] = 1;
             coord[0][0] += x_initial;
             coord[0][2] += y_initial;
             delta = delta0 + ip*deltaInterval;
-            coord[0][5] += delta;
+            /* coord[0][5] += delta; */
 #if defined(DEBUG)
             xco[iElem] = coord[0][0];
             xpco[iElem] = coord[0][1];
@@ -249,10 +264,12 @@ long doMomentumApertureSearch(
             delete_phase_references();
             reset_special_elements(beamline, 1);
             pCentral = run->p_central;
+            setTrackingWedgeFunction(momentumOffsetFunction, elem); 
+            momentumOffsetValue = delta;
             if (do_tracking(NULL, coord, 1, NULL, beamline, &pCentral, 
                             NULL, NULL, NULL, NULL, run, control->i_step, 
                             SILENT_RUNNING, control->n_passes, 0, NULL, NULL, NULL, &lostOnPass0,
-                            elem)) {
+                            NULL)) {
               /* particle survived */
               if (verbosity>2) {
                 fprintf(stdout, "  Particle survived with delta0 = %e, sf = %e m\n", delta, coord[0][4]);
@@ -340,8 +357,10 @@ long doMomentumApertureSearch(
   free_czarray_2d((void**)sLost, 2, nElem);
   free(sStart);
   free(ElementName);
-  free(traj);
+  if (traj)
+    free(traj);
   
   return 1;
 }
+
 
