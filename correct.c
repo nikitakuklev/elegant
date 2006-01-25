@@ -1980,7 +1980,10 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
   p = run->p_central;
   if (deviation)
     deviation[4] = deviation[5] = 0;
-  for (method=0; method<3; method++) {
+  /* Set method<1 for the old, single-method algorithm.
+   * Set method<3 to add the new tracking-based algorithm as fallback (not recommended)
+   */
+  for (method=0; method<1; method++) {
     if (method==0 || method==2) {
       n_iter = 0;
       error = DBL_MAX/4;
@@ -2004,7 +2007,7 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
         if ((error = sqrt(sqr(diff->a[0][0]) + sqr(diff->a[1][0]) + sqr(diff->a[2][0]) + sqr(diff->a[3][0])))<clorb_acc)
           break;
         if (error>2*last_error) {
-          fprintf(stdout, "warning: closed orbit diverging--iteration stopped\n");
+          fprintf(stdout, "error: closed orbit diverging--iteration stopped\n");
           fflush(stdout);
           fprintf(stdout, "last error was %e, current is %e\n", last_error, error);
           fflush(stdout);
@@ -2031,7 +2034,7 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
         one_part[0][5] = dp;
       } while (++n_iter<clorb_iter);
       if (n_iter==clorb_iter)  {
-        fprintf(stdout, "warning: closed orbit did not converge to better than %e after %ld iterations\n",
+        fprintf(stdout, "error: closed orbit did not converge to better than %e after %ld iterations\n",
                 error, n_iter);
         fflush(stdout);
         if (isnan(error) || isinf(error)) {
