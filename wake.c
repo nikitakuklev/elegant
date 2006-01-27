@@ -31,6 +31,15 @@ void track_through_wake(double **part, long np, WAKE *wakeData, double *PoInput,
   long ib, nb, n_binned;
   double factor, tmin, tmax, tmean, dt, Po;
 
+#if USE_MPI
+  if (notSinglePart) {
+    fprintf(stdout, "The wake function is not supported in the current parallel version.\n");
+    fprintf(stdout, "Please use serial version.\n");
+    fflush(stdout);
+    MPI_Abort(MPI_COMM_WORLD, 9);
+  }	 
+#endif
+
   set_up_wake(wakeData, run, i_pass, np, charge);
   Po = *PoInput;
   

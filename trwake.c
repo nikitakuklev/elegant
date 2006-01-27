@@ -313,11 +313,31 @@ double computeTimeCoordinates(double *time, double Po, double **part, long np)
 {
   double tmean, P;
   long ip;
+#if (!USE_MPI)
   for (ip=tmean=0; ip<np; ip++) {
     P = Po*(part[ip][5]+1);
     tmean += (time[ip] = part[ip][4]*sqrt(sqr(P)+1)/(c_mks*P));
   }
   return tmean/np;
+#else
+  long np_total;
+  double tmean_total;
+  if (isSlave || !notSinglePart) {
+    for (ip=tmean=0; ip<np; ip++) {
+      P = Po*(part[ip][5]+1);
+      tmean += (time[ip] = part[ip][4]*sqrt(sqr(P)+1)/(c_mks*P));
+    }
+  }
+  if (notSinglePart) {
+    if (isMaster) {
+      tmean = 0;
+      np = 0;
+    }
+    MPI_Allreduce(&np, &np_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&tmean, &tmean_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  }
+  return tmean_total/np_total;
+#endif
 }
 
 long binTransverseTimeDistribution(double **posItime, double *pz, long *pbin, double tmin, double dt, long nb,

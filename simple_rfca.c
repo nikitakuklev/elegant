@@ -49,28 +49,92 @@ double findFiducialTime(double **part, long np, double s0, double sOffset,
   
   if (mode&FID_MODE_LIGHT)
     tFid =  (s0+sOffset)/c_mks;
-  else if (!np || mode&FID_MODE_FIRST)
-    tFid = (part[0][4]+sOffset)/(c_mks*beta_from_delta(p0, np?part[0][5]:0.0));
+  else if (!np || mode&FID_MODE_FIRST) 
+     tFid = (part[0][4]+sOffset)/(c_mks*beta_from_delta(p0, np?part[0][5]:0.0)); 
   else if (mode&FID_MODE_PMAX) {
     long ibest, i;
     double best;
+#if (!USE_MPI)
     best = part[0][5];
-    ibest = 0;
-    for (i=1; i<np; i++)
-      if (best<part[i][5]) {
-        best = part[i][5];
-        ibest = i;
-      }
+#else  /* np could be 0 for some of the slave processors */ 
+    if (notSinglePart) {
+      if (!np)
+	best = -DBL_MAX;
+      else
+	best = part[0][5];
+    }
+    else
+      best = part[0][5];     
+#endif
+    ibest = 0; 
+    if (isSlave || !notSinglePart)
+      for (i=1; i<np; i++)
+        if (best<part[i][5]) {
+          best = part[i][5];
+          ibest = i;
+        }
+#if (!USE_MPI)
     tFid = (part[ibest][4]+sOffset)/(c_mks*beta_from_delta(p0, part[ibest][5]));
+#else
+    if (notSinglePart) {
+      if (USE_MPI) {
+	double sBest;
+	struct {
+	  double val;
+	  int rank;
+	} in, out;      
+	MPI_Comm_rank(MPI_COMM_WORLD, &(in.rank));
+	in.val = best;
+	/* find the global best value and its location, i.e., on which processor */
+	MPI_Allreduce(&in, &out, 1, MPI_DOUBLE_INT, MPI_MAXLOC, MPI_COMM_WORLD);
+	best = out.val;
+	/* broadcast the part[ibest][4] corresponding to the global best value */
+	if (in.rank==out.rank)
+	  sBest = part[ibest][4];
+	MPI_Bcast(&sBest, 1, MPI_DOUBLE, out.rank, MPI_COMM_WORLD);
+	tFid = (sBest+sOffset)/(c_mks*beta_from_delta(p0, best));
+      }
+    }
+    else
+      tFid = (part[ibest][4]+sOffset)/(c_mks*beta_from_delta(p0, part[ibest][5]));
+#endif
   }
   else if (mode&FID_MODE_TMEAN) {
     double tsum;
     long ip;
+#ifdef USE_KAHAN
+    double error = 0.0; 
+#endif
     
-    for (ip=tsum=0; ip<np; ip++) {
-      tsum += (part[ip][4]+sOffset)/(c_mks*beta_from_delta(p0, part[ip][5]));
+    if (isSlave || !notSinglePart) {
+      for (ip=tsum=0; ip<np; ip++) {
+#ifndef USE_KAHAN     
+	tsum += (part[ip][4]+sOffset)/(c_mks*beta_from_delta(p0, part[ip][5]));
+#else
+        tsum = KahanPlus(tsum, (part[ip][4]+sOffset)/(c_mks*beta_from_delta(p0, part[ip][5])), &error); 
+#endif	
+      }
     }
+#if (!USE_MPI)
     tFid = tsum/np;
+#else
+    if (notSinglePart) {
+      if (USE_MPI) {
+	double tmp; 
+	long np_total;
+      
+	if (isMaster) {
+	  tsum = 0.0;
+	  np = 0;
+	}
+	MPI_Allreduce(&np, &np_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD); 
+	MPI_Allreduce(&tsum, &tmp, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+	tFid = tmp/np_total; 
+      }
+    }
+    else
+      tFid = tsum/np; 
+#endif
   }
   else
     bomb("invalid fiducial mode in findFiducialTime", NULL);
@@ -112,7 +176,13 @@ long trackRfCavityWithWakes
     static long been_warned = 0, been_warned_kicks=0;
     double dgammaOverGammaAve = 0;
     long dgammaOverGammaNp = 0;
-    
+#if USE_MPI
+    long np_total, np_tmp;
+#endif 
+#ifdef USE_KAHAN
+    double error = 0.0; 
+#endif   
+
     if (rfca->bodyFocusModel) {
       char *modelName[2] = { "none", "srs" };
       switch (match_string(rfca->bodyFocusModel, modelName, 2, 0)) {
@@ -154,37 +224,61 @@ long trackRfCavityWithWakes
 
     if (!part)
         bomb("NULL particle data pointer (trackRfCavityWithWakes)", NULL);
-    for (ip=0; ip<np; ip++)
-        if (!part[ip]) {
-            fprintf(stdout, "NULL pointer for particle %ld (trackRfCavityWithWakes)\n", ip);
-            fflush(stdout);
-            abort();
-            }
+    if (isSlave || !notSinglePart) {
+      for (ip=0; ip<np; ip++)
+	if (!part[ip]) {
+	  fprintf(stderr, "NULL pointer for particle %ld (trackRfCavityWithWakes)\n", ip);
+	  fflush(stderr);
+#if USE_MPI
+          MPI_Abort(MPI_COMM_WORLD, 1);
+#endif
+	  abort();
+	}
+    }
     if (!rfca)
         bomb("NULL rfca pointer (trackRfCavityWithWakes)", NULL);
 
+#if (!USE_MPI)
     if (np<=0) {
         log_exit("trackRfCavityWithWakes");
         return(np);
         }
-
+#else
+    if (notSinglePart) {
+      if (isMaster)
+	np_tmp = 0;
+      else
+	np_tmp = np;
+      MPI_Allreduce(&np_tmp, &np_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);   
+      if (np_total<=0) {
+	log_exit("trackRfCavityWithWakes");
+	return(np_total);
+      }
+    }
+    else if (np<=0) {
+        log_exit("trackRfCavityWithWakes");
+        return(np);
+    }
+#endif 
     if (rfca->change_t && rfca->Q)
         bomb("incompatible RF cavity parameters: change_t!=0 && Q!=0", NULL);
 
     length = rfca->length;
 
     if (rfca->volt==0 && !wake && !trwake && !LSCKick) {
-        if (rfca->length) {
-            for (ip=0; ip<np; ip++) {
-                coord = part[ip];
-                coord[0] += coord[1]*length;
-                coord[2] += coord[3]*length;
-                coord[4] += length*sqrt(1+sqr(coord[1])+sqr(coord[3]));
-                }
-            }
-        log_exit("trackRfCavityWithWakes");
-        return(np);
-        }
+      if (rfca->length) {
+	if (isSlave || !notSinglePart) {
+	  for (ip=0; ip<np; ip++) {
+	    coord = part[ip];
+	    coord[0] += coord[1]*length;
+	    coord[2] += coord[3]*length;
+	    coord[4] += length*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+	  }
+	}
+      }
+      log_exit("trackRfCavityWithWakes");
+      return(np);
+    }
 
     omega = PIx2*rfca->freq;
     volt  = rfca->volt/(1e6*me_mev);
@@ -254,81 +348,112 @@ long trackRfCavityWithWakes
       tAve = 0;
       if (nKicks!=1)
         bomb("Must use n_kicks=1 for linearized rf cavity", NULL);
-      for (ip=0; ip<np; ip++) {
-	coord = part[ip];
-	P     = *P_central*(1+coord[5]);
-	beta_i = P/(gamma=sqrt(sqr(P)+1));
-	t     = (coord[4]+length/2)/(c_mks*beta_i)-timeOffset;
-	tAve += t;
+
+      if(isSlave || !notSinglePart) {
+	for (ip=0; ip<np; ip++) {
+	  coord = part[ip];
+	  P     = *P_central*(1+coord[5]);
+	  beta_i = P/(gamma=sqrt(sqr(P)+1));
+	  t     = (coord[4]+length/2)/(c_mks*beta_i)-timeOffset;
+#ifndef USE_KAHAN	  
+	  tAve += t;
+#else
+          tAve = KahanPlus(tAve, t, &error); 
+#endif
+	}
       }
+#if (!USE_MPI)
       tAve /= np;
+#else
+      if (notSinglePart) {
+	if (USE_MPI) {
+	  double tAve_total;
+	  MPI_Allreduce(&tAve, &tAve_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+	  tAve = tAve_total/np_total;
+	}
+      }
+      else
+        tAve /= np;
+#endif
       dgammaAve = volt*sin(omega*tAve+phase);
     }
-    
-    for (ip=0; ip<np; ip++) {
-      coord = part[ip];
-      coord[0] -= rfca->dx;
-      coord[2] -= rfca->dy;
+    if(isSlave || !notSinglePart) {
+      for (ip=0; ip<np; ip++) {
+	coord = part[ip];
+	coord[0] -= rfca->dx;
+	coord[2] -= rfca->dy;
+      }
     }
-    
     if (nKicks>0) {
       double *inverseF;
       inverseF = tmalloc(sizeof(*inverseF)*np);
       for (ik=0; ik<nKicks; ik++) {
         dgammaOverGammaAve = dgammaOverGammaNp = 0;
-        for (ip=0; ip<np; ip++) {
-          coord = part[ip];
-          if (coord[5]==-1)
-            continue;
-          if (length)
-            /* compute distance traveled to center of this section */
-            dc4 = length/2*sqrt(1+sqr(coord[1])+sqr(coord[3]));
-          else 
-            dc4 = 0;
+	if(isSlave || !notSinglePart) {
+	  for (ip=0; ip<np; ip++) {
+	    coord = part[ip];
+	    if (coord[5]==-1)
+	      continue;
+	    if (length)
+	      /* compute distance traveled to center of this section */
+	      dc4 = length/2*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+	    else 
+	      dc4 = 0;
           
-          /* compute energy kick */
-          P     = *P_central*(1+coord[5]);
-          beta_i = P/(gamma=sqrt(sqr(P)+1));
-          t     = (coord[4]+dc4)/(c_mks*beta_i)-timeOffset;
-          if (ik==0 && timeOffset && rfca->change_t) 
-            coord[4] = t*c_mks*beta_i-dc4;
-          if ((dt = t-t0)<0)
-            dt = 0;
-          if  (!same_dgamma) {
-            if (!linearize)
-              dgamma = volt*sin(omega*(t-ik*dtLight)+phase)*(tau?sqrt(1-exp(-dt/tau)):1);
-            else
-              dgamma = dgammaAve +  volt*omega*(t-tAve)*cos(omega*tAve+phase);
-          }
-          if (gamma) {
-            dgammaOverGammaNp ++;
-            dgammaOverGammaAve += dgamma/gamma;
-          }
+	    /* compute energy kick */
+	    P     = *P_central*(1+coord[5]);
+	    beta_i = P/(gamma=sqrt(sqr(P)+1));
+	    t     = (coord[4]+dc4)/(c_mks*beta_i)-timeOffset;
+	    if (ik==0 && timeOffset && rfca->change_t) 
+	      coord[4] = t*c_mks*beta_i-dc4;
+	    if ((dt = t-t0)<0)
+	      dt = 0;
+	    if  (!same_dgamma) {
+	      if (!linearize)
+		dgamma = volt*sin(omega*(t-ik*dtLight)+phase)*(tau?sqrt(1-exp(-dt/tau)):1);
+	      else
+		dgamma = dgammaAve +  volt*omega*(t-tAve)*cos(omega*tAve+phase);
+	    }
+	    if (gamma) {
+	      dgammaOverGammaNp ++;
+	      dgammaOverGammaAve += dgamma/gamma;
+	    }
           
-          inverseF[ip] = 0;
-          if (length) {
-            if (rfca->end1Focus) {
-              /* apply focus kick */
-              inverseF[ip] = dgamma/(2*gamma*length);
-              coord[1] -= coord[0]*inverseF[ip];
-              coord[3] -= coord[2]*inverseF[ip];
-            } 
-            /* apply initial drift */
-            coord[0] += coord[1]*length/2;
-            coord[2] += coord[3]*length/2;
-            coord[4] += length/2*sqrt(1+sqr(coord[1])+sqr(coord[3]));
-          } 
+	    inverseF[ip] = 0;
+	    if (length) {
+	      if (rfca->end1Focus) {
+		/* apply focus kick */
+		inverseF[ip] = dgamma/(2*gamma*length);
+		coord[1] -= coord[0]*inverseF[ip];
+		coord[3] -= coord[2]*inverseF[ip];
+	      } 
+	      /* apply initial drift */
+	      coord[0] += coord[1]*length/2;
+	      coord[2] += coord[3]*length/2;
+	      coord[4] += length/2*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+	    } 
 
-          /* apply energy kick */
-          add_to_particle_energy(coord, t, *P_central, dgamma);
-          if ((gamma1 = gamma+dgamma)<=1)
-            coord[5] = -1;
-          else 
-            /* compute inverse focal length for exit kick */
-            inverseF[ip] *= -1*gamma/gamma1;
-        }
+	    /* apply energy kick */
+	    add_to_particle_energy(coord, t, *P_central, dgamma);
+	    if ((gamma1 = gamma+dgamma)<=1)
+	      coord[5] = -1;
+	    else 
+	      /* compute inverse focal length for exit kick */
+	      inverseF[ip] *= -1*gamma/gamma1;
+	  }
+	}
 
         if (!wakesAtEnd) {
+#if USE_MPI
+          if (notSinglePart) {
+	    if (wake||trwake||LSCKick) {
+	      fprintf(stdout, "The wake function is not supported in the current parallel version.\n");
+              fprintf(stdout, "Please use serial version.\n");
+	      fflush(stdout);
+	      MPI_Abort(MPI_COMM_WORLD, 9);
+	    }
+	  }
+#endif
           /* do wakes */
           if (wake) 
             track_through_wake(part, np, wake, P_central, run, iPass, charge);
@@ -356,6 +481,16 @@ long trackRfCavityWithWakes
         }
         
         if (wakesAtEnd) {
+#if USE_MPI
+          if (notSinglePart) {
+	    if (wake||trwake||LSCKick) {
+	      fprintf(stdout, "The wake function is not supported in the current parallel version.\n");
+              fprintf(stdout, "Please use serial version.\n");
+	      fflush(stdout);
+	      MPI_Abort(MPI_COMM_WORLD, 9);
+	    }
+	  }
+#endif
           /* do wakes */
           if (wake) 
             track_through_wake(part, np, wake, P_central, run, iPass, charge);
@@ -374,91 +509,102 @@ long trackRfCavityWithWakes
       double R11=1, R21=0, R22, R12, dP, ds1;
       if (LSCKick)
         bomb("cannot presently do LSC with RFCW when N_KICKS=0", NULL);
-      
-      for (ip=0; ip<np; ip++) {
-        coord = part[ip];
+      if (isSlave || !notSinglePart) {
+	for (ip=0; ip<np; ip++) {
+	  coord = part[ip];
         
-        /* use matrix to propagate particles */
-        /* compute energy change using phase of arrival at center of cavity */
-        P     = *P_central*(1+coord[5]);
-        beta_i = P/(gamma=sqrt(sqr(P)+1));
-        ds1 = length/2*sqrt(1+sqr(coord[1])+sqr(coord[3]));
-        t     = (coord[4]+ds1)/(c_mks*beta_i)-timeOffset;
-        if (timeOffset && rfca->change_t) 
-          coord[4] = t*c_mks*beta_i-ds1;
-        if ((dt = t-t0)<0)
-          dt = 0;
-        if  (!same_dgamma) {
-          if (!linearize) {
-            sin_phase = sin(omega*t+phase);
-            cos_phase = cos(omega*t+phase);
-            dgamma = (dgammaMax=volt*(tau?sqrt(1-exp(-dt/tau)):1))*sin_phase;
-          } else {
-            cos_phase = cos(omega*tAve+phase);
-            sin_phase = omega*(t-tAve)*cos_phase;
-            dgamma = (dgammaMax=volt*(tau?sqrt(1-exp(-dt/tau)):1))*sin_phase +
-              dgammaAve;
-          }
-        }
+	  /* use matrix to propagate particles */
+	  /* compute energy change using phase of arrival at center of cavity */
+	  P     = *P_central*(1+coord[5]);
+	  beta_i = P/(gamma=sqrt(sqr(P)+1));
+	  ds1 = length/2*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+	  t     = (coord[4]+ds1)/(c_mks*beta_i)-timeOffset;
+	  if (timeOffset && rfca->change_t) 
+	    coord[4] = t*c_mks*beta_i-ds1;
+	  if ((dt = t-t0)<0)
+	    dt = 0;
+	  if  (!same_dgamma) {
+	    if (!linearize) {
+	      sin_phase = sin(omega*t+phase);
+	      cos_phase = cos(omega*t+phase);
+	      dgamma = (dgammaMax=volt*(tau?sqrt(1-exp(-dt/tau)):1))*sin_phase;
+	    } else {
+	      cos_phase = cos(omega*tAve+phase);
+	      sin_phase = omega*(t-tAve)*cos_phase;
+	      dgamma = (dgammaMax=volt*(tau?sqrt(1-exp(-dt/tau)):1))*sin_phase +
+		dgammaAve;
+	    }
+	  }
         
-        if (rfca->end1Focus && length) {
-          /* apply end focus kick */
-          inverseF = dgamma/(2*gamma*length);
-          coord[1] -= coord[0]*inverseF;
-          coord[3] -= coord[2]*inverseF;
-        } 
+	  if (rfca->end1Focus && length) {
+	    /* apply end focus kick */
+	    inverseF = dgamma/(2*gamma*length);
+	    coord[1] -= coord[0]*inverseF;
+	    coord[3] -= coord[2]*inverseF;
+	  } 
         
-        dP = sqrt(sqr(gamma+dgamma)-1) - P;
+	  dP = sqrt(sqr(gamma+dgamma)-1) - P;
         
-        if (useSRSModel) {
-          /* note that Rosenzweig and Serafini use gamma in places
-           * where they should probably use momentum, but I'll keep
-           * their expressions for now.
-           */
-          double alpha, sin_alpha, gammaf;
-          gammaf = gamma+dgamma;
-          if (fabs(sin_phase)>1e-6)
-            alpha = log(gammaf/gamma)/(2*SQRT2*sin_phase);
-          else
-            alpha = dgammaMax/gamma/(2*SQRT2);
-          R11 = cos(alpha);
-          R22 = R11*gamma/gammaf;
-          R12 = 2*SQRT2*gamma*length/dgammaMax*(sin_alpha=sin(alpha));
-          R21 = -sin_alpha*dgammaMax/(length*gammaf*2*SQRT2);
-        } else {
-          /* my original treatment used momentum for all 
-           * computations, which I still think is correct
-           */
-          R22 = 1/(1+dP/P);
-          if (fabs(dP/P)>1e-14)
-            R12 = length*(P/dP*log(1+dP/P));
-          else
-            R12 = length;
-        }
+	  if (useSRSModel) {
+	    /* note that Rosenzweig and Serafini use gamma in places
+	     * where they should probably use momentum, but I'll keep
+	     * their expressions for now.
+	     */
+	    double alpha, sin_alpha, gammaf;
+	    gammaf = gamma+dgamma;
+	    if (fabs(sin_phase)>1e-6)
+	      alpha = log(gammaf/gamma)/(2*SQRT2*sin_phase);
+	    else
+	      alpha = dgammaMax/gamma/(2*SQRT2);
+	    R11 = cos(alpha);
+	    R22 = R11*gamma/gammaf;
+	    R12 = 2*SQRT2*gamma*length/dgammaMax*(sin_alpha=sin(alpha));
+	    R21 = -sin_alpha*dgammaMax/(length*gammaf*2*SQRT2);
+	  } else {
+	    /* my original treatment used momentum for all 
+	     * computations, which I still think is correct
+	     */
+	    R22 = 1/(1+dP/P);
+	    if (fabs(dP/P)>1e-14)
+	      R12 = length*(P/dP*log(1+dP/P));
+	    else
+	      R12 = length;
+	  }
         
-        coord[4] += ds1;
-        x = coord[0];
-        xp = coord[1];
-        coord[0] = x*R11 + xp*R12;
-        coord[1] = x*R21 + xp*R22;
-        x = coord[2];
-        xp = coord[3];
-        coord[2] = x*R11 + xp*R12;
-        coord[3] = x*R21 + xp*R22;
-        coord[4] += length/2*sqrt(1+sqr(coord[1])+sqr(coord[3]));
-        coord[5] = (P+dP-(*P_central))/(*P_central);
+	  coord[4] += ds1;
+	  x = coord[0];
+	  xp = coord[1];
+	  coord[0] = x*R11 + xp*R12;
+	  coord[1] = x*R21 + xp*R22;
+	  x = coord[2];
+	  xp = coord[3];
+	  coord[2] = x*R11 + xp*R12;
+	  coord[3] = x*R21 + xp*R22;
+	  coord[4] += length/2*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+	  coord[5] = (P+dP-(*P_central))/(*P_central);
         
-        if ((gamma += dgamma)<=1)
-          coord[5] = -1;
-        if (rfca->end2Focus && length) {
-          inverseF = -dgamma/(2*gamma*length);
-          coord[1] -= coord[0]*inverseF;
-          coord[3] -= coord[2]*inverseF;
-        }
-        /* adjust s for the new particle velocity */
-        coord[4] = (P+dP)/gamma*coord[4]/beta_i;
+	  if ((gamma += dgamma)<=1)
+	    coord[5] = -1;
+	  if (rfca->end2Focus && length) {
+	    inverseF = -dgamma/(2*gamma*length);
+	    coord[1] -= coord[0]*inverseF;
+	    coord[3] -= coord[2]*inverseF;
+	  }
+	  /* adjust s for the new particle velocity */
+	  coord[4] = (P+dP)/gamma*coord[4]/beta_i;
+	}
       }
       
+#if USE_MPI
+      if (notSinglePart) {
+	if (wake||trwake) {
+	  fprintf(stdout, "The wake function is not supported in the current parallel version.\n");
+	  fprintf(stdout, "Please use serial version.\n");
+	  fflush(stdout);
+	  MPI_Abort(MPI_COMM_WORLD, 9);
+	}
+      }
+#endif
       /* do wakes */
       if (wake) 
         track_through_wake(part, np, wake, P_central, run, iPass, charge);
@@ -466,15 +612,14 @@ long trackRfCavityWithWakes
         track_through_trwake(part, np, trwake, *P_central, run, iPass, charge);
     }
     
-    
-    for (ip=0; ip<np; ip++) {
-      coord = part[ip];
-      coord[0] += rfca->dx;
-      coord[2] += rfca->dy;
-    }
-    
-    
+    if (isSlave || !notSinglePart) {
+      for (ip=0; ip<np; ip++) {
+	coord = part[ip];
+	coord[0] += rfca->dx;
+	coord[2] += rfca->dy;
+      }    
     np = removeInvalidParticles(part, np, accepted, zEnd, *P_central);
+    }
     if (rfca->change_p0)
       do_match_energy(part, np, P_central, 0);
 
@@ -619,5 +764,6 @@ long track_through_rfcw
                               rfcw->wakesAtEnd);
   return np;
 }
+
 
 

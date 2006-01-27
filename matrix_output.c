@@ -67,6 +67,12 @@ void setup_matrix_output(
   char s[100], t[100];
   char buffer[SDDS_MAXLINE];
 
+
+#if USE_MPI
+  if (!writePermitted)
+    return;
+#endif
+ 
   log_entry("setup_matrix_output");
 
   /* process namelist input */
@@ -74,6 +80,7 @@ void setup_matrix_output(
   set_print_namelist_flags(0);
   process_namelist(&matrix_output, nltext);
   print_namelist(stdout, &matrix_output);
+
 
   /* check for validity of namelist inputs */
   if (printout==NULL && SDDS_output==NULL)
@@ -95,7 +102,7 @@ void setup_matrix_output(
   SDDS_matrix= trealloc(SDDS_matrix, sizeof(*SDDS_matrix)*(n_outputs+1));
   SDDS_matrix_initialized= trealloc(SDDS_matrix_initialized, sizeof(*SDDS_matrix_initialized)*(n_outputs+1));
   SDDS_matrix_count= trealloc(SDDS_matrix_count, sizeof(*SDDS_matrix_count)*(n_outputs+1));
-
+  
   if (start_from)
     cp_str(start_name+n_outputs, start_from);
   else 

@@ -357,6 +357,20 @@ long track_beam(
     fflush(stdout);
 
   effort = 0;
+
+#if USE_MPI
+  if (beam->n_to_track<(n_processors-1)) {
+    printf("*************************************************************************************\n");
+    printf("* Warning! The number of particles shouldn't be less than the number of processors! *\n");
+    printf("* Less number of processors are recommended!                                        *\n");
+    printf("*************************************************************************************\n");
+    MPI_Abort(MPI_COMM_WORLD, 2);
+  }
+  else {  /* do tracking in parallel */ 
+    notSinglePart = 1;
+    random_1(-FABS(987654321+2*myid));
+  }
+#endif
   n_left = do_tracking(beam, NULL, 0, &effort, beamline, &p_central, 
                        beam->accepted, &output->sums_vs_z, &output->n_z_points,
                        NULL, run, control->i_step,
@@ -366,6 +380,10 @@ long track_beam(
                          +FIDUCIAL_BEAM_SEEN+RESTRICT_FIDUCIALIZATION+PRECORRECTION_BEAM+IBS_ONLY_TRACKING)),
                        control->n_passes, 0, &(output->sasefel), &(output->sliceAnalysis),
 		       finalCharge, beam->lostOnPass, NULL);
+#if USE_MPI
+  notSinglePart = 0; /* All the processors will do the same thing from now */
+  random_1(-FABS(987654321));
+#endif  
   if (control->fiducial_flag&FIRST_BEAM_IS_FIDUCIAL && !(flags&PRECORRECTION_BEAM))
     control->fiducial_flag |= FIDUCIAL_BEAM_SEEN;
   
@@ -860,3 +878,4 @@ char *brief_number(double x, char *buffer)
     return(buffer);
     }
 #endif
+

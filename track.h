@@ -24,6 +24,10 @@
 
 #if USE_MPI 
 #include "mpi.h" /* Defines the interface to MPI allowing the use of all MPI functions. */
+#if USE_MPE
+#include "mpe.h" /* Defines the MPE library */ 
+#endif
+#include <float.h>
 #endif 
 
 #include <stdio.h>
@@ -42,6 +46,18 @@
 extern long writePermitted;
 /* flag used to identify if it is the master processor */
 extern long isMaster;
+/* flag used to identify if it is a slave processor */
+extern long isSlave;
+/* flag used to indicate if the same particle will be tracked on all the processors */
+extern long notSinglePart;     
+
+#if USE_MPI
+/* pMode will be used to specify where the information is stored, i.e., on Master or Slave. */
+typedef enum pMode {notParallel, initialMode, trueParallel} parallelMode;
+extern parallelMode parallelStatus; 
+extern int n_processors;
+extern int myid;
+#endif
 
 #define malloc_verify(n) 1
 
@@ -795,6 +811,8 @@ typedef struct {
 #define UNIDIAGNOSTIC     (0x00001000UL|UNIPROCESSOR)
 /* indicates that element should be processed even with 0 particles */
 #define RUN_ZERO_PARTICLES 0x00002000UL
+/* indicates that element will be done on all of the processors */
+#define MPALGORITHM (0x00004000UL|RUN_ZERO_PARTICLES)
 
 typedef struct {
     long n_params;
@@ -3020,3 +3038,9 @@ void swapParticles(double *p1, double *p2);
 void setupMomentumApertureSearch(NAMELIST_TEXT *nltext, RUN *run, VARY *control);
 void finishMomentumApertureSearch();
 long doMomentumApertureSearch(RUN *run, VARY *control, ERRORVAL *errcon, LINE_LIST *beamline, double *startingCoord);
+
+/* compute long sum with Kahan's algorithm */
+double Kahan (long length, double a[], double *error);
+double KahanPlus (double oldSum, double b, double *error);
+
+

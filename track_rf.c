@@ -34,20 +34,45 @@ void track_through_rf_deflector(
   double cos_tilt, sin_tilt, dtLight, tLight;
   double length;
   long ip, is, n_kicks;
+#ifdef USE_KAHAN
+  double error = 0.0; 
+#endif
 
   n_kicks = rf_param->n_kicks;
   if (n_kicks%2==0)
     n_kicks += 1;
   length = rf_param->length/n_kicks;
-
+  
   if (!rf_param->initialized) {
-    rf_param->initialized = 1;
-    for (ip=rf_param->t_first_particle=0; ip<n_particles; ip++) {
-      pc = pc_central*(1+initial[ip][5]);
-      beta = pc/sqrt(1+sqr(pc));
-      beta_z = beta/sqrt(1 + sqr(initial[ip][1])+sqr(initial[ip][3]));
-      rf_param->t_first_particle += (initial[ip][4]/beta + length/(2*beta_z))/c_mks;
+    if (isSlave || !notSinglePart) {
+      rf_param->initialized = 1;
+      for (ip=rf_param->t_first_particle=0; ip<n_particles; ip++) {
+	pc = pc_central*(1+initial[ip][5]);
+	beta = pc/sqrt(1+sqr(pc));
+	beta_z = beta/sqrt(1 + sqr(initial[ip][1])+sqr(initial[ip][3]));
+#ifndef USE_KAHAN
+	rf_param->t_first_particle += (initial[ip][4]/beta + length/(2*beta_z))/c_mks;
+#else
+        rf_param->t_first_particle = KahanPlus(rf_param->t_first_particle,(initial[ip][4]/beta + length/(2*beta_z))/c_mks, &error); 
+#endif
+      }
     }
+#if USE_MPI
+    if (notSinglePart) {
+      if (USE_MPI) {
+	long n_total;
+	double tmp;
+	if (isMaster) {
+	  n_particles = 0;
+	  rf_param->t_first_particle = 0.0;
+	} 
+	MPI_Allreduce(&(rf_param->t_first_particle), &tmp, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+	rf_param->t_first_particle = tmp; 
+	MPI_Allreduce(&n_particles, &n_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+	n_particles = n_total;
+      } 
+    }
+#endif
     if (n_particles)
       rf_param->t_first_particle /= n_particles;
     if (rf_param->n_kicks<1)
@@ -201,63 +226,67 @@ void track_through_rftm110_deflector(
 	    + (rf_param->phaseNoiseGroup
 	       ? rf_param->groupPhaseNoise*GetNoiseGroupValue(rf_param->phaseNoiseGroup)
 	       : 0)
-	    )*PI/180.0 ;
+	    )*PI/180.0 
+    - omega*t_first;
   
-  if (rf_param->tilt)
-    rotateBeamCoordinates(initial, n_particles, rf_param->tilt);
-  for (ip=0; ip<n_particles; ip++) {
-    x  = initial[ip][0];
-    y  = initial[ip][2];
-    if ((rho = sqrt(x*x+y*y))>0) {
-      cos_phi = x/rho;
-      sin_phi = y/rho;
-    } else {
-      cos_phi = 1;
-      sin_phi = 0;
+  if(isSlave || !notSinglePart) {
+    if (rf_param->tilt)
+      rotateBeamCoordinates(initial, n_particles, rf_param->tilt);
+    for (ip=0; ip<n_particles; ip++) {
+      x  = initial[ip][0];
+      y  = initial[ip][2];
+      if ((rho = sqrt(x*x+y*y))>0) {
+	cos_phi = x/rho;
+	sin_phi = y/rho;
+      } else {
+	cos_phi = 1;
+	sin_phi = 0;
+      }
+      xp = initial[ip][1];
+      yp = initial[ip][3];
+
+      pc = pc_central*(1+initial[ip][5]);
+      pz = pc/sqrt(1+sqr(xp)+sqr(yp));
+      px = xp*pz;
+      py = yp*pz;
+      beta = pc/sqrt(1+sqr(pc));
+      t_part = initial[ip][4]/(c_mks*beta);
+      /*     phase = omega*(t_part - t_first) + phase0;  */
+      phase = omega*t_part + phase0;
+
+      krho2 = sqr(k*rho);
+      krho4 = sqr(krho2);
+      krho6 = krho2*krho4;
+      cos_2phi = 2*sqr(cos_phi)-1;
+      Ez = -voltTimes2*k*rho*(192 - 24*krho2 + krho4)*cos_phi*sin(phase)/384.;
+      cBx = voltTimes2*krho2*(384 - 32*krho2 + krho4)*
+	cos_phi*cos(phase)*sin_phi/3072.;
+      cBy = -voltTimes2*
+	(-9216 + 2304*krho2 - 144*krho4 + 4*krho6 + 
+	 1152*krho2*cos_2phi - 96*krho4*cos_2phi +
+	 3*krho6*cos_2phi)*cos(phase)/18432.;
+      beta_x = px/pc;
+      beta_y = py/pc;
+      beta_z = pz/pc;
+      px += beta_z*cBy;
+      py += - beta_z*cBx;
+      pz += -(Ez + beta_x*cBy - beta_y*cBx) ;
+
+      xp = px/pz;
+      yp = py/pz;
+      pc = sqrt(sqr(px)+sqr(py)+sqr(pz));
+      beta = pc/sqrt(1+sqr(pc));
+      final[ip][0] = x;
+      final[ip][1] = xp;
+      final[ip][2] = y;
+      final[ip][3] = yp;
+      final[ip][4] = t_part*c_mks*beta;
+      final[ip][5] = (pc-pc_central)/pc_central;
+      final[ip][6] = initial[ip][6];
     }
-    xp = initial[ip][1];
-    yp = initial[ip][3];
-
-    pc = pc_central*(1+initial[ip][5]);
-    pz = pc/sqrt(1+sqr(xp)+sqr(yp));
-    px = xp*pz;
-    py = yp*pz;
-    beta = pc/sqrt(1+sqr(pc));
-    t_part = initial[ip][4]/(c_mks*beta);
-    phase = omega*(t_part - t_first) + phase0;
-
-    krho2 = sqr(k*rho);
-    krho4 = sqr(krho2);
-    krho6 = krho2*krho4;
-    cos_2phi = 2*sqr(cos_phi)-1;
-    Ez = -voltTimes2*k*rho*(192 - 24*krho2 + krho4)*cos_phi*sin(phase)/384.;
-    cBx = voltTimes2*krho2*(384 - 32*krho2 + krho4)*
-      cos_phi*cos(phase)*sin_phi/3072.;
-    cBy = -voltTimes2*
-      (-9216 + 2304*krho2 - 144*krho4 + 4*krho6 + 
-       1152*krho2*cos_2phi - 96*krho4*cos_2phi +
-       3*krho6*cos_2phi)*cos(phase)/18432.;
-    beta_x = px/pc;
-    beta_y = py/pc;
-    beta_z = pz/pc;
-    px += beta_z*cBy;
-    py += - beta_z*cBx;
-    pz += -(Ez + beta_x*cBy - beta_y*cBx) ;
-
-    xp = px/pz;
-    yp = py/pz;
-    pc = sqrt(sqr(px)+sqr(py)+sqr(pz));
-    beta = pc/sqrt(1+sqr(pc));
-    final[ip][0] = x;
-    final[ip][1] = xp;
-    final[ip][2] = y;
-    final[ip][3] = yp;
-    final[ip][4] = t_part*c_mks*beta;
-    final[ip][5] = (pc-pc_central)/pc_central;
-    final[ip][6] = initial[ip][6];
+    if (rf_param->tilt)
+      rotateBeamCoordinates(initial, n_particles, -rf_param->tilt);
   }
-  if (rf_param->tilt)
-    rotateBeamCoordinates(initial, n_particles, -rf_param->tilt);
 }
 
 
@@ -296,13 +325,30 @@ void set_up_rftm110(RFTM110 *rf_param, double **initial, long n_particles, doubl
     exit(1);
   }
 
-  for (ip=rf_param->t_first_particle=0; ip<n_particles; ip++) {
-    pc = pc_central*(1+initial[ip][5]);
-    beta = pc/sqrt(1+sqr(pc));
-    rf_param->t_first_particle += initial[ip][4]/beta/c_mks;
+  if (isSlave || !notSinglePart) {
+    for (ip=rf_param->t_first_particle=0; ip<n_particles; ip++) {
+      pc = pc_central*(1+initial[ip][5]);
+      beta = pc/sqrt(1+sqr(pc));
+      rf_param->t_first_particle += initial[ip][4]/beta/c_mks;
+    }
   }
+#if USE_MPI
+  if (USE_MPI && notSinglePart) {
+    long n_total;
+    double tmp;
+    if (isMaster) {
+      n_particles = 0;
+      rf_param->t_first_particle = 0.0;
+    } 
+    MPI_Allreduce(&(rf_param->t_first_particle), &tmp, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    rf_param->t_first_particle = tmp; 
+    MPI_Allreduce(&n_particles, &n_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+    n_particles = n_total; 
+  }
+#endif
   if (n_particles)
     rf_param->t_first_particle /= n_particles;
+
   rf_param->initialized = 1;
 
   rf_param->Ts = 0;

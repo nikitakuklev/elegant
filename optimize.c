@@ -1384,6 +1384,15 @@ double optimization_function(double *value, long *invalid)
       fprintf(optimization_data->fp_log, "Tracking for optimization\n");
       fflush(optimization_data->fp_log);
     }
+#if USE_MPI 
+    if (beam->n_to_track<(n_processors-1)) {
+      printf("*************************************************************************************\n");
+      printf("* Warning! The number of particles shouldn't be less than the number of processors! *\n");
+      printf("* Less number of processors are recommended!                                        *\n");
+      printf("*************************************************************************************\n");
+      MPI_Abort(MPI_COMM_WORLD, 2);    
+    }
+#endif
     track_beam(run, control, error, variables, beamline, beam, output, optim_func_flags, 1,
                &charge);
   }

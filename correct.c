@@ -139,6 +139,13 @@ void correction_setup(
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
     process_namelist(&correct, nltext);
+#if USE_MPI 
+    if (isSlave) {
+       trajectory_output = NULL;
+       corrector_output = NULL;
+       statistics = NULL;
+    }
+#endif
     print_namelist(stdout, &correct);
     usePerturbedMatrix = use_perturbed_matrix;
     fixedLengthMatrix = fixed_length_matrix;

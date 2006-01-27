@@ -26,7 +26,13 @@ void track_SReffects(double **coord, long np, SREFFECTS *SReffects, double Po,
     double *part, beta;
     static long first = 1;
     double deltaChange, cutoff;
-    
+    long active = 1;
+#if USE_MPI
+    if (isMaster && notSinglePart) /* This is a parallel element, the master will not track unless it is a single particle simulation */
+      active = 0;
+#endif
+	
+		        
     if (SReffects->pRef==0) {
       if (!radIntegrals) {
         bomb("Problem with SREFFECTS element: pRef=0 but no radiation integrals computed.  Use the twiss_output command to compute these.", NULL);
@@ -50,6 +56,7 @@ void track_SReffects(double **coord, long np, SREFFECTS *SReffects, double Po,
     gamma2Ratio = (sqr(Po)+1)/(sqr(SReffects->pRef)+1);
     gammaRatio = sqrt(gamma2Ratio);
 
+#if (!USE_MPI)  /* The parallel version doesn't check here, as it needs communications every time */
     if (SReffects->DdeltaRef>0) {
       /* this is a temporary kludge to ensure that all particles get lost when this happens */
       for (ip=0; ip<np; ip++)
@@ -58,6 +65,7 @@ void track_SReffects(double **coord, long np, SREFFECTS *SReffects, double Po,
       fflush(stdout);
       return;
     }
+#endif    
     /* compute P/Po change per turn due to SR losses at the present momentum */
     Ddelta = SReffects->DdeltaRef*gammaRatio*gamma2Ratio;
 
@@ -106,7 +114,8 @@ void track_SReffects(double **coord, long np, SREFFECTS *SReffects, double Po,
         }
     
     cutoff = SReffects->cutoff;
-    for (ip=0; ip<np; ip++) {
+    if (active) {
+      for (ip=0; ip<np; ip++) {
         part     = coord[ip];
         xpEta    = part[5]*twiss->etapx;
         part[1]  = (part[1] - xpEta)*Fx + Srxp*gauss_rn_lim(0.0, 1.0, cutoff, random_2) + xpEta;
@@ -125,7 +134,8 @@ void track_SReffects(double **coord, long np, SREFFECTS *SReffects, double Po,
         P = (1+part[5])*Po;
         beta = P/sqrt(sqr(P)+1);
         part[4] = t*beta;
-        }
+      }
     }
+}
 
 

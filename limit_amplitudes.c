@@ -563,9 +563,11 @@ long track_through_pfilter(
     long count = 0, i;
     if (maxBuffer<np &&
         !(deltaBuffer=SDDS_Realloc(deltaBuffer, sizeof(*deltaBuffer)*(maxBuffer=np))))
-      SDDS_Bomb("memory allocation failure");
-    for (ip=0; ip<np; ip++)
-      deltaBuffer[ip] = initial[ip][5];
+      SDDS_Bomb("memory allocation failure");  
+    if (isSlave || !notSinglePart) {
+      for (ip=0; ip<np; ip++)
+	deltaBuffer[ip] = initial[ip][5];
+    }
     /* eliminate lowest lowerfraction of particles and highest
        upperfraction */
     if (pfilter->lowerFraction>0 && pfilter->lowerFraction<1) {
@@ -576,7 +578,8 @@ long track_through_pfilter(
       upper[count] = 1;
       level[count++] = 100-pfilter->upperFraction*100;
     }
-    compute_percentiles(limit, level, count, deltaBuffer, np);
+    if (isSlave || !notSinglePart)
+      compute_percentiles(limit, level, count, deltaBuffer, np);
     itop = np-1;
     for (i=0; i<2; i++) {
       if (level[i]<0)
@@ -590,21 +593,22 @@ long track_through_pfilter(
         pfilter->hasLower = 1;
       }
       if (!pfilter->fixPLimits) {
-        /* filter in next block so there are no discrepancies due to
-         * small numerical differences
-         */
-        for (ip=0; ip<=itop; ip++) {
-          if ((upper[i] && initial[ip][5]>limit[i]) ||
-              (!upper[i] && initial[ip][5]<limit[i])) {
-            swapParticles(initial[ip], initial[itop]);
-            initial[itop][4] = z;  /* record position of particle loss */
-            initial[itop][5] = Po*(1+initial[itop][5]);  /* momentum at loss */
-            if (accepted)
-              swapParticles(accepted[ip], accepted[itop]);
-            --itop;
-            --ip;
-          }
-        }
+	/* filter in next block so there are no discrepancies due to
+	 * small numerical differences
+	 */
+	if (isSlave || !notSinglePart)
+	  for (ip=0; ip<=itop; ip++) {
+	    if ((upper[i] && initial[ip][5]>limit[i]) ||
+		(!upper[i] && initial[ip][5]<limit[i])) {
+	      swapParticles(initial[ip], initial[itop]);
+	      initial[itop][4] = z;  /* record position of particle loss */
+	      initial[itop][5] = Po*(1+initial[itop][5]);  /* momentum at loss */
+	      if (accepted)
+		swapParticles(accepted[ip], accepted[itop]);
+	      --itop;
+	      --ip;
+	    }
+	  }
       }
     }
     if (pfilter->fixPLimits)
@@ -613,19 +617,20 @@ long track_through_pfilter(
   
   if (pfilter->limitsFixed) {
     double p;
-    for (ip=0; ip<=itop; ip++) {
-      p = (1+initial[ip][5])*Po;
-      if ((pfilter->hasUpper && p>pfilter->pUpper) ||
-          (pfilter->hasLower && p<pfilter->pLower)) {
-        swapParticles(initial[ip], initial[itop]);
-        initial[itop][4] = z;  /* record position of particle loss */
-        initial[itop][5] = p;  /* momentum at loss */
-          if (accepted)
-            swapParticles(accepted[ip], accepted[itop]);
-        --itop;
-        --ip;
+    if (isSlave || !notSinglePart)
+      for (ip=0; ip<=itop; ip++) {
+	p = (1+initial[ip][5])*Po;
+	if ((pfilter->hasUpper && p>pfilter->pUpper) ||
+	    (pfilter->hasLower && p<pfilter->pLower)) {
+	  swapParticles(initial[ip], initial[itop]);
+	  initial[itop][4] = z;  /* record position of particle loss */
+	  initial[itop][5] = p;  /* momentum at loss */
+	  if (accepted)
+	    swapParticles(accepted[ip], accepted[itop]);
+	  --itop;
+	  --ip;
+	}
       }
-    }
   }
   
   if (pfilter->deltaLimit<0) {
@@ -636,23 +641,43 @@ long track_through_pfilter(
 #endif
     return itop+1;
   }
-  reference = 0;
+  reference = 0.0;
   if (pfilter->beamCentered) {
-    for (ip=0; ip<=itop; ip++)
-      reference += initial[ip][5];
+    if(isSlave || !notSinglePart) {
+      for (ip=0; ip<=itop; ip++)
+	reference += initial[ip][5];
+    }
+#if (!USE_MPI)
     reference /= (itop+1);
+#else
+    if (notSinglePart) {
+      if (USE_MPI) {
+	long n_total, n_particle=itop+1;
+	double reference_sum; 
+	if (isMaster) {
+	  n_particle = 0; 
+	}
+	MPI_Allreduce(&n_particle, &n_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+	MPI_Allreduce(&reference, &reference_sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+	reference /= n_total; 
+      }
+    }
+    else
+      reference /= (itop+1);
+#endif 
   }
-  
-  for (ip=0; ip<=itop; ip++) {
-    if (fabs(initial[ip][5]-reference)<pfilter->deltaLimit)
-      continue;
-    swapParticles(initial[ip], initial[itop]);
-    initial[itop][4] = z;  /* record position of particle loss */
-    initial[itop][5] = Po*(1+initial[itop][5]);  /* momentum at loss */
-    if (accepted)
-      swapParticles(accepted[ip], accepted[itop]);
-    --itop;
-    --ip;
+  if (isSlave || !notSinglePart) {
+    for (ip=0; ip<=itop; ip++) {
+      if (fabs(initial[ip][5]-reference)<pfilter->deltaLimit)
+	continue;
+      swapParticles(initial[ip], initial[itop]);
+      initial[itop][4] = z;  /* record position of particle loss */
+      initial[itop][5] = Po*(1+initial[itop][5]);  /* momentum at loss */
+      if (accepted)
+	swapParticles(accepted[ip], accepted[itop]);
+      --itop;
+      --ip;
+    }
   }
 #if defined(MINIMIZE_MEMORY)
   free(deltaBuffer);

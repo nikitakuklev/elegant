@@ -24,27 +24,65 @@
 #include "track.h"
 
 void compute_centroids(
-    double *centroid,
-    double **coordinates,
-    long n_part
-    )
+		       double *centroid,
+		       double **coordinates,
+		       long n_part
+		       )
 {
-    long i_part, i_coord;
-    double sum[6], *part;
+  long i_part, i_coord;
+  double sum[6], *part;
+  long active = 1; 
+#if USE_MPI  /* In the non-parallel mode, it will be same with the serial version */ 
+  long n_total;
+  if (notSinglePart) {
+    if (((parallelStatus==trueParallel) && isSlave) || ((parallelStatus!=trueParallel) && isMaster))
+      active = 1;
+    else 
+      active = 0;
+  }
+#endif
+ 
+  for (i_coord=0; i_coord<6; i_coord++)
+    sum[i_coord] = centroid[i_coord] = 0;
 
-    for (i_coord=0; i_coord<6; i_coord++)
-        sum[i_coord] = centroid[i_coord] = 0;
-
+  if (active) {
     for (i_part=0; i_part<n_part; i_part++) {
-        part = coordinates[i_part];
-        for (i_coord=0; i_coord<6; i_coord++) 
-            sum[i_coord] += part[i_coord];
-        }
+      part = coordinates[i_part];
+      for (i_coord=0; i_coord<6; i_coord++) 
+	sum[i_coord] += part[i_coord];
+    }
+  }
+  if (!USE_MPI || !notSinglePart) {
     if (n_part)
-        for (i_coord=0; i_coord<6; i_coord++)
-            centroid[i_coord] = sum[i_coord]/n_part;
+      for (i_coord=0; i_coord<6; i_coord++)
+	centroid[i_coord] = sum[i_coord]/n_part;
+
+  }
+#if USE_MPI
+  if (notSinglePart) {
+    if (parallelStatus!=trueParallel) {
+      if (isMaster && n_part)
+	for (i_coord=0; i_coord<6; i_coord++)
+	  centroid[i_coord] = sum[i_coord]/n_part;
+    }
+    else {
+      if (isMaster) {
+	n_part = 0;
+      }
+      /* compute centroid sum over processors */
+      MPI_Allreduce(sum, centroid, 6, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+      /* compute total number of particles over processors */
+      MPI_Allreduce(&n_part, &n_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);  
+      if (n_total)
+	for (i_coord=0; i_coord<6; i_coord++)
+	  centroid[i_coord] /= n_total;
 
     }
+  }
+#endif  
+   
+}
 
 /* routine: compute_sigmas()
  * purpose: compute sigmas for (x, x', y, y', s, deltap/p)
@@ -126,51 +164,172 @@ void accumulate_beam_sums(
 {
   long i_part, i, j;
   double centroid[6];
-  double Sij, value;
-  
+  double value;
+  long active = 1;
+  double Sij;
+#if USE_MPI  /* In the non-parallel mode, it will be same with the serial version */ 
+  double buffer[6], Sij_p[21], Sij_total[21];
+  long n_total, offset=0, index;  
+  if (notSinglePart) {
+    if (((parallelStatus==trueParallel) && isSlave) || ((parallelStatus!=trueParallel) && isMaster))
+      active = 1;
+    else 
+      active = 0;
+  }
+#endif
+    
   if (!sums->n_part)
     sums->p0 = p_central;
 
-  if (n_part) {
-    /* maximum amplitudes */
-    for (i=0; i<6; i++) {
-      if (i==4)
-        continue;  /* done below */
+
+  if ((!USE_MPI && n_part) || USE_MPI) {
+    if (active) {
+      /* maximum amplitudes */
+      for (i=0; i<6; i++) {
+	if (i==4)
+	  continue;  /* done below */
+	for (i_part=0; i_part<n_part; i_part++) {
+	  if ((value=fabs(coord[i_part][i]))>sums->maxabs[i])
+	    sums->maxabs[i] = value;
+	  if ((value=coord[i_part][i]) > sums->max[i])
+	    sums->max[i] = value;
+	  if ((value=coord[i_part][i]) < sums->min[i])
+	    sums->min[i] = value;
+	}
+      }
+      /* compute centroids for present beam and add in to existing centroid data */
+      for (i=0; i<6; i++) {
+	for (centroid[i]=i_part=0; i_part<n_part; i_part++)
+	  centroid[i] += coord[i_part][i];
+	if (!USE_MPI || !notSinglePart) {	
+	  sums->centroid[i] = (sums->centroid[i]*sums->n_part+centroid[i])/(sums->n_part+n_part);
+	  centroid[i] /= n_part;
+	}
+#if USE_MPI
+        if (notSinglePart) {
+	  if ((parallelStatus!=trueParallel) && isMaster) {
+	    sums->centroid[i] = (sums->centroid[i]*sums->n_part+centroid[i])/(sums->n_part+n_part);
+	    centroid[i] /= n_part;
+	  }
+	}
+#endif
+      }
+    }
+#if USE_MPI
+    if (notSinglePart) {
+      if(parallelStatus==trueParallel) {
+	if (isMaster) { 
+	  n_part = 0;  /* All the particles have been distributed to the slave processors */
+	  memset(centroid, 0.0,  sizeof(double)*6);
+	}
+	/* compute centroid sum over processors */
+	MPI_Allreduce(centroid, buffer, 6, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+	memcpy(centroid, buffer, sizeof(double)*6);
+	/* compute total number of particles over processors */
+
+	MPI_Allreduce(&n_part, &n_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);  
+	for (i=0; i<6; i++) {
+	  sums->centroid[i] = (sums->centroid[i]*sums->n_part+centroid[i])/(sums->n_part+n_total);
+	  centroid[i] /= n_total;
+	}     
+      }
+    }
+#endif
+    if (active) {	        
+      i = 4;
       for (i_part=0; i_part<n_part; i_part++) {
-        if ((value=fabs(coord[i_part][i]))>sums->maxabs[i])
+        if ((value=fabs(coord[i_part][i]-centroid[i]))>sums->maxabs[i])
           sums->maxabs[i] = value;
-	if ((value=coord[i_part][i]) > sums->max[i])
-	  sums->max[i] = value;
-	if ((value=coord[i_part][i]) < sums->min[i])
+        if ((value=coord[i_part][i]-centroid[i])>sums->max[i])
+  	  sums->max[i] = value;
+        if ((value=coord[i_part][i]-centroid[i])<sums->min[i])
 	  sums->min[i] = value;
       }
     }
-    /* compute centroids for present beam and add in to existing centroid data */
-    for (i=0; i<6; i++) {
-      for (centroid[i]=i_part=0; i_part<n_part; i_part++)
-        centroid[i] += coord[i_part][i];
-      sums->centroid[i] = (sums->centroid[i]*sums->n_part+centroid[i])/(sums->n_part+n_part);
-      centroid[i] /= n_part;
+#if USE_MPI
+    if (notSinglePart) {
+      if (parallelStatus==trueParallel) {
+	/* compute sums->maxabs over processors*/
+	MPI_Allreduce(sums->maxabs, buffer, 6, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD); 
+	memcpy(sums->maxabs, buffer, sizeof(double)*6);     
+	/* compute sums->max over processors */
+	MPI_Allreduce(sums->max, buffer, 6, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD); 
+	memcpy(sums->max, buffer, sizeof(double)*6);      
+	/* compute sums->min over processors */
+	MPI_Allreduce(sums->min, buffer, 6, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD); 
+	memcpy(sums->min, buffer, sizeof(double)*6);  
+      }    
     }
-    i = 4;
-    for (i_part=0; i_part<n_part; i_part++) {
-      if ((value=fabs(coord[i_part][i]-centroid[i]))>sums->maxabs[i])
-        sums->maxabs[i] = value;
-      if ((value=coord[i_part][i]-centroid[i])>sums->max[i])
-	sums->max[i] = value;
-      if ((value=coord[i_part][i]-centroid[i])<sums->min[i])
-	sums->min[i] = value;
-    }
+#endif    
     /* compute Sigma[i][j] for present beam and add to existing data */
-    for (i=0; i<6; i++)
-      for (j=i; j<6; j++) {
-        for (Sij=i_part=0; i_part<n_part; i_part++)
-          Sij += (coord[i_part][i]-centroid[i])*(coord[i_part][j]-centroid[j]);
-        sums->sigma[i][j] = (sums->sigma[i][j]*sums->n_part + Sij)/(sums->n_part+n_part);
+    if (active) {
+      for (i=0; i<6; i++) {
+#if USE_MPI
+	if ((parallelStatus==trueParallel) && notSinglePart)
+	  if (i>=1)        
+	    offset += i-1;
+#endif
+	for (j=i; j<6; j++) {
+#if (!USE_MPI) 
+	  for (Sij=i_part=0; i_part<n_part; i_part++)
+	    Sij += (coord[i_part][i]-centroid[i])*(coord[i_part][j]-centroid[j]);
+	  sums->sigma[i][j] = (sums->sigma[i][j]*sums->n_part+Sij)/(sums->n_part+n_part);
+#else 
+	  if (notSinglePart) {
+	    if (parallelStatus==trueParallel) {
+	      index = 5*i+j-offset;
+	      Sij_p[index] = 0;
+	      for (i_part=0; i_part<n_part; i_part++)
+		Sij_p[index] += (coord[i_part][i]-centroid[i])*(coord[i_part][j]-centroid[j]);
+	    }
+	    else if (isMaster) {
+	      for (Sij=i_part=0; i_part<n_part; i_part++)
+		Sij += (coord[i_part][i]-centroid[i])*(coord[i_part][j]-centroid[j]);
+	      sums->sigma[i][j] = (sums->sigma[i][j]*sums->n_part+Sij)/(sums->n_part+n_part);
+	    }
+	  }
+	  else {
+	    for (Sij=i_part=0; i_part<n_part; i_part++)
+	      Sij += (coord[i_part][i]-centroid[i])*(coord[i_part][j]-centroid[j]);
+	    sums->sigma[i][j] = (sums->sigma[i][j]*sums->n_part+Sij)/(sums->n_part+n_part);
+	  }
+#endif
+	}
       }
+    }
+#if USE_MPI
+    if (notSinglePart) {
+      if (parallelStatus==trueParallel) {
+	if (isMaster)
+	  memset(Sij_p, 0.0,  sizeof(double)*21);
+	/* compute Sij sum over processors */
+	MPI_Allreduce(Sij_p, Sij_total, 21, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+	offset = 0; 
+	for (i=0; i<6; i++) {
+	  if (i>=1)
+	    offset += i-1;
+	  for (j=i; j<6; j++) {
+	    index = 5*i+j-offset;
+	    sums->sigma[i][j] = (sums->sigma[i][j]*sums->n_part+Sij_total[index])/(sums->n_part+n_total);
+	  }
+	}
+      }
+    }
+#endif
   }
-  
+
+#if (!USE_MPI)    
   sums->n_part += n_part;
+#else
+  if (notSinglePart) {
+    if (parallelStatus==trueParallel) 
+      sums->n_part += n_total;
+    else if (isMaster)
+      sums->n_part += n_part;
+  }
+  else
+    sums->n_part += n_part; 
+#endif    
 }
 
 void copy_beam_sums(

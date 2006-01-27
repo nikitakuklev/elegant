@@ -183,8 +183,16 @@ char *description[N_COMMANDS] = {
 static VARY run_control;
  
 long writePermitted = 1;
+/* For serial version, isMaster and isSlave are both set to 1 */
 long isMaster = 1;
-  
+long isSlave = 1;
+long notSinglePart=0; /* All the processors will do the same thing by default */
+#if USE_MPI
+parallelMode parallelStatus = initialMode; 
+int n_processors = 1;
+int myid;
+#endif
+ 
 int main(argc, argv)
 int argc;
 char **argv;
@@ -218,8 +226,6 @@ char **argv;
   semaphoreFile[0] = semaphoreFile[1] = NULL;
  
 #if USE_MPI
-  int n_processors = 1, myid;
-
 #ifdef MPI_DEBUG
   FILE *fpError; 
   char fileName[15];
@@ -238,12 +244,16 @@ char **argv;
     freopen(fileName, "w", stdout);
     MPI_Get_processor_name(processor_name,&namelen);
     fprintf(stdout, "Process %d on %s\n", myid, processor_name);
-#else
+#endif  
     /* redirect output, only the master processor will write on screen or files */
     freopen("/dev/null","w",stdout); 
-#endif    
+  
     writePermitted = isMaster = 0;
+    isSlave = 1;
   }
+  else
+    isSlave = 0;
+
   if (sizeof(int)<4) { /* The size of integer is assumed to be 4 bytes to handle a large number of particles */
     printf("Warning!!! The INT_MAX could be too small to record the number of particles.\n"); 
   }
@@ -451,9 +461,7 @@ char **argv;
         run_conditions.wrap_around = 1;
       run_conditions.tracking_updates = tracking_updates;
       run_conditions.always_change_p0 = always_change_p0;
-#if USE_MPI
-      run_conditions.n_processors = n_processors;
-#endif
+
       /* extract the root filename from the input filename */
       strcpy(s, inputfile);
       if (rootname==NULL) {
