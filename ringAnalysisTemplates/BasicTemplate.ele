@@ -52,8 +52,13 @@
         radiation_integrals = <doRadiationIntegrals>,
         higher_order_chromaticity = <doHigherOrderChromaticity>,
         chromatic_tune_spread_half_range = <chromaticTuneSpreadMomentumSpread>,
+        output_at_each_step = 1
 &end
 
 &floor_coordinates
 	filename = %s.flr,
 &end
+
+&bunched_beam &end
+&track &end
+
