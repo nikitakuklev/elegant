@@ -59,6 +59,9 @@
 	filename = %s.flr,
 &end
 
+&run_control &end
+
 &bunched_beam &end
+
 &track &end
 
