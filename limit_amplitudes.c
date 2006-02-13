@@ -896,6 +896,8 @@ long determineOpenSideCode(char *openSide)
  * Michael Borland, 2005
  */
 
+#define DEBUG_APERTURE 0
+
 long imposeApertureData(
                         double **initial, long np, double **accepted,
                         double z, double Po, long extrapolate_z, APERTURE_DATA *apData)
@@ -906,6 +908,23 @@ long imposeApertureData(
   double xSize, ySize;
   double xCenter, yCenter;
   double dx, dy;
+
+#if DEBUG_APERTURE
+  static FILE *fp = NULL;
+  if (!fp) {
+    TRACKING_CONTEXT tcontext;
+    char s[1000];
+    getTrackingContext(&tcontext);
+    sprintf(s, "%s.aplos", tcontext.rootname);
+    if (!(fp = fopen(s, "w")))
+      bomb("unable to open debug file for aperture losses", NULL);
+    fprintf(fp, "SDDS1\n");
+    fprintf(fp, "&column name=z type=double units=m &end\n");
+    fprintf(fp, "&column name=x type=double units=m &end\n");
+    fprintf(fp, "&column name=y type=double units=m &end\n");
+    fprintf(fp, "&data mode=ascii no_row_counts=1 &end\n");
+  }  
+#endif
   
   itop = np-1;
 
@@ -946,8 +965,11 @@ long imposeApertureData(
         (ySize && fabs(dy) > ySize))
       lost = 1;
     if (lost) {
+#if DEBUG_APERTURE
+      fprintf(fp, "%e %e %e\n", z, initial[ip][0], initial[ip][2]);
+#endif
       swapParticles(initial[ip], initial[itop]);
-     if (accepted)
+      if (accepted)
         swapParticles(accepted[ip], accepted[itop]);
       initial[itop][4] = z; /* record position of particle loss */
       initial[itop][5] = Po*(1+initial[itop][5]);
@@ -956,6 +978,11 @@ long imposeApertureData(
       --np;
     }
   }
+  
+#if DEBUG_APERTURE
+  fflush(fp);
+#endif
+
   return(np);
 }
 
