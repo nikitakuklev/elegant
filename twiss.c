@@ -299,6 +299,11 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
   
   n_mat_computed = 0;
 
+/*
+  fprintf(stdout, "Twiss parameter computation on path %e, %e, %e, %e, %e, %e\n",
+          path[0], path[1], path[2], path[3], path[4], path[5]);
+*/
+  
   if (radIntegrals) {
     for (i=0; i<6; i++) 
       radIntegrals->I[i] = 0;
@@ -556,6 +561,20 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
       couplingFactor[2] = 0;
   }
 
+/*
+    fprintf(stdout, "beta, eta, alpha: %e, %e; %e, %e; %e, %e\n",
+          beta[0], beta[1],
+          eta[0], eta[1], 
+          alpha[0], alpha[1]);
+  if (radIntegrals)
+    fprintf(stdout, "Radiation integrals: %e, %e, %e, %e, %e\n",
+            radIntegrals->I[0], 
+            radIntegrals->I[1], 
+            radIntegrals->I[2], 
+            radIntegrals->I[3], 
+            radIntegrals->I[4]);
+*/
+  
   m_free(&dispNew);
   m_free(&dispM);
   m_free(&dispOld);
