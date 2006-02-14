@@ -73,9 +73,9 @@ double beta_from_delta(double p, double delta)
  * location
  */
 
-static void (*trackingWedgeFunction)(double **part, long np) = NULL;
+static void (*trackingWedgeFunction)(double **part, long np, long pass) = NULL;
 static ELEMENT_LIST *trackingWedgeElement = NULL;
-void setTrackingWedgeFunction(void (*wedgeFunc)(double **part, long np), ELEMENT_LIST *eptr)
+void setTrackingWedgeFunction(void (*wedgeFunc)(double **part, long np, long pass), ELEMENT_LIST *eptr)
 {
   trackingWedgeFunction = wedgeFunc;
   trackingWedgeElement = eptr;
@@ -399,10 +399,8 @@ long do_tracking(
     }
 
     while (eptr && (nToTrack || (USE_MPI && notSinglePart))) {
-      if (trackingWedgeFunction && eptr==trackingWedgeElement) {
-        (*trackingWedgeFunction)(coord, nToTrack);
-        trackingWedgeFunction = NULL;
-      }
+      if (trackingWedgeFunction && eptr==trackingWedgeElement)
+        (*trackingWedgeFunction)(coord, nToTrack, i_pass);
       
       classFlags = entity_description[eptr->type].flags;
       elementsTracked++;
