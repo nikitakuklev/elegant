@@ -1182,7 +1182,13 @@ double optimization_function(double *value, long *invalid)
   control->i_step++;       /* to prevent automatic regeneration of beam */
   zero_beam_sums(output->sums_vs_z, output->n_z_points+1);
 
-  if (orbitCorrMode!=-1 && 
+  if (doClosedOrbit &&
+      !run_closed_orbit(run, beamline, startingOrbitCoord, NULL, 0)) {
+    *invalid = 1;
+    fprintf(stdout, "warning: unable to find closed orbit\n");
+    fflush(stdout);
+  }
+  if (!*invalid && orbitCorrMode!=-1 && 
       !do_correction(orbitCorrData, run, beamline, startingOrbitCoord, beam, control->i_step, 0)) {
     *invalid = 1;
     fprintf(stdout, "warning: unable to perform orbit correction\n");
