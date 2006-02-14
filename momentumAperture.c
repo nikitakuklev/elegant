@@ -14,6 +14,9 @@
  * Michael Borland, 2006
  */
 
+#define DEBUG 1
+
+
 #include "mdb.h"
 #include "track.h"
 #include "momentumAperture.h"
@@ -120,15 +123,31 @@ long doMomentumApertureSearch(
   long ip, nElem, iElem;
   double deltaInterval, pCentral;
   ELEMENT_LIST *elem, *elem0;
-  long **lostOnPass, **loserFound, **survivorFound, lostOnPass0, side;
+  long **lostOnPass, **loserFound, **survivorFound, *lostOnPass0, side;
   double deltaStart[2], **deltaSurvived, delta, delta0;
   double **xLost, **yLost, **deltaLost, **sLost;
   double *sStart, length;
   char **ElementName;
-  long points, splitsLeft, iTraj, survivorJustSeen;
+  long points, splitsLeft, iTraj, survivorJustSeen, code;
   TRAJECTORY *traj;
 #if defined(DEBUG)
   double *xco, *xpco, *yco, *ypco;
+  FILE *fpdeb = NULL;
+  char s[1000];
+
+  sprintf(s, "%s-Debug", output);
+  fprintf(stderr, "Debug file %s\n", s);
+  
+  if (!(fpdeb = fopen(s, "w")))
+    bomb("unable to open debug file for momentum aperture scan", NULL);
+  fprintf(fpdeb, "SDDS1\n");
+  fprintf(fpdeb, "&parameter name=ElementName type=string &end\n");
+  fprintf(fpdeb, "&parameter name=Side type=string &end\n");
+  fprintf(fpdeb, "&column name=delta type=double &end\n");
+  fprintf(fpdeb, "&column name=Lost type=short &end\n");
+  fprintf(fpdeb, "&column name=LossPass type=short &end\n");
+  fprintf(fpdeb, "&data mode=ascii no_row_counts=1 &end\n");
+  fflush(fpdeb);
 #endif
 
   /* determine how many elements will be tracked */
@@ -181,6 +200,9 @@ long doMomentumApertureSearch(
   deltaStart[0] = delta_negative_limit;
   deltaStart[1] = delta_positive_limit;
 
+  /* need to do this because do_tracking() in principle may realloc this pointer */
+  lostOnPass0 = tmalloc(sizeof(*lostOnPass0)*1);
+  
   traj = NULL;
   if (startingCoord) {
     /* track to get the closed orbit vs s */
@@ -193,7 +215,7 @@ long doMomentumApertureSearch(
     pCentral = run->p_central;
     if (!do_tracking(NULL, coord, 1, NULL, beamline, &pCentral, 
                      NULL, NULL, NULL, traj+1, run, control->i_step, 
-                     0*SILENT_RUNNING, 1, 0, NULL, NULL, NULL, &lostOnPass0,
+                     SILENT_RUNNING, 1, 0, NULL, NULL, NULL, lostOnPass0,
                      elem0)) {
       fprintf(stdout, "Error: particle lost while determining central trajectory!\n");
       return 0;
@@ -204,6 +226,7 @@ long doMomentumApertureSearch(
   elem = elem0;
   iElem = 0;
   iTraj = -1;
+
   while (elem) {
     iTraj++;
     if (!include_name_pattern || wild_match(elem->name, include_name_pattern)) {
@@ -227,6 +250,11 @@ long doMomentumApertureSearch(
         exit(1);
       }
       for (side=0; side<2; side++) {
+#if defined(DEBUG)
+        fprintf(fpdeb, "%s\n%s\n",
+                elem->name, side==0?"negative":"positive");
+        fflush(fpdeb);
+#endif
         survivorJustSeen = 0;
         deltaInterval = deltaStart[side]/(delta_points-1);
         lostOnPass[side][iElem] = -1;
@@ -280,10 +308,15 @@ long doMomentumApertureSearch(
                       delta, coord[0][0], coord[0][1], coord[0][2], coord[0][3], coord[0][4], coord[0][5]);
               fflush(stdout);
             }
-            if (do_tracking(NULL, coord, 1, NULL, beamline, &pCentral, 
-                            NULL, NULL, NULL, NULL, run, control->i_step, 
-                            SILENT_RUNNING, control->n_passes, 0, NULL, NULL, NULL, &lostOnPass0,
-                            WEDGE_METHOD?NULL:elem)) {
+            lostOnPass0[0] = -1;
+            code = do_tracking(NULL, coord, 1, NULL, beamline, &pCentral, 
+                               NULL, NULL, NULL, NULL, run, control->i_step, 
+                               SILENT_RUNNING, control->n_passes, 0, NULL, NULL, NULL, lostOnPass0,
+                               WEDGE_METHOD?NULL:elem);
+#if defined(DEBUG)
+            fprintf(fpdeb, "%21.15e %hd %hd\n", delta, code?(short)0:(short)1, (short)lostOnPass0[0]);
+#endif
+            if (code) {
               /* particle survived */
               if (verbosity>2) {
                 fprintf(stdout, "  Particle survived with delta0 = %e, sf = %e m\n", delta, coord[0][4]);
@@ -310,7 +343,7 @@ long doMomentumApertureSearch(
                     fprintf(stdout, "   coord[%ld] = %e\n", i, coord[0][i]);
                 fflush(stdout);
               }
-              lostOnPass[side][iElem] = lostOnPass0;
+              lostOnPass[side][iElem] = lostOnPass0[0];
               xLost[side][iElem] = coord[0][0];
               yLost[side][iElem] = coord[0][2];
               sLost[side][iElem] = coord[0][4];
@@ -328,6 +361,10 @@ long doMomentumApertureSearch(
           else
             break;
         } while (--splitsLeft >= 0);
+#if defined(DEBUG)
+        fprintf(fpdeb, "\n");
+        fflush(fpdeb);
+#endif
       }
       iElem++;
     }
@@ -375,6 +412,7 @@ long doMomentumApertureSearch(
   free_czarray_2d((void**)sLost, 2, nElem);
   free(sStart);
   free(ElementName);
+  free(lostOnPass0);
   if (traj)
     free(traj);
   
