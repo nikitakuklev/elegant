@@ -1206,7 +1206,7 @@ VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, doubl
                           char *bodyFocusModel, long change_p0, double Preference)
 {
     VMATRIX *M, *Medge, *Mtot, *tmp;
-    double *C, **R, dP, gamma, dgamma, dgammaMax;
+    double *C, **R, ***T, dP, gamma, dgamma, dgammaMax;
     double cos_phase, sin_phase;
     double inverseF[2] = {0,0};
     long end, useSRSModel;
@@ -1215,8 +1215,9 @@ VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, doubl
       return drift_matrix(length, order);
 
     M = tmalloc(sizeof(*M));
-    M->order = 1;
+    M->order = order>2 ? 2: order;
     initialize_matrices(M, M->order);
+    T = M->T;
     R = M->R;
     C = M->C;
     
@@ -1251,12 +1252,66 @@ VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, doubl
     }
 
     if (!useSRSModel) {
+      double phi0, sinPhi0, cosPhi0, cotPhi0, cscPhi0, p00sqr, F1, sqrtF1, F2, F2sqr;
+      double F3, sqrtF3, F3sqr, F1_1p5, F3_1p5, F4, logF4, dgMax, cosPhi0sqr, lambdaSqr, PIsqr;
+      double p00fourth, p00, lambda, L, p00third, F5, logF5, dgMaxSqr;
+      
+      phi0 = phase*PI/180;
+      p00 = *P_central;
+      dgMax = dgammaMax;
+      lambda = c_mks/frequency;
+      L = length;
+
+      sinPhi0 = sin(phi0);
+      cosPhi0 = cos(phi0);
+      cscPhi0 = 1/sinPhi0;
+      p00sqr = sqr(p00);
+      F1 = 1 + p00sqr;
+      sqrtF1 = sqrt(F1);
+      F2 = sqrtF1+dgMax*sinPhi0;
+      F2sqr = sqr(F2);
+      F3 = -1+F2sqr;
+      sqrtF3 = sqrt(F3);
+      F4 = F2 + sqrtF3;
+      logF4 = log(F4);
+
       R[0][0] = R[2][2] = R[4][4] = 1;
-      R[1][1] = R[3][3] = R[5][5] = 1/(1+dP/(*P_central));
-      if (fabs(dP/(*P_central))>1e-14)
-        R[0][1] = R[2][3] = length*(*P_central)/dP*log(1 + dP/(*P_central));
-      else
-        R[0][1] = R[2][3] = length;
+      R[0][1] = R[2][3] = p00*(-((L*cscPhi0*log(p00+sqrtF1))/dgMax)+(L*cscPhi0*logF4)/dgMax);
+      R[1][1] = R[3][3] = p00/sqrtF3;
+      R[5][4] = (2*dgMax*PI*cosPhi0*F2)/(lambda*F3);
+      R[5][5] = (p00sqr*F2)/(sqrtF1*F3);
+
+      if (order>=2) {
+        cotPhi0 = cosPhi0/sinPhi0;
+        F5 = p00 + sqrtF1;
+        logF5 = log(F5);
+        F3sqr = sqr(F3);
+        p00fourth = sqr(p00sqr);
+        p00third = p00sqr*p00;
+        F3_1p5 = pow(F3, 1.5);
+        PIsqr = sqr(PI);
+        lambdaSqr = sqr(lambda);
+        dgMaxSqr = sqr(dgMax);
+        F1_1p5 = pow(F1, 1.5);
+        cosPhi0sqr = sqr(cosPhi0);
+        
+        T[0][4][1] = T[2][4][3] = p00*((2*L*PI*cotPhi0*cscPhi0*logF5)/(dgMax*lambda)-(2*L*PI*cotPhi0*cscPhi0*logF4)/(dgMax*lambda)+(L*cscPhi0*((2*dgMax*PI*cosPhi0)/lambda+(2*dgMax*PI*cosPhi0*F2)/(lambda*sqrtF3)))/(dgMax*F4));
+
+        T[0][5][1] = T[2][5][3] = p00*(-((L*cscPhi0*logF5)/dgMax)+(L*cscPhi0*logF4)/dgMax)+p00*(-((L*(p00+p00sqr/sqrtF1)*cscPhi0)/(dgMax*F5))+(L*cscPhi0*(p00sqr/sqrtF1+(p00sqr*F2)/(sqrtF1*sqrtF3)))/(dgMax*F4));
+
+        T[1][4][1] = T[3][4][3] = (-2*dgMax*p00*PI*cosPhi0*F2)/(lambda*F3_1p5);
+
+        T[1][5][1] = T[3][5][3] = -((p00third*F2)/(sqrtF1*F3_1p5))+p00/sqrtF3;
+
+        T[4][1][1] = T[4][3][3] = 2*((L*p00sqr*cscPhi0*log(-1+F2))/(2*dgMax)-(L*p00sqr*cscPhi0*log(1+F2))/(2*dgMax));
+
+        T[5][4][4] = 2*((-4*dgMaxSqr*PIsqr*cosPhi0sqr*F2sqr)/(lambdaSqr*F3sqr)+(4*dgMaxSqr*PIsqr*cosPhi0sqr)/(lambdaSqr*F3)-(4*dgMax*PIsqr*sinPhi0*F2)/(lambdaSqr*F3));
+
+        T[5][5][4] = (-2*dgMax*p00sqr*PI*cosPhi0*F2sqr)/(lambda*sqrtF1*F3sqr)+(2*dgMax*p00sqr*PI*cosPhi0)/(lambda*sqrtF1*F3);
+
+        T[5][5][5] = 2*(-((p00fourth*F2sqr)/((F1)*F3sqr))+p00fourth/((F1)*F3)-(p00fourth*F2)/(F1_1p5*F3)+(p00sqr*F2)/(sqrtF1*F3));
+
+      }
     } else {
       /* note that Rosenzweig and Serafini use gamma in places
        * where they should probably use momentum, but I'll keep
@@ -1273,11 +1328,10 @@ VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, doubl
       R[0][1] = R[2][3] = 2*SQRT2*gamma*length/dgammaMax*(sin_alpha=sin(alpha));
       R[1][0] = R[3][2] = -sin_alpha*dgammaMax/(length*gammaf*2*SQRT2);
       R[4][4] = 1;
+      R[5][4] = (voltage/me_mev)*cos_phase/(gamma + dgamma)*(PIx2*frequency/c_mks);
       R[5][5] = 1/(1+dP/(*P_central));
     }
     
-    R[5][4] = (voltage/me_mev)*cos_phase/(gamma + dgamma)*(PIx2*frequency/c_mks);
-
     if (length && (end1Focus || end2Focus)) {
       if (end1Focus) {
         inverseF[0] = dgamma/(2*length*gamma);
