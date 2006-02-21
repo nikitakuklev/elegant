@@ -73,9 +73,10 @@ double beta_from_delta(double p, double delta)
  * location
  */
 
-static void (*trackingWedgeFunction)(double **part, long np, long pass) = NULL;
+static void (*trackingWedgeFunction)(double **part, long np, long pass, double *pCentral) = NULL;
 static ELEMENT_LIST *trackingWedgeElement = NULL;
-void setTrackingWedgeFunction(void (*wedgeFunc)(double **part, long np, long pass), ELEMENT_LIST *eptr)
+void setTrackingWedgeFunction(void (*wedgeFunc)(double **part, long np, long pass, double *pCentral),
+                              ELEMENT_LIST *eptr)
 {
   trackingWedgeFunction = wedgeFunc;
   trackingWedgeElement = eptr;
@@ -400,7 +401,7 @@ long do_tracking(
 
     while (eptr && (nToTrack || (USE_MPI && notSinglePart))) {
       if (trackingWedgeFunction && eptr==trackingWedgeElement)
-        (*trackingWedgeFunction)(coord, nToTrack, i_pass);
+        (*trackingWedgeFunction)(coord, nToTrack, i_pass, P_central);
       
       classFlags = entity_description[eptr->type].flags;
       elementsTracked++;
@@ -809,7 +810,8 @@ long do_tracking(
 	            fprintf(stdout, "warning: n_passes = %ld and WATCH interval = %ld--no output will be generated!\n",
 	     	     n_passes, watch->interval);
 		  fflush(stdout);
-		  if (i_pass>=watch->start_pass && (i_pass-watch->start_pass)%watch->interval==0) {
+		  if (i_pass>=watch->start_pass && (i_pass-watch->start_pass)%watch->interval==0 &&
+                      (watch->end_pass<0 || i_pass<=watch->end_pass)) {
 	            switch (watch->mode_code) {
 	            case WATCH_COORDINATES:
 		      dump_watch_particles(watch, step, i_pass, coord, nToTrack, *P_central,
@@ -2737,6 +2739,8 @@ void distributionScatter(double **part, long np, double Po, DSCATTER *scat, long
   }
 
   if (iPass<scat->startOnPass) 
+    return;
+  if (scat->endOnPass>=0 && iPass>scat->endOnPass)
     return;
   if (scat->oncePerParticle && dscatterGroup[scat->groupIndex].allScattered)
     return;

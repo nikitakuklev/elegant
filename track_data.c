@@ -590,6 +590,7 @@ PARAMETER watch_param[N_WATCH_PARAMS] = {
     {"FRACTION", "", IS_DOUBLE, 0, (long)((char *)&watch_example.fraction), NULL, 1.0, 0, "fraction of particles to dump (coordinate mode)"},
     {"INTERVAL", "", IS_LONG, 0, (long)((char *)&watch_example.interval), NULL, 0.0, 1, "interval for data output (in turns)"},
     {"START_PASS", "", IS_LONG, 0, (long)((char*)&watch_example.start_pass), NULL, 0.0, 0, "pass on which to start"},
+    {"END_PASS", "", IS_LONG, 0, (long)((char*)&watch_example.end_pass), NULL, 0.0, -1, "pass on which to end (inclusive).  Ignored if negative."},
     {"FILENAME", "", IS_STRING, 0, (long)((char *)&watch_example.filename), "", 0.0, 0, "output filename"},
     {"LABEL", "", IS_STRING, 0, (long)((char *)&watch_example.label), "", 0.0, 0, "output label"},
     {"MODE", "", IS_STRING, 0, (long)((char *)&watch_example.mode), "coordinates", 0.0, 0, "coordinate, parameter, centroid, or fft"},
@@ -913,6 +914,7 @@ PARAMETER dscatter_param[N_DSCATTER_PARAMS] = {
     {"LIMITPERPASS", "", IS_LONG, 0, (long)((char*)&dscatter_example.limitPerPass), NULL, 0.0, -1, "Maximum number of particles that will be scattered on each pass."},
     {"LIMITTOTAL", "", IS_LONG, 0, (long)((char*)&dscatter_example.limitTotal), NULL, 0.0, -1, "Maximum number of particles that will be scatter for each step."},
     {"STARTONPASS", "", IS_LONG, 0, (long)((char*)&dscatter_example.startOnPass), NULL, 0.0, 0, "Pass number to start on."},
+    {"ENDONPASS", "", IS_LONG, 0, (long)((char*)&dscatter_example.endOnPass), NULL, 0.0, -1, "Pass number to end on (inclusive).  Ignored if negative."},
     } ;
     
 NIBEND nibend_example;
@@ -1257,7 +1259,7 @@ PARAMETER sreffects_param[N_SREFFECTS_PARAMS] = {
     {"JDELTA", "", IS_DOUBLE, 0, (long)((char *)&SReffects_example.Jdelta), NULL, 2.0, 0, "momentum damping partition number"},
     {"EXREF", "m", IS_DOUBLE, 0, (long)((char *)&SReffects_example.exRef), NULL, 0.0, 0, "reference equilibrium x emittance"},
     {"EYREF", "m", IS_DOUBLE, 0, (long)((char *)&SReffects_example.eyRef), NULL, 0.0, 0, "reference equilibrium y emittance"},
-    {"SDELTAREF", "m", IS_DOUBLE, 0, (long)((char *)&SReffects_example.SdeltaRef), NULL, 0.0, 0, "reference equilibrium fractional momentum spread"},
+    {"SDELTAREF", "", IS_DOUBLE, 0, (long)((char *)&SReffects_example.SdeltaRef), NULL, 0.0, 0, "reference equilibrium fractional momentum spread"},
     {"DDELTAREF", "", IS_DOUBLE, 0, (long)((char *)&SReffects_example.DdeltaRef), NULL, 0.0, 0, "reference fractional momentum loss (per turn)"},
     {"PREF", "m$be$nc", IS_DOUBLE, 0, (long)((char *)&SReffects_example.pRef), NULL, 0.0, 0, "reference momentum (to which other reference values pertain)"},
     {"COUPLING", "", IS_DOUBLE, 0, (long)((char *)&SReffects_example.coupling), NULL, 0.0, 0, "x-y coupling"},

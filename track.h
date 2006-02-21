@@ -680,7 +680,7 @@ extern char *entity_text[N_TYPES];
 #define N_TMCF_PARAMS 18
 #define N_CEPL_PARAMS 16
 #define N_TWPL_PARAMS 16
-#define N_WATCH_PARAMS 12
+#define N_WATCH_PARAMS 13
 #define N_MALIGN_PARAMS 10
 #define N_TWLA_PARAMS 19
 #define N_PEPPOT_PARAMS 6
@@ -743,7 +743,7 @@ extern char *entity_text[N_TYPES];
 #define N_TFBPICKUP_PARAMS 18
 #define N_TFBDRIVER_PARAMS 20
 #define N_LSCDRIFT_PARAMS  9
-#define N_DSCATTER_PARAMS 13
+#define N_DSCATTER_PARAMS 14
 #define N_LSRMDLTR_PARAMS 14
 #define N_TAYLORSERIES_PARAMS 6
 #define N_RFTM110_PARAMS 14
@@ -1232,7 +1232,7 @@ extern char *fft_window_name[N_FFT_WINDOWS];
 
 typedef struct {
     double fraction;
-    long interval, start_pass;
+    long interval, start_pass, end_pass;
     char *filename, *label, *mode;
     long xData, yData, longitData, excludeSlopes, flushInterval, disable;
     /* internal variables for SDDS output */
@@ -1549,7 +1549,7 @@ typedef struct {
   char *plane, *fileName, *valueName, *cdfName, *pdfName;
   long oncePerParticle;
   double factor, probability;
-  long group, randomSign, limitPerPass, limitTotal, startOnPass;
+  long group, randomSign, limitPerPass, limitTotal, startOnPass, endOnPass;
   /* internal variables */
   short initialized, firstInGroup;
   long iPlane, nData, groupIndex, nLeft;
