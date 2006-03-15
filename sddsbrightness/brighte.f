@@ -88,7 +88,7 @@ C  -----------------------------------------------------------------------------
 
 	return
 	end ! brighte
-
+
 	subroutine bright1(i,k,alpha,cosphi,sinphi,
 	1	           s0,s1,s2,s3,axr,ayr)
 C+
@@ -329,7 +329,7 @@ c	ft = FOUR*i*i/a/a*(alpha2*sum1*sum1 +c*sum1*sum3 +QT*k2*sum3*sum3) ! old varia
 
 	return
 	end ! bright1
-
+
 	subroutine bright3(i,kx,ky,alpha,cosphi,sinphi,
 	1	           s0,s1,s2,s3,axr,ayr,axi,ayi)
 C+
@@ -731,7 +731,7 @@ c220     format(' ',a,1p4e15.6)
 
 	return
 	end ! bright3
-
+
 	subroutine bright_bessjn(x,nmax,bs)
 C+
 C 

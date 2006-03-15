@@ -618,7 +618,7 @@ C  -----------------------------------------------------------------------------
 	IERROR = -1
 	RETURN
 	END ! USB
-
+
 	SUBROUTINE SPECTRAL_DISTRIBUTION(IERROR)
  
 C[subroutine_header_comments]
@@ -863,7 +863,7 @@ C-
 C  -----------------------------------------------------------------------------
 	RETURN
 	END ! SPECTRAL_DISTRIBUTION
-
+
 	SUBROUTINE BRIGHTNESS_ARRAY(ICALC,I,R,ALPHAI,ALPHA2I,ALPHA)
  
 C[subroutine_header_comments]
@@ -927,7 +927,7 @@ C  Common blocks:
 
 	RETURN
 	END ! BRIGHTNESS_ARRAY
-
+
 	SUBROUTINE CONVOLUTE_DISTRIBUTION(ICALC,CONST,ALPHA,THETA,DALPHA,
 	1				  EPS,BR0,BR1,BR2,BR3,
 	2				  RA0,RA1,RA2,RA3,ICOUNT)
@@ -1038,7 +1038,7 @@ C  Common blocks:
 	
 	RETURN
 	END ! CONVOLUTE_DISTRIBUTION
-
+
 	SUBROUTINE CONVOLUTE_ENERGY_ESTEP(SP1)
  
 C[subroutine_header_comments]
@@ -1084,7 +1084,7 @@ c  Return in original array
 
 	RETURN
 	END ! CONVOLUTE_ENERGY_ESTEP
-
+
 	SUBROUTINE CONVOLUTE_ENERGY_VSTEP(SP1)
  
 C[subroutine_header_comments]
@@ -1205,7 +1205,7 @@ c  Return in original array
 
 	RETURN
 	END ! CONVOLUTE_ENERGY_VSTEP
-
+
 	REAL*8 FUNCTION SINC(ARG)
 C+
 C 
