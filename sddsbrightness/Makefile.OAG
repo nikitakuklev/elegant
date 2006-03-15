@@ -8,6 +8,9 @@
 #*************************************************************************
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.1  2004/04/08 16:10:28  soliday
+# Moved to subdirectory.
+#
 #
 #
 
@@ -32,9 +35,9 @@ endif
 
 #TARGETS = sddsbrightness$(EXE)
 ifeq ($(EPICS_VERSION).$(EPICS_REVISION),3.13)
-PROD = sddsbrightness
+PROD = sddsurgent sddsbrightness
 else
-PROD_HOST = sddsbrightness
+PROD_HOST = sddsurgent sddsbrightness
 endif
 
 USR_CFLAGS = 	-I$(EPICS_EXTENSIONS_INCLUDE) \
@@ -45,10 +48,10 @@ USR_CFLAGS_Linux =	-Df2cFortran
 USR_CFLAGS_WIN32 = 	-DPowerStationFortran -DVISUAL_CPLUSPLUS
 
 ifdef WIN32
-USR_LIBS = mdbcommon matlib fftpack SDDS1 rpnlib mdbmth namelist mdblib z fftpack
+USR_LIBS = oagphy mdbcommon matlib fftpack SDDS1 rpnlib mdbmth namelist mdblib z fftpack
 z_DIR = $(EPICS_EXTENSIONS_LIB)
 else
-USR_LIBS = mdbcommon matlib fftpack SDDS1 rpnlib mdbmth namelist mdblib
+USR_LIBS = oagphy mdbcommon matlib fftpack SDDS1 rpnlib mdbmth namelist mdblib
 SYS_PROD_LIBS_DEFAULT += z
 endif
 
@@ -66,10 +69,16 @@ matlib_DIR = $(EPICS_EXTENSIONS_LIB)
 mdblib_DIR = $(EPICS_EXTENSIONS_LIB)
 mdbcommon_DIR = $(EPICS_EXTENSIONS_LIB)
 rpnlib_DIR = $(EPICS_EXTENSIONS_LIB)
+oagphy_DIR = $(OAG_APPS)/lib/$(EPICS_HOST_ARCH)
 
+USR_LDFLAGS += -L$(OAG_APPS)/lib/$(EPICS_HOST_ARCH)
 sddsbrightness$(EXE)_SRCS =	sddsbrightness.c		
 
+sddsurgent$(EXE)_SRCS = sddsurgent.c
+
 OBJNAMES = sddsbrightness$(OBJ) usb$(OBJ) brighte$(OBJ) hunt$(OBJ)
+
+URGENT_OBJNAMES = sddsurgent$(OBJ) urgent$(OBJ) us$(OBJ) brighte$(OBJ) hunt$(OBJ)
 
 ifdef DEBUG
 		USR_CFLAGS += -DDEBUG
