@@ -16,7 +16,6 @@
 
 #define DEBUG 1
 
-
 #include "mdb.h"
 #include "track.h"
 #include "momentumAperture.h"
@@ -26,15 +25,25 @@ static double momentumOffsetValue = 0;
 
 #define WEDGE_METHOD 1
 
-static void momentumOffsetFunction(double **coord, long np, long pass)
+static void momentumOffsetFunction(double **coord, long np, long pass, double *pCentral)
 {
-  long i;
-  if (pass==1)
+  MALIGN mal;
+
+  if (pass==1) {
+    mal.dxp = mal.dyp = mal.dz = mal.dt = mal.de = 0;
+    mal.dx = x_initial;
+    mal.dy = y_initial;
+    mal.dp = momentumOffsetValue;
+    offset_beam(coord, np, &mal, *pCentral);
+
+    /*
     for (i=0; i<np; i++) {
       coord[i][0] += x_initial;
       coord[i][2] += y_initial;
       coord[i][5] += momentumOffsetValue;
     }
+    */
+  }
 }
 
 void setupMomentumApertureSearch(
@@ -58,8 +67,12 @@ void setupMomentumApertureSearch(
     bomb("delta_points should be at least 2", NULL);
   if (delta_negative_limit>=0)
     bomb("delta_negative_limit should be negative", NULL);
+  if (delta_negative_start<delta_negative_limit)
+    bomb("delta_negative_start<delta_negative_limit", NULL);
   if (delta_positive_limit<=0)
     bomb("delta_positive_limit should be positive", NULL);
+  if (delta_positive_start>delta_positive_limit)
+    bomb("delta_positive_start>delta_positive_limit", NULL);
   if (s_start>=s_end)
     bomb("s_start >= s_end", NULL);
   if (include_name_pattern && has_wildcards(include_name_pattern) && strchr(include_name_pattern, '-'))
@@ -124,11 +137,11 @@ long doMomentumApertureSearch(
   double deltaInterval, pCentral;
   ELEMENT_LIST *elem, *elem0;
   long **lostOnPass, **loserFound, **survivorFound, *lostOnPass0, side;
-  double deltaStart[2], **deltaSurvived, delta, delta0;
+  double deltaStart[2], deltaLimit[2], **deltaSurvived, delta, delta0;
   double **xLost, **yLost, **deltaLost, **sLost;
-  double *sStart, length;
+  double *sStart;
   char **ElementName;
-  long points, splitsLeft, iTraj, survivorJustSeen, code;
+  long points, splitsLeft, iTraj, code;
   TRAJECTORY *traj;
 #if defined(DEBUG)
   double *xco, *xpco, *yco, *ypco;
@@ -155,15 +168,12 @@ long doMomentumApertureSearch(
   elem0 = NULL;
   nElem = 0;
   while (elem) {
-    length = 0;
-    if (entity_description[elem->type].flags&HAS_LENGTH)
-      length = ((DRIFT*)(elem->p_elem))->length;
-    if ((elem->end_pos-length)>=s_start && (elem->end_pos-length)<=s_end &&
+    if (elem->end_pos>=s_start && elem->end_pos<=s_end &&
         (!include_name_pattern || wild_match(elem->name, include_name_pattern))) {
       if (!elem0)
 	elem0 = elem;
       nElem++;
-    } else if ((elem->end_pos-length)>s_end)
+    } else if (elem->end_pos>s_end)
       break;
     elem = elem->succ;
   }
@@ -197,8 +207,10 @@ long doMomentumApertureSearch(
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
 
-  deltaStart[0] = delta_negative_limit;
-  deltaStart[1] = delta_positive_limit;
+  deltaStart[0] = delta_negative_start;
+  deltaLimit[0] = delta_negative_limit;
+  deltaStart[1] = delta_positive_start;
+  deltaLimit[1] = delta_positive_limit;
 
   /* need to do this because do_tracking() in principle may realloc this pointer */
   lostOnPass0 = tmalloc(sizeof(*lostOnPass0)*1);
@@ -225,28 +237,24 @@ long doMomentumApertureSearch(
 
   elem = elem0;
   iElem = 0;
-  iTraj = -1;
+  iTraj = 0;
 
   while (elem) {
     iTraj++;
     if (!include_name_pattern || wild_match(elem->name, include_name_pattern)) {
-      length = 0;
-      if (entity_description[elem->type].flags&HAS_LENGTH)
-        length = ((DRIFT*)(elem->p_elem))->length;
-      if ((elem->end_pos-length)>s_end) 
+      if (elem->end_pos>s_end) 
         break;
       if (verbosity>0) {
-        fprintf(stdout, "Searching for energy aperture for %s #%ld at s=%em\n", elem->name, elem->occurence, elem->end_pos-length);
+        fprintf(stdout, "Searching for energy aperture for %s #%ld at s=%em\n", elem->name, elem->occurence, elem->end_pos);
         fflush(stdout);
       }
       ElementName[iElem] = elem->name;
-      sStart[iElem] = elem->end_pos-length;
-      if (startingCoord && iTraj && traj[iTraj].elem!=elem->pred) {
+      sStart[iElem] = elem->end_pos;
+      if (startingCoord && iTraj && traj[iTraj].elem!=elem) {
         fprintf(stdout, "Fatal error: book-keeping error for central trajectory.\n");
-        fprintf(stdout, "iTraj = %ld, traj.elem = %p, traj.elem->pred = %p, traj.elem->succ = %p, elem = %p\n",
+        fprintf(stdout, "iTraj = %ld, traj.elem = %p, elem = %p\n",
                 iTraj, traj[iTraj].elem, 
-                traj[iTraj].elem->pred, 
-                traj[iTraj].elem->succ, elem);
+                elem);
         exit(1);
       }
       for (side=0; side<2; side++) {
@@ -255,8 +263,7 @@ long doMomentumApertureSearch(
                 elem->name, side==0?"negative":"positive");
         fflush(fpdeb);
 #endif
-        survivorJustSeen = 0;
-        deltaInterval = deltaStart[side]/(delta_points-1);
+        deltaInterval = (deltaLimit[side]-deltaStart[side])/(delta_points-1);
         lostOnPass[side][iElem] = -1;
         loserFound[side][iElem] = survivorFound[side][iElem] = 0;
         xLost[side][iElem] = yLost[side][iElem] = 
@@ -264,16 +271,12 @@ long doMomentumApertureSearch(
             deltaSurvived[side][iElem] =  0;
         if (verbosity>1) {
           fprintf(stdout, " Searching for %s side from 0 to %e with interval %e\n", side==0?"negative":"positive",
-                  deltaStart[side], deltaInterval);
+                  deltaLimit[side], deltaInterval);
           fflush(stdout);
         }
         points = delta_points;
         splitsLeft = n_splits;
-        delta0 = 0;
-        if (scan_from_outside) {
-          delta0 = deltaStart[side];
-          deltaInterval *= -1;
-        }
+        delta0 = deltaStart[side];
         do {
           for (ip=0; ip<points; ip++) {
             delta = delta0 + ip*deltaInterval;
@@ -281,7 +284,8 @@ long doMomentumApertureSearch(
             reset_special_elements(beamline, 1);
             pCentral = run->p_central;
 #if WEDGE_METHOD
-            setTrackingWedgeFunction(momentumOffsetFunction, elem); 
+            setTrackingWedgeFunction(momentumOffsetFunction, 
+                                     elem->succ?elem->succ:elem0); 
             momentumOffsetValue = delta;
             if (startingCoord)
               memcpy(coord[0], startingCoord, sizeof(double)*6);
@@ -304,8 +308,9 @@ long doMomentumApertureSearch(
             ypco[iElem] = coord[0][3];
 #endif
             if (verbosity>3) {
-              fprintf(stdout, "  Tracking with delta0 = %e (%e, %e, %e, %e, %e, %e)\n", 
-                      delta, coord[0][0], coord[0][1], coord[0][2], coord[0][3], coord[0][4], coord[0][5]);
+              fprintf(stdout, "  Tracking with delta0 = %e (%e, %e, %e, %e, %e, %e), pCentral=%e\n", 
+                      delta, coord[0][0], coord[0][1], coord[0][2], coord[0][3], coord[0][4], coord[0][5],
+                      pCentral);
               fflush(stdout);
             }
             lostOnPass0[0] = -1;
@@ -316,23 +321,14 @@ long doMomentumApertureSearch(
 #if defined(DEBUG)
             fprintf(fpdeb, "%21.15e %hd %hd\n", delta, code?(short)0:(short)1, (short)lostOnPass0[0]);
 #endif
-            if (code) {
+            if (code==1) {
               /* particle survived */
               if (verbosity>2) {
                 fprintf(stdout, "  Particle survived with delta0 = %e, sf = %e m\n", delta, coord[0][4]);
                 fflush(stdout);
               }
-              if (!survivorFound[side][iElem] || fabs(delta)>fabs(deltaSurvived[side][iElem]))  {
-                if (verbosity>4)
-                  fprintf(stdout, "  New survivor-of-record for this scan\n");
-                deltaSurvived[side][iElem] = delta;
-              }
+              deltaSurvived[side][iElem] = delta;
               survivorFound[side][iElem] = 1;
-              if (scan_from_outside) {
-                if (survivorJustSeen)
-                  break;
-                survivorJustSeen = 1;
-              }
             } else {
               /* particle lost */
               if (verbosity>3) {
@@ -349,15 +345,23 @@ long doMomentumApertureSearch(
               sLost[side][iElem] = coord[0][4];
               deltaLost[side][iElem] = (coord[0][5]-pCentral)/pCentral;
               loserFound[side][iElem] = 1;
-              if (!scan_from_outside)
-                break;
-              survivorJustSeen = 0;
+              break;
             }
           }
-          points = 1;
-          deltaInterval /= 2;
-          if (survivorFound[side][iElem]) 
-            delta0 = deltaSurvived[side][iElem] + (scan_from_outside?-1:1)*deltaInterval;
+          if (survivorFound[side][iElem]) {
+            if (two_steps_back) {
+              delta0 = deltaSurvived[side][iElem] - deltaInterval;
+              if ((side==0 && delta0>0) ||  (side==1 && delta0<0))
+                delta0 = 0;
+              deltaInterval /= (delta_points-1)/2;
+              points = delta_points;
+              delta0 = delta0 + deltaInterval;
+            } else {
+              deltaInterval /= delta_points-1;
+              points = delta_points;
+              delta0 = deltaSurvived[side][iElem] + deltaInterval; 
+            }
+          }
           else
             break;
         } while (--splitsLeft >= 0);
