@@ -100,7 +100,7 @@ double findFiducialTime(double **part, long np, double s0, double sOffset,
 #endif
   }
   else if (mode&FID_MODE_TMEAN) {
-    double tsum;
+    double tsum=0;
     long ip;
 #ifdef USE_KAHAN
     double error = 0.0; 
@@ -293,8 +293,13 @@ long trackRfCavityWithWakes
     }
     dtLight = length/c_mks;
     
-    if (rfca->phase_reference==0) 
-        rfca->phase_reference = unused_phase_reference();
+    if (rfca->phase_reference==0) {
+      rfca->phase_reference = unused_phase_reference();
+#if defined(DEBUG)
+      fprintf(stdout, "RFCA assigned to phase reference %ld\n", rfca->phase_reference);
+#endif
+    }
+    
 
     switch (get_phase_reference(&phase, rfca->phase_reference)) {
         case REF_PHASE_RETURNED:
@@ -313,6 +318,9 @@ long trackRfCavityWithWakes
                 rfca->fiducial_seen = 1;
                 }
             set_phase_reference(rfca->phase_reference, phase=rfca->phase_fiducial);
+#if defined(DEBUG)
+            fprintf(stdout, "RFCA fiducial phase is %e\n", phase);
+#endif
             break;
         default:
             bomb("unknown return value from get_phase_reference()", NULL);
