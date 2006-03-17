@@ -27,6 +27,11 @@
 #endif
 #endif
 
+#if defined(linux)
+#include <sched.h>
+#include <build/include/linux/version.h>
+#endif
+
 #include "chromDefs.h"
 #include "correctDefs.h"
 #include "tuneDefs.h"
@@ -45,17 +50,19 @@ void printFarewell(FILE *fp);
 
 #define DESCRIBE_INPUT 0
 #define DEFINE_MACRO 1
-#define N_OPTIONS  2
+#define DEFINE_CPU_LIST 2
+#define N_OPTIONS 3
 char *option[N_OPTIONS] = {
     "describeinput",
     "macro",
+    "cpulist",
         };
 #if USE_MPI
 char *USAGE="mpirun -np <number of processes> Pelegant <inputfile> [-macro=<tag>=<value>,[...]]\n\nProgram by Yusong Wang, Michael Borland. (This is version 15.5Beta, "__DATE__".)";
 
 char *GREETING="This is parallel elegant, by Yusong Wang, Michael Borland. (This is version 15.5Beta, "__DATE__".)";
 #else
-char *USAGE="elegant <inputfile> [-macro=<tag>=<value>,[...]]\n\nProgram by Michael Borland. (This is version 15.5Beta, "__DATE__".)";
+char *USAGE="elegant <inputfile> [-macro=<tag>=<value>,[...]] [-cpuList=<number>[,<number>]]\n\nProgram by Michael Borland. (This is version 15.5Beta, "__DATE__".)";
 
 char *GREETING="This is elegant, by Michael Borland. (This is version 15.5Beta, "__DATE__".)";
 #endif
@@ -224,7 +231,7 @@ char **argv;
   long namelists_read = 0, failed, firstPass;
   char *semaphoreFile[2];
   semaphoreFile[0] = semaphoreFile[1] = NULL;
- 
+
 #if USE_MPI
 #ifdef MPI_DEBUG
   FILE *fpError; 
@@ -339,6 +346,25 @@ char **argv;
             macros++;
           }
         }
+        break;
+      case DEFINE_CPU_LIST:
+#if (!USE_MPI && defined(linux) && LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,0))
+        if (scanned[i].n_items<2) 
+          bomb("invalid -cpuList syntax", USAGE);
+        else {
+          long j, k;
+          unsigned long processorMask = 0;
+          for (j=1; j<scanned[i].n_items; j++) {
+            if (sscanf(scanned[i].list[j], "%ld", &k)!=1 && k<0) 
+              bomb("invalid -cpuList syntax", USAGE);
+            processorMask |= (unsigned long)(ipow(2, k)+0.5);
+          }
+          printf("processorMask = %lx\n", processorMask);
+          sched_setaffinity(0, sizeof(processorMask), &processorMask);
+        }
+#else
+        printf("warning: CPU list ignored\n");
+#endif
         break;
       default:
         bomb("unknown option given.", USAGE);
@@ -1907,11 +1933,9 @@ void readApertureInput(NAMELIST_TEXT *nltext, RUN *run)
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
   }
 
-  run->apertureData.initialized = 1;
   if ((run->apertureData.points=SDDS_RowCount(&SDDSin))<2) {
     fprintf(stdout, "** Warning: aperture input file %s has only %ld rows!",
             input, run->apertureData.points);
-    return ;
   }
 
   if (!(run->apertureData.s = SDDS_GetColumnInDoubles(&SDDSin, "s")) ||
@@ -1938,6 +1962,11 @@ void readApertureInput(NAMELIST_TEXT *nltext, RUN *run)
     }
   }
   run->apertureData.periodic = periodic;
+
+  run->apertureData.initialized = 1;
+
+  fprintf(stdout, "\n** %ld points of aperture data read from file\n\n", run->apertureData.points);
+  
   return;
 }
 
