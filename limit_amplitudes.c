@@ -916,6 +916,7 @@ long imposeApertureData(
     char s[1000];
     getTrackingContext(&tcontext);
     sprintf(s, "%s.aplos", tcontext.rootname);
+    fflush(stdout);
     if (!(fp = fopen(s, "w")))
       bomb("unable to open debug file for aperture losses", NULL);
     fprintf(fp, "SDDS1\n");
@@ -925,7 +926,7 @@ long imposeApertureData(
     fprintf(fp, "&data mode=ascii no_row_counts=1 &end\n");
   }  
 #endif
-  
+
   itop = np-1;
 
   z0 = z;
