@@ -157,6 +157,8 @@ long do_tracking(
   trackingContext.myid = myid;
 #endif 
 
+  strncpy(trackingContext.rootname, run->rootname, CONTEXT_BUFSIZE);
+
   if (!coord && !beam)
     bomb("Null particle coordinate array and null beam pointer! (do_tracking)", NULL);
   if (coord && beam)
@@ -240,7 +242,11 @@ long do_tracking(
 					  0);
       recordLossPass(lostOnPass, &nLost, nLeft, nMaximum, 0, myid, lostSinceSeqMode);
   }
-
+  if (run->apertureData.initialized)  {
+    nLeft = nToTrack = imposeApertureData(coord, nToTrack, accepted, 0.0, *P_central, 0, &(run->apertureData));
+    recordLossPass(lostOnPass, &nLost, nLeft, nMaximum, 0, myid, lostSinceSeqMode);
+  }
+  
   for (i_pass=passOffset; i_pass<n_passes+passOffset; i_pass++) {
     log_entry("do_tracking.2.1");
 
@@ -402,7 +408,7 @@ long do_tracking(
     while (eptr && (nToTrack || (USE_MPI && notSinglePart))) {
       if (trackingWedgeFunction && eptr==trackingWedgeElement)
         (*trackingWedgeFunction)(coord, nToTrack, i_pass, P_central);
-      
+
       classFlags = entity_description[eptr->type].flags;
       elementsTracked++;
       log_entry("do_tracking.2.2.0");
@@ -560,7 +566,6 @@ long do_tracking(
       trackingContext.zStart = last_z;
       trackingContext.zEnd = z;
       trackingContext.step = step;
-      strncpy(trackingContext.rootname, run->rootname, CONTEXT_BUFSIZE);
 
       log_exit("do_tracking.2.2.1");
       if (eptr->p_elem || eptr->matrix) {
@@ -761,7 +766,7 @@ long do_tracking(
 	      break;
 	    case T_ECOL:
 	      if (flags&TEST_PARTICLES && !(flags&TEST_PARTICLE_LOSSES))
-		drift_beam(coord, nToTrack, ((RCOL*)eptr->p_elem)->length, run->default_order);
+		drift_beam(coord, nToTrack, ((ECOL*)eptr->p_elem)->length, run->default_order);
 	      else
 		nLeft = elliptical_collimator(coord, (ECOL*)eptr->p_elem, nToTrack, accepted, z, *P_central);
 	      break;
@@ -1196,17 +1201,23 @@ long do_tracking(
 	    }
 	  }
 	}
-	if ((!USE_MPI || !notSinglePart ) || (USE_MPI && active)){
-	  if (!(flags&TEST_PARTICLES && !(flags&TEST_PARTICLE_LOSSES)) && (x_max || y_max)) {
-	    if (!elliptical) 
-	      nLeft = limit_amplitudes(coord, x_max, y_max, nLeft, accepted, z, *P_central, 
-				       eptr->type==T_DRIF || eptr->type==T_STRAY,
-				       maxampOpenCode);
-	    else
-	      nLeft = elimit_amplitudes(coord, x_max, y_max, nLeft, accepted, z, *P_central, 
-					eptr->type==T_DRIF || eptr->type==T_STRAY,
-					maxampOpenCode, maxampExponent);
-	  }
+	if ((!USE_MPI || !notSinglePart ) || (USE_MPI && active)) {
+	  if (!(flags&TEST_PARTICLES && !(flags&TEST_PARTICLE_LOSSES))) {
+            if (x_max || y_max) {
+              if (!elliptical) 
+                nLeft = limit_amplitudes(coord, x_max, y_max, nLeft, accepted, z, *P_central, 
+                                         eptr->type==T_DRIF || eptr->type==T_STRAY,
+                                         maxampOpenCode);
+              else
+                nLeft = elimit_amplitudes(coord, x_max, y_max, nLeft, accepted, z, *P_central, 
+                                          eptr->type==T_DRIF || eptr->type==T_STRAY,
+                                          maxampOpenCode, maxampExponent);
+            }
+            if (run->apertureData.initialized) 
+              nLeft = imposeApertureData(coord, nToTrack, accepted, z, *P_central, 
+                                 eptr->type==T_DRIF || eptr->type==T_STRAY || eptr->type==T_EDRIFT, 
+                                 &(run->apertureData));
+          }
 	}
         if (run->print_statistics && !(flags&TEST_PARTICLES)) {
           report_stats(stdout, ": ");
@@ -1313,6 +1324,7 @@ long do_tracking(
       eptrPred = eptr;
       eptr = eptr->succ;
       nToTrack = nLeft;
+
     } /* end of the while loop */
     
     if (!(flags&TEST_PARTICLES) && sliceAnalysis && sliceAnalysis->active && !sliceAnalysis->finalValuesOnly) {
