@@ -76,7 +76,9 @@ endif
 #		-DIEEE_MATH \
 #		$(ZLIB_CFLAG)
 USR_CFLAGS = 	-I$(EPICS_EXTENSIONS)/src/SDDS/include -I$(EPICS_EXTENSIONS_INCLUDE) \
-		-DIEEE_MATH -DzLib
+		-DIEEE_MATH -DzLib 
+
+USR_CFLAGS_Linux = -I/lib/modules/`uname -r`
 
 USR_CFLAGS_DEFAULT += -DUNIX -DMINIMIZE_MEMORY
 
