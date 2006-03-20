@@ -243,7 +243,7 @@ long do_tracking(
       recordLossPass(lostOnPass, &nLost, nLeft, nMaximum, 0, myid, lostSinceSeqMode);
   }
   if (run->apertureData.initialized)  {
-    nLeft = nToTrack = imposeApertureData(coord, nToTrack, accepted, 0.0, *P_central, 0, &(run->apertureData));
+    nLeft = nToTrack = imposeApertureData(coord, nToTrack, accepted, 0.0, *P_central, &(run->apertureData));
     recordLossPass(lostOnPass, &nLost, nLeft, nMaximum, 0, myid, lostSinceSeqMode);
   }
   
@@ -989,7 +989,9 @@ long do_tracking(
 	    case T_KQUAD:
 	    case T_KSEXT:
 	      nLeft = multipole_tracking2(coord, nToTrack, eptr, 0.0,
-					    *P_central, accepted, z);
+                                          *P_central, accepted, last_z,
+                                          x_max, y_max, elliptical,
+                                          &(run->apertureData));
 	      break;
 	    case T_SAMPLE:
 	      if (!(flags&TEST_PARTICLES))
@@ -1214,8 +1216,7 @@ long do_tracking(
                                           maxampOpenCode, maxampExponent);
             }
             if (run->apertureData.initialized) 
-              nLeft = imposeApertureData(coord, nToTrack, accepted, z, *P_central, 
-                                 eptr->type==T_DRIF || eptr->type==T_STRAY || eptr->type==T_EDRIFT, 
+              nLeft = imposeApertureData(coord, nLeft, accepted, z, *P_central, 
                                  &(run->apertureData));
           }
 	}
