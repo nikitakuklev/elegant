@@ -14,16 +14,12 @@
  * Michael Borland, 2006
  */
 
-#define DEBUG 1
-
 #include "mdb.h"
 #include "track.h"
 #include "momentumAperture.h"
 
 static SDDS_DATASET SDDSma;
 static double momentumOffsetValue = 0;
-
-#define WEDGE_METHOD 1
 
 static void momentumOffsetFunction(double **coord, long np, long pass, double *pCentral)
 {
@@ -35,14 +31,6 @@ static void momentumOffsetFunction(double **coord, long np, long pass, double *p
     mal.dy = y_initial;
     mal.dp = momentumOffsetValue;
     offset_beam(coord, np, &mal, *pCentral);
-
-    /*
-    for (i=0; i<np; i++) {
-      coord[i][0] += x_initial;
-      coord[i][2] += y_initial;
-      coord[i][5] += momentumOffsetValue;
-    }
-    */
   }
 }
 
@@ -63,8 +51,8 @@ void setupMomentumApertureSearch(
   /* check for data errors */
   if (!output)
     bomb("no output filename specified", NULL);
-  if (delta_points<2)
-    bomb("delta_points should be at least 2", NULL);
+  if (delta_points<3)
+    bomb("delta_points should be at least 3", NULL);
   if (delta_negative_limit>=0)
     bomb("delta_negative_limit should be negative", NULL);
   if (delta_negative_start<delta_negative_limit)
@@ -79,6 +67,10 @@ void setupMomentumApertureSearch(
     include_name_pattern = expand_ranges(include_name_pattern);
   if (n_splits<0)
     bomb("n_splits < 0", NULL);
+  if (steps_back<=0)
+    bomb("steps_back <= 0", NULL);
+  if (steps_back>=delta_points)
+    bomb("steps_back >= delta_points", NULL);
   
   output = compose_filename(output, run->rootname);
   sprintf(description, "Momentum aperture search");
@@ -102,12 +94,6 @@ void setupMomentumApertureSearch(
       SDDS_DefineColumn(&SDDSma, "xLostNegative", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
       SDDS_DefineColumn(&SDDSma, "yLostNegative", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
       SDDS_DefineColumn(&SDDSma, "deltaLostNegative", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
-#if defined(DEBUG)
-      SDDS_DefineColumn(&SDDSma, "xco", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
-      SDDS_DefineColumn(&SDDSma, "xpco", NULL, "", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
-      SDDS_DefineColumn(&SDDSma, "yco", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
-      SDDS_DefineColumn(&SDDSma, "ypco", NULL, "", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
-#endif
       !SDDS_SaveLayout(&SDDSma) || !SDDS_WriteLayout(&SDDSma)) {
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
     exit(1);
@@ -139,12 +125,11 @@ long doMomentumApertureSearch(
   long **lostOnPass, **loserFound, **survivorFound, *lostOnPass0, side;
   double deltaStart[2], deltaLimit[2], **deltaSurvived, delta, delta0;
   double **xLost, **yLost, **deltaLost, **sLost;
-  double *sStart;
+  double *sStart, extremalLostDelta;
   char **ElementName;
-  long points, splitsLeft, iTraj, code;
-  TRAJECTORY *traj;
+  long points, splitsLeft, code, firstOneLost, stepsBack;
+  double lastInterval;
 #if defined(DEBUG)
-  double *xco, *xpco, *yco, *ypco;
   FILE *fpdeb = NULL;
   char s[1000];
 
@@ -194,12 +179,6 @@ long doMomentumApertureSearch(
   sLost = (double**)czarray_2d(sizeof(**sLost), 2, nElem);
   sStart = (double*)tmalloc(sizeof(*sStart)*nElem);
   ElementName = (char**)tmalloc(sizeof(*ElementName)*nElem);
-#if defined(DEBUG)
-  xco = (double*)tmalloc(sizeof(*xco)*nElem);
-  xpco = (double*)tmalloc(sizeof(*xpco)*nElem);
-  yco = (double*)tmalloc(sizeof(*yco)*nElem);
-  ypco = (double*)tmalloc(sizeof(*ypco)*nElem);
-#endif
 
   /* start the output page */
   if (!SDDS_StartTable(&SDDSma, nElem)) {
@@ -215,32 +194,10 @@ long doMomentumApertureSearch(
   /* need to do this because do_tracking() in principle may realloc this pointer */
   lostOnPass0 = tmalloc(sizeof(*lostOnPass0)*1);
   
-  traj = NULL;
-  if (startingCoord) {
-    /* track to get the closed orbit vs s */
-    traj = tmalloc(sizeof(*traj)*(beamline->n_elems+1));
-    memcpy(coord[0], startingCoord, sizeof(**coord)*6);
-    memcpy(traj[0].centroid, startingCoord, sizeof(**coord)*6);
-    traj[0].elem = NULL;
-    delete_phase_references();
-    reset_special_elements(beamline, 1);
-    pCentral = run->p_central;
-    if (!do_tracking(NULL, coord, 1, NULL, beamline, &pCentral, 
-                     NULL, NULL, NULL, traj+1, run, control->i_step, 
-                     SILENT_RUNNING, 1, 0, NULL, NULL, NULL, lostOnPass0,
-                     elem0)) {
-      fprintf(stdout, "Error: particle lost while determining central trajectory!\n");
-      return 0;
-    }
-  }
-  
-
   elem = elem0;
   iElem = 0;
-  iTraj = 0;
 
   while (elem) {
-    iTraj++;
     if (!include_name_pattern || wild_match(elem->name, include_name_pattern)) {
       if (elem->end_pos>s_end) 
         break;
@@ -250,20 +207,13 @@ long doMomentumApertureSearch(
       }
       ElementName[iElem] = elem->name;
       sStart[iElem] = elem->end_pos;
-      if (startingCoord && iTraj && traj[iTraj].elem!=elem) {
-        fprintf(stdout, "Fatal error: book-keeping error for central trajectory.\n");
-        fprintf(stdout, "iTraj = %ld, traj.elem = %p, elem = %p\n",
-                iTraj, traj[iTraj].elem, 
-                elem);
-        exit(1);
-      }
       for (side=0; side<2; side++) {
 #if defined(DEBUG)
         fprintf(fpdeb, "%s\n%s\n",
                 elem->name, side==0?"negative":"positive");
         fflush(fpdeb);
 #endif
-        deltaInterval = (deltaLimit[side]-deltaStart[side])/(delta_points-1);
+        lastInterval = deltaInterval = (deltaLimit[side]-deltaStart[side])/(delta_points-1);
         lostOnPass[side][iElem] = -1;
         loserFound[side][iElem] = survivorFound[side][iElem] = 0;
         xLost[side][iElem] = yLost[side][iElem] = 
@@ -276,14 +226,18 @@ long doMomentumApertureSearch(
         }
         points = delta_points;
         splitsLeft = n_splits;
+        stepsBack = steps_back;
         delta0 = deltaStart[side];
+        extremalLostDelta = DBL_MAX;
         do {
+          firstOneLost = 1;
           for (ip=0; ip<points; ip++) {
             delta = delta0 + ip*deltaInterval;
+            if (fabs(delta)>=fabs(extremalLostDelta))
+              break;
             delete_phase_references();
             reset_special_elements(beamline, 1);
             pCentral = run->p_central;
-#if WEDGE_METHOD
             setTrackingWedgeFunction(momentumOffsetFunction, 
                                      elem->succ?elem->succ:elem0); 
             momentumOffsetValue = delta;
@@ -291,22 +245,7 @@ long doMomentumApertureSearch(
               memcpy(coord[0], startingCoord, sizeof(double)*6);
             else
               memset(coord[0], 0, sizeof(**coord)*6);
-#else
-            if (startingCoord)
-              memcpy(coord[0], traj[iTraj].centroid, sizeof(double)*6);
-            else
-              memset(coord[0], 0, sizeof(**coord)*6);
-            coord[0][5] += delta;
-            coord[0][0] += x_initial;
-            coord[0][2] += y_initial;
-#endif
             coord[0][6] = 1;
-#if defined(DEBUG)
-            xco[iElem] = coord[0][0];
-            xpco[iElem] = coord[0][1];
-            yco[iElem] = coord[0][2];
-            ypco[iElem] = coord[0][3];
-#endif
             if (verbosity>3) {
               fprintf(stdout, "  Tracking with delta0 = %e (%e, %e, %e, %e, %e, %e), pCentral=%e\n", 
                       delta, coord[0][0], coord[0][1], coord[0][2], coord[0][3], coord[0][4], coord[0][5],
@@ -316,8 +255,7 @@ long doMomentumApertureSearch(
             lostOnPass0[0] = -1;
             code = do_tracking(NULL, coord, 1, NULL, beamline, &pCentral, 
                                NULL, NULL, NULL, NULL, run, control->i_step, 
-                               SILENT_RUNNING, control->n_passes, 0, NULL, NULL, NULL, lostOnPass0,
-                               WEDGE_METHOD?NULL:elem);
+                               SILENT_RUNNING, control->n_passes, 0, NULL, NULL, NULL, lostOnPass0, NULL);
 #if defined(DEBUG)
             fprintf(fpdeb, "%21.15e %hd %hd\n", delta, code?(short)0:(short)1, (short)lostOnPass0[0]);
 #endif
@@ -329,6 +267,7 @@ long doMomentumApertureSearch(
               }
               deltaSurvived[side][iElem] = delta;
               survivorFound[side][iElem] = 1;
+              firstOneLost = 0;
             } else {
               /* particle lost */
               if (verbosity>3) {
@@ -339,6 +278,8 @@ long doMomentumApertureSearch(
                     fprintf(stdout, "   coord[%ld] = %e\n", i, coord[0][i]);
                 fflush(stdout);
               }
+              if (fabs(delta)<fabs(extremalLostDelta))
+                extremalLostDelta = delta;
               lostOnPass[side][iElem] = lostOnPass0[0];
               xLost[side][iElem] = coord[0][0];
               yLost[side][iElem] = coord[0][2];
@@ -348,19 +289,28 @@ long doMomentumApertureSearch(
               break;
             }
           }
+          if (!loserFound[side][iElem]) {
+            fprintf(stdout, "*** Error: no losses within specified interval on %s side\n",
+                    side==0?"negative":"positive");
+            exit(1);
+          }
           if (survivorFound[side][iElem]) {
-            if (two_steps_back) {
-              delta0 = deltaSurvived[side][iElem] - deltaInterval;
-              if ((side==0 && delta0>0) ||  (side==1 && delta0<0))
-                delta0 = 0;
-              deltaInterval /= (delta_points-1)/2;
-              points = delta_points;
-              delta0 = delta0 + deltaInterval;
-            } else {
-              deltaInterval /= delta_points-1;
-              points = delta_points;
-              delta0 = deltaSurvived[side][iElem] + deltaInterval; 
+            if (firstOneLost && delta0!=0) {
+              deltaInterval = lastInterval;
+              if (stepsBack<2*stepsBack)
+                stepsBack += 1;
+              if (splitsLeft<2*n_splits)
+                splitsLeft += 1;
             }
+            delta0 = deltaSurvived[side][iElem] - deltaInterval*(stepsBack-1);
+            if ((side==0 && delta0>0) ||  (side==1 && delta0<0))
+              delta0 = 0;
+            lastInterval = deltaInterval;
+            points = delta_points*3;
+            deltaInterval /= 3;
+            delta0 += deltaInterval;
+            if (fabs(delta0+(points-1)*deltaInterval)>fabs(extremalLostDelta))
+              points = 1.5 + (extremalLostDelta-delta0)/deltaInterval;
           }
           else
             break;
@@ -392,12 +342,6 @@ long doMomentumApertureSearch(
       !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, xLost[0], nElem, "xLostNegative") ||
       !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, yLost[0], nElem, "yLostNegative") ||
       !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, deltaLost[0], nElem, "deltaLostNegative") ||
-#if defined(DEBUG)
-      !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, xco, nElem, "xco") ||
-      !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, xpco, nElem, "xpco") ||
-      !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, yco, nElem, "yco") ||
-      !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, ypco, nElem, "ypco") ||
-#endif
       !SDDS_WritePage(&SDDSma)) {
     SDDS_SetError("Problem writing SDDS table (doMomentumApertureSearch)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -417,8 +361,6 @@ long doMomentumApertureSearch(
   free(sStart);
   free(ElementName);
   free(lostOnPass0);
-  if (traj)
-    free(traj);
   
   return 1;
 }
