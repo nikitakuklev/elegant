@@ -2451,6 +2451,8 @@ void computeEtiltCentroidOffset(double *dcoord_etilt, double rho0, double angle,
 void scatter(double **part, long np, double Po, SCATTER *scatter);
 void store_fitpoint_twiss_parameters(MARK *fpt, char *name, long occurence, TWISS *twiss);
 void store_fitpoint_beam_parameters(MARK *fpt, char *name, long occurence, double **coord, long np, double Po);
+void setTrackingWedgeFunction(void (*wedgeFunc)(double **part, long np, long pass, double *pCentral),
+                              ELEMENT_LIST *eptr);
 
 extern void track_through_kicker(double **part, long np, KICKER *kicker, double p_central, long pass,
       long order);
@@ -2610,8 +2612,10 @@ extern long track_through_pfilter(double **initial, PFILTER *pfilter, long np,
 long removeInvalidParticles(double **coord, long np, double **accepted,
                             double z, double Po);
 extern long determineOpenSideCode(char *openSide);
+long interpolateApertureData(double z, APERTURE_DATA *apData,
+                             double *xCenter, double *yCenter, double *xSize, double *ySize);
 long imposeApertureData(double **coord, long np, double **accepted,
-                        double z, double Po, long extrapolate_z, APERTURE_DATA *apData);
+                        double z, double Po, APERTURE_DATA *apData);
  
 /* prototypes for kick_sbend.c: */
 long track_through_kick_sbend(double **part, long n_part, KSBEND *ksbend, double p_error, double Po,
@@ -2666,7 +2670,9 @@ extern long motion(double **part, long n_part, void *field, long field_type, dou
  
 /* prototypes for multipole.c: */
 extern long multipole_tracking(double **particle, long n_part, MULT *multipole, double p_error, double Po, double **accepted, double z_start);
-extern long multipole_tracking2(double **particle, long n_part, ELEMENT_LIST *elem, double p_error, double Po, double **accepted, double z_start);
+extern long multipole_tracking2(double **particle, long n_part, ELEMENT_LIST *elem, double p_error, double Po, double **accepted, double z_end, 
+                                double x_max, double y_max, long elliptical, 
+                                APERTURE_DATA *apData);
 extern long fmultipole_tracking(double **particle,  long n_part, FMULT *multipole,
                                 double p_error, double Po, double **accepted, double z_start);
 
