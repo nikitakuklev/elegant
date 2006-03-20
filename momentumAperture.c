@@ -65,8 +65,8 @@ void setupMomentumApertureSearch(
     bomb("s_start >= s_end", NULL);
   if (include_name_pattern && has_wildcards(include_name_pattern) && strchr(include_name_pattern, '-'))
     include_name_pattern = expand_ranges(include_name_pattern);
-  if (n_splits<0)
-    bomb("n_splits < 0", NULL);
+  if (splits<0)
+    bomb("splits < 0", NULL);
   if (steps_back<=0)
     bomb("steps_back <= 0", NULL);
   if (steps_back>=delta_points)
@@ -225,7 +225,7 @@ long doMomentumApertureSearch(
           fflush(stdout);
         }
         points = delta_points;
-        splitsLeft = n_splits;
+        splitsLeft = splits;
         stepsBack = steps_back;
         delta0 = deltaStart[side];
         extremalLostDelta = DBL_MAX;
@@ -299,7 +299,7 @@ long doMomentumApertureSearch(
               deltaInterval = lastInterval;
               if (stepsBack<2*stepsBack)
                 stepsBack += 1;
-              if (splitsLeft<2*n_splits)
+              if (splitsLeft<2*splits)
                 splitsLeft += 1;
             }
             delta0 = deltaSurvived[side][iElem] - deltaInterval*(stepsBack-1);
