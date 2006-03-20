@@ -48,6 +48,9 @@ void setupMomentumApertureSearch(
   process_namelist(&momentum_aperture, nltext);
   print_namelist(stdout, &momentum_aperture);
 
+  if (run->concat_order!=0)
+    bomb("at present, momentum_aperture is incompatible with concatenation", NULL);
+  
   /* check for data errors */
   if (!output)
     bomb("no output filename specified", NULL);
