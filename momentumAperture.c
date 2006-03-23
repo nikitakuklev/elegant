@@ -183,12 +183,6 @@ long doMomentumApertureSearch(
   sStart = (double*)tmalloc(sizeof(*sStart)*nElem);
   ElementName = (char**)tmalloc(sizeof(*ElementName)*nElem);
 
-  /* start the output page */
-  if (!SDDS_StartTable(&SDDSma, nElem)) {
-    SDDS_SetError("Unable to start SDDS table (doMomentumApertureSearch)");
-    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-  }
-
   deltaStart[0] = delta_negative_start;
   deltaLimit[0] = delta_negative_limit;
   deltaStart[1] = delta_positive_start;
@@ -200,10 +194,15 @@ long doMomentumApertureSearch(
   elem = elem0;
   iElem = 0;
 
-  while (elem) {
+  while (elem && process_elements>0) {
     if (!include_name_pattern || wild_match(elem->name, include_name_pattern)) {
       if (elem->end_pos>s_end) 
         break;
+      if (skip_elements>0) {
+        skip_elements --;
+        elem = elem->succ;
+        continue;
+      }
       if (verbosity>0) {
         fprintf(stdout, "Searching for energy aperture for %s #%ld at s=%em\n", elem->name, elem->occurence, elem->end_pos);
         fflush(stdout);
@@ -329,27 +328,28 @@ long doMomentumApertureSearch(
         }
       }
       iElem++;
+      process_elements --;
     }
     elem = elem->succ;
-  }    
+  } 
 
-  if (!SDDS_StartPage(&SDDSma, nElem) ||
-      !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, ElementName, nElem, "ElementName") ||
-      !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, sStart, nElem, "s") ||
-      !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, loserFound[1], nElem, "deltaPositiveFound") ||
-      !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, deltaSurvived[1], nElem, "deltaPositive") ||
-      !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, lostOnPass[1], nElem, "lostOnPassPositive") ||
-      !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, sLost[1], nElem, "sLostPositive") ||
-      !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, xLost[1], nElem, "xLostPositive") ||
-      !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, yLost[1], nElem, "yLostPositive") ||
-      !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, deltaLost[1], nElem, "deltaLostPositive") ||
-      !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, loserFound[0], nElem, "deltaNegativeFound") ||
-      !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, deltaSurvived[0], nElem, "deltaNegative") ||
-      !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, lostOnPass[0], nElem, "lostOnPassNegative") ||
-      !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, sLost[0], nElem, "sLostNegative") ||
-      !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, xLost[0], nElem, "xLostNegative") ||
-      !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, yLost[0], nElem, "yLostNegative") ||
-      !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, deltaLost[0], nElem, "deltaLostNegative") ||
+  if (!SDDS_StartPage(&SDDSma, iElem) ||
+      !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, ElementName, iElem, "ElementName") ||
+      !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, sStart, iElem, "s") ||
+      !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, loserFound[1], iElem, "deltaPositiveFound") ||
+      !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, deltaSurvived[1], iElem, "deltaPositive") ||
+      !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, lostOnPass[1], iElem, "lostOnPassPositive") ||
+      !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, sLost[1], iElem, "sLostPositive") ||
+      !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, xLost[1], iElem, "xLostPositive") ||
+      !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, yLost[1], iElem, "yLostPositive") ||
+      !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, deltaLost[1], iElem, "deltaLostPositive") ||
+      !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, loserFound[0], iElem, "deltaNegativeFound") ||
+      !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, deltaSurvived[0], iElem, "deltaNegative") ||
+      !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, lostOnPass[0], iElem, "lostOnPassNegative") ||
+      !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, sLost[0], iElem, "sLostNegative") ||
+      !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, xLost[0], iElem, "xLostNegative") ||
+      !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, yLost[0], iElem, "yLostNegative") ||
+      !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, deltaLost[0], iElem, "deltaLostNegative") ||
       !SDDS_WritePage(&SDDSma)) {
     SDDS_SetError("Problem writing SDDS table (doMomentumApertureSearch)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);

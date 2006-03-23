@@ -16,6 +16,8 @@
     long delta_points = 5;
     long splits = 2;
     long steps_back = 3;
+    long skip_elements = 0;
+    long process_elements = 2147483647;
     double s_start = 0;
     double s_end = DBL_MAX;
     STRING include_name_pattern = NULL;

@@ -78,6 +78,8 @@
         splits = <splits>,
         s_start = <sStart>,
         s_end = <sEnd>,
+        skip_elements = <elementsToSkip>,
+        process_elements = <elementsToProcess>,
         include_name_pattern = <pattern>,
         verbosity = 2
 &end
