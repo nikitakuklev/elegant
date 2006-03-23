@@ -1085,6 +1085,57 @@ to obtain correction.  In general, it is not necessary and only slows the simula
 
 \begin{latexonly}
 \newpage
+\begin{center}{\Large\verb|coupled_twiss_output|}\end{center}
+\end{latexonly}
+\subsection{coupled\_twiss\_output}
+
+\begin{itemize}
+\item type: setup/action command.
+\item function: set up or execute computation of coupled twiss parameters and beam sizes
+\end{itemize}
+
+\begin{verbatim}
+&coupled_twiss_output
+    STRING filename = NULL;
+    long output_at_each_step = 0;
+    long emittances_from_twiss_command = 1;
+    double emit_x = 0;
+    double emittance_ratio = 0.01;
+    double sigma_dp = 0;
+    long calculate_3d_coupling = 1;
+    long verbosity = 0;
+    long concat_order = 2;
+&end
+\end{verbatim}
+
+\begin{itemize}
+
+\item \verb|filename| --- The (incomplete) name of the SDDS file to which coupled twiss parameters and
+  beam sizes will be written.  Suggested value: ``%s.ctwi''.
+\item \verb|output_at_each_step| --- If nonzero, then this is a setup
+  command and results in computations occurring for each simulation
+  step (e.g., for each perturbed machine if errors are included).  If
+  zero, then this is an action command and computations are done
+  immediately (e.g., for the unperturbed machine).
+\item \verb|emittances_from_twiss_command| --- If nonzero, then the values of the horizontal emittance
+  and the momentum spread are taken from the uncoupled computation done with the \verb|twiss_output| command.
+  In this case, the user must issue a \verb|twiss_output| command prior to the \verb|coupled_twiss_output|.
+  If zero, then the values of the horizontal emittance
+  and the momentum spread are taken from the parameters \verb|emit_x| and \verb|sigma_dp|, respectively.
+\verb \verb|emit_x| --- Gives the horizontal emittance, if \verb|emittances_from_twiss_command=0|.
+\item \verb|emittance_ratio| --- Gives the ratio of the x and y emittances.  Used to determine the
+  vertical emittance from the horizontal emittance.  Note that the computation is not self-consistent.
+  I.e., the user is free to enter any emittance ratio desired, whether it is consistent with the
+  machine optics or now.
+\item \verb|sigma_dp| ---  Gives the momentum spread, if \verb|emittances_from_twiss_command=0|.
+\end{itemize}
+
+This feature was added to {\tt elegant} using code supplied by V. Sajaev, based on Ripkin's method.
+The code computes the coupled lattice functions, then uses the supplied emittance, emittance ratio,
+and momentum spread to compute the beam sizes, bunch length (if rf is included), and beam tilt.
+
+\begin{latexonly}
+\newpage
 \begin{center}{\Large\verb|divide_elements|}\end{center}
 \end{latexonly}
 \subsection{divide\_elements}

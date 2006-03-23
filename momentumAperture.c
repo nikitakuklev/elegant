@@ -322,6 +322,11 @@ long doMomentumApertureSearch(
         fprintf(fpdeb, "\n");
         fflush(fpdeb);
 #endif
+        if (verbosity>0) {
+          fprintf(stdout, "Energy aperture for %s #%ld at s=%em is %e\n", elem->name, elem->occurence, elem->end_pos,
+                  deltaSurvived[side][iElem]);
+          fflush(stdout);
+        }
       }
       iElem++;
     }

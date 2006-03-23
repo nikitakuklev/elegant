@@ -4,6 +4,9 @@ exec oagwish "$0" "$@"
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.55  2005/11/04 16:27:06  borland
+# Added Xiao's code for space charge element SCMULT.
+#
 # Revision 1.53  2005/08/24 13:44:43  borland
 # Now show the time for all status messages.
 #
@@ -758,9 +761,102 @@ proc FillFrequencyMapDeltaFrame {widget args} {
 	{Display -type FrequencyMapDelta}
 }
 
+proc FillMomentumApertureFrame {widget args} {
+    global momentumAperture
+
+    APSLabeledEntry .lex -parent $widget \
+	-label "Initial x coordinate (m): " -width 20 -textVariable momentumAperture(xInitial) \
+	-contextHelp \
+	"Enter the initial x coordinate relative to the closed orbit."
+    APSLabeledEntry .ley -parent $widget \
+	-label "Initial y coordinate (m): " -width 20 -textVariable momentumAperture(yInitial) \
+	-contextHelp \
+	"Enter the initial y coordinate relative to the closed orbit."
+
+    APSLabeledEntry .ledns -parent $widget \
+	-label "Negative delta start: " -width 20 \
+        -textVariable momentumAperture(deltaNegativeStart) \
+	-contextHelp \
+	"Enter the starting value for delta for the negative-side scan."
+    APSLabeledEntry .lednl -parent $widget \
+	-label "Negative delta limit: " -width 20 \
+        -textVariable momentumAperture(deltaNegativeLimit) \
+	-contextHelp \
+	"Enter the limiting value for delta for the negative-side scan."
+
+    APSLabeledEntry .ledps -parent $widget \
+	-label "Positive delta start: " -width 20 \
+        -textVariable momentumAperture(deltaPositiveStart) \
+	-contextHelp \
+	"Enter the starting value for delta for the positive-side scan."
+    APSLabeledEntry .ledpl -parent $widget \
+	-label "Positive delta limit: " -width 20 \
+        -textVariable momentumAperture(deltaPositiveLimit) \
+	-contextHelp \
+	"Enter the limiting value for delta for the positive-side scan."
+
+    APSLabeledEntry .ledp -parent $widget \
+	-label "Delta points: " \
+	-width 20 -textVariable momentumAperture(deltaPoints) \
+	-contextHelp "Number of delta points for initial scan."
+    APSLabeledEntry .lesb -parent $widget \
+	-label "Steps back: " -width 20 -textVariable momentumAperture(stepsBack) \
+	-contextHelp \
+	"Enter the number of steps back from a loss position before scan restart."
+    APSLabeledEntry .lesp -parent $widget \
+	-label "Splits: " -width 20 -textVariable momentumAperture(splits) \
+	-contextHelp \
+	"Enter the number of interval splits."
+
+    APSLabeledEntry .les0 -parent $widget \
+	-label "Starting s (m): " -width 20 -textVariable momentumAperture(sStart) \
+	-contextHelp \
+	"Enter the starting value of s for selecting beamline elements." 
+    APSLabeledEntry .les1 -parent $widget \
+	-label "Ending s (m): " -width 20 -textVariable momentumAperture(sEnd) \
+	-contextHelp \
+	"Enter the ending value of s for selecting beamline elements." 
+
+    APSLabeledEntry .lep -parent $widget \
+	-label "Element name pattern: " -width 20 -textVariable momentumAperture(pattern) \
+	-contextHelp "Enter a pattern for matching to elements names for selecting beamline elements."
+    
+    APSLabeledEntry .let -parent $widget \
+	-label "Turns: " -width 20 -textVariable momentumAperture(turns) \
+	-contextHelp \
+	"Enter the number of turns to track."
+    
+    APSRadioButtonFrame .rb1 -parent $widget \
+	-label "Include apertures: " -orientation horizontal -buttonList {Yes No} -valueList {1 0} \
+	-variable momentumAperture(includeApertures) -contextHelp \
+	"Choose whether to include the effects of apertures that are defined in the beamline."
+
+    APSLabeledEntry .lesn -parent $widget \
+	-label "Number of jobs: " -width 20 -textVariable momentumAperture(numberOfJobs) \
+	-contextHelp \
+	"Enter the number of jobs into which to divide the computation."
+
+    APSLabeledEntry .leaf -parent $widget \
+        -label "Aperture file: " -width 60 -textVariable momentumAperture(apertureFile) \
+        -fileSelectButton 1 -buttonsOnLeft 1 -fileSelectPattern *.sdds \
+        -contextHelp \
+        "Enter the name of a file containing aperture data."
+
+    APSRadioButtonFrame .rb2 -parent $widget \
+        -label "Default matrix order: " -orientation horizontal -buttonList {1 2} -valueList {1 2} \
+        -variable momentumAperture(defaultOrder) \
+        -contextHelp \
+        "Choose the default order for elements implemented as matrices."
+
+    APSButton .bu1 -parent $widget \
+	-text "Run" -command "Run -computation MomentumAperture"
+    APSButton .bu2 -parent $widget \
+	-text "Display" -command {Display -type MomentumAperture}
+}
+
 set tabIndex -1
 set sectionList [list Main Basic PhsSpc HghrOrdrDsprsn \
-    OffMmntmTunes DA OffMmntmDA DA+Errors FineDA FMA FMADelta \
+    OffMmntmTunes DA OffMmntmDA DA+Errors FineDA FMA FMADelta MmntmAprtr \
     ClctveEfcts]
 set descriptionList [list "" "Twiss parameters, chromaticities, radiation integrals" \
     "Phase space tracking, plots, FFTs." \
@@ -772,6 +868,7 @@ set descriptionList [list "" "Twiss parameters, chromaticities, radiation integr
     "Dynamic aperture using a high-resolution algorithm (requires a cluster)." \
     "Frequency map analysis (requires a cluster)." \
     "Frequency map analysis vs delta (requires a cluster)." \
+    "Momentum aperture vs s." \
     "Collective effects."]
 
 proc DescribeSection {} {
@@ -782,7 +879,7 @@ proc DescribeSection {} {
 }
 
 set tabFrameWidgetList [APSTabFrame .main -parent .userFrame \
-    -labelList $sectionList -width 900 -height 425 -frameIndexVariable tabIndex \
+    -labelList $sectionList -width 900 -height 500 -frameIndexVariable tabIndex \
     -commandList \
         [APSReplicateItem -item DescribeSection -number [llength $sectionList]]]
 
@@ -798,6 +895,7 @@ FillDynamicApertureErrorsFrame [lindex $tabFrameWidgetList $i]; incr i
 FillFineDynamicApertureFrame [lindex $tabFrameWidgetList $i]; incr i
 FillFrequencyMapFrame [lindex $tabFrameWidgetList $i]; incr i
 FillFrequencyMapDeltaFrame [lindex $tabFrameWidgetList $i]; incr i
+FillMomentumApertureFrame [lindex $tabFrameWidgetList $i]; incr i
 FillCollectiveEffectsFrame [lindex $tabFrameWidgetList $i]; incr i
 
 lappend elegantSaveVarList momentum matrixLatticeFile kickLatticeFile mainParameterFile mainDirectory
@@ -806,6 +904,7 @@ lappend elegantSaveVarList matrixBeamline kickBeamline matrixOffsetElement kickO
 lappend elegantSaveVarList basicComputations phaseSpaceTracking offMomentumTuneTracking higherOrderDispersion
 lappend elegantSaveVarList dynamicAperture offMomentumDynamicAperture fineDynamicAperture
 lappend elegantSaveVarList frequencyMap collectiveEffects dynamicApertureErrors frequencyMapDelta
+lappend elegantSaveVarList momentumAperture
 
 set args $argv
 set configuration ""

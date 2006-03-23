@@ -116,7 +116,8 @@ char *GREETING="This is elegant, by Michael Borland. (This is version 15.5Beta, 
 #define INSERT_SCEFFECTS 46 
 #define MOMENTUM_APERTURE 47
 #define APERTURE_INPUT    48
-#define N_COMMANDS      49
+#define COUPLED_TWISS_OUTPUT 49
+#define N_COMMANDS      50
 
 char *command[N_COMMANDS] = {
     "run_setup", "run_control", "vary_element", "error_control", "error_element", "awe_beam", "bunched_beam",
@@ -128,7 +129,7 @@ char *command[N_COMMANDS] = {
     "load_parameters", "sdds_beam", "subprocess", "fit_traces", "sasefel", "alter_elements",
     "optimization_term", "slice_analysis", "divide_elements", "tune_shift_with_amplitude",
     "transmute_elements", "twiss_analysis", "semaphores", "frequency_map", "insert_sceffects", "momentum_aperture", 
-    "aperture_input",
+    "aperture_input", "coupled_twiss_output"
   } ;
 
 char *description[N_COMMANDS] = {
@@ -181,6 +182,7 @@ char *description[N_COMMANDS] = {
     "insert_sceffects            add space charge element to beamline and set calculation flags", 
     "momentum_aperture           determine momentum aperture from tracking as a function of position in the ring",
     "aperture_input              provide an SDDS file with the physical aperture vs s", 
+    "coupled_twiss_output        compute coupled beamsizes and twiss parameters",
   } ;
 
 #define NAMELIST_BUFLEN 65536
@@ -223,7 +225,7 @@ char **argv;
   ELEMENT_LINKS links;
   char *saved_lattice = NULL;
   long correction_setuped, run_setuped, run_controled, error_controled, beam_type, commandCode;
-  long do_chromatic_correction = 0, do_twiss_output = 0, fl_do_tune_correction = 0;
+  long do_chromatic_correction = 0, do_twiss_output = 0, fl_do_tune_correction = 0, do_coupled_twiss_output = 0;
   long do_closed_orbit = 0, do_matrix_output = 0, do_response_output = 0;
   long last_default_order = 0, new_beam_flags, links_present, twiss_computed = 0;
   long correctionDone;
@@ -426,7 +428,7 @@ char **argv;
       
       run_setuped = run_controled = error_controled = correction_setuped = do_closed_orbit = do_chromatic_correction = 
         fl_do_tune_correction = 0;
-      do_twiss_output = do_matrix_output = do_response_output = 0;
+      do_twiss_output = do_matrix_output = do_response_output = do_coupled_twiss_output = 0;
 
       set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
       set_print_namelist_flags(0);
@@ -772,6 +774,12 @@ char **argv;
           fflush(stdout);
           continue;
         }
+        if (do_coupled_twiss_output &&
+            !run_coupled_twiss_output(&run_conditions, beamline, starting_coord) &&
+            !soft_failure) {
+          fprintf(stdout, "Coupled twiss parameters computation failed\n");
+          fflush(stdout);
+        }
         if (do_response_output)
           run_response_output(&run_conditions, beamline, &correct, 1);
         if (center_on_orbit)
@@ -800,6 +808,8 @@ char **argv;
         finish_clorb_output();
       if (do_twiss_output)
         finish_twiss_output();
+      if (do_coupled_twiss_output)
+        finish_coupled_twiss_output();
       if (do_response_output)
         finish_response_output();
       if (parameters)
@@ -821,7 +831,7 @@ char **argv;
       tracking_updates = 1;
       concat_order = print_statistics = p_central = 0;
       run_setuped = run_controled = error_controled = correction_setuped = do_chromatic_correction =
-        fl_do_tune_correction = do_closed_orbit = do_twiss_output = do_response_output = 0;
+        fl_do_tune_correction = do_closed_orbit = do_twiss_output = do_coupled_twiss_output = do_response_output = 0;
       break;
     case MATRIX_OUTPUT:
       if (!run_setuped)
@@ -841,6 +851,19 @@ char **argv;
         reset_special_elements(beamline, 1);
         reset_driftCSR();
         finish_twiss_output();
+      }
+      break;
+    case COUPLED_TWISS_OUTPUT:
+      if (!run_setuped)
+        bomb("run_setup must precede coupled_twiss_output namelist", NULL);
+      setup_coupled_twiss_output(&namelist_text, &run_conditions, beamline, &do_coupled_twiss_output,
+                                 run_conditions.default_order);
+      if (!do_coupled_twiss_output) {
+        run_coupled_twiss_output(&run_conditions, beamline, NULL);
+        delete_phase_references();
+        reset_special_elements(beamline, 1);
+        reset_driftCSR();
+        finish_coupled_twiss_output();
       }
       break;
     case TUNE_SHIFT_WITH_AMPLITUDE:
@@ -1034,6 +1057,12 @@ char **argv;
           fflush(stdout);
           continue;
         }
+        if (do_coupled_twiss_output && 
+            !run_coupled_twiss_output(&run_conditions, beamline, starting_coord) &&
+            !soft_failure) {
+          fprintf(stdout, "Coupled twiss parameters calculation failed.\n");
+          fflush(stdout);
+        }
         if (do_response_output)
           run_response_output(&run_conditions, beamline, &correct, 1);
         switch (commandCode) {
@@ -1095,7 +1124,7 @@ char **argv;
       tracking_updates = 1;
       concat_order = print_statistics = p_central = 0;
       run_setuped = run_controled = error_controled = correction_setuped = do_chromatic_correction =
-        fl_do_tune_correction = do_closed_orbit = do_twiss_output = do_response_output = 0;
+        fl_do_tune_correction = do_closed_orbit = do_twiss_output = do_coupled_twiss_output = do_response_output = 0;
       break;
     case ANALYZE_MAP:
       setup_transport_analysis(&namelist_text, &run_conditions, &run_control, &error_control);
@@ -1140,6 +1169,8 @@ char **argv;
           run_closed_orbit(&run_conditions, beamline, starting_coord, NULL, 1);
         if (do_twiss_output)
           run_twiss_output(&run_conditions, beamline, starting_coord, 1);
+        if (do_coupled_twiss_output)
+          run_coupled_twiss_output(&run_conditions, beamline, starting_coord);
         if (do_response_output)
           run_response_output(&run_conditions, beamline, &correct, 1);
         do_transport_analysis(&run_conditions, &run_control, &error_control, beamline, 
@@ -1169,7 +1200,7 @@ char **argv;
       tracking_updates = 1;
       concat_order = print_statistics = p_central = 0;
       run_setuped = run_controled = error_controled = correction_setuped = do_chromatic_correction =
-        fl_do_tune_correction = do_closed_orbit = do_matrix_output = do_twiss_output = 0;
+        fl_do_tune_correction = do_closed_orbit = do_matrix_output = do_twiss_output = do_coupled_twiss_output = 0;
       break;
     case LINK_CONTROL:
       if (!run_setuped || !run_controled)
@@ -1251,7 +1282,7 @@ char **argv;
       tracking_updates = 1;
       concat_order = print_statistics = p_central = 0;
       run_setuped = run_controled = error_controled = correction_setuped = do_chromatic_correction =
-        fl_do_tune_correction = do_closed_orbit = do_twiss_output = do_response_output = 0;
+        fl_do_tune_correction = do_closed_orbit = do_twiss_output = do_coupled_twiss_output = do_response_output = 0;
       break;
     case SASEFEL_AT_END:
       if (!run_setuped)
@@ -1909,6 +1940,9 @@ void readApertureInput(NAMELIST_TEXT *nltext, RUN *run)
   
   run->apertureData.initialized = 0;
 
+  if (disable)
+    return;
+  
   if (!SDDS_InitializeInputFromSearchPath(&SDDSin, input)) {
     sprintf(s, "Problem opening aperture input file %s", input);
     SDDS_SetError(s);

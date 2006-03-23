@@ -46,6 +46,11 @@ correct$(OBJ): correct.h steer_elem.h
 correct.h: ../correct.nl
 	nlpp ../correct.nl correct.h
 
+coupled_twiss$(OBJ): coupled_twiss.h
+
+coupled_twiss.h: ../coupled_twiss.nl
+	nlpp ../coupled_twiss.nl coupled_twiss.h
+
 divideElements$(OBJ): divideElements.h
 
 divideElements.h: ../divideElements.nl

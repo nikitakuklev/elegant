@@ -25,6 +25,7 @@ void computeResonanceWidths(LINE_LIST *beamline, double *clorb, RUN *run);
 void copy_doubles(double *target, double *source, long n);
 double find_acceptance(ELEMENT_LIST *elem, long plane, RUN *run, char **name, double *end_pos);
 void modify_rfca_matrices(ELEMENT_LIST *eptr, long order);
+void reset_rfca_matrices(ELEMENT_LIST *eptr, long order);
 void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI, 
                            ELEMENT_LIST *elem, 
                            double beta0, double alpha0, double gamma0,
@@ -245,6 +246,8 @@ VMATRIX *compute_periodic_twiss(
   *NUx = phi[0]/PIx2;
   *NUy = phi[1]/PIx2;
 
+  reset_rfca_matrices(elem, run->default_order);
+  
   log_exit("compute_periodic_twiss");
   return(M);
 }
@@ -1726,6 +1729,21 @@ void modify_rfca_matrices(ELEMENT_LIST *eptr, long order)
       case T_MODRF:
         eptr->matrix = drift_matrix(((MODRF*)eptr->p_elem)->length, order);
         break;
+      }
+    }
+    eptr = eptr->succ;
+  }
+}
+
+void reset_rfca_matrices(ELEMENT_LIST *eptr, long order)
+/* Delete the rf cavity matrices so they'll get updated */
+{
+  while (eptr) {
+    if (eptr->type==T_RFCA || eptr->type==T_MODRF || eptr->type==T_RFCW) {
+      if (eptr->matrix) {
+        free_matrices(eptr->matrix);
+        tfree(eptr->matrix);
+        eptr->matrix = NULL;
       }
     }
     eptr = eptr->succ;
