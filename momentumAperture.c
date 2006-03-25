@@ -54,26 +54,30 @@ void setupMomentumApertureSearch(
   /* check for data errors */
   if (!output)
     bomb("no output filename specified", NULL);
-  if (delta_points<3)
-    bomb("delta_points should be at least 3", NULL);
-  if (delta_negative_limit>=0)
-    bomb("delta_negative_limit should be negative", NULL);
-  if (delta_negative_start<delta_negative_limit)
-    bomb("delta_negative_start<delta_negative_limit", NULL);
-  if (delta_positive_limit<=0)
-    bomb("delta_positive_limit should be positive", NULL);
-  if (delta_positive_start>delta_positive_limit)
-    bomb("delta_positive_start>delta_positive_limit", NULL);
+  if (delta_negative_start>=0)
+    bomb("delta_negative_start >= 0", NULL);
+  if (delta_positive_start<=0) 
+    bomb("delta_positive_start <= 0", NULL);
+  if (delta_step_size<=0)
+    bomb("delta_step_size <= 0", NULL);
+  if (fabs(delta_negative_start)<=delta_step_size/2)
+    bomb("|delta_negative_start| <= delta_step_size/2", NULL);
+  if (delta_positive_start<=delta_step_size/2)
+    bomb("delta_positive_start <= delta_step_size/2", NULL);
+  if (oversteps<1)
+    bomb("oversteps < 1", NULL);
+  if (steps_back<1)
+    bomb("steps_back < 1", NULL);
+  if (splits<0)
+    bomb("splits < 0", NULL);
   if (s_start>=s_end)
     bomb("s_start >= s_end", NULL);
   if (include_name_pattern && has_wildcards(include_name_pattern) && strchr(include_name_pattern, '-'))
     include_name_pattern = expand_ranges(include_name_pattern);
-  if (splits<0)
-    bomb("splits < 0", NULL);
-  if (steps_back<=0)
-    bomb("steps_back <= 0", NULL);
-  if (steps_back>=delta_points)
-    bomb("steps_back >= delta_points", NULL);
+  if (skip_elements<0)
+    bomb("skip_elements < 0", NULL);
+  if (process_elements<=0)
+    bomb("process_elements <= 0", NULL);
   
   output = compose_filename(output, run->rootname);
   sprintf(description, "Momentum aperture search");
@@ -126,9 +130,9 @@ long doMomentumApertureSearch(
   double deltaInterval, pCentral;
   ELEMENT_LIST *elem, *elem0;
   long **lostOnPass, **loserFound, **survivorFound, *lostOnPass0, side;
-  double deltaStart[2], deltaLimit[2], **deltaSurvived, delta, delta0;
+  double deltaStart[2], **deltaSurvived, delta, delta0;
   double **xLost, **yLost, **deltaLost, **sLost;
-  double *sStart, extremalLostDelta;
+  double *sStart, mostInsideLostDelta;
   char **ElementName;
   long points, splitsLeft, code, firstOneLost, stepsBack;
   double lastInterval;
@@ -184,9 +188,7 @@ long doMomentumApertureSearch(
   ElementName = (char**)tmalloc(sizeof(*ElementName)*nElem);
 
   deltaStart[0] = delta_negative_start;
-  deltaLimit[0] = delta_negative_limit;
   deltaStart[1] = delta_positive_start;
-  deltaLimit[1] = delta_positive_limit;
 
   /* need to do this because do_tracking() in principle may realloc this pointer */
   lostOnPass0 = tmalloc(sizeof(*lostOnPass0)*1);
@@ -215,28 +217,100 @@ long doMomentumApertureSearch(
                 elem->name, side==0?"negative":"positive");
         fflush(fpdeb);
 #endif
-        lastInterval = deltaInterval = (deltaLimit[side]-deltaStart[side])/(delta_points-1);
         lostOnPass[side][iElem] = -1;
         loserFound[side][iElem] = survivorFound[side][iElem] = 0;
         xLost[side][iElem] = yLost[side][iElem] = 
           deltaLost[side][iElem] = sLost[side][iElem] = 
             deltaSurvived[side][iElem] =  0;
+
         if (verbosity>1) {
-          fprintf(stdout, " Searching for %s side from 0 to %e with interval %e\n", side==0?"negative":"positive",
-                  deltaLimit[side], deltaInterval);
+          fprintf(stdout, " Searching for %s side from %e toward 0 with interval %e\n", side==0?"negative":"positive",
+                  deltaStart[side], delta_step_size);
           fflush(stdout);
         }
-        points = delta_points;
+
+        /* initial scan from outside */
+        delta = deltaStart[side];
+        mostInsideLostDelta = DBL_MAX*(side==1?1:-1);
+        do {
+          setTrackingWedgeFunction(momentumOffsetFunction, 
+                                   elem->succ?elem->succ:elem0); 
+          momentumOffsetValue = delta;
+          if (startingCoord)
+            memcpy(coord[0], startingCoord, sizeof(double)*6);
+          else
+            memset(coord[0], 0, sizeof(**coord)*6);
+          coord[0][6] = 1;
+          if (verbosity>3) {
+            fprintf(stdout, "  Tracking with delta0 = %e (%e, %e, %e, %e, %e, %e), pCentral=%e\n", 
+                    delta, coord[0][0], coord[0][1], coord[0][2], coord[0][3], coord[0][4], coord[0][5],
+                    pCentral);
+            fflush(stdout);
+          }
+          lostOnPass0[0] = -1;
+          delete_phase_references();
+          reset_special_elements(beamline, 1);
+          pCentral = run->p_central;
+          code = do_tracking(NULL, coord, 1, NULL, beamline, &pCentral, 
+                             NULL, NULL, NULL, NULL, run, control->i_step, 
+                             SILENT_RUNNING, control->n_passes, 0, NULL, NULL, NULL, lostOnPass0, NULL);
+          if (!code) {
+            /* particle lost */
+            if (verbosity>3) {
+              long i;
+              fprintf(stdout, "  Particle lost with delta0 = %e\n", delta);
+              if (verbosity>4)
+                for (i=0; i<6; i++)
+                  fprintf(stdout, "   coord[%ld] = %e\n", i, coord[0][i]);
+              fflush(stdout);
+            }
+            mostInsideLostDelta = delta;
+            lostOnPass[side][iElem] = lostOnPass0[0];
+            xLost[side][iElem] = coord[0][0];
+            yLost[side][iElem] = coord[0][2];
+            sLost[side][iElem] = coord[0][4];
+            deltaLost[side][iElem] = (coord[0][5]-pCentral)/pCentral;
+            loserFound[side][iElem] = 1;
+          } else {
+            if (verbosity>2)
+              fprintf(stdout, "  Particle survived with delta0 = %e\n", delta);
+            deltaSurvived[side][iElem] = delta;
+            survivorFound[side][iElem] = 1;
+            break;
+          }
+          if (delta==0)
+            break;
+          delta -= delta_step_size*(side==0?-1:1);
+          if ((side==0 && delta>0) || (side==1 && delta<0))
+            delta = 0;
+        } while (1);
+        if (delta==0 && !code)
+          continue;
+      
         splitsLeft = splits;
         stepsBack = steps_back;
-        delta0 = deltaStart[side];
-        extremalLostDelta = DBL_MAX;
+        delta0 = delta - oversteps*delta_step_size*(side==1?1:-1);
+        if ((side==0 && delta0>0) || (side==1 && delta0<0))
+          delta0 = 0;
+        lastInterval = deltaInterval = (side==1?1:-1)*oversteps*delta_step_size/split_step_divisor;
+        points = split_step_divisor*(oversteps+1);
         do {
           firstOneLost = 1;
+          if (verbosity>2) {
+            fprintf(stdout, "Scanning %ld points from delta=%e with step of %e\n",
+                    points, delta0, deltaInterval);
+            fflush(stdout);
+          }
           for (ip=0; ip<points; ip++) {
             delta = delta0 + ip*deltaInterval;
-            if (fabs(delta)>=fabs(extremalLostDelta))
+            if (fabs(delta)>=fabs(mostInsideLostDelta)) {
+              if (verbosity>3) {
+                fprintf(stdout, "Terminating loop at ip=%ld since %e>=%e\n",
+                        ip, delta, mostInsideLostDelta);
+                fflush(stdout);
+              }
               break;
+            }
             delete_phase_references();
             reset_special_elements(beamline, 1);
             pCentral = run->p_central;
@@ -280,8 +354,8 @@ long doMomentumApertureSearch(
                     fprintf(stdout, "   coord[%ld] = %e\n", i, coord[0][i]);
                 fflush(stdout);
               }
-              if (fabs(delta)<fabs(extremalLostDelta))
-                extremalLostDelta = delta;
+              if (fabs(delta)<fabs(mostInsideLostDelta))
+                mostInsideLostDelta = delta;
               lostOnPass[side][iElem] = lostOnPass0[0];
               xLost[side][iElem] = coord[0][0];
               yLost[side][iElem] = coord[0][2];
@@ -308,15 +382,13 @@ long doMomentumApertureSearch(
             if ((side==0 && delta0>0) ||  (side==1 && delta0<0))
               delta0 = 0;
             lastInterval = deltaInterval;
-            points = delta_points*3;
-            deltaInterval /= 3;
+            deltaInterval /= split_step_divisor;
             delta0 += deltaInterval;
-            if (fabs(delta0+(points-1)*deltaInterval)>fabs(extremalLostDelta))
-              points = 1.5 + (extremalLostDelta-delta0)/deltaInterval;
+            points = 1.5 + (mostInsideLostDelta-delta0)/deltaInterval;
           }
           else
             break;
-        } while (--splitsLeft >= 0);
+        } while (--splitsLeft > 0);
 #if defined(DEBUG)
         fprintf(fpdeb, "\n");
         fflush(fpdeb);

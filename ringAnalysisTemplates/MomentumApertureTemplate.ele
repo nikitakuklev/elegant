@@ -69,19 +69,19 @@
         output = %s.mmap,
         x_initial = <xInitial>,
         y_initial = <yInitial>,
-        delta_negative_limit = <deltaNegativeLimit>,
-        delta_positive_limit = <deltaPositiveLimit>,
         delta_negative_start = <deltaNegativeStart>,
         delta_positive_start = <deltaPositiveStart>,
-        delta_points = <deltaPoints>,
+        delta_step_size = <initialDeltaStep>,
+        oversteps = <oversteps>,
         steps_back = <stepsBack>,
+        split_step_divisor = <stepDivisor>,
         splits = <splits>,
         s_start = <sStart>,
         s_end = <sEnd>,
         skip_elements = <elementsToSkip>,
         process_elements = <elementsToProcess>,
         include_name_pattern = <pattern>,
-        verbosity = 2
+        verbosity = 4
 &end
 
 &stop &end
