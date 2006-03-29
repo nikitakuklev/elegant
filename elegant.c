@@ -350,7 +350,8 @@ char **argv;
         }
         break;
       case DEFINE_CPU_LIST:
-#if (!USE_MPI && defined(linux) && LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,0))
+#if (!USE_MPI && defined(linux))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,0))
         if (scanned[i].n_items<2) 
           bomb("invalid -cpuList syntax", USAGE);
         else {
@@ -364,9 +365,12 @@ char **argv;
           printf("processorMask = %lx\n", processorMask);
           sched_setaffinity(0, sizeof(processorMask), &processorMask);
         }
-#else
+#else /* (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,0)) */
         printf("warning: CPU list ignored\n");
-#endif
+#endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,0)) */
+#else /*(!USE_MPI && defined(linux)) */
+        printf("warning: CPU list ignored\n");
+#endif /*(!USE_MPI && defined(linux)) */
         break;
       default:
         bomb("unknown option given.", USAGE);

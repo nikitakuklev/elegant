@@ -224,10 +224,15 @@ void run_coupled_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_co
   LDVL=1;
   LDVR=matDim;
   lwork=204;
+#if defined(SUNPERF) || defined(LAPACK)
   dgeev_((char*)&JOBVL, (char*)&JOBVR, (int*)&N, (double*)&A,
          (int*)&LDA, (double*)&WR, (double*)&WI, (double*)&VL,
          (int*)&LDVL, (double*)&VR, (int*)&LDVR, (double*)&work,
          (int*)&lwork, (int*)&info);
+#else
+  fprintf(stderr, "Error calling dgeev. You will need to install LAPACK and rebuild elegant\n");
+  exit(1);
+#endif
   if (info != 0) {
     if (info < 0) { printf("Error calling dgeev, argument %d.\n", abs(info)); }
     if (info > 0) { printf("Error running dgeev, calculation of eigenvalue number %d failed.\n", info); }

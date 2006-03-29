@@ -96,7 +96,8 @@ else
 USR_LIBS = 	mdbcommon matlib fftpack SDDS1 \
 		rpnlib mdbmth namelist mdblib \
 		meschach
-SYS_PROD_LIBS_DEFAULT += z lapack blas g2c
+#SYS_PROD_LIBS_DEFAULT += z lapack blas g2c
+SYS_PROD_LIBS_DEFAULT += z 
 SYS_PROD_LIBS_solaris += z curses rt 
 endif
 
@@ -110,6 +111,39 @@ endif
 ifeq ($(EPICS_HOST_ARCH),solaris-sparc)
 MAKE = gnumake
 endif
+
+LAPACK = 0
+#Use LAPACK on Linux by default.
+#This is available as an RPM package.
+ifeq ($(OS_CLASS),Linux)
+LAPACK = 1
+endif
+
+SUNPERF = 0
+ifeq ($(OS_CLASS),solaris)
+ifneq ($(ANSI),GCC)
+ifneq ($(GNU),YES)
+SUNPERF = $(words $(notdir $(wildcard /opt/SUNWspro/prod/include/cc/sunperf.h)))
+endif
+endif
+endif
+
+ifneq ($(SUNPERF), 0)
+USR_CFLAGS += -DSUNPERF -dalign
+OP_SYS_LDLIBS += -xlic_lib=sunperf
+else #ifneq ($(SUNPERF), 0)
+ifneq ($(LAPACK), 0)
+USR_CFLAGS += -DHAVE_LAPACK
+ifeq ($(OS_CLASS),Linux)
+OP_SYS_LDLIBS += -llapack -lblas -lg2c
+endif #ifeq ($(OS_CLASS),Linux)
+ifeq ($(OS_CLASS),solaris)
+OPT_CFLAGS_YES=
+USR_CFLAGS += -dalign -xtarget=ultra
+OP_SYS_LDLIBS += -L/usr/local/oag/lib -llapack -lblas -lF77
+endif #ifeq ($(OS_CLASS),solaris)
+endif #ifneq ($(LAPACK), 0)
+endif #ifneq ($(SUNPERF), 0)
 
 SDDS1_DIR = $(EPICS_EXTENSIONS_LIB)
 namelist_DIR = $(EPICS_EXTENSIONS_LIB)
