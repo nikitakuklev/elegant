@@ -614,7 +614,7 @@ void do_save_lattice(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
   eptr = elem;
   while (eptr) {
     parameter = entity_description[eptr->type].parameter;
-    if (strpbrk(eptr->name, ":.,/-_+ "))
+    if (strpbrk(eptr->name, ":.,/-_+abcdefghijklmnopqrstuvwyxz "))
       sprintf(name, "\"%s\"", eptr->name);
     else
       strcpy(name, eptr->name);

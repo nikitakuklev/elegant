@@ -82,7 +82,7 @@ void fill_line(
     fprintf(stdout, "line name is %s\n", lptr->name);
     fflush(stdout);
 #endif
-    if (strpbrk(lptr->name, ":.,/-_+ "))
+    if (strpbrk(lptr->name, ":.,/-_+abcdefghijklmnopqrstuvwyxz "))
         sprintf(lptr->definition, "\"%s\": LINE=%s", lptr->name, ptr+1);
     else
         sprintf(lptr->definition, "%s: LINE=%s", lptr->name, ptr+1);
