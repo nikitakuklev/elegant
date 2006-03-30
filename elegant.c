@@ -30,6 +30,8 @@
 #if defined(linux)
 #include <sched.h>
 #include <build/include/linux/version.h>
+#else
+#define KERNEL_VERSION(a,b,c) 0
 #endif
 
 #include "chromDefs.h"
