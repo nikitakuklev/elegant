@@ -600,6 +600,40 @@ Recommended value: ``\%s.kaf''.
 
 \begin{latexonly}
 \newpage
+\begin{center}{\Large\verb|aperture_data|}\end{center}
+\end{latexonly}
+\subsection{aperture\_data}
+
+\begin{itemize}
+\item type: setup command.
+\item function: specify a file from which to take x and y aperture data vs s.
+\end{itemize}
+
+\begin{verbatim}
+&aperture_data
+        STRING input = NULL;
+        long periodic = 1; 
+        long disable = 0;
+&end
+\end{verbatim}
+
+\begin{itemize}
+\item \verb|input| --- Name of SDDS file supplying the aperture data.  The following columns are
+  all required, in double or float type, with units of \verb|m| (meters).
+  \begin{enumerate}
+    \item \verb|s| --- Distance along the central trajectory.  
+    \item \verb|xHalfAperture| --- Half aperture in the horizontal. 
+    \item \verb|yHalfAperture| --- Half aperture in the vertical.
+    \item \verb|xCenter| --- Center of the aperture in the horizontal.
+    \item \verb|yCenter| --- Center of the aperture in the vertical.
+  \end{enumerate}
+\item \verb|periodic| --- If non-zero, the aperture is a periodic function of \verb|s|, with period equal
+  to the range of the data.
+\item \verb|disable| --- If non-zero, the command is ignored.
+\end{itemize}
+
+\begin{latexonly}
+\newpage
 \begin{center}{\Large\verb|bunched_beam|}\end{center}
 \end{latexonly}
 \subsection{bunched\_beam}
@@ -1699,13 +1733,12 @@ number of the occurrence of the named element from which to start.
     STRING output = NULL;
     double x_initial = 0;
     double y_initial = 0;
-    double delta_negative_start = 0.00;
-    double delta_negative_limit = -0.06;
-    double delta_positive_start = 0.00;
-    double delta_positive_limit = 0.06;
-    long delta_points = 5;
+    double delta_negative_start = -0.10;
+    double delta_positive_start = 0.10;
+    long delta_step_size = 0.01;
+    long oversteps = 1;
     long splits = 2;
-    long steps_back = 3;
+    long steps_back = 4;
     double s_start = 0;
     double s_end = DBL_MAX;
     STRING include_name_pattern = NULL;
@@ -1718,15 +1751,13 @@ number of the occurrence of the named element from which to start.
   Recommended value: ``\%s.mmap''.
 \item \verb|x_initial|, \verb|y_initial| --- The initial x and y coordinate values for tracking. It is essential
  that \verb|y_initial| be nonzero if one wants to see losses due to vertical resonances.  
-\item \verb|delta_negative_limit|, \verb|delta_positive_limit| ---
-Limits of scans in the negative and positive directions.
 \item \verb|delta_negative_start|, \verb|delta_positive_start| ---
 Start values of scans in the negative and positive
-directions. Scanning begins at these and moves toward the respective limits.
-\item \verb|delta_points| --- Initial number of values of $\delta$ to
- use.  This is used to determine the initial step size.  It is
- important to make this value large enough that one doesn't skip over
- a narrow region where particles get lost.
+directions. Scanning begins at these and moves toward 0.
+\item \verb|delta_step_size| --- Initial size of steps in $\delta$.  This should
+ be fairly large in order to save time.
+\item \verb|oversteps| --- Number of step sizes to go past the point of first
+ survival before reversing the direction of scanning.
 \item \verb|splits| --- Number of times to split the step size in
  order to refine the location of the maximum surviving momentum
  offsets.  When a particle is lost, the algorithm steps back to a momentum offset
@@ -1745,25 +1776,37 @@ pattern.
 printouts as calculations proceed.  Mostly for debugging.
 \end{itemize}
 
-The idea for this command is based on M. Belgrounne {\em et al.},
-``Refined Tracking Procedure for the SOLEIL Energy Acceptance
-Calculation,'' Proceedings of PAC 2003, p 896.  In particular, the
-energy aperture as a function of position around the ring is
-determined by tracking.  Starting at the beginning of the lattice and
-working downstream, particles are tracked starting from the exit of
-each selected element.  The betatron coordinates are initially zero
-(or very small), while the momentum deviation is gradually increased
-until loss of the particle is observed.  This defines the momentum
-aperture at that location.
+The idea for this command is from M. Belgroune {\em et al.}, ``Refined
+Tracking Procedure for the SOLEIL Energy Acceptance Calculation,''
+Proceedings of PAC 2003, p 896, as implemented for TRACYII.  In
+particular, the energy aperture as a function of position around the
+ring is determined by tracking.  Starting at the beginning of the
+lattice and working downstream, particles are tracked starting from
+the exit of each selected element.  The betatron coordinates are
+initially zero (or very small), while the momentum deviation is
+gradually increased until loss of the particle is observed.  This
+defines the momentum aperture at that location.
 
-The user must be careful when using this command not to make
-excessively large steps, unless the back-stepping and splitting
-feature is employed.  When tracking in 6 D, the momentum aperture
-boundary may be chaotic, meaning that the location of the boundary is
-ill-defined.  It is suggested that an initial run be used to determine
-the boundary approximately.  Following this, the starting values may
-be adjusted to allow a finer scan to be performed without excessive
-computational time.
+In {\tt elegant}, the algorithm is as follows.  For simplicity in
+wording, we'll assume the momentum deviations are positive values,
+although the method is applied separately for negative values as well:
+\begin{enumerate}
+\item Choose a large momentum deviation $\delta$ (e.g., 10\%) that is sure to be lost, and track.
+\item Decrease $\delta$ in fairly large steps $\Delta\delta_0$ (e.g., 1\%) until the particle survives.
+ Call this momentum deviation $\delta_{s1}$ and the previous value (where the particle was lost)
+ $\delta_{l1}$.
+\item Scan outward from $\delta_{s1}-J\Delta\delta$, where the integer $J$ is the ``overstep'' amount,
+ typically 1.
+ Use a step-size of $\Delta\delta_1 = \Delta\delta_0/D$, where $D$ is an integer (typically 10), 
+ not exceeding $\delta_{l1}$.  Stop when a loss occurs.  Call this momentum deviation
+ $\delta_{l2}$ and the last surviving value $\delta_{s2}$.
+\item If accuracy is acceptable, stop at this point.  The momentum aperture is $\delta_{s2}$.
+\item If greater accuracy is desired, ``step back'' to a momentum deviation 
+ $\delta_{l2}-B\Delta\delta_1$, where $B$ is an integer and scan outward again 
+ with step size $\Delta\delta_1/D$.  This procedure is called a ``step-back/split'' and can be
+ repeated if greater accuracy is desired.
+\end{enumerate}
+
 
 \begin{latexonly}
 \newpage
