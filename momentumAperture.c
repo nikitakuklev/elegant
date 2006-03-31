@@ -20,12 +20,13 @@
 
 static SDDS_DATASET SDDSma;
 static double momentumOffsetValue = 0;
+static long fireOnPass = 1;
 
 static void momentumOffsetFunction(double **coord, long np, long pass, double *pCentral)
 {
   MALIGN mal;
 
-  if (pass==1) {
+  if (pass==fireOnPass) {
     mal.dxp = mal.dyp = mal.dz = mal.dt = mal.de = 0;
     mal.dx = x_initial;
     mal.dy = y_initial;
@@ -155,6 +156,11 @@ long doMomentumApertureSearch(
   fflush(fpdeb);
 #endif
 
+  if (control->n_passes==1)
+    fireOnPass = 0;
+  else
+    fireOnPass = 1;
+  
   /* determine how many elements will be tracked */
   elem = &(beamline->elem);
   elem0 = NULL;
