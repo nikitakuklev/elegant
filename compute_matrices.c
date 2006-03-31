@@ -1255,7 +1255,9 @@ VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, doubl
       double phi0, sinPhi0, cosPhi0, cotPhi0, cscPhi0, p00sqr, F1, sqrtF1, F2, F2sqr;
       double F3, sqrtF3, F3sqr, F1_1p5, F3_1p5, F4, logF4, dgMax, cosPhi0sqr, lambdaSqr, PIsqr;
       double p00fourth, p00, lambda, L, p00third, F5, logF5, dgMaxSqr;
-      
+
+      if (fabs(phase)<1e-7)
+        phase = SIGN(phase)*1e-7;
       phi0 = phase*PI/180;
       p00 = *P_central;
       dgMax = dgammaMax;
