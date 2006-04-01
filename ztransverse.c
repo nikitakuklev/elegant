@@ -226,7 +226,7 @@ void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long part
   ztransverse->SDDS_wake_initialized = 0;
 
   if (ztransverse->broad_band) {
-    /* Use impedance Z = i*wr/w*Rs/(1 + i*Q(w/wr-wr/w))
+    /* Use impedance Z = -i*wr/w*Rs/(1 + i*Q(w/wr-wr/w))
        */
     double term;
     if (ztransverse->bin_size<=0)
