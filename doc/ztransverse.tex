@@ -6,11 +6,13 @@ Z(\omega) = \int_{-\infty}^{+\infty} e^{-i \omega t} W(t) dt
 \end{equation}
 where $i = \sqrt{-1}$, $W(t)=0 for t<0$, and $W(t)$ has units of
 $V/C/m$.  Note that there is no factor of $i$ in front of the
-integral.
+integral.  Thus, in {\tt elegant} the transverse impedance is simply
+the Fourier transform of the wake.  This makes it easy to convert data
+from a program like ABCI into the wake formalism using {\tt sddsfft}.
 
 For a resonator impedance, the functional form is
 \begin{equation}
-Z(\omega) = \frac{1}{\omega} \frac{R_s}{1 + iQ(\frac{\omega}{\omega_r} - \frac{\omega_r}{\omega})},
+Z(\omega) = \frac{-i\omega_r}{\omega} \frac{R_s}{1 + iQ(\frac{\omega}{\omega_r} - \frac{\omega_r}{\omega})},
 \end{equation}
 where $R_s$ is the shunt impedance in $Ohms/m$, $Q$ is the quality
 factor, and $\omega_r$ is the resonant frequency.
