@@ -566,6 +566,7 @@ long do_tracking(
       trackingContext.zStart = last_z;
       trackingContext.zEnd = z;
       trackingContext.step = step;
+      trackingContext.elementType = eptr->type;
 
       log_exit("do_tracking.2.2.1");
       if (eptr->p_elem || eptr->matrix) {
@@ -1347,25 +1348,9 @@ long do_tracking(
     }
 
     
-    log_entry("do_tracking.2.2.3");
     if (effort)
       *effort += nLeft;
 
-    if (sums_vs_z && (*sums_vs_z) && !(flags&FINAL_SUMS_ONLY) && !(flags&TEST_PARTICLES) &&
-        (run->wrap_around || i_pass==n_passes-1)) {
-      if (i_sums<0)
-        bomb("attempt to accumulate beam sums with negative index!", NULL);
-      accumulate_beam_sums(*sums_vs_z+i_sums, coord, nToTrack, *P_central);
-      (*sums_vs_z)[i_sums].z = z;
-#if defined(BEAM_SUMS_DEBUG)
-      fprintf(stdout, "beam sums accumulated in slot %ld for %s at z=%em, sx=%e\n", 
-              i_sums, name, z, sqrt((*sums_vs_z)[i_sums].sum2[0]/nLeft));
-      fflush(stdout);
-#endif
-      i_sums++;
-    }
-    log_exit("do_tracking.2.2.3");
-    
     log_exit("do_tracking.2.2");
 #ifdef WATCH_MEMORY
     fprintf(stdout, "main tracking loop done: CPU: %6.2lf  PF: %6ld  MEM: %6ld\n",
@@ -1377,6 +1362,13 @@ long do_tracking(
       /* if eptr is not NULL, then all particles have been lost */
       /* some work still has to be done, however. */
       while (eptr) {
+        if (sums_vs_z && *sums_vs_z && !(flags&FINAL_SUMS_ONLY) && !(flags&TEST_PARTICLES)) {
+          if (i_sums<0)
+            bomb("attempt to accumulate beam sums with negative index!", NULL);
+          accumulate_beam_sums(*sums_vs_z+i_sums, coord, nToTrack, *P_central);
+          (*sums_vs_z)[i_sums].z = z;
+          i_sums++;
+        }
         if (entity_description[eptr->type].flags&HAS_LENGTH && eptr->p_elem)
           z += ((DRIFT*)eptr->p_elem)->length;
         else {
@@ -1384,13 +1376,6 @@ long do_tracking(
             z += eptr->end_pos - eptr->pred->end_pos;
           else
             z += eptr->end_pos;
-        }
-        if (sums_vs_z && *sums_vs_z && !(flags&FINAL_SUMS_ONLY) && !(flags&TEST_PARTICLES)) {
-          if (i_sums<0)
-            bomb("attempt to accumulate beam sums with negative index!", NULL);
-          accumulate_beam_sums(*sums_vs_z+i_sums, coord, nToTrack, *P_central);
-          (*sums_vs_z)[i_sums].z = z;
-          i_sums++;
         }
         switch (eptr->type) {
         case T_TFBDRIVER:
@@ -1440,6 +1425,20 @@ long do_tracking(
       }
     }
  
+    if (sums_vs_z && (*sums_vs_z) && !(flags&FINAL_SUMS_ONLY) && !(flags&TEST_PARTICLES) &&
+        (run->wrap_around || i_pass==n_passes-1)) {
+      if (i_sums<0)
+        bomb("attempt to accumulate beam sums with negative index!", NULL);
+      accumulate_beam_sums(*sums_vs_z+i_sums, coord, nToTrack, *P_central);
+      (*sums_vs_z)[i_sums].z = z;
+#if defined(BEAM_SUMS_DEBUG)
+      fprintf(stdout, "beam sums accumulated in slot %ld for %s at z=%em, sx=%e\n", 
+              i_sums, name, z, sqrt((*sums_vs_z)[i_sums].sum2[0]/nLeft));
+      fflush(stdout);
+#endif
+      i_sums++;
+    }
+    
 #if USE_MPI
     if (notSinglePart) {
       if (balanceStatus==startMode) { 

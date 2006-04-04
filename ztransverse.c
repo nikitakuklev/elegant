@@ -38,7 +38,8 @@ static SDDS_DEFINITION wake_parameter[WAKE_PARAMETERS] = {
     } ;
 
 
-void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long particles, CHARGE *charge);
+void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long particles, CHARGE *charge,
+                        double timeSpan);
 double *getTransverseImpedance(SDDS_DATASET *SDDSin, char *ZName);
 
 void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse, double Po,
@@ -61,10 +62,22 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
   FILE *fp;
 #endif
   not_first_call += 1;
+
+  if (np>max_np) {
+    pbin = trealloc(pbin, sizeof(*pbin)*(max_np=np));
+    time = trealloc(time, sizeof(*time)*max_np);
+    pz = trealloc(pz, sizeof(*pz)*max_np);
+  }
   
-  set_up_ztransverse(ztransverse, run, i_pass, np, charge);
+  /* Compute time coordinate of each particle */
+  tmean = computeTimeCoordinates(time, Po, part, np);
+  find_min_max(&tmin, &tmax, time, np);
+  
+  set_up_ztransverse(ztransverse, run, i_pass, np, charge, tmax-tmin);
   nb = ztransverse->n_bins;
   dt = ztransverse->bin_size;
+  tmin -= dt;
+  tmax -= dt;
 
   if (nb>max_n_bins) {
     posItime[0] = trealloc(posItime[0], 2*sizeof(**posItime)*(max_n_bins=nb));
@@ -73,22 +86,10 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
     Vtime = trealloc(Vtime, 2*sizeof(*Vtime)*(max_n_bins+1));
   }
 
-  if (np>max_np) {
-    pbin = trealloc(pbin, sizeof(*pbin)*(max_np=np));
-    time = trealloc(time, sizeof(*time)*max_np);
-    pz = trealloc(pz, sizeof(*pz)*max_np);
-  }
-
   for (ib=0; ib<nb; ib++)
     posItime[0][2*ib] = posItime[0][2*ib+1] = 
       posItime[1][2*ib] = posItime[1][2*ib+1] = 0;
 
-  /* Compute time coordinate of each particle */
-  tmean = computeTimeCoordinates(time, Po, part, np);
-  find_min_max(&tmin, &tmax, time, np);
-  tmin -= dt;
-  tmax -= dt;
-  
   /* make arrays of I(t)*x and I(t)*y */
   n_binned = binTransverseTimeDistribution(posItime, pz, pbin, tmin, dt, nb, time, part, Po, np,
                                            ztransverse->dx, ztransverse->dy, 1, 1);
@@ -207,7 +208,8 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
 }
 
 
-void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long particles, CHARGE *charge)
+void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long particles, CHARGE *charge,
+                        double timeSpan)
 {
   long i, nfreq;
   double df;
@@ -236,6 +238,10 @@ void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long part
     if (ztransverse->ZxReal || ztransverse->ZxImag ||
         ztransverse->ZyReal || ztransverse->ZyImag )
       bomb("can't specify both broad_band impedance and Z(f) files for ZTRANSVERSE element", NULL);
+
+    optimizeBinSettingsForImpedance(timeSpan, ztransverse->freq, ztransverse->Q,
+                                    &(ztransverse->bin_size), &(ztransverse->n_bins));
+    
     nfreq = ztransverse->n_bins/2 + 1;
     ztransverse->iZ[0] = tmalloc(sizeof(**(ztransverse->iZ))*ztransverse->n_bins);
     ztransverse->iZ[1] = tmalloc(sizeof(**(ztransverse->iZ))*ztransverse->n_bins);
@@ -396,3 +402,66 @@ double *getTransverseImpedance(SDDS_DATASET *SDDSin,
   return Z;
 }
 
+void optimizeBinSettingsForImpedance(double timeSpan, double freq, double Q,
+                                     double *binSize, long *nBins)
+{
+  long n_bins;
+  double bin_size, factor, factor1, factor2;
+  TRACKING_CONTEXT tcontext;
+  
+  n_bins = *nBins;
+  bin_size = *binSize;
+  getTrackingContext(&tcontext);
+  
+  if (1/(2*freq*bin_size)<10) {
+    /* want maximum frequency in Z > 10*fResonance */
+    fprintf(stdout, "%s %s has excessive bin size for given resonance frequency\n",
+            entity_name[tcontext.elementType],
+            tcontext.elementName);
+    bin_size = 1./freq/20;
+    fprintf(stdout, "  Bin size adjusted to %e\n", bin_size);
+    fflush(stdout);
+  }
+    if (timeSpan>bin_size*n_bins) {
+      fprintf(stdout, "%s %s has insufficient time span for initial bunch\n",
+              entity_name[tcontext.elementType],
+              tcontext.elementName);
+      n_bins = pow(2,
+                                (long)(log(timeSpan*1.05/bin_size)/log(2)+1));
+      fprintf(stdout, "  Number of bins adjusted to %ld\n",
+              n_bins);
+      fflush(stdout);
+    }
+    if (Q<1) 
+    /* Want frequency resolution < fResonance/200 and < fResonanceWidth/200 */
+      factor = 200/(n_bins*bin_size*freq/Q);
+    else
+      factor = 200/(n_bins*bin_size*freq);
+    if (factor>1) {
+      fprintf(stdout, "%s %s has too few bins or excessively small bin size for given frequency\n",
+              entity_name[tcontext.elementType],
+              tcontext.elementName);
+      if (n_bins*factor>pow(2,20)) {
+        factor1 = pow(2,20)/n_bins;
+        factor2 = factor/factor1;
+        n_bins = pow(2,20);
+        bin_size *= factor2;
+        if (1/(2*freq*bin_size)<10) {
+          fprintf(stdout, "It isn't possible to model this element with a reasonable number of bins.  Try using an RFMODE or TRFMODE instead.\n");
+          exit(1);
+        }
+        fprintf(stdout, "  Number of bins adjusted to %ld\n",
+                n_bins);
+        fprintf(stdout, "  Bin size adjusted to %e\n",
+                bin_size);
+      } else {
+        n_bins = pow(2, (long)(log(n_bins*factor)/log(2)+1));
+        fprintf(stdout, "  Number of bins adjusted to %ld\n",
+                n_bins);
+      }
+      fflush(stdout);
+    }
+  
+  *nBins = n_bins;
+  *binSize = bin_size;
+}

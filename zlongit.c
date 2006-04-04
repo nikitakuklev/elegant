@@ -51,7 +51,8 @@ static SDDS_DEFINITION wake_parameter[WAKE_PARAMETERS] = {
 
 #define DEBUG 0
 
-void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARGE *charge);
+void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARGE *charge,
+                    double timeSpan);
 
 void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
     RUN *run, long i_pass, CHARGE *charge
@@ -66,33 +67,35 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
     static long max_np = 0;
     double *Vfreq, *Z;
     long ip, ib, nb, n_binned, nfreq, iReal, iImag;
-    double factor, tmin, tmean, dt, dt1, dgam;
+    double factor, tmin, tmax, tmean, dt, dt1, dgam;
     static long not_first_call = -1;
     
     not_first_call += 1;
     
-    set_up_zlongit(zlongit, run, i_pass, np, charge);
+    if (np>max_np) {
+      pbin = trealloc(pbin, sizeof(*pbin)*(max_np=np));
+      time = trealloc(time, sizeof(*time)*max_np);
+    }
+    
+    tmean = computeTimeCoordinates(time, Po, part, np);
+    find_min_max(&tmin, &tmax, time, np);
+  
+    set_up_zlongit(zlongit, run, i_pass, np, charge, tmax-tmin);
     nb = zlongit->n_bins;
     dt = zlongit->bin_size;
 
     if (zlongit->n_bins>max_n_bins) {
-       Itime = trealloc(Itime, 2*sizeof(*Itime)*(max_n_bins=zlongit->n_bins));
-       Ifreq = trealloc(Ifreq, 2*sizeof(*Ifreq)*(max_n_bins=zlongit->n_bins));
-       Vtime = trealloc(Vtime, 2*sizeof(*Vtime)*(max_n_bins+1));
-       }
+      Itime = trealloc(Itime, 2*sizeof(*Itime)*(max_n_bins=zlongit->n_bins));
+      Ifreq = trealloc(Ifreq, 2*sizeof(*Ifreq)*(max_n_bins=zlongit->n_bins));
+      Vtime = trealloc(Vtime, 2*sizeof(*Vtime)*(max_n_bins+1));
+    }
 
-    if (np>max_np) {
-        pbin = trealloc(pbin, sizeof(*pbin)*(max_np=np));
-        time = trealloc(time, sizeof(*time)*max_np);
-        }
-
-    tmean = computeTimeCoordinates(time, Po, part, np);
     if (zlongit->reverseTimeOrder) {
       for (ip=0; ip<np; ip++)
         time[ip] = 2*tmean-time[ip];
     }
     tmin = tmean - dt*zlongit->n_bins/2.0;
-    
+
     for (ib=0; ib<zlongit->n_bins; ib++)
         Itime[2*ib] = Itime[2*ib+1] = 0;
 
@@ -243,7 +246,8 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
 
   }
 
-void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARGE *charge)
+void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARGE *charge,
+                    double timeSpan)
 {
     long i, nfreq;
     double df;
@@ -265,7 +269,7 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
        * so the impedance is Z(w) = (Ra/2)*(1 + i*T)/(1+T^2), where T=Q*(wo/w-w/wo).
        * The imaginary and real parts are positive for small w.
        */
-        double term, factor1, factor2, factor;
+        double term;
         if (zlongit->bin_size<=0)
           bomb("bin_size must be positive for ZLONGIT element", NULL);
         if (zlongit->Ra && zlongit->Rs) 
@@ -276,27 +280,8 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
             bomb("ZLONGIT element must have n_bins divisible by 2", NULL);
         if (zlongit->Zreal  || zlongit->Zimag) 
             bomb("can't specify both broad_band impedance and Z(f) files for ZLONGIT element", NULL);
-        if (2/(zlongit->freq*zlongit->bin_size)<10) {
-          /* want maximum frequency in Z > 10*fResonance */
-          fprintf(stdout, "ZLONGIT has excessive bin size for given frequency\n");
-          fflush(stdout);
-          zlongit->bin_size = 0.2/zlongit->freq;
-          fprintf(stdout, "  Bin size adjusted to %e\n", zlongit->bin_size);
-          fflush(stdout);
-        }
-        /* Want frequency resolution < fResonance/10 */
-        factor1 = 10/(zlongit->n_bins*zlongit->bin_size*zlongit->freq);
-        /* Want frequency resolution < fResonanceWidth/10 */
-        factor2 = 10/(zlongit->n_bins*zlongit->bin_size*zlongit->freq/zlongit->Q);
-        factor = MAX(factor1, factor2);
-        if (factor>1) {
-          fprintf(stdout, "ZLONGIT has too few bins or excessive bin size for given frequency\n");
-          fflush(stdout);
-          zlongit->n_bins = pow(2, (long)(log(zlongit->n_bins*factor)/log(2)+1));
-          fprintf(stdout, "  Number of bins adjusted to %ld\n",
-                  zlongit->n_bins);
-          fflush(stdout);
-        }
+        optimizeBinSettingsForImpedance(timeSpan, zlongit->freq, zlongit->Q,
+                                        &(zlongit->bin_size), &(zlongit->n_bins));
         df = 1/(zlongit->n_bins*zlongit->bin_size)/(zlongit->freq);
         nfreq = zlongit->n_bins/2 + 1;
         fprintf(stdout, "ZLONGIT has %ld frequency points with df=%e\n",

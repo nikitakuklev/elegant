@@ -501,7 +501,7 @@ typedef struct {
 #define CONTEXT_BUFSIZE 1024
 typedef struct {
   char elementName[CONTEXT_BUFSIZE+1];
-  long elementOccurrence, step;
+  long elementOccurrence, step, elementType;
   SLICE_OUTPUT *sliceAnalysis;
   double zStart, zEnd;
   char rootname[CONTEXT_BUFSIZE+1];
@@ -2848,6 +2848,8 @@ long checkPointSpacing(double *x, long n, double tolerance);
 void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse, 
                                double Po, RUN *run, long i_pass,
                                CHARGE *charge);
+void optimizeBinSettingsForImpedance(double timeSpan, double freq, double Q,
+                                     double *binSize, long *nBins);
 void convolveArrays(double *output, long outputs, 
                     double *a1, long n1,
                     double *a2, long n2);
