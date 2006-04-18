@@ -2967,19 +2967,21 @@ void processTwissAnalysisRequests(ELEMENT_LIST *elem)
         elem = elem->succ;
         continue;
       }
-      if (twissAnalysisRequest[i].matchName) {
-        if (!wild_match(elem->name, twissAnalysisRequest[i].matchName)) {
-          elem = elem->succ;
-          continue;
-        } 
-      } else {
-        if (!count &&
-            !(twissAnalysisRequest[i].startName && 
-              strcmp(twissAnalysisRequest[i].startName, elem->name)==0 &&
-              (twissAnalysisRequest[i].startOccurence<=1 ||
-               twissAnalysisRequest[i].startOccurence==elem->occurence))) {
-          elem = elem->succ;
-          continue;
+      if (twissAnalysisRequest[i].matchName || twissAnalysisRequest[i].startName) {
+        if (twissAnalysisRequest[i].matchName) {
+          if (!wild_match(elem->name, twissAnalysisRequest[i].matchName)) {
+            elem = elem->succ;
+            continue;
+          } 
+        } else {
+          if (!count &&
+              !(twissAnalysisRequest[i].startName && 
+                strcmp(twissAnalysisRequest[i].startName, elem->name)==0 &&
+                (twissAnalysisRequest[i].startOccurence<=1 ||
+                 twissAnalysisRequest[i].startOccurence==elem->occurence))) {
+            elem = elem->succ;
+            continue;
+          }
         }
       }
       count++;
