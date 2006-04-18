@@ -2918,7 +2918,8 @@ void addTwissAnalysisRequest(char *tag, char *startName, char *endName,
       (matchName &&
        !SDDS_CopyString(&twissAnalysisRequest[twissAnalysisRequests].matchName, matchName)))
     bomb("memory allocation failure (addTwissAnalysisRequest)", NULL);
-  if (has_wildcards(twissAnalysisRequest[twissAnalysisRequests].matchName) &&
+  if (matchName && 
+      has_wildcards(twissAnalysisRequest[twissAnalysisRequests].matchName) &&
       strchr(twissAnalysisRequest[twissAnalysisRequests].matchName, '-'))
     twissAnalysisRequest[twissAnalysisRequests].matchName = 
       expand_ranges(twissAnalysisRequest[twissAnalysisRequests].matchName);
