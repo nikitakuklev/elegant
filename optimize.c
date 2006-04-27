@@ -490,7 +490,7 @@ static long beam_type_code, n_evaluations_made, n_passes_made;
 static double *final_property_value;
 static long final_property_values;
 static double charge;
-static long optim_func_flags;
+static unsigned long optim_func_flags;
 static long force_output;
 static long doClosedOrbit, doChromCorr, doTuneCorr;
 
