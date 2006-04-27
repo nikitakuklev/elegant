@@ -1251,68 +1251,85 @@ VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, doubl
       }
     }
 
-    if (!useSRSModel) {
-      double phi0, sinPhi0, cosPhi0, cotPhi0, cscPhi0, p00sqr, F1, sqrtF1, F2, F2sqr;
-      double F3, sqrtF3, F3sqr, F1_1p5, F3_1p5, F4, logF4, dgMax, cosPhi0sqr, lambdaSqr, PIsqr;
-      double p00fourth, p00, lambda, L, p00third, F5, logF5, dgMaxSqr;
+    if (!useSRSModel) { 
+      double p00s, sinPhi0, cosPhi0, cotPhi0,
+      cscPhi0, f1, sf1, f2, f3, cos2phi0, f4, f2s, f5, logf4, sf5,
+      dgMaxs, sqrt2, f5_1p5, cosPhi0s, sinPhi0s, lambdas, f6, logf6,
+      sinPhi0c, dgMaxc, f1_1p5, f7, f7s, PIs;
+      double p00, dgMax, phi0, lambda, L;
 
-      if (fabs(phase)<1e-7)
-        phase = SIGN(phase)*1e-7;
       phi0 = phase*PI/180;
+      if (fabs(sin(phi0))<1e-6)
+        phi0 += 2e-6;
+      
       p00 = *P_central;
       dgMax = dgammaMax;
       lambda = c_mks/frequency;
       L = length;
-
+      
+      p00s = sqr(p00);
       sinPhi0 = sin(phi0);
       cosPhi0 = cos(phi0);
-      cscPhi0 = 1/sinPhi0;
-      p00sqr = sqr(p00);
-      F1 = 1 + p00sqr;
-      sqrtF1 = sqrt(F1);
-      F2 = sqrtF1+dgMax*sinPhi0;
-      F2sqr = sqr(F2);
-      F3 = -1+F2sqr;
-      sqrtF3 = sqrt(F3);
-      F4 = F2 + sqrtF3;
-      logF4 = log(F4);
+      cotPhi0 = 1/tan(phi0);
+      cscPhi0 = 1/sin(phi0);
+      f1 = 1+p00s;
+      sf1 = sqrt(f1);
+      f2 = sf1+dgMax*sinPhi0;
+      f3 = p00s+sf1;
+      cos2phi0 = cos(2*phi0);
+      f4 = p00+sf1;
+      f2s = sqr(f2);
+      f5 = -1+f2s;
+      logf4 = log(f4);
+      sf5 = sqrt(f5);
+      dgMaxs = sqr(dgMax);
+      sqrt2 = sqrt(2);
+      f5_1p5 = pow(f5,1.5);
+      cosPhi0s = sqr(cosPhi0);
+      sinPhi0s = sqr(sinPhi0);
+      lambdas = sqr(lambda);
+      f6 = f2+sf5;
+      logf6 = log(f6);
+      sinPhi0c = ipow(sinPhi0,3);
+      dgMaxc = ipow(dgMax,3);
+      f1_1p5 = pow(f1,1.5);
+      f7 = p00s+2*dgMax*sf1*sinPhi0+dgMaxs*sinPhi0s;
+      f7s = sqr(f7);
+      PIs = sqr(PI);
 
       R[0][0] = R[2][2] = R[4][4] = 1;
-      R[0][1] = R[2][3] = p00*(-((L*cscPhi0*log(p00+sqrtF1))/dgMax)+(L*cscPhi0*logF4)/dgMax);
-      R[1][1] = R[3][3] = p00/sqrtF3;
-      R[5][4] = (2*dgMax*PI*cosPhi0*F2)/(lambda*F3);
-      R[5][5] = (p00sqr*F2)/(sqrtF1*F3);
+      R[0][1] = R[2][3] = (L*p00*cscPhi0*(-logf4+logf6))/dgMax;
+      R[1][1] = R[3][3] = p00/sf5;
+      R[5][4] = (2*dgMax*PI*cosPhi0*(f2))/(lambda*(f5));
+      R[5][5] = (p00s*(f2))/(sf1*(f5));
 
-      if (order>=2) {
-        cotPhi0 = cosPhi0/sinPhi0;
-        F5 = p00 + sqrtF1;
-        logF5 = log(F5);
-        F3sqr = sqr(F3);
-        p00fourth = sqr(p00sqr);
-        p00third = p00sqr*p00;
-        F3_1p5 = pow(F3, 1.5);
-        PIsqr = sqr(PI);
-        lambdaSqr = sqr(lambda);
-        dgMaxSqr = sqr(dgMax);
-        F1_1p5 = pow(F1, 1.5);
-        cosPhi0sqr = sqr(cosPhi0);
-        
-        T[0][4][1] = T[2][4][3] = p00*((2*L*PI*cotPhi0*cscPhi0*logF5)/(dgMax*lambda)-(2*L*PI*cotPhi0*cscPhi0*logF4)/(dgMax*lambda)+(L*cscPhi0*((2*dgMax*PI*cosPhi0)/lambda+(2*dgMax*PI*cosPhi0*F2)/(lambda*sqrtF3)))/(dgMax*F4));
+      if (order>1) {
+        T[0][4][1] = T[2][4][3] = (2*L*p00*PI*cotPhi0*
+                (dgMax+(cscPhi0*
+                        (logf4-logf6)*
+                        sqrt(dgMaxs+2*p00s-dgMaxs*cos2phi0
+                             +4*dgMax*sf1*sinPhi0))/sqrt2))/(dgMax*lambda*sf5);
 
-        T[0][5][1] = T[2][5][3] = p00*(-((L*cscPhi0*logF5)/dgMax)+(L*cscPhi0*logF4)/dgMax)+p00*(-((L*(p00+p00sqr/sqrtF1)*cscPhi0)/(dgMax*F5))+(L*cscPhi0*(p00sqr/sqrtF1+(p00sqr*F2)/(sqrtF1*sqrtF3)))/(dgMax*F4));
+        T[0][5][1] = T[2][5][3] =
+          (L*p00*cscPhi0*(-((p00+p00s/sf1)/(f4))-logf4+logf6+p00s/(sf1*sf5)))/dgMax;
 
-        T[1][4][1] = T[3][4][3] = (-2*dgMax*p00*PI*cosPhi0*F2)/(lambda*F3_1p5);
+        T[1][4][1] = T[3][4][3] = (-2*dgMax*p00*PI*cosPhi0*(f2))/(lambda*f5_1p5);
 
-        T[1][5][1] = T[3][5][3] = -((p00third*F2)/(sqrtF1*F3_1p5))+p00/sqrtF3;
+        T[1][5][1] = T[3][5][3] = (dgMax*p00*sinPhi0*(2+p00s+dgMax*sf1*sinPhi0))/(sf1*f5_1p5);
 
-        T[4][1][1] = T[4][3][3] = 2*((L*p00sqr*cscPhi0*log(-1+F2))/(2*dgMax)-(L*p00sqr*cscPhi0*log(1+F2))/(2*dgMax));
+        T[5][1][1] = T[5][3][3] = 
+          (-0.25*L*p00s*cscPhi0*(log(-1+sf1)-1.*log(1+sf1)-1.*log(-1+f2)+log(1+f2)))/dgMax;
 
-        T[5][4][4] = 2*((-4*dgMaxSqr*PIsqr*cosPhi0sqr*F2sqr)/(lambdaSqr*F3sqr)+(4*dgMaxSqr*PIsqr*cosPhi0sqr)/(lambdaSqr*F3)-(4*dgMax*PIsqr*sinPhi0*F2)/(lambdaSqr*F3));
+        T[5][4][4] =
+          (-19.739208802178716*dgMax
+           *(dgMax*cosPhi0s+sinPhi0*
+             (p00s*sf1+dgMax*(2+3*p00s)*sinPhi0+
+              3*dgMaxs*sf1*sinPhi0s+dgMaxc*sinPhi0c)))/(lambdas*f7s);
 
-        T[5][5][4] = (-2*dgMax*p00sqr*PI*cosPhi0*F2sqr)/(lambda*sqrtF1*F3sqr)+(2*dgMax*p00sqr*PI*cosPhi0)/(lambda*sqrtF1*F3);
+        T[5][5][4] = (-2*dgMax*p00s*PI*cosPhi0)/(lambda*sf1*f7s);
 
-        T[5][5][5] = 2*(-((p00fourth*F2sqr)/((F1)*F3sqr))+p00fourth/((F1)*F3)-(p00fourth*F2)/(F1_1p5*F3)+(p00sqr*F2)/(sqrtF1*F3));
-
+        T[5][5][5] = 
+          (0.5*dgMax*p00s*sinPhi0*(2+3*p00s+3*dgMax*sf1*sinPhi0+dgMaxs*sinPhi0s))/(f1_1p5*f7s);
       }
     } else {
       /* note that Rosenzweig and Serafini use gamma in places
@@ -1333,7 +1350,7 @@ VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, doubl
       R[5][4] = (voltage/me_mev)*cos_phase/(gamma + dgamma)*(PIx2*frequency/c_mks);
       R[5][5] = 1/(1+dP/(*P_central));
     }
-    
+
     if (length && (end1Focus || end2Focus)) {
       if (end1Focus) {
         inverseF[0] = dgamma/(2*length*gamma);
@@ -1341,11 +1358,11 @@ VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, doubl
       if (end2Focus)
         inverseF[1] = -dgamma/(2*length*(gamma+dgamma));
       Medge = tmalloc(sizeof(*Medge));
-      initialize_matrices(Medge, Medge->order = 1);
+      initialize_matrices(Medge, Medge->order = M->order);
       Medge->R[0][0] = Medge->R[1][1] = Medge->R[2][2] = Medge->R[3][3] = 
         Medge->R[4][4] = Medge->R[5][5] = 1;
       Mtot = tmalloc(sizeof(*Mtot));
-      initialize_matrices(Mtot, Mtot->order = 1);
+      initialize_matrices(Mtot, Mtot->order = M->order);
       for (end=0; end<2; end++) {
         if (inverseF[end]) {
           Medge->R[1][0] = Medge->R[3][2] = -inverseF[end];
@@ -1373,11 +1390,10 @@ VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, doubl
       /* The matrix implicitly included acceleration. 
        * Must change the reference momentum of the matrix to exclude this.
        */
-      long i;
       Mtot = tmalloc(sizeof(*Mtot));
       Medge = tmalloc(sizeof(*Medge));
-      initialize_matrices(Mtot, Mtot->order = 1);
-      initialize_matrices(Medge, Medge->order = 1);
+      initialize_matrices(Mtot, Mtot->order = M->order);
+      initialize_matrices(Medge, Medge->order = M->order);
       Medge->R[0][0] = Medge->R[1][1] = Medge->R[2][2] = Medge->R[3][3] = 
         Medge->R[4][4] = Medge->R[5][5] = 1;
       Medge->C[5] = (*P_central+dP-Preference)/Preference;
