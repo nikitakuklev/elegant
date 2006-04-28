@@ -75,6 +75,7 @@ typedef struct {
 static long twissAnalysisRequests = 0;
 static TWISS_ANALYSIS_REQUEST *twissAnalysisRequest = NULL;
 
+static short mustResetRfcaMatrices = 0;
 
 VMATRIX *compute_periodic_twiss(
                                 double *betax, double *alphax, double *etax, double *etapx, double *NUx,
@@ -246,8 +247,6 @@ VMATRIX *compute_periodic_twiss(
   *NUx = phi[0]/PIx2;
   *NUy = phi[1]/PIx2;
 
-  reset_rfca_matrices(elem, run->default_order);
-  
   log_exit("compute_periodic_twiss");
   return(M);
 }
@@ -1521,6 +1520,9 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
   if (radiation_integrals) 
     beamline->flags |= BEAMLINE_RADINT_DONE+BEAMLINE_RADINT_CURRENT;
   
+  if (mustResetRfcaMatrices)
+    reset_rfca_matrices(&(beamline->elem), run->default_order);
+  
   log_exit("compute_twiss_parameters");
 }
 
@@ -1711,7 +1713,7 @@ long has_aperture(ELEMENT_LIST *elem)
 
 void modify_rfca_matrices(ELEMENT_LIST *eptr, long order)
 /* Replace the matrices for rf cavities with drift matrices. 
-   Used prior to twiss parameter computations. */
+   Used prior to periodic twiss parameter computations. */
 {
   while (eptr) {
     if (eptr->type==T_RFCA || eptr->type==T_MODRF || eptr->type==T_RFCW) {
@@ -1733,6 +1735,7 @@ void modify_rfca_matrices(ELEMENT_LIST *eptr, long order)
     }
     eptr = eptr->succ;
   }
+  mustResetRfcaMatrices = 1;
 }
 
 void reset_rfca_matrices(ELEMENT_LIST *eptr, long order)
