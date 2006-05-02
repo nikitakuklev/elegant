@@ -116,6 +116,11 @@ and references, see the specific entries in the manual.
  if closed orbit computations are requested, they are now additionally performed 
  prior to orbit correction in case orbit correction needs the perturbed correction matrix.
 
+\item Added the \verb|linear_chromatic_tracking_setup| command, which allows tracking
+ with a linear matrix representing a ring with defined chromatic variation of the 
+ tunes and lattice functions.  This was previously only possible if the ring lattice
+ was defined. The new feature allows tracking without defining the ring lattice.
+ This was requested by S. Krinsky (BNL).
 \end{itemize}
 
 \subsection{Changes and Additions to Related Programs}
@@ -1480,6 +1485,59 @@ end are given.
         the changes in the tunes.  It is recommended to leave this at the default value of
         0, since the resolution of the tunes is higher then.
 \end{itemize}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|linear_chromatic_tracking_setup|}\end{center}
+\end{latexonly}
+\subsection{linear\_chromatic\_tracking\_setup}
+
+\begin{itemize}
+\item type: setup command.
+\item function: define chromatic variation of beta functions, tunes, etc. for using in
+ fast linear-chromatic tracking
+\end{itemize}
+
+\begin{verbatim}
+&linear_chromatic_tracking_setup
+    double nux[4] = {-1, 0, 0, 0};
+    double betax[2] = {1.0, 0.0};
+    double alphax[2] = {0.0, 0.0};
+    double etax[2] = {0.0, 0.0};
+    double etapx[2] = {0.0, 0.0};
+    double nuy[4] = {-1, 0, 0, 0};
+    double betay[2] = {1.0, 0.0};
+    double alphay[2] = {0.0, 0.0};
+    double etay[2] = {0.0, 0.0};
+    double etapy[2] = {0.0, 0.0};
+    double alphac[2] = {0.0, 0.0};
+&end
+\end{verbatim}
+
+\begin{itemize}
+\item \verb|nux| --- Provide the horizontal tune plus its first three chromatic derivatives, i.e.,
+  $\partial \nu_x/\partial\delta$, $\partial^2 \nu_x/\partial\delta^2$, and
+  $\partial^3 \nu_x/\partial\delta^3$.
+\item \verb|betax| --- Provide the horizontal beta function plus its chromatic derivative.
+\item \verb|alphax| --- Provide the horizontal alpha function plus its chromatic derivative.
+\item \verb|etax| --- Provide the first- and second-order horizontal dispersion:
+  $\eta_x = \eta_x\left[0\right] + \eta_x\left[1\right]\delta$.
+\item \verb|etapx| --- Provide the first- and second-order horizontal dispersion slope.
+\item \verb|alphac| --- Provide the first and second-order momentum compaction.  N.B: if you are tracking
+ with an rf cavity, be sure that your lattice length equal to the actual circumference.  See the example below.
+\end{itemize}
+
+An example of a good lattice for use with this feature is the following:
+\begin{verbatim}
+! Actual length of the ring
+d0: drift,l=30.6667
+! Actual rf voltage and frequency
+rf: rfca,l=0,volt=30e3,phase=180,freq="c_mks 30.6667 /"
+w1: watch,filename="%s.w1",mode="centroid"
+ring: line=(d0,rf,w1)
+\end{verbatim}
+Any additional elements (e.g,. wakes or impedances) should follow d0.  No other elements represented by a matrix
+should be present!
 
 \begin{latexonly}
 \newpage
