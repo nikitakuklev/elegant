@@ -3234,6 +3234,11 @@ void setupLinearChromaticTracking(NAMELIST_TEXT *nltext, LINE_LIST *beamline)
   set_print_namelist_flags(0);
   process_namelist(&setup_linear_chromatic_tracking, nltext);
   print_namelist(stdout, &setup_linear_chromatic_tracking);
+
+  if (setup_linear_chromatic_tracking_struct.nux[0]<0)
+    bomb("nux < 0", NULL);
+  if (setup_linear_chromatic_tracking_struct.nuy[0]<0)
+    bomb("nuy < 0", NULL);
   
   beamline->twiss0 = malloc(sizeof(TWISS));
 
