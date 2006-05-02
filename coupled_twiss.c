@@ -426,10 +426,19 @@ void finish_coupled_twiss_output()
 void SortEigenvalues (double *WR, double *WI, double *VR, int matDim, int eigenModesNumber, int verbosity)
 {
   int N, i, j, index;
+
+  double WRcopy[6], WIcopy[6], VRcopy[36];
+  double **VV;
+  int *MaxIndex;
   N=eigenModesNumber;
 
-  double VV[N][N], WRcopy[6], WIcopy[6], VRcopy[36];
-  int MaxIndex[N];
+  MaxIndex = malloc(sizeof(*MaxIndex)*N);
+  VV = malloc(sizeof(*VV)*N);
+  for (i=0; i<N; i++) {
+    VV[i] = malloc(sizeof(*(VV[i]))*N);
+  }
+
+  
 
   /*--- Finding biggest components of vectors... */
   for (i=0; i<N; i++) {
@@ -475,6 +484,11 @@ void SortEigenvalues (double *WR, double *WI, double *VR, int matDim, int eigenM
     MatrixPrintout((double*)&VR[0], &matDim, &matDim, 1);
   }
 
+  free(MaxIndex);
+  for (i=0; i<N; i++) {
+    free(VV[i]);
+  }
+  free(VV);
 }
 
 int GetMaxIndex (double *V, int N)
@@ -501,9 +515,11 @@ int GetMaxIndex (double *V, int N)
 void GetAMatrix (double *V, double *transferMatrix, double *A, int *eigenModesNumber, int *matDim)
 {
   int i, j, k, K, N;
+  double *E;
   K=*eigenModesNumber;
   N=*matDim;
-  double E[N*N];
+  
+  E = malloc(sizeof(*E)*N*N);
 
   /*--- Vector rotation */
   MatrixProduct(&N, &N, (double*)&V[0], &N, &N, &transferMatrix[0], (double*)&E);
@@ -516,6 +532,7 @@ void GetAMatrix (double *V, double *transferMatrix, double *A, int *eigenModesNu
       }
     }
   }
+  free(E);
 }
 
 /*********************************************************************************************************/
