@@ -52,3 +52,11 @@ sextupole.  Note that {\tt elegant} presently {\em does not} include
 such sextupole contributions in the computation of the chromaticity
 via the {\tt twiss\_output} command.  However, these chromatic effects
 will be seen in tracking.
+
+Apertures specified via an upstream \verb|MAXAMP| element or an \verb|aperture_input|
+command will be imposed inside this element, with the following rules/limitations:
+\begin{itemize}
+\item If apertures from both sources are present, the smallest is used.
+\item The apertures are assumed to be rectangular, even if the \verb|ELLIPTICAL| qualifier
+ is set for \verb|MAXAMP|.
+\end{itemize}
