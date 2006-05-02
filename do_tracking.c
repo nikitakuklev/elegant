@@ -2242,7 +2242,7 @@ long trackWithChromaticLinearMatrix(double **particle, long particles, double **
       lastDPoP = deltaPoP;
       for (plane=0; !is_lost && plane<2; plane++) {
         /* remove the dispersive orbit from the particle coordinates */
-        coord[2*plane]   -= deltaPoP*(eta[2*plane]   + deltaPoP*eta2[2*plane]);
+        coord[2*plane]   -= deltaPoP*(eta[2*plane]   + deltaPoP*eta2[2*plane]  );
         coord[2*plane+1] -= deltaPoP*(eta[2*plane+1] + deltaPoP*eta2[2*plane+1]);
       }
       /* momentum-dependent pathlength --- note that other path-length terms are ignored ! */

@@ -5,6 +5,20 @@
  */
 #include "namelist.h"
 
+#namelist setup_linear_chromatic_tracking,struct
+    double nux[4] = {-1, 0, 0, 0};
+    double betax[2] = {1.0, 0.0};
+    double alphax[2] = {0.0, 0.0};
+    double etax[2] = {0.0, 0.0};
+    double etapx[2] = {0.0, 0.0};
+    double nuy[4] = {-1, 0, 0, 0};
+    double betay[2] = {1.0, 0.0};
+    double alphay[2] = {0.0, 0.0};
+    double etay[2] = {0.0, 0.0};
+    double etapy[2] = {0.0, 0.0};
+    double alphac[2] = {0.0, 0.0};
+#end
+
 #namelist tune_shift_with_amplitude,struct
     long turns = 2048;
     double x0 = 1e-6;

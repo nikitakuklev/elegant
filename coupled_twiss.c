@@ -434,11 +434,8 @@ void SortEigenvalues (double *WR, double *WI, double *VR, int matDim, int eigenM
 
   MaxIndex = malloc(sizeof(*MaxIndex)*N);
   VV = malloc(sizeof(*VV)*N);
-  for (i=0; i<N; i++) {
-    VV[i] = malloc(sizeof(*(VV[i]))*N);
-  }
-
-  
+  for (i=0; i<N; i++)
+    VV[i] = malloc(sizeof(**VV)*N);
 
   /*--- Finding biggest components of vectors... */
   for (i=0; i<N; i++) {
@@ -485,9 +482,8 @@ void SortEigenvalues (double *WR, double *WI, double *VR, int matDim, int eigenM
   }
 
   free(MaxIndex);
-  for (i=0; i<N; i++) {
+  for (i=0; i<N; i++)
     free(VV[i]);
-  }
   free(VV);
 }
 

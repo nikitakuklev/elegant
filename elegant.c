@@ -119,7 +119,8 @@ char *GREETING="This is elegant, by Michael Borland. (This is version 16.0Beta, 
 #define MOMENTUM_APERTURE 47
 #define APERTURE_INPUT    48
 #define COUPLED_TWISS_OUTPUT 49
-#define N_COMMANDS      50
+#define LINEAR_CHROMATIC_TRACKING_SETUP 50
+#define N_COMMANDS      51
 
 char *command[N_COMMANDS] = {
     "run_setup", "run_control", "vary_element", "error_control", "error_element", "awe_beam", "bunched_beam",
@@ -131,60 +132,61 @@ char *command[N_COMMANDS] = {
     "load_parameters", "sdds_beam", "subprocess", "fit_traces", "sasefel", "alter_elements",
     "optimization_term", "slice_analysis", "divide_elements", "tune_shift_with_amplitude",
     "transmute_elements", "twiss_analysis", "semaphores", "frequency_map", "insert_sceffects", "momentum_aperture", 
-    "aperture_input", "coupled_twiss_output"
+    "aperture_input", "coupled_twiss_output", "linear_chromatic_tracking_setup"
   } ;
 
 char *description[N_COMMANDS] = {
-    "run_setup                   defines lattice input file, primary output files, tracking order, etc.",
-    "run_control                 defines number of steps, number of passes, number of indices, etc.",
-    "vary_element                defines element family and item to vary with an index",
-    "error_control               sets up and control random errors",
-    "error_element               defines an element family and item to add errors to",
-    "awe_beam                    defines name of input beam data file, type of data, and some preprocessing",
-    "bunched_beam                defines beam distribution",
-    "correct                     requests orbit or trajectory correction and define parameters",
-    "matrix_output               requests SDDS-format output or printed output of the matrix",
-    "twiss_output                requests output of Twiss parameters, chromaticity, and acceptance",
-    "track                       command to begin tracking",
-    "stop                        command to stop reading input file and end the run",
-    "optimization_setup          requests running of optimization mode and sets it up",
-    "optimize                    command to begin optimization",
-    "optimization_variable       defines an element family and item to vary for optimization",
-    "optimization_constraint     defines a constraint on optimization",
-    "optimization_covariable     defines an element family and item to compute from optimization variables",
-    "optimization_term           specifies an individual term in the optimization equation",
-    "save_lattice                command to save the current lattice",
-    "rpn_expression              command to execute an rpn expression (useful for optimization)",
-    "trace                       requests tracing of program calls and defines parameters of trace",
-    "chromaticity                requests correction of the chromaticity",
-    "closed_orbit                requests output of the closed orbit",
-    "find_aperture               command to do aperture searches",
-    "analyze_map                 command to do map analysis",
-    "correct_tunes               requests correction of the tunes",
-    "link_control                sets up and control element links",
-    "link_elements               defines a link between two sets of elements",
-    "steering_element            defines an element (group) and item for steering the beam",
-    "amplification_factors       computes orbit/trajectory amplification factors",
-    "print_dictionary            prints a list of accelerator element types and allowed parameters",
-    "floor_coordinates           computes the floor coordinates for the ends of elements",
-    "correction_matrix_output    prints response matrices and their inverses",
-    "load_parameters             sets up loading of parameter values for elements",
-    "sdds_beam                   defines name of input beam data file",
-    "subprocess                  executes a string in a sub-shell",
-    "fit_traces                  obtains a lattice model by fitting to multiple tracks through a beamline",
-    "sasefel                     computes parameters of SASE FEL at end of system",
-    "alter_elements              alters a common parameter for one or more elements",
-    "slice_analysis              computes and outputs slice analysis of the beam",
-    "divide_elements             sets up parser to automatically divide specified elements into parts",
-    "tune_shift_with_amplitude   sets up twiss module for computation of tune shift with amplitude",
-    "transmute_elements          defines transmutation of one element type into another",
-    "twiss_analysis              requests twiss analysis of regions of a beamline (for optimization)",
-    "semaphores                  requests use of semaphore files to indicate run start and end",
-    "frequency_map               command to perform frequency map analysis",
-    "insert_sceffects            add space charge element to beamline and set calculation flags", 
-    "momentum_aperture           determine momentum aperture from tracking as a function of position in the ring",
-    "aperture_input              provide an SDDS file with the physical aperture vs s", 
-    "coupled_twiss_output        compute coupled beamsizes and twiss parameters",
+    "run_setup                        defines lattice input file, primary output files, tracking order, etc.",
+    "run_control                      defines number of steps, number of passes, number of indices, etc.",
+    "vary_element                     defines element family and item to vary with an index",
+    "error_control                    sets up and control random errors",
+    "error_element                    defines an element family and item to add errors to",
+    "awe_beam                         defines name of input beam data file, type of data, and some preprocessing",
+    "bunched_beam                     defines beam distribution",
+    "correct                          requests orbit or trajectory correction and define parameters",
+    "matrix_output                    requests SDDS-format output or printed output of the matrix",
+    "twiss_output                     requests output of Twiss parameters, chromaticity, and acceptance",
+    "track                            command to begin tracking",
+    "stop                             command to stop reading input file and end the run",
+    "optimization_setup               requests running of optimization mode and sets it up",
+    "optimize                         command to begin optimization",
+    "optimization_variable            defines an element family and item to vary for optimization",
+    "optimization_constraint          defines a constraint on optimization",
+    "optimization_covariable          defines an element family and item to compute from optimization variables",
+    "optimization_term                specifies an individual term in the optimization equation",
+    "save_lattice                     command to save the current lattice",
+    "rpn_expression                   command to execute an rpn expression (useful for optimization)",
+    "trace                            requests tracing of program calls and defines parameters of trace",
+    "chromaticity                     requests correction of the chromaticity",
+    "closed_orbit                     requests output of the closed orbit",
+    "find_aperture                    command to do aperture searches",
+    "analyze_map                      command to do map analysis",
+    "correct_tunes                    requests correction of the tunes",
+    "link_control                     sets up and control element links",
+    "link_elements                    defines a link between two sets of elements",
+    "steering_element                 defines an element (group) and item for steering the beam",
+    "amplification_factors            computes orbit/trajectory amplification factors",
+    "print_dictionary                 prints a list of accelerator element types and allowed parameters",
+    "floor_coordinates                computes the floor coordinates for the ends of elements",
+    "correction_matrix_output         prints response matrices and their inverses",
+    "load_parameters                  sets up loading of parameter values for elements",
+    "sdds_beam                        defines name of input beam data file",
+    "subprocess                       executes a string in a sub-shell",
+    "fit_traces                       obtains a lattice model by fitting to multiple tracks through a beamline",
+    "sasefel                          computes parameters of SASE FEL at end of system",
+    "alter_elements                   alters a common parameter for one or more elements",
+    "slice_analysis                   computes and outputs slice analysis of the beam",
+    "divide_elements                  sets up parser to automatically divide specified elements into parts",
+    "tune_shift_with_amplitude        sets up twiss module for computation of tune shift with amplitude",
+    "transmute_elements               defines transmutation of one element type into another",
+    "twiss_analysis                   requests twiss analysis of regions of a beamline (for optimization)",
+    "semaphores                       requests use of semaphore files to indicate run start and end",
+    "frequency_map                    command to perform frequency map analysis",
+    "insert_sceffects                 add space charge element to beamline and set calculation flags", 
+    "momentum_aperture                determine momentum aperture from tracking as a function of position in the ring",
+    "aperture_input                   provide an SDDS file with the physical aperture vs s", 
+    "coupled_twiss_output             compute coupled beamsizes and twiss parameters",
+    "linear_chromatic_tracking_setup  set up chromatic derivatives for linear chromatic tracking",
   } ;
 
 #define NAMELIST_BUFLEN 65536
@@ -230,7 +232,7 @@ char **argv;
   long do_chromatic_correction = 0, do_twiss_output = 0, fl_do_tune_correction = 0, do_coupled_twiss_output = 0;
   long do_closed_orbit = 0, do_matrix_output = 0, do_response_output = 0;
   long last_default_order = 0, new_beam_flags, links_present, twiss_computed = 0;
-  long correctionDone;
+  long correctionDone, linear_chromatic_tracking_setup_done = 0;
   double *starting_coord, finalCharge;
   long namelists_read = 0, failed, firstPass;
   char *semaphoreFile[2];
@@ -435,6 +437,7 @@ char **argv;
       run_setuped = run_controled = error_controled = correction_setuped = do_closed_orbit = do_chromatic_correction = 
         fl_do_tune_correction = 0;
       do_twiss_output = do_matrix_output = do_response_output = do_coupled_twiss_output = 0;
+      linear_chromatic_tracking_setup_done = 0;
 
       set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
       set_print_namelist_flags(0);
@@ -634,9 +637,11 @@ char **argv;
       set_print_namelist_flags(0);
       process_namelist(&track, &namelist_text);
       print_namelist(stdout, &track);
-      if ((use_linear_chromatic_matrix || longitudinal_ring_only) 
-          && (!twiss_computed && !do_twiss_output))
-        bomb("you must compute twiss parameters to do linear chromatic matrix tracking or longitudinal ring tracking", NULL);
+      if (use_linear_chromatic_matrix && 
+          !(linear_chromatic_tracking_setup_done || twiss_computed || do_twiss_output))
+        bomb("you must compute twiss parameters or give linear_chromatic_tracking_setup to do linear chromatic tracking", NULL);
+      if (longitudinal_ring_only && !(twiss_computed || do_twiss_output))
+        bomb("you must compute twiss parameters to do longitudinal ring tracking", NULL);
       if (use_linear_chromatic_matrix && longitudinal_ring_only)
         bomb("can't do linear chromatic tracking and longitudinal-only tracking together", NULL);
       if (beam_type==-1)
@@ -1331,6 +1336,14 @@ char **argv;
       break;
     case APERTURE_INPUT:
       readApertureInput(&namelist_text, &run_conditions);
+      break;
+    case LINEAR_CHROMATIC_TRACKING_SETUP:
+      if (do_twiss_output)
+        bomb("you can't give twiss_output and linear_chromatic_tracking_setup together", NULL);
+      if (!run_setuped)
+        bomb("run_setup must precede linear_chromatic_tracking_setup", NULL);
+      setupLinearChromaticTracking(&namelist_text, beamline);
+      linear_chromatic_tracking_setup_done = 1;
       break;
     default:
       fprintf(stdout, "unknown namelist %s given.  Known namelists are:\n", namelist_text.group_name);

@@ -3228,6 +3228,56 @@ void AddWigglerRadiationIntegrals(double length, long poles, double radius,
 #endif
 }
 
+void setupLinearChromaticTracking(NAMELIST_TEXT *nltext, LINE_LIST *beamline)
+{
+  set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
+  set_print_namelist_flags(0);
+  process_namelist(&setup_linear_chromatic_tracking, nltext);
+  print_namelist(stdout, &setup_linear_chromatic_tracking);
+  
+  beamline->twiss0 = malloc(sizeof(TWISS));
+
+  beamline->tune[0] = setup_linear_chromatic_tracking_struct.nux[0];
+  beamline->chromaticity[0] = setup_linear_chromatic_tracking_struct.nux[1];
+  beamline->chrom2[0] = setup_linear_chromatic_tracking_struct.nux[2];
+  beamline->chrom3[0] = setup_linear_chromatic_tracking_struct.nux[3];
+
+  beamline->twiss0->betax = setup_linear_chromatic_tracking_struct.betax[0];
+  beamline->dbeta_dPoP[0] = setup_linear_chromatic_tracking_struct.betax[1];
+
+  beamline->twiss0->alphax = setup_linear_chromatic_tracking_struct.alphax[0];
+  beamline->dalpha_dPoP[0] = setup_linear_chromatic_tracking_struct.alphax[1];
+
+  beamline->twiss0->etax = setup_linear_chromatic_tracking_struct.etax[0];
+  beamline->eta2[0] = setup_linear_chromatic_tracking_struct.etax[1];
+  beamline->eta3[0] = 0.0;
+  beamline->twiss0->etapx = setup_linear_chromatic_tracking_struct.etapx[0];
+  beamline->eta2[1] = setup_linear_chromatic_tracking_struct.etapx[1];
+  beamline->eta3[1] = 0.0;
+
+  beamline->tune[1] = setup_linear_chromatic_tracking_struct.nuy[0];
+  beamline->chromaticity[1] = setup_linear_chromatic_tracking_struct.nuy[1];
+  beamline->chrom2[1] = setup_linear_chromatic_tracking_struct.nuy[2];
+  beamline->chrom3[1] = setup_linear_chromatic_tracking_struct.nuy[3];
+
+  beamline->twiss0->betay = setup_linear_chromatic_tracking_struct.betay[0];
+  beamline->dbeta_dPoP[1] = setup_linear_chromatic_tracking_struct.betay[1];
+
+  beamline->twiss0->alphay = setup_linear_chromatic_tracking_struct.alphay[0];
+  beamline->dalpha_dPoP[1] = setup_linear_chromatic_tracking_struct.alphay[1];
+
+  beamline->twiss0->etay = setup_linear_chromatic_tracking_struct.etay[0];
+  beamline->eta2[2] = setup_linear_chromatic_tracking_struct.etay[1];
+  beamline->eta3[2] = 0.0;
+  beamline->twiss0->etapy = setup_linear_chromatic_tracking_struct.etapy[0];
+  beamline->eta2[3] = setup_linear_chromatic_tracking_struct.etapy[1];
+  beamline->eta3[3] = 0.0;
+
+  beamline->alpha[0] = setup_linear_chromatic_tracking_struct.alphac[0];
+  beamline->alpha[1] = setup_linear_chromatic_tracking_struct.alphac[1];
+}
+
+
 /* compute sextupole resonance widths */
 
 void computeResonanceWidths(LINE_LIST *beamline, double *clorb, RUN *run)
