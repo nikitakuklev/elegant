@@ -115,7 +115,7 @@ void WriteToOutput(SDDS_DATASET *SDDSout, SDDS_DATASET *SDDSout2, char *descript
                    double *power5, double *flux5);
 long GetISub(long mode, long icalc);
 
-char *USAGE="sddsurgent <inputFile> <outputFile>\n\
+char *USAGE1="sddsurgent <inputFile> <outputFile>\n\
     [-calculation=mode=<integer>,method=<integer>,harmonics=<integer>] \n\
     [-undulator=period=<value>,numberOfPeriods=<integer>,kx=<value>,ky=<value>,phase=<value>] \n\
     [-electronBeam=current=<value>,energy=<value>,spread=<value>,xsigma=<value>,ysigma=<value>,xprime=<value>,yprime=<value>,nsigma=<number>] \n\
@@ -135,8 +135,8 @@ nowarnings    If provided, no warning messages will be printed.\n\
 coupling       same as the coupling in sddsbrightness;\n\
               x emittance is ex0/(1+coupling), while y emittance is\n\
               coupling*ex0/(1+coupling).\n\
-              Ignored if ey0 parameter or ey column is found in file.\n\
-emittanceRatio   ratio of y emittance to x emittance.  x emittance is\n\
+              Ignored if ey0 parameter or ey column is found in file.\n";
+char *USAGE2="emittanceRatio   ratio of y emittance to x emittance.  x emittance is\n\
                  ex0 from input file. y emittance is ratio*ex0\n\
                  Ignored if ey0 parameter or ey column is found in file.\n\
 us            If provided, use Roger's us program for spectral calculation.\n\
@@ -158,8 +158,8 @@ calculation   specifies calculation method and mode. \n\
                 4    Flux spectrum through a pinhole \n\
                 5    Flux spectrum integrated over all angles \n\
                 6    Power density and integrated power \n\
-                -1  compute with all above modes. \n\
-                urgent can have -6 mode (only valid for harmonics<=0), \n\
+                -1  compute with all above modes. \n";
+char *USAGE3="                urgent can have -6 mode (only valid for harmonics<=0), \n\
                 which does everything mode=6 does, plus \n\
                 the angular/spatial distribution of power density \n\
                 for each harmonic. For mode=6(urgent), two output files, \n\
@@ -171,8 +171,8 @@ calculation   specifies calculation method and mode. \n\
                  =0, include all harmonics for calculation.\n\
                  =-1, Lowest order harmonic \n\
                  =I (I>0), Ith harmonic; \n\
-                 =-I (I>0), include harmonics from 1 to I.\n\
-undulator     Specifies the undulator parameters: period in m units, number of periods, \n\
+                 =-I (I>0), include harmonics from 1 to I.\n";
+char *USAGE4="undulator     Specifies the undulator parameters: period in m units, number of periods, \n\
                horizontal deflection parameter (kx), \n\
                vertical deflection parameter (ky), \n\
                and phase difference (degree) of canted undulator.\n\
@@ -197,8 +197,8 @@ pinhole    Specifies pinhole parameters: \n\
             (for angular units (d=0.0) values are entered in mrad) \n\
             xnumber    Number of subdivisions of pinhole in X (max 50) \n\
             ynumber    Number of subdivisions of pinhole in Y (max 50) \n\
-            pinhole parameters are not needed for computing on-axis brilliance (i.e., mode=3). \n\
-nphi       specifies number of steps in phi between o and pi/2.0. nphi<100 \n\
+            pinhole parameters are not needed for computing on-axis brilliance (i.e., mode=3). \n";
+char *USAGE5="nphi       specifies number of steps in phi between o and pi/2.0. nphi<100 \n\
             used in (calculation mode=1,2,3,4,5 calculation method=1,2) \n\
 alpha      steps specifies no. of steps in angle alpha (gamma*theta) (<100). \n\
             used in mode=1, method=1.\n\
@@ -242,8 +242,10 @@ int main(int argc, char **argv) {
 
   SDDS_RegisterProgramName(argv[0]);
   argc = scanargs(&s_arg, argc, argv);
-  if (argc<2)
-    bomb(NULL, USAGE);
+  if (argc<2) {
+    fprintf(stderr, "%s%s%s%s%s", USAGE1, USAGE2, USAGE3, USAGE4, USAGE5);
+    exit(1);
+  }
   output[0]=0;
   lamda1=E1=ptot=pd=max_irradiance=totalPD=totalPower=totalFlux=pdtot=ptot1=ftot=0;
   EE=lamda=xPMM=yPMM=irradiance=L1=L2=L3=L4=power=EI=spec1=spec2=spec3=NULL;
