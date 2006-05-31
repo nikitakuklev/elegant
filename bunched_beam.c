@@ -224,14 +224,26 @@ long new_bunched_beam(
 #ifdef VAX_VMS
     char s[100];
 #endif
+#if USE_MPI
+    double save_emit_x, save_emit_y,
+           save_sigma_dp, save_sigma_s;
+#endif
+
 
     beamCounter++;
-    if (firstIsFiducial && beamCounter==1)
+    if (firstIsFiducial && beamCounter==1) {
       beam->n_original = beam->n_to_track = 1;
+#if USE_MPI
+      lessPartAllowed = 1;  /* All the processors will do the same thing from now */
+#endif
+    }
     else {
       if (firstIsFiducial && beamCounter==2)
         bunchGenerated = 0;
       beam->n_original = beam->n_to_track = beam->n_particle = n_particles_per_bunch;
+#if USE_MPI
+      lessPartAllowed = 0;
+#endif
     }
     beam->n_accepted = 0;
 
@@ -269,10 +281,29 @@ long new_bunched_beam(
             }
         fprintf(stdout, "generating bunch %ld.%ld\n", control->i_step, control->i_vary);
         fflush(stdout);
+#if USE_MPI
+        if (firstIsFiducial && beamCounter==1) {
+          /* set emittances to zero temporarily */
+          save_emit_x = x_plane.emit;
+          save_emit_y = y_plane.emit;
+          save_sigma_dp = longit.sigma_dp;
+          save_sigma_s = longit.sigma_s;
+          x_plane.emit = y_plane.emit = longit.sigma_dp = longit.sigma_s = 0;
+        }
+#endif
         n_actual_particles = 
           generate_bunch(beam->original, beam->n_to_track, &x_plane,
                          &y_plane, &longit, enforce_rms_values, limit_invariants, 
                          symmetrize, haltonID, randomize_order, limit_in_4d, Po);
+#if USE_MPI
+       if (firstIsFiducial && beamCounter==1) {
+          /* copy values back */
+          x_plane.emit = save_emit_x;
+          y_plane.emit = save_emit_y;
+          longit.sigma_dp = save_sigma_dp;
+          longit.sigma_s = save_sigma_s;
+        }
+#endif
         if (bunch) {
             if (!SDDS_bunch_initialized)
                 bomb("'bunch' file is uninitialized (new_bunched_beam)", NULL);
@@ -359,16 +390,18 @@ long track_beam(
   effort = 0;
 
 #if USE_MPI
-  if (beam->n_to_track<(n_processors-1)) {
+  if (beam->n_to_track<(n_processors-1) && !lessPartAllowed) {
     printf("*************************************************************************************\n");
     printf("* Warning! The number of particles shouldn't be less than the number of processors! *\n");
     printf("* Less number of processors are recommended!                                        *\n");
     printf("*************************************************************************************\n");
+    MPI_Barrier(MPI_COMM_WORLD); /* Make sure the information can be printed before aborting */
     MPI_Abort(MPI_COMM_WORLD, 2);
   }
   else {  /* do tracking in parallel */ 
-    notSinglePart = 1;
-    random_1(-FABS(987654321+2*myid));
+    if (!lessPartAllowed) /* If less number of particles is allowed, all processors will excute the same code */
+      notSinglePart = 1;
+    /*   random_1(-FABS(987654321+2*myid)); */
   }
 #endif
   n_left = do_tracking(beam, NULL, 0, &effort, beamline, &p_central, 
@@ -382,7 +415,7 @@ long track_beam(
 		       finalCharge, beam->lostOnPass, NULL);
 #if USE_MPI
   notSinglePart = 0; /* All the processors will do the same thing from now */
-  random_1(-FABS(987654321));
+  /* random_1(-FABS(987654321)); */
 #endif  
   if (control->fiducial_flag&FIRST_BEAM_IS_FIDUCIAL && !(flags&PRECORRECTION_BEAM))
     control->fiducial_flag |= FIDUCIAL_BEAM_SEEN;

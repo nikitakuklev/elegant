@@ -65,9 +65,14 @@ void track_through_rf_deflector(
 	if (isMaster) {
 	  n_particles = 0;
 	  rf_param->t_first_particle = 0.0;
-	} 
+	}
+#ifndef USE_KAHAN 
 	MPI_Allreduce(&(rf_param->t_first_particle), &tmp, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 	rf_param->t_first_particle = tmp; 
+#else
+       	rf_param->t_first_particle = KahanParallel(rf_param->t_first_particle, error); 
+#endif
+
 	MPI_Allreduce(&n_particles, &n_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
 	n_particles = n_total;
       } 
@@ -89,60 +94,62 @@ void track_through_rf_deflector(
   dtLight = length/c_mks/2;
   Estrength = (e_mks*rf_param->voltage/n_kicks)/(me_mks*sqr(c_mks));
   Ephase = rf_param->phase*PI/180.0 + omega*(rf_param->time_offset-t_first+dtLight);
-  for (ip=0; ip<n_particles; ip++) {
-    x  = initial[ip][0];
-    xp = initial[ip][1];
-    y  = initial[ip][2];
-    yp = initial[ip][3];
-    pc = pc_central*(1+initial[ip][5]);
-    pz = pc/sqrt(1+sqr(xp)+sqr(yp));
-    px = xp*pz;
-    py = yp*pz;
-    beta = pc/sqrt(1+sqr(pc));
-    t_part = initial[ip][4]/(c_mks*beta);
-    tLight = 0;
+  if (isSlave || !notSinglePart) {
+    for (ip=0; ip<n_particles; ip++) {
+      x  = initial[ip][0];
+      xp = initial[ip][1];
+      y  = initial[ip][2];
+      yp = initial[ip][3];
+      pc = pc_central*(1+initial[ip][5]);
+      pz = pc/sqrt(1+sqr(xp)+sqr(yp));
+      px = xp*pz;
+      py = yp*pz;
+      beta = pc/sqrt(1+sqr(pc));
+      t_part = initial[ip][4]/(c_mks*beta);
+      tLight = 0;
 #ifdef DEBUG
-    fprintf(stderr, "start coord[%ld] = %e, %e, %e, %e, %e, %e\n",
-	    ip, x, xp, y, yp, initial[ip][4], initial[ip][5]);
+      fprintf(stderr, "start coord[%ld] = %e, %e, %e, %e, %e, %e\n",
+	      ip, x, xp, y, yp, initial[ip][4], initial[ip][5]);
 #endif
-    for (is=0; is<=n_kicks; is++) {
-      beta_z = pz/pc;
-      if (is==0 || is==n_kicks) {
-        /* first half-drift and last half-drift */
-        t_part += (length/(2*c_mks*beta_z));
-        tLight = dtLight;
-        x += xp*length/2;
-        y += yp*length/2;
-        if (is==n_kicks)
-          break;
-      } else {
-        t_part += (length/(c_mks*beta_z));
-        tLight += 2*dtLight; 
-        x += xp*length;
-        y += yp*length;
+      for (is=0; is<=n_kicks; is++) {
+	beta_z = pz/pc;
+	if (is==0 || is==n_kicks) {
+	  /* first half-drift and last half-drift */
+	  t_part += (length/(2*c_mks*beta_z));
+	  tLight = dtLight;
+	  x += xp*length/2;
+	  y += yp*length/2;
+	  if (is==n_kicks)
+	    break;
+	} else {
+	  t_part += (length/(c_mks*beta_z));
+	  tLight += 2*dtLight; 
+	  x += xp*length;
+	  y += yp*length;
+	}
+#ifdef DEBUG
+	fprintf(stdout, "ip=%ld  is=%ld  phase=%f\n",
+		ip, is, fmod((t_part-tLight)*omega+Ephase, PIx2)*180/PI);
+#endif
+	dp_r = Estrength*cos((t_part-tLight)*omega + Ephase);
+	xp = (px += dp_r*cos_tilt)/pz;
+	yp = (py += dp_r*sin_tilt)/pz;
+	pc = sqrt(sqr(px)+sqr(py)+sqr(pz));
       }
+      beta = pc/sqrt(1+sqr(pc));
+      final[ip][0] = x;
+      final[ip][1] = xp;
+      final[ip][2] = y;
+      final[ip][3] = yp;
+      final[ip][4] = t_part*c_mks*beta;
+      final[ip][5] = (pc-pc_central)/pc_central;
+      final[ip][6] = initial[ip][6];
 #ifdef DEBUG
-      fprintf(stdout, "ip=%ld  is=%ld  phase=%f\n",
-              ip, is, fmod((t_part-tLight)*omega+Ephase, PIx2)*180/PI);
+      fprintf(stderr, "stop  coord[%ld] = %e, %e, %e, %e, %e, %e\n",
+	      ip, final[ip][0], final[ip][1], final[ip][2], final[ip][3],
+	      final[ip][4], final[ip][5]);
 #endif
-      dp_r = Estrength*cos((t_part-tLight)*omega + Ephase);
-      xp = (px += dp_r*cos_tilt)/pz;
-      yp = (py += dp_r*sin_tilt)/pz;
-      pc = sqrt(sqr(px)+sqr(py)+sqr(pz));
     }
-    beta = pc/sqrt(1+sqr(pc));
-    final[ip][0] = x;
-    final[ip][1] = xp;
-    final[ip][2] = y;
-    final[ip][3] = yp;
-    final[ip][4] = t_part*c_mks*beta;
-    final[ip][5] = (pc-pc_central)/pc_central;
-    final[ip][6] = initial[ip][6];
-#ifdef DEBUG
-    fprintf(stderr, "stop  coord[%ld] = %e, %e, %e, %e, %e, %e\n",
-	    ip, final[ip][0], final[ip][1], final[ip][2], final[ip][3],
-	    final[ip][4], final[ip][5]);
-#endif
   }
 }
 
@@ -296,6 +303,9 @@ void set_up_rftm110(RFTM110 *rf_param, double **initial, long n_particles, doubl
   double pc, beta;
   TABLE data;
   TRACKING_CONTEXT tContext;
+#ifdef USE_KAHAN
+  double error = 0.0; 
+#endif
 
   if (rf_param->initialized)
     return;
@@ -329,7 +339,11 @@ void set_up_rftm110(RFTM110 *rf_param, double **initial, long n_particles, doubl
     for (ip=rf_param->t_first_particle=0; ip<n_particles; ip++) {
       pc = pc_central*(1+initial[ip][5]);
       beta = pc/sqrt(1+sqr(pc));
+#ifndef USE_KAHAN
       rf_param->t_first_particle += initial[ip][4]/beta/c_mks;
+#else
+      rf_param->t_first_particle = KahanPlus(rf_param->t_first_particle, initial[ip][4]/beta/c_mks, &error); 
+#endif
     }
   }
 #if USE_MPI
@@ -339,9 +353,14 @@ void set_up_rftm110(RFTM110 *rf_param, double **initial, long n_particles, doubl
     if (isMaster) {
       n_particles = 0;
       rf_param->t_first_particle = 0.0;
-    } 
+    }
+#ifndef USE_KAHAN 
     MPI_Allreduce(&(rf_param->t_first_particle), &tmp, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    rf_param->t_first_particle = tmp; 
+    rf_param->t_first_particle = tmp;
+#else
+    rf_param->t_first_particle = KahanParallel(rf_param->t_first_particle, error); 
+#endif
+ 
     MPI_Allreduce(&n_particles, &n_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
     n_particles = n_total; 
   }

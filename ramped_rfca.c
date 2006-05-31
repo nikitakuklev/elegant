@@ -33,6 +33,9 @@ long ramped_rf_cavity(
     static SDDS_TABLE debugTable;
     static long debugInitialized, debugCount = 0, debugLength;
 #endif
+#if USE_MPI
+    long np_total, np_tmp;
+#endif 
 
     log_entry("ramped_rf_cavity");
 
@@ -53,26 +56,45 @@ long ramped_rf_cavity(
             print_dictionary_entry(stdout, T_RAMPRF, 0, 0);
             }
         }
-
+#if (!USE_MPI)
     if (np<=0) {
         log_exit("ramped_rf_cavity");
         return(np);
         }
+#else
+    if (notSinglePart) {
+      if (isMaster)
+	np_tmp = 0;
+      else
+	np_tmp = np;
+      MPI_Allreduce(&np_tmp, &np_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);   
+      if (np_total<=0) {
+	log_exit("ramped_rf_cavity");
+	return(np_total);
+      }
+    }
+    else if (np<=0) {
+        log_exit("ramped_rf_cavity");
+        return(np);
+    }
+#endif 
 
     length = ramprf->length;
 
     if (ramprf->volt==0) {
+      if(isSlave || !notSinglePart) {
         if (ramprf->length) {
             for (ip=0; ip<np; ip++) {
                 coord = part[ip];
                 coord[0] += coord[1]*length;
                 coord[2] += coord[3]*length;
                 coord[4] += length;
-                }
-            }
+	    }
+	}
+      }
         log_exit("ramped_rf_cavity");
         return(np);
-        }
+    }
 
     if (!ramprf->t_Vf)
         set_up_ramped_rfca(ramprf);
@@ -151,8 +173,8 @@ long ramped_rf_cavity(
             SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
         }
 #endif
-
-    for (ip=0; ip<np; ip++) {
+    if(isSlave || !notSinglePart) {
+      for (ip=0; ip<np; ip++) {
         coord  = part[ip];
         /* apply initial drift */
         coord[0] += coord[1]*length/2;
@@ -175,41 +197,42 @@ long ramped_rf_cavity(
 
 #if defined(IEEE_MATH)
         for (i=0; i<6; i++)
-            if (isnan(coord[i]) || isinf(coord[i]))
-                break;
+	  if (isnan(coord[i]) || isinf(coord[i]))
+	    break;
         if (i!=6) {
-            fprintf(stdout, "error: bad coordinate for particle %ld in RAMPRF\n", i);
-            fflush(stdout);
-            for (i=0; i<6; i++)
-                fprintf(stdout, "%15.8e ", coord[i]);
-                fflush(stdout);
-            fprintf(stdout, "\nP = %15.8e  t = %15.8e\n", P, t);
-            fflush(stdout);
-            abort();
-            }
+	  fprintf(stdout, "error: bad coordinate for particle %ld in RAMPRF\n", i);
+	  fflush(stdout);
+	  for (i=0; i<6; i++)
+	    fprintf(stdout, "%15.8e ", coord[i]);
+	  fflush(stdout);
+	  fprintf(stdout, "\nP = %15.8e  t = %15.8e\n", P, t);
+	  fflush(stdout);
+	  abort();
+	}
 
 #endif
         
 #ifdef DEBUG
         if (ip==0) {
-            double redPhase1;
-            if ((debugCount+1)>debugLength && !SDDS_LengthenTable(&debugTable, (debugLength+=1024)))
-                SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-            if (!SDDS_SetRowValues(&debugTable, SDDS_BY_INDEX|SDDS_PASS_BY_VALUE,
-                                   debugCount, 
-                                   0, t, 
-                                   1, fmod(omega*(t-t0)+phase, PIx2), 2, volt, 3, omega/PIx2,
-                                   4, volt*sin(omega*(t-t0)+phase), -1) ||
-                !SDDS_UpdateTable(&debugTable))
-                SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-            debugCount++;
-            }
+	  double redPhase1;
+	  if ((debugCount+1)>debugLength && !SDDS_LengthenTable(&debugTable, (debugLength+=1024)))
+	    SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+	  if (!SDDS_SetRowValues(&debugTable, SDDS_BY_INDEX|SDDS_PASS_BY_VALUE,
+				 debugCount, 
+				 0, t, 
+				 1, fmod(omega*(t-t0)+phase, PIx2), 2, volt, 3, omega/PIx2,
+				 4, volt*sin(omega*(t-t0)+phase), -1) ||
+	      !SDDS_UpdateTable(&debugTable))
+	    SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+	  debugCount++;
+	}
 #endif
-        }
+      }
+    }
 
     log_exit("ramped_rf_cavity");
     return(np);
-    }
+}
 
 void set_up_ramped_rfca(RAMPRF *ramprf)
 {

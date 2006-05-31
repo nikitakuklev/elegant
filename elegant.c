@@ -204,6 +204,16 @@ long notSinglePart=0; /* All the processors will do the same thing by default */
 parallelMode parallelStatus = initialMode; 
 int n_processors = 1;
 int myid;
+int partOnMaster = 1; /* indicate if the particle information is available on master */
+long lessPartAllowed = 0; /* By default, the number of particles is required to be at least n_processors-1 */
+#endif
+
+#ifdef SET_DOUBLE
+void 
+set_fpu (unsigned int mode)
+{
+  __asm__ ("fldcw %0" : : "m" (*&mode));
+}
 #endif
  
 int main(argc, argv)
@@ -260,7 +270,8 @@ char **argv;
 #endif  
     /* redirect output, only the master processor will write on screen or files */
     freopen("/dev/null","w",stdout); 
-  
+    freopen("/dev/null","w",stderr);
+
     writePermitted = isMaster = 0;
     isSlave = 1;
   }
@@ -270,6 +281,10 @@ char **argv;
   if (sizeof(int)<4) { /* The size of integer is assumed to be 4 bytes to handle a large number of particles */
     printf("Warning!!! The INT_MAX could be too small to record the number of particles.\n"); 
   }
+#endif
+
+#ifdef SET_DOUBLE
+  set_fpu (0x27F);  /* use double-precision rounding */
 #endif
 
 #if defined(UNIX) || defined(_WIN32)
@@ -424,6 +439,9 @@ char **argv;
       free_namelist_text(&namelist_text);
     scan_namelist(&namelist_text, s);
     namelists_read = 1;
+#if USE_MPI /* synchronize all the processes before execute an input statement */ 
+    MPI_Barrier (MPI_COMM_WORLD);
+#endif
     switch ((commandCode=match_string(namelist_text.group_name, command, N_COMMANDS, EXACT_MATCH))) {
     case RUN_SETUP:
       beam_type = -1;
@@ -477,14 +495,14 @@ char **argv;
         fflush(stdout);
       }
       
-      /* seed random number generators.  Note that random_1 seeds random_2, random_3,
+      /* seed random number generators.  Note that random_1_elegant seeds random_2, random_3,
        * and random_4.
-       * random_1 is used for beamline errors.  
+       * random_1_elegant is used for beamline errors.  
        * random_4 is used for beam generation 
        * random_2 is used for random scraping/sampling/scattering.  
        * random_3 is used for BPM noise.
        */
-      random_1(-FABS(random_number_seed));
+      random_1_elegant(-FABS(random_number_seed));
 
       /* copy run data into run_conditions structure */
       run_conditions.ideal_gamma = sqrt(sqr(p_central)+1);
@@ -896,6 +914,9 @@ char **argv;
         createSemaphoreFile(semaphoreFile[1]);
       free_beamdata(&beam);
       printFarewell(stdout);
+#if USE_MPI
+      MPI_Finalize();
+#endif
       exit(0);
       break;
     case OPTIMIZATION_SETUP:
@@ -1273,7 +1294,8 @@ char **argv;
         output_magnets(magnets, lattice, beamline);
       break;
     case SUBPROCESS:
-      run_subprocess(&namelist_text, &run_conditions);
+      if (isMaster)
+        run_subprocess(&namelist_text, &run_conditions);
       break;
     case FIT_TRACES:
       do_fit_trace_data(&namelist_text, &run_conditions, beamline);

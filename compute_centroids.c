@@ -32,8 +32,18 @@ void compute_centroids(
   long i_part, i_coord;
   double sum[6], *part;
   long active = 1; 
+#ifdef USE_KAHAN
+  double error[6];
+#endif
+
 #if USE_MPI  /* In the non-parallel mode, it will be same with the serial version */ 
   long n_total;
+#ifdef USE_KAHAN
+  long j;
+  double error_sum=0.0, error_total=0.0,
+    sumMatrix[n_processors][6], errorMatrix[n_processors][6],
+    sumArray[n_processors], errorArray[n_processors];
+#endif
   if (notSinglePart) {
     if (((parallelStatus==trueParallel) && isSlave) || ((parallelStatus!=trueParallel) && isMaster))
       active = 1;
@@ -42,14 +52,22 @@ void compute_centroids(
   }
 #endif
  
-  for (i_coord=0; i_coord<6; i_coord++)
+  for (i_coord=0; i_coord<6; i_coord++) {
     sum[i_coord] = centroid[i_coord] = 0;
+#ifdef USE_KAHAN
+    error[i_coord] = 0.0;
+#endif
+  }
 
   if (active) {
     for (i_part=0; i_part<n_part; i_part++) {
       part = coordinates[i_part];
       for (i_coord=0; i_coord<6; i_coord++) 
+#ifndef USE_KAHAN
 	sum[i_coord] += part[i_coord];
+#else
+	sum[i_coord] = KahanPlus(sum[i_coord], part[i_coord], &error[i_coord]); 
+#endif	
     }
   }
   if (!USE_MPI || !notSinglePart) {
@@ -70,8 +88,25 @@ void compute_centroids(
 	n_part = 0;
       }
       /* compute centroid sum over processors */
-      MPI_Allreduce(sum, centroid, 6, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+#ifndef USE_KAHAN  
+      MPI_Allreduce(sum,centroid,6,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
+#else
+      MPI_Allgather(sum,6,MPI_DOUBLE,sumMatrix,6,MPI_DOUBLE,MPI_COMM_WORLD);
+      /* compute error sum over processors */
+      MPI_Allgather(error,6,MPI_DOUBLE,errorMatrix,6,MPI_DOUBLE,MPI_COMM_WORLD);
 
+      for (i_coord=0; i_coord<6; i_coord++) {
+        error_sum = 0.0;
+	/* extract the columnwise array from the matrix */
+	for (j=0; j<n_processors; j++) {         
+	  sumArray[j] = sumMatrix[j][i_coord];             
+	  errorArray[j] = errorMatrix[j][i_coord];
+	}
+	centroid[i_coord] = Kahan(n_processors-1,&sumArray[1],&error_sum);
+	error_total = Kahan(n_processors-1,&errorArray[1],&error_sum);
+	centroid[i_coord] += error_total; 
+      }
+#endif 
       /* compute total number of particles over processors */
       MPI_Allreduce(&n_part, &n_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);  
       if (n_total)
@@ -167,9 +202,20 @@ void accumulate_beam_sums(
   double value;
   long active = 1;
   double Sij;
+#ifdef USE_KAHAN
+  double errorCen[6], errorSig[21];
+#endif
+
 #if USE_MPI  /* In the non-parallel mode, it will be same with the serial version */ 
   double buffer[6], Sij_p[21], Sij_total[21];
   long n_total, offset=0, index;  
+#ifdef USE_KAHAN
+  double error_sum=0.0, error_total=0.0,
+    sumMatrixCen[n_processors][6], errorMatrixCen[n_processors][6],
+    sumMatrixSig[n_processors][21], errorMatrixSig[n_processors][21],
+    sumArray[n_processors], errorArray[n_processors];
+  long k;
+#endif
   if (notSinglePart) {
     if (((parallelStatus==trueParallel) && isSlave) || ((parallelStatus!=trueParallel) && isMaster))
       active = 1;
@@ -199,12 +245,21 @@ void accumulate_beam_sums(
       }
       /* compute centroids for present beam and add in to existing centroid data */
       for (i=0; i<6; i++) {
-	for (centroid[i]=i_part=0; i_part<n_part; i_part++)
+#ifdef USE_KAHAN
+        errorCen[i] = 0.0;
+#endif
+	for (centroid[i]=i_part=0; i_part<n_part; i_part++) {
+#ifndef USE_KAHAN
 	  centroid[i] += coord[i_part][i];
+#else
+	centroid[i] = KahanPlus(centroid[i], coord[i_part][i], &errorCen[i]); 
+#endif
+	}
 	if (!USE_MPI || !notSinglePart) {	
 	  sums->centroid[i] = (sums->centroid[i]*sums->n_part+centroid[i])/(sums->n_part+n_part);
 	  centroid[i] /= n_part;
 	}
+
 #if USE_MPI
         if (notSinglePart) {
 	  if ((parallelStatus!=trueParallel) && isMaster) {
@@ -223,10 +278,25 @@ void accumulate_beam_sums(
 	  memset(centroid, 0.0,  sizeof(double)*6);
 	}
 	/* compute centroid sum over processors */
+#ifndef USE_KAHAN 
 	MPI_Allreduce(centroid, buffer, 6, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 	memcpy(centroid, buffer, sizeof(double)*6);
-	/* compute total number of particles over processors */
+#else
+	MPI_Allgather(centroid,6,MPI_DOUBLE,sumMatrixCen,6,MPI_DOUBLE,MPI_COMM_WORLD);
+	/* compute error sum over processors */
+	MPI_Allgather(errorCen,6,MPI_DOUBLE,errorMatrixCen,6,MPI_DOUBLE,MPI_COMM_WORLD);
 
+	for (i=0; i<6; i++) {
+	  error_sum = 0.0;
+          centroid[i] = 0.0;
+          /* extract the columnwise array from the matrix */
+          for (j=1; j<n_processors; j++) {
+            centroid[i] = KahanPlus(centroid[i], sumMatrixCen[j][i], &error_sum);
+            centroid[i] = KahanPlus(centroid[i], errorMatrixCen[j][i], &error_sum);
+	  }
+	}
+#endif 
+	/* compute total number of particles over processors */
 	MPI_Allreduce(&n_part, &n_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);  
 	for (i=0; i<6; i++) {
 	  sums->centroid[i] = (sums->centroid[i]*sums->n_part+centroid[i])/(sums->n_part+n_total);
@@ -270,27 +340,54 @@ void accumulate_beam_sums(
 	    offset += i-1;
 #endif
 	for (j=i; j<6; j++) {
+#ifdef USE_KAHAN
+          errorSig[j]=0.0;
+#endif
+
 #if (!USE_MPI) 
-	  for (Sij=i_part=0; i_part<n_part; i_part++)
+	  for (Sij=i_part=0; i_part<n_part; i_part++) {
+#ifndef USE_KAHAN
 	    Sij += (coord[i_part][i]-centroid[i])*(coord[i_part][j]-centroid[j]);
+#else
+	    Sij = KahanPlus(Sij, (coord[i_part][i]-centroid[i])*(coord[i_part][j]-centroid[j]), &errorSig[j]); 
+#endif
+	  }
 	  sums->sigma[i][j] = (sums->sigma[i][j]*sums->n_part+Sij)/(sums->n_part+n_part);
 #else 
 	  if (notSinglePart) {
 	    if (parallelStatus==trueParallel) {
 	      index = 5*i+j-offset;
 	      Sij_p[index] = 0;
-	      for (i_part=0; i_part<n_part; i_part++)
+#ifdef USE_KAHAN
+              errorSig[index] = 0.0;
+#endif
+	      for (i_part=0; i_part<n_part; i_part++) {
+#ifndef USE_KAHAN
 		Sij_p[index] += (coord[i_part][i]-centroid[i])*(coord[i_part][j]-centroid[j]);
+#else
+	        Sij_p[index] = KahanPlus(Sij_p[index], (coord[i_part][i]-centroid[i])*(coord[i_part][j]-centroid[j]), &errorSig[index]); 
+#endif
+	      }
 	    }
 	    else if (isMaster) {
-	      for (Sij=i_part=0; i_part<n_part; i_part++)
+	      for (Sij=i_part=0; i_part<n_part; i_part++) {
+#ifndef USE_KAHAN
 		Sij += (coord[i_part][i]-centroid[i])*(coord[i_part][j]-centroid[j]);
+#else
+		Sij = KahanPlus(Sij, (coord[i_part][i]-centroid[i])*(coord[i_part][j]-centroid[j]), &errorSig[j]); 
+#endif
+	      }
 	      sums->sigma[i][j] = (sums->sigma[i][j]*sums->n_part+Sij)/(sums->n_part+n_part);
 	    }
 	  }
 	  else {
-	    for (Sij=i_part=0; i_part<n_part; i_part++)
+	    for (Sij=i_part=0; i_part<n_part; i_part++) {
+#ifndef USE_KAHAN
 	      Sij += (coord[i_part][i]-centroid[i])*(coord[i_part][j]-centroid[j]);
+#else
+	      Sij = KahanPlus(Sij, (coord[i_part][i]-centroid[i])*(coord[i_part][j]-centroid[j]), &errorSig[j]); 
+#endif
+	    }
 	    sums->sigma[i][j] = (sums->sigma[i][j]*sums->n_part+Sij)/(sums->n_part+n_part);
 	  }
 #endif
@@ -300,10 +397,38 @@ void accumulate_beam_sums(
 #if USE_MPI
     if (notSinglePart) {
       if (parallelStatus==trueParallel) {
-	if (isMaster)
+	if (isMaster) {
 	  memset(Sij_p, 0.0,  sizeof(double)*21);
+#ifdef USE_KAHAN
+          memset(errorSig, 0.0,  sizeof(double)*21);
+#endif
+	}
 	/* compute Sij sum over processors */
+#ifndef USE_KAHAN
 	MPI_Allreduce(Sij_p, Sij_total, 21, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+#else
+        MPI_Allgather(Sij_p, 21, MPI_DOUBLE, sumMatrixSig, 21, MPI_DOUBLE, MPI_COMM_WORLD);
+	/* compute error sum over processors */
+	MPI_Allgather(errorSig, 21, MPI_DOUBLE, errorMatrixSig, 21, MPI_DOUBLE,MPI_COMM_WORLD);
+        offset = 0;
+	for (i=0; i<6; i++) {
+	  if (i>=1)        
+	    offset += i-1;
+	  for (j=i; j<6; j++) {
+	    index = 5*i+j-offset;
+	    error_sum = 0.0;
+	    /* extract the columnwise array from the matrix */
+	    for (k=0; k<n_processors; k++) {         
+	      sumArray[k] = sumMatrixSig[k][index];             
+	      errorArray[k] = errorMatrixSig[k][index];
+	    }
+	    Sij_total[index] = Kahan(n_processors-1,&sumArray[1],&error_sum);
+	    error_total = Kahan(n_processors-1,&errorArray[1],&error_sum);
+	    Sij_total[index] += error_total;
+	  } 
+	}
+      
+#endif
 	offset = 0; 
 	for (i=0; i<6; i++) {
 	  if (i>=1)

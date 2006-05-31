@@ -50,7 +50,8 @@ typedef enum balanceMode {badBalance, startMode, goodBalance} balance;
 void scatterParticles(double **coord, long *nToTrack, double **accepted,
                       long n_processors, int myid, balance balanceStatus, 
                       double my_rate, double nParPerElements, double round,
-                      int lostSinceSeqMod,int *distributed);
+                      int lostSinceSeqMod,int *distributed, 
+                      long *reAllocate, double *P_central);
 void gatherParticles(double **coord, long *lostOnPass, long *nToTrack, 
                      long *nLost, double **accepted, long n_processors, 
                      int myid, double *round);
@@ -137,9 +138,6 @@ long do_tracking(
   unsigned long classFlags = 0;
   long nParticlesStartPass = 0;
   int myid, active = 1, lostSinceSeqMode = 0;
-#ifdef SORT
-  int nToTrackAtLastSort;
-#endif
 #if USE_MPI 
   long old_nToTrack = 0, nParElements, nElements; 
   int checkFlags;
@@ -147,8 +145,8 @@ long do_tracking(
   double round = 0.5;
   balance balanceStatus;
   balanceStatus = startMode;
-  int distributed = 0; /* identify if the particles have been scattered */ 
-  int partOnMaster = 1; /* indicate if the particle information is available on master */
+  int distributed = 0; /* indicate if the particles have been scattered */ 
+  long reAllocate = 0; /* indicate if new memory needs to be allocated */
 #ifdef  USE_MPE /* use the MPE library */
   int event1a, event1b;
   event1a = MPE_Log_get_event_number();
@@ -204,7 +202,7 @@ long do_tracking(
   watch_pt_seen = feedbackDriverSeen = 0;
 
 #ifdef SORT
-  nToTrackAtLastSort = nToTrack;
+  int nToTrackAtLastSort = nToTrack;
 #endif
   
   check_nan = 1;
@@ -442,6 +440,29 @@ long do_tracking(
 
       log_entry("do_tracking.2.2.1");
 
+#ifdef SORT
+      if (!USE_MPI || !notSinglePart)
+	if (nToTrackAtLastSort > nToTrack) {/* indicates more particles are lost, need sort */
+          qsort(coord[0], nToTrack, COORDINATES_PER_PARTICLE*sizeof(double), comp_IDs);
+          if (accepted!=NULL)
+            qsort(accepted[0], nToTrack, COORDINATES_PER_PARTICLE*sizeof(double), comp_IDs);
+	  nToTrackAtLastSort = nToTrack;
+	}   
+#endif   
+
+      if (sums_vs_z && *sums_vs_z && !(flags&FINAL_SUMS_ONLY) && !(flags&TEST_PARTICLES)) {
+        if (i_sums<0)
+          bomb("attempt to accumulate beam sums with negative index!", NULL);
+        accumulate_beam_sums(*sums_vs_z+i_sums, coord, nToTrack, *P_central);
+        (*sums_vs_z)[i_sums].z = z;
+#if defined(BEAM_SUMS_DEBUG)
+        fprintf(stdout, "beam sums accumulated in slot %ld for %s at z=%em, sx=%e\n", 
+                i_sums, name, z, sqrt((*sums_vs_z)[i_sums].sum2[0]/nLeft));
+        fflush(stdout);
+#endif
+        i_sums++;
+      }
+
 #if USE_MPI
       if (notSinglePart) {
 	active = 0;
@@ -491,7 +512,7 @@ long do_tracking(
 	  /* Particles will be scattered in startMode, bad balancing status or notParallel state */  
 	  if ((balanceStatus==badBalance) || (parallelStatus==notParallel)) { 
 	    scatterParticles(coord, &nToTrack, accepted, n_processors, myid,
-			     balanceStatus, my_rate, nParPerElements, round, lostSinceSeqMode, &distributed);
+			     balanceStatus, my_rate, nParPerElements, round, lostSinceSeqMode, &distributed, &reAllocate, P_central);
 	    if (myid != 0) {
 	      /* update the nMaximum for recording the nLost on all the slave processors */
 	      nMaximum = nToTrack;  
@@ -503,7 +524,7 @@ long do_tracking(
 	    /* For the first pass, scatter when it is not in parallel mode */
 	    if (parallelStatus!=trueParallel) {
 	      scatterParticles(coord, &nToTrack, accepted, n_processors, myid,
-			       balanceStatus, my_rate, nParPerElements, round, lostSinceSeqMode, &distributed); 
+			       balanceStatus, my_rate, nParPerElements, round, lostSinceSeqMode, &distributed, &reAllocate, P_central); 
 	      if (myid != 0) {
 		/* update the nMaximum for recording the nLost on all the slave processors */
 		nMaximum = nToTrack; 
@@ -527,28 +548,7 @@ long do_tracking(
       }
 #endif
 
-#ifdef SORT
-      if (!USE_MPI || !notSinglePart)
-	if (nToTrackAtLastSort > nToTrack) {/* indicates more particles are lost, need sort */
-          qsort(coord[0], nToTrack, COORDINATES_PER_PARTICLE*sizeof(double), comp_IDs);
-          if (accepted!=NULL)
-            qsort(accepted[0], nToTrack, COORDINATES_PER_PARTICLE*sizeof(double), comp_IDs);
-	  nToTrackAtLastSort = nToTrack;
-	}   
-#endif   
 
-      if (sums_vs_z && *sums_vs_z && !(flags&FINAL_SUMS_ONLY) && !(flags&TEST_PARTICLES)) {
-        if (i_sums<0)
-          bomb("attempt to accumulate beam sums with negative index!", NULL);
-        accumulate_beam_sums(*sums_vs_z+i_sums, coord, nToTrack, *P_central);
-        (*sums_vs_z)[i_sums].z = z;
-#if defined(BEAM_SUMS_DEBUG)
-        fprintf(stdout, "beam sums accumulated in slot %ld for %s at z=%em, sx=%e\n", 
-                i_sums, name, z, sqrt((*sums_vs_z)[i_sums].sum2[0]/nLeft));
-        fflush(stdout);
-#endif
-        i_sums++;
-      }
       name = eptr->name;
       last_z = z;
       if (entity_description[eptr->type].flags&HAS_LENGTH && eptr->p_elem)
@@ -1142,12 +1142,11 @@ long do_tracking(
 		}
 #if USE_MPI
 		if (USE_MPI && notSinglePart) {
-                  int reAllocate;
                   if (nLeft > nToTrack) /* The particle array on the slave processors needs to be reallocated */
                     reAllocate = nLeft;
                   else
                     reAllocate = 0;
-                  MPI_Bcast(&reAllocate, 1, MPI_INT, 0, MPI_COMM_WORLD);
+                  MPI_Bcast(&reAllocate, 1, MPI_LONG, 0, MPI_COMM_WORLD);
 		}
 #endif
 		nToTrack = nLeft;
@@ -1156,7 +1155,6 @@ long do_tracking(
 	      }
 #if USE_MPI
 	      else {   /* on the slave processors */
-                long reAllocate;
                 MPI_Bcast(&reAllocate, 1, MPI_LONG, 0, MPI_COMM_WORLD);
                 if (reAllocate)
 		  /* resize the particle array */
@@ -1252,7 +1250,9 @@ long do_tracking(
       if (flags&FIRST_BEAM_IS_FIDUCIAL && !(flags&FIDUCIAL_BEAM_SEEN)) {
         if (!(flags&RESTRICT_FIDUCIALIZATION) ||
             (entity_description[eptr->type].flags&MAY_CHANGE_ENERGY)) {
-          do_match_energy(coord, nLeft, P_central, 0);
+	  if (!(classFlags&(UNIDIAGNOSTIC&(~UNIPROCESSOR))))
+	    /* If it is a Diagnostic element, nothing needs to be done */	    
+	    do_match_energy(coord, nLeft, P_central, 0);
         }
         eptr->Pref_output_fiducial = *P_central;
       } else if (flags&FIDUCIAL_BEAM_SEEN) {
@@ -1260,7 +1260,9 @@ long do_tracking(
           set_central_momentum(coord, nLeft, eptr->Pref_output_fiducial, P_central);
       }
       else if (run->always_change_p0)
-        do_match_energy(coord, nLeft, P_central, 0);
+	if (!(classFlags&(UNIDIAGNOSTIC&(~UNIPROCESSOR))))
+	  /* If it is a Diagnostic element, nothing needs to be done */
+	  do_match_energy(coord, nLeft, P_central, 0);
       if (i_pass==0 && traj_vs_z) {
         /* collect trajectory data--used mostly by trajectory correction routines */
         if (!traj_vs_z[i_traj].centroid) {
@@ -1503,13 +1505,26 @@ long do_tracking(
 #endif
   } /* end of the for loop for n_passes*/
 
+
+#ifdef SORT   /* Sort the particles when the particles are lost at the very last element */
+      if (!USE_MPI || !notSinglePart)
+	if (nToTrackAtLastSort > nToTrack) {/* indicates more particles are lost, need sort */
+          qsort(coord[0], nToTrack, COORDINATES_PER_PARTICLE*sizeof(double), comp_IDs);
+          if (accepted!=NULL)
+            qsort(accepted[0], nToTrack, COORDINATES_PER_PARTICLE*sizeof(double), comp_IDs);
+	  nToTrackAtLastSort = nToTrack;
+	}   
+#endif 
+
+
 #if USE_MPI
   if (notSinglePart) {
     /* change back to sequential mode before leaving the do_tracking function */
-    if (parallelStatus!=notParallel && notSinglePart) {
+    if (parallelStatus==trueParallel && notSinglePart) {
       gatherParticles(coord, lostOnPass, &nToTrack, &nLost, accepted, n_processors, myid, &round);
       MPI_Bcast(&nToTrack, 1, MPI_LONG, 0, MPI_COMM_WORLD); 
       parallelStatus = notParallel ;
+      partOnMaster = 1;
     }
   }
 #endif
@@ -1652,17 +1667,13 @@ void do_match_energy(
   long active = 1;
 #if USE_MPI
   long np_total;
-  double P_total;
+  double P_total = 0.0;
   if (notSinglePart) {
     if (((parallelStatus==trueParallel) && isSlave) || ((parallelStatus!=trueParallel) && isMaster))
       active = 1;
     else 
       active = 0;
-  } 
-#ifdef USE_KAHAN
-  double error_total = 0.0, error_sum = 0.0,
-    array[n_processors]; 
-#endif 
+  }  
 #endif
 #ifdef USE_KAHAN
   double error = 0.0;
@@ -1678,9 +1689,9 @@ void do_match_energy(
 #else
   if (notSinglePart) {
     if (parallelStatus!=trueParallel) {
-      MPI_Bcast(&np, 1, MPI_LONG, 0, MPI_COMM_WORLD);
       if (!np) {
-	log_exit("do_match_energy");       
+	log_exit("do_match_energy");   
+	return;   
       }
     }
     else {
@@ -1714,22 +1725,18 @@ void do_match_energy(
       if (parallelStatus!=trueParallel) {
 	if (isMaster)            
 	  P_average /= np; 
-	MPI_Bcast(&P_average, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD); 
       }
       else {
 #ifndef USE_KAHAN    
 	MPI_Allreduce(&P_average, &P_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD );  
 #else
-	MPI_Allgather(&P_average,1,MPI_DOUBLE,array,1,MPI_DOUBLE,MPI_COMM_WORLD);
-	P_total = Kahan(n_processors-1,&array[1],&error_sum);
-	MPI_Allgather(&error,1,MPI_DOUBLE,array,1,MPI_DOUBLE,MPI_COMM_WORLD);
-	error_total = Kahan(n_processors,array,&error_sum);
-	P_total += error_total; 
+        P_total = KahanParallel (P_average, error);
+
 #endif 
 	P_average = P_total/np_total;
       }
     }
-    else
+    else /* Single particle case, all the processors will do the same as in serial version */
       P_average /= np;
 #endif 
     if (fabs(P_average-(*P_central))/(*P_central)>1e-14){ 
@@ -1762,17 +1769,12 @@ void do_match_energy(
       if (parallelStatus!=trueParallel) {
 	if (isMaster)
 	  P_average /= np; 
-	MPI_Bcast(&P_average, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
       }
       else {
 #ifndef USE_KAHAN    
 	MPI_Allreduce(&P_average, &P_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD );  
 #else
-	MPI_Allgather(&P_average,1,MPI_DOUBLE,array,1,MPI_DOUBLE,MPI_COMM_WORLD);
-	P_total = Kahan(n_processors-1,&array[1],&error_sum);
-	MPI_Allgather(&error,1,MPI_DOUBLE,array,1,MPI_DOUBLE,MPI_COMM_WORLD);
-	error_total = Kahan(n_processors-1,&array[1],&error_sum);
-	P_total += error_total; 
+        P_total = KahanParallel (P_average, error);
 #endif
 	P_average = P_total/np_total;
       }
@@ -1800,6 +1802,10 @@ void do_match_energy(
 	  fprintf(stdout, "P_average = %e  P_central = %e  t = %e  dP_centroid = %e\n",
 		  P_average, *P_central, t, dP_centroid);
 	  fflush(stdout);
+#if (USE_MPI)
+	  if (active)
+	    MPI_Abort(MPI_COMM_WORLD, 1);
+#endif    
 	  abort();
 	}
 #endif
@@ -1846,12 +1852,13 @@ void set_central_momentum(
   if (notSinglePart) {
     if (!np) 
       *P_central =  P_new;
-    if (((parallelStatus==trueParallel) && isSlave) || ((parallelStatus!=trueParallel) && isMaster)) {
-      if (*P_central != P_new) {
+
+    if (*P_central != P_new) {
+      if (((parallelStatus==trueParallel) && isSlave) || ((parallelStatus!=trueParallel) && isMaster)) {
 	for (ip=0; ip<np; ip++)
 	  coord[ip][5] = ((1+coord[ip][5])*(*P_central) - P_new)/P_new;
-	*P_central =  P_new;
       }
+      *P_central =  P_new;
     }
   }
   else {
@@ -2242,7 +2249,7 @@ long trackWithChromaticLinearMatrix(double **particle, long particles, double **
       lastDPoP = deltaPoP;
       for (plane=0; !is_lost && plane<2; plane++) {
         /* remove the dispersive orbit from the particle coordinates */
-        coord[2*plane]   -= deltaPoP*(eta[2*plane]   + deltaPoP*eta2[2*plane]  );
+        coord[2*plane]   -= deltaPoP*(eta[2*plane]   + deltaPoP*eta2[2*plane]);
         coord[2*plane+1] -= deltaPoP*(eta[2*plane+1] + deltaPoP*eta2[2*plane+1]);
       }
       /* momentum-dependent pathlength --- note that other path-length terms are ignored ! */
@@ -2946,7 +2953,8 @@ void storeMonitorOrbitValues(ELEMENT_LIST *eptr, double **part, long np)
 void scatterParticles(double **coord, long *nToTrack, double **accepted,
                       long n_processors, int myid, balance balanceStatus, 
                       double my_rate, double nParPerElements, double round, 
-                      int lostSinceSeqMode, int *distributed)
+                      int lostSinceSeqMode, int *distributed, 
+                      long *reAllocate, double *P_central)
 {
   long work_processors = n_processors-1; 
   int root = 0, i, j;
@@ -2967,7 +2975,7 @@ void scatterParticles(double **coord, long *nToTrack, double **accepted,
     MPI_Gather(&my_nToTrack, 1, MPI_INT, nToTrackCounts, 1, MPI_INT, root, MPI_COMM_WORLD);
     *distributed = 1; 
   }
-  else if ((balanceStatus == badBalance) || lostSinceSeqMode) { 
+  else if ((balanceStatus == badBalance) || lostSinceSeqMode || *reAllocate) { 
     /* calculating the number of jobs to be sent according to the speed of each processors */
     MPI_Gather(&my_rate, 1, MPI_DOUBLE, rateCounts, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
     MPI_Reduce(&my_rate, &total_rate, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
@@ -2998,6 +3006,7 @@ void scatterParticles(double **coord, long *nToTrack, double **accepted,
     }
     /* scatter the number of particles to be sent to each processor */ 
     MPI_Scatter(nToTrackCounts, 1, MPI_INT, &my_nToTrack, 1, MPI_INT, root, MPI_COMM_WORLD);
+    *reAllocate = 0; /* set the flag back to 0 after scattering */ 
   }
   else { /* keep the nToTrack unchanged */
     if (myid==0)
@@ -3029,6 +3038,9 @@ void scatterParticles(double **coord, long *nToTrack, double **accepted,
                 MPI_DOUBLE, 0, 105, MPI_COMM_WORLD, &status);
     *nToTrack = my_nToTrack;
   }
+  /* broadcast the P_central to all the slave processors */
+  MPI_Bcast(P_central, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+  
 #ifdef MPI_DEBUG
   if (MPI_DEBUG) {
     int  namelen;

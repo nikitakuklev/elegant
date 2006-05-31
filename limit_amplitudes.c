@@ -555,6 +555,9 @@ long track_through_pfilter(
   static double *deltaBuffer=NULL;
   static long maxBuffer = 0;
   double reference;
+#ifdef USE_KAHAN
+  double error = 0.0; 
+#endif
   
   itop = np-1;
 
@@ -645,7 +648,11 @@ long track_through_pfilter(
   if (pfilter->beamCentered) {
     if(isSlave || !notSinglePart) {
       for (ip=0; ip<=itop; ip++)
+#ifndef USE_KAHAN
 	reference += initial[ip][5];
+#else
+        reference = KahanPlus(reference, initial[ip][5], &error);
+#endif
     }
 #if (!USE_MPI)
     reference /= (itop+1);
@@ -658,8 +665,12 @@ long track_through_pfilter(
 	  n_particle = 0; 
 	}
 	MPI_Allreduce(&n_particle, &n_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+#ifndef USE_KAHAN 
 	MPI_Allreduce(&reference, &reference_sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-	reference /= n_total; 
+#else
+        reference_sum = KahanParallel(reference, error);
+#endif
+	reference = reference_sum/n_total; 
       }
     }
     else

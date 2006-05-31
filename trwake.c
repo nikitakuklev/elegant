@@ -313,30 +313,62 @@ double computeTimeCoordinates(double *time, double Po, double **part, long np)
 {
   double tmean, P;
   long ip;
+#ifdef USE_KAHAN
+  double error = 0.0;
+#endif
+
 #if (!USE_MPI)
   for (ip=tmean=0; ip<np; ip++) {
     P = Po*(part[ip][5]+1);
+#ifndef USE_KAHAN
     tmean += (time[ip] = part[ip][4]*sqrt(sqr(P)+1)/(c_mks*P));
+#else
+    time[ip] = part[ip][4]*sqrt(sqr(P)+1)/(c_mks*P);
+    tmean = KahanPlus(tmean, time[ip], &error);
+#endif
   }
   return tmean/np;
 #else
-  long np_total;
-  double tmean_total;
-  if (isSlave || !notSinglePart) {
+  if (!partOnMaster){
+    long np_total;
+    double tmean_total;
+    if (isSlave || !notSinglePart) {
+      for (ip=tmean=0; ip<np; ip++) {
+	P = Po*(part[ip][5]+1);
+#ifndef USE_KAHAN
+	tmean += (time[ip] = part[ip][4]*sqrt(sqr(P)+1)/(c_mks*P));
+#else
+	time[ip] = part[ip][4]*sqrt(sqr(P)+1)/(c_mks*P);
+	tmean = KahanPlus(tmean, time[ip], &error);
+#endif
+      }
+    }
+    if (notSinglePart) {
+      if (isMaster) {
+	tmean = 0;
+	np = 0;
+      }
+      MPI_Allreduce(&np, &np_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+#ifndef USE_KAHAN
+      MPI_Allreduce(&tmean, &tmean_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+#else
+      tmean_total = KahanParallel (tmean, error);
+#endif
+    }
+    return tmean_total/np_total;
+  }
+  else { /* This serial part can be removed after the upper level function (e.g. wake) is parallelized */
     for (ip=tmean=0; ip<np; ip++) {
       P = Po*(part[ip][5]+1);
+#ifndef USE_KAHAN
       tmean += (time[ip] = part[ip][4]*sqrt(sqr(P)+1)/(c_mks*P));
+#else
+      time[ip] = part[ip][4]*sqrt(sqr(P)+1)/(c_mks*P);
+      tmean = KahanPlus(tmean, time[ip], &error);
+#endif
     }
+    return tmean/np;
   }
-  if (notSinglePart) {
-    if (isMaster) {
-      tmean = 0;
-      np = 0;
-    }
-    MPI_Allreduce(&np, &np_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(&tmean, &tmean_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  }
-  return tmean_total/np_total;
 #endif
 }
 

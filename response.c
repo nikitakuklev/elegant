@@ -57,6 +57,11 @@ void setup_correction_matrix_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *
     if (unitsCode==BNL_UNITS && !BnLUnitsOK)
       bomb("At present you must give the matrix_output or twiss_output command to use BnL_units=1.  Sorry.", NULL);
     
+#if USE_MPI
+    if (isSlave)
+      return;
+#endif
+
     if (response[0])
         setup_response_output(&xRespOutput, response[0], correction_mode[correct->mode], run, beamline->name,
                               correct->CMx, &correct->SLx, 0, 0, unitsCode);
@@ -246,6 +251,11 @@ void run_response_output(RUN *run, LINE_LIST *beamline, CORRECTION *correct, lon
         else
             bomb("bad correction mode (run_response_output)", NULL);
         }
+
+#if USE_MPI
+    if (isSlave)
+      return;
+#endif
 
     if (response[1])
         do_response_output(&yRespOutput, correct->CMy, &correct->SLy, 1, 0, unitsCode, tune_corrected);

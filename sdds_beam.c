@@ -482,7 +482,14 @@ long new_sdds_beam(
   if (beam->original==beam->particle)
       beam->original = NULL;
   }
-  
+
+#if USE_MPI   
+  if (control->fiducial_flag&FIRST_BEAM_IS_FIDUCIAL) 
+    lessPartAllowed = 1;  /* This will allow tracking beam with one particle */
+  else
+    lessPartAllowed = 0; 
+#endif
+
   log_exit("new_sdds_beam");
   return(beam->n_to_track);
 }

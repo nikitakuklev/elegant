@@ -748,7 +748,8 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
         if (!grid_sample_min(&result, variables->varied_quan_value, variables->lower_limit, 
                              variables->upper_limit, variables->step,
                              variables->n_variables, optimization_data->target, 
-                             optimization_function, optimization_data->n_evaluations*1.0)) {
+                             optimization_function, optimization_data->n_evaluations*1.0,
+                             random_1_elegant)) {
           if (!optimization_data->soft_failure)
             bomb("optimization unsuccessful--aborting", NULL);
           else
@@ -762,7 +763,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
         if (!randomSampleMin(&result, variables->varied_quan_value, variables->lower_limit, 
                              variables->upper_limit, variables->n_variables, 
                              optimization_data->target, optimization_function, 
-                             optimization_data->n_evaluations)) {
+                             optimization_data->n_evaluations, random_1_elegant)) {
           if (!optimization_data->soft_failure)
             bomb("optimization unsuccessful--aborting", NULL);
           else
@@ -778,7 +779,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
                            variables->step,
                            variables->n_variables, optimization_data->target,
                            optimization_function, 
-                           optimization_data->n_evaluations)) {
+                           optimization_data->n_evaluations, random_1_elegant)) {
           if (!optimization_data->soft_failure)
             bomb("optimization unsuccessful--aborting", NULL);
           else

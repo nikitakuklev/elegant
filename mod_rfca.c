@@ -21,11 +21,17 @@ long modulated_rf_cavity(double **part, long np, MODRF *modrf, double P_central,
     long ip;
     double amPhase, pmPhase;
     double P, gamma, dgamma, phase, length, volt;
-    double *coord, t, t0, omega0, omega, beta_i, tau, dt, t1;
+    double *coord, t, t0, omega0, omega, beta_i, tau, dt, tAve;
     static long been_warned = 0;
 #ifdef DEBUG
     static SDDS_TABLE debugTable;
     static long debugInitialized, debugCount = 0, debugLength;
+#endif
+#if USE_MPI
+    long np_total, np_tmp;
+#endif 
+#ifdef USE_KAHAN
+    double error = 0.0, t1 = 0.0; 
 #endif
 
     log_entry("modulated_rf_cavity");
@@ -54,6 +60,9 @@ long modulated_rf_cavity(double **part, long np, MODRF *modrf, double P_central,
         if (!part[ip]) {
             fprintf(stdout, "NULL pointer for particle %ld (modulated_rf_cavity)\n", ip);
             fflush(stdout);
+#if USE_MPI
+	    MPI_Abort(MPI_COMM_WORLD, 1);
+#endif
             abort();
             }
     if (!modrf)
@@ -74,25 +83,45 @@ long modulated_rf_cavity(double **part, long np, MODRF *modrf, double P_central,
         }
 #endif
 
+#if (!USE_MPI)
     if (np<=0) {
         log_exit("modulated_rf_cavity");
         return(np);
         }
+#else
+    if (notSinglePart) {
+      if (isMaster)
+	np_tmp = 0;
+      else
+	np_tmp = np;
+      MPI_Allreduce(&np_tmp, &np_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);   
+      if (np_total<=0) {
+	log_exit("trackRfCavityWithWakes");
+	return(np_total);
+      }
+    }
+    else if (np<=0) {
+        log_exit("trackRfCavityWithWakes");
+        return(np);
+    }
+#endif 
 
     length = modrf->length;
 
     if (modrf->volt==0) {
         if (length) {
+	  if (isSlave || !notSinglePart) {
             for (ip=0; ip<np; ip++) {
-                coord = part[ip];
-                coord[0] += coord[1]*length;
-                coord[2] += coord[3]*length;
-                coord[4] += length;
-                }
-            }
+	      coord = part[ip];
+	      coord[0] += coord[1]*length;
+	      coord[2] += coord[3]*length;
+	      coord[4] += length;
+	    }
+	  }
+	}
         log_exit("modulated_rf_cavity");
         return(np);
-        }
+    }
 
     if (!(omega0 = PIx2*modrf->freq))
         bomb("FREQ=0 for MODRF element", NULL);
@@ -124,10 +153,35 @@ long modulated_rf_cavity(double **part, long np, MODRF *modrf, double P_central,
         }
 
     t0 = -modrf->phase_fiducial/omega0;
-    for (ip=t1=0; ip<np; ip++)
-        t1 += part[ip][4]/(c_mks*beta_from_delta(P_central, part[ip][5]));
-    t1 /= np;
-    dt = t1-t0;
+    if(isSlave || !notSinglePart) {
+      for (ip=tAve=0; ip<np; ip++) {
+#ifndef USE_KAHAN
+        tAve += part[ip][4]/(c_mks*beta_from_delta(P_central, part[ip][5]));
+#else
+        t1 = part[ip][4]/(c_mks*beta_from_delta(P_central, part[ip][5]));
+        tAve = KahanPlus(tAve, t1, &error);   
+#endif
+      }
+    }
+#if (!USE_MPI)
+    tAve /= np;
+#else
+    if (notSinglePart) {
+      if (USE_MPI) {
+	double tAve_total = 0.0;
+#ifndef USE_KAHAN
+	MPI_Allreduce(&tAve, &tAve_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+	tAve = tAve_total/np_total;
+#else
+	tAve_total= KahanParallel (tAve,  error);
+	tAve = tAve_total/np_total;
+#endif
+      }
+    }
+    else
+      tAve /= np;
+#endif
+    dt = tAve-t0;
     
     pmPhase = modrf->pmFreq*PIx2*dt + modrf->pmPhase*PI/180;
     phase = PI/180*(modrf->phase + modrf->pmMag*sin(pmPhase)*exp(-modrf->pmDecay*dt)) + omega0*dt;
@@ -141,7 +195,8 @@ long modulated_rf_cavity(double **part, long np, MODRF *modrf, double P_central,
     if ((tau=modrf->Q/omega0))
         volt *= sqrt(1 - exp(-dt/tau));
 
-    for (ip=0; ip<np; ip++) {
+    if(isSlave || !notSinglePart) {
+      for (ip=0; ip<np; ip++) {
         coord = part[ip];
         /* apply initial drift */
         coord[0] += coord[1]*length/2;
@@ -152,7 +207,7 @@ long modulated_rf_cavity(double **part, long np, MODRF *modrf, double P_central,
         P     = P_central*(1+coord[5]);
         beta_i = P/(gamma=sqrt(sqr(P)+1));
         t     = coord[4]/(c_mks*beta_i);
-        dgamma = volt*sin(omega*(t-t1)+phase); 
+        dgamma = volt*sin(omega*(t-tAve)+phase); 
 
         /* apply energy kick */
         add_to_particle_energy(coord, t, P_central, dgamma);
@@ -164,21 +219,21 @@ long modulated_rf_cavity(double **part, long np, MODRF *modrf, double P_central,
 
 #ifdef DEBUG
         if (ip==0) {
-            double redPhase1;
-            if ((debugCount+1)>debugLength && !SDDS_LengthenTable(&debugTable, (debugLength+=1024)))
-                SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-            if (!SDDS_SetRowValues(&debugTable, SDDS_BY_INDEX|SDDS_PASS_BY_VALUE,
-                                   debugCount, 
-                                   0, t, 
-                                   1, fmod(omega*(t-t1)+phase, PIx2), 2, volt, 3, omega/PIx2,
-                                   4, volt*sin(omega*(t-t1)+phase), -1) ||
-                !SDDS_UpdateTable(&debugTable))
-                SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-            debugCount++;
-            }
+	  double redPhase1;
+	  if ((debugCount+1)>debugLength && !SDDS_LengthenTable(&debugTable, (debugLength+=1024)))
+	    SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+	  if (!SDDS_SetRowValues(&debugTable, SDDS_BY_INDEX|SDDS_PASS_BY_VALUE,
+				 debugCount, 
+				 0, t, 
+				 1, fmod(omega*(t-tAve)+phase, PIx2), 2, volt, 3, omega/PIx2,
+				 4, volt*sin(omega*(t-tAve)+phase), -1) ||
+	      !SDDS_UpdateTable(&debugTable))
+	    SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+	  debugCount++;
+	}
 #endif
-        }
-
+      }
+    }
     log_exit("modulated_rf_cavity");
     return(np);
     }

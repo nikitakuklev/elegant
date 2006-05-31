@@ -1118,21 +1118,48 @@ void dump_phase_space(SDDS_TABLE *SDDS_table, double **particle, long particles,
     log_exit("dump_phase_space");
     }
 
+#ifdef SORT
+static int comp_IDs1(const void *coord1, const void *coord2)
+  {
+    if (((long*) coord1)[1] <((long*) coord2)[1]) 
+      return -1;
+    else if (((long*) coord1)[1] > ((long*) coord2)[1]) 
+      return  1;
+    else 
+      return 0;
+  }
+#endif
+
 void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long *lostOnPass, 
 			 long particles, long step)
 {
     long i;
 
 #if USE_MPI  
-    if (myid<0)
-      MPI_Comm_rank(MPI_COMM_WORLD, &myid);
-    if (myid!=0)
+    if (isSlave)
       return;
 #endif
 
     log_entry("dump_lost_particles");
     if (!particle)
         bomb("NULL coordinate pointer passed to dump_lost_particles", NULL);
+
+#ifdef SORT   /* sort for comparing the serial and parallel versions */
+      if (SORT) {
+	long tmp[particles][2], j;
+
+        for (j=0; j<particles; j++) {
+	  tmp[j][0] = lostOnPass[j]; 
+          tmp[j][1] = particle[j][6];
+	}    
+	qsort(particle[0], particles, COORDINATES_PER_PARTICLE*sizeof(double), comp_IDs); 
+	qsort(tmp[0], particles, 2*sizeof(long), comp_IDs1);
+	for (j=0; j<particles; j++) {
+	  lostOnPass[j] = tmp[j][0];
+	}
+      }
+#endif
+
     for (i=0; i<particles; i++)
         if (!particle[i]) {
             fprintf(stdout, "error: coordinate slot %ld is NULL (dump_lost_particles)\n", i);

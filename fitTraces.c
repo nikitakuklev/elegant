@@ -9,6 +9,12 @@
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.24  2005/11/22 23:21:20  borland
+ * Added momentum aperture search, which necessitated adding an argument to
+ * do_tracking, resulting in changes in many files.
+ * Also improved convergence of orbit finder, adding a second iteration using
+ * tracking if the matrix-based method fails.
+ *
  * Revision 1.23  2005/08/18 02:49:10  borland
  * Particle allocation is now guaranteed to put particles in contiguous memory.
  * This means we don't swap pointers anymore, but must copy coordinates.
@@ -1418,12 +1424,12 @@ void fit_trace_randomizeValues
   /* randomize trajectory starting values */
   for (iTrace=0; iTrace<traceData->traces; iTrace++) {
     for (iCoord=0; iCoord<4; iCoord++)
-      traceData->startingCoord[iTrace][iCoord] *= 1 + (random_1(-1)-0.5)*level*2;
+      traceData->startingCoord[iTrace][iCoord] *= 1 + (random_1_elegant(-1)-0.5)*level*2;
   }
   
   /* randomize element parameter values and recompute matrices */
   for (iUserParam=0; iUserParam<fitParam->parameters; iUserParam++) {
-    *(fitParam->paramData[iUserParam]) *= 1 + (random_1(-1)-0.5)*level*2;
+    *(fitParam->paramData[iUserParam]) *= 1 + (random_1_elegant(-1)-0.5)*level*2;
     change_defined_parameter_values(&fitParam->elementName[iUserParam],
                                     &fitParam->parameterIndex[iUserParam], 
                                     &fitParam->elementType[iUserParam],

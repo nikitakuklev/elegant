@@ -1235,8 +1235,8 @@ void randomizeErrorMultipoleFields(MULTIPOLE_DATA *randomMult)
   for (i=0; i<randomMult->orders; i++) {
     nFactorial = dfactorial(randomMult->order[i]);
     rpow = ipow(randomMult->referenceRadius, randomMult->order[i]);
-    rn1 = gauss_rn_lim(0.0, 1.0, 2.0, random_1);
-    rn2 = gauss_rn_lim(0.0, 1.0, 2.0, random_1);
+    rn1 = gauss_rn_lim(0.0, 1.0, 2.0, random_1_elegant);
+    rn2 = gauss_rn_lim(0.0, 1.0, 2.0, random_1_elegant);
     randomMult->anMod[i] = randomMult->an[i]*nFactorial*rn1/rpow;
     randomMult->bnMod[i] = randomMult->bn[i]*nFactorial*rn2/rpow;
   }

@@ -9,6 +9,9 @@
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.23  2005/01/27 17:39:39  borland
+ * Updated calls to rpn routines.
+ *
  * Revision 1.22  2003/07/24 01:42:52  borland
  * Added Ct and Cdelta output for SASE FEL computations.
  *
@@ -121,6 +124,13 @@ void setupSASEFELAtEnd(NAMELIST_TEXT *nltext, RUN *run, OUTPUT_FILES *output_dat
   /* process namelist text */
   process_namelist(&sasefel, nltext);
   print_namelist(stdout, &sasefel);
+
+#if USE_MPI
+  if (!writePermitted) {
+    output == NULL; 
+    return;
+  }
+#endif
 
   sasefelOutput = &(output_data->sasefel);
 

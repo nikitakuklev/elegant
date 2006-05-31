@@ -128,7 +128,11 @@ double findFiducialTime(double **part, long np, double s0, double sOffset,
 	  np = 0;
 	}
 	MPI_Allreduce(&np, &np_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD); 
+#ifndef USE_KAHAN
 	MPI_Allreduce(&tsum, &tmp, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+#else
+	tmp = KahanParallel (tsum, error);
+#endif
 	tFid = tmp/np_total; 
       }
     }
@@ -178,6 +182,8 @@ long trackRfCavityWithWakes
     long dgammaOverGammaNp = 0;
 #if USE_MPI
     long np_total, np_tmp;
+    long i;
+    double error_sum=0.0, sumArray[n_processors], errorArray[n_processors];
 #endif 
 #ifdef USE_KAHAN
     double error = 0.0; 
@@ -375,9 +381,20 @@ long trackRfCavityWithWakes
 #else
       if (notSinglePart) {
 	if (USE_MPI) {
-	  double tAve_total;
+	  double tAve_total = 0.0;
+#ifndef USE_KAHAN
 	  MPI_Allreduce(&tAve, &tAve_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 	  tAve = tAve_total/np_total;
+#else
+	  MPI_Allgather(&tAve,1,MPI_DOUBLE,sumArray,1,MPI_DOUBLE,MPI_COMM_WORLD);
+	  /* collect errors from all processors */
+	  MPI_Allgather(&error,1,MPI_DOUBLE,errorArray,1,MPI_DOUBLE,MPI_COMM_WORLD);
+	  for (i=1; i<n_processors; i++) {
+	    tAve_total = KahanPlus(tAve_total, sumArray[i], &error_sum);
+	    tAve_total = KahanPlus(tAve_total, errorArray[i], &error_sum);
+	  }
+	  tAve = tAve_total/np_total;
+#endif
 	}
       }
       else
@@ -475,17 +492,19 @@ long trackRfCavityWithWakes
         }
 
         if (length) {
-          /* apply final drift and focus kick if needed */
-          for (ip=0; ip<np; ip++) {
-            coord = part[ip];
-            coord[0] += coord[1]*length/2;
-            coord[2] += coord[3]*length/2;
-            coord[4] += length/2*sqrt(1+sqr(coord[1])+sqr(coord[3]));
-            if (rfca->end2Focus) {
-              coord[1] -= coord[0]*inverseF[ip];
-              coord[3] -= coord[2]*inverseF[ip];
-            }
-          }
+	  if(isSlave || !notSinglePart) {
+	    /* apply final drift and focus kick if needed */
+	    for (ip=0; ip<np; ip++) {
+	      coord = part[ip];
+	      coord[0] += coord[1]*length/2;
+	      coord[2] += coord[3]*length/2;
+	      coord[4] += length/2*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+	      if (rfca->end2Focus) {
+		coord[1] -= coord[0]*inverseF[ip];
+		coord[3] -= coord[2]*inverseF[ip];
+	      }
+	    }
+	  }
         }
         
         if (wakesAtEnd) {

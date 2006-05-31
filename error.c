@@ -80,6 +80,10 @@ void error_setup(ERRORVAL *errcon, NAMELIST_TEXT *nltext, RUN *run_cond, LINE_LI
     
     if (errcon->fp_log)
         fclose(errcon->fp_log);
+#if USE_MPI
+    if (isSlave)
+      error_log = NULL;
+#endif
     if (error_log) {
         errcon->fp_log = fopen_e(compose_filename(error_log, run_cond->rootname), "w", 0);
         fprintf(errcon->fp_log, "SDDS1\n");
@@ -396,12 +400,12 @@ double perturbation(double xamplitude, double xcutoff, long xerror_type)
 {
     switch (xerror_type) {
         case UNIFORM_ERRORS:
-            return(2*xamplitude*(random_1(0)-0.5));
+            return(2*xamplitude*(random_1_elegant(0)-0.5));
         case GAUSSIAN_ERRORS:
-            return(gauss_rn_lim(0.0, xamplitude, xcutoff, random_1));
+            return(gauss_rn_lim(0.0, xamplitude, xcutoff, random_1_elegant));
         case PLUS_OR_MINUS_ERRORS:
             /* return either -x or x */ 
-            return(xamplitude*(random_1(0)>0.5?1.0:-1.0));
+            return(xamplitude*(random_1_elegant(0)>0.5?1.0:-1.0));
         default:
             bomb("unknown error type in perturbation()", NULL);
             exit(1);

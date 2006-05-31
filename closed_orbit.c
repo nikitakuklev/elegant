@@ -99,6 +99,11 @@ long run_closed_orbit(RUN *run, LINE_LIST *beamline, double *starting_coord, BEA
     long i, bad_orbit;
     VMATRIX *M;
     
+#if USE_MPI
+    if (isSlave)
+      do_output = 0;
+#endif
+
     if (!starting_coord)
         bomb("starting_coord array is NULL (run_closed_orbit)", NULL);
     if (verbosity) {

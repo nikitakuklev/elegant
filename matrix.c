@@ -672,37 +672,37 @@ void random_matrices(VMATRIX *M, double C0, double R0, double T0, double Q0)
     switch (M->order) {
         case 3:
             for (i=0; i<6; i++) {
-                C[i] = C0*(2*random_1(1)-1);
+                C[i] = C0*(2*random_1_elegant(1)-1);
                 for (j=0; j<6; j++) {
-                    R[i][j] = R0*(2*random_1(1)-1);
+                    R[i][j] = R0*(2*random_1_elegant(1)-1);
                     Tij = T[i][j];
                     Qij = Q[i][j];
                     for (k=0; k<=j; k++) {
-                        *Tij++ = T0*(2*random_1(1)-1);
+                        *Tij++ = T0*(2*random_1_elegant(1)-1);
                         Qijk   = *Qij++;
                         for (l=0; l<=k; l++) 
-                            *Qijk++ = Q0*(2*random_1(1)-1);
+                            *Qijk++ = Q0*(2*random_1_elegant(1)-1);
                         }
                     }
                 }
             break;
         case 2:
             for (i=0; i<6; i++) {
-                C[i] = C0*(2*random_1(1)-1);
+                C[i] = C0*(2*random_1_elegant(1)-1);
                 for (j=0; j<6; j++) {
-                    R[i][j] = R0*(2*random_1(1)-1);
+                    R[i][j] = R0*(2*random_1_elegant(1)-1);
                     Tij = T[i][j];
                     for (k=0; k<=j; k++) {
-                        *Tij++ = T0*(2*random_1(1)-1);
+                        *Tij++ = T0*(2*random_1_elegant(1)-1);
                         }
                     }
                 }
             break;
         case 1:
             for (i=0; i<6; i++) {
-                C[i] = C0*(2*random_1(1)-1);
+                C[i] = C0*(2*random_1_elegant(1)-1);
                 for (j=0; j<6; j++) {
-                    R[i][j] = R0*(2*random_1(1)-1);
+                    R[i][j] = R0*(2*random_1_elegant(1)-1);
                     }
                 }
             break;

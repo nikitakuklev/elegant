@@ -9,6 +9,9 @@
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.9  2005/01/27 17:39:39  borland
+ * Updated calls to rpn routines.
+ *
  * Revision 1.8  2002/08/14 20:23:49  soliday
  * Added Open License
  *
@@ -131,6 +134,13 @@ void setupSliceAnalysis(NAMELIST_TEXT *nltext, RUN *run,
 			OUTPUT_FILES *output_data)
 {
   SDDS_DATASET *SDDSout;
+
+#if USE_MPI
+  /* This function will be parallelized in the future */
+  fprintf(stdout, "Slice analysis is not supported in this version of parallel elegant.\n");
+  MPI_Barrier(MPI_COMM_WORLD); /* Make sure the information can be printed before aborting */
+  MPI_Abort(MPI_COMM_WORLD, 1);	
+#endif
 
   /* process namelist text */
   process_namelist(&slice_analysis, nltext);

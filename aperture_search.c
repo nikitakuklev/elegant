@@ -63,6 +63,13 @@ void setup_aperture_search(
 
   log_entry("setup_aperture_search");
 
+#if USE_MPI
+  /* This function will be parallelized in the future */
+  fprintf(stdout, "Aperture search is not supported in this version of parallel elegant.\n");
+  MPI_Barrier(MPI_COMM_WORLD); /* Make sure the information can be printed before aborting */
+  MPI_Abort(MPI_COMM_WORLD, 1); 	
+#endif
+
   /* process namelist input */
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);

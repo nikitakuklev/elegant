@@ -57,6 +57,12 @@ typedef enum pMode {notParallel, initialMode, trueParallel} parallelMode;
 extern parallelMode parallelStatus; 
 extern int n_processors;
 extern int myid;
+extern int partOnMaster; /* indicate if the particle information is available on master */
+extern long lessPartAllowed;
+#endif
+
+#ifdef SORT
+extern int comp_IDs(const void *coord1, const void *coord2);
 #endif
 
 #define malloc_verify(n) 1
@@ -3047,8 +3053,12 @@ void setupMomentumApertureSearch(NAMELIST_TEXT *nltext, RUN *run, VARY *control)
 void finishMomentumApertureSearch();
 long doMomentumApertureSearch(RUN *run, VARY *control, ERRORVAL *errcon, LINE_LIST *beamline, double *startingCoord);
 
+/* prototypes for drand_oag.c */
+double random_1_elegant(long iseed);
+
 /* compute long sum with Kahan's algorithm */
 double Kahan (long length, double a[], double *error);
 double KahanPlus (double oldSum, double b, double *error);
-
-
+#if USE_MPI
+double KahanParallel (double sum,  double error);
+#endif

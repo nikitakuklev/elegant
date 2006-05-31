@@ -1,7 +1,10 @@
 CMPLR = ANSI
 # turn off the -g option
 OP_SYS_CFLAGS = 
-#HOST_OPT = NO
+#OPT_CFLAGS_NO = 
+#OPT_CFLAGS_YES = -O3
+#HOST_OPT = YES
+#Ocustom =
 
 #RATIONAL = purify
 #RATIONAL = quantify
@@ -19,16 +22,21 @@ endif
 
 OP_SYS_CFLAGS+= -DSORT                 # sort for comparing the results of two elegants
                                        # -g should be turned off for comparison
-#OP_SYS_CFLAGS+= -DUSE_KAHAN            # use Kahan's algorithm for long sum
+OP_SYS_CFLAGS+= -DUSE_KAHAN            # use Kahan's algorithm for long sum
+#OP_SYS_CFLAGS+= -DSET_DOUBLE           # set FPU as double precision
 ifeq ($(MPI),1)
-  USER_MPI_FLAGS = -DUSE_MPI=1         # 1 for parallel elegant, 0 for sequential elegant  
-  #USER_MPI_FLAGS+= -mpilog             # visualize the performance of the parallel elegant 
-  #USER_MPI_FLAGS+= -DUSE_MPE           # user defined MPE event
+  USER_MPI_FLAGS = -DUSE_MPI=1         # 1 for parallel elegant, 0 for serial elegant  
+  #OP_SYS_LDLIBS += -lmpe -llmpe                                             # visualize the performance of the parallel elegant 
+  #USER_MPI_FLAGS+=  -DUSE_MPE          # user defined MPE event
   #USER_MPI_FLAGS+=  -mpianim -L/usr/X11R6/lib -lX11   # animate MPI program in real-time
   #USER_MPI_FLAGS+= -DMPI_DEBUG         # print debugging information for MPI 
-  #USER_MPI_FLAGS+= -DCHECKFLAGS=1      # optimize by checking balance only once
-  CC = mpicc   $(USER_MPI_FLAGS)   
-  CCC = mpicxx $(USER_MPI_FLAGS)
+  #USER_MPI_FLAGS+= -DCHECKFLAGS=1      # if defined, check balance only at the beginning
+                                        # or the particle number is changed
+  #MPI_PATH = /disk1/mpich2_mpd_ssm/bin
+  MPI_PATH = /disk1/mpich2_mpd_sock/bin
+  #MPI_PATH = /share/mpich/ch_p4/bin
+  CC = $(MPI_PATH)/mpicc  $(USER_MPI_FLAGS)   
+  CCC = $(MPI_PATH)/mpicxx  $(USER_MPI_FLAGS)
   PRODOAG = Pelegant
 endif
 
@@ -172,7 +180,9 @@ elegant_SRCS = 	alpha_data.c alpha_matrix.c amplif.c analyze.c aperture_search.c
 		ibs_tracking.c zibs.c wake.c taylorSeries.c trwake.c circles.c tubend.c sasefelmx.c \
 		sasefel.c alter.c sliceAnalysis.c divideElements.c transmuteElements.c \
 		frfmode.c ftrfmode.c tfeedback.c engeCoef.c lsc.c frequencyMap.c \
-		GWigSymplecticPass.c gwig.c noiseGroup.c insertSCeffects.c momentumAperture.c kahan.c coupled_twiss.c
+		GWigSymplecticPass.c gwig.c noiseGroup.c insertSCeffects.c momentumAperture.c kahan.c \
+		coupled_twiss.c drand_oag.c
+                   
 
 Pelegant_SRCS = $(elegant_SRCS)
 
