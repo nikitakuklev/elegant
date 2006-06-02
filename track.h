@@ -717,10 +717,10 @@ extern char *entity_text[N_TYPES];
 #define N_RFMODE_PARAMS 21
 #define N_TRFMODE_PARAMS 14
 #define N_TWMTA_PARAMS 17
-#define N_ZLONGIT_PARAMS 19
+#define N_ZLONGIT_PARAMS 20
 #define N_MODRF_PARAMS 15
 #define N_SREFFECTS_PARAMS 14
-#define N_ZTRANSVERSE_PARAMS 24
+#define N_ZTRANSVERSE_PARAMS 25
 #define N_IBSCATTER_PARAMS 9
 #define N_FMULT_PARAMS 10
 #define N_BMAPXY_PARAMS 5
@@ -1933,6 +1933,7 @@ typedef struct {
     long SGOrder, SGHalfWidth; /* Savitzky-Golay smoothing parameters */
     long reverseTimeOrder;     /* use for "acausal" impedances like CSR */
     double factor;             /* multiply impedance by this factor */
+    long startOnPass;          /* If nonzero, the pass on which impedance turns on. */
     /* for internal use: */
     long initialized;          /* indicates that files are loaded */
     double *Z;                 /* n_Z (Re Z, Im Z) pairs */
@@ -1962,6 +1963,7 @@ typedef struct {
     double factor, xfactor, yfactor;  /* multiply impedance by these factors */
     char *wakes;               /* name of file to save wake potentials to */
     long wake_interval;        /* interval (in turns) between output of wakes */
+    long startOnPass;          /* If nonzero, the pass on which impedance turns on. */
     /* for internal use */
     double *iZ[2];             /* i*Z (Re Z, Im Z) pairs for each plane */
     long initialized;

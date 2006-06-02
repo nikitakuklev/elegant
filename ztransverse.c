@@ -61,6 +61,9 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
 #if defined(DEBUG)
   FILE *fp;
 #endif
+  if ((i_pass -= ztransverse->startOnPass)<0)
+    return;
+  
   not_first_call += 1;
 
   if (np>max_np) {

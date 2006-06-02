@@ -1249,6 +1249,7 @@ PARAMETER zlongit_param[N_ZLONGIT_PARAMS] = {
     {"SG_HALFWIDTH", "", IS_LONG, 0, (long)((char *)&zlongit_example.SGHalfWidth), NULL, 0.0, 4, "Savitzky-Golay filter halfwidth for smoothing"},
     {"REVERSE_TIME_ORDER", "", IS_LONG, 0, (long)((char *)&zlongit_example.reverseTimeOrder), NULL, 0.0, 0, "Reverse time-order of particles for wake computation?"},
     {"FACTOR", "", IS_DOUBLE, 0, (long)((char *)&zlongit_example.factor), NULL, 1.0, 0, "Factor by which to multiply impedance."},
+    {"START_ON_PASS", "", IS_LONG, 0, (long)((char *)&zlongit_example.startOnPass), NULL, 1.0, 0, "The pass on which the impedance effects start."},
     };
 
 SREFFECTS SReffects_example;
@@ -1324,6 +1325,7 @@ PARAMETER ztransverse_param[N_ZTRANSVERSE_PARAMS] = {
     {"YFACTOR", "", IS_DOUBLE, 0, (long)((char *)&ztransverse_example.yfactor), NULL, 1.0, 0, "Factor by which to multiply y impedance."},
     {"WAKES", "", IS_STRING, 0, (long)((char *)&ztransverse_example.wakes), NULL, 0.0, 0, "filename for output of wake"},
     {"WAKE_INTERVAL", "", IS_LONG, 0, (long)((char *)&ztransverse_example.wake_interval), NULL, 0.0, 1, "interval in passes at which to output wake"},
+    {"START_ON_PASS", "", IS_LONG, 0, (long)((char *)&ztransverse_example.startOnPass), NULL, 1.0, 0, "The pass on which the impedance effects start."},
 };
 
 IBSCATTER ibs_example;

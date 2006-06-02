@@ -70,6 +70,9 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
     double factor, tmin, tmax, tmean, dt, dt1, dgam;
     static long not_first_call = -1;
     
+    if ((i_pass -= zlongit->startOnPass)<0)
+      return;
+    
     not_first_call += 1;
     
     if (np>max_np) {
