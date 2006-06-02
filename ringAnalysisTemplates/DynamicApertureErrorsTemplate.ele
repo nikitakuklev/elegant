@@ -113,11 +113,11 @@
 &find_aperture
         output = %s.aper,
         boundary = %s.abnd,
-        xmin = <xMinimum>, xmax=<xMaximum>,
+        xmin = 0, xmax=<xMaximum>,
         ymax = <yMaximum>,
-        mode = many-particle,
+        mode = <mode>,
         nx = <xPoints>,
-        ny = <yPoints>,
+        n_splits = <splits>,
         verbosity = 1,
 &end
 
