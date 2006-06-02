@@ -215,11 +215,11 @@ sddsmatchtwiss_SRCS = sddsmatchtwiss.c
 sddsfindresonances_SRCS = sddsfindresonances.c
 
 sddsanalyzebeam_SRCS = sddsanalyzebeam.c
-sddsanalyzebeam_CFLAGS = -I../../../../../epics/extensions/src/SDDS/meschach
+sddsanalyzebeam_CFLAGS = -I$(EPICS_EXTENSIONS)/src/SDDS/meschach
 
 sddsbrightness_SRCS = sddsbrightness.c
 
-fitTraces_CFLAGS = -I../../../../../epics/extensions/src/SDDS/meschach
+fitTraces_CFLAGS = -I$(EPICS_EXTENSIONS)/src/SDDS/meschach
 
 kahan_CFLAGS = -O0
 
