@@ -1,9 +1,14 @@
+
 #!/bin/sh
 # \
 exec oagwish "$0" "$@"
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.57  2006/03/25 21:52:30  borland
+# Revised momentum apeture to scan from outside toward 0 initially, which gives
+# better speed and accuracy.
+#
 # Revision 1.56  2006/03/23 00:05:46  borland
 # Added coupled twiss parameter computation using code by V. Sajaev.
 # Added momentum aperture computation to elegantRingAnalysis.
@@ -544,25 +549,26 @@ proc FillDynamicApertureErrorsFrame {widget args} {
     global dynamicApertureErrors
 
     APSLabeledEntry .le1 -parent $widget \
-      -label "Minimum x coordinate (m): " -width 20 -textVariable dynamicApertureErrors(xMinimum) \
-      -contextHelp \
-      "Enter the minimum x coordinate for the dynamic aperture search"
-    APSLabeledEntry .le2 -parent $widget \
       -label "Maximum x coordinate (m): " -width 20 -textVariable dynamicApertureErrors(xMaximum) \
       -contextHelp \
       "Enter the maximum x coordinate for the dynamic aperture search"
-    APSLabeledEntry .le3 -parent $widget \
-      -label "Number of x points: " -width 20 -textVariable dynamicApertureErrors(xPoints) \
-      -contextHelp \
-      "Enter the number of points into which to divide the x interval."
-    APSLabeledEntry .le4 -parent $widget \
+    APSLabeledEntry .le2 -parent $widget \
       -label "Maximum y coordinate (m): " -width 20 -textVariable dynamicApertureErrors(yMaximum) \
       -contextHelp \
       "Enter the maximum y coordinate for the dynamic aperture search"
-    APSLabeledEntry .le5 -parent $widget \
-      -label "Number of y points: " -width 20 -textVariable dynamicApertureErrors(yPoints) \
+    APSLabeledEntry .le3 -parent $widget \
+      -label "Number of steps along lines: " -width 20 -textVariable dynamicApertureErrors(steps) \
       -contextHelp \
-      "Enter the number of points into which to divide the y interval."
+      "Enter the number of points into which to divide the line."
+    APSLabeledEntry .le4 -parent $widget \
+      -label "Number of divisions: " -width 20 -textVariable dynamicApertureErrors(splits) \
+      -contextHelp \
+      "Enter the number of times to divide the interval."
+    APSRadioButtonFrame .rb1 -parent $widget -label "Lines: " \
+        -orientation horizontal -variable dynamicApertureErrors(mode) \
+        -valueList "one-line three-line five-line seven-line nine-line eleven-line" \
+        -buttonList "1 3 5 7 9 11" -contextHelp \
+        "Number of lines to search on starting at the origin."
     APSLabeledEntry .le5a -parent $widget \
       -label "Fractional momentum offset: " -width 20 -textVariable dynamicApertureErrors(delta) \
       -contextHelp "Enter the fractional momentum offset."
@@ -599,7 +605,7 @@ proc FillDynamicApertureErrorsFrame {widget args} {
       -label "Run suffix: " -width 20 -textVariable dynamicApertureErrors(userSuffix) \
       -contextHelp "Enter a suffix for this set of runs."
 
-    APSRadioButtonFrame .rb1 -parent $widget \
+    APSRadioButtonFrame .rb2 -parent $widget \
       -label "Include apertures: " -orientation horizontal -buttonList {Yes No} -valueList {1 0} \
       -variable dynamicApertureErrors(includeApertures) -contextHelp \
       "Choose whether to include the effects of apertures that are defined in the beamline."
