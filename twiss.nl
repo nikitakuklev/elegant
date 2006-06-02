@@ -77,6 +77,7 @@
         double s_start = -1;
         double s_end = -1;
         STRING tag = NULL;
+        long verbosity = 0;
         long clear = 0;
 #end
 

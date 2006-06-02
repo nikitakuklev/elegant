@@ -2936,10 +2936,10 @@ void addTwissAnalysisRequest(char *tag, char *startName, char *endName,
 
 void processTwissAnalysisRequests(ELEMENT_LIST *elem)
 {
-  long i, is, iq, count;
+  long i, is, iq, count, firstTime;
   char buffer[1024];
   ELEMENT_LIST *elemOrig;
-  double value, lastValue, end_pos, start_pos, dz;
+  double value, end_pos, start_pos, dz;
   double twissData[TWISS_ANALYSIS_STATS][TWISS_ANALYSIS_QUANTITIES];
 
   elemOrig = elem;
@@ -2947,6 +2947,7 @@ void processTwissAnalysisRequests(ELEMENT_LIST *elem)
 
   for (i=0; i<twissAnalysisRequests; i++) {
     /* initialize statistics buffers and rpn memories */
+    firstTime = !twissAnalysisRequest[i].initialized;
     for (iq=0; iq<TWISS_ANALYSIS_QUANTITIES; iq++)  {
       for (is=0; is<TWISS_ANALYSIS_STATS; is++)
         if (!twissAnalysisRequest[i].initialized) {
@@ -2994,21 +2995,17 @@ void processTwissAnalysisRequests(ELEMENT_LIST *elem)
         else
           start_pos = 0;
       }
-      if (elem->pred)
-        dz = (end_pos=elem->end_pos) - elem->pred->end_pos;
-      else
-        dz = 0;
+      if (twiss_analysis_struct.verbosity>1 && firstTime) {
+        fprintf(stdout, "twiss analysis %s will include %s#%ld\n",
+                twissAnalysisRequest[i].tag,
+                elem->name, elem->occurence);
+      }
       for (iq=0; iq<TWISS_ANALYSIS_QUANTITIES; iq++)  {
-        if (elem->pred && elem->pred->twiss)
-          lastValue = *(double*)((char*)(elem->pred->twiss)+twissAnalysisQuantityOffset[iq]);
-        else
-          lastValue = 0;
         value = *(double*)((char*)elem->twiss+twissAnalysisQuantityOffset[iq]);
         for (is=0; is<TWISS_ANALYSIS_STATS; is++) {
           switch (twissAnalysisStatCode[is]) {
           case TWISS_ANALYSIS_AVE:
-            if (lastValue)
-              twissData[is][iq] += (value + lastValue)*dz;
+            twissData[is][iq] += value;
             break;
           case TWISS_ANALYSIS_MIN:
             if (twissData[is][iq]>value)
@@ -3034,19 +3031,21 @@ void processTwissAnalysisRequests(ELEMENT_LIST *elem)
       exit(1);
     }
     for (iq=0; iq<TWISS_ANALYSIS_QUANTITIES; iq++)  {
-      if (end_pos-start_pos>0)
-        twissData[TWISS_ANALYSIS_AVE][iq] /= 2*(end_pos-start_pos);
-      else
-        twissData[TWISS_ANALYSIS_AVE][iq] = 0;
+      twissData[TWISS_ANALYSIS_AVE][iq] /= count;
       for (is=0; is<TWISS_ANALYSIS_STATS; is++) {
         rpn_store(twissData[is][iq], NULL, twissAnalysisRequest[i].twissMem[is][iq]);
       }
     }
+    if (twiss_analysis_struct.verbosity && firstTime) {
+      fprintf(stdout, "%ld elements included in computations for twiss analysis request with tag %s\n",
+              count, 
+              twissAnalysisRequest[i].tag);
+    }
+    
 #if DEBUG
     if (twissAnalysisRequest[i].matchName) {
-      fprintf(stdout, "%ld matches for %s, dz = %e\n",
-              count, twissAnalysisRequest[i].tag,
-              end_pos-start_pos
+      fprintf(stdout, "%ld matches for %s\n",
+              count, twissAnalysisRequest[i].tag
               );
       for (iq=0; iq<TWISS_ANALYSIS_QUANTITIES; iq++) {
         fprintf(stdout, "%s: ", twissAnalysisQuantityName[iq]);
