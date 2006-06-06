@@ -116,7 +116,7 @@
         xmin = 0, xmax=<xMaximum>,
         ymax = <yMaximum>,
         mode = <mode>,
-        nx = <xPoints>,
+        nx = <steps>,
         n_splits = <splits>,
         verbosity = 1,
 &end
