@@ -56,13 +56,18 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
   static long max_np = 0;
   double *Vfreq, *iZ;
   long ib, nb, n_binned, nfreq, iReal, iImag, plane, first;
-  double factor, tmin, tmax, tmean, dt, userFactor[2];
+  double factor, tmin, tmax, tmean, dt, userFactor[2], rampFactor=1;
   static long not_first_call = -1;
 #if defined(DEBUG)
   FILE *fp;
 #endif
   if ((i_pass -= ztransverse->startOnPass)<0)
     return;
+
+  if (i_pass>=(ztransverse->rampPasses-1))
+    rampFactor = 1;
+  else
+    rampFactor = (i_pass+1.0)/ztransverse->rampPasses;
   
   not_first_call += 1;
 
@@ -116,8 +121,9 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
     fflush(stdout);
   }  
 
-  userFactor[0] = ztransverse->factor*ztransverse->xfactor;
-  userFactor[1] = ztransverse->factor*ztransverse->yfactor;
+  userFactor[0] = ztransverse->factor*ztransverse->xfactor*rampFactor;
+  userFactor[1] = ztransverse->factor*ztransverse->yfactor*rampFactor;
+
   first = 1;
   for (plane=0; plane<2; plane++) {
     if (userFactor[plane]==0) {
@@ -345,8 +351,8 @@ void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long part
         ztransverse->iZ[1][i] = -ZImag[1][i];
       } else if (i==n_spect-1 && ztransverse->n_bins%2==0) {
         /* Nyquist term */
-        ztransverse->iZ[0][n_spect-1] = -ZImag[0][i];
-        ztransverse->iZ[1][n_spect-1] = -ZImag[1][i];
+        ztransverse->iZ[0][2*i-1] = -ZImag[0][i];
+        ztransverse->iZ[1][2*i-1] = -ZImag[1][i];
       } else {
         /* real part of iZ */
         ztransverse->iZ[0][2*i-1] = -ZImag[0][i];
@@ -361,20 +367,6 @@ void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long part
     free(ZImag[0]);
     free(ZImag[1]);
   }
-#if 0
-  if (!ztransverse->initialized) {
-      FILE *fp;
-      fp = fopen_e("ztransverse.sdds", "w", 0);
-      fprintf(fp, "SDDS1\n&column name=f units=Hz type=double &end\n");
-      fprintf(fp, "&column name=ZReal type=double &end\n");
-      fprintf(fp, "&column name=ZImag type=double &end\n");
-      fprintf(fp, "&data mode=ascii no_row_counts=1 &end\n");
-      for (i=0; i<nfreq; i++) 
-        fprintf(fp, "%21.15e %21.15e %21.15e\n",
-                i*df, ztransverse->iZ[0][2*i], -ztransverse->iZ[0][2*i-1]);
-      fclose(fp);
-    }
-#endif
 
   if (ztransverse->wakes) {
     ztransverse->wakes = compose_filename(ztransverse->wakes, run->rootname);
@@ -393,6 +385,31 @@ void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long part
     }
     ztransverse->SDDS_wake_initialized = 1;
   }
+
+  if (ztransverse->highFrequencyCutoff0>0) {
+    applyLowPassFilterToImpedance(ztransverse->iZ[0], nfreq,
+                                  ztransverse->highFrequencyCutoff0, 
+                                  ztransverse->highFrequencyCutoff1);
+    applyLowPassFilterToImpedance(ztransverse->iZ[1], nfreq,
+                                  ztransverse->highFrequencyCutoff0, 
+                                  ztransverse->highFrequencyCutoff1);
+  }
+
+#if 0
+  if (!ztransverse->initialized) {
+    FILE *fp;
+    fp = fopen_e("ztransverse.sdds", "w", 0);
+    fprintf(fp, "SDDS1\n&column name=f units=Hz type=double &end\n");
+    fprintf(fp, "&column name=ZReal type=double &end\n");
+    fprintf(fp, "&column name=ZImag type=double &end\n");
+    fprintf(fp, "&data mode=ascii no_row_counts=1 &end\n");
+    for (i=0; i<nfreq; i++) 
+      fprintf(fp, "%21.15e %21.15e %21.15e\n",
+              i*df, ztransverse->iZ[0][2*i], i>0?-ztransverse->iZ[0][2*i-1]:0);
+    fclose(fp);
+  }
+#endif
+  
   ztransverse->initialized = 1;
 }
 

@@ -67,11 +67,18 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
     static long max_np = 0;
     double *Vfreq, *Z;
     long ip, ib, nb, n_binned, nfreq, iReal, iImag;
-    double factor, tmin, tmax, tmean, dt, dt1, dgam;
+    double factor, tmin, tmax, tmean, dt, dt1, dgam, rampFactor;
     static long not_first_call = -1;
     
     if ((i_pass -= zlongit->startOnPass)<0)
       return;
+
+    rampFactor = 0;
+    if (i_pass>=(zlongit->rampPasses-1))
+      rampFactor = 1;
+    else
+      rampFactor = (i_pass+1.0)/zlongit->rampPasses;
+    fprintf(stderr, "rampFactor = %e\n", rampFactor);
     
     not_first_call += 1;
     
@@ -165,7 +172,7 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
      * to normalize the current waveform.
      */
     Vfreq = Vtime;
-    factor = zlongit->macroParticleCharge/dt*zlongit->factor;
+    factor = zlongit->macroParticleCharge/dt*zlongit->factor*rampFactor;
     Z = zlongit->Z;
     Vfreq[0] = Ifreq[0]*Z[0]*factor;
     nfreq = nb/2 + 1;
@@ -275,7 +282,6 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
 
     if (zlongit->initialized)
       return ;
-    zlongit->initialized = 1;
 
     if (zlongit->broad_band) {
       /* compute impedance for a resonator.  Recall that I use V(t) = Vo*exp(i*w*t) convention,
@@ -322,11 +328,12 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
             fprintf(fp, "%ld %e 0\n", i, zlongit->Z[zlongit->n_bins-1]);
             fclose(fp);
             }
+        df *= zlongit->freq;
         }
     else {
         TABLE Zr_data, Zi_data;
         double *Zr=NULL, *Zi=NULL;
-        double df_spect=0.0;
+        double df_spect;
         long n_spect=0;
         if (!zlongit->Zreal && !zlongit->Zimag)
             bomb("you must either give broad_band=1, or Zreal and/or Zimag (ZLONGIT)", NULL);
@@ -376,6 +383,7 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
             bomb("number of spectrum points must be 2^n+1, n>1 (ZLONGIT)", NULL);
         zlongit->n_bins = 2*(n_spect-1);
         zlongit->bin_size = 1.0/(zlongit->n_bins*df_spect);
+        nfreq = n_spect;
         fprintf(stdout, "Using Nb=%ld and dt=%e s (span of %e s) in ZLONGIT\n",
                 zlongit->n_bins, zlongit->bin_size, zlongit->n_bins*zlongit->bin_size);
         fflush(stdout);
@@ -386,13 +394,14 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
                 zlongit->Z[0] = Zr[0];
             else if (i==n_spect-1 && zlongit->n_bins%2==0)
                 /* Nyquist term */
-                zlongit->Z[n_spect-1] = Zr[i];
+                zlongit->Z[2*i-1] = Zr[i];
             else {
                 zlongit->Z[2*i-1] = Zr[i];
                 zlongit->Z[2*i  ] = Zi[i];
                 }
             }
-        }
+        df = df_spect;
+      }
 
     if (zlongit->SDDS_wake_initialized && !SDDS_Terminate(&zlongit->SDDS_wake)) {
         SDDS_SetError("Problem terminating SDDS output (set_up_zlongit)");
@@ -413,8 +422,53 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
         }
         zlongit->SDDS_wake_initialized = 1;
       }
+
+
+    if (zlongit->highFrequencyCutoff0>0)
+      applyLowPassFilterToImpedance(zlongit->Z, nfreq,
+                                    zlongit->highFrequencyCutoff0, 
+                                    zlongit->highFrequencyCutoff1);
+
+#if 0
+    if (!zlongit->initialized) {
+      FILE *fp;
+      fp = fopen_e("zlongit.sdds", "w", 0);
+      fprintf(fp, "SDDS1\n&column name=f units=Hz type=double &end\n");
+      fprintf(fp, "&column name=ZReal type=double &end\n");
+      fprintf(fp, "&column name=ZImag type=double &end\n");
+      fprintf(fp, "&data mode=ascii no_row_counts=1 &end\n");
+      for (i=0; i<nfreq; i++) 
+        if (i==0)
+          fprintf(fp, "%21.15e %21.15e %21.15e\n",
+                  i*df, zlongit->Z[0], 0.0);
+        else 
+          fprintf(fp, "%21.15e %21.15e %21.15e\n",
+                  i*df, zlongit->Z[2*i-1], zlongit->Z[2*i]);
+      fclose(fp);
+    }
+#endif
+  
     zlongit->initialized = 1;
   }
+
+void applyLowPassFilterToImpedance(double *Z, long nfreq, double cutoff0, double cutoff1)
+{
+  long i;
+  double f;
+
+  for (i=1; i<nfreq; i++) {
+    f = (i*1.0)/nfreq;
+    if (f<cutoff0)
+      continue;
+    else if (f>cutoff1 || cutoff1<=cutoff0)
+      Z[2*i-1] = Z[2*i] = 0;
+    else {
+      Z[2*i-1] *= 1-(f-cutoff0)/(cutoff1-cutoff0);
+      Z[2*i  ] *= 1-(f-cutoff0)/(cutoff1-cutoff0);
+    }
+  }
+}
+
 
 long checkPointSpacing(double *x, long n, double tolerance)
 {

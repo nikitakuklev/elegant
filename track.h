@@ -717,10 +717,10 @@ extern char *entity_text[N_TYPES];
 #define N_RFMODE_PARAMS 21
 #define N_TRFMODE_PARAMS 14
 #define N_TWMTA_PARAMS 17
-#define N_ZLONGIT_PARAMS 20
+#define N_ZLONGIT_PARAMS 23
 #define N_MODRF_PARAMS 15
 #define N_SREFFECTS_PARAMS 14
-#define N_ZTRANSVERSE_PARAMS 25
+#define N_ZTRANSVERSE_PARAMS 28
 #define N_IBSCATTER_PARAMS 9
 #define N_FMULT_PARAMS 10
 #define N_BMAPXY_PARAMS 5
@@ -1934,6 +1934,8 @@ typedef struct {
     long reverseTimeOrder;     /* use for "acausal" impedances like CSR */
     double factor;             /* multiply impedance by this factor */
     long startOnPass;          /* If nonzero, the pass on which impedance turns on. */
+    long rampPasses;           /* If nonzero, the number of passes over which to ramp impedance up */
+    double highFrequencyCutoff0, highFrequencyCutoff1;  /* start and stop frequency for smoothing filter */
     /* for internal use: */
     long initialized;          /* indicates that files are loaded */
     double *Z;                 /* n_Z (Re Z, Im Z) pairs */
@@ -1964,6 +1966,8 @@ typedef struct {
     char *wakes;               /* name of file to save wake potentials to */
     long wake_interval;        /* interval (in turns) between output of wakes */
     long startOnPass;          /* If nonzero, the pass on which impedance turns on. */
+    long rampPasses;           /* If nonzero, the number of passes over which to ramp impedance up */
+    double highFrequencyCutoff0, highFrequencyCutoff1;  /* start and stop frequency for smoothing filter */
     /* for internal use */
     double *iZ[2];             /* i*Z (Re Z, Im Z) pairs for each plane */
     long initialized;
@@ -2851,6 +2855,7 @@ void set_up_trfmode(TRFMODE *trfmode, char *element_name, double element_z,
                     long n_passes, RUN *run, long n_particles);
 void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po, RUN *run, long i_pass,
                            CHARGE *charge);
+void applyLowPassFilterToImpedance(double *Z, long nfreq, double cutoff0, double cutoff1);
 void track_through_lscdrift(double **part, long np, LSCDRIFT *lscdrift, double Po, CHARGE *charge);
 long checkPointSpacing(double *x, long n, double tolerance);
 void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse, 

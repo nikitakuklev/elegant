@@ -1250,6 +1250,9 @@ PARAMETER zlongit_param[N_ZLONGIT_PARAMS] = {
     {"REVERSE_TIME_ORDER", "", IS_LONG, 0, (long)((char *)&zlongit_example.reverseTimeOrder), NULL, 0.0, 0, "Reverse time-order of particles for wake computation?"},
     {"FACTOR", "", IS_DOUBLE, 0, (long)((char *)&zlongit_example.factor), NULL, 1.0, 0, "Factor by which to multiply impedance."},
     {"START_ON_PASS", "", IS_LONG, 0, (long)((char *)&zlongit_example.startOnPass), NULL, 1.0, 0, "The pass on which the impedance effects start."},
+    {"RAMP_PASSES", "", IS_LONG, 0, (long)((char *)&zlongit_example.rampPasses), NULL, 1.0, 0, "Number of passes over which to linearly ramp up the impedance to full strength."},
+    {"HIGH_FREQUENCY_CUTOFF0", "", IS_DOUBLE, 0, (long)((char*)&zlongit_example.highFrequencyCutoff0), NULL, -1.0, 0, "Frequency at which smoothing filter begins.  If not positive, no frequency filter smoothing is done.  Frequency is in units of Nyquist (0.5/binsize)."},
+    {"HIGH_FREQUENCY_CUTOFF1", "", IS_DOUBLE, 0, (long)((char*)&zlongit_example.highFrequencyCutoff1), NULL, -1.0, 0, "Frequency at which smoothing filter is 0.  If not given, defaults to HIGH_FREQUENCY_CUTOFF0."},
     };
 
 SREFFECTS SReffects_example;
@@ -1326,6 +1329,9 @@ PARAMETER ztransverse_param[N_ZTRANSVERSE_PARAMS] = {
     {"WAKES", "", IS_STRING, 0, (long)((char *)&ztransverse_example.wakes), NULL, 0.0, 0, "filename for output of wake"},
     {"WAKE_INTERVAL", "", IS_LONG, 0, (long)((char *)&ztransverse_example.wake_interval), NULL, 0.0, 1, "interval in passes at which to output wake"},
     {"START_ON_PASS", "", IS_LONG, 0, (long)((char *)&ztransverse_example.startOnPass), NULL, 1.0, 0, "The pass on which the impedance effects start."},
+    {"RAMP_PASSES", "", IS_LONG, 0, (long)((char *)&ztransverse_example.rampPasses), NULL, 1.0, 0, "Number of passes over which to linearly ramp up the impedance to full strength."},
+    {"HIGH_FREQUENCY_CUTOFF0", "", IS_DOUBLE, 0, (long)((char*)&ztransverse_example.highFrequencyCutoff0), NULL, -1.0, 0, "Frequency at which smoothing filter begins.  If not positive, no frequency filter smoothing is done.  Frequency is in units of Nyquist (0.5/binsize)."},
+    {"HIGH_FREQUENCY_CUTOFF1", "", IS_DOUBLE, 0, (long)((char*)&ztransverse_example.highFrequencyCutoff1), NULL, -1.0, 0, "Frequency at which smoothing filter is 0.  If not given, defaults to HIGH_FREQUENCY_CUTOFF0."},
 };
 
 IBSCATTER ibs_example;
