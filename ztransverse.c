@@ -81,6 +81,16 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
   dt = ztransverse->bin_size;
   tmin -= dt;
   tmax -= dt;
+  if ((tmax-tmin)*2>nb*dt) {
+    TRACKING_CONTEXT tcontext;
+    getTrackingContext(&tcontext);
+    fprintf(stderr, "%s %s: Time span of bunch is more than half the total time span.\n",
+            entity_name[tcontext.elementType],
+            tcontext.elementName);
+    fprintf(stderr, "If using broad-band impedance, you should increase the number of bins and rerun.\n");
+    fprintf(stderr, "If using file-based impedance, you should increase the number of data points or decrease the frequency resolution.\n");
+    exit(1);
+  }
 
   if (nb>max_n_bins) {
     posItime[0] = trealloc(posItime[0], 2*sizeof(**posItime)*(max_n_bins=nb));
@@ -425,45 +435,45 @@ void optimizeBinSettingsForImpedance(double timeSpan, double freq, double Q,
     fprintf(stdout, "  Bin size adjusted to %e\n", bin_size);
     fflush(stdout);
   }
-    if (timeSpan>bin_size*n_bins) {
-      fprintf(stdout, "%s %s has insufficient time span for initial bunch\n",
-              entity_name[tcontext.elementType],
-              tcontext.elementName);
-      n_bins = pow(2,
-                                (long)(log(timeSpan*1.05/bin_size)/log(2)+1));
+  if (2*timeSpan>bin_size*n_bins) {
+    fprintf(stdout, "%s %s has insufficient time span for initial bunch\n",
+            entity_name[tcontext.elementType],
+            tcontext.elementName);
+    n_bins = pow(2,
+                 (long)(log(2*timeSpan*1.05/bin_size)/log(2)+1));
+    fprintf(stdout, "  Number of bins adjusted to %ld\n",
+            n_bins);
+    fflush(stdout);
+  }
+  if (Q<1) 
+    /* Want frequency resolution < fResonance/200 and < fResonanceWidth/200 */
+    factor = 200/(n_bins*bin_size*freq/Q);
+  else
+    factor = 200/(n_bins*bin_size*freq);
+  if (factor>1) {
+    fprintf(stdout, "%s %s has too few bins or excessively small bin size for given frequency\n",
+            entity_name[tcontext.elementType],
+            tcontext.elementName);
+    if (n_bins*factor>pow(2,20)) {
+      factor1 = pow(2,20)/n_bins;
+      factor2 = factor/factor1;
+      n_bins = pow(2,20);
+      bin_size *= factor2;
+      if (1/(2*freq*bin_size)<10) {
+        fprintf(stdout, "It isn't possible to model this element with a reasonable number of bins.  Try using an RFMODE or TRFMODE instead.\n");
+        exit(1);
+      }
       fprintf(stdout, "  Number of bins adjusted to %ld\n",
               n_bins);
-      fflush(stdout);
+      fprintf(stdout, "  Bin size adjusted to %e\n",
+              bin_size);
+    } else {
+      n_bins = pow(2, (long)(log(n_bins*factor)/log(2)+1));
+      fprintf(stdout, "  Number of bins adjusted to %ld\n",
+              n_bins);
     }
-    if (Q<1) 
-    /* Want frequency resolution < fResonance/200 and < fResonanceWidth/200 */
-      factor = 200/(n_bins*bin_size*freq/Q);
-    else
-      factor = 200/(n_bins*bin_size*freq);
-    if (factor>1) {
-      fprintf(stdout, "%s %s has too few bins or excessively small bin size for given frequency\n",
-              entity_name[tcontext.elementType],
-              tcontext.elementName);
-      if (n_bins*factor>pow(2,20)) {
-        factor1 = pow(2,20)/n_bins;
-        factor2 = factor/factor1;
-        n_bins = pow(2,20);
-        bin_size *= factor2;
-        if (1/(2*freq*bin_size)<10) {
-          fprintf(stdout, "It isn't possible to model this element with a reasonable number of bins.  Try using an RFMODE or TRFMODE instead.\n");
-          exit(1);
-        }
-        fprintf(stdout, "  Number of bins adjusted to %ld\n",
-                n_bins);
-        fprintf(stdout, "  Bin size adjusted to %e\n",
-                bin_size);
-      } else {
-        n_bins = pow(2, (long)(log(n_bins*factor)/log(2)+1));
-        fprintf(stdout, "  Number of bins adjusted to %ld\n",
-                n_bins);
-      }
-      fflush(stdout);
-    }
+    fflush(stdout);
+  }
   
   *nBins = n_bins;
   *binSize = bin_size;
