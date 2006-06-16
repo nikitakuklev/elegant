@@ -104,7 +104,6 @@ else
 USR_LIBS = 	mdbcommon matlib fftpack SDDS1 \
 		rpnlib mdbmth namelist mdblib \
 		meschach
-#SYS_PROD_LIBS_DEFAULT += z lapack blas g2c
 SYS_PROD_LIBS_DEFAULT += z 
 SYS_PROD_LIBS_solaris += z curses rt 
 endif
@@ -141,7 +140,7 @@ USR_CFLAGS += -DSUNPERF -dalign
 OP_SYS_LDLIBS += -xlic_lib=sunperf
 else #ifneq ($(SUNPERF), 0)
 ifneq ($(LAPACK), 0)
-USR_CFLAGS += -DHAVE_LAPACK
+USR_CFLAGS += -DHAVE_LAPACK -DLAPACK
 ifeq ($(OS_CLASS),Linux)
 OP_SYS_LDLIBS += -llapack -lblas -lg2c
 endif #ifeq ($(OS_CLASS),Linux)
