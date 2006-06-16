@@ -296,7 +296,7 @@ void run_coupled_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_co
       fprintf(stdout, "Error: no accumulated matrix found for element %s", eptr->name);
       exit(1);
     }
-    
+
     /*--- Reducing matrix dimensions */
     R = eptr->accumMatrix->R;
     for (i=0; i<matDim; i++) {
@@ -445,7 +445,7 @@ void SortEigenvalues (double *WR, double *WI, double *VR, int matDim, int eigenM
     }
   }
   for (i=0; i<N; i++) {
-    MaxIndex[i]=GetMaxIndex((double*)&VV[i], N);
+    MaxIndex[i]=GetMaxIndex(VV[i], N);
   }
 
   /*--- Copying arrays... */
@@ -514,11 +514,11 @@ void GetAMatrix (double *V, double *transferMatrix, double *A, int *eigenModesNu
   double *E;
   K=*eigenModesNumber;
   N=*matDim;
-  
+
   E = malloc(sizeof(*E)*N*N);
 
   /*--- Vector rotation */
-  MatrixProduct(&N, &N, (double*)&V[0], &N, &N, &transferMatrix[0], (double*)&E);
+  MatrixProduct(&N, &N, (double*)&V[0], &N, &N, &transferMatrix[0], E);
 
   /*--- A is 3d array. First index is eigenmode, other 2 are rows and columns of A matrix */
   for (k=0; k<K; k++) {
