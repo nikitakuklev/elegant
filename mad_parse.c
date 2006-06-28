@@ -25,7 +25,8 @@
 long is_simple(char *s);
 
 
-long max_name_length = 8;
+long max_name_length = 100;
+
 long set_max_name_length(long length)
 {
     long tmp;
