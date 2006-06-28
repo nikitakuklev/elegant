@@ -18,6 +18,7 @@
 #include "chromDefs.h"
 #include "fftpackC.h"
 #include "twiss.h"
+#include "complex.h"
 #include <stddef.h>
 
 void computeResonanceWidths(LINE_LIST *beamline, double *clorb, RUN *run);
@@ -258,14 +259,14 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
 				)
 {
   double beta[2], alpha[2], phi[2], eta[2], etap[2], gamma[2], refAlpha[2];
-  double *func, path[6], path0[6], detR[2], kappa[2], length, sTotal;
+  double *func, path[6], path0[6], detR[2], length, sTotal;
   double **R=NULL, C[2], S[2], Cp[2], Sp[2], D[2], Dp[2], sin_dphi, cos_dphi, dphi;
   long n_mat_computed, i, j, plane, otherPlane, hasMatrix;
   VMATRIX *M1, *M2;
   MATRIX *dispM, *dispOld, *dispNew;
   ELEMENT_LIST *elemOrig;
   static long asinWarning = 50;
-  
+  COMPLEX kappa;  
   if (!twiss0)
     bomb("initial Twiss parameters not given (propagate_twiss_parameters())", NULL);
   elemOrig = elem;
@@ -518,49 +519,99 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
   tune[1] = phi[1]/PIx2;
 
   if (couplingFactor) {
-    double ks, phase, y;
+    /* Compute linear coupling based on 187 of Handbook of Accelerator Physics and Engineering 
+     * and P.J. Bryant, "A Simple Theory for Weak Betatron Coupling", CERN 94-01, Vol 1., 207-217.
+     */
+    COMPLEX integrand, phaseFactor;
+    double ks, phase, y, K1, K1r, tilt;
     long q;
-    /* See page 187 of Handbook of Accelerator Physics and Engineering */
-    kappa[0] = kappa[1] = 0;  /* coupling factor */
+#ifdef DEBUG_COUPLING
+    FILE *fp;
+    fp = fopen("kappa.sdds", "w");
+    fprintf(fp, "SDDS1\n");
+    fprintf(fp, "&column name=ElementName type=string &end\n");
+    fprintf(fp, "&column name=Position, type=double &end\n");
+    fprintf(fp, "&column name=Length , type=double &end\n");
+    fprintf(fp, "&column name=K1 , type=double &end\n");
+    fprintf(fp, "&column name=Tilt , type=double &end\n");
+    fprintf(fp, "&column name=ks , type=double &end\n");
+    fprintf(fp, "&column name=phase type=double &end\n");
+    fprintf(fp, "&column name=exp0, type=double &end\n");
+    fprintf(fp, "&column name=exp1 , type=double &end\n");
+    fprintf(fp, "&column name=i0 , type=double &end\n");
+    fprintf(fp, "&column name=i1 , type=double &end\n");
+    fprintf(fp, "&column name=kappa0 , type=double &end\n");
+    fprintf(fp, "&column name=kappa1 , type=double &end\n");
+    fprintf(fp, "&data mode=ascii no_row_counts=1 &end\n");
+#endif
+    kappa.r = kappa.i = 0;  /* coupling factor */
     elem = elemOrig;
     q = tune[0] - tune[1] + 0.5;
     couplingFactor[1] = (tune[0] - tune[1]) - q;
     while (elem) {
       if ((elem->type==T_QUAD || elem->type==T_KQUAD || elem->type==T_SEXT ||
-	   elem->type==T_KSEXT) &&
-	  elem->pred &&
-	  (length = *((double*)elem->p_elem))) {
-	beta[0] = (elem->twiss->betax + elem->pred->twiss->betax)/2;
-	beta[1] = (elem->twiss->betay + elem->pred->twiss->betay)/2;
-	phi[0]  = (elem->twiss->phix + elem->pred->twiss->phix)/2;
-	phi[1]  = (elem->twiss->phiy + elem->pred->twiss->phiy)/2;
-	y = (elem->twiss->Cy + elem->pred->twiss->Cy)/2;
-	ks = 0;
+	   elem->type==T_KSEXT || elem->type==T_SOLE) && (length = *((double*)elem->p_elem))) {
+        if (elem->pred) {
+          beta[0] = (elem->twiss->betax + elem->pred->twiss->betax)/2;
+          beta[1] = (elem->twiss->betay + elem->pred->twiss->betay)/2;
+          alpha[0] = (elem->twiss->alphax + elem->pred->twiss->alphax)/2;
+          alpha[1] = (elem->twiss->alphay + elem->pred->twiss->alphay)/2;
+          phi[0]  = (elem->twiss->phix + elem->pred->twiss->phix)/2;
+          phi[1]  = (elem->twiss->phiy + elem->pred->twiss->phiy)/2;
+          y = (elem->twiss->Cy + elem->pred->twiss->Cy)/2;
+        }
+        else {
+          beta[0] = (elem->twiss->betax + twiss0->betax)/2;
+          beta[1] = (elem->twiss->betay + twiss0->betay)/2;
+          alpha[0] = (elem->twiss->alphax + twiss0->alphax)/2;
+          alpha[1] = (elem->twiss->alphay + twiss0->alphay)/2;
+          phi[0]  = (elem->twiss->phix + twiss0->phix)/2;
+          phi[1]  = (elem->twiss->phiy + twiss0->phiy)/2;
+          y = (elem->twiss->Cy + twiss0->Cy)/2;
+        }
+	ks = K1r = K1 = 0;
 	switch (elem->type) {
 	case T_QUAD:
-	  ks = ((QUAD*)(elem->p_elem))->k1 * sin(2*((QUAD*)(elem->p_elem))->tilt);
+	  K1r = (K1=((QUAD*)(elem->p_elem))->k1) * sin(2*(tilt=((QUAD*)(elem->p_elem))->tilt));
 	  break;
 	case T_KQUAD:
-	  ks = ((KQUAD*)(elem->p_elem))->k1 * sin(2*((KQUAD*)(elem->p_elem))->tilt);
+	  K1r = (K1=((KQUAD*)(elem->p_elem))->k1) * sin(2*(tilt=((KQUAD*)(elem->p_elem))->tilt));
 	  break;
 	case T_SEXT:
-	  ks = ((SEXT*)(elem->p_elem))->k2 * (y - ((SEXT*)(elem->p_elem))->dy);
+	  K1r = ((SEXT*)(elem->p_elem))->k2 * (y - ((SEXT*)(elem->p_elem))->dy);
 	  break;
 	case T_KSEXT:
-	  ks = ((KSEXT*)(elem->p_elem))->k2 * (y - ((SEXT*)(elem->p_elem))->dy);
+	  K1r = ((KSEXT*)(elem->p_elem))->k2 * (y - ((SEXT*)(elem->p_elem))->dy);
 	  break;
+        case T_SOLE:
+          ks = -((SOLE*)(elem->p_elem))->ks;
+          break;
 	}
-	phase = phi[0] - phi[1] 
-	  + (tune[0] - tune[1] - q)*2*PI*(elem->pred->end_pos +elem->end_pos)/sTotal;
-	kappa[0] += ks*sqrt(beta[0]*beta[1])*cos(phase)*length/PIx2;
-	kappa[1] += ks*sqrt(beta[0]*beta[1])*sin(phase)*length/PIx2;
+        if (K1r!=0 || ks!=0) {
+          phase = phi[0] - phi[1] 
+            - (tune[0] - tune[1] - q)*2*PI*
+              (elem->end_pos-length/2)/sTotal;
+          phaseFactor = cexpi(phase);
+          integrand.r = K1r + (alpha[0]/beta[0] - alpha[1]/beta[1])*ks/2;
+          integrand.i = -(1/beta[0]+1/beta[1])*ks/2;
+          kappa = cadd(kappa, cmulr(cmul(integrand, phaseFactor), sqrt(beta[0]*beta[1])/PIx2*length));
+#ifdef DEBUG_COUPLING
+          fprintf(fp, "%s %e %e %e %e %e %e %e %e %e %e %e %e\n",
+                  elem->name, elem->end_pos-length/2, length, K1r, tilt, ks,
+                  phase, phaseFactor.r, phaseFactor.i, integrand.r, integrand.i,
+                  kappa.i, kappa.r);
+#endif
+        }
       }
       elem = elem->succ;
     }
-    if ((couplingFactor[0] = sqrt(sqr(kappa[0])+sqr(kappa[1]))))
+    if ((couplingFactor[0] = sqrt(sqr(kappa.r)+sqr(kappa.i))))
       couplingFactor[2] = sqr(couplingFactor[0])/(sqr(couplingFactor[0]) + sqr(couplingFactor[1]));
     else
       couplingFactor[2] = 0;
+#ifdef DEBUG_COUPLING
+    fclose(fp);
+#endif
   }
 
 /*
@@ -1351,7 +1402,12 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
   beamline->twiss0->phiy   = 0;
   beamline->twiss0->etay   = etay;
   beamline->twiss0->etapy  = etapy;
-
+  if (starting_coord) {
+    beamline->twiss0->Cx  = starting_coord[0];
+    beamline->twiss0->Cy  = starting_coord[2];
+  } else
+    beamline->twiss0->Cx  = beamline->twiss0->Cy = 0;
+  
   if (twissConcatOrder>=2 && !(beamline->matrix->T))
     bomb("logic error: beamline T matrix is NULL in compute_twiss_parameters", NULL);
 
