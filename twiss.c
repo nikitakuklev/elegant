@@ -51,10 +51,12 @@ static long twissConcatOrder = 3;
 static long doTuneShiftWithAmplitude = 0;
 static SDDS_DATASET SDDSTswaTunes;
 
-#define TWISS_ANALYSIS_QUANTITIES 4
-static char *twissAnalysisQuantityName[TWISS_ANALYSIS_QUANTITIES] = {"betax", "betay", "etax", "etay"};
+#define TWISS_ANALYSIS_QUANTITIES 8
+static char *twissAnalysisQuantityName[TWISS_ANALYSIS_QUANTITIES] = {"betax", "betay", "etax", "etay", "alphax", "alphay", "etaxp", "etayp"};
 static long twissAnalysisQuantityOffset[TWISS_ANALYSIS_QUANTITIES] = {
-  offsetof(TWISS, betax), offsetof(TWISS, betay), offsetof(TWISS, etax), offsetof(TWISS, etay)
+  offsetof(TWISS, betax), offsetof(TWISS, betay), offsetof(TWISS, etax), offsetof(TWISS, etay),
+  offsetof(TWISS, alphax), offsetof(TWISS, alphay), 
+  offsetof(TWISS, etapx), offsetof(TWISS, etapx), 
   };
 #define TWISS_ANALYSIS_AVE 0
 #define TWISS_ANALYSIS_MIN 1
