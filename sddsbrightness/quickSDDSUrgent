@@ -4,6 +4,9 @@ exec oagwish "$0" "$@"
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.1  2006/03/16 15:46:58  jiaox
+# First version in CVS. A quick graphic user interface for sddsurgent.
+#
 # Revision 1.1  2006/01/06 22:18:01  jiaox
 # First Version in CVS.
 #
@@ -13,7 +16,7 @@ set auto_path [linsert $auto_path 0 /usr/local/oag/lib_patch/$env(HOST_ARCH)]
 
 package require sdds
 
-set CVSRevisionAuthor "\$Revision: 1.1 $ \$Author: jiaox $"
+set CVSRevisionAuthor "\$Revision: 1.2 $ \$Author: jiaox $"
 APSApplication . -name "Undulator Radiation Properties" -version $CVSRevisionAuthor  
 
 set status "Ready..."
@@ -466,7 +469,7 @@ proc display {} {
      set cols [ exec sddsquery -col $outputFile ]
     
      if { [ lsearch $cols "Energy" ] <0 } { 
-         setStatus "\nCurrently, this application only plot energy vs. {Flux | Brilliance/Brightness | Irradiance | L1 } \nNo Energy columns found in $outputFile. Please check with sddsEditNew."
+         setStatus "\nCurrently, this application only plots energy vs. {Flux | Brilliance/Brightness | Irradiance | L1 } \nNo Energy columns found in $outputFile. Please check with sddsEditNew."
 	 return
      }
      
@@ -479,7 +482,7 @@ proc display {} {
      
      if { $RUN_US &&  $URP(us) == "-us" } {
         set cmpfile ${tmp_dir}/us_to_SDDS
-        eval exec plaindata2sdds ${outputFile}.US ${tmp_dir}/us_to_SDDS -skiplines=26 -norowcounts $convertOptions
+        eval exec plaindata2sdds ${outputFile}.US ${tmp_dir}/us_to_SDDS -skiplines=25 -norowcounts $convertOptions
 	set legend "US_FORTRAN"
      }	
           
