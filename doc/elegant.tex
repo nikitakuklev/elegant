@@ -2060,13 +2060,15 @@ and not-equal functions, which have the names {\tt segt}, {\tt selt}, and
 {\tt sene}, respectively.  The usage is as follows:
 \begin{itemize}
 \item {\em V1} {\em V2} {\em T} {\tt segt}.  Returns a
- nonzero value if and only if value {\em V2} is greater than {\em V1}.  The 
+ nonzero value if and only if value {\em V1} is greater than {\em V2}.  The 
  returned value is $((V_1-V_2)/T)^2$.  Typically used to constraint a quantity from
  above.  E.g., to limit the maximum horizontal beta function to 10m with
  a tolerance of $T=0.1m$, one would use \verb|max.betax 10 .1 segt|.
 \item {\em V1} {\em V2} {\em T} {\tt selt}.  Returns a
- nonzero value if and only if value {\em V2} is less than value {\em V1}.  The 
- returned value is $((V_1-V_2)/T)^2$.  
+ nonzero value if and only if value {\em V1} is less than value {\em V2}.  The 
+ returned value is $((V_1-V_2)/T)^2$.    Typically used to constrain a value from
+ below.  E.g., to limit a beta function to greater than 3 m with a tolerance of 0.1 m,
+ one would use \verb|betax 3 .1 selt|.
 \item {\em V1} {\em V2} {\em T} {\tt sene}.  Returns a nonzero value
  if and only if {\em V1} and {\em V2} differ by more than {\em tol}.  If
  $V_1>V_2$, returns $((V_1-(V_2+T))/T)^2$.  If $V_2>V_1$, returns
