@@ -1891,11 +1891,12 @@ summary of the optimization parameters should be printed.
 \begin{itemize}
 \item type: setup command.
 \item function: define a constraint for optimization.
-\item note: This command is not recommended.  It is better to put constraints
+\item N.B.: This command is {\em not recommended}.  It is {\em far} better to put constraints
 	into the optimization equation (via the \verb|equation| parameter of
 	\verb|optimization_setup| or via \verb|optimization_term|).  The reason
 	is that the hard constraints imposed by \verb|optimization_constraint|
-	may make it more difficult for the optimizer to converge.
+	may make it more difficult for the optimizer to converge.  See the discussion of the
+        \verb|selt| and \verb|segt| macros in the manual entry to \verb|optimization_setup|.
 \end{itemize}
 
 \begin{verbatim}
