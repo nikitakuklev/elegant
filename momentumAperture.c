@@ -136,6 +136,7 @@ long doMomentumApertureSearch(
   double *sStart, mostInsideLostDelta;
   char **ElementName;
   long points, splitsLeft, code, firstOneLost, stepsBack;
+  long processElements, skipElements;
   double lastInterval;
 #if defined(DEBUG)
   FILE *fpdeb = NULL;
@@ -201,13 +202,15 @@ long doMomentumApertureSearch(
   
   elem = elem0;
   iElem = 0;
-
-  while (elem && process_elements>0) {
+  processElements = process_elements;
+  skipElements = skip_elements;
+  
+  while (elem && processElements>0) {
     if (!include_name_pattern || wild_match(elem->name, include_name_pattern)) {
       if (elem->end_pos>s_end) 
         break;
-      if (skip_elements>0) {
-        skip_elements --;
+      if (skipElements>0) {
+        skipElements --;
         elem = elem->succ;
         continue;
       }
@@ -406,7 +409,7 @@ long doMomentumApertureSearch(
         }
       }
       iElem++;
-      process_elements --;
+      processElements --;
     }
     elem = elem->succ;
   } 
