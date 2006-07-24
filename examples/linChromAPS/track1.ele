@@ -1,5 +1,3 @@
-! In this version, we track with higher order chromatic effects.
-
 ! For linear chromatic tracking, the lattice must have the form
 ! <nonMatrixElements>,<matrixBasedElements>,<nonMatrixElement>.
 ! Hence, we use transmute_elements to turn interior monitors, apertures,
@@ -13,8 +11,6 @@
 
 ! transmute any standard watch points (names S*) into zero-length drifts
 &transmute_elements name=S*, type=WATCH, new_type=DRIF &end
-
-! First run: correct the chromaticity using second order matrices
 
 &run_setup
         lattice = "aps.lte",
@@ -30,7 +26,7 @@
 &alter_elements name=S*S1,  item=K2, value=10.052 &end
 &alter_elements name=S*S2,  item=K2, value=-22.140 &end
 
-&run_control n_passes=1 &end
+&run_control n_passes=1024 &end
 
 ! Link all the S3 sextupoles to S1A:S3
 &link_elements target=S*S3, source=S1A:S3, item=K2, equation=K2, exclude=S1A:S3 &end
@@ -50,50 +46,11 @@
 &end    
 
 &twiss_output 
+        filename=%s.twi,
         matched = 1,
         radiation_integrals = 1
         concat_order=2,
-        higher_order_chromaticity = 0,
         output_at_each_step = 1
-&end
-
-&bunched_beam
-	n_particles_per_bunch = 1,
-        centroid[0] = 1e-4, 0, 1e-4, 0, 0, 1e-4
-&end
-
-&track use_linear_chromatic_matrix=1 &end
-
-
-! Second run: use the chromaticity correction we just did but run with
-! higher order effects.
-
-&run_setup
-        lattice = "aps.lte",
-        use_beamline = "ringrfsr",
-        p_central = "{rpnl 7.0e3 mev /}",
-        ! Increase order to maximum to allow higher-order chromaticities
-        default_order = 3,
-        concat_order = 3,
-        magnets = %s.mag,
-&end
-
-! Load the K2's from the just-saved parameter file.
-&load_parameters
-        filename = %s.param,
-        change_defined_values = 1,
-        include_item_pattern = K2
-&end
-
-&run_control n_passes=1024 &end
-
-&twiss_output 
-        filename = %s.twi,
-        matched = 1,
-        radiation_integrals = 1
-        ! Use highest-order concatenation and ask for higher order chromaticity
-        concat_order=3,
-        higher_order_chromaticity = 1,
 &end
 
 &bunched_beam
