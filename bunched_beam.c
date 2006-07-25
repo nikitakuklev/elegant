@@ -497,11 +497,11 @@ void do_track_beam_output(RUN *run, VARY *control,
     if (!(flags&SILENT_RUNNING)) {
       fprintf(stdout, "Dumping lost-particle data...\n"); fflush(stdout);
       fprintf(stdout, "n_left = %ld, n_total = %ld, n_lost = %ld\n", 
-	      n_left, beam->n_particle, beam->n_particle-n_left);
+	      n_left, beam->n_to_track, beam->n_to_track-n_left);
       fflush(stdout);
     }
     dump_lost_particles(&output->SDDS_losses, beam->particle+n_left, beam->lostOnPass+n_left,
-			beam->n_particle-n_left, control->i_step);
+			beam->n_to_track-n_left, control->i_step);
     if (!(flags&SILENT_RUNNING)) 
       fprintf(stdout, "done.\n"); fflush(stdout);
     fflush(stdout);
