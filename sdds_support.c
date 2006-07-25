@@ -1145,7 +1145,7 @@ void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long *lostOn
         bomb("NULL coordinate pointer passed to dump_lost_particles", NULL);
 
 #ifdef SORT   /* sort for comparing the serial and parallel versions */
-      if (SORT) {
+    if (SORT && particles) {
 	long tmp[particles][2], j;
 
         for (j=0; j<particles; j++) {
