@@ -2987,7 +2987,7 @@ void scatterParticles(double **coord, long *nToTrack, double **accepted,
       my_nToTrack = 0;
       for (i=1; i<work_processors; i++) {
 	nToTrackCounts[i] =  rateCounts[i]*constTime+round; /* round to the nearest integer */
-	if (my_nToTrack>*nToTrack) {  /* avoid sending more particles than the available ones */
+	if (my_nToTrack>=*nToTrack) {  /* avoid sending more particles than the available ones */
 	  nToTrackCounts[i-1] = *nToTrack-(my_nToTrack-nToTrackCounts[i-1]); 
 	  break;     
 	}
