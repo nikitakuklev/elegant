@@ -15,7 +15,11 @@
  *        radiation generated in ideal plane, helical or elliptical undulators,
  *        and also the crossed-undulators scheme [Nikitin,Kim].
  * Hairong Shang, May 2005
+
+$Log: not supported by cvs2svn $
 */
+
+
 
 #include "mdb.h"
 #include "scan.h"
@@ -150,7 +154,7 @@ calculation   specifies calculation method and mode. \n\
                 already includes convolution.\n\
                 4  Non-zero emittance; infinite-N + convolution (Dejus) \n\
                 14 Non-zero emittance; infinite-N + convolution (Walker) \n\
-                -1 compute with all above methods. \n\
+                \n\
               mode: both urgent and us has following mode: \n\
                 1    Angular/spatial flux density distribution \n\
                 2    Angular/spatial flux density spectrum \n\
@@ -158,8 +162,8 @@ calculation   specifies calculation method and mode. \n\
                 4    Flux spectrum through a pinhole \n\
                 5    Flux spectrum integrated over all angles \n\
                 6    Power density and integrated power \n\
-                -1  compute with all above modes. \n";
-char *USAGE3="                urgent can have -6 mode (only valid for harmonics<=0), \n\
+                \n";
+char *USAGE3="  urgent can have -6 mode (only valid for harmonics<=0), \n\
                 which does everything mode=6 does, plus \n\
                 the angular/spatial distribution of power density \n\
                 for each harmonic. For mode=6(urgent), two output files, \n\
@@ -167,11 +171,17 @@ char *USAGE3="                urgent can have -6 mode (only valid for harmonics<
                 while for mode=-6(urgent), three output files will be created: \n\
                 <outputfile>, <outputfile>.total, and <outputfile>.harmonic which contains\n\
                 the flux distribution for each harmonics.\n\
-              harmonics  specifies harmonic number. \n\
+                              also note that urgent mode =6 the method 2 is actully \n\
+                Zero emittance. So mode=6,method=2 for urgent corresponds to \n\
+                mode=6,method=3 -us.\n\
+                harmonics  specifies harmonic number. \n\
                  =0, include all harmonics for calculation.\n\
                  =-1, Lowest order harmonic \n\
                  =I (I>0), Ith harmonic; \n\
-                 =-I (I>0), include harmonics from 1 to I.\n";
+                 =-I (I>0), include harmonics from 1 to I.\n\
+                 For urgent mode=1,2,3,4 with method=3, harmonics is not relevent,while the above \n\
+                 numbers are valid in us calculation.\n\
+                \n";
 char *USAGE4="undulator     Specifies the undulator parameters: period in m units, number of periods, \n\
                horizontal deflection parameter (kx), \n\
                vertical deflection parameter (ky), \n\
@@ -215,12 +225,11 @@ photonEnergy  specifies the maximum and minimum photon energy in eV, \n\
 ";
 
 int main(int argc, char **argv) {
-  char *inputfile, *outputfile, *undulatorType, *description, output[1024];
+  char *inputfile, *outputfile, *undulatorType, *description, *output;
   SDDS_DATASET sddsin, sddsout, *sddsout2=NULL, sddsout1;
-  unsigned long pipeFlags, dummyFlags=0;
-  long i_arg, tmpFileUsed, i, j, special=0, first=1;
-  long modes[7]={1,2,3,4,5,6,-6}, n_modes;
-  long methods[5]={1,2,3,4,14}, n_methods;
+  unsigned long pipeFlags=0,dummyFlags=0;
+  long i_arg, tmpFileUsed, i, j, special=0;
+  
   SCANNED_ARG *s_arg;
 
   /*input parameters */
@@ -228,7 +237,7 @@ int main(int argc, char **argv) {
   ELECTRON_BEAM_PARAM electron_param;
   PINHOLE_PARAM pinhole_param;
   double emax,  emin, dAlpha, dOmega, coupling, emittanceRatio, period, current;
-  long nE, mode, icalc, iharm, nAlpha, nOmega, idebug, mode0, icalc0, us, nPhi, points, nowarnings;
+  long nE, mode, icalc, iharm, nAlpha, nOmega, idebug, us, nPhi, points, nowarnings;
   /* input parameters from input file */
   TWISS_PARAMETER twiss;
   long page, inputPages=1, inputSupplied=0;
@@ -246,7 +255,7 @@ int main(int argc, char **argv) {
     fprintf(stderr, "%s%s%s%s%s", USAGE1, USAGE2, USAGE3, USAGE4, USAGE5);
     exit(1);
   }
-  output[0]=0;
+  output= NULL;
   lamda1=E1=ptot=pd=max_irradiance=totalPD=totalPower=totalFlux=pdtot=ptot1=ftot=0;
   EE=lamda=xPMM=yPMM=irradiance=L1=L2=L3=L4=power=EI=spec1=spec2=spec3=NULL;
   isub=iang=min_harmonic=max_harmonic=nEE=i_max=idebug=iharm5=us=0;
@@ -263,6 +272,7 @@ int main(int argc, char **argv) {
   electron_param.energySpread = 0.0;
   electron_param.nsigma = 4;
   electron_param.sigmaxp = electron_param.sigmayp = 0.0;
+  electron_param.sigmax = electron_param.sigmay =0.0;
   undulator_param.itype=1;
   undulator_param.phase=0.0;
   pinhole_param.distance=0;
@@ -302,6 +312,7 @@ int main(int argc, char **argv) {
       case SET_PIPE:
         if (!processPipeOption(s_arg[i_arg].list+1, s_arg[i_arg].n_items-1, &pipeFlags))
           SDDS_Bomb("invalid -pipe syntax");
+        break;
       case SET_CALCULATION:
         if (s_arg[i_arg].n_items<2)
           SDDS_Bomb("invalid -calculation syntax");
@@ -312,12 +323,10 @@ int main(int argc, char **argv) {
                           "harmonics", SDDS_LONG, &iharm, 1, 0,
                           NULL))
           SDDS_Bomb("invalid -calculation syntax");
-        if ((mode<-1 && mode!=-6) || mode==0 || mode>6)
-          SDDS_Bomb("invalid mode given for calculation, it should be -1, or 1,2,3,4,5,6");
-        if (icalc<-1 || icalc==0 || (icalc>4 && icalc!=14))
+        if ( (mode<1 && mode != -6 )  || mode>6)
+          SDDS_Bomb("invalid mode given for calculation, it should be 1,2,3,4,5,6,-6");
+        if (icalc<1 || (icalc>4 && icalc!=14))
           SDDS_Bomb("invalid method given for calculation, it should be -1, or 1,2,3,4,14");
-        if ((mode==5 || mode==6 || mode==-6) && icalc==3) 
-          SDDS_Bomb("calculation method 3 is not available for mode 5 and 6.\n");
         if (iharm<-1000 || iharm>1000)
           SDDS_Bomb("harmonics exceeds the range of which from -1000 to 1000.");
         s_arg[i_arg].n_items++;
@@ -358,9 +367,6 @@ int main(int argc, char **argv) {
                           "nsigma", SDDS_LONG, &electron_param.nsigma, 1, 0,
                           NULL))
           SDDS_Bomb("invalid -electronbeam syntax");
-       /* if (!(dummyFlags&ELECTRON_SIGMAX_GIVEN) || !(dummyFlags&ELECTRON_SIGMAXP_GIVEN) 
-            || !(dummyFlags&ELECTRON_SIGMAY_GIVEN) || !(dummyFlags&ELECTRON_SIGMAYP_GIVEN))
-          SDDS_Bomb("invalid -electronbeam syntax, electron beam size: x, y, xp and yp should be given!"); */
         s_arg[i_arg].n_items++;
         break; 
       case SET_PINHOLE:
@@ -377,8 +383,8 @@ int main(int argc, char **argv) {
                           "ynumber", SDDS_LONG, &pinhole_param.nYP, 1, 0,
                           NULL))
           SDDS_Bomb("invalid -pinhole syntax.");
-        if (pinhole_param.nXP>50 || pinhole_param.nYP>50) 
-          SDDS_Bomb("Number of intervals of x/y acceptance (nXP/nYP) should be between 0 and 50");
+        if (pinhole_param.nXP>500 || pinhole_param.nYP>500) 
+          SDDS_Bomb("Number of intervals of x/y acceptance (nXP/nYP) should be between 0 and 500");
         s_arg[i_arg].n_items++;
         break;
       case SET_ALPHA:
@@ -441,11 +447,25 @@ int main(int argc, char **argv) {
   if (coupling && emittanceRatio)
     SDDS_Bomb("give only one of -coupling or -emittanceRatio"); 
   
-  processFilenames("sddsbrightness", &inputfile, &outputfile, pipeFlags, nowarnings, &tmpFileUsed); 
-  if (tmpFileUsed)
-    outputfile = inputfile;
   
-  if (undulator_param.itype==2 && (mode==3 || mode==5 || mode==6))
+  if( !pipeFlags) {
+      processFilenames("sddsurgent", &inputfile, &outputfile, pipeFlags, nowarnings, &tmpFileUsed); 
+      if (tmpFileUsed)
+          outputfile = inputfile;
+  } else {
+       if ( pipeFlags&USE_STDIN) {
+          outputfile = inputfile;
+          inputfile = NULL;
+       }
+       if (pipeFlags&USE_STDOUT) {
+          if(inputfile)
+             processFilenames("sddsurgent",&inputfile,&outputfile,pipeFlags,nowarnings, &tmpFileUsed);
+       }
+  }   
+    
+
+
+  if (undulator_param.itype==2 && (mode==3 || mode==5 || abs(mode)==6 ))
     SDDS_Bomb("calculation mode 3, 5, 6 are not available for canted undulator");
   if (undulator_param.itype==2 && us)
     SDDS_Bomb("US computation is not available for canted undulator.");
@@ -455,6 +475,18 @@ int main(int argc, char **argv) {
     SDDS_Bomb("Number of steps of phi (nPhi) for canted undulator (itype=2) should not exceed 25.");
   if (emin<0 || emax<0) 
     SDDS_Bomb("The minimum or maximum photon energy is less than 0.");
+
+  if( us ) {
+       if( mode == -6 ) 
+         SDDS_Bomb("us calculation mode -6 is not available.\n");
+       if( icalc == 2 ) 
+         SDDS_Bomb("us calculation method 2 is for test purposes only, use 1,3,4,14 instead.\n"); 
+  } else {
+      if ((mode==5 || mode==6 || mode==-6) && icalc==3) 
+         SDDS_Bomb("urgent calculation method 3 is not available for mode 5 and +-6.\n");
+  }
+
+
   if (icalc==1 && mode!=1 && mode!=6 && undulator_param.itype!=2) {
     if (nOmega>5000) {
       fprintf(stderr,"Too many omega points (exceeds 5000.)\n");
@@ -465,7 +497,9 @@ int main(int argc, char **argv) {
       exit(1);
     }
   }
-  if ((inputfile && !tmpFileUsed) || pipeFlags&USE_STDIN) {
+ 
+  
+  if ((inputfile && !tmpFileUsed) || (pipeFlags&USE_STDIN) ) {
     if (!(ReadTwissInput(inputfile, &twiss, coupling, emittanceRatio,
                          undulator_param.period, undulator_param.nPeriod)))
       SDDS_Bomb("Unable to read twiss parameter from input.");                     
@@ -473,9 +507,11 @@ int main(int argc, char **argv) {
     inputSupplied = 1;
   }
   
-  if (!inputSupplied &(electron_param.sigmaxp==0.0 || electron_param.sigmayp==0.0)) {
-    if ((mode<5 && icalc!=3) || (mode==6 && icalc==1)) {
-      fprintf(stderr, "The rms x and y divergence  should not be zero for mode=5, icalc=1,2 or mode=6, icalc=1 calculation.\n");
+
+  
+  if (!inputSupplied && (electron_param.sigmaxp==0.0 || electron_param.sigmayp==0.0)) {
+    if (  (abs(mode)<5 && icalc!=3) || (abs(mode)==6 && icalc==1) || ( us && mode==6 && icalc != 3)  ) {
+      fprintf(stderr, "The rms x and y divergence  should not be zero for mode 1,2,3,4 icalc=1,2 or mode=+-6, icalc=1 calculation. (Or mode=6,icalc=1,4,14 for us)\n");
       exit(1);
     }
   }
@@ -485,12 +521,10 @@ int main(int argc, char **argv) {
       exit(1);
     }
   } 
-  mode0=mode;
-  icalc0=icalc;
-  if (nE>=pinhole_param.nXP*pinhole_param.nYP)
+  if (nE>=(pinhole_param.nXP+1)*(pinhole_param.nYP+1))
     points=nE+100;
   else
-    points=pinhole_param.nXP*pinhole_param.nYP+100;
+    points=(pinhole_param.nXP+1)*(pinhole_param.nYP+1)+100;
   
   EE=(double*)malloc(sizeof(*EE)*points);
   if (!us)
@@ -518,131 +552,98 @@ int main(int argc, char **argv) {
     SDDS_CopyString(&undulatorType,"Undulator");
   else
     SDDS_CopyString(&undulatorType,"Canted undulator");
-  if (us) {
-    n_modes=6;
-    n_methods=5;
-  } else {
-    n_modes=7;
-    n_methods=3;
+  
+ 
+  special=0;
+    
+  if (mode==-6) {
+     special=1;
+     E5=(double*)malloc(sizeof(*E5)*MAXIMUM_H);
+     x5=(double*)malloc(sizeof(*x5)*MAXIMUM_H);
+     y5=(double*)malloc(sizeof(*y5)*MAXIMUM_H);
+     power5=(double*)malloc(sizeof(*power5)*MAXIMUM_H);
+     flux5=(double*)malloc(sizeof(*flux5)*MAXIMUM_H);
   }
-  for (i=0;i<n_modes;i++) {
-    special=0;
-    if (mode0==-1)
-      mode=modes[i];
-    if (mode==-6 && iharm>0) {
-      if (mode0!=-1) {
-        fprintf(stderr,"Invalid mode (-6) provided for harmonic>0.\n");
-      }
-      break;
-    }
-    for (j=0;j<n_methods;j++) {
-      if (icalc0==-1)
-        icalc=methods[j];
-      if (icalc==3 && (mode==5 || mode==6 || mode==-6))
-        continue;
-      if (mode==-6) {
-        special=1;
-        if (first) {
-          E5=(double*)malloc(sizeof(*E5)*MAXIMUM_H);
-          x5=(double*)malloc(sizeof(*x5)*MAXIMUM_H);
-          y5=(double*)malloc(sizeof(*y5)*MAXIMUM_H);
-          power5=(double*)malloc(sizeof(*power5)*MAXIMUM_H);
-          flux5=(double*)malloc(sizeof(*flux5)*MAXIMUM_H);
-          first=0;
-        }
-      }
-      for (page=0; page<inputPages; page++) {
-        if (inputSupplied) {
-          electron_param.sigmax = twiss.sigmax[page];
-          electron_param.sigmaxp = twiss.sigmaxp[page];
-          electron_param.sigmay = twiss.sigmay[page];
-          electron_param.sigmayp = twiss.sigmayp[page];
-          electron_param.energySpread = twiss.Sdelta0[page];
-        }
-        if (!us) {
-          urgent_(&undulator_param.itype,&undulator_param.period,&undulator_param.kx,
-                  &undulator_param.ky,&undulator_param.phase,&undulator_param.nPeriod,
-                  &emin,&emax,&nE,
-                  &electron_param.energy,&electron_param.current,
-                  &electron_param.sigmax,&electron_param.sigmay,
-                  &electron_param.sigmaxp,&electron_param.sigmayp,
-                  &pinhole_param.distance,&pinhole_param.xPC,&pinhole_param.yPC,
-                  &pinhole_param.xPS,&pinhole_param.yPS,&pinhole_param.nXP,&pinhole_param.nYP,
-                  &mode, &icalc, &iharm, &nPhi, &electron_param.nsigma, &nAlpha,
-                  &dAlpha,&nOmega, &dOmega, /*end of input parameters */
-                  &E1,&lamda1,&ptot,&pd,&isub,&iang,
-                  EE,lamda,&min_harmonic,&max_harmonic,&nEE,
-                  xPMM,yPMM,irradiance,L1,L2,L3,L4,&max_irradiance,power,
-                  I1,I2,&i_max,EI,spec1,spec2,
-                  spec3,&pdtot,&ptot1,&ftot,harmonics,
-                  &iharm5,x5,y5,E5,power5,flux5);
-        } else {
-          /*in us, undulator period uses cm units, while urgent uses m units */
-          /*in us, current is in mA units, while urgent is in A units */
-          period=undulator_param.period*100;
-          current=electron_param.current*1000;
-          if (iharm<-1)
-            iharm=-1*iharm;
-          us_(&electron_param.energy, &current, &electron_param.sigmax,
-              &electron_param.sigmay, &electron_param.sigmaxp, &electron_param.sigmayp,
-              &period, &undulator_param.nPeriod, &undulator_param.kx, &undulator_param.ky,
-              &emin, &emax, &nE, 
-              &pinhole_param.distance, &pinhole_param.xPC, &pinhole_param.yPC, 
-              &pinhole_param.xPS, &pinhole_param.yPS, &pinhole_param.nXP, &pinhole_param.nYP,
-              &mode, &icalc, &iharm, &nPhi, &nAlpha, &dAlpha, &nOmega, &dOmega, 
-              &electron_param.nsigma, /*end of input parameters */
-              &E1, &lamda1, &ptot, &pd, &ptot1, &isub, &iang, 
-              &ftot, &max_harmonic, &min_harmonic, L1, L2, L3, L4, &nEE,
-              xPMM, yPMM, irradiance, spec1, EE);
-        }
-        if (mode0==-1) {
-          if (!outputfile)
-            SDDS_Bomb("can not calculation all modes with pipe=out option");
-          if (icalc0==-1) 
-            sprintf(output, "%s_m%d_cal%d", outputfile, mode, icalc);
-          else
-            sprintf(output, "%s_m%d", outputfile, mode);
-        } else {
-          if (icalc0==-1) {
-            if (!outputfile)
-              SDDS_Bomb("can not calculation all methods with pipe=out option");
-            sprintf(output, "%s_cal%d", outputfile, icalc);
-          } else
-            sprintf(output, "%s", outputfile);
-        }
-        if (!us) {
-          if (!page) {
+
+  for (page=0; page<inputPages; page++) {
+     if (inputSupplied) {
+        electron_param.sigmax = twiss.sigmax[page];
+        electron_param.sigmaxp = twiss.sigmaxp[page];
+        electron_param.sigmay = twiss.sigmay[page];
+        electron_param.sigmayp = twiss.sigmayp[page];
+        electron_param.energySpread = twiss.Sdelta0[page];
+     }
+     if (!us) {
+        urgent_(&undulator_param.itype,&undulator_param.period,&undulator_param.kx,
+                &undulator_param.ky,&undulator_param.phase,&undulator_param.nPeriod,
+                &emin,&emax,&nE,
+                &electron_param.energy,&electron_param.current,
+                &electron_param.sigmax,&electron_param.sigmay,
+                &electron_param.sigmaxp,&electron_param.sigmayp,
+                &pinhole_param.distance,&pinhole_param.xPC,&pinhole_param.yPC,
+                &pinhole_param.xPS,&pinhole_param.yPS,&pinhole_param.nXP,&pinhole_param.nYP,
+                &mode, &icalc, &iharm, &nPhi, &electron_param.nsigma, &nAlpha,
+                &dAlpha,&nOmega, &dOmega, /*end of input parameters */
+                &E1,&lamda1,&ptot,&pd,&isub,&iang,
+                EE,lamda,&min_harmonic,&max_harmonic,&nEE,
+                xPMM,yPMM,irradiance,L1,L2,L3,L4,&max_irradiance,power,
+                I1,I2,&i_max,EI,spec1,spec2,
+                spec3,&pdtot,&ptot1,&ftot,harmonics,
+                &iharm5,x5,y5,E5,power5,flux5);
+     } else {
+        /*in us, undulator period uses cm units, while urgent uses m units */
+        /*in us, current is in mA units, while urgent is in A units */
+        period=undulator_param.period*100;
+        current=electron_param.current*1000;
+        us_(&electron_param.energy, &current, &electron_param.sigmax,
+            &electron_param.sigmay, &electron_param.sigmaxp, &electron_param.sigmayp,
+            &period, &undulator_param.nPeriod, &undulator_param.kx, &undulator_param.ky,
+            &emin, &emax, &nE, 
+            &pinhole_param.distance, &pinhole_param.xPC, &pinhole_param.yPC, 
+            &pinhole_param.xPS, &pinhole_param.yPS, &pinhole_param.nXP, &pinhole_param.nYP,
+            &mode, &icalc, &iharm, &nPhi, &nAlpha, &dAlpha, &nOmega, &dOmega, 
+            &electron_param.nsigma, /*end of input parameters */
+            &E1, &lamda1, &ptot, &pd, &ptot1, &isub, &iang, 
+            &ftot, &max_harmonic, &min_harmonic, L1, L2, L3, L4, &nEE,
+            xPMM, yPMM, irradiance, spec1, EE);
+     }
+              
+      
+     output = outputfile;
+     if (!us) {
+        if (!page) {
             sddsout2=SetupOutputFile(output, &sddsout, mode, undulator_param.itype, icalc, isub, iang, idebug, iharm, special, &sddsout1);
-          }
-          SpecifyDescription(&description, isub, mode, iang, i_max, iharm);
-          WriteToOutput(&sddsout, sddsout2, description, undulatorType, idebug,
-                        undulator_param.itype, undulator_param.period, undulator_param.kx,
-                        undulator_param.ky, undulator_param.phase, undulator_param.nPeriod,
-                        emin, emax, nE,
-                        electron_param.energy, electron_param.energySpread, electron_param.current,
-                        electron_param.sigmax, electron_param.sigmay, electron_param.sigmaxp,
-                        electron_param.sigmayp, pinhole_param.distance, pinhole_param.xPC,
-                        pinhole_param.yPC, pinhole_param.xPS, pinhole_param.yPS, pinhole_param.nXP,
-                        pinhole_param.nYP, mode, icalc, iharm, nPhi, electron_param.nsigma, nAlpha,
-                        dAlpha,nOmega, dOmega,
-                        E1,lamda1,ptot,pd,isub,iang,
-                        EE,lamda,min_harmonic,max_harmonic,nEE,
-                        xPMM,yPMM,irradiance,L1,L2,L3,L4,max_irradiance,power,
-                        I1,I2,i_max,EI,spec1,spec2,
-                        spec3,pdtot,ptot1,ftot,harmonics, &sddsout1,
-                        special, iharm5,x5,y5,E5,power5,flux5);
-          free(description);
-        } else {
-          if (!page) 
-            SetupUSOutput(&sddsout, outputfile, mode, iang, isub);
-          WriteUSResultsToOutput(&sddsout, undulator_param, electron_param, pinhole_param,
+        }
+        
+        SpecifyDescription(&description, isub, mode, iang, i_max, iharm);
+        WriteToOutput(&sddsout, sddsout2, description, undulatorType, idebug,
+                      undulator_param.itype, undulator_param.period, undulator_param.kx,
+                      undulator_param.ky, undulator_param.phase, undulator_param.nPeriod,
+                      emin, emax, nE,
+                      electron_param.energy, electron_param.energySpread, electron_param.current,
+                      electron_param.sigmax, electron_param.sigmay, electron_param.sigmaxp,
+                      electron_param.sigmayp, pinhole_param.distance, pinhole_param.xPC,
+                      pinhole_param.yPC, pinhole_param.xPS, pinhole_param.yPS, pinhole_param.nXP,
+                      pinhole_param.nYP, mode, icalc, iharm, nPhi, electron_param.nsigma, nAlpha,
+                      dAlpha,nOmega, dOmega,
+                      E1,lamda1,ptot,pd,isub,iang,
+                      EE,lamda,min_harmonic,max_harmonic,nEE,
+                      xPMM,yPMM,irradiance,L1,L2,L3,L4,max_irradiance,power,
+                      I1,I2,i_max,EI,spec1,spec2,
+                      spec3,pdtot,ptot1,ftot,harmonics, &sddsout1,
+                      special, iharm5,x5,y5,E5,power5,flux5);
+        free(description);
+     } else {
+        if (!page) 
+	    SetupUSOutput(&sddsout, outputfile, mode, iang, isub);
+	    WriteUSResultsToOutput(&sddsout, undulator_param, electron_param, pinhole_param,
                                  nPhi, nAlpha, dAlpha, nOmega, dOmega,
                                  mode, icalc, iharm, nEE, isub, iang,
                                  ptot, pd, ptot1, ftot, max_harmonic, min_harmonic,
                                  emin, emax, E1, lamda1, xPMM, yPMM,
                                  L1, L2, L3, L4, EE, irradiance, spec1);
-        }
-      } /*end of for page */
+     }
+  } /*end of for page */
       /* terminate sdds file */
       if (!us) {
         if (special && !SDDS_Terminate(&sddsout1))
@@ -657,13 +658,9 @@ int main(int argc, char **argv) {
       }
       if (!SDDS_Terminate(&sddsout))
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-      if (icalc0!=-1)
-        break;
-    } /*end of for j<n_methods methods loop */ 
-    if (mode0!=-1)
-      break;
-  } /*end of for i<n_modes loop */
-  if (!first) {
+      
+  
+  if (special) {
     free(x5);
     free(y5);
     free(E5);
@@ -701,8 +698,10 @@ int main(int argc, char **argv) {
 SDDS_DATASET *SetupOutputFile(char *outputfile, SDDS_DATASET *SDDSout, long mode, long itype, long icalc, 
                               long isub, long iang, long idebug, long iharm, long special, SDDS_DATASET *SDDSout1)
 {
+  
   if (!SDDS_InitializeOutput(SDDSout, SDDS_BINARY, 0, NULL, NULL, outputfile))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  
   DefineParameters(SDDSout, mode, iang, 0);
   if (isub==5) {
     SDDS_DATASET *SDDSout2=NULL;
