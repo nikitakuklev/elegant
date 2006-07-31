@@ -57,8 +57,8 @@ C YPS_I   Y-size of pinhole (full width)	(mm) or (mrad)
 C         (for angular units (d=0.0) values are entered in mrad)
 C    (X is for horizontal direction)
 C    (Y is for the vertical direction)
-C NXP_I    Number of subdivisions of pinhole in X (max 50)
-C NYP_I    Number of subdivisions of pinhole in Y (max 50)
+C NXP_I    Number of subdivisions of pinhole in X (max 500)
+C NYP_I    Number of subdivisions of pinhole in Y (max 500)
 C    (for plotting 3d results with Xus, the X-size, Y-size, and the number of
 C     of subdivisions in the two directions should be equal)
 C
@@ -227,7 +227,7 @@ C  output parameters
 	REAL*8          EU_O(*)
 C       Size parameters:
 	INTEGER*4	E_SZ,A_SZ,B_SZ,P_SZ
-	PARAMETER	(E_SZ=40001,A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=51)
+	PARAMETER	(E_SZ=40001,A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=501)
 	INTEGER*4	RECL_SZ,BLOCK_SZ,BUFFER_SZ
 	PARAMETER	(BLOCK_SZ=12288,BUFFER_SZ=1) ! Blocksize in bytes
 	
@@ -885,7 +885,10 @@ C  write to output arguments
 	YPS_I = YPS
 	NXP_I = NXP
 	NYP_I = NYP
-	IF (IANG.EQ.1) NXP_I=0;NYP_I=0
+	IF (IANG.EQ.1) THEN
+		NXP_I=0
+		NYP_I=0
+	END IF	
 	NALPHA_I = NALPHA
 	CALPHA2_I = CALPHA2
 	NOMEGA_I = NOMEGA
@@ -1093,7 +1096,7 @@ C[subroutine_header_comments]
 
 C  Size parameters:
 	INTEGER*4	E_SZ,A_SZ,B_SZ,P_SZ
-	PARAMETER	(E_SZ=40001,A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=51)
+	PARAMETER	(E_SZ=40001,A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=501)
 
 C  Declarations of scalars:
 	INTEGER*4	IERROR,ICOUNT
@@ -1265,7 +1268,7 @@ C[subroutine_header_comments]
 
 C  Size parameters:
 	INTEGER*4	E_SZ,A_SZ,B_SZ,P_SZ
-	PARAMETER	(E_SZ=40001,A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=51)
+	PARAMETER	(E_SZ=40001,A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=501)
 
 C  Declarations of scalars:
 	LOGICAL*4	LE1,LE2
@@ -1534,7 +1537,7 @@ C[subroutine_header_comments]
 
 C  Size parameters:
 	INTEGER*4	E_SZ,A_SZ,B_SZ,P_SZ
-	PARAMETER	(E_SZ=40001,A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=51)
+	PARAMETER	(E_SZ=40001,A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=501)
 
 C  Declarations of scalars:
 	INTEGER*4	IERROR,ICOUNT
@@ -1678,7 +1681,7 @@ C[subroutine_header_comments]
 
 C  Size parameters:
 	INTEGER*4	E_SZ,A_SZ,B_SZ,P_SZ
-	PARAMETER	(E_SZ=40001,A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=51)
+	PARAMETER	(E_SZ=40001,A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=501)
 
 C  Declarations of scalars:
 	INTEGER*4	IERROR,ICOUNT
@@ -1829,7 +1832,7 @@ C[subroutine_header_comments]
 
 C  Size parameters:
 	INTEGER*4	E_SZ,A_SZ,B_SZ,P_SZ
-	PARAMETER	(E_SZ=40001,A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=51)
+	PARAMETER	(E_SZ=40001,A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=501)
 
 C  Declarations of scalars:
 	LOGICAL*4	LE
@@ -2050,7 +2053,7 @@ C[subroutine_header_comments]
 
 C  Size parameters:
 	INTEGER*4	E_SZ,A_SZ,B_SZ,P_SZ
-	PARAMETER	(E_SZ=40001,A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=51)
+	PARAMETER	(E_SZ=40001,A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=501)
 
 C  Declarations of scalars:
 	INTEGER*4	ICALC,I,IC,ID
@@ -2115,7 +2118,7 @@ C[subroutine_header_comments]
 
 C  Size parameters:
 	INTEGER*4	E_SZ,A_SZ,B_SZ,P_SZ
-	PARAMETER	(E_SZ=40001,A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=51)
+	PARAMETER	(E_SZ=40001,A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=501)
 
 C  Declarations of scalars:
 	INTEGER*4	I,IC,ID
@@ -2176,7 +2179,7 @@ C[subroutine_header_comments]
  
 C  Size parameters:
 	INTEGER*4	A_SZ,B_SZ,P_SZ
-	PARAMETER	(A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=51)
+	PARAMETER	(A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=501)
 
 C  Declarations of scalars:
 	INTEGER*4	ICALC,ICOUNT,IA,IB,IC,ID
@@ -2524,7 +2527,7 @@ C  Labeled constants:
 C[subroutine_header_comments]
 C  Size parameters:
 	INTEGER*4	A_SZ,B_SZ,P_SZ
-	PARAMETER	(A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=51)
+	PARAMETER	(A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=501)
 
 C  Declarations of scalars:
 	INTEGER*4	IA,IB
