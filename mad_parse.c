@@ -841,6 +841,10 @@ void parse_element(
     fprintf(stdout, "Parsing %s\n", ptr);
 #endif
     ptr1 = get_param_name(ptr);
+    if (!ptr1) {
+      fprintf(stdout, "error getting parameter name for element %s\n", eptr->name);
+      exit(1);
+    }
     isGroup = 0;
     for (i=0; i<n_params; i++) 
       if (strcmp(parameter[i].name, ptr1)==0)
@@ -852,7 +856,7 @@ void parse_element(
       pType = parameter[i].type;
     }
     if (i==n_params && !isGroup) {
-      fprintf(stdout, "error: unknown parameter %s used for %s %s (%s)\n",
+      fprintf(stdout, "Error: unknown parameter %s used for %s %s (%s)\n",
               ptr1, eptr->name, type_name, "parse_element");
       fflush(stdout);
       fputs("valid parameters are:", stdout);
@@ -879,6 +883,11 @@ void parse_element(
           break;
         }
       }
+      exit(1);
+    }
+    if (!*ptr) {
+      fprintf(stdout, "Error: missing value for parameter %s of %s\n",
+              parameter[i].name, eptr->name);
       exit(1);
     }
     switch (pType) {
