@@ -25,6 +25,7 @@
 	p_central_mev = <momentum>,
         rootname = <mainDirectory>/<mainPrefix>FrequencyMapDelta<suffix>,
         semaphore_file = %s.done,
+	random_number_seed = <seed>,
 	losses = %s.los,
         tracking_updates = 0,
 &end
@@ -41,11 +42,14 @@
 &alter_elements name=*, type=*SBEN*, item=EDGE_ORDER, value=1, allow_missing_elements=1 &end
 
 &run_control
+	n_steps = <numberOfseeds>,
         n_passes = <turns>,
 &end
 
 &alter_elements name=<kickOffsetElement>, item=ON_PASS, value=0 &end
 &alter_elements name=<kickOffsetElement>, item=DP, value=<delta> &end
+
+sinclude(<ERROR>)
 
 &twiss_output
 	filename = %s.twi,
