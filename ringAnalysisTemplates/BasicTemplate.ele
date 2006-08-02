@@ -17,7 +17,8 @@
 	p_central = "{rpnl <momentum> mev /}",
 	default_order = <order>,
         magnets = %s.mag,
-        rootname = <mainDirectory>/<mainPrefix>Basic,
+        rootname = <mainDirectory>/<mainPrefix>Basic<suffix>,
+	random_number_seed = <seed>,
         final = %s.fin,
         semaphore_file = %s.done,
 &end
@@ -30,6 +31,7 @@
         allow_missing_parameters = 1,
         allow_missing_files = 1,
 &end
+
 
 &alter_elements name=*, type=*SBEN*, item=ORDER, value=<order>, allow_missing_parameters=1,
 	allow_missing_elements=1 &end
@@ -46,6 +48,8 @@
 	iteration_fraction = 0.1,
 &end
 
+
+
 &twiss_output
         filename = "%s.twi",
         concat_order = <order>,
@@ -59,7 +63,11 @@
 	filename = %s.flr,
 &end
 
-&run_control &end
+&run_control 
+	n_steps = <numberOfseeds>,
+&end
+
+sinclude(<ERROR>)
 
 &bunched_beam &end
 
