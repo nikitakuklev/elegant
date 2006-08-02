@@ -4,6 +4,9 @@ exec oagwish "$0" "$@"
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.59  2006/06/06 02:06:10  borland
+# Removed initial carriage return.
+#
 # Revision 1.58  2006/06/02 13:26:01  borland
 # Dynamic aperture with errors now uses line search modes.
 #
@@ -35,9 +38,10 @@ exec oagwish "$0" "$@"
 
 set auto_path [linsert $auto_path 0  /usr/local/oag/apps/lib/$env(HOST_ARCH)]
 set auto_path [linsert $auto_path 0  /usr/local/oag/lib_patch/$env(HOST_ARCH)]
+set auto_path [linsert $auto_path 0  /share/shang/oag/apps/src/tcltklib]
 APSDebugPath
 
-set CVSRevisionAuthor "\$Author: borland $"
+set CVSRevisionAuthor "\$Author: shang $"
 
 APSApplication . -name elegantRingAnalysis \
   -overview "Performs various elegant simulations for a ring."
@@ -45,10 +49,11 @@ APSApplication . -name elegantRingAnalysis \
 .menu.file.menu insert 1 command -label "Read..." -command ReadConfiguration
 
 set status "Working..."
-APSScrolledStatus .status -parent .userFrame -textVariable status -height 10 -width 135 
+APSScrolledStatus .status -parent .userFrame -textVariable status -height 10 -width 100
 
 set sourceDir $OAGGlobal(OAGAppConfigDataDirectory)/elegant/ringAnalysisTemplates
 
+set sourceDir /share/shang/oag/apps/src/elegant/ringAnalysisTemplates
 proc setStatus {text} {
     APSSetVarAndUpdate status "[clock format [clock seconds] -format %T]: $text"
     update
@@ -153,6 +158,43 @@ proc Display {args} {
     APSElegant${type}${suffix} -rootname $rootname -makePngFiles $makePngFiles -statusCallback setStatus
 }
 
+proc FillErrorsFrame {widget args} {
+    global errors
+    APSFrame .f1 -parent $widget
+    set w0 $widget.f1.frame
+    APSRadioButtonFrame .on -parent $w0 \
+	-label "Include error in computation?" -valueList {1 0} -buttonList {Yes No} \
+	-variable errors(on) -orientation horizontal
+    APSLabeledEntry .seed -parent $w0 \
+        -label "Number of seeds: " -width 11 -textVariable errors(numberOfseeds) \
+        -contextHelp "Enter the number of random seeds to run." \
+        -packOption "-side left"
+    APSLabeledEntry .number -parent $w0 \
+        -label "Random number seed: " -width 11 -textVariable errors(seed) \
+        -contextHelp "Enter the random number seed." \
+        -packOption "-side left"
+    APSFrame .other -parent $widget
+    set w1 $widget.other.frame
+    APSFrameGrid .fg -parent $w1 -xList "magnet dx dy dtilt fse" \
+        -yList "label bend quad sext"
+    foreach label {dx dy dtilt fse} unit {m m rad ""} {
+        label $w1.fg.$label.label.label -text "$label ($unit)"
+        pack $w1.fg.$label.label.label 
+    }
+    foreach magnet {Bend Quad Sext} type {bend quad sext} {
+        label $w1.fg.magnet.$type.label -text "${magnet}:" 
+        pack $w1.fg.magnet.$type.label
+    }
+    foreach quantity {dx dy dtilt fse} {
+        foreach type {bend quad sext} magnet {Bend Quad Sext} {
+            entry $w1.fg.$quantity.$type.entry \
+                -textvariable errors($quantity$magnet) \
+                -width 10
+            pack $w1.fg.$quantity.$type.entry
+        }
+    }
+}
+
 proc FillMainFrame {widget args} {
     APSLabeledEntry .le1 -parent $widget -label "Momentum (MeV/c): " \
       -width 60 -textVariable momentum -contextHelp \
@@ -251,6 +293,11 @@ proc FillBasicFrame {widget args} {
       "Run -computation BasicComputations"
     APSButton .bu2 -parent $widget -text "Display" -command \
 	{Display -type BasicComputations}
+    global apsAbortElegantRun
+    set apsAbortElegantRun(APSElegantBasicComputationsPP) 0
+     APSButton .abort -parent $widget -text "Abort" \
+	-command "set apsAbortElegantRun(APSElegantBasicComputationsPP) 1" \
+	-contextHelp "click to abort any running processes."
 }
 
 proc FillCollectiveEffectsFrame {widget args} {
@@ -294,6 +341,11 @@ proc FillCollectiveEffectsFrame {widget args} {
 	-contextHelp "Do scan for Haissinski equation (bunch lengthening)."
     APSButton .display -parent $w -text "Display" -command "Display -type DisplayHaissinski" \
 	-contextHelp "Display scan for intrabeam scattering."
+    global apsAbortElegantRun
+    set apsAbortElegantRun(Haissinski) 0 
+    APSButton .abort -parent $w -text "Abort" \
+	-command "set apsAbortElegantRun(Haissinski) 1" \
+	-contextHelp "click to abort any running processes."
 
     APSFrame .ibs -parent $widget -label "" 
     set w $widget.ibs.frame
@@ -303,6 +355,9 @@ proc FillCollectiveEffectsFrame {widget args} {
 	-contextHelp "Do scan for intrabeam scattering."
     APSButton .display -parent $w -text "Display" -command "Display -type DisplayIBS" \
 	-contextHelp "Display scan for intrabeam scattering."
+    set apsAbortElegantRun(IBS) 0
+    APSButton .abort -parent $w -text "Abort" -command "set apsAbortElegantRun(IBS) 1" \
+	-contextHelp "click to abort any running processes."
 
     APSFrame .scts -parent $widget -label ""
     set w $widget.scts.frame
@@ -312,6 +367,9 @@ proc FillCollectiveEffectsFrame {widget args} {
 	-contextHelp "Compute space charge tune spreads."
     APSButton .display -parent $w -text "Display" -command "Display -type DisplaySCTuneShift" \
 	-contextHelp "Display scan for space-charge tune spread."
+    set apsAbortElegantRun(SCTuneShift) 0
+    APSButton .abort -parent $w -text "Abort" -command "set apsAbortElegantRun(SCTuneShift) 1" \
+	-contextHelp "click to abort any running processes."
 }
 
 proc FillPhaseSpaceFrame {widget args} {
@@ -359,6 +417,11 @@ proc FillPhaseSpaceFrame {widget args} {
     APSButton .bu2 -parent $widget \
       -text "Display" -command \
 	{Display -type PhaseSpaceTracking}
+    global apsAbortElegantRun
+    set apsAbortElegantRun(APSElegantPhaseSpaceTrackingPP) 0
+    APSButton .abort -parent $widget -text "Abort" \
+	-command "set apsAbortElegantRun(APSElegantPhaseSpaceTrackingPP) 1" \
+	-contextHelp "click to abort any running processes."
 }
 
 proc FillOffMomentumTunesFrame {widget args} {
@@ -410,6 +473,11 @@ proc FillOffMomentumTunesFrame {widget args} {
     APSButton .bu2 -parent $widget \
       -text "Display" -command \
 	{Display -type OffMomentumTuneTracking}
+    global apsAbortElegantRun
+    set apsAbortElegantRun(APSElegantOffMomentumTuneTrackingPP) 0
+    APSButton .abort -parent $widget -text "Abort" \
+	-command "set apsAbortElegantRun(APSElegantOffMomentumTuneTrackingPP)  1" \
+	-contextHelp "click to abort any running processes."
 }
 
 
@@ -440,6 +508,11 @@ proc FillHigherOrderDispersionFrame {widget args} {
     APSButton .bu2 -parent $widget \
       -text "Display" -command \
 	{Display -type HigherOrderDispersion}
+    global apsAbortElegantRun
+    set apsAbortElegantRun(APSElegantHigherOrderDispersionPP) 0
+    APSButton .abort -parent $widget -text "Abort" \
+	-command "set apsAbortElegantRun(APSElegantHigherOrderDispersionPP) 1" \
+	-contextHelp "click to abort any running processes."
 }
 
 
@@ -486,6 +559,11 @@ proc FillDynamicApertureFrame {widget args} {
     APSButton .bu2 -parent $widget \
       -text "Display" -command \
 	{Display -type DynamicAperture}
+    global apsAbortElegantRun
+    set apsAbortElegantRun(APSElegantDynamicAperturePP) 0
+    APSButton .abort -parent $widget -text "Abort" \
+	-command "set apsAbortElegantRun(APSAElegantDynamicAperturePP) 1" \
+	-contextHelp "click to abort any running processes."
 }
 
 
@@ -544,6 +622,11 @@ proc FillOffMomentumDynamicApertureFrame {widget args} {
     APSButton .bu2 -parent $widget \
       -text "Display" -command \
 	{Display -type OffMomentumDynamicAperture}
+    global apsAbortElegantRun
+    set apsAbortElegantRun(APSElegantOffMomentumDynamicAperturePP) 0
+    APSButton .abort -parent $widget -text "Abort" \
+	-command "set apsAbortElegantRun(APSElegantOffMomentumDynamicAperturePP) 1" \
+	-contextHelp "click to abort any running processes."
 }
 
 
@@ -577,31 +660,7 @@ proc FillDynamicApertureErrorsFrame {widget args} {
     APSLabeledEntry .le6 -parent $widget \
       -label "Number of turns: " -width 20 -textVariable dynamicApertureErrors(turns) \
       -contextHelp \
-      "Enter the number of turns to track."
-    APSLabeledEntry .le61 -parent $widget \
-      -label "Number of seeds: " -width 20 -textVariable dynamicApertureErrors(seeds) \
-      -contextHelp \
-      "Enter the number of random seeds to run."
-
-    APSFrameGrid .fg -parent $widget -xList "magnet dx dy dtilt fse" \
-	-yList "label bend quad sext"
-    foreach label {dx dy dtilt fse} unit {m m rad ""} {
-	label $widget.fg.$label.label.label -text "$label ($unit)"
-	pack $widget.fg.$label.label.label 
-    }
-    foreach magnet {Bend Quad Sext} type {bend quad sext} {
-	label $widget.fg.magnet.$type.label -text "${magnet}:" 
-	pack $widget.fg.magnet.$type.label
-    }
-
-    foreach quantity {dx dy dtilt fse} {
-	foreach type {bend quad sext} magnet {Bend Quad Sext} {
-	    entry $widget.fg.$quantity.$type.entry \
-		-textvariable dynamicApertureErrors($quantity$magnet) \
-		-width 10
-	    pack $widget.fg.$quantity.$type.entry
-	}
-    }
+      "Enter the number of turns to track." 
 
     APSLabeledEntry .le7 -parent $widget \
       -label "Run suffix: " -width 20 -textVariable dynamicApertureErrors(userSuffix) \
@@ -617,6 +676,11 @@ proc FillDynamicApertureErrorsFrame {widget args} {
     APSButton .bu2 -parent $widget \
       -text "Display" -command \
 	{Display -type DynamicApertureErrors}
+    global apsAbortElegantRun
+    set apsAbortElegantRun(APSElegantDynamicApertureErrorsPP) 0
+    APSButton .abort -parent $widget -text "Abort" \
+	-command "set apsAbortElegantRun(APSElegantDynamicApertureErrorsPP) 1" \
+	-contextHelp "click to abort any running processes."
 }
 
 
@@ -665,6 +729,11 @@ proc FillFineDynamicApertureFrame {widget args} {
     APSButton .bu2 -parent $widget \
       -text "Display" -command \
 	{Display -type FineDynamicAperture}
+    global apsAbortElegantRun
+    set apsAbortElegantRun(APSElegantFineDynamicAperturePP) 0
+    APSButton .abort -parent $widget -text "Abort" \
+	-command "set apsAbortElegantRun(APSElegantFineDynamicAperturePP) 1" \
+	-contextHelp "click to abort any running processes."
 }
 
 
@@ -716,6 +785,11 @@ proc FillFrequencyMapFrame {widget args} {
     APSButton .bu2 -parent $widget \
       -text "Display" -command \
 	{Display -type FrequencyMap}
+    global apsAbortElegantRun
+    set apsAbortElegantRun(APSElegantFrequencyMapPP) 0
+    APSButton .abort -parent $widget -text "Abort" \
+	-command "set apsAbortElegantRun(APSElegantFrequencyMapPP) 1" \
+	-contextHelp "click to abort any running processes."
 }
 
 
@@ -771,6 +845,11 @@ proc FillFrequencyMapDeltaFrame {widget args} {
     APSButton .bu2 -parent $widget \
 	-text "Display" -command \
 	{Display -type FrequencyMapDelta}
+    global apsAbortElegantRun
+    set apsAbortElegantRun(APSElegantFrequencyMapDeltaPP) 0
+     APSButton .abort -parent $widget -text "Abort" \
+	-command "set apsAbortElegantRun(APSElegantFrequencyMapDeltaPP) 1" \
+	-contextHelp "click to abort any running processes."
 }
 
 proc FillMomentumApertureFrame {widget args} {
@@ -855,57 +934,91 @@ proc FillMomentumApertureFrame {widget args} {
         -variable momentumAperture(defaultOrder) \
         -contextHelp \
         "Choose the default order for elements implemented as matrices."
-
+    set momentumAperture(userSuffix) ""
+    APSLabeledEntry .suffix -parent $widget \
+	-label "Run suffix:" -width 20 \
+	-textVariable momentumAperture(userSuffix)
     APSButton .bu1 -parent $widget \
 	-text "Run" -command "Run -computation MomentumAperture"
     APSButton .bu2 -parent $widget \
 	-text "Display" -command {Display -type MomentumAperture}
+    global apsAbortElegantRun
+    set apsAbortElegantRun(APSElegantMomentumAperturePP) 0
+     APSButton .abort -parent $widget -text "Abort" \
+	-command "set apsAbortElegantRun(APSElegantMomentumAperturePP) 1" \
+	-contextHelp "click to abort any running processes."
 }
 
-set tabIndex -1
-set sectionList [list Main Basic PhsSpc HghrOrdrDsprsn \
-    OffMmntmTunes DA OffMmntmDA DA+Errors FineDA FMA FMADelta MmntmAprtr \
-    ClctveEfcts]
-set descriptionList [list "" "Twiss parameters, chromaticities, radiation integrals" \
-    "Phase space tracking, plots, FFTs." \
-    "Higher order dispersion from off-momentum orbits." \
-    "Off-momentum tunes from tracking." \
-    "On-momentum dynamic aperture using a relatively coarse algorithm." \
-    "Off-momentum dynamic apertures using a relatively coarse algorithm." \
-    "On-momentum dynamic aperture with errors (many seeds)." \
-    "Dynamic aperture using a high-resolution algorithm (requires a cluster)." \
-    "Frequency map analysis (requires a cluster)." \
-    "Frequency map analysis vs delta (requires a cluster)." \
-    "Momentum aperture vs s." \
-    "Collective effects."]
 
-proc DescribeSection {} {
-    global tabIndex descriptionList
-    if [string length [lindex $descriptionList $tabIndex]] {
-        setStatus [lindex $descriptionList $tabIndex]
+set topLabelList {Setup Main Aperture FMA Other}
+
+set SetupTabList {Main Errors}
+set SetupTabDescList [list "" ""]
+set SetupFrameList {Main Errors}
+set MainTabList {Basic PhsSpc  HghrOrdrDsprsn OffMmntmTunes}
+set MainFrameList {Basic PhaseSpace HigherOrderDispersion OffMomentumTunes}
+set MainTabDescList [list "Twiss parameters, chromaticities, radiation integrals" \
+                         "Phase space tracking, plots, FFTs." \
+                         "Higher order dispersion from off-momentum orbits." \
+                         "Off-momentum tunes from tracking." ]
+set ApertureTabList {DA OffMmntmDA DA+Errors FineDA MmntmAprtr}
+set ApertureFrameList {DynamicAperture OffMomentumDynamicAperture DynamicApertureErrors \
+                           FineDynamicAperture MomentumAperture}
+set ApertureTabDescList [list "On-momentum dynamic aperture using a relatively coarse algorithm." \
+                             "Off-momentum dynamic apertures using a relatively coarse algorithm." \
+                             "On-momentum dynamic aperture with errors (many seeds)." \
+                             "Dynamic aperture using a high-resolution algorithm (requires a cluster)." \
+                             "Momentum aperture vs s." ]
+set FMATabList {XY XYDelta}
+set FMAFrameList {FrequencyMap FrequencyMapDelta}
+set FMATabDescList [list "Frequency map analysis (requires a cluster)." \
+                        "Frequency map analysis vs delta (requires a cluster)." ]
+set OtherTabList {CollectiveEffects}
+set OtherFrameList {CollectiveEffects}
+set OtherTabDescList [list "Collective effects."]
+
+foreach name $topLabelList {
+    set ${name}Index -1
+}
+set topIndex -1 
+proc DescribeSection {args} {
+    global topIndex  topLabelList 
+    set topSection [lindex $topLabelList $topIndex]
+    if [string length $topSection] {
+        global  ${topSection}Index ${topSection}TabDescList
+        set index [set ${topSection}Index] 
+        set descList [set ${topSection}TabDescList]
+        set desc [lindex $descList $index]
+        if [string length $desc] {
+            setStatus "$desc"
+        }
     }
 }
 
-set tabFrameWidgetList [APSTabFrame .main -parent .userFrame \
-    -labelList $sectionList -width 900 -height 500 -frameIndexVariable tabIndex \
-    -commandList \
-        [APSReplicateItem -item DescribeSection -number [llength $sectionList]]]
+set topTabList [APSTabFrame .top -parent .userFrame \
+                    -labelList $topLabelList -frameIndexVariable topIndex \
+                    -width 900 -height 600 -packOption "-expand true" \
+                    -commandList \
+                    [APSReplicateItem -item DescribeSection -number [llength $topLabelList]]]
 
-set i 0
-FillMainFrame  [lindex $tabFrameWidgetList $i]; incr i
-FillBasicFrame [lindex $tabFrameWidgetList $i]; incr i
-FillPhaseSpaceFrame [lindex $tabFrameWidgetList $i]; incr i
-FillHigherOrderDispersionFrame [lindex $tabFrameWidgetList $i]; incr i
-FillOffMomentumTunesFrame [lindex $tabFrameWidgetList $i]; incr i
-FillDynamicApertureFrame [lindex $tabFrameWidgetList $i]; incr i
-FillOffMomentumDynamicApertureFrame [lindex $tabFrameWidgetList $i]; incr i
-FillDynamicApertureErrorsFrame [lindex $tabFrameWidgetList $i]; incr i
-FillFineDynamicApertureFrame [lindex $tabFrameWidgetList $i]; incr i
-FillFrequencyMapFrame [lindex $tabFrameWidgetList $i]; incr i
-FillFrequencyMapDeltaFrame [lindex $tabFrameWidgetList $i]; incr i
-FillMomentumApertureFrame [lindex $tabFrameWidgetList $i]; incr i
-FillCollectiveEffectsFrame [lindex $tabFrameWidgetList $i]; incr i
-
+set index 0
+foreach name $topLabelList widget $topTabList { 
+    set tabList [set ${name}TabList]
+    set len [llength $tabList] 
+    set tabFrameList [APSTabFrame .under$name -parent $widget  -packOption "-expand true"\
+                          -labelList $tabList -width 900 -height 550 \
+                          -frameIndexVariable ${name}Index \
+                          -commandList \
+                          [APSReplicateItem -item DescribeSection -number $len]]
+    
+    for {set i 0} {$i<$len} {incr i} {
+        set section [lindex [set ${name}FrameList] $i]
+        Fill${section}Frame [lindex $tabFrameList $i]
+    } 
+    incr index
+}
+ 
+lappend elegantSaveVarList errors
 lappend elegantSaveVarList momentum matrixLatticeFile kickLatticeFile mainParameterFile mainDirectory
 lappend elegantSaveVarList mainPrefix gridEngine forceOccurence makePngFiles
 lappend elegantSaveVarList matrixBeamline kickBeamline matrixOffsetElement kickOffsetElement
