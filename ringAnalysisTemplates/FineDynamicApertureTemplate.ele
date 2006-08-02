@@ -24,6 +24,7 @@
 	use_beamline = <kickBeamline>
 	p_central_mev = <momentum>,
         rootname = <mainDirectory>/<mainPrefix>FineDynamicAperture<suffix>,
+	random_number_seed = <seed>,
         semaphore_file = %s.done,
 	losses = %s.los,
         tracking_updates = 0,
@@ -42,8 +43,11 @@
 &alter_elements name=*, type=SBEN*, item=ORDER, value=1, allow_missing_elements=1 &end
 
 &run_control
+	n_steps = <numberOfseeds>,
         n_passes = <turns>,
 &end
+
+sinclude(<ERROR>)
 
 &bunched_beam
 	distribution_type[0] = 2*"line",
