@@ -26,6 +26,7 @@
         rootname = <mainDirectory>/<mainPrefix>MomentumAperture<suffix>,
         semaphore_file = %s.done,
         magnets = %s.mag,
+	random_number_seed = <seed>,
         default_order = <defaultOrder>,
         tracking_updates = 0,
 &end
@@ -48,8 +49,11 @@
 &alter_elements name=*, type=*SBEN*, item=EDGE_ORDER, value=1, allow_missing_elements=1 &end
 
 &run_control
+	n_steps = <numberOfseeds>,
         n_passes = <turns>,
 &end
+
+sinclude(<ERROR>)
 
 &twiss_output
 	filename = %s.twi,
