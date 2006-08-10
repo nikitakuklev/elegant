@@ -1990,7 +1990,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_TRWAKE_PARAMS, 0|UNIPROCESSOR, sizeof(TRWAKE), trwake_param},
     { N_TUBEND_PARAMS, 0, sizeof(TUBEND), tubend_param},
     { N_CHARGE_PARAMS, 0|UNIPROCESSOR, sizeof(CHARGE), charge_param},
-    { N_PFILTER_PARAMS, 0|MPALGORITHM, sizeof(PFILTER), pfilter_param},
+    { N_PFILTER_PARAMS, 0|UNIPROCESSOR, sizeof(PFILTER), pfilter_param},
     { N_HISTOGRAM_PARAMS, RUN_ZERO_PARTICLES|UNIDIAGNOSTIC, sizeof(HISTOGRAM), histogram_param},
     {  N_CSRCSBEND_PARAMS, MAT_LEN_NCAT|IS_MAGNET|UNIPROCESSOR,
        sizeof(CSRCSBEND),    csrcsbend_param   },

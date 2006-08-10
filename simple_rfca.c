@@ -47,10 +47,21 @@ double findFiducialTime(double **part, long np, double s0, double sOffset,
 {
   double tFid=0.0;
   
-  if (mode&FID_MODE_LIGHT)
+  if (mode&FID_MODE_LIGHT) 
     tFid =  (s0+sOffset)/c_mks;
-  else if (!np || mode&FID_MODE_FIRST) 
+  else if (mode&FID_MODE_FIRST) {
+#if (!USE_MPI) 
+    if (np)
      tFid = (part[0][4]+sOffset)/(c_mks*beta_from_delta(p0, np?part[0][5]:0.0)); 
+    else
+      bomb("0 particle for the FID_MODE_FIRST mode in findFiducialTime", NULL);
+#else
+    fprintf(stdout, "FID_MODE_FIRST mode is not supported in the current parallel version.\n");
+    fprintf(stdout, "Please use serial version.\n");
+    fflush(stdout);
+    MPI_Abort(MPI_COMM_WORLD, 9);
+#endif
+  }
   else if (mode&FID_MODE_PMAX) {
     long ibest, i;
     double best;

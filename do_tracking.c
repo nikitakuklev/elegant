@@ -137,7 +137,7 @@ long do_tracking(
   static long warnedAboutChargePosition = 0;
   unsigned long classFlags = 0;
   long nParticlesStartPass = 0;
-  int myid, active = 1, lostSinceSeqMode = 0;
+  int myid, active = 1, lostSinceSeqMode = 0, needSort = 0;
 #if USE_MPI 
   long old_nToTrack = 0, nParElements, nElements; 
   int checkFlags;
@@ -156,6 +156,10 @@ long do_tracking(
 #endif
   MPI_Comm_rank(MPI_COMM_WORLD, &myid); /* get ID number for each processor */
   trackingContext.myid = myid;
+  if (myid==0) 
+    my_rate = 0.0;
+  else
+    my_rate = 1.0;
 #endif 
 
   strncpy(trackingContext.rootname, run->rootname, CONTEXT_BUFSIZE);
@@ -441,12 +445,13 @@ long do_tracking(
       log_entry("do_tracking.2.2.1");
 
 #ifdef SORT
-      if (!USE_MPI || !notSinglePart)
+      if (!USE_MPI || needSort)
 	if (nToTrackAtLastSort > nToTrack) {/* indicates more particles are lost, need sort */
           qsort(coord[0], nToTrack, COORDINATES_PER_PARTICLE*sizeof(double), comp_IDs);
           if (accepted!=NULL)
             qsort(accepted[0], nToTrack, COORDINATES_PER_PARTICLE*sizeof(double), comp_IDs);
 	  nToTrackAtLastSort = nToTrack;
+          needSort = 0;
 	}   
 #endif   
 
@@ -1305,11 +1310,11 @@ long do_tracking(
 	  end_wtime = MPI_Wtime();
 	  my_wtime = my_wtime+end_wtime-start_wtime; 
 	}
-	else if (!(classFlags&(UNIDIAGNOSTIC&(~UNIPROCESSOR)|MPALGORITHM))) { 
+	else if (!(classFlags&((UNIDIAGNOSTIC&(~UNIPROCESSOR))|MPALGORITHM))) { 
 	  /* a non-diagnostic uniprocessor element */
 	  if ((myid == 0) && (nMaximum!=(nLeft+nLost)))         
 	    /* there are additional losses occurred */
-	    lostSinceSeqMode = 1;
+	    lostSinceSeqMode = needSort = 1;
 	  MPI_Bcast (&lostSinceSeqMode, 1, MPI_INT, 0, MPI_COMM_WORLD);
 	}
       }
@@ -1507,8 +1512,8 @@ long do_tracking(
 
 
 #ifdef SORT   /* Sort the particles when the particles are lost at the very last element */
-      if (!USE_MPI || !notSinglePart)
-	if (nToTrackAtLastSort > nToTrack) {/* indicates more particles are lost, need sort */
+      if (!USE_MPI || needSort)
+	if (nToTrackAtLastSort > nToTrack)  {/* indicates more particles are lost, need sort */
           qsort(coord[0], nToTrack, COORDINATES_PER_PARTICLE*sizeof(double), comp_IDs);
           if (accepted!=NULL)
             qsort(accepted[0], nToTrack, COORDINATES_PER_PARTICLE*sizeof(double), comp_IDs);
@@ -2975,38 +2980,60 @@ void scatterParticles(double **coord, long *nToTrack, double **accepted,
     MPI_Gather(&my_nToTrack, 1, MPI_INT, nToTrackCounts, 1, MPI_INT, root, MPI_COMM_WORLD);
     *distributed = 1; 
   }
-  else if ((balanceStatus == badBalance) || lostSinceSeqMode || *reAllocate) { 
-    /* calculating the number of jobs to be sent according to the speed of each processors */
-    MPI_Gather(&my_rate, 1, MPI_DOUBLE, rateCounts, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
-    MPI_Reduce(&my_rate, &total_rate, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-    if (myid==0) {
-      if (fabs(total_rate-0.0)>1e-12)
-        constTime = *nToTrack/total_rate;
-      else
-        constTime = 0.0;
-      my_nToTrack = 0;
-      for (i=1; i<work_processors; i++) {
-	nToTrackCounts[i] =  rateCounts[i]*constTime+round; /* round to the nearest integer */
-	if (my_nToTrack>=*nToTrack) {  /* avoid sending more particles than the available ones */
-	  nToTrackCounts[i-1] = *nToTrack-(my_nToTrack-nToTrackCounts[i-1]); 
-	  break;     
-	}
-	/* count the total number of particles that have been assigned */
-	my_nToTrack = my_nToTrack+nToTrackCounts[i];      
-      }
-      if (i<work_processors)  /* assign 0 particles to the remaining processors */
-	for (j=i; j<=work_processors; j++)
-	  nToTrackCounts[j] = 0;
-      else   /* The last processor will be responsible for all of the remaining particles */
-        nToTrackCounts[work_processors] = *nToTrack-my_nToTrack;
-#ifdef MPI_DEBUG
-      printf("total_rate=%lf, nToTrack=%ld, nToTrackForDistribution=%d\n",
-              total_rate, *nToTrack, my_nToTrack+ nToTrackCounts[work_processors] );
-#endif
+  else if ((balanceStatus == badBalance) || lostSinceSeqMode || *reAllocate) {
+    double minRate;
+    if (myid==0)
+      my_rate = 1.0;  /* set it to nonzero */
+    MPI_Allreduce(&my_rate, &minRate, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD); 
+    if (myid==0)
+      my_rate = 0.0;  /* set it back to zero */
+    if (minRate==0.0) {  /* redistribute evenly when all particles are lost on any working processor */
+      MPI_Bcast(nToTrack, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+      if (myid==0) 
+	my_nToTrack = 0;
+      else {
+	my_nToTrack = *nToTrack/work_processors; 
+	if (myid<=(*nToTrack%work_processors)) 
+	  my_nToTrack++;
+      } 
+      /* gather the number of particles to be sent to each processor */ 
+      MPI_Gather(&my_nToTrack, 1, MPI_INT, nToTrackCounts, 1, MPI_INT, root, MPI_COMM_WORLD);
     }
-    /* scatter the number of particles to be sent to each processor */ 
-    MPI_Scatter(nToTrackCounts, 1, MPI_INT, &my_nToTrack, 1, MPI_INT, root, MPI_COMM_WORLD);
-    *reAllocate = 0; /* set the flag back to 0 after scattering */ 
+    else {
+      /* calculating the number of jobs to be sent according to the speed of each processors */
+      MPI_Gather(&my_rate, 1, MPI_DOUBLE, rateCounts, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
+      MPI_Reduce(&my_rate, &total_rate, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+      if (myid==0) {
+	if (fabs(total_rate-0.0)>1e-12)
+	  constTime = *nToTrack/total_rate;
+	else
+	  constTime = 0.0;
+	my_nToTrack = 0;
+	for (i=1; i<work_processors; i++) {
+	  nToTrackCounts[i] =  rateCounts[i]*constTime+round; /* round to the nearest integer */
+	  /* avoid sending more particles than the available ones */
+	  if ((my_nToTrack+nToTrackCounts[i])>=*nToTrack) { 
+	    nToTrackCounts[i] = *nToTrack-my_nToTrack; 
+	    my_nToTrack = *nToTrack;
+	    break;     
+	  }
+	  /* count the total number of particles that have been assigned */
+	  my_nToTrack = my_nToTrack+nToTrackCounts[i];      
+	}
+	if (i<work_processors)  /* assign 0 particles to the remaining processors */
+	  for (j=i; j<=work_processors; j++)
+	    nToTrackCounts[j] = 0;
+	else   /* The last processor will be responsible for all of the remaining particles */
+	  nToTrackCounts[work_processors] = *nToTrack-my_nToTrack;
+#ifdef MPI_DEBUG
+	printf("total_rate=%lf, nToTrack=%ld, nToTrackForDistribution=%d\n",
+	       total_rate, *nToTrack, my_nToTrack+ nToTrackCounts[work_processors] );
+#endif
+      }
+      /* scatter the number of particles to be sent to each processor */ 
+      MPI_Scatter(nToTrackCounts, 1, MPI_INT, &my_nToTrack, 1, MPI_INT, root, MPI_COMM_WORLD);
+      *reAllocate = 0; /* set the flag back to 0 after scattering */ 
+    }
   }
   else { /* keep the nToTrack unchanged */
     if (myid==0)
@@ -3079,7 +3106,7 @@ void gatherParticles(double **coord, long *lostOnPass, long *nToTrack, long *nLo
   if ((myid!=0) && (my_nLost != 0)) {/* indicates more particles are lost, need sort */
     qsort(coord[0], my_nToTrack, COORDINATES_PER_PARTICLE*sizeof(double), comp_IDs);  
     if (accepted!=NULL)
-      qsort(accepted[0], my_nToTrack, COORDINATES_PER_PARTICLE*sizeof(double), comp_IDs);  
+      qsort(accepted[0], my_nToTrack, COORDINATES_PER_PARTICLE*sizeof(double), comp_IDs);    
   }
 #endif
 

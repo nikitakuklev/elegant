@@ -271,7 +271,6 @@ char **argv;
     /* redirect output, only the master processor will write on screen or files */
     freopen("/dev/null","w",stdout); 
     freopen("/dev/null","w",stderr);
-
     writePermitted = isMaster = 0;
     isSlave = 1;
   }
