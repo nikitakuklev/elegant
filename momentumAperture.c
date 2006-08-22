@@ -102,6 +102,7 @@ void setupMomentumApertureSearch(
       SDDS_DefineColumn(&SDDSma, "xLostNegative", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
       SDDS_DefineColumn(&SDDSma, "yLostNegative", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
       SDDS_DefineColumn(&SDDSma, "deltaLostNegative", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+      SDDS_DefineParameter(&SDDSma, "Step", NULL, NULL, NULL, NULL, SDDS_LONG, NULL)<0 ||
       !SDDS_SaveLayout(&SDDSma) || !SDDS_WriteLayout(&SDDSma)) {
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
     exit(1);
@@ -415,6 +416,8 @@ long doMomentumApertureSearch(
   } 
 
   if (!SDDS_StartPage(&SDDSma, iElem) ||
+      !SDDS_SetParameters(&SDDSma, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "Step",
+                          control->i_step, NULL) ||
       !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, ElementName, iElem, "ElementName") ||
       !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, sStart, iElem, "s") ||
       !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, loserFound[1], iElem, "deltaPositiveFound") ||
