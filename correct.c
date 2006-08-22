@@ -664,7 +664,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
     }
     for (i_cycle=0; i_cycle<correct->n_xy_cycles; i_cycle++) {
       final_traj = 1;
-      if (!x_failed && correct->CMx->ncor) {
+      if (!x_failed) {
         if ((n_iter_taken = orbcor_plane(correct->CMx, &correct->SLx, 0, correct->traj, 
                                          correct->n_iterations, correct->clorb_accuracy, 
                                          correct->clorb_iterations, 
@@ -702,7 +702,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
         if (!initial_correction && (i_cycle==correct->n_xy_cycles-1 || x_failed)) 
           dump_corrector_data(correct->CMx, &correct->SLx, correct->n_iterations, "horizontal", sim_step);
       }
-      if (!y_failed && correct->CMy->ncor) {
+      if (!y_failed) {
         final_traj = 2;
         if ((n_iter_taken = orbcor_plane(correct->CMy, &correct->SLy, 2, correct->traj+1, 
                                          correct->n_iterations, correct->clorb_accuracy, 
@@ -1682,7 +1682,7 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
     bomb("NULL RUN pointer passed to orbcor_plane", NULL);
   if (!beamline)
     bomb("NULL LINE_LIST pointer passed to orbcor_plane", NULL);
-  if (!CM->inverse_computed)
+  if (CM->ncor && CM->nmon && !CM->inverse_computed)
     bomb("No inverse matrix computed prior to orbcor_plane", NULL);
 
   if (closed_orbit)
@@ -1809,8 +1809,9 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
     if (iteration==n_iterations)
       break;
 
-    /* solve for the corrector kicks */
-    m_mult(CM->dK, CM->T, CM->Qo);
+    if (CM->nmon && CM->ncor)
+      /* solve for the corrector kicks */
+      m_mult(CM->dK, CM->T, CM->Qo);
 
 #ifdef DEBUG
     m_show(CM->Qo, "%13.6le ", "traj matrix\n", stdout);
