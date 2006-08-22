@@ -134,7 +134,7 @@ void print_elem_list(FILE *fp, ELEMENT_LIST *eptr)
                         if ((ptr = *(char**)(eptr->p_elem+parameter[j].offset)))
                             fprintf(fp, "    %s = \"%s\"\n", parameter[j].name, ptr);
                         else
-                            fprintf(fp, "    %s = %e\n", parameter[j].name, ptr);
+                            fprintf(fp, "    %s = \"\"\n", parameter[j].name);
                         break;
                     }
                 }
