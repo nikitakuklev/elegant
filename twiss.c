@@ -50,6 +50,8 @@ double adjustTuneHalfPlane(double frequency, double phase0, double phase1);
 static long twissConcatOrder = 3;
 static long doTuneShiftWithAmplitude = 0;
 static SDDS_DATASET SDDSTswaTunes;
+static long linearChromaticTrackingInitialized = 0;
+void setLinearChromaticTrackingValues(LINE_LIST *beamline) ;
 
 #define TWISS_ANALYSIS_QUANTITIES 8
 static char *twissAnalysisQuantityName[TWISS_ANALYSIS_QUANTITIES] = {"betax", "betay", "etax", "etay", "alphax", "alphay", "etaxp", "etayp"};
@@ -1587,11 +1589,28 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
 void update_twiss_parameters(RUN *run, LINE_LIST *beamline, unsigned long *unstable)
 {
   unsigned long unstable0;
-  compute_twiss_parameters(run, beamline, 
-                           beamline->closed_orbit?beamline->closed_orbit->centroid:NULL, matched, 
-                           radiation_integrals,
-                           beta_x, alpha_x, eta_x, etap_x, beta_y, alpha_y, eta_y, etap_y,
-                           &unstable0);
+  if (linearChromaticTrackingInitialized) {
+    /* This is a kludge to fool SREffects into thinking we've computed twiss parameters.
+     * First, propagate the users parameters around the beamline.
+     * Second, restore the global parameters in case the beamline isn't right (which is likely).
+     */
+    compute_twiss_parameters(run, beamline, 
+                             beamline->closed_orbit?beamline->closed_orbit->centroid:NULL, 0, 0,
+                             beamline->twiss0->betax, beamline->twiss0->alphax, 
+                             beamline->twiss0->etax, beamline->twiss0->etapx, 
+                             beamline->twiss0->betay, beamline->twiss0->alphay, 
+                             beamline->twiss0->etay, beamline->twiss0->etapy,
+                             &unstable0);
+    setLinearChromaticTrackingValues(beamline);
+    
+  }
+  else {
+    compute_twiss_parameters(run, beamline, 
+                             beamline->closed_orbit?beamline->closed_orbit->centroid:NULL, matched, 
+                             radiation_integrals,
+                             beta_x, alpha_x, eta_x, etap_x, beta_y, alpha_y, eta_y, etap_y,
+                             &unstable0);
+  }
   if (unstable)
     *unstable = unstable0;
 }
@@ -3285,6 +3304,7 @@ void AddWigglerRadiationIntegrals(double length, long poles, double radius,
 #endif
 }
 
+
 void setupLinearChromaticTracking(NAMELIST_TEXT *nltext, LINE_LIST *beamline)
 {
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
@@ -3299,6 +3319,13 @@ void setupLinearChromaticTracking(NAMELIST_TEXT *nltext, LINE_LIST *beamline)
   
   beamline->twiss0 = malloc(sizeof(TWISS));
 
+  setLinearChromaticTrackingValues(beamline);
+  linearChromaticTrackingInitialized = 1;
+}
+
+
+void setLinearChromaticTrackingValues(LINE_LIST *beamline) 
+{
   beamline->tune[0] = setup_linear_chromatic_tracking_struct.nux[0];
   beamline->chromaticity[0] = setup_linear_chromatic_tracking_struct.nux[1];
   beamline->chrom2[0] = setup_linear_chromatic_tracking_struct.nux[2];
@@ -3309,7 +3336,7 @@ void setupLinearChromaticTracking(NAMELIST_TEXT *nltext, LINE_LIST *beamline)
 
   beamline->twiss0->alphax = setup_linear_chromatic_tracking_struct.alphax[0];
   beamline->dalpha_dPoP[0] = setup_linear_chromatic_tracking_struct.alphax[1];
-
+  
   beamline->twiss0->etax = setup_linear_chromatic_tracking_struct.etax[0];
   beamline->eta2[0] = setup_linear_chromatic_tracking_struct.etax[1];
   beamline->eta3[0] = 0.0;
@@ -3321,13 +3348,13 @@ void setupLinearChromaticTracking(NAMELIST_TEXT *nltext, LINE_LIST *beamline)
   beamline->chromaticity[1] = setup_linear_chromatic_tracking_struct.nuy[1];
   beamline->chrom2[1] = setup_linear_chromatic_tracking_struct.nuy[2];
   beamline->chrom3[1] = setup_linear_chromatic_tracking_struct.nuy[3];
-
+  
   beamline->twiss0->betay = setup_linear_chromatic_tracking_struct.betay[0];
   beamline->dbeta_dPoP[1] = setup_linear_chromatic_tracking_struct.betay[1];
-
+  
   beamline->twiss0->alphay = setup_linear_chromatic_tracking_struct.alphay[0];
   beamline->dalpha_dPoP[1] = setup_linear_chromatic_tracking_struct.alphay[1];
-
+  
   beamline->twiss0->etay = setup_linear_chromatic_tracking_struct.etay[0];
   beamline->eta2[2] = setup_linear_chromatic_tracking_struct.etay[1];
   beamline->eta3[2] = 0.0;
