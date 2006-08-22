@@ -45,6 +45,7 @@
     long use_linear_chromatic_matrix = 0;
     long longitudinal_ring_only = 0;
     long ibs_only = 0;
+    long stop_tracking_particle_limit = -1;
 #end
 
 #namelist print_dictionary static

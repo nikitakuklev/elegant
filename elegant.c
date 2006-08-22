@@ -271,6 +271,7 @@ char **argv;
     /* redirect output, only the master processor will write on screen or files */
     freopen("/dev/null","w",stdout); 
     freopen("/dev/null","w",stderr);
+
     writePermitted = isMaster = 0;
     isSlave = 1;
   }
@@ -654,6 +655,7 @@ char **argv;
       set_print_namelist_flags(0);
       process_namelist(&track, &namelist_text);
       print_namelist(stdout, &track);
+      run_conditions.stopTrackingParticleLimit = stop_tracking_particle_limit;
       if (use_linear_chromatic_matrix && 
           !(linear_chromatic_tracking_setup_done || twiss_computed || do_twiss_output))
         bomb("you must compute twiss parameters or give linear_chromatic_tracking_setup to do linear chromatic tracking", NULL);
@@ -1626,7 +1628,7 @@ void print_dictionary_entry(FILE *fp, long type, long latex_form, long SDDS_form
   } else {
     fprintf(fp, "%c***** element type %s:\n", SDDS_form?'!':'*', entity_name[type]);
     if (SDDS_form) {
-      strcpy(buffer, entity_text[type]);
+      strcpy(buffer, entity_name[type]);
       replace_chars(buffer, "\n\t", "  ");
       fprintf(fp, "%s\n", buffer);
       fprintf(fp, "%ld\n", entity_description[type].n_params);

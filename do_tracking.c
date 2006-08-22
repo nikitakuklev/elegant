@@ -254,6 +254,15 @@ long do_tracking(
   
   for (i_pass=passOffset; i_pass<n_passes+passOffset; i_pass++) {
     log_entry("do_tracking.2.1");
+    if (run->stopTrackingParticleLimit>0 && nToTrack<run->stopTrackingParticleLimit) {
+      /* force loss of all the particles */
+      for (i=0; i<nToTrack; i++) {
+        coord[i][4] = z;
+        coord[i][5] = *P_central*(1+coord[i][5]);
+      }
+      nLeft = nToTrack = 0;
+      recordLossPass(lostOnPass, &nLost, nLeft, nMaximum, 0, myid, lostSinceSeqMode);
+    }
 
     ResetNoiseGroupValues();
 
