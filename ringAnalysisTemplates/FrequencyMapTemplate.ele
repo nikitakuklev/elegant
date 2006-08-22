@@ -42,7 +42,7 @@
 &alter_elements name=*, type=*SBEN*, item=EDGE_ORDER, value=1, allow_missing_elements=1 &end
 
 &run_control
-	n_steps = <numberOfseeds>,
+	n_steps = <numberOfSeeds>,
         n_passes = <turns>,
 &end
 

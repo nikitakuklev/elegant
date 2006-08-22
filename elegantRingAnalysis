@@ -4,6 +4,9 @@ exec oagwish "$0" "$@"
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.60  2006/08/02 22:38:27  shang
+# reorganized tabes, added error tab/
+#
 # Revision 1.59  2006/06/06 02:06:10  borland
 # Removed initial carriage return.
 #
@@ -38,10 +41,9 @@ exec oagwish "$0" "$@"
 
 set auto_path [linsert $auto_path 0  /usr/local/oag/apps/lib/$env(HOST_ARCH)]
 set auto_path [linsert $auto_path 0  /usr/local/oag/lib_patch/$env(HOST_ARCH)]
-set auto_path [linsert $auto_path 0  /share/shang/oag/apps/src/tcltklib]
 APSDebugPath
 
-set CVSRevisionAuthor "\$Author: shang $"
+set CVSRevisionAuthor "\$Author: borland $"
 
 APSApplication . -name elegantRingAnalysis \
   -overview "Performs various elegant simulations for a ring."
@@ -53,7 +55,6 @@ APSScrolledStatus .status -parent .userFrame -textVariable status -height 10 -wi
 
 set sourceDir $OAGGlobal(OAGAppConfigDataDirectory)/elegant/ringAnalysisTemplates
 
-set sourceDir /share/shang/oag/apps/src/elegant/ringAnalysisTemplates
 proc setStatus {text} {
     APSSetVarAndUpdate status "[clock format [clock seconds] -format %T]: $text"
     update
@@ -166,7 +167,7 @@ proc FillErrorsFrame {widget args} {
 	-label "Include error in computation?" -valueList {1 0} -buttonList {Yes No} \
 	-variable errors(on) -orientation horizontal
     APSLabeledEntry .seed -parent $w0 \
-        -label "Number of seeds: " -width 11 -textVariable errors(numberOfseeds) \
+        -label "Number of seeds: " -width 11 -textVariable errors(numberOfSeeds) \
         -contextHelp "Enter the number of random seeds to run." \
         -packOption "-side left"
     APSLabeledEntry .number -parent $w0 \

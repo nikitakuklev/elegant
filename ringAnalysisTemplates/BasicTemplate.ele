@@ -64,7 +64,7 @@
 &end
 
 &run_control 
-	n_steps = <numberOfseeds>,
+	n_steps = <numberOfSeeds>,
 &end
 
 sinclude(<ERROR>)
