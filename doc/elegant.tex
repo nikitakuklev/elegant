@@ -17,23 +17,16 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 16.0\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
+\author{Program Version 16.1.1\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
 \maketitle
 
-\section{Highlights of What's New in Version 16.0}
+\section{Highlights of What's New in Version 16.1.1}
 
-Version 16.0 of {\tt elegant} has been extensively modified from
-previous versions, although few changes should be noticed by users.
-This is largely due to code changes required for parallelization.  A
-parallel version will be released in the near future. Users may note
-that particles in output files are sorted by particle ID, which was not
-the case in past versions.
+This is mostly a minor bug-fix release. The most significant change as
+of version 16.1 is that a parallel version ({\tt Pelegant}) is
+supported in this release.  All single-particle dynamics have been parallelized.
 
-In addition, several significant new capabilities have been added,
-including coupled twiss parameter computation and determination of
-s-dependent momentum aperture.
-
-Here is a summary of what's changed since release 15.4.1.  For details
+Here is a summary of what's changed since release 16.0.1.  For details
 and references, see the specific entries in the manual.
 
 \subsection{Known Bugs and Problems}
@@ -48,98 +41,49 @@ and references, see the specific entries in the manual.
 
 \subsection{Bugs Fixes for Commands}
 \begin{itemize}
-\item For the \verb|tune_shift_with_amplitude| command in tracking mode, the results are now
- correct when $\alpha_x$ and/or $\alpha_y$ are nonzero at the starting point.
- This error was pointed out by L. Emery (ANL).
+\item For the {\tt twiss\_output} command, the previous version gave incorrect results for the
+ {\tt couplingIntegral} and {\tt emittanceRatio} values.  In addition, solenoid elements were
+ ignored, but are now included.
+\item Fixed a bug in the lattice parser that resulted in a crash when a value was missing for a parameter.
+\item Previously, the {\tt momentum\_aperture} command would not work correctly for runs with multiple steps.
+ This bug was discovered by H. Shang (APS) and has been fixed.
+\end{itemize}
 
+\subsection{Bug Fixes for Elements}
+\begin{itemize}
+\item Added code to ensure that the histogram time span is twice the bunch length for ZLONGIT and ZTRANSVERSE
+ elements, to prevent wrap-around issues, although these were very unlikely in previous versions if reasonably
+ good frequency resolution was used.
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-
-\item Improved the {\tt ZTRANSVERSE} and {\tt ZLONGIT} elements, which provide simulation
- of transverse and longitudinal impedances.  The improved version features automatic
- adjustment of number of bins and bin size for broad-band impedances.  This prevents
- unphysical results in the simulation.  This was inspired by an example input file
- sent by Y. Hao (BNL).  On a related note, the manual page for \verb|ZTRANSVERSE|
- was updated to fix errors and add a discussion of preparing impedance input.
-
-\item Added end-pass control for the {\tt WATCH} element.  Hence, one can now specify 
- the pass on which to start and end logging of data.
-
-\item Added end-pass control for the {\tt DSCATTER} element. Hence, one can now specify  the
- pass on which to start and end scattering.
-
-\item The {\tt KQUAD} and {\tt KSEXT} elements now include internal apertures.  These may
- result from the existing {\tt MAXAMP} element, or from the new \verb|aperture_input| 
- command (see below).  This was inspired by a discussion with R. Bartolini (DLS).
-
-\item A simple linear transverse space-charge model is available using the \verb|SCMULT| element.
- This was implemented by A. Xiao (ANL).  One simply inserts one or more \verb|SCMULT| elements into
- the lattice, along with a \verb|CHARGE| element to specify the beam charge.
-
-\item Added second-order matrices to the \verb|RFCA| element in non-body-focus mode.  This
- issue was raised by E. Prat.  This improves computation of dispersion due to a corrector
- in a linac. Note, however, that if body-focusing is used, only the 
- first-order matrix is available.
-
+\item Added start-pass, gradual ramp-on, and high-frequency cut-off filters to the ZLONGIT and ZTRANSVERSE elements.
+ These features were requested by Y. Chae (APS).
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item Added the \verb|momentum_aperture| command, which allows determination of the s-dependent
- momentum aperture.  This work was inspired by requests from R. Bartolini (DLS) and F. Wang (MIT),
- as well as a discussion with L. Nadolski (SOLEIL).
-
-\item Added the \verb|aperture_input| command, which allows specifying s-dependent aperture using
- an SDDS file.  This was inspired by a discussion with R. Bartolini (DLS).
-
-\item Added computation of the coupling integral and emittance ratio (see section 3.1.4.4 of
- \cite{HAPE}).  These are available for optimization using the symbols {\tt couplingIntegral} 
- and {\tt emittanceRatio}.  N.B.: this emittance ratio does not include the effect of 
- vertical dispersion.  This change was suggested by V. Sajaev (ANL).
-
-\item Added computation of coupled twiss parameters and beam sizes,
- using code supplied by V. Sajaev (ANL) based on \cite{Ripken}.  This
- is done with the new \verb|coupled_twiss_output| command.  The
- command requires specifying the emittance ratio.  While one might be
- tempted to use the value from the coupling integral (as in the
- previous item), we again note that this does not include vertical
- dispersion contributions.
-
-\item Added the \verb|match_name| feature to the \verb|twiss_analysis|
- command.  For example, one can now compute and optimize on the
- average $\beta_x$ at elements with names matching a wildcard string.
-
-\item The default number of iterations for orbit correction (\verb|correct| command) 
- was increased to improve results for difficult (nearly unstable) cases.  On a related note,
- if closed orbit computations are requested, they are now additionally performed 
- prior to orbit correction in case orbit correction needs the perturbed correction matrix.
-
-\item Added the \verb|linear_chromatic_tracking_setup| command, which allows tracking
- with a linear matrix representing a ring with defined chromatic variation of the 
- tunes and lattice functions.  This was previously only possible if the ring lattice
- was defined. The new feature allows tracking without defining the ring lattice.
- This was requested by S. Krinsky (BNL).
+\item Added descriptive text to the SDDS files for quantities in the {\tt sigma}, {\tt centroid},
+  and {\tt final} output files.
+\item Increased the maximum length of the name for an element from 8 to 100 characters.  This was requested
+ by R. Bosch (SRC).
+\item The {\tt twiss\_analysis} command now creates quantities for the dispersion slope and alpha.
+ Twiss analysis is no longer length-weighted, since this doesn't work when averaging over markers. 
+ Verbosity control was added to aid in confirming the elements included in the analysis.
+\item The {\tt track}  command now has a parameter (\verb|stop_tracking_particle_limit|) that can be
+ used to tell {\tt elegant} to stop tracking when the number of particles falls below a preset limit.
 \end{itemize}
 
 \subsection{Changes and Additions to Related Programs}
+
 \begin{itemize}
-\item The program {\tt sddsfindresonances} was added.  It analyzes frequency map analysis data
- to find resonance lines.  The program was written by H. Shang (ANL).
-\item Support for s-dependent momentum aperture computation was added to \verb|elegantRingAnalysis|.
- This can be done with many processors at once, and is therefore quite fast.
-\item Most computations in \verb|elegantRingAnalysis| now use the second-order concatenated matrix
- for better convergence of close orbits.  This requires setting the default matrix order to 
- 2 in these runs.  This should not impact any results as long as the tracking lattice file uses
- kick elements (recommended in any case).
-\item The program \verb|sddsurgent| was added.  It performs computations of undulator radiation properties
- using code from the programs URGENT (R. Walker) and US (R. Dejus).  It was written by H. Shang (ANL).
- In addition, a script called \verb|quickSDDSUrgent| was added that provides a basic graphical interface
- to \verb|sddsurgent|.  It was written by X. Jiao (ANL).
-\item The program \verb|sddsemitproc| was changed to improve behavior when invalid results are returned from correction algorithms.
-   Fixed bug in parsing error settings.  Fixed bug in setting output parameters
-   (S33 not set).
+\item The program {\tt touschekLifetime} was added.  It uses Piwinski's formalism to compute the Touschek
+ lifetime from {\tt elegant}'s momentum aperture and twiss parameter output.  It was written by A. Xiao (ANL).
+\item The GUI {\tt elegantRingAnalysis} now supports addition of errors to many calculations.  The interface was
+  also improved using nest tabs.  This was done by H. Shang (APS).
+\item The program {\tt sddsurgent} had a bug in the pipe option, which was fixed along with some other bugs.  The maximum size of 
+  the grids was increased from 50x50 to 500x500.  This was done by X. Jiao (APS).
 \end{itemize}
 
 \section{Introduction}
@@ -2742,6 +2686,7 @@ unit parameter change for the element.
         double s_start = -1;
         double s_end = -1;
         STRING tag = NULL;
+        long verbosity = 0;
         long clear = 0;
 &end
 \end{verbatim}
@@ -2758,7 +2703,8 @@ unit parameter change for the element.
 \item \verb|tag| --- Name prefix for quantities computed by the analysis.  The quantity
         names will have the form {\em tag}.{\em statistic}.{\em quantity}, where {\em statistic}
         is one of \verb|min|, \verb|max|, and \verb|ave|, and {\em quantity} is one of
-        \verb|betax|, \verb|betay|, \verb|etax|, and \verb|etay|.  E.g., if {\em tag} is \verb|region1|,
+        \verb|betax|, \verb|betay|, \verb|etax|, \verb|etay|, \verb|alphax|, \verb|alphay|, 
+        \verb|etaxp|, and \verb|etayp|. E.g., if {\em tag} is \verb|region1|,
         then one could use expressions like \verb|region1.max.betax| in optimization.
 \item \verb|clear| --- If nonzero, all previously defined analysis regions are deleted.
 \end{itemize}
@@ -2939,6 +2885,7 @@ for alpha magnets, quadrupoles, and sextupoles.  You may also use the
     long soft_failure = 1;
     long use_linear_chromatic_matrix = 0;
     long longitudinal_ring_only = 0;
+    long stop_tracking_particle_limit = -1;
 &end
 \end{verbatim}
 
@@ -2967,6 +2914,9 @@ of the particle using the linear chromaticity and linear dependence of
 the beta functions on momentum.
 \item \verb|longitudinal_ring_only| --- Tracks longitudinal coordinates only
 for a ring.  
+\item \verb|stop_tracking_particle_limit| --- If a non-negative is given, then
+{\tt elegant} will stop tracking when the number of particles falls below the
+given value.  It will be as if all the particles were lost.
 \end{itemize}
 
 \begin{latexonly}
