@@ -59,15 +59,25 @@ char *option[N_OPTIONS] = {
     "macro",
     "cpulist",
         };
+
+#define SHOW_USAGE    0x0001
+#define SHOW_GREETING 0x0002
+
+void showUsageOrGreeting (unsigned long mode)
+{
 #if USE_MPI
-char *USAGE="mpirun -np <number of processes> Pelegant <inputfile> [-macro=<tag>=<value>,[...]]\n\nProgram by Yusong Wang, Michael Borland. (This is version 16.1.2, "__DATE__".)";
-
-char *GREETING="This is parallel elegant, by Yusong Wang, Michael Borland. (This is version 16.1.2, "__DATE__".)";
+  char *USAGE="usage: mpirun -np <number of processes> Pelegant <inputfile> [-macro=<tag>=<value>,[...]]";
+  char *GREETING="This is elegant 16.1.2, "__DATE__", by M. Borland, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang and M. Borland.";
 #else
-char *USAGE="elegant <inputfile> [-macro=<tag>=<value>,[...]] [-cpuList=<number>[,<number>]]\n\nProgram by Michael Borland. (This is version 16.1.2, "__DATE__".)";
-
-char *GREETING="This is elegant, by Michael Borland. (This is version 16.1.2, "__DATE__".)";
+  char *USAGE="usage: elegant <inputfile> [-macro=<tag>=<value>,[...]] [-cpuList=<number>[,<number>]]";
+  char *GREETING="This is elegant 16.1.2, "__DATE__", by M. Borland, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.";
 #endif
+  if (mode&SHOW_GREETING)
+    puts(GREETING);
+  if (mode&SHOW_USAGE)
+    puts(USAGE);
+}
+
 
 #define RUN_SETUP        0
 #define RUN_CONTROL      1
@@ -327,13 +337,13 @@ char **argv;
   
   argc = scanargs(&scanned, argc, argv);
   if (argc<2) {
-    fprintf(stdout, "usage: %s\n", USAGE);
+    showUsageOrGreeting(SHOW_USAGE|SHOW_GREETING);
     fflush(stdout);
     link_date();
     exit(1);
   }
   
-  fprintf(stdout, "%s\n", GREETING);
+  showUsageOrGreeting(SHOW_GREETING);
   fflush(stdout);
   link_date();
   if (getenv("RPN_DEFNS")) {
@@ -351,8 +361,11 @@ char **argv;
           exit(0);
         break;
       case DEFINE_MACRO:
-        if ((scanned[i].n_items-=1)<1)
-          bomb("invalid -macro syntax", USAGE);
+        if ((scanned[i].n_items-=1)<1) {
+          fprintf(stdout, "Invalid -macro syntax\n");
+          showUsageOrGreeting(SHOW_USAGE);
+          exit(1);
+        }
         if (!(macroTag=SDDS_Realloc(macroTag, sizeof(*macroTag)*(macros+scanned[i].n_items))) ||
             !(macroValue=SDDS_Realloc(macroValue, sizeof(*macroValue)*(macros+scanned[i].n_items))))
           bomb("memory allocation failure (-macro)", NULL);
@@ -360,8 +373,11 @@ char **argv;
           long j;
           for (j=0; j<scanned[i].n_items; j++) {
             macroTag[macros] = scanned[i].list[j+1];
-            if (!(macroValue[macros] = strchr(macroTag[macros], '=')))
-              bomb("invalid -macro syntax", USAGE);
+            if (!(macroValue[macros] = strchr(macroTag[macros], '='))) {
+              fprintf(stdout, "Invalid -macro syntax\n");
+              showUsageOrGreeting(SHOW_USAGE);
+              exit(1);
+            }
             macroValue[macros][0] = 0;
             macroValue[macros] += 1;
             macros++;
@@ -371,14 +387,20 @@ char **argv;
       case DEFINE_CPU_LIST:
 #if (!USE_MPI && defined(linux))
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,0))
-        if (scanned[i].n_items<2) 
-          bomb("invalid -cpuList syntax", USAGE);
+        if (scanned[i].n_items<2) {
+          fprintf(stdout, "Invalid -cpuList syntax\n");
+          showUsageOrGreeting(SHOW_USAGE);
+          exit(1);
+        }
         else {
           long j, k;
           unsigned long processorMask = 0;
           for (j=1; j<scanned[i].n_items; j++) {
-            if (sscanf(scanned[i].list[j], "%ld", &k)!=1 && k<0) 
-              bomb("invalid -cpuList syntax", USAGE);
+            if (sscanf(scanned[i].list[j], "%ld", &k)!=1 && k<0)  {
+              fprintf(stdout, "Invalid -cpuList syntax\n");
+              showUsageOrGreeting(SHOW_USAGE);
+              exit(1);
+            }
             processorMask |= (unsigned long)(ipow(2, k)+0.5);
           }
           printf("processorMask = %lx\n", processorMask);
@@ -392,7 +414,8 @@ char **argv;
 #endif /*(!USE_MPI && defined(linux)) */
         break;
       default:
-        bomb("unknown option given.", USAGE);
+        fprintf(stdout, "Unknown option given.\n");
+        showUsageOrGreeting(SHOW_USAGE);
         break;
       }
     }
@@ -400,13 +423,19 @@ char **argv;
       /* filenames */
       if (!inputfile)
         fp_in = fopen_e(inputfile = scanned[i].list[0], "r", 0);
-      else 
-        bomb("too many file names listed.", USAGE);
+      else {
+        fprintf(stdout, "Too many file names listed.\n");
+        showUsageOrGreeting(SHOW_USAGE);
+        exit(1);
+      }
     }
   }
   
-  if (!inputfile)
-    bomb("no input file was given", USAGE);
+  if (!inputfile) {
+    fprintf(stdout, "No input file was given.\n");
+    showUsageOrGreeting(SHOW_USAGE);
+    exit(1);
+  }
 
 #if defined(CONDOR_COMPILE)
   sprintf(s, "%s.ckpt", inputfile);
