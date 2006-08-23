@@ -20,6 +20,7 @@
 void InitializeCWiggler(CWIGGLER *cwiggler);
 long determine_bend_flags(ELEMENT_LIST *eptr, long edge1_effects, long edge2_effects);
 VMATRIX *matrixFromExplicitMatrix(EMATRIX *emat, long order);
+VMATRIX *matrixForILMatrix(ILMATRIX *ilmat, long order);
 
 VMATRIX *full_matrix(ELEMENT_LIST *elem, RUN *run, long order) 
 {
@@ -921,6 +922,9 @@ VMATRIX *compute_matrix(
       case T_EMATRIX:
         elem->matrix = matrixFromExplicitMatrix((EMATRIX*)elem->p_elem, run->default_order);
         break;
+      case T_ILMATRIX:
+        elem->matrix = matrixForILMatrix((ILMATRIX*)elem->p_elem, run->default_order);
+        break;
       case T_KPOLY: case T_RFDF:  case T_RFTMEZ0:  case T_RMDF:  case T_TMCF: case T_CEPL:  
       case T_TWPL:  case T_TWLA:  
       case T_TWMTA: case T_RCOL:  case T_PEPPOT: case T_MAXAMP: 
@@ -1541,6 +1545,56 @@ VMATRIX *matrixFromExplicitMatrix(EMATRIX *emat, long order)
     tilt_matrices(M, emat->tilt);
   
   return M;
+}
+
+/* ilmatrix */
+VMATRIX *matrixForILMatrix(ILMATRIX *ilmat, long order)
+{
+  long i, offset, plane;
+  VMATRIX  *M1;
+  double tune2pi, R11, R22, R12, sin_phi, cos_phi, alpha, beta;
+  
+  if (order<1)
+    order = 1;
+  M1 = tmalloc(sizeof(*M1));
+  initialize_matrices(M1, M1->order=order);
+  for (i=0; i<6; i++) 
+    M1->C[i] = 0;
+
+  for (plane=0; plane<2; plane++) {
+    tune2pi = PIx2*ilmat->tune[plane];
+    offset = 2*plane;
+    beta = ilmat->beta[plane];
+    /* R11=R22 or R33=R44 */
+    sin_phi = sin(tune2pi);
+    cos_phi = cos(tune2pi);
+    alpha = ilmat->alpha[plane];
+    /* R11 or R33 */
+    R11 = M1->R[0+offset][0+offset] = cos_phi + alpha*sin_phi;
+    /* R22 or R44 */
+    R22 = M1->R[1+offset][1+offset] = cos_phi - alpha*sin_phi;
+    /* R12 or R34 */
+    if ((R12 = M1->R[0+offset][1+offset] = beta*sin_phi)) {
+      /* R21 or R43 */
+      M1->R[1+offset][0+offset] = (R11*R22-1)/R12;
+    }
+    else {
+      fprintf(stdout, "ILMATRIX problem: divide by zero\n");
+      return NULL;
+    }
+  }
+
+  /* Dispersive terms, assuming a flat ring (!) */
+  M1->R[0][5] = M1->R[4][1] = 
+    -((M1->R[0][0]-1)*ilmat->eta[0] + M1->R[0][1]    *ilmat->eta[1]);
+  M1->R[1][5] = M1->R[4][0] = 
+    -(M1->R[1][0]    *ilmat->eta[0] + (M1->R[1][1]-1)*ilmat->eta[1]);
+
+  M1->R[4][4] = M1->R[5][5] = 1;
+  M1->R[4][5] = ilmat->alphac[0]*ilmat->length - M1->R[4][0]*ilmat->eta[0] - M1->R[4][1]*ilmat->eta[1];
+  M1->C[4] = ilmat->length;
+  
+  return M1;
 }
 
 

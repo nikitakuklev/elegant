@@ -652,7 +652,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_CWIGGLER 94
 #define T_EDRIFT 95
 #define T_SCMULT 96						
-#define N_TYPES     97
+#define T_ILMATRIX 97
+#define N_TYPES     98
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -756,6 +757,7 @@ extern char *entity_text[N_TYPES];
 #define N_CWIGGLER_PARAMS 11
 #define N_EDRIFT_PARAMS 1
 #define N_SCMULT_PARAMS 0		
+#define N_ILMATRIX_PARAMS 31
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -1540,6 +1542,17 @@ typedef struct {
     long fiducialSeen;
     double sReference;
     } EMATRIX;
+
+/* names and storage structure for individualized linear matrix input */
+extern PARAMETER ilmatrix_param[N_ILMATRIX_PARAMS] ;
+typedef struct {
+    double length;
+    double tune[2], chrom[2], chrom2[2], chrom3[2];
+    double tswax[2], tsway[2];
+    double beta[2], beta1[2], alpha[2], alpha1[2];
+    double eta[4], eta1[4];
+    double alphac[2];
+    } ILMATRIX;
 
 /* names and storage structure for scattering element physical parameters */
 typedef struct {

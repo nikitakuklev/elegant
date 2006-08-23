@@ -27,13 +27,14 @@ void track_through_ftrfmode(double **part, long np, FTRFMODE *trfmode, double Po
 ELEMENT_LIST *findBeamlineMatrixElement(ELEMENT_LIST *eptr);
 void trackLongitudinalOnlyRing(double **part, long np, VMATRIX *M, double *alpha);
 void store_fitpoint_matrix_values(MARK *fpt, char *name, long occurence, VMATRIX *M);
-long trackWithChromaticLinearMatrix(double **particle, long particles,
+long trackWithIndividualizedLinearMatrix(double **particle, long particles,
                                     double **accepted, double Po, double z,
                                     ELEMENT_LIST *eptr,
                                     TWISS *twiss0, double *tune0,
                                     double *chrom, double *chrom2, double *chrom3,
                                     double *dbeta_dPoP, double *dalpha_dPoP,
-                                    double *alphac, double *eta2, double *eta3);
+                                    double *alphac, double *eta2, 
+                                    ILMATRIX *ilmat);
 void matr_element_tracking(double **coord, VMATRIX *M, MATR *matr,
                            long np, double z);
 void ematrix_element_tracking(double **coord, VMATRIX *M, EMATRIX *matr,
@@ -606,13 +607,13 @@ long do_tracking(
             /* Only the slave CPUs will work on this part */ 
             if (flags&LINEAR_CHROMATIC_MATRIX) 
               nLeft
-	        = trackWithChromaticLinearMatrix(coord, nToTrack, accepted,
+	        = trackWithIndividualizedLinearMatrix(coord, nToTrack, accepted,
 		       			         *P_central, z, eptrCLMatrix,
 					         beamline->twiss0, beamline->tune,
 					         beamline->chromaticity,
 					         beamline->chrom2, beamline->chrom3,
 					         beamline->dbeta_dPoP, beamline->dalpha_dPoP,
-					         beamline->alpha, beamline->eta2, beamline->eta3);
+					         beamline->alpha, beamline->eta2, NULL);
             else 
               trackLongitudinalOnlyRing(coord, nToTrack, 
                                         eptrCLMatrix->matrix,
@@ -942,6 +943,20 @@ long do_tracking(
 	      ematrix_element_tracking(coord, eptr->matrix, (EMATRIX*)eptr->p_elem, nToTrack,
 				       z);
 	      break;
+            case T_ILMATRIX:
+              nLeft = trackWithIndividualizedLinearMatrix(coord, nToTrack, accepted, *P_central,
+                                                     z, eptr, 
+                                                     NULL,
+                                                     ((ILMATRIX*)eptr->p_elem)->tune,
+                                                     ((ILMATRIX*)eptr->p_elem)->chrom,
+                                                     ((ILMATRIX*)eptr->p_elem)->chrom2,
+                                                     ((ILMATRIX*)eptr->p_elem)->chrom3,
+                                                     ((ILMATRIX*)eptr->p_elem)->beta1,
+                                                     ((ILMATRIX*)eptr->p_elem)->alpha1,
+                                                     ((ILMATRIX*)eptr->p_elem)->alphac,
+                                                     ((ILMATRIX*)eptr->p_elem)->eta1,
+                                                     ((ILMATRIX*)eptr->p_elem));
+              break;
 	    case T_MULT:
 	      nLeft = multipole_tracking(coord, nToTrack, (MULT*)eptr->p_elem, 0.0,
 					 *P_central, accepted, z);
@@ -2159,37 +2174,48 @@ ELEMENT_LIST *findBeamlineMatrixElement(ELEMENT_LIST *eptr)
   return eptr0;
 }
 
-long trackWithChromaticLinearMatrix(double **particle, long particles, double **accepted,
+long trackWithIndividualizedLinearMatrix(double **particle, long particles, double **accepted,
                                     double Po, double z, ELEMENT_LIST *eptr,
-                                    TWISS *twiss, double *tune0,
+                                    TWISS *twiss,
+                                    double *tune0,
                                     double *chrom,    /* d   nu /ddelta   */
                                     double *chrom2,   /* d^2 nu /ddelta^2 */
                                     double *chrom3,   /* d^3 nu /ddelta^3 */
                                     double *dbeta_dPoP, 
                                     double *dalpha_dPoP,
                                     double *alphac,   /* Cs = Cs(0) + delta*alphac[0] + delta^2*alphac[1] */
-                                    double *eta2,
-                                    double *eta3      /* x = x(0) + eta*delta + eta2*delta^2 + eta3*delta^3 */
+                                    double *eta2,     /* x = x(0) + eta*delta + eta2*delta^2 */
+                                    ILMATRIX *ilmat   /* used only if twiss==NULL */
                                     )
 {
   long ip, plane, offset, i, j, itop, is_lost;
   double *coord, deltaPoP, tune2pi, sin_phi, cos_phi;
-  double alpha[2], beta[2], eta[4], beta1, alpha1;
+  double alpha[2], beta[2], eta[4], beta1, alpha1, A[2];
   double R11, R22, R12;
   static VMATRIX *M1 = NULL;
-  double lastDPoP = DBL_MAX, det;
+  double det;
   if (!M1) {
     M1 = tmalloc(sizeof(*M1));
     initialize_matrices(M1, 1);
   }
-  beta[0] = twiss->betax;
-  beta[1] = twiss->betay;
-  alpha[0] = twiss->alphax;
-  alpha[1] = twiss->alphay;
-  eta[0] = twiss->etax;
-  eta[1] = twiss->etapx;
-  eta[2] = twiss->etay;
-  eta[3] = twiss->etapy;
+  if (twiss) {
+    beta[0] = twiss->betax;
+    beta[1] = twiss->betay;
+    alpha[0] = twiss->alphax;
+    alpha[1] = twiss->alphay;
+    eta[0] = twiss->etax;
+    eta[1] = twiss->etapx;
+    eta[2] = twiss->etay;
+    eta[3] = twiss->etapy;
+  } else {
+    for (i=0; i<2; i++) {
+      beta[i] = ilmat->beta[i];
+      alpha[i] = ilmat->alpha[i];
+    }
+    for (i=0; i<4; i++)
+      eta[i] = ilmat->eta[i];
+  }
+    
   for (i=0; i<6; i++) {
     M1->C[i] = eptr->matrix->C[i];
     for (j=0; j<6; j++)
@@ -2199,55 +2225,62 @@ long trackWithChromaticLinearMatrix(double **particle, long particles, double **
   for (ip=0; ip<particles; ip++) {
     coord = particle[ip];
     deltaPoP = coord[5];
+    /* remove the dispersive orbit from the particle coordinates */
+    coord[5] -= deltaPoP;
+    for (plane=0; plane<2; plane++) {
+      coord[2*plane]   -= deltaPoP*(eta[2*plane]   + deltaPoP*eta2[2*plane]);
+      coord[2*plane+1] -= deltaPoP*(eta[2*plane+1] + deltaPoP*eta2[2*plane+1]);
+      /* compute the betatron amplitude, if needed */
+      A[plane] = 0;
+      if (ilmat)
+        A[plane] = (sqr(coord[2*plane]) + ipow(alpha[plane]*coord[2*plane]+beta[plane]*coord[2*plane+1], 2))/beta[plane];
+    }
     is_lost = 0;
-    if (deltaPoP!=lastDPoP) {
-      for (plane=0; !is_lost && plane<2; plane++) {
-        tune2pi = PIx2*(tune0[plane] + 
-                        deltaPoP*(chrom[plane] +
-                                  deltaPoP/2*(chrom2[plane] + 
-                                              deltaPoP/3*chrom3[plane])));
-        offset = 2*plane;
-        if ((beta1 = beta[plane]+dbeta_dPoP[plane]*deltaPoP)<=0) {
-          fprintf(stdout, "nonpositive beta function for particle with delta=%le\n",
-                  deltaPoP);
-          fprintf(stdout, "particle is lost\n");
-          lastDPoP = DBL_MAX;
-          is_lost = 1;
-          continue;
-        }
-        if (fabs( ((long)(2*tune2pi/PIx2)) - ((long)(2*tune0[plane]))) != 0) {
-          fprintf(stdout, "particle with delta=%le crossed integer or half-integer resonance\n",
-                  deltaPoP);
-          fprintf(stdout, "particle is lost\n");
-          lastDPoP = DBL_MAX;
-          is_lost = 1;
-          continue;
-        }
-        /* R11=R22 or R33=R44 */
-        sin_phi = sin(tune2pi);
-        cos_phi = cos(tune2pi);
-        alpha1 = alpha[plane]+dalpha_dPoP[plane]*deltaPoP;
-        /* R11 or R33 */
-        R11 = M1->R[0+offset][0+offset] = cos_phi + alpha1*sin_phi;
-        /* R22 or R44 */
-        R22 = M1->R[1+offset][1+offset] = cos_phi - alpha1*sin_phi;
-        /* R12 or R34 */
-        if ((R12 = M1->R[0+offset][1+offset] = beta1*sin_phi)) {
-          /* R21 or R43 */
-          M1->R[1+offset][0+offset] = (R11*R22-1)/R12;
-        }
-        else {
-          bomb("divided by zero in trackWithChromaticLinearMatrix", NULL);
-        }
-        det = M1->R[0+offset][0+offset]*M1->R[1+offset][1+offset] -
-          M1->R[0+offset][1+offset]*M1->R[1+offset][0+offset];
-        if (fabs(det-1)>1e-6) {
-          fprintf(stdout, "Determinant is suspect for particle with delta=%e\n", deltaPoP);
-          fprintf(stdout, "particle is lost\n");
-          lastDPoP = DBL_MAX;
-          is_lost = 1;
-          continue;
-        }
+    for (plane=0; !is_lost && plane<2; plane++) {
+      tune2pi = PIx2*(tune0[plane] + 
+                      deltaPoP*(chrom[plane] +
+                                deltaPoP/2*(chrom2[plane] + 
+                                            deltaPoP/3*chrom3[plane])));
+      if (ilmat)
+        tune2pi += PIx2*(A[0]*ilmat->tswax[plane] + A[1]*ilmat->tsway[plane]);
+      offset = 2*plane;
+      if ((beta1 = beta[plane]+dbeta_dPoP[plane]*deltaPoP)<=0) {
+        fprintf(stdout, "nonpositive beta function for particle with delta=%le\n",
+                deltaPoP);
+        fprintf(stdout, "particle is lost\n");
+        is_lost = 1;
+        continue;
+      }
+      if (fabs( ((long)(2*tune2pi/PIx2)) - ((long)(2*tune0[plane]))) != 0) {
+        fprintf(stdout, "particle with delta=%le crossed integer or half-integer resonance\n",
+                deltaPoP);
+        fprintf(stdout, "particle is lost\n");
+        is_lost = 1;
+        continue;
+      }
+      /* R11=R22 or R33=R44 */
+      sin_phi = sin(tune2pi);
+      cos_phi = cos(tune2pi);
+      alpha1 = alpha[plane]+dalpha_dPoP[plane]*deltaPoP;
+      /* R11 or R33 */
+      R11 = M1->R[0+offset][0+offset] = cos_phi + alpha1*sin_phi;
+      /* R22 or R44 */
+      R22 = M1->R[1+offset][1+offset] = cos_phi - alpha1*sin_phi;
+      /* R12 or R34 */
+      if ((R12 = M1->R[0+offset][1+offset] = beta1*sin_phi)) {
+        /* R21 or R43 */
+        M1->R[1+offset][0+offset] = (R11*R22-1)/R12;
+      }
+      else {
+        bomb("divided by zero in trackWithChromaticLinearMatrix", NULL);
+      }
+      det = M1->R[0+offset][0+offset]*M1->R[1+offset][1+offset] -
+        M1->R[0+offset][1+offset]*M1->R[1+offset][0+offset];
+      if (fabs(det-1)>1e-6) {
+        fprintf(stdout, "Determinant is suspect for particle with delta=%e\n", deltaPoP);
+        fprintf(stdout, "particle is lost\n");
+        is_lost = 1;
+        continue;
       }
     }
     if (is_lost) {
@@ -2260,21 +2293,14 @@ long trackWithChromaticLinearMatrix(double **particle, long particles, double **
       --ip;
       --particles;
     } else {
-      lastDPoP = deltaPoP;
-      for (plane=0; !is_lost && plane<2; plane++) {
-        /* remove the dispersive orbit from the particle coordinates */
-        coord[2*plane]   -= deltaPoP*(eta[2*plane]   + deltaPoP*eta2[2*plane]);
-        coord[2*plane+1] -= deltaPoP*(eta[2*plane+1] + deltaPoP*eta2[2*plane+1]);
-      }
       /* momentum-dependent pathlength --- note that other path-length terms are ignored ! */
       M1->C[4] = eptr->matrix->C[4]*(1 + deltaPoP*(alphac[0] + deltaPoP*alphac[1]));
-      coord[5] -= lastDPoP;
       track_particles(&coord, M1, &coord, 1);
-      coord[5] += lastDPoP;
-      for (plane=0; !is_lost && plane<2; plane++) {
-        /* add back the dispersive orbit to the particle coordinates */
-        coord[2*plane]   += deltaPoP*eta[2*plane]   + sqr(deltaPoP)*eta2[2*plane];
-        coord[2*plane+1] += deltaPoP*eta[2*plane+1] + sqr(deltaPoP)*eta2[2*plane+1];
+      /* add back the dispersive orbit to the particle coordinates */
+      coord[5] += deltaPoP;
+      for (plane=0; plane<2; plane++) {
+        coord[2*plane]   += deltaPoP*(eta[2*plane]   + deltaPoP*eta2[2*plane]);
+        coord[2*plane+1] += deltaPoP*(eta[2*plane+1] + deltaPoP*eta2[2*plane+1]);
       }
     }
   }

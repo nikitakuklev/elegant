@@ -35,7 +35,7 @@ char *entity_name[N_TYPES] = {
     "REFLECT", "CLEAN", "TWISS", "WIGGLER", "SCRIPT", "FLOOR",
     "LTHINLENS", "LMIRROR", "EMATRIX", "FRFMODE", "FTRFMODE",
     "TFBPICKUP", "TFBDRIVER", "LSCDRIFT", "DSCATTER", "LSRMDLTR",
-    "TAYLORSERIES", "RFTM110", "CWIGGLER", "EDRIFT", "SCMULT",
+    "TAYLORSERIES", "RFTM110", "CWIGGLER", "EDRIFT", "SCMULT", "LCMATRIX",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -162,6 +162,7 @@ and phase modulation.",
     "Tracks through a wiggler using canonical integration routines of Y. Wu (Duke University).",
     "Tracks through a drift with no approximations (Exact DRIFT).",
     "Tracks through a zero length multipole to simulate space charge effects",  
+    "An Individualized Linear Matrix for each particle for fast symplectic tracking with chromatic and amplitude-dependent effects",
     } ;
 
 QUAD quad_example;
@@ -1906,6 +1907,43 @@ PARAMETER scmult_param[1] = {
 PARAMETER scmult_param[] = {
 };
 #endif
+
+ILMATRIX ilmatrix_example;
+PARAMETER ilmatrix_param[N_ILMATRIX_PARAMS]={
+    {"L", "M", IS_DOUBLE, 0, (long)((char *)&ilmatrix_example.length), NULL, 0.0, 0, "Length (used for position and time-of-flight computation)"},
+    {"NUX", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.tune[0]), NULL, 0.0, 0, "Horizontal tune"},
+    {"NUY", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.tune[1]), NULL, 0.0, 0, "Vertical tune"},
+    {"NUX1M", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.chrom[0]), NULL, 0.0, 0, "First chromatic derivative of the horizontal tune"},
+    {"NUY1M", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.chrom[1]), NULL, 0.0, 0, "First chromatic derivative of the vertical tune"},
+    {"NUX2M", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.chrom2[0]), NULL, 0.0, 0, "Second chromatic derivative of the horizontal tune"},
+    {"NUY2M", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.chrom2[1]), NULL, 0.0, 0, "Second chromatic derivative of the vertical tune"},
+    {"NUX3M", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.chrom3[0]), NULL, 0.0, 0, "Third chromatic derivative of the horizontal tune"},
+    {"NUY3M", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.chrom3[1]), NULL, 0.0, 0, "Third chromatic derivative of the vertical tune"},
+    {"NUX1AX", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.tswax[0]), NULL, 0.0, 0, "First amplitude derivative of the horizontal tune wrt Ax"},
+    {"NUY1AX", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.tswax[1]), NULL, 0.0, 0, "First amplitude derivative of the vertical tune wrt Ax"},
+    {"NUX1AY", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.tsway[0]), NULL, 0.0, 0, "First amplitude derivative of the horizontal tune wrt Ay"},
+    {"NUY1AY", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.tsway[1]), NULL, 0.0, 0, "First amplitude derivative of the vertical tune wrt Ay"},
+    {"BETAX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.beta[0]), NULL, 0.0, 0, "On-momentum horizontal beta function"},
+    {"BETAY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.beta[1]), NULL, 0.0, 0, "On-momentum vertical beta function"},
+    {"BETAX1M", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.beta1[0]), NULL, 0.0, 0, "First chromatic derivative of horizontal beta function"},
+    {"BETAY1M", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.beta1[1]), NULL, 0.0, 0, "First chromatic derivative of vertical beta function"},
+    {"ALPHAX", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.alpha[0]), NULL, 0.0, 0, "On-momentum horizontal alpha function"},
+    {"ALPHAY", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.alpha[1]), NULL, 0.0, 0, "On-momentum vertical alpha function"},
+    {"ALPHAX1M", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.alpha1[0]), NULL, 0.0, 0, "First chromatic derivative of horizontal alpha function"},
+    {"ALPHAY1M", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.alpha1[1]), NULL, 0.0, 0, "First chromatic derivative of vertical alpha function"},
+    {"ETAX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.eta[0]), NULL, 0.0, 0, "On-momentum horizontal eta function"},
+    {"ETAPX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.eta[1]), NULL, 0.0, 0, "On-momentum horizontal eta' function"},
+    {"ETAY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.eta[2]), NULL, 0.0, 0, "On-momentum vertical eta function"},
+    {"ETAPY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.eta[3]), NULL, 0.0, 0, "On-momentum vertical eta' function"},
+    {"ETAX1", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.eta1[0]), NULL, 0.0, 0, "First chromatic derivative of horizontal eta function"},
+    {"ETAPX1", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.eta1[1]), NULL, 0.0, 0, "First chromatic derivative of horizontal eta' function"},
+    {"ETAY1", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.eta1[2]), NULL, 0.0, 0, "First chromatic derivative of vertical eta function"},
+    {"ETAPY1", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.eta1[3]), NULL, 0.0, 0, "First chromatic derivative of vertical eta' function"},
+    {"ALPHAC", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.alphac[0]), NULL, 0.0, 0, "First-order momentum compaction factor"},
+    {"ALPHAC2", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.alphac[1]), NULL, 0.0, 0, "Second-order momentum compaction factor"},
+};
+
+
 /* array of parameter structures */
 
 #define MAT_LEN     HAS_MATRIX|HAS_LENGTH
@@ -2022,6 +2060,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     {   N_CWIGGLER_PARAMS,  MAT_LEN_NCAT|IS_MAGNET, sizeof(CWIGGLER),    cwiggler_param     }, 
     {   N_EDRIFT_PARAMS, MAT_LEN, sizeof(EDRIFT),    edrift_param   },
     {   N_SCMULT_PARAMS,    0,       sizeof(SCMULT),    scmult_param     },   
+    {  N_ILMATRIX_PARAMS,  HAS_RF_MATRIX|MAT_LEN_NCAT,  sizeof(ILMATRIX),    ilmatrix_param     }, 
 } ;
  
 
