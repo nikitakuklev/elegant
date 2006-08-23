@@ -3,7 +3,5 @@ result with elegant.
 
 runJob                   a script to run a Pelegant simulation with MPI command
 parKick.lte              lattice file for both Pelegant and elegant
-manyParticles_p.bun      bunched beam input file for Pelegant
-manyParticles_s.bun      bunched beam input file for elegant
 manyParticles_p.ele      input file for Pelegant
 manyParticles_s.ele      input file for elegant
