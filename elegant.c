@@ -309,7 +309,7 @@ char **argv;
   }
 
   compute_offsets();
-  set_max_name_length(12);
+  set_max_name_length(100);
   macros = 0;
   macroTag = macroValue = NULL;
   
