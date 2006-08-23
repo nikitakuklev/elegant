@@ -14,6 +14,9 @@
  * Michael Borland, 2000
  *
  $Log: not supported by cvs2svn $
+ Revision 1.14  2005/11/10 15:38:49  soliday
+ Added changes to get it to compile properly with 64 bit compilers.
+
  Revision 1.13  2005/02/24 19:27:53  borland
  Added -generate option to sddsanalyzebeam.  This option can generate a new
  phase-space distribution with the same 6D rms properties as the input beam.
@@ -265,12 +268,14 @@ int main(int argc, char **argv)
           emit[i] = sqrt(emit[i]);
           beta[i] = S[2*i+0][2*i+0]/emit[i];
           alpha[i] = -S[2*i+0][2*i+1]/emit[i];
-        }
+        } else
+          emit[i] = 0;
         if ((emitcor[i] = Sbeta[2*i+0][2*i+0]*Sbeta[2*i+1][2*i+1]-sqr(Sbeta[2*i+0][2*i+1]))>0) {
           emitcor[i] = sqrt(emitcor[i]);
           betacor[i] = Sbeta[2*i+0][2*i+0]/emitcor[i];
           alphacor[i] = -Sbeta[2*i+0][2*i+1]/emitcor[i];
-        }
+        } else
+          emitcor[i] = 0;
       }
     }
     /* set centroids and sigmas */
@@ -322,8 +327,8 @@ int main(int argc, char **argv)
                              "ex", emitcor[0], "enx", emitcor[0]*pAve,
                              "betax", betacor[0], "alphax", alphacor[0],
                              "ey", emitcor[1], "eny", emitcor[1]*pAve,
-                             "betay", betacor[1], "alphay", alphacor[1],
-                             "pAverage", pAve, NULL)) {
+                             "betay", betacor[1], "alphay", alphacor[1], 
+                             "el", emit[2], "pAverage", pAve, NULL)) {
         SDDS_SetError("Problem setting Twiss values");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
