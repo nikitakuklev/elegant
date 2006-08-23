@@ -17,14 +17,15 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 16.1.1\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
+\author{Program Version 16.1.3\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
 \maketitle
 
-\section{Highlights of What's New in Version 16.1.1}
+\section{Highlights of What's New in Version 16.1.3}
 
-This is mostly a minor bug-fix release. The most significant change as
-of version 16.1 is that a parallel version ({\tt Pelegant}) is
-supported in this release.  All single-particle dynamics have been parallelized.
+This is mostly a minor bug-fix release, with one new element ({\tt
+ILMATRIX}). The most significant change as of version 16.1 is that a
+parallel version ({\tt Pelegant}) is supported in this release.  All
+single-particle dynamics have been parallelized.
 
 Here is a summary of what's changed since release 16.0.1.  For details
 and references, see the specific entries in the manual.
@@ -58,6 +59,9 @@ and references, see the specific entries in the manual.
 
 \subsection{New and Modified Elements}
 \begin{itemize}
+\item Added the {\tt ILMATRIX} element, which allows fast tracking in periodic systems using an Individual
+ Linear Matrix for each particle.  The matrix has momentum and amplitude dependence via coefficients (e.g.,
+ chromaticity, tune-shift-with-amplitude) specified by the user.  This was inspired by requests from Y. Chae (APS).
 \item Added start-pass, gradual ramp-on, and high-frequency cut-off filters to the ZLONGIT and ZTRANSVERSE elements.
  These features were requested by Y. Chae (APS).
 \end{itemize}
