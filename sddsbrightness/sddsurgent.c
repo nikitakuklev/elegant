@@ -17,6 +17,9 @@
  * Hairong Shang, May 2005
 
 $Log: not supported by cvs2svn $
+Revision 1.3  2006/07/31 23:49:26  jiaox
+Removed the -1 option for mode and method. Increased the NXP and NYP limits from 50 to 500. Fixed the bug of pipe option. Clean up the code to asuure the proper the mode/method combinations.
+
 */
 
 
@@ -79,11 +82,9 @@ typedef struct {
 #define MAXIMUM_H 750000  /*maximum harmonics */
 /*fortran subroutine*/
 void urgent_();
-#if defined(_WIN32)
-#define urgent_() URGENT()
-#endif
 void us_();
 #if defined(_WIN32)
+#define urgent_() URGENT()
 #define us_() US()
 #endif
 

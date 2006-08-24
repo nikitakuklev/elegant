@@ -8,6 +8,9 @@
 #*************************************************************************
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.2  2006/03/15 17:19:24  shang
+# added compilation for sddsurgent
+#
 # Revision 1.1  2004/04/08 16:10:28  soliday
 # Moved to subdirectory.
 #
@@ -44,8 +47,8 @@ USR_CFLAGS = 	-I$(EPICS_EXTENSIONS_INCLUDE) \
 		-DIEEE_MATH -DzLib
 
 USR_CFLAGS_DEFAULT = 	-DUNIX 
-USR_CFLAGS_Linux =	-Df2cFortran
-USR_CFLAGS_WIN32 = 	-DPowerStationFortran -DVISUAL_CPLUSPLUS
+#USR_CFLAGS_Linux =	-Df2cFortran
+#USR_CFLAGS_WIN32 = 	-DpgiFortran
 
 ifdef WIN32
 USR_LIBS = oagphy mdbcommon matlib fftpack SDDS1 rpnlib mdbmth namelist mdblib z fftpack

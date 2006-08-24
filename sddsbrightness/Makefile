@@ -7,7 +7,7 @@
 # in the file LICENSE that is included with this distribution. 
 #*************************************************************************
 #
-# $Id: Makefile,v 1.5 2006-03-15 17:19:24 shang Exp $
+# $Id: Makefile,v 1.6 2006-08-24 19:20:06 soliday Exp $
 #
 #
 #
@@ -28,19 +28,19 @@ sddsbrightness$(OBJ): ../sddsbrightness.h
 
 ifdef WIN32
 usb$(OBJ) :
-	f77 /compile_only /threads /libs:dll /fast ..\\usb.f
+	ifort /compile_only /threads /libs:dll ..\\usb.f
 
 brighte$(OBJ) :
-	f77 /compile_only /threads /libs:dll /fast ..\\brighte.f
+	ifort /compile_only /threads /libs:dll ..\\brighte.f
 
 hunt$(OBJ) :
-	f77 /compile_only /threads /libs:dll /fast ..\\hunt.f
+	ifort /compile_only /threads /libs:dll ..\\hunt.f
 
 urgent$(OBJ):
-	f77 /compile_only /threads /libs:dll /fast ..\\urgent.f
+	ifort /compile_only /threads /libs:dll ..\\urgent.f
 
 us$(OBJ):
-	f77 /compile_only /threads /libs:dll /fast ..\\us.f
+	ifort /compile_only /threads /libs:dll ..\\us.f
 else
 F77 = f77
 ifdef AIX
@@ -79,7 +79,8 @@ endif
 
 ifdef WIN32
 sddsbrightness$(EXE) : $(OBJNAMES)
-	f77 /exe /threads /libs:dll /link /WARN:3 /incremental:no /opt:ref /release usb.obj \
+	ifort /exe:sddsbrightness$(EXE) /threads /libs:dll \
+	$(OBJNAMES) /link /incremental:no /opt:ref /release \
 	c:\\epics\\extensions\\lib\\$(T_A)\\mdbcommon.lib \
 	c:\\epics\\extensions\\lib\\$(T_A)\\matlib.lib \
 	c:\\epics\\extensions\\lib\\$(T_A)\\fftpack.lib \
@@ -88,11 +89,11 @@ sddsbrightness$(EXE) : $(OBJNAMES)
 	c:\\epics\\extensions\\lib\\$(T_A)\\namelist.lib \
 	c:\\epics\\extensions\\lib\\$(T_A)\\mdbmth.lib \
 	c:\\epics\\extensions\\lib\\$(T_A)\\mdblib.lib \
-	c:\\epics\\extensions\\lib\\$(T_A)\\z.lib \
-	-out:sddsbrightness$(EXE) $(OBJNAMES)
+	c:\\epics\\extensions\\lib\\$(T_A)\\z.lib
 sddsurgent$(EXE) : $(URGENT_OBJNAMES)
-	f77 /exe /threads /libs:dll /link /WARN:3 /incremental:no /opt:ref /release urgent.obj us.obj \
-	c:\\epics\\extensions\\lib\\$(T_A)\\oagphy.lib \
+	ifort /exe:sddsurgent$(EXE) /threads /libs:dll \
+	$(URGENT_OBJNAMES) /link /incremental:no /opt:ref /release \
+	c:\\oag\\apps\\lib\\$(T_A)\\oagphy.lib \
 	c:\\epics\\extensions\\lib\\$(T_A)\\mdbcommon.lib \
 	c:\\epics\\extensions\\lib\\$(T_A)\\matlib.lib \
 	c:\\epics\\extensions\\lib\\$(T_A)\\fftpack.lib \
@@ -101,8 +102,7 @@ sddsurgent$(EXE) : $(URGENT_OBJNAMES)
 	c:\\epics\\extensions\\lib\\$(T_A)\\namelist.lib \
 	c:\\epics\\extensions\\lib\\$(T_A)\\mdbmth.lib \
 	c:\\epics\\extensions\\lib\\$(T_A)\\mdblib.lib \
-	c:\\epics\\extensions\\lib\\$(T_A)\\z.lib \
-	-out:sddsbrightness$(EXE) $(OBJNAMES)
+	c:\\epics\\extensions\\lib\\$(T_A)\\z.lib
 else
 sddsbrightness$(EXE): $(OBJNAMES)
 	$(F77) -o $@ $(OBJNAMES) -L$(INSTALL_LIB) -L$(EPICS_EXTENSIONS_LIB) -lmdbcommon -lmatlib -lfftpack -lSDDS1 -lrpnlib -lnamelist -lmdbmth -lmdblib -lz $(solaris_libs)

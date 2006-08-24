@@ -14,6 +14,9 @@
  * Michael Borland, 2002
  *
  $Log: not supported by cvs2svn $
+ Revision 1.11  2005/11/10 16:19:03  soliday
+ Updated to compile with a 64bit compiler.
+
  Revision 1.10  2005/11/04 16:27:07  borland
  Added Xiao's code for space charge element SCMULT.
 
@@ -101,7 +104,7 @@ char *option[N_OPTIONS] = {
   "emittanceratio", "coupling", "nospectralbroadening","method",
 } ;
 
-char *USAGE="sddsbrightness [-pipe=[input][,output]] [<twissFile>] [<SDDSoutputfile>]\n\
+char *USAGE1="sddsbrightness [-pipe=[input][,output]] [<twissFile>] [<SDDSoutputfile>]\n\
  -harmonics=<integer> -Krange=start=<value>,end=<value>,points=<integer>\n\
  -current=<Amps> -totalLength=<meters> -periodLength=<meters>\n\
  [-emittanceRatio=<value> | -coupling=<value>] [-noSpectralBroadening]\n\
@@ -110,8 +113,8 @@ harmonics        number of harmonics to compute\n\
 Krange           range and number of undulator K parameter to evaluate\n\
 current          beam current in amperes\n\
 totalLength      total length of the undulator in meters\n\
-periodLength     length of the undulator period in meters\n\
-emittanceRatio   ratio of y emittance to x emittance.  x emittance is\n\
+periodLength     length of the undulator period in meters\n";
+char *USAGE2="emittanceRatio   ratio of y emittance to x emittance.  x emittance is\n\
                  ex0 from input file. y emittance is ratio*ex0\n\
                  Ignored if ey0 parameter or ey column is found in file.\n\
 coupling         x emittance is ex0/(1+coupling), while y emittance is\n\
@@ -197,12 +200,12 @@ int main(int argc, char **argv)
   int32_t neks;
   double sigmax,sigmay,sigmaxp,sigmayp;
   char *deviceOption, *Units=NULL;
-
   SDDS_RegisterProgramName(argv[0]);
   argc = scanargs(&s_arg, argc, argv);
-  if (argc<2) 
-    bomb(NULL, USAGE);
-
+  if (argc<2) {
+    fprintf(stderr, "%s%s\n", USAGE1, USAGE2);
+    exit(1);
+  }
   KK=NULL;
   FnOut=Energy=Brightness=LamdarOut=NULL;
   deviceOption=NULL;
