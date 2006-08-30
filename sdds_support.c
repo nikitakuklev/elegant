@@ -1134,7 +1134,9 @@ void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long *lostOn
 			 long particles, long step)
 {
     long i;
-
+#ifdef SORT   /* sort for comparing the serial and parallel versions */
+    long **tmp, j;
+#endif
 #if USE_MPI  
     if (isSlave)
       return;
@@ -1146,9 +1148,9 @@ void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long *lostOn
 
 #ifdef SORT   /* sort for comparing the serial and parallel versions */
     if (SORT && particles) {
-	long tmp[particles][2], j;
-
+        tmp = tmalloc(sizeof(*tmp) * particles);
         for (j=0; j<particles; j++) {
+          tmp[j] = tmalloc(sizeof(*(tmp[j])) * 2);
 	  tmp[j][0] = lostOnPass[j]; 
           tmp[j][1] = particle[j][6];
 	}    
@@ -1191,7 +1193,17 @@ void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long *lostOn
     SDDS_DoFSync(SDDS_table);
 
     log_exit("dump_lost_particles");
+    
+#ifdef SORT   /* sort for comparing the serial and parallel versions */
+    if (SORT && particles) {
+      for (j=0; j<particles; j++) {
+	free(tmp[j]);
+      }
+      free(tmp);
     }
+#endif
+    
+}
 
 void dump_centroid(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, long n_elements, long step,
                           double p_central)
