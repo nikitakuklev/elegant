@@ -139,6 +139,9 @@ long do_tracking(
   unsigned long classFlags = 0;
   long nParticlesStartPass = 0;
   int myid, active = 1, lostSinceSeqMode = 0, needSort = 0;
+#ifdef SORT
+  int nToTrackAtLastSort;
+#endif
 #if USE_MPI 
   long old_nToTrack = 0, nParElements, nElements; 
   int checkFlags;
@@ -207,7 +210,7 @@ long do_tracking(
   watch_pt_seen = feedbackDriverSeen = 0;
 
 #ifdef SORT
-  int nToTrackAtLastSort = nToTrack;
+  nToTrackAtLastSort = nToTrack;
 #endif
   
   check_nan = 1;
