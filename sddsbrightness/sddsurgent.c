@@ -17,6 +17,9 @@
  * Hairong Shang, May 2005
 
 $Log: not supported by cvs2svn $
+Revision 1.4  2006/08/24 19:20:06  soliday
+Updated so that it would compile on WIN32 again.
+
 Revision 1.3  2006/07/31 23:49:26  jiaox
 Removed the -1 option for mode and method. Increased the NXP and NYP limits from 50 to 500. Fixed the bug of pipe option. Clean up the code to asuure the proper the mode/method combinations.
 
@@ -49,7 +52,7 @@ char *option[N_OPTIONS] = {
 
 typedef struct {
   long nPeriod, itype;
-  double period, kx, ky, phase;
+  double period, kx, ky, phase, energy;
 } UNDULATOR_PARAM;
 
 typedef struct {
@@ -77,6 +80,7 @@ typedef struct {
 #define PINHOLE_YPS_GIVEN 0x0800UL
 #define PINHOLE_NXP_GIVEN 0x1000UL
 #define PINHOLE_NYP_GIVEN 0x2000UL
+#define UNDULATOR_ENERGY_GIVEN 0x4000UL
 
 #define MAXIMUM_E 50000  /*maximum energy points */
 #define MAXIMUM_H 750000  /*maximum harmonics */
@@ -122,7 +126,7 @@ long GetISub(long mode, long icalc);
 
 char *USAGE1="sddsurgent <inputFile> <outputFile>\n\
     [-calculation=mode=<integer>,method=<integer>,harmonics=<integer>] \n\
-    [-undulator=period=<value>,numberOfPeriods=<integer>,kx=<value>,ky=<value>,phase=<value>] \n\
+    [-undulator=period=<value>,numberOfPeriods=<integer>,kx=<value>,ky=<value>,phase=<value>,energy=<eV>] \n\
     [-electronBeam=current=<value>,energy=<value>,spread=<value>,xsigma=<value>,ysigma=<value>,xprime=<value>,yprime=<value>,nsigma=<number>] \n\
     [-pinhole=distance=<value>,xposition=<value>,yposition=<value>,xsize=<value>,ysize=<value>,xnumber=<integer>,ynumber=<integer>]\n\
     [-alpha=steps=<integer>,delta=<value>] \n\
@@ -184,8 +188,8 @@ char *USAGE3="  urgent can have -6 mode (only valid for harmonics<=0), \n\
                  numbers are valid in us calculation.\n\
                 \n";
 char *USAGE4="undulator     Specifies the undulator parameters: period in m units, number of periods, \n\
-               horizontal deflection parameter (kx), \n\
-               vertical deflection parameter (ky), \n\
+               photon energy (in eV, results in calculation of kx and forces ky=0),\n\
+               horizontal deflection parameter (kx), vertical deflection parameter (ky), \n\
                and phase difference (degree) of canted undulator.\n\
                The default value of phase is 0, i.e., single undulator.\n\
 electronBeam  Specifies the electron beam parameters (which can also be provided by input file): \n\
@@ -336,18 +340,20 @@ int main(int argc, char **argv) {
         if (s_arg[i_arg].n_items<2)
           SDDS_Bomb("invalid -undulator syntax.");
         s_arg[i_arg].n_items--;
+        undulator_param.energy = undulator_param.kx = undulator_param.ky = 0;
         if (!scanItemList(&dummyFlags, s_arg[i_arg].list+1, &s_arg[i_arg].n_items, 0,
                           "period", SDDS_DOUBLE, &undulator_param.period, 1, UNDULATOR_PERIOD_GIVEN,
                           "numberOfPeriods", SDDS_LONG, &undulator_param.nPeriod, 1, UNDULATOR_NUMBER_OF_PERIODS_GIVEN,
                           "kx", SDDS_DOUBLE, &undulator_param.kx, 1, UNDULATOR_KX_GIVEN,
                           "ky", SDDS_DOUBLE, &undulator_param.ky, 1, UNDULATOR_KY_GIVEN,
+                          "energy", SDDS_DOUBLE, &undulator_param.energy, 1, UNDULATOR_ENERGY_GIVEN,
                           "phase", SDDS_DOUBLE, &undulator_param.phase, 1, 0,
                           NULL))
           SDDS_Bomb("invalid -undulator syntax");
-        if (!(dummyFlags&UNDULATOR_KX_GIVEN))
-          SDDS_Bomb("invalid -undulator syntax, kx is not given!");
-        if (!(dummyFlags&UNDULATOR_KY_GIVEN))
-          SDDS_Bomb("invalid -undulator syntax, ky is not given!");
+        if (!(dummyFlags&UNDULATOR_ENERGY_GIVEN) && !(dummyFlags&UNDULATOR_KX_GIVEN) &&
+            !(dummyFlags&UNDULATOR_KY_GIVEN)) {
+          SDDS_Bomb("invalid -undulator syntax, give kx, ky or energy!");
+        }
         if (!(dummyFlags&UNDULATOR_NUMBER_OF_PERIODS_GIVEN))
           SDDS_Bomb("invalid -undulator syntax, numberOfPeriods is not given!");
         if (undulator_param.phase>0) undulator_param.itype=2;
@@ -476,6 +482,23 @@ int main(int argc, char **argv) {
     SDDS_Bomb("Number of steps of phi (nPhi) for canted undulator (itype=2) should not exceed 25.");
   if (emin<0 || emax<0) 
     SDDS_Bomb("The minimum or maximum photon energy is less than 0.");
+  if (undulator_param.energy) {
+    /* calculate the Kx value for the undulator */
+    double gamma, lambda;
+    gamma = electron_param.energy*1e3/me_mev;
+    lambda = h_mks*c_mks/(undulator_param.energy*e_mks);
+    undulator_param.ky = 0;
+    undulator_param.kx = sqrt(4*gamma*gamma*lambda/undulator_param.period-2);
+    printf("lambda = %e, Kx is %e\n", lambda, undulator_param.kx);
+  }
+  if (emin==emax && emin==0) {
+    double gamma, lambda;
+    gamma = electron_param.energy*1e3/me_mev;
+    lambda = undulator_param.period/(2*gamma*gamma)*(1+0.5*(sqr(undulator_param.kx)+sqr(undulator_param.ky)));
+    emin = emax = h_mks*c_mks/lambda/e_mks;
+    nE = 2;
+    printf("Photon energy is %e eV\n", emin);
+  }
 
   if( us ) {
        if( mode == -6 ) 
