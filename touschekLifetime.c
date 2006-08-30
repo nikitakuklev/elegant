@@ -1,9 +1,11 @@
 /*************************************************************************\
- * Copyright (c) 2006 The University of Chicago, as Operator of Argonne
- * National Laboratory.
- * This file is distributed subject to a Software License Agreement found
- * in the file LICENSE that is included with this distribution. 
- \*************************************************************************/
+* Copyright (c) 2002 The University of Chicago, as Operator of Argonne
+* National Laboratory.
+* Copyright (c) 2002 The Regents of the University of California, as
+* Operator of Los Alamos National Laboratory.
+* This file is distributed subject to a Software License Agreement found
+* in the file LICENSE that is included with this distribution. 
+\*************************************************************************/
 
 /* 
  * $Log: not supported by cvs2svn $
@@ -13,9 +15,7 @@
  * Input files are elegant twiss file with radiation integrals
  * parameters, and a momentum aperture file.
  * Calculated parameters will go in an output sdds file.
- * 
- * Original author: Aimin Xiao, ANL.
- */
+*/
 
 #include <stdio.h>
 #include "mdb.h"
@@ -24,13 +24,11 @@
 #include "SDDS.h"
 #include "constants.h"
 
-static char *USAGE = "touschekLifetime <resultsFile>\n\
+static char *USAGE = "touschekLife <resultsFile>\n\
  -twiss=<twissFile> -aperture=<momentumApertureFile>\n\
  {-charge=<nC>|-particles=<value>} -coupling=<value>\n\
  {-RF=Voltage=<MV>,harmonic=<value>|-length=<mm>}\n\
- [-emitxInput=<value>] [-deltaInput=<value>] [-verbose=<value>]\n\n\
- Computes Touschek lifetime using Piwinski's method, DESY 98-179/ISSN 0418-09833\n\n\
- This is version 1, A. Xiao (ANL/APS).";
+ [-emitxInput=<value>] [-deltaInput=<value>] [-verbose=<value>]";
 
 #define VERBOSE 0
 #define CHARGE 1
@@ -60,8 +58,8 @@ char *option[N_OPTIONS] = {
 void TouschekLifeCalc();  
 void FIntegral(double *tm, double *B1, double *B2, double *F, long index); 
 double Fvalue (double t, double tm, double b1, double b2);
-double linear_interpolation(double *y, double *t, long n, double t0, long *i);
-
+double linear_interpolation(double *y, double *t, long n, double t0, long i);
+ 
 /* global varibles */
 long plane_orbit = 0;
 double *s, *s2, *dpp, *dpm;
@@ -74,7 +72,7 @@ long *eOccur1;
 double pCentral, sz, sigmap; 
 double NP, emitx, emity; 
 char **eName1, **eName2, **eType1;
-#define NDIV 1000;
+#define NDIV 10000;
 
 int main( int argc, char **argv)
 {
@@ -328,8 +326,8 @@ int main( int argc, char **argv)
   s = SDDS_GetColumnInDoubles(&twissPage, "s");
   elem2 = SDDS_CountRowsOfInterest(&aperPage);
   s2 = SDDS_GetColumnInDoubles(&aperPage, "s");
-  if (s[0]<s2[0] || s[elements-1]>s2[elem2-1])
-    bomb("aperture file s range does not cover twiss file s range", NULL);
+  if(elements<elem2)
+    fprintf(stdout, "warning: Twiss file is shorter than Aperture file\n");
   emitx = emitx0/ ( 1 + coupling);
   if (emitxInput) 
     emitx = emitxInput;
@@ -443,8 +441,40 @@ void TouschekLifeCalc(long verbosity)
   
   i=j=0;
   for (i = 0; i<elements; i++) {
-    pp = linear_interpolation(dpp, s2, elem2, s[i], &j); 
-    pm = linear_interpolation(dpm, s2, elem2, s[i], &j); 
+
+/* remove zero length elements from beamline. */
+    if(i>0) {
+      while(s[i]==s[i-1]) {
+        tm[i]=tm[i-1];
+        B1[i]=B1[i-1];
+        B2[i]=B2[i-1];
+        F[i]=F[i-1];
+        coeff[i]=coeff[i-1];
+        if(++i==elements) break;
+      }
+    }
+    if(i==elements) break;
+    
+    if(j>0) {
+      while(s2[j]==s2[j-1]) {
+        dpp[j]=dpp[j-1];
+        dpm[j]=dpm[j-1];
+        if(++j==elem2) {
+          j--;
+          break;
+        }        
+      }
+    }
+/* compare two files if it's for same beam line. */       
+    if(s[i]>s2[j]) j++;
+    if(j==elem2) j--;
+    if(s[i]==s2[j] && strcmp(eName1[i],eName2[j])!=0) {
+      printf("element1 %s and elem2 %s at s1 %lf s2 %lf is diff",eName1[i],eName2[j],s[i],s2[j]);
+      bomb("Twiss and Aperture file are not for same beamline",NULL);
+    }
+
+    pp = linear_interpolation(dpp, s2, elem2, s[i], j-1); 
+    pm = linear_interpolation(dpm, s2, elem2, s[i], j-1);
 
     tm[i] = fabs(pp)>fabs(pm)?fabs(pm):fabs(pp);
     tm[i] = beta2*tm[i]*tm[i];
@@ -488,12 +518,7 @@ void TouschekLifeCalc(long verbosity)
     }
     
     coeff[i] = a0*c0;
-    
-    if (i==0) FIntegral(tm, B1, B2, F, i);
-    if (i>0 && s[i]>s[i-1]) 
-      FIntegral(tm, B1, B2, F, i);
-    else
-      F[i] = F[i-1];
+    FIntegral(tm, B1, B2, F, i);
   }
   
   tLife = 0;  
@@ -503,7 +528,7 @@ void TouschekLifeCalc(long verbosity)
     }
   }
   tLife /= s[elements-1];
-  tLife = 1/tLife;
+  tLife = 1/tLife/3600;
   return;
 } 
 
@@ -535,8 +560,8 @@ void FIntegral(double *tm, double *B1, double *B2, double *F, long index)
     
     f1 = Fvalue(t1, tstart, b1, b2);
 
-    if (abs(f1*(HPI-k1))<1e-3*sum)
-      converge = 1;
+    if (f1>0 && f1*(HPI-k1)<1e-3*sum)
+      converge =1;
     
     sum +=(f1+f0)/2*step;
     k0 = k1;
@@ -549,8 +574,8 @@ void FIntegral(double *tm, double *B1, double *B2, double *F, long index)
 double Fvalue (double t, double tm, double b1, double b2)
 {
   double c0, c1, c2, result;
-  
-  c0 = (sqr(2*t+1)*(t/tm/(1+t)-1)/t+t-sqrt(t*tm*(1+t))-(2+1/2/t)*log(t/tm/(1+t)))*sqrt(1+t);
+
+  c0 = (sqr(2*t+1)*(t/tm/(1+t)-1)/t+t-sqrt(t*tm*(1+t))-(2+1/(2*t))*log(t/tm/(1+t)))*sqrt(1+t);
   c1 = exp(-b1*t);
   c2 = dbesi0(b2*t);
   result = c0 * c1 * c2;
@@ -562,36 +587,27 @@ double Fvalue (double t, double tm, double b1, double b2)
 }
 
 /* Only linear_interpolate from i=0 to i=n-2. For i<0 using i=0. For i>n-2, using i=n-1 */
-double linear_interpolation(double *y, double *t, long n, double t0, long *iStart)
+double linear_interpolation(double *y, double *t, long n, double t0, long i)
 {
-  long i;
-  i = *iStart;
   if (i<0)
     i = 0;
   if (i>=n-1)
     i = n-2;
   while (i<=n-2 && t0>t[i+1])
     i++;
-  if (i==n-1) {
-    *iStart = n-1;
-    return(y[n-1]);
-  }
+  if (i==n-1)
+    return (y[n-1]);
   while (i>=0 && t0<t[i])
     i--;
-  if (i==-1) {
-    *iStart =  0;
-    return(y[0]);
-  }
+  if (i==-1)
+    return (y[0]);
   if (!(t0>=t[i] && t0<=t[i+1])) {
     fprintf(stdout, "failure to bracket point in time array: t0=%e, t[0] = %e, t[n-1] = %e\n",
             t0, t[0], t[n-1]);
     fflush(stdout);
     abort();
   }
-
-  *iStart = i;
-
-  /* this handles zero length elements */ 
+ /* this handles zero length elements */ 
   if (t[i+1]==t[i])
     return y[i];
   
