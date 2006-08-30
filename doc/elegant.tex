@@ -17,13 +17,13 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 16.1.4\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
+\author{Program Version 16.1.5\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
 \maketitle
 
-\section{Highlights of What's New in Version 16.1.4}
+\section{Highlights of What's New in Version 16.1.5}
 
 This is mostly a minor bug-fix release, with one new element ({\tt
-ILMATRIX}). The most significant change as of version 16.1.4 is that a
+ILMATRIX}). The most significant change as of version 16.1.5 is that a
 parallel version ({\tt Pelegant}) is supported in this release.  All
 single-particle dynamics have been parallelized.
 
@@ -48,6 +48,10 @@ and references, see the specific entries in the manual.
 \item Fixed a bug in the lattice parser that resulted in a crash when a value was missing for a parameter.
 \item Previously, the {\tt momentum\_aperture} command would not work correctly for runs with multiple steps.
  This bug was discovered by H. Shang (APS) and has been fixed.
+\item Fixed a bug in chromaticity correction when \verb|link_elements| was used.  The chromaticity correction
+ matrix was sometimes wrong and the correction would not converge.  This bug was discovered by A. Xiao (APS).
+\item Fixed a bug in Twiss parameter output when \verb|link_elements| was used to change element lengths.
+ The \verb|s| values in the file were sometimes wrong.
 \end{itemize}
 
 \subsection{Bug Fixes for Elements}

@@ -382,7 +382,8 @@ long assert_element_links(ELEMENT_LINKS *links, RUN *run, LINE_LIST *beamline, l
     double value;
     ELEMENT_LIST **targ, **sour;
     char *p_elem;
-
+    short lengthChanged = 0;
+    
     log_entry("assert_element_links");
     if (!links || links->n_links==0) {
         log_exit("assert_element_links");
@@ -453,6 +454,9 @@ long assert_element_links(ELEMENT_LINKS *links, RUN *run, LINE_LIST *beamline, l
                 fprintf(stdout, "asserting value %.15g for %s#%ld.%s at z=%.15gm\n",
                     value, links->target_name[i_link], targ[i_elem]->occurence, links->item[i_link], targ[i_elem]->end_pos);
                 fflush(stdout);
+            if (entity_description[elem_type].flags&HAS_LENGTH && 
+                entity_description[elem_type].parameter[param].offset==0)
+              lengthChanged = 1;
             switch (data_type) {
                 case IS_DOUBLE:
                     *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)) = value;
@@ -479,6 +483,8 @@ long assert_element_links(ELEMENT_LINKS *links, RUN *run, LINE_LIST *beamline, l
 #if DEBUG
     print_line(stdout, beamline);
 #endif
+    if (lengthChanged)
+      compute_end_positions(beamline);
     log_exit("assert_element_links");
     return(matrices_changed);
     }

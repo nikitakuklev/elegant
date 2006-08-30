@@ -91,6 +91,14 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
           elast = eptr;
           eptr = eptr->succ;
         }
+        if (beamline->links) {
+          rebaseline_element_links(beamline->links, run, beamline);
+          if (assert_element_links(beamline->links, run, beamline, STATIC_LINK+DYNAMIC_LINK)) {
+            beamline->flags &= ~BEAMLINE_CONCAT_CURRENT;
+            beamline->flags &= ~BEAMLINE_TWISS_CURRENT;
+            beamline->flags &= ~BEAMLINE_RADINT_CURRENT;
+          }
+        }
         
         M = beamline->matrix = compute_periodic_twiss(&beta_x, &alpha_x, &eta_x, &etap_x, beamline->tune,
                                                       &beta_y, &alpha_y, &eta_y, &etap_y, beamline->tune+1, 
@@ -193,12 +201,14 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
             count++;
             }
         if (count==0) {
-            fprintf(stdout, "error: element %s is not in the beamline.\n",  chrom->name[i]);
-            fflush(stdout);
-            exit(1);
-            }
-        if (beamline->links)
-            assert_element_links(beamline->links, run, beamline, STATIC_LINK+DYNAMIC_LINK);
+          fprintf(stdout, "error: element %s is not in the beamline.\n",  chrom->name[i]);
+          fflush(stdout);
+          exit(1);
+        }
+        if (beamline->links) {
+          rebaseline_element_links(beamline->links, run, beamline);
+          assert_element_links(beamline->links, run, beamline, STATIC_LINK+DYNAMIC_LINK);
+        }
         if (M) {
           free_matrices(M);
           free(M);
@@ -426,10 +436,12 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
               change_defined_parameter(chrom->name[i], K2_param, type, K2, NULL, LOAD_FLAG_ABSOLUTE);
             }    
 
-        if (beamline->links)
-            assert_element_links(beamline->links, run, beamline, 
-                                 STATIC_LINK+DYNAMIC_LINK+(alter_defined_values?LINK_ELEMENT_DEFINITION:0));
-
+        if (beamline->links) {
+          rebaseline_element_links(beamline->links, run, beamline);
+          assert_element_links(beamline->links, run, beamline, 
+                               STATIC_LINK+DYNAMIC_LINK+(alter_defined_values?LINK_ELEMENT_DEFINITION:0));
+        }
+        
         if (beamline->matrix) {
           free_matrices(beamline->matrix);
           free(beamline->matrix);
