@@ -19,6 +19,9 @@
  * Hairong Shang, May 2005
 
 $Log: not supported by cvs2svn $
+Revision 1.6  2006/08/31 17:45:46  borland
+Removed printout statements.
+
 Revision 1.5  2006/08/30 22:37:35  borland
 Now computes the energy range if none is given.
 Now also computes the K value for the undulator if a photon energy is given for
@@ -195,8 +198,9 @@ char *USAGE3="  urgent can have -6 mode (only valid for harmonics<=0), \n\
                  numbers are valid in us calculation.\n\
                 \n";
 char *USAGE4="undulator     Specifies the undulator parameters: period in m units, number of periods, \n\
-               photon energy (in eV, results in calculation of kx and forces ky=0),\n\
-               horizontal deflection parameter (kx), vertical deflection parameter (ky), \n\
+               photon energy (in eV, results in calculation of ky and forces kx=0),\n\
+               horizontal-plane (vertical field) deflection parameter (ky)\n\
+               vertical-plane (horizontal field) deflection parameter (kx)\n\
                and phase difference (degree) of canted undulator.\n\
                The default value of phase is 0, i.e., single undulator.\n\
 electronBeam  Specifies the electron beam parameters (which can also be provided by input file): \n\
@@ -494,8 +498,8 @@ int main(int argc, char **argv) {
     double gamma, lambda;
     gamma = electron_param.energy*1e3/me_mev;
     lambda = h_mks*c_mks/(undulator_param.energy*e_mks);
-    undulator_param.ky = 0;
-    undulator_param.kx = sqrt(4*gamma*gamma*lambda/undulator_param.period-2);
+    undulator_param.kx = 0;
+    undulator_param.ky = sqrt(4*gamma*gamma*lambda/undulator_param.period-2);
   }
   if (emin==emax && emin==0) {
     double gamma, lambda;
