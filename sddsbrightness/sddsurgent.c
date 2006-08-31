@@ -1,3 +1,5 @@
+
+
 /*************************************************************************\
 * Copyright (c) 2002 The University of Chicago, as Operator of Argonne
 * National Laboratory.
@@ -17,6 +19,11 @@
  * Hairong Shang, May 2005
 
 $Log: not supported by cvs2svn $
+Revision 1.5  2006/08/30 22:37:35  borland
+Now computes the energy range if none is given.
+Now also computes the K value for the undulator if a photon energy is given for
+the -undulator option.
+
 Revision 1.4  2006/08/24 19:20:06  soliday
 Updated so that it would compile on WIN32 again.
 
@@ -489,7 +496,6 @@ int main(int argc, char **argv) {
     lambda = h_mks*c_mks/(undulator_param.energy*e_mks);
     undulator_param.ky = 0;
     undulator_param.kx = sqrt(4*gamma*gamma*lambda/undulator_param.period-2);
-    printf("lambda = %e, Kx is %e\n", lambda, undulator_param.kx);
   }
   if (emin==emax && emin==0) {
     double gamma, lambda;
@@ -497,7 +503,6 @@ int main(int argc, char **argv) {
     lambda = undulator_param.period/(2*gamma*gamma)*(1+0.5*(sqr(undulator_param.kx)+sqr(undulator_param.ky)));
     emin = emax = h_mks*c_mks/lambda/e_mks;
     nE = 2;
-    printf("Photon energy is %e eV\n", emin);
   }
 
   if( us ) {
