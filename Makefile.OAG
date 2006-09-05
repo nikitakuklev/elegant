@@ -86,7 +86,7 @@ endif
 USR_CFLAGS = 	-I$(EPICS_EXTENSIONS)/src/SDDS/include -I$(EPICS_EXTENSIONS_INCLUDE) \
 		-DIEEE_MATH -DzLib 
 
-USR_CFLAGS_Linux = -I/lib/modules/`uname -r`
+USR_CFLAGS_Linux = -I/lib/modules/`uname -r`/build/include
 
 USR_CFLAGS_DEFAULT += -DUNIX -DMINIMIZE_MEMORY
 
@@ -105,6 +105,7 @@ USR_LIBS = 	mdbcommon matlib fftpack SDDS1 \
 		rpnlib mdbmth namelist mdblib \
 		meschach
 SYS_PROD_LIBS_DEFAULT += z 
+SYS_PROD_LIBS_Linux += z 
 SYS_PROD_LIBS_solaris += z curses rt 
 endif
 
@@ -150,7 +151,10 @@ else #ifneq ($(SUNPERF), 0)
 ifneq ($(LAPACK), 0)
 USR_CFLAGS += -DHAVE_LAPACK -DLAPACK
 ifeq ($(OS_CLASS),Linux)
-OP_SYS_LDLIBS += -llapack -lblas -lg2c
+SYS_PROD_LIBS_Linux += lapack blas
+#The g2c library is needed for gcc versions before FC2
+gcc-version = $(shell gcc -v 2> /dev/stdout | grep "^gcc" | awk '{print $$4}')
+SYS_PROD_LIBS_Linux += $(shell if [ "$(call gcc-version)" -lt "20040412" ]; then echo "g2c" ; else echo "" ; fi;)
 endif #ifeq ($(OS_CLASS),Linux)
 ifeq ($(OS_CLASS),solaris)
 OPT_CFLAGS_YES=
