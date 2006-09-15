@@ -29,7 +29,7 @@
 
 #if defined(linux)
 #include <sched.h>
-#include <linux/version.h>
+#include <build/include/linux/version.h>
 #else
 #define KERNEL_VERSION(a,b,c) 0
 #endif
@@ -67,10 +67,10 @@ void showUsageOrGreeting (unsigned long mode)
 {
 #if USE_MPI
   char *USAGE="usage: mpirun -np <number of processes> Pelegant <inputfile> [-macro=<tag>=<value>,[...]]";
-  char *GREETING="This is elegant 16.1.7, "__DATE__", by M. Borland, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang and M. Borland.";
+  char *GREETING="This is elegant 16.2Beta1, "__DATE__", by M. Borland, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang and M. Borland.";
 #else
   char *USAGE="usage: elegant <inputfile> [-macro=<tag>=<value>,[...]] [-cpuList=<number>[,<number>]]";
-  char *GREETING="This is elegant 16.1.7, "__DATE__", by M. Borland, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.";
+  char *GREETING="This is elegant 16.2Beta1, "__DATE__", by M. Borland, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.";
 #endif
   if (mode&SHOW_GREETING)
     puts(GREETING);
@@ -130,7 +130,8 @@ void showUsageOrGreeting (unsigned long mode)
 #define APERTURE_INPUT    48
 #define COUPLED_TWISS_OUTPUT 49
 #define LINEAR_CHROMATIC_TRACKING_SETUP 50
-#define N_COMMANDS      51
+#define RPN_LOAD 51
+#define N_COMMANDS      52
 
 char *command[N_COMMANDS] = {
     "run_setup", "run_control", "vary_element", "error_control", "error_element", "awe_beam", "bunched_beam",
@@ -142,7 +143,7 @@ char *command[N_COMMANDS] = {
     "load_parameters", "sdds_beam", "subprocess", "fit_traces", "sasefel", "alter_elements",
     "optimization_term", "slice_analysis", "divide_elements", "tune_shift_with_amplitude",
     "transmute_elements", "twiss_analysis", "semaphores", "frequency_map", "insert_sceffects", "momentum_aperture", 
-    "aperture_input", "coupled_twiss_output", "linear_chromatic_tracking_setup"
+    "aperture_input", "coupled_twiss_output", "linear_chromatic_tracking_setup", "rpn_load",
   } ;
 
 char *description[N_COMMANDS] = {
@@ -197,6 +198,7 @@ char *description[N_COMMANDS] = {
     "aperture_input                   provide an SDDS file with the physical aperture vs s", 
     "coupled_twiss_output             compute coupled beamsizes and twiss parameters",
     "linear_chromatic_tracking_setup  set up chromatic derivatives for linear chromatic tracking",
+    "rpn_load                         load SDDS data into rpn variables",
   } ;
 
 #define NAMELIST_BUFLEN 65536
@@ -993,6 +995,9 @@ char **argv;
       break;
     case RPN_EXPRESSION:
       run_rpn_expression(&namelist_text);
+      break;
+    case RPN_LOAD:
+      run_rpn_load(&namelist_text, &run_conditions);
       break;
     case PROGRAM_TRACE:
       process_trace_request(&namelist_text);
