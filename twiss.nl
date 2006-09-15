@@ -61,6 +61,7 @@
     STRING reference_file = NULL;
     STRING reference_element = NULL;
     long reference_element_occurrence = 0;
+    long reflect_reference_values = 0;
     long concat_order = 3;
     long higher_order_chromaticity = 0;
     long higher_order_chromaticity_points = 5;

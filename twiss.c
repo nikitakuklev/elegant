@@ -1118,6 +1118,12 @@ void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
                                 &eta_x, &etap_x, &eta_y, &etap_y,
                                 reference_file, reference_element,
                                 reference_element_occurrence);
+      if (reflect_reference_values) {
+        alpha_x = -alpha_x;
+        alpha_y = -alpha_y;
+        etap_x = -etap_x;
+        etap_y = -etap_y;
+      }
       fprintf(stdout, "Starting twiss parameters from reference file:\nbeta, alpha x: %le, %le\nbeta, alpha y: %le, %le\n",
               beta_x, alpha_x, beta_y, alpha_y);
       fprintf(stdout, "eta, eta' x: %le, %le\neta, eta' y: %le, %le\n",
