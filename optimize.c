@@ -541,6 +541,8 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
     log_entry("do_optimize");
 
     optimRecords = ignoreOptimRecords = nextOptimRecordSlot = 0;
+    bestResult = DBL_MAX;
+    
     stopOptimization  = 0;
     run               = run1;
     control           = control1;
