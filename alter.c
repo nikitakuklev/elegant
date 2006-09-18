@@ -194,7 +194,8 @@ void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
         fprintf(stdout, "Error: no matches for %s\n", name);
         exit(1);
       }
-    }
+    } else 
+      compute_end_positions(beamline);
     if (changedDefinedParameter)
       free(changedDefinedParameter);
   }
