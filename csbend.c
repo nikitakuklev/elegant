@@ -21,7 +21,10 @@
 
 void addRadiationKick(double *Qx, double *Qy, double *dPoP, long sqrtOrder,
 		      double x, double h0, double Fx, double Fy,
-		      double ds, double radCoef, double dsISR, double isrCoef);
+		      double ds, double radCoef, double dsISR, double isrCoef,
+                      long distributionBased, double meanPhotonsPerMeter,
+                      double normalizedCriticalEnergy, double Po);
+double pickNormalizedPhotonEnergy(double RN);
 
 void integrate_csbend_ord2(double *Qf, double *Qi, double s, long n, long sqrtOrder, double rho0, double p0);
 void integrate_csbend_ord4(double *Qf, double *Qi, double s, long n, long sqrtOrder, double rho0, double p0);
@@ -43,9 +46,15 @@ static double Fx_y, Fx_x_y, Fx_x2_y, Fx_x3_y;
 static double Fx_y3, Fx_x_y3;
 
 static double rho0, rho_actual, rad_coef=0, isrConstant=0;
+static double meanPhotonsPerRadian0, meanPhotonsPerMeter0, normalizedCriticalEnergy0;
+static long distributionBasedRadiation;
+static long photonCount = 0;
+static double energyCount = 0, radiansTotal = 0;
 
 static long particle_lost;
 static double s_lost;
+
+long inversePoissonCDF(double mu, double C);
 
 #if !defined(PARALLEL)
 /* to avoid problems with HP parallel compiler */
@@ -71,7 +80,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   double dxf, dyf, dzf;
   double delta_xp;
   double e1_kick_limit, e2_kick_limit;
-  
+
   if (!csbend)
     bomb("null CSBEND pointer (track_through_csbend)", NULL);
 
@@ -166,7 +175,17 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
                               137.0359895/pow3(fabs(rho_actual)));
   else
     isrConstant = 0;
-                            
+
+  if ((distributionBasedRadiation = csbend->distributionBasedRadiation)) {
+    /* Sands 5.15 */
+    meanPhotonsPerRadian0 = 5.0/(2.0*sqrt(3))*Po/137.0359895;  
+    meanPhotonsPerMeter0 = (5*c_mks*Po*me_mks*re_mks)/(2*sqrt(3)*hbar_mks*rho_actual);
+    /* Critical energy normalized to beam energy, Sands 5.9 */
+    normalizedCriticalEnergy0 = 3.0/2*hbar_mks*c_mks*pow3(Po)/fabs(rho_actual)/(Po*me_mks*sqr(c_mks));
+    fprintf(stderr, "Mean photons per radian expected: %le   ECritical/E: %le\n", 
+            meanPhotonsPerRadian0, normalizedCriticalEnergy0);
+  }
+  
   Fy_0  = 1;
   Fy_x  = -nh;
   Fy_x2 = Fy_x3 = Fy_x4 = Fy_y2 = Fy_x_y2 = Fy_x2_y2 = Fy_y4 = 0;
@@ -380,6 +399,12 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     coord[4] += dzf*EXSQRT(1+ sqr(coord[1]) + sqr(coord[3]), csbend->sqrtOrder);
   }
 
+  if (distributionBasedRadiation) {
+    radiansTotal += fabs(csbend->angle);
+    fprintf(stderr, "%e radians, photons/particle=%e, photons/radian = %e, mean y = %e\n",
+            radiansTotal, photonCount/(1.0*i_top), photonCount/radiansTotal/(1.0*i_top), energyCount/photonCount);
+  }
+  
   return(i_top+1);
 }
 
@@ -470,7 +495,8 @@ void integrate_csbend_ord2(double *Qf, double *Qi, double s, long n, long sqrtOr
     if (rad_coef || isrConstant)
       addRadiationKick(&QX, &QY, &DPoP, sqrtOrder, 
 		       X, 1./rho0, Fx, Fy, 
-		       ds, rad_coef, ds, isrConstant);
+		       ds, rad_coef, ds, isrConstant, 
+                       distributionBasedRadiation, meanPhotonsPerMeter0, normalizedCriticalEnergy0, p0);
     
     if (i==n-1) {
       /* do half-length drift */
@@ -628,7 +654,8 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double s, long n, long sqrtOr
     if (rad_coef || isrConstant) {
       addRadiationKick(&QX, &QY, &DPoP, sqrtOrder,
 		       X, 1./rho0, Fx, Fy, 
-		       ds, rad_coef, s/3, isrConstant);
+		       ds, rad_coef, s/3, isrConstant,
+                       distributionBasedRadiation, meanPhotonsPerMeter0, normalizedCriticalEnergy0, p0);
     }
 
     /* do second drift */
@@ -673,8 +700,9 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double s, long n, long sqrtOr
     if (rad_coef || isrConstant)
       addRadiationKick(&QX, &QY, &DPoP, sqrtOrder,
 		       X, 1./rho0, Fx, Fy, 
-		       ds, rad_coef, s/3, isrConstant);
-    
+		       ds, rad_coef, s/3, isrConstant,
+                       distributionBasedRadiation, meanPhotonsPerMeter0, normalizedCriticalEnergy0, p0);
+
     /* do third drift */
     dsh = s*(1-BETA)/(2-BETA)/2;
     if ((f=sqr(1+DPoP)-sqr(QY))<=0) {
@@ -716,7 +744,8 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double s, long n, long sqrtOr
     if (rad_coef || isrConstant) 
       addRadiationKick(&QX, &QY, &DPoP, sqrtOrder,
 		       X, 1./rho0, Fx, Fy, 
-		       ds, rad_coef, s/3, isrConstant);
+		       ds, rad_coef, s/3, isrConstant,
+                       distributionBasedRadiation, meanPhotonsPerMeter0, normalizedCriticalEnergy0, p0);
     
     /* do fourth drift */
     dsh = s/2/(2-BETA);
@@ -833,7 +862,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   
   reset_driftCSR();
   getTrackingContext(&tContext);
-
+  
   if (!csbend)
     bomb("null CSBEND pointer (track_through_csbend)", NULL);
 
@@ -952,6 +981,9 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
                               137.0359895/pow3(fabs(rho_actual)));
   else
     isrConstant = 0;
+
+  distributionBasedRadiation = 0;
+  
   Fy_0  = 1;
   Fy_x  = -nh;
   Fy_x2 = Fy_x3 = Fy_x4 = Fy_y2 = Fy_x_y2 = Fy_x2_y2 = Fy_y4 = 0;
@@ -2996,23 +3028,179 @@ void applyFilterTable(double *function, long bins, double dx, long fValues,
 
 void addRadiationKick(double *Qx, double *Qy, double *dPoP, long sqrtOrder,
 		      double x, double h0, double Fx, double Fy,
-		      double ds, double radCoef, double dsISR, double isrCoef)
+		      double ds, double radCoef, double dsISR, double isrCoef,
+                      long distributionBased, double meanPhotonsPerMeter,
+                      double normalizedCriticalEnergy0, double Po)
 {
-  double denom, xp, yp, F2, deltaFactor, dsFactor;
-
-  denom = EXSQRT(sqr(1+*dPoP)-sqr(*Qx)-sqr(*Qy), sqrtOrder);
-  xp = *Qx/denom;
-  yp = *Qy/denom;
-  *Qx /= (1 + *dPoP);
-  *Qy /= (1 + *dPoP);
-  deltaFactor = sqr(1 + *dPoP);
-  F2 = sqr(Fx)+sqr(Fy);
+  double f, xp, yp, F2, F, deltaFactor, dsFactor;
+  double nMean, dDelta, thetaRms;
+  long i, nEmitted;
+  double y, logy;
+  double normalizedCriticalEnergy;
+  
+  f = (1+x*h0)/EXSQRT(sqr(1+*dPoP)-sqr(*Qx)-sqr(*Qy), sqrtOrder);
+  xp = *Qx*f;
+  yp = *Qy*f;
   dsFactor = EXSQRT(sqr(1+x*h0)+sqr(xp)+sqr(yp), sqrtOrder);
-  if (radCoef)
-    *dPoP -= radCoef*deltaFactor*F2*ds*dsFactor;
-  if (isrCoef)
-    /* The minus sign is for consistency with the previous version. */
-    *dPoP -= isrCoef*deltaFactor*pow(F2,1.5)*sqrt(dsISR*dsFactor)*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
-  *Qx *= (1 + *dPoP);
-  *Qy *= (1 + *dPoP);
+  F2 = sqr(Fx)+sqr(Fy);
+
+  if (!distributionBased) {
+    deltaFactor = sqr(1 + *dPoP);
+    *Qx /= (1 + *dPoP);
+    *Qy /= (1 + *dPoP);
+    if (radCoef)
+      *dPoP -= radCoef*deltaFactor*F2*ds*dsFactor;
+    if (isrCoef)
+      /* The minus sign is for consistency with the previous version. */
+      *dPoP -= isrCoef*deltaFactor*pow(F2,1.5)*sqrt(dsISR*dsFactor)*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
+    *Qx *= (1 + *dPoP);
+    *Qy *= (1 + *dPoP);
+  } else {
+    F = sqrt(F2);
+    /* Compute the mean number of photons emitted = meanPhotonsPerMeter*meters */
+    nMean = meanPhotonsPerMeter*dsISR*dsFactor*F;
+    /* Pick the actual number of photons emitted from Poisson distribution */
+    nEmitted = inversePoissonCDF(nMean, random_2(1));
+    /* Adjust normalized critical energy to local field strength (FSE is already included via rho_actual) */
+    /* Variation with energy offset included below. */
+    normalizedCriticalEnergy = normalizedCriticalEnergy0*(1+*dPoP)*F;
+    /* For each photon, pick its energy and emission angles */
+    for (i=0; i<nEmitted; i++) {
+      /* Pick photon energy normalized to critical energy */
+      y=pickNormalizedPhotonEnergy(random_2(1));
+      /* Multiply by critical energy normalized to beam energy, adjusting for variation with
+       * individual electron energy offset. */
+      dDelta = normalizedCriticalEnergy*(1 + *dPoP)*y;
+      photonCount ++;
+      energyCount += y;
+      /* Change the total electron momentum */
+      *dPoP -= dDelta;
+      /* Compute rms spread in electron angle = (rms photon angle)*dDelta */
+      logy = log10(y);
+      thetaRms = dDelta*pow(10,
+                            -2.418673276661232e-01
+                            + logy*(-4.472680955382907e-01+logy*(-4.535350424882360e-02
+                                                                 -logy*6.181818621278201e-03)))/Po;
+      /* Compute change in electron angle due to photon angle */
+      xp += thetaRms*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
+      yp += thetaRms*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
+    }
+    f = (1 + *dPoP)/EXSQRT(sqr(1+x*h0)+sqr(xp)+sqr(yp), sqrtOrder);
+    *Qx = xp*f;
+    *Qy = yp*f;
+  }
+  
+}
+
+long inversePoissonCDF(double mu, double C)
+{
+  double sum, expMinusMu, term;
+  long r, rMax;
+  
+  r = 0;
+  if ((rMax = 50*mu)<10)
+    rMax = 10;
+  expMinusMu = exp(-mu);
+  term = sum = expMinusMu;
+  while (r<=rMax && C>=sum) {
+    term *= mu/(++r);
+    sum += term;
+  }
+  /* fprintf(stderr, "inversePoissonCDF: r=%ld for mu=%e, C=%e\n", r, mu, C); */
+  return r;
+}
+
+/* Return randomly-chosen photon energy normalized to the critical energy */
+double pickNormalizedPhotonEnergy(double RN) 
+{
+  long interpCode;
+  double value;
+  static double ksiTable[200] = {
+1.000000000000000e-07, 1.103351074554523e-07, 1.217383310646075e-07, 1.343200559586096e-07, 1.482020747927429e-07,
+1.635189113578160e-07, 1.804187271717404e-07, 1.990651067932036e-07, 2.196385495378513e-07, 2.423384085535426e-07,
+2.673842889192374e-07, 2.950186137528527e-07, 3.255088868939687e-07, 3.591505332405233e-07, 3.962690515521040e-07,
+4.372236992560780e-07, 4.824109227537678e-07, 5.322685173365927e-07, 5.872789374272963e-07, 6.479745823257918e-07,
+7.149429940622619e-07, 7.888329490825732e-07, 8.703595415651299e-07, 9.603117573208774e-07, 1.059560346180786e-06,
+1.169066741218290e-06, 1.289890855361064e-06, 1.423201921186706e-06, 1.570290408531488e-06, 1.732581081736759e-06,
+1.911644944229382e-06, 2.109214732888093e-06, 2.327202951554652e-06, 2.567720983189001e-06, 2.833097369770374e-06,
+3.125899929822278e-06, 3.448963034857157e-06, 3.805415579829938e-06, 4.198708930670648e-06, 4.632648449870741e-06,
+5.111434736502657e-06, 5.639704554113462e-06, 6.222573518736223e-06, 6.865680963315421e-06, 7.575252265320169e-06,
+8.358158724774669e-06, 9.221982709850737e-06, 1.017508139438384e-05, 1.122668092062936e-05, 1.238696398672945e-05,
+1.366716918178818e-05, 1.507968136669955e-05, 1.663817388115531e-05, 1.835773664119261e-05, 2.025502748788774e-05,
+2.234840008736815e-05, 2.465811862080412e-05, 2.720654509486478e-05, 3.001836976776838e-05, 3.312079173855694e-05,
+3.654384295607505e-05, 4.032066206311618e-05, 4.448784496925588e-05, 4.908569920644159e-05, 5.415873276357582e-05,
+5.975605436563109e-05, 6.593190648243325e-05, 7.274602260436053e-05, 8.026436452046312e-05, 8.855971070475770e-05,
+9.771244913354602e-05, 1.078111117026042e-04, 1.189534517802125e-04, 1.312473286188584e-04, 1.448118705606887e-04,
+1.597782996280689e-04, 1.762914808166189e-04, 1.945112638414439e-04, 2.146141870658145e-04, 2.367947478384840e-04,
+2.612676279365202e-04, 2.882697280504828e-04, 3.180626634504074e-04, 3.509347182037930e-04, 3.872040386295810e-04,
+4.272217166086854e-04, 4.713754443547046e-04, 5.200925166529275e-04, 5.738444084509028e-04, 6.331514454110419e-04,
+6.985881553542330e-04, 7.707878748140519e-04, 8.504493031356108e-04, 9.383435740575402e-04, 1.035322090321881e-03,
+1.142323583631410e-03, 1.260383487096962e-03, 1.390644637378946e-03, 1.534368742954572e-03, 1.692947192375836e-03,
+1.867914439234830e-03, 2.060964191854564e-03, 2.273966197872862e-03, 2.508982774009835e-03, 2.768287894108917e-03,
+3.054391670052556e-03, 3.370064913211098e-03, 3.718364390303022e-03, 4.102660002531562e-03, 4.526671789275104e-03,
+4.994505863796759e-03, 5.510692966986859e-03, 6.080227102658105e-03, 6.708621448554406e-03, 7.401960924834442e-03,
+8.166960997457158e-03, 9.011022498794720e-03, 9.942316075907171e-03, 1.096985907697749e-02, 1.210360516825099e-02,
+1.335452196639184e-02, 1.473471854468308e-02, 1.625755786686624e-02, 1.793779326078131e-02, 1.979167811637735e-02,
+2.183715833862031e-02, 2.409403673367596e-02, 2.658418068941497e-02, 2.933167681381903e-02, 3.236312132092089e-02,
+3.570786033002121e-02, 3.939830569107346e-02, 4.347015239952341e-02, 4.796281661196050e-02, 5.291978786613488e-02,
+5.838910396032759e-02, 6.442366592223334e-02, 7.108188831787103e-02, 7.842822357081021e-02, 8.653385973120035e-02,
+9.547720673026440e-02, 1.053448316706813e-01, 1.162322544203413e-01, 1.282449697899047e-01, 1.414991970199129e-01,
+1.561232236887442e-01, 1.722586122799903e-01, 1.900616973883389e-01, 2.097047392306722e-01, 2.313778527830923e-01,
+2.552908366685073e-01, 2.816753658394816e-01, 3.107867644741113e-01, 3.429067722728065e-01, 3.783463152734567e-01,
+4.174487166108054e-01, 4.605924179038830e-01, 5.081949415377639e-01, 5.607170865377987e-01, 6.186676294134220e-01,
+6.826074965088431e-01, 7.531554325044472e-01, 8.309943513916955e-01, 9.168782178988778e-01, 1.011638437307961e+00,
+1.116191954411967e+00, 1.231550862322391e+00, 1.358832474428039e+00, 1.499269100004806e+00, 1.654219599620752e+00,
+1.825183916868001e+00, 2.013817817791925e+00, 2.221947831729780e+00, 2.451587713539253e+00, 2.704960411634972e+00,
+2.984519634347505e+00, 3.292972664221137e+00, 3.633303772560254e+00, 4.008807416353689e+00, 4.423119788364888e+00,
+4.880253623874576e+00, 5.384631444881934e+00, 5.941135706944927e+00, 6.555154946882635e+00, 7.232636842499024e+00,
+7.980135322277263e+00, 8.804886289535018e+00, 9.714875109915180e+00, 1.071891743371295e+01, 1.182672581369469e+01,
+1.304902401296616e+01, 1.439764568247248e+01, 1.588565738231238e+01, 1.752745256838863e+01, 1.933892408641842e+01,
+2.133760842747432e+01, 2.354287285156119e+01, 2.597604764912193e+01, 2.866068635656761e+01, 3.162277660168377e+01,
+  };
+  static double FTable[200] = {
+0.000000000000000e+00, 1.916076787477782e-04, 3.896006996482199e-04, 5.941918318862451e-04, 8.056009324383097e-04,
+1.024055848381587e-03, 1.249790750550654e-03, 1.483048166648730e-03, 1.724078746036354e-03, 1.973142196708657e-03,
+2.230505581886648e-03, 2.496445345396121e-03, 2.771247236692068e-03, 3.055207274452791e-03, 3.348630028390361e-03,
+3.651830594751359e-03, 3.965134731031564e-03, 4.288879835176022e-03, 4.623413241840414e-03, 4.969094094184835e-03,
+5.326293748409966e-03, 5.695396753910589e-03, 6.076799201662367e-03, 6.470910424341261e-03, 6.878153743490802e-03,
+7.298967431515415e-03, 7.733803160081558e-03, 8.183127443537616e-03, 8.647422816544402e-03, 9.127188753348749e-03,
+9.622940276393589e-03, 1.013520903749105e-02, 1.066454503150837e-02, 1.121151744173274e-02, 1.177671348365064e-02,
+1.236073899369794e-02, 1.296422080554008e-02, 1.358780748228750e-02, 1.423216848805338e-02, 1.489799412460975e-02,
+1.558599872144761e-02, 1.629692120583610e-02, 1.703152471578071e-02, 1.779059568966145e-02, 1.857494805017956e-02,
+1.938542355142036e-02, 2.022289197174982e-02, 2.108824911944652e-02, 2.198242222447622e-02, 2.290636998738409e-02,
+2.386108352008151e-02, 2.484758298036615e-02, 2.586692442491193e-02, 2.692019946744418e-02, 2.800853716992024e-02,
+2.913309895920114e-02, 3.029508724043934e-02, 3.149574455091229e-02, 3.273635664445640e-02, 3.401824527268329e-02,
+3.534277891084329e-02, 3.671137126806664e-02, 3.812548585471972e-02, 3.958662612641901e-02, 4.109634873515033e-02,
+4.265626122542306e-02, 4.426802842804741e-02, 4.593335936539433e-02, 4.765402350963371e-02, 4.943184769110832e-02,
+5.126872354805775e-02, 5.316659282366442e-02, 5.512746484065590e-02, 5.715341374017695e-02, 5.924658623150298e-02,
+6.140918640941097e-02, 6.364349310252398e-02, 6.595185823803101e-02, 6.833671466591608e-02, 7.080056062143326e-02,
+7.334597653614160e-02, 7.597562485484224e-02, 7.869225776043576e-02, 8.149870143512994e-02, 8.439787179667740e-02,
+8.739277614110098e-02, 9.048652052440445e-02, 9.368229400251835e-02, 9.698338259579789e-02, 1.003931731738744e-01,
+1.039151601553213e-01, 1.075529299247917e-01, 1.113101721273651e-01, 1.151906862423360e-01, 1.191983871317649e-01,
+1.233372898347266e-01, 1.276115170379167e-01, 1.320253087906072e-01, 1.365830262538971e-01, 1.412891370418868e-01,
+1.461482173909104e-01, 1.511649654280279e-01, 1.563442022251273e-01, 1.616908577721921e-01, 1.672099659551390e-01,
+1.729066816736924e-01, 1.787862779608226e-01, 1.848541324986933e-01, 1.911157129897795e-01, 1.975765981791920e-01,
+2.042424693223850e-01, 2.111190968366426e-01, 2.182123129823302e-01, 2.255280364093208e-01, 2.330722555939911e-01,
+2.408510146807283e-01, 2.488703695479055e-01, 2.571364147677684e-01, 2.656552557248533e-01, 2.744329918358574e-01,
+2.834756510338721e-01, 2.927892168723024e-01, 3.023795848158047e-01, 3.122525396990814e-01, 3.224136624350130e-01,
+3.328683532505147e-01, 3.436217660758924e-01, 3.546787751835536e-01, 3.660438466342482e-01, 3.777210511874600e-01,
+3.897139689097260e-01, 4.020256374046105e-01, 4.146583795759362e-01, 4.276137967068266e-01, 4.408926345108801e-01,
+4.544946994027770e-01, 4.684186411623745e-01, 4.826619073829413e-01, 4.972205662043195e-01, 5.120891723276200e-01,
+5.272605134477985e-01, 5.427255018050126e-01, 5.584729557729631e-01, 5.744894096219003e-01, 5.907588309168045e-01,
+6.072624513895929e-01, 6.239785205673239e-01, 6.408820784452591e-01, 6.579446823895981e-01, 6.751342192611512e-01,
+6.924146905220633e-01, 7.097460264751286e-01, 7.270839321656986e-01, 7.443798099419868e-01, 7.615807315005799e-01,
+7.786294876113157e-01, 7.954647879517510e-01, 8.120215670459850e-01, 8.282314411609915e-01, 8.440233375507971e-01,
+8.593244148619452e-01, 8.740611430503441e-01, 8.881606055288961e-01, 9.015520524341847e-01, 9.141687939214495e-01,
+9.259502059677074e-01, 9.368438193470870e-01, 9.468075155760183e-01, 9.558117659236037e-01, 9.638415906288208e-01,
+9.708980284014210e-01, 9.769991556010101e-01, 9.821804314564566e-01, 9.864941142754962e-01, 9.900075473722704e-01,
+9.928006021230259e-01, 9.949622418923878e-01, 9.965864066620354e-01, 9.977674409043544e-01, 9.985957390441925e-01,
+9.991538996011060e-01, 9.995138052403904e-01, 9.997348433078885e-01, 9.998634876235176e-01, 9.999340435105117e-01,
+9.999702897374164e-01, 9.999876125809349e-01, 9.999952573365697e-01, 9.999983471293699e-01, 9.999994807411241e-01,
+9.999998545219742e-01, 9.999999640793696e-01, 9.999999922833868e-01, 9.999999985785893e-01, 9.999999997790499e-01,
+9.999999999715266e-01, 9.999999999970198e-01, 9.999999999997560e-01, 9.999999999999872e-01, 1.000000000000000e+00,
+  };
+  value = interp(ksiTable, FTable, 200, RN, 0, 2, &interpCode);
+  if (!interpCode)
+    return ksiTable[0];
+  return value;
 }

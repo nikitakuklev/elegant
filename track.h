@@ -713,7 +713,7 @@ extern char *entity_text[N_TYPES];
 #define N_RAMPP_PARAMS 1
 #define N_NISEPT_PARAMS 9
 #define N_STRAY_PARAMS 7
-#define N_CSBEND_PARAMS 35
+#define N_CSBEND_PARAMS 36
 #define N_MATTER_PARAMS 8
 #define N_RFMODE_PARAMS 22
 #define N_TRFMODE_PARAMS 15
@@ -1695,6 +1695,7 @@ typedef struct {
     long use_bn;
     double b1, b2, b3, b4;
     long isr, sqrtOrder;
+    long distributionBasedRadiation;
     /* for internal use only: */
     unsigned long edgeFlags;
     double k1_internal, k2_internal, k3_internal, k4_internal;

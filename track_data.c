@@ -1041,6 +1041,7 @@ PARAMETER csbend_param[N_CSBEND_PARAMS] = {
     {"B4", "1/M$a4$n", IS_DOUBLE, 0, (long)((char *)&csbend_example.b4), NULL, 0.0, 0, "K4 = b4*rho"},
     {"ISR", "", IS_LONG, 0, (long)((char *)&csbend_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (scattering)?"},
     {"SQRT_ORDER", "", IS_LONG, 0, (long)((char *)&csbend_example.sqrtOrder), NULL, 0.0, 0, "Order of expansion of square-root in Hamiltonian.  0 means no expansion."},
+    {"USE_RAD_DIST", "", IS_LONG, 0, (long)((char *)&csbend_example.distributionBasedRadiation), NULL, 0.0, 0, "If nonzero, overrides SYNCH_RAD and ISR, causing simulation of radiation from distributions, including opening angle."},
     };
 
 
