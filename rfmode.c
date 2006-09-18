@@ -39,6 +39,7 @@ void track_through_rfmode(
     long n_summed, max_hist, n_occupied;
     static long been_warned = 0;
     double Qrp, VbImagFactor, Q;
+    long deltaPass;
     
     if (charge) {
       rfmode->mp_charge = charge->macroParticleCharge;
@@ -50,7 +51,7 @@ void track_through_rfmode(
 
     if (pass%rfmode->pass_interval)
       return;
-      
+    
     if (!been_warned) {        
         if (rfmode->freq<1e3 && rfmode->freq)  {
             fprintf(stdout, "\7\7\7warning: your RFMODE frequency is less than 1kHz--this may be an error\n");
@@ -70,7 +71,7 @@ void track_through_rfmode(
     if (rfmode->detuned_until_pass>pass) {
       return ;
     }
-    
+
     if (!rfmode->initialized)
         bomb("track_through_rfmode called with uninitialized element", NULL);
 
@@ -116,8 +117,6 @@ void track_through_rfmode(
     V_sum = Vr_sum = phase_sum = Vc = Vcr = Q_sum = 0;
     n_summed = max_hist = n_occupied = 0;
     nb2 = rfmode->n_bins/2;
-    if (rfmode->single_pass)
-      rfmode->V = 0;
     
     /* find frequency and Q at this time */
     omega = PIx2*rfmode->freq;
@@ -140,12 +139,19 @@ void track_through_rfmode(
     }
     tau = 2*Q/omega;
     k = omega/4*(rfmode->RaInternal)/rfmode->Q;
+    if ((deltaPass = (pass-rfmode->detuned_until_pass)) <= (rfmode->rampPasses-1)) 
+      k *= (deltaPass+1.0)/rfmode->rampPasses;
 
     /* These adjustments per Zotter and Kheifets, 3.2.4 */
     Qrp = sqrt(Q*Q - 0.25);
     VbImagFactor = 1/(2*Qrp);
     omega *= Qrp/Q;
 
+    if (rfmode->single_pass) {
+      rfmode->V = rfmode->last_phase = 0;
+      rfmode->last_t = tmin + 0.5*dt;
+    }
+    
     for (ib=0; ib<=lastBin; ib++) {
         if (!Ihist[ib])
             continue;
@@ -163,9 +169,9 @@ void track_through_rfmode(
         V = rfmode->V*damping_factor;
         rfmode->Vr = V*cos(phase);
         rfmode->Vi = V*sin(phase);
-
+        
         /* compute beam-induced voltage for this bin */
-        Vb = 2*k*rfmode->mp_charge*rfmode->pass_interval*Ihist[ib]; 
+        Vb = 2*k*rfmode->mp_charge*rfmode->pass_interval*Ihist[ib];
         Vbin[ib] = rfmode->Vr - Vb/2;
         
         /* add beam-induced voltage to cavity voltage */
@@ -173,7 +179,7 @@ void track_through_rfmode(
         rfmode->Vi -= Vb*VbImagFactor;
         rfmode->last_phase = atan2(rfmode->Vi, rfmode->Vr);
         rfmode->V = sqrt(sqr(rfmode->Vr)+sqr(rfmode->Vi));
- 
+        
         V_sum  += Ihist[ib]*rfmode->V;
         Vr_sum += Ihist[ib]*rfmode->Vr;
         phase_sum += Ihist[ib]*rfmode->last_phase;

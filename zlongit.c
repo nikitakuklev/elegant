@@ -78,7 +78,6 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
       rampFactor = 1;
     else
       rampFactor = (i_pass+1.0)/zlongit->rampPasses;
-    fprintf(stderr, "rampFactor = %e\n", rampFactor);
     
     not_first_call += 1;
     
@@ -300,7 +299,7 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
         if (zlongit->Zreal  || zlongit->Zimag) 
             bomb("can't specify both broad_band impedance and Z(f) files for ZLONGIT element", NULL);
         optimizeBinSettingsForImpedance(timeSpan, zlongit->freq, zlongit->Q,
-                                        &(zlongit->bin_size), &(zlongit->n_bins));
+                                        &(zlongit->bin_size), &(zlongit->n_bins), zlongit->max_n_bins);
         df = 1/(zlongit->n_bins*zlongit->bin_size)/(zlongit->freq);
         nfreq = zlongit->n_bins/2 + 1;
         fprintf(stdout, "ZLONGIT has %ld frequency points with df=%e\n",

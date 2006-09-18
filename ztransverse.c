@@ -259,7 +259,8 @@ void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long part
       bomb("can't specify both broad_band impedance and Z(f) files for ZTRANSVERSE element", NULL);
 
     optimizeBinSettingsForImpedance(timeSpan, ztransverse->freq, ztransverse->Q,
-                                    &(ztransverse->bin_size), &(ztransverse->n_bins));
+                                    &(ztransverse->bin_size), &(ztransverse->n_bins),
+                                    ztransverse->max_n_bins);
     
     nfreq = ztransverse->n_bins/2 + 1;
     ztransverse->iZ[0] = tmalloc(sizeof(**(ztransverse->iZ))*ztransverse->n_bins);
@@ -433,15 +434,24 @@ double *getTransverseImpedance(SDDS_DATASET *SDDSin,
 }
 
 void optimizeBinSettingsForImpedance(double timeSpan, double freq, double Q,
-                                     double *binSize, long *nBins)
+                                     double *binSize, long *nBins, long maxBins)
 {
-  long n_bins;
+  long n_bins, maxBins2;
   double bin_size, factor, factor1, factor2;
   TRACKING_CONTEXT tcontext;
   
   n_bins = *nBins;
   bin_size = *binSize;
   getTrackingContext(&tcontext);
+
+  if (maxBins<=0)
+    maxBins2 = pow(2, 20);
+  else
+    maxBins2 = pow(2, (long)(log(maxBins)/log(2)+1));
+  if (maxBins>0 && maxBins!=maxBins2)
+    fprintf(stdout, "Adjusted maximum number of bins for %s %s to %ld\n",
+            entity_name[tcontext.elementType],
+            tcontext.elementName, maxBins2);
   
   if (1/(2*freq*bin_size)<10) {
     /* want maximum frequency in Z > 10*fResonance */
@@ -458,12 +468,16 @@ void optimizeBinSettingsForImpedance(double timeSpan, double freq, double Q,
             tcontext.elementName);
     n_bins = pow(2,
                  (long)(log(2*timeSpan*1.05/bin_size)/log(2)+1));
+    if (maxBins2<n_bins) {
+      fprintf(stderr, "  Maximum number of bins does not allow sufficient time span!\n");
+      exit(1);
+    }
     fprintf(stdout, "  Number of bins adjusted to %ld\n",
             n_bins);
     fflush(stdout);
   }
   if (Q<1) 
-    /* Want frequency resolution < fResonance/200 and < fResonanceWidth/200 */
+    /* Ideally, want frequency resolution < fResonance/200 and < fResonanceWidth/200 */
     factor = 200/(n_bins*bin_size*freq/Q);
   else
     factor = 200/(n_bins*bin_size*freq);
@@ -471,19 +485,22 @@ void optimizeBinSettingsForImpedance(double timeSpan, double freq, double Q,
     fprintf(stdout, "%s %s has too few bins or excessively small bin size for given frequency\n",
             entity_name[tcontext.elementType],
             tcontext.elementName);
-    if (n_bins*factor>pow(2,20)) {
-      factor1 = pow(2,20)/n_bins;
-      factor2 = factor/factor1;
-      n_bins = pow(2,20);
-      bin_size *= factor2;
-      if (1/(2*freq*bin_size)<10) {
-        fprintf(stdout, "It isn't possible to model this element with a reasonable number of bins.  Try using an RFMODE or TRFMODE instead.\n");
+    if (n_bins*factor>maxBins2) {
+      if ((n_bins*factor)/maxBins2>50) {
+        if (Q<1)
+          fprintf(stdout, " With %ld bins, the frequency resolution is only %.1g times the resonant frequency\n",
+                  maxBins2, freq*maxBins2*bin_size);
+        else
+          fprintf(stdout, " With %ld bins, the frequency resolution is only %.1g times the resonance width\n",
+                  maxBins2, freq/Q*maxBins2*bin_size);
+        fprintf(stdout, " It isn't possible to model this situation accurately with %ld bins.  Consider the RFMODE or TRFMODE element.\n",
+                maxBins2);
+        fprintf(stdout, " Alternatively, consider increasing your bin size or maximum number of bins\n");
         exit(1);
       }
-      fprintf(stdout, "  Number of bins adjusted to %ld\n",
-              n_bins);
-      fprintf(stdout, "  Bin size adjusted to %e\n",
-              bin_size);
+      n_bins = maxBins2;
+      fprintf(stdout, "  Number of bins adjusted to %ld\n", n_bins);
+      
     } else {
       n_bins = pow(2, (long)(log(n_bins*factor)/log(2)+1));
       fprintf(stdout, "  Number of bins adjusted to %ld\n",

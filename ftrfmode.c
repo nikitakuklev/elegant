@@ -35,6 +35,8 @@ void track_through_ftrfmode(
   double Px, Py, Pz;
   double Q, Qrp;
   long lastBin, imode;
+  long deltaPass;
+  double rampFactor;
 
   if (charge)
     trfmode->mp_charge = charge->macroParticleCharge;
@@ -92,6 +94,12 @@ void track_through_ftrfmode(
       lastBin = ib;
   }
 
+  rampFactor = 0;
+  if (pass > (trfmode->rampPasses-1)) 
+    rampFactor = 1;
+  else
+    rampFactor = (pass+1.0)/trfmode->rampPasses;
+    
   for (ib=0; ib<=lastBin; ib++) {
     if (!xsum[ib] && !ysum[ib])
       continue;
@@ -125,7 +133,7 @@ void track_through_ftrfmode(
         /* add this cavity's contribution to this bin */
         Vxbin[ib] += trfmode->Vxr[imode];
         /* compute beam-induced voltage for this bin */
-        Vxb = 2*k*trfmode->mp_charge*xsum[ib]*trfmode->xfactor; 
+        Vxb = 2*k*trfmode->mp_charge*xsum[ib]*trfmode->xfactor*rampFactor; 
         /* add beam-induced voltage to cavity voltage---it is imaginary as
          * the voltage is 90deg out of phase 
          */
@@ -147,7 +155,7 @@ void track_through_ftrfmode(
         /* add this cavity's contribution to this bin */
         Vybin[ib] += trfmode->Vyr[imode];
         /* compute beam-induced voltage for this bin */
-        Vyb = 2*k*trfmode->mp_charge*ysum[ib]*trfmode->yfactor;
+        Vyb = 2*k*trfmode->mp_charge*ysum[ib]*trfmode->yfactor*rampFactor;
         /* add beam-induced voltage to cavity voltage---it is imaginary as
          * the voltage is 90deg out of phase 
          */

@@ -715,13 +715,13 @@ extern char *entity_text[N_TYPES];
 #define N_STRAY_PARAMS 7
 #define N_CSBEND_PARAMS 35
 #define N_MATTER_PARAMS 8
-#define N_RFMODE_PARAMS 21
-#define N_TRFMODE_PARAMS 14
+#define N_RFMODE_PARAMS 22
+#define N_TRFMODE_PARAMS 15
 #define N_TWMTA_PARAMS 17
-#define N_ZLONGIT_PARAMS 23
+#define N_ZLONGIT_PARAMS 24
 #define N_MODRF_PARAMS 15
 #define N_SREFFECTS_PARAMS 14
-#define N_ZTRANSVERSE_PARAMS 28
+#define N_ZTRANSVERSE_PARAMS 29
 #define N_IBSCATTER_PARAMS 9
 #define N_FMULT_PARAMS 10
 #define N_BMAPXY_PARAMS 5
@@ -745,8 +745,8 @@ extern char *entity_text[N_TYPES];
 #define N_LTHINLENS_PARAMS 8
 #define N_LMIRROR_PARAMS 9
 #define N_EMATRIX_PARAMS (1+6+6*6+6*21+3)
-#define N_FRFMODE_PARAMS  9
-#define N_FTRFMODE_PARAMS 12
+#define N_FRFMODE_PARAMS  10
+#define N_FTRFMODE_PARAMS 13
 #define N_TFBPICKUP_PARAMS 18
 #define N_TFBDRIVER_PARAMS 20
 #define N_LSCDRIFT_PARAMS  9
@@ -1815,6 +1815,7 @@ typedef struct {
     long single_pass;          /* controls accumulation of voltage from turn-to-turn */
     long pass_interval;        /* number of passes between applications of wake */
     char *fwaveform, *Qwaveform;  /* waveforms for f/f0 and Q/Q0 vs time */
+    long rampPasses;           /* If nonzero, the number of passes over which to ramp impedance up */
     /* values for restarting the cavity */
     /* for internal use: */
     double RaInternal;         /* used to store Ra or 2*Rs, whichever is nonzero */
@@ -1848,6 +1849,7 @@ typedef struct {
     double cutoffFrequency;    /* modes above this frequency are ignored */
     char *outputFile;          /* output file for voltage in each mode */
     long flushInterval;       /* interval at which data is flushed */
+    long rampPasses;           /* If nonzero, the number of passes over which to ramp impedance up */
     /* for internal use: */
     double mp_charge;          /* charge per macroparticle */
     long initialized;          /* indicates that beam has been seen */
@@ -1877,6 +1879,7 @@ typedef struct {
     long single_pass;          /* controls accumulation of voltage from turn-to-turn */
     double dx, dy;
     double xfactor, yfactor;
+    long rampPasses;           /* If nonzero, the number of passes over which to ramp impedance up */
     /* for internal use: */
     double RaInternal;         /* used to store Ra or 2*Rs, whichever is nonzero */
     long doX, doY;
@@ -1908,6 +1911,7 @@ typedef struct {
     double cutoffFrequency;    /* modes above this frequency are ignored */
     char *outputFile;          /* output file for voltage in each mode */
     long flushInterval;       /* interval at which data is flushed */
+    long rampPasses;           /* If nonzero, the number of passes over which to ramp impedance up */
     /* for internal use: */
     double mp_charge;          /* charge per macroparticle */
     long initialized;          /* indicates that beam has been seen */
@@ -1938,6 +1942,7 @@ typedef struct {
     char *Zreal, *Zimag;       /* impedance vs frequency files */
     double bin_size;           /* size of charge bins */
     long n_bins;               /* number of charge bins--must be 2^n */
+    long max_n_bins;
     char *wakes;               /* name of file to save wake potentials in */
     long wake_interval;        /* interval (in turns) between outupt of wakes */
     long area_weight;          /* flag to turn on area-weighting */
@@ -1972,6 +1977,7 @@ typedef struct {
     double bin_size;           /* size of charge bins */
     long interpolate;          /* whether to interpolate voltage or not */
     long n_bins;               /* number of charge bins--must be 2^n */
+    long max_n_bins;
     long smoothing;            /* flag to turn on smoothing */
     long SGOrder, SGHalfWidth; /* Savitzky-Golay smoothing parameters */
     double dx, dy;
@@ -2875,7 +2881,7 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
                                double Po, RUN *run, long i_pass,
                                CHARGE *charge);
 void optimizeBinSettingsForImpedance(double timeSpan, double freq, double Q,
-                                     double *binSize, long *nBins);
+                                     double *binSize, long *nBins, long maxBins);
 void convolveArrays(double *output, long outputs, 
                     double *a1, long n1,
                     double *a2, long n2);

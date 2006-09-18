@@ -1176,6 +1176,7 @@ PARAMETER rfmode_param[N_RFMODE_PARAMS] = {
     {"PASS_INTERVAL", "", IS_LONG, 0, (long)((char *)&rfmode_example.pass_interval), NULL, 0.0, 1, "interval in passes at which to apply PASS_INTERVAL times the field (may increase speed)"},
     {"FREQ_WAVEFORM", "", IS_STRING, 0, (long)((char *)&rfmode_example.fwaveform), NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving frequency/f0 vs time, where f0 is the frequency given with the FREQ parameter"},
     {"Q_WAVEFORM", "", IS_STRING, 0, (long)((char *)&rfmode_example.Qwaveform), NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving qualityFactor/Q0 vs time, where Q0 is the quality factor given the the Q parameter."},
+    {"RAMP_PASSES", "", IS_LONG, 0, (long)((char *)&rfmode_example.rampPasses), NULL, 0.0, 0, "Number of passes over which to linearly ramp up the impedance to full strength."},
     };
 
 FRFMODE frfmode_example;
@@ -1190,6 +1191,7 @@ PARAMETER frfmode_param[N_FRFMODE_PARAMS] = {
     {"CUTOFF", "HZ", IS_DOUBLE, 0, (long)((char *)&frfmode_example.cutoffFrequency), NULL, 0.0, 0, "If >0, cutoff frequency.  Modes above this frequency are ignored."},
     {"OUTPUT_FILE", "", IS_STRING, 0, (long)((char *)&frfmode_example.outputFile), NULL, 0.0, 0, "Output file for voltage in each mode."},
     {"FLUSH_INTERVAL", "", IS_LONG, 0, (long)((char *)&frfmode_example.flushInterval), NULL, 0.0, 1, "Interval in passes at which to flush output data."},
+    {"RAMP_PASSES", "", IS_LONG, 0, (long)((char *)&frfmode_example.rampPasses), NULL, 0.0, 0, "Number of passes over which to linearly ramp up the impedance to full strength."},
     };
 
 TRFMODE trfmode_example;
@@ -1209,6 +1211,7 @@ PARAMETER trfmode_param[N_TRFMODE_PARAMS] = {
     {"DY", "M", IS_DOUBLE, 0, (long)((char *)&trfmode_example.dy), NULL, 0.0, 0, "misalignment"},
     {"XFACTOR", "", IS_DOUBLE, 0, (long)((char *)&trfmode_example.xfactor), NULL, 1.0, 0, "factor by which to multiply shunt impedances"},
     {"YFACTOR", "", IS_DOUBLE, 0, (long)((char *)&trfmode_example.yfactor), NULL, 1.0, 0, "factor by which to multiply shunt impedances"},
+    {"RAMP_PASSES", "", IS_LONG, 0, (long)((char *)&trfmode_example.rampPasses), NULL, 0.0, 0, "Number of passes over which to linearly ramp up the impedance to full strength."},
     };
 
 FTRFMODE ftrfmode_example;
@@ -1226,6 +1229,7 @@ PARAMETER ftrfmode_param[N_FTRFMODE_PARAMS] = {
     {"CUTOFF", "HZ", IS_DOUBLE, 0, (long)((char *)&ftrfmode_example.cutoffFrequency), NULL, 0.0, 0, "If >0, cutoff frequency.  Modes above this frequency are ignored."},
     {"OUTPUT_FILE", "", IS_STRING, 0, (long)((char *)&ftrfmode_example.outputFile), NULL, 0.0, 0, "Output file for voltage in each mode."},
     {"FLUSH_INTERVAL", "", IS_LONG, 0, (long)((char *)&ftrfmode_example.flushInterval), NULL, 0.0, 1, "Interval in passes at which to flush output data."},
+    {"RAMP_PASSES", "", IS_LONG, 0, (long)((char *)&ftrfmode_example.rampPasses), NULL, 0.0, 0, "Number of passes over which to linearly ramp up the impedance to full strength."},
     };
 
 ZLONGIT zlongit_example;
@@ -1241,6 +1245,7 @@ PARAMETER zlongit_param[N_ZLONGIT_PARAMS] = {
     {"ZIMAG", "", IS_STRING, 0, (long)((char *)&zlongit_example.Zimag), NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving imaginary part of impedance vs f (BROAD_BAND=0)"},
     {"BIN_SIZE", "S", IS_DOUBLE, 0, (long)((char *)&zlongit_example.bin_size), NULL, 0.0, 0, "bin size for current histogram (use 0 for autosize)"},
     {"N_BINS", "", IS_LONG, 0, (long)((char *)&zlongit_example.n_bins), NULL, 0.0, 128, "number of bins for current histogram"},
+    {"MAX_N_BINS", "", IS_LONG, 0, (long)((char *)&zlongit_example.max_n_bins), NULL, 0.0, 0, "Maximum number of bins for current histogram"},
     {"WAKES", "", IS_STRING, 0, (long)((char *)&zlongit_example.wakes), NULL, 0.0, 0, "filename for output of wake"},
     {"WAKE_INTERVAL", "", IS_LONG, 0, (long)((char *)&zlongit_example.wake_interval), NULL, 0.0, 1, "interval in passes at which to output wake"},
     {"AREA_WEIGHT", "", IS_LONG, 0, (long)((char *)&zlongit_example.area_weight), NULL, 0.0, 0, "use area-weighting in assigning charge to histogram?"},
@@ -1251,7 +1256,7 @@ PARAMETER zlongit_param[N_ZLONGIT_PARAMS] = {
     {"REVERSE_TIME_ORDER", "", IS_LONG, 0, (long)((char *)&zlongit_example.reverseTimeOrder), NULL, 0.0, 0, "Reverse time-order of particles for wake computation?"},
     {"FACTOR", "", IS_DOUBLE, 0, (long)((char *)&zlongit_example.factor), NULL, 1.0, 0, "Factor by which to multiply impedance."},
     {"START_ON_PASS", "", IS_LONG, 0, (long)((char *)&zlongit_example.startOnPass), NULL, 1.0, 0, "The pass on which the impedance effects start."},
-    {"RAMP_PASSES", "", IS_LONG, 0, (long)((char *)&zlongit_example.rampPasses), NULL, 1.0, 0, "Number of passes over which to linearly ramp up the impedance to full strength."},
+    {"RAMP_PASSES", "", IS_LONG, 0, (long)((char *)&zlongit_example.rampPasses), NULL, 0.0, 0, "Number of passes over which to linearly ramp up the impedance to full strength."},
     {"HIGH_FREQUENCY_CUTOFF0", "", IS_DOUBLE, 0, (long)((char*)&zlongit_example.highFrequencyCutoff0), NULL, -1.0, 0, "Frequency at which smoothing filter begins.  If not positive, no frequency filter smoothing is done.  Frequency is in units of Nyquist (0.5/binsize)."},
     {"HIGH_FREQUENCY_CUTOFF1", "", IS_DOUBLE, 0, (long)((char*)&zlongit_example.highFrequencyCutoff1), NULL, -1.0, 0, "Frequency at which smoothing filter is 0.  If not given, defaults to HIGH_FREQUENCY_CUTOFF0."},
     };
@@ -1319,6 +1324,7 @@ PARAMETER ztransverse_param[N_ZTRANSVERSE_PARAMS] = {
     {"BIN_SIZE", "S", IS_DOUBLE, 0, (long)((char *)&ztransverse_example.bin_size), NULL, 0.0, 0, "bin size for current histogram (use 0 for autosize)"},
     {"INTERPOLATE", "", IS_LONG, 0, (long)((char *)&ztransverse_example.interpolate), NULL, 0.0, 0, "interpolate wake?"},
     {"N_BINS", "", IS_LONG, 0, (long)((char *)&ztransverse_example.n_bins), NULL, 0.0, 128, "number of bins for current histogram"},
+    {"MAX_N_BINS", "", IS_LONG, 0, (long)((char *)&ztransverse_example.max_n_bins), NULL, 0.0, 0, "Maximum number of bins for current histogram"},
     {"SMOOTHING", "", IS_LONG, 0, (long)((char *)&ztransverse_example.smoothing), NULL, 0.0, 0, "smooth current histogram?"},
     {"SG_ORDER", "", IS_LONG, 0, (long)((char *)&ztransverse_example.SGOrder), NULL, 0.0, 1, "Savitzky-Golay filter order for smoothing"},
     {"SG_HALFWIDTH", "", IS_LONG, 0, (long)((char *)&ztransverse_example.SGHalfWidth), NULL, 0.0, 4, "Savitzky-Golay filter halfwidth for smoothing"},

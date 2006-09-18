@@ -34,6 +34,8 @@ void track_through_frfmode(
   double Vc, Vcr, dgamma;
   long max_hist, n_occupied, imode;
   double Qrp, VbImagFactor, Q;
+  long deltaPass;
+  double rampFactor;
   
   if (charge)
     rfmode->mp_charge = charge->macroParticleCharge;
@@ -90,6 +92,12 @@ void track_through_frfmode(
     n_binned++;
   }
 
+  rampFactor = 0;
+  if (pass > (rfmode->rampPasses-1)) 
+    rampFactor = 1;
+  else
+    rampFactor = (pass+1.0)/rfmode->rampPasses;
+    
   for (ib=0; ib<=lastBin; ib++) {
     t = tmin+(ib+0.5)*dt;           /* middle arrival time for this bin */
     if (!Ihist[ib])
@@ -122,7 +130,7 @@ void track_through_frfmode(
       rfmode->Vi[imode] = V*sin(phase);
 
       /* compute beam-induced voltage for this bin */
-      Vb = 2*k*rfmode->mp_charge*Ihist[ib]; 
+      Vb = 2*k*rfmode->mp_charge*Ihist[ib]*rampFactor; 
       Vbin[ib] += rfmode->Vr[imode] - Vb/2;
       
       /* add beam-induced voltage to cavity voltage */
