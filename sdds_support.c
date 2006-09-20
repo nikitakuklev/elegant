@@ -1119,11 +1119,14 @@ void dump_phase_space(SDDS_TABLE *SDDS_table, double **particle, long particles,
     }
 
 #ifdef SORT
-static int comp_IDs1(const void *coord1, const void *coord2)
+static int comp_IDs1(const void **coord1, const void **coord2)
   {
-    if (((long*) coord1)[1] <((long*) coord2)[1]) 
+    long v1, v2;
+    v1 = (*((long**)coord1))[1];
+    v2 = (*((long**)coord2))[1];
+    if (v1 < v2) 
       return -1;
-    else if (((long*) coord1)[1] > ((long*) coord2)[1]) 
+    else if (v1 > v2)
       return  1;
     else 
       return 0;
@@ -1154,12 +1157,22 @@ void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long *lostOn
 	  tmp[j][0] = lostOnPass[j]; 
           tmp[j][1] = particle[j][6];
 	}    
+        /* This call looks strange, but works because the particle data is contiguous.  The sort
+         * actually moves the data around without changing the pointers.
+         */
 	qsort(particle[0], particles, COORDINATES_PER_PARTICLE*sizeof(double), comp_IDs); 
-	qsort(tmp[0], particles, 2*sizeof(long), comp_IDs1);
+        /* This call is more standard.  We sort the pointers and leave the data in place. */
+	qsort(tmp, particles, sizeof(long*), comp_IDs1);
 	for (j=0; j<particles; j++) {
 	  lostOnPass[j] = tmp[j][0];
 	}
       }
+    if (SORT && particles) {
+      for (j=0; j<particles; j++) {
+	free(tmp[j]);
+      }
+      free(tmp);
+    }
 #endif
 
     for (i=0; i<particles; i++)
@@ -1193,15 +1206,6 @@ void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long *lostOn
     SDDS_DoFSync(SDDS_table);
 
     log_exit("dump_lost_particles");
-    
-#ifdef SORT   /* sort for comparing the serial and parallel versions */
-    if (SORT && particles) {
-      for (j=0; j<particles; j++) {
-	free(tmp[j]);
-      }
-      free(tmp);
-    }
-#endif
     
 }
 
