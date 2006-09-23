@@ -30,7 +30,7 @@ void track_through_rf_deflector(
   double Estrength;    /* |e.V.L/nSections|/(gap.m.c^2) */
   double x, xp, y, yp;
   double beta, dp_r, px, py, pz, beta_z, pc;
-  double omega, Ephase;
+  double omega, k, Ephase;
   double cos_tilt, sin_tilt, dtLight, tLight;
   double length;
   long ip, is, n_kicks;
@@ -94,7 +94,10 @@ void track_through_rf_deflector(
   dtLight = length/c_mks/2;
   Estrength = (e_mks*rf_param->voltage/n_kicks)/(me_mks*sqr(c_mks));
   Ephase = rf_param->phase*PI/180.0 + omega*(rf_param->time_offset-t_first+dtLight);
+  k = omega/c_mks;
   if (isSlave || !notSinglePart) {
+    if (rf_param->tilt)
+      rotateBeamCoordinates(initial, n_particles, rf_param->tilt);
     for (ip=0; ip<n_particles; ip++) {
       x  = initial[ip][0];
       xp = initial[ip][1];
@@ -116,14 +119,16 @@ void track_through_rf_deflector(
 	if (is==0 || is==n_kicks) {
 	  /* first half-drift and last half-drift */
 	  t_part += (length/(2*c_mks*beta_z));
-	  tLight = dtLight;
+          if (!rf_param->standingWave)
+            tLight = dtLight;
 	  x += xp*length/2;
 	  y += yp*length/2;
 	  if (is==n_kicks)
 	    break;
 	} else {
 	  t_part += (length/(c_mks*beta_z));
-	  tLight += 2*dtLight; 
+          if (!rf_param->standingWave)
+            tLight += 2*dtLight; 
 	  x += xp*length;
 	  y += yp*length;
 	}
@@ -131,9 +136,10 @@ void track_through_rf_deflector(
 	fprintf(stdout, "ip=%ld  is=%ld  phase=%f\n",
 		ip, is, fmod((t_part-tLight)*omega+Ephase, PIx2)*180/PI);
 #endif
-	dp_r = Estrength*cos((t_part-tLight)*omega + Ephase);
-	xp = (px += dp_r*cos_tilt)/pz;
-	yp = (py += dp_r*sin_tilt)/pz;
+	px += Estrength*cos((t_part-tLight)*omega + Ephase);
+        pz -= Estrength*k*x*sin((t_part-tLight)*omega + Ephase);
+	xp = px/pz;
+	yp = py/pz;
 	pc = sqrt(sqr(px)+sqr(py)+sqr(pz));
       }
       beta = pc/sqrt(1+sqr(pc));
@@ -150,6 +156,8 @@ void track_through_rf_deflector(
 	      final[ip][4], final[ip][5]);
 #endif
     }
+    if (rf_param->tilt)
+      rotateBeamCoordinates(initial, n_particles, -rf_param->tilt);
   }
 }
 

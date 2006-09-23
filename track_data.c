@@ -69,7 +69,7 @@ as a function of the actual positions (x and y).",
 command.",
     "An alpha magnet implemented as a matrix, up to 3rd order.  PART is used to split\n\
 the magnet into halves.  XS<n> and DP<n> allow momentum filtration at the midpoint.",
-    "A simple traveling wave deflecting RF cavity.   See also RFTM110.",
+    "A simple traveling or standing wave deflecting RF cavity.   See also RFTM110.",
     "A TM-mode RF cavity specified by the on-axis Ez field.",
     "A linearly-ramped electric field deflector, using an approximate analytical solution FOR LOW ENERGY PARTICLES.",
     "A numerically-integrated accelerating TM RF cavity with spatially-constant fields.",
@@ -460,6 +460,7 @@ PARAMETER rfdf_param[N_RFDF_PARAMS] = {
     {"TIME_OFFSET", "S", IS_DOUBLE, 0, (long)((char *)&rfdf_example.time_offset), NULL, 0.0, 0, "time offset (adds to phase)"},
     {"N_KICKS", "", IS_LONG, 0, (long)((char *)&rfdf_example.n_kicks), NULL, 0.0, 1, "number of kicks (odd integer)"},
     {"PHASE_REFERENCE", "", IS_LONG, 0, (long)((char *)&rfdf_example.phase_reference), NULL, 0.0, 0, "phase reference number (to link with other time-dependent elements)"},
+    {"STANDING_WAVE", "", IS_LONG, 0, (long)((char *)&rfdf_example.standingWave), NULL, 0.0, 0, "If nonzero, then cavity is standing wave."},
     } ;
 
 RFTM110 rftm110_example;

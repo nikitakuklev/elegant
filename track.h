@@ -681,7 +681,7 @@ extern char *entity_text[N_TYPES];
 #define N_MARK_PARAMS 1
 #define N_MATR_PARAMS 3
 #define N_ALPH_PARAMS 13
-#define N_RFDF_PARAMS 8
+#define N_RFDF_PARAMS 9
 #define N_RFTMEZ0_PARAMS 36
 #define N_RMDF_PARAMS 10
 #define N_TMCF_PARAMS 18
@@ -1087,6 +1087,7 @@ typedef struct {
     double length, phase, tilt, frequency, voltage;
     double time_offset;             /* equivalent to phase */
     long n_kicks, phase_reference;
+    long standingWave;
     /* for internal use only */
     double t_first_particle;        
     long   initialized;             
