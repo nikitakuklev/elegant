@@ -16,85 +16,102 @@
 #include "mdb.h"
 
 long find_nearby_array_entry(double *entry, long n, double key);
+void set_up_rftm110(RFTM110 *rf_param, double **initial, long n_particles, double pc_central);
+void set_up_rfdf(RFDF *rf_param, double **initial, long n_particles, double pc_central);
+double linear_interpolation(double *y, double *t, long n, double t0, long i);
 
 void track_through_rf_deflector(
                                 double **final, 
                                 RFDF *rf_param,
                                 double **initial,
                                 long n_particles,
-                                double pc_central
+                                double pc_central,
+				double L_central,
+				double zEnd,
+				long pass
                                 )
 {
   double t_first;     /* time when first particle crosses cavity center */
   double t_part;      /* time at which a particle enters cavity */
   double Estrength;    /* |e.V.L/nSections|/(gap.m.c^2) */
   double x, xp, y, yp;
-  double beta, dp_r, px, py, pz, beta_z, pc;
-  double omega, k, Ephase;
+  double beta, px, py, pz, beta_z, pc, gamma;
+  double omega, k, Ephase, voltFactor, t0;
   double cos_tilt, sin_tilt, dtLight, tLight;
   double length;
   long ip, is, n_kicks;
-#ifdef USE_KAHAN
-  double error = 0.0; 
-#endif
 
   n_kicks = rf_param->n_kicks;
   if (n_kicks%2==0)
     n_kicks += 1;
-  length = rf_param->length/n_kicks;
   
-  if (!rf_param->initialized) {
-    if (isSlave || !notSinglePart) {
-      rf_param->initialized = 1;
-      for (ip=rf_param->t_first_particle=0; ip<n_particles; ip++) {
-	pc = pc_central*(1+initial[ip][5]);
-	beta = pc/sqrt(1+sqr(pc));
-	beta_z = beta/sqrt(1 + sqr(initial[ip][1])+sqr(initial[ip][3]));
-#ifndef USE_KAHAN
-	rf_param->t_first_particle += (initial[ip][4]/beta + length/(2*beta_z))/c_mks;
-#else
-        rf_param->t_first_particle = KahanPlus(rf_param->t_first_particle,(initial[ip][4]/beta + length/(2*beta_z))/c_mks, &error); 
-#endif
-      }
-    }
-#if USE_MPI
-    if (notSinglePart) {
-      if (USE_MPI) {
-	long n_total;
-	double tmp;
-	if (isMaster) {
-	  n_particles = 0;
-	  rf_param->t_first_particle = 0.0;
-	}
-#ifndef USE_KAHAN 
-	MPI_Allreduce(&(rf_param->t_first_particle), &tmp, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-	rf_param->t_first_particle = tmp; 
-#else
-       	rf_param->t_first_particle = KahanParallel(rf_param->t_first_particle, error); 
-#endif
-
-	MPI_Allreduce(&n_particles, &n_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
-	n_particles = n_total;
-      } 
-    }
-#endif
-    if (n_particles)
-      rf_param->t_first_particle /= n_particles;
-    if (rf_param->n_kicks<1)
-      rf_param->n_kicks = 1;
-    rf_param->initialized = 1;
-    if (rf_param->frequency==0) 
-      bomb("RFDF cannot have frequency=0", NULL);
+  if (rf_param->frequency==0) 
+    bomb("RFDF cannot have frequency=0", NULL);
+  if (rf_param->voltage==0) {
+    exactDrift(initial, n_particles, rf_param->length);
+    return;
   }
 
+  if (!rf_param->initialized) 
+    set_up_rfdf(rf_param, initial, n_particles, pc_central);
+
+  gamma = sqrt(sqr(pc_central)+1);
+  beta  = pc_central/gamma;
+  if (pass==0) {
+    rf_param->Ts = rf_param->t_first_particle;
+    if (rf_param->alignWaveforms)
+      rf_param->Ts = 0;
+  }
+  else
+    rf_param->Ts += L_central/(beta*c_mks);
+  t0 = rf_param->Ts;
+
+  if (rf_param->n_Vpts) {
+    long i_volt;
+    if (rf_param->voltageIsPeriodic && t0>rf_param->V_tFinal) 
+      t0 = fmod(t0-rf_param->V_tInitial, rf_param->V_tFinal-rf_param->V_tInitial)+rf_param->V_tInitial;
+
+    /* find position within voltage waveform array */
+    i_volt = find_nearby_array_entry(rf_param->t_Vf, rf_param->n_Vpts, t0);
+    voltFactor = linear_interpolation(rf_param->Vfactor, rf_param->t_Vf, rf_param->n_Vpts, t0, i_volt);
+  } else {
+    voltFactor = 1;
+  }
+
+  voltFactor *= (gauss_rn_lim(1.0, rf_param->voltageNoise, 2, random_3) +
+     (rf_param->voltageNoiseGroup
+      ? rf_param->groupVoltageNoise*GetNoiseGroupValue(rf_param->voltageNoiseGroup)
+      : 0));
+
+  if (voltFactor==0) {
+    exactDrift(initial, n_particles, rf_param->length);
+    return;
+  }
+  
   omega = 2*PI*rf_param->frequency;
   t_first = rf_param->t_first_particle;
+  length = rf_param->length/n_kicks;
+  Ephase = (rf_param->phase
+	    + gauss_rn_lim(0.0, rf_param->phaseNoise, 2, random_3)
+	    + (rf_param->phaseNoiseGroup
+	       ? rf_param->groupPhaseNoise*GetNoiseGroupValue(rf_param->phaseNoiseGroup)
+	       : 0)
+	    )*PI/180.0 
+    + omega*(rf_param->time_offset - t_first);
+  if (!rf_param->standingWave)  {
+    dtLight = length/c_mks/2;
+    Ephase -= omega*dtLight;
+  } else {
+    dtLight = 0;
+    Ephase -= omega*rf_param->length/2/c_mks;
+  }
+  
+
   cos_tilt = cos(rf_param->tilt);
   sin_tilt = sin(rf_param->tilt);
-  dtLight = length/c_mks/2;
   Estrength = (e_mks*rf_param->voltage/n_kicks)/(me_mks*sqr(c_mks));
-  Ephase = rf_param->phase*PI/180.0 + omega*(rf_param->time_offset-t_first+dtLight);
   k = omega/c_mks;
+
   if (isSlave || !notSinglePart) {
     if (rf_param->tilt)
       rotateBeamCoordinates(initial, n_particles, rf_param->tilt);
@@ -118,17 +135,15 @@ void track_through_rf_deflector(
 	beta_z = pz/pc;
 	if (is==0 || is==n_kicks) {
 	  /* first half-drift and last half-drift */
-	  t_part += (length/(2*c_mks*beta_z));
-          if (!rf_param->standingWave)
-            tLight = dtLight;
+	  t_part += (length*sqrt(1+sqr(xp)+sqr(yp))/(2*c_mks*beta_z));
+          tLight = dtLight;
 	  x += xp*length/2;
 	  y += yp*length/2;
 	  if (is==n_kicks)
 	    break;
 	} else {
-	  t_part += (length/(c_mks*beta_z));
-          if (!rf_param->standingWave)
-            tLight += 2*dtLight; 
+	  t_part += (length*sqrt(1+sqr(xp)+sqr(yp))/(c_mks*beta_z));
+          tLight += 2*dtLight; 
 	  x += xp*length;
 	  y += yp*length;
 	}
@@ -137,7 +152,7 @@ void track_through_rf_deflector(
 		ip, is, fmod((t_part-tLight)*omega+Ephase, PIx2)*180/PI);
 #endif
 	px += Estrength*cos((t_part-tLight)*omega + Ephase);
-        pz -= Estrength*k*x*sin((t_part-tLight)*omega + Ephase);
+        pz += Estrength*k*x*sin((t_part-tLight)*omega + Ephase);
 	xp = px/pz;
 	yp = py/pz;
 	pc = sqrt(sqr(px)+sqr(py)+sqr(pz));
@@ -159,6 +174,7 @@ void track_through_rf_deflector(
     if (rf_param->tilt)
       rotateBeamCoordinates(initial, n_particles, -rf_param->tilt);
   }
+  
 }
 
 /* routine: track_through_rftm110_deflector()
@@ -167,9 +183,6 @@ void track_through_rf_deflector(
  * 
  * Michael Borland, 2004
  */
-
-void set_up_rftm110(RFTM110 *rf_param, double **initial, long n_particles, double pc_central);
-double linear_interpolation(double *y, double *t, long n, double t0, long i);
 
 void track_through_rftm110_deflector(
                                 double **final, 
@@ -219,7 +232,6 @@ void track_through_rftm110_deflector(
     /* find position within voltage waveform array */
     i_volt = find_nearby_array_entry(rf_param->t_Vf, rf_param->n_Vpts, t0);
     voltTimes2 = linear_interpolation(rf_param->Vfactor, rf_param->t_Vf, rf_param->n_Vpts, t0, i_volt);
-    fprintf(stderr, "Voltage factor is %e for t0=%e, i_volt=%ld, pass=%ld\n", voltTimes2, t0, i_volt, pass);
     if (voltTimes2==0)
       return;
   } else {
@@ -306,6 +318,102 @@ void track_through_rftm110_deflector(
 
 
 void set_up_rftm110(RFTM110 *rf_param, double **initial, long n_particles, double pc_central)
+{
+  long ip, i;
+  double pc, beta;
+  TABLE data;
+  TRACKING_CONTEXT tContext;
+#ifdef USE_KAHAN
+  double error = 0.0; 
+#endif
+
+  if (rf_param->initialized)
+    return;
+
+  rf_param->initialized = 1;
+
+  getTrackingContext(&tContext);
+
+  if (rf_param->voltageNoiseGroup) {
+    DefineNoiseGroup(rf_param->voltageNoiseGroup);
+    if (rf_param->phaseNoiseGroup==rf_param->voltageNoiseGroup) {
+      printf("*** Warning: VOLTAGE_NOISE_GROUP and PHASE_NOISE_GROUP are identical for %s\n",
+	     tContext.elementName);
+      printf("This is probably a mistake!\n");
+    }
+  } else if (rf_param->groupVoltageNoise) {
+    printf("Error: GROUP_VOLTAGE_NOISE is nonzero but VOLTAGE_NOISE_GROUP is zero for %s\n",
+	   tContext.elementName);
+    exit(1);
+  }
+
+  if (rf_param->phaseNoiseGroup) {
+    DefineNoiseGroup(rf_param->phaseNoiseGroup);
+  } else if (rf_param->groupPhaseNoise) {
+    printf("Error: GROUP_PHASE_NOISE is nonzero but PHASE_NOISE_GROUP is zero for %s\n",
+	   tContext.elementName);
+    exit(1);
+  }
+
+  if (isSlave || !notSinglePart) {
+    for (ip=rf_param->t_first_particle=0; ip<n_particles; ip++) {
+      pc = pc_central*(1+initial[ip][5]);
+      beta = pc/sqrt(1+sqr(pc));
+#ifndef USE_KAHAN
+      rf_param->t_first_particle += initial[ip][4]/beta/c_mks;
+#else
+      rf_param->t_first_particle = KahanPlus(rf_param->t_first_particle, initial[ip][4]/beta/c_mks, &error); 
+#endif
+    }
+  }
+#if USE_MPI
+  if (USE_MPI && notSinglePart) {
+    long n_total;
+    double tmp;
+    if (isMaster) {
+      n_particles = 0;
+      rf_param->t_first_particle = 0.0;
+    }
+#ifndef USE_KAHAN 
+    MPI_Allreduce(&(rf_param->t_first_particle), &tmp, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    rf_param->t_first_particle = tmp;
+#else
+    rf_param->t_first_particle = KahanParallel(rf_param->t_first_particle, error); 
+#endif
+ 
+    MPI_Allreduce(&n_particles, &n_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+    n_particles = n_total; 
+  }
+#endif
+  if (n_particles)
+    rf_param->t_first_particle /= n_particles;
+
+  rf_param->initialized = 1;
+
+  rf_param->Ts = 0;
+  rf_param->n_Vpts = 0;
+
+  if (rf_param->voltageWaveform) {
+    if (!getTableFromSearchPath(&data, rf_param->voltageWaveform, 1, 0))
+        bomb("unable to read voltage waveform for rftm110", NULL);
+
+    if (data.n_data<=1)
+        bomb("rftm110 voltage waveform contains less than 2 points", NULL);
+
+    rf_param->t_Vf    = data.c1;
+    rf_param->Vfactor = data.c2;
+    rf_param->n_Vpts  = data.n_data;
+    for (i=0; i<rf_param->n_Vpts-1; i++)
+        if (rf_param->t_Vf[i]>rf_param->t_Vf[i+1])
+            bomb("time values are not monotonically increasing in rftm110 voltage waveform", NULL);
+    rf_param->V_tInitial = rf_param->t_Vf[0];
+    rf_param->V_tFinal = rf_param->t_Vf[rf_param->n_Vpts-1];
+    tfree(data.xlab); tfree(data.ylab); tfree(data.title); tfree(data.topline);
+    data.xlab = data.ylab = data.title = data.topline = NULL;
+  }
+}
+
+void set_up_rfdf(RFDF *rf_param, double **initial, long n_particles, double pc_central)
 {
   long ip, i;
   double pc, beta;
