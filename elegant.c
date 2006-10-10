@@ -67,10 +67,10 @@ void showUsageOrGreeting (unsigned long mode)
 {
 #if USE_MPI
   char *USAGE="usage: mpirun -np <number of processes> Pelegant <inputfile> [-macro=<tag>=<value>,[...]]";
-  char *GREETING="This is elegant 16.2.1, "__DATE__", by M. Borland, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang and M. Borland.";
+  char *GREETING="This is elegant 16.2.2, "__DATE__", by M. Borland, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang and M. Borland.";
 #else
   char *USAGE="usage: elegant <inputfile> [-macro=<tag>=<value>,[...]] [-cpuList=<number>[,<number>]]";
-  char *GREETING="This is elegant 16.2.1, "__DATE__", by M. Borland, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.";
+  char *GREETING="This is elegant 16.2.2, "__DATE__", by M. Borland, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.";
 #endif
   if (mode&SHOW_GREETING)
     puts(GREETING);
@@ -1301,7 +1301,8 @@ char **argv;
       do_print_dictionary(filename, latex_form, SDDS_form);
       break;
     case FLOOR_COORDINATES:
-      output_floor_coordinates(&namelist_text, &run_conditions, beamline);
+      if (isMaster)
+        output_floor_coordinates(&namelist_text, &run_conditions, beamline);
       break;
     case CORRECTION_MATRIX_OUTPUT:
       if (!run_setuped)
