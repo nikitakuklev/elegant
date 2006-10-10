@@ -69,7 +69,7 @@ as a function of the actual positions (x and y).",
 command.",
     "An alpha magnet implemented as a matrix, up to 3rd order.  PART is used to split\n\
 the magnet into halves.  XS<n> and DP<n> allow momentum filtration at the midpoint.",
-    "A simple traveling or standing wave deflecting RF cavity.   See also RFTM110.",
+    "A simple traveling or standing wave deflecting RF cavity.",
     "A TM-mode RF cavity specified by the on-axis Ez field.",
     "A linearly-ramped electric field deflector, using an approximate analytical solution FOR LOW ENERGY PARTICLES.",
     "A numerically-integrated accelerating TM RF cavity with spatially-constant fields.",
@@ -158,7 +158,7 @@ and phase modulation.",
     "A scattering element to add random changes to particle coordinates according to a user-supplied distribution function",
     "A non-symplectic numerically integrated planar undulator including optional co-propagating laser beam for laser modulation of the electron beam.",
     "Tracks through a Taylor series map specified by a file containing coefficients.",
-    "Tracks through a TM110-mode (deflecting) rf cavity with all magnetic and electric field components.",
+    "Tracks through a TM110-mode (deflecting) rf cavity with all magnetic and electric field components.  NOT RECOMMENDED---See below.",
     "Tracks through a wiggler using canonical integration routines of Y. Wu (Duke University).",
     "Tracks through a drift with no approximations (Exact DRIFT).",
     "Tracks through a zero length multipole to simulate space charge effects",  
@@ -461,6 +461,15 @@ PARAMETER rfdf_param[N_RFDF_PARAMS] = {
     {"N_KICKS", "", IS_LONG, 0, (long)((char *)&rfdf_example.n_kicks), NULL, 0.0, 1, "number of kicks (odd integer)"},
     {"PHASE_REFERENCE", "", IS_LONG, 0, (long)((char *)&rfdf_example.phase_reference), NULL, 0.0, 0, "phase reference number (to link with other time-dependent elements)"},
     {"STANDING_WAVE", "", IS_LONG, 0, (long)((char *)&rfdf_example.standingWave), NULL, 0.0, 0, "If nonzero, then cavity is standing wave."},
+    {"VOLTAGE_WAVEFORM", "", IS_STRING, 0, (long)((char *)&rfdf_example.voltageWaveform), NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving voltage waveform factor vs time"},
+    {"VOLTAGE_PERIODIC", "", IS_LONG, 0, (long)((char *)&rfdf_example.voltageIsPeriodic), NULL, 0.0, 0, "If non-zero, voltage waveform is periodic with period given by time span."},
+    {"ALIGN_WAVEFORMS", "", IS_LONG, 0,  (long)((char *)&rfdf_example.alignWaveforms), NULL, 0.0, 0, "If non-zero, waveforms' t=0 is aligned with first bunch arrival time."},
+    {"VOLTAGE_NOISE", "", IS_DOUBLE, 0, (long)((char *)&rfdf_example.voltageNoise), NULL, 0.0, 0, "Rms fractional noise level for voltage."},
+    {"PHASE_NOISE", "DEG", IS_DOUBLE, 0, (long)((char *)&rfdf_example.phaseNoise), NULL, 0.0, 0, "Rms noise level for phase."},
+    {"GROUP_VOLTAGE_NOISE", "", IS_DOUBLE, 0, (long)((char *)&rfdf_example.groupVoltageNoise), NULL, 0.0, 0, "Rms fractional noise level for voltage linked to group."},
+    {"GROUP_PHASE_NOISE", "DEG", IS_DOUBLE, 0, (long)((char *)&rfdf_example.groupPhaseNoise), NULL, 0.0, 0, "Rms noise level for phase linked to group."},
+    {"VOLTAGE_NOISE_GROUP", "", IS_LONG, 0, (long)((char *)&rfdf_example.voltageNoiseGroup), NULL, 0.0, 0, "Group number for voltage noise."},
+    {"PHASE_NOISE_GROUP", "", IS_LONG, 0, (long)((char *)&rfdf_example.phaseNoiseGroup), NULL, 0.0, 0, "Group number for phase noise."},
     } ;
 
 RFTM110 rftm110_example;
@@ -1042,7 +1051,8 @@ PARAMETER csbend_param[N_CSBEND_PARAMS] = {
     {"B4", "1/M$a4$n", IS_DOUBLE, 0, (long)((char *)&csbend_example.b4), NULL, 0.0, 0, "K4 = b4*rho"},
     {"ISR", "", IS_LONG, 0, (long)((char *)&csbend_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (scattering)?"},
     {"SQRT_ORDER", "", IS_LONG, 0, (long)((char *)&csbend_example.sqrtOrder), NULL, 0.0, 0, "Order of expansion of square-root in Hamiltonian.  0 means no expansion."},
-    {"USE_RAD_DIST", "", IS_LONG, 0, (long)((char *)&csbend_example.distributionBasedRadiation), NULL, 0.0, 0, "If nonzero, overrides SYNCH_RAD and ISR, causing simulation of radiation from distributions, including opening angle."},
+    {"USE_RAD_DIST", "", IS_LONG, 0, (long)((char *)&csbend_example.distributionBasedRadiation), NULL, 0.0, 0, "If nonzero, overrides SYNCH_RAD and ISR, causing simulation of radiation from distributions, optionally including opening angle."},
+    {"ADD_OPENING_ANGLE", "", IS_LONG, 0, (long)((char *)&csbend_example.includeOpeningAngle), NULL, 0.0, 1, "If nonzero, radiation opening angle effects are add if USE_RAD_DIST is nonzero."},
     };
 
 
