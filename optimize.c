@@ -109,6 +109,7 @@ void add_optimization_variable(OPTIMIZATION_DATA *optimization_data, NAMELIST_TE
     static char *extra_name[3] = {"optimized", "optimizationFunction", "bestOptimizationFunction"};
     static char *extra_unit[3] = {"", "", ""};
     long i, extras = 3;
+    char *ptr;
     
     log_entry("add_optimization_variable");
 
@@ -192,7 +193,12 @@ void add_optimization_variable(OPTIMIZATION_DATA *optimization_data, NAMELIST_TE
     rpn_store(variables->initial_value[n_variables], NULL, 
               variables->memory_number[n_variables] = 
               rpn_create_mem(variables->varied_quan_name[n_variables], 0));
-
+    
+    ptr = tmalloc(sizeof(char)*(strlen(name)+strlen(item)+4));
+    sprintf(ptr, "%s.%s0", name, item);
+    rpn_store(variables->initial_value[n_variables], NULL, rpn_create_mem(ptr, 0));
+    free(ptr);
+    
     for (i=0; i<extras; i++) {
       variables->varied_quan_name[n_variables+i+1] = extra_name[i];
       variables->varied_quan_unit[n_variables+i+1] = extra_unit[i];
@@ -297,6 +303,12 @@ void add_optimization_covariable(OPTIMIZATION_DATA *optimization_data, NAMELIST_
     if (!get_parameter_value(covariables->varied_quan_value+n_covariables, name, covariables->varied_param[n_covariables],
             context->type, beamline))
         bomb("unable to get initial value for parameter", NULL);
+
+    ptr = tmalloc(sizeof(char)*(strlen(name)+strlen(item)+4));
+    sprintf(ptr, "%s.%s0", name, item);
+    rpn_store(covariables->varied_quan_value[n_covariables], NULL, rpn_create_mem(ptr, 0));
+    free(ptr);
+    
     covariables->varied_quan_name[n_covariables]  = tmalloc(sizeof(char)*(strlen(name)+strlen(item)+3));
     sprintf(covariables->varied_quan_name[n_covariables], "%s.%s", name, item);
     cp_str(&covariables->equation[n_covariables], equation);
@@ -307,6 +319,7 @@ void add_optimization_covariable(OPTIMIZATION_DATA *optimization_data, NAMELIST_
             covariables->varied_quan_name[n_covariables], covariables->varied_quan_value[n_covariables],
             covariables->varied_quan_unit[n_covariables]);
     fflush(stdout);
+
     sprintf(nameBuffer, "AOCEqn%ld", nameIndex++);
     create_udf(nameBuffer, equation);
     if (!SDDS_CopyString(&ptr, nameBuffer)) 
