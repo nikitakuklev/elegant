@@ -22,7 +22,8 @@
 void addRadiationKick(double *Qx, double *Qy, double *dPoP, long sqrtOrder,
 		      double x, double h0, double Fx, double Fy,
 		      double ds, double radCoef, double dsISR, double isrCoef,
-                      long distributionBased, double meanPhotonsPerMeter,
+                      long distributionBased, long includeOpeningAngle,
+                      double meanPhotonsPerMeter,
                       double normalizedCriticalEnergy, double Po);
 double pickNormalizedPhotonEnergy(double RN);
 
@@ -47,7 +48,7 @@ static double Fx_y3, Fx_x_y3;
 
 static double rho0, rho_actual, rad_coef=0, isrConstant=0;
 static double meanPhotonsPerRadian0, meanPhotonsPerMeter0, normalizedCriticalEnergy0;
-static long distributionBasedRadiation;
+static long distributionBasedRadiation, includeOpeningAngle;
 static long photonCount = 0;
 static double energyCount = 0, radiansTotal = 0;
 
@@ -184,6 +185,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     normalizedCriticalEnergy0 = 3.0/2*hbar_mks*c_mks*pow3(Po)/fabs(rho_actual)/(Po*me_mks*sqr(c_mks));
     fprintf(stderr, "Mean photons per radian expected: %le   ECritical/E: %le\n", 
             meanPhotonsPerRadian0, normalizedCriticalEnergy0);
+    includeOpeningAngle = csbend->includeOpeningAngle;
   }
   
   Fy_0  = 1;
@@ -403,6 +405,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     radiansTotal += fabs(csbend->angle);
     fprintf(stderr, "%e radians, photons/particle=%e, photons/radian = %e, mean y = %e\n",
             radiansTotal, photonCount/(1.0*i_top), photonCount/radiansTotal/(1.0*i_top), energyCount/photonCount);
+    distributionBasedRadiation = 0;
   }
   
   return(i_top+1);
@@ -496,7 +499,8 @@ void integrate_csbend_ord2(double *Qf, double *Qi, double s, long n, long sqrtOr
       addRadiationKick(&QX, &QY, &DPoP, sqrtOrder, 
 		       X, 1./rho0, Fx, Fy, 
 		       ds, rad_coef, ds, isrConstant, 
-                       distributionBasedRadiation, meanPhotonsPerMeter0, normalizedCriticalEnergy0, p0);
+                       distributionBasedRadiation, includeOpeningAngle,
+                       meanPhotonsPerMeter0, normalizedCriticalEnergy0, p0);
     
     if (i==n-1) {
       /* do half-length drift */
@@ -655,7 +659,8 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double s, long n, long sqrtOr
       addRadiationKick(&QX, &QY, &DPoP, sqrtOrder,
 		       X, 1./rho0, Fx, Fy, 
 		       ds, rad_coef, s/3, isrConstant,
-                       distributionBasedRadiation, meanPhotonsPerMeter0, normalizedCriticalEnergy0, p0);
+                       distributionBasedRadiation, includeOpeningAngle,
+                       meanPhotonsPerMeter0, normalizedCriticalEnergy0, p0);
     }
 
     /* do second drift */
@@ -701,7 +706,8 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double s, long n, long sqrtOr
       addRadiationKick(&QX, &QY, &DPoP, sqrtOrder,
 		       X, 1./rho0, Fx, Fy, 
 		       ds, rad_coef, s/3, isrConstant,
-                       distributionBasedRadiation, meanPhotonsPerMeter0, normalizedCriticalEnergy0, p0);
+                       distributionBasedRadiation, includeOpeningAngle,
+                       meanPhotonsPerMeter0, normalizedCriticalEnergy0, p0);
 
     /* do third drift */
     dsh = s*(1-BETA)/(2-BETA)/2;
@@ -745,7 +751,8 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double s, long n, long sqrtOr
       addRadiationKick(&QX, &QY, &DPoP, sqrtOrder,
 		       X, 1./rho0, Fx, Fy, 
 		       ds, rad_coef, s/3, isrConstant,
-                       distributionBasedRadiation, meanPhotonsPerMeter0, normalizedCriticalEnergy0, p0);
+                       distributionBasedRadiation, includeOpeningAngle,
+                       meanPhotonsPerMeter0, normalizedCriticalEnergy0, p0);
     
     /* do fourth drift */
     dsh = s/2/(2-BETA);
@@ -3029,7 +3036,7 @@ void applyFilterTable(double *function, long bins, double dx, long fValues,
 void addRadiationKick(double *Qx, double *Qy, double *dPoP, long sqrtOrder,
 		      double x, double h0, double Fx, double Fy,
 		      double ds, double radCoef, double dsISR, double isrCoef,
-                      long distributionBased, double meanPhotonsPerMeter,
+                      long distributionBased, long includeOpeningAngle, double meanPhotonsPerMeter,
                       double normalizedCriticalEnergy0, double Po)
 {
   double f, xp, yp, F2, F, deltaFactor, dsFactor;
@@ -3075,15 +3082,17 @@ void addRadiationKick(double *Qx, double *Qy, double *dPoP, long sqrtOrder,
       energyCount += y;
       /* Change the total electron momentum */
       *dPoP -= dDelta;
-      /* Compute rms spread in electron angle = (rms photon angle)*dDelta */
-      logy = log10(y);
-      thetaRms = dDelta*pow(10,
-                            -2.418673276661232e-01
-                            + logy*(-4.472680955382907e-01+logy*(-4.535350424882360e-02
-                                                                 -logy*6.181818621278201e-03)))/Po;
-      /* Compute change in electron angle due to photon angle */
-      xp += thetaRms*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
-      yp += thetaRms*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
+      if (includeOpeningAngle) {
+        /* Compute rms spread in electron angle = (rms photon angle)*dDelta */
+        logy = log10(y);
+        thetaRms = dDelta*pow(10,
+                              -2.418673276661232e-01
+                              + logy*(-4.472680955382907e-01+logy*(-4.535350424882360e-02
+                                                                   -logy*6.181818621278201e-03)))/Po;
+        /* Compute change in electron angle due to photon angle */
+        xp += thetaRms*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
+        yp += thetaRms*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
+      }
     }
     f = (1 + *dPoP)/EXSQRT(sqr(1+x*h0)+sqr(xp)+sqr(yp), sqrtOrder);
     *Qx = xp*f;
