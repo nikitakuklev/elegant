@@ -56,7 +56,7 @@ void check_duplic_elem(
     lo = 0; 
     hi = n_elems-1;
     if ((comparison=strcmp(new_name, elemArray[lo]->name))==0) {
-      fprintf(stdout, "error: duplicate definitions of element %s\n",
+      fprintf(stdout, "error: multiple definitions of element %s\n",
               new_name);
       fflush(stdout);
       exit(1);
@@ -65,7 +65,7 @@ void check_duplic_elem(
       insertionPoint = elemArray[lo];
     if (!insertionPoint) {
       if ((comparison=strcmp(new_name, elemArray[hi]->name))==0) {
-        fprintf(stdout, "error: duplicate definitions of element %s\n",
+        fprintf(stdout, "error: multiple definitions of element %s\n",
                 new_name);
         fflush(stdout);
         exit(1);
@@ -74,7 +74,7 @@ void check_duplic_elem(
         do {
           mid = (lo+hi)/2;
           if ((comparison=strcmp(new_name, elemArray[mid]->name))==0) {
-            fprintf(stdout, "error: duplicate definitions of element %s\n",
+            fprintf(stdout, "error: multiple definitions of element %s\n",
                     new_name);
             fflush(stdout);
             exit(1);
@@ -135,9 +135,10 @@ void check_duplic_line(
   for (i=0; i<n_lines; i++) {
     if (strcmp(new_name, line->name)==0) {
       *line->name = 0;
-      fprintf(stdout, "warning: duplicate definitions of line %s\n", 
+      fprintf(stdout, "error: multiple definitions of line %s\n", 
              new_name);
       fflush(stdout);
+      exit(1);
     }
     line = line->succ;
   }
