@@ -2288,6 +2288,7 @@ fiducialized to the average momentum of the beam.
     long correction_iterations = 1;
     double p_central = 0.0;
     double p_central_mev = 0.0;
+    long always_change_p0 = 0;
     STRING expand_for = NULL; 
     long tracking_updates = 1;
     long echo_lattice = 0;
@@ -2352,6 +2353,9 @@ information as each element is tracked.
         This is $\beta\gamma$.
 \item \verb|p_central_mev| --- Central momentum of the beamline in
 MeV/c, about which expansions are done.  Ignored if \verb|p_central| is nonzero.
+\item \verb|always_change_p0| --- If nonzero, then {\tt elegant} will match the reference momentum to
+  the beam momentum after each element.  For example, in a beamline with radiation losses, one might
+  want to adjust downstream magnets to match the energy of the incoming beam.
 \item \verb|expand_for| --- Name of an SDDS file containing particle information, from which the central
 momentum will be set.  The file contents are the same as required for {\tt elegant} input with the \verb|sdds_beam| namelist.
 \item \verb|tracking_updates| --- A flag indicating whether to print summary information about
