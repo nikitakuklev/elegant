@@ -681,7 +681,7 @@ extern char *entity_text[N_TYPES];
 #define N_MARK_PARAMS 1
 #define N_MATR_PARAMS 3
 #define N_ALPH_PARAMS 13
-#define N_RFDF_PARAMS 9
+#define N_RFDF_PARAMS 18
 #define N_RFTMEZ0_PARAMS 36
 #define N_RMDF_PARAMS 10
 #define N_TMCF_PARAMS 18
@@ -713,7 +713,7 @@ extern char *entity_text[N_TYPES];
 #define N_RAMPP_PARAMS 1
 #define N_NISEPT_PARAMS 9
 #define N_STRAY_PARAMS 7
-#define N_CSBEND_PARAMS 36
+#define N_CSBEND_PARAMS 37
 #define N_MATTER_PARAMS 8
 #define N_RFMODE_PARAMS 22
 #define N_TRFMODE_PARAMS 15
@@ -1084,14 +1084,23 @@ typedef struct {
 extern PARAMETER rfdf_param[N_RFDF_PARAMS] ;
    
 typedef struct {
-    double length, phase, tilt, frequency, voltage;
-    double time_offset;             /* equivalent to phase */
-    long n_kicks, phase_reference;
-    long standingWave;
-    /* for internal use only */
-    double t_first_particle;        
-    long   initialized;             
-    } RFDF;
+  double length, phase, tilt, frequency, voltage;
+  double time_offset;             /* equivalent to phase */
+  long n_kicks, phase_reference;
+  long standingWave;
+  char *voltageWaveform;
+  long voltageIsPeriodic, alignWaveforms;
+  double voltageNoise, phaseNoise;
+  double groupVoltageNoise, groupPhaseNoise;
+  long voltageNoiseGroup, phaseNoiseGroup;
+  /* for internal use only */
+  double t_first_particle;        
+  long initialized;             
+  double Ts;                          /* accumulated time-of-flight of central particle */
+  double *t_Vf, *Vfactor, VPeriod;    /* (time, V/volt) pairs */
+  double V_tFinal, V_tInitial;
+  long n_Vpts;
+} RFDF;
 
 /* names and storage structure for RF deflector cavity done with
  * correct TM110 mode fields
@@ -1696,7 +1705,7 @@ typedef struct {
     long use_bn;
     double b1, b2, b3, b4;
     long isr, sqrtOrder;
-    long distributionBasedRadiation;
+    long distributionBasedRadiation, includeOpeningAngle;
     /* for internal use only: */
     unsigned long edgeFlags;
     double k1_internal, k2_internal, k3_internal, k4_internal;
@@ -2758,8 +2767,11 @@ extern void track_through_rftm110_deflector(double **final, RFTM110 *rf_param,
 					    long pass);
  
 /* prototypes for track_rf2.c: */
-extern void track_through_rf_deflector(double **final, RFDF *rf_param, double **initial, long n_particles, double pc_central);
- 
+extern void track_through_rf_deflector(double **final, RFDF *rf_param,
+                                       double **initial, long n_particles,
+                                       double pc_central, double L_central, double zEnd,
+                                       long pass);
+
 /* prototypes for vary4.c: */
 extern void vary_setup(VARY *_control, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 extern void add_varied_element(VARY *_control, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
