@@ -219,14 +219,15 @@ long setup_load_parameters_for_file(char *filename, RUN *run, LINE_LIST *beamlin
 
 long do_load_parameters(LINE_LIST *beamline, long change_definitions)
 {
-  long i, j, count, mode_flags, code, rows, *occurence, param, allFilesRead, allFilesIgnored;
+  long i, j, count, mode_flags, code, rows,  param, allFilesRead, allFilesIgnored;
   char **element, **parameter, **type, **mode, *p_elem, *ptr, lastMissingElement[100];
   double *value, newValue;
   char **valueString;
   ELEMENT_LIST *eptr;
   long element_missing, numberChanged, totalNumberChanged = 0;
   long lastMissingOccurence = 0;
-  
+  int32_t *occurence;
+
   if (!load_requests || !load_parameters_setup)
     return NO_LOAD_PARAMETERS;
   allFilesRead = 1;
@@ -369,7 +370,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
       while (count-- > 0) {
         if (!find_element(element[j], &eptr, &(beamline->elem))) {
           if (occurence) {
-            fprintf(stdout, "%s: unable to find occurence %ld of element %s (do_load_parameters)\n", 
+            fprintf(stdout, "%s: unable to find occurence %" PRId32 " of element %s (do_load_parameters)\n", 
                     allow_missing_elements?"Warning":"Error",
                     occurence[j], element[j]);
             fflush(stdout);
@@ -422,7 +423,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
       if (mode_flags&LOAD_FLAG_IGNORE)
         continue;
       if (verbose)
-        fprintf(stdout, "Working on row %ld of file\n", j);
+        fprintf(stdout, "Working on row %" PRId32 " of file\n", j);
       
       if (load_request[i].flags&COMMAND_FLAG_CHANGE_DEFINITIONS) {
         change_defined_parameter(element[j], param, eptr->type, value?value[j]:0, 
@@ -465,7 +466,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
           if (eptr->divisions>1 && (entity_description[eptr->type].parameter[param].flags&PARAM_DIVISION_RELATED))
             newValue /= eptr->divisions;
           if (verbose)
-            fprintf(stdout, "Changing %s.%s #%ld from %21.15e to ",
+            fprintf(stdout, "Changing %s.%s #%" PRId32 "  from %21.15e to ",
                     eptr->name, 
                     entity_description[eptr->type].parameter[param].name, 
                     occurence?occurence[j]:numberChanged,
@@ -496,7 +497,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
             newValue = value[j];
           }
           if (verbose)
-            fprintf(stdout, "Changing %s.%s #%ld from %ld to ",
+            fprintf(stdout, "Changing %s.%s #%" PRId32 "  from %" PRId32 "  to ",
                     eptr->name,
                     entity_description[eptr->type].parameter[param].name, numberChanged,
                     *((long*)(p_elem+entity_description[eptr->type].parameter[param].offset)));
@@ -513,14 +514,14 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
           else if (mode_flags&LOAD_FLAG_FRACTIONAL)
             *((long*)(p_elem+entity_description[eptr->type].parameter[param].offset)) *= 1+newValue;
           if (verbose)
-            fprintf(stdout, "%ld\n",
+            fprintf(stdout, "%" PRId32 " \n",
                     *((long*)(p_elem+entity_description[eptr->type].parameter[param].offset)));
             fflush(stdout);
           break;
         case IS_STRING:
           load_request[i].value_type[load_request[i].values] = IS_STRING;
           if (verbose)
-            fprintf(stdout, "Changing %s.%s #%ld from %s to ",
+            fprintf(stdout, "Changing %s.%s #%" PRId32 "  from %s to ",
                     eptr->name,
                     entity_description[eptr->type].parameter[param].name, numberChanged,
                     *((char**)(p_elem+entity_description[eptr->type].parameter[param].offset)));
@@ -579,7 +580,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
   }
   if (!allFilesRead || allFilesIgnored) {
     compute_end_positions(beamline);
-    fprintf(stdout, "%ld parameter values loaded\n", totalNumberChanged);
+    fprintf(stdout, "%" PRId32 "  parameter values loaded\n", totalNumberChanged);
     return PARAMETERS_LOADED;
   }
   return PARAMETERS_ENDED;
@@ -640,7 +641,7 @@ void dumpLatticeParameters(char *filename, RUN *run, LINE_LIST *beamline)
   eptr = &(beamline->elem);
   for (iElem=0; iElem<beamline->n_elems; iElem++) {
     /*
-      fprintf(stdout, "name=%s, divisions=%ld  first=%hd\n",
+      fprintf(stdout, "name=%s, divisions=%" PRId32 "   first=%hd\n",
       eptr->name, eptr->divisions, eptr->firstOfDivGroup);
       */
     if (eptr->divisions>1 && !eptr->firstOfDivGroup) {
