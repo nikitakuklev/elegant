@@ -14,6 +14,9 @@
  * Michael Borland, 2000
  *
  $Log: not supported by cvs2svn $
+ Revision 1.19  2005/11/10 15:38:49  soliday
+ Added changes to get it to compile properly with 64 bit compilers.
+
  Revision 1.18  2003/05/26 17:54:23  borland
  Supplied a missing variable initializatin (x in main()).
  Fixed bug from improper use of spec->element to test for user input of
@@ -136,26 +139,26 @@ typedef struct {
   double etaBeam, etapBeam;
   char *filename, *element;
   int32_t occurrence;
-#define BETA_GIVEN       0x0001UL
-#define ALPHA_GIVEN      0x0002UL
-#define ETA_GIVEN        0x0004UL
-#define ETAP_GIVEN       0x0008UL
-#define NEMIT_GIVEN      0x0010UL
-#define FILENAME_GIVEN   0x0020UL
-#define ELEMENT_GIVEN    0x0040UL
-#define OCCURRENCE_GIVEN 0x0080UL
+#define BETA_GIVEN       0x0001U
+#define ALPHA_GIVEN      0x0002U
+#define ETA_GIVEN        0x0004U
+#define ETAP_GIVEN       0x0008U
+#define NEMIT_GIVEN      0x0010U
+#define FILENAME_GIVEN   0x0020U
+#define ELEMENT_GIVEN    0x0040U
+#define OCCURRENCE_GIVEN 0x0080U
 } PLANE_SPEC;
 
 typedef struct {
   double deltaStDev, tStDev, correlation, alpha, betaGamma, chirp;
   unsigned long flags;
   double R11, R12, R21, R22;
-#define DELTASTDEV_GIVEN  0x0001UL
-#define TSTDEV_GIVEN      0x0002UL
-#define CORRELATION_GIVEN 0x0004UL
-#define BETAGAMMA_GIVEN   0x0008UL
-#define ALPHAZ_GIVEN      0x0010UL
-#define CHIRP_GIVEN       0x0020UL
+#define DELTASTDEV_GIVEN  0x0001U
+#define TSTDEV_GIVEN      0x0002U
+#define CORRELATION_GIVEN 0x0004U
+#define BETAGAMMA_GIVEN   0x0008U
+#define ALPHAZ_GIVEN      0x0010U
+#define CHIRP_GIVEN       0x0020U
 } ZPLANE_SPEC;
 
 long PerformTransformation(double *x, double *xp, double *p, long rows, PLANE_SPEC *match,

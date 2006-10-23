@@ -11,6 +11,9 @@
    Hairong Shang, Oct 2005
    *
    $Log: not supported by cvs2svn $
+   Revision 1.3  2005/11/28 16:01:01  borland
+   Added -variables option.
+
    Revision 1.2  2005/11/18 21:05:19  shang
    updated the comments.
 
@@ -33,14 +36,14 @@ char *option[N_OPTIONS] = {
   "pipe",  "multipoles", "type", "variables",
 } ;
 
-#define USE_DIPOLE 0x0001UL
-#define USE_QUADRUPOLE 0x0002UL
-#define USE_SEXTUPOLE 0x0004UL
-#define USE_OCTUPOLE 0x0008UL
-#define USE_ALL_MULTIPOLES 0x0010UL
+#define USE_DIPOLE 0x0001U
+#define USE_QUADRUPOLE 0x0002U
+#define USE_SEXTUPOLE 0x0004U
+#define USE_OCTUPOLE 0x0008U
+#define USE_ALL_MULTIPOLES 0x0010U
 
-#define USE_NORMAL_TYPE 0x0001UL
-#define USE_SKEW_TYPE 0x0002UL
+#define USE_NORMAL_TYPE 0x0001U
+#define USE_SKEW_TYPE 0x0002U
 
 char *USAGE="sddsfindresonances [-pipe=[input][,output]] [<inputFile>] [<outputfile>]\n\
  -multipoles=[all]|[dipole,][quadrupole,][sextupole,][octupole,] \n\
