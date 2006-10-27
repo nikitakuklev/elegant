@@ -15,6 +15,10 @@
 #include "mdb.h"
 #include "track.h"
 
+void runBinlessTrfMode(double **part, long np, TRFMODE *trfmode, double Po,
+                       char *element_name, double element_z, long pass, long n_passes,
+                       CHARGE *charge);
+
 #define DEBUG 0
 
 void track_through_trfmode(
@@ -43,6 +47,11 @@ void track_through_trfmode(
   static long debugPass = 0;
 #endif
 
+  if (trfmode->binless) {
+    runBinlessTrfMode(part, np, trfmode, Po, element_name, element_z, pass, n_passes, charge);
+    return;
+  }
+  
   if (charge) {
     trfmode->mp_charge = charge->macroParticleCharge;
   } else if (pass==0) {
@@ -299,5 +308,175 @@ void set_up_trfmode(TRFMODE *trfmode, char *element_name, double element_z,
     trfmode->doY = 1;
   if (!trfmode->doX && !trfmode->doY) 
     bomb("No planes selected for TRFMODE", NULL);
+}
+
+void runBinlessTrfMode(
+                       double **part, long np, TRFMODE *trfmode, double Po,
+                       char *element_name, double element_z, long pass, long n_passes,
+                       CHARGE *charge
+                       )
+{
+  static TIMEDATA *tData;
+  static long max_np = 0;
+  long ip, ip0;
+  double P;
+  double Vxb, Vyb, dVxb, dVyb, V, omega, phase, t, k, damping_factor, tau;
+  double Px, Py, Pz;
+  double Q, Qrp;
+  double x, y;
+  static long been_warned = 0;
+
+  if (np==0)
+    return;
+  
+  if (charge) {
+    trfmode->mp_charge = charge->macroParticleCharge;
+  } else if (pass==0) {
+    trfmode->mp_charge = 0;
+    if (np)
+      trfmode->mp_charge = trfmode->charge/np;
+  }
+
+  omega = PIx2*trfmode->freq;
+  if ((Q = trfmode->Q/(1+trfmode->beta))<=0.5) {
+    fprintf(stdout, "The effective Q<=0.5 for TRFMODE.  Use the ZTRANSVERSE element.\n");
+    fflush(stdout);
+    exit(1);
+  }
+  tau = 2*Q/omega;
+  Qrp = sqrt(Q*Q - 0.25);
+  k = omega/4*trfmode->RaInternal/trfmode->Q;
+
+  if (!trfmode->doX && !trfmode->doY)
+    bomb("x and y turned off for TRFMODE---this shouldn't happen", NULL);
+  
+  if (!been_warned) {        
+    if (trfmode->freq<1e3 && trfmode->freq)  {
+      fprintf(stdout, "\7\7\7warning: your TRFMODE frequency is less than 1kHz--this may be an error\n");
+      fflush(stdout);
+      been_warned = 1;
+    }
+    if (been_warned) {
+      fprintf(stdout, "units of parameters for TRFMODE are as follows:\n");
+      fflush(stdout);
+      print_dictionary_entry(stdout, T_TRFMODE, 0, 0);
+    }
+  }
+
+  if (!trfmode->initialized)
+    bomb("track_through_trfmode called with uninitialized element", NULL);
+
+  if (np>max_np) 
+    tData = trealloc(tData, sizeof(*tData)*(max_np=np));
+
+  for (ip=0; ip<np; ip++) {
+    P = Po*(part[ip][5]+1);
+    tData[ip].t = part[ip][4]*sqrt(sqr(P)+1)/(c_mks*P);
+    tData[ip].ip = ip;
+  }
+  qsort(tData, np, sizeof(*tData), compTimeData);
+  
+  /* These adjustments per Zotter and Kheifets, 3.2.4, 3.3.2 */
+  k *= Q/Qrp;
+  omega *= Qrp/Q;
+
+  if (pass <= (trfmode->rampPasses-1)) 
+    k *= (pass+1.0)/trfmode->rampPasses;
+    
+  if (trfmode->single_pass) {
+    trfmode->Vx = trfmode->Vy = 0;
+    trfmode->last_t = tData[0].t;
+    trfmode->last_xphase = trfmode->last_yphase = 0;
+  }
+
+  for (ip0=0; ip0<np; ip0++) {
+    ip = tData[ip0].ip;
+    x = part[ip][0];
+    y = part[ip][2];
+    if (x==0 && y==0)
+      continue;
+    
+    t = tData[ip0].t;
+    
+    /* advance cavity to this time */
+    damping_factor = exp(-(t-trfmode->last_t)/tau);
+    if (trfmode->doX) {
+      /* -- x plane */
+      phase = trfmode->last_xphase + omega*(t - trfmode->last_t);
+      V = trfmode->Vx*damping_factor;
+      trfmode->Vxr = V*cos(phase);
+      trfmode->Vxi = V*sin(phase);
+      trfmode->last_xphase = phase;
+    }
+    if (trfmode->doY) {
+      /* -- y plane */
+      phase = trfmode->last_yphase + omega*(t - trfmode->last_t);
+      V = trfmode->Vy*damping_factor;
+      trfmode->Vyr = V*cos(phase);
+      trfmode->Vyi = V*sin(phase);
+      trfmode->last_yphase = phase;
+    }
+    
+    trfmode->last_t = t;
+
+    /* compute beam-induced voltage for this bin */
+    if (trfmode->doX) {
+      /* -- x plane */
+      dVxb = 2*k*trfmode->mp_charge*x*trfmode->xfactor;
+      Vxb = trfmode->Vxr;
+      /* add beam-induced voltage to cavity voltage---it is imaginary as
+       * the voltage is 90deg out of phase 
+       */
+      trfmode->Vxi -= dVxb;
+      if (trfmode->Vxi==0 && trfmode->Vxr==0)
+        trfmode->last_xphase = 0;
+      else
+        trfmode->last_xphase = atan2(trfmode->Vxi, trfmode->Vxr);
+      trfmode->Vx = sqrt(sqr(trfmode->Vxr)+sqr(trfmode->Vxi));
+    }
+    if (trfmode->doY) {
+      /* -- y plane */
+      dVyb = 2*k*trfmode->mp_charge*y*trfmode->yfactor;
+      Vyb = trfmode->Vyr;
+      /* add beam-induced voltage to cavity voltage---it is imaginary as
+       * the voltage is 90deg out of phase 
+       */
+      trfmode->Vyi -= dVyb;
+      if (trfmode->Vyi==0 && trfmode->Vyr==0)
+        trfmode->last_yphase = 0;
+      else
+        trfmode->last_yphase = atan2(trfmode->Vyi, trfmode->Vyr);
+      trfmode->Vy = sqrt(sqr(trfmode->Vyr)+sqr(trfmode->Vyi));
+    }    
+    
+    /* change particle slopes to reflect voltage in relevant bin */
+    P = Po*(1+part[ip][5]);
+    Pz = P/sqrt(1+sqr(part[ip][1])+sqr(part[ip][3]));
+    Px = part[ip][1]*Pz + Vxb/(1e6*me_mev);
+    Py = part[ip][3]*Pz + Vyb/(1e6*me_mev);
+    P  = sqrt(Pz*Pz+Px*Px+Py*Py);
+    part[ip][1] = Px/Pz;
+    part[ip][3] = Py/Pz;
+    part[ip][5] = (P-Po)/Po;
+    part[ip][4] = tData[ip0].t*c_mks*P/sqrt(sqr(P)+1);
+  }
+
+#if defined(MINIMIZE_MEMORY)
+  free(tData);
+  tData = NULL;
+  max_np = 0;
+#endif
+
+}
+
+int compTimeData(void *tv1, void *tv2)
+{
+  double diff;
+  diff = ((TIMEDATA*)tv1)->t - ((TIMEDATA*)tv2)->t;
+  if (diff<0)
+    return -1;
+  if (diff>0)
+    return 1;
+  return 0;
 }
 

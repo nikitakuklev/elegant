@@ -17,7 +17,8 @@
 #include "track.h"
 #include "SDDS.h"
 
-static int myid = -1;
+/*static int myid = -1;*/
+int myid = -1;
 
 void SDDS_ElegantOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row,
                              char *contents, char *command_file, char *lattice_file, SDDS_DEFINITION *parameter_definition,

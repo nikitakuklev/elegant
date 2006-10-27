@@ -18,6 +18,9 @@
 long find_nearby_array_entry(double *entry, long n, double key);
 double linear_interpolation(double *y, double *t, long n, double t0, long i);
 
+void runBinlessRfMode(double **part, long np, RFMODE *rfmode, double Po,
+		      char *element_name, double element_z, long pass, long n_passes,
+		      CHARGE *charge);
 
 void track_through_rfmode(
                           double **part, long np, RFMODE *rfmode, double Po,
@@ -40,7 +43,12 @@ void track_through_rfmode(
     static long been_warned = 0;
     double Qrp, VbImagFactor, Q;
     long deltaPass;
-    
+
+    if (rfmode->binless) {
+      runBinlessRfMode(part, np, rfmode, Po, element_name, element_z, pass, n_passes, charge);
+      return;
+    }
+
     if (charge) {
       rfmode->mp_charge = charge->macroParticleCharge;
     } else if (pass==0) {
@@ -368,3 +376,170 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
   }
 }
 
+void runBinlessRfMode(
+		      double **part, long np, RFMODE *rfmode, double Po,
+		      char *element_name, double element_z, long pass, long n_passes,
+		      CHARGE *charge
+		      )
+{
+  static TIMEDATA *tData;
+  static long max_np = 0;
+  long ip, ip0, ib;
+  double P;
+  double Vb, V, omega, phase, t, k, damping_factor, tau;
+  double V_sum, Vr_sum, phase_sum;
+  double Vc, Vcr, Q_sum, dgamma, Vb_sum;
+  long n_summed, max_hist, n_occupied;
+  static long been_warned = 0;
+  double Qrp, VbImagFactor, Q;
+  double tmean;
+  long deltaPass;
+
+  if (charge) {
+    rfmode->mp_charge = charge->macroParticleCharge;
+  } else if (pass==0) {
+    rfmode->mp_charge = 0;
+    if (np)
+      rfmode->mp_charge = rfmode->charge/np;
+  }
+
+  if (pass%rfmode->pass_interval)
+    return;
+    
+  if (!been_warned) {        
+    if (rfmode->freq<1e3 && rfmode->freq)  {
+      fprintf(stdout, "\7\7\7warning: your RFMODE frequency is less than 1kHz--this may be an error\n");
+      fflush(stdout);
+      been_warned = 1;
+    }
+    if (been_warned) {
+      fprintf(stdout, "units of parameters for RFMODE are as follows:\n");
+      fflush(stdout);
+      print_dictionary_entry(stdout, T_RFMODE, 0, 0);
+    }
+  }
+
+  if (rfmode->mp_charge==0) {
+    return ;
+  }
+  if (rfmode->detuned_until_pass>pass) {
+    return ;
+  }
+
+  if (!rfmode->initialized)
+    bomb("track_through_rfmode called with uninitialized element", NULL);
+
+  if (np>max_np) 
+    tData = trealloc(tData, sizeof(*tData)*(max_np=np));
+
+  for (ip=0; ip<np; ip++) {
+    P = Po*(part[ip][5]+1);
+    tData[ip].t = part[ip][4]*sqrt(sqr(P)+1)/(c_mks*P);
+    tData[ip].ip = ip;
+  }
+  qsort(tData, np, sizeof(*tData), compTimeData);
+
+  V_sum = Vr_sum = phase_sum = Vc = Vcr = Q_sum = Vb_sum = 0;
+  n_summed = max_hist = n_occupied = 0;
+    
+  /* find frequency and Q at this time */
+  omega = PIx2*rfmode->freq;
+  if (rfmode->nFreq) {
+    double omegaFactor;
+    ib = find_nearby_array_entry(rfmode->tFreq, rfmode->nFreq, tmean);
+    omega *= (omegaFactor=linear_interpolation(rfmode->fFreq, rfmode->tFreq, rfmode->nFreq, tmean, ib));
+    /* keeps stored energy constant for constant R/Q */
+    rfmode->V *= sqrt(omegaFactor);
+  }
+  Q = rfmode->Q/(1+rfmode->beta);
+  if (rfmode->nQ) {
+    ib = find_nearby_array_entry(rfmode->tQ, rfmode->nQ, tmean);
+    Q *= linear_interpolation(rfmode->fQ, rfmode->tQ, rfmode->nQ, tmean, ib);
+  }
+  if (Q<0.5) {
+    fprintf(stdout, "The effective Q<=0.5 for RFMODE.  Use the ZLONGIT element.\n");
+    fflush(stdout);
+    exit(1);
+  }
+  tau = 2*Q/omega;
+  k = omega/4*(rfmode->RaInternal)/rfmode->Q;
+  if ((deltaPass = (pass-rfmode->detuned_until_pass)) <= (rfmode->rampPasses-1)) 
+    k *= (deltaPass+1.0)/rfmode->rampPasses;
+
+  /* These adjustments per Zotter and Kheifets, 3.2.4 */
+  Qrp = sqrt(Q*Q - 0.25);
+  VbImagFactor = 1/(2*Qrp);
+  omega *= Qrp/Q;
+
+  if (rfmode->single_pass) {
+    rfmode->V = rfmode->last_phase = 0;
+    rfmode->last_t = tData[0].t;
+  }
+    
+  for (ip0=0; ip0<np; ip0++) {
+    ip = tData[ip0].ip;
+    t = tData[ip0].t;
+        
+    /* advance cavity to this time */
+    phase = rfmode->last_phase + omega*(t - rfmode->last_t);
+    damping_factor = exp(-(t-rfmode->last_t)/tau);
+    rfmode->last_t = t;
+    rfmode->last_phase = phase;
+    V = rfmode->V*damping_factor;
+    rfmode->Vr = V*cos(phase);
+    rfmode->Vi = V*sin(phase);
+        
+    /* compute beam-induced voltage from this particle */
+    Vb = 2*k*rfmode->mp_charge*rfmode->pass_interval;
+    /* compute voltage seen by this particle */
+    V = rfmode->Vr - Vb/2;
+        
+    /* add beam-induced voltage to cavity voltage */
+    rfmode->Vr -= Vb;
+    rfmode->Vi -= Vb*VbImagFactor;
+    rfmode->last_phase = atan2(rfmode->Vi, rfmode->Vr);
+    rfmode->V = sqrt(sqr(rfmode->Vr)+sqr(rfmode->Vi));
+        
+    V_sum  += rfmode->V;
+    Vb_sum += Vb;
+    Vr_sum += rfmode->Vr;
+    phase_sum += rfmode->last_phase;
+    Q_sum += rfmode->mp_charge;
+    n_summed  += 1;
+        
+    if (rfmode->rigid_until_pass<=pass) {
+      /* change the particle energy */
+      dgamma = V/(1e6*me_mev);
+      add_to_particle_energy(part[ip], tData[ip0].t, Po, dgamma);
+    }
+  }
+
+  if (rfmode->record) {
+    if ((pass%rfmode->sample_interval)==0 && 
+	(!SDDS_SetRowValues(&rfmode->SDDSrec, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+			    (pass/rfmode->sample_interval),
+			    "Pass", pass, "NumberOccupied", n_occupied,
+			    "FractionBinned", 1.0,
+			    "VPostBeam", rfmode->V, "PhasePostBeam", rfmode->last_phase,
+			    "tPostBeam", rfmode->last_t,
+			    "V", n_summed?V_sum/n_summed:0.0,
+			    "VReal", n_summed?Vr_sum/n_summed:0.0,
+			    "Phase", n_summed?phase_sum/n_summed:0.0, 
+			    NULL) ||
+	 !SDDS_UpdatePage(&rfmode->SDDSrec, 0))) {
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      SDDS_Bomb("problem setting up data for RFMODE record file");
+    }
+    if (pass==n_passes-1 && !SDDS_Terminate(&rfmode->SDDSrec)) {
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      SDDS_Bomb("problem writing data for RFMODE record file");
+    }
+  }
+ 
+#if defined(MINIMIZE_MEMORY)
+  free(tData);
+  tData = NULL;
+  max_np = 0;
+#endif
+
+}

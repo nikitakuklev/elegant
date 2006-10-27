@@ -715,8 +715,8 @@ extern char *entity_text[N_TYPES];
 #define N_STRAY_PARAMS 7
 #define N_CSBEND_PARAMS 37
 #define N_MATTER_PARAMS 8
-#define N_RFMODE_PARAMS 22
-#define N_TRFMODE_PARAMS 15
+#define N_RFMODE_PARAMS 23
+#define N_TRFMODE_PARAMS 16
 #define N_TWMTA_PARAMS 17
 #define N_ZLONGIT_PARAMS 24
 #define N_MODRF_PARAMS 15
@@ -1827,6 +1827,7 @@ typedef struct {
     long pass_interval;        /* number of passes between applications of wake */
     char *fwaveform, *Qwaveform;  /* waveforms for f/f0 and Q/Q0 vs time */
     long rampPasses;           /* If nonzero, the number of passes over which to ramp impedance up */
+    long binless;              /* If nonozero, then use particle-by-particle algorithm. */
     /* values for restarting the cavity */
     /* for internal use: */
     double RaInternal;         /* used to store Ra or 2*Rs, whichever is nonzero */
@@ -1891,6 +1892,7 @@ typedef struct {
     double dx, dy;
     double xfactor, yfactor;
     long rampPasses;           /* If nonzero, the number of passes over which to ramp impedance up */
+    long binless;
     /* for internal use: */
     double RaInternal;         /* used to store Ra or 2*Rs, whichever is nonzero */
     long doX, doY;
@@ -3102,3 +3104,10 @@ double KahanPlus (double oldSum, double b, double *error);
 #if USE_MPI
 double KahanParallel (double sum,  double error);
 #endif
+
+typedef struct {
+  double t;
+  long ip;
+} TIMEDATA;
+extern int compTimeData(void *tv1, void *tv2);
+
