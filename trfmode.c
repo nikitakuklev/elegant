@@ -31,13 +31,14 @@ void track_through_trfmode(
   static double *ysum = NULL;              /* sum of y coordinate in each bin = N*<y> */
   static double *Vxbin = NULL;             /* array for voltage acting on each bin MV */
   static double *Vybin = NULL;             /* array for voltage acting on each bin MV */
+  static double *Vzbin = NULL;             /* array for voltage acting on each bin MV */
   static long max_n_bins = 0;
   static long *pbin = NULL;                /* array to record which bin each particle is in */
   static double *time = NULL;              /* array to record arrival time of each particle */
   static long max_np = 0;
   long ip, ib;
   double tmin, tmax, tmean, dt, P;
-  double Vxb, Vyb, V, omega, phase, t, k, damping_factor, tau;
+  double Vxb, Vyb, V, omega, phase, t, k, omegaOverC, damping_factor, tau;
   double Px, Py, Pz;
   double Q, Qrp;
   long n_binned, lastBin;
@@ -83,7 +84,8 @@ void track_through_trfmode(
   tau = 2*Q/omega;
   Qrp = sqrt(Q*Q - 0.25);
   k = omega/4*trfmode->RaInternal/trfmode->Q;
-
+  omegaOverC = omega*c_mks;
+  
   if (!trfmode->doX && !trfmode->doY)
     bomb("x and y turned off for TRFMODE---this shouldn't happen", NULL);
   
@@ -109,6 +111,7 @@ void track_through_trfmode(
     ysum = trealloc(ysum, sizeof(*ysum)*max_n_bins);
     Vxbin = trealloc(Vxbin, sizeof(*Vxbin)*max_n_bins);
     Vybin = trealloc(Vybin, sizeof(*Vybin)*max_n_bins);
+    Vzbin = trealloc(Vzbin, sizeof(*Vzbin)*max_n_bins);
   }
 
   if (np>max_np) {
@@ -190,12 +193,14 @@ void track_through_trfmode(
     }
     
     trfmode->last_t = t;
-
+    Vzbin[ib] = 0;
+    
     /* compute beam-induced voltage for this bin */
     if (trfmode->doX) {
       /* -- x plane */
       Vxb = 2*k*trfmode->mp_charge*xsum[ib]*trfmode->xfactor;
       Vxbin[ib] = trfmode->Vxr;
+      Vzbin[ib] += -omegaOverC*part[ip][0]*(trfmode->Vxi - Vxb/2);
       /* add beam-induced voltage to cavity voltage---it is imaginary as
        * the voltage is 90deg out of phase 
        */
@@ -210,6 +215,7 @@ void track_through_trfmode(
       /* -- y plane */
       Vyb = 2*k*trfmode->mp_charge*ysum[ib]*trfmode->yfactor;
       Vybin[ib] = trfmode->Vyr;
+      Vzbin[ib] += -omegaOverC*part[ip][2]*(trfmode->Vyi - Vyb/2);
       /* add beam-induced voltage to cavity voltage---it is imaginary as
        * the voltage is 90deg out of phase 
        */
@@ -238,7 +244,7 @@ void track_through_trfmode(
   for (ip=0; ip<np; ip++) {
     if (pbin[ip]>=0) {
       P = Po*(1+part[ip][5]);
-      Pz = P/sqrt(1+sqr(part[ip][1])+sqr(part[ip][3]));
+      Pz = P/sqrt(1+sqr(part[ip][1])+sqr(part[ip][3])) + Vzbin[pbin[ip]]/(1e6*me_mev);
       Px = part[ip][1]*Pz + Vxbin[pbin[ip]]/(1e6*me_mev);
       Py = part[ip][3]*Pz + Vybin[pbin[ip]]/(1e6*me_mev);
       P  = sqrt(Pz*Pz+Px*Px+Py*Py);
@@ -280,7 +286,7 @@ void set_up_trfmode(TRFMODE *trfmode, char *element_name, double element_z,
     bomb("too few particles in set_up_trfmode()", NULL);
   if (trfmode->n_bins<2)
     bomb("too few bins for TRFMODE", NULL);
-  if (trfmode->bin_size<=0)
+  if (trfmode->bin_size<=0 && !trfmode->binless)
     bomb("bin_size must be positive for TRFMODE", NULL);
   if (trfmode->Ra && trfmode->Rs) 
     bomb("TRFMODE element may have only one of Ra or Rs nonzero.  Ra is just 2*Rs", NULL);
@@ -308,6 +314,22 @@ void set_up_trfmode(TRFMODE *trfmode, char *element_name, double element_z,
     trfmode->doY = 1;
   if (!trfmode->doX && !trfmode->doY) 
     bomb("No planes selected for TRFMODE", NULL);
+
+  if (trfmode->record) {
+    long n;
+    trfmode->record = compose_filename(trfmode->record, run->rootname);
+    if (!SDDS_InitializeOutput(&trfmode->SDDSrec, SDDS_BINARY, 1, NULL, NULL, trfmode->record) ||
+        !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "Pass", NULL, SDDS_LONG) ||
+        !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "t", "s", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "Vx", "V", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "VxReal", "V", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "Vy", "V", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "VyReal", "V", SDDS_DOUBLE) ||
+        !SDDS_WriteLayout(&trfmode->SDDSrec)) {
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      SDDS_Bomb("problem setting up TRFMODE record file");
+    }
+  }
 }
 
 void runBinlessTrfMode(
@@ -320,11 +342,31 @@ void runBinlessTrfMode(
   static long max_np = 0;
   long ip, ip0;
   double P;
-  double Vxb, Vyb, dVxb, dVyb, V, omega, phase, t, k, damping_factor, tau;
+  double Vxb, Vyb, Vzb, dVxb, dVyb, V, omega, phase, t, k, omegaOverC, damping_factor, tau;
   double Px, Py, Pz;
   double Q, Qrp;
   double x, y;
   static long been_warned = 0;
+  static long called = 0;
+#if DEBUG
+  static FILE *fpdeb = NULL;
+  double dphase, Vxr_last, Vxi_last;
+  if (!fpdeb) {
+    fpdeb = fopen("trfmode.deb", "w");
+    fprintf(fpdeb, "SDDS1\n");
+    fprintf(fpdeb, "&column name=t type=double units=s &end\n");
+    fprintf(fpdeb, "&column name=last_t type=double units=s &end\n");
+    fprintf(fpdeb, "&column name=cos_dphase type=double &end\n");
+    fprintf(fpdeb, "&column name=sin_dphase type=double &end\n");
+    fprintf(fpdeb, "&column name=VxrOld, type=double &end\n");
+    fprintf(fpdeb, "&column name=VxiOld, type=double &end\n");
+    fprintf(fpdeb, "&column name=VxrNew, type=double &end\n");
+    fprintf(fpdeb, "&column name=VxiNew, type=double &end\n");
+    fprintf(fpdeb, "&column name=x, type=double &end\n");
+    fprintf(fpdeb, "&data mode=ascii no_row_counts=1 &end\n");
+  }
+  
+#endif
 
   if (np==0)
     return;
@@ -379,23 +421,28 @@ void runBinlessTrfMode(
   /* These adjustments per Zotter and Kheifets, 3.2.4, 3.3.2 */
   k *= Q/Qrp;
   omega *= Qrp/Q;
-
+  omegaOverC = omega/c_mks;
+  
   if (pass <= (trfmode->rampPasses-1)) 
     k *= (pass+1.0)/trfmode->rampPasses;
-    
+
   if (trfmode->single_pass) {
     trfmode->Vx = trfmode->Vy = 0;
     trfmode->last_t = tData[0].t;
     trfmode->last_xphase = trfmode->last_yphase = 0;
   }
 
+  if (trfmode->record && (trfmode->sample_interval<2 || pass%trfmode->sample_interval==0)) {
+    if (!SDDS_StartPage(&trfmode->SDDSrec, np)) {
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      SDDS_Bomb("problem setting up TRFMODE record file");
+    }
+  }
+  
   for (ip0=0; ip0<np; ip0++) {
     ip = tData[ip0].ip;
-    x = part[ip][0];
-    y = part[ip][2];
-    if (x==0 && y==0)
-      continue;
-    
+    x = part[ip][0] - trfmode->dx;
+    y = part[ip][2] - trfmode->dy;
     t = tData[ip0].t;
     
     /* advance cavity to this time */
@@ -406,6 +453,11 @@ void runBinlessTrfMode(
       V = trfmode->Vx*damping_factor;
       trfmode->Vxr = V*cos(phase);
       trfmode->Vxi = V*sin(phase);
+#if DEBUG
+      dphase = omega*(t - trfmode->last_t);
+      Vxr_last = trfmode->Vxr;
+      Vxi_last = trfmode->Vxi;
+#endif
       trfmode->last_xphase = phase;
     }
     if (trfmode->doY) {
@@ -417,13 +469,14 @@ void runBinlessTrfMode(
       trfmode->last_yphase = phase;
     }
     
-    trfmode->last_t = t;
-
+    Vxb = Vyb = Vzb = 0;
+    
     /* compute beam-induced voltage for this bin */
     if (trfmode->doX) {
       /* -- x plane */
       dVxb = 2*k*trfmode->mp_charge*x*trfmode->xfactor;
       Vxb = trfmode->Vxr;
+      Vzb += -omegaOverC*x*(trfmode->Vxi - dVxb/2);
       /* add beam-induced voltage to cavity voltage---it is imaginary as
        * the voltage is 90deg out of phase 
        */
@@ -438,6 +491,7 @@ void runBinlessTrfMode(
       /* -- y plane */
       dVyb = 2*k*trfmode->mp_charge*y*trfmode->yfactor;
       Vyb = trfmode->Vyr;
+      Vzb += -omegaOverC*y*(trfmode->Vyi - dVyb/2);
       /* add beam-induced voltage to cavity voltage---it is imaginary as
        * the voltage is 90deg out of phase 
        */
@@ -448,25 +502,52 @@ void runBinlessTrfMode(
         trfmode->last_yphase = atan2(trfmode->Vyi, trfmode->Vyr);
       trfmode->Vy = sqrt(sqr(trfmode->Vyr)+sqr(trfmode->Vyi));
     }    
-    
     /* change particle slopes to reflect voltage in relevant bin */
     P = Po*(1+part[ip][5]);
-    Pz = P/sqrt(1+sqr(part[ip][1])+sqr(part[ip][3]));
+    Pz = P/sqrt(1+sqr(part[ip][1])+sqr(part[ip][3])) + Vzb/(1e6*me_mev);
     Px = part[ip][1]*Pz + Vxb/(1e6*me_mev);
     Py = part[ip][3]*Pz + Vyb/(1e6*me_mev);
+#if DEBUG
+    fprintf(fpdeb, "%e %e %e %e %e %e %e %e %e\n",
+            tData[ip0].t, trfmode->last_t, cos(dphase), sin(dphase),
+            Vxr_last, Vxi_last,
+            trfmode->Vxr, trfmode->Vxi, part[ip][0]);
+#endif
     P  = sqrt(Pz*Pz+Px*Px+Py*Py);
     part[ip][1] = Px/Pz;
     part[ip][3] = Py/Pz;
     part[ip][5] = (P-Po)/Po;
     part[ip][4] = tData[ip0].t*c_mks*P/sqrt(sqr(P)+1);
+
+    if (trfmode->record && (trfmode->sample_interval<2 || pass%trfmode->sample_interval==0)) {
+      if (!SDDS_SetRowValues(&trfmode->SDDSrec, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+                             ip0, 
+                             "Pass", pass, "t", tData[ip0].t,
+                             "Vx", trfmode->Vx, "VxReal", trfmode->Vxr,
+                             "Vy", trfmode->Vy, "VyReal", trfmode->Vyr,
+                             NULL)) {
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        SDDS_Bomb("problem setting up TRFMODE record data");
+      }
+    }
+    
+    trfmode->last_t = t;
   }
 
+  if (trfmode->record && (trfmode->sample_interval<2 || pass%trfmode->sample_interval==0)) {
+    if (!SDDS_WritePage(&trfmode->SDDSrec)) {
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        SDDS_Bomb("problem setting up TRFMODE record data");
+    }
+  }
+  
 #if defined(MINIMIZE_MEMORY)
   free(tData);
   tData = NULL;
   max_np = 0;
 #endif
 
+  called = 1;
 }
 
 int compTimeData(void *tv1, void *tv2)

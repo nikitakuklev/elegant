@@ -266,7 +266,7 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
     bomb("too few particles in set_up_rfmode()", NULL);
   if (rfmode->n_bins<2)
     bomb("too few bins for RFMODE", NULL);
-  if (rfmode->bin_size<=0)
+  if (rfmode->bin_size<=0 && !rfmode->binless)
     bomb("bin_size must be positive for RFMODE", NULL);
   if (rfmode->Ra && rfmode->Rs) 
     bomb("RFMODE element may have only one of Ra or Rs nonzero.  Ra is just 2*Rs", NULL);

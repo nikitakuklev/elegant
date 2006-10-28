@@ -1219,6 +1219,8 @@ PARAMETER trfmode_param[N_TRFMODE_PARAMS] = {
     {"BIN_SIZE", "S", IS_DOUBLE, 0, (long)((char *)&trfmode_example.bin_size), NULL, 0.0, 0, "bin size for current histogram (use 0 for autosize)"},
     {"N_BINS", "", IS_LONG, 0, (long)((char *)&trfmode_example.n_bins), NULL, 0.0, 20, "number of bins for current histogram"},
     {"PLANE", "", IS_STRING, 0, (long)((char *)&trfmode_example.plane), "both", 0.0, 0, "x, y, or both"},
+    {"SAMPLE_INTERVAL", "", IS_LONG, 0, (long)((char *)&trfmode_example.sample_interval), NULL, 0.0, 1, "passes between output to RECORD file"},
+    {"RECORD", "", IS_STRING, 0, (long)((char *)&trfmode_example.record), NULL, 0.0, 0, "output file for cavity fields"},
     {"SINGLE_PASS", "", IS_LONG, 0, (long)((char *)&trfmode_example.single_pass), NULL, 0.0, 0, "if nonzero, don't accumulate field from pass to pass"},
     {"DX", "M", IS_DOUBLE, 0, (long)((char *)&trfmode_example.dx), NULL, 0.0, 0, "misalignment"},
     {"DY", "M", IS_DOUBLE, 0, (long)((char *)&trfmode_example.dy), NULL, 0.0, 0, "misalignment"},

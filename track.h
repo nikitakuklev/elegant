@@ -716,7 +716,7 @@ extern char *entity_text[N_TYPES];
 #define N_CSBEND_PARAMS 37
 #define N_MATTER_PARAMS 8
 #define N_RFMODE_PARAMS 23
-#define N_TRFMODE_PARAMS 16
+#define N_TRFMODE_PARAMS 18
 #define N_TWMTA_PARAMS 17
 #define N_ZLONGIT_PARAMS 24
 #define N_MODRF_PARAMS 15
@@ -1888,6 +1888,8 @@ typedef struct {
     double bin_size;           /* size of charge bins */
     long n_bins;               /* number of charge bins */
     char *plane;               /* "x", "y", or "both" */
+    long sample_interval;      /* sample interval for record file */
+    char *record;              /* name of file to record (t, V) in */
     long single_pass;          /* controls accumulation of voltage from turn-to-turn */
     double dx, dy;
     double xfactor, yfactor;
@@ -1905,7 +1907,7 @@ typedef struct {
     double last_t;             /* time at which last particle was seen */
     double last_xphase;        /* phase at t=last_t */
     double last_yphase;        /* phase at t=last_t */
-    FILE *fprec;               /* pointer to file for recording (t, Vr) */
+    SDDS_DATASET SDDSrec;
     } TRFMODE;
 
 
