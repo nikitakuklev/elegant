@@ -287,7 +287,7 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
   }
   if (rfmode->sample_interval<=0)
     rfmode->sample_interval = 1;
-  if (rfmode->record) {
+  if (rfmode->record && !(rfmode->fileInitialized)) {
     rfmode->record = compose_filename(rfmode->record, run->rootname);
     n = n_passes/rfmode->sample_interval;
     if (!SDDS_InitializeOutput(&rfmode->SDDSrec, SDDS_BINARY, 1, NULL, NULL, rfmode->record) ||
@@ -305,6 +305,7 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       SDDS_Bomb("problem setting up RFMODE record file");
     }
+    rfmode->fileInitialized = 0;
   }
   if (rfmode->preload && rfmode->charge) {
     double Vb, omega, To, tau;

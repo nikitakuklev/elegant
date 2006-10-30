@@ -1087,22 +1087,16 @@ void reset_special_elements(LINE_LIST *beamline, long includeRF)
             }
             break;
           case T_RFMODE:
-            if (includeRF) {
+            if (includeRF)
               ((RFMODE*)eptr->p_elem)->initialized = 0;
-              if (SDDS_IsActive(&((RFMODE*)eptr->p_elem)->SDDSrec))
-                SDDS_Terminate(&((RFMODE*)eptr->p_elem)->SDDSrec);
-            }
             break;
           case T_FRFMODE:
             if (includeRF)
               ((FRFMODE*)eptr->p_elem)->initialized = 0;
             break;
           case T_TRFMODE:
-            if (includeRF) {
+            if (includeRF)
               ((TRFMODE*)eptr->p_elem)->initialized = 0;
-              if (SDDS_IsActive(&((TRFMODE*)eptr->p_elem)->SDDSrec))
-                SDDS_Terminate(&((TRFMODE*)eptr->p_elem)->SDDSrec);
-            }
             break;
           case T_FTRFMODE:
             if (includeRF)

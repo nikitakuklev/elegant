@@ -1846,6 +1846,7 @@ typedef struct {
     double *tQ, *fQ;
     long nQ;
     SDDS_DATASET SDDSrec;
+    long fileInitialized;
     } RFMODE;
 
 /* names and storage structure for RF-mode-from-file physical parameters */
@@ -1908,6 +1909,7 @@ typedef struct {
     double last_xphase;        /* phase at t=last_t */
     double last_yphase;        /* phase at t=last_t */
     SDDS_DATASET SDDSrec;
+    long fileInitialized;
     } TRFMODE;
 
 

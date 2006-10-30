@@ -315,8 +315,7 @@ void set_up_trfmode(TRFMODE *trfmode, char *element_name, double element_z,
   if (!trfmode->doX && !trfmode->doY) 
     bomb("No planes selected for TRFMODE", NULL);
 
-  if (trfmode->record) {
-    long n;
+  if (trfmode->record && !trfmode->fileInitialized) {
     trfmode->record = compose_filename(trfmode->record, run->rootname);
     if (!SDDS_InitializeOutput(&trfmode->SDDSrec, SDDS_BINARY, 1, NULL, NULL, trfmode->record) ||
         !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "Pass", NULL, SDDS_LONG) ||
@@ -329,6 +328,7 @@ void set_up_trfmode(TRFMODE *trfmode, char *element_name, double element_z,
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       SDDS_Bomb("problem setting up TRFMODE record file");
     }
+    trfmode->fileInitialized = 1;
   }
 }
 
