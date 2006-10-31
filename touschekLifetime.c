@@ -277,7 +277,7 @@ int main( int argc, char **argv)
                              "Charge", NULL, SDDS_DOUBLE, NULL) ||
       0>SDDS_DefineParameter(&resultsPage, "sigmaz", "$gs$r$bz$n", "m", 
                              "Bunch length", NULL, SDDS_DOUBLE, NULL) ||
-      0>SDDS_DefineParameter(&resultsPage, "tLifetime", NULL, "s", 
+      0>SDDS_DefineParameter(&resultsPage, "tLifetime", NULL, "hour", 
                              "Touschek half lifetime", NULL, SDDS_DOUBLE, NULL))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   
@@ -442,7 +442,7 @@ void TouschekLifeCalc(long verbosity)
   i=j=0;
   for (i = 0; i<elements; i++) {
 
-/* remove zero length elements from beamline. */
+/* remove zero length elements from beamline. Except the first element. */
     if(i>0) {
       while(s[i]==s[i-1]) {
         tm[i]=tm[i-1];
@@ -468,7 +468,9 @@ void TouschekLifeCalc(long verbosity)
 /* compare two files if it's for same beam line. */       
     if(s[i]>s2[j]) j++;
     if(j==elem2) j--;
-    if(s[i]==s2[j] && strcmp(eName1[i],eName2[j])!=0) {
+/* Normally the first element for twiss file is _BEG_, which is not true for aperture file.
+ But we need it for starting the calculation. */
+    if(s[i]!=0 && s[i]==s2[j] && strcmp(eName1[i],eName2[j])!=0) {
       printf("element1 %s and elem2 %s at s1 %lf s2 %lf is diff",eName1[i],eName2[j],s[i],s2[j]);
       bomb("Twiss and Aperture file are not for same beamline",NULL);
     }
