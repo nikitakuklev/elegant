@@ -1,3 +1,4 @@
+
 /*************************************************************************\
 * Copyright (c) 2002 The University of Chicago, as Operator of Argonne
 * National Laboratory.
@@ -140,7 +141,11 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
           print_elem_list(stdout, elem);
 #endif
           fill_line(line, n_lines, elem, n_elems, s);
-          check_duplic_line(line, lptr, n_lines+1);
+          if (check_duplic_elem(&elem, NULL, lptr->name, n_elems)) {
+            fprintf(stdout, "line definition %s conflicts with element of same name\n", lptr->name);
+            exit(1);
+          }
+          check_duplic_line(line, lptr->name, n_lines+1, 0);
 #ifdef DEBUG 
           fprintf(stdout, "\n****** expanded line %s:\n", lptr->name);
           fflush(stdout);
@@ -185,7 +190,11 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
               if (entity_description[newType].flags&HAS_LENGTH)
                 ((DRIFT*)eptr->p_elem)->length = length;
             }
-            check_duplic_elem(&elem, &eptr, n_elems);
+            if (check_duplic_line(line, eptr->name, n_lines+1, 1)) {
+              fprintf(stdout, "element %s conflicts with line with same name\n", eptr->name);
+              exit(1);
+            }
+            check_duplic_elem(&elem, &eptr, NULL, n_elems);
           }
 #ifdef DEBUG
           print_elem(stdout, elem);
@@ -206,7 +215,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
     if (getSCMULTSpecCount()) {
       fill_elem(eptr, getSCMULTName(), T_SCMULT, NULL);
       eptr_sc = eptr;
-      check_duplic_elem(&elem, &eptr, n_elems);
+      check_duplic_elem(&elem, &eptr, NULL, n_elems);
       extend_elem_list(&eptr);
       n_elems++;  	
     }

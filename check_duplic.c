@@ -19,29 +19,36 @@
 #include "mdb.h"
 #include "track.h"
 
-
-void check_duplic_elem(
+long check_duplic_elem(
                        ELEMENT_LIST **elem0,          /* root of element list */
                        ELEMENT_LIST **new_elem,       /* newly added element  */
+                       char *nameToCheck,             /* don't add new element, just check for this name */
                        long n_elems
                        )
 {
   char *new_name;
-  long i, comparison, hi, lo, mid;
+  long i, comparison, hi, lo, mid, checkOnly = 0;
   ELEMENT_LIST *elem, *insertionPoint, *elast;
   ELEMENT_LIST **elemArray = NULL;
 
   if (!elem0 || !*elem0)
     bomb("root pointer of element list is null (check_duplic_elem)", NULL);
-  if (!new_elem || !*new_elem)
+  if ((!new_elem || !*new_elem) && !nameToCheck)
     bomb("new element pointer is null (check_duplic_elem)", NULL);
   
-#ifdef DEBUG    
-  fprintf(stdout, "%ld elements in list\n",
-         n_elems);
-  fflush(stdout);
-#endif
   if (n_elems>=1) {
+    if (nameToCheck) {
+      checkOnly = 1;
+      new_name = nameToCheck;
+    }
+    else
+      new_name = (*new_elem)->name;
+#ifdef DEBUG    
+    fprintf(stdout, "checking name %s against %ld elements in list\n",
+            new_name, n_elems);
+    fflush(stdout);
+#endif
+    
     elemArray = trealloc(elemArray, sizeof(*elemArray)*(n_elems+10));
     elem = *elem0;
     for (i=0; i<n_elems; i++) {
@@ -49,13 +56,25 @@ void check_duplic_elem(
       elem = elem->succ;
     }
     
-    new_name = (*new_elem)->name;
+    if (nameToCheck) {
+      checkOnly = 1;
+      new_name = nameToCheck;
+    }
+    else
+      new_name = (*new_elem)->name;
     elem = *elem0;
     insertionPoint = NULL;
 
     lo = 0; 
     hi = n_elems-1;
     if ((comparison=strcmp(new_name, elemArray[lo]->name))==0) {
+      if (checkOnly) {
+        free(elemArray);
+#ifdef DEBUG
+        fprintf(stdout, "**** check reveals problem\n");
+#endif
+        return 1;
+      }
       fprintf(stdout, "error: multiple definitions of element %s\n",
               new_name);
       fflush(stdout);
@@ -65,6 +84,13 @@ void check_duplic_elem(
       insertionPoint = elemArray[lo];
     if (!insertionPoint) {
       if ((comparison=strcmp(new_name, elemArray[hi]->name))==0) {
+        if (checkOnly) {
+          free(elemArray);
+#ifdef DEBUG
+          fprintf(stdout, "**** check reveals problem\n");
+#endif
+          return 1;
+        }
         fprintf(stdout, "error: multiple definitions of element %s\n",
                 new_name);
         fflush(stdout);
@@ -74,6 +100,13 @@ void check_duplic_elem(
         do {
           mid = (lo+hi)/2;
           if ((comparison=strcmp(new_name, elemArray[mid]->name))==0) {
+            if (checkOnly) {
+              free(elemArray);
+#ifdef DEBUG
+              fprintf(stdout, "**** check reveals problem\n");
+#endif
+              return 1;
+            }
             fprintf(stdout, "error: multiple definitions of element %s\n",
                     new_name);
             fflush(stdout);
@@ -88,7 +121,7 @@ void check_duplic_elem(
           insertionPoint = elemArray[hi];
       }
     }
-    if (insertionPoint) {
+    if (!checkOnly && insertionPoint) {
 #ifdef DEBUG
       fprintf(stdout, "inserting %s before %s\n", new_name, insertionPoint->name);
       fflush(stdout);
@@ -110,30 +143,44 @@ void check_duplic_elem(
 
 #ifdef DEBUG
   elem  = *elem0;
+  i = 0;
+  fprintf(stdout, "Elements: \n");
   while (elem && elem->name) {
-    fprintf(stdout, "  %s\n", elem->name);
+    fprintf(stdout, "  %s,%c", elem->name, ++i%10==0?'\n':' ');
     fflush(stdout);
     elem = elem->succ;
   }
+  fprintf(stdout, "\n");
   fflush(stdout);
 #endif
 
+  return 0;
 }
 
-void check_duplic_line(
+long check_duplic_line(
                        LINE_LIST *line,          /* root of line list */
-                       LINE_LIST *new_line,      /* newly added line */
-                       long n_lines
+                       char *new_name,
+                       long n_lines,
+                       long checkOnly
                        )
 {
-  char *new_name;
   long i;
 
-  new_name = new_line->name;
-  
   n_lines--;
+#ifdef DEBUG
+  fprintf(stdout, "Checking name %s against %ld lines\n", new_name, n_lines);
+#endif
   for (i=0; i<n_lines; i++) {
+#ifdef DEBUG
+    fprintf(stdout, "%s,%c", line->name, (i+1)%10==0?'\n':' ');
+#endif
     if (strcmp(new_name, line->name)==0) {
+      if (checkOnly) {
+#ifdef DEBUG
+        fprintf(stdout, "+++ check reveals problem\n");
+#endif
+        return 1;
+      }
       *line->name = 0;
       fprintf(stdout, "error: multiple definitions of line %s\n", 
              new_name);
@@ -142,6 +189,11 @@ void check_duplic_line(
     }
     line = line->succ;
   }
+#ifdef DEBUG
+  fprintf(stdout, "\n");
+  fflush(stdout);
+#endif
+  return 0;
 }
 
 
