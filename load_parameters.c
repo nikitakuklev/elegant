@@ -62,6 +62,8 @@ static char *load_mode[LOAD_MODES] = {
 
 long setup_load_parameters_for_file(char *filename, RUN *run, LINE_LIST *beamline);
 
+static long warningsLeft = 100;
+
 long setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 {
   long i, index;
@@ -370,19 +372,28 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
       while (count-- > 0) {
         if (!find_element(element[j], &eptr, &(beamline->elem))) {
           if (occurence) {
-            fprintf(stdout, "%s: unable to find occurence %" PRId32 " of element %s (do_load_parameters)\n", 
-                    allow_missing_elements?"Warning":"Error",
-                    occurence[j], element[j]);
-            fflush(stdout);
+            if (warningsLeft) {
+              fprintf(stdout, "%s: unable to find occurence %" PRId32 " of element %s (do_load_parameters)\n", 
+                      allow_missing_elements?"Warning":"Error",
+                      occurence[j], element[j]);
+              if (--warningsLeft==0)
+                fprintf(stdout, "Further missing elements warnings suppressed\n");
+              fflush(stdout);
+            }
           } else {
-            fprintf(stdout, "%s: unable to find element %s (do_load_parameters)\n", 
-                    allow_missing_elements?"Warning":"Error",
-                    element[j]);
-            fflush(stdout);
+            if (warningsLeft) {
+              fprintf(stdout, "%s: unable to find element %s (do_load_parameters)\n", 
+                      allow_missing_elements?"Warning":"Error",
+                      element[j]);
+              if (--warningsLeft==0)
+                fprintf(stdout, "Further missing elements warnings suppressed\n");
+              fflush(stdout);
+            }
           }
           if (!allow_missing_elements)
             exit(1);
           element_missing = 1;
+          break;
         }
       }
       if (element_missing) {
