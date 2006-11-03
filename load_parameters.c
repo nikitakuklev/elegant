@@ -62,7 +62,7 @@ static char *load_mode[LOAD_MODES] = {
 
 long setup_load_parameters_for_file(char *filename, RUN *run, LINE_LIST *beamline);
 
-static long warningsLeft = 100;
+static long missingElementWarningsLeft = 100, missingParameterWarningsLeft = 100;
 
 long setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 {
@@ -372,20 +372,20 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
       while (count-- > 0) {
         if (!find_element(element[j], &eptr, &(beamline->elem))) {
           if (occurence) {
-            if (warningsLeft) {
+            if (missingElementWarningsLeft || !allow_missing_elements) {
               fprintf(stdout, "%s: unable to find occurence %" PRId32 " of element %s (do_load_parameters)\n", 
                       allow_missing_elements?"Warning":"Error",
                       occurence[j], element[j]);
-              if (--warningsLeft==0)
+              if (allow_missing_elements && --missingElementWarningsLeft==0)
                 fprintf(stdout, "Further missing elements warnings suppressed\n");
               fflush(stdout);
             }
           } else {
-            if (warningsLeft) {
+            if (missingElementWarningsLeft || !allow_missing_elements) {
               fprintf(stdout, "%s: unable to find element %s (do_load_parameters)\n", 
                       allow_missing_elements?"Warning":"Error",
                       element[j]);
-              if (--warningsLeft==0)
+              if (allow_missing_elements && --missingElementWarningsLeft==0)
                 fprintf(stdout, "Further missing elements warnings suppressed\n");
               fflush(stdout);
             }
@@ -405,10 +405,14 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
       lastMissingElement[0] = 0;
       lastMissingOccurence = 0;
       if ((param = confirm_parameter(parameter[j], eptr->type))<0) {
-        fprintf(stdout, "%s: element %s does not have a parameter %s (do_load_parameters)\n",
-                allow_missing_parameters?"Warning":"Error",
-                eptr->name, parameter[j]);
-        fflush(stdout);
+        if (missingParameterWarningsLeft || !allow_missing_parameters) {
+          fprintf(stdout, "%s: element %s does not have a parameter %s (do_load_parameters)\n",
+                  allow_missing_parameters?"Warning":"Error",
+                  eptr->name, parameter[j]);
+          if (allow_missing_parameters && --missingParameterWarningsLeft==0)
+            fprintf(stdout, "Further missing parameters warnings suppressed\n");
+          fflush(stdout);
+        }
         if (!allow_missing_parameters)
           exit(1);
         continue;
