@@ -716,7 +716,7 @@ extern char *entity_text[N_TYPES];
 #define N_CSBEND_PARAMS 37
 #define N_MATTER_PARAMS 8
 #define N_RFMODE_PARAMS 23
-#define N_TRFMODE_PARAMS 18
+#define N_TRFMODE_PARAMS 20
 #define N_TWMTA_PARAMS 17
 #define N_ZLONGIT_PARAMS 24
 #define N_MODRF_PARAMS 15
@@ -1890,8 +1890,10 @@ typedef struct {
     long n_bins;               /* number of charge bins */
     char *plane;               /* "x", "y", or "both" */
     long sample_interval;      /* sample interval for record file */
+    long perParticleOutput;    /* asks for per-particle output in record file */
     char *record;              /* name of file to record (t, V) in */
     long single_pass;          /* controls accumulation of voltage from turn-to-turn */
+    long rigid_until_pass;     /* don't affect beam until this pass */
     double dx, dy;
     double xfactor, yfactor;
     long rampPasses;           /* If nonzero, the number of passes over which to ramp impedance up */

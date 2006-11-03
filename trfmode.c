@@ -240,18 +240,20 @@ void track_through_trfmode(
   fflush(fpdeb);
 #endif
 
-  /* change particle slopes to reflect voltage in relevant bin */
-  for (ip=0; ip<np; ip++) {
-    if (pbin[ip]>=0) {
-      P = Po*(1+part[ip][5]);
-      Pz = P/sqrt(1+sqr(part[ip][1])+sqr(part[ip][3])) + Vzbin[pbin[ip]]/(1e6*me_mev);
-      Px = part[ip][1]*Pz + Vxbin[pbin[ip]]/(1e6*me_mev);
-      Py = part[ip][3]*Pz + Vybin[pbin[ip]]/(1e6*me_mev);
-      P  = sqrt(Pz*Pz+Px*Px+Py*Py);
-      part[ip][1] = Px/Pz;
-      part[ip][3] = Py/Pz;
-      part[ip][5] = (P-Po)/Po;
-      part[ip][4] = time[ip]*c_mks*P/sqrt(sqr(P)+1);
+  if (pass>=trfmode->rigid_until_pass) {
+    /* change particle slopes to reflect voltage in relevant bin */
+    for (ip=0; ip<np; ip++) {
+      if (pbin[ip]>=0) {
+	P = Po*(1+part[ip][5]);
+	Pz = P/sqrt(1+sqr(part[ip][1])+sqr(part[ip][3])) + Vzbin[pbin[ip]]/(1e6*me_mev);
+	Px = part[ip][1]*Pz + Vxbin[pbin[ip]]/(1e6*me_mev);
+	Py = part[ip][3]*Pz + Vybin[pbin[ip]]/(1e6*me_mev);
+	P  = sqrt(Pz*Pz+Px*Px+Py*Py);
+	part[ip][1] = Px/Pz;
+	part[ip][3] = Py/Pz;
+	part[ip][5] = (P-Po)/Po;
+	part[ip][4] = time[ip]*c_mks*P/sqrt(sqr(P)+1);
+      }
     }
   }
 
@@ -317,16 +319,30 @@ void set_up_trfmode(TRFMODE *trfmode, char *element_name, double element_z,
 
   if (trfmode->record && !trfmode->fileInitialized) {
     trfmode->record = compose_filename(trfmode->record, run->rootname);
-    if (!SDDS_InitializeOutput(&trfmode->SDDSrec, SDDS_BINARY, 1, NULL, NULL, trfmode->record) ||
-        !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "Pass", NULL, SDDS_LONG) ||
-        !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "t", "s", SDDS_DOUBLE) ||
-        !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "Vx", "V", SDDS_DOUBLE) ||
-        !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "VxReal", "V", SDDS_DOUBLE) ||
-        !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "Vy", "V", SDDS_DOUBLE) ||
-        !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "VyReal", "V", SDDS_DOUBLE) ||
-        !SDDS_WriteLayout(&trfmode->SDDSrec)) {
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      SDDS_Bomb("problem setting up TRFMODE record file");
+    if (!trfmode->perParticleOutput && trfmode->binless) {
+      if (!SDDS_InitializeOutput(&trfmode->SDDSrec, SDDS_BINARY, 1, NULL, NULL, trfmode->record) ||
+	  !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "Pass", NULL, SDDS_LONG) ||
+	  !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "t", "s", SDDS_DOUBLE) ||
+	  !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "VxMax", "V", SDDS_DOUBLE) ||
+	  !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "VxRealMax", "V", SDDS_DOUBLE) ||
+	  !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "VyMax", "V", SDDS_DOUBLE) ||
+	  !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "VyRealMax", "V", SDDS_DOUBLE) ||
+	  !SDDS_WriteLayout(&trfmode->SDDSrec)) {
+	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+	SDDS_Bomb("problem setting up TRFMODE record file");
+      } 
+    } else {
+      if (!SDDS_InitializeOutput(&trfmode->SDDSrec, SDDS_BINARY, 1, NULL, NULL, trfmode->record) ||
+	  !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "Pass", NULL, SDDS_LONG) ||
+	  !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "t", "s", SDDS_DOUBLE) ||
+	  !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "Vx", "V", SDDS_DOUBLE) ||
+	  !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "VxReal", "V", SDDS_DOUBLE) ||
+	  !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "Vy", "V", SDDS_DOUBLE) ||
+	  !SDDS_DefineSimpleColumn(&trfmode->SDDSrec, "VyReal", "V", SDDS_DOUBLE) ||
+	  !SDDS_WriteLayout(&trfmode->SDDSrec)) {
+	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+	SDDS_Bomb("problem setting up TRFMODE record file");
+      }
     }
     trfmode->fileInitialized = 1;
   }
@@ -346,6 +362,7 @@ void runBinlessTrfMode(
   double Px, Py, Pz;
   double Q, Qrp;
   double x, y;
+  double VxMax, VxRealMax, VyMax, VyRealMax;
   static long been_warned = 0;
   static long called = 0;
 #if DEBUG
@@ -433,12 +450,13 @@ void runBinlessTrfMode(
   }
 
   if (trfmode->record && (trfmode->sample_interval<2 || pass%trfmode->sample_interval==0)) {
-    if (!SDDS_StartPage(&trfmode->SDDSrec, np)) {
+    if (!SDDS_StartPage(&trfmode->SDDSrec, trfmode->perParticleOutput?np:1)) {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       SDDS_Bomb("problem setting up TRFMODE record file");
     }
   }
-  
+
+  VxMax = VxRealMax = VyMax = VyRealMax = 0;
   for (ip0=0; ip0<np; ip0++) {
     ip = tData[ip0].ip;
     x = part[ip][0] - trfmode->dx;
@@ -502,42 +520,66 @@ void runBinlessTrfMode(
         trfmode->last_yphase = atan2(trfmode->Vyi, trfmode->Vyr);
       trfmode->Vy = sqrt(sqr(trfmode->Vyr)+sqr(trfmode->Vyi));
     }    
-    /* change particle slopes to reflect voltage in relevant bin */
-    P = Po*(1+part[ip][5]);
-    Pz = P/sqrt(1+sqr(part[ip][1])+sqr(part[ip][3])) + Vzb/(1e6*me_mev);
-    Px = part[ip][1]*Pz + Vxb/(1e6*me_mev);
-    Py = part[ip][3]*Pz + Vyb/(1e6*me_mev);
+    if (pass>=trfmode->rigid_until_pass) {
+      /* change particle slopes to reflect voltage in relevant bin */
+      P = Po*(1+part[ip][5]);
+      Pz = P/sqrt(1+sqr(part[ip][1])+sqr(part[ip][3])) + Vzb/(1e6*me_mev);
+      Px = part[ip][1]*Pz + Vxb/(1e6*me_mev);
+      Py = part[ip][3]*Pz + Vyb/(1e6*me_mev);
 #if DEBUG
-    fprintf(fpdeb, "%e %e %e %e %e %e %e %e %e\n",
-            tData[ip0].t, trfmode->last_t, cos(dphase), sin(dphase),
-            Vxr_last, Vxi_last,
-            trfmode->Vxr, trfmode->Vxi, part[ip][0]);
+      fprintf(fpdeb, "%e %e %e %e %e %e %e %e %e\n",
+	      tData[ip0].t, trfmode->last_t, cos(dphase), sin(dphase),
+	      Vxr_last, Vxi_last,
+	      trfmode->Vxr, trfmode->Vxi, part[ip][0]);
 #endif
-    P  = sqrt(Pz*Pz+Px*Px+Py*Py);
-    part[ip][1] = Px/Pz;
-    part[ip][3] = Py/Pz;
-    part[ip][5] = (P-Po)/Po;
-    part[ip][4] = tData[ip0].t*c_mks*P/sqrt(sqr(P)+1);
+      P  = sqrt(Pz*Pz+Px*Px+Py*Py);
+      part[ip][1] = Px/Pz;
+      part[ip][3] = Py/Pz;
+      part[ip][5] = (P-Po)/Po;
+      part[ip][4] = tData[ip0].t*c_mks*P/sqrt(sqr(P)+1);
+    }
 
     if (trfmode->record && (trfmode->sample_interval<2 || pass%trfmode->sample_interval==0)) {
-      if (!SDDS_SetRowValues(&trfmode->SDDSrec, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-                             ip0, 
-                             "Pass", pass, "t", tData[ip0].t,
-                             "Vx", trfmode->Vx, "VxReal", trfmode->Vxr,
-                             "Vy", trfmode->Vy, "VyReal", trfmode->Vyr,
-                             NULL)) {
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-        SDDS_Bomb("problem setting up TRFMODE record data");
+      if (!trfmode->perParticleOutput) {
+	if (VxMax<fabs(trfmode->Vx))
+	  VxMax = fabs(trfmode->Vx);
+	if (VyMax<fabs(trfmode->Vy))
+	  VyMax = fabs(trfmode->Vy);
+	if (VxRealMax<fabs(trfmode->Vxr))
+	  VxRealMax = fabs(trfmode->Vxr);
+	if (VyRealMax<fabs(trfmode->Vyr))
+	  VyRealMax = fabs(trfmode->Vyr);
+      } else {
+	if (!SDDS_SetRowValues(&trfmode->SDDSrec, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+			       ip0, 
+			       "Pass", pass, "t", tData[ip0].t,
+			       "Vx", trfmode->Vx, "VxReal", trfmode->Vxr,
+			       "Vy", trfmode->Vy, "VyReal", trfmode->Vyr,
+			       NULL)) {
+	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+	  SDDS_Bomb("problem setting up TRFMODE record data (1)");
+	}
       }
     }
-    
+
     trfmode->last_t = t;
   }
 
   if (trfmode->record && (trfmode->sample_interval<2 || pass%trfmode->sample_interval==0)) {
+    if (!trfmode->perParticleOutput) {
+      if (!SDDS_SetRowValues(&trfmode->SDDSrec, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+			     0,
+			     "Pass", pass, "t", tData[0].t,
+			     "VxMax", VxMax, "VxRealMax", VxRealMax,
+			     "VyMax", VyMax, "VyRealMax", VyRealMax,
+			     NULL)) {
+	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+	SDDS_Bomb("problem setting up TRFMODE record data (2)");
+      }
+    }
     if (!SDDS_WritePage(&trfmode->SDDSrec)) {
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-        SDDS_Bomb("problem setting up TRFMODE record data");
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      SDDS_Bomb("problem writing TRFMODE record data");
     }
   }
   
