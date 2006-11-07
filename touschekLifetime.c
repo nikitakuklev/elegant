@@ -9,6 +9,9 @@
 
 /* 
  * $Log: not supported by cvs2svn $
+ * Revision 1.3  2006/10/31 19:23:07  borland
+ * Latest version from A. Xiao.
+ *
 
  * sdds program to return Touschek lifetime.
  * Using A. Piwinski's formula, DESY 98-179/ISSN 0418-9833.
@@ -86,6 +89,7 @@ int main( int argc, char **argv)
   double emitxInput, sigmaDeltaInput, rfVoltage, rfHarmonic;
   double alphac, U0, circumference, EMeV;
   double coupling, emitx0, charge;
+  short has_ex0 = 0, has_Sdelta0 = 0;
 
   /****************************************************\
    * read from command line                           *
@@ -204,26 +208,8 @@ int main( int argc, char **argv)
     fprintf( stdout, "Opening \"%s\" for checking presence of parameters.\n", inputfile1);
   if (!SDDS_InitializeInput(&twissPage, inputfile1))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-  /* Check presence of first radiation integral */
   SDDS_ReadPage(&twissPage);
-  switch(SDDS_CheckParameter(&twissPage, "I1", NULL, SDDS_DOUBLE, verbosity?stdout:NULL)) {
-  case SDDS_CHECK_NONEXISTENT:
-    if (verbosity)
-      fprintf( stdout, "\tParameter I1 not found in input file.\n");
-    exit(1);
-    break;
-  case SDDS_CHECK_WRONGTYPE:
-    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-    exit(1);
-    break;
-  case SDDS_CHECK_OKAY:
-    break;
-  default:
-    fprintf( stdout, "Unexpected result from SDDS_CheckParameter routine.\n");
-    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-    exit(1);
-    break;
-  }
+
   /****************************************************\
    * Check input aperturefile                         *
    \****************************************************/
@@ -260,17 +246,20 @@ int main( int argc, char **argv)
                              "Touschek lifetime calculation", outputfile))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 
-  if (!SDDS_TransferParameterDefinition(&resultsPage, &twissPage, "pCentral", NULL) ||
-      !SDDS_TransferParameterDefinition(&resultsPage, &twissPage, "Sdelta0", NULL) ||
-      !SDDS_TransferParameterDefinition(&resultsPage, &twissPage, "ex0", NULL))
-    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-
+  /* Ignore error returns from these three statements */
+  SDDS_TransferParameterDefinition(&resultsPage, &twissPage, "pCentral", NULL);
+  SDDS_TransferParameterDefinition(&resultsPage, &twissPage, "Sdelta0", NULL);
+  SDDS_TransferParameterDefinition(&resultsPage, &twissPage, "ex0", NULL);
+  SDDS_ClearErrors();
+  
   if (0>SDDS_DefineParameter(&resultsPage, "coupling", NULL, NULL, 
                              "Coupling", NULL, SDDS_DOUBLE, NULL) ||
       0>SDDS_DefineParameter(&resultsPage, "emitx", "$ge$r$bx$n", "m", 
                              "Horizontal emittance with coupling", NULL, SDDS_DOUBLE, NULL) ||
       0>SDDS_DefineParameter(&resultsPage, "emity", "$ge$r$by$n", "m", 
                              "Vertical emittance with coupling", NULL, SDDS_DOUBLE, NULL) ||
+      0>SDDS_DefineParameter(&resultsPage, "Sdelta", NULL, NULL, 
+                             "Fractional momentum spread", NULL, SDDS_DOUBLE, NULL) ||
       0>SDDS_DefineParameter(&resultsPage, "Particles", NULL, NULL, 
                              "Particles", NULL, SDDS_DOUBLE, NULL) ||
       0>SDDS_DefineParameter(&resultsPage, "Charge", NULL, "nC", 
@@ -295,7 +284,7 @@ int main( int argc, char **argv)
       !SDDS_TransferColumnDefinition(&resultsPage, &twissPage, "ElementOccurence", NULL))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   if (0>SDDS_DefineColumn(&resultsPage, "tm", NULL, NULL, 
-                          "Local momentum aperture", NULL, SDDS_DOUBLE, 0) ||
+                          "Local momentum aperture (beta*dp/p)^2", NULL, SDDS_DOUBLE, 0) ||
       0>SDDS_DefineColumn(&resultsPage, "B1", NULL, NULL, 
                           "Piwinski's parameter B1", NULL, SDDS_DOUBLE, 0) || 
       0>SDDS_DefineColumn(&resultsPage, "B2", NULL, NULL, 
@@ -315,10 +304,6 @@ int main( int argc, char **argv)
 
   if (!SDDS_GetParameters(&twissPage,
                           "pCentral", &pCentral,
-                          "ex0", &emitx0,
-                          "Sdelta0", &sigmap,                            
-                          "alphac", &alphac,
-                          "U0", &U0,
                           NULL) )
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 
@@ -328,16 +313,29 @@ int main( int argc, char **argv)
   s2 = SDDS_GetColumnInDoubles(&aperPage, "s");
   if(elements<elem2)
     fprintf(stdout, "warning: Twiss file is shorter than Aperture file\n");
-  emitx = emitx0/ ( 1 + coupling);
-  if (emitxInput) 
+  if (emitxInput) {
     emitx = emitxInput;
+  } else {
+    if (!SDDS_GetParameters(&twissPage, "ex0", &emitx0, NULL))
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    emitx = emitx0/ ( 1 + coupling);
+    has_ex0 = 1;
+  }
   emity = emitx * coupling;
-  if (sigmaDeltaInput) 
+  if (sigmaDeltaInput) {
     sigmap = sigmaDeltaInput;
+  } else {
+    if (!SDDS_GetParameters(&twissPage, "Sdelta0", &sigmap, NULL))
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    has_Sdelta0 = 1;
+  }
   circumference = s[elements-1];
   EMeV = sqrt(sqr(pCentral) + 1) * me_mev;
   if (!sz) {
     /* compute length in m from rf voltage, energy spread, etc */
+    if (!SDDS_GetParameters(&twissPage, "alphac", &alphac,
+                            "U0", &U0, NULL))
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     sz = 
       circumference*sigmap*
         sqrt(alphac*EMeV/(PIx2*rfHarmonic*sqrt(sqr(rfVoltage)-sqr(U0))));
@@ -381,8 +379,7 @@ int main( int argc, char **argv)
   if (0>SDDS_StartPage(&resultsPage, elements) ||
       !SDDS_SetParameters(&resultsPage, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
                           "pCentral", pCentral, 
-                          "Sdelta0", sigmap,
-                          "ex0", emitx0,
+                          "Sdelta", sigmap,
                           "coupling", coupling, 
                           "emitx", emitx,
                           "emity", emity,
@@ -406,9 +403,17 @@ int main( int argc, char **argv)
       !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, B1, elements, "B1") ||
       !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, B2, elements, "B2") ||
       !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, coeff, elements, "c0") ||
-      !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, F, elements, "F") ||
-
-      !SDDS_WritePage(&resultsPage))
+      !SDDS_SetColumn(&resultsPage, SDDS_SET_BY_NAME, F, elements, "F"))
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  if (has_ex0 && 
+      !SDDS_SetParameters(&resultsPage, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+                          "ex0", emitx0, NULL))
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  if (has_Sdelta0 &&
+      !SDDS_SetParameters(&resultsPage, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+                          "Sdelta0", sigmap, NULL))
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  if (!SDDS_WritePage(&resultsPage))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   if (SDDS_ReadPage(&twissPage)>0)
     fprintf( stdout, "The code doesn't support multi twiss pages.\n");
