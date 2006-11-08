@@ -155,6 +155,7 @@ SYS_PROD_LIBS_Linux += lapack blas
 #The g2c library is needed for gcc versions before FC2
 gcc-version = $(shell gcc -v 2> /dev/stdout | grep "^gcc" | awk '{print $$4}')
 SYS_PROD_LIBS_Linux += $(shell if [ "$(call gcc-version)" -lt "20040412" ]; then echo "g2c" ; else echo "" ; fi;)
+SYS_PROD_LIBS_Linux += $(shell if [ "$(call gcc-version)" -gt "20061010" ]; then echo "gfortran" ; else echo "" ; fi;)
 endif #ifeq ($(OS_CLASS),Linux)
 ifeq ($(OS_CLASS),solaris)
 OPT_CFLAGS_YES=
