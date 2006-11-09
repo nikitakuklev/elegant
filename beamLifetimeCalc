@@ -4,6 +4,12 @@ exec oagwish "$0" "$@"
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.16  2006/01/11 20:23:23  emery
+# Added resistive part of broadband impedance.
+# Default value is R=3 kOhm, corresponding to
+# PAC 2001 publication result. Indented
+# Haissinski section.
+#
 # Revision 1.15  2005/11/04 16:27:06  borland
 # Added Xiao's code for space charge element SCMULT.
 #
@@ -172,7 +178,7 @@ set auto_path [linsert $auto_path 0  /usr/local/oag/apps/lib/$env(HOST_ARCH)]
 set auto_path [linsert $auto_path 0 /usr/local/oag/lib_patch/$env(HOST_ARCH)]
 APSDebugPath
 
-set CVSRevisionAuthor "\$Revision: 1.16 $ \$Author: emery $"
+set CVSRevisionAuthor "\$Revision: 1.17 $ \$Author: emery $"
 
 APSApplication . -name beamLifetimeCalc -version $CVSRevisionAuthor -overview \
   "Calculates the gas scattering lifetime due to single Coulomb scattering and
@@ -828,7 +834,8 @@ proc RecomputeOutputs {args} {
                 set extraOption -verbose
             }
             exec sddsprocess $latticeFile $tmpRoot.0 \
-              -redefine=parameter,Sdelta0,$energySpread
+              -redefine=parameter,Sdelta0,$energySpread \
+              -redef=para,alphac,$alpha
             set unixCommand \
               "haissinski $tmpRoot.0 $tmpRoot.1 -model=Zn=$broadBandImpedanceZn,R=$broadBandImpedanceR \
             -charge=$Q -rf=voltage=[expr $rfVoltage*1e6],harmonic=$harmonic \
