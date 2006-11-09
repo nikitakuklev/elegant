@@ -1081,6 +1081,9 @@ double optimization_function(double *value, long *invalid)
   fprintf(stdout, "Beamline flags: %lx\n", beamline->flags);
   fflush(stdout);
 #endif
+
+  if (restart_random_numbers)
+    seedElegantRandomNumbers(0, 1);
   
   *invalid = 0;
   unstable = 0;

@@ -526,14 +526,7 @@ char **argv;
         fflush(stdout);
       }
       
-      /* seed random number generators.  Note that random_1_elegant seeds random_2, random_3,
-       * and random_4.
-       * random_1_elegant is used for beamline errors.  
-       * random_4 is used for beam generation 
-       * random_2 is used for random scraping/sampling/scattering.  
-       * random_3 is used for BPM noise.
-       */
-      random_1_elegant(-FABS(random_number_seed));
+      seedElegantRandomNumbers(random_number_seed, 0);
 
       /* copy run data into run_conditions structure */
       run_conditions.ideal_gamma = sqrt(sqr(p_central)+1);
@@ -2081,4 +2074,23 @@ void readApertureInput(NAMELIST_TEXT *nltext, RUN *run)
   return;
 }
 
+
+static long savedRandomNumberSeed ;
+
+void seedElegantRandomNumbers(long seed, long restart)
+{
+  if (restart)
+    seed = savedRandomNumberSeed;
+  else
+    savedRandomNumberSeed = seed;
+  
+  /* seed random number generators.  Note that random_1_elegant seeds random_2, random_3,
+   * and random_4.
+   * random_1_elegant is used for beamline errors.  
+   * random_4 is used for beam generation 
+   * random_2 is used for random scraping/sampling/scattering.  
+   * random_3 is used for BPM noise.
+   */
+  random_1_elegant(-FABS(seed));
+}
 

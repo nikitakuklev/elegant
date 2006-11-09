@@ -3104,6 +3104,8 @@ long doMomentumApertureSearch(RUN *run, VARY *control, ERRORVAL *errcon, LINE_LI
 /* prototypes for drand_oag.c */
 double random_1_elegant(long iseed);
 
+void seedElegantRandomNumbers(long seed, long restart);
+
 /* compute long sum with Kahan's algorithm */
 double Kahan (long length, double a[], double *error);
 double KahanPlus (double oldSum, double b, double *error);
