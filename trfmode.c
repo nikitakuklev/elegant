@@ -27,6 +27,7 @@ void track_through_trfmode(
                            CHARGE *charge
                            )
 {
+  static unsigned long *count = NULL;
   static double *xsum = NULL;              /* sum of x coordinate in each bin = N*<x> */
   static double *ysum = NULL;              /* sum of y coordinate in each bin = N*<y> */
   static double *Vxbin = NULL;             /* array for voltage acting on each bin MV */
@@ -84,7 +85,7 @@ void track_through_trfmode(
   tau = 2*Q/omega;
   Qrp = sqrt(Q*Q - 0.25);
   k = omega/4*trfmode->RaInternal/trfmode->Q;
-  omegaOverC = omega*c_mks;
+  omegaOverC = omega/c_mks;
   
   if (!trfmode->doX && !trfmode->doY)
     bomb("x and y turned off for TRFMODE---this shouldn't happen", NULL);
@@ -109,6 +110,7 @@ void track_through_trfmode(
     max_n_bins = trfmode->n_bins;
     xsum = trealloc(xsum, sizeof(*xsum)*max_n_bins);
     ysum = trealloc(ysum, sizeof(*ysum)*max_n_bins);
+    count = trealloc(count, sizeof(*count)*max_n_bins);
     Vxbin = trealloc(Vxbin, sizeof(*Vxbin)*max_n_bins);
     Vybin = trealloc(Vybin, sizeof(*Vybin)*max_n_bins);
     Vzbin = trealloc(Vzbin, sizeof(*Vzbin)*max_n_bins);
@@ -130,7 +132,7 @@ void track_through_trfmode(
   tmax = tmean + trfmode->bin_size*trfmode->n_bins/2.;
 
   for (ib=0; ib<trfmode->n_bins; ib++)
-    xsum[ib] = ysum[ib] = 0;
+    xsum[ib] = ysum[ib] = count[ib] = 0;
   dt = (tmax - tmin)/trfmode->n_bins;
   n_binned = 0;
   lastBin = -1;
@@ -143,6 +145,7 @@ void track_through_trfmode(
       continue;
     xsum[ib] += part[ip][0]-trfmode->dx;
     ysum[ib] += part[ip][2]-trfmode->dy;
+    count[ib] += 1;
     pbin[ip] = ib;
     if (ib>lastBin)
       lastBin = ib;
@@ -168,7 +171,7 @@ void track_through_trfmode(
   }
 
   for (ib=0; ib<=lastBin; ib++) {
-    if (!xsum[ib] && !ysum[ib])
+    if (!count[ib] || (!xsum[ib] && !ysum[ib]))
       continue;
 
     t = tmin+(ib+0.5)*dt;           /* middle arrival time for this bin */
@@ -200,7 +203,7 @@ void track_through_trfmode(
       /* -- x plane */
       Vxb = 2*k*trfmode->mp_charge*xsum[ib]*trfmode->xfactor;
       Vxbin[ib] = trfmode->Vxr;
-      Vzbin[ib] += -omegaOverC*part[ip][0]*(trfmode->Vxi - Vxb/2);
+      Vzbin[ib] += omegaOverC*(xsum[ib]/count[ib])*(trfmode->Vxi - Vxb/2);
       /* add beam-induced voltage to cavity voltage---it is imaginary as
        * the voltage is 90deg out of phase 
        */
@@ -215,7 +218,7 @@ void track_through_trfmode(
       /* -- y plane */
       Vyb = 2*k*trfmode->mp_charge*ysum[ib]*trfmode->yfactor;
       Vybin[ib] = trfmode->Vyr;
-      Vzbin[ib] += -omegaOverC*part[ip][2]*(trfmode->Vyi - Vyb/2);
+      Vzbin[ib] += omegaOverC*(ysum[ib]/count[ib])*(trfmode->Vyi - Vyb/2);
       /* add beam-induced voltage to cavity voltage---it is imaginary as
        * the voltage is 90deg out of phase 
        */
@@ -226,6 +229,7 @@ void track_through_trfmode(
         trfmode->last_yphase = atan2(trfmode->Vyi, trfmode->Vyr);
       trfmode->Vy = sqrt(sqr(trfmode->Vyr)+sqr(trfmode->Vyi));
     }    
+
   }
   
 #if DEBUG
@@ -494,7 +498,7 @@ void runBinlessTrfMode(
       /* -- x plane */
       dVxb = 2*k*trfmode->mp_charge*x*trfmode->xfactor;
       Vxb = trfmode->Vxr;
-      Vzb += -omegaOverC*x*(trfmode->Vxi - dVxb/2);
+      Vzb += omegaOverC*x*(trfmode->Vxi - dVxb/2);
       /* add beam-induced voltage to cavity voltage---it is imaginary as
        * the voltage is 90deg out of phase 
        */
@@ -509,7 +513,7 @@ void runBinlessTrfMode(
       /* -- y plane */
       dVyb = 2*k*trfmode->mp_charge*y*trfmode->yfactor;
       Vyb = trfmode->Vyr;
-      Vzb += -omegaOverC*y*(trfmode->Vyi - dVyb/2);
+      Vzb += omegaOverC*y*(trfmode->Vyi - dVyb/2);
       /* add beam-induced voltage to cavity voltage---it is imaginary as
        * the voltage is 90deg out of phase 
        */
