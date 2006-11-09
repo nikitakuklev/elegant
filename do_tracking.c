@@ -64,6 +64,7 @@ int comp_IDs(const void *coord1, const void *coord2);
 #endif
 static TRACKING_CONTEXT trackingContext;
 
+
 double beta_from_delta(double p, double delta)
 {
   p *= 1+delta;
@@ -1743,7 +1744,7 @@ void do_match_energy(
   if (!change_beam) {
     /* change the central momentum so that it matches the beam's centroid */
     P_average = 0;
-    if(active) {
+    if (active) {
       for (ip=0; ip<np; ip++) {
 #ifndef USE_KAHAN	     
 	P_average += (*P_central)*(1+coord[ip][5]);
@@ -1773,6 +1774,10 @@ void do_match_energy(
     else /* Single particle case, all the processors will do the same as in serial version */
       P_average /= np;
 #endif 
+#ifdef DEBUG_FIDUCIALIZATION
+      fprintf(stdout, "Changing reference momentum from %e to %e in %s at %e to match beam\n",
+              *P_central, P_average, trackingContext.elementName, trackingContext.zEnd);
+#endif
     if (fabs(P_average-(*P_central))/(*P_central)>1e-14){ 
      /* if (P_average!= *P_central) { */
       if (active) {
@@ -1888,6 +1893,10 @@ void set_central_momentum(
       *P_central =  P_new;
 
     if (*P_central != P_new) {
+#ifdef DEBUG_FIDUCIALIZATION
+      fprintf(stdout, "Changing reference momentum from %e to %e in %s at %e to match beam\n",
+              *P_central, P_new, trackingContext.elementName, trackingContext.zEnd);
+#endif
       if (((parallelStatus==trueParallel) && isSlave) || ((parallelStatus!=trueParallel) && isMaster)) {
 	for (ip=0; ip<np; ip++)
 	  coord[ip][5] = ((1+coord[ip][5])*(*P_central) - P_new)/P_new;
@@ -1901,6 +1910,10 @@ void set_central_momentum(
       return;
     }
     if (*P_central != P_new) {
+#ifdef DEBUG_FIDUCIALIZATION
+      fprintf(stdout, "Changing reference momentum from %e to %e in %s\n",
+              *P_central, P_new, trackingContext.elementName);
+#endif
       for (ip=0; ip<np; ip++)
 	coord[ip][5] = ((1+coord[ip][5])*(*P_central) - P_new)/P_new;
       *P_central =  P_new;
