@@ -205,7 +205,25 @@ long doMomentumApertureSearch(
   iElem = 0;
   processElements = process_elements;
   skipElements = skip_elements;
-  
+
+  if (fiducialize) {
+    if (startingCoord)
+      memcpy(coord[0], startingCoord, sizeof(double)*6);
+    else
+      memset(coord[0], 0, sizeof(**coord)*6);
+    coord[0][6] = 1;
+    pCentral = run->p_central;
+    if (verbosity>1) 
+      fprintf(stdout, "Tracking fiducial particle\n");
+    code = do_tracking(NULL, coord, 1, NULL, beamline, &pCentral, 
+                       NULL, NULL, NULL, NULL, run, control->i_step, 
+                       FIRST_BEAM_IS_FIDUCIAL+(verbosity>1?0:SILENT_RUNNING), 1, 0, NULL, NULL, NULL, lostOnPass0, NULL);
+    if (!code) {
+      fprintf(stdout, "Fiducial particle lost. Don't know what to do.\n");
+      exit(1);
+    }
+  }
+
   while (elem && processElements>0) {
     if (!include_name_pattern || wild_match(elem->name, include_name_pattern)) {
       if (elem->end_pos>s_end) 
@@ -251,6 +269,7 @@ long doMomentumApertureSearch(
           else
             memset(coord[0], 0, sizeof(**coord)*6);
           coord[0][6] = 1;
+          pCentral = run->p_central;
           if (verbosity>3) {
             fprintf(stdout, "  Tracking with delta0 = %e (%e, %e, %e, %e, %e, %e), pCentral=%e\n", 
                     delta, coord[0][0], coord[0][1], coord[0][2], coord[0][3], coord[0][4], coord[0][5],
@@ -258,9 +277,10 @@ long doMomentumApertureSearch(
             fflush(stdout);
           }
           lostOnPass0[0] = -1;
-          delete_phase_references();
-          reset_special_elements(beamline, 1);
-          pCentral = run->p_central;
+          if (!fiducialize) {
+            delete_phase_references();
+            reset_special_elements(beamline, 1);
+          }
           code = do_tracking(NULL, coord, 1, NULL, beamline, &pCentral, 
                              NULL, NULL, NULL, NULL, run, control->i_step, 
                              SILENT_RUNNING, control->n_passes, 0, NULL, NULL, NULL, lostOnPass0, NULL);
@@ -268,7 +288,7 @@ long doMomentumApertureSearch(
             /* particle lost */
             if (verbosity>3) {
               long i;
-              fprintf(stdout, "  Particle lost with delta0 = %e\n", delta);
+              fprintf(stdout, "  Particle lost with delta0 = %e at s = %e\n", delta, coord[0][4]);
               if (verbosity>4)
                 for (i=0; i<6; i++)
                   fprintf(stdout, "   coord[%ld] = %e\n", i, coord[0][i]);
@@ -358,7 +378,7 @@ long doMomentumApertureSearch(
               /* particle lost */
               if (verbosity>3) {
                 long i;
-                fprintf(stdout, "  Particle lost with delta0 = %e\n", delta);
+                fprintf(stdout, "  Particle lost with delta0 = %e at s = %e\n", delta, coord[0][4]);
                 if (verbosity>4)
                   for (i=0; i<6; i++)
                     fprintf(stdout, "   coord[%ld] = %e\n", i, coord[0][i]);
