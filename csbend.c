@@ -1306,7 +1306,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     }
     
     if (n_part>1 && csbend->derbenevCriterionMode) {
-      /* evaluate Derbenev criterion: sigma_x/sigma_z << (sigma_z/R)^(1/3) */
+      /* evaluate Derbenev criterion from TESLA-FEL 1995-05: sigma_x/sigma_z << (R/sigma_z)^(1/3) */
       long code;
       double Sz, Sx;
       switch (code=match_string(csbend->derbenevCriterionMode, derbenevCriterionOption, N_DERBENEV_CRITERION_OPTIONS, 0)) {
