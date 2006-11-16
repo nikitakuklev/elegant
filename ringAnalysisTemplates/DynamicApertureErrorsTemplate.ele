@@ -46,7 +46,7 @@
 &alter_elements name=<kickOffsetElement>, item=DP, value=<delta> &end
 
 &run_control
-	n_steps = <numberOfSeeds>,
+	n_steps = 1,
         n_passes = <turns>,
 &end
 
