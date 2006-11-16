@@ -26,7 +26,6 @@
         magnets = %s.mag,
         rootname = <mainDirectory>/<mainPrefix>DynamicApertureErrors<suffix>,
 	random_number_seed = <seed>,
-        final = %s.fin,
         semaphore_file = %s.done,
         tracking_updates = 0
 &end
