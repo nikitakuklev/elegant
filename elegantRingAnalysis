@@ -4,6 +4,9 @@ exec oagwish "$0" "$@"
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.61  2006/08/22 17:57:25  borland
+# Changed errors(numberOfseeds) to more standard errors(numberOfSeeds).
+#
 # Revision 1.60  2006/08/02 22:38:27  shang
 # reorganized tabes, added error tab/
 #
@@ -962,12 +965,11 @@ set MainTabDescList [list "Twiss parameters, chromaticities, radiation integrals
                          "Phase space tracking, plots, FFTs." \
                          "Higher order dispersion from off-momentum orbits." \
                          "Off-momentum tunes from tracking." ]
-set ApertureTabList {DA OffMmntmDA DA+Errors FineDA MmntmAprtr}
-set ApertureFrameList {DynamicAperture OffMomentumDynamicAperture DynamicApertureErrors \
+set ApertureTabList {DA OffMmntmDA FineDA MmntmAprtr}
+set ApertureFrameList {DynamicApertureErrors OffMomentumDynamicAperture \
                            FineDynamicAperture MomentumAperture}
-set ApertureTabDescList [list "On-momentum dynamic aperture using a relatively coarse algorithm." \
+set ApertureTabDescList [list "On-momentum dynamic aperture using a line-scan algorithm, optionally with errors." \
                              "Off-momentum dynamic apertures using a relatively coarse algorithm." \
-                             "On-momentum dynamic aperture with errors (many seeds)." \
                              "Dynamic aperture using a high-resolution algorithm (requires a cluster)." \
                              "Momentum aperture vs s." ]
 set FMATabList {XY XYDelta}
