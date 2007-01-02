@@ -3752,7 +3752,7 @@ the accelerator description for one program can be read by the other
 with no modification.  Among the differences:
 \begin{itemize}
 \item {\tt elegant} does not support the use of MAD-style equations to compute
-the value of a quantity.  The \verb|link_element| namelist command
+the value of a quantity.  The \verb|link_elements| namelist command
 can be used for this purpose, and is actually more flexible than the
 method used by MAD.  Also, \verb|rpn|-style equations may be given
 in double-quotes; these are evaluated once only when the lattice
@@ -3764,7 +3764,16 @@ as kick elements, wake fields, and numerically integrated elements.
 \item The length of an input line is not limited to 80 characters in 
 {\tt elegant}, as it is in MAD.  However, for compatibility, any lattice
 created by {\tt elegant} will conform to this limit.
+\item The maximum length of the name of an element or beamline is 100 characters.
 \end{itemize}
+
+{\tt elegant}'s lattice parser translates all input into upper case,
+except where the input is protected by double quotes.  However,
+various commands (such as {\tt vary\_element} or {\tt link\_elements})
+that accept element names as input do not perform any translation.
+Hence, when referring to element names in commands, the user must
+enter the names in upper case unless they are protected by double
+quotes in the lattice file.
 
 {\tt elegant}'s \verb|print_dictionary| command allows the user to
 obtain a list of names and short descriptions of all accelerator
