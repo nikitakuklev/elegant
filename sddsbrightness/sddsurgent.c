@@ -19,6 +19,9 @@
  * Hairong Shang, May 2005
 
 $Log: not supported by cvs2svn $
+Revision 1.9  2007/01/09 20:55:46  shang
+modified to be able to calculation method and mode through description text.
+
 Revision 1.8  2006/10/23 19:49:43  soliday
 Updated to fix an issue with linux-x86_64
 
@@ -191,11 +194,11 @@ calculation   specifies calculation method and mode. \n\
               method: both urgent and us have following methods\n\
                 1:                    Non-zero emittance; finite-N. \n\
                 2:                    Non-zero emittance; infinite-N. \n\
-                3 | WalkerInfinite:   Zero emittance;     finite-N.   \n\
+                3 | WalkerFinite:   Zero emittance;     finite-N.   \n\
                 us has additional methods as following. note that urgent method\n\
                 already includes convolution.\n\
                 4  | Dejus:           Non-zero emittance; infinite-N + convolution (Dejus) \n\
-                14 | WalkerFinite:    Non-zero emittance; infinite-N + convolution (Walker) \n\
+                14 | WalkerInfinite:    Non-zero emittance; infinite-N + convolution (Walker) \n\
                 \n\
               mode: both urgent and us has following mode: \n\
                 1 | fluxDistribution:        Angular/spatial flux density distribution \n\
