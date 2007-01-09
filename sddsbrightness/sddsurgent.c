@@ -19,6 +19,9 @@
  * Hairong Shang, May 2005
 
 $Log: not supported by cvs2svn $
+Revision 1.8  2006/10/23 19:49:43  soliday
+Updated to fix an issue with linux-x86_64
+
 Revision 1.7  2006/08/31 23:14:07  borland
 Fixed bug in last change: confused kx and ky when user specifies the
 photon energy.  Clarified usage message.
@@ -38,7 +41,6 @@ Revision 1.3  2006/07/31 23:49:26  jiaox
 Removed the -1 option for mode and method. Increased the NXP and NYP limits from 50 to 500. Fixed the bug of pipe option. Clean up the code to asuure the proper the mode/method combinations.
 
 */
-
 
 
 #include "mdb.h"
@@ -106,6 +108,27 @@ void us_();
 #define us_() US()
 #endif
 
+#define CLO_DEJUS_METHOD 0
+#define CLO_WALKER_INFINITE_METHOD 1
+#define CLO_WALKER_FINITE_METHOD 2
+#define CLO_METHODS 3
+static char *method_options[CLO_METHODS]={
+  "dejus", "walkerinfinite", "walkerfinite"
+  };
+
+#define CLO_FLUX_DISTRIBUTION_MODE 0
+#define CLO_FLUX_SPECTRUM_MODE 1
+#define CLO_BRIGHTNESS_MODE 2
+#define CLO_BRILLIANCE_MODE 3
+#define CLO_PINHOLE_SPECTRUM_MODE 4
+#define CLO_INTEGRATED_SPECTRUM_MODE 5
+#define CLO_POWER_DENSITY_MODE 6
+#define CLO_MODES 7
+static char *mode_options[CLO_MODES]={
+  "fluxDistribution", "fluxSpectrum", "brightness", "brilliance", "pinholeSpectrum", 
+  "integratedSpectrum", "powerDensity"
+  };
+
 void SetupUSOutput(SDDS_DATASET *SDDSout, char *outputfile, long mode, long iang, long isub);
 void DefineParameters(SDDS_DATASET *SDDSout, long mode, long iang, long us);
 void WriteUSResultsToOutput(SDDS_DATASET *SDDSout, UNDULATOR_PARAM  undulator_param, 
@@ -139,7 +162,7 @@ void WriteToOutput(SDDS_DATASET *SDDSout, SDDS_DATASET *SDDSout2, char *descript
 long GetISub(long mode, long icalc);
 
 char *USAGE1="sddsurgent <inputFile> <outputFile>\n\
-    [-calculation=mode=<integer>,method=<integer>,harmonics=<integer>] \n\
+    [-calculation=mode={1|2|3|4|5|6|-6|fluxDistribution|fluxSpectrum|brightness|brilliance|pinholeSpectrum|integratedSpectrum|powerDensity|,method={1|2|3|4|14|dejus|walkerinfinite|walkerfinite},harmonics=<integer>] \n\
     [-undulator=period=<value>,numberOfPeriods=<integer>,kx=<value>,ky=<value>,phase=<value>,energy=<eV>] \n\
     [-electronBeam=current=<value>,energy=<value>,spread=<value>,xsigma=<value>,ysigma=<value>,xprime=<value>,yprime=<value>,nsigma=<number>] \n\
     [-pinhole=distance=<value>,xposition=<value>,yposition=<value>,xsize=<value>,ysize=<value>,xnumber=<integer>,ynumber=<integer>]\n\
@@ -166,21 +189,21 @@ us            If provided, use Roger's us program for spectral calculation.\n\
               otherwise, use Walker's urgent program for spectral calculation.\n\
 calculation   specifies calculation method and mode. \n\
               method: both urgent and us have following methods\n\
-                1  Non-zero emittance; finite-N. \n\
-                2  Non-zero emittance; infinite-N. \n\
-                3  Zero emittance;     finite-N.   \n\
+                1:                    Non-zero emittance; finite-N. \n\
+                2:                    Non-zero emittance; infinite-N. \n\
+                3 | WalkerInfinite:   Zero emittance;     finite-N.   \n\
                 us has additional methods as following. note that urgent method\n\
                 already includes convolution.\n\
-                4  Non-zero emittance; infinite-N + convolution (Dejus) \n\
-                14 Non-zero emittance; infinite-N + convolution (Walker) \n\
+                4  | Dejus:           Non-zero emittance; infinite-N + convolution (Dejus) \n\
+                14 | WalkerFinite:    Non-zero emittance; infinite-N + convolution (Walker) \n\
                 \n\
               mode: both urgent and us has following mode: \n\
-                1    Angular/spatial flux density distribution \n\
-                2    Angular/spatial flux density spectrum \n\
-                3    On-axis brilliance spectrum \n\
-                4    Flux spectrum through a pinhole \n\
-                5    Flux spectrum integrated over all angles \n\
-                6    Power density and integrated power \n\
+                1 | fluxDistribution:        Angular/spatial flux density distribution \n\
+                2 | fluxSpectrum:            Angular/spatial flux density spectrum \n\
+                3 | brightness | brilliance: On-axis brilliance spectrum \n\
+                4 | pinholeSpectrom:          Flux spectrum through a pinhole \n\
+                5 | integratedSpectrum:      Flux spectrum integrated over all angles \n\
+                6 | powerDensity:            Power density and integrated power \n\
                 \n";
 char *USAGE3="  urgent can have -6 mode (only valid for harmonics<=0), \n\
                 which does everything mode=6 does, plus \n\
@@ -245,10 +268,10 @@ photonEnergy  specifies the maximum and minimum photon energy in eV, \n\
 ";
 
 int main(int argc, char **argv) {
-  char *inputfile, *outputfile, *undulatorType, *description, *output;
+  char *inputfile, *outputfile, *undulatorType, *description, *output, *method_str, *mode_str;
   SDDS_DATASET sddsin, sddsout, *sddsout2=NULL, sddsout1;
   unsigned long pipeFlags=0,dummyFlags=0;
-  long i_arg, tmpFileUsed, i, j, special=0;
+  long i_arg, tmpFileUsed, i, j, special=0, mode_index=-1;
   
   SCANNED_ARG *s_arg;
 
@@ -275,6 +298,7 @@ int main(int argc, char **argv) {
     fprintf(stderr, "%s%s%s%s%s", USAGE1, USAGE2, USAGE3, USAGE4, USAGE5);
     exit(1);
   }
+  method_str = mode_str = NULL;
   output= NULL;
   lamda1=E1=ptot=pd=max_irradiance=totalPD=totalPower=totalFlux=pdtot=ptot1=ftot=0;
   EE=lamda=xPMM=yPMM=irradiance=L1=L2=L3=L4=power=EI=spec1=spec2=spec3=NULL;
@@ -338,18 +362,52 @@ int main(int argc, char **argv) {
           SDDS_Bomb("invalid -calculation syntax");
         s_arg[i_arg].n_items--;
         if (!scanItemList(&dummyFlags, s_arg[i_arg].list+1, &s_arg[i_arg].n_items, 0,
-                          "mode", SDDS_LONG, &mode, 1, 0,
-                          "method", SDDS_LONG, &icalc, 1, 0,
+                          "mode", SDDS_STRING, &mode_str, 1, 0,
+                          "method", SDDS_STRING, &method_str, 1, 0,
                           "harmonics", SDDS_LONG, &iharm, 1, 0,
                           NULL))
           SDDS_Bomb("invalid -calculation syntax");
+        if (method_str) {
+          if (!get_long(&icalc, method_str)) {
+            switch(match_string(method_str, method_options, CLO_METHODS, 0)) {
+            case CLO_DEJUS_METHOD:
+              icalc = 4;
+              break;
+            case CLO_WALKER_INFINITE_METHOD:
+              icalc = 14;
+              break;
+            case CLO_WALKER_FINITE_METHOD:
+              icalc = 3;
+              break;
+            default:
+              fprintf(stderr,"Unknown calculation method - %s provided.\n", method_str);
+              exit(1);
+              break;
+            }
+          }
+        }
+        if (mode_str) {
+          if (!get_long(&mode, mode_str)) {
+            if ((mode_index=match_string(mode_str, mode_options, CLO_MODES, 0))==-1) {
+              fprintf(stderr, "Unknow mode - %s provided.\n", mode_str);
+              exit(1);
+            }
+            if (mode_index<3)
+              mode = mode_index+1;
+            else  
+              mode = mode_index;
+          }
+        }
         if ( (mode<1 && mode != -6 )  || mode>6)
           SDDS_Bomb("invalid mode given for calculation, it should be 1,2,3,4,5,6,-6");
         if (icalc<1 || (icalc>4 && icalc!=14))
           SDDS_Bomb("invalid method given for calculation, it should be -1, or 1,2,3,4,14");
         if (iharm<-1000 || iharm>1000)
           SDDS_Bomb("harmonics exceeds the range of which from -1000 to 1000.");
-        s_arg[i_arg].n_items++;
+        s_arg[i_arg].n_items++; 
+        if (method_str) free(method_str);
+        if (mode_str) free(mode_str);
+        method_str = mode_str = NULL;
         break;
       case SET_UNDULATOR:
         if (s_arg[i_arg].n_items<2)
@@ -467,8 +525,7 @@ int main(int argc, char **argv) {
     }
   }
   if (coupling && emittanceRatio)
-    SDDS_Bomb("give only one of -coupling or -emittanceRatio"); 
-  
+    SDDS_Bomb("give only one of -coupling or -emittanceRatio");   
   
   if( !pipeFlags) {
       processFilenames("sddsurgent", &inputfile, &outputfile, pipeFlags, nowarnings, &tmpFileUsed); 
@@ -484,9 +541,7 @@ int main(int argc, char **argv) {
              processFilenames("sddsurgent",&inputfile,&outputfile,pipeFlags,nowarnings, &tmpFileUsed);
        }
   }   
-    
-
-
+  
   if (undulator_param.itype==2 && (mode==3 || mode==5 || abs(mode)==6 ))
     SDDS_Bomb("calculation mode 3, 5, 6 are not available for canted undulator");
   if (undulator_param.itype==2 && us)
