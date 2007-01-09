@@ -19,6 +19,9 @@
  * Hairong Shang, May 2005
 
 $Log: not supported by cvs2svn $
+Revision 1.10  2007/01/09 21:03:31  shang
+corrected the usage for calculation method.
+
 Revision 1.9  2007/01/09 20:55:46  shang
 modified to be able to calculation method and mode through description text.
 
@@ -204,7 +207,7 @@ calculation   specifies calculation method and mode. \n\
                 1 | fluxDistribution:        Angular/spatial flux density distribution \n\
                 2 | fluxSpectrum:            Angular/spatial flux density spectrum \n\
                 3 | brightness | brilliance: On-axis brilliance spectrum \n\
-                4 | pinholeSpectrom:          Flux spectrum through a pinhole \n\
+                4 | pinholeSpectrum:         Flux spectrum through a pinhole \n\
                 5 | integratedSpectrum:      Flux spectrum integrated over all angles \n\
                 6 | powerDensity:            Power density and integrated power \n\
                 \n";
