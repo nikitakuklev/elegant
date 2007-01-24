@@ -9,6 +9,9 @@
 
 /* 
  * $Log: not supported by cvs2svn $
+ * Revision 1.21  2005/11/10 15:38:48  soliday
+ * Added changes to get it to compile properly with 64 bit compilers.
+ *
  * Revision 1.20  2004/11/10 20:50:14  borland
  * Reduced the default target to 1e-6, and made the tolerance 1/100 of
  * the target.
@@ -715,7 +718,9 @@ double IBSequations(double *x, long *invalid) {
                                2                           2               
                    e  e   delta                e  e   delta 
                     x  y                        x  y        
-       so that G = g^IBS from the very first calculation.
+       where G doesn't change much during the iterations and where
+       G' = g^IBS on the very first calculation.
+
        Correspondence with our variables:
        g^SR_x    -> 2/taux
        g^IBS_x   -> xGrowthRate
@@ -746,6 +751,7 @@ double IBSequations(double *x, long *invalid) {
   func1 = a * emitx + b + c/ (emitx * sqr(sigmaDelta));
   func2 = d * sqr(sigmaDelta) + e + f/ sqr(emitx);
   *invalid = 0;
+  /* returns an equation evaluation that, at the end of convergence, should be zero. */
   return (sqr(func1/b) + sqr(func2/e));
 }
 
