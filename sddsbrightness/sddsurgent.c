@@ -19,6 +19,9 @@
  * Hairong Shang, May 2005
 
 $Log: not supported by cvs2svn $
+Revision 1.11  2007/01/09 21:10:45  shang
+fixed a typo (replaced spectrom by spectrum)
+
 Revision 1.10  2007/01/09 21:03:31  shang
 corrected the usage for calculation method.
 
@@ -166,6 +169,9 @@ void WriteToOutput(SDDS_DATASET *SDDSout, SDDS_DATASET *SDDSout2, char *descript
                    SDDS_DATASET *SDDSout1, long special, long iharm5, double *x5, double *y5, double *E5,
                    double *power5, double *flux5);
 long GetISub(long mode, long icalc);
+void check_input_parameters(UNDULATOR_PARAM *undulator_param, ELECTRON_BEAM_PARAM *electron_param, 
+                            PINHOLE_PARAM *pinhole_param, long nE, long nPhi, long nAlpha, long nOmega, double dOmega,
+                            long mode, long icalc, long iharm, long inputSupplied, long us);
 
 char *USAGE1="sddsurgent <inputFile> <outputFile>\n\
     [-calculation=mode={1|2|3|4|5|6|-6|fluxDistribution|fluxSpectrum|brightness|brilliance|pinholeSpectrum|integratedSpectrum|powerDensity|,method={1|2|3|4|14|dejus|walkerinfinite|walkerfinite},harmonics=<integer>] \n\
@@ -329,6 +335,9 @@ int main(int argc, char **argv) {
   nPhi=20;
   pinhole_param.xPC=pinhole_param.yPC=pinhole_param.xPS=pinhole_param.yPS=0;
   pinhole_param.nXP=pinhole_param.nYP=0;
+  pinhole_param.distance = 1;
+  pinhole_param.nXP = pinhole_param.nYP = 0;
+
   nAlpha=15;
   dAlpha=2.0;
   nOmega=16;
@@ -340,6 +349,9 @@ int main(int argc, char **argv) {
   emin=emax=0;
   
   coupling = emittanceRatio = 0;
+  undulator_param.energy = undulator_param.kx = undulator_param.ky = 0;
+  undulator_param.period = 0; 
+  undulator_param.nPeriod = 0;
   
   for (i_arg=1; i_arg<argc; i_arg++) {
     if (s_arg[i_arg].arg_type==OPTION) {
@@ -419,7 +431,6 @@ int main(int argc, char **argv) {
         if (s_arg[i_arg].n_items<2)
           SDDS_Bomb("invalid -undulator syntax.");
         s_arg[i_arg].n_items--;
-        undulator_param.energy = undulator_param.kx = undulator_param.ky = 0;
         if (!scanItemList(&dummyFlags, s_arg[i_arg].list+1, &s_arg[i_arg].n_items, 0,
                           "period", SDDS_DOUBLE, &undulator_param.period, 1, UNDULATOR_PERIOD_GIVEN,
                           "numberOfPeriods", SDDS_LONG, &undulator_param.nPeriod, 1, UNDULATOR_NUMBER_OF_PERIODS_GIVEN,
@@ -548,14 +559,6 @@ int main(int argc, char **argv) {
        }
   }   
   
-  if (undulator_param.itype==2 && (mode==3 || mode==5 || abs(mode)==6 ))
-    SDDS_Bomb("calculation mode 3, 5, 6 are not available for canted undulator");
-  if (undulator_param.itype==2 && us)
-    SDDS_Bomb("US computation is not available for canted undulator.");
-  if (nPhi>100 || nAlpha>100)
-    SDDS_Bomb("Number of steps of phi or alpha (nPhi, nAlpha) should not exceed 100.");
-  if (undulator_param.itype==2 && nPhi>25)
-    SDDS_Bomb("Number of steps of phi (nPhi) for canted undulator (itype=2) should not exceed 25.");
   if (emin<0 || emax<0) 
     SDDS_Bomb("The minimum or maximum photon energy is less than 0.");
   if (undulator_param.energy) {
@@ -572,31 +575,10 @@ int main(int argc, char **argv) {
     lambda = undulator_param.period/(2*gamma*gamma)*(1+0.5*(sqr(undulator_param.kx)+sqr(undulator_param.ky)));
     emin = emax = h_mks*c_mks/lambda/e_mks;
     nE = 2;
-  }
-
-  if( us ) {
-       if( mode == -6 ) 
-         SDDS_Bomb("us calculation mode -6 is not available.\n");
-       if( icalc == 2 ) 
-         SDDS_Bomb("us calculation method 2 is for test purposes only, use 1,3,4,14 instead.\n"); 
-  } else {
-      if ((mode==5 || mode==6 || mode==-6) && icalc==3) 
-         SDDS_Bomb("urgent calculation method 3 is not available for mode 5 and +-6.\n");
-  }
-
-
-  if (icalc==1 && mode!=1 && mode!=6 && undulator_param.itype!=2) {
-    if (nOmega>5000) {
-      fprintf(stderr,"Too many omega points (exceeds 5000.)\n");
-      exit(1);
-    }
-    if ((nOmega)/(dOmega)<4.0) {
-      fprintf(stderr,"Rule nOmega/dOmega > 4 was expected for itype=1 (non-canted undulator).\n");
-      exit(1);
-    }
-  }
- 
+  }   
   
+  SDDS_ZeroMemory(&twiss, sizeof(TWISS_PARAMETER));
+  twiss.beams = 0;
   if ((inputfile && !tmpFileUsed) || (pipeFlags&USE_STDIN) ) {
     if (!(ReadTwissInput(inputfile, &twiss, coupling, emittanceRatio,
                          undulator_param.period, undulator_param.nPeriod)))
@@ -604,21 +586,10 @@ int main(int argc, char **argv) {
     inputPages = twiss.beams;
     inputSupplied = 1;
   }
+  check_input_parameters(&undulator_param, &electron_param, &pinhole_param, nE, nPhi, nAlpha, nOmega, dOmega,
+                         mode, icalc, iharm, inputSupplied, us);
   
-
   
-  if (!inputSupplied && (electron_param.sigmaxp==0.0 || electron_param.sigmayp==0.0)) {
-    if (  (abs(mode)<5 && icalc!=3) || (abs(mode)==6 && icalc==1) || ( us && mode==6 && icalc != 3)  ) {
-      fprintf(stderr, "The rms x and y divergence  should not be zero for mode 1,2,3,4 icalc=1,2 or mode=+-6, icalc=1 calculation. (Or mode=6,icalc=1,4,14 for us)\n");
-      exit(1);
-    }
-  }
-  if (pinhole_param.distance==0.0 && pinhole_param.xPC==0.0 && pinhole_param.yPC==0.0) {
-    if (mode==1) {
-      fprintf(stderr, "Invalid distance, xPC and yPC values given for mode=1, they should not be zero for mode=1 calculation.\n");
-      exit(1);
-    }
-  } 
   if (nE>=(pinhole_param.nXP+1)*(pinhole_param.nYP+1))
     points=nE+100;
   else
@@ -693,6 +664,7 @@ int main(int argc, char **argv) {
         /*in us, current is in mA units, while urgent is in A units */
         period=undulator_param.period*100;
         current=electron_param.current*1000;
+       
         us_(&electron_param.energy, &current, &electron_param.sigmax,
             &electron_param.sigmay, &electron_param.sigmaxp, &electron_param.sigmayp,
             &period, &undulator_param.nPeriod, &undulator_param.kx, &undulator_param.ky,
@@ -1103,7 +1075,7 @@ void WriteToOutput(SDDS_DATASET *SDDSout, SDDS_DATASET *SDDSout2, char *descript
                           "UndulatorType", undulatorType, "Period", period, "Phase", phase,
                           "Kx", kx, "Ky", ky, "NPeriod", nPeriod, "MinEnergy", emin, "MaxEnergy", emax,
                           "NE", nEE, "ElectronEnergy", energy, "ElectronCurrent", current,
-                          "SigmmaX", sigx, "SigmmaY", sigy, "SigmmaXPrime", sigxp, "SigmmaYPrime", sigyp,
+                          "SigmaX", sigx, "SigmaY", sigy, "SigmaXPrime", sigxp, "SigmaYPrime", sigyp,
                           "AcceptanceDistance", distance, "XCenter", xPC, "YCenter", yPC,
                           "XSize", xPS, "YSize", yPS, "NXP", nXP, "NYP", nYP,
                           "Mode", mode, "ICalc", icalc, "Harmonics", iharm, "NPhi", nPhi,
@@ -1240,14 +1212,14 @@ void DefineParameters(SDDS_DATASET *SDDSout, long mode, long iang, long us) {
                            NULL, SDDS_DOUBLE, 0)<0 ||
       SDDS_DefineParameter(SDDSout, "ElectronCurrent", NULL, "A", "Electron beam current",
                            NULL, SDDS_DOUBLE, 0)<0 ||
-      SDDS_DefineParameter(SDDSout, "SigmmaX", NULL, "mm", "horizontal rms electron beam size",
+      SDDS_DefineParameter(SDDSout, "SigmaX", NULL, "mm", "horizontal rms electron beam size",
                            NULL, SDDS_DOUBLE, 0)<0 ||
-      SDDS_DefineParameter(SDDSout, "SigmmaY", NULL, "mm", "vertical rms electron beam size",
+      SDDS_DefineParameter(SDDSout, "SigmaY", NULL, "mm", "vertical rms electron beam size",
                            NULL, SDDS_DOUBLE, 0)<0 ||
-      SDDS_DefineParameter(SDDSout, "SigmmaXPrime", NULL, "mrad", 
+      SDDS_DefineParameter(SDDSout, "SigmaXPrime", NULL, "mrad", 
                            "horizontal rms electron beam divergence", 
                            NULL, SDDS_DOUBLE, 0)<0 ||
-      SDDS_DefineParameter(SDDSout, "SigmmaYPrime", NULL, "mrad", 
+      SDDS_DefineParameter(SDDSout, "SigmaYPrime", NULL, "mrad", 
                            "vertical rms electron beam divergence", 
                            NULL, SDDS_DOUBLE, 0)<0 ||
       SDDS_DefineParameter(SDDSout, "AcceptanceDistance", NULL, "mm", "acceptance distance",
@@ -1495,8 +1467,8 @@ void WriteUSResultsToOutput(SDDS_DATASET *SDDSout, UNDULATOR_PARAM  undulator_pa
                           "Kx", undulator_param.kx, "Ky", undulator_param.ky, "NPeriod", undulator_param.nPeriod, 
                           "MinEnergy", emin, "MaxEnergy", emax,
                           "NE", nEE, "ElectronEnergy", electron_param.energy, "ElectronCurrent", electron_param.current,
-                          "SigmmaX", electron_param.sigmax, "SigmmaY", electron_param.sigmay, 
-                          "SigmmaXPrime", electron_param.sigmaxp, "SigmmaYPrime", electron_param.sigmayp,
+                          "SigmaX", electron_param.sigmax, "SigmaY", electron_param.sigmay, 
+                          "SigmaXPrime", electron_param.sigmaxp, "SigmaYPrime", electron_param.sigmayp,
                           "AcceptanceDistance", pinhole_param.distance, "XCenter", pinhole_param.xPC, 
                           "YCenter", pinhole_param.yPC, "XSize", pinhole_param.xPS, "YSize", pinhole_param.yPS, 
                           "NXP", pinhole_param.nXP, "NYP", pinhole_param.nYP,
@@ -1564,3 +1536,148 @@ void WriteUSResultsToOutput(SDDS_DATASET *SDDSout, UNDULATOR_PARAM  undulator_pa
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors); 
 }
 
+void check_input_parameters(UNDULATOR_PARAM *undulator_param, ELECTRON_BEAM_PARAM *electron_param, 
+                            PINHOLE_PARAM *pinhole_param, long nE, long nPhi, long nAlpha, long nOmega, double dOmega,
+                            long mode, long icalc, long iharm, long inputSupplied, long us)
+{
+  long error=0;
+  if (nPhi>100 || nAlpha>100) {
+    fprintf(stderr, "Number of steps of phi or alpha (nPhi, nAlpha) should not exceed 100.\n");
+    error ++;
+  }
+  
+  if (us) {
+    if (mode<1 || mode>6) {
+      fprintf(stderr, "The calculation mode for US has to be an integer from 1 to 6.\n");
+      error++;
+    }
+    if (icalc==2) {
+      fprintf(stderr, "us calculation method 2 is for test purposes only, use 1,3,4,14 instead.\n"); 
+      error++;
+    }
+    
+    if (icalc<1 || (icalc>3 && icalc!=4 && icalc!=14)) {
+      fprintf(stderr, "The calculation method for US has to be 1, 3, 4, or 14.\n");
+      error++;
+    }
+    if (mode==1 && (icalc==2 || icalc==4 || icalc==14)) {
+      fprintf(stderr, "Method=%ld, not valid for the flux density distribution.\n", icalc);
+      error++;
+    }
+    if (mode==5 && (icalc==1 || icalc==3)) {
+      fprintf(stderr, "Method=%ld, not valid for angle-integrated spectrum.\n", icalc);
+      error++;
+    }
+    if (undulator_param->itype!=1) {
+      fprintf(stderr, "US computation only works for regular undulators.\n");
+      error++;
+    }
+  } else {
+    if (undulator_param->itype<1 || undulator_param->itype>2) {
+      fprintf(stderr, "Invalid undulator type given, it can only be 1 (regular undulator) or 2 (canted undulator whose phase is greater than 0).\n");
+      error++;
+    }
+    if (mode>6 || (mode<1 && mode!=-6)) {
+      fprintf(stderr, "Invalid calculation mode given for urgent, it has to be an integer from 1 to 6 or -6.\n");
+      error++;
+    }
+    if (icalc<1 || icalc>3) {
+      fprintf(stderr, "Invalid calculation method give for urgent, it has to be an integer from 1 to 3.\n");
+      error++;
+    }
+    if (mode==5 && icalc==3) {
+      fprintf(stderr, "In URGENT, integrated flux spectrum (mode=5) is not available for WalkerFinite method (method=3).\n");
+      error++;
+    }
+    if (mode==-6 && iharm>0) {
+      fprintf(stderr, "In URGENT, mode=-6 is only valid for harmonics<=0.\n");
+      error++;
+    }
+    
+    if (abs(mode)==6 && icalc==3) {
+      fprintf(stderr, "In URGENT, mode=6 or mode=-6 (power density and integrated power calculation) is not available for method=3 (WalkerFinite method).");
+      error++;
+    }
+    if (undulator_param->itype==2 && (mode==3 || mode==5 || abs(mode)==6)) {
+      fprintf(stderr, "In URGENT, mode=3, 5, 6 or -6 is not available for canted undulator (itype=2, phase>0).\n");
+      error++;
+    }
+    if (iharm<-1000 || iharm>1000) {
+      fprintf(stderr, "The harmonics number %ld is out of URGENT harmonics range (-1000, 1000).\n", iharm);
+      error++;
+    }
+    if (nE<1 || nE>5001) {
+      fprintf(stderr, "The number of photon energy points (%ld) is out of URGENT range (1, 5001).\n", nE);
+      error++;
+    }
+    
+    if (undulator_param->itype==2 && nPhi>25) {
+      fprintf(stderr, "The value of nPhi (%ld) can not be greater than 25 for canted undulator (phase>0) calculation.\n", nPhi);
+      error++;
+    }
+    
+    if (icalc==1 && (mode==2 || mode==3 || mode==5) && undulator_param->itype==2) {
+      if (nOmega>5000) {
+        fprintf(stderr, "Too many omega points %ld (exceeds 5000).\n", nOmega);
+        error++;
+      }
+      if (nOmega/dOmega<4.0) {
+        fprintf(stderr, "Rule nOmega/dOmega >= 4 was expected for itype=1 (non-canted undulator).\n");
+        error++;
+      }
+    }
+  }
+  
+  if (pinhole_param->nXP<0 || pinhole_param->nXP>500) {
+    fprintf(stderr, "The xnumber of pinhole parameter - %ld is out of range (0, 500).\n", pinhole_param->nXP);
+    error++;
+  }
+  if (pinhole_param->nYP<0 || pinhole_param->nYP>500) {
+    fprintf(stderr, "The ynumber of pinhole parameter - %ld is out of range (0, 500).\n", pinhole_param->nYP);
+    error++;
+  }
+  if (undulator_param->period==0) {
+    fprintf(stderr,"The undulator period is zero, you need provide the period of undulator!\n");
+    error++;
+  }
+  if (undulator_param->nPeriod==0) {
+    fprintf(stderr,"The number of undulator periods is zero, you have to provide a positive integer!\n");
+    error++;
+  }
+  if (electron_param->energy==0 || electron_param->current==0) {
+    fprintf(stderr, "The energy and current of electron beam can not be zero!");
+    error++;
+  }
+  
+  if (pinhole_param->xPC<0 || pinhole_param->yPC<0) {
+    fprintf(stderr, "The center (x/y position) of pinhole can not be less than zero, it must lie in the first quadrant.\n");
+    error++;
+  }
+  if (mode==1 && us) {
+    if (pinhole_param->nXP<0 || pinhole_param->nYP<0) {
+      fprintf(stderr, "The subdivision number of pinhole in X and Y (xnumber, ynumber) can not be less than zero for US flux distribution calculation!\n");
+      error++;
+    }
+    if (pinhole_param->distance==0.0 && pinhole_param->xPC==0.0 && pinhole_param->yPC==0.0) { 
+      fprintf(stderr, "Invalid distance, xPC and yPC values given for mode=1, they should not be zero for mode=1 calculation.\n");
+      error++;
+    }
+  }
+  if (!inputSupplied && (electron_param->sigmaxp==0.0 || electron_param->sigmayp==0.0)) {
+    if (us) {
+      if (mode==6 && icalc!=3) {
+        fprintf(stderr, "The rms x and y divergence should not be zero for US mode=6, and method=1,4,14 for US calculation)\n");
+        error++;
+      }
+    } else {
+      if ((abs(mode)<5 && icalc!=3) || (abs(mode)!=6 && icalc==1)) {
+        fprintf(stderr, "The rms x and y divergence  should not be zero for URGENT mode 1,2,3,4 icalc=1,2 or mode=+-6, and method=1 calculation.\n");
+        error++;
+      }
+    }
+  }  
+  if (error) {
+    fprintf(stderr, "Input parameters checking failed.\n");
+    exit(1);
+  }
+}
