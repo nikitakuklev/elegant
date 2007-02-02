@@ -19,6 +19,9 @@
  * Hairong Shang, May 2005
 
 $Log: not supported by cvs2svn $
+Revision 1.12  2007/02/01 18:31:58  shang
+added checking input parameters; program prints error message and exits if checking failed.
+
 Revision 1.11  2007/01/09 21:10:45  shang
 fixed a typo (replaced spectrom by spectrum)
 
@@ -1272,10 +1275,29 @@ void DefineParameters(SDDS_DATASET *SDDSout, long mode, long iang, long us) {
       SDDS_DefineParameter(SDDSout, "Lambda1",  NULL, "Angstrom", "wavelenth of first harmonic", 
                            NULL, SDDS_DOUBLE, 0)<0 ||
       SDDS_DefineParameter(SDDSout, "TotalPower",  NULL, "Watts", NULL, 
-                           NULL, SDDS_DOUBLE, 0)<0 ||
-      SDDS_DefineParameter(SDDSout, "TotalPowerDensity", NULL, "Watts/mrad**2", NULL,
                            NULL, SDDS_DOUBLE, 0)<0)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  if (us) {
+    if (iang) {
+      if (SDDS_DefineParameter(SDDSout, "OnAxisPowerDensity", NULL, "Watts/mrad**2", NULL,
+                               NULL, SDDS_DOUBLE, 0)<0)
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    } else {
+      if (SDDS_DefineParameter(SDDSout, "OnAxisPowerDensity", NULL, "Watts/mm**2", NULL,
+                               NULL, SDDS_DOUBLE, 0)<0)
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+  } else {
+    if (iang) {
+      if (SDDS_DefineParameter(SDDSout, "TotalPowerDensity", NULL, "Watts/mrad**2", NULL,
+                               NULL, SDDS_DOUBLE, 0)<0)
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    } else {
+      if (SDDS_DefineParameter(SDDSout, "TotalPowerDensity", NULL, "Watts/mm**2", NULL,
+                               NULL, SDDS_DOUBLE, 0)<0)
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+  }
   if (!us) {
     if (mode==1) {
       if (SDDS_DefineParameter(SDDSout, "Energy",  NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
@@ -1474,7 +1496,7 @@ void WriteUSResultsToOutput(SDDS_DATASET *SDDSout, UNDULATOR_PARAM  undulator_pa
                           "NXP", pinhole_param.nXP, "NYP", pinhole_param.nYP,
                           "Mode", mode, "ICalc", icalc, "Harmonics", iharm, "NPhi", nPhi,
                           "NSig", electron_param.nsigma, "NAlpha", nAlpha, "DAlpha", dAlpha, "NOmega", nOmega,
-                          "DOmega", dOmega, "E1", E1, "Lambda1", lamda1, "TotalPower", ptot, "TotalPowerDensity", pd,
+                          "DOmega", dOmega, "E1", E1, "Lambda1", lamda1, "TotalPower", ptot, "OnAxisPowerDensity", pd,
                           "MaximumHarmonics", imax, "MinimumHarmonics", imin, NULL))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   if (mode==1) {
