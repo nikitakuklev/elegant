@@ -26,7 +26,7 @@ OP_SYS_CFLAGS+= -DUSE_KAHAN            # use Kahan's algorithm for long sum
 #OP_SYS_CFLAGS+= -DSET_DOUBLE           # set FPU as double precision
 ifeq ($(MPI),1)
   USER_MPI_FLAGS = -DUSE_MPI=1         # 1 for parallel elegant, 0 for serial elegant  
-  #OP_SYS_LDLIBS += -lmpe -llmpe                                             # visualize the performance of the parallel elegant 
+  #OP_SYS_LDLIBS += -lmpe -llmpe        # visualize the performance of the parallel elegant 
   #USER_MPI_FLAGS+=  -DUSE_MPE          # user defined MPE event
   #USER_MPI_FLAGS+=  -mpianim -L/usr/X11R6/lib -lX11   # animate MPI program in real-time
   #USER_MPI_FLAGS+= -DMPI_DEBUG         # print debugging information for MPI 
@@ -205,7 +205,7 @@ elegant_SRCS = 	alpha_data.c alpha_matrix.c amplif.c analyze.c aperture_search.c
 		coupled_twiss.c drand_oag.c
                    
 
-Pelegant_SRCS = $(elegant_SRCS)
+Pelegant_SRCS = $(elegant_SRCS) findGlobalMinMax.c
 
 sddsemitproc_SRCS = sddsemitproc.c
 
