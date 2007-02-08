@@ -7,10 +7,14 @@
 # in the file LICENSE that is included with this distribution. 
 #*************************************************************************
 #
-# $Id: Makefile.Pelegant,v 1.5 2006-03-23 00:05:45 borland Exp $
+# $Id: Makefile.Pelegant,v 1.6 2007-02-08 17:09:54 ywang25 Exp $
 #
 #  Lowest Level Directroy Makefile
 # $Log: not supported by cvs2svn $
+# Revision 1.5  2006/03/23 00:05:45  borland
+# Added coupled twiss parameter computation using code by V. Sajaev.
+# Added momentum aperture computation to elegantRingAnalysis.
+#
 # Revision 1.4  2005/11/28 22:07:09  borland
 # Added aperture input via an SDDS file using the new aperture_input command.
 #
@@ -55,11 +59,15 @@ include $(TOP)/configure/CONFIG
 
 LEFTOVER_MAKEFILE=1
 
-all buildInstall Pelegant Selegant:
+all buildInstall Pelegant:
 	$(RM) $(TOP)/src/elegant/Makefile
 	$(MV) $(TOP)/src/elegant/Makefile.TMP $(TOP)/src/elegant/Makefile
 	$(MAKE) -f Makefile
 
+Selegant:
+	$(RM) $(TOP)/src/elegant/Makefile
+	$(MV) $(TOP)/src/elegant/Makefile.TMP $(TOP)/src/elegant/Makefile
+	$(MAKE) -f Makefile Selegant
 endif
 endif
 

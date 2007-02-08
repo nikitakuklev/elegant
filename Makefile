@@ -7,10 +7,14 @@
 # in the file LICENSE that is included with this distribution. 
 #*************************************************************************
 #
-# $Id: Makefile,v 1.10 2006-03-23 00:05:45 borland Exp $
+# $Id: Makefile,v 1.11 2007-02-08 17:09:54 ywang25 Exp $
 #
 #  Lowest Level Directroy Makefile
 # $Log: not supported by cvs2svn $
+# Revision 1.10  2006/03/23 00:05:45  borland
+# Added coupled twiss parameter computation using code by V. Sajaev.
+# Added momentum aperture computation to elegantRingAnalysis.
+#
 # Revision 1.9  2005/11/28 22:07:09  borland
 # Added aperture input via an SDDS file using the new aperture_input command.
 #
@@ -244,8 +248,8 @@ sddsrandmult$(OBJ): sddsrandmult.h
 sddsrandmult.h: ../sddsrandmult.nl
 	nlpp ../sddsrandmult.nl sddsrandmult.h
 
-elegantLocation = $(wildcard O.linux-x86/elegant elegant)
-PelegantLocation = $(wildcard O.linux-x86/Pelegant Pelegant)
+elegantLocation = $(wildcard ../../bin/linux-x86/elegant elegant)
+PelegantLocation = $(wildcard ../../bin/linux-x86/Pelegant Pelegant)
 
 elegant = $(words $(notdir $(elegantLocation)))
 Pelegant = $(words $(notdir $(PelegantLocation)))
