@@ -738,6 +738,19 @@ long remove_outlier_particles(
       centroid[j] += ini[j];
     }
   }
+
+#if USE_MPI
+  if (isSlave) {
+    double sum[6];
+    long count_total;
+
+    MPI_Allreduce(centroid,sum,6,MPI_DOUBLE,MPI_SUM,workers);
+    memcpy(centroid,sum,sizeof(double)*6);
+    MPI_Allreduce(&count,&count_total,1,MPI_LONG,MPI_SUM,workers);
+    count = count_total;
+  }
+#endif
+
   if (!count) {
     for (ip=0; ip<np; ip++) {
       initial[ip][4] = z; /* record position of particle loss */
@@ -758,6 +771,17 @@ long remove_outlier_particles(
           stDev[j] += sqr(centroid[j] - ini[j]);
       }
     }
+#if USE_MPI
+  if (isSlave) {
+    double sum[6];
+    long count_total;
+
+    MPI_Allreduce(stDev,sum,6,MPI_DOUBLE,MPI_SUM,workers);
+    memcpy(stDev,sum,sizeof(double)*6);
+    MPI_Allreduce(&count,&count_total,1,MPI_LONG,MPI_SUM,workers);
+    count = count_total;
+  }
+#endif
     for (j=0; j<6; j++)
       stDev[j] = sqrt(stDev[j]/count);
   }

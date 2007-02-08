@@ -36,6 +36,9 @@ void track_through_frfmode(
   double Qrp, VbImagFactor, Q;
   long deltaPass;
   double rampFactor;
+#if USE_MPI
+    long np_total;
+#endif
   
   if (charge)
     rfmode->mp_charge = charge->macroParticleCharge;
@@ -62,109 +65,137 @@ void track_through_frfmode(
   }
 
   tmean = 0;
-  for (ip=0; ip<np; ip++) {
-    P = Po*(part[ip][5]+1);
-    time[ip] = part[ip][4]*sqrt(sqr(P)+1)/(c_mks*P);
-    tmean += time[ip];
-  }
-  tmean /= np;
-  tmin = tmean - rfmode->bin_size*rfmode->n_bins/2.;
-  tmax = tmean + rfmode->bin_size*rfmode->n_bins/2.;
-
-  for (ib=0; ib<rfmode->n_bins; ib++) {
-    Ihist[ib] = 0;
-    Vbin[ib] = 0;
-  }
-  
-  dt = (tmax - tmin)/rfmode->n_bins;
-  n_binned = lastBin = 0;
-  for (ip=0; ip<np; ip++) {
-    pbin[ip] = -1;
-    ib = (time[ip]-tmin)/dt;
-    if (ib<0)
-      continue;
-    if (ib>rfmode->n_bins - 1)
-      continue;
-    Ihist[ib] += 1;
-    pbin[ip] = ib;
-    if (ib>lastBin)
-      lastBin = ib;
-    n_binned++;
-  }
-
-  rampFactor = 0;
-  if (pass > (rfmode->rampPasses-1)) 
-    rampFactor = 1;
-  else
-    rampFactor = (pass+1.0)/rfmode->rampPasses;
-    
-  for (ib=0; ib<=lastBin; ib++) {
-    t = tmin+(ib+0.5)*dt;           /* middle arrival time for this bin */
-    if (!Ihist[ib])
-      continue;
-    
-    for (imode=0; imode<rfmode->modes; imode++) {
-      if (rfmode->cutoffFrequency>0 && (rfmode->omega[imode] > PIx2*rfmode->cutoffFrequency))
-        continue;
-      
-      V_sum = Vr_sum = phase_sum = Vc = Vcr = 0;
-      max_hist = n_occupied = 0;
-      nb2 = rfmode->n_bins/2;
-      
-      omega = rfmode->omega[imode];
-      Q = rfmode->Q[imode]/(1+rfmode->beta[imode]);
-      tau = 2*Q/omega;
-      k = omega/2*rfmode->Rs[imode]*rfmode->factor/rfmode->Q[imode];
-
-      /* These adjustments per Zotter and Kheifets, 3.2.4 */
-      Qrp = sqrt(Q*Q - 0.25);
-      VbImagFactor = 1/(2*Qrp);
-      omega *= Qrp/Q;
-
-      /* advance cavity to this time */
-      phase = rfmode->last_phase[imode] + omega*(t - rfmode->last_t);
-      damping_factor = exp(-(t-rfmode->last_t)/tau);
-      rfmode->last_phase[imode] = phase;
-      V = rfmode->V[imode]*damping_factor;
-      rfmode->Vr[imode] = V*cos(phase);
-      rfmode->Vi[imode] = V*sin(phase);
-
-      /* compute beam-induced voltage for this bin */
-      Vb = 2*k*rfmode->mp_charge*Ihist[ib]*rampFactor; 
-      Vbin[ib] += rfmode->Vr[imode] - Vb/2;
-      
-      /* add beam-induced voltage to cavity voltage */
-      rfmode->Vr[imode] -= Vb;
-      rfmode->Vi[imode] -= Vb*VbImagFactor;
-      rfmode->last_phase[imode] = atan2(rfmode->Vi[imode], rfmode->Vr[imode]);
-      rfmode->V[imode] = sqrt(sqr(rfmode->Vr[imode])+sqr(rfmode->Vi[imode]));
-      
-      V_sum  += Ihist[ib]*rfmode->V[imode];
-      Vr_sum += Ihist[ib]*rfmode->Vr[imode];
-      phase_sum += Ihist[ib]*rfmode->last_phase[imode];
-
-      if (rfmode->outputFile && 
-          !SDDS_SetRowValues(&rfmode->SDDSout, 
-                             SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, pass,
-                             rfmode->modeIndex[imode], rfmode->V[imode], -1))
-        SDDS_Bomb("Problem writing data to FRFMODE output file");
-    }
-    rfmode->last_t = t;
-  }
-  
-  if (rfmode->rigid_until_pass<=pass) {
-    /* change particle momentum offsets to reflect voltage in relevant bin */
-    /* also recompute slopes for new momentum to conserve transverse momentum */
+  if (isSlave) {
     for (ip=0; ip<np; ip++) {
-      if (pbin[ip]>=0) {
-        /* compute new momentum and momentum offset for this particle */
-        dgamma = Vbin[pbin[ip]]/(1e6*me_mev);
-        add_to_particle_energy(part[ip], time[ip], Po, dgamma);
+      P = Po*(part[ip][5]+1);
+      time[ip] = part[ip][4]*sqrt(sqr(P)+1)/(c_mks*P);
+      tmean += time[ip];
+    }
+  }
+#if USE_MPI
+  if (isSlave) {
+    double t_total;
+    MPI_Allreduce(&np, &np_total, 1, MPI_LONG, MPI_SUM, workers);
+    MPI_Allreduce(&tmean, &t_total, 1, MPI_DOUBLE, MPI_SUM, workers);
+    tmean = t_total;
+  }
+  tmean /= np_total;      
+#else
+  tmean /= np;
+#endif
+
+  if (isSlave) {
+    tmin = tmean - rfmode->bin_size*rfmode->n_bins/2.;
+    tmax = tmean + rfmode->bin_size*rfmode->n_bins/2.;
+
+    for (ib=0; ib<rfmode->n_bins; ib++) {
+      Ihist[ib] = 0;
+      Vbin[ib] = 0;
+    }
+    
+    dt = (tmax - tmin)/rfmode->n_bins;
+    n_binned = lastBin = 0;
+    for (ip=0; ip<np; ip++) {
+      pbin[ip] = -1;
+      ib = (time[ip]-tmin)/dt;
+      if (ib<0)
+	continue;
+      if (ib>rfmode->n_bins - 1)
+	continue;
+      Ihist[ib] += 1;
+      pbin[ip] = ib;
+      if (ib>lastBin)
+	lastBin = ib;
+      n_binned++;
+    }
+#if USE_MPI
+    if (isSlave) {
+      long lastBin_global;         
+      MPI_Allreduce(&lastBin, &lastBin_global, 1, MPI_LONG, MPI_MAX, workers);
+      lastBin = lastBin_global;
+    }
+    if(isSlave) {
+      double buffer[lastBin+1]; 
+      MPI_Allreduce(Ihist, buffer, lastBin+1, MPI_LONG, MPI_SUM, workers);
+      memcpy(Ihist, buffer, sizeof(long)*(lastBin+1));	
+    }
+#endif 
+    rampFactor = 0;
+    if (pass > (rfmode->rampPasses-1)) 
+      rampFactor = 1;
+    else
+      rampFactor = (pass+1.0)/rfmode->rampPasses;
+    
+    for (ib=0; ib<=lastBin; ib++) {
+      t = tmin+(ib+0.5)*dt;           /* middle arrival time for this bin */
+      if (!Ihist[ib])
+	continue;
+    
+      for (imode=0; imode<rfmode->modes; imode++) {
+	if (rfmode->cutoffFrequency>0 && (rfmode->omega[imode] > PIx2*rfmode->cutoffFrequency))
+	  continue;
+      
+	V_sum = Vr_sum = phase_sum = Vc = Vcr = 0;
+	max_hist = n_occupied = 0;
+	nb2 = rfmode->n_bins/2;
+	
+	omega = rfmode->omega[imode];
+	Q = rfmode->Q[imode]/(1+rfmode->beta[imode]);
+	tau = 2*Q/omega;
+	k = omega/2*rfmode->Rs[imode]*rfmode->factor/rfmode->Q[imode];
+
+	/* These adjustments per Zotter and Kheifets, 3.2.4 */
+	Qrp = sqrt(Q*Q - 0.25);
+	VbImagFactor = 1/(2*Qrp);
+	omega *= Qrp/Q;
+
+	/* advance cavity to this time */
+	phase = rfmode->last_phase[imode] + omega*(t - rfmode->last_t);
+	damping_factor = exp(-(t-rfmode->last_t)/tau);
+	rfmode->last_phase[imode] = phase;
+	V = rfmode->V[imode]*damping_factor;
+	rfmode->Vr[imode] = V*cos(phase);
+	rfmode->Vi[imode] = V*sin(phase);
+	
+	/* compute beam-induced voltage for this bin */
+	Vb = 2*k*rfmode->mp_charge*Ihist[ib]*rampFactor; 
+	Vbin[ib] += rfmode->Vr[imode] - Vb/2;
+      
+	/* add beam-induced voltage to cavity voltage */
+	rfmode->Vr[imode] -= Vb;
+	rfmode->Vi[imode] -= Vb*VbImagFactor;
+	rfmode->last_phase[imode] = atan2(rfmode->Vi[imode], rfmode->Vr[imode]);
+	rfmode->V[imode] = sqrt(sqr(rfmode->Vr[imode])+sqr(rfmode->Vi[imode]));
+      
+	V_sum  += Ihist[ib]*rfmode->V[imode];
+	Vr_sum += Ihist[ib]*rfmode->Vr[imode];
+	phase_sum += Ihist[ib]*rfmode->last_phase[imode];
+
+	if (rfmode->outputFile && 
+	    !SDDS_SetRowValues(&rfmode->SDDSout, 
+			       SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, pass,
+			       rfmode->modeIndex[imode], rfmode->V[imode], -1))
+	  SDDS_Bomb("Problem writing data to FRFMODE output file");
+      }
+      rfmode->last_t = t;
+    }
+  
+    if (rfmode->rigid_until_pass<=pass) {
+      /* change particle momentum offsets to reflect voltage in relevant bin */
+      /* also recompute slopes for new momentum to conserve transverse momentum */
+      for (ip=0; ip<np; ip++) {
+	if (pbin[ip]>=0) {
+	  /* compute new momentum and momentum offset for this particle */
+	  dgamma = Vbin[pbin[ip]]/(1e6*me_mev);
+	  add_to_particle_energy(part[ip], time[ip], Po, dgamma);
+	}
       }
     }
   }
-
   if (rfmode->outputFile) {
+#if (USE_MPI)
+      if (myid == 1) /* We let the first slave to dump the parameter */
+#endif
     if (!SDDS_SetRowValues(&rfmode->SDDSout, 
                            SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, pass,
                            "Pass", pass, NULL))
@@ -204,78 +235,79 @@ void set_up_frfmode(FRFMODE *rfmode, char *element_name, double element_z, long 
     bomb("too few particles in set_up_frfmode()", NULL);
   if (rfmode->n_bins<2)
     bomb("too few bins for FRFMODE", NULL);
-  if (!rfmode->filename ||
-      !SDDS_InitializeInput(&SDDSin, rfmode->filename))
-    bomb("unable to open file for FRFMODE element", NULL);
-  /* check existence and properties of required columns  */
-  if (SDDS_CheckColumn(&SDDSin, "Frequency", "Hz", SDDS_ANY_FLOATING_TYPE,
-                       stdout)!=SDDS_CHECK_OK) {
-    fprintf(stdout, "Error: problem with Frequency column for FRFMODE file %s.  Check existence, type, and units.\n", rfmode->filename);
-    exit(1);
-  }
-  if (SDDS_CheckColumn(&SDDSin, "Frequency", "Hz", SDDS_ANY_FLOATING_TYPE,
-                       stdout)!=SDDS_CHECK_OK) {
-    fprintf(stdout, "Error: problem with Frequency column for FRFMODE file %s.  Check existence, type, and units.\n", rfmode->filename);
-    exit(1);
-  }
-  if (SDDS_CheckColumn(&SDDSin, "Q", NULL, SDDS_ANY_FLOATING_TYPE,
-                       stdout)!=SDDS_CHECK_OK) {
-    fprintf(stdout, "Error: problem with Q column for FRFMODE file %s.  Check existence, type, and units.\n", rfmode->filename);
-    exit(1);
-  }
-  if (SDDS_CheckColumn(&SDDSin, "beta", NULL, SDDS_ANY_FLOATING_TYPE,
-                       NULL)!=SDDS_CHECK_NONEXISTENT) {
+
+    if (!rfmode->filename ||
+	!SDDS_InitializeInput(&SDDSin, rfmode->filename))
+      bomb("unable to open file for FRFMODE element", NULL);
+    /* check existence and properties of required columns  */
+    if (SDDS_CheckColumn(&SDDSin, "Frequency", "Hz", SDDS_ANY_FLOATING_TYPE,
+			 stdout)!=SDDS_CHECK_OK) {
+      fprintf(stdout, "Error: problem with Frequency column for FRFMODE file %s.  Check existence, type, and units.\n", rfmode->filename);
+      exit(1);
+    }
+    if (SDDS_CheckColumn(&SDDSin, "Frequency", "Hz", SDDS_ANY_FLOATING_TYPE,
+			 stdout)!=SDDS_CHECK_OK) {
+      fprintf(stdout, "Error: problem with Frequency column for FRFMODE file %s.  Check existence, type, and units.\n", rfmode->filename);
+      exit(1);
+    }
+    if (SDDS_CheckColumn(&SDDSin, "Q", NULL, SDDS_ANY_FLOATING_TYPE,
+			 stdout)!=SDDS_CHECK_OK) {
+      fprintf(stdout, "Error: problem with Q column for FRFMODE file %s.  Check existence, type, and units.\n", rfmode->filename);
+      exit(1);
+    }
     if (SDDS_CheckColumn(&SDDSin, "beta", NULL, SDDS_ANY_FLOATING_TYPE,
-                         NULL)!=SDDS_CHECK_OK) {
-      fprintf(stdout, "Error: problem with \"beta\" column for FRFMODE file %s.  Check type and units.\n", rfmode->filename);
-      exit(1);
+			 NULL)!=SDDS_CHECK_NONEXISTENT) {
+      if (SDDS_CheckColumn(&SDDSin, "beta", NULL, SDDS_ANY_FLOATING_TYPE,
+			   NULL)!=SDDS_CHECK_OK) {
+	fprintf(stdout, "Error: problem with \"beta\" column for FRFMODE file %s.  Check type and units.\n", rfmode->filename);
+	exit(1);
+      }
     }
-  }
-  if (rfmode->useSymmData) {
-    if (SDDS_CheckColumn(&SDDSin, "ShuntImpedanceSymm", "$gW$r", SDDS_ANY_FLOATING_TYPE,
-                         NULL)!=SDDS_CHECK_OK &&
-        SDDS_CheckColumn(&SDDSin, "ShuntImpedanceSymm", "Ohms", SDDS_ANY_FLOATING_TYPE,
-                         NULL)!=SDDS_CHECK_OK) {
-      fprintf(stdout, "Error: problem with ShuntImpedanceSymm column for FRFMODE file %s.  Check existence, type, and units.\n", rfmode->filename);
-      exit(1);
+    if (rfmode->useSymmData) {
+      if (SDDS_CheckColumn(&SDDSin, "ShuntImpedanceSymm", "$gW$r", SDDS_ANY_FLOATING_TYPE,
+			   NULL)!=SDDS_CHECK_OK &&
+	  SDDS_CheckColumn(&SDDSin, "ShuntImpedanceSymm", "Ohms", SDDS_ANY_FLOATING_TYPE,
+			   NULL)!=SDDS_CHECK_OK) {
+	fprintf(stdout, "Error: problem with ShuntImpedanceSymm column for FRFMODE file %s.  Check existence, type, and units.\n", rfmode->filename);
+	exit(1);
+      }
     }
-  }
-  else {
-    if (SDDS_CheckColumn(&SDDSin, "ShuntImpedance", "$gW$r", SDDS_ANY_FLOATING_TYPE,
-                         NULL)!=SDDS_CHECK_OK &&
-        SDDS_CheckColumn(&SDDSin, "ShuntImpedance", "Ohms", SDDS_ANY_FLOATING_TYPE,
-                         NULL)!=SDDS_CHECK_OK) {
-      fprintf(stdout, "Error: problem with ShuntImpedance column for FRFMODE file %s.  Check existence, type, and units.\n", rfmode->filename);
-      exit(1);
-    }
+    else {
+      if (SDDS_CheckColumn(&SDDSin, "ShuntImpedance", "$gW$r", SDDS_ANY_FLOATING_TYPE,
+			   NULL)!=SDDS_CHECK_OK &&
+	  SDDS_CheckColumn(&SDDSin, "ShuntImpedance", "Ohms", SDDS_ANY_FLOATING_TYPE,
+			   NULL)!=SDDS_CHECK_OK) {
+	fprintf(stdout, "Error: problem with ShuntImpedance column for FRFMODE file %s.  Check existence, type, and units.\n", rfmode->filename);
+	exit(1);
+      }
   }
 
-  if (!SDDS_ReadPage(&SDDSin))
-    SDDS_Bomb("unable to read page from file for FRFMODE element");
-  if ((rfmode->modes = SDDS_RowCount(&SDDSin))<1) {
-    fprintf(stdout, "Error: no data in FRFMODE file %s\n", rfmode->filename);
-    exit(1);
-  }
-  if (!(rfmode->omega = SDDS_GetColumnInDoubles(&SDDSin, "Frequency")) ||
-      !(rfmode->Q = SDDS_GetColumnInDoubles(&SDDSin, "Q")) ||
-      (rfmode->useSymmData &&
-       !(rfmode->Rs = SDDS_GetColumnInDoubles(&SDDSin, "ShuntImpedanceSymm"))) ||
-      (!rfmode->useSymmData &&
-       !(rfmode->Rs = SDDS_GetColumnInDoubles(&SDDSin, "ShuntImpedance")))) 
-    SDDS_Bomb("Problem getting data from FRFMODE file");
-  if (!(rfmode->beta = SDDS_GetColumnInDoubles(&SDDSin, "beta"))) {
-    if (!(rfmode->beta = malloc(sizeof(*(rfmode->beta))*rfmode->modes)))
-      bomb("memory allocation failure (FRFMODE)", NULL);
-    for (imode=0; imode<rfmode->modes; imode++)
-      rfmode->beta[imode] = 0;
-  }
-
+    if (!SDDS_ReadPage(&SDDSin))
+      SDDS_Bomb("unable to read page from file for FRFMODE element");
+    if ((rfmode->modes = SDDS_RowCount(&SDDSin))<1) {
+      fprintf(stdout, "Error: no data in FRFMODE file %s\n", rfmode->filename);
+      exit(1);
+    }
+    if (!(rfmode->omega = SDDS_GetColumnInDoubles(&SDDSin, "Frequency")) ||
+	!(rfmode->Q = SDDS_GetColumnInDoubles(&SDDSin, "Q")) ||
+	(rfmode->useSymmData &&
+	 !(rfmode->Rs = SDDS_GetColumnInDoubles(&SDDSin, "ShuntImpedanceSymm"))) ||
+	(!rfmode->useSymmData &&
+	 !(rfmode->Rs = SDDS_GetColumnInDoubles(&SDDSin, "ShuntImpedance")))) 
+      SDDS_Bomb("Problem getting data from FRFMODE file");
+    if (!(rfmode->beta = SDDS_GetColumnInDoubles(&SDDSin, "beta"))) {
+      if (!(rfmode->beta = malloc(sizeof(*(rfmode->beta))*rfmode->modes)))
+	bomb("memory allocation failure (FRFMODE)", NULL);
+      for (imode=0; imode<rfmode->modes; imode++)
+	rfmode->beta[imode] = 0;
+    }
+    
   if (!(rfmode->V  = malloc(sizeof(*(rfmode->V ))*rfmode->modes)) ||
       !(rfmode->Vr = malloc(sizeof(*(rfmode->Vr))*rfmode->modes)) ||
       !(rfmode->Vi = malloc(sizeof(*(rfmode->Vi))*rfmode->modes)) ||
       !(rfmode->last_phase = malloc(sizeof(*(rfmode->last_phase))*rfmode->modes)))
     bomb("memory allocation failure (FRFMODE)", NULL);
-  
+    
   for (imode=0; imode<rfmode->modes; imode++) {
     rfmode->omega[imode] *= PIx2;
     rfmode->V[imode] = rfmode->Vr[imode] = rfmode->Vi[imode] = 0;
@@ -304,6 +336,10 @@ void set_up_frfmode(FRFMODE *rfmode, char *element_name, double element_z, long 
 
   rfmode->last_t = element_z/c_mks;
 
+#if (USE_MPI)
+  if (myid == 1) { /* We let the first slave to dump the parameter */
+    dup2(fd,fileno(stdout));
+#endif
   if (rfmode->outputFile) {
     TRACKING_CONTEXT context;
     char *filename;
@@ -339,6 +375,10 @@ void set_up_frfmode(FRFMODE *rfmode, char *element_name, double element_z, long 
     if (filename!=rfmode->outputFile)
       free(filename);
   }
+#if (USE_MPI)
+    freopen("/dev/null","w",stdout);  
+  } /* We let the first slave to dump the parameter */
+#endif
 
   rfmode->initialized = 1;
 }

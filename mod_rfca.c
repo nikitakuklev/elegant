@@ -173,7 +173,7 @@ long modulated_rf_cavity(double **part, long np, MODRF *modrf, double P_central,
 	MPI_Allreduce(&tAve, &tAve_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 	tAve = tAve_total/np_total;
 #else
-	tAve_total= KahanParallel (tAve,  error);
+	tAve_total= KahanParallel (tAve,  error, MPI_COMM_WORLD);
 	tAve = tAve_total/np_total;
 #endif
       }

@@ -37,6 +37,9 @@ void track_through_ftrfmode(
   long lastBin, imode;
   long deltaPass;
   double rampFactor;
+#if USE_MPI
+  long np_total;
+#endif
 
   if (charge)
     trfmode->mp_charge = charge->macroParticleCharge;
@@ -66,132 +69,162 @@ void track_through_ftrfmode(
 
 
   tmean = 0;
-  for (ip=0; ip<np; ip++) {
-    P = Po*(part[ip][5]+1);
-    time[ip] = part[ip][4]*sqrt(sqr(P)+1)/(c_mks*P);
-    tmean += time[ip];
+  if (isSlave) {
+    for (ip=0; ip<np; ip++) {
+      P = Po*(part[ip][5]+1);
+      time[ip] = part[ip][4]*sqrt(sqr(P)+1)/(c_mks*P);
+      tmean += time[ip];
+    }
   }
+#if USE_MPI
+  if (isSlave) {
+    double t_total;
+    MPI_Allreduce(&np, &np_total, 1, MPI_LONG, MPI_SUM, workers);
+    MPI_Allreduce(&tmean, &t_total, 1, MPI_DOUBLE, MPI_SUM, workers);
+    tmean = t_total;
+  }
+  tmean /= np_total;      
+#else
   tmean /= np;
-  tmin = tmean - trfmode->bin_size*trfmode->n_bins/2.;
-  tmax = tmean + trfmode->bin_size*trfmode->n_bins/2.;
+#endif
 
-  for (ib=0; ib<trfmode->n_bins; ib++)
-    xsum[ib] = ysum[ib] = 0;
-  dt = (tmax - tmin)/trfmode->n_bins;
-  lastBin = -1;
+  if (isSlave) {
+    tmin = tmean - trfmode->bin_size*trfmode->n_bins/2.;
+    tmax = tmean + trfmode->bin_size*trfmode->n_bins/2.;
+
+    for (ib=0; ib<trfmode->n_bins; ib++)
+      xsum[ib] = ysum[ib] = 0;
+    dt = (tmax - tmin)/trfmode->n_bins;
+    lastBin = -1;
   
-  for (ip=0; ip<np; ip++) {
-    pbin[ip] = -1;
-    ib = (time[ip]-tmin)/dt;
-    if (ib<0)
-      continue;
-    if (ib>trfmode->n_bins - 1)
-      continue;
-    xsum[ib] += part[ip][0]-trfmode->dx;
-    ysum[ib] += part[ip][2]-trfmode->dy;
-    pbin[ip] = ib;
-    if (ib>lastBin)
-      lastBin = ib;
-  }
-
-  rampFactor = 0;
-  if (pass > (trfmode->rampPasses-1)) 
-    rampFactor = 1;
-  else
-    rampFactor = (pass+1.0)/trfmode->rampPasses;
+    for (ip=0; ip<np; ip++) {
+      pbin[ip] = -1;
+      ib = (time[ip]-tmin)/dt;
+      if (ib<0)
+	continue;
+      if (ib>trfmode->n_bins - 1)
+	continue;
+      xsum[ib] += part[ip][0]-trfmode->dx;
+      ysum[ib] += part[ip][2]-trfmode->dy;
+      pbin[ip] = ib;
+      if (ib>lastBin)
+	lastBin = ib;
+    }
+#if USE_MPI
+    if (isSlave) {
+      long lastBin_global;         
+      MPI_Allreduce(&lastBin, &lastBin_global, 1, MPI_LONG, MPI_MAX, workers);
+      lastBin = lastBin_global;
+    }
+    if(isSlave) {
+      double buffer[lastBin+1]; 
+      MPI_Allreduce(xsum, buffer, lastBin+1, MPI_DOUBLE, MPI_SUM, workers);
+      memcpy(xsum, buffer, sizeof(long)*(lastBin+1));
+      MPI_Allreduce(ysum, buffer, lastBin+1, MPI_DOUBLE, MPI_SUM, workers);
+      memcpy(ysum, buffer, sizeof(long)*(lastBin+1));	;
+    }
+#endif
+    rampFactor = 0;
+    if (pass > (trfmode->rampPasses-1)) 
+      rampFactor = 1;
+    else
+      rampFactor = (pass+1.0)/trfmode->rampPasses;
     
-  for (ib=0; ib<=lastBin; ib++) {
-    if (!xsum[ib] && !ysum[ib])
-      continue;
-    t = tmin+(ib+0.5)*dt;           /* middle arrival time for this bin */
-    for (imode=0; imode<trfmode->modes; imode++) {
-      if (trfmode->cutoffFrequency>0 && (trfmode->omega[imode] > PIx2*trfmode->cutoffFrequency))
-        continue;
+    for (ib=0; ib<=lastBin; ib++) {
+      if (!xsum[ib] && !ysum[ib])
+	continue;
+      t = tmin+(ib+0.5)*dt;           /* middle arrival time for this bin */
+      for (imode=0; imode<trfmode->modes; imode++) {
+	if (trfmode->cutoffFrequency>0 && (trfmode->omega[imode] > PIx2*trfmode->cutoffFrequency))
+	  continue;
 
-      omega = trfmode->omega[imode];
-      Q = trfmode->Q[imode]/(1+trfmode->beta[imode]);
-      tau = 2*Q/omega;
-      Qrp = sqrt(Q*Q - 0.25);
-      k = omega/2*trfmode->Rs[imode]/trfmode->Q[imode];
-      /* These adjustments per Zotter and Kheifets, 3.2.4, 3.3.2 */
-      k *= Q/Qrp;
-      omega *= Qrp/Q;
+	omega = trfmode->omega[imode];
+	Q = trfmode->Q[imode]/(1+trfmode->beta[imode]);
+	tau = 2*Q/omega;
+	Qrp = sqrt(Q*Q - 0.25);
+	k = omega/2*trfmode->Rs[imode]/trfmode->Q[imode];
+	/* These adjustments per Zotter and Kheifets, 3.2.4, 3.3.2 */
+	k *= Q/Qrp;
+	omega *= Qrp/Q;
       
-      if (!trfmode->doX[imode] && !trfmode->doY[imode])
-        bomb("x and y turned off for FTRFMODE---this shouldn't happen", NULL);
+	if (!trfmode->doX[imode] && !trfmode->doY[imode])
+	  bomb("x and y turned off for FTRFMODE---this shouldn't happen", NULL);
       
-      /* advance cavity to this time */
-      damping_factor = exp(-(t-trfmode->last_t)/tau);
-      if (trfmode->doX[imode]) {
-        /* -- x plane */
-        /* advance the phasor */
-        phase = trfmode->lastPhasex[imode] + omega*(t - trfmode->last_t);
-        V = trfmode->Vx[imode]*damping_factor;
-        trfmode->Vxr[imode] = V*cos(phase);
-        trfmode->Vxi[imode] = V*sin(phase);
-        trfmode->lastPhasex[imode] = phase;
-        /* add this cavity's contribution to this bin */
-        Vxbin[ib] += trfmode->Vxr[imode];
-        /* compute beam-induced voltage for this bin */
-        Vxb = 2*k*trfmode->mp_charge*xsum[ib]*trfmode->xfactor*rampFactor; 
-        /* add beam-induced voltage to cavity voltage---it is imaginary as
-         * the voltage is 90deg out of phase 
-         */
-        trfmode->Vxi[imode] -= Vxb;
-        if (trfmode->Vxi[imode]==0 && trfmode->Vxr[imode]==0)
-          trfmode->lastPhasex[imode] = 0;
-        else
-          trfmode->lastPhasex[imode] = atan2(trfmode->Vxi[imode], trfmode->Vxr[imode]);
-        trfmode->Vx[imode] = sqrt(sqr(trfmode->Vxr[imode])+sqr(trfmode->Vxi[imode]));
-      }
-      if (trfmode->doY[imode]) {
-        /* -- y plane */
-        /* advance the phasor */
-        phase = trfmode->lastPhasey[imode] + omega*(t - trfmode->last_t);
-        V = trfmode->Vy[imode]*damping_factor;
-        trfmode->Vyr[imode] = V*cos(phase);
-        trfmode->Vyi[imode] = V*sin(phase);
-        trfmode->lastPhasey[imode] = phase;
-        /* add this cavity's contribution to this bin */
-        Vybin[ib] += trfmode->Vyr[imode];
-        /* compute beam-induced voltage for this bin */
-        Vyb = 2*k*trfmode->mp_charge*ysum[ib]*trfmode->yfactor*rampFactor;
-        /* add beam-induced voltage to cavity voltage---it is imaginary as
-         * the voltage is 90deg out of phase 
-         */
-        trfmode->Vyi[imode] -= Vyb;
-        if (trfmode->Vyi[imode]==0 && trfmode->Vyr[imode]==0)
-          trfmode->lastPhasey[imode] = 0;
-        else
+	/* advance cavity to this time */
+	damping_factor = exp(-(t-trfmode->last_t)/tau);
+	if (trfmode->doX[imode]) {
+	  /* -- x plane */
+	  /* advance the phasor */
+	  phase = trfmode->lastPhasex[imode] + omega*(t - trfmode->last_t);
+	  V = trfmode->Vx[imode]*damping_factor;
+	  trfmode->Vxr[imode] = V*cos(phase);
+	  trfmode->Vxi[imode] = V*sin(phase);
+	  trfmode->lastPhasex[imode] = phase;
+	  /* add this cavity's contribution to this bin */
+	  Vxbin[ib] += trfmode->Vxr[imode];
+	  /* compute beam-induced voltage for this bin */
+	  Vxb = 2*k*trfmode->mp_charge*xsum[ib]*trfmode->xfactor*rampFactor; 
+	  /* add beam-induced voltage to cavity voltage---it is imaginary as
+	   * the voltage is 90deg out of phase 
+	   */
+	  trfmode->Vxi[imode] -= Vxb;
+	  if (trfmode->Vxi[imode]==0 && trfmode->Vxr[imode]==0)
+	    trfmode->lastPhasex[imode] = 0;
+	  else
+	    trfmode->lastPhasex[imode] = atan2(trfmode->Vxi[imode], trfmode->Vxr[imode]);
+	  trfmode->Vx[imode] = sqrt(sqr(trfmode->Vxr[imode])+sqr(trfmode->Vxi[imode]));
+	}
+	if (trfmode->doY[imode]) {
+	  /* -- y plane */
+	  /* advance the phasor */
+	  phase = trfmode->lastPhasey[imode] + omega*(t - trfmode->last_t);
+	  V = trfmode->Vy[imode]*damping_factor;
+	  trfmode->Vyr[imode] = V*cos(phase);
+	  trfmode->Vyi[imode] = V*sin(phase);
+	  trfmode->lastPhasey[imode] = phase;
+	  /* add this cavity's contribution to this bin */
+	  Vybin[ib] += trfmode->Vyr[imode];
+	  /* compute beam-induced voltage for this bin */
+	  Vyb = 2*k*trfmode->mp_charge*ysum[ib]*trfmode->yfactor*rampFactor;
+	  /* add beam-induced voltage to cavity voltage---it is imaginary as
+	   * the voltage is 90deg out of phase 
+	   */
+	  trfmode->Vyi[imode] -= Vyb;
+	  if (trfmode->Vyi[imode]==0 && trfmode->Vyr[imode]==0)
+	    trfmode->lastPhasey[imode] = 0;
+	  else
           trfmode->lastPhasey[imode] = atan2(trfmode->Vyi[imode], trfmode->Vyr[imode]);
-        trfmode->Vy[imode] = sqrt(sqr(trfmode->Vyr[imode])+sqr(trfmode->Vyi[imode]));
+	  trfmode->Vy[imode] = sqrt(sqr(trfmode->Vyr[imode])+sqr(trfmode->Vyi[imode]));
+	}
+
+	if (trfmode->outputFile && 
+	    !SDDS_SetRowValues(&trfmode->SDDSout, 
+			       SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, pass,
+			       trfmode->xModeIndex[imode], trfmode->Vx[imode],
+			       trfmode->yModeIndex[imode], trfmode->Vy[imode], -1))
+	  SDDS_Bomb("Problem writing data to FTRFMODE output file");
       }
-
-      if (trfmode->outputFile && 
-          !SDDS_SetRowValues(&trfmode->SDDSout, 
-                             SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, pass,
-                             trfmode->xModeIndex[imode], trfmode->Vx[imode],
-                             trfmode->yModeIndex[imode], trfmode->Vy[imode], -1))
-        SDDS_Bomb("Problem writing data to FTRFMODE output file");
+      trfmode->last_t = t;
     }
-    trfmode->last_t = t;
-  }
   
-  /* change particle slopes to reflect voltage in relevant bin */
-  for (ip=0; ip<np; ip++) {
-    if (pbin[ip]>=0) {
-      P = Po*(1+part[ip][5]);
-      Pz = P/sqrt(1+sqr(part[ip][1])+sqr(part[ip][3]));
-      Px = part[ip][1]*Pz + Vxbin[pbin[ip]]/(1e6*me_mev);
-      Py = part[ip][3]*Pz + Vybin[pbin[ip]]/(1e6*me_mev);
-      P  = sqrt(Pz*Pz+Px*Px+Py*Py);
-      part[ip][1] = Px/Pz;
-      part[ip][3] = Py/Pz;
-      part[ip][5] = (P-Po)/Po;
-      part[ip][4] = time[ip]*c_mks*P/sqrt(sqr(P)+1);
+    /* change particle slopes to reflect voltage in relevant bin */
+    for (ip=0; ip<np; ip++) {
+      if (pbin[ip]>=0) {
+	P = Po*(1+part[ip][5]);
+	Pz = P/sqrt(1+sqr(part[ip][1])+sqr(part[ip][3]));
+	Px = part[ip][1]*Pz + Vxbin[pbin[ip]]/(1e6*me_mev);
+	Py = part[ip][3]*Pz + Vybin[pbin[ip]]/(1e6*me_mev);
+	P  = sqrt(Pz*Pz+Px*Px+Py*Py);
+	part[ip][1] = Px/Pz;
+	part[ip][3] = Py/Pz;
+	part[ip][5] = (P-Po)/Po;
+	part[ip][4] = time[ip]*c_mks*P/sqrt(sqr(P)+1);
+      }
     }
   }
-
+#if (USE_MPI)
+      if (myid == 1) /* We let the first slave to dump the parameter */
+#endif
   if (trfmode->outputFile) {
     if (!SDDS_SetRowValues(&trfmode->SDDSout, 
                            SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, pass,
@@ -363,6 +396,10 @@ void set_up_ftrfmode(FTRFMODE *rfmode, char *element_name, double element_z, lon
 
   rfmode->last_t = element_z/c_mks;
 
+#if (USE_MPI)
+  if (myid == 1) {/* We let the first slave to dump the parameter */
+    dup2(fd,fileno(stdout));
+#endif
   if (rfmode->outputFile) {
     TRACKING_CONTEXT context;
     char *filename;
@@ -401,6 +438,10 @@ void set_up_ftrfmode(FTRFMODE *rfmode, char *element_name, double element_z, lon
     if (filename!=rfmode->outputFile)
       free(filename);
   }
+#if (USE_MPI)
+    freopen("/dev/null","w",stdout);  
+  } /* We let the first slave to dump the parameter */
+#endif
 
   rfmode->initialized = 1;
 }

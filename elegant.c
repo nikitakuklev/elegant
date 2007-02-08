@@ -218,6 +218,8 @@ int n_processors = 1;
 int myid;
 int partOnMaster = 1; /* indicate if the particle information is available on master */
 long lessPartAllowed = 0; /* By default, the number of particles is required to be at least n_processors-1 */
+MPI_Comm workers;
+int fd; /* save the duplicated file descriptor stdout to use it latter */
 #endif
 
 #ifdef SET_DOUBLE
@@ -267,11 +269,20 @@ char **argv;
   char processor_name[MPI_MAX_PROCESSOR_NAME];
   int namelen;  
 #endif 
+  MPI_Group world_group, worker_group;
+  int ranks[1];
 
   MPI_Init(&argc,&argv);
   /* get the total number of processors */
   MPI_Comm_size(MPI_COMM_WORLD, &n_processors);
   MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+  
+  /* create a new communicator group with the slave processors only */
+  ranks[0] = 0;  /* first process is master */
+  MPI_Comm_group(MPI_COMM_WORLD, &world_group);
+  MPI_Group_excl(world_group, 1, ranks, &worker_group);
+  MPI_Comm_create(MPI_COMM_WORLD, worker_group, &workers);
+
   if (myid!=0) {
 #ifdef MPI_DEBUG
     sprintf(fileName, "error.%d", myid);
@@ -279,11 +290,13 @@ char **argv;
     freopen(fileName, "w", stdout);
     MPI_Get_processor_name(processor_name,&namelen);
     fprintf(stdout, "Process %d on %s\n", myid, processor_name);
-#endif  
+#else   
+    /* duplicate an open file descriptor, tested with gcc */
+    fd = dup(fileno(stdout)); 
     /* redirect output, only the master processor will write on screen or files */
     freopen("/dev/null","w",stdout); 
     freopen("/dev/null","w",stderr);
-
+#endif
     writePermitted = isMaster = 0;
     isSlave = 1;
   }
@@ -542,7 +555,7 @@ char **argv;
       run_conditions.always_change_p0 = always_change_p0;
 
       /* extract the root filename from the input filename */
-      strcpy(s, inputfile);
+      strcpy_s(s, inputfile);
       if (rootname==NULL) {
         clean_filename(s);
         if ((ptr=strrchr(s, '.')))
@@ -940,6 +953,10 @@ char **argv;
       free_beamdata(&beam);
       printFarewell(stdout);
 #if USE_MPI
+      if (isSlave)
+	MPI_Comm_free(&workers); 
+      MPI_Group_free(&worker_group); 
+      close(fd); 
       MPI_Finalize();
 #endif
       exit(0);
@@ -1428,6 +1445,7 @@ char **argv;
   log_exit("main");
   printFarewell(stdout);
 #if USE_MPI
+  close(fd);
   MPI_Finalize();
 #endif
   return(0);
@@ -1435,12 +1453,24 @@ char **argv;
 
 void printFarewell(FILE *fp)
 {
+#if (!USE_MPI)
   fprintf(stdout, "=====================================================================================\n");
   fprintf(stdout, "Thanks for using elegant.  Please cite the following reference in your publications:\n");
   fprintf(stdout, "  M. Borland, \"elegant: A Flexible SDDS-Compliant Code for Accelerator Simulation,\"\n");
   fprintf(stdout, "  Advanced Photon Source LS-287, September 2000.\n");
   fprintf(stdout, "If you use a modified version, please indicate this in all publications.\n");
   fprintf(stdout, "=====================================================================================\n");
+#else 
+  fprintf(stdout, "=====================================================================================\n");
+  fprintf(stdout, "Thanks for using Pelegant.  Please cite the following references in your publications:\n");
+  fprintf(stdout, "  M. Borland, \"elegant: A Flexible SDDS-Compliant Code for Accelerator Simulation,\"\n");
+  fprintf(stdout, "  Advanced Photon Source LS-287, September 2000.\n");
+  fprintf(stdout, "  Y. Wang and M. Borland, \"Pelegant: A Parallel Accelerator Simulation Code for  \n");
+  fprintf(stdout, "  Electron Generation and Tracking, Proceedings of the 12th Advanced Accelerator  \n"); 
+  fprintf(stdout, "  Concepts Workshop, 2006.\n");
+  fprintf(stdout, "If you use a modified version, please indicate this in all publications.\n");
+  fprintf(stdout, "=====================================================================================\n");
+#endif
 }
 
 
@@ -1656,7 +1686,7 @@ void print_dictionary_entry(FILE *fp, long type, long latex_form, long SDDS_form
   } else {
     fprintf(fp, "%c***** element type %s:\n", SDDS_form?'!':'*', entity_name[type]);
     if (SDDS_form) {
-      strcpy(buffer, entity_name[type]);
+      strcpy_s(buffer, entity_name[type]);
       replace_chars(buffer, "\n\t", "  ");
       fprintf(fp, "%s\n", buffer);
       fprintf(fp, "%ld\n", entity_description[type].n_params);
@@ -1723,7 +1753,7 @@ void print_dictionary_entry(FILE *fp, long type, long latex_form, long SDDS_form
     }
     if (latex_form) {
       char *ptr0, buffer[1024];
-      strcpy(buffer, entity_description[type].parameter[j].description);
+      strcpy_s(buffer, entity_description[type].parameter[j].description);
       if (strlen(ptr0 = buffer)) {
         /* don't need splitting of strings since the p tabular code 
            is used.

@@ -28,6 +28,7 @@
 #include "mpe.h" /* Defines the MPE library */ 
 #endif
 #include <float.h>
+#include <unistd.h>
 #endif 
 
 #include <stdio.h>
@@ -59,6 +60,8 @@ extern int n_processors;
 extern int myid;
 extern int partOnMaster; /* indicate if the particle information is available on master */
 extern long lessPartAllowed;
+extern MPI_Comm workers; /* The communicator will contain the slave processors only */
+extern int fd;
 #endif
 
 #ifdef SORT
@@ -2547,6 +2550,9 @@ extern long count_final_properties(void);
 
 extern double beam_width(double fraction, double **coord, long n_part, long sort_coord);
 extern double approximateBeamWidth(double fraction, double **part, long nPart, long iCoord);
+#if USE_MPI
+extern double approximateBeamWidth_p(double fraction, double **part, long nPart, long iCoord);
+#endif
 extern double rms_emittance(double **coord, long i1, long i2, long n,
                             double *S11Return, double *S12Return, double *S22Return);
 extern double rms_longitudinal_emittance(double **coord, long n, double Po);
@@ -2558,6 +2564,13 @@ long binParticleCoordinate(double **hist, long *maxBins,
                            double *lower, double *upper, double *binSize, long *bins,
                            double expansionFactor,
                            double **particleCoord, long nParticles, long coordinateIndex);
+#if USE_MPI
+/* This is the same function as binParticleCoordinate except that only one processor needs to call it */  
+long binParticleCoordinate_s(double **hist, long *maxBins,
+                           double *lower, double *upper, double *binSize, long *bins,
+                           double expansionFactor,
+                           double **particleCoord, long nParticles, long coordinateIndex);
+#endif
 
 /* prototypes for matrix_output.c: */
 void simplify_units(char *buffer, char **numer, long n_numer, char **denom, long n_denom);
@@ -3110,12 +3123,13 @@ void seedElegantRandomNumbers(long seed, long restart);
 double Kahan (long length, double a[], double *error);
 double KahanPlus (double oldSum, double b, double *error);
 #if USE_MPI
-double KahanParallel (double sum,  double error);
+double KahanParallel (double sum,  double error, MPI_Comm comm);
+void find_global_min_max (double *min, double *max, long np, MPI_Comm comm);
 #endif
 
 typedef struct {
   double t;
   long ip;
 } TIMEDATA;
-extern int compTimeData(void *tv1, void *tv2);
+extern int compTimeData(const void *tv1, const void *tv2);
 

@@ -39,15 +39,17 @@ double KahanPlus (double oldSum, double b, double *error)
 
 #if USE_MPI
 /* calculate sum of one dimensional array on several processors with Kahan's algorithm */
-double KahanParallel (double sum,  double error)
+double KahanParallel (double sum,  double error, MPI_Comm comm)
 {
-  long i;
+  long i, offset=0;
   double sumArray[n_processors], errorArray[n_processors];
   double total = 0.0, error_sum = 0.0;
 
-  MPI_Allgather(&sum,1,MPI_DOUBLE,sumArray,1,MPI_DOUBLE,MPI_COMM_WORLD);
-  MPI_Allgather(&error,1,MPI_DOUBLE,errorArray,1,MPI_DOUBLE,MPI_COMM_WORLD);
-  for (i=1; i<n_processors; i++) {
+  MPI_Allgather(&sum,1,MPI_DOUBLE,sumArray,1,MPI_DOUBLE,comm);
+  MPI_Allgather(&error,1,MPI_DOUBLE,errorArray,1,MPI_DOUBLE,comm);
+  if (comm==workers)
+    offset=1;
+  for (i=1-offset; i<n_processors-offset; i++) {
     total = KahanPlus(total, sumArray[i], &error_sum);
     total = KahanPlus(total, errorArray[i], &error_sum);
   }

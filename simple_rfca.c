@@ -142,7 +142,7 @@ double findFiducialTime(double **part, long np, double s0, double sOffset,
 #ifndef USE_KAHAN
 	MPI_Allreduce(&tsum, &tmp, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 #else
-	tmp = KahanParallel (tsum, error);
+	tmp = KahanParallel (tsum, error, MPI_COMM_WORLD);
 #endif
 	tFid = tmp/np_total; 
       }
@@ -421,8 +421,14 @@ long trackRfCavityWithWakes
       }
     }
     if (nKicks>0) {
+#if (USE_MPI)
       double *inverseF;
       inverseF = tmalloc(sizeof(*inverseF)*np);
+#else
+      /* The dynamic allocation will crash on the slave processor when the memory is freed.
+         The VLA is supported in the C99 standard, but not in C++98 standard */
+      double inverseF[np]; 
+#endif
       for (ik=0; ik<nKicks; ik++) {
         dgammaOverGammaAve = dgammaOverGammaNp = 0;
 	if(isSlave || !notSinglePart) {
@@ -480,16 +486,6 @@ long trackRfCavityWithWakes
 	}
 
         if (!wakesAtEnd) {
-#if USE_MPI
-          if (notSinglePart) {
-	    if (wake||trwake||LSCKick) {
-	      fprintf(stdout, "The wake function is not supported in the current parallel version.\n");
-              fprintf(stdout, "Please use serial version.\n");
-	      fflush(stdout);
-	      MPI_Abort(MPI_COMM_WORLD, 9);
-	    }
-	  }
-#endif
           /* do wakes */
           if (wake) 
             track_through_wake(part, np, wake, P_central, run, iPass, charge);
@@ -519,16 +515,6 @@ long trackRfCavityWithWakes
         }
         
         if (wakesAtEnd) {
-#if USE_MPI
-          if (notSinglePart) {
-	    if (wake||trwake||LSCKick) {
-	      fprintf(stdout, "The wake function is not supported in the current parallel version.\n");
-              fprintf(stdout, "Please use serial version.\n");
-	      fflush(stdout);
-	      MPI_Abort(MPI_COMM_WORLD, 9);
-	    }
-	  }
-#endif
           /* do wakes */
           if (wake) 
             track_through_wake(part, np, wake, P_central, run, iPass, charge);
@@ -541,7 +527,9 @@ long trackRfCavityWithWakes
           }
         }
       }
-      free(inverseF);
+#if (USE_MPI)
+      free(inverseF); 
+#endif
     } else {
       double sin_phase=0.0, cos_phase, inverseF;
       double R11=1, R21=0, R22, R12, dP, ds1;
@@ -633,16 +621,6 @@ long trackRfCavityWithWakes
 	}
       }
       
-#if USE_MPI
-      if (notSinglePart) {
-	if (wake||trwake) {
-	  fprintf(stdout, "The wake function is not supported in the current parallel version.\n");
-	  fprintf(stdout, "Please use serial version.\n");
-	  fflush(stdout);
-	  MPI_Abort(MPI_COMM_WORLD, 9);
-	}
-      }
-#endif
       /* do wakes */
       if (wake) 
         track_through_wake(part, np, wake, P_central, run, iPass, charge);

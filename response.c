@@ -152,7 +152,7 @@ void setup_response_output(RESPONSE_OUTPUT *respOutput,
         eptr = CM->ucorr[i];
         if (!inverse) {
             if (is_blank(entity_description[eptr->type].parameter[SL->param_index[sl_index]].unit))
-                strcpy(units, "m");
+                strcpy_s(units, "m");
             else {
                 if (unitsCode==KNL_UNITS && (eptr->type==T_HCOR || eptr->type==T_HVCOR || eptr->type==T_VCOR))
                     sprintf(units, "m/K0L");
@@ -167,7 +167,7 @@ void setup_response_output(RESPONSE_OUTPUT *respOutput,
             }
         else {
             if (is_blank(entity_description[eptr->type].parameter[SL->param_index[sl_index]].unit))
-                strcpy(units, "1/m");
+                strcpy_s(units, "1/m");
             else {
                 if (unitsCode==KNL_UNITS 
                     && (eptr->type==T_HCOR || eptr->type==T_HVCOR || eptr->type==T_VCOR))

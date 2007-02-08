@@ -91,12 +91,12 @@ void setup_coupled_twiss_output(
     for (i=0; i<maxDimension; i++) 
       for (j=i; j<maxDimension; j++) {
         if ((i==0 || i==2 || i==4) && (j==0 || j==2 || j==4)) 
-          strcpy(units, "m$a2$n");
+          strcpy_s(units, "m$a2$n");
         else if ((!(i==0 || i==2 || i==4) && (j==0 || j==2 || j==4)) ||
                  ((i==0 || i==2 || i==4) && !(j==0 || j==2 || j==4)))
-          strcpy(units, "m");
+          strcpy_s(units, "m");
         else
-          strcpy(units, "");
+          strcpy_s(units, "");
         sprintf(name, "S%ld%ld", i+1, j+1);
         if (!SDDS_DefineSimpleColumn(&SDDScoupled, name, units, SDDS_DOUBLE)) {
           fprintf(stdout, "Unable to set up file %s\n", filename);

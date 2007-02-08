@@ -87,7 +87,7 @@ void delete_spaces(char *s)
             ptr = s++;
             while (*s==' ' || *s=='\011')
                 s++;
-            strcpy(ptr, s);
+            strcpy_s(ptr, s);
             s = ptr;
             }
         else

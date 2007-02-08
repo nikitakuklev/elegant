@@ -14,6 +14,9 @@
  * Michael Borland, 2000
  *
  $Log: not supported by cvs2svn $
+ Revision 1.15  2006/08/23 13:20:33  borland
+ Now outputs the longitudinal emittance even with only doing corrected quantities.
+
  Revision 1.14  2005/11/10 15:38:49  soliday
  Added changes to get it to compile properly with 64 bit compilers.
 
@@ -416,10 +419,10 @@ long SetUpOutputFile(SDDS_DATASET *SDDSout, char *outputfile, long correctedOnly
             sprintf(units, "%s %s", ppUnits[i], ppUnits[j]);
         }
         else {
-          strcpy(units, ppUnits[i]);
+          strcpy_s(units, ppUnits[i]);
         }
       } else if (ppUnits[j])
-        strcpy(units, ppUnits[j]);
+        strcpy_s(units, ppUnits[j]);
       if (!SDDS_DefineSimpleColumn(SDDSout, name, units, SDDS_DOUBLE))
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       if (!SDDS_CopyString(&CorName[i][j], name))

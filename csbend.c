@@ -251,6 +251,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   multipoleKicksDone += n_part*csbend->n_kicks*(csbend->integration_order==4?4:1);
 #endif
 
+  if (isSlave || !notSinglePart) {
   for (i_part=0; i_part<=i_top; i_part++) {
     if (!part) {
       fprintf(stdout, "error: null particle array found (working on particle %ld) (track_through_csbend)\n", i_part);
@@ -400,7 +401,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     coord[2] += dyf + dzf*coord[3];
     coord[4] += dzf*EXSQRT(1+ sqr(coord[1]) + sqr(coord[3]), csbend->sqrtOrder);
   }
-
+  }
   if (distributionBasedRadiation) {
     radiansTotal += fabs(csbend->angle);
     fprintf(stderr, "%e radians, photons/particle=%e, photons/radian = %e, mean y = %e\n",
@@ -847,7 +848,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   double x, xp, y, yp, p1, beta1, p0;
   double ctLower, ctUpper, dct, slippageLength, phiBend, slippageLength13;
   long diSlippage, diSlippage4;
-  long nBins, nBinned;
+  long nBins, nBinned = 0;
   long i_part, i_top, kick;
   double rho=0.0, Fx, Fy, y2;
   double n, beta, gamma, delta, fse, dp_prime;
@@ -867,7 +868,8 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   TRACKING_CONTEXT tContext;
   VMATRIX *Msection=NULL, *Me1=NULL, *Me2=NULL;
   
-  reset_driftCSR();
+  if (isSlave || !notSinglePart) 
+    reset_driftCSR();
   getTrackingContext(&tContext);
   
   if (!csbend)
@@ -878,12 +880,14 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
       exactDrift(part, n_part, csbend->length); 
     else {
       long i;
+	if (isSlave || !notSinglePart) {
       for (i=0; i<n_part; i++) {
         part[i][0] += csbend->length*part[i][1];
         part[i][2] += csbend->length*part[i][3];
         part[i][4] += csbend->length;
       }
     }
+      }
    return n_part;
   }
 
@@ -1095,6 +1099,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   dzf =  csbend->dx*sin(csbend->angle) - csbend->dz*cos(csbend->angle);
   dyf = csbend->dy;
 
+  if (isMaster) {
   if (csbend->particleOutputFile && strlen(csbend->particleOutputFile) && !csbend->particleFileActive) {
     /* set up SDDS output file for particle coordinates inside bend */
     csbend->particleFileActive = 1;
@@ -1118,7 +1123,9 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     }
   }
+  }
   
+  if (isMaster) { 
   if (csbend->histogramFile && strlen(csbend->histogramFile) && !csbend->wakeFileActive) {
     /* set up SDDS output file for CSR monitoring */
     csbend->wakeFileActive = 1;
@@ -1145,7 +1152,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
     }
   }
-
+  }
   if (csbend->wakeFilterFile && strlen(csbend->wakeFilterFile) && !csbend->wffValues) 
     readWakeFilterFile(&csbend->wffValues,
                        &csbend->wffFreqValue, &csbend->wffRealFactor, &csbend->wffImagFactor, 
@@ -1178,6 +1185,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   multipoleKicksDone += n_part*csbend->n_kicks*(csbend->integration_order==4?4:1);
 #endif
 
+  if (isSlave || !notSinglePart) {
   /* check particle data, transform coordinates, and handle edge effects */
   for (i_part=0; i_part<n_part; i_part++) {
     if (!part) {
@@ -1256,7 +1264,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
       DP -= dp_prime*X*tan(e1);
     }
   }
-  
+  }
 
   if (csbend->csr && n_part>1)
     CSRConstant = 2*macroParticleCharge*e_mks/pow(3*rho0*rho0, 1./3.)/(4*PI*epsilon_o*me_mks*sqr(c_mks));
@@ -1264,6 +1272,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     CSRConstant = 0;
   /* Now do the body of the sector dipole */
   for (kick=phiBend=0; kick<csbend->n_kicks; kick++) {
+    if (isSlave || !notSinglePart) {
     for (i_part=0; i_part<n_part; i_part++) {
       coord = part[i_part];
       if (particleLost[i_part])
@@ -1336,23 +1345,56 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
         break;
       }
     }
+    }
+
+#if (!USE_MPI)
     if (n_part>1 && !csrInhibit) {
+#else
+      if (!csrInhibit && notSinglePart) { /* n_part could be 0 for some processors, which could cause synchronization problem */
+#endif
       /* compute CSR potential function */
       if (kick==0 || !csbend->binOnce) {
         /* - first make a density histogram */
         ctLower = ctUpper = dct = 0;
-        if ((nBinned = 
-             binParticleCoordinate(&ctHist, &maxBins,
+	nBinned = binParticleCoordinate(&ctHist, &maxBins,
                                    &ctLower, &ctUpper, &dct, &nBins, 
                                    csbend->binRangeFactor<1.1?1.1:csbend->binRangeFactor, 
-                                   part, n_part, 4))!=n_part) {
+					part, n_part, 4);
+
+#if (!USE_MPI) 
+	if (nBinned != n_part) {
           fprintf(stdout, "Only %ld of %ld particles binned for CSRCSBEND (z0=%le, kick=%ld, BRF=%le)\n", 
-		  nBinned, n_part, z_start, kick,
+		  nBinned, n_part, z_start, kick, csbend->binRangeFactor<1.1?1.1:csbend->binRangeFactor);
+	  fprintf(stdout, "ct min, max = %21.15e, %21.15e, dct = %21.15e, nBins=%ld, maxBins=%ld\n",
+		  ctLower, ctUpper, dct, nBins, maxBins);
+          fflush(stdout);
+        }
+#else
+	if (USE_MPI) {
+	  int all_binned, result = 1, nBinned_total;
+
+          if (isSlave || !notSinglePart) {
+	    result = ((nBinned==n_part) ? 1 : 0);
+	  }
+	  MPI_Allreduce(&result, &all_binned, 1, MPI_INT, MPI_LAND, MPI_COMM_WORLD);
+	  MPI_Allreduce(&nBinned, &nBinned_total, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+          nBinned = nBinned_total; 
+	  if (!all_binned && isMaster) {
+	    fprintf(stdout, "Not all particles binned for CSRCSBEND (z0=%le, kick=%ld, BRF=%le)\n", 
+		    z_start, kick,
 		  csbend->binRangeFactor<1.1?1.1:csbend->binRangeFactor);
 	  fprintf(stdout, "ct min, max = %21.15e, %21.15e, dct = %21.15e, nBins=%ld, maxBins=%ld\n",
 		  ctLower, ctUpper, dct, nBins, maxBins);
           fflush(stdout);
         }
+        }
+
+	if (USE_MPI) {  /* Master needs to know the information to write the result */
+	  double buffer[nBins];
+	  MPI_Allreduce(ctHist, buffer, nBins, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+	  memcpy(ctHist, buffer, sizeof(double)*nBins);
+	}
+#endif
         
         /* - smooth the histogram, normalize to get linear density, and 
            copy in preparation for taking derivative
@@ -1361,8 +1403,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
           long nz;
           nz = applyLowPassFilter(ctHist, nBins, csbend->highFrequencyCutoff0, csbend->highFrequencyCutoff1);
           if (nz) {
-            fprintf(stdout, "Warning: low pass filter resulted in negative values in %ld bins\n",
-                    nz);
+	    fprintf(stdout, "Warning: low pass filter resulted in negative values in %ld bins\n", nz);
             fflush(stdout);
           }
         }
@@ -1446,7 +1487,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 	  applyFilterTable(dGamma, nBins, dct/c_mks, csbend->wffValues, csbend->wffFreqValue,
 			   csbend->wffRealFactor, csbend->wffImagFactor);
       }
-
+      if (isSlave || !notSinglePart) {
       if (CSRConstant) {
         for (i_part=0; i_part<n_part; i_part++) {
           long nBins1;
@@ -1462,8 +1503,10 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
           }
         }
       }
+      }
       
       if (csbend->particleFileActive && kick%csbend->particleOutputInterval==0) {
+	if (isMaster) {
         long ip;
         /* dump particle data at this location */
         if (!SDDS_StartPage(&csbend->SDDSpart, n_part) ||
@@ -1484,12 +1527,15 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
         if (!SDDS_WritePage(&csbend->SDDSpart))
           SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
         SDDS_DoFSync(&csbend->SDDSpart);
+	  printf ("Pelegant does not support dumping particle data inside an element now.");
+	}
       }
 
       if (tContext.sliceAnalysis && tContext.sliceAnalysis->active &&
 	  kick!=(csbend->n_kicks-1) &&
 	  (csbend->sliceAnalysisInterval==0 ||
 	   kick%csbend->sliceAnalysisInterval==0)) {
+#if (!USE_MPI)
 	convertFromCSBendCoords(part, n_part, rho0, cos_ttilt, sin_ttilt, 1);
 	performSliceAnalysisOutput(tContext.sliceAnalysis, part, n_part, 
 				   0, tContext.step, Po, 
@@ -1498,6 +1544,11 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 				   z_start + (kick*(z_end-z_start))/(csbend->n_kicks-1),
 				   1);
 	convertToCSBendCoords(part, n_part, rho0, cos_ttilt, sin_ttilt, 1);
+#else 
+      if (isMaster) 
+	printf ("Pelegant does not support output inside an element now.");
+    
+#endif
       }
 
       if (csbend->wakeFileActive && 
@@ -1510,6 +1561,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
           ctHist[iBin] *= macroParticleCharge*c_mks;
           ctHistDeriv[iBin] *= macroParticleCharge*sqr(c_mks)/dct;
         }
+	if (isMaster) {
         if (!SDDS_StartPage(&csbend->SDDSout, nBins) ||
             !SDDS_SetColumn(&csbend->SDDSout, SDDS_SET_BY_NAME, dGamma, nBins, "DeltaGamma") ||
             !SDDS_SetColumn(&csbend->SDDSout, SDDS_SET_BY_NAME, T1, nBins, "DeltaGammaT1") ||
@@ -1523,6 +1575,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
                                 "BinSize", dct, 
                                 "DerbenevRatio", derbenevRatio, NULL))
           SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+	}
         if (csbend->binOnce) {
           /* fix these arrays so they can be used again */
           ctHist[iBin] /= macroParticleCharge*c_mks;
@@ -1533,6 +1586,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
           T1[iBin] = ctLower-(ctLower+ctUpper)/2.0+dct*(iBin+0.5);
           T2[iBin] = dGamma[iBin]/(csbend->length/csbend->n_kicks);
         }
+	if (isMaster){
         if (!SDDS_SetColumn(&csbend->SDDSout, SDDS_SET_BY_NAME, T1, nBins, "s") ||
             !SDDS_SetColumn(&csbend->SDDSout, SDDS_SET_BY_NAME, T2, nBins, "GammaDeriv") ||
             !SDDS_WritePage(&csbend->SDDSout))
@@ -1541,23 +1595,52 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
       }
     }
   }
+  }
 
   if (!csbend->binOnce && n_part>1 && !csrInhibit && !csbend->csrBlock) {
     /* prepare some data for use by CSRDRIFT element */
     csrWake.dctBin = dct;
     ctLower = ctUpper = dct = 0;
-    if ((nBinned = 
-         binParticleCoordinate(&ctHist, &maxBins,
+
+    nBinned =  binParticleCoordinate(&ctHist, &maxBins,
                                &ctLower, &ctUpper, &dct, &nBins, 
                                csbend->binRangeFactor<1.1?1.1:csbend->binRangeFactor, 
-                               part, n_part, 4))!=n_part) {
+				     part, n_part, 4);
+#if (!USE_MPI)
+    if (nBinned!=n_part) {
       fprintf(stdout, "Only %ld of %ld particles binned for CSRCSBEND (z0=%le, end, BRF=%le)\n", 
-	      nBinned, n_part, z_start,
-	      csbend->binRangeFactor<1.1?1.1:csbend->binRangeFactor);
+	      nBinned, n_part, z_start, csbend->binRangeFactor<1.1?1.1:csbend->binRangeFactor);
       fprintf(stdout, "ct min, max = %21.15e, %21.15e, dct = %21.15e, nBins=%ld, maxBins=%ld\n",
 	      ctLower, ctUpper, dct, nBins, maxBins);
       fflush(stdout);
     }
+#else
+    if (USE_MPI && notSinglePart) {
+      int all_binned, result = 1, nBinned_total;
+
+      if (isSlave || !notSinglePart) {
+	result = ((nBinned==n_part) ? 1 : 0);
+      }
+      else
+	nBinned = 0;
+      MPI_Allreduce(&result, &all_binned, 1, MPI_INT, MPI_LAND, MPI_COMM_WORLD);
+      MPI_Allreduce(&nBinned, &nBinned_total, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+      nBinned = nBinned_total; 
+      if (!all_binned && isMaster) {
+	fprintf(stdout, "Not all particles binned for CSRCSBEND (z0=%le, kick=%ld, BRF=%le)\n", 
+		z_start, kick,
+	      csbend->binRangeFactor<1.1?1.1:csbend->binRangeFactor);
+      fprintf(stdout, "ct min, max = %21.15e, %21.15e, dct = %21.15e, nBins=%ld, maxBins=%ld\n",
+	      ctLower, ctUpper, dct, nBins, maxBins);
+      fflush(stdout);
+      }
+      if (notSinglePart) {  /* Master needs to know the information to write the result */
+	double buffer[nBins];
+	MPI_Allreduce(ctHist, buffer, nBins, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+	memcpy(ctHist, buffer, sizeof(double)*nBins);
+      }
+    }
+#endif
     csrWake.s0 = ctLower + dzf;
   } else {
     ctLower = ctUpper = dct = 0;
@@ -1565,6 +1648,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     csrWake.s0 = ctLower + dzf;
   }
   
+  if (isSlave || !notSinglePart) {
   /* remove lost particles, handle edge effects, and transform coordinates */    
   i_top = n_part-1;
   for (i_part=0; i_part<=i_top; i_part++) {
@@ -1647,6 +1731,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     coord[2] += dyf + dzf*coord[3];
     coord[4] += dzf*sqrt(1+ sqr(coord[1]) + sqr(coord[3]));
   }
+  }
 
   if (n_part>1 && !csbend->csrBlock) {
     /* prepare more data for CSRDRIFT */
@@ -1702,7 +1787,14 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   maxBins = maxParticles = 0;
 #endif
 
+#if (!USE_MPI)
   return(i_top+1);
+#else
+  if (isSlave || !notSinglePart)
+  return(i_top+1);
+  else
+    return n_part; /* i_top is not defined for master */
+#endif 
 }
 
 long binParticleCoordinate(double **hist, long *maxBins,
@@ -1717,7 +1809,9 @@ long binParticleCoordinate(double **hist, long *maxBins,
     return -1;
   if (*binSize>0 && *bins>1)
     return -2;
-  if (*lower==*upper) {
+
+  /* if (*lower==*upper)  This condition will be removed */ 
+  if (isSlave || !notSinglePart) {
     /* find range of points */
     *upper = -(*lower = DBL_MAX);
     for (iParticle=0; iParticle<nParticles; iParticle++) {
@@ -1727,6 +1821,15 @@ long binParticleCoordinate(double **hist, long *maxBins,
       if (value>*upper)
         *upper = value;
     }
+  }
+
+#if USE_MPI
+  /* find the global maximum and minimum */
+  if (isMaster)
+    nParticles = 0;
+  find_global_min_max(lower, upper, nParticles, MPI_COMM_WORLD);
+#endif
+
     if (expansionFactor>1) {
       double center, range;
       center = (*lower+*upper)/2;
@@ -1734,6 +1837,63 @@ long binParticleCoordinate(double **hist, long *maxBins,
       *lower = center-range/2;
       *upper = center+range/2;
     }
+  
+  if (*binSize>0)
+    /* bin size given, so determine the number of bins */
+    *bins = (*upper-*lower)/(*binSize);
+  *binSize = (*upper-*lower)/(*bins);
+
+  /* realloc if necessary */
+  if (*bins>*maxBins &&
+      !(*hist=SDDS_Realloc(*hist, sizeof(**hist)*(*maxBins=*bins))))
+    bomb("Memory allocation failure (binParticleCoordinate)", NULL);
+    
+  for (iBin=0; iBin<*bins; iBin++)
+    (*hist)[iBin] = 0;
+  nBinned = 0;
+  if(isSlave) {
+    for (iParticle=nBinned=0; iParticle<nParticles; iParticle++) {
+      /* the coordinate of the bin center is (iBin+0.5)*(*binSize) + *lower */
+      iBin = (particleCoord[iParticle][coordinateIndex] - *lower)/(*binSize);
+      if (iBin<0 || iBin>(*bins-1))
+        continue;
+      (*hist)[iBin] += 1;
+      nBinned++;
+    }
+  }
+  return nBinned;
+}
+
+#if USE_MPI
+long binParticleCoordinate_s(double **hist, long *maxBins,
+                           double *lower, double *upper, double *binSize, long *bins,
+                           double expansionFactor,
+                           double **particleCoord, long nParticles, long coordinateIndex)
+{
+  long iBin, iParticle, nBinned;
+  double value;
+  
+  if (*binSize<=0 && *bins<1)
+    return -1;
+  if (*binSize>0 && *bins>1)
+    return -2;
+
+  /* if (*lower==*upper)  This condition will be removed */ 
+  /* find range of points */
+  *upper = -(*lower = DBL_MAX);
+  for (iParticle=0; iParticle<nParticles; iParticle++) {
+    value = particleCoord[iParticle][coordinateIndex];
+    if (value<*lower)
+      *lower = value;
+    if (value>*upper)
+      *upper = value;
+  }
+  if (expansionFactor>1) {
+    double center, range;
+    center = (*lower+*upper)/2;
+    range = (*upper-*lower)*expansionFactor;
+    *lower = center-range/2;
+    *upper = center+range/2;
   }
   
   if (*binSize>0)
@@ -1759,6 +1919,7 @@ long binParticleCoordinate(double **hist, long *maxBins,
   }
   return nBinned;
 }
+#endif
 
 void computeSaldinFdNorm(double **FdNorm, double **x, long *n, double sMax, long ns,
                          double Po, double radius, double angle, double dx, char *normMode);
@@ -1780,11 +1941,20 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
   static long warned = 0;
   long nBins1;
   TRACKING_CONTEXT tContext;
+#if USE_MPI 
+  long np_total=1, binned_total;;
+#endif
   
   getTrackingContext(&tContext);
 
+#if (!USE_MPI)
   if (np<=1 || !csrWake.valid || !csrDrift->csr) {
-    if (csrDrift->linearOptics) {
+#else
+  if (isSlave&&notSinglePart)
+    MPI_Allreduce(&np, &np_total, 1, MPI_LONG, MPI_SUM, workers);   
+  if  ((isSlave&&np_total<=1) || !csrWake.valid || !csrDrift->csr || !notSinglePart) {
+#endif
+    if ((isSlave||!notSinglePart) && csrDrift->linearOptics) {
       long i;
       for (i=0; i<np; i++) {
         part[i][0] += csrDrift->length*part[i][1];
@@ -1924,6 +2094,7 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
     ctmax = -DBL_MAX;
 
     /* propagate particles forward, converting s to c*t=s/beta */
+    if (isSlave || !notSinglePart) {
     for (iPart=0; iPart<np; iPart++) {
       coord = part[iPart];
       coord[0] += coord[1]*dz;
@@ -1940,6 +2111,7 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
       if (coord[4]<ctmin)
         ctmin = coord[4];
 #endif
+    }
     }
 
     factor = 1;
@@ -2009,6 +2181,7 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
     dzFirst = 0;
 
     /* apply kick to each particle and convert back to normal coordinates */
+    if (isSlave || !notSinglePart) {
     for (iPart=binned=0; iPart<np; iPart++) {
       coord = part[iPart];
       if (csrWake.dGamma) {
@@ -2024,7 +2197,16 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
       beta = p/sqrt(p*p+1);
       coord[4] = beta*coord[4];
     }
+    }
+#if USE_MPI
+    if (isSlave && notSinglePart) {
+      MPI_Allreduce(&binned, &binned_total, 1, MPI_LONG, MPI_SUM, workers);
+    }
+    if ((myid==1) && (csrWake.dGamma && np_total!=binned_total)) {
+      dup2(fd,fileno(stdout)); /* Let the first slave processor write the output */
+#else
     if (csrWake.dGamma && np!=binned) {
+#endif
       fprintf(stdout, "only %ld of %ld particles binned for CSR drift %s (track_through_driftCSR)\n",
               binned, np, tContext.elementName);
       fprintf(stdout, "beam ct min, max = %21.15e, %21.15e\n",
@@ -2032,9 +2214,13 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
       fprintf(stdout, "wake ct0 = %21.15e, ct1 = %21.15e\n",
               ct0, ct0+csrWake.dctBin*csrWake.bins);
       fflush(stdout);
+#if USE_MPI
+    freopen("/dev/null","w",stdout); 
+#endif  
     }
   }
   /* do final drift of dz0/2 */
+  if (isSlave || !notSinglePart) {
   dz = dz0/2;
   for (iPart=0; iPart<np; iPart++) {
     coord = part[iPart];
@@ -2045,7 +2231,7 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
     else
       coord[4] += dz*sqrt(1+sqr(coord[1])+sqr(coord[3]));
   }    
-
+  }
   csrWake.zLast = zStart+csrDrift->length;
   
   if (csrWake.dGamma) {
@@ -2348,6 +2534,9 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
   long nBins1;
   double dsMax, x;
   TRACKING_CONTEXT tContext;
+#if USE_MPI
+  long binned_total=1, np_total=1;
+#endif
 
   getTrackingContext(&tContext);
 
@@ -2359,15 +2548,16 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
     length += (dzFirst = zStart-csrWake.zLast);
     /* propagate beam back so we can tranverse the missing length including CSR
      */
-    for (iPart=0; iPart<np; iPart++) {
-      coord = part[iPart];
-      coord[0] -= dzFirst*coord[1];
-      coord[2] -= dzFirst*coord[3];
-      if (csrDrift->linearOptics)
-        coord[4] -= dzFirst;
-      else
-        coord[4] -= dzFirst*sqrt(1+sqr(coord[1])+sqr(coord[3]));
-    }
+    if (isSlave || !notSinglePart)
+      for (iPart=0; iPart<np; iPart++) {
+	coord = part[iPart];
+	coord[0] -= dzFirst*coord[1];
+	coord[2] -= dzFirst*coord[3];
+	if (csrDrift->linearOptics)
+	  coord[4] -= dzFirst;
+	else
+	  coord[4] -= dzFirst*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+      }
     zStart = csrWake.zLast;
   }
   zOutput = zStart;  /* absolute coordinate used for output of data vs z or s */
@@ -2401,32 +2591,56 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
     dsMax = csrWake.rho/24*pow(csrWake.bendingAngle, 3)
       *(csrWake.bendingAngle+4*x)/(csrWake.bendingAngle+x);
     /* propagate particles forward, converting s to c*t=s/beta */
-    for (iPart=0; iPart<np; iPart++) {
-      coord = part[iPart];
-      coord[0] += coord[1]*dz;
-      coord[2] += coord[3]*dz;
-      p = Po*(1+coord[5]);
-      beta = p/sqrt(p*p+1);
-      if (csrDrift->linearOptics)
-        coord[4] = (coord[4]+dz)/beta;
-      else
-        coord[4] = (coord[4]+dz*sqrt(1+sqr(coord[1])+sqr(coord[3])))/beta;
+    if (isSlave || !notSinglePart) {
+      for (iPart=0; iPart<np; iPart++) {
+	coord = part[iPart];
+	coord[0] += coord[1]*dz;
+	coord[2] += coord[3]*dz;
+	p = Po*(1+coord[5]);
+	beta = p/sqrt(p*p+1);
+	if (csrDrift->linearOptics)
+	  coord[4] = (coord[4]+dz)/beta;
+	else
+	  coord[4] = (coord[4]+dz*sqrt(1+sqr(coord[1])+sqr(coord[3])))/beta;
+      }
     }
-
     /* bin the particle distribution */
     ctLower = ctUpper = dct = 0;
-    if ((nBinned = 
-         binParticleCoordinate(&ctHist, &maxBins,
-                               &ctLower, &ctUpper, &dct, &nBins, 
-                               csrWake.binRangeFactor<1.1?1.1:csrWake.binRangeFactor,
-                               part, np, 4))!=np) {
-      fprintf(stdout, "Only %ld of %ld particles binned for CSRDRIFT (%s, BRF=%le, Stupakov)\n", 
-	      nBinned, np,
-	      tContext.elementName, csrWake.binRangeFactor);
-      fprintf(stdout, "ct min, max = %21.15e, %21.15e, dct = %21.15e, nBins=%ld, maxBins=%ld\n",
-	      ctLower, ctUpper, dct, nBins, maxBins);
-      fflush(stdout);
-    }
+    nBinned = binParticleCoordinate(&ctHist, &maxBins,
+				    &ctLower, &ctUpper, &dct, &nBins, 
+				    csrWake.binRangeFactor<1.1?1.1:csrWake.binRangeFactor,
+				    part, np, 4);
+#if USE_MPI
+  if (notSinglePart) {
+    if (isSlave)
+      MPI_Allreduce(&np, &np_total, 1, MPI_LONG, MPI_SUM, workers);    
+    MPI_Allreduce(&nBinned, &binned_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+  }
+
+  if (notSinglePart) {  /* Master needs to know the information to write the result */
+    double buffer[nBins];
+    MPI_Allreduce(ctHist, buffer, nBins, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    memcpy(ctHist, buffer, sizeof(double)*nBins);
+  }
+  if ((myid==1) && (np_total!=binned_total)) {
+    dup2(fd,fileno(stdout)); /* Let the first slave processor write the output */
+    fprintf(stdout, "Only %ld of %ld particles binned for CSRDRIFT (%s, BRF=%le, Stupakov)\n", 
+	    binned_total, np_total,
+	    tContext.elementName, csrWake.binRangeFactor);
+    fflush(stdout);
+#else
+  if (nBinned!=np) {
+    fprintf(stdout, "Only %ld of %ld particles binned for CSRDRIFT (%s, BRF=%le, Stupakov)\n", 
+	    nBinned, np,
+	    tContext.elementName, csrWake.binRangeFactor);
+#endif
+    fprintf(stdout, "ct min, max = %21.15e, %21.15e, dct = %21.15e, nBins=%ld, maxBins=%ld\n",
+	    ctLower, ctUpper, dct, nBins, maxBins);
+    fflush(stdout);
+#if USE_MPI
+    freopen("/dev/null","w",stdout); 
+#endif 
+  }
       
     /* - smooth the histogram, normalize to get linear density, and 
        copy in preparation for taking derivative
@@ -2443,7 +2657,11 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
 
     if (csrWake.SGHalfWidth>0) {
       SavitzkyGolaySmooth(ctHist, nBins, csrWake.SGOrder, csrWake.SGHalfWidth, csrWake.SGHalfWidth,  0);
+#if (!USE_MPI)
       correctDistribution(ctHist, nBins, 1.0*nBinned);
+#else
+      correctDistribution(ctHist, nBins, 1.0*binned_total);
+#endif
     }
     for (iBin=0; iBin<nBins; iBin++)
       ctHistDeriv[iBin] = (ctHist[iBin] /= dct);
@@ -2545,37 +2763,60 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
     }
     
     /* apply kick to each particle and convert back to normal coordinates */
-    for (iPart=binned=0; iPart<np; iPart++) {
-      double f;
-      coord = part[iPart];
-      iBin = (f=(coord[4]-ctLower)/dct);
-      f -= iBin;
-      if (iBin>=0 && iBin<nBins1) {
-        coord[5] += ((1-f)*csrWake.dGamma[iBin] + f*csrWake.dGamma[iBin+1])/Po;
-        binned ++;
-      } else {
-	fprintf(stdout, "Particle out of bin range---not kicked: ct-ctLower=%21.15e, dct=%21.15e, iBin=%ld\n",
-		coord[4]-ctLower, dct, iBin);
+    if (isSlave || !notSinglePart) {
+      for (iPart=binned=0; iPart<np; iPart++) {
+	double f;
+	coord = part[iPart];
+	iBin = (f=(coord[4]-ctLower)/dct);
+	f -= iBin;
+	if (iBin>=0 && iBin<nBins1) {
+	  coord[5] += ((1-f)*csrWake.dGamma[iBin] + f*csrWake.dGamma[iBin+1])/Po;
+	  binned ++;
+	} else {
+	  fprintf(stdout, "Particle out of bin range---not kicked: ct-ctLower=%21.15e, dct=%21.15e, iBin=%ld\n",
+		  coord[4]-ctLower, dct, iBin);
+	}
+	p = (1+coord[5])*Po;
+	beta = p/sqrt(p*p+1);
+	coord[4] = beta*coord[4];
       }
-      p = (1+coord[5])*Po;
-      beta = p/sqrt(p*p+1);
-      coord[4] = beta*coord[4];
     }
     if (tContext.sliceAnalysis && tContext.sliceAnalysis->active &&
 	(csrDrift->sliceAnalysisInterval==0 ||
-	 iKick%csrDrift->sliceAnalysisInterval==0))  
+	 iKick%csrDrift->sliceAnalysisInterval==0)) {
+#if USE_MPI
+      /* This function will be parallelized in the future */
+      fprintf(stdout, "performSliceAnalysisOutput is not supported in parallel mode currently.\n");
+      MPI_Barrier(MPI_COMM_WORLD); /* Make sure the information can be printed before aborting */
+      MPI_Abort(MPI_COMM_WORLD, 1); 
+#endif
 	performSliceAnalysisOutput(tContext.sliceAnalysis, part, np, 
 				   0, tContext.step, Po, 
 				   csrWake.MPCharge*np,
 				   tContext.elementName, 
 				   zOutput, 0);
+    }
+#if USE_MPI
+    if (isSlave && notSinglePart) {
+      MPI_Allreduce(&binned, &binned_total, 1, MPI_LONG, MPI_SUM, workers);
+    }
+    if ((myid==1) && (np_total!=binned_total)) {
+      dup2(fd,fileno(stdout)); /* Let the first slave processor write the output */
+      fprintf(stdout, "Only %ld of %ld particles kicked for CSRDRIFT (%s, BRF=%le, Stupakov)\n", 
+	      binned_total, np_total,
+	      tContext.elementName, csrWake.binRangeFactor);
+#else
     if (np!=binned) {
       fprintf(stdout, "Only %ld of %ld particles kicked for CSRDRIFT (%s, BRF=%le, Stupakov)\n", 
 	      binned, np,
 	      tContext.elementName, csrWake.binRangeFactor);
+#endif
       fprintf(stdout, "ct min, max = %21.15e, %21.15e, dct = %21.15e, nBins=%ld, maxBins=%ld\n",
 	      ctLower, ctUpper, dct, nBins, maxBins);
       fflush(stdout);
+#if USE_MPI
+    freopen("/dev/null","w",stdout); 
+#endif 
     }
   }
   

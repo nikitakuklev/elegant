@@ -48,8 +48,18 @@ void track_through_trfmode(
   static FILE *fpdeb = NULL;
   static long debugPass = 0;
 #endif
+#if USE_MPI
+  long np_total, binned_total;
+#endif
 
-  if (trfmode->binless) {
+  if (trfmode->binless) { /* This can't be done in parallel mode */
+#if USE_MPI
+    fprintf(stdout, "binless in trfmode is not supported in the current parallel version.\n");
+    fprintf(stdout, "Please use serial version.\n");
+    fflush(stdout);
+    MPI_Barrier (MPI_COMM_WORLD);
+    MPI_Abort(MPI_COMM_WORLD, 9);
+#endif
     runBinlessTrfMode(part, np, trfmode, Po, element_name, element_z, pass, n_passes, charge);
     return;
   }
@@ -58,8 +68,18 @@ void track_through_trfmode(
     trfmode->mp_charge = charge->macroParticleCharge;
   } else if (pass==0) {
     trfmode->mp_charge = 0;
-    if (np)
-      trfmode->mp_charge = trfmode->charge/np;
+#if (!USE_MPI) 
+      if (np)
+        trfmode->mp_charge = trfmode->charge/np;
+#else
+      if (USE_MPI) {
+	if (isSlave) {
+	  MPI_Allreduce(&np, &np_total, 1, MPI_LONG, MPI_SUM, workers);
+	  if (np_total)
+	    trfmode->mp_charge = trfmode->charge/np_total; 
+	}
+      } 
+#endif
   }
 
 #if DEBUG
@@ -122,115 +142,155 @@ void track_through_trfmode(
   }
 
   tmean = 0;
-  for (ip=0; ip<np; ip++) {
-    P = Po*(part[ip][5]+1);
-    time[ip] = part[ip][4]*sqrt(sqr(P)+1)/(c_mks*P);
-    tmean += time[ip];
+  if (isSlave) {
+    for (ip=0; ip<np; ip++) {
+      P = Po*(part[ip][5]+1);
+      time[ip] = part[ip][4]*sqrt(sqr(P)+1)/(c_mks*P);
+      tmean += time[ip];
+    }
   }
+#if USE_MPI
+  if (isSlave) {
+    double t_total;
+    MPI_Allreduce(&np, &np_total, 1, MPI_LONG, MPI_SUM, workers);
+    MPI_Allreduce(&tmean, &t_total, 1, MPI_DOUBLE, MPI_SUM, workers);
+    tmean = t_total;
+  }
+  tmean /= np_total;      
+#else
   tmean /= np;
-  tmin = tmean - trfmode->bin_size*trfmode->n_bins/2.;
-  tmax = tmean + trfmode->bin_size*trfmode->n_bins/2.;
-
-  for (ib=0; ib<trfmode->n_bins; ib++)
-    xsum[ib] = ysum[ib] = count[ib] = 0;
-  dt = (tmax - tmin)/trfmode->n_bins;
-  n_binned = 0;
-  lastBin = -1;
-  for (ip=0; ip<np; ip++) {
-    pbin[ip] = -1;
-    ib = (time[ip]-tmin)/dt;
-    if (ib<0)
-      continue;
-    if (ib>trfmode->n_bins - 1)
-      continue;
-    xsum[ib] += part[ip][0]-trfmode->dx;
-    ysum[ib] += part[ip][2]-trfmode->dy;
-    count[ib] += 1;
-    pbin[ip] = ib;
-    if (ib>lastBin)
-      lastBin = ib;
-    n_binned++;
-  }
-  if (n_binned!=np) {
-    fprintf(stdout, "Warning: only %ld of %ld particles binned (TRFMODE)\n",
-            n_binned, np);
-    fflush(stdout);
-  }
+#endif
   
-  /* These adjustments per Zotter and Kheifets, 3.2.4, 3.3.2 */
-  k *= Q/Qrp;
-  omega *= Qrp/Q;
+  if (isSlave) {   
+    tmin = tmean - trfmode->bin_size*trfmode->n_bins/2.;
+    tmax = tmean + trfmode->bin_size*trfmode->n_bins/2.;
 
-  if (pass <= (trfmode->rampPasses-1)) 
-    k *= (pass+1.0)/trfmode->rampPasses;
-    
-  if (trfmode->single_pass) {
-    trfmode->Vx = trfmode->Vy = 0;
-    trfmode->last_t = tmin + ib*dt;
-    trfmode->last_xphase = trfmode->last_yphase = 0;
-  }
+    for (ib=0; ib<trfmode->n_bins; ib++)
+      xsum[ib] = ysum[ib] = count[ib] = 0;
+    dt = (tmax - tmin)/trfmode->n_bins;
+    n_binned = 0;
+    lastBin = -1;
+    for (ip=0; ip<np; ip++) {
+      pbin[ip] = -1;
+      ib = (time[ip]-tmin)/dt;
+      if (ib<0)
+	continue;
+      if (ib>trfmode->n_bins - 1)
+	continue;
 
-  for (ib=0; ib<=lastBin; ib++) {
-    if (!count[ib] || (!xsum[ib] && !ysum[ib]))
-      continue;
-
-    t = tmin+(ib+0.5)*dt;           /* middle arrival time for this bin */
-    
-    /* advance cavity to this time */
-    damping_factor = exp(-(t-trfmode->last_t)/tau);
-    if (trfmode->doX) {
-      /* -- x plane */
-      phase = trfmode->last_xphase + omega*(t - trfmode->last_t);
-      V = trfmode->Vx*damping_factor;
-      trfmode->Vxr = V*cos(phase);
-      trfmode->Vxi = V*sin(phase);
-      trfmode->last_xphase = phase;
+      xsum[ib] += part[ip][0]-trfmode->dx;
+      ysum[ib] += part[ip][2]-trfmode->dy;
+      count[ib] += 1;
+      pbin[ip] = ib;
+      if (ib>lastBin)
+	lastBin = ib;
+      n_binned++;
     }
-    if (trfmode->doY) {
-      /* -- y plane */
-      phase = trfmode->last_yphase + omega*(t - trfmode->last_t);
-      V = trfmode->Vy*damping_factor;
-      trfmode->Vyr = V*cos(phase);
-      trfmode->Vyi = V*sin(phase);
-      trfmode->last_yphase = phase;
+#if USE_MPI
+    MPI_Allreduce(&n_binned, &binned_total, 1, MPI_LONG, MPI_SUM, workers);
+    if (binned_total!=np_total && myid==1) {
+      dup2(fd,fileno(stdout)); /* Let the first slave processor write the output */
+      fprintf(stdout, "Warning: only %ld of %ld particles binned (TRFMODE)\n",
+	      binned_total, np_total);
+#else
+    if (n_binned!=np) {
+      fprintf(stdout, "Warning: only %ld of %ld particles binned (TRFMODE)\n",
+	      n_binned, np);
+#endif
+      fflush(stdout);
+#if USE_MPI
+      freopen("/dev/null","w",stdout); 
+#endif    
     }
-    
-    trfmode->last_t = t;
-    Vzbin[ib] = 0;
-    
-    /* compute beam-induced voltage for this bin */
-    if (trfmode->doX) {
-      /* -- x plane */
-      Vxb = 2*k*trfmode->mp_charge*xsum[ib]*trfmode->xfactor;
-      Vxbin[ib] = trfmode->Vxr;
-      Vzbin[ib] += omegaOverC*(xsum[ib]/count[ib])*(trfmode->Vxi - Vxb/2);
-      /* add beam-induced voltage to cavity voltage---it is imaginary as
-       * the voltage is 90deg out of phase 
-       */
-      trfmode->Vxi -= Vxb;
-      if (trfmode->Vxi==0 && trfmode->Vxr==0)
-        trfmode->last_xphase = 0;
-      else
-        trfmode->last_xphase = atan2(trfmode->Vxi, trfmode->Vxr);
-      trfmode->Vx = sqrt(sqr(trfmode->Vxr)+sqr(trfmode->Vxi));
-    }
-    if (trfmode->doY) {
-      /* -- y plane */
-      Vyb = 2*k*trfmode->mp_charge*ysum[ib]*trfmode->yfactor;
-      Vybin[ib] = trfmode->Vyr;
-      Vzbin[ib] += omegaOverC*(ysum[ib]/count[ib])*(trfmode->Vyi - Vyb/2);
-      /* add beam-induced voltage to cavity voltage---it is imaginary as
-       * the voltage is 90deg out of phase 
-       */
-      trfmode->Vyi -= Vyb;
-      if (trfmode->Vyi==0 && trfmode->Vyr==0)
-        trfmode->last_yphase = 0;
-      else
-        trfmode->last_yphase = atan2(trfmode->Vyi, trfmode->Vyr);
-      trfmode->Vy = sqrt(sqr(trfmode->Vyr)+sqr(trfmode->Vyi));
-    }    
+  
+    /* These adjustments per Zotter and Kheifets, 3.2.4, 3.3.2 */
+    k *= Q/Qrp;
+    omega *= Qrp/Q;
 
-  }
+    if (pass <= (trfmode->rampPasses-1)) 
+      k *= (pass+1.0)/trfmode->rampPasses;
+    
+    if (trfmode->single_pass) {
+      trfmode->Vx = trfmode->Vy = 0;
+      trfmode->last_t = tmin + ib*dt;
+      trfmode->last_xphase = trfmode->last_yphase = 0;
+    }
+#if USE_MPI
+    if (isSlave) {
+      long lastBin_global;         
+      MPI_Allreduce(&lastBin, &lastBin_global, 1, MPI_LONG, MPI_MAX, workers);
+      lastBin = lastBin_global;
+    }
+    if(isSlave) {
+      double buffer[lastBin+1]; 
+      MPI_Allreduce(xsum, buffer, lastBin+1, MPI_DOUBLE, MPI_SUM, workers);
+      memcpy(xsum, buffer, sizeof(double)*(lastBin+1));
+      MPI_Allreduce(ysum, buffer, lastBin+1, MPI_DOUBLE, MPI_SUM, workers);
+      memcpy(ysum, buffer, sizeof(double)*(lastBin+1));	
+      MPI_Allreduce(count, buffer, lastBin+1, MPI_LONG, MPI_SUM, workers);
+      memcpy(count, buffer, sizeof(unsigned long)*(lastBin+1));
+    }
+#endif
+    for (ib=0; ib<=lastBin; ib++) {
+      if (!count[ib] || (!xsum[ib] && !ysum[ib]))
+	continue;
+
+      t = tmin+(ib+0.5)*dt;           /* middle arrival time for this bin */
+    
+      /* advance cavity to this time */
+      damping_factor = exp(-(t-trfmode->last_t)/tau);
+      if (trfmode->doX) {
+	/* -- x plane */
+	phase = trfmode->last_xphase + omega*(t - trfmode->last_t);
+	V = trfmode->Vx*damping_factor;
+	trfmode->Vxr = V*cos(phase);
+	trfmode->Vxi = V*sin(phase);
+	trfmode->last_xphase = phase;
+      }
+      if (trfmode->doY) {
+	/* -- y plane */
+	phase = trfmode->last_yphase + omega*(t - trfmode->last_t);
+	V = trfmode->Vy*damping_factor;
+	trfmode->Vyr = V*cos(phase);
+	trfmode->Vyi = V*sin(phase);
+	trfmode->last_yphase = phase;
+      }
+    
+      trfmode->last_t = t;
+      Vzbin[ib] = 0;
+    
+      /* compute beam-induced voltage for this bin */
+      if (trfmode->doX) {
+	/* -- x plane */
+	Vxb = 2*k*trfmode->mp_charge*xsum[ib]*trfmode->xfactor;
+	Vxbin[ib] = trfmode->Vxr;
+	Vzbin[ib] += omegaOverC*(xsum[ib]/count[ib])*(trfmode->Vxi - Vxb/2);
+	/* add beam-induced voltage to cavity voltage---it is imaginary as
+	 * the voltage is 90deg out of phase 
+	 */
+	trfmode->Vxi -= Vxb;
+	if (trfmode->Vxi==0 && trfmode->Vxr==0)
+	  trfmode->last_xphase = 0;
+	else
+	  trfmode->last_xphase = atan2(trfmode->Vxi, trfmode->Vxr);
+	trfmode->Vx = sqrt(sqr(trfmode->Vxr)+sqr(trfmode->Vxi));
+      }
+      if (trfmode->doY) {
+	/* -- y plane */
+	Vyb = 2*k*trfmode->mp_charge*ysum[ib]*trfmode->yfactor;
+	Vybin[ib] = trfmode->Vyr;
+	Vzbin[ib] += omegaOverC*(ysum[ib]/count[ib])*(trfmode->Vyi - Vyb/2);
+	/* add beam-induced voltage to cavity voltage---it is imaginary as
+	 * the voltage is 90deg out of phase 
+	 */
+	trfmode->Vyi -= Vyb;
+	if (trfmode->Vyi==0 && trfmode->Vyr==0)
+	  trfmode->last_yphase = 0;
+	else
+	  trfmode->last_yphase = atan2(trfmode->Vyi, trfmode->Vyr);
+	trfmode->Vy = sqrt(sqr(trfmode->Vyr)+sqr(trfmode->Vyi));
+      }          
+    }
   
 #if DEBUG
   fprintf(fpdeb, "%ld\n%ld\n%ld\n", 
@@ -244,19 +304,22 @@ void track_through_trfmode(
   fflush(fpdeb);
 #endif
 
-  if (pass>=trfmode->rigid_until_pass) {
-    /* change particle slopes to reflect voltage in relevant bin */
-    for (ip=0; ip<np; ip++) {
-      if (pbin[ip]>=0) {
-	P = Po*(1+part[ip][5]);
-	Pz = P/sqrt(1+sqr(part[ip][1])+sqr(part[ip][3])) + Vzbin[pbin[ip]]/(1e6*me_mev);
-	Px = part[ip][1]*Pz + Vxbin[pbin[ip]]/(1e6*me_mev);
-	Py = part[ip][3]*Pz + Vybin[pbin[ip]]/(1e6*me_mev);
-	P  = sqrt(Pz*Pz+Px*Px+Py*Py);
-	part[ip][1] = Px/Pz;
-	part[ip][3] = Py/Pz;
-	part[ip][5] = (P-Po)/Po;
-	part[ip][4] = time[ip]*c_mks*P/sqrt(sqr(P)+1);
+
+
+    if (pass>=trfmode->rigid_until_pass) {
+      /* change particle slopes to reflect voltage in relevant bin */
+      for (ip=0; ip<np; ip++) {
+	if (pbin[ip]>=0) {
+	  P = Po*(1+part[ip][5]);
+	  Pz = P/sqrt(1+sqr(part[ip][1])+sqr(part[ip][3])) + Vzbin[pbin[ip]]/(1e6*me_mev);
+	  Px = part[ip][1]*Pz + Vxbin[pbin[ip]]/(1e6*me_mev);
+	  Py = part[ip][3]*Pz + Vybin[pbin[ip]]/(1e6*me_mev);
+	  P  = sqrt(Pz*Pz+Px*Px+Py*Py);
+	  part[ip][1] = Px/Pz;
+	  part[ip][3] = Py/Pz;
+	  part[ip][5] = (P-Po)/Po;
+	  part[ip][4] = time[ip]*c_mks*P/sqrt(sqr(P)+1);
+	}
       }
     }
   }
@@ -321,6 +384,9 @@ void set_up_trfmode(TRFMODE *trfmode, char *element_name, double element_z,
   if (!trfmode->doX && !trfmode->doY) 
     bomb("No planes selected for TRFMODE", NULL);
 
+#if (USE_MPI)
+    if (myid == 1) /* We let the first slave to dump the parameter */
+#endif
   if (trfmode->record && !trfmode->fileInitialized) {
     trfmode->record = compose_filename(trfmode->record, run->rootname);
     if (!trfmode->perParticleOutput && trfmode->binless) {
@@ -596,7 +662,7 @@ void runBinlessTrfMode(
   called = 1;
 }
 
-int compTimeData(void *tv1, void *tv2)
+int compTimeData(const void *tv1, const void *tv2)
 {
   double diff;
   diff = ((TIMEDATA*)tv1)->t - ((TIMEDATA*)tv2)->t;

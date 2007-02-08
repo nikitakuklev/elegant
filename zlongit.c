@@ -69,7 +69,21 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
     long ip, ib, nb, n_binned, nfreq, iReal, iImag;
     double factor, tmin, tmax, tmean, dt, dt1, dgam, rampFactor;
     static long not_first_call = -1;
-    
+#if USE_MPI
+    double tmin_part, tmax_part;           /* record the actual tmin and tmax for particles to reduce communications */
+    long offset, length;
+#endif
+   
+#ifdef  USE_MPE /* use the MPE library */
+  int event1a, event1b, event2a, event2b;
+  event1a = MPE_Log_get_event_number();
+  event1b = MPE_Log_get_event_number();
+  event2a = MPE_Log_get_event_number();
+  event2b = MPE_Log_get_event_number();
+  MPE_Describe_state(event1a, event1b, "fft1", "red");
+  MPE_Describe_state(event2a, event2b, "fft_inverse", "yellow");
+#endif
+ 
     if ((i_pass -= zlongit->startOnPass)<0)
       return;
 
@@ -80,14 +94,35 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
       rampFactor = (i_pass+1.0)/zlongit->rampPasses;
     
     not_first_call += 1;
-    
+
+#if (!USE_MPI)    
     if (np>max_np) {
       pbin = trealloc(pbin, sizeof(*pbin)*(max_np=np));
       time = trealloc(time, sizeof(*time)*max_np);
     }
+#else
+    if (USE_MPI) {
+      long np_total;
+      if (isSlave) {
+	MPI_Allreduce(&np, &np_total, 1, MPI_LONG, MPI_SUM, workers);
+	if (np_total>max_np) { 
+	  /* if the total number of particles is increased, we do reallocation for every CPU */
+	  pbin = trealloc(pbin, sizeof(*pbin)*(max_np=np));
+	  time = trealloc(time, sizeof(*time)*max_np);
+	  max_np = np_total; /* max_np should be the sum across all the processors */
+	}
+      }
+    } 
+
+#endif
     
     tmean = computeTimeCoordinates(time, Po, part, np);
     find_min_max(&tmin, &tmax, time, np);
+#if USE_MPI
+    find_global_min_max(&tmin, &tmax, np, workers); 
+    tmin_part = tmin;
+    tmax_part = tmax;     
+#endif
   
     set_up_zlongit(zlongit, run, i_pass, np, charge, tmax-tmin);
     nb = zlongit->n_bins;
@@ -137,6 +172,7 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
       pbin[ip] = ib;
       n_binned++;
     }
+#if (!USE_MPI)
     if (n_binned!=np) {
       fprintf(stdout, "Warning: only %ld of %ld particles were binned (ZLONGIT)!\n", n_binned, np);
       if (!not_first_call) {
@@ -145,6 +181,34 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
       }
       fflush(stdout);
     }
+#else
+    if (USE_MPI) {
+      int all_binned, result = 1;
+      if (isSlave)
+        result = ((n_binned==np) ? 1 : 0);
+		             
+      MPI_Allreduce(&result, &all_binned, 1, MPI_INT, MPI_LAND, workers);
+      if (!all_binned) {
+	if (myid==1) {  
+	  /* This warning will be given only if the flag MPI_DEBUG is defined for the Pelegant */ 
+	  fprintf(stdout, "warning: Not all of %ld particles were binned (WAKE)\n", np);
+	  fprintf(stdout, "consider setting n_bins=0 in WAKE definition to invoke autoscaling\n");
+	  fflush(stdout); 
+	}
+      }
+    }
+#endif
+
+#if USE_MPI 
+    offset = ((long)((tmin_part-tmin)/dt)-1 ? (long)((tmin_part-tmin)/dt)-1:0);
+    length = ((long)((tmax_part-tmin_part)/dt)+2 < nb ? (long)((tmax_part-tmin_part)/dt)+2:nb);
+    if (isSlave) {
+      double buffer[length];
+      MPI_Allreduce(&Itime[offset], buffer, length, MPI_DOUBLE, MPI_SUM, workers);
+      memcpy(&Itime[offset], buffer, sizeof(double)*length);
+    }
+#endif
+
     if (zlongit->smoothing)
       SavitzyGolaySmooth(Itime, nb, zlongit->SGOrder, 
                          zlongit->SGHalfWidth, zlongit->SGHalfWidth, 0);
@@ -165,8 +229,13 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
 
     /* Take the FFT of I(t) to get I(f) */
     memcpy(Ifreq, Itime, 2*zlongit->n_bins*sizeof(*Ifreq));
+#ifdef  USE_MPE
+	      MPE_Log_event(event1a, 0, "start zlongit"); /* record time spent on I/O operations */
+#endif
     realFFT(Ifreq, nb, 0);
-
+#ifdef  USE_MPE
+	      MPE_Log_event(event1b, 0, "end zlongit"); /* record time spent on I/O operations */
+#endif
     /* Compute V(f) = Z(f)*I(f), putting in a factor 
      * to normalize the current waveform.
      */
@@ -185,7 +254,13 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
         }
 
     /* Compute inverse FFT of V(f) to get V(t) */
+#ifdef  USE_MPE
+	      MPE_Log_event(event2a, 0, "start zlongit"); /* record time spent on I/O operations */
+#endif
     realFFT(Vfreq, nb, INVERSE_FFT);
+#ifdef  USE_MPE
+	      MPE_Log_event(event2b, 0, "start zlongit"); /* record time spent on I/O operations */
+#endif
     Vtime = Vfreq;
 
     if (zlongit->SDDS_wake_initialized && zlongit->wakes) {
@@ -275,8 +350,18 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
       zlongit->macroParticleCharge = charge->macroParticleCharge;
     } else if (pass==0) {
       zlongit->macroParticleCharge = 0;
+#if (!USE_MPI)
       if (particles)
         zlongit->macroParticleCharge = zlongit->charge/particles;
+#else
+      if (USE_MPI) {
+	long particles_total;
+
+	MPI_Allreduce(&particles, &particles_total, 1, MPI_LONG, MPI_SUM, workers);
+	if (particles_total)
+	  zlongit->macroParticleCharge = zlongit->charge/particles_total;  
+      } 
+#endif
     }
 
     if (zlongit->initialized)
@@ -408,6 +493,8 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
         }
     zlongit->SDDS_wake_initialized = 0;
 
+#if (!USE_MPI)  
+    /* Only the serial version will dump this part of output */
     if (zlongit->wakes) {
         zlongit->wakes = compose_filename(zlongit->wakes, run->rootname);
         if (zlongit->broad_band) 
@@ -421,7 +508,7 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
         }
         zlongit->SDDS_wake_initialized = 1;
       }
-
+#endif
 
     if (zlongit->highFrequencyCutoff0>0)
       applyLowPassFilterToImpedance(zlongit->Z, nfreq,

@@ -477,9 +477,13 @@ long compute_final_properties
   
   /* compute "sigma" from width of particle distributions for x and y */
   if (coord && sums->n_part>3) {
-    
+#if (!USE_MPI)    
     data[F_WIDTH_OFFSET] = approximateBeamWidth(0.6826F, coord, sums->n_part, 0L)/2.;
     data[F_WIDTH_OFFSET+1] = approximateBeamWidth(0.6826F, coord, sums->n_part, 2L)/2.;
+#else
+    data[F_WIDTH_OFFSET] = approximateBeamWidth_p(0.6826F, coord, sums->n_part, 0L)/2.;
+    data[F_WIDTH_OFFSET+1] = approximateBeamWidth_p(0.6826F, coord, sums->n_part, 2L)/2.;
+#endif
     data[F_WIDTH_OFFSET+2] = dt;
     data[F_WIDTH_OFFSET+3] = Ddp;
     for (i=0; i<6; i++) {
@@ -850,7 +854,56 @@ double approximateBeamWidth(double fraction, double **part, long nPart, long iCo
   
   /* make histogram of the coordinate */
   hist = tmalloc(sizeof(*hist)*bins);
+
   binParticleCoordinate(&hist, &maxBins, &xMin, &xMax, &dx, &bins, 
+                        1.01, part, nPart, iCoord);
+#if USE_MPI
+  if (USE_MPI) {  /* Master needs to know the information to write the result */
+    double buffer[bins];
+    MPI_Allreduce(hist, buffer, bins, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    memcpy(hist, buffer, sizeof(double)*bins);
+  }
+#endif
+  /* sum histogram to get CDF */
+  cdf = hist;
+  for (i=1; i<bins; i++)
+    cdf[i] += cdf[i-1];
+  /* normalize CDF and find 50% point */
+  i50 = bins/2;
+  for (i=0; i<bins; i++) {
+    cdf[i] /= cdf[bins-1];
+    if (cdf[i]<0.50)
+      i50 = i;
+  }
+  /* find locations containing half the indicated area around the 50% point */
+  iLo = iHi = i50;
+  for (i=i50; i<bins; i++) {
+    if ((cdf[i]-0.5)<fraction/2)
+      iHi = i;
+    else 
+      break;
+  }
+  for (i=i50; i>=0; i--) {
+    if ((0.5-cdf[i])<fraction/2)
+      iLo = i;
+    else break;
+  }
+  free(hist);
+  return (iHi-iLo)*dx;
+}
+
+#if USE_MPI
+double approximateBeamWidth_p(double fraction, double **part, long nPart, long iCoord)
+{
+  double *hist, *cdf;
+  long maxBins=ANALYSIS_BINS, bins=ANALYSIS_BINS, i50, iLo, iHi, i;
+  double xMin, xMax, dx;
+  xMin = xMax = dx = 0;
+  
+  /* make histogram of the coordinate */
+  hist = tmalloc(sizeof(*hist)*bins);
+
+  binParticleCoordinate_s(&hist, &maxBins, &xMin, &xMax, &dx, &bins, 
                         1.01, part, nPart, iCoord);
 
   /* sum histogram to get CDF */
@@ -880,4 +933,4 @@ double approximateBeamWidth(double fraction, double **part, long nPart, long iCo
   free(hist);
   return (iHi-iLo)*dx;
 }
-
+#endif

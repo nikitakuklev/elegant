@@ -48,12 +48,14 @@ void track_through_rf_deflector(
   if (rf_param->frequency==0) 
     bomb("RFDF cannot have frequency=0", NULL);
   if (rf_param->voltage==0) {
-    exactDrift(initial, n_particles, rf_param->length);
+    if (isSlave || !notSinglePart) 
+      exactDrift(initial, n_particles, rf_param->length);
     return;
   }
 
-  if (!rf_param->initialized) 
-    set_up_rfdf(rf_param, initial, n_particles, pc_central);
+  if (!rf_param->initialized)
+    if (isSlave || !notSinglePart)  
+      set_up_rfdf(rf_param, initial, n_particles, pc_central);
 
   gamma = sqrt(sqr(pc_central)+1);
   beta  = pc_central/gamma;
@@ -378,7 +380,7 @@ void set_up_rftm110(RFTM110 *rf_param, double **initial, long n_particles, doubl
     MPI_Allreduce(&(rf_param->t_first_particle), &tmp, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     rf_param->t_first_particle = tmp;
 #else
-    rf_param->t_first_particle = KahanParallel(rf_param->t_first_particle, error); 
+    rf_param->t_first_particle = KahanParallel(rf_param->t_first_particle, error, MPI_COMM_WORLD); 
 #endif
  
     MPI_Allreduce(&n_particles, &n_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
@@ -474,7 +476,7 @@ void set_up_rfdf(RFDF *rf_param, double **initial, long n_particles, double pc_c
     MPI_Allreduce(&(rf_param->t_first_particle), &tmp, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     rf_param->t_first_particle = tmp;
 #else
-    rf_param->t_first_particle = KahanParallel(rf_param->t_first_particle, error); 
+    rf_param->t_first_particle = KahanParallel(rf_param->t_first_particle, error, MPI_COMM_WORLD); 
 #endif
  
     MPI_Allreduce(&n_particles, &n_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);

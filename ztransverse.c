@@ -71,15 +71,34 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
   
   not_first_call += 1;
 
+#if (!USE_MPI)
   if (np>max_np) {
     pbin = trealloc(pbin, sizeof(*pbin)*(max_np=np));
     time = trealloc(time, sizeof(*time)*max_np);
     pz = trealloc(pz, sizeof(*pz)*max_np);
   }
+#else
+    if (USE_MPI) {
+      long np_total;
+      if (isSlave) {
+	MPI_Allreduce(&np, &np_total, 1, MPI_LONG, MPI_SUM, workers);
+	if (np_total>max_np) { 
+	  /* if the total number of particles is increased, we do reallocation for every CPU */
+	  pbin = trealloc(pbin, sizeof(*pbin)*(max_np=np));
+	  time = trealloc(time, sizeof(*time)*max_np);
+	  pz = trealloc(pz, sizeof(*pz)*max_np);
+	  max_np = np_total; /* max_np should be the sum across all the processors */
+	}
+      }
+    } 
+#endif
   
   /* Compute time coordinate of each particle */
   tmean = computeTimeCoordinates(time, Po, part, np);
   find_min_max(&tmin, &tmax, time, np);
+#if USE_MPI
+    find_global_min_max(&tmin, &tmax, np, workers);      
+#endif
   
   set_up_ztransverse(ztransverse, run, i_pass, np, charge, tmax-tmin);
   nb = ztransverse->n_bins;
@@ -111,7 +130,7 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
   /* make arrays of I(t)*x and I(t)*y */
   n_binned = binTransverseTimeDistribution(posItime, pz, pbin, tmin, dt, nb, time, part, Po, np,
                                            ztransverse->dx, ztransverse->dy, 1, 1);
-
+#if (!USE_MPI)
   if (n_binned!=np) {
     fprintf(stdout, "Warning: only %ld of %ld particles were binned (ZTRANSVERSE)!\n", n_binned, np);
     if (!not_first_call) {
@@ -120,12 +139,50 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
     }
     fflush(stdout);
   }  
+#else
+    if (USE_MPI) {
+      int all_binned, result = 1;
+      if (isSlave)
+        result = ((n_binned==np) ? 1 : 0);
+		             
+      MPI_Allreduce(&result, &all_binned, 1, MPI_INT, MPI_LAND, workers);
+      if (!all_binned) {
+	if (myid==1) {  
+	  /* This warning will be given only if the flag MPI_DEBUG is defined for the Pelegant */ 
+	  fprintf(stdout, "warning: Not all of %ld particles were binned (WAKE)\n", np);
+	  fprintf(stdout, "consider setting n_bins=0 in WAKE definition to invoke autoscaling\n");
+	  fflush(stdout); 
+	}
+      }
+    }
+#endif
 
   userFactor[0] = ztransverse->factor*ztransverse->xfactor*rampFactor;
   userFactor[1] = ztransverse->factor*ztransverse->yfactor*rampFactor;
 
   first = 1;
   for (plane=0; plane<2; plane++) {
+#if USE_MPI
+    /* This could be good for some advanced network structures */
+    /*
+  if (isSlave) {
+    double buffer[nb];
+    MPI_Allreduce(posItime[plane], buffer, nb, MPI_DOUBLE, MPI_SUM, workers);
+    memcpy(posItime[plane], buffer, sizeof(double)*nb);
+  }
+    */
+  if (isSlave) {
+    float buffer_send[nb], buffer_recv[nb];
+    long i;
+    for (i=0; i<nb; i++)
+      buffer_send[i] = posItime[plane][i];
+    MPI_Reduce(buffer_send, buffer_recv, nb, MPI_FLOAT, MPI_SUM, 1, workers);
+    MPI_Bcast(buffer_recv, nb, MPI_FLOAT, 1, workers);
+    for (i=0; i<nb; i++)
+      posItime[plane][i] = buffer_recv[i];
+  }
+
+#endif
     if (userFactor[plane]==0) {
       for (ib=0; ib<nb; ib++)
 	Vtime[ib] = 0;
@@ -237,8 +294,18 @@ void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long part
     ztransverse->macroParticleCharge = charge->macroParticleCharge;
   } else if (pass==0) {
     ztransverse->macroParticleCharge = 0;
+#if (!USE_MPI)
     if (particles)
       ztransverse->macroParticleCharge = ztransverse->charge/particles;
+#else
+      if (USE_MPI) {
+	long particles_total;
+
+	MPI_Allreduce(&particles, &particles_total, 1, MPI_LONG, MPI_SUM, workers);
+	if (particles_total)
+	  ztransverse->macroParticleCharge = ztransverse->charge/particles_total;  
+      } 
+#endif
   }
 
   if (ztransverse->initialized)
@@ -369,6 +436,8 @@ void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long part
     free(ZImag[1]);
   }
 
+#if (!USE_MPI)
+  /* Only the serial version will dump this part of output */
   if (ztransverse->wakes) {
     ztransverse->wakes = compose_filename(ztransverse->wakes, run->rootname);
     if (ztransverse->broad_band) 
@@ -386,6 +455,7 @@ void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long part
     }
     ztransverse->SDDS_wake_initialized = 1;
   }
+#endif
 
   if (ztransverse->highFrequencyCutoff0>0) {
     applyLowPassFilterToImpedance(ztransverse->iZ[0], nfreq,

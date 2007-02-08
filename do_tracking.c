@@ -56,6 +56,8 @@ void scatterParticles(double **coord, long *nToTrack, double **accepted,
 void gatherParticles(double **coord, long *lostOnPass, long *nToTrack, 
                      long *nLost, double **accepted, long n_processors, 
                      int myid, double *round);
+/* Avoid unnecessary communications by checking if an operation will be executed in advance*/
+int usefulOperation (ELEMENT_LIST *eptr, unsigned long flags, long i_pass);
 balance checkBalance(double my_wtime, int myid, long n_processors);
 #endif
 
@@ -156,8 +158,9 @@ long do_tracking(
   int event1a, event1b;
   event1a = MPE_Log_get_event_number();
   event1b = MPE_Log_get_event_number();
-  if(isMaster) 
+  if(isMaster) {
     MPE_Describe_state(event1a, event1b, "Watch", "red");
+  }
 #endif
   MPI_Comm_rank(MPI_COMM_WORLD, &myid); /* get ID number for each processor */
   trackingContext.myid = myid;
@@ -495,8 +498,9 @@ long do_tracking(
 	    active = 0;
 	  if (parallelStatus==trueParallel) {
 	    if (!partOnMaster) {
-	      gatherParticles(coord, lostOnPass, &nToTrack, &nLost, accepted, 
-			      n_processors, myid, &round);
+              if(usefulOperation(eptr, flags, i_pass))
+		gatherParticles(coord, lostOnPass, &nToTrack, &nLost, accepted, 
+				n_processors, myid, &round);
 	      /* update the nMaximum for recording the nLost on all the slave processors */
 	      if (myid!=0)
 		nMaximum = nToTrack;
@@ -508,7 +512,8 @@ long do_tracking(
 	      parallelStatus = notParallel;           
 	    }
 	  }
-	  partOnMaster = 1;   
+          if(usefulOperation(eptr, flags, i_pass))
+	    partOnMaster = 1;   
 	} 
 	else {
 	  /* This element can be done in parallel. Only the slave CPUS will work. */
@@ -1240,6 +1245,10 @@ long do_tracking(
 	    }
 	  }
 	}
+#if USE_MPI
+	if ((myid==0) && notSinglePart && (!usefulOperation(eptr, flags, i_pass)))
+	  active = 0;
+#endif
 	if ((!USE_MPI || !notSinglePart ) || (USE_MPI && active)) {
 	  if (!(flags&TEST_PARTICLES && !(flags&TEST_PARTICLE_LOSSES))) {
             if (x_max || y_max) {
@@ -1324,6 +1333,7 @@ long do_tracking(
 #if USE_MPI
 	if (!(classFlags&UNIPROCESSOR)) { /* This function will be parallelized in the future */
 	  fprintf(stdout, "performSliceAnalysisOutput is not supported in parallel mode currently.\n");
+	  MPI_Barrier(MPI_COMM_WORLD); /* Make sure the information can be printed before aborting */
 	  MPI_Abort(MPI_COMM_WORLD, 1); 
 	}
 #endif
@@ -1765,7 +1775,7 @@ void do_match_energy(
 #ifndef USE_KAHAN    
 	MPI_Allreduce(&P_average, &P_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD );  
 #else
-        P_total = KahanParallel (P_average, error);
+        P_total = KahanParallel (P_average, error, MPI_COMM_WORLD);
 
 #endif 
 	P_average = P_total/np_total;
@@ -1813,7 +1823,7 @@ void do_match_energy(
 #ifndef USE_KAHAN    
 	MPI_Allreduce(&P_average, &P_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD );  
 #else
-        P_total = KahanParallel (P_average, error);
+        P_total = KahanParallel (P_average, error, MPI_COMM_WORLD);
 #endif
 	P_average = P_total/np_total;
       }
@@ -2478,7 +2488,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
         !(cmdBuffer1 = SDDS_Realloc(cmdBuffer1, sizeof(*cmdBuffer1)*(strlen(cmdBuffer1)+count*25+1))))
       SDDS_Bomb("memory allocation failure");
     replaceString(cmdBuffer0, cmdBuffer1, tag, value, count, 0);
-    strcpy(cmdBuffer1, cmdBuffer0);
+    strcpy_s(cmdBuffer1, cmdBuffer0);
   }
   /* substitute string parameters */
   for (i=0; i<10; i++) {
@@ -2499,7 +2509,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
           SDDS_Realloc(cmdBuffer1, sizeof(*cmdBuffer1)*(strlen(cmdBuffer1)+count*strlen(script->SP[i])+1))))
       SDDS_Bomb("memory allocation failure");
     replaceString(cmdBuffer0, cmdBuffer1, tag, script->SP[i], count, 0);
-    strcpy(cmdBuffer1, cmdBuffer0);
+    strcpy_s(cmdBuffer1, cmdBuffer0);
   }
 
   if (script->verbosity>0) {
@@ -3277,6 +3287,44 @@ balance checkBalance (double my_wtime, int myid, long n_processors)
     return badBalance;
 }   
 
+int usefulOperation (ELEMENT_LIST *eptr, unsigned long flags, long i_pass)  
+{
+  WATCH *watch;
+  HISTOGRAM *histogram;
+
+  if (eptr->type==T_WATCH) {
+   if (!(flags&TEST_PARTICLES) && !(flags&INHIBIT_FILE_OUTPUT)) {
+     watch = (WATCH*)eptr->p_elem;
+     if (!watch->disable) { 
+       if (!watch->initialized) {
+         if (isSlave)   /* Slave processors will not go through the WATCH element */
+	   watch->initialized = 1;
+	 return 1;	         
+       }   
+       if (i_pass>=watch->start_pass && (i_pass-watch->start_pass)%watch->interval==0 &&
+	   (watch->end_pass<0 || i_pass<=watch->end_pass))
+	 return 1;
+     }
+   }
+   return 0;
+  }
+  else if (eptr->type==T_HISTOGRAM) {
+    if (!(flags&TEST_PARTICLES) && !(flags&INHIBIT_FILE_OUTPUT)) {
+      histogram = (HISTOGRAM*)eptr->p_elem;
+      if (!histogram->disable) {
+	if (!histogram->initialized) {
+	  if (isSlave)   /* Slave processors will not go through the HISTOGRAM element */
+	    histogram->initialized = 1;
+	  return 1;
+	}
+	if (i_pass>=histogram->startPass && (i_pass-histogram->startPass)%histogram->interval==0)
+          return 1;
+      }
+    }
+    return 0 ;
+  }
+  return 1; /* This is default for all the other UNIPROCESSOR elements */
+}
 #endif
 
 #ifdef SORT

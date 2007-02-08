@@ -113,7 +113,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
           free(filename);
           continue;
         }
-        strcpy(t, s);
+        strcpy_s(t, s);
         if ((type = tell_type(s, elem))==T_NODEF) {
           if (!is_blank(s))
             fprintf(stdout, "warning: no recognized statement on line: %s\n", t);
@@ -160,7 +160,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
             fprintf(stdout, "copying existing element\n");
             fflush(stdout);
 #endif
-            strcpy(s, t);
+            strcpy_s(s, t);
             copy_named_element(eptr, s, elem);
           }
           else {
@@ -626,7 +626,7 @@ void do_save_lattice(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     if (strpbrk(eptr->name, ":.,/-_+abcdefghijklmnopqrstuvwyxz "))
       sprintf(name, "\"%s\"", eptr->name);
     else
-      strcpy(name, eptr->name);
+      strcpy_s(name, eptr->name);
     sprintf(s, "%s: %s,", name, entity_name[eptr->type]);
     if (eptr->group && strlen(eptr->group)) {
       sprintf(t, "GROUP=\"%s\",", eptr->group);
