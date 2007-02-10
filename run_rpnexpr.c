@@ -138,7 +138,7 @@ void run_rpn_load(NAMELIST_TEXT *nltext, RUN *run)
       fprintf(stdout, "Error: unable to get data for column %s\n", match_column);
       exit(1);
     }
-    if (matching_row_number==-1) {
+    if (matching_row_number<0) {
       /* use last match */
       for (matchRow=rows-1; matchRow>=0; matchRow--)
         if (wild_match(matchColumnData[matchRow], match_column_value))
