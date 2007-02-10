@@ -67,10 +67,10 @@ void showUsageOrGreeting (unsigned long mode)
 {
 #if USE_MPI
   char *USAGE="usage: mpirun -np <number of processes> Pelegant <inputfile> [-macro=<tag>=<value>,[...]]";
-  char *GREETING="This is elegant 16.3Beta, "__DATE__", by M. Borland, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang and M. Borland.";
+  char *GREETING="This is elegant 17.0, "__DATE__", by M. Borland, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang and M. Borland.";
 #else
   char *USAGE="usage: elegant <inputfile> [-macro=<tag>=<value>,[...]] [-cpuList=<number>[,<number>]]";
-  char *GREETING="This is elegant 16.3Beta, "__DATE__", by M. Borland, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.";
+  char *GREETING="This is elegant 17.0, "__DATE__", by M. Borland, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.";
 #endif
   if (mode&SHOW_GREETING)
     puts(GREETING);
@@ -1636,6 +1636,7 @@ void do_print_dictionary(char *filename, long latex_form, long SDDS_form)
   if (SDDS_form) {
     fprintf(fp, "SDDS1\n");
     fprintf(fp, "&parameter name=ElementType, type=string &end\n");
+    fprintf(fp, "&parameter name=ParallelCapable, type=short &end\n");
     fprintf(fp, "&column name=ParameterName, type=string &end\n");
     fprintf(fp, "&column name=Units, type=string &end\n");
     fprintf(fp, "&column name=Type, type=string &end\n");
@@ -1681,6 +1682,7 @@ void print_dictionary_entry(FILE *fp, long type, long latex_form, long SDDS_form
     fprintf(fp, "\\begin{latexonly}\n\\newpage\n\\begin{center}{\\Large\\verb|%s|}\\end{center}\n\\end{latexonly}\\subsection{%s}\n", 
             entity_name[type], entity_name[type]);
     fprintf(fp, "%s\n\\\\\n", makeTexSafeString(entity_text[type]));
+    fprintf(fp, "Parallel capable? : %s\\\\\n", entity_description[type].flags&UNIPROCESSOR?"no":"yes");
     fprintf(fp, "\\begin{tabular}{|l|l|l|l|p{\\descwidth}|} \\hline\n");
     fprintf(fp, "Parameter Name & Units & Type & Default & Description \\\\ \\hline \n");
   } else {
@@ -1689,6 +1691,7 @@ void print_dictionary_entry(FILE *fp, long type, long latex_form, long SDDS_form
       strcpy_s(buffer, entity_name[type]);
       replace_chars(buffer, "\n\t", "  ");
       fprintf(fp, "%s\n", buffer);
+      fprintf(fp, "%ld\n", entity_description[type].flags&UNIPROCESSOR?0:1);
       fprintf(fp, "%ld\n", entity_description[type].n_params);
     }
     else 
