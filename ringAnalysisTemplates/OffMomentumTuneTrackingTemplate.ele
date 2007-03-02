@@ -19,6 +19,7 @@
 	p_central = "{rpnl <momentum> mev /}",
         rootname = <mainDirectory>/<mainPrefix>OffMomentumTuneTracking<suffix>,
         semaphore_file = %s.done,
+        default_order = 1,
         tracking_updates = 0,
 &end
 
