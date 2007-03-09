@@ -14,6 +14,9 @@
  * Michael Borland, 2002
  *
  $Log: not supported by cvs2svn $
+ Revision 1.12  2006/08/24 19:20:06  soliday
+ Updated so that it would compile on WIN32 again.
+
  Revision 1.11  2005/11/10 16:19:03  soliday
  Updated to compile with a 64bit compiler.
 
@@ -949,13 +952,13 @@ void Dejus_CalculateBrightness(double current,long nE,
   ENERGY = gamma*me_mev/1e3; /* GeV */
   reducedE=c_evang/lamdar; /*reduced energy ev */
   kx=0.0;
-  eMin=reducedE/(1+kMax*kMax/2.0);
-  eMax=reducedE/(1+kMin*kMin/2.0);
-  
   if (device==HELICAL) {
     kMin=kMin/sqrt(2.0);
     kMax=kMax/sqrt(2.0);
-  } 
+  }
+  eMin=reducedE/(1+kMax*kMax/2.0);
+  eMax=reducedE/(1+kMin*kMin/2.0);
+
   /*determin peak shifts for first and second harmonics at kMin */
   ky=kMin;
   nek=maxNEKS;
