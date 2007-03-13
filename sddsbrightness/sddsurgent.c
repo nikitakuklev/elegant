@@ -19,6 +19,9 @@
  * Hairong Shang, May 2005
 
 $Log: not supported by cvs2svn $
+Revision 1.13  2007/02/02 19:20:38  shang
+replaced the parameter name "TotalPowerDensity" by "OnAxisPowerDensity" for US output.
+
 Revision 1.12  2007/02/01 18:31:58  shang
 added checking input parameters; program prints error message and exits if checking failed.
 
@@ -286,7 +289,7 @@ int main(int argc, char **argv) {
   char *inputfile, *outputfile, *undulatorType, *description, *output, *method_str, *mode_str;
   SDDS_DATASET sddsin, sddsout, *sddsout2=NULL, sddsout1;
   unsigned long pipeFlags=0,dummyFlags=0;
-  long i_arg, tmpFileUsed, i, j, special=0, mode_index=-1;
+  long i_arg, tmpFileUsed, i, j, special=0, mode_index=-1, nXP0, nYP0;
   
   SCANNED_ARG *s_arg;
 
@@ -564,21 +567,8 @@ int main(int argc, char **argv) {
   
   if (emin<0 || emax<0) 
     SDDS_Bomb("The minimum or maximum photon energy is less than 0.");
-  if (undulator_param.energy) {
-    /* calculate the Kx value for the undulator */
-    double gamma, lambda;
-    gamma = electron_param.energy*1e3/me_mev;
-    lambda = h_mks*c_mks/(undulator_param.energy*e_mks);
-    undulator_param.kx = 0;
-    undulator_param.ky = sqrt(4*gamma*gamma*lambda/undulator_param.period-2);
-  }
-  if (emin==emax && emin==0) {
-    double gamma, lambda;
-    gamma = electron_param.energy*1e3/me_mev;
-    lambda = undulator_param.period/(2*gamma*gamma)*(1+0.5*(sqr(undulator_param.kx)+sqr(undulator_param.ky)));
-    emin = emax = h_mks*c_mks/lambda/e_mks;
+  if (nE<2)
     nE = 2;
-  }   
   
   SDDS_ZeroMemory(&twiss, sizeof(TWISS_PARAMETER));
   twiss.beams = 0;
@@ -588,10 +578,42 @@ int main(int argc, char **argv) {
       SDDS_Bomb("Unable to read twiss parameter from input.");                     
     inputPages = twiss.beams;
     inputSupplied = 1;
+    if (twiss.pCentral)
+      electron_param.energy = twiss.pCentral[0]*me_mev*0.001;
+  } else {
+    if (undulator_param.energy) {
+      /* calculate the Kx value for the undulator */
+      double gamma, lambda;
+      gamma = electron_param.energy*1e3/me_mev;
+      lambda = h_mks*c_mks/(undulator_param.energy*e_mks);
+      undulator_param.kx = 0;
+      undulator_param.ky = sqrt(4*gamma*gamma*lambda/undulator_param.period-2);
+    }
+    if (emin==emax && emin==0) {
+      double gamma, lambda;
+      gamma = electron_param.energy*1e3/me_mev;
+      lambda = undulator_param.period/(2*gamma*gamma)*(1+0.5*(sqr(undulator_param.kx)+sqr(undulator_param.ky)));
+      emin = emax = h_mks*c_mks/lambda/e_mks;
+      nE = 2;
+    }
   }
   check_input_parameters(&undulator_param, &electron_param, &pinhole_param, nE, nPhi, nAlpha, nOmega, dOmega,
                          mode, icalc, iharm, inputSupplied, us);
   
+  
+  if (undulator_param.itype==1)
+    SDDS_CopyString(&undulatorType,"Undulator");
+  else
+    SDDS_CopyString(&undulatorType,"Canted undulator");
+  
+  special = 0;
+  /* nXP and nYP are changed by US and urgent program
+     the return value of nXP = nXP + 1, nYP = nYP +1
+     so nXP, nYp is changing when page number increasing
+     nXP0, nYP0 are to remember the input value of nXP and nYP
+   */
+  nXP0 = pinhole_param.nXP;
+  nYP0 = pinhole_param.nYP;
   
   if (nE>=(pinhole_param.nXP+1)*(pinhole_param.nYP+1))
     points=nE+100;
@@ -599,16 +621,16 @@ int main(int argc, char **argv) {
     points=(pinhole_param.nXP+1)*(pinhole_param.nYP+1)+100;
   
   EE=(double*)malloc(sizeof(*EE)*points);
-  if (!us)
+  if (!us) 
     lamda=(double*)malloc(sizeof(*lamda)*points);
-  xPMM=(double*)malloc(sizeof(*xPMM)*points);
-  yPMM=(double*)malloc(sizeof(*yPMM)*points);
+  xPMM=(double*)malloc(sizeof(*xPMM)*points); 
+  yPMM=(double*)malloc(sizeof(*yPMM)*points); 
   irradiance=(double*)malloc(sizeof(*irradiance)*points);
   L1=(double*)malloc(sizeof(*L1)*points);
   L2=(double*)malloc(sizeof(*L2)*points);
   L3=(double*)malloc(sizeof(*L3)*points);
   L4=(double*)malloc(sizeof(*L4)*points);
-  if (!us) {
+  if (!us) { 
     power=(double*)malloc(sizeof(*power)*points);
     EI=(double*)malloc(sizeof(*EI)*points);
   }
@@ -620,117 +642,135 @@ int main(int argc, char **argv) {
     I2=(long*)malloc(sizeof(*I2)*points);
     harmonics=(long*)malloc(sizeof(*harmonics)*points);
   }
-  if (undulator_param.itype==1)
-    SDDS_CopyString(&undulatorType,"Undulator");
-  else
-    SDDS_CopyString(&undulatorType,"Canted undulator");
-  
- 
-  special=0;
-    
   if (mode==-6) {
-     special=1;
-     E5=(double*)malloc(sizeof(*E5)*MAXIMUM_H);
-     x5=(double*)malloc(sizeof(*x5)*MAXIMUM_H);
-     y5=(double*)malloc(sizeof(*y5)*MAXIMUM_H);
-     power5=(double*)malloc(sizeof(*power5)*MAXIMUM_H);
-     flux5=(double*)malloc(sizeof(*flux5)*MAXIMUM_H);
+    special=1;
+    E5=(double*)malloc(sizeof(*E5)*MAXIMUM_H);
+    x5=(double*)malloc(sizeof(*x5)*MAXIMUM_H);
+    y5=(double*)malloc(sizeof(*y5)*MAXIMUM_H);
+    power5=(double*)malloc(sizeof(*power5)*MAXIMUM_H);
+    flux5=(double*)malloc(sizeof(*flux5)*MAXIMUM_H);
   }
-
   for (page=0; page<inputPages; page++) {
-     if (inputSupplied) {
-        electron_param.sigmax = twiss.sigmax[page];
-        electron_param.sigmaxp = twiss.sigmaxp[page];
-        electron_param.sigmay = twiss.sigmay[page];
-        electron_param.sigmayp = twiss.sigmayp[page];
-        electron_param.energySpread = twiss.Sdelta0[page];
-     }
-     if (!us) {
-        urgent_(&undulator_param.itype,&undulator_param.period,&undulator_param.kx,
-                &undulator_param.ky,&undulator_param.phase,&undulator_param.nPeriod,
-                &emin,&emax,&nE,
-                &electron_param.energy,&electron_param.current,
-                &electron_param.sigmax,&electron_param.sigmay,
-                &electron_param.sigmaxp,&electron_param.sigmayp,
-                &pinhole_param.distance,&pinhole_param.xPC,&pinhole_param.yPC,
-                &pinhole_param.xPS,&pinhole_param.yPS,&pinhole_param.nXP,&pinhole_param.nYP,
-                &mode, &icalc, &iharm, &nPhi, &electron_param.nsigma, &nAlpha,
-                &dAlpha,&nOmega, &dOmega, /*end of input parameters */
-                &E1,&lamda1,&ptot,&pd,&isub,&iang,
-                EE,lamda,&min_harmonic,&max_harmonic,&nEE,
-                xPMM,yPMM,irradiance,L1,L2,L3,L4,&max_irradiance,power,
-                I1,I2,&i_max,EI,spec1,spec2,
-                spec3,&pdtot,&ptot1,&ftot,harmonics,
-                &iharm5,x5,y5,E5,power5,flux5);
-     } else {
-        /*in us, undulator period uses cm units, while urgent uses m units */
-        /*in us, current is in mA units, while urgent is in A units */
-        period=undulator_param.period*100;
-        current=electron_param.current*1000;
-       
-        us_(&electron_param.energy, &current, &electron_param.sigmax,
-            &electron_param.sigmay, &electron_param.sigmaxp, &electron_param.sigmayp,
-            &period, &undulator_param.nPeriod, &undulator_param.kx, &undulator_param.ky,
-            &emin, &emax, &nE, 
-            &pinhole_param.distance, &pinhole_param.xPC, &pinhole_param.yPC, 
-            &pinhole_param.xPS, &pinhole_param.yPS, &pinhole_param.nXP, &pinhole_param.nYP,
-            &mode, &icalc, &iharm, &nPhi, &nAlpha, &dAlpha, &nOmega, &dOmega, 
-            &electron_param.nsigma, /*end of input parameters */
-            &E1, &lamda1, &ptot, &pd, &ptot1, &isub, &iang, 
-            &ftot, &max_harmonic, &min_harmonic, L1, L2, L3, L4, &nEE,
-            xPMM, yPMM, irradiance, spec1, EE);
-     }
-              
-      
-     output = outputfile;
-     if (!us) {
-        if (!page) {
-            sddsout2=SetupOutputFile(output, &sddsout, mode, undulator_param.itype, icalc, isub, iang, idebug, iharm, special, &sddsout1);
-        }
-        
-        SpecifyDescription(&description, isub, mode, iang, i_max, iharm);
-        WriteToOutput(&sddsout, sddsout2, description, undulatorType, idebug,
-                      undulator_param.itype, undulator_param.period, undulator_param.kx,
-                      undulator_param.ky, undulator_param.phase, undulator_param.nPeriod,
-                      emin, emax, nE,
-                      electron_param.energy, electron_param.energySpread, electron_param.current,
-                      electron_param.sigmax, electron_param.sigmay, electron_param.sigmaxp,
-                      electron_param.sigmayp, pinhole_param.distance, pinhole_param.xPC,
-                      pinhole_param.yPC, pinhole_param.xPS, pinhole_param.yPS, pinhole_param.nXP,
-                      pinhole_param.nYP, mode, icalc, iharm, nPhi, electron_param.nsigma, nAlpha,
-                      dAlpha,nOmega, dOmega,
-                      E1,lamda1,ptot,pd,isub,iang,
-                      EE,lamda,min_harmonic,max_harmonic,nEE,
-                      xPMM,yPMM,irradiance,L1,L2,L3,L4,max_irradiance,power,
-                      I1,I2,i_max,EI,spec1,spec2,
-                      spec3,pdtot,ptot1,ftot,harmonics, &sddsout1,
-                      special, iharm5,x5,y5,E5,power5,flux5);
-        free(description);
-     } else {
-        if (!page) 
-	    SetupUSOutput(&sddsout, outputfile, mode, iang, isub);
-	    WriteUSResultsToOutput(&sddsout, undulator_param, electron_param, pinhole_param,
-                                 nPhi, nAlpha, dAlpha, nOmega, dOmega,
-                                 mode, icalc, iharm, nEE, isub, iang,
-                                 ptot, pd, ptot1, ftot, max_harmonic, min_harmonic,
-                                 emin, emax, E1, lamda1, xPMM, yPMM,
-                                 L1, L2, L3, L4, EE, irradiance, spec1);
-     }
-  } /*end of for page */
-      /* terminate sdds file */
-      if (!us) {
-        if (special && !SDDS_Terminate(&sddsout1))
-          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-        if (sddsout2) {
-          if (!SDDS_Terminate(sddsout2))
-            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-          free(sddsout2);
-          sddsout2 = NULL;
-        }
-        special=0;
+    /* change the pinhole nXP and nYP back to the input value */
+    pinhole_param.nXP = nXP0;
+    pinhole_param.nYP = nYP0; 
+    if (inputSupplied) {
+      electron_param.sigmax = twiss.sigmax[page];
+      electron_param.sigmaxp = twiss.sigmaxp[page];
+      electron_param.sigmay = twiss.sigmay[page];
+      electron_param.sigmayp = twiss.sigmayp[page];
+      electron_param.energySpread = twiss.Sdelta0[page];
+      electron_param.energy = twiss.pCentral[page]*me_mev*0.001;
+      if (undulator_param.energy) {
+        /* calculate the Kx value for the undulator */
+        double gamma, lambda;
+        gamma = electron_param.energy*1e3/me_mev;
+        lambda = h_mks*c_mks/(undulator_param.energy*e_mks);
+        undulator_param.kx = 0;
+        undulator_param.ky = sqrt(4*gamma*gamma*lambda/undulator_param.period-2);
       }
-      if (!SDDS_Terminate(&sddsout))
+      if (emin==emax && emin==0) {
+        double gamma, lambda;
+        gamma = electron_param.energy*1e3/me_mev;
+        lambda = undulator_param.period/(2*gamma*gamma)*(1+0.5*(sqr(undulator_param.kx)+sqr(undulator_param.ky)));
+        emin = emax = h_mks*c_mks/lambda/e_mks;
+        nE = 2;
+      }
+      check_input_parameters(&undulator_param, &electron_param, &pinhole_param, nE, nPhi, nAlpha, nOmega, dOmega,
+                             mode, icalc, iharm, inputSupplied, us);
+    }
+    
+    if (!us) {
+      urgent_(&undulator_param.itype,&undulator_param.period,&undulator_param.kx,
+              &undulator_param.ky,&undulator_param.phase,&undulator_param.nPeriod,
+              &emin,&emax,&nE,
+              &electron_param.energy,&electron_param.current,
+              &electron_param.sigmax,&electron_param.sigmay,
+              &electron_param.sigmaxp,&electron_param.sigmayp,
+              &pinhole_param.distance,&pinhole_param.xPC,&pinhole_param.yPC,
+              &pinhole_param.xPS,&pinhole_param.yPS,&pinhole_param.nXP,&pinhole_param.nYP,
+              &mode, &icalc, &iharm, &nPhi, &electron_param.nsigma, &nAlpha,
+              &dAlpha,&nOmega, &dOmega, /*end of input parameters */
+              &E1,&lamda1,&ptot,&pd,&isub,&iang,
+              EE,lamda,&min_harmonic,&max_harmonic,&nEE,
+              xPMM,yPMM,irradiance,L1,L2,L3,L4,&max_irradiance,power,
+              I1,I2,&i_max,EI,spec1,spec2,
+              spec3,&pdtot,&ptot1,&ftot,harmonics,
+              &iharm5,x5,y5,E5,power5,flux5);
+    } else {
+      /*in us, undulator period uses cm units, while urgent uses m units */
+      /*in us, current is in mA units, while urgent is in A units */
+      period=undulator_param.period*100;
+      current=electron_param.current*1000;
+      
+      us_(&electron_param.energy, &current, &electron_param.sigmax,
+          &electron_param.sigmay, &electron_param.sigmaxp, &electron_param.sigmayp,
+          &period, &undulator_param.nPeriod, &undulator_param.kx, &undulator_param.ky,
+          &emin, &emax, &nE, 
+          &pinhole_param.distance, &pinhole_param.xPC, &pinhole_param.yPC, 
+          &pinhole_param.xPS, &pinhole_param.yPS, &pinhole_param.nXP, &pinhole_param.nYP,
+          &mode, &icalc, &iharm, &nPhi, &nAlpha, &dAlpha, &nOmega, &dOmega, 
+          &electron_param.nsigma, /*end of input parameters */
+          &E1, &lamda1, &ptot, &pd, &ptot1, &isub, &iang, 
+          &ftot, &max_harmonic, &min_harmonic, L1, L2, L3, L4, &nEE,
+          xPMM, yPMM, irradiance, spec1, EE);
+     }
+    
+    
+    output = outputfile;
+    if (!us) {
+      if (!page) {
+        sddsout2=SetupOutputFile(output, &sddsout, mode, undulator_param.itype, icalc, isub, iang, idebug, iharm, special, &sddsout1);
+      }
+      
+      SpecifyDescription(&description, isub, mode, iang, i_max, iharm);
+      if (!iang)
+        pd = pd / (pinhole_param.distance * pinhole_param.distance);
+      
+      WriteToOutput(&sddsout, sddsout2, description, undulatorType, idebug,
+                    undulator_param.itype, undulator_param.period, undulator_param.kx,
+                    undulator_param.ky, undulator_param.phase, undulator_param.nPeriod,
+                    emin, emax, nE,
+                    electron_param.energy, electron_param.energySpread, electron_param.current,
+                    electron_param.sigmax, electron_param.sigmay, electron_param.sigmaxp,
+                    electron_param.sigmayp, pinhole_param.distance, pinhole_param.xPC,
+                    pinhole_param.yPC, pinhole_param.xPS, pinhole_param.yPS, pinhole_param.nXP,
+                    pinhole_param.nYP, mode, icalc, iharm, nPhi, electron_param.nsigma, nAlpha,
+                    dAlpha,nOmega, dOmega,
+                    E1,lamda1,ptot,pd,isub,iang,
+                    EE,lamda,min_harmonic,max_harmonic,nEE,
+                    xPMM,yPMM,irradiance,L1,L2,L3,L4,max_irradiance,power,
+                    I1,I2,i_max,EI,spec1,spec2,
+                    spec3,pdtot,ptot1,ftot,harmonics, &sddsout1,
+                    special, iharm5,x5,y5,E5,power5,flux5);
+      free(description);
+    } else {
+      if (!page) 
+        SetupUSOutput(&sddsout, outputfile, mode, iang, isub); 
+      if (!iang)
+        pd = pd /(pinhole_param.distance * pinhole_param.distance); 
+       WriteUSResultsToOutput(&sddsout, undulator_param, electron_param, pinhole_param,
+                              nPhi, nAlpha, dAlpha, nOmega, dOmega,
+                              mode, icalc, iharm, nEE, isub, iang,
+                              ptot, pd, ptot1, ftot, max_harmonic, min_harmonic,
+                              emin, emax, E1, lamda1, xPMM, yPMM,
+                              L1, L2, L3, L4, EE, irradiance, spec1);
+    }
+  } /*end of for page */
+  /* terminate sdds file */
+  if (!us) {
+    if (special && !SDDS_Terminate(&sddsout1))
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    if (sddsout2) {
+      if (!SDDS_Terminate(sddsout2))
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      free(sddsout2);
+      sddsout2 = NULL;
+    }
+    special=0;
+  }
+  if (!SDDS_Terminate(&sddsout))
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       
   
   if (special) {
@@ -791,7 +831,7 @@ SDDS_DATASET *SetupOutputFile(char *outputfile, SDDS_DATASET *SDDSout, long mode
       if (SDDS_DefineColumn(SDDSout, "Energy", NULL, "eV", NULL, NULL, SDDS_DOUBLE, 0)<0)
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
-    if (SDDS_DefineColumn(SDDSout, "PowerDensity", NULL, "Watts/mm**2 or mrad**2", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+    if (SDDS_DefineColumn(SDDSout, "PowerDensity", NULL, "Watts/mm^2 or mrad^2", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
         SDDS_DefineColumn(SDDSout, "Flux", NULL, "photons/s/0.1%bandwidth", NULL, NULL, SDDS_DOUBLE, 0)<0)
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     if (outputfile) {
@@ -803,14 +843,14 @@ SDDS_DATASET *SetupOutputFile(char *outputfile, SDDS_DATASET *SDDSout, long mode
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         if (SDDS_DefineParameter(SDDSout2, "Description",  NULL, NULL, NULL, NULL, SDDS_STRING, 0)<0 ||
             SDDS_DefineParameter(SDDSout2, "TotalPowerDensity",  NULL, 
-                                 "Watts/mm**2 or mrad**2", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+                                 "Watts/mm^2 or mrad^2", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
             SDDS_DefineParameter(SDDSout2, "TotalPower",  NULL, "Watts", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
             SDDS_DefineParameter(SDDSout2, "TotalFlux",  NULL, 
                                  "photons/s/0.1%bandwidth", NULL, NULL, SDDS_DOUBLE, 0)<0)
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         if (SDDS_DefineColumn(SDDSout2, "Harmonic", NULL, NULL, NULL, NULL, SDDS_LONG, 0)<0 ||
             SDDS_DefineColumn(SDDSout2, "Energy", NULL, "eV", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
-            SDDS_DefineColumn(SDDSout2, "PowerDensity", NULL, "Watts/mm**2 or mrad**2", 
+            SDDS_DefineColumn(SDDSout2, "PowerDensity", NULL, "Watts/mm^2 or mrad^2", 
                               NULL, NULL, SDDS_DOUBLE, 0)<0 ||
             SDDS_DefineColumn(SDDSout2, "Power", NULL, "Watts", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
             SDDS_DefineColumn(SDDSout2, "Flux", NULL, "photons/s/0.1%bandwidth", NULL, NULL, SDDS_DOUBLE, 0)<0 )
@@ -828,7 +868,7 @@ SDDS_DATASET *SetupOutputFile(char *outputfile, SDDS_DATASET *SDDSout, long mode
         if (SDDS_DefineColumn(SDDSout1, "X", NULL, NULL, "mm", NULL, SDDS_DOUBLE, 0)<0 ||
             SDDS_DefineColumn(SDDSout1, "Y", NULL, NULL, "mm", NULL, SDDS_DOUBLE, 0)<0 ||
             SDDS_DefineColumn(SDDSout1, "Energy", NULL, "eV", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
-            SDDS_DefineColumn(SDDSout1, "PowerDensity", NULL, "Watts/mm**2 or mrad**2", 
+            SDDS_DefineColumn(SDDSout1, "PowerDensity", NULL, "Watts/mm^2 or mrad^2", 
                               NULL, NULL, SDDS_DOUBLE, 0)<0 ||
             SDDS_DefineColumn(SDDSout1, "Flux", NULL, "photons/s/0.1%bandwidth", NULL, NULL, SDDS_DOUBLE, 0)<0 )
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -862,11 +902,11 @@ SDDS_DATASET *SetupOutputFile(char *outputfile, SDDS_DATASET *SDDSout, long mode
     /*isub=1,2*/
     if (mode==1 || (mode==2 && (isub==2 || isub==4))) {
       if (iang==0) {
-        if (SDDS_DefineColumn(SDDSout, "Irradiance", NULL, "photons/s/mm**2/0.1%bandwidth", 
+        if (SDDS_DefineColumn(SDDSout, "Irradiance", NULL, "photons/s/mm^2/0.1%bandwidth", 
                               "spatial flux density",NULL, SDDS_DOUBLE, 0)<0)
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       } else {
-        if (SDDS_DefineColumn(SDDSout, "AngularFluxDensity", NULL, "photons/s/mrad**2/0.1%bandwidth", 
+        if (SDDS_DefineColumn(SDDSout, "AngularFluxDensity", NULL, "photons/s/mrad^2/0.1%bandwidth", 
                               "angular flux density",NULL, SDDS_DOUBLE, 0)<0)
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
@@ -878,12 +918,12 @@ SDDS_DATASET *SetupOutputFile(char *outputfile, SDDS_DATASET *SDDSout, long mode
     if (isub==2 || isub==4) {
       switch (mode) {
       case 2:
-        if (SDDS_DefineColumn(SDDSout, "SpectralPowerDensity", NULL, "Watts/mm**2 or mrad**2/eV bandwidth", 
+        if (SDDS_DefineColumn(SDDSout, "SpectralPowerDensity", NULL, "Watts/mm^2 or mrad^2/eV bandwidth", 
                               NULL, NULL, SDDS_DOUBLE, 0)<0)
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         break;
       case 3:
-        if (SDDS_DefineColumn(SDDSout, "Brightness", NULL, "photons/s/mm**2/mrad**2/0.1%bandwidth", 
+        if (SDDS_DefineColumn(SDDSout, "Brightness", NULL, "photons/s/mm^2/mrad^2/0.1%bandwidth", 
                               NULL, NULL, SDDS_DOUBLE, 0)<0)
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         break;
@@ -1083,7 +1123,7 @@ void WriteToOutput(SDDS_DATASET *SDDSout, SDDS_DATASET *SDDSout2, char *descript
                           "XSize", xPS, "YSize", yPS, "NXP", nXP, "NYP", nYP,
                           "Mode", mode, "ICalc", icalc, "Harmonics", iharm, "NPhi", nPhi,
                           "NSig", nSig, "NAlpha", nAlpha, "DAlpha", dAlpha, "NOmega", nOmega,
-                          "DOmega", dOmega, "E1", E1, "Lambda1", lamda1, "TotalPower", ptot, "TotalPowerDensity", pd,NULL))
+                          "DOmega", dOmega, "E1", E1, "Lambda1", lamda1, "TotalPower", ptot, "OnAxisPowerDensity", pd,NULL))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   if (isub==5) {
     if (!SDDS_SetColumn(SDDSout, SDDS_SET_BY_NAME, xPMM, nEE, "X") ||
@@ -1277,26 +1317,15 @@ void DefineParameters(SDDS_DATASET *SDDSout, long mode, long iang, long us) {
       SDDS_DefineParameter(SDDSout, "TotalPower",  NULL, "Watts", NULL, 
                            NULL, SDDS_DOUBLE, 0)<0)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-  if (us) {
-    if (iang) {
-      if (SDDS_DefineParameter(SDDSout, "OnAxisPowerDensity", NULL, "Watts/mrad**2", NULL,
-                               NULL, SDDS_DOUBLE, 0)<0)
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-    } else {
-      if (SDDS_DefineParameter(SDDSout, "OnAxisPowerDensity", NULL, "Watts/mm**2", NULL,
-                               NULL, SDDS_DOUBLE, 0)<0)
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-    }
+  
+  if (iang) {
+    if (SDDS_DefineParameter(SDDSout, "OnAxisPowerDensity", NULL, "Watts/mrad^2", NULL,
+                             NULL, SDDS_DOUBLE, 0)<0)
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   } else {
-    if (iang) {
-      if (SDDS_DefineParameter(SDDSout, "TotalPowerDensity", NULL, "Watts/mrad**2", NULL,
-                               NULL, SDDS_DOUBLE, 0)<0)
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-    } else {
-      if (SDDS_DefineParameter(SDDSout, "TotalPowerDensity", NULL, "Watts/mm**2", NULL,
-                               NULL, SDDS_DOUBLE, 0)<0)
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-    }
+    if (SDDS_DefineParameter(SDDSout, "OnAxisPowerDensity", NULL, "Watts/mm^2", NULL,
+                             NULL, SDDS_DOUBLE, 0)<0)
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
   if (!us) {
     if (mode==1) {
@@ -1308,13 +1337,13 @@ void DefineParameters(SDDS_DATASET *SDDSout, long mode, long iang, long us) {
           SDDS_DefineParameter(SDDSout, "MaxHarmonics",  NULL, NULL, NULL, NULL, SDDS_LONG, 0)<0)
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       
-      if (SDDS_DefineParameter(SDDSout, "MaxIrradiance",  NULL, "photons/s/mm**2/0.1%bandwidth", NULL, NULL,
+      if (SDDS_DefineParameter(SDDSout, "MaxIrradiance",  NULL, "photons/s/mm^2/0.1%bandwidth", NULL, NULL,
                                SDDS_DOUBLE, 0)<0)
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);    
     }
     
     if (mode==2) {
-      if (SDDS_DefineParameter(SDDSout, "TotalPowerDensity1", NULL, "Watts/mrad**2", NULL,
+      if (SDDS_DefineParameter(SDDSout, "TotalPowerDensity1", NULL, "Watts/mrad^2", NULL,
                                NULL, SDDS_DOUBLE, 0)<0)
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }  
@@ -1367,13 +1396,13 @@ void SetupUSOutput(SDDS_DATASET *SDDSout, char *outputfile, long mode, long iang
     if (iang) {
       if (SDDS_DefineColumn(SDDSout, "X", NULL, "mrad", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
           SDDS_DefineColumn(SDDSout, "Y", NULL, "mrad", NULL, NULL, SDDS_DOUBLE, 0)<0  ||
-          SDDS_DefineColumn(SDDSout, "AngularFluxDensity", NULL, "photons/s/mrad**2/0.1%bandwidth", 
+          SDDS_DefineColumn(SDDSout, "AngularFluxDensity", NULL, "photons/s/mrad^2/0.1%bandwidth", 
                             "angular flux density",NULL, SDDS_DOUBLE, 0)<0)
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     } else {
       if (SDDS_DefineColumn(SDDSout, "X", NULL, "mm", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
           SDDS_DefineColumn(SDDSout, "Y", NULL, "mm", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
-          SDDS_DefineColumn(SDDSout, "Irradiance", NULL, "photons/s/mm**2/0.1%bandwidth", 
+          SDDS_DefineColumn(SDDSout, "Irradiance", NULL, "photons/s/mm^2/0.1%bandwidth", 
                             "spatial flux density",NULL, SDDS_DOUBLE, 0)<0)
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
@@ -1404,13 +1433,13 @@ void SetupUSOutput(SDDS_DATASET *SDDSout, char *outputfile, long mode, long iang
     if (iang) {
       if (SDDS_DefineColumn(SDDSout, "X", NULL, "mrad", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
           SDDS_DefineColumn(SDDSout, "Y", NULL, "mrad", NULL, NULL, SDDS_DOUBLE, 0)<0  ||
-          SDDS_DefineColumn(SDDSout, "PowerDensity", NULL, "watts/mrad**2", 
+          SDDS_DefineColumn(SDDSout, "PowerDensity", NULL, "watts/mrad^2", 
                             "angular power density",NULL, SDDS_DOUBLE, 0)<0)
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     } else {
       if (SDDS_DefineColumn(SDDSout, "X", NULL, "mm", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
           SDDS_DefineColumn(SDDSout, "Y", NULL, "mm", NULL, NULL, SDDS_DOUBLE, 0)<0  ||
-          SDDS_DefineColumn(SDDSout, "PowerDensity", NULL, "watts/mm**2", 
+          SDDS_DefineColumn(SDDSout, "PowerDensity", NULL, "watts/mm^2", 
                             "power density",NULL, SDDS_DOUBLE, 0)<0)
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
