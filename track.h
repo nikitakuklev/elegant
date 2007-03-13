@@ -2552,6 +2552,8 @@ extern double beam_width(double fraction, double **coord, long n_part, long sort
 extern double approximateBeamWidth(double fraction, double **part, long nPart, long iCoord);
 #if USE_MPI
 extern double approximateBeamWidth_p(double fraction, double **part, long nPart, long iCoord);
+extern double rms_emittance_p(double **coord, long i1, long i2, long n,
+                            double *S11Return, double *S12Return, double *S22Return);
 #endif
 extern double rms_emittance(double **coord, long i1, long i2, long n,
                             double *S11Return, double *S12Return, double *S22Return);

@@ -2046,7 +2046,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_MODRF_PARAMS, MAT_LEN_NCAT|HAS_RF_MATRIX|MAY_CHANGE_ENERGY|MPALGORITHM,       sizeof(MODRF),    modrf_param     }, 
     { N_BMAPXY_PARAMS,     HAS_LENGTH,   sizeof(BMAPXY),  bmapxy_param      },
     { N_ZTRANSVERSE_PARAMS,      0,     sizeof(ZTRANSVERSE),  ztransverse_param    },
-    { N_IBSCATTER_PARAMS,        0,   sizeof(IBSCATTER),  ibscatter_param  },
+    { N_IBSCATTER_PARAMS,        UNIPROCESSOR,   sizeof(IBSCATTER),  ibscatter_param  },
     { N_FMULT_PARAMS,  MAT_LEN_NCAT|IS_MAGNET,       sizeof(FMULT),    fmult_param     }, 
     { N_WAKE_PARAMS, MAY_CHANGE_ENERGY|MPALGORITHM, sizeof(WAKE), wake_param},
     { N_TRWAKE_PARAMS, 0|MPALGORITHM, sizeof(TRWAKE), trwake_param},

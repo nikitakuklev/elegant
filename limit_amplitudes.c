@@ -774,12 +774,9 @@ long remove_outlier_particles(
 #if USE_MPI
   if (isSlave) {
     double sum[6];
-    long count_total;
 
     MPI_Allreduce(stDev,sum,6,MPI_DOUBLE,MPI_SUM,workers);
     memcpy(stDev,sum,sizeof(double)*6);
-    MPI_Allreduce(&count,&count_total,1,MPI_LONG,MPI_SUM,workers);
-    count = count_total;
   }
 #endif
     for (j=0; j<6; j++)

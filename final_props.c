@@ -626,6 +626,53 @@ double rms_emittance(double **coord, long i1, long i2, long n,
   return(SAFE_SQRT(s11*s22-sqr(s12))/n);
 }
 
+#if USE_MPI
+double rms_emittance_p(double **coord, long i1, long i2, long n, 
+                     double *s11Return, double *s12Return, double *s22Return)
+{
+  double s11, s12, s22, x, xp, s11_local=0.0, s22_local=0.0, s12_local=0.0;
+  double xc, xpc, xc_local=0.0, xpc_local=0.0;
+  long i, n_total;
+  
+  if (!n)
+    return(0.0);
+
+  if (isMaster && notSinglePart) /* The master will not contribute anything in this routine */
+    n = 0; 
+
+  /* compute centroids */
+  for (i=0; i<n; i++) {
+    xc_local  += coord[i][i1];
+    xpc_local += coord[i][i2];
+  }
+  
+  MPI_Allreduce(&xc_local, &xc, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&xpc_local, &xpc, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&n, &n_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);   
+
+  xc  /= n_total;
+  xpc /= n_total;
+  
+  for (i=0; i<n; i++) {
+    s11_local += sqr(x  = coord[i][i1]-xc );
+    s22_local += sqr(xp = coord[i][i2]-xpc);
+    s12_local += x*xp;
+  }
+   
+  MPI_Allreduce(&s11_local, &s11, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&s22_local, &s22, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&s12_local, &s12, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+  if (s11Return)
+    *s11Return = s11/n_total;
+  if (s22Return)
+    *s22Return = s22/n_total;
+  if (s12Return)
+    *s12Return = s12/n_total;
+  return(SAFE_SQRT(s11*s22-sqr(s12))/n_total);
+}
+#endif
+
 double rms_norm_emittance(double **coord, long i1, long i2, long ip, long n, double Po)
 {
     return Po*rms_emittance(coord, i1, i2, n, NULL, NULL, NULL);
@@ -893,6 +940,7 @@ double approximateBeamWidth(double fraction, double **part, long nPart, long iCo
 }
 
 #if USE_MPI
+/* This function is added as we need do final statistics with Pelegant on one processor at the end */
 double approximateBeamWidth_p(double fraction, double **part, long nPart, long iCoord)
 {
   double *hist, *cdf;
@@ -903,6 +951,7 @@ double approximateBeamWidth_p(double fraction, double **part, long nPart, long i
   /* make histogram of the coordinate */
   hist = tmalloc(sizeof(*hist)*bins);
 
+  /* We expect it behaves like in a serial version */
   binParticleCoordinate_s(&hist, &maxBins, &xMin, &xMax, &dx, &bins, 
                         1.01, part, nPart, iCoord);
 

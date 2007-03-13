@@ -498,9 +498,11 @@ long do_tracking(
 	    active = 0;
 	  if (parallelStatus==trueParallel) {
 	    if (!partOnMaster) {
-              if(usefulOperation(eptr, flags, i_pass))
+              if(usefulOperation(eptr, flags, i_pass)) {
 		gatherParticles(coord, lostOnPass, &nToTrack, &nLost, accepted, 
 				n_processors, myid, &round);
+                partOnMaster = 1;
+	      }
 	      /* update the nMaximum for recording the nLost on all the slave processors */
 	      if (myid!=0)
 		nMaximum = nToTrack;
@@ -511,9 +513,7 @@ long do_tracking(
 	    if (!(classFlags&(UNIDIAGNOSTIC&(~UNIPROCESSOR)))) {
 	      parallelStatus = notParallel;           
 	    }
-	  }
-          if(usefulOperation(eptr, flags, i_pass))
-	    partOnMaster = 1;   
+	  }     
 	} 
 	else {
 	  /* This element can be done in parallel. Only the slave CPUS will work. */
@@ -3297,7 +3297,7 @@ int usefulOperation (ELEMENT_LIST *eptr, unsigned long flags, long i_pass)
      watch = (WATCH*)eptr->p_elem;
      if (!watch->disable) { 
        if (!watch->initialized) {
-         if (isSlave)   /* Slave processors will not go through the WATCH element */
+         if (isSlave)   /* Slave processors will not go through the WATCH element, so we set the flag here */
 	   watch->initialized = 1;
 	 return 1;	         
        }   

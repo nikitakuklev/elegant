@@ -54,7 +54,6 @@ void track_through_rf_deflector(
   }
 
   if (!rf_param->initialized)
-    if (isSlave || !notSinglePart)  
       set_up_rfdf(rf_param, initial, n_particles, pc_central);
 
   gamma = sqrt(sqr(pc_central)+1);

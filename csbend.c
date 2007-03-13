@@ -1273,79 +1273,86 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   /* Now do the body of the sector dipole */
   for (kick=phiBend=0; kick<csbend->n_kicks; kick++) {
     if (isSlave || !notSinglePart) {
-    for (i_part=0; i_part<n_part; i_part++) {
-      coord = part[i_part];
-      if (particleLost[i_part])
-        continue;
+      for (i_part=0; i_part<n_part; i_part++) {
+	coord = part[i_part];
+	if (particleLost[i_part])
+	  continue;
 
-      if (csbend->useMatrix)
-        track_particles(&coord, Msection, &coord, 1);
-      else {
-        /* load input coordinates into arrays */
-        Qi[0] = X;
-        Qi[1] = XP;
-        Qi[2] = Y;
-        Qi[3] = YP;
-        Qi[4] = 0;  
-        Qi[5] = DP;
+	if (csbend->useMatrix)
+	  track_particles(&coord, Msection, &coord, 1);
+	else {
+	  /* load input coordinates into arrays */
+	  Qi[0] = X;
+	  Qi[1] = XP;
+	  Qi[2] = Y;
+	  Qi[3] = YP;
+	  Qi[4] = 0;  
+	  Qi[5] = DP;
         
-        if (csbend->integration_order==4)
-          integrate_csbend_ord4(Qf, Qi, csbend->length/csbend->n_kicks, 1, 0, rho0, Po);
-        else
-          integrate_csbend_ord2(Qf, Qi, csbend->length/csbend->n_kicks, 1, 0, rho0, Po);
-        particleLost[i_part] = particle_lost;
+	  if (csbend->integration_order==4)
+	    integrate_csbend_ord4(Qf, Qi, csbend->length/csbend->n_kicks, 1, 0, rho0, Po);
+	  else
+	    integrate_csbend_ord2(Qf, Qi, csbend->length/csbend->n_kicks, 1, 0, rho0, Po);
+	  particleLost[i_part] = particle_lost;
       
-        /* retrieve coordinates from arrays */
-        X  = Qf[0];  
-        XP = Qf[1];  
-        Y  = Qf[2];  
-        YP = Qf[3];  
-        DP = Qf[5];
+	  /* retrieve coordinates from arrays */
+	  X  = Qf[0];  
+	  XP = Qf[1];  
+	  Y  = Qf[2];  
+	  YP = Qf[3];  
+	  DP = Qf[5];
 
-        if (rad_coef || isrConstant) {
-          /* convert additional distance traveled to ct using mean velocity */
-          p1 = Po*(1+DP);
-          beta1 = p1/sqrt(p1*p1+1);
-          CT += Qf[4]*2/(beta0[i_part]+beta1);
-          beta0[i_part] = beta1;
-        } else {
-          CT += Qf[4]/beta0[i_part];  
-        }
-      }
+	  if (rad_coef || isrConstant) {
+	    /* convert additional distance traveled to ct using mean velocity */
+	    p1 = Po*(1+DP);
+	    beta1 = p1/sqrt(p1*p1+1);
+	    CT += Qf[4]*2/(beta0[i_part]+beta1);
+	    beta0[i_part] = beta1;
+	  } else {
+	    CT += Qf[4]/beta0[i_part];  
+	  }
+	}
+      }    
     }
-    
+
     if (n_part>1 && csbend->derbenevCriterionMode) {
       /* evaluate Derbenev criterion from TESLA-FEL 1995-05: sigma_x/sigma_z << (R/sigma_z)^(1/3) */
       long code;
       double Sz, Sx;
       switch (code=match_string(csbend->derbenevCriterionMode, derbenevCriterionOption, N_DERBENEV_CRITERION_OPTIONS, 0)) {
       case DERBENEV_CRITERION_DISABLE:
-        break;
+	break;
       case DERBENEV_CRITERION_EVAL:
       case DERBENEV_CRITERION_ENFORCE:
-        rms_emittance(part, 4, 5, n_part, &Sz, NULL, NULL);
-        Sz = sqrt(Sz);
-        rms_emittance(part, 0, 1, n_part, &Sx, NULL, NULL);
-        Sx = sqrt(Sx);
-        derbenevRatio = (Sx/Sz)/pow(rho/Sz, 1./3.);
-        if (derbenevRatio>0.1) {
-          if (code==DERBENEV_CRITERION_EVAL)
-            fprintf(stderr, "Warning: Using 1-D CSR formalism but Derbenev criterion not satisfied (%le > 0.1).\n",
-                    derbenevRatio);
-          else {
-            csrInhibit = 1;
-            fprintf(stderr, "Warning: Derbenev criterion not satisfied (%le > 0.1)---not applying CSR\n",
-                    derbenevRatio);
-          }
-        }
-        break;
+#if !USE_MPI
+	rms_emittance(part, 4, 5, n_part, &Sz, NULL, NULL);
+	rms_emittance(part, 0, 1, n_part, &Sx, NULL, NULL);
+#else
+        /* The master will get the result from the rms_emittance routine */
+	rms_emittance_p(part, 4, 5, n_part, &Sz, NULL, NULL);
+	rms_emittance_p(part, 0, 1, n_part, &Sx, NULL, NULL);
+#endif
+	Sz = sqrt(Sz);
+	Sx = sqrt(Sx);
+	derbenevRatio = (Sx/Sz)/pow(rho0/Sz, 1./3.);
+	if (derbenevRatio>0.1) {
+	  if (code==DERBENEV_CRITERION_EVAL)
+	    fprintf(stderr, "Warning: Using 1-D CSR formalism but Derbenev criterion not satisfied (%le > 0.1).\n",
+		    derbenevRatio);
+	  else {
+	    csrInhibit = 1;
+	    fprintf(stderr, "Warning: Derbenev criterion not satisfied (%le > 0.1)---not applying CSR\n",
+		    derbenevRatio);
+	  }
+	}
+	break;
       default:
-        fprintf(stderr, "Error: invalid value for DERBENEV_CRITERION_MODE. Give 'disable', 'evaluate', or 'enforce'\n");
-        exit(1);
-        break;
+	fprintf(stderr, "Error: invalid value for DERBENEV_CRITERION_MODE. Give 'disable', 'evaluate', or 'enforce'\n");
+	exit(1);
+	break;
       }
     }
-    }
+    
 
 #if (!USE_MPI)
     if (n_part>1 && !csrInhibit) {
@@ -1488,21 +1495,21 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 			   csbend->wffRealFactor, csbend->wffImagFactor);
       }
       if (isSlave || !notSinglePart) {
-      if (CSRConstant) {
-        for (i_part=0; i_part<n_part; i_part++) {
-          long nBins1;
-          nBins1 = nBins-1;
-          coord = part[i_part];
-          if (!particleLost[i_part]) {
-            double f;
-            /* apply CSR kick */
-            iBin = (f=(CT-ctLower)/dct);
-            f -= iBin;
-            if (iBin>=0 && iBin<nBins1)
-              DP += ((1-f)*dGamma[iBin]+f*dGamma[iBin+1])/Po;
-          }
-        }
-      }
+	if (CSRConstant) {
+	  for (i_part=0; i_part<n_part; i_part++) {
+	    long nBins1;
+	    nBins1 = nBins-1;
+	    coord = part[i_part];
+	    if (!particleLost[i_part]) {
+	      double f;
+	      /* apply CSR kick */
+	      iBin = (f=(CT-ctLower)/dct);
+	      f -= iBin;
+	      if (iBin>=0 && iBin<nBins1)
+		DP += ((1-f)*dGamma[iBin]+f*dGamma[iBin+1])/Po;
+	    }
+	  }
+	}
       }
       
       if (csbend->particleFileActive && kick%csbend->particleOutputInterval==0) {
@@ -1648,101 +1655,111 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     csrWake.s0 = ctLower + dzf;
   }
   
-  if (isSlave || !notSinglePart) {
-  /* remove lost particles, handle edge effects, and transform coordinates */    
   i_top = n_part-1;
-  for (i_part=0; i_part<=i_top; i_part++) {
-    coord = part[i_part];
-    if (csbend->edge2_effects && e2!=0 && rad_coef) {
-      /* post-adjust dp/p to correct error made by integrating over entire sector */
-      y2 = Y*Y;
-      Fx = (Fx_y + (Fx_x_y + (Fx_x2_y + Fx_x3_y*X)*X)*X
-            + (Fx_y3 + Fx_x_y3*X)*y2)*Y;
-      Fy = Fy_0 + 
-        (Fy_x + (Fy_x2 + (Fy_x3 + Fy_x4*X)*X)*X)*X 
+  if (isSlave || !notSinglePart) {
+    /* remove lost particles, handle edge effects, and transform coordinates */    
+    for (i_part=0; i_part<=i_top; i_part++) {
+      coord = part[i_part];
+      if (csbend->edge2_effects && e2!=0 && rad_coef) {
+	/* post-adjust dp/p to correct error made by integrating over entire sector */
+	y2 = Y*Y;
+	Fx = (Fx_y + (Fx_x_y + (Fx_x2_y + Fx_x3_y*X)*X)*X
+	      + (Fx_y3 + Fx_x_y3*X)*y2)*Y;
+	Fy = Fy_0 + 
+	  (Fy_x + (Fy_x2 + (Fy_x3 + Fy_x4*X)*X)*X)*X 
           + (Fy_y2 + (Fy_x_y2 + Fy_x2_y2*X)*X + Fy_y4*y2)*y2;
-      dp_prime = -rad_coef*(sqr(Fx)+sqr(Fy))*sqr(1+DP)*
-        sqrt(sqr(1+X/rho0)+sqr(XP)+sqr(YP));
-      DP -= dp_prime*X*tan(e2);
-    }
+	dp_prime = -rad_coef*(sqr(Fx)+sqr(Fy))*sqr(1+DP)*
+	  sqrt(sqr(1+X/rho0)+sqr(XP)+sqr(YP));
+	DP -= dp_prime*X*tan(e2);
+      }
 
-    /* convert CT to distance traveled at final velocity */
-    p1 = Po*(1+DP);
-    beta1 = p1/sqrt(sqr(p1)+1);
-    coord[4] = CT*beta1;
+      /* convert CT to distance traveled at final velocity */
+      p1 = Po*(1+DP);
+      beta1 = p1/sqrt(sqr(p1)+1);
+      coord[4] = CT*beta1;
 
-    if (!csbend->useMatrix) {
-      /* transform to cartesian coordinates */
-      XP /= (1+X/rho0);
-      YP /= (1+X/rho0);
-    }
+      if (!csbend->useMatrix) {
+	/* transform to cartesian coordinates */
+	XP /= (1+X/rho0);
+	YP /= (1+X/rho0);
+      }
     
-    if (particleLost[i_part] || p1<=0) {
-      if (!part[i_top]) {
-        fprintf(stdout, "error: couldn't swap particles %ld and %ld--latter is null pointer (track_through_csbend)\n",
-                i_part, i_top);
-        fflush(stdout);
-        abort();
+      if (particleLost[i_part] || p1<=0) {
+	if (!part[i_top]) {
+	  fprintf(stdout, "error: couldn't swap particles %ld and %ld--latter is null pointer (track_through_csbend)\n",
+		  i_part, i_top);
+	  fflush(stdout);
+	  abort();
+	}
+	swapParticles(part[i_part], part[i_top]);
+	if (accepted) {
+	  if (!accepted[i_top]) {
+	    fprintf(stdout, 
+		    "error: couldn't swap acceptance data for particles %ld and %ld--latter is null pointer (track_through_csbend)\n",
+		    i_part, i_top);
+	    fflush(stdout);
+	    abort();
+	  }
+	  swapParticles(accepted[i_part], accepted[i_top]);
+	}
+	part[i_top][4] = z_start + s_lost;
+	part[i_top][5] = Po*(1+part[i_top][5]);
+	i_top--;
+	i_part--;
+	continue;
       }
-      swapParticles(part[i_part], part[i_top]);
-      if (accepted) {
-        if (!accepted[i_top]) {
-          fprintf(stdout, 
-                  "error: couldn't swap acceptance data for particles %ld and %ld--latter is null pointer (track_through_csbend)\n",
-                  i_part, i_top);
-          fflush(stdout);
-          abort();
-        }
-        swapParticles(accepted[i_part], accepted[i_top]);
-      }
-      part[i_top][4] = z_start + s_lost;
-      part[i_top][5] = Po*(1+part[i_top][5]);
-      i_top--;
-      i_part--;
-      continue;
-    }
 
-    if (csbend->edge2_effects) {
-      if (csbend->useMatrix)
-        track_particles(&coord, Me2, &coord, 1);
-      else {
-        /* apply edge focusing */
-        rho = (1+DP)*rho_actual;
-        if (csbend->useMatrix || csbend->edge_order<2) {
-          delta_xp = tan(e2)/rho*X;
-          XP += delta_xp;
-          YP -= tan(e2-psi2/(1+DP))/rho*Y;
-        }
-        else 
-          apply_edge_effects(&X, &XP, &Y, &YP, rho, n, e2, he2, psi2*(1+DP), 1);
+      if (csbend->edge2_effects) {
+	if (csbend->useMatrix)
+	  track_particles(&coord, Me2, &coord, 1);
+	else {
+	  /* apply edge focusing */
+	  rho = (1+DP)*rho_actual;
+	  if (csbend->useMatrix || csbend->edge_order<2) {
+	    delta_xp = tan(e2)/rho*X;
+	    XP += delta_xp;
+	    YP -= tan(e2-psi2/(1+DP))/rho*Y;
+	  }
+	  else 
+	    apply_edge_effects(&X, &XP, &Y, &YP, rho, n, e2, he2, psi2*(1+DP), 1);
+	}
       }
-    }
 
-    coord = part[i_part];
-    x  =  X*cos_ttilt -  Y*sin_ttilt + dcoord_etilt[0];
-    y  =  X*sin_ttilt +  Y*cos_ttilt + dcoord_etilt[2];
-    xp = XP*cos_ttilt - YP*sin_ttilt + dcoord_etilt[1];
-    yp = XP*sin_ttilt + YP*cos_ttilt + dcoord_etilt[3];
-    X  = x;
-    Y  = y;
-    XP = xp;
-    YP = yp;
-    coord[0] += dxf + dzf*coord[1];
-    coord[2] += dyf + dzf*coord[3];
-    coord[4] += dzf*sqrt(1+ sqr(coord[1]) + sqr(coord[3]));
-  }
+      coord = part[i_part];
+      x  =  X*cos_ttilt -  Y*sin_ttilt + dcoord_etilt[0];
+      y  =  X*sin_ttilt +  Y*cos_ttilt + dcoord_etilt[2];
+      xp = XP*cos_ttilt - YP*sin_ttilt + dcoord_etilt[1];
+      yp = XP*sin_ttilt + YP*cos_ttilt + dcoord_etilt[3];
+      X  = x;
+      Y  = y;
+      XP = xp;
+      YP = yp;
+      coord[0] += dxf + dzf*coord[1];
+      coord[2] += dyf + dzf*coord[3];
+      coord[4] += dzf*sqrt(1+ sqr(coord[1]) + sqr(coord[3]));
+    }
   }
 
   if (n_part>1 && !csbend->csrBlock) {
     /* prepare more data for CSRDRIFT */
     long imin, imax;
     double S55;
-    
+
+#if !USE_MPI    
     rms_emittance(part, 0, 1, i_top+1, &csrWake.S11, &csrWake.S12, &csrWake.S22);
     rms_emittance(part, 4, 5, i_top+1, &S55, NULL, NULL);
-    csrWake.rmsBunchLength = sqrt(S55);
     csrWake.perc68BunchLength = approximateBeamWidth(0.6826, part, i_top+1, 4)/2;
     csrWake.perc90BunchLength = approximateBeamWidth(0.9, part, i_top+1, 4)/2;
+#else
+    rms_emittance_p(part, 0, 1, i_top+1, &csrWake.S11, &csrWake.S12, &csrWake.S22);
+    rms_emittance_p(part, 4, 5, i_top+1, &S55, NULL, NULL);
+    csrWake.perc68BunchLength = approximateBeamWidth(0.6826, part, i_top+1, 4)/2;
+    csrWake.perc90BunchLength = approximateBeamWidth(0.9, part, i_top+1, 4)/2;
+#endif
+
+    csrWake.rmsBunchLength = sqrt(S55);
+
+
 #ifdef DEBUG
       fprintf(stderr, "rms bunch length = %le, percentile bunch length (68, 90) = %le, %le\n",
               csrWake.rmsBunchLength, csrWake.perc68BunchLength, csrWake.perc90BunchLength);
@@ -2204,11 +2221,13 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
     }
     if ((myid==1) && (csrWake.dGamma && np_total!=binned_total)) {
       dup2(fd,fileno(stdout)); /* Let the first slave processor write the output */
+      fprintf(stdout, "only %ld of %ld particles binned for CSR drift %s (track_through_driftCSR)\n",
+              binned_total, np_total, tContext.elementName);
 #else
     if (csrWake.dGamma && np!=binned) {
-#endif
       fprintf(stdout, "only %ld of %ld particles binned for CSR drift %s (track_through_driftCSR)\n",
               binned, np, tContext.elementName);
+#endif
       fprintf(stdout, "beam ct min, max = %21.15e, %21.15e\n",
               ctmin, ctmax);
       fprintf(stdout, "wake ct0 = %21.15e, ct1 = %21.15e\n",
@@ -2220,17 +2239,17 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
     }
   }
   /* do final drift of dz0/2 */
-  if (isSlave || !notSinglePart) {
   dz = dz0/2;
-  for (iPart=0; iPart<np; iPart++) {
-    coord = part[iPart];
-    coord[0] += coord[1]*dz;
-    coord[2] += coord[3]*dz;
-    if (csrDrift->linearOptics)
-      coord[4] += dz;
-    else
-      coord[4] += dz*sqrt(1+sqr(coord[1])+sqr(coord[3]));
-  }    
+  if (isSlave || !notSinglePart) {
+    for (iPart=0; iPart<np; iPart++) {
+      coord = part[iPart];
+      coord[0] += coord[1]*dz;
+      coord[2] += coord[3]*dz;
+      if (csrDrift->linearOptics)
+	coord[4] += dz;
+      else
+	coord[4] += dz*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+    }    
   }
   csrWake.zLast = zStart+csrDrift->length;
   
