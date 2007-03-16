@@ -4,6 +4,10 @@ exec oagwish "$0" "$@"
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.17  2006/11/09 19:20:58  emery
+# For Haissinski equation solving, the momentum compaction
+# entered will override the value in the file of the lattice input tab.
+#
 # Revision 1.16  2006/01/11 20:23:23  emery
 # Added resistive part of broadband impedance.
 # Default value is R=3 kOhm, corresponding to
@@ -178,7 +182,7 @@ set auto_path [linsert $auto_path 0  /usr/local/oag/apps/lib/$env(HOST_ARCH)]
 set auto_path [linsert $auto_path 0 /usr/local/oag/lib_patch/$env(HOST_ARCH)]
 APSDebugPath
 
-set CVSRevisionAuthor "\$Revision: 1.17 $ \$Author: emery $"
+set CVSRevisionAuthor "\$Revision: 1.18 $ \$Author: borland $"
 
 APSApplication . -name beamLifetimeCalc -version $CVSRevisionAuthor -overview \
   "Calculates the gas scattering lifetime due to single Coulomb scattering and
@@ -855,8 +859,11 @@ proc RecomputeOutputs {args} {
                 return
             }
             if [catch {exec sddsprocess $tmpRoot.1 -pipe=out \
-                         "-define=column,Time2Density,Time sqr Density *" \
+                         "-define=column,TimeDensity,Time Density *" \
                          -process=Density,integ,DensityInteg,functionOf=Time \
+                         -process=TimeDensity,integ,TimeDensityInteg,functionOf=Time \
+                         "-define=parameter,meanTime,TimeDensityInteg DensityInteg /,units=s" \
+                         "-define=column,Time2Density,Time meanTime - sqr Density *" \
                          -process=Time2Density,integ,Time2DensityInteg,functionOf=Time \
                          "-define=parameter,bunchLength,Time2DensityInteg DensityInteg / sqrt c_mks * 1e3 *,units=mm" \
                          | sddscollapse -pipe=in $tmpRoot.2} result] {
