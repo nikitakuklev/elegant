@@ -14,6 +14,9 @@
  * Michael Borland, 2000
  *
  $Log: not supported by cvs2svn $
+ Revision 1.20  2006/10/23 19:49:43  soliday
+ Updated to fix an issue with linux-x86_64
+
  Revision 1.19  2005/11/10 15:38:49  soliday
  Added changes to get it to compile properly with 64 bit compilers.
 
@@ -100,10 +103,10 @@ char *option[N_OPTIONS] = {
 } ;
 
 char *USAGE="sddsmatchtwiss [-pipe=[input][,output]] [<SDDSinputfile>] [<SDDSoutputfile>]\n\
-  [-xPlane=[beta=<meters>,alpha=<value>][nemittance=<meters>,]\n\
+  [-xPlane=[beta=<meters>,alpha=<value>][,{nemittance=<meters>|emittance=<meters>}]\n\
            [,etaValue=<meters>][,etaSlope=<value>]\n\
            [,filename=<filename>[,element=<name>[,occurrence=<number>]]]]\n\
-  [-yPlane=[beta=<meters>,alpha=<value>][nemittance=<meters>,]\n\
+  [-yPlane=[beta=<meters>,alpha=<value>][,{nemittance=<meters>|emittance=<meters>}]\n\
            [,etaValue=<meters>][,etaSlope=<value>]\n\
            [,filename=<filename>[,element=<name>[,occurrence=<number>]]]]\n\
   [-zPlane=[deltaStDev=<value>][,tStDev=<seconds>]\n\
@@ -133,7 +136,7 @@ first page only, then reused for all subsequent pages.\n\n\
 Program by Michael Borland.  (This is version 5, January 2002.)\n";
 
 typedef struct {
-  double beta, alpha, eta, etap, normEmittance;
+  double beta, alpha, eta, etap, normEmittance, emittance;
   unsigned long flags;
   double R11, R12, R21, R22;
   double etaBeam, etapBeam;
@@ -147,6 +150,7 @@ typedef struct {
 #define FILENAME_GIVEN   0x0020U
 #define ELEMENT_GIVEN    0x0040U
 #define OCCURRENCE_GIVEN 0x0080U
+#define EMIT_GIVEN       0x0100U
 } PLANE_SPEC;
 
 typedef struct {
@@ -201,6 +205,7 @@ int main(int argc, char **argv)
                           "beta", SDDS_DOUBLE, &xSpec.beta, 1, BETA_GIVEN,
                           "alpha", SDDS_DOUBLE, &xSpec.alpha, 1, ALPHA_GIVEN,
                           "nemittance", SDDS_DOUBLE, &xSpec.normEmittance, 1, NEMIT_GIVEN,
+                          "emittance", SDDS_DOUBLE, &xSpec.emittance, 1, EMIT_GIVEN,
                           "etavalue", SDDS_DOUBLE, &xSpec.eta, 1, ETA_GIVEN,
                           "etaslope", SDDS_DOUBLE, &xSpec.etap, 1, ETAP_GIVEN,
 			  "filename", SDDS_STRING, &xSpec.filename, 1, FILENAME_GIVEN,
@@ -212,6 +217,7 @@ int main(int argc, char **argv)
             (!(xSpec.flags&BETA_GIVEN) && xSpec.flags&ALPHA_GIVEN) ||
             (xSpec.flags&BETA_GIVEN && xSpec.beta<=0) || 
             (xSpec.flags&NEMIT_GIVEN && xSpec.normEmittance<0) ||
+            (xSpec.flags&EMIT_GIVEN && xSpec.emittance<0) ||
 	    ((xSpec.flags&ELEMENT_GIVEN || xSpec.flags&OCCURRENCE_GIVEN) &&
 	     !(xSpec.flags&FILENAME_GIVEN)))
           SDDS_Bomb("invalid -xPlane syntax/values---watch out for abbreviations of etaValue and etaSlope");
@@ -225,6 +231,7 @@ int main(int argc, char **argv)
                           "beta", SDDS_DOUBLE, &ySpec.beta, 1, BETA_GIVEN,
                           "alpha", SDDS_DOUBLE, &ySpec.alpha, 1, ALPHA_GIVEN,
                           "nemittance", SDDS_DOUBLE, &ySpec.normEmittance, 1, NEMIT_GIVEN,
+                          "emittance", SDDS_DOUBLE, &ySpec.emittance, 1, EMIT_GIVEN,
                           "etavalue", SDDS_DOUBLE, &ySpec.eta, 1, ETA_GIVEN,
                           "etaslope", SDDS_DOUBLE, &ySpec.etap, 1, ETAP_GIVEN,
 			  "filename", SDDS_STRING, &ySpec.filename, 1, FILENAME_GIVEN,
@@ -236,6 +243,7 @@ int main(int argc, char **argv)
             (!(ySpec.flags&BETA_GIVEN) && ySpec.flags&ALPHA_GIVEN) ||
             (ySpec.flags&BETA_GIVEN && ySpec.beta<=0) ||
             (ySpec.flags&NEMIT_GIVEN && ySpec.normEmittance<0) ||
+            (ySpec.flags&EMIT_GIVEN && ySpec.emittance<0) ||
 	    ((ySpec.flags&ELEMENT_GIVEN || ySpec.flags&OCCURRENCE_GIVEN) &&
 	     !(ySpec.flags&FILENAME_GIVEN)))
           SDDS_Bomb("invalid -yPlane syntax/values---watch out for abbreviations of etaValue and etaSlope");
@@ -376,6 +384,11 @@ long PerformTransformation(double *x, double *xp, double *p, long rows, PLANE_SP
   pAve = arithmeticAverage(p, rows);
   for (i=0; i<rows; i++)
     p[i] = p[i]/pAve - 1;
+
+  if (match->flags&EMIT_GIVEN) {
+    match->flags |= NEMIT_GIVEN;
+    match->normEmittance = match->emittance*pAve;
+  }
 
   if (computeTransform) {
     computeCorrelations(&S11, &S16, &S66, x, p, rows);
