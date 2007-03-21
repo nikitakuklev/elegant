@@ -24,7 +24,8 @@
 
 static char *USAGE1 = "haissinski <twissFile> <resultsFile>\n\
  {-wakeFunction=<file>,tColumn=<name>,wColumn=<name> |\n\
-  -model=[L=<Henry>|Zn=<Ohms>],R=<Ohm>} \n\
+  -model=[L=<Henry>|Zn=<Ohms>],R=<Ohm> |\n\
+  -BBResonator=Rs=<Ohm>,frequency=<Hz>,Q=<value>[,wall=<Ohms>]} \n\
  {-charge=<C>|-particles=<value>|-bunchCurrent=<A>}\n\
  {-steps=<numberOfChargeSteps>} {-outputLastStepOnly}\n\
  {-RF=Voltage=<V>,harmonic=<value>|-length=<s>}\n\
@@ -42,10 +43,13 @@ in an electron storage ring. \n\
                solved bunch distribution.\n\
 wakeFunction   Input the wake function for an impulse response of a 1 C charge.\n\
                Time and wake column names should be specified with \n\
-               units s and V/nC respectively.\n";
+               units s and V/C respectively.\n";
 static char *USAGE2 = "model          Instead of a wake function, a circuit model can be entered. The inductive\n\
                part may be entered with L (inductance) or with |Z/n| value.\n\
                R is the resistance.\n\
+BBResonator    Instead of a wake function or circuit model, one can specify the\n\
+               parameters of a broad-band resonator, optionally with a resistive\n\
+               wall term (implemented as a simple resistor as in -model).\n\
 RF             RF parameters that control the length of the zero-current beam.\n\
 length         Alternatively, one can specify the zero-current bunch length (rms)\n\
                in seconds directly.\n\
@@ -83,7 +87,8 @@ integrationParameters   Specifies integration parameters for solving the \n\
 #define OUTPUT_LAST_STEP_ONLY 12
 #define HARMONIC_CAVITY 13
 #define BUNCH_CURRENT 14
-#define N_OPTIONS 15
+#define BBRESONATOR 15
+#define N_OPTIONS 16
 char *option[N_OPTIONS] = {
   "verbose",
   "charge",
@@ -99,7 +104,8 @@ char *option[N_OPTIONS] = {
   "energy",
   "outputlaststeponly",
   "harmoniccavity",
-  "bunchcurrent" };
+  "bunchcurrent",
+  "bbresonator" };
 
 typedef struct {
   double *y, xStart, xDelta;
@@ -140,6 +146,8 @@ void writeResults( SDDS_TABLE *resultsPage, FUNCTION *density,
                   FUNCTION *potential, FUNCTION *potentialDistortion, 
                   FUNCTION *Vind, double charge, double averageCurrent,
                   long converged);
+void makeBBRWakeFunction(FUNCTION *wake, double dt, long points, 
+                         double Q, double R, double omega, double rw, double T0);
 
 long verbosity;
 
@@ -163,9 +171,11 @@ int main( int argc, char **argv)
   double revFrequency, syncPhase, syncTune, syncAngFrequency;
   double VrfDot, ZoverN, inductance, resistance;
   double rfHigherHarmonic=0, rfHigherHarmonicVoltage=0;
-  double maxDifference, rmsDifference, madDifference, maxTolerance, fraction;
+  double maxDifference, rmsDifference, madDifference, maxTolerance, fraction, lastMaxDifference;
   double maxDensity;
   double averageCurrent=0.0, bunchCurrent=0.0, desiredEnergy;
+  long useBBR = 0;
+  double BBR_R, BBR_Q, BBR_frequency, BBR_rw;
   
   SDDS_RegisterProgramName(argv[0]);
   argc  =  scanargs(&scanned, argc, argv);
@@ -308,6 +318,7 @@ int main( int argc, char **argv)
             tCol || wCol)
           bomb("invalid -wake syntax/values", "-wakeFunction=<file>,tColumn=<name>,wColumn=<name>");
         useWakeFunction = 1;
+        useBBR = 0;
         break;
       case MODEL:
         if (scanned[i].n_items<2)
@@ -321,7 +332,23 @@ int main( int argc, char **argv)
                           NULL) ||
             inductance<0 || resistance<0 || ZoverN<0)
           bomb("invalid -model syntax/values", "-model=[L=<Henry>|Zn=<Ohms>],R=<Ohm>");
+        useWakeFunction = useBBR = 0;
+        break;
+      case BBRESONATOR:
+        if (scanned[i].n_items<3)
+          bomb("invalid -BBResonator syntax", NULL);
+        scanned[i].n_items--;
+        BBR_Q = BBR_frequency = BBR_R = BBR_rw = 0;
+        if (!scanItemList(&dummyFlags, scanned[i].list+1, &scanned[i].n_items, 0,
+                          "R", SDDS_DOUBLE, &BBR_R, 1, 0,
+                          "Q", SDDS_DOUBLE, &BBR_Q, 1, 0,
+                          "frequency", SDDS_DOUBLE, &BBR_frequency, 1, 0,
+                          "wall", SDDS_DOUBLE, &BBR_rw, 1, 0,
+                          NULL) ||
+            inductance<0 || resistance<0 || ZoverN<0)
+          bomb("invalid -model syntax/values", "-model=[L=<Henry>|Zn=<Ohms>],R=<Ohm>");
         useWakeFunction = 0;
+        useBBR = 1;
         break;
       default:
         bomb("unknown option given.", NULL);  
@@ -376,20 +403,46 @@ int main( int argc, char **argv)
     VrfDot = sqr(2 * PI) * revFrequency * sqr(syncTune) * (energyMeV * 1e6)/
       momentumCompaction;
   }
-  
-  if (!useWakeFunction) {
+
+  if (!useWakeFunction && !useBBR) {
     if ( inductance==0 && ZoverN != 0) {
       inductance = ZoverN * circumference / 2 / PI/ c_mks;
     }
   }
   
-  if (useWakeFunction) {
-    /*
-      determine wake function from file data or from parameters.
-      May require interpolation.
-      */
-    getWakeFunction( &wake, wakeFile, tCol, wCol, deltaTime, points);
-    
+  if (useWakeFunction || useBBR) {
+    useWakeFunction = 1;
+    if (useBBR) {
+      /* generate the wake function for a BBR
+       * W = omega*R/Q * exp(-omega*t/(2*Q)) * (cos (omega*t) - sin(omega'*t)/(2*Q'))
+       * units of W are V/C
+       */
+#ifdef DEBUG
+      FILE *fp;
+      long i;
+      fprintf(stderr, "Making BBR wake\n");
+#endif
+
+      makeBBRWakeFunction(&wake, deltaTime, points, BBR_Q, BBR_R, BBR_frequency*PIx2, BBR_rw, 1/revFrequency);
+
+#ifdef DEBUG
+      fp = fopen("BBRWake.sdds", "w");
+      fprintf(fp, "SDDS1\n&column name=Time, type=double, units=s &end\n");
+      fprintf(fp, "&column name=Wakefield, type=double, units=V/C &end\n");
+      fprintf(fp, "&data mode=ascii no_row_counts=1 &end\n");
+      for (i=0; i<points; i++) 
+        fprintf(fp, "%e %e\n", deltaTime*i, wake.y[i]);
+      fclose(fp);
+#endif
+    }
+    else {
+      /*
+        determine wake function from file data or from parameters.
+        May require interpolation.
+        */
+      getWakeFunction( &wake, wakeFile, tCol, wCol, deltaTime, points);
+    }
+      
     /* integrate Wake function for step response
      */
     integrateWakeFunction( &stepResponse, &wake);
@@ -416,6 +469,7 @@ int main( int argc, char **argv)
       fprintf( stdout, "Iterations for solution for charge %g\n", charge);
       fflush(stdout);
     }
+    lastMaxDifference = DBL_MAX;
     for (j=0; j<iterationLimits; j++) {
       copyDensity( &densityOld, &density );
       /* Calculate potential well distortion term. 
@@ -482,6 +536,9 @@ int main( int argc, char **argv)
         writeResults( &resultsPage, &density, &potential, &potentialDistortion, 
                      &Vinduced, charge, averageCurrent, converged );
       }
+      if (maxDifference>lastMaxDifference)
+        fraction /= 2;
+      lastMaxDifference = maxDifference;
     }
     /* write results whether converged or not */
     averageCurrent = charge * revFrequency;
@@ -574,7 +631,7 @@ void getWakeFunction(FUNCTION *wake, char *wakeFile, char *tCol, char *wCol,
     exit(1);
     break;
   }
-  switch(SDDS_CheckColumn(&wakePage, wCol, "V/nC", SDDS_DOUBLE, verbosity?stdout:NULL)) {
+  switch(SDDS_CheckColumn(&wakePage, wCol, "V/C", SDDS_DOUBLE, verbosity?stdout:NULL)) {
   case SDDS_CHECK_NONEXISTENT:
   case SDDS_CHECK_WRONGTYPE:
   case SDDS_CHECK_WRONGUNITS:
@@ -704,6 +761,7 @@ void getPotentialDistortion( FUNCTION *potentialDistortion,
                   FUNCTION *density, FUNCTION *wake) {
   long i, j, index;
   double *ptr;
+  double P0;
   
   ptr = potentialDistortion->y;
   /* This assignment transfers all values, including
@@ -730,18 +788,14 @@ void getPotentialDistortion( FUNCTION *potentialDistortion,
 
 /* calculate induced voltage. */
  for (i=0; i<density->points;i++) {
-    /* time t = (i+offset)*xDelta for Vind */
     Vind->y[i] = 0.0;
     for (j=0; j<density->points;j++) {
-      /* time t' = (j+offset)*Xdelta for wake */
       /* start integrating with the first element of wake->y even though
          it may correspond to negative time, i.e. non-causal data which
          may be zero, btw. */
-      /* time t - t' = (i+offset)*xDelta - (j+offset)*xDelta for density */
-      index = i - wake->offset - density->offset - j;
-      if ( index<0 ) continue;
-      /* Note negative sign from definition */
-      Vind->y[i] -= wake->y[j] * density->y[index] * density->xDelta;
+      index = i - wake->offset - j;
+      if ( index<0 ) break;
+      Vind->y[i] += wake->y[index] * density->y[j] * density->xDelta;
     }
   }
 
@@ -757,9 +811,12 @@ void getPotentialDistortion( FUNCTION *potentialDistortion,
   
 /* potential at synchronous phase and middle of original
    density distribution is defined to be zero */
+/*
+  P0 = potentialDistortion->y[-potentialDistortion->offset];
   for (i=0; i<potentialDistortion->points; i++) {
-    potentialDistortion->y[i] -= potentialDistortion->y[potentialDistortion->offset];
+    potentialDistortion->y[i] -= P0;
   }
+*/
 }
 
 void getPotentialDistortionFromModel( FUNCTION *potentialDistortion,
@@ -922,3 +979,28 @@ void printFunction( char *label, FUNCTION *data) {
     fprintf( stderr, "\t%s.y[%ld]: %g\n", label, i, data->y[i]);
   }
 }
+
+void makeBBRWakeFunction(FUNCTION *wake, double dt, long points, 
+                         double Q, double R, double omega, double rw, double T0)
+{
+  double Qp, omegap, t;
+  long i;
+  
+  wake->xStart = 0;
+  wake->xDelta = dt;
+  wake->points = points;
+  wake->offset = 0;
+  wake->xFactor = wake->yFactor = 1;
+  
+  Qp = sqrt(Q*Q-0.25);
+  omegap = omega*Qp/Q;
+  
+  wake->y = tmalloc(sizeof(*(wake->y))*points);
+  for (i=0; i<points; i++) {
+    t = i*dt;
+    wake->y[i] = (omega*R/Q)*exp(-omega*t/(2*Q))*(cos(omegap*t) - sin(omegap*t)/(2*Qp));
+  }
+  if (rw)
+    wake->y[0] += rw/dt;
+}
+
