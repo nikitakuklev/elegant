@@ -132,7 +132,7 @@ CLAPACK = 0
 #This may make it harder for outside users to compile elegant but they
 #can always turn if off if they want
 ifdef WIN32
-CLAPACK = 0
+CLAPACK = 1
 endif
 
 SUNPERF = 0
