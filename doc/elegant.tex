@@ -17,18 +17,25 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 16.1.7\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
+\author{Program Version 17.1\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
 \maketitle
 
-\section{Highlights of What's New in Version 16.1.7}
+\section{Highlights of What's New in Version 17.1}
 
-This is mostly a minor bug-fix release, with one new element ({\tt
-ILMATRIX}). The most significant change as of version 16.1.7 is that a
-parallel version ({\tt Pelegant}) is supported in this release.  All
-single-particle dynamics have been parallelized.
+This release is a fairly major one, particularly with respect to the
+degree of parallelization of collective effects, thanks to on-going
+work by Yusong Wang.  Parallelization now includes wakefields and
+coherent synchrotron radiation, in addition to the single-particle
+dynamics that was parallelized in the previous release.  Elements that
+support parallel computation are indicated on the individual manual pages.
+Just under 80\% of the elements have been parallelized at this time.
+Elements that are not yet parallelized can still be used as part of a
+parallel run, but the computations for those elements are done in serial mode.
 
-Here is a summary of what's changed since release 16.0.1.  For details
-and references, see the specific entries in the manual.
+In addition, several serious bugs were found and fixed, and numerous
+improvements were made.  Here is a summary of what's changed since
+release 16.1.7.  For details and references, see the specific entries
+in the manual.
 
 \subsection{Known Bugs and Problems}
 \begin{itemize}
@@ -42,57 +49,77 @@ and references, see the specific entries in the manual.
 
 \subsection{Bugs Fixes for Commands}
 \begin{itemize}
-\item For the {\tt twiss\_output} command, the previous version gave incorrect results for the
- {\tt couplingIntegral} and {\tt emittanceRatio} values.  In addition, solenoid elements were
- ignored, but are now included.
-\item Fixed a bug in the lattice parser that resulted in a crash when a value was missing for a parameter.
-\item Previously, the {\tt momentum\_aperture} command would not work correctly for runs with multiple steps.
- This bug was discovered by H. Shang (APS) and has been fixed.
-\item Fixed a bug in chromaticity correction when \verb|link_elements| was used.  The chromaticity correction
- matrix was sometimes wrong and the correction would not converge.  This bug was discovered by A. Xiao (APS).
-\item Fixed a bug in Twiss parameter output when \verb|link_elements| was used to change element lengths.
- The \verb|s| values in the file were sometimes wrong.
+\item Fixed bug in {\tt load\_parameters} that resulted in slow loading of data when a
+ specific occurrence of an element was not found.
+\item Fixed bug in lost-particle saving (via the {\tt run\_setup} command), which was
+ introduced in version 16.1.7.  The bug resulted in a crash of the program.
 \end{itemize}
 
 \subsection{Bug Fixes for Elements}
 \begin{itemize}
-\item Added code to ensure that the histogram time span is twice the bunch length for ZLONGIT and ZTRANSVERSE
- elements, to prevent wrap-around issues, although these were very unlikely in previous versions if reasonably
- good frequency resolution was used.
+\item A lattice file parser bug was fixed.  Previously, elements with
+  the same name as a beamline and beamlines with the same name as an
+  element were allowed, resulting in incorrect saved files in some
+  cases.  The program now issues an error message and exits when
+  duplicate definitions are encountered.
+\item Fixed problems with single-pass mode of the {\tt RFMODE}, {\tt TRFMODE},
+  {\tt FRFMODE}, and {\tt FTRFMODE} elements.  Previous versions used an uninitialized
+  variable and may give unreliable results depending on the compiler.
+\item The {\tt TRFMODE} element now includes the longitudinal voltage (a very small effect in
+ most cases).
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item Added the {\tt ILMATRIX} element, which allows fast tracking in periodic systems using an Individual
- Linear Matrix for each particle.  The matrix has momentum and amplitude dependence via coefficients (e.g.,
- chromaticity, tune-shift-with-amplitude) specified by the user.  This was inspired by requests from Y. Chae (APS).
-\item Added start-pass, gradual ramp-on, and high-frequency cut-off filters to the ZLONGIT and ZTRANSVERSE elements.
- These features were requested by Y. Chae (APS).
+\item The {\tt RFDF} element (RF deflector) was upgraded to include the longitudinal
+ field and to treat standing-wave deflectors.  It also now
+ supports the same modulation and noise features as {\tt RFTM110}.
+\item The {\tt RFMODE}, {\tt TRFMODE}, {\tt FRFMODE}, and {\tt FTRFMODE} now support ramping 
+ of the impedance, which helps to reduce transient effects.  This was requested by Y. Chae (ANL)
+ based on ideas from M. Blaskiewicz (BNL).
+\item Added ``binless'' mode for {\tt RFMODE} and {\tt TRFMODE}, which is much faster than 
+ the histogram-based method for beams with trains of bunches.
+\item Added distribution-based synchrotron radiation to the {\tt CSBEND} element.  This provides
+ a more fundamental simulation of quantum excitation, in that accurate photon energy, number,
+ and angular distributions are used.  (Even so, little difference is seen from the previous 
+ model based on guassian distributions.)
+\item Added the {\tt RECORD} and {\tt SAMPLE\_INTERVAL} features to {\tt TRFMODE}, allowing
+ output of the mode voltage and other data.
+\item Added the {\tt MAX\_BINS} feature to {\tt ZLONGIT} and {\tt ZTRANSVERSE}, to permit 
+ use of an excessive number of bins.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item Added descriptive text to the SDDS files for quantities in the {\tt sigma}, {\tt centroid},
-  and {\tt final} output files.
-\item Increased the maximum length of the name for an element from 8 to 100 characters.  This was requested
- by R. Bosch (SRC).
-\item The {\tt twiss\_analysis} command now creates quantities for the dispersion slope and alpha.
- Twiss analysis is no longer length-weighted, since this doesn't work when averaging over markers. 
- Verbosity control was added to aid in confirming the elements included in the analysis.
-\item The {\tt track}  command now has a parameter (\verb|stop_tracking_particle_limit|) that can be
- used to tell {\tt elegant} to stop tracking when the number of particles falls below a preset limit.
+\item The {\tt rpn\_load} command was added, which helps in multi-stage optimization by allowing
+ loading and selection of data from SDDS files into the RPN variables that can be used in
+ optimization expressions.
+\item The {\tt optimization\_setup} command now allows specifying that the random number generator
+ shall be reset to the user-specified seed at the start of every function evaluation. In addition, initial
+ values of variable and covariable parameters are now available in RPN variables for use in expressions.
+\item The {\tt load\_parameters} commands now limits the number of warnings about missing parameters
+ to 100, after which warnings are suppressed.
+\item The {\tt momentum\_aperture} command now supports fiducialization of the beamline momentum profile
+ before determining the momentum aperture.  This is useful when there is acceleration or energy loss
+ due to radiation.
 \end{itemize}
 
 \subsection{Changes and Additions to Related Programs}
 
 \begin{itemize}
-\item The program {\tt touschekLifetime} was added.  It uses Piwinski's formalism to compute the Touschek
- lifetime from {\tt elegant}'s momentum aperture and twiss parameter output.  It was written by A. Xiao (ANL).
-\item The GUI {\tt elegantRingAnalysis} now supports addition of errors to many calculations.  The interface was
-  also improved using nest tabs.  This was done by H. Shang (APS).
-\item The program {\tt sddsurgent} had a bug in the pipe option, which was fixed along with some other bugs.  The maximum size of 
-  the grids was increased from 50x50 to 500x500.  This was done by X. Jiao (APS).
+\item {\tt beamLifetimeCalc}: When solving the Haissinski equation for the bunch length, the momentum 
+ compaction entered into the GUI now overrides the value from the lattice file.
+\item {\tt elegantRingAnalysis}:  Errors are now implemented in a global fashion that may be applied to many calculation types.
+\item {\tt touscheckLifetime}: This new program (by A. Xiao) computes the Touschek lifetime using Piwinski's formalism.
+ It takes twiss parameter and s-dependent momentum-aperture data from {\tt elegant}.
 \end{itemize}
+
+\section{Credits}
+
+Contributors to {\tt elegant} include M. Borland, V. Sajaev, Y. Wang, Y.Wu, and A. Xiao.
+Contributors to related programs include M. Borland, R. Dejus, L. Emery, and H. Shang.
+R. Soliday is responsible for multi-platform builds and distribution.
+Of course, we also appreciate the many suggestions, comments, and bug reports from users.
 
 \section{Introduction}
 
@@ -1737,6 +1764,7 @@ number of the occurrence of the named element from which to start.
     double s_start = 0;
     double s_end = DBL_MAX;
     STRING include_name_pattern = NULL;
+    long fiducialize = 0;
     long verbosity = 0;        
 &end
 \end{verbatim}
@@ -1767,6 +1795,10 @@ directions. Scanning begins at these and moves toward 0.
 \item \verb|include_name_pattern| --- If given, tracking will start
 only at the entrance to elements that match the given wildcard
 pattern.
+\item \verb|fiducialize| --- If given, an initially on-energy particle is tracked before
+ the momentum aperture search begins, in order to fiducialize the reference momentum.
+ This is useful if there are synchrotron radiation losses or energy gain due to cavities
+ in the system.
 \item \verb|verbosity| --- Larger values result in more detailed
 printouts as calculations proceed.  Mostly for debugging.
 \end{itemize}
@@ -1936,6 +1968,7 @@ form \verb|<element-name>.<parameter-name>|, in all capital letters.
     double simplex_pass_range_factor = 1;
     long include_simplex_1d_scans = 1;
     long start_from_simplex_vertex1 = 0;
+    long restart_random_numbers = 0;
 &end
 \end{verbatim}
 
@@ -1946,7 +1979,10 @@ variables and the ``final'' parameters of the beam (as recorded in the
 \verb|final| output file available in the \verb|run_setup| namelist).
 The optimization variables or covariables may appear in the equation
 in the form \verb|<element-name>.<parameter-name>|, all in capital
-letters.  Data from MARK elements with FITPOINT=1 may be used via
+letters.  In addition, initial values of variables and covariables
+are available in the form \verb|<element-name>.<parameter-name>0|.
+
+Data from MARK elements with FITPOINT=1 may be used via
 symbols of the form
 \verb|<element-name>#<occurrence-number>.<parameter-name>|, where
 \verb|<parameter-name>| can be a Twiss parameter name (if the twiss
@@ -2098,6 +2134,10 @@ a significant difference in the optimization speed.
 \item \verb|start_from_simplex_vertex1| --- If nonzero, optimizer uses the initial simplex vertex as the
  starting point for each new 1d scan.  Otherwise, it uses the result of the previous scan.
 
+\item \verb|restart_random_numbers| --- If nonzero, the random number generators used by {\tt elegant} are
+ reset for each evaluation of the optimization function.  This is valuable if one is optimizing tracking
+ results that involve random processes (e.g., ISR or scattering).
+
 \end{itemize}
 
 \begin{latexonly}
@@ -2210,6 +2250,73 @@ equal, the range of the parameter is unlimited.
 \begin{itemize}
 \item \verb|expression| --- An {\tt rpn} expression.  This expression is executed immediately and can be
 used, for example, to read in {\tt rpn} commands from a file or store values in {\tt rpn} memories.
+\end{itemize}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|rpn_load|}\end{center}
+\end{latexonly}
+\subsection{rpn\_load}
+
+\begin{itemize}
+\item type: action/setup command.
+\item function: load data from SDDS file into RPN variables.
+\end{itemize}
+
+\begin{verbatim}
+&rpn_load
+    STRING tag = NULL;
+    STRING filename = NULL;
+    STRING match_column = NULL;
+    STRING match_column_value = NULL;
+    long matching_row_number = -1;
+    STRING match_parameter = NULL;
+    STRING match_parameter_value = NULL;
+    long use_row = -1;
+    long use_page = -1;
+&end
+\end{verbatim}
+
+This command is used to facilitate multi-stage optimization runs by allowing convenient
+loading of data from SDDS files into RPN variables.  For example, one may match the
+final Twiss parameters of a lattice to the parameters stored in an SDDS file from
+a different run.
+
+\begin{itemize}
+
+\item \verb|tag| --- A string that will be pre-pended to the names of all the numerical columns 
+ in the file in order to create RPN variable names.  E.g., if the input file was from the
+ \verb|twiss_output| command and \verb|tag = tw1| was given, then RPN variables 
+ \verb|tw1.betax|, \verb|tw1.alphax|, etc. would be used.
+
+\item verb|filename| --- The (incomplete) name of the SDDS file from which to read data.
+    By default, data is taken from all columns from the last row of the last page of the file.
+    This default behavior can be altered using one or more of the following parameters:
+\begin{itemize}
+    
+\item \verb|match_column| --- The name of a string column to use in selecting the row from
+ which data will be taken.
+
+\item  \verb|match_column_value| --- The value that the column named by \verb|match_column| must
+ have to be selected from the file.  By default, the last row with a matching value is used.
+
+\item \verb|matching_row_number| --- If a nonnegative value is given, then the \verb|matching_row_number|$^{th}$
+ matching row is selected (0 is the first row, 1 the second, etc).  Otherwise, the last match row is used.  Ignored if \verb|match_column| is not
+ given.
+
+\item \verb|match_parameter| --- The name of a string parameter to use in selecting the page
+ from which data will be taken.  
+
+\item \verb|match_parameter_value| --- The value that the parameter named by \verb|match_parameter| must
+ have to be selected from the file.  By default, the last page with a matching value is used.
+
+\item \verb|use_row| --- If nonnegative, specifies the row number to use, starting at 0 for the first row.
+ Ignored if \verb|match_column| is given.
+
+\item \verb|use_page| --- If nonnegative, specifies the page number to use, starting at 1 for the first page.
+ Takes precedence over \verb|\match_parameter| if both are given.
+
+\end{itemize}
 \end{itemize}
 
 \begin{latexonly}

@@ -51,3 +51,10 @@ The edge effects are turned off for the edges between successive {\tt B1PART} el
 This is done only for successive dipoles with the same name and when there
 are no intervening elements.
 
+Incoherent synchrotron radiation, when requested with {\tt ISR=1},
+normally uses gaussian distributions for the excitation of the electrons.
+Setting {\tt USE\_RAD\_DIST=1} invokes a more sophisticated algorithm that
+uses correct statistics for the photon energy and number distributions.
+In addition, if {\tt USE\_RAD\_DIST=1} one may also set {\tt ADD\_OPENING\_ANGLE=1},
+which includes the photon angular distribution when computing the effect on 
+the emitting electron.  
