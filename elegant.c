@@ -1142,6 +1142,8 @@ char **argv;
         }
         if (do_response_output)
           run_response_output(&run_conditions, beamline, &correct, 1);
+        if (parameters)
+          dumpLatticeParameters(parameters, &run_conditions, beamline);
         switch (commandCode) {
         case FIND_APERTURE:
           do_aperture_search(&run_conditions, &run_control, starting_coord,
@@ -1171,6 +1173,8 @@ char **argv;
       }
       if (do_closed_orbit)
         finish_clorb_output();
+      if (parameters)
+        finishLatticeParametersFile();
 #ifdef SUNOS4
       check_heap();
 #endif
