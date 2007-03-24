@@ -1081,6 +1081,16 @@ void reset_special_elements(LINE_LIST *beamline, long includeRF)
               ((RFCW*)eptr->p_elem)->rfca.fiducial_seen = 0;
             }
             break;
+          case T_RFDF:
+            if (includeRF) {
+              ((RFDF*)eptr->p_elem)->fiducial_seen = 0;
+            }
+            break;
+          case T_RFTM110:
+            if (includeRF) {
+              ((RFTM110*)eptr->p_elem)->fiducial_seen = 0;
+            }
+            break;
           case T_MODRF:
             if (includeRF) {
               ((MODRF*)eptr->p_elem)->fiducial_seen = 0;

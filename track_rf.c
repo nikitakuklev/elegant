@@ -53,7 +53,7 @@ void track_through_rf_deflector(
     return;
   }
 
-  if (!rf_param->initialized)
+  if (!rf_param->initialized || !rf_param->fiducial_seen)
       set_up_rfdf(rf_param, initial, n_particles, pc_central);
 
   gamma = sqrt(sqr(pc_central)+1);
@@ -212,7 +212,7 @@ void track_through_rftm110_deflector(
   if (rf_param->voltage==0)
     return;
 
-  if (!rf_param->initialized) 
+  if (!rf_param->initialized || !rf_param->fiducial_seen) 
     set_up_rftm110(rf_param, initial, n_particles, pc_central);
 
   gamma = sqrt(sqr(pc_central)+1);
@@ -328,6 +328,42 @@ void set_up_rftm110(RFTM110 *rf_param, double **initial, long n_particles, doubl
   double error = 0.0; 
 #endif
 
+  if (!rf_param->fiducial_seen) {
+    if (isSlave || !notSinglePart) {
+      for (ip=rf_param->t_first_particle=0; ip<n_particles; ip++) {
+        pc = pc_central*(1+initial[ip][5]);
+        beta = pc/sqrt(1+sqr(pc));
+#ifndef USE_KAHAN
+        rf_param->t_first_particle += initial[ip][4]/beta/c_mks;
+#else
+        rf_param->t_first_particle = KahanPlus(rf_param->t_first_particle, initial[ip][4]/beta/c_mks, &error); 
+#endif
+      }
+    }
+#if USE_MPI
+    if (USE_MPI && notSinglePart) {
+      long n_total;
+      double tmp;
+      if (isMaster) {
+        n_particles = 0;
+        rf_param->t_first_particle = 0.0;
+      }
+#ifndef USE_KAHAN 
+      MPI_Allreduce(&(rf_param->t_first_particle), &tmp, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      rf_param->t_first_particle = tmp;
+#else
+      rf_param->t_first_particle = KahanParallel(rf_param->t_first_particle, error, MPI_COMM_WORLD); 
+#endif
+      
+      MPI_Allreduce(&n_particles, &n_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+      n_particles = n_total; 
+    }
+#endif
+    if (n_particles)
+      rf_param->t_first_particle /= n_particles;
+    rf_param->fiducial_seen = 1;
+  }
+  
   if (rf_param->initialized)
     return;
 
@@ -355,39 +391,6 @@ void set_up_rftm110(RFTM110 *rf_param, double **initial, long n_particles, doubl
 	   tContext.elementName);
     exit(1);
   }
-
-  if (isSlave || !notSinglePart) {
-    for (ip=rf_param->t_first_particle=0; ip<n_particles; ip++) {
-      pc = pc_central*(1+initial[ip][5]);
-      beta = pc/sqrt(1+sqr(pc));
-#ifndef USE_KAHAN
-      rf_param->t_first_particle += initial[ip][4]/beta/c_mks;
-#else
-      rf_param->t_first_particle = KahanPlus(rf_param->t_first_particle, initial[ip][4]/beta/c_mks, &error); 
-#endif
-    }
-  }
-#if USE_MPI
-  if (USE_MPI && notSinglePart) {
-    long n_total;
-    double tmp;
-    if (isMaster) {
-      n_particles = 0;
-      rf_param->t_first_particle = 0.0;
-    }
-#ifndef USE_KAHAN 
-    MPI_Allreduce(&(rf_param->t_first_particle), &tmp, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    rf_param->t_first_particle = tmp;
-#else
-    rf_param->t_first_particle = KahanParallel(rf_param->t_first_particle, error, MPI_COMM_WORLD); 
-#endif
- 
-    MPI_Allreduce(&n_particles, &n_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
-    n_particles = n_total; 
-  }
-#endif
-  if (n_particles)
-    rf_param->t_first_particle /= n_particles;
 
   rf_param->initialized = 1;
 
@@ -424,6 +427,43 @@ void set_up_rfdf(RFDF *rf_param, double **initial, long n_particles, double pc_c
   double error = 0.0; 
 #endif
 
+  if (!rf_param->fiducial_seen) {
+    if (isSlave || !notSinglePart) {
+      for (ip=rf_param->t_first_particle=0; ip<n_particles; ip++) {
+        pc = pc_central*(1+initial[ip][5]);
+        beta = pc/sqrt(1+sqr(pc));
+#ifndef USE_KAHAN
+        rf_param->t_first_particle += initial[ip][4]/beta/c_mks;
+#else
+        rf_param->t_first_particle = KahanPlus(rf_param->t_first_particle, initial[ip][4]/beta/c_mks, &error); 
+#endif
+      }
+    }
+#if USE_MPI
+    if (USE_MPI && notSinglePart) {
+      long n_total;
+      double tmp;
+      if (isMaster) {
+        n_particles = 0;
+        rf_param->t_first_particle = 0.0;
+      }
+#ifndef USE_KAHAN 
+      MPI_Allreduce(&(rf_param->t_first_particle), &tmp, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      rf_param->t_first_particle = tmp;
+#else
+      rf_param->t_first_particle = KahanParallel(rf_param->t_first_particle, error, MPI_COMM_WORLD); 
+#endif
+      
+      MPI_Allreduce(&n_particles, &n_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+      n_particles = n_total; 
+    }
+#endif
+    if (n_particles)
+      rf_param->t_first_particle /= n_particles;
+    rf_param->fiducial_seen = 1;
+  }
+  
+
   if (rf_param->initialized)
     return;
 
@@ -451,39 +491,6 @@ void set_up_rfdf(RFDF *rf_param, double **initial, long n_particles, double pc_c
 	   tContext.elementName);
     exit(1);
   }
-
-  if (isSlave || !notSinglePart) {
-    for (ip=rf_param->t_first_particle=0; ip<n_particles; ip++) {
-      pc = pc_central*(1+initial[ip][5]);
-      beta = pc/sqrt(1+sqr(pc));
-#ifndef USE_KAHAN
-      rf_param->t_first_particle += initial[ip][4]/beta/c_mks;
-#else
-      rf_param->t_first_particle = KahanPlus(rf_param->t_first_particle, initial[ip][4]/beta/c_mks, &error); 
-#endif
-    }
-  }
-#if USE_MPI
-  if (USE_MPI && notSinglePart) {
-    long n_total;
-    double tmp;
-    if (isMaster) {
-      n_particles = 0;
-      rf_param->t_first_particle = 0.0;
-    }
-#ifndef USE_KAHAN 
-    MPI_Allreduce(&(rf_param->t_first_particle), &tmp, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    rf_param->t_first_particle = tmp;
-#else
-    rf_param->t_first_particle = KahanParallel(rf_param->t_first_particle, error, MPI_COMM_WORLD); 
-#endif
- 
-    MPI_Allreduce(&n_particles, &n_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
-    n_particles = n_total; 
-  }
-#endif
-  if (n_particles)
-    rf_param->t_first_particle /= n_particles;
 
   rf_param->initialized = 1;
 

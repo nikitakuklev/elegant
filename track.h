@@ -1098,7 +1098,7 @@ typedef struct {
   long voltageNoiseGroup, phaseNoiseGroup;
   /* for internal use only */
   double t_first_particle;        
-  long initialized;             
+  long initialized, fiducial_seen;
   double Ts;                          /* accumulated time-of-flight of central particle */
   double *t_Vf, *Vfactor, VPeriod;    /* (time, V/volt) pairs */
   double V_tFinal, V_tInitial;
@@ -1120,7 +1120,7 @@ typedef struct {
   long voltageNoiseGroup, phaseNoiseGroup;
   /* for internal use only */
   double t_first_particle;        
-  long   initialized;             
+  long   initialized, fiducial_seen;
   double Ts;                          /* accumulated time-of-flight of central particle */
   double *t_Vf, *Vfactor, VPeriod;    /* (time, V/volt) pairs */
   double V_tFinal, V_tInitial;
