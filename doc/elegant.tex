@@ -45,6 +45,11 @@ in the manual.
 	{\em even when these are not calculated}, which is potentially
 	misleading.   The values are zero when the calculation is not
         requested.
+\item Parallel efficiency can depend strongly on the particular problem and
+  the amount of outupt.  For example, a simulation without collective effects and
+  with minimal output will show excellent scaling up to 500 or 1000 processors, while 
+  a simulation dominated by collective effects with frequent output may roll off
+  with only 30 processors.  Work continues to improve the scaling. 
 \end{itemize}
 
 \subsection{Bugs Fixes for Commands}
