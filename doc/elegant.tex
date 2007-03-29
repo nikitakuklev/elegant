@@ -17,10 +17,10 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 17.1\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
+\author{Program Version 17.1.1\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
 \maketitle
 
-\section{Highlights of What's New in Version 17.1}
+\section{Highlights of What's New in Version 17.1.1}
 
 This release is a fairly major one, particularly with respect to the
 degree of parallelization of collective effects, thanks to on-going
@@ -112,6 +112,9 @@ in the manual.
 \subsection{Changes and Additions to Related Programs}
 
 \begin{itemize}
+\item {\tt sddsurgent}: This program was in the previous release, but was undocumented.  It uses algorithms from the programs 
+  US (by R. Dejus) and URGENT (by R. Walker) for computation of undulator
+  radiation properties, including power density and intensity distributions.
 \item {\tt beamLifetimeCalc}: When solving the Haissinski equation for the bunch length, the momentum 
  compaction entered into the GUI now overrides the value from the lattice file.
 \item {\tt elegantRingAnalysis}:  Errors are now implemented in a global fashion that may be applied to many calculation types.
@@ -3220,6 +3223,8 @@ on subsequent pages.
         functions and dispersion.    The beam file
         is of the type written by {\tt elegant} using the {\tt output} field of the {\tt run\_setup}
         command, or the WATCH element.
+\item {\tt sddsurgent} --- Uses algorithms from the programs US (by R. Dejus) and URGENT (by R. Walker) for computation of undulator
+  radiation properties, including power density and intensity distributions.
 \item {\tt sddsrandmult} --- Simulates the effect of random mechanical errors in a quadrupole or sextupole,
   generating multipole error data that can be used with {\tt elegant}'s {\tt KQUAD} and {\tt KSEXT}
   elements.
@@ -3856,6 +3861,132 @@ The namelist command is {\tt perturbations}.  It has the following fields:
 \end{itemize}
 
 \newpage
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|sddsurgent|}\end{center}
+\end{latexonly}
+\subsection{sddsurgent}
+
+\begin{itemize}
+\item {\bf description:} {\tt sddsurgent} uses algorithms from the program
+US (by R. Dejus) and URGENT (by R. Walker) for computation of undulator
+radiation properties, including power density and intensity distributions.
+
+\item {\bf examples:}
+Take particle data from a tracking run and compute the power density using a 1 mm by 1 mm pinhole
+for a 72-period, 3.3-cm-period undulator set for a 5 keV first harmonic.
+\begin{flushleft}{\tt
+sddsanalyzebeam run.out -pipe=out -correctedOnly \\ 
+ | sddsurgent -pipe=in power.sdds -electronbeam=current=0.025 \\
+ -calc=method=dejus,mode=powerDensity -us \\
+ -pinhole=dist=30,xsize=1,ysize=1,xnum=100,ynum=100 \\
+ -undulator=period=0.033,number=72,energy=5e3
+}\end{flushleft}
+
+\item {\bf synopsis:}
+\begin{flushleft}{\tt
+sddsurgent {\em inputFile} {\em outputFile}
+    [-calculation=mode={\em modeString},method={\em methodString},harmonics={\em integer}] 
+    [-undulator=period={\em meters},numberOfPeriods={\em integer},
+      kx={\em value},ky={\em value},phase={\em value},energy={\em eV}] 
+    [-electronBeam=current={\em Amp},energy={\em GeV},spread={\em fraction},
+      xsigma={\em mm},ysigma={\em mm},xprime={\em mrad},yprime={\em mrad},nsigma={\em number}] 
+    [-pinhole=distance={\em m},xposition={\em value},yposition={\em value},
+      xsize={\em value},ysize={\em value},xnumber={\em integer},ynumber={\em integer}]
+    [-alpha=steps={\em integer},delta={\em value}] 
+    [-omega=steps={\em integer},delta={\em value}] [-nphi={\em integer}] 
+    [-us] [-photonEnergy=maximum={\em eV},minimum={\em eV},points={\em number}]
+    [-nowarnings] [-coupling={\em value} | -emittanceRatio={\em value}] 
+}\end{flushleft}
+
+\item {\bf files:}
+\begin{itemize}
+\item {\em inputFile} --- A Twiss output file from {\tt elegant}, with radiation integral 
+calculations included, or an output from {\tt sddsanalyzebeam}. In the latter case, the
+{\tt -correctedOnly} option should be used with {\tt sddsanalyzebeam}.
+\item {\em outputFile} --- Contains the output data, which varies depending on the calculation mode.
+ Use {\tt sddsquery} to view the file contents.
+\end{itemize}
+
+\item {\bf switches:}
+\begin{itemize}
+\item {\tt pipe} --- The standard SDDS Toolkit pipe option.
+\item {\tt -calculation=mode={\em modeString},method={\em methodString},harmonics={\em integer}} ---
+ Choose which calculation to perform and what method to us, as well as the number of undulator harmonics to
+  compute.  Values for {\em modeString} are
+  \begin{itemize}
+    \item {\tt 1 | fluxDistribution}:        Angular/spatial flux density distribution.
+    \item {\tt 2 | fluxSpectrum}:            Angular/spatial flux density spectrum
+    \item {\tt 3 | brightness | brilliance}: On-axis brilliance spectrum
+    \item {\tt 4 | pinholeSpectrum}:         Flux spectrum through a pinhole
+    \item {\tt 5 | integratedSpectrum}:      Flux spectrum integrated over all angles
+    \item {\tt 6 | powerDensity}:            Power density and integrated power
+  \end{itemize}
+  Values for {\em methodString} are
+  \begin{itemize}
+    \item 1:                    Non-zero emittance; finite-N.
+    \item 2:                    Non-zero emittance; infinite-N.
+    \item {\tt 3 | WalkerFinite}:   Zero emittance;     finite-N.
+    \item {\tt 4  | Dejus}:           Non-zero emittance; infinite-N + convolution (Dejus, with {\tt -us} only).
+    \item {\tt 14 | WalkerInfinite}:    Non-zero emittance; infinite-N + convolution (Walker, with {-tt us} only).
+  \end{itemize}
+\item {\tt -emittanceRatio={\em value} | -coupling={\em value}} --- In the case of a twiss
+ output file from {\tt elegant}, which does not contain the vertical emittance, one must
+ supply one of these options.  If {\tt -emittanceRatio={\em R}} is given, $\epsilon_y = \epsilon_0*R$ 
+ and $\epsilon_x = \epsilon_0$. If {\tt -coupling={\em k}} is given, $\epsilon_x = \epsilon_0/(1+k)$
+ and $\epsilon_y = k*\epsilon_x$.  $\epsilon_0$ is the equilibrium emittance from the twiss output
+ of {\tt elegant}.  
+
+ In the case of twiss output from {\tt sddsanalyzebeam}, both emittances are present and these options
+ are ignored.
+\item {\tt undulator=period={\em meters},numberOfPeriods={\em integer},}\\ {\tt kx={\em value},ky={\em value},phase={\em value},energy={\em eV}]} --- 
+ Specify undulator parameters.  If energy (of first-harmonic photons) is given, {\tt kx=0} and {\tt ky} is computed,
+ corresponding to a horizontally deflecting undulator.
+ {\tt phase} specifies the phase difference in degrees for a canted undulator.  
+\item {\tt -electronBeam=current={\em Amps},energy={\em GeV},spread={\em fraction},}\\ {\tt xsigma={\em mm},ysigma={\em mm},xprime={\em mrad},yprime={\em mrad},nsigma={\em number}} specifies electron beam parameters.  Only the current is needed, as other data will be drawn from the input file.
+ \begin{itemize}
+   \item {\tt current} ---  electron beam current in A. (default is 0.1A).
+   \item {\tt energy} ---   electron energy in Gev. (default is 7.0Gev).
+   \item {\tt spread} ---   electron energy spread.
+   \item {\tt xsigma} ---   horizontal RMS beam size (mm)
+   \item {\tt ysigma} ---   vertical RMS beam size (mm)
+   \item {\tt xprime} ---   horizontal RMS divergence (mrad)
+   \item {\tt yprime} ---   vertical RMS divergence (mrad)
+   \item {\tt nsigma} ---   no. of standard deviations of electron beam dimensions
+     (size and divergence) to be included.
+ \end{itemize}
+\item {\tt -pinhole=distance={\em m},xposition={\em value},yposition={\em value},}\\ {\tt xsize={\em value},ysize={\em value},xnumber={\em integer},ynumber={\em integer}} --- Specifies pinhole parameters.
+  Pinhole parameters are not needed for computing on-axis brilliance (i.e., mode=3). 
+  \begin{itemize}
+    \item {\tt distance} ---   distance from the source (m)  (distance=0.0 gives angular flux).
+    \item {\tt xposition} ---  X-coordinate for center of pinhole (mm) or (mrad for distance=0) 
+    \item {\tt yposition} ---  Y-coordinate for center of pinhole (mm) or (mrad for distance=0) 
+    \item {\tt xsize} ---      X-size of pinhole (full width)	(mm) or (mrad for distance=0) 
+    \item {\tt ysize} ---      y-size of pinhole (full width)	(mm) or (mrad for distance=0) 
+    \item {\tt xnumber} ---    Number of subdivisions of pinhole in X (max 500) 
+    \item {\tt ynumber} ---    Number of subdivisions of pinhole in Y (max 500) 
+  \end{itemize}
+\item {\tt nphi={\em number}} --- Specifies number of steps in phi between 0 and $\pi/2$. Must be less than 100.
+  used in (calculation mode=1,2,3,4,5 calculation method=1,2).
+\item {\tt alpha=steps={\em integer},delta={\em value}} --- Specifies the number of steps in angle alpha (gamma*theta) (<100). 
+            Delta specifies range of angles in alpha$^2$ to be used, in units of 
+            the angular equivalent to 1/N. Used in  (mode=1, method=1) and method=3.
+\item {\tt omegasteps={\em integer},delta={\em value}} ---   Specifies the number of steps in 
+            photon energy for the natural lineshape (<5000). 
+            delta specifies range of photon energies to be included in the natural lineshape 
+            in units (energy of fundamental/N).  The default value covers the range $\pm 2/N$
+            of the natural lineshape. 
+            Used in mode=2,3,4,5 method=1. 
+\item {\tt photonEnergy=maximum={\em eV},minimum={\em eV},points={\em number}} --- 
+  Specifies the maximum and minimum photon energy in eV, 
+  and the number of energy points to be computed.
+\end{itemize}
+
+\item {\bf authors:} H. Shang, R. Dejus, M. Borland, X. Jiao (ANL).
+\end{itemize}
+
+\newpage 
+
 \section{Accelerator and Element Description}
 
 As mentioned in the introduction, {\tt elegant} uses a variant of the
