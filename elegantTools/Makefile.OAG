@@ -1,0 +1,88 @@
+#*************************************************************************
+# Copyright (c) 2002 The University of Chicago, as Operator of Argonne
+# National Laboratory.
+# Copyright (c) 2002 The Regents of the University of California, as
+# Operator of Los Alamos National Laboratory.
+# This file is distributed subject to a Software License Agreement found
+# in the file LICENSE that is included with this distribution. 
+#*************************************************************************
+#
+# $Id: Makefile.OAG,v 1.1 2007-03-30 16:50:28 soliday Exp $
+#
+# $Log: not supported by cvs2svn $
+#
+#
+
+#CMPLR = ANSI
+
+#RATIONAL = purify
+#RATIONAL = quantify
+#RATIONAL = purecov
+ifdef RATIONAL
+HOST_OPT = NO
+ifeq ($(EPICS_VERSION).$(EPICS_REVISION),3.13)
+CC = $(RATIONAL) -best-effort $($(ANSI)_$(CMPLR))
+CXX = $(RATIONAL) -best-effort $($(CPLUSPLUS)_$(CXXCMPLR))
+else 
+CC := $(RATIONAL) -best-effort $(CC)
+CCC := $(RATIONAL) -best-effort $(CCC)
+endif
+endif
+
+PRODOAG = sddsemitmeas sddsemitproc sddsTouschekInteg \
+          recurseSetup haissinski sddsmatchtwiss \
+          sddsanalyzebeam sddsrandmult sddsresdiag sddsfindresonances
+
+SCRIPTS = elegantRingAnalysis beamLifetimeCalc fin2param elegant2shower shower2elegant longitCmd longitCalcs
+
+PROD_HOST = $(PRODOAG)
+
+USR_CFLAGS = 	-I$(EPICS_EXTENSIONS)/src/SDDS/include -I$(EPICS_EXTENSIONS_INCLUDE) \
+		-DIEEE_MATH -DzLib
+
+ifdef WIN32
+USR_LIBS = 	mdbcommon matlib fftpack SDDS1 \
+		rpnlib mdbmth namelist mdblib \
+		meschach z fdlibm
+z_DIR = $(EPICS_EXTENSIONS_LIB)
+else
+USR_LIBS = 	mdbcommon matlib fftpack SDDS1 \
+		rpnlib mdbmth namelist mdblib \
+		meschach
+SYS_PROD_LIBS_DEFAULT += z 
+SYS_PROD_LIBS_Linux += z 
+SYS_PROD_LIBS_solaris += z curses rt 
+endif
+
+SDDS1_DIR = $(EPICS_EXTENSIONS_LIB)
+namelist_DIR = $(EPICS_EXTENSIONS_LIB)
+fftpack_DIR = $(EPICS_EXTENSIONS_LIB)
+mdbmth_DIR = $(EPICS_EXTENSIONS_LIB)
+matlib_DIR = $(EPICS_EXTENSIONS_LIB)
+mdblib_DIR = $(EPICS_EXTENSIONS_LIB)
+mdbcommon_DIR = $(EPICS_EXTENSIONS_LIB)
+rpnlib_DIR = $(EPICS_EXTENSIONS_LIB)
+meschach_DIR = $(EPICS_EXTENSIONS_LIB)
+fdlibm_DIR = $(EPICS_EXTENSIONS_LIB)
+
+
+sddsemitproc_SRCS = sddsemitproc.c
+
+sddsemitmeas_SRCS = sddsemitmeas.c
+
+sddsrandmult_SRCS = sddsrandmult.c
+
+sddsresdiag_SRCS = sddsresdiag.c
+
+sddsTouschekInteg_SRCS = sddsTouschekInteg.c
+
+recurseSetup_SRCS = recurseSetup.c
+
+haissinski_SRCS = haissinski.c
+
+sddsmatchtwiss_SRCS = sddsmatchtwiss.c
+
+sddsfindresonances_SRCS = sddsfindresonances.c
+
+sddsanalyzebeam_SRCS = sddsanalyzebeam.c
+sddsanalyzebeam_CFLAGS = -I$(EPICS_EXTENSIONS)/src/SDDS/meschach
