@@ -662,7 +662,7 @@ void lorentz_setup(
                     bomb("Newton's method failed to find coordinate fse_opt for NISEPT--decrease accuracy parameter", NULL);
 #endif
                 if (fse_opt==0)
-                    fse_opt = 1./DBL_MAX;
+                    fse_opt = DBL_MIN;
                 fprintf(stdout, "NISEPT fse_opt adjusted to %e to obtain trajectory error of %e\n",
                     fse_opt, nisept_trajectory_error(fse_opt));
                 fflush(stdout);

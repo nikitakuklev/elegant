@@ -1714,7 +1714,7 @@ double find_acceptance(
         b = ((ECOL*)ap_elem->p_elem)->y_max;
       }
       if ((aperture = sqr(a)*(1 - sqr(other_centroid/b)))<0)
-        aperture = 1/DBL_MAX;
+        aperture = DBL_MIN;
       else
         aperture = sqrt(aperture);
       break;
@@ -1740,7 +1740,7 @@ double find_acceptance(
     default:
       if (a_tube && b_tube) {
         if ((aperture = sqr(a_tube)*(1-sqr(other_centroid/b_tube)))<0)
-          aperture = 1/DBL_MAX;
+          aperture = DBL_MIN;
         else
           aperture = sqrt(aperture);
       }
