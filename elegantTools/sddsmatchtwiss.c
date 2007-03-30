@@ -14,6 +14,9 @@
  * Michael Borland, 2000
  *
  $Log: not supported by cvs2svn $
+ Revision 1.1  2007/03/30 16:50:29  soliday
+ Moved from directory above.
+
  Revision 1.21  2007/03/16 02:07:27  borland
  Added option to specify geometric emittance.
 
@@ -105,7 +108,7 @@ char *option[N_OPTIONS] = {
   "zplane",
 } ;
 
-char *USAGE="sddsmatchtwiss [-pipe=[input][,output]] [<SDDSinputfile>] [<SDDSoutputfile>]\n\
+char *USAGE1="sddsmatchtwiss [-pipe=[input][,output]] [<SDDSinputfile>] [<SDDSoutputfile>]\n\
   [-xPlane=[beta=<meters>,alpha=<value>][,{nemittance=<meters>|emittance=<meters>}]\n\
            [,etaValue=<meters>][,etaSlope=<value>]\n\
            [,filename=<filename>[,element=<name>[,occurrence=<number>]]]]\n\
@@ -115,8 +118,8 @@ char *USAGE="sddsmatchtwiss [-pipe=[input][,output]] [<SDDSinputfile>] [<SDDSout
   [-zPlane=[deltaStDev=<value>][,tStDev=<seconds>]\n\
            [,{correlation=<seconds>|alpha=<value>}][,chirp=<1/seconds>]\n\
            [,betaGamma=<central-value>]]\n\
-  [-nowarnings] [-oneTransform]\n\
-The input file must have columns x, xp, y, yp, and p; for example, an\n\
+  [-nowarnings] [-oneTransform]\n";
+char *USAGE2="The input file must have columns x, xp, y, yp, and p; for example, an\n\
 elegant beam output file is acceptable.  If filename is not given, then\n\
 beta and alpha must be given together, or omitted together.  etaValue \n\
 and etaSlope may be given individually or together.  If etaValue is not \n\
@@ -136,7 +139,7 @@ in x and y planes while the absolute momentum spread is preserved in\n\
 the longitudinal plane.\n\
 If -oneTransform is given, then the transformation is computed for the\n\
 first page only, then reused for all subsequent pages.\n\n\
-Program by Michael Borland.  (This is version 5, January 2002.)\n";
+Program by Michael Borland.  ("__DATE__")\n";
 
 typedef struct {
   double beta, alpha, eta, etap, normEmittance, emittance;
@@ -190,8 +193,10 @@ int main(int argc, char **argv)
   
   SDDS_RegisterProgramName(argv[0]);
   argc = scanargs(&s_arg, argc, argv);
-  if (argc<2) 
-    bomb(NULL, USAGE);
+  if (argc<2) {
+    fprintf(stderr, "%s%s\n", USAGE1, USAGE2);
+    return(1);
+  }
 
   inputfile = outputfile = NULL;
   pipeFlags = noWarnings = 0;

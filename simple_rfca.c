@@ -421,7 +421,7 @@ long trackRfCavityWithWakes
       }
     }
     if (nKicks>0) {
-#if (USE_MPI)
+#if (USE_MPI) || defined(_WIN32)
       double *inverseF;
       inverseF = tmalloc(sizeof(*inverseF)*np);
 #else
@@ -527,7 +527,7 @@ long trackRfCavityWithWakes
           }
         }
       }
-#if (USE_MPI)
+#if (USE_MPI) || defined(_WIN32)
       free(inverseF); 
 #endif
     } else {
