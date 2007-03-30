@@ -71,6 +71,7 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
     chrom->sextupole_tweek = sextupole_tweek;
     chrom->tolerance = tolerance;
     verbosityLevel = verbosity;
+    chrom->exit_on_failure = exit_on_failure;
     
     if (!use_perturbed_matrix) {
       if (!beamline->twiss0 || !beamline->matrix) {
@@ -494,8 +495,16 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
                                beamline->waists, NULL, beamline->elem_twiss, run, clorb,
 			       beamline->couplingFactor);
     log_exit("do_chromaticity_correction");
-    return 1;
+
+    if (chrom->tolerance>0 &&
+        (chrom->tolerance<fabs(dchromx) || chrom->tolerance<fabs(dchromy))
+        && chrom->exit_on_failure) {
+      fprintf(stdout, "Chromaticity correction failure---exiting!\n");
+      exit(1);
     }
+
+    return 1;
+  }
 
 void computeChromaticities(double *chromx, double *chromy, 
                            double *dbetax, double *dbetay,
