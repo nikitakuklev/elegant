@@ -7,10 +7,13 @@
 # in the file LICENSE that is included with this distribution. 
 #*************************************************************************
 #
-# $Id: Makefile,v 1.11 2007-02-08 17:09:54 ywang25 Exp $
+# $Id: Makefile,v 1.12 2007-03-30 16:55:00 soliday Exp $
 #
 #  Lowest Level Directroy Makefile
 # $Log: not supported by cvs2svn $
+# Revision 1.11  2007/02/08 17:09:54  ywang25
+# Impoved Makefile to build Pelegant and elegant more conveniently.
+#
 # Revision 1.10  2006/03/23 00:05:45  borland
 # Added coupled twiss parameter computation using code by V. Sajaev.
 # Added momentum aperture computation to elegantRingAnalysis.
@@ -59,9 +62,6 @@ else
 include $(TOP)/configure/CONFIG
 include $(TOP)/src/elegant/Makefile.OAG
 include $(TOP)/configure/RULES
-
-sddsbrightness$(OBJ):
-	$(MAKE) -f ../Makefile.Host.brightness
 
 alter$(OBJ): alter.h
 
@@ -243,11 +243,6 @@ fitTraces$(OBJ): fitTraces.h
 fitTraces.h: ../fitTraces.nl
 	nlpp ../fitTraces.nl fitTraces.h
 
-sddsrandmult$(OBJ): sddsrandmult.h
-
-sddsrandmult.h: ../sddsrandmult.nl
-	nlpp ../sddsrandmult.nl sddsrandmult.h
-
 elegantLocation = $(wildcard ../../bin/linux-x86/elegant elegant)
 PelegantLocation = $(wildcard ../../bin/linux-x86/Pelegant Pelegant)
 
@@ -319,5 +314,5 @@ endif
 
 
 clean::
-	$(RM) sddsrandmult.h fitTraces.h vary.h twiss.h tune.h trace.h subprocess.h steer_elem.h sliceAnalysis.h sdds_beam.h save_lattice.h sasefel.h run_rpnexpr.h response.h optimize.h optim_covariable.h matrix_output.h load_parameters.h link_elements.h frequencyMap.h floor.h error.h elegant.h transmuteElements.h divideElements.h correct.h steer_elem.h closed_orbit.h chrom.h bunched_beam.h aperture_search.h analyze.h amplif.h alter.h insertSCeffects.h momentumAperture.h aperture_data.h
+	$(RM) fitTraces.h vary.h twiss.h tune.h trace.h subprocess.h steer_elem.h sliceAnalysis.h sdds_beam.h save_lattice.h sasefel.h run_rpnexpr.h response.h optimize.h optim_covariable.h matrix_output.h load_parameters.h link_elements.h frequencyMap.h floor.h error.h elegant.h transmuteElements.h divideElements.h correct.h steer_elem.h closed_orbit.h chrom.h bunched_beam.h aperture_search.h analyze.h amplif.h alter.h insertSCeffects.h momentumAperture.h aperture_data.h
 
