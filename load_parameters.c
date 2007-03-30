@@ -325,7 +325,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
       if (verbose)
 	fprintf(stdout, "Using occurence data.\n");
       if (SDDS_GetColumnIndex(&load_request[i].table, Occurence_ColumnName)>=0) {
-        if (!(occurence = (long *)SDDS_GetColumn(&load_request[i].table, Occurence_ColumnName))) {
+        if (!(occurence = (int32_t *)SDDS_GetColumn(&load_request[i].table, Occurence_ColumnName))) {
           fprintf(stdout, "Error: problem accessing data from load_parameters file %s\n", load_request[i].filename);
           fflush(stdout);
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);

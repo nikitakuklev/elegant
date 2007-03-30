@@ -230,6 +230,16 @@ set_fpu (unsigned int mode)
 }
 #endif
  
+int run_coupled_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord);
+void finish_coupled_twiss_output();
+void run_rpn_load(NAMELIST_TEXT *nltext, RUN *run);
+void setupLinearChromaticTracking(NAMELIST_TEXT *nltext, LINE_LIST *beamline);
+void setup_coupled_twiss_output(NAMELIST_TEXT *nltext, RUN *run, 
+                                LINE_LIST *beamline, long *do_coupled_twiss_output,
+                                long default_order);
+
+
+
 int main(argc, argv)
 int argc;
 char **argv;
@@ -842,7 +852,7 @@ char **argv;
           continue;
         }
         if (do_coupled_twiss_output &&
-            !run_coupled_twiss_output(&run_conditions, beamline, starting_coord) &&
+            run_coupled_twiss_output(&run_conditions, beamline, starting_coord) &&
             !soft_failure) {
           fprintf(stdout, "Coupled twiss parameters computation failed\n");
           fflush(stdout);
@@ -1134,8 +1144,8 @@ char **argv;
           fflush(stdout);
           continue;
         }
-        if (do_coupled_twiss_output && 
-            !run_coupled_twiss_output(&run_conditions, beamline, starting_coord) &&
+        if (do_coupled_twiss_output &&
+            run_coupled_twiss_output(&run_conditions, beamline, starting_coord) &&
             !soft_failure) {
           fprintf(stdout, "Coupled twiss parameters calculation failed.\n");
           fflush(stdout);

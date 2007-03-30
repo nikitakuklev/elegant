@@ -116,7 +116,7 @@ void setup_coupled_twiss_output(
 }
 
 
-void run_coupled_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord)
+int run_coupled_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord)
 {
   char JOBVL, JOBVR;
   int N, LDA, LDVL, LDVR, lwork, info, i, j, k;
@@ -134,10 +134,14 @@ void run_coupled_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_co
     fprintf(stdout, "\n* Computing coupled sigma matrix\n");
   
   if (emittances_from_twiss_command) {
-    if (!(beamline->flags&BEAMLINE_TWISS_DONE))
-      bomb("emittances_from_twiss_command was set but twiss calculations not seen", NULL);
-    if (!(beamline->flags&BEAMLINE_RADINT_DONE))
-      bomb("emittances_from_twiss_command was set but radiation integral calculations not seen", NULL);
+    if (!(beamline->flags&BEAMLINE_TWISS_DONE)) {
+      fprintf(stderr, "emittances_from_twiss_command was set but twiss calculations not seen");
+      return(1);
+    }
+    if (!(beamline->flags&BEAMLINE_RADINT_DONE)) {
+      fprintf(stderr, "emittances_from_twiss_command was set but radiation integral calculations not seen");
+      return(1);
+    }
     emit_x = beamline->radIntegrals.ex0;
     sigma_dp = beamline->radIntegrals.sigmadelta;
     if (verbosity>1) 
@@ -231,12 +235,12 @@ void run_coupled_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_co
          (int*)&lwork, (int*)&info);
 #else
   fprintf(stderr, "Error calling dgeev. You will need to install LAPACK and rebuild elegant\n");
-  exit(1);
+  return(1);
 #endif
   if (info != 0) {
     if (info < 0) { printf("Error calling dgeev, argument %d.\n", abs(info)); }
     if (info > 0) { printf("Error running dgeev, calculation of eigenvalue number %d failed.\n", info); }
-    exit(1);
+    return(1);
   }
   if (verbosity > 0) {
     printf("Info: %d ; %f \n", info, work[0]);
@@ -279,8 +283,8 @@ void run_coupled_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_co
   /*--- Prepare the output file */
   if (!SDDS_StartPage(&SDDScoupled, nElements)) {
     fflush(stdout);
-    SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
-    exit(1);
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+    return(1);
   }
   
   /*--- Loop over elements */
@@ -293,8 +297,8 @@ void run_coupled_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_co
     }
 
     if (!eptr->accumMatrix) {
-      fprintf(stdout, "Error: no accumulated matrix found for element %s", eptr->name);
-      exit(1);
+      fprintf(stderr, "Error: no accumulated matrix found for element %s", eptr->name);
+      return(1);
     }
 
     /*--- Reducing matrix dimensions */
@@ -351,8 +355,8 @@ void run_coupled_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_co
                            "xyTilt", 0.5*atan(2*SigmaMatrix[0][2]/(SigmaMatrix[0][0]-SigmaMatrix[2][2])),
                            "Ss", eigenModesNumber==3?sqrt(SigmaMatrix[4][4]):-1,
                            NULL)) {
-      SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
-      exit(1);
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      return(1);
     }
     if (verbosity > 0) {
       printf("SigmaX  = %12.4e, SigmaY  = %12.4e, Beam tilt = %12.4e \n", 
@@ -373,8 +377,8 @@ void run_coupled_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_co
                            "etax", sqrt(Amatrix[2*matDim*matDim]*Amatrix[2*matDim*matDim+4*matDim+4]),
                            "etay", sqrt(Amatrix[2*matDim*matDim+2*matDim+2]*Amatrix[2*matDim*matDim+4*matDim+4]),
                            NULL)) {
-      SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
-      exit(1);
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      return(1);
     }
     
     if (output_sigma_matrix) {
@@ -384,8 +388,8 @@ void run_coupled_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_co
           sprintf(name, "S%d%d", i+1, j+1);
           if (!SDDS_SetRowValues(&SDDScoupled, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
                                  iElement, name, SigmaMatrix[i][j], NULL)) {
-            SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
-            exit(1);
+            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+            return(1);
           }
         }
     }
@@ -406,9 +410,10 @@ void run_coupled_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_co
   }
 
   if (!SDDS_WritePage(&SDDScoupled)) {
-    SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
-    exit(1);
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+    return(1);
   }
+  return(0);
 }
 
 void finish_coupled_twiss_output() 

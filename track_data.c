@@ -1923,14 +1923,14 @@ SCMULT scmult_example;
 PARAMETER scmult_param[N_SCMULT_PARAMS] = {
 };
 */
-#ifdef WIN32
+/*#ifdef WIN32*/
 PARAMETER scmult_param[1] = {
     {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&edrift_example.length), NULL, 0.0, 0, "length"},
 };
-#else
+/*#else
 PARAMETER scmult_param[] = {
 };
-#endif
+#endif*/
 
 ILMATRIX ilmatrix_example;
 PARAMETER ilmatrix_param[N_ILMATRIX_PARAMS]={
