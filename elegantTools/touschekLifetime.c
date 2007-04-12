@@ -9,6 +9,9 @@
 
 /* 
  * $Log: not supported by cvs2svn $
+ * Revision 1.1  2007/04/12 15:57:47  soliday
+ * Added touschekLifetime to elegantTools
+ *
  * Revision 1.4  2006/11/07 02:02:06  borland
  * Will now work if radiation integrals are not present in the Twiss file,
  * provided the appropriate data is given on the commandline.
@@ -591,7 +594,7 @@ double Fvalue (double t, double tm, double b1, double b2)
   c2 = dbesi0(b2*t);
   result = c0 * c1 * c2;
   /* If overflow/underflow use approximate equation for modified bessel function. */
-  if (isnan(result) || result>MAXFLOAT) {
+  if (isnan(result) || result>FLT_MAX) {
     result=c0*exp(b2*t-b1*t)/sqrt(PIx2*b2*t);
   } 
   return result;
