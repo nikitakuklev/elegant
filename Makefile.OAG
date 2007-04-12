@@ -109,6 +109,12 @@ endif
 ifeq ($(EPICS_HOST_ARCH),solaris-sparc)
 MAKE = gnumake
 endif
+ifeq ($(EPICS_HOST_ARCH),solaris-x86)
+MAKE = gmake
+endif
+ifeq ($(EPICS_HOST_ARCH),solaris-x86-gnu)
+MAKE = gmake
+endif
 
 LAPACK = 0
 #Use LAPACK on Linux by default.
