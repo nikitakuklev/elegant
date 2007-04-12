@@ -412,7 +412,12 @@ VMATRIX *solenoid_matrix(double length, double ks, long max_order)
 {
     VMATRIX *M;
     double *C, **R, ***T;
-    double cos_ksl, sin_ksl, ksl, CS, S2, temp;
+    double cos_ksl;
+    double sin_ksl;
+    double ksl;
+    double CS2;
+    double S2;
+    double temp;
     
     log_entry("solenoid_matrix");
     
@@ -435,11 +440,11 @@ VMATRIX *solenoid_matrix(double length, double ks, long max_order)
     C[4] = length;
     
     R[0][0] = R[1][1] = R[2][2] = R[3][3] = sqr(cos_ksl);
-    R[2][0] = R[3][1] = -(R[0][2] = R[1][3] = CS = sin_ksl*cos_ksl);
+    R[2][0] = R[3][1] = -(R[0][2] = R[1][3] = CS2 = sin_ksl*cos_ksl);
     R[4][4] = R[5][5] = 1;
     
-    R[0][1] = R[2][3] = CS/ks;
-    R[1][0] = R[3][2] = -ks*CS;
+    R[0][1] = R[2][3] = CS2/ks;
+    R[1][0] = R[3][2] = -ks*CS2;
     
     S2 = sqr(sin_ksl);
     R[1][2] = -(R[3][0] = ks*S2);
