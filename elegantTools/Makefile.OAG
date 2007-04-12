@@ -7,9 +7,12 @@
 # in the file LICENSE that is included with this distribution. 
 #*************************************************************************
 #
-# $Id: Makefile.OAG,v 1.1 2007-03-30 16:50:28 soliday Exp $
+# $Id: Makefile.OAG,v 1.2 2007-04-12 15:57:46 soliday Exp $
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.1  2007/03/30 16:50:28  soliday
+# Moved from directory above.
+#
 #
 #
 
@@ -31,7 +34,8 @@ endif
 
 PRODOAG = sddsemitmeas sddsemitproc sddsTouschekInteg \
           recurseSetup haissinski sddsmatchtwiss \
-          sddsanalyzebeam sddsrandmult sddsresdiag sddsfindresonances
+          sddsanalyzebeam sddsrandmult sddsresdiag \
+          sddsfindresonances touschekLifetime
 
 SCRIPTS = elegantRingAnalysis beamLifetimeCalc fin2param elegant2shower shower2elegant longitCmd longitCalcs
 
