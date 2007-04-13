@@ -18,9 +18,15 @@
 #include "coupled_twiss.h"
 
 void dgeev_();
+void store_fitpoint_ctwiss_parameters(MARK *fpt, char *name, long occurence,
+                                      double betax1, double betax2,
+                                      double betay1, double betay2,
+                                      double etax, double etay,
+                                      double tilt);
 
 static SDDS_DATASET SDDScoupled;
 static short SDDScoupledInitialized = 0;
+static short initialized = 0;
 
 void SortEigenvalues (double *WR, double *WI, double *VR, int matDim, int eigenModesNumber, int verbosity);
 int GetMaxIndex (double *V, int N);
@@ -45,8 +51,6 @@ void setup_coupled_twiss_output(
 
   if (filename)
     filename = compose_filename(filename, run->rootname);
-  else
-    bomb("supply a filename", NULL);
   
   *do_coupled_twiss_output = output_at_each_step;
   
@@ -60,59 +64,64 @@ void setup_coupled_twiss_output(
     if (emittance_ratio<0)
       bomb("emittance_ratio < 0", NULL);
   }
+
+  if (filename) {
+    if (!SDDS_InitializeOutput(&SDDScoupled, SDDS_BINARY, 0, NULL, NULL, filename) ||
+        !SDDS_DefineSimpleColumn(&SDDScoupled, "ElementName", NULL, SDDS_STRING) ||
+        !SDDS_DefineSimpleColumn(&SDDScoupled, "s", "m", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(&SDDScoupled, "Sx", "m", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(&SDDScoupled, "Sxp", "", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(&SDDScoupled, "Sy", "m", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(&SDDScoupled, "Syp", "", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(&SDDScoupled, "xyTilt", "", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(&SDDScoupled, "Ss", "m", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(&SDDScoupled, "betax1", "m", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(&SDDScoupled, "betax2", "m", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(&SDDScoupled, "betay1", "m", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(&SDDScoupled, "betay2", "m", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(&SDDScoupled, "etax", "m", SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(&SDDScoupled, "etay", "m", SDDS_DOUBLE)) {
+      fprintf(stdout, "Unable to set up file %s\n", filename);
+      fflush(stdout);
+      SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
+      exit(1);
+    }
   
-  if (!SDDS_InitializeOutput(&SDDScoupled, SDDS_BINARY, 0, NULL, NULL, filename) ||
-      !SDDS_DefineSimpleColumn(&SDDScoupled, "ElementName", NULL, SDDS_STRING) ||
-      !SDDS_DefineSimpleColumn(&SDDScoupled, "s", "m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(&SDDScoupled, "Sx", "m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(&SDDScoupled, "Sxp", "", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(&SDDScoupled, "Sy", "m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(&SDDScoupled, "Syp", "", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(&SDDScoupled, "xyTilt", "", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(&SDDScoupled, "Ss", "m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(&SDDScoupled, "betax1", "m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(&SDDScoupled, "betax2", "m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(&SDDScoupled, "betay1", "m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(&SDDScoupled, "betay2", "m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(&SDDScoupled, "etax", "m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(&SDDScoupled, "etay", "m", SDDS_DOUBLE)) {
-    fprintf(stdout, "Unable to set up file %s\n", filename);
-    fflush(stdout);
-    SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
-    exit(1);
-  }
-  if (output_sigma_matrix) {
-    long maxDimension, i, j;
-    char name[100], units[10];
-    if (calculate_3d_coupling)
-      maxDimension = 6;
-    else
-      maxDimension = 4;
-    for (i=0; i<maxDimension; i++) 
-      for (j=i; j<maxDimension; j++) {
-        if ((i==0 || i==2 || i==4) && (j==0 || j==2 || j==4)) 
-          strcpy_s(units, "m$a2$n");
-        else if ((!(i==0 || i==2 || i==4) && (j==0 || j==2 || j==4)) ||
-                 ((i==0 || i==2 || i==4) && !(j==0 || j==2 || j==4)))
-          strcpy_s(units, "m");
-        else
-          strcpy_s(units, "");
-        sprintf(name, "S%ld%ld", i+1, j+1);
-        if (!SDDS_DefineSimpleColumn(&SDDScoupled, name, units, SDDS_DOUBLE)) {
-          fprintf(stdout, "Unable to set up file %s\n", filename);
-          fflush(stdout);
-          SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
-          exit(1);
+    if (output_sigma_matrix) {
+      long maxDimension, i, j;
+      char name[100], units[10];
+      if (calculate_3d_coupling)
+        maxDimension = 6;
+      else
+        maxDimension = 4;
+      for (i=0; i<maxDimension; i++) 
+        for (j=i; j<maxDimension; j++) {
+          if ((i==0 || i==2 || i==4) && (j==0 || j==2 || j==4)) 
+            strcpy_s(units, "m$a2$n");
+          else if ((!(i==0 || i==2 || i==4) && (j==0 || j==2 || j==4)) ||
+                   ((i==0 || i==2 || i==4) && !(j==0 || j==2 || j==4)))
+            strcpy_s(units, "m");
+          else
+            strcpy_s(units, "");
+          sprintf(name, "S%ld%ld", i+1, j+1);
+          if (!SDDS_DefineSimpleColumn(&SDDScoupled, name, units, SDDS_DOUBLE)) {
+            fprintf(stdout, "Unable to set up file %s\n", filename);
+            fflush(stdout);
+            SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
+            exit(1);
+          }
         }
-      }
+    }
+    
+    if (!SDDS_WriteLayout(&SDDScoupled)) {
+      fprintf(stdout, "Unable to set up file %s\n", filename);
+      fflush(stdout);
+      SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
+      exit(1);
+    }
   }
   
-  if (!SDDS_WriteLayout(&SDDScoupled)) {
-    fprintf(stdout, "Unable to set up file %s\n", filename);
-    fflush(stdout);
-    SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
-    exit(1);
-  }
+  initialized = 1;
 }
 
 
@@ -129,7 +138,11 @@ int run_coupled_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coo
   double **R;
   ELEMENT_LIST *eptr, *eptr0;
   long nElements, lastNElements, iElement;
-   
+  double betax1, betax2, betay1, betay2, etax, etay, tilt;
+
+  if (!initialized)
+    return 0;
+  
   if (verbosity>1)
     fprintf(stdout, "\n* Computing coupled sigma matrix\n");
   
@@ -279,12 +292,13 @@ int run_coupled_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coo
     MatrixPrintout((double*)&Vnorm, &matDim, &matDim, 1);
   }
 
-
-  /*--- Prepare the output file */
-  if (!SDDS_StartPage(&SDDScoupled, nElements)) {
-    fflush(stdout);
-    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-    return(1);
+  if (SDDScoupledInitialized) {
+    /*--- Prepare the output file */
+    if (!SDDS_StartPage(&SDDScoupled, nElements)) {
+      fflush(stdout);
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      return(1);
+    }
   }
   
   /*--- Loop over elements */
@@ -343,21 +357,25 @@ int run_coupled_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coo
       MatrixPrintout((double*)&SigmaMatrix, &matDim, &matDim, 2);
     }
 
-    /*--- Calculating beam sizes: 0-SigmaX, 1-SigmaXP, 2-SigmaY, 3-SigmaYP, 4-BeamTilt, 5-BunchLength */
-    if (!SDDS_SetRowValues(&SDDScoupled, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-                           iElement, 
-                           "ElementName", eptr->name,
-                           "s", eptr->end_pos,
-                           "Sx", sqrt(SigmaMatrix[0][0]),
-                           "Sxp", sqrt(SigmaMatrix[1][1]),
-                           "Sy", sqrt(SigmaMatrix[2][2]),
-                           "Syp", sqrt(SigmaMatrix[3][3]),
-                           "xyTilt", 0.5*atan(2*SigmaMatrix[0][2]/(SigmaMatrix[0][0]-SigmaMatrix[2][2])),
-                           "Ss", eigenModesNumber==3?sqrt(SigmaMatrix[4][4]):-1,
-                           NULL)) {
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      return(1);
+    tilt=0.5*atan(2*SigmaMatrix[0][2]/(SigmaMatrix[0][0]-SigmaMatrix[2][2]));
+    if (SDDScoupledInitialized) {
+      /*--- Calculating beam sizes: 0-SigmaX, 1-SigmaXP, 2-SigmaY, 3-SigmaYP, 4-BeamTilt, 5-BunchLength */
+      if (!SDDS_SetRowValues(&SDDScoupled, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+                             iElement, 
+                             "ElementName", eptr->name,
+                             "s", eptr->end_pos,
+                             "Sx", sqrt(SigmaMatrix[0][0]),
+                             "Sxp", sqrt(SigmaMatrix[1][1]),
+                             "Sy", sqrt(SigmaMatrix[2][2]),
+                             "Syp", sqrt(SigmaMatrix[3][3]),
+                             "xyTilt", tilt,
+                             "Ss", eigenModesNumber==3?sqrt(SigmaMatrix[4][4]):-1,
+                             NULL)) {
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        return(1);
+      }
     }
+    
     if (verbosity > 0) {
       printf("SigmaX  = %12.4e, SigmaY  = %12.4e, Beam tilt = %12.4e \n", 
              sqrt(SigmaMatrix[0][0]), sqrt(SigmaMatrix[2][2]),
@@ -368,30 +386,38 @@ int run_coupled_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coo
       }
     }
 
-    if (!SDDS_SetRowValues(&SDDScoupled, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-                           iElement,
-                           "betax1", Amatrix[0],
-                           "betax2", Amatrix[1*matDim*matDim],
-                           "betay1", Amatrix[2*matDim+2],
-                           "betay2", Amatrix[1*matDim*matDim+2*matDim+2],
-                           "etax", sqrt(Amatrix[2*matDim*matDim]*Amatrix[2*matDim*matDim+4*matDim+4]),
-                           "etay", sqrt(Amatrix[2*matDim*matDim+2*matDim+2]*Amatrix[2*matDim*matDim+4*matDim+4]),
-                           NULL)) {
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      return(1);
-    }
-    
-    if (output_sigma_matrix) {
-      char name[100];
-      for (i=0; i<matDim; i++)
-        for (j=i; j<matDim; j++) {
-          sprintf(name, "S%d%d", i+1, j+1);
-          if (!SDDS_SetRowValues(&SDDScoupled, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-                                 iElement, name, SigmaMatrix[i][j], NULL)) {
-            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-            return(1);
+    betax1 = Amatrix[0];
+    betax2 = Amatrix[1*matDim*matDim];
+    betay1 = Amatrix[2*matDim+2];
+    betay2 = Amatrix[1*matDim*matDim+2*matDim+2];
+    etax = sqrt(Amatrix[2*matDim*matDim]*Amatrix[2*matDim*matDim+4*matDim+4]);
+    etay = sqrt(Amatrix[2*matDim*matDim+2*matDim+2]*Amatrix[2*matDim*matDim+4*matDim+4]);
+    if (SDDScoupledInitialized) {
+      if (!SDDS_SetRowValues(&SDDScoupled, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+                             iElement,
+                             "betax1", betax1,
+                             "betax2", betax2,
+                             "betay1", betay1,
+                             "betay2", betay2,
+                             "etax", etax,
+                             "etay", etay,
+                             NULL)) {
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        return(1);
+      }
+      
+      if (output_sigma_matrix) {
+        char name[100];
+        for (i=0; i<matDim; i++)
+          for (j=i; j<matDim; j++) {
+            sprintf(name, "S%d%d", i+1, j+1);
+            if (!SDDS_SetRowValues(&SDDScoupled, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+                                   iElement, name, SigmaMatrix[i][j], NULL)) {
+              SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+              return(1);
+            }
           }
-        }
+      }
     }
     
     if (verbosity > 0) {
@@ -405,11 +431,15 @@ int run_coupled_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coo
       fflush(stdout);
     }
 
+    if (eptr->type==T_MARK && ((MARK*)eptr->p_elem)->fitpoint)
+      store_fitpoint_ctwiss_parameters((MARK*)eptr->p_elem, eptr->name, eptr->occurence, betax1, betax2, betay1, betay2, etax, etay,
+                                       tilt);
+    
     iElement++;
     eptr = eptr->succ;
   }
 
-  if (!SDDS_WritePage(&SDDScoupled)) {
+  if (SDDScoupledInitialized && !SDDS_WritePage(&SDDScoupled)) {
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
     return(1);
   }
@@ -423,6 +453,7 @@ void finish_coupled_twiss_output()
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
   SDDScoupledInitialized = 0;
+  initialized = 0;
 }
 
 
@@ -584,3 +615,35 @@ void MatrixProduct (int *N1, int *M1, double *T1, int *N2, int *M2, double *T2, 
   }
 }
 
+void store_fitpoint_ctwiss_parameters(MARK *fpt, char *name, long occurence,
+                                      double betax1, double betax2,
+                                      double betay1, double betay2,
+                                      double etax, double etay,
+                                      double tilt)
+{
+  long i;
+  double data[7];
+  static char *suffix[7] = {
+    "betax1", "betax2", "betay1", "betay2", "cetax", "cetay", "tilt"
+    };
+  static char s[200];
+
+  data[0] = betax1;
+  data[1] = betax2;
+  data[2] = betay1;
+  data[3] = betay2;
+  data[4] = etax;
+  data[5] = etay;
+  data[6] = tilt;
+  
+  if (!(fpt->init_flags&16)) {
+    fpt->ctwiss_mem = tmalloc(sizeof(*(fpt->ctwiss_mem))*12);
+    fpt->init_flags |= 16;
+    for (i=0; i<7; i++) {
+      sprintf(s, "%s#%ld.%s", name, occurence, suffix[i]);
+      fpt->ctwiss_mem[i] = rpn_create_mem(s, 0);
+    }
+  }
+  for (i=0; i<7; i++)
+    rpn_store(data[i], NULL, fpt->ctwiss_mem[i]);
+}

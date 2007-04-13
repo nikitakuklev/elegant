@@ -1052,7 +1052,8 @@ typedef struct {
     unsigned long init_flags; /* 1:twiss_mem initialized, 
                                  2:centroid_mem, sigma_mem, emit_mem initialized,
                                  4:floor_mem initialized
-                                 8:matrix_mem initialized*/
+                                 8:matrix_mem initialized
+                                 16:ctwiss_mem initialized */
     long *twiss_mem;       /* betax, alphax, NUx, etax, etaxp, betay, ... */
     long *centroid_mem;    /* (x, xp, y, yp, s, dp, Pcen, n) */
     long *sigma_mem;       /* (x, xp, y, yp, s, dp) */
@@ -1061,6 +1062,7 @@ typedef struct {
     long *floor_mem;       /* X, Z, theta */
     long *matrix_mem;
     long *co_mem;          /* closed orbit */
+    long *ctwiss_mem;      /* coupled twiss parameters */
     } MARK;
 
 /* storage structure for alpha magnet */

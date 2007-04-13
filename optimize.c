@@ -1258,6 +1258,7 @@ double optimization_function(double *value, long *invalid)
       fflush(optimization_data->fp_log);
     }
     update_twiss_parameters(run, beamline, &unstable);
+    run_coupled_twiss_output(run, beamline, startingOrbitCoord);
     if (unstable)
       *invalid = 1;
 #if DEBUG
