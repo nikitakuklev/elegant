@@ -119,6 +119,7 @@ void setup_coupled_twiss_output(
       SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
       exit(1);
     }
+    SDDScoupledInitialized = 1;
   }
   
   initialized = 1;
