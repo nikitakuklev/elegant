@@ -1408,7 +1408,7 @@ char **argv;
       break;
     case INSERT_SCEFFECTS:
       if (run_setuped)
-        bomb("transmute_elements must precede run_setup", NULL);
+        bomb("insert_sceffects must precede run_setup", NULL);
       setupSCEffect(&namelist_text, &run_conditions, beamline);
       break;
     case TWISS_ANALYSIS:
