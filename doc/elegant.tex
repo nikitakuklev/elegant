@@ -1475,6 +1475,48 @@ end are given.
 
 \begin{latexonly}
 \newpage
+\begin{center}{\Large\verb|insert_sceffects|}\end{center}
+\end{latexonly}
+\subsection{insert\_sceffects}
+
+\begin{itemize}
+\item type: setup command.
+\item function: set up for transverse space charge calculation (ring only).
+\end{itemize}
+
+\begin{verbatim}
+&insert_sceffects
+        STRING name = NULL;
+        STRING type = NULL;
+        STRING exclude = NULL;
+        long disable = 0;
+        long clear = 0;
+        STRING element_prefix = "MYSC";
+        long skip = 0;
+        long vertical = 0;
+        long horizontal = 0;
+        long nonlinear = 0;
+&end
+\end{verbatim}
+
+\begin{itemize}
+\item \verb|name| --- Possibily wild-card containing string specifying the
+	elements name. After that, the space charge kick is to be inserted.
+\item \verb|type| --- Possibily wild-card containing string specifying the
+	element types. After that, the space charge kick is to be inserted.
+\item \verb|exclude| --- Possibily wild-card containing string specifying 
+	elements to be excluded from the specified space charge kick insertion.
+\item \verb|disable| --- If nonzero, the command is ignored.
+\item \verb|clear| --- If nonzero, all prior space charge insertions are deleted.
+\item \verb|element_prefix| --- give space-charge kick name. Will apear as element name in beamline.
+\item \verb|skip| --- If nonzero, number of ``skip'' space charge kicks are skiped. 
+        If zero, only one space charge kick is inserted to the end of beamline. 
+\item \verb|vertical|, \verb|horizontal|, \verb|nonlinear| --- Switches for setting up 
+space charge kick calculation.
+\end{itemize}
+
+\begin{latexonly}
+\newpage
 \begin{center}{\Large\verb|linear_chromatic_tracking_setup|}\end{center}
 \end{latexonly}
 \subsection{linear\_chromatic\_tracking\_setup}
