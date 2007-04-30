@@ -10,6 +10,7 @@
 #include "mdb.h"
 #include "track.h"
 #include "match_string.h"
+#include "complex.h"
 
 #define DEBUG 0
 
@@ -18,72 +19,74 @@ typedef struct {
 } SC_SPEC;
 
 static SC_SPEC *scSpec = NULL;
-static long scSpecs = 0;
+static long No_scSpec = 0;
 static SPACE_CHARGE *sc = NULL;
 
-double get_rms(double **coord, long i1, long np);
+void linearSCKick(double *coord, ELEMENT_LIST *eptr, double *center);
+void nonlinearSCKick(double *coord, ELEMENT_LIST *eptr, double *center, 
+                     double sigmax, double sigmay, double *kick);
 
 long getSCMULTSpecCount() 
 {
-	return (scSpecs);
+  return (No_scSpec);
 }
 char *getSCMULTName()
 {
-	return (sc->name);
+  return (sc->name);
 }
 
 void addSCSpec(char *name, char *type, char *exclude)
 {
   if (!(scSpec 
 	= SDDS_Realloc(scSpec,
-		       sizeof(*scSpec)*(scSpecs+1))))
+		       sizeof(*scSpec)*(No_scSpec+1))))
     bomb("memory allocation failure", NULL);
-  scSpec[scSpecs].name = NULL;
-  scSpec[scSpecs].type = NULL;
-  scSpec[scSpecs].exclude = NULL;
+  scSpec[No_scSpec].name = NULL;
+  scSpec[No_scSpec].type = NULL;
+  scSpec[No_scSpec].exclude = NULL;
   if ((name &&
-       !SDDS_CopyString(&scSpec[scSpecs].name, name)) ||
+       !SDDS_CopyString(&scSpec[No_scSpec].name, name)) ||
       (type &&
-       !SDDS_CopyString(&scSpec[scSpecs].type, type)) ||
+       !SDDS_CopyString(&scSpec[No_scSpec].type, type)) ||
       (exclude &&
-       !SDDS_CopyString(&scSpec[scSpecs].exclude, exclude)))
+       !SDDS_CopyString(&scSpec[No_scSpec].exclude, exclude)))
     bomb("memory allocation failure", NULL);
   
-  scSpecs++;
+  No_scSpec++;
 }
 
 void clearSCSpecs() 
 {
-  while (scSpecs--) {
-    if (scSpec[scSpecs].name)
-      free(scSpec[scSpecs].name);
-    if (scSpec[scSpecs].type)
-      free(scSpec[scSpecs].type);
-    if (scSpec[scSpecs].exclude)
-      free(scSpec[scSpecs].exclude);
+  while (No_scSpec--) {
+    if (scSpec[No_scSpec].name)
+      free(scSpec[No_scSpec].name);
+    if (scSpec[No_scSpec].type)
+      free(scSpec[No_scSpec].type);
+    if (scSpec[No_scSpec].exclude)
+      free(scSpec[No_scSpec].exclude);
   }
   free(scSpec);
   scSpec = NULL;
 }
 
-long insertSCMULT(char *name, long type, long *occurance) 
+long insertSCMULT(char *name, long type, long *occurrence) 
 {
   long i;
-  for (i=0; i<scSpecs; i++) {
+  for (i=0; i<No_scSpec; i++) {
     if (scSpec[i].exclude && wild_match(name, scSpec[i].exclude))
       continue;
     if (scSpec[i].name && !wild_match(name, scSpec[i].name))
       continue;
     if (scSpec[i].type && !wild_match(entity_name[type], scSpec[i].type))
       continue;
-    (*occurance)++;
+    (*occurrence)++;
     break;
   }
 
-  if(*occurance < sc->nskip || sc->nskip==0)
-  	  	return(0);
+  if (*occurrence < sc->nskip || sc->nskip==0)
+    return(0);
 
-  *occurance = 0;
+  *occurrence = 0;
   return(1);
 }
 
@@ -92,8 +95,8 @@ void setupSCEffect(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 {
   long i;
   
-  if (!scSpecs && !(sc = SDDS_Realloc(sc, sizeof(*sc))))
-    bomb("memory allocation failure", NULL);
+  if (!No_scSpec && !(sc = SDDS_Realloc(sc, sizeof(*sc))))
+    bomb("memory allocation failure", NULL);                
 
   /* process the namelist text */
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
@@ -134,118 +137,187 @@ void setupSCEffect(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
   
   addSCSpec(name, type, exclude);
 
-  sc->name = NULL;
-  if(element_prefix) 
-  	sc->name = element_prefix;
+  sc->name = "SCElem";
+  if (element_prefix) 
+    sc->name = element_prefix;
 
-  sc->nskip = sc->nonlinear = 0; 
+  sc->nskip = 0;
+  sc->nonlinear = 0; 
   sc->horizontal = sc->vertical = sc->longitudinal =0;
-  if(skip)
-  	sc->nskip = skip;
+  if (skip)
+    sc->nskip = skip;
 
-  if(vertical)
-  	sc->vertical = vertical;
+  if (vertical)
+    sc->vertical = vertical;
 
-  if(horizontal)
-  	sc->horizontal = horizontal;
+  if (horizontal)
+    sc->horizontal = horizontal;
 
-  if(longitudinal)
-  	sc->longitudinal =longitudinal;
+  if (longitudinal)
+    sc->longitudinal =longitudinal;
 
-  if(nonlinear)
-  	sc->nonlinear = nonlinear;
+  if (nonlinear)
+    sc->nonlinear = nonlinear;
 }
 
 /* track through space charge element */
 void trackThroughSCMULT(double **part, long np, ELEMENT_LIST *eptr)
 {
-	long i;
-	double *coord;
-	double k0, kx, ky;
-	double x0, y0, z0;
-	static long j;
-	
-	if (!np)  
-	    return;
+  long i;
+  double *coord;
+  double kx, ky, sx;
+  double center[3], kick[2];
+  double sigmax, sigmay;
 
-	/* compute bunch center */
-	for(i=x0=y0=z0=0; i<np; i++) {
-		coord = part[i];
-		x0 += coord[0];
-		y0 += coord[2];
-		z0 += coord[4];
-	}
-	x0 /= np;
-	y0 /= np;
-	z0 /= np;
+  if (!np)  
+    return;
+  /* compute bunch center */
+  for(i=center[0]=center[1]=center[2]=0; i<np; i++) {
+    coord = part[i];
+    center[0] += coord[0];
+    center[1] += coord[2];
+    center[2] += coord[4];
+  }
+  center[0] /= np;
+  center[1] /= np;
+  center[2] /= np;
+ 
+  /* apply kick to particles */
+  if (!nonlinear) {
+    for(i=0; i<np; i++) {
+      coord = part[i];
+      linearSCKick(coord, eptr, center);
+    }
+  }
+  else {
+    sigmax = computeRmsCoordinate(part, 0, np);
+    sigmay = computeRmsCoordinate(part, 2, np);
+    for(i=0; i<np; i++) {
+      coord = part[i];
 
-	/* apply kick to particles */
-	for(i=0; i<np; i++) {
-		coord = part[i];
-		k0 = exp(-sqr(coord[4]-z0)/sqr(sc->sigmaz)/2.0);
-		if(sc->horizontal) {
-			kx = sc->c1 * k0 * (4*PI * sc->dmux / eptr->twiss->betax);	/* From dmux to KL */
-			coord[1] += kx*(coord[0]-x0);
-		}
-		if(sc->vertical) {
-			ky = sc->c1 * k0 * (4*PI * sc->dmuy / eptr->twiss->betay);	/* From dmuy to KL */
-			coord[3] += ky*(coord[2]-y0);
-/*			if(i==0) printf("j=%d, dmuy=%.6g, z=%.6g, k0=%.6g, ky=%.6g, betay=%.6g, c0=%.6g, c1=%.6g\n", ++j, sc->dmuy, coord[4]-z0, k0, ky, eptr->twiss->betay, sc->c0, sc->c1); */
-		}
-	}
-	sc->dmux=sc->dmuy=0.0;												/* reset space charge strength */
+      if ((fabs(coord[0]-center[0])<sigmax) && (fabs(coord[2]-center[1]) < sigmay)) {
+        linearSCKick(coord, eptr, center);
+        continue;
+      }
+
+      if (sigmax/sigmay>0.99 && sigmax/sigmay < 1.01) {
+        sx = 0.99 * sigmay;
+        nonlinearSCKick(coord, eptr, center, sx, sigmay, kick); 
+        kx = kick[0];
+        ky = kick[1];
+        sx = 1.01 * sigmay;
+        nonlinearSCKick(coord, eptr, center, sx, sigmay, kick); 
+        kx += kick[0];
+        ky += kick[1];
+        coord[1] += kx / 2.0;
+        coord[3] += ky / 2.0;
+      }
+      else {
+        nonlinearSCKick(coord, eptr, center, sigmax, sigmay, kick); 
+        coord[1] += kick[0];
+        coord[3] += kick[1];
+      }
+    }
+  }
+
+  sc->dmux=sc->dmuy=0.0;       /* reset space charge strength */
+}
+
+void linearSCKick(double *coord, ELEMENT_LIST *eptr, double *center)
+{
+  double k0, kx, ky;
+  k0 = sc->c1 * exp(-sqr(coord[4]-center[2])/sqr(sc->sigmaz)/2.0);
+  if (sc->horizontal) {
+    kx = k0 * sc->dmux / eptr->twiss->betax;	/* From dmux to KL */
+    coord[1] += kx*(coord[0]-center[0]);
+  }
+  if (sc->vertical) {
+    ky = k0 * sc->dmuy / eptr->twiss->betay;	/* From dmuy to KL */
+    coord[3] += ky*(coord[2]-center[1]);
+  }
+}
+
+void nonlinearSCKick(double *coord, ELEMENT_LIST *eptr, double *center, 
+                     double sigmax, double sigmay, double *kick)
+{
+  double k0, kx, ky, sqs;
+  COMPLEX wa, wb, w1, w2, w;
+  double temp;
+  long flag;
+
+  k0 = sc->c1 * exp(-sqr(coord[4]-center[2])/sqr(sc->sigmaz)/2.0) * sqrt(PI/2.0);
+
+  sqs = sqrt(fabs(sqr(sigmax)-sqr(sigmay))*2.0);
+  kx = k0 * sc->dmux * sigmax * sqrt(sigmax+sigmay) / sqrt(fabs(sigmax-sigmay)) / eptr->twiss->betax;
+  ky = k0 * sc->dmuy * sigmay * sqrt(sigmax+sigmay) / sqrt(fabs(sigmax-sigmay)) / eptr->twiss->betay;
+
+  w1.r = (coord[0]-center[0])/sqs;
+  w1.i = (coord[2]-center[1])/sqs;
+  w2.r = (coord[0]-center[0])*sigmay/sigmax/sqs;
+  w2.i = (coord[2]-center[1])*sigmax/sigmay/sqs;
+  temp = exp((-sqr(coord[0]-center[0])/sqr(sigmax)-sqr(coord[2]-center[1])/sqr(sigmay))/2.0);
+
+  wofz(&w1.r, &w1.i, &wa.r, &wa.i, &flag);
+  wofz(&w2.r, &w2.i, &wb.r, &wb.i, &flag);
+  w.r = wa.r - temp*wb.r;
+  w.i = wa.i - temp*wb.i;
+  kick[0] = kx * w.i;
+  kick[1] = ky * w.r;
 }
 
 void initializeSCMULT(ELEMENT_LIST *eptr, double **part, long np, double Po, long i_pass )
 {
-	CHARGE *charge;
+  static CHARGE *charge;
 	
-	if(!eptr->twiss)
-		bomb("Twiss parameters must be calculated before SC tracking.", NULL);
+  if (!eptr->twiss)
+    bomb("Twiss parameters must be calculated before SC tracking.", NULL);
 		
-	if(i_pass==0) {
-		while(eptr) {
-			if(eptr->type==T_CHARGE) {
-				charge = (CHARGE*)eptr->p_elem;
-				break;
-			}
-			eptr =eptr->succ;
-		}
-		if(charge==NULL) 
-			bomb("No charge element is given.", NULL);
+  if (i_pass==0) {
+    while(eptr) {
+      if (eptr->type==T_CHARGE) {
+        charge = (CHARGE*)eptr->p_elem;
+        break;
+      }
+      eptr =eptr->succ;
+    }
+    if (charge==NULL) 
+      bomb("No charge element is given.", NULL);
 	
-		sc->c0 = re_mks * charge->charge / e_mks / pow(2*PI, 3./2.);
-		sc->sigmax = get_rms(part, 0, np);
-		sc->sigmay = get_rms(part, 2, np);
-		sc->sigmaz = get_rms(part, 4, np);
-	}
-	sc->c1 = sc->c0/pow(Po, 3.0)/sc->sigmaz;
+  }
+  sc->sigmax = computeRmsCoordinate(part, 0, np);
+  sc->sigmay = computeRmsCoordinate(part, 2, np);
+  sc->sigmaz = computeRmsCoordinate(part, 4, np);
+  sc->c0 = sqrt(2.0/PI) * re_mks * charge->charge / e_mks;
+  sc->c1 = sc->c0/sqr(Po)/sqrt(sqr(Po)+1.0)/sc->sigmaz;
+  /*       printf("c0=%.6g, c1=%.6g, sz=%.6g\n\n", sc->c0, sc->c1, sc->sigmaz); */
+
+  sc->dmux=sc->dmuy=0.0;
+  sc->length=0.0;
 }
 
 void accumulateSCMULT(double **part, long np, ELEMENT_LIST *eptr)
 {
-	TWISS *twiss0;
-	double dmux, dmuy, temp;
-	double length;
+  TWISS *twiss0;
+  double dmux, dmuy, temp;
+  double length;
 	
-	twiss0 = (eptr->pred)->twiss;
-	temp = sc->sigmax + sc->sigmay;
-	dmux = twiss0->betax / sc->sigmax / temp;
-	dmuy = twiss0->betay / sc->sigmay / temp;
-
-	sc->sigmax = get_rms(part, 0, np);
-	sc->sigmay = get_rms(part, 2, np);
-	twiss0 = eptr->twiss;
-	temp = sc->sigmax + sc->sigmay;
-	dmux += twiss0->betax / sc->sigmax / temp;
-	dmuy += twiss0->betay / sc->sigmay / temp;
+  twiss0 = (eptr->pred)->twiss;
+  temp = sc->sigmax + sc->sigmay;
+  dmux = twiss0->betax / sc->sigmax / temp;
+  dmuy = twiss0->betay / sc->sigmay / temp;
+  sc->sigmax = computeRmsCoordinate(part, 0, np);
+  sc->sigmay = computeRmsCoordinate(part, 2, np);
+  twiss0 = eptr->twiss;
+  temp = sc->sigmax + sc->sigmay;
+  dmux += twiss0->betax / sc->sigmax / temp;
+  dmuy += twiss0->betay / sc->sigmay / temp;
 	
-	length = ((DRIFT*)eptr->p_elem)->length;
-	sc->dmux += dmux * length /2.0;
-	sc->dmuy += dmuy * length /2.0;
+  length = ((DRIFT*)eptr->p_elem)->length;
+  sc->dmux += dmux * length /2.0;
+  sc->dmuy += dmuy * length /2.0;
 }
 
-double get_rms(double **coord, long i1, long np)
+double computeRmsCoordinate(double **coord, long i1, long np)
 {
   double vrms, x, xc;
   long i;
