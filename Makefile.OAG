@@ -34,6 +34,7 @@ ifeq ($(MPI),1)
                                         # or the particle number is changed
   #MPI_PATH = /disk1/mpich2_mpd_ssm/bin
   MPI_PATH = /disk1/mpich2_mpd_sock/bin
+  #MPI_PATH=/usr/local/software/mvapich2-gcc/bin
   #MPI_PATH = /share/mpich/ch_p4/bin
   CC = $(MPI_PATH)/mpicc  $(USER_MPI_FLAGS)   
   CCC = $(MPI_PATH)/mpicxx  $(USER_MPI_FLAGS)
@@ -149,7 +150,7 @@ USR_CFLAGS += -DHAVE_LAPACK -DLAPACK
 ifeq ($(OS_CLASS),Linux)
 SYS_PROD_LIBS_Linux += lapack blas
 #The g2c library is needed for gcc versions before FC2
-GFORTRAN = $(words $(notdir $(wildcard /usr/lib/libgfortran.*)))
+GFORTRAN = $(words $(notdir $(wildcard /usr/lib/libgfortran.* /usr/lib64/libgfortran.*)))
 ifeq ($(GFORTRAN), 0)
 SYS_PROD_LIBS_Linux += g2c
 else
