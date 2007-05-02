@@ -23,7 +23,7 @@ static long No_scSpec = 0;
 static SPACE_CHARGE *sc = NULL;
 
 void linearSCKick(double *coord, ELEMENT_LIST *eptr, double *center);
-void nonlinearSCKick(double *coord, ELEMENT_LIST *eptr, double *center, 
+int  nonlinearSCKick(double *coord, ELEMENT_LIST *eptr, double *center, 
                      double sigmax, double sigmay, double *kick);
 
 long getSCMULTSpecCount() 
@@ -168,6 +168,7 @@ void trackThroughSCMULT(double **part, long np, ELEMENT_LIST *eptr)
   double kx, ky, sx;
   double center[3], kick[2];
   double sigmax, sigmay;
+  int flag;
 
   if (!np)  
     return;
@@ -202,18 +203,30 @@ void trackThroughSCMULT(double **part, long np, ELEMENT_LIST *eptr)
 
       if (sigmax/sigmay>0.99 && sigmax/sigmay < 1.01) {
         sx = 0.99 * sigmay;
-        nonlinearSCKick(coord, eptr, center, sx, sigmay, kick); 
+        flag = nonlinearSCKick(coord, eptr, center, sx, sigmay, kick); 
+        if(!flag) {
+          linearSCKick(coord, eptr, center);
+          continue;
+        }
         kx = kick[0];
         ky = kick[1];
         sx = 1.01 * sigmay;
-        nonlinearSCKick(coord, eptr, center, sx, sigmay, kick); 
+        flag = nonlinearSCKick(coord, eptr, center, sx, sigmay, kick); 
+        if(!flag) {
+          linearSCKick(coord, eptr, center);
+          continue;
+        }
         kx += kick[0];
         ky += kick[1];
         coord[1] += kx / 2.0;
         coord[3] += ky / 2.0;
       }
       else {
-        nonlinearSCKick(coord, eptr, center, sigmax, sigmay, kick); 
+        flag = nonlinearSCKick(coord, eptr, center, sigmax, sigmay, kick); 
+        if(!flag) {
+          linearSCKick(coord, eptr, center);
+          continue;
+        }
         coord[1] += kick[0];
         coord[3] += kick[1];
       }
@@ -237,7 +250,7 @@ void linearSCKick(double *coord, ELEMENT_LIST *eptr, double *center)
   }
 }
 
-void nonlinearSCKick(double *coord, ELEMENT_LIST *eptr, double *center, 
+int nonlinearSCKick(double *coord, ELEMENT_LIST *eptr, double *center, 
                      double sigmax, double sigmay, double *kick)
 {
   double k0, kx, ky, sqs;
@@ -258,11 +271,16 @@ void nonlinearSCKick(double *coord, ELEMENT_LIST *eptr, double *center,
   temp = exp((-sqr(coord[0]-center[0])/sqr(sigmax)-sqr(coord[2]-center[1])/sqr(sigmay))/2.0);
 
   wofz(&w1.r, &w1.i, &wa.r, &wa.i, &flag);
+  if(!flag) return(0);
   wofz(&w2.r, &w2.i, &wb.r, &wb.i, &flag);
+  if(!flag) return(0);
+
   w.r = wa.r - temp*wb.r;
   w.i = wa.i - temp*wb.i;
   kick[0] = kx * w.i;
   kick[1] = ky * w.r;
+
+  return(1);
 }
 
 void initializeSCMULT(ELEMENT_LIST *eptr, double **part, long np, double Po, long i_pass )
