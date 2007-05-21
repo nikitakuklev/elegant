@@ -472,6 +472,8 @@ void free_elements(ELEMENT_LIST *elemlist)
         eptr->p_elem = NULL;
         tfree(eptr->name);
         eptr->name = NULL;
+        tfree(eptr->definition_text);
+        eptr->definition_text = NULL;
         if (entity_description[eptr->type].flags&HAS_MATRIX && eptr->matrix) {
             free_matrices(eptr->matrix);
             free(eptr->matrix);

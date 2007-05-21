@@ -48,7 +48,7 @@ void initialize_structures(RUN *run_conditions, VARY *run_control, ERRORVAL *err
 void do_semaphore_setup(char **semaphoreFile, NAMELIST_TEXT *nltext);
 void free_beamdata(BEAM *beam);
 void printFarewell(FILE *fp);
-
+void closeBeamlineOutputFiles(LINE_LIST *beamline);
 
 #define DESCRIBE_INPUT 0
 #define DEFINE_MACRO 1
@@ -525,6 +525,8 @@ char **argv;
       }
       else {
         /* free previous lattice info */
+	if (beamline)
+          closeBeamlineOutputFiles(beamline);
         free_elements(NULL);
         free_beamlines(NULL);
         saved_lattice = lattice;
@@ -614,7 +616,20 @@ char **argv;
       run_conditions.lattice = compose_filename(saved_lattice, rootname);
       if (element_divisions>1)
         addDivisionSpec("*", NULL, NULL, element_divisions, 0.0);
+#ifdef USE_MPE /* use the MPE library */
+      if (USE_MPE) {
+        int event1a, event1b;
+	event1a = MPE_Log_get_event_number();
+	event1b = MPE_Log_get_event_number();
+	if(isMaster) 
+	  MPE_Describe_state(event1a, event1b, "get_beamline", "blue");
+	MPE_Log_event(event1a, 0, "start get_beamline"); /* record time spent on reading input */ 
+#endif
       beamline = get_beamline(lattice, use_beamline, p_central, echo_lattice);
+#ifdef  USE_MPE
+	      MPE_Log_event(event1b, 0, "end get_beamline");
+      }
+#endif
       fprintf(stdout, "length of beamline %s per pass: %21.15e m\n", beamline->name, beamline->revolution_length);
       fflush(stdout);
       lattice = saved_lattice;
@@ -2141,3 +2156,73 @@ void seedElegantRandomNumbers(long seed, long restart)
   random_1_elegant(-FABS(seed));
 }
 
+/* Routine to close output files that are associated with beamline elements
+ */
+
+void closeBeamlineOutputFiles(LINE_LIST *beamline)
+{
+  ELEMENT_LIST *eptr;
+  CSRCSBEND *CsrCsBend;
+  
+  eptr = &(beamline->elem);
+  while (eptr) {
+    switch (eptr->type) {
+    case T_WATCH:
+      if (((WATCH*)(eptr->p_elem))->initialized) {
+        SDDS_Terminate(&(((WATCH*)(eptr->p_elem))->SDDS_table));
+        ((WATCH*)(eptr->p_elem))->initialized = 0;
+      }
+      break;
+    case T_HISTOGRAM:
+      if (((HISTOGRAM*)(eptr->p_elem))->initialized) {
+        SDDS_Terminate(&(((HISTOGRAM*)(eptr->p_elem))->SDDS_table));
+        ((HISTOGRAM*)(eptr->p_elem))->initialized = 0;
+      }
+      break;
+    case T_CSRCSBEND:
+      CsrCsBend = (CSRCSBEND*)(eptr->p_elem);
+      if (CsrCsBend->histogramFile) 
+        SDDS_Terminate(&(CsrCsBend->SDDSout));
+      if (CsrCsBend->particleOutputFile)
+        SDDS_Terminate(&(CsrCsBend->SDDSpart));
+      break;
+    case T_RFMODE:
+      if (((RFMODE*)(eptr->p_elem))->record && ((RFMODE*)(eptr->p_elem))->fileInitialized)
+        SDDS_Terminate(&(((RFMODE*)(eptr->p_elem))->SDDSrec));
+      ((RFMODE*)(eptr->p_elem))->fileInitialized = 0;
+      break;
+    case T_FRFMODE:
+      if (((FRFMODE*)(eptr->p_elem))->outputFile && ((FRFMODE*)(eptr->p_elem))->initialized)
+        SDDS_Terminate(&(((FRFMODE*)(eptr->p_elem)))->SDDSout);
+      ((FRFMODE*)(eptr->p_elem))->initialized = 0;
+      break;
+    case T_TRFMODE:
+      if (((TRFMODE*)(eptr->p_elem))->record && ((TRFMODE*)(eptr->p_elem))->fileInitialized)
+        SDDS_Terminate(&(((TRFMODE*)(eptr->p_elem))->SDDSrec));
+      ((TRFMODE*)(eptr->p_elem))->fileInitialized = 0;
+      break;
+    case T_FTRFMODE:
+      if (((FTRFMODE*)(eptr->p_elem))->outputFile && ((FTRFMODE*)(eptr->p_elem))->initialized)
+        SDDS_Terminate(&(((FTRFMODE*)(eptr->p_elem)))->SDDSout);
+      ((FTRFMODE*)(eptr->p_elem))->initialized = 0;
+      break;
+    case T_ZLONGIT:
+      if (((ZLONGIT*)(eptr->p_elem))->wakes && ((ZLONGIT*)(eptr->p_elem))->SDDS_wake_initialized)
+        SDDS_Terminate(&(((ZLONGIT*)(eptr->p_elem)))->SDDS_wake);
+      ((ZLONGIT*)(eptr->p_elem))->SDDS_wake_initialized = 0;
+      break;
+    case T_ZTRANSVERSE:
+      if (((ZTRANSVERSE*)(eptr->p_elem))->wakes && ((ZTRANSVERSE*)(eptr->p_elem))->SDDS_wake_initialized)
+        SDDS_Terminate(&(((ZTRANSVERSE*)(eptr->p_elem)))->SDDS_wake);
+      ((ZTRANSVERSE*)(eptr->p_elem))->SDDS_wake_initialized = 0;      
+      break;      
+    case T_TFBDRIVER:
+      if (((TFBDRIVER*)(eptr->p_elem))->outputFile)
+	SDDS_Terminate(&(((TFBDRIVER*)(eptr->p_elem)))->SDDSout);
+      break;
+    default:
+      break;
+    }
+    eptr = eptr->succ;
+  }
+}
