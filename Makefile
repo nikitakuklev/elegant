@@ -7,10 +7,13 @@
 # in the file LICENSE that is included with this distribution. 
 #*************************************************************************
 #
-# $Id: Makefile,v 1.12 2007-03-30 16:55:00 soliday Exp $
+# $Id: Makefile,v 1.13 2007-05-21 16:43:57 ywang25 Exp $
 #
 #  Lowest Level Directroy Makefile
 # $Log: not supported by cvs2svn $
+# Revision 1.12  2007/03/30 16:55:00  soliday
+# Removed a bunch of scripts and programs that have been moved to elegantTools.
+#
 # Revision 1.11  2007/02/08 17:09:54  ywang25
 # Impoved Makefile to build Pelegant and elegant more conveniently.
 #
@@ -141,6 +144,8 @@ frequencyMap$(OBJ): frequencyMap.h
 frequencyMap.h: ../frequencyMap.nl
 	nlpp ../frequencyMap.nl frequencyMap.h
 
+hashtab$(OBJ) : hashtab.c standard.h recycle.h lookupa.h hashtab.h
+
 insertSCeffects$(OBJ): insertSCeffects.h
 
 insertSCeffects.h: ../insertSCeffects.nl
@@ -150,6 +155,8 @@ link_elements$(OBJ): link_elements.h
 
 link_elements.h: ../link_elements.nl
 	nlpp ../link_elements.nl link_elements.h
+
+lookupa$(OBJ) : lookupa.c standard.h lookupa.h
 
 load_parameters$(OBJ): load_parameters.h
 
@@ -175,6 +182,8 @@ optimize$(OBJ): optimize.h optim_covariable.h
 
 optimize.h: ../optimize.nl
 	nlpp ../optimize.nl optimize.h
+
+recycle$(OBJ) : recycle.c standard.h recycle.h
 
 response$(OBJ): response.h
 

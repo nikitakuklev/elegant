@@ -41,6 +41,13 @@
 #define isnan(x) _isnan(x)
 #endif
 
+#ifndef STANDARD
+#include "standard.h"
+#endif
+#ifndef HASHTAB
+#include "hashtab.h"
+#endif
+
 #define COORDINATES_PER_PARTICLE 7
 
 /* flag used to identify which processor is allowed to write to a file */
@@ -51,6 +58,10 @@ extern long isMaster;
 extern long isSlave;
 /* flag used to indicate if the same particle will be tracked on all the processors */
 extern long notSinglePart;     
+
+/* A hash table for loading parameters effectively */
+
+extern htab *load_hash;
 
 #if USE_MPI
 /* pMode will be used to specify where the information is stored, i.e., on Master or Slave. */
@@ -2804,6 +2815,7 @@ extern void add_varied_element(VARY *_control, NAMELIST_TEXT *nltext, RUN *run, 
 extern long vary_beamline(VARY *_control, ERRORVAL *errcon, RUN *run, LINE_LIST *beamline);
 extern long perturb_beamline(VARY *_control, ERRORVAL *errcon, RUN *run, LINE_LIST *beamline);
 extern ELEMENT_LIST *find_element(char *elem_name,  ELEMENT_LIST **context, ELEMENT_LIST *elem);
+extern ELEMENT_LIST *find_element_hash(char *elem_name, long occurence,  ELEMENT_LIST **context,  ELEMENT_LIST *elem);
 extern ELEMENT_LIST *wfind_element(char *elem_name,  ELEMENT_LIST **context, ELEMENT_LIST *elem);
 ELEMENT_LIST *find_element_index(char *elem_name,  ELEMENT_LIST **context,  ELEMENT_LIST *elem, long *index);
 extern long confirm_parameter(char *item_name, long type);

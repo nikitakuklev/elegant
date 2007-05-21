@@ -212,6 +212,9 @@ long writePermitted = 1;
 long isMaster = 1;
 long isSlave = 1;
 long notSinglePart=0; /* All the processors will do the same thing by default */
+
+htab *load_hash; /* A hash table for loading parameters */
+
 #if USE_MPI
 parallelMode parallelStatus = initialMode; 
 int n_processors = 1;
@@ -343,6 +346,8 @@ char **argv;
     exit(1);
   }
 
+  /* create a hash table with the size of 2^12, it can grow automatically if necessary */
+  load_hash = hcreate(12);     
   compute_offsets();
   set_max_name_length(100);
   macros = 0;
@@ -365,6 +370,7 @@ char **argv;
     showUsageOrGreeting(SHOW_USAGE|SHOW_GREETING);
     fflush(stdout);
     link_date();
+
     exit(1);
   }
   

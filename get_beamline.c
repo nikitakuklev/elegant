@@ -49,6 +49,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
   static long n_elems, n_lines;
   FILE *fp_mad[MAX_FILE_NESTING];
   char *s, *t=NULL, *ptr;
+  char occurence_s[8], eptr_name[1024];
 
   log_entry("get_beamline");
 
@@ -317,6 +318,15 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
     eptr = eptr->succ;
   }
 
+  eptr = &(lptr->elem);
+  while (eptr) {
+    /* use "eptr->name+eptr->occurence" as the key, and eptr's address as the value for hash table*/
+      sprintf (occurence_s, "%ld", eptr->occurence);
+      strcpy (eptr_name, eptr->name);
+      strcat (eptr_name, occurence_s);
+      hadd (load_hash, eptr_name, strlen(eptr_name), (void*)eptr);
+      eptr = eptr->succ;
+  }
   compute_end_positions(lptr);
   free(s);
   free(t);

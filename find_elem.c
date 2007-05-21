@@ -30,12 +30,45 @@ ELEMENT_LIST *find_element(char *elem_name,  ELEMENT_LIST **context,  ELEMENT_LI
         eptr = (*context)->succ;
     while (eptr && strcmp(eptr->name, elem_name)!=0)
         eptr = eptr->succ;
+
     log_exit("find_element");
     if (context)
       return *context=eptr;
     else
       return eptr;
     }
+
+ELEMENT_LIST *find_element_hash(char *elem_name, long occurence, ELEMENT_LIST **context,  ELEMENT_LIST *elem)
+{
+    ELEMENT_LIST *eptr;
+    static char occurence_s[8], name_occurence[1024];
+
+    log_entry("find_element");
+    if (!elem_name)
+        bomb("elem_name is NULL (find_element)", NULL);
+    if (!elem)
+        bomb("elem is NULL (find_element)", NULL);
+
+    if (!context || *context==NULL)
+        eptr = elem;
+    else
+        eptr = (*context)->succ;
+
+    sprintf(occurence_s, "%ld", occurence);
+    strcpy(name_occurence, elem_name);
+    strcat(name_occurence, occurence_s);
+    /* use hash table */
+    if(hfind(load_hash, name_occurence, strlen(name_occurence)))
+      eptr = (ELEMENT_LIST*) hstuff(load_hash);
+    else 
+      eptr = NULL;
+  
+    log_exit("find_element");
+    if (context)
+      return *context=eptr;
+    else
+      return eptr;
+}
 
 ELEMENT_LIST *find_element_index(char *elem_name,  ELEMENT_LIST **context,  ELEMENT_LIST *elem, long *index)
 {

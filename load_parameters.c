@@ -348,7 +348,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
         }
       }
     }
-    
+
     load_request[i].values = 0;
     element_missing = 0;
     lastMissingElement[0] = 0;
@@ -356,12 +356,10 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
     for (j=0; j<rows; j++) {
       eptr = NULL;
       if (occurence) {
-        count = occurence[j];
         if (occurence[j]<=lastMissingOccurence &&
             strcmp(lastMissingElement, element[j])==0)
           continue;
       } else {
-        count = 1;
         if (strcmp(lastMissingElement, element[j])==0)
           continue;
       }
@@ -384,33 +382,34 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
           wild_match(type[j], load_request[i].excludeTypePattern))
         continue;
       element_missing = 0;
-      while (count-- > 0) {
-        if (!find_element(element[j], &eptr, &(beamline->elem))) {
-          if (occurence) {
-            if (missingElementWarningsLeft || !allow_missing_elements) {
-              fprintf(stdout, "%s: unable to find occurence %" PRId32 " of element %s (do_load_parameters)\n", 
-                      allow_missing_elements?"Warning":"Error",
-                      occurence[j], element[j]);
-              if (allow_missing_elements && --missingElementWarningsLeft==0)
-                fprintf(stdout, "Further missing elements warnings suppressed\n");
-              fflush(stdout);
-            }
-          } else {
-            if (missingElementWarningsLeft || !allow_missing_elements) {
-              fprintf(stdout, "%s: unable to find element %s (do_load_parameters)\n", 
-                      allow_missing_elements?"Warning":"Error",
-                      element[j]);
-              if (allow_missing_elements && --missingElementWarningsLeft==0)
-                fprintf(stdout, "Further missing elements warnings suppressed\n");
-              fflush(stdout);
-            }
-          }
-          if (!allow_missing_elements)
-            exit(1);
-          element_missing = 1;
-          break;
-        }
+
+      /* if occurence is available, we can take advantage of hash table */
+      if ((occurence && (!find_element_hash(element[j], occurence[j], &eptr, &(beamline->elem)))) ||
+	  (!occurence && (!find_element_hash(element[j], 1,  &eptr, &(beamline->elem)))))  {
+	if (occurence) {
+	  if (missingElementWarningsLeft || !allow_missing_elements) {
+	    fprintf(stdout, "%s: unable to find occurence %" PRId32 " of element %s (do_load_parameters)\n", 
+		    allow_missing_elements?"Warning":"Error",
+		    occurence[j], element[j]);
+	    if (allow_missing_elements && --missingElementWarningsLeft==0)
+	      fprintf(stdout, "Further missing elements warnings suppressed\n");
+	    fflush(stdout);
+	  }
+	} else {
+	  if (missingElementWarningsLeft || !allow_missing_elements) {
+	    fprintf(stdout, "%s: unable to find element %s (do_load_parameters)\n", 
+		    allow_missing_elements?"Warning":"Error",
+		    element[j]);
+	    if (allow_missing_elements && --missingElementWarningsLeft==0)
+	      fprintf(stdout, "Further missing elements warnings suppressed\n");
+	    fflush(stdout);
+	  }
+	}
+	if (!allow_missing_elements)
+	  exit(1);
+	element_missing = 1;
       }
+  
       if (element_missing) {
         if (occurence)
           lastMissingOccurence = occurence[j];
@@ -579,7 +578,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
             ((entity_description[eptr->type].parameter[param].flags&PARAM_CHANGES_MATRIX)?VMATRIX_IS_PERTURBED:0);
         load_request[i].element_flags[load_request[i].values] = eptr->flags;
         load_request[i].values++;
-      } while (!occurence && find_element(element[j], &eptr, &(beamline->elem)));
+      } while (!occurence && find_element_hash(element[j], numberChanged+1, &eptr, &(beamline->elem)));
       free(element[j]);
       free(parameter[j]);
       if (mode)
