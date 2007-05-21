@@ -163,15 +163,26 @@ void setupSCEffect(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 /* track through space charge element */
 void trackThroughSCMULT(double **part, long np, ELEMENT_LIST *eptr)
 {
-  long i;
+  long i, np_total;
   double *coord;
   double kx, ky, sx;
   double center[3], kick[2];
   double sigmax, sigmay;
   int flag;
 
-  if (!np)  
-    return;
+  if ( !USE_MPI || !notSinglePart) {
+    if (!np)  
+      return;
+  }
+#if USE_MPI
+  else {
+    if(isMaster)
+      np = 0;
+    MPI_Allreduce (&np, &np_total, 1, MPI_LONG, MPI_SUM, workers);
+   if (!np_total)
+     return(0.0);
+  }
+#endif
   /* compute bunch center */
   for(i=center[0]=center[1]=center[2]=0; i<np; i++) {
     coord = part[i];
@@ -179,9 +190,19 @@ void trackThroughSCMULT(double **part, long np, ELEMENT_LIST *eptr)
     center[1] += coord[2];
     center[2] += coord[4];
   }
+#if USE_MPI
+  if (USE_MPI) {
+    double center_sum[3];
+    MPI_Allreduce (center, center_sum, 3, MPI_DOUBLE, MPI_SUM, workers);
+    center[0] = center_sum[0]/np_total;
+    center[1] = center_sum[1]/np_total;
+    center[2] = center_sum[2]/np_total;
+  } 
+#else
   center[0] /= np;
   center[1] /= np;
   center[2] /= np;
+#endif
  
   /* apply kick to particles */
   if (!nonlinear) {
@@ -302,9 +323,18 @@ void initializeSCMULT(ELEMENT_LIST *eptr, double **part, long np, double Po, lon
       bomb("No charge element is given.", NULL);
 	
   }
+#if USE_MPI
+  /* We set it as single particle case, as the particles have not been distributed 
+     when the function is called, all the processors will do the same */
+  notSinglePart = 0;  
+#endif
   sc->sigmax = computeRmsCoordinate(part, 0, np);
   sc->sigmay = computeRmsCoordinate(part, 2, np);
   sc->sigmaz = computeRmsCoordinate(part, 4, np);
+#if USE_MPI
+  /* set it back to parallel execution */
+  notSinglePart = 1;
+#endif
   sc->c0 = sqrt(2.0/PI) * re_mks * charge->charge / e_mks;
   sc->c1 = sc->c0/sqr(Po)/sqrt(sqr(Po)+1.0)/sc->sigmaz;
   /*       printf("c0=%.6g, c1=%.6g, sz=%.6g\n\n", sc->c0, sc->c1, sc->sigmaz); */
@@ -323,8 +353,13 @@ void accumulateSCMULT(double **part, long np, ELEMENT_LIST *eptr)
   temp = sc->sigmax + sc->sigmay;
   dmux = twiss0->betax / sc->sigmax / temp;
   dmuy = twiss0->betay / sc->sigmay / temp;
+#if USE_MPI
+  sc->sigmax = computeRmsCoordinate_p(part, 0, np, eptr);
+  sc->sigmay = computeRmsCoordinate_p(part, 2, np, eptr);
+#else
   sc->sigmax = computeRmsCoordinate(part, 0, np);
   sc->sigmay = computeRmsCoordinate(part, 2, np);
+#endif
   twiss0 = eptr->twiss;
   temp = sc->sigmax + sc->sigmay;
   dmux += twiss0->betax / sc->sigmax / temp;
@@ -337,21 +372,109 @@ void accumulateSCMULT(double **part, long np, ELEMENT_LIST *eptr)
 
 double computeRmsCoordinate(double **coord, long i1, long np)
 {
-  double vrms, x, xc;
-  long i;
-  
-  if (!np)
-    return(0.0);
+  double vrms=0.0, x, xc=0.0;
+  double xc_sum=0.0, vrms_sum=0.0;
+  long i, np_total;
+
+  if ( !USE_MPI || !notSinglePart) {
+    if (!np)
+      return(0.0);
+  }
+#if USE_MPI
+  else {
+    if(isMaster)
+      np = 0;
+    MPI_Allreduce (&np, &np_total, 1, MPI_LONG, MPI_SUM, workers);
+   if (!np_total)
+     return(0.0);
+  }
+#endif
 
   /* compute centroids */
   for (i=xc=0; i<np; i++) {
     xc  += coord[i][i1];
   }
-  xc  /= np;
-
+  /* Compute the sum of xc across all the processors */
+  if ( !USE_MPI || !notSinglePart) 
+    xc /= np;
+#if USE_MPI
+  else {
+    MPI_Allreduce (&xc, &xc_sum, 1, MPI_DOUBLE, MPI_SUM, workers);
+    xc = xc_sum/np_total;
+  }
+#endif
   for (i=vrms=0; i<np; i++) {
     vrms += sqr(x  = coord[i][i1]-xc );
   }
-  return(sqrt(vrms/np));
+  if ( !USE_MPI || !notSinglePart)   
+    vrms /= np;
+#if USE_MPI
+  else {
+    MPI_Allreduce (&vrms, &vrms_sum, 1, MPI_DOUBLE, MPI_SUM, workers);
+    vrms = vrms_sum/np_total;
+  }
+#endif 
+  return(sqrt(vrms));
 }
 
+#if USE_MPI
+/* We have this new function as we need treat the parallel an serial element separately */
+double computeRmsCoordinate_p(double **coord, long i1, long np, ELEMENT_LIST *eptr)
+{
+  double vrms=0.0, xc=0.0;
+  long i, np_total;
+  unsigned long classFlags = 0;
+
+  classFlags = entity_description[eptr->type].flags;
+
+  if (classFlags&UNIPROCESSOR) { /* serial element, only master works */
+    MPI_Bcast(&np, 1, MPI_LONG, 0, MPI_COMM_WORLD);
+    if (!np)
+      return(0.0);
+
+    /* compute centroids */
+    if (isMaster) {
+      for (i=xc=0; i<np; i++) {
+	xc  += coord[i][i1];
+      }
+      xc  /= np;
+    }
+    /* Broadcast the xc from master to all the slaves */
+    MPI_Bcast(&xc, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    if (isMaster) {
+      for (i=vrms=0; i<np; i++) {
+	vrms += sqr(coord[i][i1]-xc);
+      }
+      vrms /= np;    
+    }
+    /* Broadcast the vrms from master to all the slaves */
+    MPI_Bcast(&vrms, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+  }
+  else { /* parallel element, only slaves works */
+    double xc_sum=0.0, vrms_sum = 0.0;
+
+    if(isMaster)
+      np = 0;
+    MPI_Allreduce (&np, &np_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+    /* compute centroids */
+    if (isSlave) {
+      for (i=xc=0; i<np; i++) {
+	xc  += coord[i][i1];
+      }
+    }
+    /* Compute the sum of xc across all the processors */
+    MPI_Allreduce (&xc, &xc_sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    xc = xc_sum/np_total;
+
+    if (isSlave) {
+      for (i=vrms=0; i<np; i++) {
+	vrms += sqr(coord[i][i1]-xc);
+      }
+    }
+    /* Compute the sum of vrms across all the processors */
+    MPI_Allreduce (&vrms, &vrms_sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    vrms = vrms_sum/np_total;    
+  }
+  return(sqrt(vrms));
+}
+#endif

@@ -3096,6 +3096,9 @@ void trackThroughSCMULT(double **part, long np, ELEMENT_LIST *eptr);
 void initializeSCMULT(ELEMENT_LIST *eptr, double **part, long np, double Po, long i_pass );
 void accumulateSCMULT(double **part, long np, ELEMENT_LIST *eptr);
 double computeRmsCoordinate(double **coord, long i1, long np);
+#if USE_MPI
+double computeRmsCoordinate_p(double **coord, long i1, long np, ELEMENT_LIST *eptr);
+#endif
 
 void transverseFeedbackPickup(TFBPICKUP *tfbp, double **part, long np, long pass);
 void initializeTransverseFeedbackPickup(TFBPICKUP *tfbp);
