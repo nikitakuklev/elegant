@@ -21,7 +21,7 @@ Source is http://burtleburtle.net/bob/c/lookupa.h
 #ifndef _X86_64_
 ub4 lookup(/*_ ub1 *k, ub4 length, ub4 level _*/);
 #else
-ub8 lookup(/*_ ub1 *k, ub8 length, ub8 level _*/)
+ub8 lookup(/*_ ub1 *k, ub8 length, ub8 level _*/);
 #endif
 
 #endif /* LOOKUPA */
