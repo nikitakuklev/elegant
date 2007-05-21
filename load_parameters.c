@@ -119,6 +119,15 @@ long setup_load_parameters_for_file(char *filename, RUN *run, LINE_LIST *beamlin
   load_request[load_requests].excludeNamePattern = exclude_name_pattern;
   load_request[load_requests].excludeItemPattern = exclude_item_pattern;
   load_request[load_requests].excludeTypePattern = exclude_type_pattern;
+
+#ifdef USE_MPE /* use the MPE library */    
+  int event1a, event1b;
+  event1a = MPE_Log_get_event_number();
+  event1b = MPE_Log_get_event_number();
+  if(isMaster) 
+    MPE_Describe_state(event1a, event1b, "load_parameters", "blue");
+  MPE_Log_event(event1a, 0, "start load_parameters"); /* record time spent on reading input */ 
+#endif
   
   SDDS_ClearErrors();
 
@@ -213,8 +222,14 @@ long setup_load_parameters_for_file(char *filename, RUN *run, LINE_LIST *beamlin
     do_load_parameters(beamline, 1);
     fprintf(stdout, "New length per pass: %21.15e m\n",
             compute_end_positions(beamline));
+#ifdef  USE_MPE
+  MPE_Log_event(event1b, 0, "end load_parameters");
+#endif
     return 1;
   }
+#ifdef  USE_MPE
+  MPE_Log_event(event1b, 0, "end load_parameters");
+#endif
   return 0;
 }
 
