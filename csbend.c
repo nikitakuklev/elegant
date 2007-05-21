@@ -1959,7 +1959,7 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
   long nBins1;
   TRACKING_CONTEXT tContext;
 #if USE_MPI 
-  long np_total=1, binned_total;;
+  long np_total=1, np_tmp=np, binned_total;
 #endif
   
   getTrackingContext(&tContext);
@@ -1967,22 +1967,29 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
 #if (!USE_MPI)
   if (np<=1 || !csrWake.valid || !csrDrift->csr) {
 #else
-  if (isSlave&&notSinglePart)
-    MPI_Allreduce(&np, &np_total, 1, MPI_LONG, MPI_SUM, workers);   
-  if  ((isSlave&&np_total<=1) || !csrWake.valid || !csrDrift->csr || !notSinglePart) {
-#endif
-    if ((isSlave||!notSinglePart) && csrDrift->linearOptics) {
-      long i;
-      for (i=0; i<np; i++) {
-        part[i][0] += csrDrift->length*part[i][1];
-        part[i][2] += csrDrift->length*part[i][3];
-        part[i][4] += csrDrift->length;
-      }
-    }
-    else
-      exactDrift(part, np, csrDrift->length);
-    return np;
+  if (notSinglePart){
+    if (isMaster) 
+      np_tmp = 0;  
+    MPI_Allreduce(&np_tmp, &np_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);   
   }
+  if (np_total<=1 || !csrWake.valid || !csrDrift->csr) 	{
+    if (isSlave||!notSinglePart) {
+#endif
+      if (csrDrift->linearOptics) {
+	long i;
+	for (i=0; i<np; i++) {
+	  part[i][0] += csrDrift->length*part[i][1];
+	  part[i][2] += csrDrift->length*part[i][3];
+	  part[i][4] += csrDrift->length;
+	}
+      }
+      else
+	exactDrift(part, np, csrDrift->length);
+#if (USE_MPI)
+    }
+#endif
+    return np;
+  }	
   nBins1 = csrWake.bins - 1;
 
   mode = 
@@ -2841,15 +2848,16 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
   
   /* do final drift of dz0/2 */
   dz = dz0/2;
-  for (iPart=0; iPart<np; iPart++) {
-    coord = part[iPart];
-    coord[0] += coord[1]*dz;
-    coord[2] += coord[3]*dz;
-    if (csrDrift->linearOptics)
-      coord[4] += dz;
-    else
-      coord[4] += dz*sqrt(1+sqr(coord[1])+sqr(coord[3]));
-  }    
+  if (isSlave || !notSinglePart)
+    for (iPart=0; iPart<np; iPart++) {
+      coord = part[iPart];
+      coord[0] += coord[1]*dz;
+      coord[2] += coord[3]*dz;
+      if (csrDrift->linearOptics)
+	coord[4] += dz;
+      else
+	coord[4] += dz*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+    }    
 
   csrWake.zLast = zStart + length;
   free(ctHist);
