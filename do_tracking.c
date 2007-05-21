@@ -141,7 +141,7 @@ long do_tracking(
   static long warnedAboutChargePosition = 0;
   unsigned long classFlags = 0;
   long nParticlesStartPass = 0;
-  int myid, active = 1, lostSinceSeqMode = 0, needSort = 0;
+  int myid = 0, active = 1, lostSinceSeqMode = 0, needSort = 0;
 #ifdef SORT
   int nToTrackAtLastSort;
 #endif
@@ -155,11 +155,17 @@ long do_tracking(
   int distributed = 0; /* indicate if the particles have been scattered */ 
   long reAllocate = 0; /* indicate if new memory needs to be allocated */
 #ifdef  USE_MPE /* use the MPE library */
-  int event1a, event1b;
+  int event1a, event1b, event2a, event2b;
+  MPE_LOG_BYTES  bytebuf;
+  int            bytebuf_pos = 0;
   event1a = MPE_Log_get_event_number();
   event1b = MPE_Log_get_event_number();
+  event2a = MPE_Log_get_event_number(); 
+  event2b = MPE_Log_get_event_number();
   if(isMaster) {
     MPE_Describe_state(event1a, event1b, "Watch", "red");
+    MPE_Describe_info_state( event2a, event2b, "Tracking_element", "orange",
+			     "Element: %s" );
   }
 #endif
   MPI_Comm_rank(MPI_COMM_WORLD, &myid); /* get ID number for each processor */
@@ -686,7 +692,11 @@ long do_tracking(
 	      break;
 	    }
 	  }
-          
+#ifdef  USE_MPE
+	  bytebuf_pos = 0;
+	  MPE_Log_event( event2a, 0, NULL );
+	  MPE_Log_pack( bytebuf, &bytebuf_pos, 's', strlen(entity_name[eptr->type]), entity_name[eptr->type]); 
+#endif
 	  if (active && (((!USE_MPI || !notSinglePart) && nParticlesStartPass) || nToTrack || 
 	     (USE_MPI && (classFlags&RUN_ZERO_PARTICLES)))) {
 	    switch (type) {
@@ -1244,6 +1254,9 @@ long do_tracking(
 	      break;
 	    }
 	  }
+#ifdef USE_MPE
+	      MPE_Log_event( event2b, 0, bytebuf );
+#endif
 	}
 #if USE_MPI
 	if ((myid==0) && notSinglePart && (!usefulOperation(eptr, flags, i_pass)))
@@ -1357,6 +1370,10 @@ long do_tracking(
 	    lostSinceSeqMode = needSort = 1;
 	  MPI_Bcast (&lostSinceSeqMode, 1, MPI_INT, 0, MPI_COMM_WORLD);
 	}
+      }
+      if (classFlags&MPALGORITHM && isMaster) {
+	/* Master does not need to do limit_amplitudes for MPALGORITHM elements */
+        active = 0; 
       }
 #endif
       if ((!USE_MPI || !notSinglePart) || (USE_MPI && active)) {
