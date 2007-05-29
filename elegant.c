@@ -213,8 +213,6 @@ long isMaster = 1;
 long isSlave = 1;
 long notSinglePart=0; /* All the processors will do the same thing by default */
 
-htab *load_hash; /* A hash table for loading parameters */
-
 #if USE_MPI
 parallelMode parallelStatus = initialMode; 
 int n_processors = 1;
@@ -1483,6 +1481,7 @@ char **argv;
   close(fd);
   MPI_Finalize();
 #endif
+  hdestroy(load_hash);                         /* destroy hash table */
   return(0);
 }
 
