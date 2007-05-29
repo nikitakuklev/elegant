@@ -18,6 +18,9 @@
 /* flag word for trace mode */
 long trace_mode = 0;
 
+/* A hash table for loading parameters effectively */
+htab *load_hash;
+
 long particleID = 1;
 
 char *entity_name[N_TYPES] = {
