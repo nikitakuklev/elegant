@@ -214,7 +214,8 @@ madto_SRCS = 	madto.c sdds_strength_output.c convert_to_parmela.c convert_to_pat
 		convert_to_patricia.c convert_to_transport.c convert_to_xorbit.c track_data.c \
 		get_beamline.c mad_parse.c output_magnets.c cfgets.c trace.c check_duplic.c \
 		extend_list.c matrix.c compose_fn.c find_elem.c print_line.c divideElements.c \
-		transmuteElements.c convert_to_cosy.c engeCoef.c  insertSCeffects.c drand_oag.c
+		transmuteElements.c convert_to_cosy.c engeCoef.c  insertSCeffects.c drand_oag.c \
+                lookupa.c recycle.c hashtab.c
 
 sddssasefel_SRCS = sddssasefel.c sasefelmx.c
 
