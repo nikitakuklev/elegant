@@ -60,7 +60,7 @@ extern long isSlave;
 extern long notSinglePart;     
 
 /* A hash table for loading parameters effectively */
-htab *load_hash;
+extern htab *load_hash;
 
 #if USE_MPI
 /* pMode will be used to specify where the information is stored, i.e., on Master or Slave. */
