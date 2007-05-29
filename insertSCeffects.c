@@ -372,7 +372,7 @@ void accumulateSCMULT(double **part, long np, ELEMENT_LIST *eptr)
 
 double computeRmsCoordinate(double **coord, long i1, long np)
 {
-  double vrms=0.0, x, xc=0.0;
+  double vrms=0.0, xc=0.0;
   double xc_sum=0.0, vrms_sum=0.0;
   long i, np_total;
 
@@ -404,7 +404,7 @@ double computeRmsCoordinate(double **coord, long i1, long np)
   }
 #endif
   for (i=vrms=0; i<np; i++) {
-    vrms += sqr(x  = coord[i][i1]-xc );
+    vrms += sqr(coord[i][i1]-xc );
   }
   if ( !USE_MPI || !notSinglePart)   
     vrms /= np;
