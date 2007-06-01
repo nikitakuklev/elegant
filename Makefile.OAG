@@ -26,19 +26,25 @@ OP_SYS_CFLAGS+= -DUSE_KAHAN            # use Kahan's algorithm for long sum
 #OP_SYS_CFLAGS+= -DSET_DOUBLE           # set FPU as double precision
 ifeq ($(MPI),1)
   USER_MPI_FLAGS = -DUSE_MPI=1         # 1 for parallel elegant, 0 for serial elegant  
+  PRODOAG = Pelegant
+ifdef WIN32
+  CC := $(CC) $(USER_MPI_FLAGS)
+  CCC := $(CCC) $(USER_MPI_FLAGS)
+else
   #OP_SYS_LDLIBS += -lmpe -llmpe        # visualize the performance of the parallel elegant 
   #USER_MPI_FLAGS+=  -DUSE_MPE          # user defined MPE event
   #USER_MPI_FLAGS+=  -mpianim -L/usr/X11R6/lib -lX11   # animate MPI program in real-time
   #USER_MPI_FLAGS+= -DMPI_DEBUG         # print debugging information for MPI 
   #USER_MPI_FLAGS+= -DCHECKFLAGS=1      # if defined, check balance only at the beginning
                                         # or the particle number is changed
+  MPI_PATH = $(wildcard /usr/local/software/mvapich2-gcc/bin /disk1/mpich2_mpd_sock/bin)
   #MPI_PATH = /disk1/mpich2_mpd_ssm/bin
-  MPI_PATH = /disk1/mpich2_mpd_sock/bin
-  #MPI_PATH=/usr/local/software/mvapich2-gcc/bin
+  #MPI_PATH = /disk1/mpich2_mpd_sock/bin
+  #MPI_PATH = /usr/local/software/mvapich2-gcc/bin
   #MPI_PATH = /share/mpich/ch_p4/bin
   CC = $(MPI_PATH)/mpicc  $(USER_MPI_FLAGS)   
   CCC = $(MPI_PATH)/mpicxx  $(USER_MPI_FLAGS)
-  PRODOAG = Pelegant
+endif
 endif
 
 ifeq ($(NOMPI),1)
@@ -84,13 +90,20 @@ USR_CFLAGS_DEFAULT += -DUNIX -DMINIMIZE_MEMORY
 ifeq ($(LYNCEANTECH),1) 
         USR_CFLAGS += -DLYNCEANTECH
 endif
-USR_CFLAGS_WIN32 = -nil-
 
 ifdef WIN32
 USR_LIBS = 	mdbcommon matlib fftpack SDDS1 \
 		rpnlib mdbmth namelist mdblib \
 		meschach z fdlibm
 z_DIR = $(EPICS_EXTENSIONS_LIB)
+
+ifeq ($(MPI),1)
+USR_CFLAGS_WIN32 = -Ic:/MPICH2/include
+USR_LIBS += mpi
+mpi_DIR = c:/MPICH2/lib
+else
+USR_CFLAGS_WIN32 = -nil-
+endif
 else
 USR_LIBS = 	mdbcommon matlib fftpack SDDS1 \
 		rpnlib mdbmth namelist mdblib \
@@ -149,12 +162,18 @@ ifneq ($(LAPACK), 0)
 USR_CFLAGS += -DHAVE_LAPACK -DLAPACK
 ifeq ($(OS_CLASS),Linux)
 SYS_PROD_LIBS_Linux += lapack blas
-#The g2c library is needed for gcc versions before FC2
+
 GFORTRAN = $(words $(notdir $(wildcard /usr/lib/libgfortran.* /usr/lib64/libgfortran.*)))
 ifeq ($(GFORTRAN), 0)
 SYS_PROD_LIBS_Linux += g2c
 else
+gcc-version = $(shell gcc -v 2> /dev/stdout | grep "^gcc" | awk '{print $$4}')
+gfortran-version = $(shell gfortran -v 2> /dev/stdout | grep "^gcc" | awk '{print $$4}')
+ifeq ($(gcc-version),$(gfortran-version))
 SYS_PROD_LIBS_Linux += gfortran
+else
+SYS_PROD_LIBS_Linux += g2c
+endif
 endif
 #gcc-version = $(shell gcc -v 2> /dev/stdout | grep "^gcc" | awk '{print $$4}')
 #SYS_PROD_LIBS_Linux += $(shell if [ "$(call gcc-version)" -lt "20050722" ]; then echo "g2c" ; else echo "" ; fi;)
