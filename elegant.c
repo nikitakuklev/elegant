@@ -271,8 +271,6 @@ char **argv;
   double *starting_coord, finalCharge;
   long namelists_read = 0, failed, firstPass;
   char *semaphoreFile[2];
-  semaphoreFile[0] = semaphoreFile[1] = NULL;
-
 #if USE_MPI
 #ifdef MPI_DEBUG
   FILE *fpError; 
@@ -282,7 +280,11 @@ char **argv;
 #endif 
   MPI_Group world_group, worker_group;
   int ranks[1];
+#endif
 
+  semaphoreFile[0] = semaphoreFile[1] = NULL;
+
+#if USE_MPI
   MPI_Init(&argc,&argv);
   /* get the total number of processors */
   MPI_Comm_size(MPI_COMM_WORLD, &n_processors);
@@ -303,10 +305,15 @@ char **argv;
     fprintf(stdout, "Process %d on %s\n", myid, processor_name);
 #else   
     /* duplicate an open file descriptor, tested with gcc */
-    fd = dup(fileno(stdout)); 
+    fd = dup(fileno(stdout));
     /* redirect output, only the master processor will write on screen or files */
-    freopen("/dev/null","w",stdout); 
+#if defined(_WIN32)
+    freopen("NUL","w",stdout);
+    freopen("NUL","w",stderr);
+#else
+    freopen("/dev/null","w",stdout);
     freopen("/dev/null","w",stderr);
+#endif
 #endif
     writePermitted = isMaster = 0;
     isSlave = 1;

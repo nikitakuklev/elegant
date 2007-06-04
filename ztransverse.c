@@ -55,9 +55,12 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
   static double *pz = NULL;
   static long max_np = 0;
   double *Vfreq, *iZ;
-  long ib, nb, n_binned, nfreq, iReal, iImag, plane, first;
+  long i, ib, nb, n_binned, nfreq, iReal, iImag, plane, first;
   double factor, tmin, tmax, tmean, dt, userFactor[2], rampFactor=1;
   static long not_first_call = -1;
+#if USE_MPI
+  float *buffer_send, *buffer_recv;
+#endif
 #if defined(DEBUG)
   FILE *fp;
 #endif
@@ -172,14 +175,16 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
   }
     */
   if (isSlave) {
-    float buffer_send[nb], buffer_recv[nb];
-    long i;
+    buffer_send = malloc(sizeof(float) * nb);
+    buffer_recv = malloc(sizeof(float) * nb);
     for (i=0; i<nb; i++)
       buffer_send[i] = posItime[plane][i];
     MPI_Reduce(buffer_send, buffer_recv, nb, MPI_FLOAT, MPI_SUM, 1, workers);
     MPI_Bcast(buffer_recv, nb, MPI_FLOAT, 1, workers);
     for (i=0; i<nb; i++)
       posItime[plane][i] = buffer_recv[i];
+    free(buffer_send);
+    free(buffer_recv);
   }
 
 #endif

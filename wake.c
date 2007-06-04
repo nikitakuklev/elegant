@@ -30,6 +30,9 @@ void track_through_wake(double **part, long np, WAKE *wakeData, double *PoInput,
   static long max_np = 0;
   long ib, nb, n_binned;
   double factor, tmin, tmax, tmean, dt, Po;
+#if USE_MPI
+  double *buffer;
+#endif
 
   set_up_wake(wakeData, run, i_pass, np, charge);
   Po = *PoInput;
@@ -131,9 +134,10 @@ void track_through_wake(double **part, long np, WAKE *wakeData, double *PoInput,
   }
   
   if (isSlave && notSinglePart) {
-    double buffer[nb];
+    buffer = malloc(sizeof(double) * nb);
     MPI_Allreduce(Itime, buffer, nb, MPI_DOUBLE, MPI_SUM, workers);
     memcpy(Itime, buffer, sizeof(double)*nb);
+    free(buffer);
   }
 #endif
   if (isSlave || !notSinglePart) {

@@ -191,14 +191,14 @@ long trackRfCavityWithWakes
     static long been_warned = 0, been_warned_kicks=0;
     double dgammaOverGammaAve = 0;
     long dgammaOverGammaNp = 0;
-#if USE_MPI
-    long np_total, np_tmp;
-    long i;
-    double error_sum=0.0, sumArray[n_processors], errorArray[n_processors];
-#endif 
 #ifdef USE_KAHAN
     double error = 0.0; 
 #endif   
+#if USE_MPI
+    long np_total, np_tmp;
+    long i;
+    double error_sum=0.0, *sumArray, *errorArray;
+#endif
 
     if (rfca->bodyFocusModel) {
       char *modelName[2] = { "none", "srs" };
@@ -397,6 +397,9 @@ long trackRfCavityWithWakes
 	  MPI_Allreduce(&tAve, &tAve_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 	  tAve = tAve_total/np_total;
 #else
+	  sumArray = malloc(sizeof(double) * n_processors);
+	  errorArray = malloc(sizeof(double) * n_processors);
+
 	  MPI_Allgather(&tAve,1,MPI_DOUBLE,sumArray,1,MPI_DOUBLE,MPI_COMM_WORLD);
 	  /* collect errors from all processors */
 	  MPI_Allgather(&error,1,MPI_DOUBLE,errorArray,1,MPI_DOUBLE,MPI_COMM_WORLD);
@@ -405,6 +408,9 @@ long trackRfCavityWithWakes
 	    tAve_total = KahanPlus(tAve_total, errorArray[i], &error_sum);
 	  }
 	  tAve = tAve_total/np_total;
+	  
+	  free(sumArray);
+	  free(errorArray);
 #endif
 	}
       }

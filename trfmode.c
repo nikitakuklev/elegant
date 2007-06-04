@@ -49,6 +49,7 @@ void track_through_trfmode(
   static long debugPass = 0;
 #endif
 #if USE_MPI
+  double *buffer;
   long np_total, binned_total;
 #endif
 
@@ -199,7 +200,11 @@ void track_through_trfmode(
 #endif
       fflush(stdout);
 #if USE_MPI
+#if defined(_WIN32)
+    freopen("NUL","w",stdout); 
+#else
       freopen("/dev/null","w",stdout); 
+#endif
 #endif    
     }
   
@@ -222,13 +227,14 @@ void track_through_trfmode(
       lastBin = lastBin_global;
     }
     if(isSlave) {
-      double buffer[lastBin+1]; 
+      buffer = malloc(sizeof(double) * (lastBin+1)); 
       MPI_Allreduce(xsum, buffer, lastBin+1, MPI_DOUBLE, MPI_SUM, workers);
       memcpy(xsum, buffer, sizeof(double)*(lastBin+1));
       MPI_Allreduce(ysum, buffer, lastBin+1, MPI_DOUBLE, MPI_SUM, workers);
       memcpy(ysum, buffer, sizeof(double)*(lastBin+1));	
       MPI_Allreduce(count, buffer, lastBin+1, MPI_LONG, MPI_SUM, workers);
       memcpy(count, buffer, sizeof(unsigned long)*(lastBin+1));
+      free(buffer);
     }
 #endif
     for (ib=0; ib<=lastBin; ib++) {

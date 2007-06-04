@@ -44,6 +44,7 @@ void track_through_rfmode(
     double Qrp, VbImagFactor, Q;
     long deltaPass;
 #if USE_MPI
+    double *buffer;
     long np_total;
 #endif
 
@@ -212,9 +213,10 @@ void track_through_rfmode(
         lastBin = lastBin_global;
       }
       if(isSlave) {
-        double buffer[lastBin+1]; 
+        buffer = malloc(sizeof(double) * (lastBin+1)); 
 	MPI_Allreduce(Ihist, buffer, lastBin+1, MPI_LONG, MPI_SUM, workers);
-        memcpy(Ihist, buffer, sizeof(long)*(lastBin+1));	
+        memcpy(Ihist, buffer, sizeof(long)*(lastBin+1));
+	free(buffer);
       }
 #endif    
       for (ib=0; ib<=lastBin; ib++) {

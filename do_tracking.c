@@ -151,7 +151,6 @@ long do_tracking(
   double my_wtime, start_wtime, end_wtime, nParPerElements, my_rate;
   double round = 0.5;
   balance balanceStatus;
-  balanceStatus = startMode;
   int distributed = 0; /* indicate if the particles have been scattered */ 
   long reAllocate = 0; /* indicate if new memory needs to be allocated */
 #ifdef  USE_MPE /* use the MPE library */
@@ -168,6 +167,7 @@ long do_tracking(
 			     "Element: %s" );
   }
 #endif
+  balanceStatus = startMode;
   MPI_Comm_rank(MPI_COMM_WORLD, &myid); /* get ID number for each processor */
   trackingContext.myid = myid;
   if (myid==0) 
@@ -1556,9 +1556,9 @@ long do_tracking(
 	  } 
 	}
 #ifdef MPI_DEBUG  
-	fprintf(stderr, "\n\nmyid=%d, nParPerElements=%e, my_time=%lf, my_rate=%lf\n",
+	fprintf(stdout, "\n\nmyid=%d, nParPerElements=%e, my_time=%lf, my_rate=%lf\n",
 		myid, nParPerElements, my_wtime, nParPerElements/my_wtime);
-	fprintf(stderr, "nParElements=%ld, nElements=%ld\n",nParElements, nElements);
+	fprintf(stdout, "nParElements=%ld, nElements=%ld\n",nParElements, nElements);
 #endif
       }
       if (myid==0)
@@ -1727,6 +1727,9 @@ void do_match_energy(
   long ip;
   double P_average, dP_centroid, P, t;
   long active = 1;
+#ifdef USE_KAHAN
+  double error = 0.0;
+#endif
 #if USE_MPI
   long np_total;
   double P_total = 0.0;
@@ -1736,9 +1739,6 @@ void do_match_energy(
     else 
       active = 0;
   }  
-#endif
-#ifdef USE_KAHAN
-  double error = 0.0;
 #endif
 
   log_entry("do_match_energy");
@@ -3043,10 +3043,13 @@ void scatterParticles(double **coord, long *nToTrack, double **accepted,
 {
   long work_processors = n_processors-1; 
   int root = 0, i, j;
-  int my_nToTrack, nItems, nToTrackCounts[n_processors];
-  double total_rate, constTime, rateCounts[n_processors];
+  int my_nToTrack, nItems, *nToTrackCounts;
+  double total_rate, constTime, *rateCounts;
   MPI_Status status;
-
+  
+  nToTrackCounts = malloc(sizeof(int) * n_processors);
+  rateCounts = malloc(sizeof(double) * n_processors);
+  
   /* The particles will be distributed to slave processors evenly for the first pass */
   if ((balanceStatus==startMode) && (!*distributed))  {
     if (myid==0) 
@@ -3160,14 +3163,21 @@ void scatterParticles(double **coord, long *nToTrack, double **accepted,
 	}
   }
 #endif
+
+  free(nToTrackCounts);
+  free(rateCounts);
+
 }
 
 void gatherParticles(double **coord, long *lostOnPass, long *nToTrack, long *nLost, double **accepted, long n_processors, int myid, double *round)
 {
   long work_processors = n_processors-1;
   int root = 0, i, nItems, displs ;
-  int my_nToTrack, my_nLost, nToTrackCounts[n_processors], nLostCounts[n_processors], current_nLost = 0; 
+  int my_nToTrack, my_nLost, *nToTrackCounts, *nLostCounts, current_nLost = 0; 
   MPI_Status status;
+
+  nToTrackCounts = malloc(sizeof(int) * n_processors);
+  nLostCounts = malloc(sizeof(int) * n_processors);
 
   if (myid==0) {
     my_nToTrack = 0;  
@@ -3253,14 +3263,20 @@ void gatherParticles(double **coord, long *lostOnPass, long *nToTrack, long *nLo
     }
     MPI_Bcast (round, 1, MPI_DOUBLE, root, MPI_COMM_WORLD);
   } 
+
+  free(nToTrackCounts);
+  free(nLostCounts);
+
 }
 
 balance checkBalance (double my_wtime, int myid, long n_processors)
 {
-  double maxTime, minTime, time[n_processors];
+  double maxTime, minTime, *time;
   int i, balanceFlag = 1; 
   static int imbalanceCounter = 2; /* counter for the number of continuously imbalanced passes,
                                       the 1st pass is treated specially */
+
+  time = malloc(sizeof(double) * n_processors);
 
   MPI_Gather (&my_wtime, 1, MPI_DOUBLE, time, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD); 
   if (myid==0) {
@@ -3297,6 +3313,8 @@ balance checkBalance (double my_wtime, int myid, long n_processors)
     fflush(stdout);
   }
 #endif
+
+  free(time);
 
   if (balanceFlag==1) 
     return goodBalance;

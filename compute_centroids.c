@@ -41,8 +41,16 @@ void compute_centroids(
 #ifdef USE_KAHAN
   long j;
   double error_sum=0.0, error_total=0.0,
-    sumMatrix[n_processors][6], errorMatrix[n_processors][6],
-    sumArray[n_processors], errorArray[n_processors];
+    **sumMatrix, **errorMatrix,
+    *sumArray, *errorArray;
+  sumMatrix = malloc(sizeof(double*) * n_processors);
+  errorMatrix = malloc(sizeof(double*) * n_processors);
+  sumArray = malloc(sizeof(double) * n_processors);
+  errorArray = malloc(sizeof(double) * n_processors);
+  for (j=0; j<n_processors; j++) {
+    sumMatrix[j] = malloc(sizeof(double) * 6);
+    errorMatrix[j] = malloc(sizeof(double) * 6);
+  }
 #endif
   if (notSinglePart) {
     if (((parallelStatus==trueParallel) && isSlave) || ((parallelStatus!=trueParallel) && isMaster))
@@ -117,6 +125,19 @@ void compute_centroids(
   }
 #endif  
    
+#if USE_MPI  /* In the non-parallel mode, it will be same with the serial version */ 
+#ifdef USE_KAHAN
+  for (j=0; j<n_processors; j++) {
+    free(sumMatrix[j]);
+    free(errorMatrix[j]);
+  }
+  free(sumMatrix);
+  free(errorMatrix);
+  free(sumArray);
+  free(errorArray);
+#endif
+#endif
+
 }
 
 /* routine: compute_sigmas()
@@ -211,10 +232,22 @@ void accumulate_beam_sums(
   long n_total, offset=0, index;  
 #ifdef USE_KAHAN
   double error_sum=0.0, error_total=0.0,
-    sumMatrixCen[n_processors][6], errorMatrixCen[n_processors][6],
-    sumMatrixSig[n_processors][21], errorMatrixSig[n_processors][21],
-    sumArray[n_processors], errorArray[n_processors];
+    **sumMatrixCen, **errorMatrixCen,
+    **sumMatrixSig, **errorMatrixSig,
+    *sumArray, *errorArray;
   long k;
+  sumMatrixCen = malloc(sizeof(double*) * n_processors);
+  errorMatrixCen = malloc(sizeof(double*) * n_processors);
+  sumMatrixSig = malloc(sizeof(double*) * n_processors);
+  errorMatrixSig = malloc(sizeof(double*) * n_processors);
+  sumArray = malloc(sizeof(double) * n_processors);
+  errorArray = malloc(sizeof(double) * n_processors);
+  for (j=0; j<n_processors; j++) {
+    sumMatrixCen[j] = malloc(sizeof(double) * 6);
+    errorMatrixCen[j] = malloc(sizeof(double) * 6);
+    sumMatrixSig[j] = malloc(sizeof(double) * 21);
+    errorMatrixSig[j] = malloc(sizeof(double) * 21);
+  }
 #endif
   if (notSinglePart) {
     if (((parallelStatus==trueParallel) && isSlave) || ((parallelStatus!=trueParallel) && isMaster))
@@ -455,6 +488,25 @@ void accumulate_beam_sums(
   else
     sums->n_part += n_part; 
 #endif    
+
+
+#if USE_MPI
+#ifdef USE_KAHAN
+  for (j=0; j<n_processors; j++) {
+    free(sumMatrixCen[j]);
+    free(errorMatrixCen[j]);
+    free(sumMatrixSig[j]);
+    free(errorMatrixSig[j]);
+  }
+  free(sumMatrixCen);
+  free(errorMatrixCen);
+  free(sumMatrixSig);
+  free(errorMatrixSig);
+  free(sumArray);
+  free(errorArray);
+#endif
+#endif
+
 }
 
 void copy_beam_sums(

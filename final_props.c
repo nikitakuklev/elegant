@@ -897,6 +897,9 @@ double approximateBeamWidth(double fraction, double **part, long nPart, long iCo
   double *hist, *cdf;
   long maxBins=ANALYSIS_BINS, bins=ANALYSIS_BINS, i50, iLo, iHi, i;
   double xMin, xMax, dx;
+#if USE_MPI
+  double *buffer;
+#endif
   xMin = xMax = dx = 0;
   
   /* make histogram of the coordinate */
@@ -906,9 +909,10 @@ double approximateBeamWidth(double fraction, double **part, long nPart, long iCo
                         1.01, part, nPart, iCoord);
 #if USE_MPI
   if (USE_MPI) {  /* Master needs to know the information to write the result */
-    double buffer[bins];
+    buffer = malloc(sizeof(double) * bins);
     MPI_Allreduce(hist, buffer, bins, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     memcpy(hist, buffer, sizeof(double)*bins);
+    free(buffer);
   }
 #endif
   /* sum histogram to get CDF */

@@ -42,8 +42,11 @@ double KahanPlus (double oldSum, double b, double *error)
 double KahanParallel (double sum,  double error, MPI_Comm comm)
 {
   long i, offset=0;
-  double sumArray[n_processors], errorArray[n_processors];
+  double *sumArray, *errorArray;
   double total = 0.0, error_sum = 0.0;
+
+  sumArray = malloc(sizeof(double) * n_processors);
+  errorArray = malloc(sizeof(double) * n_processors);
 
   MPI_Allgather(&sum,1,MPI_DOUBLE,sumArray,1,MPI_DOUBLE,comm);
   MPI_Allgather(&error,1,MPI_DOUBLE,errorArray,1,MPI_DOUBLE,comm);
@@ -53,7 +56,8 @@ double KahanParallel (double sum,  double error, MPI_Comm comm)
     total = KahanPlus(total, sumArray[i], &error_sum);
     total = KahanPlus(total, errorArray[i], &error_sum);
   }
-
+  free(sumArray);
+  free(errorArray);
   return total;
 }
 #endif

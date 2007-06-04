@@ -28,7 +28,9 @@
 #include "mpe.h" /* Defines the MPE library */ 
 #endif
 #include <float.h>
+#if !defined(_WIN32)
 #include <unistd.h>
+#endif
 #endif 
 
 #include <stdio.h>
@@ -38,7 +40,10 @@
 #include "table.h"
 #if defined(_WIN32)
 #include <float.h>
+#include <math.h>
+#include <io.h>
 #define isnan(x) _isnan(x)
+#define dup2(x,y) _dup2(x,y)
 #endif
 
 #ifndef STANDARD

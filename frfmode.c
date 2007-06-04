@@ -37,7 +37,8 @@ void track_through_frfmode(
   long deltaPass;
   double rampFactor;
 #if USE_MPI
-    long np_total;
+  double *buffer; 
+  long np_total;
 #endif
   
   if (charge)
@@ -115,9 +116,10 @@ void track_through_frfmode(
       lastBin = lastBin_global;
     }
     if(isSlave) {
-      double buffer[lastBin+1]; 
+      buffer = malloc(sizeof(double) * (lastBin+1)); 
       MPI_Allreduce(Ihist, buffer, lastBin+1, MPI_LONG, MPI_SUM, workers);
-      memcpy(Ihist, buffer, sizeof(long)*(lastBin+1));	
+      memcpy(Ihist, buffer, sizeof(long)*(lastBin+1));
+      free(buffer);
     }
 #endif 
     rampFactor = 0;
@@ -376,7 +378,11 @@ void set_up_frfmode(FRFMODE *rfmode, char *element_name, double element_z, long 
       free(filename);
   }
 #if (USE_MPI)
+#if defined(_WIN32)
+    freopen("NUL","w",stdout); 
+#else
     freopen("/dev/null","w",stdout);  
+#endif
   } /* We let the first slave to dump the parameter */
 #endif
 

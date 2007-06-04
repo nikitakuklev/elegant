@@ -38,6 +38,7 @@ void track_through_ftrfmode(
   long deltaPass;
   double rampFactor;
 #if USE_MPI
+  double *buffer;
   long np_total;
 #endif
 
@@ -117,11 +118,12 @@ void track_through_ftrfmode(
       lastBin = lastBin_global;
     }
     if(isSlave) {
-      double buffer[lastBin+1]; 
+      buffer = malloc(sizeof(double) * (lastBin+1)); 
       MPI_Allreduce(xsum, buffer, lastBin+1, MPI_DOUBLE, MPI_SUM, workers);
       memcpy(xsum, buffer, sizeof(long)*(lastBin+1));
       MPI_Allreduce(ysum, buffer, lastBin+1, MPI_DOUBLE, MPI_SUM, workers);
-      memcpy(ysum, buffer, sizeof(long)*(lastBin+1));	;
+      memcpy(ysum, buffer, sizeof(long)*(lastBin+1));
+      free(buffer);
     }
 #endif
     rampFactor = 0;
@@ -439,7 +441,11 @@ void set_up_ftrfmode(FTRFMODE *rfmode, char *element_name, double element_z, lon
       free(filename);
   }
 #if (USE_MPI)
+#if defined(_WIN32)
+    freopen("NUL","w",stdout); 
+#else
     freopen("/dev/null","w",stdout);  
+#endif
   } /* We let the first slave to dump the parameter */
 #endif
 

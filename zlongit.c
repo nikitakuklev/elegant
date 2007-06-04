@@ -70,6 +70,7 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
     double factor, tmin, tmax, tmean, dt, dt1, dgam, rampFactor;
     static long not_first_call = -1;
 #if USE_MPI
+    double *buffer;
     double tmin_part, tmax_part;           /* record the actual tmin and tmax for particles to reduce communications */
     long offset, length;
 #endif
@@ -203,9 +204,10 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
     offset = ((long)((tmin_part-tmin)/dt)-1 ? (long)((tmin_part-tmin)/dt)-1:0);
     length = ((long)((tmax_part-tmin_part)/dt)+2 < nb ? (long)((tmax_part-tmin_part)/dt)+2:nb);
     if (isSlave) {
-      double buffer[length];
+      buffer = malloc(sizeof(double) * length);;
       MPI_Allreduce(&Itime[offset], buffer, length, MPI_DOUBLE, MPI_SUM, workers);
       memcpy(&Itime[offset], buffer, sizeof(double)*length);
+      free(buffer);
     }
 #endif
 

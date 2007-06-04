@@ -27,6 +27,9 @@ void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
   static long max_np = 0;
   long ib, nb, n_binned, plane;
   double factor, tmin, tmean, tmax, dt;
+#if USE_MPI
+  double *buffer;
+#endif
 
   set_up_trwake(wakeData, run, i_pass, np, charge);
 
@@ -127,9 +130,10 @@ void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
     
 #if USE_MPI 
 	if (isSlave) {
-	  double buffer[nb];
+	  buffer = malloc(sizeof(double) * nb);
 	  MPI_Allreduce(posItime[plane], buffer, nb, MPI_DOUBLE, MPI_SUM, workers);
 	  memcpy(posItime[plane], buffer, sizeof(double)*nb);
+	  free(buffer);
 	}
 #endif
 	factor = wakeData->macroParticleCharge*wakeData->factor;

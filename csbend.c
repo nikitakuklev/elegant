@@ -865,6 +865,9 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   long iBin, iBinBehind;
   long csrInhibit = 0;
   double derbenevRatio = 0;
+#if USE_MPI
+  double *buffer;
+#endif
   TRACKING_CONTEXT tContext;
   VMATRIX *Msection=NULL, *Me1=NULL, *Me2=NULL;
   
@@ -1397,9 +1400,10 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
         }
 
 	if (USE_MPI) {  /* Master needs to know the information to write the result */
-	  double buffer[nBins];
+	  buffer = malloc(sizeof(double) * nBins);
 	  MPI_Allreduce(ctHist, buffer, nBins, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 	  memcpy(ctHist, buffer, sizeof(double)*nBins);
+	  free(buffer);
 	}
 #endif
         
@@ -1642,9 +1646,10 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
       fflush(stdout);
       }
       if (notSinglePart) {  /* Master needs to know the information to write the result */
-	double buffer[nBins];
+	buffer = malloc(sizeof(double) * nBins);
 	MPI_Allreduce(ctHist, buffer, nBins, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 	memcpy(ctHist, buffer, sizeof(double)*nBins);
+	free(buffer);
       }
     }
 #endif
@@ -2241,7 +2246,11 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
               ct0, ct0+csrWake.dctBin*csrWake.bins);
       fflush(stdout);
 #if USE_MPI
+#if defined(_WIN32)
+    freopen("NUL","w",stdout); 
+#else
     freopen("/dev/null","w",stdout); 
+#endif
 #endif  
     }
   }
@@ -2562,6 +2571,7 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
   TRACKING_CONTEXT tContext;
 #if USE_MPI
   long binned_total=1, np_total=1;
+  double *buffer;
 #endif
 
   getTrackingContext(&tContext);
@@ -2644,9 +2654,10 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
   }
 
   if (notSinglePart) {  /* Master needs to know the information to write the result */
-    double buffer[nBins];
+    buffer = malloc(sizeof(double) * nBins);
     MPI_Allreduce(ctHist, buffer, nBins, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     memcpy(ctHist, buffer, sizeof(double)*nBins);
+    free(buffer);
   }
   if ((myid==1) && (np_total!=binned_total)) {
     dup2(fd,fileno(stdout)); /* Let the first slave processor write the output */
@@ -2664,7 +2675,11 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
 	    ctLower, ctUpper, dct, nBins, maxBins);
     fflush(stdout);
 #if USE_MPI
+#if defined(_WIN32)
+    freopen("NUL","w",stdout); 
+#else
     freopen("/dev/null","w",stdout); 
+#endif
 #endif 
   }
       
@@ -2841,7 +2856,11 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
 	      ctLower, ctUpper, dct, nBins, maxBins);
       fflush(stdout);
 #if USE_MPI
+#if defined(_WIN32)
+    freopen("NUL","w",stdout); 
+#else
     freopen("/dev/null","w",stdout); 
+#endif
 #endif 
     }
   }
