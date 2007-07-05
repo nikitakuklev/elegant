@@ -1290,6 +1290,7 @@ parameter.  If zero, then the errors replace the prior value of the parameter.
 &error_control
     long clear_error_settings = 1;
     long summarize_error_settings = 0;
+    long no_errors_for_first_step = 0;
     STRING error_log = NULL;
 &end
 \end{verbatim}
@@ -1297,6 +1298,8 @@ parameter.  If zero, then the errors replace the prior value of the parameter.
 \begin{itemize}
 \item \verb|clear_error_settings| --- Clear all previous error settings.
 \item \verb|summarize_error_settings| --- Summarize current error settings.
+\item \verb|no_errors_for_first_step| --- If non-zero, then there will be no errors for the first step.  This can be useful for
+ fiducialization of phase and momentum profiles.
 \item \verb|error_log| --- The (incomplete) name of a SDDS file to which error values will be written.  Recommended value: ``\%s.erl''.
 \end{itemize}
 
