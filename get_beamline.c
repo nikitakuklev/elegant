@@ -321,7 +321,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
   eptr = &(lptr->elem);
   while (eptr) {
     /* use "eptr->name+eptr->occurence" as the key, and eptr's address as the value for hash table*/
-      sprintf (occurence_s, "%ld", eptr->occurence);
+      sprintf (occurence_s, "#%ld", eptr->occurence);
       strcpy (eptr_name, eptr->name);
       strcat (eptr_name, occurence_s);
       hadd (load_hash, eptr_name, strlen(eptr_name), (void*)eptr);

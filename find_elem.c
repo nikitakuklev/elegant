@@ -54,7 +54,7 @@ ELEMENT_LIST *find_element_hash(char *elem_name, long occurence, ELEMENT_LIST **
     else
         eptr = (*context)->succ;
 
-    sprintf(occurence_s, "%ld", occurence);
+    sprintf(occurence_s, "#%ld", occurence);
     strcpy(name_occurence, elem_name);
     strcat(name_occurence, occurence_s);
     /* use hash table */
