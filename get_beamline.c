@@ -142,6 +142,10 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
           print_elem_list(stdout, elem);
 #endif
           fill_line(line, n_lines, elem, n_elems, s);
+          if (strchr(lptr->name, '#')) {
+            fprintf(stdout, "The name %s is invalid for a beamline: # is a reserved character.\n", lptr->name);
+            exit(1);
+          }
           if (check_duplic_elem(&elem, NULL, lptr->name, n_elems)) {
             fprintf(stdout, "line definition %s conflicts with element of same name\n", lptr->name);
             exit(1);
@@ -163,6 +167,10 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
 #endif
             strcpy_s(s, t);
             copy_named_element(eptr, s, elem);
+            if (strchr(eptr->name, '#')) {
+              fprintf(stdout, "The name %s is invalid for an element: # is a reserved character.\n", eptr->name);
+              exit(1);
+            }
           }
           else {
             long newType;
@@ -172,6 +180,10 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
             fflush(stdout);
 #endif
             fill_elem(eptr, s, type, fp_mad[iMad]);
+            if (strchr(eptr->name, '#')) {
+              fprintf(stdout, "The name %s is invalid for an element: # is a reserved character.\n", eptr->name);
+              exit(1);
+            }
             length = 0;
             if ((newType=elementTransmutation(eptr->name, eptr->type))!=eptr->type &&
                 newType>=0) {
