@@ -744,8 +744,8 @@ extern char *entity_text[N_TYPES];
 #define N_IBSCATTER_PARAMS 9
 #define N_FMULT_PARAMS 10
 #define N_BMAPXY_PARAMS 5
-#define N_WAKE_PARAMS 12
-#define N_TRWAKE_PARAMS 18
+#define N_WAKE_PARAMS 13
+#define N_TRWAKE_PARAMS 19
 #define N_TUBEND_PARAMS 6
 #define N_CHARGE_PARAMS 2
 #define N_PFILTER_PARAMS 5
@@ -2047,6 +2047,7 @@ typedef struct {
     long interpolate;          /* flag to turn on interpolation */
     long smoothing, SGHalfWidth, SGOrder;  /* flag to turn on smoothing plus control parameters */
     long change_p0, allowLongBeam;
+    long rampPasses;           /* If nonzero, the number of passes over which to ramp wake up */
     /* for internal use: */
     long initialized;          /* indicates that files are loaded */
     long wakePoints, isCopy;
@@ -2066,6 +2067,7 @@ typedef struct {
     long smoothing, SGHalfWidth, SGOrder;  /* flag to turn on smoothing plus control parameters */
     double dx, dy, tilt;
     long xPower, yPower;
+    long rampPasses;           /* If nonzero, the number of passes over which to ramp wake up */
     /* for internal use: */
     long initialized;          /* indicates that files are loaded */
     long wakePoints, isCopy;

@@ -26,12 +26,16 @@ void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
   static double *pz = NULL;
   static long max_np = 0;
   long ib, nb, n_binned, plane;
-  double factor, tmin, tmean, tmax, dt;
+  double factor, tmin, tmean, tmax, dt, rampFactor=1;
 #if USE_MPI
   double *buffer;
 #endif
 
   set_up_trwake(wakeData, run, i_pass, np, charge);
+  if (i_pass>=(wakeData->rampPasses-1))
+    rampFactor = 1;
+  else
+    rampFactor = (i_pass+1.0)/wakeData->rampPasses;
 
 #if (!USE_MPI) 
   if (np>max_np) {
@@ -138,9 +142,9 @@ void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
 #endif
 	factor = wakeData->macroParticleCharge*wakeData->factor;
 	if (plane==0)
-	  factor *= wakeData->xfactor;
+	  factor *= wakeData->xfactor*rampFactor;
 	else
-	  factor *= wakeData->yfactor;
+	  factor *= wakeData->yfactor*rampFactor;
 	if (!factor)
 	  continue;
     

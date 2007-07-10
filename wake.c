@@ -29,12 +29,17 @@ void track_through_wake(double **part, long np, WAKE *wakeData, double *PoInput,
   static double *time = NULL;            /* array to record arrival time of each particle */
   static long max_np = 0;
   long ib, nb, n_binned;
-  double factor, tmin, tmax, tmean, dt, Po;
+  double factor, tmin, tmax, tmean, dt, Po, rampFactor;
 #if USE_MPI
   double *buffer;
 #endif
 
   set_up_wake(wakeData, run, i_pass, np, charge);
+  rampFactor = 0;
+  if (i_pass>=(wakeData->rampPasses-1))
+    rampFactor = 1;
+  else
+    rampFactor = (i_pass+1.0)/wakeData->rampPasses;
   Po = *PoInput;
 
   if (!USE_MPI || !notSinglePart) {
@@ -164,7 +169,7 @@ void track_through_wake(double **part, long np, WAKE *wakeData, double *PoInput,
 		   Itime, nb, 
 		   wakeData->W, wakeData->wakePoints);
 
-    factor = wakeData->macroParticleCharge*wakeData->factor;
+    factor = wakeData->macroParticleCharge*wakeData->factor*rampFactor;
     for (ib=0; ib<nb; ib++)
       Vtime[ib] *= factor;
   

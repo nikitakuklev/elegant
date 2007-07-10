@@ -1390,6 +1390,7 @@ PARAMETER wake_param[N_WAKE_PARAMS] = {
     {"SG_ORDER", "", IS_LONG, 0, (long)((char *)&wake_example.SGOrder), NULL, 0.0, 1, "Savitzky-Golay filter order for smoothing"},
     {"CHANGE_P0", "", IS_LONG, 0, (long)((char *)&wake_example.change_p0), NULL, 0.0, 0, "change central momentum?"},
     {"ALLOW_LONG_BEAM", "", IS_LONG, 0, (long)((char *)&wake_example.allowLongBeam), NULL, 0.0, 0, "allow beam longer than wake data?"},
+    {"RAMP_PASSES", "", IS_LONG, 0, (long)((char *)&wake_example.rampPasses), NULL, 0.0, 0, "Number of passes over which to linearly ramp up the wake to full strength."},
     };
 
 TRWAKE trwake_example;
@@ -1413,6 +1414,7 @@ PARAMETER trwake_param[N_TRWAKE_PARAMS] = {
     {"TILT", "RAD", IS_DOUBLE, 0, (long)((char *)&trwake_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
     {"XPOWER", "", IS_LONG, 0, (long)((char *)&trwake_example.xPower), NULL, 0.0, 1, "Power of x that x kick depends on."},
     {"YPOWER", "", IS_LONG, 0, (long)((char *)&trwake_example.yPower), NULL, 0.0, 1, "Power of y that y kick depends on."},
+    {"RAMP_PASSES", "", IS_LONG, 0, (long)((char *)&trwake_example.rampPasses), NULL, 0.0, 0, "Number of passes over which to linearly ramp up the wake to full strength."},
     };
 
 CHARGE charge_example;
