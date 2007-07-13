@@ -427,14 +427,9 @@ long trackRfCavityWithWakes
       }
     }
     if (nKicks>0) {
-#if (USE_MPI) || defined(_WIN32)
       double *inverseF;
       inverseF = tmalloc(sizeof(*inverseF)*np);
-#else
-      /* The dynamic allocation will crash on the slave processor when the memory is freed.
-         The VLA is supported in the C99 standard, but not in C++98 standard */
-      double inverseF[np]; 
-#endif
+
       for (ik=0; ik<nKicks; ik++) {
         dgammaOverGammaAve = dgammaOverGammaNp = 0;
 	if(isSlave || !notSinglePart) {
@@ -533,9 +528,7 @@ long trackRfCavityWithWakes
           }
         }
       }
-#if (USE_MPI) || defined(_WIN32)
       free(inverseF); 
-#endif
     } else {
       double sin_phase=0.0, cos_phase, inverseF;
       double R11=1, R21=0, R22, R12, dP, ds1;
