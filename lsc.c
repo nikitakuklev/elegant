@@ -37,7 +37,11 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
 
   Z0 = sqrt(mu_o/epsilon_o);
   nb = LSC->bins;
-
+  if (nb%2==1) {
+    fprintf(stdout, "Error: LSC must have an even number of bins\n");
+    exit(1);
+  }
+  
 #if DEBUG
   fprintf(stdout, "%ld bins for LSC\n", nb);
   fflush(stdout);
@@ -250,7 +254,11 @@ void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge,
   
   Z0 = sqrt(mu_o/epsilon_o);
   nb = LSC->bins;
-
+  if (nb%2==1) {
+    fprintf(stdout, "Error: LSC must have an even number of bins\n");
+    exit(1);
+  }
+  
 #if DEBUG
   fprintf(stdout, "%ld bins for LSC\n", nb);
   fflush(stdout);
