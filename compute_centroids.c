@@ -43,14 +43,10 @@ void compute_centroids(
   double error_sum=0.0, error_total=0.0,
     **sumMatrix, **errorMatrix,
     *sumArray, *errorArray;
-  sumMatrix = malloc(sizeof(double*) * n_processors);
-  errorMatrix = malloc(sizeof(double*) * n_processors);
+  sumMatrix = (double**)czarray_2d(sizeof(**sumMatrix), n_processors, 6); 
+  errorMatrix = (double**)czarray_2d(sizeof(**errorMatrix), n_processors, 6);
   sumArray = malloc(sizeof(double) * n_processors);
   errorArray = malloc(sizeof(double) * n_processors);
-  for (j=0; j<n_processors; j++) {
-    sumMatrix[j] = malloc(sizeof(double) * 6);
-    errorMatrix[j] = malloc(sizeof(double) * 6);
-  }
 #endif
   if (notSinglePart) {
     if (((parallelStatus==trueParallel) && isSlave) || ((parallelStatus!=trueParallel) && isMaster))
@@ -99,9 +95,9 @@ void compute_centroids(
 #ifndef USE_KAHAN  
       MPI_Allreduce(sum,centroid,6,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
 #else
-      MPI_Allgather(sum,6,MPI_DOUBLE,sumMatrix,6,MPI_DOUBLE,MPI_COMM_WORLD);
+      MPI_Allgather(sum,6,MPI_DOUBLE,&sumMatrix[0][0],6,MPI_DOUBLE,MPI_COMM_WORLD);
       /* compute error sum over processors */
-      MPI_Allgather(error,6,MPI_DOUBLE,errorMatrix,6,MPI_DOUBLE,MPI_COMM_WORLD);
+      MPI_Allgather(error,6,MPI_DOUBLE,&errorMatrix[0][0],6,MPI_DOUBLE,MPI_COMM_WORLD);
 
       for (i_coord=0; i_coord<6; i_coord++) {
         error_sum = 0.0;
@@ -127,12 +123,8 @@ void compute_centroids(
    
 #if USE_MPI  /* In the non-parallel mode, it will be same with the serial version */ 
 #ifdef USE_KAHAN
-  for (j=0; j<n_processors; j++) {
-    free(sumMatrix[j]);
-    free(errorMatrix[j]);
-  }
-  free(sumMatrix);
-  free(errorMatrix);
+  free_czarray_2d((void**)sumMatrix, n_processors, 6); 
+  free_czarray_2d((void**)errorMatrix, n_processors, 6);
   free(sumArray);
   free(errorArray);
 #endif
@@ -236,18 +228,12 @@ void accumulate_beam_sums(
     **sumMatrixSig, **errorMatrixSig,
     *sumArray, *errorArray;
   long k;
-  sumMatrixCen = malloc(sizeof(double*) * n_processors);
-  errorMatrixCen = malloc(sizeof(double*) * n_processors);
-  sumMatrixSig = malloc(sizeof(double*) * n_processors);
-  errorMatrixSig = malloc(sizeof(double*) * n_processors);
+  sumMatrixCen = (double**)czarray_2d(sizeof(**sumMatrixCen), n_processors, 6); 
+  errorMatrixCen = (double**)czarray_2d(sizeof(**errorMatrixCen), n_processors, 6);
+  sumMatrixSig = (double**)czarray_2d(sizeof(**sumMatrixSig), n_processors, 21);
+  errorMatrixSig = (double**)czarray_2d(sizeof(**errorMatrixSig), n_processors, 21);
   sumArray = malloc(sizeof(double) * n_processors);
   errorArray = malloc(sizeof(double) * n_processors);
-  for (j=0; j<n_processors; j++) {
-    sumMatrixCen[j] = malloc(sizeof(double) * 6);
-    errorMatrixCen[j] = malloc(sizeof(double) * 6);
-    sumMatrixSig[j] = malloc(sizeof(double) * 21);
-    errorMatrixSig[j] = malloc(sizeof(double) * 21);
-  }
 #endif
   if (notSinglePart) {
     if (((parallelStatus==trueParallel) && isSlave) || ((parallelStatus!=trueParallel) && isMaster))
@@ -315,9 +301,9 @@ void accumulate_beam_sums(
 	MPI_Allreduce(centroid, buffer, 6, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 	memcpy(centroid, buffer, sizeof(double)*6);
 #else
-	MPI_Allgather(centroid,6,MPI_DOUBLE,sumMatrixCen,6,MPI_DOUBLE,MPI_COMM_WORLD);
+	MPI_Allgather(centroid,6,MPI_DOUBLE,&sumMatrixCen[0][0],6,MPI_DOUBLE,MPI_COMM_WORLD);
 	/* compute error sum over processors */
-	MPI_Allgather(errorCen,6,MPI_DOUBLE,errorMatrixCen,6,MPI_DOUBLE,MPI_COMM_WORLD);
+      	MPI_Allgather(errorCen,6,MPI_DOUBLE,&errorMatrixCen[0][0],6,MPI_DOUBLE,MPI_COMM_WORLD); 
 
 	for (i=0; i<6; i++) {
 	  error_sum = 0.0;
@@ -440,9 +426,9 @@ void accumulate_beam_sums(
 #ifndef USE_KAHAN
 	MPI_Allreduce(Sij_p, Sij_total, 21, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 #else
-        MPI_Allgather(Sij_p, 21, MPI_DOUBLE, sumMatrixSig, 21, MPI_DOUBLE, MPI_COMM_WORLD);
+        MPI_Allgather(Sij_p, 21, MPI_DOUBLE, &sumMatrixSig[0][0], 21, MPI_DOUBLE, MPI_COMM_WORLD);
 	/* compute error sum over processors */
-	MPI_Allgather(errorSig, 21, MPI_DOUBLE, errorMatrixSig, 21, MPI_DOUBLE,MPI_COMM_WORLD);
+	MPI_Allgather(errorSig, 21, MPI_DOUBLE, &errorMatrixSig[0][0], 21, MPI_DOUBLE,MPI_COMM_WORLD);
         offset = 0;
 	for (i=0; i<6; i++) {
 	  if (i>=1)        
@@ -492,16 +478,10 @@ void accumulate_beam_sums(
 
 #if USE_MPI
 #ifdef USE_KAHAN
-  for (j=0; j<n_processors; j++) {
-    free(sumMatrixCen[j]);
-    free(errorMatrixCen[j]);
-    free(sumMatrixSig[j]);
-    free(errorMatrixSig[j]);
-  }
-  free(sumMatrixCen);
-  free(errorMatrixCen);
-  free(sumMatrixSig);
-  free(errorMatrixSig);
+  free_czarray_2d((void**)sumMatrixCen, n_processors, 6); 
+  free_czarray_2d((void**)errorMatrixCen, n_processors, 6);
+  free_czarray_2d((void**)sumMatrixSig, n_processors, 21);
+  free_czarray_2d((void**)errorMatrixSig, n_processors, 21);
   free(sumArray);
   free(errorArray);
 #endif
