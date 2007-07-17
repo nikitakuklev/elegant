@@ -140,7 +140,8 @@ htab  *t;    /* the table */
 { 
   while (hcount(t))                    /* while the table is not empty */
   {
-    free(hkey(t));                     /* free memory for the line */
+    if (hkey(t))
+      free(hkey(t));                   /* free memory for the line */
     hdel(t);                           /* delete from hash table */
   }
   refree(t->space);

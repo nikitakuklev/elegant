@@ -329,7 +329,9 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
       lptr->flags |= BEAMLINE_TWISS_WANTED;
     eptr = eptr->succ;
   }
-
+  /* create a hash table with the size of 2^12, it can grow automatically if necessary */
+  if (!load_hash)
+     load_hash = hcreate(12);  
   eptr = &(lptr->elem);
   while (eptr) {
     /* use "eptr->name+eptr->occurence" as the key, and eptr's address as the value for hash table*/
@@ -568,9 +570,13 @@ void free_beamlines(LINE_LIST *beamline)
             tfree(lptr);
             break;
             }
-        }
+        } 
+    if (load_hash) { 
+       hdestroy(load_hash);                         /* destroy hash table */  
+       load_hash = NULL;
+    }      
     log_exit("free_beamlines");
-    }
+}
 
 void delete_matrix_data(LINE_LIST *beamline)
 {
