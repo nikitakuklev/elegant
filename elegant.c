@@ -350,9 +350,7 @@ char **argv;
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
     exit(1);
   }
-
-  /* create a hash table with the size of 2^12, it can grow automatically if necessary */
-  load_hash = hcreate(12);     
+  load_hash = NULL;     
   compute_offsets();
   set_max_name_length(100);
   macros = 0;
@@ -375,7 +373,6 @@ char **argv;
     showUsageOrGreeting(SHOW_USAGE|SHOW_GREETING);
     fflush(stdout);
     link_date();
-
     exit(1);
   }
   
@@ -1488,7 +1485,8 @@ char **argv;
   close(fd);
   MPI_Finalize();
 #endif
-  hdestroy(load_hash);                         /* destroy hash table */
+  if (load_hash)
+    hdestroy(load_hash);                         /* destroy hash table */
   return(0);
 }
 
