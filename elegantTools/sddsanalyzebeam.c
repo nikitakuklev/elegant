@@ -14,6 +14,9 @@
  * Michael Borland, 2000
  *
  $Log: not supported by cvs2svn $
+ Revision 1.1  2007/03/30 16:50:28  soliday
+ Moved from directory above.
+
  Revision 1.16  2007/02/08 16:51:46  ywang25
  Parallelized several new elements.
 
@@ -422,10 +425,10 @@ long SetUpOutputFile(SDDS_DATASET *SDDSout, char *outputfile, long correctedOnly
             sprintf(units, "%s %s", ppUnits[i], ppUnits[j]);
         }
         else {
-          strcpy_s(units, ppUnits[i]);
+          strcpy_ss(units, ppUnits[i]);
         }
       } else if (ppUnits[j])
-        strcpy_s(units, ppUnits[j]);
+        strcpy_ss(units, ppUnits[j]);
       if (!SDDS_DefineSimpleColumn(SDDSout, name, units, SDDS_DOUBLE))
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       if (!SDDS_CopyString(&CorName[i][j], name))

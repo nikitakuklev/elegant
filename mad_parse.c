@@ -190,7 +190,7 @@ extern ELEMENT_LIST *expand_line(
             /* add elements from a parenthesized list to the line's element list */
             cp_str(&ptrs, ptr1);
             for (i=0; i<multiplier; i++) {
-                strcpy_s(ptr1, ptrs);
+                strcpy_ss(ptr1, ptrs);
                 leptr = expand_line(leptr, lptr, ptr1, line, nl, elem, ne, part_of);
                 }
 #ifdef DEBUG
@@ -612,7 +612,7 @@ long tell_type(char *s, ELEMENT_LIST *elem)
         fflush(stdout);
 #endif
         if ((ptr=strchr(name, ','))) {
-            strcpy_s(s, ptr+1);
+            strcpy_ss(s, ptr+1);
             *ptr = 0;
             }
         ptr = name;
@@ -740,7 +740,7 @@ char *get_param_name(char *s)
         }
     *ptr = 0;
     cp_str(&ptr1, s);
-    strcpy_s(s, ptr+1);
+    strcpy_ss(s, ptr+1);
     log_exit("get_param_name");
     return(ptr1);
     }

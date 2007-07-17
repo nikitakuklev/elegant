@@ -378,7 +378,7 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
       sangle[2] = *psi;
       *s += length;
       length = 0;
-      strcpy_s(label, elem->name);
+      strcpy_ss(label, elem->name);
     }
   } else {
     /* floor coordinate reset */
@@ -389,7 +389,7 @@ long advanceFloorCoordinates(MATRIX *V1, MATRIX *W1, MATRIX *V0, MATRIX *W0,
       V1->a[i][0] = coord[i] = fep->position[i];
       sangle[i] = fep->angle[i];
     }
-    strcpy_s(label, elem->name);
+    strcpy_ss(label, elem->name);
     setupSurveyAngleMatrix(W1, fep->angle[0], fep->angle[1], fep->angle[2]);
   }
   if (SDDS_floor &&

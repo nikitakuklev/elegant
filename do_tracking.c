@@ -2505,7 +2505,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
         !(cmdBuffer1 = SDDS_Realloc(cmdBuffer1, sizeof(*cmdBuffer1)*(strlen(cmdBuffer1)+count*25+1))))
       SDDS_Bomb("memory allocation failure");
     replaceString(cmdBuffer0, cmdBuffer1, tag, value, count, 0);
-    strcpy_s(cmdBuffer1, cmdBuffer0);
+    strcpy_ss(cmdBuffer1, cmdBuffer0);
   }
   /* substitute string parameters */
   for (i=0; i<10; i++) {
@@ -2526,7 +2526,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
           SDDS_Realloc(cmdBuffer1, sizeof(*cmdBuffer1)*(strlen(cmdBuffer1)+count*strlen(script->SP[i])+1))))
       SDDS_Bomb("memory allocation failure");
     replaceString(cmdBuffer0, cmdBuffer1, tag, script->SP[i], count, 0);
-    strcpy_s(cmdBuffer1, cmdBuffer0);
+    strcpy_ss(cmdBuffer1, cmdBuffer0);
   }
 
   if (script->verbosity>0) {

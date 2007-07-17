@@ -575,7 +575,7 @@ char **argv;
       run_conditions.always_change_p0 = always_change_p0;
 
       /* extract the root filename from the input filename */
-      strcpy_s(s, inputfile);
+      strcpy_ss(s, inputfile);
       if (rootname==NULL) {
         clean_filename(s);
         if ((ptr=strrchr(s, '.')))
@@ -1727,7 +1727,7 @@ void print_dictionary_entry(FILE *fp, long type, long latex_form, long SDDS_form
   } else {
     fprintf(fp, "%c***** element type %s:\n", SDDS_form?'!':'*', entity_name[type]);
     if (SDDS_form) {
-      strcpy_s(buffer, entity_name[type]);
+      strcpy_ss(buffer, entity_name[type]);
       replace_chars(buffer, "\n\t", "  ");
       fprintf(fp, "%s\n", buffer);
       fprintf(fp, "%ld\n", entity_description[type].flags&UNIPROCESSOR?0:1);
@@ -1795,7 +1795,7 @@ void print_dictionary_entry(FILE *fp, long type, long latex_form, long SDDS_form
     }
     if (latex_form) {
       char *ptr0, buffer[1024];
-      strcpy_s(buffer, entity_description[type].parameter[j].description);
+      strcpy_ss(buffer, entity_description[type].parameter[j].description);
       if (strlen(ptr0 = buffer)) {
         /* don't need splitting of strings since the p tabular code 
            is used.

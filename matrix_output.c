@@ -134,7 +134,7 @@ void setup_matrix_output(
     for (i=0; i<6; i++) {
       sprintf(buffer, "&column name=C%ld, symbol=\"C$b%ld$n\", type=double ", i+1, i+1);
       if (SDDS_StringIsBlank(unit[i]))
-	strcpy_s(t, " &end");
+	strcpy_ss(t, " &end");
       else
 	sprintf(t, "units=%s &end", unit[i]);
       strcat(buffer, t);
@@ -149,7 +149,7 @@ void setup_matrix_output(
 	for (j=0; j<6; j++) {
 	  sprintf(buffer, "&column name=R%ld%ld, symbol=\"R$b%ld%ld$n\", type=double ", i+1, j+1, i+1, j+1);
 	  if (i==j)
-	    strcpy_s(t, " &end");
+	    strcpy_ss(t, " &end");
 	  else
 	    sprintf(t, "units=%s/%s &end", unit[i], unit[j]);
 	  strcat(buffer, t);
@@ -514,11 +514,11 @@ void simplify_units(char *buffer, char **numer, long n_numer, char **denom, long
 #endif
 
   if (n_numer==0 && n_denom==0)
-    strcpy_s(buffer, "");
+    strcpy_ss(buffer, "");
   else {
     buffer[0] = 0;
     if (n_numer<1)
-      strcpy_s(buffer, "1");
+      strcpy_ss(buffer, "1");
     else {
       for (in=0; in<n_numer; in++) {
 	if (mult_numer[in]==1)
