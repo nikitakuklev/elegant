@@ -470,12 +470,16 @@ long do_tracking(
 #ifdef SORT
       if (!USE_MPI || needSort)
 	if (nToTrackAtLastSort > nToTrack) {/* indicates more particles are lost, need sort */
-          qsort(coord[0], nToTrack, COORDINATES_PER_PARTICLE*sizeof(double), comp_IDs);
-          if (accepted!=NULL)
-            qsort(accepted[0], nToTrack, COORDINATES_PER_PARTICLE*sizeof(double), comp_IDs);
-	  nToTrackAtLastSort = nToTrack;
-          needSort = 0;
-	}   
+          if (beam && beam->bunchFrequency!=0)
+            fprintf(stdout, "*** Warning: particle ID sort not being performed because bunch frequency is nonzero\n");
+          else {
+            qsort(coord[0], nToTrack, COORDINATES_PER_PARTICLE*sizeof(double), comp_IDs);
+            if (accepted!=NULL)
+              qsort(accepted[0], nToTrack, COORDINATES_PER_PARTICLE*sizeof(double), comp_IDs);
+            nToTrackAtLastSort = nToTrack;
+            needSort = 0;
+          }   
+        }
 #endif   
 
       if (sums_vs_z && *sums_vs_z && !(flags&FINAL_SUMS_ONLY) && !(flags&TEST_PARTICLES)) {
@@ -1571,11 +1575,15 @@ long do_tracking(
 #ifdef SORT   /* Sort the particles when the particles are lost at the very last element */
       if (!USE_MPI || needSort)
 	if (nToTrackAtLastSort > nToTrack)  {/* indicates more particles are lost, need sort */
-          qsort(coord[0], nToTrack, COORDINATES_PER_PARTICLE*sizeof(double), comp_IDs);
-          if (accepted!=NULL)
-            qsort(accepted[0], nToTrack, COORDINATES_PER_PARTICLE*sizeof(double), comp_IDs);
-	  nToTrackAtLastSort = nToTrack;
-	}   
+          if (beam && beam->bunchFrequency!=0)
+            fprintf(stdout, "*** Warning: particle ID sort not being performed because bunch frequency is nonzero\n");
+          else { 
+            qsort(coord[0], nToTrack, COORDINATES_PER_PARTICLE*sizeof(double), comp_IDs);
+            if (accepted!=NULL)
+              qsort(accepted[0], nToTrack, COORDINATES_PER_PARTICLE*sizeof(double), comp_IDs);
+            nToTrackAtLastSort = nToTrack;
+          }   
+        }
 #endif 
 
 

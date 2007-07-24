@@ -58,6 +58,8 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
   long i, ib, nb, n_binned, nfreq, iReal, iImag, plane, first;
   double factor, tmin, tmax, tmean, dt, userFactor[2], rampFactor=1;
   static long not_first_call = -1;
+  long ip, ip1, ip2, bunches, bunch, npb;
+  long bucketEnd[MAX_BUCKETS];
 #if USE_MPI
   float *buffer_send, *buffer_recv;
 #endif
@@ -96,58 +98,97 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
     } 
 #endif
   
-  /* Compute time coordinate of each particle */
-  tmean = computeTimeCoordinates(time, Po, part, np);
-  find_min_max(&tmin, &tmax, time, np);
+    if ((part[0][6]-floor(part[0][6]))!=0) {
+      /* This is a kludgey way to determine that particles have been assigned to buckets */
+      printf("Bunched beam detected\n"); fflush(stdout);
+#if USE_MPI
+      if (n_processors!=1) {
+        printf("Error (ZLONGIT): must have bunch_frequency=0 for parallel mode.\n");
+        MPI_Barrier(MPI_COMM_WORLD); /* Make sure the information can be printed before aborting */
+        MPI_Abort(MPI_COMM_WORLD, 2);
+      }
+#endif
+      /* Start by sorting in bucket order */
+      qsort(part[0], np, COORDINATES_PER_PARTICLE*sizeof(double), comp_BucketNumbers);
+      /* Find the end of the buckets in the particle list */
+      bunches = 0;
+      for (ip=1; ip<np; ip++) {
+        if ((part[ip-1][6]-floor(part[ip-1][6]))!=(part[ip][6]-floor(part[ip][6]))) {
+          printf("Bucket %ld ends with ip=%ld\n", bunches, ip-1); fflush(stdout);
+          bucketEnd[bunches++] = ip-1;
+          if (bunches>=MAX_BUCKETS) {
+            bomb("Error (wake): maximum number of buckets was exceeded", NULL);
+          }
+        }
+      }
+      bucketEnd[bunches++] = np-1;
+    } else {
+      bunches = 1;
+      bucketEnd[0] = np-1;
+    }
+    printf("Bucket %ld ends with ip=%ld\n", bunches, bucketEnd[bunches-1]); fflush(stdout);
+
+  ip2 = -1;
+  for (bunch=0; bunch<bunches; bunch++) {
+    ip1 = ip2+1;
+    ip2 = bucketEnd[bunch];
+    npb = ip2-ip1+1;
+    printf("Processing bunch %ld with %ld particles\n", bunch, npb); fflush(stdout);
+    /* Compute time coordinate of each particle */
+    tmean = computeTimeCoordinates(time, Po, part, np);
+    find_min_max(&tmin, &tmax, time, np);
 #if USE_MPI
     find_global_min_max(&tmin, &tmax, np, workers);      
 #endif
-  
-  set_up_ztransverse(ztransverse, run, i_pass, np, charge, tmax-tmin);
-  nb = ztransverse->n_bins;
-  dt = ztransverse->bin_size;
-  tmin -= dt;
-  tmax -= dt;
-  if ((tmax-tmin)*2>nb*dt) {
-    TRACKING_CONTEXT tcontext;
-    getTrackingContext(&tcontext);
-    fprintf(stderr, "%s %s: Time span of bunch is more than half the total time span.\n",
-            entity_name[tcontext.elementType],
-            tcontext.elementName);
-    fprintf(stderr, "If using broad-band impedance, you should increase the number of bins and rerun.\n");
-    fprintf(stderr, "If using file-based impedance, you should increase the number of data points or decrease the frequency resolution.\n");
-    exit(1);
-  }
-
-  if (nb>max_n_bins) {
-    posItime[0] = trealloc(posItime[0], 2*sizeof(**posItime)*(max_n_bins=nb));
-    posItime[1] = trealloc(posItime[1], 2*sizeof(**posItime)*(max_n_bins=nb));
-    posIfreq = trealloc(posIfreq, 2*sizeof(*posIfreq)*(max_n_bins=nb));
-    Vtime = trealloc(Vtime, 2*sizeof(*Vtime)*(max_n_bins+1));
-  }
-
-  for (ib=0; ib<nb; ib++)
-    posItime[0][2*ib] = posItime[0][2*ib+1] = 
-      posItime[1][2*ib] = posItime[1][2*ib+1] = 0;
-
-  /* make arrays of I(t)*x and I(t)*y */
-  n_binned = binTransverseTimeDistribution(posItime, pz, pbin, tmin, dt, nb, time, part, Po, np,
-                                           ztransverse->dx, ztransverse->dy, 1, 1);
-#if (!USE_MPI)
-  if (n_binned!=np) {
-    fprintf(stdout, "Warning: only %ld of %ld particles were binned (ZTRANSVERSE)!\n", n_binned, np);
-    if (!not_first_call) {
-      fprintf(stdout, "*** This may produce unphysical results.  Your wake needs smaller frequency\n");
-      fprintf(stdout, "    spacing to cover a longer time span.\n");
+    if (bunch==0) {
+      /* use np here since we need to compute the macroparticle charge */
+      set_up_ztransverse(ztransverse, run, i_pass, np, charge, tmax-tmin);
     }
-    fflush(stdout);
-  }  
+    nb = ztransverse->n_bins;
+    dt = ztransverse->bin_size;
+    tmin -= dt;
+    tmax -= dt;
+    if ((tmax-tmin)*2>nb*dt) {
+      TRACKING_CONTEXT tcontext;
+      getTrackingContext(&tcontext);
+      fprintf(stderr, "%s %s: Time span of bunch is more than half the total time span.\n",
+              entity_name[tcontext.elementType],
+              tcontext.elementName);
+      fprintf(stderr, "If using broad-band impedance, you should increase the number of bins and rerun.\n");
+      fprintf(stderr, "If using file-based impedance, you should increase the number of data points or decrease the frequency resolution.\n");
+      exit(1);
+    }
+
+    if (nb>max_n_bins) {
+      posItime[0] = trealloc(posItime[0], 2*sizeof(**posItime)*(max_n_bins=nb));
+      posItime[1] = trealloc(posItime[1], 2*sizeof(**posItime)*(max_n_bins=nb));
+      posIfreq = trealloc(posIfreq, 2*sizeof(*posIfreq)*(max_n_bins=nb));
+      Vtime = trealloc(Vtime, 2*sizeof(*Vtime)*(max_n_bins+1));
+    }
+
+    for (ib=0; ib<nb; ib++)
+      posItime[0][2*ib] = posItime[0][2*ib+1] = 
+        posItime[1][2*ib] = posItime[1][2*ib+1] = 0;
+
+    /* make arrays of I(t)*x and I(t)*y */
+    n_binned = binTransverseTimeDistribution(posItime, pz, pbin, tmin, dt, nb, 
+                                             time+ip1, part+ip1, Po, npb,
+                                             ztransverse->dx, ztransverse->dy, 1, 1);
+#if (!USE_MPI)
+    if (n_binned!=npb) {
+      fprintf(stdout, "Warning: only %ld of %ld particles were binned (ZTRANSVERSE)!\n", n_binned, npb);
+      if (!not_first_call) {
+        fprintf(stdout, "*** This may produce unphysical results.  Your wake needs smaller frequency\n");
+        fprintf(stdout, "    spacing to cover a longer time span.\n");
+      }
+      fflush(stdout);
+    }  
 #else
     if (USE_MPI) {
       int all_binned, result = 1;
       if (isSlave)
         result = ((n_binned==np) ? 1 : 0);
-		             
+      
       MPI_Allreduce(&result, &all_binned, 1, MPI_INT, MPI_LAND, workers);
       if (!all_binned) {
 	if (myid==1) {  
@@ -160,119 +201,120 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
     }
 #endif
 
-  userFactor[0] = ztransverse->factor*ztransverse->xfactor*rampFactor;
-  userFactor[1] = ztransverse->factor*ztransverse->yfactor*rampFactor;
+    userFactor[0] = ztransverse->factor*ztransverse->xfactor*rampFactor;
+    userFactor[1] = ztransverse->factor*ztransverse->yfactor*rampFactor;
 
-  first = 1;
-  for (plane=0; plane<2; plane++) {
+    first = 1;
+    for (plane=0; plane<2; plane++) {
 #if USE_MPI
-    /* This could be good for some advanced network structures */
-    /*
-  if (isSlave) {
-    double buffer[nb];
-    MPI_Allreduce(posItime[plane], buffer, nb, MPI_DOUBLE, MPI_SUM, workers);
-    memcpy(posItime[plane], buffer, sizeof(double)*nb);
-  }
-    */
-  if (isSlave) {
-    buffer_send = malloc(sizeof(float) * nb);
-    buffer_recv = malloc(sizeof(float) * nb);
-    for (i=0; i<nb; i++)
-      buffer_send[i] = posItime[plane][i];
-    MPI_Reduce(buffer_send, buffer_recv, nb, MPI_FLOAT, MPI_SUM, 1, workers);
-    MPI_Bcast(buffer_recv, nb, MPI_FLOAT, 1, workers);
-    for (i=0; i<nb; i++)
-      posItime[plane][i] = buffer_recv[i];
-    free(buffer_send);
-    free(buffer_recv);
-  }
+      /* This could be good for some advanced network structures */
+      /*
+        if (isSlave) {
+        double buffer[nb];
+        MPI_Allreduce(posItime[plane], buffer, nb, MPI_DOUBLE, MPI_SUM, workers);
+        memcpy(posItime[plane], buffer, sizeof(double)*nb);
+        }
+        */
+      if (isSlave) {
+        buffer_send = malloc(sizeof(float) * nb);
+        buffer_recv = malloc(sizeof(float) * nb);
+        for (i=0; i<nb; i++)
+          buffer_send[i] = posItime[plane][i];
+        MPI_Reduce(buffer_send, buffer_recv, nb, MPI_FLOAT, MPI_SUM, 1, workers);
+        MPI_Bcast(buffer_recv, nb, MPI_FLOAT, 1, workers);
+        for (i=0; i<nb; i++)
+          posItime[plane][i] = buffer_recv[i];
+        free(buffer_send);
+        free(buffer_recv);
+      }
 
 #endif
-    if (userFactor[plane]==0) {
-      for (ib=0; ib<nb; ib++)
-	Vtime[ib] = 0;
-    } else {
-      if (ztransverse->smoothing)
-	SavitzyGolaySmooth(posItime[plane], nb, ztransverse->SGOrder,
-			   ztransverse->SGHalfWidth, ztransverse->SGHalfWidth, 0);
-      
-      /* Take the FFT of (x*I)(t) to get (x*I)(f) */
-      memcpy(posIfreq, posItime[plane], 2*nb*sizeof(*posIfreq));
-      realFFT(posIfreq, nb, 0);
-      
-      /* Compute V(f) = i*Z(f)*(x*I)(f), putting in a factor 
-       * to normalize the current waveform
-       */
-      Vfreq = Vtime;
-      factor = ztransverse->macroParticleCharge/dt*userFactor[plane];
-      iZ = ztransverse->iZ[plane];
-      Vfreq[0] = posIfreq[0]*iZ[0]*factor;
-      nfreq = nb/2 + 1;
-      if (nb%2==0)
-	/* Nyquist term */
-	Vfreq[nb-1] = posIfreq[nb-1]*iZ[nb-1]*factor;
-      for (ib=1; ib<nfreq-1; ib++) {
-	iImag = (iReal = 2*ib-1)+1;
-	/* The signs are chosen here to get agreement with TRFMODE.
-	   In particular, test particles following closely behind the 
-	   drive particle get defocused.
-	*/
-	Vfreq[iReal] =  (posIfreq[iReal]*iZ[iImag] + posIfreq[iImag]*iZ[iReal])*factor; 
-	Vfreq[iImag] = -(posIfreq[iReal]*iZ[iReal] - posIfreq[iImag]*iZ[iImag])*factor;
+      if (userFactor[plane]==0) {
+        for (ib=0; ib<nb; ib++)
+          Vtime[ib] = 0;
+      } else {
+        if (ztransverse->smoothing)
+          SavitzyGolaySmooth(posItime[plane], nb, ztransverse->SGOrder,
+                             ztransverse->SGHalfWidth, ztransverse->SGHalfWidth, 0);
+        
+        /* Take the FFT of (x*I)(t) to get (x*I)(f) */
+        memcpy(posIfreq, posItime[plane], 2*nb*sizeof(*posIfreq));
+        realFFT(posIfreq, nb, 0);
+        
+        /* Compute V(f) = i*Z(f)*(x*I)(f), putting in a factor 
+         * to normalize the current waveform
+         */
+        Vfreq = Vtime;
+        factor = ztransverse->macroParticleCharge/dt*userFactor[plane];
+        iZ = ztransverse->iZ[plane];
+        Vfreq[0] = posIfreq[0]*iZ[0]*factor;
+        nfreq = nb/2 + 1;
+        if (nb%2==0)
+          /* Nyquist term */
+          Vfreq[nb-1] = posIfreq[nb-1]*iZ[nb-1]*factor;
+        for (ib=1; ib<nfreq-1; ib++) {
+          iImag = (iReal = 2*ib-1)+1;
+          /* The signs are chosen here to get agreement with TRFMODE.
+             In particular, test particles following closely behind the 
+             drive particle get defocused.
+             */
+          Vfreq[iReal] =  (posIfreq[iReal]*iZ[iImag] + posIfreq[iImag]*iZ[iReal])*factor; 
+          Vfreq[iImag] = -(posIfreq[iReal]*iZ[iReal] - posIfreq[iImag]*iZ[iImag])*factor;
+        }
+        
+        /* Compute inverse FFT of V(f) to get V(t) */
+        realFFT(Vfreq, nb, INVERSE_FFT);
+        Vtime = Vfreq;
+        
+        /* change particle transverse momenta to reflect voltage in relevant bin */
+        applyTransverseWakeKicks(part+ip1, time+ip1, pz, pbin, npb, 
+                                 Po, plane, 
+                                 Vtime, nb, tmin, dt, ztransverse->interpolate);
       }
-      
-      /* Compute inverse FFT of V(f) to get V(t) */
-      realFFT(Vfreq, nb, INVERSE_FFT);
-      Vtime = Vfreq;
-      
-      /* change particle transverse momenta to reflect voltage in relevant bin */
-      applyTransverseWakeKicks(part, time, pz, pbin, np, 
-			       Po, plane, 
-			       Vtime, nb, tmin, dt, ztransverse->interpolate);
-    }
 
-    if (ztransverse->SDDS_wake_initialized && ztransverse->wakes) {
-      /* wake potential output */
-      factor = ztransverse->macroParticleCharge/dt;
-      if (ztransverse->wake_interval<=0 || (i_pass%ztransverse->wake_interval)==0) {
-	if (first && !SDDS_StartTable(&ztransverse->SDDS_wake, nb)) {
-	  SDDS_SetError("Problem starting SDDS table for wake output (track_through_ztransverse)");
-	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-	}
-	for (ib=0; ib<nb; ib++) {
-	  if (!SDDS_SetRowValues(&ztransverse->SDDS_wake, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ib,
-				 0, ib*dt, 
-				 1+plane*2, posItime[plane][ib]*factor,  
-				 2+plane*2, Vtime[ib], -1)) {
-	    SDDS_SetError("Problem setting rows of SDDS table for wake output (track_through_ztransverse)");
-	    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-	  }
-	}
-	if (!SDDS_SetParameters(&ztransverse->SDDS_wake, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-				"Pass", i_pass, "q", ztransverse->macroParticleCharge*np, NULL)) {
-	  SDDS_SetError("Problem setting parameters of SDDS table for wake output (track_through_ztransverse)");
-	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-	}
-	if (ztransverse->broad_band) {
-	  if (!SDDS_SetParameters(&ztransverse->SDDS_wake, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-				  "Rs", ztransverse->Rs, "fo", ztransverse->freq, 
-				  "Deltaf", ztransverse->bin_size, NULL)) {
-	    SDDS_SetError("Problem setting parameters of SDDS table for wake output (track_through_ztransverse)");
-	    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-	  }
-	}
-	if (!first) {
-	  if (!SDDS_WriteTable(&ztransverse->SDDS_wake)) {
-	    SDDS_SetError("Problem writing SDDS table for wake output (track_through_ztransverse)");
-	    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-	  }
-	  SDDS_DoFSync(&ztransverse->SDDS_wake);
-	}
+      if (ztransverse->SDDS_wake_initialized && ztransverse->wakes) {
+        /* wake potential output */
+        factor = ztransverse->macroParticleCharge/dt;
+        if (ztransverse->wake_interval<=0 || (i_pass%ztransverse->wake_interval)==0) {
+          if (first && !SDDS_StartTable(&ztransverse->SDDS_wake, nb)) {
+            SDDS_SetError("Problem starting SDDS table for wake output (track_through_ztransverse)");
+            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+          }
+          for (ib=0; ib<nb; ib++) {
+            if (!SDDS_SetRowValues(&ztransverse->SDDS_wake, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ib,
+                                   0, ib*dt, 
+                                   1+plane*2, posItime[plane][ib]*factor,  
+                                   2+plane*2, Vtime[ib], -1)) {
+              SDDS_SetError("Problem setting rows of SDDS table for wake output (track_through_ztransverse)");
+              SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+            }
+          }
+          if (!SDDS_SetParameters(&ztransverse->SDDS_wake, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+                                  "Pass", i_pass, "q", ztransverse->macroParticleCharge*np, NULL)) {
+            SDDS_SetError("Problem setting parameters of SDDS table for wake output (track_through_ztransverse)");
+            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+          }
+          if (ztransverse->broad_band) {
+            if (!SDDS_SetParameters(&ztransverse->SDDS_wake, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+                                    "Rs", ztransverse->Rs, "fo", ztransverse->freq, 
+                                    "Deltaf", ztransverse->bin_size, NULL)) {
+              SDDS_SetError("Problem setting parameters of SDDS table for wake output (track_through_ztransverse)");
+              SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+            }
+          }
+          if (!first) {
+            if (!SDDS_WriteTable(&ztransverse->SDDS_wake)) {
+              SDDS_SetError("Problem writing SDDS table for wake output (track_through_ztransverse)");
+              SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+            }
+            SDDS_DoFSync(&ztransverse->SDDS_wake);
+          }
+        }
       }
+      first = 0;
     }
-    first = 0;
   }
-
+  
 #if defined(MIMIMIZE_MEMORY)
   free(posItime[0]);
   free(posItime[1]);

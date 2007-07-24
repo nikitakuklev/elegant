@@ -63,11 +63,13 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
     static double *Vtime = NULL;           /* array for voltage acting on each bin */
     static long max_n_bins = 0;
     static long *pbin = NULL;              /* array to record which bin each particle is in */
-    static double *time = NULL;            /* array to record arrival time of each particle */
+    static double *time = NULL;           /* array to record arrival time of each particle */
     static long max_np = 0;
     double *Vfreq, *Z;
     long ip, ib, nb, n_binned, nfreq, iReal, iImag;
     double factor, tmin, tmax, tmean, dt, dt1, dgam, rampFactor;
+    long ip1, ip2, bunches, bunch, npb;
+    long bucketEnd[MAX_BUCKETS];
     static long not_first_call = -1;
 #if USE_MPI
     double *buffer;
@@ -114,221 +116,263 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
 	}
       }
     } 
-
 #endif
-    
-    tmean = computeTimeCoordinates(time, Po, part, np);
-    find_min_max(&tmin, &tmax, time, np);
+
+    if ((part[0][6]-floor(part[0][6]))!=0) {
+      /* This is a kludgey way to determine that particles have been assigned to buckets */
+      printf("Bunched beam detected\n"); fflush(stdout);
 #if USE_MPI
-    find_global_min_max(&tmin, &tmax, np, workers); 
-    tmin_part = tmin;
-    tmax_part = tmax;     
+      if (n_processors!=1) {
+        printf("Error (ZLONGIT): must have bunch_frequency=0 for parallel mode.\n");
+        MPI_Barrier(MPI_COMM_WORLD); /* Make sure the information can be printed before aborting */
+        MPI_Abort(MPI_COMM_WORLD, 2);
+      }
+#endif
+      /* Start by sorting in bucket order */
+      qsort(part[0], np, COORDINATES_PER_PARTICLE*sizeof(double), comp_BucketNumbers);
+      /* Find the end of the buckets in the particle list */
+      bunches = 0;
+      for (ip=1; ip<np; ip++) {
+        if ((part[ip-1][6]-floor(part[ip-1][6]))!=(part[ip][6]-floor(part[ip][6]))) {
+          printf("Bucket %ld ends with ip=%ld\n", bunches, ip-1); fflush(stdout);
+          bucketEnd[bunches++] = ip-1;
+          if (bunches>=MAX_BUCKETS) {
+            bomb("Error (wake): maximum number of buckets was exceeded", NULL);
+          }
+        }
+      }
+      bucketEnd[bunches++] = np-1;
+    } else {
+      bunches = 1;
+      bucketEnd[0] = np-1;
+    }
+    printf("Bucket %ld ends with ip=%ld\n", bunches, bucketEnd[bunches-1]); fflush(stdout);
+
+
+    ip2 = -1;
+    for (bunch=0; bunch<bunches; bunch++) {
+      ip1 = ip2+1;
+      ip2 = bucketEnd[bunch];
+      npb = ip2-ip1+1;
+      printf("Processing bunch %ld with %ld particles\n", bunch, npb); fflush(stdout);
+      tmean = computeTimeCoordinates(time+ip1, Po, part+ip1, npb);
+      find_min_max(&tmin, &tmax, time+ip1, npb);
+      if (bunch==0) {
+        /* use np here since we need to compute the macroparticle charge */
+        set_up_zlongit(zlongit, run, i_pass, np, charge, tmax-tmin);
+      }
+#if USE_MPI
+      find_global_min_max(&tmin, &tmax, np, workers); 
+      tmin_part = tmin;
+      tmax_part = tmax;     
 #endif
   
-    set_up_zlongit(zlongit, run, i_pass, np, charge, tmax-tmin);
-    nb = zlongit->n_bins;
-    dt = zlongit->bin_size;
-    if ((tmax-tmin)*2>nb*dt) {
-      TRACKING_CONTEXT tcontext;
-      getTrackingContext(&tcontext);
-      fprintf(stderr, "%s %s: Time span of bunch is more than half the total time span.\n",
-              entity_name[tcontext.elementType],
-              tcontext.elementName);
-      fprintf(stderr, "If using broad-band impedance, you should increase the number of bins and rerun.\n");
-      fprintf(stderr, "If using file-based impedance, you should increase the number of data points or decrease the frequency resolution.\n");
-      exit(1);
-    }
-    
-    if (zlongit->n_bins>max_n_bins) {
-      Itime = trealloc(Itime, 2*sizeof(*Itime)*(max_n_bins=zlongit->n_bins));
-      Ifreq = trealloc(Ifreq, 2*sizeof(*Ifreq)*(max_n_bins=zlongit->n_bins));
-      Vtime = trealloc(Vtime, 2*sizeof(*Vtime)*(max_n_bins+1));
-    }
-
-    if (zlongit->reverseTimeOrder) {
-      for (ip=0; ip<np; ip++)
-        time[ip] = 2*tmean-time[ip];
-    }
-    tmin = tmean - dt*zlongit->n_bins/2.0;
-
-    for (ib=0; ib<zlongit->n_bins; ib++)
+      nb = zlongit->n_bins;
+      dt = zlongit->bin_size;
+      if ((tmax-tmin)*2>nb*dt) {
+        TRACKING_CONTEXT tcontext;
+        getTrackingContext(&tcontext);
+        fprintf(stderr, "%s %s: Time span of bunch is more than half the total time span.\n",
+                entity_name[tcontext.elementType],
+                tcontext.elementName);
+        fprintf(stderr, "If using broad-band impedance, you should increase the number of bins and rerun.\n");
+        fprintf(stderr, "If using file-based impedance, you should increase the number of data points or decrease the frequency resolution.\n");
+        exit(1);
+      }
+      
+      if (zlongit->n_bins>max_n_bins) {
+        Itime = trealloc(Itime, 2*sizeof(*Itime)*(max_n_bins=zlongit->n_bins));
+        Ifreq = trealloc(Ifreq, 2*sizeof(*Ifreq)*(max_n_bins=zlongit->n_bins));
+        Vtime = trealloc(Vtime, 2*sizeof(*Vtime)*(max_n_bins+1));
+      }
+      
+      if (zlongit->reverseTimeOrder) {
+        for (ip=ip1; ip<=ip2; ip++)
+          time[ip] = 2*tmean-time[ip];
+      }
+      tmin = tmean - dt*zlongit->n_bins/2.0;
+      
+      for (ib=0; ib<zlongit->n_bins; ib++)
         Itime[2*ib] = Itime[2*ib+1] = 0;
-
-    for (ip=n_binned=0; ip<np; ip++) {
-      pbin[ip] = -1;
-      ib = (time[ip]-tmin)/dt;
-      if (ib<0)
-        continue;
-      if (ib>nb - 1)
-        continue;
-      if (zlongit->area_weight && ib>1 && ib<(nb-1)) {
-        double dist;
-        dist = (time[ip]-((ib+0.5)*dt+tmin))/dt;
-        Itime[ib] += 0.5;
-        Itime[ib-1] += 0.25-0.5*dist;
-        Itime[ib+1] += 0.25+0.5*dist;
+      
+      n_binned=0; 
+      for (ip=ip1; ip<=ip2; ip++) {
+        pbin[ip] = -1;
+        ib = (time[ip]-tmin)/dt;
+        if (ib<0)
+          continue;
+        if (ib>nb - 1)
+          continue;
+        if (zlongit->area_weight && ib>1 && ib<(nb-1)) {
+          double dist;
+          dist = (time[ip]-((ib+0.5)*dt+tmin))/dt;
+          Itime[ib] += 0.5;
+          Itime[ib-1] += 0.25-0.5*dist;
+          Itime[ib+1] += 0.25+0.5*dist;
+        }
+        else 
+          Itime[ib] += 1;
+        pbin[ip] = ib;
+        n_binned++;
       }
-      else 
-        Itime[ib] += 1;
-      pbin[ip] = ib;
-      n_binned++;
-    }
 #if (!USE_MPI)
-    if (n_binned!=np) {
-      fprintf(stdout, "Warning: only %ld of %ld particles were binned (ZLONGIT)!\n", n_binned, np);
-      if (!not_first_call) {
-        fprintf(stdout, "*** This may produce unphysical results.  Your wake needs smaller frequency\n");
-        fprintf(stdout, "    spacing to cover a longer time span.\n");
+      if (n_binned!=npb) {
+        fprintf(stdout, "Warning: only %ld of %ld particles were binned (ZLONGIT)!\n", n_binned, ip2-ip1+1);
+        if (!not_first_call) {
+          fprintf(stdout, "*** This may produce unphysical results.  Your wake needs smaller frequency\n");
+          fprintf(stdout, "    spacing to cover a longer time span.\n");
+        }
+        fflush(stdout);
       }
-      fflush(stdout);
-    }
 #else
-    if (USE_MPI) {
-      int all_binned, result = 1;
-      if (isSlave)
-        result = ((n_binned==np) ? 1 : 0);
-		             
-      MPI_Allreduce(&result, &all_binned, 1, MPI_INT, MPI_LAND, workers);
-      if (!all_binned) {
-	if (myid==1) {  
-	  /* This warning will be given only if the flag MPI_DEBUG is defined for the Pelegant */ 
-	  fprintf(stdout, "warning: Not all of %ld particles were binned (WAKE)\n", np);
-	  fprintf(stdout, "consider setting n_bins=0 in WAKE definition to invoke autoscaling\n");
-	  fflush(stdout); 
-	}
+      if (USE_MPI) {
+        int all_binned, result = 1;
+        if (isSlave)
+          result = ((n_binned==np) ? 1 : 0);
+        
+        MPI_Allreduce(&result, &all_binned, 1, MPI_INT, MPI_LAND, workers);
+        if (!all_binned) {
+          if (myid==1) {  
+            /* This warning will be given only if the flag MPI_DEBUG is defined for the Pelegant */ 
+            fprintf(stdout, "warning: Not all of %ld particles were binned (WAKE)\n", np);
+            fprintf(stdout, "consider setting n_bins=0 in WAKE definition to invoke autoscaling\n");
+            fflush(stdout); 
+          }
+        }
       }
-    }
 #endif
 
 #if USE_MPI 
-    offset = ((long)((tmin_part-tmin)/dt)-1 ? (long)((tmin_part-tmin)/dt)-1:0);
-    length = ((long)((tmax_part-tmin_part)/dt)+2 < nb ? (long)((tmax_part-tmin_part)/dt)+2:nb);
-    if (isSlave) {
-      buffer = malloc(sizeof(double) * length);;
-      MPI_Allreduce(&Itime[offset], buffer, length, MPI_DOUBLE, MPI_SUM, workers);
-      memcpy(&Itime[offset], buffer, sizeof(double)*length);
-      free(buffer);
-    }
+      offset = ((long)((tmin_part-tmin)/dt)-1 ? (long)((tmin_part-tmin)/dt)-1:0);
+      length = ((long)((tmax_part-tmin_part)/dt)+2 < nb ? (long)((tmax_part-tmin_part)/dt)+2:nb);
+      if (isSlave) {
+        buffer = malloc(sizeof(double) * length);;
+        MPI_Allreduce(&Itime[offset], buffer, length, MPI_DOUBLE, MPI_SUM, workers);
+        memcpy(&Itime[offset], buffer, sizeof(double)*length);
+        free(buffer);
+      }
 #endif
 
-    if (zlongit->smoothing)
-      SavitzyGolaySmooth(Itime, nb, zlongit->SGOrder, 
-                         zlongit->SGHalfWidth, zlongit->SGHalfWidth, 0);
+      if (zlongit->smoothing)
+        SavitzyGolaySmooth(Itime, nb, zlongit->SGOrder, 
+                           zlongit->SGHalfWidth, zlongit->SGHalfWidth, 0);
     
 #if DEBUG 
-    /* Output the time-binned data */
-    if (1) {
-      FILE *fp;
-      fp = fopen("zlongit.tbin", "w");
-      fprintf(fp, "SDDS1\n&column name=t type=double units=s &end\n&column name=I type=double &end\n&data mode=ascii &end\n");
-      fprintf(fp, "%ld\n", nb);
-      for (ib=0; ib<nb; ib++) 
-        fprintf(fp, "%e %e\n",
-                ib*dt+tmin, Itime[ib]*zlongit->macroParticleCharge/dt);
-      fclose(fp);
-    }
+      /* Output the time-binned data */
+      if (1) {
+        FILE *fp;
+        fp = fopen("zlongit.tbin", "w");
+        fprintf(fp, "SDDS1\n&column name=t type=double units=s &end\n&column name=I type=double &end\n&data mode=ascii &end\n");
+        fprintf(fp, "%ld\n", nb);
+        for (ib=0; ib<nb; ib++) 
+          fprintf(fp, "%e %e\n",
+                  ib*dt+tmin, Itime[ib]*zlongit->macroParticleCharge/dt);
+        fclose(fp);
+      }
 #endif
 
-    /* Take the FFT of I(t) to get I(f) */
-    memcpy(Ifreq, Itime, 2*zlongit->n_bins*sizeof(*Ifreq));
+      /* Take the FFT of I(t) to get I(f) */
+      memcpy(Ifreq, Itime, 2*zlongit->n_bins*sizeof(*Ifreq));
 #ifdef  USE_MPE
-	      MPE_Log_event(event1a, 0, "start zlongit"); /* record time spent on I/O operations */
+      MPE_Log_event(event1a, 0, "start zlongit"); /* record time spent on I/O operations */
 #endif
-    realFFT(Ifreq, nb, 0);
+      realFFT(Ifreq, nb, 0);
 #ifdef  USE_MPE
-	      MPE_Log_event(event1b, 0, "end zlongit"); /* record time spent on I/O operations */
+      MPE_Log_event(event1b, 0, "end zlongit"); /* record time spent on I/O operations */
 #endif
-    /* Compute V(f) = Z(f)*I(f), putting in a factor 
-     * to normalize the current waveform.
-     */
-    Vfreq = Vtime;
-    factor = zlongit->macroParticleCharge/dt*zlongit->factor*rampFactor;
-    Z = zlongit->Z;
-    Vfreq[0] = Ifreq[0]*Z[0]*factor;
-    nfreq = nb/2 + 1;
-    if (nb%2==0)
+      /* Compute V(f) = Z(f)*I(f), putting in a factor 
+       * to normalize the current waveform.
+       */
+      Vfreq = Vtime;
+      factor = zlongit->macroParticleCharge/dt*zlongit->factor*rampFactor;
+      Z = zlongit->Z;
+      Vfreq[0] = Ifreq[0]*Z[0]*factor;
+      nfreq = nb/2 + 1;
+      if (nb%2==0)
         /* Nyquist term */
         Vfreq[nb-1] = Ifreq[nb-1]*Z[nb-1]*factor;
-    for (ib=1; ib<nfreq-1; ib++) {
+      for (ib=1; ib<nfreq-1; ib++) {
         iImag = (iReal = 2*ib-1)+1;
         Vfreq[iReal] = (Ifreq[iReal]*Z[iReal] - Ifreq[iImag]*Z[iImag])*factor;
         Vfreq[iImag] = (Ifreq[iReal]*Z[iImag] + Ifreq[iImag]*Z[iReal])*factor; 
-        }
-
-    /* Compute inverse FFT of V(f) to get V(t) */
+      }
+      
+      /* Compute inverse FFT of V(f) to get V(t) */
 #ifdef  USE_MPE
-	      MPE_Log_event(event2a, 0, "start zlongit"); /* record time spent on I/O operations */
+      MPE_Log_event(event2a, 0, "start zlongit"); /* record time spent on I/O operations */
 #endif
-    realFFT(Vfreq, nb, INVERSE_FFT);
+      realFFT(Vfreq, nb, INVERSE_FFT);
 #ifdef  USE_MPE
-	      MPE_Log_event(event2b, 0, "start zlongit"); /* record time spent on I/O operations */
+      MPE_Log_event(event2b, 0, "start zlongit"); /* record time spent on I/O operations */
 #endif
-    Vtime = Vfreq;
-
-    if (zlongit->SDDS_wake_initialized && zlongit->wakes) {
+      Vtime = Vfreq;
+      
+      if (zlongit->SDDS_wake_initialized && zlongit->wakes) {
         /* wake potential output */
-      factor = zlongit->macroParticleCharge/dt;
+        factor = zlongit->macroParticleCharge/dt;
         if (zlongit->wake_interval<=0 || (i_pass%zlongit->wake_interval)==0) {
-            if (!SDDS_StartTable(&zlongit->SDDS_wake, nb)) {
-                SDDS_SetError("Problem starting SDDS table for wake output (track_through_zlongit)");
-                SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-                }
-            for (ib=0; ib<nb; ib++) {
-                if (!SDDS_SetRowValues(&zlongit->SDDS_wake, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ib,
-                                       0, ib*dt, 1, Vtime[ib], 2, Itime[ib]*factor, -1)) {
-                    SDDS_SetError("Problem setting rows of SDDS table for wake output (track_through_zlongit)");
-                    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-                    }
-                }
+          if (!SDDS_StartTable(&zlongit->SDDS_wake, nb)) {
+            SDDS_SetError("Problem starting SDDS table for wake output (track_through_zlongit)");
+            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+          }
+          for (ib=0; ib<nb; ib++) {
+            if (!SDDS_SetRowValues(&zlongit->SDDS_wake, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ib,
+                                   0, ib*dt, 1, Vtime[ib], 2, Itime[ib]*factor, -1)) {
+              SDDS_SetError("Problem setting rows of SDDS table for wake output (track_through_zlongit)");
+              SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+            }
+          }
+          if (!SDDS_SetParameters(&zlongit->SDDS_wake, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+                                  "Pass", i_pass, "q", zlongit->macroParticleCharge*np, NULL)) {
+            SDDS_SetError("Problem setting parameters of SDDS table for wake output (track_through_zlongit)");
+            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+          }
+          if (zlongit->broad_band) {
             if (!SDDS_SetParameters(&zlongit->SDDS_wake, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-                                    "Pass", i_pass, "q", zlongit->macroParticleCharge*np, NULL)) {
-                SDDS_SetError("Problem setting parameters of SDDS table for wake output (track_through_zlongit)");
-                SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-                }
-            if (zlongit->broad_band) {
-                if (!SDDS_SetParameters(&zlongit->SDDS_wake, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-                                        "Ra", zlongit->Ra, "fo", zlongit->freq, "Deltaf", zlongit->bin_size, NULL)) {
-                    SDDS_SetError("Problem setting parameters of SDDS table for wake output (track_through_zlongit)");
-                    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-                    }
-                }
-            if (!SDDS_WriteTable(&zlongit->SDDS_wake)) {
-                SDDS_SetError("Problem writing SDDS table for wake output (track_through_zlongit)");
-                SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-                }
-            SDDS_DoFSync(&zlongit->SDDS_wake);
+                                    "Ra", zlongit->Ra, "fo", zlongit->freq, "Deltaf", zlongit->bin_size, NULL)) {
+              SDDS_SetError("Problem setting parameters of SDDS table for wake output (track_through_zlongit)");
+              SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+            }
+          }
+          if (!SDDS_WriteTable(&zlongit->SDDS_wake)) {
+            SDDS_SetError("Problem writing SDDS table for wake output (track_through_zlongit)");
+            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+          }
+          SDDS_DoFSync(&zlongit->SDDS_wake);
         }
-    }
+      }
 
-    /* put zero voltage in Vtime[nb] for use in interpolation */
-    Vtime[nb] = 0;
-    /* change particle momentum offsets to reflect voltage in relevant bin */
-    for (ip=0; ip<np; ip++) {
-      if ((ib=pbin[ip])>=0 && ib<=nb-1) {
-        if (zlongit->interpolate && ib>0) {
-          /* dt/2 offset is so that center of bin is location where
-           * particle sees voltage for that bin only
-           */
-          dt1 = time[ip]-(tmin+dt/2.0+dt*ib);
-          if (dt1<0)
-            dt1 += dt;
+      /* put zero voltage in Vtime[nb] for use in interpolation */
+      Vtime[nb] = 0;
+      /* change particle momentum offsets to reflect voltage in relevant bin */
+      for (ip=ip1; ip<=ip2; ip++) {
+        if ((ib=pbin[ip])>=0 && ib<=nb-1) {
+          if (zlongit->interpolate && ib>0) {
+            /* dt/2 offset is so that center of bin is location where
+             * particle sees voltage for that bin only
+             */
+            dt1 = time[ip]-(tmin+dt/2.0+dt*ib);
+            if (dt1<0)
+              dt1 += dt;
+            else
+              ib += 1;
+            if (ib<nb)
+              dgam = (Vtime[ib-1]+(Vtime[ib]-Vtime[ib-1])/dt*dt1)/(1e6*me_mev);
+            else
+              continue;
+          }
           else
-            ib += 1;
-          if (ib<nb)
-            dgam = (Vtime[ib-1]+(Vtime[ib]-Vtime[ib-1])/dt*dt1)/(1e6*me_mev);
-          else
-            continue;
-        }
-        else
-          dgam = Vtime[ib]/(1e6*me_mev);
-        if (dgam) {
-          if (zlongit->reverseTimeOrder)
-            time[ip] = 2*tmean - time[ip];
-          /* Put in minus sign here as the voltage decelerates the beam */
-          add_to_particle_energy(part[ip], time[ip], Po, -dgam);
+            dgam = Vtime[ib]/(1e6*me_mev);
+          if (dgam) {
+            if (zlongit->reverseTimeOrder)
+              time[ip] = 2*tmean - time[ip];
+            /* Put in minus sign here as the voltage decelerates the beam */
+            add_to_particle_energy(part[ip], time[ip], Po, -dgam);
+          }
         }
       }
     }
+    
 
 #if defined(MINIMIZE_MEMORY)
     free(Itime);
@@ -339,7 +383,6 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
     pbin = NULL;
     max_np = max_n_bins = 0;
 #endif
-
   }
 
 void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARGE *charge,

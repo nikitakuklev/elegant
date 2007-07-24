@@ -450,6 +450,7 @@ typedef struct {
     double **accepted;      /* coordinates of accepted particles, with loss info on lost particles */
     long n_accepted;        /* final number of particles being tracked. */
     long *lostOnPass;       /* pass on which a particle is lost */
+    double bunchFrequency;
     } BEAM;
 
 typedef struct {
@@ -3159,3 +3160,5 @@ typedef struct {
 } TIMEDATA;
 extern int compTimeData(const void *tv1, const void *tv2);
 
+#define MAX_BUCKETS 16384
+int comp_BucketNumbers(const void *coord1, const void *coord2);
