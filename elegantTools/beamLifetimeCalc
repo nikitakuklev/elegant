@@ -4,6 +4,9 @@ exec oagwish "$0" "$@"
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.1  2007/03/30 16:50:28  soliday
+# Moved from directory above.
+#
 # Revision 1.18  2007/03/16 02:13:42  borland
 # Corrected the calculation of the bunch length to include the effect of the
 # centroid motion.
@@ -186,7 +189,7 @@ set auto_path [linsert $auto_path 0  /usr/local/oag/apps/lib/$env(HOST_ARCH)]
 set auto_path [linsert $auto_path 0 /usr/local/oag/lib_patch/$env(HOST_ARCH)]
 APSDebugPath
 
-set CVSRevisionAuthor "\$Revision: 1.1 $ \$Author: soliday $"
+set CVSRevisionAuthor "\$Revision: 1.2 $ \$Author: shang $"
 
 APSApplication . -name beamLifetimeCalc -version $CVSRevisionAuthor -overview \
   "Calculates the gas scattering lifetime due to single Coulomb scattering and
@@ -752,7 +755,7 @@ proc LoadLatticeParameters {} {
     set energy [expr $pCentral*0.51099906e-3]
     set revolutionFrequency [expr 2.9979825e8/($superperiods*$sLast)]
     set Uo [expr $Uo*$superperiods]
-    foreach item {energy emittance energySpread dampingTime Uo} {
+    foreach item {energy emittance energySpread dampingTime dampingTimeH dampingTimeV Uo} {
         set referenceValue($item) [expr 1.0*[set $item]]
     }
     set tcl_precision 17
