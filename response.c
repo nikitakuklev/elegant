@@ -43,8 +43,12 @@ void setup_correction_matrix_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *
 {
     long unitsCode;
     log_entry("setup_correction_matrix_output");
-    if (correct->mode==-1)
-        bomb("can't do response matrix output--orbit/trajectory correction not requested", NULL);
+    if (correct->mode==-1) {
+      printf("Error: you must request orbit/trajectory correction before requesting response matrix output.\n");
+      printf("Otherwise, elegant doesn't have the needed information about correctors and monitors.\n");
+      exit(1);  
+    }
+    
 
     /* process the namelist text */
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
@@ -227,30 +231,62 @@ void setup_response_output(RESPONSE_OUTPUT *respOutput,
 
 void run_response_output(RUN *run, LINE_LIST *beamline, CORRECTION *correct, long tune_corrected)
 {
-    long unitsCode;
+    long unitsCode, inverseComputedSave;
+    MATRIX *Cx, *Cy, *Tx, *Ty, *tmp;
+
     unitsCode = KnL_units?KNL_UNITS:(BnL_units?BNL_UNITS:0);
     if (tune_corrected==0 && !output_before_tune_correction)
         return;
-    log_entry("run_response_output");
 
-    if (output_at_each_step) {
-        if (correct->mode==TRAJECTORY_CORRECTION) {
-            compute_trajcor_matrices(correct->CMx, &correct->SLx, 0, run, beamline, 0,
-                                     !(inverse[0]==NULL || SDDS_StringIsBlank(inverse[0])));
-            compute_trajcor_matrices(correct->CMy, &correct->SLy, 2, run, beamline, 0,
-                                    !(inverse[1]==NULL || SDDS_StringIsBlank(inverse[1])));
-            }
-        else if (correct->mode==ORBIT_CORRECTION) {
-            compute_orbcor_matrices(correct->CMx, &correct->SLx, 0, run, beamline, 0,
-                                    !(inverse[0]==NULL || SDDS_StringIsBlank(inverse[0])),
-                                    fixed_length, 1);
-            compute_orbcor_matrices(correct->CMy, &correct->SLy, 2, run, beamline, 0,
-                                    !(inverse[1]==NULL || SDDS_StringIsBlank(inverse[1])),
-                                    fixed_length, 1);
-            }
-        else
-            bomb("bad correction mode (run_response_output)", NULL);
-        }
+    /* Copy the matrices from the correction structure so we can put them back when we are done. 
+     * We have to do this because the correction command may have different settings (e.g., fixed-length
+     * constraint or non-perturbed matrix.
+     */
+    m_alloc(&Cx, correct->CMx->nmon, correct->CMx->ncor);
+    tmp = Cx; Cx = correct->CMx->C;  correct->CMx->C = tmp;
+     
+    m_alloc(&Cy, correct->CMy->nmon, correct->CMy->ncor);
+    tmp = Cy; Cy = correct->CMy->C;  correct->CMy->C = tmp;
+
+    m_alloc(&Tx, correct->CMx->ncor, correct->CMx->nmon);
+    tmp = Tx; Tx = correct->CMx->T;  correct->CMx->T = tmp;
+
+    m_alloc(&Ty, correct->CMy->ncor, correct->CMy->nmon);
+    tmp = Ty; Ty = correct->CMy->T;  correct->CMy->T = tmp;
+
+    if (correct->mode==TRAJECTORY_CORRECTION) {
+      printf("Computing trajectory correction matrices for output.\n");
+      inverseComputedSave = correct->CMx->inverse_computed;
+      correct->CMx->inverse_computed = 0;
+      compute_trajcor_matrices(correct->CMx, &correct->SLx, 0, run, beamline, 0,
+                               !(inverse[0]==NULL || SDDS_StringIsBlank(inverse[0])));
+      correct->CMx->inverse_computed = inverseComputedSave;
+
+      inverseComputedSave = correct->CMy->inverse_computed;
+      correct->CMy->inverse_computed = 0;
+      compute_trajcor_matrices(correct->CMy, &correct->SLy, 2, run, beamline, 0,
+                               !(inverse[1]==NULL || SDDS_StringIsBlank(inverse[1])));
+      correct->CMy->inverse_computed = inverseComputedSave;
+    }
+    else if (correct->mode==ORBIT_CORRECTION) {
+      printf("Computing orbit correction matrices for output, with %s length.\n",
+             fixed_length?"fixed":"variable");
+      inverseComputedSave = correct->CMx->inverse_computed;
+      correct->CMx->inverse_computed = 0;
+      compute_orbcor_matrices(correct->CMx, &correct->SLx, 0, run, beamline, 0,
+                              !(inverse[0]==NULL || SDDS_StringIsBlank(inverse[0])),
+                              fixed_length, 1);
+      correct->CMx->inverse_computed = inverseComputedSave;
+
+      inverseComputedSave = correct->CMy->inverse_computed;
+      correct->CMy->inverse_computed = 0;
+      compute_orbcor_matrices(correct->CMy, &correct->SLy, 2, run, beamline, 0,
+                              !(inverse[1]==NULL || SDDS_StringIsBlank(inverse[1])),
+                              fixed_length, 1);
+      correct->CMy->inverse_computed = inverseComputedSave;
+    }
+    else
+      bomb("bad correction mode (run_response_output)", NULL);
 
 #if USE_MPI
     if (isSlave)
@@ -267,7 +303,18 @@ void run_response_output(RUN *run, LINE_LIST *beamline, CORRECTION *correct, lon
     if (inverse[1])
         do_response_output(&yInvRespOutput, correct->CMy, &correct->SLy, 1, 1, unitsCode, tune_corrected);
 
-    log_exit("run_response_output");
+    /* copy matrices back to the correction structure and free memory */
+    tmp = Cx; Cx = correct->CMx->C;  correct->CMx->C = tmp;
+    m_free(&Cx);
+     
+    tmp = Cy; Cy = correct->CMy->C;  correct->CMy->C = tmp;
+    m_free(&Cy);
+
+    tmp = Tx; Tx = correct->CMx->T;  correct->CMx->T = tmp;
+    m_free(&Tx);
+
+    tmp = Ty; Ty = correct->CMy->T;  correct->CMy->T = tmp;
+    m_free(&Ty);
     }
 
 void do_response_output(RESPONSE_OUTPUT *respOutput, CORMON_DATA *CM, STEERING_LIST *SL, long plane,
