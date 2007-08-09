@@ -214,7 +214,8 @@ void correction_setup(
     _correct->CMy->bpm_noise_cutoff = bpm_noise_cutoff[1];
     _correct->CMx->fixed_length = _correct->CMy->fixed_length = fixed_length;
     _correct->response_only = n_iterations==0;
-
+    _correct->CMx->inverse_computed = _correct->CMy->inverse_computed = 0;
+    
     /* find correction matrices Qo, T, C, and W for all monitors using all correctors */
     if (verbose)
       fputs("finding correctors/monitors and/or computing correction matrices\n", stdout);
@@ -1553,6 +1554,7 @@ void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN
     fprintf(stdout, "computing orbit response matrix...");
     fflush(stdout);
   }
+  
   switch (coord) {
   case 0:
     for (i_corr=0; i_corr<CM->ncor; i_corr++) {
