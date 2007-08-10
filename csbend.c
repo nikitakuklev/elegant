@@ -3346,7 +3346,7 @@ void addRadiationKick(double *Qx, double *Qy, double *dPoP, long sqrtOrder,
       *dPoP -= radCoef*deltaFactor*F2*ds*dsFactor;
     if (isrCoef)
       /* The minus sign is for consistency with the previous version. */
-      *dPoP -= isrCoef*deltaFactor*pow(F2,1.5)*sqrt(dsISR*dsFactor)*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
+      *dPoP -= isrCoef*deltaFactor*pow(F2,0.75)*sqrt(dsISR*dsFactor)*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
     *Qx *= (1 + *dPoP);
     *Qy *= (1 + *dPoP);
   } else {

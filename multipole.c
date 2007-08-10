@@ -907,7 +907,7 @@ int integrate_kick_multipole_ord2(double *coord, double cos_tilt, double sin_til
       if (rad_coef)
 	dp -= rad_coef*deltaFactor*F2*dsFactor;
       if (isr_coef)
-	dp -= isr_coef*deltaFactor*pow(F2, 1.5)*sqrt(dsFactor)*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
+	dp -= isr_coef*deltaFactor*pow(F2, 0.75)*sqrt(dsFactor)*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
       qx *= (1+dp);
       qy *= (1+dp);
     }
@@ -1110,7 +1110,7 @@ int integrate_kick_multipole_ord4(double *coord, double cos_tilt, double sin_til
 	if (rad_coef)
 	  dp -= rad_coef*deltaFactor*F2*dsFactor;
 	if (isr_coef)
-	  dp -= isr_coef*deltaFactor*pow(F2, 1.5)*sqrt(dsISRFactor)*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
+	  dp -= isr_coef*deltaFactor*pow(F2, 0.75)*sqrt(dsISRFactor)*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
         qx *= (1+dp);
         qy *= (1+dp);
       }
