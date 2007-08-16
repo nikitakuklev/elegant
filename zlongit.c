@@ -157,15 +157,15 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
       printf("Processing bunch %ld with %ld particles\n", bunch, npb); fflush(stdout);
       tmean = computeTimeCoordinates(time+ip1, Po, part+ip1, npb);
       find_min_max(&tmin, &tmax, time+ip1, npb);
-      if (bunch==0) {
-        /* use np here since we need to compute the macroparticle charge */
-        set_up_zlongit(zlongit, run, i_pass, np, charge, tmax-tmin);
-      }
 #if USE_MPI
       find_global_min_max(&tmin, &tmax, np, workers); 
       tmin_part = tmin;
       tmax_part = tmax;     
 #endif
+      if (bunch==0) {
+        /* use np here since we need to compute the macroparticle charge */
+        set_up_zlongit(zlongit, run, i_pass, np, charge, tmax-tmin);
+      }
   
       nb = zlongit->n_bins;
       dt = zlongit->bin_size;
