@@ -212,6 +212,7 @@ long writePermitted = 1;
 long isMaster = 1;
 long isSlave = 1;
 long notSinglePart=0; /* All the processors will do the same thing by default */
+double factor = 1.0;    /* In serial version, the memory will be allocted for all the particles */ 
 
 #if USE_MPI
 parallelMode parallelStatus = initialMode; 
@@ -324,6 +325,8 @@ char **argv;
   if (sizeof(int)<4) { /* The size of integer is assumed to be 4 bytes to handle a large number of particles */
     printf("Warning!!! The INT_MAX could be too small to record the number of particles.\n"); 
   }
+  if (isSlave && (n_processors>3))   /* This will avoid wasting memory on a laptop with a small number of cores */    
+    factor = 2.0/(n_processors-1);   /* In parallel version, a portion of meory will be allocated on each slave */
 #endif
 
 #ifdef SET_DOUBLE
