@@ -256,14 +256,16 @@ long do_tracking(
   if (finalCharge)
     *finalCharge = 0;  
 
-  if (check_nan) {
+  if (isMaster) {   /* As the particles have not been distributed, only master needs to do these computation */
+    if (check_nan) {
       nLeft = nToTrack = limit_amplitudes(coord, DBL_MAX, DBL_MAX, nToTrack, accepted, z, *P_central, 0,
 					  0);
       recordLossPass(lostOnPass, &nLost, nLeft, nMaximum, 0, myid, lostSinceSeqMode);
-  }
-  if (run->apertureData.initialized)  {
-    nLeft = nToTrack = imposeApertureData(coord, nToTrack, accepted, 0.0, *P_central, &(run->apertureData));
-    recordLossPass(lostOnPass, &nLost, nLeft, nMaximum, 0, myid, lostSinceSeqMode);
+    }
+    if (run->apertureData.initialized)  {
+      nLeft = nToTrack = imposeApertureData(coord, nToTrack, accepted, 0.0, *P_central, &(run->apertureData));
+      recordLossPass(lostOnPass, &nLost, nLeft, nMaximum, 0, myid, lostSinceSeqMode);
+    }
   }
   
   for (i_pass=passOffset; i_pass<n_passes+passOffset; i_pass++) {
@@ -1512,59 +1514,65 @@ long do_tracking(
     
 #if USE_MPI
     if (notSinglePart) {
-      if (balanceStatus==startMode) { 
-	balanceStatus = checkBalance (my_wtime, myid, n_processors);  
-	/* calculate the rate for all of the slave processors */
-	if (myid==0) {
-	  my_rate = 0.0;
-	  nParPerElements = 0.0;
-	}
-	else {
-	  nParPerElements = (double)nParElements/(double)nElements;
-	  if (my_wtime!=0.0) 
-	    my_rate = nParPerElements/my_wtime;
-	  else 
-	    my_rate = 1.; 
-	} 
-	lostSinceSeqMode = 1; /* set flag to distribute jobs according to  the speed */
-      }
-      else { /* The workload balancing will be checked for every pass by default.
-		If user defined the CHECKFLAGS, the balance will be checked only 
-		when the nToTrack is changed. */
-#ifdef CHECKFLAGS 
-	if (myid==0) {
-	  if (old_nToTrack!=nToTrack) {
-	    checkFlags = 1;
-	  }
-	  else
-	    checkFlags = 0;
-	}
-	MPI_Bcast(&checkFlags, 1, MPI_INT, 0, MPI_COMM_WORLD);
-#else
-	checkFlags = 1; /* the default option */
-#endif
-	if (checkFlags)
-	  balanceStatus = checkBalance (my_wtime, myid, n_processors);   
-	if (balanceStatus == badBalance) {
+      if (run->load_balancing_on) {  /* User can choose if load balancing needs to be done */
+	if (balanceStatus==startMode) { 
+	  balanceStatus = checkBalance (my_wtime, myid, n_processors);  
+	  /* calculate the rate for all of the slave processors */
 	  if (myid==0) {
 	    my_rate = 0.0;
 	    nParPerElements = 0.0;
 	  }
 	  else {
 	    nParPerElements = (double)nParElements/(double)nElements;
-	    if (my_wtime!=0.0)
+	    if (my_wtime!=0.0) 
 	      my_rate = nParPerElements/my_wtime;
-	    else  
-	      /* set the speed to be euqal for the special case where all the elements are UNIPROCESSOR or MPALGORITHM */
-	      my_rate = 1.;
+	    else 
+	      my_rate = 1.; 
 	  } 
+	  /*  lostSinceSeqMode = 1; */ /* set flag to distribute jobs according to  the speed.
+                                          The default redistribution for the first turn is disabled
+                                          as it might cause some problems for random number generator */
 	}
-#ifdef MPI_DEBUG  
-	fprintf(stdout, "\n\nmyid=%d, nParPerElements=%e, my_time=%lf, my_rate=%lf\n",
-		myid, nParPerElements, my_wtime, nParPerElements/my_wtime);
-	fprintf(stdout, "nParElements=%ld, nElements=%ld\n",nParElements, nElements);
+	else { /* The workload balancing will be checked for every pass by default.
+		  If user defined the CHECKFLAGS, the balance will be checked only 
+		  when the nToTrack is changed. */
+#ifdef CHECKFLAGS 
+	  if (myid==0) {
+	    if (old_nToTrack!=nToTrack) {
+	      checkFlags = 1;
+	    }
+	    else
+	      checkFlags = 0;
+	  }
+	  MPI_Bcast(&checkFlags, 1, MPI_INT, 0, MPI_COMM_WORLD);
+#else
+	  checkFlags = 1; /* the default option */
 #endif
+	  if (checkFlags)
+	    balanceStatus = checkBalance (my_wtime, myid, n_processors);   
+	  if (balanceStatus == badBalance) {
+	    if (myid==0) {
+	      my_rate = 0.0;
+	      nParPerElements = 0.0;
+	    }
+	    else {
+	      nParPerElements = (double)nParElements/(double)nElements;
+	      if (my_wtime!=0.0)
+		my_rate = nParPerElements/my_wtime;
+	      else  
+		/* set the speed to be euqal for the special case where all the elements are UNIPROCESSOR or MPALGORITHM */
+		my_rate = 1.;
+	    } 
+	  }
+#ifdef MPI_DEBUG  
+	  fprintf(stdout, "\n\nmyid=%d, nParPerElements=%e, my_time=%lf, my_rate=%lf\n",
+		  myid, nParPerElements, my_wtime, nParPerElements/my_wtime);
+	  fprintf(stdout, "nParElements=%ld, nElements=%ld\n",nParElements, nElements);
+#endif
+	}
       }
+      else 
+        balanceStatus = goodBalance;
       if (myid==0)
 	old_nToTrack = nToTrack;
     }
@@ -1667,8 +1675,10 @@ long do_tracking(
     printf("Balance is checked for the first pass and when particles are lost only.\n"); 
     fflush(stdout);
   #else
-    printf("Balance is checked for every pass.\n"); 
-    fflush(stdout);
+    if (run->load_balancing_on) {
+      printf("Balance is checked for every pass.\n"); 
+      fflush(stdout);
+    }
   #endif
 #endif
 
