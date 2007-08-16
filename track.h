@@ -66,6 +66,8 @@ extern long notSinglePart;
 
 /* A hash table for loading parameters effectively */
 extern htab *load_hash;
+/* A factor used for distibuting memory on slave processors */
+extern double factor;
 
 #if USE_MPI
 /* pMode will be used to specify where the information is stored, i.e., on Master or Slave. */
@@ -284,7 +286,7 @@ typedef struct {
     double ideal_gamma, p_central;
     long default_order, concat_order, print_statistics;
     long combine_bunch_statistics, wrap_around, tracking_updates, final_pass; 
-    long always_change_p0, stopTrackingParticleLimit;
+    long always_change_p0, stopTrackingParticleLimit, load_balancing_on;
     char *runfile, *lattice, *acceptance, *centroid, *sigma, 
          *final, *output, *rootname, *losses;
     APERTURE_DATA apertureData;
