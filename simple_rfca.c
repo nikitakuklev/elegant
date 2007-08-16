@@ -494,7 +494,18 @@ long trackRfCavityWithWakes
             track_through_trwake(part, np, trwake, *P_central, run, iPass, charge);
           if (LSCKick) {
             if (dgammaOverGammaNp)
-              dgammaOverGammaAve /= dgammaOverGammaNp;
+#if !USE_MPI
+              dgammaOverGammaAve /= dgammaOverGammaNp;           
+#else
+	    if (USE_MPI) {
+              double t1 = dgammaOverGammaAve;
+              long t2 = dgammaOverGammaNp;
+	      MPI_Allreduce (&t1, &dgammaOverGammaAve, 1, MPI_DOUBLE, MPI_SUM, workers);
+              MPI_Allreduce (&t2, &dgammaOverGammaNp, 1, MPI_LONG, MPI_SUM, workers);  
+              dgammaOverGammaAve /= dgammaOverGammaNp; 
+	    }
+    
+#endif
             addLSCKick(part, np, LSCKick, *P_central, charge, length, dgammaOverGammaAve);
           }
         }
@@ -523,7 +534,17 @@ long trackRfCavityWithWakes
             track_through_trwake(part, np, trwake, *P_central, run, iPass, charge);
           if (LSCKick) {
             if (dgammaOverGammaNp)
-              dgammaOverGammaAve /= dgammaOverGammaNp;
+#if !USE_MPI
+              dgammaOverGammaAve /= dgammaOverGammaNp;           
+#else
+	    if (USE_MPI) {
+              double t1 = dgammaOverGammaAve;
+              long t2 = dgammaOverGammaNp;
+	      MPI_Allreduce (&t1, &dgammaOverGammaAve, 1, MPI_DOUBLE, MPI_SUM, workers);
+              MPI_Allreduce (&t2, &dgammaOverGammaNp, 1, MPI_LONG, MPI_SUM, workers);  
+              dgammaOverGammaAve /= dgammaOverGammaNp; 
+	    }
+#endif
             addLSCKick(part, np, LSCKick, *P_central, charge, length, dgammaOverGammaAve);
           }
         }

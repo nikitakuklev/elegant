@@ -34,6 +34,9 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
 #if DEBUG
   FILE *fpd = NULL;
 #endif
+#if USE_MPI
+  double *buffer;
+#endif
 
   Z0 = sqrt(mu_o/epsilon_o);
   nb = LSC->bins;
@@ -54,32 +57,82 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
     Vtime = trealloc(Vtime, 2*sizeof(*Vtime)*(max_n_bins+1));
   }
 
-  if (np>max_np) {
-    pbin = trealloc(pbin, sizeof(*pbin)*(max_np=np));
-    time = trealloc(time, sizeof(*time)*max_np);
+  if (!USE_MPI || !notSinglePart) {
+    if (np>max_np) {
+      pbin = trealloc(pbin, sizeof(*pbin)*(max_np=np));
+      time = trealloc(time, sizeof(*time)*max_np);
+    }
   }
-
+#if USE_MPI
+  else if (USE_MPI) {
+      long np_total;
+      if (isSlave) {
+	MPI_Allreduce(&np, &np_total, 1, MPI_LONG, MPI_SUM, workers);
+	if (np_total>max_np) { 
+	  /* if the total number of particles is increased, we do reallocation for every CPU */
+	  pbin = trealloc(pbin, sizeof(*pbin)*(max_np=np));
+	  time = trealloc(time, sizeof(*time)*max_np);
+	  max_np = np_total; /* max_np should be the sum across all the processors */
+	}
+      }
+    }
+#endif 
   lengthLeft = LSC->length;
   while (lengthLeft>0) {
     /* compute time coordinates and make histogram */
-    tmean = computeTimeCoordinates(time, Po, part, np);
+    if (isSlave ||  !notSinglePart)
+      tmean = computeTimeCoordinates(time, Po, part, np);
     find_min_max(&tmin, &tmax, time, np);
+#if USE_MPI
+    if(isMaster) {
+      tmin = DBL_MAX;
+      tmax = DBL_MIN;
+    }
+    find_global_min_max(&tmin, &tmax, nb, MPI_COMM_WORLD);       
+#endif
     dt = (tmax-tmin)/(nb-3);
 #if DEBUG
     fprintf(stdout, "tmean=%e, tmin=%e, tmax=%e, dt=%e\n",
             tmean, tmin, tmax, dt);
     fflush(stdout);
 #endif
-    n_binned = binTimeDistribution(Itime, pbin, tmin, dt, nb, time, part, Po, np);
+    if (isSlave ||  !notSinglePart)
+      n_binned = binTimeDistribution(Itime, pbin, tmin, dt, nb, time, part, Po, np);
 #if DEBUG
     fprintf(stdout, "%ld of %ld particles binned\n", n_binned, np);
     fflush(stdout);
 #endif
+  if (!USE_MPI || !notSinglePart) {
     if (n_binned!=np) {
       fprintf(stdout, "Warning: only %ld of %ld particles were binned (LSCDRIFT)!\n", n_binned, np);
       fprintf(stdout, "This shouldn't happen.\n");
       fflush(stdout);
     }
+  }
+#if USE_MPI
+#if MPI_DEBUG   
+  else if (isSlave) {
+    int all_binned, result = 1;
+
+    result = ((n_binned==np) ? 1 : 0);		             
+    MPI_Allreduce(&result, &all_binned, 1, MPI_INT, MPI_LAND, workers);
+    if (!all_binned) {
+      if (myid==1) {  
+	/* This warning will be given only if the flag MPI_DEBUG is defined for the Pelegant to avoid communications */ 
+	fprintf(stdout, "warning: Not all of %ld particles were binned (LSCDRIFT)\n", np);
+	fflush(stdout); 
+      }
+    }
+  }
+#endif  
+  if (isSlave && notSinglePart) {
+    buffer = malloc(sizeof(double) * nb);
+    MPI_Allreduce(Itime, buffer, nb, MPI_DOUBLE, MPI_SUM, workers);
+    memcpy(Itime, buffer, sizeof(double)*nb);
+    free(buffer);
+  }
+#endif
+  if (isSlave || !notSinglePart) {
     if (LSC->smoothing) {
       SavitzyGolaySmooth(Itime, nb, LSC->SGOrder, LSC->SGHalfWidth, LSC->SGHalfWidth, 0);
 #if DEBUG
@@ -87,10 +140,18 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
       fflush(stdout);
 #endif
     }
+  }
 
     /* Compute kSC and length to drift */
     /* - find maximum current */
     find_min_max(&Imin, &Imax, Itime, nb);
+#if USE_MPI
+    if(isMaster) {
+      Imin = DBL_MAX;
+      Imax = DBL_MIN;
+    }
+    find_global_min_max(&Imin, &Imax, nb, MPI_COMM_WORLD);      
+#endif
 #if DEBUG
     fprintf(stdout, "Maximum particles/bin: %e    Q/MP: %e C    Imax: %e A\n", 
             Imax, charge->macroParticleCharge, Imax*charge->macroParticleCharge/dt);
@@ -98,7 +159,12 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
 #endif
     Imax *= charge->macroParticleCharge/dt;
     /* - compute beam radius as the average rms beam size in x and y */
+#if !USE_MPI
     rms_emittance(part, 0, 2, np, &S11, NULL, &S33);
+#else
+    rms_emittance_p(part, 0, 2, np, &S11, NULL, &S33);
+#endif
+
     if ((beamRadius = (sqrt(S11)+sqrt(S33))/2*LSC->radiusFactor)==0) {
       fprintf(stdout, "Error: beam radius is zero in LSCDRIFT\n");
       exit(1);
@@ -180,19 +246,21 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
       fprintf(fpd, "\n");
 #endif
     Zmax = 0;
-    for (ib=1; ib<nfreq-1; ib++) {
-      k = ib*dk;
-      a1 = k*beamRadius/Po;        
-      ZImag = a2/k*(1-a1*dbesk1(a1));
+    if (isSlave) {
+      for (ib=1; ib<nfreq-1; ib++) {
+	k = ib*dk;
+	a1 = k*beamRadius/Po;        
+	ZImag = a2/k*(1-a1*dbesk1(a1));
 #if DEBUG
-      fprintf(fpd, "%e %e\n", k, ZImag);
+	fprintf(fpd, "%e %e\n", k, ZImag);
 #endif
-      if (ZImag>Zmax)
-        Zmax = ZImag;
-      iImag = (iReal = 2*ib-1)+1;
-      /* There is a minus sign here because I use t<0 for the head */
-      Vfreq[iReal] = Ifreq[iImag]*ZImag*factor;
-      Vfreq[iImag] = -Ifreq[iReal]*ZImag*factor;
+	if (ZImag>Zmax)
+	  Zmax = ZImag;
+	iImag = (iReal = 2*ib-1)+1;
+	/* There is a minus sign here because I use t<0 for the head */
+	Vfreq[iReal] = Ifreq[iImag]*ZImag*factor;
+	Vfreq[iImag] = -Ifreq[iReal]*ZImag*factor;
+      }
     }
 #if DEBUG
     fprintf(stdout, "Maximum |Z| = %e Ohm\n", Zmax);
@@ -205,16 +273,17 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
     
     /* put zero voltage in Vtime[nb] for use in interpolation */
     Vtime[nb] = 0;
-    applyLongitudinalWakeKicks(part, time, pbin, np, Po, Vtime, 
-                             nb, tmin, dt, LSC->interpolate);
+    if (isSlave) {
+      applyLongitudinalWakeKicks(part, time, pbin, np, Po, Vtime, 
+				 nb, tmin, dt, LSC->interpolate);
 
-    /* advance particles to the next step */
-    for (ib=0; ib<np; ib++) {
-      part[ib][4] += length*sqrt(1+sqr(part[ib][1])+sqr(part[ib][3]));
-      part[ib][0] += length*part[ib][1];
-      part[ib][2] += length*part[ib][3];
+      /* advance particles to the next step */
+      for (ib=0; ib<np; ib++) {
+	part[ib][4] += length*sqrt(1+sqr(part[ib][1])+sqr(part[ib][3]));
+	part[ib][0] += length*part[ib][1];
+	part[ib][2] += length*part[ib][3];
+      }
     }
-    
     lengthLeft -= length;
   }
 
@@ -226,8 +295,10 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
 #if defined(MINIMIZE_MEMORY)
   free(Itime);
   free(Vtime);
-  free(pbin);
-  free(time);
+  if (isSlave) {
+    free(pbin);
+    free(time);
+  }
   Itime = Vtime = time = NULL;
   pbin = NULL;
   max_np = max_n_bins = 0;
@@ -279,6 +350,10 @@ void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge,
   /* compute time coordinates and make histogram */
   tmean = computeTimeCoordinates(time, Po, part, np);
   find_min_max(&tmin, &tmax, time, np);
+#if USE_MPI
+  if (isSlave && notSinglePart)
+    find_global_min_max(&tmin, &tmax, nb, workers);      
+#endif
   dt = (tmax-tmin)/(nb-3);
 #if DEBUG
   fprintf(stdout, "tmean=%e, tmin=%e, tmax=%e, dt=%e\n",
@@ -290,7 +365,7 @@ void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge,
   fprintf(stdout, "%ld of %ld particles binned\n", n_binned, np);
   fflush(stdout);
 #endif
-  if (n_binned!=np) {
+  if (n_binned!=np && !USE_MPI) {/* This will not be checked in Pelegant to avoid communications */
     fprintf(stdout, "Warning: only %ld of %ld particles were binned (LSCDRIFT)!\n", n_binned, np);
     fprintf(stdout, "This shouldn't happen.\n");
     fflush(stdout);
@@ -302,6 +377,16 @@ void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge,
   dk = df*PIx2/c_mks;
   /* - find maximum current */
   find_min_max(&Imin, &Imax, Itime, nb);
+#if USE_MPI
+  if (isSlave && notSinglePart) {
+    double *buffer;
+    find_global_min_max(&tmin, &tmax, np, workers);  
+    buffer = malloc(sizeof(double) * nb);
+    MPI_Allreduce(Itime, buffer, nb, MPI_DOUBLE, MPI_SUM, workers);
+    memcpy(Itime, buffer, sizeof(double)*nb);
+    free(buffer);
+  }     
+#endif
 #if DEBUG
   fprintf(stdout, "Maximum particles/bin: %e    Q/MP: %e C    Imax: %e A\n", 
           Imax, charge->macroParticleCharge, Imax*charge->macroParticleCharge/dt);
@@ -309,7 +394,11 @@ void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge,
 #endif
   Imax *= charge->macroParticleCharge/dt;
   /* - compute beam radius as the average rms beam size in x and y */
-  rms_emittance(part, 0, 2, np, &S11, NULL, &S33);
+#if !USE_MPI
+    rms_emittance(part, 0, 2, np, &S11, NULL, &S33);
+#else
+    rms_emittance_p(part, 0, 2, np, &S11, NULL, &S33);
+#endif
   if ((beamRadius = (sqrt(S11)+sqrt(S33))/2*LSC->radiusFactor)==0) {
     fprintf(stdout, "Error: beam radius is zero in LSCDRIFT\n");
     exit(1);
@@ -325,25 +414,26 @@ void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge,
   fflush(stdout);
 #endif
   length = 1/kSC;
-  if (dgammaOverGamma) {
-    double length2;
-    length2 = fabs(lengthScale/dgammaOverGamma);
-    if (length2<length)
-      length = length2;
-  }
-  length /= 10;
-  
-  if (length<lengthScale) {
-    /* length scale used by calling routine is too large, so refuse to do it */
-    TRACKING_CONTEXT context;
-    getTrackingContext(&context);
-    fprintf(stdout, "Error: distance between LSC kicks for %s at z=%e is too large.\n",
-            context.elementName, context.zStart);
-    fprintf(stdout, "Suggest reducing distance between kicks by factor %e\n",
+  if (isSlave) {
+    if (dgammaOverGamma) {
+      double length2;
+      length2 = fabs(lengthScale/dgammaOverGamma);
+      if (length2<length)
+	length = length2;
+    }
+    length /= 10;
+    
+    if (length<lengthScale) {
+      /* length scale used by calling routine is too large, so refuse to do it */
+      TRACKING_CONTEXT context;
+      getTrackingContext(&context);
+      fprintf(stdout, "Error: distance between LSC kicks for %s at z=%e is too large.\n",
+	      context.elementName, context.zStart);
+      fprintf(stdout, "Suggest reducing distance between kicks by factor %e\n",
             lengthScale/length);
-    exit(1);
-  }    
-
+      exit(1);
+    }    
+  }
   /* Take the FFT of I(t) to get I(f) */
   memcpy(Ifreq, Itime, 2*nb*sizeof(*Ifreq));
   realFFT(Ifreq, nb, 0);
