@@ -98,35 +98,35 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
     } 
 #endif
   
-    if ((part[0][6]-floor(part[0][6]))!=0) {
-      /* This is a kludgey way to determine that particles have been assigned to buckets */
-      printf("Bunched beam detected\n"); fflush(stdout);
+  if ((part[0][6]-floor(part[0][6]))!=0) {
+    /* This is a kludgey way to determine that particles have been assigned to buckets */
+    printf("Bunched beam detected\n"); fflush(stdout);
 #if USE_MPI
-      if (n_processors!=1) {
-        printf("Error (ZLONGIT): must have bunch_frequency=0 for parallel mode.\n");
-        MPI_Barrier(MPI_COMM_WORLD); /* Make sure the information can be printed before aborting */
-        MPI_Abort(MPI_COMM_WORLD, 2);
-      }
+    if (n_processors!=1) {
+      printf("Error (ZTRANSVERSE): must have bunch_frequency=0 for parallel mode.\n");
+      MPI_Barrier(MPI_COMM_WORLD); /* Make sure the information can be printed before aborting */
+      MPI_Abort(MPI_COMM_WORLD, 2);
+    }
 #endif
-      /* Start by sorting in bucket order */
-      qsort(part[0], np, COORDINATES_PER_PARTICLE*sizeof(double), comp_BucketNumbers);
-      /* Find the end of the buckets in the particle list */
-      bunches = 0;
-      for (ip=1; ip<np; ip++) {
-        if ((part[ip-1][6]-floor(part[ip-1][6]))!=(part[ip][6]-floor(part[ip][6]))) {
-          printf("Bucket %ld ends with ip=%ld\n", bunches, ip-1); fflush(stdout);
-          bucketEnd[bunches++] = ip-1;
-          if (bunches>=MAX_BUCKETS) {
+    /* Start by sorting in bucket order */
+    qsort(part[0], np, COORDINATES_PER_PARTICLE*sizeof(double), comp_BucketNumbers);
+    /* Find the end of the buckets in the particle list */
+    bunches = 0;
+    for (ip=1; ip<np; ip++) {
+      if ((part[ip-1][6]-floor(part[ip-1][6]))!=(part[ip][6]-floor(part[ip][6]))) {
+        printf("Bucket %ld ends with ip=%ld\n", bunches, ip-1); fflush(stdout);
+        bucketEnd[bunches++] = ip-1;
+        if (bunches>=MAX_BUCKETS) {
             bomb("Error (wake): maximum number of buckets was exceeded", NULL);
           }
-        }
       }
-      bucketEnd[bunches++] = np-1;
-    } else {
-      bunches = 1;
-      bucketEnd[0] = np-1;
     }
-    printf("Bucket %ld ends with ip=%ld\n", bunches, bucketEnd[bunches-1]); fflush(stdout);
+    bucketEnd[bunches++] = np-1;
+  } else {
+    bunches = 1;
+    bucketEnd[0] = np-1;
+  }
+  printf("Bucket %ld ends with ip=%ld\n", bunches, bucketEnd[bunches-1]); fflush(stdout);
 
   ip2 = -1;
   for (bunch=0; bunch<bunches; bunch++) {
@@ -135,8 +135,8 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
     npb = ip2-ip1+1;
     printf("Processing bunch %ld with %ld particles\n", bunch, npb); fflush(stdout);
     /* Compute time coordinate of each particle */
-    tmean = computeTimeCoordinates(time, Po, part, np);
-    find_min_max(&tmin, &tmax, time, np);
+    tmean = computeTimeCoordinates(time+ip1, Po, part+ip1, npb);
+    find_min_max(&tmin, &tmax, time+ip1, npb);
 #if USE_MPI
     find_global_min_max(&tmin, &tmax, np, workers);      
 #endif
@@ -151,9 +151,10 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
     if ((tmax-tmin)*2>nb*dt) {
       TRACKING_CONTEXT tcontext;
       getTrackingContext(&tcontext);
-      fprintf(stderr, "%s %s: Time span of bunch is more than half the total time span.\n",
+      fprintf(stderr, "%s %s: Time span of bunch (%le s) is more than half the total time span (%le s).\n",
               entity_name[tcontext.elementType],
-              tcontext.elementName);
+              tcontext.elementName,
+              tmax-tmin, nb*dt);
       fprintf(stderr, "If using broad-band impedance, you should increase the number of bins and rerun.\n");
       fprintf(stderr, "If using file-based impedance, you should increase the number of data points or decrease the frequency resolution.\n");
       exit(1);
