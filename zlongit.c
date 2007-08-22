@@ -172,9 +172,9 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
       if ((tmax-tmin)*2>nb*dt) {
         TRACKING_CONTEXT tcontext;
         getTrackingContext(&tcontext);
-        fprintf(stderr, "%s %s: Time span of bunch is more than half the total time span.\n",
+        fprintf(stderr, "%s %s: Time span of bunch (%le s) is more than half the total time span (%le s).\n",
                 entity_name[tcontext.elementType],
-                tcontext.elementName);
+                tcontext.elementName, tmax-tmin, nb*dt);
         fprintf(stderr, "If using broad-band impedance, you should increase the number of bins and rerun.\n");
         fprintf(stderr, "If using file-based impedance, you should increase the number of data points or decrease the frequency resolution.\n");
         exit(1);
