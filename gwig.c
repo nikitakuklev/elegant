@@ -31,6 +31,9 @@
 #include <math.h>
 #include <stdio.h>
 
+void GWigRadiationKicks(struct gwig *pWig, double *X, double *Bxyz, double dl);
+void GWigB(struct gwig *pWig, double *Xvec, double *B);
+
 void GWigGauge(struct gwig *pWig, double *X, int flag)
 
 {
@@ -63,6 +66,11 @@ void GWigPass_2nd(struct gwig *pWig, double *X)
 
   for (i = 1; i <= Nstep; i++) {
     GWigMap_2nd(pWig, X, dl);
+    if (pWig->sr || pWig->isr)  {
+      double B[3];
+      GWigB(pWig, X, B);
+      GWigRadiationKicks(pWig, X, B, dl);
+    }
   }
 }
 
@@ -294,5 +302,119 @@ double sinc(double x)
   x2 = x*x;
   result = 1e0 - x2/6e0*(1e0 - x2/20e0 *(1e0 - x2/42e0*(1e0-x2/72e0) ) );
   return result;
+}
+
+
+void GWigB(struct gwig *pWig, double *Xvec, double *B) 
+/* Compute magnetic field at particle location.
+ * Added by M. Borland, August 2007.
+ */
+{
+  int    i;
+  double x, y, z;
+  double kx, ky, kz, tz, kw;
+  double cx, sxkx, chx, shx;
+  double cy, sy, chy, shy, sz;
+  double cz, shyky, shxkx;
+  
+  x = Xvec[0];
+  y = Xvec[2];
+  z = pWig->Zw;
+  
+  kw   = 2e0*PI/(pWig->Lw);
+
+  for (i=0; i<3; i++)
+    B[i] = 0;
+  
+  /* Horizontal Wiggler: note that one potentially could have: kx=0 */
+  for (i = 0; i < pWig->NHharm; i++) {
+    kx = pWig->Hkx[i];
+    ky = pWig->Hky[i];
+    kz = pWig->Hkz[i];
+    tz = pWig->Htz[i];
+
+    cx  = cos(kx*x);
+    chy = cosh(ky * y);
+    sz  = sin(kz * z + tz);
+
+    shy = sinh(ky * y);
+    if ( abs(kx/kw) > GWIG_EPS ) {
+      sxkx = sin(kx * x)/kx;	
+    } else {
+      sxkx = x*sinc(kx*x);
+    }
+
+    /* Accumulate field values in user-supplied array (Bx, By, Bz) */
+    cz = cos(kz*z+tz);
+    if (abs(ky)>1e-8) 
+      shyky = shy/ky;
+    else 
+      shyky = y*(1 + sqr(ky*y)/6);
+    B[0] += pWig->PB0*pWig->HCw_raw[i]*kx*sin(kx*x)*shyky*cz;
+    B[1] -= pWig->PB0*pWig->HCw_raw[i]*cx*chy*cz;
+    B[2] += pWig->PB0*pWig->HCw_raw[i]*cx*shyky*sz;
+  }
+
+
+  /* Vertical Wiggler: note that one potentially could have: ky=0 */
+  for (i = 0; i < pWig->NVharm; i++ ) {
+    kx = pWig->Vkx[i];
+    ky = pWig->Vky[i];
+    kz = pWig->Vkz[i];
+    tz = pWig->Vtz[i];
+
+    shx = sinh(kx * x);
+    sy  = sin(ky * y);
+    sz  = sin(kz * z + tz);
+
+    chx = cosh(kx * x);
+    cy  = cos(ky * y);
+
+    /* Accumulate field values in user-supplied array (Bx, By, Bz) */
+    cz = cos(kz*z+z);
+    B[0] += pWig->PB0*pWig->VCw_raw[i]*chx*cos(ky*y)*cz;
+    if (abs(kx)>1e-8) 
+      shxkx = shx/kx;
+    else
+      shxkx = x*(1 + sqr(kx*x)/6);
+    B[1] -= pWig->PB0*pWig->VCw_raw[i]*ky*shxkx*sy*cz;
+    B[2] -= pWig->PB0*pWig->VCw_raw[i]*kz*shxkx*cy*sz;
+  }
+}
+
+void GWigRadiationKicks(struct gwig *pWig, double *X, double *Bxyz, double dl)
+/* Apply kicks for synchrotron radiation.
+ * Added by M. Borland, August 2007.
+ */
+{
+  double Po, irho2, H, irho, dFactor;
+  double B2, r1, r2;
+
+  bomb("Synchtron radiation is not fully implemented for CWIGGLER at this time.", NULL);
+  
+  /* B^2 in T^2 */
+  if ((B2 = sqr(Bxyz[0]) + sqr(Bxyz[1]))==0)
+    return ;
+
+  /* Beam rigidity in T*m */
+  H = (Po=pWig->Po)/586.679074042074490;
+
+  /* 1/rho^2 */
+  irho2 = B2/sqr(H);
+
+  /* (1+delta)^2 */
+  dFactor = sqr(1+X[4]);
+  
+  if (pWig->sr) {
+    /* Classical radiation loss */
+    X[4] -= pWig->srCoef*dFactor*irho2*dl;
+  }
+
+  if (pWig->isr) {
+    /* Incoherent synchrotron radiation or quantum excitation */
+    irho = sqrt(irho2);
+    X[4] += r2*dFactor*pow(irho2,1.5)*sqrt(dl)*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
+  }
+  
 }
 

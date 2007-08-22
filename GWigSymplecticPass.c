@@ -41,13 +41,16 @@ void GWigInit(struct gwig *Wig,
 	      double *T2,  /* unused */
 	      double *R1,  /* unused */
 	      double *R2,  /* unused */
-	      double pCentral /* central momentum (beta*gamma) */
+	      double pCentral, /* central momentum (beta*gamma) */
+              long synchRad,   /* classical radiation ? */
+              long isr         /* quantum (incoherent) radiation ? */
 	      )
 {
   double *tmppr;
   int    i;
   double kw;
 
+  Wig->Po = pCentral;
   Wig->E0 = pCentral*XMC2;
   Wig->Pmethod = Nmeth;
   Wig->PN = Nstep;
@@ -56,6 +59,14 @@ void GWigInit(struct gwig *Wig,
   Wig->NVharm = NVharm;
   Wig->PB0 = Bmax;
   Wig->Lw  = Lw;
+  Wig->srCoef = 0;
+
+  if (Wig->sr = synchRad)
+    Wig->srCoef = sqr(e_mks)*ipow(pCentral, 3)/(6*PI*epsilon_o*me_mks*sqr(c_mks));
+
+  Wig->isrCoef = 0;
+  if (Wig->isr = isr)
+    Wig->isrCoef = re_mks*sqrt(55/(24.0*sqrt(3))*ipow(pCentral, 5)*137.0359895);
 
   kw = 2.0e0*PI/(Wig->Lw);
   Wig->Zw = 0.0;
@@ -135,6 +146,11 @@ void GWigSymplecticPass(double **coord, long num_particles, double pCentral,
   if (!cwiggler->initialized) 
     InitializeCWiggler(cwiggler);
 
+  if ((cwiggler->sr || cwiggler->isr) && cwiggler->integrationOrder==fourth) {
+    printf("Error: Can't presently include synchrotron radiation effects for fourth-order integration of CWIGGLER\n");
+    exit(1);
+  }
+
   GWigInit(&Wig, cwiggler->length, cwiggler->length/cwiggler->periods, 
 	   cwiggler->BMax, cwiggler->stepsPerPeriod, 
 	   cwiggler->integrationOrder,
@@ -142,7 +158,8 @@ void GWigSymplecticPass(double **coord, long num_particles, double pCentral,
 	   cwiggler->BxHarmonics,
 	   cwiggler->ByData,
 	   cwiggler->BxData,
-	   NULL, NULL, NULL, NULL, pCentral);
+	   NULL, NULL, NULL, NULL, pCentral,
+           cwiggler->sr, cwiggler->isr);
 
   if (cwiggler->tilt)
     rotateBeamCoordinates(coord, num_particles, cwiggler->tilt);
@@ -178,7 +195,7 @@ void GWigSymplecticPass(double **coord, long num_particles, double pCentral,
 	GWigPass_4th(&Wig, r6);
 	break;
       default:
-	printf("Invalid method integration order for CWIGGLER (use 2 or 4)\n");
+	printf("Error: Invalid method integration order for CWIGGLER (use 2 or 4)\n");
 	exit(1);
 	break;
     }
@@ -213,10 +230,25 @@ void InitializeCWiggler(CWIGGLER *cwiggler)
   long i;
   if (cwiggler->initialized)
     return;
-  ReadCWigglerHarmonics(&cwiggler->ByData, &cwiggler->ByHarmonics, 
-			       cwiggler->ByFile, "By");
-  ReadCWigglerHarmonics(&cwiggler->BxData, &cwiggler->BxHarmonics, 
-			       cwiggler->BxFile, "Bx");
+  if (cwiggler->sinusoidal) {
+    if (cwiggler->BxFile || cwiggler->ByFile)
+      printf("*** Warning: CWIGGLER element has SINUSOIDAL=1, but also has filenames\n");
+    cwiggler->BxHarmonics = 0;
+    cwiggler->BxData = NULL;
+    cwiggler->ByHarmonics = 1;
+    cwiggler->ByData = tmalloc(sizeof(*(cwiggler->ByData)*6));
+    cwiggler->ByData[0] = 0;  /* row */
+    cwiggler->ByData[1] = 1;  /* Cmn */
+    cwiggler->ByData[2] = 0;  /* kx */
+    cwiggler->ByData[3] = 1;  /* ky */
+    cwiggler->ByData[4] = 1;  /* kz */
+    cwiggler->ByData[5] = 0;  /* phase */
+  } else {
+    ReadCWigglerHarmonics(&cwiggler->ByData, &cwiggler->ByHarmonics, 
+                          cwiggler->ByFile, "By");
+    ReadCWigglerHarmonics(&cwiggler->BxData, &cwiggler->BxHarmonics, 
+                          cwiggler->BxFile, "Bx");
+  }
   for (i=0; i<cwiggler->ByHarmonics; i++)
     sumCmn2[0] += sqr(cwiggler->ByData[6*i+1]);
   for (i=0; i<cwiggler->BxHarmonics; i++)

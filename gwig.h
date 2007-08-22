@@ -37,6 +37,7 @@ struct gwig {
   int Pmethod;      /* Integration Method */
   int PN;           /* Number of integration steps */
   double E0;        /* Energy of ring, [GeV] */
+  double Po;        /* beta*gamma for reference particle */
   double PB0;       /* B0 in [Tesla] */
   int Nw;           /* Number of periods */
   double Lw;        /* Wiggler Period [m] */
@@ -44,7 +45,9 @@ struct gwig {
   int NVharm;       /* No. of vertical harmonics */
   double Aw;        /* Wiggler parameter */
   double Zw;        /* Longitudinal variable [m] */
-
+  short sr, isr;    /* flags for classical and incoherent SR */
+  double srCoef, isrCoef;
+  
   double HCw[WHmax];
   double VCw[WHmax];
   double HCw_raw[WHmax];

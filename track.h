@@ -776,7 +776,7 @@ extern char *entity_text[N_TYPES];
 #define N_LSRMDLTR_PARAMS 14
 #define N_TAYLORSERIES_PARAMS 6
 #define N_RFTM110_PARAMS 14
-#define N_CWIGGLER_PARAMS 11
+#define N_CWIGGLER_PARAMS 14
 #define N_EDRIFT_PARAMS 1
 #define N_SCMULT_PARAMS 0		
 #define N_ILMATRIX_PARAMS 31
@@ -2186,6 +2186,7 @@ typedef struct {
   double dx, dy, dz, tilt;
   long periods, stepsPerPeriod, integrationOrder;
   char *ByFile, *BxFile;
+  long sr, isr, sinusoidal;
   /* for internal use */
   long initialized;
   double *ByData, *BxData; 

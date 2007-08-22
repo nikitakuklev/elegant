@@ -1588,6 +1588,9 @@ PARAMETER cwiggler_param[N_CWIGGLER_PARAMS] = {
   {"INTEGRATION_ORDER", "", IS_LONG, 0, (long)((char *)&cwiggler_example.integrationOrder), NULL, 0.0, 4, "Integration order (2 or 4)."},
   {"BY_FILE", " ", IS_STRING, 0, (long)((char *)&cwiggler_example.ByFile), NULL, 0.0, 0, "Name of SDDS file with By harmonic data."},
   {"BX_FILE", " ", IS_STRING, 0, (long)((char *)&cwiggler_example.BxFile), NULL, 0.0, 0, "Name of SDDS file with Bx harmonic data."},
+  {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&cwiggler_example.sr), NULL, 0.0, 0, "include classical synchrotron radiation?"},
+  {"ISR", "", IS_LONG, 0, (long)((char *)&cwiggler_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (scattering)?"},
+  {"SINUSOIDAL", "", IS_LONG, 0, (long)((char *)&cwiggler_example.sinusoidal), NULL, 0.0, 0, "ideal sinusoidal wiggler?  If non-zero, BX_FILE and BY_FILE are not used."},
 } ;
 
 SCRIPT script_example;
