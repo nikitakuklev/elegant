@@ -37,7 +37,7 @@ else
   #USER_MPI_FLAGS+= -DMPI_DEBUG         # print debugging information for MPI 
   #USER_MPI_FLAGS+= -DCHECKFLAGS=1      # if defined, check balance only at the beginning
                                         # or the particle number is changed
-  MPI_PATH = $(wildcard /usr/local/software/mvapich2-gcc/bin /disk1/mpich2_mpd_sock/bin)
+  MPI_PATH = $(wildcard /usr/local/software/mvapich2-gcc/bin /disk1/mpich2_smpd_nemesis/bin)
   #MPI_PATH = /disk1/mpich2_mpd_ssm/bin
   #MPI_PATH = /disk1/mpich2_mpd_sock/bin
   #MPI_PATH = /usr/local/software/mvapich2-gcc/bin
