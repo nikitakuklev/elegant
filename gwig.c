@@ -60,7 +60,6 @@ void GWigPass_2nd(struct gwig *pWig, double *X)
 {
   int    i, Nstep;
   double dl;
-  double ax, ay, axpy, aypx;
 
 /*
   static FILE *fpd = NULL;
@@ -86,6 +85,7 @@ void GWigPass_2nd(struct gwig *pWig, double *X)
     GWigMap_2nd(pWig, X, dl);
     if (pWig->sr || pWig->isr)  {
       double B[3];
+      double ax, ay, axpy, aypx;
       GWigAx(pWig, X, &ax, &axpy);
       GWigAy(pWig, X, &ay, &aypx);
       GWigB(pWig, X, B);
@@ -123,6 +123,18 @@ void GWigPass_4th(struct gwig *pWig, double *X)
     GWigMap_2nd(pWig, X, dl1);
     GWigMap_2nd(pWig, X, dl0);
     GWigMap_2nd(pWig, X, dl1);
+    if (pWig->sr || pWig->isr)  {
+      double B[3];
+      double ax, ay, axpy, aypx;
+      GWigAx(pWig, X, &ax, &axpy);
+      GWigAy(pWig, X, &ay, &aypx);
+      GWigB(pWig, X, B);
+      X[1] -= ax;
+      X[3] -= ay;
+      GWigRadiationKicks(pWig, X, B, dl);
+      X[1] += ax;
+      X[3] += ay;
+    }
   }
 }
 

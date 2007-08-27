@@ -146,10 +146,12 @@ void GWigSymplecticPass(double **coord, long num_particles, double pCentral,
   if (!cwiggler->initialized) 
     InitializeCWiggler(cwiggler);
 
+/*
   if ((cwiggler->sr || cwiggler->isr) && cwiggler->integrationOrder==fourth) {
     printf("Error: Can't presently include synchrotron radiation effects for fourth-order integration of CWIGGLER\n");
     exit(1);
   }
+*/
 
   GWigInit(&Wig, cwiggler->length, cwiggler->length/cwiggler->periods, 
 	   cwiggler->BMax, cwiggler->stepsPerPeriod, 
