@@ -236,7 +236,7 @@ void InitializeCWiggler(CWIGGLER *cwiggler)
     cwiggler->BxHarmonics = 0;
     cwiggler->BxData = NULL;
     cwiggler->ByHarmonics = 1;
-    cwiggler->ByData = tmalloc(sizeof(*(cwiggler->ByData)*6));
+    cwiggler->ByData = tmalloc(sizeof(*(cwiggler->ByData))*6);
     cwiggler->ByData[0] = 0;  /* row */
     cwiggler->ByData[1] = 1;  /* Cmn */
     cwiggler->ByData[2] = 0;  /* kx */

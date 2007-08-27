@@ -60,7 +60,25 @@ void GWigPass_2nd(struct gwig *pWig, double *X)
 {
   int    i, Nstep;
   double dl;
-  
+  double ax, ay, axpy, aypx;
+
+/*
+  static FILE *fpd = NULL;
+  static long index = 0;
+  if (!fpd) {
+    fpd = fopen("gwig.sdds", "w");
+    fprintf(fpd, "SDDS1\n");
+    fprintf(fpd, "&column name=i type=long &end\n");
+    fprintf(fpd, "&column name=x type=double &end\n");
+    fprintf(fpd, "&column name=y type=double &end\n");
+    fprintf(fpd, "&column name=px type=double &end\n");
+    fprintf(fpd, "&column name=py type=double &end\n");
+    fprintf(fpd, "&column name=delta type=double &end\n");
+    fprintf(fpd, "&column name=B type=double &end\n");
+    fprintf(fpd, "&data mode=ascii no_row_counts=1 &end\n");
+  }
+*/
+
   Nstep = pWig->PN*(pWig->Nw);
   dl    = pWig->Lw/(pWig->PN);
 
@@ -68,8 +86,19 @@ void GWigPass_2nd(struct gwig *pWig, double *X)
     GWigMap_2nd(pWig, X, dl);
     if (pWig->sr || pWig->isr)  {
       double B[3];
+      GWigAx(pWig, X, &ax, &axpy);
+      GWigAy(pWig, X, &ay, &aypx);
       GWigB(pWig, X, B);
+      X[1] -= ax;
+      X[3] -= ay;
       GWigRadiationKicks(pWig, X, B, dl);
+/*
+      fprintf(fpd, "%d %e %e %e %e %e %e\n",
+              index, X[0], X[2], X[1], X[3], X[4], sqr(B[0])+sqr(B[1])+sqr(B[2]));
+      index ++;
+*/
+      X[1] += ax;
+      X[3] += ay;
     }
   }
 }
@@ -388,10 +417,9 @@ void GWigRadiationKicks(struct gwig *pWig, double *X, double *Bxyz, double dl)
  */
 {
   double Po, irho2, H, irho, dFactor;
-  double B2, r1, r2;
+  double B2;
+  double dDelta;
 
-  bomb("Synchtron radiation is not fully implemented for CWIGGLER at this time.", NULL);
-  
   /* B^2 in T^2 */
   if ((B2 = sqr(Bxyz[0]) + sqr(Bxyz[1]))==0)
     return ;
@@ -407,13 +435,18 @@ void GWigRadiationKicks(struct gwig *pWig, double *X, double *Bxyz, double dl)
   
   if (pWig->sr) {
     /* Classical radiation loss */
-    X[4] -= pWig->srCoef*dFactor*irho2*dl;
+    dDelta = -pWig->srCoef*dFactor*irho2*dl;
+    X[4] += dDelta;
+    X[1] *= (1+dDelta);
+    X[3] *= (1+dDelta);
   }
 
   if (pWig->isr) {
     /* Incoherent synchrotron radiation or quantum excitation */
-    irho = sqrt(irho2);
-    X[4] += r2*dFactor*pow(irho2,1.5)*sqrt(dl)*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
+    dDelta = pWig->isrCoef*dFactor*pow(irho2,0.75)*sqrt(dl)*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
+    X[4] += dDelta;
+    X[1] *= (1+dDelta);
+    X[3] *= (1+dDelta);
   }
   
 }
