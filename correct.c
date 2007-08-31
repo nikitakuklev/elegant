@@ -1582,7 +1582,7 @@ void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN
           = moniFactor*corrFactor[i_corr]*
             cos(htune-fabs(CM->umoni[i_moni]->twiss->phix - phi));
         if (fixed_length)
-          CM->C->a[i_moni][i_corr] += CM->umoni[i_moni]->twiss->etax*corrFactorFL[i_corr];
+          CM->C->a[i_moni][i_corr] -= CM->umoni[i_moni]->twiss->etax*corrFactorFL[i_corr];
         sprintf(memName, "HR_%s#%ld_%s#%ld.%s",
                 CM->umoni[i_moni]->name, CM->umoni[i_moni]->occurence,
                 CM->ucorr[i_corr]->name, CM->ucorr[i_corr]->occurence, 
