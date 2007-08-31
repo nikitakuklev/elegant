@@ -21,17 +21,19 @@ void track_through_ftrfmode(
                             CHARGE *charge
                             )
 {
+  static unsigned long *count = NULL;
   static double *xsum = NULL;              /* sum of x coordinate in each bin = N*<x> */
   static double *ysum = NULL;              /* sum of y coordinate in each bin = N*<y> */
   static double *Vxbin = NULL;             /* array for voltage acting on each bin MV */
   static double *Vybin = NULL;             /* array for voltage acting on each bin MV */
+  static double *Vzbin = NULL;             /* array for voltage acting on each bin MV */
   static long max_n_bins = 0;
   static long *pbin = NULL;                /* array to record which bin each particle is in */
   static double *time = NULL;              /* array to record arrival time of each particle */
   static long max_np = 0;
   long ip, ib;
   double tmin, tmax, tmean, dt, P;
-  double Vxb, Vyb, V, omega, phase, t, k, damping_factor, tau;
+  double Vxb, Vyb, V, omega, phase, t, k, omegaOverC, damping_factor, tau;
   double Px, Py, Pz;
   double Q, Qrp;
   long lastBin, imode;
@@ -59,8 +61,10 @@ void track_through_ftrfmode(
     max_n_bins = trfmode->n_bins;
     xsum = trealloc(xsum, sizeof(*xsum)*max_n_bins);
     ysum = trealloc(ysum, sizeof(*ysum)*max_n_bins);
+    count = trealloc(count, sizeof(*count)*max_n_bins);
     Vxbin = trealloc(Vxbin, sizeof(*Vxbin)*max_n_bins);
     Vybin = trealloc(Vybin, sizeof(*Vybin)*max_n_bins);
+    Vzbin = trealloc(Vzbin, sizeof(*Vzbin)*max_n_bins);
   }
 
   if (np>max_np) {
@@ -94,7 +98,7 @@ void track_through_ftrfmode(
     tmax = tmean + trfmode->bin_size*trfmode->n_bins/2.;
 
     for (ib=0; ib<trfmode->n_bins; ib++)
-      xsum[ib] = ysum[ib] = 0;
+      xsum[ib] = ysum[ib] = count[ib] = 0;
     dt = (tmax - tmin)/trfmode->n_bins;
     lastBin = -1;
   
@@ -107,6 +111,7 @@ void track_through_ftrfmode(
 	continue;
       xsum[ib] += part[ip][0]-trfmode->dx;
       ysum[ib] += part[ip][2]-trfmode->dy;
+      count[ib] += 1;
       pbin[ip] = ib;
       if (ib>lastBin)
 	lastBin = ib;
@@ -123,6 +128,8 @@ void track_through_ftrfmode(
       memcpy(xsum, buffer, sizeof(long)*(lastBin+1));
       MPI_Allreduce(ysum, buffer, lastBin+1, MPI_DOUBLE, MPI_SUM, workers);
       memcpy(ysum, buffer, sizeof(long)*(lastBin+1));
+      MPI_Allreduce(count, buffer, lastBin+1, MPI_LONG, MPI_SUM, workers);
+      memcpy(count, buffer, sizeof(unsigned long)*(lastBin+1));
       free(buffer);
     }
 #endif
@@ -133,9 +140,10 @@ void track_through_ftrfmode(
       rampFactor = (pass+1.0)/trfmode->rampPasses;
     
     for (ib=0; ib<=lastBin; ib++) {
-      if (!xsum[ib] && !ysum[ib])
+      if (!count[ib] || (!xsum[ib] && !ysum[ib]))
 	continue;
       t = tmin+(ib+0.5)*dt;           /* middle arrival time for this bin */
+      Vzbin[ib] = 0;
       for (imode=0; imode<trfmode->modes; imode++) {
 	if (trfmode->cutoffFrequency>0 && (trfmode->omega[imode] > PIx2*trfmode->cutoffFrequency))
 	  continue;
@@ -148,7 +156,8 @@ void track_through_ftrfmode(
 	/* These adjustments per Zotter and Kheifets, 3.2.4, 3.3.2 */
 	k *= Q/Qrp;
 	omega *= Qrp/Q;
-      
+        omegaOverC = omega/c_mks;
+        
 	if (!trfmode->doX[imode] && !trfmode->doY[imode])
 	  bomb("x and y turned off for FTRFMODE---this shouldn't happen", NULL);
       
@@ -166,6 +175,7 @@ void track_through_ftrfmode(
 	  Vxbin[ib] += trfmode->Vxr[imode];
 	  /* compute beam-induced voltage for this bin */
 	  Vxb = 2*k*trfmode->mp_charge*xsum[ib]*trfmode->xfactor*rampFactor; 
+          Vzbin[ib] += omegaOverC*(xsum[ib]/count[ib])*(trfmode->Vxi[imode] - Vxb/2);
 	  /* add beam-induced voltage to cavity voltage---it is imaginary as
 	   * the voltage is 90deg out of phase 
 	   */
@@ -188,6 +198,7 @@ void track_through_ftrfmode(
 	  Vybin[ib] += trfmode->Vyr[imode];
 	  /* compute beam-induced voltage for this bin */
 	  Vyb = 2*k*trfmode->mp_charge*ysum[ib]*trfmode->yfactor*rampFactor;
+          Vzbin[ib] += omegaOverC*(ysum[ib]/count[ib])*(trfmode->Vyi[imode] - Vyb/2);
 	  /* add beam-induced voltage to cavity voltage---it is imaginary as
 	   * the voltage is 90deg out of phase 
 	   */
@@ -205,15 +216,16 @@ void track_through_ftrfmode(
 			       trfmode->xModeIndex[imode], trfmode->Vx[imode],
 			       trfmode->yModeIndex[imode], trfmode->Vy[imode], -1))
 	  SDDS_Bomb("Problem writing data to FTRFMODE output file");
-      }
+      } /* loop over modes */
       trfmode->last_t = t;
-    }
+    } /* loop over bins */
+    
   
     /* change particle slopes to reflect voltage in relevant bin */
     for (ip=0; ip<np; ip++) {
       if (pbin[ip]>=0) {
 	P = Po*(1+part[ip][5]);
-	Pz = P/sqrt(1+sqr(part[ip][1])+sqr(part[ip][3]));
+	Pz = P/sqrt(1+sqr(part[ip][1])+sqr(part[ip][3])) + Vzbin[pbin[ip]]/(1e6*me_mev);
 	Px = part[ip][1]*Pz + Vxbin[pbin[ip]]/(1e6*me_mev);
 	Py = part[ip][3]*Pz + Vybin[pbin[ip]]/(1e6*me_mev);
 	P  = sqrt(Pz*Pz+Px*Px+Py*Py);
