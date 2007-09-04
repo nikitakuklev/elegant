@@ -1,4 +1,4 @@
-/*************************************************************************\
+ /*************************************************************************\
 * Copyright (c) 2002 The University of Chicago, as Operator of Argonne
 * National Laboratory.
 * Copyright (c) 2002 The Regents of the University of California, as
@@ -107,7 +107,10 @@ void track_through_trfmode(
   Qrp = sqrt(Q*Q - 0.25);
   k = omega/4*trfmode->RaInternal/trfmode->Q;
   omegaOverC = omega/c_mks;
-  
+  /* These adjustments per Zotter and Kheifets, 3.2.4, 3.3.2 */
+  k *= Q/Qrp;
+  omega *= Qrp/Q;
+
   if (!trfmode->doX && !trfmode->doY)
     bomb("x and y turned off for TRFMODE---this shouldn't happen", NULL);
   
@@ -207,11 +210,7 @@ void track_through_trfmode(
 #endif
 #endif    
     }
-  
-    /* These adjustments per Zotter and Kheifets, 3.2.4, 3.3.2 */
-    k *= Q/Qrp;
-    omega *= Qrp/Q;
-
+    
     if (pass <= (trfmode->rampPasses-1)) 
       k *= (pass+1.0)/trfmode->rampPasses;
     
@@ -271,7 +270,7 @@ void track_through_trfmode(
     
       /* compute beam-induced voltage for this bin */
       if (trfmode->doX) {
-	/* -- x plane */
+	/* -- x plane (NB: ramp factor is already in k) */
 	Vxb = 2*k*trfmode->mp_charge*xsum[ib]*trfmode->xfactor;
 	Vxbin[ib] = trfmode->Vxr;
 	Vzbin[ib] += omegaOverC*(xsum[ib]/count[ib])*(trfmode->Vxi - Vxb/2);
@@ -286,7 +285,7 @@ void track_through_trfmode(
 	trfmode->Vx = sqrt(sqr(trfmode->Vxr)+sqr(trfmode->Vxi));
       }
       if (trfmode->doY) {
-	/* -- y plane */
+	/* -- y plane (NB: ramp factor is already in k) */
 	Vyb = 2*k*trfmode->mp_charge*ysum[ib]*trfmode->yfactor;
 	Vybin[ib] = trfmode->Vyr;
 	Vzbin[ib] += omegaOverC*(ysum[ib]/count[ib])*(trfmode->Vyi - Vyb/2);
