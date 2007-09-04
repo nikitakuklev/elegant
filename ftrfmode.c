@@ -98,7 +98,7 @@ void track_through_ftrfmode(
     tmax = tmean + trfmode->bin_size*trfmode->n_bins/2.;
 
     for (ib=0; ib<trfmode->n_bins; ib++)
-      xsum[ib] = ysum[ib] = count[ib] = 0;
+      xsum[ib] = ysum[ib] = count[ib] = Vxbin[ib] = Vybin[ib] = Vzbin[ib] = 0;
     dt = (tmax - tmin)/trfmode->n_bins;
     lastBin = -1;
   
@@ -149,7 +149,6 @@ void track_through_ftrfmode(
         fflush(stdout);
       }
       
-      Vzbin[ib] = 0;
       for (imode=0; imode<trfmode->modes; imode++) {
 	if (trfmode->cutoffFrequency>0 && (trfmode->omega[imode] > PIx2*trfmode->cutoffFrequency))
 	  continue;
