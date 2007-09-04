@@ -217,7 +217,7 @@ void track_through_trfmode(
     
     if (trfmode->single_pass) {
       trfmode->Vx = trfmode->Vy = 0;
-      trfmode->last_t = tmin + ib*dt;
+      trfmode->last_t = tmin + 0.5*dt;
       trfmode->last_xphase = trfmode->last_yphase = 0;
     }
 #if USE_MPI
@@ -245,6 +245,10 @@ void track_through_trfmode(
     
       /* advance cavity to this time */
       damping_factor = exp(-(t-trfmode->last_t)/tau);
+      if (damping_factor>1) {
+        fprintf(stdout, "*** Warning: damping factor >1 for TRFMODE\n");
+        fflush(stdout);
+      }
       if (trfmode->doX) {
 	/* -- x plane */
 	phase = trfmode->last_xphase + omega*(t - trfmode->last_t);
