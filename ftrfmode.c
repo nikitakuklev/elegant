@@ -143,11 +143,19 @@ void track_through_ftrfmode(
       if (!count[ib] || (!xsum[ib] && !ysum[ib]))
 	continue;
       t = tmin+(ib+0.5)*dt;           /* middle arrival time for this bin */
+      if (t<trfmode->last_t) {
+        trfmode->last_t = t;
+        fprintf(stdout, "*** Warning: reference time reset for FTRFMODE.  Should only happen once per step.\n");
+        fflush(stdout);
+      }
+      
       Vzbin[ib] = 0;
       for (imode=0; imode<trfmode->modes; imode++) {
 	if (trfmode->cutoffFrequency>0 && (trfmode->omega[imode] > PIx2*trfmode->cutoffFrequency))
 	  continue;
-
+	if (!trfmode->doX[imode] && !trfmode->doY[imode])
+          continue;
+      
 	omega = trfmode->omega[imode];
 	Q = trfmode->Q[imode]/(1+trfmode->beta[imode]);
 	tau = 2*Q/omega;
@@ -158,10 +166,6 @@ void track_through_ftrfmode(
 	omega *= Qrp/Q;
         omegaOverC = omega/c_mks;
         
-	if (!trfmode->doX[imode] && !trfmode->doY[imode])
-	  bomb("x and y turned off for FTRFMODE---this shouldn't happen", NULL);
-      
-	/* advance cavity to this time */
 	damping_factor = exp(-(t-trfmode->last_t)/tau);
 	if (trfmode->doX[imode]) {
 	  /* -- x plane */
@@ -173,13 +177,17 @@ void track_through_ftrfmode(
 	  trfmode->lastPhasex[imode] = phase;
 	  /* add this cavity's contribution to this bin */
 	  Vxbin[ib] += trfmode->Vxr[imode];
+
 	  /* compute beam-induced voltage for this bin */
 	  Vxb = 2*k*trfmode->mp_charge*xsum[ib]*trfmode->xfactor*rampFactor; 
           Vzbin[ib] += omegaOverC*(xsum[ib]/count[ib])*(trfmode->Vxi[imode] - Vxb/2);
+
 	  /* add beam-induced voltage to cavity voltage---it is imaginary as
 	   * the voltage is 90deg out of phase 
 	   */
 	  trfmode->Vxi[imode] -= Vxb;
+
+          /* update the phasor */
 	  if (trfmode->Vxi[imode]==0 && trfmode->Vxr[imode]==0)
 	    trfmode->lastPhasex[imode] = 0;
 	  else
@@ -196,31 +204,48 @@ void track_through_ftrfmode(
 	  trfmode->lastPhasey[imode] = phase;
 	  /* add this cavity's contribution to this bin */
 	  Vybin[ib] += trfmode->Vyr[imode];
+
 	  /* compute beam-induced voltage for this bin */
 	  Vyb = 2*k*trfmode->mp_charge*ysum[ib]*trfmode->yfactor*rampFactor;
           Vzbin[ib] += omegaOverC*(ysum[ib]/count[ib])*(trfmode->Vyi[imode] - Vyb/2);
+
 	  /* add beam-induced voltage to cavity voltage---it is imaginary as
 	   * the voltage is 90deg out of phase 
 	   */
 	  trfmode->Vyi[imode] -= Vyb;
+
+          /* update the phasor */
 	  if (trfmode->Vyi[imode]==0 && trfmode->Vyr[imode]==0)
 	    trfmode->lastPhasey[imode] = 0;
 	  else
-          trfmode->lastPhasey[imode] = atan2(trfmode->Vyi[imode], trfmode->Vyr[imode]);
+            trfmode->lastPhasey[imode] = atan2(trfmode->Vyi[imode], trfmode->Vyr[imode]);
 	  trfmode->Vy[imode] = sqrt(sqr(trfmode->Vyr[imode])+sqr(trfmode->Vyi[imode]));
 	}
-
-	if (trfmode->outputFile && 
-	    !SDDS_SetRowValues(&trfmode->SDDSout, 
-			       SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, pass,
-			       trfmode->xModeIndex[imode], trfmode->Vx[imode],
-			       trfmode->yModeIndex[imode], trfmode->Vy[imode], -1))
-	  SDDS_Bomb("Problem writing data to FTRFMODE output file");
       } /* loop over modes */
       trfmode->last_t = t;
     } /* loop over bins */
     
-  
+    if (trfmode->outputFile) {
+      for (imode=0; imode<trfmode->modes; imode++) {
+        if (!SDDS_SetRowValues(&trfmode->SDDSout, 
+                               SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, pass,
+                               trfmode->xModeIndex[imode], trfmode->Vx[imode],
+                               trfmode->yModeIndex[imode], trfmode->Vy[imode], -1))
+          SDDS_Bomb("Problem writing data to FTRFMODE output file");
+      }
+    }
+
+    if (0) {
+      FILE *fp;
+      fp = fopen("modeData.sdds", "w");
+      fprintf(fp, "SDDS1\n&column name=bin type=long &end\n");
+      fprintf(fp, "&column name=Voltage, type=double &end\n");
+      fprintf(fp, "&data mode=ascii no_row_counts=1 &end\n");
+      for (ib=0; ib<trfmode->n_bins; ib++)
+        fprintf(fp, "%ld %e\n", ib, Vybin[ib]);
+      fclose(fp);
+    }
+    
     /* change particle slopes to reflect voltage in relevant bin */
     for (ip=0; ip<np; ip++) {
       if (pbin[ip]>=0) {
@@ -329,17 +354,17 @@ void set_up_ftrfmode(FTRFMODE *rfmode, char *element_name, double element_z, lon
       exit(1);
     }
   }
-  if (SDDS_CheckColumn(&SDDSin, "doX", NULL, SDDS_ANY_INTEGER_TYPE,
+  if (SDDS_CheckColumn(&SDDSin, "xMode", NULL, SDDS_ANY_INTEGER_TYPE,
                        NULL)!=SDDS_CHECK_NONEXISTENT) {
-    if (SDDS_CheckColumn(&SDDSin, "doX", NULL, SDDS_ANY_INTEGER_TYPE,
+    if (SDDS_CheckColumn(&SDDSin, "xMode", NULL, SDDS_ANY_INTEGER_TYPE,
                          NULL)!=SDDS_CHECK_OK) {
       fprintf(stdout, "Error: problem with \"doX\" column for FTRFMODE file %s.  Check type and units.\n", rfmode->filename);
       exit(1);
     }
   }
-  if (SDDS_CheckColumn(&SDDSin, "doY", NULL, SDDS_ANY_INTEGER_TYPE,
+  if (SDDS_CheckColumn(&SDDSin, "yMode", NULL, SDDS_ANY_INTEGER_TYPE,
                        NULL)!=SDDS_CHECK_NONEXISTENT) {
-    if (SDDS_CheckColumn(&SDDSin, "doY", NULL, SDDS_ANY_INTEGER_TYPE,
+    if (SDDS_CheckColumn(&SDDSin, "yMode", NULL, SDDS_ANY_INTEGER_TYPE,
                          NULL)!=SDDS_CHECK_OK) {
       fprintf(stdout, "Error: problem with \"doY\" column for FTRFMODE file %s.  Check type and units.\n", rfmode->filename);
       exit(1);
