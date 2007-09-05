@@ -17,25 +17,17 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 17.1.1\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
+\author{Program Version 17.2.1\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
 \maketitle
 
-\section{Highlights of What's New in Version 17.1.1}
+\section{Highlights of What's New in Version 17.2.1}
 
-This release is a fairly major one, particularly with respect to the
-degree of parallelization of collective effects, thanks to on-going
-work by Yusong Wang.  Parallelization now includes wakefields and
-coherent synchrotron radiation, in addition to the single-particle
-dynamics that was parallelized in the previous release.  Elements that
-support parallel computation are indicated on the individual manual pages.
-Just under 80\% of the elements have been parallelized at this time.
-Elements that are not yet parallelized can still be used as part of a
-parallel run, but the computations for those elements are done in serial mode.
-
-In addition, several serious bugs were found and fixed, and numerous
-improvements were made.  Here is a summary of what's changed since
-release 16.1.7.  For details and references, see the specific entries
-in the manual.
+This is primarily is bug-fix and performance release, with several significant bugs
+being corrected.  Parallelization now includes the longitudinal and
+transverse space-charge elements.  Several significant performance enhancements
+were made as well.  Here is a summary of what's changed
+since release 17.1.1.  For details and references, see the specific
+entries in the manual.
 
 \subsection{Known Bugs and Problems}
 \begin{itemize}
@@ -54,77 +46,75 @@ in the manual.
 
 \subsection{Bugs Fixes for Commands}
 \begin{itemize}
-\item Fixed bug in {\tt load\_parameters} that resulted in slow loading of data when a
- specific occurrence of an element was not found.
-\item Fixed bug in lost-particle saving (via the {\tt run\_setup} command), which was
- introduced in version 16.1.7.  The bug resulted in a crash of the program.
+\item Output of the inverse response matrix during multi-step runs had a bug, resulting in 
+ repeated output of the same data.  Also, it wasn't always possible to get
+ get updated response matrix output that was updated during multi-step runs, if the
+ fixed path-length constraint was used, for example.  Reported by Michael Abo-Bakr (BESSY).
 \end{itemize}
 
 \subsection{Bug Fixes for Elements}
 \begin{itemize}
-\item A lattice file parser bug was fixed.  Previously, elements with
-  the same name as a beamline and beamlines with the same name as an
-  element were allowed, resulting in incorrect saved files in some
-  cases.  The program now issues an error message and exits when
-  duplicate definitions are encountered.
-\item Fixed problems with single-pass mode of the {\tt RFMODE}, {\tt TRFMODE},
-  {\tt FRFMODE}, and {\tt FTRFMODE} elements.  Previous versions used an uninitialized
-  variable and may give unreliable results depending on the compiler.
-\item The {\tt TRFMODE} element now includes the longitudinal voltage (a very small effect in
- most cases).
+\item The {\tt CWIGGLER} element had an error in the ordering of rotation and displacement removal 
+ operations.   Simulations that contained both rotational
+ and displacement errors for the same \verb|CWIGGLER| element should be repeated.
+\item There was an error in an exponent for synchrotron radiation expressions, resulting
+ in incorrect dependence of the quantum fluctuations on transverse position in a dipole, quadrupole,
+ or sextupole.  Tests with the APS ring showed small effects on results even for orbits with 
+ several percent momentum deviation.
+\item The correction to the response matrix when there was dispersion at the corrector was being
+ added with the wrong sign.  This would affect response matrix output in the bending plane.
+ This is a minor effect in large rings but quite significant in small rings.
+ Reported by Michael Abo-Bakr (BESSY).
+\item When particles were lost on an \verb|ECOL| element with non-zero length, the loss locations
+ were recorded incorrectly.  Reported by Feng Zhou (SLAC).
+\item The \verb|FTRFMODE| element, which allows simulating multiple tranverse rf modes, had an unitialized
+ variable that would result in incorrect accumulation of voltages over many passes.
+\item Previously, the transverse space-charge element \verb|SCMULT| could be inserted by hand into the 
+ lattice, but it wouldn't actually run.  Now, the user is required to provide a \verb|insert_sceffects|
+ command to use \verb|SCMULT|.
+\item The longitudinal space charge algorithm (\verb|LSCDRIFT| and \verb|RFCW|) would give give 
+ invalid results if the number of bins was odd.  This odd choice of bin number is no longer allowed.
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item The {\tt RFDF} element (RF deflector) was upgraded to include the longitudinal
- field and to treat standing-wave deflectors.  It also now
- supports the same modulation and noise features as {\tt RFTM110}.
-\item The {\tt RFMODE}, {\tt TRFMODE}, {\tt FRFMODE}, and {\tt FTRFMODE} now support ramping 
- of the impedance, which helps to reduce transient effects.  This was requested by Y. Chae (ANL)
- based on ideas from M. Blaskiewicz (BNL).
-\item Added ``binless'' mode for {\tt RFMODE} and {\tt TRFMODE}, which is much faster than 
- the histogram-based method for beams with trains of bunches.
-\item Added distribution-based synchrotron radiation to the {\tt CSBEND} element.  This provides
- a more fundamental simulation of quantum excitation, in that accurate photon energy, number,
- and angular distributions are used.  (Even so, little difference is seen from the previous 
- model based on guassian distributions.)
-\item Added the {\tt RECORD} and {\tt SAMPLE\_INTERVAL} features to {\tt TRFMODE}, allowing
- output of the mode voltage and other data.
-\item Added the {\tt MAX\_BINS} feature to {\tt ZLONGIT} and {\tt ZTRANSVERSE}, to prevent
- use of an excessive number of bins.
+\item The {\tt CWIGGLER} element, which models a wiggler using Y. Wu's symplectic integration code,
+ now optionally includes synchrotron radiation.  Y. Wu assisted in this work by helping with understanding of 
+ the internals of his code.
+\item The {\tt ZLONGIT} and {\tt ZTRANSVERSE} elements will now recognize bunched beams.  This means 
+ one can perform efficient simulations of multibunch beams with short-range impedance effects included.
+ At present this feature is experimental and may change in the future.  It is not compatible with parallel execution.
+ Contact M. Borland for assistance in using it.
+\item The \verb|SCMULT| element has been parallelized and now includes non-linear space charge forces \cite{Xiao2007A}.  \verb|SCMULT|
+ has also been parallelized.
+\item Longitudinal space charge (via \verb|LSCDRIFT| and \verb|RFCW|) have been parallelized.
+\item The longitudinal electric field was added to \verb|FTRFMODE|.  This is typically a very small correction.
+\item The ramping option was added to \verb|WAKE| and \verb|TRWAKE|, having appeared previously for \verb|ZLONGIT|, \verb|ZTRANVERSE|,
+ \verb|RFMODE|, \verb|TRFMODE|, \verb|FRFMODE|, and \verb|FTRFMODE|.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item The {\tt rpn\_load} command was added, which helps in multi-stage optimization by allowing
- loading and selection of data from SDDS files into the RPN variables that can be used in
- optimization expressions.
-\item The {\tt optimization\_setup} command now allows specifying that the random number generator
- shall be reset to the user-specified seed at the start of every function evaluation. In addition, initial
- values of variable and covariable parameters are now available in RPN variables for use in expressions.
-\item The {\tt load\_parameters} commands now limits the number of warnings about missing parameters
- to 100, after which warnings are suppressed.
-\item The {\tt momentum\_aperture} command now supports fiducialization of the beamline momentum profile
- before determining the momentum aperture.  This is useful when there is acceleration or energy loss
- due to radiation.
+\item The optimizer can now access quantities related to the coupled lattice functions computed by
+ \verb|coupled_twiss_output|.  
+\item The efficiency of the \verb|load_parameters| command was greatly improved through use of a 
+ hash table.  This will have a significant impact on loading large files.  One implication of this
+ is that the character \verb|#| is no longer allowed in beamline and element names.
+\item The load-balancing feature may now be turned off using the \verb|load_balancing_on| control in
+ \verb|run_setup|.  This makes results deterministic and can aid, for example, in comparing runs
+ that are part of a parameter scan.
 \end{itemize}
 
 \subsection{Changes and Additions to Related Programs}
 
 \begin{itemize}
-\item {\tt sddsurgent}: This program was in the previous release, but was undocumented.  It uses algorithms from the programs 
-  US (by R. Dejus) and URGENT (by R. Walker) for computation of undulator
-  radiation properties, including power density and intensity distributions.
-\item {\tt beamLifetimeCalc}: When solving the Haissinski equation for the bunch length, the momentum 
- compaction entered into the GUI now overrides the value from the lattice file.
-\item {\tt elegantRingAnalysis}:  Errors are now implemented in a global fashion that may be applied to many calculation types.
-\item {\tt touscheckLifetime}: This new program (by A. Xiao) computes the Touschek lifetime using Piwinski's formalism.
- It takes twiss parameter and s-dependent momentum-aperture data from {\tt elegant}.
+\item The \verb|beamLifetimeCalc| script was modified to fix a bug that would result in an 
+ error being issued when the beam energy was changed.
 \end{itemize}
 
 \section{Credits}
 
-Contributors to {\tt elegant} include M. Borland, V. Sajaev, Y. Wang, Y.Wu, and A. Xiao.
+Contributors to {\tt elegant} include M. Borland, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.
 Contributors to related programs include M. Borland, R. Dejus, L. Emery, and H. Shang.
 R. Soliday is responsible for multi-platform builds and distribution.
 Of course, we also appreciate the many suggestions, comments, and bug reports from users.
@@ -2060,7 +2050,7 @@ V} (vertical) and {\em corrParam} is the parameter of the corrector
 used for changing the orbit (e.g., {\tt HKICK} or {\tt VKICK} for a
 {\tt KICKER} element).
 
-If the twiss command was given, one may also refer to statistics of
+If the twiss command was given  with \verb|output_at_each_step=1|, one may also refer to statistics of
 Twiss parameters in the form \verb|<statistic>.<parameter-name>|,
 where \verb|<statistic>| is either \verb|min| or \verb|max|.  One may
 also use the symbols \verb|nux|, \verb|dnux/dp|, (and corresponding
@@ -2069,7 +2059,7 @@ tune, chromaticity, and first- and second- order momentum compaction
 factors.  The final values of the Twiss parameters are referred to
 simply as \verb|betax|, \verb|etax|, etc.  
 
-If the twiss command was given and radiation integral computation
+If the twiss command was given  with \verb|output_at_each_step=1| and radiation integral computation
 was requested, one may use \verb|ex0| and \verb|Sdelta0| for
 the equilibrium emittance and momentum spread, plus \verb|J<plane>|
 and \verb|tau<plane>| for the damping partition and damping time,
@@ -2078,6 +2068,14 @@ where \verb|<plane>| is \verb|x|, \verb|y|, or \verb|delta|.
 The coupling integral and emittance ratio due to x-y coupling may
 be accessed using the symbols \verb|couplingIntegral| and
 \verb|emittanceRatio|.  See section 3.1.4.4 of \cite{HAPE}.
+
+If the \verb|coupled_twiss_output| command was given with \verb|output_at_each_step=1|,
+one may use symbols of the form \verb|<name>#<occurrence>.<property>| where
+\verb|<name>| is the name of any \verb|MARKER| element with \verb|FITPOINT=1|.
+\verb|<property>| may be one of \verb|betax1|, \verb|betax2|, \verb|betay1|,
+\verb|betay2|, \verb|cetax|, \verb|cetay|, and \verb|tilt| (these are
+the two beta functions for x and y, the coupled dispersion values for
+x and y, and the beam tilt).
 
 If the \verb|floor_coordinates| command was given, one may use
 \verb|X|, \verb|Z|, and \verb|theta| to refer to the final values of
@@ -2454,6 +2452,7 @@ fiducialized to the average momentum of the beam.
     long echo_lattice = 0;
     STRING search_path = NULL;
     long element_divisions = 0;
+    long load_balancing_on = 1;
 &end
 \end{verbatim}
 
@@ -2526,6 +2525,12 @@ tracking.
 \item \verb|element_divisions| --- Specify how many pieces to split elements into.  Only 
  certain elements (basically, those with a matrix) are split.  Results in creation of 
  \verb|element_divisions| new elements having the same name as each split element.
+\item \verb|load_balancing_on| --- If non-zero, load-balancing is performed for parallel mode.
+ This can result in non-deterministic results if the load-balancing is different on two
+ otherwise identical runs.  Load-balancing variations may occur in heterogeneous clusters,
+ clusters with multiple users, or for other reasons.  In such situations, turning off 
+ load balancing can be useful if, for example, one is performing parameter scans and
+ wishes to eliminate spurious sources of variation.
 \end{itemize}
 
 \begin{latexonly}
@@ -4302,6 +4307,10 @@ LINAC''.
 \bibitem{Derbenev}
   Ya. S. Derbenev, J. Rossbach, E. L. Saldin, V. D. Shiltsev, ``Microbunch Radiative Tail-Head
   Interaction,'' September 1995, TESLA-FEL 95-05.
+
+\bibitem{Xiao2007A}
+  A. Xiao {\em et al.}, ``Direct Space-Charge Calculation in {\tt elegant} and its Application to the
+ ILC Damping Ring,'' Proc. PAC2007, 3456-3458.
 
 \end{thebibliography}
 
