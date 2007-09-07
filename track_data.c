@@ -1562,8 +1562,8 @@ PARAMETER twissElement_param[N_TWISSELEMENT_PARAMS] = {
   {"ETAY", "M", IS_DOUBLE, 0, (long)((char *)&twissElem_example.etay), NULL, 0.0, 0, "vertical eta function"},
   {"ETAYP", "", IS_DOUBLE, 0, (long)((char *)&twissElem_example.etayp), NULL, 0.0, 0, "slope of vertical eta function"},
   {"FROM_BEAM", "", IS_LONG, 0, (long)((char *)&twissElem_example.fromBeam), NULL, 0.0, 0, "compute transformation from tracked beam properties instead of Twiss parameters?"},
-  {"COMPUTE_ONCE", "", IS_LONG, 0, (long)((char *)&twissElem_example.computeOnce), NULL, 0.0, 0, "compute transformation only for first beam?"},
-  {"APPLY_ONCE", "", IS_LONG, 0, (long)((char *)&twissElem_example.applyOnce), NULL, 0.0, 0, "apply correction only on first pass through for each beam?"},
+  {"COMPUTE_ONCE", "", IS_LONG, 0, (long)((char *)&twissElem_example.computeOnce), NULL, 0.0, 0, "compute transformation only for first beam or lattice functions?"},
+  {"APPLY_ONCE", "", IS_LONG, 1, (long)((char *)&twissElem_example.applyOnce), NULL, 0.0, 0, "apply correction only on first pass through for each beam?"},
   {"VERBOSE", "", IS_LONG, 0, (long)((char *)&twissElem_example.verbose), NULL, 0.0, 0, "if non-zero, print extra information about transformations"},
 };
 
