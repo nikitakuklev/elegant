@@ -1252,6 +1252,61 @@ long do_tracking(
 	    case T_CWIGGLER:
 	      GWigSymplecticPass(coord, nToTrack, *P_central, (CWIGGLER*)eptr->p_elem);
 	      break;
+            case T_TWISSELEMENT:
+              if ( ((TWISSELEMENT*)eptr->p_elem)->applyOnce==0 || i_pass==passOffset) {
+                /* If applying once, do so on the first pass through only */
+                if ( ((TWISSELEMENT*)eptr->p_elem)->fromBeam ) {
+                  /* Compute the transformation from the beam, rather than the lattice twiss parameters */
+                  if ( ((TWISSELEMENT*)eptr->p_elem)->computeOnce==0 || 
+                      ((TWISSELEMENT*)eptr->p_elem)->transformComputed==0) {
+                    TWISS beamTwiss;
+                    if (((TWISSELEMENT*)eptr->p_elem)->verbose)
+                      printf("* Computing beam-based twiss transformation matrix for %s at z=%e m\n",
+                             eptr->name, eptr->end_pos);
+                    computeBeamTwissParameters(&beamTwiss, coord, nToTrack);
+                    if (eptr->matrix)
+                      free_matrices(eptr->matrix);
+                    eptr->matrix = twissTransformMatrix((TWISSELEMENT*)eptr->p_elem, &beamTwiss);
+                    ((TWISSELEMENT*)eptr->p_elem)->transformComputed = 1;
+                  }
+                }
+                if (((TWISSELEMENT*)eptr->p_elem)->transformComputed==0) {
+                  printf("Error: The twiss parameter transformation matrix was not computed for element %s at z=%e m\n",
+                         eptr->name, eptr->end_pos);
+                  printf("This means you set FROM_BEAM=0 but didn't issue a twiss_output command.\n");
+                  exit(1);
+                }
+                if (eptr->matrix==NULL) {
+                  printf("Error: twiss parameter transformation matrix was not computed for element %s at z=%e m\n",
+                         eptr->name, eptr->end_pos);
+                  printf("and this wasn't properly detected.  Please send your input files to borland@aps.anl.gov.\n");
+                  exit(1);
+                }
+                if (((TWISSELEMENT*)eptr->p_elem)->verbose) {
+                  TWISS beamTwiss;
+                  printf("* Applying twiss parameter transformation matrix (%s at z=%e m) to beam.\n", eptr->name, eptr->end_pos);
+                  computeBeamTwissParameters(&beamTwiss, coord, nToTrack);
+                  printf("  * Initial twiss parameters:\n");
+                  printf("  betax = %le  alphax = %le  etax = %le, etaxp = %le\n",
+                         beamTwiss.betax, beamTwiss.alphax, beamTwiss.etax, beamTwiss.etapx);
+                  printf("  betay = %le  alphay = %le  etay = %le, etayp = %le\n",
+                         beamTwiss.betay, beamTwiss.alphay, beamTwiss.etay, beamTwiss.etapy);
+                  fflush(stdout);
+                }
+                track_particles(coord, eptr->matrix, coord, nToTrack);
+                if (((TWISSELEMENT*)eptr->p_elem)->verbose) {
+                  TWISS beamTwiss;
+                  computeBeamTwissParameters(&beamTwiss, coord, nToTrack);
+                  printf("  * Final twiss parameters:\n");
+                  printf("  betax = %le  alphax = %le  etax = %le, etaxp = %le\n",
+                         beamTwiss.betax, beamTwiss.alphax, beamTwiss.etax, beamTwiss.etapx);
+                  printf("  betay = %le  alphay = %le  etay = %le, etayp = %le\n",
+                         beamTwiss.betay, beamTwiss.alphay, beamTwiss.etay, beamTwiss.etapy);
+                  fflush(stdout);
+                }
+              }
+              
+              break;
 	    default:
 	      fprintf(stdout, "programming error: no tracking statements for element %s (type %s)\n",
 		      eptr->name, entity_name[eptr->type]);

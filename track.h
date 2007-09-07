@@ -760,7 +760,7 @@ extern char *entity_text[N_TYPES];
 #define N_RFCW_PARAMS 36
 #define N_REFLECT_PARAMS 1
 #define N_CLEAN_PARAMS 7
-#define N_TWISSELEMENT_PARAMS 6
+#define N_TWISSELEMENT_PARAMS 12
 #define N_WIGGLER_PARAMS 8
 #define N_SCRIPT_PARAMS 31
 #define N_FLOORELEMENT_PARAMS 6
@@ -1053,8 +1053,10 @@ typedef struct {
 
 /* storage structure for twiss element (sets twiss parameters) */
 typedef struct {
-  double betax, betay, alphax, alphay;
-  long fromBeam, onceOnly;
+  double betax, betay, alphax, alphay, etax, etaxp, etay, etayp;
+  long fromBeam, computeOnce, applyOnce, verbose;
+  /* internal variables */
+  long transformComputed;
 } TWISSELEMENT;
 
 /* storage structure for floor element (sets floor coordinates) */
@@ -2579,6 +2581,7 @@ extern double approximateBeamWidth_p(double fraction, double **part, long nPart,
 extern double rms_emittance_p(double **coord, long i1, long i2, long n,
                             double *S11Return, double *S12Return, double *S22Return);
 #endif
+void computeBeamTwissParameters(TWISS *twiss, double **data, long particles);
 extern double rms_emittance(double **coord, long i1, long i2, long n,
                             double *S11Return, double *S12Return, double *S22Return);
 extern double rms_longitudinal_emittance(double **coord, long n, double Po);

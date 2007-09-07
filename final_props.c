@@ -987,3 +987,59 @@ double approximateBeamWidth_p(double fraction, double **part, long nPart, long i
   return (iHi-iLo)*dx;
 }
 #endif
+
+void computeBeamTwissParameters(TWISS *twiss, double **data, long particles)
+{
+  double C[6], S[6][6], beamsize[6], eta[6], Sbeta[6][6], emitcor[3], betacor[3], alphacor[3];
+  long i, j, iPart;
+  double sum;
+
+  compute_centroids(C, data, particles);
+
+  /* compute correlations */
+  for (i=0; i<6; i++) {
+    for (j=0; j<=i; j++) {
+      for (iPart=sum=0; iPart<particles; iPart++)
+        sum += (data[iPart][i]-C[i])*(data[iPart][j]-C[j]);
+      S[j][i] = S[i][j] = sum/particles;
+    }
+  }
+
+  for (i=0; i<6; i++)
+    beamsize[i] = sqrt(S[i][i]);
+
+  /* compute correlations with energy correlations removed */
+  for (i=0; i<6; i++) 
+      eta[i] = 0;
+  if (S[5][5])
+    for (i=0; i<4; i++) 
+      eta[i] = S[i][5]/S[5][5];
+  
+  for (i=0; i<4; i++) {
+    for (j=0; j<=i; j++) {
+      for (iPart=sum=0; iPart<particles; iPart++)
+        sum += (data[iPart][i]-eta[i]*data[iPart][5])*(data[iPart][j]-eta[j]*data[iPart][5]);
+      Sbeta[j][i] = Sbeta[i][j] = sum/particles;
+    }
+  }
+
+  /* compute beta functions etc */
+  for (i=0; i<2; i++) {
+    emitcor[i] = betacor[i] = alphacor[i] = 0;
+    if ((emitcor[i] = Sbeta[2*i+0][2*i+0]*Sbeta[2*i+1][2*i+1]-sqr(Sbeta[2*i+0][2*i+1]))>0) {
+      emitcor[i] = sqrt(emitcor[i]);
+      betacor[i] = Sbeta[2*i+0][2*i+0]/emitcor[i];
+      alphacor[i] = -Sbeta[2*i+0][2*i+1]/emitcor[i];
+    } else
+      emitcor[i] = 0;
+  }
+  
+  twiss->betax = betacor[0];
+  twiss->betay = betacor[1];
+  twiss->alphax = alphacor[0];
+  twiss->alphay = alphacor[1];
+  twiss->etax = eta[0];
+  twiss->etapx = eta[1];
+  twiss->etay = eta[2];
+  twiss->etapy = eta[3];
+}

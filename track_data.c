@@ -1557,8 +1557,14 @@ PARAMETER twissElement_param[N_TWISSELEMENT_PARAMS] = {
   {"BETAY", "M", IS_DOUBLE, 0, (long)((char *)&twissElem_example.betay), NULL, 1.0, 0, "vertical beta function"},
   {"ALPHAX", "", IS_DOUBLE, 0, (long)((char *)&twissElem_example.alphax), NULL, 0.0, 0, "horizontal alpha function"},
   {"ALPHAY", "", IS_DOUBLE, 0, (long)((char *)&twissElem_example.alphay), NULL, 0.0, 0, "vertical alpha function"},
-  {"FROM_BEAM", "", IS_LONG, 0, (long)((char *)&twissElem_example.fromBeam), NULL, 0.0, 0, "compute correction from tracked beam properties instead of Twiss parameters?"},
-  {"ONCE_ONLY", "", IS_LONG, 0, (long)((char *)&twissElem_example.onceOnly), NULL, 0.0, 0, "compute correction only for first beam or input twiss parameters, apply to all?"},        
+  {"ETAX", "M", IS_DOUBLE, 0, (long)((char *)&twissElem_example.etax), NULL, 0.0, 0, "horizontal eta function"},
+  {"ETAXP", "", IS_DOUBLE, 0, (long)((char *)&twissElem_example.etaxp), NULL, 0.0, 0, "slope of horizontal eta function"},
+  {"ETAY", "M", IS_DOUBLE, 0, (long)((char *)&twissElem_example.etay), NULL, 0.0, 0, "vertical eta function"},
+  {"ETAYP", "", IS_DOUBLE, 0, (long)((char *)&twissElem_example.etayp), NULL, 0.0, 0, "slope of vertical eta function"},
+  {"FROM_BEAM", "", IS_LONG, 0, (long)((char *)&twissElem_example.fromBeam), NULL, 0.0, 0, "compute transformation from tracked beam properties instead of Twiss parameters?"},
+  {"COMPUTE_ONCE", "", IS_LONG, 0, (long)((char *)&twissElem_example.computeOnce), NULL, 0.0, 0, "compute transformation only for first beam?"},
+  {"APPLY_ONCE", "", IS_LONG, 0, (long)((char *)&twissElem_example.applyOnce), NULL, 0.0, 0, "apply correction only on first pass through for each beam?"},
+  {"VERBOSE", "", IS_LONG, 0, (long)((char *)&twissElem_example.verbose), NULL, 0.0, 0, "if non-zero, print extra information about transformations"},
 };
 
 WIGGLER wiggler_example;
@@ -2072,8 +2078,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_MAPSOLENOID_PARAMS,  MAT_LEN_NCAT,    sizeof(MAP_SOLENOID),    mapSolenoid_param    }, 
     { N_REFLECT_PARAMS,      HAS_MATRIX|MATRIX_TRACKING,    sizeof(REFLECT),    reflect_param  },
     { N_CLEAN_PARAMS,  0, sizeof(CLEAN), clean_param },
-    { N_TWISSELEMENT_PARAMS, HAS_MATRIX|MATRIX_TRACKING, 
-      sizeof(TWISSELEMENT), twissElement_param},
+    { N_TWISSELEMENT_PARAMS, HAS_MATRIX|DONT_CONCAT|UNIPROCESSOR,  sizeof(TWISSELEMENT), twissElement_param},
     { N_WIGGLER_PARAMS, MAT_LEN|MATRIX_TRACKING, sizeof(WIGGLER), wiggler_param},
     { N_SCRIPT_PARAMS,  MAT_LEN|UNIPROCESSOR, sizeof(SCRIPT),    script_param     }, 
     { N_FLOORELEMENT_PARAMS,  0, sizeof(FLOORELEMENT),    floor_param     }, 

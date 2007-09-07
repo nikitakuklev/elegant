@@ -1428,33 +1428,64 @@ VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, doubl
 VMATRIX *twissTransformMatrix(TWISSELEMENT *twissWanted,
                               TWISS *twissInput)
 {
-  VMATRIX *M;
+  VMATRIX *M1, *M2, *M3, *Mtot;
   double beta1, beta2, alpha1, alpha2;
-  
-  M = tmalloc(sizeof(*M));
-  initialize_matrices(M, M->order=1);
-  M->R[0][0] = M->R[1][1] = M->R[2][2] = M->R[3][3] = 
-    M->R[4][4] = M->R[5][5] = 1;
+
+  M2 = tmalloc(sizeof(*M2));
+  initialize_matrices(M2, M2->order=1);
+  M2->R[0][0] = M2->R[1][1] = M2->R[2][2] = M2->R[3][3] = 
+    M2->R[4][4] = M2->R[5][5] = 1;
+
   if (twissInput==NULL)
-    return M;
+    return M2;
 
   beta1 = twissInput->betax;
   beta2 = twissWanted->betax;
   alpha1 = twissInput->alphax;
   alpha2 = twissWanted->alphax;
-  M->R[0][0] = beta2/sqrt(beta1*beta2);
-  M->R[1][0] = (alpha1-alpha2)/sqrt(beta1*beta2);
-  M->R[1][1] = beta1/sqrt(beta1*beta2);
-  
+  M2->R[0][0] = beta2/sqrt(beta1*beta2);
+  M2->R[1][0] = (alpha1-alpha2)/sqrt(beta1*beta2);
+  M2->R[1][1] = beta1/sqrt(beta1*beta2);
+
   beta1 = twissInput->betay;
   beta2 = twissWanted->betay;
   alpha1 = twissInput->alphay;
   alpha2 = twissWanted->alphay;
-  M->R[2][2] = beta2/sqrt(beta1*beta2);
-  M->R[3][2] = (alpha1-alpha2)/sqrt(beta1*beta2);
-  M->R[3][3] = beta1/sqrt(beta1*beta2);
+  M2->R[2][2] = beta2/sqrt(beta1*beta2);
+  M2->R[3][2] = (alpha1-alpha2)/sqrt(beta1*beta2);
+  M2->R[3][3] = beta1/sqrt(beta1*beta2);
+
+  M1 = tmalloc(sizeof(*M1));
+  initialize_matrices(M1, M1->order=1);
+  M1->R[0][0] = M1->R[1][1] = M1->R[2][2] = M1->R[3][3] = 
+    M1->R[4][4] = M1->R[5][5] = 1;
+  M1->R[0][5] = -twissInput->etax;
+  M1->R[1][5] = -twissInput->etapx;
+  M1->R[2][5] = -twissInput->etay;
+  M1->R[3][5] = -twissInput->etapy;
+
+  M3 = tmalloc(sizeof(*M3));
+  initialize_matrices(M3, M3->order=1);
+  M3->R[0][0] = M3->R[1][1] = M3->R[2][2] = M3->R[3][3] = 
+    M3->R[4][4] = M3->R[5][5] = 1;
+  M3->R[0][5] = twissWanted->etax;
+  M3->R[1][5] = twissWanted->etaxp;
+  M3->R[2][5] = twissWanted->etay;
+  M3->R[3][5] = twissWanted->etayp;
+
+  Mtot = tmalloc(sizeof(*Mtot));
+  initialize_matrices(Mtot, Mtot->order=1);
+  concat_matrices(Mtot, M2, M1  , 0);
+  concat_matrices(M1  , M3, Mtot, 0);
+
+  free_matrices(Mtot);
+  free_matrices(M2);
+  free_matrices(M3);
+  free(Mtot);
+  free(M2);
+  free(M3);
   
-  return M;
+  return M1;
 }
 
 /* thin lens for light optics */
