@@ -106,10 +106,10 @@ void track_through_trfmode(
   tau = 2*Q/omega;
   Qrp = sqrt(Q*Q - 0.25);
   k = omega/4*trfmode->RaInternal/trfmode->Q;
-  omegaOverC = omega/c_mks;
   /* These adjustments per Zotter and Kheifets, 3.2.4, 3.3.2 */
   k *= Q/Qrp;
   omega *= Qrp/Q;
+  omegaOverC = omega/c_mks;
 
   if (!trfmode->doX && !trfmode->doY)
     bomb("x and y turned off for TRFMODE---this shouldn't happen", NULL);
