@@ -125,11 +125,11 @@ void track_through_ftrfmode(
     if(isSlave) {
       buffer = malloc(sizeof(double) * (lastBin+1)); 
       MPI_Allreduce(xsum, buffer, lastBin+1, MPI_DOUBLE, MPI_SUM, workers);
-      memcpy(xsum, buffer, sizeof(long)*(lastBin+1));
+      memcpy(xsum, buffer, sizeof(*xsum)*(lastBin+1));
       MPI_Allreduce(ysum, buffer, lastBin+1, MPI_DOUBLE, MPI_SUM, workers);
-      memcpy(ysum, buffer, sizeof(long)*(lastBin+1));
+      memcpy(ysum, buffer, sizeof(*ysum)*(lastBin+1));
       MPI_Allreduce(count, buffer, lastBin+1, MPI_LONG, MPI_SUM, workers);
-      memcpy(count, buffer, sizeof(unsigned long)*(lastBin+1));
+      memcpy(count, buffer, sizeof(*count)*(lastBin+1));
       free(buffer);
     }
 #endif
