@@ -7,10 +7,13 @@
 # in the file LICENSE that is included with this distribution. 
 #*************************************************************************
 #
-# $Id: Makefile.Pelegant,v 1.7 2007-03-30 16:55:00 soliday Exp $
+# $Id: Makefile.Pelegant,v 1.8 2007-09-28 17:41:01 ywang25 Exp $
 #
 #  Lowest Level Directroy Makefile
 # $Log: not supported by cvs2svn $
+# Revision 1.7  2007/03/30 16:55:00  soliday
+# Removed a bunch of scripts and programs that have been moved to elegantTools.
+#
 # Revision 1.6  2007/02/08 17:09:54  ywang25
 # Impoved Makefile to build Pelegant and elegant more conveniently.
 #
@@ -62,7 +65,7 @@ include $(TOP)/configure/CONFIG
 
 LEFTOVER_MAKEFILE=1
 
-all buildInstall Pelegant:
+all buildInstall:
 	$(RM) $(TOP)/src/elegant/Makefile
 	$(MV) $(TOP)/src/elegant/Makefile.TMP $(TOP)/src/elegant/Makefile
 	$(MAKE) -f Makefile
@@ -71,6 +74,11 @@ Selegant:
 	$(RM) $(TOP)/src/elegant/Makefile
 	$(MV) $(TOP)/src/elegant/Makefile.TMP $(TOP)/src/elegant/Makefile
 	$(MAKE) -f Makefile Selegant
+
+Pelegant:
+	$(RM) $(TOP)/src/elegant/Makefile
+	$(MV) $(TOP)/src/elegant/Makefile.TMP $(TOP)/src/elegant/Makefile
+	$(MAKE) -f Makefile Pelegant
 endif
 endif
 
