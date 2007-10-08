@@ -427,11 +427,19 @@ void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge,
       /* length scale used by calling routine is too large, so refuse to do it */
       TRACKING_CONTEXT context;
       getTrackingContext(&context);
+#if USE_MPI
+      if (myid==1) 
+	dup2(fd,fileno(stdout)); /* Let the first slave processor write the output */
+#endif
       fprintf(stdout, "Error: distance between LSC kicks for %s at z=%e is too large.\n",
 	      context.elementName, context.zStart);
       fprintf(stdout, "Suggest reducing distance between kicks by factor %e\n",
             lengthScale/length);
+#if USE_MPI
+      MPI_Abort (workers, 1);
+#else
       exit(1);
+#endif
     }    
   }
   /* Take the FFT of I(t) to get I(f) */
