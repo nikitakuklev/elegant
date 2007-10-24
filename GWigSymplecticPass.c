@@ -187,7 +187,8 @@ void GWigSymplecticPass(double **coord, long num_particles, double pCentral,
     /* For some reason, they swap the order here */
     r6[4] = coord[c][5]; 
     r6[5] = coord[c][4];
-
+    Wig.Zw = 0;
+    
     /* Track through the wiggler */
     switch (cwiggler->integrationOrder) {
       case second :
