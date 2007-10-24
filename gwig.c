@@ -412,7 +412,7 @@ void GWigB(struct gwig *pWig, double *Xvec, double *B)
     cy  = cos(ky * y);
 
     /* Accumulate field values in user-supplied array (Bx, By, Bz) */
-    cz = cos(kz*z+z);
+    cz = cos(kz*z+tz);
     B[0] += pWig->PB0*pWig->VCw_raw[i]*chx*cos(ky*y)*cz;
     if (abs(kx)>1e-8) 
       shxkx = shx/kx;
