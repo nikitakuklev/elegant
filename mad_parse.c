@@ -849,14 +849,22 @@ void parse_element(
       exit(1);
     }
     isGroup = 0;
-    for (i=0; i<n_params; i++) 
-      if (strcmp(parameter[i].name, ptr1)==0)
-        break;
     if (strcmp(ptr1, "GROUP")==0) {
       pType = IS_STRING;
       isGroup = 1;
     } else {
-      pType = parameter[i].type;
+      for (i=0; i<n_params; i++) 
+        if (strcmp(parameter[i].name, ptr1)==0)
+          break;
+      if (i==n_params) {
+        /* try again, ignoring underscores */
+        for (i=0; i<n_params; i++) {
+          if (strcmp_skip(parameter[i].name, ptr1, "_")==0)
+            break;
+        }
+      }
+      if (i<n_params)
+        pType = parameter[i].type;
     }
     if (i==n_params && !isGroup) {
       fprintf(stdout, "Error: unknown parameter %s used for %s %s (%s)\n",
