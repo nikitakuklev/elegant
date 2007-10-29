@@ -1584,7 +1584,9 @@ CWIGGLER cwiggler_example;
 
 PARAMETER cwiggler_param[N_CWIGGLER_PARAMS] = {
   {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&cwiggler_example.length), NULL, 0.0, 0, "Total length"},
-  {"BMAX", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&cwiggler_example.BMax), NULL, 0.0, 0, "Maximum magnetic field."},
+  {"B_MAX", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&cwiggler_example.BMax), NULL, 0.0, 0, "Maximum on-axis magnetic field."},
+  {"BX_MAX", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&cwiggler_example.BxMax), NULL, 0.0, 0, "Maximum on-axis magnetic field.  Ignored if B_MAX is nonzero."},
+  {"BY_MAX", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&cwiggler_example.ByMax), NULL, 0.0, 0, "Maximum on-axis magnetic field.  Ignored if B_MAX is nonzero."},
   {"DX", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&cwiggler_example.dx), NULL, 0.0, 0, "Misaligment."},
   {"DY", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&cwiggler_example.dy), NULL, 0.0, 0, "Misaligment."},
   {"DZ", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&cwiggler_example.dz), NULL, 0.0, 0, "Misaligment."},
@@ -1594,9 +1596,14 @@ PARAMETER cwiggler_param[N_CWIGGLER_PARAMS] = {
   {"INTEGRATION_ORDER", "", IS_LONG, 0, (long)((char *)&cwiggler_example.integrationOrder), NULL, 0.0, 4, "Integration order (2 or 4)."},
   {"BY_FILE", " ", IS_STRING, 0, (long)((char *)&cwiggler_example.ByFile), NULL, 0.0, 0, "Name of SDDS file with By harmonic data."},
   {"BX_FILE", " ", IS_STRING, 0, (long)((char *)&cwiggler_example.BxFile), NULL, 0.0, 0, "Name of SDDS file with Bx harmonic data."},
-  {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&cwiggler_example.sr), NULL, 0.0, 0, "include classical synchrotron radiation?"},
-  {"ISR", "", IS_LONG, 0, (long)((char *)&cwiggler_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (scattering)?"},
-  {"SINUSOIDAL", "", IS_LONG, 0, (long)((char *)&cwiggler_example.sinusoidal), NULL, 0.0, 0, "ideal sinusoidal wiggler?  If non-zero, BX_FILE and BY_FILE are not used."},
+  {"BY_SPLIT_POLE", "", IS_LONG, 0, (long)((char *)&cwiggler_example.BySplitPole), NULL, 0.0, 0, "Use \"split-pole\" expansion for By?"},
+  {"BX_SPLIT_POLE", "", IS_LONG, 0, (long)((char *)&cwiggler_example.BxSplitPole), NULL, 0.0, 0, "Use \"split-pole\" expansion for Bx?"},
+  {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&cwiggler_example.sr), NULL, 0.0, 0, "Include classical synchrotron radiation?"},
+  {"ISR", "", IS_LONG, 0, (long)((char *)&cwiggler_example.isr), NULL, 0.0, 0, "Include incoherent synchrotron radiation (scattering)?"},
+  {"SINUSOIDAL", "", IS_LONG, 0, (long)((char *)&cwiggler_example.sinusoidal), NULL, 0.0, 0, "Ideal sinusoidal wiggler?  If non-zero, BX_FILE and BY_FILE are not used."},
+  {"VERTICAL", "", IS_LONG,  PARAM_CHANGES_MATRIX, (long)((char *)&cwiggler_example.vertical), NULL, 0.0, 0, "If SINUSOIDAL is non-zero, then setting this to non-zero gives a vertical wiggler.  Default is horizontal."},
+  {"HELICAL", "", IS_LONG, 0, (long)((char *)&cwiggler_example.helical), NULL, 0.0, 0, "Ideal helical wiggler?  If non-zero and SINUSOIDAL is also non-zero, BX_FILE and BY_FILE are not used."},
+  {"FORCE_MATCHED", "", IS_LONG, 0, (long)((char *)&cwiggler_example.forceMatched), NULL, 0.0, 1, "Force matched dispersion for first harmonics?  If non-zero, start and end of magnetic field will be inset from the ends of the device if phase is not 0 or $\\pi$."},
 } ;
 
 SCRIPT script_example;

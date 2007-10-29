@@ -39,15 +39,19 @@ struct gwig {
   double E0;        /* Energy of ring, [GeV] */
   double Po;        /* beta*gamma for reference particle */
   double PB0;       /* B0 in [Tesla] */
+  double PB0H, PB0V; /* Ignored if B0 is nonzero, but used otherwise for H and V wiggler fields */
   int Nw;           /* Number of periods */
   double Lw;        /* Wiggler Period [m] */
   int NHharm;       /* No. of horizontal harmonics */
   int NVharm;       /* No. of vertical harmonics */
   double Aw;        /* Wiggler parameter */
   double Zw;        /* Longitudinal variable [m] */
+  double zStartH, zStartV;  /* Start and end z coordinates of the wiggler field, which are computed */
+  double zEndH, zEndV;      /* based on the phase of the first harmonic to get matched dispersion. */
   short sr, isr;    /* flags for classical and incoherent SR */
   double srCoef, isrCoef;
-  
+
+  int HSplitPole, VSplitPole;
   double HCw[WHmax];
   double VCw[WHmax];
   double HCw_raw[WHmax];
@@ -69,6 +73,6 @@ void GWigMap_2nd(struct gwig *pWig, double *X, double dl);
 void GWigAx(struct gwig *pWig, double *Xvec, double *pax, double *paxpy);
 void GWigAy(struct gwig *pWig, double *Xvec, double *pay, double *paypx);
 double sinc(double x );
-void InitializeCWiggler(CWIGGLER *cwiggler);
-long ReadCWigglerHarmonics(double **BData, long *harmonics, char *file, char *name);
+void InitializeCWiggler(CWIGGLER *cwiggler, char *name);
+long ReadCWigglerHarmonics(double **BData, long *harmonics, char *file, char *name, long vertical);
 #endif

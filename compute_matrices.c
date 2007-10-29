@@ -17,7 +17,7 @@
 
 #define DEBUG 0
 
-void InitializeCWiggler(CWIGGLER *cwiggler);
+void InitializeCWiggler(CWIGGLER *cwiggler, char *name);
 long determine_bend_flags(ELEMENT_LIST *eptr, long edge1_effects, long edge2_effects);
 VMATRIX *matrixFromExplicitMatrix(EMATRIX *emat, long order);
 VMATRIX *matrixForILMatrix(ILMATRIX *ilmat, long order);
@@ -496,7 +496,7 @@ VMATRIX *compute_matrix(
     CSRCSBEND *csrcsbend;
     CSRDRIFT *csrdrift; LSCDRIFT *lscdrift; EDRIFT *edrift;
     WIGGLER *wiggler; CWIGGLER *cwiggler;
-    double ks, Pref_output;
+    double ks, Pref_output, tilt;
     VARY rcContext;
     long fiducialize;
 
@@ -551,20 +551,34 @@ VMATRIX *compute_matrix(
 	break;
       case T_CWIGGLER:
 	cwiggler = (CWIGGLER*)elem->p_elem;
-	if (cwiggler->BMax<=0) {
-	  fprintf(stderr, "Error: CWIGGLER has BMAX<=0\n");
-	  exit(1);
-	}
-	InitializeCWiggler(cwiggler);
-	/* Basic first-harmonic focusing for a horizontal or vertical planar wiggler */
-	cwiggler->radiusInternal = elem->Pref_input/(e_mks/me_mks/c_mks)/cwiggler->BMax;
-	elem->matrix 
-	  = wiggler_matrix(cwiggler->length,
-			   cwiggler->radiusInternal/sqrt(cwiggler->sumCmn2),
-			   cwiggler->dx, cwiggler->dy, cwiggler->dz,
-			   cwiggler->tilt
-			   + (cwiggler->BxFile && !cwiggler->ByFile ? PI/2.0 : 0),
-			   run->default_order);
+	if (cwiggler->BMax<=0 && cwiggler->BxMax<=0 && cwiggler->ByMax<=0) {
+	  fprintf(stderr, "*** Warning: CWIGGLER has BMAX<=0\n");
+          elem->matrix = drift_matrix(cwiggler->length, run->default_order);
+	} else {
+          InitializeCWiggler(cwiggler, elem->name);
+          if (cwiggler->ByHarmonics && cwiggler->BxHarmonics) {
+            printf("*** Warning: non-planar CWIGGLER detected.  Matrix for this element is not available.\n");
+            printf("    Twiss parameters and matrix-dependent quanities will not be correct!\n");
+          }
+          /* Basic first-harmonic focusing for a horizontal or vertical planar wiggler */
+          tilt = 0;
+          if (cwiggler->BMax)
+            cwiggler->radiusInternal = elem->Pref_input/(e_mks/me_mks/c_mks)/cwiggler->BMax;
+          if (cwiggler->ByHarmonics) {
+            if (cwiggler->ByMax)
+              cwiggler->radiusInternal = elem->Pref_input/(e_mks/me_mks/c_mks)/cwiggler->ByMax;
+          } else {
+            if (cwiggler->BxMax)
+              cwiggler->radiusInternal = elem->Pref_input/(e_mks/me_mks/c_mks)/cwiggler->BxMax;
+            tilt = PI/2;
+          }
+          elem->matrix 
+            = wiggler_matrix(cwiggler->length,
+                             cwiggler->radiusInternal/sqrt(cwiggler->sumCmn2),
+                             cwiggler->dx, cwiggler->dy, cwiggler->dz,
+                             cwiggler->tilt + tilt,
+                             run->default_order);
+        }
         break;
       case T_SCRIPT:
         elem->matrix = drift_matrix(((SCRIPT*)elem->p_elem)->length, 

@@ -776,7 +776,7 @@ extern char *entity_text[N_TYPES];
 #define N_LSRMDLTR_PARAMS 14
 #define N_TAYLORSERIES_PARAMS 6
 #define N_RFTM110_PARAMS 14
-#define N_CWIGGLER_PARAMS 14
+#define N_CWIGGLER_PARAMS 21
 #define N_EDRIFT_PARAMS 1
 #define N_SCMULT_PARAMS 0		
 #define N_ILMATRIX_PARAMS 31
@@ -2184,17 +2184,20 @@ typedef struct {
 /* names and storage structure for CWIGGLER element */
 extern PARAMETER cwiggler_param[N_CWIGGLER_PARAMS];
 typedef struct {
-  double length, BMax;
+  double length, BMax, BxMax, ByMax;
   double dx, dy, dz, tilt;
   long periods, stepsPerPeriod, integrationOrder;
   char *ByFile, *BxFile;
-  long sr, isr, sinusoidal;
+  long BySplitPole, BxSplitPole;
+  long sr, isr, sinusoidal, vertical, helical;
+  long forceMatched;
   /* for internal use */
   long initialized;
   double *ByData, *BxData; 
   long ByHarmonics, BxHarmonics;
   double sumCmn2;            /* computed from dominant-plane harmonics */
   double radiusInternal;     /* computed from BMax and sumCmn2 */
+  double zEndPointH[2], zEndPointV[2];
 } CWIGGLER;
 
 /* names and storage structure for SCRIPT element */
