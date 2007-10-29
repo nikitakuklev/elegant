@@ -1,4 +1,4 @@
-This element simulates a wiggler or undulator using Ying Wu's
+This element simulates a wiggler or undulator using a modified version of Ying Wu's
 canonical integration code for wigglers.  To use the element, one must
 supply an SDDS file giving harmonic analysis of the wiggler field.
 The field expansion used by the code for a horizontally-deflecting
@@ -25,4 +25,66 @@ For matrix and radiation integral computations, {\tt elegant} uses a
 WIGGLER element when it encounters a CWIGGLER.  The effective bending
 radius is $B\rho/B_0/\sqrt{\sum C_{mn}^2}$ (L. Emery, private
 communication).  Tests show that this gives good agreement in the
-tunes from tracking and Twiss parameter calculations.
+tunes from tracking and Twiss parameter calculations.  Presently this
+works only for horizontal wigglers.
+
+{\tt elegant} allows specifying field expansions for on-axis $B_y$ and
+$B_x$ components, so one can model a helical wiggler.  However, in this
+case one set of components should have $\theta_{zn} = 0$ or $\theta_{zn}=\pi$,
+while the other should have $\theta_{zn} = \pm \pi/2$.
+Using Wu's code, the latter set will not have matched dispersion.  Our
+modified version solves this by delaying the beginning of the field
+components in question by $\lambda/4$ and ending the field prematurely
+by $3\lambda/4$.  This causes all the fields to start and end at the
+crest, which ensures matched dispersion.  The downside is that the
+(typically) vertical wiggler component is missing a full period of
+field.  One can turn off this behavior by setting \verb|FORCE_MATCHED=0|.
+
+{\bf Additional field expansions}
+
+Y. Wu's code included field expansions for a vertically-deflecting
+wiggler as well as the horizontally-deflecting wiggler given above.
+In both cases, these expansions are suitable for a wiggler with two
+poles that are above/below or left/right of the beam axis.  They are
+not always suitable for devices with more complex pole geometries.
+
+Another geometry that is important is a ``split pole'' wiggler, in which
+each pole is made from two pieces.  Such configurations are seen, for example,
+in devices used to produce variable polarization.  In such cases, the
+expansion given may not be appropriate.  Here, we summarize the form of the
+various expansions that {\tt elegant} supports.  For brevity, we show the
+form of a single harmonic component.
+
+Horizontal wiggler, split poles, produces $B_y$ only on-axis.   Specified
+by setting {\tt BY\_SPLIT\_POLE=0}, and giving {\tt BY\_FILE} or {\tt SINUSOIDAL=1} with {\tt VERTICAL=0}.
+\begin{eqnarray}
+B_x & = & \left|B_0\right| \frac{k_x \cos (k_z z + \phi) \sin (k_x x) \sinh (k_y y)}{k_y}\\
+B_y & = & - \left|B_0\right| \cos (k_x x) \cos (k_z z + \phi) \cosh (k_y y)
+\end{eqnarray}
+where $k_y^2 = k_x^2 + k_z^2$.
+
+Horizontal wiggler, split poles, produces $B_y$ only on-axis.   Specified
+by setting {\tt BY\_SPLIT\_POLE=1}, and giving {\tt BY\_FILE} or {\tt SINUSOIDAL=1} with {\tt VERTICAL=0}.
+\begin{eqnarray}
+B_x & = & -\left|B_0\right| \frac{k_x \cos (k_z z + \phi) \sin (k_y y) \sinh (k_x x)}{k_y}\\
+B_y & = & -\left|B_0\right| \cos (k_y y) \cos (k_z z + \phi) \cosh (k_x x)
+\end{eqnarray}
+where $k_y^2 = k_x^2 + k_z^2$.
+
+Vertical wiggler, normal poles, produces $B_x$ only on-axis.   Specified
+by setting {\tt BX\_SPLIT\_POLE=0}, and giving {\tt BX\_FILE} or {\tt SINUSOIDAL=1} with {\tt VERTICAL=1} or
+{\tt HELICAL=1}.
+\begin{eqnarray}
+B_x & = & \left|B_0\right| \cos (k_y y) \cos (k_z z + \phi) \cosh (k_x x)\\
+B_y & = & -\left|B_0\right| \frac{k_y \cos (k_z z + \phi) \sin (k_y y) \sinh (k_x x)}{k_x}
+\end{eqnarray}
+where $k_x^2 = k_y^2 + k_z^2$.
+
+Vertical wiggler, normal poles, produces $B_x$ only on-axis.   Specified
+by setting {\tt BX\_SPLIT\_POLE=1}, and giving {\tt BX\_FILE} or {\tt SINUSOIDAL=1} with {\tt VERTICAL=1} or
+{\tt HELICAL=1}.
+\begin{eqnarray}
+B_x & = & \left|B_0\right| \cos (k_x x) \cos (k_z z + \phi) \cosh (k_y y)\\
+B_y & = & \left|B_0\right| \frac{k_y \cos (k_z z + \phi) \sin (k_x x) \sinh (k_y y)}{k_x}
+\end{eqnarray}
+where $k_x^2 = k_y^2 + k_z^2$.
