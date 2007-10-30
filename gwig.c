@@ -34,7 +34,7 @@
 void GWigRadiationKicks(struct gwig *pWig, double *X, double *Bxyz, double dl);
 void GWigB(struct gwig *pWig, double *Xvec, double *B);
 
-#define FIELD_OUTPUT 0
+#define FIELD_OUTPUT 1
 
 void GWigGauge(struct gwig *pWig, double *X, int flag)
 
@@ -256,12 +256,12 @@ void GWigAx(struct gwig *pWig, double *Xvec, double *pax, double *paxpy)
   gamma0   = pWig->E0/XMC2;
   beta0    = sqrt(1e0 - 1e0/(gamma0*gamma0));
   if (pWig->NHharm && z>=pWig->zStartH && z<=pWig->zEndH) {
-    /* Horizontal Wiggler: note that one potentially could have: kx=0 */
     if (pWig->PB0H!=0)
       pWig->Aw = (q_e/m_e/clight)/(2e0*PI) * (pWig->Lw) * (pWig->PB0H);
     else
       pWig->Aw = (q_e/m_e/clight)/(2e0*PI) * (pWig->Lw) * (pWig->PB0);
     if (!pWig->HSplitPole) {
+      /* Normal Horizontal Wiggler: note that one potentially could have: kx=0 */
       for (i = 0; i < pWig->NHharm; i++) {
         pWig->HCw[i] = pWig->HCw_raw[i]*(pWig->Aw)/(gamma0*beta0);
         kx = pWig->Hkx[i];
@@ -284,6 +284,7 @@ void GWigAx(struct gwig *pWig, double *Xvec, double *pax, double *paxpy)
         axpy = axpy + pWig->HCw[i]*(kw/kz)*ky*sxkx*shy*sz;
       }
     } else {
+      /* Split-pole Horizontal Wiggler: note that one potentially could have: ky=0 (caught in main routine) */
       for (i = 0; i < pWig->NHharm; i++) {
         pWig->HCw[i] = pWig->HCw_raw[i]*(pWig->Aw)/(gamma0*beta0);
         kx = pWig->Hkx[i];
@@ -296,11 +297,7 @@ void GWigAx(struct gwig *pWig, double *Xvec, double *pax, double *paxpy)
         sz = sin(kz*z+tz);
         ax = ax + pWig->HCw[i]*(kw/kz)*cy*chx*sz;
         
-        if (abs(kx/kw)>GWIG_EPS) {
-          shxkx = sinh(kx*x)/kx;
-        } else {
-          shxkx = x*(1 + sqr(kx*x)/6);
-        }
+        shxkx = sinh(kx*x)/kx;
         axpy = axpy - pWig->HCw[i]*(kw/kz)*ky*sin(ky*y)*shxkx*sz;
       } 
     }
@@ -308,12 +305,12 @@ void GWigAx(struct gwig *pWig, double *Xvec, double *pax, double *paxpy)
   
   
   if (pWig->NVharm && z>=pWig->zStartV && z<=pWig->zEndV) {
-    /* Vertical Wiggler: note that one potentially could have: ky=0 */
     if (pWig->PB0V!=0)
       pWig->Aw = (q_e/m_e/clight)/(2e0*PI) * (pWig->Lw) * (pWig->PB0V);
     else
       pWig->Aw = (q_e/m_e/clight)/(2e0*PI) * (pWig->Lw) * (pWig->PB0);
     if (!pWig->VSplitPole) {
+      /* Normal Vertical Wiggler: note that one potentially could have: ky=0 */
       for (i = 0; i < pWig->NVharm; i++ ) {
         pWig->VCw[i] = pWig->VCw_raw[i]*(pWig->Aw)/(gamma0*beta0);
         kx = pWig->Vkx[i];
@@ -331,6 +328,7 @@ void GWigAx(struct gwig *pWig, double *Xvec, double *pax, double *paxpy)
         axpy = axpy + pWig->VCw[i]*(kw/kz)* ipow(ky/kx,2) *chx*cy*sz;      
       }
     } else {
+      /* Split-pole Vertical Wiggler: note that one potentially could have: kx=0 (caught in main routine) */
       for (i = 0; i < pWig->NVharm; i++ ) {
         pWig->VCw[i] = pWig->VCw_raw[i]*(pWig->Aw)/(gamma0*beta0);
         kx = pWig->Vkx[i];
@@ -372,12 +370,12 @@ void GWigAy(struct gwig *pWig, double *Xvec, double *pay, double *paypx)
   beta0   = sqrt(1e0 - 1e0/(gamma0*gamma0));
      
   if (pWig->NHharm && z>=pWig->zStartH && z<=pWig->zEndH) {
-    /* Horizontal Wiggler: note that one potentially could have: kx=0 */
     if (pWig->PB0H!=0)
       pWig->Aw = (q_e/m_e/clight)/(2e0*PI) * (pWig->Lw) * (pWig->PB0H);
     else
       pWig->Aw = (q_e/m_e/clight)/(2e0*PI) * (pWig->Lw) * (pWig->PB0);
     if (!pWig->HSplitPole) {
+      /* Normal Horizontal Wiggler: note that one potentially could have: kx=0 */
       for ( i = 0; i < pWig->NHharm; i++ ){
         pWig->HCw[i] = (pWig->HCw_raw[i])*(pWig->Aw)/(gamma0*beta0);
         kx = pWig->Hkx[i];
@@ -396,6 +394,7 @@ void GWigAy(struct gwig *pWig, double *Xvec, double *pay, double *paypx)
         aypx = aypx + (pWig->HCw[i])*(kw/kz)*ipow(kx/ky,2) * cx*chy*sz;
       }
     } else {
+      /* Split-pole Horizontal Wiggler: note that one potentially could have: ky=0 (caught in main routine) */
       for ( i = 0; i < pWig->NHharm; i++ ){
         pWig->HCw[i] = (pWig->HCw_raw[i])*(pWig->Aw)/(gamma0*beta0);
         kx = pWig->Hkx[i];
@@ -417,6 +416,7 @@ void GWigAy(struct gwig *pWig, double *Xvec, double *pay, double *paypx)
     else
       pWig->Aw = (q_e/m_e/clight)/(2e0*PI) * (pWig->Lw) * (pWig->PB0);
     if (!pWig->VSplitPole) {
+      /* Normal Vertical Wiggler, could have ky=0 */
       for (i = 0; i < pWig->NVharm; i++ ) {
         pWig->VCw[i] = (pWig->VCw_raw[i])*(pWig->Aw)/(gamma0*beta0);       
         kx = pWig->Vkx[i];
@@ -437,6 +437,7 @@ void GWigAy(struct gwig *pWig, double *Xvec, double *pay, double *paypx)
         aypx = aypx + (pWig->VCw[i])*(kw/kz)* kx*shx*syky*sz;
       }
     } else {
+      /* Split-pole Vertical Wiggler, could have kx=0 */
       for (i = 0; i < pWig->NVharm; i++ ) {
         pWig->VCw[i] = (pWig->VCw_raw[i])*(pWig->Aw)/(gamma0*beta0);       
         kx = pWig->Vkx[i];
@@ -446,10 +447,7 @@ void GWigAy(struct gwig *pWig, double *Xvec, double *pay, double *paypx)
 
         sz   = sin(kz * z + tz);
         ay   = ay + (pWig->VCw[i])*(kw/kz)*cosh(ky*y)*cos(kx*x)*sz;
-        if (abs(ky/kw) > GWIG_EPS)
-          shyky = sinh(ky*y)/ky;
-        else
-          shyky = y*(1 + sqr(ky*y)/6);
+        shyky = sinh(ky*y)/ky;
         aypx = aypx - (pWig->VCw[i])*(kw/kz)*kx*shyky*sin(kx*x)*sz;
       }
     }
@@ -492,9 +490,9 @@ void GWigB(struct gwig *pWig, double *Xvec, double *B)
   B[0] = B[1] = 0;
 
   if (pWig->NHharm && z>=pWig->zStartH && z<=pWig->zEndH) {
-    /* Horizontal Wiggler: note that one potentially could have: kx=0 */
     B0 = pWig->PB0H ? pWig->PB0H : pWig->PB0;
     if (!pWig->HSplitPole) {
+      /* Normal Horizontal Wiggler: note that one potentially could have: kx=0 */
       for (i = 0; i < pWig->NHharm; i++) {
         kx = pWig->Hkx[i];
         ky = pWig->Hky[i];
@@ -512,6 +510,7 @@ void GWigB(struct gwig *pWig, double *Xvec, double *B)
         B[1] -= B0*pWig->HCw_raw[i]*cx*chy*cz;
       }
     } else {
+      /* Split-pole Horizontal Wiggler: note that one potentially could have: ky=0 (caught in main routine) */
       for (i = 0; i < pWig->NHharm; i++) {
         kx = pWig->Hkx[i];
         ky = pWig->Hky[i];
@@ -531,9 +530,9 @@ void GWigB(struct gwig *pWig, double *Xvec, double *B)
   }
   
   if (pWig->NVharm && z>=pWig->zStartV && z<=pWig->zEndV) {
-    /* Vertical Wiggler: note that one potentially could have: ky=0 */
     B0 = pWig->PB0V ? pWig->PB0V : pWig->PB0;
     if (!pWig->VSplitPole) {
+      /* Normal Vertical Wiggler: note that one potentially could have: ky=0 */
       for (i = 0; i < pWig->NVharm; i++ ) {
         kx = pWig->Vkx[i];
         ky = pWig->Vky[i];
@@ -551,6 +550,7 @@ void GWigB(struct gwig *pWig, double *Xvec, double *B)
         B[1] -= B0*pWig->VCw_raw[i]*ky/kx*shx*sy*cz;
       }
     } else {
+      /* Split-pole Vertical Wiggler: note that one potentially could have: kx=0 (caught in main routine) */
       for (i = 0; i < pWig->NVharm; i++ ) {
         kx = pWig->Vkx[i];
         ky = pWig->Vky[i];

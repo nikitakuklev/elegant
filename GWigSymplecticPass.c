@@ -26,21 +26,23 @@
 /******************************************************************************/
 /* PHYSICS SECTION ************************************************************/
 
-void GWigInit(struct gwig *Wig, 
+void GWigInit(struct gwig *Wig,
 	      double Ltot, /* total length of wiggler */
 	      double Lw,   /* wiggler period (m) */
 	      double Bmax, /* peak magnetic field (Tesla) */
+              double BHmax, /* peak magnetic field (Tesla) for H wiggler expansion, ignored if Bmax is nonzero */
+              double BVmax, /* peak magnetic field (Tesla) for V wiggler expansion, ignored if Bmax is nonzero */
 	      int Nstep,   /* number of integration steps (per period?) */
 	      int Nmeth,   /* integration method (2 or 4 for integration order) */
 	      int NHharm,  /* number of horizontal harmonics (By) */
 	      int NVharm,  /* number of vertical harmonics (Bx) */
+              int HSplitPole,  /* use split-pole expansion for horizontal harmonics? */
+              int VSplitPole,  /* use split-pole expansion for vertical harmonics? */
 	      double *pBy, /* data for horizontal harmonics (By) */ 
 	                   /* (harmonic, strength, kx/kw, ky/kw, kz/kw, phase, ...) */
 	      double *pBx, /* data for vertical harmonics (Bx) */
-	      double *T1,  /* unused */
-	      double *T2,  /* unused */
-	      double *R1,  /* unused */
-	      double *R2,  /* unused */
+              double *zEndPointH, /* endpoint data for horizontal harmonics (By) */
+              double *zEndPointV, /* endpoint data for vertical harmonics (Bx) */
 	      double pCentral, /* central momentum (beta*gamma) */
               long synchRad,   /* classical radiation ? */
               long isr         /* quantum (incoherent) radiation ? */
@@ -58,20 +60,32 @@ void GWigInit(struct gwig *Wig,
   Wig->NHharm = NHharm;
   Wig->NVharm = NVharm;
   Wig->PB0 = Bmax;
+  Wig->PB0H = BHmax;
+  Wig->PB0V = BVmax;
   Wig->Lw  = Lw;
   Wig->srCoef = 0;
-
-  if (Wig->sr = synchRad)
+  Wig->HSplitPole = HSplitPole;
+  Wig->VSplitPole = VSplitPole;
+  Wig->zStartH = zEndPointH[0];
+  Wig->zEndH = zEndPointH[1];
+  Wig->zStartV = zEndPointV[0];
+  Wig->zEndV = zEndPointV[1];
+  
+  if ((Wig->sr = synchRad))
     Wig->srCoef = sqr(e_mks)*ipow(pCentral, 3)/(6*PI*epsilon_o*me_mks*sqr(c_mks));
 
   Wig->isrCoef = 0;
-  if (Wig->isr = isr)
+  if ((Wig->isr = isr))
     Wig->isrCoef = re_mks*sqrt(55/(24.0*sqrt(3))*ipow(pCentral, 5)*137.0359895);
 
   kw = 2.0e0*PI/(Wig->Lw);
   Wig->Zw = 0.0;
   Wig->Aw = 0.0;
   tmppr = pBy;
+  if (NHharm>WHmax || NVharm>WHmax) {
+    printf("*** Error: too many harmonics for CWIGGLER. Maximum is %ld.\n", WHmax);
+    exit(1);
+  }
   for (i = 0; i < NHharm; i++){
     tmppr++;
     Wig->HCw[i] = 0.0;
@@ -142,9 +156,12 @@ void GWigSymplecticPass(double **coord, long num_particles, double pCentral,
   double r6[6], denom;
   struct gwig Wig;
   MALIGN malign;
-
+  TRACKING_CONTEXT tContext;
+  
+  getTrackingContext(&tContext);
+  
   if (!cwiggler->initialized) 
-    InitializeCWiggler(cwiggler);
+    InitializeCWiggler(cwiggler, tContext.elementName);
 
 /*
   if ((cwiggler->sr || cwiggler->isr) && cwiggler->integrationOrder==fourth) {
@@ -154,13 +171,14 @@ void GWigSymplecticPass(double **coord, long num_particles, double pCentral,
 */
 
   GWigInit(&Wig, cwiggler->length, cwiggler->length/cwiggler->periods, 
-	   cwiggler->BMax, cwiggler->stepsPerPeriod, 
+	   cwiggler->BMax, cwiggler->ByMax, cwiggler->BxMax, 
+           cwiggler->stepsPerPeriod, 
 	   cwiggler->integrationOrder,
-	   cwiggler->ByHarmonics, 
-	   cwiggler->BxHarmonics,
-	   cwiggler->ByData,
-	   cwiggler->BxData,
-	   NULL, NULL, NULL, NULL, pCentral,
+	   cwiggler->ByHarmonics, cwiggler->BxHarmonics,
+           cwiggler->BySplitPole, cwiggler->BxSplitPole,
+	   cwiggler->ByData, cwiggler->BxData,
+           cwiggler->zEndPointH, cwiggler->zEndPointV, 
+           pCentral,
            cwiggler->sr, cwiggler->isr);
 
   if (cwiggler->tilt)
@@ -227,41 +245,111 @@ void GWigSymplecticPass(double **coord, long num_particles, double pCentral,
     rotateBeamCoordinates(coord, num_particles, -cwiggler->tilt);
 }
 
-void InitializeCWiggler(CWIGGLER *cwiggler)
+void InitializeCWiggler(CWIGGLER *cwiggler, char *name)
 {
   double sumCmn2[2] = {0,0};
   long i;
   if (cwiggler->initialized)
     return;
+  if (cwiggler->BMax && (cwiggler->BxMax || cwiggler->ByMax)) {
+    printf("*** Error: Non-zero BMAX for CWIGGLER when BXMAX or BYMAX also non-zero\n");
+    exit(1);
+  }
   if (cwiggler->sinusoidal) {
     if (cwiggler->BxFile || cwiggler->ByFile)
       printf("*** Warning: CWIGGLER element has SINUSOIDAL=1, but also has filenames\n");
     cwiggler->BxHarmonics = 0;
     cwiggler->BxData = NULL;
-    cwiggler->ByHarmonics = 1;
-    cwiggler->ByData = tmalloc(sizeof(*(cwiggler->ByData))*6);
-    cwiggler->ByData[0] = 0;  /* row */
-    cwiggler->ByData[1] = 1;  /* Cmn */
-    cwiggler->ByData[2] = 0;  /* kx */
-    cwiggler->ByData[3] = 1;  /* ky */
-    cwiggler->ByData[4] = 1;  /* kz */
-    cwiggler->ByData[5] = 0;  /* phase */
+    if (!cwiggler->vertical || cwiggler->helical) {
+      cwiggler->ByHarmonics = 1;
+      cwiggler->ByData = tmalloc(sizeof(*(cwiggler->ByData))*6);
+      cwiggler->ByData[0] = 0;  /* row */
+      cwiggler->ByData[1] = 1;  /* Cmn */
+      cwiggler->ByData[2] = 0;  /* kx */
+      cwiggler->ByData[3] = 1;  /* ky */
+      cwiggler->ByData[4] = 1;  /* kz */
+      cwiggler->ByData[5] = 0;  /* phase */
+    }
+    if (cwiggler->vertical || cwiggler->helical) {
+      cwiggler->BxHarmonics = 1;
+      cwiggler->BxData = tmalloc(sizeof(*(cwiggler->BxData))*6);
+      cwiggler->BxData[0] = 0;     /* row */
+      cwiggler->BxData[1] = 1;     /* Cmn */
+      cwiggler->BxData[2] = 1;     /* kx */
+      cwiggler->BxData[3] = 0;     /* ky */
+      cwiggler->BxData[4] = 1;     /* kz */
+      if (cwiggler->helical)
+        cwiggler->BxData[5] = PI/2;  /* phase */
+      else 
+        cwiggler->BxData[5] = 0;
+    }
   } else {
+    if (cwiggler->helical) {
+      printf("*** Error: CWIGGLER element has HELICAL=1, but doesn't have SINUSOIDAL=1\n");
+      exit(1);
+    }
+    if (cwiggler->vertical) {
+      printf("*** Error: CWIGGLER element has VERTICAL=1, but doesn't have SINUSOIDAL=1\n");
+      exit(1);
+    }
     ReadCWigglerHarmonics(&cwiggler->ByData, &cwiggler->ByHarmonics, 
-                          cwiggler->ByFile, "By");
+                          cwiggler->ByFile, "By", 0, cwiggler->BySplitPole);
     ReadCWigglerHarmonics(&cwiggler->BxData, &cwiggler->BxHarmonics, 
-                          cwiggler->BxFile, "Bx");
+                          cwiggler->BxFile, "Bx", 1, cwiggler->BxSplitPole);
   }
   for (i=0; i<cwiggler->ByHarmonics; i++)
     sumCmn2[0] += sqr(cwiggler->ByData[6*i+1]);
   for (i=0; i<cwiggler->BxHarmonics; i++)
     sumCmn2[1] += sqr(cwiggler->BxData[6*i+1]);
   cwiggler->sumCmn2 = MAX(sumCmn2[0], sumCmn2[1]);
+
+  if (cwiggler->ByHarmonics) {
+    double phase;
+    phase = fmod(cwiggler->ByData[5], PIx2);
+    if (cwiggler->BMax==0 && cwiggler->ByMax==0)
+      printf("*** Warning: BMAX=0 and BYMAX=0 for CWIGGLER WITH BY Harmonics\n");
+    if (phase==0 || phase==PI || !cwiggler->forceMatched) {
+      cwiggler->zEndPointH[0] = 0;
+      cwiggler->zEndPointH[1] = cwiggler->length;
+    } else if (phase<PI) {
+      cwiggler->zEndPointH[0] = (PI-phase)/(PIx2)*(cwiggler->length/cwiggler->periods);
+      cwiggler->zEndPointH[1] = cwiggler->length - (cwiggler->length/cwiggler->periods - cwiggler->zEndPointH[0]) ;
+    } else {
+      cwiggler->zEndPointH[0] = (PIx2-phase)/(PIx2)*(cwiggler->length/cwiggler->periods);
+      cwiggler->zEndPointH[1] = cwiggler->length - (cwiggler->length/cwiggler->periods - cwiggler->zEndPointH[0]) ;
+    }
+    if (phase!=0 && phase!=PI && cwiggler->forceMatched)
+      printf("Inset endpoints for CWIGGLER %s By Harmonic Data: %le, %le\n",
+             name, cwiggler->zEndPointH[0], cwiggler->zEndPointH[1]);
+    /* This helps ensure the field is right for the last point even with summation errors for the z position */
+    cwiggler->zEndPointH[1] += (cwiggler->length/cwiggler->periods)/cwiggler->stepsPerPeriod/10;
+  }
+  if (cwiggler->BxHarmonics) {
+    double phase;
+    phase = fmod(cwiggler->BxData[5], PIx2);
+    if (cwiggler->BMax==0 && cwiggler->BxMax==0)
+      printf("*** Warning: BMAX=0 and BXMAX=0 for CWIGGLER WITH BX Harmonics\n");
+    if (phase==0 || phase==PI || !cwiggler->forceMatched) {
+      cwiggler->zEndPointV[0] = 0;
+      cwiggler->zEndPointV[1] = cwiggler->length;
+    } else if (phase<PI) {
+      cwiggler->zEndPointV[0] = (PI-phase)/(PIx2)*(cwiggler->length/cwiggler->periods);
+      cwiggler->zEndPointV[1] = cwiggler->length - (cwiggler->length/cwiggler->periods - cwiggler->zEndPointV[0]) ;
+    } else {
+      cwiggler->zEndPointV[0] = (PIx2-phase)/(PIx2)*(cwiggler->length/cwiggler->periods);
+      cwiggler->zEndPointV[1] = cwiggler->length - (cwiggler->length/cwiggler->periods - cwiggler->zEndPointV[0]) ;
+    }
+    if (phase!=0 && phase!=PI && cwiggler->forceMatched)
+      printf("Inset endpoints for CWIGGLER %s Bx Harmonic Data: %le, %le\n",
+             name, cwiggler->zEndPointV[0], cwiggler->zEndPointV[1]);
+    /* This helps ensure the field is right for the last point even with summation errors for the z position */
+    cwiggler->zEndPointV[1] += (cwiggler->length/cwiggler->periods)/cwiggler->stepsPerPeriod/10;
+  }
   cwiggler->initialized = 1;
 }
 
 
-long ReadCWigglerHarmonics(double **BData, long *harmonics, char *file, char *name)
+long ReadCWigglerHarmonics(double **BData, long *harmonics, char *file, char *name, long verticalWiggler, long splitPole)
 {
   SDDS_DATASET SDDSin;
   double *Cmn, *kx, *ky, *kz, *phase;
@@ -297,6 +385,37 @@ long ReadCWigglerHarmonics(double **BData, long *harmonics, char *file, char *na
   }
 
   for (row=0; row<rows; row++) {
+    if (kz[row]<=0) {
+      printf("*** Error: Problem with KzOverKw in %s: value %e is not positive\n", file, kz[row]);
+      exit(1);
+    }
+    if ((!verticalWiggler && !splitPole) || (verticalWiggler && splitPole)) {
+      if (ky[row]<kz[row]) {
+        printf("*** Error: Problem with KyOverKw<KzOverKw in %s\n", file);
+        exit(1);
+      }
+      if (!fabs(kx[row]) && verticalWiggler) {
+        printf("*** Error: KxOverKw = 0 is not supported for vertical split pole wigglers\n");
+        exit(1);
+      }
+      if ( fabs(sqrt(sqr(kx[row])+sqr(kz[row]))/ky[row]-1)>1e-6 ) {
+        printf("*** Error: KyOverKw == sqrt(KxOverKw^2+KzOverKw^2) not satisfied to sufficient accuracy (1e-6) in %s\n", file);
+        exit(1);
+      }
+    } else {
+      if (kx[row]<kz[row]) {
+        printf("*** Error: Problem with KxOverKw<KzOverKw in %s\n", file);
+        exit(1);
+      } 
+      if (!fabs(ky[row]) && !verticalWiggler) {
+        printf("*** Error: KyOverKw = 0 is not supported for horizontal split pole wigglers\n");
+        exit(1);
+      }
+      if ( fabs(sqrt(sqr(ky[row])+sqr(kz[row]))/kx[row]-1)>1e-6 ) {
+        printf("*** Error: KxOverKw == sqrt(KyOverKw^2+KzOverKw^2) not satisfied to sufficient accuracy (1e-6) in %s\n", file);
+        exit(1);
+      }
+    }
     (*BData)[row*6]   = row;
     (*BData)[row*6+1] = Cmn[row];
     (*BData)[row*6+2] = kx[row];
@@ -304,8 +423,11 @@ long ReadCWigglerHarmonics(double **BData, long *harmonics, char *file, char *na
     (*BData)[row*6+4] = kz[row];
     (*BData)[row*6+5] = phase[row];
   }
-  if (!SDDS_Terminate(&SDDSin)) {
-    printf("Warning: problem terminating CWIGGLER input file\n");
-  }
+  if (phase[0]<0) {
+    printf("Error: Phase value for CWIGGLER first harmonic is negative.  This isn't allowed.\n");
+    exit(1);
+  }    
+  if (!SDDS_Terminate(&SDDSin))
+    printf("*** Warning: problem terminating CWIGGLER input file\n");
   return rows;
 }
