@@ -83,7 +83,7 @@ void GWigInit(struct gwig *Wig,
   Wig->Aw = 0.0;
   tmppr = pBy;
   if (NHharm>WHmax || NVharm>WHmax) {
-    printf("*** Error: too many harmonics for CWIGGLER. Maximum is %ld.\n", WHmax);
+    printf("*** Error: too many harmonics for CWIGGLER. Maximum is %ld.\n", (long)WHmax);
     exit(1);
   }
   for (i = 0; i < NHharm; i++){
@@ -180,7 +180,8 @@ void GWigSymplecticPass(double **coord, long num_particles, double pCentral,
            cwiggler->zEndPointH, cwiggler->zEndPointV, 
            pCentral,
            cwiggler->sr, cwiggler->isr);
-
+  Wig.cwiggler = cwiggler;
+  
   if (cwiggler->tilt)
     rotateBeamCoordinates(coord, num_particles, cwiggler->tilt);
   if (cwiggler->dx || cwiggler->dy || cwiggler->dz) {
@@ -189,6 +190,15 @@ void GWigSymplecticPass(double **coord, long num_particles, double pCentral,
     malign.dy = -cwiggler->dy;
     malign.dz = cwiggler->dz;
     offset_beam(coord, num_particles, &malign, pCentral);
+  }
+
+  if (cwiggler->fieldOutputInitialized) {
+    if (!SDDS_StartPage(&cwiggler->SDDSFieldOutput, 1000)) {
+      printf("*** Error: unable to start SDDS page for CWIGGLER field output\n");
+      SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+    cwiggler->fieldOutputRow = 0;
+    cwiggler->fieldOutputRows = 1000;
   }
 
   for (c=0; c<num_particles; c++) {	
@@ -234,6 +244,13 @@ void GWigSymplecticPass(double **coord, long num_particles, double pCentral,
     coord[c][3] = r6[3]/denom;
   }
 
+  if (cwiggler->fieldOutputInitialized) {
+    if (!SDDS_WritePage(&cwiggler->SDDSFieldOutput)) {
+      printf("*** Error: unable to write SDDS page for CWIGGLER field output\n");
+      SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+  }
+
   if (cwiggler->dx || cwiggler->dy || cwiggler->dz) {
     memset(&malign, 0, sizeof(malign));
     malign.dx = cwiggler->dx;
@@ -254,6 +271,21 @@ void InitializeCWiggler(CWIGGLER *cwiggler, char *name)
   if (cwiggler->BMax && (cwiggler->BxMax || cwiggler->ByMax)) {
     printf("*** Error: Non-zero BMAX for CWIGGLER when BXMAX or BYMAX also non-zero\n");
     exit(1);
+  }
+  if (cwiggler->fieldOutput) {
+    if (!SDDS_InitializeOutput(&cwiggler->SDDSFieldOutput, SDDS_BINARY, 0, NULL, NULL, cwiggler->fieldOutput) ||
+        !SDDS_DefineSimpleColumn(&cwiggler->SDDSFieldOutput, "x", "m", SDDS_FLOAT) ||
+        !SDDS_DefineSimpleColumn(&cwiggler->SDDSFieldOutput, "y", "m", SDDS_FLOAT) ||
+        !SDDS_DefineSimpleColumn(&cwiggler->SDDSFieldOutput, "z", "m", SDDS_FLOAT) ||
+        !SDDS_DefineSimpleColumn(&cwiggler->SDDSFieldOutput, "px", "", SDDS_FLOAT) ||
+        !SDDS_DefineSimpleColumn(&cwiggler->SDDSFieldOutput, "py", "", SDDS_FLOAT) ||
+        !SDDS_DefineSimpleColumn(&cwiggler->SDDSFieldOutput, "Bx", "T", SDDS_FLOAT) ||
+        !SDDS_DefineSimpleColumn(&cwiggler->SDDSFieldOutput, "By", "T", SDDS_FLOAT) ||
+        !SDDS_WriteLayout(&cwiggler->SDDSFieldOutput)) {
+      printf("*** Error: problem setting up field output file for CWIGGLER\n");
+      SDDS_PrintErrors(stdout,  SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+    cwiggler->fieldOutputInitialized = 1;
   }
   if (cwiggler->sinusoidal) {
     if (cwiggler->BxFile || cwiggler->ByFile)
@@ -293,9 +325,9 @@ void InitializeCWiggler(CWIGGLER *cwiggler, char *name)
       exit(1);
     }
     ReadCWigglerHarmonics(&cwiggler->ByData, &cwiggler->ByHarmonics, 
-                          cwiggler->ByFile, "By", 0, cwiggler->BySplitPole);
+                          cwiggler->ByFile, "By", 0, cwiggler->BySplitPole, cwiggler);
     ReadCWigglerHarmonics(&cwiggler->BxData, &cwiggler->BxHarmonics, 
-                          cwiggler->BxFile, "Bx", 1, cwiggler->BxSplitPole);
+                          cwiggler->BxFile, "Bx", 1, cwiggler->BxSplitPole, cwiggler);
   }
   for (i=0; i<cwiggler->ByHarmonics; i++)
     sumCmn2[0] += sqr(cwiggler->ByData[6*i+1]);
@@ -349,7 +381,7 @@ void InitializeCWiggler(CWIGGLER *cwiggler, char *name)
 }
 
 
-long ReadCWigglerHarmonics(double **BData, long *harmonics, char *file, char *name, long verticalWiggler, long splitPole)
+long ReadCWigglerHarmonics(double **BData, long *harmonics, char *file, char *name, long verticalWiggler, long splitPole, CWIGGLER *cwiggler)
 {
   SDDS_DATASET SDDSin;
   double *Cmn, *kx, *ky, *kz, *phase;
@@ -415,6 +447,11 @@ long ReadCWigglerHarmonics(double **BData, long *harmonics, char *file, char *na
         printf("*** Error: KxOverKw == sqrt(KyOverKw^2+KzOverKw^2) not satisfied to sufficient accuracy (1e-6) in %s\n", file);
         exit(1);
       }
+    }
+    if (PIx2*kz[row] > 2*cwiggler->stepsPerPeriod) {
+      printf("*** Error: KzOverKw = %le is too large for only %ld steps per period\n",
+             kz[row], cwiggler->stepsPerPeriod);
+      exit(1);
     }
     (*BData)[row*6]   = row;
     (*BData)[row*6+1] = Cmn[row];

@@ -64,6 +64,7 @@ struct gwig {
   double Vky[WHmax];
   double Vkz[WHmax];
   double Vtz[WHmax];
+  CWIGGLER *cwiggler;
 };
 
 void GWigGauge(struct gwig *pWig, double *X, int flag);
@@ -75,5 +76,5 @@ void GWigAy(struct gwig *pWig, double *Xvec, double *pay, double *paypx);
 double sinc(double x );
 void InitializeCWiggler(CWIGGLER *cwiggler, char *name);
 long ReadCWigglerHarmonics(double **BData, long *harmonics, char *file, char *name, long vertical,
-                           long splitPole);
+                           long splitPole, CWIGGLER *cwiggler);
 #endif

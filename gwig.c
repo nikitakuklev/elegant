@@ -33,6 +33,7 @@
 
 void GWigRadiationKicks(struct gwig *pWig, double *X, double *Bxyz, double dl);
 void GWigB(struct gwig *pWig, double *Xvec, double *B);
+void GWigAddToFieldOutput(CWIGGLER *cwiggler, double Z, double *X, double *B);
 
 #define FIELD_OUTPUT 0
 
@@ -105,7 +106,7 @@ void GWigPass_2nd(struct gwig *pWig, double *X)
   
   for (i = 1; i <= Nstep; i++) {
     GWigMap_2nd(pWig, X, dl);
-    if (pWig->sr || pWig->isr || FIELD_OUTPUT)  {
+    if (pWig->sr || pWig->isr || pWig->cwiggler->fieldOutputInitialized) {
       double B[2];
       double ax, ay, axpy, aypx;
       GWigAx(pWig, X, &ax, &axpy);
@@ -115,6 +116,8 @@ void GWigPass_2nd(struct gwig *pWig, double *X)
       X[3] -= ay;
       if (pWig->sr || pWig->isr)
         GWigRadiationKicks(pWig, X, B, dl);
+      if (pWig->cwiggler->fieldOutputInitialized)
+        GWigAddToFieldOutput(pWig->cwiggler, pWig->Zw, X, B);
 #if FIELD_OUTPUT
       fprintf(fpd, "%ld %e %e %e %e %e %e %e %e\n",
               index, pWig->Zw, X[0], X[2], X[1], X[3], X[4], B[0], B[1]);
@@ -159,7 +162,7 @@ void GWigPass_4th(struct gwig *pWig, double *X)
     GWigMap_2nd(pWig, X, dl1);
     GWigMap_2nd(pWig, X, dl0);
     GWigMap_2nd(pWig, X, dl1);
-    if (pWig->sr || pWig->isr)  {
+    if (pWig->sr || pWig->isr || pWig->cwiggler->fieldOutputInitialized) {
       double B[2];
       double ax, ay, axpy, aypx;
       GWigAx(pWig, X, &ax, &axpy);
@@ -167,7 +170,10 @@ void GWigPass_4th(struct gwig *pWig, double *X)
       GWigB(pWig, X, B);
       X[1] -= ax;
       X[3] -= ay;
-      GWigRadiationKicks(pWig, X, B, dl);
+      if (pWig->sr || pWig->isr)
+        GWigRadiationKicks(pWig, X, B, dl);
+      if (pWig->cwiggler->fieldOutputInitialized)
+        GWigAddToFieldOutput(pWig->cwiggler, pWig->Zw, X, B);
       X[1] += ax;
       X[3] += ay;
     }
@@ -611,4 +617,31 @@ void GWigRadiationKicks(struct gwig *pWig, double *X, double *Bxy, double dl)
   }
   
 }
+
+void GWigAddToFieldOutput(CWIGGLER *cwiggler, double Z, double *X, double *B) 
+{
+  SDDS_DATASET *SDDSout;
+
+  SDDSout = &(cwiggler->SDDSFieldOutput);
+  
+  if (cwiggler->fieldOutputRow==cwiggler->fieldOutputRows) {
+    if (!SDDS_LengthenTable(SDDSout, 1000)) {
+      printf("*** Error: problem lengthening table size for CWIGGLER field output.  Table was %ld rows\n",
+             cwiggler->fieldOutputRows);
+      SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+    cwiggler->fieldOutputRows += 1000;
+  }
+  if (!SDDS_SetRowValues(SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, cwiggler->fieldOutputRow,
+                        "x", (float)X[0], "y", (float)X[2], "z", (float)Z,
+                        "px", (float)X[1], "py", (float)X[2], 
+                        "Bx", (float)B[0], "By", (float)B[1], 
+                         NULL)) {
+      printf("*** Error: problem setting row values for CWIGGLER field output.\n");
+      SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  }
+  cwiggler->fieldOutputRow ++;
+  return ;
+}
+
 
