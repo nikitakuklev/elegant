@@ -21,7 +21,7 @@
 #ifndef GWIG
 #define GWIG
 
-#define WHmax 20
+#define WHmax 200
 #define GWIG_EPS (1e-6)
 
 static const int Elem_Entrance = 1;
@@ -74,5 +74,6 @@ void GWigAx(struct gwig *pWig, double *Xvec, double *pax, double *paxpy);
 void GWigAy(struct gwig *pWig, double *Xvec, double *pay, double *paypx);
 double sinc(double x );
 void InitializeCWiggler(CWIGGLER *cwiggler, char *name);
-long ReadCWigglerHarmonics(double **BData, long *harmonics, char *file, char *name, long vertical);
+long ReadCWigglerHarmonics(double **BData, long *harmonics, char *file, char *name, long vertical,
+                           long splitPole);
 #endif
