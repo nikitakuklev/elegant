@@ -34,7 +34,7 @@
 void GWigRadiationKicks(struct gwig *pWig, double *X, double *Bxyz, double dl);
 void GWigB(struct gwig *pWig, double *Xvec, double *B);
 
-#define FIELD_OUTPUT 1
+#define FIELD_OUTPUT 0
 
 void GWigGauge(struct gwig *pWig, double *X, int flag)
 
