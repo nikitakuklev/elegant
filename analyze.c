@@ -197,10 +197,10 @@ void do_transport_analysis(
     offset[2] = delta_y ;
     coord[4][2] += delta_y ;
     coord[5][2] -= delta_y ;
-    /* particles 6 and 7 are for d/dy */
+    /* particles 6 and 7 are for d/dyp */
     offset[3] = delta_y ;
-    coord[6][3] += delta_y ;
-    coord[7][3] -= delta_y ;
+    coord[6][3] += delta_yp ;
+    coord[7][3] -= delta_yp ;
     /* particles 8 and 9 are for d/ds */
     offset[4] = delta_s ;
     coord[8][4] += delta_s ;
@@ -219,9 +219,9 @@ void do_transport_analysis(
         /* particles 16 and 17 are for d/dy */
         coord[16][2] += 3*delta_y ;
         coord[17][2] -= 3*delta_y ;
-        /* particles 18 and 19 are for d/dy */
-        coord[18][3] += 3*delta_y ;
-        coord[19][3] -= 3*delta_y ;
+        /* particles 18 and 19 are for d/dyp */
+        coord[18][3] += 3*delta_yp ;
+        coord[19][3] -= 3*delta_yp ;
         /* particles 20 and 21 are for d/ds */
         coord[20][4] += 3*delta_s ;
         coord[21][4] -= 3*delta_s ;
@@ -433,4 +433,103 @@ void finish_transport_analysis(
         }        
     SDDS_analyze_initialized = 0;
     }
+
+
+VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *stepSize)
+{
+  double **coord;
+  long n_track, i, j;
+  VMATRIX *M;
+  double **R, *C;
+  double defaultStep[6] = {1e-5, 1e-5, 1e-5, 1e-5, 1e-5, 1e-5};
+
+  coord = (double**)czarray_2d(sizeof(**coord), 1+6*4, 7);
+
+  if (stepSize==NULL)
+    stepSize = defaultStep;
+  
+  n_track = 4*6+1;
+  for (j=0; j<7; j++)
+    for (i=0; i<n_track; i++)
+      coord[i][j] = startingCoord ? startingCoord[j] : 0;
+
+  /* particles 0 and 1 are for d/dx */
+  coord[0][0] += stepSize[0] ;
+  coord[1][0] -= stepSize[0] ;
+  /* particles 2 and 3 are for d/dxp */
+  coord[2][1] += stepSize[1];
+  coord[3][1] -= stepSize[1];
+  /* particles 4 and 5 are for d/dy */
+  coord[4][2] += stepSize[2] ;
+  coord[5][2] -= stepSize[2] ;
+  /* particles 6 and 7 are for d/dyp */
+  coord[6][3] += stepSize[3] ;
+  coord[7][3] -= stepSize[3] ;
+  /* particles 8 and 9 are for d/ds */
+  coord[8][4] += stepSize[4] ;
+  coord[9][4] -= stepSize[4] ;
+  /* particles 10 and 11 are for d/delta */
+  coord[10][5] += stepSize[5];
+  coord[11][5] -= stepSize[5];
+
+  /* particles 12 and 13 are for d/dx */
+  coord[12][0] += 3*stepSize[0] ;
+  coord[13][0] -= 3*stepSize[0] ;
+  /* particles 14 and 15 are for d/dxp */
+  coord[14][1] += 3*stepSize[1];
+  coord[15][1] -= 3*stepSize[1];
+  /* particles 16 and 17 are for d/dy */
+  coord[16][2] += 3*stepSize[2] ;
+  coord[17][2] -= 3*stepSize[2] ;
+  /* particles 18 and 19 are for d/dyp */
+  coord[18][3] += 3*stepSize[3] ;
+  coord[19][3] -= 3*stepSize[3] ;
+  /* particles 20 and 21 are for d/ds */
+  coord[20][4] += 3*stepSize[4] ;
+  coord[21][4] -= 3*stepSize[4] ;
+  /* particles 22 and 23 are for d/delta */
+  coord[22][5] += 3*stepSize[5];
+  coord[23][5] -= 3*stepSize[5];
+  /* particle n_track-1 is the reference particle (coordinates set above) */
+
+  switch (eptr->type) {
+  case T_CWIGGLER:
+    GWigSymplecticPass(coord, n_track, run->p_central, (CWIGGLER*)eptr->p_elem);
+    break;
+  default:
+    printf("*** Error: determineMatrix called for element that is not supported!\n");
+    printf("***        Seek professional help!\n");
+    exit(1);
+    break;
+  }
+  
+  M = tmalloc(sizeof(*M));
+  M->order = 1;
+  initialize_matrices(M, M->order);
+  R = M->R;
+  C = M->C;
+  
+  for (i=0; i<6; i++) {
+    /* i indexes the dependent quantity */
+
+    /* Determine C[i] */
+    C[i] = coord[n_track-1][i];
+
+    /* Compute R[i][j] */
+    for (j=0; j<6; j++) {
+      /* j indexes the initial coordinate value */
+      if (n_points==2) 
+        R[i][j] = (coord[2*j][i]-coord[2*j+1][i])/(2*stepSize[j]);
+      else
+        R[i][j] = 
+          (27*(coord[2*j][i]-coord[2*j+1][i])-(coord[2*j+12][i]-coord[2*j+13][i]))/(48*stepSize[j]);
+    }
+  }
+
+  free_czarray_2d((void**)coord, 1+4*6, 7);
+
+  print_matrices(stdout, "\nElement matrix determined from tracking:\n", M);
+  
+  return M;
+}
 

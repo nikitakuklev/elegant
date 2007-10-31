@@ -554,14 +554,13 @@ VMATRIX *compute_matrix(
 	if (cwiggler->BMax<=0 && cwiggler->BxMax<=0 && cwiggler->ByMax<=0) {
 	  fprintf(stderr, "*** Warning: CWIGGLER has BMAX<=0\n");
           elem->matrix = drift_matrix(cwiggler->length, run->default_order);
+          cwiggler->radiusInternal = HUGE_VAL;
 	} else {
           InitializeCWiggler(cwiggler, elem->name);
           if (cwiggler->ByHarmonics && cwiggler->BxHarmonics) {
-            printf("*** Warning: non-planar CWIGGLER detected.  Matrix for this element is not available.\n");
-            printf("    Twiss parameters and matrix-dependent quanities will not be correct!\n");
+            printf("*** Warning: non-planar CWIGGLER detected.\n");
+            printf("    Radiation integrals for this element will not be correct.\n");
           }
-          /* Basic first-harmonic focusing for a horizontal or vertical planar wiggler */
-          tilt = 0;
           if (cwiggler->BMax)
             cwiggler->radiusInternal = elem->Pref_input/(e_mks/me_mks/c_mks)/cwiggler->BMax;
           if (cwiggler->ByHarmonics) {
@@ -570,14 +569,8 @@ VMATRIX *compute_matrix(
           } else {
             if (cwiggler->BxMax)
               cwiggler->radiusInternal = elem->Pref_input/(e_mks/me_mks/c_mks)/cwiggler->BxMax;
-            tilt = PI/2;
           }
-          elem->matrix 
-            = wiggler_matrix(cwiggler->length,
-                             cwiggler->radiusInternal/sqrt(cwiggler->sumCmn2),
-                             cwiggler->dx, cwiggler->dy, cwiggler->dz,
-                             cwiggler->tilt + tilt,
-                             run->default_order);
+          elem->matrix = determineMatrix(run, elem, NULL, NULL);
         }
         break;
       case T_SCRIPT:

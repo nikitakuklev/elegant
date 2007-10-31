@@ -2475,9 +2475,12 @@ extern long calculate_matrices(LINE_LIST *line, RUN *run);
 extern VMATRIX *drift_matrix(double length, long order);
 extern VMATRIX *wiggler_matrix(double length, double radius, double dx, double dy, double dz,
 			       double tilt, long order);
+extern void GWigSymplecticPass(double **coord, long num_particles, double pCentral,
+			CWIGGLER *cwiggler);
 extern VMATRIX *sextupole_matrix(double K2, double length, long maximum_order, double tilt, double fse);
 extern VMATRIX *solenoid_matrix(double length, double ks, long max_order);
 extern VMATRIX *compute_matrix(ELEMENT_LIST *elem, RUN *run, VMATRIX *Mspace);
+extern VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *stepSize);
 extern void set_up_watch_point(WATCH *watch, RUN *run);
 extern VMATRIX *magnification_matrix(MAGNIFY *magnif);
 extern void reset_special_elements(LINE_LIST *beamline, long includeRF);
