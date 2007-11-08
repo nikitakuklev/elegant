@@ -109,7 +109,7 @@ long run_closed_orbit(RUN *run, LINE_LIST *beamline, double *starting_coord, BEA
     if (verbosity) {
       fprintf(stdout, "Starting point for closed orbit\n");
       for (i=0; i<6; i++) 
-	fprintf(stdout, "%e%s", starting_coord[i], i==5?"\n":", ");
+        fprintf(stdout, "%e%s", starting_coord[i], i==5?"\n":", ");
     }
 
     if (start_from_centroid || start_from_dp_centroid) {
