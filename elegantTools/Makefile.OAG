@@ -7,9 +7,12 @@
 # in the file LICENSE that is included with this distribution. 
 #*************************************************************************
 #
-# $Id: Makefile.OAG,v 1.2 2007-04-12 15:57:46 soliday Exp $
+# $Id: Makefile.OAG,v 1.3 2007-11-09 22:10:32 soliday Exp $
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.2  2007/04/12 15:57:46  soliday
+# Added touschekLifetime to elegantTools
+#
 # Revision 1.1  2007/03/30 16:50:28  soliday
 # Moved from directory above.
 #
@@ -46,12 +49,12 @@ USR_CFLAGS = 	-I$(EPICS_EXTENSIONS)/src/SDDS/include -I$(EPICS_EXTENSIONS_INCLUD
 
 ifdef WIN32
 USR_LIBS = 	mdbcommon matlib fftpack SDDS1 \
-		rpnlib mdbmth namelist mdblib \
+		namelist rpnlib mdbmth mdblib \
 		meschach z fdlibm
 z_DIR = $(EPICS_EXTENSIONS_LIB)
 else
 USR_LIBS = 	mdbcommon matlib fftpack SDDS1 \
-		rpnlib mdbmth namelist mdblib \
+		namelist rpnlib mdbmth mdblib \
 		meschach
 SYS_PROD_LIBS_DEFAULT += z 
 SYS_PROD_LIBS_Linux += z 
