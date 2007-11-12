@@ -7,7 +7,7 @@
 # in the file LICENSE that is included with this distribution. 
 #*************************************************************************
 #
-# $Id: Makefile,v 1.6 2006-08-24 19:20:06 soliday Exp $
+# $Id: Makefile,v 1.7 2007-11-12 19:52:40 soliday Exp $
 #
 #
 #
@@ -65,6 +65,14 @@ ifeq ($(EPICS_HOST_ARCH),solaris-sparc64)
 F77 = g77 -m64
 solaris_libs = -lcurses -lrt
 endif
+
+ifeq ($(OS_CLASS),Linux)
+ifeq ($(STATIC_BUILD),YES)
+static_flags = -Wl,-Bstatic -static-libgcc
+linux_libs = -lc
+endif
+endif
+
 usb$(OBJ) : 
 	$(F77) ../usb.f -c -o usb$(OBJ)	
 brighte$(OBJ) :
@@ -105,10 +113,10 @@ sddsurgent$(EXE) : $(URGENT_OBJNAMES)
 	c:\\epics\\extensions\\lib\\$(T_A)\\z.lib
 else
 sddsbrightness$(EXE): $(OBJNAMES)
-	$(F77) -o $@ $(OBJNAMES) -L$(INSTALL_LIB) -L$(EPICS_EXTENSIONS_LIB) -lmdbcommon -lmatlib -lfftpack -lSDDS1 -lrpnlib -lnamelist -lmdbmth -lmdblib -lz $(solaris_libs)
+	$(F77) -o $@ $(OBJNAMES) $(static_flags) -L$(INSTALL_LIB) -L$(EPICS_EXTENSIONS_LIB) -lmdbcommon -lmatlib -lfftpack -lSDDS1 -lrpnlib -lnamelist -lmdbmth -lmdblib -lz $(solaris_libs) $(linux_libs)
 
 sddsurgent$(EXE): $(URGENT_OBJNAMES)
-	$(F77) -o $@ $(URGENT_OBJNAMES) -L$(INSTALL_LIB) -L$(EPICS_EXTENSIONS_LIB) -loagphy -lmdbcommon -lmatlib -lfftpack -lSDDS1 -lrpnlib -lnamelist -lmdbmth -lmdblib -lz $(solaris_libs)
+	$(F77) -o $@ $(URGENT_OBJNAMES) $(static_flags) -L$(INSTALL_LIB) -L$(EPICS_EXTENSIONS_LIB) -loagphy -lmdbcommon -lmatlib -lfftpack -lSDDS1 -lrpnlib -lnamelist -lmdbmth -lmdblib -lz $(solaris_libs) $(linux_libs)
 endif
 
 endif
