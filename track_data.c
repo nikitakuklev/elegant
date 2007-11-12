@@ -1291,7 +1291,7 @@ PARAMETER sreffects_param[N_SREFFECTS_PARAMS] = {
     {"EXREF", "m", IS_DOUBLE, 0, (long)((char *)&SReffects_example.exRef), NULL, 0.0, 0, "reference equilibrium x emittance"},
     {"EYREF", "m", IS_DOUBLE, 0, (long)((char *)&SReffects_example.eyRef), NULL, 0.0, 0, "reference equilibrium y emittance"},
     {"SDELTAREF", "", IS_DOUBLE, 0, (long)((char *)&SReffects_example.SdeltaRef), NULL, 0.0, 0, "reference equilibrium fractional momentum spread"},
-    {"DDELTAREF", "", IS_DOUBLE, 0, (long)((char *)&SReffects_example.DdeltaRef), NULL, 0.0, 0, "reference fractional momentum loss (per turn)"},
+    {"DDELTAREF", "", IS_DOUBLE, 0, (long)((char *)&SReffects_example.DdeltaRef), NULL, 0.0, 0, "reference fractional momentum change per turn due to SR (negative value)"},
     {"PREF", "m$be$nc", IS_DOUBLE, 0, (long)((char *)&SReffects_example.pRef), NULL, 0.0, 0, "reference momentum (to which other reference values pertain)"},
     {"COUPLING", "", IS_DOUBLE, 0, (long)((char *)&SReffects_example.coupling), NULL, 0.0, 0, "x-y coupling"},
     {"FRACTION", "", IS_DOUBLE, 0, (long)((char *)&SReffects_example.fraction), NULL, 1.0, 0, "fraction of implied SR effect to simulate with each instance"},
