@@ -442,7 +442,8 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
   VMATRIX *M;
   double **R, *C;
   double defaultStep[6] = {1e-5, 1e-5, 1e-5, 1e-5, 1e-5, 1e-5};
-
+  long ltmp1, ltmp2;
+  
   coord = (double**)czarray_2d(sizeof(**coord), 1+6*4, 7);
 
   if (stepSize==NULL)
@@ -494,7 +495,12 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
 
   switch (eptr->type) {
   case T_CWIGGLER:
+    ltmp1 = ((CWIGGLER*)eptr->p_elem)->isr;
+    ltmp2 = ((CWIGGLER*)eptr->p_elem)->sr;
+    ((CWIGGLER*)eptr->p_elem)->isr = ((CWIGGLER*)eptr->p_elem)->sr = 0;
     GWigSymplecticPass(coord, n_track, run->p_central, (CWIGGLER*)eptr->p_elem);
+    ((CWIGGLER*)eptr->p_elem)->isr = ltmp1;
+    ((CWIGGLER*)eptr->p_elem)->sr = ltmp2;
     break;
   default:
     printf("*** Error: determineMatrix called for element that is not supported!\n");
