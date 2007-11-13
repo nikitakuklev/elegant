@@ -587,7 +587,7 @@ void applyLowPassFilterToImpedance(double *Z, long nfreq, double cutoff0, double
   long i;
   double f;
 
-  for (i=1; i<nfreq; i++) {
+  for (i=1; i<nfreq-1; i++) {
     f = (i*1.0)/nfreq;
     if (f<cutoff0)
       continue;
