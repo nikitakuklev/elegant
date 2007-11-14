@@ -4,6 +4,9 @@
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.1  2007/03/30 16:50:28  soliday
+# Moved from directory above.
+#
 # Revision 1.63  2007/01/24 19:06:23  emery
 # Indented code.
 #
@@ -53,7 +56,7 @@ set auto_path [linsert $auto_path 0  /usr/local/oag/apps/lib/$env(HOST_ARCH)]
 set auto_path [linsert $auto_path 0  /usr/local/oag/lib_patch/$env(HOST_ARCH)]
 APSDebugPath
 
-set CVSRevisionAuthor "\$Author: soliday $"
+set CVSRevisionAuthor "\$Author: borland $"
 
 APSApplication . -name elegantRingAnalysis \
   -overview "Performs various elegant simulations for a ring."
@@ -211,34 +214,34 @@ proc FillMainFrame {widget args} {
       -width 60 -textVariable momentum -contextHelp \
       "Enter the beam momentum in MeV/c."
     APSLabeledEntry .le2 -parent $widget -label "Matrix lattice file: " \
-      -width 60 -textVariable matrixLatticeFile -fileSelectButton 1 -buttonsOnLeft 1 -fileSelectPattern *.lte \
+      -width 80 -textVariable matrixLatticeFile -fileSelectButton 1 -buttonsOnLeft 1 -fileSelectPattern *.lte \
       -contextHelp \
       "Enter the name of the lattice file that uses matrix-based elements."
     APSLabeledEntry .le2a -parent $widget -label "Matrix beamline: " \
-      -width 60 -textVariable matrixBeamline \
+      -width 80 -textVariable matrixBeamline \
       -contextHelp \
       "Enter the name of the beamline for the matrix representation"
     APSLabeledEntry .le2b -parent $widget -label "Offset element for matrix beamline: " \
-      -width 60 -textVariable matrixOffsetElement \
+      -width 80 -textVariable matrixOffsetElement \
       -contextHelp \
       "Enter the name of the offset element (MALIGN) for the beamline for the matrix representation.  It should be at the start of the beamline."
 
     APSLabeledEntry .le3 -parent $widget -label "Tracking lattice file: " \
-      -width 60 -textVariable kickLatticeFile -fileSelectButton 1 -buttonsOnLeft 1 -fileSelectPattern *.lte \
+      -width 80 -textVariable kickLatticeFile -fileSelectButton 1 -buttonsOnLeft 1 -fileSelectPattern *.lte \
       -contextHelp \
       "Enter the name of the lattice file that uses kick-based elements for tracking."
     APSLabeledEntry .le3a -parent $widget -label "Kick beamline: " \
-      -width 60 -textVariable kickBeamline \
+      -width 80 -textVariable kickBeamline \
       -contextHelp \
       "Enter the name of the beamline for the kick representation"
     APSLabeledEntry .le3b -parent $widget -label "Offset element for kick beamline: " \
-      -width 60 -textVariable kickOffsetElement \
+      -width 80 -textVariable kickOffsetElement \
       -contextHelp \
       "Enter the name of the offset element (MALIGN) for the beamline for the kick representation.  It should be at the start of the beamline."
 
     foreach item {1 2 3 4} {
         APSLabeledEntry .le4$item -parent $widget -label "Parameter file (optional): " \
-          -width 60 -textVariable mainParameterFile($item) -fileSelectButton 1 -buttonsOnLeft 1 -fileSelectPattern *.param \
+          -width 80 -textVariable mainParameterFile($item) -fileSelectButton 1 -buttonsOnLeft 1 -fileSelectPattern *.param \
           -contextHelp \
           "Enter the name of the parameter file that contains element parameters.  It will be loaded over the lattice."
     }
@@ -246,12 +249,12 @@ proc FillMainFrame {widget args} {
       -variable forceOccurence -valueList "1 0" -buttonList "Yes No" -orientation horizontal \
       -contextHelp "If Yes, then when elements have the same name in the lattice file, elegant is forced to honor the occurence number of elements when loading parameters.  Not only is this faster, but it is necessary if there is any variation in properties among like-named elements.  If the parameter file only covers one sector of the ring, then No should be selected so that the element properties are loaded into all occurences of the same-named element."
     APSLabeledEntry .le5 -parent $widget -label "Output directory: " \
-      -width 60 -textVariable mainDirectory \
+      -width 80 -textVariable mainDirectory \
       -fileSelectButton 1 -buttonsOnLeft 1 -fileSelectDirectory 1 \
       -contextHelp \
       "Enter the directory in which to place calculation results." 
     APSLabeledEntry .le6 -parent $widget -label "Output file prefix (optional): " \
-      -width 60 -textVariable mainPrefix \
+      -width 80 -textVariable mainPrefix \
       -contextHelp "Enter an optional prefix to use in creating output filenames."
 
     APSRadioButtonFrame .rb1 -parent $widget -label "Use GridEngine? " -orientation horizontal \
@@ -347,7 +350,7 @@ proc FillCollectiveEffectsFrame {widget args} {
     APSFrame .hai -parent $widget -label "" 
     set w $widget.hai.frame
     APSLabeledEntry .hai -parent $w -label "Haissinski: " \
-      -width 70 -textVariable collectiveEffects(haissinskiOutput) -commandButton 1 
+      -width 80 -textVariable collectiveEffects(haissinskiOutput) -commandButton 1 
     APSButton .run -parent $w -text "Run" -command "Run -computation RunHaissinski" \
       -contextHelp "Do scan for Haissinski equation (bunch lengthening)."
     APSButton .display -parent $w -text "Display" -command "Display -type DisplayHaissinski" \
@@ -361,7 +364,7 @@ proc FillCollectiveEffectsFrame {widget args} {
     APSFrame .ibs -parent $widget -label "" 
     set w $widget.ibs.frame
     APSLabeledEntry .ibs -parent $w -label "IBS: " -commandButton 1 \
-      -width 60 -textVariable collectiveEffects(ibsOutput)
+      -width 80 -textVariable collectiveEffects(ibsOutput)
     APSButton .run -parent $w -text "Run" -command "Run -computation RunIBS" \
       -contextHelp "Do scan for intrabeam scattering."
     APSButton .display -parent $w -text "Display" -command "Display -type DisplayIBS" \
@@ -373,7 +376,7 @@ proc FillCollectiveEffectsFrame {widget args} {
     APSFrame .scts -parent $widget -label ""
     set w $widget.scts.frame
     APSLabeledEntry .scts -parent $w -label "SC tune spread: " -commandButton 1\
-      -width 60 -textVariable collectiveEffects(scTuneShiftOutput)
+      -width 80 -textVariable collectiveEffects(scTuneShiftOutput)
     APSButton .run -parent $w -text "Run" -command "Run -computation RunSCTuneShift" \
       -contextHelp "Compute space charge tune spreads."
     APSButton .display -parent $w -text "Display" -command "Display -type DisplaySCTuneShift" \
@@ -935,7 +938,7 @@ proc FillMomentumApertureFrame {widget args} {
       "Enter the number of jobs into which to divide the computation."
 
     APSLabeledEntry .leaf -parent $widget \
-      -label "Aperture file: " -width 60 -textVariable momentumAperture(apertureFile) \
+      -label "Aperture file: " -width 80 -textVariable momentumAperture(apertureFile) \
       -fileSelectButton 1 -buttonsOnLeft 1 -fileSelectPattern *.sdds \
       -contextHelp \
       "Enter the name of a file containing aperture data."
