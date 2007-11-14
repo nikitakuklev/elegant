@@ -4,6 +4,9 @@
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.2  2007/11/14 21:55:25  borland
+# File entry boxes are now 80 characters wide.
+#
 # Revision 1.1  2007/03/30 16:50:28  soliday
 # Moved from directory above.
 #
@@ -64,7 +67,7 @@ APSApplication . -name elegantRingAnalysis \
 .menu.file.menu insert 1 command -label "Read..." -command ReadConfiguration
 
 set status "Working..."
-APSScrolledStatus .status -parent .userFrame -textVariable status -height 10 -width 100
+APSScrolledStatus .status -parent .userFrame -textVariable status -height 10 -width 140 
 
 set sourceDir $OAGGlobal(OAGAppConfigDataDirectory)/elegant/ringAnalysisTemplates
 
