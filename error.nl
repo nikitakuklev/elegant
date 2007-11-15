@@ -10,6 +10,7 @@
     long summarize_error_settings = 0;
     STRING error_log = NULL;
     long no_errors_for_first_step = 0;
+    double error_factor = 1;
 #end
 
 #namelist error static

@@ -234,7 +234,7 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
 
             cp_str(errcon->item+n_items, str_toupper(item));
             cp_str(errcon->name+n_items, context->name);
-            errcon->error_level[n_items] = amplitude;
+            errcon->error_level[n_items] = amplitude*error_factor;
             errcon->error_cutoff[n_items] = cutoff;
             errcon->error_type[n_items] = match_string(type, known_error_type, N_ERROR_TYPES, 0);
             errcon->quan_name[n_items] = tmalloc(sizeof(char*)*(strlen(context->name)+strlen(item)+4));
