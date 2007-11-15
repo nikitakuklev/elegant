@@ -2196,8 +2196,8 @@ typedef struct {
   long initialized;
   double *ByData, *BxData; 
   long ByHarmonics, BxHarmonics;
-  double sumCmn2;            /* computed from dominant-plane harmonics */
-  double radiusInternal;     /* computed from BMax and sumCmn2 */
+  double BPeak[2];              
+  double radiusInternal[2];     
   double zEndPointH[2], zEndPointV[2];
   SDDS_DATASET SDDSFieldOutput;
   short fieldOutputInitialized;

@@ -29,8 +29,9 @@ void modify_rfca_matrices(ELEMENT_LIST *eptr, long order);
 void reset_rfca_matrices(ELEMENT_LIST *eptr, long order);
 void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI, 
                            ELEMENT_LIST *elem, 
-                           double beta0, double alpha0, double gamma0,
-                           double eta0, double etap0, double *coord);
+                           double beta0, double alpha0, double gamma0, double eta0, double etap0, 
+                           double betay0, double alphay0, double gammay0, double etay0, double etapy0, 
+                           double *coord);
 void AddWigglerRadiationIntegrals(double length, long periods, double radius,
 				  double eta, double etap, 
 				  double beta, double alpha,
@@ -419,8 +420,10 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
     elem->twiss->periodic = matched;
     if (radIntegrals)
       incrementRadIntegrals(radIntegrals, elem->twiss->dI, 
-                            elem, beta[0], alpha[0], gamma[0], 
-                            eta[0], etap[0], path0);
+                            elem, 
+                            beta[0], alpha[0], gamma[0], eta[0], etap[0], 
+                            beta[1], alpha[1], gamma[1], eta[1], etap[1], 
+                            path0);
     if (elem->type==T_ROTATE) {
       if (fabs(((ROTATE*)elem->p_elem)->tilt-PI/2.0)<1e-6 ||
           fabs(((ROTATE*)elem->p_elem)->tilt-3*PI/2.0)<1e-6 ||
@@ -1954,8 +1957,9 @@ void compute_twiss_statistics(LINE_LIST *beamline, TWISS *twiss_ave, TWISS *twis
 
 void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI, 
                            ELEMENT_LIST *elem, 
-                           double beta0, double alpha0, double gamma0,
-                           double eta0, double etap0, double *coord)
+                           double beta0, double alpha0, double gamma0, double eta0, double etap0, 
+                           double betay0, double alphay0, double gammay0, double etay0, double etapy0, 
+                           double *coord)
 {
   /* compute contribution to radiation integrals */
   long isBend;
@@ -1994,16 +1998,28 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
   } else if (elem->type==T_CWIGGLER) {
     CWIGGLER *wiggler;
     wiggler = (CWIGGLER*)(elem->p_elem);
-    AddWigglerRadiationIntegrals(wiggler->length, wiggler->periods*2, 
-				 wiggler->radiusInternal/sqrt(wiggler->sumCmn2), 
-				 eta0, etap0, 
-				 beta0, alpha0,
-				 &I1, &I2, &I3, &I4, &I5);
-    radIntegrals->I[0] += I1;
-    radIntegrals->I[1] += I2;
-    radIntegrals->I[2] += I3;
-    radIntegrals->I[3] += I4;
-    radIntegrals->I[4] += I5;
+    if (wiggler->BPeak[1]) {
+      /* By */
+      AddWigglerRadiationIntegrals(wiggler->length, wiggler->periods*2, 
+                                   wiggler->radiusInternal[1],
+                                   eta0, etap0, beta0, alpha0,
+                                   &I1, &I2, &I3, &I4, &I5);
+      radIntegrals->I[0] += I1;
+      radIntegrals->I[1] += I2;
+      radIntegrals->I[2] += I3;
+      radIntegrals->I[3] += I4;
+      radIntegrals->I[4] += I5;
+    }
+    if (wiggler->BPeak[0]) {
+      /* Bx */
+      I1 = I2 = I3 = I4 = I5 = 0;
+      AddWigglerRadiationIntegrals(wiggler->length, wiggler->periods*2, 
+                                   wiggler->radiusInternal[0],
+                                   etay0, etapy0, betay0, alphay0,
+                                   &I1, &I2, &I3, &I4, &I5);
+      radIntegrals->I[1] += I2;
+      radIntegrals->I[2] += I3;
+    }
   } else {
     isBend = 1;
     switch (elem->type) {

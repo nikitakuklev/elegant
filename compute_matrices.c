@@ -551,25 +551,17 @@ VMATRIX *compute_matrix(
 	break;
       case T_CWIGGLER:
 	cwiggler = (CWIGGLER*)elem->p_elem;
-	if (cwiggler->BMax<=0 && cwiggler->BxMax<=0 && cwiggler->ByMax<=0) {
-	  fprintf(stderr, "*** Warning: CWIGGLER has BMAX<=0\n");
+        InitializeCWiggler(cwiggler, elem->name);
+	if (cwiggler->BPeak[0]==0 && cwiggler->BPeak[1]==0) {
+	  fprintf(stderr, "*** Warning: CWIGGLER has zero field in both planes\n");
           elem->matrix = drift_matrix(cwiggler->length, run->default_order);
-          cwiggler->radiusInternal = HUGE_VAL;
+          cwiggler->radiusInternal[0] = cwiggler->radiusInternal[1] = HUGE_VAL;
 	} else {
-          InitializeCWiggler(cwiggler, elem->name);
-          if (cwiggler->ByHarmonics && cwiggler->BxHarmonics) {
-            printf("*** Warning: non-planar CWIGGLER detected.\n");
-            printf("    Radiation integrals for this element will not be correct.\n");
-          }
-          if (cwiggler->BMax)
-            cwiggler->radiusInternal = elem->Pref_input/(e_mks/me_mks/c_mks)/cwiggler->BMax;
-          if (cwiggler->ByHarmonics) {
-            if (cwiggler->ByMax)
-              cwiggler->radiusInternal = elem->Pref_input/(e_mks/me_mks/c_mks)/cwiggler->ByMax;
-          } else {
-            if (cwiggler->BxMax)
-              cwiggler->radiusInternal = elem->Pref_input/(e_mks/me_mks/c_mks)/cwiggler->BxMax;
-          }
+          cwiggler->radiusInternal[0] = cwiggler->radiusInternal[1] = HUGE_VAL;
+          if (cwiggler->BPeak[0])
+            cwiggler->radiusInternal[0] = elem->Pref_input/(e_mks/me_mks/c_mks)/cwiggler->BPeak[0];
+          if (cwiggler->BPeak[1])
+            cwiggler->radiusInternal[1] = elem->Pref_input/(e_mks/me_mks/c_mks)/cwiggler->BPeak[1];
           elem->matrix = determineMatrix(run, elem, NULL, NULL);
         }
         break;

@@ -264,7 +264,7 @@ void GWigSymplecticPass(double **coord, long num_particles, double pCentral,
 
 void InitializeCWiggler(CWIGGLER *cwiggler, char *name)
 {
-  double sumCmn2[2] = {0,0};
+  double sumCmn[2] = {0,0};
   long i;
   if (cwiggler->initialized)
     return;
@@ -330,11 +330,17 @@ void InitializeCWiggler(CWIGGLER *cwiggler, char *name)
                           cwiggler->BxFile, "Bx", 1, cwiggler->BxSplitPole, cwiggler);
   }
   for (i=0; i<cwiggler->ByHarmonics; i++)
-    sumCmn2[0] += sqr(cwiggler->ByData[6*i+1]);
+    sumCmn[1] += cwiggler->ByData[6*i+1];
   for (i=0; i<cwiggler->BxHarmonics; i++)
-    sumCmn2[1] += sqr(cwiggler->BxData[6*i+1]);
-  cwiggler->sumCmn2 = MAX(sumCmn2[0], sumCmn2[1]);
-
+    sumCmn[0] += cwiggler->BxData[6*i+1];
+  if (cwiggler->BMax) {
+    cwiggler->BPeak[0] = cwiggler->BMax*sumCmn[0];  
+    cwiggler->BPeak[1] = cwiggler->BMax*sumCmn[1];
+  } else {
+    cwiggler->BPeak[0] = cwiggler->BxMax*sumCmn[0];  
+    cwiggler->BPeak[1] = cwiggler->ByMax*sumCmn[1];
+  }
+  
   if (cwiggler->ByHarmonics) {
     double phase;
     phase = fmod(cwiggler->ByData[5], PIx2);
