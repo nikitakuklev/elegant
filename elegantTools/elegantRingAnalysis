@@ -4,6 +4,10 @@
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.4  2007/11/16 13:53:23  borland
+# Added entry box for the template file for dynamic aperture, so user can
+# change it if desired.
+#
 # Revision 1.3  2007/11/14 21:56:41  borland
 # Scrolled status window is wider.
 #
@@ -134,16 +138,31 @@ proc ReadConfiguration {} {
 
 proc Run {args} {
     set computation ""
-    APSStrictParseArguments {computation}
+    set processOnly 0
+    APSStrictParseArguments {computation processOnly}
     global sourceDir elegantSaveVarList makePngFiles
     eval global $elegantSaveVarList
-    APSElegant$computation -sourceDir $sourceDir -statusCallback setStatus \
-      -momentum $momentum -matrixLatticeFile $matrixLatticeFile \
-      -matrixBeamline $matrixBeamline -matrixOffsetElement $matrixOffsetElement \
-      -kickLatticeFile $kickLatticeFile -kickBeamline  $kickBeamline \
-      -kickOffsetElement $kickOffsetElement -forceOccurence $forceOccurence \
-      -mainDirectory $mainDirectory -mainPrefix $mainPrefix \
-      -gridEngine $gridEngine  -makePngFiles $makePngFiles
+
+    if $processOnly {
+        # Only if processOnly is set can we be sure that the procedure accepts this
+        # argument
+        APSElegant$computation -sourceDir $sourceDir -statusCallback setStatus \
+          -momentum $momentum -matrixLatticeFile $matrixLatticeFile \
+          -matrixBeamline $matrixBeamline -matrixOffsetElement $matrixOffsetElement \
+          -kickLatticeFile $kickLatticeFile -kickBeamline  $kickBeamline \
+          -kickOffsetElement $kickOffsetElement -forceOccurence $forceOccurence \
+          -mainDirectory $mainDirectory -mainPrefix $mainPrefix \
+          -gridEngine $gridEngine  -makePngFiles $makePngFiles \
+          -processOnly $processOnly
+    } else {
+        APSElegant$computation -sourceDir $sourceDir -statusCallback setStatus \
+          -momentum $momentum -matrixLatticeFile $matrixLatticeFile \
+          -matrixBeamline $matrixBeamline -matrixOffsetElement $matrixOffsetElement \
+          -kickLatticeFile $kickLatticeFile -kickBeamline  $kickBeamline \
+          -kickOffsetElement $kickOffsetElement -forceOccurence $forceOccurence \
+          -mainDirectory $mainDirectory -mainPrefix $mainPrefix \
+          -gridEngine $gridEngine  -makePngFiles $makePngFiles 
+    }
 }
 
 proc Display {args} {
@@ -698,6 +717,8 @@ proc FillDynamicApertureErrorsFrame {widget args} {
 
     APSButton .bu1 -parent $widget \
       -text "Run" -command "Run -computation DynamicApertureErrors"
+    APSButton .bu1a -parent $widget \
+      -text "Process" -command "Run -computation DynamicApertureErrors -processOnly 1"
     APSButton .bu2 -parent $widget \
       -text "Display" -command \
       {Display -type DynamicApertureErrors}
