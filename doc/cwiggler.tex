@@ -21,12 +21,14 @@ harmonic should be 0 or $\pi$ in order to have matched dispersion.
  {\tt KxOverKw}, {\tt KyOverKw}, and {\tt KzOverKw}.
 \end{itemize}
 
-For matrix and radiation integral computations, {\tt elegant} uses a
-WIGGLER element when it encounters a CWIGGLER.  The effective bending
-radius is $B\rho/B_0/\sqrt{\sum C_{mn}^2}$ (L. Emery, private
-communication).  Tests show that this gives good agreement in the
-tunes from tracking and Twiss parameter calculations.  Presently this
-works only for horizontal wigglers.
+In Version 17.3 and later, for matrix computations {\tt elegant} uses
+a first-order matrix derived from particle tracking when it
+encounterse a CWIGGLER.  Tests show that this gives good agreement in
+the tunes from tracking and Twiss parameter calculations.  For
+radiation integrals, an idealized sinusoidal wiggler model is used
+with bending radius equal to $B\rho/(B_0 \sum C_{mn})$ for each plane.
+Energy loss, energy spread, and horizontal emittance should be estimated
+accurately.
 
 {\tt elegant} allows specifying field expansions for on-axis $B_y$ and
 $B_x$ components, so one can model a helical wiggler.  However, in this
@@ -51,7 +53,7 @@ not always suitable for devices with more complex pole geometries.
 Another geometry that is important is a ``split pole'' wiggler, in which
 each pole is made from two pieces.  Such configurations are seen, for example,
 in devices used to produce variable polarization.  In such cases, the
-expansion given may not be appropriate.  Here, we summarize the form of the
+expansion given above may not be appropriate.  Here, we summarize the form of the
 various expansions that {\tt elegant} supports.  For brevity, we show the
 form of a single harmonic component.
 
