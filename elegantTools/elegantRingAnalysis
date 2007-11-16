@@ -4,6 +4,9 @@
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.3  2007/11/14 21:56:41  borland
+# Scrolled status window is wider.
+#
 # Revision 1.2  2007/11/14 21:55:25  borland
 # File entry boxes are now 80 characters wide.
 #
@@ -648,7 +651,7 @@ proc FillOffMomentumDynamicApertureFrame {widget args} {
 
 
 proc FillDynamicApertureErrorsFrame {widget args} {
-    global dynamicApertureErrors
+    global dynamicApertureErrors templateDirectory
 
     APSLabeledEntry .le1 -parent $widget \
       -label "Maximum x coordinate (m): " -width 20 -textVariable dynamicApertureErrors(xMaximum) \
@@ -687,7 +690,12 @@ proc FillDynamicApertureErrorsFrame {widget args} {
       -label "Include apertures: " -orientation horizontal -buttonList {Yes No} -valueList {1 0} \
       -variable dynamicApertureErrors(includeApertures) -contextHelp \
       "Choose whether to include the effects of apertures that are defined in the beamline."
-    
+
+    set dynamicApertureErrors(template) [file join $templateDirectory $dynamicApertureErrors(template)]
+    APSLabeledEntry .le8 -parent $widget \
+        -label "Template file: " -width 80 -textVariable dynamicApertureErrors(template) \
+        -contextHelp "Enter the name of the template file for the runs."
+
     APSButton .bu1 -parent $widget \
       -text "Run" -command "Run -computation DynamicApertureErrors"
     APSButton .bu2 -parent $widget \
@@ -1011,29 +1019,6 @@ proc DescribeSection {args} {
     }
 }
 
-set topTabList [APSTabFrame .top -parent .userFrame \
-                  -labelList $topLabelList -frameIndexVariable topIndex \
-                  -width 900 -height 600 -packOption "-expand true" \
-                  -commandList \
-                  [APSReplicateItem -item DescribeSection -number [llength $topLabelList]]]
-
-set index 0
-foreach name $topLabelList widget $topTabList { 
-    set tabList [set ${name}TabList]
-    set len [llength $tabList] 
-    set tabFrameList [APSTabFrame .under$name -parent $widget  -packOption "-expand true"\
-                        -labelList $tabList -width 900 -height 550 \
-                        -frameIndexVariable ${name}Index \
-                        -commandList \
-                        [APSReplicateItem -item DescribeSection -number $len]]
-    
-    for {set i 0} {$i<$len} {incr i} {
-        set section [lindex [set ${name}FrameList] $i]
-        Fill${section}Frame [lindex $tabFrameList $i]
-    } 
-    incr index
-}
-
 lappend elegantSaveVarList errors
 lappend elegantSaveVarList momentum matrixLatticeFile kickLatticeFile mainParameterFile mainDirectory
 lappend elegantSaveVarList mainPrefix gridEngine forceOccurence makePngFiles
@@ -1058,6 +1043,29 @@ if {[string length $configuration]} {
 }
 if [string length $templateDirectory] {
     set sourceDir $templateDirectory
+}
+
+set topTabList [APSTabFrame .top -parent .userFrame \
+                  -labelList $topLabelList -frameIndexVariable topIndex \
+                  -width 900 -height 600 -packOption "-expand true" \
+                  -commandList \
+                  [APSReplicateItem -item DescribeSection -number [llength $topLabelList]]]
+
+set index 0
+foreach name $topLabelList widget $topTabList { 
+    set tabList [set ${name}TabList]
+    set len [llength $tabList] 
+    set tabFrameList [APSTabFrame .under$name -parent $widget  -packOption "-expand true"\
+                        -labelList $tabList -width 900 -height 550 \
+                        -frameIndexVariable ${name}Index \
+                        -commandList \
+                        [APSReplicateItem -item DescribeSection -number $len]]
+    
+    for {set i 0} {$i<$len} {incr i} {
+        set section [lindex [set ${name}FrameList] $i]
+        Fill${section}Frame [lindex $tabFrameList $i]
+    } 
+    incr index
 }
 
 setStatus "Ready."
