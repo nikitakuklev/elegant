@@ -57,7 +57,7 @@ expansion given above may not be appropriate.  Here, we summarize the form of th
 various expansions that {\tt elegant} supports.  For brevity, we show the
 form of a single harmonic component.
 
-Horizontal wiggler, split poles, produces $B_y$ only on-axis.   Specified
+Horizontal wiggler, normal poles, produces $B_y$ only on-axis.   Specified
 by setting {\tt BY\_SPLIT\_POLE=0}, and giving {\tt BY\_FILE} or {\tt SINUSOIDAL=1} with {\tt VERTICAL=0}.
 \begin{eqnarray}
 B_x & = & \left|B_0\right| \frac{k_x \cos (k_z z + \phi) \sin (k_x x) \sinh (k_y y)}{k_y}\\
@@ -74,7 +74,7 @@ B_y & = & -\left|B_0\right| \cos (k_y y) \cos (k_z z + \phi) \cosh (k_x x)
 where $k_y^2 = k_x^2 + k_z^2$.
 
 Vertical wiggler, normal poles, produces $B_x$ only on-axis.   Specified
-by setting {\tt BX\_SPLIT\_POLE=0}, and giving {\tt BX\_FILE} or {\tt SINUSOIDAL=1} with {\tt VERTICAL=1} or
+by setting {\tt BX\_SPLIT\_POLE=0}, and giving {\tt BX\_FILE} or {\tt SINUSOIDAL=1} with either {\tt VERTICAL=1} or
 {\tt HELICAL=1}.
 \begin{eqnarray}
 B_x & = & \left|B_0\right| \cos (k_y y) \cos (k_z z + \phi) \cosh (k_x x)\\
@@ -82,8 +82,8 @@ B_y & = & -\left|B_0\right| \frac{k_y \cos (k_z z + \phi) \sin (k_y y) \sinh (k_
 \end{eqnarray}
 where $k_x^2 = k_y^2 + k_z^2$.
 
-Vertical wiggler, normal poles, produces $B_x$ only on-axis.   Specified
-by setting {\tt BX\_SPLIT\_POLE=1}, and giving {\tt BX\_FILE} or {\tt SINUSOIDAL=1} with {\tt VERTICAL=1} or
+Vertical wiggler, split poles, produces $B_x$ only on-axis.   Specified
+by setting {\tt BX\_SPLIT\_POLE=1}, and giving {\tt BX\_FILE} or {\tt SINUSOIDAL=1} with either {\tt VERTICAL=1} or
 {\tt HELICAL=1}.
 \begin{eqnarray}
 B_x & = & \left|B_0\right| \cos (k_x x) \cos (k_z z + \phi) \cosh (k_y y)\\
