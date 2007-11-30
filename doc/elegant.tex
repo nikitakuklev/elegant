@@ -17,17 +17,16 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 17.2.2\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
+\author{Program Version 17.3.1\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
 \maketitle
 
-\section{Highlights of What's New in Version 17.2.2}
+\section{Highlights of What's New in Version 17.3.1}
 
-This is primarily is bug-fix and performance release, with several significant bugs
-being corrected.  Parallelization now includes the longitudinal and
-transverse space-charge elements.  Several significant performance enhancements
-were made as well.  Here is a summary of what's changed
-since release 17.1.1.  For details and references, see the specific
-entries in the manual.
+This release has one significant bug fix plus significant feature
+improvements for the {\tt CWIGGLER} element.  There are also several minor
+feature improvements and bug fixes.
+Here is a summary of what's changed since release 17.2.2.  For details
+and references, see the specific entries in the manual.
 
 \subsection{Known Bugs and Problems}
 \begin{itemize}
@@ -44,72 +43,41 @@ entries in the manual.
   with only 30 processors.  Work continues to improve the scaling. 
 \end{itemize}
 
-\subsection{Bugs Fixes for Commands}
-\begin{itemize}
-\item Output of the inverse response matrix during multi-step runs had a bug, resulting in 
- repeated output of the same data.  Also, it wasn't always possible to get
- get updated response matrix output that was updated during multi-step runs, if the
- fixed path-length constraint was used, for example.  Reported by Michael Abo-Bakr (BESSY).
-\end{itemize}
-
 \subsection{Bug Fixes for Elements}
 \begin{itemize}
-\item The {\tt CWIGGLER} element had an error in the ordering of rotation and displacement removal 
- operations.   Simulations that contained both rotational
- and displacement errors for the same \verb|CWIGGLER| element should be repeated.
-\item There was an error in an exponent for synchrotron radiation expressions, resulting
- in incorrect dependence of the quantum fluctuations on transverse position in a dipole, quadrupole,
- or sextupole.  Tests with the APS ring showed small effects on results even for orbits with 
- several percent momentum deviation.
-\item The correction to the response matrix when there was dispersion at the corrector was being
- added with the wrong sign.  This would affect response matrix output in the bending plane.
- This is a minor effect in large rings but quite significant in small rings.
- Reported by Michael Abo-Bakr (BESSY).
-\item When particles were lost on an \verb|ECOL| element with non-zero length, the loss locations
- were recorded incorrectly.  Reported by Feng Zhou (SLAC).
-\item The \verb|FTRFMODE| element, which allows simulating multiple tranverse rf modes, had an unitialized
- variable that would result in incorrect accumulation of voltages over many passes.
-\item Previously, the transverse space-charge element \verb|SCMULT| could be inserted by hand into the 
- lattice, but it wouldn't actually run.  Now, the user is required to provide a \verb|insert_sceffects|
- command to use \verb|SCMULT|.
-\item The longitudinal space charge algorithm (\verb|LSCDRIFT| and \verb|RFCW|) would give give 
- invalid results if the number of bins was odd.  This odd choice of bin number is no longer allowed.
+\item An error was discovered in Y. Wu's C code version of the integrator for a vertical wiggler, used by 
+ the {\tt CWIGGLER} element.  This was confirmed with Y. Wu and corrected.
+\item An error was fixed in field computations for vertical wigglers that had very small effects on
+ synchrotron radiation modeling.  
+\item A memory access error was discovered in the low-pass filtering routine used by {\tt ZLONGIT} and
+ {\tt ZTRANSVERSE}, which would cause a crash on some recent Linux systems.  This was corrected. 
+ Very small changes have been observed in some results.
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item The {\tt CWIGGLER} element, which models a wiggler using Y. Wu's symplectic integration code,
- now optionally includes synchrotron radiation.  Y. Wu assisted in this work by helping with understanding of 
- the internals of his code.
-\item The {\tt ZLONGIT} and {\tt ZTRANSVERSE} elements will now recognize bunched beams.  This means 
- one can perform efficient simulations of multibunch beams with short-range impedance effects included.
- At present this feature is experimental and may change in the future.  It is not compatible with parallel execution.
- Contact M. Borland for assistance in using it.
-\item The \verb|SCMULT| element has been parallelized and now includes non-linear space charge forces \cite{Xiao2007A}.  \verb|SCMULT|
- has also been parallelized.
-\item Longitudinal space charge (via \verb|LSCDRIFT| and \verb|RFCW|) have been parallelized.
-\item The longitudinal electric field was added to \verb|FTRFMODE|.  This is typically a very small correction.
-\item The ramping option was added to \verb|WAKE| and \verb|TRWAKE|, having appeared previously for \verb|ZLONGIT|, \verb|ZTRANVERSE|,
- \verb|RFMODE|, \verb|TRFMODE|, \verb|FRFMODE|, and \verb|FTRFMODE|.
+\item The {\tt CWIGGLER} element was given a major upgrade.  The primary new feature is better
+ handling of helical devices, including new field expansions appropriate for APPLE-type devices
+ and adjustments to match the dispersion in both planes.  Convenience features were added to 
+ allow modeling more device types without specifying a harmonic expansion file. 
+ More checks are made on user input to
+ ensure validity.  The user may request output of the fields as seen by the particles.  
+ Radiation integral computations are more accurate and include both field components.
+ The linear transfer matrix, used for optics calculations, is computed from tracking and thus
+ includes both vertical and horizontal focusing.
+\item The {\tt TWISS} element can now perform transformations based on analysis of the
+ beam.  Previously, the transformation was based on the twiss parameters from the {\tt twiss\_output}
+ command only.  Insignificant changes in results may be observed.
+\item Longitudinal space charge is now available for the {\tt RFCW} element even when the SRS body focus
+ model is used.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item The optimizer can now access quantities related to the coupled lattice functions computed by
- \verb|coupled_twiss_output|.  
-\item The efficiency of the \verb|load_parameters| command was greatly improved through use of a 
- hash table.  This will have a significant impact on loading large files.  One implication of this
- is that the character \verb|#| is no longer allowed in beamline and element names.
-\item The load-balancing feature may now be turned off using the \verb|load_balancing_on| control in
- \verb|run_setup|.  This makes results deterministic and can aid, for example, in comparing runs
- that are part of a parameter scan.
-\end{itemize}
-
-\subsection{Changes and Additions to Related Programs}
-
-\begin{itemize}
-\item The \verb|beamLifetimeCalc| script was modified to fix a bug that would result in an 
- error being issued when the beam energy was changed.
+\item The {\tt error\_control} command now accepts an overall error factor that is applied to all
+ error amplitudes.
+\item The lattice parser was changed to allow insertion or omission of underscores in field names
+ without penalty.  E.g., {\tt KQUAD,N\_KICKS=4} and {\tt kQuad,nKicks=4} will both be accepted.
 \end{itemize}
 
 \section{Credits}
@@ -1282,6 +1250,7 @@ parameter.  If zero, then the errors replace the prior value of the parameter.
     long summarize_error_settings = 0;
     long no_errors_for_first_step = 0;
     STRING error_log = NULL;
+    double error_factor = 1;
 &end
 \end{verbatim}
 
@@ -1291,6 +1260,7 @@ parameter.  If zero, then the errors replace the prior value of the parameter.
 \item \verb|no_errors_for_first_step| --- If non-zero, then there will be no errors for the first step.  This can be useful for
  fiducialization of phase and momentum profiles.
 \item \verb|error_log| --- The (incomplete) name of a SDDS file to which error values will be written.  Recommended value: ``\%s.erl''.
+\item \verb|error_factor| --- A value by which to multiply the error amplitudes in all \verb|error| commands.
 \end{itemize}
 
 \begin{latexonly}
