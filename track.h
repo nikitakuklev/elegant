@@ -2304,11 +2304,13 @@ typedef struct {
 } TAYLORSERIES;
 
 /* macros for bending magnets */ 
+long determine_bend_flags(ELEMENT_LIST *eptr, long edge1_effects, long edge2_effects);
 #define SAME_BEND_PRECEDES 1 
 #define SAME_BEND_FOLLOWS 2 
 #define BEND_EDGE1_EFFECTS 4 
 #define BEND_EDGE2_EFFECTS 8 
 #define BEND_EDGE_EFFECTS (BEND_EDGE1_EFFECTS+BEND_EDGE2_EFFECTS)
+#define BEND_EDGE_DETERMINED 16
 
 #define IS_BEND(type) ((type)==T_SBEN || (type)==T_RBEN)
 

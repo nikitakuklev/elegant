@@ -90,6 +90,9 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     return n_part;
   }
 
+  if (!(csbend->edgeFlags&BEND_EDGE_DETERMINED)) 
+    bomb("CSBEND element doesn't have edge flags set.", NULL);
+  
   if (csbend->integration_order!=2 && csbend->integration_order!=4)
     bomb("CSBEND integration_order is invalid--must be either 2 or 4", NULL);
 
@@ -280,7 +283,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     s  = coord[4];
     dp = dp0 = coord[5];
 
-    if (csbend->edge1_effects) {
+    if (csbend->edgeFlags&BEND_EDGE1_EFFECTS) {
       rho = (1+dp)*rho_actual;
       if (csbend->edge_order<2) {
         /* apply edge focusing */
@@ -300,7 +303,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     /* load input coordinates into arrays */
     Qi[0] = x;  Qi[1] = xp;  Qi[2] = y;  Qi[3] = yp;  Qi[4] = 0;  Qi[5] = dp;
 
-    if (csbend->edge1_effects && e1!=0 && rad_coef) {
+    if (csbend->edgeFlags&BEND_EDGE1_EFFECTS && e1!=0 && rad_coef) {
       /* pre-adjust dp/p to anticipate error made by integrating over entire sector */
       y2 = y*y;
       Fx = (Fx_y + (Fx_x_y + (Fx_x2_y + Fx_x3_y*x)*x)*x + (Fx_y3 + Fx_x_y3*x)*y2)*y;
@@ -342,7 +345,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       continue;
     }
 
-    if (csbend->edge2_effects && e2!=0 && rad_coef) {
+    if (csbend->edgeFlags&BEND_EDGE2_EFFECTS && e2!=0 && rad_coef) {
       /* post-adjust dp/p to correct error made by integrating over entire sector */
       x = Qf[0];
       xp = Qf[1];
@@ -377,7 +380,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     xp /= (1+x/rho0);
     yp /= (1+x/rho0);
 
-    if (csbend->edge2_effects) {
+    if (csbend->edgeFlags&BEND_EDGE2_EFFECTS) {
       /* apply edge focusing */
       rho = (1+dp)*rho_actual;
       if (csbend->edge_order<2) {
@@ -1234,7 +1237,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 #define YP coord[3]
 #define CT coord[4]
 #define DP coord[5]
-    if (csbend->edge1_effects) {
+    if (csbend->edgeFlags&BEND_EDGE1_EFFECTS) {
       /* apply edge focusing */
       if (csbend->useMatrix)
         track_particles(&coord, Me1, &coord, 1);
@@ -1255,7 +1258,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
       XP *= (1+X/rho0);
       YP *= (1+X/rho0);
     }
-    if (csbend->edge1_effects && e1!=0 && rad_coef) {
+    if (csbend->edgeFlags&BEND_EDGE1_EFFECTS && e1!=0 && rad_coef) {
       /* pre-adjust dp/p to anticipate error made by integrating over entire sector */
       y2 = Y*Y;
       Fx = (Fx_y + (Fx_x_y + (Fx_x2_y + Fx_x3_y*X)*X)*X
@@ -1665,7 +1668,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     /* remove lost particles, handle edge effects, and transform coordinates */    
     for (i_part=0; i_part<=i_top; i_part++) {
       coord = part[i_part];
-      if (csbend->edge2_effects && e2!=0 && rad_coef) {
+      if (csbend->edgeFlags&BEND_EDGE2_EFFECTS && e2!=0 && rad_coef) {
 	/* post-adjust dp/p to correct error made by integrating over entire sector */
 	y2 = Y*Y;
 	Fx = (Fx_y + (Fx_x_y + (Fx_x2_y + Fx_x3_y*X)*X)*X
@@ -1714,7 +1717,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 	continue;
       }
 
-      if (csbend->edge2_effects) {
+      if (csbend->edgeFlags&BEND_EDGE2_EFFECTS) {
 	if (csbend->useMatrix)
 	  track_particles(&coord, Me2, &coord, 1);
 	else {

@@ -1005,6 +1005,8 @@ long do_tracking(
 					       *P_central, accepted, z);
 	      break;
 	    case T_CSBEND:
+              ((CSBEND*)eptr->p_elem)->edgeFlags = determine_bend_flags(eptr, ((CSBEND*)eptr->p_elem)->edge1_effects,
+                                                                        ((CSBEND*)eptr->p_elem)->edge2_effects);
 	      if (flags&TEST_PARTICLES) {
 		saveISR = ((CSBEND*)eptr->p_elem)->isr;
 		((CSBEND*)eptr->p_elem)->isr = 0;
@@ -1015,6 +1017,8 @@ long do_tracking(
 		((CSBEND*)eptr->p_elem)->isr = saveISR;	  
 	      break;
 	    case T_CSRCSBEND:
+              ((CSRCSBEND*)eptr->p_elem)->edgeFlags = determine_bend_flags(eptr, ((CSRCSBEND*)eptr->p_elem)->edge1_effects,
+                                                                        ((CSRCSBEND*)eptr->p_elem)->edge2_effects);
 	      if (flags&TEST_PARTICLES) {
 		saveISR = ((CSRCSBEND*)eptr->p_elem)->isr;
 		((CSRCSBEND*)eptr->p_elem)->isr = 0;

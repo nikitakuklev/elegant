@@ -1321,6 +1321,7 @@ long determine_bend_flags(ELEMENT_LIST *elem, long edge1_effects, long edge2_eff
         bend_flags |= BEND_EDGE1_EFFECTS;
     if (edge2_effects && !(bend_flags&SAME_BEND_FOLLOWS))
         bend_flags |= BEND_EDGE2_EFFECTS;
+    bend_flags |= BEND_EDGE_DETERMINED;
     return(bend_flags);
     }
 
