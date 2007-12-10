@@ -107,6 +107,8 @@ int main(int argc, char **argv)
     fprintf(fp_out, 
             "&parameter name=Description, type=string, fixed_value=\"%ld-superperiod resonance diagram for order %ld through %ld\" &end\n",
             n_super, min_order, max_order);
+    fprintf(fp_out, 
+            "&parameter name=ResonanceLabel type=string &end\n");
     fprintf(fp_out, "&data mode=ascii no_row_counts=1 &end\n");
     m = max_order*((nux_int>nuy_int?nux_int:nuy_int)+1);
 
@@ -200,6 +202,7 @@ int main(int argc, char **argv)
                     first = 0;
                     fprintf(fp_out, "! %ld NUx +  %ld NUy = %ld        type = %ld\n", j, k, m*n_super, type);
                     fprintf(fp_out, "%ld\n", order);
+                    fprintf(fp_out, "%ld$gn$r$bx$n+%ld$gn$r$by$n=%ld\n", j, k, m*n_super);
                     if (location[0]&FL_LOC_BOTTOM || location[0]&FL_LOC_LEFT)
                         fprintf(fp_out, "%lf %lf\n", nux_int+nuxi[0], nuy_int+nuyi[0]);
                     else if (location[0]&FL_LOC_RIGHT)
