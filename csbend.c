@@ -81,7 +81,8 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   double dxf, dyf, dzf;
   double delta_xp;
   double e1_kick_limit, e2_kick_limit;
-
+  static long largeRhoWarning = 0;
+  
   if (!csbend)
     bomb("null CSBEND pointer (track_through_csbend)", NULL);
 
@@ -89,7 +90,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     exactDrift(part, n_part, csbend->length);
     return n_part;
   }
-
+  
   if (!(csbend->edgeFlags&BEND_EDGE_DETERMINED)) 
     bomb("CSBEND element doesn't have edge flags set.", NULL);
   
@@ -138,6 +139,15 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     delta = csbend->k4_internal*pow5(rho0)/24.;
   }
 
+  if (rho0>1e6) {
+    if (!largeRhoWarning) {
+      printf("Warning: One or more CSBENDs have radius > 1e6.  Treated as drift.\n");
+      largeRhoWarning = 1;
+    }
+    exactDrift(part, n_part, csbend->length);
+    return n_part;
+  }
+  
   fse = csbend->fse;
   h2 = sqr(h=1./rho0);
   h3 = h*h2;
@@ -866,7 +876,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   double delta_xp;
   double macroParticleCharge, CSRConstant;
   long iBin, iBinBehind;
-  long csrInhibit = 0;
+  long csrInhibit = 0, largeRhoWarning;
   double derbenevRatio = 0;
 #if USE_MPI
   double *buffer;
@@ -886,15 +896,15 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
       exactDrift(part, n_part, csbend->length); 
     else {
       long i;
-	if (isSlave || !notSinglePart) {
-      for (i=0; i<n_part; i++) {
-        part[i][0] += csbend->length*part[i][1];
-        part[i][2] += csbend->length*part[i][3];
-        part[i][4] += csbend->length;
+      if (isSlave || !notSinglePart) {
+        for (i=0; i<n_part; i++) {
+          part[i][0] += csbend->length*part[i][1];
+          part[i][2] += csbend->length*part[i][3];
+          part[i][4] += csbend->length;
+        }
       }
     }
-      }
-   return n_part;
+    return n_part;
   }
 
   if (csbend->integration_order!=2 && csbend->integration_order!=4)
@@ -968,6 +978,15 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     delta = csbend->k4_internal*pow5(rho0)/24.;
   }
 
+  if (rho0>1e6) {
+    if (!largeRhoWarning) {
+      printf("Warning: One or more CSRCSBENDs have radius > 1e6.  Treated as drift.\n");
+      largeRhoWarning = 1;
+    }
+    exactDrift(part, n_part, csbend->length);
+    return n_part;
+  }
+  
   fse = csbend->fse;
   h2 = sqr(h=1./rho0);
   h3 = h*h2;
