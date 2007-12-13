@@ -1043,6 +1043,7 @@ void dump_particle_histogram(HISTOGRAM *histogram, long step, long pass, double 
     } else
       range = histogram->binSize[icoord]*histogram->bins;
     center = (lower+upper)/2;
+    range *= (1+1e-12); /* Rounding error might cause particle lost in the first and last bins */ 
     lower = center-range/2;
     upper = center+range/2;
     for (ibin=0; ibin<histogram->bins; ibin++) 
