@@ -883,9 +883,11 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 #endif
   TRACKING_CONTEXT tContext;
   VMATRIX *Msection=NULL, *Me1=NULL, *Me2=NULL;
-  
+
+  csrWake.valid = 0;
   if (isSlave || !notSinglePart) 
     reset_driftCSR();
+
   getTrackingContext(&tContext);
   
   if (!csbend)
