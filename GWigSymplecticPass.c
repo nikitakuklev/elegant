@@ -160,8 +160,7 @@ void GWigSymplecticPass(double **coord, long num_particles, double pCentral,
   
   getTrackingContext(&tContext);
   
-  if (!cwiggler->initialized) 
-    InitializeCWiggler(cwiggler, tContext.elementName);
+  InitializeCWiggler(cwiggler, tContext.elementName);
 
 /*
   if ((cwiggler->sr || cwiggler->isr) && cwiggler->integrationOrder==fourth) {
@@ -266,81 +265,72 @@ void InitializeCWiggler(CWIGGLER *cwiggler, char *name)
 {
   double sumCmn[2] = {0,0};
   long i;
-  if (cwiggler->initialized)
-    return;
+
   if (cwiggler->BMax && (cwiggler->BxMax || cwiggler->ByMax)) {
     printf("*** Error: Non-zero BMAX for CWIGGLER when BXMAX or BYMAX also non-zero\n");
     exit(1);
   }
-  if (cwiggler->fieldOutput) {
-    if (!SDDS_InitializeOutput(&cwiggler->SDDSFieldOutput, SDDS_BINARY, 0, NULL, NULL, cwiggler->fieldOutput) ||
-        !SDDS_DefineSimpleColumn(&cwiggler->SDDSFieldOutput, "x", "m", SDDS_FLOAT) ||
-        !SDDS_DefineSimpleColumn(&cwiggler->SDDSFieldOutput, "y", "m", SDDS_FLOAT) ||
-        !SDDS_DefineSimpleColumn(&cwiggler->SDDSFieldOutput, "z", "m", SDDS_FLOAT) ||
-        !SDDS_DefineSimpleColumn(&cwiggler->SDDSFieldOutput, "px", "", SDDS_FLOAT) ||
-        !SDDS_DefineSimpleColumn(&cwiggler->SDDSFieldOutput, "py", "", SDDS_FLOAT) ||
-        !SDDS_DefineSimpleColumn(&cwiggler->SDDSFieldOutput, "Bx", "T", SDDS_FLOAT) ||
-        !SDDS_DefineSimpleColumn(&cwiggler->SDDSFieldOutput, "By", "T", SDDS_FLOAT) ||
-        !SDDS_WriteLayout(&cwiggler->SDDSFieldOutput)) {
-      printf("*** Error: problem setting up field output file for CWIGGLER\n");
-      SDDS_PrintErrors(stdout,  SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+
+  if (!cwiggler->initialized) {
+    if (cwiggler->fieldOutput) {
+      if (!SDDS_InitializeOutput(&cwiggler->SDDSFieldOutput, SDDS_BINARY, 0, NULL, NULL, cwiggler->fieldOutput) ||
+          !SDDS_DefineSimpleColumn(&cwiggler->SDDSFieldOutput, "x", "m", SDDS_FLOAT) ||
+          !SDDS_DefineSimpleColumn(&cwiggler->SDDSFieldOutput, "y", "m", SDDS_FLOAT) ||
+          !SDDS_DefineSimpleColumn(&cwiggler->SDDSFieldOutput, "z", "m", SDDS_FLOAT) ||
+          !SDDS_DefineSimpleColumn(&cwiggler->SDDSFieldOutput, "px", "", SDDS_FLOAT) ||
+          !SDDS_DefineSimpleColumn(&cwiggler->SDDSFieldOutput, "py", "", SDDS_FLOAT) ||
+          !SDDS_DefineSimpleColumn(&cwiggler->SDDSFieldOutput, "Bx", "T", SDDS_FLOAT) ||
+          !SDDS_DefineSimpleColumn(&cwiggler->SDDSFieldOutput, "By", "T", SDDS_FLOAT) ||
+          !SDDS_WriteLayout(&cwiggler->SDDSFieldOutput)) {
+        printf("*** Error: problem setting up field output file for CWIGGLER\n");
+        SDDS_PrintErrors(stdout,  SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      }
+      cwiggler->fieldOutputInitialized = 1;
     }
-    cwiggler->fieldOutputInitialized = 1;
+    if (cwiggler->sinusoidal) {
+      if (cwiggler->BxFile || cwiggler->ByFile)
+        printf("*** Warning: CWIGGLER element has SINUSOIDAL=1, but also has filenames\n");
+      cwiggler->BxHarmonics = 0;
+      cwiggler->BxData = NULL;
+      if (!cwiggler->vertical || cwiggler->helical) {
+        cwiggler->ByHarmonics = 1;
+        cwiggler->ByData = tmalloc(sizeof(*(cwiggler->ByData))*6);
+        cwiggler->ByData[0] = 0;  /* row */
+        cwiggler->ByData[1] = 1;  /* Cmn */
+        cwiggler->ByData[2] = 0;  /* kx */
+        cwiggler->ByData[3] = 1;  /* ky */
+        cwiggler->ByData[4] = 1;  /* kz */
+        cwiggler->ByData[5] = 0;  /* phase */
+      }
+      if (cwiggler->vertical || cwiggler->helical) {
+        cwiggler->BxHarmonics = 1;
+        cwiggler->BxData = tmalloc(sizeof(*(cwiggler->BxData))*6);
+        cwiggler->BxData[0] = 0;     /* row */
+        cwiggler->BxData[1] = 1;     /* Cmn */
+        cwiggler->BxData[2] = 1;     /* kx */
+        cwiggler->BxData[3] = 0;     /* ky */
+        cwiggler->BxData[4] = 1;     /* kz */
+        if (cwiggler->helical)
+          cwiggler->BxData[5] = PI/2;  /* phase */
+        else 
+          cwiggler->BxData[5] = 0;
+      }
+    } else {
+      if (cwiggler->helical) {
+        printf("*** Error: CWIGGLER element has HELICAL=1, but doesn't have SINUSOIDAL=1\n");
+        exit(1);
+      }
+      if (cwiggler->vertical) {
+        printf("*** Error: CWIGGLER element has VERTICAL=1, but doesn't have SINUSOIDAL=1\n");
+        exit(1);
+      }
+      ReadCWigglerHarmonics(&cwiggler->ByData, &cwiggler->ByHarmonics, 
+                            cwiggler->ByFile, "By", 0, cwiggler->BySplitPole, cwiggler);
+      ReadCWigglerHarmonics(&cwiggler->BxData, &cwiggler->BxHarmonics, 
+                            cwiggler->BxFile, "Bx", 1, cwiggler->BxSplitPole, cwiggler);
+    }
   }
-  if (cwiggler->sinusoidal) {
-    if (cwiggler->BxFile || cwiggler->ByFile)
-      printf("*** Warning: CWIGGLER element has SINUSOIDAL=1, but also has filenames\n");
-    cwiggler->BxHarmonics = 0;
-    cwiggler->BxData = NULL;
-    if (!cwiggler->vertical || cwiggler->helical) {
-      cwiggler->ByHarmonics = 1;
-      cwiggler->ByData = tmalloc(sizeof(*(cwiggler->ByData))*6);
-      cwiggler->ByData[0] = 0;  /* row */
-      cwiggler->ByData[1] = 1;  /* Cmn */
-      cwiggler->ByData[2] = 0;  /* kx */
-      cwiggler->ByData[3] = 1;  /* ky */
-      cwiggler->ByData[4] = 1;  /* kz */
-      cwiggler->ByData[5] = 0;  /* phase */
-    }
-    if (cwiggler->vertical || cwiggler->helical) {
-      cwiggler->BxHarmonics = 1;
-      cwiggler->BxData = tmalloc(sizeof(*(cwiggler->BxData))*6);
-      cwiggler->BxData[0] = 0;     /* row */
-      cwiggler->BxData[1] = 1;     /* Cmn */
-      cwiggler->BxData[2] = 1;     /* kx */
-      cwiggler->BxData[3] = 0;     /* ky */
-      cwiggler->BxData[4] = 1;     /* kz */
-      if (cwiggler->helical)
-        cwiggler->BxData[5] = PI/2;  /* phase */
-      else 
-        cwiggler->BxData[5] = 0;
-    }
-  } else {
-    if (cwiggler->helical) {
-      printf("*** Error: CWIGGLER element has HELICAL=1, but doesn't have SINUSOIDAL=1\n");
-      exit(1);
-    }
-    if (cwiggler->vertical) {
-      printf("*** Error: CWIGGLER element has VERTICAL=1, but doesn't have SINUSOIDAL=1\n");
-      exit(1);
-    }
-    ReadCWigglerHarmonics(&cwiggler->ByData, &cwiggler->ByHarmonics, 
-                          cwiggler->ByFile, "By", 0, cwiggler->BySplitPole, cwiggler);
-    ReadCWigglerHarmonics(&cwiggler->BxData, &cwiggler->BxHarmonics, 
-                          cwiggler->BxFile, "Bx", 1, cwiggler->BxSplitPole, cwiggler);
-  }
-  for (i=0; i<cwiggler->ByHarmonics; i++)
-    sumCmn[1] += cwiggler->ByData[6*i+1];
-  for (i=0; i<cwiggler->BxHarmonics; i++)
-    sumCmn[0] += cwiggler->BxData[6*i+1];
-  if (cwiggler->BMax) {
-    cwiggler->BPeak[0] = cwiggler->BMax*sumCmn[0];  
-    cwiggler->BPeak[1] = cwiggler->BMax*sumCmn[1];
-  } else {
-    cwiggler->BPeak[0] = cwiggler->BxMax*sumCmn[0];  
-    cwiggler->BPeak[1] = cwiggler->ByMax*sumCmn[1];
-  }
-  
+    
   if (cwiggler->ByHarmonics) {
     double phase;
     phase = fmod(cwiggler->ByData[5], PIx2);
@@ -356,7 +346,7 @@ void InitializeCWiggler(CWIGGLER *cwiggler, char *name)
       cwiggler->zEndPointH[0] = (PIx2-phase)/(PIx2)*(cwiggler->length/cwiggler->periods);
       cwiggler->zEndPointH[1] = cwiggler->length - (cwiggler->length/cwiggler->periods - cwiggler->zEndPointH[0]) ;
     }
-    if (phase!=0 && phase!=PI && cwiggler->forceMatched)
+    if (phase!=0 && phase!=PI && cwiggler->forceMatched && cwiggler->verbosity)
       printf("Inset endpoints for CWIGGLER %s By Harmonic Data: %le, %le\n",
              name, cwiggler->zEndPointH[0], cwiggler->zEndPointH[1]);
     /* This helps ensure the field is right for the last point even with summation errors for the z position */
@@ -377,12 +367,25 @@ void InitializeCWiggler(CWIGGLER *cwiggler, char *name)
       cwiggler->zEndPointV[0] = (PIx2-phase)/(PIx2)*(cwiggler->length/cwiggler->periods);
       cwiggler->zEndPointV[1] = cwiggler->length - (cwiggler->length/cwiggler->periods - cwiggler->zEndPointV[0]) ;
     }
-    if (phase!=0 && phase!=PI && cwiggler->forceMatched)
+    if (phase!=0 && phase!=PI && cwiggler->forceMatched && cwiggler->verbosity)
       printf("Inset endpoints for CWIGGLER %s Bx Harmonic Data: %le, %le\n",
              name, cwiggler->zEndPointV[0], cwiggler->zEndPointV[1]);
     /* This helps ensure the field is right for the last point even with summation errors for the z position */
     cwiggler->zEndPointV[1] += (cwiggler->length/cwiggler->periods)/cwiggler->stepsPerPeriod/10;
   }
+  
+  for (i=0; i<cwiggler->ByHarmonics; i++)
+    sumCmn[1] += cwiggler->ByData[6*i+1];
+  for (i=0; i<cwiggler->BxHarmonics; i++)
+    sumCmn[0] += cwiggler->BxData[6*i+1];
+  if (cwiggler->BMax) {
+    cwiggler->BPeak[0] = cwiggler->BMax*sumCmn[0];  
+    cwiggler->BPeak[1] = cwiggler->BMax*sumCmn[1];
+  } else {
+    cwiggler->BPeak[0] = cwiggler->BxMax*sumCmn[0];  
+    cwiggler->BPeak[1] = cwiggler->ByMax*sumCmn[1];
+  }
+
   cwiggler->initialized = 1;
 }
 
