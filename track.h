@@ -776,7 +776,7 @@ extern char *entity_text[N_TYPES];
 #define N_LSRMDLTR_PARAMS 14
 #define N_TAYLORSERIES_PARAMS 6
 #define N_RFTM110_PARAMS 14
-#define N_CWIGGLER_PARAMS 22
+#define N_CWIGGLER_PARAMS 23
 #define N_EDRIFT_PARAMS 1
 #define N_SCMULT_PARAMS 0		
 #define N_ILMATRIX_PARAMS 31
@@ -2192,6 +2192,7 @@ typedef struct {
   long sr, isr, sinusoidal, vertical, helical;
   long forceMatched;
   char *fieldOutput;
+  long verbosity;
   /* for internal use */
   long initialized;
   double *ByData, *BxData; 

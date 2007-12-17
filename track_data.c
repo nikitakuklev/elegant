@@ -1605,6 +1605,7 @@ PARAMETER cwiggler_param[N_CWIGGLER_PARAMS] = {
   {"HELICAL", "", IS_LONG, 0, (long)((char *)&cwiggler_example.helical), NULL, 0.0, 0, "Ideal helical wiggler?  If non-zero and SINUSOIDAL is also non-zero, BX_FILE and BY_FILE are not used."},
   {"FORCE_MATCHED", "", IS_LONG, 0, (long)((char *)&cwiggler_example.forceMatched), NULL, 0.0, 1, "Force matched dispersion for first harmonics?  If non-zero, start and end of magnetic field will be inset from the ends of the device if phase is not 0 or $\\pi$."},
   {"FIELD_OUTPUT", "", IS_STRING, 0, (long)((char *)&cwiggler_example.fieldOutput), NULL, 0.0, 0, "Name of file to which field samples will be written.  Slow, so use only for debugging."},
+  {"VERBOSITY", "", IS_LONG, 0, (long)((char *)&cwiggler_example.verbosity), NULL, 0.0, 0, "A higher value requires more detailed printouts related to computations."},
 } ;
 
 SCRIPT script_example;
