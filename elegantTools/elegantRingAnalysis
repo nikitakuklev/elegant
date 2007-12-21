@@ -4,6 +4,10 @@
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.5  2007/11/16 19:12:30  borland
+# For DynamicAperture with errors only, added process-only button.  Should
+# be straightforward to add for others.
+#
 # Revision 1.4  2007/11/16 13:53:23  borland
 # Added entry box for the template file for dynamic aperture, so user can
 # change it if desired.
@@ -319,8 +323,11 @@ proc FillBasicFrame {widget args} {
       -label "Quad divisions: " -type integer \
       -textVariable basicComputations(quadDivisions)
     APSLabeledEntry .le41 -parent $widget -width 20 \
-      -label "Edge order for dipoles: " -type integer \
+      -label "Edge order for dipoles (always 1 for tracking): " -type integer \
       -textVariable basicComputations(edgeOrder) 
+    APSLabeledEntry .le42 -parent $widget -width 20 \
+      -label "Body order for matrix dipoles (always 1 for tracking): " -type integer \
+      -textVariable basicComputations(bodyOrder) 
     APSLabeledEntry .le5 -parent $widget -width 20 \
       -label "Final s for twiss plots (m): " \
       -textVariable basicComputations(finalSTwiss)
