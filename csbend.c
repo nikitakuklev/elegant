@@ -2582,7 +2582,7 @@ static long SolveForPhiStupakovDiffCount = 0;
 long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift, 
                             double Po, double **accepted, double zStart, char *rootname)
 {
-  long iPart, iKick, iBin, binned, nKicks;
+  long iPart, iKick, iBin, binned=0, nKicks;
   long nCaseC, nCaseD1, nCaseD2;
   double ctLower, ctUpper, ds;
   long nBins, maxBins, nBinned, diBin;
