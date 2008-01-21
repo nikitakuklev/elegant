@@ -30,13 +30,13 @@ int integrate_kick_multipole_ord2(double *coord, double cos_tilt, double sin_til
                                   double Po, double rad_coef, double isr_coef,
                                   long order, long sqrtOrder, double KnL, long n_kicks, double drift,
                                   MULTIPOLE_DATA *multData, MULTIPOLE_DATA *steeringMultData,
-                                  MULT_APERTURE_DATA *apData, double *dz);
+                                  MULT_APERTURE_DATA *apData, double *dz, double *sigmaDelta2);
 int integrate_kick_multipole_ord4(double *coord, double cos_tilt, double sin_tilt,
                                   double dx, double dy, double xkick, double ykick,
                                   double Po, double rad_coef, double isr_coef,
                                   long order, long sqrtOrder, double KnL, long n_kicks, double drift,
                                   MULTIPOLE_DATA *multData, MULTIPOLE_DATA *steeringMultData,
-                                  MULT_APERTURE_DATA *apData, double *dz);
+                                  MULT_APERTURE_DATA *apData, double *dz, double *sigmaDelta2);
 void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
                                       MULTIPOLE_DATA *systematicMult,
                                       MULTIPOLE_DATA *randomMult,
@@ -282,7 +282,7 @@ long fmultipole_tracking(
 
     if (!integrate_kick_multipole_ord4(coord, cos_tilt, sin_tilt, dx, dy, 0.0, 0.0, Po, rad_coef, 0.0,
                                        1, multipole->sqrtOrder, 0.0, n_kicks, drift, &multData, NULL, NULL,
-                                       &dummy)) {
+                                       &dummy, NULL)) {
       is_lost = 1;
       break;
     }
@@ -591,7 +591,9 @@ long multipole_tracking2(
                          double y_max,
                          long elliptical,
                          /* from aperture_data command */
-                         APERTURE_DATA *apFileData
+                         APERTURE_DATA *apFileData,
+                         /* For return of accumulated change in sigmaDelta^2 */
+                         double *sigmaDelta2
                          )
 {
   double KnL;         /* integrated strength = L/(B.rho)*(Dx^n(By))_o for central momentum */
@@ -642,8 +644,10 @@ long multipole_tracking2(
     sqrtOrder = kquad->sqrtOrder?1:0;
     if (kquad->synch_rad)
       rad_coef = sqr(e_mks)*pow3(Po)/(6*PI*epsilon_o*sqr(c_mks)*me_mks); 
-    if (kquad->isr)
-      isr_coef = re_mks*sqrt(55.0/(24*sqrt(3))*pow5(Po)*137.0359895);
+    isr_coef = re_mks*sqrt(55.0/(24*sqrt(3))*pow5(Po)*137.0359895);
+    if (!kquad->isr)
+      /* Minus sign indicates we accumulate into sigmaDelta^2 only, don't perturb particles */
+      isr_coef *= -1;
     if (!kquad->multipolesInitialized) {
       /* read the data files for the error multipoles */
       readErrorMultipoleData(&(kquad->systematicMultipoleData),
@@ -679,8 +683,10 @@ long multipole_tracking2(
     sqrtOrder = ksext->sqrtOrder?1:0;
     if (ksext->synch_rad)
       rad_coef = sqr(e_mks)*pow3(Po)/(6*PI*epsilon_o*sqr(c_mks)*me_mks);
-    if (ksext->isr)
-      isr_coef = re_mks*sqrt(55.0/(24*sqrt(3))*pow5(Po)*137.0359895);
+    isr_coef = re_mks*sqrt(55.0/(24*sqrt(3))*pow5(Po)*137.0359895);
+    if (!ksext->isr)
+      /* Minus sign indicates we accumulate into sigmaDelta^2 only, don't perturb particles */
+      isr_coef *= -1;
     if (!ksext->multipolesInitialized) {
       /* read the data files for the error multipoles */
       readErrorMultipoleData(&(ksext->systematicMultipoleData),
@@ -735,7 +741,7 @@ long multipole_tracking2(
   apertureData.yMax = y_max;
   apertureData.elliptical = elliptical;
   apertureData.present = x_max>0 || y_max>0;
-  if (apFileData->initialized) {
+  if (apFileData && apFileData->initialized) {
     /* If there is file-based aperture data, it may override MAXAMP data. */
     double xCenF, yCenF, xMaxF, yMaxF;
     apertureData.present = 1;
@@ -754,6 +760,8 @@ long multipole_tracking2(
     }
   }
   
+  if (sigmaDelta2)
+    *sigmaDelta2 = 0;
   for (i_part=0; i_part<=i_top; i_part++) {
     if (!(coord = particle[i_part])) {
       fprintf(stdout, "null coordinate pointer for particle %ld (multipole_tracking)", i_part);
@@ -771,13 +779,13 @@ long multipole_tracking2(
                                         Po, rad_coef, isr_coef, order, sqrtOrder, KnL,
                                         n_parts, drift, 
                                         multData, steeringMultData,
-                                        &apertureData, &dz)) ||
+                                        &apertureData, &dz, sigmaDelta2)) ||
         (integ_order==2 &&
          !integrate_kick_multipole_ord2(coord, cos_tilt, sin_tilt, dx, dy, xkick, ykick,
                                         Po, rad_coef, isr_coef, order, sqrtOrder, KnL, 
                                         n_parts, drift,
                                         multData, steeringMultData,
-                                        &apertureData, &dz))) {
+                                        &apertureData, &dz, sigmaDelta2))) {
       swapParticles(particle[i_part], particle[i_top]);
       if (accepted)
         swapParticles(accepted[i_part], accepted[i_top]);
@@ -788,6 +796,9 @@ long multipole_tracking2(
       continue;
     }
   }
+  if (sigmaDelta2)
+    *sigmaDelta2 /= i_top+1;
+  
   log_exit("multipole_tracking2");
   return(i_top+1);
 }
@@ -798,7 +809,7 @@ int integrate_kick_multipole_ord2(double *coord, double cos_tilt, double sin_til
                                   long order, long sqrtOrder, double KnL, long n_kicks, double drift,
                                   MULTIPOLE_DATA *multData, 
                                   MULTIPOLE_DATA *steeringMultData,
-                                  MULT_APERTURE_DATA *apData, double *dz) 
+                                  MULT_APERTURE_DATA *apData, double *dz, double *sigmaDelta2) 
 {
   double p, qx, qy, denom, beta0, beta1, dp, s;
   double x, y, xp, yp, sum_Fx, sum_Fy;
@@ -906,8 +917,10 @@ int integrate_kick_multipole_ord2(double *coord, double cos_tilt, double sin_til
       qy /= (1+dp);
       if (rad_coef)
 	dp -= rad_coef*deltaFactor*F2*dsFactor;
-      if (isr_coef)
+      if (isr_coef>0)
 	dp -= isr_coef*deltaFactor*pow(F2, 0.75)*sqrt(dsFactor)*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
+      if (sigmaDelta2)
+        *sigmaDelta2 += sqr(isr_coef*deltaFactor)*pow(F2, 1.5)*dsFactor;
       qx *= (1+dp);
       qy *= (1+dp);
     }
@@ -989,7 +1002,7 @@ int integrate_kick_multipole_ord4(double *coord, double cos_tilt, double sin_til
                                   double Po, double rad_coef, double isr_coef,
                                   long order, long sqrtOrder, double KnL, long n_parts, double drift,
                                   MULTIPOLE_DATA *multData, MULTIPOLE_DATA *steeringMultData,
-                                  MULT_APERTURE_DATA *apData, double *dz) 
+                                  MULT_APERTURE_DATA *apData, double *dz, double *sigmaDelta2) 
 {
   double p, qx, qy, denom, beta0, beta1, dp, s;
   double x, y, xp, yp, sum_Fx, sum_Fy;
@@ -1109,8 +1122,10 @@ int integrate_kick_multipole_ord4(double *coord, double cos_tilt, double sin_til
 	dsFactor *= drift*kickFrac[step]; /* that's ok here, since we don't take sqrt */
 	if (rad_coef)
 	  dp -= rad_coef*deltaFactor*F2*dsFactor;
-	if (isr_coef)
+	if (isr_coef>0)
 	  dp -= isr_coef*deltaFactor*pow(F2, 0.75)*sqrt(dsISRFactor)*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
+        if (sigmaDelta2)
+          *sigmaDelta2 += sqr(isr_coef*deltaFactor)*pow(F2, 1.5)*dsFactor;
         qx *= (1+dp);
         qy *= (1+dp);
       }

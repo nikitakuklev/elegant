@@ -19,7 +19,7 @@
 #define EXSQRT(value, order) (order==0?sqrt(value):(1+0.5*((value)-1)))
 
 
-void addRadiationKick(double *Qx, double *Qy, double *dPoP, long sqrtOrder,
+void addRadiationKick(double *Qx, double *Qy, double *dPoP, double *sigmaDelta2, long sqrtOrder,
 		      double x, double h0, double Fx, double Fy,
 		      double ds, double radCoef, double dsISR, double isrCoef,
                       long distributionBased, long includeOpeningAngle,
@@ -27,8 +27,8 @@ void addRadiationKick(double *Qx, double *Qy, double *dPoP, long sqrtOrder,
                       double normalizedCriticalEnergy, double Po);
 double pickNormalizedPhotonEnergy(double RN);
 
-void integrate_csbend_ord2(double *Qf, double *Qi, double s, long n, long sqrtOrder, double rho0, double p0);
-void integrate_csbend_ord4(double *Qf, double *Qi, double s, long n, long sqrtOrder, double rho0, double p0);
+void integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, long sqrtOrder, double rho0, double p0);
+void integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, long sqrtOrder, double rho0, double p0);
 void exactDrift(double **part, long np, double length);
 void convertFromCSBendCoords(double **part, long np, double rho0, 
 			     double cos_ttilt, double sin_ttilt, long ctMode);
@@ -63,7 +63,7 @@ extern unsigned long multipoleKicksDone ;
 #endif
 
 long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_error, double Po, double **accepted,
-                          double z_start)
+                          double z_start, double *sigmaDelta2)
 {
   double nh, betah2, gammah3, deltah4;
   double h, h2, h3;
@@ -184,11 +184,11 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   else
     rad_coef = 0;
   /* isrConstant is the RMS increase in dP/P per meter due to incoherent SR.  */
-  if (csbend->isr)
-    isrConstant = re_mks*sqrt(55.0/(24*sqrt(3))*pow5(Po)*
-                              137.0359895/pow3(fabs(rho_actual)));
-  else
-    isrConstant = 0;
+  isrConstant = re_mks*sqrt(55.0/(24*sqrt(3))*pow5(Po)*
+                            137.0359895/pow3(fabs(rho_actual)));
+  if (!csbend->isr)
+    /* Minus sign here indicates that we accumulate ISR into sigmaDelta^2 but don't apply it to particles. */
+    isrConstant *= -1; 
 
   if ((distributionBasedRadiation = csbend->distributionBasedRadiation)) {
     /* Sands 5.15 */
@@ -264,6 +264,8 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   multipoleKicksDone += n_part*csbend->n_kicks*(csbend->integration_order==4?4:1);
 #endif
 
+  if (sigmaDelta2)
+    *sigmaDelta2 = 0;
   if (isSlave || !notSinglePart) {
   for (i_part=0; i_part<=i_top; i_part++) {
     if (!part) {
@@ -325,9 +327,9 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     particle_lost = 0;
     if (!particle_lost) {
       if (csbend->integration_order==4)
-        integrate_csbend_ord4(Qf, Qi, csbend->length, csbend->n_kicks, csbend->sqrtOrder, rho0, Po);
+        integrate_csbend_ord4(Qf, Qi, sigmaDelta2, csbend->length, csbend->n_kicks, csbend->sqrtOrder, rho0, Po);
       else
-        integrate_csbend_ord2(Qf, Qi, csbend->length, csbend->n_kicks, csbend->sqrtOrder, rho0, Po);
+        integrate_csbend_ord2(Qf, Qi, sigmaDelta2, csbend->length, csbend->n_kicks, csbend->sqrtOrder, rho0, Po);
     }
 
     if (particle_lost) {
@@ -421,18 +423,22 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
             radiansTotal, photonCount/(1.0*i_top), photonCount/radiansTotal/(1.0*i_top), energyCount/photonCount);
     distributionBasedRadiation = 0;
   }
+
+  if (sigmaDelta2)
+    /* Return average value for all particles */
+    *sigmaDelta2 /= i_top+1;
   
   return(i_top+1);
 }
 
-void integrate_csbend_ord2(double *Qf, double *Qi, double s, long n, long sqrtOrder, double rho0, double p0)
+void integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, long sqrtOrder, double rho0, double p0)
 {
   long i;
   double factor, f, phi, ds, dsh, dp, dist;
   double Fx, Fy, x, y, y2;
   double sine, cosi, tang;
   double sin_phi, cos_phi;
-
+  
 #define X0 Qi[0]
 #define XP0 Qi[1]
 #define Y0 Qi[2]
@@ -469,6 +475,7 @@ void integrate_csbend_ord2(double *Qf, double *Qi, double s, long n, long sqrtOr
   dsh = ds/2;
   dist = 0;
 
+  
   for (i=0; i<n; i++) {
     if (i==0) {
       /* do half-length drift */
@@ -510,7 +517,7 @@ void integrate_csbend_ord2(double *Qf, double *Qi, double s, long n, long sqrtOr
     QX += -ds*(1+X/rho0)*Fy/rho_actual;
     QY += ds*(1+X/rho0)*Fx/rho_actual;
     if (rad_coef || isrConstant)
-      addRadiationKick(&QX, &QY, &DPoP, sqrtOrder, 
+      addRadiationKick(&QX, &QY, &DPoP, sigmaDelta2, sqrtOrder, 
 		       X, 1./rho0, Fx, Fy, 
 		       ds, rad_coef, ds, isrConstant, 
                        distributionBasedRadiation, includeOpeningAngle,
@@ -582,7 +589,7 @@ void integrate_csbend_ord2(double *Qf, double *Qi, double s, long n, long sqrtOr
 }
 
 
-void integrate_csbend_ord4(double *Qf, double *Qi, double s, long n, long sqrtOrder, double rho0, double p0)
+void integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s, long n, long sqrtOrder, double rho0, double p0)
 {
   long i;
   double factor, f, phi, ds, dsh, dp, dist;
@@ -624,7 +631,7 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double s, long n, long sqrtOr
   Y = Y0;
   S = S0;
   DPoP = DPoP0;
-
+  
   dist = 0;
 
   s /= n;
@@ -670,7 +677,7 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double s, long n, long sqrtOr
     QX += -ds*(1+X/rho0)*Fy/rho_actual;
     QY += ds*(1+X/rho0)*Fx/rho_actual;
     if (rad_coef || isrConstant) {
-      addRadiationKick(&QX, &QY, &DPoP, sqrtOrder,
+      addRadiationKick(&QX, &QY, &DPoP, sigmaDelta2, sqrtOrder,
 		       X, 1./rho0, Fx, Fy, 
 		       ds, rad_coef, s/3, isrConstant,
                        distributionBasedRadiation, includeOpeningAngle,
@@ -717,7 +724,7 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double s, long n, long sqrtOr
     QX += -ds*(1+X/rho0)*Fy/rho_actual;
     QY += ds*(1+X/rho0)*Fx/rho_actual;
     if (rad_coef || isrConstant)
-      addRadiationKick(&QX, &QY, &DPoP, sqrtOrder,
+      addRadiationKick(&QX, &QY, &DPoP, sigmaDelta2, sqrtOrder,
 		       X, 1./rho0, Fx, Fy, 
 		       ds, rad_coef, s/3, isrConstant,
                        distributionBasedRadiation, includeOpeningAngle,
@@ -762,7 +769,7 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double s, long n, long sqrtOr
     QX += -ds*(1+X/rho0)*Fy/rho_actual;
     QY += ds*(1+X/rho0)*Fx/rho_actual;
     if (rad_coef || isrConstant) 
-      addRadiationKick(&QX, &QY, &DPoP, sqrtOrder,
+      addRadiationKick(&QX, &QY, &DPoP, sigmaDelta2, sqrtOrder,
 		       X, 1./rho0, Fx, Fy, 
 		       ds, rad_coef, s/3, isrConstant,
                        distributionBasedRadiation, includeOpeningAngle,
@@ -1305,9 +1312,9 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 	if (particleLost[i_part])
 	  continue;
 
-	if (csbend->useMatrix)
+	if (csbend->useMatrix) {
 	  track_particles(&coord, Msection, &coord, 1);
-	else {
+	} else {
 	  /* load input coordinates into arrays */
 	  Qi[0] = X;
 	  Qi[1] = XP;
@@ -1317,9 +1324,9 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 	  Qi[5] = DP;
         
 	  if (csbend->integration_order==4)
-	    integrate_csbend_ord4(Qf, Qi, csbend->length/csbend->n_kicks, 1, 0, rho0, Po);
+	    integrate_csbend_ord4(Qf, Qi, NULL, csbend->length/csbend->n_kicks, 1, 0, rho0, Po);
 	  else
-	    integrate_csbend_ord2(Qf, Qi, csbend->length/csbend->n_kicks, 1, 0, rho0, Po);
+	    integrate_csbend_ord2(Qf, Qi, NULL, csbend->length/csbend->n_kicks, 1, 0, rho0, Po);
 	  particleLost[i_part] = particle_lost;
       
 	  /* retrieve coordinates from arrays */
@@ -3344,7 +3351,7 @@ void applyFilterTable(double *function, long bins, double dx, long fValues,
   free(realimag);
 }
 
-void addRadiationKick(double *Qx, double *Qy, double *dPoP, long sqrtOrder,
+void addRadiationKick(double *Qx, double *Qy, double *dPoP, double *sigmaDelta2, long sqrtOrder,
 		      double x, double h0, double Fx, double Fy,
 		      double ds, double radCoef, double dsISR, double isrCoef,
                       long distributionBased, long includeOpeningAngle, double meanPhotonsPerMeter,
@@ -3368,9 +3375,11 @@ void addRadiationKick(double *Qx, double *Qy, double *dPoP, long sqrtOrder,
     *Qy /= (1 + *dPoP);
     if (radCoef)
       *dPoP -= radCoef*deltaFactor*F2*ds*dsFactor;
-    if (isrCoef)
+    if (isrCoef>0)
       /* The minus sign is for consistency with the previous version. */
       *dPoP -= isrCoef*deltaFactor*pow(F2,0.75)*sqrt(dsISR*dsFactor)*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
+    if (sigmaDelta2)
+      *sigmaDelta2 += sqr(isrCoef*deltaFactor)*pow(F2,1.5)*dsISR*dsFactor;
     *Qx *= (1 + *dPoP);
     *Qy *= (1 + *dPoP);
   } else {
