@@ -12,7 +12,7 @@ void find_global_min_max (double *min, double *max, long np, MPI_Comm comm) {
  
     if (!np) { /* define MAX and MIN for the processors with 0 particles */
       local_min = DBL_MAX;
-      local_max = DBL_MIN;
+      local_max = -DBL_MAX;
     }
     else{
       local_min = *min;
