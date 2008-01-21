@@ -1013,7 +1013,7 @@ long do_tracking(
 		((CSBEND*)eptr->p_elem)->isr = 0;
 	      }
 	      nLeft = track_through_csbend(coord, nToTrack, (CSBEND*)eptr->p_elem, 0.0,
-					   *P_central, accepted, last_z);
+					   *P_central, accepted, last_z, NULL);
 	      if (flags&TEST_PARTICLES)
 		((CSBEND*)eptr->p_elem)->isr = saveISR;	  
 	      break;
@@ -1054,7 +1054,7 @@ long do_tracking(
 	      nLeft = multipole_tracking2(coord, nToTrack, eptr, 0.0,
                                           *P_central, accepted, last_z,
                                           x_max, y_max, elliptical,
-                                          &(run->apertureData));
+                                          &(run->apertureData), NULL);
 	      break;
 	    case T_SAMPLE:
 	      if (!(flags&TEST_PARTICLES))
