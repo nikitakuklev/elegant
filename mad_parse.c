@@ -529,9 +529,23 @@ void copy_element(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long reverse, long divisio
       if (entity_description[e1->type].flags&HAS_LENGTH)
         *(double*)(e1->p_elem) /= divisions;
       if (IS_BEND(e1->type)) {
-        BEND *bptr;
-        bptr = (BEND*)e1->p_elem;
-        bptr->angle /= divisions;
+        BEND *bptr; CSBEND *csbptr;
+        switch (e1->type) {
+        case T_SBEN:
+          bptr = (BEND*)e1->p_elem;
+          bptr->angle /= divisions;
+          break;
+        case T_CSBEND:
+          csbptr = (CSBEND*)e1->p_elem;
+          csbptr->angle /= divisions;
+          csbptr->n_kicks = csbptr->n_kicks / divisions + 1;
+          break;
+        default:
+          printf("Internal error: Attempt to divide angle for element that is not supported (type=%ld)\n",
+                 e1->type);
+          exit(1);
+          break;
+        }
       }
       e1->divisions = divisions;
     }
