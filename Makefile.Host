@@ -99,6 +99,16 @@ matrix_output$(OBJ): matrix_output.h
 matrix_output.h: ../matrix_output.nl
 	nlpp ../matrix_output.nl matrix_output.h
 
+momentumAperture$(OBJ): momentumAperture.h
+
+momentumAperture.h: ../momentumAperture.nl
+	nlpp ../momentumAperture.nl momentumAperture.h
+
+moments$(OBJ): moments.h
+
+moments.h: ../moments.nl
+	nlpp ../moments.nl moments.h
+
 optim_covariable$(OBJ): optim_covariable.h
 
 optim_covariable.h: ../optim_covariable.nl

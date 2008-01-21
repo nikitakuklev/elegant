@@ -7,10 +7,13 @@
 # in the file LICENSE that is included with this distribution. 
 #*************************************************************************
 #
-# $Id: Makefile.Pelegant,v 1.8 2007-09-28 17:41:01 ywang25 Exp $
+# $Id: Makefile.Pelegant,v 1.9 2008-01-21 17:38:41 borland Exp $
 #
 #  Lowest Level Directroy Makefile
 # $Log: not supported by cvs2svn $
+# Revision 1.8  2007/09/28 17:41:01  ywang25
+# When building Pelegant, if there is an error or interuppted by user, the Makefile can't be recovered to the original one. This version of Makefile.Pelegant fixed the problem.
+#
 # Revision 1.7  2007/03/30 16:55:00  soliday
 # Removed a bunch of scripts and programs that have been moved to elegantTools.
 #
@@ -193,6 +196,11 @@ momentumAperture$(OBJ): momentumAperture.h
 
 momentumAperture.h: ../momentumAperture.nl
 	nlpp ../momentumAperture.nl momentumAperture.h
+
+moments$(OBJ): moments.h
+
+moments.h: ../moments.nl
+	nlpp ../moments.nl moments.h
 
 optim_covariable$(OBJ): optim_covariable.h
 

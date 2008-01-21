@@ -7,10 +7,13 @@
 # in the file LICENSE that is included with this distribution. 
 #*************************************************************************
 #
-# $Id: Makefile,v 1.13 2007-05-21 16:43:57 ywang25 Exp $
+# $Id: Makefile,v 1.14 2008-01-21 17:38:41 borland Exp $
 #
 #  Lowest Level Directroy Makefile
 # $Log: not supported by cvs2svn $
+# Revision 1.13  2007/05/21 16:43:57  ywang25
+# Added hash table functions according to Bob Jenkins's code in public domain. Customized for elegant to improve parameter loading.
+#
 # Revision 1.12  2007/03/30 16:55:00  soliday
 # Removed a bunch of scripts and programs that have been moved to elegantTools.
 #
@@ -172,6 +175,11 @@ momentumAperture$(OBJ): momentumAperture.h
 
 momentumAperture.h: ../momentumAperture.nl
 	nlpp ../momentumAperture.nl momentumAperture.h
+
+moments$(OBJ): moments.h
+
+moments.h: ../moments.nl
+	nlpp ../moments.nl moments.h
 
 optim_covariable$(OBJ): optim_covariable.h
 
