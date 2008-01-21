@@ -86,6 +86,8 @@ void initialize_matrices(VMATRIX *M, long order)
     double ****Q;
 
     log_entry("initialize_matrices");
+
+    M->eptr = NULL;
     
     switch (M->order = order) {
         case 3:
@@ -161,6 +163,8 @@ void null_matrices(VMATRIX *M)
 
     log_entry("null_matrices");
 
+    M->eptr = NULL;
+    
     set_matrix_pointers(&C, &R, &T, &Q, M);
 
     switch (M->order) {
@@ -222,7 +226,7 @@ void track_particles(double **final, VMATRIX *M, double  **initial, long n_part)
     double *fin, *ini;
     double *Ri;
     static double temp[6];
-
+    
     log_entry("track_particles");
     
     if (!M)
@@ -255,7 +259,7 @@ void track_particles(double **final, VMATRIX *M, double  **initial, long n_part)
                 fflush(stdout);
                 abort();
                 }
-            fin[6] = ini[6];  /* copy particle ID # */
+            fin[6] = ini[6];       /* copy particle ID # */
             for (i=5; i>=0; i--) {
                 sum = C[i];
                 for (j=5; j>=0; j--) {
@@ -278,7 +282,7 @@ void track_particles(double **final, VMATRIX *M, double  **initial, long n_part)
                                   the event initial and final are same*/
                 }
             for (i=5; i>=0; i--)
-                fin[i] = temp[i];
+              fin[i] = temp[i];
             }
         break;
       case 2:
@@ -358,6 +362,7 @@ void track_particles(double **final, VMATRIX *M, double  **initial, long n_part)
         exit(1);
         break;
         }
+    
     log_exit("track_particles");
     }
 
@@ -744,6 +749,7 @@ void copy_matrices(VMATRIX *M1, VMATRIX *M0)
                     for (l=0; l<=k; l++)
                         M1->Q[i][j][k][l] = M0->Q[i][j][k][l];
         }
+
     log_exit("copy_matrices");
     }
 
@@ -829,4 +835,5 @@ long check_matrix(VMATRIX *M, char *comment)
     log_exit("check_matrix");
     return(3);
     }
+
 
