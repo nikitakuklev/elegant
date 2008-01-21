@@ -2039,11 +2039,11 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_SCRAPER_PARAMS,  MAT_LEN_NCAT,    sizeof(SCRAPER),    scraper_param  },
     {  N_CENTER_PARAMS,           UNIPROCESSOR,     sizeof(CENTER),    center_param   },
     {  N_KICKER_PARAMS,  MAT_LEN_NCAT|IS_MAGNET,     sizeof(KICKER),    kicker_param   },
-    {   N_KSEXT_PARAMS, MAT_LEN_NCAT|IS_MAGNET|MAT_CHW_ENERGY,      
+    {   N_KSEXT_PARAMS, MAT_LEN_NCAT|IS_MAGNET|MAT_CHW_ENERGY|DIVIDE_OK,      
                                           sizeof(KSEXT),    ksext_param    },
     {  N_KSBEND_PARAMS, MAT_LEN_NCAT|IS_MAGNET,
                                          sizeof(KSBEND),    ksbend_param   },
-    {   N_KQUAD_PARAMS, MAT_LEN_NCAT|IS_MAGNET|MAT_CHW_ENERGY, 
+    {   N_KQUAD_PARAMS, MAT_LEN_NCAT|IS_MAGNET|MAT_CHW_ENERGY|DIVIDE_OK, 
                                           sizeof(KQUAD),    kquad_param    },
     { N_MAGNIFY_PARAMS, HAS_MATRIX|MATRIX_TRACKING,     sizeof(MAGNIFY),    magnify_param  },
     {  N_SAMPLE_PARAMS,          0,      sizeof(SAMPLE),    sample_param   },
@@ -2058,7 +2058,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     {   N_RAMPP_PARAMS,          UNIPROCESSOR,       sizeof(RAMPP),    rampp_param    },
     {   N_STRAY_PARAMS,    MAT_LEN|MAT_CHW_ENERGY,
                                           sizeof(STRAY),    stray_param    },
-    {  N_CSBEND_PARAMS, MAT_LEN_NCAT|IS_MAGNET,
+    {  N_CSBEND_PARAMS, MAT_LEN_NCAT|IS_MAGNET|DIVIDE_OK,
                                          sizeof(CSBEND),    csbend_param   },
     {   N_TWMTA_PARAMS, MAT_LEN_NCAT|UNIPROCESSOR,     sizeof(TWMTA),    twmta_param    },
     {  N_MATTER_PARAMS,    MAT_LEN,      sizeof(MATTER),   matter_param    },
@@ -2108,7 +2108,6 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     {   N_SCMULT_PARAMS,    0,       sizeof(SCMULT),    scmult_param     },   
     {  N_ILMATRIX_PARAMS,  HAS_RF_MATRIX|MAT_LEN_NCAT,  sizeof(ILMATRIX),    ilmatrix_param     }, 
 } ;
- 
 
 void compute_offsets()
 {
@@ -2118,4 +2117,16 @@ void compute_offsets()
             entity_description[i].parameter[j].offset -= entity_description[i].parameter[0].offset;
         }
     }
+
+
+/* The sigma matrix s[i][j] is stored in a 21-element array.  These indices give the i and j values 
+ * corresponding to an element the array.  We have i<=j (upper triangular).  Values are filled in
+ * by setSigmaIndices, which is called on start-up.
+ */
+long sigmaIndex1[21], sigmaIndex2[21];
+
+/* This array gives the index in the 21-element array for given i and j.  Values are filled in
+ * by setSigmaIndices, which is called on start-up.
+ */
+long sigmaIndex3[6][6];
 
