@@ -97,6 +97,8 @@ typedef struct {
 typedef struct {
     double *C, **R, ***T, ****Q;
     long order;
+    /* These are needed by radiation calculations */
+    struct element_list *eptr;  /* address of element structure, if any */
     } VMATRIX;
 
 /* structure for general multipole kicks */
@@ -135,6 +137,13 @@ typedef struct {
   double dI[6];
   short periodic;  /* kind of wasteful... */
 } TWISS;
+
+/* Sigma matrix for beam moments computations */
+typedef struct {
+  /* 21 unique elements from upper triangular part of the 
+   * sigma matrix, stored in row order */
+  double sigma[21];  
+} SIGMA_MATRIX;
 
 /* structure for accumulating beam moments */
 
@@ -177,9 +186,13 @@ typedef struct element_list {
 #define VMATRIX_IS_PERTURBED 8
     double Pref_input, Pref_output;
     double Pref_output_fiducial;
-    VMATRIX *matrix;      /* matrix of this element */
-    TWISS *twiss;
+    VMATRIX *matrix;      /* pure matrix of this element */
     VMATRIX *accumMatrix; /* accumulated matrix to the end of this element */
+    TWISS *twiss;         /* computed from the above matrices */
+    VMATRIX *Mld;         /* linear damping matrix (on-orbit, with trajectory ) */
+    double *D;            /* 21-element diffusion matrix for this element */
+    double *accumD;       /* accumulated diffusion matrix up to end of this element */
+    SIGMA_MATRIX *sigmaMatrix;
     char *part_of;     /* name of lowest-level line that this element is part of */
     struct element_list *pred, *succ;
     long divisions;    /* if element was subdivided, how many times */
@@ -236,7 +249,8 @@ typedef struct line_list {
     ELEMENT_LIST *elem_recirc;    /* pointer to element in elem list */
     long icat_recirc;             /* refers to element index in ecat list */
     ELEMENT_LIST *ecat_recirc;    /* pointer to element in ecat list */
-    TWISS *twiss0;         /* initial Twiss parameters */
+    TWISS *twiss0;                /* initial Twiss parameters */
+    SIGMA_MATRIX *sigmaMatrix0;   /* initial Sigma matrix */
     ELEMENT_LIST *elem_twiss;  /* pointer to element for which twiss0 holds entering Twiss parameters.
                               Usually &elem or elem_recirc. */
     ELEMENT_LIST *elast;    /* pointer to last element &elem list */
@@ -261,6 +275,7 @@ typedef struct line_list {
     char *acc_limit_name[2];  /* names of elements at which acceptance is limited, in x and y */
     TRAJECTORY *closed_orbit;  /* closed orbit, if previously calculated, starting at recirc element */
     VMATRIX *matrix;       /* matrix from start of elem_twiss to end of line */
+    VMATRIX *Mld;          /* linear damping matrix from start of elem_twiss to end of line */
     char *part_of;         /* name of lowest-level line that this line is part of */
     ELEMENT_LINKS *links;   /* pointer to element links for this beamline */
     struct line_list *pred, *succ;
@@ -270,14 +285,14 @@ typedef struct line_list {
  * X_CURRENT : operation is current
  * X_DONE    : operation has been previously done, but may not be current
  */
-#define BEAMLINE_CONCAT_CURRENT 0x00000001
-#define BEAMLINE_CONCAT_DONE    0x00000002
-#define BEAMLINE_TWISS_CURRENT  0x00000004
-#define BEAMLINE_TWISS_DONE     0x00000008
-#define BEAMLINE_TWISS_WANTED   0x00000010
-#define BEAMLINE_RADINT_WANTED  0x00000020
-#define BEAMLINE_RADINT_CURRENT 0x00000040
-#define BEAMLINE_RADINT_DONE    0x00000080
+#define BEAMLINE_CONCAT_CURRENT   0x00000001
+#define BEAMLINE_CONCAT_DONE      0x00000002
+#define BEAMLINE_TWISS_CURRENT    0x00000004
+#define BEAMLINE_TWISS_DONE       0x00000008
+#define BEAMLINE_TWISS_WANTED     0x00000010
+#define BEAMLINE_RADINT_WANTED    0x00000020
+#define BEAMLINE_RADINT_CURRENT   0x00000040
+#define BEAMLINE_RADINT_DONE      0x00000080
     } LINE_LIST;
 
 /* structure for passing information on run conditions */
@@ -830,8 +845,11 @@ typedef struct {
 #define IS_MAGNET          0x00000010UL
 #define MATRIX_TRACKING    0x00000020UL
 #define HAS_RF_MATRIX      0x00000040UL
+/* Element may change the reference energy */
 #define MAY_CHANGE_ENERGY  0x00000080UL
+/* Matrix changes with energy */
 #define MAT_CHW_ENERGY     0x00000100UL
+/* Element can be automatically divided */
 #define DIVIDE_OK          0x00000200UL
 /* set this flag to prevent dictionary output of experimental elements */
 #define NO_DICT_OUTPUT     0x00000400UL
@@ -2313,7 +2331,9 @@ long determine_bend_flags(ELEMENT_LIST *eptr, long edge1_effects, long edge2_eff
 #define BEND_EDGE_EFFECTS (BEND_EDGE1_EFFECTS+BEND_EDGE2_EFFECTS)
 #define BEND_EDGE_DETERMINED 16
 
-#define IS_BEND(type) ((type)==T_SBEN || (type)==T_RBEN)
+#define IS_BEND(type) ((type)==T_SBEN || (type)==T_RBEN || (type)==T_CSBEND || (type)==T_KSBEND || (type)==T_CSRCSBEND)
+#define IS_RADIATOR(type) ((type)==T_SBEN || (type)==T_RBEN || (type)==T_CSBEND || (type)==T_CSRCSBEND || \
+                           (type)==T_QUAD || (type)==T_KQUAD || (type)==T_SEXT || (type)==T_KSEXT || (type)==T_WIGGLER || (type)==T_CWIGGLER)
 
 /* flags for run_awe_beam and run_bunched_beam */
 #define TRACK_PREVIOUS_BUNCH 1
@@ -2474,6 +2494,7 @@ extern VMATRIX *full_matrix(ELEMENT_LIST *elem, RUN *run, long order);
 extern VMATRIX *append_full_matrix(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long order);
 VMATRIX *accumulate_matrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long order, long full_matrix_only);
 extern long fill_in_matrices(ELEMENT_LIST *elem, RUN *run);
+VMATRIX *accumulateRadiationMatrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long order, long radiation);
 extern long calculate_matrices(LINE_LIST *line, RUN *run);
 extern VMATRIX *drift_matrix(double length, long order);
 extern VMATRIX *wiggler_matrix(double length, double radius, double dx, double dy, double dz,
@@ -2484,6 +2505,7 @@ extern VMATRIX *sextupole_matrix(double K2, double length, long maximum_order, d
 extern VMATRIX *solenoid_matrix(double length, double ks, long max_order);
 extern VMATRIX *compute_matrix(ELEMENT_LIST *elem, RUN *run, VMATRIX *Mspace);
 extern VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *stepSize);
+extern VMATRIX *determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *D);
 extern void set_up_watch_point(WATCH *watch, RUN *run);
 extern VMATRIX *magnification_matrix(MAGNIFY *magnif);
 extern void reset_special_elements(LINE_LIST *beamline, long includeRF);
@@ -2777,7 +2799,7 @@ extern long motion(double **part, long n_part, void *field, long field_type, dou
 extern long multipole_tracking(double **particle, long n_part, MULT *multipole, double p_error, double Po, double **accepted, double z_start);
 extern long multipole_tracking2(double **particle, long n_part, ELEMENT_LIST *elem, double p_error, double Po, double **accepted, double z_end, 
                                 double x_max, double y_max, long elliptical, 
-                                APERTURE_DATA *apData);
+                                APERTURE_DATA *apData, double *sigmaDelta2);
 extern long fmultipole_tracking(double **particle,  long n_part, FMULT *multipole,
                                 double p_error, double Po, double **accepted, double z_start);
 
@@ -2993,7 +3015,7 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
 long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, double p_error, double Po, double **accepted,
     double z_start, double z_end, CHARGE *charge, char *rootname);
 long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_error, double Po, double **accepted,
-    double z_start);
+    double z_start, double *sigmaDelta2);
 long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift, 
                             double Po, double **accepted, double zStart, 
 			    double revolutionLength, char *rootname);
@@ -3181,3 +3203,29 @@ extern int compTimeData(const void *tv1, const void *tv2);
 
 #define MAX_BUCKETS 16384
 int comp_BucketNumbers(const void *coord1, const void *coord2);
+
+
+void setStartingMoments(SIGMA_MATRIX *sm, 
+                        double emit_x, double beta_x, double alpha_x, double eta_x, double etap_x,
+                        double emit_y, double beta_y, double alpha_y, double eta_y, double etap_y,
+                        double emit_z, double beta_z, double alpha_z);
+void propagateBeamMoments(RUN *run, LINE_LIST *beamline, double *traj);
+void dumpBeamMoments(LINE_LIST *beamline, long n_elem, long final_values_only, long tune_corrected,
+                     RUN *run);
+void setupMomentsOutput(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, long *doMomentsOutput,
+                        long default_order);
+void finishMomentsOutput(void);
+long runMomentsOutput(RUN *run, LINE_LIST *beamline, double *startingCoord, long tune_corrected);
+void fillSigmaPropagationMatrix(double **Ms, double **R);
+
+/* The sigma matrix s[i][j] is stored in a 21-element array.  These indices give the i and j values 
+ * corresponding to an element the array.  We have i<=j (upper triangular).  Values are filled in
+ * by setSigmaIndices, which is called on start-up.
+ */
+extern long sigmaIndex1[21], sigmaIndex2[21];
+
+/* This array gives the index in the 21-element array for given i and j.  Values are filled in
+ * by setSigmaIndices, which is called on start-up.
+ */
+extern long sigmaIndex3[6][6];
+
