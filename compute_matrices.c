@@ -111,65 +111,132 @@ VMATRIX *accumulate_matrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long ord
 VMATRIX *append_full_matrix(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long order) 
 {
   return accumulate_matrices(elem, run, M0, order, 1);
-#if 0  
-  VMATRIX *M1, *M2, *tmp, *Md;
-    ELEMENT_LIST *member;
-    double Pref_input;
+}
 
-    log_entry("append_full_matrix");
-    if (!elem) {
-        fputs("error: NULL element pointer passed to append_full_matrix", stdout);
-        abort();
-        }
-    if (!M0) {
-        fputs("error: NULL initial matrix pointer passed to append_full_matrix", stdout);
-        abort();
-        }
-    
-    initialize_matrices(M1=tmalloc(sizeof(*M1)), order);
-    initialize_matrices(M2=tmalloc(sizeof(*M2)), order);
-    copy_matrices1(M1, M0);
-    
-    member = elem;
-    while (member) {
-        if (member->type<0 || member->type>=N_TYPES) {
-            fprintf(stdout, "error: bad element type %ld (full_matrix)\n", member->type);
-            fflush(stdout);
-            fprintf(stdout, "element name is %s and end position is %em\n", 
-                   (member->name?member->name:"{null}"), member->end_pos);
-            fflush(stdout);
-            abort();
-            }
-        if (member->pred)
-            Pref_input = member->pred->Pref_output;
-        else
-            Pref_input = member->Pref_input;
-        if (!member->matrix || Pref_input!=member->Pref_input)
-            compute_matrix(member, run, NULL);
-        if ((entity_description[member->type].flags&HAS_MATRIX) && !member->matrix) {
-            fprintf(stdout, "programming error: matrix not computed for element %s\n",
-                    member->name);
-            fflush(stdout);
-            abort();
-            }
-        if (member->matrix) {
-          concat_matrices(M2, member->matrix, M1,
-                          entity_description[member->type].flags&HAS_RF_MATRIX?
-                        CONCAT_EXCLUDE_S0:0);
-          tmp = M2;
-          M2  = M1;
-          M1  = tmp;
-        }
-        member = member->succ;
-      }
+VMATRIX *accumulateRadiationMatrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long order, long radiation)
+{
+  VMATRIX *M1, *M2, *Ml1, *Ml2, *tmp;
+  ELEMENT_LIST *member;
+  double Pref_input;
+  long i, j, k;
+  MATRIX *Ms;
   
-    if (M2) {
-        free_matrices(M2); tfree(M2); M2 = NULL;
-        }
-    log_exit("append_full_matrix");
-    return(M1);
-#endif
+  if (!elem) {
+    fputs("error: NULL element pointer passed to accumulateRadiationMatrices", stdout);
+    abort();
+  }
+  
+  initialize_matrices(M1=tmalloc(sizeof(*M1)), order);
+  initialize_matrices(M2=tmalloc(sizeof(*M2)), order);
+  initialize_matrices(Ml1=tmalloc(sizeof(*Ml1)), 1);
+  initialize_matrices(Ml2=tmalloc(sizeof(*Ml2)), 1);
+  for (i=0; i<6; i++)
+    M1->R[i][i] = M2->R[i][i] = Ml1->R[i][i] = 1;
+  if (M0)
+    copy_matrices1(M1, M0);
+  m_alloc(&Ms, 21, 21);
+  
+  member = elem;
+    
+  while (member) {
+    if (member->type<0 || member->type>=N_TYPES) {
+      fprintf(stdout, "error: bad element type %ld (accumulateRadiationMatrices)\n", member->type);
+      fflush(stdout);
+      fprintf(stdout, "element name is %s and end position is %em\n", 
+             (member->name?member->name:"{null}"), member->end_pos);
+      fflush(stdout);
+      abort();
     }
+    if (member->pred)
+      Pref_input = member->pred->Pref_output;
+    else
+      Pref_input = member->Pref_input;
+    if (!member->matrix || Pref_input!=member->Pref_input) {
+      if (member->matrix) {
+        free_matrices(member->matrix);
+        free(member->matrix);
+      }
+      compute_matrix(member, run, NULL);
+    }
+    if ((entity_description[member->type].flags&HAS_MATRIX) && !member->matrix) {
+      fprintf(stdout, "programming error: matrix not computed for element %s\n",
+              member->name);
+      fflush(stdout);
+      abort();
+    }
+    if (!(member->D))
+      member->D = tmalloc(21*sizeof(*(member->D)));
+    memset(member->D, 0, 21*sizeof(*(member->D)));
+    if (!(member->accumD))
+      member->accumD = tmalloc(21*sizeof(*(member->accumD)));
+    memset(member->accumD, 0, 21*sizeof(*(member->accumD)));
+    if (member->matrix) {
+      /* Step 1: determine effective R matrix for this element */
+      if (radiation && (IS_RADIATOR(member->type) || member->type==T_RFCA)) {
+        /* Must include radiation, so do tracking */
+        determineRadiationMatrix(Ml2, run, member, M1->C, member->D);
+        memcpy(member->accumD, member->D, 21*sizeof(*(member->D)));
+        /* 
+          &member->D[sigmaIndex3[5][5]]); 
+          member->accumD[sigmaIndex3[5][5]] = member->D[sigmaIndex3[5][5]];
+        */
+      } else {
+        /* Just use the matrix computed above.
+         * Concatenate incoming centroid with the matrix to get the on-orbit R matrix 
+         */
+        memcpy(Ml1->C, M1->C, 6*sizeof(*(Ml1->C)));
+        concat_matrices(Ml2, member->matrix, Ml1,
+                        entity_description[member->type].flags&HAS_RF_MATRIX?CONCAT_EXCLUDE_S0:0);
+      } 
+      /* Step 2: Copy the C vector */
+      memcpy(M2->C, Ml2->C, 6*sizeof(*(M2->C)));
+      /* Step 3: Propagate the diffusion matrix */
+      if (member->pred && member->pred->accumD) {
+        fillSigmaPropagationMatrix(Ms->a, Ml2->R);
+        for (i=0; i<21; i++) 
+          for (j=0; j<21; j++)
+            member->accumD[i] += Ms->a[i][j]*member->pred->accumD[j];
+      }
+      /* Step 5: Multiply the R matrices */
+      for (i=0; i<6; i++)
+        for (j=0; j<6; j++) {
+          M2->R[i][j] = 0;
+          for (k=0; k<6; k++) 
+            M2->R[i][j] += Ml2->R[i][k]*M1->R[k][j];
+        }
+      tmp = M2;
+      M2  = M1;
+      M1  = tmp;
+      /* Step 6: Store the linear damping matrix and trajectory. */
+      /* This matrix must be used carefully because the C component contains the full
+       * trajectory, not just the contribution.  It should only be used for moments
+       * propagation.
+       */
+      if (!(member->Mld)) {
+        member->Mld = tmalloc(sizeof(*(member->Mld)));
+        initialize_matrices(member->Mld, 1);
+      }
+      copy_matrices(member->Mld, Ml2);
+    } else { 
+      if (member->pred && member->pred->accumD)
+        memcpy(member->accumD, member->pred->accumD, 21*sizeof(*(member->accumD)));
+      if (!(member->Mld)) {
+        member->Mld = tmalloc(sizeof(*(member->Mld)));
+        initialize_matrices(member->Mld, 1);
+      }
+      for (i=0; i<6; i++) {
+        member->Mld->C[i] = M1->C[i];
+        member->Mld->R[i][i] = 1;
+      }
+    }
+    member = member->succ;
+  }
+  if (M2) {
+    free_matrices(M2); tfree(M2); M2 = NULL;
+  }
+  m_free(&Ms);
+  return M1;
+}
 
 long fill_in_matrices(
                       ELEMENT_LIST *elem,
@@ -295,7 +362,7 @@ VMATRIX *sextupole_matrix(double K2, double length, long maximum_order, double t
     double temp;
     
     log_entry("sextupole_matrix");
-    
+
     K2 *= (1+fse);
 
     M = tmalloc(sizeof(*M));
@@ -495,7 +562,7 @@ VMATRIX *compute_matrix(
     CSRCSBEND *csrcsbend;
     CSRDRIFT *csrdrift; LSCDRIFT *lscdrift; EDRIFT *edrift;
     WIGGLER *wiggler; CWIGGLER *cwiggler;
-    double ks, Pref_output, tilt;
+    double ks, Pref_output;
     VARY rcContext;
     long fiducialize;
 
@@ -947,6 +1014,10 @@ VMATRIX *compute_matrix(
             }
         break;
         }
+
+    if (elem->matrix)
+      /* This allows us to find the element if we have the matrix */
+      elem->matrix->eptr = elem;
 
     return(elem->matrix);
     }
@@ -1406,7 +1477,8 @@ VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, doubl
       initialize_matrices(Mtot, Mtot->order = M->order);
       initialize_matrices(Medge, Medge->order = M->order);
       Medge->R[0][0] = Medge->R[1][1] = Medge->R[2][2] = Medge->R[3][3] = 
-        Medge->R[4][4] = Medge->R[5][5] = 1;
+        Medge->R[4][4] = 1;
+      Medge->R[5][5] = (*P_central+dP)/Preference;
       Medge->C[5] = (*P_central+dP-Preference)/Preference;
       concat_matrices(Mtot, Medge, M, CONCAT_EXCLUDE_S0);
       tmp = Mtot;
