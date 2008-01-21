@@ -1034,7 +1034,9 @@ void dump_particle_histogram(HISTOGRAM *histogram, long step, long pass, double 
 	upper += 1e-16;
       }
     }
-#if USE_MPI  
+#if USE_MPI
+    if (isMaster)    /* The particles are on slave */
+      particles = 0;    
     find_global_min_max(&lower, &upper, particles, MPI_COMM_WORLD); 
 #endif
     if (histogram->count==0 || !histogram->fixedBinSize) {
@@ -1048,10 +1050,6 @@ void dump_particle_histogram(HISTOGRAM *histogram, long step, long pass, double 
     upper = center+range/2;
     for (ibin=0; ibin<histogram->bins; ibin++) 
       coordinate[ibin] = (ibin+0.5)*histogram->binSize[icoord] + lower;
-#if USE_MPI
-    if (isMaster)    /* The particles are on slave */
-      particles = 0;  
-#endif
     make_histogram(frequency, histogram->bins, lower, upper, histData, particles, 1);
 #if USE_MPI
     if (USE_MPI) /* This will update the number of particles locally on master if there are lost on laves */
