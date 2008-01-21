@@ -401,7 +401,7 @@ long track_beam(
     MPI_Abort(MPI_COMM_WORLD, 2);
   }
   else {  /* do tracking in parallel */ 
-    if (!lessPartAllowed) /* If less number of particles is allowed, all processors will excute the same code */
+    if (!lessPartAllowed || beam->n_to_track>=(n_processors-1)) /* If less number of particles is allowed, all processors will excute the same code */
       notSinglePart = 1;
     /*   random_1(-FABS(987654321+2*myid)); */
   }
