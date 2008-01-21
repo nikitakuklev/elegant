@@ -49,6 +49,7 @@ void do_semaphore_setup(char **semaphoreFile, NAMELIST_TEXT *nltext);
 void free_beamdata(BEAM *beam);
 void printFarewell(FILE *fp);
 void closeBeamlineOutputFiles(LINE_LIST *beamline);
+void setSigmaIndices();
 
 #define DESCRIBE_INPUT 0
 #define DEFINE_MACRO 1
@@ -67,10 +68,10 @@ void showUsageOrGreeting (unsigned long mode)
 {
 #if USE_MPI
   char *USAGE="usage: mpirun -np <number of processes> Pelegant <inputfile> [-macro=<tag>=<value>,[...]]";
-  char *GREETING="This is elegant 17.3.4, "__DATE__", by M. Borland, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang and M. Borland.";
+  char *GREETING="This is elegant 17.3.5, "__DATE__", by M. Borland, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang and M. Borland.";
 #else
   char *USAGE="usage: elegant <inputfile> [-macro=<tag>=<value>,[...]] [-cpuList=<number>[,<number>]]";
-  char *GREETING="This is elegant 17.3.4, "__DATE__", by M. Borland, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.";
+  char *GREETING="This is elegant 17.3.5, "__DATE__", by M. Borland, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.";
 #endif
   if (mode&SHOW_GREETING)
     puts(GREETING);
@@ -131,7 +132,8 @@ void showUsageOrGreeting (unsigned long mode)
 #define COUPLED_TWISS_OUTPUT 49
 #define LINEAR_CHROMATIC_TRACKING_SETUP 50
 #define RPN_LOAD 51
-#define N_COMMANDS      52
+#define MOMENTS_OUTPUT 52
+#define N_COMMANDS      53
 
 char *command[N_COMMANDS] = {
     "run_setup", "run_control", "vary_element", "error_control", "error_element", "awe_beam", "bunched_beam",
@@ -144,6 +146,7 @@ char *command[N_COMMANDS] = {
     "optimization_term", "slice_analysis", "divide_elements", "tune_shift_with_amplitude",
     "transmute_elements", "twiss_analysis", "semaphores", "frequency_map", "insert_sceffects", "momentum_aperture", 
     "aperture_input", "coupled_twiss_output", "linear_chromatic_tracking_setup", "rpn_load",
+    "moments_output",
   } ;
 
 char *description[N_COMMANDS] = {
@@ -199,6 +202,7 @@ char *description[N_COMMANDS] = {
     "coupled_twiss_output             compute coupled beamsizes and twiss parameters",
     "linear_chromatic_tracking_setup  set up chromatic derivatives for linear chromatic tracking",
     "rpn_load                         load SDDS data into rpn variables",
+    "moments_output                   perform moments computations and output to file",
   } ;
 
 #define NAMELIST_BUFLEN 65536
@@ -266,8 +270,9 @@ char **argv;
   char *saved_lattice = NULL;
   long correction_setuped, run_setuped, run_controled, error_controled, beam_type, commandCode;
   long do_chromatic_correction = 0, do_twiss_output = 0, fl_do_tune_correction = 0, do_coupled_twiss_output = 0;
+  long do_moments_output = 0;
   long do_closed_orbit = 0, do_matrix_output = 0, do_response_output = 0;
-  long last_default_order = 0, new_beam_flags, links_present, twiss_computed = 0;
+  long last_default_order = 0, new_beam_flags, links_present, twiss_computed = 0, moments_computed = 0;
   long correctionDone, linear_chromatic_tracking_setup_done = 0;
   double *starting_coord, finalCharge;
   long namelists_read = 0, failed, firstPass;
@@ -358,6 +363,7 @@ char **argv;
   set_max_name_length(100);
   macros = 0;
   macroTag = macroValue = NULL;
+  setSigmaIndices();
   
 #if defined(VAX_VMS) || defined(UNIX) || defined(_WIN32)
   init_stats();
@@ -519,7 +525,7 @@ char **argv;
       
       run_setuped = run_controled = error_controled = correction_setuped = do_closed_orbit = do_chromatic_correction = 
         fl_do_tune_correction = 0;
-      do_twiss_output = do_matrix_output = do_response_output = do_coupled_twiss_output = 0;
+      do_twiss_output = do_matrix_output = do_response_output = do_coupled_twiss_output = do_moments_output = 0;
       linear_chromatic_tracking_setup_done = 0;
 
       set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
@@ -806,6 +812,8 @@ char **argv;
           fflush(stdout);
           continue;
         }
+        if (do_moments_output)
+          runMomentsOutput(&run_conditions, beamline, starting_coord, 0);
         if (do_response_output)
           run_response_output(&run_conditions, beamline, &correct, 0);
         run_matrix_output(&run_conditions, beamline);
@@ -877,6 +885,8 @@ char **argv;
           fflush(stdout);
           continue;
         }
+        if (do_moments_output)
+          runMomentsOutput(&run_conditions, beamline, starting_coord, 1);
         if (do_coupled_twiss_output &&
             run_coupled_twiss_output(&run_conditions, beamline, starting_coord) &&
             !soft_failure) {
@@ -911,6 +921,8 @@ char **argv;
         finish_clorb_output();
       if (do_twiss_output)
         finish_twiss_output();
+      if (do_moments_output)
+        finishMomentsOutput();
       if (do_coupled_twiss_output)
         finish_coupled_twiss_output();
       if (do_response_output)
@@ -954,6 +966,20 @@ char **argv;
         reset_special_elements(beamline, 1);
         reset_driftCSR();
         finish_twiss_output();
+      }
+      break;
+    case MOMENTS_OUTPUT:
+      if (!run_setuped)
+        bomb("run_setup must precede moments_output namelist", NULL);
+      setupMomentsOutput(&namelist_text, &run_conditions, beamline, &do_moments_output,
+                         run_conditions.default_order);
+      if (!do_moments_output) {
+        moments_computed = 1;
+        runMomentsOutput(&run_conditions, beamline, NULL, -1);
+        delete_phase_references();
+        reset_special_elements(beamline, 1);
+        reset_driftCSR();
+        finishMomentsOutput();
       }
       break;
     case COUPLED_TWISS_OUTPUT:
@@ -1733,7 +1759,7 @@ void print_dictionary_entry(FILE *fp, long type, long latex_form, long SDDS_form
       strcpy_ss(buffer, entity_name[type]);
       replace_chars(buffer, "\n\t", "  ");
       fprintf(fp, "%s\n", buffer);
-      fprintf(fp, "%ld\n", entity_description[type].flags&UNIPROCESSOR?0:1);
+      fprintf(fp, "%ld\n", (long)(entity_description[type].flags&UNIPROCESSOR?0:1));
       fprintf(fp, "%ld\n", entity_description[type].n_params);
     }
     else 
@@ -2239,3 +2265,16 @@ void closeBeamlineOutputFiles(LINE_LIST *beamline)
     eptr = eptr->succ;
   }
 }
+
+void setSigmaIndices() 
+{
+  long i, j, k;
+  
+  for (i=k=0; i<6; i++)
+    for (j=i; j<6; j++, k++) {
+      sigmaIndex3[i][j] = sigmaIndex3[j][i] = k;
+      sigmaIndex1[k] = i;
+      sigmaIndex2[k] = j;
+    }
+}
+
