@@ -202,8 +202,9 @@ long do_tracking(
   }
 #endif
   
-  if (accepted)
-    copy_particles(accepted, coord, nOriginal);
+  if (isMaster)
+    if (accepted)
+      copy_particles(accepted, coord, nOriginal);
 
 #ifdef VAX_VMS
   is_batch = job_mode(getpid())==2?1:0;
@@ -1214,14 +1215,18 @@ long do_tracking(
 #if USE_MPI
 	      else {   /* on the slave processors */
                 MPI_Bcast(&reAllocate, 1, MPI_LONG, 0, MPI_COMM_WORLD);
-                if (reAllocate)
+                if (reAllocate) {
 		  /* resize the particle array */
-		  if (!(coord = beam->particle =  (double**)resize_czarray_2d((void**)coord,sizeof(double), reAllocate, 7)) ||
+		  if (beam->original==beam->particle) {
+		    beam->original = NULL; /* The slaves don't need to save the original particle informaiton in this version */
+		  }
+		  if (!(coord = beam->particle =  (double**)resize_czarray_2d((void**)coord,sizeof(double), reAllocate*factor, 7)) ||
 		      ((lostOnPass!=NULL) && !(lostOnPass = beam->lostOnPass = realloc(beam->lostOnPass, sizeof(lostOnPass)*reAllocate)))) {
 		    fprintf(stderr, "Memory allocation failure increasing particle array size to %ld\n",
 			    reAllocate);
 		    MPI_Abort(MPI_COMM_WORLD, 1);   
 		  }                                  
+		}
 	      }
 #endif
 	      break;
@@ -1433,10 +1438,10 @@ long do_tracking(
 	    lostSinceSeqMode = needSort = 1;
 	  MPI_Bcast (&lostSinceSeqMode, 1, MPI_INT, 0, MPI_COMM_WORLD);
 	}
-      }
-      if (classFlags&MPALGORITHM && isMaster) {
-	/* Master does not need to do limit_amplitudes for MPALGORITHM elements */
-        active = 0; 
+	if (classFlags&MPALGORITHM && isMaster) {
+	  /* Master does not need to do limit_amplitudes for MPALGORITHM elements */
+	  active = 0; 
+	}
       }
 #endif
       if ((!USE_MPI || !notSinglePart) || (USE_MPI && active)) {
