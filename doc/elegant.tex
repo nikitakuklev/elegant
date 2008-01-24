@@ -404,6 +404,25 @@ suggested ``\%s'' field in all the output file names).
 One may give the {\tt macro} option any number of times, or combine
 all substitutions in one option.
 
+{\tt elegant} also allows execution of commands in the shell as part of
+evaluation of a namelist field.  To invoke this, one encloses the commandline
+string in curly braces.  E.g., 
+\begin{verbatim}
+betax = {rpnl 8 2 / pi /}
+\end{verbatim}
+In this example, \verb|betax| is assigned the value $8/(2 \pi)$, which is computed using
+the commandline program \verb|rpnl|.  One possible pitfall with using \verb|rpnl| in this
+fashion is interpretation of the multiplication symbol (\verb|*|) as a file wildcard by the
+shell.  For this reason, the alternate multiplication operator \verb|mult| is preferred, e.g.,
+\begin{verbatim}
+betax = {rpnl 8 pi mult}
+\end{verbatim}
+rather than
+\begin{verbatim}
+betax = {rpnl 8 pi *}
+\end{verbatim}
+
+
 \begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|alter_elements|}\end{center}
