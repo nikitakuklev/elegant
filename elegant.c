@@ -1744,8 +1744,10 @@ char *makeTexSafeString(char *source);
 void print_dictionary_entry(FILE *fp, long type, long latex_form, long SDDS_form)
 {
   char *type_name[3] = {"double", "long", "STRING", };
-  long j, texLines;
+  char *description;
+  long j, texLines, specialEntry;
   char buffer[16384];
+  char *specialDescription = "Optionally used to assign an element to a group, with a user-defined name.  Group names will appear in the parameter output file in the column ElementGroup";
   if (latex_form) {
     fprintf(fp, "\\begin{latexonly}\n\\newpage\n\\begin{center}{\\Large\\verb|%s|}\\end{center}\n\\end{latexonly}\\subsection{%s}\n", 
             entity_name[type], entity_name[type]);
@@ -1765,7 +1767,10 @@ void print_dictionary_entry(FILE *fp, long type, long latex_form, long SDDS_form
     else 
       fprintf(fp, "%s\n", entity_text[type]);
   }
-  for (j=texLines=0; j<entity_description[type].n_params; j++) {
+  specialEntry = 0;
+  for (j=texLines=0; j<=entity_description[type].n_params; j++) {
+    if (j==entity_description[type].n_params)
+      specialEntry = 1;
     /* 35 lines fits on a latex page */
     if (latex_form && texLines>35) {
       texLines = 0;
@@ -1778,71 +1783,80 @@ void print_dictionary_entry(FILE *fp, long type, long latex_form, long SDDS_form
     }
     if (SDDS_form) {
       fprintf(fp, "\"%s\" \"%s\" \"%s\"", 
-              PRINTABLE_NULL(entity_description[type].parameter[j].name), 
-              PRINTABLE_NULL(entity_description[type].parameter[j].unit),
-              PRINTABLE_NULL(type_name[entity_description[type].parameter[j].type-1]));
+              PRINTABLE_NULL(specialEntry ? "GROUP" : entity_description[type].parameter[j].name), 
+              PRINTABLE_NULL(specialEntry ? "" : entity_description[type].parameter[j].unit),
+              PRINTABLE_NULL(specialEntry ? "string" : type_name[entity_description[type].parameter[j].type-1]));
     } else if (!latex_form)
       fprintf(fp, "%20s %20s %10s", 
-              PRINTABLE_NULL(entity_description[type].parameter[j].name), 
-              PRINTABLE_NULL(entity_description[type].parameter[j].unit),
-              PRINTABLE_NULL(type_name[entity_description[type].parameter[j].type-1]));
+              PRINTABLE_NULL(specialEntry ? "GROUP" : entity_description[type].parameter[j].name), 
+              PRINTABLE_NULL(specialEntry ? "" : entity_description[type].parameter[j].unit),
+              PRINTABLE_NULL(specialEntry ? "string" : type_name[entity_description[type].parameter[j].type-1]));
     else {
       fprintf(fp, "%s ",
-              makeTexSafeString(PRINTABLE_NULL(entity_description[type].parameter[j].name)));
+              makeTexSafeString(PRINTABLE_NULL(specialEntry ? "GROUP" : 
+                                               entity_description[type].parameter[j].name)));
       fprintf(fp, "& %s ",
-              translateUnitsToTex(PRINTABLE_NULL(entity_description[type].parameter[j].unit)));
+              translateUnitsToTex(PRINTABLE_NULL(specialEntry ? "" : 
+                                                 entity_description[type].parameter[j].unit)));
       fprintf(fp, "& %s & ",
-              makeTexSafeString(PRINTABLE_NULL(type_name[entity_description[type].parameter[j].type-1])));
+              makeTexSafeString(PRINTABLE_NULL(specialEntry ? "string" :
+                                               type_name[entity_description[type].parameter[j].type-1])));
     }
-    switch (entity_description[type].parameter[j].type) {
-    case IS_DOUBLE:
-      if (latex_form && entity_description[type].parameter[j].number==0)
-        fprintf(fp, " 0.0");
-      else 
-        fprintf(fp, "  %.15g", entity_description[type].parameter[j].number);
-      break;
-    case IS_LONG:
-      if (latex_form && entity_description[type].parameter[j].integer==0)
-        fprintf(fp, " \\verb|0|");
-      else      
-        fprintf(fp, "  %-15ld", entity_description[type].parameter[j].integer);
-      break;
-    case IS_STRING:
-      if (SDDS_form)
-	fprintf(fp, " \"%s\"", 
-		PRINTABLE_NULL(entity_description[type].parameter[j].string));
-      else 
+    if (!specialEntry) {
+      switch (entity_description[type].parameter[j].type) {
+      case IS_DOUBLE:
+        if (latex_form && entity_description[type].parameter[j].number==0)
+          fprintf(fp, " 0.0");
+        else 
+          fprintf(fp, "  %.15g", entity_description[type].parameter[j].number);
+        break;
+      case IS_LONG:
+        if (latex_form && entity_description[type].parameter[j].integer==0)
+          fprintf(fp, " \\verb|0|");
+        else      
+          fprintf(fp, "  %-15ld", entity_description[type].parameter[j].integer);
+        break;
+      case IS_STRING:
+        if (SDDS_form)
+          fprintf(fp, " \"%s\"", 
+                  PRINTABLE_NULL(entity_description[type].parameter[j].string));
+        else 
 	  fprintf(fp, "  %-15s", 
-              PRINTABLE_NULL(entity_description[type].parameter[j].string));
-      break;
-    default:
-      fprintf(stdout, "Invalid parameter type for %s item of %s\n",
-              PRINTABLE_NULL(entity_description[type].parameter[j].name),
-              entity_name[type]);
-      fflush(stdout);
-      exit(1);
+                  PRINTABLE_NULL(entity_description[type].parameter[j].string));
+        break;
+      default:
+        fprintf(stdout, "Invalid parameter type for %s item of %s\n",
+                PRINTABLE_NULL(entity_description[type].parameter[j].name),
+                entity_name[type]);
+        fflush(stdout);
+        exit(1);
+      }
     }
+    if (specialEntry)
+      description = specialDescription;
+    else
+      description = entity_description[type].parameter[j].description;
     if (latex_form) {
-      char *ptr0, buffer[1024];
-      strcpy_ss(buffer, entity_description[type].parameter[j].description);
+      char *ptr0;
+      strcpy_ss(buffer, description);
       if (strlen(ptr0 = buffer)) {
         /* don't need splitting of strings since the p tabular code 
            is used.
            */
         /*
-        while (strlen(ptr0)>20) {
+          while (strlen(ptr0)>20) {
           ptr1 = ptr0+20;
           while (*ptr1 && *ptr1!=' ')
-            ptr1++;
+          ptr1++;
           if (!*ptr1)
-            break;
+          break;
           *ptr1 = 0;
           fprintf(fp, " & %s ", makeTexSafeString(ptr0));
           fprintf(fp, "\\\\ \n & & & ");
           ptr0 = ptr1+1;
           texLines++;
-        }
-        */
+          }
+          */
         /* add to lines counter based on estimate of wrap-around lines
            in the latex parbox. 28 is approximate number of char. in 2 in */
         texLines += strlen(ptr0) / 28;
@@ -1858,9 +1872,9 @@ void print_dictionary_entry(FILE *fp, long type, long latex_form, long SDDS_form
       }
     }
     else if (SDDS_form)
-      fprintf(fp, "  \"%s\"\n", entity_description[type].parameter[j].description);
+      fprintf(fp, "  \"%s\"\n", description);
     else
-      fprintf(fp, "  %s\n", entity_description[type].parameter[j].description);
+      fprintf(fp, "  %s\n", description);
   }
   if (latex_form) {
     char physicsFile[1024];
