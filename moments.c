@@ -31,7 +31,8 @@ static long momentsCount = 0;
 #define IC_TYPE 2
 #define IC_S 3
 #define IC_PCENTRAL 4
-#define N_COLUMNS IC_PCENTRAL+22+6
+#define IC_EMITTANCE (IC_PCENTRAL+1+21+6)
+#define N_COLUMNS (IC_PCENTRAL+1+21+6+3)
 static SDDS_DEFINITION column_definition[N_COLUMNS] = {
 {"ElementName", "&column name=ElementName, type=string, description=\"Element name\", format_string=%10s &end"},
 {"ElementOccurence", "&column name=ElementOccurence, type=long, description=\"Occurence of element\", format_string=%6ld &end"},
@@ -65,6 +66,9 @@ static SDDS_DEFINITION column_definition[N_COLUMNS] = {
     {"c4",    "&column name=c4, symbol=\"c$b4$n\", units=, type=double, description=\"<y'>)\" &end"},
     {"c5",    "&column name=c5, symbol=\"c$b5$n\", units=m, type=double, description=\"<s>)\" &end"},
     {"c6",    "&column name=c6, symbol=\"c$b6$n\", units=, type=double, description=\"<delta>)\" &end"},
+    {"ex",    "&column name=ex, symbol=\"$ge$r$bx$n\", units=m, type=double, description=\"Projected horizontal emittance\" &end"},
+    {"ey",    "&column name=ey, symbol=\"$ge$r$by$n\", units=m, type=double, description=\"Projected vertical emittance\" &end"},
+    {"ez",    "&column name=ez, symbol=\"$ge$r$bz$n\", units=m, type=double, description=\"Projected longitudinal emittance\" &end"},
 };
 
 #define IP_STEP 0
@@ -85,8 +89,8 @@ void dumpBeamMoments(
   RUN *run
   )
 {
-  double data[N_COLUMNS];
-  long i, j, k, row_count, elemCheck;
+  double data[N_COLUMNS], *emit;
+  long i, j, k, row_count, elemCheck, plane;
   char *stage;
   ELEMENT_LIST *elem;
   SIGMA_MATRIX *sigma0;
@@ -110,7 +114,7 @@ void dumpBeamMoments(
 
   elem   = beamline->elem_twiss;
   sigma0 = beamline->sigmaMatrix0;
-  
+  emit = data+IC_EMITTANCE;
   if (!final_values_only) {
     row_count = 0;
     data[IC_S] = 0;     /* position */
@@ -120,6 +124,15 @@ void dumpBeamMoments(
     for (i=0; i<6; i++) {
       k = sigmaIndex3[i][i];
       data[IC_PCENTRAL+1+k] = sqrt(data[IC_PCENTRAL+1+k]);
+    }
+    for (plane=0; plane<3; plane++) {
+      emit[plane] = sigma0->sigma[sigmaIndex3[0+plane*2][0+plane*2]]*
+        sigma0->sigma[sigmaIndex3[1+plane*2][1+plane*2]] - 
+          sqr(sigma0->sigma[sigmaIndex3[0+plane*2][1+plane*2]]);
+      if (emit[plane]>0)
+        emit[plane] = sqrt(emit[plane]);
+      else
+        emit[plane] = -1;
     }
     for (j=IC_S; j<N_COLUMNS; j++)
       if (!SDDS_SetRowValues(&SDDSMoments, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row_count, j, data[j], -1)) {
@@ -143,6 +156,15 @@ void dumpBeamMoments(
       for (i=0; i<6; i++) {
         k = sigmaIndex3[i][i];
         data[IC_PCENTRAL+1+k] = sqrt(data[IC_PCENTRAL+1+k]);
+      }
+      for (plane=0; plane<3; plane++) {
+        emit[plane] = elem->sigmaMatrix->sigma[sigmaIndex3[0+plane*2][0+plane*2]]*
+          elem->sigmaMatrix->sigma[sigmaIndex3[1+plane*2][1+plane*2]] - 
+            sqr(elem->sigmaMatrix->sigma[sigmaIndex3[0+plane*2][1+plane*2]]);
+        if (emit[plane]>0)
+          emit[plane] = sqrt(emit[plane]);
+        else
+          emit[plane] = -1;
       }
       for (j=IC_S; j<N_COLUMNS; j++)
         if (!SDDS_SetRowValues(&SDDSMoments, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row_count, j, data[j], -1)) {
@@ -182,6 +204,15 @@ void dumpBeamMoments(
     for (i=0; i<6; i++) {
       k = sigmaIndex3[i][i];
       data[IC_PCENTRAL+1+k] = sqrt(data[IC_PCENTRAL+1+k]);
+    }
+    for (plane=0; plane<3; plane++) {
+      emit[plane] = elem->sigmaMatrix->sigma[sigmaIndex3[0+plane*2][0+plane*2]]*
+        elem->sigmaMatrix->sigma[sigmaIndex3[1+plane*2][1+plane*2]] - 
+          sqr(elem->sigmaMatrix->sigma[sigmaIndex3[0+plane*2][1+plane*2]]);
+      if (emit[plane]>0)
+        emit[plane] = sqrt(emit[plane]);
+      else
+        emit[plane] = -1;
     }
     for (j=IC_S; j<N_COLUMNS; j++)
       if (!SDDS_SetRowValues(&SDDSMoments, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, 0, j, data[j], -1)) {
