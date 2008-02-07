@@ -308,17 +308,24 @@ long runMomentsOutput(RUN *run, LINE_LIST *beamline, double *startingCoord, long
       M1->C[i] = startingCoord[i];
       M1->R[i][i] = 1;
     }
-    beamline->Mld = accumulateRadiationMatrices(beamline->elem_twiss, run, M1, 1, radiation);
+    beamline->Mld = accumulateRadiationMatrices(beamline->elem_twiss, run, M1, 1, radiation, n_slices);
     free_matrices(M1);
     free(M1);
   }
   else {
-    beamline->Mld = accumulateRadiationMatrices(beamline->elem_twiss, run, NULL, 1, radiation);
+    beamline->Mld = accumulateRadiationMatrices(beamline->elem_twiss, run, NULL, 1, radiation, n_slices);
   }
   if (verbosity>0) {
     char text[200];
-    sprintf(text, "one-turn, on-orbit matrix with%sradiation:", radiation?" ":"out ");
+    sprintf(text, "** One-turn, on-orbit matrix with%sradiation:", radiation?" ":"out ");
     print_matrices(stdout, text, beamline->Mld);
+  }
+  if (verbosity>1) {
+    long j;
+    printf("** One-turn diffusion matrix: \n");
+    for (i=0; i<6; i++) 
+      for (j=0; j<6; j++)
+        printf("%13.6e%c", beamline->elast->accumD[sigmaIndex3[i][j]], j==5?'\n':' ');
   }
   
   if (matched) {
@@ -331,11 +338,25 @@ long runMomentsOutput(RUN *run, LINE_LIST *beamline, double *startingCoord, long
                        emit_y, beta_y, alpha_y, eta_y, etap_y, 
                        emit_z, beta_z, alpha_z);
   }
+  if (verbosity>1) {
+    long j;
+    printf("** Starting sigma matrix: \n");
+    for (i=0; i<6; i++) 
+      for (j=0; j<6; j++)
+        printf("%13.6e%c", beamline->sigmaMatrix0->sigma[sigmaIndex3[i][j]], j==5?'\n':' ');
+  }
   
   /* Propagate moments to each element */
   propagateBeamMoments(run, beamline, startingCoord);
 
   elast = beamline->elast;
+  if (verbosity>1) {
+    long j;
+    printf("** Final sigma matrix: \n");
+    for (i=0; i<6; i++) 
+      for (j=0; j<6; j++)
+        printf("%13.6e%c", elast->sigmaMatrix->sigma[sigmaIndex3[i][j]], j==5?'\n':' ');
+  }
 
   if (SDDSMomentsInitialized)
     dumpBeamMoments(beamline, n_elem, final_values_only, tune_corrected, run);

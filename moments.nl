@@ -13,6 +13,7 @@
     long verbosity = 0;
     long matched = 1;
     long radiation = 1;
+    long n_slices = 10;
     double emit_x = 0;
     double beta_x = 0;
     double alpha_x = 0;

@@ -113,7 +113,7 @@ VMATRIX *append_full_matrix(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long orde
   return accumulate_matrices(elem, run, M0, order, 1);
 }
 
-VMATRIX *accumulateRadiationMatrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long order, long radiation)
+VMATRIX *accumulateRadiationMatrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long order, long radiation, long nSlices)
 {
   VMATRIX *M1, *M2, *Ml1, *Ml2, *tmp;
   ELEMENT_LIST *member;
@@ -174,12 +174,8 @@ VMATRIX *accumulateRadiationMatrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, 
       /* Step 1: determine effective R matrix for this element */
       if (radiation && (IS_RADIATOR(member->type) || member->type==T_RFCA)) {
         /* Must include radiation, so do tracking */
-        determineRadiationMatrix(Ml2, run, member, M1->C, member->D);
+        determineRadiationMatrix(Ml2, run, member, M1->C, member->D, nSlices, order);
         memcpy(member->accumD, member->D, 21*sizeof(*(member->D)));
-        /* 
-          &member->D[sigmaIndex3[5][5]]); 
-          member->accumD[sigmaIndex3[5][5]] = member->D[sigmaIndex3[5][5]];
-        */
       } else {
         /* Just use the matrix computed above.
          * Concatenate incoming centroid with the matrix to get the on-orbit R matrix 

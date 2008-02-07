@@ -2494,7 +2494,7 @@ extern VMATRIX *full_matrix(ELEMENT_LIST *elem, RUN *run, long order);
 extern VMATRIX *append_full_matrix(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long order);
 VMATRIX *accumulate_matrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long order, long full_matrix_only);
 extern long fill_in_matrices(ELEMENT_LIST *elem, RUN *run);
-VMATRIX *accumulateRadiationMatrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long order, long radiation);
+VMATRIX *accumulateRadiationMatrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long order, long radiation, long nSlices);
 extern long calculate_matrices(LINE_LIST *line, RUN *run);
 extern VMATRIX *drift_matrix(double length, long order);
 extern VMATRIX *wiggler_matrix(double length, double radius, double dx, double dy, double dz,
@@ -2505,7 +2505,8 @@ extern VMATRIX *sextupole_matrix(double K2, double length, long maximum_order, d
 extern VMATRIX *solenoid_matrix(double length, double ks, long max_order);
 extern VMATRIX *compute_matrix(ELEMENT_LIST *elem, RUN *run, VMATRIX *Mspace);
 extern VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *stepSize);
-extern VMATRIX *determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *D);
+extern void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *D, long slices, long order);
+extern void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *D);
 extern void set_up_watch_point(WATCH *watch, RUN *run);
 extern VMATRIX *magnification_matrix(MAGNIFY *magnif);
 extern void reset_special_elements(LINE_LIST *beamline, long includeRF);

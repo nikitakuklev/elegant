@@ -539,18 +539,228 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
   return M;
 }
 
-VMATRIX *determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *D)
+void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *Dr, long nSlices, long order)
 {
   CSBEND csbend; BEND *sbend;
-  KQUAD kquad, *kqp; QUAD *quad;
+  KQUAD kquad;  QUAD *quad;
   KSEXT ksext; SEXT *sext;
-  CWIGGLER cwiggler;
+  double length;
+  long i, j, k, slice;
+  double *accumD1, *accumD2, *dtmp;
+  VMATRIX *M1, *M2, *Ml1, *Mtmp;
+  ELEMENT_LIST elem;
+  MATRIX *Ms;
+  char s[1000];
+  
+  /* Accumulated diffusion matrix */
+  accumD1 = tmalloc(21*sizeof(*(accumD1)));
+  memset(accumD1, 0, 21*sizeof(*(accumD1)));
+  accumD2 = tmalloc(21*sizeof(*(accumD2)));
+  memset(accumD2, 0, 21*sizeof(*(accumD2)));
+
+  /* Matrices for C, R matrix propagation: */
+  initialize_matrices(M1=tmalloc(sizeof(*M1)), order);
+  initialize_matrices(M2=tmalloc(sizeof(*M2)), order);
+  /* Temporary variable for linear matrix with radiation: */
+  initialize_matrices(Ml1=tmalloc(sizeof(*Ml1)), 1);
+  for (i=0; i<6; i++) {
+    M1->R[i][i] = 1;
+    M1->C[i] = startingCoord[i];
+  }
+  /* Matrix for sigma matrix (D matrix) propagation */
+  m_alloc(&Ms, 21, 21);
+
+  elem.end_pos = eptr->end_pos;
+  for (slice=0; slice<nSlices; slice++) {
+    switch (eptr->type) {
+    case T_CSBEND:
+      memcpy(&csbend, (CSBEND*)eptr->p_elem, sizeof(CSBEND));
+      csbend.isr = 0;
+      csbend.angle /= nSlices;
+      length = csbend.length /= nSlices;
+      csbend.n_kicks = fabs(csbend.angle/0.005) + 1;
+      if (slice!=0) {
+        csbend.edge1_effects = 0;
+        csbend.e1 = 0;
+      }
+      if (slice!=nSlices-1) {
+        csbend.edge2_effects = 0;
+        csbend.e2 = 0;
+      }
+      elem.type = T_CSBEND;
+      elem.p_elem = (void*)&csbend;
+      break;
+    case T_SBEN:
+      sbend = (BEND*)eptr->p_elem;
+      memset(&csbend, 0, sizeof(csbend));
+      csbend.isr = 0;
+      csbend.synch_rad = 1;
+      length = csbend.length = sbend->length/nSlices;
+      csbend.angle = sbend->angle/nSlices;
+      csbend.k1 = sbend->k1;
+      csbend.e1 = sbend->e1;
+      csbend.e2 = sbend->e2;
+      csbend.k2 = sbend->k2;
+      csbend.h1 = sbend->h1;
+      csbend.h2 = sbend->h2;
+      csbend.hgap = sbend->hgap;
+      csbend.fint = sbend->fint;
+      csbend.dx = sbend->dx;
+      csbend.dy = sbend->dy;
+      csbend.dz = sbend->dz;
+      csbend.fse = sbend->fse;
+      csbend.etilt = sbend->etilt;
+      csbend.edge1_effects = sbend->edge1_effects;
+      csbend.edge2_effects = sbend->edge2_effects;
+      if (slice!=0) {
+        csbend.edge1_effects = 0;
+        csbend.e1 = 0;
+      }
+      if (slice!=nSlices-1) {
+        csbend.edge2_effects = 0;
+        csbend.e2 = 0;
+      }
+      csbend.edge_order = sbend->edge_order;
+      csbend.edgeFlags = sbend->edgeFlags;
+      csbend.k1_internal = sbend->k1_internal;
+      csbend.k2_internal = sbend->k2_internal;
+      csbend.n_kicks = fabs(csbend.angle/0.005) + 1;
+      csbend.integration_order = 4;
+      elem.type = T_CSBEND;
+      elem.p_elem = (void*)&csbend;
+      break;
+    case T_KQUAD:
+      memcpy(&kquad, (KQUAD*)eptr->p_elem, sizeof(KQUAD));
+      kquad.isr = 0;
+      length = (kquad.length /= nSlices);
+      kquad.n_kicks = 4 + (long)(fabs(kquad.k1)*sqr(kquad.length));
+      elem.type = T_KQUAD;
+      elem.p_elem = (void*)&kquad;
+      break;
+    case T_QUAD:
+      quad = (QUAD*)eptr->p_elem;
+      memset(&kquad, 0, sizeof(KQUAD));
+      kquad.isr = 0;
+      kquad.synch_rad = 1;
+      length = (kquad.length = quad->length/nSlices);
+      kquad.k1 = quad->k1;
+      kquad.tilt = quad->tilt;
+      if (quad->ffringe)
+        bomb("Can't perform radiation matrix calculations when QUAD has nonzero FFRINGE parameter", NULL);
+      kquad.dx = quad->dx;
+      kquad.dy = quad->dy;
+      kquad.dz = quad->dz;
+      kquad.fse = quad->fse;
+      kquad.xkick = quad->xkick;
+      kquad.ykick = quad->ykick;
+      kquad.xKickCalibration = quad->xKickCalibration;
+      kquad.yKickCalibration = quad->yKickCalibration;
+      kquad.n_kicks = 4 + (long)(fabs(kquad.k1)*sqr(kquad.length));
+      kquad.integration_order = 4;
+      elem.type = T_KQUAD;
+      elem.p_elem = (void*)&kquad;
+      break;
+    case T_KSEXT:
+      memcpy(&ksext, (KSEXT*)eptr->p_elem, sizeof(KSEXT));
+      ksext.isr = 0;
+      ksext.n_kicks = 4;
+      length = (ksext.length /= nSlices);
+      elem.type = T_KSEXT;
+      elem.p_elem = (void*)&ksext;
+      break;
+    case T_SEXT:
+      sext = (SEXT*)eptr->p_elem;
+      memset(&ksext, 0, sizeof(KSEXT));
+      ksext.isr = 0;
+      ksext.synch_rad = 1;
+      length = (ksext.length = sext->length/nSlices);
+      ksext.k2 = sext->k2;
+      ksext.tilt = sext->tilt;
+      ksext.dx = sext->dx;
+      ksext.dy = sext->dy;
+      ksext.dz = sext->dz;
+      ksext.fse = sext->fse;
+      ksext.n_kicks = 4;
+      ksext.integration_order = 4;
+      elem.type = T_KSEXT;
+      elem.p_elem = (void*)&ksext;
+      break;
+    case T_RFCA:
+      nSlices = 1;
+      elem.type = T_RFCA;
+      elem.p_elem = eptr->p_elem;
+      length = ((RFCA*)eptr->p_elem)->length;
+      break;
+    default:
+      printf("*** Error: determineRadiationMatrix called for element (%s) that is not supported!\n", eptr->name);
+      printf("***        Seek professional help!\n");
+      exit(1);
+      break;
+    }
+
+    /* Step 1: determine effective R matrix for this element, as well as the diffusion matrix */
+    determineRadiationMatrix1(Ml1, run, &elem, M1->C, accumD2);
+
+    /* Step 2: Propagate the diffusion matrix */
+    fillSigmaPropagationMatrix(Ms->a, Ml1->R);
+    for (i=0; i<21; i++) 
+      for (j=0; j<21; j++)
+        accumD2[i] += Ms->a[i][j]*accumD1[j];
+    dtmp    = accumD1;
+    accumD1 = accumD2;
+    accumD2 = dtmp;
+    
+    /* Step 3: Copy the propagated C vector */
+    memcpy(M2->C, Ml1->C, 6*sizeof(*(M2->C)));
+
+    /* Step 4: Multiply the R matrices */
+    for (i=0; i<6; i++)
+      for (j=0; j<6; j++) {
+        M2->R[i][j] = 0;
+        for (k=0; k<6; k++) 
+          M2->R[i][j] += Ml1->R[i][k]*M1->R[k][j];
+      }
+
+    Mtmp = M2;
+    M2   = M1;
+    M1   = Mtmp;
+
+    elem.end_pos += length;
+  }
+  
+  /* Copy the matrix to the caller's buffer */
+  for (i=0; i<6; i++) {
+    Mr->C[i] = M1->C[i];
+    for (j=0; j<6; j++) {
+      Mr->R[i][j] = M1->R[i][j];
+    }
+  }
+  for (i=0; i<21; i++)
+    Dr[i] = accumD1[i];
+
+  /*
+  sprintf(s, "Matrix for %s", eptr->name);
+  print_matrices(stdout, s, Mr);
+  */
+  
+  free(accumD1);
+  free(accumD2);
+  free_matrices(M2); tfree(M2);
+  free_matrices(M1); tfree(M1);
+  free_matrices(Ml1); tfree(Ml1);
+  m_free(&Ms);
+}
+
+
+void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *elem, double *startingCoord, double *D)
+{
+  CSBEND *csbend;
+  KQUAD *kquad;
+  KSEXT *ksext;
   double **coord, pCentral;
   long n_track, i, j;
-  VMATRIX *M;
   double **R, *C, Cs0;
   double stepSize[6] = {1e-5, 1e-5, 1e-5, 1e-5, 1e-3, 1e-5};
-  ELEMENT_LIST elem;
   double sigmaDelta2;
   
   coord = (double**)czarray_2d(sizeof(**coord), 1+6*2, 7);
@@ -568,107 +778,25 @@ VMATRIX *determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, dou
     coord[2*i+1][i] -= stepSize[i] ;
   }
   
-
   if (D) {
     for (i=0; i<21; i++)
         D[i] = 0;
   }
   sigmaDelta2 = 0;
   
-  switch (eptr->type) {
+  switch (elem->type) {
   case T_CSBEND:
-    memcpy(&csbend, (CSBEND*)eptr->p_elem, sizeof(CSBEND));
-    csbend.isr = 0;
-    track_through_csbend(coord, n_track, &csbend, 0, run->p_central, NULL, eptr->end_pos-csbend.length, &sigmaDelta2);
-    break;
-  case T_SBEN:
-    sbend = (BEND*)eptr->p_elem;
-    memset(&csbend, 0, sizeof(csbend));
-    csbend.isr = 0;
-    csbend.synch_rad = 1;
-    csbend.length = sbend->length;
-    csbend.angle = sbend->angle;
-    csbend.k1 = sbend->k1;
-    csbend.e1 = sbend->e1;
-    csbend.e2 = sbend->e2;
-    csbend.k2 = sbend->k2;
-    csbend.h1 = sbend->h1;
-    csbend.h2 = sbend->h2;
-    csbend.hgap = sbend->hgap;
-    csbend.fint = sbend->fint;
-    csbend.dx = sbend->dx;
-    csbend.dy = sbend->dy;
-    csbend.dz = sbend->dz;
-    csbend.fse = sbend->fse;
-    csbend.etilt = sbend->etilt;
-    csbend.edge1_effects = sbend->edge1_effects;
-    csbend.edge2_effects = sbend->edge2_effects;
-    csbend.edge_order = sbend->edge_order;
-    csbend.edgeFlags = sbend->edgeFlags;
-    csbend.k1_internal = sbend->k1_internal;
-    csbend.k2_internal = sbend->k2_internal;
-    csbend.n_kicks = fabs(csbend.angle/0.005) + 1;
-    csbend.integration_order = 4;
-    track_through_csbend(coord, n_track, &csbend, 0, run->p_central, NULL, eptr->end_pos-csbend.length, &sigmaDelta2);
+    csbend = (CSBEND*)elem->p_elem;
+    track_through_csbend(coord, n_track, csbend, 0, run->p_central, NULL, elem->end_pos-csbend->length, &sigmaDelta2);
     break;
   case T_KQUAD:
-    memcpy(&kquad, (KQUAD*)eptr->p_elem, sizeof(KQUAD));
-    elem.p_elem = (void*)&kquad;
-    elem.type = T_KQUAD;
-    kquad.isr = 0;
-    multipole_tracking2(coord, n_track, &elem, 0.0, run->p_central, NULL, eptr->end_pos-kquad.length,
-                       0.0, 0.0, 0, NULL, &sigmaDelta2);
-    break;
-  case T_QUAD:
-    quad = (QUAD*)eptr->p_elem;
-    memset(&kquad, 0, sizeof(KQUAD));
-    kquad.isr = 0;
-    kquad.synch_rad = 1;
-    kquad.length = quad->length;
-    kquad.k1 = quad->k1;
-    kquad.tilt = quad->tilt;
-    if (quad->ffringe)
-      bomb("Can't perform radiation matrix calculations when QUAD has nonzero FFRINGE parameter", NULL);
-    kquad.dx = quad->dx;
-    kquad.dy = quad->dy;
-    kquad.dz = quad->dz;
-    kquad.fse = quad->fse;
-    kquad.xkick = quad->xkick;
-    kquad.ykick = quad->ykick;
-    kquad.xKickCalibration = quad->xKickCalibration;
-    kquad.yKickCalibration = quad->yKickCalibration;
-    elem.p_elem = (void*)&kquad;
-    elem.type = T_KQUAD;
-    kquad.n_kicks = 2;
-    kquad.integration_order = 4;
-    multipole_tracking2(coord, n_track, &elem, 0.0, run->p_central, NULL, eptr->end_pos-kquad.length,
+    kquad = (KQUAD*)elem->p_elem;
+    multipole_tracking2(coord, n_track, elem, 0.0, run->p_central, NULL, elem->end_pos-kquad->length,
                        0.0, 0.0, 0, NULL, &sigmaDelta2);
     break;
   case T_KSEXT:
-    memcpy(&ksext, (KSEXT*)eptr->p_elem, sizeof(KSEXT));
-    elem.p_elem = (void*)&ksext;
-    ksext.isr = 0;
-    elem.type = T_KSEXT;
-    multipole_tracking2(coord, n_track, &elem, 0.0, run->p_central, NULL, eptr->end_pos-ksext.length,
-                       0.0, 0.0, 0, NULL, &sigmaDelta2);
-    break;
-  case T_SEXT:
-    sext = (SEXT*)eptr->p_elem;
-    memset(&ksext, 0, sizeof(KSEXT));
-    ksext.isr = 0;
-    ksext.synch_rad = 1;
-    ksext.length = sext->length;
-    ksext.k2 = sext->k2;
-    ksext.tilt = sext->tilt;
-    ksext.dx = sext->dx;
-    ksext.dy = sext->dy;
-    ksext.dz = sext->dz;
-    ksext.fse = sext->fse;
-    elem.p_elem = (void*)&ksext;
-    elem.type = T_KSEXT;
-    ksext.n_kicks = 2;
-    ksext.integration_order = 4;
-    multipole_tracking2(coord, n_track, &elem, 0.0, run->p_central, NULL, eptr->end_pos-ksext.length,
+    ksext = (KSEXT*)elem->p_elem;
+    multipole_tracking2(coord, n_track, elem, 0.0, run->p_central, NULL, elem->end_pos-ksext->length,
                        0.0, 0.0, 0, NULL, &sigmaDelta2);
     break;
   case T_RFCA:
@@ -676,10 +804,10 @@ VMATRIX *determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, dou
     for (i=0; i<n_track; i++)
       coord[i][4] += Cs0;
     Cs0 = 0;
-    simple_rf_cavity(coord, n_track, (RFCA*)eptr->p_elem, NULL, &pCentral, eptr->end_pos);
+    simple_rf_cavity(coord, n_track, (RFCA*)elem->p_elem, NULL, &pCentral, elem->end_pos);
     break;
   default:
-    printf("*** Error: determineRadiationMatrix called for element (%s) that is not supported!\n", eptr->name);
+    printf("*** Error: determineRadiationMatrix1 called for element (%s) that is not supported!\n", elem->name);
     printf("***        Seek professional help!\n");
     exit(1);
     break;
@@ -689,10 +817,10 @@ VMATRIX *determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, dou
   C = Mr->C;
   for (i=0; i<6; i++) {
     /* i indexes the dependent quantity */
-
+    
     /* Determine C[i] */
     C[i] = coord[n_track-1][i];
-
+    
     /* Compute R[i][j] */
     for (j=0; j<6; j++) {
       /* j indexes the initial coordinate value */
@@ -700,26 +828,10 @@ VMATRIX *determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, dou
     }
   }
 
-  /*
-  D[sigmaIndex3[0][0]] = sigmaDelta2/2*sqr(R[0][5]/4);
-  D[sigmaIndex3[0][1]] = sigmaDelta2/2*R[1][5]/2*R[0][5]/4;
-  D[sigmaIndex3[1][1]] = sigmaDelta2/2*sqr(R[1][5]/2);
-  D[sigmaIndex3[2][2]] = sigmaDelta2/2*sqr(R[2][5]/4);
-  D[sigmaIndex3[2][3]] = sigmaDelta2/2*R[3][5]/2*R[2][5]/4;
-  D[sigmaIndex3[3][3]] = sigmaDelta2/2*sqr(R[3][5]/2);
-  D[sigmaIndex3[5][0]] = sigmaDelta2/2*R[0][5]/4;
-  D[sigmaIndex3[5][1]] = sigmaDelta2/2*R[1][5]/2;
-  D[sigmaIndex3[5][2]] = sigmaDelta2/2*R[2][5]/4;
-  D[sigmaIndex3[5][3]] = sigmaDelta2/2*R[3][5]/2;
-  */
-
   D[sigmaIndex3[5][5]] = sigmaDelta2;
-
+  
   C[4] += Cs0;
   free_czarray_2d((void**)coord, 1+2*6, 7);
 
-  /*  print_matrices(stdout, "\nElement matrix determined from tracking:\n", Mr); */
-  
-  return M;
 }
 
