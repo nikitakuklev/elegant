@@ -1092,16 +1092,18 @@ typedef struct {
                                  2:centroid_mem, sigma_mem, emit_mem initialized,
                                  4:floor_mem initialized
                                  8:matrix_mem initialized
-                                 16:ctwiss_mem initialized */
+                                 16:ctwiss_mem initialized
+                                 32:moments_mem initialized */
     long *twiss_mem;       /* betax, alphax, NUx, etax, etaxp, betay, ... */
-    long *centroid_mem;    /* (x, xp, y, yp, s, dp, Pcen, n) */
-    long *sigma_mem;       /* (x, xp, y, yp, s, dp) */
-    long *sij_mem;         /* <xi*xj> for 6>=j>i>=1 */
-    long *emit_mem;        /* (x, y, z) */
+    long *centroid_mem;    /* (x, xp, y, yp, s, dp, Pcen, n) from tracking */
+    long *sigma_mem;       /* (x, xp, y, yp, s, dp) from tracking */
+    long *sij_mem;         /* <xi*xj> for 6>=j>i>=1 from tracking */
+    long *emit_mem;        /* (x, y, z) from tracking */
     long *floor_mem;       /* X, Z, theta */
     long *matrix_mem;
     long *co_mem;          /* closed orbit */
     long *ctwiss_mem;      /* coupled twiss parameters */
+    long *moments_mem;     /* beam moments from moments propagation (not tracking) */
     } MARK;
 
 /* storage structure for alpha magnet */

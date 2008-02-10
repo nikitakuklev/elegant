@@ -20,6 +20,7 @@
 
 void determinePeriodicMoments(double **R, double *D, SIGMA_MATRIX *sigma0);
 void propagateBeamMoments(RUN *run, LINE_LIST *beamline, double *traj);
+void storeFitpointMomentsParameters(MARK *mark, char *name, long occurence, SIGMA_MATRIX *sigma0);
 
 static long momentsInitialized = 0;
 static long SDDSMomentsInitialized = 0;
@@ -281,9 +282,8 @@ void setupMomentsOutput(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
     momentsCount = 0;
   }
   else
-    SDDSMomentsInitialized = 1;
+    SDDSMomentsInitialized = 0;
   momentsInitialized = 1;
-
 }
 
 void finishMomentsOutput(void)
@@ -292,7 +292,7 @@ void finishMomentsOutput(void)
     SDDS_SetError("Problem terminating SDDS output (finishMomentsOutput)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
-  SDDSMomentsInitialized = momentsCount = 0;
+  SDDSMomentsInitialized = momentsCount = momentsInitialized = 0;
 }
 
 long runMomentsOutput(RUN *run, LINE_LIST *beamline, double *startingCoord, long tune_corrected)
@@ -305,6 +305,9 @@ long runMomentsOutput(RUN *run, LINE_LIST *beamline, double *startingCoord, long
   fflush(stdout);
 #endif
 
+  if (!momentsInitialized)
+    return 1;
+  
   if (tune_corrected==0 && !output_before_tune_correction)
     return 1;
 
@@ -494,10 +497,13 @@ void propagateBeamMoments(RUN *run, LINE_LIST *beamline, double *traj)
     } else 
       /* Assume it doesn't modify the sigma matrix */
       memcpy(elem->sigmaMatrix, S1, sizeof(*S1));
+    if (elem->type==T_MARK && ((MARK*)elem->p_elem)->fitpoint) 
+      storeFitpointMomentsParameters((MARK*)elem->p_elem, elem->name, elem->occurence, elem->sigmaMatrix);
     elem = elem->succ;
   }
   m_free(&Ms);
 }
+
 
 void determinePeriodicMoments
   (
@@ -536,4 +542,23 @@ void determinePeriodicMoments
   m_free(&M2);
   m_free(&M3);
 }
+
+void storeFitpointMomentsParameters(MARK *mark, char *name, long occurence, SIGMA_MATRIX *sigma0)
+{
+  char s[1000];
+  long i;
+
+  if (!(mark->init_flags&32)) {
+    mark->moments_mem = tmalloc(sizeof(*(mark->moments_mem))*21);
+    mark->init_flags |= 32;
+    for (i=0; i<21; i++) {
+      sprintf(s, "%s#%ld.s%ld%ldm", name, occurence, 
+              sigmaIndex1[i]+1, sigmaIndex2[i]+1);
+      mark->moments_mem[i] = rpn_create_mem(s, 0);
+    }
+  }
+  for (i=0; i<21; i++) 
+    rpn_store(sigma0->sigma[i], NULL, mark->moments_mem[i]);
+}
+
 
