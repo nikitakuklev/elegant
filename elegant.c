@@ -331,7 +331,7 @@ char **argv;
     printf("Warning!!! The INT_MAX could be too small to record the number of particles.\n"); 
   }
   if (isSlave && (n_processors>3))   /* This will avoid wasting memory on a laptop with a small number of cores */    
-    factor = 2.0/(n_processors-1);   /* In parallel version, a portion of meory will be allocated on each slave */
+    factor = 2.0/(n_processors-1);   /* In parallel version, a portion of memory will be allocated on each slave */
 #endif
 
 #ifdef SET_DOUBLE
