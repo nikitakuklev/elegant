@@ -3414,7 +3414,6 @@ int usefulOperation (ELEMENT_LIST *eptr, unsigned long flags, long i_pass)
        if (!watch->initialized) {
          if (isSlave)   /* Slave processors will not go through the WATCH element, so we set the flag here */
 	   watch->initialized = 1;
-	 return 1;	         
        }   
        if (i_pass>=watch->start_pass && (i_pass-watch->start_pass)%watch->interval==0 &&
 	   (watch->end_pass<0 || i_pass<=watch->end_pass))
