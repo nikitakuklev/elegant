@@ -93,7 +93,7 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
           eptr = eptr->succ;
         }
         if (beamline->links) {
-          rebaseline_element_links(beamline->links, run, beamline);
+          /* rebaseline_element_links(beamline->links, run, beamline); */
           if (assert_element_links(beamline->links, run, beamline, STATIC_LINK+DYNAMIC_LINK)) {
             beamline->flags &= ~BEAMLINE_CONCAT_CURRENT;
             beamline->flags &= ~BEAMLINE_TWISS_CURRENT;
@@ -207,7 +207,7 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
           exit(1);
         }
         if (beamline->links) {
-          rebaseline_element_links(beamline->links, run, beamline);
+          /* rebaseline_element_links(beamline->links, run, beamline); */
           assert_element_links(beamline->links, run, beamline, STATIC_LINK+DYNAMIC_LINK);
         }
         if (M) {
@@ -438,7 +438,7 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
             }    
 
         if (beamline->links) {
-          rebaseline_element_links(beamline->links, run, beamline);
+          /* rebaseline_element_links(beamline->links, run, beamline); */
           assert_element_links(beamline->links, run, beamline, 
                                STATIC_LINK+DYNAMIC_LINK+(alter_defined_values?LINK_ELEMENT_DEFINITION:0));
         }
