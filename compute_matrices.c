@@ -1042,8 +1042,6 @@ void set_up_watch_point(WATCH *watch, RUN *run)
          *qualifier++ = 0;
     if ((watch->mode_code=match_string(watch->mode, watch_mode, N_WATCH_MODES, 0))<0)
         bomb("unknown watch mode", NULL);
-    if (watch->mode_code!=WATCH_COORDINATES)
-      watch->start_pass = 0;
     if (watch->label && str_in(watch->label, "%s")) {
         char *buffer;
         buffer = tmalloc(sizeof(*buffer)*(strlen(watch->label)+strlen(run->rootname)+1));

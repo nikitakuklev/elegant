@@ -649,7 +649,7 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
                            long particles, long original_particles,  double Po, 
                            double revolutionLength)
 {
-    long sample, i, j;
+    long sample, i, j, watchStartPass=watch->start_pass;
     double tc, tc0, p_sum, gamma_sum, sum, p=0.0;
     
 #if USE_MPI  
@@ -674,12 +674,12 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
             fflush(stdout);
             abort();
             }
-    if (pass==0 && !SDDS_StartTable(&watch->SDDS_table, n_passes/watch->interval+1)) {
+    if ((watchStartPass==pass) && !SDDS_StartTable(&watch->SDDS_table, (n_passes-watchStartPass)/watch->interval+1)) {
         SDDS_SetError("Problem starting SDDS table (dump_watch_parameters)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
 
-    sample = pass/watch->interval;
+    sample = (pass-watchStartPass)/watch->interval;
     tc0 = (pass-watch->passLast)*revolutionLength*sqrt(Po*Po+1)/(c_mks*(Po+1e-32)) + watch->t0Last;
     watch->t0Last = tc0;
     watch->passLast = pass;
@@ -765,7 +765,7 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
     if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
                            "Particles", particles, 
                            "Transmission", (original_particles?((double)particles)/original_particles:(double)0.0),
-                           "Pass", sample*watch->interval, 
+                           "Pass", pass, 
                            "Step", step, NULL)) {
       SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
