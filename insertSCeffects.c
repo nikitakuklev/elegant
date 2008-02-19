@@ -136,10 +136,7 @@ void setupSCEffect(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
   }
   
   addSCSpec(name, type, exclude);
-
-  sc->name = "SCElem";
-  if (element_prefix) 
-    sc->name = element_prefix;
+  cp_str(&(sc->name),element_prefix);
 
   sc->nskip = 0;
   sc->nonlinear = 0; 
