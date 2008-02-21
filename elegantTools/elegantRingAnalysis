@@ -4,6 +4,9 @@
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.6  2007/12/21 17:03:36  borland
+# Added control for body order in matrix dipoles.
+#
 # Revision 1.5  2007/11/16 19:12:30  borland
 # For DynamicAperture with errors only, added process-only button.  Should
 # be straightforward to add for others.
@@ -99,6 +102,7 @@ set mainParameterFile(1) ""
 set mainParameterFile(2) ""
 set mainParameterFile(3) ""
 set mainParameterFile(4) ""
+set mainParameterFile(5) ""
 set forceOccurence 0
 set mainDirectory [pwd]
 set mainPrefix ""
@@ -268,7 +272,7 @@ proc FillMainFrame {widget args} {
       -contextHelp \
       "Enter the name of the offset element (MALIGN) for the beamline for the kick representation.  It should be at the start of the beamline."
 
-    foreach item {1 2 3 4} {
+    foreach item {1 2 3 4 5} {
         APSLabeledEntry .le4$item -parent $widget -label "Parameter file (optional): " \
           -width 80 -textVariable mainParameterFile($item) -fileSelectButton 1 -buttonsOnLeft 1 -fileSelectPattern *.param \
           -contextHelp \
