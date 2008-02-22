@@ -1495,6 +1495,10 @@ end are given.
         If zero, only one space charge kick is inserted to the end of beamline. 
 \item \verb|vertical|, \verb|horizontal|, \verb|nonlinear| --- Switches for setting up 
 space charge kick calculation.
+\item CHARGE --- User has to use CHARGE to set up bunch current. 
+\item Note --- Some user
+use  $``matched\_to\_cell''$ or $``use\_twiss\_command\_values''$ inside $``bunched\_beam''$
+command. Those options will erase SCMULT assignment along beamline. In this case, user has to re-calculate twiss using $``twiss\_output''$ just before tracking.
 \end{itemize}
 
 \begin{latexonly}
