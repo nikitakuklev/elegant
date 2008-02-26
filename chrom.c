@@ -361,8 +361,8 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
     }
     
     presentError = DBL_MAX;
-    K2_max = -(K2_min = DBL_MAX);
     for (iter=0; iter<chrom->n_iterations; iter++) {
+        K2_max = -(K2_min = DBL_MAX);
         dchromx = chrom->chromx - chromx0;
         dchromy = chrom->chromy - chromy0;
         if (chrom->tolerance>0 &&
