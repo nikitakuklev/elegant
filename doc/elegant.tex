@@ -408,20 +408,46 @@ all substitutions in one option.
 evaluation of a namelist field.  To invoke this, one encloses the commandline
 string in curly braces.  E.g., 
 \begin{verbatim}
-betax = {rpnl 8 2 / pi /}
+betax = "{sdds2stream -parameter=betaxFinal data.twi}"
 \end{verbatim}
-In this example, \verb|betax| is assigned the value $8/(2 \pi)$, which is computed using
-the commandline program \verb|rpnl|.  One possible pitfall with using \verb|rpnl| in this
+(Note that the quotes are also required.)
+In this example, \verb|betax| is assigned the value of the parameter {\tt betaxFinal} from
+the file {\tt data.twi}.
+Frequently, the commandline RPN calculator, {\tt rpnl} is also used in this way, for example
+\begin{verbatim}
+betax = "{rpnl 8 pi / 2 /}"
+\end{verbatim}
+assigns the value $8/(2 \pi)$ to {\tt betax}. One possible pitfall with using \verb|rpnl| in this
 fashion is interpretation of the multiplication symbol (\verb|*|) as a file wildcard by the
 shell.  For this reason, the alternate multiplication operator \verb|mult| is preferred, e.g.,
 \begin{verbatim}
-betax = {rpnl 8 pi mult}
+betax = "{rpnl 8 pi mult}"
 \end{verbatim}
 rather than
 \begin{verbatim}
-betax = {rpnl 8 pi *}
+betax = "{rpnl 8 pi *}"
 \end{verbatim}
 
+We used the program {\tt rpnl} in these examples because it is perhaps familiar.  However, versions 17.4 and later
+allow direct evaluation of RPN expressions in commands whenever square brackets are used to delimite a sequence.  For example, 
+\begin{verbatim}
+betax = "[8 2 / pi /]"
+\end{verbatim}
+(Note that the quotes are also required.)
+The advantages of this method are speed (no subprocess is needed),
+lack of intermediate interpretation by the shell, and persistence of
+the stack and variables.  So, for example, one might use
+\begin{verbatim}
+betax = "[8 2 / pi / sto betax0]"
+betay = "[betax0]"
+\end{verbatim}
+Another advantage is the ability to mix subcommands and rpn expressions, as in
+\begin{verbatim}
+betax = "[{sdds2stream -parameter=betaxFinal data.twi} 2 /]"
+\end{verbatim}
+would assign to {\tt betax} half
+the value of the parameter {\tt betaxFinal} from
+the file {\tt data.twi}.
 
 \begin{latexonly}
 \newpage
@@ -945,8 +971,10 @@ correction of a trajectory or a closed orbit.
 \item \verb|corrector_output| --- The (incomplete) name of an SDDS file to which information about the final corrector strengths will be written. Recommended value: ``\%s.cor''.  
 \item \verb|statistics| --- The (incomplete) name of an SDDS file to which statistical information about the
 trajectories (or orbits) and corrector strengths will be written.  Recommended value: ``\%s.scor''.
-\item \verb|corrector_tweek[2]| --- The amount by which to change the correctors in order to compute correction coefficients.
-[The word ``tweak'' is misspelled ``tweek'' in the code.]
+\item \verb|corrector_tweek[2]| --- The amount by which to change the correctors in order to compute correction coefficients for
+transport lines.
+[The word ``tweak'' is misspelled ``tweek'' in the code.]   The default value, 1 mrad, may be too large for systems with
+small apertures.  If you get an error message about ``tracking failed for test particle,'' try decreasing this value.
 \item \verb|corrector_limit[2]| --- The maximum strength allowed for a corrector.
 \item \verb|correction_fraction[2]| --- The fraction of the computed correction strength to actually use for any one iteration.
 \item \verb|correction_accuracy[2]| --- The desired accuracy of the correction in terms of the RMS BPM values.
