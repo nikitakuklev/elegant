@@ -311,8 +311,6 @@ long runMomentsOutput(RUN *run, LINE_LIST *beamline, double *startingCoord, long
   if (tune_corrected==0 && !output_before_tune_correction)
     return 1;
 
-  report_stats(stdout, "Entered runMomentsOutput: ");
-  
   /* Computations will start at the beginning of the beamline, or at the
    * first recirculation element 
    */
@@ -357,7 +355,7 @@ long runMomentsOutput(RUN *run, LINE_LIST *beamline, double *startingCoord, long
   else {
     beamline->Mld = accumulateRadiationMatrices(beamline->elem_twiss, run, NULL, 1, radiation, n_slices);
   }
-  report_stats(stdout, "Accumulated radiation matrices: ");
+
   if (verbosity>0) {
     char text[200];
     sprintf(text, "** One-turn, on-orbit matrix with%sradiation:", radiation?" ":"out ");
@@ -374,7 +372,6 @@ long runMomentsOutput(RUN *run, LINE_LIST *beamline, double *startingCoord, long
   if (matched) {
     /* Compute periodic moments */
     determinePeriodicMoments(beamline->Mld->R, beamline->elast->accumD, beamline->sigmaMatrix0);
-    report_stats(stdout, "Determined periodic moments: ");
   } else {
     /* Determine starting moments from twiss parameter values */
     setStartingMoments(beamline->sigmaMatrix0,
@@ -392,7 +389,6 @@ long runMomentsOutput(RUN *run, LINE_LIST *beamline, double *startingCoord, long
   
   /* Propagate moments to each element */
   propagateBeamMoments(run, beamline, startingCoord);
-  report_stats(stdout, "Propagated periodic moments: ");
 
   elast = beamline->elast;
   if (verbosity>1) {
@@ -406,8 +402,6 @@ long runMomentsOutput(RUN *run, LINE_LIST *beamline, double *startingCoord, long
   if (SDDSMomentsInitialized)
     dumpBeamMoments(beamline, n_elem, final_values_only, tune_corrected, run);
 
-  report_stats(stdout, "Exiting runMomentsOutput: ");
-  
   return 1;
 }
 
