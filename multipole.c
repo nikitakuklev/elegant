@@ -1266,57 +1266,59 @@ void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
 {
   long i;
   double sFactor=0.0, rFactor=0.0;
-  
+
   if (!totalMult->initialized) {
     totalMult->initialized = 1;
     /* make a list of unique orders for random and systematic multipoles */
     if (systematicMult->orders && randomMult->orders &&
         systematicMult->orders!=randomMult->orders)
-      bomb("The number of systematic and random multipole error orders must be the same for any give element", NULL);
+      bomb("The number of systematic and random multipole error orders must be the same for any given element", NULL);
     if (systematicMult->orders)
       totalMult->orders = systematicMult->orders;
     else
       totalMult->orders = randomMult->orders;
-    if (!(totalMult->order=SDDS_Malloc(sizeof(*totalMult->order)*(totalMult->orders))))
-      bomb("memory allocation failure (computeTotalMultipoleFields)", NULL);
-    if (systematicMult->orders &&
-        (!(systematicMult->anMod=SDDS_Malloc(sizeof(*systematicMult->anMod)*systematicMult->orders)) ||
-         !(systematicMult->bnMod=SDDS_Malloc(sizeof(*systematicMult->bnMod)*systematicMult->orders)) ||
-         !(systematicMult->KnL=SDDS_Malloc(sizeof(*systematicMult->KnL)*systematicMult->orders)) ||
-         !(systematicMult->JnL=SDDS_Malloc(sizeof(*systematicMult->JnL)*systematicMult->orders))))
-      bomb("memory allocation failure (computeTotalMultipoleFields)", NULL);
-    if (randomMult->orders &&
-        (!(randomMult->anMod=SDDS_Malloc(sizeof(*randomMult->anMod)*randomMult->orders)) ||
-         !(randomMult->bnMod=SDDS_Malloc(sizeof(*randomMult->bnMod)*randomMult->orders)) ||
-         !(randomMult->KnL=SDDS_Malloc(sizeof(*randomMult->KnL)*randomMult->orders)) ||
-         !(randomMult->JnL=SDDS_Malloc(sizeof(*randomMult->JnL)*randomMult->orders))))
-      bomb("memory allocation failure (computeTotalMultipoleFields", NULL);
-    if (!(totalMult->KnL = SDDS_Malloc(sizeof(*totalMult->KnL)*totalMult->orders)) ||
-        !(totalMult->JnL = SDDS_Malloc(sizeof(*totalMult->JnL)*totalMult->orders)) )
-      bomb("memory allocation failure (computeTotalMultipoleFields)", NULL);
-    if (steeringMult && steeringMult->orders) {
-      if (!(steeringMult->KnL = SDDS_Malloc(sizeof(*steeringMult->KnL)*steeringMult->orders)) ||
-          !(steeringMult->JnL = SDDS_Malloc(sizeof(*steeringMult->JnL)*steeringMult->orders)) )
+    if (totalMult->orders) {
+      if (!(totalMult->order=SDDS_Malloc(sizeof(*totalMult->order)*(totalMult->orders))))
         bomb("memory allocation failure (computeTotalMultipoleFields)", NULL);
-    }
-    for (i=0; i<totalMult->orders; i++) {
-      if (systematicMult->orders && randomMult->orders &&
-          systematicMult->order[i]!=randomMult->order[i])
-        bomb("multipole orders in systematic and random lists must match up for any given element.",
-             NULL);
-      if (systematicMult->orders) {
-        totalMult->order[i] = systematicMult->order[i] ;
-        systematicMult->anMod[i] = systematicMult->an[i]*dfactorial(systematicMult->order[i])/
-          ipow(systematicMult->referenceRadius, systematicMult->order[i]);
-        systematicMult->bnMod[i] = systematicMult->bn[i]*dfactorial(systematicMult->order[i])/
-          ipow(systematicMult->referenceRadius, systematicMult->order[i]);
-      } else {
-        totalMult->order[i] = randomMult->order[i];
-        /* anMod and bnMod will be computed later for randomized multipoles */
+      if (systematicMult->orders &&
+          (!(systematicMult->anMod=SDDS_Malloc(sizeof(*systematicMult->anMod)*systematicMult->orders)) ||
+           !(systematicMult->bnMod=SDDS_Malloc(sizeof(*systematicMult->bnMod)*systematicMult->orders)) ||
+           !(systematicMult->KnL=SDDS_Malloc(sizeof(*systematicMult->KnL)*systematicMult->orders)) ||
+           !(systematicMult->JnL=SDDS_Malloc(sizeof(*systematicMult->JnL)*systematicMult->orders))))
+        bomb("memory allocation failure (computeTotalMultipoleFields)", NULL);
+      if (randomMult->orders &&
+          (!(randomMult->anMod=SDDS_Malloc(sizeof(*randomMult->anMod)*randomMult->orders)) ||
+           !(randomMult->bnMod=SDDS_Malloc(sizeof(*randomMult->bnMod)*randomMult->orders)) ||
+           !(randomMult->KnL=SDDS_Malloc(sizeof(*randomMult->KnL)*randomMult->orders)) ||
+           !(randomMult->JnL=SDDS_Malloc(sizeof(*randomMult->JnL)*randomMult->orders))))
+        bomb("memory allocation failure (computeTotalMultipoleFields", NULL);
+      if (!(totalMult->KnL = SDDS_Malloc(sizeof(*totalMult->KnL)*totalMult->orders)) ||
+          !(totalMult->JnL = SDDS_Malloc(sizeof(*totalMult->JnL)*totalMult->orders)) )
+        bomb("memory allocation failure (computeTotalMultipoleFields)", NULL);
+      if (steeringMult && steeringMult->orders) {
+        if (!(steeringMult->KnL = SDDS_Malloc(sizeof(*steeringMult->KnL)*steeringMult->orders)) ||
+            !(steeringMult->JnL = SDDS_Malloc(sizeof(*steeringMult->JnL)*steeringMult->orders)) )
+          bomb("memory allocation failure (computeTotalMultipoleFields)", NULL);
+      }
+      for (i=0; i<totalMult->orders; i++) {
+        if (systematicMult->orders && randomMult->orders &&
+            systematicMult->order[i]!=randomMult->order[i])
+          bomb("multipole orders in systematic and random lists must match up for any given element.",
+               NULL);
+        if (systematicMult->orders) {
+          totalMult->order[i] = systematicMult->order[i] ;
+          systematicMult->anMod[i] = systematicMult->an[i]*dfactorial(systematicMult->order[i])/
+            ipow(systematicMult->referenceRadius, systematicMult->order[i]);
+          systematicMult->bnMod[i] = systematicMult->bn[i]*dfactorial(systematicMult->order[i])/
+            ipow(systematicMult->referenceRadius, systematicMult->order[i]);
+        } else {
+          totalMult->order[i] = randomMult->order[i];
+          /* anMod and bnMod will be computed later for randomized multipoles */
+        }
       }
     }
   }
-
+  
   if (randomMult->orders)
     randomizeErrorMultipoleFields(randomMult);
   

@@ -212,7 +212,10 @@ VMATRIX *accumulateRadiationMatrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, 
         member->Mld = tmalloc(sizeof(*(member->Mld)));
         initialize_matrices(member->Mld, 1);
       }
-      copy_matrices(member->Mld, Ml2);
+      for (i=0; i<6; i++) {
+        member->Mld->C[i] = Ml2->C[i];
+        memcpy(member->Mld->R[i], Ml2->R[i], 6*sizeof(Ml2->R[i]));
+      }
     } else { 
       if (member->pred && member->pred->accumD)
         memcpy(member->accumD, member->pred->accumD, 21*sizeof(*(member->accumD)));
@@ -228,7 +231,13 @@ VMATRIX *accumulateRadiationMatrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, 
     member = member->succ;
   }
   if (M2) {
-    free_matrices(M2); tfree(M2); M2 = NULL;
+    free_matrices(M2); tfree(M2);
+  }
+  if (Ml1) {
+    free_matrices(Ml1); tfree(Ml1);
+  }
+  if (Ml2) {
+    free_matrices(Ml2); tfree(Ml2);
   }
   m_free(&Ms);
   return M1;
