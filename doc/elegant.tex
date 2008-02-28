@@ -2046,22 +2046,11 @@ in the form \verb|<element-name>.<parameter-name>|, all in capital
 letters.  In addition, initial values of variables and covariables
 are available in the form \verb|<element-name>.<parameter-name>0|.
 
-Data from MARK elements with FITPOINT=1 may be used via
-symbols of the form
-\verb|<element-name>#<occurrence-number>.<parameter-name>|, where
-\verb|<parameter-name>| can be a Twiss parameter name (if the twiss
-command was given), a floor coordinate name (if the floor command was
-given, a beam-size or centroid name, a sigma-matrix element, or a
-closed orbit value ({\tt xco}, {\tt xpco}, etc) if closed orbit
-calculations are requested.  The parameter names are the same as those
-used in the corresponding output files.  Beam sizes, centroids, and
-sigma-matrix elements are from tracking the particle distribution.
-See the documentation for the MARK element for a more detailed listing.
-
-If closed orbit calculations are requested, data from {\tt MONI}, {\tt
-HMON}, and {\tt VMON} elements that have {\tt CO\_FITPOINT=1} is
-available under the names {\em bpmName}\verb|#|{\em occurence}.{\em q}{\tt
-co}, where {\em q} is {\tt x}, {\tt xp}, {\tt y}, or {\tt yp}.
+Data from MARK elements with {\tt FITPOINT=1} and from beam position
+monitors with {\tt CO\_FITPOINT=1} may be used via symbols of the form
+{\tt {\em elementName}\#{\em occurenceNum}.{\em parameterName}}.  See the
+documentation for the {\tt MARK}, {\tt MONI}, {\tt HMON}, and {\tt
+VMON} elements for detailed discussion and listing.
 
 If response matrix calculation is requested, response matrix values
 are available in variables with names {\em Plane}{\tt R\_}{\em
@@ -2089,14 +2078,6 @@ where \verb|<plane>| is \verb|x|, \verb|y|, or \verb|delta|.
 The coupling integral and emittance ratio due to x-y coupling may
 be accessed using the symbols \verb|couplingIntegral| and
 \verb|emittanceRatio|.  See section 3.1.4.4 of \cite{HAPE}.
-
-If the \verb|coupled_twiss_output| command was given with \verb|output_at_each_step=1|,
-one may use symbols of the form \verb|<name>#<occurrence>.<property>| where
-\verb|<name>| is the name of any \verb|MARKER| element with \verb|FITPOINT=1|.
-\verb|<property>| may be one of \verb|betax1|, \verb|betax2|, \verb|betay1|,
-\verb|betay2|, \verb|cetax|, \verb|cetay|, and \verb|tilt| (these are
-the two beta functions for x and y, the coupled dispersion values for
-x and y, and the beam tilt).
 
 If the \verb|floor_coordinates| command was given, one may use
 \verb|X|, \verb|Z|, and \verb|theta| to refer to the final values of
