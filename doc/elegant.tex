@@ -2210,6 +2210,10 @@ a significant difference in the optimization speed.
 &optimization_term
     STRING term = NULL;
     double weight = 1.0;
+    STRING field_name = NULL;
+    long field_initial_value = 0;
+    long field_final_value = 0;
+    long field_interval = 1;
 &end
 \end{verbatim}
 
@@ -2228,6 +2232,19 @@ details on designing optimization terms.
 \item \verb|weight| --- The weight to assign to this term.  If zero, the term
         is ignored.
 
+
+\item \verb|field_name|, \verb|field_initial_value|, \verb|field_final_value|, \verb|field_interval| --- 
+  These parameters are used to perform substitution of a series of values into the string given by
+  \verb|term|.  This can be used to make an identical constraint at a number of instances
+  of the same marker.  For example, to constraint \verb|Cx| to zero at instances 1, 3, 5, ..., 39,
+  of marker \verb|M1|, one could use
+\begin{verbatim}
+&optimization_term
+  term = "M1#@.Cx sqr", 
+  field_name = @, 
+  field_initial_value = 1, field_final_value = 39, field_interval = 2
+&end
+\end{verbatim}
 
 \end{itemize}
 
