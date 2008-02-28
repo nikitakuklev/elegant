@@ -20,7 +20,7 @@
 
 void determinePeriodicMoments(double **R, double *D, SIGMA_MATRIX *sigma0);
 void propagateBeamMoments(RUN *run, LINE_LIST *beamline, double *traj);
-void storeFitpointMomentsParameters(MARK *mark, char *name, long occurence, SIGMA_MATRIX *sigma0);
+void storeFitpointMomentsParameters(MARK *mark, char *name, long occurence, SIGMA_MATRIX *sigma0, double *centroid);
 
 static long momentsInitialized = 0;
 static long SDDSMomentsInitialized = 0;
@@ -505,7 +505,7 @@ void propagateBeamMoments(RUN *run, LINE_LIST *beamline, double *traj)
       /* Assume it doesn't modify the sigma matrix */
       memcpy(elem->sigmaMatrix, S1, sizeof(*S1));
     if (elem->type==T_MARK && ((MARK*)elem->p_elem)->fitpoint) 
-      storeFitpointMomentsParameters((MARK*)elem->p_elem, elem->name, elem->occurence, elem->sigmaMatrix);
+      storeFitpointMomentsParameters((MARK*)elem->p_elem, elem->name, elem->occurence, elem->sigmaMatrix, elem->Mld->C);
     elem = elem->succ;
   }
   free_matrices(M1); free(M1);
@@ -554,22 +554,28 @@ void determinePeriodicMoments
   m_free(&M3);
 }
 
-void storeFitpointMomentsParameters(MARK *mark, char *name, long occurence, SIGMA_MATRIX *sigma0)
+void storeFitpointMomentsParameters(MARK *mark, char *name, long occurence, SIGMA_MATRIX *sigma0, double *centroid)
 {
   char s[1000];
   long i;
 
   if (!(mark->init_flags&32)) {
-    mark->moments_mem = tmalloc(sizeof(*(mark->moments_mem))*21);
+    mark->moments_mem = tmalloc(sizeof(*(mark->moments_mem))*(21+6));
     mark->init_flags |= 32;
     for (i=0; i<21; i++) {
       sprintf(s, "%s#%ld.s%ld%ldm", name, occurence, 
               sigmaIndex1[i]+1, sigmaIndex2[i]+1);
       mark->moments_mem[i] = rpn_create_mem(s, 0);
     }
+    for (i=0; i<6; i++) {
+      sprintf(s, "%s#%ld.c%ldm", name, occurence, i+1);
+      mark->moments_mem[i+21] = rpn_create_mem(s, 0);
+    }
   }
   for (i=0; i<21; i++) 
     rpn_store(sigma0->sigma[i], NULL, mark->moments_mem[i]);
+  for (i=0; i<6; i++) 
+    rpn_store(centroid[i], NULL, mark->moments_mem[i+21]);
 }
 
 
