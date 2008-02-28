@@ -16,6 +16,10 @@ static char *optimize_method[N_OPTIM_METHODS] = {
 #namelist optimization_term static
     STRING term = NULL;
     double weight = 1.0;
+    STRING field_name = NULL;
+    long field_initial_value = 0;
+    long field_final_value = 0;
+    long field_interval = 1;
 #end
 
 #namelist optimization_setup static
