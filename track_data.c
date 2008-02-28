@@ -423,7 +423,7 @@ PARAMETER clean_param[N_CLEAN_PARAMS] = {
 MARK mark_example;
 /* name for marker parameters */
 PARAMETER mark_param[N_MARK_PARAMS] = {
-    {"FITPOINT", "", IS_LONG, 0, (long)((char *)&mark_example.fitpoint), NULL, 0.0, 0, "supply Twiss parameters, moments, floor coordinates for optimization?"},
+    {"FITPOINT", "", IS_LONG, 0, (long)((char *)&mark_example.fitpoint), NULL, 0.0, 0, "Supply local values of Twiss parameters, moments, floor coordinates, matrices, etc. for optimization?"},
     } ;
 
 MATR matr_example;
