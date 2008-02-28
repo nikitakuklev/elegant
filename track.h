@@ -3218,7 +3218,8 @@ void dumpBeamMoments(LINE_LIST *beamline, long n_elem, long final_values_only, l
 void setupMomentsOutput(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, long *doMomentsOutput,
                         long default_order);
 void finishMomentsOutput(void);
-long runMomentsOutput(RUN *run, LINE_LIST *beamline, double *startingCoord, long tune_corrected);
+long runMomentsOutput(RUN *run, LINE_LIST *beamline, double *startingCoord, long tune_corrected, 
+                      long writeToFile);
 void fillSigmaPropagationMatrix(double **Ms, double **R);
 
 /* The sigma matrix s[i][j] is stored in a 21-element array.  These indices give the i and j values 

@@ -1378,7 +1378,7 @@ double optimization_function(double *value, long *invalid)
       rpn_store(beamline->radIntegrals.I[i], NULL, radint_mem[i+8]);
   }
 
-  runMomentsOutput(run, beamline, startingOrbitCoord, 1);
+  runMomentsOutput(run, beamline, startingOrbitCoord, 1, 0);
 
   if (floorCoord_mem[0]==-1) 
     for (i=0; i<7; i++)

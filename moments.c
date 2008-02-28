@@ -295,7 +295,7 @@ void finishMomentsOutput(void)
   SDDSMomentsInitialized = momentsCount = momentsInitialized = 0;
 }
 
-long runMomentsOutput(RUN *run, LINE_LIST *beamline, double *startingCoord, long tune_corrected)
+long runMomentsOutput(RUN *run, LINE_LIST *beamline, double *startingCoord, long tune_corrected, long writeToFile)
 {
   ELEMENT_LIST *eptr, *elast;
   long n_elem, last_n_elem, i;
@@ -399,7 +399,7 @@ long runMomentsOutput(RUN *run, LINE_LIST *beamline, double *startingCoord, long
         printf("%13.6e%c", elast->sigmaMatrix->sigma[sigmaIndex3[i][j]], j==5?'\n':' ');
   }
 
-  if (SDDSMomentsInitialized)
+  if (SDDSMomentsInitialized && writeToFile)
     dumpBeamMoments(beamline, n_elem, final_values_only, tune_corrected, run);
 
   return 1;

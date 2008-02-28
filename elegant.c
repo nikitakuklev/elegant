@@ -813,7 +813,7 @@ char **argv;
           continue;
         }
         if (do_moments_output)
-          runMomentsOutput(&run_conditions, beamline, starting_coord, 0);
+          runMomentsOutput(&run_conditions, beamline, starting_coord, 0, 1);
         if (do_response_output)
           run_response_output(&run_conditions, beamline, &correct, 0);
         run_matrix_output(&run_conditions, beamline);
@@ -886,7 +886,7 @@ char **argv;
           continue;
         }
         if (do_moments_output)
-          runMomentsOutput(&run_conditions, beamline, starting_coord, 1);
+          runMomentsOutput(&run_conditions, beamline, starting_coord, 1, 1);
         if (do_coupled_twiss_output &&
             run_coupled_twiss_output(&run_conditions, beamline, starting_coord) &&
             !soft_failure) {
@@ -975,7 +975,7 @@ char **argv;
                          run_conditions.default_order);
       if (!do_moments_output) {
         moments_computed = 1;
-        runMomentsOutput(&run_conditions, beamline, NULL, -1);
+        runMomentsOutput(&run_conditions, beamline, NULL, -1, 1);
         delete_phase_references();
         reset_special_elements(beamline, 1);
         reset_driftCSR();
