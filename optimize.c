@@ -266,11 +266,13 @@ void add_optimization_term(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
   }
   optimization_data->terms += n_field_values;
 
+/*
   fprintf(stderr, "**** Terms:\n");
   for (index=0; index<optimization_data->terms; index++) {
     fprintf(stderr, "%s\n", optimization_data->term[index]);
   }
   fprintf(stderr, "****\n");
+*/
 }
 
 void add_optimization_covariable(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
