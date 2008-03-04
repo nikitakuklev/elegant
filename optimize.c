@@ -227,7 +227,7 @@ void add_optimization_term(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
     bomb("term is invalid", NULL);
   if (optimization_data->equation)
     bomb("you've already given an optimization equation, so you can't give individual terms", NULL);
-  if (!field_name) {
+  if (!field_string) {
     field_initial_value = field_final_value = 0;
     field_interval = 1;
     n_field_values = 1;
@@ -253,9 +253,9 @@ void add_optimization_term(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
     bomb("memory allocation failure", NULL);
 
   for (index=0; index<n_field_values; index++) {
-    if (field_name && strlen(field_name)) {
+    if (field_string && strlen(field_string)) {
       sprintf(value, "%ld", field_value);
-      replaceString(s, term, field_name, value, -1, 0);
+      replaceString(s, term, field_string, value, -1, 0);
       field_value += field_interval;
     } else 
       strcpy(s, term);
