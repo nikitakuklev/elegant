@@ -1050,11 +1050,28 @@ long do_tracking(
 					   *P_central, accepted, z);
 	      break;
 	    case T_KQUAD:
-	    case T_KSEXT:
+              if (flags&TEST_PARTICLES) {
+                saveISR = ((KQUAD*)eptr->p_elem)->isr;
+                ((KQUAD*)eptr->p_elem)->isr = 0;
+              }
 	      nLeft = multipole_tracking2(coord, nToTrack, eptr, 0.0,
                                           *P_central, accepted, last_z,
                                           x_max, y_max, elliptical,
                                           &(run->apertureData), NULL);
+              if (flags&TEST_PARTICLES)
+                ((KQUAD*)eptr->p_elem)->isr = saveISR;
+              break;
+	    case T_KSEXT:
+              if (flags&TEST_PARTICLES) {
+                saveISR = ((KSEXT*)eptr->p_elem)->isr;
+                ((KSEXT*)eptr->p_elem)->isr = 0;
+              }
+	      nLeft = multipole_tracking2(coord, nToTrack, eptr, 0.0,
+                                          *P_central, accepted, last_z,
+                                          x_max, y_max, elliptical,
+                                          &(run->apertureData), NULL);
+              if (flags&TEST_PARTICLES)
+                ((KSEXT*)eptr->p_elem)->isr = saveISR;
 	      break;
 	    case T_SAMPLE:
 	      if (!(flags&TEST_PARTICLES))
@@ -1257,7 +1274,13 @@ long do_tracking(
 	      show_dE = 1;
 	      break;
 	    case T_CWIGGLER:
+              if (flags&TEST_PARTICLES) {
+                saveISR = ((CWIGGLER*)eptr->p_elem)->isr;
+                ((CWIGGLER*)eptr->p_elem)->isr = 0;
+              }
 	      GWigSymplecticPass(coord, nToTrack, *P_central, (CWIGGLER*)eptr->p_elem);
+              if (flags&TEST_PARTICLES)
+                ((CWIGGLER*)eptr->p_elem)->isr = saveISR;
 	      break;
             case T_TWISSELEMENT:
               if ( ((TWISSELEMENT*)eptr->p_elem)->applyOnce==0 || i_pass==passOffset) {
