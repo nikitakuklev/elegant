@@ -40,6 +40,10 @@ void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 	value = value-1;
       differential = 0;
     }
+    if (start_occurence>end_occurence) 
+      bomb("start_occurence > end_occurence", NULL);
+    if (s_start>s_end)
+      bomb("s_start > s_end", NULL);
     if (type) {
       long i;
       str_toupper(type);
@@ -59,6 +63,12 @@ void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     nMatches = 0;
     while ((eptr=wfind_element(name, &context, &(beamline->elem)))) {
       if (exclude && strlen(exclude) && wild_match(eptr->name, exclude))
+        continue;
+      if (start_occurence!=0 && end_occurence!=0 && 
+          (eptr->occurence<start_occurence || eptr->occurence>end_occurence))
+        continue;
+      if (s_start>=0 && s_end>=0 &&
+          (eptr->end_pos<s_start || eptr->end_pos>s_end))
         continue;
       if (type && !wild_match(entity_name[context->type], type))
         continue;

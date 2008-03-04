@@ -17,6 +17,10 @@
         long verbose = 0;
         long allow_missing_elements = 0;
         long allow_missing_parameters = 0;
+        long start_occurence = 0;
+        long end_occurence = 0;
+        double s_start = -1;
+        double s_end = -1;
 #end
 
 
