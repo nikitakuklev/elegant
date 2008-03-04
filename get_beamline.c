@@ -29,14 +29,38 @@ void process_rename_request(char *s, char **name, long n_names);
 static ELEMENT_LIST *elem;   /* elem: root of linked-list of ELEM structures */
 static LINE_LIST *line;      /* line: root of linked-list of LINE structures */
 
-void lfree(void *ptr) 
+typedef struct input_object {
+  void *ptr;   /* points to an ELEMENT_LIST or LINE_LIST */
+  long isLine;
+  struct input_object *next;
+} INPUT_OBJECT;
+static INPUT_OBJECT inputObject, *lastInputObject=NULL;
+
+void addToInputObjectList(void *ptr, long isLine)
 {
-    static FILE *fpl = NULL;
-    if (!fpl)
-        fpl = fopen_e("free.log", "w", 0);
-    fprintf(fpl, "%x freed\n", ptr);
-    tfree(ptr);
-    }
+  if (lastInputObject==NULL)
+    lastInputObject = &inputObject;
+  else {
+    lastInputObject->next = tmalloc(sizeof(INPUT_OBJECT));
+    lastInputObject = lastInputObject->next;
+  }
+  lastInputObject->ptr = ptr;
+  lastInputObject->isLine = isLine;
+  lastInputObject->next = NULL;
+}
+
+void freeInputObjects()
+{
+  INPUT_OBJECT *ptr;
+  lastInputObject = inputObject.next;
+  while (lastInputObject) {
+    ptr = lastInputObject;
+    lastInputObject = lastInputObject->next;
+    free(ptr);
+  }
+  lastInputObject = NULL;
+}
+
 
 #define MAX_LINE_LENGTH 128*16384 
 #define MAX_FILE_NESTING 10
@@ -142,6 +166,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
           print_elem_list(stdout, elem);
 #endif
           fill_line(line, n_lines, elem, n_elems, s);
+          addToInputObjectList((void*)lptr, 1);
           if (strchr(lptr->name, '#')) {
             fprintf(stdout, "The name %s is invalid for a beamline: # is a reserved character.\n", lptr->name);
             exit(1);
@@ -180,6 +205,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
             fflush(stdout);
 #endif
             fill_elem(eptr, s, type, fp_mad[iMad]);
+            addToInputObjectList((void*)eptr, 0);
             if (strchr(eptr->name, '#')) {
               fprintf(stdout, "The name %s is invalid for an element: # is a reserved character.\n", eptr->name);
               exit(1);
@@ -634,7 +660,8 @@ void do_save_lattice(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
   char *ptr;
   PARAMETER *parameter;
   char s[16384], t[1024], name[1024];
-
+  INPUT_OBJECT *object;
+  
   log_entry("do_save_lattice");
 
   /* process the namelist text */
@@ -650,71 +677,73 @@ void do_save_lattice(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     filename = compose_filename(filename, run->rootname);
   fp = fopen_e(filename, "w", FOPEN_INFORM_OF_OPEN);
 
-  eptr = elem;
-  while (eptr) {
-    parameter = entity_description[eptr->type].parameter;
-    if (strpbrk(eptr->name, ":.,/-_+abcdefghijklmnopqrstuvwyxz "))
-      sprintf(name, "\"%s\"", eptr->name);
-    else
-      strcpy_ss(name, eptr->name);
-    sprintf(s, "%s: %s,", name, entity_name[eptr->type]);
-    if (eptr->group && strlen(eptr->group)) {
-      sprintf(t, "GROUP=\"%s\",", eptr->group);
-      strcat(s, t);
-    }
-    for (j=0; j<entity_description[eptr->type].n_params; j++) {
-      switch (parameter[j].type) {
-      case IS_DOUBLE:
-        dvalue = *(double*)(eptr->p_elem+parameter[j].offset);
-        /*
-        if ((parameter[j].flags&PARAM_DIVISION_RELATED) && 
-            eptr->divisions>1) {
-          fprintf(stderr, "Multiplying %s by %ld\n",
-                  parameter[j].name, eptr->divisions);
-          dvalue *= eptr->divisions;
-        }
-        */
-        if (!suppress_defaults || dvalue!=parameter[j].number) {
-          /* value is not the default, so add to output */
-          sprintf(t, "%s=%.16g", parameter[j].name, dvalue);
-          strcat(s, t);
-          if (j!=entity_description[eptr->type].n_params-1)
-            strcat(s, ",");
-        }
-        break;
-      case IS_LONG:
-        lvalue = *(long *)(eptr->p_elem+parameter[j].offset);
-        if (!suppress_defaults || lvalue!=parameter[j].integer) {
-          /* value is not the default, so add to output */
-          sprintf(t, "%s=%ld", parameter[j].name, lvalue);
-          strcat(s, t);
-          if (j!=entity_description[eptr->type].n_params-1)
-            strcat(s, ",");
-        }
-        break;
-      case IS_STRING:
-        ptr = *(char**)(eptr->p_elem+parameter[j].offset);
-        if (ptr &&
-            (!suppress_defaults || !parameter[j].string || strcmp(ptr, parameter[j].string)!=0)) {
-          sprintf(t, "%s=\"%s\"", parameter[j].name, ptr);
-          strcat(s, t);
-          if (j!=entity_description[eptr->type].n_params-1)
-            strcat(s, ",");
-        }
-        break;
+  object = &inputObject;
+  do {
+    if (!object->isLine) {
+      eptr = (ELEMENT_LIST*)(object->ptr);
+      parameter = entity_description[eptr->type].parameter;
+      if (strpbrk(eptr->name, ":.,/-_+abcdefghijklmnopqrstuvwyxz "))
+        sprintf(name, "\"%s\"", eptr->name);
+      else
+        strcpy_ss(name, eptr->name);
+      sprintf(s, "%s: %s,", name, entity_name[eptr->type]);
+      if (eptr->group && strlen(eptr->group)) {
+        sprintf(t, "GROUP=\"%s\",", eptr->group);
+        strcat(s, t);
       }
+      for (j=0; j<entity_description[eptr->type].n_params; j++) {
+        switch (parameter[j].type) {
+        case IS_DOUBLE:
+          dvalue = *(double*)(eptr->p_elem+parameter[j].offset);
+          /*
+            if ((parameter[j].flags&PARAM_DIVISION_RELATED) && 
+            eptr->divisions>1) {
+            fprintf(stderr, "Multiplying %s by %ld\n",
+            parameter[j].name, eptr->divisions);
+            dvalue *= eptr->divisions;
+            }
+            */
+          if (!suppress_defaults || dvalue!=parameter[j].number) {
+            /* value is not the default, so add to output */
+            sprintf(t, "%s=%.16g", parameter[j].name, dvalue);
+            strcat(s, t);
+            if (j!=entity_description[eptr->type].n_params-1)
+              strcat(s, ",");
+          }
+          break;
+        case IS_LONG:
+          lvalue = *(long *)(eptr->p_elem+parameter[j].offset);
+          if (!suppress_defaults || lvalue!=parameter[j].integer) {
+            /* value is not the default, so add to output */
+            sprintf(t, "%s=%ld", parameter[j].name, lvalue);
+            strcat(s, t);
+            if (j!=entity_description[eptr->type].n_params-1)
+              strcat(s, ",");
+          }
+          break;
+        case IS_STRING:
+          ptr = *(char**)(eptr->p_elem+parameter[j].offset);
+          if (ptr &&
+              (!suppress_defaults || !parameter[j].string || strcmp(ptr, parameter[j].string)!=0)) {
+            sprintf(t, "%s=\"%s\"", parameter[j].name, ptr);
+            strcat(s, t);
+            if (j!=entity_description[eptr->type].n_params-1)
+              strcat(s, ",");
+          }
+          break;
+        }
+      }
+      if (s[j=strlen(s)-1]==',')
+        s[j] = 0;
+      print_with_continuation(fp, s, 79);
+      eptr = eptr->succ;
+    } else {
+      lptr = (LINE_LIST*)(object->ptr);
+      print_with_continuation(fp, lptr->definition, 79);
     }
-    if (s[j=strlen(s)-1]==',')
-      s[j] = 0;
-    print_with_continuation(fp, s, 79);
-    eptr = eptr->succ;
-  }
-  lptr = line;
-  while (lptr) {
-    print_with_continuation(fp, lptr->definition, 79);
-    lptr = lptr->succ;
-  }
-
+  } while ((object=object->next));
+  
+  
   if (beamline && beamline->name)
     fprintf(fp, "USE,%s\n", beamline->name);
 

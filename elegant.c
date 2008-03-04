@@ -546,6 +546,7 @@ char **argv;
           closeBeamlineOutputFiles(beamline);
         free_elements(NULL);
         free_beamlines(NULL);
+        freeInputObjects();
         saved_lattice = lattice;
       }
       free_beamdata(&beam);
