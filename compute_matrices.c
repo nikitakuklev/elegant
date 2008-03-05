@@ -214,7 +214,7 @@ VMATRIX *accumulateRadiationMatrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, 
       }
       for (i=0; i<6; i++) {
         member->Mld->C[i] = Ml2->C[i];
-        memcpy(member->Mld->R[i], Ml2->R[i], 6*sizeof(Ml2->R[i]));
+        memcpy(member->Mld->R[i], Ml2->R[i], 6*sizeof(*(Ml2->R[i])));
       }
     } else { 
       if (member->pred && member->pred->accumD)
