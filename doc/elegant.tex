@@ -472,6 +472,10 @@ the file {\tt data.twi}.
         long multiplicative = 0;
         long verbose = 0;
         long allow_missing_parameters = 0;
+        long start_occurence = 0;
+        long end_occurence = 0;
+        double s_start = -1;
+        double s_end = -1;
 &end
 \end{verbatim}
 
@@ -494,6 +498,12 @@ the file {\tt data.twi}.
 \item \verb|allow_missing_parameters| --- If nonzero, then it is not an error if an
         element does not have the parameter named with \verb|item|.  Normally, such
         an occurence is an error and terminates the program.
+\item \verb|start_occurence| and \verb|end_occurence| --- If nonzero, these give the starting and
+ ending occurence numbers of elements that will be altered.  N.B.: if wildcards are used, occurence
+ number counting is for each set of identically-named elements separately, rather than for the sequence
+ of matched elements.
+\item \verb|s_start| and \verb|s_end| --- If non-negative, these give the gaving and ending position
+ limits for the end-of-element locations of elements to be altered.
 \end{itemize}
 
 \begin{latexonly}
@@ -2210,7 +2220,7 @@ a significant difference in the optimization speed.
 &optimization_term
     STRING term = NULL;
     double weight = 1.0;
-    STRING field_name = NULL;
+    STRING field_string = NULL;
     long field_initial_value = 0;
     long field_final_value = 0;
     long field_interval = 1;
@@ -2233,7 +2243,7 @@ details on designing optimization terms.
         is ignored.
 
 
-\item \verb|field_name|, \verb|field_initial_value|, \verb|field_final_value|, \verb|field_interval| --- 
+\item \verb|field_string|, \verb|field_initial_value|, \verb|field_final_value|, \verb|field_interval| --- 
   These parameters are used to perform substitution of a series of values into the string given by
   \verb|term|.  This can be used to make an identical constraint at a number of instances
   of the same marker.  For example, to constraint \verb|Cx| to zero at instances 1, 3, 5, ..., 39,
@@ -2241,7 +2251,7 @@ details on designing optimization terms.
 \begin{verbatim}
 &optimization_term
   term = "M1#@.Cx sqr", 
-  field_name = @, 
+  field_string = @, 
   field_initial_value = 1, field_final_value = 39, field_interval = 2
 &end
 \end{verbatim}
