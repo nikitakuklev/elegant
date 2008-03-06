@@ -1269,6 +1269,11 @@ void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
 
   if (!totalMult->initialized) {
     totalMult->initialized = 1;
+    if (steeringMult && steeringMult->orders) {
+      if (!(steeringMult->KnL = SDDS_Malloc(sizeof(*steeringMult->KnL)*steeringMult->orders)) ||
+          !(steeringMult->JnL = SDDS_Malloc(sizeof(*steeringMult->JnL)*steeringMult->orders)) )
+        bomb("memory allocation failure (computeTotalMultipoleFields)", NULL);
+    }
     /* make a list of unique orders for random and systematic multipoles */
     if (systematicMult->orders && randomMult->orders &&
         systematicMult->orders!=randomMult->orders)
@@ -1295,11 +1300,6 @@ void computeTotalErrorMultipoleFields(MULTIPOLE_DATA *totalMult,
       if (!(totalMult->KnL = SDDS_Malloc(sizeof(*totalMult->KnL)*totalMult->orders)) ||
           !(totalMult->JnL = SDDS_Malloc(sizeof(*totalMult->JnL)*totalMult->orders)) )
         bomb("memory allocation failure (computeTotalMultipoleFields)", NULL);
-      if (steeringMult && steeringMult->orders) {
-        if (!(steeringMult->KnL = SDDS_Malloc(sizeof(*steeringMult->KnL)*steeringMult->orders)) ||
-            !(steeringMult->JnL = SDDS_Malloc(sizeof(*steeringMult->JnL)*steeringMult->orders)) )
-          bomb("memory allocation failure (computeTotalMultipoleFields)", NULL);
-      }
       for (i=0; i<totalMult->orders; i++) {
         if (systematicMult->orders && randomMult->orders &&
             systematicMult->order[i]!=randomMult->order[i])
