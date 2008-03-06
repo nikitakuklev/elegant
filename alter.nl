@@ -21,6 +21,8 @@
         long end_occurence = 0;
         double s_start = -1;
         double s_end = -1;
+        STRING after = NULL;
+        STRING before = NULL;
 #end
 
 

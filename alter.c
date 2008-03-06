@@ -44,6 +44,46 @@ void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
       bomb("start_occurence > end_occurence", NULL);
     if (s_start>s_end)
       bomb("s_start > s_end", NULL);
+    if (after || before) {
+      ELEMENT_LIST *context;
+      double sMin, sMax;
+      context = NULL;
+      if (s_start<0)
+        s_start = -DBL_MAX;
+      if (s_end<0)
+        s_end = DBL_MAX;
+      if (after && strlen(after)) {
+        if (!(context=find_element(after, &context, &(beamline->elem)))) {
+          fprintf(stdout, "Element %s not found in beamline.\n", after);
+          exit(1);
+        }
+        sMin = context->end_pos;
+        if (find_element(after, &context, &(beamline->elem))) {
+          fprintf(stdout, "Element %s found in beamline more than once.\n", after);
+          exit(1);
+        }
+        fprintf(stdout, "%s found at s = %le m\n", after, sMin);
+        fflush(stdout);
+        if (sMin>s_start)
+          s_start = sMin;
+      }
+      context = NULL;
+      if (before && strlen(before)) {
+        if (!(context=find_element(before, &context, &(beamline->elem)))) {
+          fprintf(stdout, "Element %s not found in beamline.\n", before);
+          exit(1);
+        }
+        sMax = context->end_pos;
+        if (find_element(before, &context, &(beamline->elem))) {
+          fprintf(stdout, "Element %s found in beamline more than once.\n", before);
+          exit(1);
+        }
+        fprintf(stdout, "%s found at s = %le m\n", before, sMax);
+        fflush(stdout);
+        if (sMax<s_end)
+          s_end = sMax;
+      }
+    }
     if (type) {
       long i;
       str_toupper(type);
