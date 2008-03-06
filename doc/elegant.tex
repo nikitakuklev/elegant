@@ -153,6 +153,16 @@ trend toward graphical user interfaces, which virtually force an
 inefficient one-job, one-computer, manual postprocessing way of
 working.
 
+In passing, we note another ``philosophical'' point about {\tt
+elegant}, namely, the goal of complete backward compatibility.  We
+consider it unacceptable if a new version of the program gives
+different answers than an old version, unless the old version was
+wrong.  Hence, there are sometimes less-than-ideal default settings in
+{\tt elegant}, incorrect spelling of parameters, etc., that are never
+fixed, because doing so would break old input files.  It helps to read
+the manual pages carefully for the more complex features to ensure that
+the defaults are understood and appropriate.
+
 \subsection{Capabilities of {\tt elegant}}
 
 {\tt elegant} started as a tracking code, and it is still well-suited
@@ -1263,11 +1273,10 @@ and momentum spread to compute the beam sizes, bunch length (if rf is included),
 A ``plus\_or\_minus'' error is equal in magnitude to the amplitude given, with the sign randomly chosen.
 \item \verb|amplitude| --- The amplitude of the errors.
 \item \verb|cutoff| --- The cutoff for the random distribution.
-
 \item \verb|bind|, \verb|bind_number|, \verb|bind_across_names| ---
 These parameters control ``binding'' of errors among elements, which
 means assigning the same error contribution to several elements.  This
-occurs if \verb|bind| is nonzero; if \verb|bind| is negative, then the
+occurs if \verb|bind| is nonzero, {\bf which it is by default}! If \verb|bind| is negative, then the
 sign of the error will alternate between successive elements.
 \verb|bind_number| can be used to limit the number of elements bound
 together. In particular, if \verb|bind_number| is positive, then a
