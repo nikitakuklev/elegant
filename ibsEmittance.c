@@ -9,6 +9,10 @@
 
 /* 
  * $Log: not supported by cvs2svn $
+ * Revision 1.22  2007/01/24 17:17:56  emery
+ * Added comment clarifying the meaning of G and
+ * the returned value of IBSequations.
+ *
  * Revision 1.21  2005/11/10 15:38:48  soliday
  * Added changes to get it to compile properly with 64 bit compilers.
  *
@@ -146,7 +150,7 @@ char *option[N_OPTIONS] = {
 double IBSequations(double *x, long *invalid);
 void IBSsimplexReport(double ymin, double *xmin, long pass, long evals, long dims);
 
-void IBSIntegrate(double *exInteg, double *eyInteg, double *elInteg, long *passInteg,
+void IBSIntegrate(double *exInteg, double *eyInteg, double *elInteg, int32_t *passInteg,
                   double *SdeltaInteg, double *SzInteg,
                   double *xRateInteg, double *yRateInteg, double *zRateInteg,
                   long integTurns, long integStepSize, 
@@ -185,7 +189,7 @@ int main( int argc, char **argv)
   long integrationPoints = 0;
   double *exInteg=NULL, *eyInteg=NULL, *elInteg=NULL, *xRateInteg=NULL, *yRateInteg=NULL, *zRateInteg=NULL;
   double *SdeltaInteg=NULL, *SzInteg=NULL;
-  long *passInteg=NULL;
+  int32_t *passInteg=NULL;
   unsigned long dummyFlags;
   double rfVoltage, rfHarmonic;
   double alphac, U0, circumference, energy;
@@ -762,7 +766,7 @@ void IBSsimplexReport(double ymin, double *xmin, long pass, long evals, long dim
   return;
 }
 
-void IBSIntegrate(double *exInteg, double *eyInteg, double *elInteg, long *passInteg,
+void IBSIntegrate(double *exInteg, double *eyInteg, double *elInteg, int32_t *passInteg,
                   double *SdeltaInteg, double *SzInteg,
                   double *xRateInteg, double *yRateInteg, double *zRateInteg,
                   long integTurns, long integStepSize, 
