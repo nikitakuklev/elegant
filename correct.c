@@ -190,7 +190,8 @@ void correction_setup(
         bomb("n_iterations < 0", NULL);
     if ((_correct->n_xy_cycles = n_xy_cycles)<0)
         bomb("n_xy_cycles < 0", NULL);
-
+    _correct->minimum_cycles = minimum_cycles;
+    
     _correct->CMx = tmalloc(sizeof(*_correct->CMx));
     _correct->CMy = tmalloc(sizeof(*_correct->CMy));
 
@@ -255,9 +256,9 @@ void correction_setup(
 
     if (_correct->mode==TRAJECTORY_CORRECTION) {
       compute_trajcor_matrices(_correct->CMx, &_correct->SLx, 0, run, beamline, 0,
-                               !_correct->response_only);
+                               !_correct->response_only && _correct->method==GLOBAL_CORRECTION);
       compute_trajcor_matrices(_correct->CMy, &_correct->SLy, 2, run, beamline, 0, 
-                               !_correct->response_only);
+                               !_correct->response_only && _correct->method==GLOBAL_CORRECTION);
     }
     else if (_correct->mode==ORBIT_CORRECTION) {
       compute_orbcor_matrices(_correct->CMx, &_correct->SLx, 0, run, beamline, 0, 
@@ -588,7 +589,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
         }
         else
 #endif
-          if (rms_before<=rms_after+correct->CMx->corr_accuracy) {
+          if (rms_before<=rms_after+correct->CMx->corr_accuracy && i_cycle>correct->minimum_cycles) {
             x_failed = 1;
             if (correct->verbose)
               fputs("trajectory not improved--discontinuing horizontal correction\n", stdout);
@@ -622,7 +623,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
         }
         else
 #endif
-          if (rms_before<=rms_after+correct->CMy->corr_accuracy) {
+          if (rms_before<=rms_after+correct->CMy->corr_accuracy && i_cycle>correct->minimum_cycles) {
             y_failed = 1;
             if (correct->verbose)
               fputs("trajectory not improved--discontinuing vertical correction\n", stdout);
@@ -1178,6 +1179,7 @@ void one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TR
   long n_part, i, tracking_flags;
   double **particle, param, fraction;
   double p, x, y, reading;
+  double sLimit;
   
   log_entry("one_to_one_trajcor_plane");
   
@@ -1210,8 +1212,21 @@ void one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TR
       bomb("corrector value array for this iteration is NULL (one_to_one_trajcor_plane)", NULL);
     if (!(traj = traject[iteration?1:0]))
       bomb("trajectory array for this iteration is NULL (one_to_one_trajcor_plane)", NULL);
-    
-    for (i_moni=i_corr=0; i_moni<CM->nmon; i_moni++) {
+
+    for (i_corr=0; i_corr<CM->ncor; i_corr++) {
+      /* Find most-distant BPM downstream of this corrector that is not downstream of the next corrector */
+      sLimit = HUGE_VAL;
+      if (i_corr!=CM->ncor-1)
+        sLimit = CM->ucorr[i_corr]->end_pos;
+      for (i_moni=0; i_moni<CM->nmon; i_moni++) 
+        if (CM->ucorr[i_corr]->end_pos < CM->umoni[i_moni]->end_pos)
+          break;
+      for ( ; i_moni<(CM->nmon-1); i_moni++) 
+        if (CM->umoni[i_moni+1]->end_pos>=sLimit)
+          break;
+      if (i_moni==CM->nmon)
+        break;
+              
       /* find trajectory */
       p = sqrt(sqr(run->ideal_gamma)-1);
       
@@ -1267,16 +1282,22 @@ void one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TR
 
       /* change corrector */
       corr = CM->ucorr[i_corr];
-      sl_index = CM->sl_index[i_corr];
-      kick_offset = SL->param_offset[sl_index];
+      sl_index = CM->sl_index[i_corr];           /* steering list index of this corrector */
+      kick_offset = SL->param_offset[sl_index];  /* offset of steering parameter in element structure */
       if (iteration==0)
+        /* Record initial value */
         CM->kick[iteration][i_corr] = *((double*)(corr->p_elem+kick_offset))*CM->kick_coef[i_corr];
+      /* Compute new value of the parameter
+       * NewValue = OldValue - BpmReading/ResponseCoefficient*CorrectionFraction
+       */
       param = *((double*)(corr->p_elem+kick_offset)) - reading/CM->C->a[i_moni][i_corr]*CM->corr_fraction;
+      /* Check that we haven't exceeded allowed strength */
       fraction = 1;
       if (param && SL->corr_limit[sl_index])
         if ((fraction = SL->corr_limit[sl_index]/fabs(param))>1)
           fraction = 1;
       *((double*)(corr->p_elem+kick_offset)) = param*fraction;
+      /* Record the new kick strength */
       CM->kick[iteration+1][i_corr] = *((double*)(corr->p_elem+kick_offset))*CM->kick_coef[i_corr];
 #if defined(DEBUG)
       fprintf(stdout, ", param = %e, fraction=%e\n", param, fraction);
@@ -1294,7 +1315,6 @@ void one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TR
       /* indicate that beamline concatenation and Twiss parameter computation (if wanted) are not current */
       beamline->flags &= ~BEAMLINE_CONCAT_CURRENT;
       beamline->flags &= ~BEAMLINE_TWISS_CURRENT;
-      i_corr++;
     }
   }
 

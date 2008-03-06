@@ -22,6 +22,7 @@
     long fixed_length = 0;
     long fixed_length_matrix = 0;
     long n_xy_cycles = 1;
+    long minimum_cycles = 1;
     long n_iterations = 1;
     long prezero_correctors = 1;
     long track_before_and_after = 0;

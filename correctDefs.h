@@ -47,7 +47,7 @@ typedef struct {
     long mode;
 #define TRAJECTORY_CORRECTION 0
 #define ORBIT_CORRECTION 1
-    long method, verbose, track_before_and_after, n_iterations, n_xy_cycles;
+    long method, verbose, track_before_and_after, n_iterations, n_xy_cycles, minimum_cycles;
     long prezero_correctors, start_from_centroid, use_actual_beam, response_only;
     double clorb_accuracy;
     double clorb_iterations;
