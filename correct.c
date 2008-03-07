@@ -1179,7 +1179,6 @@ void one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TR
   long n_part, i, tracking_flags;
   double **particle, param, fraction;
   double p, x, y, reading;
-  double sLimit;
   
   log_entry("one_to_one_trajcor_plane");
   
@@ -1213,20 +1212,15 @@ void one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TR
     if (!(traj = traject[iteration?1:0]))
       bomb("trajectory array for this iteration is NULL (one_to_one_trajcor_plane)", NULL);
 
+    i_moni = 0;
     for (i_corr=0; i_corr<CM->ncor; i_corr++) {
-      /* Find most-distant BPM downstream of this corrector that is not downstream of the next corrector */
-      sLimit = HUGE_VAL;
-      if (i_corr!=CM->ncor-1)
-        sLimit = CM->ucorr[i_corr]->end_pos;
-      for (i_moni=0; i_moni<CM->nmon; i_moni++) 
+      /* Find next BPM downstream of this corrector */
+      for ( ; i_moni<CM->nmon; i_moni++) 
         if (CM->ucorr[i_corr]->end_pos < CM->umoni[i_moni]->end_pos)
-          break;
-      for ( ; i_moni<(CM->nmon-1); i_moni++) 
-        if (CM->umoni[i_moni+1]->end_pos>=sLimit)
           break;
       if (i_moni==CM->nmon)
         break;
-              
+      
       /* find trajectory */
       p = sqrt(sqr(run->ideal_gamma)-1);
       
@@ -1245,19 +1239,9 @@ void one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TR
       n_part = do_tracking(NULL, particle, n_part, NULL, beamline, &p, (double**)NULL, 
                            (BEAM_SUMS**)NULL, (long*)NULL,
                            traj, run, 0, tracking_flags, 1, 0, NULL, NULL, NULL, NULL, NULL);
-      if (beam) {
-        fprintf(stdout, "%ld particles survived tracking", n_part);
-        fflush(stdout);
-        if (n_part==0) {
-          for (i=0; i<beamline->n_elems+1; i++)
-            if (traj[i].n_part==0)
-              break;
-          if (i!=0 && i<beamline->n_elems+1)
-            fprintf(stdout, "---all beam lost before z=%em (element %s)",
-                    traj[i].elem->end_pos, traj[i].elem->name);
-          fflush(stdout);
-        }
-        fputc('\n', stdout);
+      if (traj[CM->mon_index[i_moni]].n_part==0) {
+        printf("beam lost at position %e m\n", traj[CM->mon_index[i_moni]].elem->end_pos);
+        break;
       }
       
       if (!(eptr=traj[CM->mon_index[i_moni]].elem))
