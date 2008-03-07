@@ -18,7 +18,9 @@
 #include "track.h"
 #include "matlib.h"
 
-#define ANALYSIS_BINS 1000000
+#define ANALYSIS_BINS    10000
+/* For time and momentum percentiles in final properties output */
+#define ANALYSIS_BINS2 1000000
 
 static double tmp_safe_sqrt;
 #define SAFE_SQRT(x) ((tmp_safe_sqrt=(x))<0?0.0:sqrt(tmp_safe_sqrt))
@@ -439,9 +441,9 @@ long compute_final_properties
       sum += sqr( tData[i] - tc);
     data[6+F_SIGMA_OFFSET] = sqrt(sum/sums->n_part);
     /* results of these calls used below */
-    approximate_percentiles(tPosition, percLevel, 12, tData, sums->n_part, ANALYSIS_BINS);
-    approximate_percentiles(tPosition2, percLevel2, 9, tData, sums->n_part, ANALYSIS_BINS);
-    approximate_percentiles(deltaPosition, percLevel, 12, deltaData, sums->n_part, ANALYSIS_BINS);
+    approximate_percentiles(tPosition, percLevel, 12, tData, sums->n_part, ANALYSIS_BINS2);
+    approximate_percentiles(tPosition2, percLevel2, 9, tData, sums->n_part, ANALYSIS_BINS2);
+    approximate_percentiles(deltaPosition, percLevel, 12, deltaData, sums->n_part, ANALYSIS_BINS2);
   }
   else {
     for (i=0; i<7; i++) 
