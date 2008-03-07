@@ -20,7 +20,7 @@ void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     ELEMENT_LIST *context, *eptr;
     char *p_elem;
     char **changedDefinedParameter = NULL;
-    long nChangedDefinedParameter = 0;
+    long nChangedDefinedParameter = 0, modeCount;
 
     /* process the namelist text */
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
@@ -40,32 +40,29 @@ void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 	value = value-1;
       differential = 0;
     }
+    if ((((s_start>=0 && s_end>=0) ? 1 : 0) +
+         ((start_occurence!=0 && end_occurence!=0) ? 1 : 0 ) +
+         ((after || before) ? 1 : 0 ))>1)
+      bomb("can't combine start_occurence/end_occurence, s_start/s_end, and after/before---use one method only", NULL);
     if (start_occurence>end_occurence) 
       bomb("start_occurence > end_occurence", NULL);
-    if (s_start>s_end)
-      bomb("s_start > s_end", NULL);
     if (after || before) {
       ELEMENT_LIST *context;
-      double sMin, sMax;
       context = NULL;
-      if (s_start<0)
-        s_start = -DBL_MAX;
-      if (s_end<0)
-        s_end = DBL_MAX;
+      s_start = -DBL_MAX;
+      s_end = DBL_MAX;
       if (after && strlen(after)) {
         if (!(context=find_element(after, &context, &(beamline->elem)))) {
           fprintf(stdout, "Element %s not found in beamline.\n", after);
           exit(1);
         }
-        sMin = context->end_pos;
+        s_start = context->end_pos;
         if (find_element(after, &context, &(beamline->elem))) {
           fprintf(stdout, "Element %s found in beamline more than once.\n", after);
           exit(1);
         }
-        fprintf(stdout, "%s found at s = %le m\n", after, sMin);
+        fprintf(stdout, "%s found at s = %le m\n", after, s_start);
         fflush(stdout);
-        if (sMin>s_start)
-          s_start = sMin;
       }
       context = NULL;
       if (before && strlen(before)) {
@@ -73,17 +70,19 @@ void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
           fprintf(stdout, "Element %s not found in beamline.\n", before);
           exit(1);
         }
-        sMax = context->end_pos;
+        s_end = context->end_pos;
         if (find_element(before, &context, &(beamline->elem))) {
           fprintf(stdout, "Element %s found in beamline more than once.\n", before);
           exit(1);
         }
-        fprintf(stdout, "%s found at s = %le m\n", before, sMax);
+        fprintf(stdout, "%s found at s = %le m\n", before, s_end);
         fflush(stdout);
-        if (sMax<s_end)
-          s_end = sMax;
       }
+      if (s_start>s_end) 
+        bomb("'after' element follows 'before' element!", NULL);
     }
+    if (s_start>s_end)
+      bomb("s_start > s_end", NULL);
     if (type) {
       long i;
       str_toupper(type);

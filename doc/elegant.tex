@@ -486,6 +486,8 @@ the file {\tt data.twi}.
         long end_occurence = 0;
         double s_start = -1;
         double s_end = -1;
+        STRING before = NULL;
+        STRING after = NULL;
 &end
 \end{verbatim}
 
@@ -508,12 +510,16 @@ the file {\tt data.twi}.
 \item \verb|allow_missing_parameters| --- If nonzero, then it is not an error if an
         element does not have the parameter named with \verb|item|.  Normally, such
         an occurence is an error and terminates the program.
-\item \verb|start_occurence| and \verb|end_occurence| --- If nonzero, these give the starting and
+\item \verb|start_occurence|, \verb|end_occurence| --- If nonzero, these give the starting and
  ending occurence numbers of elements that will be altered.  N.B.: if wildcards are used, occurence
  number counting is for each set of identically-named elements separately, rather than for the sequence
  of matched elements.
-\item \verb|s_start| and \verb|s_end| --- If non-negative, these give the gaving and ending position
+\item \verb|s_start|, \verb|s_end| --- If non-negative, these give the gaving and ending position
  limits for the end-of-element locations of elements to be altered.
+\item \verb|after| --- The name of an element.  If given, the alteration is applied only to elements
+ that follow the named element in the beamline.  
+\item \verb|before| --- The name of an element.  If given, the alteration is applied only to elements
+ that precede the named element in the beamline. 
 \end{itemize}
 
 \begin{latexonly}
