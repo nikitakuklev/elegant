@@ -1373,7 +1373,7 @@ parameter.  If zero, then the errors replace the prior value of the parameter.
 
 \item \verb|mode| --- May be ``many-particle'', ``single-particle'',
 ``one-line'', ``three-line'', ``five-line'', ``seven-line'',
-``nine-line'', or ``eleven-line''.  Many-particle searching is much
+``nine-line'', or ``eleven-line''.   Many-particle searching is much
 faster than single-particle, but does not allow interval splitting to
 search for the aperture boundary.  Both ``many-particle'' and
 ``single-particle'' modes involve searching from the outside inward,
@@ -1385,9 +1385,12 @@ one-line mode searches the line from the origin to $(x_{max},
 y_{max})$.  three-line mode searches this line, plus the lines from
 the origin to $(x_{max}, 0)$ and $(0, y_{max})$.  For $n$-line modes
 with $n>3$, $n$ lines are explored from $(0,0)$ to
-$(x_{max}*sin(\theta), y_{max}*cos(\theta))$, where $\theta$ takes
-values from $-pi/2$ to $\pi/2$.   In these modes, the output file contains
+$(x_{max}*\cos(\theta), y_{max}*\sin(\theta))$, where $\theta$ takes
+values from $0$ to $\pi$.   In these modes, the output file contains
 a parameter called ``Area,'' which gives the area of the dynamic aperture.
+
+{\bf N.B.: Although ``many-particle'' is the default, we recommend
+  using one of the line modes for dynamic aperture.}
 
 \item \verb|search_output| --- The (incomplete) name of an SDDS file for output of detailed
  information on each tracked particle (single-particle mode only).  Recommended value:
