@@ -68,7 +68,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
 {
   long type=0, i;
   long occurence, iMad;
-  static ELEMENT_LIST *eptr, *eptr1, *eptr_sc;
+  static ELEMENT_LIST *eptr, *eptr1, *eptr_sc, *eptr_add;
   static LINE_LIST *lptr;
   static long n_elems, n_lines;
   FILE *fp_mad[MAX_FILE_NESTING];
@@ -271,6 +271,13 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
   else {
     s[0] = 0;
     type = T_NODEF;
+
+    if (getAddElemFlag) {
+      eptr = generate_elem(getElemDefinition());
+      eptr_add = eptr;
+      check_duplic_elem(&elem, &eptr, NULL, n_elems);
+      n_elems++;  	
+    }
   }
   
 
@@ -322,6 +329,30 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
   		if (eptr->succ==NULL && skip!=0) {				/* add space charge element to the end of line */
   			add_element(eptr, eptr_sc);
   			eptr = eptr->succ;							/* this is very impotant to get off the loop */
+  			nelem++;
+ 		}   			
+  		eptr = eptr->succ; 
+  	}
+  	lptr->n_elems += nelem;
+  } 
+
+  if (getAddElemFlag()) {
+  	long skip = 0;
+  	long nelem = 0;
+  	eptr = &(lptr->elem);
+  	while (eptr) {
+  		if (eptr->type == eptr_add->type) {	/* the code don't allow insert element of same type as previous one */
+  			eptr = eptr->succ;
+  			continue;
+  		}
+  		if (insertElem(eptr->name, eptr->type, &skip)) {
+ 			add_element(eptr, eptr_add); 
+  			eptr = eptr->succ;		/* move pointer to new added element */
+  			nelem++;
+   		}
+  		if (eptr->succ==NULL && skip!=0 && getAddEndFlag()) {	/* add element to the end of line if request */
+  			add_element(eptr, eptr_add);
+  			eptr = eptr->succ;				/* this is very impotant to get off the loop */
   			nelem++;
  		}   			
   		eptr = eptr->succ; 
@@ -985,13 +1016,17 @@ long nearestInteger(double value)
   return (long)(value+0.5);
 }
 
-/* generate scmult element */
-ELEMENT_LIST *generate_elem(char *s, long type) 
+/* generate element */
+ELEMENT_LIST *generate_elem(char *s) 
 {
   ELEMENT_LIST *elem;
+  long type=0;
+
   elem = tmalloc(sizeof(*elem));
   elem->pred = elem->succ = NULL;
   elem->name = NULL;
+  if ((type = tell_type(s, elem))==T_NODEF)
+    bomb("no recognized element definition", NULL);
   fill_elem(elem, s, type, NULL);
   return(elem);
 }
