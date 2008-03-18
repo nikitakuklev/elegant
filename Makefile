@@ -7,10 +7,13 @@
 # in the file LICENSE that is included with this distribution. 
 #*************************************************************************
 #
-# $Id: Makefile,v 1.14 2008-01-21 17:38:41 borland Exp $
+# $Id: Makefile,v 1.15 2008-03-18 16:45:08 xiaoam Exp $
 #
 #  Lowest Level Directroy Makefile
 # $Log: not supported by cvs2svn $
+# Revision 1.14  2008/01/21 17:38:41  borland
+# Added moments.c and moments.nl.
+#
 # Revision 1.13  2007/05/21 16:43:57  ywang25
 # Added hash table functions according to Bob Jenkins's code in public domain. Customized for elegant to improve parameter loading.
 #
@@ -153,6 +156,16 @@ insertSCeffects$(OBJ): insertSCeffects.h
 
 insertSCeffects.h: ../insertSCeffects.nl
 	nlpp ../insertSCeffects.nl insertSCeffects.h
+
+insert_elements$(OBJ): insert_elements.h
+
+insert_elements.h: ../insert_elements.nl
+	nlpp ../insert_elements.nl insert_elements.h
+
+touschekScatter$(OBJ): touschekScatter.h
+
+touschekScatter.h: ../touschekScatter.nl
+	nlpp ../touschekScatter.nl touschekScatter.h
 
 link_elements$(OBJ): link_elements.h
 
@@ -331,5 +344,5 @@ endif
 
 
 clean::
-	$(RM) fitTraces.h vary.h twiss.h tune.h trace.h subprocess.h steer_elem.h sliceAnalysis.h sdds_beam.h save_lattice.h sasefel.h run_rpnexpr.h response.h optimize.h optim_covariable.h matrix_output.h load_parameters.h link_elements.h frequencyMap.h floor.h error.h elegant.h transmuteElements.h divideElements.h correct.h steer_elem.h closed_orbit.h chrom.h bunched_beam.h aperture_search.h analyze.h amplif.h alter.h insertSCeffects.h momentumAperture.h aperture_data.h
+	$(RM) fitTraces.h vary.h twiss.h tune.h trace.h subprocess.h steer_elem.h sliceAnalysis.h sdds_beam.h save_lattice.h sasefel.h run_rpnexpr.h response.h optimize.h optim_covariable.h matrix_output.h load_parameters.h link_elements.h frequencyMap.h floor.h error.h elegant.h transmuteElements.h divideElements.h correct.h steer_elem.h closed_orbit.h chrom.h bunched_beam.h aperture_search.h analyze.h amplif.h alter.h insertSCeffects.h insert_elements.h touschekScatter.h momentumAperture.h aperture_data.h
 
