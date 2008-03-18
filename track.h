@@ -690,7 +690,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_EDRIFT 95
 #define T_SCMULT 96						
 #define T_ILMATRIX 97
-#define N_TYPES     98
+#define T_TSCATTER  98
+#define N_TYPES     99
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -795,6 +796,7 @@ extern char *entity_text[N_TYPES];
 #define N_EDRIFT_PARAMS 1
 #define N_SCMULT_PARAMS 0		
 #define N_ILMATRIX_PARAMS 31
+#define N_TSCATTER_PARAMS 0		
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -1630,6 +1632,25 @@ typedef struct {
   long iPlane, nData, groupIndex, nLeft;
   double *indepData, *cdfData;
 } DSCATTER;
+
+typedef struct {
+  long seed, nbins;
+  double charge, weight_limit;
+  double ebeam, gamma, pCentral, p0;
+  double emit[3], range[3];
+  double sigz, sigma_p, delta, sz0, dp0;
+} TSCATTER_SPEC;
+
+typedef struct {
+  /* internal variables */
+  double IntR, p_rate, s_rate;
+  char *losFile, *bunFile, *disFile;
+  double twiss[3][3], disp[2][2];
+  double sigx, sigy, sigz, sigxyz;
+  double range[6];
+  double factor, totalWeight, ignorWeight; 
+  long simuCount; 
+} TSCATTER;
 
 /* names and storage structure for polynomial kick terms */
 extern PARAMETER kpoly_param[N_KPOLY_PARAMS];
@@ -2722,7 +2743,7 @@ void change_defined_parameter_divopt(char *elem_name, long param, long elem_type
 void change_defined_parameter(char *elem_name, long param_number, long type, double value, char *valueString, unsigned long mode);
 extern void delete_matrix_data(LINE_LIST *beamline);
 
-extern ELEMENT_LIST *generate_elem(char *s, long type); 
+extern ELEMENT_LIST *generate_elem(char *s); 
 extern void add_element(ELEMENT_LIST *elem0, ELEMENT_LIST *elem1);
 extern void rm_element(ELEMENT_LIST *elem); 
 
@@ -3162,6 +3183,18 @@ double computeRmsCoordinate(double **coord, long i1, long np);
 #if USE_MPI
 double computeRmsCoordinate_p(double **coord, long i1, long np, ELEMENT_LIST *eptr);
 #endif
+
+void do_insert_elements(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
+long insertElem(char *name, long type, long *occurrence);
+long getAddElemFlag(); 
+char *getElemDefinition();
+long getAddEndFlag();
+
+void setupTouschekEffect(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline); 
+void SDDS_BeamScatterSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row, char *contents, 
+                           char *command_file, char *lattice_file, char *caller);
+void dump_scattered_particles(SDDS_TABLE *SDDS_table, double **particle, 
+                              long particles, double *weight, TSCATTER *tsptr, TSCATTER_SPEC *tsSpec);
 
 void transverseFeedbackPickup(TFBPICKUP *tfbp, double **part, long np, long pass);
 void initializeTransverseFeedbackPickup(TFBPICKUP *tfbp);
