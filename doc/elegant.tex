@@ -17,14 +17,18 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 17.3.1\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
+\author{Program Version 18.1.0\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
 \maketitle
 
-\section{Highlights of What's New in Version 17.3.1}
+\section{Highlights of What's New in Version 18.1.0}
 
-This release has one significant bug fix plus significant feature
-improvements for the {\tt CWIGGLER} element.  There are also several minor
-feature improvements and bug fixes.
+This release has a major new feature for storage ring simulation,
+namely, computation and optimization of fully coupled beam moments in
+the presence of synchrotron radiation and damping.  There are also
+several some significant bug fixes as well as numerous feature improvements.
+The \verb|CWIGGLER| element in particular was much improved.
+The set of examples runs has also been expanded.
+
 Here is a summary of what's changed since release 17.2.2.  For details
 and references, see the specific entries in the manual.
 
@@ -46,43 +50,96 @@ and references, see the specific entries in the manual.
 \subsection{Bug Fixes for Elements}
 \begin{itemize}
 \item An error was discovered in Y. Wu's C code version of the integrator for a vertical wiggler, used by 
- the {\tt CWIGGLER} element.  This was confirmed with Y. Wu and corrected.
+ the {\tt CWIGGLER} element.  This was confirmed with Y. Wu and corrected.  Simulations with horizontal field
+ components should be repeated to check results.
 \item An error was fixed in field computations for vertical wigglers that had very small effects on
  synchrotron radiation modeling.  
 \item A memory access error was discovered in the low-pass filtering routine used by {\tt ZLONGIT} and
  {\tt ZTRANSVERSE}, which would cause a crash on some recent Linux systems.  This was corrected. 
  Very small changes have been observed in some results.
+\item A bug was fixed in handling sequences of \verb|CSBEND| elements with the same name with no separating
+ elements (or none other than markers).  The edge effects were included between the dipoles, which is incorrect.
+ This bug was reported by Y. Roblin (TJNAF).
+\item If the bending radius of a \verb|CSBEND| or \verb|CSRCSBEND| exceeds $10^6$ m, it is treated as a drift space to
+ prevent numerical problems.  This bug was found in a lattice provided by J. Wu (SLAC).
+\item The matrix for the \verb|RFCA| element was incorrect when the phase was different from 0 to 180 degrees and
+ the cavity was {\em not} used for acceleration.    This might have affected some storage ring lattice computations.
+\item The \verb|GROUP| parameter, used for assigning elements to named groups, now appears in the dictionary lists.
+\item Fixed bugs in creating histograms with \verb|HISTOGRAM| when all particles were lost on one processor.  The
+ tolerance on the range was increased to avoid dropping particles.  This was done by Y. Wang (APS).
+\end{itemize}
+
+\subsection{Bug Fixes for Commands}
+\begin{itemize}
+\item A bug was fixed in chromaticity correction that resulted in incorrect reporting of maximum $K_2$ values.  Another bug
+ was fixed that sometimes resulted in nonconvergence of chromaticity correction when \verb|link_elements| was used in an 
+ unusual way (namely, when the baseline value feature on the stack was used).
+\item When trajectories are corrected in one-to-one mode using \verb|correct|, the program now uses the first BPM after
+ each corrector.  Previously, it might use the wrong BPM if the number of BPMs was greater than the number of correctors.
+ Also, in this mode the response matrix is no longer inverted, which saves time.  
+\item For \verb|insert_sceffects|, a memory allocation bug that sometimes caused a crash was fixed.  This was found and fixed
+ by A. Xiao (APS).
+\item It is now possible to run in parallel mode even when the first tracking step is set to fiducialization using
+ \verb|first_is_fiducial=1| in \verb|run_control|.  This was fixed by Y. Wang (APS).
+\item The command parser was modified to permit execution of expressions in the rpn calculator module for assignment 
+ to command parameters.  This is done by enclosing the expression in parenthesis.  See section 5 for details.
+ This was implemented by R. Soliday (APS).
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item The {\tt CWIGGLER} element was given a major upgrade.  The primary new feature is better
- handling of helical devices, including new field expansions appropriate for APPLE-type devices
- and adjustments to match the dispersion in both planes.  Convenience features were added to 
- allow modeling more device types without specifying a harmonic expansion file. 
- More checks are made on user input to
- ensure validity.  The user may request output of the fields as seen by the particles.  
- Radiation integral computations are more accurate and include both field components.
- The linear transfer matrix, used for optics calculations, is computed from tracking and thus
- includes both vertical and horizontal focusing.
+\item The {\tt CWIGGLER} element was given a major upgrade.  The
+ primary new feature is better handling of helical devices, including
+ new field expansions appropriate for APPLE-type devices and
+ adjustments to match the dispersion in both planes.  Convenience
+ features were added to allow modeling more device types without
+ specifying a harmonic expansion file.  A check was added for
+ insufficient number of integration steps compared to field harmonics.
+ The user may request output of the fields as seen by the particles.
+
+ It is now possible to perform parameter scans, for example of the
+ field strength, using \verb|vary_element|.  User may now specify an
+ output filename for field samples.  The linear transfer matrix, used
+ for optics calculations, is computed from tracking and thus includes
+ both vertical and horizontal focusing.  Radiation integral
+ computations (for output by the \verb|twiss_output| command) are more
+ accurate and include contributions to $I_2$ and $I_3$ from horizontal fields.
+
 \item The {\tt TWISS} element can now perform transformations based on analysis of the
- beam.  Previously, the transformation was based on the twiss parameters from the {\tt twiss\_output}
- command only.  Insignificant changes in results may be observed.
+ beam being tracked.  Previously, the transformation was based on the twiss parameters from the {\tt twiss\_output}
+ command only.  Insignificant changes in results may be observed in other modes due to rearrangement of the code.
 \item Longitudinal space charge is now available for the {\tt RFCW} element even when the SRS body focus
- model is used.
+ model is used.  This applies to the parallel and serial versions.
+\item Elements of type {\tt CSBEND}, {\tt KQUAD}, and {\tt KSEXT} are now splittable using the \verb|divide_elements| command and the
+ \verb|element_divisions| control in \verb|run_setup|.
+
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
+\item The \verb|moments_output| command was added, which allows computation, output, and optimization of the results
+ of beam moments propagation.  Synchrotron radiation and damping may optionally be included. One may find closed solutions
+ (for rings) or simply propagate moments from a defined starting point.
+\item The \verb|alter_elements| command now has several features that allow restricting the application of the alteration,
+ based on position, occurence number, and position relative to other elements.  This was requested by V. Sajaev (APS).
 \item The {\tt error\_control} command now accepts an overall error factor that is applied to all
  error amplitudes.
+\item The \verb|optimization_term| command now includes the ability to create a sequence of terms by substitution of a
+ sequence of numerical values into the term definition.  This uses the new \verb|field_string| feature.
 \item The lattice parser was changed to allow insertion or omission of underscores in field names
- without penalty.  E.g., {\tt KQUAD,N\_KICKS=4} and {\tt kQuad,nKicks=4} will both be accepted.
+ without penalty.  E.g., {\tt Q1: KQUAD,N\_KICKS=4} and {\tt Q1: KQUAD,NKICKS=4} will both be accepted in the lattice file.
+ Note that in other contexts, such as altering elements, adding errors, or loading parameters from an SDDS file, one must
+ still observe the correct spelling as given in the element dictionary.
+\item When lattices are saved with \verb|save_lattice|, the element and beamline definitions are now saved in the 
+ same order as in the original file. 
+\item The \verb|correct| command (for orbit or trajectory correction)
+ now has a parameter that specifies the minimum number of x-y cycles
+ to perform before giving up.
 \end{itemize}
 
 \section{Credits}
 
-Contributors to {\tt elegant} include M. Borland, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.
+Contributors to {\tt elegant} include M. Borland, R. Soliday, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.
 Contributors to related programs include M. Borland, R. Dejus, L. Emery, and H. Shang.
 R. Soliday is responsible for multi-platform builds and distribution.
 Of course, we also appreciate the many suggestions, comments, and bug reports from users.
@@ -439,21 +496,21 @@ betax = "{rpnl 8 pi *}"
 \end{verbatim}
 
 We used the program {\tt rpnl} in these examples because it is perhaps familiar.  However, versions 17.4 and later
-allow direct evaluation of RPN expressions in commands whenever square brackets are used to delimite a sequence.  For example, 
+allow direct evaluation of RPN expressions in commands whenever parentheses are used to delimite a sequence.  For example, 
 \begin{verbatim}
-betax = "[8 2 / pi /]"
+betax = "(8 2 / pi /)"
 \end{verbatim}
 (Note that the quotes are also required.)
 The advantages of this method are speed (no subprocess is needed),
 lack of intermediate interpretation by the shell, and persistence of
 the stack and variables.  So, for example, one might use
 \begin{verbatim}
-betax = "[8 2 / pi / sto betax0]"
-betay = "[betax0]"
+betax = "(8 2 / pi / sto betax0)"
+betay = "(betax0)"
 \end{verbatim}
 Another advantage is the ability to mix subcommands and rpn expressions, as in
 \begin{verbatim}
-betax = "[{sdds2stream -parameter=betaxFinal data.twi} 2 /]"
+betax = "({sdds2stream -parameter=betaxFinal data.twi} 2 /)"
 \end{verbatim}
 would assign to {\tt betax} half
 the value of the parameter {\tt betaxFinal} from
@@ -975,6 +1032,7 @@ during the computations.
     long fixed_length = 0;
     long fixed_length_matrix = 0;
     long n_xy_cycles = 1;
+    long minimum_cycles = 1;
     long n_iterations = 1;
     long prezero_correctors = 1;
     long track_before_and_after = 0;
@@ -1013,7 +1071,8 @@ length by changing the momentum offset of the beam.
 \item \verb|fixed_length_matrix| --- Indicates that for fixed-length orbit correction, the fixed-length
 matrix should be computed and used.  This will improve convergence but isn't always needed.
 \item \verb|n_xy_cycles| --- Number of times to alternate between correcting the x and y planes.
-\item \verb|n_iterations| --- Number of iterations of the correction for each x/y cycle.
+\item \verb|minimum_cycles| --- The minimum number of x-y cycles to perform, even if the correction does not improve.
+\item \verb|n_iterations| --- Number of iterations of the correction in each plane for each x/y cycle.
 \item \verb|prezero_correctors| --- Flag indicating whether to set the correctors to zero before starting.
 \item \verb|track_before_and_after| --- Flag indicating whether tracking should be done both before and after
 correction.
@@ -1373,7 +1432,7 @@ parameter.  If zero, then the errors replace the prior value of the parameter.
 
 \item \verb|mode| --- May be ``many-particle'', ``single-particle'',
 ``one-line'', ``three-line'', ``five-line'', ``seven-line'',
-``nine-line'', or ``eleven-line''.   Many-particle searching is much
+``nine-line'', or ``eleven-line''.  Many-particle searching is much
 faster than single-particle, but does not allow interval splitting to
 search for the aperture boundary.  Both ``many-particle'' and
 ``single-particle'' modes involve searching from the outside inward,
@@ -1385,12 +1444,9 @@ one-line mode searches the line from the origin to $(x_{max},
 y_{max})$.  three-line mode searches this line, plus the lines from
 the origin to $(x_{max}, 0)$ and $(0, y_{max})$.  For $n$-line modes
 with $n>3$, $n$ lines are explored from $(0,0)$ to
-$(x_{max}*\cos(\theta), y_{max}*\sin(\theta))$, where $\theta$ takes
-values from $0$ to $\pi$.   In these modes, the output file contains
+$(x_{max}*sin(\theta), y_{max}*cos(\theta))$, where $\theta$ takes
+values from $-pi/2$ to $\pi/2$.   In these modes, the output file contains
 a parameter called ``Area,'' which gives the area of the dynamic aperture.
-
-{\bf N.B.: Although ``many-particle'' is the default, we recommend
-  using one of the line modes for dynamic aperture.}
 
 \item \verb|search_output| --- The (incomplete) name of an SDDS file for output of detailed
  information on each tracked particle (single-particle mode only).  Recommended value:
@@ -1789,7 +1845,6 @@ changes to parameters.
 
 \end{itemize}
 
-
 \begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|matrix_output|}\end{center}
@@ -1833,6 +1888,81 @@ from which to begin concatenation and output.
 \item \verb|start_from_occurrence| --- If \verb|start_from| is not NULL, the
 number of the occurrence of the named element from which to start.
 \end{itemize}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|moments_output|}\end{center}
+\end{latexonly}
+\subsection{moments\_output}
+
+\begin{itemize}
+\item type: action/setup command.
+\item function: compute periodic or non-periodic beam moments, optionally including radiation
+\end{itemize}
+
+\begin{verbatim}
+&moments_output
+    STRING filename = NULL;
+    long output_at_each_step = 0;
+    long output_before_tune_correction = 0;
+    long final_values_only = 0;
+    long verbosity = 0;
+    long matched = 1;
+    long radiation = 1;
+    long n_slices = 10;
+    double emit_x = 0;
+    double beta_x = 0;
+    double alpha_x = 0;
+    double eta_x = 0;
+    double etap_x = 0;
+    double emit_y = 0;
+    double beta_y = 0;
+    double alpha_y = 0;
+    double eta_y = 0;
+    double etap_y = 0;
+    double emit_z = 0;
+    double beta_z = 0;
+    double alpha_z = 0;
+&end
+\end{verbatim}
+
+\begin{itemize}
+\item \verb|filename| --- The (incomplete) name of a file to which the moments results will be written.
+  Recommended value: ``\%s.mom''.
+\item \verb|output_at_each_step| --- A flag indicating, if set, that computations and/or output is desired at each step of the simulation.
+\item \verb|output_before_tune_correction| --- A flag indicating, if set, that output is desired both before and after
+tune correction.
+\item \verb|final_values_only| --- A flag indicating, if set, that only the final values of the Twiss parameters should
+be output, and not the parameters as a function of s.
+\item \verb|verbosity| --- Larger numbers result in an increasing amount of informational output to the standard output stream.
+\item \verb|matched| --- A flag indicating, if set, that the periodic or matched moments should be found.
+\item \verb|radiation| --- A flag indicating, if set, that synchrotron radiation effects should be included.
+\item \verb|n_slices| --- The number of slices into which to cut individual dipoles, quadrupoles, and sextuoples for computations.
+  10 has been found to work for all rings tested, but users are advised to ensure it is sufficient for their cases.
+\item \verb|emit_x|, \verb|beta_x|, \verb|alpha_x|, \verb|eta_x|, \verb|etap_x|, and related quantities for \verb|y| and \verb|z| ---
+  If \verb|matched=0|, then these specify the starting beam ellipses in all three planes.
+\end{itemize}
+
+This command performs several functions.  In the most basic form, it
+propagates beam moments, i.e., the 6x6 sigma matrix, from the
+beginning to the end of a transport line, including coupling from
+rotated elements or offset sextupoles. This can be performed with or
+without synchrotron radiation effects in dipoles, quadrupoles, and sextupoles.
+({\em NB: radiation effects are not yet included for wigglers!})  These computations
+include the evolution of the trajectory due to errors and (if included)
+synchrotron radiation.
+
+If desired, the command will instead compute the periodic beam
+moments.  In this case, the user must include an appropriate rf cavity
+in the lattice in order to get valid results.  (By ``appropriate rf
+cavity'' we mean that it must have the right voltage, frequency, and
+phase to support stored beam.)  It is also suggested that the user
+compute the closed orbit using \verb|closed_orbit| so that the
+computations are performed on the closed orbit.
+
+The results of moments computation may be subjected to optimization
+using values at marker elements.  See the documentation for
+\verb|MARK| for more details.
 
 \begin{latexonly}
 \newpage
@@ -4147,100 +4277,31 @@ B1: SBEN,L=1.0,ANGLE=''myAngle'',E1=''myAngle 2 /'',E2=''myAngle 2 /''
 \section{Examples}
 
 Example runs and post-processing files are included along with the
-distribution of {\tt elegant}.  These are drawn from the author's
-research and all concern various aspects of the Argonne Positron
-Accumulator Ring (PAR) and its injection and ejection lines (LTP and
-PTB, respectively).
+distribution of {\tt elegant}.  The examples are intended to
+demonstrate program capabilities with minimal work on the user's part.
+However, they don't pretend to cover all the capabilities.
 
-The examples are intended to demonstrate program capabilities with
-minimal work on the user's part.  Each demo is invoked using a command
-(a C-shell script) that can both run {\tt elegant} and post-process
-the output.  After running the demo, the output can be viewed again
-without rerunning {\tt elegant} by invoking the command with the word
-\verb|review| added to the command line.  Including the word
-\verb|hardcopy| on the command line results in the graphs being sent
-to the default printer, which is assumed to accept Postscript.
-
-The post-processing is typically handled by a lower-level script that
-is called from the demo script.  These lower-level scripts are good
+Each demo is (typically) invoked using a command (usually a C-shell
+script) that can both run {\tt elegant} and post-process the output.
+The post-processing is often handled by a lower-level script that is
+called from the demo script.  These lower-level scripts are good
 models for the creation of customized scripts for user applications.
 
-\begin{enumerate}
+The examples are organized into a number of directories and subdirectories.
+In each area, the user will find a ``Notebook'' file (a simple ASCII file) that describes 
+the example and how to run it.
 
-\item \verb|par10h*| --- These files provide a demonstration of Twiss
-parameter computation, tracking, element variation, and map analysis.
-The lattice is defined with kick elements, which are used for all
-tracking.  After computation of the Twiss parameters for the
-PAR\cite{Borland_PC}, a series of particles are tracked with different
-initial x coordinates.  Finally, the tunes and Twiss parameters are
-computed by tracking; they are very close to the analytical values.
-The post-processing commands make phase-space plots and plots of FFTs
-of the motion, showing that the motion becomes chaotic at the
-stability limit.  To execute this demo, type the command
-\verb|par10h|.
+Here's a helpful tip in searching the examples on UNIX/LINUX systems: suppose one wants
+to find an example of the \verb|frequency_map| command.  One can search all the elegant
+command files very quickly with this command:
+\begin{verbatim}
+find . -name '*.ele' | xargs fgrep frequency_map
+\end{verbatim}
+Similarly, to find all examples that use the \verb|CSBEND| elements, one could use
+\begin{verbatim}
+find . -name '*.lte' | xargs fgrep -i csbend
+\end{verbatim}
 
-\item \verb|par_sympl*| --- These files provide a demonstration of the
-symplecticity of tracking with {\tt elegant} kick elements.  A single
-large-amplitude particle is tracked for ${\rm 2^{14}}$ turns.  The
-invariant ${\rm J_x}$ is then computed and plotted as a function of
-turn number.  To execute this demo, type the command \verb|par_sympl|.
-The post-processing takes quite some time because of the very large
-number of points.
-
-\item \verb|par_chrom*| --- These files provide a demonstration of
-computing chromaticity and other parameters as a function of momentum
-offset using map analysis.  The lattice is the same as
-\verb|par10h.lte|, except all of the elements are implemented using
-second-order matrices.  Hence, the chromaticity from tracking should
-be nearly identical to the analytical results computed by the
-\verb|twiss_output| command, which it is.  To run this demonstration,
-enter \verb|par_chrom|.  The reader may wish to try this demo again
-using \verb|ksbend|, \verb|csbend|, or \verb|nibend| elements in place
-of the \verb|sbend| elements, and \verb|kquad| (\verb|ksext|) elements
-in place of the \verb|quad| (\verb|sext|) elements.
-
-\item \verb|par_damp*| --- These files provide a demonstration of
-damping partition calculation using single turn tracking with
-synchrotron radiation.  The expected value of the longitudinal damping
-partition for PAR is ${\rm J_\delta = 1.758}$.  The user may edit the
-lattice file, \verb|par_damp.lte|, to invoke a different element for
-the dipole magnet.  In particular, definitions for numerically
-integrated dipoles with extended fringe-fields are present.  To
-execute this demo, type the command \verb|par_damp|.
-
-\item \verb|par_dynap*| --- These files provide a demonstration of
-dynamic aperture runs for a series of randomized machines.  Also
-exhibited here are orbit, tune, and chromaticity correction.  The
-post-processing commands make a plot of the dynamic apertures with the
-physical aperture superimposed.  (The \verb|orbcorr_plots| script can
-also be used to plot orbit correction information.) To execute this
-demo, type the command \verb|par_dynap|.  The lattice has been
-stripped down so that only a few of the more significant multipoles
-are present.  Also, fictitious extra sextupoles have been added to
-compensate the lack of second-order edge terms in the bending magnets
-(these would result in nonsymplectic tracking if included).  Still,
-the running time is many hours.
-
-\item \verb|ejoptk*| --- These files provide a demonstration of the
-optimization of a multi-turn ejection bump for PAR, using a
-time-dependent kicker waveform (formed from two cubic splines).  After
-optimization, the lattice is tracked with a realistic beam
-distribution to verify good transmission and show the centroid
-position vs z over three turns.  To execute this demo, type the
-command \verb|ejoptk|.
-
-\item \verb|ltp_te*| --- These files provide a demonstration of
-transport line simulation.  The Linac-to-PAR transport line is
-simulated with errors and trajectory correction to predict the
-transmission losses and the steering error at the exit of the septum.
-The trajectory correction uses tracking of a beam distribution, which
-is slower than tracking the centroid, but which produces better
-results in the presence of the large momentum spread.  The reader may
-wish to verify this by turning off this feature and running the
-simulation again.  To execute this demo, type the command
-\verb|ltp_te|.  The running time for this demo is quite long.
-
-\end{enumerate}
 
 \newpage
 \section{The {\tt rpn} Calculator}
