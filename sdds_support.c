@@ -1550,3 +1550,91 @@ long check_sdds_column(SDDS_TABLE *SDDS_table, char *name, char *units)
   return(0);
 }
 
+#define BEAM_SCATTER_PARAMETERS 6
+static SDDS_DEFINITION beam_scatter_parameter[BEAM_SCATTER_PARAMETERS] = {
+  {"SimuCount", "&parameter name=SimuCount, type=long, description=\"Total simulated scatted particles\" &end"},
+  {"IntRate", "&parameter name=IntRate, type=double, description=\"Integrated Scattering Rate\" &end"},
+  {"PLocalRate", "&parameter name=PLocalRate, type=double, description=\"Piwinski's Local Rate\" &end"},
+  {"SLocalRate", "&parameter name=SLocalRate, type=double, description=\"Simulated Local Rate\" &end"},
+  {"TotalWeight", "&parameter name=TotalWeight, type=double, description=\"Total Simulated Weight\" &end"},
+  {"IgnorWeight", "&parameter name=IgnorWeight, type=double, description=\"Ignored Simulated Weight\" &end"},
+};
+#define BEAM_SCATTER_COLUMNS 8
+static SDDS_DEFINITION beam_scatter_column[BEAM_SCATTER_COLUMNS] = {
+    {"x", "&column name=x, units=m, type=double &end"},
+    {"xp", "&column name=xp, symbol=\"x'\", type=double &end"},
+    {"y", "&column name=y, units=m, type=double &end"},
+    {"yp", "&column name=yp, symbol=\"y'\", type=double &end"},
+    {"t", "&column name=t, units=s, type=double &end"},
+    {"p", "&column name=p, units=\"m$be$nc\", type=double &end"},
+    {"particleID", "&column name=particleID, type=long &end"},
+    {"weight", "&column name=weight, type=double &end"},
+};
+
+void SDDS_BeamScatterSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row, char *contents, 
+                          char *command_file, char *lattice_file, char *caller)
+{
+    log_entry("SDDS_BeamScatterSetup");
+
+    SDDS_ElegantOutputSetup(SDDS_table, filename, mode, lines_per_row, contents, command_file, lattice_file,
+                            beam_scatter_parameter, BEAM_SCATTER_PARAMETERS, beam_scatter_column, BEAM_SCATTER_COLUMNS,
+                            caller, SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
+
+    log_exit("SDDS_BeamScatterSetup");
+}
+
+void dump_scattered_particles(SDDS_TABLE *SDDS_table, double **particle, 
+                              long particles, double *weight, TSCATTER *tsptr, TSCATTER_SPEC *tsSpec)
+{
+    long i;
+
+    log_entry("dump_scattered_particles");
+    if (!particle)
+        bomb("NULL coordinate pointer passed to dump_scattered_particles", NULL);
+
+    for (i=0; i<particles; i++)
+        if (!particle[i]) {
+            fprintf(stdout, "error: coordinate slot %ld is NULL (dump_scattered_particles)\n", i);
+            fflush(stdout);
+            abort();
+        }
+
+    if (!SDDS_StartTable(SDDS_table, particles)) {
+        SDDS_SetError("Problem starting SDDS table (dump_scattered_particles)");
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+
+    for (i=0; i<particles; i++) {
+        if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, i,
+                               0, particle[i][0], 1, particle[i][1], 2, particle[i][2], 3, particle[i][3],
+                               4, particle[i][4]/c_mks, 5, (particle[i][5]+1.)*tsSpec->pCentral,
+                               6, (long)particle[i][6], 7, weight[i], -1)) {
+            SDDS_SetError("Problem setting SDDS row values (dump_scattered_particles)");
+            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+        }
+    }
+
+    if ((!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "SimuCount", tsptr->simuCount, NULL))||
+        (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "IntRate", tsptr->IntR, NULL))||
+        (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "PLocalRate", tsptr->p_rate, NULL))||
+        (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "SLocalRate", tsptr->s_rate, NULL))||
+        (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "IgnorWeight", tsptr->ignorWeight, NULL))||
+        (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "TotalWeight", tsptr->totalWeight, NULL))){
+        SDDS_SetError("Problem setting SDDS parameters (dump_scattered_particles)");
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+
+    if (!SDDS_WriteTable(SDDS_table)) {
+        SDDS_SetError("Problem writing SDDS table (dump_scattered_particles)");
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    } 
+       
+    SDDS_DoFSync(SDDS_table);
+    if (!SDDS_Terminate(SDDS_table)) {
+      SDDS_SetError("Problem terminating 'distribution' file (TouschekDistribution)");
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+    log_exit("dump_scattered_particles");    
+}
+  
+
