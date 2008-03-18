@@ -133,7 +133,9 @@ void showUsageOrGreeting (unsigned long mode)
 #define LINEAR_CHROMATIC_TRACKING_SETUP 50
 #define RPN_LOAD 51
 #define MOMENTS_OUTPUT 52
-#define N_COMMANDS      53
+#define TOUSCHEK_SCATTER 53
+#define INSERT_ELEMENTS 54
+#define N_COMMANDS      55
 
 char *command[N_COMMANDS] = {
     "run_setup", "run_control", "vary_element", "error_control", "error_element", "awe_beam", "bunched_beam",
@@ -146,7 +148,7 @@ char *command[N_COMMANDS] = {
     "optimization_term", "slice_analysis", "divide_elements", "tune_shift_with_amplitude",
     "transmute_elements", "twiss_analysis", "semaphores", "frequency_map", "insert_sceffects", "momentum_aperture", 
     "aperture_input", "coupled_twiss_output", "linear_chromatic_tracking_setup", "rpn_load",
-    "moments_output",
+    "moments_output", "touschek_scatter", "insert_elements",
   } ;
 
 char *description[N_COMMANDS] = {
@@ -203,6 +205,8 @@ char *description[N_COMMANDS] = {
     "linear_chromatic_tracking_setup  set up chromatic derivatives for linear chromatic tracking",
     "rpn_load                         load SDDS data into rpn variables",
     "moments_output                   perform moments computations and output to file",
+    "touschek_scatter                 calculate Touschek lifetime, simulate touschek scattering effects, find out momentum aperture through tracking", 
+    "insert_elements                  insert elements into already defined beamline", 
   } ;
 
 #define NAMELIST_BUFLEN 65536
@@ -1464,6 +1468,16 @@ char **argv;
         bomb("insert_sceffects must precede run_setup", NULL);
       setupSCEffect(&namelist_text, &run_conditions, beamline);
       break;
+    case INSERT_ELEMENTS:
+      if (!run_setuped)
+        bomb("run_setup must precede insert_element namelist", NULL);
+      do_insert_elements(&namelist_text, &run_conditions, beamline);
+      break;
+    case TOUSCHEK_SCATTER:
+      if (!run_setuped)
+        bomb("run_setup must precede touschek_scatter namelist", NULL);
+      setupTouschekEffect(&namelist_text, &run_conditions, beamline);
+      break;
     case TWISS_ANALYSIS:
       if (do_twiss_output)
         bomb("twiss_analysis must come before twiss_output", NULL);
@@ -1998,8 +2012,12 @@ void free_beamdata(BEAM *beam)
     free_czarray_2d((void**)beam->accepted, beam->n_particle, 7);
   if (beam->original && beam->original!=beam->particle)
     free_czarray_2d((void**)beam->original, beam->n_original, 7);
+  if (beam->lostOnPass)
+    free(beam->lostOnPass);
   beam->particle = beam->accepted = beam->original = NULL;
-  beam->n_original = beam->n_to_track = beam->n_accepted = beam->p0 = beam->n_saved = beam->n_particle = 0;
+  beam->lostOnPass = NULL;
+  beam->n_original = beam->n_to_track = beam->n_accepted = beam->n_saved = beam->n_particle = 0;
+  beam->p0_original = beam->p0 =0.;
 }  
 
 long getTableFromSearchPath(TABLE *tab, char *file, long sampleInterval, long flags)
