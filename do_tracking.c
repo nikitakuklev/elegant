@@ -1085,6 +1085,8 @@ long do_tracking(
 	      if (!(flags&TEST_PARTICLES))
 		distributionScatter(coord, nToTrack, *P_central, (DSCATTER*)eptr->p_elem, i_pass);
 	      break;
+	    case T_TSCATTER:
+              break;
 	    case T_NIBEND:
 	      nLeft = lorentz(coord, nToTrack, (NIBEND*)eptr->p_elem, T_NIBEND, *P_central, accepted);
 	      break;

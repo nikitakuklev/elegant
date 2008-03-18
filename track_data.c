@@ -39,6 +39,7 @@ char *entity_name[N_TYPES] = {
     "LTHINLENS", "LMIRROR", "EMATRIX", "FRFMODE", "FTRFMODE",
     "TFBPICKUP", "TFBDRIVER", "LSCDRIFT", "DSCATTER", "LSRMDLTR",
     "TAYLORSERIES", "RFTM110", "CWIGGLER", "EDRIFT", "SCMULT", "ILMATRIX",
+    "TSCATTER",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -1990,6 +1991,9 @@ PARAMETER ilmatrix_param[N_ILMATRIX_PARAMS]={
     {"ALPHAC2", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.alphac[1]), NULL, 0.0, 0, "Second-order momentum compaction factor"},
 };
 
+TSCATTER tscatter_example;   
+PARAMETER tscatter_param[] = {
+};
 
 /* array of parameter structures */
 
@@ -2107,6 +2111,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     {   N_EDRIFT_PARAMS, MAT_LEN, sizeof(EDRIFT),    edrift_param   },
     {   N_SCMULT_PARAMS,    0,       sizeof(SCMULT),    scmult_param     },   
     {  N_ILMATRIX_PARAMS,  HAS_RF_MATRIX|MAT_LEN_NCAT,  sizeof(ILMATRIX),    ilmatrix_param     }, 
+    {   N_TSCATTER_PARAMS,  0,       sizeof(TSCATTER),  tscatter_param     },   
 } ;
 
 void compute_offsets()
