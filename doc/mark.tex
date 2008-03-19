@@ -36,3 +36,8 @@ form {\em Element}\#{\em N}.{\em quantity}, where {\em quantity} has the followi
   respectively, the three position coordinates, the three angle coordinates, and the total arc length
   at the marker location.
 \end{itemize}
+
+The misalignment controls for this element are non-functional, in the sense that they do not affect the beam.
+However, when combined with external scripts and the \verb|GROUP| parameter, one can use this feature to
+implement girder misalignments using pairs of markers to indicate the ends of the girders.  A future version
+of {\tt elegant} will implement this internally.

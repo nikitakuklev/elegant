@@ -716,7 +716,7 @@ extern char *entity_text[N_TYPES];
 #define N_MONI_PARAMS 11
 #define N_RCOL_PARAMS 6
 #define N_ECOL_PARAMS 7
-#define N_MARK_PARAMS 1
+#define N_MARK_PARAMS 3
 #define N_MATR_PARAMS 3
 #define N_ALPH_PARAMS 13
 #define N_RFDF_PARAMS 18
@@ -1088,25 +1088,26 @@ typedef struct {
 /* storage structure for marker */
 
 typedef struct {
-    long fitpoint;
-    /* values for internal use: */
-    unsigned long init_flags; /* 1:twiss_mem initialized, 
-                                 2:centroid_mem, sigma_mem, emit_mem initialized,
-                                 4:floor_mem initialized
-                                 8:matrix_mem initialized
-                                 16:ctwiss_mem initialized
-                                 32:moments_mem initialized */
-    long *twiss_mem;       /* betax, alphax, NUx, etax, etaxp, betay, ... */
-    long *centroid_mem;    /* (x, xp, y, yp, s, dp, Pcen, n) from tracking */
-    long *sigma_mem;       /* (x, xp, y, yp, s, dp) from tracking */
-    long *sij_mem;         /* <xi*xj> for 6>=j>i>=1 from tracking */
-    long *emit_mem;        /* (x, y, z) from tracking */
-    long *floor_mem;       /* X, Z, theta */
-    long *matrix_mem;
-    long *co_mem;          /* closed orbit */
-    long *ctwiss_mem;      /* coupled twiss parameters */
-    long *moments_mem;     /* beam moments from moments propagation (not tracking) */
-    } MARK;
+  double dx, dy;   /* Useful for recording position of girder ends, for example */
+  long fitpoint;
+  /* values for internal use: */
+  unsigned long init_flags; /* 1:twiss_mem initialized, 
+                               2:centroid_mem, sigma_mem, emit_mem initialized,
+                               4:floor_mem initialized
+                               8:matrix_mem initialized
+                               16:ctwiss_mem initialized
+                               32:moments_mem initialized */
+  long *twiss_mem;       /* betax, alphax, NUx, etax, etaxp, betay, ... */
+  long *centroid_mem;    /* (x, xp, y, yp, s, dp, Pcen, n) from tracking */
+  long *sigma_mem;       /* (x, xp, y, yp, s, dp) from tracking */
+  long *sij_mem;         /* <xi*xj> for 6>=j>i>=1 from tracking */
+  long *emit_mem;        /* (x, y, z) from tracking */
+  long *floor_mem;       /* X, Z, theta */
+  long *matrix_mem;
+  long *co_mem;          /* closed orbit */
+  long *ctwiss_mem;      /* coupled twiss parameters */
+  long *moments_mem;     /* beam moments from moments propagation (not tracking) */
+} MARK;
 
 /* storage structure for alpha magnet */
 extern PARAMETER alph_param[N_ALPH_PARAMS] ;

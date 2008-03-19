@@ -424,6 +424,8 @@ PARAMETER clean_param[N_CLEAN_PARAMS] = {
 MARK mark_example;
 /* name for marker parameters */
 PARAMETER mark_param[N_MARK_PARAMS] = {
+    {"DX", "M", IS_DOUBLE, 0, (long)((char *)&mark_example.dx), NULL, 0.0, 0, "non-functional misalignment (e.g., for girder)"},
+    {"DY", "M", IS_DOUBLE, 0, (long)((char *)&mark_example.dy), NULL, 0.0, 0, "non-functional misalignment (e.g., for girder)"},
     {"FITPOINT", "", IS_LONG, 0, (long)((char *)&mark_example.fitpoint), NULL, 0.0, 0, "Supply local values of Twiss parameters, moments, floor coordinates, matrices, etc. for optimization?"},
     } ;
 
