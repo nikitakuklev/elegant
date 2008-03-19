@@ -9,6 +9,9 @@
 
 /* 
  * $Log: not supported by cvs2svn $
+ * Revision 1.23  2008/03/06 23:07:23  borland
+ * Fixed problem on 64 bit machines.
+ *
  * Revision 1.22  2007/01/24 17:17:56  emery
  * Added comment clarifying the meaning of G and
  * the returned value of IBSequations.
@@ -376,23 +379,24 @@ int main( int argc, char **argv)
       0>SDDS_DefineParameter(&resultsPage, "zGrowthRate", "g$bIBS,z$n", "1/s", "IBS emittance growth rate in the longitudinal plane", NULL, SDDS_DOUBLE, NULL))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 
-  if (0>SDDS_DefineParameter(&resultsPage, "Convergence", NULL, NULL, "Convergence state of emittance calculations.", NULL, SDDS_STRING, NULL) ||
-      0>SDDS_DefineParameter(&resultsPage, "emitx0", "$ge$r$bx,0$n", "$gp$rm", "Horizontal emittance with no coupling and no IBS.", NULL, SDDS_DOUBLE, NULL) ||
-      0>SDDS_DefineParameter(&resultsPage, "emitxInput", "$ge$r$bx,Input$n", "$gp$rm", "Horizontal emittance with coupling and no IBS.", NULL, SDDS_DOUBLE, NULL) ||
-      0>SDDS_DefineParameter(&resultsPage, "emityInput", "$ge$r$by,Input$n", "$gp$rm", "Vertical emittance with coupling and no IBS.", NULL, SDDS_DOUBLE, NULL))
+  if (0>SDDS_DefineParameter(&resultsPage, "Convergence", NULL, NULL, "Convergence state of emittance calculations", NULL, SDDS_STRING, NULL) ||
+      0>SDDS_DefineParameter(&resultsPage, "emitx0", "$ge$r$bx,0$n", "$gp$rm", "Equilibrium horizontal emittance with no coupling and no IBS", NULL, SDDS_DOUBLE, NULL) ||
+      0>SDDS_DefineParameter(&resultsPage, "emitxInput", "$ge$r$bx,Input$n", "$gp$rm", "Initial horizontal emittance with coupling", NULL, SDDS_DOUBLE, NULL) ||
+      0>SDDS_DefineParameter(&resultsPage, "emityInput", "$ge$r$by,Input$n", "$gp$rm", "Initial vertical emittance with coupling", NULL, SDDS_DOUBLE, NULL))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   
   if (!growthRatesOnly) {
-    if (0>SDDS_DefineParameter(&resultsPage, "emitx", "$ge$r$bx$n", "$gp$rm", "Horizontal emittance with coupling and with IBS.", NULL, SDDS_DOUBLE, NULL) ||
-        0>SDDS_DefineParameter(&resultsPage, "emity", "$ge$r$by$n", "$gp$rm", "Vertical emittance with coupling and with IBS.", NULL, SDDS_DOUBLE, NULL) ||
-        0>SDDS_DefineParameter(&resultsPage, "sigmaDelta", "$gs$r$bd$n", NULL, "Relative momentum spread with IBS.", NULL, SDDS_DOUBLE, NULL) || 
-        0>SDDS_DefineParameter(&resultsPage, "sigmaz", "$gs$r$bz$n", "m", "Bunch length with IBS.", NULL, SDDS_DOUBLE, NULL))
+    if (0>SDDS_DefineParameter(&resultsPage, "emitx", "$ge$r$bx$n", "$gp$rm", "Horizontal emittance with coupling and with IBS", NULL, SDDS_DOUBLE, NULL) ||
+        0>SDDS_DefineParameter(&resultsPage, "emity", "$ge$r$by$n", "$gp$rm", "Vertical emittance with coupling and with IBS", NULL, SDDS_DOUBLE, NULL) ||
+        0>SDDS_DefineParameter(&resultsPage, "sigmaDelta", "$gs$r$bd$n", NULL, "Relative momentum spread with IBS", NULL, SDDS_DOUBLE, NULL) || 
+        0>SDDS_DefineParameter(&resultsPage, "sigmaz", "$gs$r$bz$n", "m", "Bunch length with IBS", NULL, SDDS_DOUBLE, NULL))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
   
   
-  if (0>SDDS_DefineParameter(&resultsPage, "sigmaDelta0", "$gs$r$bd,0$n", NULL, "Relative momentum spread without IBS.", NULL, SDDS_DOUBLE, NULL) ||
-      0>SDDS_DefineParameter(&resultsPage, "sigmaz0", "$gs$r$bz,0$n", "m", "Bunch length without IBS.", NULL, SDDS_DOUBLE, NULL))
+  if (0>SDDS_DefineParameter(&resultsPage, "sigmaDelta0", "$gs$r$bd,0$n", NULL, "Equilibrium relative momentum spread without IBS", NULL, SDDS_DOUBLE, NULL) ||
+      0>SDDS_DefineParameter(&resultsPage, "sigmaDeltaInput", "$gs$r$bd,0$n", NULL, "Initial relative momentum spread", NULL, SDDS_DOUBLE, NULL) ||
+      0>SDDS_DefineParameter(&resultsPage, "sigmaz0", "$gs$r$bz,0$n", "m", "Bunch length without IBS", NULL, SDDS_DOUBLE, NULL))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 
   if (verbosity)
@@ -473,7 +477,7 @@ int main( int argc, char **argv)
     /* emitx0 and sigmaDelta0 are unperturbed quantities 
        (i.e. no coupling and no IBS) that
        zibs requires to internally calculate the quantum excitation.
-       (zibs doesn't use the radiation intergrals but should!) 
+       (zibs doesn't use the radiation integrals but should!) 
        */
     emitx0 = 55.0/ (32.*sqrt(3.)) * hbar_mks * sqr(pCentral)/ (me_mks * c_mks)
       * I5 / (I2 - I4);
@@ -619,6 +623,7 @@ int main( int argc, char **argv)
                             "xGrowthRate", xGrowthRate,
                             "yGrowthRate", yGrowthRate,
                             "zGrowthRate", zGrowthRate,
+                            "sigmaDeltaInput", sigmaDeltaInput,
                             "sigmaDelta0", sigmaDelta0,
                             "sigmaz0", sigmaz0, NULL) ||
         (!growthRatesOnly && 
