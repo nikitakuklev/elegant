@@ -272,7 +272,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
     s[0] = 0;
     type = T_NODEF;
 
-    if (getAddElemFlag) {
+    if (getAddElemFlag()) {
       eptr = generate_elem(getElemDefinition());
       eptr_add = eptr;
       check_duplic_elem(&elem, &eptr, NULL, n_elems);
