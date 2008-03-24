@@ -41,6 +41,7 @@ void fill_hbook (book1 *x, book1 *y, book1 *s, book1 *xp, book1 *yp,
                  book1 *dp, double *p, double weight);
 void print_hbook (book1 *x, book1 *y, book1 *s, book1 *xp, book1 *yp, book1 *dp,
                   TSCATTER *tsptr, char *filename, char *description, int verbosity);
+void free_beamdata(BEAM *beam);
 
 void setupTouschekEffect(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline) 
 {
@@ -221,7 +222,7 @@ double Fvalue (double t, double tm, double b1, double b2)
   c2 = dbesi0(b2*t);
   result = c0 * c1 * c2;
   /* If overflow/underflow use approximate equation for modified bessel function. */
-  if (isnan(result) || result>MAXFLOAT) {
+  if (isnan(result) || result>FLT_MAX) {
     result=c0*exp(b2*t-b1*t)/sqrt(PIx2*b2*t);
   } 
   return result;
