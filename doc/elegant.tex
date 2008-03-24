@@ -17,10 +17,10 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 18.1.2\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
+\author{Program Version 18.1.3\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
 \maketitle
 
-\section{Highlights of What's New in Version 18.1.2}
+\section{Highlights of What's New in Version 18.1.3}
 
 This release has a major new feature for storage ring simulation,
 namely, computation and optimization of fully coupled beam moments in
@@ -67,6 +67,7 @@ and references, see the specific entries in the manual.
 \item The \verb|GROUP| parameter, used for assigning elements to named groups, now appears in the dictionary lists.
 \item Fixed bugs in creating histograms with \verb|HISTOGRAM| when all particles were lost on one processor.  The
  tolerance on the range was increased to avoid dropping particles.  This was done by Y. Wang (APS).
+\item Fixed problem with output when the \verb|START_PASS| is not zero for dumping \verb|WATCH| parameters.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
@@ -79,8 +80,6 @@ and references, see the specific entries in the manual.
  Also, in this mode the response matrix is no longer inverted, which saves time.  
 \item For \verb|insert_sceffects|, a memory allocation bug that sometimes caused a crash was fixed.  This was found and fixed
  by A. Xiao (APS).
-\item It is now possible to run in parallel mode even when the first tracking step is set to fiducialization using
- \verb|first_is_fiducial=1| in \verb|run_control|.  This was fixed by Y. Wang (APS).
 \item The command parser was modified to permit execution of expressions in the rpn calculator module for assignment 
  to command parameters.  This is done by enclosing the expression in parenthesis.  See section 5 for details.
  This was implemented by R. Soliday (APS).
@@ -136,6 +135,20 @@ and references, see the specific entries in the manual.
  now has a parameter that specifies the minimum number of x-y cycles
  to perform before giving up.
 \end{itemize}
+
+\subsection{Improvements and Bug Fixes for Parallel Version}
+
+This work was performed by Y. Wang (APS).
+\begin{itemize}
+\item It is now possible to run in parallel mode even when the first tracking step is set to fiducialization using
+ \verb|first_is_fiducial=1| in \verb|run_control|. 
+\item Improved memory usage efficiency to allow {\tt Pelegant} run larger simulations.  We've run up to 60 million particles
+ for the FERMI@ELETTRA FEL driver using this version.   The current memory bottleneck on master will be
+ eliminated in the next version with parallel I/O.
+\item Parallelized longitudinal space charge when used as part of an \verb|RFCW| element.
+\end{itemize}
+
+
 
 \subsection{Changes to Related Programs and Files}
 \begin{itemize}
