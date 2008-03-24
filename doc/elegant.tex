@@ -3567,7 +3567,7 @@ al.}).
 
 \item {\bf examples:}
 This example computes the IBS equilibrium parameters and the contributions to the
-growth rates vs position in the APS lattice.
+growth rates (at equilibrium) vs position in the APS lattice.
 \begin{flushleft}{\tt 
 ibsEmittance aps.twi aps.ibs -charge=5 -coupling=0.02 -rf=voltage=9,harmonic=1296
 }\end{flushleft}
@@ -3575,11 +3575,13 @@ ibsEmittance aps.twi aps.ibs -charge=5 -coupling=0.02 -rf=voltage=9,harmonic=129
 \item {\bf synopsis:}
 \begin{flushleft}{\tt 
 ibsEmittance {\em twissFile} {\em resultsFile}
-{-charge={\em nC}|-particles={\em value}} -coupling={\em value}
-[-emitxInput={\em value}] [-deltaInput={\em value}] 
-[-growthRatesOnly] [-superperiods={\em value}]
-{-RF=Voltage={\em MV},harmonic={\em value}|-length={\em mm}}
-[-energy={\em MeV}] [-integrate=turns={\em number}[,stepSize={\em number}]]
+ {-charge=<nC>|-particles=<value>} -coupling=<value>
+ [-emitxInput=<value>] [-deltaInput=<value>] 
+ [-superperiods=<value>]
+ \{-RF=Voltage=<MV>,harmonic=<value>|-length=<mm>\}
+ [-energy=<MeV>] 
+ [\{-growthRatesOnly | -integrate=turns=<number>[,stepSize=<number>]\}]
+ [-noWarning] 
 }\end{flushleft}
 
 \item {\bf files:}
@@ -3595,18 +3597,25 @@ ibsEmittance {\em twissFile} {\em resultsFile}
 the value from the parameter \verb|ex0| in {\em twissFile} is used.
 \item {\bf -deltaInput} --- Give the initial rms fractional momentum spread.  If not
 specified, the value from the parameter \verb|Sdelta0| in {\em twissFile} is used.
-\item {\bf -growthRatesOnly} --- If given, only the growth rates are computed.  Equilibrium
-values are not computed.
 \item {\bf -superperiods={\em value}} --- If given, the number of superperiods in the 
 lattice.  {\em twissFile} is taken to pertain to a single sector.
 \item {\bf -RF=Voltage={\em MV},harmonic={\em value}} --- Specify rf voltage and harmonic number.
 \item {\bf -length={\em mm}} --- Specify the rms bunch length.
 \item {\bf -energy={\em MeV}} --- Specify the beam energy.  By default, this is taken from
  the {\tt pCentral} parameter in {\em twissFile}.
-\item -integrate=turns={\em number}[,stepSize={\em number}] --- If given, then {\em resultsFile}
+\item {\bf -growthRatesOnly} --- If given, only the initial growth rates are computed.  Equilibrium
+emittance values are not computed. {\em resultsFile} will contain columns of initial growth rate
+contributions from individual elements. Without this option, {\em resultsFile}
+would normally contain columns of growth rate contributions at equilibrium.
+\item {\bf -integrate=turns={\em number}[,stepSize={\em number}]} --- 
+  If given, then {\em resultsFile}
  contains the result of integrating the differential equations for the emittances for 
- the given number of turns.  The step size is the number of turns for each integration step,
+ the given number of turns and not the contributions 
+ of individual elements of growth rates.  
+ The step size is the number of turns for each integration step,
  and can be adjusted to get faster results.
+ The options -growthRatesOnly and -integrate are not compatible.
+\item {\bf -noWarning} --- Removes warning messages.
 \end{itemize}
 
 \item {\bf author:} L. Emery, M. Borland, ANL/APS.
