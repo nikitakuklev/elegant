@@ -1,6 +1,6 @@
 	SUBROUTINE USB(ENERGY,CUR,SIGX,SIGY,SIGX1,SIGY1,PERIOD,N_F,
-	1              KX_F,KY_F,EMINU,EMAXU,NEU_F,METHOD_F,
-	2              E_F,SPEC0_F,NE_F,IERROR)
+     1              KX_F,KY_F,EMINU,EMAXU,NEU_F,METHOD_F,
+     2              E_F,SPEC0_F,NE_F,IERROR)
 C+
 C FUNCTIONAL DESCRIPTION:	
 C  Subroutine to calculate the on-axis brilliance (ph/s/mrad^2/mm^2/0.1%bw)
@@ -167,7 +167,7 @@ C  Labeled constants:
 	PARAMETER	(TWOPI= 6.2831 85307 17958 64769 25287D0)
 	REAL*8		FINE_STRUCTURE_CONST
 	PARAMETER	(FINE_STRUCTURE_CONST=1.0D19*EC*1.0D19*EC
-	1		/(4.0D0*PI*EPSZ*1.0D38*HBAR*C))
+     1		/(4.0D0*PI*EPSZ*1.0D38*HBAR*C))
 	REAL*8		PTOT_FAC,PD_FAC,PDH_FAC
 	PARAMETER	(PTOT_FAC=PI/3.0D0*EC/EPSZ/(MEE**2)*1.0D+6)   ! 0.07257
 	PARAMETER	(PD_FAC  =21.0D0/(16.0D0*PI*MEE**2)*PTOT_FAC) ! 0.11611
@@ -209,7 +209,7 @@ C  Common blocks:
 	COMMON		/CALCR/	    K,KX,KY,K3,NPI,PE,GAMMA,ER,EW,DEW,LEN
 	COMMON		/FACTOR/    FAC,C1
 	COMMON		/BEAM/	    AP2MIN,AP2MAX,AP2CNT,ARGMAX,
-	1			    FU,FV,SIGX2,SIGY2
+     1			    FU,FV,SIGX2,SIGY2
 	COMMON		/ANGLE_PHII/ INDEX_PHI,NPHI4,NPHI,NPHI_BRIGHT
 	COMMON		/ANGLE_PHIR/ COSPHI,SINPHI,S2SIGN,DPHI
 	COMMON		/ANGLE_ALPI/ NALPHA
@@ -246,7 +246,7 @@ C  -----------------------------------------------------------------------------
 	  GO TO 930
 	END IF ! METHOD_F
 	IF ((ABS(KX-KY) .GE. EPSK) 
-	1    .AND. (KX .GE. EPSK .AND. KY .GE. EPSK)) GO TO 902
+     1    .AND. (KX .GE. EPSK .AND. KY .GE. EPSK)) GO TO 902
 C-
 C  -----------------------------------------------------------------------------
 
@@ -529,8 +529,8 @@ C+ Scale factors
 C  -----------------------------------------------------------------------------
 	FAC = 4.0D0			! use symmetry
 	IF (SIGU .NE. ZERO .AND. SIGV .NE. ZERO)
-	1   C1 =N*N*FINE_STRUCTURE_CONST*BW*CUR*C_MA_A/EC
-	2        /(TWOPI*SIGU*SIGV*D2*C_M_MM*C_M_MM)
+     1   C1 =N*N*FINE_STRUCTURE_CONST*BW*CUR*C_MA_A/EC
+     2        /(TWOPI*SIGU*SIGV*D2*C_M_MM*C_M_MM)
 C-
 C  -----------------------------------------------------------------------------
 
@@ -575,31 +575,31 @@ C  -----------------------------------------------------------------------------
 900	CONTINUE
 	PRINT 200,'&USB-F-BNDERR, Boundary error'
 	PRINT 205,'- energy array out of bounds; number of points',IE,
-	1	  ' is greater than ',E_SZ
+     1	  ' is greater than ',E_SZ
 	GO TO 999
 
 902	CONTINUE
 	PRINT 200,'&USB-E-INVDAT, Deflection parameter errror'
 	PRINT 200,'- deflection parameters Kx, Ky must be set equal or',
-	1         ' one must be identically zero.'
+     1         ' one must be identically zero.'
 	GO TO 999
 
 905	CONTINUE
 	PRINT 200,'&USB-F-BNDERR, Boundary error'
 	PRINT 205,'- energy array out of bounds; number of points ',NE,
-	1	  ' is greater than ',E_SZ
+     1	  ' is greater than ',E_SZ
 	GO TO 999
 
 910	CONTINUE
 	PRINT 200,'&USB-E-HARMERR, Harmonic errror'
 	PRINT 210,'- no harmonics reachable in the range ',EMINU,
-	1	  ' to ',EMAXU,' eV.'
+     1	  ' to ',EMAXU,' eV.'
 	GO TO 999
 
 930	CONTINUE
 	PRINT 200,'&USB-E-INVDAT, Invalid data'
 	PRINT 207,'- check input data file; method ',METHOD_F,
-	1	  ' not valid for the on-axis brightness.'
+     1	  ' not valid for the on-axis brightness.'
 	GO TO 999
 
 999	CONTINUE
@@ -685,7 +685,7 @@ C  Common blocks:
 	COMMON		/CALCR/	    K,KX,KY,K3,NPI,PE,GAMMA,ER,EW,DEW,LEN
 	COMMON		/FACTOR/    FAC,C1
 	COMMON		/BEAM/	    AP2MIN,AP2MAX,AP2CNT,ARGMAX,
-	1			    FU,FV,SIGX2,SIGY2
+     1			    FU,FV,SIGX2,SIGY2
 	COMMON		/ANGLE_ALPI/ NALPHA
 	COMMON		/ANGLE_ALPR/ CALPHA2
 	COMMON		/ENERGY1/    E,EU,SPEC0,SPEC1,SPEC2,SPEC3
@@ -723,7 +723,7 @@ C  -----------------------------------------------------------------------------
 	  IF (IMAX .LT. IMIN) GO TO 810 ! Next energy
 	  LE1 = .TRUE.		
 	  IF (IHARM .GT. 0 .AND. (IHARM .LT. IMIN .OR. IHARM .GT. IMAX))
-	1     GO TO 810 ! Next energy
+     1     GO TO 810 ! Next energy
 	  LE2 = .TRUE.
 C-
 C  -----------------------------------------------------------------------------
@@ -796,8 +796,8 @@ C  Brightness
 
 C  Two-dimensional convolution of the brightness with the electron distribution
 	    CALL CONVOLUTE_DISTRIBUTION(METHOD,CONST,ALPHA,THETA,DALPHA,
-	1			        EPS,BR0,BR1,BR2,BR3,
-	2			        RA0,RA1,RA2,RA3,ICOUNT)
+     1			        EPS,BR0,BR1,BR2,BR3,
+     2			        RA0,RA1,RA2,RA3,ICOUNT)
 
 	    IF (ICOUNT .GT. 1) THEN ! If higher harmonics do not contribute
 	      I2(IE) = I
@@ -844,13 +844,13 @@ C  -----------------------------------------------------------------------------
 900	CONTINUE
 	PRINT 200,'&SPECTRAL_DISTRIBUTION-E-HARMERR, Harmonic errror'
 	PRINT 210,'- no harmonics reachable in the range ',E(NE1),
-	1	  ' to ',E(NE2),' eV.'
+     1	  ' to ',E(NE2),' eV.'
 	GO TO 999
 
 910	CONTINUE
 	PRINT 200,'&SPECTRAL_DISTRIBUTION-E-HARMERR, Harmonic errror'
 	PRINT 220,'- Harmonic number ',IHARM,' not in the range ',E(NE1),
-	1	  ' to ',E(NE2),' eV.'
+     1	  ' to ',E(NE2),' eV.'
 	GO TO 999
 
 200	FORMAT(' ',8A)
@@ -907,7 +907,7 @@ C  Common blocks:
 	    H      = SINC(ARG)
 	    DO ID=1,NPHI_BRIGHT
 	      CALL BRIGHTE(I,ALPHA(IC),COSPHI(ID),SINPHI(ID),
-	1                  S0,S1,S2,S3,AXR,AYR,AXI,AYI)
+     1                  S0,S1,S2,S3,AXR,AYR,AXI,AYI)
 	      BR0(ID,IC) = H*S0
 	      BR1(ID,IC) = H*S1
 	      BR2(ID,IC) = H*S2
@@ -917,7 +917,7 @@ C  Common blocks:
 	ELSE ! Infinite-N approximation (H=1.0)
 	  DO ID=1,NPHI_BRIGHT
 	    CALL BRIGHTE(I,ALPHAI,COSPHI(ID),SINPHI(ID),
-	1                S0,S1,S2,S3,AXR,AYR,AXI,AYI)
+     1                S0,S1,S2,S3,AXR,AYR,AXI,AYI)
 	    BR0(ID,1) = S0
 	    BR1(ID,1) = S1
 	    BR2(ID,1) = S2
@@ -929,8 +929,8 @@ C  Common blocks:
 	END ! BRIGHTNESS_ARRAY
 
 	SUBROUTINE CONVOLUTE_DISTRIBUTION(ICALC,CONST,ALPHA,THETA,DALPHA,
-	1				  EPS,BR0,BR1,BR2,BR3,
-	2				  RA0,RA1,RA2,RA3,ICOUNT)
+     1				  EPS,BR0,BR1,BR2,BR3,
+     2				  RA0,RA1,RA2,RA3,ICOUNT)
  
 C[subroutine_header_comments]
  
@@ -965,7 +965,7 @@ C  Common blocks:
 	REAL*8		COSPHI(A_SZ),SINPHI(A_SZ),S2SIGN(A_SZ)
 
 	COMMON		/BEAM/	    AP2MIN,AP2MAX,AP2CNT,ARGMAX,
-	1			    FU,FV,SIGX2,SIGY2
+     1			    FU,FV,SIGX2,SIGY2
 	COMMON		/ANGLE_PHII/ INDEX_PHI,NPHI4,NPHI,NPHI_BRIGHT
 	COMMON		/ANGLE_PHIR/ COSPHI,SINPHI,S2SIGN,DPHI
 	COMMON		/ANGLE_ALPI/ NALPHA

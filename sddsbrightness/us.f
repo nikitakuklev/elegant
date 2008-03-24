@@ -1,15 +1,15 @@
 	SUBROUTINE US(ENERGY_I, CUR_I, SIGX_I,
-	1    SIGY_I, SIGX1_I, SIGY1_I,
-	2    PERIOD_I, N_I, KX_I, KY_I, EMINU_I,
-	3    EMAXU_I, NEU_I, DD_I, XPC_I, YPC_I, 
-	4    XPS_I, YPS_I, NXP_I, NYP_I,
-	5    MODE_I, METHOD_I, IHARM_I,
-	6    NPHI_I, NALPHA_I, CALPHA2_I, NOMEGA_I,
-	7    COMEGA_I, NSIGMA_I,
-	8    E1Z_O, LAMDA1_O, PTOT_O, PD_O, TOTPOWER_O, ISUB_O,
-	9    IANG_O, TOTFLUX_O, IMAX_O, IMIN_O,
-	1    P1_O, P2_O, P3_O, P4_O, NE_O, XP_O, YP_O, RA0_O,
-	2    SPEC0_O, EU_O)
+     1    SIGY_I, SIGX1_I, SIGY1_I,
+     2    PERIOD_I, N_I, KX_I, KY_I, EMINU_I,
+     3    EMAXU_I, NEU_I, DD_I, XPC_I, YPC_I, 
+     4    XPS_I, YPS_I, NXP_I, NYP_I,
+     5    MODE_I, METHOD_I, IHARM_I,
+     6    NPHI_I, NALPHA_I, CALPHA2_I, NOMEGA_I,
+     7    COMEGA_I, NSIGMA_I,
+     8    E1Z_O, LAMDA1_O, PTOT_O, PD_O, TOTPOWER_O, ISUB_O,
+     9    IANG_O, TOTFLUX_O, IMAX_O, IMIN_O,
+     1    P1_O, P2_O, P3_O, P4_O, NE_O, XP_O, YP_O, RA0_O,
+     2    SPEC0_O, EU_O)
 C       +
 C       PROGRAM DESCRIPTION:	
 C       Program to calculate undulator spectra within the Bessel function 
@@ -275,8 +275,8 @@ C  Labeled constants:
 	PARAMETER	(PIHALF=1.5707 96326 79489 66192 31322D0)
 	PARAMETER	(TWOPI= 6.2831 85307 17958 64769 25287D0)
 	REAL*8		FINE_STRUCTURE_CONST
-	PARAMETER	(FINE_STRUCTURE_CONST=1.0D19*EC*1.0D19*EC
-	1		/(4.0D0*PI*EPSZ*1.0D38*HBAR*C))
+	PARAMETER       (FINE_STRUCTURE_CONST=1.0D19*EC*1.0D19*EC
+     1   /(4.0D0*PI*EPSZ*1.0D38*HBAR*C))
 	REAL*8		PTOT_FAC,PD_FAC,PDH_FAC
 	PARAMETER	(PTOT_FAC=PI/3.0D0*EC/EPSZ/(MEE**2)*1.0D+6)   ! 0.07257
 	PARAMETER	(PD_FAC  =21.0D0/(16.0D0*PI*MEE**2)*PTOT_FAC) ! 0.11611
@@ -319,7 +319,7 @@ C  Common blocks:
 	COMMON		/CALCR/	    K,KX,KY,K3,NPI,PE,GAMMA,ER,EW,DEW,LEN
 	COMMON		/FACTOR/    FAC,C1,C2,C3,C4,C5
 	COMMON		/BEAM1/	    AP2MIN,AP2MAX,AP2CNT,ARGMAX,
-	1			    FU,FV,SIGX2,SIGY2,GSIGUV
+     1			    FU,FV,SIGX2,SIGY2,GSIGUV
 	COMMON		/PINHOLE/   XP,YP,CX,CY,NXP,NYP,DXP,DYP
 	COMMON		/ANGLE_PHII/ INDEX_PHI,NPHI4,NPHI,NPHI_BRIGHT
 	COMMON		/ANGLE_PHIR/ COSPHI,SINPHI,S2SIGN,DPHI
@@ -374,10 +374,10 @@ C MODE .EQ. 5 .AND. METHOD .EQ. 3 limit use to infinite-N + convolution
 C -----------------------------------------------------------------------------
 	IF (XPC .LT. ZERO .OR. YPC .LT. ZERO) GO TO 920
 	IF ((MODE .EQ. 1 .AND. METHOD .EQ. 2) .OR.
-	1    (MODE .EQ. 1 .AND. METHOD .EQ. 4) .OR.
-	2    (MODE .EQ. 1 .AND. METHOD .EQ.14)) GO TO 930 
+     1    (MODE .EQ. 1 .AND. METHOD .EQ. 4) .OR.
+     2    (MODE .EQ. 1 .AND. METHOD .EQ.14)) GO TO 930 
 	IF ((MODE .EQ. 5 .AND. METHOD .EQ. 1) .OR.
-	1    (MODE .EQ. 5 .AND. METHOD .EQ. 3)) GO TO 940
+     1    (MODE .EQ. 5 .AND. METHOD .EQ. 3)) GO TO 940
                                                      
 C+ Default values
 C  -----------------------------------------------------------------------------
@@ -430,7 +430,7 @@ C  -----------------------------------------------------------------------------
 	IF (KX .LT. EPSK .OR. KY .LT. EPSK) THEN
 	    K  = KX +KY
             GK = K*((K**6)+(24.0D0*(K**4)/7.0D0)+
-	1        (4.0D0*K*K)+(16.0D0/7.0D0))/((1.0D0+(K*K))**3.5D0)
+     1        (4.0D0*K*K)+(16.0D0/7.0D0))/((1.0D0+(K*K))**3.5D0)
 	END IF 
 	IF (ABS(KX-KY) .LT. EPSK) THEN
 	    K  = KX
@@ -561,7 +561,8 @@ C  Generate energy scale with variable step size
 		 END IF		! IDW
 	      END DO		! WHILE
 	      
-	      DO WHILE (E(IE) .LT. (EP-EPSE) .AND. E(IE) .LT. (EMAX-EPSE))
+              DO WHILE (E(IE) .LT. (EP-EPSE) .AND. 
+     1                  E(IE) .LT. (EMAX-EPSE))
 		 IF (E(IE) .GT. EP-EF) THEN
 		    IDW = IDW*2
 		    IF (IDW .GT. IDWMAX) THEN
@@ -719,8 +720,9 @@ C+ Set up arrays of cos(phi) and sin(phi), and index_phi
 C  -----------------------------------------------------------------------------
 	IF (METHOD .NE. 3) THEN ! non-zero emittance
 	   IF (XE1 .LE. ZERO .AND. YE1 .LE. ZERO) THEN
-	      IF ((MODE .EQ. 2 .AND. XPC .EQ. ZERO .AND. YPC .EQ. ZERO) .OR.
-	1	   MODE .EQ. 3) THEN
+               IF ((MODE .EQ. 2 .AND. XPC .EQ. 
+     1              ZERO .AND. YPC .EQ. ZERO) .OR.
+     2              MODE .EQ. 3) THEN
 		 NPHI4 = NPHI   ! Use only 0 ... 90 deg.
 	      ELSE
 		 NPHI4 = 4*NPHI ! Use full range: 0 ... 360 deg.
@@ -826,15 +828,15 @@ C  -----------------------------------------------------------------------------
 
 C+ Scale factors
 C  -----------------------------------------------------------------------------
-	 IF (SIGU .NE. ZERO .AND. SIGV .NE. ZERO)
-	1     C1 =N*N*FINE_STRUCTURE_CONST*BW*CUR*C_MA_A/EC
-	2     /(TWOPI*SIGU*SIGV*D2*C_M_MM*C_M_MM)
+         IF (SIGU .NE. ZERO .AND. SIGV .NE. ZERO)
+     1      C1 =N*N*FINE_STRUCTURE_CONST*BW*CUR*C_MA_A/EC
+     2          /(TWOPI*SIGU*SIGV*D2*C_M_MM*C_M_MM)
 	 C2 = N*N*   FINE_STRUCTURE_CONST*BW*CUR*C_MA_A/EC
 	 C3 = N*N*G2*FINE_STRUCTURE_CONST*BW*CUR*C_MA_A/EC
-	1     /(D2*C_M_MM*C_M_MM)
+     1        /(D2*C_M_MM*C_M_MM)
 	 C4 = PDH_FAC*N*N*(G2**2)*CUR*C_MA_A/(LEN*D2)
 	 IF (SIGU .NE. ZERO .AND. SIGV .NE. ZERO)
-	1     C5 = PDH_FAC*N*N*G2*CUR*C_MA_A/(TWOPI*SIGU*SIGV*LEN*D2)
+     1       C5 = PDH_FAC*N*N*G2*CUR*C_MA_A/(TWOPI*SIGU*SIGV*LEN*D2)
 C       -
 C       -----------------------------------------------------------------------------
 
@@ -930,7 +932,8 @@ C       Space-distribution (non-zero emittance and zero emittance case)
 		 NE_O = NE_O + 1
 	      END DO		! IB
 	   END DO		! IA   
-	ELSE IF ((ISUB .EQ. 2) .OR. (ISUB .EQ. 3) .OR. (ISUB .EQ. 5)) THEN
+        ELSE IF ((ISUB .EQ. 2) .OR. (ISUB .EQ. 3) 
+     1           .OR. (ISUB .EQ. 5)) THEN
 C  Spectral distributions (non-zero emittance and zero emittance case)
 C       Get frequency-integrated power (flux) (no meaning for brilliance)
 	   IMIN = 10000
@@ -1052,33 +1055,33 @@ C       Power density (non-zero emittance and zero emittance case)
 C+ Error returns
 C  -----------------------------------------------------------------------------
 900	WRITE (0,*) 'US-F-BNDERR, Boundary error'
-	WRITE (0,*) '- energy array out of bounds; number of points',IE,
-	1    ' is greater than ',E_SZ
+        WRITE (0,*) '- energy array out of bounds; number of points',IE,
+     1     ' is greater than ',E_SZ
 	GO TO 999
 
  905	WRITE (0,*) 'US-F-BNDERR, Boundary error'
 	WRITE (0,*) '- energy array out of bounds; number of points ',NE,
-	1    ' is greater than ',E_SZ
+     1    ' is greater than ',E_SZ
 	GO TO 999
 
  910	WRITE (0,*) '&US-E-HARMERR, Harmonic errror'
 	WRITE (0,*) '- no harmonics reachable in the range ',EMINU,
-	1    ' to ',EMAXU,' eV.'
+     1    ' to ',EMAXU,' eV.'
 	GO TO 999
 
  920	WRITE(0,*) '&US-E-INVDAT, Invalid data'
-	WRITE(0,*) '- check input data file; center of pinhole must lie ',
-	1    'in the first quadrant.'
+        WRITE(0,*) '- check input data file; center of pinhole must ',
+     1    'lie in the first quadrant.'
 	GO TO 999
 	
  930	WRITE(0,*) '&US-E-INVDAT, Invalid data'
 	WRITE(0,*) '- check input data file; method ',METHOD,
-	1    ' not valid for the flux density distribution.'
+     1    ' not valid for the flux density distribution.'
 	GO TO 999
 
 940	WRITE(0,*) '&US-E-INVDAT, Invalid data'
 	WRITE(0,*) '- check input data file; method ',METHOD,
-	1    ' not valid for angle-integrated spectrum.'
+     1    ' not valid for angle-integrated spectrum.'
 	GO TO 999
 
 999	WRITE(0,*)
@@ -1136,7 +1139,7 @@ C  Common blocks:
 	COMMON		/CALCR/	    K,KX,KY,K3,NPI,PE,GAMMA,ER,EW,DEW,LEN
 	COMMON		/FACTOR/    FAC,C1,C2,C3,C4,C5
 	COMMON		/BEAM1/	    AP2MIN,AP2MAX,AP2CNT,ARGMAX,
-	1			    FU,FV,SIGX2,SIGY2,GSIGUV
+     1			    FU,FV,SIGX2,SIGY2,GSIGUV
 	COMMON		/PINHOLE/   XP,YP,CX,CY,NXP,NYP,DXP,DYP
 	COMMON		/ANGLE_ALPI/ NALPHA
 	COMMON		/ANGLE_ALPR/ CALPHA2
@@ -1163,8 +1166,8 @@ C  -----------------------------------------------------------------------------
 	    IMAX = (AP2MAX+K3)/R
 	END IF ! METHOD
 	IF (IMAX .LT. IMIN) GO TO 900
-	IF (IHARM .GT. 0 .AND. (IHARM .LT. IMIN .OR. IHARM .GT. IMAX))
-	1   GO TO 910
+        IF (IHARM .GT. 0 .AND. (IHARM .LT. IMIN .OR. IHARM .GT. IMAX))
+     1   GO TO 910
 C-
 C  -----------------------------------------------------------------------------
 	DO IB=1,NYP
@@ -1224,8 +1227,8 @@ C  Brilliance
 
 C  Two-dimensional convolution of the brilliance with the electron distribution
 	    CALL CONVOLUTE_DISTRIBUTION(METHOD,CONST,ALPHA,THETA,DALPHA,
-	1				EPS,BR0,BR1,BR2,BR3,
-	2				    RA0,RA1,RA2,RA3,ICOUNT)
+     1				EPS,BR0,BR1,BR2,BR3,
+     2				    RA0,RA1,RA2,RA3,ICOUNT)
 
 	    IF (ICOUNT .GT. 1) THEN ! If higher harmonics do not contribute
 		I2(1) = I
@@ -1247,8 +1250,8 @@ C  -----------------------------------------------------------------------------
 
 910	CONTINUE
 	WRITE(0,200) '&SPACE_DISTRIBUTION-E-HARMERR, Harmonic errror'
-	WRITE(0,220) '- Harmonic number ',IHARM,' not in reachable range ',
-	1	   IMIN,' to ',IMAX,' at ',E(1), ' eV.'
+        WRITE(0,220) '- Harmonic number ',IHARM,' not in reachable ',
+     1	   IMIN,' range to ',IMAX,' at ',E(1), ' eV.'
 	GO TO 999
 
 200	FORMAT(' ',8A)
@@ -1333,7 +1336,7 @@ C  Common blocks:
 	COMMON		/CALCR/	    K,KX,KY,K3,NPI,PE,GAMMA,ER,EW,DEW,LEN
 	COMMON		/FACTOR/    FAC,C1,C2,C3,C4,C5
 	COMMON		/BEAM1/	    AP2MIN,AP2MAX,AP2CNT,ARGMAX,
-	1			    FU,FV,SIGX2,SIGY2,GSIGUV
+     1			    FU,FV,SIGX2,SIGY2,GSIGUV
 	COMMON		/PINHOLE/   XP,YP,CX,CY,NXP,NYP,DXP,DYP
 	COMMON		/ANGLE_ALPI/ NALPHA
 	COMMON		/ANGLE_ALPR/ CALPHA2
@@ -1371,8 +1374,9 @@ C  -----------------------------------------------------------------------------
 	    END IF ! METHOD
 	    IF (IMAX .LT. IMIN) GO TO 810 ! Next energy
 	    LE1 = .TRUE.		
-	    IF (IHARM .GT. 0 .AND. (IHARM .LT. IMIN .OR. IHARM .GT. IMAX))
-	1	GO TO 810 ! Next energy
+            IF (IHARM .GT. 0 .AND. (IHARM .LT. IMIN .OR. 
+     1        IHARM .GT. IMAX))
+     2	        GO TO 810 ! Next energy
 	    LE2 = .TRUE.
 C-
 C  -----------------------------------------------------------------------------
@@ -1451,8 +1455,8 @@ C  Brilliance
 
 C  Two-dimensional convolution of the brilliance with the electron distribution
 		CALL CONVOLUTE_DISTRIBUTION(METHOD,CONST,ALPHA,THETA,DALPHA,
-	1				    EPS,BR0,BR1,BR2,BR3,
-	2				        RA0,RA1,RA2,RA3,ICOUNT)
+     1				    EPS,BR0,BR1,BR2,BR3,
+     2				        RA0,RA1,RA2,RA3,ICOUNT)
 
 		IF (ICOUNT .GT. 1) THEN ! If higher harmonics do not contribute
 		    I2(IE) = I
@@ -1511,13 +1515,13 @@ C  -----------------------------------------------------------------------------
 900	CONTINUE
 	WRITE(0,200) '&SPECTRAL_DISTRIBUTION-E-HARMERR, Harmonic errror'
 	WRITE(0,210) '- no harmonics reachable in the range ',E(NE1),
-	1	  ' to ',E(NE2),' eV.'
+     1	  ' to ',E(NE2),' eV.'
 	GO TO 999
 
 910	CONTINUE
 	WRITE(0,200) '&SPECTRAL_DISTRIBUTION-E-HARMERR, Harmonic errror'
-	WRITE(0,220) '- Harmonic number ',IHARM,' not in the range ',E(NE1),
-	1	  ' to ',E(NE2),' eV.'
+        WRITE(0,220) '- Harmonic number ',IHARM,' not in the range ',
+     1	  E(NE1),' to ',E(NE2),' eV.'
 	GO TO 999
 
 200	FORMAT(' ',8A)
@@ -1722,7 +1726,7 @@ C  Common blocks:
 	COMMON		/CALCR/	    K,KX,KY,K3,NPI,PE,GAMMA,ER,EW,DEW,LEN
 	COMMON		/FACTOR/    FAC,C1,C2,C3,C4,C5
 	COMMON		/BEAM1/	    AP2MIN,AP2MAX,AP2CNT,ARGMAX,
-	1			    FU,FV,SIGX2,SIGY2,GSIGUV
+     1			    FU,FV,SIGX2,SIGY2,GSIGUV
 	COMMON		/PINHOLE/   XP,YP,CX,CY,NXP,NYP,DXP,DYP
 	COMMON		/ANGLE_ALPI/ NALPHA
 	COMMON		/ANGLE_ALPR/ CALPHA2
@@ -1773,8 +1777,8 @@ C  Power density
 
 C  Two-dimensional convolution of the pdf with the electron distribution
 		CALL CONVOLUTE_DISTRIBUTION(1,CONST,ALPHA,THETA,DALPHA,
-	1				    EPSP,BR0,BR1,BR2,BR3,
-	2				         RA0,RA1,RA2,RA3,ICOUNT)
+     1				    EPSP,BR0,BR1,BR2,BR3,
+     2				         RA0,RA1,RA2,RA3,ICOUNT)
 
 	    ELSE ! zero emittance; direct calculation
 	        DO IB=1,NYP
@@ -1791,7 +1795,7 @@ C  Two-dimensional convolution of the pdf with the electron distribution
 		            SINPHI = YG/ALPHAP
 		        END IF ! ALPHAP
 		        CALL BRIGHTE(I,ALPHAP,COSPHI,SINPHI,
-	1			     S0,S1,S2,S3,AXR,AYR,AXI,AYI)
+     1			     S0,S1,S2,S3,AXR,AYR,AXI,AYI)
 			DELTA0 = CONST*S0/(K3+ALPHA2)
 			DELTA1 = CONST*S1/(K3+ALPHA2)
 			DELTA2 = CONST*S2/(K3+ALPHA2)
@@ -1970,7 +1974,7 @@ C  -----------------------------------------------------------------------------
 			    SINPHI = YG/ALPHA
 			END IF ! ALPHA
 	        	CALL BRIGHTE(I,ALPHA,COSPHI,SINPHI,
-	1	   	             S0,S1,S2,S3,AXR,AYR,AXI,AYI)
+     1	   	             S0,S1,S2,S3,AXR,AYR,AXI,AYI)
 			ARG        = NPI*(ALPHA2-ALPHA2I)/R
 			RA0(IA,IB) = CONST*SINC_DEJUS(ARG)*S0
 			RA1(IA,IB) = CONST*SINC_DEJUS(ARG)*S1
@@ -2019,7 +2023,7 @@ C  -----------------------------------------------------------------------------
 	WRITE(0,200) '&NO_EMITTANCE-E-HARMERR, Harmonic errror' 
 	IF (IHARM .GT. 0) THEN
 	    WRITE(0,220) '- Harmonic number ',IHARM,' not reachable at ',
-	1             E(1),' eV.'
+     1             E(1),' eV.'
 	ELSE
 	    WRITE(0,210) '- no harmonics reachable at ',E(1),' eV.'
 	END IF ! IHARM
@@ -2029,10 +2033,10 @@ C  -----------------------------------------------------------------------------
 	WRITE(0,200) '&NO_EMITTANCE-E-HARMERR, Harmonic errror' 
 	IF (IHARM .GT. 0) THEN
 	    WRITE(0,220) '- Harmonic number ',IHARM,' not in the range ',
-	1             E(NE1),' to ',E(NE2),' eV.'
+     1             E(NE1),' to ',E(NE2),' eV.'
 	ELSE
 	    WRITE(0,210) '- no harmonics reachable in the range ',E(NE1),
-	1	      ' to ',E(NE2),' eV.'
+     1	      ' to ',E(NE2),' eV.'
 	END IF ! IHARM
 	GO TO 999
 
@@ -2091,7 +2095,7 @@ C  Common blocks:
 		H      = SINC_DEJUS(ARG)
 		DO ID=1,NPHI_BRIGHT
 		    CALL BRIGHTE(I,ALPHA(IC),COSPHI(ID),SINPHI(ID),
-	1			 S0,S1,S2,S3,AXR,AYR,AXI,AYI)
+     1			 S0,S1,S2,S3,AXR,AYR,AXI,AYI)
 		    BR0(ID,IC) = H*S0
 		    BR1(ID,IC) = H*S1
 		    BR2(ID,IC) = H*S2
@@ -2101,7 +2105,7 @@ C  Common blocks:
 	ELSE ! Infinite-N approximation (H=1.0)
 	    DO ID=1,NPHI_BRIGHT
 	        CALL BRIGHTE(I,ALPHAI,COSPHI(ID),SINPHI(ID),
-	1	   	     S0,S1,S2,S3,AXR,AYR,AXI,AYI)
+     1	   	     S0,S1,S2,S3,AXR,AYR,AXI,AYI)
 		BR0(ID,1) = S0
 		BR1(ID,1) = S1
 		BR2(ID,1) = S2
@@ -2156,7 +2160,7 @@ C  Common blocks:
 	    ALPHA2 = ALPHA(IC)*ALPHA(IC)
 	    DO ID=1,NPHI_BRIGHT
 	        CALL BRIGHTE(I,ALPHA(IC),COSPHI(ID),SINPHI(ID),
-	1	   	     S0,S1,S2,S3,AXR,AYR,AXI,AYI)
+     1	   	     S0,S1,S2,S3,AXR,AYR,AXI,AYI)
 		BR0(ID,IC) = S0/(K3+ALPHA2)
 		BR1(ID,IC) = S1/(K3+ALPHA2)
 		BR2(ID,IC) = S2/(K3+ALPHA2)
@@ -2172,8 +2176,8 @@ c		BR3(ID,IC) = ZERO
 	END ! PDF_ARRAY
 
 	SUBROUTINE CONVOLUTE_DISTRIBUTION(ICALC,CONST,ALPHA,THETA,DALPHA,
-	1				  EPS,BR0,BR1,BR2,BR3,
-	2				      RA0,RA1,RA2,RA3,ICOUNT)
+     1				  EPS,BR0,BR1,BR2,BR3,
+     2				      RA0,RA1,RA2,RA3,ICOUNT)
  
 C[subroutine_header_comments]
  
@@ -2212,7 +2216,7 @@ C  Common blocks:
 	REAL*8		XP(P_SZ),YP(P_SZ),CX(P_SZ),CY(P_SZ)
 
 	COMMON		/BEAM1/	    AP2MIN,AP2MAX,AP2CNT,ARGMAX,
-	1			    FU,FV,SIGX2,SIGY2,GSIGUV
+     1			    FU,FV,SIGX2,SIGY2,GSIGUV
 	COMMON		/PINHOLE/   XP,YP,CX,CY,NXP,NYP,DXP,DYP
 	COMMON		/ANGLE_PHII/ INDEX_PHI,NPHI4,NPHI,NPHI_BRIGHT
 	COMMON		/ANGLE_PHIR/ COSPHI,SINPHI,S2SIGN,DPHI

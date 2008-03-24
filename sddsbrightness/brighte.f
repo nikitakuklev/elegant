@@ -1,5 +1,5 @@
 	subroutine brighte(i,alpha,cosphi,sinphi,
-	1	           s0,s1,s2,s3,axr,ayr,axi,ayi)
+     1	           s0,s1,s2,s3,axr,ayr,axi,ayi)
 
 C+
 C 
@@ -71,26 +71,26 @@ C+ Select call to appropriate Brightness routine
 C  -----------------------------------------------------------------------------
 	if (kx .lt. KMIN .and. ky .gt. KMIN) then      ! Regular plane device
 	   call bright1(i,ky,alpha,cosphi,sinphi,
-	1               s0,s1,s2,s3,axr,ayr)
+     1               s0,s1,s2,s3,axr,ayr)
 	   axi = ZERO
 	   ayi = ZERO
 	else if (kx .gt. KMIN .and. ky .lt. KMIN) then ! Flipped plane device
 	   call bright1(i,kx,alpha,sinphi,-cosphi,
-	1               s0,s1,s2,s3,axr,ayr)
+     1               s0,s1,s2,s3,axr,ayr)
 	   s1 = -s1
 	   s2 = -s2
 	   axi = ZERO
 	   ayi = ZERO
 	else                                           ! Elliptical device
 	   call bright3(i,kx,ky,alpha,cosphi,sinphi,
-	1               s0,s1,s2,s3,axr,ayr,axi,ayi)
+     1               s0,s1,s2,s3,axr,ayr,axi,ayi)
 	end if
 
 	return
 	end ! brighte
 
 	subroutine bright1(i,k,alpha,cosphi,sinphi,
-	1	           s0,s1,s2,s3,axr,ayr)
+     1	           s0,s1,s2,s3,axr,ayr)
 C+
 C 
 C FUNCTIONAL DESCRIPTION:	
@@ -193,13 +193,15 @@ C  -----------------------------------------------------------------------------
 	if (nx .gt. B_SZ) then
 	    nx = B_SZ
 	    print 200,'&bright1-W-DIMERR, Dimension error'
-	    print 200,'Array of Bessel function values out of bound for x'
+            print 200,'Array of Bessel function values out ',
+     1        'of bound for x'
 	    print 210,'- upper bound reset to ',B_SZ
 	end if ! nx
 	if (ny .gt. B_SZ) then
 	    ny = B_SZ
 	    print 200,'&bright1-W-DIMERR, Dimension error'
-	    print 200,'Array of Bessel function values out of bound for y'
+	    print 200,'Array of Bessel function values out ',
+     1        'of bound for y'
 	    print 210,'- upper bound reset to ',B_SZ
 	end if ! ny
 200	format(' ',a)
@@ -331,7 +333,7 @@ c	ft = FOUR*i*i/a/a*(alpha2*sum1*sum1 +c*sum1*sum3 +QT*k2*sum3*sum3) ! old varia
 	end ! bright1
 
 	subroutine bright3(i,kx,ky,alpha,cosphi,sinphi,
-	1	           s0,s1,s2,s3,axr,ayr,axi,ayi)
+     1	           s0,s1,s2,s3,axr,ayr,axi,ayi)
 C+
 C 
 C FUNCTIONAL DESCRIPTION:	
@@ -403,7 +405,7 @@ C  Declarations of scalars:
 	real*8		x,y,absy,phi
 	real*8		a,alpha2,k2
 	real*8		co,so,cp0,cm0,sp0,sm0,cp1p,cm1p,sp1p,sm1p,
-	1               cp1m,cm1m,sp1m,sm1m,cps,cp1s,cms,cm1s
+     1               cp1m,cm1m,sp1m,sm1m,cps,cp1s,cms,cm1s
 	real*8          sum0r,sum0i,sum1pr,sum1pi,sum1mr,sum1mi
 	real*8          bxp0r,bxp0i,bxp1pr,bxp1pi,bxp1mr,bxp1mi
 	real*8          bxm0r,bxm0i,bxm1pr,bxm1pi,bxm1mr,bxm1mi
@@ -435,7 +437,7 @@ C  -----------------------------------------------------------------------------
 	k2     = kx*kx +ky*ky
 	a      = ONE+HALF*k2+alpha2
 	x      = (TWO*i/a)*alpha*
-	1        sqrt(kx*kx*sinphi*sinphi +ky*ky*cosphi*cosphi) ! x >= 0.0
+     1        sqrt(kx*kx*sinphi*sinphi +ky*ky*cosphi*cosphi) ! x >= 0.0
 	y      = (QT *i/a)*(ky*ky -kx*kx)
 	absy   = abs(y)
 	phi    = atan2((kx*sinphi),(ky*cosphi))
@@ -469,13 +471,15 @@ C  -----------------------------------------------------------------------------
 	if (nx .gt. B_SZ) then
 	    nx = B_SZ
 	    print 200,'&bright3-W-DIMERR, Dimension error'
-	    print 200,'Array of Bessel function values out of bound for x'
+	    print 200,'Array of Bessel function values out ',
+     1         'of bound for x'
 	    print 210,'- upper bound reset to ',B_SZ
 	end if ! nx
 	if (ny .gt. B_SZ) then
 	    ny = B_SZ
 	    print 200,'&bright3-W-DIMERR, Dimension error'
-	    print 200,'Array of Bessel function values out of bound for y'
+	    print 200,'Array of Bessel function values out ',
+     1         'of bound for y'
 	    print 210,'- upper bound reset to ',B_SZ
 	end if ! ny
 200	format(' ',a)

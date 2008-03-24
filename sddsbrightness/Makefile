@@ -7,7 +7,7 @@
 # in the file LICENSE that is included with this distribution. 
 #*************************************************************************
 #
-# $Id: Makefile,v 1.7 2007-11-12 19:52:40 soliday Exp $
+# $Id: Makefile,v 1.8 2008-03-24 21:00:34 soliday Exp $
 #
 #
 #
@@ -42,9 +42,12 @@ urgent$(OBJ):
 us$(OBJ):
 	ifort /compile_only /threads /libs:dll ..\\us.f
 else
-F77 = f77
+F77 = g77
 ifdef AIX
 F77 = g77
+endif
+ifeq ($(OS_CLASS),Darwin)
+F77 = /sw/bin/gfortran
 endif
 ifeq ($(HOST_ARCH),solaris)
 F77 = g77
