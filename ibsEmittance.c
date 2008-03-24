@@ -9,6 +9,10 @@
 
 /* 
  * $Log: not supported by cvs2svn $
+ * Revision 1.24  2008/03/19 23:04:53  emery
+ * Added parameter sigmaDeltaInput to the output.
+ * Removed periods in SDDS column and parameter descriptions.
+ *
  * Revision 1.23  2008/03/06 23:07:23  borland
  * Fixed problem on 64 bit machines.
  *
@@ -113,9 +117,11 @@
 static char *USAGE = "ibsEmittance <twissFile> <resultsFile>\n\
  {-charge=<nC>|-particles=<value>} -coupling=<value>\n\
  [-emitxInput=<value>] [-deltaInput=<value>] \n\
- [-growthRatesOnly] [-superperiods=<value>]\n\
+ [-superperiods=<value>]\n\
  {-RF=Voltage=<MV>,harmonic=<value>|-length=<mm>}\n\
- [-energy=<MeV>] [-integrate=turns=<number>[,stepSize=<number>]]";
+ [-energy=<MeV>] \n\
+ [ {-growthRatesOnly | -integrate=turns=<number>[,stepSize=<number>] } ]\n\
+ [-noWarning]";
 
 #define SET_ENERGY 0
 #define VERBOSE 1
@@ -131,7 +137,8 @@ static char *USAGE = "ibsEmittance <twissFile> <resultsFile>\n\
 #define GROWTHRATESONLY 11
 #define SET_TARGET 12
 #define SET_INTEGRATE 13
-#define N_OPTIONS 14
+#define NO_WARNING 14
+#define N_OPTIONS 15
 char *option[N_OPTIONS] = {
   "energy",
   "verbose",
@@ -147,6 +154,7 @@ char *option[N_OPTIONS] = {
   "growthratesonly",
   "target",
   "integrate",
+  "noWarning",
   };
 
 #include "zibs.h"
@@ -176,11 +184,12 @@ int main( int argc, char **argv)
   char *inputfile, *outputfile;
   SDDS_DATASET twissPage, resultsPage;
   double particles, charge, length;
-  long verbosity, i, elements, superperiods, growthRatesOnly;
+  long verbosity, noWarning, i, elements, superperiods, growthRatesOnly;
   double pCentral, I1, I2, I3, I4, I5, taux, taudelta;
   double EMeV;
   double emitx0, emitx, emitxInput, emityInput, emity, coupling, sigmaz0, sigmaz;
   double sigmaDelta0, sigmaDelta, sigmaDeltaInput, xGrowthRate, yGrowthRate, zGrowthRate;
+  double xGrowthRateInitial, yGrowthRateInitial, zGrowthRateInitial;
   double emitxOld, sigmaDeltaOld;
   long method, converged;
 /* used in simplex minimization */
@@ -219,6 +228,7 @@ int main( int argc, char **argv)
   growthRatesOnly = 0;
   integrationTurns = 0;
   rfVoltage = rfHarmonic = 0;
+  noWarning = 0;
   for (i = 1; i<argc; i++) {
     if (scanned[i].arg_type == OPTION) {
       delete_chars(scanned[i].list[0], "_");
@@ -295,6 +305,9 @@ int main( int argc, char **argv)
             integrationTurns<=0 || integrationStepSize<1) 
           bomb("invalid -integrate syntax", NULL);
         break;
+      case NO_WARNING:
+        noWarning = 1;
+        break;
       default:
         bomb("unknown option given.", NULL);  
       }
@@ -322,6 +335,15 @@ int main( int argc, char **argv)
     bomb("Coupling value not specified.",NULL);
   if (!length && !rfVoltage) 
     bomb("Specify either the bunch length or the rf voltage.", NULL);
+
+  if (growthRatesOnly && integrationTurns) {
+    growthRatesOnly = 0;
+    if (!noWarning)
+      fprintf( stdout, "*Warning* -growthRatesOnly option is incompatiable with -integrate option. The -growthRatesOnly will be disabled.\n");
+  }
+  
+  if (!growthRatesOnly && !integrationTurns && !noWarning)  
+    fprintf( stdout, "*Warning* The growth rate contribution columns in the results file will be those calculated from the equilibrium (or final) condition.\n");
 
   /***************************************************\
    * get parameter information from first input file  *
@@ -374,6 +396,9 @@ int main( int argc, char **argv)
       0>SDDS_DefineParameter(&resultsPage, "Charge", NULL, "nC", "Charge", NULL, SDDS_DOUBLE, NULL) ||
       0>SDDS_DefineParameter(&resultsPage, "PeakCurrent", "I$bp$n", "A", "Peak Current", NULL, SDDS_DOUBLE, NULL) ||
       0>SDDS_DefineParameter(&resultsPage, "RfVoltage", NULL, "MV", "Rf Voltage", NULL, SDDS_DOUBLE, NULL) ||
+      0>SDDS_DefineParameter(&resultsPage, "xGrowthRateInitial", "g$bIBS,x$n", "1/s", "Initial IBS emittance growth rate in the horizontal plane", NULL, SDDS_DOUBLE, NULL) ||
+      0>SDDS_DefineParameter(&resultsPage, "yGrowthRateInitial", "g$bIBS,y$n", "1/s", "Initial IBS emittance growth rate in the vertical plane", NULL, SDDS_DOUBLE, NULL) ||
+      0>SDDS_DefineParameter(&resultsPage, "zGrowthRateInitial", "g$bIBS,z$n", "1/s", "Initial IBS emittance growth rate in the longitudinal plane", NULL, SDDS_DOUBLE, NULL) ||
       0>SDDS_DefineParameter(&resultsPage, "xGrowthRate", "g$bIBS,x$n", "1/s", "IBS emittance growth rate in the horizontal plane", NULL, SDDS_DOUBLE, NULL) ||
       0>SDDS_DefineParameter(&resultsPage, "yGrowthRate", "g$bIBS,y$n", "1/s", "IBS emittance growth rate in the vertical plane", NULL, SDDS_DOUBLE, NULL) ||
       0>SDDS_DefineParameter(&resultsPage, "zGrowthRate", "g$bIBS,z$n", "1/s", "IBS emittance growth rate in the longitudinal plane", NULL, SDDS_DOUBLE, NULL))
@@ -385,6 +410,7 @@ int main( int argc, char **argv)
       0>SDDS_DefineParameter(&resultsPage, "emityInput", "$ge$r$by,Input$n", "$gp$rm", "Initial vertical emittance with coupling", NULL, SDDS_DOUBLE, NULL))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   
+  /* requested equilibrium emittances or integrate emittances turn-by-turn*/
   if (!growthRatesOnly) {
     if (0>SDDS_DefineParameter(&resultsPage, "emitx", "$ge$r$bx$n", "$gp$rm", "Horizontal emittance with coupling and with IBS", NULL, SDDS_DOUBLE, NULL) ||
         0>SDDS_DefineParameter(&resultsPage, "emity", "$ge$r$by$n", "$gp$rm", "Vertical emittance with coupling and with IBS", NULL, SDDS_DOUBLE, NULL) ||
@@ -518,7 +544,17 @@ int main( int argc, char **argv)
         bomb("memory allocation failure", NULL);
     }
 
-    if (!integrationPoints && !growthRatesOnly) {
+    /* This call is to get the initial growth rates for writing to results file.
+       This applies for any running option selected in the commandline */
+    IBSGrowthRates( pCentral, emitxInput, emityInput, sigmaDeltaInput, sigmaz0, particles,
+                 emitx0, sigmaDelta0, 2./taux, 2./taudelta, coupling,
+                 s, betax, alphax, betay, alphay, etax, etaxp, 
+                 NULL, NULL, NULL, elements,
+                 superperiods, verbosity,
+                 &xGrowthRateInitial, &yGrowthRateInitial, &zGrowthRateInitial);
+
+    /* iterating for equilibrium emittances and final growth rates */
+    if (!integrationTurns && !growthRatesOnly) {
       if (verbosity > 1) {
         fprintf (stdout, "Starting values:\nemitx: %10.5g sigmaDelta %10.5g.\n", emitx, sigmaDelta);
       }
@@ -594,13 +630,31 @@ int main( int argc, char **argv)
       emity = emitx * coupling;
       sigmaz = sigmaz0 * (sigmaDelta/ sigmaDelta0);
     }
-    IBSGrowthRates( pCentral, emitx, emity, sigmaDelta, sigmaz, particles,
-                   emitx0, sigmaDelta0, 2./taux, 2./taudelta, coupling,
-                   s, betax, alphax, betay, alphay, etax, etaxp, 
-                   xRateVsS, yRateVsS, zRateVsS, elements,
-                   superperiods, verbosity,
-                   &xGrowthRate, &yGrowthRate, &zGrowthRate);
+
+    /* calculate growth rates contributions at equilibrium or
+     just one time (-growthRateOnly option) */
+     if (!integrationPoints) {
+       IBSGrowthRates( pCentral, emitx, emity, sigmaDelta, sigmaz, particles,
+                      emitx0, sigmaDelta0, 2./taux, 2./taudelta, coupling,
+                      s, betax, alphax, betay, alphay, etax, etaxp, 
+                      xRateVsS, yRateVsS, zRateVsS, elements,
+                      superperiods, verbosity,
+                      &xGrowthRate, &yGrowthRate, &zGrowthRate);
+     } else {
+       /* final growth rates and emittances after integration */
+       xGrowthRate = xRateInteg[integrationPoints - 1] ;
+       yGrowthRate = yRateInteg[integrationPoints - 1] ;
+       zGrowthRate = zRateInteg[integrationPoints - 1] ;
+       emitx = exInteg[integrationPoints - 1] ;
+       emity = eyInteg[integrationPoints - 1] ;
+       sigmaDelta = SdeltaInteg[integrationPoints - 1] ;
+       sigmaz = SzInteg[integrationPoints - 1] ;
+     }
+    
+    
+    
     converged = 1;
+
     if (0>SDDS_StartPage(&resultsPage, integrationPoints?integrationPoints:elements) ||
         !SDDS_SetParameters(&resultsPage, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
                             "Convergence", converged?"Emittance converged":"Emittance did not converge",
@@ -623,6 +677,9 @@ int main( int argc, char **argv)
                             "xGrowthRate", xGrowthRate,
                             "yGrowthRate", yGrowthRate,
                             "zGrowthRate", zGrowthRate,
+                            "xGrowthRateInitial", xGrowthRateInitial,
+                            "yGrowthRateInitial", yGrowthRateInitial,
+                            "zGrowthRateInitial", zGrowthRateInitial,
                             "sigmaDeltaInput", sigmaDeltaInput,
                             "sigmaDelta0", sigmaDelta0,
                             "sigmaz0", sigmaz0, NULL) ||
