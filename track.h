@@ -796,7 +796,7 @@ extern char *entity_text[N_TYPES];
 #define N_EDRIFT_PARAMS 1
 #define N_SCMULT_PARAMS 0		
 #define N_ILMATRIX_PARAMS 31
-#define N_TSCATTER_PARAMS 0		
+#define N_TSCATTER_PARAMS 1
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -1643,6 +1643,7 @@ typedef struct {
 } TSCATTER_SPEC;
 
 typedef struct {
+  long dummy;
   /* internal variables */
   double IntR, p_rate, s_rate;
   char *losFile, *bunFile, *disFile;

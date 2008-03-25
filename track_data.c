@@ -1994,7 +1994,7 @@ PARAMETER ilmatrix_param[N_ILMATRIX_PARAMS]={
 };
 
 TSCATTER tscatter_example;   
-PARAMETER tscatter_param[1] = {
+PARAMETER tscatter_param[N_TSCATTER_PARAMS] = {
     {"DUMMY", "", IS_LONG, 0, 0, NULL, 0.0, 0, ""},
 };
 
