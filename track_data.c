@@ -167,6 +167,7 @@ and phase modulation.",
     "Tracks through a drift with no approximations (Exact DRIFT).",
     "Tracks through a zero length multipole to simulate space charge effects",  
     "An Individualized Linear Matrix for each particle for fast symplectic tracking with chromatic and amplitude-dependent effects",
+    "An element to simulate Touschek scattering",
     } ;
 
 QUAD quad_example;
@@ -2114,7 +2115,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     {   N_EDRIFT_PARAMS, MAT_LEN, sizeof(EDRIFT),    edrift_param   },
     {   N_SCMULT_PARAMS,    0,       sizeof(SCMULT),    scmult_param     },   
     {  N_ILMATRIX_PARAMS,  HAS_RF_MATRIX|MAT_LEN_NCAT,  sizeof(ILMATRIX),    ilmatrix_param     }, 
-    {   N_TSCATTER_PARAMS,  0,       sizeof(TSCATTER),  tscatter_param     },   
+    {   N_TSCATTER_PARAMS,  NO_DICT_OUTPUT,       sizeof(TSCATTER),  tscatter_param     },   
 } ;
 
 void compute_offsets()
