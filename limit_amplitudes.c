@@ -193,19 +193,20 @@ long limit_amplitudes(
             part[2] += dz*part[3];
             }
         if (is_out) {
+          if (ip!=itop)
             swapParticles(coord[ip], coord[itop]);
-            coord[itop][4] = z+dz;  /* record position of loss */
-            coord[itop][5] = Po*(1+coord[itop][5]);
-            if (accepted)
-                swapParticles(accepted[ip], accepted[itop]);
-            --itop;
-            --ip;
-            np--;
-            }
+          coord[itop][4] = z+dz;  /* record position of loss */
+          coord[itop][5] = Po*(1+coord[itop][5]);
+          if (accepted)
+            swapParticles(accepted[ip], accepted[itop]);
+          --itop;
+          --ip;
+          np--;
         }
+      }
     log_exit("limit_amplitudes");
     return(np);
-    }
+  }
 
 
 long removeInvalidParticles(
