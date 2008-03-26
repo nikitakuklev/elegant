@@ -35,7 +35,7 @@ typedef struct {
     double **kick, **posi;
     /* copies of input specifications for correction */
     double corr_fraction, corr_accuracy, corr_limit, bpm_noise, default_tweek, bpm_noise_cutoff;
-    long fixed_length, bpm_noise_distribution;
+    long fixed_length, bpm_noise_distribution, default_threading_divisor;
     /* correction matrix plus working matrices.  dK = T*Qo is the vector of corrector kicks */
     /* Cij = dX(monitor i)/dK(corrector j) */
     MATRIX *T, *Qo, *dK, *C; 

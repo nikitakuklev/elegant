@@ -15,6 +15,7 @@
     double corrector_limit[2] = {0, 0};
     double correction_fraction[2] = {1, 1};
     double correction_accuracy[2] = {1e-6, 1e-6};
+    long threading_divisor[2] = {100, 100};
     double bpm_noise[2] = {0, 0};
     double bpm_noise_cutoff[2] = {1.0, 1.0};
     STRING bpm_noise_distribution[2] = {"uniform", "uniform"};
