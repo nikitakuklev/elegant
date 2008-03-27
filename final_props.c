@@ -20,7 +20,7 @@
 
 #define ANALYSIS_BINS    10000
 /* For time and momentum percentiles in final properties output */
-#define ANALYSIS_BINS2 1000000
+#define ANALYSIS_BINS2   10000
 
 static double tmp_safe_sqrt;
 #define SAFE_SQRT(x) ((tmp_safe_sqrt=(x))<0?0.0:sqrt(tmp_safe_sqrt))
