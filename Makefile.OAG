@@ -20,6 +20,13 @@ CCC := $(RATIONAL) -best-effort $(CCC)
 endif
 endif
 
+ifdef GPROF
+HOST_OPT = NO
+CC := $(CC) -pg
+CCC := $(CCC) -pg
+CXX := $(CXX) -pg
+endif
+
 OP_SYS_CFLAGS+= -DSORT                 # sort for comparing the results of two elegants
                                        # -g should be turned off for comparison
 OP_SYS_CFLAGS+= -DUSE_KAHAN            # use Kahan's algorithm for long sum
