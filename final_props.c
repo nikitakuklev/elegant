@@ -19,7 +19,11 @@
 #include "matlib.h"
 
 #define ANALYSIS_BINS    10000
-/* For time and momentum percentiles in final properties output */
+
+/* For time and momentum percentiles in final properties output.
+ * Warning: increasing this number may seriously impact performance of
+ * optimizations.
+ */
 #define ANALYSIS_BINS2   10000
 
 static double tmp_safe_sqrt;
