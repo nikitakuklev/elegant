@@ -26,9 +26,11 @@ char *correction_mode[N_CORRECTION_MODES] = {
 #define GLOBAL_CORRECTION 0
 #define ONE_TO_ONE_CORRECTION 1
 #define THREAD_CORRECTION 2
-#define N_CORRECTION_METHODS 3
+#define ONE_TO_BEST_CORRECTION 3
+#define ONE_TO_NEXT_CORRECTION 4
+#define N_CORRECTION_METHODS 5
 char *correction_method[N_CORRECTION_METHODS] = {
-    "global", "one-to-one", "thread"
+    "global", "one-to-one", "thread", "one-to-best", "one-to-next",
     } ;
 
 /* For trajectory correction:
@@ -48,7 +50,7 @@ char *correction_method[N_CORRECTION_METHODS] = {
 long global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **traject, long n_iterations, 
                           RUN *run, LINE_LIST *beamline, double *starting_coord, BEAM *beam);
 void one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **traject, long n_iterations, RUN *run, 
-            LINE_LIST *beamline, double *starting_coord, BEAM *beam);
+            LINE_LIST *beamline, double *starting_coord, BEAM *beam, long method);
 void thread_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **traject, long n_iterations, RUN *run, 
             LINE_LIST *beamline, double *starting_coord, BEAM *beam);
 long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **orbit, 
@@ -262,9 +264,11 @@ void correction_setup(
     }
 
     if (_correct->mode==TRAJECTORY_CORRECTION) {
-      compute_trajcor_matrices(_correct->CMx, &_correct->SLx, 0, run, beamline, 0,
+      compute_trajcor_matrices(_correct->CMx, &_correct->SLx, 0, run, beamline, 
+                               _correct->method==THREAD_CORRECTION,
                                !_correct->response_only && _correct->method==GLOBAL_CORRECTION);
-      compute_trajcor_matrices(_correct->CMy, &_correct->SLy, 2, run, beamline, 0, 
+      compute_trajcor_matrices(_correct->CMy, &_correct->SLy, 2, run, beamline, 
+                               _correct->method==THREAD_CORRECTION,
                                !_correct->response_only && _correct->method==GLOBAL_CORRECTION);
     }
     else if (_correct->mode==ORBIT_CORRECTION) {
@@ -582,8 +586,11 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
             return 0;
           break;
         case ONE_TO_ONE_CORRECTION:
+        case ONE_TO_BEST_CORRECTION:
+        case ONE_TO_NEXT_CORRECTION:
           one_to_one_trajcor_plane(correct->CMx, &correct->SLx, 0, correct->traj, correct->n_iterations, 
-                                   run, beamline, starting_coord, (correct->use_actual_beam?beam:NULL));
+                                   run, beamline, starting_coord, (correct->use_actual_beam?beam:NULL),
+                                   correct->method);
           break;
         case THREAD_CORRECTION:
           thread_trajcor_plane(correct->CMx, &correct->SLx, 0, correct->traj, correct->n_iterations, 
@@ -630,8 +637,11 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
             return 0;
           break;
         case ONE_TO_ONE_CORRECTION:
+        case ONE_TO_BEST_CORRECTION:
+        case ONE_TO_NEXT_CORRECTION:
           one_to_one_trajcor_plane(correct->CMy, &correct->SLy, 2, correct->traj+1, correct->n_iterations, 
-                                   run, beamline, starting_coord, (correct->use_actual_beam?beam:NULL));
+                                   run, beamline, starting_coord, (correct->use_actual_beam?beam:NULL),
+                                   correct->method);
           break;
         case THREAD_CORRECTION:
           thread_trajcor_plane(correct->CMy, &correct->SLy, 2, correct->traj+1, correct->n_iterations, 
@@ -1202,7 +1212,7 @@ long global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
 }
 
 void one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **traject, long n_iterations, RUN *run,
-                              LINE_LIST *beamline, double *starting_coord, BEAM *beam)
+                              LINE_LIST *beamline, double *starting_coord, BEAM *beam, long method)
 {
   ELEMENT_LIST *corr, *eptr;
   TRAJECTORY *traj;
@@ -1211,6 +1221,7 @@ void one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TR
   long n_part, i, tracking_flags;
   double **particle, param, fraction;
   double p, x, y, reading;
+  double response;
   
   log_entry("one_to_one_trajcor_plane");
   
@@ -1244,12 +1255,62 @@ void one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TR
     if (!(traj = traject[iteration?1:0]))
       bomb("trajectory array for this iteration is NULL (one_to_one_trajcor_plane)", NULL);
 
+    /* record the starting trajectory */
+    p = sqrt(sqr(run->ideal_gamma)-1);
+    if (!beam) {
+      if (!starting_coord)
+        fill_double_array(*particle, 7, 0.0);
+      else {
+        for (i=0; i<7; i++)
+          particle[0][i] = starting_coord[i];
+      }
+      n_part = 1;
+    }
+    else
+      copy_particles(particle, beam->particle, n_part=beam->n_to_track);
+    n_part = do_tracking(NULL, particle, n_part, NULL, beamline, &p, (double**)NULL, 
+                         (BEAM_SUMS**)NULL, (long*)NULL,
+                         traj, run, 0, tracking_flags, 1, 0, NULL, NULL, NULL, NULL, NULL);
+    for (i_moni=0; i_moni<CM->nmon; i_moni++) {
+      if (!(eptr=traj[CM->mon_index[i_moni]].elem))
+        bomb("invalid element pointer in trajectory array (one_to_one_trajcor_plane)", NULL);
+      x = traj[CM->mon_index[i_moni]].centroid[0];
+      y = traj[CM->mon_index[i_moni]].centroid[2];
+      CM->posi[iteration][i_moni] = computeMonitorReading(eptr, coord, x, y, 0);
+    }
+    if (iteration==n_iterations)
+      break;
+    
     i_moni = 0;
     for (i_corr=0; i_corr<CM->ncor; i_corr++) {
-      /* Find next BPM downstream of this corrector */
-      for ( ; i_moni<CM->nmon; i_moni++) 
-        if (CM->ucorr[i_corr]->end_pos < CM->umoni[i_moni]->end_pos)
-          break;
+      switch (method) {
+      case ONE_TO_NEXT_CORRECTION:
+      case ONE_TO_ONE_CORRECTION:
+        /* Find next BPM downstream of this corrector */
+        for ( ; i_moni<CM->nmon; i_moni++) 
+          if (CM->ucorr[i_corr]->end_pos < CM->umoni[i_moni]->end_pos)
+            break;
+        break;
+      case ONE_TO_BEST_CORRECTION:
+        /* Find BPM with larger response than its neighbors */
+        for ( ; i_moni<CM->nmon; i_moni++) 
+          if (CM->ucorr[i_corr]->end_pos < CM->umoni[i_moni]->end_pos)
+            break;
+        if (i_moni!=CM->nmon) {
+          response = fabs(CM->C->a[i_moni][i_corr]);
+          for ( ; i_moni<CM->nmon-1; i_moni++) {
+            if (response>fabs(CM->C->a[i_moni+1][i_corr]))
+              break;
+            response = fabs(CM->C->a[i_moni+1][i_corr]);
+          }
+        }
+        break;
+      default:
+        printf("Error: Unknown method in one_to_one_trajcor_plane: %ld---This shouldn't happen!\n", method);
+        exit(1);
+        break;
+      }
+      
       if (i_moni==CM->nmon)
         break;
       
@@ -1282,7 +1343,6 @@ void one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TR
       y = traj[CM->mon_index[i_moni]].centroid[2];
       reading = computeMonitorReading(eptr, coord, x, y, 0);
       reading += (CM->bpm_noise?noise_value(CM->bpm_noise, CM->bpm_noise_cutoff, CM->bpm_noise_distribution):0);
-      CM->posi[iteration][i_moni] = reading;
 
 #if defined(DEBUG)
       fprintf(stdout, "i_moni = %ld, i_corr = %ld, reading = %e", i_moni, i_corr, reading);
@@ -1350,7 +1410,7 @@ void thread_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
   long iteration, kick_offset;
   long i_corr, i_moni, sl_index, iElem, nElems, iBest;
   long n_part, n_left, i, tracking_flags, done;
-  double **particle, param, fraction, bestValue, origValue, lastValue, direction;
+  double **particle, param, fraction, bestValue, origValue, lastValue;
   double p, scanStep;
   long iScan, nScan;
 
@@ -1426,8 +1486,8 @@ void thread_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
           /* Record initial value */
           CM->kick[iteration][i_corr] = *((double*)(corr->p_elem+kick_offset))*CM->kick_coef[i_corr];
 
-        bestValue = origValue = *((double*)(corr->p_elem+kick_offset));
-        if (!done) {
+        lastValue = bestValue = origValue = *((double*)(corr->p_elem+kick_offset));
+        if (!done && corr->end_pos < traj[iBest].elem->end_pos) {
           for (iScan=0; !done && iScan<nScan; iScan++) {
             /* -- Compute new value of the parameter
              *    NewValue = OldValue + CorrectorTweek 
@@ -1497,6 +1557,10 @@ void thread_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
             compute_matrix(corr, run, NULL);
             if (beamline->links)
               assert_element_links(beamline->links, run, beamline, DYNAMIC_LINK);
+          }
+          if (bestValue!=origValue) {
+            printf("Beam now advanced to element %ld\n", iBest);
+            fflush(stdout);
           }
           
           /* indicate that beamline concatenation and Twiss parameter computation (if wanted) are not current */
