@@ -1409,7 +1409,7 @@ void thread_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
   TRAJECTORY *traj;
   long iteration, kick_offset;
   long i_corr, i_moni, sl_index, iElem, nElems, iBest;
-  long n_part, n_left, i, tracking_flags, done;
+  long n_part, n_left, i, tracking_flags, done, direction, improved, worsened;
   double **particle, param, fraction, bestValue, origValue, lastValue;
   double p, scanStep;
   long iScan, nScan;
@@ -1435,8 +1435,8 @@ void thread_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
   nElems = beamline->n_elems+1;
   done = 0;
 
-  nScan = 2*CM->default_threading_divisor+1.5;
-  scanStep = 2.0/nScan;
+  nScan = CM->default_threading_divisor+1.5;
+  scanStep = 1.0/(nScan-1);
   
   for (iteration=0; iteration<=n_iterations; iteration++) {
     if (!CM->posi[iteration])
@@ -1488,62 +1488,71 @@ void thread_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
 
         lastValue = bestValue = origValue = *((double*)(corr->p_elem+kick_offset));
         if (!done && corr->end_pos < traj[iBest].elem->end_pos) {
-          for (iScan=0; !done && iScan<nScan; iScan++) {
-            /* -- Compute new value of the parameter
-             *    NewValue = OldValue + CorrectorTweek 
-             */
-            param = origValue 
-              + SL->corr_tweek[sl_index]/CM->kick_coef[i_corr]*(iScan*scanStep-1);
-            /* Check that we haven't exceeded allowed strength */
-            fraction = 1;
-            if (param && SL->corr_limit[sl_index])
-              if ((fraction = SL->corr_limit[sl_index]/fabs(param))>1)
-                fraction = 1;
-            lastValue = *((double*)(corr->p_elem+kick_offset)) = param*fraction;
-            if (corr->matrix) {
-              free_matrices(corr->matrix);
-              tfree(corr->matrix);
-              corr->matrix = NULL;
-            }
-            compute_matrix(corr, run, NULL);
-            if (beamline->links)
-              assert_element_links(beamline->links, run, beamline, DYNAMIC_LINK);
-            
-            /* indicate that beamline concatenation and Twiss parameter computation (if wanted) are not current */
-            beamline->flags &= ~BEAMLINE_CONCAT_CURRENT;
-            beamline->flags &= ~BEAMLINE_TWISS_CURRENT;
-            
-            /* -- Find trajectory */
-            p = sqrt(sqr(run->ideal_gamma)-1);
-            if (!beam) {
-              if (!starting_coord)
-                fill_double_array(*particle, 7, 0.0);
-              else {
-                for (i=0; i<7; i++)
-                  particle[0][i] = starting_coord[i];
+          improved = 0;
+          for (direction=-1; !improved && !done && direction<2 ; direction+=2) {
+            worsened = 0;
+            for (iScan=0; !worsened && !done && iScan<nScan; iScan++) {
+              /* -- Compute new value of the parameter
+               *    NewValue = OldValue + CorrectorTweek 
+               */
+              param = origValue 
+                + SL->corr_tweek[sl_index]/CM->kick_coef[i_corr]*iScan*scanStep*direction;
+              /* Check that we haven't exceeded allowed strength */
+              fraction = 1;
+              if (param && SL->corr_limit[sl_index])
+                if ((fraction = SL->corr_limit[sl_index]/fabs(param))>1)
+                  fraction = 1;
+              lastValue = *((double*)(corr->p_elem+kick_offset)) = param*fraction;
+              if (corr->matrix) {
+                free_matrices(corr->matrix);
+                tfree(corr->matrix);
+                corr->matrix = NULL;
               }
-              n_part = 1;
-            }
-            else
-              copy_particles(particle, beam->particle, n_part=beam->n_to_track);
-            n_left = do_tracking(NULL, particle, n_part, NULL, beamline, &p, (double**)NULL, 
-                                 (BEAM_SUMS**)NULL, (long*)NULL,
-                                 traj, run, 0, tracking_flags, 1, 0, NULL, NULL, NULL, NULL, NULL);
-            /* Determine if this is better than the previous best */
-            if (n_left!=n_part) {
-              for (iElem=0; iElem<nElems; iElem++) {
-                if (traj[iElem].n_part==0)
-                  break;
+              compute_matrix(corr, run, NULL);
+              if (beamline->links)
+                assert_element_links(beamline->links, run, beamline, DYNAMIC_LINK);
+              
+              /* indicate that beamline concatenation and Twiss parameter computation (if wanted) are not current */
+              beamline->flags &= ~BEAMLINE_CONCAT_CURRENT;
+              beamline->flags &= ~BEAMLINE_TWISS_CURRENT;
+              
+              /* -- Find trajectory */
+              p = sqrt(sqr(run->ideal_gamma)-1);
+              if (!beam) {
+                if (!starting_coord)
+                  fill_double_array(*particle, 7, 0.0);
+                else {
+                  for (i=0; i<7; i++)
+                    particle[0][i] = starting_coord[i];
+                }
+                n_part = 1;
               }
-              if (iElem>iBest) {
-                iBest = iElem;
+              else
+                copy_particles(particle, beam->particle, n_part=beam->n_to_track);
+              n_left = do_tracking(NULL, particle, n_part, NULL, beamline, &p, (double**)NULL, 
+                                   (BEAM_SUMS**)NULL, (long*)NULL,
+                                   traj, run, 0, tracking_flags, 1, 0, NULL, NULL, NULL, NULL, NULL);
+              /* Determine if this is better than the previous best */
+              if (n_left!=n_part) {
+                for (iElem=0; iElem<nElems; iElem++) {
+                  if (traj[iElem].n_part==0)
+                    break;
+                }
+                if (iElem>iBest) {
+                  iBest = iElem;
+                  bestValue = *((double*)(corr->p_elem+kick_offset));
+                  improved = 1;
+                } else if (iElem<iBest) {
+                  /* getting worse, so quit this scan */
+                  worsened = 1;
+                }
+              } else {
+                /* Made it to the end, so quit */
+                iBest = nElems;
                 bestValue = *((double*)(corr->p_elem+kick_offset));
+                done = 1;
+                break;
               }
-            } else {
-              iBest = nElems;
-              bestValue = *((double*)(corr->p_elem+kick_offset));
-              done = 1;
-              break;
             }
           }
           
