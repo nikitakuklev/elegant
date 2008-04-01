@@ -2760,6 +2760,7 @@ extern long remove_outlier_particles(double **initial, CLEAN *clean, long np,
 				     double **accepted, double z, double Po);  
 extern long beam_scraper(double **initial, SCRAPER *scraper, long np, double **accepted, double z,
     double P_central);
+void interpretScraperDirection(SCRAPER *scraper);
 extern long track_through_pfilter(double **initial, PFILTER *pfilter, long np, 
                                   double **accepted, double z, double Po);
 long removeInvalidParticles(double **coord, long np, double **accepted,
