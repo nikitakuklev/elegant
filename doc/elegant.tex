@@ -3184,7 +3184,9 @@ exit of each element, unless otherwise noted.
 \item {\tt etax} and {\tt etay} --- The horizontal and vertical dispersion functions.
 \item {\tt etaxp} and {\tt etayp} --- The slopes of the horizontal and vertical dispersion functions.
 \item {\tt xAperture} and {\tt yAperture} --- The horizontal and vertical apertures.  If undefined, will have a 
-  value of 0.
+ value of 10m.  If the beam trajectory is non-zero, then the aperture will be changed (usually reduced) accordingly.  Hence, these
+ are best understood as the {\tt effective} apertures.  They are used in determining the horizontal and vertical acceptance
+ parameters, {\tt Ax} and {\tt Ay}.
 \item {\tt pCentral0} --- The central momentum ($\beta\gamma$) at the {\bf entrance} to the element.
 \item {\tt dI}{\em n} --- Contribution to radiation integral {\tt I}{\em n}.  Radiation integrals take account of
   horizontal bending only.
