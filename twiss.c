@@ -1677,24 +1677,25 @@ double find_acceptance(
                        ELEMENT_LIST *elem, long plane, RUN *run, char **name, double *z
                        )
 {
-  double beta, acceptance, tmp, last_z, *last_aperture;
-  double tube_aperture, aperture, centroid, room;
-  double other_centroid, a, b, a_tube, b_tube;
+  double beta, acceptance, tmp;
+  double tube_aperture, aperture, centroid, offset;
+  double other_centroid, a, b, a_tube, b_tube, aperture1;
+  long aperture_set, elliptical_tube, tube_set;
   SCRAPER *scraper;
   ELEMENT_LIST *ap_elem;
 
   log_entry("find_acceptance");
 
   acceptance = tube_aperture = a_tube = b_tube = 0;
-  last_z = 0;
-  last_aperture = NULL;
+  elliptical_tube = tube_set = 0;
   *name = NULL;
-  *z = 0;
+  *z = -DBL_MAX;
   while (elem) {
     beta = *(((double*)elem->twiss) + (plane?TWISS_Y_OFFSET:0));
     centroid = *(((double*)elem->twiss) + (plane?1:0) + TWISS_CENT_OFFSET);
     other_centroid = *(((double*)elem->twiss) + (plane?0:1) + TWISS_CENT_OFFSET);
     aperture = 0;
+    aperture_set = 0;
     if (!has_aperture(elem) && has_aperture(elem->succ))
       ap_elem = elem->succ;
     else
@@ -1702,13 +1703,19 @@ double find_acceptance(
     switch (ap_elem->type) {
     case T_MAXAMP:
       if (((MAXAMP*)ap_elem->p_elem)->elliptical==0) {
+        elliptical_tube = tube_set = aperture_set = 0;
         if (plane)
-          tube_aperture = aperture = ((MAXAMP*)ap_elem->p_elem)->y_max;
+          tube_aperture = ((MAXAMP*)ap_elem->p_elem)->y_max;
         else
-          tube_aperture = aperture = ((MAXAMP*)ap_elem->p_elem)->x_max;
-        a_tube = b_tube = 0;
-      }
-      else {
+          tube_aperture = ((MAXAMP*)ap_elem->p_elem)->x_max;
+        if (tube_aperture>0) {
+          aperture = tube_aperture - fabs(centroid);
+          aperture_set = 1;
+          tube_set = 1;
+        }
+      } else {
+        elliptical_tube = 1;
+        tube_set = aperture_set = 0;
         if (plane) {
           a_tube = ((MAXAMP*)ap_elem->p_elem)->y_max;
           b_tube = ((MAXAMP*)ap_elem->p_elem)->x_max;
@@ -1717,106 +1724,136 @@ double find_acceptance(
           a_tube = ((MAXAMP*)ap_elem->p_elem)->x_max;
           b_tube = ((MAXAMP*)ap_elem->p_elem)->y_max;
         }
-        if ((aperture = sqr(a_tube)*(1 - sqr(other_centroid/b_tube)))<0)
-          aperture = 0;
-        else
-          aperture = sqrt(aperture);
+        if (a_tube>0) {
+          if (b_tube>0) {
+            if ((aperture = sqr(a_tube)*(1 - sqr(other_centroid/b_tube)))<0)
+              aperture = 0;
+          } else
+            aperture = sqr(a_tube);
+          aperture = sqrt(aperture) - fabs(centroid);
+          aperture_set = 1;
+          tube_set = 1;
+        }
       }
       break;
     case T_RCOL:
       if (plane) {
-        centroid -= ((RCOL*)ap_elem->p_elem)->dy;
-        other_centroid -= ((RCOL*)ap_elem->p_elem)->dx;
+        if (((RCOL*)ap_elem->p_elem)->y_max>0) {
+          aperture = ((RCOL*)ap_elem->p_elem)->y_max;
+          offset = ((RCOL*)ap_elem->p_elem)->dy;
+          aperture_set = 1;
+        }
+      } else {
+        if (((RCOL*)ap_elem->p_elem)->x_max>0) {
+          aperture = ((RCOL*)ap_elem->p_elem)->x_max;
+          offset = ((RCOL*)ap_elem->p_elem)->dx;
+          aperture_set = 1;
+        }
       }
-      else {
-        centroid -= ((RCOL*)ap_elem->p_elem)->dx;
-        other_centroid -= ((RCOL*)ap_elem->p_elem)->dy;
-      }
-      if (plane)
-        aperture = ((RCOL*)ap_elem->p_elem)->y_max;
-      else
-        aperture = ((RCOL*)ap_elem->p_elem)->x_max;
+      if (aperture_set)
+        aperture = aperture - fabs(centroid-offset);
       break;
     case T_ECOL:
       if (plane) {
-        centroid -= ((ECOL*)ap_elem->p_elem)->dy;
-        other_centroid -= ((ECOL*)ap_elem->p_elem)->dx;
-      }
-      else {
-        centroid -= ((ECOL*)ap_elem->p_elem)->dx;
-        other_centroid -= ((ECOL*)ap_elem->p_elem)->dy;
-      }
-      if (plane) {
         a = ((ECOL*)ap_elem->p_elem)->y_max;
         b = ((ECOL*)ap_elem->p_elem)->x_max;
-      }
-      else {
+        if (a>0) {
+          centroid -= ((ECOL*)ap_elem->p_elem)->dy;
+          other_centroid -= ((ECOL*)ap_elem->p_elem)->dx;
+          aperture_set = 1;
+        }
+      } else {
         a = ((ECOL*)ap_elem->p_elem)->x_max;
         b = ((ECOL*)ap_elem->p_elem)->y_max;
+        if (a>0) {
+          centroid -= ((ECOL*)ap_elem->p_elem)->dx;
+          other_centroid -= ((ECOL*)ap_elem->p_elem)->dy;
+          aperture_set = 1;
+        }
       }
-      if ((aperture = sqr(a)*(1 - sqr(other_centroid/b)))<0)
-        aperture = DBL_MIN;
-      else
-        aperture = sqrt(aperture);
+      if (aperture_set) {
+        if (b>0) {
+          if ((aperture = sqr(a)*(1 - sqr(other_centroid/b)))<0)
+            aperture = 0;
+        } else
+          aperture = sqr(a);
+        aperture = sqrt(aperture) - fabs(centroid);
+      }
       break;
     case T_SCRAPER:
       scraper = (SCRAPER*)ap_elem->p_elem;
       if (plane) {
-        centroid -= scraper->dy;
-        other_centroid -= scraper->dx;
-      }
-      else {
-        centroid -= scraper->dx;
-        other_centroid -= scraper->dy;
-      }
-      if (plane) {
-        if (scraper->direction==1 || scraper->direction==3)
-          aperture = fabs(scraper->position);
-      }
-      else {
-        if (scraper->direction==0 || scraper->direction==2)
-          aperture = fabs(scraper->position);
+        if (scraper->direction==1 || scraper->direction==3) {
+          offset = scraper->dy;
+          aperture = scraper->position + offset - centroid;
+          if (scraper->direction==3)
+            aperture = -aperture;
+          aperture_set = 1;
+        }
+      } else {
+        if (scraper->direction==0 || scraper->direction==2) {
+          offset = scraper->dx;
+          aperture = scraper->position + offset - centroid;
+          if (scraper->direction==2)
+            aperture = -aperture;
+          aperture_set = 1;
+        }
       }
       break;
     default:
-      if (a_tube && b_tube) {
-        if ((aperture = sqr(a_tube)*(1-sqr(other_centroid/b_tube)))<0)
-          aperture = DBL_MIN;
-        else
-          aperture = sqrt(aperture);
-      }
-      else {
-        aperture = tube_aperture;
-      }
       break;
     }
-    if (aperture) {
-      if ((room=aperture-fabs(centroid))>0) {
-        if (((tmp=sqr(room)/beta)<acceptance || !acceptance)) {
-          *name = elem->name;
-          *z = elem->end_pos;
-          acceptance = tmp;
+    if (run->apertureData.initialized) {
+      /* Find aperture from the aperture data file */
+      double dx, dy, xsize, ysize;
+      if (interpolateApertureData(elem->end_pos, &(run->apertureData), &dx, &dy, &xsize, &ysize)) {
+        centroid = *(((double*)elem->twiss) + (plane?1:0) + TWISS_CENT_OFFSET);
+        if (plane) {
+          aperture1 = ysize;
+          offset = dy;
+        } else {
+          aperture1 = xsize;
+          offset = dx;
+        }
+        aperture1 = aperture1 - fabs(centroid-offset);
+        if (!aperture_set || aperture1<aperture) {
+          aperture = aperture1;
+          aperture_set = 1;
         }
       }
-      else {
+    }
+    if (tube_set) {
+      if (elliptical_tube) {
+        centroid = *(((double*)elem->twiss) + (plane?1:0) + TWISS_CENT_OFFSET);
+        other_centroid = *(((double*)elem->twiss) + (plane?0:1) + TWISS_CENT_OFFSET);
+        if (b_tube>0) {
+          if ((aperture1 = sqr(a_tube)*(1 - sqr(other_centroid/b_tube)))<0)
+            aperture1 = 0;
+        } else 
+          aperture1 = sqr(a_tube);
+        aperture1 = sqrt(aperture1) - fabs(centroid);
+      } else
+        aperture1 = tube_aperture - fabs(centroid);
+      if (!aperture_set || aperture1<aperture) {
+        aperture = aperture1;
+        aperture_set = 1;
+      }
+    }
+    
+    if (aperture_set) {
+      if (((tmp=sqr(aperture)/beta)<acceptance || !acceptance)) {
         *name = elem->name;
         *z = elem->end_pos;
-        acceptance = 0;
-        break;
+        acceptance = tmp;
       }
-    }
-    
-    if (last_aperture) {
-      if (last_z==elem->end_pos) {
-        if (aperture==0)
-          aperture = *last_aperture;
-        else if (*last_aperture==0)
-          *last_aperture = aperture;
-      }
-    }
-    
-    *(last_aperture = (((double*)elem->twiss) + (plane?TWISS_Y_OFFSET:0) + 5)) = aperture;
-    last_z = elem->end_pos;
+    } else
+      aperture = COORD_LIMIT;
+
+    if (plane)
+      elem->twiss->apy = aperture;
+    else
+      elem->twiss->apx = aperture;
+
     elem = elem->succ;
   }
   log_exit("find_acceptance");
@@ -3076,7 +3113,7 @@ void processTwissAnalysisRequests(ELEMENT_LIST *elem)
   long i, is, iq, count, firstTime;
   char buffer[1024];
   ELEMENT_LIST *elemOrig;
-  double value, end_pos, start_pos, dz;
+  double value, end_pos, start_pos;
   double twissData[TWISS_ANALYSIS_STATS][TWISS_ANALYSIS_QUANTITIES];
 
   elemOrig = elem;
