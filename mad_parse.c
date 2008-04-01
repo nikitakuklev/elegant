@@ -234,8 +234,13 @@ long is_simple(char *s)
 
 void fill_elem(ELEMENT_LIST *eptr, char *s, long type, FILE *fp_input)
 {
-    log_entry("fill_elem");
-    eptr->end_pos = eptr->flags = 0;
+  BEND *bptr;
+  MATR *matr;
+  FILE *fpm;
+  char *filename;
+
+  log_entry("fill_elem");
+  eptr->end_pos = eptr->flags = 0;
 
     if ((eptr->type = type)>=N_TYPES || type<=0) {
         fprintf(stdout, "unknown element type %ld in fill_elem()\n", type);
@@ -263,39 +268,45 @@ void fill_elem(ELEMENT_LIST *eptr, char *s, long type, FILE *fp_input)
             entity_description[type].n_params,
             s, eptr, entity_name[type]);
     if (type==T_RBEN) {
-      BEND *bptr;
+    }
+    switch (type) {
+    case T_RBEN:
       bptr = (BEND*)(eptr->p_elem);
       bptr->e1 += bptr->angle/2;
       bptr->e2 += bptr->angle/2;
       type = eptr->type = T_SBEN;
       if (fabs(bptr->angle)>1e-14)
         bptr->length *= (bptr->angle/2)/sin(bptr->angle/2);
+      break;
+    case T_PEPPOT:
+      parse_pepper_pot((PEPPOT*)(eptr->p_elem), fp_input, eptr->name);
+      break;
+    case T_MATR:
+      matr = (MATR*)eptr->p_elem;
+      if (!(filename=findFileInSearchPath(matr->filename))) {
+        fprintf(stderr,"Unable to find MATR file %s\n", matr->filename);
+        exit(1);
+      }
+      fprintf(stdout, "File %s found: %s\n", matr->filename, filename);
+      fpm = fopen_e(filename, "r", 0);
+      free(filename);
+      matr->M.order = matr->order;
+      initialize_matrices(&(matr->M), matr->order);
+      if (!read_matrices(&(matr->M), fpm)) {
+        fprintf(stdout, "error reading matrix from file %s\n", matr->filename);
+        fflush(stdout);
+        abort();
+      }
+      fclose(fpm);
+      matr->matrix_read = 1;
+      matr->length = matr->M.C[4];
+      break;
+    case T_SCRAPER:
+      interpretScraperDirection((SCRAPER*)(eptr->p_elem));
+      break;
+    default:
+      break;
     }
-    if (type==T_PEPPOT) 
-        parse_pepper_pot((PEPPOT*)(eptr->p_elem), fp_input, eptr->name);
-    else if (type==T_MATR) {
-        MATR *matr;
-        FILE *fpm;
-        char *filename;
-        matr = (MATR*)eptr->p_elem;
-        if (!(filename=findFileInSearchPath(matr->filename))) {
-          fprintf(stderr,"Unable to find MATR file %s\n", matr->filename);
-          exit(1);
-        }
-        fprintf(stdout, "File %s found: %s\n", matr->filename, filename);
-        fpm = fopen_e(filename, "r", 0);
-        free(filename);
-        matr->M.order = matr->order;
-        initialize_matrices(&(matr->M), matr->order);
-        if (!read_matrices(&(matr->M), fpm)) {
-            fprintf(stdout, "error reading matrix from file %s\n", matr->filename);
-            fflush(stdout);
-            abort();
-            }
-        fclose(fpm);
-        matr->matrix_read = 1;
-        matr->length = matr->M.C[4];
-        }
         
     eptr->flags = PARAMETERS_ARE_STATIC;     /* default, to be changed by variation and error settings */
     log_exit("fill_elem");
@@ -1003,3 +1014,25 @@ void parse_pepper_pot(
     log_exit("parse_pepper_pot");
     }
 
+void interpretScraperDirection(SCRAPER *scraper)
+{
+  if (scraper->insert_from) {
+    switch (toupper(scraper->insert_from[1])) {
+    case 'Y': case 'V':
+      scraper->direction = 1;
+      break;
+    case 'X': case 'H':
+      scraper->direction = 0;
+      break;
+    default:
+      fprintf(stdout, "Error: invalid scraper insert_from parameter: %s\n",
+              scraper->insert_from);
+      fflush(stdout);
+      bomb("scraper insert_from axis letter is not one of x, h, y, or v", NULL);
+      break;
+    }
+    if (scraper->insert_from[0]=='-')
+      scraper->direction += 2;
+    scraper->insert_from = NULL;
+  }
+}

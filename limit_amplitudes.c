@@ -439,25 +439,6 @@ long beam_scraper(
 
   log_entry("beam_scraper");
 
-  if (scraper->insert_from) {
-    switch (toupper(scraper->insert_from[1])) {
-    case 'Y': case 'V':
-      scraper->direction = 1;
-      break;
-    case 'X': case 'H':
-      scraper->direction = 0;
-      break;
-    default:
-      fprintf(stdout, "Error: invalid scraper insert_from parameter: %s\n",
-              scraper->insert_from);
-      fflush(stdout);
-      bomb("scraper insert_from axis letter is not one of x, h, y, or v", NULL);
-      break;
-    }
-    if (scraper->insert_from[0]=='-')
-      scraper->direction += 2;
-    scraper->insert_from = NULL;
-  }
   if (scraper->direction<0 || scraper->direction>3)
     return np;
   
@@ -939,8 +920,6 @@ long interpolateApertureData(double z, APERTURE_DATA *apData,
   return 1;
 }
 
-
-#define DEBUG_APERTURE 0
 
 long imposeApertureData(
                         double **initial, long np, double **accepted,
