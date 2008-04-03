@@ -2001,15 +2001,18 @@ using values at marker elements.  See the documentation for
     double y_initial = 0;
     double delta_negative_start = -0.10;
     double delta_positive_start = 0.10;
-    long delta_step_size = 0.01;
+    double delta_step_size = 0.01;
     long oversteps = 1;
-    long splits = 2;
     long steps_back = 4;
+    long splits = 2;
+    long split_step_divisor = 10;
+    long skip_elements = 0;
+    long process_elements = 2147483647;
     double s_start = 0;
     double s_end = DBL_MAX;
     STRING include_name_pattern = NULL;
     long fiducialize = 0;
-    long verbosity = 0;        
+    long verbosity = 1;
 &end
 \end{verbatim}
 
@@ -2025,24 +2028,39 @@ directions. Scanning begins at these and moves toward 0.
  be fairly large in order to save time.
 \item \verb|oversteps| --- Number of step sizes to go past the point of first
  survival before reversing the direction of scanning.
-\item \verb|splits| --- Number of times to split the step size in
- order to refine the location of the maximum surviving momentum
- offsets.  When a particle is lost, the algorithm steps back to a momentum offset
- where a particle survived, subdivides the step size, and continues searching.  
+
 \item \verb|steps_back| --- When performing interval splitting, when a particle is
  lost, the algorithm steps back to a momentum offset where a particle survived.
  This method helps to ensure that the algorithm did not find a stable island.
  This is the number of steps to go back. 
+
+\item \verb|splits| --- Number of times to split the step size in
+ order to refine the location of the maximum surviving momentum
+ offsets.  When a particle is lost, the algorithm steps back to a momentum offset
+ where a particle survived, subdivides the step size, and continues searching.  
+
+\item \verb|split_step_divisor| --- Factor by which to subdivide the step size
+  for each split.
+
+\item \verb|skip_elements| --- Number of elements to skip before starting to
+  compute momentum apertures.
+
+\item \verb|process_elements| --- Number of elements for which to compute
+  momentum aperture.
+
 \item \verb|s_start|, \verb|s_end| --- Limiting s coordinates of the
  elements from which tracking will start.  The default values will
  exclude no elements.
+
 \item \verb|include_name_pattern| --- If given, tracking will start
 only at the entrance to elements that match the given wildcard
 pattern.
+
 \item \verb|fiducialize| --- If given, an initially on-energy particle is tracked before
  the momentum aperture search begins, in order to fiducialize the reference momentum.
  This is useful if there are synchrotron radiation losses or energy gain due to cavities
  in the system.
+
 \item \verb|verbosity| --- Larger values result in more detailed
 printouts as calculations proceed.  Mostly for debugging.
 \end{itemize}
