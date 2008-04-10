@@ -2108,7 +2108,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     { N_TFBDRIVER_PARAMS, UNIPROCESSOR|RUN_ZERO_PARTICLES,     sizeof(TFBDRIVER),  tfbdriver_param    },
     { N_LSCDRIFT_PARAMS, MAT_LEN_NCAT|MPALGORITHM,     sizeof(LSCDRIFT),  lscdrift_param    },
     { N_DSCATTER_PARAMS,          UNIPROCESSOR,     sizeof(DSCATTER),    dscatter_param  },
-    { N_LSRMDLTR_PARAMS,    MAT_LEN_NCAT|UNIPROCESSOR, sizeof(LSRMDLTR), lsrMdltr_param },
+    { N_LSRMDLTR_PARAMS,    MAT_LEN_NCAT, sizeof(LSRMDLTR), lsrMdltr_param },
     { N_TAYLORSERIES_PARAMS, MAT_LEN_NCAT|IS_MAGNET|NO_DICT_OUTPUT,    sizeof(TAYLORSERIES),  taylorSeries_param  },
     {    N_RFTM110_PARAMS,  0|MPALGORITHM,       sizeof(RFTM110),    rftm110_param     }, 
     {   N_CWIGGLER_PARAMS,  MAT_LEN_NCAT|IS_MAGNET, sizeof(CWIGGLER),    cwiggler_param     }, 
