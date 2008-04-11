@@ -787,7 +787,7 @@ extern char *entity_text[N_TYPES];
 #define N_FTRFMODE_PARAMS 13
 #define N_TFBPICKUP_PARAMS 18
 #define N_TFBDRIVER_PARAMS 20
-#define N_LSCDRIFT_PARAMS  9
+#define N_LSCDRIFT_PARAMS  10
 #define N_DSCATTER_PARAMS 14
 #define N_LSRMDLTR_PARAMS 14
 #define N_TAYLORSERIES_PARAMS 6
@@ -2312,7 +2312,7 @@ typedef struct {
 /* Longitudinal space-charge drift */
 extern PARAMETER lscdrift_param[N_LSCDRIFT_PARAMS];
 typedef struct {
-  double length;
+  double length, lEffective;
   long bins;
   long smoothing, SGHalfWidth, SGOrder, interpolate;
   double highFrequencyCutoff0, highFrequencyCutoff1, radiusFactor;

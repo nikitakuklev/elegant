@@ -26,6 +26,7 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
   static double *time = NULL;            /* array to record arrival time of each particle */
   static long max_np = 0;
   double *Vfreq, ZImag;
+  short kickMode = 0;
   long ib, nb, n_binned, nfreq, iReal, iImag;
   double factor, tmin, tmax, tmean, dt, df, dk, a1, a2;
   double lengthLeft, Imin, Imax, kSC, Zmax;
@@ -77,7 +78,10 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
       }
     }
 #endif 
-  lengthLeft = LSC->length;
+  if ((lengthLeft = LSC->length)==0) {
+    lengthLeft = LSC->lEffective;
+    kickMode = 1;
+  }
   while (lengthLeft>0) {
     /* compute time coordinates and make histogram */
     if (isSlave ||  !notSinglePart)
@@ -173,7 +177,7 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
     kSC = 2/beamRadius*sqrt(Imax/ipow(Po,3)/Ia);
     /* - compute length to drift */
     length = 0.1/kSC;
-    if (length>lengthLeft)
+    if (length>lengthLeft && kickMode)
       length = lengthLeft;
     /* - compute values for computing impedance */
     df = 1./(dt*nb);
@@ -276,12 +280,13 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
     if (isSlave) {
       applyLongitudinalWakeKicks(part, time, pbin, np, Po, Vtime, 
 				 nb, tmin, dt, LSC->interpolate);
-
-      /* advance particles to the next step */
-      for (ib=0; ib<np; ib++) {
-	part[ib][4] += length*sqrt(1+sqr(part[ib][1])+sqr(part[ib][3]));
-	part[ib][0] += length*part[ib][1];
-	part[ib][2] += length*part[ib][3];
+      if (!kickMode) {
+        /* advance particles to the next step */
+        for (ib=0; ib<np; ib++) {
+          part[ib][4] += length*sqrt(1+sqr(part[ib][1])+sqr(part[ib][3]));
+          part[ib][0] += length*part[ib][1];
+          part[ib][2] += length*part[ib][3];
+        }
       }
     }
     lengthLeft -= length;
