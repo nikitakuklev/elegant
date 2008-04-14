@@ -4,6 +4,9 @@
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.7  2008/02/21 00:05:55  borland
+# Allow up to 5 (instead of 4) parameter files.
+#
 # Revision 1.6  2007/12/21 17:03:36  borland
 # Added control for body order in matrix dipoles.
 #
@@ -922,13 +925,13 @@ proc FillMomentumApertureFrame {widget args} {
       "Enter the initial y coordinate relative to the closed orbit."
 
     APSLabeledEntry .ledns -parent $widget \
-      -label "Negative delta start: " -width 20 \
-      -textVariable momentumAperture(deltaNegativeStart) \
+      -label "Negative delta limit: " -width 20 \
+      -textVariable momentumAperture(deltaNegativeLimit) \
       -contextHelp \
-      "Enter the starting value for delta for the negative-side scan."
+      "Enter the limiting value for delta for the negative-side scan."
     APSLabeledEntry .ledps -parent $widget \
-      -label "Positive delta start: " -width 20 \
-      -textVariable momentumAperture(deltaPositiveStart) \
+      -label "Positive delta limit: " -width 20 \
+      -textVariable momentumAperture(deltaPositiveLimit) \
       -contextHelp \
       "Enter the starting value for delta for the positive-side scan."
 
@@ -936,21 +939,13 @@ proc FillMomentumApertureFrame {widget args} {
       -label "Initial delta step: " \
       -width 20 -textVariable momentumAperture(initialDeltaStep) \
       -contextHelp "Initial step size for delta."
-    APSLabeledEntry .leos -parent $widget -type integer \
-      -label "Over steps: " -width 20 -textVariable momentumAperture(oversteps) \
-      -contextHelp \
-      "Enter the number of steps to go beyond the first surviving particle before scanning back toward the point of loss."
     APSLabeledEntry .lesp -parent $widget -type integer \
       -label "Splits: " -width 20 -textVariable momentumAperture(splits) \
       -contextHelp \
       "Enter the number of interval splits."
-    APSLabeledEntry .lesb -parent $widget -type integer \
-      -label "Steps back before splitting: " -width 20 -textVariable momentumAperture(stepsBack) \
-      -contextHelp \
-      "Enter the number of steps back from a loss position before scan restart."
     APSLabeledEntry .splitdiv -parent $widget -type integer \
       -label "Step size divisor: " -width 20 -textVariable momentumAperture(stepDivisor) \
-      -label "Divisor for step size when splitting and stepping back." \
+      -label "Divisor for step size when splitting." \
 
     APSLabeledEntry .les0 -parent $widget \
       -label "Starting s (m): " -width 20 -textVariable momentumAperture(sStart) \

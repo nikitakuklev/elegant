@@ -9,11 +9,9 @@
     STRING output = NULL;
     double x_initial = 0;
     double y_initial = 0;
-    double delta_negative_start = -0.10;
-    double delta_positive_start = 0.10;
+    double delta_negative_limit = -0.10;
+    double delta_positive_limit = 0.10;
     double delta_step_size = 0.01;
-    long oversteps = 1;
-    long steps_back = 4;
     long splits = 2;
     long split_step_divisor = 10;
     long skip_elements = 0;
