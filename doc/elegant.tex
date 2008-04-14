@@ -17,19 +17,13 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 18.1.4\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
+\author{Program Version 19.0\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
 \maketitle
 
-\section{Highlights of What's New in Version 18.1.4}
+\section{Highlights of What's New in Version 19.0}
 
-This release has a major new feature for storage ring simulation,
-namely, computation and optimization of fully coupled beam moments in
-the presence of synchrotron radiation and damping.  There are also
-several some significant bug fixes as well as numerous feature improvements.
-The \verb|CWIGGLER| element in particular was much improved.
-The set of examples runs has also been expanded.
 
-Here is a summary of what's changed since release 17.2.2.  For details
+Here is a summary of what's changed since release 18.1.  For details
 and references, see the specific entries in the manual.
 
 \subsection{Known Bugs and Problems}
@@ -48,113 +42,24 @@ and references, see the specific entries in the manual.
 \end{itemize}
 
 \subsection{Bug Fixes for Elements}
-\begin{itemize}
-\item An error was discovered in Y. Wu's C code version of the integrator for a vertical wiggler, used by 
- the {\tt CWIGGLER} element.  This was confirmed with Y. Wu and corrected.  Simulations with horizontal field
- components should be repeated to check results.
-\item An error was fixed in field computations for vertical wigglers that had very small effects on
- synchrotron radiation modeling.  
-\item A memory access error was discovered in the low-pass filtering routine used by {\tt ZLONGIT} and
- {\tt ZTRANSVERSE}, which would cause a crash on some recent Linux systems.  This was corrected. 
- Very small changes have been observed in some results.
-\item A bug was fixed in handling sequences of \verb|CSBEND| elements with the same name with no separating
- elements (or none other than markers).  The edge effects were included between the dipoles, which is incorrect.
- This bug was reported by Y. Roblin (TJNAF).
-\item If the bending radius of a \verb|CSBEND| or \verb|CSRCSBEND| exceeds $10^6$ m, it is treated as a drift space to
- prevent numerical problems.  This bug was found in a lattice provided by J. Wu (SLAC).
-\item The matrix for the \verb|RFCA| element was incorrect when the phase was different from 0 to 180 degrees and
- the cavity was {\em not} used for acceleration.    This might have affected some storage ring lattice computations.
-\item The \verb|GROUP| parameter, used for assigning elements to named groups, now appears in the dictionary lists.
-\item Fixed bugs in creating histograms with \verb|HISTOGRAM| when all particles were lost on one processor.  The
- tolerance on the range was increased to avoid dropping particles.  This was done by Y. Wang (APS).
-\item Fixed problem with output when the \verb|START_PASS| is not zero for dumping \verb|WATCH| parameters.
-\end{itemize}
 
 \subsection{Bug Fixes for Commands}
-\begin{itemize}
-\item A bug was fixed in chromaticity correction that resulted in incorrect reporting of maximum $K_2$ values.  Another bug
- was fixed that sometimes resulted in nonconvergence of chromaticity correction when \verb|link_elements| was used in an 
- unusual way (namely, when the baseline value feature on the stack was used).
-\item When trajectories are corrected in one-to-one mode using \verb|correct|, the program now uses the first BPM after
- each corrector.  Previously, it might use the wrong BPM if the number of BPMs was greater than the number of correctors.
- Also, in this mode the response matrix is no longer inverted, which saves time.  
-\item For \verb|insert_sceffects|, a memory allocation bug that sometimes caused a crash was fixed.  This was found and fixed
- by A. Xiao (APS).
-\item The command parser was modified to permit execution of expressions in the rpn calculator module for assignment 
- to command parameters.  This is done by enclosing the expression in parenthesis.  See section 5 for details.
- This was implemented by R. Soliday (APS).
-\end{itemize}
 
 \subsection{New and Modified Elements}
-\begin{itemize}
-\item The {\tt CWIGGLER} element was given a major upgrade.  The
- primary new feature is better handling of helical devices, including
- new field expansions appropriate for APPLE-type devices and
- adjustments to match the dispersion in both planes.  Convenience
- features were added to allow modeling more device types without
- specifying a harmonic expansion file.  A check was added for
- insufficient number of integration steps compared to field harmonics.
- The user may request output of the fields as seen by the particles.
-
- It is now possible to perform parameter scans, for example of the
- field strength, using \verb|vary_element|.  User may now specify an
- output filename for field samples.  The linear transfer matrix, used
- for optics calculations, is computed from tracking and thus includes
- both vertical and horizontal focusing.  Radiation integral
- computations (for output by the \verb|twiss_output| command) are more
- accurate and include contributions to $I_2$ and $I_3$ from horizontal fields.
-
-\item The {\tt TWISS} element can now perform transformations based on analysis of the
- beam being tracked.  Previously, the transformation was based on the twiss parameters from the {\tt twiss\_output}
- command only.  Insignificant changes in results may be observed in other modes due to rearrangement of the code.
-\item Longitudinal space charge is now available for the {\tt RFCW} element even when the SRS body focus
- model is used.  This applies to the parallel and serial versions.
-\item Elements of type {\tt CSBEND}, {\tt KQUAD}, and {\tt KSEXT} are now splittable using the \verb|divide_elements| command and the
- \verb|element_divisions| control in \verb|run_setup|.
-
-\end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item The \verb|moments_output| command was added, which allows computation, output, and optimization of the results
- of beam moments propagation.  Synchrotron radiation and damping may optionally be included. One may find closed solutions
- (for rings) or simply propagate moments from a defined starting point.
-\item The \verb|alter_elements| command now has several features that allow restricting the application of the alteration,
- based on position, occurence number, and position relative to other elements.  This was requested by V. Sajaev (APS).
-\item The {\tt error\_control} command now accepts an overall error factor that is applied to all
- error amplitudes.
-\item The \verb|optimization_term| command now includes the ability to create a sequence of terms by substitution of a
- sequence of numerical values into the term definition.  This uses the new \verb|field_string| feature.
-\item The lattice parser was changed to allow insertion or omission of underscores in field names
- without penalty.  E.g., {\tt Q1: KQUAD,N\_KICKS=4} and {\tt Q1: KQUAD,NKICKS=4} will both be accepted in the lattice file.
- Note that in other contexts, such as altering elements, adding errors, or loading parameters from an SDDS file, one must
- still observe the correct spelling as given in the element dictionary.
-\item When lattices are saved with \verb|save_lattice|, the element and beamline definitions are now saved in the 
- same order as in the original file. 
-\item The \verb|correct| command (for orbit or trajectory correction)
- now has a parameter that specifies the minimum number of x-y cycles
- to perform before giving up.
+\item The algorithm for the \verb|momentum_aperture| command was changed, to address reproducibility issues
+ with the old algorithm.  The old algorithm searched from the outside (large momentum deviation), which seemed to 
+ sometimes cause it to find stable islands.  The new algorithm searches from the inside and provides more
+ consistent results.
+ Unfortunately, this change is not backward compatible.
 \end{itemize}
 
 \subsection{Improvements and Bug Fixes for Parallel Version}
 
-This work was performed by Y. Wang (APS).
-\begin{itemize}
-\item It is now possible to run in parallel mode even when the first tracking step is set to fiducialization using
- \verb|first_is_fiducial=1| in \verb|run_control|. 
-\item Improved memory usage efficiency to allow {\tt Pelegant} run larger simulations.  We've run up to 60 million particles
- for the FERMI@ELETTRA FEL driver using this version.   The current memory bottleneck on master will be
- eliminated in the next version with parallel I/O.
-\item Parallelized longitudinal space charge when used as part of an \verb|RFCW| element.
-\end{itemize}
-
-
 
 \subsection{Changes to Related Programs and Files}
-\begin{itemize}
-\item The set of example runs has been significantly expanded.  These are distributed as a separate file.
-\item The program {\tt ibsEmittance} was revised to forestall confusion by adding more data to the output file.
-\end{itemize}
 
 \section{Credits}
 
@@ -1999,11 +1904,9 @@ using values at marker elements.  See the documentation for
     STRING output = NULL;
     double x_initial = 0;
     double y_initial = 0;
-    double delta_negative_start = -0.10;
-    double delta_positive_start = 0.10;
+    double delta_negative_limit = -0.10;
+    double delta_positive_limit = 0.10;
     double delta_step_size = 0.01;
-    long oversteps = 1;
-    long steps_back = 4;
     long splits = 2;
     long split_step_divisor = 10;
     long skip_elements = 0;
@@ -2021,18 +1924,11 @@ using values at marker elements.  See the documentation for
   Recommended value: ``\%s.mmap''.
 \item \verb|x_initial|, \verb|y_initial| --- The initial x and y coordinate values for tracking. It is essential
  that \verb|y_initial| be nonzero if one wants to see losses due to vertical resonances.  
-\item \verb|delta_negative_start|, \verb|delta_positive_start| ---
-Start values of scans in the negative and positive
-directions. Scanning begins at these and moves toward 0.
+\item \verb|delta_negative_limit|, \verb|delta_positive_limit| ---
+Limiting values of scans in the negative and positive
+directions. Scanning begins at 0 and moves to to these values, but never beyond. 
 \item \verb|delta_step_size| --- Initial size of steps in $\delta$.  This should
  be fairly large in order to save time.
-\item \verb|oversteps| --- Number of step sizes to go past the point of first
- survival before reversing the direction of scanning.
-
-\item \verb|steps_back| --- When performing interval splitting, when a particle is
- lost, the algorithm steps back to a momentum offset where a particle survived.
- This method helps to ensure that the algorithm did not find a stable island.
- This is the number of steps to go back. 
 
 \item \verb|splits| --- Number of times to split the step size in
  order to refine the location of the maximum surviving momentum
@@ -2076,24 +1972,22 @@ initially zero (or very small), while the momentum deviation is
 gradually increased until loss of the particle is observed.  This
 defines the momentum aperture at that location.
 
-In {\tt elegant}, the algorithm is as follows.  For simplicity in
+In {\tt elegant} version 19.0 and later, the algorithm is as follows.  For simplicity in
 wording, we'll assume the momentum deviations are positive values,
 although the method is applied separately for negative values as well:
 \begin{enumerate}
-\item Choose a large momentum deviation $\delta$ (e.g., 10\%) that is sure to be lost, and track.
-\item Decrease $\delta$ in fairly large steps $\Delta\delta_0$ (e.g., 1\%) until the particle survives.
- Call this momentum deviation $\delta_{s1}$ and the previous value (where the particle was lost)
- $\delta_{l1}$.
-\item Scan outward from $\delta_{s1}-J\Delta\delta$, where the integer $J$ is the ``overstep'' amount,
- typically 1.
- Use a step-size of $\Delta\delta_1 = \Delta\delta_0/D$, where $D$ is an integer (typically 10), 
- not exceeding $\delta_{l1}$.  Stop when a loss occurs.  Call this momentum deviation
- $\delta_{l2}$ and the last surviving value $\delta_{s2}$.
-\item If accuracy is acceptable, stop at this point.  The momentum aperture is $\delta_{s2}$.
-\item If greater accuracy is desired, ``step back'' to a momentum deviation 
- $\delta_{l2}-B\Delta\delta_1$, where $B$ is an integer and scan outward again 
- with step size $\Delta\delta_1/D$.  This procedure is called a ``step-back/split'' and can be
- repeated if greater accuracy is desired.
+\item Start with $\delta=0$, i.e., zero momentum offset.
+\item Track a particle to see if it gets lost.  If so, proceed to step 4.
+\item Increase $\delta$ by step size $\Delta\delta$ and return to step 2.
+\item If no splitting steps remain, proceed to the next step.  Otherwise:
+\begin{enumerate}
+\item Decrement the ``splits remaining'' counter by 1.
+\item Divide the step size by \verb|split_step_divisor| to get a new step size  $\Delta\delta$.
+\item Set $\delta = \delta_s + \Delta\delta$, where $\delta_s$ is the last momentum offset for
+ which the particle survived.
+\item Continue from step 2.
+\end{enumerate}
+\item Stop.  The momentum aperture is $\delta_s$
 \end{enumerate}
 
 
