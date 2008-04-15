@@ -128,8 +128,8 @@ long doMomentumApertureSearch(
   double deltaInterval, pCentral, deltaStart;
   ELEMENT_LIST *elem, *elem0;
   long **lostOnPass, **loserFound, **survivorFound, *lostOnPass0, side;
-  double deltaLimit[2], **deltaSurvived, delta;
-  double **xLost, **yLost, **deltaLost, **sLost;
+  double deltaLimit[2], deltaLimit1, **deltaWhenLost, delta;
+  double **xLost, **yLost, **deltaSurvived, **sLost, deltaLost;
   double *sStart;
   char **ElementName;
   long code;
@@ -185,7 +185,7 @@ long doMomentumApertureSearch(
   deltaSurvived = (double**)czarray_2d(sizeof(**deltaSurvived), 2, nElem);
   xLost = (double**)czarray_2d(sizeof(**xLost), 2, nElem);
   yLost = (double**)czarray_2d(sizeof(**yLost), 2, nElem);
-  deltaLost = (double**)czarray_2d(sizeof(**deltaLost), 2, nElem);
+  deltaWhenLost = (double**)czarray_2d(sizeof(**deltaWhenLost), 2, nElem);
   sLost = (double**)czarray_2d(sizeof(**sLost), 2, nElem);
   sStart = (double*)tmalloc(sizeof(*sStart)*nElem);
   ElementName = (char**)tmalloc(sizeof(*ElementName)*nElem);
@@ -236,12 +236,13 @@ long doMomentumApertureSearch(
       sStart[iElem] = elem->end_pos;
       for (side=0; side<2; side++) {
         deltaStart = 0;
+        deltaSign = side==0 ? -1 : 1;
         lostOnPass[side][iElem] = -1;
         loserFound[side][iElem] = survivorFound[side][iElem] = 0;
         xLost[side][iElem] = yLost[side][iElem] = 
-          deltaLost[side][iElem] = sLost[side][iElem] = 
+          deltaWhenLost[side][iElem] = sLost[side][iElem] = 
             deltaSurvived[side][iElem] =  0;
-        deltaSign = side==0 ? -1 : 1;
+        deltaLost = deltaSign*DBL_MAX/2;
         deltaInterval = delta_step_size*deltaSign;
         
         if (verbosity>1) {
@@ -249,7 +250,8 @@ long doMomentumApertureSearch(
                   deltaLimit[side], delta_step_size);
           fflush(stdout);
         }
-        
+
+        deltaLimit1 = deltaLimit[side];
         for (split=0; split<=splits; split++) {
           delta = deltaStart;
           
@@ -259,7 +261,7 @@ long doMomentumApertureSearch(
           fflush(fpdeb);
 #endif
 
-          do {
+          while (fabs(delta) <= fabs(deltaLimit1)) {
             setTrackingWedgeFunction(momentumOffsetFunction, 
                                      elem->succ?elem->succ:elem0); 
             momentumOffsetValue = delta;
@@ -297,7 +299,8 @@ long doMomentumApertureSearch(
               xLost[side][iElem] = coord[0][0];
               yLost[side][iElem] = coord[0][2];
               sLost[side][iElem] = coord[0][4];
-              deltaLost[side][iElem] = (coord[0][5]-pCentral)/pCentral;
+              deltaLost = delta;
+              deltaWhenLost[side][iElem] = (coord[0][5]-pCentral)/pCentral;
               loserFound[side][iElem] = 1;
               break;
             } else {
@@ -307,7 +310,7 @@ long doMomentumApertureSearch(
               survivorFound[side][iElem] = 1;
             }
             delta += deltaInterval;
-          } while (fabs(delta) <= fabs(deltaLimit[side]));
+          }
           if (split==0) {
             if (!survivorFound[side][iElem]) {
               fprintf(stdout, "Error: No survivor found for initial scan for  %s #%ld at s=%em\n", elem->name, elem->occurence, elem->end_pos);
@@ -318,9 +321,10 @@ long doMomentumApertureSearch(
               exit(1);
             }
           }
-          deltaStart = deltaSurvived[side][iElem];
+          deltaStart = deltaSurvived[side][iElem] - steps_back*deltaInterval;
           deltaInterval /= split_step_divisor;
           deltaStart += deltaInterval;
+          deltaLimit1 = deltaLost;
           if ((deltaStart<0 && deltaSign==1) || (deltaStart>0 && deltaSign==-1))
             deltaStart = 0;
         }
@@ -352,14 +356,14 @@ long doMomentumApertureSearch(
       !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, sLost[1], iElem, "sLostPositive") ||
       !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, xLost[1], iElem, "xLostPositive") ||
       !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, yLost[1], iElem, "yLostPositive") ||
-      !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, deltaLost[1], iElem, "deltaLostPositive") ||
+      !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, deltaWhenLost[1], iElem, "deltaLostPositive") ||
       !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, loserFound[0], iElem, "deltaNegativeFound") ||
       !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, deltaSurvived[0], iElem, "deltaNegative") ||
       !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, lostOnPass[0], iElem, "lostOnPassNegative") ||
       !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, sLost[0], iElem, "sLostNegative") ||
       !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, xLost[0], iElem, "xLostNegative") ||
       !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, yLost[0], iElem, "yLostNegative") ||
-      !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, deltaLost[0], iElem, "deltaLostNegative") ||
+      !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, deltaWhenLost[0], iElem, "deltaLostNegative") ||
       !SDDS_WritePage(&SDDSma)) {
     SDDS_SetError("Problem writing SDDS table (doMomentumApertureSearch)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -374,7 +378,7 @@ long doMomentumApertureSearch(
   free_czarray_2d((void**)deltaSurvived, 2, nElem);
   free_czarray_2d((void**)xLost, 2, nElem);
   free_czarray_2d((void**)yLost, 2, nElem);
-  free_czarray_2d((void**)deltaLost, 2, nElem);
+  free_czarray_2d((void**)deltaWhenLost, 2, nElem);
   free_czarray_2d((void**)sLost, 2, nElem);
   free(sStart);
   free(ElementName);

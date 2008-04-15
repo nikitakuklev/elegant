@@ -13,6 +13,7 @@
     double delta_positive_limit = 0.10;
     double delta_step_size = 0.01;
     long splits = 2;
+    long steps_back = 1;
     long split_step_divisor = 10;
     long skip_elements = 0;
     long process_elements = 2147483647;
