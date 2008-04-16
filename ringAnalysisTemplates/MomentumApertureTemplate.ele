@@ -76,6 +76,7 @@
         delta_negative_limit = <deltaNegativeLimit>,
         delta_positive_limit = <deltaPositiveLimit>,
         delta_step_size = <initialDeltaStep>,
+        steps_back = <stepsBack>,
         split_step_divisor = <stepDivisor>,
         splits = <splits>,
         s_start = <sStart>,

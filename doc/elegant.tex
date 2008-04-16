@@ -1907,6 +1907,7 @@ using values at marker elements.  See the documentation for
     double delta_negative_limit = -0.10;
     double delta_positive_limit = 0.10;
     double delta_step_size = 0.01;
+    long steps_back = 1;
     long splits = 2;
     long split_step_divisor = 10;
     long skip_elements = 0;
@@ -1929,6 +1930,11 @@ Limiting values of scans in the negative and positive
 directions. Scanning begins at 0 and moves to to these values, but never beyond. 
 \item \verb|delta_step_size| --- Initial size of steps in $\delta$.  This should
  be fairly large in order to save time.
+
+\item \verb|steps_back| --- Number of steps to back up after a particle is lost,
+ relative to the last surviving $\delta$, before continuing with a smaller step size.
+ If this is set to zero, there is a risk of finding a too-large momentum aperture
+ (a stable island).
 
 \item \verb|splits| --- Number of times to split the step size in
  order to refine the location of the maximum surviving momentum
@@ -1981,10 +1987,12 @@ although the method is applied separately for negative values as well:
 \item Increase $\delta$ by step size $\Delta\delta$ and return to step 2.
 \item If no splitting steps remain, proceed to the next step.  Otherwise:
 \begin{enumerate}
-\item Decrement the ``splits remaining'' counter by 1.
+\item Change $\delta$ to $delta_s - s_b\Delta\delta$., where $\delta_s$ is
+ the largest $\delta$ for which the particle survived, and $s_b$ is the
+ \verb|steps_back| parameter.
 \item Divide the step size by \verb|split_step_divisor| to get a new step size  $\Delta\delta$.
-\item Set $\delta = \delta_s + \Delta\delta$, where $\delta_s$ is the last momentum offset for
- which the particle survived.
+\item Set $\delta = \delta + \Delta\delta$.
+\item Decrement the ``splits remaining'' counter by 1.
 \item Continue from step 2.
 \end{enumerate}
 \item Stop.  The momentum aperture is $\delta_s$

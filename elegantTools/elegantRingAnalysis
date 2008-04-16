@@ -4,6 +4,10 @@
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.8  2008/04/14 21:17:58  borland
+# Improved (simplified) algorithm for momentum aperture determination.  Not
+# backward compatible!
+#
 # Revision 1.7  2008/02/21 00:05:55  borland
 # Allow up to 5 (instead of 4) parameter files.
 #
@@ -939,6 +943,10 @@ proc FillMomentumApertureFrame {widget args} {
       -label "Initial delta step: " \
       -width 20 -textVariable momentumAperture(initialDeltaStep) \
       -contextHelp "Initial step size for delta."
+    APSLabeledEntry .lesb -parent $widget -type integer \
+      -label "Steps back: " -width 20 -textVariable momentumAperture(stepsBack) \
+      -contextHelp \
+      "Enter the number of steps to back off from the last surviving particle before splitting the interval."
     APSLabeledEntry .lesp -parent $widget -type integer \
       -label "Splits: " -width 20 -textVariable momentumAperture(splits) \
       -contextHelp \
