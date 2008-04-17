@@ -46,14 +46,19 @@ and references, see the specific entries in the manual.
 \subsection{Bug Fixes for Commands}
 
 \subsection{New and Modified Elements}
+\begin{itemize}
+\item The {\tt LSCDRIFT} element was upgrade to allow delivering a single longitudinal
+ space charge kick to represent the accumulated kicks over an extended length, but with
+ zero insertion length in the lattice. 
+\end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
 \item The algorithm for the \verb|momentum_aperture| command was changed, to address reproducibility issues
  with the old algorithm.  The old algorithm searched from the outside (large momentum deviation), which seemed to 
  sometimes cause it to find stable islands.  The new algorithm searches from the inside and provides more
- consistent results.
- Unfortunately, this change is not backward compatible.
+ consistent results. Unfortunately, this change is not backward compatible.  Thanks to P. Chou (NSRRC) for
+ bringing this issue to our attention.
 \end{itemize}
 
 \subsection{Improvements and Bug Fixes for Parallel Version}
@@ -1998,6 +2003,17 @@ although the method is applied separately for negative values as well:
 \item Stop.  The momentum aperture is $\delta_s$
 \end{enumerate}
 
+This command can be used for both rings and transport lines.  For
+rings it is most appropriate to have an rf cavity (i.e., an {\tt RFCA}
+element) in the lattice.  One should also include radiation loss using
+either of two methods:
+\begin{enumerate}
+\item {\tt SREFFECTS} element, with {\tt QEXCITATION=0}.  To set up this element more easily, one
+ can include a \verb|twiss_output| command with \verb|radiation_integrals=1|.
+\item Use {\tt CSBEND} and {\tt KQUAD} elements with \verb|SYNCH_RAD=1| and \verb|ISR=0|.
+\end{enumerate}
+When including radiation loss, one must be certain to set the phase of the rf cavity
+correctly.  It is also a good idea to track for several synchrotron oscillation periods.
 
 \begin{latexonly}
 \newpage
@@ -4226,8 +4242,8 @@ B1: SBEN,L=1.0,ANGLE=''myAngle'',E1=''myAngle 2 /'',E2=''myAngle 2 /''
 \newpage
 \section{Examples}
 
-Example runs and post-processing files are included along with the
-distribution of {\tt elegant}.  The examples are intended to
+Example runs and post-processing files are available in a separate tar file.
+The examples are intended to
 demonstrate program capabilities with minimal work on the user's part.
 However, they don't pretend to cover all the capabilities.
 
@@ -4241,13 +4257,17 @@ The examples are organized into a number of directories and subdirectories.
 In each area, the user will find a ``Notebook'' file (a simple ASCII file) that describes 
 the example and how to run it.
 
+Many examples for storage ring simulations reside in the {\tt PAR} subdirectory.
+The PAR (Particle Accumulator Ring) is a small storage ring in the APS injector
+that is good for quick examples because of its size.
+
 Here's a helpful tip in searching the examples on UNIX/LINUX systems: suppose one wants
 to find an example of the \verb|frequency_map| command.  One can search all the elegant
 command files very quickly with this command:
 \begin{verbatim}
 find . -name '*.ele' | xargs fgrep frequency_map
 \end{verbatim}
-Similarly, to find all examples that use the \verb|CSBEND| elements, one could use
+Similarly, to find all examples that use \verb|CSBEND| elements, one could use
 \begin{verbatim}
 find . -name '*.lte' | xargs fgrep -i csbend
 \end{verbatim}
@@ -4360,7 +4380,7 @@ LINAC''.
   J. D. Jackson, {\em Clasical Electrodynamics}, second edition.
 
 \bibitem{Ripken}
- G. Ripken, DESY Report Nno. R1-70/04, 1970 (unpublished).
+ G. Ripken, DESY Report No. R1-70/04, 1970 (unpublished).
 
 \bibitem{HAPE}
   {\em Handbook of Accelerator Physics and Engineering}, A. Chao and M. Tigner eds., 1998.
@@ -4372,6 +4392,9 @@ LINAC''.
 \bibitem{Xiao2007A}
   A. Xiao {\em et al.}, ``Direct Space-Charge Calculation in {\tt elegant} and its Application to the
  ILC Damping Ring,'' Proc. PAC2007, 3456-3458.
+
+\bibitem{Huang2004}
+  Z. Huang {\em et al.}, Phys. Rev. ST Accel. Beams {\bf 7} 074401 (2004).
 
 \end{thebibliography}
 
