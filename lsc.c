@@ -102,10 +102,7 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
 #endif
     if (isSlave ||  !notSinglePart)
       n_binned = binTimeDistribution(Itime, pbin, tmin, dt, nb, time, part, Po, np);
-#if DEBUG
-    fprintf(stdout, "%ld of %ld particles binned\n", n_binned, np);
-    fflush(stdout);
-#endif
+
   if (!USE_MPI || !notSinglePart) {
     if (n_binned!=np) {
       fprintf(stdout, "Warning: only %ld of %ld particles were binned (LSCDRIFT)!\n", n_binned, np);
@@ -177,7 +174,7 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
     kSC = 2/beamRadius*sqrt(Imax/ipow(Po,3)/Ia);
     /* - compute length to drift */
     length = 0.1/kSC;
-    if (length>lengthLeft && kickMode)
+    if (length>lengthLeft || kickMode)
       length = lengthLeft;
     /* - compute values for computing impedance */
     df = 1./(dt*nb);
