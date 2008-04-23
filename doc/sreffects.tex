@@ -13,6 +13,17 @@ be given, although the defaults work for typical lattices.
 
 In automatic initialization, the user turns on the radiation integral
 feature in {\tt twiss\_output}, causing {\tt elegant} to automatically
-compute the above quantities.  The {\tt COUPLING} parameter can be used
-to change the partitioning of quantum excitation between the horizontal
-and vertical planes.
+compute the above quantities.  This will occur only if {\tt PREF=0}.
+The {\tt COUPLING} parameter can be used to change the partitioning of
+quantum excitation between the horizontal and vertical planes.
+
+N.B.: Computation of Twiss parameters does not fully include the
+effects of synchrotron radiation losses when these are imposed using
+{\tt SREFFECTS} elements.  If {\tt PREF=0} (automatic initialization),
+these effects are completely missing.  If {\tt PREF} is non-zero, then
+{\tt elegant} will use the {\tt DDELTAREF} parameter to compute the
+energy offset from the element, and thus its effect on the beam
+trajectory.
+
+
+

@@ -39,6 +39,9 @@ and references, see the specific entries in the manual.
   with minimal output will show excellent scaling up to 500 or 1000 processors, while 
   a simulation dominated by collective effects with frequent output may roll off
   with only 30 processors.  Work continues to improve the scaling. 
+\item Computation of closed orbits and Twiss parameters does not fully include the effects of synchrotron
+  radiation losses when these are imposed using {\tt SREFFECTS} elements.  See
+  the documentation for {\tt SREFFECTS}.
 \end{itemize}
 
 \subsection{Bug Fixes for Elements}
