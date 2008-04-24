@@ -57,7 +57,7 @@ and references, see the specific entries in the manual.
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item The {\tt LSCDRIFT} element was upgrade to allow delivering a single longitudinal
+\item The {\tt LSCDRIFT} element was upgraded to allow delivering a single longitudinal
  space charge kick to represent the accumulated kicks over an extended length, but with
  zero insertion length in the lattice. 
 \end{itemize}
@@ -69,6 +69,9 @@ and references, see the specific entries in the manual.
  sometimes cause it to find stable islands.  The new algorithm searches from the inside and provides more
  consistent results. Unfortunately, this change is not backward compatible.  Thanks to P. Chou (NSRRC) for
  bringing this issue to our attention.
+\item The \verb|twiss_output| command now has a parameter to control whether, when computing periodic
+  lattice functions (\verb|matched=1|), rf cavities are treated as drift spaces.  By default they are
+  so treated.    See the documentation for \verb|twiss_output| for more information.
 \end{itemize}
 
 \subsection{Improvements and Bug Fixes for Parallel Version}
@@ -3069,6 +3072,7 @@ unit parameter change for the element.
     STRING reference_file = NULL;
     STRING reference_element = NULL;
     long reference_element_occurrence = 0;
+    long cavities_are_drifts_if_matched = 1;
 &end
 \end{verbatim}
 
@@ -3118,6 +3122,11 @@ over the full range \verb|higher_order_chromaticity_range|.
 \item \verb|reference_element_occurrence| --- Ignored if \verb|reference_element| is not given.
         Otherwise, the occurence number of \verb|reference_element| to use.  If 0, the last
         occurence is used.
+\item \verb|cavities_are_drifts_if_matched| --- By default,  if \verb|matched=1|, {\tt elegant} treats rf cavities
+  as drift spaces, allowing the user to have a cavity in the ring definition without it affecting the lattice functions.
+  By setting \verb|cavities_are_drifts_if_matched=0|, one can force {\tt elegant} to use the actual matrix for the
+  rf cavity.  The differences between the 
+  results are generally small, but the default behavior disagrees with the results of \verb|moments_output|.
 \end{itemize}
 
 The output file from this command contains the following columns, giving values of quantities at the
