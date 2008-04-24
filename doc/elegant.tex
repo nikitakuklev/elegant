@@ -42,6 +42,8 @@ and references, see the specific entries in the manual.
 \item Computation of closed orbits and Twiss parameters does not fully include the effects of synchrotron
   radiation losses when these are imposed using {\tt SREFFECTS} elements.  See
   the documentation for {\tt SREFFECTS}.
+\item The parameters file created with the parameters field of \verb|run_setup| does not contain
+  any non-numerical parameters of the lattice.
 \end{itemize}
 
 \subsection{Bug Fixes for Elements}
@@ -2627,6 +2629,8 @@ errors occured.  If the file exists, it is deleted.  This file can be
 used to record the fact that the run completed without error.
 \item \verb|parameters| --- The (incomplete) name of an SDDS file into
 which parameters of accelerator elements are written.
+N.B.: this file does not contain any non-numerical parameters of the lattice.
+Hence, it is not a complete description of the settings of the lattice.
 \item \verb|combine_bunch_statistics| --- A flag indicating whether to
 combine statistical information for all simulation steps.  If
 non-zero, then the \verb|sigma| and \verb|centroid| data will be
