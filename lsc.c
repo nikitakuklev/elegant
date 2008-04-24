@@ -39,6 +39,9 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
   double *buffer;
 #endif
 
+  if (!charge)
+    bomb("No charge defined for LSC.  Insert a CHARGE element in the beamline.", NULL);
+  
   Z0 = sqrt(mu_o/epsilon_o);
   nb = LSC->bins;
   if (nb%2==1) {
@@ -324,6 +327,9 @@ void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge,
   double Imin, Imax, kSC, Zmax;
   double Ia = 17045, Z0, length, k;
   double S11, S33, beamRadius;
+  
+  if (!charge)
+    bomb("No charge defined for LSC.  Insert a CHARGE element in the beamline.", NULL);
   
   Z0 = sqrt(mu_o/epsilon_o);
   nb = LSC->bins;
