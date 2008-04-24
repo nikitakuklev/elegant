@@ -102,8 +102,10 @@ VMATRIX *compute_periodic_twiss(
   if ((i = fill_in_matrices(elem, run)))
     fprintf(stdout, "%ld matrices recomputed for periodic Twiss parameter computation\n", i);
     fflush(stdout);
-  
-  modify_rfca_matrices(elem, run->default_order);  /* replace rf cavities with drifts */
+
+  if (cavities_are_drifts_if_matched)
+    modify_rfca_matrices(elem, run->default_order);  /* replace rf cavities with drifts */
+
   if (clorb) {
     /* use the closed orbit to compute the on-orbit R matrix */
     M1 = tmalloc(sizeof(*M1));
@@ -1627,7 +1629,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
   if (radiation_integrals) 
     beamline->flags |= BEAMLINE_RADINT_DONE+BEAMLINE_RADINT_CURRENT;
   
-  if (mustResetRfcaMatrices)
+  if (cavities_are_drifts_if_matched && mustResetRfcaMatrices)
     reset_rfca_matrices(&(beamline->elem), run->default_order);
   
   log_exit("compute_twiss_parameters");
