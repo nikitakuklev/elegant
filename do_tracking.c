@@ -1185,8 +1185,8 @@ long do_tracking(
 				   charge);
 	      break;
 	    case T_SREFFECTS:
-	      if (!(flags&TEST_PARTICLES))
-		track_SReffects(coord, nToTrack, (SREFFECTS*)eptr->p_elem, *P_central, eptr->twiss, &(beamline->radIntegrals));
+              track_SReffects(coord, nToTrack, (SREFFECTS*)eptr->p_elem, *P_central, eptr->twiss, &(beamline->radIntegrals),
+                              flags&TEST_PARTICLES);
 	      break;
 	    case T_IBSCATTER:
 	      if (!(flags&TEST_PARTICLES))

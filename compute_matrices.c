@@ -176,6 +176,12 @@ VMATRIX *accumulateRadiationMatrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, 
         /* Must include radiation, so do tracking */
         determineRadiationMatrix(Ml2, run, member, M1->C, member->D, nSlices, order);
         memcpy(member->accumD, member->D, 21*sizeof(*(member->D)));
+      } else if (member->type==T_SREFFECTS) {
+        /* Must not use the matrix for these elements, as it may double-count radiation losses */
+        for (i=0; i<6; i++) {
+          Ml2->C[i] = M1->C[i];
+          memcpy(Ml2->R[i], Ml1->R[i], 6*sizeof(*(Ml2->R[i])));
+        }
       } else {
         /* Just use the matrix computed above.
          * Concatenate incoming centroid with the matrix to get the on-orbit R matrix 
@@ -999,6 +1005,9 @@ VMATRIX *compute_matrix(
         break;
       case T_ILMATRIX:
         elem->matrix = matrixForILMatrix((ILMATRIX*)elem->p_elem, run->default_order);
+        break;
+      case T_SREFFECTS:
+        elem->matrix = srEeffectsMatrix((SREFFECTS*)elem->p_elem);
         break;
       case T_KPOLY: case T_RFDF:  case T_RFTMEZ0:  case T_RMDF:  case T_TMCF: case T_CEPL:  
       case T_TWPL:  case T_TWLA:  

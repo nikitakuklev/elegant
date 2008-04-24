@@ -3034,7 +3034,10 @@ long binTimeDistribution(double *Itime, long *pbin, double tmin,
 
 
 void track_SReffects(double **coord, long n, SREFFECTS *SReffects, double Po, 
-                             TWISS *twiss, RADIATION_INTEGRALS *radIntegrals);
+                     TWISS *twiss, RADIATION_INTEGRALS *radIntegrals,
+                     long lossesOnly);
+VMATRIX *srEeffectsMatrix(SREFFECTS *SReffects);
+
 void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po, 
                ELEMENT_LIST *element, RADIATION_INTEGRALS *radIntegrals0,
                CHARGE *charge);
