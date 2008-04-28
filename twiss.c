@@ -3334,9 +3334,7 @@ void AddWigglerRadiationIntegrals(double length, long poles, double radius,
 	h0 = fieldSign/radius;
       
       *I1 += (h0*Lp*(h0*ipow(Lp,2) + 4*eta*PI + 2*etap*Lp*PI))/(2.*ipow(PI,2));
-      
       *I2 += (ipow(h0,2)*Lp)/2.;
-      
       *I3 += SIGN(h0)*(4*ipow(h0,3)*Lp)/(3.*PI);
       
       *I5 += SIGN(h0)*
@@ -3361,17 +3359,16 @@ void AddWigglerRadiationIntegrals(double length, long poles, double radius,
 	      h0, *I1, *I2, *I3, *I4, *I5);
 #endif
     }
+    
   } else {
-    /* Even number of poles: use half-length end-poles to match */
-    /* Integrate a full period at a time (starts and ends in the
-     * middle of a pole) */
+    /* Even number of poles: use half-length end-poles to match 
+     * Integrate a full period at a time (starts and ends in the
+     * middle of a pole).
+     */
     double L;
     L = 2*Lp;
     h0 = 1./radius;
     for (pole=0; pole<poles; pole+=2) {
-      *I1 += -((ipow(h0,2)*ipow(Lp,3))/ipow(PI,2));
-      *I2 += ipow(h0,2)*Lp;
-      *I3 += (8*ipow(h0,3)*Lp)/(3.*PI);
       *I5 += (ipow(h0,3)*Lp*(gamma*
                               (9000*ipow(eta,2)*ipow(PI,4) +
                                1125*eta*h0*ipow(Lp,2)*ipow(PI,2)*(16 + 3*PI) +
@@ -3386,6 +3383,9 @@ void AddWigglerRadiationIntegrals(double length, long poles, double radius,
       gamma = (1+alpha*alpha)/beta;
       eta   = eta + 2*Lp*etap;
     }
+    *I1 += -(poles/2)*((ipow(h0,2)*ipow(Lp,3))/ipow(PI,2));
+    *I2 += (poles/2)*ipow(h0,2)*Lp;
+    *I3 += (poles/2)*(8*ipow(h0,3)*Lp)/(3.*PI);
   }
 
 #ifdef DEBUG
