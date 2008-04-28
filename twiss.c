@@ -3339,13 +3339,6 @@ void AddWigglerRadiationIntegrals(double length, long poles, double radius,
       
       *I3 += SIGN(h0)*(4*ipow(h0,3)*Lp)/(3.*PI);
       
-      /* I4 should be identically zero because there is no transverse variation to
-       * the energy loss.
-       
-       *I4 += (ipow(h0,3)*Lp*(7*h0*ipow(Lp,2) + 16*(2*eta + etap*Lp)*PI))/(24.*ipow(PI,2));
-       
-      */
-      
       *I5 += SIGN(h0)*
 	(ipow(h0,3)*Lp*(gamma*
 			(-50625*eta*h0*ipow(Lp,2)*ipow(PI,3) +
@@ -3376,21 +3369,18 @@ void AddWigglerRadiationIntegrals(double length, long poles, double radius,
     L = 2*Lp;
     h0 = 1./radius;
     for (pole=0; pole<poles; pole+=2) {
-      *I1 += (ipow(h0,2)*ipow(Lp,3))/ipow(PI,2);
+      *I1 += -((ipow(h0,2)*ipow(Lp,3))/ipow(PI,2));
       *I2 += ipow(h0,2)*Lp;
       *I3 += (8*ipow(h0,3)*Lp)/(3.*PI);
-      *I5 += (ipow(h0,3)*Lp*
-	      (gamma*
-	       (72000*ipow(eta,2)*ipow(PI,4) +
-		1125*eta*h0*ipow(Lp,2)*ipow(PI,2)*(-128 + 45*PI) +
-		ipow(h0,2)*ipow(Lp,4)*(125248 - 50625*PI + 3600*ipow(PI,2))) +
-	       15*PI*(240*beta*PI*(4*ipow(h0,2)*ipow(Lp,2) - 15*etap*h0*Lp*PI +
-				   20*ipow(etap,2)*ipow(PI,2)) +
-		      alpha*(16*ipow(h0,2)*ipow(Lp,3)*(149 - 60*PI) +
-			     9600*eta*etap*ipow(PI,3) +
-			     75*h0*Lp*PI*(-48*eta*PI + etap*Lp*(-128 + 45*PI))))))/
-	(108000.*ipow(PI,5));
-      
+      *I5 += (ipow(h0,3)*Lp*(gamma*
+                              (9000*ipow(eta,2)*ipow(PI,4) +
+                               1125*eta*h0*ipow(Lp,2)*ipow(PI,2)*(16 + 3*PI) +
+                               ipow(h0,2)*ipow(Lp,4)*(15656 + 2235*PI + 2250*ipow(PI,2))) +
+                              225*ipow(PI,2)*(8*beta*
+                                               (ipow(h0,2)*ipow(Lp,2) + 5*ipow(etap,2)*ipow(PI,2)) +
+                                               alpha*(-16*ipow(h0,2)*ipow(Lp,3) +
+                                                       5*etap*(16*eta*ipow(PI,2) + h0*ipow(Lp,2)*(16 + 3*PI))))))/
+                                                         (3375.*ipow(PI,5));
       beta  = beta - 2*L*alpha + sqr(L)*gamma;
       alpha = alpha - L*gamma;
       gamma = (1+alpha*alpha)/beta;
