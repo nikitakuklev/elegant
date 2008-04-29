@@ -937,8 +937,13 @@ void parse_element(
                 *((double*)(p_elem+parameter[i].offset)));
         fflush(stdout);
       }
-      else
-        get_double((double*)(p_elem+parameter[i].offset), ptr);
+      else {
+        if (sscanf(ptr, "%lf", (double*)(p_elem+parameter[i].offset))!=1) {
+          printf("Error scanning token %s for double value for parameter %s of %s.  Please check syntax.\n", 
+                 ptr, parameter[i].name, eptr->name);
+          exit(1);
+        }
+      }
       break;
     case IS_LONG:
       if (!isdigit(*ptr) && *ptr!='-' && *ptr!='+') {
@@ -951,8 +956,13 @@ void parse_element(
                 *((long*)(p_elem+parameter[i].offset)));
         fflush(stdout);
       } 
-      else 
-        get_long((long*)(p_elem+parameter[i].offset), ptr);
+      else {
+        if (sscanf(ptr, "%ld", (long*)(p_elem+parameter[i].offset))!=1) {
+          printf("Error scanning token %s for integer value for parameter %s of %s.  Please check syntax.\n", 
+                 ptr, parameter[i].name, eptr->name);
+          exit(1);
+        }
+      }
       break;
     case IS_STRING:
       if (!isGroup)
