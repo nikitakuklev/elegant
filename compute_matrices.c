@@ -1007,7 +1007,7 @@ VMATRIX *compute_matrix(
         elem->matrix = matrixForILMatrix((ILMATRIX*)elem->p_elem, run->default_order);
         break;
       case T_SREFFECTS:
-        elem->matrix = srEeffectsMatrix((SREFFECTS*)elem->p_elem);
+        elem->matrix = srEffectsMatrix((SREFFECTS*)elem->p_elem);
         break;
       case T_KPOLY: case T_RFDF:  case T_RFTMEZ0:  case T_RMDF:  case T_TMCF: case T_CEPL:  
       case T_TWPL:  case T_TWLA:  

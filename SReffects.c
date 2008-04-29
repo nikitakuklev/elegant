@@ -158,7 +158,7 @@ void track_SReffects(double **coord, long np, SREFFECTS *SReffects, double Po,
     }
   }
 
-VMATRIX *srEeffectsMatrix(SREFFECTS *SReffects)
+VMATRIX *srEffectsMatrix(SREFFECTS *SReffects)
 {
   double Ddelta;
   VMATRIX *M1;
