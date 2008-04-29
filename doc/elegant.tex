@@ -39,9 +39,9 @@ and references, see the specific entries in the manual.
   with minimal output will show excellent scaling up to 500 or 1000 processors, while 
   a simulation dominated by collective effects with frequent output may roll off
   with only 30 processors.  Work continues to improve the scaling. 
-\item Computation of closed orbits and Twiss parameters does not fully include the effects of synchrotron
+\item Computation of closed orbits and Twiss parameters will not always include the effects of synchrotron
   radiation losses when these are imposed using {\tt SREFFECTS} elements.  See
-  the documentation for {\tt SREFFECTS}.
+  the documentation for {\tt SREFFECTS} for details.
 \item The parameters file created with the parameters field of \verb|run_setup| does not contain
   any non-numerical parameters of the lattice.
 \end{itemize}
@@ -54,9 +54,16 @@ and references, see the specific entries in the manual.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
+\begin{itemize}
+\item  The lattice parser will no longer accept invalid numerical values, such as ``--3.5'', which in the
+ past would have been understood as ``-3.5''.  Y. Kim (PSI) pointed out this oddity.
+\end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
+\item In past versions, the {\tt RFDF} element had a very strange way of defining the RF phase
+  for traveling wave mode.  This has been changed so that the phase is now easy to understand,
+  being simply the phase of the first kick the beam receives.
 \item The {\tt LSCDRIFT} element was upgraded to allow delivering a single longitudinal
  space charge kick to represent the accumulated kicks over an extended length, but with
  zero insertion length in the lattice. 
