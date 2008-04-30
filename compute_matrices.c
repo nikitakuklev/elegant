@@ -171,7 +171,17 @@ VMATRIX *accumulateRadiationMatrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, 
       member->accumD = tmalloc(21*sizeof(*(member->accumD)));
     memset(member->accumD, 0, 21*sizeof(*(member->accumD)));
     if (member->matrix) {
-      /* Step 1: determine effective R matrix for this element */
+      /* The matrix variables are as follows:
+         M1:  the concatenated matrix up to this point
+         M2:  working variable for updating M1
+         Ml1: unit R matrix, but centroid matrix may be changed for use in concatenation.
+         Ml2: holds result of computing the linearized matrix for the element we are working on,
+              but with the full trajectory in C (not just the contribution).
+       */
+      /* Step 1: determine effective R matrix for this element 
+       * either by tracking through the element or by concatenating
+       * the incoming trajectory with the element's matrix.
+       */
       if (radiation && (IS_RADIATOR(member->type) || member->type==T_RFCA)) {
         /* Must include radiation, so do tracking */
         determineRadiationMatrix(Ml2, run, member, M1->C, member->D, nSlices, order);
@@ -179,7 +189,9 @@ VMATRIX *accumulateRadiationMatrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, 
       } else if (member->type==T_SREFFECTS) {
         /* Must not use the matrix for these elements, as it may double-count radiation losses */
         for (i=0; i<6; i++) {
+          /* Copy the centroid */
           Ml2->C[i] = M1->C[i];
+          /* Copy the unit R matrix */
           memcpy(Ml2->R[i], Ml1->R[i], 6*sizeof(*(Ml2->R[i])));
         }
       } else {
@@ -232,6 +244,19 @@ VMATRIX *accumulateRadiationMatrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, 
       for (i=0; i<6; i++) {
         member->Mld->C[i] = M1->C[i];
         member->Mld->R[i][i] = 1;
+      }
+      if (member->type==T_ENERGY) {
+        ENERGY *energy;
+        energy = (ENERGY*)member->p_elem;
+        if (energy->match_beamline) {
+          /* Reference momentum is changed to match the centroid of the particles,
+           * so set momentum centroid to zero */
+          member->Mld->C[5] = M1->C[5] = 0;
+        } else {
+          printf("Error: ENERGY element with MATCH_BEAMLINE not set encountered in moments analysis.\n");
+          printf("ENERGY element can only be included in MATCH_BEAMLINE mode at present.\n");
+          exit(1);
+        }
       }
     }
     member = member->succ;
