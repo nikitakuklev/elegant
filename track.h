@@ -2522,7 +2522,7 @@ extern long fill_in_matrices(ELEMENT_LIST *elem, RUN *run);
 VMATRIX *accumulateRadiationMatrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, long order, long radiation, long nSlices);
 extern long calculate_matrices(LINE_LIST *line, RUN *run);
 extern VMATRIX *drift_matrix(double length, long order);
-extern VMATRIX *wiggler_matrix(double length, double radius, double dx, double dy, double dz,
+extern VMATRIX *wiggler_matrix(double length, double radius, long poles, double dx, double dy, double dz,
 			       double tilt, long order);
 extern void GWigSymplecticPass(double **coord, long num_particles, double pCentral,
 			CWIGGLER *cwiggler);

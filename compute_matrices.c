@@ -359,14 +359,14 @@ VMATRIX *drift_matrix(double length, long order)
     return(M);
     }
 
-VMATRIX *wiggler_matrix(double length, double radius, 
+VMATRIX *wiggler_matrix(double length, double radius, long poles,
 			double dx, double dy, double dz, 
 			double tilt, long order)
 {
     VMATRIX *M;
     double **R, *C;
     double kl;
-
+    
     M = tmalloc(sizeof(*M));
     M->order = 1;
     initialize_matrices(M, M->order);
@@ -382,6 +382,7 @@ VMATRIX *wiggler_matrix(double length, double radius,
       R[2][2] = R[3][3] = cos(kl);
       R[2][3] = sin(kl)/(kl/length);
       R[3][2] = -(kl/length)*sin(kl);
+      R[4][5] = -(poles/2)*ipow(1/radius,2)*ipow(length/poles, 3)/ipow(PI,2);
     }
 
     tilt_matrices(M, tilt);
@@ -647,7 +648,7 @@ VMATRIX *compute_matrix(
 	  fprintf(stderr, "Parameters are length=%e, poles=%ld, radius=%e, K=%e\n",
 		  wiggler->length, wiggler->poles, wiggler->radiusInternal, wiggler->K);
 	}
-        elem->matrix = wiggler_matrix(wiggler->length, wiggler->radiusInternal,
+        elem->matrix = wiggler_matrix(wiggler->length, wiggler->radiusInternal, wiggler->poles,
 				      wiggler->dx, wiggler->dy, wiggler->dz, wiggler->tilt,
 				      run->default_order);
 	break;
