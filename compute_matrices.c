@@ -637,8 +637,8 @@ VMATRIX *compute_matrix(
 	if (wiggler->K) {
 	  long poles;
 	  double period;
-	  poles = 2*(wiggler->poles/2)+1;
-	  period = 2*(wiggler->length/poles);
+	  /* poles = 2*(wiggler->poles/2)+1; */
+	  period = 2*(wiggler->length/wiggler->poles);
 	  wiggler->radiusInternal = sqrt(sqr(elem->Pref_input)+1)*period/(PIx2*wiggler->K);
 	} else
 	  wiggler->radiusInternal = wiggler->radius;
