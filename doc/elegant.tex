@@ -34,20 +34,19 @@ and references, see the specific entries in the manual.
 	{\em even when these are not calculated}, which is potentially
 	misleading.   The values are zero when the calculation is not
         requested.
-\item Parallel efficiency can depend strongly on the particular problem and
-  the amount of outupt.  For example, a simulation without collective effects and
-  with minimal output will show excellent scaling up to 500 or 1000 processors, while 
-  a simulation dominated by collective effects with frequent output may roll off
-  with only 30 processors.  Work continues to improve the scaling. 
 \item Computation of closed orbits and Twiss parameters will not always include the effects of synchrotron
   radiation losses when these are imposed using {\tt SREFFECTS} elements.  See
   the documentation for {\tt SREFFECTS} for details.
-\item The parameters file created with the parameters field of \verb|run_setup| does not contain
+\item The file created with the parameters field of \verb|run_setup| does not contain
   any non-numerical parameters of the lattice.
 \end{itemize}
 
 \subsection{Bug Fixes for Elements}
 \begin{itemize}
+\item In versions prior to 19.0, the $I_5$ radiation integral was computed incorrectly for 
+  {\tt WIGGLER} elements with an even number of poles and for all {\tt CWIGGLER} elements.  Thanks to
+  W. Guo (BNL) for finding this bug.  Also, the $I_2$ radiation integral (which affects $\alpha$)
+  had a sign error.
 \item If longitudinal space charge simulation was invoked (using {\tt LSCDRIFT} or {\tt RFCW}) but
  the {\tt CHARGE} element was omitted, {\tt elegant} bombed.  This has been fixed. Thanks to P. Williams (Daresbury)
  for finding this bug.
@@ -63,7 +62,8 @@ and references, see the specific entries in the manual.
 \begin{itemize}
 \item In past versions, the {\tt RFDF} element had a very strange way of defining the RF phase
   for traveling wave mode.  This has been changed so that the phase is now easy to understand,
-  being simply the phase of the first kick the beam receives.
+  being simply the phase of the first kick the beam receives.  Thanks to Y. Kim (PSI) for bringing
+  this to our attention.
 \item The {\tt LSCDRIFT} element was upgraded to allow delivering a single longitudinal
  space charge kick to represent the accumulated kicks over an extended length, but with
  zero insertion length in the lattice. 
@@ -74,15 +74,12 @@ and references, see the specific entries in the manual.
 \item The algorithm for the \verb|momentum_aperture| command was changed, to address reproducibility issues
  with the old algorithm.  The old algorithm searched from the outside (large momentum deviation), which seemed to 
  sometimes cause it to find stable islands.  The new algorithm searches from the inside and provides more
- consistent results. Unfortunately, this change is not backward compatible.  Thanks to P. Chou (NSRRC) for
+ consistent results. {\em Unfortunately, this change is not backward compatible.}  Thanks to P. Chou (NSRRC) for
  bringing this issue to our attention.
 \item The \verb|twiss_output| command now has a parameter to control whether, when computing periodic
   lattice functions (\verb|matched=1|), rf cavities are treated as drift spaces.  By default they are
   so treated.    See the documentation for \verb|twiss_output| for more information.
 \end{itemize}
-
-\subsection{Improvements and Bug Fixes for Parallel Version}
-
 
 \subsection{Changes to Related Programs and Files}
 
