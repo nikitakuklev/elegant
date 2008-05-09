@@ -114,7 +114,7 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
     bunches = 0;
     for (ip=1; ip<np; ip++) {
       if ((part[ip-1][6]-floor(part[ip-1][6]))!=(part[ip][6]-floor(part[ip][6]))) {
-        printf("Bucket %ld ends with ip=%ld\n", bunches, ip-1); fflush(stdout);
+        /* printf("Bucket %ld ends with ip=%ld\n", bunches, ip-1); fflush(stdout); */
         bucketEnd[bunches++] = ip-1;
         if (bunches>=MAX_BUCKETS) {
             bomb("Error (wake): maximum number of buckets was exceeded", NULL);
@@ -126,7 +126,7 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
     bunches = 1;
     bucketEnd[0] = np-1;
   }
-  printf("Bucket %ld ends with ip=%ld\n", bunches, bucketEnd[bunches-1]); fflush(stdout);
+  /* printf("Bucket %ld ends with ip=%ld\n", bunches, bucketEnd[bunches-1]); fflush(stdout); */
 
   ip2 = -1;
   for (bunch=0; bunch<bunches; bunch++) {
