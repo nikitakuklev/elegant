@@ -29,14 +29,17 @@ void extend_line_list(LINE_LIST **lptr)
 
 void extend_elem_list(ELEMENT_LIST **eptr)
 {
-    log_entry("extend_elem_list");
-    (*eptr)->succ = tmalloc((unsigned)sizeof(**eptr));
+    (*eptr)->succ = calloc(1, sizeof(**eptr));
     ((*eptr)->succ)->pred = *eptr;
     *eptr                 = (*eptr)->succ;
     (*eptr)->succ         = NULL;
-    (*eptr)->matrix       = NULL;
-    (*eptr)->type   = (*eptr)->flags = (*eptr)->end_pos = 0;
-    (*eptr)->p_elem = (*eptr)->name  = NULL;
-    log_exit("extend_elem_list");
+
+    (*eptr)->matrix  = (*eptr)->accumMatrix = (*eptr)->Mld = NULL;
+    (*eptr)->type    = (*eptr)->flags = (*eptr)->end_pos = 0;
+    (*eptr)->p_elem  = (*eptr)->name  = (*eptr)->group = (*eptr)->definition_text = NULL;
+    (*eptr)->D       = (*eptr)->accumD  = NULL;
+    (*eptr)->twiss   = NULL;
+    (*eptr)->part_of = NULL;
+    (*eptr)->sigmaMatrix = NULL;
     }
 
