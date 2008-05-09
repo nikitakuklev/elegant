@@ -3272,3 +3272,11 @@ extern long sigmaIndex1[21], sigmaIndex2[21];
  */
 extern long sigmaIndex3[6][6];
 
+void setup_coupled_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, long *do_coupled_twiss_output,
+                                long default_order);
+int run_coupled_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord);
+void finish_coupled_twiss_output();
+void SortEigenvalues (double *WR, double *WI, double *VR, int matDim, int eigenModesNumber, int verbosity);
+
+
+

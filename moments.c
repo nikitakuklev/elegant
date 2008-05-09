@@ -22,6 +22,7 @@ void determinePeriodicMoments(double **R, double *D, SIGMA_MATRIX *sigma0);
 void propagateBeamMoments(RUN *run, LINE_LIST *beamline, double *traj);
 void storeFitpointMomentsParameters(MARK *mark, char *name, long occurence, SIGMA_MATRIX *sigma0, double *centroid);
 void prepareMomentsArray(double *data, ELEMENT_LIST *elem, double *sigma);
+void computeNaturalEmittances(VMATRIX *M, double *sigma, double *emittance);
 
 static long momentsInitialized = 0;
 static long SDDSMomentsInitialized = 0;
@@ -90,11 +91,17 @@ static SDDS_DEFINITION column_definition[N_COLUMNS] = {
 #define IP_STEP 0
 #define IP_STAGE 1
 #define IP_PCENTRAL 2
-#define N_PARAMETERS IP_PCENTRAL+1
+#define IP_E1 3
+#define IP_E2 4
+#define IP_E3 5
+#define N_PARAMETERS IP_E3+1
 static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
 {"Step", "&parameter name=Step, type=long, description=\"Simulation step\" &end"},
 {"Stage", "&parameter name=Stage, type=string, description=\"Stage of computation\" &end"},
 {"pCentral", "&parameter name=pCentral, type=double, units=\"m$be$nc\", description=\"Central momentum\" &end"},
+{"e1", "&parameter name=e1, symbol=\"$ge$r$b1$n\", type=double, units=m,  description=\"Emittance of mode 1\" &end"},
+{"e2", "&parameter name=e2, symbol=\"$ge$r$b2$n\", type=double, units=m,  description=\"Emittance of mode 2\" &end"},
+{"e3", "&parameter name=e3, symbol=\"$ge$r$b3$n\", type=double, units=m,  description=\"Emittance of mode 3\" &end"},
 } ;
 
 void dumpBeamMoments(
@@ -106,10 +113,11 @@ void dumpBeamMoments(
   )
 {
   double data[N_COLUMNS], *emit;
-  long i, j, k, row_count, elemCheck, plane;
+  long j, row_count, elemCheck;
   char *stage;
   ELEMENT_LIST *elem;
   SIGMA_MATRIX *sigma0;
+  double eNatural[3];
   
   if (tune_corrected==1)
     stage = "tunes corrected";
@@ -197,6 +205,15 @@ void dumpBeamMoments(
       SDDS_SetError("Problem setting SDDS rows (dumpBeamMoments)");
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
+  }
+
+  computeNaturalEmittances(beamline->Mld, beamline->sigmaMatrix0->sigma, eNatural);
+  if (!SDDS_SetParameters(&SDDSMoments, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE,
+                          IP_E1, eNatural[0], 
+                          IP_E2, eNatural[1], 
+                          IP_E3, eNatural[2], -1)) {
+    SDDS_SetError("Problem setting SDDS emittance parameters (dumpBeamMoments)");
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
 
   if (!SDDS_WriteTable(&SDDSMoments)) {
@@ -426,8 +443,7 @@ void propagateBeamMoments(RUN *run, LINE_LIST *beamline, double *traj)
   ELEMENT_LIST *elem;
   VMATRIX *M1, *M2, *Me;
   SIGMA_MATRIX *S1, *S2;
-  double path[6], path0[6];
-  double **R;
+  double path[6];
   MATRIX *Ms;
   
   /* Allocate memory to store sigma matrix as we propagate, copy initial matrix */
@@ -601,6 +617,197 @@ void prepareMomentsArray(double *data, ELEMENT_LIST *elem, double *sigma)
     else
       emit[plane] = -1;
   }
+}
 
+/* Following code is from V. Sajaev's calculateEnvelopes.c program, adapted to 
+ * elegant by M. Borland and V. Sajaev.
+ */
+
+#define MATDIM  6
+#define MATDIM2 36
+
+void NormalizeEigenvectors(int dim, double *V, int debug);
+double *AddMM1(int sum, int rows, int cols, double *M1, double *M2);
+double *MatrixProduct1 (int rows1, int cols1, double *T1, int rows2, int cols2, double *T2);
+double *TransposeM(int rows, int cols, double *M);
+void MatrixPrintout1(char *string, double *AA, int N, int M);
+void dgeev_();
+
+void computeNaturalEmittances(VMATRIX *Mld, double *sigmaMatrix, double *emittance) 
+{
+  int i, j, k, eigenModesNumber, dim=MATDIM;
+  double WR[MATDIM], WI[MATDIM], VL[MATDIM2], VR[MATDIM2], M[MATDIM2], Mcopy[MATDIM2], work[1000];
+  double *Rdiag;
+  char JOBVL, JOBVR;
+  int N, LDA, LDVL, LDVR, lwork, info;
+  double ReV[MATDIM2], ImV[MATDIM2];
+  double *M1, *M2, *M3, *M4;
+  
+  eigenModesNumber = 3;
+ 
+  /* Copy the revolution matrix into the working buffer */
+  for (i=0; i<MATDIM; i++)
+    for (j=0; j<MATDIM; j++) {
+      M[i*MATDIM+j] = Mld->R[i][j];
+    }
+  
+  memcpy(Mcopy, M, sizeof(*Mcopy)*MATDIM2);
+    
+  /*--- Calculating eigenvectors using dgeev ... */
+  /* VR is right-hand side eigenvectors such that: VR^transp * M = lamdba * VR^transp
+     VR[0 to 5] are real components of vector 1, VR[6 to 11] are imagenary components of vector 1 and so on.
+     see description of procedure on the web */
+#if defined(SUNPERF) || defined(LAPACK) || defined(CLAPACK)
+  JOBVL = 'N';
+  JOBVR = 'V';
+  N = LDA = LDVR = MATDIM;
+  LDVL = 1;
+  lwork = 1000;
+  dgeev_((char*)&JOBVL, (char*)&JOBVR, (int*)&N, (double*)&Mcopy,
+         (int*)&LDA, (double*)&WR, (double*)&WI, (double*)&VL,
+         (int*)&LDVL, (double*)&VR, (int*)&LDVR, (double*)&work,
+         (int*)&lwork, (int*)&info);
+#else
+  fprintf(stderr, "Error calling dgeev. You will need to install LAPACK and rebuild elegant\n");
+  return(1);
+#endif
+
+  if (info != 0) {
+    if (info < 0) { printf("Error calling dgeev, argument %d.\n", abs(info)); }
+    if (info > 0) { printf("Error running dgeev, calculation of eigenvalue number %d failed.\n", info); }
+    exit(1);
+  }
+
+  /*--- Sorting of eigenvalues and eigenvectors according to (x,y,z)... */
+  SortEigenvalues(WR, WI, VR, dim, eigenModesNumber, 0);
+
+  /*--- Normalization of eigenvectors... */
+  NormalizeEigenvectors(dim, VR, 0);
+
+  /*--- Assembling diagonalizing matrix V ---*/
+  for (k=0; k<eigenModesNumber; k++) {
+    for (i=0; i<dim; i++) {
+      ReV[k*2*dim+i] = VR[k*2*dim+i];
+      ReV[(k*2+1)*dim+i] = -VR[(k*2+1)*dim+i];
+    }
+  }
+  for (k=0; k<eigenModesNumber; k++) {
+    for (i=0; i<dim; i++) {
+      ImV[2*k*dim+i] = VR[(2*k+1)*dim+i];
+      ImV[(2*k+1)*dim+i] = -VR[2*k*dim+i];
+    }
+  }
+
+  /* Copy the sigma matrix into the working buffer */
+  for (i=0; i<MATDIM; i++)
+    for (j=0; j<MATDIM; j++)
+      Mcopy[i*MATDIM+j] = sigmaMatrix[sigmaIndex3[i][j]];
+
+  M3 = MatrixProduct1(dim,dim,ReV,dim,dim,Mcopy);
+  M4 = TransposeM(dim,dim,ReV);
+  M1 = MatrixProduct1(dim,dim,M3,dim,dim,M4);
+  free(M3);
+  free(M4);
+
+  M3 = MatrixProduct1(dim,dim,ImV,dim,dim,Mcopy); 
+  M4 = TransposeM(dim,dim,ImV);
+  M2 = MatrixProduct1(dim,dim,M3,dim,dim,M4);
+  free(M3);
+  free(M4);
+
+  Rdiag=AddMM1(1,dim,dim,M1,M2);
+  free(M1);
+  free(M2);
+
+  emittance[0] = Rdiag[0];
+  emittance[1] = Rdiag[2*dim+2];
+  emittance[2] = Rdiag[4*dim+4];
+  free(Rdiag);
+}
+
+void NormalizeEigenvectors(int dim, double *V, int debug)
+{
+  int k, i, eigenModesNumber;
+  eigenModesNumber = 3;
+  double Norm[3], Vcopy[MATDIM2];
+
+  for (i=0; i<MATDIM2; i++) Vcopy[i] = V[i];
+  for (k=0; k<eigenModesNumber; k++) {
+    Norm[k]=0;
+    for (i=0; i<eigenModesNumber; i++) {
+      /* Index = Irow*dim + Icolumn */
+      Norm[k]+=(V[2*k*dim+2*i+1]*V[(2*k+1)*dim+2*i]-V[2*k*dim+2*i]*V[(2*k+1)*dim+2*i+1])*2;
+    }
+    Norm[k]=-1.0/sqrt(fabs(Norm[k]));
+    if (debug == 4) printf("Normalization coefficient[%d]= %12.4e \n",k,Norm[k]);
+  }
+  for (k=0; k<eigenModesNumber; k++) {
+    for (i=0; i<dim*2; i++) {
+      V[k*2*dim+i]=Vcopy[k*2*dim+i]*Norm[k];
+    }
+  }
+}
+
+double *AddMM1(int sum, int rows, int cols, double *M1, double *M2)
+/* Adds two matrices */
+{
+  int i, j;
+  double *M3;
+  M3 = malloc(sizeof(*M3)*cols*rows);
+  for (i=0; i<rows; i++) {
+    for (j=0; j<cols; j++) {
+      if (sum == 1) {
+	M3[i*cols+j] = M1[i*cols+j] + M2[i*cols+j];
+      } else {
+	M3[i*cols+j] = M1[i*cols+j] - M2[i*cols+j];
+      }
+    }
+  }
+  return M3;
+}
+
+double *MatrixProduct1 (int rows1, int cols1, double *T1, int rows2, int cols2, double *T2)
+/* Calculates T3=T1*T2 */
+{
+  double *T3;
+  T3 = malloc(sizeof(*T3)*rows1*cols2);
+  int i, j, k;
+  if (cols1 != rows2) {
+    printf("Wrong matrix dimension!\n");
+    exit(1);
+  }
+  for (i=0; i<rows1; i++) {
+    for (j=0; j<cols2; j++) {
+      T3[i*cols2+j]=0;
+      for (k=0; k<cols1; k++) {
+        T3[i*cols2+j]+=T1[i*cols1+k]*T2[k*cols2+j];
+      }
+    }
+  }
+  return T3;
+}
+
+double *TransposeM(int rows, int cols, double *M)
+{
+  int i, j;
+  double *Mt;
+  Mt = malloc(sizeof(*Mt)*cols*rows);
+  for (i=0; i<rows; i++) 
+    for (j=0; j<cols; j++)
+      Mt[j*cols+i] = M[i*cols+j];
+  return Mt;
+}
+
+void MatrixPrintout1(char *string, double *AA, int Nrow, int Ncol)
+{
+  int i, j;
+  printf("%s\n", string);
+  for (i=0; i<Nrow; i++) {
+    for (j=0; j<Ncol; j++) {
+      printf("%16.8e", AA[i*Ncol+j]);
+    }
+    printf("\n");
+  }
+  printf("\n");
 }
 
