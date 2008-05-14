@@ -46,6 +46,12 @@
         disable = <apertureFileDisable>
 &end
 
+&twiss_output
+	final_values_only = 1,
+	statistics = 1,
+	radiation_integrals = 1
+&end
+
 &alter_elements name=*, type=*SBEN*, item=EDGE_ORDER, value=1, allow_missing_elements=1, allow_missing_parameters=1 &end
 &alter_elements name=*, type=*SBEN*, item=ORDER, value=1, allow_missing_elements=1, allow_missing_parameters=1 &end
 
@@ -53,7 +59,6 @@
 	n_steps = <numberOfSeeds>,
         n_passes = <turns>,
 &end
-
 
 &twiss_output
 	filename = %s.twi,
