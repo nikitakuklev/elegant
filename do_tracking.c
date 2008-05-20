@@ -1190,9 +1190,8 @@ long do_tracking(
 	      break;
 	    case T_IBSCATTER:
 	      if (!(flags&TEST_PARTICLES))
-		track_IBS(coord, nToTrack, (IBSCATTER*)eptr->p_elem,
-			  *P_central, &(beamline->elem), &(beamline->radIntegrals),
-			  charge);
+           track_IBS(coord, nToTrack, (IBSCATTER*)eptr->p_elem,
+                     *P_central, &(beamline->elem), charge, i_pass, run);
 	      break;
 	    case T_SCRIPT:
               if (isMaster || !notSinglePart) {
