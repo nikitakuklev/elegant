@@ -9,6 +9,9 @@
 
 /* 
  * $Log: not supported by cvs2svn $
+ * Revision 1.26  2008/05/20 19:30:17  xiaoam
+ * updated for new IBS calculation.
+ *
  * Revision 1.25  2008/03/24 14:51:57  emery
  * Rewrote usage message to indicate that the -growthRateOnly option
  * is incompatible with the -integrate option.
@@ -326,8 +329,6 @@ int main( int argc, char **argv)
                           NULL) ||
             integrationTurns<=0 || integrationStepSize<1) 
           bomb("invalid -integrate syntax", NULL);
-        if (integrationTurns && !isRing)
-          bomb("integration can not be worked with transport line", NULL);
         break;
       case NO_WARNING:
         noWarning = 1;
@@ -368,6 +369,14 @@ int main( int argc, char **argv)
   
   if (!growthRatesOnly && !integrationTurns && !noWarning)  
     fprintf( stdout, "*Warning* The growth rate contribution columns in the results file will be those calculated from the equilibrium (or final) condition.\n");
+  if (integrationTurns && !isRing) {
+    integrationTurns = 0;
+    fprintf( stdout, "*Warning* -isRing=0 is incompatiable with -integrate option. The -integrate will be disabled.\n");
+  }
+  if (energy && !isRing) {
+    energy = 0;
+    fprintf( stdout, "*Warning* you can not scale energy for linac beam. Scaling will be disabled.\n");
+  }
 
   /***************************************************\
    * get parameter information from first input file  *
@@ -508,8 +517,6 @@ int main( int argc, char **argv)
     circumference = s[elements-1]*superperiods;
     U0 *= superperiods;
     if (energy!=0) {
-      if(!isRing)
-        bomb("you can not scale energy for not circular accelerator", NULL);
       /* scale to new energy */
       pCentral0 = sqrt(sqr(energy/me_mev)-1);
       taux /= ipow(energy/EMeV, 3);
