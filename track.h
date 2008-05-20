@@ -760,7 +760,7 @@ extern char *entity_text[N_TYPES];
 #define N_MODRF_PARAMS 15
 #define N_SREFFECTS_PARAMS 14
 #define N_ZTRANSVERSE_PARAMS 29
-#define N_IBSCATTER_PARAMS 9
+#define N_IBSCATTER_PARAMS 12
 #define N_FMULT_PARAMS 10
 #define N_BMAPXY_PARAMS 5
 #define N_WAKE_PARAMS 13
@@ -2168,12 +2168,20 @@ extern PARAMETER IBSCATTER_param[N_IBSCATTER_PARAMS];
 
 typedef struct {
   double coupling, factor, charge;
-  long do_x, do_y, do_z;
-  long smooth, verbosity, forceMatchedTwiss;
+  long do_x, do_y, do_z, interval;
+  long smooth, verbosity, forceMatchedTwiss, isRing;
+  char *filename; 
   /* internal use only */
-  double *s, *betax, *alphax, *betay, *alphay, *etax, *etaxp;
-  long elements;
-  double revolutionLength;
+  char **name;
+  double *s, *pCentral;
+  double *betax, *alphax, *etax, *etaxp;
+  double *betay, *alphay, *etay, *etayp;
+  double *xRateVsS, *yRateVsS, *zRateVsS;
+  long elements, offset, output;
+  double revolutionLength, dT;
+  double emitx0, emity0, emitl0, sigmaz0, sigmaDelta0;
+  double emitx, emity, emitl, sigmaz, sigmaDelta;
+  double xGrowthRate, yGrowthRate, zGrowthRate;
 } IBSCATTER;
 
 /* space charge multipole element */
@@ -3039,8 +3047,7 @@ void track_SReffects(double **coord, long n, SREFFECTS *SReffects, double Po,
 VMATRIX *srEffectsMatrix(SREFFECTS *SReffects);
 
 void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po, 
-               ELEMENT_LIST *element, RADIATION_INTEGRALS *radIntegrals0,
-               CHARGE *charge);
+               ELEMENT_LIST *element, CHARGE *charge, long i_pass, RUN *run);
 
 long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, double p_error, double Po, double **accepted,
     double z_start, double z_end, CHARGE *charge, char *rootname);
