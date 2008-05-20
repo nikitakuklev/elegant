@@ -2630,7 +2630,7 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
       n = (N_TSWA*N_TSWA + N_TSWA)/2;
     }
     /* Nu = AxAy*Coef 
-     * Nu is (m-1)x1, AxAy is mxn, Coef is nx1 */
+     * Nu is (m-1)x1, AxAy is (m-1)xn, Coef is nx1 */
     m --;  /* won't use [0][0] from tune arrays due to NAFF issues */
     m_alloc(&AxAy, m, n);
     m_alloc(&Coef, n, 1);
