@@ -1374,9 +1374,12 @@ PARAMETER ibscatter_param[N_IBSCATTER_PARAMS] = {
   {"DO_X", "", IS_LONG, 0, (long)((char *)&ibs_example.do_x), NULL, 0.0, 1, "do x-plane scattering?"},
   {"DO_Y", "", IS_LONG, 0, (long)((char *)&ibs_example.do_y), NULL, 0.0, 1, "do y-plane scattering?"},
   {"DO_Z", "", IS_LONG, 0, (long)((char *)&ibs_example.do_z), NULL, 0.0, 1, "do z-plane scattering?"},
+  {"INTERVAL", "", IS_LONG, 0, (long)((char *)&ibs_example.interval), NULL, 0.0, 1, "how often to update output file?"},
   {"SMOOTH", "", IS_LONG, 0, (long)((char *)&ibs_example.smooth), NULL, 0.0, 0, "Use smooth method instead of random numbers?"},
   {"VERBOSITY", "", IS_LONG, 0, (long)((char *)&ibs_example.verbosity), NULL, 0.0, 0, "Set verbosity level"},
   {"FORCE_MATCHED_TWISS", "", IS_LONG, 0, (long)((char *)&ibs_example.forceMatchedTwiss), NULL, 0.0, 0, "Force computations to be done with twiss parameters of the beamline, not the beam."},
+  {"ISRING", "", IS_LONG, 0, (long)((char *)&ibs_example.isRing), NULL, 0.0, 1, "Is it storage ring?"},
+  {"FILENAME", "", IS_STRING, 0, (long)((char *)&ibs_example.filename), "", 0.0, 0, "output filename"},
 };
 
 WAKE wake_example;

@@ -12,224 +12,70 @@
 #include "constants.h"
 #include "zibs.h"
 
-/*
-  converted from ZAP
-  some coordinate convention:
-  Zap uses coordinate x, z, l for our x, y, z.
-  So I had to change several variable names to be consistent
-  with our coordinate system. Here is the complete list to preserve my
-  sanity:
-  ZAP        here
-  ----------------
-  ipr     -> printFlag
-  ns      -> steps
-  istep      not used
-  itit1      not used
-  const   -> const
-  dencon  -> dencon
-  pnb     -> particles
-  coulog  -> coulombLog
-  ro      -> re_mks
-  beta    -> beta (v/c)
-  gm      -> gamma
-  clite   -> c_mks
-  epsx    -> emitx
-  epsz    -> emity
-  sigp    -> sigmaDelta
-  sigl    -> sigmaz
-  epszx   -> emityxRatio
-  epsxz   -> emitxyRatio
-  imax    -> elements (number of elements)
-  dels    -> deltas
-  ss      -> ss (magnet position)
-  btx     -> betax pointer
-  btz     -> betay pointer
-  betrxz  -> betaxyRatio
-  betrzx  -> betayxRatio
-  dqcon   -> tuneShiftConst (space charge effect)
-  dqscx   -> SCtuneShiftx
-  dqscz   -> SCtuneShifty
-  dqscmx  -> SCtuneShiftMax
-  epsx0   -> emitx0 (natural emittance)
-  epsz0   -> emity0
-  tavx    -> tauxAve
-  tavy    -> tauyAve
-  tavz    -> tauzAve
-  iz      -> i (element counter)
-  imx     -> elements
-  apx     -> alphax pointer
-  ap      -> etax pointer
-  app     -> etaxp pointer
-  betax   -> btx (local variable)
-  betaz   -> bty
-  alx     -> alx
-  eta     -> eta
-  etap    -> etap
-  am      -> atomicNumber
-  cl      -> cz (constants used in scattering rate)
-  cz      -> cy
-  conl    -> conz
-  conz    -> cony
-  zintx   -> zintx
-  zintz   -> zinty
-  zintl   -> zintz
-  ccz     -> cy
-  iiz     -> k  (counter within steps loop)
-  al      -> al (used to store powers of 10, whatever!)
-  bl      -> bl 
-  maxdec  -> maxDecades
-  imax1   -> not used (this is part of a sleazy way zap uses the last
-             element of an array to store the average values -- I couldn't
-             recognize what was going on in this subroutine until
-             I read the input routines and found out what the last element
-             of the array was for.)
-  imax2   -> not used (same stuff as above)
-  fjoe    -> weight (used in summing contribution from each lattice point)
-  gsr     -> transSRdampRate
-  gsrl    -> longSRdampRate
-*/
-
 /* prototypes */
-void IBSGrowthRates (double gamma, double emitx, double emity,
-                     double sigmaDelta, double sigmaz,
-                     double particles,
-                     double emitx0, double sigmaDelta0, 
-                     double transSRdampRate, double longSRdampRate,
-                     double coupling,
-                     double *s, double *betax, double *alphax, double *betay, 
-                     double *alphay, double *etax, double *etaxp, 
-                     double *xRateVsS, double *yRateVsS, double *zRateVsS, long elements, 
-                     long superperiods, long verbosity,
-                     double *xGrowthRate, double *yGrowthRate, double *zGrowthRate) {
-/*
-     Subroutine uses simpson's rule integration
-     to calculate bjorken/mtingwa integrals (eqn. 3.4)
-     particle accelerators 13, 115(1983)
-
-     Equivalent expressions are found in conte/martini
-     particle accelerators 17, 1(1985)
-
-     Integrals are broken into decades to optimize speed
-
-     Use weighted average of lattice parameters in regions of non-zero eta
-         to predict average lifetimes (in last line of integral outputs)
-     The weighted lifetimes are based on an average value for script-h
-         and are corrected to reflect the entire ring size
-
-*/
-  double test = 1e-5;
-  double SCtuneShiftLimit = 0.25;
-  double simpsonCoeff[2] = {2.,4.};
+void IBSRate (double particles, double coupling, 
+              long elements, long superperiods, long verbosity, long isRing,
+              double emitx0, double emity0, double sigmaDelta0, double sigmaz0,
+              double *s, double *pCentral, double *betax, double *alphax, double *betay, 
+              double *alphay, double *etax, double *etaxp, double *etay, double *etayp,
+              double *xRateVsS, double *yRateVsS, double *zRateVsS, 
+              double *xGrowthRate, double *yGrowthRate, double *zGrowthRate, long isElegant) 
+{
   long i, j, k;
-  double beta, EMeV, coulombLogReturn, dencon;
-  double emityxRatio, emitxyRatio, betaxyRatio, betayxRatio;
-  double sumx, sumy, delta;
-  double constant, tuneShiftConst, SCtuneShiftx, SCtuneShifty, SCtuneShiftMax, particlesSC;
-  double tauxAve, tauyAve, tauzAve;
-  double betaxAve, betayAve;
-  double betx, alx, bety, eta, etap, phi, c1, c2, c3, cx, cy, cz, r1, a, b;
-  double cscale, testLog, checkLog, cprime, conz, cony;
-  double zintx, zinty, zintz;
-  double ccy, td1, td2, tz1, tz2, ty1, ty2, tx1, tx2;
-  double h, aloop, term, func, polyx, polyy, polyz, sumz;
-  double alam, cof, f=0.0, coff, tmpx, tmpy, tmpz;
-  double txi, tyi, tzi, weight, taux, tauy, tauz;
-  double epsCheck=0.0, epzCheck=0.0;  
+  double test = 1e-5;
+  double simpsonCoeff[2] = {2.,4.};
+  double coulombLogReturn, constant, weight;
+  double h, lambda0, lambda, cof, term, func, polyx, polyy, polyz;
+  double txi, tyi, tzi, sumx, sumy, sumz, zintx, zinty, zintz;
 
-#define STEPS 10
+  double beta, gamma0, gamma1, gamma2;
+  double emitx, emity, sigmaDelta, sigmaz;
+  double phix, phiy, Cx, Cy;
+  double x11, x12, x22, y22, y23, y33, z22;
+  double A, c11[3], c22[3], c33[3], c12[3], c23[3];
+  double a0, b0, c0, ax, bx, ay, by, az, bz;
+
+#define STEPS 100
 #define MAXDECADES 30
   long maxDecades = MAXDECADES;
   long steps = STEPS; /* number of integration steps per decade */
-  double al[MAXDECADES+2], bl[MAXDECADES+2], sqrt_al[MAXDECADES+2];
-  double alam2d[MAXDECADES+2][STEPS+2], sqrtAlam2d[MAXDECADES+2][STEPS+2];
-  long nsteps, noWarning;
+
+  if (elements < 2)
+    bomb(NULL,"There are fewer than two elements in the twiss function arrays.\n");
+
+  /* elegant give exit beam parameter. ibsEmit give input beam parameter */
+  if(isElegant) {
+    gamma0 = sqrt(pCentral[0]*pCentral[0]+1);
+    gamma1 = sqrt(pCentral[elements-1]*pCentral[elements-1]+1);
+    emitx0 = emitx0*gamma1/gamma0;
+    emity0 = emity0*gamma1/gamma0;
+    sigmaDelta0 = sigmaDelta0*gamma1/gamma0;
+  } else {
+    gamma0 = gamma1 = sqrt(pCentral[0]*pCentral[0]+1);
+  }
 
   if (verbosity>2) {
     fprintf(stdout, "IBS Rates:\n");
-    fprintf(stdout, "gamma = %le, emitx = %le, emity = %le, sigmaDelta = %le, sigmaz = %le\n",
-            gamma, emitx, emity, sigmaDelta, sigmaz);
-    fprintf(stdout, "emitx0 = %le, sigmaDelta0 = %le, transSRRate = %le, longSRRate = %le\n",
-            emitx0, sigmaDelta0, transSRdampRate, longSRdampRate);
-    fprintf(stdout, "coupling = %le, superperiods = %ld, particles = %le\n",
-            coupling, superperiods, particles);
-  }
-  
-
-  EMeV = sqrt(sqr(gamma) + 1) * me_mev;
-  betaxAve = 0.0;
-  betayAve = 0.0;
-  for (i=1; i<elements; i++) {
-    delta = s[i] - s[i-1];
-    betaxAve += delta * (betax[i] + betax[i-1])/ 2.;
-    betayAve += delta * (betay[i] + betay[i-1])/ 2.;
-  }
-  betaxAve /= s[elements-1];
-  betayAve /= s[elements-1];
-  beta = sqrt(1 - 1 / sqr( gamma ));
-  noWarning = 1;
-  coulombLogReturn = coulombLog(gamma, emitx, emity, betaxAve, betayAve, sigmaz, particles, noWarning);
-  if (verbosity>3)
-    fprintf( stdout, "Coulomb log: %g.\n", coulombLogReturn);
-  constant = particles * coulombLogReturn * sqr(re_mks) * c_mks /
-    (8 * PI * pow(beta,3) * pow(gamma,4) * emitx *  emity * sigmaDelta * sigmaz);
-  dencon = particles/ (8 * sigmaz * sqrt(pow(PI,3) * emitx * emity));
-  emityxRatio = sqrt( emity/ emitx );
-  emitxyRatio = 1.0 / emityxRatio;
-  sumx = 0.0;
-  sumy = 0.0;
-  
-  if (elements < 2)
-    bomb(NULL,"There are fewer than two elements in the twiss function arrays.\n");
-  
-  for (i=1; i<elements; i++) {
-    delta = s[i] - s[i-1];
-    betaxyRatio = sqrt(betax[i-1]/betay[i-1]);
-    betayxRatio = 1.0/ betaxyRatio;
-    sumx += 0.5 * betaxyRatio * delta/ (1 + emitxyRatio * betaxyRatio);
-    sumy += 0.5 * betayxRatio * delta/ (1 + emityxRatio * betayxRatio);
-    betaxyRatio = sqrt(betax[i]/betay[i]);
-    betayxRatio = 1.0/ betaxyRatio;
-    sumx += 0.5 * betaxyRatio * delta/ (1 + emitxyRatio * betaxyRatio);
-    sumy += 0.5 * betayxRatio * delta/ (1 + emityxRatio * betayxRatio);
-  }
-  /* formula simplified from zap since we use the superperiods variable */
-  tuneShiftConst = re_mks * superperiods * dencon/ pow(gamma,3);
-  SCtuneShiftx = tuneShiftConst * sumx;
-  SCtuneShifty = tuneShiftConst * sumy;
-  SCtuneShiftMax = MAX(SCtuneShiftx, SCtuneShifty);
-  if (verbosity>3)
-    fprintf( stdout, "Space charge tune shifts:\n x: %g y: %g.\n", 
-            SCtuneShiftx, SCtuneShifty);
-  if (SCtuneShiftMax > SCtuneShiftLimit ) {
-    particlesSC = SCtuneShiftLimit * particles/ SCtuneShiftMax;
-    if (verbosity > 0)
-      fprintf( stdout, "Warning: Space charge tune shift is excessive - should use fewer "
-              "than %12.4g particles per bunch.\n", particlesSC);
+    fprintf(stdout, "gamma=%le, emitx = %le, emity = %le, sigmaDelta = %le, sigmaz = %le\n",
+            gamma0, emitx0, emity0, sigmaDelta0, sigmaz0);
+    fprintf(stdout, "coupling = %le, superperiods = %ld, particles = %le, isRing=%ld\n",
+            coupling, superperiods, particles, isRing);
   }
 
-  tauxAve = 0.0;
-  tauyAve = 0.0;
-  tauzAve = 0.0;
   *xGrowthRate= 0.0; 
   *yGrowthRate= 0.0; 
   *zGrowthRate= 0.0; 
 
   steps = steps + steps%2;
-  al[0] = 0;
-  for (j=0; j<maxDecades; j++) {
-    bl[j] = pow(10,j);
-    al[j+1] = bl[j];
-    sqrt_al[j] = sqrt(al[j]);
-    h = (bl[j]-al[j])/steps;
-    for (k=1; k<=steps; k++) {
-      alam2d[j][k] = al[j]+k*h;
-      sqrtAlam2d[j][k] = sqrt(alam2d[j][k]);
-    }
-  }
-  
+
+  gamma2 = gamma0*gamma0;
+  beta = pCentral[0]/gamma0;
+  emitx = emitx0;
+  emity = emity0;
+  sigmaDelta = sigmaDelta0;
+  sigmaz = sigmaz0;
+
   for( i=0; i<elements; i++) {
-    /* Does a better job at trapeze integration than original zap 
-     */
     if (i==0) {
       weight = FABS(s[1]-s[0])/ 2.0/ s[elements-1];
     } else if (i==(elements-1) ) {
@@ -237,12 +83,7 @@ void IBSGrowthRates (double gamma, double emitx, double emity,
     } else {
       weight = FABS(s[i+1]-s[i-1])/ 2.0/ s[elements-1];
     }
-    /* original zap weighting 
-    if (i==0)
-      weight = 0.0;
-    else
-      weight = FABS(s[i]-s[i-1])/ s[elements-1];
-      */
+
     if (!weight) {
       if (xRateVsS)
         xRateVsS[i] = 0;
@@ -252,143 +93,133 @@ void IBSGrowthRates (double gamma, double emitx, double emity,
         zRateVsS[i] = 0;
       continue;
     }
-    
 
-    betx = betax[i];
-    alx = alphax[i];
-    bety = betay[i];
-    eta = etax[i];
-    etap = etaxp[i];
-    
-    phi=etap+(alx*eta/betx);
-    c1=sqr(gamma*eta)/(emitx*betx);
-    c3=betx/emitx;
-    c2=c3*sqr(gamma*phi);
-    cx=c1+c2;
-    cz=sqr(gamma/sigmaDelta);
-    cy=bety/emity;
-    r1=3./cy;
-    a=cx+cz;
-    b=(c3+cy)*(c1+cz)+cy*c2;
-    
-    /*
-      C=C3*CZ*(C1+CL)
-      
-      Define cprime=c*cscale to try to keep the value
-      small enough for the vax in single precision.
-      Test log(c) to see if it needs scaling
-      */
-    
-    cscale = 1.0;
-    testLog = 33.0;
-    checkLog = log10(c3)+log10(cy)+log10(c1+cz);
-    if( checkLog > testLog)
-      cscale = pow(10.0,(testLog - checkLog));
-    cprime = c3*cy*cscale*(c1+cz);
-    
-    conz = constant*cz;
-    cony = constant*cy;
+    if (!isRing) {
+      gamma2 = pCentral[i]*pCentral[i]+1;
+      gamma1 = sqrt(gamma2);
+      beta = pCentral[i]/gamma1;
+      emitx = emitx0 * gamma0 / gamma1;
+      emity = emity0 * gamma0 / gamma1;
+      sigmaDelta = sigmaDelta0 * gamma0 /gamma1;
+    } 
 
-    if (verbosity>3) {
-      fprintf( stdout, "constant= %12.5g  conz=%12.5g  cony=%12.5g"
-              "   a=%12.5g b=%12.5g\n", constant, conz, cony, a, b);
-    }
-    
-    /*     split integral into decades, with "steps" steps per decade
-     */
+    coulombLogReturn = coulombLog(gamma1, emitx, emity, betax[i], betay[i], sigmaz, particles, 1);
+    constant = particles * sqr(re_mks) * c_mks /
+      (8 * PI * ipow(beta,3) * ipow(gamma2,2) * emitx *  emity * sigmaDelta * sigmaz);
+    constant *= coulombLogReturn;
+    if (verbosity>6)
+      fprintf( stdout, "Coulomb log: %g.\n constant=: %g \n", coulombLogReturn, constant);
 
-    zintx = 0.0;
-    zinty = 0.0;
-    zintz = 0.0;
+    phix = etaxp[i] + (alphax[i]*etax[i]/betax[i]);
+    phiy = etayp[i] + (alphay[i]*etay[i]/betay[i]);
+   
+    x11 = betax[i] / emitx;
+    x12 = -x11 * gamma1 * phix;
+    Cx = x11 * ipow(etax[i]/betax[i],2) * gamma2;
+    x22 = Cx + x12*x12 / x11;
+ 
+    y33 = betay[i] / emity;
+    y23 = -y33 * gamma1 * phiy;
+    Cy = y33 * ipow(etay[i]/betay[i],2) * gamma2; 
+    y22 = Cy + y23*y23 / y33;
+
+    z22 = gamma2 / sigmaDelta / sigmaDelta;
+
+    A = x22 + y22 + z22;
+
+    a0 = x11 + y33 + A;
+    b0 = (x11+y33)*A - x12*x12 - y23*y23 + x11*y33;
+    c0 = x11*y33*(Cx+Cy+z22);
+
+    c11[0] = A*y33 - y23*y23;
+    c11[1] = A + y33;
+    c11[2] = 1.;
+
+    c22[0] = x11*y33;
+    c22[1] = x11+y33;
+    c22[2] = 1;
+
+    c33[0] = A*x11 - x12*x12;;
+    c33[1] = A + x11;
+    c33[2] = 1;
+
+    c12[0] = -x12*y33;
+    c12[1] = -x12;
+    c12[2] = 0;
+
+    c23[0] = -x11*y23;
+    c23[1] = -y23;
+    c23[2] = 0;
     
-    /*     Constants for integration loop
-           to keep the numbers reasonable, the numerator is
-           scaled by 1/cprime and the denominator by 1/cprime**2
-           the extra factor of cprime is accounted for after integrating
-           */    
-    /*     ccz=c**(-2./3.) */
-    ccy = pow(cprime,(-2./3.));
-    td1=(a+c3)*ccy;
-    td2=1./(sqrt(ccy)*cscale*cy);
-    tz1=(2.*a-cy-c3)/cprime;
-    tz2=(b-2.*c3*cy)/cprime;
-    ty1=(-a-c3+2.*cy)/cprime;
-    /*     ty2=(b-r1*c+cy*c3)/cprime */
-    ty2=(b+cy*c3)/cprime-r1/cscale;
-    tx1=(2.*a*(cx-c3)-cy*cx-c3*(cy-cz-2.*c3-6.*c2))/cprime;
-    tx2=(c3+cx)*((b+c3*cy)/cprime)-6./cscale+3.*c3*cy*(cz/cprime);
-    al[0]= 0.0;
+    ax = (x11+x22) * (c11[1]+c22[1]+c33[1]) - 3.*(x11*c11[1] + 2.*x12*c12[1] + x22*c22[1]);
+    bx = (x11+x22) * (c11[0]+c22[0]+c33[0]) - 3.*(x11*c11[0] + 2.*x12*c12[0] + x22*c22[0]);
+
+    ay = (y22+y33) * (c11[1]+c22[1]+c33[1]) - 3.*(y33*c33[1] + 2.*y23*c23[1] + y22*c22[1]);
+    by = (y22+y33) * (c11[0]+c22[0]+c33[0]) - 3.*(y33*c33[0] + 2.*y23*c23[0] + y22*c22[0]);
+
+    az = z22  * (c11[1]+c22[1]+c33[1]) -3.*z22*c22[1];
+    bz = z22  * (c11[0]+c22[0]+c33[0]) -3.*z22*c22[0];
+    
+    /* Using simpson's rule to do the integral. 
+       split integral into decades with "steps" steps per decade.
+       integration intervals be [0,10], [10,100], [100,1000], and so on. 
+       j is the index over these intervals. k is the index over each step.
+    */
+    lambda0 = 0.0;
+    zintx = zinty = zintz = 0.0;
     for( j=0; j<maxDecades; j++ ) {
-      /* 
-        It seems that al and bl are integration limits. The
-        integration intervals seem to be [0,10], [10,100], [100,1000],
-        and so on. j is the index over these intervals.
-        */
-      /* 
-        bl[j] = pow(10,j); 
-         al[j+1] = bl[j];
-      */
-      h = (bl[j]-al[j])/ steps;
-      aloop = al[j];
-
-      /* Evaluate simpson's rule summation for one interval
-         the integrand is calculated in the loop itself
-         */
-      term = sqrt((cy+aloop)*ccy) * 
-        sqrt(aloop*ccy*aloop+td1*aloop+td2);
-      func = sqrt_al[j]/term/term/term;
-      polyz = tz1*aloop+tz2;
-      polyx = tx1*aloop+tx2;
-      polyy = ty1*aloop+ty2;
-      /* First point in simpson's integration
-       */
-      sumz = func*polyz;
-      sumx = func*polyx;
-      sumy = func*polyy;
-      /* split decade into "steps" steps (even number, usually 10) 
-         and do simpsons rule. There should be 11 points, ten
-         of which are treated below.
-         */
-      for( k=1; k<=steps; k++) {
-        alam = alam2d[j][k];
-/* second point (k=1) should have coefficient of 4 */
-        cof = simpsonCoeff[k%2]; 
-        term = sqrt((cy+alam)*ccy) * sqrt(alam*ccy*alam+td1*alam+td2);
-        f = sqrtAlam2d[j][k]/term/term/term;
-        coff = cof*f;
-        polyz = tz1*alam+tz2;
-        polyx = tx1*alam+tx2;
-        polyy = ty1*alam+ty2;
-        sumz += coff*polyz;
-        sumx += coff*polyx;
-        sumy += coff*polyy;
+      if (j==0) {
+        h = 1. / steps;
       }
-      /* This is to compensate for the "2" coefficient as
-         the coefficient for the last point should be 1.
-         */
-      sumz -= f*polyz;
-      sumx -= f*polyx;
-      sumy -= f*polyy;
-      tmpz = (sumz/3.0)*h;
-      tmpx = (sumx/3.0)*h;
-      tmpy = (sumy/3.0)*h;
-      zintz += tmpz;
-      zintx += tmpx;
-      zinty += tmpy;
-      /*
-        Test to see if integral has converged
+      else {
+        h = lambda * 9. / steps;
+      } 
+
+      sumx = sumy = sumz = 0.0;
+      for( k=0; k<=steps; k++) {
+        lambda = lambda0 + k*h;
+        /* split decade into "steps" steps (even number) and do simpsons rule.
+           odd points have cof 4 and even points have cof 2. 
+           the first and last point just count once. */
+        cof = simpsonCoeff[k%2]; 
+        if (k==0 || k==steps) 
+          cof = 1.;
+        /*
+        term = pow((ipow(alam,3) + a0*ipow(alam,2) + b0*alam + c0),0.5);
         */
-      if( FABS(tmpz/zintz)<test && FABS(tmpx/zintx)<test &&
-         FABS(tmpy/zinty)<test ) break;
+        term = sqrt(ipow(lambda,3) + a0*ipow(lambda,2) + b0*lambda + c0);
+        func = sqrt(lambda)/term/term/term;
+        cof *= func;
+        polyz = (az*lambda + bz);
+        polyx = (ax*lambda + bx);
+        polyy = (ay*lambda + by);
+        sumz += cof*polyz;
+        sumx += cof*polyx;
+        sumy += cof*polyy;
+      }
+      lambda0 = lambda;
+      sumz = (sumz/3.0)*h;
+      sumx = (sumx/3.0)*h;
+      sumy = (sumy/3.0)*h;
+      zintz += sumz;
+      zintx += sumx;
+      zinty += sumy;
+      /* Test to see if integral has converged */
+      if( FABS(sumz/zintz)<test && FABS(sumx/zintx)<test && FABS(sumy/zinty)<test ) 
+        break;
       if (j == maxDecades) 
         fprintf( stdout, "**Warning** Integral did not converge in %ld decades.\n",maxDecades);
     }
-    nsteps = steps * j;
 
-    /* divide answers by cprime to account for scaling */
-    txi = constant * (zintx/cprime);
-    tyi = cony * (zinty/cprime);
-    tzi = conz * (zintz/cprime);
+    txi = constant * zintx;
+    tyi = constant * zinty;
+    tzi = constant * zintz;
+  if (verbosity > 1) {
+    fprintf( stdout, "i=%ld, coulombLogReturn=%g, constant=%g, zintx=%g, zinty=%g, zintz=%g\n", 
+             i, coulombLogReturn, constant/coulombLogReturn, zintx, zinty, zintz);
+  }
+    if (!isRing)
+      tzi *= 2.0;
 
     *xGrowthRate += txi*weight;
     *yGrowthRate += tyi*weight;
@@ -402,38 +233,12 @@ void IBSGrowthRates (double gamma, double emitx, double emity,
     if (zRateVsS)
       zRateVsS[i] = tzi;
   }
-  taux = 1.0/ *xGrowthRate;
-  tauy = 1.0/ *yGrowthRate;
-  tauz = 1.0/ *zGrowthRate;
-  
-  /* the quantum excitation term in the denominator is
-       SR  0    1
-      g   e   -----
-       x   x  1 + k 
-    */
-  if (transSRdampRate != 0)
-    epsCheck = (transSRdampRate - *xGrowthRate/ (1 + coupling)) * emitx/ (transSRdampRate * emitx0/ (1 + coupling));
-  if (longSRdampRate != 0)
-    epzCheck = (longSRdampRate - *zGrowthRate) * sqr(sigmaDelta)/ (longSRdampRate * sqr(sigmaDelta0));
-  
-  /* output average values 
-   */
+
   if (verbosity > 1) {
-    fprintf( stdout, "(Weighted) average rates (1/sec): longitudinal= %15.6g"
-            "   horizontal= %15.6g   vertical= %15.6g\n", *zGrowthRate, *xGrowthRate, *yGrowthRate);
-/*    fprintf( stdout, "(Weighted) average lifetimes (sec): longitudinal= %15.6g"
-            "   horizontal= %15.6g   vertical= %15.6g\n", tauz, taux, tauy);
-*/
+    fprintf( stdout, "(Weighted) average rates (1/sec): longitudinal= %g"
+            "   horizontal= %g   vertical= %g\n", *zGrowthRate, *xGrowthRate, *yGrowthRate);
   }
   
-  /*
-    OUTPUT (GSR-ACUPL*GIBS(EPSHAT))*EPSHAT/(GSR*EPS0X) AND
-    (GSRL-GLIBS(EPLHAT))*EPLHAT/(GSRL*EPS0L) RATIOS
-    */
-  if (verbosity>1 && transSRdampRate!=0.0) {
-    fprintf( stdout, "coupling = %8.4f\n(transSRdampRate - IBSGrowthRate(emitxTrial)/(1+coupling)) * emitxTrial/(transSRdampRate*emitx0) = %15.6g\n", coupling, epsCheck);
-    fprintf( stdout, "(longSRdampRate - IBSLongGrowthRate(emitzTrial)) * emitzTrial/(longSRdampRate*emitz0)    = %15.6g\n", epzCheck);
-  }
   return;
 }
 

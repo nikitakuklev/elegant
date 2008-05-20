@@ -14,15 +14,10 @@ double coulombLog (double gamma, double emitx, double emity,
                    double betaxAve, double betayAve, double sigz, double particles, 
                    long noWarning);
 
-void IBSGrowthRates (double gamma, double emitx, double emity,
-                     double sigmaDelta, double sigmaz,
-                     double particles,
-                     double emitx0, double sigmaDelta0,
-                     double transSRdampRate, double longSRdampRate,
-                     double coupling,
-                     double *s, double *betax, double *alphax, double *betay, 
-                     double *alphay, double *etax, double *etaxp,
-                     double *xrate, double *yrate, double *zrate, long elements, 
-                     long superperiods, long verbosity,
-                     double *xGrowthRate, double *yGrowthRate, double *zGrowthRate);
-
+void IBSRate (double particles, double coupling, 
+              long elements, long superperiods, long verbosity, long isRing,
+              double emitx, double emity, double sigmaDelta, double sigmaz,
+              double *s, double *pCentral, double *betax, double *alphax, double *betay, 
+              double *alphay, double *etax, double *etaxp, double *etay, double *etayp,
+              double *xRateVsS, double *yRateVsS, double *zRateVsS, 
+              double *xGrowthRate, double *yGrowthRate, double *zGrowthRate, long isElegant);
