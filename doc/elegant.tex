@@ -3445,6 +3445,8 @@ on subsequent pages.
         distributions from user-designed distribution functions.  It is thus a more flexible alternative
         to \verb|bunched_beam|.  This program is part of the SDDS toolkit.  See the SDDS toolkit
         manual for documentation.
+\item {\tt touschekLifetime} --- This program calculates Touschek lifetime using A. Piwinski's formula.
+        Input files are generated from ``twiss\_output'' and ``momentum\_aperture''.
 \end{itemize}
 
 \begin{latexonly}
@@ -4212,6 +4214,56 @@ calculations included, or an output from {\tt sddsanalyzebeam}. In the latter ca
 \item {\bf authors:} H. Shang, R. Dejus, M. Borland, X. Jiao (ANL).
 \end{itemize}
 
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|touschekLifetime|}\end{center}
+\end{latexonly}
+\subsection{touschekLifetime}
+
+\begin{itemize}
+\item {\bf description:} \verb|touschekLifetime| computes Touschek lifetime using 
+A. Piwinski's formula~\cite{Piwinski}.
+
+\item {\bf examples:}
+\begin{flushleft}{\tt
+touschekLifetime aps.life -twiss=aps.twi -aper=aps.aper -part=2e10 -coupling=0.01 -length=6
+}\end{flushleft}
+
+\item {\bf synopsis:}
+\begin{flushleft}{\tt 
+touschekLifetime {\em outputFile}
+ -twiss=<twissFile> -aperture=<momentumApertureFile>
+ {-charge=<nC>|-particles=<value>} -coupling=<value>
+ {-RF=Voltage=<MV>,harmonic=<value>|-length=<mm>}
+ [-emitxInput=<value>] [-deltaInput=<value>] [-verbosity=<value>]
+}\end{flushleft}
+
+\item {\bf files:}
+{\em outputFile} --- Contains resulting Touschek lifetime.
+
+\item {\bf switches:}
+\begin{itemize}
+\item {\tt -twiss} --- A twiss parameter file from {\tt elegant}. 
+You must use the \verb|radiation_integrals| flag in \verb|twiss_output|.
+\item {\tt -aperture} --- A momentum aperture file from {\tt elegant}. 
+This file can contain a subset of elements of twissFile (for example: only Quadrupole elements). 
+But, they {\bf must} point to same beamline. One for a part of beamline (a few sectors) and one for
+entire ring is {\bf prohibit}.
+\item {\tt -charge}, {\tt -particles} --- Give the charge (in nanocoulombs) or the
+ number of electrons.
+\item {\tt -coupling} --- Give the emittance coupling ratio, $\epsilon_y/\epsilon_x$.
+\item {\tt -RF=Voltage={\em MV},harmonic={\em value}} --- Specify rf voltage and harmonic number.
+\item {\tt -length={\em mm}} --- Specify the rms bunch length.
+\item {\tt -emitxInput} --- Give the initial x emittance in meters.  If not specified,
+the value from the parameter \verb|ex0| in {\em twissFile} is used.
+\item {\tt -deltaInput} --- Give the initial rms fractional momentum spread.  If not
+specified, the value from the parameter \verb|Sdelta0| in {\em twissFile} is used.
+\item {\tt -verbosity} --- If nonzero, program execution information is printed to the standard output.
+\end{itemize}
+
+\item {\bf author:} A. Xiao, M. Borland, ANL/APS.
+\end{itemize}
+
 \newpage 
 
 \section{Accelerator and Element Description}
@@ -4430,6 +4482,9 @@ LINAC''.
 
 \bibitem{Huang2004}
   Z. Huang {\em et al.}, Phys. Rev. ST Accel. Beams {\bf 7} 074401 (2004).
+
+\bibitem{Piwinski}
+  A. Piwinski, `` The Touschek effect in strong focusing storage rings,'' DESY-98-179, Nov 1998.
 
 \end{thebibliography}
 
