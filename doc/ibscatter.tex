@@ -1,0 +1,22 @@
+This element is used for simulation of intra-beam scattering
+(IBS). The IBS algorithm is based on the Bjorken and
+Mtingwa's~\cite{BM} formula, and with an extension of including
+vertical dispersion. It can be used for both storage ring and Linac.
+
+To initialize IBS calculation, one or more IBSCATTER elements must be
+inserted into the beamline. {\tt elegant} calculates the integrated
+IBS growth rates between IBSCATTERs (or from beginning of the beamline
+to first IBSCATTER), then scats particles at each IBSCATTER
+element. Beam's parameters are updated for use in downstream elements.
+
+Because the IBS growth rates are energy dependent, special caution is
+needed for calculations with accelerating beam. The user needs to
+split their accelerating cavity into several pieces, so that $\gamma$
+has no large changes between elements.
+
+The user can examine the calculation through an optional SDDS output
+file - {\it filename}. The file has a multiple page structure. One
+IBSCATTER element at pass $i$ occupies one page. Each page contains
+integrated IBS growth rates between IBSCATTERs (or from beginning of
+the beamline to first IBSCATTER) as parameters, and local rates for
+elements in between as tabular data.
