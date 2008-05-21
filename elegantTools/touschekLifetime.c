@@ -9,6 +9,9 @@
 
 /* 
  * $Log: not supported by cvs2svn $
+ * Revision 1.2  2007/04/12 21:11:52  soliday
+ * Updated so that it will compile on WIN32.
+ *
  * Revision 1.1  2007/04/12 15:57:47  soliday
  * Added touschekLifetime to elegantTools
  *
@@ -34,11 +37,11 @@
 #include "SDDS.h"
 #include "constants.h"
 
-static char *USAGE = "touschekLife <resultsFile>\n\
+static char *USAGE = "touschekLifetime <resultsFile>\n\
  -twiss=<twissFile> -aperture=<momentumApertureFile>\n\
  {-charge=<nC>|-particles=<value>} -coupling=<value>\n\
  {-RF=Voltage=<MV>,harmonic=<value>|-length=<mm>}\n\
- [-emitxInput=<value>] [-deltaInput=<value>] [-verbose=<value>]";
+ [-emitxInput=<value>] [-deltaInput=<value>] [-verbosity=<value>]";
 
 #define VERBOSE 0
 #define CHARGE 1
@@ -216,6 +219,24 @@ int main( int argc, char **argv)
   if (!SDDS_InitializeInput(&twissPage, inputfile1))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   SDDS_ReadPage(&twissPage);
+
+  switch(SDDS_CheckParameter(&twissPage, "I1", NULL, SDDS_DOUBLE, verbosity?stdout:NULL)) {
+  case SDDS_CHECK_NONEXISTENT:
+    if (verbosity)
+      fprintf( stdout, "\tParameter I1 not found in input file.\n");
+    break;
+  case SDDS_CHECK_WRONGTYPE:
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    exit(1);
+    break;
+  case SDDS_CHECK_OKAY:
+    break;
+  default:
+    fprintf( stdout, "Unexpected result from SDDS_CheckParameter routine while checking parameter Type.\n");
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    exit(1);
+    break;
+  }
 
   /****************************************************\
    * Check input aperturefile                         *
