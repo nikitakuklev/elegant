@@ -68,10 +68,26 @@
 	radiation_integrals = 1
 &end
 
+sinclude(<ERROR>)
+
 &closed_orbit
         output = %s.clo,
 	closed_orbit_iterations = 500,
 	iteration_fraction = 0.1,
+&end
+
+&correct
+        mode = "orbit", method = "global",
+        verbose = 1, n_iterations = 4, n_xy_cycles = 100,
+        correction_fraction[0] = 0.5, 0.5,
+        bpm_noise[0] = 0e-6, 0e-6,
+        correction_accuracy[0] = 1e-6, 1e-6,
+        trajectory_output = "%s.orb",
+        corrector_output = "%s.cor",
+        statistics = "%s.scor",
+        closed_orbit_iteration_fraction = 0.5,
+        closed_orbit_iterations = 20,
+        closed_orbit_accuracy = 1e-9,
 &end
 
 &momentum_aperture
