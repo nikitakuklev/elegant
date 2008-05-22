@@ -719,7 +719,7 @@ extern char *entity_text[N_TYPES];
 #define N_MARK_PARAMS 3
 #define N_MATR_PARAMS 3
 #define N_ALPH_PARAMS 13
-#define N_RFDF_PARAMS 18
+#define N_RFDF_PARAMS 20
 #define N_RFTMEZ0_PARAMS 36
 #define N_RMDF_PARAMS 10
 #define N_TMCF_PARAMS 18
@@ -787,11 +787,11 @@ extern char *entity_text[N_TYPES];
 #define N_FTRFMODE_PARAMS 13
 #define N_TFBPICKUP_PARAMS 18
 #define N_TFBDRIVER_PARAMS 20
-#define N_LSCDRIFT_PARAMS  10
+#define N_LSCDRIFT_PARAMS  11
 #define N_DSCATTER_PARAMS 14
 #define N_LSRMDLTR_PARAMS 14
 #define N_TAYLORSERIES_PARAMS 6
-#define N_RFTM110_PARAMS 14
+#define N_RFTM110_PARAMS 16
 #define N_CWIGGLER_PARAMS 23
 #define N_EDRIFT_PARAMS 1
 #define N_SCMULT_PARAMS 0		
@@ -1142,6 +1142,7 @@ typedef struct {
   double voltageNoise, phaseNoise;
   double groupVoltageNoise, groupPhaseNoise;
   long voltageNoiseGroup, phaseNoiseGroup;
+  long startPass, endPass;
   /* for internal use only */
   double t_first_particle;        
   long initialized, fiducial_seen;
@@ -1164,6 +1165,7 @@ typedef struct {
   double voltageNoise, phaseNoise;
   double groupVoltageNoise, groupPhaseNoise;
   long voltageNoiseGroup, phaseNoiseGroup;
+  long startPass, endPass;
   /* for internal use only */
   double t_first_particle;        
   long   initialized, fiducial_seen;
@@ -2168,8 +2170,8 @@ extern PARAMETER IBSCATTER_param[N_IBSCATTER_PARAMS];
 
 typedef struct {
   double coupling, factor, charge;
-  long do_x, do_y, do_z, interval;
-  long smooth, verbosity, forceMatchedTwiss, isRing;
+  long do_x, do_y, do_z;
+  long smooth, verbosity, forceMatchedTwiss, isRing, interval;
   char *filename; 
   /* internal use only */
   char **name;
@@ -2324,6 +2326,7 @@ typedef struct {
   long bins;
   long smoothing, SGHalfWidth, SGOrder, interpolate;
   double highFrequencyCutoff0, highFrequencyCutoff1, radiusFactor;
+  long lsc;
 } LSCDRIFT;
 
 /* PLanar Undulator with optional laser heater */

@@ -47,12 +47,14 @@ void track_through_rf_deflector(
   
   if (rf_param->frequency==0) 
     bomb("RFDF cannot have frequency=0", NULL);
-  if (rf_param->voltage==0) {
+  if (rf_param->voltage==0 ||
+      (rf_param->startPass>=0 && pass<rf_param->startPass) ||
+      (rf_param->endPass>=0 && pass>rf_param->endPass)) {
     if (isSlave || !notSinglePart) 
       exactDrift(initial, n_particles, rf_param->length);
     return;
   }
-
+    
   if (!rf_param->initialized || !rf_param->fiducial_seen)
       set_up_rfdf(rf_param, initial, n_particles, pc_central);
 
@@ -213,7 +215,9 @@ void track_through_rftm110_deflector(
   if (rf_param->frequency==0) 
     bomb("RFTM110 cannot have frequency=0", NULL);
 
-  if (rf_param->voltage==0)
+  if (rf_param->voltage==0 ||
+      (rf_param->startPass>=0 && pass<rf_param->startPass) ||
+      (rf_param->endPass>=0 && pass>rf_param->endPass))
     return;
 
   if (!rf_param->initialized || !rf_param->fiducial_seen) 

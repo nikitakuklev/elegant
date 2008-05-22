@@ -39,9 +39,15 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
   double *buffer;
 #endif
 
+  if (LSC->lsc==0) {
+    if (isSlave || !notSinglePart) 
+      exactDrift(part, np, LSC->length);
+    return;
+  }
+  
   if (!charge)
     bomb("No charge defined for LSC.  Insert a CHARGE element in the beamline.", NULL);
-  
+
   Z0 = sqrt(mu_o/epsilon_o);
   nb = LSC->bins;
   if (nb%2==1) {

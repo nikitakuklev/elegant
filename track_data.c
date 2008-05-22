@@ -477,6 +477,8 @@ PARAMETER rfdf_param[N_RFDF_PARAMS] = {
     {"GROUP_PHASE_NOISE", "DEG", IS_DOUBLE, 0, (long)((char *)&rfdf_example.groupPhaseNoise), NULL, 0.0, 0, "Rms noise level for phase linked to group."},
     {"VOLTAGE_NOISE_GROUP", "", IS_LONG, 0, (long)((char *)&rfdf_example.voltageNoiseGroup), NULL, 0.0, 0, "Group number for voltage noise."},
     {"PHASE_NOISE_GROUP", "", IS_LONG, 0, (long)((char *)&rfdf_example.phaseNoiseGroup), NULL, 0.0, 0, "Group number for phase noise."},
+    {"START_PASS", "", IS_LONG, 0, (long)((char *)&rfdf_example.startPass), NULL, 0.0, -1, "If non-negative, pass on which to start modeling cavity."},    
+    {"END_PASS", "", IS_LONG, 0, (long)((char *)&rfdf_example.endPass), NULL, 0.0, -1, "If non-negative, pass on which to end modeling cavity."},    
     } ;
 
 RFTM110 rftm110_example;
@@ -496,6 +498,8 @@ PARAMETER rftm110_param[N_RFTM110_PARAMS] = {
     {"GROUP_PHASE_NOISE", "DEG", IS_DOUBLE, 0, (long)((char *)&rftm110_example.groupPhaseNoise), NULL, 0.0, 0, "Rms noise level for phase linked to group."},
     {"VOLTAGE_NOISE_GROUP", "", IS_LONG, 0, (long)((char *)&rftm110_example.voltageNoiseGroup), NULL, 0.0, 0, "Group number for voltage noise."},
     {"PHASE_NOISE_GROUP", "", IS_LONG, 0, (long)((char *)&rftm110_example.phaseNoiseGroup), NULL, 0.0, 0, "Group number for phase noise."},
+    {"START_PASS", "", IS_LONG, 0, (long)((char *)&rftm110_example.startPass), NULL, 0.0, -1, "If non-negative, pass on which to start modeling cavity."},    
+    {"END_PASS", "", IS_LONG, 0, (long)((char *)&rftm110_example.endPass), NULL, 0.0, -1, "If non-negative, pass on which to end modeling cavity."},    
     } ;
 
 RFTMEZ0 rftmez0_example;
@@ -1374,12 +1378,12 @@ PARAMETER ibscatter_param[N_IBSCATTER_PARAMS] = {
   {"DO_X", "", IS_LONG, 0, (long)((char *)&ibs_example.do_x), NULL, 0.0, 1, "do x-plane scattering?"},
   {"DO_Y", "", IS_LONG, 0, (long)((char *)&ibs_example.do_y), NULL, 0.0, 1, "do y-plane scattering?"},
   {"DO_Z", "", IS_LONG, 0, (long)((char *)&ibs_example.do_z), NULL, 0.0, 1, "do z-plane scattering?"},
-  {"INTERVAL", "", IS_LONG, 0, (long)((char *)&ibs_example.interval), NULL, 0.0, 1, "how often to update output file?"},
   {"SMOOTH", "", IS_LONG, 0, (long)((char *)&ibs_example.smooth), NULL, 0.0, 0, "Use smooth method instead of random numbers?"},
   {"VERBOSITY", "", IS_LONG, 0, (long)((char *)&ibs_example.verbosity), NULL, 0.0, 0, "Set verbosity level"},
   {"FORCE_MATCHED_TWISS", "", IS_LONG, 0, (long)((char *)&ibs_example.forceMatchedTwiss), NULL, 0.0, 0, "Force computations to be done with twiss parameters of the beamline, not the beam."},
   {"ISRING", "", IS_LONG, 0, (long)((char *)&ibs_example.isRing), NULL, 0.0, 1, "Is it storage ring?"},
-  {"FILENAME", "", IS_STRING, 0, (long)((char *)&ibs_example.filename), "", 0.0, 0, "output filename"},
+  {"INTERVAL", "", IS_LONG, 0, (long)((char *)&ibs_example.interval), NULL, 0.0, 1, "Interval in passes at which to update output file."},
+  {"FILENAME", "", IS_STRING, 0, (long)((char *)&ibs_example.filename), NULL, 0.0, 0, "Output filename."},
 };
 
 WAKE wake_example;
@@ -1924,6 +1928,7 @@ PARAMETER lscdrift_param[N_LSCDRIFT_PARAMS] = {
     {"HIGH_FREQUENCY_CUTOFF0", "", IS_DOUBLE, 0, (long)((char*)&lscdrift_example.highFrequencyCutoff0), NULL, -1.0, 0, "Spatial frequency at which smoothing filter begins.  If not positive, no frequency filter smoothing is done.  Frequency is in units of Nyquist (0.5/binsize)."},
     {"HIGH_FREQUENCY_CUTOFF1", "", IS_DOUBLE, 0, (long)((char*)&lscdrift_example.highFrequencyCutoff1), NULL, -1.0, 0, "Spatial frequency at which smoothing filter is 0.  If not given, defaults to HIGH_FREQUENCY_CUTOFF0."},
     {"RADIUS_FACTOR", "", IS_DOUBLE, 0, (long)((char*)&lscdrift_example.radiusFactor), NULL, 1.7, 0, "LSC radius is (Sx+Sy)/2*RADIUS_FACTOR"},
+    {"LSC", "", IS_LONG, 0, (long)((char *)&lscdrift_example.lsc), NULL, 0.0, 1, "Include longitudinal space-charge impedance?  If zero, acts like ordinary drift."},
 };
 
 LSRMDLTR lsrMdltr_example;
