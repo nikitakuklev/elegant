@@ -17,6 +17,17 @@ compute the above quantities.  This will occur only if {\tt PREF=0}.
 The {\tt COUPLING} parameter can be used to change the partitioning of
 quantum excitation between the horizontal and vertical planes.
 
+In versions 19.0 and later, {\tt elegant} includes the effect of {\tt
+SREFFECTS} on the closed orbit.  This presents a dilemna when
+automatic initialization is used, because in order to perform
+automatic initialization, {\tt elegant} has to compute the optics
+functions.  However, it must determine the closed orbit to compute the
+optics functions.  The solution to this is for the user to pre-compute
+the twiss parameters and radiation integrals using \verb|twiss_output|
+with \verb|output_at_each_step=0|.  The user is free to subsequently give
+\verb|twiss_output| with \verb|output_at_each_step=1| to obtain the
+results on the closed orbit.
+
 N.B.: Computation of Twiss parameters does not fully include the
 effects of synchrotron radiation losses when these are imposed using
 {\tt SREFFECTS} elements.  If {\tt PREF=0} (automatic initialization),
