@@ -170,9 +170,9 @@ the defaults are understood and appropriate.
 
 {\tt elegant} started as a tracking code, and it is still well-suited
 to this task.  {\tt elegant} tracks in the 6-dimensional phase space
-${\rm (x, x^\prime, y, y^\prime, s, \delta)}$, where x (y) is the
+${\rm (x, x^\prime, y, y^\prime, s, \delta)}$, where $x$ ($y$) is the
 horizontal (vertical) transverse coordinate, primed quantities are
-slopes, s is the {\em total} distance traveled, and $\delta$ is the
+slopes, $s$ is the {\em total, equivalent} distance traveled, and $\delta$ is the
 fractional momentum deviation\cite{KLBrown}.  Note that these
 quantities are commonly referred to as (x, xp, y, yp, s, dp) in the
 namelists, accelerator element parameters, and output files.  (``dp''
@@ -261,6 +261,33 @@ uncorrected orbits and trajectories pertaining to any element that
 produces an orbit or trajectory distortion.  It simultaneously
 computes the amplification functions for the steering magnets, in
 order to determine how strong the steering magnets will need to be.
+
+\section{Digression on the Longitudinal Coordinate Definition\label{sec:longitCoord}}
+
+A word is in order about the definition of $s$, which we've described
+as the {\em total, equivalent} distance traveled.  First, by {\em
+total} distance we mean that $s$ is {\em not} measured relative to the
+bunch center or a fiducial particle.  It is entirely a property of the
+individual particle and its path through the accelerator.
+
+To explain what we mean by {\em equivalent} distance, note that the
+relationship between $s$ and arrival time $t$ at the observation point
+is, for each particle, $s = \beta c t$, where $\beta c$ is the
+instantaneous velocity of the particle.  Whenever a particle's
+velocity changes, {\tt elegant} recomputes $s$ to ensure that this
+relationship holds.  $s$ is thus the ``equivalent'' distance the
+particle would have traveled at the present velocity to arrive at the
+observation point at the given time.  This book-keeping is required
+because {\tt elegant} was originally a matrix code using $s$ as the
+longitudinal coordinate.
+
+Users should keep the meaning of $s$ in mind when viewing statistics
+for $s$, for example, in the {\tt sigma} or watch point output files.
+A quantity like {\tt Ss} is literally the rms spread in $s$.  It is
+{\em not} defined as $\sigma_t/(\langle \beta \rangle c)$.  A
+nonrelativistic beam with velocity spread will show no change in {\tt
+Ss} in a drift space, because the distance traveled is the same for
+all particles.
 
 \section{Fiducialization in {\tt elegant}}
 
@@ -2622,10 +2649,12 @@ will be written.  Recommended value: ``\%s.out''.
 of s will be written.   Recommended value: ``\%s.cen''.
 \item \verb|sigma| --- The (incomplete) name of an SDDS file into
 which the beam sigma matrix as a function of z will be written.
-Recommended value: ``\%s.sig''.
+Recommended value: ``\%s.sig''.  N.B.: confusion sometimes occurs about some of the quantities related to
+the {\tt s} coordinate in this file.  Please see Section \ref{sec:longitCoord} above.
 \item \verb|final| --- The (incomplete) name of an SDDS file into
 which final beam and transport parameters will be written. Recommended
-value: ``\%s.fin''.
+value: ``\%s.fin''.   N.B.: confusion sometimes occurs about some of the quantities related to
+the {\tt s} coordinate in this file.  Please see Section \ref{sec:longitCoord} above.
 \item \verb|acceptance| --- The (incomplete) name of an SDDS file into
 which the initial coordinates of transmitted particles will be
 written.  Recommended value: ``\%s.acc''.
