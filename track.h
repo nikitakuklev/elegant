@@ -89,7 +89,7 @@ extern int comp_IDs(const void *coord1, const void *coord2);
 
 typedef struct {
   double *s, *xMax, *yMax, *dx, *dy;
-  long points, periodic, initialized;
+  long points, periodic, initialized, persistent;
 } APERTURE_DATA;
 
 /* Variable-order transport matrix structure */

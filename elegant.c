@@ -606,6 +606,9 @@ char **argv;
       run_conditions.centroid   = compose_filename(centroid, rootname);
       run_conditions.sigma      = compose_filename(sigma, rootname);
 
+      if (run_conditions.apertureData.initialized && !run_conditions.apertureData.persistent)
+        resetApertureData(&(run_conditions.apertureData));
+      
       /* Only the master processor will be allowed to write to output files */
       if (writePermitted) {
 	run_conditions.final      = compose_filename(final, rootname);
@@ -2128,19 +2131,7 @@ void readApertureInput(NAMELIST_TEXT *nltext, RUN *run)
   process_namelist(&aperture_data, nltext);
   print_namelist(stdout, &aperture_data);
 
-  if (run->apertureData.initialized) {
-    if (run->apertureData.s)
-      free(run->apertureData.s);
-    if (run->apertureData.xMax)
-      free(run->apertureData.xMax);
-    if (run->apertureData.yMax)
-      free(run->apertureData.yMax);
-    if (run->apertureData.dx)
-      free(run->apertureData.dx);
-    if (run->apertureData.dy)
-      free(run->apertureData.dy);
-    run->apertureData.s = run->apertureData.xMax = run->apertureData.yMax = run->apertureData.dx = run->apertureData.dy = NULL;    
-  }
+  resetApertureData(&(run->apertureData));
   
   run->apertureData.initialized = 0;
 
@@ -2200,12 +2191,30 @@ void readApertureInput(NAMELIST_TEXT *nltext, RUN *run)
     }
   }
   run->apertureData.periodic = periodic;
-
+  run->apertureData.persistent = persistent;
   run->apertureData.initialized = 1;
 
   fprintf(stdout, "\n** %ld points of aperture data read from file\n\n", run->apertureData.points);
   
   return;
+}
+
+void resetApertureData(APERTURE_DATA *apData)
+{
+  if (apData->initialized) {
+    if (apData->s)
+      free(apData->s);
+    if (apData->xMax)
+      free(apData->xMax);
+    if (apData->yMax)
+      free(apData->yMax);
+    if (apData->dx)
+      free(apData->dx);
+    if (apData->dy)
+      free(apData->dy);
+    apData->s = apData->xMax = apData->yMax = apData->dx = apData->dy = NULL;    
+    apData->initialized = 0;
+  }
 }
 
 
