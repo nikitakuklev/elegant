@@ -23,7 +23,12 @@
 \section{Highlights of What's New in Version 19.0}
 
 Here is a summary of what's changed since release 18.1.  For details
-and references, see the specific entries in the manual.
+and references, see the specific entries in the manual.  Contrary to
+our usual policy with {\tt elegant}, there are a few changes in this
+version that are not backward compatible, most notably modifications
+to the \verb|momentum_aperture| command.  Some significant bugs were
+also fixed, particularly related to radiation integrals for wigglers
+when invoked for \verb|CWIGGLER| elements.
 
 \subsection{Known Bugs and Problems}
 \begin{itemize}
@@ -43,39 +48,45 @@ and references, see the specific entries in the manual.
 \subsection{Bug Fixes for Elements}
 \begin{itemize}
 \item In versions prior to 19.0, the $I_5$ radiation integral was computed incorrectly for 
-  {\tt WIGGLER} elements with an even number of poles and for all {\tt CWIGGLER} elements.  Thanks to
-  W. Guo (BNL) for finding this bug.  Also, the wiggler contribution to the $I_2$ radiation integral had a sign error,
+  {\tt WIGGLER} elements with an even number of poles and for all {\tt CWIGGLER} elements.  W. Guo (BNL) found this bug.  
+  Also, the wiggler contribution to the $I_2$ radiation integral had a sign error,
   although it wasn't used in any computations.  
 \item The {\tt WIGGLER} element did not include contributions to $R_{56}$.  This was also rectified, so that wigglers now affect $\alpha_c$.
+\item The {\tt WIGGLER} element was internally forced to have an odd number of poles.  This is no longer the case.
 \item When the strength parameter (i.e., \verb|B_MAX|, \verb|BY_MAX|, or \verb|BX_MAX|) of a {\tt CWIGGLER} element was varied,
  the Twiss parameters and radiation integrals did not change.  This has been fixed.
 \item If longitudinal space charge simulation was invoked (using {\tt LSCDRIFT} or {\tt RFCW}) but
- the {\tt CHARGE} element was omitted, {\tt elegant} bombed.  This has been fixed. Thanks to P. Williams (Daresbury)
- for finding this bug.
+ the {\tt CHARGE} element was omitted, {\tt elegant} bombed.  This has been fixed.  P. Williams (Daresbury) found this bug.
 \item The {\tt SREFFECTS} element did not include the effects of the dispersive orbit when damping and quantum excitation
   where disabled.  This has been fixed, but it requires computing the Twiss parameters now for any simulation that involves
   {\tt SREFFECTS}.
+\item The {\tt ENERGY} element now works correctly in the context of beam moments analysis.
+\item The {\tt TWISS} element now has \verb|APPLY_ONCE=1| by default, which gives backward compatibility to pre-18.1 versions.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item  The lattice parser will no longer accept invalid numerical values, such as ``--3.5'', which in the
- past would have been understood as ``-3.5''.  Y. Kim (PSI) pointed out this oddity.
+\item  The lattice parser will no longer accept invalid numerical values, such as $--3.5$, which in the
+ past would have been understood as $-3.5$.  Y. Kim (PSI) pointed out this oddity.
+\item The \verb|aperture_data| command is no longer persistent across \verb|run_setup| sequences, to agree
+ with the behavior of other features.  A new parameter (\verb|persistent=1|) can be used to force persistence.
+ Y. Roblin (TJNAF) found this bug.
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item In past versions, the {\tt RFDF} element had a very strange way of defining the RF phase
-  for traveling wave mode.  This has been changed so that the phase is now easy to understand,
-  being simply the phase of the first kick the beam receives.  Thanks to Y. Kim (PSI) for bringing
-  this to our attention.
+\item The algorithm used by the {\tt IBSCATTER} element, which models intrabeam scattering, has been
+ improved to allow modeling IBS in linacs and transport lines.  This work was done by A. Xiao (ANL).
 \item The {\tt LSCDRIFT} element was upgraded to allow delivering a single longitudinal
  space charge kick to represent the accumulated kicks over an extended length, but with
  zero insertion length in the lattice. 
-\item The algorithm used by the {\tt IBSCATTER} element, which models intrabeam scattering, has been
- improved to allow modeling IBS in linacs and transport lines.  This work was done by A. Xiao (ANL).
+\item In past versions, the {\tt RFDF} element had a very strange way of defining the RF phase
+  for traveling wave mode.  This has been changed so that the phase is now easy to understand,
+  being simply the phase of the first kick the beam receives.  Y. Kim (PSI) brought this to our attention.
 \item The {\tt SREFFECTS} element will now affect the closed orbit through an energy change.  This
  allows Twiss parameter and related computations to use the orbit with the effects of radiation losses.
+\item The {\tt RFDF} and {\tt RFTM110} elements now have \verb|START_PASS| and \verb|END_PASS| parameters,
+ to make it easy to turn them on and off.
 \end{itemize}
 
 \subsection{New and Modified Commands}
@@ -83,11 +94,19 @@ and references, see the specific entries in the manual.
 \item The algorithm for the \verb|momentum_aperture| command was changed, to address reproducibility issues
  with the old algorithm.  The old algorithm searched from the outside (large momentum deviation), which seemed to 
  sometimes cause it to find stable islands.  The new algorithm searches from the inside and provides more
- consistent results. {\em Unfortunately, this change is not backward compatible.}  Thanks to P. Chou (NSRRC) for
- bringing this issue to our attention.
+ consistent results. {\em Unfortunately, this change is not backward compatible.}  P. Chou (NSRRC) brought
+ this issue to our attention.
+\item The output file from \verb|moments_output| now includes the projected betatron beam moments and emittances.
+ It also includes the emittances for the three independent modes; the latter was based on code supplied by V. Sajaev (ANL).
 \item The \verb|twiss_output| command now has a parameter to control whether, when computing periodic
   lattice functions (\verb|matched=1|), rf cavities are treated as drift spaces.  By default they are
   so treated.    See the documentation for \verb|twiss_output| for more information.
+\item The aperture computations from the \verb|twiss_output| command have been improved considerably and should give better
+ agreement with tracking: an aperture-less element now has the aperture of the downstream element, if there is one.  Centroid offsets are
+ included in determining the aperture.  {\tt SCRAPER} elements are also included now.  If several apertures are applicable at a given
+ point, the minimum one is used.  The aperture is 10.0m if undefined, whereas it was zero before.
+\item The \verb|correct| command has several new trajectory correction modes, called {\tt thread} and {\tt one-to-best}.
+ See the documentation for \verb|correct| for details.
 \end{itemize}
 
 \subsection{Changes to Related Programs and Files}
@@ -96,6 +115,10 @@ and references, see the specific entries in the manual.
 \item A manual page was added for the {\tt touschekLifetime} program.
 \item The {\tt ibsEmittance} program now computes intrabeam scattering for transport lines and linacs. This
   work was done by A. Xiao (ANL).
+\item The {\tt sddsemitproc} program was upgraded to allow individual uncertainties to be specified for data points.
+ This was requested by M. Joyce (TJNAF).  A manual page was also added for this program.
+\item The manual page for {\tt sddsemitmeas} was removed.  The program is now disparaged and users should use
+ {\tt sddsemitproc} instead.
 \end{itemize}
 
 \section{Credits}
@@ -293,8 +316,8 @@ velocity changes, {\tt elegant} recomputes $s$ to ensure that this
 relationship holds.  $s$ is thus the ``equivalent'' distance the
 particle would have traveled at the present velocity to arrive at the
 observation point at the given time.  This book-keeping is required
-because {\tt elegant} was originally a matrix code using $s$ as the
-longitudinal coordinate.
+because {\tt elegant} was originally a matrix-only code using $s$ as
+the longitudinal coordinate.
 
 Users should keep the meaning of $s$ in mind when viewing statistics
 for $s$, for example, in the {\tt sigma} or watch point output files.
@@ -664,6 +687,7 @@ Recommended value: ``\%s.kaf''.
 &aperture_data
         STRING input = NULL;
         long periodic = 1; 
+        long persistent = 0;
         long disable = 0;
 &end
 \end{verbatim}
@@ -680,6 +704,8 @@ Recommended value: ``\%s.kaf''.
   \end{enumerate}
 \item \verb|periodic| --- If non-zero, the aperture is a periodic function of \verb|s|, with period equal
   to the range of the data.
+\item \verb|persistent| --- If non-zero, the aperture data persists across subsequent \verb|run_setup| commands.
+  By default, the aperture data is forgotten when a new \verb|run_setup| command is seen.
 \item \verb|disable| --- If non-zero, the command is ignored.
 \end{itemize}
 
@@ -1037,8 +1063,12 @@ during the computations.
 
 \item \verb|mode| --- Either ``trajectory'' or ``orbit'', indicating
 correction of a trajectory or a closed orbit.
-\item \verb|method| --- For trajectories, may be ``one-to-one'' or
-``global''.  For closed orbit, must be ``global''.
+\item \verb|method| --- For trajectories, may be ``one-to-one'', ``one-to-best'', ``one-to-next'', ``thread'', or ``global''.  
+``One-to-one'' and ``one-to-next'' are the same: steering is performed by pairing one corrector with the next downstream BPM.
+``One-to-best'' attempts to find a BPM with a large response to each corrector.  ``Thread'' does corrector sweeps to work the
+beam through a beamline with apertures; it is quite slow.  ``Global'' simply uses the global response matrix; it is the best
+choice if the trajectory is not lost on an aperture.
+For closed orbit, must be ``global''.
 \item \verb|trajectory_output| --- The (incomplete) name of an SDDS file to which the trajectories or orbits will be written.  Recommended value: ``\%s.traj'' or ``\%s.orb''.  
 \item \verb|corrector_output| --- The (incomplete) name of an SDDS file to which information about the final corrector strengths will be written. Recommended value: ``\%s.cor''.  
 \item \verb|statistics| --- The (incomplete) name of an SDDS file to which statistical information about the
@@ -3548,7 +3578,7 @@ iterations={\em number},fraction={\em value},tolerance={\em value}
  this value should be N.  If one gives the whole ring, this value should be 1.
 \item {\tt -energy={\em GeV}} --- Beam energy. If not given, the value in the {\em twissfile} 
  is used.
-\item {\tt -integrationParameters=deltaTime={\em s},points={\em number},startTime={\em s},}
+\item {\tt -integrationParameters=deltaTime={\em s},points={\em number},startTime={\em s},}\\
  {\tt iterations={\em number},fraction={\em value},tolerance={\em value} } --- Integration 
  parameters, which must be set.  {\tt deltaTime} is the time interval for wake function and
  charge density evaluation.  {\tt points} is the number of time points, while {\tt startTime}
