@@ -67,6 +67,8 @@ and references, see the specific entries in the manual.
 \item The {\tt LSCDRIFT} element was upgraded to allow delivering a single longitudinal
  space charge kick to represent the accumulated kicks over an extended length, but with
  zero insertion length in the lattice. 
+\item The algorithm used by the {\tt IBSCATTER} element, which models intrabeam scattering, has been
+ improved to allow modeling IBS in linacs and transport lines.  This work was done by A. Xiao (ANL).
 \end{itemize}
 
 \subsection{New and Modified Commands}
@@ -82,6 +84,12 @@ and references, see the specific entries in the manual.
 \end{itemize}
 
 \subsection{Changes to Related Programs and Files}
+
+\begin{itemize}
+\item A manual page was added for the {\tt touschekLifetime} program.
+\item The {\tt ibsEmittance} program now computes intrabeam scattering for transport lines and linacs. This
+  work was done by A. Xiao (ANL).
+\end{itemize}
 
 \section{Credits}
 
@@ -3426,56 +3434,55 @@ arithmetic.
 
 A number of specialized programs are available that work with {\tt
 elegant}. Most are SDDS-compliant, so they will also work with any
-program that reads or writes appropriate SDDS data.  These programs
-will be made available in Version 14.3Beta.  The following is a
-brief description of each program.  Full descriptions are available
+program that reads or writes appropriate SDDS data.  The following is
+a brief description of each program.  Full descriptions are available
 on subsequent pages.
 \begin{itemize}
 \item {\tt elegant2genesis} --- This program performs
         slice analysis of particle output files, which are suitable for use with
         the SDDS-compliant APS version of GENESIS\cite{GENESIS}.  This program is
         part of the SDDS toolkit.  See the SDDS toolkit
-        manual for documentation.
+        manual for documentation. (Program by M. Borland.)
 \item {\tt haissinski} --- Computes the steady-state longitudinal distribution in
         an electron storage ring.  Requires as input a file containing the Twiss
         parameters around the ring, such as that provided by the \verb|twiss_output| command.
-        (Program by L. Emery)
+        (Program by L. Emery and M. Borland.)
 \item {\tt ibsEmittance} --- Computes local intra-beam scattering rates for both storage ring
-        and Linac. Also computes the equlibrium transverse and longitudinal emittances of a 
+        and linac. Also computes the equlibrium transverse and longitudinal emittances of a 
         beam in an electron storage ring, resulting from the combination of quantum excitation,
         damping, and intra-beam scattering.  Requires as input a file containing the
         Twiss parameters, such as that provided by the \verb|twiss_output| command.
-        (Program by L. Emery and A. Xiao)
+        (Program by L. Emery, M. Borland, and A. Xiao)
 \item {\tt madto} --- Translates an {\tt elegant}-style lattice file (or a MAD file, with
         some restrictions) into formats accepted by other programs, such as COSY, PARMELA, 
         PATPET, PATRICIA, TRANSPORT, and XORBIT.  Will also generate an SDDS file containing lattice
-        data.
+        data.  (Program by M. Borland.)
 \item {\tt sddsanalyzebeam} --- Analyzes a beam of macro-particles and produces an SDDS file
         containing beam moments, emittances, equivalent beta functions, etc.  The beam file
         is of the type written by {\tt elegant} using the {\tt output} field of the {\tt run\_setup}
-        command, or the WATCH element.
+        command, or the WATCH element.  (Program by M. Borland.)
 \item {\tt sddsbrightness} --- Uses twiss parameter output or data from {\tt sddsanalyzebeam} to
-  compute undulator brightness curves.  
+  compute undulator brightness curves.  (Program by H. Shang, R. Dejus, M. Borland, X. Jiao.)
 \item {\tt sddsemitmeas} --- Analyzes quadrupole scan emittance measurement data.  Accepts a
         file containing the transport matrix for each point and measured beam sizes.  
         The file may, for example, be the file produced
         by the {\tt final} field of the {\tt run\_setup} command.  The quadrupole scan can be
-        executed inside of {\tt elegant} using {\tt vary\_elements}.
+        executed inside of {\tt elegant} using {\tt vary\_elements}. (Program by M. Borland.)
 \item {\tt sddsmatchtwiss} --- Transforms a beam of macro-particles to match to given beta
         functions and dispersion.    The beam file
         is of the type written by {\tt elegant} using the {\tt output} field of the {\tt run\_setup}
-        command, or the WATCH element.
+        command, or the WATCH element. (Program by M. Borland.)
 \item {\tt sddsurgent} --- Uses algorithms from the programs US (by R. Dejus) and URGENT (by R. Walker) for computation of undulator
-  radiation properties, including power density and intensity distributions.
+  radiation properties, including power density and intensity distributions.  (Program by H. Shang, R. Dejus, M. Borland, X. Jiao.)
 \item {\tt sddsrandmult} --- Simulates the effect of random mechanical errors in a quadrupole or sextupole,
   generating multipole error data that can be used with {\tt elegant}'s {\tt KQUAD} and {\tt KSEXT}
-  elements.
+  elements. (Program by M. Borland.)
 \item {\tt sddssampledist} --- This program allows creating particle
         distributions from user-designed distribution functions.  It is thus a more flexible alternative
         to \verb|bunched_beam|.  This program is part of the SDDS toolkit.  See the SDDS toolkit
-        manual for documentation.
+        manual for documentation.  (Program by M. Borland and H. Shang.)
 \item {\tt touschekLifetime} --- This program calculates Touschek lifetime using A. Piwinski's formula.
-        Input files are generated from ``twiss\_output'' and ``momentum\_aperture''.
+        Input files are generated from ``twiss\_output'' and ``momentum\_aperture''.  (Program by A. Xiao.)
 \end{itemize}
 
 \begin{latexonly}
@@ -3558,8 +3565,8 @@ equilibrium emittances for electron rings due to intrabeam scattering
 (IBS).  It will also integrate the growth rates to show the time
 evolution of the emittances.  The IBS algorithm is based on the
 Bjorken and Mtingwa's~\cite{BM} formula, and with an extension of including vertical
-dispersion. User also can use this program to estimate IBS growth rates
-for Linac beam, with special attention paid on beam's energy
+dispersion. The program can also estimate IBS growth rates
+for and transport line or linac beam, provided special attention paid to the beam's energy
 change (splitting RF cavities as needed). 
 
 \item {\bf examples:}
@@ -3597,7 +3604,7 @@ specified, the value from the parameter \verb|Sdelta0| in {\em twissFile} is use
 \item {\bf -superperiods={\em value}} --- If given, the number of superperiods in the 
 lattice.  {\em twissFile} is taken to pertain to a single sector.
 \item {\bf -isRing} --- Specify the calculation is done for stored beam 
-(isRing=1, default) or Linac beam (isRing=0). When isRing is set to 0, the energy scaling
+(isRing=1, default) or transport line/linac beam (isRing=0). When isRing is set to 0, the energy scaling
 and integration calculation will be disabled.  
 \item {\bf -RF=Voltage={\em MV},harmonic={\em value}} --- Specify rf voltage and harmonic number.
 \item {\bf -length={\em mm}} --- Specify the rms bunch length.
