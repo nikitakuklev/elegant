@@ -15,6 +15,9 @@
  */
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.1  2007/03/30 16:50:29  soliday
+ * Moved from directory above.
+ *
  * Revision 1.6  2005/12/15 00:36:04  borland
  * Fixed bug in parsing error settings.  Fixed bug in setting output parameters
  * (S33 not set).
@@ -130,17 +133,19 @@
 #define SET_SIGMA_DATA 8
 #define SET_PIPE 9
 #define SET_INCLUDE_DISPERSION 10
-#define N_OPTIONS 11
+#define SET_ERROR_DATA 11
+#define N_OPTIONS 12
 
 char *option[N_OPTIONS] = {
     "errorlevel", "nerrorsets", "seed", "verbosity",
     "deviationlimit", "resolution", "limitmode", "ignoreplane",
-    "sigmadata", "pipe", "includedispersion",
+    "sigmadata", "pipe", "includedispersion", "errordata",
     } ;
 
 #define USAGE "sddsemitproc\n\
  [<inputfile>] [<outputfile>] [-pipe=[input][,output]]\n\
  -sigmaData=<xName>,<yName> [-includeDispersion[=vertical]] \n\
+ [-errorData=<xName>,<yName> | \n\
  [-errorLevel=<x_valueInm>,<y_valueInm>,[{gaussian,<nSigmas> | uniform}]]\n\
  [-nErrorSets=<number>]\n\
  [-limitMode={resolution | zero}[{,reject}]\n\
@@ -161,15 +166,16 @@ USAGE,
 "(e.g., using sddsxref). \n",
 "-sigmaData is used to name the columns in <inputfile> that contain the",
 "    beam sizes to be used in fitting.",
-"-errorLevel and -nErrorSets specify the addition of random measurement",
-"    errors to the sigmas. -deviationLimit allows exclusion from the ",
+"-errorData and -errorLevel are two ways to specify the rms errors in the",
+"    measurements.  -nErrorSets specifies the number of ensembles of errors",
+"    to add to the sigmas. -deviationLimit allows exclusion from the ",
 "    fit of bad data.  -limitMode allows you to specify what is done",
 "    with data at or below the resolution limit.",
 "-resolution allows specification of the measurement resolution,",
 "    which is subtracted in quadrature from the sigma or width values.",
-"-includeDispersion is used if there is dispersion in the system. For this\n",
-"    to work, you must have a dipole in the beamline that you are simulating.\n",
-"    Otherwise, the program cannot separate dispersive effects from emittance.\n",
+"-includeDispersion is used if there is dispersion in the system. For this",
+"    to work, you must have a dipole in the beamline that you are simulating.",
+"    Otherwise, the program cannot separate dispersive effects from emittance.",
 NULL
     } ; 
 
@@ -177,15 +183,15 @@ NULL
 
 double solve_normal_form(MATRIX *F, MATRIX *sF, MATRIX *P, MATRIX *M, MATRIX *C, double *s2_fit);
 double solve_normal_form_opt(MATRIX *F, MATRIX *sF, MATRIX *P, MATRIX *M, MATRIX *C, double dev_limit,
-    int *n_used, double *s2_fit);
+    long *n_used, double *s2_fit);
 void print_fit(char *filename, double *variable_data, char *variable_name,
-    double *sigma2_fit, double resol, char *sigma_name, int n_pts);
+    double *sigma2_fit, double resol, char *sigma_name, long n_pts);
 double propagate_errors_for_emittance(double **Sigma, double **Covar);
-void set_up_covariance_matrix(MATRIX *K, double *sigma, double *uncert, int n_configs, int equal_weights);
+void set_up_covariance_matrix(MATRIX *K, double *sigma, double *uncert, long n_configs, long equal_weights);
 double estimate_uncertainty(double *uncert, MATRIX *S, MATRIX *sS, MATRIX *R, MATRIX *s2, MATRIX *K, 
-    double dev_limit, int n_configs, double uncert_min, double *fit_sig2_return);
-int make_tweeked_data_set(MATRIX *s2, double *sigma, double error_level, double error_sigmas, int error_type_code, 
-    int n_configs, double resol, int reject_at_limit, double limit, int *n_at_resol);
+    double dev_limit, long n_configs, double uncert_min, double *fit_sig2_return);
+long make_tweeked_data_set(MATRIX *s2, double *sigma, double *errorData, double error_level, double error_sigmas, long error_type_code, 
+    long n_configs, double resol, long reject_at_limit, double limit, long *n_at_resol);
 long SetSigmaData(SDDS_DATASET *SDDSout, char *dataName, MATRIX *s2, char *fitName, double *fitSigSqr, 
                   long configs);
 
@@ -216,7 +222,7 @@ int main(
   double *R16=NULL;   /* R16 matrix element for ith configuration */
   double *sigmax, *uncertx;               /* sigma in x plane for ith configuration */
   double *R33=NULL, *R34=NULL, *R36=NULL, *sigmay, *uncerty;   /* similar data for y plane */
-  int n_configs, i_config;
+  long n_configs, i_config;
   MATRIX *Rx, *Ry, *s2x, *s2y;
   MATRIX *Sx, *Sy, *sSx, *sSy, *Kx, *Ky;
   double S11_sum, S11_sum2, S12_sum, S12_sum2, S22_sum, S22_sum2;
@@ -225,36 +231,35 @@ int main(
   double S36_sum, S46_sum, S36_sum2, S46_sum2;
   double betax, alphax, betax_sum, betax_sum2, alphax_sum, alphax_sum2;
   double betay, alphay, betay_sum, betay_sum2, alphay_sum, alphay_sum2;
-  int i_variable;
+  long i_variable;
   double emitx, emity;
   SCANNED_ARG *scanned;
-  int i_arg, i;
+  long i_arg, i;
   char *input, *output;
   char *variable_name;
   double *variable_data, *x_fit_sig2, *y_fit_sig2;
-  int n_error_sets, seed, i_error, error_type_code;
+  long n_error_sets, seed, i_error, error_type_code;
   double error_sigmas;
   double emitx_max, emitx_min;
   double emity_max, emity_min;
   double emitx_sum, emity_sum;
   double emitx2_sum, emity2_sum;
   double x_error_level, y_error_level;
-  double md_x, md_y, *dev_limit, md, contrib;
-  int i_dev, n_dev_limits;
-  int nx_used, nx_used_sum;
-  int ny_used, ny_used_sum;
-  int n_good_fits_x, n_good_fits_y;
+  double md_x, md_y, *dev_limit, contrib;
+  long i_dev, n_dev_limits;
+  long nx_used, nx_used_sum;
+  long ny_used, ny_used_sum;
+  long n_good_fits_x, n_good_fits_y;
   double x_resol, y_resol;
   double x_limit=0.0, y_limit=0.0;
-  int limit_code, reject_at_limit;
-  int n_xresol, n_yresol, ignore_x, ignore_y, error_output;
-  double x_uncert_frac, y_uncert_frac;
+  long limit_code, reject_at_limit;
+  long n_xresol, n_yresol, ignore_x, ignore_y, error_output;
   double x_uncert_min, y_uncert_min;
-  double x_fixed_uncert, y_fixed_uncert;
   double includeDispersion;
-  int equal_weights_x_fit=0, equal_weights_y_fit=0, constant_weighting;
-  int find_uncert, verbosity;
+  long equal_weights_x_fit=0, equal_weights_y_fit=0;
+  long verbosity;
   char *x_width_name, *y_width_name;
+  char *x_error_name, *y_error_name;
   unsigned long pipeFlags;
   char emitLabel[256], xEmitLabel[256], yEmitLabel[256];
   
@@ -281,12 +286,11 @@ int main(
   limit_code = LIMIT_AT_ZERO;
   reject_at_limit = 0;
   ignore_x = ignore_y = 0;
-  x_uncert_frac = y_uncert_frac = 0;
   x_uncert_min = y_uncert_min = 0;
-  find_uncert = constant_weighting = 0;
-  x_fixed_uncert = y_fixed_uncert = verbosity = 0;
+  verbosity = 0;
   x_width_name = "Sx";
   y_width_name = "Sy";
+  x_error_name = y_error_name = NULL;
   includeDispersion = 0;
   pipeFlags = 0;
   
@@ -314,13 +318,13 @@ int main(
         break;
       case SET_N_ERROR_SETS:
         if (scanned[i_arg].n_items!=2 ||
-            !sscanf(scanned[i_arg].list[1], "%d", &n_error_sets) ||
+            !sscanf(scanned[i_arg].list[1], "%ld", &n_error_sets) ||
             n_error_sets<0)
           bomb("invalid -n_error_sets syntax", USAGE);
         break;
       case SET_SEED:
         if (scanned[i_arg].n_items!=2 ||
-            !sscanf(scanned[i_arg].list[1], "%d", &seed) ||
+            !sscanf(scanned[i_arg].list[1], "%ld", &seed) ||
             seed<0)
           bomb("invalid -seed syntax", USAGE);
         break;
@@ -361,7 +365,7 @@ int main(
         break;
       case SET_VERBOSITY:
         if (scanned[i_arg].n_items!=2 ||
-            !sscanf(scanned[i_arg].list[1], "%d", &verbosity) ||
+            !sscanf(scanned[i_arg].list[1], "%ld", &verbosity) ||
             verbosity<0)
           bomb("invalid -verbosity syntax", USAGE);
         break;
@@ -370,6 +374,12 @@ int main(
             !strlen(x_width_name = scanned[i_arg].list[1]) ||
             !strlen(y_width_name = scanned[i_arg].list[2]))
           bomb("invalid -sigmaData syntax", USAGE);
+        break;
+      case SET_ERROR_DATA:
+        if (scanned[i_arg].n_items!=3 ||
+            !strlen(x_error_name = scanned[i_arg].list[1]) ||
+            !strlen(y_error_name = scanned[i_arg].list[2]))
+          bomb("invalid -errorData syntax", USAGE);
         break;
       case SET_PIPE:
 	if (!processPipeOption(scanned[i_arg].list+1, scanned[i_arg].n_items-1, &pipeFlags))
@@ -384,6 +394,7 @@ int main(
             SDDS_Bomb("invalid -includeDispersion syntax");
          } else if (scanned[i_arg].n_items>2)  
            SDDS_Bomb("invalid -includeDispersion syntax");
+        SDDS_Bomb("The -includeDispersion option isn't reliable.  Suggest subtracting off energy spread contribution to beam size manually.");
         break;
       default:
         bomb("unknown option given", USAGE);
@@ -486,6 +497,12 @@ int main(
       SDDS_GetColumnIndex(&SDDSin, "R12")<0 ||
       SDDS_GetColumnIndex(&SDDSin, "R33")<0 ||
       SDDS_GetColumnIndex(&SDDSin, "R34")<0)
+    SDDS_Bomb("input file missing required quantities");
+  if (x_error_name) {
+    if (SDDS_GetColumnIndex(&SDDSin, x_error_name)<0 ||
+        SDDS_GetColumnIndex(&SDDSin, y_error_name)<0)
+      SDDS_Bomb("input file missing error quantities");
+  }
   if (includeDispersion &&
       (SDDS_GetColumnIndex(&SDDSin, "R16")<0 ||
        SDDS_GetColumnIndex(&SDDSin, "R36")<0))
@@ -543,14 +560,26 @@ int main(
     if (!(variable_data = SDDS_GetColumn(&SDDSin, variable_name)))
       SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
 
-    uncertx = SDDS_Realloc(uncertx, sizeof(double)*n_configs);
-    uncerty = SDDS_Realloc(uncerty, sizeof(double)*n_configs);
+    if (!x_error_name) {
+      uncertx = SDDS_Realloc(uncertx, sizeof(double)*n_configs);
+      uncerty = SDDS_Realloc(uncerty, sizeof(double)*n_configs);
+      for (i_config=0 ; i_config<n_configs; i_config++) {
+        uncertx[i_config] = uncerty[i_config] = 0;
+      }
+    } else {
+      if (uncertx)
+        free(uncertx);
+      if (uncerty)
+        free(uncerty);
+      if (!(uncertx = SDDS_GetColumn(&SDDSin, x_error_name)))
+        SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+      if (!(uncerty = SDDS_GetColumn(&SDDSin, y_error_name)))
+        SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+    } 
+
     x_fit_sig2 = SDDS_Realloc(x_fit_sig2, sizeof(double)*n_configs);
     y_fit_sig2 = SDDS_Realloc(y_fit_sig2, sizeof(double)*n_configs);
 
-    for (i_config=0 ; i_config<n_configs; i_config++) {
-      uncertx[i_config] = uncerty[i_config] = 0;
-    }
     if (n_configs<4)
       continue;
 
@@ -565,9 +594,11 @@ int main(
         if (i_config==n_configs)
           SDDS_Bomb("you asked to include dispersion, but R16=0 for all configurations");
       }
-      equal_weights_x_fit = 0;
-      for (i_config=0; i_config<n_configs; i_config++)
-        uncertx[i_config] = 1;
+      if (!x_error_name) {
+        equal_weights_x_fit = 0;
+        for (i_config=0; i_config<n_configs; i_config++)
+          uncertx[i_config] = 1;
+      }
     }
     if (!ignore_y) {
       if (includeDispersion==2) {
@@ -577,9 +608,11 @@ int main(
         if (i_config==n_configs)
           SDDS_Bomb("you asked to include vertical dispersion, but R36=0 for all configurations");
       }
-      equal_weights_y_fit = 0;
-      for (i_config=0; i_config<n_configs; i_config++)
-        uncerty[i_config] = 1;
+      if (!y_error_name) {
+        equal_weights_y_fit = 0;
+        for (i_config=0; i_config<n_configs; i_config++)
+          uncerty[i_config] = 1;
+      }
     }
 
     m_alloc(&Rx,  n_configs, includeDispersion==1?6:3);
@@ -629,7 +662,7 @@ int main(
       n_xresol = n_yresol = 0; 
       for (i_error=0; i_error<n_error_sets; i_error++) {
         if (verbosity>1) {
-          fprintf(stderr, "Error set %d...\n", i_error);
+          fprintf(stderr, "Error set %ld...\n", i_error);
         }
         for (i_config=0; i_config<n_configs; i_config++) {
           s2x->a[i_config][0] =  sqr( sigmax[i_config] ) - sqr(x_resol);
@@ -641,7 +674,7 @@ int main(
         }
 
         if (!ignore_x) {
-          if (x_error_level==0 && i_error==0) {
+          if (x_error_level==0 && i_error==0 && !x_error_name) {
             /* must do initial fit to find error level */
             set_up_covariance_matrix(Kx, sigmax, uncertx, n_configs, equal_weights_x_fit);
             x_error_level = estimate_uncertainty(uncertx, Sx, sSx, Rx, s2x, Kx, dev_limit[i_dev], 
@@ -649,7 +682,7 @@ int main(
 	    if (verbosity>2) 
 	      fprintf(stderr, "x error level estimate: %le\n", x_error_level);
 	  }
-          if (!make_tweeked_data_set(s2x, sigmax, x_error_level, error_sigmas, error_type_code, n_configs, 
+          if (!make_tweeked_data_set(s2x, sigmax, x_error_name?uncertx:NULL, x_error_level, error_sigmas, error_type_code, n_configs, 
                                      x_resol, reject_at_limit, x_limit, &n_xresol))  {
             bomb("fatal error: failed to get acceptable error set\n", NULL);
           }
@@ -657,7 +690,7 @@ int main(
         }
 
         if (!ignore_y) {
-          if (y_error_level==0 && i_error==0) {
+          if (y_error_level==0 && i_error==0 && !y_error_name) {
             /* must do initial fit to find error level */
             set_up_covariance_matrix(Ky, sigmay, uncerty, n_configs, equal_weights_y_fit);
             y_error_level = estimate_uncertainty(uncerty, Sy, sSy, Ry, s2y, Ky, dev_limit[i_dev], 
@@ -665,7 +698,7 @@ int main(
 	    if (verbosity>2) 
 	      fprintf(stderr, "y error level estimate: %le\n", y_error_level);
           }
-          if (!make_tweeked_data_set(s2y, sigmay, y_error_level, error_sigmas, error_type_code, n_configs, 
+          if (!make_tweeked_data_set(s2y, sigmay, y_error_name?uncerty:NULL, y_error_level, error_sigmas, error_type_code, n_configs, 
                                      y_resol, reject_at_limit, y_limit, &n_yresol))  {
             bomb("fatal error: failed to get acceptable error set\n", NULL);
           }
@@ -861,10 +894,10 @@ int main(
 void print_fit(
                char *filename, double *variable_data, char *variable_name,
                double *sigma2_fit, double resol, char *sigma_name,
-               int n_pts
+               long n_pts
                )
 {
-  int i, n_good;
+  long i, n_good;
   FILE *fp;
 
   for (i=n_good=0; i<n_pts; i++)
@@ -872,7 +905,7 @@ void print_fit(
       n_good++;
 
   fp = fopen_e(filename, "w", 0);
-  fprintf(fp, "%s\n%s\nEMITMEAS fit output\n\n%d\n", variable_name, sigma_name,
+  fprintf(fp, "%s\n%s\nEMITMEAS fit output\n\n%ld\n", variable_name, sigma_name,
           n_good);
 
   for (i=0; i<n_pts; i++) 
@@ -891,14 +924,14 @@ double solve_normal_form_opt(
                              MATRIX *K,      /* NxN inverse covariance matrix for Measured quantities.
                                                 K[i][j] = delta(i,j)/uncert[i]^2 */
                              double dev_limit,/* limit on deviation for any point used in final fit */
-                             int *n_used,    /* number of points used in final fit */
+                             long *n_used,    /* number of points used in final fit */
                              double *s2_fit  /* sigma^2 from fit (returned) */
                              )
 {
-  int i, j, i_good;
+  long i, j, i_good;
   double rms_error, error;
   double *s2_fit2;
-  int *index, n_good, *good;
+  long *index, n_good, *good;
   MATRIX *Pc, *Mc, *Kc;
 
   rms_error = solve_normal_form(F, sF, P, M, K, s2_fit);
@@ -975,7 +1008,7 @@ double solve_normal_form(
                          double *s2_fit      /* sigma^2 from fit (returned) */
                          )
 {
-  int n, m, i;
+  long n, m, i;
   MATRIX *Pt, *Pt_K, *Pt_K_P, *Inv_Pt_K_P, *Inv_PtKP_PtK;
   MATRIX *Mp, *Tt, *TC, *C;
   double error, rms_error;
@@ -1030,9 +1063,9 @@ double solve_normal_form(
     }
     if (!m_mult(sF, TC, Tt)) {
       fprintf(stderr, "matrix error--call was: m_mult(sF, TC, Tt)\n");
-      fprintf(stderr, "sF: %ld x %ld\n", sF->n, sF->m);
-      fprintf(stderr, "TC: %ld x %ld\n", TC->n, TC->m);
-      fprintf(stderr, "Tt: %ld x %ld\n", Tt->n, Tt->m);
+      fprintf(stderr, "sF: %d x %d\n", sF->n, sF->m);
+      fprintf(stderr, "TC: %d x %d\n", TC->n, TC->m);
+      fprintf(stderr, "Tt: %d x %d\n", Tt->n, Tt->m);
       return -1;
     }
   }
@@ -1067,13 +1100,15 @@ double solve_normal_form(
   return(rms_error);
 }
 
-int make_tweeked_data_set(MATRIX *s2, double *sigma, double error_level, double error_sigmas, int error_type_code, 
-                          int n_configs, double resol, int reject_at_limit, double limit, int *n_at_resol)
+long make_tweeked_data_set(MATRIX *s2, double *sigma, double *uncert, double error_level, double error_sigmas, long error_type_code, 
+                          long n_configs, double resol, long reject_at_limit, double limit, long *n_at_resol)
 {
-  int i_config, n_tries;
+  long i_config, n_tries;
   double tweek;
 
   for (i_config=n_tries=0; i_config<n_configs && n_tries<MAX_N_TRIES; i_config++) {
+    if (uncert)
+      error_level = uncert[i_config];
     tweek = (error_type_code==UNIFORM_ERRORS?
              2*error_level*(random_1(1)-.5):
              gauss_rn_lim(0.0, error_level, error_sigmas, random_1));
@@ -1095,10 +1130,10 @@ int make_tweeked_data_set(MATRIX *s2, double *sigma, double error_level, double 
   return(1);
 }
 
-void set_up_covariance_matrix(MATRIX *K, double *sigma, double *uncert, int n_configs, int equal_weights)
+void set_up_covariance_matrix(MATRIX *K, double *sigma, double *uncert, long n_configs, long equal_weights)
 /* actually, K is the inverse of the covariance matrix */
 {
-  int i_config;
+  long i_config;
 
   for (i_config=0; i_config<n_configs; i_config++) {
     if (sigma[i_config]==0 || uncert[i_config]==0 || equal_weights)
@@ -1109,10 +1144,10 @@ void set_up_covariance_matrix(MATRIX *K, double *sigma, double *uncert, int n_co
 }
 
 double estimate_uncertainty(double *uncert, MATRIX *S, MATRIX *sS, MATRIX *R, MATRIX *s2, 
-                            MATRIX *K, double dev_limit, int n_configs, double uncert_min, double *fit_sig2_return)
+                            MATRIX *K, double dev_limit, long n_configs, double uncert_min, double *fit_sig2_return)
 {
   double md, *fit_sig2;
-  int n_used, i_config;
+  long n_used, i_config;
 
   if (fit_sig2_return)
     fit_sig2 = fit_sig2_return;
