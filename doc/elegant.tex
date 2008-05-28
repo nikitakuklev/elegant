@@ -4251,7 +4251,7 @@ calculations included, or an output from {\tt sddsanalyzebeam}. In the latter ca
 
 \begin{itemize}
 \item {\bf description:} \verb|touschekLifetime| computes Touschek lifetime using 
-A. Piwinski's formula~\cite{Piwinski}.
+A. Piwinski's formula~\cite{Piwinski, Xiao2007a}.
 
 \item {\bf examples:}
 \begin{flushleft}{\tt
@@ -4274,15 +4274,19 @@ touschekLifetime {\em outputFile}
 \begin{itemize}
 \item {\tt -twiss} --- A twiss parameter file from {\tt elegant}. 
 You must use the \verb|radiation_integrals| flag in \verb|twiss_output|.
-\item {\tt -aperture} --- A momentum aperture file from {\tt elegant}. 
-This file can contain a subset of elements of twissFile (for example: only Quadrupole elements). 
-But, they {\bf must} point to same beamline. One for a part of beamline (a few sectors) and one for
-entire ring is {\bf prohibit}.
+\item {\tt -aperture} --- A momentum aperture file from {\tt elegant}.
+This file can contain a subset of elements of twissFile (for example:
+only Quadrupole elements).  However, the Twiss and momentum aperture
+files {\em must} cover the same beamline. Having one file for a part
+of beamline (e.g., a few sectors) and one for the entire ring will
+yield incorrect results.
 \item {\tt -charge}, {\tt -particles} --- Give the charge (in nanocoulombs) or the
  number of electrons.
-\item {\tt -coupling} --- Give the emittance coupling ratio, $\epsilon_y/\epsilon_x$.
+\item {\tt -coupling} --- Give the emittance coupling ratio, $\epsilon_y/\epsilon_x$.  This is
+ used to compute the horizontal and vertical emittance from the natural emittance.
 \item {\tt -RF=Voltage={\em MV},harmonic={\em value}} --- Specify rf voltage and harmonic number.
-\item {\tt -length={\em mm}} --- Specify the rms bunch length.
+ N.B.: If the data files cover only a portion of the ring, using this option will give incorrect results!
+\item {\tt -length={\em mm}} --- Specify the rms bunch length.  This is an alternative to giving rf parameters.
 \item {\tt -emitxInput} --- Give the initial x emittance in meters.  If not specified,
 the value from the parameter \verb|ex0| in {\em twissFile} is used.
 \item {\tt -deltaInput} --- Give the initial rms fractional momentum spread.  If not
@@ -4290,7 +4294,7 @@ specified, the value from the parameter \verb|Sdelta0| in {\em twissFile} is use
 \item {\tt -verbosity} --- If nonzero, program execution information is printed to the standard output.
 \end{itemize}
 
-\item {\bf author:} A. Xiao, M. Borland, ANL/APS.
+\item {\bf author:} A. Xiao, ANL/APS.
 \end{itemize}
 
 \newpage 
@@ -4336,7 +4340,7 @@ conventions for angles, focusing strength, and so forth.
 
 Comments may be embedded in the lattice file by starting a line with 
 an exclamation point (``!'').  Rpn expressions may be embedded separately
-from an element definition by starting a line with a percent sign (``%'').
+from an element definition by starting a line with a percent sign (``\%'').
 For example
 \begin{verbatim}
 ! Define pi
@@ -4514,6 +4518,10 @@ LINAC''.
 
 \bibitem{Piwinski}
   A. Piwinski, `` The Touschek effect in strong focusing storage rings,'' DESY-98-179, Nov 1998.
+
+\bibitem{Xiao2007a}
+  A. Xiao {\em et al.}, ``Touschek Effect Calculation and its Application to a Transport Line,''
+  Proc. PAC07, 3453-3455 (2007).
 
 \end{thebibliography}
 
