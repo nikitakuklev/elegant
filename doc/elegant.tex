@@ -22,7 +22,6 @@
 
 \section{Highlights of What's New in Version 19.0}
 
-
 Here is a summary of what's changed since release 18.1.  For details
 and references, see the specific entries in the manual.
 
@@ -45,11 +44,17 @@ and references, see the specific entries in the manual.
 \begin{itemize}
 \item In versions prior to 19.0, the $I_5$ radiation integral was computed incorrectly for 
   {\tt WIGGLER} elements with an even number of poles and for all {\tt CWIGGLER} elements.  Thanks to
-  W. Guo (BNL) for finding this bug.  Also, the $I_2$ radiation integral (which affects $\alpha$)
-  had a sign error.
+  W. Guo (BNL) for finding this bug.  Also, the wiggler contribution to the $I_2$ radiation integral had a sign error,
+  although it wasn't used in any computations.  
+\item The {\tt WIGGLER} element did not include contributions to $R_{56}$.  This was also rectified, so that wigglers now affect $\alpha_c$.
+\item When the strength parameter (i.e., \verb|B_MAX|, \verb|BY_MAX|, or \verb|BX_MAX|) of a {\tt CWIGGLER} element was varied,
+ the Twiss parameters and radiation integrals did not change.  This has been fixed.
 \item If longitudinal space charge simulation was invoked (using {\tt LSCDRIFT} or {\tt RFCW}) but
  the {\tt CHARGE} element was omitted, {\tt elegant} bombed.  This has been fixed. Thanks to P. Williams (Daresbury)
  for finding this bug.
+\item The {\tt SREFFECTS} element did not include the effects of the dispersive orbit when damping and quantum excitation
+  where disabled.  This has been fixed, but it requires computing the Twiss parameters now for any simulation that involves
+  {\tt SREFFECTS}.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
@@ -69,6 +74,8 @@ and references, see the specific entries in the manual.
  zero insertion length in the lattice. 
 \item The algorithm used by the {\tt IBSCATTER} element, which models intrabeam scattering, has been
  improved to allow modeling IBS in linacs and transport lines.  This work was done by A. Xiao (ANL).
+\item The {\tt SREFFECTS} element will now affect the closed orbit through an energy change.  This
+ allows Twiss parameter and related computations to use the orbit with the effects of radiation losses.
 \end{itemize}
 
 \subsection{New and Modified Commands}
@@ -3463,7 +3470,7 @@ on subsequent pages.
         command, or the WATCH element.  (Program by M. Borland.)
 \item {\tt sddsbrightness} --- Uses twiss parameter output or data from {\tt sddsanalyzebeam} to
   compute undulator brightness curves.  (Program by H. Shang, R. Dejus, M. Borland, X. Jiao.)
-\item {\tt sddsemitmeas} --- Analyzes quadrupole scan emittance measurement data.  Accepts a
+\item {\tt sddsemitproc} --- Analyzes quadrupole scan emittance measurement data.  Accepts a
         file containing the transport matrix for each point and measured beam sizes.  
         The file may, for example, be the file produced
         by the {\tt final} field of the {\tt run\_setup} command.  The quadrupole scan can be
@@ -3836,17 +3843,18 @@ and {\tt Brightness{\em i}}.
 
 \begin{latexonly}
 \newpage
-\begin{center}{\Large\verb|sddsemitmeas|}\end{center}
+\begin{center}{\Large\verb|sddsemitproc|}\end{center}
 \end{latexonly}
-\subsection{sddsemitmeas}
-\label{sddsemitmeas}
+\subsection{sddsemitproc}
+\label{sddsemitproc}
 
 \begin{itemize}
+
 \item {\bf description:} 
 
-{\tt sddsemitmeas} analyzes quadrupole scan emittance measurement
+{\tt sddsemitproc} analyzes quadrupole scan emittance measurement
 data.  It accepts a file containing the transport matrix for each data
-point and measured beam sizes.  Because {\tt sddsemitmeas} uses the
+point and measured beam sizes.  Because {\tt sddsemitproc} uses the
 matrix rather than a thin-lens model, it can analyze data from
 arbitrarily complex scans, involving, for example, multiple thick-lens
 quadrupoles.
@@ -3856,7 +3864,7 @@ The matrix data can be prepared using {\tt elegant}.  For example, the
 quadrupoles.  In addition, the beam size data may be prepared using
 {\tt elegant}, to allow simulation of emittance measurements.
 
-{\tt sddsemitmeas} will perform error analysis using a Monte Carlo
+{\tt sddsemitproc} will perform error analysis using a Monte Carlo
 technique.  A user-specified number of random error sets are generated
 and added to all measurements.  Analysis is performed for each error
 set.  Statistics over all the error sets provide most likely values
@@ -3867,23 +3875,20 @@ and error bars.
 elegant quadScan.ele
 sddscollapse quadScan.fin -pipe=out \\
 | sddsxref -pipe=in quadScan.data -take=SigmaX,SigmaY \\
-| sddsemitmeas -pipe=in emitResults.sdds
+| sddsemitproc -pipe=in emitResults.sdds
 }\end{flushleft}
 
 \item {\bf synopsis:}
 \begin{flushleft}{\tt
-sddsemitmeas [{\em inputfile}] [{\em outputfile}] [-pipe=[input][,output]]
+sddsemitproc [{\em inputfile}] [{\em outputfile}] [-pipe=[input][,output]]
  [-sigmaData={\em xName},{\em yName}]
- [-energySpread={\em fractionalRMSValue}]
- [-errorLevel={\em valueInm},[\{gaussian,{\em nSigmas} | uniform\}]]
+ [-errorData={\em xName},{\em yName} | 
+  -errorLevel={\em valueInm},[\{gaussian,{\em nSigmas} | uniform\}]]
  [-nErrorSets={\em number}] [-seed=integer]
  [-limitMode={resolution | zero}[{,reject}]
  [-deviationLimit={\em xLevelm},{\em yLevelm}]
  [-resolution={\em xResolutionm},{\em yResolutionm}]
- [-uncertaintyFraction={\em xValue},{\em yValue}]
- [-fixedUncertainty={\em xValuem},{\em yValuem}]
- [-findUncertainties] [-minimumUncertainty={\em xValuem},{\em yValuem}]
- [-constantWeighting] [-verbosity={\em level}]
+ [-verbosity={\em level}]
 }\end{flushleft}
 
 \item {\bf files:}
@@ -3899,19 +3904,13 @@ run\_setup} command in {\tt elegant}, and collapses it using {\tt
 sddscollapse}.  Each page of {\em inputfile} corresponds to a different
 emittance measurement.
 
-If energy spread is included (\verb|-energySpread| option), the file
-must also contain columns named \verb|etax| and \verb|etay|, giving
-the horizontal and vertical dispersion at the observation point.
-These may be added to the {\tt final} file using {\tt sddsprocess} (to
-get the final values as parameters) and {\tt sddsxref} (to transfer
-the parameters), prior to using {\tt sddscollapse}.
-
 In addition to this data, {\em inputfile} must also contain columns
 giving the rms beam sizes in x and y.  The user supplies the names of
-the columns using the \verb|-sigmaData| option.  These columns may be
-from {\tt elegant} (e.g., \verb|Sx| and \verb|Sy|), if one wants to
-simulate an emittance measurement.  Note that the theory behind the
-emittance measurement is strictly correct only for true RMS beamsize
+the columns using the \verb|-sigmaData| option; otherwise, they
+default to \verb|Sx| and \verb|Sy|.  These columns may be from {\tt
+elegant} (e.g., \verb|Sx| and \verb|Sy|), if one wants to simulate an
+emittance measurement.  Note that the theory behind the emittance
+measurement is strictly correct only for true RMS beamsize
 measurements.  Use of FWHM or some other measure will give unreliable
 results.
  
@@ -3921,12 +3920,6 @@ geometric rms emittance, sigma matrix, and Twiss parameters of the
 beam in the horizontal and vertical planes.  If error sets were requested
 (using \verb|-nErrorSets|), then there are also parameters giving the
 error bars (``sigma's'') of the measured values.
-
-The columns of {\em outputfile} contain various quantities depending
-on the mode.  For files generated with {\tt elegant} and no error sets,
-it contains the measured and fit beam size data, along with the strength
-of one of the varied quadrupoles.  In other cases, less data may be
-present.
 
 \end{itemize}
 
@@ -3938,17 +3931,15 @@ of the columns in {\em inputfile} from which the x and y rms beam
 sizes are to be taken.  Default values are {\tt Sx} and {\tt Sy},
 which are the data provided by {\tt elegant}.
 
-\item {\tt -energySpread={\em fractionalRMSValue}} --- Supplies the
-fractional rms energy spread of the beam.  If given, the {\em
-inputfile} must contain dispersion data, as described above.
-
 \item {\tt -errorLevel={\em valueInm},[{gaussian,{\em nSigmas} |
 uniform}]} --- Supplies the standard deviation of random errors to be
-added to the measured beam sizes for Monte Carlo error analysis.  This
-control should not be confused with the controls over the individual
-data point uncertainties; the latter are used for purposes of
-weighting the fits only.  Supposedly, the error levels and the
-uncertainties would be the same, however.
+added to the measured beam sizes for Monte Carlo error analysis.
+
+\item {\tt -errorData={\em xName},{\em yName}} --- May be used to
+supply the names of columns in the input file that contain the 
+error level for each measurement.  This is an option instead of
+using {\tt -errorLevel}, which allows varying the measurement
+error for each point.
 
 \item {\tt -nErrorSets={\em number}} --- The number of sets of random
 errors to generate and add to the measurements.  Each error set is
@@ -3978,18 +3969,6 @@ have and still be included.  An initial fit is performed for each
 randomized set or the raw data, as appropriate.  Outliers are then
 removed and the fit is repeated.
 
-\item {\tt -uncertaintyFraction={\em xValue},{\em yValue}} ---
-Specifies that uncertainties in individual measurements should
-determined as the given fractions of the measured values.  Generally
-not realistic.
-\item {\tt -fixedUncertainty={\em xValuem},{\em yValuem}} --- Specifies that uncertainties in individual
-        measurements should be identical, at the values given (in meters).
-\item {\tt -findUncertainties} --- Specifies that uncertainties in individual measurements should be
-        deduced from an initial unweighted fit.
-\item {\tt -minimumUncertainty={\em xValuem},{\em yValuem}} --- Specifies that uncertainties may not
-        be smaller than the given values, in meters.
-\item {\tt -constantWeighting} --- Specifies uncertainties such that all points are given equal weight
-        in the fit.
 \item {\tt -verbosity={\em level}} --- Higher values of {\em level} result in more informational
         printouts as the program runs.
 \end{itemize}
