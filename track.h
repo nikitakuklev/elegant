@@ -2781,6 +2781,7 @@ long interpolateApertureData(double z, APERTURE_DATA *apData,
                              double *xCenter, double *yCenter, double *xSize, double *ySize);
 long imposeApertureData(double **coord, long np, double **accepted,
                         double z, double Po, APERTURE_DATA *apData);
+void resetApertureData(APERTURE_DATA *apData);
  
 /* prototypes for kick_sbend.c: */
 long track_through_kick_sbend(double **part, long n_part, KSBEND *ksbend, double p_error, double Po,
