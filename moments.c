@@ -728,8 +728,8 @@ void computeNaturalEmittances(VMATRIX *Mld, double *sigmaMatrix, double *emittan
 void NormalizeEigenvectors(int dim, double *V, int debug)
 {
   int k, i, eigenModesNumber;
-  eigenModesNumber = 3;
   double Norm[3], Vcopy[MATDIM2];
+  eigenModesNumber = 3;
 
   for (i=0; i<MATDIM2; i++) Vcopy[i] = V[i];
   for (k=0; k<eigenModesNumber; k++) {
@@ -770,8 +770,8 @@ double *MatrixProduct1 (int rows1, int cols1, double *T1, int rows2, int cols2, 
 /* Calculates T3=T1*T2 */
 {
   double *T3;
-  T3 = malloc(sizeof(*T3)*rows1*cols2);
   int i, j, k;
+  T3 = malloc(sizeof(*T3)*rows1*cols2);
   if (cols1 != rows2) {
     printf("Wrong matrix dimension!\n");
     exit(1);
