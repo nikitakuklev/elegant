@@ -4,6 +4,9 @@
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.9  2008/04/16 13:22:30  borland
+# Added steps back feature and documentation.
+#
 # Revision 1.8  2008/04/14 21:17:58  borland
 # Improved (simplified) algorithm for momentum aperture determination.  Not
 # backward compatible!
@@ -1074,6 +1077,7 @@ if {[string length $configuration]} {
         setStatus "not found: $configuration"
     } else {
         source $configuration
+        setStatus "Configuration $configuration read."
     }    
 }
 if [string length $templateDirectory] {
