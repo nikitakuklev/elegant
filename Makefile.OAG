@@ -150,7 +150,11 @@ SUNPERF = 0
 ifeq ($(OS_CLASS),solaris)
 ifneq ($(ANSI),GCC)
 ifneq ($(GNU),YES)
+ifneq ($(EPICS_HOST_ARCH),solaris-x86)
+ifneq ($(EPICS_HOST_ARCH),solaris-x86_64)
 SUNPERF = $(words $(notdir $(wildcard /opt/SUNWspro/prod/include/cc/sunperf.h)))
+endif
+endif
 endif
 endif
 endif
