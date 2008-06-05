@@ -669,7 +669,7 @@ void computeNaturalEmittances(VMATRIX *Mld, double *sigmaMatrix, double *emittan
          (int*)&lwork, (int*)&info);
 #else
   fprintf(stderr, "Error calling dgeev. You will need to install LAPACK and rebuild elegant\n");
-  return(1);
+  exit(1);
 #endif
 
   if (info != 0) {
