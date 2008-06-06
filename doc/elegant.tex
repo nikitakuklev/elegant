@@ -3043,7 +3043,7 @@ long final_values_only = 0;
 
 \begin{itemize}
 \item \verb|output| --- The (incomplete) filename of the output file.
-	Recommended value is ``%s.slan''.
+	Recommended value is ``\%s.slan''.
 \item \verb|n_slices| --- Number of slices to use.
 \item \verb|s_start|, \verb|s_end| --- Position in beamline at which to start
         and stop performing slice analysis.
@@ -3985,6 +3985,9 @@ technique.  A user-specified number of random error sets are generated
 and added to all measurements.  Analysis is performed for each error
 set.  Statistics over all the error sets provide most likely values
 and error bars.
+
+The beam parameters computed by {\tt sddsemitproc} pertain to the
+beginning of whatever system is simulated in {\tt elegant}.
 
 \item {\bf examples:}
 \begin{flushleft}{\tt
