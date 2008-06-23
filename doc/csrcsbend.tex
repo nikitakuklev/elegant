@@ -70,3 +70,8 @@ dipole elements directly follow one another or are separated by a MARK element.
 Third, one can use a series of dipoles with different names.  In this case, you
 must also use the \verb|EDGE1_EFFECTS| and \verb|EDGE2_EFFECTS| parameters to
 turn off interior edge effects.  
+
+N.B.: Splitting dipoles is not generally recommended for {\tt
+CSRCSBEND} because the coherent synchrotron radiation computations
+start over at the beginning of each piece.  This is only acceptable
+when using \verb|STEADY_STATE=1|.
