@@ -29,28 +29,6 @@ order is controlled using the {\tt EDGE\_ORDER} parameter, which has a
 default value of 1.  N.B.: if you choose the second-order matrix, it
 is not symplectic.
 
-Note about split dipoles: {\tt elegant} can internally split dipoles
-into several pieces, which the user can control using the {\tt
-element\_divisions} parameter of the {\tt run\_setup} namelist, or
-using the {\tt divide\_elements} command.  In splitting dipoles, {\tt elegant}
-simply substitutes a series of dipoles with the length and angle divided by
-the appropriate factor.  ``Interior'' edge effects (i.e., between split
-pieces) are automatically turned off.
-
-The user may also split dipoles into pieces in the lattice definition.  E.g.,
-suppose one wanted to split the following dipole:
-\begin{verbatim}
-B1: SBEN,L=0.5,ANGLE=0.5,E1=0.5,E2=0.5
-\end{verbatim}
-One could do this easily using
-\begin{verbatim}
-B1PART: SBEN,L=0.1,ANGLE=0.1,E1=0.5,E2=0.5
-B1: line=(5*B1PART)
-\end{verbatim}
-The edge effects are turned off for the edges between successive {\tt B1PART} elements.
-This is done only for successive dipoles with the same name and when there
-are no intervening elements.
-
 Incoherent synchrotron radiation, when requested with {\tt ISR=1},
 normally uses gaussian distributions for the excitation of the electrons.
 Setting {\tt USE\_RAD\_DIST=1} invokes a more sophisticated algorithm that
