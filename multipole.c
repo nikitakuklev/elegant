@@ -645,7 +645,7 @@ long multipole_tracking2(
     if (kquad->synch_rad)
       rad_coef = sqr(e_mks)*pow3(Po)/(6*PI*epsilon_o*sqr(c_mks)*me_mks); 
     isr_coef = re_mks*sqrt(55.0/(24*sqrt(3))*pow5(Po)*137.0359895);
-    if (!kquad->isr)
+    if (!kquad->isr || (kquad->isr1Particle==0 && n_part==1))
       /* Minus sign indicates we accumulate into sigmaDelta^2 only, don't perturb particles */
       isr_coef *= -1;
     if (!kquad->multipolesInitialized) {
@@ -684,7 +684,7 @@ long multipole_tracking2(
     if (ksext->synch_rad)
       rad_coef = sqr(e_mks)*pow3(Po)/(6*PI*epsilon_o*sqr(c_mks)*me_mks);
     isr_coef = re_mks*sqrt(55.0/(24*sqrt(3))*pow5(Po)*137.0359895);
-    if (!ksext->isr)
+    if (!ksext->isr || (ksext->isr1Particle==0 && n_part==1))
       /* Minus sign indicates we accumulate into sigmaDelta^2 only, don't perturb particles */
       isr_coef *= -1;
     if (!ksext->multipolesInitialized) {

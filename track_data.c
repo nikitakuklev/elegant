@@ -814,6 +814,7 @@ PARAMETER ksext_param[N_KSEXT_PARAMS] = {
     {"INTEGRATION_ORDER", "", IS_LONG, 0, (long)((char *)&ksext_example.integration_order), NULL, 0.0, 4, "integration order (2 or 4)"},
     {"SQRT_ORDER", "", IS_LONG, 0, (long)((char *)&ksext_example.sqrtOrder), NULL, 0.0, 0, "Order of expansion of square-root in Hamiltonian.  0 means no expansion."},
     {"ISR", "", IS_LONG, 0, (long)((char *)&ksext_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (scattering)?"},
+    {"ISR1PART", "", IS_LONG, 0, (long)((char *)&ksext_example.isr1Particle), NULL, 0.0, 1, "Include ISR for single-particle beam only if ISR=1 and ISR1PART=1"},
     };
 
 KSBEND ksbend_example;
@@ -874,6 +875,7 @@ PARAMETER kquad_param[N_KQUAD_PARAMS]={
     {"INTEGRATION_ORDER", "", IS_LONG, 0, (long)((char *)&kquad_example.integration_order), NULL, 0.0, 4, "integration order (2 or 4)"},
     {"SQRT_ORDER", "", IS_LONG, 0, (long)((char *)&kquad_example.sqrtOrder), NULL, 0.0, 0, "Order of expansion of square-root in Hamiltonian.  0 means no expansion."},
     {"ISR", "", IS_LONG, 0, (long)((char *)&kquad_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (scattering)?"},
+    {"ISR1PART", "", IS_LONG, 0, (long)((char *)&kquad_example.isr1Particle), NULL, 0.0, 1, "Include ISR for single-particle beam only if ISR=1 and ISR1PART=1"},
     };
 
 MAGNIFY magnify_example;
@@ -1061,6 +1063,7 @@ PARAMETER csbend_param[N_CSBEND_PARAMS] = {
     {"B3", "1/M$a3$n", IS_DOUBLE, 0, (long)((char *)&csbend_example.b3), NULL, 0.0, 0, "K3 = b3/rho"},
     {"B4", "1/M$a4$n", IS_DOUBLE, 0, (long)((char *)&csbend_example.b4), NULL, 0.0, 0, "K4 = b4/rho"},
     {"ISR", "", IS_LONG, 0, (long)((char *)&csbend_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (scattering)?"},
+    {"ISR1PART", "", IS_LONG, 0, (long)((char *)&csbend_example.isr1Particle), NULL, 0.0, 1, "Include ISR for single-particle beam only if ISR=1 and ISR1PART=1"},
     {"SQRT_ORDER", "", IS_LONG, 0, (long)((char *)&csbend_example.sqrtOrder), NULL, 0.0, 0, "Order of expansion of square-root in Hamiltonian.  0 means no expansion."},
     {"USE_RAD_DIST", "", IS_LONG, 0, (long)((char *)&csbend_example.distributionBasedRadiation), NULL, 0.0, 0, "If nonzero, overrides SYNCH_RAD and ISR, causing simulation of radiation from distributions, optionally including opening angle."},
     {"ADD_OPENING_ANGLE", "", IS_LONG, 0, (long)((char *)&csbend_example.includeOpeningAngle), NULL, 0.0, 1, "If nonzero, radiation opening angle effects are add if USE_RAD_DIST is nonzero."},
@@ -1114,6 +1117,7 @@ PARAMETER csrcsbend_param[N_CSRCSBEND_PARAMS] = {
     {"B3", "1/M$a3$n", IS_DOUBLE, 0, (long)((char *)&csrcsbend_example.b3), NULL, 0.0, 0, "b3 = B3/rho"},
     {"B4", "1/M$a4$n", IS_DOUBLE, 0, (long)((char *)&csrcsbend_example.b4), NULL, 0.0, 0, "b4 = B4/rho"},
     {"ISR", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (scattering)?"},
+    {"ISR1PART", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.isr1Particle), NULL, 0.0, 1, "Include ISR for single-particle beam only if ISR=1 and ISR1PART=1"},
     {"CSR", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.csr), NULL, 0.0, 1, "enable CSR computations?"},
     {"BLOCK_CSR", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.csrBlock), NULL, 0.0, 0, "block CSR from entering CSRDRIFT?"},
     {"DERBENEV_CRITERION_MODE", "", IS_STRING, 0, (long)((char *)&csrcsbend_example.derbenevCriterionMode), "disable", 0.0, 1, "disable, evaluate, or enforce"},
@@ -1611,6 +1615,7 @@ PARAMETER cwiggler_param[N_CWIGGLER_PARAMS] = {
   {"BX_SPLIT_POLE", "", IS_LONG, 0, (long)((char *)&cwiggler_example.BxSplitPole), NULL, 0.0, 0, "Use \"split-pole\" expansion for Bx?"},
   {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&cwiggler_example.sr), NULL, 0.0, 0, "Include classical synchrotron radiation?"},
   {"ISR", "", IS_LONG, 0, (long)((char *)&cwiggler_example.isr), NULL, 0.0, 0, "Include incoherent synchrotron radiation (scattering)?"},
+  {"ISR1PART", "", IS_LONG, 0, (long)((char *)&cwiggler_example.isr1Particle), NULL, 0.0, 1, "Include ISR for single-particle beam only if ISR=1 and ISR1PART=1"},
   {"SINUSOIDAL", "", IS_LONG, 0, (long)((char *)&cwiggler_example.sinusoidal), NULL, 0.0, 0, "Ideal sinusoidal wiggler?  If non-zero, BX_FILE and BY_FILE are not used."},
   {"VERTICAL", "", IS_LONG,  PARAM_CHANGES_MATRIX, (long)((char *)&cwiggler_example.vertical), NULL, 0.0, 0, "If SINUSOIDAL is non-zero, then setting this to non-zero gives a vertical wiggler.  Default is horizontal."},
   {"HELICAL", "", IS_LONG, 0, (long)((char *)&cwiggler_example.helical), NULL, 0.0, 0, "Ideal helical wiggler?  If non-zero and SINUSOIDAL is also non-zero, BX_FILE and BY_FILE are not used."},

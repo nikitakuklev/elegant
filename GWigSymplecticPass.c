@@ -178,7 +178,7 @@ void GWigSymplecticPass(double **coord, long num_particles, double pCentral,
 	   cwiggler->ByData, cwiggler->BxData,
            cwiggler->zEndPointH, cwiggler->zEndPointV, 
            pCentral,
-           cwiggler->sr, cwiggler->isr);
+           cwiggler->sr, cwiggler->isr && (num_particles>1 || cwiggler->isr1Particle));
   Wig.cwiggler = cwiggler;
   
   if (cwiggler->tilt)

@@ -186,7 +186,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   /* isrConstant is the RMS increase in dP/P per meter due to incoherent SR.  */
   isrConstant = re_mks*sqrt(55.0/(24*sqrt(3))*pow5(Po)*
                             137.0359895/pow3(fabs(rho_actual)));
-  if (!csbend->isr)
+  if (!csbend->isr || (csbend->isr1Particle==0 && n_part==1))
     /* Minus sign here indicates that we accumulate ISR into sigmaDelta^2 but don't apply it to particles. */
     isrConstant *= -1; 
 
@@ -1021,7 +1021,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   else
     rad_coef = 0;
   /* isrConstant is the RMS increase in dP/P per meter due to incoherent SR.  */
-  if (csbend->isr) 
+  if (csbend->isr && (n_part>1 || !csbend->isr1Particle)) 
     isrConstant = re_mks*sqrt(55.0/(24*sqrt(3))*pow5(Po)*
                               137.0359895/pow3(fabs(rho_actual)));
   else

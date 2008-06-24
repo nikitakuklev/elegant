@@ -738,9 +738,9 @@ extern char *entity_text[N_TYPES];
 #define N_SCRAPER_PARAMS 13
 #define N_CENTER_PARAMS 6
 #define N_KICKER_PARAMS 10
-#define N_KSEXT_PARAMS 16
+#define N_KSEXT_PARAMS 17
 #define N_KSBEND_PARAMS 27
-#define N_KQUAD_PARAMS 23
+#define N_KQUAD_PARAMS 24
 #define N_MAGNIFY_PARAMS 6
 #define N_SAMPLE_PARAMS 2
 #define N_HVCOR_PARAMS 10
@@ -751,7 +751,7 @@ extern char *entity_text[N_TYPES];
 #define N_RAMPP_PARAMS 1
 #define N_NISEPT_PARAMS 9
 #define N_STRAY_PARAMS 7
-#define N_CSBEND_PARAMS 37
+#define N_CSBEND_PARAMS 38
 #define N_MATTER_PARAMS 8
 #define N_RFMODE_PARAMS 23
 #define N_TRFMODE_PARAMS 20
@@ -769,7 +769,7 @@ extern char *entity_text[N_TYPES];
 #define N_CHARGE_PARAMS 2
 #define N_PFILTER_PARAMS 5
 #define N_HISTOGRAM_PARAMS 11
-#define N_CSRCSBEND_PARAMS 56
+#define N_CSRCSBEND_PARAMS 57
 #define N_CSRDRIFT_PARAMS 20
 #define N_REMCOR_PARAMS 6
 #define N_MAPSOLENOID_PARAMS 18
@@ -792,7 +792,7 @@ extern char *entity_text[N_TYPES];
 #define N_LSRMDLTR_PARAMS 14
 #define N_TAYLORSERIES_PARAMS 6
 #define N_RFTM110_PARAMS 16
-#define N_CWIGGLER_PARAMS 23
+#define N_CWIGGLER_PARAMS 24
 #define N_EDRIFT_PARAMS 1
 #define N_SCMULT_PARAMS 0		
 #define N_ILMATRIX_PARAMS 31
@@ -1518,7 +1518,7 @@ typedef struct {
     double dx, dy, dz, fse;
     long n_kicks, synch_rad;
     char *systematic_multipoles, *random_multipoles;
-    long integration_order, sqrtOrder, isr;
+    long integration_order, sqrtOrder, isr, isr1Particle;
     /* for internal use */
     long multipolesInitialized;
     MULTIPOLE_DATA systematicMultipoleData; 
@@ -1551,7 +1551,7 @@ typedef struct {
     double xKickCalibration, yKickCalibration;
     long xSteering, ySteering, n_kicks, synch_rad;
     char *systematic_multipoles, *random_multipoles, *steering_multipoles;
-    long integration_order, sqrtOrder, isr;
+    long integration_order, sqrtOrder, isr, isr1Particle;
     /* for internal use */
     long multipolesInitialized;
     MULTIPOLE_DATA systematicMultipoleData; 
@@ -1775,7 +1775,7 @@ typedef struct {
     long kick_limit_scaling;
     long use_bn;
     double b1, b2, b3, b4;
-    long isr, sqrtOrder;
+    long isr, isr1Particle, sqrtOrder;
     long distributionBasedRadiation, includeOpeningAngle;
     /* for internal use only: */
     unsigned long edgeFlags;
@@ -1800,7 +1800,7 @@ typedef struct {
     long outputInterval, outputLastWakeOnly, steadyState;
     long use_bn;
     double b1, b2, b3, b4;
-    long isr, csr, csrBlock;
+    long isr, isr1Particle, csr, csrBlock;
     char *derbenevCriterionMode, *particleOutputFile;
     long particleOutputInterval, sliceAnalysisInterval;
     double highFrequencyCutoff0, highFrequencyCutoff1;
@@ -2242,7 +2242,7 @@ typedef struct {
   long periods, stepsPerPeriod, integrationOrder;
   char *ByFile, *BxFile;
   long BySplitPole, BxSplitPole;
-  long sr, isr, sinusoidal, vertical, helical;
+  long sr, isr, isr1Particle, sinusoidal, vertical, helical;
   long forceMatched;
   char *fieldOutput;
   long verbosity;
