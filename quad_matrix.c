@@ -433,3 +433,160 @@ VMATRIX *qfringe_matrix(
     return(M);
     }
 
+VMATRIX *qscombo_matrix(double K1, double K2, double length, long maximum_order,
+                           double tilt, double fse1, double fse2)
+{
+    VMATRIX *M;
+    double *C, **R, ***T;
+    double k, kl, K1L, cos_kl, sin_kl, cosh_kl, sinh_kl, l2, sin2_kl, sin_2kl, cos_2kl;
+    double sinh_2kl, sinh2_kl, K1_1p5, K1_2;
+
+    K1 *= (1+fse1);
+    
+    if (K1==0 || length==0) {
+      if (K2==0)
+        return drift_matrix(length, maximum_order);
+      return sextupole_matrix(K2, length, maximum_order, tilt, fse2);
+    }
+
+    K2 *= (1+fse2);
+
+    M = tmalloc(sizeof(*M));
+    initialize_matrices(M, M->order = MIN(2,maximum_order));
+    C = M->C;
+    R = M->R;
+    T = M->T;
+
+    if (K1>0) {
+      k = sqrt(K1);
+      kl = k*length;
+      K1L = K1*length;
+      cos_kl = cos(kl);
+      sin_kl = sin(kl);
+      cosh_kl = cosh(kl);
+      sinh_kl = sinh(kl);
+      l2 = ipow(length, 2);
+      sin2_kl = ipow(sin_kl, 2);
+      sin_2kl = sin(2*kl);
+      sinh_2kl = sinh(2*kl);
+      sinh2_kl = ipow(sinh_kl, 2);
+      
+      K1_1p5 = pow(K1, 1.5);
+      K1_2   = ipow(K1, 2);
+
+      C[4] = length;
+      
+      R[0][0] = cos_kl;
+      R[0][1] = sin_kl/k;
+      R[1][0] = -(k*sin_kl);
+      R[1][1] = cos_kl;
+      R[2][2] = cosh_kl;
+      R[2][3] = sinh_kl/k;
+      R[3][2] = k*sinh_kl;
+      R[3][3] = cosh_kl;
+      R[4][4] = 1;
+      R[5][5] = 1;
+      T[0][0][0] = -(K2*(K1*l2 + sin2_kl))/(8.*K1);
+      T[0][1][0] = (K2*(-2*kl + sin_2kl))/(8.*K1_1p5);
+      T[0][1][1] = (K2*(-(K1*l2) + sin2_kl))/(8.*K1_2);
+      T[0][2][2] = (K2*(K1*l2 + sinh2_kl))/(8.*K1);
+      T[0][3][2] = (K2*(-2*length + sinh_2kl/k))/(8.*K1);
+      T[0][3][3] = (K2*(-(K1*l2) + sinh2_kl))/(8.*K1_2);
+      T[0][5][0] = (kl*sin_kl)/2.;
+      T[0][5][1] = (-(length*cos_kl) + sin_kl/k)/2.;
+      T[1][0][0] = (K2*(-2*length - sin_2kl/k))/8.;
+      T[1][1][0] = -(K2*sin2_kl)/(2.*K1);
+      T[1][1][1] = (K2*(-2*kl + sin_2kl))/(8.*K1_1p5);
+      T[1][2][2] = (K2*(2*length + sinh_2kl/k))/8.;
+      T[1][3][2] = (K2*sinh2_kl)/(2.*K1);
+      T[1][3][3] = (K2*(-2*kl + sinh_2kl))/(8.*K1_1p5);
+      T[1][5][0] = (K1*length*cos_kl + k*sin_kl)/2.;
+      T[1][5][1] = (kl*sin_kl)/2.;
+      T[2][2][0] = (K2*sin_kl*sinh_kl)/(2.*K1);
+      T[2][2][1] = (K2*(K1*length - k*cos_kl*sinh_kl))/(2.*K1_2);
+      T[2][3][0] = (K2*(-(K1*length) + k*cosh_kl*sin_kl))/(2.*K1_2);
+      if (kl<1e-3)
+        T[2][3][1] = K2*(ipow(kl,4)/6)/(2.*K1_2);
+      else
+        T[2][3][1] = K2*(1 - cos_kl*cosh_kl)/(2.*K1_2);
+      T[2][5][2] = -(kl*sinh_kl)/2.;
+      T[2][5][3] = (-(length*cosh_kl) + sinh_kl/k)/2.;
+      T[3][2][0] = (K2*(cosh_kl*sin_kl + cos_kl*sinh_kl))/(2.*k);
+      T[3][2][1] = (K2 - K2*cos_kl*cosh_kl +  K2*sin_kl*sinh_kl)/(2.*K1);
+      T[3][3][0] = (K2*(-1 + cos_kl*cosh_kl + sin_kl*sinh_kl))/(2.*K1);
+      T[3][3][1] = (K2*(cosh_kl*sin_kl - cos_kl*sinh_kl))/(2.*K1_1p5);
+      T[3][5][2] = (-(K1*length*cosh_kl) - k*sinh_kl)/2.;
+      T[3][5][3] = -(kl*sinh_kl)/2.;
+      T[4][0][0] = (2*K1*length - k*sin_2kl)/8.;
+      T[4][1][0] = -sin2_kl/2.;
+      T[4][1][1] = (2*length + sin_2kl/k)/8.;
+      T[4][2][2] = (-2*K1*length + k*sinh_2kl)/8.;
+      T[4][3][2] = sinh2_kl/2.;
+      T[4][3][3] = (2*length + sinh_2kl/k)/8.;
+    } else {
+      k = sqrt(-K1);
+      kl = k*length;
+      K1_2 = K1*K1;
+      
+      cos_kl = cos(kl);
+      sin_kl = sin(kl);
+      cosh_kl = cosh(kl);
+      sinh_kl = sinh(kl);
+      l2 = ipow(length, 2);
+      sin2_kl = ipow(sin_kl, 2);
+      sin_2kl = sin(2*kl);
+      cos_2kl = cos(2*kl);
+      sinh_2kl = sinh(2*kl);
+      sinh2_kl = ipow(sinh_kl, 2);
+      
+      C[4] = length;
+
+      R[0][0] = cosh_kl;
+      R[0][1] = sinh_kl/k;
+      R[1][0] = k*sinh_kl;
+      R[1][1] = cosh_kl;
+      R[2][2] = cos_kl;
+      R[2][3] = sin_kl/k;
+      R[3][2] = -(k*sin_kl);
+      R[3][3] = cos_kl;
+      R[4][4] = 1;
+      R[5][5] = 1;
+      T[0][0][0] = (K2*(-(K1*l2) + sinh2_kl))/(8.*K1);
+      T[0][1][0] = (K2*(-2*length + sinh_2kl/k))/(8.*K1);
+      T[0][1][1] = -(K2*(K1*l2 + sinh2_kl))/(8.*K1_2);
+      T[0][2][2] = (K2*(-1 + 2*K1*l2 + cos_2kl))/(16.*K1);
+      T[0][3][2] = (K2*(-2*kl + sin_2kl))/(8.*K1*k);
+      T[0][3][3] = (K2*(-(K1*l2) - sin2_kl))/(8.*K1_2);
+      T[0][5][0] = -(kl*sinh_kl)/2.;
+      T[0][5][1] = (-(length*cosh_kl) + sinh_kl/k)/2.;
+      T[1][0][0] = (K2*(-2*K1*length + k*sinh_2kl))/(8.*K1);
+      T[1][1][0] = (K2*sinh2_kl)/(2.*K1);
+      T[1][1][1] = -(K2*(2*K1*length + k*sinh_2kl))/(8.*K1_2);
+      T[1][2][2] = (K2*(2*K1*length - k*sin_2kl))/(8.*K1);
+      T[1][3][2] = -(K2*sin2_kl)/(2.*K1);
+      T[1][3][3] = (K2*(-2*kl + sin_2kl))/(8.*K1*k);
+      T[1][5][0] = (K1*length*cosh_kl - k*sinh_kl)/2.;
+      T[1][5][1] = -(kl*sinh_kl)/2.;
+      T[2][2][0] = -(K2*sinh_kl*sin_kl)/(2.*K1);
+      T[2][2][1] = (K2*(K1*length + k*cosh_kl*sin_kl))/(2.*K1_2);
+      T[2][3][0] = (K2*(-(K1*length) - k*cos_kl*sinh_kl))/(2.*K1_2);
+      T[2][3][1] = (K2 - K2*cosh_kl*cos_kl)/(2.*K1_2);
+      T[2][5][2] = (kl*sin_kl)/2.;
+      T[2][5][3] = (-(length*cos_kl) + sin_kl/k)/2.;
+      T[3][2][0] = (K2*(cos_kl*sinh_kl + cosh_kl*sin_kl))/(2.*k);
+      T[3][2][1] = (K2 - K2*cosh_kl*cos_kl - K2*sinh_kl*sin_kl)/(2.*K1);
+      T[3][3][0] = (K2*(-1 + cosh_kl*cos_kl - sinh_kl*sin_kl))/(2.*K1);
+      T[3][3][1] = (K2*(cos_kl*sinh_kl - cosh_kl*sin_kl))/(2.*K1*k);
+      T[3][5][2] = (-(K1*length*cos_kl) + k*sin_kl)/2.;
+      T[3][5][3] = (kl*sin_kl)/2.;
+      T[4][0][0] = (2*K1*length + k*sinh_2kl)/8.;
+      T[4][1][0] = sinh2_kl/2.;
+      T[4][1][1] = (2*length + sinh_2kl/k)/8.;
+      T[4][2][2] = (-2*K1*length - k*sin_2kl)/8.;
+      T[4][3][2] = -sin2_kl/2.;
+      T[4][3][3] = (2*length + sin_2kl/k)/8.;
+    }
+    
+    tilt_matrices(M, tilt);
+    return(M);
+    }

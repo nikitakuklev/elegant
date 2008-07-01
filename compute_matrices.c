@@ -592,7 +592,7 @@ VMATRIX *compute_matrix(
     VCOR *vcor; ALPH *alph; DRIFT *drift;
     SOLE *sole; ROTATE *rot; QFRING *qfring;
     MONI *moni; HMON *hmon; VMON *vmon; 
-    KSEXT *ksext; KSBEND *ksbend; KQUAD *kquad; NIBEND *nibend; NISEPT *nisept;
+    KSEXT *ksext; KSBEND *ksbend; KQUAD *kquad; NIBEND *nibend; NISEPT *nisept; KQSCOMB *kqscomb;
     SAMPLE *sample; STRAY *stray; CSBEND *csbend; RFCA *rfca; ENERGY *energy;
     RFCW *rfcw; 
     MATTER *matter; MALIGN *malign; MATR *matr; MODRF *modrf;
@@ -854,6 +854,16 @@ VMATRIX *compute_matrix(
                                   ksext->systematic_multipoles, 0);
         readErrorMultipoleData(&(ksext->randomMultipoleData),
                                   ksext->random_multipoles, 0);
+        break;
+      case T_KQSCOMB:
+        kqscomb = (KQSCOMB*)elem->p_elem;
+        if (kqscomb->n_kicks<1)
+            bomb("n_kicks must by > 0 for KQSCOMB element", NULL);
+        elem->matrix = qscombo_matrix(kqscomb->k1, kqscomb->k2, kqscomb->length, 
+                                      (run->default_order?run->default_order:1), kqscomb->tilt,
+                                      kqscomb->fse1, kqscomb->fse2);
+        if (kqscomb->dx || kqscomb->dy || kqscomb->dz)
+            misalign_matrix(elem->matrix, kqscomb->dx, kqscomb->dy, kqscomb->dz, 0.0);
         break;
       case T_MAGNIFY:
         elem->matrix = magnification_matrix((MAGNIFY*)elem->p_elem);

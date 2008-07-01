@@ -606,9 +606,11 @@ long multipole_tracking2(
   double tilt, rad_coef, isr_coef, xkick, ykick, dz;
   KQUAD *kquad;
   KSEXT *ksext;
-  MULTIPOLE_DATA *multData, *steeringMultData;
+  KQSCOMB *kqscomb;
+  MULTIPOLE_DATA *multData = NULL, *steeringMultData = NULL;
   long sqrtOrder;
   MULT_APERTURE_DATA apertureData;
+  double K2L;
   
   log_entry("multipole_tracking2");
 
@@ -621,7 +623,6 @@ long multipole_tracking2(
     bomb("null p_elem pointer (multipole_tracking2)", NULL);
 
   rad_coef = xkick = ykick = isr_coef = 0;
-  steeringMultData = NULL;
   sqrtOrder = 0;
 
   switch (elem->type) {
@@ -702,13 +703,43 @@ long multipole_tracking2(
                                      KnL, 2);
     multData = &(ksext->totalMultipoleData);
     break;
+  case T_KQSCOMB:
+    /* Implemented as a quadrupole with sextupole as a secondary multipole */
+    kqscomb = ((KQSCOMB*)elem->p_elem);
+    n_kicks = kqscomb->n_kicks;
+    order = 1;
+    KnL = kqscomb->k1*kqscomb->length*(1+kqscomb->fse1);
+    drift = kqscomb->length;
+    tilt = kqscomb->tilt;
+    dx = kqscomb->dx;
+    dy = kqscomb->dy;
+    integ_order = kqscomb->integration_order;
+    sqrtOrder = 0;
+    if (kqscomb->synch_rad)
+      rad_coef = sqr(e_mks)*pow3(Po)/(6*PI*epsilon_o*sqr(c_mks)*me_mks); 
+    isr_coef = re_mks*sqrt(55.0/(24*sqrt(3))*pow5(Po)*137.0359895);
+    if (!kqscomb->isr || (kqscomb->isr1Particle==0 && n_part==1))
+      /* Minus sign indicates we accumulate into sigmaDelta^2 only, don't perturb particles */
+      isr_coef *= -1;
+    K2L = kqscomb->k2*kqscomb->length*(1+kqscomb->fse2);
+    if (K2L) {
+      multData = tmalloc(sizeof(*multData));
+      multData->orders = multData->initialized = 1;
+      multData->randomized = 0;
+      multData->order = tmalloc(sizeof(*(multData->order))*1);
+      multData->order[0] = 2;
+      multData->KnL = tmalloc(sizeof(*(multData->KnL))*1);
+      multData->KnL[0] = K2L;
+      multData->JnL = NULL;
+    }
+    break;
   default:
     fprintf(stdout, "error: multipole_tracking2() called for element %s--not supported!\n", elem->name);
     fflush(stdout);
     exit(1);
     break;
   }
-  if (!multData->initialized)
+  if (multData && !multData->initialized)
     multData = NULL;
   
   if (n_kicks<=0)

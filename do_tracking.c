@@ -1073,6 +1073,18 @@ long do_tracking(
               if (flags&TEST_PARTICLES)
                 ((KSEXT*)eptr->p_elem)->isr = saveISR;
 	      break;
+	    case T_KQSCOMB:
+              if (flags&TEST_PARTICLES) {
+                saveISR = ((KQSCOMB*)eptr->p_elem)->isr;
+                ((KQSCOMB*)eptr->p_elem)->isr = 0;
+              }
+	      nLeft = multipole_tracking2(coord, nToTrack, eptr, 0.0,
+                                          *P_central, accepted, last_z,
+                                          x_max, y_max, elliptical,
+                                          &(run->apertureData), NULL);
+              if (flags&TEST_PARTICLES)
+                ((KQSCOMB*)eptr->p_elem)->isr = saveISR;
+	      break;
 	    case T_SAMPLE:
 	      if (!(flags&TEST_PARTICLES))
 		nLeft = sample_particles(coord, (SAMPLE*)eptr->p_elem, nToTrack, accepted, z, *P_central);
