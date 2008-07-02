@@ -433,7 +433,7 @@ VMATRIX *qfringe_matrix(
     return(M);
     }
 
-VMATRIX *qscombo_matrix(double K1, double K2, double length, long maximum_order,
+VMATRIX *quse_matrix(double K1, double K2, double length, long maximum_order,
                            double tilt, double fse1, double fse2)
 {
     VMATRIX *M;

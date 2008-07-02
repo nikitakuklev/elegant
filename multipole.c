@@ -606,7 +606,7 @@ long multipole_tracking2(
   double tilt, rad_coef, isr_coef, xkick, ykick, dz;
   KQUAD *kquad;
   KSEXT *ksext;
-  KQSCOMB *kqscomb;
+  KQUSE *kquse;
   MULTIPOLE_DATA *multData = NULL, *steeringMultData = NULL;
   long sqrtOrder;
   MULT_APERTURE_DATA apertureData;
@@ -703,25 +703,25 @@ long multipole_tracking2(
                                      KnL, 2);
     multData = &(ksext->totalMultipoleData);
     break;
-  case T_KQSCOMB:
+  case T_KQUSE:
     /* Implemented as a quadrupole with sextupole as a secondary multipole */
-    kqscomb = ((KQSCOMB*)elem->p_elem);
-    n_kicks = kqscomb->n_kicks;
+    kquse = ((KQUSE*)elem->p_elem);
+    n_kicks = kquse->n_kicks;
     order = 1;
-    KnL = kqscomb->k1*kqscomb->length*(1+kqscomb->fse1);
-    drift = kqscomb->length;
-    tilt = kqscomb->tilt;
-    dx = kqscomb->dx;
-    dy = kqscomb->dy;
-    integ_order = kqscomb->integration_order;
+    KnL = kquse->k1*kquse->length*(1+kquse->fse1);
+    drift = kquse->length;
+    tilt = kquse->tilt;
+    dx = kquse->dx;
+    dy = kquse->dy;
+    integ_order = kquse->integration_order;
     sqrtOrder = 0;
-    if (kqscomb->synch_rad)
+    if (kquse->synch_rad)
       rad_coef = sqr(e_mks)*pow3(Po)/(6*PI*epsilon_o*sqr(c_mks)*me_mks); 
     isr_coef = re_mks*sqrt(55.0/(24*sqrt(3))*pow5(Po)*137.0359895);
-    if (!kqscomb->isr || (kqscomb->isr1Particle==0 && n_part==1))
+    if (!kquse->isr || (kquse->isr1Particle==0 && n_part==1))
       /* Minus sign indicates we accumulate into sigmaDelta^2 only, don't perturb particles */
       isr_coef *= -1;
-    K2L = kqscomb->k2*kqscomb->length*(1+kqscomb->fse2);
+    K2L = kquse->k2*kquse->length*(1+kquse->fse2);
     if (K2L) {
       multData = tmalloc(sizeof(*multData));
       multData->orders = multData->initialized = 1;

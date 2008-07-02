@@ -1780,7 +1780,7 @@ void print_dictionary_entry(FILE *fp, long type, long latex_form, long SDDS_form
       replace_chars(buffer, "\n\t", "  ");
       fprintf(fp, "%s\n", buffer);
       fprintf(fp, "%ld\n", (long)(entity_description[type].flags&UNIPROCESSOR?0:1));
-      fprintf(fp, "%ld\n", entity_description[type].n_params);
+      fprintf(fp, "%ld\n", entity_description[type].n_params+1);
     }
     else 
       fprintf(fp, "%s\n", entity_text[type]);
@@ -1849,6 +1849,8 @@ void print_dictionary_entry(FILE *fp, long type, long latex_form, long SDDS_form
         fflush(stdout);
         exit(1);
       }
+    } else {
+      fprintf(fp, "NULL");
     }
     if (specialEntry)
       description = specialDescription;

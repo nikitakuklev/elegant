@@ -691,7 +691,7 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_SCMULT 96						
 #define T_ILMATRIX 97
 #define T_TSCATTER  98
-#define T_KQSCOMB 99
+#define T_KQUSE 99
 #define N_TYPES   100
 
 extern char *entity_name[N_TYPES];
@@ -798,7 +798,7 @@ extern char *entity_text[N_TYPES];
 #define N_SCMULT_PARAMS 0		
 #define N_ILMATRIX_PARAMS 31
 #define N_TSCATTER_PARAMS 1
-#define N_KQSCOMB_PARAMS 14
+#define N_KQUSE_PARAMS 14
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -2361,14 +2361,14 @@ typedef struct {
 } TAYLORSERIES;
 
 /* names and storage structure for quadrupole+sextupole physical parameters */
-extern PARAMETER kqscomb_param[N_KQSCOMB_PARAMS];
+extern PARAMETER kquse_param[N_KQUSE_PARAMS];
 
 typedef struct {
     double length, k1, k2, tilt;
     double dx, dy, dz, fse1, fse2;
     long n_kicks, synch_rad;
     long integration_order, isr, isr1Particle;
-  } KQSCOMB;
+  } KQUSE;
 
 /* macros for bending magnets */ 
 long determine_bend_flags(ELEMENT_LIST *eptr, long edge1_effects, long edge2_effects);
@@ -2885,7 +2885,7 @@ extern void qfringe_R_matrix(double *R11, double *R21, double *R12, double *R22,
 extern void qfringe_T_matrix(double *T116, double *T126, double *T216, double *T226,
     double *T511, double *T512, double *T522, double dk_dz, double l, long reverse);
 extern VMATRIX *qfringe_matrix(double K1, double l, double tilt, long direction, long order, double fse);
-extern VMATRIX *qscombo_matrix(double K1, double K2, double l, long maximum_order, double tilt, double fse1, double fse2);
+extern VMATRIX *quse_matrix(double K1, double K2, double l, long maximum_order, double tilt, double fse1, double fse2);
 
 /* prototypes for tilt_matrices.c: */
 extern void tilt_matrices0(VMATRIX *M, double tilt);

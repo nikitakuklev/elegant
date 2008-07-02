@@ -39,7 +39,7 @@ char *entity_name[N_TYPES] = {
     "LTHINLENS", "LMIRROR", "EMATRIX", "FRFMODE", "FTRFMODE",
     "TFBPICKUP", "TFBDRIVER", "LSCDRIFT", "DSCATTER", "LSRMDLTR",
     "TAYLORSERIES", "RFTM110", "CWIGGLER", "EDRIFT", "SCMULT", "ILMATRIX",
-    "TSCATTER", "KQSCOMB",
+    "TSCATTER", "KQUSE",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -2014,24 +2014,24 @@ PARAMETER tscatter_param[N_TSCATTER_PARAMS] = {
     {"DUMMY", "", IS_LONG, 0, 0, NULL, 0.0, 0, ""},
 };
 
-KQSCOMB kqscomb_example;
+KQUSE kquse_example;
 
 /* kick quad+sext physical parameters */
-PARAMETER kqscomb_param[N_KQSCOMB_PARAMS] = {
-    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kqscomb_example.length), NULL, 0.0, 0, "length"},
-    {"K1", "1/M$a2$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kqscomb_example.k1), NULL, 0.0, 0, "geometric quadrupole strength"},
-    {"K2", "1/M$a3$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kqscomb_example.k2), NULL, 0.0, 0, "geometric sextupole strength"},
-    {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kqscomb_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
-    {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kqscomb_example.dx), NULL, 0.0, 0, "misalignment"},
-    {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kqscomb_example.dy), NULL, 0.0, 0, "misalignment"},
-    {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kqscomb_example.dz), NULL, 0.0, 0, "misalignment"},
-    {"FSE1", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kqscomb_example.fse1), NULL, 0.0, 0, "fractional strength error for K1"},
-    {"FSE2", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kqscomb_example.fse2), NULL, 0.0, 0, "fractional strength error for K2"},
-    {"N_KICKS", "", IS_LONG, 0, (long)((char *)&kqscomb_example.n_kicks), NULL, 0.0, DEFAULT_N_KICKS, "number of kicks"},
-    {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&kqscomb_example.synch_rad), NULL, 0.0, 0, "include classical synchrotron radiation?"},
-    {"INTEGRATION_ORDER", "", IS_LONG, 0, (long)((char *)&kqscomb_example.integration_order), NULL, 0.0, 4, "integration order (2 or 4)"},
-    {"ISR", "", IS_LONG, 0, (long)((char *)&kqscomb_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (scattering)?"},
-    {"ISR1PART", "", IS_LONG, 0, (long)((char *)&kqscomb_example.isr1Particle), NULL, 0.0, 1, "Include ISR for single-particle beam only if ISR=1 and ISR1PART=1"},
+PARAMETER kquse_param[N_KQUSE_PARAMS] = {
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquse_example.length), NULL, 0.0, 0, "length"},
+    {"K1", "1/M$a2$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquse_example.k1), NULL, 0.0, 0, "geometric quadrupole strength"},
+    {"K2", "1/M$a3$n", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquse_example.k2), NULL, 0.0, 0, "geometric sextupole strength"},
+    {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquse_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
+    {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquse_example.dx), NULL, 0.0, 0, "misalignment"},
+    {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquse_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquse_example.dz), NULL, 0.0, 0, "misalignment"},
+    {"FSE1", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquse_example.fse1), NULL, 0.0, 0, "fractional strength error for K1"},
+    {"FSE2", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kquse_example.fse2), NULL, 0.0, 0, "fractional strength error for K2"},
+    {"N_KICKS", "", IS_LONG, 0, (long)((char *)&kquse_example.n_kicks), NULL, 0.0, DEFAULT_N_KICKS, "number of kicks"},
+    {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&kquse_example.synch_rad), NULL, 0.0, 0, "include classical synchrotron radiation?"},
+    {"INTEGRATION_ORDER", "", IS_LONG, 0, (long)((char *)&kquse_example.integration_order), NULL, 0.0, 4, "integration order (2 or 4)"},
+    {"ISR", "", IS_LONG, 0, (long)((char *)&kquse_example.isr), NULL, 0.0, 0, "include incoherent synchrotron radiation (scattering)?"},
+    {"ISR1PART", "", IS_LONG, 0, (long)((char *)&kquse_example.isr1Particle), NULL, 0.0, 1, "Include ISR for single-particle beam only if ISR=1 and ISR1PART=1"},
     };
 
 
@@ -2152,8 +2152,8 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     {   N_SCMULT_PARAMS,    0,       sizeof(SCMULT),    scmult_param     },   
     {  N_ILMATRIX_PARAMS,  HAS_RF_MATRIX|MAT_LEN_NCAT,  sizeof(ILMATRIX),    ilmatrix_param     }, 
     {   N_TSCATTER_PARAMS,  NO_DICT_OUTPUT,       sizeof(TSCATTER),  tscatter_param     },   
-    {   N_KQSCOMB_PARAMS, MAT_LEN_NCAT|IS_MAGNET|MAT_CHW_ENERGY|DIVIDE_OK,      
-                                          sizeof(KQSCOMB),    kqscomb_param    },
+    {   N_KQUSE_PARAMS, MAT_LEN_NCAT|IS_MAGNET|MAT_CHW_ENERGY|DIVIDE_OK,      
+                                          sizeof(KQUSE),    kquse_param    },
 } ;
 
 void compute_offsets()
