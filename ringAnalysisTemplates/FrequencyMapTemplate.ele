@@ -44,7 +44,7 @@
 
 &run_control
 	n_steps = <numberOfSeeds>,
-        n_passes = <turns>,
+        n_passes = "(<turns> <includeChanges> 1 + *)",
 &end
 
 &alter_elements name=<kickOffsetElement>, item=ON_PASS, value=0 &end
@@ -74,6 +74,7 @@
         ymax = <yMaximum>,
         nx = 1,
         ny = <yPoints>,
+        include_changes = <includeChanges>
 &end
 
 

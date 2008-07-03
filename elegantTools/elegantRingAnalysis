@@ -4,6 +4,9 @@
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.10  2008/06/05 13:01:22  borland
+# Added status message after reading configuration file given on commandline.
+#
 # Revision 1.9  2008/04/16 13:22:30  borland
 # Added steps back feature and documentation.
 #
@@ -838,7 +841,11 @@ proc FillFrequencyMapFrame {widget args} {
     APSLabeledEntry .le7 -parent $widget \
       -label "Fractional momentum offset: " -width 20 -textVariable frequencyMap(delta) \
       -contextHelp "Enter the fractional momentum offset" 
-    
+
+    APSRadioButtonFrame .rb0 -parent $widget \
+      -label "Compute diffusion: " -orientation horizontal -buttonList {Yes No} -valueList {1 0} \
+      -variable frequencyMap(includeChanges) -contextHelp \
+      "Choose whether to compute diffusion (change in tune after tracking).  If Yes, then twice as many turns are tracked."
     APSRadioButtonFrame .rb1 -parent $widget \
       -label "Include apertures: " -orientation horizontal -buttonList {Yes No} -valueList {1 0} \
       -variable frequencyMap(includeApertures) -contextHelp \
