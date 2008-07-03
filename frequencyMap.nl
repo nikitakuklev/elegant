@@ -7,11 +7,11 @@
 
 #namelist frequency_map static
     STRING output = NULL;
-    double xmin =  1e-6;
+    double xmin =  -0.1;
     double xmax =  0.1;
     double ymin =  1e-6;
     double ymax =  0.1;
-    long nx = 21;
+    long nx = 20;
     long ny = 21;
     long verbosity = 1;
     long include_changes = 0;
