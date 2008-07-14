@@ -1641,7 +1641,7 @@ end are given.
 \begin{verbatim}
 &frequency_map
     STRING output = NULL;
-    double xmin = 1e-6;
+    double xmin = -0.1;
     double xmax = 0.1;
     double ymin = 1e-6;
     double ymax = 0.1;
@@ -1656,8 +1656,6 @@ end are given.
 \item \verb|output| --- The (incomplete) name of an SDDS file to send output to.  
  Recommended value: ``\%s.fma''.
 \item \verb|xmin|, \verb|xmax| --- Limits of grid of initial x coordinates for tracking.             
- \verb|xmin| should typically be a small, positive value so that there                               
- is some betatron oscillation from which to get the tune.                                            
 \item \verb|ymin|, \verb|ymax| --- Limits of grid of initial y coordinates for tracking.             
  \verb|ymin| should typically be a small, positive value so that there                               
  is some betatron oscillation from which to get the tune.                       
@@ -2766,7 +2764,7 @@ fiducialized to the average momentum of the beam.
     long echo_lattice = 0;
     STRING search_path = NULL;
     long element_divisions = 0;
-    long load_balancing_on = 1;
+    long load_balancing_on = 0;
 &end
 \end{verbatim}
 
