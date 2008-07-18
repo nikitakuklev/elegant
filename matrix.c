@@ -155,64 +155,43 @@ void initialize_matrices(VMATRIX *M, long order)
     }
 
 
-void null_matrices(VMATRIX *M)
+void null_matrices(VMATRIX *M, unsigned long flags)
 {
     register long i, j, k, l;
     double *Tij, **Qij, *Qijk;
     double *C, **R, ***T, ****Q;
 
-    log_entry("null_matrices");
-
     M->eptr = NULL;
     
     set_matrix_pointers(&C, &R, &T, &Q, M);
 
-    switch (M->order) {
-        case 3:
-            for (i=0; i<6; i++) {
-                C[i] = 0;
-                for (j=0; j<6; j++) {
-                    R[i][j] = 0;
-                    Tij = T[i][j];
-                    Qij = Q[i][j];
-                    for (k=0; k<=j; k++) {
-                        *Tij++ = 0;
-                        Qijk   = *Qij++;
-                        for (l=0; l<=k; l++) 
-                            *Qijk++ = 0;
-                        }
-                    }
-                }
-            break;
-        case 2:
-            for (i=0; i<6; i++) {
-                C[i] = 0;
-                for (j=0; j<6; j++) {
-                    R[i][j] = 0;
-                    Tij = T[i][j];
-                    for (k=0; k<=j; k++) {
-                        *Tij++ = 0;
-                        }
-                    }
-                }
-            break;
-        case 1:
-            for (i=0; i<6; i++) {
-                C[i] = 0;
-                for (j=0; j<6; j++) {
-                    R[i][j] = 0;
-                    }
-                }
-            break;
-        default:
-            fprintf(stdout, "invalid order: %ld  (null_matrices)\n", 
-                M->order);
-            fflush(stdout);
-            exit(1);
-            break;
+    if (M->order==3 && !(flags&EXCLUDE_Q) && Q)
+        for (j=0; j<6; j++) {
+          Qij = Q[i][j];
+          for (k=0; k<=j; k++) {
+            Qijk   = *Qij++;
+            for (l=0; l<=k; l++) 
+              *Qijk++ = 0;
+          }
         }
-    log_exit("null_matrices");
-    }
+    if (M->order>=2 && !(flags&EXCLUDE_T) && T)
+      for (i=0; i<6; i++) {
+        for (j=0; j<6; j++) {
+          Tij = T[i][j];
+          for (k=0; k<=j; k++)
+            *Tij++ = 0;
+        }
+      }
+    if (M->order>=1 && !(flags&EXCLUDE_R) && R)
+      for (i=0; i<6; i++) 
+        for (j=0; j<6; j++) 
+          R[i][j] = (flags&SET_UNIT_R) && (i==j) ? 1 : 0;
+
+    if (!(flags&EXCLUDE_C) && C)
+      for (i=0; i<6; i++) 
+        C[i] = 0;
+  }
+
 
 void track_particles(double **final, VMATRIX *M, double  **initial, long n_part)
 {
