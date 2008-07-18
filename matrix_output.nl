@@ -11,6 +11,7 @@
     long full_matrix_only = 0;
     STRING SDDS_output = NULL;
     long SDDS_output_order = 1;
+    long individual_matrices = 0;
     long output_at_each_step = 0;
     STRING start_from = NULL;
     long start_from_occurence = 1;

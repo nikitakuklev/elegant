@@ -2831,7 +2831,13 @@ extern void offset_matrix(VMATRIX *M, double dx, double dxp, double dy, double d
 /* prototypes for matrix7.c: */
 extern void print_matrices(FILE *fp, char *string, VMATRIX *M);
 extern void initialize_matrices(VMATRIX *M, long order);
-extern void null_matrices(VMATRIX *M);
+extern void null_matrices(VMATRIX *M, unsigned long flags);
+/* flags for null_matrices */
+#define EXCLUDE_C  0x01
+#define EXCLUDE_R  0x02
+#define EXCLUDE_T  0x04
+#define EXCLUDE_Q  0x08
+#define SET_UNIT_R 0x10
 extern void track_particles(double **final, VMATRIX *M, double  **initial, long n_part);
 extern void free_matrices(VMATRIX *M);
 extern void free_nonlinear_matrices(VMATRIX *M);

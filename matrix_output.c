@@ -30,6 +30,7 @@ static char **SDDS_match = NULL;
 static SDDS_TABLE *SDDS_matrix = NULL;
 static long *SDDS_matrix_initialized = NULL;
 static long *SDDS_matrix_count = NULL;
+static long individualMatrices;
 
 #define IC_S 0
 #define IC_ELEMENT 1
@@ -102,6 +103,9 @@ void setup_matrix_output(
   SDDS_matrix= trealloc(SDDS_matrix, sizeof(*SDDS_matrix)*(n_outputs+1));
   SDDS_matrix_initialized= trealloc(SDDS_matrix_initialized, sizeof(*SDDS_matrix_initialized)*(n_outputs+1));
   SDDS_matrix_count= trealloc(SDDS_matrix_count, sizeof(*SDDS_matrix_count)*(n_outputs+1));
+  if (individual_matrices && full_matrix_only)
+    bomb("individual_matrices and full_matrix_only are incompatible", NULL);
+  individualMatrices = individual_matrices;
   
   if (start_from)
     cp_str(start_name+n_outputs, start_from);
@@ -258,7 +262,7 @@ void run_matrix_output(
 		       )
 {
   ELEMENT_LIST *member, *first_member;
-  long i, n_elem_no_matrix, n_elements, sfo;
+  long i, j, n_elem_no_matrix, n_elements, sfo;
   long i_SDDS_output, n_SDDS_output=0;
   long i_output, output_order;
   VMATRIX *M1, *M2, *tmp;
@@ -361,6 +365,8 @@ void run_matrix_output(
 		entity_name[member->type], member->name);
 	fflush(stdout);
 #endif
+        if (individualMatrices) 
+          null_matrices(M1, EXCLUDE_C|SET_UNIT_R);
 	concat_matrices(M2, member->matrix, M1, 
 			entity_description[member->type].flags&HAS_RF_MATRIX?
 			CONCAT_EXCLUDE_S0:0);
@@ -368,16 +374,20 @@ void run_matrix_output(
 	M2  = M1;
 	M1  = tmp;
 	if (fp_printout[i_output] && !print_full_only[i_output]) {
+          sprintf(s, "%s matrix after last element",
+                  individualMatrices ? "Effective element" : "Concatenated");
 	  if (M1->order > print_order[i_output]) {
 	    SWAP_LONG(M1->order, print_order[i_output]);
-	    print_matrices(fp_printout[i_output], "Concantenated matrix after last element", M1);
+	    print_matrices(fp_printout[i_output], s, M1);
 	    SWAP_LONG(M1->order, print_order[i_output]);
 	  } else {
-	    print_matrices(fp_printout[i_output], "Concantenated matrix after last element", M1);
+	    print_matrices(fp_printout[i_output], s, M1);
 	  }
 	}
       } else {
 	n_elem_no_matrix++;
+        if (individualMatrices)
+          null_matrices(M1, EXCLUDE_C|SET_UNIT_R);
       }
       if (SDDS_matrix_initialized[i_output] && 
 	  (!SDDS_match[i_output] || wild_match(member->name, SDDS_match[i_output]))) {
