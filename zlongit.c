@@ -154,7 +154,7 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
       ip1 = ip2+1;
       ip2 = bucketEnd[bunch];
       npb = ip2-ip1+1;
-      printf("Processing bunch %ld with %ld particles\n", bunch, npb); fflush(stdout);
+      /* printf("Processing bunch %ld with %ld particles\n", bunch, npb); fflush(stdout); */
       tmean = computeTimeCoordinates(time+ip1, Po, part+ip1, npb);
       find_min_max(&tmin, &tmax, time+ip1, npb);
 #if USE_MPI
