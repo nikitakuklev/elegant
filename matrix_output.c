@@ -269,7 +269,8 @@ void run_matrix_output(
   char s[256];
   double z0;
   VARY rcContext;
-
+  double Ccopy[6];
+  
   if (n_outputs==0)
     return;
 
@@ -366,6 +367,7 @@ void run_matrix_output(
 	fflush(stdout);
 #endif
         if (individualMatrices) 
+          /* exclude C so that the effect of the trajectory is included */
           null_matrices(M1, EXCLUDE_C|SET_UNIT_R);
 	concat_matrices(M2, member->matrix, M1, 
 			entity_description[member->type].flags&HAS_RF_MATRIX?
@@ -386,13 +388,23 @@ void run_matrix_output(
 	}
       } else {
 	n_elem_no_matrix++;
-        if (individualMatrices)
+        if (individualMatrices) {
+          copy_matrices1(M2, M1);
           null_matrices(M1, EXCLUDE_C|SET_UNIT_R);
+        }
       }
       if (SDDS_matrix_initialized[i_output] && 
 	  (!SDDS_match[i_output] || wild_match(member->name, SDDS_match[i_output]))) {
+        if (individualMatrices) {
+          /* output change in C, rather than C itself */
+          copy_doubles(Ccopy, M1->C, 6);
+          for (i=0; i<6; i++)
+            M1->C[i] -= M2->C[i];
+        }
 	SDDS_set_matrices(SDDS_matrix+i_output, M1, SDDS_order[i_output], member,
 			  i_SDDS_output++, n_SDDS_output);
+        if (individualMatrices)
+          copy_doubles(M1->C, Ccopy, 6);
       }
       member = member->succ;
     }
