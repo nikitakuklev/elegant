@@ -18,6 +18,7 @@
 
 #define EXSQRT(value, order) (order==0?sqrt(value):(1+0.5*((value)-1)))
 
+static long negativeWarningsLeft = 100;
 
 void addRadiationKick(double *Qx, double *Qy, double *dPoP, double *sigmaDelta2, long sqrtOrder,
 		      double x, double h0, double Fx, double Fy,
@@ -1444,8 +1445,10 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
         if (csbend->highFrequencyCutoff0>0) {
           long nz;
           nz = applyLowPassFilter(ctHist, nBins, csbend->highFrequencyCutoff0, csbend->highFrequencyCutoff1);
-          if (nz) {
+          if (nz && negativeWarningsLeft) {
 	    fprintf(stdout, "Warning: low pass filter resulted in negative values in %ld bins\n", nz);
+            if (--negativeWarningsLeft==0)
+              fprintf(stdout, "         Further warnings will be suppressed for this run.\n");
             fflush(stdout);
           }
         }
@@ -2720,9 +2723,11 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
     if (csrWake.highFrequencyCutoff0>0) {
       long nz;
       nz = applyLowPassFilter(ctHist, nBins, csrWake.highFrequencyCutoff0, csrWake.highFrequencyCutoff1);
-      if (nz) {
+      if (nz && negativeWarningsLeft) {
         fprintf(stdout, "Warning: low pass filter resulted in negative values in %ld bins\n",
                 nz);
+        if (--negativeWarningsLeft==0)
+          fprintf(stdout, "         Further warnings will be suppressed for this run.\n");
         fflush(stdout);
       }
     }
