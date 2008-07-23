@@ -1240,7 +1240,7 @@ long run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, lon
   eptr = beamline->elem_twiss = &(beamline->elem);
   n_elem = last_n_elem = beamline->n_elems;
   while (eptr) {
-    if (eptr->type==T_RECIRC) {
+    if (eptr->type==T_RECIRC && matched) {
       last_n_elem = n_elem;
       beamline->elem_twiss = beamline->elem_recirc = eptr;
     }
@@ -1396,7 +1396,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
 
   elast = eptr;
   while (eptr) {
-    if (eptr->type==T_RECIRC)
+    if (eptr->type==T_RECIRC && matched)
       beamline->elem_twiss = beamline->elem_recirc = eptr;
     elast = eptr;
     eptr = eptr->succ;
