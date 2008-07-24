@@ -599,6 +599,7 @@ VMATRIX *compute_matrix(
     CSRCSBEND *csrcsbend;
     CSRDRIFT *csrdrift; LSCDRIFT *lscdrift; EDRIFT *edrift;
     WIGGLER *wiggler; CWIGGLER *cwiggler;
+    UKICKMAP *ukickmap;
     double ks, Pref_output;
     VARY rcContext;
     long fiducialize;
@@ -668,9 +669,11 @@ VMATRIX *compute_matrix(
           elem->matrix = determineMatrix(run, elem, NULL, NULL);
         }
         break;
+      case T_UKICKMAP:
+        elem->matrix = determineMatrix(run, elem, NULL, NULL);
+        break;
       case T_SCRIPT:
-        elem->matrix = drift_matrix(((SCRIPT*)elem->p_elem)->length, 
-				    run->default_order);
+        elem->matrix = determineMatrix(run, elem, NULL, NULL);
 	break;
       case T_RBEN: case T_SBEN:
         bend = (BEND*)elem->p_elem;

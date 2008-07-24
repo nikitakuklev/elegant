@@ -37,8 +37,6 @@ void matr_element_tracking(double **coord, VMATRIX *M, MATR *matr,
                            long np, double z);
 void ematrix_element_tracking(double **coord, VMATRIX *M, EMATRIX *matr,
                               long np, double z);
-long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge, BEAM *beam, double **part, 
-                             long np, long nLost, char *mainRootname, long iPass, long driftOrder);
 void distributionScatter(double **part, long np, double Po, DSCATTER *scat, long iPass);
 void recordLossPass(long *lostOnPass, long *nLost, long nLeft, long nMaximum, long pass, int myid,
                     int lostSinceSeqMode);
@@ -822,7 +820,7 @@ long do_tracking(
 	      break;
 	    case T_SCRAPER:
 	      if (!(flags&TEST_PARTICLES && !(flags&TEST_PARTICLE_LOSSES))) {
-		nLeft = beam_scraper(coord, (SCRAPER*)eptr->p_elem, nToTrack, accepted, z, *P_central);
+		nLeft = beam_scraper(coord, (SCRAPER*)eptr->p_elem, nToTrack, accepted, last_z, *P_central);
 	      }
 	      break;
 	    case T_PFILTER:
@@ -985,11 +983,11 @@ long do_tracking(
               break;
 	    case T_MULT:
 	      nLeft = multipole_tracking(coord, nToTrack, (MULT*)eptr->p_elem, 0.0,
-					 *P_central, accepted, z);
+					 *P_central, accepted, last_z);
 	      break;
 	    case T_FMULT:
 	      nLeft = fmultipole_tracking(coord, nToTrack, (FMULT*)eptr->p_elem, 0.0,
-					  *P_central, accepted, z);
+					  *P_central, accepted, last_z);
 	      break;
 	    case T_TAYLORSERIES:
 	      nLeft = taylorSeries_tracking(coord, nToTrack, (TAYLORSERIES*)eptr->p_elem, 0.0,
@@ -1295,6 +1293,10 @@ long do_tracking(
               if (flags&TEST_PARTICLES)
                 ((CWIGGLER*)eptr->p_elem)->isr = saveISR;
 	      break;
+            case T_UKICKMAP:
+              nLeft = trackUndulatorKickMap(coord, accepted, nToTrack, *P_central, (UKICKMAP*)eptr->p_elem, 
+                                            last_z);
+              break;
             case T_TWISSELEMENT:
               if ( ((TWISSELEMENT*)eptr->p_elem)->applyOnce==0 || i_pass==passOffset) {
                 /* If applying once, do so on the first pass through only */

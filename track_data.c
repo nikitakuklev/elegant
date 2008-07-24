@@ -39,7 +39,7 @@ char *entity_name[N_TYPES] = {
     "LTHINLENS", "LMIRROR", "EMATRIX", "FRFMODE", "FTRFMODE",
     "TFBPICKUP", "TFBDRIVER", "LSCDRIFT", "DSCATTER", "LSRMDLTR",
     "TAYLORSERIES", "RFTM110", "CWIGGLER", "EDRIFT", "SCMULT", "ILMATRIX",
-    "TSCATTER", "KQUSE",
+    "TSCATTER", "KQUSE", "UKICKMAP",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -167,8 +167,9 @@ and phase modulation.",
     "Tracks through a drift with no approximations (Exact DRIFT).",
     "Tracks through a zero length multipole to simulate space charge effects",  
     "An Individualized Linear Matrix for each particle for fast symplectic tracking with chromatic and amplitude-dependent effects",
-    "An element to simulate Touschek scattering",
-    "A canonical kick element combining quadrupole and sextupole fields."
+    "An element to simulate Touschek scattering.",
+    "A canonical kick element combining quadrupole and sextupole fields.",
+    "An undulator kick map (e.g., using data from RADIA).",
     } ;
 
 QUAD quad_example;
@@ -2035,6 +2036,16 @@ PARAMETER kquse_param[N_KQUSE_PARAMS] = {
     };
 
 
+UKICKMAP ukickmap_example;
+
+/* undulator kick map physical parameters */
+PARAMETER ukickmap_param[N_UKICKMAP_PARAMS] = {
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ukickmap_example.length), NULL, 0.0, 0, "length"},
+    {"FIELD_RATIO", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ukickmap_example.fieldRatio), NULL, 0.0, 0, "Factor by which to multiply the magnetic fields."},
+    {"INPUT_FILE", " ", IS_STRING, 0, (long)((char *)&ukickmap_example.inputFile), NULL, 0.0, 0, "Name of SDDS file with undulator kickmap data."},
+    };
+
+
 /* array of parameter structures */
 
 #define MAT_LEN     HAS_MATRIX|HAS_LENGTH
@@ -2154,6 +2165,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     {   N_TSCATTER_PARAMS,  NO_DICT_OUTPUT,       sizeof(TSCATTER),  tscatter_param     },   
     {   N_KQUSE_PARAMS, MAT_LEN_NCAT|IS_MAGNET|MAT_CHW_ENERGY|DIVIDE_OK,      
                                           sizeof(KQUSE),    kquse_param    },
+    {   N_UKICKMAP_PARAMS, MAT_LEN_NCAT|IS_MAGNET, sizeof(UKICKMAP),    ukickmap_param    },
 } ;
 
 void compute_offsets()

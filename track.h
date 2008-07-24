@@ -692,7 +692,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_ILMATRIX 97
 #define T_TSCATTER  98
 #define T_KQUSE 99
-#define N_TYPES   100
+#define T_UKICKMAP 100
+#define N_TYPES   101
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -799,6 +800,7 @@ extern char *entity_text[N_TYPES];
 #define N_ILMATRIX_PARAMS 31
 #define N_TSCATTER_PARAMS 1
 #define N_KQUSE_PARAMS 14
+#define N_UKICKMAP_PARAMS 3
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -2370,6 +2372,20 @@ typedef struct {
     long integration_order, isr, isr1Particle;
   } KQUSE;
 
+/* names and storage structure for kick map physical parameters */
+extern PARAMETER ukickmap_param[N_UKICKMAP_PARAMS];
+
+typedef struct {
+  double length, fieldRatio;
+  char *inputFile;
+  /* for internal use only */
+  long initialized;
+  long points, nx, ny;
+  double *xpFactor, *ypFactor;
+  double xmin, xmax, dx;
+  double ymin, ymax, dy;
+} UKICKMAP;  
+
 /* macros for bending magnets */ 
 long determine_bend_flags(ELEMENT_LIST *eptr, long edge1_effects, long edge2_effects);
 #define SAME_BEND_PRECEDES 1 
@@ -2616,6 +2632,8 @@ void store_fitpoint_twiss_parameters(MARK *fpt, char *name, long occurence, TWIS
 void store_fitpoint_beam_parameters(MARK *fpt, char *name, long occurence, double **coord, long np, double Po);
 void setTrackingWedgeFunction(void (*wedgeFunc)(double **part, long np, long pass, double *pCentral),
                               ELEMENT_LIST *eptr);
+long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge, BEAM *beam, double **part, 
+                             long np, long nLost, char *mainRootname, long iPass, long driftOrder);
 
 extern void track_through_kicker(double **part, long np, KICKER *kicker, double p_central, long pass,
       long order);
@@ -2863,6 +2881,10 @@ extern long fmultipole_tracking(double **particle,  long n_part, FMULT *multipol
 /* prototypes for taylorseries.c: */
 extern long taylorSeries_tracking(double **particle,  long n_part, TAYLORSERIES *taylorSeries,
                                 double p_error, double Po, double **accepted, double z_start);
+
+/* prototypes for kickmap.c */
+long trackUndulatorKickMap(double **particle, double **accepted, long nParticles, double pRef, UKICKMAP *map,
+                  double zStart);
 
 /* prototypes for output_magnets.c: */
 extern void output_magnets(char *filename, char *line_name, LINE_LIST *beamline);

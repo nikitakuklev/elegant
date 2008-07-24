@@ -502,6 +502,16 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
     ((CWIGGLER*)eptr->p_elem)->isr = ltmp1;
     ((CWIGGLER*)eptr->p_elem)->sr = ltmp2;
     break;
+  case T_UKICKMAP:
+    if (trackUndulatorKickMap(coord, NULL, n_track, run->p_central, (UKICKMAP*)eptr->p_elem, 0)!=n_track) {
+      printf("*** Error: particles lost in determineMatrix call for UKICKMAP\n");
+      exit(1);
+    }
+    break;
+  case T_SCRIPT:
+    transformBeamWithScript((SCRIPT*)eptr->p_elem, run->p_central, NULL, NULL, coord, n_track, 0,
+                            NULL, 0, 2);
+    break;
   default:
     printf("*** Error: determineMatrix called for element that is not supported!\n");
     printf("***        Seek professional help!\n");
