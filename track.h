@@ -2376,7 +2376,7 @@ typedef struct {
 extern PARAMETER ukickmap_param[N_UKICKMAP_PARAMS];
 
 typedef struct {
-  double length, fieldRatio;
+  double length, fieldFactor;
   char *inputFile;
   /* for internal use only */
   long initialized;

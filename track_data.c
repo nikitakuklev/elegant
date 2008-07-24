@@ -2041,7 +2041,7 @@ UKICKMAP ukickmap_example;
 /* undulator kick map physical parameters */
 PARAMETER ukickmap_param[N_UKICKMAP_PARAMS] = {
     {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ukickmap_example.length), NULL, 0.0, 0, "length"},
-    {"FIELD_RATIO", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ukickmap_example.fieldRatio), NULL, 0.0, 0, "Factor by which to multiply the magnetic fields."},
+    {"FIELD_FACTOR", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ukickmap_example.fieldFactor), NULL, 0.0, 0, "Factor by which to multiply the magnetic fields."},
     {"INPUT_FILE", " ", IS_STRING, 0, (long)((char *)&ukickmap_example.inputFile), NULL, 0.0, 0, "Name of SDDS file with undulator kickmap data."},
     };
 
