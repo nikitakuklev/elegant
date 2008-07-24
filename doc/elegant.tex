@@ -2284,7 +2284,8 @@ allowed for the expression.
 \item \verb|item| --- The parameter of the element to be changed.
 \item \verb|equation| --- An {\tt rpn} equation for the value of the parameter in terms of the
 values of any parameters of any optimization variable.  These latter appear in the equation in the
-form \verb|<element-name>.<parameter-name>|, in all capital letters.
+form \verb|<element-name>.<parameter-name>|, in all capital letters.  The original values of all
+variables and covariable may be accessed via names like \verb|<element-name>.<parameter-name>0|.
 \item \verb|disable| --- If nonzero, the covariable is ignored.
 \end{itemize}
 
