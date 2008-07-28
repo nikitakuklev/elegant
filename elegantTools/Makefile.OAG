@@ -7,9 +7,12 @@
 # in the file LICENSE that is included with this distribution. 
 #*************************************************************************
 #
-# $Id: Makefile.OAG,v 1.4 2008-07-24 22:06:13 borland Exp $
+# $Id: Makefile.OAG,v 1.5 2008-07-28 21:11:27 shang Exp $
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.4  2008/07/24 22:06:13  borland
+# Added km2sdds
+#
 # Revision 1.3  2007/11/09 22:10:32  soliday
 # Changed order of link libraries.
 #
@@ -41,7 +44,7 @@ endif
 PRODOAG = sddsemitmeas sddsemitproc sddsTouschekInteg \
           recurseSetup haissinski sddsmatchtwiss \
           sddsanalyzebeam sddsrandmult sddsresdiag \
-          sddsfindresonances touschekLifetime
+          sddsfindresonances touschekLifetime csrImpedance
 
 SCRIPTS = elegantRingAnalysis beamLifetimeCalc fin2param elegant2shower shower2elegant longitCmd longitCalcs km2sdds
 
@@ -60,7 +63,7 @@ USR_LIBS = 	mdbcommon matlib fftpack SDDS1 \
 		namelist rpnlib mdbmth mdblib \
 		meschach
 SYS_PROD_LIBS_DEFAULT += z 
-SYS_PROD_LIBS_Linux += z 
+SYS_PROD_LIBS_Linux += z gsl gslcblas
 SYS_PROD_LIBS_solaris += z curses rt 
 endif
 
