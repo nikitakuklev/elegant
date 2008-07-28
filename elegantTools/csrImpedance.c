@@ -1,7 +1,19 @@
+/*************************************************************************\
+* Copyright (c) 2008 The University of Chicago, as Operator of Argonne
+* National Laboratory.
+* Copyright (c) 2008 The Regents of the University of California, as
+* Operator of Los Alamos National Laboratory.
+* This file is distributed subject to a Software License Agreement found
+* in the file LICENSE that is included with this distribution. 
+\*************************************************************************/
+
+/* 
+ * $Log: not supported by cvs2svn $
+ *
+ */
 
 #include "SDDS.h"
 #include "scan.h"
-#include "constants.h"
 #include "mdb.h"
 #include <gsl/gsl_sf_airy.h>
 #include <gsl/gsl_complex_math.h>
@@ -18,8 +30,16 @@ char *option[N_OPTIONS]= {
   "height", "frequencyLimit", "n", "radius", "pipe"
   };
 
-char *USAGE = "csrImpedance <outputFile> -height=<valueInMeters> -radius=<valueInMeters> \
-         -frequencyLimit=maximum=<valueInHz>,minimum=<ValueInHz> -n=<interger> -pipe[=out]";
+char *USAGE = "csrImpedance {<outputFile>  | -pipe[=out]} -height=<valueInMeters> -radius=<valueInMeters> \n\
+-frequencyLimit=maximum=<valueInHz>[,minimum=<ValueInHz>] -n=<integer>\n\n\
+<outputFile>     Name of file to which to write the impedance.  Can be used directly\n\
+                 with elegant's ZLONGIT element.\n\
+height           Full height of the vacuum chamber.\n\
+radius           Radius of the dipole magnet.\n\
+frequencyLimit   Frequency range over which to compute the impedance.\n\
+n                Base-2 logarithm of the number of points to generate.\n\
+pipe            Specifies deliverying output to a pipe rather than a file.\n\n\
+Program by H. Shang and Y. Wang (APS)\n";
 
 typedef gsl_complex fcomplex; 
 const double Z0 = 376.730313461770606;   /* mu_o * c_mks  */
