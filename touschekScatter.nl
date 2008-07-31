@@ -16,13 +16,13 @@
         double sigma_dp = 0.0;
         double sigma_s = 0.0;
         double distribution_cutoff[3] = {3, 3, 3};
-        long save_initial_coordinates = 0;
-        STRING bunch = "%s.bun";
-        STRING loss = "%s.los";
-        STRING distribution = "%s.dis";
-        long n_particles_per_bunch = 1000;
-        long total_scattered_particles = 10000;
-        double weight_limit = 1.0;
+        STRING bunch = NULL;
+        STRING loss = NULL;
+        STRING distribution = NULL;
+        STRING initial = NULL;
+        long NSimulated = 5E6;
+        long do_track = 0;
+        double ignored_portion = 0.05;
         long verbosity = 0;
 #end
 /*
@@ -30,5 +30,5 @@ charge in nC.
 frequency in Hz
 delta in % "energy aperture of interested"
 emittance in nm
-sigma_dp in real, sigma_s in mm.
+sigma_dp is the realative energy spread, sigma_s in mm.
 */
