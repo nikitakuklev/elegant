@@ -1642,21 +1642,22 @@ typedef struct {
 
 typedef struct {
   long seed, nbins;
-  double charge, weight_limit;
-  double ebeam, gamma, pCentral, p0;
+  double charge, ignoredPortion;
+  double ebeam, gamma, pCentral, betagamma;
   double emit[3], range[3];
-  double sigz, sigma_p, delta, sz0, dp0;
+  double sigz, sigma_p, delta, dp0;
 } TSCATTER_SPEC;
 
 typedef struct {
   long dummy;
   /* internal variables */
-  double IntR, p_rate, s_rate;
-  char *losFile, *bunFile, *disFile;
+  char *name;
+  double s;
+  double IntR, p_rate, s_rate, i_rate;
+  char *losFile, *bunFile, *disFile,*iniFile;
   double twiss[3][3], disp[2][2];
   double sigx, sigy, sigz, sigxyz;
-  double range[6];
-  double factor, totalWeight, ignorWeight; 
+  double factor, totalWeight;
   long simuCount; 
 } TSCATTER;
 
@@ -3253,6 +3254,10 @@ void SDDS_BeamScatterSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, lo
                            char *command_file, char *lattice_file, char *caller);
 void dump_scattered_particles(SDDS_TABLE *SDDS_table, double **particle, 
                               long particles, double *weight, TSCATTER *tsptr, TSCATTER_SPEC *tsSpec);
+void SDDS_BeamScatterLossSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row, char *contents, 
+                               char *command_file, char *lattice_file, char *caller);
+void dump_scattered_loss_particles(SDDS_TABLE *SDDS_table, double **particle, long *lostOnPass, 
+                                   long particles, double *weight, TSCATTER *tsptr);
 
 void transverseFeedbackPickup(TFBPICKUP *tfbp, double **part, long np, long pass);
 void initializeTransverseFeedbackPickup(TFBPICKUP *tfbp);
