@@ -1550,16 +1550,15 @@ long check_sdds_column(SDDS_TABLE *SDDS_table, char *name, char *units)
   return(0);
 }
 
-#define BEAM_SCATTER_PARAMETERS 6
+#define BEAM_SCATTER_PARAMETERS 5
 static SDDS_DEFINITION beam_scatter_parameter[BEAM_SCATTER_PARAMETERS] = {
-  {"SimuCount", "&parameter name=SimuCount, type=long, description=\"Total simulated scatted particles\" &end"},
-  {"IntRate", "&parameter name=IntRate, type=double, description=\"Integrated Scattering Rate\" &end"},
-  {"PLocalRate", "&parameter name=PLocalRate, type=double, description=\"Piwinski's Local Rate\" &end"},
-  {"SLocalRate", "&parameter name=SLocalRate, type=double, description=\"Simulated Local Rate\" &end"},
-  {"TotalWeight", "&parameter name=TotalWeight, type=double, description=\"Total Simulated Weight\" &end"},
-  {"IgnorWeight", "&parameter name=IgnorWeight, type=double, description=\"Ignored Simulated Weight\" &end"},
+  {"N_Particles", "&parameter name=N_Particles, type=long, description=\"Total simulated scatted particles\" &end"},
+  {"IntRate", "&parameter name=IntRate, type=double, units=\"1/s\", description=\"Integrated Scattering Rate\" &end"},
+  {"PLocalRate", "&parameter name=PLocalRate, type=double, units=\"1/s/m\", description=\"Piwinski's Local Rate\" &end"},
+  {"SLocalRate", "&parameter name=SLocalRate, type=double, units=\"1/s/m\", description=\"Simulated Local Rate\" &end"},
+  {"IgnorRate", "&parameter name=IgnorRate, type=double, units=\"1/s/m\", description=\"Ignored Scattering Rate\" &end"},
 };
-#define BEAM_SCATTER_COLUMNS 8
+#define BEAM_SCATTER_COLUMNS 9
 static SDDS_DEFINITION beam_scatter_column[BEAM_SCATTER_COLUMNS] = {
     {"x", "&column name=x, units=m, type=double &end"},
     {"xp", "&column name=xp, symbol=\"x'\", type=double &end"},
@@ -1568,7 +1567,8 @@ static SDDS_DEFINITION beam_scatter_column[BEAM_SCATTER_COLUMNS] = {
     {"t", "&column name=t, units=s, type=double &end"},
     {"p", "&column name=p, units=\"m$be$nc\", type=double &end"},
     {"particleID", "&column name=particleID, type=long &end"},
-    {"weight", "&column name=weight, type=double &end"},
+    {"Rate", "&column name=Rate, units=\"1/s/m\", type=double &end"},
+    {"IntRate", "&column name=IntRate, units=\"1/s\", type=double &end"},
 };
 
 void SDDS_BeamScatterSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row, char *contents, 
@@ -1587,6 +1587,7 @@ void dump_scattered_particles(SDDS_TABLE *SDDS_table, double **particle,
                               long particles, double *weight, TSCATTER *tsptr, TSCATTER_SPEC *tsSpec)
 {
     long i;
+    double rate;
 
     log_entry("dump_scattered_particles");
     if (!particle)
@@ -1605,21 +1606,21 @@ void dump_scattered_particles(SDDS_TABLE *SDDS_table, double **particle,
     }
 
     for (i=0; i<particles; i++) {
+      rate = weight[i]*tsptr->IntR/tsptr->s_rate;
         if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, i,
                                0, particle[i][0], 1, particle[i][1], 2, particle[i][2], 3, particle[i][3],
                                4, particle[i][4]/c_mks, 5, (particle[i][5]+1.)*tsSpec->pCentral,
-                               6, (long)particle[i][6], 7, weight[i], -1)) {
+                               6, (long)particle[i][6], 7, weight[i], 8, rate, -1)) {
             SDDS_SetError("Problem setting SDDS row values (dump_scattered_particles)");
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
     }
 
-    if ((!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "SimuCount", tsptr->simuCount, NULL))||
+    if ((!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "N_Particles", particles, NULL))||
         (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "IntRate", tsptr->IntR, NULL))||
         (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "PLocalRate", tsptr->p_rate, NULL))||
         (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "SLocalRate", tsptr->s_rate, NULL))||
-        (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "IgnorWeight", tsptr->ignorWeight, NULL))||
-        (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "TotalWeight", tsptr->totalWeight, NULL))){
+        (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "IgnorRate", tsptr->i_rate, NULL))) {
         SDDS_SetError("Problem setting SDDS parameters (dump_scattered_particles)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
@@ -1637,4 +1638,90 @@ void dump_scattered_particles(SDDS_TABLE *SDDS_table, double **particle,
     log_exit("dump_scattered_particles");    
 }
   
+#define BEAM_SCATTER_LOSS_COLUMNS 10
+static SDDS_DEFINITION beam_scatter_loss_column[BEAM_SCATTER_LOSS_COLUMNS] = {
+    {"x", "&column name=x, units=m, type=double &end"},
+    {"xp", "&column name=xp, symbol=\"x'\", type=double &end"},
+    {"y", "&column name=y, units=m, type=double &end"},
+    {"yp", "&column name=yp, symbol=\"y'\", type=double &end"},
+    {"s", "&column name=s, units=m, type=double &end"},
+    {"p", "&column name=p, units=\"m$be$nc\", type=double &end"},
+    {"particleID", "&column name=particleID, type=long &end"},
+    {"Pass", "&column name=Pass, type=long &end"},
+    {"Rate", "&column name=Rate, units=\"1/s/m\", type=double &end"},
+    {"IntRate", "&column name=IntRate, units=\"1/s\", type=double &end"},
+} ;
+#define BEAM_SCATTER_LOSS_PARAMETERS 5
+static SDDS_DEFINITION beam_scatter_loss_parameter[BEAM_SCATTER_LOSS_PARAMETERS] = {
+  {"N_Particles", "&parameter name=N_Particles, type=long, description=\"Total lost simulated scatted particles\" &end"},
+  {"IntRate", "&parameter name=IntRate, type=double, units=\"1/s\", description=\"Integrated Scattering Rate\" &end"},
+  {"TotalRate", "&parameter name=TotalRate, type=double, units=\"1/s/m\", description=\"Total simulated scatter rate\" &end"},
+  {"LossRate", "&parameter name=LossRate, type=double, units=\"1/s/m\", description=\"Total loss rate including the ignored rate\" &end"},
+  {"IntLossRate", "&parameter name=IntLossRate, type=double, units=\"1/s\", description=\"Total integrated loss rate\" &end"},
+};
 
+void SDDS_BeamScatterLossSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row, char *contents, 
+                          char *command_file, char *lattice_file, char *caller)
+{
+    log_entry("SDDS_BeamScatterLossSetup");
+
+    SDDS_ElegantOutputSetup(SDDS_table, filename, mode, lines_per_row, contents, command_file, lattice_file,
+                            beam_scatter_loss_parameter, BEAM_SCATTER_LOSS_PARAMETERS, 
+                            beam_scatter_loss_column, BEAM_SCATTER_LOSS_COLUMNS,
+                            caller, SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
+    log_exit("SDDS_BeamScatterLossSetup");
+}
+
+void dump_scattered_loss_particles(SDDS_TABLE *SDDS_table, double **particle, long *lostOnPass, 
+                                   long particles, double *weight, TSCATTER *tsptr)
+{
+    long i, j;
+    double rate, lossRate, intLossRate;
+
+    log_entry("dump_scattered_loss_particles");
+    if (!particle)
+        bomb("NULL coordinate pointer passed to dump_scattered_loss_particles", NULL);
+
+    for (i=0; i<particles; i++)
+        if (!particle[i]) {
+            fprintf(stdout, "error: coordinate slot %ld is NULL (dump_scattered_loss_particles)\n", i);
+            fflush(stdout);
+            abort();
+            }
+
+    if (!SDDS_StartTable(SDDS_table, particles)) {
+        SDDS_SetError("Problem starting SDDS table (dump_scattered_loss_particles)");
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+        }
+    lossRate=intLossRate=0.;
+    for (i=0; i<particles; i++) {
+        j = (long)particle[i][6]-1;
+        rate = weight[j]*tsptr->IntR/tsptr->s_rate;
+        lossRate += weight[j];
+        intLossRate += rate;
+        if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, i,
+                               0, particle[i][0], 1, particle[i][1], 2, particle[i][2], 3, particle[i][3],
+                               4, particle[i][4], 5, particle[i][5],
+                               6, (long)particle[i][6], 7, lostOnPass[i], 
+                               8, weight[j], 9, rate, -1)) {
+            SDDS_SetError("Problem setting SDDS row values (dump_scattered_loss_particles)");
+            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+            }
+        }
+    if ((!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "N_Particles", particles, NULL))||
+        (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "IntRate", tsptr->IntR, NULL))||
+        (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "TotalRate", tsptr->s_rate, NULL))||
+        (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "LossRate", lossRate, NULL))||
+        (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "IntLossRate", intLossRate, NULL))) {
+        SDDS_SetError("Problem setting SDDS parameters (dump_scattered_loss_particles)");
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+        }
+    if (!SDDS_WriteTable(SDDS_table)) {
+        SDDS_SetError("Problem writing SDDS table (dump_scattered_loss_particles)");
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+        } 
+    SDDS_DoFSync(SDDS_table);
+
+    log_exit("dump_scattered_loss_particles");
+    
+}
