@@ -39,11 +39,15 @@ typedef struct {
 book1 *chbook1(char *vName, double xmin, double xmax, int xbins);
 void chfill1(book1 *bName, double x, double weight);
 void chprint1(book1 *bName, char *filename, char *description, int verbosity);
+void free_hbook1(book1 *x);
 
 book2 *chbook2(char *xName, char *yName, double xmin, double xmax, double ymin, double ymax, int xbins, int ybins);
 void chfill2(book2 *bName, double x, double y, double weight);
 void chprint2(book2 *bName, char *filename, char *description, int verbosity);
+void free_hbook2(book2 *x);
 
 ntuple *chbookn(char **vName, int NDimension, double *xmin, double *xmax, int *xbins);
 void chfilln(ntuple *bName, double *x, double weight);
+void free_hbookn(ntuple *x);
+
 void checkbook2 (book2 *bName);

@@ -101,7 +101,14 @@ void chprint1(book1 *bName, char *filename, char *description, int verbosity)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   if (!SDDS_Terminate(&outPage))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  free(v);
+  return;
+}
 
+void free_hbook1 (book1 *x)
+{
+  free(x->value);
+  free(x);
   return;
 }
 
@@ -210,6 +217,13 @@ void chprint2(book2 *bName, char *filename, char *description, int verbosity)
   return;
 }
 
+void free_hbook2 (book2 *x)
+{
+  free(x->value);
+  free(x);
+  return;
+}
+
 ntuple *chbookn(char **vName, int ND, double *xmin, double *xmax, int *xbins)
 {
   ntuple *book;
@@ -267,6 +281,18 @@ char a[100]="";
   printf("%s\n",a);                 
 */
 
+  return;
+}
+
+void free_hbookn (ntuple *x)
+{
+  free(x->vname);
+  free(x->xmin);
+  free(x->xmax);
+  free(x->dx);
+  free(x->xbins);
+  free(x->value);
+  free(x);
   return;
 }
 
