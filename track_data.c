@@ -623,7 +623,7 @@ PARAMETER watch_param[N_WATCH_PARAMS] = {
     {"INTERVAL", "", IS_LONG, 0, (long)((char *)&watch_example.interval), NULL, 0.0, 1, "interval for data output (in turns)"},
     {"START_PASS", "", IS_LONG, 0, (long)((char*)&watch_example.start_pass), NULL, 0.0, 0, "pass on which to start"},
     {"END_PASS", "", IS_LONG, 0, (long)((char*)&watch_example.end_pass), NULL, 0.0, -1, "pass on which to end (inclusive).  Ignored if negative."},
-    {"FILENAME", "", IS_STRING, 0, (long)((char *)&watch_example.filename), "", 0.0, 0, "output filename"},
+    {"FILENAME", "", IS_STRING, 0, (long)((char *)&watch_example.filename), "", 0.0, 0, "output filename, possibly incomplete (see below)"},
     {"LABEL", "", IS_STRING, 0, (long)((char *)&watch_example.label), "", 0.0, 0, "output label"},
     {"MODE", "", IS_STRING, 0, (long)((char *)&watch_example.mode), "coordinates", 0.0, 0, "coordinate, parameter, centroid, or fft.  For fft mode, you may add a space and a qualifer giving the window type: hanning (default), parzen, welch, or uniform."},
     {"X_DATA", "", IS_LONG, 0, (long)((char*)&watch_example.xData), NULL, 0.0, 1, "include x data in coordinate mode?"},
@@ -1462,7 +1462,7 @@ PARAMETER pfilter_param[N_PFILTER_PARAMS] = {
 HISTOGRAM histogram_example;
 /* HISTOGRAM physical parameters */
 PARAMETER histogram_param[N_HISTOGRAM_PARAMS] = {
-  {"FILENAME", "", IS_STRING, 0, (long)((char *)&histogram_example.filename), "", 0.0, 0, "filename for histogram output"},
+  {"FILENAME", "", IS_STRING, 0, (long)((char *)&histogram_example.filename), "", 0.0, 0, "filename for histogram output, possibly incomplete (see below)"},
   {"INTERVAL", "", IS_LONG, 0, (long)((char *)&histogram_example.interval), NULL, 0.0, 1, "interval in passes between output"},
   {"START_PASS", "", IS_LONG, 0, (long)((char*)&histogram_example.startPass), NULL, 0.0, 0, "starting pass for output"},
   {"BINS", "", IS_LONG, 0, (long)((char*)&histogram_example.bins), NULL, 0.0, 50, "number of bins"},
