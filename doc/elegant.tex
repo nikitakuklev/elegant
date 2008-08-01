@@ -52,6 +52,8 @@ shielded CSR impedance is also included.
 \begin{itemize}
 \item The \verb|CSRDRIFT| element was excluded from element division.  This has been corrected.  Y. Ding (SLAC)
   reported this.
+\item The \verb|SCRIPT| element would be treated as a drift space if matrix concatenation was requested in
+ \verb|run_setup|.  This has been corrected.  W. Guo (BNL) reported this.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
@@ -74,14 +76,21 @@ shielded CSR impedance is also included.
 \item The \verb|WATCH| and \verb|HISTOGRAM| elements now incorporate a feature allowing the element occurrence
  number to be substituted into the output filename.  This can be helpful in creating a set of histograms or
  particle dumps with sequentially-numbered filenames.  See the documentation for those elements for details.
+\item The \verb|CWIGGLER|, \verb|CSBEND|, \verb|CSRCSBEND|, \verb|KQUAD|, and \verb|KSEXT| elements now have
+ a parameter (\verb|ISR1PART|) that allows turning off ISR when a single particle is being tracked (e.g., for
+ an explicit fiducialization step).
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
 \item A new command, \verb|change_particle|, was added that allows tracking particles other than electrons.
-  Predefined types are positions, protons, and muons.  Others may be defined in terms of charge and mass
+  Predefined types are positrons, protons, and muons.  Others may be defined in terms of charge and mass
   ratios to the electron.  This was requested by H. Sayed and Y. Roblin (TJNAF).
 \item A new command, \verb|insert_elements|, was added by A. Xiao (ANL).  It allows inserting elements into a lattice at many locations. This is a convenient way to add elements to a lattice without modifying the lattice file.
+\item The \verb|frequency_map| command now computes the diffusion, defined as $\log_{10} (\Delta\nu_x^2 + \Delta\nu_y^2)$.
+\item The \verb|matrix_output| command now allows outputting the individual {\em on-trajectory} matrices of the elements, rather than
+the just concatenated matrix of the beamline.  This was requested by N. Sereno (ANL).
+\item The \verb|magnets| output from \verb|run_setup| now has a column giving the element type (\verb|ElementType|).
 \end{itemize}
 
 \subsection{Changes to Related Programs and Files}
@@ -2008,6 +2017,7 @@ changes to parameters.
     long full_matrix_only = 0;
     STRING SDDS_output = NULL;
     long SDDS_output_order = 1;
+    long individual_matrices = 0;
     STRING SDDS_output_match = NULL;
     long output_at_each_step = 0;
     STRING start_from = NULL;
@@ -2024,6 +2034,8 @@ the entire accelerator is to be output.
 \item \verb|SDDS_output| --- The (incomplete) name of an SDDS 
 file to which the matrix will be written.  Recommended value: ``\%s.mat''.
 \item \verb|SDDS_output_order| --- The order to which the matrix is output in SDDS format.
+\item \verb|individual_matrices| --- If non-zero, the matrices in the SDDS file are the individual
+{\em on-trajectory} matrices of the elements, rather than the concatenated matrix of the beamline.
 \item \verb|SDDS_output_match| --- A wildcard string which element names must match in
 order for data to appear in the SDDS output file.
 \item \verb|output_at_each_step| --- A flag indicating whether matrix output
@@ -3610,6 +3622,9 @@ program that reads or writes appropriate SDDS data.  The following is
 a brief description of each program.  Full descriptions are available
 on subsequent pages.
 \begin{itemize}
+\item {\tt csrImpedance} --- Computes the shielded steady-state CSR impedance for a dipole magnet.
+ The output can be used immediately with {\tt elegant}'s \verb|ZLONGIT| element.
+ (Program by Y. Wang and H. Shang.)
 \item {\tt elegant2genesis} --- This program performs
         slice analysis of particle output files, which are suitable for use with
         the SDDS-compliant APS version of GENESIS\cite{GENESIS}.  This program is
@@ -3655,6 +3670,45 @@ on subsequent pages.
         manual for documentation.  (Program by M. Borland and H. Shang.)
 \item {\tt touschekLifetime} --- This program calculates Touschek lifetime using A. Piwinski's formula.
         Input files are generated from ``twiss\_output'' and ``momentum\_aperture''.  (Program by A. Xiao.)
+\end{itemize}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|csrImpedance|}\end{center}
+\end{latexonly}
+\subsection{csrImpedance}
+
+\begin{itemize}
+\item {\bf description:}  Computes the steady-state CSR impedance with shielding by parallel plates.
+The computed impedance is for a dipole magnet that bends the beam in a complete circle.
+
+\item {\bf synopsis:}
+\begin{flushleft}{\tt
+csrImpedance {{\em outputFile}  | -pipe[=out]} -height={\em valueInMeters} -radius={\em valueInMeters}
+-frequencyLimit=maximum={\em valueInHz}[,minimum={\em valueInHz}] -n={\em integer}
+}\end{flushleft}
+
+\item {\bf files:}
+\begin{itemize}
+\item {\tt outputFile} --- SDDS file containing computed impedance.  May be used directly with 
+{\tt elegant}'s \verb|ZLONGIT| element.
+ as columns, along with analysis and conditions as parameters.
+\end{itemize}
+
+\item {\bf switches:}
+\begin{itemize}
+\item {\tt -height} --- The full height of the vacuum chamber, in meters.
+\item {\tt -radius} --- The radius of the bending magnet, in meters.
+\item {\tt frequencyLimit} --- Allows specifying the upper frequency limit (required), as well as the
+ lower frequency limit, for the computed impedance.  {\tt elegant} will not accept the data if the lower
+ limit is not 0.  If the rms bunch length is $\sigma_t$, then it is suggested to have the maximum frequency 
+ much greater than $1/(2\pi\sigma_t)$.
+\item {\tt -n} --- Allows specifying the number of data points to be computed. The number of points computed
+ is $2^n+1$, which is required by {\tt elegant}.  A reasonable value is $n=14$.
+\end{itemize}
+
+\item {\bf authors:} Y. Wang, H. Shang, ANL/APS.
+Based on a simplified form\cite{Agoh} of Warnock's \cite{Warnock} formula.
 \end{itemize}
 
 \begin{latexonly}
@@ -4690,6 +4744,13 @@ LINAC''.
 \bibitem{Xiao2007a}
   A. Xiao {\em et al.}, ``Touschek Effect Calculation and its Application to a Transport Line,''
   Proc. PAC07, 3453-3455 (2007).
+
+\bibitem{Warnock}
+  W. Warnock, ``Shielded Coherent Synchrotron Radiation and Its Effect on Very Short Bunches,'' SLAC-PUB-5375, 1990.
+
+\bibitem{Agoh}
+  T. Agoh and K. Yokoya, ``Calculation of coherent synchrotron radiation using mesh,'' Phys. Rev. ST Accel. Beams 7,
+  054403 (2004).
 
 \end{thebibliography}
 
