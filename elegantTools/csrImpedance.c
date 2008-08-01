@@ -9,6 +9,10 @@
 
 /* 
  * $Log: not supported by cvs2svn $
+ * Revision 1.2  2008/07/28 21:25:46  borland
+ * Expanded usage message.
+ * Added CVS header and copyright message.
+ *
  *
  */
 
@@ -39,7 +43,8 @@ radius           Radius of the dipole magnet.\n\
 frequencyLimit   Frequency range over which to compute the impedance.\n\
 n                Base-2 logarithm of the number of points to generate.\n\
 pipe            Specifies deliverying output to a pipe rather than a file.\n\n\
-Program by H. Shang and Y. Wang (APS)\n";
+Program by H. Shang and Y. Wang (APS), based on Agoh and Yokoya's simplified form\n\
+of Warnock's equation.\n";
 
 typedef gsl_complex fcomplex; 
 const double Z0 = 376.730313461770606;   /* mu_o * c_mks  */
