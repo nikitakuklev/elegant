@@ -120,7 +120,7 @@ long ramped_rf_cavity(
         i_freq = find_nearby_array_entry(ramprf->t_ff, ramprf->n_fpts, t0);
         }
 
-    volt = ramprf->volt/(1e6*me_mev)*linear_interpolation(ramprf->Vfactor, ramprf->t_Vf, ramprf->n_Vpts, t0, i_volt);
+    volt = ramprf->volt/(1e6*particleMassMV*particleRelSign)*linear_interpolation(ramprf->Vfactor, ramprf->t_Vf, ramprf->n_Vpts, t0, i_volt);
     if (!fixed_freq) {
       omega = PIx2*ramprf->freq*linear_interpolation(ramprf->ffactor, ramprf->t_ff, ramprf->n_fpts, t0, i_freq);
       phase = linear_interpolation(ramprf->dPhase, ramprf->t_dP, ramprf->n_Ppts, t0, i_phase)*PI/180.0 -

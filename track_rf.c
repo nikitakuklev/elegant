@@ -116,7 +116,7 @@ void track_through_rf_deflector(
 
   cos_tilt = cos(rf_param->tilt);
   sin_tilt = sin(rf_param->tilt);
-  Estrength = (e_mks*rf_param->voltage/n_kicks)/(me_mks*sqr(c_mks));
+  Estrength = (particleCharge*rf_param->voltage/n_kicks)/(particleMass*sqr(c_mks));
   k = omega/c_mks;
 
   if (isSlave || !notSinglePart) {
@@ -248,7 +248,7 @@ void track_through_rftm110_deflector(
   }
 
   /* using 2*volt in expressions gives us theta=V/E */
-  voltTimes2 *= 2*rf_param->voltage/(1e6*me_mev)*
+  voltTimes2 *= 2*rf_param->voltage/(1e6*particleMassMV*particleRelSign)*
     (gauss_rn_lim(1.0, rf_param->voltageNoise, 2, random_3) +
      (rf_param->voltageNoiseGroup
       ? rf_param->groupVoltageNoise*GetNoiseGroupValue(rf_param->voltageNoiseGroup)

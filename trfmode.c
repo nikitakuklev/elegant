@@ -69,6 +69,8 @@ void track_through_trfmode(
     trfmode->mp_charge = charge->macroParticleCharge;
   } else if (pass==0) {
     trfmode->mp_charge = 0;
+    if (trfmode->charge<0)
+      bomb("TRFMODE charge parameter should be non-negative. Use change_particle to set particle charge.", NULL);
 #if (!USE_MPI) 
       if (np)
         trfmode->mp_charge = trfmode->charge/np;
@@ -271,7 +273,7 @@ void track_through_trfmode(
       /* compute beam-induced voltage for this bin */
       if (trfmode->doX) {
 	/* -- x plane (NB: ramp factor is already in k) */
-	Vxb = 2*k*trfmode->mp_charge*xsum[ib]*trfmode->xfactor;
+	Vxb = 2*k*trfmode->mp_charge*particleRelSign*xsum[ib]*trfmode->xfactor;
 	Vxbin[ib] = trfmode->Vxr;
 	Vzbin[ib] += omegaOverC*(xsum[ib]/count[ib])*(trfmode->Vxi - Vxb/2);
 	/* add beam-induced voltage to cavity voltage---it is imaginary as
@@ -286,7 +288,7 @@ void track_through_trfmode(
       }
       if (trfmode->doY) {
 	/* -- y plane (NB: ramp factor is already in k) */
-	Vyb = 2*k*trfmode->mp_charge*ysum[ib]*trfmode->yfactor;
+	Vyb = 2*k*trfmode->mp_charge*particleRelSign*ysum[ib]*trfmode->yfactor;
 	Vybin[ib] = trfmode->Vyr;
 	Vzbin[ib] += omegaOverC*(ysum[ib]/count[ib])*(trfmode->Vyi - Vyb/2);
 	/* add beam-induced voltage to cavity voltage---it is imaginary as
@@ -320,9 +322,9 @@ void track_through_trfmode(
       for (ip=0; ip<np; ip++) {
 	if (pbin[ip]>=0) {
 	  P = Po*(1+part[ip][5]);
-	  Pz = P/sqrt(1+sqr(part[ip][1])+sqr(part[ip][3])) + Vzbin[pbin[ip]]/(1e6*me_mev);
-	  Px = part[ip][1]*Pz + Vxbin[pbin[ip]]/(1e6*me_mev);
-	  Py = part[ip][3]*Pz + Vybin[pbin[ip]]/(1e6*me_mev);
+	  Pz = P/sqrt(1+sqr(part[ip][1])+sqr(part[ip][3])) + Vzbin[pbin[ip]]/(1e6*particleMassMV*particleRelSign);
+	  Px = part[ip][1]*Pz + Vxbin[pbin[ip]]/(1e6*particleMassMV*particleRelSign);
+	  Py = part[ip][3]*Pz + Vybin[pbin[ip]]/(1e6*particleMassMV*particleRelSign);
 	  P  = sqrt(Pz*Pz+Px*Px+Py*Py);
 	  part[ip][1] = Px/Pz;
 	  part[ip][3] = Py/Pz;
@@ -471,6 +473,8 @@ void runBinlessTrfMode(
     trfmode->mp_charge = charge->macroParticleCharge;
   } else if (pass==0) {
     trfmode->mp_charge = 0;
+    if (trfmode->charge<0)
+      bomb("TRFMODE charge parameter should be non-negative. Use change_particle to set particle charge state.", NULL);
     if (np)
       trfmode->mp_charge = trfmode->charge/np;
   }
@@ -571,7 +575,7 @@ void runBinlessTrfMode(
     /* compute beam-induced voltage for this bin */
     if (trfmode->doX) {
       /* -- x plane */
-      dVxb = 2*k*trfmode->mp_charge*x*trfmode->xfactor;
+      dVxb = 2*k*trfmode->mp_charge*particleRelSign*x*trfmode->xfactor;
       Vxb = trfmode->Vxr;
       Vzb += omegaOverC*x*(trfmode->Vxi - dVxb/2);
       /* add beam-induced voltage to cavity voltage---it is imaginary as
@@ -586,7 +590,7 @@ void runBinlessTrfMode(
     }
     if (trfmode->doY) {
       /* -- y plane */
-      dVyb = 2*k*trfmode->mp_charge*y*trfmode->yfactor;
+      dVyb = 2*k*trfmode->mp_charge*particleRelSign*y*trfmode->yfactor;
       Vyb = trfmode->Vyr;
       Vzb += omegaOverC*y*(trfmode->Vyi - dVyb/2);
       /* add beam-induced voltage to cavity voltage---it is imaginary as
@@ -602,9 +606,9 @@ void runBinlessTrfMode(
     if (pass>=trfmode->rigid_until_pass) {
       /* change particle slopes to reflect voltage in relevant bin */
       P = Po*(1+part[ip][5]);
-      Pz = P/sqrt(1+sqr(part[ip][1])+sqr(part[ip][3])) + Vzb/(1e6*me_mev);
-      Px = part[ip][1]*Pz + Vxb/(1e6*me_mev);
-      Py = part[ip][3]*Pz + Vyb/(1e6*me_mev);
+      Pz = P/sqrt(1+sqr(part[ip][1])+sqr(part[ip][3])) + Vzb/(1e6*particleMassMV*particleRelSign);
+      Px = part[ip][1]*Pz + Vxb/(1e6*particleMassMV*particleRelSign);
+      Py = part[ip][3]*Pz + Vyb/(1e6*particleMassMV*particleRelSign);
 #if DEBUG
       fprintf(fpdeb, "%e %e %e %e %e %e %e %e %e\n",
 	      tData[ip0].t, trfmode->last_t, cos(dphase), sin(dphase),

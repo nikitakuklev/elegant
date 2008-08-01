@@ -396,7 +396,7 @@ void (*set_up_derivatives(
   
   field_global = field;
 
-  Escale = (Bscale = e_mks/me_mks)/c_mks;
+  Escale = (Bscale = particleCharge/particleMass)/c_mks;
   change_p0 = 0;
   
   switch (field_type) {
@@ -416,8 +416,8 @@ void (*set_up_derivatives(
     *n_steps = mapSol->n_steps;
     mapSol->zMap0 = mapSol->length/2-mapSol->lUniform/2;
     mapSol->zMap1 = mapSol->length/2+mapSol->lUniform/2;
-    mapSol->BxUniformScaled = mapSol->BxUniform*e_mks/(me_mks*c_mks);
-    mapSol->ByUniformScaled = mapSol->ByUniform*e_mks/(me_mks*c_mks);
+    mapSol->BxUniformScaled = mapSol->BxUniform*particleCharge/(particleMass*c_mks);
+    mapSol->ByUniformScaled = mapSol->ByUniform*particleCharge/(particleMass*c_mks);
     select_integrator(mapSol->method);
     setupRotate3Matrix((void**)&partRot, -mapSol->eTilt, -mapSol->eYaw, -mapSol->ePitch);
     setupRotate3Matrix((void**)&fieldRot, mapSol->eTilt, mapSol->eYaw, mapSol->ePitch);
@@ -431,7 +431,7 @@ void (*set_up_derivatives(
     lsrMdltr->ku = 2*PI/(lsrMdltr->length/lsrMdltr->periods);
     gamma = sqrt(sqr(P_central)+1);
     beta = P_central/gamma;
-    Ku = lsrMdltr->Bu*e_mks/(me_mks*c_mks)/(beta*lsrMdltr->ku);
+    Ku = lsrMdltr->Bu*particleCharge/(particleMass*c_mks)/(beta*lsrMdltr->ku);
     if ((lsrMdltr->fieldCode = match_string(lsrMdltr->fieldExpansion, 
                                          lsrMdltrFieldExpansion, N_LSRMDLTR_FIELD_EXPANSIONS, 0)),0) {
       long i;
@@ -447,8 +447,8 @@ void (*set_up_derivatives(
     lsrMdltr->k = *kscale = PIx2/lsrMdltr->laserWavelength;
     lsrMdltr->ZRayleigh = lsrMdltr->k/2*sqr(lsrMdltr->laserW0); 
     lsrMdltr->omega = omega = *kscale*c_mks;
-    lsrMdltr->Escale = e_mks/(me_mks*omega*c_mks);
-    lsrMdltr->Bscale = e_mks/(me_mks*omega);
+    lsrMdltr->Escale = particleCharge/(particleMass*omega*c_mks);
+    lsrMdltr->Bscale = particleCharge/(particleMass*omega);
     lsrMdltr->Ef0Laser = 2/lsrMdltr->laserW0*sqrt(sqrt(mu_o/epsilon_o)*lsrMdltr->laserPeakPower/PI);
     X_offset = 0;
     X_aperture_center = X_center = 0;
@@ -509,8 +509,8 @@ void (*set_up_derivatives(
     setupRotate3Matrix((void**)&fieldRot, rftmEz0->eTilt, rftmEz0->eYaw, rftmEz0->ePitch);
     setupRotate3Matrix((void**)&partRot1, -rftmEz0->eTiltSol, -rftmEz0->eYawSol, -rftmEz0->ePitchSol);
     setupRotate3Matrix((void**)&fieldRot1, rftmEz0->eTiltSol, rftmEz0->eYawSol, rftmEz0->ePitchSol);
-    rftmEz0->BxStrayScaled = rftmEz0->BxStray*e_mks/(me_mks*rftmEz0->k*c_mks);
-    rftmEz0->ByStrayScaled = rftmEz0->ByStray*e_mks/(me_mks*rftmEz0->k*c_mks);
+    rftmEz0->BxStrayScaled = rftmEz0->BxStray*particleCharge/(particleMass*rftmEz0->k*c_mks);
+    rftmEz0->ByStrayScaled = rftmEz0->ByStray*particleCharge/(particleMass*rftmEz0->k*c_mks);
     if (!rftmEz0->initialized) {
       makeRftmEz0FieldTestFile(rftmEz0);
       rftmEz0->initialized = 1;
@@ -542,9 +542,9 @@ void (*set_up_derivatives(
                                            -tmcf->k*tmcf->length/2 + z_start);
         tmcf->fiducial_part = part[0];
       }
-      tmcf->Er   *= e_mks/(me_mks*c_mks*omega);
-      tmcf->Ez   *= e_mks/(me_mks*c_mks*omega);
-      tmcf->Bphi *= e_mks/(me_mks*omega);
+      tmcf->Er   *= particleCharge/(particleMass*c_mks*omega);
+      tmcf->Ez   *= particleCharge/(particleMass*c_mks*omega);
+      tmcf->Bphi *= particleCharge/(particleMass*omega);
     }
     *tau_start = tmcf->phase + PIx2*tmcf->frequency*tmcf->time_offset +
       tmcf->phase0;
@@ -584,10 +584,10 @@ void (*set_up_derivatives(
         cep->fiducial_part = part[0];
       }
     }
-    cep->E_scaled = e_mks*cep->voltage*cep->ramp_time/
-      (cep->gap*me_mks*c_mks);
-    cep->E_static = e_mks*cep->static_voltage*cep->ramp_time/
-      (cep->gap*me_mks*c_mks);
+    cep->E_scaled = particleCharge*cep->voltage*cep->ramp_time/
+      (cep->gap*particleMass*c_mks);
+    cep->E_static = particleCharge*cep->static_voltage*cep->ramp_time/
+      (cep->gap*particleMass*c_mks);
     cep->cos_tilt = cos(cep->tilt);
     cep->sin_tilt = sin(cep->tilt);
     *tau_start = cep->time_offset/cep->ramp_time + cep->tau0;
@@ -626,10 +626,10 @@ void (*set_up_derivatives(
         twp->fiducial_part = part[0];
       }
     }
-    twp->E_scaled = e_mks*twp->voltage*twp->ramp_time/
-      (twp->gap*me_mks*c_mks);
-    twp->E_static = e_mks*twp->static_voltage*twp->ramp_time/
-      (twp->gap*me_mks*c_mks);
+    twp->E_scaled = particleCharge*twp->voltage*twp->ramp_time/
+      (twp->gap*particleMass*c_mks);
+    twp->E_static = particleCharge*twp->static_voltage*twp->ramp_time/
+      (twp->gap*particleMass*c_mks);
     twp->cos_tilt = cos(twp->tilt);
     twp->sin_tilt = sin(twp->tilt);
     *tau_start = twp->time_offset/twp->ramp_time + twp->tau0;
@@ -1670,7 +1670,7 @@ void setupRftmEz0FromFile(RFTMEZ0 *rftmEz0, double frequency, double length)
   fflush(stdout);
   if (EzMax)
     for (i=0; i<rftmEz0->nz; i++)
-      rftmEz0->Ez[i] *= e_mks/(me_mks*c_mks*PIx2*frequency)/EzMax;
+      rftmEz0->Ez[i] *= particleCharge/(particleMass*c_mks*PIx2*frequency)/EzMax;
   else
     for (i=0; i<rftmEz0->nz; i++)
       rftmEz0->Ez[i] = 0;
@@ -1830,11 +1830,11 @@ void setupRftmEz0SolenoidFromFile(RFTMEZ0 *rftmEz0, double length, double k)
   /* perform scaling */
   for (ir=0; ir<rftmEz0->nrSol; ir++) 
     for (iz=0; iz<rftmEz0->nzSol; iz++) 
-      rftmEz0->BzSol[ir][iz] *= e_mks/(me_mks*k*c_mks);
+      rftmEz0->BzSol[ir][iz] *= particleCharge/(particleMass*k*c_mks);
   if (rftmEz0->BrSol) 
     for (ir=0; ir<rftmEz0->nrSol; ir++) 
       for (iz=0; iz<rftmEz0->nzSol; iz++) 
-        rftmEz0->BrSol[ir][iz] *= e_mks/(me_mks*k*c_mks);
+        rftmEz0->BrSol[ir][iz] *= particleCharge/(particleMass*k*c_mks);
 
   rftmEz0->dBzdZSol = NULL;
   if (rftmEz0->nrSol==1) {
@@ -2013,8 +2013,8 @@ void setupMapSolenoidFromFile(MAP_SOLENOID *mapSol, double length)
   /* perform scaling */
   for (ir=0; ir<mapSol->nr; ir++) 
     for (iz=0; iz<mapSol->nz; iz++)  {
-      mapSol->Br[ir][iz] *= e_mks/(me_mks*c_mks);
-      mapSol->Bz[ir][iz] *= e_mks/(me_mks*c_mks);
+      mapSol->Br[ir][iz] *= particleCharge/(particleMass*c_mks);
+      mapSol->Bz[ir][iz] *= particleCharge/(particleMass*c_mks);
     }
 
   mapSol->dr = dr;
@@ -2052,10 +2052,10 @@ void makeRftmEz0FieldTestFile(RFTMEZ0 *rftmEz0)
     exit(1);
   }
   dX = dY = 1e-3*rftmEz0->k/sqrt(2);
-  ERFscale = 1/(sin(PI/2.0)*e_mks/(me_mks*c_mks*PIx2*rftmEz0->frequency));
-  BRFscale = 1/(cos(PI/2.0)*e_mks/(me_mks*PIx2*rftmEz0->frequency));
+  ERFscale = 1/(sin(PI/2.0)*particleCharge/(particleMass*c_mks*PIx2*rftmEz0->frequency));
+  BRFscale = 1/(cos(PI/2.0)*particleCharge/(particleMass*PIx2*rftmEz0->frequency));
   k = PIx2*rftmEz0->frequency/c_mks;
-  scale = me_mks*k*c_mks/e_mks;
+  scale = particleMass*k*c_mks/particleCharge;
   for (iz=0; iz<nz; iz++) {
     computeFields_rftmEz0(E, BOverGamma, BOverGammaSol, 
                           dX, dY, iz*dZ,

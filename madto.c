@@ -210,7 +210,7 @@ int main(int argc, char **argv)
 
     switch (output_mode) {
       case TRANSPORT_OUTPUT: 
-        beamline = get_beamline(input, NULL, p_cent/(1e6*me_mev), 0);
+        beamline = get_beamline(input, NULL, p_cent/(1e6*particleMassMV), 0);
         if (magnets)
             output_magnets(magnets, beamline->name, beamline);
         convert_to_transport(output, beamline, flip_k_signs, angle_tolerance,
@@ -218,20 +218,20 @@ int main(int argc, char **argv)
         break;
       case PATRICIA_OUTPUT:
         set_max_name_length(4);
-        beamline = get_beamline(input, NULL, p_cent/(1e6*me_mev), 0);
+        beamline = get_beamline(input, NULL, p_cent/(1e6*particleMassMV), 0);
         if (magnets)
             output_magnets(magnets, beamline->name, beamline);
         convert_to_patricia(output, beamline, flip_k_signs, angle_tolerance, header_file, ender_file); 
         break;
       case PATPET_OUTPUT:
         set_max_name_length(4);
-        beamline = get_beamline(input, NULL, p_cent/(1e6*me_mev), 0);
+        beamline = get_beamline(input, NULL, p_cent/(1e6*particleMassMV), 0);
         if (magnets)
             output_magnets(magnets, beamline->name, beamline);
         convert_to_patpet(output, beamline, flip_k_signs, angle_tolerance, header_file, ender_file); 
         break;
       case PARMELA_OUTPUT:
-        beamline = get_beamline(input, NULL, p_cent/(1e6*me_mev), 0);
+        beamline = get_beamline(input, NULL, p_cent/(1e6*particleMassMV), 0);
         if (magnets)
             output_magnets(magnets, beamline->name, beamline);
         convert_to_parmela(output, beamline, flip_k_signs, angle_tolerance, header_file, ender_file,
@@ -239,28 +239,28 @@ int main(int argc, char **argv)
         break;
       case SDDS_OUTPUT:
         set_max_name_length(12);
-        beamline = get_beamline(input, NULL, p_cent/(1e6*me_mev), 0);
+        beamline = get_beamline(input, NULL, p_cent/(1e6*particleMassMV), 0);
         if (magnets)
             output_magnets(magnets, beamline->name, beamline);
         sdds_strength_output(output, beamline, input);
         break;
       case XORBIT_OUTPUT:
-        beamline = get_beamline(input, NULL, p_cent/(1e6*me_mev), 0);
+        beamline = get_beamline(input, NULL, p_cent/(1e6*particleMassMV), 0);
         if (magnets)
             output_magnets(magnets, beamline->name, beamline);
         convert_to_xorbit(output, beamline, flip_k_signs, header_file, ender_file);
         break;
       case EMMAMATLAB_OUTPUT: 
-        beamline = get_beamline(input, NULL, p_cent/(1e6*me_mev), 0);
+        beamline = get_beamline(input, NULL, p_cent/(1e6*particleMassMV), 0);
         if (magnets)
             output_magnets(magnets, beamline->name, beamline);
         convert_to_EmmaMatlab(output, beamline, header_file, ender_file);
         break;
       case COSY_OUTPUT:
-        beamline = get_beamline(input, NULL, p_cent/me_mev, 0);
+        beamline = get_beamline(input, NULL, p_cent/particleMassMV, 0);
         if (magnets)
             output_magnets(magnets, beamline->name, beamline);
-        convert_to_cosy(output, beamline, order, p_cent/me_mev, quad_ap/1e3, sext_ap/1e3); 
+        convert_to_cosy(output, beamline, order, p_cent/particleMassMV, quad_ap/1e3, sext_ap/1e3); 
         break;
       default:
         bomb("internal error--unknown output mode", NULL);

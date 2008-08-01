@@ -191,7 +191,7 @@ long modulated_rf_cavity(double **part, long np, MODRF *modrf, double P_central,
         omega = omega0;
 
     amPhase = modrf->amFreq*PIx2*dt + modrf->amPhase*PI/180;
-    volt  = modrf->volt/(1e6*me_mev)*(1 + modrf->amMag*sin(amPhase)*exp(-modrf->amDecay*dt));
+    volt  = modrf->volt/(1e6*particleMassMV*particleRelSign)*(1 + modrf->amMag*sin(amPhase)*exp(-modrf->amDecay*dt));
     if ((tau=modrf->Q/omega0))
         volt *= sqrt(1 - exp(-dt/tau));
 

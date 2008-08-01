@@ -52,7 +52,7 @@ void track_through_ramped_deflector(
     t_null = ramp_param->t_first_particle + ramp_param->time_offset;
     cos_tilt = cos(ramp_param->tilt);
     sin_tilt = sin(ramp_param->tilt);
-    Estrength = -e_mks*ramp_param->voltage/(me_mks*pow3(c_mks)*ramp_param->ramp_time*ramp_param->gap);
+    Estrength = -particleCharge*ramp_param->voltage/(particleMass*pow3(c_mks)*ramp_param->ramp_time*ramp_param->gap);
     length = ramp_param->length/ramp_param->n_sections;
 
     for (ip=0; ip<n_particles; ip++) {

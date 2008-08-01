@@ -77,7 +77,10 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
 
   if (charge)
     IBS->charge = charge->macroParticleCharge*np;   
-  IBSRate (fabs(IBS->charge/e_mks), 
+  if (IBS->charge<0)
+    bomb("IBSCATTER charge parameter should be non-negative.  Use change_particle to set particle charge state.", NULL);
+
+  IBSRate (fabs(IBS->charge/particleCharge), 
            IBS->coupling, IBS->elements, 1, IBS->verbosity, IBS->isRing,
            IBS->emitx0, IBS->emity0, IBS->sigmaDelta0, IBS->sigmaz0,
            IBS->s, IBS->pCentral, IBS->betax, IBS->alphax, IBS->betay,
@@ -405,7 +408,7 @@ void dump_IBScatter(SDDS_TABLE *SDDS_table, IBSCATTER *IBS, long pass)
     }
   }
   gamma = sqrt(ipow(IBS->pCentral[IBS->elements-1], 2)+1.);
-  if ((!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "Particles", fabs(IBS->charge/e_mks), NULL))||
+  if ((!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "Particles", fabs(IBS->charge/particleCharge), NULL))||
       (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "Charge", IBS->charge*1e9, NULL))||
       (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "s", IBS->s[IBS->elements-1], NULL))||
       (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "Pass", pass, NULL))||

@@ -266,7 +266,7 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
         fprintf(fp, "%ld\n", nb);
         for (ib=0; ib<nb; ib++) 
           fprintf(fp, "%e %e\n",
-                  ib*dt+tmin, Itime[ib]*zlongit->macroParticleCharge/dt);
+                  ib*dt+tmin, Itime[ib]*zlongit->macroParticleCharge*particleRelSign/dt);
         fclose(fp);
       }
 #endif
@@ -284,7 +284,7 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
        * to normalize the current waveform.
        */
       Vfreq = Vtime;
-      factor = zlongit->macroParticleCharge/dt*zlongit->factor*rampFactor;
+      factor = zlongit->macroParticleCharge*particleRelSign/dt*zlongit->factor*rampFactor;
       Z = zlongit->Z;
       Vfreq[0] = Ifreq[0]*Z[0]*factor;
       nfreq = nb/2 + 1;
@@ -309,7 +309,7 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
       
       if (zlongit->SDDS_wake_initialized && zlongit->wakes) {
         /* wake potential output */
-        factor = zlongit->macroParticleCharge/dt;
+        factor = zlongit->macroParticleCharge*particleRelSign/dt;
         if (zlongit->wake_interval<=0 || (i_pass%zlongit->wake_interval)==0) {
           if (!SDDS_StartTable(&zlongit->SDDS_wake, nb)) {
             SDDS_SetError("Problem starting SDDS table for wake output (track_through_zlongit)");
@@ -323,7 +323,7 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
             }
           }
           if (!SDDS_SetParameters(&zlongit->SDDS_wake, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-                                  "Pass", i_pass, "q", zlongit->macroParticleCharge*np, NULL)) {
+                                  "Pass", i_pass, "q", zlongit->macroParticleCharge*particleRelSign*np, NULL)) {
             SDDS_SetError("Problem setting parameters of SDDS table for wake output (track_through_zlongit)");
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
           }
@@ -357,12 +357,12 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
             else
               ib += 1;
             if (ib<nb)
-              dgam = (Vtime[ib-1]+(Vtime[ib]-Vtime[ib-1])/dt*dt1)/(1e6*me_mev);
+              dgam = (Vtime[ib-1]+(Vtime[ib]-Vtime[ib-1])/dt*dt1)/(1e6*particleMassMV*particleRelSign);
             else
               continue;
           }
           else
-            dgam = Vtime[ib]/(1e6*me_mev);
+            dgam = Vtime[ib]/(1e6*particleMassMV*particleRelSign);
           if (dgam) {
             if (zlongit->reverseTimeOrder)
               time[ip] = 2*tmean - time[ip];
@@ -395,6 +395,8 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
       zlongit->macroParticleCharge = charge->macroParticleCharge;
     } else if (pass==0) {
       zlongit->macroParticleCharge = 0;
+      if (zlongit->charge<0)
+        bomb("ZLONGIT charge parameter should be non-negative.  Use change_particle to set particle charge state.", NULL);
 #if (!USE_MPI)
       if (particles)
         zlongit->macroParticleCharge = zlongit->charge/particles;

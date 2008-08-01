@@ -115,7 +115,7 @@ long track_through_kick_sbend(double **part, long n_part, KSBEND *ksbend, double
      * the central particle.
      */
     if (ksbend->synch_rad)
-        rad_coef = sqr(e_mks)*pow3(Po)*sqr(1+fse)/(6*PI*epsilon_o*sqr(c_mks)*me_mks*sqr(rho0));
+        rad_coef = sqr(particleCharge)*pow3(Po)*sqr(1+fse)/(6*PI*epsilon_o*sqr(c_mks)*particleMass*sqr(rho0));
     else
         rad_coef = 0;
 

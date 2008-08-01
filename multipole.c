@@ -251,7 +251,7 @@ long fmultipole_tracking(
   dy = multipole->dy;
   dz = multipole->dz;
   if (multipole->synch_rad)
-    rad_coef = sqr(e_mks)*pow3(Po)/(6*PI*epsilon_o*sqr(c_mks)*me_mks);
+    rad_coef = sqr(particleCharge)*pow3(Po)/(6*PI*epsilon_o*sqr(c_mks)*particleMass);
   else
     rad_coef = 0;
 
@@ -368,7 +368,7 @@ long multipole_tracking(
     if (multipole->bore)
         /* KnL = d^nB/dx^n * L/(B.rho) = n! B(a)/a^n * L/(B.rho) */
         KnL = dfactorial(multipole->order)*multipole->BTipL/ipow(multipole->bore, multipole->order)*
-              (e_mks/(me_mks*c_mks*Po))*multipole->factor;
+              (particleCharge/(particleMass*c_mks*Po))*multipole->factor;
     else
       KnL = multipole->KnL*multipole->factor/n_kicks;
 
@@ -378,7 +378,7 @@ long multipole_tracking(
     dy = multipole->dy;
     dz = multipole->dz;
     if (multipole->synch_rad)
-        rad_coef = sqr(e_mks)*pow3(Po)/(6*PI*epsilon_o*sqr(c_mks)*me_mks);
+        rad_coef = sqr(particleCharge)*pow3(Po)/(6*PI*epsilon_o*sqr(c_mks)*particleMass);
     else
         rad_coef = 0;
 
@@ -632,7 +632,7 @@ long multipole_tracking2(
     order = 1;
     if (kquad->bore)
       /* KnL = d^nB/dx^n * L/(B.rho) = n! B(a)/a^n * L/(B.rho) * (1+FSE) */
-      KnL = kquad->B/kquad->bore*(e_mks/(me_mks*c_mks*Po))*kquad->length*(1+kquad->fse);
+      KnL = kquad->B/kquad->bore*(particleCharge/(particleMass*c_mks*Po))*kquad->length*(1+kquad->fse);
     else
       KnL = kquad->k1*kquad->length*(1+kquad->fse);
     drift = kquad->length;
@@ -644,8 +644,8 @@ long multipole_tracking2(
     integ_order = kquad->integration_order;
     sqrtOrder = kquad->sqrtOrder?1:0;
     if (kquad->synch_rad)
-      rad_coef = sqr(e_mks)*pow3(Po)/(6*PI*epsilon_o*sqr(c_mks)*me_mks); 
-    isr_coef = re_mks*sqrt(55.0/(24*sqrt(3))*pow5(Po)*137.0359895);
+      rad_coef = sqr(particleCharge)*pow3(Po)/(6*PI*epsilon_o*sqr(c_mks)*particleMass); 
+    isr_coef = particleRadius*sqrt(55.0/(24*sqrt(3))*pow5(Po)*137.0359895);
     if (!kquad->isr || (kquad->isr1Particle==0 && n_part==1))
       /* Minus sign indicates we accumulate into sigmaDelta^2 only, don't perturb particles */
       isr_coef *= -1;
@@ -673,7 +673,7 @@ long multipole_tracking2(
     order = 2;
     if (ksext->bore)
       /* KnL = d^nB/dx^n * L/(B.rho) = n! B(a)/a^n * L/(B.rho) * (1+FSE) */
-      KnL = 2*ksext->B/sqr(ksext->bore)*(e_mks/(me_mks*c_mks*Po))*ksext->length*(1+ksext->fse);
+      KnL = 2*ksext->B/sqr(ksext->bore)*(particleCharge/(particleMass*c_mks*Po))*ksext->length*(1+ksext->fse);
     else
       KnL = ksext->k2*ksext->length*(1+ksext->fse);
     drift = ksext->length;
@@ -683,8 +683,8 @@ long multipole_tracking2(
     integ_order = ksext->integration_order;
     sqrtOrder = ksext->sqrtOrder?1:0;
     if (ksext->synch_rad)
-      rad_coef = sqr(e_mks)*pow3(Po)/(6*PI*epsilon_o*sqr(c_mks)*me_mks);
-    isr_coef = re_mks*sqrt(55.0/(24*sqrt(3))*pow5(Po)*137.0359895);
+      rad_coef = sqr(particleCharge)*pow3(Po)/(6*PI*epsilon_o*sqr(c_mks)*particleMass);
+    isr_coef = particleRadius*sqrt(55.0/(24*sqrt(3))*pow5(Po)*137.0359895);
     if (!ksext->isr || (ksext->isr1Particle==0 && n_part==1))
       /* Minus sign indicates we accumulate into sigmaDelta^2 only, don't perturb particles */
       isr_coef *= -1;
@@ -716,8 +716,8 @@ long multipole_tracking2(
     integ_order = kquse->integration_order;
     sqrtOrder = 0;
     if (kquse->synch_rad)
-      rad_coef = sqr(e_mks)*pow3(Po)/(6*PI*epsilon_o*sqr(c_mks)*me_mks); 
-    isr_coef = re_mks*sqrt(55.0/(24*sqrt(3))*pow5(Po)*137.0359895);
+      rad_coef = sqr(particleCharge)*pow3(Po)/(6*PI*epsilon_o*sqr(c_mks)*particleMass); 
+    isr_coef = particleRadius*sqrt(55.0/(24*sqrt(3))*pow5(Po)*137.0359895);
     if (!kquse->isr || (kquse->isr1Particle==0 && n_part==1))
       /* Minus sign indicates we accumulate into sigmaDelta^2 only, don't perturb particles */
       isr_coef *= -1;

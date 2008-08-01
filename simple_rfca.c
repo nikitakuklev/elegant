@@ -19,6 +19,8 @@ static char *fiducialModeChoice[4] = {
     "light", "tmean", "first", "pmaximum",
     };
 
+#define DEBUG 1
+
 long trackRfCavityWithWakes(double **part, long np, RFCA *rfca, double **accepted, 
                             double *P_central, double zEnd, long iPass, RUN *run,
                             CHARGE *charge, WAKE *wake, TRWAKE *trwake, LSCKICK *LSCKick,
@@ -154,7 +156,7 @@ double findFiducialTime(double **part, long np, double s0, double sOffset,
   else
     bomb("invalid fiducial mode in findFiducialTime", NULL);
 #ifdef DEBUG
-  fprintf(stderr, "Fiducial time (mode %x): %21.15e\n", mode, tFid);
+  printf("Fiducial time (mode %lx): %21.15e\n", mode, tFid);
 #endif
   return tFid;
 }
@@ -294,7 +296,7 @@ long trackRfCavityWithWakes
     }
 
     omega = PIx2*rfca->freq;
-    volt  = rfca->volt/(1e6*me_mev);
+    volt  = rfca->volt/(1e6*particleMassMV*particleRelSign);
     if (omega)
         tau = rfca->Q/omega;
     else

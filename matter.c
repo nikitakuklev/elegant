@@ -31,6 +31,9 @@ void track_through_matter(
   
   log_entry("track_through_matter");
 
+  if (particleIsElectron==0)
+    bomb("MATTER element doesn't work for particles other than electrons", NULL);
+  
   if ((L=matter->length)==0)
     return;
 
@@ -39,14 +42,14 @@ void track_through_matter(
     Nrad = theta_rms = 0;
   else {
     Nrad = matter->length/matter->Xo;
-    theta_rms = 13.6/me_mev/Po/sqr(beta)*sqrt(Nrad)*(1+0.038*log(Nrad));
+    theta_rms = 13.6/particleMassMV/Po/sqr(beta)*sqrt(Nrad)*(1+0.038*log(Nrad));
   }
   dGammaFactor = 1-exp(-Nrad);
   
   if (Nrad<1e-3) {
     if (matter->Z<1 || matter->A<1 || matter->rho<=0)
       bomb("MATTER element is too thin---provide Z, A, and rho for single-scattering calculation.", NULL);
-    K1 = 4*sqr(matter->Z*re_mks/(beta*Po));
+    K1 = 4*sqr(matter->Z*particleRadius/(beta*Po));
     K2 = sqr(pow(matter->Z, 1./3.)/137.036/Po);
     sigmaTotal = K1*pow(PI, 3)/(sqr(K2)+K2*SQR_PI);
     probScatter = matter->rho/(AMU*matter->A)*matter->length*sigmaTotal;

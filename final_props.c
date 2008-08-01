@@ -474,7 +474,7 @@ long compute_final_properties
   }
   if (sums->n_part) {
     pAverage = data[F_T_OFFSET+2] = p_sum/sums->n_part;
-    data[F_T_OFFSET+3] = (gamma_sum/sums->n_part-1)*me_mev;
+    data[F_T_OFFSET+3] = (gamma_sum/sums->n_part-1)*particleMassMV;
   }
   else
     data[F_T_OFFSET+2] = data[F_T_OFFSET+3] = 0;

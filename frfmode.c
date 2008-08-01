@@ -160,7 +160,7 @@ void track_through_frfmode(
 	rfmode->Vi[imode] = V*sin(phase);
 	
 	/* compute beam-induced voltage for this bin */
-	Vb = 2*k*rfmode->mp_charge*Ihist[ib]*rampFactor; 
+	Vb = 2*k*particleRelSign*rfmode->mp_charge*Ihist[ib]*rampFactor; 
 	Vbin[ib] += rfmode->Vr[imode] - Vb/2;
       
 	/* add beam-induced voltage to cavity voltage */
@@ -188,7 +188,7 @@ void track_through_frfmode(
       for (ip=0; ip<np; ip++) {
 	if (pbin[ip]>=0) {
 	  /* compute new momentum and momentum offset for this particle */
-	  dgamma = Vbin[pbin[ip]]/(1e6*me_mev);
+	  dgamma = Vbin[pbin[ip]]/(1e6*particleMassMV*particleRelSign);
 	  add_to_particle_energy(part[ip], time[ip], Po, dgamma);
 	}
       }

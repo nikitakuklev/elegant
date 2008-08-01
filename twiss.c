@@ -2269,16 +2269,16 @@ void computeRadiationIntegrals(RADIATION_INTEGRALS *RI, double Po, double revolu
 {    
     double Rce, gamma;
     gamma = sqrt(sqr(Po)+1);
-    Rce = sqr(e_mks)/(1e7*me_mks);
-    RI->Uo = me_mev*Rce*RI->I[1]*2./3.*ipow(gamma,4);
+    Rce = sqr(particleCharge)/(1e7*particleMass);
+    RI->Uo = particleMassMV*Rce*RI->I[1]*2./3.*ipow(gamma,4);
     RI->Jx = 1 - RI->I[3]/RI->I[1];
     RI->Jdelta = 3 - RI->Jx;
     RI->Jy = 1;
     RI->tauy = 1./(Rce/3*ipow(gamma,3)*c_mks/revolutionLength*RI->I[1]);
     RI->taux = RI->tauy*RI->Jy/RI->Jx;
     RI->taudelta = RI->tauy*RI->Jy/RI->Jdelta;
-    RI->sigmadelta = gamma*sqrt(55./32./sqrt(3.)*hbar_mks/(me_mks*c_mks)*RI->I[2]/(2*RI->I[1]+RI->I[3]));
-    RI->ex0 = sqr(gamma)*55./32./sqrt(3.)*hbar_mks/(me_mks*c_mks)*RI->I[4]/(RI->I[1]-RI->I[3]);
+    RI->sigmadelta = gamma*sqrt(55./32./sqrt(3.)*hbar_mks/(particleMass*c_mks)*RI->I[2]/(2*RI->I[1]+RI->I[3]));
+    RI->ex0 = sqr(gamma)*55./32./sqrt(3.)*hbar_mks/(particleMass*c_mks)*RI->I[4]/(RI->I[1]-RI->I[3]);
   }
 
 void LoadStartingTwissFromFile(double *betax, double *betay, double *alphax, double *alphay,

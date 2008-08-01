@@ -50,6 +50,7 @@ void free_beamdata(BEAM *beam);
 void printFarewell(FILE *fp);
 void closeBeamlineOutputFiles(LINE_LIST *beamline);
 void setSigmaIndices();
+void process_particle_command(NAMELIST_TEXT *nltext);
 
 #define DESCRIBE_INPUT 0
 #define DEFINE_MACRO 1
@@ -68,10 +69,10 @@ void showUsageOrGreeting (unsigned long mode)
 {
 #if USE_MPI
   char *USAGE="usage: mpirun -np <number of processes> Pelegant <inputfile> [-macro=<tag>=<value>,[...]]";
-  char *GREETING="This is elegant 19.1Beta, "__DATE__", by M. Borland, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang and M. Borland.";
+  char *GREETING="This is elegant 19.1Beta3, "__DATE__", by M. Borland, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang and M. Borland.";
 #else
   char *USAGE="usage: elegant <inputfile> [-macro=<tag>=<value>,[...]] [-cpuList=<number>[,<number>]]";
-  char *GREETING="This is elegant 19.1Beta, "__DATE__", by M. Borland, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.";
+  char *GREETING="This is elegant 19.1Beta3, "__DATE__", by M. Borland, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.";
 #endif
   if (mode&SHOW_GREETING)
     puts(GREETING);
@@ -135,7 +136,8 @@ void showUsageOrGreeting (unsigned long mode)
 #define MOMENTS_OUTPUT 52
 #define TOUSCHEK_SCATTER 53
 #define INSERT_ELEMENTS 54
-#define N_COMMANDS      55
+#define CHANGE_PARTICLE 55
+#define N_COMMANDS      56
 
 char *command[N_COMMANDS] = {
     "run_setup", "run_control", "vary_element", "error_control", "error_element", "awe_beam", "bunched_beam",
@@ -148,7 +150,7 @@ char *command[N_COMMANDS] = {
     "optimization_term", "slice_analysis", "divide_elements", "tune_shift_with_amplitude",
     "transmute_elements", "twiss_analysis", "semaphores", "frequency_map", "insert_sceffects", "momentum_aperture", 
     "aperture_input", "coupled_twiss_output", "linear_chromatic_tracking_setup", "rpn_load",
-    "moments_output", "touschek_scatter", "insert_elements",
+    "moments_output", "touschek_scatter", "insert_elements", "change_particle",
   } ;
 
 char *description[N_COMMANDS] = {
@@ -207,6 +209,7 @@ char *description[N_COMMANDS] = {
     "moments_output                   perform moments computations and output to file",
     "touschek_scatter                 calculate Touschek lifetime, simulate touschek scattering effects, find out momentum aperture through tracking", 
     "insert_elements                  insert elements into already defined beamline", 
+    "change_particle                  change the particle type"
   } ;
 
 #define NAMELIST_BUFLEN 65536
@@ -518,6 +521,11 @@ char **argv;
     MPI_Barrier (MPI_COMM_WORLD);
 #endif
     switch ((commandCode=match_string(namelist_text.group_name, command, N_COMMANDS, EXACT_MATCH))) {
+    case CHANGE_PARTICLE:
+      if (run_setuped)
+        bomb("particle command should precede run_setup", NULL);  /* to ensure nothing is inconsistent */
+      process_particle_command(&namelist_text);
+      break;
     case RUN_SETUP:
       beam_type = -1;
       
@@ -561,7 +569,7 @@ char **argv;
       if (p_central && p_central_mev)
         bomb("give only one of p_central and p_central_mev", NULL);
       if (p_central_mev!=0 && p_central==0)
-        p_central = p_central_mev/me_mev;
+        p_central = p_central_mev/particleMassMV;
       if (p_central<=0 && !expand_for)
         bomb("p_central<=0 and p_central_mev<=0", NULL);
       if (expand_for)
@@ -2320,5 +2328,87 @@ void setSigmaIndices()
       sigmaIndex1[k] = i;
       sigmaIndex2[k] = j;
     }
+}
+
+#define TYPE_ELECTRON 0
+#define TYPE_PROTON   1
+#define TYPE_MUON     2
+#define TYPE_POSITRON 3
+#define TYPE_OTHER    4
+#define N_PARTICLE_TYPES 5
+static char *particleTypeName[N_PARTICLE_TYPES] = {
+  "electron", "proton", "muon", "positron", "custom"
+  };
+static double charge[N_PARTICLE_TYPES] = {
+  -e_mks, e_mks, -e_mks, e_mks, 0
+  };
+static double mass[N_PARTICLE_TYPES] = {
+  me_mks, 1.6726485e-27, 1.88353109e-28, me_mks, 0
+  };
+
+void process_particle_command(NAMELIST_TEXT *nltext)
+{
+  long code, i;
+  
+  set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
+  set_print_namelist_flags(0);
+  process_namelist(&change_particle, nltext);
+  print_namelist(stdout, &change_particle);
+
+  code = match_string(change_particle_struct.name, particleTypeName, N_PARTICLE_TYPES, EXACT_MATCH);
+  
+  if (code==TYPE_ELECTRON) {
+    particleIsElectron = 1;
+    /* ensure exact backward compatibility */
+    particleMass = me_mks;
+    particleCharge = e_mks;
+    particleMassMV = me_mev;
+    particleRadius = re_mks;
+    particleRelSign = 1;
+  } else if (code==TYPE_POSITRON) {
+    particleIsElectron = 0;
+    /* ensure exact reversal from electron */
+    particleMass = me_mks;
+    particleCharge = -e_mks;
+    particleMassMV = me_mev;
+    particleRadius = re_mks;
+    particleRelSign = -1;
+  } else {
+    particleIsElectron = 0;
+    switch (code) {
+    case TYPE_PROTON:
+    case TYPE_MUON:
+      particleMass = mass[code];
+      /* minus sign is a legacy of time when this was an electron-only code */
+      particleCharge = -charge[code];  
+      break;
+    case TYPE_OTHER:
+      if (change_particle_struct.mass_ratio<=0 || change_particle_struct.charge_ratio==0)
+        bomb("Must have mass_ratio>0 and charge_ratio nonzero", NULL);
+      particleMass = mass[TYPE_ELECTRON]*change_particle_struct.mass_ratio;
+      /* minus sign is a legacy of time when this was an electron-only code */
+      particleCharge = -charge[TYPE_ELECTRON]*change_particle_struct.charge_ratio;
+      break;
+    default:
+      fprintf(stderr, "Unknown particle type.  Known types are \n");
+      for (i=0; i<N_PARTICLE_TYPES; i++)
+        fprintf(stderr, "%s%c", particleTypeName[i], i==(N_PARTICLE_TYPES-1)?'\n':' ');
+      exit(1);
+      break;
+    }
+    particleRelSign = -SIGN(particleCharge)/SIGN(charge[TYPE_ELECTRON]);
+    particleMassMV = particleMass*sqr(c_mks)/fabs(particleCharge)/1e6;
+    particleRadius = sqr(particleCharge)/(4*PI*epsilon_o*particleMass*sqr(c_mks));
+  }
+  /* 
+    printf("particleMass = %e, particleRadius = %e, particleCharge = %e, particleMassMV = %e, particleRelSign = %e\n",
+    particleMass, particleRadius, particleCharge, particleMassMV, particleRelSign);
+    */
+  printf("************************************************\n");
+  printf("* WARNING ! \n");
+  printf("* Changing the particle type is not a fully tested\n");
+  printf("* feature.\n");
+  printf("* Please be alert for results that don't make sense!\n");
+  printf("************************************************\n");
 }
 

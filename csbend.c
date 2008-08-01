@@ -181,11 +181,11 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
    * the central particle.
    */
   if (csbend->synch_rad)
-    rad_coef = sqr(e_mks)*pow3(Po)*sqr(1+fse)/(6*PI*epsilon_o*sqr(c_mks)*me_mks*sqr(rho0));
+    rad_coef = sqr(particleCharge)*pow3(Po)*sqr(1+fse)/(6*PI*epsilon_o*sqr(c_mks)*particleMass*sqr(rho0));
   else
     rad_coef = 0;
   /* isrConstant is the RMS increase in dP/P per meter due to incoherent SR.  */
-  isrConstant = re_mks*sqrt(55.0/(24*sqrt(3))*pow5(Po)*
+  isrConstant = particleRadius*sqrt(55.0/(24*sqrt(3))*pow5(Po)*
                             137.0359895/pow3(fabs(rho_actual)));
   if (!csbend->isr || (csbend->isr1Particle==0 && n_part==1))
     /* Minus sign here indicates that we accumulate ISR into sigmaDelta^2 but don't apply it to particles. */
@@ -194,9 +194,9 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   if ((distributionBasedRadiation = csbend->distributionBasedRadiation)) {
     /* Sands 5.15 */
     meanPhotonsPerRadian0 = 5.0/(2.0*sqrt(3))*Po/137.0359895;  
-    meanPhotonsPerMeter0 = (5*c_mks*Po*me_mks*re_mks)/(2*sqrt(3)*hbar_mks*rho_actual);
+    meanPhotonsPerMeter0 = (5*c_mks*Po*particleMass*particleRadius)/(2*sqrt(3)*hbar_mks*rho_actual);
     /* Critical energy normalized to beam energy, Sands 5.9 */
-    normalizedCriticalEnergy0 = 3.0/2*hbar_mks*c_mks*pow3(Po)/fabs(rho_actual)/(Po*me_mks*sqr(c_mks));
+    normalizedCriticalEnergy0 = 3.0/2*hbar_mks*c_mks*pow3(Po)/fabs(rho_actual)/(Po*particleMass*sqr(c_mks));
     fprintf(stderr, "Mean photons per radian expected: %le   ECritical/E: %le\n", 
             meanPhotonsPerRadian0, normalizedCriticalEnergy0);
     includeOpeningAngle = csbend->includeOpeningAngle;
@@ -1018,12 +1018,12 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
    * the central particle.
    */
   if (csbend->synch_rad)
-    rad_coef = sqr(e_mks)*pow3(Po)*sqr(1+fse)/(6*PI*epsilon_o*sqr(c_mks)*me_mks*sqr(rho0));
+    rad_coef = sqr(particleCharge)*pow3(Po)*sqr(1+fse)/(6*PI*epsilon_o*sqr(c_mks)*particleMass*sqr(rho0));
   else
     rad_coef = 0;
   /* isrConstant is the RMS increase in dP/P per meter due to incoherent SR.  */
   if (csbend->isr && (n_part>1 || !csbend->isr1Particle)) 
-    isrConstant = re_mks*sqrt(55.0/(24*sqrt(3))*pow5(Po)*
+    isrConstant = particleRadius*sqrt(55.0/(24*sqrt(3))*pow5(Po)*
                               137.0359895/pow3(fabs(rho_actual)));
   else
     isrConstant = 0;
@@ -1302,7 +1302,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   }
 
   if (csbend->csr && n_part>1)
-    CSRConstant = 2*macroParticleCharge*e_mks/pow(3*rho0*rho0, 1./3.)/(4*PI*epsilon_o*me_mks*sqr(c_mks));
+    CSRConstant = 2*macroParticleCharge*particleCharge/pow(3*rho0*rho0, 1./3.)/(4*PI*epsilon_o*particleMass*sqr(c_mks));
   else
     CSRConstant = 0;
   /* Now do the body of the sector dipole */
@@ -2112,6 +2112,8 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
       break;
     }
     criticalWavelength = 4.19/ipow(csrWake.Po, 3)*csrWake.rho;
+    if (!particleIsElectron)
+      bomb("CSRDRIFT spread mode is not supported for particles other than electrons", NULL);
     thetaRad = 0.5463e-3/(csrWake.Po*0.511e-3)/pow(criticalWavelength/wavelength, 1./3.);
   }
 

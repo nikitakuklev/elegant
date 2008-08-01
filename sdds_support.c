@@ -745,7 +745,7 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
     if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
                            "Ct", tc, "dCt", tc-tc0,
                            "pAverage", p_sum/particles, "pCentral", Po, 
-                           "KAverage", (gamma_sum/particles-1)*me_mev, NULL)) {
+                           "KAverage", (gamma_sum/particles-1)*particleMassMV, NULL)) {
       SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }

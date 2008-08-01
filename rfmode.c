@@ -63,6 +63,8 @@ void track_through_rfmode(
       rfmode->mp_charge = charge->macroParticleCharge;
     } else if (pass==0) {
       rfmode->mp_charge = 0;
+      if (rfmode->charge<0)
+        bomb("RFMODE charge parameter should be non-negative. Use change_particle to set particle charge state.", NULL);
 #if (!USE_MPI) 
       if (np)
         rfmode->mp_charge = rfmode->charge/np;
@@ -238,7 +240,7 @@ void track_through_rfmode(
         rfmode->Vi = V*sin(phase);
 
         /* compute beam-induced voltage for this bin */
-        Vb = 2*k*rfmode->mp_charge*rfmode->pass_interval*Ihist[ib];
+        Vb = 2*k*rfmode->mp_charge*particleRelSign*rfmode->pass_interval*Ihist[ib];
         Vbin[ib] = rfmode->Vr - Vb/2;
         
         /* add beam-induced voltage to cavity voltage */
@@ -250,7 +252,7 @@ void track_through_rfmode(
         V_sum  += Ihist[ib]*rfmode->V;
         Vr_sum += Ihist[ib]*rfmode->Vr;
         phase_sum += Ihist[ib]*rfmode->last_phase;
-        Q_sum += Ihist[ib]*rfmode->mp_charge;
+        Q_sum += Ihist[ib]*rfmode->mp_charge*particleRelSign;
         n_summed  += Ihist[ib];
         
         if (ib==nb2) {
@@ -265,7 +267,7 @@ void track_through_rfmode(
 	for (ip=0; ip<np; ip++) {
 	  if (pbin[ip]>=0) {
 	    /* compute new momentum and momentum offset for this particle */
-	    dgamma = Vbin[pbin[ip]]/(1e6*me_mev);
+	    dgamma = Vbin[pbin[ip]]/(1e6*particleMassMV*particleRelSign);
 	    add_to_particle_energy(part[ip], time[ip], Po, dgamma);
 	  }
 	}
@@ -382,7 +384,7 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
     }
     To = total_length/(Po*c_mks/sqrt(sqr(Po)+1));
     omega = rfmode->freq*PIx2;
-    Vb = 2 * omega/4*(rfmode->Ra)/rfmode->Q * rfmode->charge * rfmode->preload_factor;
+    Vb = 2 * omega/4*(rfmode->Ra)/rfmode->Q * rfmode->charge * rfmode->preload_factor * particleRelSign;
     tau = 2*rfmode->Q/(omega*(1+rfmode->beta));
 
     Vc = cmulr(
@@ -466,6 +468,8 @@ void runBinlessRfMode(
     rfmode->mp_charge = charge->macroParticleCharge;
   } else if (pass==0) {
     rfmode->mp_charge = 0;
+    if (rfmode->charge<0)
+      bomb("RFMODE charge parameter should be non-negative. Use change_particle to set particle charge state.", NULL);
     if (np)
       rfmode->mp_charge = rfmode->charge/np;
   }
@@ -557,7 +561,7 @@ void runBinlessRfMode(
     rfmode->Vi = V*sin(phase);
         
     /* compute beam-induced voltage from this particle */
-    Vb = 2*k*rfmode->mp_charge*rfmode->pass_interval;
+    Vb = 2*k*rfmode->mp_charge*particleRelSign*rfmode->pass_interval;
     /* compute voltage seen by this particle */
     V = rfmode->Vr - Vb/2;
         
@@ -571,12 +575,12 @@ void runBinlessRfMode(
     Vb_sum += Vb;
     Vr_sum += rfmode->Vr;
     phase_sum += rfmode->last_phase;
-    Q_sum += rfmode->mp_charge;
+    Q_sum += rfmode->mp_charge*particleRelSign;
     n_summed  += 1;
         
     if (rfmode->rigid_until_pass<=pass) {
       /* change the particle energy */
-      dgamma = V/(1e6*me_mev);
+      dgamma = V/(1e6*particleMassMV*particleRelSign);
       add_to_particle_energy(part[ip], tData[ip0].t, Po, dgamma);
     }
   }

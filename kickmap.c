@@ -27,53 +27,60 @@ long trackUndulatorKickMap(
                double zStart
                )
 {
-  long ip, iTop;
+  long ip, iTop, ik, nKicks;
   double *coord;
   double eomc, H;
   double dxpFactor, dypFactor;
   double length, fieldFactor;
-  
+
   length = map->length;
   fieldFactor = map->fieldFactor;
   if (!map->initialized)
     initializeUndulatorKickMap(map);
+
+  if ((nKicks=map->nKicks)<1)
+    bomb("N_KICKS must be >=1 for UKICKMAP", NULL);
+
+  length /= nKicks;
+  fieldFactor /= nKicks;
   
-  eomc = e_mks/me_mks/c_mks; 
+  eomc = particleCharge/particleMass/c_mks; 
 
   iTop = nParticles-1;
-  for (ip=0; ip<=iTop; ip++) {
-    coord = particle[ip];
+  for (ik=0; ik<nKicks; ik++) {
+    for (ip=0; ip<=iTop; ip++) {
+      coord = particle[ip];
 
-    /* 1. go through half length */
-    coord[0] += coord[1]*length/2.0;
-    coord[2] += coord[3]*length/2.0;
-    coord[4] += length/2.0*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+      /* 1. go through half length */
+      coord[0] += coord[1]*length/2.0;
+      coord[2] += coord[3]*length/2.0;
+      coord[4] += length/2.0*sqrt(1+sqr(coord[1])+sqr(coord[3]));
 
-    /* 2. apply the kicks 
-     * use interpolation to get dxpFactor and dypFactor 
-     */
-    if (!interpolateUndulatorKickMap(&dxpFactor, &dypFactor, map, coord[0], coord[2])) {
-      /* particle is lost */
-      swapParticles(particle[ip], particle[iTop]); 
-      if (accepted)
-        swapParticles(accepted[ip], accepted[iTop]);
-      particle[iTop][4] = zStart;
-      particle[iTop][5] = pRef*(1+particle[iTop][5]);
-      iTop--;
-      ip--;
-      continue;
-    } else {
-      H = pRef*(1+coord[5])/eomc;
-      coord[1] += dxpFactor*sqr(fieldFactor/H);
-      coord[3] += dypFactor*sqr(fieldFactor/H);
+      /* 2. apply the kicks 
+       * use interpolation to get dxpFactor and dypFactor 
+       */
+      if (!interpolateUndulatorKickMap(&dxpFactor, &dypFactor, map, coord[0], coord[2])) {
+        /* particle is lost */
+        swapParticles(particle[ip], particle[iTop]); 
+        if (accepted)
+          swapParticles(accepted[ip], accepted[iTop]);
+        particle[iTop][4] = zStart;
+        particle[iTop][5] = pRef*(1+particle[iTop][5]);
+        iTop--;
+        ip--;
+      } else {
+        H = pRef*(1+coord[5])/eomc;
+        coord[1] += dxpFactor*sqr(fieldFactor/H);
+        coord[3] += dypFactor*sqr(fieldFactor/H);
+
+        /* 3. go through another half length */
+        coord[0] += coord[1]*length/2.0;
+        coord[2] += coord[3]*length/2.0;
+        coord[4] += length/2.0*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+      }
     }
-    
-
-    /* 3. go through another half length */
-    coord[0] += coord[1]*length/2.0;
-    coord[2] += coord[3]*length/2.0;
-    coord[4] += length/2.0*sqrt(1+sqr(coord[1])+sqr(coord[3]));
   }
+  
 
   return iTop+1;
 }

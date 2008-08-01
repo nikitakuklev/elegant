@@ -104,7 +104,7 @@ void convert_to_cosy(char *outputfile, LINE_LIST *beamline,
     for (i=0; i<NVAR; i++)
       fprintf(fp, "    VARIABLE %s 100 %ld ; \n", varName[i], varLength[i]);
       
-    BRho = pCentral*me_mks*c_mks/e_mks;
+    BRho = pCentral*particleMass*c_mks/particleCharge;
 
     /* emit procedures describing elements */
     eptr = &(beamline->elem);
@@ -240,7 +240,7 @@ void convert_to_cosy(char *outputfile, LINE_LIST *beamline,
     fprintf(fp, "    OPENF 7 '%s.map' 'new' ;\n", outputfile);
     fprintf(fp, "    OPENF 8 '%s.tunes' 'new' ;\n", outputfile);
     fprintf(fp, "    OV %ld 2 1 ;\n", cosyOrder);
-    fprintf(fp, "    RPE %.15g*PARA(1) ;\n", (sqrt(pCentral*pCentral+1)-1)*me_mks*sqr(c_mks)/e_mks/1e6);
+    fprintf(fp, "    RPE %.15g*PARA(1) ;\n", (sqrt(pCentral*pCentral+1)-1)*particleMass*sqr(c_mks)/particleCharge/1e6);
     fprintf(fp, "    UM ; MACH; \n");
     fprintf(fp, "    PT 7; CLOSEF 7;\n");
     fprintf(fp, "    TP MU; WRITE 8 ' DELTA-DEPENDENT TUNES: '   MU(1) MU(2) ;\n");

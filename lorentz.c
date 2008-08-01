@@ -603,7 +603,7 @@ void lorentz_setup(
             x_correction = nibend->x_correction;
             s_offset = nibend->s_offset;
             if (nibend->synch_rad)
-              rad_coef = sqr(e_mks/c_mks)*ipow(Po,3)/(6*PI*epsilon_o*me_mks);
+              rad_coef = sqr(particleCharge/c_mks)*ipow(Po,3)/(6*PI*epsilon_o*particleMass);
             else
               rad_coef = 0;
 /*
@@ -1352,7 +1352,7 @@ void bmapxy_deriv_function(double *qp, double *q, double s)
       wp[2] = w[0]*F1 - w[1]*F0;
       if (bmapxy->BGiven) {
         for (ix=0; ix<3; ix++) 
-          wp[ix] *= e_mks/(me_mks*c_mks*P0);
+          wp[ix] *= particleCharge/(particleMass*c_mks*P0);
       }
     }
     

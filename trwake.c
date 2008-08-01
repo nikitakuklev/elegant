@@ -140,7 +140,7 @@ void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
 	  free(buffer);
 	}
 #endif
-	factor = wakeData->macroParticleCharge*wakeData->factor;
+	factor = wakeData->macroParticleCharge*particleRelSign*wakeData->factor;
 	if (plane==0)
 	  factor *= wakeData->xfactor*rampFactor;
 	else
@@ -217,7 +217,7 @@ void applyTransverseWakeKicks(double **part, double *time, double *pz, long *pbi
       } else
         Vinterp = Vtime[ib];
       if (Vinterp)
-        part[ip][offset] += Vinterp/(1e6*me_mev)/pz[ip];
+        part[ip][offset] += Vinterp/(1e6*particleMassMV*particleRelSign)/pz[ip];
     }
   }
 }
@@ -242,6 +242,8 @@ void set_up_trwake(TRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
   } else if (pass==0) {
     wakeData->macroParticleCharge = 0;
 #if (!USE_MPI)
+    if (wakeData->charge<0)
+      bomb("WAKE charge parameter should be non-negative.  Use change_particle to set particle charge state.", NULL);
     if (particles)
       wakeData->macroParticleCharge = wakeData->charge/particles;
 #else

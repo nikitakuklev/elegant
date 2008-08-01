@@ -332,7 +332,7 @@ void initializeSCMULT(ELEMENT_LIST *eptr, double **part, long np, double Po, lon
   /* set it back to parallel execution */
   notSinglePart = 1;
 #endif
-  sc->c0 = sqrt(2.0/PI) * re_mks * charge->charge / e_mks;
+  sc->c0 = sqrt(2.0/PI) * particleRadius * charge->charge / particleCharge;
   sc->c1 = sc->c0/sqr(Po)/sqrt(sqr(Po)+1.0)/sc->sigmaz;
   /*       printf("c0=%.6g, c1=%.6g, sz=%.6g\n\n", sc->c0, sc->c1, sc->sigmaz); */
 

@@ -599,7 +599,7 @@ VMATRIX *compute_matrix(
     CSRCSBEND *csrcsbend;
     CSRDRIFT *csrdrift; LSCDRIFT *lscdrift; EDRIFT *edrift;
     WIGGLER *wiggler; CWIGGLER *cwiggler;
-    UKICKMAP *ukickmap;
+    UKICKMAP *ukickmap; SCRIPT *script;
     double ks, Pref_output;
     VARY rcContext;
     long fiducialize;
@@ -663,9 +663,9 @@ VMATRIX *compute_matrix(
 	} else {
           cwiggler->radiusInternal[0] = cwiggler->radiusInternal[1] = HUGE_VAL;
           if (cwiggler->BPeak[0])
-            cwiggler->radiusInternal[0] = elem->Pref_input/(e_mks/me_mks/c_mks)/cwiggler->BPeak[0];
+            cwiggler->radiusInternal[0] = elem->Pref_input/(particleCharge/particleMass/c_mks)/cwiggler->BPeak[0];
           if (cwiggler->BPeak[1])
-            cwiggler->radiusInternal[1] = elem->Pref_input/(e_mks/me_mks/c_mks)/cwiggler->BPeak[1];
+            cwiggler->radiusInternal[1] = elem->Pref_input/(particleCharge/particleMass/c_mks)/cwiggler->BPeak[1];
           elem->matrix = determineMatrix(run, elem, NULL, NULL);
         }
         break;
@@ -673,7 +673,11 @@ VMATRIX *compute_matrix(
         elem->matrix = determineMatrix(run, elem, NULL, NULL);
         break;
       case T_SCRIPT:
-        elem->matrix = determineMatrix(run, elem, NULL, NULL);
+        script = ((SCRIPT*)elem->p_elem);
+        if (script->driftMatrix)
+          elem->matrix = drift_matrix(script->length, run->default_order);
+        else
+          elem->matrix = determineMatrix(run, elem, NULL, NULL);
 	break;
       case T_RBEN: case T_SBEN:
         bend = (BEND*)elem->p_elem;
@@ -762,7 +766,7 @@ VMATRIX *compute_matrix(
         sole = (SOLE*) elem->p_elem;
         ks = sole->ks;
         if (sole->B && !ks)
-          ks = -sole->B*e_mks/(me_mks*c_mks*elem->Pref_input);
+          ks = -sole->B*particleCharge/(particleMass*c_mks*elem->Pref_input);
         elem->matrix = solenoid_matrix(sole->length, ks,
                                        sole->order?sole->order:run->default_order);
         if (sole->dx || sole->dy || sole->dz)
@@ -827,7 +831,7 @@ VMATRIX *compute_matrix(
       case T_KQUAD:
         kquad = (KQUAD*)elem->p_elem;
         if (kquad->bore)
-            kquad->k1 = kquad->B/kquad->bore*(e_mks/(me_mks*c_mks*elem->Pref_input));
+            kquad->k1 = kquad->B/kquad->bore*(particleCharge/(particleMass*c_mks*elem->Pref_input));
         if (kquad->n_kicks<1)
             bomb("n_kicks must by > 0 for KQUAD element", NULL);
         elem->matrix = quadrupole_matrix(kquad->k1, kquad->length, 
@@ -845,7 +849,7 @@ VMATRIX *compute_matrix(
       case T_KSEXT:
         ksext = (KSEXT*)elem->p_elem;
         if (ksext->bore)
-            ksext->k2 = 2*ksext->B/sqr(ksext->bore)*(e_mks/(me_mks*c_mks*elem->Pref_input));
+            ksext->k2 = 2*ksext->B/sqr(ksext->bore)*(particleCharge/(particleMass*c_mks*elem->Pref_input));
         if (ksext->n_kicks<1)
             bomb("n_kicks must by > 0 for KSEXT element", NULL);
         elem->matrix = sextupole_matrix(ksext->k2, ksext->length, 
@@ -1364,7 +1368,7 @@ VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, doubl
     voltage /= 1e6;  /* convert to MV */
     sin_phase = sin(PI*phase/180.0);
     cos_phase = cos(PI*phase/180.0);
-    dgamma = (dgammaMax=voltage/me_mev)*sin_phase;
+    dgamma = (dgammaMax=voltage/particleMassMV*particleRelSign)*sin_phase;
     gamma = sqrt(sqr(*P_central)+1);
     dP    = sqrt(sqr(gamma+dgamma)-1) - *P_central;
 
@@ -1480,7 +1484,7 @@ VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, doubl
       R[0][1] = R[2][3] = 2*SQRT2*gamma*length/dgammaMax*(sin_alpha=sin(alpha));
       R[1][0] = R[3][2] = -sin_alpha*dgammaMax/(length*gammaf*2*SQRT2);
       R[4][4] = 1;
-      R[5][4] = (voltage/me_mev)*cos_phase/(gamma + dgamma)*(PIx2*frequency/c_mks);
+      R[5][4] = (voltage/particleMassMV*particleRelSign)*cos_phase/(gamma + dgamma)*(PIx2*frequency/c_mks);
       R[5][5] = 1/(1+dP/(*P_central));
     }
 

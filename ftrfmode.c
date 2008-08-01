@@ -178,7 +178,7 @@ void track_through_ftrfmode(
 	  Vxbin[ib] += trfmode->Vxr[imode];
 
 	  /* compute beam-induced voltage for this bin */
-	  Vxb = 2*k*trfmode->mp_charge*xsum[ib]*trfmode->xfactor*rampFactor; 
+	  Vxb = 2*k*trfmode->mp_charge*particleRelSign*xsum[ib]*trfmode->xfactor*rampFactor; 
           Vzbin[ib] += omegaOverC*(xsum[ib]/count[ib])*(trfmode->Vxi[imode] - Vxb/2);
 
 	  /* add beam-induced voltage to cavity voltage---it is imaginary as
@@ -205,7 +205,7 @@ void track_through_ftrfmode(
 	  Vybin[ib] += trfmode->Vyr[imode];
 
 	  /* compute beam-induced voltage for this bin */
-	  Vyb = 2*k*trfmode->mp_charge*ysum[ib]*trfmode->yfactor*rampFactor;
+	  Vyb = 2*k*trfmode->mp_charge*particleRelSign*ysum[ib]*trfmode->yfactor*rampFactor;
           Vzbin[ib] += omegaOverC*(ysum[ib]/count[ib])*(trfmode->Vyi[imode] - Vyb/2);
 
 	  /* add beam-induced voltage to cavity voltage---it is imaginary as
@@ -249,9 +249,9 @@ void track_through_ftrfmode(
     for (ip=0; ip<np; ip++) {
       if (pbin[ip]>=0) {
 	P = Po*(1+part[ip][5]);
-	Pz = P/sqrt(1+sqr(part[ip][1])+sqr(part[ip][3])) + Vzbin[pbin[ip]]/(1e6*me_mev);
-	Px = part[ip][1]*Pz + Vxbin[pbin[ip]]/(1e6*me_mev);
-	Py = part[ip][3]*Pz + Vybin[pbin[ip]]/(1e6*me_mev);
+	Pz = P/sqrt(1+sqr(part[ip][1])+sqr(part[ip][3])) + Vzbin[pbin[ip]]/(1e6*particleMassMV*particleRelSign);
+	Px = part[ip][1]*Pz + Vxbin[pbin[ip]]/(1e6*particleMassMV*particleRelSign);
+	Py = part[ip][3]*Pz + Vybin[pbin[ip]]/(1e6*particleMassMV*particleRelSign);
 	P  = sqrt(Pz*Pz+Px*Px+Py*Py);
 	part[ip][1] = Px/Pz;
 	part[ip][3] = Py/Pz;

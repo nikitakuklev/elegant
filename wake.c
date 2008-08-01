@@ -169,7 +169,7 @@ void track_through_wake(double **part, long np, WAKE *wakeData, double *PoInput,
 		   Itime, nb, 
 		   wakeData->W, wakeData->wakePoints);
 
-    factor = wakeData->macroParticleCharge*wakeData->factor*rampFactor;
+    factor = wakeData->macroParticleCharge*particleRelSign*wakeData->factor*rampFactor;
     for (ib=0; ib<nb; ib++)
       Vtime[ib] *= factor;
   
@@ -207,10 +207,10 @@ void applyLongitudinalWakeKicks(double **part, double *time, long *pbin, long np
           ib--;
           dt1 += dt;
         }
-        dgam = (Vtime[ib]+(Vtime[ib+1]-Vtime[ib])/dt*dt1)/(1e6*me_mev);
+        dgam = (Vtime[ib]+(Vtime[ib+1]-Vtime[ib])/dt*dt1)/(1e6*particleMassMV*particleRelSign);
       }
       else
-        dgam = Vtime[ib]/(1e6*me_mev);
+        dgam = Vtime[ib]/(1e6*particleMassMV*particleRelSign);
       if (dgam) {
         /* Put in minus sign here as the voltage decelerates the beam */
 	add_to_particle_energy(part[ip], time[ip], Po, -dgam); 
@@ -238,6 +238,8 @@ void set_up_wake(WAKE *wakeData, RUN *run, long pass, long particles, CHARGE *ch
     wakeData->macroParticleCharge = charge->macroParticleCharge;
   } else if (pass==0) {
     wakeData->macroParticleCharge = 0;
+    if (wakeData->charge<0)
+      bomb("WAKE charge parameter should be non-negative.  Use change_particle to set particle charge state.", NULL);
 #if (!USE_MPI)
     if (particles)
       wakeData->macroParticleCharge = wakeData->charge/particles;

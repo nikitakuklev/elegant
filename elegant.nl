@@ -37,6 +37,12 @@
     long element_divisions = 0;
 #end
 
+#namelist change_particle,struct
+    STRING name = "electron";
+    double mass_ratio = 0;
+    double charge_ratio = 0;
+#end
+
 #namelist track static
     long center_on_orbit = 0;
     long center_momentum_also = 1;

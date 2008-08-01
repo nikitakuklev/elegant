@@ -46,6 +46,9 @@
 #define dup2(x,y) _dup2(x,y)
 #endif
 
+extern double particleMass, particleCharge, particleMassMV, particleRadius, particleRelSign;
+extern long particleIsElectron;
+
 #ifndef STANDARD
 #include "standard.h"
 #endif
@@ -780,7 +783,7 @@ extern char *entity_text[N_TYPES];
 #define N_CLEAN_PARAMS 7
 #define N_TWISSELEMENT_PARAMS 12
 #define N_WIGGLER_PARAMS 8
-#define N_SCRIPT_PARAMS 31
+#define N_SCRIPT_PARAMS 32
 #define N_FLOORELEMENT_PARAMS 6
 #define N_LTHINLENS_PARAMS 8
 #define N_LMIRROR_PARAMS 9
@@ -800,7 +803,7 @@ extern char *entity_text[N_TYPES];
 #define N_ILMATRIX_PARAMS 31
 #define N_TSCATTER_PARAMS 1
 #define N_KQUSE_PARAMS 14
-#define N_UKICKMAP_PARAMS 3
+#define N_UKICKMAP_PARAMS 4
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -2270,7 +2273,7 @@ typedef struct {
   char *command;
   long useCsh, verbosity, startPass, onPass;
   char *directory, *rootname, *inputExtension, *outputExtension;
-  long keepFiles;
+  long keepFiles, driftMatrix;
   double NP[10];
   char *SP[10];
 } SCRIPT;
@@ -2379,6 +2382,7 @@ extern PARAMETER ukickmap_param[N_UKICKMAP_PARAMS];
 typedef struct {
   double length, fieldFactor;
   char *inputFile;
+  long nKicks;
   /* for internal use only */
   long initialized;
   long points, nx, ny;

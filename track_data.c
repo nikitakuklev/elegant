@@ -18,6 +18,14 @@
 /* flag word for trace mode */
 long trace_mode = 0;
 
+/* default values for electron tracking */
+double particleMass = me_mks;
+double particleCharge = e_mks;
+double particleMassMV = me_mev;
+double particleRadius = re_mks;
+double particleRelSign = 1;   /* relative to electron */
+long particleIsElectron = 1;
+
 /* A hash table for loading parameters effectively */
 htab *load_hash;
 
@@ -839,7 +847,7 @@ PARAMETER ksbend_param[N_KSBEND_PARAMS] = {
     {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksbend_example.dy), NULL, 0.0, 0, "misalignment"},
     {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksbend_example.dz), NULL, 0.0, 0, "misalignment"},
     {"FSE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksbend_example.fse), NULL, 0.0, 0, "fractional strength error"},
-    {"ETILT", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksbend_example.etilt), NULL, 0.0, 0, "error rotation about incoming longitudinal axis"},
+    {"ETILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ksbend_example.etilt), NULL, 0.0, 0, "error rotation about incoming longitudinal axis"},
     {"N_KICKS", "", IS_LONG, 0, (long)((char *)&ksbend_example.n_kicks), NULL, 0.0, DEFAULT_N_KICKS, "number of kicks"},
     {"NONLINEAR", "", IS_LONG, 0, (long)((char *)&ksbend_example.nonlinear), NULL, 0.0, 1, "include nonlinear field components?"},
     {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&ksbend_example.synch_rad), NULL, 0.0, 0, "include classical synchrotron radiation?"},
@@ -961,7 +969,7 @@ PARAMETER nibend_param[N_NIBEND_PARAMS] = {
     {"FP3", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&nibend_example.fp3), NULL, 0.0, 0, "not used"},
     {"FP4", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&nibend_example.fp4), NULL, 0.0, 0, "not used"},
     {"FSE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&nibend_example.fse), NULL, 0.0, 0, "fractional strength error"},
-    {"ETILT", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&nibend_example.etilt), NULL, 0.0, 0, "error rotation about incoming longitudinal axis"},
+    {"ETILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&nibend_example.etilt), NULL, 0.0, 0, "error rotation about incoming longitudinal axis"},
     {"ACCURACY", "", IS_DOUBLE, 0, (long)((char *)&nibend_example.accuracy), NULL, DEFAULT_ACCURACY, 0, "integration accuracy (for nonadaptive integration, used as the step-size)"},
     {"MODEL", "", IS_STRING, 0, (long)((char *)&nibend_example.model), DEFAULT_NIBEND_TYPE, 0.0, 0, "fringe model (hard-edge, linear, cubic-spline, tanh, quintic, enge1, enge3, enge5)"},
     {"METHOD", "", IS_STRING, 0, (long)((char *)&nibend_example.method), DEFAULT_INTEG_METHOD, 0.0, 0, "integration method (runge-kutta, bulirsch-stoer, modified-midpoint, two-pass modified-midpoint, leap-frog, non-adaptive runge-kutta)"},
@@ -1048,7 +1056,7 @@ PARAMETER csbend_param[N_CSBEND_PARAMS] = {
     {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csbend_example.dy), NULL, 0.0, 0, "misalignment"},
     {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csbend_example.dz), NULL, 0.0, 0, "misalignment"},
     {"FSE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csbend_example.fse), NULL, 0.0, 0, "fractional strength error"},
-    {"ETILT", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csbend_example.etilt), NULL, 0.0, 0, "error rotation about incoming longitudinal axis"},
+    {"ETILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csbend_example.etilt), NULL, 0.0, 0, "error rotation about incoming longitudinal axis"},
     {"N_KICKS", "", IS_LONG, 0, (long)((char *)&csbend_example.n_kicks), NULL, 0.0, DEFAULT_N_KICKS, "number of kicks"},
     {"NONLINEAR", "", IS_LONG, 0, (long)((char *)&csbend_example.nonlinear), NULL, 0.0, 1, "include nonlinear field components?"},
     {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&csbend_example.synch_rad), NULL, 0.0, 0, "include classical synchrotron radiation?"},
@@ -1092,7 +1100,7 @@ PARAMETER csrcsbend_param[N_CSRCSBEND_PARAMS] = {
     {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csrcsbend_example.dy), NULL, 0.0, 0, "misalignment"},
     {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csrcsbend_example.dz), NULL, 0.0, 0, "misalignment"},
     {"FSE", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csrcsbend_example.fse), NULL, 0.0, 0, "fractional strength error"},
-    {"ETILT", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csrcsbend_example.etilt), NULL, 0.0, 0, "error rotation about incoming longitudinal axis"},
+    {"ETILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&csrcsbend_example.etilt), NULL, 0.0, 0, "error rotation about incoming longitudinal axis"},
     {"N_KICKS", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.n_kicks), NULL, 0.0, DEFAULT_N_KICKS, "number of kicks"},
     {"NONLINEAR", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.nonlinear), NULL, 0.0, 1, "include nonlinear field components?"},
     {"LINEARIZE", "", IS_LONG, 0, (long)((char *)&csrcsbend_example.useMatrix), NULL, 0.0, 0, "use linear matrix instead of symplectic integrator?"},
@@ -1640,6 +1648,7 @@ PARAMETER script_param[N_SCRIPT_PARAMS] = {
   {"INPUT_EXTENSION", "", IS_STRING, 0, (long)((char *)&script_example.inputExtension), "in", 0.0, 0, "Extension for the script input file."},
   {"OUTPUT_EXTENSION", "", IS_STRING, 0, (long)((char *)&script_example.outputExtension), "out", 0.0, 0, "Extension for the script output file."},
   {"KEEP_FILES", "", IS_LONG, 0, (long)((char *)&script_example.keepFiles), NULL, 0.0, 0, "If nonzero, then script input and output files are not deleted after use.  By default, they are deleted."},
+  {"DRIFT_MATRIX", "", IS_LONG, 0, (long)((char *)&script_example.driftMatrix), NULL, 0.0, 0, "If nonzero, then for matrix calculations the element is treated as a drift space."},
   {"NP0", "", IS_DOUBLE, 0, (long)((char *)&script_example.NP[0]), NULL, 0.0, 0, "User-defined numerical parameter for command substitution for sequence %np0"},
   {"NP1", "", IS_DOUBLE, 0, (long)((char *)&script_example.NP[1]), NULL, 0.0, 0, "User-defined numerical parameter for command substitution for sequence %np1"},
   {"NP2", "", IS_DOUBLE, 0, (long)((char *)&script_example.NP[2]), NULL, 0.0, 0, "User-defined numerical parameter for command substitution for sequence %np2"},
@@ -2043,6 +2052,7 @@ PARAMETER ukickmap_param[N_UKICKMAP_PARAMS] = {
     {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ukickmap_example.length), NULL, 0.0, 0, "length"},
     {"FIELD_FACTOR", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ukickmap_example.fieldFactor), NULL, 1.0, 0, "Factor by which to multiply the magnetic fields."},
     {"INPUT_FILE", " ", IS_STRING, 0, (long)((char *)&ukickmap_example.inputFile), NULL, 0.0, 0, "Name of SDDS file with undulator kickmap data."},
+    {"N_KICKS", "", IS_LONG, 0, (long)((char *)&ukickmap_example.nKicks), NULL, 0.0, 1, "Number of kicks into which to split the element."},
     };
 
 

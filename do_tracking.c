@@ -723,6 +723,8 @@ long do_tracking(
 		  charge->macroParticleCharge = charge->charge/(nOriginal);
 		if (charge->chargePerParticle)
 		  charge->macroParticleCharge = charge->chargePerParticle;
+                if (charge->macroParticleCharge<0) 
+                  bomb("Error: CHARGE element should specify the quantity of charge (in Coulombs) without the sign", NULL);
 	      }
 	      break;
 	    case T_MARK:
@@ -1122,7 +1124,7 @@ long do_tracking(
 		SOLE *sptr;
 		double ks;
 		sptr = (SOLE*)eptr->p_elem;
-		if ((ks = -sptr->B/(*P_central*me_mks*c_mks/e_mks))!=sptr->ks) {
+		if ((ks = -sptr->B/(*P_central*particleMass*c_mks/particleCharge))!=sptr->ks) {
 		  sptr->ks = ks;
 		  if (eptr->matrix)
 		    free_matrices(eptr->matrix);
@@ -1387,17 +1389,6 @@ long do_tracking(
 	}
         if (run->print_statistics && !(flags&TEST_PARTICLES)) {
           report_stats(stdout, ": ");
-          /*
-            if (show_dE && nLeft) {
-            fprintf(stdout, "average energy imparted: %e MeV\n",
-            dgamma*me_mev/nLeft);
-            fflush(stdout);
-            fprintf(stdout, "average x,y,z momentum imparted: %e, %e, %e MeV/c\n",
-            dP[0]*me_mev/nLeft, dP[1]*me_mev/nLeft,
-            dP[2]*me_mev/nLeft);
-            fflush(stdout);
-            }
-	  */
           fprintf(stdout, "central momentum is %e    zstart = %em  zend = %em\n", *P_central, last_z, z);
           fflush(stdout);
           if (nLeft!=nToTrack)

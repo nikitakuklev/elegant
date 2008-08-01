@@ -246,7 +246,7 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
          * to normalize the current waveform
          */
         Vfreq = Vtime;
-        factor = ztransverse->macroParticleCharge/dt*userFactor[plane];
+        factor = ztransverse->macroParticleCharge*particleRelSign/dt*userFactor[plane];
         iZ = ztransverse->iZ[plane];
         Vfreq[0] = posIfreq[0]*iZ[0]*factor;
         nfreq = nb/2 + 1;
@@ -275,7 +275,7 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
 
       if (ztransverse->SDDS_wake_initialized && ztransverse->wakes) {
         /* wake potential output */
-        factor = ztransverse->macroParticleCharge/dt;
+        factor = ztransverse->macroParticleCharge*particleRelSign/dt;
         if (ztransverse->wake_interval<=0 || (i_pass%ztransverse->wake_interval)==0) {
           if (first && !SDDS_StartTable(&ztransverse->SDDS_wake, nb)) {
             SDDS_SetError("Problem starting SDDS table for wake output (track_through_ztransverse)");
@@ -291,7 +291,7 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
             }
           }
           if (!SDDS_SetParameters(&ztransverse->SDDS_wake, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-                                  "Pass", i_pass, "q", ztransverse->macroParticleCharge*np, NULL)) {
+                                  "Pass", i_pass, "q", ztransverse->macroParticleCharge*particleRelSign*np, NULL)) {
             SDDS_SetError("Problem setting parameters of SDDS table for wake output (track_through_ztransverse)");
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
           }
@@ -342,6 +342,8 @@ void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long part
     ztransverse->macroParticleCharge = charge->macroParticleCharge;
   } else if (pass==0) {
     ztransverse->macroParticleCharge = 0;
+    if (ztransverse->charge<0)
+      bomb("ZTRANSVERSE charge parameter should be non-negative. Use change_particle to set particle charge state.", NULL);
 #if (!USE_MPI)
     if (particles)
       ztransverse->macroParticleCharge = ztransverse->charge/particles;
