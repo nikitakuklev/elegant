@@ -2576,7 +2576,7 @@ extern VMATRIX *compute_matrix(ELEMENT_LIST *elem, RUN *run, VMATRIX *Mspace);
 extern VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *stepSize);
 extern void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *D, long slices, long order);
 extern void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *D);
-extern void set_up_watch_point(WATCH *watch, RUN *run);
+extern void set_up_watch_point(WATCH *watch, RUN *run, long occurence);
 extern VMATRIX *magnification_matrix(MAGNIFY *magnif);
 extern void reset_special_elements(LINE_LIST *beamline, long includeRF);
 extern VMATRIX *stray_field_matrix(double length, double *lB, double *gB, double theta, long order, double p_central, 
@@ -2757,6 +2757,7 @@ void finishFrequencyMap();
 /* prototypes for elegant.c: */
 extern void getRunControlContext(VARY *context);
 extern char *compose_filename(char *template, char *root_name);
+char *compose_filename_occurence(char *template, char *root_name, long occurence);
 extern double find_beam_p_central(char *input);
 void center_beam_on_coords(double **particle, long n_part, double *coord, long center_momentum_also);
 void offset_beam_by_coords(double **part, long np, double *coord, long offset_dp);
@@ -3179,7 +3180,7 @@ extern void SDDS_CentroidOutputSetup(SDDS_TABLE *SDDS_table, char *filename, lon
 extern void SDDS_SigmaOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row,
                            char *command_file, char *lattice_file, char *caller);
 extern void readErrorMultipoleData(MULTIPOLE_DATA *multData, char *multFile, long steering);
-extern void set_up_histogram(HISTOGRAM *histogram, RUN *run);
+extern void set_up_histogram(HISTOGRAM *histogram, RUN *run, long occurence);
 extern long track_through_tubend(double **part, long n_part, TUBEND *tubend,
                           double p_error, double Po, double **accepted,
                           double z_start);

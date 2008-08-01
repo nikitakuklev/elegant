@@ -26,3 +26,38 @@ char *compose_filename(char *template, char *root_name)
     else
         return(template);
     }
+
+char *compose_filename_occurence(char *template, char *root_name, long occurence)
+{
+  char *ptr_s, *ptr_ld;
+  char *ptr;
+  char format[10];
+  long i;
+  
+  ptr_s = str_in(template, "%s");
+  ptr_ld = str_in(template, "%ld");
+  for (i=1; i<20; i++) {
+    sprintf(format, "%%%ldld", i);
+    if ((ptr=str_in(template, format)) && (!ptr_ld || ptr_ld>ptr))
+      ptr_ld = ptr;
+    sprintf(format, "%%0%ldld", i);
+    if ((ptr=str_in(template, format)) && (!ptr_ld || ptr_ld>ptr))
+      ptr_ld = ptr;
+  }
+  
+  ptr = tmalloc(sizeof(char)*(strlen(template)+strlen(root_name)+100));
+  if (ptr_s && ptr_ld) {
+    if (ptr_s>ptr_ld)
+      sprintf(ptr, template, occurence, root_name);
+    else
+      sprintf(ptr, template, root_name, occurence);
+  } else if (ptr_s)
+    sprintf(ptr, template, root_name);
+  else if (ptr_ld) 
+    sprintf(ptr, template, occurence);
+  else 
+    ptr = template;
+  
+  return ptr;
+}
+  

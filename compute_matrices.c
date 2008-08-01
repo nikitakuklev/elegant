@@ -1086,7 +1086,7 @@ char *fft_window_name[N_FFT_WINDOWS] = {
     "hanning", "parzen", "welch", "uniform",
     } ;
 
-void set_up_watch_point(WATCH *watch, RUN *run)
+void set_up_watch_point(WATCH *watch, RUN *run, long occurence)
 {
     char *mode, *qualifier;
 
@@ -1110,7 +1110,7 @@ void set_up_watch_point(WATCH *watch, RUN *run)
         free(watch->label);
         watch->label = buffer;
         }
-    watch->filename = compose_filename(watch->filename, run->rootname);
+    watch->filename = compose_filename_occurence(watch->filename, run->rootname, occurence);
     SDDS_WatchPointSetup(watch, SDDS_BINARY, 1, run->runfile, run->lattice, "set_up_watch_point", qualifier);
     watch->initialized = 1;
     watch->count = 0;
@@ -1118,7 +1118,7 @@ void set_up_watch_point(WATCH *watch, RUN *run)
     log_exit("set_up_watch_point");
     }
 
-void set_up_histogram(HISTOGRAM *histogram, RUN *run)
+void set_up_histogram(HISTOGRAM *histogram, RUN *run, long occurence)
 {
   if (histogram->disable)
     return;
@@ -1131,7 +1131,7 @@ void set_up_histogram(HISTOGRAM *histogram, RUN *run)
   if (histogram->binSizeFactor<=0)
     bomb("bin_size_factor is non-positive for HISTOGRAM element", NULL);
   
-  histogram->filename = compose_filename(histogram->filename, run->rootname);
+  histogram->filename = compose_filename_occurence(histogram->filename, run->rootname, occurence);
   
   SDDS_HistogramSetup(histogram, SDDS_BINARY, 1, run->runfile, run->lattice, "set_up_histogram");
   histogram->initialized = 1;
