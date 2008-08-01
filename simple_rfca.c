@@ -19,8 +19,6 @@ static char *fiducialModeChoice[4] = {
     "light", "tmean", "first", "pmaximum",
     };
 
-#define DEBUG 1
-
 long trackRfCavityWithWakes(double **part, long np, RFCA *rfca, double **accepted, 
                             double *P_central, double zEnd, long iPass, RUN *run,
                             CHARGE *charge, WAKE *wake, TRWAKE *trwake, LSCKICK *LSCKick,
