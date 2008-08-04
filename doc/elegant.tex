@@ -31,7 +31,11 @@ and references, see the specific entries in the manual.  Several minor
 bugs were fixed.  There were also several significant feature
 enhancements, including RADIA-style kick maps and the ability to
 simulate particles other than electrons. A new program for computing the
-shielded CSR impedance is also included.
+shielded CSR impedance is also included.  
+
+{\em N.B. There was a change to the \verb|SCRIPT| element that is not
+by default backward compatible.  See below for details.}
+
 
 \subsection{Known Bugs and Problems}
 \begin{itemize}
@@ -52,8 +56,12 @@ shielded CSR impedance is also included.
 \begin{itemize}
 \item The \verb|CSRDRIFT| element was excluded from element division.  This has been corrected.  Y. Ding (SLAC)
   reported this.
-\item The \verb|SCRIPT| element would be treated as a drift space if matrix concatenation was requested in
- \verb|run_setup|.  This has been corrected.  W. Guo (BNL) reported this.
+\item The \verb|SCRIPT| element would be treated as a drift space if
+ matrix concatenation was requested in \verb|run_setup|.  W. Guo (BNL)
+ reported problem.  This has been changed, so that {\tt elegant} now
+ by default uses tracking to determine the matrix.  {\em This may
+ impact the operation of some runs, but can be turned off using the
+ \verb|DRIFT_MATRIX| parameter.}
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
