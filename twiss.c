@@ -2460,8 +2460,12 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
       Ax[ix] = sqr(x)*(1+sqr(twiss->alphax))/twiss->betax;
       for (iy=0; iy<gridSize; iy++) {
 	lost[ix][iy] = 0;
-        if (tune_shift_with_amplitude_struct.sparse_grid &&
-            !(ix==0 || iy==0 || ix==iy)) 
+        xTune[ix][iy] = -1;
+        yTune[ix][iy] = -1;
+        if ((tune_shift_with_amplitude_struct.sparse_grid &&
+             !(ix==0 || iy==0 || ix==iy)) ||
+               (tune_shift_with_amplitude_struct.lines_only &&
+                !(ix==0 || iy==0)))
           continue;
         m++;
         y0[iy] = 
@@ -2508,9 +2512,11 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
 	  for (iy=0; iy<gridSize; iy++) {
 	    if (ix==0 && iy==0)
 	      continue;
-	    if (tune_shift_with_amplitude_struct.sparse_grid &&
-		!(ix==0 || iy==0 || ix==iy)) 
-	      continue;
+            if ((tune_shift_with_amplitude_struct.sparse_grid &&
+                 !(ix==0 || iy==0 || ix==iy)) ||
+                (tune_shift_with_amplitude_struct.lines_only &&
+                 !(ix==0 || iy==0)))
+              continue;
 	    result = fabs(xTune[ix][iy] - xTune[0][0]);
 	    if (result>maxResult)
 	      maxResult = result;
@@ -2551,7 +2557,12 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
 
   if (tune_shift_with_amplitude_struct.tune_output) {
     for (ix=j=0; ix<gridSize; ix++) {
-      for (iy=0; iy<gridSize; iy++, j++) {
+      for (iy=0; iy<gridSize; iy++) {
+        if ((tune_shift_with_amplitude_struct.sparse_grid &&
+             !(ix==0 || iy==0 || ix==iy)) ||
+               (tune_shift_with_amplitude_struct.lines_only &&
+                !(ix==0 || iy==0)))
+          continue;
 	if (!SDDS_SetRowValues(&SDDSTswaTunes, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, j,
 			       "x", x0[ix], "Ax", Ax[ix],
 			       "nux", xTune[ix][iy],
@@ -2562,6 +2573,7 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
 	  SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
 	  exit(1);
 	}
+        j++;
       }
     }
     if (!SDDS_WritePage(&SDDSTswaTunes)) {
@@ -2575,9 +2587,11 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
   yTuneExtrema[0] = -(yTuneExtrema[1] = -DBL_MAX);
   for (ix=0; ix<gridSize; ix++) {
     for (iy=0; iy<gridSize; iy++) {
-      if (tune_shift_with_amplitude_struct.sparse_grid &&
-	  !(ix==0 || iy==0 || ix==iy)) 
-	continue;
+      if ((tune_shift_with_amplitude_struct.sparse_grid &&
+           !(ix==0 || iy==0 || ix==iy)) ||
+          (tune_shift_with_amplitude_struct.lines_only &&
+           !(ix==0 || iy==0)))
+        continue;
       if (lost[ix][iy] ||
 	  xTune[ix][iy]<=0.0 || xTune[ix][iy]>=1.0 ||
 	  yTune[ix][iy]<=0.0 || yTune[ix][iy]>=1.0)
@@ -2610,111 +2624,179 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
   if (!nLost && !tune_shift_with_amplitude_struct.spread_only) {
     m = gridSize*gridSize;
     order = tune_shift_with_amplitude_struct.order<=1?1:2;
-    if (order==1) {
-      /* the expansion is
-	 nu = Ax^0 (TS00 + Ay*TS01) +
-	 Ax^1 (TS10 ) 
-	 where TSij = 1/(i!j!) dnu/(dAx^i dAy^j)
-      */
-      nTSWA = 2;
-      n = 4;
-    }
-    else {
-      /* the expansion is
-	 nu = Ax^0 (TS00 + Ay*TS01 + Ay^2*TS02) +
-	 Ax^1 (TS10 + Ay*TS11 ) +
-	 Ax^2 (TS20 )
-	 where TSij = 1/(i!j!) dnu/(dAx^i dAy^j)
-      */
-      nTSWA = N_TSWA;
-      n = (N_TSWA*N_TSWA + N_TSWA)/2;
-    }
-    /* Nu = AxAy*Coef 
-     * Nu is (m-1)x1, AxAy is (m-1)xn, Coef is nx1 */
-    m --;  /* won't use [0][0] from tune arrays due to NAFF issues */
-    m_alloc(&AxAy, m, n);
-    m_alloc(&Coef, n, 1);
-    m_alloc(&Nu, m, 1);
-    m_alloc(&AxAyTr, n, m);
-    m_alloc(&Mf, n, n);
-    m_alloc(&MfInv, n, n);
-    m_alloc(&AxAyTrNu, n, 1);
-    for (ix=i=0; ix<gridSize; ix++) {
-      for (iy=0; iy<gridSize; iy++) {
-	if (tune_shift_with_amplitude_struct.sparse_grid &&
-	    !(ix==0 || iy==0 || ix==iy)) 
-	  continue;
-	if (ix==0 && iy==0)
-	  continue;
-	for (ix1=j=0; ix1<nTSWA; ix1++) {
-	  for (iy1=0; (ix1+iy1)<=order; iy1++, j++) {
-	    if (j>=n)
-	      bomb("indexing problem for TSWA calculation", NULL);
-	    AxAy->a[i][j] = ipow(Ax[ix], ix1)*ipow(Ay[iy], iy1);
-	  }
-	}
-	i++;
+    if (tune_shift_with_amplitude_struct.lines_only) {
+      /* Perform 1-D fits vs Ax and Ay. 
+       * No cross terms get included. 
+       */
+      double *tuneData, *coefData;
+      tuneData = tmalloc(sizeof(*tuneData)*gridSize);
+      coefData = tmalloc(sizeof(*coefData)*3);
+
+      /* x tune vs x amplitude */
+      for (ix=iy=0; ix<gridSize; ix++)
+        tuneData[ix] = xTune[ix][iy];
+      lsfn(Ax, tuneData, NULL, gridSize, order, coefData, NULL, NULL, NULL);
+      for (ix=0; ix<(order+1); ix++) {
+        dnux_dA[ix][0] = coefData[ix]*factorial(ix);
       }
-    }
-    m_trans(AxAyTr, AxAy);
-    m_mult(Mf, AxAyTr, AxAy);
-    m_invert(MfInv, Mf);
-    for (ix=i=0; ix<gridSize; ix++)
-      for (iy=0; iy<gridSize; iy++) {
-        if (tune_shift_with_amplitude_struct.sparse_grid &&
-            !(ix==0 || iy==0 || ix==iy)) 
-          continue;
-	if (ix==0 && iy==0)
-	  continue;
-        Nu->a[i][0] = xTune[ix][iy];
-        i++;
+        
+      /* x tune vs y amplitude */
+      for (ix=iy=0; iy<gridSize; iy++)
+        tuneData[iy] = xTune[ix][iy];
+      lsfn(Ay, tuneData, NULL, gridSize, order, coefData, NULL, NULL, NULL);
+      for (iy=0; iy<(order+1); iy++)
+        dnux_dA[0][iy] = coefData[iy]*factorial(iy);
+
+      /* y tune vs x amplitude */
+      for (ix=iy=0; ix<gridSize; ix++) 
+        tuneData[ix] = yTune[ix][iy];
+      lsfn(Ax, tuneData, NULL, gridSize, order, coefData, NULL, NULL, NULL);
+      for (ix=0; ix<(order+1); ix++)
+        dnuy_dA[ix][0] = coefData[ix]*factorial(ix);
+            
+      /* y tune vs y amplitude */
+      for (ix=iy=0; iy<gridSize; iy++)
+        tuneData[iy] = yTune[ix][iy];
+      lsfn(Ay, tuneData, NULL, gridSize, order, coefData, NULL, NULL, NULL);
+      for (iy=0; iy<(order+1); iy++) 
+        dnuy_dA[0][iy] = coefData[iy]*factorial(iy);
+
+      if (tune_shift_with_amplitude_struct.verbose) {
+        fprintf(stdout, "dnux/(dAx^i):  ");
+        for (ix=0; ix<(order+1); ix++)
+          fprintf(stdout, "%10.3g ", dnux_dA[ix][0]);
+        fputc('\n', stdout);
+        fprintf(stdout, "dnux/(dAy^i):  ");
+        for (iy=0; iy<(order+1); iy++)
+          fprintf(stdout, "%10.3g ", dnux_dA[0][iy]);
+        fputc('\n', stdout);
+        fprintf(stdout, "dnuy/(dAx^i):  ");
+        for (ix=0; ix<(order+1); ix++)
+          fprintf(stdout, "%10.3g ", dnuy_dA[ix][0]);
+        fputc('\n', stdout);
+        fprintf(stdout, "dnuy/(dAy^i):  ");
+        for (iy=0; iy<(order+1); iy++)
+          fprintf(stdout, "%10.3g ", dnuy_dA[0][iy]);
+        fputc('\n', stdout);
       }
-    m_mult(AxAyTrNu, AxAyTr, Nu);
-    m_mult(Coef, MfInv, AxAyTrNu);
-    for (ix=i=0; ix<nTSWA; ix++) 
-      for (iy=0; (ix+iy)<=order; iy++, i++)
-        dnux_dA[ix][iy] = Coef->a[i][0]*factorial(ix)*factorial(iy);
-    if (tune_shift_with_amplitude_struct.verbose) {
-      fprintf(stdout, "dnux/(dAx^i dAy^j):\n");
-      for (ix=0; ix<nTSWA; ix++) {
-	for (iy=0; iy<nTSWA; iy++) {
-	  fprintf(stdout, "%10.3g%c", dnux_dA[ix][iy], iy==(nTSWA-1)?'\n':' ');
-	}
+      free(tuneData);
+      free(coefData);
+    } else {
+      /* Perform 2d fits vs Ax and Ay. 
+       * May have trouble getting dnux/Ay=dnuy/dAx 
+       */
+      if (order==1) {
+        /* the expansion is
+           nu = Ax^0 (TS00 + Ay*TS01) +
+           Ax^1 (TS10 ) 
+           where TSij = 1/(i!j!) dnu/(dAx^i dAy^j)
+           */
+        nTSWA = 2;
+        n = 4;
       }
-    }
+      else {
+        /* the expansion is
+           nu = Ax^0 (TS00 + Ay*TS01 + Ay^2*TS02) +
+           Ax^1 (TS10 + Ay*TS11 ) +
+           Ax^2 (TS20 )
+           where TSij = 1/(i!j!) dnu/(dAx^i dAy^j)
+           */
+        nTSWA = N_TSWA;
+        n = (N_TSWA*N_TSWA + N_TSWA)/2;
+      }
+      /* Nu = AxAy*Coef 
+       * Nu is (m-1)x1, AxAy is (m-1)xn, Coef is nx1 */
+      m --;  /* won't use [0][0] from tune arrays due to NAFF issues */
+      m_alloc(&AxAy, m, n);
+      m_alloc(&Coef, n, 1);
+      m_alloc(&Nu, m, 1);
+      m_alloc(&AxAyTr, n, m);
+      m_alloc(&Mf, n, n);
+      m_alloc(&MfInv, n, n);
+      m_alloc(&AxAyTrNu, n, 1);
+      for (ix=i=0; ix<gridSize; ix++) {
+        for (iy=0; iy<gridSize; iy++) {
+          if ((tune_shift_with_amplitude_struct.sparse_grid &&
+               !(ix==0 || iy==0 || ix==iy)) ||
+              (tune_shift_with_amplitude_struct.lines_only &&
+               !(ix==0 || iy==0)))
+            continue;
+          if (ix==0 && iy==0)
+            continue;
+          for (ix1=j=0; ix1<nTSWA; ix1++) {
+            for (iy1=0; (ix1+iy1)<=order; iy1++, j++) {
+              if (j>=n)
+                bomb("indexing problem for TSWA calculation", NULL);
+              AxAy->a[i][j] = ipow(Ax[ix], ix1)*ipow(Ay[iy], iy1);
+            }
+          }
+          i++;
+        }
+      }
+      m_trans(AxAyTr, AxAy);
+      m_mult(Mf, AxAyTr, AxAy);
+      m_invert(MfInv, Mf);
+      for (ix=i=0; ix<gridSize; ix++)
+        for (iy=0; iy<gridSize; iy++) {
+          if ((tune_shift_with_amplitude_struct.sparse_grid &&
+               !(ix==0 || iy==0 || ix==iy)) ||
+              (tune_shift_with_amplitude_struct.lines_only &&
+               !(ix==0 || iy==0)))
+            continue;
+          if (ix==0 && iy==0)
+            continue;
+          Nu->a[i][0] = xTune[ix][iy];
+          i++;
+        }
+      m_mult(AxAyTrNu, AxAyTr, Nu);
+      m_mult(Coef, MfInv, AxAyTrNu);
+      for (ix=i=0; ix<nTSWA; ix++) 
+        for (iy=0; (ix+iy)<=order; iy++, i++)
+          dnux_dA[ix][iy] = Coef->a[i][0]*factorial(ix)*factorial(iy);
+      if (tune_shift_with_amplitude_struct.verbose) {
+        fprintf(stdout, "dnux/(dAx^i dAy^j):\n");
+        for (ix=0; ix<nTSWA; ix++) {
+          for (iy=0; iy<nTSWA; iy++) {
+            fprintf(stdout, "%10.3g%c", dnux_dA[ix][iy], iy==(nTSWA-1)?'\n':' ');
+          }
+        }
+      }
       
-    for (ix=i=0; ix<gridSize; ix++)
-      for (iy=0; iy<gridSize; iy++) {
-	if (tune_shift_with_amplitude_struct.sparse_grid &&
-	    !(ix==0 || iy==0 || ix==iy)) 
-	  continue;
-	if (ix==0 && iy==0)
-	  continue;
-	Nu->a[i][0] = yTune[ix][iy];
-	i++;
+      for (ix=i=0; ix<gridSize; ix++)
+        for (iy=0; iy<gridSize; iy++) {
+          if ((tune_shift_with_amplitude_struct.sparse_grid &&
+               !(ix==0 || iy==0 || ix==iy)) ||
+              (tune_shift_with_amplitude_struct.lines_only &&
+               !(ix==0 || iy==0)))
+            continue;
+          if (ix==0 && iy==0)
+            continue;
+          Nu->a[i][0] = yTune[ix][iy];
+          i++;
+        }
+      m_mult(AxAyTrNu, AxAyTr, Nu);
+      m_mult(Coef, MfInv, AxAyTrNu);
+      for (ix=i=0; ix<nTSWA; ix++) 
+        for (iy=0; (ix+iy)<=order; iy++, i++)
+          dnuy_dA[ix][iy] = Coef->a[i][0]*factorial(ix)*factorial(iy);
+      if (tune_shift_with_amplitude_struct.verbose) {
+        fprintf(stdout, "dnuy/(dAx^i dAy^j):\n");
+        for (ix=0; ix<nTSWA; ix++) {
+          for (iy=0; iy<nTSWA; iy++) {
+            fprintf(stdout, "%10.3g%c", dnuy_dA[ix][iy], iy==(nTSWA-1)?'\n':' ');
+          }
+        }
       }
-    m_mult(AxAyTrNu, AxAyTr, Nu);
-    m_mult(Coef, MfInv, AxAyTrNu);
-    for (ix=i=0; ix<nTSWA; ix++) 
-      for (iy=0; (ix+iy)<=order; iy++, i++)
-	dnuy_dA[ix][iy] = Coef->a[i][0]*factorial(ix)*factorial(iy);
-    if (tune_shift_with_amplitude_struct.verbose) {
-      fprintf(stdout, "dnuy/(dAx^i dAy^j):\n");
-      for (ix=0; ix<nTSWA; ix++) {
-	for (iy=0; iy<nTSWA; iy++) {
-	  fprintf(stdout, "%10.3g%c", dnuy_dA[ix][iy], iy==(nTSWA-1)?'\n':' ');
-	}
-      }
-    }
       
-    m_free(&AxAy);
-    m_free(&Coef);
-    m_free(&Nu);
-    m_free(&AxAyTr);
-    m_free(&Mf);
-    m_free(&MfInv);
-    m_free(&AxAyTrNu);
-  }
+      m_free(&AxAy);
+      m_free(&Coef);
+      m_free(&Nu);
+      m_free(&AxAyTr);
+      m_free(&Mf);
+      m_free(&MfInv);
+      m_free(&AxAyTrNu);
+    }
+  }  
 }
 
 

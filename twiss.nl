@@ -25,6 +25,7 @@
     double y0 = 1e-6;
     double x1 = 3e-4;
     double y1 = 3e-4;
+    long lines_only = 1;
     long grid_size = 6;
     long sparse_grid = 0;
     long spread_only = 0;
