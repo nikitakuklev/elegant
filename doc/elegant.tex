@@ -69,6 +69,12 @@ by default backward compatible.  See below for details.}
 \item The {\tt twiss\_output} command would fail to generate Twiss parameters for elements upstream of
  a recirculation element.   This would prevent the use of \verb|SREFFECTS| and \verb|SCMULT| elements.
  M. Cornacchia (SLAC) reported this.
+\item A new mode (\verb|lines_only=1|) was added to
+   \verb|tune_shift_with_amplitude| that allows turning off the
+   two-dimensional fitting.  V. Sajaev (ANL) reported that the
+   two-dimensional fitting may be unreliable, giving $\partial
+   \nu_x/\partial A_y$ significantly different from $\partial
+   \nu_y/\partial A_x$.
 \end{itemize}
 
 \subsection{New and Modified Elements}
@@ -3514,6 +3520,7 @@ integers and $p$ is $x$ or $y$.  $A_q = (1 + \alpha_q) q^2/\beta_q$, with $q=x$ 
     double x1 = 3e-4;
     double y1 = 3e-4;
     long grid_size = 6;
+    long lines_only = 0;
     long sparse_grid = 0;
     long spread_only = 0;
     double nux_roi_width = 0.02;
@@ -3542,6 +3549,11 @@ integers and $p$ is $x$ or $y$.  $A_q = (1 + \alpha_q) q^2/\beta_q$, with $q=x$ 
         tune shifts.  These values should be small enough to ensure linearity in the tune
         shift.  
 \item \verb|grid_size| --- Size of the grid of points in x and y.  
+\item \verb|lines_only| --- If nonzero, then instead of a full set of \verb|grid_size|$^2$
+  particles, only two lines of particles with $x=0$ and/or $y=0$ are tracked.  In this
+  case, no $A_x^i*A_y^j$ terms are computed (except for $i=0$ or $j=0$).  However, in addition
+  to being faster, the results may be more reliable, e.g., $\partial \nu_x/\partial A_y = 
+  \partial \nu_y/\partial A_x$ may be more closely satisfied.
 \item \verb|sparse_grid| --- If nonzero, then instead of a full set of \verb|grid_size|$^2$
         particles, a sparse grid of particles is tracked.  Will save time at some expense
         in accuracy.
