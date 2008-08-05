@@ -92,14 +92,21 @@ void setupTouschekEffect(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
   /* Initial Touschek calculation then calculate the Twiss function. */
   init_TSPEC ();
   run_twiss_output(run, beamline, NULL, -1);
-
+#if USE_MPI
+  MPI_Barrier(MPI_COMM_WORLD); 
+#endif
   /* Calculate Piwinski's scattering rate. */
   if (TouschekRate(beamline))
     bomb("Touschek scattering rate calculation error", NULL);
   /* Generate scattered particles at TScatter. 
      And track the scattered particles down to beamline. */
+#if USE_MPI
+  MPI_Barrier(MPI_COMM_WORLD); 
+#endif
   TouschekDistribution(run, beamline);
-
+#if USE_MPI
+  MPI_Barrier(MPI_COMM_WORLD); 
+#endif
   return;
 }
 
@@ -495,224 +502,247 @@ void TouschekDistribution(RUN *run, LINE_LIST *beamline)
   eptr = &(beamline->elem);
   beam0 = &Beam0;
   beam = &Beam;
+
+
   while (eptr) {
     if (eptr->type == T_TSCATTER) {
-      weight = (double*)malloc(sizeof(double)*NSimulated);
-      beam0->particle = (double**)czarray_2d(sizeof(double), NSimulated, 7);
-      beam0->original = beam0->accepted = NULL;
-      beam0->n_original = beam0->n_to_track = beam0->n_particle = NSimulated;
-      beam0->n_accepted = beam0->n_saved = 0;
-      beam0->p0_original = beam0->p0 = tsSpec->betagamma;
-      beam0->bunchFrequency = 0.;
-      beam0->lostOnPass = tmalloc(sizeof(*(beam0->lostOnPass))*beam0->n_to_track);
-
-      tsptr = initTSCATTER (eptr);
-      xrange[0] = 0.5*tsSpec->range[0]*tsptr->sigx;
-      xrange[1] = 0.5*tsSpec->range[1]*tsptr->sigy;
-      xrange[2] = 0.5*tsSpec->range[2]*tsptr->sigz;
-      xrange[3] = 0.5*tsSpec->range[0]*sqrt(tsSpec->emit[0]/tsptr->twiss[0][1])*(1.+fabs(tsptr->twiss[0][0]));
-      xrange[4] = 0.5*tsSpec->range[1]*sqrt(tsSpec->emit[1]/tsptr->twiss[1][1])*(1.+fabs(tsptr->twiss[1][0]));
-
-      xrange[0] = xrange[0]+fabs(0.5*tsSpec->range[2]*tsSpec->sigma_p*tsptr->disp[0][0]);
-      xrange[1] = xrange[1]+fabs(0.5*tsSpec->range[2]*tsSpec->sigma_p*tsptr->disp[1][0]);
-      xrange[3] = xrange[3]+fabs(0.5*tsSpec->range[2]*tsSpec->sigma_p*tsptr->disp[0][1]);
-      xrange[4] = xrange[4]+fabs(0.5*tsSpec->range[2]*tsSpec->sigma_p*tsptr->disp[1][1]);
-      xrange[5] = 0.5*tsSpec->range[2]*tsSpec->sigma_p;
-      if (initial) {
-        tsptr->iniFile = compose_filename1(initial, run->rootname, eptr->occurence);
-        x0  = chbook1("x", -xrange[0], xrange[0], tsSpec->nbins);
-        y0  = chbook1("y", -xrange[1], xrange[1], tsSpec->nbins);
-        s0  = chbook1("s", -xrange[2], xrange[2], tsSpec->nbins);
-        xp0 = chbook1("xp", -xrange[3], xrange[3], tsSpec->nbins);
-        yp0 = chbook1("yp", -xrange[4], xrange[4], tsSpec->nbins);
-        dp0 = chbook1("dp", -xrange[5], xrange[5], tsSpec->nbins);
+#if USE_MPI
+      if (myid==0) {
+#endif
+	weight = (double*)malloc(sizeof(double)*NSimulated);
+	beam0->particle = (double**)czarray_2d(sizeof(double), NSimulated, 7);
+	beam0->original = beam0->accepted = NULL;
+	beam0->n_original = beam0->n_to_track = beam0->n_particle = NSimulated;
+	beam0->n_accepted = beam0->n_saved = 0;
+	beam0->p0_original = beam0->p0 = tsSpec->betagamma;
+	beam0->bunchFrequency = 0.;
+	beam0->lostOnPass = tmalloc(sizeof(*(beam0->lostOnPass))*beam0->n_to_track);
+	
+	tsptr = initTSCATTER (eptr);
+	xrange[0] = 0.5*tsSpec->range[0]*tsptr->sigx;
+	xrange[1] = 0.5*tsSpec->range[1]*tsptr->sigy;
+	xrange[2] = 0.5*tsSpec->range[2]*tsptr->sigz;
+	xrange[3] = 0.5*tsSpec->range[0]*sqrt(tsSpec->emit[0]/tsptr->twiss[0][1])*(1.+fabs(tsptr->twiss[0][0]));
+	xrange[4] = 0.5*tsSpec->range[1]*sqrt(tsSpec->emit[1]/tsptr->twiss[1][1])*(1.+fabs(tsptr->twiss[1][0]));
+	
+	xrange[0] = xrange[0]+fabs(0.5*tsSpec->range[2]*tsSpec->sigma_p*tsptr->disp[0][0]);
+	xrange[1] = xrange[1]+fabs(0.5*tsSpec->range[2]*tsSpec->sigma_p*tsptr->disp[1][0]);
+	xrange[3] = xrange[3]+fabs(0.5*tsSpec->range[2]*tsSpec->sigma_p*tsptr->disp[0][1]);
+	xrange[4] = xrange[4]+fabs(0.5*tsSpec->range[2]*tsSpec->sigma_p*tsptr->disp[1][1]);
+	xrange[5] = 0.5*tsSpec->range[2]*tsSpec->sigma_p;
+	if (initial) {
+	  tsptr->iniFile = compose_filename1(initial, run->rootname, eptr->occurence);
+	  x0  = chbook1("x", -xrange[0], xrange[0], tsSpec->nbins);
+	  y0  = chbook1("y", -xrange[1], xrange[1], tsSpec->nbins);
+	  s0  = chbook1("s", -xrange[2], xrange[2], tsSpec->nbins);
+	  xp0 = chbook1("xp", -xrange[3], xrange[3], tsSpec->nbins);
+	  yp0 = chbook1("yp", -xrange[4], xrange[4], tsSpec->nbins);
+	  dp0 = chbook1("dp", -xrange[5], xrange[5], tsSpec->nbins);
+	}
+	if (distribution) {
+	  tsptr->disFile = compose_filename1(distribution, run->rootname, eptr->occurence);
+	  x  = chbook1("x", -xrange[0], xrange[0], tsSpec->nbins);
+	  y  = chbook1("y", -xrange[1], xrange[1], tsSpec->nbins);
+	  s  = chbook1("s", -xrange[2], xrange[2], tsSpec->nbins);
+	  xp = chbook1("xp", -xrange[3], xrange[3], tsSpec->nbins);
+	  yp = chbook1("yp", -xrange[4], xrange[4], tsSpec->nbins);
+	  dp = chbook1("dp", -0.1, 0.1, tsSpec->nbins);
+	}
+	if (loss) {
+	  tsptr->losFile = compose_filename1(loss, run->rootname, eptr->occurence);
+	  SDDS_BeamScatterLossSetup(&SDDS_loss, tsptr->losFile, SDDS_BINARY, 1, 
+				    "lost particle coordinates", run->runfile,
+				    run->lattice, "touschek_scatter");
+	}
+	if (bunch) {
+	  tsptr->bunFile = compose_filename1(bunch, run->rootname, eptr->occurence);
+	  SDDS_BeamScatterSetup(&SDDS_bunch, tsptr->bunFile, SDDS_BINARY, 1, 
+				"scattered-beam phase space", run->runfile,
+				run->lattice, "touschek_scatter");
+	}
+	
+	i = 0; j=0;total_event=0;
+	while(1) {
+	  if(i>=NSimulated)
+	    break;
+	  /* Select the 11 random number then mix them */
+	  if (tsSpec->seed > 0) 
+	    iseed0 = tsSpec->seed;
+	  for (j=0; j<11; j++) {
+	    ran1[j] = random_oag(iseed0, 10);    
+	  }
+	  randomizeOrder((char*)ran1, sizeof(ran1[0]), 11, 0, random_4);
+	  
+	  total_event++;
+	  selectPart(tsptr, p1, p2, &dens1, &dens2, ran1);
+	  if (initial) {
+	    fill_hbook (x0, y0, s0, xp0, yp0, dp0, p1, dens1);
+	    fill_hbook (x0, y0, s0, xp0, yp0, dp0, p2, dens2);
+	  }
+	  /* This is very important. Change from slop to MeV */
+	  for(j=3; j<5; j++) {
+	    p1[j] *= tsSpec->pCentral;
+	    p2[j] *= tsSpec->pCentral;
+	  }
+	  p1[5] = (p1[5]+1)*tsSpec->pCentral;
+	  p2[5] = (p2[5]+1)*tsSpec->pCentral;
+	  
+	  bunch2cm(p1,p2,qa,beta,&gamma);
+	  
+	  theta = (ran1[9]*0.998+0.001)*PI;
+	  phi = ran1[10]*PI;
+	  
+	  temp = dens1*dens2*sin(theta);
+	  eulertrans(qa,theta,phi,qb,&qabs);
+	  cm2bunch(p1,p2,qb,beta,&gamma);
+	  p1[5] -= tsSpec->pCentral;
+	  p2[5] -= tsSpec->pCentral;
+	  
+	  if(fabs(p1[5])>tsSpec->dp0 || fabs(p2[5])>tsSpec->dp0) {
+	    beta0=qabs/sqrt(qabs*qabs+me_mev*me_mev);
+	    cross = moeller(beta0,theta);
+	    temp *= cross*beta0/gamma/gamma;
+	    
+	    if(fabs(p1[5])>tsSpec->dp0) {
+	      tsptr->totalWeight += temp;
+	      p1[3] /= tsSpec->pCentral;
+	      p1[4] /= tsSpec->pCentral;
+	      p1[5] /= tsSpec->pCentral;
+	      if (distribution) {
+		fill_hbook (x, y, s, xp, yp, dp, p1, temp);
+	      }
+	      tsptr->simuCount++;
+	      
+	      beam0->particle[i][0] = p1[0];
+	      beam0->particle[i][1] = p1[3];
+	      beam0->particle[i][2] = p1[1];
+	      beam0->particle[i][3] = p1[4];
+	      beam0->particle[i][4] = p1[2];
+	      beam0->particle[i][5] = p1[5];
+	      weight[i] = temp;
+	      beam0->particle[i][6] = ++i;
+	    }
+	    
+	    if(i>=NSimulated)
+	      break;
+	    
+	    if(fabs(p2[5])>tsSpec->dp0) {
+	      tsptr->totalWeight += temp;
+	      p2[3] /= tsSpec->pCentral;
+	      p2[4] /= tsSpec->pCentral;
+	      p2[5] /= tsSpec->pCentral;
+	      if (distribution) {
+		fill_hbook (x, y, s, xp, yp, dp, p2, temp);
+	      }
+	      tsptr->simuCount++;
+	      
+	      beam0->particle[i][0] = p2[0];
+	      beam0->particle[i][1] = p2[3];
+	      beam0->particle[i][2] = p2[1];
+	      beam0->particle[i][3] = p2[4];
+	      beam0->particle[i][4] = p2[2];
+	      beam0->particle[i][5] = p2[5];
+	      weight[i] = temp;
+	      beam0->particle[i][6] = ++i;
+	    }
+	  }
+	  
+	  if (total_event*11 > (long)2e9)  {
+	    fprintf(stdout, "warning: The total random number used > 2e9. Use less NSimulated or use small delta");
+	    fflush(stdout);
+	    break;
+	  }
+	}
+	if (total_event/tsptr->simuCount > 20) {
+	  if (distribution_cutoff[0]<5 || distribution_cutoff[1]<5 ) 
+	    fprintf(stdout, "waring: Scattering rate is low, please use 5 sigma beam for better simulation.\n");
+	  else
+	    fprintf(stdout, "waring: Scattering rate is very low, please ignore the rate from Monte Carlo simulation. Use Piwinski's rate only\n"); 
+	}
+	tsptr->factor = tsptr->factor / (double)(total_event);
+	tsptr->s_rate = tsptr->totalWeight * tsptr->factor;
+	tsptr->i_rate = tsptr->s_rate*tsSpec->ignoredPortion;
+	
+	/* Pick tracking particles from the simulated scattered particles */
+	index = (long*)malloc(sizeof(long)*tsptr->simuCount);
+	iTotal = 0;
+	wTotal =0.;
+	weight_limit = tsptr->totalWeight*(1-tsSpec->ignoredPortion);
+	weight_ave = tsptr->totalWeight/tsptr->simuCount;
+	
+	pickPart(weight, index, 0, tsptr->simuCount,  
+		 &iTotal, &wTotal, weight_limit, weight_ave);
+	
+	beam->particle = (double**)czarray_2d(sizeof(double), iTotal, 7);
+	beam->original = beam->accepted = NULL;
+	beam->n_original = beam->n_to_track = beam->n_particle = iTotal;
+	beam->n_accepted = beam->n_saved = 0;
+	beam->p0_original = beam->p0 = tsSpec->betagamma;
+	beam->bunchFrequency = 0.;
+	beam->lostOnPass = tmalloc(sizeof(*(beam->lostOnPass))*beam->n_to_track);
+	
+	for (i=0; i<iTotal; i++) {
+	  beam->particle[i][0] = beam0->particle[index[i]][0];
+	  beam->particle[i][1] = beam0->particle[index[i]][1];
+	  beam->particle[i][2] = beam0->particle[index[i]][2];
+	  beam->particle[i][3] = beam0->particle[index[i]][3];
+	  beam->particle[i][4] = beam0->particle[index[i]][4];
+	  beam->particle[i][5] = beam0->particle[index[i]][5];
+	  beam->particle[i][6] = i+1; /* make the particle ID correspond to weight index */
+	  weight[i] *= tsptr->factor;
+	}
+	if (bunch)
+	  dump_scattered_particles(&SDDS_bunch, beam->particle, (long)iTotal,
+				   weight, tsptr, tsSpec);
+	if (distribution) {
+	  print_hbook(x, y, s, xp, yp, dp, tsptr, tsptr->disFile, 
+		      "Distribution of Scattered particles", 1);
+	  free_hbook1(x);free_hbook1(y);free_hbook1(s);
+	  free_hbook1(xp);free_hbook1(yp);free_hbook1(dp);
+	}
+	if (initial) {
+	  print_hbook(x0, y0, s0, xp0, yp0, dp0, tsptr, tsptr->iniFile, 
+		      "Distribution of simulated particles", 1);
+	  free_hbook1(x0);free_hbook1(y0);free_hbook1(s0);
+	  free_hbook1(xp0);free_hbook1(yp0);free_hbook1(dp0);
+	}
+#if USE_MPI
       }
-      if (distribution) {
-        tsptr->disFile = compose_filename1(distribution, run->rootname, eptr->occurence);
-        x  = chbook1("x", -xrange[0], xrange[0], tsSpec->nbins);
-        y  = chbook1("y", -xrange[1], xrange[1], tsSpec->nbins);
-        s  = chbook1("s", -xrange[2], xrange[2], tsSpec->nbins);
-        xp = chbook1("xp", -xrange[3], xrange[3], tsSpec->nbins);
-        yp = chbook1("yp", -xrange[4], xrange[4], tsSpec->nbins);
-        dp = chbook1("dp", -0.1, 0.1, tsSpec->nbins);
-      }
-      if (loss) {
-        tsptr->losFile = compose_filename1(loss, run->rootname, eptr->occurence);
-        SDDS_BeamScatterLossSetup(&SDDS_loss, tsptr->losFile, SDDS_BINARY, 1, 
-                           "lost particle coordinates", run->runfile,
-                           run->lattice, "touschek_scatter");
-      }
-      if (bunch) {
-        tsptr->bunFile = compose_filename1(bunch, run->rootname, eptr->occurence);
-        SDDS_BeamScatterSetup(&SDDS_bunch, tsptr->bunFile, SDDS_BINARY, 1, 
-                              "scattered-beam phase space", run->runfile,
-                              run->lattice, "touschek_scatter");
-      }
-
-      i = 0; j=0;total_event=0;
-      while(1) {
-        if(i>=NSimulated)
-          break;
-        /* Select the 11 random number then mix them */
-        if (tsSpec->seed > 0) 
-          iseed0 = tsSpec->seed;
-        for (j=0; j<11; j++) {
-          ran1[j] = random_oag(iseed0, 10);    
-        }
-        randomizeOrder((char*)ran1, sizeof(ran1[0]), 11, 0, random_4);
-
-        total_event++;
-        selectPart(tsptr, p1, p2, &dens1, &dens2, ran1);
-        if (initial) {
-          fill_hbook (x0, y0, s0, xp0, yp0, dp0, p1, dens1);
-          fill_hbook (x0, y0, s0, xp0, yp0, dp0, p2, dens2);
-        }
-        /* This is very important. Change from slop to MeV */
-        for(j=3; j<5; j++) {
-          p1[j] *= tsSpec->pCentral;
-          p2[j] *= tsSpec->pCentral;
-        }
-        p1[5] = (p1[5]+1)*tsSpec->pCentral;
-        p2[5] = (p2[5]+1)*tsSpec->pCentral;
-
-        bunch2cm(p1,p2,qa,beta,&gamma);
-
-        theta = (ran1[9]*0.998+0.001)*PI;
-        phi = ran1[10]*PI;
-
-        temp = dens1*dens2*sin(theta);
-        eulertrans(qa,theta,phi,qb,&qabs);
-        cm2bunch(p1,p2,qb,beta,&gamma);
-        p1[5] -= tsSpec->pCentral;
-        p2[5] -= tsSpec->pCentral;
-
-        if(fabs(p1[5])>tsSpec->dp0 || fabs(p2[5])>tsSpec->dp0) {
-          beta0=qabs/sqrt(qabs*qabs+me_mev*me_mev);
-          cross = moeller(beta0,theta);
-          temp *= cross*beta0/gamma/gamma;
-
-          if(fabs(p1[5])>tsSpec->dp0) {
-            tsptr->totalWeight += temp;
-            p1[3] /= tsSpec->pCentral;
-            p1[4] /= tsSpec->pCentral;
-            p1[5] /= tsSpec->pCentral;
-            if (distribution) {
-              fill_hbook (x, y, s, xp, yp, dp, p1, temp);
-            }
-            tsptr->simuCount++;
-
-            beam0->particle[i][0] = p1[0];
-            beam0->particle[i][1] = p1[3];
-            beam0->particle[i][2] = p1[1];
-            beam0->particle[i][3] = p1[4];
-            beam0->particle[i][4] = p1[2];
-            beam0->particle[i][5] = p1[5];
-            weight[i] = temp;
-            beam0->particle[i][6] = ++i;
-          }
-
-          if(i>=NSimulated)
-            break;
-
-          if(fabs(p2[5])>tsSpec->dp0) {
-            tsptr->totalWeight += temp;
-            p2[3] /= tsSpec->pCentral;
-            p2[4] /= tsSpec->pCentral;
-            p2[5] /= tsSpec->pCentral;
-            if (distribution) {
-              fill_hbook (x, y, s, xp, yp, dp, p2, temp);
-            }
-            tsptr->simuCount++;
-           
-            beam0->particle[i][0] = p2[0];
-            beam0->particle[i][1] = p2[3];
-            beam0->particle[i][2] = p2[1];
-            beam0->particle[i][3] = p2[4];
-            beam0->particle[i][4] = p2[2];
-            beam0->particle[i][5] = p2[5];
-            weight[i] = temp;
-            beam0->particle[i][6] = ++i;
-          }
-        }
-        
-        if (total_event*11 > (long)2e9)  {
-          fprintf(stdout, "warning: The total random number used > 2e9. Use less NSimulated or use small delta");
-          fflush(stdout);
-          break;
-        }
-      }
-      if (total_event/tsptr->simuCount > 20) {
-        if (distribution_cutoff[0]<5 || distribution_cutoff[1]<5 ) 
-          fprintf(stdout, "waring: Scattering rate is low, please use 5 sigma beam for better simulation.\n");
-        else
-          fprintf(stdout, "waring: Scattering rate is very low, please ignore the rate from Monte Carlo simulation. Use Piwinski's rate only\n"); 
-      }
-      tsptr->factor = tsptr->factor / (double)(total_event);
-      tsptr->s_rate = tsptr->totalWeight * tsptr->factor;
-      tsptr->i_rate = tsptr->s_rate*tsSpec->ignoredPortion;
-
-      /* Pick tracking particles from the simulated scattered particles */
-      index = (long*)malloc(sizeof(long)*tsptr->simuCount);
-      iTotal = 0;
-      wTotal =0.;
-      weight_limit = tsptr->totalWeight*(1-tsSpec->ignoredPortion);
-      weight_ave = tsptr->totalWeight/tsptr->simuCount;
-
-      pickPart(weight, index, 0, tsptr->simuCount,  
-               &iTotal, &wTotal, weight_limit, weight_ave);
-
-      beam->particle = (double**)czarray_2d(sizeof(double), iTotal, 7);
-      beam->original = beam->accepted = NULL;
-      beam->n_original = beam->n_to_track = beam->n_particle = iTotal;
-      beam->n_accepted = beam->n_saved = 0;
-      beam->p0_original = beam->p0 = tsSpec->betagamma;
-      beam->bunchFrequency = 0.;
-      beam->lostOnPass = tmalloc(sizeof(*(beam->lostOnPass))*beam->n_to_track);
-
-      for (i=0; i<iTotal; i++) {
-        beam->particle[i][0] = beam0->particle[index[i]][0];
-        beam->particle[i][1] = beam0->particle[index[i]][1];
-        beam->particle[i][2] = beam0->particle[index[i]][2];
-        beam->particle[i][3] = beam0->particle[index[i]][3];
-        beam->particle[i][4] = beam0->particle[index[i]][4];
-        beam->particle[i][5] = beam0->particle[index[i]][5];
-        beam->particle[i][6] = i+1; /* make the particle ID correspond to weight index */
-        weight[i] *= tsptr->factor;
-      }
-      if (bunch)
-        dump_scattered_particles(&SDDS_bunch, beam->particle, (long)iTotal,
-                                 weight, tsptr, tsSpec);
-      if (distribution) {
-        print_hbook(x, y, s, xp, yp, dp, tsptr, tsptr->disFile, 
-                    "Distribution of Scattered particles", 1);
-        free_hbook1(x);free_hbook1(y);free_hbook1(s);
-        free_hbook1(xp);free_hbook1(yp);free_hbook1(dp);
-      }
-      if (initial) {
-        print_hbook(x0, y0, s0, xp0, yp0, dp0, tsptr, tsptr->iniFile, 
-                    "Distribution of simulated particles", 1);
-        free_hbook1(x0);free_hbook1(y0);free_hbook1(s0);
-        free_hbook1(xp0);free_hbook1(yp0);free_hbook1(dp0);
-      }
+      MPI_Barrier(MPI_COMM_WORLD); 
+#endif
       if (do_track) {
-        n_left = do_tracking(beam, NULL, (long)iTotal, NULL, beamline, 
-                             &tsSpec->betagamma, NULL, NULL, NULL, NULL, run, 1,
-                             0, 1, 0, NULL,
-                             NULL, NULL, beam->lostOnPass, eptr);
-        if (loss) {
-          dump_scattered_loss_particles(&SDDS_loss, beam->particle+n_left, beam->lostOnPass+n_left,
-                                        beam->n_to_track-n_left, weight, tsptr);
-          if (!SDDS_Terminate(&SDDS_loss)) {
-            SDDS_SetError("Problem terminating 'losses' file (finish_output)");
-            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-          }
-        }
+	n_left = do_tracking(beam, NULL, (long)iTotal, NULL, beamline, 
+			     &tsSpec->betagamma, NULL, NULL, NULL, NULL, run, 1,
+			     0, 1, 0, NULL,
+			     NULL, NULL, beam->lostOnPass, eptr);
+#if USE_MPI
+	MPI_Barrier(MPI_COMM_WORLD); 
+	if (myid==0) {
+#endif
+	  if (loss) {
+	    dump_scattered_loss_particles(&SDDS_loss, beam->particle+n_left, beam->lostOnPass+n_left,
+					  beam->n_to_track-n_left, weight, tsptr);
+	    if (!SDDS_Terminate(&SDDS_loss)) {
+	      SDDS_SetError("Problem terminating 'losses' file (finish_output)");
+	      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+	    }
+	  }
+#if USE_MPI
+	}
+#endif
       }
-      free_beamdata(beam0);
-      free_beamdata(beam);
-      free(weight);
+#if USE_MPI
+      if (myid==0) {
+#endif
+	free_beamdata(beam0);
+	free_beamdata(beam);
+	
+	free(weight);
+#if USE_MPI
+      }
+#endif
     }
-    eptr = eptr->succ; 
+     eptr = eptr->succ; 
   }
   return;
 }
