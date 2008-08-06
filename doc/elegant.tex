@@ -92,6 +92,8 @@ by default backward compatible.  See below for details.}
 \item The \verb|CWIGGLER|, \verb|CSBEND|, \verb|CSRCSBEND|, \verb|KQUAD|, and \verb|KSEXT| elements now have
  a parameter (\verb|ISR1PART|) that allows turning off ISR when a single particle is being tracked (e.g., for
  an explicit fiducialization step).
+\item The \verb|ILMATRIX| element now has a \verb|TILT| parameter.  A. Petrenko (FNAL) pointed out that this element
+ didn't include x-y coupling.  This parameter may help in that regard.
 \end{itemize}
 
 \subsection{New and Modified Commands}
@@ -99,7 +101,11 @@ by default backward compatible.  See below for details.}
 \item A new command, \verb|change_particle|, was added that allows tracking particles other than electrons.
   Predefined types are positrons, protons, and muons.  Others may be defined in terms of charge and mass
   ratios to the electron.  This was requested by H. Sayed and Y. Roblin (TJNAF).
-\item A new command, \verb|insert_elements|, was added by A. Xiao (ANL).  It allows inserting elements into a lattice at many locations. This is a convenient way to add elements to a lattice without modifying the lattice file.
+\item A new command, \verb|insert_elements|, was added by A. Xiao
+(ANL).  It allows inserting elements into a lattice at many
+locations. This is a convenient way to add a large number of identical
+elements (e.g., markers, monitors) to a lattice without modifying the
+lattice file.
 \item The \verb|frequency_map| command now computes the diffusion, defined as $\log_{10} (\Delta\nu_x^2 + \Delta\nu_y^2)$.
 \item The \verb|matrix_output| command now allows outputting the individual {\em on-trajectory} matrices of the elements, rather than
 the just concatenated matrix of the beamline.  This was requested by N. Sereno (ANL).
