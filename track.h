@@ -1656,9 +1656,9 @@ typedef struct {
   long dummy;
   /* internal variables */
   char *name;
-  double s;
+  double s, betagamma;
   double IntR, p_rate, s_rate, i_rate;
-  char *losFile, *bunFile, *disFile,*iniFile;
+  char *losFile, *bunFile, *disFile,*iniFile, *outFile;
   double twiss[3][3], disp[2][2];
   double sigx, sigy, sigz, sigxyz;
   double factor, totalWeight;
@@ -3259,11 +3259,11 @@ void setupTouschekEffect(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 void SDDS_BeamScatterSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row, char *contents, 
                            char *command_file, char *lattice_file, char *caller);
 void dump_scattered_particles(SDDS_TABLE *SDDS_table, double **particle, 
-                              long particles, double *weight, TSCATTER *tsptr, TSCATTER_SPEC *tsSpec);
+                              long particles, double *weight, TSCATTER *tsptr);
 void SDDS_BeamScatterLossSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row, char *contents, 
                                char *command_file, char *lattice_file, char *caller);
-void dump_scattered_loss_particles(SDDS_TABLE *SDDS_table, double **particle, long *lostOnPass, 
-                                   long particles, double *weight, TSCATTER *tsptr);
+void dump_scattered_loss_particles(SDDS_TABLE *SDDS_table, double **particleLos, double **particleOri,
+                                   long *lostOnPass, long particles, double *weight, TSCATTER *tsptr);
 
 void transverseFeedbackPickup(TFBPICKUP *tfbp, double **part, long np, long pass);
 void initializeTransverseFeedbackPickup(TFBPICKUP *tfbp);

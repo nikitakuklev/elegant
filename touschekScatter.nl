@@ -20,7 +20,10 @@
         STRING loss = NULL;
         STRING distribution = NULL;
         STRING initial = NULL;
+        STRING output = NULL;
         long NSimulated = 5E6;
+        long i_start = 0;
+        long i_end = 1;
         long do_track = 0;
         double ignored_portion = 0.05;
         long verbosity = 0;
