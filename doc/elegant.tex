@@ -50,6 +50,10 @@ by default backward compatible.  See below for details.}
   the documentation for {\tt SREFFECTS} for details.
 \item The file created with the parameters field of \verb|run_setup| does not contain
   any non-numerical parameters of the lattice.
+\item When \verb|transmute_elements| is used to turn a sextupole into a quadrupole, several problems are seen.
+ Some of the quadrupole parameters are filled with garbage values.  When \verb|alter_elements| or
+ \verb|save_lattice| are subsequently used, \verb|elegant| crashes.   These problems were reported by 
+ V. Sajaev (ANL).
 \end{itemize}
 
 \subsection{Bug Fixes for Elements}
