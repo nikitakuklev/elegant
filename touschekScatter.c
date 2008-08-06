@@ -507,9 +507,6 @@ void TouschekDistribution(RUN *run, LINE_LIST *beamline)
 
   while (eptr) {
     if (eptr->type == T_TSCATTER) {
-#if USE_MPI
-      if (myid==0) {
-#endif
         eleCount++;
         if(eleCount < i_start) {
           eptr = eptr->succ; 
@@ -517,6 +514,10 @@ void TouschekDistribution(RUN *run, LINE_LIST *beamline)
         }
         if(eleCount > i_end)
           break;
+#if USE_MPI
+      MPI_Barrier(MPI_COMM_WORLD); 
+      if (myid==0) {
+#endif
         weight = (double*)malloc(sizeof(double)*NSimulated);
         beam0->particle = (double**)czarray_2d(sizeof(double), NSimulated, 7);
         beam0->original = beam0->accepted = NULL;
