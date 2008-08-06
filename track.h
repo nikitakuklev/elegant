@@ -800,7 +800,7 @@ extern char *entity_text[N_TYPES];
 #define N_CWIGGLER_PARAMS 24
 #define N_EDRIFT_PARAMS 1
 #define N_SCMULT_PARAMS 0		
-#define N_ILMATRIX_PARAMS 31
+#define N_ILMATRIX_PARAMS 32
 #define N_TSCATTER_PARAMS 1
 #define N_KQUSE_PARAMS 14
 #define N_UKICKMAP_PARAMS 4
@@ -1620,6 +1620,7 @@ typedef struct {
     double beta[2], beta1[2], alpha[2], alpha1[2];
     double eta[4], eta1[4];
     double alphac[2];
+    double tilt;
     } ILMATRIX;
 
 /* names and storage structure for scattering element physical parameters */

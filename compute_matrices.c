@@ -1758,6 +1758,9 @@ VMATRIX *matrixForILMatrix(ILMATRIX *ilmat, long order)
   M1->R[4][4] = M1->R[5][5] = 1;
   M1->R[4][5] = ilmat->alphac[0]*ilmat->length - M1->R[4][0]*ilmat->eta[0] - M1->R[4][1]*ilmat->eta[1];
   M1->C[4] = ilmat->length;
+
+  if (ilmat->tilt)
+    tilt_matrices(M1, ilmat->tilt);
   
   return M1;
 }

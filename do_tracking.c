@@ -2346,6 +2346,7 @@ long trackWithIndividualizedLinearMatrix(double **particle, long particles, doub
   double *coord, deltaPoP, tune2pi, sin_phi, cos_phi;
   double alpha[2], beta[2], eta[4], beta1, alpha1, A[2];
   double R11, R22, R12;
+  
   static VMATRIX *M1 = NULL;
   double det;
   if (!M1) {
@@ -2375,6 +2376,10 @@ long trackWithIndividualizedLinearMatrix(double **particle, long particles, doub
     for (j=0; j<6; j++)
       M1->R[i][j] = i==j?1:0;
   }
+
+  if (ilmat && ilmat->tilt) 
+    rotateBeamCoordinates(particle, particles, ilmat->tilt);
+  
   itop = particles-1;
   for (ip=0; ip<particles; ip++) {
     coord = particle[ip];
@@ -2458,6 +2463,10 @@ long trackWithIndividualizedLinearMatrix(double **particle, long particles, doub
       }
     }
   }
+
+  if (ilmat && ilmat->tilt) 
+    rotateBeamCoordinates(particle, particles, -ilmat->tilt);
+
   return particles;
 }
   
