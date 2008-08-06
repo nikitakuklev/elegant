@@ -747,6 +747,7 @@ void TouschekDistribution(RUN *run, LINE_LIST *beamline)
               chfill1(lossDis, (beam->particle+n_left)[i][4], weight[j]*tsptr->IntR/tsptr->s_rate);
             }
             chprint1(lossDis, tsptr->outFile, "Beam loss distribution in particles/s/m", verbosity);
+	    free_hbook1(lossDis);
           }
 #if USE_MPI
         }
