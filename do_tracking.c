@@ -1310,6 +1310,10 @@ long do_tracking(
                     if (((TWISSELEMENT*)eptr->p_elem)->verbose)
                       printf("* Computing beam-based twiss transformation matrix for %s at z=%e m\n",
                              eptr->name, eptr->end_pos);
+                    if (nToTrack<10) {
+                      printf("*** Error: too few particles (<10) for computation of twiss parameters from beam\n");
+                      exit(1);
+                    }
                     computeBeamTwissParameters(&beamTwiss, coord, nToTrack);
                     if (eptr->matrix)
                       free_matrices(eptr->matrix);
