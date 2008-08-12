@@ -1815,7 +1815,6 @@ typedef struct {
     double highFrequencyCutoff0, highFrequencyCutoff1;
     char *wakeFilterFile, *wffFreqColumn, *wffRealColumn, *wffImagColumn;
     /* for internal use only: */
-    long flags;   /* bend flags */
     short wakeFileActive, particleFileActive;
     SDDS_DATASET SDDSout, SDDSpart;
     double k1_internal, k2_internal, k3_internal, k4_internal;
