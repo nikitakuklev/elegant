@@ -9,6 +9,9 @@
 
 /* 
  * $Log: not supported by cvs2svn $
+ * Revision 1.4  2008/08/12 16:15:32  borland
+ * Added low-pass filter option.
+ *
  * Revision 1.3  2008/08/01 23:03:28  borland
  * Added reference to Agoh and Warnock.
  *
@@ -105,8 +108,8 @@ int main (int argc, char **argv)
         if (s_arg[i_arg].n_items!=3 ||
             !get_double(&filter1, s_arg[i_arg].list[1]) ||
             !get_double(&filter2, s_arg[i_arg].list[2]) ||
-            filter1<0 || (filter1>filter2))
-          SDDS_Bomb("Invalid -filter syntax provided");
+            filter1<0 || (filter1>filter2) || filter2>1)
+          SDDS_Bomb("Invalid -filter syntax provided.  Must have 0<=cutoff1<=cutoff2<=1.");
         break;
       case CLO_PIPE:
         if (!processPipeOption(s_arg[i_arg].list+1, s_arg[i_arg].n_items-1, &pipeFlags))
