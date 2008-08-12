@@ -1,7 +1,23 @@
-This element provides simulation of undulators using RADIA kick maps.
+This element provides simulation of undulators using kick maps \cite{Elleaume1992}.
 A script (\verb|km2sdds|) is provided with the {\tt elegant}
-distribution to translate the RADIA output into SDDS for use by
+distribution to translate RADIA \cite{radia} output into SDDS for use by
 \verb|elegant|.
 
+The input file has the following columns:
+\begin{itemize}
+\item \verb|x| --- Horizontal position in meters.
+\item \verb|y| --- Vertical position in meters.
+\item \verb|xpFactor| --- Horizontal kick factor in $T^2 m^2$.
+\item \verb|ypFactor| --- Vertical kick factor in $T^2 m^2$.
+\end{itemize}
+The values of \verb|x| and \verb|y| must be laid out on a grid of equispaced points.
+It is assumed that the data is ordered such that \verb|x| varies fastest.  This can be
+accomplished with the command
+\begin{verbatim}
+% sddssort -column=y,increasing -column=x,increasing input1.sdds input2.sdds
+\end{verbatim}
+where \verb|input1.sdds| is the original (unordered) file and \verb|input2.sdds| is the
+new file, which would be used with \verb|UKICKMAP|.
+
 This was requested by W. Guo (BNL), who also assisted with the
-implementation.
+implementation and debugging.

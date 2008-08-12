@@ -84,8 +84,8 @@ by default backward compatible.  See below for details.}
 \begin{itemize}
 \item A new element, \verb|KQUSE|, was added.  It combines quadrupole and sextupole fields.  V. Sajaev (ANL) 
   requested this.
-\item A new element, \verb|UKICKMAP|, was added.  It provides simulation of undulators using RADIA kick maps.
-  A script (\verb|km2sdds|) is provide to translate the RADIA output into SDDS for use by \verb|elegant|.
+\item A new element, \verb|UKICKMAP|, was added.  It provides simulation of undulators using kick maps \cite{Elleaume1992}.
+  A script (\verb|km2sdds|) is provide to translate the RADIA\cite{radia} output into SDDS for use by \verb|elegant|.
   This was requested by W. Guo (BNL), who also assisted with the implementation and debugging.
 \item The \verb|SCRIPT| element previously was treated as a drift space for the purpose of Twiss parameter
   computations.  In this release, the linear matrix of the element is determined by tracking.  This was
@@ -123,8 +123,12 @@ the just concatenated matrix of the beamline.  This was requested by N. Sereno (
  written by Y. Wang and H. Shang (ANL), computes the shielded
  steady-state CSR impedance in a form that can be immediately used
  with \verb|elegant|'s \verb|ZLONGIT| element.
-\item A new script, \verb|km2sdds|, was added.  This script translates RADIA kick maps into SDDS format for 
+\item A new script, \verb|km2sdds|, was added.  This script translates kick maps into SDDS format for 
  use by \verb|elegant|.
+\item A new script, \verb|astra2elegant|, was added.  This script converts ASTRA particle data to a form that
+  \verb|elegant| accepts.
+\item A new script, \verb|elegant2astra|, was added.  This script converts {\tt elegant} particle data to a form
+  that ASTRA accepts.
 \end{itemize}
 
 \section{Credits}
@@ -4780,6 +4784,12 @@ LINAC''.
 \bibitem{Agoh}
   T. Agoh and K. Yokoya, ``Calculation of coherent synchrotron radiation using mesh,'' Phys. Rev. ST Accel. Beams 7,
   054403 (2004).
+
+\bibitem{Elleaume1992}
+  P. Elleaume, ``A New Approach to Electron Beam Dynamics in Undulators and Wigglers,'' Proc. EPAC 1992, 661-663.
+
+\bibitem{radia}
+  http://www.esrf.eu/Accelerators/Groups/InsertionDevices/Software/Radia
 
 \end{thebibliography}
 
