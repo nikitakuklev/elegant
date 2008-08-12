@@ -891,7 +891,11 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 #endif
   TRACKING_CONTEXT tContext;
   VMATRIX *Msection=NULL, *Me1=NULL, *Me2=NULL;
+  static double accumulatedAngle = 0;
 
+  if (!(csbend->edgeFlags&SAME_BEND_PRECEDES))
+    accumulatedAngle = 0;
+  
   csrWake.valid = 0;
   if (isSlave || !notSinglePart) 
     reset_driftCSR();
@@ -1306,7 +1310,8 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   else
     CSRConstant = 0;
   /* Now do the body of the sector dipole */
-  for (kick=phiBend=0; kick<csbend->n_kicks; kick++) {
+  phiBend = accumulatedAngle; 
+  for (kick=0; kick<csbend->n_kicks; kick++) {
     if (isSlave || !notSinglePart) {
       for (i_part=0; i_part<n_part; i_part++) {
 	coord = part[i_part];
@@ -1828,7 +1833,13 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
       free_matrices(Me2);
     }
   }
-  
+
+  if (csbend->csrBlock)
+    accumulatedAngle = 0;
+  else
+    /* accumulate the bending angle just in case the same type of dipole follows */
+    accumulatedAngle += fabs(angle);
+    
 #if defined(MINIMIZE_MEMORY)
   /* leave dGamma out of this because that memory is used by CSRDRIFT */
   free(beta0);
