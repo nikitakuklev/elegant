@@ -9,6 +9,9 @@
 
 /* 
  * $Log: not supported by cvs2svn $
+ * Revision 1.3  2008/08/01 23:03:28  borland
+ * Added reference to Agoh and Warnock.
+ *
  * Revision 1.2  2008/07/28 21:25:46  borland
  * Expanded usage message.
  * Added CVS header and copyright message.
@@ -28,22 +31,25 @@
 #define CLO_NUMBER 2
 #define CLO_RADIUS 3
 #define CLO_PIPE 4
-#define N_OPTIONS 5
+#define CLO_FILTER 5
+#define N_OPTIONS 6
 
 char *option[N_OPTIONS]= {
-  "height", "frequencyLimit", "n", "radius", "pipe"
+  "height", "frequencyLimit", "n", "radius", "pipe", "filter"
   };
 
 char *USAGE = "csrImpedance {<outputFile>  | -pipe[=out]} -height=<valueInMeters> -radius=<valueInMeters> \n\
--frequencyLimit=maximum=<valueInHz>[,minimum=<ValueInHz>] -n=<integer>\n\n\
+-frequencyLimit=maximum=<valueInHz>[,minimum=<ValueInHz>] -n=<integer> [-filter=<cutoff1>,<cutoff2>]\n\n\
 <outputFile>     Name of file to which to write the impedance.  Can be used directly\n\
                  with elegant's ZLONGIT element.\n\
 height           Full height of the vacuum chamber.\n\
 radius           Radius of the dipole magnet.\n\
 frequencyLimit   Frequency range over which to compute the impedance.\n\
 n                Base-2 logarithm of the number of points to generate.\n\
-pipe            Specifies deliverying output to a pipe rather than a file.\n\n\
-Program by H. Shang and Y. Wang (APS), based on Agoh and Yokoya's simplified form\n\
+filter           Specifies a simple low-pass filter to apply to the data, \n\
+                 starting a <cutoff1>*fMax and reaching zero at <cutoff2>*fMax.\n\
+pipe             Specifies deliverying output to a pipe rather than a file.\n\n\
+Program by H. Shang, Y. Wang, and M. Borland (APS), based on Agoh and Yokoya's simplified form\n\
 of Warnock's equation.\n";
 
 typedef gsl_complex fcomplex; 
@@ -51,7 +57,7 @@ const double Z0 = 376.730313461770606;   /* mu_o * c_mks  */
 const double C5=1.004524;
 
 fcomplex sum_F0(double height, double k, double radius);
-void csr_impedance(double height, double radius, double fmin, double fmax, long N, SDDS_DATASET *SDDS_out);
+void csr_impedance(double height, double radius, double fmin, double fmax, long N, double filter1, double filter2, SDDS_DATASET *SDDS_out);
 fcomplex Z_asymtotic(double height, double radius, double f);
 void SetupOutput(char *filename, SDDS_DATASET *SDDS_out);
 
@@ -64,7 +70,8 @@ int main (int argc, char **argv)
   double height=-1, radius=-1, fmin=0, fmax=-1;
   long N=0, i_arg;
   unsigned long pipeFlags=0, dummyFlags=0;
-    
+  double filter1=-1, filter2=-1;
+  
   argc = scanargs(&s_arg, argc, argv);
   if (argc<2) 
     bomb(NULL, USAGE);
@@ -94,6 +101,13 @@ int main (int argc, char **argv)
           SDDS_Bomb("invalid -errorTemplate syntax");
         s_arg[i_arg].n_items +=1; 
         break;
+      case CLO_FILTER:
+        if (s_arg[i_arg].n_items!=3 ||
+            !get_double(&filter1, s_arg[i_arg].list[1]) ||
+            !get_double(&filter2, s_arg[i_arg].list[2]) ||
+            filter1<0 || (filter1>filter2))
+          SDDS_Bomb("Invalid -filter syntax provided");
+        break;
       case CLO_PIPE:
         if (!processPipeOption(s_arg[i_arg].list+1, s_arg[i_arg].n_items-1, &pipeFlags))
           SDDS_Bomb("invalid -pipe syntax");
@@ -118,17 +132,17 @@ int main (int argc, char **argv)
     SDDS_Bomb("The radius is not provided.");
  
   SetupOutput(outputFile, &SDDS_out);
-  csr_impedance (height, radius, fmin, fmax, N, &SDDS_out); 
+  csr_impedance (height, radius, fmin, fmax, N, filter1, filter2, &SDDS_out); 
   if (!SDDS_Terminate(&SDDS_out))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   free_scanargs(&s_arg, argc); 
   return 0;
 }
 
-void csr_impedance (double height, double radius, double fmin, double fmax, long N, SDDS_DATASET *SDDS_out) 
+void csr_impedance (double height, double radius, double fmin, double fmax, long N, double filter1, double filter2, SDDS_DATASET *SDDS_out) 
 {
   long Np, i; 
-  double df, f, k;
+  double df, f, k, fNorm, factor;
   fcomplex *Z, *Z_LLimit;
   Np = pow(2,N)+1;
   df=(fmax-fmin)/(Np-1);
@@ -144,6 +158,7 @@ void csr_impedance (double height, double radius, double fmin, double fmax, long
   {
     f = fmin+df*i;
     k = 2*PI*f/c_mks;
+    fNorm = (1.0*i)/Np;
     
     if (fabs(k)>1e-6) {
       Z[i] = gsl_complex_mul_real(sum_F0(height,k,radius),2*PI/height*pow(2.0/k/radius,1.0/3)*Z0); 
@@ -161,8 +176,22 @@ void csr_impedance (double height, double radius, double fmin, double fmax, long
       Z_LLimit[i] = gsl_complex_rect (0.0, GSL_IMAG(Z_LLimit[i]));
     if (fabs(GSL_IMAG(Z_LLimit[i]))<1e-32)
       Z_LLimit[i] = gsl_complex_rect (GSL_REAL(Z_LLimit[i]), 0.0);
+
+    /* Apply low-pass filter */
+    factor = 1;
+    if (filter1>0) {
+      if (fNorm>filter1) {
+        if (filter1==filter2 || fNorm>filter2)
+          factor = 0;
+        else 
+          factor = (filter2-fNorm)/(filter2-filter1);
+      }
+    }
+
     if (!SDDS_SetRowValues(SDDS_out,  SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, i, 
-                           "f", f, "k", k, "ZReal", GSL_REAL(Z[i])*2*PI*radius, "ZImag", GSL_IMAG(Z[i])*2*PI*radius*-1, NULL))
+                           "f", f, "k", k, 
+                           "ZReal", factor*GSL_REAL(Z[i])*2*PI*radius, 
+                           "ZImag", factor*GSL_IMAG(Z[i])*2*PI*radius*-1, NULL))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
   if (!SDDS_WritePage(SDDS_out))
@@ -214,6 +243,8 @@ void SetupOutput (char *filename, SDDS_DATASET *SDDS_out) {
       SDDS_DefineParameter(SDDS_out, "Radius", "radius", "m", "Radius", NULL, SDDS_DOUBLE, NULL)<0 ||
       SDDS_DefineParameter(SDDS_out, "MaximumFrequency", NULL, "Hz", NULL, NULL, SDDS_DOUBLE, NULL)<0 ||
       SDDS_DefineParameter(SDDS_out, "MinimumFrequency", NULL, "Hz", NULL, NULL, SDDS_DOUBLE, NULL)<0 ||
+      SDDS_DefineParameter(SDDS_out, "FilterCutoff1", NULL, "f$bmax$n", NULL, NULL, SDDS_DOUBLE, NULL)<0 ||
+      SDDS_DefineParameter(SDDS_out, "FilterCutoff2", NULL, "f$bmax$n", NULL, NULL, SDDS_DOUBLE, NULL)<0 ||
       SDDS_DefineParameter(SDDS_out, "N", "N", NULL, "The power of two", NULL, SDDS_LONG, NULL)<0 ||
       SDDS_DefineColumn(SDDS_out, "f", "f", "Hz", "frequency", NULL, SDDS_DOUBLE, 0)<0 ||
       SDDS_DefineColumn(SDDS_out, "k", "k", NULL, "wave number", NULL, SDDS_DOUBLE, 0)<0 ||
