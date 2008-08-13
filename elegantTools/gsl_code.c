@@ -888,11 +888,11 @@ double gsl_sf_airy_Bi(const double x, gsl_mode_t mode)
   EVAL_RESULT(gsl_sf_airy_Bi_e(x, mode, &result));
 }
 
-extern inline unsigned int GSL_MODE_PREC(gsl_mode_t mt);
-extern inline unsigned int GSL_MODE_PREC(gsl_mode_t mt){ 
+unsigned int GSL_MODE_PREC(gsl_mode_t mt);
+unsigned int GSL_MODE_PREC(gsl_mode_t mt){ 
   return  (mt & (unsigned int)7); 
 }
-static inline int cheb_eval_mode_e(const cheb_series * cs,
+static int cheb_eval_mode_e(const cheb_series * cs,
                  const double x,
                  gsl_mode_t mode,
                  gsl_sf_result * result) {
@@ -956,9 +956,7 @@ static int airy_mod_phase(const double x, gsl_mode_t mode, gsl_sf_result * mod, 
 
   return GSL_SUCCESS;
 }
-inline static int 
-airy_aie(const double x, gsl_mode_t mode, gsl_sf_result * result)
-{
+static int airy_aie(const double x, gsl_mode_t mode, gsl_sf_result * result) {
   double sqx = sqrt(x);
   double z   = 2.0/(x*sqx) - 1.0;
   double y   = sqrt(sqx);
@@ -1128,7 +1126,7 @@ int gsl_sf_sin_err_e(const double x, const double dx, gsl_sf_result * result)
   return stat_s;
 }
 
-static inline int cheb_eval_e(const cheb_series * cs,
+static int cheb_eval_e(const cheb_series * cs,
                               const double x,
                               gsl_sf_result * result) {
   int j;
