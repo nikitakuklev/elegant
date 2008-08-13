@@ -7,9 +7,12 @@
 # in the file LICENSE that is included with this distribution. 
 #*************************************************************************
 #
-# $Id: Makefile.OAG,v 1.5 2008-07-28 21:11:27 shang Exp $
+# $Id: Makefile.OAG,v 1.6 2008-08-13 19:01:54 soliday Exp $
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.5  2008/07/28 21:11:27  shang
+# added csrImpedance
+#
 # Revision 1.4  2008/07/24 22:06:13  borland
 # Added km2sdds
 #
@@ -63,7 +66,7 @@ USR_LIBS = 	mdbcommon matlib fftpack SDDS1 \
 		namelist rpnlib mdbmth mdblib \
 		meschach
 SYS_PROD_LIBS_DEFAULT += z 
-SYS_PROD_LIBS_Linux += z gsl gslcblas
+SYS_PROD_LIBS_Linux += z
 SYS_PROD_LIBS_solaris += z curses rt 
 endif
 
@@ -99,3 +102,5 @@ sddsfindresonances_SRCS = sddsfindresonances.c
 
 sddsanalyzebeam_SRCS = sddsanalyzebeam.c
 sddsanalyzebeam_CFLAGS = -I$(EPICS_EXTENSIONS)/src/SDDS/meschach
+
+csrImpedance_SRCS = gsl_code.c csrImpedance.c

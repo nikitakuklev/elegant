@@ -9,6 +9,9 @@
 
 /* 
  * $Log: not supported by cvs2svn $
+ * Revision 1.5  2008/08/12 16:55:37  borland
+ * Improved test conditions for -filter.
+ *
  * Revision 1.4  2008/08/12 16:15:32  borland
  * Added low-pass filter option.
  *
@@ -25,8 +28,7 @@
 #include "SDDS.h"
 #include "scan.h"
 #include "mdb.h"
-#include <gsl/gsl_sf_airy.h>
-#include <gsl/gsl_complex_math.h>
+#include "gsl_code.h"
 #include <math.h>
   
 #define CLO_HEIGHT 0
@@ -55,7 +57,6 @@ pipe             Specifies deliverying output to a pipe rather than a file.\n\n\
 Program by H. Shang, Y. Wang, and M. Borland (APS), based on Agoh and Yokoya's simplified form\n\
 of Warnock's equation.\n";
 
-typedef gsl_complex fcomplex; 
 const double Z0 = 376.730313461770606;   /* mu_o * c_mks  */
 const double C5=1.004524;
 
