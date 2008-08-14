@@ -69,7 +69,7 @@ double findFiducialTime(double **part, long np, double s0, double sOffset,
     best = part[0][5];
 #else  /* np could be 0 for some of the slave processors */ 
     if (notSinglePart) {
-      if (!np)
+      if (!np || isMaster)
 	best = -DBL_MAX;
       else
 	best = part[0][5];
