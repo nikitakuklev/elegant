@@ -13,10 +13,8 @@
 #include "constants.h"
 #include "chbook.h"
 
-book1 *chbook1(char *vName, double xmin, double xmax, int xbins)
+void chbook1(book1 *book, char *vName, double xmin, double xmax, int xbins)
 {
-  book1 *book;
-
   book = (book1 *)malloc(sizeof(*book));
 
   book->vname = vName;

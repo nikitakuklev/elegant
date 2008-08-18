@@ -472,6 +472,7 @@ typedef struct {
     long *lostOnPass;       /* pass on which a particle is lost */
     double bunchFrequency;
     } BEAM;
+void free_beamdata(BEAM *beam);
 
 typedef struct {
   long active;

@@ -492,9 +492,9 @@ void TouschekDistribution(RUN *run, LINE_LIST *beamline)
   static SDDS_TABLE SDDS_bunch, SDDS_loss;
   BEAM  Beam0, Beam, *beam0, *beam;
   double xrange[6];
-  book1 *x, *y, *s, *xp, *yp, *dp;
-  book1 *x0, *y0, *s0, *xp0, *yp0, *dp0;
-  book1 *lossDis;
+  book1 x, y, s, xp, yp, dp;
+  book1 x0, y0, s0, xp0, yp0, dp0;
+  book1 lossDis;
   double *weight;
   double ran1[11];
   long *index, iTotal, sTotal;
@@ -541,25 +541,25 @@ void TouschekDistribution(RUN *run, LINE_LIST *beamline)
         xrange[5] = 0.5*tsSpec->range[2]*tsSpec->sigma_p;
         if (initial) {
           tsptr->iniFile = compose_filename1(initial, run->rootname, eptr->occurence);
-          x0  = chbook1("x", -xrange[0], xrange[0], tsSpec->nbins);
-          y0  = chbook1("y", -xrange[1], xrange[1], tsSpec->nbins);
-          s0  = chbook1("s", -xrange[2], xrange[2], tsSpec->nbins);
-          xp0 = chbook1("xp", -xrange[3], xrange[3], tsSpec->nbins);
-          yp0 = chbook1("yp", -xrange[4], xrange[4], tsSpec->nbins);
-          dp0 = chbook1("dp", -xrange[5], xrange[5], tsSpec->nbins);
+          chbook1(&x0,  "x", -xrange[0], xrange[0], tsSpec->nbins);
+          chbook1(&y0,  "y", -xrange[1], xrange[1], tsSpec->nbins);
+          chbook1(&s0,  "s", -xrange[2], xrange[2], tsSpec->nbins);
+          chbook1(&xp0, "xp", -xrange[3], xrange[3], tsSpec->nbins);
+          chbook1(&yp0, "yp", -xrange[4], xrange[4], tsSpec->nbins);
+          chbook1(&dp0, "dp", -xrange[5], xrange[5], tsSpec->nbins);
         }
         if (distribution) {
           tsptr->disFile = compose_filename1(distribution, run->rootname, eptr->occurence);
-          x  = chbook1("x", -xrange[0], xrange[0], tsSpec->nbins);
-          y  = chbook1("y", -xrange[1], xrange[1], tsSpec->nbins);
-          s  = chbook1("s", -xrange[2], xrange[2], tsSpec->nbins);
-          xp = chbook1("xp", -xrange[3], xrange[3], tsSpec->nbins);
-          yp = chbook1("yp", -xrange[4], xrange[4], tsSpec->nbins);
-          dp = chbook1("dp", -0.1, 0.1, tsSpec->nbins);
+          chbook1(&x,  "x", -xrange[0], xrange[0], tsSpec->nbins);
+          chbook1(&y,  "y", -xrange[1], xrange[1], tsSpec->nbins);
+          chbook1(&s,  "s", -xrange[2], xrange[2], tsSpec->nbins);
+          chbook1(&xp, "xp", -xrange[3], xrange[3], tsSpec->nbins);
+          chbook1(&yp, "yp", -xrange[4], xrange[4], tsSpec->nbins);
+          chbook1(&dp, "dp", -0.1, 0.1, tsSpec->nbins);
         }
         if (output) {
           tsptr->outFile = compose_filename1(output, run->rootname, eptr->occurence);
-          lossDis  = chbook1("los_distribution", 0, sTotal, sTotal);
+          chbook1(&lossDis, "los_distribution", 0, sTotal, sTotal);
         }
         if (loss) {
           tsptr->losFile = compose_filename1(loss, run->rootname, eptr->occurence);
@@ -589,8 +589,8 @@ void TouschekDistribution(RUN *run, LINE_LIST *beamline)
           total_event++;
           selectPart(tsptr, p1, p2, &dens1, &dens2, ran1);
           if (initial) {
-            fill_hbook (x0, y0, s0, xp0, yp0, dp0, p1, dens1);
-            fill_hbook (x0, y0, s0, xp0, yp0, dp0, p2, dens2);
+            fill_hbook (&x0, &y0, &s0, &xp0, &yp0, &dp0, p1, dens1);
+            fill_hbook (&x0, &y0, &s0, &xp0, &yp0, &dp0, p2, dens2);
           }
           /* This is very important. Change from slop to MeV */
           for(j=3; j<5; j++) {
@@ -622,7 +622,7 @@ void TouschekDistribution(RUN *run, LINE_LIST *beamline)
               p1[4] /= tsSpec->pCentral;
               p1[5] /= tsSpec->pCentral;
               if (distribution) {
-                fill_hbook (x, y, s, xp, yp, dp, p1, temp);
+                fill_hbook (&x, &y, &s, &xp, &yp, &dp, p1, temp);
               }
               tsptr->simuCount++;
 	      
@@ -633,7 +633,8 @@ void TouschekDistribution(RUN *run, LINE_LIST *beamline)
               beam0->particle[i][4] = p1[2];
               beam0->particle[i][5] = p1[5];
               weight[i] = temp;
-              beam0->particle[i][6] = ++i;
+	      i++;
+              beam0->particle[i][6] = i;
             }
 	    
             if(i>=NSimulated)
@@ -645,7 +646,7 @@ void TouschekDistribution(RUN *run, LINE_LIST *beamline)
               p2[4] /= tsSpec->pCentral;
               p2[5] /= tsSpec->pCentral;
               if (distribution) {
-                fill_hbook (x, y, s, xp, yp, dp, p2, temp);
+                fill_hbook (&x, &y, &s, &xp, &yp, &dp, p1, temp);
               }
               tsptr->simuCount++;
 	      
@@ -656,7 +657,8 @@ void TouschekDistribution(RUN *run, LINE_LIST *beamline)
               beam0->particle[i][4] = p2[2];
               beam0->particle[i][5] = p2[5];
               weight[i] = temp;
-              beam0->particle[i][6] = ++i;
+	      i++;
+              beam0->particle[i][6] = i;
             }
           }
 	  
@@ -678,6 +680,7 @@ void TouschekDistribution(RUN *run, LINE_LIST *beamline)
 	
         /* Pick tracking particles from the simulated scattered particles */
         index = (long*)malloc(sizeof(long)*tsptr->simuCount);
+	for (i=0; i<tsptr->simuCount; i++) index[i]=i;
         iTotal = 0;
         wTotal =0.;
         weight_limit = tsptr->totalWeight*(1-tsSpec->ignoredPortion);
@@ -702,23 +705,23 @@ void TouschekDistribution(RUN *run, LINE_LIST *beamline)
           beam->original[i][3] = beam->particle[i][3] = beam0->particle[index[i]][3];
           beam->original[i][4] = beam->particle[i][4] = beam0->particle[index[i]][4];
           beam->original[i][5] = beam->particle[i][5] = beam0->particle[index[i]][5];
-          beam->original[i][6] = beam->particle[i][6] = i+1; /* make the particle ID correspond to weight index */
+          beam->original[i][6] = beam->particle[i][6] = i+1;
           weight[i] *= tsptr->factor;
         }
         if (bunch)
           dump_scattered_particles(&SDDS_bunch, beam->particle, (long)iTotal,
                                    weight, tsptr);
         if (distribution) {
-          print_hbook(x, y, s, xp, yp, dp, tsptr, tsptr->disFile, 
+          print_hbook(&x, &y, &s, &xp, &yp, &dp, tsptr, tsptr->disFile, 
                       "Distribution of Scattered particles", 1);
-          free_hbook1(x);free_hbook1(y);free_hbook1(s);
-          free_hbook1(xp);free_hbook1(yp);free_hbook1(dp);
+          free_hbook1(&x);free_hbook1(&y);free_hbook1(&s);
+          free_hbook1(&xp);free_hbook1(&yp);free_hbook1(&dp);
         }
         if (initial) {
-          print_hbook(x0, y0, s0, xp0, yp0, dp0, tsptr, tsptr->iniFile, 
+          print_hbook(&x0, &y0, &s0, &xp0, &yp0, &dp0, tsptr, tsptr->iniFile, 
                       "Distribution of simulated particles", 1);
-          free_hbook1(x0);free_hbook1(y0);free_hbook1(s0);
-          free_hbook1(xp0);free_hbook1(yp0);free_hbook1(dp0);
+          free_hbook1(&x0);free_hbook1(&y0);free_hbook1(&s0);
+          free_hbook1(&xp0);free_hbook1(&yp0);free_hbook1(&dp0);
         }
 #if USE_MPI
       }
@@ -744,10 +747,10 @@ void TouschekDistribution(RUN *run, LINE_LIST *beamline)
           if (output) {
             for (i=0; i< beam->n_to_track-n_left; i++) {
               j = (beam->particle+n_left)[i][6]-1;
-              chfill1(lossDis, (beam->particle+n_left)[i][4], weight[j]*tsptr->IntR/tsptr->s_rate);
+              chfill1(&lossDis, (beam->particle+n_left)[i][4], weight[j]*tsptr->IntR/tsptr->s_rate);
             }
-            chprint1(lossDis, tsptr->outFile, "Beam loss distribution in particles/s/m", verbosity);
-	    free_hbook1(lossDis);
+            chprint1(&lossDis, tsptr->outFile, "Beam loss distribution in particles/s/m", verbosity);
+	    free_hbook1(&lossDis);
           }
 #if USE_MPI
         }
@@ -756,8 +759,8 @@ void TouschekDistribution(RUN *run, LINE_LIST *beamline)
 #if USE_MPI
       if (myid==0) {
 #endif
+        free_beamdata(beam);
         free_beamdata(beam0);
-        free_beamdata(beam);        
         free(weight);
 #if USE_MPI
       }
@@ -1007,20 +1010,28 @@ void pickPart(double *weight, long *index, long start, long end,
   if(N<3) return;  /* scattered particles normally appear in pair */
   index2 = (long*)malloc(sizeof(long)*N);
   weight2 = (double*)malloc(sizeof(double)*N);
-
+  index1 = (long*)malloc(sizeof(long)*N);
+  weight1 = (double*)malloc(sizeof(double)*N);
+  
   for (i=start; i<end; i++) {
-    if (weight[i] >= weight_ave) {
+    if (weight[i] > weight_ave) {
       weight2[i2] = weight[i];
-      index2[i2++] = i;
+      index2[i2++] = index[i];
       w2 += weight[i];
-    } 
+    } else {
+      weight1[i1] = weight[i];
+      index1[i1++] = index[i];
+      w1 += weight[i];
+    }
   }
-  if ((w2+ (*wTotal)) >= weight_limit) {
+  if ((w2+ (*wTotal)) > weight_limit) {
     weight_ave = w2/(double)i2;
     for (i=0; i<i2; i++) {
       index[start+i]=index2[i];
       weight[start+i]=weight2[i];
     }
+    free(weight1);
+    free(index1);
     free(weight2);
     free(index2);
     pickPart(weight, index, start, start+i2,
@@ -1028,15 +1039,6 @@ void pickPart(double *weight, long *index, long start, long end,
     return;
   }
 
-  index1 = (long*)malloc(sizeof(long)*N);
-  weight1 = (double*)malloc(sizeof(double)*N);
-  for (i=start; i<end; i++) {
-    if (weight[i] < weight_ave) {
-      weight1[i1] = weight[i];
-      index1[i1++] = i;
-      w1 += weight[i];
-    } 
-  }
   *iTotal += i2;
   *wTotal += w2;
   weight_ave = w1/(double)i1;

@@ -36,7 +36,7 @@ typedef struct {
   long length, count;
 } ntuple;
 
-book1 *chbook1(char *vName, double xmin, double xmax, int xbins);
+void chbook1(book1 *bName, char *vName, double xmin, double xmax, int xbins);
 void chfill1(book1 *bName, double x, double weight);
 void chprint1(book1 *bName, char *filename, char *description, int verbosity);
 void free_hbook1(book1 *x);

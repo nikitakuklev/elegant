@@ -46,7 +46,6 @@ void initialize_structures(RUN *run_conditions, VARY *run_control, ERRORVAL *err
                            CHROM_CORRECTION *chrom_corr_data, TUNE_CORRECTION *tune_corr_data,
                            ELEMENT_LINKS *links);
 void do_semaphore_setup(char **semaphoreFile, NAMELIST_TEXT *nltext);
-void free_beamdata(BEAM *beam);
 void printFarewell(FILE *fp);
 void closeBeamlineOutputFiles(LINE_LIST *beamline);
 void setSigmaIndices();
