@@ -646,7 +646,7 @@ void TouschekDistribution(RUN *run, LINE_LIST *beamline)
               p2[4] /= tsSpec->pCentral;
               p2[5] /= tsSpec->pCentral;
               if (distribution) {
-                fill_hbook (&x, &y, &s, &xp, &yp, &dp, p1, temp);
+                fill_hbook (&x, &y, &s, &xp, &yp, &dp, p2, temp);
               }
               tsptr->simuCount++;
 	      
