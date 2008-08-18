@@ -71,7 +71,6 @@ void setupTouschekEffect(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 
   if (!charge)    
     bomb("charge has to be given", NULL);
-  charge /= 1e9;
   if (frequency<1)
     bomb("frequency has to >=1", NULL);
   if (!delta)
@@ -81,13 +80,10 @@ void setupTouschekEffect(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     bomb("beam energy has to be given", NULL);
   if (!emittance[0] || !emittance[1])
     bomb("bunch emittance has to be given", NULL);
-  emittance[0] /= 1.e9;
-  emittance[1] /= 1.e9;
   if (!sigma_dp)
     bomb("energy spread has to be given", NULL);
   if (!sigma_s)
     bomb("bunch length has to be given", NULL);
-  sigma_s /= 1.e3;
 
   /* Initial Touschek calculation then calculate the Twiss function. */
   init_TSPEC ();
@@ -483,7 +479,7 @@ void print_hbook (book1 *x, book1 *y, book1 *s, book1 *xp, book1 *yp, book1 *dp,
 
 void TouschekDistribution(RUN *run, LINE_LIST *beamline)
 {
-  long i, j, total_event, n_left, iseed0=123456789, eleCount=0;
+  long i, j, total_event, n_left, eleCount=0;
   ELEMENT_LIST *eptr;
   TSCATTER *tsptr;
   double p1[6], p2[6], dens1, dens2;
@@ -518,10 +514,10 @@ void TouschekDistribution(RUN *run, LINE_LIST *beamline)
       MPI_Barrier(MPI_COMM_WORLD); 
       if (myid==0) {
 #endif
-        weight = (double*)malloc(sizeof(double)*NSimulated);
-        beam0->particle = (double**)czarray_2d(sizeof(double), NSimulated, 7);
+        weight = (double*)malloc(sizeof(double)*n_simulated);
+        beam0->particle = (double**)czarray_2d(sizeof(double), n_simulated, 7);
         beam0->original = beam0->accepted = NULL;
-        beam0->n_original = beam0->n_to_track = beam0->n_particle = NSimulated;
+        beam0->n_original = beam0->n_to_track = beam0->n_particle = n_simulated;
         beam0->n_accepted = beam0->n_saved = 0;
         beam0->p0_original = beam0->p0 = tsSpec->betagamma;
         beam0->bunchFrequency = 0.;
@@ -576,13 +572,11 @@ void TouschekDistribution(RUN *run, LINE_LIST *beamline)
         
         i = 0; j=0;total_event=0;
         while(1) {
-          if(i>=NSimulated)
+          if(i>=n_simulated)
             break;
-          /* Select the 11 random number then mix them */
-          if (tsSpec->seed > 0) 
-            iseed0 = tsSpec->seed;
+          /* Select the 11 random number then mix them. Use elegant run_setup seed */
           for (j=0; j<11; j++) {
-            ran1[j] = random_oag(iseed0, 10);    
+            ran1[j] = random_1_elegant(1);
           }
           randomizeOrder((char*)ran1, sizeof(ran1[0]), 11, 0, random_4);
           
@@ -637,7 +631,7 @@ void TouschekDistribution(RUN *run, LINE_LIST *beamline)
               beam0->particle[i][6] = i;
             }
 	    
-            if(i>=NSimulated)
+            if(i>=n_simulated)
               break;
 	    
             if(fabs(p2[5])>tsSpec->dp0) {
@@ -663,7 +657,7 @@ void TouschekDistribution(RUN *run, LINE_LIST *beamline)
           }
 	  
           if (total_event*11 > (long)2e9)  {
-            fprintf(stdout, "warning: The total random number used > 2e9. Use less NSimulated or use small delta");
+            fprintf(stdout, "warning: The total random number used > 2e9. Use less n_simulated or use small delta");
             fflush(stdout);
             break;
           }
@@ -816,7 +810,6 @@ void init_TSPEC ()
   if (!(tsSpec = SDDS_Malloc(sizeof(*tsSpec))))
     bomb("memory allocation failure at setup Touscheck scatter", NULL);                
 
-  tsSpec->seed = seed;
   tsSpec->ebeam = p_central_mev;
   tsSpec->delta = delta;
   tsSpec->sigma_p = sigma_dp;

@@ -6,7 +6,6 @@
 #include "namelist.h"
 
 #namelist touschek_scatter static
-        long seed = 123456789;
         long nbins = 100;
         double charge = 0;
         double frequency = 1;
@@ -21,7 +20,7 @@
         STRING distribution = NULL;
         STRING initial = NULL;
         STRING output = NULL;
-        long NSimulated = 5E6;
+        long n_simulated = 5E6;
         long i_start = 0;
         long i_end = 1;
         long do_track = 0;
@@ -29,9 +28,9 @@
         long verbosity = 0;
 #end
 /*
-charge in nC.
+charge in C.
 frequency in Hz
 delta in % "energy aperture of interested"
-emittance in nm
-sigma_dp is the realative energy spread, sigma_s in mm.
+emittance in m.rad
+sigma_dp is the realative energy spread, sigma_s in m.
 */

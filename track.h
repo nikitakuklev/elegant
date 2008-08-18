@@ -1646,7 +1646,7 @@ typedef struct {
 } DSCATTER;
 
 typedef struct {
-  long seed, nbins;
+  long nbins;
   double charge, ignoredPortion;
   double ebeam, gamma, pCentral, betagamma;
   double emit[3], range[3];

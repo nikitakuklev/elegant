@@ -1552,11 +1552,11 @@ long check_sdds_column(SDDS_TABLE *SDDS_table, char *name, char *units)
 
 #define BEAM_SCATTER_PARAMETERS 5
 static SDDS_DEFINITION beam_scatter_parameter[BEAM_SCATTER_PARAMETERS] = {
-  {"N_Particles", "&parameter name=N_Particles, type=long, description=\"Total simulated scatted particles\" &end"},
+  {"Particles", "&parameter name=Particles, type=long, description=\"Total simulated scatted particles\" &end"},
   {"IntRate", "&parameter name=IntRate, type=double, units=\"1/s\", description=\"Integrated Scattering Rate\" &end"},
   {"PLocalRate", "&parameter name=PLocalRate, type=double, units=\"1/s/m\", description=\"Piwinski's Local Rate\" &end"},
   {"SLocalRate", "&parameter name=SLocalRate, type=double, units=\"1/s/m\", description=\"Simulated Local Rate\" &end"},
-  {"IgnorRate", "&parameter name=IgnorRate, type=double, units=\"1/s/m\", description=\"Ignored Scattering Rate\" &end"},
+  {"IgnoredRate", "&parameter name=IgnoredRate, type=double, units=\"1/s/m\", description=\"Ignored Scattering Rate\" &end"},
 };
 #define BEAM_SCATTER_COLUMNS 9
 static SDDS_DEFINITION beam_scatter_column[BEAM_SCATTER_COLUMNS] = {
@@ -1616,11 +1616,11 @@ void dump_scattered_particles(SDDS_TABLE *SDDS_table, double **particle,
         }
     }
 
-    if ((!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "N_Particles", particles, NULL))||
+    if ((!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "Particles", particles, NULL))||
         (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "IntRate", tsptr->IntR, NULL))||
         (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "PLocalRate", tsptr->p_rate, NULL))||
         (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "SLocalRate", tsptr->s_rate, NULL))||
-        (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "IgnorRate", tsptr->i_rate, NULL))) {
+        (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "IgnoredRate", tsptr->i_rate, NULL))) {
         SDDS_SetError("Problem setting SDDS parameters (dump_scattered_particles)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
@@ -1656,7 +1656,7 @@ static SDDS_DEFINITION beam_scatter_loss_column[BEAM_SCATTER_LOSS_COLUMNS] = {
 } ;
 #define BEAM_SCATTER_LOSS_PARAMETERS 6
 static SDDS_DEFINITION beam_scatter_loss_parameter[BEAM_SCATTER_LOSS_PARAMETERS] = {
-  {"N_Particles", "&parameter name=N_Particles, type=long, description=\"Total lost simulated scatted particles\" &end"},
+  {"Particles", "&parameter name=Particles, type=long, description=\"Total lost simulated scatted particles\" &end"},
   {"S0", "&parameter name=S0, type=double, units=m, description=\"Scatter location\" &end"},
   {"TotalRate", "&parameter name=TotalRate, type=double, units=\"1/s/m\", description=\"Total simulated scatter rate\" &end"},
   {"LossRate", "&parameter name=LossRate, type=double, units=\"1/s/m\", description=\"Total loss rate including the ignored rate\" &end"},
@@ -1712,7 +1712,7 @@ void dump_scattered_loss_particles(SDDS_TABLE *SDDS_table, double **particleLos,
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
             }
         }
-    if ((!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "N_Particles", particles, NULL))||
+    if ((!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "Particles", particles, NULL))||
         (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "S0", tsptr->s, NULL))||
         (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "TotalRate", tsptr->s_rate, NULL))||
         (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "LossRate", lossRate, NULL))||
