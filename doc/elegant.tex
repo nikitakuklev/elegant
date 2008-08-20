@@ -3713,12 +3713,13 @@ on subsequent pages.
 
 \begin{itemize}
 \item {\bf description:}  Computes the steady-state CSR impedance with shielding by parallel plates.
-The computed impedance is for a dipole magnet that bends the beam in a complete circle.
+By default, the computed impedance is for a dipole magnet that bends the beam in a complete circle.
 
 \item {\bf synopsis:}
 \begin{flushleft}{\tt
 csrImpedance {{\em outputFile}  | -pipe[=out]} -height={\em valueInMeters} -radius={\em valueInMeters}
 -frequencyLimit=maximum={\em valueInHz}[,minimum={\em valueInHz}] -n={\em integer} [-filter={\em cutoff1},{\em cutoff2}]
+[-angle={\em radians}]
 }\end{flushleft}
 
 \item {\bf files:}
@@ -3732,6 +3733,7 @@ csrImpedance {{\em outputFile}  | -pipe[=out]} -height={\em valueInMeters} -radi
 \begin{itemize}
 \item {\tt -height} --- The full height of the vacuum chamber, in meters.
 \item {\tt -radius} --- The radius of the bending magnet, in meters.
+\item {\tt -angle} --- The angle of the bending magnet, in radians.  The default is $2\pi$.
 \item {\tt frequencyLimit} --- Allows specifying the upper frequency limit (required), as well as the
  lower frequency limit, for the computed impedance.  {\tt elegant} will not accept the data if the lower
  limit is not 0.  If the rms bunch length is $\sigma_t$, then it is suggested to have the maximum frequency 
