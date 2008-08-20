@@ -590,7 +590,6 @@ the file {\tt data.twi}.
 %end{latexonly}
 
 \hyperref{{\tt optimize}}{{\tt optimize}}{}{subsec:optimize} & Execute an optimization. \\ \hline
-\hyperref{{\tt optimization\_constraint}}{{\tt optimization\_constraint}}{}{subsec:optimizationconstraint} & Define a constraint for optimization. \\ \hline
 \hyperref{{\tt optimization\_covariable}}{{\tt optimization\_covariable}}{}{subsec:optimizationcovariable} & Define a dependent parameter for optimization. \\ \hline
 \hyperref{{\tt optimization\_setup}}{{\tt optimization\_setup}}{}{subsec:optimizationsetup} & Perform initial optimization setup. \\ \hline
 \hyperref{{\tt optimization\_term}}{{\tt optimization\_term}}{}{subsec:optimizationterm} & Define a term of penalty function. \\ \hline
@@ -2310,7 +2309,7 @@ summary of the optimization parameters should be printed.
 \begin{itemize}
 \item type: setup command.
 \item function: define a constraint for optimization.
-\item N.B.: This command is {\em not recommended}.  It is {\em far} better to put constraints
+\item N.B.: This command is {\em disparaged}. It is {\em far} better to put constraints
 	into the optimization equation (via the \verb|equation| parameter of
 	\verb|optimization_setup| or via \verb|optimization_term|).  The reason
 	is that the hard constraints imposed by \verb|optimization_constraint|
@@ -2328,12 +2327,15 @@ summary of the optimization parameters should be printed.
 
 \begin{itemize}
 
-\item \verb|quantity| --- The quantity to be constrained, given as an
-{\tt rpn} expression in terms of the optimization variables, the
-optimization covariables, and and the ``final'' parameters (see the
-entry for \verb|run_setup| for the last of these).  The optimization
+\item \verb|quantity| --- The quantity to be constrained, given as the
+name of a quantity from among the optimization variables, optimization
+covariables, and the ``final'' parameters (see the entry for
+\verb|run_setup| for the last of these).  The optimization
 (co)variables are referred to as
-\verb|<element-name>.<parameter-name>|, in all capital letters.
+\verb|<element-name>.<parameter-name>|, in all capital letters.  Other
+quantities, such as Twiss parameters or anything else but what is
+listed just above, are not recognized.  Expressions involving multiple
+quantities are not supported.
 
 \item \verb|lower|, \verb|upper| --- The lower and upper limits
 allowed for the expression.
