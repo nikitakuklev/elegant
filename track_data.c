@@ -47,7 +47,7 @@ char *entity_name[N_TYPES] = {
     "LTHINLENS", "LMIRROR", "EMATRIX", "FRFMODE", "FTRFMODE",
     "TFBPICKUP", "TFBDRIVER", "LSCDRIFT", "DSCATTER", "LSRMDLTR",
     "TAYLORSERIES", "RFTM110", "CWIGGLER", "EDRIFT", "SCMULT", "ILMATRIX",
-    "TSCATTER", "KQUSE", "UKICKMAP",
+    "TSCATTER", "KQUSE", "UKICKMAP", "MBUMPER",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -116,7 +116,7 @@ by constants.",
     "An element that reduces the number of particles in the beam by interval-based or\n\
 random sampling.",
     "A combined horizontal-vertical steering magnet implemented as a matrix, up to\n\
-2nd order.",
+2nd order. For time-dependent kickers, see BUMPER.",
     "A scattering element to add gaussian random numbers to particle coordinates.",
     "A numerically-integrated dipole magnet with various extended-fringe-field models.",
     "A thin kick element with polynomial dependence on the coordinates in one plane.",
@@ -178,6 +178,7 @@ and phase modulation.",
     "An element to simulate Touschek scattering.",
     "A canonical kick element combining quadrupole and sextupole fields.",
     "An undulator kick map (e.g., using data from RADIA).",
+    "A time-dependent multipole kicker magnet. The waveform is in SDDS format, with time in seconds and amplitude normalized to 1.",
     } ;
 
 QUAD quad_example;
@@ -796,6 +797,9 @@ PARAMETER kicker_param[N_KICKER_PARAMS] = {
     {"L", "M", IS_DOUBLE, 0, (long)((char *)&kicker_example.length), NULL, 0.0, 0, "length"},
     {"ANGLE", "RAD", IS_DOUBLE, 0, (long)((char *)&kicker_example.angle), NULL, 0.0, 0, "kick angle"},
     {"TILT", "RAD", IS_DOUBLE, 0, (long)((char *)&kicker_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
+    {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kicker_example.dx), NULL, 0.0, 0, "misalignment"},
+    {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kicker_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&kicker_example.dz), NULL, 0.0, 0, "misalignment"},
     {"B2", "1/M^2", IS_DOUBLE, 0, (long)((char *)&kicker_example.b2), NULL, 0.0, 0, "Sextupole term: By=Bo*(1+b2*x^2)"},
     {"TIME_OFFSET", "S", IS_DOUBLE, 0, (long)((char *)&kicker_example.time_offset), NULL, 0.0, 0, "time offset of waveform"},
     {"PERIODIC", "", IS_LONG, 0, (long)((char *)&kicker_example.periodic), NULL, 0.0, 0, "is waveform periodic?"},
@@ -803,6 +807,24 @@ PARAMETER kicker_param[N_KICKER_PARAMS] = {
     {"FIRE_ON_PASS", "", IS_LONG, 0, (long)((char *)&kicker_example.fire_on_pass), NULL, 0.0, 0, "pass number to fire on"},
     {"N_KICKS", "", IS_LONG, 0, (long)((char *)&kicker_example.n_kicks), NULL, 0.0, 0, "Number of kicks to use for simulation. 0 uses an exact result but ignores b2."},
     {"WAVEFORM", "", IS_STRING, 0, (long)((char *)&kicker_example.waveform), NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving kick factor vs time"},
+    } ;
+
+MKICKER mkicker_example;
+/* multipole kicker physical parameters */
+PARAMETER mkicker_param[N_MKICKER_PARAMS] = {
+    {"L", "M", IS_DOUBLE, 0, (long)((char *)&mkicker_example.length), NULL, 0.0, 0, "length"},
+    {"STRENGTH", "", IS_DOUBLE, 0, (long)((char *)&mkicker_example.strength), NULL, 0.0, 0, "geometric strength in 1/m^order"},
+    {"TILT", "RAD", IS_DOUBLE, 0, (long)((char *)&mkicker_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
+    {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mkicker_example.dx), NULL, 0.0, 0, "misalignment"},
+    {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mkicker_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&mkicker_example.dz), NULL, 0.0, 0, "misalignment"},
+    {"TIME_OFFSET", "S", IS_DOUBLE, 0, (long)((char *)&mkicker_example.time_offset), NULL, 0.0, 0, "time offset of waveform"},
+    {"ORDER", "", IS_LONG, 0, (long)((char *)&mkicker_example.order), NULL, 0.0, 0, "multipole order, where 1 is quadrupole, 2 is sextupole, etc."},
+    {"PERIODIC", "", IS_LONG, 0, (long)((char *)&mkicker_example.periodic), NULL, 0.0, 0, "is waveform periodic?"},
+    {"PHASE_REFERENCE", "", IS_LONG, 0, (long)((char *)&mkicker_example.phase_reference), NULL, 0.0, 0, "phase reference number (to link with other time-dependent elements)"},
+    {"FIRE_ON_PASS", "", IS_LONG, 0, (long)((char *)&mkicker_example.fire_on_pass), NULL, 0.0, 0, "pass number to fire on"},
+    {"N_KICKS", "", IS_LONG, 1, (long)((char *)&mkicker_example.n_kicks), NULL, 0.0, 0, "Number of kicks to use for simulation."},
+    {"WAVEFORM", "", IS_STRING, 0, (long)((char *)&mkicker_example.waveform), NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving kick factor vs time"},
     } ;
 
 KSEXT ksext_example;
@@ -2177,6 +2199,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     {   N_KQUSE_PARAMS, MAT_LEN_NCAT|IS_MAGNET|MAT_CHW_ENERGY|DIVIDE_OK,      
                                           sizeof(KQUSE),    kquse_param    },
     {   N_UKICKMAP_PARAMS, MAT_LEN_NCAT|IS_MAGNET, sizeof(UKICKMAP),    ukickmap_param    },
+    {  N_MKICKER_PARAMS,  MAT_LEN_NCAT|IS_MAGNET,     sizeof(MKICKER),    mkicker_param   },
 } ;
 
 void compute_offsets()

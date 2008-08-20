@@ -697,7 +697,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_TSCATTER  98
 #define T_KQUSE 99
 #define T_UKICKMAP 100
-#define N_TYPES   101
+#define T_MKICKER 101
+#define N_TYPES   102
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -743,7 +744,7 @@ extern char *entity_text[N_TYPES];
 #define N_QFRING_PARAMS 9
 #define N_SCRAPER_PARAMS 13
 #define N_CENTER_PARAMS 6
-#define N_KICKER_PARAMS 10
+#define N_KICKER_PARAMS 13
 #define N_KSEXT_PARAMS 17
 #define N_KSBEND_PARAMS 27
 #define N_KQUAD_PARAMS 24
@@ -804,7 +805,8 @@ extern char *entity_text[N_TYPES];
 #define N_ILMATRIX_PARAMS 32
 #define N_TSCATTER_PARAMS 1
 #define N_KQUSE_PARAMS 14
-#define N_UKICKMAP_PARAMS 4
+#define N_UKICKMAP_PARAMS 7
+#define N_MKICKER_PARAMS 13
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -1506,7 +1508,7 @@ typedef struct {
 extern PARAMETER kicker_param[N_KICKER_PARAMS];
 
 typedef struct {
-    double length, angle, tilt, b2, time_offset;
+    double length, angle, tilt, dx, dy, dz, b2, time_offset;
     long periodic, phase_reference, fire_on_pass, n_kicks;
     char *waveform;
     /* for internal use only: */
@@ -1517,6 +1519,22 @@ typedef struct {
     double t_fiducial;
     FILE *fpdebug;
     } KICKER;
+
+/* names and storage structure for time-dependent multipole kicker */
+extern PARAMETER mkicker_param[N_MKICKER_PARAMS];
+
+typedef struct {
+    double length, strength, tilt, dx, dy, dz, time_offset;
+    long order, periodic, phase_reference, fire_on_pass, n_kicks;
+    char *waveform;
+    /* for internal use only: */
+    double *t_wf, *amp_wf;         /* amplitude vs time for waveform */
+    double tmin, tmax;
+    long n_wf;                     /* number of points in waveform */
+    long fiducial_seen;
+    double t_fiducial;
+    FILE *fpdebug;
+    } MKICKER;
 
 /* names and storage structure for kick sextupole physical parameters */
 extern PARAMETER sext_param[N_SEXT_PARAMS];
@@ -2643,6 +2661,8 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge, BE
 
 extern void track_through_kicker(double **part, long np, KICKER *kicker, double p_central, long pass,
       long order);
+void track_through_mkicker(double **part, long np, MKICKER *kicker, double p_central, long pass, long default_order);
+
 extern long simple_rf_cavity(double **part, long np, RFCA *rfca, double **accepted, double *P_central,
                              double zEnd);
 extern long track_through_rfcw(double **part, long np, RFCW *rfcw, double **accepted, double *P_central, 
@@ -2878,12 +2898,28 @@ extern long motion(double **part, long n_part, void *field, long field_type, dou
     double *dP, double **accepted, double z_start);
  
 /* prototypes for multipole.c: */
+typedef struct {
+  double xCen, yCen, xMax, yMax;
+  short elliptical, present;
+} MULT_APERTURE_DATA;
 extern long multipole_tracking(double **particle, long n_part, MULT *multipole, double p_error, double Po, double **accepted, double z_start);
 extern long multipole_tracking2(double **particle, long n_part, ELEMENT_LIST *elem, double p_error, double Po, double **accepted, double z_end, 
                                 double x_max, double y_max, long elliptical, 
                                 APERTURE_DATA *apData, double *sigmaDelta2);
 extern long fmultipole_tracking(double **particle,  long n_part, FMULT *multipole,
                                 double p_error, double Po, double **accepted, double z_start);
+int integrate_kick_multipole_ord2(double *coord, double cos_tilt, double sin_tilt,
+                                  double dx, double dy, double dz, double xkick, double ykick,
+                                  double Po, double rad_coef, double isr_coef,
+                                  long order, long sqrtOrder, double KnL, long n_kicks, double drift,
+                                  MULTIPOLE_DATA *multData, MULTIPOLE_DATA *steeringMultData,
+                                  MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2);
+int integrate_kick_multipole_ord4(double *coord, double cos_tilt, double sin_tilt,
+                                  double dx, double dy, double dz, double xkick, double ykick,
+                                  double Po, double rad_coef, double isr_coef,
+                                  long order, long sqrtOrder, double KnL, long n_kicks, double drift,
+                                  MULTIPOLE_DATA *multData, MULTIPOLE_DATA *steeringMultData,
+                                  MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2);
 
 /* prototypes for taylorseries.c: */
 extern long taylorSeries_tracking(double **particle,  long n_part, TAYLORSERIES *taylorSeries,

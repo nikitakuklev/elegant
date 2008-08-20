@@ -1001,6 +1001,12 @@ long do_tracking(
 	      else
 		track_through_kicker(coord, nToTrack, (KICKER*)eptr->p_elem, *P_central, i_pass, run->default_order);
 	      break;
+	    case T_MKICKER:
+	      if (flags&TIME_DEPENDENCE_OFF)
+		drift_beam(coord, nToTrack, ((MKICKER*)eptr->p_elem)->length, run->default_order);
+	      else
+		track_through_mkicker(coord, nToTrack, (MKICKER*)eptr->p_elem, *P_central, i_pass, run->default_order);
+	      break;
 	    case T_KSBEND:
 	      nLeft = track_through_kick_sbend(coord, nToTrack, (KSBEND*)eptr->p_elem, 0.0,
 					       *P_central, accepted, z);
