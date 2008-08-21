@@ -14,6 +14,9 @@
  * Michael Borland, 2000
  *
  $Log: not supported by cvs2svn $
+ Revision 1.2  2007/07/17 21:02:26  soliday
+ Changed strcpy_s to strcpy_ss because of a conflict with VC2005.
+
  Revision 1.1  2007/03/30 16:50:28  soliday
  Moved from directory above.
 
@@ -79,34 +82,38 @@
 #define SET_NOWARNINGS 1
 #define SET_CORRECTED_ONLY 2
 #define SET_GENERATE 3
-#define N_OPTIONS 4
+#define SET_CANONICAL 4
+#define N_OPTIONS 5
 
 char *option[N_OPTIONS] = {
-  "pipe", "nowarnings", "correctedonly", "generate"
+  "pipe", "nowarnings", "correctedonly", "generate", "canonical"
 } ;
 
 char *USAGE="sddsanalyzebeam [-pipe=[input][,output]] [<SDDSinputfile>] [<SDDSoutputfile>]\n\
-  [-nowarnings] [-correctedOnly] [-generate=<outputFile>,<particles>,<cutoff>]\n\
+  [-nowarnings] [-correctedOnly] [-canonical] [-generate=<outputFile>,<particles>,<cutoff>]\n\
 Computes Twiss parameters and other properties of a particle beam.\n\
 The input file must have columns x, xp, y, yp, t, and p; for example, an elegant\n\
 beam output file is acceptable.\nIf -correctedOnly is given, then only the\n\
 \"corrected values\" (with dispersion terms correctly subtracted) are given.\n\
 Use this if you plan to use the output as input to the twiss_output command in\n\
 elegant.\n\
+If -canonical is given, all computations are performed for canonical variables.\n\
 If -generate is given, a new gaussian distribution with the specified number of\n\
 particles is generated based on the analysis.\n\n\
 Program by Michael Borland.  (This is version 3, February 2005.)\n";
 
 
-long SetUpOutputFile(SDDS_DATASET *SDDSout, char *outputfile, long correctedOnly, SDDS_DATASET *SDDSin);
+long SetUpOutputFile(SDDS_DATASET *SDDSout, char *outputfile, long correctedOnly, long canonical, SDDS_DATASET *SDDSin);
 long check_sdds_beam_column(SDDS_TABLE *SDDS_table, char *name, char *units);
 long SetUpGenerateFile(SDDS_DATASET *SDDSgen, char *generateFile);
 void GenerateAndDumpParticles(SDDS_DATASET *SDDSgen, double C[6], double S[6][6], double pAve,
 			      double cutoff, long np);
+void TransformToCanonicalMomenta(double **data, long np, double pAve);
 
 char *CenName[6];
 char *CorName[6][6];
 char *psName[6] = {"x", "xp", "y", "yp", "t", "delta" };
+char *qsName[6] = {"x", "qx", "y", "qy", "t", "delta" };
 /* columns in output file derived from parameters in input file */
 int32_t pColumns;
 char **pColumn;
@@ -124,7 +131,7 @@ int main(int argc, char **argv)
   double S[6][6], C[6], beta[3], alpha[3], eta[4], emit[3], emitcor[3], beamsize[6];
   double betacor[3], alphacor[3];
   double *data[6], Sbeta[6][6];
-  long tmpFileUsed, correctedOnly;
+  long tmpFileUsed, correctedOnly, canonical=0;
   double cutoff = 3;
 
   SDDS_RegisterProgramName(argv[0]);
@@ -156,6 +163,9 @@ int main(int argc, char **argv)
 	    nToGenerate<1)
 	  SDDS_Bomb("invalid -generate syntax");
 	break;
+      case SET_CANONICAL:
+        canonical = 1;
+        break;
       default:
         fprintf(stdout, "error: unknown switch: %s\n", s_arg[i_arg].list[0]);
         fflush(stdout);
@@ -191,9 +201,11 @@ int main(int argc, char **argv)
     exit(1);
   }
 
-  if (!SetUpOutputFile(&SDDSout, outputfile, correctedOnly, &SDDSin))
+  if (!SetUpOutputFile(&SDDSout, outputfile, correctedOnly, canonical, &SDDSin) ||
+      !SDDS_SetParameters(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+                          "canonical", canonical, NULL))
     SDDS_Bomb("problem setting up output file");
-
+  
   if (generateFile) {
     if (!SetUpGenerateFile(&SDDSgen, generateFile))
       SDDS_Bomb("problem setting up -generate output file");
@@ -226,17 +238,21 @@ int main(int argc, char **argv)
           !(data[4] = t =  SDDS_GetColumnInDoubles(&SDDSin, "t")) ||
           !(data[5] = p = SDDS_GetColumnInDoubles(&SDDSin, "p")))
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+
+      /* convert momentum to (p-po)/po */
+      pAve = arithmeticAverage(p, particles);
+      for (i=0; i<particles; i++)
+        p[i] = p[i]/pAve-1;
+
+      if (canonical) 
+        TransformToCanonicalMomenta(data, particles, pAve);
+
       /* compute and subtract off average values */
-      for (i=0; i<5; i++) {
+      for (i=0; i<6; i++) {
         C[i] = arithmeticAverage(data[i], particles);
         for (j=0; j<particles; j++)
           data[i][j] -= C[i];
       }
-      /* convert momentum to (p-po)/po */
-      C[6] = 0;
-      pAve = arithmeticAverage(p, particles);
-      for (i=0; i<particles; i++)
-        p[i] = p[i]/pAve-1;
 
       /* compute correlations */
       for (i=0; i<6; i++) {
@@ -342,6 +358,7 @@ int main(int argc, char **argv)
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
     }
+
     /* copy parameters from the input file to columns in the output file */
     for (i=0; i<pColumns; i++) {
       long buffer[16];
@@ -367,13 +384,14 @@ int main(int argc, char **argv)
   return 0;
 }
 
-long SetUpOutputFile(SDDS_DATASET *SDDSout, char *outputfile, long correctedOnly, SDDS_DATASET *SDDSin)
+long SetUpOutputFile(SDDS_DATASET *SDDSout, char *outputfile, long correctedOnly, long canonical, SDDS_DATASET *SDDSin)
 {
   char units[128], name[128];
   char *ppUnits[6] = {"m", 0, "m", 0, "s", 0} ;
   long i, j;
   
   if (!SDDS_InitializeOutput(SDDSout, SDDS_BINARY, 1, NULL, NULL, outputfile) ||
+      !SDDS_DefineSimpleParameter(SDDSout, "canonical", NULL, SDDS_LONG) ||
       !SDDS_DefineSimpleColumn(SDDSout, "ElementName", NULL, SDDS_STRING) ||
       !SDDS_DefineSimpleColumn(SDDSout, "ex", "m", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleColumn(SDDSout, "enx", "m", SDDS_DOUBLE) ||
@@ -409,7 +427,7 @@ long SetUpOutputFile(SDDS_DATASET *SDDSout, char *outputfile, long correctedOnly
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
   for (i=0; i<6; i++) {
-    sprintf(name, "C%s", psName[i]);
+    sprintf(name, "C%s", canonical==0?psName[i]:qsName[i]);
     if (!SDDS_CopyString(&CenName[i], name))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     if (!SDDS_DefineSimpleColumn(SDDSout, name, ppUnits[i], SDDS_DOUBLE))
@@ -612,5 +630,22 @@ void GenerateAndDumpParticles(SDDS_DATASET *SDDSgen, double C[6], double S[6][6]
     exit(1);
   }
   
+}
+
+void TransformToCanonicalMomenta(double **data, long np, double pAve)
+{
+  double qz, xp, yp, delta;
+  long ip;
+
+  /* Compute canonical momenta, save slopes */
+  for (ip=0; ip<np; ip++) {
+    xp    = data[1][ip];
+    yp    = data[3][ip];
+    delta = data[5][ip];
+    qz = (1+delta)/sqrt(1+sqr(xp)+sqr(yp));
+    data[1][ip] *= qz;  /* qx = px/p0 = xp*(1+delta)/sqrt(1+xp^2+yp^2) = xp*qz*/
+    data[3][ip] *= qz;  /* qy = yp*qz */
+    data[5][ip]  = qz;
+  }
 }
 
