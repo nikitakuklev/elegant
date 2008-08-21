@@ -9,6 +9,9 @@
 
 /* 
  * $Log: not supported by cvs2svn $
+ * Revision 1.6  2008/08/13 19:01:54  soliday
+ * Updated to work without needing the entire GSL library installed.
+ *
  * Revision 1.5  2008/08/12 16:55:37  borland
  * Improved test conditions for -filter.
  *
@@ -37,14 +40,16 @@
 #define CLO_RADIUS 3
 #define CLO_PIPE 4
 #define CLO_FILTER 5
-#define N_OPTIONS 6
+#define CLO_ANGLE 6
+#define N_OPTIONS 7
 
 char *option[N_OPTIONS]= {
-  "height", "frequencyLimit", "n", "radius", "pipe", "filter"
+  "height", "frequencyLimit", "n", "radius", "pipe", "filter", "angle",
   };
 
 char *USAGE = "csrImpedance {<outputFile>  | -pipe[=out]} -height=<valueInMeters> -radius=<valueInMeters> \n\
--frequencyLimit=maximum=<valueInHz>[,minimum=<ValueInHz>] -n=<integer> [-filter=<cutoff1>,<cutoff2>]\n\n\
+-frequencyLimit=maximum=<valueInHz>[,minimum=<ValueInHz>] -n=<integer> [-filter=<cutoff1>,<cutoff2>]\n\
+[-angle=<radians>]\n\n\
 <outputFile>     Name of file to which to write the impedance.  Can be used directly\n\
                  with elegant's ZLONGIT element.\n\
 height           Full height of the vacuum chamber.\n\
@@ -53,6 +58,7 @@ frequencyLimit   Frequency range over which to compute the impedance.\n\
 n                Base-2 logarithm of the number of points to generate.\n\
 filter           Specifies a simple low-pass filter to apply to the data, \n\
                  starting a <cutoff1>*fMax and reaching zero at <cutoff2>*fMax.\n\
+angle            Set the angle of the bend.  The default is 2*pi\n\
 pipe             Specifies deliverying output to a pipe rather than a file.\n\n\
 Program by H. Shang, Y. Wang, and M. Borland (APS), based on Agoh and Yokoya's simplified form\n\
 of Warnock's equation.\n";
@@ -61,7 +67,8 @@ const double Z0 = 376.730313461770606;   /* mu_o * c_mks  */
 const double C5=1.004524;
 
 fcomplex sum_F0(double height, double k, double radius);
-void csr_impedance(double height, double radius, double fmin, double fmax, long N, double filter1, double filter2, SDDS_DATASET *SDDS_out);
+void csr_impedance(double height, double radius, double angle, 
+  double fmin, double fmax, long N, double filter1, double filter2, SDDS_DATASET *SDDS_out);
 fcomplex Z_asymtotic(double height, double radius, double f);
 void SetupOutput(char *filename, SDDS_DATASET *SDDS_out);
 
@@ -75,6 +82,7 @@ int main (int argc, char **argv)
   long N=0, i_arg;
   unsigned long pipeFlags=0, dummyFlags=0;
   double filter1=-1, filter2=-1;
+  double angle = PIx2;
   
   argc = scanargs(&s_arg, argc, argv);
   if (argc<2) 
@@ -118,6 +126,15 @@ int main (int argc, char **argv)
         if (pipeFlags!=USE_STDOUT)
           SDDS_Bomb("only -pipe=out syntax is valid!");
         break;
+      case CLO_ANGLE:
+        if (s_arg[i_arg].n_items!=2 ||
+            !get_double(&angle, s_arg[i_arg].list[1]) ||
+            angle<0 || angle>PIx2)
+          SDDS_Bomb("Invalid -angle syntax provided (give value between 0 and 2*pi).");
+        break;
+      default:
+        SDDS_Bomb("unknown option given");
+        break;
       }
     } else if (!outputFile)
       outputFile = s_arg[i_arg].list[0];
@@ -136,14 +153,15 @@ int main (int argc, char **argv)
     SDDS_Bomb("The radius is not provided.");
  
   SetupOutput(outputFile, &SDDS_out);
-  csr_impedance (height, radius, fmin, fmax, N, filter1, filter2, &SDDS_out); 
+  csr_impedance (height, radius, angle, fmin, fmax, N, filter1, filter2, &SDDS_out); 
   if (!SDDS_Terminate(&SDDS_out))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   free_scanargs(&s_arg, argc); 
   return 0;
 }
 
-void csr_impedance (double height, double radius, double fmin, double fmax, long N, double filter1, double filter2, SDDS_DATASET *SDDS_out) 
+void csr_impedance(double height, double radius, double angle, 
+  double fmin, double fmax, long N, double filter1, double filter2, SDDS_DATASET *SDDS_out)
 {
   long Np, i; 
   double df, f, k, fNorm, factor;
@@ -194,8 +212,8 @@ void csr_impedance (double height, double radius, double fmin, double fmax, long
 
     if (!SDDS_SetRowValues(SDDS_out,  SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, i, 
                            "f", f, "k", k, 
-                           "ZReal", factor*GSL_REAL(Z[i])*2*PI*radius, 
-                           "ZImag", factor*GSL_IMAG(Z[i])*2*PI*radius*-1, NULL))
+                           "ZReal", factor*GSL_REAL(Z[i])*angle*radius, 
+                           "ZImag", factor*GSL_IMAG(Z[i])*angle*radius*-1, NULL))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
   if (!SDDS_WritePage(SDDS_out))
