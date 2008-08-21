@@ -17,25 +17,17 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 19.1\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
+\author{Program Version 19.2\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
 \htmladdnormallink{forum}{https://www.aps.anl.gov/Accelerator_Systems_Division/Operations_Analysis/phpBB3}.
 Users are encouraged to join and participate.
 
-\section{Highlights of What's New in Version 19.1}
+\section{Highlights of What's New in Version 19.2}
 
-Here is a summary of what's changed since release 19.0.  For details
-and references, see the specific entries in the manual.  Several minor
-bugs were fixed.  There were also several significant feature
-enhancements, including RADIA-style kick maps and the ability to
-simulate particles other than electrons. A new program for computing the
-shielded CSR impedance is also included.  
-
-{\em N.B. There was a change to the \verb|SCRIPT| element that is not
-by default backward compatible.  See below for details.}
-
+Here is a summary of what's changed since release 19.1.  For details
+and references, see the specific entries in the manual. 
 
 \subsection{Known Bugs and Problems}
 \begin{itemize}
@@ -58,77 +50,31 @@ by default backward compatible.  See below for details.}
 
 \subsection{Bug Fixes for Elements}
 \begin{itemize}
-\item The \verb|CSRDRIFT| element was excluded from element division.  This has been corrected.  Y. Ding (SLAC)
-  reported this.
-\item The \verb|SCRIPT| element would be treated as a drift space if
- matrix concatenation was requested in \verb|run_setup|.  W. Guo (BNL)
- reported problem.  This has been changed, so that {\tt elegant} now
- by default uses tracking to determine the matrix.  {\em As reported by C. Yao (ANL), this may
- impact the operation of some runs, but can be turned off using the \verb|DRIFT_MATRIX| parameter.}
+\item The {\tt DZ} (longitudinal alignment parameter) for the elements {\tt KQUAD}, {\tt KSEXT}, and
+  {\tt KQUSE} was ignored.  This was fixed.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item The {\tt twiss\_output} command would fail to generate Twiss parameters for elements upstream of
- a recirculation element.   This would prevent the use of \verb|SREFFECTS| and \verb|SCMULT| elements.
- M. Cornacchia (SLAC) reported this.
-\item A new mode (\verb|lines_only=1|) was added to
-   \verb|tune_shift_with_amplitude| that allows turning off the
-   two-dimensional fitting.  V. Sajaev (ANL) reported that the
-   two-dimensional fitting may be unreliable, giving $\partial
-   \nu_x/\partial A_y$ significantly different from $\partial
-   \nu_y/\partial A_x$.
+\item None
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item A new element, \verb|KQUSE|, was added.  It combines quadrupole and sextupole fields.  V. Sajaev (ANL) 
-  requested this.
-\item A new element, \verb|UKICKMAP|, was added.  It provides simulation of undulators using kick maps \cite{Elleaume1992}.
-  A script (\verb|km2sdds|) is provide to translate the RADIA\cite{radia} output into SDDS for use by \verb|elegant|.
-  This was requested by W. Guo (BNL), who also assisted with the implementation and debugging.
-\item The \verb|SCRIPT| element previously was treated as a drift space for the purpose of Twiss parameter
-  computations.  In this release, the linear matrix of the element is determined by tracking.  This was
-  suggested by W. Guo (BNL).
-\item The \verb|WATCH| and \verb|HISTOGRAM| elements now incorporate a feature allowing the element occurrence
- number to be substituted into the output filename.  This can be helpful in creating a set of histograms or
- particle dumps with sequentially-numbered filenames.  See the documentation for those elements for details.
-\item The \verb|CWIGGLER|, \verb|CSBEND|, \verb|CSRCSBEND|, \verb|KQUAD|, and \verb|KSEXT| elements now have
- a parameter (\verb|ISR1PART|) that allows turning off ISR when a single particle is being tracked (e.g., for
- an explicit fiducialization step).
-\item The \verb|ILMATRIX| element now has a \verb|TILT| parameter.  A. Petrenko (FNAL) pointed out that this element
- didn't include x-y coupling.  This parameter may help in that regard.
+\item A new element, {\tt MBUMPER}, was added that allows modeling time-dependent multipole kickers.
+\item The {\tt BUMPER} element, which models a time-dependent dipole kicker, now supports misalignments.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item A new command, \verb|change_particle|, was added that allows tracking particles other than electrons.
-  Predefined types are positrons, protons, and muons.  Others may be defined in terms of charge and mass
-  ratios to the electron.  This was requested by H. Sayed and Y. Roblin (TJNAF).  Y. Roblin also helped with testing.
-\item A new command, \verb|insert_elements|, was added by A. Xiao
-(ANL).  It allows inserting elements into a lattice at many
-locations. This is a convenient way to add a large number of identical
-elements (e.g., markers, monitors) to a lattice without modifying the
-lattice file.
-\item The \verb|frequency_map| command now computes the diffusion, defined as $\log_{10} (\Delta\nu_x^2 + \Delta\nu_y^2)$.
-\item The \verb|matrix_output| command now allows outputting the individual {\em on-trajectory} matrices of the elements, rather than
-the just concatenated matrix of the beamline.  This was requested by N. Sereno (ANL).
-\item The \verb|magnets| output from \verb|run_setup| now has a column giving the element type (\verb|ElementType|).
+\item None
 \end{itemize}
 
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
-\item A new program, \verb|csrImpedance|, was added. This program,
- written by Y. Wang, H. Shang, and M. Borland (ANL), computes the shielded
- steady-state CSR impedance in a form that can be immediately used
- with \verb|elegant|'s \verb|ZLONGIT| element.
-\item A new script, \verb|km2sdds|, was added.  This script translates kick maps into SDDS format for 
- use by \verb|elegant|.
-\item A new script, \verb|astra2elegant|, was added.  This script converts ASTRA particle data to a form that
-  \verb|elegant| accepts.
-\item A new script, \verb|elegant2astra|, was added.  This script converts {\tt elegant} particle data to a form
-  that ASTRA accepts.
+\item {\tt sddsanalyzebeam} now has the option to perform all computations using canonical coordates.
+  This was requested by P. Piot (NIU).
 \end{itemize}
 
 \section{Credits}
