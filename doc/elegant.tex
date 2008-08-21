@@ -73,7 +73,7 @@ and references, see the specific entries in the manual.
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
-\item {\tt sddsanalyzebeam} now has the option to perform all computations using canonical coordates.
+\item {\tt sddsanalyzebeam} now has the option to perform all computations using canonical coordinates.
   This was requested by P. Piot (NIU).
 \end{itemize}
 
@@ -3937,7 +3937,7 @@ sddsanalyzebeam run.out run.analysis
 \item {\bf synopsis:}
 \begin{flushleft}{\tt
 sddsanalyzebeam [-pipe=[input][,output]] [{\em inputfile}] [{\em outputfile}]
-[-nowarnings] [-correctedOnly]
+[-nowarnings] [-correctedOnly] [-canonical]
 }\end{flushleft}
 
 \item {\bf files:}
@@ -3966,6 +3966,8 @@ to that convention, use the SDDS toolkit program {\tt sddsexpand}.
 \item {\tt correctedOnly} --- If given, only the corrected twiss parameters are computed and
  output.  These parameters are the correct ones to match a beamline to, since they have the
  dispersive and mono-energetic terms properly separated.
+\item {\tt -canonical} --- If given, all computations are performed using canonical momenta 
+  $q_x = p_x/p_0 = x^\prime (1 + \delta)/\sqrt{1 + x^{\prime 2} + y^{\prime 2}}$ etc.
 \end{itemize}
 
 \item {\bf author:} M. Borland, ANL/APS.
