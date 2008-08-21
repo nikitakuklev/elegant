@@ -14,6 +14,9 @@
  * Michael Borland, 2000
  *
  $Log: not supported by cvs2svn $
+ Revision 1.3  2008/08/21 14:54:06  borland
+ Added option to use canonical coordinates.
+
  Revision 1.2  2007/07/17 21:02:26  soliday
  Changed strcpy_s to strcpy_ss because of a conflict with VC2005.
 
@@ -100,7 +103,7 @@ elegant.\n\
 If -canonical is given, all computations are performed for canonical variables.\n\
 If -generate is given, a new gaussian distribution with the specified number of\n\
 particles is generated based on the analysis.\n\n\
-Program by Michael Borland.  (This is version 3, February 2005.)\n";
+Program by Michael Borland.  (This is version 4, August 2008.)\n";
 
 
 long SetUpOutputFile(SDDS_DATASET *SDDSout, char *outputfile, long correctedOnly, long canonical, SDDS_DATASET *SDDSin);
