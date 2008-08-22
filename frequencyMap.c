@@ -67,8 +67,6 @@ void setupFrequencyMap(
     bomb("no output filename specified", NULL);
   if (xmin>xmax)
     bomb("xmin > xmax", NULL);
-  if (ymin<=0) 
-    bomb("ymin<=0. A small positive value is suggested.", NULL);
   if (ymin>ymax)
     bomb("ymin > ymax", NULL);
   if (nx<1)

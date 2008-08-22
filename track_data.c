@@ -95,7 +95,7 @@ the magnet into halves.  XS<n> and DP<n> allow momentum filtration at the midpoi
 the central momentum or energy to a specified value.",
     "A collimating element that sets the maximum transmitted particle amplitudes for\n\
 all following elements, until the next MAXAMP.",
-    "An element that rotates the beam coordinates about the longitudinal axis.",
+    "An element that rotates the beam about the longitudinal axis.",
     "An element that defines the point from which transmission calculations are made.",
     "An element that defines the point to which particles recirculate in multi-pass\n\
 tracking",
@@ -2073,6 +2073,10 @@ UKICKMAP ukickmap_example;
 /* undulator kick map physical parameters */
 PARAMETER ukickmap_param[N_UKICKMAP_PARAMS] = {
     {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ukickmap_example.length), NULL, 0.0, 0, "length"},
+    {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ukickmap_example.tilt), NULL, 0.0, 0, "rotation about longitudinal axis"},
+    {"DX", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ukickmap_example.dx), NULL, 0.0, 0, "misalignment"},
+    {"DY", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ukickmap_example.dy), NULL, 0.0, 0, "misalignment"},
+    {"DZ", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ukickmap_example.dz), NULL, 0.0, 0, "misalignment"},
     {"FIELD_FACTOR", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ukickmap_example.fieldFactor), NULL, 1.0, 0, "Factor by which to multiply the magnetic fields."},
     {"INPUT_FILE", " ", IS_STRING, 0, (long)((char *)&ukickmap_example.inputFile), NULL, 0.0, 0, "Name of SDDS file with undulator kickmap data."},
     {"N_KICKS", "", IS_LONG, 0, (long)((char *)&ukickmap_example.nKicks), NULL, 0.0, 1, "Number of kicks into which to split the element."},

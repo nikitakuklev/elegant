@@ -45,6 +45,11 @@ long trackUndulatorKickMap(
   
   eomc = particleCharge/particleMass/c_mks; 
 
+  if (map->dx || map->dy || map->dz)
+    offsetBeamCoordinates(particle, nParticles, map->dx, map->dy, map->dz);
+  if (map->tilt)
+    rotateBeamCoordinates(particle, nParticles, map->tilt);
+  
   iTop = nParticles-1;
   for (ik=0; ik<nKicks; ik++) {
     for (ip=0; ip<=iTop; ip++) {
@@ -80,6 +85,11 @@ long trackUndulatorKickMap(
     }
   }
   
+  
+  if (map->tilt)
+    rotateBeamCoordinates(particle, nParticles, -map->tilt);
+  if (map->dx || map->dy || map->dz)
+    offsetBeamCoordinates(particle, nParticles, -map->dx, -map->dy, -map->dz);
 
   return iTop+1;
 }
@@ -130,7 +140,7 @@ long initializeUndulatorKickMap(UKICKMAP *map)
     nx ++;
   }
   map->xmax = x[nx-1];
-  map->dx = (map->xmax-map->xmin)/(nx-1);
+  map->dxg = (map->xmax-map->xmin)/(nx-1);
   if ((map->nx=nx)<=1 || y[0]>y[nx] || (map->ny = map->points/nx)<=1) {
     fprintf(stdout, "file %s for UKICKMAP element doesn't have correct structure or amount of data\n",
             map->inputFile);
@@ -141,9 +151,9 @@ long initializeUndulatorKickMap(UKICKMAP *map)
   }
   map->ymin = y[0];
   map->ymax = y[map->points-1];
-  map->dy = (map->ymax-map->ymin)/(map->ny-1);
-  fprintf(stdout, "UKICKMAP element from file %s: nx=%ld, ny=%ld, dx=%e, dy=%e, x:[%e, %e], y:[%e, %e]\n",
-          map->inputFile, map->nx, map->ny, map->dx, map->dy, 
+  map->dyg = (map->ymax-map->ymin)/(map->ny-1);
+  fprintf(stdout, "UKICKMAP element from file %s: nx=%ld, ny=%ld, dxg=%e, dyg=%e, x:[%e, %e], y:[%e, %e]\n",
+          map->inputFile, map->nx, map->ny, map->dxg, map->dyg, 
           map->xmin, map->xmax, 
           map->ymin, map->ymax);
   free(x);
@@ -161,13 +171,13 @@ long interpolateUndulatorKickMap(double *xpFactor, double *ypFactor, UKICKMAP *m
   if (isnan(x) || isnan(y) || isinf(x) || isinf(y))
     return 0;
   
-  ix = (x-map->xmin)/map->dx + 0.5;
-  iy = (y-map->ymin)/map->dy + 0.5;
+  ix = (x-map->xmin)/map->dxg + 0.5;
+  iy = (y-map->ymin)/map->dyg + 0.5;
   if (ix<0 || iy<0 || ix>map->nx-1 || iy>map->ny-1)
     return 0;
   
-  fx = (x-(ix*map->dx+map->xmin))/map->dx;
-  fy = (y-(iy*map->dy+map->ymin))/map->dy;
+  fx = (x-(ix*map->dxg+map->xmin))/map->dxg;
+  fy = (y-(iy*map->dyg+map->ymin))/map->dyg;
 
   Fa = (1-fy)*map->xpFactor[ix+iy*map->nx] + fy*map->xpFactor[ix+(iy+1)*map->nx];
   Fb = (1-fy)*map->xpFactor[ix+1+iy*map->nx] + fy*map->xpFactor[ix+1+(iy+1)*map->nx];

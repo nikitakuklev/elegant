@@ -25,7 +25,7 @@ void track_through_kicker(
 {
     long i, n, ip;
     double time, time_offset, angle, t0, *coord, sum_amp, amplitude, ds;
-    double x, xp, y, yp, dp, s, cos_tilt, sin_tilt, curv, dx, dy, dz;
+    double x, xp, y, yp, dp, s, curv, dx;
     double theta_i, alpha_i, alpha_f;
 
     if (np<=0)
@@ -79,11 +79,10 @@ void track_through_kicker(
 
     time_offset += kicker->time_offset;
 
-    cos_tilt = cos(kicker->tilt);
-    sin_tilt = sin(kicker->tilt);
-    dx = kicker->dx;
-    dy = kicker->dy;
-    dz = kicker->dz;
+    if (kicker->dx || kicker->dy || kicker->dz)
+      offsetBeamCoordinates(part, np, kicker->dx, kicker->dy, kicker->dz);
+    if (kicker->tilt)
+      rotateBeamCoordinates(part, np, kicker->tilt);
 
     sum_amp = 0;
     for (ip=0; ip<np; ip++) {
@@ -128,15 +127,10 @@ void track_through_kicker(
             continue;
             }
 
-        /* calculate coordinates in rotated and offset frame */
-        coord[4] += dz*sqrt(1 + sqr(coord[1]) + sqr(coord[3]));
-        coord[0]  = coord[0] - dx + dz*coord[1];
-        coord[2]  = coord[2] - dy + dz*coord[3];
-
-        x  =  coord[0]*cos_tilt + coord[2]*sin_tilt;
-        y  = -coord[0]*sin_tilt + coord[2]*cos_tilt;
-        xp =  coord[1]*cos_tilt + coord[3]*sin_tilt;
-        yp = -coord[1]*sin_tilt + coord[3]*cos_tilt;
+        x  = coord[0];
+        xp = coord[1];
+        y  = coord[2];
+        yp = coord[3];
         s  = coord[4];
         dp = coord[5];
 
@@ -181,24 +175,24 @@ void track_through_kicker(
             yp += -2*sin(angle)/kicker->length/(1+dp)*ds*x0*y0*kicker->b2;
           }
         }
-        
-        /* undo the rotation and store in place of initial coordinates */
-        coord[0] = x*cos_tilt - y*sin_tilt;
-        coord[2] = x*sin_tilt + y*cos_tilt;
-        coord[1] = xp*cos_tilt - yp*sin_tilt;
-        coord[3] = xp*sin_tilt + yp*cos_tilt;
+    
+        coord[0] = x;
+        coord[1] = xp;
+        coord[2] = y;
+        coord[3] = yp;
         coord[4] = s;
-
-        /* remove the coordinate offsets */
-        coord[0] += dx - coord[1]*dz;
-        coord[2] += dy - coord[3]*dz;
-        coord[4] -= dz*sqrt(1+ sqr(coord[1]) + sqr(coord[3]));
-        }
+      }
+    
 /*
     if (np)
         fprintf(stdout, "average kicker amplitude = %f\n", sum_amp/np);
         fflush(stdout);
  */
+
+    if (kicker->tilt)
+      rotateBeamCoordinates(part, np, -kicker->tilt);
+    if (kicker->dx || kicker->dy || kicker->dz)
+      offsetBeamCoordinates(part, np, -kicker->dx, -kicker->dy, -kicker->dz);
 
     log_exit("track_through_kicker");
     }
@@ -239,7 +233,6 @@ void track_through_mkicker(
 {
   long i, n, ip;
   double time, time_offset, strength, t0, amplitude;
-  double cos_tilt, sin_tilt;
   double dummy;
   long n_parts;
   
@@ -292,11 +285,13 @@ void track_through_mkicker(
 
   time_offset += kicker->time_offset;
 
-  cos_tilt = cos(kicker->tilt);
-  sin_tilt = sin(kicker->tilt);
-
   if ((n_parts = ceil(kicker->n_kicks/4.0))<1)
     n_parts = 1;
+
+  if (kicker->dx || kicker->dy || kicker->dz)
+    offsetBeamCoordinates(part, np, kicker->dx, kicker->dy, kicker->dz);
+  if (kicker->tilt)
+    rotateBeamCoordinates(part, np, kicker->tilt);
 
   for (ip=0; ip<np; ip++) {
     strength = kicker->strength;
@@ -330,14 +325,15 @@ void track_through_mkicker(
                                       kicker->t_wf[i],   kicker->t_wf[i+1], time));
     }
 
-
-    integrate_kick_multipole_ord4(part[ip], cos_tilt, sin_tilt,
-                                  kicker->dx, kicker->dy, kicker->dz, 0.0, 0.0,
-                                  0.0, 0.0, 0.0,
+    integrate_kick_multipole_ord4(part[ip], kicker->dx, kicker->dy, 0.0, 0.0, 0.0, 0.0, 0.0,
                                   kicker->order, 0, strength*kicker->length, n_parts,
                                   kicker->length, NULL, NULL, NULL, &dummy, NULL);
   }
 
+  if (kicker->tilt)
+    rotateBeamCoordinates(part, np, -kicker->tilt);
+  if (kicker->dx || kicker->dy || kicker->dz)
+    offsetBeamCoordinates(part, np, -kicker->dx, -kicker->dy, -kicker->dz);
 }
 
 void set_up_mkicker(MKICKER *kicker)

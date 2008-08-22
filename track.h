@@ -805,7 +805,7 @@ extern char *entity_text[N_TYPES];
 #define N_ILMATRIX_PARAMS 32
 #define N_TSCATTER_PARAMS 1
 #define N_KQUSE_PARAMS 14
-#define N_UKICKMAP_PARAMS 7
+#define N_UKICKMAP_PARAMS 8
 #define N_MKICKER_PARAMS 13
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
@@ -2399,15 +2399,15 @@ typedef struct {
 extern PARAMETER ukickmap_param[N_UKICKMAP_PARAMS];
 
 typedef struct {
-  double length, fieldFactor;
+  double length, tilt, dx, dy, dz, fieldFactor;
   char *inputFile;
   long nKicks;
   /* for internal use only */
   long initialized;
   long points, nx, ny;
   double *xpFactor, *ypFactor;
-  double xmin, xmax, dx;
-  double ymin, ymax, dy;
+  double xmin, xmax, dxg;
+  double ymin, ymax, dyg;
 } UKICKMAP;  
 
 /* macros for bending magnets */ 
@@ -2872,6 +2872,7 @@ extern long set_max_name_length(long length);
 extern void misalign_matrix(VMATRIX *M, double dx, double dy, double dz, double bend_angle);
 extern VMATRIX *misalignment_matrix(MALIGN *malign, long order);
 extern void offset_matrix(VMATRIX *M, double dx, double dxp, double dy, double dyp);
+extern void offsetBeamCoordinates(double **part, long np, double dx, double dy, double dz);
 
 /* prototypes for matrix7.c: */
 extern void print_matrices(FILE *fp, char *string, VMATRIX *M);
@@ -2908,14 +2909,12 @@ extern long multipole_tracking2(double **particle, long n_part, ELEMENT_LIST *el
                                 APERTURE_DATA *apData, double *sigmaDelta2);
 extern long fmultipole_tracking(double **particle,  long n_part, FMULT *multipole,
                                 double p_error, double Po, double **accepted, double z_start);
-int integrate_kick_multipole_ord2(double *coord, double cos_tilt, double sin_tilt,
-                                  double dx, double dy, double dz, double xkick, double ykick,
+int integrate_kick_multipole_ord2(double *coord, double dx, double dy, double xkick, double ykick,
                                   double Po, double rad_coef, double isr_coef,
                                   long order, long sqrtOrder, double KnL, long n_kicks, double drift,
                                   MULTIPOLE_DATA *multData, MULTIPOLE_DATA *steeringMultData,
                                   MULT_APERTURE_DATA *apData, double *dzLoss, double *sigmaDelta2);
-int integrate_kick_multipole_ord4(double *coord, double cos_tilt, double sin_tilt,
-                                  double dx, double dy, double dz, double xkick, double ykick,
+int integrate_kick_multipole_ord4(double *coord, double dx, double dy, double xkick, double ykick,
                                   double Po, double rad_coef, double isr_coef,
                                   long order, long sqrtOrder, double KnL, long n_kicks, double drift,
                                   MULTIPOLE_DATA *multData, MULTIPOLE_DATA *steeringMultData,

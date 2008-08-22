@@ -125,3 +125,20 @@ void offset_matrix(VMATRIX *M, double dx, double dxp, double dy, double dyp)
     log_exit("offset_matrix");
     }
 
+/* The name is a misnomer: we offset the coordinates of a beam
+ * to emulate offsetting of the upcoming element by the values
+ */
+
+void offsetBeamCoordinates(double **coord, long np, double dx, double dy, double dz)
+{
+  long ip;
+  double *part;
+  
+  for (ip=np-1; ip>=0; ip--) {
+    part = coord[ip];
+    part[4] += dz*sqrt(1 + sqr(part[1]) + sqr(part[3]));
+    part[0]  = part[0] - dx + dz*part[1];
+    part[2]  = part[2] - dy + dz*part[3];
+  }
+}
+
