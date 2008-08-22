@@ -15,7 +15,7 @@
 #include "track.h"
 #include "mdb.h"
 
-long initializeUndulatorKickMap(UKICKMAP *map);
+void initializeUndulatorKickMap(UKICKMAP *map);
 long interpolateUndulatorKickMap(double *xpFactor, double *ypFactor, UKICKMAP *map, double x, double y);
 
 long trackUndulatorKickMap(
@@ -94,7 +94,7 @@ long trackUndulatorKickMap(
   return iTop+1;
 }
 
-long initializeUndulatorKickMap(UKICKMAP *map)
+void initializeUndulatorKickMap(UKICKMAP *map)
 {
   SDDS_DATASET SDDSin;
   double *x=NULL, *y=NULL, *xpFactor=NULL, *ypFactor=NULL;
