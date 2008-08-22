@@ -7,9 +7,12 @@
 # in the file LICENSE that is included with this distribution. 
 #*************************************************************************
 #
-# $Id: Makefile.OAG,v 1.7 2008-08-14 17:10:40 borland Exp $
+# $Id: Makefile.OAG,v 1.8 2008-08-22 15:55:59 borland Exp $
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.7  2008/08/14 17:10:40  borland
+# Added astra2elegant and elegant2astra.
+#
 # Revision 1.6  2008/08/13 19:01:54  soliday
 # Updated to work without needing the entire GSL library installed.
 #
@@ -52,7 +55,7 @@ PRODOAG = sddsemitmeas sddsemitproc sddsTouschekInteg \
           sddsanalyzebeam sddsrandmult sddsresdiag \
           sddsfindresonances touschekLifetime csrImpedance
 
-SCRIPTS = elegantRingAnalysis beamLifetimeCalc fin2param elegant2shower shower2elegant longitCmd longitCalcs km2sdds astra2elegant elegant2astra
+SCRIPTS = elegantRingAnalysis beamLifetimeCalc fin2param elegant2shower shower2elegant longitCmd longitCalcs km2sdds astra2elegant elegant2astra smoothDist6s
 
 PROD_HOST = $(PRODOAG)
 
