@@ -626,9 +626,9 @@ void TouschekDistribution(RUN *run, LINE_LIST *beamline)
               beam0->particle[i][3] = p1[4];
               beam0->particle[i][4] = p1[2];
               beam0->particle[i][5] = p1[5];
+              beam0->particle[i][6] = i+1;
               weight[i] = temp;
-	      i++;
-              beam0->particle[i][6] = i;
+              i++;
             }
 	    
             if(i>=n_simulated)
@@ -650,9 +650,9 @@ void TouschekDistribution(RUN *run, LINE_LIST *beamline)
               beam0->particle[i][3] = p2[4];
               beam0->particle[i][4] = p2[2];
               beam0->particle[i][5] = p2[5];
+              beam0->particle[i][6] = i+1;
               weight[i] = temp;
-	      i++;
-              beam0->particle[i][6] = i;
+              i++;
             }
           }
 	  
@@ -674,7 +674,7 @@ void TouschekDistribution(RUN *run, LINE_LIST *beamline)
 	
         /* Pick tracking particles from the simulated scattered particles */
         index = (long*)malloc(sizeof(long)*tsptr->simuCount);
-	for (i=0; i<tsptr->simuCount; i++) index[i]=i;
+        for (i=0; i<tsptr->simuCount; i++) index[i]=i;
         iTotal = 0;
         wTotal =0.;
         weight_limit = tsptr->totalWeight*(1-tsSpec->ignoredPortion);
