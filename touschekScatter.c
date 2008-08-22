@@ -488,9 +488,9 @@ void TouschekDistribution(RUN *run, LINE_LIST *beamline)
   static SDDS_TABLE SDDS_bunch, SDDS_loss;
   BEAM  Beam0, Beam, *beam0, *beam;
   double xrange[6];
-  book1 x, y, s, xp, yp, dp;
-  book1 x0, y0, s0, xp0, yp0, dp0;
-  book1 lossDis;
+  book1 *x, *y, *s, *xp, *yp, *dp;
+  book1 *x0, *y0, *s0, *xp0, *yp0, *dp0;
+  book1 *lossDis;
   double *weight;
   double ran1[11];
   long *index, iTotal, sTotal;
@@ -537,25 +537,25 @@ void TouschekDistribution(RUN *run, LINE_LIST *beamline)
         xrange[5] = 0.5*tsSpec->range[2]*tsSpec->sigma_p;
         if (initial) {
           tsptr->iniFile = compose_filename1(initial, run->rootname, eptr->occurence);
-          chbook1(&x0,  "x", -xrange[0], xrange[0], tsSpec->nbins);
-          chbook1(&y0,  "y", -xrange[1], xrange[1], tsSpec->nbins);
-          chbook1(&s0,  "s", -xrange[2], xrange[2], tsSpec->nbins);
-          chbook1(&xp0, "xp", -xrange[3], xrange[3], tsSpec->nbins);
-          chbook1(&yp0, "yp", -xrange[4], xrange[4], tsSpec->nbins);
-          chbook1(&dp0, "dp", -xrange[5], xrange[5], tsSpec->nbins);
+          x0 = chbook1("x", -xrange[0], xrange[0], tsSpec->nbins);
+          y0 = chbook1("y", -xrange[1], xrange[1], tsSpec->nbins);
+          s0 = chbook1("s", -xrange[2], xrange[2], tsSpec->nbins);
+          xp0 = chbook1("xp", -xrange[3], xrange[3], tsSpec->nbins);
+          yp0 = chbook1("yp", -xrange[4], xrange[4], tsSpec->nbins);
+          dp0 = chbook1("dp", -xrange[5], xrange[5], tsSpec->nbins);
         }
         if (distribution) {
           tsptr->disFile = compose_filename1(distribution, run->rootname, eptr->occurence);
-          chbook1(&x,  "x", -xrange[0], xrange[0], tsSpec->nbins);
-          chbook1(&y,  "y", -xrange[1], xrange[1], tsSpec->nbins);
-          chbook1(&s,  "s", -xrange[2], xrange[2], tsSpec->nbins);
-          chbook1(&xp, "xp", -xrange[3], xrange[3], tsSpec->nbins);
-          chbook1(&yp, "yp", -xrange[4], xrange[4], tsSpec->nbins);
-          chbook1(&dp, "dp", -0.1, 0.1, tsSpec->nbins);
+          x = chbook1("x", -xrange[0], xrange[0], tsSpec->nbins);
+          y = chbook1("y", -xrange[1], xrange[1], tsSpec->nbins);
+          s = chbook1("s", -xrange[2], xrange[2], tsSpec->nbins);
+          xp = chbook1("xp", -xrange[3], xrange[3], tsSpec->nbins);
+          yp = chbook1("yp", -xrange[4], xrange[4], tsSpec->nbins);
+          dp = chbook1("dp", -0.1, 0.1, tsSpec->nbins);
         }
         if (output) {
           tsptr->outFile = compose_filename1(output, run->rootname, eptr->occurence);
-          chbook1(&lossDis, "los_distribution", 0, sTotal, sTotal);
+          lossDis = chbook1("los_distribution", 0, sTotal, sTotal);
         }
         if (loss) {
           tsptr->losFile = compose_filename1(loss, run->rootname, eptr->occurence);
@@ -583,10 +583,10 @@ void TouschekDistribution(RUN *run, LINE_LIST *beamline)
           total_event++;
           selectPart(tsptr, p1, p2, &dens1, &dens2, ran1);
           if (initial) {
-            fill_hbook (&x0, &y0, &s0, &xp0, &yp0, &dp0, p1, dens1);
-            fill_hbook (&x0, &y0, &s0, &xp0, &yp0, &dp0, p2, dens2);
+            fill_hbook (x0, y0, s0, xp0, yp0, dp0, p1, dens1);
+            fill_hbook (x0, y0, s0, xp0, yp0, dp0, p2, dens2);
           }
-          /* This is very important. Change from slop to MeV */
+         /* This is very important. Change from slop to MeV */
           for(j=3; j<5; j++) {
             p1[j] *= tsSpec->pCentral;
             p2[j] *= tsSpec->pCentral;
@@ -616,7 +616,7 @@ void TouschekDistribution(RUN *run, LINE_LIST *beamline)
               p1[4] /= tsSpec->pCentral;
               p1[5] /= tsSpec->pCentral;
               if (distribution) {
-                fill_hbook (&x, &y, &s, &xp, &yp, &dp, p1, temp);
+                fill_hbook (x, y, s, xp, yp, dp, p1, temp);
               }
               tsptr->simuCount++;
 	      
@@ -640,7 +640,7 @@ void TouschekDistribution(RUN *run, LINE_LIST *beamline)
               p2[4] /= tsSpec->pCentral;
               p2[5] /= tsSpec->pCentral;
               if (distribution) {
-                fill_hbook (&x, &y, &s, &xp, &yp, &dp, p2, temp);
+                fill_hbook (x, y, s, xp, yp, dp, p2, temp);
               }
               tsptr->simuCount++;
 	      
@@ -706,16 +706,16 @@ void TouschekDistribution(RUN *run, LINE_LIST *beamline)
           dump_scattered_particles(&SDDS_bunch, beam->particle, (long)iTotal,
                                    weight, tsptr);
         if (distribution) {
-          print_hbook(&x, &y, &s, &xp, &yp, &dp, tsptr, tsptr->disFile, 
+          print_hbook(x, y, s, xp, yp, dp, tsptr, tsptr->disFile, 
                       "Distribution of Scattered particles", 1);
-          free_hbook1(&x);free_hbook1(&y);free_hbook1(&s);
-          free_hbook1(&xp);free_hbook1(&yp);free_hbook1(&dp);
+          free_hbook1(x);free_hbook1(y);free_hbook1(s);
+          free_hbook1(xp);free_hbook1(yp);free_hbook1(dp);
         }
         if (initial) {
-          print_hbook(&x0, &y0, &s0, &xp0, &yp0, &dp0, tsptr, tsptr->iniFile, 
+          print_hbook(x0, y0, s0, xp0, yp0, dp0, tsptr, tsptr->iniFile, 
                       "Distribution of simulated particles", 1);
-          free_hbook1(&x0);free_hbook1(&y0);free_hbook1(&s0);
-          free_hbook1(&xp0);free_hbook1(&yp0);free_hbook1(&dp0);
+          free_hbook1(x0);free_hbook1(y0);free_hbook1(s0);
+          free_hbook1(xp0);free_hbook1(yp0);free_hbook1(dp0);
         }
 #if USE_MPI
       }
@@ -741,10 +741,10 @@ void TouschekDistribution(RUN *run, LINE_LIST *beamline)
           if (output) {
             for (i=0; i< beam->n_to_track-n_left; i++) {
               j = (beam->particle+n_left)[i][6]-1;
-              chfill1(&lossDis, (beam->particle+n_left)[i][4], weight[j]*tsptr->IntR/tsptr->s_rate);
+              chfill1(lossDis, (beam->particle+n_left)[i][4], weight[j]*tsptr->IntR/tsptr->s_rate);
             }
-            chprint1(&lossDis, tsptr->outFile, "Beam loss distribution in particles/s/m", verbosity);
-	    free_hbook1(&lossDis);
+            chprint1(lossDis, tsptr->outFile, "Beam loss distribution in particles/s/m", verbosity);
+	    free_hbook1(lossDis);
           }
 #if USE_MPI
         }
