@@ -232,7 +232,7 @@ void setup_response_output(RESPONSE_OUTPUT *respOutput,
 void run_response_output(RUN *run, LINE_LIST *beamline, CORRECTION *correct, long tune_corrected)
 {
     long unitsCode, inverseComputedSave;
-    MATRIX *Cx, *Cy, *Tx, *Ty, *tmp;
+    MAT *Cx, *Cy, *Tx, *Ty;
 
     unitsCode = KnL_units?KNL_UNITS:(BnL_units?BNL_UNITS:0);
     if (tune_corrected==0 && !output_before_tune_correction)
@@ -242,17 +242,14 @@ void run_response_output(RUN *run, LINE_LIST *beamline, CORRECTION *correct, lon
      * We have to do this because the correction command may have different settings (e.g., fixed-length
      * constraint or non-perturbed matrix.
      */
-    m_alloc(&Cx, correct->CMx->nmon, correct->CMx->ncor);
-    tmp = Cx; Cx = correct->CMx->C;  correct->CMx->C = tmp;
-     
-    m_alloc(&Cy, correct->CMy->nmon, correct->CMy->ncor);
-    tmp = Cy; Cy = correct->CMy->C;  correct->CMy->C = tmp;
 
-    m_alloc(&Tx, correct->CMx->ncor, correct->CMx->nmon);
-    tmp = Tx; Tx = correct->CMx->T;  correct->CMx->T = tmp;
+    Cx = correct->CMx->C;
+    Tx = correct->CMx->T;
+    correct->CMx->C = correct->CMx->T = NULL;
 
-    m_alloc(&Ty, correct->CMy->ncor, correct->CMy->nmon);
-    tmp = Ty; Ty = correct->CMy->T;  correct->CMy->T = tmp;
+    Cy = correct->CMy->C;
+    Ty = correct->CMy->T;
+    correct->CMy->C = correct->CMy->T = NULL;
 
     if (correct->mode==TRAJECTORY_CORRECTION) {
       printf("Computing trajectory correction matrices for output.\n");
@@ -293,28 +290,25 @@ void run_response_output(RUN *run, LINE_LIST *beamline, CORRECTION *correct, lon
       return;
 #endif
 
-    if (response[1])
-        do_response_output(&yRespOutput, correct->CMy, &correct->SLy, 1, 0, unitsCode, tune_corrected);
     if (response[0])
         do_response_output(&xRespOutput, correct->CMx, &correct->SLx, 0, 0, unitsCode, tune_corrected);
-
+    if (response[1])
+        do_response_output(&yRespOutput, correct->CMy, &correct->SLy, 1, 0, unitsCode, tune_corrected);
     if (inverse[0])
         do_response_output(&xInvRespOutput, correct->CMx, &correct->SLx, 0, 1, unitsCode, tune_corrected);
     if (inverse[1])
         do_response_output(&yInvRespOutput, correct->CMy, &correct->SLy, 1, 1, unitsCode, tune_corrected);
 
     /* copy matrices back to the correction structure and free memory */
-    tmp = Cx; Cx = correct->CMx->C;  correct->CMx->C = tmp;
-    m_free(&Cx);
-     
-    tmp = Cy; Cy = correct->CMy->C;  correct->CMy->C = tmp;
-    m_free(&Cy);
+    matrix_free(correct->CMx->C);
+    matrix_free(correct->CMx->T);
+    correct->CMx->C = Cx;
+    correct->CMx->T = Tx;
 
-    tmp = Tx; Tx = correct->CMx->T;  correct->CMx->T = tmp;
-    m_free(&Tx);
-
-    tmp = Ty; Ty = correct->CMy->T;  correct->CMy->T = tmp;
-    m_free(&Ty);
+    matrix_free(correct->CMy->C);
+    matrix_free(correct->CMy->T);
+    correct->CMy->C = Cy;
+    correct->CMy->T = Ty;
     }
 
 void do_response_output(RESPONSE_OUTPUT *respOutput, CORMON_DATA *CM, STEERING_LIST *SL, long plane,
@@ -324,6 +318,13 @@ void do_response_output(RESPONSE_OUTPUT *respOutput, CORMON_DATA *CM, STEERING_L
     ELEMENT_LIST *eptr;
     double value;
 
+/*
+    matrix_show(inverse ? CM->T : CM->C, "%13.6le ", 
+                plane ? 
+                (inverse ? "vertical inverse\n" : "vertical response\n") :
+                (inverse ? "horizontal inverse\n" : "horizontal response\n"), stdout);
+*/
+    
     log_entry("do_response_output");
     if (!SDDS_StartTable(&respOutput->SDDSout, CM->nmon) ||
         !SDDS_SetParameters(&respOutput->SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
@@ -339,7 +340,7 @@ void do_response_output(RESPONSE_OUTPUT *respOutput, CORMON_DATA *CM, STEERING_L
         if (unitsCode==BNL_UNITS) 
             for (j=0; j<CM->ncor; j++) {
                 eptr = CM->ucorr[j];
-                value = (inverse?CM->T->a[j][i]:CM->C->a[i][j]);
+                value = (inverse?Mij(CM->T, j, i):Mij(CM->C, i, j));
                 if (eptr->type==T_HCOR || eptr->type==T_HVCOR || eptr->type==T_VCOR) {
                     value *= (inverse?eptr->Pref_output/586.679:586.679/(eptr->Pref_output+1e-10));
                   }
@@ -350,7 +351,7 @@ void do_response_output(RESPONSE_OUTPUT *respOutput, CORMON_DATA *CM, STEERING_L
         else if (unitsCode==KNL_UNITS && plane==0) 
             for (j=0; j<CM->ncor; j++) {
                 eptr = CM->ucorr[j];
-                value = (inverse?CM->T->a[j][i]:CM->C->a[i][j]);
+                value = (inverse?Mij(CM->T, j, i):Mij(CM->C, i, j));
                 if (eptr->type==T_HCOR || eptr->type==T_HVCOR)
                     value = -value;
                 if (!SDDS_SetRowValues(&respOutput->SDDSout, SDDS_PASS_BY_VALUE|SDDS_SET_BY_INDEX, i,
@@ -359,7 +360,7 @@ void do_response_output(RESPONSE_OUTPUT *respOutput, CORMON_DATA *CM, STEERING_L
                 }
         else
             for (j=0; j<CM->ncor; j++) {
-                value = (inverse?CM->T->a[j][i]:CM->C->a[i][j]);
+                value = (inverse?Mij(CM->T, j, i):Mij(CM->C, i, j));
                 if (!SDDS_SetRowValues(&respOutput->SDDSout, SDDS_PASS_BY_VALUE|SDDS_SET_BY_INDEX, i,
                                        respOutput->correctorIndex[j], value, -1))
                     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);

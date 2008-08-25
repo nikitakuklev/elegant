@@ -7,7 +7,7 @@
 * in the file LICENSE that is included with this distribution. 
 \*************************************************************************/
 
-#include "matlib.h"
+#include "matrixOp.h"
 
 /* see correction.c for additional explanation of the next three structures */
 
@@ -36,9 +36,11 @@ typedef struct {
     /* copies of input specifications for correction */
     double corr_fraction, corr_accuracy, corr_limit, bpm_noise, default_tweek, bpm_noise_cutoff;
     long fixed_length, bpm_noise_distribution, default_threading_divisor;
-    /* correction matrix plus working matrices.  dK = T*Qo is the vector of corrector kicks */
-    /* Cij = dX(monitor i)/dK(corrector j) */
-    MATRIX *T, *Qo, *dK, *C; 
+    long remove_smallest_SVs, keep_largest_SVs, auto_limit_SVs;
+    double minimum_SV_ratio;
+    /* correction matrix and inverse, respectively: */
+    /* Mij(C, i, j) = dX(monitor i)/dK(corrector j) */
+    MAT *C, *T; 
     /* information about last correction */
     long n_cycles_done, inverse_computed;
     } CORMON_DATA;

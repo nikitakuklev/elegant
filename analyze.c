@@ -16,7 +16,7 @@
 #include "mdb.h"
 #include "track.h"
 #include "analyze.h"
-#include "correctDefs.h"
+#include "matlib.h"
 
 #define CMATRIX_OFFSET 0
 #define RMATRIX_OFFSET 6

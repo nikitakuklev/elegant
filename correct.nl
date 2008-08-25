@@ -15,6 +15,10 @@
     double corrector_limit[2] = {0, 0};
     double correction_fraction[2] = {1, 1};
     double correction_accuracy[2] = {1e-6, 1e-6};
+    long remove_smallest_SVs[2] = {0, 0};
+    long keep_largest_SVs[2] = {0, 0};
+    double minimum_SV_ratio[2] = {0, 0};
+    long auto_limit_SVs[2] = {1, 1};
     long threading_divisor[2] = {100, 100};
     double bpm_noise[2] = {0, 0};
     double bpm_noise_cutoff[2] = {1.0, 1.0};
