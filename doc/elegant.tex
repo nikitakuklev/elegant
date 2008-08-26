@@ -67,7 +67,9 @@ and references, see the specific entries in the manual.
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item None
+\item Orbit and trajectory correction now use singular value decomposition (SVD) for matrix inversion,
+ with several controls that allow removal of singular vectors.  See the documentation for the 
+ \verb|correct| command for details.
 \end{itemize}
 
 \subsection{Changes to Related Programs and Files}
@@ -1105,6 +1107,11 @@ during the computations.
     double corrector_limit[2] = {0, 0};
     double correction_fraction[2] = {1, 1};
     double correction_accuracy[2] = {1e-6, 1e-6};
+    long remove_smallest_SVs[2] = {0, 0};
+    long keep_largest_SVs[2] = {0, 0};
+    double minimum_SV_ratio[2] = {0, 0};
+    long auto_limit_SVs[2] = {1, 1};
+    long threading_divisor[2] = {100, 100};
     double bpm_noise[2] = {0, 0};
     double bpm_noise_cutoff[2] = {1.0, 1.0};
     STRING bpm_noise_distribution[2] = {"uniform", "uniform"};
@@ -1124,6 +1131,9 @@ during the computations.
     long use_perturbed_matrix = 0;
 &end
 \end{verbatim}
+
+In the case of array variables with dimension 2, the first entry is for the horizontal plane and the second
+is for the vertical plane.
 
 \begin{itemize}
 
@@ -1146,6 +1156,13 @@ small apertures.  If you get an error message about ``tracking failed for test p
 \item \verb|corrector_limit[2]| --- The maximum strength allowed for a corrector.
 \item \verb|correction_fraction[2]| --- The fraction of the computed correction strength to actually use for any one iteration.
 \item \verb|correction_accuracy[2]| --- The desired accuracy of the correction in terms of the RMS BPM values.
+\item \verb|remove_smallest_SVs|, \verb|keep_largest_SVs|, \verb|minimum_SV_ratio|, \verb|auto_limit_SVs| --- These parameters control the elimination of
+  singular vectors from the inverse response matrix, which can help deal with degeneracy in the correctors and reduce corrector strength.
+  By default, the number of singular vectors is limited to the number of BPMs, which is a basic condition for stability; this can be defeated by
+  setting \verb|auto_limit_SVs| to 0 for the desired planes.  Set \verb|remove_smallest_SVs| to require removal of a given number of
+  vectors with the smallest singular values; this is ignored if \verb|auto_limit_SVs| is also requested and would remove more SVs. 
+  Set \verb|keep_largest_SVs| to require keeping at most a given number of the largest SVs.
+  Set \verb|minimum_SV_ratio| to require removal of any vectors with singular values less than a given factor of the largest singular value.
 \item \verb|bpm_noise[2]| --- The BPM noise level. 
 \item \verb|bpm_noise_cutoff[2]| --- Cutoff values for the random distributions of BPM noise.
 \item \verb|bpm_noise_distribution[2]| --- May be either ``gaussian'', ``uniform'', or ``plus\_or\_minus''.
