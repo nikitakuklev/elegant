@@ -105,6 +105,7 @@ sinclude(<ERROR>)
         skip_elements = <elementsToSkip>,
         process_elements = <elementsToProcess>,
         include_name_pattern = <pattern>,
+        include_type_pattern = <typePattern>,
         verbosity = 4
 &end
 
