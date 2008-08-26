@@ -4,6 +4,9 @@
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.11  2008/07/03 16:46:20  borland
+# Added option to include diffusion calculation.
+#
 # Revision 1.10  2008/06/05 13:01:22  borland
 # Added status message after reading configuration file given on commandline.
 #
@@ -976,7 +979,11 @@ proc FillMomentumApertureFrame {widget args} {
 
     APSLabeledEntry .lep -parent $widget \
       -label "Element name pattern: " -width 20 -textVariable momentumAperture(pattern) \
-      -contextHelp "Enter a pattern for matching to elements names for selecting beamline elements."
+      -contextHelp "Enter a pattern for matching to element names for selecting beamline elements."
+    
+    APSLabeledEntry .letp -parent $widget \
+      -label "Element type pattern: " -width 20 -textVariable momentumAperture(typePattern) \
+      -contextHelp "Enter a pattern for matching to element types for selecting beamline elements."
     
     APSLabeledEntry .let -parent $widget \
       -label "Turns: " -width 20 -textVariable momentumAperture(turns) \
