@@ -19,6 +19,11 @@
  * Hairong Shang, May 2005
 
 $Log: not supported by cvs2svn $
+Revision 1.14  2007/03/13 17:39:23  shang
+fixed the bug in computing on-axis power density for spatial distribution, modified the code
+to read electron beam energy from each page of the input file and update the undulator's Kx and Ky if
+they are computed from electron beam energy.
+
 Revision 1.13  2007/02/02 19:20:38  shang
 replaced the parameter name "TotalPowerDensity" by "OnAxisPowerDensity" for US output.
 
@@ -149,14 +154,14 @@ void DefineParameters(SDDS_DATASET *SDDSout, long mode, long iang, long us);
 void WriteUSResultsToOutput(SDDS_DATASET *SDDSout, UNDULATOR_PARAM  undulator_param, 
                             ELECTRON_BEAM_PARAM electron_param, PINHOLE_PARAM pinhole_param,
                             long nPhi, long nAlpha, double dAlpha, long nOmega, double dOmega,
-                            long mode, long icalc, long iharm, long nEE, long isub, long iang,
+                            long mode, long icalc, int32_t iharm, long nEE, long isub, long iang,
                             double ptot, double pd, double ptot1, double ftot, long imax, long imin,
                             double emin, double emax, double E1, double lamda1, double *xPMM, double *yPMM,
                             double *L1, double *L2, double *L3, double *L4, double *EE, double *irradiance,
                             double *spec1);
-void SpecifyDescription(char **description, long isub, long mode, long iang, long i_max, long iharm);
+void SpecifyDescription(char **description, long isub, long mode, long iang, long i_max, int32_t iharm);
 SDDS_DATASET *SetupOutputFile(char *outputfile, SDDS_DATASET *SDDSout, long mode, long itype, long icalc, 
-                              long isub, long iang, long idebug, long iharm, long special, SDDS_DATASET *SDDSout1);
+                              long isub, long iang, long idebug, int32_t iharm, long special, SDDS_DATASET *SDDSout1);
 void WriteToOutput(SDDS_DATASET *SDDSout, SDDS_DATASET *SDDSout2, char *description, char *undulatorType,
                    long idebug,
                    long itype, double period, double kx, double ky, double phase,
@@ -164,7 +169,7 @@ void WriteToOutput(SDDS_DATASET *SDDSout, SDDS_DATASET *SDDSout2, char *descript
                    double energy, double energySpread, double current, double sigx, double sigy, double sigxp,
                    double sigyp, double distance, double xPC, double yPC, 
                    double xPS, double yPS,long nXP, long nYP,
-                   long mode, long icalc, long iharm, long nPhi, long nSig, long nAlpha,
+                   long mode, long icalc, int32_t iharm, long nPhi, long nSig, long nAlpha,
                    double dAlpha, long nOmega, double dOmega,
                    double E1, double lamda1, double ptot, double pd, long isub, long iang,
                    double *EE, double *lamda, long min_harmonic, long max_harmonic, long nEE,
@@ -172,12 +177,12 @@ void WriteToOutput(SDDS_DATASET *SDDSout, SDDS_DATASET *SDDSout2, char *descript
                    double *L1, double *L2, double *L3, double *L4, double max_irradiance, double *power,
                    long *I1, long *I2, long i_max, double *EI, double *spec1, double *spec2,
                    double *spec3, double pdtot, double ptot1, double ftot, long *harmonics,
-                   SDDS_DATASET *SDDSout1, long special, long iharm5, double *x5, double *y5, double *E5,
+                   SDDS_DATASET *SDDSout1, long special, int32_t iharm5, double *x5, double *y5, double *E5,
                    double *power5, double *flux5);
 long GetISub(long mode, long icalc);
 void check_input_parameters(UNDULATOR_PARAM *undulator_param, ELECTRON_BEAM_PARAM *electron_param, 
                             PINHOLE_PARAM *pinhole_param, long nE, long nPhi, long nAlpha, long nOmega, double dOmega,
-                            long mode, long icalc, long iharm, long inputSupplied, long us);
+                            long mode, long icalc, int32_t iharm, long inputSupplied, long us);
 
 char *USAGE1="sddsurgent <inputFile> <outputFile>\n\
     [-calculation=mode={1|2|3|4|5|6|-6|fluxDistribution|fluxSpectrum|brightness|brilliance|pinholeSpectrum|integratedSpectrum|powerDensity|,method={1|2|3|4|14|dejus|walkerinfinite|walkerfinite},harmonics=<integer>] \n\
@@ -298,7 +303,8 @@ int main(int argc, char **argv) {
   ELECTRON_BEAM_PARAM electron_param;
   PINHOLE_PARAM pinhole_param;
   double emax,  emin, dAlpha, dOmega, coupling, emittanceRatio, period, current;
-  long nE, mode, icalc, iharm, nAlpha, nOmega, idebug, us, nPhi, points, nowarnings;
+  long nE, mode, icalc,  nAlpha, nOmega, idebug, us, nPhi, points, nowarnings;
+  int32_t iharm;
   /* input parameters from input file */
   TWISS_PARAMETER twiss;
   long page, inputPages=1, inputSupplied=0;
@@ -809,7 +815,7 @@ int main(int argc, char **argv) {
 }
 
 SDDS_DATASET *SetupOutputFile(char *outputfile, SDDS_DATASET *SDDSout, long mode, long itype, long icalc, 
-                              long isub, long iang, long idebug, long iharm, long special, SDDS_DATASET *SDDSout1)
+                              long isub, long iang, long idebug, int32_t iharm, long special, SDDS_DATASET *SDDSout1)
 {
   
   if (!SDDS_InitializeOutput(SDDSout, SDDS_BINARY, 0, NULL, NULL, outputfile))
@@ -961,7 +967,7 @@ SDDS_DATASET *SetupOutputFile(char *outputfile, SDDS_DATASET *SDDSout, long mode
   return NULL;
 }
 
-void SpecifyDescription(char **description, long isub, long mode, long iang, long i_max, long iharm)
+void SpecifyDescription(char **description, long isub, long mode, long iang, long i_max, int32_t iharm)
 {             
   char desc[2046];
   
@@ -1017,7 +1023,7 @@ void SpecifyDescription(char **description, long isub, long mode, long iang, lon
     if (iharm>0) 
       sprintf(desc,"Angular distribution for harmonic %d.",iharm);
     else
-      sprintf(desc,"Angular distribution for harmonic from 1 to %d.",i_max);
+      sprintf(desc,"Angular distribution for harmonic from 1 to %ld.",i_max);
     SDDS_CopyString(description, desc);
     break;
   default:
@@ -1048,7 +1054,7 @@ void WriteToOutput(SDDS_DATASET *SDDSout, SDDS_DATASET *SDDSout2, char *descript
                    double energy, double energySpread, double current, double sigx, double sigy, double sigxp,
                    double sigyp, double distance, double xPC, double yPC, 
                    double xPS, double yPS,long nXP, long nYP,
-                   long mode, long icalc, long iharm, long nPhi, long nSig, long nAlpha,
+                   long mode, long icalc, int32_t iharm, long nPhi, long nSig, long nAlpha,
                    double dAlpha, long nOmega, double dOmega,
                    double E1, double lamda1, double ptot, double pd, long isub, long iang,
                    double *EE, double *lamda, long min_harmonic, long max_harmonic, long nEE,
@@ -1056,7 +1062,7 @@ void WriteToOutput(SDDS_DATASET *SDDSout, SDDS_DATASET *SDDSout2, char *descript
                    double *L1, double *L2, double *L3, double *L4, double max_irradiance, double *power,
                    long *I1, long *I2, long i_max, double *EI, double *spec1, double *spec2,
                    double *spec3, double pdtot, double ptot1, double ftot, long *harmonics,
-                   SDDS_DATASET *SDDSout1, long special, long iharm5, double *x5, double *y5, double *E5,
+                   SDDS_DATASET *SDDSout1, long special, int32_t iharm5, double *x5, double *y5, double *E5,
                    double *power5, double *flux5) 
 {
   long i, n1=0, n2=0;
@@ -1065,7 +1071,7 @@ void WriteToOutput(SDDS_DATASET *SDDSout, SDDS_DATASET *SDDSout2, char *descript
     for (i=0;i<iharm5;i++) {
       if (!SDDS_StartPage(SDDSout1, nEE))
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-      sprintf(desc,"Angular Distribution for harmonic %d",i+1);
+      sprintf(desc,"Angular Distribution for harmonic %ld",i+1);
       if (!SDDS_SetParameters(SDDSout1,SDDS_BY_NAME|SDDS_PASS_BY_VALUE,"Description", desc,NULL))
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       if (!SDDS_SetColumn(SDDSout1, SDDS_SET_BY_NAME, x5+i*nEE, nEE, "X") ||
@@ -1458,7 +1464,7 @@ void SetupUSOutput(SDDS_DATASET *SDDSout, char *outputfile, long mode, long iang
 void WriteUSResultsToOutput(SDDS_DATASET *SDDSout, UNDULATOR_PARAM  undulator_param, 
                             ELECTRON_BEAM_PARAM electron_param, PINHOLE_PARAM pinhole_param,
                             long nPhi, long nAlpha, double dAlpha, long nOmega, double dOmega,
-                            long mode, long icalc, long iharm, long nEE, long isub, long iang,
+                            long mode, long icalc, int32_t iharm, long nEE, long isub, long iang,
                             double ptot, double pd, double ptot1, double ftot, long imax, long imin,
                             double emin, double emax, double E1, double lamda1, double *xPMM, double *yPMM,
                             double *L1, double *L2, double *L3, double *L4, double *EE, double *irradiance,
@@ -1469,17 +1475,17 @@ void WriteUSResultsToOutput(SDDS_DATASET *SDDSout, UNDULATOR_PARAM  undulator_pa
   
   if (isub==1 || (isub==5 && mode==1)) {    
     if (iang)
-      sprintf(desc,"Angular flux density distribution for %f ev (ph/s/mr^2/0.1%bw).", emin);
+      sprintf(desc,"Angular flux density distribution for %lf ev (ph/s/mr^2/0.1%bw).", emin);
     else
-      sprintf(desc, "Irradiance for %f ev (ph/s/mm^2/0.1%bm).", emin);
+      sprintf(desc, "Irradiance for %lf ev (ph/s/mm^2/0.1%bm).", emin);
   } else if (isub==2 || isub==3 || isub==5) { 
     if (mode==2) 
-      sprintf(desc, "Angular flux density spectrum for x=%f mrad and y=%f mrad.", xPMM[0], yPMM[0]);
+      sprintf(desc, "Angular flux density spectrum for x=%f mrad and y=%lf mrad.", xPMM[0], yPMM[0]);
     else if (mode==3)
       sprintf(desc,"%s", "On-axis brilliance (ph/s/mrad^2/mm^2/0.1%bw).");
     else if (mode==4) {
       if (iang)
-        sprintf(desc, "Flux through %f mrad, %f mrad pinhole at %f mrad, %f mrad.", 
+        sprintf(desc, "Flux through %lf mrad, %lf mrad pinhole at %lf mrad, %lf mrad.", 
                 pinhole_param.xPS, pinhole_param.yPS, pinhole_param.xPC, pinhole_param.yPC);
       else
         sprintf(desc, "Flux through %f mrad, %f mm pinhole at %f mm, %f mm.", 
@@ -1589,7 +1595,7 @@ void WriteUSResultsToOutput(SDDS_DATASET *SDDSout, UNDULATOR_PARAM  undulator_pa
 
 void check_input_parameters(UNDULATOR_PARAM *undulator_param, ELECTRON_BEAM_PARAM *electron_param, 
                             PINHOLE_PARAM *pinhole_param, long nE, long nPhi, long nAlpha, long nOmega, double dOmega,
-                            long mode, long icalc, long iharm, long inputSupplied, long us)
+                            long mode, long icalc, int32_t iharm, long inputSupplied, long us)
 {
   long error=0;
   if (nPhi>100 || nAlpha>100) {
