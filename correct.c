@@ -221,12 +221,14 @@ void correction_setup(
     _correct->CMx->remove_smallest_SVs = remove_smallest_SVs[0];
     _correct->CMx->auto_limit_SVs = auto_limit_SVs[0];
     _correct->CMx->keep_largest_SVs = keep_largest_SVs[0];
-    _correct->CMx->minimum_SV_ratio = minimum_SV_ratio[0];
+    if ((_correct->CMx->minimum_SV_ratio = minimum_SV_ratio[0])>=1)
+      bomb("minimum_SV_ratio should be less than 1 to be meaningful", NULL);
 
     _correct->CMy->remove_smallest_SVs = remove_smallest_SVs[1];
     _correct->CMy->auto_limit_SVs = auto_limit_SVs[1];
     _correct->CMy->keep_largest_SVs = keep_largest_SVs[1];
-    _correct->CMy->minimum_SV_ratio = minimum_SV_ratio[1];
+    if ((_correct->CMy->minimum_SV_ratio = minimum_SV_ratio[1])>=1) 
+      bomb("minimum_SV_ratio should be less than 1 to be meaningful", NULL);
 
     if (verbose)
       fputs("finding correctors/monitors and/or computing correction matrices\n", stdout);
