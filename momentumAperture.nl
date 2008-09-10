@@ -20,6 +20,7 @@
     double s_start = 0;
     double s_end = DBL_MAX;
     STRING include_name_pattern = NULL;
+    STRING include_type_pattern = NULL;
     long fiducialize = 0;
     long verbosity = 1;        
 #end

@@ -71,6 +71,8 @@ void setupMomentumApertureSearch(
     bomb("s_start >= s_end", NULL);
   if (include_name_pattern && has_wildcards(include_name_pattern) && strchr(include_name_pattern, '-'))
     include_name_pattern = expand_ranges(include_name_pattern);
+  if (include_type_pattern && has_wildcards(include_type_pattern) && strchr(include_type_pattern, '-'))
+    include_type_pattern = expand_ranges(include_type_pattern);
   if (skip_elements<0)
     bomb("skip_elements < 0", NULL);
   if (process_elements<=0)
@@ -164,7 +166,8 @@ long doMomentumApertureSearch(
   nElem = 0;
   while (elem) {
     if (elem->end_pos>=s_start && elem->end_pos<=s_end &&
-        (!include_name_pattern || wild_match(elem->name, include_name_pattern))) {
+        (!include_name_pattern || wild_match(elem->name, include_name_pattern)) &&
+        (!include_type_pattern || wild_match(entity_name[elem->type], include_type_pattern)) ) {
       if (!elem0)
 	elem0 = elem;
       nElem++;
@@ -220,7 +223,8 @@ long doMomentumApertureSearch(
   }
 
   while (elem && processElements>0) {
-    if (!include_name_pattern || wild_match(elem->name, include_name_pattern)) {
+    if ((!include_name_pattern || wild_match(elem->name, include_name_pattern)) &&
+        (!include_type_pattern || wild_match(entity_name[elem->type], include_type_pattern))) {
       if (elem->end_pos>s_end) 
         break;
       if (skipElements>0) {
