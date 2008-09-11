@@ -948,7 +948,7 @@ particles.
 \newpage
 \begin{center}{\Large\verb|change_particle|}\end{center}
 \end{latexonly}
-\subsection{chromaticity \label{subsec:changeparticle}}
+\subsection{change\_particle\label{subsec:changeparticle}}
 
 \begin{itemize}
 \item type: action command.
@@ -3980,9 +3980,12 @@ to that convention, use the SDDS toolkit program {\tt sddsexpand}.
 \begin{itemize}
 \item {\tt pipe} --- The standard SDDS Toolkit pipe option.
 \item {\tt nowarnings} --- Suppressses warning messages.
-\item {\tt correctedOnly} --- If given, only the corrected twiss parameters are computed and
- output.  These parameters are the correct ones to match a beamline to, since they have the
- dispersive and mono-energetic terms properly separated.
+\item {\tt correctedOnly} --- If given, only the ``corrected'' twiss parameters and emittances are computed and
+ output.  The corrected twiss parameters have the dispersive component subtracted.  Normally, these are
+computed but given names like \verb|betacx|, \verb|ecx|, etc. whereas the uncorrected values are 
+\verb|betax|, \verb|ex|, etc. The corrected parameters are the correct ones to match a beamline to, since they have the
+ dispersive and mono-energetic terms properly separated.  The uncorrected values are more relevant if the dispersion
+is spurious (i.e., uncorrected or due to something like CSR that doesn't admit of correction).
 \item {\tt -canonical} --- If given, all computations are performed using canonical momenta 
   $q_x = p_x/p_0 = x^\prime (1 + \delta)/\sqrt{1 + x^{\prime 2} + y^{\prime 2}}$ etc.
 \end{itemize}
