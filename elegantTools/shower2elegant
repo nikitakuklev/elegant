@@ -45,7 +45,6 @@ exec sddsprocess $input -pipe=out \
     -process=z,max,zMax \
     "-redefine=column,x,x $xref - xp zMax z - * +,units=m" \
     "-redefine=column,y,y $yref - yp zMax z - * +,units=m" \
-    "-define=column,t,zMax z - vz /,units=s" \
     | sddsconvert -pipe -retain=column,x,y,xp,yp,t,p \
     | sddscombine -pipe=in $output -merge
 
