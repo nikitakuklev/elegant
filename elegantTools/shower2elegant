@@ -35,16 +35,40 @@ if $positrons {
     set type positrons
 } 
 
-exec sddsprocess $input -pipe=out \
-    -match=parameter,Type=$type \
-    -filter=column,w,0.01,1.01 \
-    "-define=column,xp,u $uref - w /" \
-    "-define=column,yp,v $vref - w /" \
-    "-define=column,p,Energy mev / sqr 1 - sqrt" \
-    "-define=column,vz,w c_mks *,units=m/s" \
-    -process=z,max,zMax \
-    "-redefine=column,x,x $xref - xp zMax z - * +,units=m" \
-    "-redefine=column,y,y $yref - yp zMax z - * +,units=m" \
-    | sddsconvert -pipe -retain=column,x,y,xp,yp,t,p \
-    | sddscombine -pipe=in $output -merge
 
+set columnList [APSGetSDDSNames -class column -fileName $input]
+if [lsearch -exact $columnList t]!=-1 {
+    # Time data already present in input, don't create it 
+
+    exec sddsprocess $input -pipe=out \
+      -match=parameter,Type=$type \
+      -filter=column,w,0.01,1.01 \
+      "-define=column,xp,u $uref - w /" \
+      "-define=column,yp,v $vref - w /" \
+      "-define=column,p,Energy mev / sqr 1 - sqrt" \
+      "-define=column,vz,w c_mks *,units=m/s" \
+      -process=z,max,zMax \
+      "-redefine=column,x,x $xref - xp zMax z - * +,units=m" \
+      "-redefine=column,y,y $yref - yp zMax z - * +,units=m" \
+      | sddsconvert -pipe -retain=column,x,y,xp,yp,t,p \
+      | sddscombine -pipe=in $output -merge
+
+} else {
+    # Time data not present in input (old version of shower or new version without
+    # -addTimeColumn option), so create it
+
+    exec sddsprocess $input -pipe=out \
+      -match=parameter,Type=$type \
+      -filter=column,w,0.01,1.01 \
+      "-define=column,xp,u $uref - w /" \
+      "-define=column,yp,v $vref - w /" \
+      "-define=column,p,Energy mev / sqr 1 - sqrt" \
+      "-define=column,vz,w c_mks *,units=m/s" \
+      -process=z,max,zMax \
+      "-redefine=column,x,x $xref - xp zMax z - * +,units=m" \
+      "-redefine=column,y,y $yref - yp zMax z - * +,units=m" \
+      "-define=column,t,zMax z - vz /,units=s" \
+      | sddsconvert -pipe -retain=column,x,y,xp,yp,t,p \
+      | sddscombine -pipe=in $output -merge
+
+}
