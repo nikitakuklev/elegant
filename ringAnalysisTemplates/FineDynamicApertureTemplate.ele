@@ -46,7 +46,7 @@
 &twiss_output
         radiation_integrals = 1
         matched = 1
-        output_at_each_step = 1
+        output_at_each_step = 0
 &end
 
 &run_control
