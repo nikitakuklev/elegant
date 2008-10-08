@@ -22,5 +22,6 @@
     long verbosity = 0;    
     long assume_nonincreasing = 0;
     long offset_by_orbit = 0;
+    long n_lines = 11;
 #end
 

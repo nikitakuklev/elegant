@@ -19,10 +19,14 @@
 
 #define IC_X 0
 #define IC_Y 1
-#define N_COLUMNS 2
+#define IC_XC 2
+#define IC_YC 3
+#define N_COLUMNS 4
 static SDDS_DEFINITION column_definition[N_COLUMNS] = {
     {"x", "&column name=x, symbol=x, units=m, type=double &end"},
     {"y", "&column name=y, symbol=y, units=m, type=double &end"},
+    {"xClipped", "&column name=xClipped, symbol=xClipped, units=m, type=double &end"},
+    {"yClipped", "&column name=yClipped, symbol=yClipped, units=m, type=double &end"},
     } ;
 
 #define IP_STEP 0
@@ -39,18 +43,21 @@ static FILE *fpSearchOutput = NULL;
 #define MP_MODE 0
 #define SP_MODE 1
 #define ONE_LINE_MODE 2
+/* This one needs to be the first line mode */
 #define TWO_LINE_MODE 3
 #define THREE_LINE_MODE 4
 #define FIVE_LINE_MODE 5
 #define SEVEN_LINE_MODE 6
 #define NINE_LINE_MODE 7
 #define ELEVEN_LINE_MODE 8
-#define LINE_MODE 9
-#define N_SEARCH_MODES 10
+#define N_LINE_MODE 9
+/* This one needs to be the last line mode */
+#define LINE_MODE 10
+#define N_SEARCH_MODES 11
 static char *search_mode[N_SEARCH_MODES] = {
   "many-particle", "single-particle", "one-line", "two-line", "three-line", "five-line", 
-  "seven-line", "nine-line", "eleven-line",  "particle-line"
-    } ;
+  "seven-line", "nine-line", "eleven-line", "n-line", "particle-line",
+} ;
 static long mode_code = 0;
 
 void setup_aperture_search(
@@ -170,6 +177,11 @@ long do_aperture_search(
 
   log_entry("do_aperture_search");
   switch (mode_code) {
+  case N_LINE_MODE:
+    if (n_lines%2==0)
+      bomb("n_lines must be an odd number for aperture search", NULL);
+    retcode = do_aperture_search_line(run, control, referenceCoord, errcon, beamline, n_lines);
+    break;
   case MP_MODE:
     retcode = do_aperture_search_mp(run, control, referenceCoord, errcon, beamline);
     break;
@@ -194,6 +206,12 @@ long do_aperture_search(
     break;
   case ELEVEN_LINE_MODE:
     retcode = do_aperture_search_line(run, control, referenceCoord, errcon, beamline, 11);
+    break;
+  case FIFTEEN_LINE_MODE:
+    retcode = do_aperture_search_line(run, control, referenceCoord, errcon, beamline, 15);
+    break;
+  case NINETEEN_LINE_MODE:
+    retcode = do_aperture_search_line(run, control, referenceCoord, errcon, beamline, 19);
     break;
   case SP_MODE:
   default:
@@ -933,20 +951,39 @@ long do_aperture_search_line(
   if (lines>1) {
     /* compute the area */
     
-    /* First clip off any portions that stick out like islands.
-     * To do this, we insist that the x values must be monotonically increasing.
+    /* First clip off any portions that stick out like islands.  This is done in three steps. */
+
+    /* 1.  Insist that the x values must be monotonically increasing 
      */
-    for (line=lines-1; line>0; line--)
+    for (line=0; line<lines/2; line++)
+      if (xLimit[line+1]<xLimit[line])
+	xLimit[line+1] = xLimit[line];
+    for (line=lines-1; line>lines/2; line--)
       if (xLimit[line-1]>xLimit[line])
 	xLimit[line-1] = xLimit[line];
 
+    /* 2. for x<0, y values must increase monotonically as x increases (larger index) */
+    for (line=lines/2; line>0; line--) {
+      if (yLimit[line-1]>yLimit[line])
+        yLimit[line-1] = yLimit[line];
+    }
+    
+    /* 3. for x>0, y values must fall monotonically as x increases (larger index) */
+    for (line=lines/2; line<(lines-1); line++) {
+      if (yLimit[line+1]>yLimit[line])
+        yLimit[line+1] = yLimit[line];
+    }
+    
     /* perform trapazoid rule integration */
     for (line=0; line<lines-1; line++) 
       area += (xLimit[line+1]-xLimit[line])*(yLimit[line+1]+yLimit[line])/2;
+
   }
 
-  if (!SDDS_SetParameters(&SDDS_aperture, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-			  "Area", area, NULL)) {
+  if (!SDDS_SetColumn(&SDDS_aperture, SDDS_SET_BY_NAME, xLimit, lines, "xClipped") ||
+      !SDDS_SetColumn(&SDDS_aperture, SDDS_SET_BY_NAME, yLimit, lines, "yClipped") ||
+      !SDDS_SetParameters(&SDDS_aperture, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+                         "Area", area, NULL)) {
     SDDS_SetError("Problem setting parameters values in SDDS table (do_aperture_search)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
