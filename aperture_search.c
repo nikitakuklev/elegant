@@ -207,12 +207,6 @@ long do_aperture_search(
   case ELEVEN_LINE_MODE:
     retcode = do_aperture_search_line(run, control, referenceCoord, errcon, beamline, 11);
     break;
-  case FIFTEEN_LINE_MODE:
-    retcode = do_aperture_search_line(run, control, referenceCoord, errcon, beamline, 15);
-    break;
-  case NINETEEN_LINE_MODE:
-    retcode = do_aperture_search_line(run, control, referenceCoord, errcon, beamline, 19);
-    break;
   case SP_MODE:
   default:
     retcode = do_aperture_search_sp(run, control, referenceCoord, errcon, beamline);
@@ -792,16 +786,18 @@ long do_aperture_search_line(
   double p_central;
   long index, split, nSteps;
   long effort, n_trpoint, line;
-  double xSurvived, ySurvived, area;
-  double dxFactor[11], dyFactor[11], dtheta;
+  double xSurvived, ySurvived, area, dtheta;
   double orbit[6] = {0,0,0,0,0,0};
-  double xLimit[11], yLimit[11];
+  double *dxFactor, *dyFactor;
+  double *xLimit, *yLimit;
   long originStable;
 
   coord = (double**)czarray_2d(sizeof(**coord), 1, 7);
 
-  if (lines>11) 
-    bomb("too many lines requested for DA line search", NULL);
+  dxFactor = tmalloc(sizeof(*dxFactor)*lines);
+  dyFactor = tmalloc(sizeof(*dyFactor)*lines);
+  xLimit = tmalloc(sizeof(*xLimit)*lines);
+  yLimit = tmalloc(sizeof(*yLimit)*lines);
 
   switch (lines) {
   case 1:
@@ -1002,6 +998,11 @@ long do_aperture_search_line(
   SDDS_DoFSync(&SDDS_aperture);
     
   free_czarray_2d((void**)coord, 1, 7);
+  free(dxFactor);
+  free(dyFactor);
+  free(xLimit);
+  free(yLimit);
+  
   return(1);
 }
 
