@@ -21,8 +21,6 @@
 #include "complex.h"
 #include <stddef.h>
 
-void computeResonanceWidths(LINE_LIST *beamline, double *clorb, RUN *run);
-
 void copy_doubles(double *target, double *source, long n);
 double find_acceptance(ELEMENT_LIST *elem, long plane, RUN *run, char **name, double *end_pos);
 void modify_rfca_matrices(ELEMENT_LIST *eptr, long order);
@@ -1540,10 +1538,6 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
 				      beamline->nuxTswaExtrema, beamline->nuyTswaExtrema,
                                       beamline->twiss0, beamline->tune, M, beamline, run,
                                       starting_coord); 
-      /*
-        if (resonance_widths)
-        computeResonanceWidths(beamline, starting_coord, run);
-        */
     }
   }
   else {
@@ -1583,10 +1577,6 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
 				      beamline->nuxTswaExtrema, beamline->nuyTswaExtrema,
                                       beamline->twiss0, beamline->tune, M, beamline, run,
                                       starting_coord); 
-      /* 
-      if (resonance_widths)
-        computeResonanceWidths(beamline, starting_coord, run);
-        */
 #ifdef DEBUG
       fprintf(stdout, "chomaticities: %e, %e\n", chromx, chromy);
       fflush(stdout);
@@ -3538,9 +3528,4 @@ void setLinearChromaticTrackingValues(LINE_LIST *beamline)
 }
 
 
-/* compute sextupole resonance widths */
-
-void computeResonanceWidths(LINE_LIST *beamline, double *clorb, RUN *run)
-{
-}
 
