@@ -1003,7 +1003,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 #define SET_BUNCHED_BEAM 6
 #define SET_SDDS_BEAM   33
 
-#define N_TWISS_QUANS 72
+#define N_TWISS_QUANS 77
 static char *twiss_name[N_TWISS_QUANS] = {
     "betax", "alphax", "nux", "etax", "etapx", 
     "betay", "alphay", "nuy", "etay", "etapy", 
@@ -1030,6 +1030,7 @@ static char *twiss_name[N_TWISS_QUANS] = {
     "couplingIntegral", "emittanceRatio",
     "h21000", "h30000", "h10110", "h10020", "h10200",
     "dnux/dJx", "dnux/dJy", "dnuy/dJy",
+    "h11001", "h00111", "h20001", "h00201", "h10002",
     };
 static long twiss_mem[N_TWISS_QUANS] = {
   -1, -1, -1, -1, -1,  
@@ -1056,6 +1057,7 @@ static long twiss_mem[N_TWISS_QUANS] = {
   -1, -1,
   -1, -1, -1, -1, -1,
   -1, -1, -1,
+  -1, -1, -1, -1, -1,
     };
 
 static char *radint_name[13] = {
@@ -1392,6 +1394,11 @@ double optimization_function(double *value, long *invalid)
     rpn_store(beamline->drivingTerms.dnux_dJx, NULL, twiss_mem[69]);
     rpn_store(beamline->drivingTerms.dnux_dJy, NULL, twiss_mem[70]);
     rpn_store(beamline->drivingTerms.dnuy_dJy, NULL, twiss_mem[71]);
+    rpn_store(beamline->drivingTerms.h11001, NULL, twiss_mem[72]);
+    rpn_store(beamline->drivingTerms.h00111, NULL, twiss_mem[73]);
+    rpn_store(beamline->drivingTerms.h20001, NULL, twiss_mem[74]);
+    rpn_store(beamline->drivingTerms.h00201, NULL, twiss_mem[75]);
+    rpn_store(beamline->drivingTerms.h10002, NULL, twiss_mem[76]);
     
 #if DEBUG
     fprintf(stdout, "Twiss parameters done.\n");

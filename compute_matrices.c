@@ -599,7 +599,7 @@ VMATRIX *compute_matrix(
     CSRCSBEND *csrcsbend;
     CSRDRIFT *csrdrift; LSCDRIFT *lscdrift; EDRIFT *edrift;
     WIGGLER *wiggler; CWIGGLER *cwiggler;
-    UKICKMAP *ukickmap; SCRIPT *script;
+    UKICKMAP *ukmap; SCRIPT *script;
     double ks, Pref_output;
     VARY rcContext;
     long fiducialize;
@@ -637,7 +637,6 @@ VMATRIX *compute_matrix(
       case T_WIGGLER:
 	wiggler = (WIGGLER*)elem->p_elem;
 	if (wiggler->K) {
-	  long poles;
 	  double period;
 	  /* poles = 2*(wiggler->poles/2)+1; */
 	  period = 2*(wiggler->length/wiggler->poles);
@@ -670,7 +669,15 @@ VMATRIX *compute_matrix(
         }
         break;
       case T_UKICKMAP:
+        ukmap = ((UKICKMAP*)elem->p_elem);
         elem->matrix = determineMatrix(run, elem, NULL, NULL);
+        if (ukmap->Kreference && ukmap->fieldFactor) {
+          if (ukmap->periods<=0)
+            bomb("UKICKMAP has PERIODS<=0 and KREFERENCE non-zero", NULL);
+          ukmap->radiusInternal = 
+            sqrt(sqr(elem->Pref_input)+1)*(ukmap->length/ukmap->periods)/(PIx2*ukmap->Kreference*ukmap->fieldFactor);
+        } else 
+          ukmap->radiusInternal = -1;
         break;
       case T_SCRIPT:
         script = ((SCRIPT*)elem->p_elem);

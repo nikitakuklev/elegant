@@ -70,7 +70,7 @@
     long quick_higher_order_chromaticity = 0;
     double chromatic_tune_spread_half_range = 0;
     long cavities_are_drifts_if_matched = 1;
-    long geometric_driving_terms = 0;
+    long compute_driving_terms = 0;
 #end
 
 #namelist twiss_analysis,struct

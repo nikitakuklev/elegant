@@ -21,7 +21,7 @@
 #include "complex.h"
 #include <stddef.h>
 
-void computeGeometricDrivingTerms(DRIVING_TERMS *drivingTerms, ELEMENT_LIST *eptr, TWISS *twiss0, double *tune);
+void computeDrivingTerms(DRIVING_TERMS *drivingTerms, ELEMENT_LIST *eptr, TWISS *twiss0, double *tune);
 void copy_doubles(double *target, double *source, long n);
 double find_acceptance(ELEMENT_LIST *elem, long plane, RUN *run, char **name, double *end_pos);
 void modify_rfca_matrices(ELEMENT_LIST *eptr, long order);
@@ -791,16 +791,21 @@ static SDDS_DEFINITION column_definition[N_COLUMNS_WRI] = {
 #define IP_COUPLINGINTEGRAL 48
 #define IP_COUPLINGOFFSET 49
 #define IP_EMITRATIO 50
-#define IP_H21000 51
-#define IP_H30000 52
-#define IP_H10110 53
-#define IP_H10020 54
-#define IP_H10200 55
-#define IP_DNUXDJX 56
-#define IP_DNUXDJY 57
-#define IP_DNUYDJY 58
-#define IP_ALPHAC2 59
-#define IP_ALPHAC  60
+#define IP_H11001 51
+#define IP_H00111 52
+#define IP_H20001 53
+#define IP_H00201 54
+#define IP_H10002 55
+#define IP_H21000 56
+#define IP_H30000 57
+#define IP_H10110 58
+#define IP_H10020 59
+#define IP_H10200 60
+#define IP_DNUXDJX 61
+#define IP_DNUXDJY 62
+#define IP_DNUYDJY 63
+#define IP_ALPHAC2 64
+#define IP_ALPHAC  65
 /* IP_ALPHAC must be the last item before the radiation-integral-related
  * items!
  */
@@ -872,14 +877,19 @@ static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
 {"couplingIntegral", "&parameter name=couplingIntegral, type=double, description=\"Coupling integral for difference resonance\" &end"},
 {"couplingDelta", "&parameter name=couplingDelta, type=double, description=\"Distance from difference resonance\" &end"},
 {"emittanceRatio", "&parameter name=emittanceRatio, type=double, description=\"Emittance ratio from coupling integral\" &end"},
+{"h11001", "&parameter name=h11001, type=double, description=\"Magnitude of chromatic driving term\", &end"},
+{"h00111", "&parameter name=h00111, type=double, description=\"Magnitude of chromatic driving term\", &end"},
+{"h20001", "&parameter name=h20001, type=double, description=\"Magnitude of chromatic driving term\", &end"},
+{"h00201", "&parameter name=h00201, type=double, description=\"Magnitude of chromatic driving term\", &end"},
+{"h10002", "&parameter name=h10002, type=double, description=\"Magnitude of chromatic driving term\", units=\"/m$a1/2$n\" &end"},
 {"h21000", "&parameter name=h21000, type=double, description=\"Magnitude of geometric driving term\", units=\"1/m$a1/2$n\" &end"},
 {"h30000", "&parameter name=h30000, type=double, description=\"Magnitude of geometric driving term\", units=\"1/m$a1/2$n\" &end"},
 {"h10110", "&parameter name=h10110, type=double, description=\"Magnitude of geometric driving term\", units=\"1/m$a1/2$n\" &end"},
 {"h10020", "&parameter name=h10020, type=double, description=\"Magnitude of geometric driving term\", units=\"1/m$a1/2$n\" &end"},
 {"h10200", "&parameter name=h10200, type=double, description=\"Magnitude of geometric driving term\", units=\"1/m$a1/2$n\" &end"},
-{"dnux/dJx", "&parameter name=dnux/dJx, type=double, description=\"Horizontal tune shift with horizontal invariant\", units=\"1/m$a2$n\" &end"},
-{"dnux/dJy", "&parameter name=dnux/dJy, type=double, description=\"Horizontal tune shift with vertical invariant\", units=\"1/m$a2$n\" &end"},
-{"dnuy/dJy", "&parameter name=dnuy/dJy, type=double, description=\"Vertical tune shift with vertical invariant\", units=\"1/m$a2$n\" &end"},
+{"dnux/dJx", "&parameter name=dnux/dJx, type=double, description=\"Horizontal tune shift with horizontal invariant\", units=\"1/m\" &end"},
+{"dnux/dJy", "&parameter name=dnux/dJy, type=double, description=\"Horizontal tune shift with vertical invariant\", units=\"1/m\" &end"},
+{"dnuy/dJy", "&parameter name=dnuy/dJy, type=double, description=\"Vertical tune shift with vertical invariant\", units=\"1/m\" &end"},
 {"alphac2", "&parameter name=alphac2, symbol=\"$ga$r$bc2$n\", type=double, description=\"2nd-order momentum compaction factor\" &end"},
 {"alphac", "&parameter name=alphac, symbol=\"$ga$r$bc$n\", type=double, description=\"Momentum compaction factor\" &end"},
 {"I1", "&parameter name=I1, type=double, description=\"Radiation integral 1\", units=m &end"} ,
@@ -980,6 +990,11 @@ void dump_twiss_parameters(
 			  IP_NUXTSWAMAX, beamline->nuxTswaExtrema[1],
 			  IP_NUYTSWAMIN, beamline->nuyTswaExtrema[0],
 			  IP_NUYTSWAMAX, beamline->nuyTswaExtrema[1],
+                          IP_H11001, beamline->drivingTerms.h11001,
+                          IP_H00111, beamline->drivingTerms.h00111,
+                          IP_H20001, beamline->drivingTerms.h20001,
+                          IP_H00201, beamline->drivingTerms.h00201,
+                          IP_H10002, beamline->drivingTerms.h10002,
                           IP_H21000, beamline->drivingTerms.h21000,
                           IP_H30000, beamline->drivingTerms.h30000,
                           IP_H10110, beamline->drivingTerms.h10110,
@@ -1566,8 +1581,8 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
 				      beamline->nuxTswaExtrema, beamline->nuyTswaExtrema,
                                       beamline->twiss0, beamline->tune, M, beamline, run,
                                       starting_coord); 
-      if (geometric_driving_terms)
-        computeGeometricDrivingTerms(&(beamline->drivingTerms), beamline->elem_twiss, beamline->twiss0, beamline->tune);
+      if (compute_driving_terms)
+        computeDrivingTerms(&(beamline->drivingTerms), beamline->elem_twiss, beamline->twiss0, beamline->tune);
     }
   }
   else {
@@ -1602,7 +1617,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
                                          (higher_order_chromaticity_points-1),
                                          higher_order_chromaticity_points, quick_higher_order_chromaticity);
       computeChromaticTuneLimits(beamline);
-      if (geometric_driving_terms)
+      if (doTuneShiftWithAmplitude)
         computeTuneShiftWithAmplitude(beamline->dnux_dA, beamline->dnuy_dA,
 				      beamline->nuxTswaExtrema, beamline->nuyTswaExtrema,
                                       beamline->twiss0, beamline->tune, M, beamline, run,
@@ -2079,6 +2094,18 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
       radIntegrals->I[1] += I2;
       radIntegrals->I[2] += I3;
     }
+  } else if (elem->type==T_UKICKMAP) {
+    UKICKMAP *ukmap;
+    ukmap = (UKICKMAP*)(elem->p_elem);
+    AddWigglerRadiationIntegrals(ukmap->length, 2*ukmap->periods, ukmap->radiusInternal,
+				 eta0, etap0, 
+				 beta0, alpha0,
+				 &I1, &I2, &I3, &I4, &I5);
+    radIntegrals->I[0] += I1;
+    radIntegrals->I[1] += I2;
+    radIntegrals->I[2] += I3;
+    radIntegrals->I[3] += I4;
+    radIntegrals->I[4] += I5;
   } else {
     isBend = 1;
     switch (elem->type) {
@@ -3397,6 +3424,8 @@ void AddWigglerRadiationIntegrals(double length, long poles, double radius,
   FILE *fpd = NULL;
 #endif
 
+  printf("wiggler: length=%e, poles=%ld, radius=%e\n", length, poles, radius);
+  
   if (poles<3)
     bomb("wiggler must have at least 3 poles", NULL);
   if (radius<=0)
@@ -3557,22 +3586,25 @@ void setLinearChromaticTrackingValues(LINE_LIST *beamline)
 }
 
 
-void computeGeometricDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, double *tune)
+void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, double *tune)
 {
+  double h11001[2], h00111[2], h20001[2], h00201[2], h10002[2];
   double h21000[2], h30000[2], h10110[2], h10020[2], h10200[2];
-  double betax1, betay1, phix1, phiy1;
+  double betax1, betay1, phix1, phiy1, etax1;
   double betax2, betay2, phix2, phiy2;
-  double coef, b3L1, b3L2, sqrt_betax, sqrt3_betax, nux, nuy;
+  double coef, b2L, b3L1, b3L2, sqrt_betax, sqrt3_betax, nux, nuy;
   double dnudA[2][2];
   ELEMENT_LIST *eptr1, *eptr2;
   
   /* accumulate real and imaginary parts */
+  h11001[0] = h00111[0] = h20001[0] = h00201[0] = h10002[0] = 0;
+  h11001[1] = h00111[1] = h20001[1] = h00201[1] = h10002[1] = 0;
   h21000[0] = h30000[0] = h10110[0] = h10020[0] = h10200[0] = 0;
   h21000[1] = h30000[1] = h10110[1] = h10020[1] = h10200[1] = 0;
 
   eptr1 = elem;
   while (eptr1) {
-    b3L1 = 0;
+    b2L = b3L1 = 0;
     switch (eptr1->type) {
     case T_SEXT:
       b3L1 = ((SEXT*)eptr1->p_elem)->k2 * ((SEXT*)eptr1->p_elem)->length/2;
@@ -3581,29 +3613,41 @@ void computeGeometricDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *t
       b3L1 = ((KSEXT*)eptr1->p_elem)->k2 * ((KSEXT*)eptr1->p_elem)->length/2;
       break;
     case T_KQUSE:
+      b2L = ((KQUSE*)eptr1->p_elem)->k1 * ((KQUSE*)eptr1->p_elem)->length;
       b3L1 = ((KQUSE*)eptr1->p_elem)->k2 * ((KQUSE*)eptr1->p_elem)->length/2;
       break;
     case T_SBEN:
     case T_RBEN:
+      b2L = ((BEND*)eptr1->p_elem)->k1 * ((BEND*)eptr1->p_elem)->length;
       b3L1 = ((BEND*)eptr1->p_elem)->k2 * ((BEND*)eptr1->p_elem)->length/2;
       break;
     case T_CSBEND:
+      b2L = ((CSBEND*)eptr1->p_elem)->k1 * ((CSBEND*)eptr1->p_elem)->length;
       b3L1 = ((CSBEND*)eptr1->p_elem)->k2 * ((CSBEND*)eptr1->p_elem)->length/2;
       break;
     case T_CSRCSBEND:
+      b2L = ((CSRCSBEND*)eptr1->p_elem)->k1 * ((CSRCSBEND*)eptr1->p_elem)->length;
       b3L1 = ((CSRCSBEND*)eptr1->p_elem)->k2 * ((CSRCSBEND*)eptr1->p_elem)->length/2;
+      break;
+    case T_QUAD:
+      b2L = ((QUAD*)eptr1->p_elem)->k1 * ((QUAD*)eptr1->p_elem)->length;
+      break;
+    case T_KQUAD:
+      b2L = ((KQUAD*)eptr1->p_elem)->k1 * ((KQUAD*)eptr1->p_elem)->length;
       break;
     default:
       break;
     }      
-    if (b3L1) {
+    if (b2L || b3L1) {
       if (eptr1->pred) {
         betax1 = (eptr1->twiss->betax + eptr1->pred->twiss->betax)/2;
+        etax1  = (eptr1->twiss->etax + eptr1->pred->twiss->etax)/2;
         phix1  = (eptr1->twiss->phix + eptr1->pred->twiss->phix)/2;
         betay1 = (eptr1->twiss->betay + eptr1->pred->twiss->betay)/2;
         phiy1  = (eptr1->twiss->phiy + eptr1->pred->twiss->phiy)/2;
       } else {
         betax1 = (eptr1->twiss->betax + twiss0->betax)/2;
+        etax1  = (eptr1->twiss->etax + twiss0->etax)/2;
         phix1  = (eptr1->twiss->phix + twiss0->phix)/2;
         betay1 = (eptr1->twiss->betay + twiss0->betay)/2;
         phiy1  = (eptr1->twiss->phiy + twiss0->phiy)/2;
@@ -3611,30 +3655,56 @@ void computeGeometricDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *t
       sqrt_betax = sqrt(betax1);
       sqrt3_betax = ipow(sqrt_betax, 3);
 
-      /* h21000 */
-      coef = -b3L1/8*sqrt3_betax;
-      h21000[0] += coef*cos(phix1);
-      h21000[1] += coef*sin(phix1);
+      /* first-order chromatic terms */
+      /* h11001 and h00111 */
+      coef = b2L-2*b3L1*etax1;
+      h11001[0] += coef*betax1/4;
+      h00111[0] += -coef*betay1/4;
 
-      /* h30000 */
-      coef = coef/3;
-      h30000[0] += coef*cos(3*phix1);
-      h30000[1] += coef*sin(3*phix1);
+      /* h20001, h00201 */
+      h20001[0] += coef/8*betax1*cos(2*phix1);
+      h20001[1] += coef/8*betax1*sin(2*phix1);
+      h00201[0] += -coef/8*betay1*cos(2*phiy1);
+      h00201[1] += -coef/8*betay1*sin(2*phiy1);
 
-      /* h10110 */
-      coef = b3L1/4*sqrt_betax*betay1;
-      h10110[0] += coef*cos(phix1);
-      h10110[1] += coef*sin(phix1);
+      /* h10002 */
+      coef = b2L-b3L1*etax1;
+      h10002[0] += coef/2*etax1*sqrt_betax*cos(phix1);
+      h10002[1] += coef/2*etax1*sqrt_betax*sin(phix1);
 
-      /* h10020 and h10200 */
-      coef = coef/2;
-      h10020[0] += coef*cos(phix1-2*phiy1);
-      h10020[1] += coef*sin(phix1-2*phiy1);
-      h10200[0] += coef*cos(phix1+2*phiy1);
-      h10200[1] += coef*sin(phix1+2*phiy1);
+      if (b3L1) {
+        /* first-order geometric terms */
+        /* h21000 */
+        coef = -b3L1/8*sqrt3_betax;
+        h21000[0] += coef*cos(phix1);
+        h21000[1] += coef*sin(phix1);
+        
+        /* h30000 */
+        coef = coef/3;
+        h30000[0] += coef*cos(3*phix1);
+        h30000[1] += coef*sin(3*phix1);
+        
+        /* h10110 */
+        coef = b3L1/4*sqrt_betax*betay1;
+        h10110[0] += coef*cos(phix1);
+        h10110[1] += coef*sin(phix1);
+        
+        /* h10020 and h10200 */
+        coef = coef/2;
+        h10020[0] += coef*cos(phix1-2*phiy1);
+        h10020[1] += coef*sin(phix1-2*phiy1);
+        h10200[0] += coef*cos(phix1+2*phiy1);
+        h10200[1] += coef*sin(phix1+2*phiy1);
+      }
     }
     eptr1 = eptr1->succ;
   }
+
+  d->h11001 = sqrt(sqr(h11001[0])+sqr(h11001[1]));
+  d->h00111 = sqrt(sqr(h00111[0])+sqr(h00111[1]));
+  d->h20001 = sqrt(sqr(h20001[0])+sqr(h20001[1]));
+  d->h00201 = sqrt(sqr(h00201[0])+sqr(h00201[1]));
+  d->h10002 = sqrt(sqr(h10002[0])+sqr(h10002[1]));
 
   d->h21000 = sqrt(sqr(h21000[0])+sqr(h21000[1]));
   d->h30000 = sqrt(sqr(h30000[0])+sqr(h30000[1]));
@@ -3710,7 +3780,6 @@ void computeGeometricDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *t
           break;
         }
         if (b3L2) {
-          double term;
           if (eptr2->pred) {
             betax2 = (eptr2->twiss->betax + eptr2->pred->twiss->betax)/2;
             phix2  = (eptr2->twiss->phix + eptr2->pred->twiss->phix)/2;
@@ -3722,8 +3791,8 @@ void computeGeometricDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *t
             betay2 = (eptr2->twiss->betay + twiss0->betay)/2;
             phiy2  = (eptr2->twiss->phiy + twiss0->phiy)/2;
           }
-          d->dnux_dJx += (term=b3L1*b3L2/(-16*PI)*pow(betax1*betax2, 1.5)*
-                          (3*cos(fabs(phix1-phix2)-PI*nux)/sin(PI*nux) + cos(fabs(3*(phix1-phix2)-3*PI*nux))/sin(3*PI*nux)));
+          d->dnux_dJx += b3L1*b3L2/(-16*PI)*pow(betax1*betax2, 1.5)*
+                          (3*cos(fabs(phix1-phix2)-PI*nux)/sin(PI*nux) + cos(fabs(3*(phix1-phix2))-3*PI*nux)/sin(3*PI*nux));
           d->dnux_dJy += b3L1*b3L2/(8*PI)*sqrt(betax1*betax2)*betay1*
             (2*betax2*cos(fabs(phix1-phix2)-PI*nux)/sin(PI*nux) 
              - betay2*cos(fabs(phix1-phix2)+2*fabs(phiy1-phiy2)-PI*(nux+2*nuy))/sin(PI*(nux+2*nuy))

@@ -243,6 +243,9 @@ typedef struct {
 typedef struct {
   /* First-order geometric terms */
   double h21000, h30000, h10110, h10020, h10200;
+  /* First order chromatic terms */
+  double h11001, h00111, h20001, h00201, h10002;
+  /* tune shifts with amplitude */
   double dnux_dJx, dnux_dJy, dnuy_dJy;
 } DRIVING_TERMS;
 
@@ -812,7 +815,7 @@ extern char *entity_text[N_TYPES];
 #define N_ILMATRIX_PARAMS 32
 #define N_TSCATTER_PARAMS 1
 #define N_KQUSE_PARAMS 14
-#define N_UKICKMAP_PARAMS 8
+#define N_UKICKMAP_PARAMS 10
 #define N_MKICKER_PARAMS 13
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
@@ -2408,13 +2411,15 @@ extern PARAMETER ukickmap_param[N_UKICKMAP_PARAMS];
 typedef struct {
   double length, tilt, dx, dy, dz, fieldFactor;
   char *inputFile;
-  long nKicks;
+  long nKicks, periods;
+  double Kreference;
   /* for internal use only */
   long initialized;
   long points, nx, ny;
   double *xpFactor, *ypFactor;
   double xmin, xmax, dxg;
   double ymin, ymax, dyg;
+  double radiusInternal;
 } UKICKMAP;  
 
 /* macros for bending magnets */ 
