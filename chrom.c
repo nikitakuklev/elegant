@@ -575,7 +575,8 @@ void computeChromaticities(double *chromx, double *chromy,
 }
 
 void computeHigherOrderChromaticities(LINE_LIST *beamline, double *clorb, RUN *run,
-				      long concatOrder, double deltaStep, long deltaPoints)
+				      long concatOrder, double deltaStep, long deltaPoints,
+                                      long quickMode)
 {
 #define MAX_NDELTA_VALUES 11   /* must be at least 5 */
   double trace[2][MAX_NDELTA_VALUES], delta[MAX_NDELTA_VALUES];
@@ -583,16 +584,20 @@ void computeHigherOrderChromaticities(LINE_LIST *beamline, double *clorb, RUN *r
   double coef[MAX_NDELTA_VALUES], sCoef[MAX_NDELTA_VALUES], chi;
   long i, p;
   double c1;
-  VMATRIX *M1, M0;
+  VMATRIX M1, M0, *Mp;
 
   if (deltaPoints>MAX_NDELTA_VALUES)
     bomb("too many points for higher-order chromaticity", NULL);
   if (deltaPoints<5)
     deltaPoints = 5;
+  if (!(beamline->matrix))
+    bomb("no matrix for beamline (computeHigherOrderChromaticities)", NULL);
   
   beamline->chrom2[0] = beamline->chrom2[1] = 0;
   beamline->chrom3[0] = beamline->chrom3[1] = 0;
   initialize_matrices(&M0, 1);
+  initialize_matrices(&M1, concatOrder);
+  
   eta[0] = beamline->twiss0->etax;
   eta[1] = beamline->twiss0->etapx;
   eta[2] = beamline->twiss0->etay;
@@ -606,12 +611,17 @@ void computeHigherOrderChromaticities(LINE_LIST *beamline, double *clorb, RUN *r
 	(i<4? sqr(delta[p])*beamline->eta2[i] + pow3(delta[p])*beamline->eta3[i] : 0);
       M0.R[i][i] = 1;
     }
-    M1 = append_full_matrix(beamline->elem_twiss, run, &M0, concatOrder);
+    if (quickMode)
+      concat_matrices(Mp=&M1, beamline->matrix, &M0, 0);
+    else
+      Mp = append_full_matrix(beamline->elem_twiss, run, &M0, concatOrder);
     for (i=0; i<2; i++)
       /* Tr[0,1][p] is the trace for x,y plane for point p */
-      trace[i][p] = M1->R[2*i][2*i] + M1->R[2*i+1][2*i+1];
-    free_matrices(M1);
-    free(M1);
+      trace[i][p] = Mp->R[2*i][2*i] + Mp->R[2*i+1][2*i+1];
+    if (!quickMode) {
+      free_matrices(Mp);
+      free(Mp);
+    }
   }
   for (i=0; i<2; i++) {
     lsfn(delta, trace[i], NULL, deltaPoints, (long)(MIN(deltaPoints-2,5)), 
@@ -621,13 +631,17 @@ void computeHigherOrderChromaticities(LINE_LIST *beamline, double *clorb, RUN *r
                            2*coef[2]
                            + 8*sqr(PI)*sqr(c1)*cos(PIx2*beamline->tune[i])
                            )/(-4*PI*sin(PIx2*beamline->tune[i]));
-    beamline->chrom3[i] = (
-                           6*coef[3] 
-                           - 16*pow3(PI*c1)*sin(PIx2*beamline->tune[i]) 
-                           + 24*sqr(PI)*c1*beamline->chrom2[i]*cos(PIx2*beamline->tune[i])
-                           )/(-4*PI*sin(PIx2*beamline->tune[i]));
+    if (quickMode)
+      beamline->chrom3[i] = 0;
+    else
+      beamline->chrom3[i] = (
+                             6*coef[3] 
+                             - 16*pow3(PI*c1)*sin(PIx2*beamline->tune[i]) 
+                             + 24*sqr(PI)*c1*beamline->chrom2[i]*cos(PIx2*beamline->tune[i])
+                             )/(-4*PI*sin(PIx2*beamline->tune[i]));
   }
   free_matrices(&M0);
+  free_matrices(&M1);
 }
 
 double computeChromaticDerivRElem(long i, long j, TWISS *twiss, VMATRIX *M)

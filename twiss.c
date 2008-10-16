@@ -21,6 +21,7 @@
 #include "complex.h"
 #include <stddef.h>
 
+void computeGeometricDrivingTerms(DRIVING_TERMS *drivingTerms, ELEMENT_LIST *eptr, TWISS *twiss0, double *tune);
 void copy_doubles(double *target, double *source, long n);
 double find_acceptance(ELEMENT_LIST *elem, long plane, RUN *run, char **name, double *end_pos);
 void modify_rfca_matrices(ELEMENT_LIST *eptr, long order);
@@ -790,8 +791,16 @@ static SDDS_DEFINITION column_definition[N_COLUMNS_WRI] = {
 #define IP_COUPLINGINTEGRAL 48
 #define IP_COUPLINGOFFSET 49
 #define IP_EMITRATIO 50
-#define IP_ALPHAC2 51
-#define IP_ALPHAC  52
+#define IP_H21000 51
+#define IP_H30000 52
+#define IP_H10110 53
+#define IP_H10020 54
+#define IP_H10200 55
+#define IP_DNUXDJX 56
+#define IP_DNUXDJY 57
+#define IP_DNUYDJY 58
+#define IP_ALPHAC2 59
+#define IP_ALPHAC  60
 /* IP_ALPHAC must be the last item before the radiation-integral-related
  * items!
  */
@@ -863,6 +872,14 @@ static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
 {"couplingIntegral", "&parameter name=couplingIntegral, type=double, description=\"Coupling integral for difference resonance\" &end"},
 {"couplingDelta", "&parameter name=couplingDelta, type=double, description=\"Distance from difference resonance\" &end"},
 {"emittanceRatio", "&parameter name=emittanceRatio, type=double, description=\"Emittance ratio from coupling integral\" &end"},
+{"h21000", "&parameter name=h21000, type=double, description=\"Magnitude of geometric driving term\", units=\"1/m$a1/2$n\" &end"},
+{"h30000", "&parameter name=h30000, type=double, description=\"Magnitude of geometric driving term\", units=\"1/m$a1/2$n\" &end"},
+{"h10110", "&parameter name=h10110, type=double, description=\"Magnitude of geometric driving term\", units=\"1/m$a1/2$n\" &end"},
+{"h10020", "&parameter name=h10020, type=double, description=\"Magnitude of geometric driving term\", units=\"1/m$a1/2$n\" &end"},
+{"h10200", "&parameter name=h10200, type=double, description=\"Magnitude of geometric driving term\", units=\"1/m$a1/2$n\" &end"},
+{"dnux/dJx", "&parameter name=dnux/dJx, type=double, description=\"Horizontal tune shift with horizontal invariant\", units=\"1/m$a2$n\" &end"},
+{"dnux/dJy", "&parameter name=dnux/dJy, type=double, description=\"Horizontal tune shift with vertical invariant\", units=\"1/m$a2$n\" &end"},
+{"dnuy/dJy", "&parameter name=dnuy/dJy, type=double, description=\"Vertical tune shift with vertical invariant\", units=\"1/m$a2$n\" &end"},
 {"alphac2", "&parameter name=alphac2, symbol=\"$ga$r$bc2$n\", type=double, description=\"2nd-order momentum compaction factor\" &end"},
 {"alphac", "&parameter name=alphac, symbol=\"$ga$r$bc$n\", type=double, description=\"Momentum compaction factor\" &end"},
 {"I1", "&parameter name=I1, type=double, description=\"Radiation integral 1\", units=m &end"} ,
@@ -963,6 +980,14 @@ void dump_twiss_parameters(
 			  IP_NUXTSWAMAX, beamline->nuxTswaExtrema[1],
 			  IP_NUYTSWAMIN, beamline->nuyTswaExtrema[0],
 			  IP_NUYTSWAMAX, beamline->nuyTswaExtrema[1],
+                          IP_H21000, beamline->drivingTerms.h21000,
+                          IP_H30000, beamline->drivingTerms.h30000,
+                          IP_H10110, beamline->drivingTerms.h10110,
+                          IP_H10020, beamline->drivingTerms.h10020,
+                          IP_H10200, beamline->drivingTerms.h10200,
+                          IP_DNUXDJX, beamline->drivingTerms.dnux_dJx,
+                          IP_DNUXDJY, beamline->drivingTerms.dnux_dJy,
+                          IP_DNUYDJY, beamline->drivingTerms.dnuy_dJy,
                           IP_ETAX2, beamline->eta2[0],
                           IP_ETAY2, beamline->eta2[2],
                           IP_ETAX3, beamline->eta3[0],
@@ -1191,7 +1216,7 @@ void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
   beamline->flags |= BEAMLINE_TWISS_WANTED;
   if (radiation_integrals)
     beamline->flags |= BEAMLINE_RADINT_WANTED;
-
+  
   beamline->chromDeltaHalfRange = chromatic_tune_spread_half_range;
 
   log_exit("setup_twiss_output");
@@ -1510,7 +1535,10 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
   for (i=0; i<N_TSWA; i++)
     for (j=0; j<N_TSWA; j++)
       beamline->dnux_dA[i][j] = beamline->dnuy_dA[i][j] = 0;
-      
+
+  beamline->drivingTerms.h21000 = beamline->drivingTerms.h30000 = beamline->drivingTerms.h10110 =
+    beamline->drivingTerms.h10020 = beamline->drivingTerms.h10200 = 0;
+  
   if (periodic) {
     if (!(M = beamline->matrix))
       bomb("logic error: revolution matrix is NULL in compute_twiss_parameters", NULL);
@@ -1531,13 +1559,15 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
 	computeHigherOrderChromaticities(beamline, starting_coord, run, twissConcatOrder,
                                          higher_order_chromaticity_range/
                                          (higher_order_chromaticity_points-1),
-                                         higher_order_chromaticity_points);
+                                         higher_order_chromaticity_points, quick_higher_order_chromaticity);
       computeChromaticTuneLimits(beamline);
       if (doTuneShiftWithAmplitude)
         computeTuneShiftWithAmplitude(beamline->dnux_dA, beamline->dnuy_dA,
 				      beamline->nuxTswaExtrema, beamline->nuyTswaExtrema,
                                       beamline->twiss0, beamline->tune, M, beamline, run,
                                       starting_coord); 
+      if (geometric_driving_terms)
+        computeGeometricDrivingTerms(&(beamline->drivingTerms), beamline->elem_twiss, beamline->twiss0, beamline->tune);
     }
   }
   else {
@@ -1570,9 +1600,9 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
 	computeHigherOrderChromaticities(beamline, starting_coord, run, twissConcatOrder,
                                          higher_order_chromaticity_range/
                                          (higher_order_chromaticity_points-1),
-                                         higher_order_chromaticity_points);
+                                         higher_order_chromaticity_points, quick_higher_order_chromaticity);
       computeChromaticTuneLimits(beamline);
-      if (doTuneShiftWithAmplitude)
+      if (geometric_driving_terms)
         computeTuneShiftWithAmplitude(beamline->dnux_dA, beamline->dnuy_dA,
 				      beamline->nuxTswaExtrema, beamline->nuyTswaExtrema,
                                       beamline->twiss0, beamline->tune, M, beamline, run,
@@ -2789,7 +2819,6 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
   }  
 }
 
-
 long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *beamline, RUN *run,
 			      double *startingCoord, 
 			      double xAmplitude, double yAmplitude, long turns,
@@ -3017,7 +3046,7 @@ void computeTuneShiftWithAmplitudeM(double dnux_dA[N_TSWA][N_TSWA], double dnuy_
   concat_matrices(&M1, &M2, &M2, 0);
   turns = 2;
 
-  while (turns<4096) {
+  while (turns<32768) {
     copy_matrices(&M2, &M1);
     concat_matrices(&M1, &M2, &M2, 0);
     turns *= 2;
@@ -3526,6 +3555,191 @@ void setLinearChromaticTrackingValues(LINE_LIST *beamline)
   beamline->alpha[0] = setup_linear_chromatic_tracking_struct.alphac[0];
   beamline->alpha[1] = setup_linear_chromatic_tracking_struct.alphac[1];
 }
+
+
+void computeGeometricDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, double *tune)
+{
+  double h21000[2], h30000[2], h10110[2], h10020[2], h10200[2];
+  double betax1, betay1, phix1, phiy1;
+  double betax2, betay2, phix2, phiy2;
+  double coef, b3L1, b3L2, sqrt_betax, sqrt3_betax, nux, nuy;
+  double dnudA[2][2];
+  ELEMENT_LIST *eptr1, *eptr2;
+  
+  /* accumulate real and imaginary parts */
+  h21000[0] = h30000[0] = h10110[0] = h10020[0] = h10200[0] = 0;
+  h21000[1] = h30000[1] = h10110[1] = h10020[1] = h10200[1] = 0;
+
+  eptr1 = elem;
+  while (eptr1) {
+    b3L1 = 0;
+    switch (eptr1->type) {
+    case T_SEXT:
+      b3L1 = ((SEXT*)eptr1->p_elem)->k2 * ((SEXT*)eptr1->p_elem)->length/2;
+      break;
+    case T_KSEXT:
+      b3L1 = ((KSEXT*)eptr1->p_elem)->k2 * ((KSEXT*)eptr1->p_elem)->length/2;
+      break;
+    case T_KQUSE:
+      b3L1 = ((KQUSE*)eptr1->p_elem)->k2 * ((KQUSE*)eptr1->p_elem)->length/2;
+      break;
+    case T_SBEN:
+    case T_RBEN:
+      b3L1 = ((BEND*)eptr1->p_elem)->k2 * ((BEND*)eptr1->p_elem)->length/2;
+      break;
+    case T_CSBEND:
+      b3L1 = ((CSBEND*)eptr1->p_elem)->k2 * ((CSBEND*)eptr1->p_elem)->length/2;
+      break;
+    case T_CSRCSBEND:
+      b3L1 = ((CSRCSBEND*)eptr1->p_elem)->k2 * ((CSRCSBEND*)eptr1->p_elem)->length/2;
+      break;
+    default:
+      break;
+    }      
+    if (b3L1) {
+      if (eptr1->pred) {
+        betax1 = (eptr1->twiss->betax + eptr1->pred->twiss->betax)/2;
+        phix1  = (eptr1->twiss->phix + eptr1->pred->twiss->phix)/2;
+        betay1 = (eptr1->twiss->betay + eptr1->pred->twiss->betay)/2;
+        phiy1  = (eptr1->twiss->phiy + eptr1->pred->twiss->phiy)/2;
+      } else {
+        betax1 = (eptr1->twiss->betax + twiss0->betax)/2;
+        phix1  = (eptr1->twiss->phix + twiss0->phix)/2;
+        betay1 = (eptr1->twiss->betay + twiss0->betay)/2;
+        phiy1  = (eptr1->twiss->phiy + twiss0->phiy)/2;
+      }
+      sqrt_betax = sqrt(betax1);
+      sqrt3_betax = ipow(sqrt_betax, 3);
+
+      /* h21000 */
+      coef = -b3L1/8*sqrt3_betax;
+      h21000[0] += coef*cos(phix1);
+      h21000[1] += coef*sin(phix1);
+
+      /* h30000 */
+      coef = coef/3;
+      h30000[0] += coef*cos(3*phix1);
+      h30000[1] += coef*sin(3*phix1);
+
+      /* h10110 */
+      coef = b3L1/4*sqrt_betax*betay1;
+      h10110[0] += coef*cos(phix1);
+      h10110[1] += coef*sin(phix1);
+
+      /* h10020 and h10200 */
+      coef = coef/2;
+      h10020[0] += coef*cos(phix1-2*phiy1);
+      h10020[1] += coef*sin(phix1-2*phiy1);
+      h10200[0] += coef*cos(phix1+2*phiy1);
+      h10200[1] += coef*sin(phix1+2*phiy1);
+    }
+    eptr1 = eptr1->succ;
+  }
+
+  d->h21000 = sqrt(sqr(h21000[0])+sqr(h21000[1]));
+  d->h30000 = sqrt(sqr(h30000[0])+sqr(h30000[1]));
+  d->h10110 = sqrt(sqr(h10110[0])+sqr(h10110[1]));
+  d->h10020 = sqrt(sqr(h10020[0])+sqr(h10020[1]));
+  d->h10200 = sqrt(sqr(h10200[0])+sqr(h10200[1]));
+
+  nux = tune[0];
+  nuy = tune[1];
+  eptr1 = elem;
+  d->dnux_dJx = d->dnux_dJy = d->dnuy_dJy = 0;
+  while (eptr1) {
+    b3L1 = 0;
+    switch (eptr1->type) {
+    case T_SEXT:
+      b3L1 = ((SEXT*)eptr1->p_elem)->k2 * ((SEXT*)eptr1->p_elem)->length/2;
+      break;
+    case T_KSEXT:
+      b3L1 = ((KSEXT*)eptr1->p_elem)->k2 * ((KSEXT*)eptr1->p_elem)->length/2;
+      break;
+    case T_KQUSE:
+      b3L1 = ((KQUSE*)eptr1->p_elem)->k2 * ((KQUSE*)eptr1->p_elem)->length/2;
+      break;
+    case T_RBEN:
+    case T_SBEN:
+      b3L1 = ((BEND*)eptr1->p_elem)->k2 * ((BEND*)eptr1->p_elem)->length/2;
+      break;
+    case T_CSBEND:
+      b3L1 = ((CSBEND*)eptr1->p_elem)->k2 * ((CSBEND*)eptr1->p_elem)->length/2;
+      break;
+    case T_CSRCSBEND:
+      b3L1 = ((CSRCSBEND*)eptr1->p_elem)->k2 * ((CSRCSBEND*)eptr1->p_elem)->length/2;
+      break;
+    default:
+      break;
+    }      
+    if (b3L1) {
+      if (eptr1->pred) {
+        betax1 = (eptr1->twiss->betax + eptr1->pred->twiss->betax)/2;
+        phix1  = (eptr1->twiss->phix + eptr1->pred->twiss->phix)/2;
+        betay1 = (eptr1->twiss->betay + eptr1->pred->twiss->betay)/2;
+        phiy1  = (eptr1->twiss->phiy + eptr1->pred->twiss->phiy)/2;
+      } else {
+        betax1 = (eptr1->twiss->betax + twiss0->betax)/2;
+        phix1  = (eptr1->twiss->phix + twiss0->phix)/2;
+        betay1 = (eptr1->twiss->betay + twiss0->betay)/2;
+        phiy1  = (eptr1->twiss->phiy + twiss0->phiy)/2;
+      }
+      eptr2 = elem;
+      while (eptr2) {
+        b3L2 = 0;
+        switch (eptr2->type) {
+        case T_SEXT:
+          b3L2 = ((SEXT*)eptr2->p_elem)->k2 * ((SEXT*)eptr2->p_elem)->length/2;
+          break;
+        case T_KSEXT:
+          b3L2 = ((KSEXT*)eptr2->p_elem)->k2 * ((KSEXT*)eptr2->p_elem)->length/2;
+          break;
+        case T_KQUSE:
+          b3L2 = ((KQUSE*)eptr2->p_elem)->k2 * ((KQUSE*)eptr2->p_elem)->length/2;
+          break;
+        case T_RBEN:
+        case T_SBEN:
+          b3L2 = ((BEND*)eptr2->p_elem)->k2 * ((BEND*)eptr2->p_elem)->length/2;
+          break;
+        case T_CSBEND:
+          b3L2 = ((CSBEND*)eptr2->p_elem)->k2 * ((CSBEND*)eptr2->p_elem)->length/2;
+          break;
+        case T_CSRCSBEND:
+          b3L2 = ((CSRCSBEND*)eptr2->p_elem)->k2 * ((CSRCSBEND*)eptr2->p_elem)->length/2;
+          break;
+        default:
+          break;
+        }
+        if (b3L2) {
+          double term;
+          if (eptr2->pred) {
+            betax2 = (eptr2->twiss->betax + eptr2->pred->twiss->betax)/2;
+            phix2  = (eptr2->twiss->phix + eptr2->pred->twiss->phix)/2;
+            betay2 = (eptr2->twiss->betay + eptr2->pred->twiss->betay)/2;
+            phiy2  = (eptr2->twiss->phiy + eptr2->pred->twiss->phiy)/2;
+          } else {
+            betax2 = (eptr2->twiss->betax + twiss0->betax)/2;
+            phix2  = (eptr2->twiss->phix + twiss0->phix)/2;
+            betay2 = (eptr2->twiss->betay + twiss0->betay)/2;
+            phiy2  = (eptr2->twiss->phiy + twiss0->phiy)/2;
+          }
+          d->dnux_dJx += (term=b3L1*b3L2/(-16*PI)*pow(betax1*betax2, 1.5)*
+                          (3*cos(fabs(phix1-phix2)-PI*nux)/sin(PI*nux) + cos(fabs(3*(phix1-phix2)-3*PI*nux))/sin(3*PI*nux)));
+          d->dnux_dJy += b3L1*b3L2/(8*PI)*sqrt(betax1*betax2)*betay1*
+            (2*betax2*cos(fabs(phix1-phix2)-PI*nux)/sin(PI*nux) 
+             - betay2*cos(fabs(phix1-phix2)+2*fabs(phiy1-phiy2)-PI*(nux+2*nuy))/sin(PI*(nux+2*nuy))
+             + betay2*cos(fabs(phix1-phix2)-2*fabs(phiy1-phiy2)-PI*(nux-2*nuy))/sin(PI*(nux-2*nuy)));
+          d->dnuy_dJy += b3L1*b3L2/(-16*PI)*sqrt(betax1*betax2)*betay1*betay2*
+            (4*cos(fabs(phix1-phix2)-PI*nux)/sin(PI*nux) 
+             + cos(fabs(phix1-phix2)+2*fabs(phiy1-phiy2)-PI*(nux+2*nuy))/sin(PI*(nux+2*nuy)) 
+             + cos(fabs(phix1-phix2)-2*fabs(phiy1-phiy2)-PI*(nux-2*nuy))/sin(PI*(nux-2*nuy)));
+        }
+        eptr2 = eptr2->succ;
+      }
+    }
+    eptr1 = eptr1->succ;
+  }
+}
+
 
 
 

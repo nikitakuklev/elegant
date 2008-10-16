@@ -67,8 +67,10 @@
     long higher_order_chromaticity = 0;
     long higher_order_chromaticity_points = 5;
     double higher_order_chromaticity_range = 4e-4;
+    long quick_higher_order_chromaticity = 0;
     double chromatic_tune_spread_half_range = 0;
     long cavities_are_drifts_if_matched = 1;
+    long geometric_driving_terms = 0;
 #end
 
 #namelist twiss_analysis,struct
@@ -83,6 +85,4 @@
         long verbosity = 0;
         long clear = 0;
 #end
-
-
 

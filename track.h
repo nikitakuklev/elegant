@@ -240,6 +240,12 @@ typedef struct {
   double ex0, sigmadelta, Uo;
 } RADIATION_INTEGRALS;
 
+typedef struct {
+  /* First-order geometric terms */
+  double h21000, h30000, h10110, h10020, h10200;
+  double dnux_dJx, dnux_dJy, dnuy_dJy;
+} DRIVING_TERMS;
+
 /* Node structure for linked-list of beamline definitions: */
 #define N_TSWA 3
 typedef struct line_list {
@@ -274,6 +280,7 @@ typedef struct line_list {
     double nuyTswaExtrema[2];  /* min, max tunes from TSWA calculations */ 
     double acceptance[4];      /* in pi-meter-radians for x and y, plus z locations of limits (4 doubles in all) */
     double couplingFactor[3];  /* kappa, delta, r from pg 187 of HAPE */
+    DRIVING_TERMS drivingTerms;
     RADIATION_INTEGRALS radIntegrals;
     char *acc_limit_name[2];  /* names of elements at which acceptance is limited, in x and y */
     TRAJECTORY *closed_orbit;  /* closed orbit, if previously calculated, starting at recirc element */
