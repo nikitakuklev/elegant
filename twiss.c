@@ -3587,6 +3587,7 @@ void setLinearChromaticTrackingValues(LINE_LIST *beamline)
 
 
 void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, double *tune)
+/* Based on J. Bengtsson, SLS Note 9/97, March 7, 1997, with corrections per W. Guo (NSLS) */
 {
   double h11001[2], h00111[2], h20001[2], h00201[2], h10002[2];
   double h21000[2], h30000[2], h10110[2], h10020[2], h10200[2];
