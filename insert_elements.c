@@ -47,6 +47,8 @@ void do_insert_elements(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 
   if (disable)
     return;
+  if (!skip && !add_at_end)
+    bomb("skip and add_at_end can not be zero at the same time", NULL);
 
   if (!(addElem = SDDS_Realloc(addElem, sizeof(*addElem))))
     bomb("memory allocation failure at insert_elements", NULL);
@@ -79,11 +81,10 @@ void do_insert_elements(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     if (has_wildcards(exclude) && strchr(exclude, '-'))
       exclude = expand_ranges(exclude);
   }
+  str_toupper(element_def);
 
   add_elem_flag = 1;
-  addElem->nskip = 0;
-  if (skip)
-    addElem->nskip = skip;
+  addElem->nskip = skip;
   addElem->add_end =0;
   if (add_at_end)
     addElem->add_end = add_at_end;
