@@ -341,10 +341,6 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
   	long nelem = 0;
   	eptr = &(lptr->elem);
   	while (eptr) {
-  		if (eptr->type == eptr_add->type) {	/* the code don't allow insert element of same type as previous one */
-  			eptr = eptr->succ;
-  			continue;
-  		}
   		if (insertElem(eptr->name, eptr->type, &skip)) {
  			add_element(eptr, eptr_add); 
   			eptr = eptr->succ;		/* move pointer to new added element */
