@@ -9,7 +9,7 @@
         STRING name = NULL;
         STRING type = NULL;
         STRING exclude = NULL;
-        long skip = 0;
+        long skip = 1;
         long disable = 0;
         long add_at_end = 0;
         STRING element_def = NULL;

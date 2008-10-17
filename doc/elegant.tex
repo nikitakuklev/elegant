@@ -1683,7 +1683,7 @@ end are given.
         STRING name = NULL;
         STRING type = NULL;
         STRING exclude = NULL;
-        long skip = 0;
+        long skip = 1;
         long disable = 0;
         long add_at_end = 0;
         STRING element_def = NULL;
@@ -1698,7 +1698,7 @@ end are given.
         type of the elements after which to insert the new element.
 \item \verb|exclude| --- Possibily wild-card containing string specifying 
 	the name of elements to be excluded from the specified insertion.
-\item \verb|skip| --- If nonzero, the element is inserted at every $n^{th}$ element.
+\item \verb|skip| --- The element is inserted at every $n^{th}$ element.
 \item \verb|disable| --- If nonzero, the command is ignored.
 \item \verb|add_at_end| --- If nonzero, the element is also added at the end of the beamline.
 \item \verb|element_def| --- The definition of the element, just as it would be entered in the lattice file.
