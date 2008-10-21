@@ -2097,15 +2097,17 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
   } else if (elem->type==T_UKICKMAP) {
     UKICKMAP *ukmap;
     ukmap = (UKICKMAP*)(elem->p_elem);
-    AddWigglerRadiationIntegrals(ukmap->length, 2*ukmap->periods, ukmap->radiusInternal,
-				 eta0, etap0, 
-				 beta0, alpha0,
-				 &I1, &I2, &I3, &I4, &I5);
-    radIntegrals->I[0] += I1;
-    radIntegrals->I[1] += I2;
-    radIntegrals->I[2] += I3;
-    radIntegrals->I[3] += I4;
-    radIntegrals->I[4] += I5;
+    if (ukmap->radiusInternal>0) {
+      AddWigglerRadiationIntegrals(ukmap->length, 2*ukmap->periods, ukmap->radiusInternal,
+                                   eta0, etap0, 
+                                   beta0, alpha0,
+                                   &I1, &I2, &I3, &I4, &I5);
+      radIntegrals->I[0] += I1;
+      radIntegrals->I[1] += I2;
+      radIntegrals->I[2] += I3;
+      radIntegrals->I[3] += I4;
+      radIntegrals->I[4] += I5;
+    }
   } else {
     isBend = 1;
     switch (elem->type) {
