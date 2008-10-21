@@ -578,7 +578,7 @@ void computeHigherOrderChromaticities(LINE_LIST *beamline, double *clorb, RUN *r
 				      long concatOrder, double deltaStep, long deltaPoints,
                                       long quickMode)
 {
-#define MAX_NDELTA_VALUES 11   /* must be at least 5 */
+#define MAX_NDELTA_VALUES 101   /* must be at least 5 */
   double trace[2][MAX_NDELTA_VALUES], delta[MAX_NDELTA_VALUES];
   double eta[6];
   double coef[MAX_NDELTA_VALUES], sCoef[MAX_NDELTA_VALUES], chi;
