@@ -7,7 +7,7 @@
 # in the file LICENSE that is included with this distribution. 
 #*************************************************************************
 #
-# $Id: Makefile,v 1.9 2008-06-05 22:14:11 soliday Exp $
+# $Id: Makefile,v 1.10 2008-10-21 18:26:55 soliday Exp $
 #
 #
 #
@@ -77,7 +77,7 @@ F77 = f77
 solaris_libs = -lcurses -lrt
 endif
 ifeq ($(EPICS_HOST_ARCH),solaris-x86_64)
-F77 = f77
+F77 = f77 -m64
 solaris_libs = -lcurses -lrt
 endif
 
