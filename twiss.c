@@ -3424,8 +3424,6 @@ void AddWigglerRadiationIntegrals(double length, long poles, double radius,
   FILE *fpd = NULL;
 #endif
 
-  printf("wiggler: length=%e, poles=%ld, radius=%e\n", length, poles, radius);
-  
   if (poles<3)
     bomb("wiggler must have at least 3 poles", NULL);
   if (radius<=0)
