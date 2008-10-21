@@ -3297,7 +3297,7 @@ double computeRmsCoordinate_p(double **coord, long i1, long np, ELEMENT_LIST *ep
 #endif
 
 void do_insert_elements(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
-long insertElem(char *name, long type, long *occurrence);
+long insertElem(char *name, long type, long *skip, long occurPosition);
 long getAddElemFlag(); 
 char *getElemDefinition();
 long getAddEndFlag();

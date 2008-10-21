@@ -14,7 +14,7 @@
 
 typedef struct {
   char *name, *type, *exclude, *elemDef;
-  long nskip, add_end;
+  long nskip, add_end, total, occur[10];
 } ADD_ELEM;
 
 static ADD_ELEM addElem;
@@ -47,9 +47,15 @@ void do_insert_elements(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 
   if (disable)
     return;
-  if (!skip && !add_at_end)
-    bomb("skip and add_at_end can not be zero at the same time", NULL);
+  if (!skip && !add_at_end && !total_occurence)
+    bomb("skip, add_at_end and total_occurence can not be zero at the same time", NULL);
 
+  if (total_occurence) {
+    if (skip)
+      bomb("skip and total_occurence can not be used together. One must have to be set to zero", NULL);
+    if (has_wildcards(name))
+      bomb("element name has to be specified if you use the occurence feature", NULL);
+  }
   add_elem_flag = 0;
   
   if ((!name || !strlen(name)) && !type)
@@ -90,27 +96,44 @@ void do_insert_elements(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
   addElem.type = type;
   addElem.exclude = exclude;
   addElem.elemDef = element_def;
-
   delete_spaces(addElem.elemDef);
+
+  addElem.total = total_occurence;
+  for (i=0; i< addElem.total; i++) {
+    addElem.occur[i] =  occurence[i];
+  }
+
   beamline = get_beamline(NULL, beamline->name, run->p_central, 0);
 
   return;
 }
 
-long insertElem(char *name, long type, long *occurrence) 
+long insertElem(char *name, long type, long *skip, long occurPosition) 
 {
+  long i;
+
   if (addElem.exclude && wild_match(name, addElem.exclude))
     return(0);
   if (addElem.name && !wild_match(name, addElem.name))
     return(0);
   if (addElem.type && !wild_match(entity_name[type], addElem.type))
     return(0);
-  (*occurrence)++;
 
-  if (*occurrence < addElem.nskip || addElem.nskip==0)
+  if (addElem.total) {
+    for (i=0; i<addElem.total; i++) {
+      if (occurPosition == addElem.occur[i])
+        return(1);
+    }
     return(0);
+  }
 
-  *occurrence = 0;
-  return(1);
+  if (addElem.nskip) {
+    (*skip)++;
+    if (*skip < addElem.nskip)
+      return(0);
+    *skip = 0;
+    return(1);
+  }
+  return(0);
 }
 

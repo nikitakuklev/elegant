@@ -14,6 +14,8 @@
         long add_at_end = 0;
         STRING element_def = NULL;
         long verbose = 1;
+        long total_occurence = 0;
+        long occurence[10]={0,0,0,0,0,0,0,0,0,0};
 #end
 
 

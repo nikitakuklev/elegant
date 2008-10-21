@@ -341,17 +341,17 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
   	long nelem = 0;
   	eptr = &(lptr->elem);
   	while (eptr) {
-  		if (insertElem(eptr->name, eptr->type, &skip)) {
- 			add_element(eptr, eptr_add); 
-  			eptr = eptr->succ;		/* move pointer to new added element */
-  			nelem++;
-   		}
-  		if (eptr->succ==NULL && skip!=0 && getAddEndFlag()) {	/* add element to the end of line if request */
-  			add_element(eptr, eptr_add);
-  			eptr = eptr->succ;				/* this is very impotant to get off the loop */
-  			nelem++;
- 		}   			
-  		eptr = eptr->succ; 
+     if (insertElem(eptr->name, eptr->type, &skip, eptr->occurence)) {
+       add_element(eptr, eptr_add); 
+       eptr = eptr->succ;		/* move pointer to new added element */
+       nelem++;
+     }
+     if (eptr->succ==NULL && getAddEndFlag()) {	/* add element to the end of line if request */
+       add_element(eptr, eptr_add);
+       eptr = eptr->succ;				/* this is very impotant to get off the loop */
+       nelem++;
+     }   			
+     eptr = eptr->succ; 
   	}
   	lptr->n_elems += nelem;
   } 
