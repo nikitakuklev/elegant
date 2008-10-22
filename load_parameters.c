@@ -730,7 +730,8 @@ void dumpLatticeParameters(char *filename, RUN *run, LINE_LIST *beamline)
   }
   if (!SDDS_WritePage(SDDSout))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-  SDDS_DoFSync(SDDSout);
+  if (!inhibitFileSync)
+    SDDS_DoFSync(SDDSout);
 }
 
 void finishLatticeParametersFile() 

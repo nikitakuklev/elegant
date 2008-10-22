@@ -9,6 +9,9 @@
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.25  2006/05/31 16:02:54  ywang25
+ * The first release of Pelegant. It has passed a regression test of 100 cases.
+ *
  * Revision 1.24  2005/11/22 23:21:20  borland
  * Added momentum aperture search, which necessitated adding an argument to
  * do_tracking, resulting in changes in many files.
@@ -485,7 +488,8 @@ void fit_trace_writeTraceOutput
     }
     if (!SDDS_WritePage(&SDDSout))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-    SDDS_DoFSync(&SDDSout);
+    if (!inhibitFileSync)
+      SDDS_DoFSync(&SDDSout);
   }
   if (!SDDS_Terminate(&SDDSout))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);

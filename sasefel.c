@@ -9,6 +9,9 @@
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.24  2006/05/31 16:02:53  ywang25
+ * The first release of Pelegant. It has passed a regression test of 100 cases.
+ *
  * Revision 1.23  2005/01/27 17:39:39  borland
  * Updated calls to rpn routines.
  *
@@ -490,7 +493,8 @@ void doSASEFELAtEndOutput(SASEFEL_OUTPUT *sasefelOutput, long step)
   }
   if (!SDDS_WritePage(SDDSout))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-  SDDS_DoFSync(SDDSout);
+  if (!inhibitFileSync)
+    SDDS_DoFSync(SDDSout);
 }
 
 

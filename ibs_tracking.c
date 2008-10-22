@@ -448,6 +448,7 @@ void dump_IBScatter(SDDS_TABLE *SDDS_table, IBSCATTER *IBS, long pass)
 
   SDDS_UpdatePage(SDDS_table, 0);
        
-  SDDS_DoFSync(SDDS_table);
+  if (!inhibitFileSync)
+    SDDS_DoFSync(SDDS_table);
   log_exit("dump_IBScatter");    
 }

@@ -5,6 +5,10 @@
  */
 #include "namelist.h"
 
+#namelist global_settings static
+     long inhibit_fsync = 0;
+#end
+
 #namelist run_setup static
     STRING lattice = NULL;
     STRING use_beamline = NULL;

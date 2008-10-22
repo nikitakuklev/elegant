@@ -308,7 +308,8 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
               SDDS_SetError("Problem writing SDDS table for wake output (track_through_ztransverse)");
               SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
             }
-            SDDS_DoFSync(&ztransverse->SDDS_wake);
+            if (!inhibitFileSync)
+              SDDS_DoFSync(&ztransverse->SDDS_wake);
           }
         }
       }

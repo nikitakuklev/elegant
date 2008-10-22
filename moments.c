@@ -220,7 +220,8 @@ void dumpBeamMoments(
     SDDS_SetError("Unable to write Twiss parameter data (dumpBeamMoments)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
-  SDDS_DoFSync(&SDDSMoments);
+  if (!inhibitFileSync)
+    SDDS_DoFSync(&SDDSMoments);
   if (!SDDS_EraseData(&SDDSMoments)) {
     SDDS_SetError("Unable to erase Twiss parameter data (dumpBeamMoments)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);

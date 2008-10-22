@@ -29,6 +29,9 @@ long particleIsElectron = 1;
 /* A hash table for loading parameters effectively */
 htab *load_hash;
 
+/* various user-controlled global flags (global_settings namelist) */
+long inhibitFileSync = 0;
+
 long particleID = 1;
 
 char *entity_name[N_TYPES] = {

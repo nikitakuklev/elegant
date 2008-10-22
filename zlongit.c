@@ -338,7 +338,8 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
             SDDS_SetError("Problem writing SDDS table for wake output (track_through_zlongit)");
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
           }
-          SDDS_DoFSync(&zlongit->SDDS_wake);
+          if (!inhibitFileSync)
+            SDDS_DoFSync(&zlongit->SDDS_wake);
         }
       }
 

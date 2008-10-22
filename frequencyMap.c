@@ -191,7 +191,8 @@ long doFrequencyMap(
       }
     }
   }
-  SDDS_DoFSync(&SDDS_fmap);
+  if (!inhibitFileSync)
+    SDDS_DoFSync(&SDDS_fmap);
   if (!SDDS_WriteTable(&SDDS_fmap)) {
     SDDS_SetError("Problem writing SDDS table (doFrequencyMap)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);

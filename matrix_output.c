@@ -413,7 +413,8 @@ void run_matrix_output(
 	SDDS_SetError("Unable to write matrix data (run_matrix_output)");
 	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
-      SDDS_DoFSync(SDDS_matrix+i_output);
+      if (!inhibitFileSync)
+        SDDS_DoFSync(SDDS_matrix+i_output);
       if (!SDDS_EraseData(SDDS_matrix+i_output)) {
 	SDDS_SetError("Unable to erase matrix data (run_matrix_output)");
 	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);

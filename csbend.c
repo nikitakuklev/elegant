@@ -1576,7 +1576,8 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
         }
         if (!SDDS_WritePage(&csbend->SDDSpart))
           SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-        SDDS_DoFSync(&csbend->SDDSpart);
+        if (!inhibitFileSync)
+          SDDS_DoFSync(&csbend->SDDSpart);
 	  printf ("Pelegant does not support dumping particle data inside an element now.");
 	}
       }
@@ -1641,7 +1642,8 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
             !SDDS_SetColumn(&csbend->SDDSout, SDDS_SET_BY_NAME, T2, nBins, "GammaDeriv") ||
             !SDDS_WritePage(&csbend->SDDSout))
           SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-        SDDS_DoFSync(&csbend->SDDSout);
+        if (!inhibitFileSync)
+          SDDS_DoFSync(&csbend->SDDSout);
       }
     }
   }
@@ -3043,7 +3045,8 @@ void DumpStupakovOutput(char *filename, SDDS_DATASET *SDDSout, long *active,
     SDDS_SetError("Problem writing to output file for CSRDRIFT (Stupakov mode)");
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
   }
-  SDDS_DoFSync(SDDSout);
+  if (!inhibitFileSync)
+    SDDS_DoFSync(SDDSout);
 }
 
 

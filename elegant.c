@@ -50,6 +50,7 @@ void printFarewell(FILE *fp);
 void closeBeamlineOutputFiles(LINE_LIST *beamline);
 void setSigmaIndices();
 void process_particle_command(NAMELIST_TEXT *nltext);
+void processGlobalSettings(NAMELIST_TEXT *nltext);
 
 #define DESCRIBE_INPUT 0
 #define DEFINE_MACRO 1
@@ -136,7 +137,8 @@ void showUsageOrGreeting (unsigned long mode)
 #define TOUSCHEK_SCATTER 53
 #define INSERT_ELEMENTS 54
 #define CHANGE_PARTICLE 55
-#define N_COMMANDS      56
+#define GLOBAL_SETTINGS 56
+#define N_COMMANDS      57
 
 char *command[N_COMMANDS] = {
     "run_setup", "run_control", "vary_element", "error_control", "error_element", "awe_beam", "bunched_beam",
@@ -149,7 +151,7 @@ char *command[N_COMMANDS] = {
     "optimization_term", "slice_analysis", "divide_elements", "tune_shift_with_amplitude",
     "transmute_elements", "twiss_analysis", "semaphores", "frequency_map", "insert_sceffects", "momentum_aperture", 
     "aperture_input", "coupled_twiss_output", "linear_chromatic_tracking_setup", "rpn_load",
-    "moments_output", "touschek_scatter", "insert_elements", "change_particle",
+    "moments_output", "touschek_scatter", "insert_elements", "change_particle", "global_settings",
   } ;
 
 char *description[N_COMMANDS] = {
@@ -675,6 +677,9 @@ char **argv;
       reset_driftCSR();
       last_default_order = default_order;
       run_setuped = 1;
+      break;
+    case GLOBAL_SETTINGS:
+      processGlobalSettings(&namelist_text);
       break;
     case RUN_CONTROL:
       if (!run_setuped)
@@ -2410,4 +2415,15 @@ void process_particle_command(NAMELIST_TEXT *nltext)
   printf("* Please be alert for results that don't make sense!\n");
   printf("************************************************\n");
 }
+
+void processGlobalSettings(NAMELIST_TEXT *nltext)
+{
+  set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
+  set_print_namelist_flags(0);
+  process_namelist(&global_settings, nltext);
+  print_namelist(stdout, &global_settings);
+
+  inhibitFileSync = inhibit_fsync;
+}
+
 

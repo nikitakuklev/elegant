@@ -183,7 +183,8 @@ void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamli
     SDDS_SetError("Unable to write floor coordinate data (output_floor_coordinates)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
-  SDDS_DoFSync(&SDDS_floor);
+  if (!inhibitFileSync)
+    SDDS_DoFSync(&SDDS_floor);
   if (!SDDS_Terminate(&SDDS_floor)) {
     SDDS_SetError("Unable to terminate SDDS file (output_floor_coordinates)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);

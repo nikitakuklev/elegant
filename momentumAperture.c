@@ -372,7 +372,8 @@ long doMomentumApertureSearch(
     SDDS_SetError("Problem writing SDDS table (doMomentumApertureSearch)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
-  SDDS_DoFSync(&SDDSma);
+  if (!inhibitFileSync)
+    SDDS_DoFSync(&SDDSma);
       
 
   free_czarray_2d((void**)coord, 1, 7);

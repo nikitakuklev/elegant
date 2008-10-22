@@ -392,7 +392,8 @@ void do_transport_analysis(
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
         exit(1);
         }
-    SDDS_DoFSync(&SDDS_analyze);
+    if (!inhibitFileSync)
+      SDDS_DoFSync(&SDDS_analyze);
     
     if (verbosity>0) {
         for (i=0; i<6; i++) {
