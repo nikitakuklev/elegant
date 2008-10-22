@@ -58,6 +58,9 @@ extern long particleIsElectron;
 
 #define COORDINATES_PER_PARTICLE 7
 
+/* various user-controlled global flags (global_settings namelist) */
+extern long inhibitFileSync;
+
 /* flag used to identify which processor is allowed to write to a file */
 extern long writePermitted;
 /* flag used to identify if it is the master processor */
