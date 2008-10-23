@@ -71,6 +71,8 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
   IBS->emity = IBS->emity0 = yBeamParam.emittance;
   compute_longitudinal_parameters(&longitBeamParam, coord, np, Po);
   IBS->emitl = IBS->emitl0 = longitBeamParam.emittance;  /* units are seconds */
+  if (IBS->revolutionLength==0)
+    bomb("The length between IBSCATTERS or the length from start to first IBSCATTER can not be zero", NULL);
   vz = IBS->revolutionLength/IBS->dT;
   IBS->sigmaz = IBS->sigmaz0 = vz*sqrt(longitBeamParam.s11);
   IBS->sigmaDelta = IBS->sigmaDelta0 = sqrt(longitBeamParam.s22);
