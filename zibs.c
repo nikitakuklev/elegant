@@ -13,7 +13,7 @@
 #include "zibs.h"
 
 /* prototypes */
-void IBSRate (double particles, double coupling, 
+void IBSRate (double particles, 
               long elements, long superperiods, long verbosity, long isRing,
               double emitx0, double emity0, double sigmaDelta0, double sigmaz0,
               double *s, double *pCentral, double *betax, double *alphax, double *betay, 
@@ -58,8 +58,8 @@ void IBSRate (double particles, double coupling,
     fprintf(stdout, "IBS Rates:\n");
     fprintf(stdout, "gamma=%le, emitx = %le, emity = %le, sigmaDelta = %le, sigmaz = %le\n",
             gamma0, emitx0, emity0, sigmaDelta0, sigmaz0);
-    fprintf(stdout, "coupling = %le, superperiods = %ld, particles = %le, isRing=%ld\n",
-            coupling, superperiods, particles, isRing);
+    fprintf(stdout, "superperiods = %ld, particles = %le, isRing=%ld\n",
+            superperiods, particles, isRing);
   }
 
   *xGrowthRate= 0.0; 

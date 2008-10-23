@@ -14,7 +14,7 @@ double coulombLog (double gamma, double emitx, double emity,
                    double betaxAve, double betayAve, double sigz, double particles, 
                    long noWarning);
 
-void IBSRate (double particles, double coupling, 
+void IBSRate (double particles, 
               long elements, long superperiods, long verbosity, long isRing,
               double emitx, double emity, double sigmaDelta, double sigmaz,
               double *s, double *pCentral, double *betax, double *alphax, double *betay, 

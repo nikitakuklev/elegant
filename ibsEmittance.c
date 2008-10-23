@@ -9,6 +9,9 @@
 
 /* 
  * $Log: not supported by cvs2svn $
+ * Revision 1.27  2008/05/20 20:45:29  xiaoam
+ * Change code exits to warning message.
+ *
  * Revision 1.26  2008/05/20 19:30:17  xiaoam
  * updated for new IBS calculation.
  *
@@ -583,7 +586,7 @@ int main( int argc, char **argv)
 
     /* This call is to get the initial growth rates for writing to results file.
        This applies for any running option selected in the commandline */
-    IBSRate(particles, coupling, elements, superperiods, verbosity, isRing,
+    IBSRate(particles, elements, superperiods, verbosity, isRing,
              emitx, emity, sigmaDelta, sigmaz, 
              s, pCentral, betax, alphax, betay, alphay, etax, etaxp, etay, etayp,
              NULL, NULL, NULL, 
@@ -670,7 +673,7 @@ int main( int argc, char **argv)
     /* calculate growth rates contributions at equilibrium or
      just one time (-growthRateOnly option) */
      if (!integrationPoints) {
-       IBSRate(particles, coupling, elements, superperiods, verbosity, isRing, 
+       IBSRate(particles, elements, superperiods, verbosity, isRing, 
                 emitx, emity, sigmaDelta, sigmaz, 
                 s, pCentral, betax, alphax, betay, alphay, etax, etaxp, etay, etayp,
                 xRateVsS, yRateVsS, zRateVsS, 
@@ -833,7 +836,7 @@ double IBSequations(double *x, long *invalid) {
     
   emity = emitx * coupling;
   sigmaz = sigmaz0 * (sigmaDelta/ sigmaDelta0);
-  IBSRate(particles, coupling, elements, superperiods, verbosity, isRing, 
+  IBSRate(particles, elements, superperiods, verbosity, isRing, 
           emitx, emity, sigmaDelta, sigmaz, 
           s, pCentral, betax, alphax, betay, alphay, etax, etaxp, etay, etayp,
           NULL, NULL, NULL, 
@@ -890,7 +893,7 @@ void IBSIntegrate(double *exInteg, double *eyInteg, double *elInteg, int32_t *pa
     SdeltaInteg[slot] = sigmaDelta;
     SzInteg[slot] = sigmaz;
     passInteg[slot] = turn;
-    IBSRate(particles, coupling, elements, superperiods, verbosity, isRing,
+    IBSRate(particles, elements, superperiods, verbosity, isRing,
              emitx, emity, sigmaDelta, sigmaz, 
              s, pCentral, betax, alphax, betay, alphay, etax, etaxp,etay, etayp, 
              NULL, NULL, NULL, 
@@ -910,7 +913,7 @@ void IBSIntegrate(double *exInteg, double *eyInteg, double *elInteg, int32_t *pa
   SdeltaInteg[slot] = sigmaDelta;
   SzInteg[slot] = sigmaz;
   passInteg[slot] = turn;
-  IBSRate(particles, coupling, elements, superperiods, verbosity, isRing,  
+  IBSRate(particles, elements, superperiods, verbosity, isRing,  
            emitx, emity, sigmaDelta, sigmaz, 
            s, pCentral, betax, alphax, betay, alphay, etax, etaxp,etay, etayp, 
            NULL, NULL, NULL,          

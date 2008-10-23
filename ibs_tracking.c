@@ -83,7 +83,7 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
     bomb("IBSCATTER charge parameter should be non-negative.  Use change_particle to set particle charge state.", NULL);
 
   IBSRate (fabs(IBS->charge/particleCharge), 
-           IBS->coupling, IBS->elements, 1, IBS->verbosity, IBS->isRing,
+           IBS->elements, 1, IBS->verbosity, IBS->isRing,
            IBS->emitx0, IBS->emity0, IBS->sigmaDelta0, IBS->sigmaz0,
            IBS->s, IBS->pCentral, IBS->betax, IBS->alphax, IBS->betay,
            IBS->alphay, IBS->etax, IBS->etaxp, IBS->etay, IBS->etayp,

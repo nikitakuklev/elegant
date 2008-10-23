@@ -780,7 +780,7 @@ extern char *entity_text[N_TYPES];
 #define N_MODRF_PARAMS 15
 #define N_SREFFECTS_PARAMS 14
 #define N_ZTRANSVERSE_PARAMS 29
-#define N_IBSCATTER_PARAMS 12
+#define N_IBSCATTER_PARAMS 11
 #define N_FMULT_PARAMS 10
 #define N_BMAPXY_PARAMS 5
 #define N_WAKE_PARAMS 13
@@ -2209,7 +2209,7 @@ typedef struct {
 extern PARAMETER IBSCATTER_param[N_IBSCATTER_PARAMS];
 
 typedef struct {
-  double coupling, factor, charge;
+  double factor, charge;
   long do_x, do_y, do_z;
   long smooth, verbosity, forceMatchedTwiss, isRing, interval;
   char *filename; 

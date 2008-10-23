@@ -1411,13 +1411,12 @@ PARAMETER ztransverse_param[N_ZTRANSVERSE_PARAMS] = {
 
 IBSCATTER ibs_example;
 PARAMETER ibscatter_param[N_IBSCATTER_PARAMS] = {
-  {"COUPLING", "", IS_DOUBLE, 0, (long)((char *)&ibs_example.coupling), NULL, 1.0, 0, "x-y coupling"},
   {"FACTOR", "", IS_DOUBLE, 0, (long)((char *)&ibs_example.factor), NULL, 1.0, 0, "factor by which to multiply growth rates before using"},
   {"CHARGE", "C", IS_DOUBLE, 0, (long)((char *)&ibs_example.charge), NULL, 0.0, 0, "beam charge (or use CHARGE element)"},
   {"DO_X", "", IS_LONG, 0, (long)((char *)&ibs_example.do_x), NULL, 0.0, 1, "do x-plane scattering?"},
   {"DO_Y", "", IS_LONG, 0, (long)((char *)&ibs_example.do_y), NULL, 0.0, 1, "do y-plane scattering?"},
   {"DO_Z", "", IS_LONG, 0, (long)((char *)&ibs_example.do_z), NULL, 0.0, 1, "do z-plane scattering?"},
-  {"SMOOTH", "", IS_LONG, 0, (long)((char *)&ibs_example.smooth), NULL, 0.0, 0, "Use smooth method instead of random numbers?"},
+  {"SMOOTH", "", IS_LONG, 0, (long)((char *)&ibs_example.smooth), NULL, 0.0, 1, "Use smooth method instead of random numbers?"},
   {"VERBOSITY", "", IS_LONG, 0, (long)((char *)&ibs_example.verbosity), NULL, 0.0, 0, "Set verbosity level"},
   {"FORCE_MATCHED_TWISS", "", IS_LONG, 0, (long)((char *)&ibs_example.forceMatchedTwiss), NULL, 0.0, 0, "Force computations to be done with twiss parameters of the beamline, not the beam."},
   {"ISRING", "", IS_LONG, 0, (long)((char *)&ibs_example.isRing), NULL, 0.0, 1, "Is it storage ring?"},
