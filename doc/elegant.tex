@@ -32,8 +32,8 @@ and references, see the specific entries in the manual.
 \subsection{Known Bugs and Problems}
 \begin{itemize}
 \item Twiss output contains entries for the higher-order dispersion, tune
-        shifts with amplitude, higher-order chromaticity, and tune spreads
-        due to chromaticity and amplitude 
+        shifts with amplitude, higher-order chromaticity, tune spreads
+        due to chromaticity and amplitude, and resonance driving terms
 	{\em even when these are not calculated}, which is potentially
 	misleading.   The values are zero when the calculation is not
         requested.
@@ -70,6 +70,9 @@ and references, see the specific entries in the manual.
 \item Orbit and trajectory correction now use singular value decomposition (SVD) for matrix inversion,
  with several controls that allow removal of singular vectors.  See the documentation for the 
  \verb|correct| command for details.
+\item Computation of resonance driving terms\cite{Bengtsson} was added to \verb|twiss_output|.  These may be optimized.
+ See the documentation for the \verb|twiss_output| command for details.
+ This was requested by W. Guo (NSLS), who helped with testing.
 \end{itemize}
 
 \subsection{Changes to Related Programs and Files}
@@ -492,6 +495,7 @@ would assign to {\tt betax} half
 the value of the parameter {\tt betaxFinal} from
 the file {\tt data.twi}.
 
+
 \begin{latexonly}
 \newpage
 \end{latexonly}
@@ -556,7 +560,7 @@ the file {\tt data.twi}.
 \hyperref{{\tt steering\_element}}{{\tt steering\_element}}{}{subsec:steeringelement} & Define element parameters as steering correctors. \\ \hline
 \hyperref{{\tt transmute\_elements}}{{\tt transmute\_elements}}{}{subsec:transmuteelements} & Transmute elements from one type to another. \\ \hline
 \hyperref{{\tt twiss\_analysis}}{{\tt twiss\_analysis}}{}{subsec:twissanalysis} & Define subset of beamline for twiss parameter analysis. \\ \hline
-\hyperref{{\tt twiss\_output}}{{\tt twiss\_output}}{}{subsec:twissoutput} & Set up twiss parameter computation. \\ \hline
+\hyperref{{\tt twiss\_output}}{{\tt twiss\_output}}{}{subsec:twissoutput} & Set up twiss parameter and related computation. \\ \hline
 \hyperref{{\tt track}}{{\tt track}}{}{subsec:track} & Execute tracking of particles and other operations. \\ \hline
 \hyperref{{\tt tune\_shift\_with\_amplitude}}{{\tt tune\_shift\_with\_amplitude}}{}{subsec:tuneshiftwithamplitude} & Compute tune shifts with amplitude. \\ \hline
 \hyperref{{\tt vary\_element}}{{\tt vary\_element}}{}{subsec:varyelement} & Vary element parameters in loops. \\ \hline
@@ -2376,8 +2380,10 @@ variables and covariable may be accessed via names like \verb|<element-name>.<pa
 \begin{itemize}
 \item \verb|equation| --- An {\tt rpn} equation for the optimization
 function, expressed in terms of any parameters of any optimization
-variables and the ``final'' parameters of the beam (as recorded in the
-\verb|final| output file available in the \verb|run_setup| namelist).
+variables, the ``final'' parameters of the beam (as recorded in the
+\verb|final| output file available in the \verb|run_setup| namelist),
+and selected quantities from Twiss parameter, tune shift with amplitude,
+closed orbit, beam moments, driving terms, and other computations.
 The optimization variables or covariables may appear in the equation
 in the form \verb|<element-name>.<parameter-name>|, all in capital
 letters.  In addition, initial values of variables and covariables
@@ -2397,24 +2403,41 @@ V} (vertical) and {\em corrParam} is the parameter of the corrector
 used for changing the orbit (e.g., {\tt HKICK} or {\tt VKICK} for a
 {\tt KICKER} element).
 
-If the twiss command was given  with \verb|output_at_each_step=1|, one may also refer to statistics of
-Twiss parameters in the form \verb|<statistic>.<parameter-name>|,
-where \verb|<statistic>| is either \verb|min| or \verb|max|.  One may
-also use the symbols \verb|nux|, \verb|dnux/dp|, (and corresponding
-symbols for y), \verb|alphac|, and \verb|alphac2|.  These are the
-tune, chromaticity, and first- and second- order momentum compaction
-factors.  The final values of the Twiss parameters are referred to
-simply as \verb|betax|, \verb|etax|, etc.  
-
-If the twiss command was given  with \verb|output_at_each_step=1| and radiation integral computation
-was requested, one may use \verb|ex0| and \verb|Sdelta0| for
+Many quantities are made available for optimization if \verb|twiss_output| command is given
+with \verb|output_at_each_step=1|:
+\begin{itemize} 
+\item Final Twiss parameters, e.g., \verb|betax|, \verb|alphax|, \verb|etax|.  The names
+are the same as the column names in the twiss output file.
+\item Statistics of Twiss parameters in the form \verb|<statistic>.<parameter-name>|,
+where \verb|<statistic>| is either \verb|min| or \verb|max|.
+\item Tunes and chromaticities via symbols \verb|nux|, \verb|dnux/dp|, (and corresponding
+symbols for y).
+\item First- and second-order momentum compaction factors via symbols \verb|alphac| and \verb|alphac2|.  
+\item If radiation integral computation is requested,  one may use \verb|ex0| and \verb|Sdelta0| for
 the equilibrium emittance and momentum spread, plus \verb|J<plane>|
 and \verb|tau<plane>| for the damping partition and damping time,
-where \verb|<plane>| is \verb|x|, \verb|y|, or \verb|delta|.
-
-The coupling integral and emittance ratio due to x-y coupling may
+where \verb|<plane>| is \verb|x|, \verb|y|, or \verb|delta|.  One may also use
+\verb|I1| through \verb|I5| for the individual radiation integrals.
+\item If \verb|compute_driving_terms=1|, then the quantities
+{\tt h11001}, {\tt h00111}, {\tt h20001}, {\tt h00201}, {\tt h10002}, {\tt h21000}, {\tt h30000}, 
+ {\tt h10110}, {\tt h10020}, {\tt h10200}, {\tt dnux/dJx}, {\tt dnux/dJy},  and {\tt dnuy/dJy} 
+may be used.
+\item The coupling integral and emittance ratio due to x-y coupling may
 be accessed using the symbols \verb|couplingIntegral| and
 \verb|emittanceRatio|.  See section 3.1.4.4 of \cite{HAPE}.
+\item If higher-order chromaticity is requested, then one may use the
+  symbols {\tt dnux/dp2}, {\tt dnux/dp3}, {\tt dnuy/dp2}, {\tt
+    dnuy/dp3}, {\tt etax2} , {\tt etax3}, {\tt etay2} , {\tt etay3},
+  {\tt nuxChromLower}, {\tt nuxChromUpper}, {\tt nuyChromLower}, and
+  {\tt nuyChromUpper}.
+\item If the \verb|tune_shift_with_amplitude| command was also given
+  and one may use the symbols {\tt dnux/dAx}, {\tt dnux/dAy}, {\tt
+    dnuy/dAx}, {\tt dnuy/dAy}, {\tt dnux/dAx2}, {\tt dnux/dAy2}, {\tt
+    dnux/dAxAy}, {\tt dnuy/dAx2}, {\tt dnuy/dAy2}, {\tt dnuy/dAxAy},
+  {\tt nuxTswaLower}, {\tt nuxTswaUpper}, {\tt nuyTswaLower}, and {\tt
+    nuyTswaUpper}.
+
+\end{itemize}
 
 If the \verb|floor_coordinates| command was given, one may use
 \verb|X|, \verb|Z|, and \verb|theta| to refer to the final values of
@@ -3274,6 +3297,7 @@ unit parameter change for the element.
     long higher_order_chromaticity_points = 5;
     double higher_order_chromaticity_range = 4e-4;
     double chromatic_tune_spread_half_range = 0;
+    long quick_higher_order_chromaticity = 0;
     double beta_x = 1;
     double alpha_x = 0;
     double eta_x = 0;
@@ -3286,6 +3310,7 @@ unit parameter change for the element.
     STRING reference_element = NULL;
     long reference_element_occurrence = 0;
     long cavities_are_drifts_if_matched = 1;
+    long compute_driving_terms = 0;
 &end
 \end{verbatim}
 
@@ -3320,11 +3345,14 @@ namelist and the highest available order for all beamline elements.
 trace of off-momentum matrices obtained by concantenation of the
 matrix for \verb|higher_order_chromaticity_points| values of $\delta$
 over the full range \verb|higher_order_chromaticity_range|.
+If \verb|quick_higher_order_chromaticity| is nonzero, then a quicker concatenation method is
+used that gives the second-order chromaticity only.
 
 \item \verb|chromatic_tune_spread_half_range| --- Half range of $\delta$ for which the
         chromatic tune spread is computed.  The results are available in for optimization  and
         in the twiss output file under the names \verb|nuxChromUpper|, \verb|nuxChromLower|, 
         and similarly for the y plane.  This computation uses the chromaticities.
+
 \item \verb|reference_file| --- If given, the name of a file from which twiss parameter data will
         be taken to give the starting values.  Ignored if \verb|matched| is nonzero.  The file
         should have the beta and alpha functions with the same names as the file created by
@@ -3340,6 +3368,10 @@ over the full range \verb|higher_order_chromaticity_range|.
   By setting \verb|cavities_are_drifts_if_matched=0|, one can force {\tt elegant} to use the actual matrix for the
   rf cavity.  The differences between the 
   results are generally small, but the default behavior disagrees with the results of \verb|moments_output|.
+\item \verb|compute_driving_terms| --- If nonzero, then resonance driving terms \cite{Bengtsson} and
+ tune shifts with amplitude are computed by summing over dipole, quadrupole, and sextupole elements.  For dipoles, only the effects of gradients and
+ sextupole terms are included; curvature effects are not present in the theory.   In addition, these quantities may be optimized 
+ by using those names in optimization terms (see list below).
 \end{itemize}
 
 The output file from this command contains the following columns, giving values of quantities at the
@@ -3373,8 +3405,6 @@ lattice as a whole.
   defined as $d^2\nu/d\delta^2$.  Will be zero if \verb|higher_order_chromaticity| is zero.
 \item {\tt dnux/dp3} and {\tt dnuy/dp3} --- The horizontal and vertical 3rd-order chromaticities, 
   defined as $d^3\nu/d\delta^3$.  Will be zero if \verb|higher_order_chromaticity| is zero.
-\item {\tt Ax} and {\tt Ay} --- The horizontal and vertical acceptance.  These will be zero if no apertures are
-  defined.
 \item {\tt dbetax/dp} and {\tt dbetay/dp} --- Chromatic derivatives of the horizontal and vertical beta functions,
 defined as $\frac{d\beta}{d\delta}$.
 \item {\tt etax2}, {\tt etax3}, {\tt etay2}, {\tt etay3} --- Higher order dispersion in the horizontal and
@@ -3385,6 +3415,14 @@ defined as $\frac{d\beta}{d\delta}$.
 \item {\tt dnux/dAx}, {\tt dnux/dAy}, {\tt dnuy/dAx}, {\tt dnuy/dAy} --- Tune shifts with amplitude, where amplitude
   is defined as $A_q = (1 + \alpha_q) q^2/\beta_q$, with $q=x$ or $q=y$.  These will
   be zero unless the \verb|tune_shift_with_amplitude| command is given.
+\item {\tt h11001}, {\tt h00111}, {\tt h20001}, {\tt h00201}, {\tt h10002}, {\tt h21000}, {\tt h30000}, 
+ {\tt h10110}, {\tt h10020}, and {\tt h10200} --- Resonance driving terms\cite{Bengtsson}.  These will be
+ zero unless \verb|compute_driving_terms| is nonzero.
+\item {\tt dnux/dJx}, {\tt dnux/dJy},  and {\tt dnuy/dJy} --- Tune shifts with amplitude from Bengtsson's theory \cite{Bengtsson}.
+ See documentation for \verb|tune_shift_with_amplitude| for discussion and comparison with {\tt dnux/dAx} etc.
+ These will be zero unless \verb|compute_driving_terms| is nonzero.
+\item {\tt Ax} and {\tt Ay} --- The horizontal and vertical acceptance.  These will be zero if no apertures are
+  defined.
 \item {\tt alphac}, {\tt alphac2} --- First- and second-order momentum compaction.  The path length is 
   $s = s_o + \alpha_c L \delta + \alpha_{c2} L \delta^2$.
 \item {\tt couplingIntegral}, {\tt couplingDelta}, and {\tt emittanceRatio} --- These quantities are defined
@@ -3478,12 +3516,19 @@ given value.  It will be as if all the particles were lost.
 \item type: setup command.
 \item function: prepare for computation of tune shifts with amplitude.
 \item note: must be given prior to the \verb|twiss_output| command.
-\item method: tune shifts with amplitude are computed via tracking a series of
-        particles at different amplitudes or by a matrix method.  NAFF is used to 
-        determine the tunes from the tracking data.  It is the user's responsbility to optimize the
-        parameters to ensure that results are reasonable.  Using tracking to determine
-        tune shifts is more accurate than analytical methods as it includes multi-turn
-        effects that are important in some rings (e.g., the APS).
+\item methods: 
+\begin{itemize}
+ \item[Method 1]: tune shifts with amplitude are computed via tracking a series of
+  particles at different amplitudes or by a matrix method.  NAFF is used to 
+  determine the tunes from the tracking data.  It is the user's responsbility to optimize the
+  parameters to ensure that results are reasonable.  
+ \item[Method 2]: tune shifts are computed using a concatenated multi-turn third-order matrix.
+ This appears to be reliable for many cases we've tested.
+ \item[Method 3]: tune shifts can be computed quickly using Bengtsson's formulae \cite{Bengtsson} by
+ setting \verb|compute_driving_terms=1| in \verb|twiss_output|.  For cases where all methods are
+ valid, the results will differ by a factor of 2 from the results obtained with this command.
+ Also, the present command has more general validity because it includes dipole curvature effects.
+\end{itemize}
 
 The quantities computed are $\frac{\partial}{\partial A_x^n \partial A_y^m}\nu_p$, where $n\geq 0$ and $m \geq 0$ are
 integers and $p$ is $x$ or $y$.  $A_q = (1 + \alpha_q) q^2/\beta_q$, with $q=x$ or $q=y$.
@@ -4766,6 +4811,10 @@ LINAC''.
 
 \bibitem{radia}
   http://www.esrf.eu/Accelerators/Groups/InsertionDevices/Software/Radia
+
+\bibitem{Bengtsson}
+ J. Bengtsson, "The Sextupole Scheme for the Swiss Light Source (SLS): An Analytic Approach," SLS Note 9/97,
+ March 7, 1997. (Corrections to several typos were supplied by W. Guo, NSLS.)
 
 \end{thebibliography}
 
