@@ -818,7 +818,7 @@ extern char *entity_text[N_TYPES];
 #define N_ILMATRIX_PARAMS 32
 #define N_TSCATTER_PARAMS 1
 #define N_KQUSE_PARAMS 14
-#define N_UKICKMAP_PARAMS 10
+#define N_UKICKMAP_PARAMS 12
 #define N_MKICKER_PARAMS 13
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
@@ -2416,6 +2416,7 @@ typedef struct {
   char *inputFile;
   long nKicks, periods;
   double Kreference;
+  long synchRad, isr;
   /* for internal use only */
   long initialized;
   long points, nx, ny;
@@ -2423,6 +2424,8 @@ typedef struct {
   double xmin, xmax, dxg;
   double ymin, ymax, dyg;
   double radiusInternal;
+  long radiationIntegralsComputed;
+  double I2, I3, I5;
 } UKICKMAP;  
 
 /* macros for bending magnets */ 

@@ -32,7 +32,8 @@ long trackUndulatorKickMap(
   double eomc, H;
   double dxpFactor, dypFactor;
   double length, fieldFactor;
-
+  double radCoef, isrCoef, sxpCoef, sqrtBetax, deltaFactor, delta;
+  
   length = map->length;
   fieldFactor = map->fieldFactor;
   if (!map->initialized)
@@ -41,6 +42,19 @@ long trackUndulatorKickMap(
   if ((nKicks=map->nKicks)<1)
     bomb("N_KICKS must be >=1 for UKICKMAP", NULL);
 
+  radCoef = isrCoef = 0;
+  if (map->radiationIntegralsComputed) {
+    if (map->synchRad)
+      /* radCoef is d((P-Po)/Po) per step for the on-axis, on-momentum particle */
+      radCoef = 2./3*particleRadius*ipow(pRef, 3)*(map->I2/nKicks);
+    if (map->isr) {
+      /* isrCoef is the RMS increase in dP/P per step due to incoherent SR.  */
+      isrCoef = particleRadius*sqrt(55.0/(24*sqrt(3))*pow5(pRef)*137.0359895*map->I3/nKicks);
+      /* sxpCoef is related to the increase in the RMS divergence per step due to incoherent SR */
+      sxpCoef = particleRadius*sqrt(55.0/(24*sqrt(3))*pow5(pRef)*137.0359895*map->I5/nKicks);
+    }
+  }
+  
   length /= nKicks;
   
   eomc = particleCharge/particleMass/c_mks; 
@@ -52,6 +66,17 @@ long trackUndulatorKickMap(
   
   iTop = nParticles-1;
   for (ik=0; ik<nKicks; ik++) {
+    if (sxpCoef) {
+      double S11, S12, S22, emit;
+#if !USE_MPI
+      rms_emittance(particle, 0, 1, iTop+1, &S11, &S12, &S22);
+#else
+      rms_emittance_p(particle, 0, 1, iTop+1, &S11, &S12, &S22);
+#endif
+      sqrtBetax = 0;
+      if ((emit = S11*S22-sqr(S12))>0)
+        sqrtBetax = sqrt(S11/emit);
+    }
     for (ip=0; ip<=iTop; ip++) {
       coord = particle[ip];
 
@@ -82,10 +107,22 @@ long trackUndulatorKickMap(
         coord[2] += coord[3]*length/2.0;
         coord[4] += length/2.0*sqrt(1+sqr(coord[1])+sqr(coord[3]));
       }
+
+      /* 3. Optionally apply synchrotron radiation kicks */
+      if (radCoef || isrCoef) {
+        delta = coord[5];
+        deltaFactor = ipow(1+delta, 2);
+        if (radCoef) 
+          coord[5] -= radCoef*deltaFactor;
+        if (isrCoef)
+          coord[5] -= isrCoef*deltaFactor*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
+        if (sxpCoef && sqrtBetax)
+          coord[1] += sxpCoef*(1+delta)/sqrtBetax*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
+      }
     }
   }
   
-  
+
   if (map->tilt)
     rotateBeamCoordinates(particle, nParticles, -map->tilt);
   if (map->dx || map->dy || map->dz)
