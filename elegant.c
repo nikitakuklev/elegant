@@ -138,7 +138,8 @@ void showUsageOrGreeting (unsigned long mode)
 #define INSERT_ELEMENTS 54
 #define CHANGE_PARTICLE 55
 #define GLOBAL_SETTINGS 56
-#define N_COMMANDS      57
+#define REPLACE_ELEMENTS 57
+#define N_COMMANDS      58
 
 char *command[N_COMMANDS] = {
     "run_setup", "run_control", "vary_element", "error_control", "error_element", "awe_beam", "bunched_beam",
@@ -151,7 +152,7 @@ char *command[N_COMMANDS] = {
     "optimization_term", "slice_analysis", "divide_elements", "tune_shift_with_amplitude",
     "transmute_elements", "twiss_analysis", "semaphores", "frequency_map", "insert_sceffects", "momentum_aperture", 
     "aperture_input", "coupled_twiss_output", "linear_chromatic_tracking_setup", "rpn_load",
-    "moments_output", "touschek_scatter", "insert_elements", "change_particle", "global_settings",
+    "moments_output", "touschek_scatter", "insert_elements", "change_particle", "global_settings","replace_elements",
   } ;
 
 char *description[N_COMMANDS] = {
@@ -210,7 +211,9 @@ char *description[N_COMMANDS] = {
     "moments_output                   perform moments computations and output to file",
     "touschek_scatter                 calculate Touschek lifetime, simulate touschek scattering effects, find out momentum aperture through tracking", 
     "insert_elements                  insert elements into already defined beamline", 
-    "change_particle                  change the particle type"
+    "change_particle                  change the particle type",
+    "global_settings                  ...",
+    "replace_elements                 remove or replace elements inside beamline" 
   } ;
 
 #define NAMELIST_BUFLEN 65536
@@ -1487,6 +1490,11 @@ char **argv;
       if (!run_setuped)
         bomb("run_setup must precede insert_element namelist", NULL);
       do_insert_elements(&namelist_text, &run_conditions, beamline);
+      break;
+    case REPLACE_ELEMENTS:
+      if (!run_setuped)
+        bomb("run_setup must precede replace_element namelist", NULL);
+      do_replace_elements(&namelist_text, &run_conditions, beamline);
       break;
     case TOUSCHEK_SCATTER:
       if (!run_setuped)

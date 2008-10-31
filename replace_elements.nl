@@ -1,21 +1,18 @@
-/* file: insert_elements.nl
- * purpose: namelist for insert elements into beamline
+/* file: replace_elements.nl
+ * purpose: namelist for replace or delete elements along beamline
  * 
- * A.Xiao, 2007
+ * A.Xiao, 2008
  */
 #include "namelist.h"
 
-#namelist insert_elements static
+#namelist replace_elements static
         STRING name = NULL;
         STRING type = NULL;
         STRING exclude = NULL;
         long skip = 1;
         long disable = 0;
-        long add_at_end = 0;
         STRING element_def = NULL;
-        long verbose = 0;
         long total_occurrences = 0;
         long occurrence[100]={0};
+        long verbose = 0;
 #end
-
-

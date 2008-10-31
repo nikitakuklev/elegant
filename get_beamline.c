@@ -68,7 +68,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
 {
   long type=0, i;
   long occurence, iMad;
-  static ELEMENT_LIST *eptr, *eptr1, *eptr_sc, *eptr_add;
+  static ELEMENT_LIST *eptr, *eptr1, *eptr_sc, *eptr_add, *eptr_del;
   static LINE_LIST *lptr;
   static long n_elems, n_lines;
   FILE *fp_mad[MAX_FILE_NESTING];
@@ -273,8 +273,58 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
     type = T_NODEF;
 
     if (getAddElemFlag()) {
-      eptr = generate_elem(getElemDefinition());
+      /* go to the last elements in linked-list */
+      eptr = elem;
+      while (eptr->succ) 
+        eptr = eptr->succ;
+      /* extend the list for accommodating new element */
+      extend_elem_list(&eptr);
+      /* add new element to linked-list */
+      s = getElemDefinition();
+      if ((type = tell_type(s, elem))==T_NODEF) {
+        if (!is_blank(s))
+          fprintf(stdout, "warning: no recognized statement on line: %s\n", s);
+        fflush(stdout);
+      }
+      fill_elem(eptr, s, type, NULL);
+      if (strchr(eptr->name, '#')) {
+        fprintf(stdout, "The name %s is invalid for an element: # is a reserved character.\n", eptr->name);
+        exit(1);
+      }
       eptr_add = eptr;
+      if (check_duplic_line(line, eptr->name, n_lines+1, 1)) {
+        fprintf(stdout, "element %s conflicts with line with same name\n", eptr->name);
+        exit(1);
+      }
+      check_duplic_elem(&elem, &eptr, NULL, n_elems);
+      n_elems++;  	
+    }
+
+    if (getDelElemFlag()==1) {
+      /* go to the last elements in linked-list */
+      eptr = elem;
+      while (eptr->succ) 
+        eptr = eptr->succ;
+      /* extend the list for accommodating new element */
+      extend_elem_list(&eptr);
+      /* add new element to linked-list */
+      s = getElemDefinition1();
+      if ((type = tell_type(s, elem))==T_NODEF) {
+        if (!is_blank(s))
+          fprintf(stdout, "warning: no recognized statement on line: %s\n", s);
+        fflush(stdout);
+      }
+      fill_elem(eptr, s, type, NULL);
+      if (strchr(eptr->name, '#')) {
+        fprintf(stdout, "The name %s is invalid for an element: # is a reserved character.\n", eptr->name);
+        exit(1);
+      }
+      /* This is mis spelled. Should be eptr_replace. */
+      eptr_del = eptr;
+      if (check_duplic_line(line, eptr->name, n_lines+1, 1)) {
+        fprintf(stdout, "element %s conflicts with line with same name\n", eptr->name);
+        exit(1);
+      }
       check_duplic_elem(&elem, &eptr, NULL, n_elems);
       n_elems++;  	
     }
@@ -354,6 +404,27 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
      eptr = eptr->succ; 
   	}
   	lptr->n_elems += nelem;
+  } 
+
+  if (getDelElemFlag()) {
+    long skip = 0;
+    long flag;
+    eptr = &(lptr->elem);
+    while (eptr) {
+      flag = replaceElem(eptr->name, eptr->type, &skip, eptr->occurence);
+      if (flag == 1) {
+        if (!eptr->pred)
+          bomb("Can not replace the first element in beamline", NULL);
+        eptr = replace_element(eptr, eptr_del);
+      }
+      if (flag == -1) {
+        if (!eptr->pred)
+          bomb("Can not remove the first element in beamline", NULL);
+        eptr = rm_element(eptr);
+        lptr->n_elems--;
+      } 
+      eptr = eptr->succ; 
+    }
   } 
 
   /* go through and give occurence numbers to each element */
@@ -704,72 +775,181 @@ void do_save_lattice(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     filename = compose_filename(filename, run->rootname);
   fp = fopen_e(filename, "w", FOPEN_INFORM_OF_OPEN);
 
-  object = &inputObject;
-  do {
-    if (!object->isLine) {
-      eptr = (ELEMENT_LIST*)(object->ptr);
-      parameter = entity_description[eptr->type].parameter;
+  if (!output_seq) {
+    object = &inputObject;
+    do {
+      if (!object->isLine) {
+        eptr = (ELEMENT_LIST*)(object->ptr);
+        parameter = entity_description[eptr->type].parameter;
+        if (strpbrk(eptr->name, ":.,/-_+abcdefghijklmnopqrstuvwyxz "))
+          sprintf(name, "\"%s\"", eptr->name);
+        else
+          strcpy_ss(name, eptr->name);
+        sprintf(s, "%s: %s,", name, entity_name[eptr->type]);
+        if (eptr->group && strlen(eptr->group)) {
+          sprintf(t, "GROUP=\"%s\",", eptr->group);
+          strcat(s, t);
+        }
+        for (j=0; j<entity_description[eptr->type].n_params; j++) {
+          switch (parameter[j].type) {
+          case IS_DOUBLE:
+            dvalue = *(double*)(eptr->p_elem+parameter[j].offset);
+            /*
+              if ((parameter[j].flags&PARAM_DIVISION_RELATED) && 
+              eptr->divisions>1) {
+              fprintf(stderr, "Multiplying %s by %ld\n",
+              parameter[j].name, eptr->divisions);
+              dvalue *= eptr->divisions;
+              }
+            */
+            if (!suppress_defaults || dvalue!=parameter[j].number) {
+              /* value is not the default, so add to output */
+              sprintf(t, "%s=%.16g", parameter[j].name, dvalue);
+              strcat(s, t);
+              if (j!=entity_description[eptr->type].n_params-1)
+                strcat(s, ",");
+            }
+            break;
+          case IS_LONG:
+            lvalue = *(long *)(eptr->p_elem+parameter[j].offset);
+            if (!suppress_defaults || lvalue!=parameter[j].integer) {
+              /* value is not the default, so add to output */
+              sprintf(t, "%s=%ld", parameter[j].name, lvalue);
+              strcat(s, t);
+              if (j!=entity_description[eptr->type].n_params-1)
+                strcat(s, ",");
+            }
+            break;
+          case IS_STRING:
+            ptr = *(char**)(eptr->p_elem+parameter[j].offset);
+            if (ptr &&
+                (!suppress_defaults || !parameter[j].string || strcmp(ptr, parameter[j].string)!=0)) {
+              sprintf(t, "%s=\"%s\"", parameter[j].name, ptr);
+              strcat(s, t);
+              if (j!=entity_description[eptr->type].n_params-1)
+                strcat(s, ",");
+            }
+            break;
+          }
+        }
+        if (s[j=strlen(s)-1]==',')
+          s[j] = 0;
+        print_with_continuation(fp, s, 79);
+        eptr = eptr->succ;
+      } else {
+        lptr = (LINE_LIST*)(object->ptr);
+        print_with_continuation(fp, lptr->definition, 79);
+      }
+    } while ((object=object->next));
+    
+  } else {
+    /* first write element definition */
+    long type;
+    for (type=1; type<N_TYPES; type++) {
+      eptr = &(beamline->elem);
+      while (eptr) {
+        if ((eptr->occurence == 1) && (eptr->type == type)) {
+          parameter = entity_description[eptr->type].parameter;
+          if (strpbrk(eptr->name, ":.,/-_+abcdefghijklmnopqrstuvwyxz "))
+            sprintf(name, "\"%s\"", eptr->name);
+          else
+            strcpy_ss(name, eptr->name);
+          sprintf(s, "%s: %s,", name, entity_name[eptr->type]);
+          if (eptr->group && strlen(eptr->group)) {
+            sprintf(t, "GROUP=\"%s\",", eptr->group);
+            strcat(s, t);
+          }
+          for (j=0; j<entity_description[eptr->type].n_params; j++) {
+            switch (parameter[j].type) {
+            case IS_DOUBLE:
+              dvalue = *(double*)(eptr->p_elem+parameter[j].offset);
+              /*
+                if ((parameter[j].flags&PARAM_DIVISION_RELATED) && 
+                eptr->divisions>1) {
+                fprintf(stderr, "Multiplying %s by %ld\n",
+                parameter[j].name, eptr->divisions);
+                dvalue *= eptr->divisions;
+                }
+              */
+              if (!suppress_defaults || dvalue!=parameter[j].number) {
+                /* value is not the default, so add to output */
+                sprintf(t, "%s=%.16g", parameter[j].name, dvalue);
+                strcat(s, t);
+                if (j!=entity_description[eptr->type].n_params-1)
+                  strcat(s, ",");
+              }
+              break;
+            case IS_LONG:
+              lvalue = *(long *)(eptr->p_elem+parameter[j].offset);
+              if (!suppress_defaults || lvalue!=parameter[j].integer) {
+                /* value is not the default, so add to output */
+                sprintf(t, "%s=%ld", parameter[j].name, lvalue);
+                strcat(s, t);
+                if (j!=entity_description[eptr->type].n_params-1)
+                  strcat(s, ",");
+              }
+              break;
+            case IS_STRING:
+              ptr = *(char**)(eptr->p_elem+parameter[j].offset);
+              if (ptr &&
+                  (!suppress_defaults || !parameter[j].string || strcmp(ptr, parameter[j].string)!=0)) {
+                sprintf(t, "%s=\"%s\"", parameter[j].name, ptr);
+                strcat(s, t);
+                if (j!=entity_description[eptr->type].n_params-1)
+                  strcat(s, ",");
+              }
+              break;
+            }
+          }
+          if (s[j=strlen(s)-1]==',')
+            s[j] = 0;
+          print_with_continuation(fp, s, 79);
+        }
+        eptr = eptr->succ;
+      }
+    }
+    /* Write beamline sequence now, each line has 40 elements limitation */
+    long nline=1, nelem=0;
+    eptr = &(beamline->elem);
+    sprintf(s, "L%04ld: LINE = (", nline);
+    while (eptr) {
+      nelem++;
       if (strpbrk(eptr->name, ":.,/-_+abcdefghijklmnopqrstuvwyxz "))
         sprintf(name, "\"%s\"", eptr->name);
       else
         strcpy_ss(name, eptr->name);
-      sprintf(s, "%s: %s,", name, entity_name[eptr->type]);
-      if (eptr->group && strlen(eptr->group)) {
-        sprintf(t, "GROUP=\"%s\",", eptr->group);
-        strcat(s, t);
+      strcat(s, name);
+      strcat(s, ",");
+
+      eptr = eptr->succ;
+      if (nelem == 40) {
+        nline++;
+        nelem=0;
+        if (s[j=strlen(s)-1]==',')
+          s[j] = 0;
+        strcat(s, ")");
+        print_with_continuation(fp, s, 79);
+        sprintf(s, "L%04ld: LINE = (", nline);
       }
-      for (j=0; j<entity_description[eptr->type].n_params; j++) {
-        switch (parameter[j].type) {
-        case IS_DOUBLE:
-          dvalue = *(double*)(eptr->p_elem+parameter[j].offset);
-          /*
-            if ((parameter[j].flags&PARAM_DIVISION_RELATED) && 
-            eptr->divisions>1) {
-            fprintf(stderr, "Multiplying %s by %ld\n",
-            parameter[j].name, eptr->divisions);
-            dvalue *= eptr->divisions;
-            }
-            */
-          if (!suppress_defaults || dvalue!=parameter[j].number) {
-            /* value is not the default, so add to output */
-            sprintf(t, "%s=%.16g", parameter[j].name, dvalue);
-            strcat(s, t);
-            if (j!=entity_description[eptr->type].n_params-1)
-              strcat(s, ",");
-          }
-          break;
-        case IS_LONG:
-          lvalue = *(long *)(eptr->p_elem+parameter[j].offset);
-          if (!suppress_defaults || lvalue!=parameter[j].integer) {
-            /* value is not the default, so add to output */
-            sprintf(t, "%s=%ld", parameter[j].name, lvalue);
-            strcat(s, t);
-            if (j!=entity_description[eptr->type].n_params-1)
-              strcat(s, ",");
-          }
-          break;
-        case IS_STRING:
-          ptr = *(char**)(eptr->p_elem+parameter[j].offset);
-          if (ptr &&
-              (!suppress_defaults || !parameter[j].string || strcmp(ptr, parameter[j].string)!=0)) {
-            sprintf(t, "%s=\"%s\"", parameter[j].name, ptr);
-            strcat(s, t);
-            if (j!=entity_description[eptr->type].n_params-1)
-              strcat(s, ",");
-          }
-          break;
-        }
-      }
+    }
+    if (nelem) {
+      nline++;
       if (s[j=strlen(s)-1]==',')
         s[j] = 0;
+      strcat(s, ")");
       print_with_continuation(fp, s, 79);
-      eptr = eptr->succ;
-    } else {
-      lptr = (LINE_LIST*)(object->ptr);
-      print_with_continuation(fp, lptr->definition, 79);
     }
-  } while ((object=object->next));
-  
+
+    sprintf(s, "%s: LINE = (",  beamline->name);
+    for (j=1; j<nline; j++) {
+      sprintf(t, " L%04ld,",j);
+      strcat(s, t);
+    }
+    if (s[j=strlen(s)-1]==',')
+      s[j] = 0;
+    strcat(s, ")");
+    print_with_continuation(fp, s, 79);
+  }
   
   if (beamline && beamline->name)
     fprintf(fp, "USE,%s\n", beamline->name);
@@ -1012,41 +1192,42 @@ long nearestInteger(double value)
   return (long)(value+0.5);
 }
 
-/* generate element */
-ELEMENT_LIST *generate_elem(char *s) 
-{
-  ELEMENT_LIST *elem;
-  long type=0;
-
-  elem = tmalloc(sizeof(*elem));
-  elem->pred = elem->succ = NULL;
-  elem->name = NULL;
-  if ((type = tell_type(s, elem))==T_NODEF)
-    bomb("no recognized element definition", NULL);
-  fill_elem(elem, s, type, NULL);
-  return(elem);
-}
-
 /* add element "elem1" after "elem0" */
 void add_element(ELEMENT_LIST *elem0, ELEMENT_LIST *elem1) 
 {
   ELEMENT_LIST *eptr;
   eptr = tmalloc(sizeof(*eptr));
   copy_element(eptr, elem1, 0, 0, 0);
-  
+
   eptr->pred = elem0;
   eptr->succ = elem0->succ;
-  if (elem0->succ) {
+  if (elem0->succ)
     (elem0->succ)->pred = eptr;
-  }
   elem0->succ = eptr;
 }
 
 /* remove element "elem" from the list */
-void rm_element(ELEMENT_LIST *elem) 		
+ELEMENT_LIST *rm_element(ELEMENT_LIST *elem) 		
 {
-  if (elem->pred) 							/* never can remove the first element */
-    (elem->pred)->succ=elem->succ;
+  (elem->pred)->succ = elem->succ;
+  if (elem->succ)
+    (elem->succ)->pred = elem->pred;
+  return (elem->pred);
+}
+
+/* replace element "elem0" with "elem1" */
+ELEMENT_LIST *replace_element(ELEMENT_LIST *elem0, ELEMENT_LIST *elem1) 
+{
+  ELEMENT_LIST *eptr;
+  eptr = tmalloc(sizeof(*eptr));
+  copy_element(eptr, elem1, 0, 0, 0);
+
+  (elem0->pred)->succ = eptr;
+  if (elem0->succ)
+    (elem0->succ)->pred = eptr;
+  eptr->pred = elem0->pred;
+  eptr->succ = elem0->succ;
+  return (eptr);
 }
 
 

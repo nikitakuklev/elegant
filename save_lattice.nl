@@ -8,4 +8,5 @@
 #namelist save_lattice static
     STRING filename = NULL;
     long suppress_defaults = 1;
+    long output_seq = 0;
 #end

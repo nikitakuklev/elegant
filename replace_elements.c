@@ -10,45 +10,43 @@
 #include "mdb.h"
 #include "track.h"
 #include "match_string.h"
-#include "insert_elements.h"
+#include "replace_elements.h"
 
 typedef struct {
   char *name, *type, *exclude, *elemDef;
-  long nskip, add_end, total, occur[100];
-} ADD_ELEM;
+  long nskip, total, occur[100];
+} DEL_ELEM;
 
-static ADD_ELEM addElem;
-static long add_elem_flag = 0;
+static DEL_ELEM delElem;
+/* flag=0: do nothing; 
+   flag=-1: delete element; 
+   flag=1: replace element with new element. */
+static long  delete_elem_flag = 0;
 
-long getAddElemFlag() 
+long getDelElemFlag() 
 {
-  return (add_elem_flag);
+  return (delete_elem_flag);
 }
 
-char *getElemDefinition()
+char *getElemDefinition1()
 {
-  return (addElem.elemDef);
+  return (delElem.elemDef);
 } 
 
-long getAddEndFlag()
-{
-  return (addElem.add_end);
-} 
-
-void do_insert_elements(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline) 
+void do_replace_elements(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline) 
 {
   long i;
 
   /* process the namelist text */
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
-  process_namelist(&insert_elements, nltext);
-  print_namelist(stdout, &insert_elements);
+  process_namelist(&replace_elements, nltext);
+  print_namelist(stdout, &replace_elements);
 
   if (disable)
     return;
-  if (!skip && !add_at_end && !total_occurrences)
-    bomb("skip, add_at_end and total_occurrences can not be zero at the same time", NULL);
+  if (!skip && !total_occurrences)
+    bomb("skip and total_occurrences can not be zero at the same time", NULL);
 
   if (total_occurrences) {
     if (skip)
@@ -56,12 +54,10 @@ void do_insert_elements(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     if (has_wildcards(name))
       bomb("element name has to be specified if you use the occurrence feature", NULL);
   }
-  add_elem_flag = 0;
+  delete_elem_flag = 0;
   
   if ((!name || !strlen(name)) && !type)
     bomb("name or type needs to be given", NULL);
-  if (!element_def || !strlen(element_def))
-    bomb("element's definition is not given", NULL);
  
   if (name) {
     str_toupper(name);
@@ -74,7 +70,7 @@ void do_insert_elements(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
       type = expand_ranges(type);
     for (i=0; i<N_TYPES; i++)
       if (wild_match(entity_name[i], type))
-	break;
+        break;
     if (i==N_TYPES) {
       fprintf(stderr, "type pattern %s does not match any known type", type);
       exit(1);
@@ -85,55 +81,57 @@ void do_insert_elements(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     if (has_wildcards(exclude) && strchr(exclude, '-'))
       exclude = expand_ranges(exclude);
   }
-  str_toupper(element_def);
 
-  add_elem_flag = 1;
-  addElem.nskip = skip;
-  addElem.add_end =0;
-  if (add_at_end)
-    addElem.add_end = add_at_end;
-  addElem.name = name;
-  addElem.type = type;
-  addElem.exclude = exclude;
-  addElem.elemDef = element_def;
-  delete_spaces(addElem.elemDef);
+  if (!element_def || !strlen(element_def)) {
+    delete_elem_flag = -1;
+  } else {
+    delete_elem_flag = 1;
+    str_toupper(element_def);
+    delElem.elemDef = element_def;
+    delete_spaces(delElem.elemDef);
+  }
 
-  addElem.total = total_occurrences;
-  for (i=0; i< addElem.total; i++) {
-    addElem.occur[i] =  occurrence[i];
+  delElem.nskip = skip;
+  delElem.name = name;
+  delElem.type = type;
+  delElem.exclude = exclude;
+
+  delElem.total = total_occurrences;
+  for (i=0; i< delElem.total; i++) {
+    delElem.occur[i] =  occurrence[i];
   }
 
   beamline = get_beamline(NULL, beamline->name, run->p_central, 0);
-  add_elem_flag = 0;
+  delete_elem_flag = 0;
 
   return;
 }
 
-long insertElem(char *name, long type, long *skip, long occurPosition) 
+long replaceElem(char *name, long type, long *skip, long occurPosition) 
 {
   long i;
 
-  if (addElem.exclude && wild_match(name, addElem.exclude))
+  if (delElem.exclude && wild_match(name, delElem.exclude))
     return(0);
-  if (addElem.name && !wild_match(name, addElem.name))
+  if (delElem.name && !wild_match(name, delElem.name))
     return(0);
-  if (addElem.type && !wild_match(entity_name[type], addElem.type))
+  if (delElem.type && !wild_match(entity_name[type], delElem.type))
     return(0);
 
-  if (addElem.total) {
-    for (i=0; i<addElem.total; i++) {
-      if (occurPosition == addElem.occur[i])
-        return(1);
+  if (delElem.total) {
+    for (i=0; i<delElem.total; i++) {
+      if (occurPosition == delElem.occur[i])
+        return(delete_elem_flag);
     }
     return(0);
   }
 
-  if (addElem.nskip) {
+  if (delElem.nskip) {
     (*skip)++;
-    if (*skip < addElem.nskip)
+    if (*skip < delElem.nskip)
       return(0);
     *skip = 0;
-    return(1);
+    return(delete_elem_flag);
   }
   return(0);
 }

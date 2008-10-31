@@ -2831,9 +2831,9 @@ void change_defined_parameter_divopt(char *elem_name, long param, long elem_type
 void change_defined_parameter(char *elem_name, long param_number, long type, double value, char *valueString, unsigned long mode);
 extern void delete_matrix_data(LINE_LIST *beamline);
 
-extern ELEMENT_LIST *generate_elem(char *s); 
 extern void add_element(ELEMENT_LIST *elem0, ELEMENT_LIST *elem1);
-extern void rm_element(ELEMENT_LIST *elem); 
+extern ELEMENT_LIST *rm_element(ELEMENT_LIST *elem); 
+extern ELEMENT_LIST *replace_element(ELEMENT_LIST *elem0, ELEMENT_LIST *elem1); 
 
 /* prototypes for limit_amplitudes4.c: */
 extern long rectangular_collimator(double **initial, RCOL *rcol, long np, double **accepted, double z, double P_central);
@@ -3307,6 +3307,11 @@ long insertElem(char *name, long type, long *skip, long occurPosition);
 long getAddElemFlag(); 
 char *getElemDefinition();
 long getAddEndFlag();
+
+void do_replace_elements(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
+long replaceElem(char *name, long type, long *skip, long occurPosition);
+long getDelElemFlag();
+char *getElemDefinition1();
 
 void setupTouschekEffect(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline); 
 void SDDS_BeamScatterSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row, char *contents, 
