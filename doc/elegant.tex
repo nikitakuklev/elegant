@@ -1677,9 +1677,12 @@ end are given.
 \subsection{insert\_elements \label{subsec:insertelements}}
 
 \begin{itemize}
-\item type: setup command.
-\item function: Insert elements into a lattice at many locations. This is a convenient way to
- add elements to a lattice without modifying the lattice file.
+\item type: action command.
+\item function: Insert elements into a beamline at specified locations. This is a convenient way to
+ add elements to a beamline without modifying the lattice file.
+\item notes: 
+	The modified beamline can be saved through \verb|save_lattice|
+   command. Be sure to use ``output\_seq = 1'' option in that command.  
 \end{itemize}
 
 \begin{verbatim}
@@ -1691,22 +1694,29 @@ end are given.
         long disable = 0;
         long add_at_end = 0;
         STRING element_def = NULL;
-        long verbose = 1;
+        long total_occurrences = 0;
+        long occurrence[100]={0};
 &end
 \end{verbatim}
 
 \begin{itemize}
-\item \verb|name| --- Possibily wild-card containing string specifying the
-	name of the elements after which to insert the new element.
-\item \verb|type| --- Possibily wild-card containing string specifying the
-        type of the elements after which to insert the new element.
-\item \verb|exclude| --- Possibily wild-card containing string specifying 
-	the name of elements to be excluded from the specified insertion.
-\item \verb|skip| --- The element is inserted at every $n^{th}$ element.
+\item \verb|name| --- Possibly wild-card containing string specifying the
+   name of the elements after which the new element is inserted.
+\item \verb|type| --- Possibly wild-card containing string specifying the
+   type of the elements after which the new element is inserted.
+\item \verb|exclude| --- Possibly wild-card containing string specifying 
+   the names of elements to be excluded from the specification.
+\item \verb|skip| --- New elements are inserted at every $n^{th}$ specified location.
 \item \verb|disable| --- If nonzero, the command is ignored.
-\item \verb|add_at_end| --- If nonzero, the element is also added at the end of the beamline.
-\item \verb|element_def| --- The definition of the element, just as it would be entered in the lattice file.
-\item \verb|verbose| --- A non-zero value results in printing of informational messages to the terminal.
+\item \verb|add_at_end| --- If nonzero, the element is also inserted to the end of the beamline.
+\item \verb|element_def| --- The definition of the new element should be just as it would be entered in 
+the lattice file.
+\item \verb|total_occurrences|, \verb|occurrence| --- 
+These parameters are used to insert the new elements after specified occurrences of 
+the element \verb|name|.  \verb|total_occurrences| specifies how many new elements to add,
+up to a maximum of 100, while the entries in the array \verb|occurrence| specify the occurrences
+after which to add the new elements. If \verb|total_occurrences| is non-zero, then {\bf skip} must
+be set to zero  and the {\bf name} must be the exact name (no wild-card matching). 
 \end{itemize}
 
 \begin{latexonly}
@@ -2665,6 +2675,64 @@ equal, the range of the parameter is unlimited.
 
 \begin{latexonly}
 \newpage
+\begin{center}{\Large\verb|replace_elements|}\end{center}
+\end{latexonly}
+\subsection{replace\_elements \label{subsec:replaceelements}}
+
+\begin{itemize}
+\item type: action command.
+\item function: Replace old element with a newly defined element, or just 
+   remove it from beamline. This is a convenient way to modify lattice in an elegant run.
+\item notes: 
+	The modified lattice can be saved through \verb|save_lattice|
+   command. Be sure to use ``output\_seq = 1'' option in that command.  
+\item warning:
+   The element's occurrence is re-calculated after each usage of this command. If 
+   you need to repeat this command for SAME named element several times, you have to re-calculate 
+   it occurrence every time. For example, you want to remove Q1 at occurrence position 
+   (1,3,5), and use 
+   `replace\_elements'' twice. If in the first command you use ``occurence[0]=1,3'',
+   then in the second command you have to use ``occurence[0]=3'', since after remove of
+   (1,3) Q1s, the 5th Q1 now becoming 3rd Q1.
+\end{itemize}
+
+\begin{verbatim}
+&replace_elements
+        STRING name = NULL;
+        STRING type = NULL;
+        STRING exclude = NULL;
+        long skip = 1;
+        long disable = 0;
+        STRING element_def = NULL;
+        long total_occurrences = 0;
+        long occurrence[100]={0};
+&end
+\end{verbatim}
+
+\begin{itemize}
+\item \verb|name| --- Possibly wild-card containing string specifying the
+	name of the elements to be removed or replaced.
+\item \verb|type| --- Possibly wild-card containing string specifying the
+   type of the elements to be removed or replaced.
+\item \verb|exclude| --- Possibly wild-card containing string specifying 
+	the name of elements to be excluded from this command.
+\item \verb|skip| --- The element is removed or replaced at every $n^{th}$ 
+   specified location.
+\item \verb|disable| --- If nonzero, the command is ignored.
+\item \verb|element_def| --- If NULL, the specified elements are removed from
+   the beamline. If not NULL, the specified elements are replaced with the new element
+   defined here. The definition of the element should be just as it would be entered in 
+   the lattice file.
+\item \verb|total_occurrences|, \verb|occurrence| --- 
+These parameters are used to replace or delete specified occurrences of 
+the element \verb|name|.  \verb|total_occurrences| specifies how many elements to replace
+or delete up to a maximum of 10, while the entries in the array \verb|occurrence| specify the occurrences
+to replace or delete. If \verb|total_occurrences| is non-zero, then {\bf skip} must
+be set to zero  and the {\bf name} must be the exact name (no wild-card matching). 
+\end{itemize}
+
+\begin{latexonly}
+\newpage
 \begin{center}{\Large\verb|rpn_expression|}\end{center}
 \end{latexonly}
 \subsection{rpn\_expression \label{subsec:rpnexpression}}
@@ -2975,12 +3043,18 @@ supported; the ``Ming-Xie'' model is based on the simple parametrization M. Xie\
 \begin{verbatim}
 &save_lattice
     STRING filename = NULL;
+    long output_seq = 0;
 &end
 \end{verbatim}
 
 \begin{itemize}
 \item \verb|filename| --- The (incomplete) name of a file to which the element and beamline definitions
 will be written.  Recommended value: ``\%s.new''.
+\item \verb|output_seq| --- If non-zero, the lattice will be saved as a single beamline sequence.
+Elements used for the beamline are re-arranged according to their type. Note: 
+sub-beamline definitions in the original lattice file will be destroyed from the output file.
+This feature is intended to be used 
+together with \verb|insert_elements| and \verb|replace_elements|. 
 \end{itemize}
 
 \begin{latexonly}
