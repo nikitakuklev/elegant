@@ -89,7 +89,7 @@ exec sddspfit $input $input.fit -terms=12 -evaluate=$input.eval,number=10000 -co
 # find the StDev(pResidual) and make a table for computing pStDev(t)
 exec sddssort $input.fit -col=t,incr -pipe=out \
   | sddsbreak -rowlimit=1000 -pipe \
-  | sddsprocess -pipe -process=t,ave,tAve -process=pResidual,stand,pStDev \
+  | sddsprocess -pipe "-test=parameter,n_rows 10 >" -process=t,ave,tAve -process=pResidual,stand,pStDev \
   | sddscollapse -pipe \
   | sddspfit -pipe=in $input.tmp -terms=12 \
   -evaluate=$input.pStDev,number=10000 -column=tAve,pStDev
@@ -116,7 +116,7 @@ exec sddshist $input -pipe=out -bins=1000 -data=t -expand=1.2 \
 # slice the beam up and compute slice emittances
 if [catch {exec sddssort $input -pipe=out -column=t \
                     | sddsbreak -rowlimit=1000 -pipe \
-                    | sddsprocess -pipe "-test=parameter,i_page 10 > i_page 90 < &&" \
+                    | sddsprocess -pipe "-test=parameter,n_rows 10 >" "-test=parameter,i_page 10 > i_page 90 < &&" \
                     | sddsanalyzebeam -pipe \
                     | sddsprocess -pipe -process=en?,median,%sMedian \
                     | sdds2stream -pipe -parameter=enxMedian,enyMedian} emitList] {
@@ -189,7 +189,8 @@ if $betaSlices>1 {
     set np [exec sdds2stream -rows=bare $output]
     set sliceNp [expr $np/$betaSlices]
     exec sddssort $output -column=t -pipe=out \
-      | sddsbreak -rowlimit=$sliceNp -pipe=in $rootname-grouped.sdds
+      | sddsbreak -rowlimit=$sliceNp -pipe \
+      | sddsprocess -pipe=in "-test=param,n_rows 10 >" $rootname-grouped.sdds
     exec sddssplit $rootname-grouped.sdds -rootname=$rootname-split- -extension=sdds
 
     # compute and retriev slice parameters from input file
@@ -197,6 +198,7 @@ if $betaSlices>1 {
     set sliceNp [expr $np/$betaSlices]
     exec sddssort $input -column=t -pipe=out \
         | sddsbreak -rowlimit=$sliceNp -pipe \
+        | sddsprocess -pipe "-test=param,n_rows 10 >" \
         | sddsanalyzebeam -pipe=in $rootname.sliceTwiss
     set betaxList [exec sdds2stream -column=betax $rootname.sliceTwiss]
     set alphaxList [exec sdds2stream -column=alphax $rootname.sliceTwiss]
@@ -212,7 +214,7 @@ if $betaSlices>1 {
     set newList ""
     foreach betax $betaxList alphax $alphaxList betay $betayList alphay $alphayList \
       enx $enxList eny $enyList filename $fileList {
-          puts stdout "Working on $filename"
+          puts stdout "Working on $filename -xplane=beta=$betax,alpha=$alphax,nemit=$enx -yplane=beta=$betay,alpha=$alphay,nemit=$eny"
           flush stdout
           exec sddsmatchtwiss $filename [file rootname $filename].matched \
           -xplane=beta=$betax,alpha=$alphax,nemit=$enx \
