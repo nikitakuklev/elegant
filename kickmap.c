@@ -77,47 +77,49 @@ long trackUndulatorKickMap(
       if ((emit = S11*S22-sqr(S12))>0)
         sqrtBetax = sqrt(S11/emit);
     }
-    for (ip=0; ip<=iTop; ip++) {
-      coord = particle[ip];
-
-      /* 1. go through half length */
-      coord[0] += coord[1]*length/2.0;
-      coord[2] += coord[3]*length/2.0;
-      coord[4] += length/2.0*sqrt(1+sqr(coord[1])+sqr(coord[3]));
-
-      /* 2. apply the kicks 
-       * use interpolation to get dxpFactor and dypFactor 
-       */
-      if (!interpolateUndulatorKickMap(&dxpFactor, &dypFactor, map, coord[0], coord[2])) {
-        /* particle is lost */
-        swapParticles(particle[ip], particle[iTop]); 
-        if (accepted)
-          swapParticles(accepted[ip], accepted[iTop]);
-        particle[iTop][4] = zStart;
-        particle[iTop][5] = pRef*(1+particle[iTop][5]);
-        iTop--;
-        ip--;
-      } else {
-        H = pRef*(1+coord[5])/eomc;
-        coord[1] += dxpFactor*sqr(fieldFactor/H)/nKicks;
-        coord[3] += dypFactor*sqr(fieldFactor/H)/nKicks;
-
-        /* 3. go through another half length */
+    if (isSlave || !notSinglePart) {
+      for (ip=0; ip<=iTop; ip++) {
+        coord = particle[ip];
+        
+        /* 1. go through half length */
         coord[0] += coord[1]*length/2.0;
         coord[2] += coord[3]*length/2.0;
         coord[4] += length/2.0*sqrt(1+sqr(coord[1])+sqr(coord[3]));
-      }
-
-      /* 3. Optionally apply synchrotron radiation kicks */
-      if (radCoef || isrCoef) {
-        delta = coord[5];
-        deltaFactor = ipow(1+delta, 2);
-        if (radCoef) 
-          coord[5] -= radCoef*deltaFactor;
-        if (isrCoef)
-          coord[5] -= isrCoef*deltaFactor*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
-        if (sxpCoef && sqrtBetax)
-          coord[1] += sxpCoef*(1+delta)/sqrtBetax*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
+        
+        /* 2. apply the kicks 
+         * use interpolation to get dxpFactor and dypFactor 
+         */
+        if (!interpolateUndulatorKickMap(&dxpFactor, &dypFactor, map, coord[0], coord[2])) {
+          /* particle is lost */
+          swapParticles(particle[ip], particle[iTop]); 
+          if (accepted)
+            swapParticles(accepted[ip], accepted[iTop]);
+          particle[iTop][4] = zStart;
+          particle[iTop][5] = pRef*(1+particle[iTop][5]);
+          iTop--;
+          ip--;
+        } else {
+          H = pRef*(1+coord[5])/eomc;
+          coord[1] += dxpFactor*sqr(fieldFactor/H)/nKicks;
+          coord[3] += dypFactor*sqr(fieldFactor/H)/nKicks;
+          
+          /* 3. go through another half length */
+          coord[0] += coord[1]*length/2.0;
+          coord[2] += coord[3]*length/2.0;
+          coord[4] += length/2.0*sqrt(1+sqr(coord[1])+sqr(coord[3]));
+        }
+        
+        /* 3. Optionally apply synchrotron radiation kicks */
+        if (radCoef || isrCoef) {
+          delta = coord[5];
+          deltaFactor = ipow(1+delta, 2);
+          if (radCoef) 
+            coord[5] -= radCoef*deltaFactor;
+          if (isrCoef)
+            coord[5] -= isrCoef*deltaFactor*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
+          if (sxpCoef && sqrtBetax)
+            coord[1] += sxpCoef*(1+delta)/sqrtBetax*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
+        }
       }
     }
   }
