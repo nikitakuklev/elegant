@@ -2098,20 +2098,7 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
   } else if (elem->type==T_UKICKMAP) {
     UKICKMAP *ukmap;
     ukmap = (UKICKMAP*)(elem->p_elem);
-    ukmap->radiationIntegralsComputed = 0;
     if (ukmap->radiusInternal>0) {
-      /* Find the wiggler-only terms for use in tracking by setting the external
-       * dispersion to zero 
-       */
-      AddWigglerRadiationIntegrals(ukmap->length, 2*ukmap->periods, ukmap->radiusInternal,
-                                   0.0, 0.0,
-                                   beta0, alpha0,
-                                   &I1, &I2, &I3, &I4, &I5);
-      ukmap->I2 = I2;
-      ukmap->I3 = I3;
-      ukmap->I5 = I5;
-      ukmap->radiationIntegralsComputed = 1;
-
       AddWigglerRadiationIntegrals(ukmap->length, 2*ukmap->periods, ukmap->radiusInternal,
                                    eta0, etap0,
                                    beta0, alpha0,
@@ -3440,8 +3427,8 @@ void AddWigglerRadiationIntegrals(double length, long poles, double radius,
   FILE *fpd = NULL;
 #endif
 
-  if (poles<3)
-    bomb("wiggler must have at least 3 poles", NULL);
+  if (poles<2)
+    bomb("wiggler must have at least 2 poles", NULL);
   if (radius<=0)
     bomb("wiggler must have positive, nonzero radius", NULL);
 

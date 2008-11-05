@@ -670,7 +670,6 @@ VMATRIX *compute_matrix(
         break;
       case T_UKICKMAP:
         ukmap = ((UKICKMAP*)elem->p_elem);
-        elem->matrix = determineMatrix(run, elem, NULL, NULL);
         if (ukmap->Kreference && ukmap->fieldFactor) {
           if (ukmap->periods<=0)
             bomb("UKICKMAP has PERIODS<=0 and KREFERENCE non-zero", NULL);
@@ -678,6 +677,7 @@ VMATRIX *compute_matrix(
             sqrt(sqr(elem->Pref_input)+1)*(ukmap->length/ukmap->periods)/(PIx2*ukmap->Kreference*ukmap->fieldFactor);
         } else 
           ukmap->radiusInternal = -1;
+        elem->matrix = determineMatrix(run, elem, NULL, NULL);
         break;
       case T_SCRIPT:
         script = ((SCRIPT*)elem->p_elem);

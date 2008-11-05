@@ -32,7 +32,9 @@ long trackUndulatorKickMap(
   double eomc, H;
   double dxpFactor, dypFactor;
   double length, fieldFactor;
-  double radCoef, isrCoef, sxpCoef, sqrtBetax, deltaFactor, delta;
+  double radCoef, isrCoef, sxpCoef, beta, alpha, sqrtBeta, deltaFactor, delta;
+  double I1, I2, I3, I4, I5;
+  double sqrtI3, sqrtI5;
   
   length = map->length;
   fieldFactor = map->fieldFactor;
@@ -43,16 +45,14 @@ long trackUndulatorKickMap(
     bomb("N_KICKS must be >=1 for UKICKMAP", NULL);
 
   radCoef = isrCoef = 0;
-  if (map->radiationIntegralsComputed) {
-    if (map->synchRad)
-      /* radCoef is d((P-Po)/Po) per step for the on-axis, on-momentum particle */
-      radCoef = 2./3*particleRadius*ipow(pRef, 3)*(map->I2/nKicks);
-    if (map->isr) {
-      /* isrCoef is the RMS increase in dP/P per step due to incoherent SR.  */
-      isrCoef = particleRadius*sqrt(55.0/(24*sqrt(3))*pow5(pRef)*137.0359895*map->I3/nKicks);
-      /* sxpCoef is related to the increase in the RMS divergence per step due to incoherent SR */
-      sxpCoef = particleRadius*sqrt(55.0/(24*sqrt(3))*pow5(pRef)*137.0359895*map->I5/nKicks);
-    }
+  if (map->synchRad)
+    /* radCoef*I2 is d((P-Po)/Po) per step for the on-axis, on-momentum particle */
+    radCoef = 2./3*particleRadius*ipow(pRef, 3);
+  if (map->isr) {
+    /* isrCoef*sqrt(I3) is the RMS increase in dP/P per step due to incoherent SR.  */
+    isrCoef = particleRadius*sqrt(55.0/(24*sqrt(3))*pow5(pRef)*137.0359895);
+    /* sxpCoef*sqrt(I5) is related to the increase in the RMS divergence per step due to incoherent SR */
+    sxpCoef = particleRadius*sqrt(55.0/(24*sqrt(3))*pow5(pRef)*137.0359895);
   }
   
   length /= nKicks;
@@ -67,16 +67,49 @@ long trackUndulatorKickMap(
   iTop = nParticles-1;
   for (ik=0; ik<nKicks; ik++) {
     if (sxpCoef) {
-      double S11, S12, S22, emit;
+      double S11, S12, S22, S16, S26, S66;
+      double S11beta, S12beta, S22beta, emit;
+
+      if (nKicks!=map->periods)
+        bomb("Number of kicks must equal number of periods for UKICKMAP radiation tracking", NULL);
+      
+      /* These calls are inefficient (repeat some calculations), but better than other routines we have now */
 #if !USE_MPI
       rms_emittance(particle, 0, 1, iTop+1, &S11, &S12, &S22);
+      rms_emittance(particle, 0, 5, iTop+1, &S11, &S16, &S66);
+      rms_emittance(particle, 1, 5, iTop+1, &S22, &S26, &S66);
 #else
       rms_emittance_p(particle, 0, 1, iTop+1, &S11, &S12, &S22);
+      rms_emittance_p(particle, 0, 5, iTop+1, &S11, &S16, &S66);
+      rms_emittance_p(particle, 1, 5, iTop+1, &S22, &S26, &S66);
 #endif
-      sqrtBetax = 0;
-      if ((emit = S11*S22-sqr(S12))>0)
-        sqrtBetax = sqrt(S11/emit);
+
+      if (S66) {
+        S11beta = S11 - sqr(S16)/S66;
+        S12beta = S12 - S16*S26/S66;
+        S22beta = S22 - sqr(S26)/S66;
+      } else {
+        S11beta = S11;
+        S12beta = S12;
+        S22beta = S22;
+      }
+      beta = alpha = sqrtBeta = 0;
+      if ((emit = S11beta*S22beta-sqr(S12beta))>0) {
+        emit = sqrt(emit);
+        beta = sqrt(S11beta/emit);
+        sqrtBeta = sqrt(beta);
+        alpha = -S12beta/emit;
+      }
+      I1 = I2 = I3 = I4 = I5 = 0;
+      AddWigglerRadiationIntegrals(map->length/map->periods, 2, map->radiusInternal,
+                                   0.0, 0.0, beta, alpha,
+                                   &I1, &I2, &I3, &I4, &I5);
+      if (I3<0 || I5<0)
+        bomb("I3 or I5 is negative in UKICKMAP", NULL);
+      sqrtI3 = sqrt(I3);
+      sqrtI5 = sqrt(I5);
     }
+    
     if (isSlave || !notSinglePart) {
       for (ip=0; ip<=iTop; ip++) {
         coord = particle[ip];
@@ -114,11 +147,11 @@ long trackUndulatorKickMap(
           delta = coord[5];
           deltaFactor = ipow(1+delta, 2);
           if (radCoef) 
-            coord[5] -= radCoef*deltaFactor;
+            coord[5] -= radCoef*I2*deltaFactor;
           if (isrCoef)
-            coord[5] -= isrCoef*deltaFactor*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
-          if (sxpCoef && sqrtBetax)
-            coord[1] += sxpCoef*(1+delta)/sqrtBetax*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
+            coord[5] += isrCoef*sqrtI3*deltaFactor*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
+          if (sxpCoef && sqrtBeta)
+            coord[1] += sxpCoef*sqrtI5*(1+delta)/sqrtBeta*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
         }
       }
     }

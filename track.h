@@ -2424,8 +2424,6 @@ typedef struct {
   double xmin, xmax, dxg;
   double ymin, ymax, dyg;
   double radiusInternal;
-  long radiationIntegralsComputed;
-  double I2, I3, I5;
 } UKICKMAP;  
 
 /* macros for bending magnets */ 
