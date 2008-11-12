@@ -18,7 +18,7 @@
 #include "matlib.h"
 #include <stddef.h>
 
-void determinePeriodicMoments(double **R, double *D, SIGMA_MATRIX *sigma0);
+void determineEquilibriumMoments(double **R, double *D, SIGMA_MATRIX *sigma0);
 void propagateBeamMoments(RUN *run, LINE_LIST *beamline, double *traj);
 void storeFitpointMomentsParameters(MARK *mark, char *name, long occurence, SIGMA_MATRIX *sigma0, double *centroid);
 void prepareMomentsArray(double *data, ELEMENT_LIST *elem, double *sigma);
@@ -358,15 +358,25 @@ long runMomentsOutput(RUN *run, LINE_LIST *beamline, double *startingCoord, long
         printf("%13.6e%c", beamline->elast->accumD[sigmaIndex3[i][j]], j==5?'\n':' ');
   }
   
-  if (matched) {
-    /* Compute periodic moments */
-    determinePeriodicMoments(beamline->Mld->R, beamline->elast->accumD, beamline->sigmaMatrix0);
+  if (equilibrium) {
+    /* Compute equilibrium moments */
+    determineEquilibriumMoments(beamline->Mld->R, beamline->elast->accumD, beamline->sigmaMatrix0);
   } else {
-    /* Determine starting moments from twiss parameter values */
-    setStartingMoments(beamline->sigmaMatrix0,
-                       emit_x, beta_x, alpha_x, eta_x, etap_x,
-                       emit_y, beta_y, alpha_y, eta_y, etap_y, 
-                       emit_z, beta_z, alpha_z);
+    if (matched) {
+      /* Use periodic lattice functions */
+      if (!(beamline->flags&BEAMLINE_TWISS_DONE))
+	bomb("no twiss parameters computed for matched moments propogation", NULL);
+      /* Determine starting moments from twiss parameter values */
+      setStartingMoments(beamline->sigmaMatrix0,
+			 emit_x, beamline->twiss0->betax, beamline->twiss0->alphax, beamline->twiss0->etax, beamline->twiss0->etapx,
+			 emit_y, beamline->twiss0->betay, beamline->twiss0->alphay, beamline->twiss0->etay, beamline->twiss0->etapy, 
+			 emit_z, beta_z, alpha_z);
+    } else 
+      /* Determine starting moments from twiss parameter values */
+      setStartingMoments(beamline->sigmaMatrix0,
+			 emit_x, beta_x, alpha_x, eta_x, etap_x,
+			 emit_y, beta_y, alpha_y, eta_y, etap_y, 
+			 emit_z, beta_z, alpha_z);
   }
   if (verbosity>1) {
     long j;
@@ -504,7 +514,7 @@ void propagateBeamMoments(RUN *run, LINE_LIST *beamline, double *traj)
 }
 
 
-void determinePeriodicMoments
+void determineEquilibriumMoments
   (
    double **R,                   /* revolution matrix (input) */
    double *D,                    /* diffusion matrix (input) */
