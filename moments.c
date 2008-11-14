@@ -117,7 +117,7 @@ void dumpBeamMoments(
   char *stage;
   ELEMENT_LIST *elem;
   SIGMA_MATRIX *sigma0;
-  double eNatural[3];
+  double eNatural[3] = {0,0,0};
   
   if (tune_corrected==1)
     stage = "tunes corrected";
@@ -207,7 +207,8 @@ void dumpBeamMoments(
     }
   }
 
-  computeNaturalEmittances(beamline->Mld, beamline->sigmaMatrix0->sigma, eNatural);
+  if (equilibrium)
+    computeNaturalEmittances(beamline->Mld, beamline->sigmaMatrix0->sigma, eNatural); 
   if (!SDDS_SetParameters(&SDDSMoments, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE,
                           IP_E1, eNatural[0], 
                           IP_E2, eNatural[1], 
