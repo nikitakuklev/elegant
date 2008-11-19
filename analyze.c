@@ -237,7 +237,7 @@ void do_transport_analysis(
                     NULL, NULL, NULL, NULL, run, control->i_step, 
 		    (control->fiducial_flag&
 		     (FIRST_BEAM_IS_FIDUCIAL+RESTRICT_FIDUCIALIZATION))
-		    +SILENT_RUNNING,
+		    +SILENT_RUNNING+TEST_PARTICLES,
 		    control->n_passes, 0,
                     NULL, NULL, NULL, NULL, NULL)!=n_track) {
         fputs("warning: particle(s) lost during transport analysis--continuing with next step", stdout);
@@ -590,6 +590,18 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
       csbend.angle /= nSlices;
       length = csbend.length /= nSlices;
       csbend.n_kicks = fabs(csbend.angle/0.005) + 1;
+      if (slice!=0)
+        csbend.edgeFlags &= ~BEND_EDGE1_EFFECTS;
+      if (slice!=nSlices-1) 
+        csbend.edgeFlags &= ~BEND_EDGE2_EFFECTS;
+      elem.type = T_CSBEND;
+      elem.p_elem = (void*)&csbend;
+      break;
+    case T_SBEN:
+      csbend.isr = 0;
+      csbend.angle /= nSlices;
+      length = (csbend.length /= nSlices);
+      csbend.n_kicks = fabs(csbend.angle/0.005) + 1;
       if (slice!=0) {
         csbend.edge1_effects = 0;
         csbend.e1 = 0;
@@ -600,8 +612,6 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
       }
       elem.type = T_CSBEND;
       elem.p_elem = (void*)&csbend;
-      break;
-    case T_SBEN:
       sbend = (BEND*)eptr->p_elem;
       memset(&csbend, 0, sizeof(csbend));
       csbend.isr = 0;
@@ -623,22 +633,16 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
       csbend.etilt = sbend->etilt;
       csbend.edge1_effects = sbend->edge1_effects;
       csbend.edge2_effects = sbend->edge2_effects;
-      if (slice!=0) {
-        csbend.edge1_effects = 0;
-        csbend.e1 = 0;
-      }
-      if (slice!=nSlices-1) {
-        csbend.edge2_effects = 0;
-        csbend.e2 = 0;
-      }
       csbend.edge_order = sbend->edge_order;
       csbend.edgeFlags = sbend->edgeFlags;
+      if (slice!=0)
+        csbend.edgeFlags &= ~BEND_EDGE1_EFFECTS;
+      if (slice!=nSlices-1) 
+        csbend.edgeFlags &= ~BEND_EDGE2_EFFECTS;
       csbend.k1_internal = sbend->k1_internal;
       csbend.k2_internal = sbend->k2_internal;
       csbend.n_kicks = fabs(csbend.angle/0.005) + 1;
       csbend.integration_order = 4;
-      elem.type = T_CSBEND;
-      elem.p_elem = (void*)&csbend;
       break;
     case T_KQUAD:
       memcpy(&kquad, (KQUAD*)eptr->p_elem, sizeof(KQUAD));
@@ -710,7 +714,7 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
     }
 
     /* Step 1: determine effective R matrix for this element, as well as the diffusion matrix */
-    determineRadiationMatrix1(Ml1, run, &elem, M1->C, accumD2);
+    determineRadiationMatrix1(Ml1, run, &elem, M1->C, accumD2); 
 
     /* Step 2: Propagate the diffusion matrix */
     fillSigmaPropagationMatrix(Ms->a, Ml1->R);
@@ -749,10 +753,10 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
   for (i=0; i<21; i++)
     Dr[i] = accumD1[i];
 
-  /*
+/*
   sprintf(s, "Matrix for %s", eptr->name);
   print_matrices(stdout, s, Mr);
-  */
+*/
   
   free(accumD1);
   free(accumD2);
@@ -799,6 +803,9 @@ void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *elem, double
   case T_CSBEND:
     csbend = (CSBEND*)elem->p_elem;
     track_through_csbend(coord, n_track, csbend, 0, run->p_central, NULL, elem->end_pos-csbend->length, &sigmaDelta2);
+    break;
+  case T_SBEN:
+    track_particles(coord, elem->matrix, coord, n_track);
     break;
   case T_KQUAD:
     kquad = (KQUAD*)elem->p_elem;
