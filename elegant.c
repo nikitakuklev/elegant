@@ -1064,6 +1064,19 @@ char **argv;
       }
       if (parameters)
         finishLatticeParametersFile();
+      /* reassert defaults for namelist run_setup */
+      lattice = use_beamline = acceptance = centroid = sigma = final = output = rootname = losses =
+        parameters = NULL;
+      combine_bunch_statistics = 0;
+      random_number_seed = 987654321;
+      wrap_around = 1;
+      final_pass = 0;
+      default_order = 2;
+      concat_order = 0;
+      tracking_updates = 1;
+      concat_order = print_statistics = p_central = 0;
+      run_setuped = run_controled = error_controled = correction_setuped = do_chromatic_correction =
+        fl_do_tune_correction = do_closed_orbit = do_twiss_output = do_coupled_twiss_output = do_response_output = 0;
       break;
     case OPTIMIZATION_VARIABLE:
       if (beam_type!=-1)
