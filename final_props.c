@@ -1025,7 +1025,7 @@ void computeBeamTwissParameters(TWISS *twiss, double **data, long particles)
   for (i=0; i<4; i++) {
     for (j=0; j<=i; j++) {
       for (iPart=sum=0; iPart<particles; iPart++)
-        sum += (data[iPart][i]-eta[i]*data[iPart][5])*(data[iPart][j]-eta[j]*data[iPart][5]);
+        sum += ((data[iPart][i]-C[i])-eta[i]*(data[iPart][5]-C[5]))*((data[iPart][j]-C[j])-eta[j]*(data[iPart][5]-C[5]));
       Sbeta[j][i] = Sbeta[i][j] = sum/particles;
     }
   }
