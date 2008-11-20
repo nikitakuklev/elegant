@@ -352,15 +352,15 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
                      twissInput.betay, twissInput.alphay, twissInput.etay, twissInput.etapy);
               printf("  * Final twiss parameters:\n");
               printf("  betax = %le  alphax = %le  etax = %le, etaxp = %le\n",
-                     ((TWISSELEMENT*)elem->p_elem)->betax,
-                     ((TWISSELEMENT*)elem->p_elem)->alphax,
-                     ((TWISSELEMENT*)elem->p_elem)->etax,
-                     ((TWISSELEMENT*)elem->p_elem)->etaxp);
+                     ((TWISSELEMENT*)elem->p_elem)->twiss.betax,
+                     ((TWISSELEMENT*)elem->p_elem)->twiss.alphax,
+                     ((TWISSELEMENT*)elem->p_elem)->twiss.etax,
+                     ((TWISSELEMENT*)elem->p_elem)->twiss.etapx);
               printf("  betax = %le  alphax = %le  etax = %le, etaxp = %le\n",
-                     ((TWISSELEMENT*)elem->p_elem)->betay,
-                     ((TWISSELEMENT*)elem->p_elem)->alphay,
-                     ((TWISSELEMENT*)elem->p_elem)->etay,
-                     ((TWISSELEMENT*)elem->p_elem)->etayp);
+                     ((TWISSELEMENT*)elem->p_elem)->twiss.betay,
+                     ((TWISSELEMENT*)elem->p_elem)->twiss.alphay,
+                     ((TWISSELEMENT*)elem->p_elem)->twiss.etay,
+                     ((TWISSELEMENT*)elem->p_elem)->twiss.etapy);
             }
             elem->matrix = twissTransformMatrix((TWISSELEMENT*)elem->p_elem,
                                                 &twissInput);

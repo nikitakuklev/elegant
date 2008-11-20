@@ -1096,7 +1096,7 @@ typedef struct {
 
 /* storage structure for twiss element (sets twiss parameters) */
 typedef struct {
-  double betax, betay, alphax, alphay, etax, etaxp, etay, etayp;
+  TWISS twiss;
   long fromBeam, computeOnce, applyOnce, verbose;
   /* internal variables */
   long transformComputed;
@@ -3268,6 +3268,7 @@ double FELScalingFunction
 void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 
 VMATRIX *twissTransformMatrix(TWISSELEMENT *twissWanted, TWISS *twissInput);
+VMATRIX *twissTransformMatrix1(TWISS *twissWanted, TWISS *twissInput);
 VMATRIX *lightThinLensMatrix(LTHINLENS *ltl);
 VMATRIX *lightMirrorMatrix(LMIRROR *lm);
 

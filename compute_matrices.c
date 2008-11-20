@@ -1557,9 +1557,10 @@ VMATRIX *rf_cavity_matrix(double length, double voltage, double frequency, doubl
     return(M);
 }
 
-VMATRIX *twissTransformMatrix(TWISSELEMENT *twissWanted,
-                              TWISS *twissInput)
+  
+VMATRIX *twissTransformMatrix1(TWISS *twissWanted, TWISS *twissInput)
 {
+
   VMATRIX *M1, *M2, *M3, *Mtot;
   double beta1, beta2, alpha1, alpha2;
 
@@ -1601,9 +1602,9 @@ VMATRIX *twissTransformMatrix(TWISSELEMENT *twissWanted,
   M3->R[0][0] = M3->R[1][1] = M3->R[2][2] = M3->R[3][3] = 
     M3->R[4][4] = M3->R[5][5] = 1;
   M3->R[0][5] = twissWanted->etax;
-  M3->R[1][5] = twissWanted->etaxp;
+  M3->R[1][5] = twissWanted->etapx;
   M3->R[2][5] = twissWanted->etay;
-  M3->R[3][5] = twissWanted->etayp;
+  M3->R[3][5] = twissWanted->etapy;
 
   Mtot = tmalloc(sizeof(*Mtot));
   initialize_matrices(Mtot, Mtot->order=1);
@@ -1619,6 +1620,13 @@ VMATRIX *twissTransformMatrix(TWISSELEMENT *twissWanted,
   
   return M1;
 }
+
+VMATRIX *twissTransformMatrix(TWISSELEMENT *twissWanted,
+                              TWISS *twissInput)
+{
+  return twissTransformMatrix1(&(twissWanted->twiss), twissInput);
+}
+
 
 /* thin lens for light optics */
 VMATRIX *lightThinLensMatrix(LTHINLENS *ltl)

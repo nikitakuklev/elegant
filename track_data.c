@@ -1602,14 +1602,14 @@ PARAMETER mapSolenoid_param[N_MAPSOLENOID_PARAMS] = {
 TWISSELEMENT twissElem_example;
 
 PARAMETER twissElement_param[N_TWISSELEMENT_PARAMS] = {
-  {"BETAX", "M", IS_DOUBLE, 0, (long)((char *)&twissElem_example.betax), NULL, 1.0, 0, "horizontal beta function"},
-  {"BETAY", "M", IS_DOUBLE, 0, (long)((char *)&twissElem_example.betay), NULL, 1.0, 0, "vertical beta function"},
-  {"ALPHAX", "", IS_DOUBLE, 0, (long)((char *)&twissElem_example.alphax), NULL, 0.0, 0, "horizontal alpha function"},
-  {"ALPHAY", "", IS_DOUBLE, 0, (long)((char *)&twissElem_example.alphay), NULL, 0.0, 0, "vertical alpha function"},
-  {"ETAX", "M", IS_DOUBLE, 0, (long)((char *)&twissElem_example.etax), NULL, 0.0, 0, "horizontal eta function"},
-  {"ETAXP", "", IS_DOUBLE, 0, (long)((char *)&twissElem_example.etaxp), NULL, 0.0, 0, "slope of horizontal eta function"},
-  {"ETAY", "M", IS_DOUBLE, 0, (long)((char *)&twissElem_example.etay), NULL, 0.0, 0, "vertical eta function"},
-  {"ETAYP", "", IS_DOUBLE, 0, (long)((char *)&twissElem_example.etayp), NULL, 0.0, 0, "slope of vertical eta function"},
+  {"BETAX", "M", IS_DOUBLE, 0, (long)((char *)&twissElem_example.twiss.betax), NULL, 1.0, 0, "horizontal beta function"},
+  {"ALPHAX", "", IS_DOUBLE, 0, (long)((char *)&twissElem_example.twiss.alphax), NULL, 0.0, 0, "horizontal alpha function"},
+  {"ETAX", "M", IS_DOUBLE, 0, (long)((char *)&twissElem_example.twiss.etax), NULL, 0.0, 0, "horizontal eta function"},
+  {"ETAXP", "", IS_DOUBLE, 0, (long)((char *)&twissElem_example.twiss.etapx), NULL, 0.0, 0, "slope of horizontal eta function"},
+  {"BETAY", "M", IS_DOUBLE, 0, (long)((char *)&twissElem_example.twiss.betay), NULL, 1.0, 0, "vertical beta function"},
+  {"ALPHAY", "", IS_DOUBLE, 0, (long)((char *)&twissElem_example.twiss.alphay), NULL, 0.0, 0, "vertical alpha function"},
+  {"ETAY", "M", IS_DOUBLE, 0, (long)((char *)&twissElem_example.twiss.etay), NULL, 0.0, 0, "vertical eta function"},
+  {"ETAYP", "", IS_DOUBLE, 0, (long)((char *)&twissElem_example.twiss.etapy), NULL, 0.0, 0, "slope of vertical eta function"},
   {"FROM_BEAM", "", IS_LONG, 0, (long)((char *)&twissElem_example.fromBeam), NULL, 0.0, 0, "compute transformation from tracked beam properties instead of Twiss parameters?"},
   {"COMPUTE_ONCE", "", IS_LONG, 0, (long)((char *)&twissElem_example.computeOnce), NULL, 0.0, 0, "compute transformation only for first beam or lattice functions?"},
   {"APPLY_ONCE", "", IS_LONG, 0, (long)((char *)&twissElem_example.applyOnce), NULL, 0.0, 1, "apply correction only on first pass through for each beam?"},
