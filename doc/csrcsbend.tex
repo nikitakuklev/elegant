@@ -53,6 +53,15 @@ order is controlled using the {\tt EDGE\_ORDER} parameter, which has a
 default value of 1.  N.B.: if you choose the second-order matrix, it
 is not symplectic.
 
+Some confusion may exist about the edge angles, particularly the signs.
+For a sector magnet, we have of course \verb|E1=E2=0|.  For a symmetric rectangular
+magnet, \verb|E1=E2=ANGLE/2|.  If \verb|ANGLE| is negative, then so are
+\verb|E1| and \verb|E2|.  To understand this, imagine a rectangular magnet with positive \verb|ANGLE|.
+If the magnet is flipped over, then \verb|ANGLE| becomes negative, as does the bending
+radius $\rho$.    Hence, to keep the focal length
+of the edge $1/f = -\tan E_i /\rho$ constant, we must also change the sign of
+$E_i$.
+
 {\em Special note about splitting dipoles}: when dipoles are long, it is
 common to want to split them into several pieces, to get a better look
 at the interior optics.  When doing this, care must be exercised not
