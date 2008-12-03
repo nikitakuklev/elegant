@@ -372,10 +372,15 @@ char **argv;
   load_hash = NULL;     
   compute_offsets();
   set_max_name_length(100);
-  macros = 0;
-  macroTag = macroValue = NULL;
   setSigmaIndices();
   
+  macros = 1;
+  if (!(macroTag = malloc(sizeof(*macroTag))) ||
+      !(macroValue = malloc(sizeof(*macroValue)))) 
+    bomb("memory allocation failure setting up default macro tag/value pairs", NULL);
+  macroTag[0] = "INPUTFILENAME";
+  macroValue[0] = NULL;  /* will fill in later */
+
 #if defined(VAX_VMS) || defined(UNIX) || defined(_WIN32)
   init_stats();
 #endif
@@ -489,7 +494,8 @@ char **argv;
     showUsageOrGreeting(SHOW_USAGE);
     exit(1);
   }
-
+  cp_str(&macroValue[0], inputfile);
+  
 #if defined(CONDOR_COMPILE)
   sprintf(s, "%s.ckpt", inputfile);
   init_image_with_file_name(s);
