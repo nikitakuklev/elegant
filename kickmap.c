@@ -44,7 +44,7 @@ long trackUndulatorKickMap(
   if ((nKicks=map->nKicks)<1)
     bomb("N_KICKS must be >=1 for UKICKMAP", NULL);
 
-  radCoef = isrCoef = 0;
+  radCoef = isrCoef = sxpCoef = 0;
   if (map->synchRad)
     /* radCoef*I2 is d((P-Po)/Po) per step for the on-axis, on-momentum particle */
     radCoef = 2./3*particleRadius*ipow(pRef, 3);
