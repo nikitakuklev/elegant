@@ -504,10 +504,15 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
     ((CWIGGLER*)eptr->p_elem)->sr = ltmp2;
     break;
   case T_UKICKMAP:
+    ltmp1 = ((UKICKMAP*)eptr->p_elem)->isr;
+    ltmp2 = ((UKICKMAP*)eptr->p_elem)->synchRad;
+    ((UKICKMAP*)eptr->p_elem)->isr = ((UKICKMAP*)eptr->p_elem)->synchRad = 0;
     if (trackUndulatorKickMap(coord, NULL, n_track, run->p_central, (UKICKMAP*)eptr->p_elem, 0)!=n_track) {
       printf("*** Error: particles lost in determineMatrix call for UKICKMAP\n");
       exit(1);
     }
+    ((UKICKMAP*)eptr->p_elem)->isr = ltmp1;
+    ((UKICKMAP*)eptr->p_elem)->synchRad = ltmp2;
     break;
   case T_SCRIPT:
     transformBeamWithScript((SCRIPT*)eptr->p_elem, run->p_central, NULL, NULL, coord, n_track, 0,
