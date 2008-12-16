@@ -37,15 +37,13 @@ long rectangular_collimator(
   double x_center, y_center;
   double x1, y1, zx, zy, dx, dy;
 
-  log_entry("rectangular_collimator");
-
   xsize  = rcol->x_max;
   ysize  = rcol->y_max;
   x_center = rcol->dx;
   y_center = rcol->dy;
 
-  if (!(xsize || ysize)) {
-    log_exit("rectangular_collimator");
+  if (xsize<=0 && ysize<=0) {
+    exactDrift(initial, np, rcol->length);
     return(np);
   }
   openCode = determineOpenSideCode(rcol->openSide);
@@ -55,8 +53,8 @@ long rectangular_collimator(
     dx = ini[0] - x_center;
     dy = ini[2] - y_center;
     lost = 0;
-    if ((xsize && fabs(dx) > xsize) ||
-        (ysize && fabs(dy) > ysize)) {
+    if ((xsize>0 && fabs(dx) > xsize) ||
+        (ysize>0 && fabs(dy) > ysize)) {
       lost = openCode ? evaluateLostWithOpenSides(openCode, dx, dy, xsize, ysize) : 1;
     } else if (isinf(ini[0]) || isinf(ini[2]) ||
                isnan(ini[0]) || isnan(ini[2]) )
@@ -73,7 +71,6 @@ long rectangular_collimator(
     }
   }
   if (np==0 || (length=rcol->length)<=0) {
-    log_exit("rectangular_collimator");
     return(np);
   }
 
@@ -85,9 +82,9 @@ long rectangular_collimator(
     dx = x1 - x_center;
     dy = y1 - y_center;
     is_out = 0;
-    if (xsize && fabs(dx)>xsize)
+    if (xsize>0 && fabs(dx)>xsize)
       is_out += 1*(openCode?evaluateLostWithOpenSides(openCode, dx, 0, xsize, ysize):1);
-    if (ysize && fabs(dy)>ysize)
+    if (ysize>0 && fabs(dy)>ysize)
       is_out += 2*(openCode?evaluateLostWithOpenSides(openCode, 0, dy, xsize, ysize):1);
     if (isinf(x1) || isinf(y1) || isnan(x1) || isnan(y1) )
       is_out += 4;
@@ -134,7 +131,6 @@ long rectangular_collimator(
       ini[2] = y1;
     }
   }
-  log_exit("rectangular_collimator");
   return(np);
 }
 
@@ -153,21 +149,18 @@ long limit_amplitudes(
     double *part;
     double dz, dzx, dzy;
 
-    log_entry("limit_amplitudes");
-
-    if (!(xmax || ymax)) {
-        log_exit("limit_amplitudes");
-        return(np);
-        }
+    if (xmax<0 && ymax<0) {
+      return(np);
+    }
 
     itop = np-1;
 
     for (ip=0; ip<np; ip++) {
         part = coord[ip];
         is_out = 0;
-        if (xmax && fabs(part[0])>xmax)
+        if (xmax>0 && fabs(part[0])>xmax)
             is_out += 1;
-        if (ymax && fabs(part[2])>ymax)
+        if (ymax>0 && fabs(part[2])>ymax)
             is_out += 2;
         if (openCode)
           is_out *= evaluateLostWithOpenSides(openCode, part[0], part[2], xmax, ymax);
@@ -204,7 +197,6 @@ long limit_amplitudes(
           np--;
         }
       }
-    log_exit("limit_amplitudes");
     return(np);
   }
 
@@ -272,8 +264,22 @@ long elliptical_collimator(
   dx = ecol->dx;
   dy = ecol->dy;
 
-  if (!a2 || !b2)
+  if (ecol->x_max<=0 || ecol->y_max<=0) {
+    /* At least one of x_max or y_max is non-positive */
+    if (ecol->x_max>0 || ecol->y_max>0) {
+      /* One of x_max or y_max is positive. Use rectangular collimator routine to implement this. */
+      RCOL rcol;
+      rcol.length = ecol->length;
+      rcol.x_max = ecol->x_max;
+      rcol.y_max = ecol->y_max;
+      rcol.dx = ecol->dx;
+      rcol.dy = ecol->dy;
+      rcol.openSide = ecol->openSide;
+      return rectangular_collimator(initial, &rcol, np, accepted, z, Po);
+    } 
+    exactDrift(initial, np, ecol->length);
     return(np);
+  }
   openCode = determineOpenSideCode(ecol->openSide);
 
   itop = np-1;
@@ -359,18 +365,18 @@ long elimit_amplitudes(
     double a2, b2, c1, c2, c0, dz, det;
     TRACKING_CONTEXT context;
 
-    log_entry("elimit_amplitudes");
-
     if (exponent<2 || exponent%2) {
       getTrackingContext(&context);
       fprintf(stderr, "Error for %s: exponent=%ld is not valid.  Give even integer >=2\n",
               context.elementName, exponent);
       exit(1);
     }
-    if (!(xmax || ymax)) {
-        log_exit("elimit_amplitudes");
-        return(np);
-        }
+    if (xmax<=0 || ymax<=0) {
+      /* At least one of the dimensions is non-positive and therefore ignored */
+      if (xmax>0 || ymax>0) 
+        return limit_amplitudes(coord, xmax, ymax, np, accepted, z, Po, extrapolate_z, openCode);
+      return(np);
+    }
 
     a2 = ipow(xmax, exponent);
     b2 = ipow(ymax, exponent);
