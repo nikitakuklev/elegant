@@ -1199,7 +1199,7 @@ double optimization_function(double *value, long *invalid)
   if (beamline->links && beamline->links->n_links)
     rebaseline_element_links(beamline->links, run, beamline);
   i = compute_changed_matrices(beamline, run) +
-    assert_element_links(beamline->links, run, beamline, STATIC_LINK+DYNAMIC_LINK);
+    assert_element_links(beamline->links, run, beamline, STATIC_LINK+DYNAMIC_LINK+LINK_ELEMENT_DEFINITION);
   beamline->flags &= ~(BEAMLINE_CONCAT_CURRENT+BEAMLINE_CONCAT_DONE+
 		       BEAMLINE_TWISS_CURRENT+BEAMLINE_TWISS_DONE+
 		       BEAMLINE_RADINT_CURRENT+BEAMLINE_RADINT_DONE);
