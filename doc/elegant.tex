@@ -29,7 +29,7 @@ Users are encouraged to join and participate.
 Here is a summary of what's changed since release 19.1.  For details
 and references, see the specific entries in the manual. 
 
-\subsection{Known Bugs and Problems}
+\subsection{Known Bugs, Problems, and Limitations}
 \begin{itemize}
 \item Twiss output contains entries for the higher-order dispersion, tune
         shifts with amplitude, higher-order chromaticity, tune spreads
@@ -40,6 +40,8 @@ and references, see the specific entries in the manual.
 \item Computation of closed orbits and Twiss parameters will not always include the effects of synchrotron
   radiation losses when these are imposed using {\tt SREFFECTS} elements.  See
   the documentation for {\tt SREFFECTS} for details.
+\item Computation of beam moments does not include synchrotron radiation effects from \verb|CWIGGLER|,
+  \verb|WIGGLER|, or \verb|UKICKMAP| elements.
 \item The file created with the parameters field of \verb|run_setup| does not contain
   any non-numerical parameters of the lattice.
 \item When \verb|transmute_elements| is used to turn a sextupole into a quadrupole, several problems are seen.
@@ -51,7 +53,10 @@ and references, see the specific entries in the manual.
 \subsection{Bug Fixes for Elements}
 \begin{itemize}
 \item The {\tt DZ} (longitudinal alignment parameter) for the elements {\tt KQUAD}, {\tt KSEXT}, and
-  {\tt KQUSE} was nonfunctional. This was fixed.
+  {\tt KQUSE} was nonfunctional. 
+\item The \verb|ECOL| and \verb|RCOL| elements did not perform correct beam transport computations
+  when the length was non-zero and the apertures were both zero.  S. DiMitri (ELETTRA) and 
+  M. Cornacchia (SLAC) reported this bug.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
@@ -65,6 +70,7 @@ and references, see the specific entries in the manual.
 \item The {\tt BUMPER} element, which models a time-dependent dipole kicker, now supports misalignments.
 \item The {\tt UKICKMAP} element now supports synchrotron radiation, both in the radiation integral
  calculations (via \verb|twiss_output|) and in tracking.  This was requested by W. Guo (BNL).
+ N.B.: beam moments computations do not include these effects.
 \end{itemize}
 
 \subsection{New and Modified Commands}
@@ -3124,6 +3130,9 @@ containing positrons, electrons, and photons, one might want to select
 only the positrons.
 \item \verb|one_random_bunch| --- A flag indicating whether, for {\tt spiffe} data, a new random
 distribution should be calculated for each step of the simulation.
+\item \verb|reuse_bunch| --- A flag indicating whether to use the bunch again or not.  If set, then the first bunch in the
+file is used repeatedly for as many tracking steps as requested.  Otherwise, each bunch is used only once and the number of
+steps is limited to the number of bunches (e.g., the number of pages in the file when \verb|prebunched=0|).
 \item \verb|prebunched| --- A flag indicating, if zero, that the entire file is one ``bunch,'' and otherwise that each page in the file is a different bunch.
 \item \verb|sample_interval| --- If non-zero, only every \verb|sample_interval|$^{\rm th}$ particle is used.
 \item \verb|n_tables_to_skip| --- Number of SDDS pages to skip at the beginning of the file.
