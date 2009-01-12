@@ -66,6 +66,7 @@ long trackUndulatorKickMap(
   
   iTop = nParticles-1;
   for (ik=0; ik<nKicks; ik++) {
+    sqrtI3 = sqrtI5 = 0;
     if (sxpCoef) {
       double S11, S12, S22, S16, S26, S66;
       double S11beta, S12beta, S22beta, emit;
