@@ -102,9 +102,12 @@ VMATRIX *compute_periodic_twiss(
     fprintf(stdout, "%ld matrices recomputed for periodic Twiss parameter computation\n", i);
     fflush(stdout);
 
-  if (cavities_are_drifts_if_matched)
+  if (cavities_are_drifts_if_matched) {
+    if (run->always_change_p0)
+      bomb("can't have run_setup/always_change_p0=1 and twiss_output/cavities_are_drifts_if_matched=1", NULL);
     modify_rfca_matrices(elem, run->default_order);  /* replace rf cavities with drifts */
-
+  }
+  
   if (clorb) {
     /* use the closed orbit to compute the on-orbit R matrix */
     M1 = tmalloc(sizeof(*M1));
@@ -1924,9 +1927,13 @@ void modify_rfca_matrices(ELEMENT_LIST *eptr, long order)
       }
       switch (eptr->type) {
       case T_RFCA:
+        if (((RFCA*)eptr->p_elem)->change_p0)
+          bomb("can't treat cavities like drifts when CHANGE_P0=1", NULL);
         eptr->matrix = drift_matrix(((RFCA*)eptr->p_elem)->length, order);
         break;
       case T_RFCW:
+        if (((RFCW*)eptr->p_elem)->change_p0)
+          bomb("can't treat cavities like drifts when CHANGE_P0=1", NULL);
         eptr->matrix = drift_matrix(((RFCW*)eptr->p_elem)->length, order);
         break;
       case T_MODRF:
