@@ -67,48 +67,56 @@ long trackUndulatorKickMap(
   iTop = nParticles-1;
   for (ik=0; ik<nKicks; ik++) {
     sqrtI3 = sqrtI5 = 0;
-    if (sxpCoef) {
+    if (radCoef || sxpCoef) {
       double S11, S12, S22, S16, S26, S66;
       double S11beta, S12beta, S22beta, emit;
 
       if (nKicks!=map->periods)
         bomb("Number of kicks must equal number of periods for UKICKMAP radiation tracking", NULL);
       
-      /* These calls are inefficient (repeat some calculations), but better than other routines we have now */
+      if (sxpCoef) {
+        /* These calls are inefficient (repeat some calculations), but better than other routines we have now */
 #if !USE_MPI
-      rms_emittance(particle, 0, 1, iTop+1, &S11, &S12, &S22);
-      rms_emittance(particle, 0, 5, iTop+1, &S11, &S16, &S66);
-      rms_emittance(particle, 1, 5, iTop+1, &S22, &S26, &S66);
+        rms_emittance(particle, 0, 1, iTop+1, &S11, &S12, &S22);
+        rms_emittance(particle, 0, 5, iTop+1, &S11, &S16, &S66);
+        rms_emittance(particle, 1, 5, iTop+1, &S22, &S26, &S66);
 #else
-      rms_emittance_p(particle, 0, 1, iTop+1, &S11, &S12, &S22);
-      rms_emittance_p(particle, 0, 5, iTop+1, &S11, &S16, &S66);
-      rms_emittance_p(particle, 1, 5, iTop+1, &S22, &S26, &S66);
+        rms_emittance_p(particle, 0, 1, iTop+1, &S11, &S12, &S22);
+        rms_emittance_p(particle, 0, 5, iTop+1, &S11, &S16, &S66);
+        rms_emittance_p(particle, 1, 5, iTop+1, &S22, &S26, &S66);
 #endif
 
-      if (S66) {
-        S11beta = S11 - sqr(S16)/S66;
-        S12beta = S12 - S16*S26/S66;
-        S22beta = S22 - sqr(S26)/S66;
+        if (S66) {
+          S11beta = S11 - sqr(S16)/S66;
+          S12beta = S12 - S16*S26/S66;
+          S22beta = S22 - sqr(S26)/S66;
+        } else {
+          S11beta = S11;
+          S12beta = S12;
+          S22beta = S22;
+        }
+        beta = alpha = sqrtBeta = 0;
+        if ((emit = S11beta*S22beta-sqr(S12beta))>0) {
+          emit = sqrt(emit);
+          beta = sqrt(S11beta/emit);
+          sqrtBeta = sqrt(beta);
+          alpha = -S12beta/emit;
+        }
       } else {
-        S11beta = S11;
-        S12beta = S12;
-        S22beta = S22;
-      }
-      beta = alpha = sqrtBeta = 0;
-      if ((emit = S11beta*S22beta-sqr(S12beta))>0) {
-        emit = sqrt(emit);
-        beta = sqrt(S11beta/emit);
-        sqrtBeta = sqrt(beta);
-        alpha = -S12beta/emit;
+        emit = 0;
+        sqrtBeta = beta = 1;
+        alpha = 0;
       }
       I1 = I2 = I3 = I4 = I5 = 0;
       AddWigglerRadiationIntegrals(map->length/map->periods, 2, map->radiusInternal,
                                    0.0, 0.0, beta, alpha,
                                    &I1, &I2, &I3, &I4, &I5);
-      if (I3<0 || I5<0)
-        bomb("I3 or I5 is negative in UKICKMAP", NULL);
-      sqrtI3 = sqrt(I3);
-      sqrtI5 = sqrt(I5);
+      if (sxpCoef) {
+        if (I3<0 || I5<0)
+          bomb("I3 or I5 is negative in UKICKMAP", NULL);
+        sqrtI3 = sqrt(I3);
+        sqrtI5 = sqrt(I5);
+      }
     }
     
     if (isSlave || !notSinglePart) {
