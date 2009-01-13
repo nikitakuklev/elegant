@@ -97,6 +97,10 @@ typedef struct cheb_series_struct cheb_series;
 #define CHECK_UNDERFLOW(r) if (fabs((r)->val) < GSL_DBL_MIN) GSL_ERROR("underflow", GSL_EUNDRFLW);
 #define UNDERFLOW_ERROR(result) do { (result)->val = 0.0; (result)->err = GSL_DBL_MIN; GSL_ERROR ("underflow", GSL_EUNDRFLW); } while(0)
 
+#if !defined(M_PI)
+#define M_PI   3.14159265358979323846
+#define M_PI_4 0.78539816339744830962
+#endif
 
 
 gsl_complex gsl_complex_mul_real (gsl_complex a, double x);
