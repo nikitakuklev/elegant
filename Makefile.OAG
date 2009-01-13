@@ -143,7 +143,7 @@ CLAPACK = 0
 #This may make it harder for outside users to compile elegant but they
 #can always turn if off if they want
 ifdef WIN32
-CLAPACK = 1
+CLAPACK = $(words $(notdir $(wildcard c:/CLAPACK/include/clapack.h)))
 endif
 
 SUNPERF = 0
@@ -194,9 +194,9 @@ endif #ifneq ($(SUNPERF), 0)
 
 ifneq ($(CLAPACK), 0)
 ifdef WIN32
-USR_CFLAGS += -DCLAPACK -Ic:\\CLAPACK\\include
-CLAPACK_LIB = c:\\CLAPACK\\lib
+USR_CPPFLAGS += -DCLAPACK -DF2C -I$(CLAPACK_INCLUDE)
 USR_LIBS += clapack
+clapack_DIR = $(CLAPACK_LIB)
 endif
 endif
 

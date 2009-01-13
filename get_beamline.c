@@ -845,6 +845,7 @@ void do_save_lattice(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
   } else {
     /* first write element definition */
     long type;
+    long nline=1, nelem=0;
     for (type=1; type<N_TYPES; type++) {
       eptr = &(beamline->elem);
       while (eptr) {
@@ -909,7 +910,6 @@ void do_save_lattice(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
       }
     }
     /* Write beamline sequence now, each line has 40 elements limitation */
-    long nline=1, nelem=0;
     eptr = &(beamline->elem);
     sprintf(s, "L%04ld: LINE = (", nline);
     while (eptr) {

@@ -34,7 +34,6 @@
 **
 ***************************************************************************/
 
-#include "matrixOp.h"
 #include "SDDS.h"
 #include "mdb.h"
 #define HUGE DBL_MAX
@@ -57,6 +56,7 @@ int f2c_dgemm(char* transA, char* transB, integer* M, integer* N, integer* K,
 #ifdef LAPACK
 #include "f2c.h"
 #endif
+#include "matrixOp.h"
 
 
 /* m_get -- gets an mxn matrix (in MAT form) by dynamic memory allocation in column major order
