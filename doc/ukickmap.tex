@@ -19,11 +19,14 @@ accomplished with the command
 where \verb|input1.sdds| is the original (unordered) file and \verb|input2.sdds| is the
 new file, which would be used with \verb|UKICKMAP|.
 
-{\tt elegant} performs radiation integral computations for \verb|UKICKMAP| and can
-also include radiation effects in tracking.  This feature has limitations, namely, that
-the radiation integral computations assume the device is horizontally deflecting.  However,
-in tracking, no such assumption is made.  Also, the element is not presently included
-in beam moments computations via the \verb|moments_output| command.
+{\tt elegant} performs radiation integral computations
+for \verb|UKICKMAP| and can also include radiation effects in
+tracking.  This feature has limitations, namely, that the radiation
+integral computations assume the device is horizontally deflecting.
+However, in tracking, no such assumption is made.  N.B.: at present
+this element is {\em not} presently included in beam moments
+computations via the \verb|moments_output| command.
 
 This element was requested by W. Guo (BNL), who also assisted with the
 implementation and debugging.
+

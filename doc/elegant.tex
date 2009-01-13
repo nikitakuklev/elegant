@@ -17,14 +17,14 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 19.2\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
+\author{Program Version 20.0\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
 \htmladdnormallink{forum}{https://www.aps.anl.gov/Accelerator_Systems_Division/Operations_Analysis/phpBB3}.
 Users are encouraged to join and participate.
 
-\section{Highlights of What's New in Version 19.2}
+\section{Highlights of What's New in Version 20.0}
 
 Here is a summary of what's changed since release 19.1.  For details
 and references, see the specific entries in the manual. 
@@ -53,15 +53,24 @@ and references, see the specific entries in the manual.
 \subsection{Bug Fixes for Elements}
 \begin{itemize}
 \item The {\tt DZ} (longitudinal alignment parameter) for the elements {\tt KQUAD}, {\tt KSEXT}, and
-  {\tt KQUSE} was nonfunctional. 
+  {\tt KQUSE} was nonfunctional.   This was fixed.
 \item The \verb|ECOL| and \verb|RCOL| elements did not perform correct beam transport computations
   when the length was non-zero and the apertures were both zero.  S. DiMitri (ELETTRA) and 
   M. Cornacchia (SLAC) reported this bug.
+\item Previously, \verb|RFCA| and \verb|RFCW| elements with \verb|CHANGE_P0=1| could be treated
+ as drift spaces for the purpose of twiss parameter computation by setting \verb|cavities_are_drifts_if_matched=1|
+ in \verb|twiss_output|. However, this really doesn't make sense and can give misleading results,
+ so it is now disallowed.  This feature should be used only for ring computations when the beam
+ energy is not significantly changed by the cavities.  This issue was raised by P. Williams (ASTEC).
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item None
+\item A bug was fixed for optimization runs when \verb|link_elements| and \verb|save_lattice| were used.
+ In particular, the linked elements would not have the correct parameters in the new lattice, although they
+ would be correct in the parameter output file (if requested).  This bug was reported by P. Williams (ASTEC).
+\item A bug was found in beam moments computations with radiation effects.  The bug, related to
+  treatment of edge angles, would have impacted results for cases with significant edge focusing and x-y coupling.
 \end{itemize}
 
 \subsection{New and Modified Elements}
@@ -78,9 +87,22 @@ and references, see the specific entries in the manual.
 \item Orbit and trajectory correction now use singular value decomposition (SVD) for matrix inversion,
  with several controls that allow removal of singular vectors.  See the documentation for the 
  \verb|correct| command for details.
-\item Computation of resonance driving terms\cite{Bengtsson} was added to \verb|twiss_output|.  These may be optimized.
+\item Computation of resonance driving terms\cite{Bengtsson} was added to \verb|twiss_output|.  These may included in optimization. 
  See the documentation for the \verb|twiss_output| command for details.
  This was requested by W. Guo (NSLS), who helped with testing.
+\item The \verb|replace_elements| command was added, which allows replacing a set of elements with a new element,
+  as well as removing the elements altogether.
+  This is more general than the \verb|transmute_elements|, which permits only a limited set of transmutations.
+  This command was added by A. Xiao (ANL).
+\item The \verb|global_settings| command was added, which will be used to allow users to control global settings.
+  At present, it permits changing the file synchronization behavior.
+\item The \verb|find_aperture| command now has an ``n-lines'' mode that permits specifying as many search lines
+  as desired.
+\item The \verb|moments_output| command has a new flag, \verb|equilibrium| that permits requesting the
+  equilibrium moments. Although this was the default before when periodic (``matched'') conditions were invoked, 
+  there was no way to request non-equilibrium moments with matched lattice functions.
+\item The \verb|include_type_pattern| parameter was added to the \verb|momentum_aperture| command, to permit
+  selecting elements by type.
 \end{itemize}
 
 \subsection{Changes to Related Programs and Files}
@@ -531,6 +553,7 @@ the file {\tt data.twi}.
 \hyperref{{\tt find\_aperture}}{{\tt find\_aperture}}{}{subsec:findaperture} & Determine the transverse (e.g., dynamic) aperture. \\ \hline
 \hyperref{{\tt floor\_coordinates}}{{\tt floor\_coordinates}}{}{subsec:floorcoordinates} & Compute and output floor coordinates. \\ \hline
 \hyperref{{\tt frequency\_map}}{{\tt frequency\_map}}{}{subsec:frequencymap} & Compute and output frequency map. \\ \hline
+\hyperref{{\tt global\_settings}}{{\tt global\_settings}}{}{subsec:globalsetttings} & Change global settings.\\ \hline
 \hyperref{{\tt insert\_elements}}{{\tt insert\_sceffects}}{}{subsec:insertelements} & Insert elements into the lattice at many places. \\ \hline
 \hyperref{{\tt insert\_sceffects}}{{\tt insert\_sceffects}}{}{subsec:insertsceffects} & Insert space charge kick elements. \\ \hline
 \hyperref{{\tt linear\_chromatic\_tracking\_setup}}{{\tt linear\_chromatic\_tracking\_setup}}{}{subsec:linearchromatictrackingsetup} & Set up for fast tracking with chromatic effects. \\ \hline
@@ -1537,6 +1560,7 @@ parameter.  If zero, then the errors replace the prior value of the parameter.
     long assume_nonincreasing = 0;
     long verbosity = 0;    
     long offset_by_orbit = 0;
+    long n_lines = 11;
 &end
 \end{verbatim}
 
@@ -1544,23 +1568,27 @@ parameter.  If zero, then the errors replace the prior value of the parameter.
 \item \verb|output| --- The (incomplete) name of an SDDS file to send output to.  
  Recommended value: ``\%s.aper''.
 
-\item \verb|mode| --- May be ``many-particle'', ``single-particle'',
-``one-line'', ``three-line'', ``five-line'', ``seven-line'',
-``nine-line'', or ``eleven-line''.  Many-particle searching is much
+\item \verb|mode| --- May be ``many-particle'', ``single-particle'', ``one-line, ``three-lines'', or ``n-lines''.
+Many-particle searching is much
 faster than single-particle, but does not allow interval splitting to
 search for the aperture boundary.  Both ``many-particle'' and
 ``single-particle'' modes involve searching from the outside inward,
 which improves speed but may result in including islands.
 
-The {\em n}-line modes avoid this by searching form the origin
+The line modes avoid this by searching form the origin
 outward.  Of these, the one-line and three-line modes are special:
 one-line mode searches the line from the origin to $(x_{max},
 y_{max})$.  three-line mode searches this line, plus the lines from
-the origin to $(x_{max}, 0)$ and $(0, y_{max})$.  For $n$-line modes
-with $n>3$, $n$ lines are explored from $(0,0)$ to
+the origin to $(x_{max}, 0)$ and $(0, y_{max})$.  
+
+For n-line mode, the number of lines is set with the \verb|n_lines| parameter.
+With $n>3$, $n$ lines are explored from $(0,0)$ to
 $(x_{max}*sin(\theta), y_{max}*cos(\theta))$, where $\theta$ takes
 values from $-pi/2$ to $\pi/2$.   In these modes, the output file contains
 a parameter called ``Area,'' which gives the area of the dynamic aperture.
+
+Also still recognized are other modes, namely, ``five-line'', ``seven-line'', ``nine-line'',
+and ``eleven-line''.
 
 \item \verb|search_output| --- The (incomplete) name of an SDDS file for output of detailed
  information on each tracked particle (single-particle mode only).  Recommended value:
@@ -1600,6 +1628,9 @@ the transverse beam coordinates by the closed orbit before tracking.  The defaul
 zero for backward compatibility, but the recommended value is 1.
 
 \item \verb|verbosity| --- A larger value results in more printouts during computations.
+
+\item \verb|n_lines| --- In ``n-lines'' mode, the number of lines to search.
+
 \end{itemize}
 
 \begin{latexonly}
@@ -1646,8 +1677,8 @@ end are given.
 
 \begin{itemize}
 \item type: action command.  
-        The number of turns tracked is set by the \verb|run_control| command.
 \item function: compute frequency map from tracking
+      Note that the number of turns tracked is set by the \verb|run_control| command.
 \end{itemize}
 
 \begin{verbatim}
@@ -1677,6 +1708,29 @@ end are given.
 \item \verb|include_changes| --- If nonozero, then computes not only the tunes, but also
         the changes in the tunes.  It is recommended to leave this at the default value of
         0, since the resolution of the tunes is higher then.
+\end{itemize}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|global_settings|}\end{center}
+\end{latexonly}
+\subsection{global\_settings \label{subsec:globalsettings}}
+
+\begin{itemize}
+\item type: action command.  
+\item function: change global settings.
+\end{itemize}
+
+\begin{verbatim}
+&global_settings
+    long inhibit_fsync = 0;
+&end
+\end{verbatim}
+
+\begin{itemize}
+\item \verb|inhibit_fsync| --- By default, \verb|elegant| forces file synchronization across a network file system
+  to ensure that users see up-to-date files as soon as possible.  In cases where a great deal of output is generated,
+  this can degrade performance.  Setting this parameter to 1 will turn off synchronization until the end of the run.
 \end{itemize}
 
 \begin{latexonly}
@@ -2077,6 +2131,7 @@ number of the occurrence of the named element from which to start.
     long final_values_only = 0;
     long verbosity = 0;
     long matched = 1;
+    long equilibrium = 1;
     long radiation = 1;
     long n_slices = 10;
     double emit_x = 0;
@@ -2105,6 +2160,8 @@ tune correction.
 be output, and not the parameters as a function of s.
 \item \verb|verbosity| --- Larger numbers result in an increasing amount of informational output to the standard output stream.
 \item \verb|matched| --- A flag indicating, if set, that the periodic or matched moments should be found.
+\item \verb|equilibrium| --- A flag indicating, if set, that the equilibrium moments should be found.  If \verb|matched=1| and \verb|equilibrium=0|,
+  then the initial twiss parameters are computed from the periodic solution for the beamline.
 \item \verb|radiation| --- A flag indicating, if set, that synchrotron radiation effects should be included.
 \item \verb|n_slices| --- The number of slices into which to cut individual dipoles, quadrupoles, and sextuoples for computations.
   10 has been found to work for all rings tested, but users are advised to ensure it is sufficient for their cases.
@@ -2160,6 +2217,7 @@ using values at marker elements.  See the documentation for
     double s_start = 0;
     double s_end = DBL_MAX;
     STRING include_name_pattern = NULL;
+    STRING include_type_pattern = NULL;
     long fiducialize = 0;
     long verbosity = 1;
 &end
@@ -2201,6 +2259,10 @@ directions. Scanning begins at 0 and moves to to these values, but never beyond.
 
 \item \verb|include_name_pattern| --- If given, tracking will start
 only at the entrance to elements that match the given wildcard
+pattern.
+
+\item \verb|include_type_pattern| --- If given, tracking will start
+only at the entrance to elements whose type matches the given wildcard
 pattern.
 
 \item \verb|fiducialize| --- If given, an initially on-energy particle is tracked before
@@ -2735,7 +2797,7 @@ equal, the range of the parameter is unlimited.
 \item \verb|total_occurrences|, \verb|occurrence| --- 
 These parameters are used to replace or delete specified occurrences of 
 the element \verb|name|.  \verb|total_occurrences| specifies how many elements to replace
-or delete up to a maximum of 10, while the entries in the array \verb|occurrence| specify the occurrences
+or delete up to a maximum of 100, while the entries in the array \verb|occurrence| specify the occurrences
 to replace or delete. If \verb|total_occurrences| is non-zero, then {\bf skip} must
 be set to zero  and the {\bf name} must be the exact name (no wild-card matching). 
 \end{itemize}
@@ -3413,7 +3475,8 @@ be output, and not the parameters as a function of s.
 Twiss parameters should be computed and included in output.
 \item \verb|radiation_integrals| --- A flag indicating, if set, that radiation integrals should be computed
 and included in output. {\em N.B.: Radiation integral computation is not correct for systems with vertical
-bending, nor does it take into account coupling.}
+bending, nor does it take into account coupling.  See the \verb|moments_output| command if you need such
+computations.}
 \item \verb|beta_X|, \verb|alpha_X|, \verb|eta_X|, \verb|etap_X| --- If \verb|matched| is zero, the initial values for
 the X plane.
 
@@ -3454,6 +3517,8 @@ used that gives the second-order chromaticity only.
   By setting \verb|cavities_are_drifts_if_matched=0|, one can force {\tt elegant} to use the actual matrix for the
   rf cavity.  The differences between the 
   results are generally small, but the default behavior disagrees with the results of \verb|moments_output|.
+  This feature is not available for cavities that change the beam energy (\verb|CHANGE_P0=1| in element definition 
+  or \verb|always_change_p0=1| on \verb|run_setup|).
 \item \verb|compute_driving_terms| --- If nonzero, then resonance driving terms \cite{Bengtsson} and
  tune shifts with amplitude are computed by summing over dipole, quadrupole, and sextupole elements.  For dipoles, only the effects of gradients and
  sextupole terms are included; curvature effects are not present in the theory.   In addition, these quantities may be optimized 
