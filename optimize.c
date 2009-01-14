@@ -1200,6 +1200,8 @@ double optimization_function(double *value, long *invalid)
     rebaseline_element_links(beamline->links, run, beamline);
   i = compute_changed_matrices(beamline, run) +
     assert_element_links(beamline->links, run, beamline, STATIC_LINK+DYNAMIC_LINK+LINK_ELEMENT_DEFINITION);
+  if (beamline->flags&BEAMLINE_CONCAT_DONE)
+    free_elements1(&(beamline->ecat));
   beamline->flags &= ~(BEAMLINE_CONCAT_CURRENT+BEAMLINE_CONCAT_DONE+
 		       BEAMLINE_TWISS_CURRENT+BEAMLINE_TWISS_DONE+
 		       BEAMLINE_RADINT_CURRENT+BEAMLINE_RADINT_DONE);
