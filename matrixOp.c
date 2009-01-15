@@ -377,7 +377,7 @@ MAT *matrix_invert(MAT *Ain, double *weight, int32_t largestSValue, int32_t smal
 
   A = matrix_copy(Ain);  /* To avoid changing users matrix */
 
-#if defined(CLAPACK) || defined(LAPACK) 
+#if defined(CLAPACK) || defined(LAPACK)
   if (!A || A->m<=0 || A->n<=0)
     SDDS_Bomb("Invalid matrix provided for invert (matrix_invert)!");
   n = A->n;
@@ -586,7 +586,7 @@ MAT *matrix_invert(MAT *Ain, double *weight, int32_t largestSValue, int32_t smal
         Mij(Inv, j, i) *= weight[i];
   }
 #else
-  SDDS_Bomb("Matrix inversion is unable for non LAPACK/CLAPACK library.");
+  SDDS_Bomb("Matrix inversion is unavailable for non LAPACK/CLAPACK versions of elegant.");
 #endif
   matrix_free(A);
   return Inv;
