@@ -193,14 +193,66 @@ endif #ifneq ($(LAPACK), 0)
 endif #ifneq ($(SUNPERF), 0)
 
 ifneq ($(CLAPACK), 0)
-ifdef WIN32
-USR_CPPFLAGS += -DCLAPACK -DF2C -I$(CLAPACK_INCLUDE)
-USR_LIBS += clapack
-clapack_DIR = $(CLAPACK_LIB)
+  ifdef WIN32
+    USR_CPPFLAGS += -DCLAPACK -DF2C -I$(CLAPACK_INCLUDE)
+    USR_LIBS += clapack
+  else
+    ifeq ($(OS_CLASS),solaris)
+        # One can choose threaded ptcblas ptf77blas or unthreaded cblas f77blas
+        USR_CPPFLAGS += -DCLAPACK -DF2C -I$(CLAPACK_INCLUDE) -I$(ATLAS_INCLUDE)
+        USR_LIBS += lapack cblaswr cblas atlas F77 I77 
+#        USR_LIBS += lapack ptcblas ptf77blas  atlas 
+#        OP_SYS_LDLIBS += -lgfortran
+      else
+        # One can choose threaded ptcblas ptf77blas or unthreaded cblas f77blas
+        USR_CPPFLAGS += -DCLAPACK  -I$(ATLAS_INCLUDE)
+        USR_LIBS += lapack ptcblas ptf77blas  atlas 
+        OP_SYS_LDLIBS += -lgfortran
+      endif
+  endif
+else 
+  # section on LAPACK
+  ifneq ($(LAPACK), 0)
+    ifdef WIN32
+      USR_CPPFLAGS += -DLAPACK -I$(LAPACK_INCLUDE)
+      USR_LIBS += lapack
+    else
+      # there is no lapack header file
+      OP_SYS_LDLIBS += -llapack -lblas -lgfortran
+      USR_CPPFLAGS += -DLAPACK 
+    endif
+  else
+    # SUNPERF choice is placed last since it may be set to 1
+    # because of the existence of the library.
+    ifneq ($(SUNPERF), 0)
+      USR_CPPFLAGS += -DSUNPERF
+      OP_SYS_LDLIBS += -xlic_lib=sunperf -lsunperf
+      OP_SYS_LDFLAGS = $(COMPILER_LDFLAGS) -z combreloc -z lazyload
+    endif
+  endif
+endif
+
+
+# if LAPACK macro is set, then the lapack lib is found in the 
+# standard /usr/lib
+ifneq ($(CLAPACK), 0)
+ifeq ($(OS_CLASS),solaris)
+lapack_DIR = $(CLAPACK_LIB)
+cblaswr_DIR = $(CLAPACK_LIB)
+else
+lapack_DIR = $(ATLAS_LIB)
 endif
 endif
 
 clapack_DIR = $(CLAPACK_LIB)
+cblas_DIR = $(ATLAS_LIB)
+ptcblas_DIR = $(ATLAS_LIB)
+f77blas_DIR = $(ATLAS_LIB)
+ptf77blas_DIR = $(ATLAS_LIB)
+atlas_DIR = $(ATLAS_LIB)
+F77_DIR = $(F2C_LIB)
+I77_DIR = $(F2C_LIB)
+
 SDDS1_DIR = $(EPICS_EXTENSIONS_LIB)
 namelist_DIR = $(EPICS_EXTENSIONS_LIB)
 fftpack_DIR = $(EPICS_EXTENSIONS_LIB)
