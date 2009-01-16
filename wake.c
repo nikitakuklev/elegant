@@ -90,6 +90,13 @@ void track_through_wake(double **part, long np, WAKE *wakeData, double *PoInput,
     }
 
     dt = wakeData->dt;
+    if ((tmax-tmin)<20*dt) {
+      fprintf(stdout, "Warning: The beam is shorter than 20*DT, where DT is the spacing of the wake points.\n");
+      fprintf(stdout, "         Depending on the longitudinal distribution and shape of the wake, this may produce poor results.\n");
+      fprintf(stdout, "         Consider using a wake with finer time spacing in WAKE elements.\n");
+      fflush(stdout);
+    }
+    
     if (wakeData->n_bins) {
       nb = wakeData->n_bins;
       tmin = tmean-dt*nb/2.0;
