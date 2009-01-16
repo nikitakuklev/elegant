@@ -253,34 +253,21 @@ void run_response_output(RUN *run, LINE_LIST *beamline, CORRECTION *correct, lon
 
     if (correct->mode==TRAJECTORY_CORRECTION) {
       printf("Computing trajectory correction matrices for output.\n");
-      inverseComputedSave = correct->CMx->inverse_computed;
-      correct->CMx->inverse_computed = 0;
       compute_trajcor_matrices(correct->CMx, &correct->SLx, 0, run, beamline, 0,
                                !(inverse[0]==NULL || SDDS_StringIsBlank(inverse[0])));
-      correct->CMx->inverse_computed = inverseComputedSave;
 
-      inverseComputedSave = correct->CMy->inverse_computed;
-      correct->CMy->inverse_computed = 0;
       compute_trajcor_matrices(correct->CMy, &correct->SLy, 2, run, beamline, 0,
                                !(inverse[1]==NULL || SDDS_StringIsBlank(inverse[1])));
-      correct->CMy->inverse_computed = inverseComputedSave;
     }
     else if (correct->mode==ORBIT_CORRECTION) {
       printf("Computing orbit correction matrices for output, with %s length.\n",
              fixed_length?"fixed":"variable");
-      inverseComputedSave = correct->CMx->inverse_computed;
-      correct->CMx->inverse_computed = 0;
       compute_orbcor_matrices(correct->CMx, &correct->SLx, 0, run, beamline, 0,
                               !(inverse[0]==NULL || SDDS_StringIsBlank(inverse[0])),
                               fixed_length, 1);
-      correct->CMx->inverse_computed = inverseComputedSave;
-
-      inverseComputedSave = correct->CMy->inverse_computed;
-      correct->CMy->inverse_computed = 0;
       compute_orbcor_matrices(correct->CMy, &correct->SLy, 2, run, beamline, 0,
                               !(inverse[1]==NULL || SDDS_StringIsBlank(inverse[1])),
                               fixed_length, 1);
-      correct->CMy->inverse_computed = inverseComputedSave;
     }
     else
       bomb("bad correction mode (run_response_output)", NULL);

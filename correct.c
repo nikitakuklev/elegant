@@ -216,8 +216,9 @@ void correction_setup(
     _correct->CMy->bpm_noise_cutoff = bpm_noise_cutoff[1];
     _correct->CMx->fixed_length = _correct->CMy->fixed_length = fixed_length;
     _correct->response_only = n_iterations==0;
-    _correct->CMx->inverse_computed = _correct->CMy->inverse_computed = 0;
-
+    _correct->CMx->T = _correct->CMy->T = NULL;
+    _correct->CMx->C = _correct->CMy->C = NULL;
+    
     _correct->CMx->remove_smallest_SVs = remove_smallest_SVs[0];
     _correct->CMx->auto_limit_SVs = auto_limit_SVs[0];
     _correct->CMx->keep_largest_SVs = keep_largest_SVs[0];
@@ -845,7 +846,7 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
   /* allocate matrices for this plane */
   CM->C  = matrix_get(CM->nmon, CM->ncor);   /* Response matrix */
   CM->T  = NULL;
-
+  
   /* arrays for trajectory data */
   traj0 = tmalloc(sizeof(*traj0)*beamline->n_elems);
   traj1 = tmalloc(sizeof(*traj1)*beamline->n_elems);
@@ -994,7 +995,7 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
 #endif
   report_stats(stdout, "done");
 
-  if (invert && !CM->inverse_computed) {
+  if (invert) {
     report_stats(stdout, "Computing correction matrix ");
     fflush(stdout);
 
@@ -1013,7 +1014,6 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
 
     report_stats(stdout, "\ndone.");
     printf("Condition number is %e\n", conditionNumber);
-    CM->inverse_computed = 1;
     fflush(stdout);
   }
   
@@ -1047,7 +1047,7 @@ long global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
     bomb("corrector value array is NULL (global_trajcor_plane)", NULL);
   if (!traject)
     bomb("no trajectory arrays supplied (global_trajcor_plane)", NULL);
-  if (!CM->inverse_computed)
+  if (!CM->T)
     bomb("no inverse matrix computed (global_trajcor_plane)", NULL);
 
   Qo = matrix_get(CM->nmon, 1);   /* Vector of BPM errors */
@@ -1895,7 +1895,7 @@ void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN
   matrix_show(CM->C    , "%13.6le ", "influence matrix\n", stdout);
 #endif
 
-  if (invert && !CM->inverse_computed) {
+  if (invert) {
     /* compute correction matrix T */
     if (verbose) {
       fprintf(stdout, "computing correction matrix...");
@@ -1916,7 +1916,6 @@ void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN
       printf("Condition number is %e\n", conditionNumber);
       fflush(stdout);
     }
-    CM->inverse_computed = 1;
 #ifdef DEBUG
     matrix_show(CM->T, "%13.6le ", "correction matrix\n", stdout);
 #endif
@@ -1947,7 +1946,7 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
     bomb("NULL RUN pointer passed to orbcor_plane", NULL);
   if (!beamline)
     bomb("NULL LINE_LIST pointer passed to orbcor_plane", NULL);
-  if (CM->ncor && CM->nmon && !CM->inverse_computed)
+  if (CM->ncor && CM->nmon && !CM->T)
     bomb("No inverse matrix computed prior to orbcor_plane", NULL);
 
   if (closed_orbit)

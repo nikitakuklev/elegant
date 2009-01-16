@@ -42,7 +42,7 @@ typedef struct {
     /* Mij(C, i, j) = dX(monitor i)/dK(corrector j) */
     MAT *C, *T; 
     /* information about last correction */
-    long n_cycles_done, inverse_computed;
+    long n_cycles_done;
     } CORMON_DATA;
 
 typedef struct {
