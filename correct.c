@@ -1214,7 +1214,7 @@ void one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TR
   
   log_entry("one_to_one_trajcor_plane");
   
-  if (!matrix_check(CM->C) || !matrix_check(CM->T))
+  if (!matrix_check(CM->C))
     bomb("corrupted correction matrix detected (one_to_one_trajcor_plane)", NULL);
   if (!CM->mon_index)
     bomb("monitor index array is NULL (one_to_one_trajcor_plane)", NULL);
