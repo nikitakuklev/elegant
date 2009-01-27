@@ -7,6 +7,7 @@
 * in the file LICENSE that is included with this distribution. 
 \*************************************************************************/
 
+
 /* file: correct.c
  * purpose: trajectory/orbit correction for elegant
  * 
@@ -572,7 +573,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
     if (usePerturbedMatrix) {
       compute_trajcor_matrices(correct->CMx, &correct->SLx, 0, run, beamline, 0,
                                !correct->response_only);
-      compute_trajcor_matrices(correct->CMy, &correct->SLy, 0, run, beamline, 0,
+      compute_trajcor_matrices(correct->CMy, &correct->SLy, 2, run, beamline, 0,
                                !correct->response_only);
     }
     for (i_cycle=0; i_cycle<correct->n_xy_cycles; i_cycle++) {
@@ -844,7 +845,11 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
   report_stats(stdout, "start");
 
   /* allocate matrices for this plane */
+  if (CM->C)
+    matrix_free(CM->C);
   CM->C  = matrix_get(CM->nmon, CM->ncor);   /* Response matrix */
+  if (CM->T)
+    matrix_free(CM->T);
   CM->T  = NULL;
   
   /* arrays for trajectory data */
@@ -900,7 +905,8 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
     /* change the corrector by corr_tweek and compute the new matrix for the corrector */
     kick1 = *((double*)(corr->p_elem+kick_offset)) = kick0 + corr_tweek;
 #ifdef DEBUG
-    fprintf(stdout, "corrector %s tweeked to %e\n", corr->name, *((double*)(corr->p_elem+kick_offset)));
+    fprintf(stdout, "corrector %s tweeked to %e (type=%ld, offset=%ld)\n", corr->name, *((double*)(corr->p_elem+kick_offset)),
+            i_type, kick_offset);
     fflush(stdout);
 #endif
 
@@ -1793,9 +1799,13 @@ void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN
   }
 
   /* allocate matrices for this plane */
+  if (CM->C)
+    matrix_free(CM->C);
   CM->C  = matrix_get(CM->nmon, CM->ncor);   /* Response matrix */
+  if (CM->T)
+    matrix_free(CM->T);
   CM->T  = NULL;
-  
+
   if (find_only)
     return;
 
