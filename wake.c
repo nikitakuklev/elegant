@@ -28,6 +28,7 @@ void track_through_wake(double **part, long np, WAKE *wakeData, double *PoInput,
   static long *pbin = NULL;              /* array to record which bin each particle is in */
   static double *time = NULL;            /* array to record arrival time of each particle */
   static long max_np = 0;
+  static short shortBunchWarning = 0;
   long ib, nb, n_binned;
   double factor, tmin, tmax, tmean, dt, Po, rampFactor;
 #if USE_MPI
@@ -90,11 +91,12 @@ void track_through_wake(double **part, long np, WAKE *wakeData, double *PoInput,
     }
 
     dt = wakeData->dt;
-    if ((tmax-tmin)<20*dt) {
+    if (np>1 && (tmax-tmin)<20*dt && !shortBunchWarning) {
       fprintf(stdout, "Warning: The beam is shorter than 20*DT, where DT is the spacing of the wake points.\n");
       fprintf(stdout, "         Depending on the longitudinal distribution and shape of the wake, this may produce poor results.\n");
       fprintf(stdout, "         Consider using a wake with finer time spacing in WAKE elements.\n");
       fflush(stdout);
+      shortBunchWarning = 1;
     }
     
     if (wakeData->n_bins) {
