@@ -520,9 +520,11 @@ long compute_final_properties
                                       (sqr(sums->sigma[2][5])*sums->sigma[3][3] -
                                        2*sums->sigma[2][3]*sums->sigma[2][5]*sums->sigma[3][5] +
                                        sqr(sums->sigma[3][5])*sums->sigma[2][2])/sums->sigma[5][5]);
-  } else 
-    data[F_EMIT_OFFSET+2] = data[F_EMIT_OFFSET+3] = 0;
-
+  } else {
+    data[F_EMIT_OFFSET+2] = data[F_EMIT_OFFSET];
+    data[F_EMIT_OFFSET+3] = data[F_EMIT_OFFSET+1];
+  }
+  
   data[F_EMIT_OFFSET+4] = rms_longitudinal_emittance(coord, sums->n_part, p_central);
   
   /* compute normalized emittances */
