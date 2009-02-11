@@ -45,7 +45,7 @@ if !$found {
 
 # Scan x kick table
 gets $fdi data
-eval set data [os editstring "$nh%/  / /" [string trim $data]]
+eval set data [os editstring "$nh\(s/ /x/ /)" [string trim $data]]
 set xdata [split $data]
 
 set ydata ""
@@ -60,7 +60,7 @@ for {set iy 0} {$iy<$nv} {incr iy} {
         puts stderr "Wrong number of rows (horizontal data )"
         exit 1
     }
-    eval set data [os editstring "$nh%/  / /" [string trim $data]]
+    eval set data [os editstring "$nh\(s/ /x/ /)" [string trim $data]]
     set data [split $data]
     set y [lindex $data 0]
     set data [lrange $data 1 end]
@@ -92,7 +92,7 @@ for {set iy 0} {$iy<$nv} {incr iy} {
         puts stderr "Wrong number of rows (horizontal data )"
         exit 1
     }
-    eval set data [os editstring "$nh%/  / /" [string trim $data]]
+    eval set data [os editstring "$nh\(s/ /x/ /)" [string trim $data]]
     set data [lrange [split $data] 1 end]
     set ypdata($iy) $data
 }
