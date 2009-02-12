@@ -69,10 +69,10 @@ void showUsageOrGreeting (unsigned long mode)
 {
 #if USE_MPI
   char *USAGE="usage: mpirun -np <number of processes> Pelegant <inputfile> [-macro=<tag>=<value>,[...]]";
-  char *GREETING="This is elegant 20.0.4, "__DATE__", by M. Borland, W. Guo, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang and M. Borland.";
+  char *GREETING="This is elegant 20.1Beta2, "__DATE__", by M. Borland, W. Guo, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang and M. Borland.";
 #else
-  char *USAGE="usage: elegant <inputfile> [-macro=<tag>=<value>,[...]] [-cpuList=<number>[,<number>]]";
-  char *GREETING="This is elegant 20.0.4, "__DATE__", by M. Borland, W. Guo, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.";
+  char *USAGE="usage: elegant <inputfile> [-macro=<tag>=<value>,[...]]";
+  char *GREETING="This is elegant 20.1Beta2, "__DATE__", by M. Borland, W. Guo, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.";
 #endif
   if (mode&SHOW_GREETING)
     puts(GREETING);
@@ -553,7 +553,7 @@ char **argv;
       set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
       set_print_namelist_flags(0);
       process_namelist(&run_setup, &namelist_text);
-      print_namelist(stdout, &run_setup);
+      if (echoNamelists) print_namelist(stdout, &run_setup);
       setSearchPath(search_path);
       /* check for validity of namelist inputs */
       if (lattice==NULL) {
@@ -762,7 +762,7 @@ char **argv;
       set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
       set_print_namelist_flags(0);
       process_namelist(&track, &namelist_text);
-      print_namelist(stdout, &track);
+      if (echoNamelists) print_namelist(stdout, &track);
       run_conditions.stopTrackingParticleLimit = stop_tracking_particle_limit;
       if (use_linear_chromatic_matrix && 
           !(linear_chromatic_tracking_setup_done || twiss_computed || do_twiss_output))
@@ -1415,7 +1415,7 @@ char **argv;
       set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
       set_print_namelist_flags(0);
       process_namelist(&print_dictionary, &namelist_text);
-      print_namelist(stdout, &print_dictionary);
+      if (echoNamelists) print_namelist(stdout, &print_dictionary);
       do_print_dictionary(filename, latex_form, SDDS_form);
       break;
     case FLOOR_COORDINATES:
@@ -2082,7 +2082,7 @@ void do_semaphore_setup(char **semaphoreFile,
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
   process_namelist(&semaphores, nltext);
-  print_namelist(stdout, &semaphores);
+  if (echoNamelists) print_namelist(stdout, &semaphores);
  
   semaphoreFile[0] = semaphoreFile[1] = NULL;
   if (writePermitted) {
@@ -2170,7 +2170,7 @@ void readApertureInput(NAMELIST_TEXT *nltext, RUN *run)
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
   process_namelist(&aperture_data, nltext);
-  print_namelist(stdout, &aperture_data);
+  if (echoNamelists) print_namelist(stdout, &aperture_data);
 
   resetApertureData(&(run->apertureData));
   
@@ -2384,7 +2384,7 @@ void process_particle_command(NAMELIST_TEXT *nltext)
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
   process_namelist(&change_particle, nltext);
-  print_namelist(stdout, &change_particle);
+  if (echoNamelists) print_namelist(stdout, &change_particle);
 
   code = match_string(change_particle_struct.name, particleTypeName, N_PARTICLE_TYPES, EXACT_MATCH);
   
@@ -2448,9 +2448,14 @@ void processGlobalSettings(NAMELIST_TEXT *nltext)
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
   process_namelist(&global_settings, nltext);
-  print_namelist(stdout, &global_settings);
+  if (echoNamelists) print_namelist(stdout, &global_settings);
 
   inhibitFileSync = inhibit_fsync;
+  echoNamelists = echo_namelists;
+  if (log_file)
+    freopen(log_file, "w", stdout);
+  if (error_log_file)
+    freopen(error_log_file, "w", stderr);
 }
 
 
