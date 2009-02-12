@@ -806,11 +806,22 @@ static SDDS_DEFINITION column_definition[N_COLUMNS_WRI] = {
 #define IP_H10110 58
 #define IP_H10020 59
 #define IP_H10200 60
-#define IP_DNUXDJX 61
-#define IP_DNUXDJY 62
-#define IP_DNUYDJY 63
-#define IP_ALPHAC2 64
-#define IP_ALPHAC  65
+#define IP_H22000 61
+#define IP_H11110 62
+#define IP_H00220 63
+#define IP_H31000 64
+#define IP_H40000 65
+#define IP_H20110 66
+#define IP_H11200 67
+#define IP_H20020 68
+#define IP_H20200 69
+#define IP_H00310 70
+#define IP_H00400 71 
+#define IP_DNUXDJX 72
+#define IP_DNUXDJY 73
+#define IP_DNUYDJY 74
+#define IP_ALPHAC2 75
+#define IP_ALPHAC  76
 /* IP_ALPHAC must be the last item before the radiation-integral-related
  * items!
  */
@@ -892,6 +903,17 @@ static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
 {"h10110", "&parameter name=h10110, type=double, description=\"Magnitude of geometric driving term\", units=\"1/m$a1/2$n\" &end"},
 {"h10020", "&parameter name=h10020, type=double, description=\"Magnitude of geometric driving term\", units=\"1/m$a1/2$n\" &end"},
 {"h10200", "&parameter name=h10200, type=double, description=\"Magnitude of geometric driving term\", units=\"1/m$a1/2$n\" &end"},
+{"h22000", "&parameter name=h22000, type=double, description=\"Magnitude of geometric driving term\", units=\"1/m\" &end"},
+{"h11110", "&parameter name=h11110, type=double, description=\"Magnitude of geometric driving term\", units=\"1/m\" &end"},
+{"h00220", "&parameter name=h00220, type=double, description=\"Magnitude of geometric driving term\", units=\"1/m\" &end"},
+{"h31000", "&parameter name=h31000, type=double, description=\"Magnitude of geometric driving term\", units=\"1/m\" &end"},
+{"h40000", "&parameter name=h40000, type=double, description=\"Magnitude of geometric driving term\", units=\"1/m\" &end"},
+{"h20110", "&parameter name=h20110, type=double, description=\"Magnitude of geometric driving term\", units=\"1/m\" &end"},
+{"h11200", "&parameter name=h11200, type=double, description=\"Magnitude of geometric driving term\", units=\"1/m\" &end"},
+{"h20020", "&parameter name=h20020, type=double, description=\"Magnitude of geometric driving term\", units=\"1/m\" &end"},
+{"h20200", "&parameter name=h20200, type=double, description=\"Magnitude of geometric driving term\", units=\"1/m\" &end"},
+{"h00310", "&parameter name=h00310, type=double, description=\"Magnitude of geometric driving term\", units=\"1/m\" &end"},
+{"h00400", "&parameter name=h00400, type=double, description=\"Magnitude of geometric driving term\", units=\"1/m\" &end"},
 {"dnux/dJx", "&parameter name=dnux/dJx, type=double, description=\"Horizontal tune shift with horizontal invariant\", units=\"1/m\" &end"},
 {"dnux/dJy", "&parameter name=dnux/dJy, type=double, description=\"Horizontal tune shift with vertical invariant\", units=\"1/m\" &end"},
 {"dnuy/dJy", "&parameter name=dnuy/dJy, type=double, description=\"Vertical tune shift with vertical invariant\", units=\"1/m\" &end"},
@@ -1005,6 +1027,17 @@ void dump_twiss_parameters(
                           IP_H10110, beamline->drivingTerms.h10110,
                           IP_H10020, beamline->drivingTerms.h10020,
                           IP_H10200, beamline->drivingTerms.h10200,
+                          IP_H22000, beamline->drivingTerms.h22000,
+                          IP_H11110, beamline->drivingTerms.h11110,
+                          IP_H00220, beamline->drivingTerms.h00220,
+                          IP_H31000, beamline->drivingTerms.h31000,
+                          IP_H40000, beamline->drivingTerms.h40000,
+                          IP_H20110, beamline->drivingTerms.h20110,
+                          IP_H11200, beamline->drivingTerms.h11200,
+                          IP_H20020, beamline->drivingTerms.h20020,
+                          IP_H20200, beamline->drivingTerms.h20200,
+                          IP_H00310, beamline->drivingTerms.h00310,
+                          IP_H00400, beamline->drivingTerms.h00400,
                           IP_DNUXDJX, beamline->drivingTerms.dnux_dJx,
                           IP_DNUXDJY, beamline->drivingTerms.dnux_dJy,
                           IP_DNUYDJY, beamline->drivingTerms.dnuy_dJy,
@@ -1179,7 +1212,7 @@ void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
   process_namelist(&twiss_output, nltext);
-  print_namelist(stdout, &twiss_output);
+  if (echoNamelists) print_namelist(stdout, &twiss_output);
   
 #if USE_MPI
     if (!writePermitted)
@@ -1558,7 +1591,10 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
       beamline->dnux_dA[i][j] = beamline->dnuy_dA[i][j] = 0;
 
   beamline->drivingTerms.h21000 = beamline->drivingTerms.h30000 = beamline->drivingTerms.h10110 =
-    beamline->drivingTerms.h10020 = beamline->drivingTerms.h10200 = 0;
+    beamline->drivingTerms.h10020 = beamline->drivingTerms.h10200 = 
+      beamline->drivingTerms.h22000 = beamline->drivingTerms.h11110 = beamline->drivingTerms.h00220 = beamline->drivingTerms.h31000 = 
+        beamline->drivingTerms.h40000 = beamline->drivingTerms.h20110 = beamline->drivingTerms.h11200 = beamline->drivingTerms.h20020 = 
+          beamline->drivingTerms.h20200 = beamline->drivingTerms.h00310 = beamline->drivingTerms.h00400 = 0;
   
   if (periodic) {
     if (!(M = beamline->matrix))
@@ -2409,7 +2445,7 @@ void setupTuneShiftWithAmplitude(NAMELIST_TEXT *nltext, RUN *run)
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
   process_namelist(&tune_shift_with_amplitude, nltext);
-  print_namelist(stdout, &tune_shift_with_amplitude);
+  if (echoNamelists) print_namelist(stdout, &tune_shift_with_amplitude);
 
   if (tune_shift_with_amplitude_struct.turns<100 && tune_shift_with_amplitude_struct.turns!=0)
     bomb("too few turns requested (tune_shift_with_amplitude)", NULL);
@@ -3384,7 +3420,7 @@ void setupTwissAnalysisRequest(NAMELIST_TEXT *nltext, RUN *run,
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
   process_namelist(&twiss_analysis, nltext);
-  print_namelist(stdout, &twiss_analysis);
+  if (echoNamelists) print_namelist(stdout, &twiss_analysis);
 
   if (twiss_analysis_struct.clear) {
     clearTwissAnalysisRequests();
@@ -3539,7 +3575,7 @@ void setupLinearChromaticTracking(NAMELIST_TEXT *nltext, LINE_LIST *beamline)
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
   process_namelist(&setup_linear_chromatic_tracking, nltext);
-  print_namelist(stdout, &setup_linear_chromatic_tracking);
+  if (echoNamelists) print_namelist(stdout, &setup_linear_chromatic_tracking);
 
   if (setup_linear_chromatic_tracking_struct.nux[0]<0)
     bomb("nux < 0", NULL);
@@ -3599,8 +3635,12 @@ void setLinearChromaticTrackingValues(LINE_LIST *beamline)
 void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, double *tune)
 /* Based on J. Bengtsson, SLS Note 9/97, March 7, 1997, with corrections per W. Guo (NSLS) */
 {
-  double h11001[2], h00111[2], h20001[2], h00201[2], h10002[2];
-  double h21000[2], h30000[2], h10110[2], h10020[2], h10200[2];
+  COMPLEX h11001, h00111, h20001, h00201, h10002;
+  COMPLEX h21000, h30000, h10110, h10020, h10200;
+  COMPLEX h22000, h11110, h00220, h31000, h40000, h12000;
+  COMPLEX h20110, h11200, h20020, h20200, h00310, h00400;
+  COMPLEX t1, t2, t3, t4;
+  
   double betax1, betay1, phix1, phiy1, etax1;
   double betax2, betay2, phix2, phiy2;
   double coef, b2L, b3L1, b3L2, sqrt_betax, sqrt3_betax, nux, nuy;
@@ -3608,10 +3648,10 @@ void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, do
   ELEMENT_LIST *eptr1, *eptr2;
   
   /* accumulate real and imaginary parts */
-  h11001[0] = h00111[0] = h20001[0] = h00201[0] = h10002[0] = 0;
-  h11001[1] = h00111[1] = h20001[1] = h00201[1] = h10002[1] = 0;
-  h21000[0] = h30000[0] = h10110[0] = h10020[0] = h10200[0] = 0;
-  h21000[1] = h30000[1] = h10110[1] = h10020[1] = h10200[1] = 0;
+  h11001.r = h00111.r = h20001.r = h00201.r = h10002.r = 0;
+  h11001.i = h00111.i = h20001.i = h00201.i = h10002.i = 0;
+  h21000.r = h30000.r = h10110.r = h10020.r = h10200.r = 0;
+  h21000.i = h30000.i = h10110.i = h10020.i = h10200.i = 0;
 
   eptr1 = elem;
   while (eptr1) {
@@ -3669,60 +3709,115 @@ void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, do
       /* first-order chromatic terms */
       /* h11001 and h00111 */
       coef = b2L-2*b3L1*etax1;
-      h11001[0] += coef*betax1/4;
-      h00111[0] += -coef*betay1/4;
+      h11001.r += coef*betax1/4;
+      h00111.r += -coef*betay1/4;
 
       /* h20001, h00201 */
-      h20001[0] += coef/8*betax1*cos(2*phix1);
-      h20001[1] += coef/8*betax1*sin(2*phix1);
-      h00201[0] += -coef/8*betay1*cos(2*phiy1);
-      h00201[1] += -coef/8*betay1*sin(2*phiy1);
+      h20001.r += coef/8*betax1*cos(2*phix1);
+      h20001.i += coef/8*betax1*sin(2*phix1);
+      h00201.r += -coef/8*betay1*cos(2*phiy1);
+      h00201.i += -coef/8*betay1*sin(2*phiy1);
 
       /* h10002 */
       coef = b2L-b3L1*etax1;
-      h10002[0] += coef/2*etax1*sqrt_betax*cos(phix1);
-      h10002[1] += coef/2*etax1*sqrt_betax*sin(phix1);
+      h10002.r += coef/2*etax1*sqrt_betax*cos(phix1);
+      h10002.i += coef/2*etax1*sqrt_betax*sin(phix1);
 
       if (b3L1) {
         /* first-order geometric terms */
         /* h21000 */
         coef = -b3L1/8*sqrt3_betax;
-        h21000[0] += coef*cos(phix1);
-        h21000[1] += coef*sin(phix1);
+        h21000.r += coef*cos(phix1);
+        h21000.i += coef*sin(phix1);
         
         /* h30000 */
         coef = coef/3;
-        h30000[0] += coef*cos(3*phix1);
-        h30000[1] += coef*sin(3*phix1);
+        h30000.r += coef*cos(3*phix1);
+        h30000.i += coef*sin(3*phix1);
         
         /* h10110 */
         coef = b3L1/4*sqrt_betax*betay1;
-        h10110[0] += coef*cos(phix1);
-        h10110[1] += coef*sin(phix1);
+        h10110.r += coef*cos(phix1);
+        h10110.i += coef*sin(phix1);
         
         /* h10020 and h10200 */
         coef = coef/2;
-        h10020[0] += coef*cos(phix1-2*phiy1);
-        h10020[1] += coef*sin(phix1-2*phiy1);
-        h10200[0] += coef*cos(phix1+2*phiy1);
-        h10200[1] += coef*sin(phix1+2*phiy1);
+        h10020.r += coef*cos(phix1-2*phiy1);
+        h10020.i += coef*sin(phix1-2*phiy1);
+        h10200.r += coef*cos(phix1+2*phiy1);
+        h10200.i += coef*sin(phix1+2*phiy1);
       }
     }
     eptr1 = eptr1->succ;
   }
 
-  d->h11001 = sqrt(sqr(h11001[0])+sqr(h11001[1]));
-  d->h00111 = sqrt(sqr(h00111[0])+sqr(h00111[1]));
-  d->h20001 = sqrt(sqr(h20001[0])+sqr(h20001[1]));
-  d->h00201 = sqrt(sqr(h00201[0])+sqr(h00201[1]));
-  d->h10002 = sqrt(sqr(h10002[0])+sqr(h10002[1]));
+  d->h11001 = sqrt(sqr(h11001.r)+sqr(h11001.i));
+  d->h00111 = sqrt(sqr(h00111.r)+sqr(h00111.i));
+  d->h20001 = sqrt(sqr(h20001.r)+sqr(h20001.i));
+  d->h00201 = sqrt(sqr(h00201.r)+sqr(h00201.i));
+  d->h10002 = sqrt(sqr(h10002.r)+sqr(h10002.i));
 
-  d->h21000 = sqrt(sqr(h21000[0])+sqr(h21000[1]));
-  d->h30000 = sqrt(sqr(h30000[0])+sqr(h30000[1]));
-  d->h10110 = sqrt(sqr(h10110[0])+sqr(h10110[1]));
-  d->h10020 = sqrt(sqr(h10020[0])+sqr(h10020[1]));
-  d->h10200 = sqrt(sqr(h10200[0])+sqr(h10200[1]));
+  d->h21000 = sqrt(sqr(h21000.r)+sqr(h21000.i));
+  d->h30000 = sqrt(sqr(h30000.r)+sqr(h30000.i));
+  d->h10110 = sqrt(sqr(h10110.r)+sqr(h10110.i));
+  d->h10020 = sqrt(sqr(h10020.r)+sqr(h10020.i));
+  d->h10200 = sqrt(sqr(h10200.r)+sqr(h10200.i));
 
+  /* compute second-order geomeric terms */
+  h12000 = cconj(h21000);
+  h22000.r = (3*sqr(cmod(h21000)) + sqr(cmod(h30000)))/64;
+  h22000.i = 0;
+  d->h22000 = cmod(h22000);
+
+  t1 = cmulr(cmul(h21000, cconj(h10110)), 2.);
+  t2 = cmul(h10020, cconj(h10020));
+  t3 = cmul(h10200, cconj(h10200));
+  h11110 = cmulr(cadd(t1, cadd(t2, t3)), 1./16.);
+  d->h11110 = cmod(h11110);
+  
+  h00220.r = (4*sqr(cmod(h10110)) + sqr(cmod(h10020)) + sqr(cmod(h10200)))/64;
+  h00220.i = 0;
+  d->h00220 = cmod(h00220);
+  
+  h31000 = cmulr(cmul(h30000, cconj(h21000)), 2./64.);
+  d->h31000 = cmod(h31000);
+  
+  h40000 = cmulr(cmul(h30000, h21000), 1./64.);
+  d->h40000 = cmod(h40000);
+  
+  t1 = cmulr(cmul(h30000, cconj(h10110)), 2);
+  t2 = cmulr(cmul(h21000, h10110), 2);
+  t3 = cmulr(cmul(h10200, h10020), 4);
+  h20110 = cmulr(cadd(cadd(t1, t2), t3), 1/64.);
+  d->h20110 = cmod(h20110);
+  
+  t1 = cmulr(cmul(h10200, h12000), 2);
+  t2 = cmulr(cmul(h21000, cconj(h10020)), 2);
+  t3 = cmulr(cmul(h10200, cconj(h10110)), 4);
+  t4 = cmulr(cmul(h10110, cconj(h10020)), 4);
+  h11200 = cmulr(cadd(cadd(t1, t2), cadd(t3, t4)), 1./64.);
+  d->h11200 = cmod(h11200);
+  
+  t1 = cmul(h21000, h10020);
+  t2 = cmul(h30000, cconj(h10200));
+  t3 = cmulr(cmul(h10110, h10020), 4);
+  h20020 = cmulr(cadd(cadd(t1, t2), t3), 1./64.);
+  d->h20020 = cmod(h20020);
+  
+  t1 = cmul(h30000, cconj(h10020));
+  t2 = cmul(h10200, h21000);
+  t3 = cmulr(cmul(h10110, h10200), 4);
+  h20200 = cadd(cadd(t1, t2), t3);
+  d->h20200 = cmod(h20200);
+  
+  t1 = cmul(h10200, cconj(h10110));
+  t2 = cmul(h10110, cconj(h10020));
+  h00310 = cmulr(cadd(t1, t2), 2./64.);
+  d->h00310 = cmod(h00310);
+  
+  h00400 = cmulr(cmul(h10200,cconj(h10020)), 1./64);
+  d->h00400 = cmod(h00400);
+  
   nux = tune[0];
   nuy = tune[1];
   eptr1 = elem;
