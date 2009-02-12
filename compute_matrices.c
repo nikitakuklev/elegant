@@ -924,21 +924,12 @@ VMATRIX *compute_matrix(
         if (csbend->n_kicks<1)
             bomb("n_kicks must be > 0 for CSBEND element", NULL);
         csbend->edgeFlags = determine_bend_flags(elem, csbend->edge1_effects, csbend->edge2_effects);
-        if (csbend->use_bn) {
-          csbend->k1_internal = csbend->b1/(csbend->length/csbend->angle);
-          csbend->k2_internal = csbend->b2/(csbend->length/csbend->angle);
-          csbend->k3_internal = csbend->b3/(csbend->length/csbend->angle);
-          csbend->k4_internal = csbend->b4/(csbend->length/csbend->angle);
-        } else {
-          csbend->k1_internal = csbend->k1;
-          csbend->k2_internal = csbend->k2;
-          csbend->k3_internal = csbend->k3;
-          csbend->k4_internal = csbend->k4;
-        }
         elem->matrix = 
             bend_matrix(csbend->length, csbend->angle, csbend->e1, csbend->e2, 
-                        csbend->h1, csbend->h2, csbend->k1_internal, 
-                        csbend->k2_internal, csbend->tilt, csbend->fint, 
+                        csbend->h1, csbend->h2, 
+                        csbend->use_bn ? csbend->b1/(csbend->length/csbend->angle) : csbend->k1,
+                        csbend->use_bn ? csbend->b2/(csbend->length/csbend->angle) : csbend->k2,
+                        csbend->tilt, csbend->fint, 
                         csbend->hgap*2, csbend->fse, csbend->etilt,
                         csbend->nonlinear?2:(run->default_order?run->default_order:1),
                         csbend->edge_order, csbend->edgeFlags, 0);
@@ -953,21 +944,12 @@ VMATRIX *compute_matrix(
         if (csrcsbend->n_kicks<1)
             bomb("n_kicks must be > 0 for CSRCSBEND element", NULL);
         csrcsbend->edgeFlags = determine_bend_flags(elem, csrcsbend->edge1_effects, csrcsbend->edge2_effects);
-        if (csrcsbend->use_bn) {
-          csrcsbend->k1_internal = csrcsbend->b1/(csrcsbend->length/csrcsbend->angle);
-          csrcsbend->k2_internal = csrcsbend->b2/(csrcsbend->length/csrcsbend->angle);
-          csrcsbend->k3_internal = csrcsbend->b3/(csrcsbend->length/csrcsbend->angle);
-          csrcsbend->k4_internal = csrcsbend->b4/(csrcsbend->length/csrcsbend->angle);
-        } else {
-          csrcsbend->k1_internal = csrcsbend->k1;
-          csrcsbend->k2_internal = csrcsbend->k2;
-          csrcsbend->k3_internal = csrcsbend->k3;
-          csrcsbend->k4_internal = csrcsbend->k4;
-        }
         elem->matrix = 
             bend_matrix(csrcsbend->length, csrcsbend->angle, csrcsbend->e1, csrcsbend->e2, 
-                        csrcsbend->h1, csrcsbend->h2, csrcsbend->k1_internal, 
-                        csrcsbend->k2_internal, csrcsbend->tilt, csrcsbend->fint, 
+                        csrcsbend->h1, csrcsbend->h2, 
+                        csrcsbend->use_bn ? csrcsbend->b1/(csrcsbend->length/csrcsbend->angle) : csrcsbend->k1,
+                        csrcsbend->use_bn ? csrcsbend->b2/(csrcsbend->length/csrcsbend->angle) : csrcsbend->k2,
+                        csrcsbend->tilt, csrcsbend->fint, 
                         csrcsbend->hgap*2, csrcsbend->fse, csrcsbend->etilt,
                         csrcsbend->nonlinear?2:(run->default_order?run->default_order:1),
                         csrcsbend->edge_order, csrcsbend->edgeFlags, 0);
