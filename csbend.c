@@ -40,12 +40,8 @@ void applyFilterTable(double *function, long bins, double dt, long fValues,
 
 long correctDistribution(double *array, long npoints, double desiredSum);
 
-static double Fy_0, Fy_x, Fy_x2, Fy_x3, Fy_x4;
-static double Fy_y2, Fy_x_y2, Fy_x2_y2;
-static double Fy_y4;
-
-static double Fx_y, Fx_x_y, Fx_x2_y, Fx_x3_y;
-static double Fx_y3, Fx_x_y3;
+static double **Fx_xy = NULL, **Fy_xy = NULL;
+static long expansionOrder1 = 11;  /* order of expansion+1 */
 
 static double rho0, rho_actual, rad_coef=0, isrConstant=0;
 static double meanPhotonsPerRadian0, meanPhotonsPerMeter0, normalizedCriticalEnergy0;
@@ -63,15 +59,164 @@ long inversePoissonCDF(double mu, double C);
 extern unsigned long multipoleKicksDone ;
 #endif
 
+void computeCSBENDFields(double *Fx, double *Fy, double x, double y)
+{
+  double xp[11], yp[11];
+  double sumFx=0, sumFy=0;
+  long i, j;
+  static short first = 1;
+  
+  xp[0] = yp[0] = 1;
+  for (i=1; i<expansionOrder1; i++) {
+    xp[i] = xp[i-1]*x;
+    yp[i] = yp[i-1]*y;
+  }
+  
+  for (i=0; i<expansionOrder1; i++)
+    for (j=1; j<expansionOrder1-i; j+=2) {
+      if (Fx_xy[i][j]) {
+        sumFx += Fx_xy[i][j]*xp[i]*yp[j];
+/*
+        if (first)
+          fprintf(stdout, "Including in Fx: %e * x^%ld y^%ld\n", Fx_xy[i][j], i, j);
+*/
+      }
+    }
+  *Fx = sumFx;
+
+  for (i=0; i<expansionOrder1; i++)
+    for (j=0; j<expansionOrder1-i; j+=2) {
+      if (Fy_xy[i][j]) {
+        sumFy += Fy_xy[i][j]*xp[i]*yp[j];
+/*
+        if (first)
+          fprintf(stdout, "Including in Fy: %e * x^%ld y^%ld\n", Fy_xy[i][j], i, j);
+*/
+      }
+    }
+
+  *Fy = sumFy;
+
+  first = 0;
+}
+
+void computeCSBENDFieldCoefficients(double *b, double h, long nonlinear, long expansionOrder)
+{
+  long i, j;
+  double h2, h3, h4, h5;
+
+  if (expansionOrder==0) {
+    /* set the order to be <highestMultipole>+2 */
+    for (i=7; i>=0; i--)
+      if (b[i])
+        break;
+    if ((expansionOrder = i+3)<4)
+      /* make minimum value 4 for backward compatibility */
+      expansionOrder = 4;  
+  }
+
+  expansionOrder1 = expansionOrder + 1;
+  if (expansionOrder1>11)
+    bomb("expansion order >10 for CSBEND or CSRCSBEND", NULL);
+  
+  if (!Fx_xy)
+    Fx_xy = (double**)czarray_2d(sizeof(double), 11, 11);
+  if (!Fy_xy)
+    Fy_xy = (double**)czarray_2d(sizeof(double), 11, 11);
+    
+  for (i=0; i<expansionOrder1; i++) {
+    memset(Fx_xy[i], 0, expansionOrder1*sizeof(double));
+    memset(Fy_xy[i], 0, expansionOrder1*sizeof(double));
+  }
+  
+  h2 = h*h;
+  h3 = h2*h;
+  h4 = h2*h2;
+  h5 = h4*h;
+
+  Fx_xy[0][1] = b[0];
+  Fy_xy[0][0] = 1;
+  Fy_xy[1][0] = b[0];
+  
+  if (nonlinear) {
+    Fx_xy[1][1] = b[1];
+    Fx_xy[2][1] = b[2]/2.;
+    Fx_xy[3][1] = b[3]/6.;
+    Fx_xy[4][1] = b[4]/24.;
+    Fx_xy[5][1] = b[5]/120.;
+    Fx_xy[6][1] = b[6]/720.;
+    Fx_xy[7][1] = b[7]/5040.;
+    Fx_xy[0][3] = (-b[2] - b[1]*h + b[0]*h2)/6.;
+    Fx_xy[1][3] = (-b[3] - b[2]*h + 2*b[1]*h2 - 2*b[0]*h3)/6.;
+    Fx_xy[2][3] = (-b[4] + h*(-b[3] + 3*h*(b[2] - 2*b[1]*h + 2*b[0]*h2)))/12.;
+    Fx_xy[3][3] = (-b[5] - h*(b[4] + 4*h*(-b[3] + 3*h*(b[2] - 2*b[1]*h + 2*b[0]*h2))))/36.;
+    Fx_xy[4][3] = (-b[6] + h*(-b[5] + 5*h*(b[4] + 4*h*(-b[3] + 3*h*(b[2] - 2*b[1]*h + 2*b[0]*h2)))))/ 144.;
+    Fx_xy[5][3] = (-b[7] - h*(b[6] + 6*h*(-b[5] + 5*h*(b[4] + 4*h*(-b[3] + 3*h*(b[2] - 2*b[1]*h + 2*b[0]*h2))))))/720.;
+    Fx_xy[6][3] = (h*(-b[7] + 7*h*(b[6] + 6*h*(-b[5] + 5*h*(b[4] + 4*h*(-b[3] + 3*h*(b[2] - 2*b[1]*h + 2*b[0]*h2)))))))/ 4320.;
+    Fx_xy[7][3] = (h2*(b[7] - 7*h*(b[6] + 6*h*(-b[5] + 5*h*(b[4] + 4*h*(-b[3] + 3*h*(b[2] - 2*b[1]*h + 2*b[0]*h2)))))))/3780.;
+    Fx_xy[0][5] = (b[4] + h*(2*b[3] - 3*h*(b[2] - b[1]*h + b[0]*h2)))/120.;
+    Fx_xy[1][5] = (b[5] + h*(2*b[4] + h*(-5*b[3] + 9*b[2]*h - 12*b[1]*h2 + 12*b[0]*h3)))/ 120.;
+    Fx_xy[2][5] = (b[6] + h*(2*b[5] + h*(-7*b[4] + 19*b[3]*h - 39*b[2]*h2 + 60*b[1]*h3 - 60*b[0]*h4)))/240.;
+    Fx_xy[3][5] = (b[7] + h*(2*b[6] + 3*h*(-3*b[5] + 11*b[4]*h - 32*b[3]*h2 + 72*b[2]*h3 - 120*b[1]*h4 + 120*b[0]*h5)))/720.;
+    Fx_xy[4][5] = (h*(2*b[7] + h*(-11*b[6] - 3*h*(-17*b[5] + 5*h*(13*b[4] + 8*h*(-5*b[3] + 3*h*(4*b[2] - 7*b[1]*h + 7*b[0]*h2)))))))/2880.;
+    Fx_xy[5][5] = (h2*(-13*b[7] + h*(73*b[6] + 12*h*(-29*b[5] + 5*h*(23*b[4] + 2*h*(-37*b[3] + 3*h*(31*b[2] + 56*h*(-b[1] + b[0]*h))))))))/14400.;
+    Fx_xy[0][7] = (-b[6] - 3*h*(b[5] + h*(-2*b[4] + h*(4*b[3] - 9*b[2]*h + 15*b[1]*h2 - 15*b[0]*h3))))/5040.;
+    Fx_xy[1][7] = (-b[7] - 3*h*(b[6] + h*(-3*b[5] + 8*b[4]*h - 21*b[3]*h2 + 51*b[2]*h3 - 90*b[1]*h4 + 90*b[0]*h5)))/5040.;
+    Fx_xy[2][7] = (h*(-b[7] + h*(4*b[6] + h*(-14*b[5] + 45*b[4]*h - 135*b[3]*h2 + 345*b[2]*h3 - 630*b[1]*h4 + 630*b[0]*h5))))/ 3360.;
+    Fx_xy[3][7] = (h2*(5*b[7] + h*(-22*b[6] + 3*h*(29*b[5] - 5*h*(21*b[4] + 4*h*(-17*b[3] + 45*b[2]*h - 84*b[1]*h2 + 84*b[0]*h3))))))/10080.;
+    Fx_xy[0][9] = (h*(4*b[7] - 5*h*(2*b[6] + 3*h*(-2*b[5] + 7*b[4]*h - 22*b[3]*h2 + 57*b[2]*h3 - 105*b[1]*h4 + 105*b[0]*h5))))/ 362880.;
+    Fx_xy[1][9] = (h2*(-14*b[7] + 5*h*(10*b[6] + 3*h*(-13*b[5] + 50*b[4]*h - 167*b[3]*h2 + 447*b[2]*h3 - 840*b[1]*h4 + 840*b[0]*h5))))/362880.;
+
+    Fy_xy[2][0] = b[1]/2.;
+    Fy_xy[3][0] = b[2]/6.;
+    Fy_xy[4][0] = b[3]/24.;
+    Fy_xy[5][0] = b[4]/120.;
+    Fy_xy[6][0] = b[5]/720.;
+    Fy_xy[7][0] = b[6]/5040.;
+    Fy_xy[8][0] = b[7]/40320.;
+    Fy_xy[0][2] = (-b[1] - b[0]*h)/2.;
+    Fy_xy[1][2] = (-b[2] - b[1]*h + b[0]*h2)/2.;
+    Fy_xy[2][2] = (-b[3] - b[2]*h + 2*b[1]*h2 - 2*b[0]*h3)/4.;
+    Fy_xy[3][2] = (-b[4] + h*(-b[3] + 3*h*(b[2] - 2*b[1]*h + 2*b[0]*h2)))/12.;
+    Fy_xy[4][2] = (-b[5] - h*(b[4] + 4*h*(-b[3] + 3*h*(b[2] - 2*b[1]*h + 2*b[0]*h2))))/48.;
+    Fy_xy[5][2] = (-b[6] + h*(-b[5] + 5*h*(b[4] + 4*h*(-b[3] + 3*h*(b[2] - 2*b[1]*h + 2*b[0]*h2)))))/ 240.;
+    Fy_xy[6][2] = (-b[7] - h*(b[6] + 6*h*(-b[5] + 5*h*(b[4] + 4*h*(-b[3] + 3*h*(b[2] - 2*b[1]*h + 2*b[0]*h2))))))/1440.;
+    Fy_xy[7][2] = (h*(-b[7] + 7*h*(b[6] + 6*h*(-b[5] + 5*h*(b[4] + 4*h*(-b[3] + 3*h*(b[2] - 2*b[1]*h + 2*b[0]*h2)))))))/ 10080.;
+    Fy_xy[8][2] = (h2*(b[7] - 7*h*(b[6] + 6*h*(-b[5] + 5*h*(b[4] + 4*h*(-b[3] + 3*h*(b[2] - 2*b[1]*h + 2*b[0]*h2)))))))/10080.;
+    Fy_xy[0][4] = (b[3] + h*(2*b[2] + h*(-b[1] + b[0]*h)))/24.;
+    Fy_xy[1][4] = (b[4] + h*(2*b[3] - 3*h*(b[2] - b[1]*h + b[0]*h2)))/24.;
+    Fy_xy[2][4] = (b[5] + h*(2*b[4] + h*(-5*b[3] + 9*b[2]*h - 12*b[1]*h2 + 12*b[0]*h3)))/48.;
+    Fy_xy[3][4] = (b[6] + h*(2*b[5] + h*(-7*b[4] + 19*b[3]*h - 39*b[2]*h2 + 60*b[1]*h3 - 60*b[0]*h4)))/144.;
+    Fy_xy[4][4] = (b[7] + h*(2*b[6] + 3*h*(-3*b[5] + 11*b[4]*h - 32*b[3]*h2 + 72*b[2]*h3 - 120*b[1]*h4 + 120*b[0]*h5)))/576.;
+    Fy_xy[5][4] = (h*(2*b[7] + h*(-11*b[6] - 3*h*(-17*b[5] + 5*h*(13*b[4] + 8*h*(-5*b[3] + 3*h*(4*b[2] - 7*b[1]*h + 7*b[0]*h2)))))))/2880.;
+    Fy_xy[6][4] = (h2*(-13*b[7] + h*(73*b[6] + 12*h*(-29*b[5] + 5*h*(23*b[4] + 2*h*(-37*b[3] + 3*h*(31*b[2] + 56*h*(-b[1] + b[0]*h))))))))/17280.;
+    Fy_xy[0][6] = (-b[5] - 3*h*(b[4] + h*(-b[3] + 2*b[2]*h - 3*b[1]*h2 + 3*b[0]*h3)))/720.;
+    Fy_xy[1][6] = (-b[6] - 3*h*(b[5] + h*(-2*b[4] + h*(4*b[3] - 9*b[2]*h + 15*b[1]*h2 - 15*b[0]*h3))))/720.;
+    Fy_xy[2][6] = (-b[7] - 3*h*(b[6] + h*(-3*b[5] + 8*b[4]*h - 21*b[3]*h2 + 51*b[2]*h3 - 90*b[1]*h4 + 90*b[0]*h5)))/1440.;
+    Fy_xy[3][6] = (h*(-b[7] + h*(4*b[6] + h*(-14*b[5] + 45*b[4]*h - 135*b[3]*h2 + 345*b[2]*h3 - 630*b[1]*h4 + 630*b[0]*h5))))/ 1440.;
+    Fy_xy[4][6] = (h2*(5*b[7] + h*(-22*b[6] + 3*h*(29*b[5] - 5*h*(21*b[4] + 4*h*(-17*b[3] + 45*b[2]*h - 84*b[1]*h2 + 84*b[0]*h3))))))/5760.;
+    Fy_xy[0][8] = (b[7] + h*(4*b[6] + 3*h*(-2*b[5] + 6*b[4]*h - 17*b[3]*h2 + 42*b[2]*h3 - 75*b[1]*h4 + 75*b[0]*h5)))/40320.;
+    Fy_xy[1][8] = (h*(4*b[7] - 5*h*(2*b[6] + 3*h*(-2*b[5] + 7*b[4]*h - 22*b[3]*h2 + 57*b[2]*h3 - 105*b[1]*h4 + 105*b[0]*h5))))/ 40320.;
+    Fy_xy[2][8] = (h2*(-14*b[7] + 5*h*(10*b[6] + 3*h*(-13*b[5] + 50*b[4]*h - 167*b[3]*h2 + 447*b[2]*h3 - 840*b[1]*h4 + 840*b[0]*h5))))/80640.;
+    Fy_xy[0][10] = (h2*(2*b[7] + h*(-8*b[6] - 3*h*(-11*b[5] + h*(43*b[4] + 5*h*(-29*b[3] + 3*h*(26*b[2] + 49*h*(-b[1] + b[0]*h))))))))/725760.;
+  }
+
+  /*
+  for (i=0; i<11; i++) 
+    for (j=0; j<11; j++)
+      fprintf(stdout, "Fx[%ld][%ld] = %e   Fy[%ld][%ld] = %e\n", i, j, Fx_xy[i][j], i, j, Fy_xy[i][j]);
+      */
+}
+
+
 long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_error, double Po, double **accepted,
                           double z_start, double *sigmaDelta2)
 {
-  double nh, betah2, gammah3, deltah4;
-  double h, h2, h3;
+  double h;
   long i_part, i_top;
-  double rho, s, Fx, Fy;
-  double x, xp, y, yp, dp, y2, dp0;
-  double n, beta, gamma, delta, fse, dp_prime;
+  double rho, s, Fx, Fy, rhoSign;
+  double x, xp, y, yp, dp, dp0;
+  double n, fse, dp_prime;
   double tilt, etilt, cos_ttilt, sin_ttilt, ttilt;
   double *coord;
   double angle, e1, e2, Kg;
@@ -98,34 +243,39 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   if (csbend->integration_order!=2 && csbend->integration_order!=4)
     bomb("CSBEND integration_order is invalid--must be either 2 or 4", NULL);
 
+  rho0 =  csbend->length/csbend->angle;
   if (csbend->use_bn) {
-    rho0 = csbend->length/csbend->angle;
-    csbend->k1_internal = csbend->b1/rho0;
-    csbend->k2_internal = csbend->b2/rho0;
-    csbend->k3_internal = csbend->b3/rho0;
-    csbend->k4_internal = csbend->b4/rho0;
+    csbend->b[0] = csbend->b1;
+    csbend->b[1] = csbend->b2;
+    csbend->b[2] = csbend->b3;
+    csbend->b[3] = csbend->b4;
+    csbend->b[4] = csbend->b5;
+    csbend->b[5] = csbend->b6;
+    csbend->b[6] = csbend->b7;
+    csbend->b[7] = csbend->b8;
   } else {
-    csbend->k1_internal = csbend->k1;
-    csbend->k2_internal = csbend->k2;
-    csbend->k3_internal = csbend->k3;
-    csbend->k4_internal = csbend->k4;
+    csbend->b[0] = csbend->k1*rho0;
+    csbend->b[1] = csbend->k2*rho0;
+    csbend->b[2] = csbend->k3*rho0;
+    csbend->b[3] = csbend->k4*rho0;
+    csbend->b[4] = csbend->k5*rho0;
+    csbend->b[5] = csbend->k6*rho0;
+    csbend->b[6] = csbend->k7*rho0;
+    csbend->b[7] = csbend->k8*rho0;
   }
-
+  
   he1 = csbend->h1;
   he2 = csbend->h2;
   if (csbend->angle<0) {
+    long i;
     angle = -csbend->angle;
     e1    = -csbend->e1;
     e2    = -csbend->e2;
     etilt = csbend->etilt;
     tilt  = csbend->tilt + PI;      /* work in rotated system */
-    rho0  = -csbend->length/angle;  /* temporarily keep the sign */
-    n     = -sqr(rho0)*csbend->k1_internal;
-    beta  = 0.5*csbend->k2_internal*pow3(rho0);
-    gamma = csbend->k3_internal*pow4(rho0)/6.;
-    delta = csbend->k4_internal*pow5(rho0)/24.;
-    /* this is always a postive value now */
-    rho0  = -rho0;
+    rho0  = csbend->length/angle;
+    for (i=0; i<8; i+=2)
+      csbend->b[i] *= -1;
   }
   else {
     angle = csbend->angle;
@@ -134,11 +284,8 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     etilt = csbend->etilt;
     tilt  = csbend->tilt;
     rho0  = csbend->length/angle;
-    n     = -sqr(rho0)*csbend->k1_internal;
-    beta  = 0.5*csbend->k2_internal*pow3(rho0);
-    gamma = csbend->k3_internal*pow4(rho0)/6.;
-    delta = csbend->k4_internal*pow5(rho0)/24.;
   }
+
 
   if (rho0>1e6) {
     if (!largeRhoWarning) {
@@ -150,12 +297,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   }
   
   fse = csbend->fse;
-  h2 = sqr(h=1./rho0);
-  h3 = h*h2;
-  nh = n*h;
-  betah2 = beta*h2;
-  gammah3 = gamma*h3;
-  deltah4 = delta*h2*h2;
+  h = 1/rho0;
   if (fse>-1)
     rho_actual = 1/((1+fse)*h);
   else
@@ -202,28 +344,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
     includeOpeningAngle = csbend->includeOpeningAngle;
   }
   
-  Fy_0  = 1;
-  Fy_x  = -nh;
-  Fy_x2 = Fy_x3 = Fy_x4 = Fy_y2 = Fy_x_y2 = Fy_x2_y2 = Fy_y4 = 0;
-  if (csbend->nonlinear) {
-    Fy_x2    = betah2;
-    Fy_x3    = gammah3;
-    Fy_y2    = (h*nh - 2*betah2)/2;
-    Fy_x_y2  =  - (2*h*betah2 + nh*h2 + 6*gammah3)/2;
-    Fy_x4    = deltah4;
-    Fy_x2_y2 =  - (3*h*gammah3 - h3*nh - 2*h2*betah2 + 12*deltah4)/2;
-    Fy_y4    = (12*h*gammah3 - h3*nh - 2*h2*betah2 + 24*deltah4)/24;
-  }
-
-  Fx_y    =  - nh;
-  Fx_x_y  = Fx_x2_y = Fx_x3_y = Fx_y3 = Fx_x_y3 = 0;
-  if (csbend->nonlinear) {
-    Fx_x_y  = 2*betah2;
-    Fx_x2_y = 3*gammah3;
-    Fx_y3   =  - (2*h*betah2 + nh*h2 + 6*gammah3)/6;
-    Fx_x3_y = 4*deltah4;
-    Fx_x_y3 =  - (3*h*gammah3 - h3*nh - 2*h2*betah2 + 12*deltah4)/3;
-  }
+  computeCSBENDFieldCoefficients(csbend->b, h, csbend->nonlinear, csbend->expansionOrder);
 
   ttilt = tilt + etilt;
   if (ttilt==0) {
@@ -318,9 +439,8 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
 
     if (csbend->edgeFlags&BEND_EDGE1_EFFECTS && e1!=0 && rad_coef) {
       /* pre-adjust dp/p to anticipate error made by integrating over entire sector */
-      y2 = y*y;
-      Fx = (Fx_y + (Fx_x_y + (Fx_x2_y + Fx_x3_y*x)*x)*x + (Fx_y3 + Fx_x_y3*x)*y2)*y;
-      Fy = Fy_0 + (Fy_x + (Fy_x2 + (Fy_x3 + Fy_x4*x)*x)*x)*x + (Fy_y2 + (Fy_x_y2 + Fy_x2_y2*x)*x + Fy_y4*y2)*y2;
+      computeCSBENDFields(&Fx, &Fy, x, y);
+
       dp_prime = -rad_coef*(sqr(Fx)+sqr(Fy))*sqr(1+dp)*EXSQRT(sqr(1+x/rho0)+sqr(xp)+sqr(yp), csbend->sqrtOrder);
       Qi[5] -= dp_prime*x*tan(e1);
     }
@@ -365,9 +485,9 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
       y = Qf[2];
       yp = Qf[3];
       dp = Qf[5];
-      y2 = y*y;
-      Fx = (Fx_y + (Fx_x_y + (Fx_x2_y + Fx_x3_y*x)*x)*x + (Fx_y3 + Fx_x_y3*x)*y2)*y;
-      Fy = Fy_0 + (Fy_x + (Fy_x2 + (Fy_x3 + Fy_x4*x)*x)*x)*x + (Fy_y2 + (Fy_x_y2 + Fy_x2_y2*x)*x + Fy_y4*y2)*y2;
+
+      computeCSBENDFields(&Fx, &Fy, x, y);
+
       dp_prime = -rad_coef*(sqr(Fx)+sqr(Fy))*sqr(1+dp)*EXSQRT(sqr(1+x/rho0)+sqr(xp)+sqr(yp), csbend->sqrtOrder);
       Qf[5] -= dp_prime*x*tan(e2);
     }
@@ -436,7 +556,7 @@ void integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2, double s
 {
   long i;
   double factor, f, phi, ds, dsh, dp, dist;
-  double Fx, Fy, x, y, y2;
+  double Fx, Fy, x, y;
   double sine, cosi, tang;
   double sin_phi, cos_phi;
   
@@ -510,9 +630,8 @@ void integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2, double s
     /* calculate the scaled fields */
     x = X;
     y = Y;
-    y2   = y*y;
-    Fx = (Fx_y + (Fx_x_y + (Fx_x2_y + Fx_x3_y*x)*x)*x + (Fx_y3 + Fx_x_y3*x)*y2)*y;
-    Fy = Fy_0 + (Fy_x + (Fy_x2 + (Fy_x3 + Fy_x4*x)*x)*x)*x + (Fy_y2 + (Fy_x_y2 + Fy_x2_y2*x)*x + Fy_y4*y2)*y2;
+
+    computeCSBENDFields(&Fx, &Fy, x, y);
 
     /* do kicks */
     QX += -ds*(1+X/rho0)*Fy/rho_actual;
@@ -594,7 +713,7 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s
 {
   long i;
   double factor, f, phi, ds, dsh, dp, dist;
-  double Fx, Fy, x, y, y2;
+  double Fx, Fy, x, y;
   double sine, cosi, tang;
   double sin_phi, cos_phi;
   
@@ -671,9 +790,9 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s
     /* -- calculate the scaled fields */
     x = X;
     y = Y;
-    y2   = y*y;
-    Fx = (Fx_y + (Fx_x_y + (Fx_x2_y + Fx_x3_y*x)*x)*x + (Fx_y3 + Fx_x_y3*x)*y2)*y;
-    Fy = Fy_0 + (Fy_x + (Fy_x2 + (Fy_x3 + Fy_x4*x)*x)*x)*x + (Fy_y2 + (Fy_x_y2 + Fy_x2_y2*x)*x + Fy_y4*y2)*y2;
+
+    computeCSBENDFields(&Fx, &Fy, x, y);
+    
     /* --do kicks */
     QX += -ds*(1+X/rho0)*Fy/rho_actual;
     QY += ds*(1+X/rho0)*Fx/rho_actual;
@@ -718,9 +837,8 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s
     /* -- calculate the scaled fields */
     x = X;
     y = Y;
-    y2   = y*y;
-    Fx = (Fx_y + (Fx_x_y + (Fx_x2_y + Fx_x3_y*x)*x)*x + (Fx_y3 + Fx_x_y3*x)*y2)*y;
-    Fy = Fy_0 + (Fy_x + (Fy_x2 + (Fy_x3 + Fy_x4*x)*x)*x)*x + (Fy_y2 + (Fy_x_y2 + Fy_x2_y2*x)*x + Fy_y4*y2)*y2;
+    computeCSBENDFields(&Fx, &Fy, x, y);
+
     /* --do kicks */
     QX += -ds*(1+X/rho0)*Fy/rho_actual;
     QY += ds*(1+X/rho0)*Fx/rho_actual;
@@ -763,9 +881,8 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s
     /* -- calculate the scaled fields */
     x = X;
     y = Y;
-    y2   = y*y;
-    Fx = (Fx_y + (Fx_x_y + (Fx_x2_y + Fx_x3_y*x)*x)*x + (Fx_y3 + Fx_x_y3*x)*y2)*y;
-    Fy = Fy_0 + (Fy_x + (Fy_x2 + (Fy_x3 + Fy_x4*x)*x)*x)*x + (Fy_y2 + (Fy_x_y2 + Fy_x2_y2*x)*x + Fy_y4*y2)*y2;
+    computeCSBENDFields(&Fx, &Fy, x, y);
+
     /* --do kicks */
     QX += -ds*(1+X/rho0)*Fy/rho_actual;
     QY += ds*(1+X/rho0)*Fx/rho_actual;
@@ -838,7 +955,9 @@ typedef struct {
   SDDS_DATASET SDDS_Stupakov;
   long StupakovFileActive, StupakovOutputInterval;
   long trapazoidIntegration;
+  double lowFrequencyCutoff0, lowFrequencyCutoff1;
   double highFrequencyCutoff0, highFrequencyCutoff1;
+  long clipNegativeBins;
   long wffValues;
   double *wffFreqValue, *wffRealFactor, *wffImagFactor;
 } CSR_LAST_WAKE;
@@ -859,8 +978,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
                              double Po, double **accepted, double z_start, double z_end,
                              CHARGE *charge, char *rootname)
 {
-  double nh, betah2, gammah3, deltah4;
-  double h, h2, h3, he1, he2;
+  double h, n, he1, he2;
   static long csrWarning = 0;
   static double *beta0=NULL, *ctHist=NULL, *ctHistDeriv=NULL;
   static double *dGamma=NULL, *T1=NULL, *T2=NULL, *denom=NULL;
@@ -871,8 +989,8 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   long diSlippage, diSlippage4;
   long nBins, nBinned = 0;
   long i_part, i_top, kick;
-  double rho=0.0, Fx, Fy, y2;
-  double n, beta, gamma, delta, fse, dp_prime;
+  double rho=0.0, Fx, Fy;
+  double fse, dp_prime;
   double tilt, etilt, cos_ttilt, sin_ttilt, ttilt;
   double *coord;
   double angle, e1, e2, Kg;
@@ -951,33 +1069,39 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
        !(particleLost=SDDS_Realloc(particleLost, sizeof(*particleLost)*n_part))))
     bomb("Memory allocation failure (track_through_csbendCSR)", NULL);
 
+  rho0 = csbend->length/csbend->angle;
   if (csbend->use_bn) {
-    rho0 = csbend->length/csbend->angle;
-    csbend->k1_internal = csbend->b1/rho0;
-    csbend->k2_internal = csbend->b2/rho0;
-    csbend->k3_internal = csbend->b3/rho0;
-    csbend->k4_internal = csbend->b4/rho0;
+    csbend->b[0] = csbend->b1;
+    csbend->b[1] = csbend->b2;
+    csbend->b[2] = csbend->b3;
+    csbend->b[3] = csbend->b4;
+    csbend->b[4] = csbend->b5;
+    csbend->b[5] = csbend->b6;
+    csbend->b[6] = csbend->b7;
+    csbend->b[7] = csbend->b8;
   } else {
-    csbend->k1_internal = csbend->k1;
-    csbend->k2_internal = csbend->k2;
-    csbend->k3_internal = csbend->k3;
-    csbend->k4_internal = csbend->k4;
+    csbend->b[0] = csbend->k1*rho0;
+    csbend->b[1] = csbend->k2*rho0;
+    csbend->b[2] = csbend->k3*rho0;
+    csbend->b[3] = csbend->k4*rho0;
+    csbend->b[4] = csbend->k5*rho0;
+    csbend->b[5] = csbend->k6*rho0;
+    csbend->b[6] = csbend->k7*rho0;
+    csbend->b[7] = csbend->k8*rho0;
   }
 
   he1 = csbend->h1;
   he2 = csbend->h2;
   if (csbend->angle<0) {
+    long i;
     angle = -csbend->angle;
     e1    = -csbend->e1;
     e2    = -csbend->e2;
     etilt = csbend->etilt;
     tilt  = csbend->tilt + PI;
-    rho0  = -csbend->length/angle;
-    n     = -sqr(rho0)*csbend->k1_internal;
-    beta  = 0.5*csbend->k2_internal*pow3(rho0);
-    gamma = csbend->k3_internal*pow4(rho0)/6.;
-    delta = csbend->k4_internal*pow5(rho0)/24.;
-    rho0  = -rho0;
+    rho0  = csbend->length/angle;
+    for (i=0; i<8; i+=2)
+      csbend->b[i] *= -1;
   }
   else {
     angle = csbend->angle;
@@ -986,12 +1110,8 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     etilt = csbend->etilt;
     tilt  = csbend->tilt;
     rho0  = csbend->length/angle;
-    n     = -sqr(rho0)*csbend->k1_internal;
-    beta  = 0.5*csbend->k2_internal*pow3(rho0);
-    gamma = csbend->k3_internal*pow4(rho0)/6.;
-    delta = csbend->k4_internal*pow5(rho0)/24.;
   }
-
+  
   if (rho0>1e6) {
     if (!largeRhoWarning) {
       printf("Warning: One or more CSRCSBENDs have radius > 1e6.  Treated as drift.\n");
@@ -1001,13 +1121,9 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     return n_part;
   }
   
+  h = 1/rho0;
+  n = -csbend->b[0]/h;
   fse = csbend->fse;
-  h2 = sqr(h=1./rho0);
-  h3 = h*h2;
-  nh = n*h;
-  betah2 = beta*h2;
-  gammah3 = gamma*h3;
-  deltah4 = delta*h2*h2;
   if (fse>-1)
     rho_actual = 1/((1+fse)*h);
   else
@@ -1034,39 +1150,16 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
 
   distributionBasedRadiation = 0;
   
-  Fy_0  = 1;
-  Fy_x  = -nh;
-  Fy_x2 = Fy_x3 = Fy_x4 = Fy_y2 = Fy_x_y2 = Fy_x2_y2 = Fy_y4 = 0;
   if (csbend->useMatrix) {
     csbend->nonlinear = 0;
-    Me1 = edge_matrix(e1, 1./(rho0/(1+csbend->fse)), 0.0, n,
-                      -1, Kg, 1, 0, 0);
+    Me1 = edge_matrix(e1, 1./(rho0/(1+csbend->fse)), 0.0, n, -1, Kg, 1, 0, 0);
     Msection = bend_matrix(csbend->length/csbend->n_kicks, 
                                    angle/csbend->n_kicks, 0.0, 0.0, 
-                                   0.0, 0.0, csbend->k1_internal, 0.0,
+                                   0.0, 0.0, csbend->b[0]*h,  0.0,
                                    0.0, 0.0, 0.0, csbend->fse, csbend->etilt, 1, 1, 0, 0);
-    Me2 = edge_matrix(e2, 1./(rho0/(1+csbend->fse)), 0.0, n, 
-                      1, Kg, 1, 0, 0);
+    Me2 = edge_matrix(e2, 1./(rho0/(1+csbend->fse)), 0.0, n, 1, Kg, 1, 0, 0);
   }
-  if (csbend->nonlinear) {
-    Fy_x2    = betah2;
-    Fy_x3    = gammah3;
-    Fy_y2    = (h*nh - 2*betah2)/2;
-    Fy_x_y2  =  - (2*h*betah2 + nh*h2 + 6*gammah3)/2;
-    Fy_x4    = deltah4;
-    Fy_x2_y2 =  - (3*h*gammah3 - h3*nh - 2*h2*betah2 + 12*deltah4)/2;
-    Fy_y4    = (12*h*gammah3 - h3*nh - 2*h2*betah2 + 24*deltah4)/24;
-  }
-
-  Fx_y    =  - nh;
-  Fx_x_y  = Fx_x2_y = Fx_x3_y = Fx_y3 = Fx_x_y3 = 0;
-  if (csbend->nonlinear) {
-    Fx_x_y  = 2*betah2;
-    Fx_x2_y = 3*gammah3;
-    Fx_y3   =  - (2*h*betah2 + nh*h2 + 6*gammah3)/6;
-    Fx_x3_y = 4*deltah4;
-    Fx_x_y3 =  - (3*h*gammah3 - h3*nh - 2*h2*betah2 + 12*deltah4)/3;
-  }
+  computeCSBENDFieldCoefficients(csbend->b, h, csbend->nonlinear, csbend->expansionOrder);
 
   ttilt = tilt + etilt;
   if (ttilt==0) {
@@ -1215,6 +1308,9 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   csrWake.zLast = csrWake.z0 = z_end;
   csrWake.highFrequencyCutoff0 = csbend->highFrequencyCutoff0;
   csrWake.highFrequencyCutoff1 = csbend->highFrequencyCutoff1;
+  csrWake.lowFrequencyCutoff0 = csbend->lowFrequencyCutoff0;
+  csrWake.lowFrequencyCutoff1 = csbend->lowFrequencyCutoff1;
+  csrWake.clipNegativeBins = csbend->clipNegativeBins;
   csrWake.wffValues = csbend->wffValues;
   csrWake.wffFreqValue = csbend->wffFreqValue;
   csrWake.wffRealFactor = csbend->wffRealFactor;
@@ -1293,11 +1389,8 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     }
     if (csbend->edgeFlags&BEND_EDGE1_EFFECTS && e1!=0 && rad_coef) {
       /* pre-adjust dp/p to anticipate error made by integrating over entire sector */
-      y2 = Y*Y;
-      Fx = (Fx_y + (Fx_x_y + (Fx_x2_y + Fx_x3_y*X)*X)*X
-            + (Fx_y3 + Fx_x_y3*X)*y2)*Y;
-      Fy = Fy_0 + (Fy_x + (Fy_x2 + (Fy_x3 + Fy_x4*X)*X)*X)*X
-        + (Fy_y2 + (Fy_x_y2 + Fy_x2_y2*X)*X + Fy_y4*y2)*y2;
+      computeCSBENDFields(&Fx, &Fy, x, y);
+
       dp_prime = -rad_coef*(sqr(Fx)+sqr(Fy))*sqr(1+DP)*
         sqrt(sqr(1+X/rho0)+sqr(XP)+sqr(YP));
       DP -= dp_prime*X*tan(e1);
@@ -1447,9 +1540,12 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
         /* - smooth the histogram, normalize to get linear density, and 
            copy in preparation for taking derivative
            */
-        if (csbend->highFrequencyCutoff0>0) {
+        if (csbend->highFrequencyCutoff0>0 || csbend->lowFrequencyCutoff0>=0) {
           long nz;
-          nz = applyLowPassFilter(ctHist, nBins, csbend->highFrequencyCutoff0, csbend->highFrequencyCutoff1);
+          nz = applyLHPassFilters(ctHist, nBins, 
+                                  csbend->lowFrequencyCutoff0, csbend->lowFrequencyCutoff1,
+                                  csbend->highFrequencyCutoff0, csbend->highFrequencyCutoff1,
+                                  csbend->clipNegativeBins);
           if (nz && negativeWarningsLeft) {
 	    fprintf(stdout, "Warning: low pass filter resulted in negative values in %ld bins\n", nz);
             if (--negativeWarningsLeft==0)
@@ -1708,12 +1804,8 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
       coord = part[i_part];
       if (csbend->edgeFlags&BEND_EDGE2_EFFECTS && e2!=0 && rad_coef) {
 	/* post-adjust dp/p to correct error made by integrating over entire sector */
-	y2 = Y*Y;
-	Fx = (Fx_y + (Fx_x_y + (Fx_x2_y + Fx_x3_y*X)*X)*X
-	      + (Fx_y3 + Fx_x_y3*X)*y2)*Y;
-	Fy = Fy_0 + 
-	  (Fy_x + (Fy_x2 + (Fy_x3 + Fy_x4*X)*X)*X)*X 
-          + (Fy_y2 + (Fy_x_y2 + Fy_x2_y2*X)*X + Fy_y4*y2)*y2;
+        computeCSBENDFields(&Fx, &Fy, x, y);
+        
 	dp_prime = -rad_coef*(sqr(Fx)+sqr(Fy))*sqr(1+DP)*
 	  sqrt(sqr(1+X/rho0)+sqr(XP)+sqr(YP));
 	DP -= dp_prime*X*tan(e2);
@@ -2735,9 +2827,12 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
     /* - smooth the histogram, normalize to get linear density, and 
        copy in preparation for taking derivative
        */
-    if (csrWake.highFrequencyCutoff0>0) {
+    if (csrWake.highFrequencyCutoff0>0 || csrWake.lowFrequencyCutoff0>=0) {
       long nz;
-      nz = applyLowPassFilter(ctHist, nBins, csrWake.highFrequencyCutoff0, csrWake.highFrequencyCutoff1);
+      nz = applyLHPassFilters(ctHist, nBins, 
+                              csrWake.lowFrequencyCutoff0, csrWake.lowFrequencyCutoff1,
+                              csrWake.highFrequencyCutoff0, csrWake.highFrequencyCutoff1,
+                              csrWake.clipNegativeBins);
       if (nz && negativeWarningsLeft) {
         fprintf(stdout, "Warning: low pass filter resulted in negative values in %ld bins\n",
                 nz);
@@ -3213,6 +3308,102 @@ long applyLowPassFilter(double *histogram, long bins,
   }
   free(realimag);
   return correctDistribution(histogram, bins, sum);
+}
+
+long applyLHPassFilters(double *histogram, long bins, 
+			double startHP,   /* in units of Nyquist frequency */
+			double endHP,     /* in units of Nyquist frequency */
+			double startLP,   /* in units of Nyquist frequency */
+			double endLP,     /* in units of Nyquist frequency */
+                        long clipNegative
+			)
+{
+  long i, i1, i2;
+  double fraction, dfraction, sum;
+  double *realimag;
+  long frequencies;
+
+  if (!(realimag = (double*)malloc(sizeof(*realimag)*(bins+2))))
+    SDDS_Bomb("allocation failure");
+
+  if (endLP<startLP)
+    endLP = startLP;
+  if (endHP<startHP)
+    endHP = startHP;
+  
+  frequencies = bins/2 + 1;
+  realFFT2(realimag, histogram, bins, 0);
+
+  if (startLP>0) {
+    i1 = startLP*frequencies;
+    if (i1<0) 
+      i1=0;
+    if (i1>frequencies-1)
+      i1 = frequencies-1;
+    
+    i2 = endLP*frequencies;
+    if (i2<0) 
+      i2=0;
+    if (i2>frequencies-1)
+      i2 = frequencies-1;
+    
+    dfraction = i1==i2? 0 : 1./(i2-i1);
+    fraction = 1;
+    for (i=i1; i<=i2; i++) {
+      realimag[2*i  ] *= fraction;
+      realimag[2*i+1] *= fraction;
+      if ((fraction -= dfraction)<0)
+        fraction = 0;
+    }
+    for (; i<frequencies; i++) {
+      realimag[2*i  ] = 0;
+      realimag[2*i+1] = 0;
+    }
+  }
+  
+  if (startHP>0) {
+    i1 = startHP*frequencies;
+    if (i1<0) 
+      i1=0;
+    if (i1>frequencies-1)
+      i1 = frequencies-1;
+    
+    i2 = endHP*frequencies;
+    if (i2<0) 
+      i2=0;
+    if (i2>frequencies-1)
+      i2 = frequencies-1;
+    
+    dfraction = i1==i2? 0 : 1./(i2-i1);
+    fraction = 0;
+    for (i=0; i<i1; i++) {
+      realimag[2*i  ] = 0;
+      realimag[2*i+1] = 0;
+    }
+    for (i=i1; i<=i2; i++) {
+      realimag[2*i  ] *= fraction;
+      realimag[2*i+1] *= fraction;
+      if ((fraction += dfraction)>1)
+        fraction = 1;
+    }
+  }
+  
+  realFFT2(realimag, realimag, bins, INVERSE_FFT);
+
+  /* copy data to input buffer  */
+  for (i=sum=0; i<bins; i++) {
+    sum += histogram[i];
+    histogram[i] = realimag[i];
+  }
+  free(realimag);
+
+  if (clipNegative)
+    /* normalize to keep the sum constant
+     * don't allow negative values 
+     */
+    return correctDistribution(histogram, bins, sum);
+  else
+    return 0;
 }
 
 long correctDistribution(double *array, long npoints, double desiredSum)
