@@ -802,6 +802,8 @@ long track_through_rfcw
 
   rfcw->LSCKick.bins = rfcw->LSCBins;
   rfcw->LSCKick.interpolate = rfcw->LSCInterpolate;
+  rfcw->LSCKick.lowFrequencyCutoff0 = rfcw->LSCLowFrequencyCutoff0;
+  rfcw->LSCKick.lowFrequencyCutoff1 = rfcw->LSCLowFrequencyCutoff1;
   rfcw->LSCKick.highFrequencyCutoff0 = rfcw->LSCHighFrequencyCutoff0;
   rfcw->LSCKick.highFrequencyCutoff1 = rfcw->LSCHighFrequencyCutoff1;
   rfcw->LSCKick.radiusFactor = rfcw->LSCRadiusFactor;

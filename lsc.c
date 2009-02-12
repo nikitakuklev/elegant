@@ -226,6 +226,30 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
       Ifreq[nb-1] = 0;
     }
     
+    if (LSC->lowFrequencyCutoff0>=0) {
+      /* apply high-pass filter */
+      long i, i1, i2;
+      double dfraction, fraction;
+      i1 = LSC->lowFrequencyCutoff0*nfreq;
+      if (i1<1)
+	i1 = 1;
+      i2 = LSC->lowFrequencyCutoff1*nfreq;
+      if (i2>=nfreq)
+	i2 = nfreq-1;
+      dfraction = i1==i2 ? 0 : 1./(i2-i1);
+      fraction = 0;
+      for (i=0; i<i1; i++) {
+	Ifreq[2*i-1] = 0;
+	Ifreq[2*i  ] = 0;
+      }
+      for (i=i1; i<i2; i++) {
+	Ifreq[2*i-1] *= fraction;
+	Ifreq[2*i  ] *= fraction;
+	if ((fraction += dfraction)>1)
+	  fraction = 1;
+      }
+    }
+    
     /* Compute V(f) = Z(f)*I(f), putting in a factor 
      * to normalize the current waveform.
      */
@@ -487,6 +511,30 @@ void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge,
     Ifreq[nb-1] = 0;
   }
   
+  if (LSC->lowFrequencyCutoff0>=0) {
+    /* apply high-pass filter */
+    long i, i1, i2;
+    double dfraction, fraction;
+    i1 = LSC->lowFrequencyCutoff0*nfreq;
+    if (i1<1)
+      i1 = 1;
+    i2 = LSC->lowFrequencyCutoff1*nfreq;
+    if (i2>=nfreq)
+      i2 = nfreq-1;
+    dfraction = i1==i2 ? 0 : 1./(i2-i1);
+    fraction = 0;
+    for (i=0; i<i1; i++) {
+      Ifreq[2*i-1] = 0;
+      Ifreq[2*i  ] = 0;
+    }
+    for (i=i1; i<i2; i++) {
+      Ifreq[2*i-1] *= fraction;
+      Ifreq[2*i  ] *= fraction;
+      if ((fraction += dfraction)>1)
+        fraction = 1;
+    }
+  }
+
   /* Compute V(f) = Z(f)*I(f), putting in a factor 
    * to normalize the current waveform.
    */
