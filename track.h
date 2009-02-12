@@ -60,6 +60,7 @@ extern long particleIsElectron;
 
 /* various user-controlled global flags (global_settings namelist) */
 extern long inhibitFileSync;
+extern long echoNamelists;
 
 /* flag used to identify which processor is allowed to write to a file */
 extern long writePermitted;
@@ -248,6 +249,9 @@ typedef struct {
   double h21000, h30000, h10110, h10020, h10200;
   /* First order chromatic terms */
   double h11001, h00111, h20001, h00201, h10002;
+  /* Second-order geometric terms */
+  double h22000, h11110, h00220, h31000, h40000;
+  double h20110, h11200, h20020, h20200, h00310, h00400;
   /* tune shifts with amplitude */
   double dnux_dJx, dnux_dJy, dnuy_dJy;
 } DRIVING_TERMS;
@@ -771,7 +775,7 @@ extern char *entity_text[N_TYPES];
 #define N_RAMPP_PARAMS 1
 #define N_NISEPT_PARAMS 9
 #define N_STRAY_PARAMS 7
-#define N_CSBEND_PARAMS 38
+#define N_CSBEND_PARAMS 47
 #define N_MATTER_PARAMS 8
 #define N_RFMODE_PARAMS 23
 #define N_TRFMODE_PARAMS 20
@@ -789,11 +793,11 @@ extern char *entity_text[N_TYPES];
 #define N_CHARGE_PARAMS 2
 #define N_PFILTER_PARAMS 5
 #define N_HISTOGRAM_PARAMS 11
-#define N_CSRCSBEND_PARAMS 57
+#define N_CSRCSBEND_PARAMS 69
 #define N_CSRDRIFT_PARAMS 20
 #define N_REMCOR_PARAMS 6
 #define N_MAPSOLENOID_PARAMS 18
-#define N_RFCW_PARAMS 36
+#define N_RFCW_PARAMS 38
 #define N_REFLECT_PARAMS 1
 #define N_CLEAN_PARAMS 7
 #define N_TWISSELEMENT_PARAMS 12
@@ -807,7 +811,7 @@ extern char *entity_text[N_TYPES];
 #define N_FTRFMODE_PARAMS 13
 #define N_TFBPICKUP_PARAMS 18
 #define N_TFBDRIVER_PARAMS 20
-#define N_LSCDRIFT_PARAMS  11
+#define N_LSCDRIFT_PARAMS  13
 #define N_DSCATTER_PARAMS 14
 #define N_LSRMDLTR_PARAMS 14
 #define N_TAYLORSERIES_PARAMS 6
@@ -1804,7 +1808,7 @@ typedef struct {
 extern PARAMETER csbend_param[N_CSBEND_PARAMS];
 
 typedef struct {
-    double length, angle, k1, k2, k3, k4, e1, e2, tilt;
+    double length, angle, k1, k2, k3, k4, k5, k6, k7, k8, e1, e2, tilt;
     double h1, h2, hgap, fint;
     double dx, dy, dz;
     double fse;     /* Fractional Strength Error */
@@ -1814,20 +1818,20 @@ typedef struct {
     long integration_order;
     double edge1_kick_limit, edge2_kick_limit;
     long kick_limit_scaling;
-    long use_bn;
-    double b1, b2, b3, b4;
+    long use_bn, expansionOrder;
+    double b1, b2, b3, b4, b5, b6, b7, b8;
     long isr, isr1Particle, sqrtOrder;
     long distributionBasedRadiation, includeOpeningAngle;
     /* for internal use only: */
     unsigned long edgeFlags;
-    double k1_internal, k2_internal, k3_internal, k4_internal;
+    double b[8];
     } CSBEND;
 
 /* names and storage structure for canonically-integrated bending magnet with CSR physical parameters */
 extern PARAMETER csrcsbend_param[N_CSRCSBEND_PARAMS];
 
 typedef struct {
-    double length, angle, k1, k2, k3, k4, e1, e2, tilt;
+    double length, angle, k1, k2, k3, k4, k5, k6, k7, k8, e1, e2, tilt;
     double h1, h2, hgap, fint;
     double dx, dy, dz;
     double fse;     /* Fractional Strength Error */
@@ -1839,17 +1843,19 @@ typedef struct {
     long SGHalfWidth, SGOrder, SGDerivHalfWidth, SGDerivOrder, trapazoidIntegration;
     char *histogramFile;
     long outputInterval, outputLastWakeOnly, steadyState;
-    long use_bn;
-    double b1, b2, b3, b4;
+    long use_bn, expansionOrder;
+    double b1, b2, b3, b4, b5, b6, b7, b8;
     long isr, isr1Particle, csr, csrBlock;
     char *derbenevCriterionMode, *particleOutputFile;
     long particleOutputInterval, sliceAnalysisInterval;
+    double lowFrequencyCutoff0, lowFrequencyCutoff1;
     double highFrequencyCutoff0, highFrequencyCutoff1;
+    long clipNegativeBins;
     char *wakeFilterFile, *wffFreqColumn, *wffRealColumn, *wffImagColumn;
     /* for internal use only: */
     short wakeFileActive, particleFileActive;
     SDDS_DATASET SDDSout, SDDSpart;
-    double k1_internal, k2_internal, k3_internal, k4_internal;
+    double b[8];
     short xIndex, xpIndex, tIndex, pIndex;
     long wffValues;
     double *wffFreqValue, *wffRealFactor, *wffImagFactor;
@@ -2169,6 +2175,7 @@ extern PARAMETER rfcw_param[N_RFCW_PARAMS] ;
 
 typedef struct {
   long bins, interpolate;
+  double lowFrequencyCutoff0, lowFrequencyCutoff1;
   double highFrequencyCutoff0, highFrequencyCutoff1;
   double radiusFactor;
 } LSCKICK;
@@ -2186,6 +2193,7 @@ typedef struct {
     long smoothing, SGHalfWidth, SGOrder;  /* flag to turn on smoothing plus control parameters */
     double dx, dy;
     long linearize, doLSC, LSCBins, LSCInterpolate;
+    double LSCLowFrequencyCutoff0, LSCLowFrequencyCutoff1;
     double LSCHighFrequencyCutoff0, LSCHighFrequencyCutoff1, LSCRadiusFactor;
     long wakesAtEnd;
     /* for internal use only: */
@@ -2365,6 +2373,7 @@ typedef struct {
   double length, lEffective;
   long bins;
   long smoothing, SGHalfWidth, SGOrder, interpolate;
+  double lowFrequencyCutoff0, lowFrequencyCutoff1;
   double highFrequencyCutoff0, highFrequencyCutoff1, radiusFactor;
   long lsc;
 } LSCDRIFT;
@@ -3161,6 +3170,8 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
 			    double revolutionLength, char *rootname);
 long reset_driftCSR();
 long applyLowPassFilter(double *histogram, long bins, double start, double end);
+long applyLHPassFilters(double *histogram, long bins, double startHP, double endHP,
+			double startLP, double endLP, long clipNegative);
 
 void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 void final_floor_coordinates(LINE_LIST *beamline, double *XYZ, double *Angle,
