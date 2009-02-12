@@ -111,7 +111,7 @@ void setup_transport_analysis(
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
     process_namelist(&analyze_map, nltext);
-    print_namelist(stdout, &analyze_map);
+    if (echoNamelists) print_namelist(stdout, &analyze_map);
 
     /* check for data errors */
     if (!output)
@@ -644,8 +644,8 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
         csbend.edgeFlags &= ~BEND_EDGE1_EFFECTS;
       if (slice!=nSlices-1) 
         csbend.edgeFlags &= ~BEND_EDGE2_EFFECTS;
-      csbend.k1_internal = sbend->k1_internal;
-      csbend.k2_internal = sbend->k2_internal;
+      csbend.k1 = sbend->k1;
+      csbend.k2 = sbend->k2;
       csbend.n_kicks = fabs(csbend.angle/0.005) + 1;
       csbend.integration_order = 4;
       break;
