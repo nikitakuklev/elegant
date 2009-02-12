@@ -9,6 +9,9 @@
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.25  2008/10/22 18:30:51  borland
+ * Added global_settings command and means to inhibit file sync calls.
+ *
  * Revision 1.24  2006/05/31 16:02:53  ywang25
  * The first release of Pelegant. It has passed a regression test of 100 cases.
  *
@@ -126,7 +129,7 @@ void setupSASEFELAtEnd(NAMELIST_TEXT *nltext, RUN *run, OUTPUT_FILES *output_dat
 
   /* process namelist text */
   process_namelist(&sasefel, nltext);
-  print_namelist(stdout, &sasefel);
+  if (echoNamelists) print_namelist(stdout, &sasefel);
 
 #if USE_MPI
   if (!writePermitted) {

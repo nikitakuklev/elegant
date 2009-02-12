@@ -80,7 +80,7 @@ void setup_matrix_output(
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
   process_namelist(&matrix_output, nltext);
-  print_namelist(stdout, &matrix_output);
+  if (echoNamelists) print_namelist(stdout, &matrix_output);
 
 
   /* check for validity of namelist inputs */

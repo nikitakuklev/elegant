@@ -99,7 +99,7 @@ void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamli
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
   process_namelist(&floor_coordinates, nltext);
-  print_namelist(stdout, &floor_coordinates);
+  if (echoNamelists) print_namelist(stdout, &floor_coordinates);
   
   if (magnet_centers && vertices_only)
     bomb("you can simultaneously request magnet centers and vertices only output", NULL);

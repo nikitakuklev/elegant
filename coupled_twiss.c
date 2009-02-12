@@ -42,7 +42,7 @@ void setup_coupled_twiss_output(
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
   process_namelist(&coupled_twiss_output, nltext);
-  print_namelist(stdout, &coupled_twiss_output);
+  if (echoNamelists) print_namelist(stdout, &coupled_twiss_output);
   
 #if USE_MPI
     if (!writePermitted)

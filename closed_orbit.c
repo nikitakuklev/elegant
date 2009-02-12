@@ -77,7 +77,7 @@ void setup_closed_orbit(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
     process_namelist(&closed_orbit, nltext);
-    print_namelist(stdout, &closed_orbit);
+    if (echoNamelists) print_namelist(stdout, &closed_orbit);
 
     if (output)
         output = compose_filename(output, run->rootname);

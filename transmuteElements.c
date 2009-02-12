@@ -82,7 +82,7 @@ void setupTransmuteElements(NAMELIST_TEXT *nltext, RUN *run,
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
   process_namelist(&transmute_elements, nltext);
-  print_namelist(stdout, &transmute_elements);
+  if (echoNamelists) print_namelist(stdout, &transmute_elements);
 
   if (clear_all) {
     clearTransmutationSpecs();

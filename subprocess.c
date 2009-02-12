@@ -42,7 +42,7 @@ void run_subprocess(NAMELIST_TEXT *nltext, RUN *run)
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
   process_namelist(&subprocess, nltext);
-  print_namelist(stdout, &subprocess);
+  if (echoNamelists) print_namelist(stdout, &subprocess);
 
   if (command) {
     buffer[0] = 0;

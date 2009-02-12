@@ -108,7 +108,7 @@ void setup_sdds_beam(
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
   process_namelist(&sdds_beam, nltext);
-  print_namelist(stdout, &sdds_beam);
+  if (echoNamelists) print_namelist(stdout, &sdds_beam);
   fflush(stdout);
 
   /* check for validity of namelist inputs */

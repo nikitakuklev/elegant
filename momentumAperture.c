@@ -47,7 +47,7 @@ void setupMomentumApertureSearch(
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
   process_namelist(&momentum_aperture, nltext);
-  print_namelist(stdout, &momentum_aperture);
+  if (echoNamelists) print_namelist(stdout, &momentum_aperture);
 
   if (run->concat_order!=0)
     bomb("at present, momentum_aperture is incompatible with concatenation", NULL);

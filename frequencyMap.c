@@ -60,7 +60,7 @@ void setupFrequencyMap(
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
   process_namelist(&frequency_map, nltext);
-  print_namelist(stdout, &frequency_map);
+  if (echoNamelists) print_namelist(stdout, &frequency_map);
   
   /* check for data errors */
   if (!output)

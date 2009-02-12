@@ -67,7 +67,7 @@ void setupTouschekEffect(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
   process_namelist(&touschek_scatter, nltext);
-  print_namelist(stdout, &touschek_scatter);
+  if (echoNamelists) print_namelist(stdout, &touschek_scatter);
 
   if (!charge)    
     bomb("charge has to be given", NULL);

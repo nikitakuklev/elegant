@@ -43,7 +43,7 @@ void do_insert_elements(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
   process_namelist(&insert_elements, nltext);
-  print_namelist(stdout, &insert_elements);
+  if (echoNamelists) print_namelist(stdout, &insert_elements);
 
   if (disable)
     return;

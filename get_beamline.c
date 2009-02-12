@@ -766,7 +766,7 @@ void do_save_lattice(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
   process_namelist(&save_lattice, nltext);
-  print_namelist(stdout, &save_lattice);
+  if (echoNamelists) print_namelist(stdout, &save_lattice);
 
   /* check for valid data */
   if (filename==NULL)

@@ -36,7 +36,7 @@ void do_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
     process_namelist(&optimization_setup, nltext);
-    print_namelist(stdout, &optimization_setup);
+    if (echoNamelists) print_namelist(stdout, &optimization_setup);
 
     /* check validity of input values, and copy into structure */
     if ((optimization_data->mode=match_string(mode, optimize_mode, N_OPTIM_MODES, EXACT_MATCH))<0)
@@ -121,7 +121,7 @@ void add_optimization_variable(OPTIMIZATION_DATA *optimization_data, NAMELIST_TE
     step_size = 1;
     lower_limit = -(upper_limit = DBL_MAX);
     process_namelist(&optimization_variable, nltext);
-    print_namelist(stdout, &optimization_variable);
+    if (echoNamelists) print_namelist(stdout, &optimization_variable);
 
     if (disable)
       return;
@@ -218,7 +218,7 @@ void add_optimization_term(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
   process_namelist(&optimization_term, nltext);
-  print_namelist(stdout, &optimization_term);
+  if (echoNamelists) print_namelist(stdout, &optimization_term);
 
   if (weight==0)
     return ;
@@ -290,7 +290,7 @@ void add_optimization_covariable(OPTIMIZATION_DATA *optimization_data, NAMELIST_
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
     process_namelist(&optimization_covariable, nltext);
-    print_namelist(stdout, &optimization_covariable);
+    if (echoNamelists) print_namelist(stdout, &optimization_covariable);
     if (disable)
       return ;
     
@@ -385,7 +385,7 @@ void add_optimization_constraint(OPTIMIZATION_DATA *optimization_data, NAMELIST_
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
     process_namelist(&optimization_constraint, nltext);
-    print_namelist(stdout, &optimization_constraint);
+    if (echoNamelists) print_namelist(stdout, &optimization_constraint);
 
     /* check for valid input */
     if (quantity==NULL)
@@ -647,7 +647,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
     process_namelist(&optimize, nltext);
-    print_namelist(stdout, &optimize);
+    if (echoNamelists) print_namelist(stdout, &optimize);
 
     if (summarize_setup)
         summarize_optimization_setup(optimization_data);
@@ -1003,7 +1003,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 #define SET_BUNCHED_BEAM 6
 #define SET_SDDS_BEAM   33
 
-#define N_TWISS_QUANS 77
+#define N_TWISS_QUANS 88
 static char *twiss_name[N_TWISS_QUANS] = {
     "betax", "alphax", "nux", "etax", "etapx", 
     "betay", "alphay", "nuy", "etay", "etapy", 
@@ -1031,6 +1031,8 @@ static char *twiss_name[N_TWISS_QUANS] = {
     "h21000", "h30000", "h10110", "h10020", "h10200",
     "dnux/dJx", "dnux/dJy", "dnuy/dJy",
     "h11001", "h00111", "h20001", "h00201", "h10002",
+    "h22000", "h11110", "h00220", "h31000", "h40000",
+    "h20110", "h11200", "h20020", "h20200", "h00310", "h00400"
     };
 static long twiss_mem[N_TWISS_QUANS] = {
   -1, -1, -1, -1, -1,  
@@ -1401,7 +1403,18 @@ double optimization_function(double *value, long *invalid)
     rpn_store(beamline->drivingTerms.h20001, NULL, twiss_mem[74]);
     rpn_store(beamline->drivingTerms.h00201, NULL, twiss_mem[75]);
     rpn_store(beamline->drivingTerms.h10002, NULL, twiss_mem[76]);
-    
+    rpn_store(beamline->drivingTerms.h22000, NULL, twiss_mem[77]); 
+    rpn_store(beamline->drivingTerms.h11110, NULL, twiss_mem[78]);
+    rpn_store(beamline->drivingTerms.h00220, NULL, twiss_mem[79]);
+    rpn_store(beamline->drivingTerms.h31000, NULL, twiss_mem[80]);
+    rpn_store(beamline->drivingTerms.h40000, NULL, twiss_mem[81]);
+    rpn_store(beamline->drivingTerms.h20110, NULL, twiss_mem[82]);
+    rpn_store(beamline->drivingTerms.h11200, NULL, twiss_mem[83]);
+    rpn_store(beamline->drivingTerms.h20020, NULL, twiss_mem[84]); 
+    rpn_store(beamline->drivingTerms.h20200, NULL, twiss_mem[85]);
+    rpn_store(beamline->drivingTerms.h00310, NULL, twiss_mem[86]); 
+    rpn_store(beamline->drivingTerms.h00400, NULL, twiss_mem[87]);
+
 #if DEBUG
     fprintf(stdout, "Twiss parameters done.\n");
     fflush(stdout);

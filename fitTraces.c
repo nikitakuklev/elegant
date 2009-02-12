@@ -9,6 +9,9 @@
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.26  2008/10/22 18:30:51  borland
+ * Added global_settings command and means to inhibit file sync calls.
+ *
  * Revision 1.25  2006/05/31 16:02:54  ywang25
  * The first release of Pelegant. It has passed a regression test of 100 cases.
  *
@@ -216,7 +219,7 @@ void do_fit_trace_data(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
   
   /* process namelist text */
   process_namelist(&fit_traces, nltext);
-  print_namelist(stdout, &fit_traces);
+  if (echoNamelists) print_namelist(stdout, &fit_traces);
 
   if (!trace_data_file || !fexists(trace_data_file)) {
     fprintf(stdout, "fit_traces: trace_data_file file not given or not found\n");

@@ -46,7 +46,7 @@ void process_trace_request(NAMELIST_TEXT *nltext)
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
     process_namelist(&trace, nltext);
-    print_namelist(stdout, &trace);
+    if (echoNamelists) print_namelist(stdout, &trace);
 
     if (record_allocation && filename)
         keep_alloc_record(filename);

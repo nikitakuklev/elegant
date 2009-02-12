@@ -26,7 +26,7 @@ void run_rpn_expression(NAMELIST_TEXT *nltext)
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
     process_namelist(&rpn_expression, nltext);
-    print_namelist(stdout, &rpn_expression);
+    if (echoNamelists) print_namelist(stdout, &rpn_expression);
 
     if (expression) {
         rpn(expression);
@@ -48,7 +48,7 @@ void run_rpn_load(NAMELIST_TEXT *nltext, RUN *run)
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
   process_namelist(&rpn_load, nltext);
-  print_namelist(stdout, &rpn_load);
+  if (echoNamelists) print_namelist(stdout, &rpn_load);
   
   if (match_column && strlen(match_column)) {
     if (use_row!=-1) {

@@ -42,7 +42,7 @@ void setup_tune_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline,
     set_print_namelist_flags(0);
     process_namelist(&correct_tunes, nltext);
     str_toupper(quadrupoles);
-    print_namelist(stdout, &correct_tunes);
+    if (echoNamelists) print_namelist(stdout, &correct_tunes);
 
     if (tune->name)
         tfree(tune->name);

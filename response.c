@@ -54,7 +54,7 @@ void setup_correction_matrix_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
     process_namelist(&correction_matrix_output, nltext);
-    print_namelist(stdout, &correction_matrix_output);
+    if (echoNamelists) print_namelist(stdout, &correction_matrix_output);
     *do_response = output_at_each_step;
 
     unitsCode = KnL_units?KNL_UNITS:(BnL_units?BNL_UNITS:0);

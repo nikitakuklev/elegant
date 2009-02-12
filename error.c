@@ -40,7 +40,7 @@ void error_setup(ERRORVAL *errcon, NAMELIST_TEXT *nltext, RUN *run_cond, LINE_LI
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
     process_namelist(&error_control, nltext);
-    print_namelist(stdout, &error_control);
+    if (echoNamelists) print_namelist(stdout, &error_control);
 
     if (summarize_error_settings) {
         fprintf(stdout, "summary of random error settings: \n");
@@ -145,7 +145,7 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
         bomb("element name missing in error namelist", NULL);
       SDDS_CopyString(&name, "*");
     }
-    print_namelist(stdout, &error);
+    if (echoNamelists) print_namelist(stdout, &error);
 
     /* check for valid input and copy to errcon arrays */
     if (item==NULL)

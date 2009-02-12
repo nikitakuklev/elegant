@@ -144,7 +144,7 @@ void correction_setup(
        statistics = NULL;
     }
 #endif
-    print_namelist(stdout, &correct);
+    if (echoNamelists) print_namelist(stdout, &correct);
     usePerturbedMatrix = use_perturbed_matrix;
     fixedLengthMatrix = fixed_length_matrix;
     
@@ -321,7 +321,7 @@ void add_steering_element(CORRECTION *correct, LINE_LIST *beamline, RUN *run, NA
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
   process_namelist(&steering_element, nltext);
-  print_namelist(stdout, &steering_element);
+  if (echoNamelists) print_namelist(stdout, &steering_element);
 
   if (limit && (limit<tweek || limit<0))
     bomb("invalid limit specified for steering element", NULL);

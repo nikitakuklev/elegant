@@ -72,7 +72,7 @@ long setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
   process_namelist(&load_parameters, nltext);
-  print_namelist(stdout, &load_parameters);
+  if (echoNamelists) print_namelist(stdout, &load_parameters);
 
   if (filename_list && strlen(filename_list)) {
     fprintf(stdout, "Using list of filenames for parameter loading\n");

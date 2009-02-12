@@ -33,7 +33,7 @@ void element_link_control(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, RUN *run_
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
     process_namelist(&link_control, nltext);
-    print_namelist(stdout, &link_control);
+    if (echoNamelists) print_namelist(stdout, &link_control);
     
     if (summarize_links) {
         fprintf(stdout, "\nsummary of element links:\n");
@@ -110,7 +110,7 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
       str_tolower(mode);
     else
       cp_str(&mode, "dynamic");
-    print_namelist(stdout, &link_elements);
+    if (echoNamelists) print_namelist(stdout, &link_elements);
 
     /* check for valid input */
     if (!target)

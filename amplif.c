@@ -63,7 +63,7 @@ void compute_amplification_factors(
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
   process_namelist(&amplification_factors, nltext);
-  print_namelist(stdout, &amplification_factors);
+  if (echoNamelists) print_namelist(stdout, &amplification_factors);
 
   if (plane)
     str_tolower(plane);

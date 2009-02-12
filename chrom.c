@@ -49,7 +49,7 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
     set_print_namelist_flags(0);
     process_namelist(&chromaticity, nltext);
     str_toupper(sextupoles);
-    print_namelist(stdout, &chromaticity);
+    if (echoNamelists) print_namelist(stdout, &chromaticity);
 
     if (run->default_order<2)
         bomb("default order must be >= 2 for chromaticity correction", NULL);

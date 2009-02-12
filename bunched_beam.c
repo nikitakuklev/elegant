@@ -82,7 +82,7 @@ void setup_bunched_beam(
     etap_y = yTwiss[3];
   }
   
-  print_namelist(stdout, &bunched_beam);
+  if (echoNamelists) print_namelist(stdout, &bunched_beam);
 
   /* check for validity of namelist inputs */
   if (emit_nx && !emit_x)

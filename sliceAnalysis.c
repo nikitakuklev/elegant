@@ -9,6 +9,9 @@
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.10  2006/05/31 16:02:54  ywang25
+ * The first release of Pelegant. It has passed a regression test of 100 cases.
+ *
  * Revision 1.9  2005/01/27 17:39:39  borland
  * Updated calls to rpn routines.
  *
@@ -144,7 +147,7 @@ void setupSliceAnalysis(NAMELIST_TEXT *nltext, RUN *run,
 
   /* process namelist text */
   process_namelist(&slice_analysis, nltext);
-  print_namelist(stdout, &slice_analysis);
+  if (echoNamelists) print_namelist(stdout, &slice_analysis);
 
   sliceOutput = &(output_data->sliceAnalysis);
 

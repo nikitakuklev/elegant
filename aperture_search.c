@@ -81,7 +81,7 @@ void setup_aperture_search(
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
   process_namelist(&find_aperture, nltext);
-  print_namelist(stdout, &find_aperture);
+  if (echoNamelists) print_namelist(stdout, &find_aperture);
 
   /* check for data errors */
   if (!output)

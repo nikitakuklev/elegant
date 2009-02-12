@@ -93,7 +93,7 @@ void setupDivideElements(NAMELIST_TEXT *nltext, RUN *run,
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
   process_namelist(&divide_elements, nltext);
-  print_namelist(stdout, &divide_elements);
+  if (echoNamelists) print_namelist(stdout, &divide_elements);
 
   if (clear) {
     clearDivisionSpecs();

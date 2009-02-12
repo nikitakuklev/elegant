@@ -239,7 +239,7 @@ void setupMomentsOutput(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
   process_namelist(&moments_output, nltext);
-  print_namelist(stdout, &moments_output);
+  if (echoNamelists) print_namelist(stdout, &moments_output);
   
 #if USE_MPI
   if (!writePermitted)

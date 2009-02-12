@@ -33,7 +33,7 @@ void vary_setup(VARY *_control, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beam
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
     process_namelist(&run_control, nltext);
-    print_namelist(stdout, &run_control);
+    if (echoNamelists) print_namelist(stdout, &run_control);
 
     /* check validity of input values */
     if (n_steps<=0 && n_indices<=0)
@@ -124,7 +124,7 @@ void add_varied_element(VARY *_control, NAMELIST_TEXT *nltext, RUN *run, LINE_LI
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
     process_namelist(&vary_element, nltext);
-    print_namelist(stdout, &vary_element);
+    if (echoNamelists) print_namelist(stdout, &vary_element);
 
     /* check for valid input */
     if (index_number<0 || index_number>=_control->n_indices)
