@@ -3804,9 +3804,9 @@ void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, do
   h20020 = cmulr(cadd(cadd(t1, t2), t3), 1./64.);
   d->h20020 = cmod(h20020);
   
-  t1 = cmul(h30000, cconj(h10020));
-  t2 = cmul(h10200, h21000);
-  t3 = cmulr(cmul(h10110, h10200), 4);
+  t1 = cmulr(cmul(h30000, cconj(h10020)), 1/64.);
+  t2 = cmulr(cmul(h10200, h21000), 1/64.);
+  t3 = cmulr(cmul(h10110, h10200), 1/16.);
   h20200 = cadd(cadd(t1, t2), t3);
   d->h20200 = cmod(h20200);
   
