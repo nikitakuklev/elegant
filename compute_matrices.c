@@ -600,7 +600,7 @@ VMATRIX *compute_matrix(
     CSRDRIFT *csrdrift; LSCDRIFT *lscdrift; EDRIFT *edrift;
     WIGGLER *wiggler; CWIGGLER *cwiggler;
     UKICKMAP *ukmap; SCRIPT *script;
-    double ks, Pref_output;
+    double ks, Pref_output, pSave;
     VARY rcContext;
     long fiducialize;
 
@@ -665,7 +665,14 @@ VMATRIX *compute_matrix(
             cwiggler->radiusInternal[0] = elem->Pref_input/(particleCharge/particleMass/c_mks)/cwiggler->BPeak[0];
           if (cwiggler->BPeak[1])
             cwiggler->radiusInternal[1] = elem->Pref_input/(particleCharge/particleMass/c_mks)/cwiggler->BPeak[1];
+          /* printf("Wiggler %s radii are %le  and %le,  length is %le, with %ld periods\n",
+             elem->name, cwiggler->radiusInternal[0], cwiggler->radiusInternal[1], 
+             cwiggler->length, cwiggler->periods);
+             */
+          pSave = run->p_central;
+          run->p_central = elem->Pref_input;
           elem->matrix = determineMatrix(run, elem, NULL, NULL);
+          run->p_central = pSave;
         }
         break;
       case T_UKICKMAP:
@@ -677,14 +684,21 @@ VMATRIX *compute_matrix(
             sqrt(sqr(elem->Pref_input)+1)*(ukmap->length/ukmap->periods)/(PIx2*ukmap->Kreference*ukmap->fieldFactor);
         } else 
           ukmap->radiusInternal = -1;
+        pSave = run->p_central;
+        run->p_central = elem->Pref_input;
         elem->matrix = determineMatrix(run, elem, NULL, NULL);
+        run->p_central = pSave;
         break;
       case T_SCRIPT:
         script = ((SCRIPT*)elem->p_elem);
         if (script->driftMatrix)
           elem->matrix = drift_matrix(script->length, run->default_order);
-        else
+        else {
+          pSave = run->p_central;
+          run->p_central = elem->Pref_input;
           elem->matrix = determineMatrix(run, elem, NULL, NULL);
+          run->p_central = pSave;
+        }
 	break;
       case T_RBEN: case T_SBEN:
         bend = (BEND*)elem->p_elem;
