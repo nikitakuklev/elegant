@@ -52,64 +52,36 @@ and references, see the specific entries in the manual.
 
 \subsection{Bug Fixes for Elements}
 \begin{itemize}
-\item The {\tt DZ} (longitudinal alignment parameter) for the elements {\tt KQUAD}, {\tt KSEXT}, and
-  {\tt KQUSE} was nonfunctional.   This was fixed.
-\item The \verb|ECOL| and \verb|RCOL| elements did not perform correct beam transport computations
-  when the length was non-zero and the apertures were both zero.  S. DiMitri (ELETTRA) and 
-  M. Cornacchia (SLAC) reported this bug.
-\item Previously, \verb|RFCA| and \verb|RFCW| elements with \verb|CHANGE_P0=1| could be treated
- as drift spaces for the purpose of twiss parameter computation by setting \verb|cavities_are_drifts_if_matched=1|
- in \verb|twiss_output|. However, this really doesn't make sense and can give misleading results,
- so it is now disallowed.  This feature should be used only for ring computations when the beam
- energy is not significantly changed by the cavities.  This issue was raised by P. Williams (ASTEC).
+\item None.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item A bug was fixed for optimization runs when \verb|link_elements| and \verb|save_lattice| were used.
- In particular, the linked elements would not have the correct parameters in the new lattice, although they
- would be correct in the parameter output file (if requested).  This bug was reported by P. Williams (ASTEC).
-\item A bug was found in beam moments computations with radiation effects.  The bug, related to
-  treatment of edge angles, would have impacted results for cases with significant edge focusing and x-y coupling.
+\item A bug was fixed in computation of corrected emittances  for output to the \verb|run_setup/sigma| and \verb|run_setup/final| files.
+  This bug resulted in the emittances being set to zero if the energy spread was zero.
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item A new element, {\tt MBUMPER}, was added that allows modeling time-dependent multipole kickers.
-\item The {\tt BUMPER} element, which models a time-dependent dipole kicker, now supports misalignments.
-\item The {\tt UKICKMAP} element now supports synchrotron radiation, both in the radiation integral
- calculations (via \verb|twiss_output|) and in tracking.  This was requested by W. Guo (BNL).
- N.B.: beam moments computations do not include these effects.
+\item The \verb|CSBEND| and \verb|CSRCSBEND| elements now use a higher-order magnetic field expansion.  This
+  was requested by A. Petrenko.  Small changes in tracking results may be observed.
+\item The \verb|CSRCSBEND|, \verb|LSCDRIFT|, and \verb|RFCW| elements now support a high-pass filter in addition
+  to the existing low-pass filter.  This was requested by J. Wu (SLAC).
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item Orbit and trajectory correction now use singular value decomposition (SVD) for matrix inversion,
- with several controls that allow removal of singular vectors.  See the documentation for the 
- \verb|correct| command for details.
-\item Computation of resonance driving terms\cite{Bengtsson} was added to \verb|twiss_output|.  These may included in optimization. 
- See the documentation for the \verb|twiss_output| command for details.
- This was requested by W. Guo (NSLS), who helped with testing.
-\item The \verb|replace_elements| command was added, which allows replacing a set of elements with a new element,
-  as well as removing the elements altogether.
-  This is more general than the \verb|transmute_elements|, which permits only a limited set of transmutations.
-  This command was added by A. Xiao (ANL).
-\item The \verb|global_settings| command was added, which will be used to allow users to control global settings.
-  At present, it permits changing the file synchronization behavior.
-\item The \verb|find_aperture| command now has an ``n-lines'' mode that permits specifying as many search lines
-  as desired.
-\item The \verb|moments_output| command has a new flag, \verb|equilibrium| that permits requesting the
-  equilibrium moments. Although this was the default before when periodic (``matched'') conditions were invoked, 
-  there was no way to request non-equilibrium moments with matched lattice functions.
-\item The \verb|include_type_pattern| parameter was added to the \verb|momentum_aperture| command, to permit
-  selecting elements by type.
+\item The \verb|twiss_output| command now computes second-order geometric driving terms.  This was requested
+  by W. Guo (BNL), who helped in testing. 
+\item The \verb|global_settings| command now offers several options for reducing or redirecting output that 
+  goes to the terminal.  This was a result of requests from G. Shen (BNL).
 \end{itemize}
 
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
-\item {\tt sddsanalyzebeam} now has the option to perform all computations using canonical coordinates.
-  This was requested by P. Piot (NIU).
+\item A bug was fixed in {\tt km2sdds}.  The script had trouble scanning RADIA output files with extra spaces between
+ columns of data.  This was reported by O. Ferrando (Trieste).
 \end{itemize}
 
 \section{Credits}
@@ -3457,6 +3429,7 @@ unit parameter change for the element.
     STRING reference_file = NULL;
     STRING reference_element = NULL;
     long reference_element_occurrence = 0;
+    long reflect_reference_values = 0;
     long cavities_are_drifts_if_matched = 1;
     long compute_driving_terms = 0;
 &end
@@ -3512,6 +3485,8 @@ used that gives the second-order chromaticity only.
 \item \verb|reference_element_occurrence| --- Ignored if \verb|reference_element| is not given.
         Otherwise, the occurence number of \verb|reference_element| to use.  If 0, the last
         occurence is used.
+\item \verb|reflect_reference_values| --- If nonzero, reference values of $\alpha_{x,y}$ and $\eta^\prime_{x,y}$ are
+  multiplied by -1.  This permits matching backwards from the reference point.
 \item \verb|cavities_are_drifts_if_matched| --- By default,  if \verb|matched=1|, {\tt elegant} treats rf cavities
   as drift spaces, allowing the user to have a cavity in the ring definition without it affecting the lattice functions.
   By setting \verb|cavities_are_drifts_if_matched=0|, one can force {\tt elegant} to use the actual matrix for the
