@@ -444,6 +444,7 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
   double **R, *C;
   double defaultStep[6] = {1e-5, 1e-5, 1e-5, 1e-5, 1e-5, 1e-5};
   long ltmp1, ltmp2;
+  char s[1024];
   
   coord = (double**)czarray_2d(sizeof(**coord), 1+6*4, 7);
 
@@ -550,7 +551,12 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
 
   free_czarray_2d((void**)coord, 1+4*6, 7);
 
-  print_matrices(stdout, "\nElement matrix determined from tracking:\n", M);
+  if (strlen(eptr->name)<900)
+    sprintf(s, "\nElement %s#%ld matrix determined from tracking:\n", eptr->name, eptr->occurence);
+  else
+    sprintf(s, "\nElement matrix determined from tracking:\n");
+    
+  print_matrices(stdout, s, M);
   
   return M;
 }
