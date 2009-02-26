@@ -159,7 +159,7 @@ long doFrequencyMap(
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
       if (include_changes) {
-	memcpy(startingCoord, endingCoord, sizeof(*startingCoord)*4);
+	memcpy(startingCoord, endingCoord, sizeof(*startingCoord)*6);
 	if (!computeTunesFromTracking(secondTune, secondAmplitude,
 				      beamline->matrix, beamline, run,
 				      startingCoord, 0.0, 0.0, turns,
