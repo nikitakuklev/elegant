@@ -2907,6 +2907,23 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
   long i, one=1;
   double CSave[6];
   
+#ifdef DEBUG1
+  FILE *fpdeb = NULL;
+  if (!fpdeb) {
+    fpdeb = fopen("tuneTracking.sdds", "w");
+    fprintf(fpdeb, "SDDS1\n");
+    fprintf(fpdeb, "&column name=Pass type=long &end\n");
+    fprintf(fpdeb, "&column name=x type=double &end\n");
+    fprintf(fpdeb, "&column name=xp type=double &end\n");
+    fprintf(fpdeb, "&column name=y type=double &end\n");
+    fprintf(fpdeb, "&column name=yp type=double &end\n");
+    fprintf(fpdeb, "&column name=t type=double &end\n");
+    fprintf(fpdeb, "&column name=p type=double &end\n");
+    fprintf(fpdeb, "&data mode=ascii &end\n");
+  }
+  fprintf(fpdeb, "%ld\n", turns);
+#endif
+
 #ifdef DEBUG
   fprintf(stdout, "In computeTunesFromTracking: turns=%ld, xAmp=%le, yAmp=%le, useMatrix=%ld\n",
           turns, xAmplitude, yAmplitude, useMatrix);
@@ -2926,14 +2943,14 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
   if (!startingCoord)
     fill_double_array(oneParticle[0], 7, 0.0);
   else {
-    memcpy(oneParticle[0], startingCoord, 6*sizeof(*oneParticle));
+    memcpy(oneParticle[0], startingCoord, 6*sizeof(**oneParticle));
     oneParticle[0][6] = 0;
   }
   oneParticle[0][0] += xAmplitude;
   oneParticle[0][2] += yAmplitude;
 
 #ifdef DEBUG
-  fprintf(stdout, "Starting coordinates: %le, %le, %le, %le, %le, %le\n",
+  fprintf(stdout, "Starting coordinates: %21.15le, %21.15le, %21.15le, %21.15le, %21.15le, %21.15le\n",
           oneParticle[0][0], oneParticle[0][1],
           oneParticle[0][2], oneParticle[0][3],
           oneParticle[0][4], oneParticle[0][5]);
@@ -2996,13 +3013,17 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
     xp[i] = oneParticle[0][1];
     y[i] = oneParticle[0][2];
     yp[i] = oneParticle[0][3];
+#ifdef DEBUG1
+    fprintf(fpdeb, "%ld %21.15e %21.15e %21.15e %21.15e %21.15e %21.15e\n", i, 
+            oneParticle[0][0], oneParticle[0][1], oneParticle[0][2], oneParticle[0][3], oneParticle[0][4], oneParticle[0][5]);
+#endif
   }
   if (endingCoord) {
     for (i=0; i<6; i++)
       endingCoord[i] = oneParticle[0][i];
   }
 #ifdef DEBUG
-  fprintf(stdout, "Ending coordinates: %le, %le, %le, %le, %le, %le\n",
+  fprintf(stdout, "Ending coordinates: %21.15le, %21.15le, %21.15le, %21.15le, %21.15le, %21.15le\n",
           oneParticle[0][0], oneParticle[0][1],
           oneParticle[0][2], oneParticle[0][3],
           oneParticle[0][4], oneParticle[0][5]);
