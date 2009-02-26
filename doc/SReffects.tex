@@ -1,0 +1,29 @@
+This element provides an alternative to element-by-element modeling of synchrotron radiation.
+There are several instances in which one may want to use this element:
+\begin{itemize}
+\item Simulation of instabilities or other dynamics in which quantum excitation and radiation
+  damping play a role.
+\item Simulation of dynamics with an rf cavity when the synchronous phase is significantly
+  different from 180 degrees, so that average radiation losses must be included.
+\item Computation of dynamic and momentum aperture in the presence of radiation damping.
+\end{itemize}
+
+The major parameters (\verb|JX|, \verb|JY|, \verb|EXREF|, \verb|SDELTAREF|,
+\verb|DDELTAREF|, and \verb|PREF|) can be supplied by the user, or filled in by {\tt elegant}
+if the \verb|twiss_output| command is given with \verb|radiation_integrals=1|.
+Because the radiation integrals computation in \verb|twiss_output| pertains to the
+horizontal plane only, the user must supply either \verb|EYREF| or \verb|COUPLING| if
+non-zero vertical emittance is desired.
+
+The user may elect to turn off some aspects of the synchrotron radiation model.  These should be
+changed from the default values with care!
+\begin{itemize}
+\item \verb|DAMPING| --- Default is 1.  If set to 0, then no radiation damping effects will be included.
+  More precisely, it is equivalent to setting \verb|JX=JY=JDELTA=1|.  Damping still occurs at any
+  rf cavities (since {\tt elegant} works in trace space).
+\item \verb|QEXCITATION| --- Default is 1.  If set to 0, then no quantum excitation effects are included,
+  which is to say that all particles will experience the same perturbation.  
+\item \verb|LOSSES| --- Default is 1.  If set to 0, no average energy losses are included.
+\end{itemize}
+  
+
