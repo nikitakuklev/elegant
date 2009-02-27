@@ -28,11 +28,18 @@ void track_SReffects(double **coord, long np, SREFFECTS *SReffects, double Po,
     static long first = 1;
     double deltaChange, cutoff;
     long active = 1;
+    static short warned = 0;
+    
 #if USE_MPI
     if (isMaster && notSinglePart) /* This is a parallel element, the master will not track unless it is a single particle simulation */
       active = 0;
 #endif
-	
+
+    if (SReffects->qExcite && !SReffects->includeOffsets) {
+      printf("\n*** Error: SREFFECTS seen with QEXCITATION=1 and INCLUDE_OFFSETS=0\n");
+      exit(1);
+    }
+
     if (!twiss) {
       printf("Problem with SREFFECTS: no twiss parameters were computed\n");
       printf("It may be necessary to pre-compute twiss parameters using an additional\n");
@@ -141,13 +148,16 @@ void track_SReffects(double **coord, long np, SREFFECTS *SReffects, double Po,
           deltaChange = -part[5];
           part[5]  = Ddelta + part[5]*Fdelta + Srdelta*gauss_rn_lim(0.0, 1.0, cutoff, random_2);
           deltaChange += part[5];
-          /* This is required to keep the beam at the same distance from the off-momentum closed orbit,
-           * to avoid additional quantum excitation 
-           */
-          part[0] += twiss->etax*deltaChange;
-          part[1] += twiss->etapx*deltaChange;
-          part[2] += twiss->etay*deltaChange;
-          part[3] += twiss->etapy*deltaChange;
+          if (SReffects->includeOffsets) {
+            /* This is required to keep the beam at the same distance from the off-momentum closed orbit,
+             * to avoid additional quantum excitation.  It isn't needed if the rf cavity is right next door
+             * and is set properly.
+             */
+            part[0] += twiss->etax*deltaChange;
+            part[1] += twiss->etapx*deltaChange;
+            part[2] += twiss->etay*deltaChange;
+            part[3] += twiss->etapy*deltaChange;
+          }
           P = (1+part[5])*Po;
           beta = P/sqrt(sqr(P)+1);
           part[4] = t*beta;
@@ -162,14 +172,6 @@ void track_SReffects(double **coord, long np, SREFFECTS *SReffects, double Po,
           P = (1+part[5])*Po;
           beta = P/sqrt(sqr(P)+1);
           part[4] = t*beta;
-          /* This is required to keep the beam at the same distance from the off-momentum closed orbit,
-           * to avoid additional quantum excitation 
-           */
-          deltaChange = Ddelta;
-          part[0] += twiss->etax*deltaChange;
-          part[1] += twiss->etapx*deltaChange;
-          part[2] += twiss->etay*deltaChange;
-          part[3] += twiss->etapy*deltaChange;
         }
       }
     }
