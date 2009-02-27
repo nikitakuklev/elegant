@@ -17,26 +17,68 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 20.0\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
+\author{Program Version 21.0\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
 \htmladdnormallink{forum}{https://www.aps.anl.gov/Accelerator_Systems_Division/Operations_Analysis/phpBB3}.
-Users are encouraged to join and participate.
+Users are encouraged to join and participate.  At minimum, users should subscribe to the ``Bugs'' topic,
+since this is where bug notifications are posted.
 
-\section{Highlights of What's New in Version 20.0}
+\section{Highlights of What's New in Version 21.0}
 
-Here is a summary of what's changed since release 19.1.  For details
-and references, see the specific entries in the manual. 
+Here is a summary of what's changed since release 20.0.  For details and references, see the specific entries in the manual. 
+
+\subsection{Bug Fixes for Elements}
+\begin{itemize}
+\item The effect of the \verb|SREFFECTS| element on the closed orbit was incorrect if there was dispersion at the element's location.
+ This was fixed, but it results in a discrepancy between the closed orbit and tracking unless care is taken.  As a result, the element
+ now allows the user to control inclusion of orbit offsets.  The manual page has additional guidance on using this element correctly.
+\item For some elements, {\tt elegant} computes a first-order transfer matrix from tracking in order to allow computation of twiss parameters
+  and the like.  This wouldn't work correctly for systems with acceleration.  This has been fixed.
+\end{itemize}
+
+\subsection{Bug Fixes for Commands}
+\begin{itemize}
+\item A bug was fixed in computation of the \verb|dnux|, \verb|dnuy|, and \verb|diffusion| quantities in frequency map analysis on 32-bit computers.
+\item A bug was fixed in computation of corrected emittances  for output to the \verb|run_setup/sigma| and \verb|run_setup/final| files.
+  This bug resulted in the emittances being set to zero if the energy spread was zero.
+\item Several bugs were inadvertently introduced into orbit and trajectory correction in the last revision.  These were fixed in updated
+  releases of version 20.0.  These fixes are also present in Version 21.0.  These bugs were reported by A. Petrenko, R. Fliller (FNAL), and others.
+\end{itemize}
+
+\subsection{New and Modified Elements}
+\begin{itemize}
+\item The \verb|CSBEND| and \verb|CSRCSBEND| elements now use a higher-order magnetic field expansion.  This
+  was requested by A. Petrenko.  Small changes in tracking results may be observed.
+\item The \verb|CSRCSBEND|, \verb|LSCDRIFT|, and \verb|RFCW| elements now support a high-pass filter in addition
+  to the existing low-pass filter.  This was requested by J. Wu (SLAC).
+\item \verb|The global_settings| command has several new parameters that allow controlling output to the terminal.
+  This resulted from requests by G. Shen (BNL) and others.
+\item The \verb|WAKE| and \verb|TRWAKE| elements will now issue a warning if the bunch is considered too short compared
+  to the spacing of the wake points.  This was suggested by Y. Kim (PSI).
+\end{itemize}
+
+\subsection{New and Modified Commands}
+\begin{itemize}
+\item The \verb|twiss_output| command now computes second-order geometric driving terms.  This was requested
+  by W. Guo (BNL), who helped with development and testing.
+\item The \verb|global_settings| command now offers several options for reducing or redirecting output that 
+  goes to the terminal.  This was a result of requests from G. Shen (BNL).
+\end{itemize}
+
+\subsection{Changes to Related Programs and Files}
+
+\begin{itemize}
+\item A bug was fixed in {\tt km2sdds}.  The script had trouble scanning RADIA output files with extra spaces between
+ columns of data.  This was reported by O. Ferrando.
+\end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
 \begin{itemize}
-\item Twiss output contains entries for the higher-order dispersion, tune
-        shifts with amplitude, higher-order chromaticity, tune spreads
-        due to chromaticity and amplitude, and resonance driving terms
-	{\em even when these are not calculated}, which is potentially
-	misleading.   The values are zero when the calculation is not
-        requested.
+\item Twiss output contains entries for the higher-order dispersion, tune shifts with amplitude, higher-order chromaticity, tune spreads
+  due to chromaticity and amplitude, and resonance driving terms {\em even when these are not calculated}, which is potentially
+  misleading.   The values are zero when the calculation is not requested.
 \item Computation of closed orbits and Twiss parameters will not always include the effects of synchrotron
   radiation losses when these are imposed using {\tt SREFFECTS} elements.  See
   the documentation for {\tt SREFFECTS} for details.
@@ -48,40 +90,6 @@ and references, see the specific entries in the manual.
  Some of the quadrupole parameters are filled with garbage values.  When \verb|alter_elements| or
  \verb|save_lattice| are subsequently used, \verb|elegant| crashes.   These problems were reported by 
  V. Sajaev (ANL).
-\end{itemize}
-
-\subsection{Bug Fixes for Elements}
-\begin{itemize}
-\item None.
-\end{itemize}
-
-\subsection{Bug Fixes for Commands}
-\begin{itemize}
-\item A bug was fixed in computation of corrected emittances  for output to the \verb|run_setup/sigma| and \verb|run_setup/final| files.
-  This bug resulted in the emittances being set to zero if the energy spread was zero.
-\end{itemize}
-
-\subsection{New and Modified Elements}
-\begin{itemize}
-\item The \verb|CSBEND| and \verb|CSRCSBEND| elements now use a higher-order magnetic field expansion.  This
-  was requested by A. Petrenko.  Small changes in tracking results may be observed.
-\item The \verb|CSRCSBEND|, \verb|LSCDRIFT|, and \verb|RFCW| elements now support a high-pass filter in addition
-  to the existing low-pass filter.  This was requested by J. Wu (SLAC).
-\end{itemize}
-
-\subsection{New and Modified Commands}
-\begin{itemize}
-\item The \verb|twiss_output| command now computes second-order geometric driving terms.  This was requested
-  by W. Guo (BNL), who helped in testing. 
-\item The \verb|global_settings| command now offers several options for reducing or redirecting output that 
-  goes to the terminal.  This was a result of requests from G. Shen (BNL).
-\end{itemize}
-
-\subsection{Changes to Related Programs and Files}
-
-\begin{itemize}
-\item A bug was fixed in {\tt km2sdds}.  The script had trouble scanning RADIA output files with extra spaces between
- columns of data.  This was reported by O. Ferrando (Trieste).
 \end{itemize}
 
 \section{Credits}
@@ -525,7 +533,7 @@ the file {\tt data.twi}.
 \hyperref{{\tt find\_aperture}}{{\tt find\_aperture}}{}{subsec:findaperture} & Determine the transverse (e.g., dynamic) aperture. \\ \hline
 \hyperref{{\tt floor\_coordinates}}{{\tt floor\_coordinates}}{}{subsec:floorcoordinates} & Compute and output floor coordinates. \\ \hline
 \hyperref{{\tt frequency\_map}}{{\tt frequency\_map}}{}{subsec:frequencymap} & Compute and output frequency map. \\ \hline
-\hyperref{{\tt global\_settings}}{{\tt global\_settings}}{}{subsec:globalsetttings} & Change global settings.\\ \hline
+\hyperref{{\tt global\_settings}}{{\tt global\_settings}}{}{subsec:globalsettings} & Change global settings.\\ \hline
 \hyperref{{\tt insert\_elements}}{{\tt insert\_sceffects}}{}{subsec:insertelements} & Insert elements into the lattice at many places. \\ \hline
 \hyperref{{\tt insert\_sceffects}}{{\tt insert\_sceffects}}{}{subsec:insertsceffects} & Insert space charge kick elements. \\ \hline
 \hyperref{{\tt linear\_chromatic\_tracking\_setup}}{{\tt linear\_chromatic\_tracking\_setup}}{}{subsec:linearchromatictrackingsetup} & Set up for fast tracking with chromatic effects. \\ \hline
@@ -1696,6 +1704,9 @@ end are given.
 \begin{verbatim}
 &global_settings
     long inhibit_fsync = 0;
+    long echo_namelists = 1;
+    STRING log_file = NULL;
+    STRING error_log_file = NULL;
 &end
 \end{verbatim}
 
@@ -1703,6 +1714,14 @@ end are given.
 \item \verb|inhibit_fsync| --- By default, \verb|elegant| forces file synchronization across a network file system
   to ensure that users see up-to-date files as soon as possible.  In cases where a great deal of output is generated,
   this can degrade performance.  Setting this parameter to 1 will turn off synchronization until the end of the run.
+\item \verb|echo_namelists| -- By default, \verb|elegant| echoes all namelist input to the terminal.  If this parameter
+  is set to 0, this output will be inhibited.
+\item \verb|log_file| --- By default, \verb|elegant| writes status information to the terminal.  If a filename is supplied
+  for this parameter, the output will instead go to the file.  On Linux and Unix, using \verb|/dev/null| will result in 
+  the output being discarded.
+\item \verb|error_log_file| --- By default, \verb|elegant| writes error messages to the terminal.  If a filename is supplied
+  for this parameter, the output will instead go to the file.  On Linux and Unix, using \verb|/dev/null| will result in 
+  the output being discarded.
 \end{itemize}
 
 \begin{latexonly}
@@ -2472,9 +2491,10 @@ and \verb|tau<plane>| for the damping partition and damping time,
 where \verb|<plane>| is \verb|x|, \verb|y|, or \verb|delta|.  One may also use
 \verb|I1| through \verb|I5| for the individual radiation integrals.
 \item If \verb|compute_driving_terms=1|, then the quantities
-{\tt h11001}, {\tt h00111}, {\tt h20001}, {\tt h00201}, {\tt h10002}, {\tt h21000}, {\tt h30000}, 
- {\tt h10110}, {\tt h10020}, {\tt h10200}, {\tt dnux/dJx}, {\tt dnux/dJy},  and {\tt dnuy/dJy} 
-may be used.
+{\tt h11001}, {\tt h00111}, {\tt h20001}, {\tt h00201}, {\tt h10002}, {\tt h21000}, {\tt h30000}, {\tt h10110}, {\tt h10020},
+{\tt h10200}, {\tt h22000}, {\tt h11110}, {\tt h00220}, {\tt h31000}, {\tt h40000}, {\tt h20110}, {\tt h11200}, {\tt h20020},
+{\tt h20200}, {\tt h00310}, {\tt h00400}, {\tt dnux/dJx}, {\tt dnux/dJy},  and {\tt dnuy/dJy} 
+may be used.  Table \ref{tab:drivingTerms} explains the meaning of the terms.
 \item The coupling integral and emittance ratio due to x-y coupling may
 be accessed using the symbols \verb|couplingIntegral| and
 \verb|emittanceRatio|.  See section 3.1.4.4 of \cite{HAPE}.
@@ -3541,9 +3561,10 @@ defined as $\frac{d\beta}{d\delta}$.
 \item {\tt dnux/dAx}, {\tt dnux/dAy}, {\tt dnuy/dAx}, {\tt dnuy/dAy} --- Tune shifts with amplitude, where amplitude
   is defined as $A_q = (1 + \alpha_q) q^2/\beta_q$, with $q=x$ or $q=y$.  These will
   be zero unless the \verb|tune_shift_with_amplitude| command is given.
-\item {\tt h11001}, {\tt h00111}, {\tt h20001}, {\tt h00201}, {\tt h10002}, {\tt h21000}, {\tt h30000}, 
- {\tt h10110}, {\tt h10020}, and {\tt h10200} --- Resonance driving terms\cite{Bengtsson}.  These will be
- zero unless \verb|compute_driving_terms| is nonzero.
+\item {\tt h11001}, {\tt h00111}, {\tt h20001}, {\tt h00201}, {\tt h10002}, {\tt h21000}, {\tt h30000}, {\tt h10110}, {\tt h10020},
+{\tt h10200}, {\tt h22000}, {\tt h11110}, {\tt h00220}, {\tt h31000}, {\tt h40000}, {\tt h20110}, {\tt h11200}, {\tt h20020},
+{\tt h20200}, {\tt h00310}, {\tt h00400}--- Resonance driving terms\cite{Bengtsson}.  These will be
+ zero unless \verb|compute_driving_terms| is nonzero.  See table \ref{tab:drivingTerms} for an explanation of each term.
 \item {\tt dnux/dJx}, {\tt dnux/dJy},  and {\tt dnuy/dJy} --- Tune shifts with amplitude from Bengtsson's theory \cite{Bengtsson}.
  See documentation for \verb|tune_shift_with_amplitude| for discussion and comparison with {\tt dnux/dAx} etc.
  These will be zero unless \verb|compute_driving_terms| is nonzero.
@@ -3577,6 +3598,36 @@ only.  You must change the \verb|default\_order| parameter on
 \verb|run\_setup| to \verb|3| in order to use the third-order matrices
 for alpha magnets, quadrupoles, and sextupoles.  You may also use the
 {\tt ORDER} parameter on individual element definitions.
+
+\begin{table}[htb]\caption{Meaning of the various driving terms\cite{Bengtsson}.}
+\begin{center}
+\begin{tabular}{|c|c|}\hline
+Term Name & Explanation \\  \hline \hline
+h11001 & drives x chromaticity \\ \hline
+h00111 & drives y chromaticity \\ \hline
+h20001 & drives synchro-betatron resonances \\ \hline
+h00201 & drives momentum-dependence of beta functions \\ \hline
+h10002 & drives second order dispersion \\ \hline
+h21000 & drives $\nu_x$ \\ \hline
+h30000 & drives $3 \nu_x$ \\ \hline
+h10110 & drives $\nu_x$ \\ \hline
+h10020 & drives $\nu_x - 2 \nu_y$ \\ \hline
+h10200 & drives $\nu_x + 2 \nu_y$ \\ \hline
+h22000 & drives $d\nu_x/dJ_x$\\ \hline
+h11110 & drives $d\nu_x/dJ_y$ \\ \hline
+h00220 & drives $d\nu_y/dJ_y$ \\ \hline
+h31000 & drives $2 \nu_x$ \\ \hline
+h40000 & drives $4 \nu_x$ \\ \hline
+h20110 & drives $2 \nu_x$ \\ \hline
+h11200 & drives $2 \nu_y$ \\ \hline
+h20020 & drives $2 \nu_x - 2 \nu_y$ \\ \hline
+h20200 & drives $2 \nu_x + 2 \nu_y$ \\ \hline
+h00310 & drives $2 \nu_y$ \\ \hline
+h00400 & drives $4 \nu_y$ \\ \hline
+\end{tabular}
+\end{center}
+\label{tab:drivingTerms}
+\end{table}
 
 \begin{latexonly}
 \newpage
