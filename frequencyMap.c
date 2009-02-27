@@ -108,6 +108,9 @@ long doFrequencyMap(
   double firstAmplitude[2], secondAmplitude[2];
   double dx, dy, x, y;
   long ix, iy, ip, turns;
+  static double **one_part;
+  double p;
+  long n_part;
   
   if (!SDDS_StartPage(&SDDS_fmap, nx*ny) || 
       !SDDS_SetParameters(&SDDS_fmap, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, 0, control->i_step, -1)) {
@@ -123,6 +126,24 @@ long doFrequencyMap(
       }
   }
 
+
+  /* Perform fiducialization by tracking one turn */
+  if (!one_part)
+    one_part = (double**)czarray_2d(sizeof(**one_part), 1, 7);
+  n_part = 1;
+  if (referenceCoord) {
+    long i;
+    for (i=0; i<6; i++)
+      one_part[0][i] = referenceCoord[i];
+  }
+  p = run->p_central;
+  if (!do_tracking(NULL, one_part, n_part, NULL, beamline, &p, (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
+                   NULL, run, 0, TEST_PARTICLES, 1, 0,
+                   NULL, NULL, NULL, NULL, NULL)) {
+    printf("Error: lost particle when fiducializing\n");
+    exit(1);
+  }
+  
   if (nx>1)
     dx  = (xmax-xmin)/(nx-1);
   else
