@@ -46,6 +46,13 @@
 &alter_elements name=<kickOffsetElement>, item=ON_PASS, value=0 &end
 &alter_elements name=<kickOffsetElement>, item=DP, value=<delta> &end
 
+! May be needed if SREFFECTS elements are present
+&twiss_output
+        radiation_integrals = 1
+        matched = 1
+        output_at_each_step = 0
+&end
+
 &run_control
 	n_steps = 1,
         n_passes = <turns>,
