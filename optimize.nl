@@ -13,13 +13,16 @@ static char *optimize_method[N_OPTIM_METHODS] = {
     "simplex", "grid", "sample", "powell", "randomsample", "randomwalk",
     } ;
 
-#namelist optimization_term static
+#namelist optimization_term,struct
     STRING term = NULL;
     double weight = 1.0;
     STRING field_string = NULL;
     long field_initial_value = 0;
     long field_final_value = 0;
     long field_interval = 1;
+    STRING input_file = NULL;
+    STRING input_column = NULL;
+    long verbose = 0;
 #end
 
 #namelist optimization_setup static

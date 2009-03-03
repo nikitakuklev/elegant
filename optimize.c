@@ -211,8 +211,9 @@ void add_optimization_variable(OPTIMIZATION_DATA *optimization_data, NAMELIST_TE
 void add_optimization_term(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *nltext, RUN *run,
                            LINE_LIST *beamline)
 {
-  long field_value, n_field_values, index;
+  long field_value, n_field_values = 0, index, nFileTerms = 0;
   char s[16834], value[100];
+  char **fileTerm = NULL;
   
   /* process namelist text */
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
@@ -220,59 +221,87 @@ void add_optimization_term(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
   process_namelist(&optimization_term, nltext);
   if (echoNamelists) print_namelist(stdout, &optimization_term);
 
-  if (weight==0)
+  if (optimization_term_struct.weight==0)
     return ;
   
-  if (term==NULL)
-    bomb("term is invalid", NULL);
+  if (optimization_term_struct.term==NULL && optimization_term_struct.input_file==NULL)
+    bomb("term is invalid and no input file given", NULL);
   if (optimization_data->equation)
     bomb("you've already given an optimization equation, so you can't give individual terms", NULL);
-  if (!field_string) {
-    field_initial_value = field_final_value = 0;
-    field_interval = 1;
+  if (optimization_term_struct.field_string && optimization_term_struct.input_file)
+    bomb("you can't use field substitution and file input together", NULL);
+  if (optimization_term_struct.field_string) {
+    if ((n_field_values = (optimization_term_struct.field_final_value-optimization_term_struct.field_initial_value)/optimization_term_struct.field_interval+1)<=0) 
+      bomb("something strage about field_final_value, field_initial_value, and field_interval", NULL);
+    field_value = optimization_term_struct.field_initial_value;
+  } else if (optimization_term_struct.input_file) {
+    SDDS_DATASET SDDSin;
+    if (!optimization_term_struct.input_column)
+      bomb("you must give input_column when giving input_file", NULL);
+    if (!SDDS_InitializeInputFromSearchPath(&SDDSin, optimization_term_struct.input_file) ||
+        SDDS_ReadPage(&SDDSin)!=1)
+      SDDS_Bomb("problem reading optimization term input file");
+    if ((nFileTerms=SDDS_RowCount(&SDDSin))==0) {
+      printf("Warning: No rows loaded from file!\n");
+      return ;
+    }
+    if (SDDS_GetNamedColumnType(&SDDSin, optimization_term_struct.input_column)!=SDDS_STRING) {
+      printf("Error: column %s is nonexistent or not string type.\n", optimization_term_struct.input_column);
+      exit(1);
+    }
+    if (!(fileTerm = SDDS_GetColumn(&SDDSin, optimization_term_struct.input_column))) 
+      SDDS_Bomb("error getting optimization term column from file");
+    SDDS_Terminate(&SDDSin);
+  } else {
+    optimization_term_struct.field_initial_value = optimization_term_struct.field_final_value = 0;
+    optimization_term_struct.field_interval = 1;
     n_field_values = 1;
     field_value = 0;
-  } else {
-    if ((n_field_values = (field_final_value-field_initial_value)/field_interval+1)<=0) 
-      bomb("something strage about field_final_value, field_initial_value, and field_interval", NULL);
-    field_value = field_initial_value;
+    nFileTerms = 0;
   }
-  
+
   if (!(optimization_data->term 
         = SDDS_Realloc(optimization_data->term,
-                       sizeof(*optimization_data->term)*(optimization_data->terms+n_field_values))) ||
+                       sizeof(*optimization_data->term)*(optimization_data->terms+n_field_values+nFileTerms))) ||
       !(optimization_data->termValue 
         = SDDS_Realloc(optimization_data->termValue,
-                       sizeof(*optimization_data->termValue)*(optimization_data->terms+n_field_values))) ||
+                       sizeof(*optimization_data->termValue)*(optimization_data->terms+n_field_values+nFileTerms))) ||
       !(optimization_data->termWeight 
         = SDDS_Realloc(optimization_data->termWeight,
-                       sizeof(*optimization_data->termWeight)*(optimization_data->terms+n_field_values))) ||
+                       sizeof(*optimization_data->termWeight)*(optimization_data->terms+n_field_values+nFileTerms))) ||
       !(optimization_data->usersTermWeight 
         = SDDS_Realloc(optimization_data->usersTermWeight,
-                       sizeof(*optimization_data->usersTermWeight)*(optimization_data->terms+n_field_values))))
+                       sizeof(*optimization_data->usersTermWeight)*(optimization_data->terms+n_field_values+nFileTerms))))
     bomb("memory allocation failure", NULL);
 
-  for (index=0; index<n_field_values; index++) {
-    if (field_string && strlen(field_string)) {
-      sprintf(value, "%ld", field_value);
-      replaceString(s, term, field_string, value, -1, 0);
-      field_value += field_interval;
-    } else 
-      strcpy(s, term);
-    if (!SDDS_CopyString(&optimization_data->term[optimization_data->terms+index], s))
-      bomb("memory allocation failure", NULL);
-    optimization_data->termWeight[optimization_data->terms+index] = 1;
-    optimization_data->usersTermWeight[optimization_data->terms+index] = weight;
+  if (!nFileTerms) {
+    for (index=0; index<n_field_values; index++) {
+      if (optimization_term_struct.field_string && strlen(optimization_term_struct.field_string)) {
+        sprintf(value, "%ld", field_value);
+        replaceString(s, optimization_term_struct.term, optimization_term_struct.field_string, value, -1, 0);
+        field_value += optimization_term_struct.field_interval;
+      } else 
+        strcpy(s, optimization_term_struct.term);
+      if (!SDDS_CopyString(&optimization_data->term[optimization_data->terms+index], s))
+        bomb("memory allocation failure", NULL);
+      optimization_data->termWeight[optimization_data->terms+index] = 1;
+      optimization_data->usersTermWeight[optimization_data->terms+index] = optimization_term_struct.weight;
+      if (optimization_term_struct.verbose)
+        printf("Added term: %s\n", optimization_data->term[optimization_data->terms+index]);
+    }
+    optimization_data->terms += n_field_values;
+  } else {
+    for (index=0; index<nFileTerms; index++) {
+      optimization_data->term[optimization_data->terms+index] = fileTerm[index];
+      optimization_data->termWeight[optimization_data->terms+index] = 1;
+      optimization_data->usersTermWeight[optimization_data->terms+index] = optimization_term_struct.weight;
+      if (optimization_term_struct.verbose)
+        printf("Added term: %s\n", optimization_data->term[optimization_data->terms+index]);
+    }
+    optimization_data->terms += nFileTerms;
+    free(fileTerm);
   }
-  optimization_data->terms += n_field_values;
-
-/*
-  fprintf(stderr, "**** Terms:\n");
-  for (index=0; index<optimization_data->terms; index++) {
-    fprintf(stderr, "%s\n", optimization_data->term[index]);
-  }
-  fprintf(stderr, "****\n");
-*/
+  
 }
 
 void add_optimization_covariable(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
