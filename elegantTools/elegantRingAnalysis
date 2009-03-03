@@ -4,6 +4,9 @@
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.12  2008/08/26 18:24:18  borland
+# Added element type pattern for momentum aperture.
+#
 # Revision 1.11  2008/07/03 16:46:20  borland
 # Added option to include diffusion calculation.
 #
@@ -206,6 +209,8 @@ proc Display {args} {
         set suffix PP
         if [regexp {Basic} $type] {
             set prefix Basic
+        } elseif [regexp {Moments} $type] {
+            set prefix Moments
         } else {
             set prefix $type
         }
@@ -363,6 +368,41 @@ proc FillBasicFrame {widget args} {
     set apsAbortElegantRun(APSElegantBasicComputationsPP) 0
     APSButton .abort -parent $widget -text "Abort" \
       -command "set apsAbortElegantRun(APSElegantBasicComputationsPP) 1" \
+      -contextHelp "click to abort any running processes."
+}
+
+proc FillMomentsFrame {widget args} {
+    global momentsComputations
+
+    APSLabeledEntry .le1 -parent $widget -width 20 \
+      -label "Order for matrix quadrupoles and sextupoles: " -type integer \
+      -textVariable momentsComputations(order) 
+    APSLabeledEntry .le2 -parent $widget -width 20 \
+      -label "Edge order for dipoles: " -type integer \
+      -textVariable momentsComputations(edgeOrder) 
+    APSLabeledEntry .le3 -parent $widget -width 20 \
+      -label "Body order for matrix dipoles: " -type integer \
+      -textVariable momentsComputations(bodyOrder) 
+
+    APSLabeledEntry .le4 -parent $widget -width 20 \
+      -label "Source point type pattern: " \
+      -textVariable momentsComputations(sourcePointTypePattern) 
+    APSLabeledEntry .le5 -parent $widget -width 20 \
+      -label "Source point name pattern: " \
+      -textVariable momentsComputations(sourcePointNamePattern) 
+
+    APSLabeledEntry .le6 -parent $widget -width 20 \
+      -label "Run suffix: " \
+      -textVariable momentsComputations(userSuffix)
+
+    APSButton .bu1 -parent $widget -text "Compute" -command \
+      "Run -computation MomentsComputations"
+    APSButton .bu2 -parent $widget -text "Display" -command \
+      {Display -type MomentsComputations}
+    global apsAbortElegantRun
+    set apsAbortElegantRun(APSElegantMomentsComputationsPP) 0
+    APSButton .abort -parent $widget -text "Abort" \
+      -command "set apsAbortElegantRun(APSElegantMomentsComputationsPP) 1" \
       -contextHelp "click to abort any running processes."
 }
 
@@ -1032,9 +1072,10 @@ set topLabelList {Setup Main Aperture FMA Other}
 set SetupTabList {Main Errors}
 set SetupTabDescList [list "" ""]
 set SetupFrameList {Main Errors}
-set MainTabList {Basic PhsSpc  HghrOrdrDsprsn OffMmntmTunes}
-set MainFrameList {Basic PhaseSpace HigherOrderDispersion OffMomentumTunes}
+set MainTabList {Basic Moments PhsSpc  HghrOrdrDsprsn OffMmntmTunes}
+set MainFrameList {Basic Moments PhaseSpace HigherOrderDispersion OffMomentumTunes}
 set MainTabDescList [list "Twiss parameters, chromaticities, radiation integrals" \
+                       "Equilibrium beam moments" \
                        "Phase space tracking, plots, FFTs." \
                        "Higher order dispersion from off-momentum orbits." \
                        "Off-momentum tunes from tracking." ]
@@ -1075,7 +1116,7 @@ lappend elegantSaveVarList errors
 lappend elegantSaveVarList momentum matrixLatticeFile kickLatticeFile mainParameterFile mainDirectory
 lappend elegantSaveVarList mainPrefix gridEngine forceOccurence makePngFiles
 lappend elegantSaveVarList matrixBeamline kickBeamline matrixOffsetElement kickOffsetElement
-lappend elegantSaveVarList basicComputations phaseSpaceTracking offMomentumTuneTracking higherOrderDispersion
+lappend elegantSaveVarList basicComputations momentsComputations phaseSpaceTracking offMomentumTuneTracking higherOrderDispersion
 lappend elegantSaveVarList dynamicAperture offMomentumDynamicAperture fineDynamicAperture
 lappend elegantSaveVarList frequencyMap collectiveEffects dynamicApertureErrors frequencyMapDelta
 lappend elegantSaveVarList momentumAperture
