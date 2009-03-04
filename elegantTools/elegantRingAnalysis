@@ -4,6 +4,9 @@
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.13  2009/03/03 18:52:47  borland
+# Added moments computation feature.
+#
 # Revision 1.12  2008/08/26 18:24:18  borland
 # Added element type pattern for momentum aperture.
 #
@@ -234,13 +237,16 @@ proc FillErrorsFrame {widget args} {
       -label "Include error in computation?" -valueList {1 0} -buttonList {Yes No} \
       -variable errors(on) -orientation horizontal
     APSLabeledEntry .seed -parent $w0 \
-      -label "Number of seeds: " -width 11 -textVariable errors(numberOfSeeds) \
-      -contextHelp "Enter the number of random seeds to run." \
-      -packOption "-side left"
+      -label "Number of seeds: " -width 60 -textVariable errors(numberOfSeeds) \
+      -contextHelp "Enter the number of random seeds to run." 
     APSLabeledEntry .number -parent $w0 \
-      -label "Random number seed: " -width 11 -textVariable errors(seed) \
-      -contextHelp "Enter the random number seed." \
-      -packOption "-side left"
+      -label "Random number seed: " -width 60 -textVariable errors(seed) \
+      -contextHelp "Enter the random number seed." 
+    APSLabeledEntry .file -parent $w0 \
+      -label "Parameter file: " -width 60 -textVariable errors(errorInputFile) -fileSelectButton 1 -buttonsOnLeft 1 -fileSelectPattern *.erl \
+      -contextHelp \
+      "Enter the name of an optional file from which to read errors"
+
     APSFrame .other -parent $widget
     set w1 $widget.other.frame
     APSFrameGrid .fg -parent $w1 -xList "magnet dx dy dtilt fse" \
