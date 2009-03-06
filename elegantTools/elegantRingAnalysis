@@ -4,6 +4,9 @@
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.14  2009/03/04 03:20:23  borland
+# Added option for parameter file with errors.
+#
 # Revision 1.13  2009/03/03 18:52:47  borland
 # Added moments computation feature.
 #
@@ -237,20 +240,26 @@ proc FillErrorsFrame {widget args} {
       -label "Include error in computation?" -valueList {1 0} -buttonList {Yes No} \
       -variable errors(on) -orientation horizontal
     APSLabeledEntry .seed -parent $w0 \
-      -label "Number of seeds: " -width 60 -textVariable errors(numberOfSeeds) \
+      -label "Number of seeds: " -width 80 -textVariable errors(numberOfSeeds) \
       -contextHelp "Enter the number of random seeds to run." 
     APSLabeledEntry .number -parent $w0 \
-      -label "Random number seed: " -width 60 -textVariable errors(seed) \
+      -label "Random number seed: " -width 80 -textVariable errors(seed) \
       -contextHelp "Enter the random number seed." 
     APSLabeledEntry .file -parent $w0 \
-      -label "Parameter file: " -width 60 -textVariable errors(errorInputFile) -fileSelectButton 1 -buttonsOnLeft 1 -fileSelectPattern *.erl \
+      -label "Parameter file: " -width 80 -textVariable errors(errorInputFile) -fileSelectButton 1 -buttonsOnLeft 1 -fileSelectPattern *.erl \
       -contextHelp \
       "Enter the name of an optional file from which to read errors"
 
     APSFrame .other -parent $widget
     set w1 $widget.other.frame
+    APSRadioButtonFrame .mask -parent $w1 -label "Mask?" -valueList {1 0} -buttonList {Yes No} \
+        -variable errors(maskTable) -orientation horizontal \
+        -commandList [list "APSDisableWidget $w1.fg" "APSEnableWidget $w1.fg" ]
     APSFrameGrid .fg -parent $w1 -xList "magnet dx dy dtilt fse" \
       -yList "label bend quad sext"
+    if $errors(maskTable) {
+        APSDisableWidget $w1.fg
+    }
     foreach label {dx dy dtilt fse} unit {m m rad ""} {
         label $w1.fg.$label.label.label -text "$label ($unit)"
         pack $w1.fg.$label.label.label 
@@ -268,6 +277,7 @@ proc FillErrorsFrame {widget args} {
         }
     }
 }
+
 
 proc FillMainFrame {widget args} {
     APSLabeledEntry .le1 -parent $widget -label "Momentum (MeV/c): " \
