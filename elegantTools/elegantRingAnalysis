@@ -4,6 +4,9 @@
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.15  2009/03/06 22:44:47  borland
+# Added masking feature for individual errors.
+#
 # Revision 1.14  2009/03/04 03:20:23  borland
 # Added option for parameter file with errors.
 #
@@ -341,13 +344,13 @@ proc FillMainFrame {widget args} {
 proc FillBasicFrame {widget args} {
     global basicComputations
     foreach item [list Chromaticity HigherOrderChromaticity ChromaticTuneSpread \
-                    RadiationIntegrals ] {
+                    RadiationIntegrals DrivingTerms ] {
         lappend variableList basicComputations(do$item) 
     }
     APSCheckButtonFrame .cb1 -parent $widget \
       -label "Include: " -allNone 1 -limitPerRow 4 \
       -buttonList [list Chromaticity "Higher-order chromaticity" "Chromatic Tune Spread" \
-                     "Radiation Integrals" ] \
+                     "Radiation Integrals" "Driving terms"] \
       -variableList $variableList 
 
     APSLabeledEntry .le1 -parent $widget -width 20 \
