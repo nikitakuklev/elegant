@@ -57,6 +57,7 @@ sinclude(<ERRORPARAM>)
         higher_order_chromaticity = <doHigherOrderChromaticity>,
         chromatic_tune_spread_half_range = <chromaticTuneSpreadMomentumSpread>,
         output_at_each_step = 1
+        compute_driving_terms = <doDrivingTerms>
 &end
 
 &floor_coordinates
