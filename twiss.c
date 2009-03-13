@@ -665,6 +665,9 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
 #endif
   }
 
+  if (radIntegrals)
+    radIntegrals->computed = 1;
+  
 /*
     fprintf(stdout, "beta, eta, alpha: %e, %e; %e, %e; %e, %e\n",
           beta[0], beta[1],
@@ -1549,14 +1552,17 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
   fflush(stdout);
 #endif
 
+  beamline->radIntegrals.computed = 0;
+  
   propagate_twiss_parameters(beamline->twiss0, beamline->tune, beamline->waists,
                              (radiation_integrals?&(beamline->radIntegrals):NULL),
                              beamline->elem_twiss, run, starting_coord,
 			     beamline->couplingFactor);
   
   if (radiation_integrals)
-    computeRadiationIntegrals(&(beamline->radIntegrals), run->p_central,
+    completeRadiationIntegralComputation(&(beamline->radIntegrals), run->p_central,
                               beamline->revolution_length);
+  
 #ifdef DEBUG
   fprintf(stdout, "finding acceptance\n");
   fflush(stdout);
@@ -2360,7 +2366,7 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
 }
 
 
-void computeRadiationIntegrals(RADIATION_INTEGRALS *RI, double Po, double revolutionLength)
+void completeRadiationIntegralComputation(RADIATION_INTEGRALS *RI, double Po, double revolutionLength)
 {    
     double Rce, gamma;
     gamma = sqrt(sqr(Po)+1);
@@ -2374,6 +2380,7 @@ void computeRadiationIntegrals(RADIATION_INTEGRALS *RI, double Po, double revolu
     RI->taudelta = RI->tauy*RI->Jy/RI->Jdelta;
     RI->sigmadelta = gamma*sqrt(55./32./sqrt(3.)*hbar_mks/(particleMass*c_mks)*RI->I[2]/(2*RI->I[1]+RI->I[3]));
     RI->ex0 = sqr(gamma)*55./32./sqrt(3.)*hbar_mks/(particleMass*c_mks)*RI->I[4]/(RI->I[1]-RI->I[3]);
+    RI->computed = 1;
   }
 
 void LoadStartingTwissFromFile(double *betax, double *betay, double *alphax, double *alphay,

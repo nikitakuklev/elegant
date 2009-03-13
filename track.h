@@ -204,6 +204,7 @@ typedef struct element_list {
     struct element_list *pred, *succ;
     long divisions;    /* if element was subdivided, how many times */
     short firstOfDivGroup;
+
     } ELEMENT_LIST;
 
 typedef struct {
@@ -238,6 +239,7 @@ typedef struct {
 
 /* radiation integrals and related values.  See SLAC 1193. */
 typedef struct {
+  short computed;
   double I[5];
   double Jx, Jy, Jdelta;
   double taux, tauy, taudelta;
@@ -2786,7 +2788,7 @@ void setupTuneShiftWithAmplitude(NAMELIST_TEXT *nltext, RUN *run);
 long run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, long tune_corrected);
 void finish_twiss_output(void);
 void copy_doubles(double *source, double *target, long n);
-void computeRadiationIntegrals(RADIATION_INTEGRALS *RI, double Po, double revolutionLength);
+void completeRadiationIntegralComputation(RADIATION_INTEGRALS *RI, double Po, double revolutionLength);
 void setupTwissAnalysisRequest(NAMELIST_TEXT *nltext, RUN *run, 
                                LINE_LIST *beamline);
 long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *beamline, RUN *run,

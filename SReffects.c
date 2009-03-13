@@ -48,7 +48,7 @@ void track_SReffects(double **coord, long np, SREFFECTS *SReffects, double Po,
     }
     
     if (SReffects->pRef==0) {
-      if (!radIntegrals) {
+      if (!radIntegrals || !radIntegrals->computed) {
         bomb("Problem with SREFFECTS element: pRef=0 but no radiation integrals computed.  Use the twiss_output command to compute these.", NULL);
       }
       /* take data from radiation integrals */
