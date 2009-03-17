@@ -9,6 +9,9 @@
 
 /* 
  * $Log: not supported by cvs2svn $
+ * Revision 1.3  2008/05/21 21:00:15  xiaoam
+ * Add check radiation integral when read twissFile. It's necessaray when user doesn't supply emitxInput.
+ *
  * Revision 1.2  2007/04/12 21:11:52  soliday
  * Updated so that it will compile on WIN32.
  *
@@ -40,8 +43,10 @@
 static char *USAGE = "touschekLifetime <resultsFile>\n\
  -twiss=<twissFile> -aperture=<momentumApertureFile>\n\
  {-charge=<nC>|-particles=<value>} -coupling=<value>\n\
+ [-deltaLimit=<percent>]\n\
  {-RF=Voltage=<MV>,harmonic=<value>|-length=<mm>}\n\
- [-emitxInput=<value>] [-deltaInput=<value>] [-verbosity=<value>]";
+ [-emitxInput=<value>] [-deltaInput=<value>] [-verbosity=<value>]\n\
+Program by A. Xiao.  (This is version 3, M. Borland)";
 
 #define VERBOSE 0
 #define CHARGE 1
@@ -53,7 +58,8 @@ static char *USAGE = "touschekLifetime <resultsFile>\n\
 #define DELTAINPUT 7
 #define TWISSFILE 8
 #define APERFILE 9
-#define N_OPTIONS 10
+#define DELTALIMIT 10
+#define N_OPTIONS 11
 
 char *option[N_OPTIONS] = {
   "verbose",
@@ -66,12 +72,14 @@ char *option[N_OPTIONS] = {
   "deltainput",
   "twiss",
   "aperture",
+  "deltalimit",
 };
 
 void TouschekLifeCalc();  
 void FIntegral(double *tm, double *B1, double *B2, double *F, long index); 
 double Fvalue (double t, double tm, double b1, double b2);
 double linear_interpolation(double *y, double *t, long n, double t0, long i);
+void limitMomentumAperture(double *dpp, double *dpm, double limit, long n);
  
 /* global varibles */
 long plane_orbit = 0;
@@ -100,7 +108,8 @@ int main( int argc, char **argv)
   double alphac, U0, circumference, EMeV;
   double coupling, emitx0, charge;
   short has_ex0 = 0, has_Sdelta0 = 0;
-
+  double deltaLimit = 0;
+  
   /****************************************************\
    * read from command line                           *
    \****************************************************/
@@ -184,6 +193,11 @@ int main( int argc, char **argv)
         if (scanned[i].n_items<2)
           bomb("invalid -twiss syntax", NULL);
         inputfile2  =  scanned[i].list[1];
+        break;
+      case DELTALIMIT:
+        if (scanned[i].n_items != 2 || !get_double(&deltaLimit, scanned[i].list[1]) || deltaLimit<=0)
+          bomb("invalid -deltaLimit syntax/values", "-deltaLimit=<percent>");        
+        deltaLimit /= 100.0;
         break;
       default:
         bomb("unknown option given.", NULL);  
@@ -384,6 +398,8 @@ int main( int argc, char **argv)
   eName2 = SDDS_GetColumn(&aperPage, "ElementName");
   dpp = SDDS_GetColumnInDoubles(&aperPage, "deltaPositive");
   dpm = SDDS_GetColumnInDoubles(&aperPage, "deltaNegative");
+  if (deltaLimit>0)
+    limitMomentumAperture(dpp, dpm, deltaLimit, elements);
   
   /****************************************************\
    * calculate Touschek Lifetime                      *
@@ -648,3 +664,18 @@ double linear_interpolation(double *y, double *t, long n, double t0, long i)
   
   return( y[i] + (y[i+1]-y[i])/(t[i+1]-t[i])*(t0-t[i]) );
 }
+
+void limitMomentumAperture(double *dpp, double *dpm, double limit, long n)
+{
+  long i;
+  double limitn;
+  
+  limitn = -limit;
+  for (i=0; i<n; i++) {
+    if (dpp[i]>limit)
+      dpp[i] = limit;
+    if (dpm[i]<limitn)
+      dpm[i] = limitn;
+  }
+}
+
