@@ -6,13 +6,14 @@ set auto_path [linsert $auto_path 0  /usr/local/oag/apps/lib/$env(HOST_ARCH)]
 set auto_path [linsert $auto_path 0 /usr/local/oag/lib_patch/$env(HOST_ARCH)]
 APSStandardSetup
 
-set usage "usage: fracAnalysis -input <particleFilename> -output <filename> -fractions <listOfPercentiles> -plane {x|y}\nAnalyzes beam distribution from elegant using sddsanalyze beam for specified fractions of the distribution as determined by the particle amplitudes in the specified plane."
+set usage "usage: fracAnalysis -input <particleFilename> -output <filename> -fractions <listOfPercentiles> -plane {x|y} \[-plot 1\]\nAnalyzes beam distribution from elegant using sddsanalyze beam for specified fractions of the distribution as determined by the particle amplitudes in the specified plane."
 set input ""
 set output ""
 set fractions 50,60,70,80,90,100
 set plane x
+set plot 0
 set args $argv
-if {[APSStrictParseArguments {input output fractions plane}] || ![string length $input] || ![string length $output] || [llength [split $fractions " ,"]]<2 || \
+if {[APSStrictParseArguments {plot input output fractions plane}] || ![string length $input] || ![string length $output] || [llength [split $fractions " ,"]]<2 || \
       [lsearch -exact [list x y] $plane]==-1} {
     puts stderr "$usage"
     exit 1
@@ -40,10 +41,13 @@ flush stdout
 exec sddsxref $input $tmpRoot.ana -pipe=out -leave=* -transfer=parameter,* \
   | sddsprocess -pipe \
   "-define=parameter,gamma${plane},1 alpha${plane} sqr + beta${plane} /,units=1/m" \
-  "-define=col,J${plane},$plane sqr gamma$plane * 2 alpha$plane * $plane * ${plane}p * + ${plane}p sqr beta$plane * + ,units=m"  \
+  "-define=col,J${plane},$plane sqr gamma$plane * 2 alpha$plane * $plane * ${plane}p * + ${plane}p sqr beta$plane * + ,units=m,symbol=J\$b$plane\$n"  \
+  "-define=col,sqrtJ${plane},J${plane} abs sqrt,units=m\$a1/2\$n,symbol=J\$b$plane\$n\$a1/2\$n"  \
   | sddssort -pipe=in [file rootname $input].J${plane}Sort -col=J${plane},incr 
 
-exec sddsplot -column=$plane,${plane}p -graph=dot,vary -order=spect -split=column=J$plane [file rootname $input].J${plane}Sort &
+if $plot {
+    exec sddsplot -column=$plane,${plane}p -graph=dot,vary -order=spect -split=column=sqrtJ$plane [file rootname $input].J${plane}Sort &
+}
 
 set index 0
 foreach fraction $fractionList {
@@ -66,3 +70,7 @@ foreach fraction $fractionList {
 
 eval exec sddscombine $fileList -merge $output -overwrite
 eval file delete -force $fileList $tmpRoot.ana 
+
+if $plot {
+    exec sddsplot -layout=2,2 -separate $output -graph=sym,connect -column=Fraction,(e$plane,en$plane,beta$plane,alpha$plane) &
+}
