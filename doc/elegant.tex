@@ -308,14 +308,16 @@ all particles.
 \section{Fiducialization in {\tt elegant}}
 
 In some tracking codes, there is a ``fiducial particle'' that is
-assumed to travel along the ideal trajectory or orbit, with the ideal
+tracked along with the beam.  This particle follows the ideal trajectory or orbit, with the ideal
 momentum, and at the ideal phase.  There is no fiducial particle in {\tt
-elegant}.  Instead, {\em elements} are fiducialized in {\tt elegant}.
-Fiducializing an element means determining the momentum and arrival time
-(or phase) of the reference particle.  This is particularly important
-in simulations of linacs.
+elegant}.  Instead, fiducialization is typically based on statistical properties of 
+the bunch.  This can be performed on a bunch-by-bunch basis, or for the first
+bunch seen in a run.  The latter method must be used if one wants to look at the
+effects of changing phase, voltage, or magnets relative to some nominal configuration.
 
-If the reference momentum does not change and no time-dependent elements
+Internally, {\tt elegant} fiducializes each element in the beamline.
+Fiducializing an element means determining the reference momentum and arrival time
+(or phase) for that element.   If the reference momentum does not change along a beamline and no time-dependent elements
 are involved, then fiducialization is irrelevant.  All elements are
 fiducialized at the central momentum defined in \verb|run_setup|.
 
@@ -357,6 +359,33 @@ A number of commands have parameters for controlling fiducialization:
 	want to waste time fidicializing with a many-particle bunch.
 \end{itemize}
 
+Here are some examples that may be helpful.  
+\begin{itemize}
+\item {\em Scanning a phase error in a linac with a bunch compressor:}  The scan is performed using
+the \verb|vary_element| command.  For this to work properly, it is necessary to fidcualize the system
+with zero phase error.  Hence, one must use the enumeration feature of \verb|vary_element| to provide
+an input file with the phase errors and the file must be sorted so that the row with zero phase error
+is first.  Further, one must set \verb|reset_rf_for_each_step = 0| and \verb|first_is_fiducial = 1|
+in \verb|run_control|, and \verb|CHANGE_P0=1| on all rf cavity elements.  (See the \verb|bunchComp/phaseSweep| 
+and \verb|bunchComp/dtSweep| examples.)
+
+\item {\em Scanning the voltage of a linac to simulate different operating energy choices at the compressor:}
+In this case, one scans the linac voltage, but wants to fiducialize the system for each voltage.
+(It's a change in design, not an error or perturbation.)  One again uses \verb|vary_element|, but
+nothing special needs to be done about the order of the voltage values.  One must set
+\verb|reset_rf_for_each_step = 1| and \verb|first_is_fiducial = 0| in in \verb|run_control|,
+and \verb|CHANGE_P0=1| on all rf cavity elements.  (See the \verb|bunchComp/energySweep| example.)
+
+\item {\em Simulation of phase and voltage jitter:}  In this case, one uses the \verb|error_elements|
+command to impart errors to the \verb|PHASE| and \verb|VOLT| parameters of rf cavity elements.
+However, the first beam through the system must not see any errors.  This is accomplished by
+setting \verb|no_errors_for_first_step=1| in \verb|error_control|.  One can also (optionally) use
+a 1-particle beam for fiducialization by setting \verb|first_is_fiducial=1| in \verb|bunched_beam|.
+In addition, one must set  \verb|reset_rf_for_each_step = 0| and \verb|first_is_fiducial = 1|
+in \verb|run_control|, and \verb|CHANGE_P0=1| on all rf cavity elements.  (See the \verb|bunchCompJitter/jitter|
+example.)
+
+\end{itemize}
 
 \section{Namelist Command Dictionary}
 
