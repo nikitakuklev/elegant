@@ -17,7 +17,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 21.0\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
+\author{Program Version 22.0\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -25,71 +25,39 @@ Note: another source of help for {\tt elegant} is the on-line
 Users are encouraged to join and participate.  At minimum, users should subscribe to the ``Bugs'' topic,
 since this is where bug notifications are posted.
 
-\section{Highlights of What's New in Version 21.0}
+\section{Highlights of What's New in Version 22.0}
 
-Here is a summary of what's changed since release 20.0.  For details and references, see the specific entries in the manual. 
+Here is a summary of what's changed since release 21.0.  For details and references, see the specific entries in the manual. 
 
 \subsection{Bug Fixes for Elements}
 \begin{itemize}
-\item The effect of the \verb|SREFFECTS| element on the closed orbit was incorrect if there was dispersion at the element's location.
- This was fixed, but it results in a discrepancy between the closed orbit and tracking unless care is taken.  As a result, the element
- now allows the user to control inclusion of orbit offsets.  The manual page has additional guidance on using this element correctly.
-\item For some elements, {\tt elegant} computes a first-order transfer matrix from tracking in order to allow computation of twiss parameters
-  and the like.  This wouldn't work correctly for systems with acceleration.  This has been fixed.
+\item 
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item A bug was fixed in computation of the \verb|dnux|, \verb|dnuy|, and \verb|diffusion| quantities in frequency map analysis on 32-bit computers.
-\item A bug was fixed in computation of corrected emittances  for output to the \verb|run_setup/sigma| and \verb|run_setup/final| files.
-  This bug resulted in the emittances being set to zero if the energy spread was zero.
-\item Several bugs were inadvertently introduced into orbit and trajectory correction in the last revision.  These were fixed in updated
-  releases of version 20.0.  These fixes are also present in Version 21.0.  These bugs were reported by A. Petrenko, R. Fliller (FNAL), and others.
+\item 
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item The \verb|CSBEND| and \verb|CSRCSBEND| elements now use a higher-order magnetic field expansion.  This
-  was requested by A. Petrenko.  Small changes in tracking results may be observed.
-\item The \verb|CSRCSBEND|, \verb|LSCDRIFT|, and \verb|RFCW| elements now support a high-pass filter in addition
-  to the existing low-pass filter.  This was requested by J. Wu (SLAC).
-\item \verb|The global_settings| command has several new parameters that allow controlling output to the terminal.
-  This resulted from requests by G. Shen (BNL) and others.
-\item The \verb|WAKE| and \verb|TRWAKE| elements will now issue a warning if the bunch is considered too short compared
-  to the spacing of the wake points.  This was suggested by Y. Kim (PSI).
+\item 
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item The \verb|twiss_output| command now computes second-order geometric driving terms.  This was requested
-  by W. Guo (BNL), who helped with development and testing.
-\item The \verb|global_settings| command now offers several options for reducing or redirecting output that 
-  goes to the terminal.  This was a result of requests from G. Shen (BNL).
+\item 
 \end{itemize}
 
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
-\item A bug was fixed in {\tt km2sdds}.  The script had trouble scanning RADIA output files with extra spaces between
- columns of data.  This was reported by O. Ferrando.
+\item
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
 \begin{itemize}
-\item Twiss output contains entries for the higher-order dispersion, tune shifts with amplitude, higher-order chromaticity, tune spreads
-  due to chromaticity and amplitude, and resonance driving terms {\em even when these are not calculated}, which is potentially
-  misleading.   The values are zero when the calculation is not requested.
-\item Computation of closed orbits and Twiss parameters will not always include the effects of synchrotron
-  radiation losses when these are imposed using {\tt SREFFECTS} elements.  See
-  the documentation for {\tt SREFFECTS} for details.
-\item Computation of beam moments does not include synchrotron radiation effects from \verb|CWIGGLER|,
-  \verb|WIGGLER|, or \verb|UKICKMAP| elements.
-\item The file created with the parameters field of \verb|run_setup| does not contain
-  any non-numerical parameters of the lattice.
-\item When \verb|transmute_elements| is used to turn a sextupole into a quadrupole, several problems are seen.
- Some of the quadrupole parameters are filled with garbage values.  When \verb|alter_elements| or
- \verb|save_lattice| are subsequently used, \verb|elegant| crashes.   These problems were reported by 
- V. Sajaev (ANL).
+\item 
 \end{itemize}
 
 \section{Credits}
@@ -3874,6 +3842,10 @@ on subsequent pages.
 \item {\tt csrImpedance} --- Computes the shielded steady-state CSR impedance for a dipole magnet.
  The output can be used immediately with {\tt elegant}'s \verb|ZLONGIT| element.
  (Program by Y. Wang, H. Shang, and M. Borland.)
+\item {\tt doubleDist6} --- Increases the number of particles in a particle input file by
+ successively doubling the number.  Intended to be used to increase the number of particles
+ produced by a photoinjector simulation to improve stability of CSR and LSC simulations.
+ See also {\tt smoothDist6}.
 \item {\tt elegant2genesis} --- This program performs
         slice analysis of particle output files, which are suitable for use with
         the SDDS-compliant APS version of GENESIS\cite{GENESIS}.  This program is
@@ -3917,6 +3889,10 @@ on subsequent pages.
         distributions from user-designed distribution functions.  It is thus a more flexible alternative
         to \verb|bunched_beam|.  This program is part of the SDDS toolkit.  See the SDDS toolkit
         manual for documentation.  (Program by M. Borland and H. Shang.)
+\item {\tt smoothDist6s} --- Increases the number of particles in an input particle distribution.  At the same
+ time, smooths the distribution and adds optional energy and density modulation.   Intended to be used to increase the number of particles
+ produced by a photoinjector simulation to improve stability of CSR and LSC simulations.  Also useful in studying 
+ the growth rate for energy and density modulations.  See also {\tt doubleDist6}.
 \item {\tt touschekLifetime} --- This program calculates Touschek lifetime using A. Piwinski's formula.
         Input files are generated from ``twiss\_output'' and ``momentum\_aperture''.  (Program by A. Xiao.)
 \end{itemize}
@@ -3964,6 +3940,50 @@ csrImpedance {{\em outputFile}  | -pipe[=out]} -height={\em valueInMeters} -radi
 
 \item {\bf authors:} Y. Wang, H. Shang, ANL/APS.
 Based on a simplified form\cite{Agoh} of Warnock's \cite{Warnock} formula.
+\end{itemize}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|doubleDist6|}\end{center}
+\end{latexonly}
+\subsection{doubleDist6}
+
+\begin{itemize}
+\item {\bf description:} Increases the number of particles in a particle input file by
+ successively doubling the number.  Intended to be used to increase the number of particles
+ produced by a photoinjector simulation to improve stability of CSR and LSC simulations.
+
+The algorithm is as follows:
+\begin{itemize}
+\item For each doubling, insert a new particle ``near'' every pair of existing particles in time.
+    The particle has a new t value, but the same (x, xp, y, yp, p) as one of the original particles.
+\item Bin the beam according to t into a large number of bins.  Randomize the assignment of p values
+    relative to other coordinates across particles in the same bin, while additionally adding a 
+    small random value to each p value.
+\end{itemize}
+
+\item {\bf synopsis:}
+\begin{flushleft}{\tt
+doubleDist6 -input {\em name} -output {\em name} -doublings {\em number} -nt {\em bins}
+}\end{flushleft}
+
+\item {\bf files:}
+\begin{itemize}
+\item {\tt input} --- A particle distribution file, such as might be used with \verb|sdds_beam|.
+\item {\tt output} --- A particle distribution file, such as might be used with \verb|sdds_beam|.
+\end{itemize}
+
+\item {\bf switches:}
+\begin{itemize}
+\item {\tt -doublings {\em n}} --- The number of times to double the size of the distribution.
+ The number of particles in the output file is $2^n$ times the number in the input file.
+\item {\tt -nt {\em bins}} --- The number of time bins to use for momentum randomization. This
+ helps to avoid having many particles with exactly same momentum.
+\end{itemize}
+
+\item {\bf author:} M. Borland, ANL/APS.
+
+\item {\bf see also:} {\tt smoothDist6s}
 \end{itemize}
 
 \begin{latexonly}
@@ -4709,6 +4729,87 @@ calculations included, or an output from {\tt sddsanalyzebeam}. In the latter ca
 \end{itemize}
 
 \item {\bf authors:} H. Shang, R. Dejus, M. Borland, X. Jiao (ANL).
+\end{itemize}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|smoothDist6|}\end{center}
+\end{latexonly}
+\subsection{smoothDist6}
+
+\begin{itemize}
+\item {\bf description:} Increases the number of particles in a particle input file by
+ sampling a simplified distribution based the input file.  Intended to be used to increase the number of particles
+ produced by a photoinjector simulation to improve stability of CSR and LSC simulations.
+ Can also add energy and density modulations for performing gain studies.
+
+The algorithm is as follows:
+\begin{enumerate}
+\item Fit a 12$^{th}$-order polynomial to $p$ as a function of $t$.  Evaluate
+ the polynomial at 10,000 equispaced points to generate a lookup table for the momentum
+ variation with time.
+\item Compute the standard deviation of the momentum $p_{sd}$ for blocks of 2,000 successive
+ particles.  Fit this data with a 12$^{th}$-order polynomial and evaluate 
+ it a 10,000 equispaced points to generate a lookup table for $p_{sd}$ as a function of $t$.
+\item Create a histogram of $t$ and smooth it with a low-pass filter having a cutoff at
+ 0.1 THz.  This may resulting in ringing at the ends of the histogram, which is clipped off
+ by masking with the original histogram. 
+\item Optionally modulate the histogram H(t) with a sinusoid, by
+ multiplying the histogram by $(1 + d_m) \cos 2\pi c t/\lambda_m$, where $d_m$
+ is the modulation depth and $\lambda_m$ is the modulation wavelength. For non-zero $d_m$,
+ this will result in a longitudinal-density-modulated distribution when the histogram is
+ used as a probability distribution and sampled to create time coordinates.
+\item Sample the time histogram $N$ times using a ``quiet start'' Halton sequence with
+ radix 2, where $N$ is the number of desired particles.  The sampling
+ operation is performed by first numerically computing the cumulative
+ distribution function $C(t)=\int_{-\infty}^t H(t^\prime)
+ dt^\prime/\int_{-\infty}^\infty H(t^\prime) dt^\prime$.  Inverting
+ this to obtain $t(C)$, we generate each sample from $H(t)$ by
+ evaluating $t(U)$, where $U$ is a quantity on the interval [0, 1] generated
+ from the Halton sequence.
+\item Create samples for other coordinates by quiet-sampling of gaussian distributions:
+ \begin{enumerate}
+ \item Scaled transverse coordinates $\hat{x}$, $\hat{x^\prime}$,
+ $\hat{y}$, and $\hat{y^\prime}$ using Halton radices 3, 5, 7, and 11,
+ respectively.  For convenience in scaling (step 9), these are defined such that the standard deviation of
+ each coordinate is $10^{-4}$ and all coordinates are uncorrelated.
+ \item Scaled fractional momentum deviation $\delta_1$ using Halton radix 13, with
+ unit standard deviation.
+ \end{enumerate}
+\item Interpolate the look-up tables to determine the mean $p_{mean}$ and standard 
+ deviation $p_{sd}$ of the momentum at each particle's time coordinate. Use these
+ to compute the individual particle momenta using $p = p_{mean} + \delta_1 p_{sd}$.
+\item Compute the projected transverse rms emittances and Twiss parameters for the original beam.
+\item Transform the scaled transverse phase-space coordinates to give the desired 
+ projected Twiss parameters in the x and y planes.  The x and y planes are assumed to be uncorrelated.
+\end{enumerate}
+
+\item {\bf synopsis:}
+\begin{flushleft}{\tt
+smoothDist6 -input {\em name} -output {\em name} -factor {\em number} -rippleAmplitude {\em \%} -rippleWavelength {\em microns} \
+ -smoothPasses {\em num(500)} -energyMod {\em \%} -betaSlices {\em n}
+}\end{flushleft}
+
+\item {\bf files:}
+\begin{itemize}
+\item {\tt input} --- A particle distribution file, such as might be used with \verb|sdds_beam|.
+\item {\tt output} --- A particle distribution file, such as might be used with \verb|sdds_beam|.
+\end{itemize}
+
+\item {\bf switches:}
+\begin{itemize}
+\item {\tt -factor {\em number}} --- Factor by which to multiply the number of particles.
+\item {\tt -rippleAmplitude {\em value}} --- Density ripple amplitude, in percent.
+\item {\tt -energyMod {\em value}} --- Energy modulation amplitude, in percent.  
+\item {\tt -rippleWavelength {\em value}} --- Density ripple and energy modulation wavelength, in microns.
+\item {\tt -betaSlices {\em n}} --- Number of longitudinal slices to use for analysis of twiss parameters.  The twiss parameters of 
+the beam will vary step-wise from slice to slice.  This discontinuous variation may cause problems (e.g., unstable behavior).
+\item {\tt -smoothPases {\em num}} --- Presently ignored.
+\end{itemize}
+
+\item {\bf author:} M. Borland, ANL/APS.
+
+\item {\bf see also:} {\tt doubleDist6}
 \end{itemize}
 
 \begin{latexonly}
