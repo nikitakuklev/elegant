@@ -58,6 +58,7 @@ proc APSStrictParseArguments {optlist} {
 
 
 set usage {usage: smoothDist6 -input <name> -output <name> -factor <number> -rippleAmplitude <%> -rippleWavelength <um> -smoothPasses <num(500)> -energyMod <%> -betaSlices <n>}
+set debug 0
 set args $argv
 set output ""
 set input ""
@@ -67,7 +68,7 @@ set smoothPasses 500
 set factor 0
 set betaSlices 1
 set energyMod 0
-if {[APSStrictParseArguments {input output factor rippleAmplitude rippleWavelength smoothPasses energyMod betaSlices}] \
+if {[APSStrictParseArguments {input output factor rippleAmplitude rippleWavelength smoothPasses energyMod betaSlices debug}] \
       || ![string length $input] || ![string length $output] || $factor<1 \
       || $rippleAmplitude<0 || $rippleWavelength<=0 || $smoothPasses<=0 || $betaSlices<=0} {
     return -code error "$usage"
@@ -83,8 +84,9 @@ set factor [expr int($factor)]
 
 # fit a polynomial to the (t,p) data to make a table for computing p(t)
 exec sddspfit $input $input.fit -terms=12 -evaluate=$input.eval,number=10000 -column=t,p
-# exec sddsplot -col=t,p $input -graph=dot -col=t,p $input.eval -graph=line,type=1 &
-# exec sddsplot -col=t,pResidual $input.fit -graph=dot &
+if $debug {
+    exec sddsplot -col=t,p $input -graph=dot -col=t,p $input.eval -graph=line,type=1 "-title=momentum fit"
+}
 
 # find the StDev(pResidual) and make a table for computing pStDev(t)
 exec sddssort $input.fit -col=t,incr -pipe=out \
@@ -94,14 +96,24 @@ exec sddssort $input.fit -col=t,incr -pipe=out \
   | sddspfit -pipe=in $input.tmp -terms=12 \
   -evaluate=$input.pStDev,number=10000 -column=tAve,pStDev
 file delete $input.tmp
-# exec sddsplot -col=tAve,pStDev $input.pStDev &
+if $debug {
+    exec sddsplot -col=tAve,pStDev $input.pStDev "-title=momentum spread"
+}
 
 # compute number of particles that we'll generate
 set samples [expr [exec sdds2stream -rows=bare $input]*$factor]
+if $debug {
+    puts stdout "Will generate $samples particles"
+    flush stdout
+}
 
 # find average momentum
 set pAve [exec sddsprocess $input -pipe=out -process=p,ave,pAve \
             | sdds2stream -pipe -param=pAve]
+if $debug {
+    puts stdout "Average momentum from input beam: $pAve"
+    flush stdout
+}
 
 # smooth the longitudinal density to get a function for generating
 # the distribution, and apply the modulation
@@ -112,6 +124,9 @@ exec sddshist $input -pipe=out -bins=1000 -data=t -expand=1.2 \
     "-define=parameter,rippleAmplitude,$rippleAmplitude 100 /" \
     "-redefine=column,frequency,frequency 0 > ? frequencySmoothed : 0 $ " \
     "-redefine=column,frequency,frequency 1 t rippleOmega * cos rippleAmplitude * + *"
+if $debug {
+    exec sddsplot -column=t,frequency $input.this "-title=time distribution"
+}
 
 # slice the beam up and compute slice emittances
 if [catch {exec sddssort $input -pipe=out -column=t \
@@ -122,11 +137,19 @@ if [catch {exec sddssort $input -pipe=out -column=t \
                     | sdds2stream -pipe -parameter=enxMedian,enyMedian} emitList] {
     return -code error "$emitList"
 }
+if $debug {
+    puts stdout "Mean slice emittances: $emitList"
+    flush stdout
+}
 APSSetVarsFromList -variableList "enx eny" -valueList $emitList
 
 # find the projected twiss parameters (which LCLS is matched to)
 set betaList [exec sddsanalyzebeam $input -pipe=out \
                 | sdds2stream -pipe -column=betax,betay,alphax,alphay]
+if $debug {
+    puts stdout "Twiss parameters: $betaList"
+    flush stdout
+}
 APSSetVarsFromList -variableList "betax betay alphax alphay" -valueList $betaList
 
 # make a gaussian distribution function (3 sigma)
@@ -147,6 +170,9 @@ exec sddssampledist -pipe=out -samples=$samples \
   -column=indep=z,df=gaussianDF,output=delta1,haltonRadix=13,datafile=gdf.sdds \
   | sddsprocess -pipe -define=col,p,$pAve \
   | sddssort -pipe=in -column=t $input.partial0
+if $debug {
+    exec sddsplot -column=t,p -graph=dot $input.partial0 "-title=longitudinal phase space step 1"
+}
 
 if $betaSlices<=1 {
     exec  sddsmatchtwiss $input.partial0 $input.partial \
@@ -157,10 +183,16 @@ if $betaSlices<=1 {
     catch {file delete $input.partial}
     file rename $input.partial0 $input.partial
 }
+if $debug {
+    exec sddsplot -column=t,p -graph=dot $input.partial "-title=longitudinal phase space step 2"
+}
 
 # Generate value for standard deviation of p for each particle location.
 exec sddsinterp $input.pStDev $input.pStDevP \
   -column=tAve,pStDev -fileValues=$input.partial,column=t -order=2
+if $debug {
+    exec sddsplot -column=tAve,pStDev -graph=dot $input.pStDevP "-title=longitudinal phase space step 3 (stand. dev. of p)"
+}
 
 # Interpolate <p>(t) at each particle location.
 # Xref in the standard deviation of p, plus (x, xp, y, yp).
@@ -179,6 +211,9 @@ exec sddsinterp $input.eval -pipe=out \
     "-define=column,particleID,i_row,type=long" \
     | sddsconvert -pipe=in $output \
     -delete=column,pStDevP,delta1
+if $debug {
+    exec sddsplot $output -column=t,p -graph=dot "-title=output longitudinal phase space"
+}
 
 if $betaSlices>1 {
     # quick-and-dirty implementation of beta, alpha variation along the bunch
