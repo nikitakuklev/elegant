@@ -7,9 +7,12 @@
 # in the file LICENSE that is included with this distribution. 
 #*************************************************************************
 #
-# $Id: Makefile.OAG,v 1.11 2009-03-17 17:09:28 borland Exp $
+# $Id: Makefile.OAG,v 1.12 2009-04-02 19:25:42 borland Exp $
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.11  2009/03/17 17:09:28  borland
+# Added fracEmittance script.
+#
 # Revision 1.10  2009/03/13 15:36:50  borland
 # Added computeTwissBeats.
 #
@@ -64,7 +67,7 @@ PRODOAG = sddsemitmeas sddsemitproc sddsTouschekInteg \
           sddsanalyzebeam sddsrandmult sddsresdiag \
           sddsfindresonances touschekLifetime csrImpedance
 
-SCRIPTS = elegantRingAnalysis beamLifetimeCalc fin2param elegant2shower shower2elegant longitCmd longitCalcs km2sdds astra2elegant elegant2astra smoothDist6s impact2sdds impact2elegant computeTwissBeats fracEmittance
+SCRIPTS = elegantRingAnalysis beamLifetimeCalc fin2param elegant2shower shower2elegant longitCmd longitCalcs km2sdds astra2elegant elegant2astra smoothDist6s impact2sdds impact2elegant computeTwissBeats fracEmittance doubleDist6
 
 PROD_HOST = $(PRODOAG)
 
