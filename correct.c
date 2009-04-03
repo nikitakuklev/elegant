@@ -571,14 +571,16 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
   case TRAJECTORY_CORRECTION:
     x_failed = y_failed = 0;
     if (usePerturbedMatrix) {
-      compute_trajcor_matrices(correct->CMx, &correct->SLx, 0, run, beamline, 0,
+      if (!(correct->CMx->nmon==0 || correct->CMx->ncor==0))
+        compute_trajcor_matrices(correct->CMx, &correct->SLx, 0, run, beamline, 0,
                                !correct->response_only);
-      compute_trajcor_matrices(correct->CMy, &correct->SLy, 2, run, beamline, 0,
-                               !correct->response_only);
+      if (!(correct->CMy->nmon==0 || correct->CMy->ncor==0))
+        compute_trajcor_matrices(correct->CMy, &correct->SLy, 2, run, beamline, 0,
+                                 !correct->response_only);
     }
     for (i_cycle=0; i_cycle<correct->n_xy_cycles; i_cycle++) {
       final_traj = 1;
-      if (!x_failed && correct->CMx->ncor) {
+      if (!x_failed && correct->CMx->ncor && correct->CMx->nmon) {
         switch (correct->method) {
         case GLOBAL_CORRECTION:
           if (!global_trajcor_plane(correct->CMx, &correct->SLx, 0, correct->traj, correct->n_iterations, 
@@ -627,7 +629,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
         if (!initial_correction && (i_cycle==correct->n_xy_cycles-1 || x_failed))
           dump_corrector_data(correct->CMx, &correct->SLx, correct->n_iterations, "horizontal", sim_step);
       }
-      if (!y_failed && correct->CMy->ncor) {                    
+      if (!y_failed && correct->CMy->ncor && correct->CMy->nmon) {                    
         final_traj = 2;
 
         switch (correct->method) {
@@ -677,7 +679,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
         if (!initial_correction && (i_cycle==correct->n_xy_cycles-1 || y_failed))
           dump_corrector_data(correct->CMy, &correct->SLy, correct->n_iterations, "vertical", sim_step);
       }
-      if (initial_correction && i_cycle==0)
+      if (initial_correction && i_cycle==0 && ((correct->CMx->ncor && correct->CMx->nmon) || (correct->CMy->ncor && correct->CMy->nmon)))
         dump_orb_traj(correct->traj[0], beamline->n_elems, "uncorrected", sim_step);
       if (x_failed && y_failed) {
         if (correct->verbose)
@@ -685,7 +687,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
         break;
       }
     }
-    if (!initial_correction && correct->n_iterations>=1)
+    if (!initial_correction && correct->n_iterations>=1 && ((correct->CMx->ncor && correct->CMx->nmon) || (correct->CMy->ncor && correct->CMy->nmon)))
       dump_orb_traj(correct->traj[final_traj], beamline->n_elems, "corrected", sim_step);
     if (starting_coord)
       for (i=0; i<6; i++)
@@ -700,15 +702,17 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
     x_failed = y_failed = bombed = 0;
     if (usePerturbedMatrix) {
       if (correct->verbose)
-        fprintf(stdout, "Computing orbit correction matrices\n");
-      compute_orbcor_matrices(correct->CMx, &correct->SLx, 0, run, beamline, 0, 
-                              !correct->response_only, fixedLengthMatrix, correct->verbose);
-      compute_orbcor_matrices(correct->CMy, &correct->SLy, 2, run, beamline, 0, 
-                              !correct->response_only, fixedLengthMatrix, correct->verbose);
+        fprintf(stdout, "Computing orbit correction matrices\n"); 
+      if (!(correct->CMx->nmon==0 || correct->CMx->ncor==0))
+        compute_orbcor_matrices(correct->CMx, &correct->SLx, 0, run, beamline, 0, 
+                                !correct->response_only, fixedLengthMatrix, correct->verbose);
+      if (!(correct->CMy->nmon==0 || correct->CMy->ncor==0))
+        compute_orbcor_matrices(correct->CMy, &correct->SLy, 2, run, beamline, 0, 
+                                !correct->response_only, fixedLengthMatrix, correct->verbose);
     }
     for (i_cycle=0; i_cycle<correct->n_xy_cycles; i_cycle++) {
       final_traj = 1;
-      if (!x_failed) {
+      if (!x_failed && correct->CMx->ncor && correct->CMx->nmon) {
         if ((n_iter_taken = orbcor_plane(correct->CMx, &correct->SLx, 0, correct->traj, 
                                          correct->n_iterations, correct->clorb_accuracy, 
                                          correct->clorb_iterations, 
@@ -746,7 +750,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
         if (!initial_correction && (i_cycle==correct->n_xy_cycles-1 || x_failed)) 
           dump_corrector_data(correct->CMx, &correct->SLx, correct->n_iterations, "horizontal", sim_step);
       }
-      if (!y_failed) {
+      if (!y_failed && correct->CMy->ncor && correct->CMy->nmon) {
         final_traj = 2;
         if ((n_iter_taken = orbcor_plane(correct->CMy, &correct->SLy, 2, correct->traj+1, 
                                          correct->n_iterations, correct->clorb_accuracy, 
@@ -783,7 +787,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
         if (!initial_correction && (i_cycle==correct->n_xy_cycles-1 || y_failed))
           dump_corrector_data(correct->CMy, &correct->SLy, correct->n_iterations, "vertical", sim_step);
       }
-      if (initial_correction && i_cycle==0) 
+      if (initial_correction && i_cycle==0 && ((correct->CMx->ncor && correct->CMx->nmon) || (correct->CMy->ncor && correct->CMy->nmon))) 
         dump_orb_traj(correct->traj[0], beamline->n_elems, "uncorrected", sim_step);
       if (x_failed && y_failed) {
         if (correct->verbose)
@@ -791,7 +795,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
         break;
       }
     }
-    if (!initial_correction && !bombed && correct->n_iterations>=1)
+    if (!initial_correction && !bombed && correct->n_iterations>=1 && ((correct->CMx->ncor && correct->CMx->nmon) || (correct->CMy->ncor && correct->CMy->nmon)))
       dump_orb_traj(correct->traj[final_traj], beamline->n_elems, "corrected", sim_step);
     break;
   }
