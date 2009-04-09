@@ -15,6 +15,9 @@
  * Using code from sddsbrightness (Shang, Dejus, Borland) and sddsurgent (Shang, Dejus)
  *
  $Log: not supported by cvs2svn $
+ Revision 1.3  2009/04/09 16:21:15  borland
+ Fixed usage message.
+
  Revision 1.2  2009/04/09 14:48:26  borland
  Added total flux computation and output.
 
@@ -139,7 +142,7 @@ void CalculateFlux(ELECTRON_BEAM_PARAM eBeam,
                    long ihMin, long ihMax, long ihStep,
                    long neks,
                    long method, long mode,
-                   double **K, double ***FnOut,
+                   double **K, double **TotalPower, double **OnAxisPowerDensity, double ***FnOut,
                    double ***Energy, double ***Flux, double ***LambdarOut);
 
 int main(int argc, char **argv)
@@ -151,7 +154,7 @@ int main(int argc, char **argv)
   long harmonics, tmpFileUsed, i_arg, readCode, h, ih;
   unsigned long dummyFlags;
   long method, nE, ihMin, ihMax, mode = 4;
-  double *KK, **FnOut, **Energy, **Flux, **LambdarOut;
+  double *KK, **FnOut, **Energy, **Flux, **LambdarOut, *TotalPower, *OnAxisPowerDensity;
   int32_t neks;
   PINHOLE_PARAM pinhole_param;
   UNDULATOR_PARAM undulator_param;
@@ -164,7 +167,7 @@ int main(int argc, char **argv)
     exit(1);
   }
 
-  KK = NULL;
+  KK = TotalPower = OnAxisPowerDensity = NULL;
   FnOut = Energy = Flux = LambdarOut = NULL;
 
   inputfile = outputfile = NULL;
@@ -350,10 +353,11 @@ int main(int argc, char **argv)
 #endif
     electron_param.current *= 1e3;  /* want mA */
     CalculateFlux(electron_param, undulator_param, pinhole_param,
-                        ihMin, ihMax, 2, 
-                        neks,
-                        method, mode,
-                        &KK, &FnOut, &Energy, &Flux, &LambdarOut);
+                  ihMin, ihMax, 2, 
+                  neks,
+                  method, mode,
+                  &KK, &TotalPower, &OnAxisPowerDensity,
+                  &FnOut, &Energy, &Flux, &LambdarOut);
     electron_param.current /= 1e3; 
     
 #ifdef DEBUG
@@ -361,12 +365,15 @@ int main(int argc, char **argv)
 #endif
     for (ih=0; ih<harmonics; ih++) {
       h = ih*2+1;
-      if (h==1 && !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_INDEX, KK, nE, 0))
+      if (h==1 && 
+          (!SDDS_SetColumn(&SDDSout, SDDS_SET_BY_INDEX, KK, nE, 0) ||
+           !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_INDEX, TotalPower, nE, 1) ||
+           !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_INDEX, OnAxisPowerDensity, nE, 2)))
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-      if (!SDDS_SetColumn(&SDDSout, SDDS_SET_BY_INDEX, Flux[ih], nE, ih*4+1) ||
-          !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_INDEX, FnOut[ih], nE, ih*4+2) ||
-          !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_INDEX, LambdarOut[ih], nE, ih*4+3) ||
-          !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_INDEX, Energy[ih], nE, ih*4+4))
+      if (!SDDS_SetColumn(&SDDSout, SDDS_SET_BY_INDEX, Flux[ih], nE, ih*4+3) ||
+          !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_INDEX, FnOut[ih], nE, ih*4+4) ||
+          !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_INDEX, LambdarOut[ih], nE, ih*4+5) ||
+          !SDDS_SetColumn(&SDDSout, SDDS_SET_BY_INDEX, Energy[ih], nE, ih*4+6))
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
     if (!SDDS_SetParameters(&SDDSout, SDDS_BY_NAME|SDDS_PASS_BY_VALUE, "current", electron_param.current, 
@@ -403,6 +410,8 @@ int main(int argc, char **argv)
     free(Flux);
     free(LambdarOut);
     free(KK);
+    free(TotalPower);
+    free(OnAxisPowerDensity);
   }
   return 0;
 }
@@ -413,7 +422,9 @@ long SetUpOutputFile(SDDS_DATASET *SDDSout, SDDS_DATASET *SDDSin, char *outputfi
   char buffer[1024];
   
   if (!SDDS_InitializeOutput(SDDSout, SDDS_BINARY, 1, NULL, NULL, outputfile) ||
-      !SDDS_DefineSimpleColumn(SDDSout, "K", NULL, SDDS_DOUBLE))
+      !SDDS_DefineSimpleColumn(SDDSout, "K", NULL, SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleColumn(SDDSout, "TotalPower", "W", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleColumn(SDDSout, "OnAxisPowerDensity", "W/mrad$a2$n", SDDS_DOUBLE))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   if (SDDS_DefineParameter(SDDSout,"current",NULL, "mA", NULL,NULL,SDDS_DOUBLE, 0)<0 ||
       SDDS_DefineParameter(SDDSout,"EnergySpread",NULL, NULL, NULL,NULL,SDDS_DOUBLE, 0)<0 ||
@@ -666,8 +677,8 @@ void CalculateFlux(ELECTRON_BEAM_PARAM eBeam,
                    long ihMin, long ihMax, long ihStep,
                    long neks,
                    long method, long mode,
-                   double **K, double ***FnOut,
-                   double ***Energy, double ***Flux, double ***LambdarOut)
+                   double **K,  double **TotalPower, double **OnAxisPowerDensity, 
+                   double ***FnOut, double ***Energy, double ***Flux, double ***LambdarOut)
 {
   double lambdar, reducedE, kx, ky, eMin, eMax, ekMin, ekMax, ep, sp, dep1, dep2, fc, fc2, de, smax;
   long ih, i, j, je;
@@ -700,12 +711,15 @@ void CalculateFlux(ELECTRON_BEAM_PARAM eBeam,
   
   ei = eb = sb = NULL;
   period = undulator.period*1.0e2; /*use cm as units */
+
   if (*K) free(*K);
+  if (*TotalPower) free(*TotalPower);
+  if (*OnAxisPowerDensity) free(*OnAxisPowerDensity);
   if (*FnOut) free(*FnOut);
   if (*Energy) free(*Energy);
   if (*Flux) free(*Flux);
   if (*LambdarOut) free(*LambdarOut);
-  *K = NULL;
+  *K = *TotalPower = *OnAxisPowerDensity = NULL;
   *FnOut = *Energy = *Flux = *LambdarOut = NULL;
 
   nE = undulator.nPoints;
@@ -740,6 +754,8 @@ void CalculateFlux(ELECTRON_BEAM_PARAM eBeam,
   L3=(double*)malloc(sizeof(*L3)*points);
   L4=(double*)malloc(sizeof(*L4)*points);
   spec1=(double*)malloc(sizeof(*spec1)*points);
+  *TotalPower = (double*)calloc(nE, sizeof(**TotalPower));
+  *OnAxisPowerDensity = (double*)calloc(nE, sizeof(**OnAxisPowerDensity));
   
 #ifdef DEBUG
   fprintf(stderr, "Done\n");
@@ -1003,8 +1019,9 @@ void CalculateFlux(ELECTRON_BEAM_PARAM eBeam,
         fprintf(stderr, "peak found at %e eV\n", ep);
 #endif
       }
-      
 #ifdef DEBUG
+      fprintf(stderr, "%e eV, E1 = %e, lambda1 = %e, ptot = %e, pd = %e, ptot1 = %e\n", 
+              ep, E1, lambda1, ptot, pd, ptot1);
       fprintf(stderr, "Saving values for j=%ld, ih=%ld, ei[j]=%p, eb[j]=%p, sb[j]=%p\n",
               j, ih, ei[j], eb[j], sb[j]);
 #endif
@@ -1012,6 +1029,10 @@ void CalculateFlux(ELECTRON_BEAM_PARAM eBeam,
       ei[j][ih] = i*ek;
       eb[j][ih] = ep;
       sb[j][ih] = sp*densityFactor;
+      if (ih==0) {
+        (*TotalPower)[nE-1-j] = ptot;
+        (*OnAxisPowerDensity)[nE-1-j] = pd;
+      }
     }
    /* fprintf(stderr, "Harmonics %d completed.\n", i); */
     ih++;
