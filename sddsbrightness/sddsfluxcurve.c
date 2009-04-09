@@ -15,6 +15,9 @@
  * Using code from sddsbrightness (Shang, Dejus, Borland) and sddsurgent (Shang, Dejus)
  *
  $Log: not supported by cvs2svn $
+ Revision 1.4  2009/04/09 21:55:01  borland
+ Added output of total power and on-axis power density.
+
  Revision 1.3  2009/04/09 16:21:15  borland
  Fixed usage message.
 
@@ -606,9 +609,6 @@ void CheckInputParameters(long method, UNDULATOR_PARAM undulator_param, ELECTRON
 
   if (undulator_param.flags==0)
     SDDS_Bomb("give -undulator option");
-
-  if (pinhole_param.flags==0)
-    SDDS_Bomb("given -pinhole option");
 
   /* Should be more thorough here. */
 }
