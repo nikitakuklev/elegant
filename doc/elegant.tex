@@ -52,7 +52,8 @@ Here is a summary of what's changed since release 21.0.  For details and referen
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
-\item
+\item A new program, {\tt sddsfluxcurve}, was added.  It computes flux tuning curves for undulators using
+beam parameters from {\tt elegant}'s \verb|twiss_output| command or from {\tt sddsanalyzebeam}.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
@@ -3876,6 +3877,8 @@ on subsequent pages.
         The file may, for example, be the file produced
         by the {\tt final} field of the {\tt run\_setup} command.  The quadrupole scan can be
         executed inside of {\tt elegant} using {\tt vary\_elements}. (Program by M. Borland.)
+\item {\tt sddsfluxcurve} --- Uses twiss parameter output or data from {\tt sddsanalyzebeam} to
+  compute undulator flux tuning curves.  (Program by M. Borland, H. Shang, R. Dejus.)
 \item {\tt sddsmatchtwiss} --- Transforms a beam of macro-particles to match to given beta
         functions and dispersion.    The beam file
         is of the type written by {\tt elegant} using the {\tt output} field of the {\tt run\_setup}
@@ -4477,6 +4480,72 @@ removed and the fit is repeated.
 
 \item {\bf author:} M. Borland, ANL/APS.
 
+\end{itemize}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|sddsfluxcurve|}\end{center}
+\end{latexonly}
+\subsection{sddsfluxcurve}
+
+\begin{itemize}
+\item {\bf description:} {\tt sddsfluxcurve} computes undulator fluxcurve curves using
+Twiss parameter data from {\tt elegant} or {\tt sddsanalyzebeam}. Several calculation
+methods are available.
+
+\item {\bf examples:}
+\begin{flushleft}{\tt
+sddsfluxcurve run.twi run.bri -harmonics=3 \
+  -electronBeam=current=0.1,coupling=0.01 \
+  -undulator=period=0.033,numberOfPeriods=70,kmin=0.01,kmax=2.7,points=100 \
+  -pinhole=distance=30,xsize=0.0025,ysize=0.001 
+}\end{flushleft}
+
+\item {\bf synopsis:}
+\begin{flushleft}{\tt
+sddsfluxcurve [-pipe=[input][,output]] [{\em twissFile}] [{\em SDDSoutputfile}]
+    [-harmonics={\em integer}] [-method={\em methodName}[,neks={\em integer}]]
+    [-mode={pinhole|density|total}]
+    -undulator=period={\em meters},numberOfPeriods={\em integer},kmin={\em value},kmax={\em value}[,points={\em number}]
+    [-electronBeam=current={\em amps},[,{coupling={\em value} | emittanceRatio={\em value}}]]
+    [-pinhole=distance={\em meters},xsize={\em meters},ysize={\em meters}[,xnumber={\em integer}][,ynumber={\em integer}][,xposition={\em meters}][,yposition={\em meters}]]
+    [-nowarnings]
+}\end{flushleft}
+
+\item {\bf files:}
+\begin{itemize}
+\item {\em twissFile} --- A Twiss output file from {\tt elegant}, with radiation integral 
+calculations included, or an output from {\tt sddsanalyzebeam}. In the latter case, the
+{\tt -correctedOnly} option should be used.
+\item {\em SDDSoutputFile} --- Contains the flux data in column form.  For each 
+requested harmonic {\em i}, there are columns {\tt photonEnergy{\em i}} and {\tt wavelength{\em i}},
+plus a column for the flux ({\tt TotalFlux{\em i}}, {\tt PinholeFlux{\em i}}, or {\tt FluxDensity{\em i}}).
+\end{itemize}
+
+\item {\bf switches:}
+\begin{itemize}
+\item {\tt pipe} --- The standard SDDS Toolkit pipe option.
+\item {\tt harmonics} --- The number of harmonics to compute.
+\item {\tt -method={\em string},neks={\em value}]} --- Choose which method to
+ use for calculations.   Options are
+ \begin{itemize} 
+ \item {\tt dejus} --- R. Dejus' non-zero emittance, infinite-N+convolution method.  This is the
+   default.
+ \item {\tt walkerinfinite} --- R. Walker's method.  Dejus' method is derived from this method.
+ \end{itemize}
+ {\tt neks} is used to  change the number of points used for finding the peak of the distribution.
+\end{itemize}
+\item {\tt mode={pinhole|density|total}} --- Specify whether to compute the flux through a pinhole, the flux density,
+  or the total flux.
+\item {\tt -undulator=period={\em meters},numberOfPeriods={\em integer},kmin={\em value},kmax={\em value}[,points={\em number}]} ---
+  Specify undulator parameters.  {\tt points} is the number of K values to use on the interval $[K_{min}, K_{max}]$.
+\item {\tt electronBeam=current={\em amps},[,{coupling={\em value} | emittanceRatio={\em value}}]} --- Specify parameters of the
+  electron beam.  The current defaults to 0.1 A.  Either the coupling or emittance ratio must be given, unless the input file
+  contains the parameter {\tt ey0} or the column {\tt ey}.
+\item {\tt -pinhole=distance={\em meters},xsize={\em meters},ysize={\em meters}[,xnumber={\em integer}][,ynumber={\em integer}][,xposition={\em meters}][,yposition={\em meters}]} ---
+  Specify the parameters of the pinhole.  Required for {\tt -mode=pinhole}.  By default {\tt xnumber}=20, {\tt ynumber}=20, 
+  {\tt xposition=0}, and {\tt yposition=0}.
+\item {\bf authors:} M. Borland, H. Shang, R. Dejus (ANL).
 \end{itemize}
 
 \begin{latexonly}
