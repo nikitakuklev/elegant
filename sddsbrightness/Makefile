@@ -7,7 +7,7 @@
 # in the file LICENSE that is included with this distribution. 
 #*************************************************************************
 #
-# $Id: Makefile,v 1.10 2008-10-21 18:26:55 soliday Exp $
+# $Id: Makefile,v 1.11 2009-04-09 14:34:47 borland Exp $
 #
 #
 #
@@ -42,7 +42,7 @@ urgent$(OBJ):
 us$(OBJ):
 	ifort /compile_only /threads /libs:dll ..\\us.f
 else
-F77 = g77
+F77 = g77 
 ifdef AIX
 F77 = g77
 endif
@@ -132,6 +132,9 @@ sddsbrightness$(EXE): $(OBJNAMES)
 
 sddsurgent$(EXE): $(URGENT_OBJNAMES)
 	$(F77) -o $@ $(URGENT_OBJNAMES) $(static_flags) -L$(INSTALL_LIB) -L$(EPICS_EXTENSIONS_LIB) -loagphy -lmdbcommon -lmatlib -lfftpack -lSDDS1 -lrpnlib -lnamelist -lmdbmth -lmdblib -lz $(solaris_libs) $(linux_libs)
+
+sddsfluxcurve$(EXE): $(FLUXCURVE_OBJNAMES)
+	$(F77) -o $@ $(FLUXCURVE_OBJNAMES) $(static_flags) -L$(INSTALL_LIB) -L$(EPICS_EXTENSIONS_LIB) -loagphy -lmdbcommon -lmatlib -lfftpack -lSDDS1 -lrpnlib -lnamelist -lmdbmth -lmdblib -lz $(solaris_libs) $(linux_libs)
 endif
 
 endif

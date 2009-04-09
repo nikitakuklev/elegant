@@ -8,6 +8,9 @@
 #*************************************************************************
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.3  2006/08/24 19:20:06  soliday
+# Updated so that it would compile on WIN32 again.
+#
 # Revision 1.2  2006/03/15 17:19:24  shang
 # added compilation for sddsurgent
 #
@@ -38,9 +41,9 @@ endif
 
 #TARGETS = sddsbrightness$(EXE)
 ifeq ($(EPICS_VERSION).$(EPICS_REVISION),3.13)
-PROD = sddsurgent sddsbrightness
+PROD = sddsurgent sddsbrightness sddsfluxcurve
 else
-PROD_HOST = sddsurgent sddsbrightness
+PROD_HOST = sddsurgent sddsbrightness sddsfluxcurve
 endif
 
 USR_CFLAGS = 	-I$(EPICS_EXTENSIONS_INCLUDE) \
@@ -77,11 +80,15 @@ oagphy_DIR = $(OAG_APPS)/lib/$(EPICS_HOST_ARCH)
 USR_LDFLAGS += -L$(OAG_APPS)/lib/$(EPICS_HOST_ARCH)
 sddsbrightness$(EXE)_SRCS =	sddsbrightness.c		
 
+sddsfluxcurve$(EXE)_SRCS =	sddsfluxcurve.c		
+
 sddsurgent$(EXE)_SRCS = sddsurgent.c
 
 OBJNAMES = sddsbrightness$(OBJ) usb$(OBJ) brighte$(OBJ) hunt$(OBJ)
 
 URGENT_OBJNAMES = sddsurgent$(OBJ) urgent$(OBJ) us$(OBJ) brighte$(OBJ) hunt$(OBJ)
+
+FLUXCURVE_OBJNAMES = sddsfluxcurve$(OBJ) us$(OBJ) brighte$(OBJ) hunt$(OBJ)
 
 ifdef DEBUG
 		USR_CFLAGS += -DDEBUG
