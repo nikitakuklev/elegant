@@ -15,6 +15,9 @@
  * Using code from sddsbrightness (Shang, Dejus, Borland) and sddsurgent (Shang, Dejus)
  *
  $Log: not supported by cvs2svn $
+ Revision 1.1  2009/04/09 14:21:26  borland
+ First version in CVS.
+
  */
 #include "mdb.h"
 #include "scan.h"
@@ -54,6 +57,7 @@ method           choose method for calculating flux \n\
 mode             Choose calculation mode: \n\
                  mode=pinhole         Flux through defined pinhole (default)\n\
                  mode=density         Flux density.\n\
+                 mode=total           Total flux.\n\
 undulator        specify undulator parameters\n\
 electronBeam     specify electron beam parameters that are not in the twiss file.\n\
                  Defaults to 0.1A.\n\
@@ -65,9 +69,10 @@ Program by Michael Borland.  (This is version 1, April 2009.)\n";
 
 #define MODE_PINHOLE 0
 #define MODE_DENSITY 1
-#define MODE_OPTIONS 2
+#define MODE_TOTAL   2
+#define MODE_OPTIONS 3
 static char *mode_option[MODE_OPTIONS] = {
-  "pinhole", "density"
+  "pinhole", "density", "total"
   } ;
 
 typedef struct {
@@ -252,6 +257,9 @@ int main(int argc, char **argv)
         case MODE_DENSITY:
           mode = 2;
           break;
+        case MODE_TOTAL:
+          mode = 5;
+          break;
         default:
           SDDS_Bomb("Invalid mode given (use pinhole or density)");
           break;
@@ -419,7 +427,7 @@ long SetUpOutputFile(SDDS_DATASET *SDDSout, SDDS_DATASET *SDDSin, char *outputfi
     switch (mode) {
     case 4:
       /* pinhole flux */
-      sprintf(buffer, "Flux%ld", h);
+      sprintf(buffer, "PinholeFlux%ld", h);
       if (!SDDS_DefineSimpleColumn(SDDSout, buffer, "photons/s/0.1%BW", SDDS_DOUBLE))
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       break;
@@ -427,6 +435,12 @@ long SetUpOutputFile(SDDS_DATASET *SDDSout, SDDS_DATASET *SDDSin, char *outputfi
       /* flux density */
       sprintf(buffer, "FluxDensity%ld", h);
       if (!SDDS_DefineSimpleColumn(SDDSout, buffer, "photons/s/mrad$a2$n/0.1%BW", SDDS_DOUBLE))
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      break;
+    case 5:
+      /* total flux */
+      sprintf(buffer, "TotalFlux%ld", h);
+      if (!SDDS_DefineSimpleColumn(SDDSout, buffer, "photons/s/0.1%BW", SDDS_DOUBLE))
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       break;
     default:
