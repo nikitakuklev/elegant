@@ -15,6 +15,9 @@
  * Using code from sddsbrightness (Shang, Dejus, Borland) and sddsurgent (Shang, Dejus)
  *
  $Log: not supported by cvs2svn $
+ Revision 1.5  2009/04/09 22:10:28  borland
+ Fixed bug in checking arguments.
+
  Revision 1.4  2009/04/09 21:55:01  borland
  Added output of total power and on-axis power density.
 
@@ -252,8 +255,8 @@ int main(int argc, char **argv)
                           "emittanceratio", SDDS_DOUBLE, &electron_param, 1, ELECTRON_ERATIO_GIVEN,
                           NULL))
           SDDS_Bomb("invalid -electronBeam syntax.");
-        if ((electron_param.flags&ELECTRON_COUPLING_GIVEN?1:0)==(electron_param.flags&ELECTRON_ERATIO_GIVEN?1:0))
-          SDDS_Bomb("give one and only one of coupling and emittanceRatio to -electronBeam option");
+        if (electron_param.flags&ELECTRON_COUPLING_GIVEN && electron_param.flags&ELECTRON_ERATIO_GIVEN)
+          SDDS_Bomb("give only one of coupling and emittanceRatio to -electronBeam option");
         s_arg[i_arg].n_items++;
         break;
       case SET_MODE:
@@ -604,9 +607,6 @@ void CheckInputParameters(long method, UNDULATOR_PARAM undulator_param, ELECTRON
   if (harmonics<=0)
     SDDS_Bomb("give -harmonics option");
   
-  if ((electron_param.flags&ELECTRON_COUPLING_GIVEN?1:0)==(electron_param.flags&ELECTRON_ERATIO_GIVEN?1:0))
-    SDDS_Bomb("give one and only one of coupling and emittanceRatio to -electronBeam option");
-
   if (undulator_param.flags==0)
     SDDS_Bomb("give -undulator option");
 
