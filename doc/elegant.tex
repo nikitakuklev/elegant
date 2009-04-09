@@ -4508,7 +4508,8 @@ sddsfluxcurve [-pipe=[input][,output]] [{\em twissFile}] [{\em SDDSoutputfile}]
     [-mode={pinhole|density|total}]
     -undulator=period={\em meters},numberOfPeriods={\em integer},kmin={\em value},kmax={\em value}[,points={\em number}]
     [-electronBeam=current={\em amps},[,{coupling={\em value} | emittanceRatio={\em value}}]]
-    [-pinhole=distance={\em meters},xsize={\em meters},ysize={\em meters}[,xnumber={\em integer}][,ynumber={\em integer}][,xposition={\em meters}][,yposition={\em meters}]]
+    [-pinhole=distance={\em meters},xsize={\em meters},ysize={\em meters}
+    [,xnumber={\em integer}][,ynumber={\em integer}][,xposition={\em meters}][,yposition={\em meters}]]
     [-nowarnings]
 }\end{flushleft}
 
@@ -4542,7 +4543,8 @@ plus a column for the flux ({\tt TotalFlux{\em i}}, {\tt PinholeFlux{\em i}}, or
 \item {\tt electronBeam=current={\em amps},[,{coupling={\em value} | emittanceRatio={\em value}}]} --- Specify parameters of the
   electron beam.  The current defaults to 0.1 A.  Either the coupling or emittance ratio must be given, unless the input file
   contains the parameter {\tt ey0} or the column {\tt ey}.
-\item {\tt -pinhole=distance={\em meters},xsize={\em meters},ysize={\em meters}[,xnumber={\em integer}][,ynumber={\em integer}][,xposition={\em meters}][,yposition={\em meters}]} ---
+\item {\tt -pinhole=distance={\em meters},xsize={\em meters},ysize={\em meters}}{\tt [,xnumber={\em integer}]}\\
+  {\tt [,ynumber={\em integer}]}{\tt [,xposition={\em meters}]}{\tt [,yposition={\em meters}]} ---
   Specify the parameters of the pinhole.  Required for {\tt -mode=pinhole}.  By default {\tt xnumber}=20, {\tt ynumber}=20, 
   {\tt xposition=0}, and {\tt yposition=0}.
 \item {\bf authors:} M. Borland, H. Shang, R. Dejus (ANL).
