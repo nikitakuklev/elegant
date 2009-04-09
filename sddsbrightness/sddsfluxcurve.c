@@ -15,6 +15,9 @@
  * Using code from sddsbrightness (Shang, Dejus, Borland) and sddsurgent (Shang, Dejus)
  *
  $Log: not supported by cvs2svn $
+ Revision 1.2  2009/04/09 14:48:26  borland
+ Added total flux computation and output.
+
  Revision 1.1  2009/04/09 14:21:26  borland
  First version in CVS.
 
@@ -40,7 +43,7 @@ char *option[N_OPTIONS] = {
 
 char *USAGE1="sddsfluxcurve [-pipe=[input][,output]] [<twissFile>] [<SDDSoutputfile>]\n\
     [-harmonics=<integer>] [-method=<methodName>[,neks=<integer>]]\n\
-    [-mode={pinhole|density}]\n\
+    [-mode={pinhole|density|total}]\n\
     -undulator=period=<meters>,numberOfPeriods=<integer>,kmin=<value>,kmax=<value>[,points=<number>]\n\
     [-electronBeam=current=<amps>,[,{coupling=<value> | emittanceRatio=<value>}]]\n\
     [-pinhole=distance=<meters>,xsize=<meters>,ysize=<meters>[,xnumber=<integer>][,ynumber=<integer>][,xposition=<meters>][,yposition=<meters>]]\n\
