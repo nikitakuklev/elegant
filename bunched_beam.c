@@ -91,6 +91,19 @@ void setup_bunched_beam(
     emit_y = emit_ny/Po;
   if (n_particles_per_bunch<=0)
     bomb("n_particles_per_bunch is invalid", NULL);
+#if SDDS_MPI_IO
+  if (isSlave) {
+    long work_processors = n_processors-1;
+    long my_nToTrack = n_particles_per_bunch/work_processors; 
+    if (myid<=(n_particles_per_bunch%work_processors)) 
+      my_nToTrack++;
+    n_particles_per_bunch = my_nToTrack;
+  }
+  else {
+    beam->n_original_total = beam->n_to_track_total = n_particles_per_bunch; /* record the total number of particles being tracked */
+    n_particles_per_bunch = 0;
+  }
+#endif
   if (emit_x<0 || beta_x<=0)
     bomb("emit_x<=0 or beta_x<=0", NULL);
   if (emit_y<0 || beta_y<=0)
@@ -169,17 +182,30 @@ void setup_bunched_beam(
     one_random_bunch = 1;
   if (!one_random_bunch)
     save_initial_coordinates = save_original;
-  
-  beam->particle = (double**)czarray_2d(sizeof(double), n_particles_per_bunch, 7);
-  if (!save_initial_coordinates)
-    beam->original = beam->particle;
+  if (isSlave)
+    beam->particle = (double**)czarray_2d(sizeof(double), n_particles_per_bunch, 7);
+#if SDDS_MPI_IO
   else
-    beam->original = (double**)czarray_2d(sizeof(double), n_particles_per_bunch, 7);
-  if (run->acceptance) 
-    beam->accepted = (double**)czarray_2d(sizeof(double), n_particles_per_bunch, 7);
+    beam->particle = NULL;
+#endif
+  if (isSlave)
+    if (!save_initial_coordinates)
+      beam->original = beam->particle;
+    else
+      beam->original = (double**)czarray_2d(sizeof(double), n_particles_per_bunch, 7);
+#if SDDS_MPI_IO
+  else
+    beam->original = NULL;
+#endif
+  if(isSlave)
+    if (run->acceptance) 
+      beam->accepted = (double**)czarray_2d(sizeof(double), n_particles_per_bunch, 7);
+    else
+      beam->accepted = NULL;
+#if SDDS_MPI_IO
   else
     beam->accepted = NULL;
-  
+#endif
   beam->n_original = beam->n_to_track = beam->n_particle = n_particles_per_bunch;
   beam->n_accepted = beam->n_saved = 0;
   firstIsFiducial = first_is_fiducial;
@@ -188,6 +214,11 @@ void setup_bunched_beam(
   if (one_random_bunch) {
     /* make a seed for reinitializing the beam RN generator */
     beamRepeatSeed = 1e8*random_4(1);
+#if SDDS_MPI_IO
+    /* All processors will have same beamRepeatSeed after here. This will make
+       it easy for the serial version to generate the same sequence */
+    MPI_Bcast(&beamRepeatSeed, 1, MPI_LONG, 1, MPI_COMM_WORLD);
+#endif
     random_4(-beamRepeatSeed);
   }
   bunchGenerated = 0;
@@ -229,14 +260,27 @@ long new_bunched_beam(
 #if USE_MPI
     double save_emit_x, save_emit_y,
            save_sigma_dp, save_sigma_s;
-#endif
 
+    if (firstIsFiducial)
+      notSinglePart = 0;
+    else
+      notSinglePart = 1;
+#endif
 
     beamCounter++;
     if (firstIsFiducial && beamCounter==1) {
       beam->n_original = beam->n_to_track = 1;
 #if USE_MPI
       lessPartAllowed = 1;  /* All the processors will do the same thing from now */
+      if (isMaster) { /* For parallel I/O version, memory will be allocated for one particle on master */
+	beam->particle=(double**)czarray_2d(sizeof(double),1,7);
+	if (!save_initial_coordinates)
+	  beam->original = beam->particle;
+	else
+	  beam->original=(double**)czarray_2d(sizeof(double),1,7);
+	if (run->acceptance)
+	  beam->accepted=(double**)czarray_2d(sizeof(double),1,7);
+      }	
 #endif
     }
     else {
@@ -245,6 +289,10 @@ long new_bunched_beam(
       beam->n_original = beam->n_to_track = beam->n_particle = n_particles_per_bunch;
 #if USE_MPI
       lessPartAllowed = 0;
+      if (isMaster) {
+	beam->particle = beam->original = beam->accepted = NULL;
+	beam->n_original = beam->n_to_track = beam->n_particle = 0;
+      }
 #endif
     }
     beam->n_accepted = 0;
@@ -255,10 +303,16 @@ long new_bunched_beam(
       bomb("programming error: original beam coordinates needed but not saved", NULL);
     
     if (!bunchGenerated || !save_initial_coordinates) {
-        if (one_random_bunch)
+      if (one_random_bunch) {
             /* reseed the random number generator to get the same sequence again */
             /* means we don't have to store the original coordinates */
-            random_4(-beamRepeatSeed);
+#if SDDS_MPI_IO 
+	/* There will be no same sequence for different processors */
+	random_4(-(beamRepeatSeed+2*(myid-1)));  
+#else
+	random_4(-beamRepeatSeed);
+#endif
+      }
         if (control->cell) {
             VMATRIX *M;
 	    unsigned long savedFlags;
@@ -293,10 +347,41 @@ long new_bunched_beam(
           x_plane.emit = y_plane.emit = longit.sigma_dp = longit.sigma_s = 0;
         }
 #endif
-        n_actual_particles = 
-          generate_bunch(beam->original, beam->n_to_track, &x_plane,
-                         &y_plane, &longit, enforce_rms_values, limit_invariants, 
-                         symmetrize, haltonID, randomize_order, limit_in_4d, Po);
+#if !SDDS_MPI_IO
+	if (run->random_sequence_No > 1 && one_random_bunch) {
+	  /* generate the same random number sequence as the parallel version */
+	  long work_processors = run->random_sequence_No-1, my_n_actual_particles;
+	  long my_nToTrack, i;
+
+	  orig_sequence_No = remaining_sequence_No = run->random_sequence_No-1;
+	  n_actual_particles = 0;
+	  for (i=0; i<work_processors; i++) {
+	    /* This will make the serial version has the same start seed as each of the sequences 
+	       in the parallel version */
+	    random_4(-(beamRepeatSeed+2*i)); 
+	    my_nToTrack = beam->n_to_track/work_processors;
+	    if (i<(beam->n_to_track%work_processors)) 
+	      my_nToTrack++;
+	    if (x_plane.beam_type==DYNAP_BEAM) { 
+	      /* This is a special case, generate_bunch will be called one time only */ 
+	      remaining_sequence_No = 1;
+	      my_nToTrack = beam->n_to_track;
+	    }
+	    my_n_actual_particles =
+	      generate_bunch(&beam->original[n_actual_particles], my_nToTrack, &x_plane,
+			     &y_plane, &longit, enforce_rms_values, limit_invariants, 
+			     symmetrize, haltonID, randomize_order, limit_in_4d, Po);
+	    n_actual_particles += my_n_actual_particles;
+	    if (x_plane.beam_type==DYNAP_BEAM)
+	      break;
+	  }
+	}
+	else
+#endif
+	  n_actual_particles = 
+	    generate_bunch(beam->original, beam->n_to_track, &x_plane,
+			   &y_plane, &longit, enforce_rms_values, limit_invariants, 
+			   symmetrize, haltonID, randomize_order, limit_in_4d, Po);
 #if USE_MPI
        if (firstIsFiducial && beamCounter==1) {
           /* copy values back */
@@ -361,13 +446,14 @@ long track_beam(
                 )
 {    
   double p_central;
-  long n_left, n_trpoint, effort;
+  long n_left, effort;
 
   log_entry("track_beam");
 
   if (beam->lostOnPass)
     free(beam->lostOnPass);
-  beam->lostOnPass = tmalloc(sizeof(*(beam->lostOnPass))*beam->n_to_track);
+  if (isSlave || !notSinglePart)
+    beam->lostOnPass = tmalloc(sizeof(*(beam->lostOnPass))*beam->n_to_track);
 
   if (!run)
     bomb("RUN pointer is NULL (track_beam)", NULL);
@@ -385,35 +471,33 @@ long track_beam(
   p_central = run->p_central;
 
   /* now track particles */
-  if (!(flags&SILENT_RUNNING))
+  if (!(flags&SILENT_RUNNING)) {
+#if !SDDS_MPI_IO
     fprintf(stdout, "tracking %ld particles\n", beam->n_to_track);
+#else
+    fprintf(stdout, "tracking %ld particles\n", beam->n_to_track_total);
+#endif
     fflush(stdout);
-
+  }
   effort = 0;
 
 #if USE_MPI
-  if (beam->n_to_track<(n_processors-1) && !lessPartAllowed) {
+  if (isSlave && beam->n_to_track<1 && !lessPartAllowed) {
     printf("*************************************************************************************\n");
     printf("* Warning! The number of particles shouldn't be less than the number of processors! *\n");
     printf("* Less number of processors are recommended!                                        *\n");
     printf("*************************************************************************************\n");
-    MPI_Barrier(MPI_COMM_WORLD); /* Make sure the information can be printed before aborting */
-    MPI_Abort(MPI_COMM_WORLD, 2);
+    /*  MPI_Abort(workers, 2); */
   }
   else {  /* do tracking in parallel */ 
-    if (!lessPartAllowed || beam->n_to_track>=(n_processors-1)) /* If less number of particles is allowed, all processors will excute the same code */
-      notSinglePart = 1;
-    /*   random_1(-FABS(987654321+2*myid)); */
+    notSinglePart = 1;
+    if (lessPartAllowed) { /* If less number of particles is allowed, all processors will excute the same code */
+      notSinglePart = 0;
+    }
   }
+  if (isSlave || !notSinglePart)
 #endif
   if (control->bunch_frequency) {
-#if USE_MPI
-    if (n_processors!=1) {
-      printf("Error: must have bunch_frequency=0 for parallel mode.\n");
-      MPI_Barrier(MPI_COMM_WORLD); /* Make sure the information can be printed before aborting */
-      MPI_Abort(MPI_COMM_WORLD, 2);
-    }
-#endif
     makeBucketAssignments(beam, p_central, control->bunch_frequency);
   }
   
@@ -426,7 +510,7 @@ long track_beam(
                          +FIDUCIAL_BEAM_SEEN+RESTRICT_FIDUCIALIZATION+PRECORRECTION_BEAM+IBS_ONLY_TRACKING)),
                        control->n_passes, 0, &(output->sasefel), &(output->sliceAnalysis),
 		       finalCharge, beam->lostOnPass, NULL);
-#if USE_MPI
+#if USE_MPI && (!SDDS_MPI_IO)
   notSinglePart = 0; /* All the processors will do the same thing from now */
   /* random_1(-FABS(987654321)); */
 #endif  
@@ -443,11 +527,33 @@ long track_beam(
 
   if (!(flags&SILENT_RUNNING)) {
     extern unsigned long multipoleKicksDone;
+#if SDDS_MPI_IO
+    if (SDDS_MPI_IO) {
+      long total_effort, total_multipoleKicksDone, total_left;
+      
+      if (notSinglePart) {
+	if (isMaster) 
+	  multipoleKicksDone = effort = n_left = 0;
+	MPI_Reduce (&n_left, &total_left, 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+	MPI_Reduce (&effort, &total_effort, 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+	MPI_Reduce (&multipoleKicksDone, &total_multipoleKicksDone, 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+	fprintf(stdout, "%ld particles transmitted, total effort of %ld particle-turns\n", total_left, total_effort);
+	fflush(stdout);
+	fprintf(stdout, "%lu multipole kicks done\n\n", total_multipoleKicksDone);
+      }
+      else {
+	fprintf(stdout, "%ld particles transmitted, total effort of %ld particle-turns\n", n_left, effort);
+	fflush(stdout);
+	fprintf(stdout, "%lu multipole kicks done\n\n", multipoleKicksDone);
+      }
+      fflush(stdout);
+    }
+#else
     fprintf(stdout, "%ld particles transmitted, total effort of %ld particle-turns\n", n_left, effort);
     fflush(stdout);
     fprintf(stdout, "%lu multipole kicks done\n\n", multipoleKicksDone);
     fflush(stdout);
-    fflush(stdout);
+#endif
   }
 
   if (!delayOutput)
@@ -509,8 +615,19 @@ void do_track_beam_output(RUN *run, VARY *control,
       bomb("'losses' file is uninitialized (track_beam)", NULL);
     if (!(flags&SILENT_RUNNING)) {
       fprintf(stdout, "Dumping lost-particle data...\n"); fflush(stdout);
+#if SDDS_MPI_IO
+      if (SDDS_MPI_IO) {
+	long total_left;
+	
+	if (isMaster) n_left = 0;
+	MPI_Reduce (&n_left, &total_left, 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+	fprintf(stdout, "n_left = %ld, n_total = %ld, n_lost = %ld\n", 
+	      total_left, beam->n_original_total, beam->n_original_total-total_left);
+      }
+#else
       fprintf(stdout, "n_left = %ld, n_total = %ld, n_lost = %ld\n", 
 	      n_left, beam->n_to_track, beam->n_to_track-n_left);
+#endif
       fflush(stdout);
     }
     dump_lost_particles(&output->SDDS_losses, beam->particle+n_left, beam->lostOnPass+n_left,
@@ -548,6 +665,7 @@ void do_track_beam_output(RUN *run, VARY *control,
       fflush(stdout);
   }
 
+  
   if (run->final && !run->combine_bunch_statistics) {
     if (!(M = full_matrix(&(beamline->elem), run, 1)))
       bomb("computation of full matrix for final output failed (track_beam)", NULL);
@@ -559,7 +677,7 @@ void do_track_beam_output(RUN *run, VARY *control,
       bomb("beam sums array for final output is NULL", NULL);
     if (!(flags&SILENT_RUNNING)) 
       fprintf(stdout, "Dumping final properties data..."); fflush(stdout);
-      fflush(stdout);
+    fflush(stdout);
     dump_final_properties
       (&output->SDDS_final, output->sums_vs_z+output->n_z_points, 
        control->varied_quan_value, control->varied_quan_name?*control->varied_quan_name:NULL, 

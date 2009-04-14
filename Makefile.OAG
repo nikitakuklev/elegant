@@ -1,6 +1,6 @@
 CMPLR = ANSI
 # turn off the -g option
-OP_SYS_CFLAGS = 
+OP_SYS_CFLAGS =  
 #OPT_CFLAGS_NO = 
 #OPT_CFLAGS_YES = -O3
 #HOST_OPT = NO
@@ -27,6 +27,7 @@ OP_SYS_CFLAGS+= -DUSE_KAHAN            # use Kahan's algorithm for long sum
 ifeq ($(MPI),1)
   USER_MPI_FLAGS = -DUSE_MPI=1         # 1 for parallel elegant, 0 for serial elegant  
   PRODOAG = Pelegant
+  STATIC_LDFLAGS_YES= -Bstatic -static-libgcc  # remove the -Wl to compile Pelegant
 ifdef WIN32
   CC := $(CC) $(USER_MPI_FLAGS)
   CCC := $(CCC) $(USER_MPI_FLAGS)
@@ -37,14 +38,14 @@ else
   #USER_MPI_FLAGS+= -DMPI_DEBUG         # print debugging information for MPI 
   #USER_MPI_FLAGS+= -DCHECKFLAGS=1      # if defined, check balance only at the beginning
                                         # or the particle number is changed
-  MPI_PATH = $(wildcard /usr/local/software/mvapich2-gcc/bin /disk1/mpich2_smpd_nemesis/bin)
-  #MPI_PATH = /disk1/mpich2_mpd_ssm/bin
-  #MPI_PATH = /disk1/mpich2_mpd_sock/bin
-  #MPI_PATH = /usr/local/software/mvapich2-gcc/bin
-  #MPI_PATH = /share/mpich/ch_p4/bin
-  #MPI_PATH = /data/mpich2_mpd_nemesis/bin
-  CC = $(MPI_PATH)/mpicc  $(USER_MPI_FLAGS)   
-  CCC = $(MPI_PATH)/mpicxx  $(USER_MPI_FLAGS)
+  MPI_PATH = $(wildcard /usr/local/software/mvapich2-gcc/bin/ /share/mpich2_mpd_sock/bin/)
+  #MPI_PATH = /share/mpich/ch_p4/bin/
+  USER_MPI_FLAGS += -DSDDS_MPI_IO
+  CC = $(MPI_PATH)mpicc   $(USER_MPI_FLAGS)   
+  CCC = $(MPI_PATH)mpicxx  $(USER_MPI_FLAGS)
+  # memory debugging with totalview
+  # USR_LDFLAGS+= -L/share/toolworks/totalview.7.3.0-6/linux-x86/lib/ -Wl,-rpath,/share/toolworks/totalview.7.3.0-6/linux-x86/lib/ 
+  # SYS_PROD_LIBS_Linux += tvheap
 endif
 endif
 
@@ -106,12 +107,17 @@ else
 USR_CFLAGS_WIN32 = -nil-
 endif
 else
-USR_LIBS = 	mdbcommon matlib fftpack SDDS1 \
+USR_LIBS = 	mdbcommon matlib fftpack \
 		rpnlib mdbmth namelist mdblib \
 		meschach
+ifeq ($(MPI),1)
+USR_LIBS += SDDSmpi                  # parallel SDDS IO
+else
+USR_LIBS += SDDS1
+endif
 SYS_PROD_LIBS_DEFAULT += z 
 SYS_PROD_LIBS_Linux += z 
-SYS_PROD_LIBS_solaris += z curses rt 
+SYS_PROD_LIBS_solaris += z curses rt 	
 endif
 
 MAKE = make
@@ -203,11 +209,11 @@ ifneq ($(CLAPACK), 0)
         USR_LIBS += lapack cblaswr cblas atlas F77 I77 
 #        USR_LIBS += lapack ptcblas ptf77blas  atlas 
 #        OP_SYS_LDLIBS += -lgfortran
-      else
+    else
         # One can choose threaded ptcblas ptf77blas or unthreaded cblas f77blas
         USR_CPPFLAGS += -DCLAPACK  -I$(ATLAS_INCLUDE)
         USR_LIBS += lapack ptcblas ptf77blas  atlas 
-        OP_SYS_LDLIBS += -lgfortran
+#        OP_SYS_LDLIBS += -lgfortran
       endif
   endif
 else 
@@ -218,7 +224,8 @@ else
       USR_LIBS += lapack
     else
       # there is no lapack header file
-      OP_SYS_LDLIBS += -llapack -lblas -lgfortran
+      OP_SYS_LDLIBS += -llapack -lblas 
+#	-lgfortran
       USR_CPPFLAGS += -DLAPACK 
     endif
   else
@@ -285,7 +292,7 @@ elegant_SRCS = 	alpha_data.c alpha_matrix.c amplif.c analyze.c aperture_search.c
                 insert_elements.c touschekScatter.c chbook.c kickmap.c matrixOp.c replace_elements.c
                    
 
-Pelegant_SRCS = $(elegant_SRCS) findGlobalMinMax.c
+Pelegant_SRCS = $(elegant_SRCS) findGlobalMinMax.c  media_oag.c
 
 madto_SRCS = 	madto.c sdds_strength_output.c convert_to_parmela.c convert_to_patpet.c convert_to_matlab.c \
 		convert_to_patricia.c convert_to_transport.c convert_to_xorbit.c track_data.c \

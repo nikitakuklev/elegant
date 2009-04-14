@@ -56,8 +56,8 @@ double KahanParallel (double sum,  double error, MPI_Comm comm)
     total = KahanPlus(total, sumArray[i], &error_sum);
     total = KahanPlus(total, errorArray[i], &error_sum);
   }
-  free(sumArray);
-  free(errorArray);
+  tfree(sumArray); sumArray = NULL;
+  tfree(errorArray); errorArray = NULL;
   return total;
 }
 #endif

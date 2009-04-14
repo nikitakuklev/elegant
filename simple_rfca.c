@@ -234,9 +234,10 @@ long trackRfCavityWithWakes
             print_dictionary_entry(stdout, T_RFCA, 0, 0);
             }
         }
-
-    if (!part)
+    if (isSlave) {
+      if (!part)
         bomb("NULL particle data pointer (trackRfCavityWithWakes)", NULL);
+    }
     if (isSlave || !notSinglePart) {
       for (ip=0; ip<np; ip++)
 	if (!part[ip]) {
@@ -359,6 +360,7 @@ long trackRfCavityWithWakes
         }
 
     timeOffset = 0;
+    if(isSlave || !notSinglePart) {
     if (omega && rfca->change_t) {
       coord = part[0];
       P     = *P_central*(1+coord[5]);
@@ -367,7 +369,8 @@ long trackRfCavityWithWakes
       if (omega!=0 && t>(0.9*To) && rfca->change_t)
         timeOffset = ((long)(t/To+0.5))*To;
     }
-    
+    }
+
     if ((linearize = rfca->linearize)) {
       tAve = 0;
       if (nKicks!=1)
@@ -484,7 +487,6 @@ long trackRfCavityWithWakes
 	      inverseF[ip] *= -1*gamma/gamma1;
 	  }
 	}
-
         if (!wakesAtEnd) {
           /* do wakes */
           if (wake) 
@@ -508,7 +510,6 @@ long trackRfCavityWithWakes
             addLSCKick(part, np, LSCKick, *P_central, charge, length, dgammaOverGammaAve);
           }
         }
-
         if (length) {
 	  if(isSlave || !notSinglePart) {
 	    /* apply final drift and focus kick if needed */

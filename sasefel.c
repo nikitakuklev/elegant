@@ -9,6 +9,9 @@
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.26  2009/02/12 22:54:58  borland
+ * Added ability to turn off echoing of namelists.
+ *
  * Revision 1.25  2008/10/22 18:30:51  borland
  * Added global_settings command and means to inhibit file sync calls.
  *
@@ -110,6 +113,7 @@
 #define BEAMSIZE_VERTICAL   3
 #define BEAMSIZE_MAXIMUM    4
 #define BEAMSIZE_OPTIONS    5
+#define ANALYSIS_BINS    10000
 
 char *beamsizeOption[BEAMSIZE_OPTIONS] = {
   "geometric mean", "arithmetic mean", "horizontal", "vertical", "maximum"
@@ -130,13 +134,6 @@ void setupSASEFELAtEnd(NAMELIST_TEXT *nltext, RUN *run, OUTPUT_FILES *output_dat
   /* process namelist text */
   process_namelist(&sasefel, nltext);
   if (echoNamelists) print_namelist(stdout, &sasefel);
-
-#if USE_MPI
-  if (!writePermitted) {
-    output == NULL; 
-    return;
-  }
-#endif
 
   sasefelOutput = &(output_data->sasefel);
 
@@ -271,6 +268,7 @@ void setupSASEFELAtEnd(NAMELIST_TEXT *nltext, RUN *run, OUTPUT_FILES *output_dat
       !(sasefelOutput->sliceFound = malloc(sizeof(*(sasefelOutput->sliceFound))*(n_slices+2)))) 
     bomb("memory allocation failure (setupSASEFELAtEnd)", NULL);
 
+  if (isMaster)
   if (output) {
 
     sasefelOutput->filename = compose_filename(output, run->rootname);
@@ -450,6 +448,9 @@ void doSASEFELAtEndOutput(SASEFEL_OUTPUT *sasefelOutput, long step)
   if (!sasefelOutput->filename)
     return;
   SDDSout = &(sasefelOutput->SDDSout);
+#if SDDS_MPI_IO
+  SDDSout->parallel_io = 0;
+#endif
   if (!SDDS_StartPage(SDDSout, 0) ||
       !SDDS_SetParameters(SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
                           "Step", step,
@@ -511,7 +512,13 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
   double xLimit[2], percentLevel[2];
   long count, slicesFound=0, j;
   double aveCoord[7], rmsCoord[7];
-  
+
+#if SDDS_MPI_IO
+  long total_count;
+  long total_particles;
+
+  MPI_Allreduce (&particles, &total_particles, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+#else
   if (!particles) {
     fprintf(stdout, "no particles left---can't compute FEL parameters");
     fflush(stdout);
@@ -534,6 +541,7 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
     }
     return;
   }
+#endif
   if (!(time=malloc(sizeof(*time)*particles)))
     SDDS_Bomb("memory allocation failure (computeSASEFELAtEnd)");
   computeTimeCoordinates(time, Po, particle, particles);
@@ -547,8 +555,20 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
       aveCoord[j] += particle[i][j];
     aveCoord[j] += time[i];
   }
+
+#if SDDS_MPI_IO
+  if (SDDS_MPI_IO) {
+    double aveCoord_tmp[7];
+
+    memcpy(aveCoord_tmp, aveCoord, 7*sizeof(aveCoord[0]));
+    MPI_Allreduce (aveCoord_tmp, aveCoord, 7, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); 
+    for (j=0; j<7; j++)
+      aveCoord[j] /= total_particles;
+  }
+#else
   for (j=0; j<7; j++)
     aveCoord[j] /= particles;
+#endif
   deltaAve = aveCoord[5];
   sasefelOutput->Cx[0] = aveCoord[0];
   sasefelOutput->Cxp[0] = aveCoord[1];
@@ -560,20 +580,38 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
   /* compute rms energy spread */
   for (i=deltaRMS=0; i<particles; i++)
     deltaRMS += sqr(particle[i][5]-deltaAve);
+#if !SDDS_MPI_IO
   sasefelOutput->Sdelta[0] = deltaRMS = sqrt(deltaRMS/particles);
-  
+#else
+  if (SDDS_MPI_IO){
+    double deltaRMS_sum;
+
+    MPI_Reduce(&deltaRMS, &deltaRMS_sum, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    if (isMaster)
+      sasefelOutput->Sdelta[0] = deltaRMS = sqrt(deltaRMS_sum/total_particles);
+  }
+#endif  
   /* compute rms-equivalent time value so that Q/(sqrt(2*PI)*tRMS) is
    * a good estimate of peak current.  I use the 10% and 90% points of
    * the distribution to compute peak current, then get equivalent tRMS.
    */
   percentLevel[0] = 10;
   percentLevel[1] = 90;
+#if SDDS_MPI_IO
+  approximate_percentiles_p(xLimit, percentLevel, 2, time, particles, ANALYSIS_BINS); 
+#else
   compute_percentiles(xLimit, percentLevel, 2, time, particles);
+#endif
   sasefelOutput->rmsBunchLength[0] = tRMS 
     = (xLimit[1] - xLimit[0])/(0.8*sqrt(2*PI));
   
+#if SDDS_MPI_IO
+  emitx = rms_emittance_p(particle, 0, 1, particles, &S11, &S12, NULL);
+  emity = rms_emittance_p(particle, 2, 3, particles, &S33, &S34, NULL);
+#else
   emitx = rms_emittance(particle, 0, 1, particles, &S11, &S12, NULL);
   emity = rms_emittance(particle, 2, 3, particles, &S33, &S34, NULL);
+#endif
 
   SetSASEBetaEmitValues(sasefelOutput->emit+0, sasefelOutput->betaToUse+0,
                         sasefelOutput->beamsizeMode,
@@ -633,7 +671,11 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
       /* compute rms-equivalent time value so that Q/(sqrt(2*PI)*tRMS) is
        * the average current in the slice
        */
+#if SDDS_MPI_IO
+      approximate_percentiles_p(xLimit, percentLevel, 2, time, particles, ANALYSIS_BINS);
+#else
       compute_percentiles(xLimit, percentLevel, 2, time, particles);
+#endif
       sasefelOutput->rmsBunchLength[slice] = (xLimit[1] - xLimit[0])/sqrt(2*PI);
       
       /* find centroids of slice */
@@ -647,6 +689,10 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
 	  aveCoord[j] += time[i];
         }
       }
+#if SDDS_MPI_IO
+      MPI_Allreduce (&count, &total_count, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+      count = total_count;
+#endif
       if (count<2) {
         /* fill in some dummy values */
         sasefelOutput->sliceFound[slice] = 0;
@@ -667,6 +713,14 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
       }
       slicesFound++;
       sasefelOutput->sliceFound[slice] = 1;
+#if SDDS_MPI_IO
+  if (SDDS_MPI_IO) {
+    double aveCoord_tmp[7];
+
+    memcpy(aveCoord_tmp, aveCoord, 7*sizeof(aveCoord[0]));
+    MPI_Allreduce (aveCoord_tmp, aveCoord, 7, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); 
+  }
+#endif
       for (j=0; j<7; j++) {
         aveCoord[j] /= count;
         rmsCoord[j] = 0;
@@ -687,6 +741,17 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
           S12 += (particle[i][0]-aveCoord[0])*(particle[i][1]-aveCoord[1]);
           S34 += (particle[i][2]-aveCoord[2])*(particle[i][3]-aveCoord[3]);
         }
+#if SDDS_MPI_IO
+  if (SDDS_MPI_IO) {
+    double rmsCoord_tmp[6], 
+      S12_tmp = S12, S34_tmp = S34;
+
+    memcpy(rmsCoord_tmp, rmsCoord, 6*sizeof(rmsCoord[0]));
+    MPI_Reduce (rmsCoord_tmp, rmsCoord, 6, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD); 
+    MPI_Reduce (&S12_tmp, &S12, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce (&S34_tmp, &S34, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+  }
+#endif
       for (j=0; j<6; j++)
         rmsCoord[j] = sqrt(rmsCoord[j]/count);
       S12 /= count;

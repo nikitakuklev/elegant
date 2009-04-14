@@ -75,6 +75,10 @@ void setupFrequencyMap(
     ny = 1;
 
   output = compose_filename(output, run->rootname);
+ #if SDDS_MPI_IO
+     SDDS_fmap.parallel_io = 1;
+     SDDS_MPI_Setup(&SDDS_fmap, 1, n_processors, myid, MPI_COMM_WORLD, 1);
+ #endif
   SDDS_ElegantOutputSetup(&SDDS_fmap, output, SDDS_BINARY, 1, "frequency map analysis",
                           run->runfile, run->lattice, parameter_definition, N_PARAMETERS,
                           column_definition, 
@@ -87,12 +91,12 @@ void setupFrequencyMap(
       SDDS_SetError("Unable to define additional SDDS parameters (setup_aperture_search)");
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
-  
+#if !SDDS_MPI_IO  
   if (!SDDS_WriteLayout(&SDDS_fmap)) {
     SDDS_SetError("Unable to write SDDS layout for aperture search");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
-  
+#endif  
 }
 
 
@@ -111,12 +115,36 @@ long doFrequencyMap(
   static double **one_part;
   double p;
   long n_part;
-  
+
+#if SDDS_MPI_IO
+  long particles;
+  /* Open file here for parallel IO */
+  if (!SDDS_MPI_File_Open(SDDS_fmap.MPI_dataset, SDDS_fmap.layout.filename, SDDS_MPI_WRITE_ONLY)) 
+    SDDS_MPI_BOMB("SDDS_MPI_File_Open failed.", &SDDS_fmap.MPI_dataset->MPI_file);
+  if (!SDDS_MPI_WriteLayout(&SDDS_fmap))  
+    SDDS_MPI_BOMB("SDDS_MPI_WriteLayout failed.", &SDDS_fmap.MPI_dataset->MPI_file);
+
+  particles = nx*ny/n_processors;
+  if (myid < nx*ny%n_processors) 
+    particles++;
+  if (!SDDS_StartPage(&SDDS_fmap, particles) || 
+      !SDDS_SetParameters(&SDDS_fmap, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, 0, control->i_step, -1)) {
+    SDDS_SetError("Unable to start SDDS page (do_frequencyMap)");
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  }
+  if (verbosity) {
+    verbosity = 0;
+  if (myid == 0)
+    printf ("Warning: In parallel version, no intermediate particle tracking information will be provided\n");
+  }
+#else
   if (!SDDS_StartPage(&SDDS_fmap, nx*ny) || 
       !SDDS_SetParameters(&SDDS_fmap, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, 0, control->i_step, -1)) {
     SDDS_SetError("Unable to start SDDS page (do_frequencyMap)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
+#endif
+
   if (control->n_elements_to_vary) {
     for (ip=0; ip<control->n_elements_to_vary; ip++)
       if (!SDDS_SetParameters(&SDDS_fmap, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ip+1,
@@ -125,7 +153,6 @@ long doFrequencyMap(
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
   }
-
 
   /* Perform fiducialization by tracking one turn */
   if (!one_part)
@@ -162,6 +189,10 @@ long doFrequencyMap(
     for (iy=0; iy<ny; iy++) {
       y = ymin + iy*dy;
       memcpy(startingCoord, referenceCoord, sizeof(*startingCoord)*6);
+#if USE_MPI
+      if (myid == (ix*ny+iy)%n_processors) /* Partition the job according to particle ID */
+#endif
+      {
       if (!computeTunesFromTracking(firstTune, firstAmplitude,
 				    beamline->matrix, beamline, run,
                                     startingCoord, x, y, turns,
@@ -188,6 +219,8 @@ long doFrequencyMap(
 	    secondTune[0]>1.0 || secondTune[0]<0 || secondTune[1]>1.0 || secondTune[1]<0) {
 	  if (verbosity)
 	    fprintf(stdout, "Problem with particle %ld tune determination\n", ip);
+	  if (SDDS_fmap.n_rows) /* If the particle is lost, it will not show in the frequency map */ 
+	    SDDS_fmap.n_rows--;
 	  continue;
 	}
 	if (!SDDS_SetRowValues(&SDDS_fmap, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ip,
@@ -210,11 +243,17 @@ long doFrequencyMap(
                 ix*ny+iy+1, nx*ny);
         fflush(stdout);
       }
+      }
     }
   }
+
   if (!inhibitFileSync)
     SDDS_DoFSync(&SDDS_fmap);
+#if SDDS_MPI_IO
+  if (!SDDS_MPI_WriteTable(&SDDS_fmap)) {
+#else
   if (!SDDS_WriteTable(&SDDS_fmap)) {
+#endif
     SDDS_SetError("Problem writing SDDS table (doFrequencyMap)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }

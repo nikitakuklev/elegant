@@ -555,7 +555,7 @@ long track_through_pfilter(
     if (maxBuffer<np &&
         !(deltaBuffer=SDDS_Realloc(deltaBuffer, sizeof(*deltaBuffer)*(maxBuffer=np))))
       SDDS_Bomb("memory allocation failure");  
-
+    if (isSlave)
     for (ip=0; ip<np; ip++)
       deltaBuffer[ip] = initial[ip][5];
     /* eliminate lowest lowerfraction of particles and highest
@@ -568,8 +568,11 @@ long track_through_pfilter(
       upper[count] = 1;
       level[count++] = 100-pfilter->upperFraction*100;
     }
-     
+#if USE_MPI
+    approximate_percentiles_p(limit, level, count, deltaBuffer, np, pfilter->bins); 
+#else     
     compute_percentiles(limit, level, count, deltaBuffer, np);
+#endif
     itop = np-1;
     for (i=0; i<2; i++) {
       if (level[i]<0)
@@ -586,6 +589,7 @@ long track_through_pfilter(
 	/* filter in next block so there are no discrepancies due to
 	 * small numerical differences
 	 */
+	if (isSlave)
 	for (ip=0; ip<=itop; ip++) {
 	  if ((upper[i] && initial[ip][5]>limit[i]) ||
 	      (!upper[i] && initial[ip][5]<limit[i])) {
@@ -606,6 +610,7 @@ long track_through_pfilter(
   
   if (pfilter->limitsFixed) {
     double p;
+    if(isSlave)
     for (ip=0; ip<=itop; ip++) {
       p = (1+initial[ip][5])*Po;
       if ((pfilter->hasUpper && p>pfilter->pUpper) ||
@@ -631,6 +636,7 @@ long track_through_pfilter(
   }
   reference = 0.0;
   if (pfilter->beamCentered) {
+    if (isSlave)
     for (ip=0; ip<=itop; ip++) {
 #ifndef USE_KAHAN
       reference += initial[ip][5];
@@ -638,8 +644,19 @@ long track_through_pfilter(
       reference = KahanPlus(reference, initial[ip][5], &error);
 #endif
     }
+#if USE_MPI
+    if (isMaster)
+      itop = 0; 
+    if (USE_MPI) {
+      long itop_total;
+      MPI_Allreduce(&itop, &itop_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); 
+      reference /= (itop_total+1);
+    }
+#else
     reference /= (itop+1);
+#endif
   }
+  if (isSlave)
   for (ip=0; ip<=itop; ip++) {
     if (fabs(initial[ip][5]-reference)<pfilter->deltaLimit)
       continue;

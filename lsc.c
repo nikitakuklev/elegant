@@ -99,7 +99,7 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
 #if USE_MPI
     if(isMaster) {
       tmin = DBL_MAX;
-      tmax = DBL_MIN;
+      tmax = -DBL_MAX;
     }
     find_global_min_max(&tmin, &tmax, nb, MPI_COMM_WORLD);       
 #endif
@@ -158,7 +158,7 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
 #if USE_MPI
     if(isMaster) {
       Imin = DBL_MAX;
-      Imax = DBL_MIN;
+      Imax = -DBL_MAX;
     }
     find_global_min_max(&Imin, &Imax, nb, MPI_COMM_WORLD);      
 #endif
@@ -328,11 +328,11 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
 #endif
 
 #if defined(MINIMIZE_MEMORY)
-  free(Itime);
-  free(Vtime);
+  tfree(Itime);
+  tfree(Vtime);
   if (isSlave) {
-    free(pbin);
-    free(time);
+    tfree(pbin);
+    tfree(time);
   }
   Itime = Vtime = time = NULL;
   pbin = NULL;
@@ -422,7 +422,7 @@ void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge,
     buffer = malloc(sizeof(double) * nb);
     MPI_Allreduce(Itime, buffer, nb, MPI_DOUBLE, MPI_SUM, workers);
     memcpy(Itime, buffer, sizeof(double)*nb);
-    free(buffer);
+    tfree(buffer); buffer = NULL;
   }     
 #endif
 #if DEBUG
@@ -583,10 +583,10 @@ void addLSCKick(double **part, long np, LSCKICK *LSC, double Po, CHARGE *charge,
                              nb, tmin, dt, LSC->interpolate);
   
 #if defined(MINIMIZE_MEMORY)
-  free(Itime);
-  free(Vtime);
-  free(pbin);
-  free(time);
+  tfree(Itime);
+  tfree(Vtime);
+  tfree(pbin);
+  tfree(time);
   Itime = Vtime = time = NULL;
   pbin = NULL;
   max_np = max_n_bins = 0;

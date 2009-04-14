@@ -28,9 +28,7 @@ void SDDS_ElegantOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, 
     log_entry("SDDS_ElegantOutputSetup");
     last_index = -1;
 
-#if USE_MPI  
-    if (myid<0) 
-      MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+#if USE_MPI && !SDDS_MPI_IO 
     if (myid!=0)
       return;
 #endif
@@ -45,11 +43,18 @@ void SDDS_ElegantOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, 
                 }
             }
         sprintf(description, "%s--input: %s  lattice: %s", contents, command_file, lattice_file);
-        if (!SDDS_InitializeOutput(SDDS_table, mode, 1, description, contents, filename)) {
+#if SDDS_MPI_IO
+	/* We still need serial IO for some operations */
+	if ((SDDS_table->parallel_io && (!SDDS_Parallel_InitializeOutput(SDDS_table, description, contents, filename))) ||
+	    (!SDDS_table->parallel_io && (!SDDS_InitializeOutput(SDDS_table, mode, 1, description, contents, filename))))
+#else
+        if (!SDDS_InitializeOutput(SDDS_table, mode, 1, description, contents, filename)) 
+#endif
+	{
             SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
             exit(1);
-            }
-        }
+	}
+    }
 
     /* define SDDS parameters */
     for (i=0; i<n_parameters; i++) {
@@ -90,6 +95,11 @@ void SDDS_ElegantOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, 
         last_index = index;
         }
 
+#if SDDS_MPI_IO 
+  /* In the case of parallel IO, the WiteLayout will be called at the time it dumps data or setups the output,
+     as the communicator information is required */
+    if (!SDDS_table->parallel_io)
+#endif
     if (flags&SDDS_EOS_COMPLETE) {
         if (!SDDS_WriteLayout(SDDS_table)) {
             fprintf(stdout, "Unable to write SDDS layout for file %s (%s)\n", filename, caller);
@@ -140,6 +150,11 @@ void SDDS_PhaseSpaceSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, lon
                           char *command_file, char *lattice_file, char *caller)
 {
     log_entry("SDDS_PhaseSpaceSetup");
+#if SDDS_MPI_IO
+    SDDS_table->parallel_io = 1;
+    /* set up parallel IO information */      
+    SDDS_MPI_Setup(SDDS_table, 1, n_processors, myid, MPI_COMM_WORLD, 0);
+#endif
     SDDS_ElegantOutputSetup(SDDS_table, filename, mode, lines_per_row, contents, command_file, lattice_file,
                             phase_space_parameter, PHASE_SPACE_PARAMETERS, phase_space_column, PHASE_SPACE_COLUMNS,
                             caller, SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
@@ -163,11 +178,10 @@ void SDDS_BeamLossSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long 
                           char *command_file, char *lattice_file, char *caller)
 {
     log_entry("SDDS_BeamLossSetup");
-#if USE_MPI  
-    if (myid<0)
-      MPI_Comm_rank(MPI_COMM_WORLD, &myid);
-    if (myid!=0)
-      return;
+#if SDDS_MPI_IO  
+    SDDS_table->parallel_io = 1;
+    /* set up parallel IO information */      
+    SDDS_MPI_Setup(SDDS_table, 1, n_processors, myid, MPI_COMM_WORLD, 0);
 #endif
 
     SDDS_ElegantOutputSetup(SDDS_table, filename, mode, lines_per_row, contents, command_file, lattice_file,
@@ -194,10 +208,11 @@ void SDDS_CentroidOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode,
 {
     log_entry("SDDS_CentroidOutputSetup");
 #if USE_MPI  
-    if (myid<0)   
-      MPI_Comm_rank(MPI_COMM_WORLD, &myid);
     if (myid!=0)
       return;
+#if SDDS_MPI_IO
+     SDDS_table->parallel_io = 0;
+#endif
 #endif
 
     SDDS_ElegantOutputSetup(SDDS_table, filename, mode, lines_per_row, contents, command_file, lattice_file,
@@ -332,7 +347,7 @@ void SDDS_WatchPointSetup(WATCH *watch, long mode, long lines_per_row,
   char *filename;
   long watch_mode, columns;
   
-#if USE_MPI  
+#if USE_MPI && !SDDS_MPI_IO 
     if (myid<0)
       MPI_Comm_rank(MPI_COMM_WORLD, &myid);
     if (myid!=0)
@@ -342,12 +357,25 @@ void SDDS_WatchPointSetup(WATCH *watch, long mode, long lines_per_row,
   SDDS_table = &watch->SDDS_table;
   filename = watch->filename;
   watch_mode = watch->mode_code;
+
+#if SDDS_MPI_IO
+  SDDS_table->parallel_io = 0; /* By default, I/O will be done in serial */
+#endif
   switch (watch_mode) {
     case WATCH_COORDINATES:
+#if SDDS_MPI_IO
+    SDDS_table->parallel_io = 1; 
+    SDDS_MPI_Setup(SDDS_table, 1, n_processors, myid, MPI_COMM_WORLD, 0);
+#endif
     SDDS_ElegantOutputSetup(SDDS_table, filename, mode, lines_per_row, "watch-point phase space",
                             command_file, lattice_file,
                             phase_space_parameter, PHASE_SPACE_PARAMETERS,
                             NULL, 0, caller, SDDS_EOS_NEWFILE);
+#if SDDS_MPI_IO
+    /* Open file here for parallel IO */
+    if (!SDDS_MPI_File_Open(SDDS_table->MPI_dataset, SDDS_table->layout.filename, SDDS_MPI_WRITE_ONLY)) 
+      SDDS_MPI_BOMB("SDDS_MPI_File_Open failed.", &SDDS_table->MPI_dataset->MPI_file);
+#endif
     columns = 0;
     if (watch->xData) {
       if ((watch->xIndex[0]=SDDS_DefineColumn(SDDS_table, "x", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0))<0 ||
@@ -409,14 +437,24 @@ void SDDS_WatchPointSetup(WATCH *watch, long mode, long lines_per_row,
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exit(1);
     }
-    if (!SDDS_WriteLayout(SDDS_table)) {
+#if SDDS_MPI_IO
+    if (!SDDS_MPI_WriteLayout(SDDS_table))  
+#else     
+    if (!SDDS_WriteLayout(SDDS_table))
+#endif
+    {
       fprintf(stdout, "Unable to write SDDS layout for file %s (%s)\n", filename, caller);
       fflush(stdout);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exit(1);
     }
+#if SDDS_MPI_IO
+    if ((watch->useDisconnect) && (!SDDS_DisconnectFile(SDDS_table)))
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+#endif
     break;
   case WATCH_CENTROIDS:
+    if (isMaster)
     SDDS_ElegantOutputSetup(SDDS_table, filename, mode, lines_per_row, "watch-point centroids",
                             command_file, lattice_file,
                             standard_parameter, STANDARD_PARAMETERS,
@@ -424,6 +462,7 @@ void SDDS_WatchPointSetup(WATCH *watch, long mode, long lines_per_row,
                             caller, SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
     break;
   case WATCH_PARAMETERS:
+    if (isMaster)
     SDDS_ElegantOutputSetup(SDDS_table, filename, mode, lines_per_row, "watch-point parameters", 
                             command_file, lattice_file,
                             standard_parameter, STANDARD_PARAMETERS, 
@@ -431,6 +470,7 @@ void SDDS_WatchPointSetup(WATCH *watch, long mode, long lines_per_row,
                             caller, SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
     break;
   case WATCH_FFT:
+    if (isMaster) {
     if (!qualifier)
       watch->window_code = FFT_HANNING;
     else if ((watch->window_code=match_string(qualifier, fft_window_name, N_FFT_WINDOWS, 0))<0) 
@@ -440,6 +480,7 @@ void SDDS_WatchPointSetup(WATCH *watch, long mode, long lines_per_row,
                             command_file, lattice_file, standard_parameter, STANDARD_PARAMETERS, 
                             watch_point_fft_column, WATCH_POINT_FFT_COLUMNS,
                             caller, SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
+    }
     break;
   default:
     break;
@@ -449,8 +490,8 @@ void SDDS_WatchPointSetup(WATCH *watch, long mode, long lines_per_row,
 void SDDS_HistogramSetup(HISTOGRAM *histogram, long mode, long lines_per_row,
                           char *command_file, char *lattice_file, char *caller)
 {
-  SDDS_TABLE *SDDS_table;
-  char *filename;
+  SDDS_TABLE *SDDS_table=NULL;
+  char *filename=NULL;
   long column, columns;
 
   if (isMaster) {
@@ -558,15 +599,17 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
 {
   long i, row;
   double p, t0, t;
-
-#if USE_MPI  
-    if (myid<0)
-      MPI_Comm_rank(MPI_COMM_WORLD, &myid);
-    if (myid!=0)
-      return;
+#if SDDS_MPI_IO
+  long total_row;
 #endif
 
   log_entry("dump_watch_particles");
+#if SDDS_MPI_IO
+  if (isMaster && notSinglePart)   /* No particle will be dumped by master */
+    particles = 0; 
+  else
+#endif
+  {
   if (!watch->initialized)
     bomb("uninitialized watch-point (coordinate mode) encountered (dump_watch_particles)", NULL);
   if (!particle)
@@ -579,7 +622,7 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
       fflush(stdout);
       abort();
     }
-
+  }
   if (!SDDS_StartTable(&watch->SDDS_table, particles)) {
     SDDS_SetError("Problem starting SDDS table (dump_watch_particles)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -588,6 +631,9 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
   t0 = (pass-watch->passLast)*length*sqrt(Po*Po+1)/(c_mks*(Po+1e-32)) + watch->t0Last;
   watch->t0Last = t0;
   watch->passLast = pass;
+#if SDDS_MPI_IO
+  if ((isSlave&&notSinglePart)||(!notSinglePart&&isMaster))
+#endif
   for (i=0; i<particles; i++) {
     if (watch->fraction==1 || random_2(0)<watch->fraction) {
       if (watch->xData && 
@@ -625,6 +671,15 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
       }
     }
   }
+#if SDDS_MPI_IO
+  if (USE_MPI&&notSinglePart){
+
+    MPI_Allreduce (&row, &total_row, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+    if (isMaster)
+      row = total_row;
+  }
+  if (total_row)
+#endif
   if (!SDDS_SetParameters(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
                           "Step", step, "Pass", pass, "Particles", row, "pCentral", Po,
                           "PassLength", length, 
@@ -634,12 +689,29 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
     SDDS_SetError("Problem setting SDDS parameters (dump_watch_particles)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
-  if (!SDDS_WriteTable(&watch->SDDS_table) || !SDDS_ShortenTable(&watch->SDDS_table, 1)) {
+#if SDDS_MPI_IO
+  if ((watch->useDisconnect) && (!SDDS_ReconnectFile(&watch->SDDS_table)))
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  if (total_row)
+  if (!SDDS_MPI_WriteTable(&watch->SDDS_table))
+#else
+  if (!SDDS_WriteTable(&watch->SDDS_table) || !SDDS_ShortenTable(&watch->SDDS_table, 1)) 
+#endif
+  {
     SDDS_SetError("Problem writing SDDS table (dump_watch_particles)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   } 
   if (!inhibitFileSync)
     SDDS_DoFSync(&watch->SDDS_table);
+#if SDDS_MPI_IO
+  if ((watch->useDisconnect) && (!SDDS_DisconnectFile(&watch->SDDS_table)))
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  if (!SDDS_ShortenTable(&watch->SDDS_table, 1))
+  {
+    SDDS_SetError("Problem shortening SDDS table (dump_watch_particles)");
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  }
+#endif
   log_exit("dump_watch_particles");
 }
 
@@ -654,20 +726,38 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
     double tc, tc0, p_sum, gamma_sum, sum, p=0.0;
     
 #if USE_MPI  
-    if (myid<0)
-      MPI_Comm_rank(MPI_COMM_WORLD, &myid);
-    if (myid!=0)
-      return;
+    long particles_total;
+    double emittance_l;
+#ifdef  USE_MPE /* use the MPE library */
+  int event1a, event1b;
+  event1a = MPE_Log_get_event_number();
+  event1b = MPE_Log_get_event_number();
+  if(isMaster) {
+    MPE_Describe_state(event1a, event1b, "End Watch", "pink");
+  }
 #endif
 
-    log_entry("dump_watch_parameters");
+    if (myid<0)
+      MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+    if (myid==0)
+      particles = 0;
 
-    if (!watch->initialized)
+    MPI_Allreduce(&particles, &particles_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+#endif
+
+    if (isMaster) {
+      log_entry("dump_watch_parameters");
+ 
+      if (!watch->initialized)
         bomb("uninitialized watch-point (coordinate mode) encountered (dump_watch_parameters)", NULL);
-    if (!particle)
-        bomb("NULL coordinate pointer passed to dump_watch_parameters", NULL);
-    if (watch->fraction>1)
+    
+      if (watch->fraction>1)
         bomb("logic error--fraction>1 in dump_watch_parameters", NULL);
+    }
+    if (isSlave) {
+      if (!particle)
+        bomb("NULL coordinate pointer passed to dump_watch_parameters", NULL);
+    }
 
     for (i=0; i<particles; i++)
         if (!particle[i]) {
@@ -675,10 +765,11 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
             fflush(stdout);
             abort();
             }
+    if (isMaster) 
     if ((watchStartPass==pass) && !SDDS_StartTable(&watch->SDDS_table, (n_passes-watchStartPass)/watch->interval+1)) {
         SDDS_SetError("Problem starting SDDS table (dump_watch_parameters)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-        }
+      }
 
     sample = (pass-watchStartPass)/watch->interval;
     tc0 = (pass-watch->passLast)*revolutionLength*sqrt(Po*Po+1)/(c_mks*(Po+1e-32)) + watch->t0Last;
@@ -686,23 +777,38 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
     watch->passLast = pass;
     /* compute centroids, sigmas, and emittances for x, y, and s */
     for (i=0; i<6; i+=2 ) {
-      double x, xp, cx, cxp, sum_x, sum_xp, sum_x2, sum_xxp, sum_xp2;
-      for (j=sum_x=sum_xp=0; j<particles; j++) {
+      double x, xp, cx, cxp, sum_x = 0, sum_xp = 0, sum_x2, sum_xxp, sum_xp2;
+      for (j=0; j<particles; j++) {
         sum_x   += particle[j][i];
         sum_xp  += particle[j][i+1];
       }
+#if SDDS_MPI_IO
+      if (USE_MPI) {
+	double sum_x_total, sum_xp_total;
+
+	MPI_Allreduce(&sum_x, &sum_x_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(&sum_xp, &sum_xp_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+	sum_x = sum_x_total;
+        sum_xp = sum_xp_total; 
+         
+        cx = sum_x/particles_total;
+        cxp = sum_xp/particles_total;
+      }
+#else
       if (particles) {
         cx  = sum_x/particles;
         cxp = sum_xp/particles;
       }
       else 
         cx = cxp = 0;
-      if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
-                             i==0?"Cx" :(i==2?"Cy" :"Cs" ), cx,
-                             i==0?"Cxp":(i==2?"Cyp":"Cdelta"), cxp, NULL)) {
-        SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-      }
+#endif
+      if (isMaster) 
+	if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
+			       i==0?"Cx" :(i==2?"Cy" :"Cs" ), cx,
+			       i==0?"Cxp":(i==2?"Cyp":"Cdelta"), cxp, NULL)) {
+	  SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
+	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+	}
       if (watch->mode_code==WATCH_PARAMETERS) {
         for (j=sum_x2=sum_xp2=sum_xxp=0; j<particles; j++) {
           x  = particle[j][i]   - cx;
@@ -711,27 +817,64 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
           sum_xxp += x*xp;
           sum_xp2 += sqr(xp);
         }
-        if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
-                               i==0?"Sx" :(i==2?"Sy" :"Ss" ), particles?sqrt(sum_x2/particles):0.0,
-                               i==0?"Sxp":(i==2?"Syp":"Sdelta"), particles?sqrt(sum_xp2/particles):0.0, NULL)) {
-          SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
-          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-        }
-        if (i!=4)
-          if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
-                                 i==0?"ex":"ey", SAFE_SQRT(sum_x2*sum_xp2-sqr(sum_xxp))/particles, NULL)) {
-            SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
-            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-          }
+#if SDDS_MPI_IO
+	if (USE_MPI) {
+          double sum[3], sum_total[3];
+          sum[0] = sum_x2; sum[1] = sum_xxp; sum[2] = sum_xp2;
+	  MPI_Allreduce(sum, sum_total, 3, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+          sum_x2 = sum_total[0];
+          sum_xxp = sum_total[1];
+          sum_xp2 = sum_total[2];
+	}
+        if (isMaster) {
+	  if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
+				 i==0?"Sx" :(i==2?"Sy" :"Ss" ), particles_total?sqrt(sum_x2/particles_total):0.0,
+				 i==0?"Sxp":(i==2?"Syp":"Sdelta"), particles_total?sqrt(sum_xp2/particles_total):0.0, NULL)) {
+	    SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
+	    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+	  }
+	  if (i!=4)
+	    if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
+				   i==0?"ex":"ey", SAFE_SQRT(sum_x2*sum_xp2-sqr(sum_xxp))/particles_total, NULL)) {
+	      SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
+	      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+	    }
+	}
+#else 
+	if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
+			       i==0?"Sx" :(i==2?"Sy" :"Ss" ), particles?sqrt(sum_x2/particles):0.0,
+			       i==0?"Sxp":(i==2?"Syp":"Sdelta"), particles?sqrt(sum_xp2/particles):0.0, NULL)) {
+	  SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
+	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+	}
+	if (i!=4)
+	  if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
+				 i==0?"ex":"ey", SAFE_SQRT(sum_x2*sum_xp2-sqr(sum_xxp))/particles, NULL)) {
+	    SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
+	    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+	  }
+#endif
       }
     }
-    
+
+#if SDDS_MPI_IO 
+    emittance_l = rms_longitudinal_emittance_p(particle, particles, Po);  
+    if (isMaster) {
+      if (watch->mode_code==WATCH_PARAMETERS)
+	if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
+			       "el", emittance_l, NULL)) {
+	  SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
+	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+	}
+    }
+#else
     if (watch->mode_code==WATCH_PARAMETERS)
       if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
-                             "el", rms_longitudinal_emittance(particle, particles, Po), NULL)) {
-        SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+			     "el", rms_longitudinal_emittance(particle, particles, Po), NULL)) {
+	SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
+	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
+#endif
     /* time centroid and sigma */
     for (i=p_sum=gamma_sum=sum=0; i<particles; i++) {
       p = Po*(1+particle[i][5]);
@@ -739,10 +882,29 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
       gamma_sum += sqrt(sqr(p)+1);
       sum += particle[i][4]/(p/sqrt(sqr(p)+1)*c_mks) ;
     }
+#if SDDS_MPI_IO
+    if (USE_MPI) {
+      double p_sum_total, gamma_sum_total, sum_total;
+      MPI_Allreduce (&sum, &sum_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce (&p_sum, &p_sum_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce (&gamma_sum, &gamma_sum_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);     
+      tc = sum_total/particles_total;
+      if (isMaster) {
+	if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
+			       "Ct", tc, "dCt", tc-tc0,
+			       "pAverage", p_sum_total/particles_total, "pCentral", Po, 
+			       "KAverage", (gamma_sum_total/particles_total-1)*me_mev, NULL)) {
+	  SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
+	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+	}
+      }
+    }
+#else
     if (particles)
       tc = sum/particles;
     else
       tc = 0;
+ 
     if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
                            "Ct", tc, "dCt", tc-tc0,
                            "pAverage", p_sum/particles, "pCentral", Po, 
@@ -750,45 +912,69 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
       SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
+#endif
     if (watch->mode_code==WATCH_PARAMETERS) {
       for (i=sum=0; i<particles; i++) {
         p = Po*(1+particle[i][5]);
         sum += sqr(particle[i][4]/(p/sqrt(sqr(p)+1)*c_mks) - tc);
       }
+#if SDDS_MPI_IO
+      if (USE_MPI) {
+	double sum_total;
+	MPI_Allreduce(&sum, &sum_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+        if (isMaster)
+	  if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
+				 "St", particles_total?sqrt(sum_total/particles_total):0.0, NULL)) {
+	    SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
+	    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+	  }
+	if (isMaster)
+          particles = particles_total; /* make sure the partiles will not be used in a loop */
+      }
+#else
       if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
                              "St", particles?sqrt(sum/particles):0.0, NULL)) {
         SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
+#endif
     }
 
-    /* number of particles */
-    if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
-                           "Particles", particles, 
-                           "Transmission", (original_particles?((double)particles)/original_particles:(double)0.0),
-                           "Pass", pass, 
-                           "Step", step, NULL)) {
-      SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-    }
-    if (!SDDS_SetParameters(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
-                            "Step", step, NULL)) {
-      SDDS_SetError("Problem setting parameter values for SDDS table (dump_watch_parameters)");
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-    }
-    
-    if (sample==(n_passes-1)/watch->interval) {
-      if (watch->flushInterval>0) {
-        if (sample!=watch->flushSample && !SDDS_UpdatePage(&watch->SDDS_table, 0)) {
-          SDDS_SetError("Problem writing data for SDDS table (dump_watch_parameters)");
-          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-        }
+    if (isMaster) {
+      /* number of particles */
+      if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,			     
+#if SDDS_MPI_IO
+			     "Particles", particles_total,
+			     "Transmission", (original_particles?((double)particles_total)/original_particles:(double)0.0),
+#else 
+			     "Particles", particles,
+			     "Transmission", (original_particles?((double)particles)/original_particles:(double)0.0),
+#endif
+			     "Pass", pass, 
+			     "Step", step, NULL)) {
+	SDDS_SetError("Problem setting row values for SDDS table (dump_watch_parameters)");
+	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
-      else if (!SDDS_WriteTable(&watch->SDDS_table)) {
-        SDDS_SetError("Problem writing data for SDDS table (dump_watch_parameters)");
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      if (!SDDS_SetParameters(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
+			      "Step", step, NULL)) {
+	SDDS_SetError("Problem setting parameter values for SDDS table (dump_watch_parameters)");
+	SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
-    } else {
+
+
+      if (sample==(n_passes-1)/watch->interval) {
+	if (watch->flushInterval>0) {
+	  if (sample!=watch->flushSample && !SDDS_UpdatePage(&watch->SDDS_table, 0)) {
+	    SDDS_SetError("Problem writing data for SDDS table (dump_watch_parameters)");
+	    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+	  }
+	}
+	else if (!SDDS_WriteTable(&watch->SDDS_table)) {
+	  SDDS_SetError("Problem writing data for SDDS table (dump_watch_parameters)");
+	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+	}
+      } else {
       if (watch->flushInterval>0 && sample%watch->flushInterval==0 &&
           !SDDS_UpdatePage(&watch->SDDS_table, 0)) {
         SDDS_SetError("Problem flushing data for SDDS table (dump_watch_parameters)");
@@ -796,11 +982,17 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
       }
       watch->flushSample = sample;
     }
-    if (!inhibitFileSync)
-      SDDS_DoFSync(&watch->SDDS_table);
-    
-    log_exit("dump_watch_parameters");
-  }
+#ifdef  USE_MPE
+	      MPE_Log_event(event1a, 0, "start watch"); /* record time spent on I/O operations */
+#endif
+      if (!inhibitFileSync)
+	SDDS_DoFSync(&watch->SDDS_table);
+#ifdef  USE_MPE
+	      MPE_Log_event(event1b, 0, "end watch");
+#endif   
+      log_exit("dump_watch_parameters");
+    }
+}
 
 
 void dump_watch_FFT(WATCH *watch, long step, long pass, long n_passes, double **particle, long particles,
@@ -973,8 +1165,9 @@ void dump_particle_histogram(HISTOGRAM *histogram, long step, long pass, double 
   log_entry("dump_particle_histogram");
   if (!histogram->initialized)
     bomb("uninitialized histogram encountered (dump_particle_histogram)", NULL);
-  if (!particle)
-    bomb("NULL coordinate pointer passed to dump_particle_histogram", NULL);
+  if (isSlave)
+    if (!particle)
+      bomb("NULL coordinate pointer passed to dump_particle_histogram", NULL);
   /*
   for (ipart=0; ipart<particles; ipart++)
     if (!particle[ipart]) {
@@ -999,6 +1192,7 @@ void dump_particle_histogram(HISTOGRAM *histogram, long step, long pass, double 
     if (!(buffer=SDDS_Realloc(buffer, sizeof(*buffer)*maxBins))) {
       SDDS_Bomb("Memory allocation failure (dump_particle_histogram)");
     }
+    MPI_Reduce (&particles, &particles_total, 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
 #endif
   }
   if (isSlave) {
@@ -1055,14 +1249,15 @@ void dump_particle_histogram(HISTOGRAM *histogram, long step, long pass, double 
       coordinate[ibin] = (ibin+0.5)*histogram->binSize[icoord] + lower;
     make_histogram(frequency, histogram->bins, lower, upper, histData, particles, 1);
 #if USE_MPI
-    if (USE_MPI) /* This will update the number of particles locally on master if there are lost on laves */
+    if (USE_MPI) /* This will update the number of particles locally on master if there are lost on slaves */
       MPI_Reduce (&particles, &particles_total, 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
     if (isMaster)
       particles = particles_total;
     MPI_Allreduce(frequency, buffer, histogram->bins, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     memcpy(frequency, buffer, sizeof(*buffer)*histogram->bins);    
+    if (isMaster && particles_total) 
 #endif
-    if (isMaster) {
+    {
       if (histogram->normalize)
 	for (ibin=0; ibin<histogram->bins; ibin++)
 	  frequency[ibin] /= particles*(upper-lower)/histogram->bins;
@@ -1074,7 +1269,10 @@ void dump_particle_histogram(HISTOGRAM *histogram, long step, long pass, double 
       }
     }
   }
-  if (isMaster) {
+#if SDDS_MPI_IO
+  if (isMaster && particles_total)
+#endif
+  {
     if (!SDDS_SetParameters(&histogram->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
 			    "Step", step, "Pass", pass, "Particles", particles, "pCentral", Po,
 			    "PassLength", length, "Charge", charge,
@@ -1100,33 +1298,50 @@ void dump_phase_space(SDDS_TABLE *SDDS_table, double **particle, long particles,
     long i;
     double p;
 
-#if USE_MPI  
-    if (myid<0) 
-      MPI_Comm_rank(MPI_COMM_WORLD, &myid);
-    if (myid!=0)
-      return;
+#if SDDS_MPI_IO
+    long total_particles;
+
+    /* Open file here for parallel IO */
+    if (!SDDS_table->layout.layout_written) { /* Check if the file has been opened already */
+      if (!SDDS_MPI_File_Open(SDDS_table->MPI_dataset, SDDS_table->layout.filename, SDDS_MPI_WRITE_ONLY)) 
+	SDDS_MPI_BOMB("SDDS_MPI_File_Open failed.", &SDDS_table->MPI_dataset->MPI_file);
+      if (!SDDS_MPI_WriteLayout(SDDS_table))  
+	SDDS_MPI_BOMB("SDDS_MPI_WriteLayout failed.", &SDDS_table->MPI_dataset->MPI_file);
+    }
 #endif
 
     log_entry("dump_phase_space");
-    if (!particle)
+    if (isSlave) {
+      if (!particle)
         bomb("NULL coordinate pointer passed to dump_phase_space", NULL);
-    for (i=0; i<particles; i++)
+    
+      for (i=0; i<particles; i++)
         if (!particle[i]) {
             fprintf(stdout, "error: coordinate slot %ld is NULL (dump_phase_space)\n", i);
             fflush(stdout);
             abort();
-            }
-
+	}
+    }
     if (!SDDS_StartTable(SDDS_table, particles)) {
         SDDS_SetError("Problem starting SDDS table (dump_phase_space)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
+#if SDDS_MPI_IO
+    if (notSinglePart) {
+      MPI_Reduce (&particles, &total_particles, 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+      if (isMaster)
+	particles = total_particles;
+    }
+#endif  
     if (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, 
                             "Step", step, "pCentral", Po, "Particles", particles,
                             "Charge", charge, NULL)) {
         SDDS_SetError("Problem setting parameter values for SDDS table (dump_phase_space)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
+#if SDDS_MPI_IO
+    if ((notSinglePart&&isSlave)||(!notSinglePart&&isMaster))
+#endif
     for (i=0; i<particles; i++) {
         p = Po*(1+particle[i][5]);
         if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, i,
@@ -1141,10 +1356,15 @@ void dump_phase_space(SDDS_TABLE *SDDS_table, double **particle, long particles,
         SDDS_SetError("Problem setting SDDS parameters (dump_phase_space)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
-    if (!SDDS_WriteTable(SDDS_table) || !SDDS_ShortenTable(SDDS_table, 1)) {
+#if SDDS_MPI_IO
+    if (!SDDS_MPI_WriteTable(SDDS_table) || !SDDS_ShortenTable(SDDS_table, 1))
+#else
+    if (!SDDS_WriteTable(SDDS_table) || !SDDS_ShortenTable(SDDS_table, 1))
+#endif
+      {
         SDDS_SetError("Problem writing SDDS table (dump_phase_space)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-        } 
+      } 
     if (!inhibitFileSync)
       SDDS_DoFSync(SDDS_table);
 
@@ -1174,13 +1394,21 @@ void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long *lostOn
     long **tmp, j;
 #endif
 #if USE_MPI  
-    if (isSlave)
-      return;
+
+    /* Open file here for parallel IO */
+    if (!SDDS_table->layout.layout_written) { /* Check if the file has been opened already */
+      if (!SDDS_MPI_File_Open(SDDS_table->MPI_dataset, SDDS_table->layout.filename, SDDS_MPI_WRITE_ONLY)) 
+	SDDS_MPI_BOMB("SDDS_MPI_File_Open failed.", &SDDS_table->MPI_dataset->MPI_file);
+      if (!SDDS_MPI_WriteLayout(SDDS_table))  
+	SDDS_MPI_BOMB("SDDS_MPI_WriteLayout failed.", &SDDS_table->MPI_dataset->MPI_file);
+    }
 #endif
 
     log_entry("dump_lost_particles");
-    if (!particle)
+    if (isSlave) {
+      if (!particle)
         bomb("NULL coordinate pointer passed to dump_lost_particles", NULL);
+    }
 
 #ifdef SORT   /* sort for comparing the serial and parallel versions */
     if (SORT && particles) {
@@ -1232,10 +1460,15 @@ void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long *lostOn
         SDDS_SetError("Problem setting SDDS parameters (dump_lost_particles)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
-    if (!SDDS_WriteTable(SDDS_table)) {
+#if SDDS_MPI_IO
+    if (!SDDS_MPI_WriteTable(SDDS_table))
+#else
+    if (!SDDS_WriteTable(SDDS_table))
+#endif
+      {
         SDDS_SetError("Problem writing SDDS table (dump_lost_particles)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-        } 
+      } 
     if (!inhibitFileSync)
       SDDS_DoFSync(SDDS_table);
 
@@ -1689,7 +1922,7 @@ void dump_scattered_loss_particles(SDDS_TABLE *SDDS_table, double **particleLos,
                                    long *lostOnPass, long particles, double *weight, TSCATTER *tsptr)
 {
     long i, j;
-    double rate, lossRate, intLossRate, p;
+    double rate, lossRate, intLossRate;
 
     log_entry("dump_scattered_loss_particles");
     if (!particleLos)

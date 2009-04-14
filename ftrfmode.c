@@ -15,6 +15,15 @@
 #include "mdb.h"
 #include "track.h"
 
+#if USE_MPI
+typedef struct {
+  long index;  /* Records the real index in the whole histogram */
+  long count;
+  double xsum, ysum;
+} HISTOGRAM_DATA;
+
+#endif
+
 void track_through_ftrfmode(
                             double **part, long np, FTRFMODE *trfmode, double Po,
                             char *element_name, double element_z, long pass, long n_passes,
@@ -27,7 +36,6 @@ void track_through_ftrfmode(
   static double *Vxbin = NULL;             /* array for voltage acting on each bin MV */
   static double *Vybin = NULL;             /* array for voltage acting on each bin MV */
   static double *Vzbin = NULL;             /* array for voltage acting on each bin MV */
-  static long max_n_bins = 0;
   static long *pbin = NULL;                /* array to record which bin each particle is in */
   static double *time = NULL;              /* array to record arrival time of each particle */
   static long max_np = 0;
@@ -37,11 +45,26 @@ void track_through_ftrfmode(
   double Px, Py, Pz;
   double Q, Qrp;
   long lastBin, imode;
-  long deltaPass;
   double rampFactor;
+  long nonEmptyBins = 0;
 #if USE_MPI
-  double *buffer;
-  long np_total;
+  static long *nonEmptyArray = NULL;
+  double *buffer = NULL;
+  long  *reverseMap = NULL;
+  long np_total, i, j, map_j=0;
+  long firstBin = trfmode->n_bins, firstBin_global, lastBin_global;
+  long nonEmptyBins_total = 0, offset = 0;
+  MPI_Status status;
+  HISTOGRAM_DATA *subHis; /* a compressed histogram with non-zero bins only */ 
+#ifdef  USE_MPE /* use the MPE library */
+  int event1a, event1b, event2a, event2b;
+  event1a = MPE_Log_get_event_number();
+  event1b = MPE_Log_get_event_number();
+  event2a = MPE_Log_get_event_number();
+  event2b = MPE_Log_get_event_number();
+  MPE_Describe_state(event1a, event1b, "Count nonEmptyBins", "red");
+  MPE_Describe_state(event2a, event2b, "Compress-unCompress", "yellow");
+#endif
 #endif
 
   if (charge)
@@ -56,22 +79,26 @@ void track_through_ftrfmode(
 
   if (trfmode->outputFile && pass==0 && !SDDS_StartPage(&trfmode->SDDSout, n_passes))
     SDDS_Bomb("Problem starting page for FTRFMODE output file");
+
   
-  if (trfmode->n_bins>max_n_bins) {
-    max_n_bins = trfmode->n_bins;
-    xsum = trealloc(xsum, sizeof(*xsum)*max_n_bins);
-    ysum = trealloc(ysum, sizeof(*ysum)*max_n_bins);
-    count = trealloc(count, sizeof(*count)*max_n_bins);
-    Vxbin = trealloc(Vxbin, sizeof(*Vxbin)*max_n_bins);
-    Vybin = trealloc(Vybin, sizeof(*Vybin)*max_n_bins);
-    Vzbin = trealloc(Vzbin, sizeof(*Vzbin)*max_n_bins);
-  }
+  xsum = calloc(trfmode->n_bins, sizeof(*xsum));
+  ysum = calloc(trfmode->n_bins, sizeof(*ysum));
+  count = calloc(trfmode->n_bins, sizeof(*count));
+#if (!USE_MPI)
+  Vxbin = calloc(trfmode->n_bins, sizeof(*Vxbin));
+  Vybin = calloc(trfmode->n_bins, sizeof(*Vybin));
+  Vzbin = calloc(trfmode->n_bins, sizeof(*Vzbin));
+  if (!(xsum && ysum && count && Vxbin && Vybin && Vzbin))
+    bomb ("Memory allocation failure in track_through_ftrfmod", NULL);
+#endif
+
+  if (!(xsum && ysum && count))
+    bomb ("Memory allocation failure in track_through_ftrfmod", NULL);
 
   if (np>max_np) {
     pbin = trealloc(pbin, sizeof(*pbin)*(max_np=np));
     time = trealloc(time, sizeof(*time)*max_np);
   }
-
 
   tmean = 0;
   if (isSlave) {
@@ -93,15 +120,13 @@ void track_through_ftrfmode(
   tmean /= np;
 #endif
 
-  if (isSlave) {
     tmin = tmean - trfmode->bin_size*trfmode->n_bins/2.;
     tmax = tmean + trfmode->bin_size*trfmode->n_bins/2.;
 
-    for (ib=0; ib<trfmode->n_bins; ib++)
-      xsum[ib] = ysum[ib] = count[ib] = Vxbin[ib] = Vybin[ib] = Vzbin[ib] = 0;
     dt = (tmax - tmin)/trfmode->n_bins;
     lastBin = -1;
-  
+
+  if (isSlave) {  
     for (ip=0; ip<np; ip++) {
       pbin[ip] = -1;
       ib = (time[ip]-tmin)/dt;
@@ -112,49 +137,139 @@ void track_through_ftrfmode(
       xsum[ib] += part[ip][0]-trfmode->dx;
       ysum[ib] += part[ip][2]-trfmode->dy;
       count[ib] += 1;
+      if (count[ib]==1) /* Count nonEmptyBins for the first time only */
+        nonEmptyBins++;
       pbin[ip] = ib;
       if (ib>lastBin)
 	lastBin = ib;
-    }
 #if USE_MPI
-    if (isSlave) {
-      long lastBin_global;         
-      MPI_Allreduce(&lastBin, &lastBin_global, 1, MPI_LONG, MPI_MAX, workers);
-      lastBin = lastBin_global;
+      if (ib<firstBin)    
+	firstBin = ib;
+#endif
     }
-    if(isSlave) {
-      buffer = malloc(sizeof(double) * (lastBin+1)); 
-      MPI_Allreduce(xsum, buffer, lastBin+1, MPI_DOUBLE, MPI_SUM, workers);
-      memcpy(xsum, buffer, sizeof(*xsum)*(lastBin+1));
-      MPI_Allreduce(ysum, buffer, lastBin+1, MPI_DOUBLE, MPI_SUM, workers);
-      memcpy(ysum, buffer, sizeof(*ysum)*(lastBin+1));
-      MPI_Allreduce(count, buffer, lastBin+1, MPI_LONG, MPI_SUM, workers);
-      memcpy(count, buffer, sizeof(*count)*(lastBin+1));
-      free(buffer);
+  }
+
+#if USE_MPI
+  MPI_Reduce(&lastBin, &lastBin_global, 1, MPI_LONG, MPI_MAX, 0, MPI_COMM_WORLD);
+  MPI_Reduce(&firstBin, &firstBin_global, 1, MPI_LONG, MPI_MIN, 0, MPI_COMM_WORLD);
+    if (isMaster) {
+      lastBin = lastBin_global;
+      firstBin = firstBin_global; 
+    }
+
+    if (!nonEmptyArray)
+      nonEmptyArray = malloc(sizeof(*nonEmptyArray)*n_processors);
+
+    MPI_Gather(&nonEmptyBins,1,MPI_LONG,nonEmptyArray,1,MPI_LONG,0,MPI_COMM_WORLD);
+    if (isMaster){
+      for (i=1; i<n_processors; i++) 
+	nonEmptyBins_total += nonEmptyArray[i];
+    }
+    MPI_Bcast(&nonEmptyBins_total, 1, MPI_LONG, 0, MPI_COMM_WORLD);
+  
+    if (!(subHis = calloc(nonEmptyBins_total, sizeof(*subHis))))
+      bomb ("Memory allocation failure in track_through_ftrfmod", NULL);
+ 
+    Vxbin = calloc(nonEmptyBins_total, sizeof(*Vxbin));
+    Vybin = calloc(nonEmptyBins_total, sizeof(*Vybin));
+    Vzbin = calloc(nonEmptyBins_total, sizeof(*Vzbin));
+    reverseMap = calloc(trfmode->n_bins, sizeof(*reverseMap));
+
+    if (isSlave) {
+      /* figure out the overlapped part of histogram between neighbor processors */
+      /* MPI_Sendrecv(&lastBin, 1, MPI_LONG, myid+1, 109, &ovlap_f, myid-1, 109, workers, &status);
+      MPI_Sendrecv(&firstBin, 1, MPI_LONG, myid-1, 110, &ovlap_e, myid+1, 110, workers, &status); 
+      */
+      for (i=0,ib=firstBin; ib<=lastBin; ib++) {
+	if (count[ib]){        
+          subHis[i].index = ib;
+	  subHis[i].count = count[ib];
+	  subHis[i].xsum = xsum[ib];
+       	  subHis[i].ysum = ysum[ib]; 
+	  i++;
+	}
+      }
+      MPI_Send(subHis, nonEmptyBins*sizeof(*subHis), MPI_BYTE, 0, 108, MPI_COMM_WORLD);
+    }
+    else {
+      for (i=1; i<n_processors; i++) {
+        if (i>1)
+	  offset += nonEmptyArray[i-1];
+	MPI_Recv (&subHis[offset], nonEmptyArray[i]*sizeof(*subHis), MPI_BYTE, i, 108, MPI_COMM_WORLD, &status); 
+	for (j=offset; j<nonEmptyArray[i]; j++)
+          #define current subHis[j]
+          map_j = current.index;
+          count[map_j] += current.count;
+          xsum[map_j] += current.xsum;
+	  ysum[map_j] += current.ysum; 
+      }
+#ifdef  USE_MPE
+      MPE_Log_event(event1a, 0, "start initialize");
+#endif       
+      for (i=0, ib=firstBin; ib<=lastBin; ib++) { 
+        if (count[ib]) {
+          subHis[i].index = ib;
+	  subHis[i].count = count[ib];
+	  subHis[i].xsum = xsum[ib];
+       	  subHis[i].ysum = ysum[ib];
+          i++;  
+        }
+      } 
+#ifdef  USE_MPE
+      MPE_Log_event(event1b, 0, "end initialize");
+#endif 
+      /* If there are overlapped bins between different processors, the number should be less than the original
+	 nonEmptyBins_total */
+      nonEmptyBins_total = i;  
+    }
+    MPI_Bcast (&nonEmptyBins_total, 1, MPI_LONG, 0, MPI_COMM_WORLD);
+    MPI_Bcast (subHis, nonEmptyBins_total*sizeof(*subHis), MPI_BYTE, 0, MPI_COMM_WORLD);
+    
+    if (isSlave) {
+      for (i=0; i<nonEmptyBins_total; i++) {      
+	count[i] = subHis[i].count;
+	xsum[i] = subHis[i].xsum;
+	ysum[i] = subHis[i].ysum;
+        reverseMap[subHis[i].index] = i;  
+      }
     }
 #endif
+    
     rampFactor = 0;
     if (pass > (trfmode->rampPasses-1)) 
       rampFactor = 1;
     else
       rampFactor = (pass+1.0)/trfmode->rampPasses;
-    
-    for (ib=0; ib<=lastBin; ib++) {
-      if (!count[ib] || (!xsum[ib] && !ysum[ib]))
-	continue;
-      t = tmin+(ib+0.5)*dt;           /* middle arrival time for this bin */
-      if (t<trfmode->last_t) {
-        trfmode->last_t = t;
-        fprintf(stdout, "*** Warning: reference time reset for FTRFMODE.  Should only happen once per step.\n");
-        fflush(stdout);
-      }
-      
-      for (imode=0; imode<trfmode->modes; imode++) {
+
+    if (isSlave){
+      double last_t = trfmode->last_t; /* Save it and use it later for different modes */
+
+      for (imode=0; imode<trfmode->modes; imode++) 
+#if USE_MPI
+	if (myid == (imode%(n_processors-1)+1))    /* Decompse the modes on different processors */ 
+#endif
+      {
 	if (trfmode->cutoffFrequency>0 && (trfmode->omega[imode] > PIx2*trfmode->cutoffFrequency))
 	  continue;
 	if (!trfmode->doX[imode] && !trfmode->doY[imode])
           continue;
-      
+
+	trfmode->last_t = last_t;
+#if USE_MPI
+	for (i=0; i<nonEmptyBins_total; i++) {  /* For parallel version, we use non-empty part of array only */
+	  ib = i;
+	  t = tmin+(subHis[i].index+0.5)*dt;           /* middle arrival time for this bin */
+#else
+    for (ib=0; ib<=lastBin; ib++) {
+      if (!count[ib] || (!xsum[ib] && !ysum[ib]))
+	continue;
+      t = tmin+(ib+0.5)*dt;           /* middle arrival time for this bin */
+#endif
+      if (t<trfmode->last_t) {
+        trfmode->last_t = t;
+	/*  fprintf(stdout, "*** Warning: reference time reset for FTRFMODE.  Should only happen once per step.\n");
+	    fflush(stdout); */
+      }            
 	omega = trfmode->omega[imode];
 	Q = trfmode->Q[imode]/(1+trfmode->beta[imode]);
 	tau = 2*Q/omega;
@@ -220,10 +335,28 @@ void track_through_ftrfmode(
             trfmode->lastPhasey[imode] = atan2(trfmode->Vyi[imode], trfmode->Vyr[imode]);
 	  trfmode->Vy[imode] = sqrt(sqr(trfmode->Vyr[imode])+sqr(trfmode->Vyi[imode]));
 	}
-      } /* loop over modes */
-      trfmode->last_t = t;
-    } /* loop over bins */
-    
+     trfmode->last_t = t;
+      } /* loop over bins */
+
+    } /* loop over modes */
+    }
+
+#if (USE_MPI)
+      if (isSlave) {
+	/* Sum up the result for different modes on different CPUs */ 
+       	buffer = malloc(sizeof(double)*nonEmptyBins_total);
+	MPI_Allreduce(Vxbin, buffer, nonEmptyBins_total, MPI_DOUBLE, MPI_SUM, workers);
+        memcpy(Vxbin, buffer, sizeof(*Vxbin)*nonEmptyBins_total);
+	MPI_Allreduce(Vybin, buffer, nonEmptyBins_total, MPI_DOUBLE, MPI_SUM, workers);
+        memcpy(Vybin, buffer, sizeof(*Vybin)*nonEmptyBins_total);
+	MPI_Allreduce(Vzbin, buffer, nonEmptyBins_total, MPI_DOUBLE, MPI_SUM, workers);
+        memcpy(Vzbin, buffer, sizeof(*Vzbin)*nonEmptyBins_total); 
+      }
+      if (trfmode->outputFile) {
+	printf (" the trfmode->output will not work for the current version of SDDS in Pelegant\n");
+        exit (1);
+      }
+#endif   
     if (trfmode->outputFile) {
       for (imode=0; imode<trfmode->modes; imode++) {
         if (!SDDS_SetRowValues(&trfmode->SDDSout, 
@@ -244,8 +377,9 @@ void track_through_ftrfmode(
         fprintf(fp, "%ld %e\n", ib, Vybin[ib]);
       fclose(fp);
     }
-    
+     
     /* change particle slopes to reflect voltage in relevant bin */
+#if  (!USE_MPI)
     for (ip=0; ip<np; ip++) {
       if (pbin[ip]>=0) {
 	P = Po*(1+part[ip][5]);
@@ -259,9 +393,25 @@ void track_through_ftrfmode(
 	part[ip][4] = time[ip]*c_mks*P/sqrt(sqr(P)+1);
       }
     }
-  }
-#if (USE_MPI)
-      if (myid == 1) /* We let the first slave to dump the parameter */
+#else
+    if (isSlave) {
+      for (ip=0; ip<np; ip++) {
+	if (pbin[ip]>=0) {
+          i = reverseMap[pbin[ip]];
+	  P = Po*(1+part[ip][5]);
+	  Pz = P/sqrt(1+sqr(part[ip][1])+sqr(part[ip][3])) + Vzbin[i]/(1e6*particleMassMV*particleRelSign);
+	  Px = part[ip][1]*Pz + Vxbin[i]/(1e6*particleMassMV*particleRelSign);
+	  Py = part[ip][3]*Pz + Vybin[i]/(1e6*particleMassMV*particleRelSign);
+	  P  = sqrt(Pz*Pz+Px*Px+Py*Py);
+	  part[ip][1] = Px/Pz;
+	  part[ip][3] = Py/Pz;
+	  part[ip][5] = (P-Po)/Po;
+	  part[ip][4] = time[ip]*c_mks*P/sqrt(sqr(P)+1);
+	}
+      }
+    } 
+
+    if (myid == 1) /* We let the first slave to dump the parameter */
 #endif
   if (trfmode->outputFile) {
     if (!SDDS_SetRowValues(&trfmode->SDDSout, 
@@ -272,19 +422,35 @@ void track_through_ftrfmode(
         !SDDS_UpdatePage(&trfmode->SDDSout, 0))
       SDDS_Bomb("Problem writing data to FTRFMODE output file");
   }
-  
-#if defined(MINIMIZE_MEMORY)
+     
+#ifdef  USE_MPE
+      MPE_Log_event(event2a, 0, "start histogram"); 
+#endif
   free(xsum);
   free(ysum);
+  free(count);
   free(Vxbin);
   free(Vybin);
-  free(pbin);
-  free(time);
-  xsum = ysum = Vxbin = Vybin = time = NULL;
-  pbin = NULL;
-  max_n_bins =  max_np = 0;
+  free(Vzbin);
+#if USE_MPI
+  #if defined(MINIMIZE_MEMORY)
+    free(nonEmptyArray); nonEmptyArray = NULL;
+  #endif
+  free(reverseMap);
+  free(buffer);
+  free(subHis);
 #endif
 
+#if defined(MINIMIZE_MEMORY)
+  free(pbin);
+  free(time);
+  time = NULL;
+  pbin = NULL;
+  max_np = 0;
+#endif
+#ifdef  USE_MPE
+    MPE_Log_event(event2b, 0, "end histogram"); 
+#endif
 }
 
 void set_up_ftrfmode(FTRFMODE *rfmode, char *element_name, double element_z, long n_passes, 

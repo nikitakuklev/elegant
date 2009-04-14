@@ -230,10 +230,16 @@ long notSinglePart=0; /* All the processors will do the same thing by default */
 double factor = 1.0;    /* In serial version, the memory will be allocted for all the particles */ 
 
 #if USE_MPI
-parallelMode parallelStatus = initialMode; 
 int n_processors = 1;
 int myid;
-int partOnMaster = 1; /* indicate if the particle information is available on master */
+#if SDDS_MPI_IO
+parallelMode parallelStatus = trueParallel; 
+int partOnMaster = 0; /* indicate if the particle information is available on master */
+#else
+parallelMode parallelStatus = initialMode; 
+int partOnMaster = 1;
+#endif
+
 long lessPartAllowed = 0; /* By default, the number of particles is required to be at least n_processors-1 */
 MPI_Comm workers;
 int fd; /* save the duplicated file descriptor stdout to use it latter */
@@ -341,10 +347,12 @@ char **argv;
   if (sizeof(int)<4) { /* The size of integer is assumed to be 4 bytes to handle a large number of particles */
     printf("Warning!!! The INT_MAX could be too small to record the number of particles.\n"); 
   }
+#if !SDDS_MPI_IO
   if (isSlave && (n_processors>3))   /* This will avoid wasting memory on a laptop with a small number of cores */    
     factor = 2.0/(n_processors-1);   /* In parallel version, a portion of memory will be allocated on each slave */
 #endif
-
+#endif
+ 
 #ifdef SET_DOUBLE
   set_fpu (0x27F);  /* use double-precision rounding */
 #endif
@@ -605,6 +613,9 @@ char **argv;
         run_conditions.wrap_around = 1;
       run_conditions.tracking_updates = tracking_updates;
       run_conditions.always_change_p0 = always_change_p0;
+      run_conditions.load_balancing_on = load_balancing_on;
+      run_conditions.random_sequence_No = random_sequence_No;
+      remaining_sequence_No = random_sequence_No; /* For Pelegant regression test */
 
       /* extract the root filename from the input filename */
       strcpy_ss(s, inputfile);
@@ -620,27 +631,36 @@ char **argv;
         run_conditions.rootname = rootname;
         run_conditions.runfile  = compose_filename(inputfile, rootname);
       }
+      /* In the version with parallel I/O, these file names need to be known by all the processors, otherwise there
+	 will be a synchronization issue when calculated accumulated sum in do_tracking */
       run_conditions.acceptance = compose_filename(acceptance, rootname);
       run_conditions.centroid   = compose_filename(centroid, rootname);
       run_conditions.sigma      = compose_filename(sigma, rootname);
 
       if (run_conditions.apertureData.initialized && !run_conditions.apertureData.persistent)
-        resetApertureData(&(run_conditions.apertureData));
-      
-      /* Only the master processor will be allowed to write to output files */
-      if (writePermitted) {
-	run_conditions.final      = compose_filename(final, rootname);
+        resetApertureData(&(run_conditions.apertureData)); 
+
+#if !SDDS_MPI_IO
+      if (isMaster)
+#endif
+      {
 	run_conditions.output     = compose_filename(output, rootname);
 	run_conditions.losses     = compose_filename(losses, rootname);
+	run_conditions.final      = compose_filename(final, rootname);
+      }
+#if !SDDS_MPI_IO
+      else
+	run_conditions.final = run_conditions.output = run_conditions.losses = NULL;
+#endif     
+
+      if (isMaster) { /* These files will be written by master */
 	magnets                   = compose_filename(magnets, rootname);
 	semaphore_file            = compose_filename(semaphore_file, rootname);
-	parameters                = compose_filename(parameters, rootname);
+	parameters                = compose_filename(parameters, rootname);        
       }
       else {
-        run_conditions.final = run_conditions.output = run_conditions.losses =
-	magnets = semaphore_file = parameters = NULL;
+        magnets = semaphore_file = parameters = NULL;
       }
-        
       
       if (semaphore_file && fexists(semaphore_file))
         remove(semaphore_file);
@@ -790,8 +810,16 @@ char **argv;
             else
               new_bunched_beam(&beam, &run_conditions, &run_control, &output_data, 0);
             new_beam_flags = TRACK_PREVIOUS_BUNCH;
+#ifdef SDDS_MPI_IO
+	   if (correct.start_from_centroid) {
+	      notSinglePart = 1; /* Compute centroids across all the processors, instead of local centroid on each individual processor */		
+              compute_centroids(starting_coord, beam.particle, beam.n_to_track);
+              notSinglePart = 0; /* Switch back to single particle mode, i.e., all the processor will do the same thing */  		
+	  } 
+#else
             if (correct.start_from_centroid)
               compute_centroids(starting_coord, beam.particle, beam.n_to_track);
+#endif
             if (correct.track_before_and_after) {
               track_beam(&run_conditions, &run_control, &error_control, &optimize.variables, 
                          beamline, &beam, &output_data, 
@@ -1605,6 +1633,12 @@ double find_beam_p_central(char *input)
   char s[SDDS_MAXLINE];
   double *p=NULL, psum;
   long i, rows;
+#if SDDS_MPI_IO 
+/* All the processes will read the wake file, but not in parallel.
+   Zero the Memory when call  SDDS_InitializeInput */
+  SDDSin.parallel_io = 0; 
+#endif
+
   
   if (!SDDS_InitializeInputFromSearchPath(&SDDSin, input) || !SDDS_ReadPage(&SDDSin)) {
     sprintf(s, "Problem opening beam input file %s", input);

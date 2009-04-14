@@ -83,7 +83,7 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
   event1b = MPE_Log_get_event_number();
   event2a = MPE_Log_get_event_number();
   event2b = MPE_Log_get_event_number();
-  MPE_Describe_state(event1a, event1b, "fft1", "red");
+  MPE_Describe_state(event1a, event1b, "SavitzyGolaySmooth", "red");
   MPE_Describe_state(event2a, event2b, "fft_inverse", "yellow");
 #endif
  
@@ -253,11 +253,17 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
       }
 #endif
 
+#ifdef  USE_MPE
+      MPE_Log_event(event1a, 0, "start zlongit"); /* record time spent on I/O operations */
+#endif
       if (zlongit->smoothing)
         SavitzyGolaySmooth(Itime, nb, zlongit->SGOrder, 
                            zlongit->SGHalfWidth, zlongit->SGHalfWidth, 0);
-    
-#if DEBUG 
+#ifdef  USE_MPE
+      MPE_Log_event(event1b, 0, "end zlongit"); /* record time spent on I/O operations */
+#endif
+
+#if DEBUG
       /* Output the time-binned data */
       if (1) {
         FILE *fp;
@@ -273,13 +279,8 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
 
       /* Take the FFT of I(t) to get I(f) */
       memcpy(Ifreq, Itime, 2*zlongit->n_bins*sizeof(*Ifreq));
-#ifdef  USE_MPE
-      MPE_Log_event(event1a, 0, "start zlongit"); /* record time spent on I/O operations */
-#endif
       realFFT(Ifreq, nb, 0);
-#ifdef  USE_MPE
-      MPE_Log_event(event1b, 0, "end zlongit"); /* record time spent on I/O operations */
-#endif
+
       /* Compute V(f) = Z(f)*I(f), putting in a factor 
        * to normalize the current waveform.
        */

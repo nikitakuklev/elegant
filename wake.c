@@ -242,6 +242,11 @@ void set_up_wake(WAKE *wakeData, RUN *run, long pass, long particles, CHARGE *ch
   SDDS_DATASET SDDSin;
   double tmin, tmax;
   long iw;
+#if SDDS_MPI_IO 
+/* All the processes will read the wake file, but not in parallel.
+   Zero the Memory when call  SDDS_InitializeInput */
+  SDDSin.parallel_io = 0; 
+#endif
   
   if (charge) {
     wakeData->macroParticleCharge = charge->macroParticleCharge;

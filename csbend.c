@@ -1004,12 +1004,18 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   long iBin, iBinBehind;
   long csrInhibit = 0, largeRhoWarning;
   double derbenevRatio = 0;
-#if USE_MPI
-  double *buffer;
-#endif
+  long n_partMoreThanOne = 0;
   TRACKING_CONTEXT tContext;
   VMATRIX *Msection=NULL, *Me1=NULL, *Me2=NULL;
   static double accumulatedAngle = 0;
+
+#if USE_MPI
+  double *buffer;  
+  if (notSinglePart)
+    n_partMoreThanOne = 1; /* This is necessary to solve synchronization issue in parallel version*/
+#else
+  if (n_part > 1) n_partMoreThanOne = 1;
+#endif
 
   if (!(csbend->edgeFlags&SAME_BEND_PRECEDES))
     accumulatedAngle = 0;
@@ -1064,10 +1070,11 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   if (csbend->SGDerivOrder<=0)
     csbend->SGDerivOrder = 1;
   
-  if (n_part>maxParticles &&
-      (!(beta0=SDDS_Realloc(beta0, sizeof(*beta0)*(maxParticles=n_part))) ||
-       !(particleLost=SDDS_Realloc(particleLost, sizeof(*particleLost)*n_part))))
-    bomb("Memory allocation failure (track_through_csbendCSR)", NULL);
+  if (isSlave || !notSinglePart) 
+    if (n_part>maxParticles &&
+	(!(beta0=SDDS_Realloc(beta0, sizeof(*beta0)*(maxParticles=n_part))) ||
+	 !(particleLost=SDDS_Realloc(particleLost, sizeof(*particleLost)*n_part))))
+      bomb("Memory allocation failure (track_through_csbendCSR)", NULL);
 
   rho0 = csbend->length/csbend->angle;
   if (csbend->use_bn) {
@@ -1397,8 +1404,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     }
   }
   }
-
-  if (csbend->csr && n_part>1)
+  if (csbend->csr && n_partMoreThanOne)
     CSRConstant = 2*macroParticleCharge*particleCharge/pow(3*rho0*rho0, 1./3.)/(4*PI*epsilon_o*particleMass*sqr(c_mks));
   else
     CSRConstant = 0;
@@ -1448,7 +1454,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
       }    
     }
 
-    if (n_part>1 && csbend->derbenevCriterionMode) {
+    if (n_partMoreThanOne && csbend->derbenevCriterionMode) {
       /* evaluate Derbenev criterion from TESLA-FEL 1995-05: sigma_x/sigma_z << (R/sigma_z)^(1/3) */
       long code;
       double Sz, Sx;
@@ -1488,7 +1494,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     
 
 #if (!USE_MPI)
-    if (n_part>1 && !csrInhibit) {
+    if (n_partMoreThanOne && !csrInhibit) {
 #else
       if (!csrInhibit && notSinglePart) { /* n_part could be 0 for some processors, which could cause synchronization problem */
 #endif
@@ -1511,13 +1517,13 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
         }
 #else
 	if (USE_MPI) {
-	  int all_binned, result = 1, nBinned_total;
+	  long all_binned, result = 1, nBinned_total;
 
           if (isSlave || !notSinglePart) {
 	    result = ((nBinned==n_part) ? 1 : 0);
 	  }
-	  MPI_Allreduce(&result, &all_binned, 1, MPI_INT, MPI_LAND, MPI_COMM_WORLD);
-	  MPI_Allreduce(&nBinned, &nBinned_total, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+	  MPI_Allreduce(&result, &all_binned, 1, MPI_LONG, MPI_LAND, MPI_COMM_WORLD);
+	  MPI_Allreduce(&nBinned, &nBinned_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
           nBinned = nBinned_total; 
 	  if (!all_binned && isMaster) {
 	    fprintf(stdout, "Not all particles binned for CSRCSBEND (z0=%le, kick=%ld, BRF=%le)\n", 
@@ -1745,7 +1751,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   }
   }
 
-  if (!csbend->binOnce && n_part>1 && !csrInhibit && !csbend->csrBlock) {
+  if (!csbend->binOnce && n_partMoreThanOne && !csrInhibit && !csbend->csrBlock) {
     /* prepare some data for use by CSRDRIFT element */
     csrWake.dctBin = dct;
     ctLower = ctUpper = dct = 0;
@@ -1764,15 +1770,15 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     }
 #else
     if (USE_MPI && notSinglePart) {
-      int all_binned, result = 1, nBinned_total;
+      long all_binned, result = 1, nBinned_total;
 
       if (isSlave || !notSinglePart) {
 	result = ((nBinned==n_part) ? 1 : 0);
       }
       else
 	nBinned = 0;
-      MPI_Allreduce(&result, &all_binned, 1, MPI_INT, MPI_LAND, MPI_COMM_WORLD);
-      MPI_Allreduce(&nBinned, &nBinned_total, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(&result, &all_binned, 1, MPI_LONG, MPI_LAND, MPI_COMM_WORLD);
+      MPI_Allreduce(&nBinned, &nBinned_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
       nBinned = nBinned_total; 
       if (!all_binned && isMaster) {
 	fprintf(stdout, "Not all particles binned for CSRCSBEND (z0=%le, kick=%ld, BRF=%le)\n", 
@@ -1878,7 +1884,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     }
   }
 
-  if (n_part>1 && !csbend->csrBlock) {
+  if (n_partMoreThanOne && !csbend->csrBlock) {
     /* prepare more data for CSRDRIFT */
     long imin, imax;
     double S55;

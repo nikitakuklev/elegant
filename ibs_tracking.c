@@ -180,8 +180,12 @@ void inflateEmittance(double **coord, double Po,
 {
   long i;
   double factorSqrt;
+
+#if !USE_MPI  
   if (!np)
     return;
+#endif
+
   factorSqrt = sqrt(factor);
   if (offset==4) {
     /* longitudinal */

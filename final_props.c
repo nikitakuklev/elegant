@@ -184,6 +184,14 @@ void SDDS_FinalOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, lo
                            char *caller)
 {
   long i, duplicates=0;
+#if USE_MPI
+  if (myid!=0)
+    return;
+#if SDDS_MPI_IO
+  SDDS_table->parallel_io = 0;
+#endif
+#endif
+
   SDDS_ElegantOutputSetup(SDDS_table, filename, mode, lines_per_row, contents, command_file, 
                           lattice_file, final_property_parameter, FINAL_PROPERTY_PARAMETERS, NULL, 0,
                           caller, SDDS_EOS_NEWFILE);
@@ -261,24 +269,29 @@ void dump_final_properties
         bomb("Unexpected NULL pointer for optimization quantity values/names (dump_final_properties)", NULL);
     if (!M)
         bomb("NULL matrix pointer (dump_final_properties)", NULL);
+    if (isSlave)
     if (!particle)
         bomb("NULL particle coordinates pointer (dump_final_properties)", NULL);
 
+    if (isMaster)
     if (!SDDS_StartTable(SDDS_table, 0)) {
         SDDS_SetError("Problem starting SDDS table (dump_final_properties)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
 
-    if ((n_properties=SDDS_ParameterCount(SDDS_table)) !=
-        (FINAL_PROPERTY_PARAMETERS+n_varied_quan+n_perturbed_quan+n_optim_quan-perturbed_quan_duplicates)) {
+    if (isMaster)
+      if ((n_properties=SDDS_ParameterCount(SDDS_table)) !=
+	  (FINAL_PROPERTY_PARAMETERS+n_varied_quan+n_perturbed_quan+n_optim_quan-perturbed_quan_duplicates)) {
         fprintf(stdout, "error: the number of parameters (%ld) defined for the SDDS table for the final properties file is not equal to the number of quantities (%ld) for which information is provided (dump_final_properties)\n",
                 n_properties, 
                 FINAL_PROPERTY_PARAMETERS+n_varied_quan+n_perturbed_quan+n_optim_quan-perturbed_quan_duplicates);
         fflush(stdout);
         abort();
-        }
+      }
+#if SDDS_MPI_IO
+    MPI_Bcast (&n_properties, 1, MPI_LONG, 0, MPI_COMM_WORLD);
+#endif
     computed_properties = tmalloc(sizeof(*computed_properties)*n_properties);
-
     if ((n_computed=compute_final_properties
                        (computed_properties, sums, n_original, p_central, M, particle, step,
                         totalSteps, charge))!=
@@ -288,80 +301,81 @@ void dump_final_properties
         fflush(stdout);
         abort();
         }
-
-    if ((index=SDDS_GetParameterIndex(SDDS_table, "MEM"))<0) {
+    if (isMaster) {
+      if ((index=SDDS_GetParameterIndex(SDDS_table, "MEM"))<0) {
         SDDS_SetError("Problem getting SDDS index of Step parameter (dump_final_properties)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-        }
-    for (i=0; i<FINAL_PROPERTY_LONG_PARAMETERS; i++)
+      }
+      for (i=0; i<FINAL_PROPERTY_LONG_PARAMETERS; i++)
         if (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE,
                                 i+index, (long)computed_properties[i+index], -1)) {
-            SDDS_SetError("Problem setting SDDS parameter values (dump_final_properties)");
-            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-            }
-    if ((index=SDDS_GetParameterIndex(SDDS_table, "Sx"))<0) {
+	  SDDS_SetError("Problem setting SDDS parameter values (dump_final_properties)");
+	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+	}
+      if ((index=SDDS_GetParameterIndex(SDDS_table, "Sx"))<0) {
         SDDS_SetError("Problem getting SDDS index of Sx parameter (dump_final_properties)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-        }
-    for (i=0; i<FINAL_PROPERTY_PARAMETERS-FINAL_PROPERTY_LONG_PARAMETERS; i++)
-        if (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, 
-                               i+index, computed_properties[i+index], -1)) {
-            SDDS_SetError("Problem setting SDDS parameter values for computed properties (dump_final_properties)");
-            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-            }
-    free(computed_properties);
-    
-    if (first_varied_quan_name) {
-        if ((index=SDDS_GetParameterIndex(SDDS_table, first_varied_quan_name))<0) {
-            SDDS_SetError("Problem getting SDDS index of first varied quantity parameter (dump_final_properties)");
-            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-            }
-        for (i=0; i<n_varied_quan; i++)
-            if (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, 
-                                   i+index, varied_quan[i], -1)) {
-                SDDS_SetError("Problem setting SDDS parameter values for varied quantities (dump_final_properties)");
-                SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-                }
-        }
-
-    if (perturbed_quan_index) {
-      for (i=0; i<n_perturbed_quan; i++)
-        if (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE,
-                                perturbed_quan_index[i], (double)0.0, -1)) {
-          SDDS_SetError("Problem setting SDDS parameter values for perturbed quantities (dump_final_properties)");
-          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-        }
-      for (i=0; i<n_perturbed_quan; i++) {
-        double value;
-        if (!SDDS_GetParameterByIndex(SDDS_table, perturbed_quan_index[i], &value) ||
-            !SDDS_SetParameters(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE,
-                                perturbed_quan_index[i], perturbed_quan[i]+value, -1)) {
-          SDDS_SetError("Problem setting SDDS parameter values for perturbed quantities (dump_final_properties)");
-          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-        }
       }
-    }
-
-    if (first_optim_quan_name) {
-        if ((index=SDDS_GetParameterIndex(SDDS_table, first_optim_quan_name))<0) {
-            SDDS_SetError("Problem getting SDDS index of first optimization quantity parameter (dump_final_properties)");
-            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-            }
-        for (i=0; i<n_optim_quan; i++)
-            if (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE,
-                                   i+index, optim_quan[i], -1)) {
-                SDDS_SetError("Problem setting SDDS parameter values for optimization quantities (dump_final_properties)");
-                SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-                }
-        }
+      for (i=0; i<FINAL_PROPERTY_PARAMETERS-FINAL_PROPERTY_LONG_PARAMETERS; i++)
+        if (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, 
+				i+index, computed_properties[i+index], -1)) {
+	  SDDS_SetError("Problem setting SDDS parameter values for computed properties (dump_final_properties)");
+	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+	}
     
-    if (!SDDS_WriteTable(SDDS_table)) {
+      if (first_varied_quan_name) {
+        if ((index=SDDS_GetParameterIndex(SDDS_table, first_varied_quan_name))<0) {
+	  SDDS_SetError("Problem getting SDDS index of first varied quantity parameter (dump_final_properties)");
+	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+	}
+        for (i=0; i<n_varied_quan; i++)
+	  if (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, 
+				  i+index, varied_quan[i], -1)) {
+	    SDDS_SetError("Problem setting SDDS parameter values for varied quantities (dump_final_properties)");
+	    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+	  }
+      }
+
+      if (perturbed_quan_index) {
+	for (i=0; i<n_perturbed_quan; i++)
+	  if (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE,
+				  perturbed_quan_index[i], (double)0.0, -1)) {
+	    SDDS_SetError("Problem setting SDDS parameter values for perturbed quantities (dump_final_properties)");
+	    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+	  }
+	for (i=0; i<n_perturbed_quan; i++) {
+	  double value;
+	  if (!SDDS_GetParameterByIndex(SDDS_table, perturbed_quan_index[i], &value) ||
+	      !SDDS_SetParameters(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE,
+				  perturbed_quan_index[i], perturbed_quan[i]+value, -1)) {
+	    SDDS_SetError("Problem setting SDDS parameter values for perturbed quantities (dump_final_properties)");
+	    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+	  }
+	}
+      }
+
+      if (first_optim_quan_name) {
+        if ((index=SDDS_GetParameterIndex(SDDS_table, first_optim_quan_name))<0) {
+	  SDDS_SetError("Problem getting SDDS index of first optimization quantity parameter (dump_final_properties)");
+	  SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+	}
+        for (i=0; i<n_optim_quan; i++)
+	  if (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE,
+				  i+index, optim_quan[i], -1)) {
+	    SDDS_SetError("Problem setting SDDS parameter values for optimization quantities (dump_final_properties)");
+	    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+	  }
+      }
+    
+      if (!SDDS_WriteTable(SDDS_table)) {
         SDDS_SetError("Problem writing SDDS data for final properties (dump_final_properties)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-        }
-    if (!inhibitFileSync)
-      SDDS_DoFSync(SDDS_table);
+      }
+      if (!inhibitFileSync)
+	SDDS_DoFSync(SDDS_table);
+    }
 
+    free(computed_properties);
     log_exit("dump_final_properties");
     }
 
@@ -388,6 +402,10 @@ long compute_final_properties
   double deltaPosition[12]={0,0,0,0,0,0,0,0,0,0,0,0};
   double percLevel2[9] = {10,20,30,40,50,60,70,80,90};
   double tPosition2[9] = {0,0,0,0,0,0,0,0,0};
+#if SDDS_MPI_IO
+  double tmp;
+  long n_part_total, n_original_total;
+#endif
   log_entry("compute_final_properties");
 
   if (!data)
@@ -396,11 +414,22 @@ long compute_final_properties
     bomb("beam sums element is null (compute_final_properties)", NULL);
   if (!M || !M->C || !M->R)
     bomb("invalid/null transport map (compute_final_properties)", NULL);
+  if (isSlave)
   if (!coord)
     bomb("particle coordinate array is null (compute_final_properties)", NULL);
   
   /* compute centroids and sigmas */
-  if (sums->n_part) {
+#if SDDS_MPI_IO
+  if (myid==0) /* The total number of particles survived is on the master */
+    n_part_total = sums->n_part;
+  MPI_Bcast (&n_part_total, 1, MPI_LONG, 0, MPI_COMM_WORLD);
+  if (n_part_total) 
+ /* We have to check the total number of particles, otherwise it will cause
+    synchronization problem as no particle left on some processors */
+#else
+  if (sums->n_part)
+#endif 
+  {
     for (i=0; i<6; i++) 
       centroid[i] = data[i+F_CENTROID_OFFSET] = sums->centroid[i];
     for (i=0; i<6; i++)
@@ -421,6 +450,9 @@ long compute_final_properties
         (!(tData = malloc(sizeof(*tData)*(percDataMax=sums->n_part))) ||
          !(deltaData = malloc(sizeof(*deltaData)*(percDataMax=sums->n_part)))))
       bomb("memory allocation failure (compute_final_properties)", NULL);
+#if SDDS_MPI_IO
+    if (isSlave || !notSinglePart)
+#endif
     for (i=sum=0; i<sums->n_part; i++) {
       if (!coord[i]) {
         fprintf(stdout, "coordinate element for particle %ld is null (compute_final_properties)\n", i);
@@ -438,17 +470,56 @@ long compute_final_properties
         tmin = t;
       if (t>tmax)
         tmax = t;
+    } 
+#if SDDS_MPI_IO
+    if (isMaster && notSinglePart) {
+      tmax = dp_max = -DBL_MAX;
+      tmin = dp_min = DBL_MAX;
+      sum = 0;
     }
-    dt = tmax-tmin;
-    Ddp = dp_max - dp_min;
-    data[6+F_CENTROID_OFFSET] = (tc = sum/sums->n_part);
+    tmp = tmax;
+    MPI_Reduce (&tmp, &tmax, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    tmp = tmin;
+    MPI_Reduce (&tmp, &tmin, 1, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
+    tmp = dp_max;
+    MPI_Reduce (&tmp, &dp_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    tmp = dp_min;
+    MPI_Reduce (&tmp, &dp_min, 1, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
+    if (notSinglePart) {
+      tmp = sum; 
+      MPI_Reduce (&tmp, &sum, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    }
+#endif
+    if (isMaster) {
+      dt = tmax-tmin;
+      Ddp = dp_max - dp_min;
+      data[6+F_CENTROID_OFFSET] = (tc = sum/sums->n_part);
+    }
+#if SDDS_MPI_IO
+    MPI_Bcast (&tc, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+#endif
+    if (isSlave || !notSinglePart)
     for (i=sum=0; i<sums->n_part; i++)
       sum += sqr( tData[i] - tc);
+#if SDDS_MPI_IO
+    if (notSinglePart) {
+      if (isMaster)
+	sum = 0.0;
+      tmp = sum;
+      MPI_Reduce (&tmp, &sum, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    }
+#endif
     data[6+F_SIGMA_OFFSET] = sqrt(sum/sums->n_part);
+#if !SDDS_MPI_IO
     /* results of these calls used below */
     approximate_percentiles(tPosition, percLevel, 12, tData, sums->n_part, ANALYSIS_BINS2);
     approximate_percentiles(tPosition2, percLevel2, 9, tData, sums->n_part, ANALYSIS_BINS2);
     approximate_percentiles(deltaPosition, percLevel, 12, deltaData, sums->n_part, ANALYSIS_BINS2);
+#else
+    approximate_percentiles_p(tPosition, percLevel, 12, tData, sums->n_part, ANALYSIS_BINS2);
+    approximate_percentiles_p(tPosition2, percLevel2, 9, tData, sums->n_part, ANALYSIS_BINS2);
+    approximate_percentiles_p(deltaPosition, percLevel, 12, deltaData, sums->n_part, ANALYSIS_BINS2);
+#endif
   }
   else {
     for (i=0; i<7; i++) 
@@ -459,35 +530,73 @@ long compute_final_properties
   }
 
   /* transmission */
+#if !SDDS_MPI_IO
   if (n_original)
     data[F_T_OFFSET] = ((double)sums->n_part)/n_original;
   else
     data[F_T_OFFSET] = 0;
+#else
+  if (notSinglePart) {
+    MPI_Reduce (&n_original, &n_original_total, 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+    if (n_original_total)
+      data[F_T_OFFSET] = ((double)sums->n_part)/n_original_total;
+    else
+      data[F_T_OFFSET] = 0;
+  }
+  else {
+    if (n_original)
+      data[F_T_OFFSET] = ((double)sums->n_part)/n_original;
+    else
+      data[F_T_OFFSET] = 0;
+  }
+
+#endif
   /* lattice momentum */
   data[F_T_OFFSET+1] = p_central;
 
   /* compute average momentum and kinetic energy */
   p_sum = gamma_sum = 0;
   pAverage = p_central;
+
+#if SDDS_MPI_IO
+  if (isSlave || !notSinglePart)
+#endif
   for (i=0; i<sums->n_part; i++) {
     p_sum     += (p = (1+coord[i][5])*p_central);
     gamma_sum += sqrt(sqr(p)+1);
   }
-  if (sums->n_part) {
-    pAverage = data[F_T_OFFSET+2] = p_sum/sums->n_part;
-    data[F_T_OFFSET+3] = (gamma_sum/sums->n_part-1)*particleMassMV;
-  }
-  else
-    data[F_T_OFFSET+2] = data[F_T_OFFSET+3] = 0;
-  /* beam charge */
-  data[F_T_OFFSET+4] = charge;
-  
+
+#if SDDS_MPI_IO
+  if (SDDS_MPI_IO && notSinglePart) {
+    double *tmp_sum = malloc(2*sizeof(*tmp_sum)),
+      *tmp = malloc(2*sizeof(*tmp_sum));
+    tmp[0] = p_sum; tmp[1] = gamma_sum;
+    MPI_Reduce (tmp, tmp_sum, 2, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    p_sum = tmp_sum[0]; gamma_sum = tmp_sum[1];
+    free (tmp); free (tmp_sum);
+  }   
+#endif
+  if (isMaster) {
+    if (sums->n_part) {
+      pAverage = data[F_T_OFFSET+2] = p_sum/sums->n_part;
+      data[F_T_OFFSET+3] = (gamma_sum/sums->n_part-1)*particleMassMV;
+    }
+    else
+      data[F_T_OFFSET+2] = data[F_T_OFFSET+3] = 0;
+    /* beam charge */
+    data[F_T_OFFSET+4] = charge;
+  } 
   /* compute "sigma" from width of particle distributions for x and y */
+#if !SDDS_MPI_IO
   if (coord && sums->n_part>3) {
-#if (!USE_MPI)    
+#else 
+  if (n_part_total>3) {  /* In the version with parallel IO, coord on master points to NULL */
+#endif
+#if (!USE_MPI) || SDDS_MPI_IO    
     data[F_WIDTH_OFFSET] = approximateBeamWidth(0.6826F, coord, sums->n_part, 0L)/2.;
     data[F_WIDTH_OFFSET+1] = approximateBeamWidth(0.6826F, coord, sums->n_part, 2L)/2.;
 #else
+    /* In the parallel version without parallel I/O, this will be done on the master processor */
     data[F_WIDTH_OFFSET] = approximateBeamWidth_p(0.6826F, coord, sums->n_part, 0L)/2.;
     data[F_WIDTH_OFFSET+1] = approximateBeamWidth_p(0.6826F, coord, sums->n_part, 2L)/2.;
 #endif
@@ -508,8 +617,14 @@ long compute_final_properties
   }
 
   /* compute emittances */
+#if !SDDS_MPI_IO
   data[F_EMIT_OFFSET]   = rms_emittance(coord, 0, 1, sums->n_part, NULL, NULL, NULL);
   data[F_EMIT_OFFSET+1] = rms_emittance(coord, 2, 3, sums->n_part, NULL, NULL, NULL);
+#else
+  data[F_EMIT_OFFSET]   = rms_emittance_p(coord, 0, 1, sums->n_part, NULL, NULL, NULL);
+  data[F_EMIT_OFFSET+1] = rms_emittance_p(coord, 2, 3, sums->n_part, NULL, NULL, NULL);
+#endif
+
   /* corrected transverse emittances */
   if (sums->sigma[5][5]) {
     data[F_EMIT_OFFSET+2] = SAFE_SQRT(sqr(data[F_EMIT_OFFSET]) - 
@@ -524,8 +639,12 @@ long compute_final_properties
     data[F_EMIT_OFFSET+2] = data[F_EMIT_OFFSET];
     data[F_EMIT_OFFSET+3] = data[F_EMIT_OFFSET+1];
   }
-  
+
+#if !SDDS_MPI_IO
   data[F_EMIT_OFFSET+4] = rms_longitudinal_emittance(coord, sums->n_part, p_central);
+#else
+  data[F_EMIT_OFFSET+4] = rms_longitudinal_emittance_p(coord, sums->n_part, p_central);
+#endif
   
   /* compute normalized emittances */
   for (i=0; i<4; i++)
@@ -556,7 +675,6 @@ long compute_final_properties
   
   /* number of particles */
   data[i_data=F_N_OFFSET] = sums->n_part;
-
   log_exit("compute_final_properties");
   return(i_data+1);
 }
@@ -643,8 +761,9 @@ double rms_emittance_p(double **coord, long i1, long i2, long n,
   double xc, xpc, xc_local=0.0, xpc_local=0.0;
   long i, n_total;
   
+  /* We don't check this in the parallel version now, as the master has 0 particle and causes problem 
   if (!n)
-    return(0.0);
+  return(0.0); */
 
   if (isMaster && notSinglePart) /* The master will not contribute anything in this routine */
     n = 0; 
@@ -747,6 +866,65 @@ double rms_longitudinal_emittance(double **coord, long n, double Po)
     log_exit("rms_longitudinal_emittance");
     return(SAFE_SQRT(s11*s22-sqr(s12))/n);
     }
+
+#if USE_MPI
+double rms_longitudinal_emittance_p(double **coord, long n, double Po)
+{
+    double s11, s12, s22, dt, ddp, s[3], s_total[3];
+    double tc, dpc, beta, P, tmp[2], tmp_total[2];
+    long i;
+    static double *time = NULL;
+    static long max_n = 0;
+    long n_total;
+
+    if (notSinglePart) {
+      if (isMaster)
+	n = 0;
+      MPI_Allreduce (&n, &n_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD); 
+    }
+   
+    if (!n_total)
+        return(0.0);
+
+    if (n>max_n)
+        time = trealloc(time, sizeof(*time)*(max_n=n));
+ 
+    if(isMaster)
+      log_entry("rms_logitudinal_emittance");
+
+    /* compute centroids */
+    for (i=tc=dpc=0; i<n; i++) {
+        P = Po*(1+coord[i][5]);
+        beta = P/sqrt(P*P+1);
+        time[i] = coord[i][4]/(beta*c_mks);
+        tc  += time[i];
+        dpc += coord[i][5];
+        }
+
+    tmp[0] = tc; tmp[1] = dpc;
+    MPI_Allreduce (&tmp, &tmp_total, 2, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    /*  MPI_Allreduce (&dpc, &dpc_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); */
+   
+    tc = tmp_total[0]/n_total;
+    dpc = tmp_total[1]/n_total;
+
+    for (i=s11=s12=s22=0; i<n; i++) {
+        s11 += sqr(dt  =  time[i]    - tc);
+        s22 += sqr(ddp = coord[i][5] - dpc);
+        s12 += dt*ddp;
+        }
+    s[0] = s11; s[1] = s12; s[2] = s22;
+    MPI_Reduce (s, s_total, 3, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+   
+    if (isMaster)
+      log_exit("rms_longitudinal_emittance");
+     
+    /* Only the master will return meaningful result */
+    return(SAFE_SQRT(s_total[0]*s_total[2]-sqr(s_total[1]))/n_total);
+    }
+
+
+#endif
 
 void compute_longitudinal_parameters(ONE_PLANE_PARAMETERS *bp, double **coord, long n, double Po)
 {
@@ -1002,6 +1180,12 @@ void computeBeamTwissParameters(TWISS *twiss, double **data, long particles)
   double C[6], S[6][6], beamsize[6], eta[6], Sbeta[6][6], emitcor[3], betacor[3], alphacor[3];
   long i, j, iPart;
   double sum;
+#if USE_MPI 
+  long particles_total, index=0;
+  double S_p[21], S_p_sum[21], Sbeta_p[10], Sbeta_p_sum[10];  
+
+  MPI_Allreduce(&particles, &particles_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD); 
+#endif 
 
   compute_centroids(C, data, particles);
 
@@ -1010,9 +1194,23 @@ void computeBeamTwissParameters(TWISS *twiss, double **data, long particles)
     for (j=0; j<=i; j++) {
       for (iPart=sum=0; iPart<particles; iPart++)
         sum += (data[iPart][i]-C[i])*(data[iPart][j]-C[j]);
+#if (!USE_MPI)
       S[j][i] = S[i][j] = sum/particles;
+#else
+      S_p[index++] = sum;
+#endif
     }
   }
+
+#if USE_MPI
+  MPI_Allreduce(S_p, S_p_sum, 21, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  index = 0; 
+  for (i=0; i<6; i++) {
+    for (j=0; j<=i; j++) {
+      S[i][j] = S[j][i] = S_p_sum[index++]/particles_total;
+    }
+  }
+#endif
 
   for (i=0; i<6; i++)
     beamsize[i] = sqrt(S[i][i]);
@@ -1024,13 +1222,29 @@ void computeBeamTwissParameters(TWISS *twiss, double **data, long particles)
     for (i=0; i<4; i++) 
       eta[i] = S[i][5]/S[5][5];
   
+#if USE_MPI
+  index = 0;
+#endif
   for (i=0; i<4; i++) {
     for (j=0; j<=i; j++) {
       for (iPart=sum=0; iPart<particles; iPart++)
         sum += ((data[iPart][i]-C[i])-eta[i]*(data[iPart][5]-C[5]))*((data[iPart][j]-C[j])-eta[j]*(data[iPart][5]-C[5]));
+#if (!USE_MPI)
       Sbeta[j][i] = Sbeta[i][j] = sum/particles;
+#else
+      Sbeta_p[index++] = sum; 
+#endif
     }
   }
+#if USE_MPI
+  MPI_Allreduce(Sbeta_p, Sbeta_p_sum, 10, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  index = 0; 
+  for (i=0; i<4; i++) {
+    for (j=0; j<=i; j++) {
+      Sbeta[i][j] = Sbeta[j][i] = Sbeta_p_sum[index++]/particles_total;
+    }
+  }
+#endif
 
   /* compute beta functions etc */
   for (i=0; i<2; i++) {

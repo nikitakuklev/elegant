@@ -79,6 +79,10 @@ void setup_closed_orbit(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     process_namelist(&closed_orbit, nltext);
     if (echoNamelists) print_namelist(stdout, &closed_orbit);
 
+#if (USE_MPI) 
+    if (isSlave)
+      output=NULL;
+#endif
     if (output)
         output = compose_filename(output, run->rootname);
     if (closed_orbit_accuracy<=0)
@@ -94,7 +98,6 @@ void setup_closed_orbit(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
                                 SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
         SDDS_clorb_initialized = 1;
         }
-
     log_exit("setup_closed_orbit");
     }
 
@@ -263,6 +266,10 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
   double p, error, last_error;
 
   log_entry("find_closed_orbit");
+
+#if SDDS_MPI_IO
+  notSinglePart = 0; /* run as single particle mode, i.e., all processors will do the same thing */  
+#endif
 
   if (fixed_length)
     return findFixedLengthClosedOrbit(clorb, clorb_acc, clorb_iter, beamline, M, run, dp,
@@ -458,6 +465,10 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
   clorb[0].centroid[3] = one_part[0][3];
   clorb[0].centroid[4] = 0;
   clorb[0].centroid[5] = dp;
+
+#if SDDS_MPI_IO
+  notSinglePart = 1; /* Switch back to regular parallel tracking mode */  
+#endif
 
   log_exit("find_closed_orbit");
   if (bad_orbit)

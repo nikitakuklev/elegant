@@ -1,6 +1,6 @@
 /*************************************************************************\
 * Copyright (c) 2002 The University of Chicago, as Operator of Argonne
-* National Laboratory.
+M Laboratory.
 * Copyright (c) 2002 The Regents of the University of California, as
 * Operator of Los Alamos National Laboratory.
 * This file is distributed subject to a Software License Agreement found
@@ -60,10 +60,16 @@ static char *elegantColumn[6] = {
 long get_sdds_particles(double ***particle, long one_dump, long n_skip);
 
 static SDDS_TABLE SDDS_input;
+
 static long input_initialized = 0, has_been_read = 0;
 char **inputFile = NULL;
 long inputFiles = 0;
 long inputFileIndex = 0;
+
+#if USE_MPI
+  static long firstIsFiducial;
+#endif
+
 
 void setup_sdds_beam(
                      BEAM *beam,
@@ -186,10 +192,35 @@ long new_sdds_beam(
 
   log_entry("new_sdds_beam");
 
+#if USE_MPI
+  if ((control->fiducial_flag&FIRST_BEAM_IS_FIDUCIAL) && (!has_been_read)) {
+    firstIsFiducial = 1;  
+    notSinglePart = 0;
+  }
+  else {
+    firstIsFiducial = 0;
+    notSinglePart = 1;
+    if (isMaster && beam->n_to_track) {
+      if (beam->original)
+	free_czarray_2d((void**)beam->particle, beam->n_original, 7);
+      if (beam->particle)
+	free_czarray_2d((void**)beam->particle, beam->n_particle, 7);
+      if (beam->accepted)
+	free_czarray_2d((void**)beam->accepted, beam->n_particle, 7);
+      beam->particle = beam->accepted = beam->original = NULL;
+      beam->particle = beam->original = NULL;
+      beam->n_to_track = beam->n_original = 0; 
+    }
+  }
+#endif
+
   if (flags&TRACK_PREVIOUS_BUNCH) {
     /* retracking bunch that has already been set up */
     if (!save_initial_coordinates)
       bomb("logic error---initial beam coordinates not saved", NULL);
+#ifdef SDDS_MPI_IO
+    if (isSlave || !notSinglePart)
+#endif
     if (beam->original==NULL)
       bomb("can't retrack with previous bunch--there isn't one!", NULL);
     if (n_particles_per_ring!=1) {
@@ -250,19 +281,25 @@ long new_sdds_beam(
       if (beam->original && beam->original!=beam->particle)
         free_czarray_2d((void**)beam->original, beam->n_original, 7);
       beam->particle = beam->accepted = beam->original = NULL;
+
       /* read the new page */
       if ((beam->n_original=get_sdds_particles(&beam->original, prebunched, n_tables_to_skip))>=0) { 
-        n_tables_to_skip = 0;    /* use the user's parameter only the first time */
-        if (save_initial_coordinates || n_particles_per_ring!=1)
-          beam->particle = (double**)czarray_2d
-            (sizeof(double), beam->n_particle=(long)(n_particles_per_ring*beam->n_original*factor), 7);
-        else {
-          beam->particle = beam->original;
-          beam->n_particle = beam->n_original;
-        }
-        if (run->acceptance) 
-          beam->accepted = (double**)czarray_2d
-            (sizeof(double), (long)(beam->n_particle*factor), 7);
+#if SDDS_MPI_IO
+        if (isSlave || !notSinglePart)  
+#endif
+	{
+	  n_tables_to_skip = 0;    /* use the user's parameter only the first time */
+	  if (save_initial_coordinates || n_particles_per_ring!=1)
+	    beam->particle = (double**)czarray_2d
+	      (sizeof(double), beam->n_particle=(long)(n_particles_per_ring*beam->n_original*factor), 7);
+	  else {
+	    beam->particle = beam->original;
+	    beam->n_particle = beam->n_original;
+	  }
+	  if (run->acceptance) 
+	    beam->accepted = (double**)czarray_2d
+	      (sizeof(double), (long)(beam->n_particle*factor), 7);
+	}
       }
       else { 
         log_exit("new_sdds_beam");
@@ -276,7 +313,28 @@ long new_sdds_beam(
   t_offset = (control->bunch_frequency?(control->i_step-1)/control->bunch_frequency:0);
 
   p_central = beam->p0_original = run->p_central;
+#if SDDS_MPI_IO
+  if (isSlave || (!notSinglePart)) {
+    if (notSinglePart) {
+      long sum=0, tmp, my_offset, *offset = tmalloc(n_processors*sizeof(*offset)),
+	n_particle=(beam->n_original)/sample_interval*sample_fraction;
+      MPI_Allgather(&n_particle, 1, MPI_LONG, offset, 1, MPI_LONG, workers);
+      tmp = offset[0];
+      for (i=1; i<n_processors; i++) {
+	sum += tmp;
+	tmp = offset[i];
+	offset[i] = sum; 
+      }
+      offset[0] = 0; 
+      my_offset = offset[myid-1];
+      if (input_type_code==SPIFFE_BEAM) 
+	particleID = my_offset+1;
+      else
+	particleID += my_offset;
+    }
+#else
   if (isMaster) {
+#endif
   if (new_particle_data || generate_new_bunch || 
       (input_type_code==SPIFFE_BEAM && !one_random_bunch && !(flags&TRACK_PREVIOUS_BUNCH))) {
     /* Create the initial distribution from the beam->original particle data 
@@ -490,15 +548,13 @@ long new_sdds_beam(
       beam->original = NULL;
   }
 
-#if USE_MPI   
-  if (control->fiducial_flag&FIRST_BEAM_IS_FIDUCIAL) 
-    lessPartAllowed = 1;  /* This will allow tracking beam with one particle */
+#if SDDS_MPI_IO
+  if (!firstIsFiducial) {
+    MPI_Allreduce (&(beam->n_to_track), &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+    beam->n_original_total = beam->n_to_track_total;
+  }
   else
-    lessPartAllowed = 0; 
-  /* The slave processors need to know n_to_track to see if there are enough
-     particles to track, i.e., n_to_track should be greater or equal to the 
-     number of processors */
-  MPI_Bcast(&(beam->n_to_track), 1, MPI_LONG, 0, MPI_COMM_WORLD);
+    beam->n_original_total = beam->n_to_track_total = beam->n_original;
 #endif
 
   log_exit("new_sdds_beam");
@@ -518,10 +574,16 @@ long get_sdds_particles(double ***particle,
   int32_t i;
   long np_max, np, np_new, rows, dump_rejected;
   long retval, data_seen;
-  double **data=NULL, **new_data;
+  double **data=NULL;
   static char s[200];
   long indexID = -1;
-
+  double *columnData;
+  long ic;
+#if SDDS_MPI_IO
+  long total_points = 0, total_rows; 
+  int32_t active = 0; 
+  static int32_t first_call = 1;
+#endif
   log_entry("get_sdds_particles");
 
   if (particle==NULL) {
@@ -541,14 +603,28 @@ long get_sdds_particles(double ***particle,
   }
   
   retval = data_seen = np = 0;
+#if SDDS_MPI_IO
+  /* Only slaves will read the input data */
+  if (first_call) {
+    SDDS_MPI_Setup(&SDDS_input, 1, n_processors, myid, MPI_COMM_WORLD, 0); 
+    first_call = 0;
+  }
+#endif
   while (inputFileIndex<inputFiles) {
     if (!input_initialized) {
-      if (!SDDS_InitializeInputFromSearchPath(&SDDS_input, inputFile[inputFileIndex])) {
+#if SDDS_MPI_IO
+      if (!SDDS_MPI_InitializeInputFromSearchPath(&SDDS_input, inputFile[inputFileIndex])) 
+#else
+      if (!SDDS_InitializeInputFromSearchPath(&SDDS_input, inputFile[inputFileIndex])) 
+#endif
+      {
         sprintf(s, "Problem opening beam input file %s", inputFile[inputFileIndex]);
         SDDS_SetError(s);
         SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
       }
+
       input_initialized = 1;
+
       if (selection_parameter) {
         if ((i=SDDS_GetParameterIndex(&SDDS_input, selection_parameter))<0)
           fprintf(stdout, "warning: SDDS beam file %s does not contain the selection parameter %s\n",
@@ -597,19 +673,26 @@ long get_sdds_particles(double ***particle,
       fflush(stdout);
     }
     
-     
     np_max = np = 0;
     data = NULL;
     data_seen = 1;
     while (data_seen) {
       data_seen = 0;
+#if SDDS_MPI_IO
+      if ((retval=SDDS_MPI_ReadPage(&SDDS_input))==0)
+#else
       if ((retval=SDDS_ReadTable(&SDDS_input))==0)
+#endif
         SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
       else if (retval!=-1) 
         data_seen = 1;
       else 
         /* end of file */
         break;
+#if SDDS_MPI_IO
+      particleID = (total_points + SDDS_input.MPI_dataset->start_row + 1); /* Add offset for particleID in the version with parallel I/O */
+      total_points += (long) SDDS_MPI_TotalRowCount(&SDDS_input);
+#endif
       printf("Read page %ld from file\n", retval);
       fflush(stdout);
       if (one_dump && n_skip>0) {
@@ -633,19 +716,33 @@ long get_sdds_particles(double ***particle,
           break;
         }
       }
-      if ((rows = SDDS_CountRowsOfInterest(&SDDS_input))<=0) {
+#if !SDDS_MPI_IO
+      if ((rows = SDDS_RowCount(&SDDS_input))<=0) {
+#else
+      rows = SDDS_input.n_rows;
+      total_rows = SDDS_MPI_TotalRowCount(&SDDS_input);
+      if (total_rows<=0) {	
+#endif
         if (rows==-1) {
           sprintf(s, "Problem counting rows of interest for file %s", inputFile[inputFileIndex]);
           SDDS_SetError(s);
           SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
         }
         if (!one_dump) {
+#if !SDDS_MPI_IO
           printf("Continuing to try to read file.\n");
           fflush(stdout);
+#else
+	  fprintf(stdout, "%ld rows in page %ld\n", total_rows, retval);
+#endif
           continue;
         }
       }
+#if !SDDS_MPI_IO
       fprintf(stdout, "%ld rows in page %ld\n", rows, retval);
+#else
+      fprintf(stdout, "%ld rows in page %ld\n", total_rows , retval);
+#endif
       fflush(stdout);
       SDDS_SetColumnFlags(&SDDS_input, 0);
       if (!SDDS_SetColumnsOfInterest(&SDDS_input, SDDS_NAMES_STRING, 
@@ -654,50 +751,98 @@ long get_sdds_particles(double ***particle,
         SDDS_SetError(s);
         SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
       }
-      if ((np_new=np+rows)>np_max) {
-        /* must reallocate to get more space */
-        np_max = np + rows;
-        if (np_max ==1)  /* special case for one particle simulation */
+#if SDDS_MPI_IO  
+      /* when first_is_fiducial flag is set, the coordinate for the first bunch 
+	 will be broadcasted to all the processors */
+      if (firstIsFiducial && (retval==1)) {
+	np_new=np+total_rows;
+	data = (double**)resize_czarray_2d((void**)data, sizeof(double), total_rows, 7);
+      }
+      /* For simulation with a large number of particles, master will not be allocated memory */
+      else if (isSlave)
+#endif 
+	if ((np_new=np+rows)>np_max) {
+	  /* must reallocate to get more space */
+	  np_max = np + rows;
 	  data = (double**)resize_czarray_2d((void**)data, sizeof(double), (long)(np_max), 7);
-        else
-	  data = (double**)resize_czarray_2d((void**)data, sizeof(double), (long)(np_max*factor), 7);
+	}
+
+#if SDDS_MPI_IO
+      if (firstIsFiducial && (total_rows<(n_processors-1))) {
+	if ((myid>=1) && (myid<=total_rows)) 
+	  /* if fiducial particles number is less than n_processors, the first n_particle slaves will extract information */
+	  active = 1;
       }
-      if (isMaster) { /* Only the master will read in the input for now */
-        double *columnData;
-        long ic;
-        for (ic=0; ic<(input_type_code==SPIFFE_BEAM?5:6); ic++) {
-          if (!(columnData=SDDS_GetColumnInDoubles(&SDDS_input, input_type_code==SPIFFE_BEAM?spiffeColumn[ic]:elegantColumn[ic]))) {
-            sprintf(s, "Problem getting column %s for file %s", input_type_code==SPIFFE_BEAM?spiffeColumn[ic]:elegantColumn[ic], inputFile[inputFileIndex]);
-            SDDS_SetError(s);
-            SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-          }
-          for (i=np; i<np_new; i++) 
-            data[i][ic] = columnData[i-np];
-          free(columnData);
-        }
-        if ((indexID=SDDS_GetColumnIndex(&SDDS_input, "particleID"))>=0) {
-          double *index;
-          if (!(index=SDDS_GetColumnInDoubles(&SDDS_input, "particleID"))) {
-            sprintf(s, "Problem reading particleID column for file %s", inputFile[inputFileIndex]);
-            SDDS_SetError(s);
-            SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
-          }
-          for (i=np; i<np_new; i++)
-            data[i][6] = index[i-np];
-          free(index);
-        }
-        else if (input_type_code!=SPIFFE_BEAM)
-          for (i=np; i<np_new; i++)
-            data[i][6] = particleID++;
-      }
-      np = np_new;
+      else if (isSlave)
+	active = 1;     
       
+    if (active)
+#endif
+    {   
+      for (ic=0; ic<(input_type_code==SPIFFE_BEAM?5:6); ic++) {
+	if (!(columnData=SDDS_GetColumnInDoubles(&SDDS_input, input_type_code==SPIFFE_BEAM?spiffeColumn[ic]:elegantColumn[ic]))) {
+	  sprintf(s, "Problem getting column %s for file %s", input_type_code==SPIFFE_BEAM?spiffeColumn[ic]:elegantColumn[ic], inputFile[inputFileIndex]);
+	  SDDS_SetError(s);
+	  SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+	}
+	for (i=np; i<np_new; i++) 
+	  data[i][ic] = columnData[i-np];
+	free(columnData);
+      }
+      if ((indexID=SDDS_GetColumnIndex(&SDDS_input, "particleID"))>=0) {
+	double *index;
+	if (!(index=SDDS_GetColumnInDoubles(&SDDS_input, "particleID"))) {
+	  sprintf(s, "Problem reading particleID column for file %s", inputFile[inputFileIndex]);
+	  SDDS_SetError(s);
+	  SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+	}
+	for (i=np; i<np_new; i++)
+	  data[i][6] = index[i-np];
+	free(index);
+      }
+      else if (input_type_code!=SPIFFE_BEAM)
+        
+	for (i=np; i<np_new; i++)
+	  data[i][6] = particleID++;
+    }
+      np = np_new;
+#if SDDS_MPI_IO
+      if (firstIsFiducial) {
+	int length = SDDS_input.n_rows*COORDINATES_PER_PARTICLE*sizeof(double);
+        int *all_lens = tmalloc(n_processors*sizeof(*all_lens));
+        int *offset = tmalloc(n_processors*sizeof(*offset));
+       
+	MPI_Allgather(&length, 1, MPI_INT, all_lens, 1, MPI_LONG, MPI_COMM_WORLD);
+	offset[0] = 0;
+	for (i=0; i<n_processors-1; i++)
+	  offset[i+1] = offset[i] + all_lens[i]; 
+				 
+	  /* The first bunch will be duplicated on all processors */
+	MPI_Allgatherv(&data[0][0], length, MPI_CHAR, &data[0][0], all_lens, offset, MPI_CHAR, MPI_COMM_WORLD);
+
+	/* All the processors will do the same work for the first bunch */
+	lessPartAllowed = 1;
+	notSinglePart = 0;
+	SDDS_input.n_rows = np = total_rows;
+      }
+      else {
+	lessPartAllowed = 0;
+	notSinglePart = 1;
+	if (isMaster)
+	  np = 0;
+      }
+
+#endif
       if (one_dump && !dump_rejected)
         break;
     }
     if (retval==-1) {
       /* go to next file */
+#if SDDS_MPI_IO
+      if (!SDDS_MPI_Terminate(&SDDS_input)) {
+#else
       if (!SDDS_Terminate(&SDDS_input)) {
+#endif
         sprintf(s, "Problem terminating SDDS beam input from file %s", inputFile[inputFileIndex]);
         SDDS_SetError(s);
         SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
@@ -707,8 +852,17 @@ long get_sdds_particles(double ***particle,
       inputFileIndex ++;
       input_initialized = 0;
     }
+#if !SDDS_MPI_IO      
     if (np)
       break;
+#else
+    if (SDDS_MPI_IO) {
+      long np_total;
+      MPI_Allreduce (&np, &np_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+      if (np_total)
+	break;
+    }
+#endif
     fprintf(stdout, "Checking next file\n");
     fflush(stdout);
   }    
@@ -720,12 +874,16 @@ long get_sdds_particles(double ***particle,
   
   if (!data_seen && one_dump)
     return -1;
-  
+#if SDDS_MPI_IO  
+  fprintf(stdout, "a total of %ld data points were read\n\n", total_points);
+#else
   fprintf(stdout, "a total of %ld data points were read\n\n", np);
+#endif
   fflush(stdout);
   *particle = data;
 
   log_exit("get_sdds_particles");
+
   return(np);
 }            
 

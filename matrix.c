@@ -210,10 +210,12 @@ void track_particles(double **final, VMATRIX *M, double  **initial, long n_part)
     
     if (!M)
         bomb("NULL VMATRIX pointer in track_particles", NULL);
+#if !SDDS_MPI_IO
     if (!final)
         bomb("NULL final coordinates pointer in track_particles", NULL);
     if (!initial)
         bomb("NULL initial coordinates pointer in track_particles", NULL);
+#endif
 
     set_matrix_pointers(&C, &R, &T, &Q, M);
 

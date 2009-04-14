@@ -180,8 +180,10 @@ long motion(
     double tol_factor, end_factor;
     double X=0.0, Y=0.0;
 
+#if !USE_MPI
     if (!n_part)
         return(0);
+#endif
     change_p0 = 0;
     P_central = *pCentral;
     

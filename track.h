@@ -1,3 +1,4 @@
+
 /*************************************************************************\
 * Copyright (c) 2002 The University of Chicago, as Operator of Argonne
 * National Laboratory.
@@ -87,6 +88,7 @@ extern long lessPartAllowed;
 extern MPI_Comm workers; /* The communicator will contain the slave processors only */
 extern int fd;
 #endif
+long remaining_sequence_No, orig_sequence_No; /* For Pelegant regression test */
 
 #ifdef SORT
 extern int comp_IDs(const void *coord1, const void *coord2);
@@ -323,7 +325,7 @@ typedef struct {
     double ideal_gamma, p_central;
     long default_order, concat_order, print_statistics;
     long combine_bunch_statistics, wrap_around, tracking_updates, final_pass; 
-    long always_change_p0, stopTrackingParticleLimit, load_balancing_on;
+    long always_change_p0, stopTrackingParticleLimit, load_balancing_on, random_sequence_No;
     char *runfile, *lattice, *acceptance, *centroid, *sigma, 
          *final, *output, *rootname, *losses;
     APERTURE_DATA apertureData;
@@ -484,6 +486,10 @@ typedef struct {
     double p0_original;     /* initial central momentum */
     double **particle;      /* current/final coordinates */
     long n_to_track;        /* initial number of particles being tracked. */
+#if SDDS_MPI_IO
+  long n_to_track_total;    /* The total number of particles being tracked on all the processors */
+  long n_original_total;    /* The total number of particles read from data file */
+#endif
     long n_particle;        /* size of particle and accepted arrays */
     double p0;              /* current/final central momentum */
     double **accepted;      /* coordinates of accepted particles, with loss info on lost particles */
@@ -793,7 +799,7 @@ extern char *entity_text[N_TYPES];
 #define N_TRWAKE_PARAMS 19
 #define N_TUBEND_PARAMS 6
 #define N_CHARGE_PARAMS 2
-#define N_PFILTER_PARAMS 5
+#define N_PFILTER_PARAMS 6
 #define N_HISTOGRAM_PARAMS 11
 #define N_CSRCSBEND_PARAMS 69
 #define N_CSRDRIFT_PARAMS 20
@@ -2269,7 +2275,7 @@ typedef struct {
 extern PARAMETER pfilter_param[N_PFILTER_PARAMS];
 typedef struct {
   double deltaLimit, lowerFraction, upperFraction;
-  long fixPLimits, beamCentered;
+  long fixPLimits, beamCentered, bins;
   /* for internal use only */
   long limitsFixed;
   double pLower, pUpper;
@@ -2737,6 +2743,7 @@ extern double approximateBeamWidth(double fraction, double **part, long nPart, l
 extern double approximateBeamWidth_p(double fraction, double **part, long nPart, long iCoord);
 extern double rms_emittance_p(double **coord, long i1, long i2, long n,
                             double *S11Return, double *S12Return, double *S22Return);
+extern double rms_longitudinal_emittance_p(double **coord, long n, double Po);
 #endif
 void computeBeamTwissParameters(TWISS *twiss, double **data, long particles);
 extern double rms_emittance(double **coord, long i1, long i2, long n,
@@ -3361,6 +3368,12 @@ long doMomentumApertureSearch(RUN *run, VARY *control, ERRORVAL *errcon, LINE_LI
 
 /* prototypes for drand_oag.c */
 double random_1_elegant(long iseed);
+
+#if SDDS_MPI_IO
+/* prototypes for media_oag.c */
+long approximate_percentiles_p(double *position, double *percent, long positions, double *x, long n, 
+			       long bins);
+#endif
 
 void seedElegantRandomNumbers(long seed, long restart);
 

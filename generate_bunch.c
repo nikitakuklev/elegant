@@ -34,6 +34,10 @@ void enforce_beta_alpha_emit(double **coord, long n_part, long offset, double be
 void zero_centroid(double **particle, long n_particles, long coord);
 long dynap_distribution(double **particle, long n_particles, double sx, double sy,
             long nx, long ny);
+#if SDDS_MPI_IO
+long dynap_distribution_p(double **particle, long n_particles, double sx, double sy,
+            long nx, long ny);
+#endif
 void gaussian_distribution(double **particle, long n_particles, 
     long offset, double s1, double s2, long symmetrize, long *haltonID, double limit,
     double limit_invar, double beta, long halo);
@@ -72,21 +76,64 @@ long generate_bunch(
     double s1, s2, s3, s4, delta_p;
     double s56, beta, emit, alpha=0.0;
     double *randomizedData = NULL;
+#if !SDDS_MPI_IO
+    /* for Pelegant regression test */
+    static long initial_saved=0;
+    static double **first_particle_address;  
+    static long total_n_particles = 0;
     
+    if (!initial_saved) { 
+      first_particle_address = particle;  /* Save the beginning address of particle array */
+      remaining_sequence_No = orig_sequence_No;
+      initial_saved = 1;
+    }
+    else
+      remaining_sequence_No--;
+    total_n_particles += n_particles;
+#else
+    long sum=0, tmp, my_offset, *offset = tmalloc(n_processors*sizeof(*offset)), total_particles=0;
+    if (isSlave) {
+      MPI_Allgather (&n_particles, 1, MPI_LONG, offset, 1, MPI_LONG, workers);
+      tmp = offset[0];
+      for (i=1; i<n_processors; i++) {
+	sum += tmp;
+	tmp = offset[i];
+	offset[i] = sum; 
+      }
+      offset[0] = 0; 
+      my_offset = offset[myid-1];
+      particleID += my_offset;
+      total_particles =  sum;
+    }
+#endif
     if (x_plane->beam_type==DYNAP_BEAM) {
       if (first_call) {
-        n_particles = dynap_distribution(particle, n_particles, 
-                                         sqrt(x_plane->emit*x_plane->beta), 
-                                         
+#if SDDS_MPI_IO
+        n_particles = dynap_distribution_p(particle, n_particles,
+                                         sqrt(x_plane->emit*x_plane->beta),
                                          sqrt(y_plane->emit*y_plane->beta),
                                          (long)(x_plane->cutoff+0.5),
                                          (long)(y_plane->cutoff+0.5));
+#else
+	n_particles = total_n_particles;
+	particle = first_particle_address;
+	remaining_sequence_No=1; /*This is a special case of generating particles in parallel */
+        n_particles = dynap_distribution(particle, n_particles, 
+                                         sqrt(x_plane->emit*x_plane->beta),        
+                                         sqrt(y_plane->emit*y_plane->beta),
+                                         (long)(x_plane->cutoff+0.5),
+                                         (long)(y_plane->cutoff+0.5));
+#endif
         set_beam_centroids(particle, 0, n_particles, x_plane->cent_posi, x_plane->cent_slope);
         set_beam_centroids(particle, 2, n_particles, y_plane->cent_posi, y_plane->cent_slope);
         set_beam_centroids(particle, 4, n_particles, longit->cent_s, longit->cent_dp);
 	for (i_particle=0; i_particle<n_particles; i_particle++) 
 	  particle[i_particle][6] = particleID++;
       }
+#if SDDS_MPI_IO
+      /* prepare for the next bunch */
+      particleID += (total_particles - n_particles - my_offset + 1);
+#endif
       first_call = 0;
     }
     else {
@@ -94,7 +141,7 @@ long generate_bunch(
         /* make mono-energetic distribution in x plane */
         s1 = sqrt(x_plane->emit);
         s2 = s1/x_plane->beta;
-        switch (x_plane->beam_type) {
+	switch (x_plane->beam_type) {
         case GAUSSIAN_BEAM:
           gaussian_distribution(particle, n_particles, 0, s1, s2, 
                                 symmetrize && (enforce_rms_params[0] || n_particles%4==0), 
@@ -132,11 +179,21 @@ long generate_bunch(
           abort();
           break;
         }
+#if !SDDS_MPI_IO
+	if(remaining_sequence_No<=1) {
+	  zero_centroid(first_particle_address, total_n_particles, 0);
+	  zero_centroid(first_particle_address, total_n_particles, 1);
+	  if (enforce_rms_params[0])
+	    enforce_sigma_values(first_particle_address, total_n_particles, 0, s1, s2);
+	  transform_from_normalized_coordinates(first_particle_address, total_n_particles, 0, x_plane->beta, x_plane->alpha);
+	}
+#else
         zero_centroid(particle, n_particles, 0);
         zero_centroid(particle, n_particles, 1);
         if (enforce_rms_params[0])
           enforce_sigma_values(particle, n_particles, 0, s1, s2);
         transform_from_normalized_coordinates(particle, n_particles, 0, x_plane->beta, x_plane->alpha);
+#endif
         
         /* make mono-energetic distribution in y plane */
         s1 = sqrt(y_plane->emit);
@@ -179,11 +236,21 @@ long generate_bunch(
           abort();
           break;
         }
+#if !SDDS_MPI_IO
+        if(remaining_sequence_No<=1) {
+          zero_centroid(first_particle_address, total_n_particles, 2);
+          zero_centroid(first_particle_address, total_n_particles, 3);
+          if (enforce_rms_params[1])
+            enforce_sigma_values(first_particle_address, total_n_particles, 2, s1, s2);
+          transform_from_normalized_coordinates(first_particle_address, total_n_particles, 2, y_plane->beta, y_plane->alpha);
+        }
+#else
         zero_centroid(particle, n_particles, 2);
         zero_centroid(particle, n_particles, 3);
         if (enforce_rms_params[1])
           enforce_sigma_values(particle, n_particles, 2, s1, s2);
         transform_from_normalized_coordinates(particle, n_particles, 2, y_plane->beta, y_plane->alpha);
+#endif
       }
       else {
         if (y_plane->beam_type!=x_plane->beam_type || y_plane->cutoff!=x_plane->cutoff)
@@ -206,6 +273,20 @@ long generate_bunch(
           bomb("limit_in_4d is available only for gaussian and uniform beam distributions", NULL);
           break;
         }
+#if !SDDS_MPI_IO
+        if(remaining_sequence_No<=1) {
+          zero_centroid(first_particle_address, total_n_particles, 0);
+          zero_centroid(first_particle_address, total_n_particles, 1);
+          zero_centroid(first_particle_address, total_n_particles, 2);
+          zero_centroid(first_particle_address, total_n_particles, 3);
+          if (enforce_rms_params[0])
+            enforce_sigma_values(first_particle_address, total_n_particles, 0, s1, s2);
+          transform_from_normalized_coordinates(first_particle_address, total_n_particles, 0, x_plane->beta, x_plane->alpha);
+          if (enforce_rms_params[1])
+            enforce_sigma_values(first_particle_address, total_n_particles, 2, s1, s2);
+          transform_from_normalized_coordinates(first_particle_address, total_n_particles, 2, x_plane->beta, x_plane->alpha);
+        }
+#else
         zero_centroid(particle, n_particles, 0);
         zero_centroid(particle, n_particles, 1);
         zero_centroid(particle, n_particles, 2);
@@ -216,6 +297,7 @@ long generate_bunch(
           enforce_sigma_values(particle, n_particles, 2, s3, s4);
         transform_from_normalized_coordinates(particle, n_particles, 0, x_plane->beta, x_plane->alpha);
         transform_from_normalized_coordinates(particle, n_particles, 2, y_plane->beta, y_plane->alpha);
+#endif
       }
     }
     
@@ -293,12 +375,23 @@ long generate_bunch(
       abort();
       break;
     }
+#if !SDDS_MPI_IO
+    if(remaining_sequence_No<=1) {
+      zero_centroid(first_particle_address, total_n_particles, 4);
+      zero_centroid(first_particle_address, total_n_particles, 5);
+      if (enforce_rms_params[2])
+	enforce_sigma_values(first_particle_address, total_n_particles, 4, s1, s2);
+      if (emit)
+	transform_from_normalized_coordinates(first_particle_address, total_n_particles, 4, beta, alpha);
+    }
+#else
     zero_centroid(particle, n_particles, 4);
     zero_centroid(particle, n_particles, 5);
     if (enforce_rms_params[2])
       enforce_sigma_values(particle, n_particles, 4, s1, s2);
     if (emit)
       transform_from_normalized_coordinates(particle, n_particles, 4, beta, alpha);
+#endif
     if (x_plane->beam_type==DYNAP_BEAM)
       return(n_particles);
 
@@ -346,6 +439,25 @@ long generate_bunch(
     
     /* incorporate dispersion and centroid shifts into (x, x', y, y') */
     /* also add particle ID */
+#if !SDDS_MPI_IO
+    /* This should be involved after both centroid and sigma have been forced */
+  if(remaining_sequence_No<=1) {
+    for (i_particle=0; i_particle<total_n_particles; i_particle++) {
+      if (longit->chirp)
+        first_particle_address[i_particle][5] += longit->chirp*first_particle_address[i_particle][4];
+      first_particle_address[i_particle][4] += longit->cent_s;
+      first_particle_address[i_particle][5] += longit->cent_dp;
+      delta_p = first_particle_address[i_particle][5];
+      first_particle_address[i_particle][0] += delta_p*x_plane->eta + x_plane->cent_posi;
+      first_particle_address[i_particle][1] += delta_p*x_plane->etap + x_plane->cent_slope;
+      first_particle_address[i_particle][2] += delta_p*y_plane->eta + y_plane->cent_posi;
+      first_particle_address[i_particle][3] += delta_p*y_plane->etap + y_plane->cent_slope;
+      first_particle_address[i_particle][6] = particleID++;
+    }
+    initial_saved = 0; /* Prepare for next bunch */
+    total_n_particles = 0;
+  }
+#else
     for (i_particle=0; i_particle<n_particles; i_particle++) {
       if (longit->chirp)
         particle[i_particle][5] += longit->chirp*particle[i_particle][4];
@@ -358,6 +470,9 @@ long generate_bunch(
       particle[i_particle][3] += delta_p*y_plane->etap + y_plane->cent_slope;
       particle[i_particle][6] = particleID++;
     }
+    /* prepare for the next bunch */
+    particleID += (total_particles - n_particles - my_offset);
+#endif
 
 #ifdef IEEE_MATH
     /* check for invalid data */
@@ -370,6 +485,9 @@ long generate_bunch(
 #endif
 
     first_call = 0;
+#if SDDS_MPI_IO
+    tfree(offset);
+#endif
     return(n_particles);
   }
 
@@ -395,6 +513,18 @@ void gaussian_distribution(
   if (haltonID[offset] && haltonID[offset+1]) {
     double s12[2], buffer[2];
     long dim;
+#if SDDS_MPI_IO
+    /* To generate n particles on m processors, each processor will 
+       generate myid*n/m particles, but only the last n/m will be used */
+    long i, start_particle, *particle_array = tmalloc(n_processors*sizeof(*particle_array));
+
+    MPI_Allgather (&n_particles, 1, MPI_LONG, particle_array, 1, MPI_LONG, MPI_COMM_WORLD);
+    for (i=1; i<n_processors; i++) {
+      particle_array[i] += particle_array[i-1] ; 
+    }
+    start_particle = particle_array[myid]-n_particles; /* The first particle for a processor */
+    n_particles = particle_array[myid]; 
+#endif
     s12[0] = s1;
     s12[1] = s2;
     for (i_particle=0; i_particle<n_particles; i_particle++) {
@@ -414,9 +544,19 @@ void gaussian_distribution(
         if ((!halo && flag) || (halo && !flag))
           break;
       } while (1);
+#if SDDS_MPI_IO
+      if (i_particle>=start_particle) {
+	for (dim=0; dim<2; dim++)
+	  particle[i_particle-start_particle][offset+dim] = buffer[dim];
+      }
+#else
       for (dim=0; dim<2; dim++)
         particle[i_particle][offset+dim] = buffer[dim];
+#endif
     }
+#if SDDS_MPI_IO
+    tfree(particle_array);
+#endif
   }
   else {
     for (i_particle=0; i_particle<n_particles; i_particle++) {
@@ -463,6 +603,18 @@ void uniform_distribution(
   long i_particle;
   double range1, range2; 
   double rnd1, rnd2=0.0;
+#if SDDS_MPI_IO
+  /* To generate n particles on m processors, each processor will 
+     generate myid*n/m particles, but only the last n/m will be used */
+  long i, start_particle, *particle_array = tmalloc(n_processors*sizeof(*particle_array));
+  
+  MPI_Allgather (&n_particles, 1, MPI_LONG, particle_array, 1, MPI_LONG, MPI_COMM_WORLD);
+  for (i=1; i<n_processors; i++) {
+    particle_array[i] += particle_array[i-1] ; 
+  }
+  start_particle = particle_array[myid]-n_particles; /* The first particle for a processor */
+  n_particles = particle_array[myid]; 
+#endif
 
   log_entry("uniform_distribution");
 
@@ -482,6 +634,7 @@ void uniform_distribution(
         rnd2 = random_4(1)-.5;
       }
     } while (rnd2*rnd2+rnd1*rnd1 > .25) ;
+#if !SDDS_MPI_IO
     x1 = range1*rnd1;
     x2 = range2*rnd2;
     particle[i_particle][0+offset] = x1;
@@ -500,7 +653,32 @@ void uniform_distribution(
       particle[i_particle][0+offset] = -x1;
       particle[i_particle][1+offset] = -x2;
     }
+#else
+    if (i_particle>=start_particle) {
+      x1 = range1*rnd1;
+      x2 = range2*rnd2;
+      particle[i_particle-start_particle][0+offset] = x1;
+      particle[i_particle-start_particle][1+offset] = x2;
+      if (symmetrize) {
+	if (++i_particle>=n_particles)
+	  break;
+	particle[i_particle-start_particle][0+offset] = x1;
+	particle[i_particle-start_particle][1+offset] = -x2;
+	if (++i_particle>=n_particles)
+        break;
+	particle[i_particle-start_particle][0+offset] = -x1;
+	particle[i_particle-start_particle][1+offset] = x2;
+	if (++i_particle>=n_particles)
+	  break;
+	particle[i_particle-start_particle][0+offset] = -x1;
+	particle[i_particle-start_particle][1+offset] = -x2;
+      }
+    }
+#endif
   }
+#if SDDS_MPI_IO
+  tfree(particle_array);
+#endif
   log_exit("uniform_distribution");
 }
 
@@ -553,6 +731,18 @@ void hard_edge_distribution(
   double range1; 
   double range2; 
   double rnd1, rnd2;
+#if SDDS_MPI_IO
+    /* To generate n particles on m processors, each processor will 
+       generate myid*n/m particles, but only the last n/m will be used */
+    long i, start_particle, *particle_array = tmalloc(n_processors*sizeof(*particle_array));
+
+    MPI_Allgather (&n_particles, 1, MPI_LONG, particle_array, 1, MPI_LONG, MPI_COMM_WORLD);
+    for (i=1; i<n_processors; i++) {
+      particle_array[i] += particle_array[i-1] ; 
+    }
+    start_particle = particle_array[myid]-n_particles; /* The first particle for a processor */
+    n_particles = particle_array[myid]; 
+#endif
 
   log_entry("hard_edge_distribution");
 
@@ -569,6 +759,28 @@ void hard_edge_distribution(
       rnd1 = random_4(1)-.5;
       rnd2 = random_4(1)-.5;
     }
+#if SDDS_MPI_IO
+    if (i_particle<start_particle)
+      continue;
+    x1 = range1*rnd1;
+    x2 = range2*rnd2;
+    particle[i_particle-start_particle][0+offset] = x1;
+    particle[i_particle-start_particle][1+offset] = x2;
+    if (symmetrize) {
+      if (++i_particle>=n_particles)
+        break;
+      particle[i_particle-start_particle][0+offset] = x1;
+      particle[i_particle-start_particle][1+offset] = -x2;
+      if (++i_particle>=n_particles)
+        break;
+      particle[i_particle-start_particle][0+offset] = -x1;
+      particle[i_particle-start_particle][1+offset] = x2;
+      if (++i_particle>=n_particles)
+        break;
+      particle[i_particle-start_particle][0+offset] = -x1;
+      particle[i_particle-start_particle][1+offset] = -x2;
+    }
+#else
     x1 = range1*rnd1;
     x2 = range2*rnd2;
     particle[i_particle][0+offset] = x1;
@@ -587,8 +799,13 @@ void hard_edge_distribution(
       particle[i_particle][0+offset] = -x1;
       particle[i_particle][1+offset] = -x2;
     }
+#endif
   }
   log_exit("hard_edge_distribution");
+
+#if SDDS_MPI_IO
+  tfree(particle_array);
+#endif
 }
 
 
@@ -625,21 +842,36 @@ void enforce_sigma_values(double **coord, long n_part, long offset, double s1d, 
     double s1a, s2a;
     double f1, f2;
     long i;
+#if SDDS_MPI_IO
+    double s1a_total, s2a_total; 
+    long total_particles;
+#endif
 
     log_entry("enforce_sigma_values");
 
+#if !SDDS_MPI_IO
     if (n_part<2) {
         log_exit("enforce_sigma_values");
         return;
         }
-
+#endif
     s1a = s2a = 0;
     for (i=0; i<n_part; i++) {
         s1a += sqr(coord[i][offset+0]);
         s2a += sqr(coord[i][offset+1]);
         }
+#if !SDDS_MPI_IO
     s1a = sqrt(s1a/n_part);
     s2a = sqrt(s2a/n_part);
+#else
+    if (isSlave) {
+      MPI_Allreduce (&s1a, &s1a_total, 1, MPI_DOUBLE, MPI_SUM, workers);
+      MPI_Allreduce (&s2a, &s2a_total, 1, MPI_DOUBLE, MPI_SUM, workers);
+      MPI_Allreduce (&n_part, &total_particles, 1, MPI_LONG, MPI_SUM, workers);
+      s1a = sqrt(s1a_total/total_particles);
+      s2a = sqrt(s2a_total/total_particles);
+    }
+#endif
 
     if (s1a!=0)
         f1 = s1d/s1a;
@@ -669,7 +901,17 @@ void zero_centroid(double **particle, long n_particles, long coord)
         }
     for (i=sum=0; i<n_particles; i++)
         sum += particle[i][coord];
+#if !SDDS_MPI_IO
     sum /= n_particles;
+#else
+    if (isSlave) {
+      double total_sum; 
+      long total_particles;
+      MPI_Allreduce (&sum, &total_sum, 1, MPI_DOUBLE, MPI_SUM, workers);
+      MPI_Allreduce (&n_particles, &total_particles, 1, MPI_LONG, MPI_SUM, workers);
+      sum = total_sum/total_particles;
+    }
+#endif
     for (i=0; i<n_particles; i++)
         particle[i][coord] -= sum;
     log_exit("zero_centroid");
@@ -710,6 +952,65 @@ long dynap_distribution(double **particle, long n_particles, double sx, double s
     log_exit("dynap_distribution");
     return(nx*ny);
     }
+
+#if SDDS_MPI_IO
+long dynap_distribution_p(double **particle, long n_particles, double sx, double sy,
+        long nx, long ny)
+{
+    long ix, iy, ip;
+    double x, y, dx=0.0, dy=0.0;
+    double *coord;
+    long n_particles_total, remainder, start_particle, end_particle;
+
+    log_entry("dynap_distribution");
+    MPI_Allreduce(&n_particles, &n_particles_total, 1,  MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+    if ((nx<1 || ny<1) || (nx==1 && ny==1 && n_particles_total!=1)) {
+        if ((nx = sqrt(n_particles_total*1.0))<=1) 
+            bomb("too few particles requested for dynamic-aperture beam type", NULL);
+        }
+    if ((ny = n_particles_total/nx)<1)
+        bomb("invalid particle parameters for dynamic-aperture beam type--increase number of particles", NULL);
+    if (nx>1)
+        dx = 2*sx/(nx-1);
+    if (ny>1)
+        dy = sy/(ny-1);
+    x = -sx;
+/* distribute particles to different processors according to the ip */
+    if (isSlave) {
+       n_particles_total = nx*ny;	
+       n_particles = n_particles_total/(n_processors-1);
+       remainder =  n_particles_total%(n_processors-1);	
+       if (myid<=remainder) {
+	 start_particle = n_particles*(myid-1);
+	 n_particles++;
+	 end_particle = n_particles*myid-1;
+       }
+       else {
+	start_particle = n_particles*(myid-1) + remainder;
+ 	end_particle = n_particles*myid + remainder-1;
+      }
+    for (ix=ip=0; ix<nx; ix++) {
+        y = 0;
+        for (iy=0; iy<ny; iy++, ip++) {
+	  if(ip>=start_particle && ip<=end_particle) {
+            coord = particle[ip-start_particle];
+            coord[0] = x;
+            coord[2] = y;
+            coord[1] = coord[3] = coord[4] = coord[5] = 0;
+	  }
+            y += dy;
+            }
+        x += dx;
+        }
+  }
+    log_exit("dynap_distribution");
+
+    if (isMaster)
+       return 0;
+    else	
+        return(n_particles);
+}
+#endif
 
 void transform_from_normalized_coordinates(double **part, long n_part, long offset, double beta, double alpha)
 {

@@ -146,7 +146,7 @@ void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
 	  buffer = malloc(sizeof(double) * nb);
 	  MPI_Allreduce(posItime[plane], buffer, nb, MPI_DOUBLE, MPI_SUM, workers);
 	  memcpy(posItime[plane], buffer, sizeof(double)*nb);
-	  free(buffer);
+	  free(buffer); buffer = NULL;
 	}
 #endif
 	factor = wakeData->macroParticleCharge*particleRelSign*wakeData->factor;
@@ -245,7 +245,12 @@ void set_up_trwake(TRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
   SDDS_DATASET SDDSin;
   double tmin, tmax;
   long iw;
-  
+#if SDDS_MPI_IO 
+/* All the processes will read the wake file, but not in parallel.
+   Zero the Memory when call  SDDS_InitializeInput */
+  SDDSin.parallel_io = 0; 
+#endif  
+
   if (charge) {
     wakeData->macroParticleCharge = charge->macroParticleCharge;
   } else if (pass==0) {

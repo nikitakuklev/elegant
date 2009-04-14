@@ -80,7 +80,14 @@ void setupMomentumApertureSearch(
   
   output = compose_filename(output, run->rootname);
   sprintf(description, "Momentum aperture search");
+#if SDDS_MPI_IO
+  SDDS_MPI_Setup(&SDDSma, 1, n_processors, myid, MPI_COMM_WORLD, 1);
+  if (!SDDS_Parallel_InitializeOutput(&SDDSma, description, "momentum aperture",  output)) {
+#else
   if (!SDDS_InitializeOutput(&SDDSma, SDDS_BINARY, 1, description, "momentum aperture",  output)) {
+#endif
+
+
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
     exit(1);
   }
@@ -100,11 +107,17 @@ void setupMomentumApertureSearch(
       SDDS_DefineColumn(&SDDSma, "xLostNegative", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
       SDDS_DefineColumn(&SDDSma, "yLostNegative", NULL, "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
       SDDS_DefineColumn(&SDDSma, "deltaLostNegative", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
-      SDDS_DefineParameter(&SDDSma, "Step", NULL, NULL, NULL, NULL, SDDS_LONG, NULL)<0 ||
-      !SDDS_SaveLayout(&SDDSma) || !SDDS_WriteLayout(&SDDSma)) {
+      SDDS_DefineParameter(&SDDSma, "Step", NULL, NULL, NULL, NULL, SDDS_LONG, NULL)<0){
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
     exit(1);
   }
+#if !SDDS_MPI_IO
+  /* In the version with parallel IO, the layout will be written later */
+  if(!SDDS_SaveLayout(&SDDSma) || !SDDS_WriteLayout(&SDDSma)){
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+    exit(1);
+  }
+#endif
   
 }
 
@@ -136,6 +149,9 @@ long doMomentumApertureSearch(
   char **ElementName;
   long code;
   long processElements, skipElements, deltaSign, split;
+#if USE_MPI
+  long total_iElem = 0;  /* A global counter for job distribution */
+#endif
 #if defined(DEBUG)
   FILE *fpdeb = NULL;
   char s[1000];
@@ -150,7 +166,7 @@ long doMomentumApertureSearch(
   fprintf(fpdeb, "&parameter name=Side type=string &end\n");
   fprintf(fpdeb, "&column name=delta type=double &end\n");
   fprintf(fpdeb, "&column name=Lost type=short &end\n");
-  fprintf(fpdeb, "&column name=LossPass type=short &end\n");
+  fprintf(fpdeb, "&column name=Loss Pass type=short &end\n");
   fprintf(fpdeb, "&data mode=ascii no_row_counts=1 &end\n");
   fflush(fpdeb);
 #endif
@@ -175,9 +191,20 @@ long doMomentumApertureSearch(
       break;
     elem = elem->succ;
   }
+#if !USE_MPI
   if (nElem==0) 
     SDDS_Bomb("no elements found between s_start and s_end for momentum aperture computation");
-
+#else
+  if ((nElem<n_processors) && (myid==0)) {
+    printf("Warning: The number of elements should be larger than the number of processors to avoid wasting resource.\n\ 
+            The number of elements is %ld. The number of processors is %ld.\n", nElem, n_processors);
+  }    
+  if (verbosity) {
+    verbosity = 0;
+  if (myid == 0)
+    printf ("Warning: In parallel version, no intermediate information will be provided\n");
+  }
+#endif
   /* allocate arrays for tracking */
   coord = (double**)czarray_2d(sizeof(**coord), 1, 7);
 
@@ -215,7 +242,7 @@ long doMomentumApertureSearch(
       fprintf(stdout, "Tracking fiducial particle\n");
     code = do_tracking(NULL, coord, 1, NULL, beamline, &pCentral, 
                        NULL, NULL, NULL, NULL, run, control->i_step, 
-                       FIRST_BEAM_IS_FIDUCIAL+(verbosity>1?0:SILENT_RUNNING), 1, 0, NULL, NULL, NULL, lostOnPass0, NULL);
+                       FIRST_BEAM_IS_FIDUCIAL+(verbosity>1?0:SILENT_RUNNING)+INHIBIT_FILE_OUTPUT, 1, 0, NULL, NULL, NULL, lostOnPass0, NULL);
     if (!code) {
       fprintf(stdout, "Fiducial particle lost. Don't know what to do.\n");
       exit(1);
@@ -232,6 +259,9 @@ long doMomentumApertureSearch(
         elem = elem->succ;
         continue;
       }
+#if USE_MPI
+      if (myid == total_iElem%n_processors) {
+#endif
       if (verbosity>0) {
         fprintf(stdout, "Searching for energy aperture for %s #%ld at s=%em\n", elem->name, elem->occurence, elem->end_pos);
         fflush(stdout);
@@ -288,7 +318,7 @@ long doMomentumApertureSearch(
             }
             code = do_tracking(NULL, coord, 1, NULL, beamline, &pCentral, 
                                NULL, NULL, NULL, NULL, run, control->i_step, 
-                               SILENT_RUNNING, control->n_passes, 0, NULL, NULL, NULL, lostOnPass0, NULL);
+                               SILENT_RUNNING+INHIBIT_FILE_OUTPUT, control->n_passes, 0, NULL, NULL, NULL, lostOnPass0, NULL);
             if (!code) {
               /* particle lost */
               if (verbosity>3) {
@@ -344,11 +374,22 @@ long doMomentumApertureSearch(
       }
       
       iElem++;
+#if USE_MPI
+      }
+      total_iElem++;
+#endif
       processElements --;
     }
     elem = elem->succ;
   } 
 
+#if SDDS_MPI_IO
+  /* Open file here for parallel IO */
+  if (!SDDS_MPI_File_Open(SDDSma.MPI_dataset, SDDSma.layout.filename, SDDS_MPI_WRITE_ONLY)) 
+    SDDS_MPI_BOMB("SDDS_MPI_File_Open failed.", &SDDSma.MPI_dataset->MPI_file);
+  if (!SDDS_MPI_WriteLayout(&SDDSma))  
+    SDDS_MPI_BOMB("SDDS_MPI_WriteLayout failed.", &SDDSma.MPI_dataset->MPI_file);
+#endif                                                                                       
   if (!SDDS_StartPage(&SDDSma, iElem) ||
       !SDDS_SetParameters(&SDDSma, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "Step",
                           control->i_step, NULL) ||
@@ -368,7 +409,11 @@ long doMomentumApertureSearch(
       !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, xLost[0], iElem, "xLostNegative") ||
       !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, yLost[0], iElem, "yLostNegative") ||
       !SDDS_SetColumn(&SDDSma, SDDS_SET_BY_NAME, deltaWhenLost[0], iElem, "deltaLostNegative") ||
+#if !SDDS_MPI_IO
       !SDDS_WritePage(&SDDSma)) {
+#else
+      !SDDS_MPI_WritePage(&SDDSma)) {
+#endif
     SDDS_SetError("Problem writing SDDS table (doMomentumApertureSearch)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }

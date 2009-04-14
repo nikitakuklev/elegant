@@ -322,6 +322,10 @@ void accumulate_beam_sums(
 	  centroid[i] /= n_total;
 	}     
       }
+      else
+	if (isMaster) {
+	  n_total = n_part;
+	}
     }
 #endif
     if (active) {	        
@@ -465,14 +469,23 @@ void accumulate_beam_sums(
 #if (!USE_MPI)    
   sums->n_part += n_part;
 #else
-  if (notSinglePart) {
+  if (!notSinglePart)
+    sums->n_part += n_part; 
+  else if (!SDDS_MPI_IO) {
     if (parallelStatus==trueParallel) 
       sums->n_part += n_total;
     else if (isMaster)
       sums->n_part += n_part;
+  } else {
+    if (isMaster)
+      sums->n_part += n_total;
+    else
+      sums->n_part += n_part;
+  
   }
-  else
-    sums->n_part += n_part; 
+   
+ 
+    
 #endif    
 
 

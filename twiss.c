@@ -1258,6 +1258,9 @@ void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
   }
 
   if (filename) {
+#if SDDS_MPI_IO
+    SDDS_twiss.parallel_io = 0;
+#endif
     SDDS_ElegantOutputSetup(&SDDS_twiss, filename, SDDS_BINARY, 1, "Twiss parameters",
                             run->runfile, run->lattice, parameter_definition, 
                             (radiation_integrals?N_PARAMETERS:IP_ALPHAC+1),

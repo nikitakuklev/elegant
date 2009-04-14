@@ -1509,20 +1509,20 @@ double optimization_function(double *value, long *invalid)
       fprintf(optimization_data->fp_log, "Tracking for optimization\n");
       fflush(optimization_data->fp_log);
     }
-#if USE_MPI 
-    if (beam->n_to_track<(n_processors-1)) {
-      printf("*************************************************************************************\n");
-      printf("* Warning! The number of particles shouldn't be less than the number of processors! *\n");
-      printf("* Less number of processors are recommended!                                        *\n");
-      printf("*************************************************************************************\n");
-      MPI_Abort(MPI_COMM_WORLD, 2);    
-    }
+#if USE_MPI
+    if (isMaster)
+      if (beam->n_to_track_total<(n_processors-1)) {
+	printf("*************************************************************************************\n");
+	printf("* Warning! The number of particles shouldn't be less than the number of processors! *\n");
+	printf("* Less number of processors are recommended!                                        *\n");
+	printf("*************************************************************************************\n");
+	MPI_Abort(MPI_COMM_WORLD, 2);    
+      }
 #endif
     track_beam(run, control, error, variables, beamline, beam, output, optim_func_flags, 1,
                &charge);
   }
   
-  if (writePermitted) { /* Only the master will execute the block */
     if (!*invalid) {
       if (output->sasefel.active)
         storeSASEFELAtEndInRPN(&(output->sasefel));
@@ -1544,6 +1544,7 @@ double optimization_function(double *value, long *invalid)
         fflush(stdout);
         abort();
       }
+      if (isMaster) { /* Only the master will execute the block */
       rpn_store_final_properties(final_property_value, final_property_values);
       if (optimization_data->matrix_order>1)
         rpnStoreHigherMatrixElements(M, &optimization_data->TijkMem,

@@ -361,7 +361,10 @@ void set_up_trfmode(TRFMODE *trfmode, char *element_name, double element_z,
     return;
   
   trfmode->initialized = 1;
-  
+
+#if SDDS_MPI_IO
+  if (isSlave)
+#endif  
   if (n_particles<1)
     bomb("too few particles in set_up_trfmode()", NULL);
   if (trfmode->n_bins<2)

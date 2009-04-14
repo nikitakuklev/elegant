@@ -37,7 +37,8 @@
     double p_central = 0.0;
     double p_central_mev = 0.0;
     long always_change_p0 = 0;
-    long load_balancing_on = 1;
+    long load_balancing_on = 0;
+    long random_sequence_No = 1;
     STRING expand_for = NULL;
     long tracking_updates = 1;
     STRING search_path = NULL;

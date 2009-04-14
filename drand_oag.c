@@ -18,15 +18,15 @@ double random_1_elegant(long iseed)
           iseed = -iseed;
 #if (!USE_MPI)
         random_2(-(iseed+2));
-#else
-        if (myid==1)
-          random_2(-(iseed+2)); 
-        /* Pelegant should give the same result as elegant if running on 2 processors. */
-        else
-          random_2(-(iseed+2*(myid+4))); 
-#endif
         random_3(-(iseed+4));
-        random_4(-(iseed+6));
+	random_4(-(iseed+6));
+#else
+        /* Pelegant should give the same result as elegant if running on 2 processors. */
+	random_2(-(iseed+2*myid)); 
+	random_3(-(iseed+2*myid+2));
+	random_4(-(iseed+2*myid+4));
+#endif
+
         seed[3] = ((iseed & 4095)/2)*2+1;
         seed[2] = (iseed >>= 12) & 4095;
         seed[1] = (iseed >>= 12) & 4095;

@@ -233,8 +233,12 @@ void set_up_frfmode(FRFMODE *rfmode, char *element_name, double element_z, long 
   
   if (rfmode->initialized)
     return;
+
+#if !SDDS_MPI_IO
   if (n_particles<1)
     bomb("too few particles in set_up_frfmode()", NULL);
+#endif
+
   if (rfmode->n_bins<2)
     bomb("too few bins for FRFMODE", NULL);
 

@@ -327,8 +327,10 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
   rfmode->initialized = 1;
   if (rfmode->pass_interval<=0)
     bomb("pass_interval <= 0 for RFMODE", NULL);
+#if !SDDS_MPI_IO
   if (n_particles<1)
     bomb("too few particles in set_up_rfmode()", NULL);
+#endif
   if (rfmode->n_bins<2)
     bomb("too few bins for RFMODE", NULL);
   if (rfmode->bin_size<=0 && !rfmode->binless)

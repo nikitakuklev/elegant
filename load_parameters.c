@@ -130,6 +130,11 @@ long setup_load_parameters_for_file(char *filename, RUN *run, LINE_LIST *beamlin
 #endif
   
   SDDS_ClearErrors();
+#if SDDS_MPI_IO 
+  /* All the processes will read the wake file, but not in parallel.
+     Zero the Memory when call  SDDS_InitializeInput */
+  load_request[load_requests].table.parallel_io = 0; 
+#endif
 
   if (!SDDS_InitializeInputFromSearchPath(&load_request[load_requests].table, 
                                           load_request[load_requests].filename)) {
