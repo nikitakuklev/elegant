@@ -15,6 +15,9 @@
  * Using code from sddsbrightness (Shang, Dejus, Borland) and sddsurgent (Shang, Dejus)
  *
  $Log: not supported by cvs2svn $
+ Revision 1.6  2009/04/09 22:19:56  borland
+ Removed some invalid testing done on arguments.
+
  Revision 1.5  2009/04/09 22:10:28  borland
  Fixed bug in checking arguments.
 
@@ -532,7 +535,8 @@ long GetBeamParameters(ELECTRON_BEAM_PARAM *eBeam, SDDS_DATASET *SDDSin)
   etayp = data[rows-1];
   free(data);
 
-  if (SDDS_CheckParameter(SDDSin, "ex0", "$gp$rm", SDDS_ANY_FLOATING_TYPE, NULL)==SDDS_CHECK_OK) {
+  if (SDDS_CheckParameter(SDDSin, "ex0", "$gp$rm", SDDS_ANY_FLOATING_TYPE, NULL)==SDDS_CHECK_OK ||
+      SDDS_CheckParameter(SDDSin, "ex0", "m", SDDS_ANY_FLOATING_TYPE, NULL)==SDDS_CHECK_OK) {
     if (!SDDS_GetParameterAsDouble(SDDSin, "ex0", &ex0))
       SDDS_Bomb("unable to get ex0 parameter from input file");
   } else {
@@ -632,7 +636,8 @@ void InitializeInputFile(SDDS_DATASET *SDDSin, char *inputfile)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     SDDS_Bomb("something wrong with twiss parameter columns");
   }
-  if (SDDS_CheckParameter(SDDSin, "ex0", "$gp$rm", SDDS_ANY_FLOATING_TYPE, NULL)!=SDDS_CHECK_OK) {
+  if (SDDS_CheckParameter(SDDSin, "ex0", "$gp$rm", SDDS_ANY_FLOATING_TYPE, NULL)!=SDDS_CHECK_OK &&
+      SDDS_CheckParameter(SDDSin, "ex0", "m", SDDS_ANY_FLOATING_TYPE, NULL)!=SDDS_CHECK_OK) {
     if (SDDS_CheckColumn(SDDSin,"ex", "$gp$rm", SDDS_ANY_FLOATING_TYPE, NULL)!=SDDS_CHECK_OK &&
         SDDS_CheckColumn(SDDSin,"ex", "m", SDDS_ANY_FLOATING_TYPE, NULL)!=SDDS_CHECK_OK) {
       SDDS_Bomb("Something wrong with both ex0 parameter and ex column, one of them has to exist");

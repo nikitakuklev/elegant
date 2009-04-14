@@ -14,6 +14,9 @@
  * Michael Borland, 2002
  *
  $Log: not supported by cvs2svn $
+ Revision 1.13  2007/03/09 19:38:02  borland
+ Fixed bug in energy range calculation for helical devices.
+
  Revision 1.12  2006/08/24 19:20:06  soliday
  Updated so that it would compile on WIN32 again.
 
@@ -382,7 +385,8 @@ int main(int argc, char **argv)
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     SDDS_Bomb("something wrong with twiss parameter columns");
   }
-  if (SDDS_CheckParameter(&SDDSin, "ex0", "$gp$rm", SDDS_ANY_FLOATING_TYPE, NULL)!=SDDS_CHECK_OK) {
+  if (SDDS_CheckParameter(&SDDSin, "ex0", "$gp$rm", SDDS_ANY_FLOATING_TYPE, NULL)!=SDDS_CHECK_OK &&
+      SDDS_CheckParameter(&SDDSin, "ex0", "m", SDDS_ANY_FLOATING_TYPE, NULL)!=SDDS_CHECK_OK) {
     if (SDDS_CheckColumn(&SDDSin,"ex", "$gp$rm", SDDS_ANY_FLOATING_TYPE, NULL)!=SDDS_CHECK_OK &&
         SDDS_CheckColumn(&SDDSin,"ex", "m", SDDS_ANY_FLOATING_TYPE, NULL)!=SDDS_CHECK_OK) {
       SDDS_Bomb("Something wrong with both ex0 parameter and ex column, one of them has to exist");
@@ -713,7 +717,8 @@ long GetTwissValues(SDDS_DATASET *SDDSin,
     SDDS_Bomb("unable to get etay");
   *etayp = data[rows-1];
   free(data);
-  if (SDDS_CheckParameter(SDDSin, "ex0", "$gp$rm", SDDS_ANY_FLOATING_TYPE, NULL)==SDDS_CHECK_OK) {
+  if (SDDS_CheckParameter(SDDSin, "ex0", "$gp$rm", SDDS_ANY_FLOATING_TYPE, NULL)==SDDS_CHECK_OK ||
+      SDDS_CheckParameter(SDDSin, "ex0", "m", SDDS_ANY_FLOATING_TYPE, NULL)==SDDS_CHECK_OK) {
     if (!SDDS_GetParameterAsDouble(SDDSin, "ex0", ex0))
       SDDS_Bomb("unable to get ex0 parameter from input file");
   } else {
