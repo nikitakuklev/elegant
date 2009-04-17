@@ -205,6 +205,8 @@ void setup_bunched_beam(
 #if SDDS_MPI_IO
   else
     beam->accepted = NULL;
+  if (run->acceptance)
+    dumpAcceptance = 1; /* indicate if the initial coordinates of transmitted particles will be dumped */
 #endif
   beam->n_original = beam->n_to_track = beam->n_particle = n_particles_per_bunch;
   beam->n_accepted = beam->n_saved = 0;
@@ -495,6 +497,10 @@ long track_beam(
       notSinglePart = 0;
     }
   }
+
+  if (isMaster && notSinglePart) /* This is a makeup to avoid changing the execution order of the serial elegant */
+    beam->lostOnPass = NULL;
+
   if (isSlave || !notSinglePart)
 #endif
   if (control->bunch_frequency) {

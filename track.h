@@ -87,6 +87,7 @@ extern int partOnMaster; /* indicate if the particle information is available on
 extern long lessPartAllowed;
 extern MPI_Comm workers; /* The communicator will contain the slave processors only */
 extern int fd;
+extern int dumpAcceptance; /* A flag to indicate if the initial coordinates of transmitted particles will be dumped */
 #endif
 long remaining_sequence_No, orig_sequence_No; /* For Pelegant regression test */
 

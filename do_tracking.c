@@ -3505,7 +3505,7 @@ void gatherParticles(double ***coord, long **lostOnPass, long *nToTrack, long *n
   if (isMaster) {
     if(*coord==NULL)
       *coord = (double**)resize_czarray_2d((void**)(*coord), sizeof(double), nToTrack_total+nLost_total, 7);
-    if(*accepted==NULL)
+    if(dumpAcceptance && (*accepted==NULL))
       *accepted = (double**)resize_czarray_2d((void**)(*accepted), sizeof(double), nToTrack_total+nLost_total, 7); 
     if(*lostOnPass==NULL)
       *lostOnPass = (long*)tmalloc(sizeof(**lostOnPass)*(nToTrack_total+nLost_total));
