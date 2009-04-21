@@ -11,6 +11,9 @@
    for calculating wiggler and bending magnet spectra using the bessel function approximation.
 
 $Log: not supported by cvs2svn $
+Revision 1.2  2009/04/21 20:35:52  shang
+removed all numerical recipe routines and now uses qromb() for integration, which was converted from netlib.org; and removed the inputfile option.
+
 Revision 1.1  2009/04/21 15:23:02  shang
 first version, converted from ws.f by Roger Dejus
 
@@ -1079,8 +1082,7 @@ c  Roger J. Dejus, XFD/APS, April, 1995.
 }
 
 
-/*c  Routine for calculation of fk. Typically used for K < 100.0.
-c  Funtion QROMB8 is based on routine from Numerical Recipes.
+/*c  Routine for calculation of fk. Typically used for K < 100.0. 
 c  Input: x	gamma*theta
 c         y	gamma*psi
 c         k	deflection parameter
