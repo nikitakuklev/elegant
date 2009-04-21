@@ -3049,7 +3049,7 @@ void summarize_optimization_setup(OPTIMIZATION_DATA *_optimize);
 void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *error1, LINE_LIST *beamline1, 
                  BEAM *beam1, OUTPUT_FILES *output1, OPTIMIZATION_DATA *optimization_data1, 
                  void *chromData, long beam_type1, long doClosedOrbit, long doChromCorr,
-                 void *correct, long correctMode, void *tuneData, long doTuneCorr);
+                 void *correct, long correctMode, void *tuneData, long doTuneCorr, long doFindAperture);
 void add_optimization_covariable(OPTIMIZATION_DATA *_optimize, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 
 /* prototype for sample.c */
@@ -3096,16 +3096,16 @@ long run_closed_orbit(RUN *run, LINE_LIST *beamline, double *starting_coord, BEA
 void setup_closed_orbit(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 
 /* prototypes for aperture_search.c */
-void setup_aperture_search(NAMELIST_TEXT *nltext, RUN *run, VARY *control);
+void setup_aperture_search(NAMELIST_TEXT *nltext, RUN *run, VARY *control, long *optimizationMode);
 long do_aperture_search(RUN *run, VARY *control, double *referenceCoord, 
-			ERRORVAL *errcon, LINE_LIST *beamline);
+			ERRORVAL *errcon, LINE_LIST *beamline, double *apertureReturn);
 long do_aperture_search_mp(RUN *run, VARY *control, double *referenceCoord,
 			   ERRORVAL *errcon, LINE_LIST *beamline);
 long do_aperture_search_sp(RUN *run, VARY *control, double *referenceCoord, 
 			   ERRORVAL *errcon, LINE_LIST *beamline);
 long do_aperture_search_line(RUN *run, VARY *control, double *referenceCoord,
 			     ERRORVAL *errcon, LINE_LIST *beamline,
-			     long three);
+			     long number, double *apertureReturn);
 void finish_aperture_search(RUN *run, VARY *control,  ERRORVAL *errcon, LINE_LIST *beamline);
 
 /* prototypes for analyze.c */

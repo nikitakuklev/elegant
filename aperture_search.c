@@ -63,7 +63,8 @@ static long mode_code = 0;
 void setup_aperture_search(
 			   NAMELIST_TEXT *nltext,
 			   RUN *run,
-			   VARY *control
+			   VARY *control,
+                           long *optimizationMode
 			   )
 {
   char description[200];
@@ -84,8 +85,8 @@ void setup_aperture_search(
   if (echoNamelists) print_namelist(stdout, &find_aperture);
 
   /* check for data errors */
-  if (!output)
-    bomb("no output filename specified", NULL);
+  if (!output && !optimization_mode)
+    bomb("no output filename specified (required if optimization_mode=0)", NULL);
   if (xmin>=xmax)
     bomb("xmin >= xmax", NULL);
   if (ymin>=ymax)
@@ -106,61 +107,66 @@ void setup_aperture_search(
   }
   if ((mode_code=match_string(mode, search_mode, N_SEARCH_MODES, 0))<0)
     bomb("unknown search mode", NULL);
+  if (optimization_mode && (mode_code<=TWO_LINE_MODE || (mode_code==LINE_MODE && n_lines<3)))
+    bomb("dynamic aperture optimization requires use of n-line mode with at least 3 lines", NULL);
   if (offset_by_orbit && mode_code==SP_MODE)
     bomb("can't presently offset_by_orbit for that mode", NULL);
 
-  output = compose_filename(output, run->rootname);
-  sprintf(description, "%s aperture search", search_mode[mode_code]);
-  SDDS_ElegantOutputSetup(&SDDS_aperture, output, SDDS_BINARY, 1, 
-			  description, run->runfile, run->lattice, parameter_definition, 
-			  N_PARAMETERS-(mode_code>=TWO_LINE_MODE && mode_code<=LINE_MODE?0:1),
-			  column_definition, N_COLUMNS, "setup_aperture_search", SDDS_EOS_NEWFILE);
-
-  if (control->n_elements_to_vary) 
-    if (!SDDS_DefineSimpleParameters(&SDDS_aperture, control->n_elements_to_vary,
-				     control->varied_quan_name, control->varied_quan_unit, SDDS_DOUBLE)) {
-      SDDS_SetError("Unable to define additional SDDS parameters (setup_aperture_search)");
+  if (!optimization_mode) {
+    output = compose_filename(output, run->rootname);
+    sprintf(description, "%s aperture search", search_mode[mode_code]);
+    SDDS_ElegantOutputSetup(&SDDS_aperture, output, SDDS_BINARY, 1, 
+                            description, run->runfile, run->lattice, parameter_definition, 
+                            N_PARAMETERS-(mode_code>=TWO_LINE_MODE && mode_code<=LINE_MODE?0:1),
+                            column_definition, N_COLUMNS, "setup_aperture_search", SDDS_EOS_NEWFILE);
+    if (control->n_elements_to_vary) 
+      if (!SDDS_DefineSimpleParameters(&SDDS_aperture, control->n_elements_to_vary,
+                                       control->varied_quan_name, control->varied_quan_unit, SDDS_DOUBLE)) {
+        SDDS_SetError("Unable to define additional SDDS parameters (setup_aperture_search)");
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      }
+    
+    if (!SDDS_WriteLayout(&SDDS_aperture)) {
+      SDDS_SetError("Unable to write SDDS layout for aperture search");
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
-
-  if (!SDDS_WriteLayout(&SDDS_aperture)) {
-    SDDS_SetError("Unable to write SDDS layout for aperture search");
-    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-  }
-
-  if (boundary && (mode_code==SP_MODE || mode_code==MP_MODE)) {
-    FILE *fp;
-    boundary = compose_filename(boundary, run->rootname);
-    fp = fopen_e(boundary, "w", 0);
-    fputs("SDDS1\n&column name=x, units=m, type=double &end\n", fp);
-    fputs("&column name=y, units=m, type=double &end\n", fp);
-    fprintf(fp, "&parameter name=MplTitle, type=string, fixed_value=\"Aperture search boundary for run %s\", &end\n",
-	    run->runfile);
-    fputs("&data mode=ascii, no_row_counts=1 &end\n", fp);
-    fprintf(fp, "%e\t%e\n", xmin, ymin);
-    fprintf(fp, "%e\t%e\n", xmin, ymax);
-    fprintf(fp, "%e\t%e\n", xmax, ymax);
-    fprintf(fp, "%e\t%e\n", xmax, ymin);
-    fprintf(fp, "%e\t%e\n", xmin, ymin);
-    fclose(fp);
-  }
-
-  fpSearchOutput = NULL;
-  if (search_output) {
-    if (mode_code!=SP_MODE) {
-      fprintf(stdout, "Error: search_output field can only be used with single-particle mode\n");
-      exit(1);
-    }
-    search_output = compose_filename(search_output, run->rootname);
-    fpSearchOutput = fopen_e(search_output, "w", 0);
-    fputs("SDDS1\n&parameter name=Step, type=long &end\n", fpSearchOutput);
-    fputs("&parameter name=x0, type=double, units=m &end\n", fpSearchOutput);
-    fputs("&parameter name=y0, type=double, units=m &end\n", fpSearchOutput);
-    fputs("&parameter name=SearchFromRight, type=short &end\n", fpSearchOutput);
-    fputs("&parameter name=IsStable, type=short &end\n", fpSearchOutput);
-    fputs("&data mode=ascii no_row_counts=1 &end\n", fpSearchOutput);
-  }
     
+    if (boundary && (mode_code==SP_MODE || mode_code==MP_MODE)) {
+      FILE *fp;
+      boundary = compose_filename(boundary, run->rootname);
+      fp = fopen_e(boundary, "w", 0);
+      fputs("SDDS1\n&column name=x, units=m, type=double &end\n", fp);
+      fputs("&column name=y, units=m, type=double &end\n", fp);
+      fprintf(fp, "&parameter name=MplTitle, type=string, fixed_value=\"Aperture search boundary for run %s\", &end\n",
+              run->runfile);
+      fputs("&data mode=ascii, no_row_counts=1 &end\n", fp);
+      fprintf(fp, "%e\t%e\n", xmin, ymin);
+      fprintf(fp, "%e\t%e\n", xmin, ymax);
+      fprintf(fp, "%e\t%e\n", xmax, ymax);
+      fprintf(fp, "%e\t%e\n", xmax, ymin);
+      fprintf(fp, "%e\t%e\n", xmin, ymin);
+      fclose(fp);
+    }
+
+    fpSearchOutput = NULL;
+    if (search_output) {
+      if (mode_code!=SP_MODE) {
+        fprintf(stdout, "Error: search_output field can only be used with single-particle mode\n");
+        exit(1);
+      }
+      search_output = compose_filename(search_output, run->rootname);
+      fpSearchOutput = fopen_e(search_output, "w", 0);
+      fputs("SDDS1\n&parameter name=Step, type=long &end\n", fpSearchOutput);
+      fputs("&parameter name=x0, type=double, units=m &end\n", fpSearchOutput);
+      fputs("&parameter name=y0, type=double, units=m &end\n", fpSearchOutput);
+      fputs("&parameter name=SearchFromRight, type=short &end\n", fpSearchOutput);
+      fputs("&parameter name=IsStable, type=short &end\n", fpSearchOutput);
+      fputs("&data mode=ascii no_row_counts=1 &end\n", fpSearchOutput);
+    }
+  }
+  
+  *optimizationMode = optimization_mode;
+
   log_exit("setup_aperture_search");
 }
 
@@ -170,42 +176,44 @@ long do_aperture_search(
 			VARY *control,
 			double *referenceCoord,
 			ERRORVAL *errcon,
-			LINE_LIST *beamline
+			LINE_LIST *beamline,
+                        double *returnValue
 			)
 {    
   long retcode;
-
+  *returnValue = 0;
+  
   log_entry("do_aperture_search");
   switch (mode_code) {
   case N_LINE_MODE:
     if (n_lines%2==0)
       bomb("n_lines must be an odd number for aperture search", NULL);
-    retcode = do_aperture_search_line(run, control, referenceCoord, errcon, beamline, n_lines);
+    retcode = do_aperture_search_line(run, control, referenceCoord, errcon, beamline, n_lines, returnValue);
     break;
   case MP_MODE:
     retcode = do_aperture_search_mp(run, control, referenceCoord, errcon, beamline);
     break;
   case ONE_LINE_MODE:
   case LINE_MODE:
-    retcode = do_aperture_search_line(run, control, referenceCoord, errcon, beamline, 1);
+    retcode = do_aperture_search_line(run, control, referenceCoord, errcon, beamline, 1, returnValue);
     break;
   case TWO_LINE_MODE:
-    retcode = do_aperture_search_line(run, control, referenceCoord, errcon, beamline, 2);
+    retcode = do_aperture_search_line(run, control, referenceCoord, errcon, beamline, 2, returnValue);
     break;
   case THREE_LINE_MODE:
-    retcode = do_aperture_search_line(run, control, referenceCoord, errcon, beamline, 3);
+    retcode = do_aperture_search_line(run, control, referenceCoord, errcon, beamline, 3, returnValue);
     break;
   case FIVE_LINE_MODE:
-    retcode = do_aperture_search_line(run, control, referenceCoord, errcon, beamline, 5);
+    retcode = do_aperture_search_line(run, control, referenceCoord, errcon, beamline, 5, returnValue);
     break;
   case SEVEN_LINE_MODE:
-    retcode = do_aperture_search_line(run, control, referenceCoord, errcon, beamline, 7);
+    retcode = do_aperture_search_line(run, control, referenceCoord, errcon, beamline, 7, returnValue);
     break;
   case NINE_LINE_MODE:
-    retcode = do_aperture_search_line(run, control, referenceCoord, errcon, beamline, 9);
+    retcode = do_aperture_search_line(run, control, referenceCoord, errcon, beamline, 9, returnValue);
     break;
   case ELEVEN_LINE_MODE:
-    retcode = do_aperture_search_line(run, control, referenceCoord, errcon, beamline, 11);
+    retcode = do_aperture_search_line(run, control, referenceCoord, errcon, beamline, 11, returnValue);
     break;
   case SP_MODE:
   default:
@@ -480,7 +488,6 @@ long do_aperture_search_mp(
   }
   if (!inhibitFileSync)
     SDDS_DoFSync(&SDDS_aperture);
-        
   log_exit("do_aperture_search_mp.5");
 
   log_entry("do_aperture_search_mp.8");
@@ -762,15 +769,18 @@ void finish_aperture_search(
                             LINE_LIST *beamline
                             )
 {
-  if (SDDS_IsActive(&SDDS_aperture) && !SDDS_Terminate(&SDDS_aperture)) {
-    SDDS_SetError("Problem terminating SDDS output (finish_aperture_search)");
-    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-  }
-  if (fpSearchOutput) {
-    fclose(fpSearchOutput);
-    fpSearchOutput = NULL;
+  if (output) {
+    if (SDDS_IsActive(&SDDS_aperture) && !SDDS_Terminate(&SDDS_aperture)) {
+      SDDS_SetError("Problem terminating SDDS output (finish_aperture_search)");
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+    if (fpSearchOutput) {
+      fclose(fpSearchOutput);
+      fpSearchOutput = NULL;
+    }
   }
 }
+
 
 /* line search routine */
 
@@ -780,7 +790,8 @@ long do_aperture_search_line(
 			     double *referenceCoord,
 			     ERRORVAL *errcon,
 			     LINE_LIST *beamline,
-			     long lines
+			     long lines,
+                             double *returnValue
 			     )
 {
   double **coord;
@@ -847,22 +858,24 @@ long do_aperture_search_line(
     fflush(stdout);
   }
 
-  if (!SDDS_StartTable(&SDDS_aperture, lines)) {
-    SDDS_SetError("Unable to start SDDS table (do_aperture_search)");
-    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  if (output) {
+    if (!SDDS_StartTable(&SDDS_aperture, lines)) {
+      SDDS_SetError("Unable to start SDDS table (do_aperture_search)");
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+    SDDS_SetParameters(&SDDS_aperture, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, 0, control->i_step, -1);
+    if (control->n_elements_to_vary) {
+      for (index=0; index<control->n_elements_to_vary; index++)
+        if (!SDDS_SetParameters(&SDDS_aperture, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, index+1,
+                                control->varied_quan_value[index], -1))
+          break;
+    }
+    if (SDDS_NumberOfErrors()) {
+      SDDS_SetError("Problem setting SDDS parameter values (do_aperture_search)");
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
   }
-  SDDS_SetParameters(&SDDS_aperture, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, 0, control->i_step, -1);
-  if (control->n_elements_to_vary) {
-    for (index=0; index<control->n_elements_to_vary; index++)
-      if (!SDDS_SetParameters(&SDDS_aperture, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, index+1,
-			      control->varied_quan_value[index], -1))
-	break;
-  }
-  if (SDDS_NumberOfErrors()) {
-    SDDS_SetError("Problem setting SDDS parameter values (do_aperture_search)");
-    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-  }
-    
+  
   originStable = 0;
   for (line=0; line<lines; line++) {
     if (dxFactor[line]>0)
@@ -938,13 +951,15 @@ long do_aperture_search_line(
     }
     xLimit[line] = xSurvived;
     yLimit[line] = ySurvived;
-    if (!SDDS_SetRowValues(&SDDS_aperture, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, line,
-			   IC_X, xSurvived, IC_Y, ySurvived, -1)) {
-      SDDS_SetError("Problem setting SDDS row values (do_aperture_search)");
-      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    if (output) {
+      if (!SDDS_SetRowValues(&SDDS_aperture, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, line,
+                             IC_X, xSurvived, IC_Y, ySurvived, -1)) {
+        SDDS_SetError("Problem setting SDDS row values (do_aperture_search)");
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+      }
     }
   }
-
+  
   area = 0;
   if (lines>1) {
     /* compute the area */
@@ -977,29 +992,32 @@ long do_aperture_search_line(
       area += (xLimit[line+1]-xLimit[line])*(yLimit[line+1]+yLimit[line])/2;
 
   }
+  *returnValue = area;
 
-  if (!SDDS_SetColumn(&SDDS_aperture, SDDS_SET_BY_NAME, xLimit, lines, "xClipped") ||
-      !SDDS_SetColumn(&SDDS_aperture, SDDS_SET_BY_NAME, yLimit, lines, "yClipped") ||
-      !SDDS_SetParameters(&SDDS_aperture, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-                         "Area", area, NULL)) {
-    SDDS_SetError("Problem setting parameters values in SDDS table (do_aperture_search)");
-    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-  }
-  if (control->n_elements_to_vary) {
+  if (output) {
+    if (!SDDS_SetColumn(&SDDS_aperture, SDDS_SET_BY_NAME, xLimit, lines, "xClipped") ||
+        !SDDS_SetColumn(&SDDS_aperture, SDDS_SET_BY_NAME, yLimit, lines, "yClipped") ||
+        !SDDS_SetParameters(&SDDS_aperture, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+                            "Area", area, NULL)) {
+      SDDS_SetError("Problem setting parameters values in SDDS table (do_aperture_search)");
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+    if (control->n_elements_to_vary) {
     long i;
     for (i=0; i<control->n_elements_to_vary; i++)
       if (!SDDS_SetParameters(&SDDS_aperture, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, i+N_PARAMETERS,
 			      control->varied_quan_value[i], -1))
 	break;
   }
-
-  if (!SDDS_WriteTable(&SDDS_aperture)) {
-    SDDS_SetError("Problem writing SDDS table (do_aperture_search)");
-    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-  }
-  if (!inhibitFileSync)
-    SDDS_DoFSync(&SDDS_aperture);
     
+    if (!SDDS_WriteTable(&SDDS_aperture)) {
+      SDDS_SetError("Problem writing SDDS table (do_aperture_search)");
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+    if (!inhibitFileSync)
+      SDDS_DoFSync(&SDDS_aperture);
+  }
+  
   free_czarray_2d((void**)coord, 1, 7);
   free(dxFactor);
   free(dyFactor);

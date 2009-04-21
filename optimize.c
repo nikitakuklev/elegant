@@ -566,7 +566,7 @@ static long final_property_values;
 static double charge;
 static unsigned long optim_func_flags;
 static long force_output;
-static long doClosedOrbit, doChromCorr, doTuneCorr;
+static long doClosedOrbit, doChromCorr, doTuneCorr, doFindAperture;
 
 /* structure to keep results of last N optimization function
  * evaluations, so we don't track the same thing twice.
@@ -601,7 +601,8 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
                  void *chromCorrData1, long beam_type1,
                  long doClosedOrbit1, long doChromCorr1,
                  void *orbitCorrData1, long orbitCorrMode1,
-                 void *tuneCorrData1, long doTuneCorr1)
+                 void *tuneCorrData1, long doTuneCorr1,
+                 long doFindAperture1)
 {
     static long optUDFcount = 0;
     double optimization_function(double *values, long *invalid);
@@ -633,6 +634,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
     orbitCorrMode     = orbitCorrMode1;
     tuneCorrData      = (TUNE_CORRECTION*)tuneCorrData1;
     doTuneCorr        = doTuneCorr1;
+    doFindAperture    = doFindAperture1;
     
     n_evaluations_made = 0;
     n_passes_made      = 0;
@@ -1521,6 +1523,15 @@ double optimization_function(double *value, long *invalid)
 #endif
     track_beam(run, control, error, variables, beamline, beam, output, optim_func_flags, 1,
                &charge);
+
+    if (doFindAperture) {
+      double area;
+      do_aperture_search(run, control, startingOrbitCoord, error, beamline, &area);
+      rpn_store(area, NULL, rpn_create_mem("DaArea", 0));
+      if (optimization_data->verbose)
+        printf("DA area is %e\n", area);
+    } 
+
   }
   
     if (!*invalid) {

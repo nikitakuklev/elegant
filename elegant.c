@@ -288,13 +288,14 @@ char **argv;
   char *saved_lattice = NULL;
   long correction_setuped, run_setuped, run_controled, error_controled, beam_type, commandCode;
   long do_chromatic_correction = 0, do_twiss_output = 0, fl_do_tune_correction = 0, do_coupled_twiss_output = 0;
-  long do_moments_output = 0;
+  long do_moments_output = 0, do_find_aperture = 0;
   long do_closed_orbit = 0, do_matrix_output = 0, do_response_output = 0;
   long last_default_order = 0, new_beam_flags, links_present, twiss_computed = 0, moments_computed = 0;
   long correctionDone, linear_chromatic_tracking_setup_done = 0;
   double *starting_coord, finalCharge;
   long namelists_read = 0, failed, firstPass;
   char *semaphoreFile[2];
+  double apertureReturn;
 #if USE_MPI
 #ifdef MPI_DEBUG
   FILE *fpError; 
@@ -556,7 +557,7 @@ char **argv;
       
       run_setuped = run_controled = error_controled = correction_setuped = do_closed_orbit = do_chromatic_correction = 
         fl_do_tune_correction = 0;
-      do_twiss_output = do_matrix_output = do_response_output = do_coupled_twiss_output = do_moments_output = 0;
+      do_twiss_output = do_matrix_output = do_response_output = do_coupled_twiss_output = do_moments_output = do_find_aperture = 0;
       linear_chromatic_tracking_setup_done = 0;
 
       set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
@@ -1093,7 +1094,7 @@ char **argv;
         do_optimize(&namelist_text, &run_conditions, &run_control, &error_control, beamline, &beam,
                     &output_data, &optimize, &chrom_corr_data, beam_type, do_closed_orbit,
                     do_chromatic_correction, &correct, correct.mode, &tune_corr_data, 
-                    fl_do_tune_correction);
+                    fl_do_tune_correction, do_find_aperture);
         if (parameters)
           dumpLatticeParameters(parameters, &run_conditions, beamline);
       }
@@ -1165,7 +1166,8 @@ char **argv;
     case MOMENTUM_APERTURE:
       switch (commandCode) {
       case FIND_APERTURE:
-        setup_aperture_search(&namelist_text, &run_conditions, &run_control);
+        setup_aperture_search(&namelist_text, &run_conditions, &run_control, &do_find_aperture);
+        if (do_find_aperture) continue;
         break;
       case FREQUENCY_MAP:
         setupFrequencyMap(&namelist_text, &run_conditions, &run_control);
@@ -1280,7 +1282,7 @@ char **argv;
         switch (commandCode) {
         case FIND_APERTURE:
           do_aperture_search(&run_conditions, &run_control, starting_coord,
-			     &error_control, beamline);
+			     &error_control, beamline, &apertureReturn);
           break;
         case FREQUENCY_MAP:
           doFrequencyMap(&run_conditions, &run_control, starting_coord, &error_control, beamline);
