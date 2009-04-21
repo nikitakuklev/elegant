@@ -11,6 +11,9 @@
    for calculating wiggler and bending magnet spectra using the bessel function approximation.
 
 $Log: not supported by cvs2svn $
+Revision 1.1  2009/04/21 15:23:02  shang
+first version, converted from ws.f by Roger Dejus
+
 */
 
 #include "scan.h"
@@ -46,19 +49,13 @@ static char *mode_options[CLO_MODES]={
   "integratedSpectrum", "powerDensity"
   };
 
-char *USAGE="sddsws <inputFile> <outputFile> [-pipe[=in|out]] [-nowarnings] \n\
+char *USAGE="sddsws <outputFile> [-pipe[=out]] [-nowarnings] \n\
      [-electronBeam=current=<value>(mA),energy=<value>(GeV)] \n\
      [-photoEneryg=maximum=<value>(eV),minimum=<value>(eV),points=<number>] \n\
      [-magnet=period=<value>(cm),<numberOfPeriods>=<number>,kx=<value>,ky=<valu>[,bendingMagnet]] \n\
      [-pinhole=distance=<value>,xposition=<value>,yposition=<value>,xsize=<value>,ysize=<value>,xnumber=<integer>,ynumber=<integer>]\n\
      [-calculationMode=fluxDistribution|fluxSpectrum|brightness|pinholeSpectrum|integratedSpectrum|powerDensity|1-6] \n\
-<inputfile>      if both <inputfile> and <outputfile> are provided, \n\
-                 the inputfile is the same input file as sddsbrightness, it can be a \n\
-                 twiss file or output from sddsanalyzebeam. <inputfile> provides \n\
-                 electron beam parameters, and maybe magnet, pinhole and photon parameters.\n\
-                 If <outputfile> is not provided, the <inputfile> will be taken as \n\
-                 <outputfile>, the required input parameters must be provided through other options.\n\
-electronBeam     Specifies the electron beam (storage ring) parameters (which can also be provided by input file): \n\
+electronBeam     Specifies the electron beam (storage ring) parameters: \n\
                  current  electron beam current in mA. (default is 100mA). \n\
                  energy   electron energy in Gev. (default is 7.0Gev).\n\
 photonEnergy     specifies the maximum and minimum photon energy in eV, \n\
@@ -130,7 +127,7 @@ INTEG_PARAMETER integ_par;
 
 int main(int argc, char **argv)
 {
-  char *inputfile=NULL, *outputfile=NULL;
+  char  *outputfile=NULL;
   double energy=7.0, current=100.0, emax=-1, emin=-1, xpc=0, ypc=0, xsize=-1, ysize=-1, kx=0, ky=-1, period=-1, pdistance=0;
   long mode=-1, nxp=20, nyp=20, nE=500, i, j, k, bendingMagnet=0, i_arg, nowarnings=0, mode_index=-1, isAngular=0, total_rows=0, index;
   double nPeriod;
@@ -156,6 +153,8 @@ int main(int argc, char **argv)
       case CLO_PIPE:
         if (!processPipeOption(s_arg[i_arg].list+1, s_arg[i_arg].n_items-1, &pipeFlags))
           SDDS_Bomb("invalid -pipe syntax");
+        if (!(pipeFlags&USE_STDOUT))
+          SDDS_Bomb("invalid -pipe flag provided.");
         break;
       case CLO_ELECTRON_BEAM:
         if (s_arg[i_arg].n_items<2)
@@ -240,20 +239,16 @@ int main(int argc, char **argv)
         exit(1);
       }
     } else {
-      if (inputfile==NULL)
-        inputfile =  s_arg[i_arg].list[0];
-      else if (outputfile==NULL)
+      if (outputfile==NULL)
         outputfile = s_arg[i_arg].list[0];
       else
         SDDS_Bomb("too many filenames");
     }
   }
-  if (!outputfile && !inputfile && !pipeFlags)
+  if (!outputfile && !pipeFlags)
     SDDS_Bomb("output file not provided.");
-  if (!outputfile && !pipeFlags) {
-    outputfile = inputfile;
-    inputfile = NULL;
-  }
+  if (outputfile && pipeFlags) 
+    SDDS_Bomb("Too many files provided.");
  
   checkWSInput(mode, &xpc, &ypc, xsize, ysize, nE, kx, ky, bendingMagnet, &isAngular, &pdistance, &xsize, &ysize, &nxp, &nyp, emin, emax);
   compute_constants(nE, nxp, nyp, nPeriod, energy, current, kx, ky, period, pdistance, emax, emin, xpc, ypc, xsize, ysize);
@@ -991,8 +986,8 @@ void bendingMagnet_power_distribution(long nxp, long nyp, long nE, double ky, do
 
   for (ie=0; ie<neta; ie++) {
     eta[ie] = etamin + ie*deta;
-    asigma[ie] = dbeskv_nu(eta[ie], 2.0/3.0); /* Modified Bessel function of 2nd kind (2/3)*/
-    api[ie] =  dbeskv_nu(eta[ie], 1.0/3.0); /* Modified Bessel function of 2nd kind (1/3) */
+    asigma[ie] = k23(eta[ie]); /* Modified Bessel function of 2nd kind (2/3)*/
+    api[ie] =  k13(eta[ie]); /* Modified Bessel function of 2nd kind (1/3) */
   }
 
   *irradiance = calloc(sizeof(**irradiance), nxp * nyp);
@@ -1096,7 +1091,7 @@ void fk(double xg, double yg, double k_magnet, double *s0, double *s1, double *s
   double gk, c, xc, yc, kc, A, B, eps, fkh, fkv;
   A=0;
   B=PI;
-  eps = 1.0e-7;
+  eps = 1.0e-12;
   
   gk = k_magnet*(pow(k_magnet, 6) +24.0/7.0*pow(k_magnet, 4) +4.0*k_magnet*k_magnet +16.0/7.0)/pow(1.0 + k_magnet*k_magnet, 3.5);
   c  = 2.0*16.0/7.0*k_magnet/PI/gk;
@@ -1105,8 +1100,8 @@ void fk(double xg, double yg, double k_magnet, double *s0, double *s1, double *s
   integ_par.yc = yg;
   
 
-  fkh = c*qromb8(fkh_integrand,A,B,eps);
-  fkv = c*qromb8(fkv_integrand,A,B,eps);
+  fkh = c*qromb(fkh_integrand, 20,A,B,eps);
+  fkv = c*qromb(fkv_integrand, 20,A,B,eps);
   *s0  = fkh + fkv;
   *s1  = fkh - fkv;
   *s2  = 0.0;
