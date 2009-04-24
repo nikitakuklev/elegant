@@ -7,9 +7,12 @@
 # in the file LICENSE that is included with this distribution. 
 #*************************************************************************
 #
-# $Id: Makefile.OAG,v 1.12 2009-04-02 19:25:42 borland Exp $
+# $Id: Makefile.OAG,v 1.13 2009-04-24 18:58:10 soliday Exp $
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.12  2009/04/02 19:25:42  borland
+# Added doubleDist6 script.
+#
 # Revision 1.11  2009/03/17 17:09:28  borland
 # Added fracEmittance script.
 #
@@ -98,6 +101,7 @@ mdbcommon_DIR = $(EPICS_EXTENSIONS_LIB)
 rpnlib_DIR = $(EPICS_EXTENSIONS_LIB)
 meschach_DIR = $(EPICS_EXTENSIONS_LIB)
 fdlibm_DIR = $(EPICS_EXTENSIONS_LIB)
+gsl_DIR = $(EPICS_EXTENSIONS_LIB)
 
 
 sddsemitproc_SRCS = sddsemitproc.c
@@ -121,4 +125,7 @@ sddsfindresonances_SRCS = sddsfindresonances.c
 sddsanalyzebeam_SRCS = sddsanalyzebeam.c
 sddsanalyzebeam_CFLAGS = -I$(EPICS_EXTENSIONS)/src/SDDS/meschach
 
-csrImpedance_SRCS = gsl_code.c csrImpedance.c
+csrImpedance_SRCS = csrImpedance.c
+csrImpedance_CFLAGS = -I$(EPICS_EXTENSIONS)/src/SDDS/gsl
+csrImpedance_LIBS = gsl
+

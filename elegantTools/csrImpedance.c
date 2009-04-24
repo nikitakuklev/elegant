@@ -9,6 +9,9 @@
 
 /* 
  * $Log: not supported by cvs2svn $
+ * Revision 1.7  2008/08/21 14:53:55  borland
+ * Added option to change the bending angle.
+ *
  * Revision 1.6  2008/08/13 19:01:54  soliday
  * Updated to work without needing the entire GSL library installed.
  *
@@ -31,9 +34,10 @@
 #include "SDDS.h"
 #include "scan.h"
 #include "mdb.h"
-#include "gsl_code.h"
 #include <math.h>
-  
+#include "gsl/gsl_complex_math.h"
+#include "gsl/gsl_sf_airy.h"
+
 #define CLO_HEIGHT 0
 #define CLO_FREQUENCY_LIMIT 1
 #define CLO_NUMBER 2
@@ -66,10 +70,10 @@ of Warnock's equation.\n";
 const double Z0 = 376.730313461770606;   /* mu_o * c_mks  */
 const double C5=1.004524;
 
-fcomplex sum_F0(double height, double k, double radius);
+gsl_complex sum_F0(double height, double k, double radius);
 void csr_impedance(double height, double radius, double angle, 
   double fmin, double fmax, long N, double filter1, double filter2, SDDS_DATASET *SDDS_out);
-fcomplex Z_asymtotic(double height, double radius, double f);
+gsl_complex Z_asymtotic(double height, double radius, double f);
 void SetupOutput(char *filename, SDDS_DATASET *SDDS_out);
 
 
@@ -165,12 +169,12 @@ void csr_impedance(double height, double radius, double angle,
 {
   long Np, i; 
   double df, f, k, fNorm, factor;
-  fcomplex *Z, *Z_LLimit;
+  gsl_complex *Z, *Z_LLimit;
   Np = pow(2,N)+1;
   df=(fmax-fmin)/(Np-1);
   
-  Z=(fcomplex *)calloc(sizeof(*Z), Np);
-  Z_LLimit=(fcomplex *)calloc(sizeof(*Z), Np);
+  Z=(gsl_complex *)calloc(sizeof(*Z), Np);
+  Z_LLimit=(gsl_complex *)calloc(sizeof(*Z), Np);
   if (!SDDS_StartPage(SDDS_out, Np) ||
       !SDDS_SetParameters(SDDS_out, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
                           "Height", height, "Radius", radius, "MaximumFrequency", fmax, 
@@ -222,11 +226,11 @@ void csr_impedance(double height, double radius, double angle,
   free(Z);
 }
 
-fcomplex sum_F0 (double h, double k, double r)
+gsl_complex sum_F0 (double h, double k, double r)
 {
   int p, pMax=50;
   double beta, beta2, tmp=PI/h*pow(r/2/k/k, 1.0/3); 
-  fcomplex sum=gsl_complex_rect(0.0,0.0), tmp1, tmp2, tmp3;
+  gsl_complex sum=gsl_complex_rect(0.0,0.0), tmp1, tmp2, tmp3;
   double ai,bi,aip,bip;
 
   for (p=0; p<pMax; p++) {
@@ -252,7 +256,7 @@ fcomplex sum_F0 (double h, double k, double r)
   return sum; 
 }
 
-fcomplex Z_asymtotic  (double h, double r, double k)
+gsl_complex Z_asymtotic  (double h, double r, double k)
 {
   double k2h3=pow(k,2.0)*pow(h,3.0), PI3=pow(PI,3.0); 
   return gsl_complex_mul_real( gsl_complex_rect(exp(-2*PI3/r/3/k2h3), -1.5*C5*pow(k2h3/PI3/r, 2.0)),PI*Z0/k/h/h);
