@@ -42,6 +42,7 @@ else
   #MPI_PATH = /share/mpich2_mpd_sock/bin/
   #MPI_PATH = /share/mpich/ch_p4/bin/
   USER_MPI_FLAGS += -DSDDS_MPI_IO
+  MPI_PATH = /data/mpich2_mpd_nemesis/bin/
   CC = $(MPI_PATH)mpicc   $(USER_MPI_FLAGS)   
   CCC = $(MPI_PATH)mpicxx  $(USER_MPI_FLAGS)
   # memory debugging with totalview
@@ -97,7 +98,7 @@ endif
 ifdef WIN32
 USR_LIBS = 	mdbcommon matlib fftpack SDDS1 \
 		rpnlib mdbmth namelist mdblib \
-		meschach z fdlibm
+		meschach z fdlibm gsl
 z_DIR = $(EPICS_EXTENSIONS_LIB)
 
 ifeq ($(MPI),1)
@@ -111,11 +112,11 @@ else
 ifeq ($(MPI),1)
 USR_LIBS = 	mdbcommon matlib fftpack SDDSmpi \
 		rpnlib mdbmth namelist mdblib \
-		meschach
+		meschach gsl
 else
 USR_LIBS = 	mdbcommon matlib fftpack SDDS1 \
 		rpnlib mdbmth namelist mdblib \
-		meschach
+		meschach gsl
 endif
 SYS_PROD_LIBS_DEFAULT += z 
 SYS_PROD_LIBS_Linux += z 
@@ -266,6 +267,7 @@ SDDS1_DIR = $(EPICS_EXTENSIONS_LIB)
 namelist_DIR = $(EPICS_EXTENSIONS_LIB)
 fftpack_DIR = $(EPICS_EXTENSIONS_LIB)
 mdbmth_DIR = $(EPICS_EXTENSIONS_LIB)
+gsl_DIR = $(EPICS_EXTENSIONS_LIB)
 matlib_DIR = $(EPICS_EXTENSIONS_LIB)
 mdblib_DIR = $(EPICS_EXTENSIONS_LIB)
 mdbcommon_DIR = $(EPICS_EXTENSIONS_LIB)

@@ -7,9 +7,12 @@
 # in the file LICENSE that is included with this distribution. 
 #*************************************************************************
 #
-# $Id: Makefile.OAG,v 1.13 2009-04-24 18:58:10 soliday Exp $
+# $Id: Makefile.OAG,v 1.14 2009-04-27 14:36:12 borland Exp $
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.13  2009/04/24 18:58:10  soliday
+# Updated to work with the gsl library that we now include with CVS.
+#
 # Revision 1.12  2009/04/02 19:25:42  borland
 # Added doubleDist6 script.
 #
@@ -80,12 +83,12 @@ USR_CFLAGS = 	-I$(EPICS_EXTENSIONS)/src/SDDS/include -I$(EPICS_EXTENSIONS_INCLUD
 ifdef WIN32
 USR_LIBS = 	mdbcommon matlib fftpack SDDS1 \
 		namelist rpnlib mdbmth mdblib \
-		meschach z fdlibm
+		meschach z fdlibm gsl
 z_DIR = $(EPICS_EXTENSIONS_LIB)
 else
 USR_LIBS = 	mdbcommon matlib fftpack SDDS1 \
 		namelist rpnlib mdbmth mdblib \
-		meschach
+		meschach gsl
 SYS_PROD_LIBS_DEFAULT += z 
 SYS_PROD_LIBS_Linux += z
 SYS_PROD_LIBS_solaris += z curses rt 
