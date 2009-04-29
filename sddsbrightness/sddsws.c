@@ -11,6 +11,9 @@
    for calculating wiggler and bending magnet spectra using the bessel function approximation.
 
 $Log: not supported by cvs2svn $
+Revision 1.6  2009/04/29 20:06:32  shang
+to be consistent with ws, assume it is bending magnet when the number of periods is set to 0.5
+
 Revision 1.5  2009/04/29 19:20:40  shang
 fixed another bug in computing the pinhole ydelta when the start position is not at zero  that xsize instead of ysize was used.
 
@@ -786,7 +789,6 @@ void spectral_distribution(long mode, long nE,  long nxp, long nyp, long bending
       spec0 = fac*area0;
       spec1 = fac*area1;
       spec3 = fac*area3;
-      fprintf(stderr, "ie=%d, ra0=%e, ra1=%e, ra3=%e\n", ie, area0, area1, area3);
     } else if (mode==2 || mode==3) {
       /*fixed position */
       spec0 = ra0[0];
