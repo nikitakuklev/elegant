@@ -11,6 +11,9 @@
    for calculating wiggler and bending magnet spectra using the bessel function approximation.
 
 $Log: not supported by cvs2svn $
+Revision 1.5  2009/04/29 19:20:40  shang
+fixed another bug in computing the pinhole ydelta when the start position is not at zero  that xsize instead of ysize was used.
+
 Revision 1.4  2009/04/29 19:02:03  shang
 fixed a typo in syntax text and fixed a bug in allocating memory for cy.
 
@@ -203,6 +206,8 @@ int main(int argc, char **argv)
           SDDS_Bomb("invalid -undulator syntax");
         s_arg[i_arg].n_items++;
         if (dummyFlags & BENDING_MAGNET_FLAG)
+          bendingMagnet = 1;
+        if (nPeriod==0.5)
           bendingMagnet = 1;
         if (bendingMagnet)
           nPeriod = 0.5;
@@ -634,9 +639,9 @@ void compute_irradiance(long nxp, long nyp, long bendingMagnet, double kx, doubl
   
   vpmax = sqrt(1.0 - ECP_FRAC);
   for (i=0; i<nxp; i++) {
+    xg = gamma_ * cx[i];
     for (j=0; j<nyp; j++) {
       k = i * nyp + j;
-      xg = gamma_ * cx[i];
       vp = fabs(xg)/ky;
       yg = gamma_ * cy[j];
       yg2 = yg * yg;
@@ -661,7 +666,8 @@ void compute_irradiance(long nxp, long nyp, long bendingMagnet, double kx, doubl
         api = dbeskv_nu(eta, 1.0/3.0); 
         use roger's k13, and k23, seems to be faster; they were converted into c in mdbmth */
       asigma = k23(eta);
-      api = k13(eta);
+      api = k13(eta);                                   \
+      /*  fprintf(stdout, "eta=%f, asigma=%e, api=%e\n", eta, asigma, api);*/
       ra0[k] = y2*fc*(asigma*asigma + cpi*api*api);
       ra1[k] = y2*fc*(asigma*asigma - cpi*api*api);
       if (bendingMagnet) 
@@ -780,6 +786,7 @@ void spectral_distribution(long mode, long nE,  long nxp, long nyp, long bending
       spec0 = fac*area0;
       spec1 = fac*area1;
       spec3 = fac*area3;
+      fprintf(stderr, "ie=%d, ra0=%e, ra1=%e, ra3=%e\n", ie, area0, area1, area3);
     } else if (mode==2 || mode==3) {
       /*fixed position */
       spec0 = ra0[0];
