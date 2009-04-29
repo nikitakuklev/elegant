@@ -11,6 +11,9 @@
    for calculating wiggler and bending magnet spectra using the bessel function approximation.
 
 $Log: not supported by cvs2svn $
+Revision 1.3  2009/04/21 20:46:16  shang
+removed qromb8 statement
+
 Revision 1.2  2009/04/21 20:35:52  shang
 removed all numerical recipe routines and now uses qromb() for integration, which was converted from netlib.org; and removed the inputfile option.
 
@@ -54,7 +57,7 @@ static char *mode_options[CLO_MODES]={
 
 char *USAGE="sddsws <outputFile> [-pipe[=out]] [-nowarnings] \n\
      [-electronBeam=current=<value>(mA),energy=<value>(GeV)] \n\
-     [-photoEneryg=maximum=<value>(eV),minimum=<value>(eV),points=<number>] \n\
+     [-photoEnergy=maximum=<value>(eV),minimum=<value>(eV),points=<number>] \n\
      [-magnet=period=<value>(cm),<numberOfPeriods>=<number>,kx=<value>,ky=<valu>[,bendingMagnet]] \n\
      [-pinhole=distance=<value>,xposition=<value>,yposition=<value>,xsize=<value>,ysize=<value>,xnumber=<integer>,ynumber=<integer>]\n\
      [-calculationMode=fluxDistribution|fluxSpectrum|brightness|pinholeSpectrum|integratedSpectrum|powerDensity|1-6] \n\
@@ -499,6 +502,10 @@ void checkWSInput(long mode, double *xpc, double *ypc, double xsize, double ysiz
     fprintf(stderr, "On-axis brightness spectrum (mode=3) not implemented in ws!\n");
     exit(1);
     } */
+  if (mode<1) {
+    fprintf(stderr, "Error(sddsws): the computation mode is not provided.\n");
+    exit(1);
+  }
   if (*xpc<0 || *ypc<0) {
     fprintf(stderr, "the pinhole position must be in the first quadrant, xposition and y position can not be less than 0.\n");
     exit(1);
@@ -603,7 +610,7 @@ void compute_constants(long nE, long nxp, long nyp, double nPeriod,
   xp = calloc(sizeof(*xp), nxp+1);
   yp = calloc(sizeof(*yp), nyp+1);
   cx = calloc(sizeof(*cx), nxp+1);
-  cy = calloc(sizeof(*cy), nxp+1);
+  cy = calloc(sizeof(*cy), nyp+1);
   
   for (i=0; i<nxp+1; i++) {
     xp[i] = xpmin + i*dxp;  /* poistion [mm] */
@@ -752,7 +759,6 @@ void spectral_distribution(long mode, long nE,  long nxp, long nyp, long bending
   *irradiance = calloc(sizeof(**irradiance), nE);
  
   *flux = *power =  0;
-  fprintf(stderr, "nE=%d\n", nE);
   ra0 = calloc(sizeof(*ra0), nxp * nyp);
   ra1 = calloc(sizeof(*ra1), nxp * nyp);
   ra3 = calloc(sizeof(*ra3), nxp * nyp);
