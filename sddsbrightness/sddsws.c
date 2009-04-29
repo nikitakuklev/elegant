@@ -11,6 +11,9 @@
    for calculating wiggler and bending magnet spectra using the bessel function approximation.
 
 $Log: not supported by cvs2svn $
+Revision 1.4  2009/04/29 19:02:03  shang
+fixed a typo in syntax text and fixed a bug in allocating memory for cy.
+
 Revision 1.3  2009/04/21 20:46:16  shang
 removed qromb8 statement
 
@@ -602,7 +605,7 @@ void compute_constants(long nE, long nxp, long nyp, double nPeriod,
     xpmin = xpc - xsize/2.0;
     ypmin = ypc - ysize/2.0;
     if (nxp>0) dxp = xsize/nxp;
-    if (nyp>0) dyp = xsize/nyp;
+    if (nyp>0) dyp = ysize/nyp;
   }
   photonE = calloc(sizeof(*photonE), nE);
   for (i=0; i<nE; i++)
@@ -710,7 +713,6 @@ void space_distribution(long mode, long bendingMagnet, long nxp, long nyp, long 
   free(ra3);
   *flux = (*flux)*fac; /*ph/s/0.1%bw */
   *power = (*flux)/BW*e_mks; /*  W/eV */
-  fprintf(stderr, "flux=%f, power=%f\n", *flux, *power);
 }
 
 double trapz2(double *ra, long nxp, long nyp)
