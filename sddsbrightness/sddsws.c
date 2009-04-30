@@ -11,6 +11,9 @@
    for calculating wiggler and bending magnet spectra using the bessel function approximation.
 
 $Log: not supported by cvs2svn $
+Revision 1.7  2009/04/29 20:16:11  shang
+removed printing statements
+
 Revision 1.6  2009/04/29 20:06:32  shang
 to be consistent with ws, assume it is bending magnet when the number of periods is set to 0.5
 
@@ -35,7 +38,6 @@ first version, converted from ws.f by Roger Dejus
 #include "SDDS.h"
 #include "mdb.h"
 #include "ws_constants.h"
-#include "oagphy.h"
 
 #define CLO_ELECTRON_BEAM 0
 #define CLO_PHOTON_ENERGY 1
@@ -585,10 +587,10 @@ void compute_constants(long nE, long nxp, long nyp, double nPeriod,
   gk = 0;
   if (kx< EPSK || ky < EPSK) {
     k_magnet = kx + ky;
-    gk = k_magnet*(pow(k_magnet, 6) + 24.0 * pow(k_magnet,4)/7.0 + 4.0 * k_magnet * k_magnet + 16.0/7.0)/pow(1.0 + k_magnet*k_magnet, 3.5);
+    gk = k_magnet*(ipow(k_magnet, 6) + 24.0 * ipow(k_magnet,4)/7.0 + 4.0 * k_magnet * k_magnet + 16.0/7.0)/pow(1.0 + k_magnet*k_magnet, 3.5);
   } else if (abs(kx-ky)< EPSK) {
     k_magnet = kx;
-    gk = 32.0/7.0*k_magnet/pow(1.0 + k_magnet*k_magnet, 3.0);
+    gk = 32.0/7.0*k_magnet/ipow(1.0 + k_magnet*k_magnet, 3);
   }
   totalPower = PTOT_FAC * nPeriod * k2 * (energy*energy) * current * C_MA_A / (period * C_CM_M); /* units [W] */
   totalPowerDensity = PD_FAC * nPeriod * k_magnet * gk * energy * energy * energy * energy * current * C_MA_A/(period * C_CM_M);  /* units [W]/mrad^2 */
@@ -638,38 +640,38 @@ void compute_constants(long nE, long nxp, long nyp, double nPeriod,
 void compute_irradiance(long nxp, long nyp, long bendingMagnet, double kx, double ky, double p_e, long mode, double *ra0, double *ra1,  double *ra3)
 {
   long i, j, k;
-  double  xg, yg, vp, vpmax, ecp, yg2, yg1, cc, cpi, cpis, y2, eta, y, asigma, api, area, fc;
+  double  xg, yg, vp, vpmax, ecp, yg2, yg1, cc, cpi, cpis, y2, eta, y, asigma, api, area, fc, e1;
   
   vpmax = sqrt(1.0 - ECP_FRAC);
-  for (i=0; i<nxp; i++) {
-    xg = gamma_ * cx[i];
-    for (j=0; j<nyp; j++) {
+  for (j=0; j<nyp; j++) {
+    yg = gamma_ * cy[j];
+    yg2 = yg * yg;
+    yg1 = 1.0 + yg2;
+    cc = yg1 * yg1;
+    cpi = yg2/yg1;
+    if (yg>0) {
+      cpis = sqrt(cpi);
+    } else {
+      cpis = -sqrt(cpi);
+    }
+    fc = facs*cc;
+    e1 =  pow(yg1, 1.5);
+    for (i=0; i<nxp; i++) {
+      xg = gamma_ * cx[i];
       k = i * nyp + j;
       vp = fabs(xg)/ky;
-      yg = gamma_ * cy[j];
-      yg2 = yg * yg;
-      yg1 = 1.0 + yg2;
-      cc = yg1 * yg1;
-      cpi = yg2/yg1;
-      if (yg>0) {
-        cpis = sqrt(cpi);
-      } else {
-        cpis = -sqrt(cpi);
-      }
-      fc = facs*cc;
       if (vp>vpmax) 
         continue;
       ecp = ec0 * sqrt(1.0-vp*vp); /* eV*/
-      
       y = p_e/ecp;
       y2 = y*y;
-      eta = 0.5* y * pow(yg1, 1.5);
+      eta = 0.5* y * e1;
       /*
         asigma = dbeskv_nu(eta, 2.0/3.0);
         api = dbeskv_nu(eta, 1.0/3.0); 
         use roger's k13, and k23, seems to be faster; they were converted into c in mdbmth */
       asigma = k23(eta);
-      api = k13(eta);                                   \
+      api = k13(eta); 
       /*  fprintf(stdout, "eta=%f, asigma=%e, api=%e\n", eta, asigma, api);*/
       ra0[k] = y2*fc*(asigma*asigma + cpi*api*api);
       ra1[k] = y2*fc*(asigma*asigma - cpi*api*api);
@@ -746,7 +748,7 @@ double trapz2(double *ra, long nxp, long nyp)
         wy = 0.5;
       else 
         wy = 1.0;
-      sum = sum + wx*wy*ra[k];
+      sum += wx*wy*ra[k];
     }
   }
   area = sum * dxp * dyp;
@@ -1018,28 +1020,27 @@ void bendingMagnet_power_distribution(long nxp, long nyp, long nE, double ky, do
   *xpp = calloc(sizeof(**xpp), nxp*nyp);
   *ypp = calloc(sizeof(**ypp), nxp*nyp);
   *power = 0;
-  for (ix=0; ix<nxp; ix++) {
-    xg = gamma_ * cx[ix];
-    for (iy=0; iy<nyp; iy++) {
+  for (iy=0; iy<nyp; iy++) {
+    yg = gamma_ * cy[iy];
+    yg2 = yg * yg;
+    yg1 = 1.0 + yg2;
+    cc = yg1*yg1;
+    cpi = yg2/yg1;
+    if (yg>0)
+      cpis = sqrt(cpi);
+    else
+      cpis = -sqrt(cpi);
+    c1 = 2.0/pow(yg1, 1.5);
+    for (ix=0; ix<nxp; ix++) {
+      xg = gamma_ * cx[ix];
       k = ix * nyp + iy;
       (*xpp)[k] = xp[ix];
       (*ypp)[k] = yp[iy];
       ra0 = ra1 = ra2 =ra3 =0;
-   
-      yg = gamma_ * cy[iy];
       vp = fabs(xg)/ky;
       if (vp>vpmax)
         continue;
       ecp = ec0 * sqrt(1.0 - vp*vp);
-      yg2 = yg * yg;
-      yg1 = 1.0 + yg2;
-      cc = yg1*yg1;
-      cpi = yg2/yg1;
-      if (yg>0)
-        cpis = sqrt(cpi);
-      else
-        cpis = -sqrt(cpi);
-      c1 = 2.0/pow(yg1, 1.5);
       fc = facp1*cc*deta*c1*ecp;
       for (ie=0; ie<neta; ie++) {
         if (ie==0 || ie==neta-1)
@@ -1112,7 +1113,7 @@ void fk(double xg, double yg, double k_magnet, double *s0, double *s1, double *s
   B=PI;
   eps = 1.0e-12;
   
-  gk = k_magnet*(pow(k_magnet, 6) +24.0/7.0*pow(k_magnet, 4) +4.0*k_magnet*k_magnet +16.0/7.0)/pow(1.0 + k_magnet*k_magnet, 3.5);
+  gk = k_magnet*(ipow(k_magnet, 6) +24.0/7.0*ipow(k_magnet, 4) +4.0*k_magnet*k_magnet +16.0/7.0)/pow(1.0 + k_magnet*k_magnet, 3.5);
   c  = 2.0*16.0/7.0*k_magnet/PI/gk;
   integ_par.xc = xg;
   integ_par.kc = k_magnet;
@@ -1168,7 +1169,7 @@ c  horizontally and vertically polarized components added.
   p = xc -kc*cos(alpha);
   d = 1.0 + yc*yc + p*p;
   h = 1.0 +yc*yc -p*p;
-  result = h*h/pow(d, 5)*sin(alpha)*sin(alpha);
+  result = h*h/ipow(d, 5)*sin(alpha)*sin(alpha);
   return result;
 }
 
@@ -1193,6 +1194,6 @@ c  horizontally and vertically polarized components added. */
   p = xc -kc*cos(alpha);
   d = 1.0 +yc*yc +p*p;
   v = 2.0*yc*p;
-  return (v*v/pow(d, 5))*sin(alpha)*sin(alpha);
+  return (v*v/ipow(d, 5))*sin(alpha)*sin(alpha);
   
 }
