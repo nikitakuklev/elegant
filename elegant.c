@@ -139,7 +139,8 @@ void showUsageOrGreeting (unsigned long mode)
 #define CHANGE_PARTICLE 55
 #define GLOBAL_SETTINGS 56
 #define REPLACE_ELEMENTS 57
-#define N_COMMANDS      58
+#define APERTURE_DATAX   58
+#define N_COMMANDS      59
 
 char *command[N_COMMANDS] = {
     "run_setup", "run_control", "vary_element", "error_control", "error_element", "awe_beam", "bunched_beam",
@@ -153,6 +154,7 @@ char *command[N_COMMANDS] = {
     "transmute_elements", "twiss_analysis", "semaphores", "frequency_map", "insert_sceffects", "momentum_aperture", 
     "aperture_input", "coupled_twiss_output", "linear_chromatic_tracking_setup", "rpn_load",
     "moments_output", "touschek_scatter", "insert_elements", "change_particle", "global_settings","replace_elements",
+    "aperture_data",
   } ;
 
 char *description[N_COMMANDS] = {
@@ -204,7 +206,7 @@ char *description[N_COMMANDS] = {
     "frequency_map                    command to perform frequency map analysis",
     "insert_sceffects                 add space charge element to beamline and set calculation flags", 
     "momentum_aperture                determine momentum aperture from tracking as a function of position in the ring",
-    "aperture_input                   provide an SDDS file with the physical aperture vs s", 
+    "aperture_data                    provide an SDDS file with the physical aperture vs s", 
     "coupled_twiss_output             compute coupled beamsizes and twiss parameters",
     "linear_chromatic_tracking_setup  set up chromatic derivatives for linear chromatic tracking",
     "rpn_load                         load SDDS data into rpn variables",
@@ -213,7 +215,8 @@ char *description[N_COMMANDS] = {
     "insert_elements                  insert elements into already defined beamline", 
     "change_particle                  change the particle type",
     "global_settings                  ...",
-    "replace_elements                 remove or replace elements inside beamline" 
+    "replace_elements                 remove or replace elements inside beamline",
+    "aperture_input                   provide an SDDS file with the physical aperture vs s (same as aperture_data)", 
   } ;
 
 #define NAMELIST_BUFLEN 65536
@@ -1557,6 +1560,7 @@ char **argv;
       setupTwissAnalysisRequest(&namelist_text, &run_conditions, beamline);
       break;
     case APERTURE_INPUT:
+    case APERTURE_DATAX:
       readApertureInput(&namelist_text, &run_conditions);
       break;
     case LINEAR_CHROMATIC_TRACKING_SETUP:
