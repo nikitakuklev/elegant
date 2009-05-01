@@ -15,6 +15,9 @@
  * Using code from sddsbrightness (Shang, Dejus, Borland) and sddsurgent (Shang, Dejus)
  *
  $Log: not supported by cvs2svn $
+ Revision 1.7  2009/04/14 13:19:48  borland
+ Now accepts units of "m" for ex0.
+
  Revision 1.6  2009/04/09 22:19:56  borland
  Removed some invalid testing done on arguments.
 
@@ -189,7 +192,6 @@ int main(int argc, char **argv)
   pinhole_param.distance = 30;
   pinhole_param.xPC = pinhole_param.yPC = pinhole_param.xPS = pinhole_param.yPS = 0;
   pinhole_param.nXP = pinhole_param.nYP = 20;
-  pinhole_param.distance = 1;
 
   electron_param.flags = 0;
   electron_param.current = 0.1;
