@@ -19,6 +19,9 @@
  * Hairong Shang, May 2005
 
 $Log: not supported by cvs2svn $
+Revision 1.15  2008/09/09 18:28:51  shang
+fixed a type conversion problem in linux 64 bit machine
+
 Revision 1.14  2007/03/13 17:39:23  shang
 fixed the bug in computing on-axis power density for spatial distribution, modified the code
 to read electron beam energy from each page of the input file and update the undulator's Kx and Ky if
@@ -586,6 +589,7 @@ int main(int argc, char **argv) {
     inputSupplied = 1;
     if (twiss.pCentral)
       electron_param.energy = twiss.pCentral[0]*me_mev*0.001;
+    
   } else {
     if (undulator_param.energy) {
       /* calculate the Kx value for the undulator */
@@ -1507,7 +1511,7 @@ void WriteUSResultsToOutput(SDDS_DATASET *SDDSout, UNDULATOR_PARAM  undulator_pa
     if (mode!=1 && mode!=6) {
       Gauss_Convolve(EE, spec1, &nEE, electron_param.energySpread, &n1, &n2);
       if (mode!=3) {
-        for (i=0; i<=n2; i++) {
+        for (i=n1; i<=n2; i++) {
           L1[i-n1] = L1[i];
           L2[i-n1] = L2[i];
           L3[i-n1] = L3[i];
