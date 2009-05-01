@@ -11,6 +11,9 @@
    for calculating wiggler and bending magnet spectra using the bessel function approximation.
 
 $Log: not supported by cvs2svn $
+Revision 1.8  2009/04/30 22:30:34  shang
+optimized the code to reduce the pow() calls and improved the computation speed by about one times.
+
 Revision 1.7  2009/04/29 20:16:11  shang
 removed printing statements
 
@@ -590,7 +593,7 @@ void compute_constants(long nE, long nxp, long nyp, double nPeriod,
     gk = k_magnet*(ipow(k_magnet, 6) + 24.0 * ipow(k_magnet,4)/7.0 + 4.0 * k_magnet * k_magnet + 16.0/7.0)/pow(1.0 + k_magnet*k_magnet, 3.5);
   } else if (abs(kx-ky)< EPSK) {
     k_magnet = kx;
-    gk = 32.0/7.0*k_magnet/ipow(1.0 + k_magnet*k_magnet, 3);
+    gk = 32.0/7.0*k_magnet/pow(1.0 + k_magnet*k_magnet, 3.5);
   }
   totalPower = PTOT_FAC * nPeriod * k2 * (energy*energy) * current * C_MA_A / (period * C_CM_M); /* units [W] */
   totalPowerDensity = PD_FAC * nPeriod * k_magnet * gk * energy * energy * energy * energy * current * C_MA_A/(period * C_CM_M);  /* units [W]/mrad^2 */
