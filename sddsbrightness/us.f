@@ -227,12 +227,13 @@ C  output parameters
 	REAL*8          EU_O(*)
 C       Size parameters:
 	INTEGER*4	E_SZ,A_SZ,B_SZ,P_SZ
-	PARAMETER	(E_SZ=40001,A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=501)
+	PARAMETER	(E_SZ=50001,A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=501)
 	INTEGER*4	RECL_SZ,BLOCK_SZ,BUFFER_SZ
 	PARAMETER	(BLOCK_SZ=12288,BUFFER_SZ=1) ! Blocksize in bytes
 	
 C       Declarations of scalars:
 	INTEGER*4	IERROR,J,L,N1,N2,NOMEGA,NEI,NALPHAP
+	INTEGER*4	NCH,NCH1,NCH2
 	INTEGER*4	I,IA,IB,IE,ID,IW,ISIGN,ISUB,IE1,IE2,IDW
 	INTEGER*4       IMIN, IMAX, IEU
 	REAL*8          ENERGY,CUR,PERIOD,SIGX,SIGY,SIGX1,SIGY1
@@ -388,13 +389,17 @@ C  -----------------------------------------------------------------------------
 	IF (CALPHA2 .EQ. ZERO) CALPHA2 = 2.0D0
 	IF (COMEGA  .EQ. ZERO) COMEGA  = 2.0D0
 	
+	L = 80
+
+	NCH1 = L
+	
 C       Determine units (angular or spatial units)
 	IF (MODE .EQ. 3 .OR. DU .EQ. ZERO) THEN
 	   IANG_O = 1
 	   LANG = .TRUE.
 	   D    = ONE
 	ELSE
-	   I_ANG = 0
+	   IANG_O = 0
 	   LANG = .FALSE.
 	   D    = DU
 	END IF			!
@@ -561,8 +566,7 @@ C  Generate energy scale with variable step size
 		 END IF		! IDW
 	      END DO		! WHILE
 	      
-              DO WHILE (E(IE) .LT. (EP-EPSE) .AND. 
-     1                  E(IE) .LT. (EMAX-EPSE))
+	      DO WHILE (E(IE) .LT. (EP-EPSE) .AND. E(IE) .LT. (EMAX-EPSE))
 		 IF (E(IE) .GT. EP-EF) THEN
 		    IDW = IDW*2
 		    IF (IDW .GT. IDWMAX) THEN
@@ -573,7 +577,7 @@ C  Generate energy scale with variable step size
 		    END IF	! IDW
 		 END IF		! E(IE)
 		 
-		 IE = IE+1
+		 IE       = IE+1
 		 IF (IE .GT. E_SZ) GO TO 900
 		 HE(IE-1) = DEF
 		 IF (IE .EQ. 2) THEN
@@ -583,6 +587,7 @@ C  Generate energy scale with variable step size
 		 END IF		! IE
 		 E(IE) = E(IE-1)+HE(IE-1)
 	      END DO		! WHILE
+	      
 
 C  Redefine the last point within range of harmonic # i
 	      SL       = MIN(EP,EMAX)
@@ -620,9 +625,11 @@ C  Adjust end points
 	   HA(NE) = HE(NE-1)/TWO
 	   
 	   IF (NEU .EQ. 0) NEU = INT(NE2/100.0D0+ONE)*100.0D0 ! Default
+C	    DEU = (EMAXU-EMINU)/NEU
 	   DE  = (EMAXU-EMINU)/NEU
 	   NEU = NEU+1
 	   DO IE=1,NEU		! Energy scale (user's selection)
+C		EU(IE) = EMINU+(IE-1)*DEU
 	      EU(IE) = EMINU+(IE-1)*DE
 	   END DO		! IE
    	   
@@ -887,7 +894,7 @@ C  write to output arguments
 	YPS_I = YPS
 	NXP_I = NXP
 	NYP_I = NYP
-	IF (IANG.EQ.1) THEN
+	IF (IANG_O.EQ.1) THEN
 		NXP_I=0
 		NYP_I=0
 	END IF	
@@ -1099,7 +1106,7 @@ C[subroutine_header_comments]
 
 C  Size parameters:
 	INTEGER*4	E_SZ,A_SZ,B_SZ,P_SZ
-	PARAMETER	(E_SZ=40001,A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=501)
+	PARAMETER	(E_SZ=50001,A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=501)
 
 C  Declarations of scalars:
 	INTEGER*4	IERROR,ICOUNT
@@ -1271,7 +1278,7 @@ C[subroutine_header_comments]
 
 C  Size parameters:
 	INTEGER*4	E_SZ,A_SZ,B_SZ,P_SZ
-	PARAMETER	(E_SZ=40001,A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=501)
+	PARAMETER	(E_SZ=50001,A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=501)
 
 C  Declarations of scalars:
 	LOGICAL*4	LE1,LE2
@@ -1541,7 +1548,7 @@ C[subroutine_header_comments]
 
 C  Size parameters:
 	INTEGER*4	E_SZ,A_SZ,B_SZ,P_SZ
-	PARAMETER	(E_SZ=40001,A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=501)
+	PARAMETER	(E_SZ=50001,A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=501)
 
 C  Declarations of scalars:
 	INTEGER*4	IERROR,ICOUNT
@@ -1685,7 +1692,7 @@ C[subroutine_header_comments]
 
 C  Size parameters:
 	INTEGER*4	E_SZ,A_SZ,B_SZ,P_SZ
-	PARAMETER	(E_SZ=40001,A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=501)
+	PARAMETER	(E_SZ=50001,A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=501)
 
 C  Declarations of scalars:
 	INTEGER*4	IERROR,ICOUNT
@@ -1836,7 +1843,7 @@ C[subroutine_header_comments]
 
 C  Size parameters:
 	INTEGER*4	E_SZ,A_SZ,B_SZ,P_SZ
-	PARAMETER	(E_SZ=40001,A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=501)
+	PARAMETER	(E_SZ=50001,A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=501)
 
 C  Declarations of scalars:
 	LOGICAL*4	LE
@@ -2057,7 +2064,7 @@ C[subroutine_header_comments]
 
 C  Size parameters:
 	INTEGER*4	E_SZ,A_SZ,B_SZ,P_SZ
-	PARAMETER	(E_SZ=40001,A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=501)
+	PARAMETER	(E_SZ=50001,A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=501)
 
 C  Declarations of scalars:
 	INTEGER*4	ICALC,I,IC,ID
@@ -2122,7 +2129,7 @@ C[subroutine_header_comments]
 
 C  Size parameters:
 	INTEGER*4	E_SZ,A_SZ,B_SZ,P_SZ
-	PARAMETER	(E_SZ=40001,A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=501)
+	PARAMETER	(E_SZ=50001,A_SZ=400,B_SZ=A_SZ/4+1,P_SZ=501)
 
 C  Declarations of scalars:
 	INTEGER*4	I,IC,ID
@@ -2304,7 +2311,7 @@ C  Common blocks:
 C[subroutine_header_comments]
 C  Size parameters:
 	INTEGER*4	E_SZ
-	PARAMETER	(E_SZ=40001)
+	PARAMETER	(E_SZ=50001)
 
 C  Declarations of scalars:
 	INTEGER*4	IE,IW
@@ -2350,7 +2357,7 @@ c  Return in original array
 C[subroutine_header_comments]
 C  Size parameters:
 	INTEGER*4	E_SZ
-	PARAMETER	(E_SZ=40001)
+	PARAMETER	(E_SZ=50001)
 
 C  Declarations of scalars:
 	INTEGER*4	IE,IEU,J1,J2
