@@ -29,24 +29,39 @@ since this is where bug notifications are posted.
 
 Here is a summary of what's changed since release 21.0.  For details and references, see the specific entries in the manual. 
 
+There have been relatively few changes to the serial code, apart from some mostly minor bug fixes.
+The major change in this version is a reworking of parallelization to include parallel I/O, parallel frequency map analysis (\verb|frequency_map|), and parallel 
+momentum aperture determination (\verb|momentum_aperture|).  This work was done by Y. Wang and H. Shang.
+
 \subsection{Bug Fixes for Elements}
+
 \begin{itemize}
-\item 
+\item Fixed some problems with keeping track of whether radiation integrals have been computed, which prevents invalid \verb|SREFFECTS|
+setup in some cases.  
+\item Fixed a bug in computing the radiation matrix of a tilted \verb|SBEND| element, which would affect beam moments analysis.
+\item Since the matrix for the \verb|UKICKMAP| element is determined by tracking, the \verb|N_KICKS| parameter may in principle change
+ the matrix.  This fact was not previously part of the element definition, but has been fixed.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item 
+\item Fixed a bug in trajectory/orbit correction that resulted in a crash when the number of monitors or correctors was zero.
+\item In frequency map analysis, a fiducial particle is now tracked first to ensure that the system is properly fiducialized.  This is needed
+if there is an rf cavity in the lattice (which isn't really a good idea for FMA).
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item 
+\item Added \verb|INCLUDE_OFFSETS| parameter to \verb|SREFFECTS|, which allows the user to control whether dispersion-related
+offsets of the orbit are included when a particle loses energy.  To avoid unwanted quantum excitation, no longer
+include offsets (i.e., dispersion effects) when tracking in with only radiation losses.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item 
+\item Added the ability to optimize dynamic aperture using \verb|find_aperture|.
+\item Optimization terms may now be defined using an external SDDS file, which can make it easier to set up 
+ optimizations with large numbers of terms.
 \end{itemize}
 
 \subsection{Changes to Related Programs and Files}
@@ -58,7 +73,20 @@ beam parameters from {\tt elegant}'s \verb|twiss_output| command or from {\tt sd
 
 \subsection{Known Bugs, Problems, and Limitations}
 \begin{itemize}
-\item 
+\item Twiss output contains entries for the higher-order dispersion, tune shifts with amplitude, higher-order chromaticity, tune spreads
+  due to chromaticity and amplitude, and resonance driving terms {\em even when these are not calculated}, which is potentially
+  misleading.   The values are zero when the calculation is not requested.
+\item Computation of closed orbits and Twiss parameters will not always include the effects of synchrotron
+  radiation losses when these are imposed using {\tt SREFFECTS} elements.  See
+  the documentation for {\tt SREFFECTS} for details.
+\item Computation of beam moments does not include synchrotron radiation effects from \verb|CWIGGLER|,
+  \verb|WIGGLER|, or \verb|UKICKMAP| elements.
+\item The file created with the parameters field of \verb|run_setup| does not contain
+  any non-numerical parameters of the lattice.
+\item When \verb|transmute_elements| is used to turn a sextupole into a quadrupole, several problems are seen.
+ Some of the quadrupole parameters are filled with garbage values.  When \verb|alter_elements| or
+ \verb|save_lattice| are subsequently used, \verb|elegant| crashes.   These problems were reported by 
+ V. Sajaev (ANL).
 \end{itemize}
 
 \section{Credits}
@@ -1517,7 +1545,7 @@ parameter.  If zero, then the errors replace the prior value of the parameter.
 \subsection{find\_aperture \label{subsec:findaperture}}
 
 \begin{itemize}
-\item type: action command.
+\item type: setup/action command.
 \item function: find the aperture in (x, y) space for an accelerator.
 \end{itemize}
 
@@ -1540,6 +1568,7 @@ parameter.  If zero, then the errors replace the prior value of the parameter.
     long verbosity = 0;    
     long offset_by_orbit = 0;
     long n_lines = 11;
+    long optimization_mode = 0;
 &end
 \end{verbatim}
 
@@ -1609,6 +1638,10 @@ zero for backward compatibility, but the recommended value is 1.
 \item \verb|verbosity| --- A larger value results in more printouts during computations.
 
 \item \verb|n_lines| --- In ``n-lines'' mode, the number of lines to search.
+
+\item \verb|optimization_mode| --- If non-zero, then \verb|find_aperture| is a setup command and can be used
+with {\tt elegant}'s internal optimizer.  The quantity \verb|Area| is defined, giving the area of the dynamic
+aperture for use in the penalty function.  This is available only for the line search modes.
 
 \end{itemize}
 
