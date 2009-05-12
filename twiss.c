@@ -2918,7 +2918,7 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
   double CSave[6];
   
 #ifdef DEBUG1
-  FILE *fpdeb = NULL;
+  static FILE *fpdeb = NULL;
   if (!fpdeb) {
     fpdeb = fopen("tuneTracking.sdds", "w");
     fprintf(fpdeb, "SDDS1\n");
@@ -2932,6 +2932,7 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
     fprintf(fpdeb, "&data mode=ascii &end\n");
   }
   fprintf(fpdeb, "%ld\n", turns);
+
 #endif
 
 #ifdef DEBUG
@@ -2993,6 +2994,10 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
   fprintf(stdout, "Starting to track\n");
   fflush(stdout);
 #endif
+#ifdef DEBUG1
+  fprintf(fpdeb, "0 %21.15e %21.15e %21.15e %21.15e %21.15e %21.15e\n",
+            oneParticle[0][0], oneParticle[0][1], oneParticle[0][2], oneParticle[0][3], oneParticle[0][4], oneParticle[0][5]);
+#endif
 
   for (i=1; i<turns; i++) {
     if (useMatrix)
@@ -3040,6 +3045,11 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
   fflush(stdout);
 #endif
 
+
+#ifdef DEBUG
+  fprintf(stdout, "Performing NAFF (1)\n");
+  fflush(stdout);
+#endif
   if (PerformNAFF(&frequency[0], &amplitude[0], &phase[0], 
 		  &dummy, 0.0, 1.0, x, turns, 
 		  NAFF_MAX_FREQUENCIES|NAFF_FREQ_CYCLE_LIMIT|NAFF_FREQ_ACCURACY_LIMIT,
@@ -3052,6 +3062,10 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
 	    tuneUpperLimit?(tuneUpperLimit[0]>0.5 ? 1-tuneUpperLimit[0] : tuneUpperLimit[0]):0);
     return 0;
   }
+#ifdef DEBUG
+  fprintf(stdout, "Performing NAFF (2)\n");
+  fflush(stdout);
+#endif
   if (PerformNAFF(&frequency[1], &amplitude[1], &phase[1], 
 		  &dummy, 0.0, 1.0, xp, turns, 
 		  NAFF_MAX_FREQUENCIES|NAFF_FREQ_CYCLE_LIMIT|NAFF_FREQ_ACCURACY_LIMIT,
@@ -3064,6 +3078,10 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
 	    tuneUpperLimit?(tuneUpperLimit[0]>0.5 ? 1-tuneUpperLimit[0] : tuneUpperLimit[0]):0);
     return 0;
   }
+#ifdef DEBUG
+  fprintf(stdout, "Performing NAFF (3)\n");
+  fflush(stdout);
+#endif
   if (PerformNAFF(&frequency[2], &amplitude[2], &phase[2], 
 		  &dummy, 0.0, 1.0, y, turns,
 		  NAFF_MAX_FREQUENCIES|NAFF_FREQ_CYCLE_LIMIT|NAFF_FREQ_ACCURACY_LIMIT,
@@ -3076,6 +3094,10 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
 	    tuneUpperLimit?(tuneUpperLimit[0]>0.5 ? 1-tuneUpperLimit[0] : tuneUpperLimit[0]):0);
     return 0;
   }
+#ifdef DEBUG
+  fprintf(stdout, "Performing NAFF (4)\n");
+  fflush(stdout);
+#endif
   if (PerformNAFF(&frequency[3], &amplitude[3], &phase[3], 
 		  &dummy, 0.0, 1.0, yp, turns,
 		  NAFF_MAX_FREQUENCIES|NAFF_FREQ_CYCLE_LIMIT|NAFF_FREQ_ACCURACY_LIMIT,
