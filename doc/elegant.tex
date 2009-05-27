@@ -53,8 +53,8 @@ if there is an rf cavity in the lattice (which isn't really a good idea for FMA)
 \subsection{New and Modified Elements}
 \begin{itemize}
 \item Added \verb|INCLUDE_OFFSETS| parameter to \verb|SREFFECTS|, which allows the user to control whether dispersion-related
-offsets of the orbit are included when a particle loses energy.  To avoid unwanted quantum excitation, no longer
-include offsets (i.e., dispersion effects) when tracking in with only radiation losses.
+offsets of the orbit are included when a particle loses energy.  To avoid unwanted quantum excitation, we no longer
+include offsets (i.e., dispersion effects) when tracking with only radiation losses.
 \end{itemize}
 
 \subsection{New and Modified Commands}
@@ -155,12 +155,12 @@ simulations\cite{S2EJitter} and top-up tracking\cite{TopUpTracking}
 can be performed involving hundreds or thousands of runs, with input
 created by scripts depending on the SDDS toolkit.  These simulations
 make use of concurrent computing on about 20 workstation using the
-Distributed Queueing System\cite{DQS}.  Clearly, use of automated
+Distributed Queueing System\cite{DQS}.  Another example is the {\tt elegantRingAnalysis} 
+script, which allows using many workstations for simulation of storage ring
+dynamic and momentum aperture, frequency maps, and so on.
+Clearly, use of automated
 postprocessing tools greatly increases the scale and sophistication of
-simulations possible.  This stands in stark contrast to the current
-trend toward graphical user interfaces, which virtually force an
-inefficient one-job, one-computer, manual postprocessing way of
-working.
+simulations possible.  
 
 In passing, we note another ``philosophical'' point about {\tt
 elegant}, namely, the goal of complete backward compatibility.  We
