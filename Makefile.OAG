@@ -311,6 +311,10 @@ ibsEmittance_SRCS = ibsEmittance.c zibs.c
 
 fitTraces_CFLAGS = -I$(EPICS_EXTENSIONS)/src/SDDS/meschach
 
+ifdef WIN32
+kahan_CFLAGS = /O0
+else
 kahan_CFLAGS = -O0
+endif
 
 
