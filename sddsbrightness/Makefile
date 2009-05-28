@@ -7,7 +7,7 @@
 # in the file LICENSE that is included with this distribution. 
 #*************************************************************************
 #
-# $Id: Makefile,v 1.11 2009-04-09 14:34:47 borland Exp $
+# $Id: Makefile,v 1.12 2009-05-28 21:14:12 soliday Exp $
 #
 #
 #
@@ -116,6 +116,19 @@ sddsbrightness$(EXE) : $(OBJNAMES)
 sddsurgent$(EXE) : $(URGENT_OBJNAMES)
 	ifort /exe:sddsurgent$(EXE) /threads /libs:dll \
 	$(URGENT_OBJNAMES) /link /incremental:no /opt:ref /release \
+	c:\\oag\\apps\\lib\\$(T_A)\\oagphy.lib \
+	c:\\epics\\extensions\\lib\\$(T_A)\\mdbcommon.lib \
+	c:\\epics\\extensions\\lib\\$(T_A)\\matlib.lib \
+	c:\\epics\\extensions\\lib\\$(T_A)\\fftpack.lib \
+	c:\\epics\\extensions\\lib\\$(T_A)\\SDDS1.lib \
+	c:\\epics\\extensions\\lib\\$(T_A)\\rpnlib.lib \
+	c:\\epics\\extensions\\lib\\$(T_A)\\namelist.lib \
+	c:\\epics\\extensions\\lib\\$(T_A)\\mdbmth.lib \
+	c:\\epics\\extensions\\lib\\$(T_A)\\mdblib.lib \
+	c:\\epics\\extensions\\lib\\$(T_A)\\z.lib
+sddsfluxcurve$(EXE) : $(FLUXCURVE_OBJNAMES)
+	ifort /exe:sddsfluxcurve$(EXE) /threads /libs:dll \
+	$(FLUXCURVE_OBJNAMES) /link /incremental:no /opt:ref /release \
 	c:\\oag\\apps\\lib\\$(T_A)\\oagphy.lib \
 	c:\\epics\\extensions\\lib\\$(T_A)\\mdbcommon.lib \
 	c:\\epics\\extensions\\lib\\$(T_A)\\matlib.lib \

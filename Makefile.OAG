@@ -29,6 +29,7 @@ ifeq ($(MPI),1)
   PRODOAG = Pelegant
   STATIC_LDFLAGS_YES= -Bstatic -static-libgcc  # remove the -Wl to compile Pelegant
 ifdef WIN32
+  USER_MPI_FLAGS += -DSDDS_MPI_IO=0
   CC := $(CC) $(USER_MPI_FLAGS)
   CCC := $(CCC) $(USER_MPI_FLAGS)
 else

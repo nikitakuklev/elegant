@@ -196,8 +196,7 @@ long doMomentumApertureSearch(
     SDDS_Bomb("no elements found between s_start and s_end for momentum aperture computation");
 #else
   if ((nElem<n_processors) && (myid==0)) {
-    printf("Warning: The number of elements should be larger than the number of processors to avoid wasting resource.\n\ 
-            The number of elements is %ld. The number of processors is %ld.\n", nElem, n_processors);
+    printf("Warning: The number of elements should be larger than the number of processors to avoid wasting resource.\nThe number of elements is %ld. The number of processors is %ld.\n", nElem, n_processors);
   }    
   if (verbosity) {
     verbosity = 0;

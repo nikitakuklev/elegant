@@ -1511,7 +1511,7 @@ double optimization_function(double *value, long *invalid)
       fprintf(optimization_data->fp_log, "Tracking for optimization\n");
       fflush(optimization_data->fp_log);
     }
-#if USE_MPI
+#if SDDS_MPI_IO
     if (isMaster)
       if (beam->n_to_track_total<(n_processors-1)) {
 	printf("*************************************************************************************\n");
