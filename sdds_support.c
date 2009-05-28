@@ -1393,7 +1393,7 @@ void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long *lostOn
 #ifdef SORT   /* sort for comparing the serial and parallel versions */
     long **tmp, j;
 #endif
-#if USE_MPI  
+#if SDDS_MPI_IO
 
     /* Open file here for parallel IO */
     if (!SDDS_table->layout.layout_written) { /* Check if the file has been opened already */

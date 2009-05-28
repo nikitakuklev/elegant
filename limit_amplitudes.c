@@ -568,7 +568,7 @@ long track_through_pfilter(
       upper[count] = 1;
       level[count++] = 100-pfilter->upperFraction*100;
     }
-#if USE_MPI
+#if SDDS_MPI_IO
     approximate_percentiles_p(limit, level, count, deltaBuffer, np, pfilter->bins); 
 #else     
     compute_percentiles(limit, level, count, deltaBuffer, np);
