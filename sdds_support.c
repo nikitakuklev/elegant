@@ -431,7 +431,7 @@ void SDDS_WatchPointSetup(WATCH *watch, long mode, long lines_per_row,
       exit(1);
     }
     if (SDDS_DefineParameter(SDDS_table, "Description", NULL, NULL, NULL, "%s", SDDS_STRING,
-			     watch->label?watch->label:"")<0) {
+			     watch->label && strlen(watch->label) ? watch->label: "watch point" )<0) {
       fprintf(stdout, "Unable define SDDS parameter for file %s (%s)\n", filename, caller);
       fflush(stdout);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
