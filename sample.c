@@ -13,8 +13,8 @@
  *
  * Michael Borland, 1991
  */
-#include "track.h"
 #include "mdb.h"
+#include "track.h"
 
 long sample_particles(double **initial, SAMPLE *samp, long np, double **accepted, double z, double p0)
 {

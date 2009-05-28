@@ -12,8 +12,8 @@
  * 
  * Michael Borland, 1989
  */
-#include "track.h"
 #include "mdb.h"
+#include "track.h"
 
 void print_line(FILE *fp, LINE_LIST *lptr)
 {

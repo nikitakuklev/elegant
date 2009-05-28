@@ -14,9 +14,9 @@
  *  Accelerator Physics Group, Duke FEL Lab, www.fel.duke.edu
 */
 
-#include "track.h"
 #include "SDDS.h"
 #include "mdb.h"
+#include "track.h"
 
 #ifndef GWIG
 #define GWIG

@@ -12,8 +12,8 @@
  *
  * Michael Borland, 1989
  */
-#include "track.h"
 #include "mdb.h"
+#include "track.h"
 
 /* flag bit values */
 #define FL_REF_PHASE_SET 1

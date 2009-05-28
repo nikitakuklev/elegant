@@ -8,8 +8,8 @@
 \*************************************************************************/
 
 #include <ctype.h>
-#include "track.h"
 #include "mdb.h"
+#include "track.h"
 #include "sort.h"
 
 long evaluateLostWithOpenSides(long code, double dx, double dy, double xsize, double ysize);

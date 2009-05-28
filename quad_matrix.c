@@ -12,8 +12,8 @@
  *
  * Michael Borland, 1989.
  */
-#include "track.h"
 #include "mdb.h"
+#include "track.h"
 
 static double swap_tmp;
 #define swap_double(x, y) (swap_tmp=(x),(x)=(y),(y)=swap_tmp)

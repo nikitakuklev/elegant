@@ -11,8 +11,8 @@
  *
  * Michael Borland, 1989
  */
-#include "track.h"
 #include "mdb.h"
+#include "track.h"
 
 #if !defined(SWAP_PTR)
 double *temp_ptr;

@@ -12,8 +12,8 @@
  * 
  * Michael Borland, Weiming Guo, 2008
  */
-#include "track.h"
 #include "mdb.h"
+#include "track.h"
 
 void initializeUndulatorKickMap(UKICKMAP *map);
 long interpolateUndulatorKickMap(double *xpFactor, double *ypFactor, UKICKMAP *map, double x, double y);

@@ -16,8 +16,8 @@
  *
  * Michael Borland, 1987, 1988, 1989, 1991.
  */
-#include "track.h"
 #include "mdb.h"
+#include "track.h"
 #include <ctype.h>
 #include <string.h>
 #include <memory.h>
