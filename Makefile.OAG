@@ -50,6 +50,10 @@ else
   # USR_LDFLAGS+= -L/share/toolworks/totalview.7.3.0-6/linux-x86/lib/ -Wl,-rpath,/share/toolworks/totalview.7.3.0-6/linux-x86/lib/ 
   # SYS_PROD_LIBS_Linux += tvheap
 endif
+else
+  USER_MPI_FLAGS += -DUSE_MPI=0 -DSDDS_MPI_IO=0
+  CC := $(CC) $(USER_MPI_FLAGS)
+  CCC := $(CCC) $(USER_MPI_FLAGS)
 endif
 
 ifeq ($(NOMPI),1)
