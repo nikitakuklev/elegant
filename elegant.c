@@ -235,10 +235,10 @@ double factor = 1.0;    /* In serial version, the memory will be allocted for al
 #if USE_MPI
 int n_processors = 1;
 int myid;
+int dumpAcceptance = 0;
 #if SDDS_MPI_IO
 parallelMode parallelStatus = trueParallel; 
 int partOnMaster = 0; /* indicate if the particle information is available on master */
-int dumpAcceptance = 0;
 #else
 parallelMode parallelStatus = initialMode; 
 int partOnMaster = 1;
