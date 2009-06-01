@@ -218,7 +218,7 @@ long new_sdds_beam(
     /* retracking bunch that has already been set up */
     if (!save_initial_coordinates)
       bomb("logic error---initial beam coordinates not saved", NULL);
-#ifdef SDDS_MPI_IO
+#if SDDS_MPI_IO
     if (isSlave || !notSinglePart)
 #endif
     if (beam->original==NULL)

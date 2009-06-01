@@ -815,7 +815,7 @@ char **argv;
             else
               new_bunched_beam(&beam, &run_conditions, &run_control, &output_data, 0);
             new_beam_flags = TRACK_PREVIOUS_BUNCH;
-#ifdef SDDS_MPI_IO
+#if SDDS_MPI_IO
 	   if (correct.start_from_centroid) {
 	      notSinglePart = 1; /* Compute centroids across all the processors, instead of local centroid on each individual processor */		
               compute_centroids(starting_coord, beam.particle, beam.n_to_track);

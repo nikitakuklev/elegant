@@ -214,7 +214,7 @@ long do_tracking(
   }
 #endif
 
-#ifdef SDDS_MPI_IO
+#if SDDS_MPI_IO
   if (isSlave || (!notSinglePart))
 #else 
   if (isMaster)
