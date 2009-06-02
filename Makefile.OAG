@@ -25,35 +25,30 @@ OP_SYS_CFLAGS+= -DSORT                 # sort for comparing the results of two e
 OP_SYS_CFLAGS+= -DUSE_KAHAN            # use Kahan's algorithm for long sum
 #OP_SYS_CFLAGS+= -DSET_DOUBLE           # set FPU as double precision
 ifeq ($(MPI),1)
-  USER_MPI_FLAGS = -DUSE_MPI=1         # 1 for parallel elegant, 0 for serial elegant  
+  USER_MPI_FLAGS = -DUSE_MPI=1 # 1 for parallel elegant, 0 for serial elegant  
+  USER_MPI_FLAGS += -DSDDS_MPI_IO=1
   PRODOAG = Pelegant
   STATIC_LDFLAGS_YES= -Bstatic -static-libgcc  # remove the -Wl to compile Pelegant
 ifdef WIN32
-  USER_MPI_FLAGS += -DSDDS_MPI_IO=0
-  CC := $(CC) $(USER_MPI_FLAGS)
-  CCC := $(CCC) $(USER_MPI_FLAGS)
+    CC := $(CC) $(USER_MPI_FLAGS)
+    CCC := $(CCC) $(USER_MPI_FLAGS)
 else
-  #OP_SYS_LDLIBS += -lmpe -llmpe        # visualize the performance of the parallel elegant 
-  #USER_MPI_FLAGS+=  -DUSE_MPE          # user defined MPE event
-  #USER_MPI_FLAGS+=  -mpianim -L/usr/X11R6/lib -lX11   # animate MPI program in real-time
-  #USER_MPI_FLAGS+= -DMPI_DEBUG         # print debugging information for MPI 
-  #USER_MPI_FLAGS+= -DCHECKFLAGS=1      # if defined, check balance only at the beginning
+    #OP_SYS_LDLIBS += -lmpe -llmpe        # visualize the performance of the parallel elegant 
+    #USER_MPI_FLAGS+=  -DUSE_MPE          # user defined MPE event
+    #USER_MPI_FLAGS+=  -mpianim -L/usr/X11R6/lib -lX11   # animate MPI program in real-time
+    #USER_MPI_FLAGS+= -DMPI_DEBUG         # print debugging information for MPI 
+    #USER_MPI_FLAGS+= -DCHECKFLAGS=1      # if defined, check balance only at the beginning
                                         # or the particle number is changed
-  MPI_PATH = $(wildcard /usr/local/software/mvapich2-gcc/bin/ /share/mpich2_smpd_nemesis/bin/)
-  #MPI_PATH = /share/mpich2_mpd_sock/bin/
-  #MPI_PATH = /share/mpich/ch_p4/bin/
-  USER_MPI_FLAGS += -DSDDS_MPI_IO
-  MPI_PATH = /data/mpich2_mpd_nemesis/bin/
-  CC = $(MPI_PATH)mpicc   $(USER_MPI_FLAGS)   
-  CCC = $(MPI_PATH)mpicxx  $(USER_MPI_FLAGS)
-  # memory debugging with totalview
-  # USR_LDFLAGS+= -L/share/toolworks/totalview.7.3.0-6/linux-x86/lib/ -Wl,-rpath,/share/toolworks/totalview.7.3.0-6/linux-x86/lib/ 
-  # SYS_PROD_LIBS_Linux += tvheap
+    MPI_PATH = $(wildcard /usr/local/software/mvapich2-gcc/bin/ /share/mpich2_smpd_nemesis/bin/)
+    #MPI_PATH = /share/mpich2_mpd_sock/bin/
+    #MPI_PATH = /share/mpich/ch_p4/bin/
+    MPI_PATH = /data/mpich2_mpd_nemesis/bin/
+    CC = $(MPI_PATH)mpicc   $(USER_MPI_FLAGS)   
+    CCC = $(MPI_PATH)mpicxx  $(USER_MPI_FLAGS)
+    # memory debugging with totalview
+    # USR_LDFLAGS+= -L/share/toolworks/totalview.7.3.0-6/linux-x86/lib/ -Wl,-rpath,/share/toolworks/totalview.7.3.0-6/linux-x86/lib/ 
+    # SYS_PROD_LIBS_Linux += tvheap
 endif
-else
-  USER_MPI_FLAGS += -DUSE_MPI=0 -DSDDS_MPI_IO=0
-  CC := $(CC) $(USER_MPI_FLAGS)
-  CCC := $(CCC) $(USER_MPI_FLAGS)
 endif
 
 ifeq ($(NOMPI),1)
@@ -101,9 +96,15 @@ ifeq ($(LYNCEANTECH),1)
 endif
 
 ifdef WIN32
+ifeq ($(MPI),1)
+USR_LIBS = 	mdbcommon matlib fftpack SDDSmpi \
+		rpnlib mdbmth namelist mdblib \
+		meschach z fdlibm gsl
+else
 USR_LIBS = 	mdbcommon matlib fftpack SDDS1 \
 		rpnlib mdbmth namelist mdblib \
 		meschach z fdlibm gsl
+endif
 z_DIR = $(EPICS_EXTENSIONS_LIB)
 
 ifeq ($(MPI),1)
@@ -268,6 +269,7 @@ atlas_DIR = $(ATLAS_LIB)
 F77_DIR = $(F2C_LIB)
 I77_DIR = $(F2C_LIB)
 
+SDDSmpi_DIR = $(EPICS_EXTENSIONS_LIB)
 SDDS1_DIR = $(EPICS_EXTENSIONS_LIB)
 namelist_DIR = $(EPICS_EXTENSIONS_LIB)
 fftpack_DIR = $(EPICS_EXTENSIONS_LIB)
