@@ -14,6 +14,9 @@
  * Michael Borland, 2002
  *
  $Log: not supported by cvs2svn $
+ Revision 1.14  2009/04/14 13:19:48  borland
+ Now accepts units of "m" for ex0.
+
  Revision 1.13  2007/03/09 19:38:02  borland
  Fixed bug in energy range calculation for helical devices.
 
@@ -557,7 +560,7 @@ long SetUpOutputFile(SDDS_DATASET *SDDSout, SDDS_DATASET *SDDSin, char *outputfi
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   for (h=1; h<2*harmonics; h+=2) {
     sprintf(buffer, "Brightness%ld", h);
-    if (!SDDS_DefineSimpleColumn(SDDSout, buffer, "photons/s/mrad$a2$n/mm$a2$n0.1%BW", SDDS_DOUBLE))
+    if (!SDDS_DefineSimpleColumn(SDDSout, buffer, "photons/s/mrad$a2$n/mm$a2$n/0.1%BW", SDDS_DOUBLE))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     sprintf(buffer, "F%ld", h);
     if (!SDDS_DefineSimpleColumn(SDDSout, buffer, NULL, SDDS_DOUBLE))
