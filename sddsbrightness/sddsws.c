@@ -11,6 +11,9 @@
    for calculating wiggler and bending magnet spectra using the bessel function approximation.
 
 $Log: not supported by cvs2svn $
+Revision 1.9  2009/05/01 20:53:50  shang
+fixed a bug in compute gk
+
 Revision 1.8  2009/04/30 22:30:34  shang
 optimized the code to reduce the pow() calls and improved the computation speed by about one times.
 
@@ -105,7 +108,15 @@ calculationMode specifies calculation mode: \n\
                 4 | pinholeSpectrum:         Flux spectrum through a pinhole \n\
                 5 | integratedSpectrum:      Flux spectrum integrated over all angles \n\
                 6 | powerDensity:            Power density and integrated power \n\
-transformed from ws.f by Roger Dejus, Hairong Shang (April, 2009).\n\n";
+transformed from ws.f by Roger Dejus, Hairong Shang (April, 2009).\n\n\
+NOTE: THE POLARIZATION PARAMETERS ARE PROVIDED (P1, P2, P3 and P4 in the output file.) \n\
+ALTHOUGH NOT THOROUGHLY TESTED - USE WITH CAUTION.\n\
+For a bending magnet source:  set N=0.5, and make Ky large and adjust the period length accordingly. \n\
+For example, put Ky=9.34 and alculate the period length from, Period (cm) = 10.0/B0(T), where B0 is \n\
+strength of the magnetic field (in Tesla) for the bending magnet.  The calculated power density (pd) is correct,\n\
+but the total power (ptot) is irrelevant. Typically make the extend of the pinhole small in the horizontal direction\n\
+(theta << Ky/gamma) as the intensity should not depend on the horizontal offset. Check value of B0 (and critcal energy EC0)\n\
+in the output file.\n\n";
          
 void checkWSInput(long mode, double *xpc, double *ypc, double xsize, double ysize, long nE, double kx, double ky, 
                   long bendingMagnet, long *isAngular, double *pdistance,
@@ -271,7 +282,11 @@ int main(int argc, char **argv)
     SDDS_Bomb("output file not provided.");
   if (outputfile && pipeFlags) 
     SDDS_Bomb("Too many files provided.");
- 
+  if (!nowarnings) {
+    fprintf(stdout, "Warning: the polarization parameters (P1, P2, P3 and P4 in the output file) are provided although not thoroughly tested, use with caution.\n");
+    if (bendingMagnet) 
+      fprintf(stdout, "Warning: the result may be inaccurate for bending magnet, use with caution.\n");
+  }
   checkWSInput(mode, &xpc, &ypc, xsize, ysize, nE, kx, ky, bendingMagnet, &isAngular, &pdistance, &xsize, &ysize, &nxp, &nyp, emin, emax);
   compute_constants(nE, nxp, nyp, nPeriod, energy, current, kx, ky, period, pdistance, emax, emin, xpc, ypc, xsize, ysize);
   
