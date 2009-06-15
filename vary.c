@@ -17,6 +17,8 @@
 #include "vary.h"
 
 long load_enumerated_values(double **value, char *file, char *column);
+void reset_parameter_values(char **elem_name, long *param_number, long *type, long n_elems,
+                            LINE_LIST *beamline);
 
 void vary_setup(VARY *_control, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 {
@@ -277,8 +279,8 @@ long vary_beamline(VARY *_control, ERRORVAL *errcon, RUN *run, LINE_LIST *beamli
 #endif
       log_entry("vary_beamline.1");
       /* assert unperturbed values */
-      assert_parameter_values(errcon->name, errcon->param_number, errcon->elem_type,
-                              errcon->unperturbed_value, errcon->n_items, beamline);
+      reset_parameter_values(errcon->name, errcon->param_number, errcon->elem_type,
+                             errcon->n_items, beamline);
       if (errcon->new_data_read) {
         /* set element flags to indicate perturbation of parameters that change the matrix */
         set_element_flags(beamline, errcon->name, errcon->flags, errcon->elem_type, errcon->param_number,
@@ -567,6 +569,60 @@ void set_element_flags(LINE_LIST *beamline, char **elem_name, long *elem_perturb
     log_exit("set_element_flags");
     }
         
+void reset_parameter_values(char **elem_name, long *param_number, long *type, long n_elems,
+            LINE_LIST *beamline)
+{
+    ELEMENT_LIST *eptr;
+    char *p_elem, *p_elem0;
+    long i_elem, elem_type, data_type, param;
+
+    log_entry("reset_parameter_values");
+    if (!elem_name)
+        bomb("elem_name array is NULL (reset_parameter_values)", NULL);
+    if (!param_number)
+        bomb("param_number array is NULL (reset_parameter_values)", NULL);
+    if (!type)
+        bomb("type array is NULL (reset_parameter_values)", NULL);
+    if (!beamline)
+        bomb("beamline pointer is NULL (reset_parameter_values)", NULL);
+
+    for (i_elem=0; i_elem<n_elems; i_elem++) {
+        eptr = NULL;
+        elem_type = type[i_elem];
+        param     = param_number[i_elem];
+        data_type = entity_description[elem_type].parameter[param].type;
+        if (!elem_name[i_elem]) {
+            fprintf(stdout, "error: name missing for element %ld (reset_parameter_values)\n", i_elem);
+            fflush(stdout);
+            if (i_elem!=0)
+                fprintf(stdout, "preceeding element is %s\n", elem_name[i_elem-1]);
+                fflush(stdout);
+            if (i_elem!=n_elems-1)
+                fprintf(stdout, "suceeding element is %s\n", elem_name[i_elem+1]);
+                fflush(stdout);
+            }
+        while (find_element(elem_name[i_elem], &eptr, &(beamline->elem))) {
+            p_elem = eptr->p_elem;
+            p_elem0 = eptr->p_elem0;
+            switch (data_type) {
+                case IS_DOUBLE:
+                    *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)) = 
+		      *((double*)(p_elem0+entity_description[elem_type].parameter[param].offset)) ;
+                    break;
+                case IS_LONG:
+                    *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) = 
+		      *((long*)(p_elem0+entity_description[elem_type].parameter[param].offset)) ;
+                    break;
+                case IS_STRING:
+                default:
+                    bomb("unknown/invalid variable quantity", NULL);
+                    exit(1);
+                }
+            }
+        }
+    log_exit("reset_parameter_values");
+    }
+
 void assert_parameter_values(char **elem_name, long *param_number, long *type, double *value, long n_elems,
             LINE_LIST *beamline)
 {

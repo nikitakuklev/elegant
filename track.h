@@ -185,7 +185,8 @@ typedef struct element_list {
     double end_pos, end_theta;
     char *name, *group;
     char *definition_text;
-    char *p_elem;       /* pointer to the element structure */
+    char *p_elem;        /* pointer to the element structure */
+    char *p_elem0;       /* pointer to the reference element structure */
     long type;
     long occurence;     /* greater than 1, if assigned */
     long flags;

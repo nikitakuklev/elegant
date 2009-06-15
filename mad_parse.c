@@ -23,6 +23,7 @@
 #include <memory.h>
 
 long is_simple(char *s);
+void copy_p_elem(char *target, char *source, long type);
 
 long max_name_length = 100;
 
@@ -260,14 +261,15 @@ void fill_elem(ELEMENT_LIST *eptr, char *s, long type, FILE *fp_input)
     eptr->matrix = NULL;
     eptr->group = NULL;
     eptr->p_elem = tmalloc(entity_description[type].structure_size);
+    eptr->p_elem0 = tmalloc(entity_description[type].structure_size);
     zero_memory(eptr->p_elem, entity_description[type].structure_size);
+    zero_memory(eptr->p_elem0, entity_description[type].structure_size);
 
     parse_element((char*)(eptr->p_elem), 
             entity_description[type].parameter, 
             entity_description[type].n_params,
             s, eptr, entity_name[type]);
-    if (type==T_RBEN) {
-    }
+
     switch (type) {
     case T_RBEN:
       bptr = (BEND*)(eptr->p_elem);
@@ -282,23 +284,6 @@ void fill_elem(ELEMENT_LIST *eptr, char *s, long type, FILE *fp_input)
       break;
     case T_MATR:
       matr = (MATR*)eptr->p_elem;
-      if (!(filename=findFileInSearchPath(matr->filename))) {
-        fprintf(stderr,"Unable to find MATR file %s\n", matr->filename);
-        exit(1);
-      }
-      fprintf(stdout, "File %s found: %s\n", matr->filename, filename);
-      fpm = fopen_e(filename, "r", 0);
-      free(filename);
-      matr->M.order = matr->order;
-      initialize_matrices(&(matr->M), matr->order);
-      if (!read_matrices(&(matr->M), fpm)) {
-        fprintf(stdout, "error reading matrix from file %s\n", matr->filename);
-        fflush(stdout);
-        abort();
-      }
-      fclose(fpm);
-      matr->matrix_read = 1;
-      matr->length = matr->M.C[4];
       break;
     case T_SCRAPER:
       interpretScraperDirection((SCRAPER*)(eptr->p_elem));
@@ -308,6 +293,9 @@ void fill_elem(ELEMENT_LIST *eptr, char *s, long type, FILE *fp_input)
     }
         
     eptr->flags = PARAMETERS_ARE_STATIC;     /* default, to be changed by variation and error settings */
+
+    copy_p_elem(eptr->p_elem0, eptr->p_elem, type);
+
     log_exit("fill_elem");
     }
 
@@ -366,7 +354,9 @@ void copy_named_element(ELEMENT_LIST *eptr, char *s, ELEMENT_LIST *elem)
 #endif
 
     eptr->p_elem = tmalloc(entity_description[elem->type].structure_size);
-    memcpy((void*)eptr->p_elem, (const void *)elem->p_elem, entity_description[elem->type].structure_size);
+    eptr->p_elem0 = tmalloc(entity_description[elem->type].structure_size);
+    copy_p_elem(eptr->p_elem, elem->p_elem, elem->type);
+    copy_p_elem(eptr->p_elem0, eptr->p_elem, elem->type);
     cp_str(&eptr->name, name);
     eptr->group = NULL;
     if (elem->group)
@@ -498,11 +488,10 @@ void copy_element(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long reverse, long divisio
     e1->matrix  = NULL;
     e1->type    = e2->type;
     e1->p_elem  = tmalloc(entity_description[e1->type].structure_size);
+    e1->p_elem0 = tmalloc(entity_description[e1->type].structure_size);
+    copy_p_elem(e1->p_elem, e2->p_elem, e1->type);
+    copy_p_elem(e1->p_elem0, e2->p_elem, e1->type);
     e1->divisions = 1;
-    ptr1 = e1->p_elem;
-    ptr2 = e2->p_elem;
-    for (i=0; i<entity_description[e1->type].structure_size; i++)
-        *ptr1++ = *ptr2++;
     if (reverse) {
       BEND *bptr;
       KSBEND *ksbptr;
@@ -1039,4 +1028,41 @@ void interpretScraperDirection(SCRAPER *scraper)
       scraper->direction += 2;
     scraper->insert_from = NULL;
   }
+}
+
+void copy_p_elem(char *target, char *source, long type)
+{
+  long i, offset;
+
+  for (i=0; i<entity_description[type].n_params; i++) {
+    switch (entity_description[type].parameter[i].type) {
+    case IS_DOUBLE:
+      *((double*)(target+entity_description[type].parameter[i].offset)) = 
+	*((double*)(source+entity_description[type].parameter[i].offset)) ;
+      break;
+    case IS_LONG:
+      *((long*)(target+entity_description[type].parameter[i].offset)) = 
+	*((long*)(source+entity_description[type].parameter[i].offset)) ;
+      break;
+    case IS_STRING:
+      cp_str(((char**)(target+entity_description[type].parameter[i].offset)),
+	     *((char**)(source+entity_description[type].parameter[i].offset)) );
+      break;
+    default:
+      bomb("invalid parameter type (copy_p_elem).  Seek professional help!", NULL);
+      break;
+    }
+  }
+
+  if (type==T_PEPPOT)  {
+    /* Need to modernize pepper-pot element to read data from SDDS file */
+    PEPPOT *pps, *ppt;
+    pps = (PEPPOT*)source;
+    ppt = (PEPPOT*)target;
+    ppt->x = array_1d(sizeof(double), 0, ppt->n_holes-1);
+    ppt->y = array_1d(sizeof(double), 0, ppt->n_holes-1);
+    memcpy(ppt->x, pps->x, sizeof(double)*ppt->n_holes);
+    memcpy(ppt->y, pps->y, sizeof(double)*ppt->n_holes);
+  }
+
 }

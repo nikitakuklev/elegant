@@ -618,6 +618,8 @@ void free_elements(ELEMENT_LIST *elemlist)
 #endif
         tfree(eptr->p_elem);
         eptr->p_elem = NULL;
+        tfree(eptr->p_elem0);
+        eptr->p_elem0 = NULL;
         tfree(eptr->name);
         eptr->name = NULL;
         tfree(eptr->definition_text);
@@ -999,7 +1001,7 @@ void change_defined_parameter_values(char **elem_name, long *param_number, long 
                                      double *value, long n_elems)
 {
   ELEMENT_LIST *eptr;
-  char *p_elem;
+  char *p_elem, *p_elem0;
   long i_elem, elem_type, data_type, param;
   double dValue;
   
@@ -1012,6 +1014,7 @@ void change_defined_parameter_values(char **elem_name, long *param_number, long 
     data_type = entity_description[elem_type].parameter[param].type;
     while (find_element(elem_name[i_elem], &eptr, elem)) {
       p_elem = eptr->p_elem;
+      p_elem0 = eptr->p_elem0;
       switch (data_type) {
       case IS_DOUBLE:
         dValue = value[i_elem];
@@ -1019,6 +1022,7 @@ void change_defined_parameter_values(char **elem_name, long *param_number, long 
             eptr->divisions)
           dValue *= eptr->divisions;
         *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)) = dValue;
+        *((double*)(p_elem0+entity_description[elem_type].parameter[param].offset)) = dValue;
 #if DEBUG
         fprintf(stdout, "   changing parameter %s of %s #%ld to %e\n",
                 entity_description[elem_type].parameter[param].name,
@@ -1029,6 +1033,7 @@ void change_defined_parameter_values(char **elem_name, long *param_number, long 
         break;
       case IS_LONG:
         *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) = 
+	  *((long*)(p_elem0+entity_description[elem_type].parameter[param].offset)) = 
           nearestInteger(value[i_elem]);
 #if DEBUG
         fprintf(stdout, "   changing parameter %s of %s #%ld to %ld\n",
@@ -1054,7 +1059,7 @@ void change_defined_parameter_divopt(char *elem_name, long param, long elem_type
                                       long checkDiv)
 {
   ELEMENT_LIST *eptr;
-  char *p_elem;
+  char *p_elem, *p_elem0;
   long data_type;
 
   log_entry("change_defined_parameter");
@@ -1065,6 +1070,7 @@ void change_defined_parameter_divopt(char *elem_name, long param, long elem_type
     return;
   while (find_element(elem_name, &eptr, elem)) {
     p_elem = eptr->p_elem;
+    p_elem0 = eptr->p_elem0;
     switch (data_type) {
     case IS_DOUBLE:
       if (valueString) {
@@ -1086,14 +1092,20 @@ void change_defined_parameter_divopt(char *elem_name, long param, long elem_type
                 *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)));
       fflush(stdout);
       if (mode&LOAD_FLAG_ABSOLUTE)
-        *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)) = value;
-      else if (mode&LOAD_FLAG_DIFFERENTIAL)
+        *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)) = 
+	  *((double*)(p_elem0+entity_description[elem_type].parameter[param].offset)) = value;
+      else if (mode&LOAD_FLAG_DIFFERENTIAL) {
         *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)) += value;
-      else if (mode&LOAD_FLAG_FRACTIONAL)
+        *((double*)(p_elem0+entity_description[elem_type].parameter[param].offset)) += value;
+      }
+      else if (mode&LOAD_FLAG_FRACTIONAL) {
         *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)) *= 1+value;
+        *((double*)(p_elem0+entity_description[elem_type].parameter[param].offset)) *= 1+value;
+      }
       if (mode&LOAD_FLAG_VERBOSE)
-        fprintf(stdout, "%e\n", 
-                *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)));
+        fprintf(stdout, "%e (%e)\n", 
+                *((double*)(p_elem+entity_description[elem_type].parameter[param].offset)),
+                *((double*)(p_elem0+entity_description[elem_type].parameter[param].offset)));
       fflush(stdout);
       break;
     case IS_LONG:
@@ -1114,12 +1126,18 @@ void change_defined_parameter_divopt(char *elem_name, long param, long elem_type
       fflush(stdout);
       if (mode&LOAD_FLAG_ABSOLUTE)
         *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) = 
+	  *((long*)(p_elem0+entity_description[elem_type].parameter[param].offset)) = 
           nearestInteger(value);
-      else if (mode&LOAD_FLAG_DIFFERENTIAL)
+      else if (mode&LOAD_FLAG_DIFFERENTIAL) {
         *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) += 
           nearestInteger(value);
-      else if (mode&LOAD_FLAG_FRACTIONAL)
+        *((long*)(p_elem0+entity_description[elem_type].parameter[param].offset)) += 
+          nearestInteger(value);
+      }
+      else if (mode&LOAD_FLAG_FRACTIONAL) {
         *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)) *= 1+value;
+        *((long*)(p_elem0+entity_description[elem_type].parameter[param].offset)) *= 1+value;
+      }
       if (mode&LOAD_FLAG_VERBOSE)
         fprintf(stdout, "%ld\n",
                 *((long*)(p_elem+entity_description[elem_type].parameter[param].offset)));
@@ -1133,6 +1151,12 @@ void change_defined_parameter_divopt(char *elem_name, long param, long elem_type
                 valueString);
       fflush(stdout);
       if (!SDDS_CopyString(((char**)(p_elem+entity_description[elem_type].parameter[param].offset)), 
+                           valueString)) {
+        fprintf(stdout, "Error (change_defined_parameter): unable to copy string parameter value\n");
+        fflush(stdout);
+        exit(1);
+      }
+      if (!SDDS_CopyString(((char**)(p_elem0+entity_description[elem_type].parameter[param].offset)), 
                            valueString)) {
         fprintf(stdout, "Error (change_defined_parameter): unable to copy string parameter value\n");
         fflush(stdout);

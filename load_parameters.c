@@ -242,7 +242,7 @@ long setup_load_parameters_for_file(char *filename, RUN *run, LINE_LIST *beamlin
 long do_load_parameters(LINE_LIST *beamline, long change_definitions)
 {
   long i, j, count, mode_flags, code, rows,  param, allFilesRead, allFilesIgnored;
-  char **element, **parameter, **type, **mode, *p_elem, *ptr, lastMissingElement[100];
+  char **element, **parameter, **type, **mode, *p_elem, *p_elem0, *ptr, lastMissingElement[100];
   double *value, newValue;
   char **valueString;
   ELEMENT_LIST *eptr;
@@ -468,6 +468,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
       do {
         numberChanged++;
         p_elem = eptr->p_elem;
+        p_elem0 = eptr->p_elem0;
         load_request[i].reset_address 
           = trealloc(load_request[i].reset_address,
                      sizeof(*load_request[i].reset_address)*(load_request[i].values+1));
@@ -509,14 +510,23 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
           load_request[i].starting_value[load_request[i].values]
             = *((double*)(p_elem+entity_description[eptr->type].parameter[param].offset));
           load_request[i].value_type[load_request[i].values] = IS_DOUBLE;
-          if (mode_flags&LOAD_FLAG_ABSOLUTE)
+          if (mode_flags&LOAD_FLAG_ABSOLUTE) {
             *((double*)(p_elem+entity_description[eptr->type].parameter[param].offset)) = newValue;
-          else if (mode_flags&LOAD_FLAG_DIFFERENTIAL)
+	    if (load_request[i].flags&COMMAND_FLAG_CHANGE_DEFINITIONS)
+	      *((double*)(p_elem0+entity_description[eptr->type].parameter[param].offset)) = newValue;
+	      
+	  } else if (mode_flags&LOAD_FLAG_DIFFERENTIAL) {
             *((double*)(p_elem+entity_description[eptr->type].parameter[param].offset)) += newValue;
-          else if (mode_flags&LOAD_FLAG_FRACTIONAL)
+	    if (load_request[i].flags&COMMAND_FLAG_CHANGE_DEFINITIONS)
+	      *((double*)(p_elem0+entity_description[eptr->type].parameter[param].offset)) += newValue;
+	  } else if (mode_flags&LOAD_FLAG_FRACTIONAL) {
             *((double*)(p_elem+entity_description[eptr->type].parameter[param].offset)) *= 1+newValue;
+	    if (load_request[i].flags&COMMAND_FLAG_CHANGE_DEFINITIONS)
+	      *((double*)(p_elem0+entity_description[eptr->type].parameter[param].offset)) *= 1+newValue;
+	  }
           if (verbose)
-            fprintf(stdout, "%21.15e\n",
+            fprintf(stdout, "%21.15e (%21.15e)\n",
+                    *((double*)(p_elem+entity_description[eptr->type].parameter[param].offset)),
                     *((double*)(p_elem+entity_description[eptr->type].parameter[param].offset)));
             fflush(stdout);
           break;
@@ -539,14 +549,23 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
           load_request[i].starting_value[load_request[i].values]
             = *((long*)(p_elem+entity_description[eptr->type].parameter[param].offset));
           load_request[i].value_type[load_request[i].values] = IS_LONG;
-          if (mode_flags&LOAD_FLAG_ABSOLUTE)
+          if (mode_flags&LOAD_FLAG_ABSOLUTE) {
             *((long*)(p_elem+entity_description[eptr->type].parameter[param].offset)) = 
               nearestInteger(newValue);
-          else if (mode_flags&LOAD_FLAG_DIFFERENTIAL)
+	    if (load_request[i].flags&COMMAND_FLAG_CHANGE_DEFINITIONS)
+	      *((long*)(p_elem0+entity_description[eptr->type].parameter[param].offset)) = 
+		nearestInteger(newValue);
+	  } else if (mode_flags&LOAD_FLAG_DIFFERENTIAL) {
             *((long*)(p_elem+entity_description[eptr->type].parameter[param].offset)) += 
               nearestInteger(newValue);
-          else if (mode_flags&LOAD_FLAG_FRACTIONAL)
+	    if (load_request[i].flags&COMMAND_FLAG_CHANGE_DEFINITIONS)
+	      *((long*)(p_elem0+entity_description[eptr->type].parameter[param].offset)) = 
+		nearestInteger(newValue);
+	  } else if (mode_flags&LOAD_FLAG_FRACTIONAL) {
             *((long*)(p_elem+entity_description[eptr->type].parameter[param].offset)) *= 1+newValue;
+	    if (load_request[i].flags&COMMAND_FLAG_CHANGE_DEFINITIONS)
+	      *((long*)(p_elem0+entity_description[eptr->type].parameter[param].offset)) *= 1+newValue;
+	  }
           if (verbose)
             fprintf(stdout, "%" PRId32 " \n",
                     *((long*)(p_elem+entity_description[eptr->type].parameter[param].offset)));
@@ -566,6 +585,14 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
             fflush(stdout);
             exit(1);
           }
+	  if (load_request[i].flags&COMMAND_FLAG_CHANGE_DEFINITIONS) {
+	    if (!SDDS_CopyString((char**)(p_elem0+entity_description[eptr->type].parameter[param].offset),
+				 valueString[j])) {
+	      fprintf(stdout, "Error (do_load_parameters): unable to copy value string\n");
+	      fflush(stdout);
+	      exit(1);
+	    }
+	  }
           if (verbose)
             fprintf(stdout, "%s\n", 
                     *((char**)(p_elem+entity_description[eptr->type].parameter[param].offset)));

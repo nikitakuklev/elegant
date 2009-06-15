@@ -807,8 +807,27 @@ VMATRIX *compute_matrix(
         break;
       case T_MATR:
         matr = (MATR*)elem->p_elem;
-        if (!matr->matrix_read) 
-            bomb("matrix not read in for MATR element", NULL);
+        if (!matr->matrix_read) {
+          char *filename;
+          FILE *fpm;
+          if (!(filename=findFileInSearchPath(matr->filename))) {
+            fprintf(stderr,"Unable to find MATR file %s\n", matr->filename);
+            exit(1);
+          }
+          fprintf(stdout, "File %s found: %s\n", matr->filename, filename);
+          fpm = fopen_e(filename, "r", 0);
+          free(filename);
+          matr->M.order = matr->order;
+          initialize_matrices(&(matr->M), matr->order);
+          if (!read_matrices(&(matr->M), fpm)) {
+            fprintf(stdout, "error reading matrix from file %s\n", matr->filename);
+            fflush(stdout);
+            abort();
+          }
+          fclose(fpm);
+          matr->matrix_read = 1;
+          matr->length = matr->M.C[4];
+        }
         elem->matrix = &(((MATR*)elem->p_elem)->M);
         break;
       case T_WATCH:
