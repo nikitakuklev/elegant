@@ -64,3 +64,11 @@ N\_STEPS should be about 100 times the number of undulator periods.
 
 The expressions for the laser field used by this element were provided
 by P. Emma (SLAC).
+
+The laser time profile can be specified using the \verb|TIME_PROFILE|
+parameter to specify the name of an SDDS file containing the
+profile.   By default $t=0$ in the
+profile is lined up with $\langle t \rangle$ in the electron bunch.
+This can be changed with the \verb|TIME_OFFSET| parameter. A positive
+value of \verb|TIME_OFFSET| moves the laser profile forward in time (toward
+the head of the bunch).
