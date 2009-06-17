@@ -42,6 +42,7 @@ void (*set_up_derivatives(void *field, long field_type, double *kscale,
         double z_start, double *Z_end, double *tau_start, double **part, long n_part, 
         double Po, double *X_limit, double *Y_limit, double *accuracy,
         long *n_steps))(double *, double *, double);
+void (*set_up_stochastic_effects(long field_type))(double *, double, double);
 void derivatives_tmcf_mode(
     double *qp,       /* derivatives w.r.t. tau */
     double *q,        /* X,Y,Z,Px,Py,Pz */
@@ -78,6 +79,8 @@ void derivatives_mapSolenoid(
     double tau     
     );
 void derivatives_laserModulator(double *qp, double *q, double tau);
+void stochastic_laserModulator(double *q, double tau, double h);
+
 
 void computeFields_rftmEz0(double *E, double *BOverGamma, double *BOverGammaSol, 
                            double q0, double q1, double q2, double tau, double gamma);
@@ -95,9 +98,20 @@ void input_impulse_twmta(double *P, double *q);
 void output_impulse_twmta(double *P, double *q);
 
 static void (*derivatives)(double *xqp, double *xq, double xt);
+static void (*stochasticEffects)(double *xq, double xt, double h);
 static void (*input_impulse)(double *P, double *q);
 static void (*output_impulse)(double *P, double *q);
 static long (*integrator)();
+
+static long integratorCode = -1;
+#define RUNGE_KUTTA 0
+#define BULIRSCH_STOER 1
+#define NA_RUNGE_KUTTA 2
+#define MODIFIED_MIDPOINT 3
+#define N_METHODS 4
+static char *method[N_METHODS] = {
+    "runge-kutta", "bulirsch-stoer", "non-adaptive runge-kutta", "modified midpoint"
+    } ;
 
 long analyzeSpacing(double *z, long nz, double *dzReturn, FILE *fpError);
 
@@ -145,6 +159,11 @@ static double initial_phase=0, final_phase=0;
 static double xMaxSeen=-1e300, xMinSeen=1e300;
 static long xMotionCenterVar = -1;
 
+static double radCoef = 0;
+static double isrCoef = 0;
+static double dsRad = 0;
+static double P_central;
+
 #define LSRMDLTR_IDEAL 0
 #define LSRMDLTR_EXACT 1
 #define LSRMDLTR_LEADING 2
@@ -165,7 +184,7 @@ long motion(
     double z_start
     )
 {
-    double tau, tau_limit, P_central;
+    double tau, tau_limit;
     double tau_start;
     long n_eq = 6;
     static double q[6], dqdt[6];         /* X,Y,Z,Px,Py,Pz */
@@ -187,6 +206,9 @@ long motion(
     change_p0 = 0;
     P_central = *pCentral;
     
+    radCoef = sqr(particleCharge)*pow3(P_central)/(6*PI*epsilon_o*sqr(c_mks)*particleMass);
+    isrCoef = particleRadius*sqrt(55.0/(24*sqrt(3))*pow5(P_central)*137.0359895);
+
     log_entry("motion");
 
     X_aperture_center = Y_aperture_center = 0;
@@ -197,6 +219,8 @@ long motion(
     derivatives = set_up_derivatives(field, field_type, &kscale, z_start, &Z_end, 
                                      &tau_start, part, n_part, P_central, 
                                      &X_limit, &Y_limit, &tolerance, &n_steps);
+    stochasticEffects = set_up_stochastic_effects(field_type);
+    
     if (n_steps<2)
         bomb("too few steps for integration", NULL);
 
@@ -254,9 +278,15 @@ long motion(
             if (input_impulse)
                 input_impulse(P, q);
             derivCalls = 0;
-            switch (rk_return = (*integrator)(q, derivatives, n_eq, accuracy, accmode, tiny, misses,
-                  &tau, tau_limit, sqr(tolerance)*(tau_limit-tau), hrec, hmax, &hrec, exit_function, 
-                  sqr(tolerance)*kscale)) {
+            if (integrator==rk_odeint3_na) 
+              rk_return = rk_odeint3_na(q, derivatives, n_eq, accuracy, accmode, tiny, misses,
+                                        &tau, tau_limit, sqr(tolerance)*(tau_limit-tau), hrec, hmax, &hrec, exit_function, 
+                                        sqr(tolerance)*kscale, stochasticEffects);
+            else 
+              rk_return = (*integrator)(q, derivatives, n_eq, accuracy, accmode, tiny, misses,
+                                        &tau, tau_limit, sqr(tolerance)*(tau_limit-tau), hrec, hmax, &hrec, exit_function, 
+                                        sqr(tolerance)*kscale);
+            switch (rk_return) {
                 case DIFFEQ_ZERO_STEPSIZE:
                 case DIFFEQ_CANT_TAKE_STEP:
                 case DIFFEQ_OUTSIDE_INTERVAL:
@@ -442,6 +472,8 @@ void (*set_up_derivatives(
         fprintf(stdout, "    %s\n", lsrMdltrFieldExpansion[i]);
       exit(1);
     }
+    if (lsrMdltr->isr && integratorCode!=NA_RUNGE_KUTTA)
+      bomb("LSRMDLTR with ISR must use non-adaptive runge-kutta integration", NULL);
     if (lsrMdltr->usersLaserWavelength)
       lsrMdltr->laserWavelength = lsrMdltr->usersLaserWavelength;
     else
@@ -459,6 +491,23 @@ void (*set_up_derivatives(
     *Z_end = lsrMdltr->length*(*kscale);
     Z_center = lsrMdltr->length/2*(*kscale);
     *X_limit = *Y_limit = 1e300;
+    lsrMdltr->t0 = 0;
+    if (lsrMdltr->timeProfileFile) {
+      long i;
+      TABLE data;
+      if (!getTableFromSearchPath(&data, lsrMdltr->timeProfileFile, 1, 0))
+        bomb("unable to read data for LSRMDLTR time profile", NULL);
+      if (data.n_data<=1)
+        bomb("LSRMDLTR time profile contains less than 2 points", NULL);
+      lsrMdltr->timeValue = data.c1;
+      lsrMdltr->amplitudeValue = data.c2;
+      lsrMdltr->tProfilePoints = data.n_data;
+      for (i=1; i<data.n_data; i++)
+        if (data.c1[i-1]>data.c1[i])
+          bomb("time values not monotonically increasing in LSRMDLTR time profile", NULL);
+      tfree(data.xlab); tfree(data.ylab); tfree(data.title); tfree(data.topline);
+    }
+    lsrMdltr->t0 = findFiducialTime(part, n_part, 0, lsrMdltr->length/2, P_central, FID_MODE_TMEAN) + lsrMdltr->timeProfileOffset;
     return(derivatives_laserModulator);
   case T_RFTMEZ0:
     rftmEz0 = field;
@@ -778,6 +827,17 @@ void (*set_up_derivatives(
     break;
   }
   exit(1);
+}
+
+void (*set_up_stochastic_effects(long field_type))(double *, double, double)
+{
+  switch (field_type) {
+  case T_LSRMDLTR:
+    return(stochastic_laserModulator);
+  default:
+    return NULL;
+    break;
+  }
 }
 
 void derivatives_rftmEz0(
@@ -1531,16 +1591,6 @@ double *select_fiducial(double **part, long n_part, char *var_mode_in)
   return(part[i_best]);
 }
 
-
-#define RUNGE_KUTTA 0
-#define BULIRSCH_STOER 1
-#define NA_RUNGE_KUTTA 2
-#define MODIFIED_MIDPOINT 3
-#define N_METHODS 4
-static char *method[N_METHODS] = {
-    "runge-kutta", "bulirsch-stoer", "non-adaptive runge-kutta", "modified midpoint"
-    } ;
-
 void select_integrator(char *desired_method)
 {
     long i;
@@ -1553,7 +1603,7 @@ void select_integrator(char *desired_method)
     fprintf(stdout, "this translates into string %s\n", desired_method);
     fflush(stdout);
 #endif
-    switch (match_string(desired_method, method, N_METHODS, 0)) {
+    switch (integratorCode=match_string(desired_method, method, N_METHODS, 0)) {
       case RUNGE_KUTTA:
         fprintf(stdout, "Warning: adaptive integrator chosen.  \"non-adaptive runge-kutta\" is recommended.\n");
         fflush(stdout);
@@ -2085,7 +2135,8 @@ void makeRftmEz0FieldTestFile(RFTMEZ0 *rftmEz0)
 }
 
 void computeLaserField(double *Ef, double *Bf, double phase, double Ef0, double ZR,
-                       double k, double w0, double x, double y, double dz) ;
+                       double k, double w0, double x, double y, double dz,
+                       double *tValue, double *amplitudeValue, long profilePoints, double tForProfile) ;
 
 #ifdef DEBUG
 FILE *fppu = NULL;
@@ -2108,6 +2159,7 @@ void derivatives_laserModulator(double *qp, double *q, double tau)
     fprintf(fppu, "&column name=phi type=double &end\n");
     fprintf(fppu, "&column name=x type=double units=m &end\n");
     fprintf(fppu, "&column name=y type=double units=m &end\n");
+
     fprintf(fppu, "&column name=z type=double units=m &end\n");
     fprintf(fppu, "&column name=Px type=double &end\n");
     fprintf(fppu, "&column name=Py type=double &end\n");
@@ -2121,7 +2173,7 @@ void derivatives_laserModulator(double *qp, double *q, double tau)
   derivCalls++;
   P  = q+3;
   gamma = sqrt(sqr(P[0])+sqr(P[1])+sqr(P[2])+1);
-
+  
   /* X' = Px/gamma, etc. */
   qp[0] = P[0]/gamma;
   qp[1] = P[1]/gamma;
@@ -2166,20 +2218,22 @@ void derivatives_laserModulator(double *qp, double *q, double tau)
     double Bscale;
     computeLaserField(E, Blaser, -tau + q[2] - Z_center + lsrMdltr->laserPhase,
                       lsrMdltr->Ef0Laser, lsrMdltr->ZRayleigh, lsrMdltr->k, lsrMdltr->laserW0,
-                      x, y, z-Z_center/lsrMdltr->k);
+                      x, y, z-Z_center/lsrMdltr->k,
+                      lsrMdltr->timeValue, lsrMdltr->amplitudeValue, lsrMdltr->tProfilePoints,
+                      (tau/lsrMdltr->omega-lsrMdltr->t0) - (q[2]-Z_center)/(lsrMdltr->k*c_mks));
     Bscale = lsrMdltr->Bscale/gamma;
     for (i=0; i<3; i++) {
       E[i] *= lsrMdltr->Escale;
       BOverGamma[i] += Blaser[i]*Bscale;
     }
   }
-  
 
   /* (Px,Py,Pz)' = (Ex,Ey,Ez) + (Px,Py,Pz)x(Bx,By,Bz)/gamma */
   Pp = qp+3;
   Pp[0] = -(E[0]+P[1]*BOverGamma[2]-P[2]*BOverGamma[1]);
   Pp[1] = -(E[1]+P[2]*BOverGamma[0]-P[0]*BOverGamma[2]);
   Pp[2] = -(E[2]+P[0]*BOverGamma[1]-P[1]*BOverGamma[0]);
+
   
 #ifdef DEBUG
   fprintf(fppu, "%e %e %e %e %e %e %e %e %e %e %e\n", tau, tau/lsrMdltr->omega, 
@@ -2187,17 +2241,131 @@ void derivatives_laserModulator(double *qp, double *q, double tau)
 #endif
 }
 
+void stochastic_laserModulator(double *q, double tau, double h)
+{
+  LSRMDLTR *lsrMdltr; 
+  double gamma, *P, p;
+  double B[2]={0,0};
+  double x, y, z, Bfactor, kuz, kuy;
+  double B2, delta0, delta1, irho2;
+  long i, poleNumber;
+
+  lsrMdltr = (LSRMDLTR*)field_global;
+
+  if (!lsrMdltr->synchRad && !lsrMdltr->isr)
+    return;
+  
+  P  = q+3;
+  p = sqr(P[0])+sqr(P[1])+sqr(P[2]);
+  gamma = sqrt(p+1);
+  p = sqrt(p);
+  
+  x = (q[0] - X_offset)/lsrMdltr->k;
+  y = q[1]/lsrMdltr->k;
+  z = q[2]/lsrMdltr->k;
+  h = h/lsrMdltr->k;
+  
+  poleNumber = z/(lsrMdltr->length/(2*lsrMdltr->periods))+0.5;
+  if (poleNumber>2 && poleNumber<(2*lsrMdltr->periods-2))
+    factor = 1;
+  else if (poleNumber==0 || poleNumber==2*lsrMdltr->periods)
+    factor = lsrMdltr->poleFactor1;
+  else if (poleNumber==1 || poleNumber==(2*lsrMdltr->periods-1))
+    factor = lsrMdltr->poleFactor2;
+  else 
+    factor = lsrMdltr->poleFactor3;
+
+  Bfactor = factor*lsrMdltr->Bu;
+  kuz = lsrMdltr->ku*z;
+  kuy = lsrMdltr->ku*y;
+  if (lsrMdltr->fieldCode==LSRMDLTR_IDEAL) {
+    B[0] = Bfactor*cos(kuz);
+    B[1] = 0;
+  } else if (lsrMdltr->fieldCode==LSRMDLTR_EXACT) {
+    B[0] = Bfactor*cos(kuz)*cosh(kuy);
+    B[1] = Bfactor*sin(kuz)*sinh(kuy);
+  } else {
+    /* leading terms only */
+    B[0] = Bfactor*cos(kuz)*(1+sqr(kuy)/2);
+    B[1] = Bfactor*sin(kuz)*kuy;
+  }
+  
+  B2 = sqr(B[0]) + sqr(B[1]);
+  /* 1/rho^2 for central momentum */
+  irho2 = B2/sqr(gamma*me_mks*c_mks/e_mks);
+  delta1 = delta0 = (p-P_central)/P_central;
+  if (lsrMdltr->synchRad)
+    delta1 -= radCoef*(1+delta0)*irho2*h;
+  if (lsrMdltr->isr)
+    delta1 += isrCoef*sqr(1+delta0)*pow(irho2, 0.75)*sqrt(h)*gauss_rn_lim(0.0, 1.0, 3.0, random_2);
+
+  for (i=0; i<3; i++)
+    P[i] *= (1+delta1)/(1+delta0);
+  
+  }
+
 #include "complex.h"
 
 void computeLaserField(double *Ef, double *Bf, double phase, double Ef0, double ZR,
-                       double k, double w0, double x, double y, double dz) 
+                       double k, double w0, double x, double y, double dz,
+                       double *timeValue, double *amplitudeValue, long profilePoints,
+                       double tForProfile) 
 {
   /* Based on P. Emma's MATLAB routine */
+#if DEBUG
+  static FILE *fpdeb = NULL;
+#endif
 
   COMPLEX Q, Q2, Efx, ctmp1, ctmp2, ctmp3, ctmp4;
   COMPLEX Efz, Bfx, Bfy, Bfz;
   double r2, x2;
+  static long lastIndex = 0;
+  double amplitude = 1;
+  long i;
 
+  for (i=0; i<3; i++)
+    Ef[i] = Bf[i] = 0;
+  
+  if (timeValue) {
+    long i;
+    if (tForProfile<timeValue[0] || tForProfile>timeValue[profilePoints-1])
+      return;
+    else {
+      if ((i = lastIndex)>=(profilePoints-1))
+        i = profilePoints-2;
+      if (i<0)
+        i = 0;
+      if (tForProfile<timeValue[i]) {
+        do {
+          i--;
+        } while (i>=0 && tForProfile<timeValue[i]);
+      } else if (tForProfile>timeValue[i+1]) {
+        do {
+          i++;
+        } while (i<(profilePoints-1) && tForProfile>timeValue[i+1]);
+      }
+      if (i<0 || i>=(profilePoints-1))
+        return;
+      else
+        amplitude = INTERPOLATE(amplitudeValue[i], amplitudeValue[i+1], 
+                                timeValue[i], timeValue[i+1],
+                                tForProfile);
+#if DEBUG
+      if (!fpdeb) {
+        fpdeb = fopen("lsrMdltr.sdds", "w");
+        fprintf(fpdeb, "SDDS1\n&column name=t type=double units=s &end\n");
+        fprintf(fpdeb, "&column name=A type=double &end\n");
+        fprintf(fpdeb, "&column name=dz type=double units=m &end\n");
+        fprintf(fpdeb, "&data mode=ascii no_row_counts=1 &end\n");
+      }
+      fprintf(fpdeb, "%e %e %e\n", tForProfile, amplitude, dz);
+#endif
+      lastIndex = i;
+    }
+  }
+  
+  Ef0 *= amplitude;
+    
   x2 = sqr(x);
   r2 = x2 + sqr(y);
   

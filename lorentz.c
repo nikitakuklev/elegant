@@ -330,12 +330,17 @@ long do_lorentz_integration(double *coord, void *field)
         s_end   = central_length*2;
         hmax    = central_length/N_INTERIOR_STEPS;
         hrec    = hmax/10;
-        if (integrator==rk_odeint3_na)
-          hrec = central_length*tolerance;
         if ((exit_toler = sqr(tolerance)*s_end)<central_length*1e-14)
             exit_toler = central_length*1e-14;
-        switch (int_return = (*integrator)(q, deriv_function, n_eq, accuracy, accmode, tiny, misses,
-              &s_start, s_end, exit_toler, hrec, hmax, &hrec, exit_function, exit_toler)) {
+        if (integrator==rk_odeint3_na) {
+          hrec = central_length*tolerance;
+          int_return = rk_odeint3_na(q, deriv_function, n_eq, accuracy, accmode, tiny, misses,
+                                     &s_start, s_end, exit_toler, hrec, hmax, &hrec, exit_function, exit_toler, NULL);
+        }
+        else 
+          int_return = (*integrator)(q, deriv_function, n_eq, accuracy, accmode, tiny, misses,
+                                     &s_start, s_end, exit_toler, hrec, hmax, &hrec, exit_function, exit_toler);
+        switch (int_return) {
             case DIFFEQ_ZERO_STEPSIZE:
             case DIFFEQ_CANT_TAKE_STEP:
             case DIFFEQ_OUTSIDE_INTERVAL:
