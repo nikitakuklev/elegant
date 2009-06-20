@@ -516,9 +516,11 @@ long compute_final_properties
     approximate_percentiles(tPosition2, percLevel2, 9, tData, sums->n_part, ANALYSIS_BINS2);
     approximate_percentiles(deltaPosition, percLevel, 12, deltaData, sums->n_part, ANALYSIS_BINS2);
 #else
-    approximate_percentiles_p(tPosition, percLevel, 12, tData, sums->n_part, ANALYSIS_BINS2);
-    approximate_percentiles_p(tPosition2, percLevel2, 9, tData, sums->n_part, ANALYSIS_BINS2);
-    approximate_percentiles_p(deltaPosition, percLevel, 12, deltaData, sums->n_part, ANALYSIS_BINS2);
+    if (n_part_total) {
+      approximate_percentiles_p(tPosition, percLevel, 12, tData, sums->n_part, ANALYSIS_BINS2);
+      approximate_percentiles_p(tPosition2, percLevel2, 9, tData, sums->n_part, ANALYSIS_BINS2);
+      approximate_percentiles_p(deltaPosition, percLevel, 12, deltaData, sums->n_part, ANALYSIS_BINS2);
+    }
 #endif
   }
   else {
@@ -586,6 +588,7 @@ long compute_final_properties
     /* beam charge */
     data[F_T_OFFSET+4] = charge;
   } 
+
   /* compute "sigma" from width of particle distributions for x and y */
 #if !SDDS_MPI_IO
   if (coord && sums->n_part>3) {
@@ -761,12 +764,17 @@ double rms_emittance_p(double **coord, long i1, long i2, long n,
   double xc, xpc, xc_local=0.0, xpc_local=0.0;
   long i, n_total;
   
-  /* We don't check this in the parallel version now, as the master has 0 particle and causes problem 
-  if (!n)
-  return(0.0); */
+  if (notSinglePart) {
+    if (isMaster)
+      n = 0; /* The master will not contribute anything in this routine */
+    MPI_Allreduce (&n, &n_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD); 
+  } else {
+    if (!n)
+      return(0.0);    
+  }
 
-  if (isMaster && notSinglePart) /* The master will not contribute anything in this routine */
-    n = 0; 
+  if (!n_total)
+    return(0.0);
 
   /* compute centroids */
   for (i=0; i<n; i++) {
@@ -881,7 +889,11 @@ double rms_longitudinal_emittance_p(double **coord, long n, double Po)
       if (isMaster)
 	n = 0;
       MPI_Allreduce (&n, &n_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD); 
+    } else {
+      if (!n)
+	return(0.0);    
     }
+    
    
     if (!n_total)
         return(0.0);
