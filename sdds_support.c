@@ -785,14 +785,17 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
 #if SDDS_MPI_IO
       if (USE_MPI) {
 	double sum_x_total, sum_xp_total;
-
-	MPI_Allreduce(&sum_x, &sum_x_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        MPI_Allreduce(&sum_xp, &sum_xp_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-	sum_x = sum_x_total;
-        sum_xp = sum_xp_total; 
-         
-        cx = sum_x/particles_total;
-        cxp = sum_xp/particles_total;
+ 
+        if (particles_total) {
+	  MPI_Allreduce(&sum_x, &sum_x_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+	  MPI_Allreduce(&sum_xp, &sum_xp_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+	  sum_x = sum_x_total;
+	  sum_xp = sum_xp_total;
+	  cx = sum_x/particles_total;
+	  cxp = sum_xp/particles_total;
+	}
+	else
+	  cx = cxp = 0;
       }
 #else
       if (particles) {
@@ -888,7 +891,10 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
       MPI_Allreduce (&sum, &sum_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
       MPI_Allreduce (&p_sum, &p_sum_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
       MPI_Allreduce (&gamma_sum, &gamma_sum_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);     
-      tc = sum_total/particles_total;
+      if (particles_total)
+	tc = sum_total/particles_total;
+      else
+	tc = 0;
       if (isMaster) {
 	if (!SDDS_SetRowValues(&watch->SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, sample,
 			       "Ct", tc, "dCt", tc-tc0,
