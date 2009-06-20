@@ -981,8 +981,8 @@ long dynap_distribution_p(double **particle, long n_particles, double sx, double
        n_particles = n_particles_total/(n_processors-1);
        remainder =  n_particles_total%(n_processors-1);	
        if (myid<=remainder) {
-	 start_particle = n_particles*(myid-1);
 	 n_particles++;
+	 start_particle = n_particles*(myid-1);
 	 end_particle = n_particles*myid-1;
        }
        else {
