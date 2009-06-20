@@ -282,8 +282,10 @@ void accumulate_beam_sums(
 #if USE_MPI
         if (notSinglePart) {
 	  if ((parallelStatus!=trueParallel) && isMaster) {
-	    sums->centroid[i] = (sums->centroid[i]*sums->n_part+centroid[i])/(sums->n_part+n_part);
-	    centroid[i] /= n_part;
+	    if (n_part) {
+	      sums->centroid[i] = (sums->centroid[i]*sums->n_part+centroid[i])/(sums->n_part+n_part);
+	      centroid[i] /= n_part;
+	    }
 	  }
 	}
 #endif
@@ -316,11 +318,12 @@ void accumulate_beam_sums(
 	}
 #endif 
 	/* compute total number of particles over processors */
-	MPI_Allreduce(&n_part, &n_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);  
-	for (i=0; i<6; i++) {
-	  sums->centroid[i] = (sums->centroid[i]*sums->n_part+centroid[i])/(sums->n_part+n_total);
-	  centroid[i] /= n_total;
-	}     
+	MPI_Allreduce(&n_part, &n_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+	if (n_total)
+	  for (i=0; i<6; i++) {
+	    sums->centroid[i] = (sums->centroid[i]*sums->n_part+centroid[i])/(sums->n_part+n_total);
+	    centroid[i] /= n_total;
+	  }     
       }
       else
 	if (isMaster) {
@@ -400,10 +403,11 @@ void accumulate_beam_sums(
 		Sij = KahanPlus(Sij, (coord[i_part][i]-centroid[i])*(coord[i_part][j]-centroid[j]), &errorSig[j]); 
 #endif
 	      }
-	      sums->sigma[i][j] = (sums->sigma[i][j]*sums->n_part+Sij)/(sums->n_part+n_part);
+	      if (n_part)
+		sums->sigma[i][j] = (sums->sigma[i][j]*sums->n_part+Sij)/(sums->n_part+n_part);
 	    }
 	  }
-	  else {
+	  else { /* Single particle case */
 	    for (Sij=i_part=0; i_part<n_part; i_part++) {
 #ifndef USE_KAHAN
 	      Sij += (coord[i_part][i]-centroid[i])*(coord[i_part][j]-centroid[j]);
@@ -411,7 +415,8 @@ void accumulate_beam_sums(
 	      Sij = KahanPlus(Sij, (coord[i_part][i]-centroid[i])*(coord[i_part][j]-centroid[j]), &errorSig[j]); 
 #endif
 	    }
-	    sums->sigma[i][j] = (sums->sigma[i][j]*sums->n_part+Sij)/(sums->n_part+n_part);
+	    if (n_part)
+	      sums->sigma[i][j] = (sums->sigma[i][j]*sums->n_part+Sij)/(sums->n_part+n_part);
 	  }
 #endif
 	}
@@ -452,13 +457,15 @@ void accumulate_beam_sums(
 	}
       
 #endif
-	offset = 0; 
-	for (i=0; i<6; i++) {
-	  if (i>=1)
-	    offset += i-1;
-	  for (j=i; j<6; j++) {
-	    index = 5*i+j-offset;
-	    sums->sigma[i][j] = (sums->sigma[i][j]*sums->n_part+Sij_total[index])/(sums->n_part+n_total);
+	if (n_total) {
+	  offset = 0; 
+	  for (i=0; i<6; i++) {
+	    if (i>=1)
+	      offset += i-1;
+	    for (j=i; j<6; j++) {
+	      index = 5*i+j-offset;
+	      sums->sigma[i][j] = (sums->sigma[i][j]*sums->n_part+Sij_total[index])/(sums->n_part+n_total);
+	    }
 	  }
 	}
       }
