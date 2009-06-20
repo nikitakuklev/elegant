@@ -92,16 +92,20 @@ void setup_bunched_beam(
   if (n_particles_per_bunch<=0)
     bomb("n_particles_per_bunch is invalid", NULL);
 #if SDDS_MPI_IO
-  if (isSlave) {
-    long work_processors = n_processors-1;
-    long my_nToTrack = n_particles_per_bunch/work_processors; 
-    if (myid<=(n_particles_per_bunch%work_processors)) 
-      my_nToTrack++;
-    n_particles_per_bunch = my_nToTrack;
-  }
+  beam->n_original_total = beam->n_to_track_total = n_particles_per_bunch; /* record the total number of particles being tracked */
+  if (n_particles_per_bunch == 1) /* a special case for single particle tracking */
+    notSinglePart = 0;
   else {
-    beam->n_original_total = beam->n_to_track_total = n_particles_per_bunch; /* record the total number of particles being tracked */
-    n_particles_per_bunch = 0;
+    if (isSlave) {
+      long work_processors = n_processors-1;
+      long my_nToTrack = n_particles_per_bunch/work_processors; 
+      if (myid<=(n_particles_per_bunch%work_processors)) 
+	my_nToTrack++;
+      n_particles_per_bunch = my_nToTrack;
+    }
+    else {
+      n_particles_per_bunch = 0;
+    }
   }
 #endif
   if (emit_x<0 || beta_x<=0)
@@ -290,7 +294,11 @@ long new_bunched_beam(
         bunchGenerated = 0;
       beam->n_original = beam->n_to_track = beam->n_particle = n_particles_per_bunch;
 #if USE_MPI
-      lessPartAllowed = 0;
+      if (beam->n_original_total != 1)
+	lessPartAllowed = 0;
+      else {
+	lessPartAllowed = 1; 
+      }
       if (isMaster) {
 	beam->particle = beam->original = beam->accepted = NULL;
 	beam->n_original = beam->n_to_track = beam->n_particle = 0;
@@ -624,11 +632,13 @@ void do_track_beam_output(RUN *run, VARY *control,
 #if SDDS_MPI_IO
       if (SDDS_MPI_IO) {
 	long total_left;
-	
-	if (isMaster) n_left = 0;
-	MPI_Reduce (&n_left, &total_left, 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+	if (notSinglePart) {
+	  if (isMaster) n_left = 0;
+	  MPI_Reduce (&n_left, &total_left, 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+	} else 
+	  total_left = n_left;
 	fprintf(stdout, "n_left = %ld, n_total = %ld, n_lost = %ld\n", 
-	      total_left, beam->n_original_total, beam->n_original_total-total_left);
+		total_left, beam->n_original_total, beam->n_original_total-total_left);
       }
 #else
       fprintf(stdout, "n_left = %ld, n_total = %ld, n_lost = %ld\n", 
