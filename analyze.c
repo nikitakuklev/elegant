@@ -445,6 +445,7 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
   double defaultStep[6] = {1e-5, 1e-5, 1e-5, 1e-5, 1e-5, 1e-5};
   long ltmp1, ltmp2;
   char s[1024];
+  double dgamma, dP[3];
   
   coord = (double**)czarray_2d(sizeof(**coord), 1+6*4, 7);
 
@@ -518,6 +519,10 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
   case T_SCRIPT:
     transformBeamWithScript((SCRIPT*)eptr->p_elem, run->p_central, NULL, NULL, coord, n_track, 0,
                             NULL, 0, 2);
+    break;
+  case T_TWLA:
+  case T_TWMTA:
+    motion(coord, n_track, eptr->p_elem, eptr->type, &run->p_central, &dgamma, dP, NULL, 0.0);
     break;
   default:
     printf("*** Error: determineMatrix called for element that is not supported!\n");

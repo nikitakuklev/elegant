@@ -1074,13 +1074,20 @@ VMATRIX *compute_matrix(
       case T_SREFFECTS:
         elem->matrix = srEffectsMatrix((SREFFECTS*)elem->p_elem);
         break;
+      case T_TWLA: 
+      case T_TWMTA:
+      case T_MAPSOLENOID:
+        pSave = run->p_central;
+        run->p_central = elem->Pref_input;
+        elem->matrix = determineMatrix(run, elem, NULL, NULL);
+        elem->Pref_output = run->p_central;
+        run->p_central = pSave;
+        break;
       case T_KPOLY: case T_RFDF:  case T_RFTMEZ0:  case T_RMDF:  case T_TMCF: case T_CEPL:  
-      case T_TWPL:  case T_TWLA:  
-      case T_TWMTA: case T_RCOL:  case T_PEPPOT: case T_MAXAMP: 
-      case T_ECOL: case T_TRCOUNT: 
-      case T_RECIRC: case T_SCRAPER: case T_CENTER: case T_MULT: 
+      case T_TWPL:  case T_RCOL:  case T_PEPPOT: case T_MAXAMP: 
+      case T_ECOL: case T_TRCOUNT: case T_RECIRC: case T_SCRAPER: case T_CENTER: case T_MULT: 
       case T_SCATTER: case T_RAMPRF: case T_RAMPP: 
-      case T_KICKER: case T_RFMODE: case T_REMCOR: case T_MAPSOLENOID:
+      case T_KICKER: case T_RFMODE: case T_REMCOR: 
       case T_DSCATTER: case T_LSRMDLTR: case T_MKICKER:
       default:
         if (entity_description[elem->type].flags&HAS_LENGTH)
