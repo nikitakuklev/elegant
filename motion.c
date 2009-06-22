@@ -507,7 +507,7 @@ void (*set_up_derivatives(
           bomb("time values not monotonically increasing in LSRMDLTR time profile", NULL);
       tfree(data.xlab); tfree(data.ylab); tfree(data.title); tfree(data.topline);
     }
-    lsrMdltr->t0 = findFiducialTime(part, n_part, 0, lsrMdltr->length/2, P_central, FID_MODE_TMEAN) + lsrMdltr->timeProfileOffset;
+    lsrMdltr->t0 = findFiducialTime(part, n_part, 0, lsrMdltr->length/2, P_central, FID_MODE_TMEAN) + lsrMdltr->timeProfileOffset; 
     return(derivatives_laserModulator);
   case T_RFTMEZ0:
     rftmEz0 = field;
