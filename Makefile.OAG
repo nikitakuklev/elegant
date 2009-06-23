@@ -43,6 +43,7 @@ else
     #MPI_PATH = /share/mpich2_mpd_sock/bin/
     #MPI_PATH = /share/mpich/ch_p4/bin/
     #MPI_PATH = /data/mpich2_mpd_nemesis/bin/
+    #MPI_PATH = /data/mpich2-1.0.8p1/bin/
     CC = $(MPI_PATH)mpicc   $(USER_MPI_FLAGS)   
     CCC = $(MPI_PATH)mpicxx  $(USER_MPI_FLAGS)
     # memory debugging with totalview
