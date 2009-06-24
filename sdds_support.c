@@ -223,7 +223,7 @@ void SDDS_CentroidOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode,
     log_exit("SDDS_CentroidOutputSetup");
     }
 
-#define SIGMA_MATRIX_COLUMNS 53
+#define SIGMA_MATRIX_COLUMNS 57
 static SDDS_DEFINITION sigma_matrix_column[SIGMA_MATRIX_COLUMNS] = {
     {"s1",    "&column name=s1, symbol=\"$gs$r$b1$n\", units=m, type=double, description=\"sqrt(<x*x>)\" &end"},
     {"s12",    "&column name=s12, symbol=\"$gs$r$b12$n\", units=m, type=double, description=\"<x*xp'>\" &end"},
@@ -278,6 +278,10 @@ static SDDS_DEFINITION sigma_matrix_column[SIGMA_MATRIX_COLUMNS] = {
     {"eny", "&column name=eny, symbol=\"$ge$r$by,n$n\", type=double, units=m, description=\"normalized vertical emittance\" &end"},
     {"ecy", "&column name=ecy, symbol=\"$ge$r$by,c$n\", units=m, type=double, description=\"geometric vertical emittance less dispersive contributions\" &end"},
     {"ecny", "&column name=ecny, symbol=\"$ge$r$by,cn$n\", type=double, units=m, description=\"normalized vertical emittance less dispersive contributions\" &end"},
+    {"betaxBeam", "&column name=betaxBeam, symbol=\"$gb$r$bx,beam$n\", type=double, units=m, description=\"betax for the beam, excluding dispersive contributions\" &end"},
+    {"alphaxBeam", "&column name=alphaxBeam, symbol=\"$ga$r$bx,beam$n\", type=double, description=\"alphax for the beam, excluding dispersive contributions\" &end"},
+    {"betayBeam", "&column name=betayBeam, symbol=\"$gb$r$by,beam$n\", type=double, units=m, description=\"betay for the beam, excluding dispersive contributions\" &end"},
+    {"alphayBeam", "&column name=alphayBeam, symbol=\"$ga$r$by,beam$n\", type=double, description=\"alphay for the beam, excluding dispersive contributions\" &end"},
     } ;
 
 void SDDS_SigmaOutputSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row,
@@ -1593,9 +1597,9 @@ void dump_sigma(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, lo
   long i, j, ie, offset, plane, index;
   BEAM_SUMS *beam;
   ELEMENT_LIST *eptr;
-  double emit, emitNorm;
+  double emit, emitNorm, beta, alpha;
   char *name, *type_name;
-  long s_index=0, ma1_index=0, min1_index=0, max1_index=0, Sx_index=0, occurence, ex_index=0;
+  long s_index=0, ma1_index=0, min1_index=0, max1_index=0, Sx_index=0, occurence, ex_index=0, betax_index=0;
   long sNIndex[6]={0,0,0,0,0,0};
 
 #if USE_MPI  
@@ -1622,7 +1626,8 @@ void dump_sigma(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, lo
       (min1_index=SDDS_GetColumnIndex(SDDS_table, "minimum1"))<0 ||
       (max1_index=SDDS_GetColumnIndex(SDDS_table, "maximum1"))<0 ||
       (Sx_index=SDDS_GetColumnIndex(SDDS_table, "Sx"))<0 ||
-      (ex_index=SDDS_GetColumnIndex(SDDS_table, "ex"))<0) {
+      (ex_index=SDDS_GetColumnIndex(SDDS_table, "ex"))<0 ||
+      (betax_index=SDDS_GetColumnIndex(SDDS_table, "betaxBeam"))<0) {
     SDDS_SetError("Problem getting index of SDDS columns (dump_sigma)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
@@ -1710,6 +1715,27 @@ void dump_sigma(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, lo
         if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, 
                                ex_index+2+2*plane, emit, 
                                ex_index+3+2*plane, emitNorm,
+                               -1)) {
+          SDDS_SetError("Problem setting SDDS row values (dump_sigma)");
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+        }
+        /* beta and alpha */
+        beta = alpha = 0;
+        if (emit) {
+          if (beam->sigma[5][5]) {
+            double s11c, s12c;
+            s11c = beam->sigma[0+plane][0+plane] - sqr(beam->sigma[0+plane][5])/beam->sigma[5][5];
+            s12c = beam->sigma[0+plane][1+plane] - beam->sigma[0+plane][5]*beam->sigma[1+plane][5]/beam->sigma[5][5];
+            beta = s11c/emit;
+            alpha = -s12c/emit;
+          } else {
+            beta = beam->sigma[0+plane][0+plane]/emit;
+            alpha = -beam->sigma[0+plane][1+plane]/emit;
+          }
+        }
+        if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie,
+                               betax_index+plane+0, beta,
+                               betax_index+plane+1, alpha,
                                -1)) {
           SDDS_SetError("Problem setting SDDS row values (dump_sigma)");
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
