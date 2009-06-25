@@ -812,7 +812,7 @@ long get_sdds_particles(double ***particle,
         int *all_lens = tmalloc(n_processors*sizeof(*all_lens));
         int *offset = tmalloc(n_processors*sizeof(*offset));
        
-	MPI_Allgather(&length, 1, MPI_INT, all_lens, 1, MPI_LONG, MPI_COMM_WORLD);
+	MPI_Allgather(&length, 1, MPI_INT, all_lens, 1, MPI_INT, MPI_COMM_WORLD);
 	offset[0] = 0;
 	for (i=0; i<n_processors-1; i++)
 	  offset[i+1] = offset[i] + all_lens[i]; 
