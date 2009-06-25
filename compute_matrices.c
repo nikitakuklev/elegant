@@ -182,7 +182,7 @@ VMATRIX *accumulateRadiationMatrices(ELEMENT_LIST *elem, RUN *run, VMATRIX *M0, 
        * either by tracking through the element or by concatenating
        * the incoming trajectory with the element's matrix.
        */
-      if (radiation && (IS_RADIATOR(member->type) || member->type==T_RFCA)) {
+      if (radiation && (IS_RADIATOR(member->type) || member->type==T_RFCA || member->type==T_TWLA)) {
         /* Must include radiation, so do tracking */
         determineRadiationMatrix(Ml2, run, member, M1->C, member->D, nSlices, order);
         memcpy(member->accumD, member->D, 21*sizeof(*(member->D)));

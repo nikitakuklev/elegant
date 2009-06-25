@@ -521,7 +521,6 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
                             NULL, 0, 2);
     break;
   case T_TWLA:
-  case T_TWMTA:
     motion(coord, n_track, eptr->p_elem, eptr->type, &run->p_central, &dgamma, dP, NULL, 0.0);
     break;
   default:
@@ -568,7 +567,7 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
 
 void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *Dr, long nSlices, long order)
 {
-  CSBEND csbend; BEND *sbend;
+  CSBEND csbend; CSRCSBEND *csrcsbend; BEND *sbend;
   KQUAD kquad;  QUAD *quad;
   KSEXT ksext; SEXT *sext;
   double length;
@@ -653,6 +652,46 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
       csbend.n_kicks = fabs(csbend.angle/0.005) + 1;
       csbend.integration_order = 4;
       break;
+    case T_CSRCSBEND:
+      if (slice!=0)
+        csbend.edge1_effects = 0;
+      if (slice!=nSlices-1)
+        csbend.edge2_effects = 0;
+      elem.type = T_CSBEND;
+      elem.p_elem = (void*)&csbend;
+      csrcsbend = (CSRCSBEND*)eptr->p_elem;
+      memset(&csbend, 0, sizeof(csbend));
+      csbend.isr = 0;
+      csbend.synch_rad = 1;
+      length = csbend.length = csrcsbend->length/nSlices;
+      csbend.angle = csrcsbend->angle/nSlices;
+      csbend.k1 = csrcsbend->k1;
+      csbend.e1 = csrcsbend->e1;
+      csbend.e2 = csrcsbend->e2;
+      csbend.k2 = csrcsbend->k2;
+      csbend.h1 = csrcsbend->h1;
+      csbend.h2 = csrcsbend->h2;
+      csbend.hgap = csrcsbend->hgap;
+      csbend.fint = csrcsbend->fint;
+      csbend.dx = csrcsbend->dx;
+      csbend.dy = csrcsbend->dy;
+      csbend.dz = csrcsbend->dz;
+      csbend.fse = csrcsbend->fse;
+      csbend.tilt = csrcsbend->tilt;
+      csbend.etilt = csrcsbend->etilt;
+      csbend.edge1_effects = csrcsbend->edge1_effects;
+      csbend.edge2_effects = csrcsbend->edge2_effects;
+      csbend.edge_order = csrcsbend->edge_order;
+      csbend.edgeFlags = csrcsbend->edgeFlags;
+      if (slice!=0)
+        csbend.edgeFlags &= ~BEND_EDGE1_EFFECTS;
+      if (slice!=nSlices-1)
+        csbend.edgeFlags &= ~BEND_EDGE2_EFFECTS;
+      csbend.k1 = csrcsbend->k1;
+      csbend.k2 = csrcsbend->k2;
+      csbend.n_kicks = fabs(csbend.angle/0.005) + 1;
+      csbend.integration_order = 4;
+      break;
     case T_KQUAD:
       memcpy(&kquad, (KQUAD*)eptr->p_elem, sizeof(KQUAD));
       kquad.isr = 0;
@@ -714,6 +753,12 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
       elem.type = T_RFCA;
       elem.p_elem = eptr->p_elem;
       length = ((RFCA*)eptr->p_elem)->length;
+      break;
+    case T_TWLA:
+      nSlices = 1;
+      elem.type = T_TWLA;
+      elem.p_elem = eptr->p_elem;
+      length = ((TW_LINAC*)eptr->p_elem)->length;
       break;
     default:
       printf("*** Error: determineRadiationMatrix called for element (%s) that is not supported!\n", eptr->name);
@@ -786,6 +831,7 @@ void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *elem, double
   double **R, *C, Cs0;
   double stepSize[6] = {1e-5, 1e-5, 1e-5, 1e-5, 1e-3, 1e-5};
   double sigmaDelta2;
+  double dP[3], dgamma;
   
   coord = (double**)czarray_2d(sizeof(**coord), 1+6*2, 7);
 
@@ -832,6 +878,10 @@ void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *elem, double
       coord[i][4] += Cs0;
     Cs0 = 0;
     simple_rf_cavity(coord, n_track, (RFCA*)elem->p_elem, NULL, &pCentral, elem->end_pos);
+    break;
+  case T_TWLA:
+    pCentral = run->p_central;
+    motion(coord, n_track, elem->p_elem, elem->type, &pCentral, &dgamma, dP, NULL, 0.0);
     break;
   default:
     printf("*** Error: determineRadiationMatrix1 called for element (%s) that is not supported!\n", elem->name);
