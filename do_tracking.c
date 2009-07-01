@@ -2388,14 +2388,20 @@ void store_fitpoint_matrix_values(MARK *fpt, char *name, long occurence, VMATRIX
 void store_fitpoint_beam_parameters(MARK *fpt, char *name, long occurence, double **coord, long np, double Po)
 {
   long i, j, k;
-  static double emit[3], sigma[6], centroid[6];
+  static double emit[3], sigma[6], centroid[6], beta[3], alpha[3], emitc[3];
   static BEAM_SUMS sums;
   static char *centroid_name_suffix[8] = {
     "Cx", "Cxp", "Cy", "Cyp", "Cs", "Cdelta", "pCentral", "Particles" };
   static char *sigma_name_suffix[6] = {
     "Sx", "Sxp", "Sy", "Syp", "Ss", "Sdelta" };
-  static char *emit_name_suffix[3] = {
-    "ex", "ey", "es"};
+  static char *emit_name_suffix[5] = {
+    "ex", "ey", "es", "ecx", "ecy"};
+  static char *beta_name_suffix[2] = {
+    "betaxBeam", "betayBeam", 
+  };
+  static char *alpha_name_suffix[2] = {
+    "alphaxBeam", "alphayBeam",
+  };
   static char s[1000];
 
   zero_beam_sums(&sums, 1);
@@ -2404,16 +2410,20 @@ void store_fitpoint_beam_parameters(MARK *fpt, char *name, long occurence, doubl
     for (i=0; i<6; i++) {
       centroid[i] = sums.centroid[i];
       sigma[i] = sqrt(sums.sigma[i][i]);
-      if ((emit[i/2] = sums.sigma[i][i]*sums.sigma[i+1][i+1] - sqr(sums.sigma[i][i+1]))>0)
-	emit[i/2] = sqrt(emit[i/2]);
-      else
-	emit[i/2] = 0;
+      if (i%2==0) {
+        beta[i/2] = alpha[i/2] = emitc[i/2] = emit[i/2] = 0;
+        computeEmitTwissFromSigmaMatrix(emit+i/2, emitc+i/2, beta+i/2, alpha+i/2, sums.sigma, i);
+/*        printf("%s#%ld : emit = %e, beta = %e, alpha = %e\n",
+               name, occurence, emit[i/2], beta[i/2], alpha[i/2]); */
+      }
     }
-  
+    
     if (!(fpt->init_flags&2)) {
       fpt->centroid_mem = tmalloc(sizeof(*fpt->centroid_mem)*8);
       fpt->sigma_mem = tmalloc(sizeof(*fpt->sigma_mem)*6);
-      fpt->emit_mem = tmalloc(sizeof(*fpt->emit_mem)*3);
+      fpt->emit_mem = tmalloc(sizeof(*fpt->emit_mem)*5);
+      fpt->betaBeam_mem = tmalloc(sizeof(*fpt->betaBeam_mem)*2);
+      fpt->alphaBeam_mem = tmalloc(sizeof(*fpt->alphaBeam_mem)*2);
       fpt->sij_mem = tmalloc(sizeof(*fpt->sigma_mem)*15);
       for (i=0; i<8; i++) {
 	sprintf(s, "%s#%ld.%s", name, occurence, centroid_name_suffix[i]);
@@ -2423,9 +2433,15 @@ void store_fitpoint_beam_parameters(MARK *fpt, char *name, long occurence, doubl
 	sprintf(s, "%s#%ld.%s", name, occurence, sigma_name_suffix[i]);
 	fpt->sigma_mem[i] = rpn_create_mem(s, 0);
       }
-      for (i=0; i<3; i++) {
+      for (i=0; i<5; i++) {
 	sprintf(s, "%s#%ld.%s", name, occurence, emit_name_suffix[i]);
 	fpt->emit_mem[i] = rpn_create_mem(s, 0);
+      }
+      for (i=0; i<2; i++) {
+	sprintf(s, "%s#%ld.%s", name, occurence, beta_name_suffix[i]);
+	fpt->betaBeam_mem[i] = rpn_create_mem(s, 0);
+	sprintf(s, "%s#%ld.%s", name, occurence, alpha_name_suffix[i]);
+	fpt->alphaBeam_mem[i] = rpn_create_mem(s, 0);
       }
       for (i=k=0; i<6; i++) {
 	for (j=i+1; j<6; j++, k++) {
@@ -2441,6 +2457,12 @@ void store_fitpoint_beam_parameters(MARK *fpt, char *name, long occurence, doubl
     }
     for (i=0; i<3; i++)
       rpn_store(emit[i], NULL, fpt->emit_mem[i]);
+    for (i=0; i<2; i++) {
+      rpn_store(emitc[i], NULL, fpt->emit_mem[i+3]);
+      rpn_store(beta[i], NULL, fpt->betaBeam_mem[i]);
+      /* printf("%s#%ld.%s = %e\n", name, occurence, beta_name_suffix[i], beta[i]); */
+      rpn_store(alpha[i], NULL, fpt->alphaBeam_mem[i]);
+    }
     for (i=k=0; i<6; i++)
       for (j=i+1; j<6; j++, k++)
 	rpn_store(sums.sigma[i][j], NULL, fpt->sij_mem[k]);
