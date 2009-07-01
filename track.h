@@ -1138,7 +1138,9 @@ typedef struct {
   long *centroid_mem;    /* (x, xp, y, yp, s, dp, Pcen, n) from tracking */
   long *sigma_mem;       /* (x, xp, y, yp, s, dp) from tracking */
   long *sij_mem;         /* <xi*xj> for 6>=j>i>=1 from tracking */
-  long *emit_mem;        /* (x, y, z) from tracking */
+  long *emit_mem;        /* (x, y, z, cx, cy) from tracking */
+  long *betaBeam_mem;    /* (x, y) from tracking */
+  long *alphaBeam_mem;    /* (x, y) from tracking */
   long *floor_mem;       /* X, Z, theta */
   long *matrix_mem;
   long *co_mem;          /* closed orbit */
@@ -3253,6 +3255,7 @@ extern void dump_phase_space(SDDS_TABLE *SDDS_table, double **particle, long par
                              double charge);
 extern void dump_sigma(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, long n_elements, long step,
                 double p_central);
+void computeEmitTwissFromSigmaMatrix(double *emit, double *emitc, double *beta, double *alpha, double sigma[6][6], long plane);
 extern void doSASEFELAtEndOutput(SASEFEL_OUTPUT *sasefelOutput, long step);
 extern void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long particles, 
                          double Po, double charge);
