@@ -19,6 +19,7 @@ void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     long thisType, lastType, iParam=0, nMatches;
     ELEMENT_LIST *context, *eptr;
     char *p_elem;
+    char *p_elem0;
     char **changedDefinedParameter = NULL;
     long nChangedDefinedParameter = 0, modeCount;
 
@@ -125,6 +126,7 @@ void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
       }
       nMatches++;
       p_elem = eptr->p_elem;
+      p_elem0 = eptr->p_elem0;
       switch (entity_description[eptr->type].parameter[iParam].type) {
       case IS_DOUBLE:
         if (verbose)
@@ -153,6 +155,8 @@ void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
           *((double*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)) *= 1+value;
         else
           *((double*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)) = value;
+        *((double*)(p_elem0+entity_description[eptr->type].parameter[iParam].offset)) = 
+          *((double*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)) ;
         if (verbose) {
           fprintf(stdout, "%21.15e\n",
                   *((double*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)));
@@ -188,6 +192,8 @@ void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
         else
           *((long*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)) =
             nearestInteger(value);
+        *((long*)(p_elem0+entity_description[eptr->type].parameter[iParam].offset)) = 
+          *((long*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)) ;
         if (verbose) {
           fprintf(stdout, "%ld\n",
                   *((long*)(p_elem+entity_description[eptr->type].parameter[iParam].offset)));
@@ -209,6 +215,8 @@ void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
                   entity_description[eptr->type].parameter[iParam].name, 
                   *((char**)(p_elem+entity_description[eptr->type].parameter[iParam].offset)));
         cp_str((char**)(p_elem+entity_description[eptr->type].parameter[iParam].offset),
+               string_value);
+        cp_str((char**)(p_elem0+entity_description[eptr->type].parameter[iParam].offset),
                string_value);
         /* this step could be very inefficient */
         if ((nMatches==1 || has_wildcards(name)) &&
