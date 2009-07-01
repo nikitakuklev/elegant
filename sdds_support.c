@@ -1597,7 +1597,7 @@ void dump_sigma(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, lo
   long i, j, ie, offset, plane, index;
   BEAM_SUMS *beam;
   ELEMENT_LIST *eptr;
-  double emit, emitNorm, beta, alpha;
+  double emit, emitNorm, emitc, emitcNorm, beta, alpha;
   char *name, *type_name;
   long s_index=0, ma1_index=0, min1_index=0, max1_index=0, Sx_index=0, occurence, ex_index=0, betax_index=0;
   long sNIndex[6]={0,0,0,0,0,0};
@@ -1692,46 +1692,15 @@ void dump_sigma(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, lo
         }
       }
       for (plane=0; plane<=2; plane+=2) {
-        /* emittance */
-        emit = SAFE_SQRT(beam->sigma[0+plane][0+plane]*beam->sigma[1+plane][1+plane] 
-                         - sqr(beam->sigma[0+plane][1+plane]));
+        /* emittance and beam twiss parameters */
+        computeEmitTwissFromSigmaMatrix(&emit, &emitc, &beta, &alpha, beam->sigma, plane);
         emitNorm = emit*beam->p0*(1+beam->centroid[5]);
+        emitcNorm = emitc*beam->p0*(1+beam->centroid[5]);
         if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, 
                                ex_index+2*plane, emit, 
                                ex_index+1+2*plane, emitNorm,
-                               -1)) {
-          SDDS_SetError("Problem setting SDDS row values (dump_sigma)");
-          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-        }
-        /* corrected emittance */
-        if (beam->sigma[5][5])
-          emit = SAFE_SQRT(sqr(emit) - 
-                           (sqr(beam->sigma[0+plane][5])*beam->sigma[1+plane][1+plane] -
-                            2*beam->sigma[0+plane][1+plane]*beam->sigma[0+plane][5]*beam->sigma[1+plane][5] +
-                            sqr(beam->sigma[1+plane][5])*beam->sigma[0+plane][0+plane])/beam->sigma[5][5]);
-        emitNorm = emit*beam->p0*(1+beam->centroid[5]);
-        if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie, 
-                               ex_index+2+2*plane, emit, 
-                               ex_index+3+2*plane, emitNorm,
-                               -1)) {
-          SDDS_SetError("Problem setting SDDS row values (dump_sigma)");
-          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-        }
-        /* beta and alpha */
-        beta = alpha = 0;
-        if (emit) {
-          if (beam->sigma[5][5]) {
-            double s11c, s12c;
-            s11c = beam->sigma[0+plane][0+plane] - sqr(beam->sigma[0+plane][5])/beam->sigma[5][5];
-            s12c = beam->sigma[0+plane][1+plane] - beam->sigma[0+plane][5]*beam->sigma[1+plane][5]/beam->sigma[5][5];
-            beta = s11c/emit;
-            alpha = -s12c/emit;
-          } else {
-            beta = beam->sigma[0+plane][0+plane]/emit;
-            alpha = -beam->sigma[0+plane][1+plane]/emit;
-          }
-        }
-        if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, ie,
+                               ex_index+2+2*plane, emitc, 
+                               ex_index+3+2*plane, emitcNorm,
                                betax_index+plane+0, beta,
                                betax_index+plane+1, alpha,
                                -1)) {
@@ -2003,3 +1972,44 @@ void dump_scattered_loss_particles(SDDS_TABLE *SDDS_table, double **particleLos,
     log_exit("dump_scattered_loss_particles");
     
 }
+
+void computeEmitTwissFromSigmaMatrix(double *emit, double *emitc, double *beta, double *alpha, double sigma[6][6], long plane)
+{
+  if (plane<0 || plane>4 || plane%2!=0)
+    bomb("invalid value for plane in computeEmitTwissFromSigmaMatrix", NULL);
+  if (!emit || (!emitc && (alpha || beta)))
+    bomb("invalid pointers passed to computeEmitTwissFromSigmaMatrix", NULL);
+  
+  /* emittance */
+  *emit = SAFE_SQRT(sigma[0+plane][0+plane]*sigma[1+plane][1+plane] - sqr(sigma[0+plane][1+plane]));
+
+  if (emitc) {
+    /* corrected emittance */
+    if (sigma[5][5] && plane!=4)
+      *emitc = SAFE_SQRT(sqr(*emit) - 
+                         (sqr(sigma[0+plane][5])*sigma[1+plane][1+plane] -
+                          2*sigma[0+plane][1+plane]*sigma[0+plane][5]*sigma[1+plane][5] +
+                          sqr(sigma[1+plane][5])*sigma[0+plane][0+plane])/sigma[5][5]);
+    else
+      *emitc = *emit;
+    
+    /* beta and alpha */
+    if (beta && alpha) {
+      *beta = *alpha = 0;
+      if (*emitc) {
+        if (sigma[5][5] && plane!=4) {
+          double s11c, s12c;
+          s11c = sigma[0+plane][0+plane] - sqr(sigma[0+plane][5])/sigma[5][5];
+          s12c = sigma[0+plane][1+plane] - sigma[0+plane][5]*sigma[1+plane][5]/sigma[5][5];
+          *beta = s11c/(*emitc);
+          *alpha = -s12c/(*emitc);
+        } else {
+          *beta = sigma[0+plane][0+plane]/(*emitc);
+          *alpha = -sigma[0+plane][1+plane]/(*emitc);
+        }
+      }
+    }
+  }
+}
+
+
