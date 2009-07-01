@@ -620,6 +620,10 @@ long compute_final_properties
   }
 
   /* compute emittances */
+  computeEmitTwissFromSigmaMatrix(data+F_EMIT_OFFSET+0, data+F_EMIT_OFFSET+2, NULL, NULL, sums->sigma, 0);
+  computeEmitTwissFromSigmaMatrix(data+F_EMIT_OFFSET+1, data+F_EMIT_OFFSET+3, NULL, NULL, sums->sigma, 2);
+
+#if 0
 #if !SDDS_MPI_IO
   data[F_EMIT_OFFSET]   = rms_emittance(coord, 0, 1, sums->n_part, NULL, NULL, NULL);
   data[F_EMIT_OFFSET+1] = rms_emittance(coord, 2, 3, sums->n_part, NULL, NULL, NULL);
@@ -642,6 +646,7 @@ long compute_final_properties
     data[F_EMIT_OFFSET+2] = data[F_EMIT_OFFSET];
     data[F_EMIT_OFFSET+3] = data[F_EMIT_OFFSET+1];
   }
+#endif
 
 #if !SDDS_MPI_IO
   data[F_EMIT_OFFSET+4] = rms_longitudinal_emittance(coord, sums->n_part, p_central);
