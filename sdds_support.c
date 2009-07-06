@@ -344,7 +344,8 @@ static SDDS_DEFINITION watch_point_fft_column[WATCH_POINT_FFT_COLUMNS] = {
     } ;
 
 void SDDS_WatchPointSetup(WATCH *watch, long mode, long lines_per_row,
-                          char *command_file, char *lattice_file, char *caller, char *qualifier)
+                          char *command_file, char *lattice_file, char *caller, char *qualifier,
+                          char *previousElementName)
 {
   char s[100];
   SDDS_TABLE *SDDS_table;
@@ -435,7 +436,13 @@ void SDDS_WatchPointSetup(WATCH *watch, long mode, long lines_per_row,
       exit(1);
     }
     if (SDDS_DefineParameter(SDDS_table, "Description", NULL, NULL, NULL, "%s", SDDS_STRING, watch->label)<0) {
-/*			     watch->label && strlen(watch->label) ? watch->label: "watch point" )<0) { */
+      fprintf(stdout, "Unable define SDDS parameter for file %s (%s)\n", filename, caller);
+      fflush(stdout);
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      exit(1);
+    }
+    if (SDDS_DefineParameter(SDDS_table, "PreviousElementName", NULL, NULL, NULL, "%s", SDDS_STRING, 
+                             previousElementName?previousElementName:"_BEG_")<0) {
       fprintf(stdout, "Unable define SDDS parameter for file %s (%s)\n", filename, caller);
       fflush(stdout);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);

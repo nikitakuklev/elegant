@@ -2640,7 +2640,7 @@ extern VMATRIX *compute_matrix(ELEMENT_LIST *elem, RUN *run, VMATRIX *Mspace);
 extern VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *stepSize);
 extern void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *D, long slices, long order);
 extern void determineRadiationMatrix1(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double *startingCoord, double *D);
-extern void set_up_watch_point(WATCH *watch, RUN *run, long occurence);
+extern void set_up_watch_point(WATCH *watch, RUN *run, long occurence, char *previousElementName);
 extern VMATRIX *magnification_matrix(MAGNIFY *magnif);
 extern void reset_special_elements(LINE_LIST *beamline, long includeRF);
 extern VMATRIX *stray_field_matrix(double length, double *lB, double *gB, double theta, long order, double p_central, 
@@ -3235,7 +3235,8 @@ extern void SDDS_BeamLossSetup(SDDS_TABLE *SDDS_table, char *filename, long mode
 extern void SDDS_SigmaMatrixSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row,
                            char *command_file, char *lattice_file, char *caller);
 extern void SDDS_WatchPointSetup(WATCH *waatch, long mode, long lines_per_row,
-                                 char *command_file, char *lattice_file, char *caller, char *qualifier);
+                                 char *command_file, char *lattice_file, char *caller, char *qualifier, 
+                                 char *previousElementName);
 void SDDS_HistogramSetup(HISTOGRAM *histogram, long mode, long lines_per_row,
                          char *command_file, char *lattice_file, char *caller);
 void dump_particle_histogram(HISTOGRAM *histogram, long step, long pass, double **particle, long particles, 

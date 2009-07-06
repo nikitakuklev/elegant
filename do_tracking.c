@@ -900,7 +900,7 @@ long do_tracking(
 	        if (!watch->disable) {
 	          watch_pt_seen = 1;
 	          if (!watch->initialized) 
-	            set_up_watch_point(watch, run, eptr->occurence);
+	            set_up_watch_point(watch, run, eptr->occurence, eptr->pred?eptr->pred->name:NULL);
 	          if (i_pass==0 && (n_passes/watch->interval)==0)
 	            fprintf(stdout, "warning: n_passes = %ld and WATCH interval = %ld--no output will be generated!\n",
 	     	     n_passes, watch->interval);
@@ -1639,7 +1639,7 @@ long do_tracking(
           if (!(flags&TEST_PARTICLES) && !(flags&INHIBIT_FILE_OUTPUT)) {
             watch = (WATCH*)eptr->p_elem;
             if (!watch->initialized) 
-              set_up_watch_point(watch, run, eptr->occurence);
+              set_up_watch_point(watch, run, eptr->occurence, eptr->pred?eptr->pred->name:NULL);
 	    if (!watch->disable) {
 	      if (i_pass%watch->interval==0) {
 		switch (watch->mode_code) {

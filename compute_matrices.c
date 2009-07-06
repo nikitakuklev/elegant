@@ -1115,7 +1115,7 @@ char *fft_window_name[N_FFT_WINDOWS] = {
     "hanning", "parzen", "welch", "uniform",
     } ;
 
-void set_up_watch_point(WATCH *watch, RUN *run, long occurence)
+void set_up_watch_point(WATCH *watch, RUN *run, long occurence, char *previousElementName)
 {
     char *mode, *qualifier;
 
@@ -1140,7 +1140,7 @@ void set_up_watch_point(WATCH *watch, RUN *run, long occurence)
         watch->label = buffer;
         }
     watch->filename = compose_filename_occurence(watch->filename, run->rootname, occurence);
-    SDDS_WatchPointSetup(watch, SDDS_BINARY, 1, run->runfile, run->lattice, "set_up_watch_point", qualifier);
+    SDDS_WatchPointSetup(watch, SDDS_BINARY, 1, run->runfile, run->lattice, "set_up_watch_point", qualifier, previousElementName);
     watch->initialized = 1;
     watch->count = 0;
     watch->flushSample = -1;
