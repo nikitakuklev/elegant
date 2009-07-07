@@ -706,7 +706,9 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
   if (total_row)
   if (!SDDS_MPI_WriteTable(&watch->SDDS_table))
 #else
-  if (!SDDS_WriteTable(&watch->SDDS_table) || !SDDS_ShortenTable(&watch->SDDS_table, 1)) 
+  if (SDDS_IsDisconnected(&(watch->SDDS_table)) &&  (!SDDS_ReconnectFile(&watch->SDDS_table)))
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  if (!SDDS_WriteTable(&watch->SDDS_table))
 #endif
   {
     SDDS_SetError("Problem writing SDDS table (dump_watch_particles)");
@@ -714,7 +716,6 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
   } 
   if (!inhibitFileSync)
     SDDS_DoFSync(&watch->SDDS_table);
-#if SDDS_MPI_IO
   if ((watch->useDisconnect) && (!SDDS_DisconnectFile(&watch->SDDS_table)))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   if (!SDDS_ShortenTable(&watch->SDDS_table, 1))
@@ -722,7 +723,6 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
     SDDS_SetError("Problem shortening SDDS table (dump_watch_particles)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
-#endif
   log_exit("dump_watch_particles");
 }
 
