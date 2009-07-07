@@ -85,7 +85,7 @@ void do_insert_elements(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     if (has_wildcards(exclude) && strchr(exclude, '-'))
       exclude = expand_ranges(exclude);
   }
-  str_toupper(element_def);
+  str_to_upper_quotes(element_def);
 
   add_elem_flag = 1;
   addElem.nskip = skip;
