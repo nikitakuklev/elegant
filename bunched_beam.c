@@ -826,11 +826,14 @@ void finish_output(
     if (eptr->type==T_WATCH) {
       WATCH *watch;
       watch = (WATCH*)eptr->p_elem;
-      if (watch->initialized && !SDDS_Terminate(&watch->SDDS_table)) {
-        char s[1024];
-        sprintf(s, "Warning: error terminating watch file %s\n", 
-                watch->filename);
-        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+      if (watch->initialized) {
+        if ((watch->useDisconnect && SDDS_IsDisconnected(&watch->SDDS_table) && 
+             !SDDS_ReconnectFile(&watch->SDDS_table)) || !SDDS_Terminate(&watch->SDDS_table)) {
+          char s[1024];
+          sprintf(s, "Warning: error terminating watch file %s\n", 
+                  watch->filename);
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        }
       }
     }
     eptr = eptr->succ;
