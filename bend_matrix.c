@@ -1301,7 +1301,7 @@ long determine_bend_flags(ELEMENT_LIST *elem, long edge1_effects, long edge2_eff
             bend_flags |= SAME_BEND_PRECEDES;
             break;
             }
-        if (other->type==T_MARK)
+        if (other->type==T_MARK || other->type==T_WATCH)
             other = other->pred;
         else 
             break;
@@ -1312,7 +1312,7 @@ long determine_bend_flags(ELEMENT_LIST *elem, long edge1_effects, long edge2_eff
             bend_flags |= SAME_BEND_FOLLOWS;
             break;
             }
-        if (other->type==T_MARK)
+        if (other->type==T_MARK || other->type==T_WATCH)
             other = other->succ;
         else
             break;
