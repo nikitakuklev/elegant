@@ -511,7 +511,6 @@ void copy_element(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long reverse, long divisio
     e1->p_elem  = tmalloc(entity_description[e1->type].structure_size);
     e1->p_elem0 = tmalloc(entity_description[e1->type].structure_size);
     copy_p_elem(e1->p_elem, e2->p_elem, e1->type);
-    copy_p_elem(e1->p_elem0, e2->p_elem, e1->type);
     e1->divisions = 1;
     if (reverse) {
       BEND *bptr;
@@ -548,7 +547,12 @@ void copy_element(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long reverse, long divisio
         e1->firstOfDivGroup = 1;
       if (entity_description[e1->type].flags&HAS_LENGTH)
         *(double*)(e1->p_elem) /= divisions;
-      if (IS_BEND(e1->type)) {
+      if (e1->type==T_RFCA) {
+        RFCA *rfca;
+        rfca = (RFCA*)e1->p_elem;
+        rfca->volt /= divisions;
+      }
+      else if (IS_BEND(e1->type)) {
         BEND *bptr; CSBEND *csbptr;
         switch (e1->type) {
         case T_SBEN:
@@ -569,6 +573,7 @@ void copy_element(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long reverse, long divisio
       }
       e1->divisions = divisions;
     }
+    copy_p_elem(e1->p_elem0, e2->p_elem, e1->type);
     log_exit("copy_element");
   }
 
