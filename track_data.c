@@ -2140,7 +2140,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
            sizeof(SOLE),    sole_param     }, 
     {    N_HCOR_PARAMS,     MAT_LEN|IS_MAGNET|MATRIX_TRACKING,       sizeof(HCOR),    hcor_param     }, 
     {    N_VCOR_PARAMS,     MAT_LEN|IS_MAGNET|MATRIX_TRACKING,       sizeof(VCOR),    vcor_param     }, 
-    {    N_RFCA_PARAMS,     MAT_LEN_NCAT|HAS_RF_MATRIX|MAY_CHANGE_ENERGY|MPALGORITHM,       sizeof(RFCA),    rfca_param     }, 
+    {    N_RFCA_PARAMS,     MAT_LEN_NCAT|HAS_RF_MATRIX|MAY_CHANGE_ENERGY|MPALGORITHM|DIVIDE_OK,       sizeof(RFCA),    rfca_param     }, 
     {                0,           0,                  0,    NULL           },
     {    N_HMON_PARAMS,     MAT_LEN_NCAT|MATRIX_TRACKING,       sizeof(HMON),    hmon_param     }, 
     {    N_VMON_PARAMS,     MAT_LEN_NCAT|MATRIX_TRACKING,       sizeof(VMON),    vmon_param     }, 
