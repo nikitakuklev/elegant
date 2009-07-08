@@ -1067,6 +1067,8 @@ VMATRIX *compute_matrix(
         break;
       case T_EMATRIX:
         elem->matrix = matrixFromExplicitMatrix((EMATRIX*)elem->p_elem, run->default_order);
+        if (((EMATRIX*)elem->p_elem)->deltaP)
+          elem->Pref_output += ((EMATRIX*)elem->p_elem)->deltaP;
         break;
       case T_ILMATRIX:
         elem->matrix = matrixForILMatrix((ILMATRIX*)elem->p_elem, run->default_order);

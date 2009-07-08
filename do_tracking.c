@@ -36,7 +36,7 @@ long trackWithIndividualizedLinearMatrix(double **particle, long particles,
 void matr_element_tracking(double **coord, VMATRIX *M, MATR *matr,
                            long np, double z);
 void ematrix_element_tracking(double **coord, VMATRIX *M, EMATRIX *matr,
-                              long np, double z);
+                              long np, double z, double *Pcentral);
 void distributionScatter(double **part, long np, double Po, DSCATTER *scat, long iPass);
 void recordLossPass(long *lostOnPass, long *nLost, long nLeft, long nMaximum, long pass, int myid,
                     int lostSinceSeqMode);
@@ -1053,7 +1053,7 @@ long do_tracking(
 	      if (!eptr->matrix)
 		eptr->matrix = compute_matrix(eptr, run, NULL);
 	      ematrix_element_tracking(coord, eptr->matrix, (EMATRIX*)eptr->p_elem, nToTrack,
-				       z);
+				       z, P_central);
 	      break;
             case T_ILMATRIX:
               nLeft = trackWithIndividualizedLinearMatrix(coord, nToTrack, accepted, *P_central,
@@ -2693,7 +2693,7 @@ void matr_element_tracking(double **coord, VMATRIX *M, MATR *matr,
 }
 
 void ematrix_element_tracking(double **coord, VMATRIX *M, EMATRIX *matr,
-			      long np, double z)
+			      long np, double z, double *P_central)
 /* subtract off <s> prior to using a user-supplied matrix to avoid possible
  * problems with R5? and T?5? elements
  */
@@ -2719,6 +2719,8 @@ void ematrix_element_tracking(double **coord, VMATRIX *M, EMATRIX *matr,
     for (i=0; i<np; i++)
       coord[i][4] += matr->sReference;
   }
+  if (matr->deltaP)
+    *P_central += matr->deltaP;
 }
 
 long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge, 
