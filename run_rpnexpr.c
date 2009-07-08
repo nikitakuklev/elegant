@@ -38,11 +38,12 @@ void run_rpn_expression(NAMELIST_TEXT *nltext)
 void run_rpn_load(NAMELIST_TEXT *nltext, RUN *run)
 {
   SDDS_DATASET SDDSin;
-  long code, foundPage, iColumn, matchRow, rows, i;
-  int32_t columns;
+  long code, foundPage, iColumn, matchRow, rows, i, iParameter;
+  int32_t columns, parameters;
   char *parameterValue = NULL;
-  double *data;
+  double *data, data1;
   char **columnName, **matchColumnData, *memName = NULL;
+  char **parameterName;
   
   /* process the namelist text */
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
@@ -112,75 +113,112 @@ void run_rpn_load(NAMELIST_TEXT *nltext, RUN *run)
     exit(1);
   }
 
-  if ((columnName = SDDS_GetColumnNames(&SDDSin, &columns))==NULL) {
-    fprintf(stdout, "Warning: No columns in file!\n");
-    return;
-  }
+  if (!load_parameters) {
+    if ((columnName = SDDS_GetColumnNames(&SDDSin, &columns))==NULL) {
+      fprintf(stdout, "Warning: No columns in file!\n");
+      return;
+    }
 
-  rows = SDDS_RowCount(&SDDSin);
-  matchRow = rows-1;
-  if (use_row!=-1) {
-    if (use_row>=rows) {
-      fprintf(stdout, "Error: number of rows in file (%ld) less than needed for use_row=%ld\n",
-              rows, use_row);
-      exit(1);
-    }
-    matchRow = use_row;
-  } 
-  
-  if (match_column) {
-    if (SDDS_GetNamedColumnType(&SDDSin, match_column)!=SDDS_STRING) {
-      fprintf(stdout, "Error: column %s nonexistent or not string type.\n",
-              match_column);
-      exit(1);
-    }
-    if (!(matchColumnData=SDDS_GetColumn(&SDDSin, match_column))) {
-      fprintf(stdout, "Error: unable to get data for column %s\n", match_column);
-      exit(1);
-    }
-    if (matching_row_number<0) {
-      /* use last match */
-      for (matchRow=rows-1; matchRow>=0; matchRow--)
-        if (wild_match(matchColumnData[matchRow], match_column_value))
-          break;
-    } else {
-      /* use nth match */
-      for (matchRow=0; matchRow<rows; matchRow++)
-        if (wild_match(matchColumnData[matchRow], match_column_value) &&
-            matching_row_number-- == 0)
-          break;
+    rows = SDDS_RowCount(&SDDSin);
+    matchRow = rows-1;
+    if (use_row!=-1) {
+      if (use_row>=rows) {
+        fprintf(stdout, "Error: number of rows in file (%ld) less than needed for use_row=%ld\n",
+                rows, use_row);
+        exit(1);
+      }
+      matchRow = use_row;
+    } 
+
+    if (match_column) {
+      if (SDDS_GetNamedColumnType(&SDDSin, match_column)!=SDDS_STRING) {
+        fprintf(stdout, "Error: column %s nonexistent or not string type.\n",
+                match_column);
+        exit(1);
+      }
+      if (!(matchColumnData=SDDS_GetColumn(&SDDSin, match_column))) {
+        fprintf(stdout, "Error: unable to get data for column %s\n", match_column);
+        exit(1);
+      }
+      if (matching_row_number<0) {
+        /* use last match */
+        for (matchRow=rows-1; matchRow>=0; matchRow--)
+          if (wild_match(matchColumnData[matchRow], match_column_value))
+            break;
+      } else {
+        /* use nth match */
+        for (matchRow=0; matchRow<rows; matchRow++)
+          if (wild_match(matchColumnData[matchRow], match_column_value) &&
+              matching_row_number-- == 0)
+            break;
+      }
+      
+      if (matchRow<0 || matchRow>=rows) {
+        fprintf(stdout, "Error: unable to find match for %s in column %s\n",
+                match_column_value, match_column);
+        exit(1);
+      }
+      SDDS_FreeStringArray(matchColumnData, rows);
     }
     
-    if (matchRow<0 || matchRow>=rows) {
-      fprintf(stdout, "Error: unable to find match for %s in column %s\n",
-              match_column_value, match_column);
-      exit(1);
-    }
-    SDDS_FreeStringArray(matchColumnData, rows);
-  }
-  
-  for (iColumn=0; iColumn<columns; iColumn++) {
-    switch (SDDS_GetNamedColumnType(&SDDSin, columnName[iColumn])) {
-    case SDDS_CHARACTER:
-    case SDDS_STRING:
-      break;
-    default:
-      if (!(data=SDDS_GetColumnInDoubles(&SDDSin, columnName[iColumn]))) {
-        fprintf(stdout, "Error: unable to get data for column %s as numerical data.\n",
-                columnName[iColumn]);
-        exit(1);
+    for (iColumn=0; iColumn<columns; iColumn++) {
+      switch (SDDS_GetNamedColumnType(&SDDSin, columnName[iColumn])) {
+      case SDDS_CHARACTER:
+      case SDDS_STRING:
+        break;
+      default:
+        if (!(data=SDDS_GetColumnInDoubles(&SDDSin, columnName[iColumn]))) {
+          fprintf(stdout, "Error: unable to get data for column %s as numerical data.\n",
+                  columnName[iColumn]);
+          exit(1);
+        }
+        if (!(memName=SDDS_Realloc(memName, sizeof(*memName)*(strlen(tag)+strlen(columnName[iColumn])+2)))) {
+          fprintf(stdout, "Memory allocation failure trying to create memory name for loaded data\n");
+          exit(1);
+        }
+        sprintf(memName, "%s.%s", tag, columnName[iColumn]);
+        rpn_store(data[matchRow], NULL, rpn_create_mem(memName, 0));
+        fprintf(stdout, "%le --> %s\n", data[matchRow], memName);
+        free(columnName[iColumn]);
+        free(data);
       }
-      if (!(memName=SDDS_Realloc(memName, sizeof(*memName)*(strlen(tag)+strlen(columnName[iColumn])+2)))) {
-        fprintf(stdout, "Memory allocation failure trying to create memory name for loaded data\n");
-        exit(1);
-      }
-      sprintf(memName, "%s.%s", tag, columnName[iColumn]);
-      rpn_store(data[matchRow], NULL, rpn_create_mem(memName, 0));
-      fprintf(stdout, "%le --> %s\n", data[matchRow], memName);
-      free(data);
     }
+    if (memName)
+      free(memName);
+    if (columnName)
+      free(columnName);
+  } else {
+    /* load data from parameters */
+    if ((parameterName = SDDS_GetParameterNames(&SDDSin, &parameters))==NULL) {
+      fprintf(stdout, "Warning: No parameters in file!\n");
+      return;
+    }
+
+    for (iParameter=0; iParameter<parameters; iParameter++) {
+      switch (SDDS_GetNamedParameterType(&SDDSin, parameterName[iParameter])) {
+      case SDDS_CHARACTER:
+      case SDDS_STRING:
+        break;
+      default:
+        if (!SDDS_GetParameterAsDouble(&SDDSin, parameterName[iParameter], &data1)) {
+          fprintf(stdout, "Error: unable to get data for parameter %s as numerical data.\n",
+                  parameterName[iParameter]);
+          exit(1);
+        }
+        if (!(memName=SDDS_Realloc(memName, sizeof(*memName)*(strlen(tag)+strlen(parameterName[iParameter])+2)))) {
+          fprintf(stdout, "Memory allocation failure trying to create memory name for loaded data\n");
+          exit(1);
+        }
+        sprintf(memName, "%s.%s", tag, parameterName[iParameter]);
+        rpn_store(data1, NULL, rpn_create_mem(memName, 0));
+        fprintf(stdout, "%le --> %s\n", data1,  memName);
+        free(parameterName[iParameter]);
+      }
+    }
+    if (memName)
+      free(memName);
+    if (parameterName)
+      free(parameterName);
   }
-  if (memName)
-    free(memName);
 }
 

@@ -18,6 +18,7 @@
     STRING match_parameter_value = NULL;
     long use_row = -1;
     long use_page = -1;
+    long load_parameters = 0;
     STRING tag = NULL;
 #end
     
