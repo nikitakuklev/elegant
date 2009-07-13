@@ -7,8 +7,12 @@ The input file has the following columns:
 \begin{itemize}
 \item \verb|x| --- Horizontal position in meters.
 \item \verb|y| --- Vertical position in meters.
-\item \verb|xpFactor| --- Horizontal kick factor in $T^2 m^2$.
-\item \verb|ypFactor| --- Vertical kick factor in $T^2 m^2$.
+\item \verb|xpFactor| --- Horizontal kick factor $C_x$ in $T^2 m^2$.  This factor is defined by
+equation (5a) in \cite{Elleaume1992}.  In particular, $\Delta x^\prime = C_x/H^2$, where
+$H$ is the beam rigidity in  $T^2 m^2$.
+\item \verb|ypFactor| --- Vertical kick factor $C_y$ in $T^2 m^2$. This factor is defined by
+equation (5b) in \cite{Elleaume1992}.  In particular, $\Delta y^\prime = C_y/H^2$, where
+$H$ is the beam rigidity in  $T^2 m^2$.
 \end{itemize}
 The values of \verb|x| and \verb|y| must be laid out on a grid of equispaced points.
 It is assumed that the data is ordered such that \verb|x| varies fastest.  This can be
