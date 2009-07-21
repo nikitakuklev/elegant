@@ -58,6 +58,8 @@ plaindata2sdds beam.out -pipe=out \
 mv beam.out .trackOutputFiles/
 
 W=`sddsprocess beam.sdds -pipe=out -clip=0,1,invert | sdds2stream -pipe -column=Energy`
+dWoW=`sddsprocess beam.sdds -pipe=out -clip=0,1,invert | sdds2stream -pipe -column=WDeviation`
+W=`rpnl $W 1 $dWoW 100 / - mult`
 echo "Energy: $W"
 
 plaindata2sdds coord.out -pipe=out \
@@ -89,6 +91,8 @@ for file in coord.out.???? ; do
         -filter=column,ElementNumber,$n,$n \
         | sddsexpand -pipe=in  beam.sdds.$n 
     W=`sdds2stream beam.sdds.$n -parameter=Energy`
+    dWoW=`sdds2stream beam.sdds.$n -parameter=WDeviation`
+    W=`rpnl $W 1 $dWoW 100 / - mult`
     echo "$file: Energy $W MeV"
     plaindata2sdds $file -pipe=out \
         -norowcount \
