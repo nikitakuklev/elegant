@@ -79,7 +79,7 @@ plaindata2sdds coord.out -pipe=out \
     -convert=column,[xy],m,cm,0.01 \
     -convert=column,[xy]p,,mrad,0.001 \
     "-define=column,t,dt 1e9 /,units=s" \
-    "-define=column,p,$W dW + mev / sqr 1 + sqrt" 
+    "-define=column,p,$W dW + mev / 1 + sqr 1 - sqrt" 
 mv coord.out .trackOutputFiles/
     
 filesPresent=0
@@ -111,7 +111,7 @@ for file in coord.out.???? ; do
         -convert=column,[xy],m,cm,0.01 \
         -convert=column,[xy]p,,mrad,0.001 \
         "-define=column,t,dt 1e9 /,units=s" \
-        "-define=column,p,$W dW + mev / sqr 1 + sqrt" \
+        "-define=column,p,$W dW + mev / 1 + sqr 1 - sqrt" \
     | sddsxref -pipe=in beam.sdds.$n -leave=* -transfer=parameter,s,Energy,NumberLost,Particles,enz,Element* coord-$n0.sdds
     \rm beam.sdds.$n 
     mv $file .trackOutputFiles/
