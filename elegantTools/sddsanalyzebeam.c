@@ -14,6 +14,9 @@
  * Michael Borland, 2000
  *
  $Log: not supported by cvs2svn $
+ Revision 1.4  2008/08/21 16:58:16  borland
+ Incremented version number and date.
+
  Revision 1.3  2008/08/21 14:54:06  borland
  Added option to use canonical coordinates.
 
@@ -396,37 +399,37 @@ long SetUpOutputFile(SDDS_DATASET *SDDSout, char *outputfile, long correctedOnly
   if (!SDDS_InitializeOutput(SDDSout, SDDS_BINARY, 1, NULL, NULL, outputfile) ||
       !SDDS_DefineSimpleParameter(SDDSout, "canonical", NULL, SDDS_LONG) ||
       !SDDS_DefineSimpleColumn(SDDSout, "ElementName", NULL, SDDS_STRING) ||
-      !SDDS_DefineSimpleColumn(SDDSout, "ex", "m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(SDDSout, "enx", "m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(SDDSout, "betax", "m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(SDDSout, "alphax", NULL, SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(SDDSout, "etax", "m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(SDDSout, "etaxp", NULL, SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(SDDSout, "ey", "m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(SDDSout, "eny", "m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(SDDSout, "betay", "m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(SDDSout, "alphay", NULL, SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(SDDSout, "etay", "m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(SDDSout, "etayp", NULL, SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(SDDSout, "Sx", "m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(SDDSout, "Sxp", NULL, SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(SDDSout, "Sy", "m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(SDDSout, "Syp", NULL, SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(SDDSout, "St", "s", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(SDDSout, "Sdelta", NULL, SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(SDDSout, "pAverage", NULL, SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(SDDSout, "el", "s", SDDS_DOUBLE)) {
+      SDDS_DefineColumn(SDDSout, "ex", "$ge$r$bx$n", "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+      SDDS_DefineColumn(SDDSout, "enx", "$ge$r$bnx$n", "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+      SDDS_DefineColumn(SDDSout, "betax", "$gb$r$bx$n", "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+      SDDS_DefineColumn(SDDSout, "alphax", "$ga$r$bx$n", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+      SDDS_DefineColumn(SDDSout, "etax", "$gc$r$bx$n", "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+      SDDS_DefineColumn(SDDSout, "etaxp", "$gc$r$bx$n$a'$n", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+      SDDS_DefineColumn(SDDSout, "ey", "$ge$r$by$n", "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+      SDDS_DefineColumn(SDDSout, "eny", "$ge$r$bny$n", "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+      SDDS_DefineColumn(SDDSout, "betay", "$gb$r$by$n", "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+      SDDS_DefineColumn(SDDSout, "alphay", "$ga$r$by$n", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+      SDDS_DefineColumn(SDDSout, "etay", "$gc$r$by$n", "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+      SDDS_DefineColumn(SDDSout, "etayp", "$gc$r$by$n$a'$n", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+      SDDS_DefineColumn(SDDSout, "Sx", "$gs$r$bx$n", "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+      SDDS_DefineColumn(SDDSout, "Sxp", "$gs$r$bx'$n", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+      SDDS_DefineColumn(SDDSout, "Sy", "$gs$r$by$n", "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+      SDDS_DefineColumn(SDDSout, "Syp", "$gs$r$by'$n", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+      SDDS_DefineColumn(SDDSout, "St", "$gs$r$bt$n", "s", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+      SDDS_DefineColumn(SDDSout, "Sdelta", "$gs$bd$n$r", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+      SDDS_DefineColumn(SDDSout, "pAverage", "<p>", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+      SDDS_DefineColumn(SDDSout, "el", "$ge$r$bl$n", "s", NULL, NULL, SDDS_DOUBLE, 0)<0) {
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
   if (!correctedOnly &&
-      (!SDDS_DefineSimpleColumn(SDDSout, "ecx", "m", SDDS_DOUBLE) ||
-       !SDDS_DefineSimpleColumn(SDDSout, "ecnx", "m", SDDS_DOUBLE) ||
-       !SDDS_DefineSimpleColumn(SDDSout, "betacx", "m", SDDS_DOUBLE) ||
-       !SDDS_DefineSimpleColumn(SDDSout, "alphacx", NULL, SDDS_DOUBLE) ||
-       !SDDS_DefineSimpleColumn(SDDSout, "ecy", "m", SDDS_DOUBLE) ||
-       !SDDS_DefineSimpleColumn(SDDSout, "ecny", "m", SDDS_DOUBLE) ||
-       !SDDS_DefineSimpleColumn(SDDSout, "betacy", "m", SDDS_DOUBLE) ||
-       !SDDS_DefineSimpleColumn(SDDSout, "alphacy", NULL, SDDS_DOUBLE))) {
+      (SDDS_DefineColumn(SDDSout, "ecx", "$ge$r$bcx$n", "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+       SDDS_DefineColumn(SDDSout, "ecnx", "$ge$r$bcnx$n", "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+       SDDS_DefineColumn(SDDSout, "betacx", "$gb$r$bcx$n", "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+       SDDS_DefineColumn(SDDSout, "alphacx", "$ga$r$bcx$n", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+       SDDS_DefineColumn(SDDSout, "ecy", "$ge$r$bcy$n", "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+       SDDS_DefineColumn(SDDSout, "ecny", "$ge$r$bcny$n", "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+       SDDS_DefineColumn(SDDSout, "betacy", "$gb$r$bcy$n", "m", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+       SDDS_DefineColumn(SDDSout, "alphacy", "$ga$r$bcy$n", NULL, NULL, NULL, SDDS_DOUBLE, 0)<0)) {
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
   for (i=0; i<6; i++) {
