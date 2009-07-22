@@ -7,9 +7,12 @@
 # in the file LICENSE that is included with this distribution. 
 #*************************************************************************
 #
-# $Id: Makefile.OAG,v 1.14 2009-04-27 14:36:12 borland Exp $
+# $Id: Makefile.OAG,v 1.15 2009-07-22 21:52:59 borland Exp $
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.14  2009/04/27 14:36:12  borland
+# Added gsl library.
+#
 # Revision 1.13  2009/04/24 18:58:10  soliday
 # Updated to work with the gsl library that we now include with CVS.
 #
@@ -73,7 +76,7 @@ PRODOAG = sddsemitmeas sddsemitproc sddsTouschekInteg \
           sddsanalyzebeam sddsrandmult sddsresdiag \
           sddsfindresonances touschekLifetime csrImpedance
 
-SCRIPTS = elegantRingAnalysis beamLifetimeCalc fin2param elegant2shower shower2elegant longitCmd longitCalcs km2sdds astra2elegant elegant2astra smoothDist6s impact2sdds impact2elegant computeTwissBeats fracEmittance doubleDist6
+SCRIPTS = elegantRingAnalysis beamLifetimeCalc fin2param elegant2shower shower2elegant longitCmd longitCalcs km2sdds astra2elegant elegant2astra smoothDist6s impact2sdds impact2elegant computeTwissBeats fracEmittance doubleDist6 track2sdds track2mag elegant2track
 
 PROD_HOST = $(PRODOAG)
 
