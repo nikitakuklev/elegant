@@ -7,13 +7,15 @@ set auto_path [linsert $auto_path 0 /usr/local/oag/lib_patch/$env(HOST_ARCH)]
 APSStandardSetup
 package require rpn
 
-set usage {usage: elegant2track -input <filename> -output <filename> -reference <MeV> -frequency <MHz>}
+set usage {usage: elegant2track -input <filename> -output <filename> -reference <MeV> -frequency <MHz> -pmin <beta*gamma> -phaseOffset <deg>}
 set input ""
 set output ""
 set reference 1.0
 set frequency 100.0
+set pmin 0.0
+set phaseOffset 0.0
 set args $argv
-if {[APSStrictParseArguments {input output reference frequency}] || ![string length $input] || ![string length $output]} {
+if {[APSStrictParseArguments {input output reference frequency pmin phaseOffset}] || ![string length $input] || ![string length $output]} {
     return -code error "$usage"
 }
 if ![file exists $input] {
@@ -23,18 +25,27 @@ if [file exists $output] {
    return -code error "in use: $output"
 }
 
+set tRef [exec sddsprocess -pipe=out $input -process=p,max,tRef,functionOf=t,position -retain=col,t,p \
+            | sdds2stream -pipe -parameter=tRef]
+set np0 [exec sdds2stream -rows=bare $input]
+
 set bg0 [rpn expr "$reference mev / 1 + sqr 1 - sqrt"]
 set fd [open $output w]
 puts $fd "    [format %.1f [expr $reference*1000]]  1"
-puts $fd "[exec sdds2stream -rows=bare $input]"
+set np [exec sddsprocess $input -pipe=out -filter=col,p,$pmin,1e300 | sdds2stream -rows=bare -pipe ]
+puts stdout "$np particles ([expr (1.0*$np)/$np0])"
+puts $fd "$np"
 puts $fd "1.0"
 puts $fd [string toupper "  0.000000000000000E+00  0.000000000000000E+00  0.000000000000000E+00  0.000000000000000E+00  0.000000000000000E+00 [format %22.15e $bg0]   0"]
 close $fd
 
 exec sddsprocess $input -pipe=out \
      -convert=col,\[xy\],cm,m,1e2 \
+     -filter=col,p,$pmin,1e300 \
+     -define=parameter,tRef,$tRef,units=s \
      "-define=parameter,omega,$frequency 2e6 * pi *,units=Hz" \
-     "-define=col,phase,t omega *" \
+     "-define=parameter,phaseOffset,$phaseOffset dtor" \
+     "-define=col,phase,t tRef - omega * phaseOffset +" \
      "-define=column,spin,0,type=short" \
      | sddsprintout -pipe -format=double=%22.15e,short=%3hd \
      "-spreadsheet=nolabels,quote=,delimiter= " -notitle -nolabels \
