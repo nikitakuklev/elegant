@@ -39,6 +39,8 @@ plaindata2sdds $input -pipe=out \
   "-redefine=column,t,z betaz c_mks * 1e-16 + / chs tReference 1e9 / +,units=s" \
   "-define=column,xp,px pz 1e-18 + /" \
   "-define=column,yp,py pz 1e-18 + /" \
+  "-redefine=column,x,x xp z * -,units=m" \
+  "-redefine=column,y,y yp z * -,units=m" \
   -filter=column,particleType,0.5,1.5 \
   '-filter=column,status,4.5,5.5,status,-6.5,-0.5,|' \
   -convert=column,q,C,nC,1e-9 \
