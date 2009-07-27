@@ -7,15 +7,16 @@ set auto_path [linsert $auto_path 0 /usr/local/oag/lib_patch/$env(HOST_ARCH)]
 APSStandardSetup
 package require rpn
 
-set usage {usage: elegant2track -input <filename> -output <filename> -reference <MeV> -frequency <MHz> -pmin <beta*gamma> -phaseOffset <deg>}
+set usage {usage: elegant2track -input <filename> -output <filename> -reference <MeV> -frequency <MHz> -pmin <beta*gamma> -phaseOffset <deg> -sparse <integer>}
 set input ""
 set output ""
 set reference 1.0
 set frequency 100.0
 set pmin 0.0
 set phaseOffset 0.0
+set sparse 1
 set args $argv
-if {[APSStrictParseArguments {input output reference frequency pmin phaseOffset}] || ![string length $input] || ![string length $output]} {
+if {[APSStrictParseArguments {input output reference frequency pmin phaseOffset sparse}] || ![string length $input] || ![string length $output]} {
     return -code error "$usage"
 }
 if ![file exists $input] {
@@ -33,7 +34,10 @@ set bg0 [rpn expr "$reference mev / 1 + sqr 1 - sqrt"]
 set fd [open $output w]
 puts $fd "    [format %.1f [expr $reference*1000]]  1"
 set np [exec sddsprocess $input -pipe=out -filter=col,p,$pmin,1e300 | sdds2stream -rows=bare -pipe ]
-puts stdout "$np particles ([expr (1.0*$np)/$np0])"
+puts stdout "Effective fraction retained after momentum filter: [expr (1.0*$np)/$np0]"
+if $sparse!=1 {
+    set np [exec sddsprocess $input -pipe=out -filter=col,p,$pmin,1e300 -sparse=$sparse | sdds2stream -rows=bare -pipe ]
+}
 puts $fd "$np"
 puts $fd "1.0"
 puts $fd [string toupper "  0.000000000000000E+00  0.000000000000000E+00  0.000000000000000E+00  0.000000000000000E+00  0.000000000000000E+00 [format %22.15e $bg0]   0"]
@@ -42,6 +46,7 @@ close $fd
 exec sddsprocess $input -pipe=out \
      -convert=col,\[xy\],cm,m,1e2 \
      -filter=col,p,$pmin,1e300 \
+     -sparse=$sparse \
      -define=parameter,tRef,$tRef,units=s \
      "-define=parameter,omega,$frequency 2e6 * pi *,units=Hz" \
      "-define=parameter,phaseOffset,$phaseOffset dtor" \
@@ -50,6 +55,9 @@ exec sddsprocess $input -pipe=out \
      | sddsprintout -pipe -format=double=%22.15e,short=%3hd \
      "-spreadsheet=nolabels,quote=,delimiter= " -notitle -nolabels \
      -column=x,format=%23.15e -column=xp -column=y -column=yp -column=phase -column=p -column=spin | tr e E  >> $output
+
+set count [lindex [split [exec wc -l $output]] 0]
+puts stdout "[expr $count-4] particles"
 
 # Local Variables:
 # mode: tcl
