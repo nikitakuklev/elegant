@@ -7,9 +7,12 @@
 # in the file LICENSE that is included with this distribution. 
 #*************************************************************************
 #
-# $Id: Makefile.OAG,v 1.15 2009-07-22 21:52:59 borland Exp $
+# $Id: Makefile.OAG,v 1.16 2009-07-28 14:44:53 borland Exp $
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.15  2009/07/22 21:52:59  borland
+# Added elegant2track script.
+#
 # Revision 1.14  2009/04/27 14:36:12  borland
 # Added gsl library.
 #
@@ -74,9 +77,9 @@ endif
 PRODOAG = sddsemitmeas sddsemitproc sddsTouschekInteg \
           recurseSetup haissinski sddsmatchtwiss \
           sddsanalyzebeam sddsrandmult sddsresdiag \
-          sddsfindresonances touschekLifetime csrImpedance
+          sddsfindresonances touschekLifetime csrImpedance astra2elegant
 
-SCRIPTS = elegantRingAnalysis beamLifetimeCalc fin2param elegant2shower shower2elegant longitCmd longitCalcs km2sdds astra2elegant elegant2astra smoothDist6s impact2sdds impact2elegant computeTwissBeats fracEmittance doubleDist6 track2sdds track2mag elegant2track
+SCRIPTS = elegantRingAnalysis beamLifetimeCalc fin2param elegant2shower shower2elegant longitCmd longitCalcs km2sdds elegant2astra smoothDist6s impact2sdds impact2elegant computeTwissBeats fracEmittance doubleDist6 track2sdds track2mag elegant2track
 
 PROD_HOST = $(PRODOAG)
 
@@ -109,6 +112,8 @@ meschach_DIR = $(EPICS_EXTENSIONS_LIB)
 fdlibm_DIR = $(EPICS_EXTENSIONS_LIB)
 gsl_DIR = $(EPICS_EXTENSIONS_LIB)
 
+
+astra2elegant_SRCS = astra2elegant.c
 
 sddsemitproc_SRCS = sddsemitproc.c
 
