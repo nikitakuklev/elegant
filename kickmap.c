@@ -208,6 +208,14 @@ void initializeUndulatorKickMap(UKICKMAP *map)
     exit(1);
   }
   SDDS_Terminate(&SDDSin);
+
+  if (map->xyFactor!=1) {
+    long i;
+    for (i=0; i<map->points; i++) {
+      x[i] *= map->xyFactor;
+      y[i] *= map->xyFactor;
+    }
+  }
   
   /* It is assumed that the data is ordered so that x changes fastest.
    * This can be accomplished with sddssort -column=y,incr -column=x,incr
@@ -220,9 +228,7 @@ void initializeUndulatorKickMap(UKICKMAP *map)
       break;
     nx ++;
   }
-  map->xmax = x[nx-1];
-  map->dxg = (map->xmax-map->xmin)/(nx-1);
-  if ((map->nx=nx)<=1 || y[0]>y[nx] || (map->ny = map->points/nx)<=1) {
+  if ((nx>=map->points) || nx<=1 || y[0]>y[nx] || (map->ny = map->points/nx)<=1) {
     fprintf(stdout, "file %s for UKICKMAP element doesn't have correct structure or amount of data\n",
             map->inputFile);
     fflush(stdout);
@@ -230,6 +236,9 @@ void initializeUndulatorKickMap(UKICKMAP *map)
     fflush(stdout);
     exit(1);
   }
+  map->nx = nx;
+  map->xmax = x[nx-1];
+  map->dxg = (map->xmax-map->xmin)/(nx-1);
   map->ymin = y[0];
   map->ymax = y[map->points-1];
   map->dyg = (map->ymax-map->ymin)/(map->ny-1);
