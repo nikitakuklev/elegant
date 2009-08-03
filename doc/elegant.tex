@@ -17,7 +17,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 22.0\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
+\author{Program Version 22.1\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -25,50 +25,37 @@ Note: another source of help for {\tt elegant} is the on-line
 Users are encouraged to join and participate.  At minimum, users should subscribe to the ``Bugs'' topic,
 since this is where bug notifications are posted.
 
-\section{Highlights of What's New in Version 22.0}
+\section{Highlights of What's New in Version 22.1}
 
-Here is a summary of what's changed since release 21.0.  For details and references, see the specific entries in the manual. 
+Here is a summary of what's changed since release 22.0.  For details and references, see the specific entries in the manual. 
 
-There have been relatively few changes to the serial code, apart from some mostly minor bug fixes.
-The major change in this version is a reworking of parallelization to include parallel I/O, parallel frequency map analysis (\verb|frequency_map|), and parallel 
-momentum aperture determination (\verb|momentum_aperture|).  This work was done by Y. Wang and H. Shang.
 
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item Fixed some problems with keeping track of whether radiation integrals have been computed, which prevents invalid \verb|SREFFECTS|
-setup in some cases.  
-\item Fixed a bug in computing the radiation matrix of a tilted \verb|SBEND| element, which would affect beam moments analysis.
-\item Since the matrix for the \verb|UKICKMAP| element is determined by tracking, the \verb|N_KICKS| parameter may in principle change
- the matrix.  This fact was not previously part of the element definition, but has been fixed.
+\item 
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item Fixed a bug in trajectory/orbit correction that resulted in a crash when the number of monitors or correctors was zero.
-\item In frequency map analysis, a fiducial particle is now tracked first to ensure that the system is properly fiducialized.  This is needed
-if there is an rf cavity in the lattice (which isn't really a good idea for FMA).
+\item 
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item Added \verb|INCLUDE_OFFSETS| parameter to \verb|SREFFECTS|, which allows the user to control whether dispersion-related
-offsets of the orbit are included when a particle loses energy.  To avoid unwanted quantum excitation, we no longer
-include offsets (i.e., dispersion effects) when tracking with only radiation losses.
+\item 
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item Added the ability to optimize dynamic aperture using \verb|find_aperture|.
-\item Optimization terms may now be defined using an external SDDS file, which can make it easier to set up 
- optimizations with large numbers of terms.
+\item 
 \end{itemize}
 
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
-\item A new program, {\tt sddsfluxcurve}, was added.  It computes flux tuning curves for undulators using
-beam parameters from {\tt elegant}'s \verb|twiss_output| command or from {\tt sddsanalyzebeam}.
+\item The script {\tt astra2elegant} was replaced by a compiled program.  The program is not only much faster, but
+  also has corrections for the conversion that will be evident in long bunches or low energy beams.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
@@ -3874,6 +3861,10 @@ program that reads or writes appropriate SDDS data.  The following is
 a brief description of each program.  Full descriptions are available
 on subsequent pages.
 \begin{itemize}
+\item {\tt astra2elegant} --- Converts ASCII particle output from ASTRA to a binary
+  SDDS file suitable for use with {\tt elegant}.  This program is recommended over
+  the astra2sdds program on the ASTRA website, because the latter produces ASCII SDDS
+  files that are quite slow to read.
 \item {\tt csrImpedance} --- Computes the shielded steady-state CSR impedance for a dipole magnet.
  The output can be used immediately with {\tt elegant}'s \verb|ZLONGIT| element.
  (Program by Y. Wang, H. Shang, and M. Borland.)
@@ -3932,6 +3923,39 @@ on subsequent pages.
  the growth rate for energy and density modulations.  See also {\tt doubleDist6}.
 \item {\tt touschekLifetime} --- This program calculates Touschek lifetime using A. Piwinski's formula.
         Input files are generated from ``twiss\_output'' and ``momentum\_aperture''.  (Program by A. Xiao.)
+\end{itemize}
+
+\begin{latexonly}
+\newpage
+\begin{center}{\Large\verb|astra2elegant|}\end{center}
+\end{latexonly}
+\subsection{csrImpedance}
+
+\begin{itemize}
+\item {\bf description:}   Converts ASCII particle output from ASTRA to a binary
+SDDS file suitable for use with {\tt elegant}.  This program is recommended over
+the astra2sdds program on the ASTRA website, because the latter produces ASCII SDDS
+files that are quite slow to read.
+
+\item {\bf synopsis:}
+\begin{flushleft}{\tt
+astra2elegant [{\em inputFile}] [{\em outputFile}] [-pipe=[input][,output]]
+}\end{flushleft}
+
+\item {\bf files:}
+\begin{itemize}
+\item {\tt inputFile} --- ASCII particle output file from ASTRA.
+\item {\tt outputFile} --- SDDS file containing phase space data. May be used directly with 
+{\tt elegant}.
+\end{itemize}
+
+\item {\bf switches:}
+\begin{itemize}
+\item {\tt -pipe[=input][,output]} --- Standard SDDS toolkit pipe option.
+\end{itemize}
+
+\item {\bf authors:} M. Borland (ANL/APS).
+
 \end{itemize}
 
 \begin{latexonly}
