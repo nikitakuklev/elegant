@@ -69,10 +69,10 @@ void showUsageOrGreeting (unsigned long mode)
 {
 #if USE_MPI
   char *USAGE="usage: mpirun -np <number of processes> Pelegant <inputfile> [-macro=<tag>=<value>,[...]]";
-  char *GREETING="This is elegant 22.1Beta7, "__DATE__", by M. Borland, W. Guo, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
+  char *GREETING="This is elegant 22.1Beta8, "__DATE__", by M. Borland, W. Guo, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.\nParallelized by Y. Wang, H. Shang, and M. Borland.";
 #else
   char *USAGE="usage: elegant <inputfile> [-macro=<tag>=<value>,[...]]";
-  char *GREETING="This is elegant 22.1Beta7 "__DATE__", by M. Borland, W. Guo, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.";
+  char *GREETING="This is elegant 22.1Beta8 "__DATE__", by M. Borland, W. Guo, V. Sajaev, Y. Wang, Y. Wu, and A. Xiao.";
 #endif
   if (mode&SHOW_GREETING)
     puts(GREETING);
@@ -1843,7 +1843,7 @@ void print_dictionary_entry(FILE *fp, long type, long latex_form, long SDDS_form
 {
   char *type_name[3] = {"double", "long", "STRING", };
   char *description;
-  long j, texLines, specialEntry;
+  long j, texLines, specialEntry, xyWaveforms;
   char buffer[16384];
   char *specialDescription = "Optionally used to assign an element to a group, with a user-defined name.  Group names will appear in the parameter output file in the column ElementGroup";
   if (latex_form) {
@@ -1866,6 +1866,7 @@ void print_dictionary_entry(FILE *fp, long type, long latex_form, long SDDS_form
       fprintf(fp, "%s\n", entity_text[type]);
   }
   specialEntry = 0;
+  xyWaveforms = 0;
   for (j=texLines=0; j<=entity_description[type].n_params; j++) {
     if (j==entity_description[type].n_params)
       specialEntry = 1;
@@ -1901,6 +1902,8 @@ void print_dictionary_entry(FILE *fp, long type, long latex_form, long SDDS_form
                                                type_name[entity_description[type].parameter[j].type-1])));
     }
     if (!specialEntry) {
+      if (entity_description[type].parameter[j].flags&PARAM_XY_WAVEFORM)
+        xyWaveforms++;
       switch (entity_description[type].parameter[j].type) {
       case IS_DOUBLE:
         if (latex_form && entity_description[type].parameter[j].number==0)
@@ -1978,8 +1981,9 @@ void print_dictionary_entry(FILE *fp, long type, long latex_form, long SDDS_form
   }
   if (latex_form) {
     char physicsFile[1024];
-    
+
     fprintf(fp, "\\end{tabular}\n\n");
+
 
     sprintf(physicsFile, "%s.tex", entity_name[type]);
     str_tolower(physicsFile);
@@ -1987,6 +1991,8 @@ void print_dictionary_entry(FILE *fp, long type, long latex_form, long SDDS_form
       fprintf(stderr, "Including file %s\n", physicsFile);
       fprintf(fp, "\\vspace*{0.5in}\n\\input{%s}\n", physicsFile);
     }
+    if (xyWaveforms) 
+      fprintf(fp, "\\vspace*{0.5in}\n\\input{xyWaveforms.tex}\n");
   }
 }
 

@@ -483,7 +483,7 @@ PARAMETER rfdf_param[N_RFDF_PARAMS] = {
     {"N_KICKS", "", IS_LONG, 0, (long)((char *)&rfdf_example.n_kicks), NULL, 0.0, 1, "number of kicks (odd integer)"},
     {"PHASE_REFERENCE", "", IS_LONG, 0, (long)((char *)&rfdf_example.phase_reference), NULL, 0.0, 0, "phase reference number (to link with other time-dependent elements)"},
     {"STANDING_WAVE", "", IS_LONG, 0, (long)((char *)&rfdf_example.standingWave), NULL, 0.0, 0, "If nonzero, then cavity is standing wave."},
-    {"VOLTAGE_WAVEFORM", "", IS_STRING, 0, (long)((char *)&rfdf_example.voltageWaveform), NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving voltage waveform factor vs time"},
+    {"VOLTAGE_WAVEFORM", "", IS_STRING, PARAM_XY_WAVEFORM, (long)((char *)&rfdf_example.voltageWaveform), NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving voltage waveform factor vs time"},
     {"VOLTAGE_PERIODIC", "", IS_LONG, 0, (long)((char *)&rfdf_example.voltageIsPeriodic), NULL, 0.0, 0, "If non-zero, voltage waveform is periodic with period given by time span."},
     {"ALIGN_WAVEFORMS", "", IS_LONG, 0,  (long)((char *)&rfdf_example.alignWaveforms), NULL, 0.0, 0, "If non-zero, waveforms' t=0 is aligned with first bunch arrival time."},
     {"VOLTAGE_NOISE", "", IS_DOUBLE, 0, (long)((char *)&rfdf_example.voltageNoise), NULL, 0.0, 0, "Rms fractional noise level for voltage."},
@@ -504,7 +504,7 @@ PARAMETER rftm110_param[N_RFTM110_PARAMS] = {
     {"FREQUENCY", "HZ", IS_DOUBLE, 0, (long)((char *)&rftm110_example.frequency), NULL, DEFAULT_FREQUENCY, 0, "frequency"},
     {"VOLTAGE", "V", IS_DOUBLE, 0, (long)((char *)&rftm110_example.voltage), NULL, 0.0, 0, "peak deflecting voltage"},
     {"PHASE_REFERENCE", "", IS_LONG, 0, (long)((char *)&rftm110_example.phase_reference), NULL, 0.0, 0, "phase reference number (to link with other time-dependent elements)"},
-    {"VOLTAGE_WAVEFORM", "", IS_STRING, 0, (long)((char *)&rftm110_example.voltageWaveform), NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving voltage waveform factor vs time"},
+    {"VOLTAGE_WAVEFORM", "", IS_STRING, PARAM_XY_WAVEFORM, (long)((char *)&rftm110_example.voltageWaveform), NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving voltage waveform factor vs time"},
     {"VOLTAGE_PERIODIC", "", IS_LONG, 0, (long)((char *)&rftm110_example.voltageIsPeriodic), NULL, 0.0, 0, "If non-zero, voltage waveform is periodic with period given by time span."},
     {"ALIGN_WAVEFORMS", "", IS_LONG, 0,  (long)((char *)&rftm110_example.alignWaveforms), NULL, 0.0, 0, "If non-zero, waveforms' t=0 is aligned with first bunch arrival time."},
     {"VOLTAGE_NOISE", "", IS_DOUBLE, 0, (long)((char *)&rftm110_example.voltageNoise), NULL, 0.0, 0, "Rms fractional noise level for voltage."},
@@ -811,7 +811,7 @@ PARAMETER kicker_param[N_KICKER_PARAMS] = {
     {"PHASE_REFERENCE", "", IS_LONG, 0, (long)((char *)&kicker_example.phase_reference), NULL, 0.0, 0, "phase reference number (to link with other time-dependent elements)"},
     {"FIRE_ON_PASS", "", IS_LONG, 0, (long)((char *)&kicker_example.fire_on_pass), NULL, 0.0, 0, "pass number to fire on"},
     {"N_KICKS", "", IS_LONG, 0, (long)((char *)&kicker_example.n_kicks), NULL, 0.0, 0, "Number of kicks to use for simulation. 0 uses an exact result but ignores b2."},
-    {"WAVEFORM", "", IS_STRING, 0, (long)((char *)&kicker_example.waveform), NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving kick factor vs time"},
+    {"WAVEFORM", "", IS_STRING, PARAM_XY_WAVEFORM, (long)((char *)&kicker_example.waveform), NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving kick factor vs time"},
     } ;
 
 MKICKER mkicker_example;
@@ -829,7 +829,7 @@ PARAMETER mkicker_param[N_MKICKER_PARAMS] = {
     {"PHASE_REFERENCE", "", IS_LONG, 0, (long)((char *)&mkicker_example.phase_reference), NULL, 0.0, 0, "phase reference number (to link with other time-dependent elements)"},
     {"FIRE_ON_PASS", "", IS_LONG, 0, (long)((char *)&mkicker_example.fire_on_pass), NULL, 0.0, 0, "pass number to fire on"},
     {"N_KICKS", "", IS_LONG, 1, (long)((char *)&mkicker_example.n_kicks), NULL, 0.0, 0, "Number of kicks to use for simulation."},
-    {"WAVEFORM", "", IS_STRING, 0, (long)((char *)&mkicker_example.waveform), NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving kick factor vs time"},
+    {"WAVEFORM", "", IS_STRING, PARAM_XY_WAVEFORM, (long)((char *)&mkicker_example.waveform), NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving kick factor vs time"},
     } ;
 
 KSEXT ksext_example;
@@ -1040,15 +1040,15 @@ PARAMETER ramprf_param[N_RAMPRF_PARAMS] = {
     {"PHASE", "DEG", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ramprf_example.phase), NULL, 0.0, 0, "nominal phase"},
     {"FREQ", "Hz", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ramprf_example.freq), NULL, 500.0e6, 0, "nominal frequency"},
     {"PHASE_REFERENCE", "", IS_LONG, 0, (long)((char *)&ramprf_example.phase_reference), NULL, 0.0, 0, "phase reference number (to link with other time-dependent elements)"},
-    {"VOLT_WAVEFORM", "", IS_STRING, 0, (long)((char *)&ramprf_example.vwaveform), NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving voltage waveform factor vs time"},
-    {"PHASE_WAVEFORM", "", IS_STRING, 0, (long)((char *)&ramprf_example.pwaveform), NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving phase offset vs time (requires FREQ_WAVEFORM)"},
-    {"FREQ_WAVEFORM", "", IS_STRING, 0, (long)((char *)&ramprf_example.fwaveform), NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving frequency factor vs time (requires PHASE_WAVEFORM)"},
+    {"VOLT_WAVEFORM", "", IS_STRING, PARAM_XY_WAVEFORM, (long)((char *)&ramprf_example.vwaveform), NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving voltage waveform factor vs time"},
+    {"PHASE_WAVEFORM", "", IS_STRING, PARAM_XY_WAVEFORM, (long)((char *)&ramprf_example.pwaveform), NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving phase offset vs time (requires FREQ_WAVEFORM)"},
+    {"FREQ_WAVEFORM", "", IS_STRING, PARAM_XY_WAVEFORM, (long)((char *)&ramprf_example.fwaveform), NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving frequency factor vs time (requires PHASE_WAVEFORM)"},
     {"FIDUCIAL", "", IS_STRING, 0, (long)((char *)&ramprf_example.fiducial), NULL, 0.0, 0, "mode for determining fiducial arrival time (light, tmean, first, pmaximum)"},
     };
 
 /* momentum ramp physical parameters */
 PARAMETER rampp_param[N_RAMPP_PARAMS] = {
-    {"WAVEFORM", "", IS_STRING, 0, 0, NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving momentum factor vs time"}
+    {"WAVEFORM", "", IS_STRING, PARAM_XY_WAVEFORM, 0, NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving momentum factor vs time"}
     };
 
 STRAY stray_example;
@@ -1259,8 +1259,8 @@ PARAMETER rfmode_param[N_RFMODE_PARAMS] = {
     {"RECORD", "", IS_STRING, 0, (long)((char *)&rfmode_example.record), NULL, 0.0, 0, "output file for cavity fields"},
     {"SINGLE_PASS", "", IS_LONG, 0, (long)((char *)&rfmode_example.single_pass), NULL, 0.0, 0, "if nonzero, don't accumulate field from pass to pass"},
     {"PASS_INTERVAL", "", IS_LONG, 0, (long)((char *)&rfmode_example.pass_interval), NULL, 0.0, 1, "interval in passes at which to apply PASS_INTERVAL times the field (may increase speed)"},
-    {"FREQ_WAVEFORM", "", IS_STRING, 0, (long)((char *)&rfmode_example.fwaveform), NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving frequency/f0 vs time, where f0 is the frequency given with the FREQ parameter"},
-    {"Q_WAVEFORM", "", IS_STRING, 0, (long)((char *)&rfmode_example.Qwaveform), NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving qualityFactor/Q0 vs time, where Q0 is the quality factor given the the Q parameter."},
+    {"FREQ_WAVEFORM", "", IS_STRING, PARAM_XY_WAVEFORM, (long)((char *)&rfmode_example.fwaveform), NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving frequency/f0 vs time, where f0 is the frequency given with the FREQ parameter"},
+    {"Q_WAVEFORM", "", IS_STRING, PARAM_XY_WAVEFORM, (long)((char *)&rfmode_example.Qwaveform), NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving qualityFactor/Q0 vs time, where Q0 is the quality factor given the the Q parameter."},
     {"RAMP_PASSES", "", IS_LONG, 0, (long)((char *)&rfmode_example.rampPasses), NULL, 0.0, 0, "Number of passes over which to linearly ramp up the impedance to full strength."},
     {"BINLESS", "", IS_LONG, 0, (long)((char *)&rfmode_example.binless), NULL, 0.0, 0, "If nonzero, use algorithm that doesn't requiring binning.  Best for few particles, widely spaced."},
     };
@@ -1332,8 +1332,8 @@ PARAMETER zlongit_param[N_ZLONGIT_PARAMS] = {
     {"RS", "Ohm", IS_DOUBLE, 0, (long)((char *)&zlongit_example.Rs), NULL, 0.0, 0, "shunt impedance (Ra=2*Rs)"},
     {"Q", "", IS_DOUBLE, 0, (long)((char *)&zlongit_example.Q), NULL, 0.0, 1, "cavity Q"},
     {"FREQ", "Hz", IS_DOUBLE, 0, (long)((char *)&zlongit_example.freq), NULL, 0.0, 0, "frequency (BROAD_BAND=1)"},
-    {"ZREAL", "", IS_STRING, 0, (long)((char *)&zlongit_example.Zreal), NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving real part of impedance vs f (BROAD_BAND=0)"},
-    {"ZIMAG", "", IS_STRING, 0, (long)((char *)&zlongit_example.Zimag), NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving imaginary part of impedance vs f (BROAD_BAND=0)"},
+    {"ZREAL", "", IS_STRING, PARAM_XY_WAVEFORM, (long)((char *)&zlongit_example.Zreal), NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving real part of impedance vs f (BROAD_BAND=0)"},
+    {"ZIMAG", "", IS_STRING, PARAM_XY_WAVEFORM, (long)((char *)&zlongit_example.Zimag), NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving imaginary part of impedance vs f (BROAD_BAND=0)"},
     {"BIN_SIZE", "S", IS_DOUBLE, 0, (long)((char *)&zlongit_example.bin_size), NULL, 0.0, 0, "bin size for current histogram (use 0 for autosize)"},
     {"N_BINS", "", IS_LONG, 0, (long)((char *)&zlongit_example.n_bins), NULL, 0.0, 128, "number of bins for current histogram"},
     {"MAX_N_BINS", "", IS_LONG, 0, (long)((char *)&zlongit_example.max_n_bins), NULL, 0.0, 0, "Maximum number of bins for current histogram"},
@@ -2019,7 +2019,7 @@ PARAMETER lsrMdltr_param[N_LSRMDLTR_PARAMS] = {
     {"LASER_PHASE", "RAD", IS_DOUBLE, 0, (long)((char *)&lsrMdltr_example.laserPhase), NULL, 0.0, 0, "laser phase"},
     {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&lsrMdltr_example.synchRad), NULL, 0.0, 0, "Include classical synchrotron radiation?"},
     {"ISR", "", IS_LONG, 0, (long)((char *)&lsrMdltr_example.isr), NULL, 0.0, 0, "Include quantum excitation?"},
-    {"TIME_PROFILE", NULL, IS_STRING, 0, (long)((char*)&lsrMdltr_example.timeProfileFile), NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving time-dependent modulation of the laser profile"},
+    {"TIME_PROFILE", NULL, IS_STRING, PARAM_XY_WAVEFORM, (long)((char*)&lsrMdltr_example.timeProfileFile), NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving time-dependent modulation of the laser profile"},
     {"TIME_OFFSET", "S", IS_DOUBLE, 0, (long)((char *)&lsrMdltr_example.timeProfileOffset), NULL, 0.0, 0, "Time offset of the laser profile."},
 };  
 

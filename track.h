@@ -837,6 +837,7 @@ extern char *entity_text[N_TYPES];
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
+#define PARAM_XY_WAVEFORM      0x0004UL
 
 typedef struct {
     char *name;            /* parameter name */
