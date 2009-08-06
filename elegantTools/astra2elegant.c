@@ -13,11 +13,16 @@
  * Michael Borland, 2009
  *
  $Log: not supported by cvs2svn $
+ Revision 1.1  2009/07/28 14:15:51  borland
+ First version.
+
  
  */
 #include "mdb.h"
 #include "scan.h"
 #include "SDDS.h"
+
+#define MAX_ROW_INCREMENT 100000
 
 #define SET_PIPE 0
 #define N_OPTIONS 1
@@ -31,7 +36,7 @@ Converts ASTRA phase space output to a form acceptable to elegant.\n\
 Program by Michael Borland.  (This is version 1, July 2009.)\n";
 
 long SetUpOutputFile(SDDS_DATASET *SDDSout, char *outputfile);
-long addParticleToFile(SDDS_DATASET *SDDSout, long *row, long maxRows,
+long addParticleToFile(SDDS_DATASET *SDDSout, long *row, long *maxRows,
                        double x, double y, double z, double px, double py, double pz);
 
 int main(int argc, char **argv)
@@ -42,7 +47,7 @@ int main(int argc, char **argv)
   SCANNED_ARG *s_arg;
   unsigned long pipeFlags;
   FILE *fpin;
-  double x, y, z, px, py, pzRef, dpz, clock, charge;
+  double x, y, z, px, py, pzRef, dpz, clock, charge, totalCharge;
   long index, flag, i_arg, tmpFileUsed;
   
   SDDS_RegisterProgramName(argv[0]);
@@ -89,24 +94,31 @@ int main(int argc, char **argv)
              &x, &y, &z, &px, &py, &pzRef, &clock, &charge, &index, &flag)!=10 ||
       flag!=5)
     SDDS_Bomb("problem reading reference particle data");
+  totalCharge = charge;
   
   if (!SetUpOutputFile(&SDDSout, outputfile) ||
-      !SDDS_StartTable(&SDDSout, maxRows=1000))
+      !SDDS_StartTable(&SDDSout, maxRows=MAX_ROW_INCREMENT))
     SDDS_Bomb("problem setting up output file");
 
   row = 0;
-  if (!addParticleToFile(&SDDSout, &row, maxRows, x, y, 0.0, px, py, pzRef))
+  if (!addParticleToFile(&SDDSout, &row, &maxRows, x, y, 0.0, px, py, pzRef))
     return 1;
-  
+
   while (!feof(fpin) &&
          fscanf(fpin, "%le %le %le %le %le %le %le %le %ld %ld",
                 &x, &y, &z, &px, &py, &dpz, &clock, &charge, &index, &flag)==10) {
-    if (flag==3 || flag==5)
-      if (!addParticleToFile(&SDDSout, &row, maxRows, x, y, z, px, py, pzRef+dpz))
+    if (flag==3 || flag==5) {
+      if (!addParticleToFile(&SDDSout, &row, &maxRows, x, y, z, px, py, pzRef+dpz))
         return 1;
+      totalCharge += charge;
+    }
   }
+  
+  if (!SDDS_SetParameters(&SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+                          "Charge", fabs(totalCharge/1e9), NULL))
+    SDDS_Bomb("problem setting Charge value");
 
-  if (row%maxRows && !SDDS_UpdatePage(&SDDSout, FLUSH_TABLE)) 
+  if (row%maxRows && !SDDS_WritePage(&SDDSout))
     SDDS_Bomb("problem writing rows with particle data");
 
   if (!SDDS_Terminate(&SDDSout))
@@ -125,6 +137,7 @@ long SetUpOutputFile(SDDS_DATASET *SDDSout, char *outputfile)
       SDDS_DefineColumn(SDDSout, "yp", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
       SDDS_DefineColumn(SDDSout, "t", NULL, "s", NULL, NULL, SDDS_DOUBLE, 0)<0 ||
       SDDS_DefineColumn(SDDSout, "p", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0)<0 ||
+      SDDS_DefineParameter(SDDSout, "Charge", NULL, "C", NULL, NULL, SDDS_DOUBLE, NULL)<0 ||
       !SDDS_WriteLayout(SDDSout)) 
     return 0;
   return 1;
@@ -132,7 +145,7 @@ long SetUpOutputFile(SDDS_DATASET *SDDSout, char *outputfile)
 
 #define K1 (e_mks/me_mks/sqr(c_mks))
 
-long addParticleToFile(SDDS_DATASET *SDDSout, long *row, long maxRows,
+long addParticleToFile(SDDS_DATASET *SDDSout, long *row, long *maxRows,
                        double x, double y, double z, double px, double py, double pz)
 {
   double xp, yp;
@@ -155,8 +168,9 @@ long addParticleToFile(SDDS_DATASET *SDDSout, long *row, long maxRows,
     return 0;
   }
   *row += 1;
-  if (*row%maxRows==0) {
-    if (!SDDS_UpdatePage(SDDSout, FLUSH_TABLE)) {
+  if (*row==*maxRows) {
+    *maxRows += MAX_ROW_INCREMENT;
+    if (!SDDS_LengthenTable(SDDSout, *maxRows)) {
       SDDS_Bomb("problem writing rows with particle data");
       return 0;
     }
