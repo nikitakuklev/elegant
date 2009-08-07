@@ -261,8 +261,8 @@ long interpolateUndulatorKickMap(double *xpFactor, double *ypFactor, UKICKMAP *m
   if (isnan(x) || isnan(y) || isinf(x) || isinf(y))
     return 0;
   
-  ix = (x-map->xmin)/map->dxg + 0.5;
-  iy = (y-map->ymin)/map->dyg + 0.5;
+  ix = (x-map->xmin)/map->dxg ;
+  iy = (y-map->ymin)/map->dyg ;
   if (ix<0 || iy<0 || ix>map->nx-1 || iy>map->ny-1)
     return 0;
   

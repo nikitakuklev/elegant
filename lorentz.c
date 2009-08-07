@@ -1332,8 +1332,8 @@ void bmapxy_deriv_function(double *qp, double *q, double s)
 
     /* find field components */
     F0 = 0;  /* z component of field. */
-    ix = (x-bmapxy->xmin)/bmapxy->dx + 0.5;
-    iy = (y-bmapxy->ymin)/bmapxy->dy + 0.5;
+    ix = (x-bmapxy->xmin)/bmapxy->dx;
+    iy = (y-bmapxy->ymin)/bmapxy->dy;
     if (ix<0 || iy<0 || ix>bmapxy->nx-1 || iy>bmapxy->ny-1) {
       F1 = F2 = 0;
       fprintf(stdout, "invalid particle: x=%e, y=%e, ix=%ld, iy=%ld\n",
