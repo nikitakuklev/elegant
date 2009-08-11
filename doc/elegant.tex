@@ -56,6 +56,11 @@ Here is a summary of what's changed since release 22.0.  For details and referen
 \begin{itemize}
 \item The script {\tt astra2elegant} was replaced by a compiled program.  The program is not only much faster, but
   also has corrections for the conversion that will be evident in long bunches or low energy beams.
+\item The scripts {\tt impact2sdds} and {\tt impact2elegant} were added.  These provide translation of IMPACT-T \cite{IMPACT} output
+  into SDDS files for more convenient postprocessing, as well as translation of IMPACT-T phase space into {\tt elegant}'s
+  conventions.  
+\item The scripts {\tt track2sdds}, {\tt track2mag}, and {\tt elegant2track} were added.  These provide a interface between
+  the ASCII version of TRACK and SDDS/{\tt elegant}.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
@@ -381,6 +386,8 @@ note that, unlike FORTRAN namelists, these namelists need not come in
 a predefined order; {\tt elegant} is able to detect which namelist is
 next in the file and react appropriately.
 
+\subsection{General Command Syntax}
+
 Each namelist has a number of variables associated with it, which are
 used to control details of the run.  These variables come in three
 data types: (1) {\tt long}, for the C long integer type.  (2) {\tt
@@ -519,6 +526,35 @@ would assign to {\tt betax} half
 the value of the parameter {\tt betaxFinal} from
 the file {\tt data.twi}.
 
+\subsection{Setup and Action Commands}
+ 
+A subject of frequent confusion for {\tt elegant} users is the
+distinction between setup and action commands.  An ``action'' command
+causes {\tt elegant} to immediately perform a specific computation or
+set of computations.  In contrast, a ``setup'' command tells {\tt elegant}
+how to perform computations when it later encounters a ``major'' action
+command (one of \verb|analyze_map|, \verb|find_aperture|, \verb|frequency_map|, \verb|momentum_aperture|, \verb|optimize|, 
+or \verb|track|).
+
+Several commands are switchable between action and setup modes.  These
+include the \verb|coupled_| \verb|twiss_output|,
+\verb|correction_matrix_output|, \verb|twiss_output|,
+\verb|find_aperture|, \verb|matrix_output|, and \verb|sasefel|
+commands.  Except for \verb|find_aperture|, all of the commands that
+can run in both modes have the \verb|output_at_each_step| parameter,
+which is used to switch between the modes.  In the case of
+\verb|find_aperture|, the switch is accomplished using the
+\verb|optimization_mode| parameter.  Regardless of which parameter is
+present, unless the parameter is given a value of 1, the command
+operates in action mode.  Further, if the command is used in setup mode
+and no relevant action command is present later in the file, then the requested
+will not be performed.
+
+Typically one wants to use these switchable commands in setup mode whenever one is
+simulating random errors, performing a parameter scan, or performing optimization.
+When in setup mode, the indicated computations will be performed repeatedly, e.g.,
+for each set of errors, for each step in the parameter scan, or for use in each
+evaluation of the optimization penalty function.
 
 \begin{latexonly}
 \newpage
@@ -527,35 +563,36 @@ the file {\tt data.twi}.
 
 \begin{table}[h]\caption{Table of {\tt elegant} commands and their functions.}
 \begin{center}
-\begin{tabular}{|l|l|}\hline
-\hyperref{{\tt alter\_elements}}{{\tt alter\_elements}}{}{subsec:alterelements} & Change an element parameter from the command file. \\ \hline
-\hyperref{{\tt amplification\_factors}}{{\tt amplification\_factors}}{}{subsec:amplificationfactors} & Compute orbit amplification functions. \\ \hline
-\hyperref{{\tt analyze\_map}}{{\tt analyze\_map}}{}{subsec:analyzemap} & Determine first-order matrix from tracking. \\ \hline
-\hyperref{{\tt aperture\_data}}{{\tt aperture\_data}}{}{subsec:aperturedata} & Define aperture using an SDDS file. \\ \hline
-\hyperref{{\tt bunched\_beam}}{{\tt bunched\_beam}}{}{subsec:bunchedbeam} & Set up beam generation. \\ \hline
-\hyperref{{\tt change\_particle}}{{\tt change\_particle}}{}{subsec:changeparticle} & Change the type of particle. Default is electron.\\ \hline
-\hyperref{{\tt chromaticity}}{{\tt chromaticity}}{}{subsec:chromaticity} & Correct the chromaticity. \\ \hline
-\hyperref{{\tt closed\_orbit}}{{\tt closed\_orbit}}{}{subsec:closedorbit} & Compute the closed orbit. \\ \hline
-\hyperref{{\tt correct}}{{\tt correct}}{}{subsec:correct} & Correct the orbit or trajectory. \\ \hline
-\hyperref{{\tt correction\_matrix\_output}}{{\tt correction\_matrix\_output}}{}{subsec:correctionmatrixoutput} & Obtain orbit/trajectory correction matrix in a file. \\ \hline
-\hyperref{{\tt correct\_tunes}}{{\tt correct\_tunes}}{}{subsec:correcttunes} & Correct the tunes. \\ \hline
-\hyperref{{\tt coupled\_twiss\_output}}{{\tt coupled\_twiss\_output}}{}{subsec:coupledtwissoutput} & Compute and output coupled twiss parameters. \\ \hline
-\hyperref{{\tt divide\_elements}}{{\tt divide\_elements}}{}{subsec:divideelements} & Specify division of elements into pieces. \\ \hline
-\hyperref{{\tt error\_element}}{{\tt error\_element}}{}{subsec:errorelement} & Define errors for a set of elements. \\ \hline
-\hyperref{{\tt error\_control}}{{\tt error\_control}}{}{subsec:errorcontrol} & Set up and control error generation process. \\ \hline
-\hyperref{{\tt find\_aperture}}{{\tt find\_aperture}}{}{subsec:findaperture} & Determine the transverse (e.g., dynamic) aperture. \\ \hline
-\hyperref{{\tt floor\_coordinates}}{{\tt floor\_coordinates}}{}{subsec:floorcoordinates} & Compute and output floor coordinates. \\ \hline
-\hyperref{{\tt frequency\_map}}{{\tt frequency\_map}}{}{subsec:frequencymap} & Compute and output frequency map. \\ \hline
-\hyperref{{\tt global\_settings}}{{\tt global\_settings}}{}{subsec:globalsettings} & Change global settings.\\ \hline
-\hyperref{{\tt insert\_elements}}{{\tt insert\_sceffects}}{}{subsec:insertelements} & Insert elements into the lattice at many places. \\ \hline
-\hyperref{{\tt insert\_sceffects}}{{\tt insert\_sceffects}}{}{subsec:insertsceffects} & Insert space charge kick elements. \\ \hline
-\hyperref{{\tt linear\_chromatic\_tracking\_setup}}{{\tt linear\_chromatic\_tracking\_setup}}{}{subsec:linearchromatictrackingsetup} & Set up for fast tracking with chromatic effects. \\ \hline
-\hyperref{{\tt link\_control}}{{\tt link\_control}}{}{subsec:linkcontrol} & Control linking of element parameters. \\ \hline
-\hyperref{{\tt link\_elements}}{{\tt link\_elements}}{}{subsec:linkelements} & Define link between parameters of two elements. \\ \hline
-\hyperref{{\tt load\_parameters}}{{\tt load\_parameters}}{}{subsec:loadparameters} & Load element parameters from SDDS file. \\ \hline
-\hyperref{{\tt matrix\_output}}{{\tt matrix\_output}}{}{subsec:matrixoutput} & Output transfer matrix along beamline. \\ \hline
-\hyperref{{\tt moments\_output}}{{\tt moments\_output}}{}{subsec:momentsoutput} & Compute coupled beam moments, with radiation option. \\ \hline
-\hyperref{{\tt momentum\_aperture}}{{\tt momentum\_aperture}}{}{subsec:momentumaperture} & Determine s-dependent momentum aperture. \\ \hline
+\begin{tabular}{|l|l|l|}\hline
+Command name & Type & Description \\
+\hyperref{{\tt alter\_elements}}{{\tt alter\_elements}}{}{subsec:alterelements} & action & Change an element parameter from the command file. \\ \hline
+\hyperref{{\tt amplification\_factors}}{{\tt amplification\_factors}}{}{subsec:amplificationfactors} & action & Compute orbit amplification functions. \\ \hline
+\hyperref{{\tt analyze\_map}}{{\tt analyze\_map}}{}{subsec:analyzemap} & major action & Determine first-order matrix from tracking. \\ \hline
+\hyperref{{\tt aperture\_data}}{{\tt aperture\_data}}{}{subsec:aperturedata} & setup & Define aperture using an SDDS file. \\ \hline
+\hyperref{{\tt bunched\_beam}}{{\tt bunched\_beam}}{}{subsec:bunchedbeam} & setup & Set up beam generation. \\ \hline
+\hyperref{{\tt change\_particle}}{{\tt change\_particle}}{}{subsec:changeparticle} & action & Change the type of particle. Default is electron.\\ \hline
+\hyperref{{\tt chromaticity}}{{\tt chromaticity}}{}{subsec:chromaticity} & setup & Correct the chromaticity. \\ \hline
+\hyperref{{\tt closed\_orbit}}{{\tt closed\_orbit}}{}{subsec:closedorbit} & setup & Compute the closed orbit. \\ \hline
+\hyperref{{\tt correct}}{{\tt correct}}{}{subsec:correct} & setup & Correct the orbit or trajectory. \\ \hline
+\hyperref{{\tt correction\_matrix\_output}}{{\tt correction\_matrix\_output}}{}{subsec:correctionmatrixoutput} & action/setup & Obtain orbit/trajectory correction matrix in a file. \\ \hline
+\hyperref{{\tt correct\_tunes}}{{\tt correct\_tunes}}{}{subsec:correcttunes} & setup & Correct the tunes. \\ \hline
+\hyperref{{\tt coupled\_twiss\_output}}{{\tt coupled\_twiss\_output}}{}{subsec:coupledtwissoutput} & setup/action & Compute and output coupled twiss parameters. \\ \hline
+\hyperref{{\tt divide\_elements}}{{\tt divide\_elements}}{}{subsec:divideelements} & setup & Specify division of elements into pieces. \\ \hline
+\hyperref{{\tt error\_element}}{{\tt error\_element}}{}{subsec:errorelement} & setup & Define errors for a set of elements. \\ \hline
+\hyperref{{\tt error\_control}}{{\tt error\_control}}{}{subsec:errorcontrol} & setup & Set up and control error generation process. \\ \hline
+\hyperref{{\tt find\_aperture}}{{\tt find\_aperture}}{}{subsec:findaperture} & setup/major action & Determine the transverse (e.g., dynamic) aperture. \\ \hline
+\hyperref{{\tt floor\_coordinates}}{{\tt floor\_coordinates}}{}{subsec:floorcoordinates} & action & Compute and output floor coordinates. \\ \hline
+\hyperref{{\tt frequency\_map}}{{\tt frequency\_map}}{}{subsec:frequencymap} & major action & Compute and output frequency map. \\ \hline
+\hyperref{{\tt global\_settings}}{{\tt global\_settings}}{}{subsec:globalsettings} & action & Change global settings.\\ \hline
+\hyperref{{\tt insert\_elements}}{{\tt insert\_sceffects}}{}{subsec:insertelements} & action & Insert elements into the lattice at many places. \\ \hline
+\hyperref{{\tt insert\_sceffects}}{{\tt insert\_sceffects}}{}{subsec:insertsceffects} & action & Insert space charge kick elements. \\ \hline
+\hyperref{{\tt linear\_chromatic\_tracking\_setup}}{{\tt linear\_chromatic\_tracking\_setup}}{}{subsec:linearchromatictrackingsetup} & setup & Set up for fast tracking with chromatic effects. \\ \hline
+\hyperref{{\tt link\_control}}{{\tt link\_control}}{}{subsec:linkcontrol} & setup & Control linking of element parameters. \\ \hline
+\hyperref{{\tt link\_elements}}{{\tt link\_elements}}{}{subsec:linkelements} & setup & Define link between parameters of two elements. \\ \hline
+\hyperref{{\tt load\_parameters}}{{\tt load\_parameters}}{}{subsec:loadparameters} & setup/action & Load element parameters from SDDS file. \\ \hline
+\hyperref{{\tt matrix\_output}}{{\tt matrix\_output}}{}{subsec:matrixoutput} & setup/action & Output transfer matrix along beamline. \\ \hline
+\hyperref{{\tt moments\_output}}{{\tt moments\_output}}{}{subsec:momentsoutput} & setup/action & Compute coupled beam moments, with radiation option. \\ \hline
+\hyperref{{\tt momentum\_aperture}}{{\tt momentum\_aperture}}{}{subsec:momentumaperture} & major action & Determine s-dependent momentum aperture. \\ \hline
 %begin{latexonly}
 \end{tabular}
 \end{center}
@@ -563,32 +600,32 @@ the file {\tt data.twi}.
 
 \begin{table}[h]\caption{Table of {\tt elegant} commands and their functions.}
 \begin{center}
-\begin{tabular}{|l|l|}\hline
+\begin{tabular}{|l|l|l|}\hline
 %end{latexonly}
 
-\hyperref{{\tt optimize}}{{\tt optimize}}{}{subsec:optimize} & Execute an optimization. \\ \hline
-\hyperref{{\tt optimization\_covariable}}{{\tt optimization\_covariable}}{}{subsec:optimizationcovariable} & Define a dependent parameter for optimization. \\ \hline
-\hyperref{{\tt optimization\_setup}}{{\tt optimization\_setup}}{}{subsec:optimizationsetup} & Perform initial optimization setup. \\ \hline
-\hyperref{{\tt optimization\_term}}{{\tt optimization\_term}}{}{subsec:optimizationterm} & Define a term of penalty function. \\ \hline
-\hyperref{{\tt optimization\_variable}}{{\tt optimization\_variable}}{}{subsec:optimizationvariable} & Define an optimization variable. \\ \hline
-\hyperref{{\tt print\_dictionary}}{{\tt print\_dictionary}}{}{subsec:printdictionary} & Print the element dictionary. \\ \hline
-\hyperref{{\tt rpn\_expression}}{{\tt rpn\_expression}}{}{subsec:rpnexpression} & Execute an expression in the rpn interpreter. \\ \hline
-\hyperref{{\tt rpn\_load}}{{\tt rpn\_load}}{}{subsec:rpnload} & Load values from SDDS file into rpn interpreter. \\ \hline
-\hyperref{{\tt run\_control}}{{\tt run\_control}}{}{subsec:runcontrol} & Set up simulation steps and passes. \\ \hline
-\hyperref{{\tt run\_setup}}{{\tt run\_setup}}{}{subsec:runsetup} & Define global simulation parameters and output files. \\ \hline
-\hyperref{{\tt sasefel}}{{\tt sasefel}}{}{subsec:sasefel} & Evaluate SASE FEL gain etc. \\ \hline
-\hyperref{{\tt save\_lattice}}{{\tt save\_lattice}}{}{subsec:savelattice} & Save new lattice file. \\ \hline
-\hyperref{{\tt sdds\_beam}}{{\tt sdds\_beam}}{}{subsec:sddsbeam} & Define loading of particles from SDDS file. \\ \hline
-\hyperref{{\tt semaphores}}{{\tt semaphores}}{}{subsec:semaphores} & Define file semaphores for start/end of run. \\ \hline
-\hyperref{{\tt slice\_analysis}}{{\tt slice\_analysis}}{}{subsec:sliceanalysis} & Perform slice analysis along beamline. \\ \hline
-\hyperref{{\tt subprocess}}{{\tt subprocess}}{}{subsec:subprocess} & Execute a command in the shell. \\ \hline
-\hyperref{{\tt steering\_element}}{{\tt steering\_element}}{}{subsec:steeringelement} & Define element parameters as steering correctors. \\ \hline
-\hyperref{{\tt transmute\_elements}}{{\tt transmute\_elements}}{}{subsec:transmuteelements} & Transmute elements from one type to another. \\ \hline
-\hyperref{{\tt twiss\_analysis}}{{\tt twiss\_analysis}}{}{subsec:twissanalysis} & Define subset of beamline for twiss parameter analysis. \\ \hline
-\hyperref{{\tt twiss\_output}}{{\tt twiss\_output}}{}{subsec:twissoutput} & Set up twiss parameter and related computation. \\ \hline
-\hyperref{{\tt track}}{{\tt track}}{}{subsec:track} & Execute tracking of particles and other operations. \\ \hline
-\hyperref{{\tt tune\_shift\_with\_amplitude}}{{\tt tune\_shift\_with\_amplitude}}{}{subsec:tuneshiftwithamplitude} & Compute tune shifts with amplitude. \\ \hline
-\hyperref{{\tt vary\_element}}{{\tt vary\_element}}{}{subsec:varyelement} & Vary element parameters in loops. \\ \hline
+\hyperref{{\tt optimize}}{{\tt optimize}}{}{subsec:optimize} & major action & Execute an optimization. \\ \hline
+\hyperref{{\tt optimization\_covariable}}{{\tt optimization\_covariable}}{}{subsec:optimizationcovariable} & setup & Define a dependent parameter for optimization. \\ \hline
+\hyperref{{\tt optimization\_setup}}{{\tt optimization\_setup}}{}{subsec:optimizationsetup} & setup & Perform initial optimization setup. \\ \hline
+\hyperref{{\tt optimization\_term}}{{\tt optimization\_term}}{}{subsec:optimizationterm} & setup & Define a term of penalty function. \\ \hline
+\hyperref{{\tt optimization\_variable}}{{\tt optimization\_variable}}{}{subsec:optimizationvariable} & setup & Define an optimization variable. \\ \hline
+\hyperref{{\tt print\_dictionary}}{{\tt print\_dictionary}}{}{subsec:printdictionary} & action & Print the element dictionary. \\ \hline
+\hyperref{{\tt rpn\_expression}}{{\tt rpn\_expression}}{}{subsec:rpnexpression} & action & Execute an expression in the rpn interpreter. \\ \hline
+\hyperref{{\tt rpn\_load}}{{\tt rpn\_load}}{}{subsec:rpnload} & action & Load values from SDDS file into rpn interpreter. \\ \hline
+\hyperref{{\tt run\_control}}{{\tt run\_control}}{}{subsec:runcontrol} & setup & Set up simulation steps and passes. \\ \hline
+\hyperref{{\tt run\_setup}}{{\tt run\_setup}}{}{subsec:runsetup} & setup & Define global simulation parameters and output files. \\ \hline
+\hyperref{{\tt sasefel}}{{\tt sasefel}}{}{subsec:sasefel} & setup/action & Evaluate SASE FEL gain etc. \\ \hline
+\hyperref{{\tt save\_lattice}}{{\tt save\_lattice}}{}{subsec:savelattice} & action & Save new lattice file. \\ \hline
+\hyperref{{\tt sdds\_beam}}{{\tt sdds\_beam}}{}{subsec:sddsbeam} & setup & Define loading of particles from SDDS file. \\ \hline
+\hyperref{{\tt semaphores}}{{\tt semaphores}}{}{subsec:semaphores} & setup & Define file semaphores for start/end of run. \\ \hline
+\hyperref{{\tt slice\_analysis}}{{\tt slice\_analysis}}{}{subsec:sliceanalysis} & setup & Perform slice analysis along beamline. \\ \hline
+\hyperref{{\tt subprocess}}{{\tt subprocess}}{}{subsec:subprocess} & action & Execute a command in the shell. \\ \hline
+\hyperref{{\tt steering\_element}}{{\tt steering\_element}}{}{subsec:steeringelement} & setup & Define element parameters as steering correctors. \\ \hline
+\hyperref{{\tt transmute\_elements}}{{\tt transmute\_elements}}{}{subsec:transmuteelements} & setup & Transmute elements from one type to another. \\ \hline
+\hyperref{{\tt twiss\_analysis}}{{\tt twiss\_analysis}}{}{subsec:twissanalysis} & setup & Define subset of beamline for twiss parameter analysis. \\ \hline
+\hyperref{{\tt twiss\_output}}{{\tt twiss\_output}}{}{subsec:twissoutput} & setup/action & Set up twiss parameter and related computation. \\ \hline
+\hyperref{{\tt track}}{{\tt track}}{}{subsec:track} & major action & Execute tracking of particles and other operations. \\ \hline
+\hyperref{{\tt tune\_shift\_with\_amplitude}}{{\tt tune\_shift\_with\_amplitude}}{}{subsec:tuneshiftwithamplitude} & setup & Compute tune shifts with amplitude. \\ \hline
+\hyperref{{\tt vary\_element}}{{\tt vary\_element}}{}{subsec:varyelement} & setup & Vary element parameters in loops. \\ \hline
 \end{tabular}
 \end{center}
 \end{table}
@@ -709,7 +746,7 @@ Recommended value: ``\%s.kaf''.
 \subsection{analyze\_map \label{subsec:analyzemap}}
 
 \begin{itemize}
-\item type: action command.
+\item type: major action command.
 \item function: find the approximate first-order matrix and related quantities for an accelerator by tracking.
 \end{itemize}
 
@@ -1468,7 +1505,7 @@ and momentum spread to compute the beam sizes, bunch length (if rf is included),
 \item \verb|type| --- The type of random distribution to use.  May be one of ``uniform'', ``gaussian'', or ``plus\_or\_minus''.
 A ``plus\_or\_minus'' error is equal in magnitude to the amplitude given, with the sign randomly chosen.
 \item \verb|amplitude| --- The amplitude of the errors.
-\item \verb|cutoff| --- The cutoff for the random distribution.
+\item \verb|cutoff| --- The cutoff for the gaussian random distribution in units of the amplitude.  Ignored for other distribution types.
 \item \verb|bind|, \verb|bind_number|, \verb|bind_across_names| ---
 These parameters control ``binding'' of errors among elements, which
 means assigning the same error contribution to several elements.  This
@@ -1532,7 +1569,7 @@ parameter.  If zero, then the errors replace the prior value of the parameter.
 \subsection{find\_aperture \label{subsec:findaperture}}
 
 \begin{itemize}
-\item type: setup/action command.
+\item type: setup/major action command.
 \item function: find the aperture in (x, y) space for an accelerator.
 \end{itemize}
 
@@ -1675,7 +1712,7 @@ end are given.
 \subsection{frequency\_map \label{subsec:frequencymap}}
 
 \begin{itemize}
-\item type: action command.  
+\item type: major action command.  
 \item function: compute frequency map from tracking
       Note that the number of turns tracked is set by the \verb|run_control| command.
 \end{itemize}
@@ -2207,7 +2244,7 @@ using values at marker elements.  See the documentation for
 \subsection{momentum\_aperture \label{subsec:momentumaperture}}
 
 \begin{itemize}
-\item type: action command.
+\item type: major action command.
 \item function: determine momentum aperture as a function of position in the lattice by tracking
 \end{itemize}
 
@@ -2334,7 +2371,7 @@ correctly.  It is also a good idea to track for several synchrotron oscillation 
 \subsection{optimize \label{subsec:optimize}}
 
 \begin{itemize}
-\item type: action command.
+\item type: major action command.
 \item function: perform optimization.
 \item note: on UNIX systems, the user may press Control-C to force
 \verb|elegant| to terminate optimization and proceed as if
@@ -3655,7 +3692,7 @@ h00400 & drives $4 \nu_y$ \\ \hline
 \subsection{track \label{subsec:track}}
 
 \begin{itemize}
-\item type: action command.
+\item type: major action command.
 \item function: track particles.
 \end{itemize}
 
@@ -3858,13 +3895,15 @@ arithmetic.
 A number of specialized programs are available that work with {\tt
 elegant}. Most are SDDS-compliant, so they will also work with any
 program that reads or writes appropriate SDDS data.  The following is
-a brief description of each program.  Full descriptions are available
-on subsequent pages.
+a brief description of each program.  Full descriptions for most programs are available
+on subsequent pages.  Most programs will return a help message if the program name is
+given with no arguments.
 \begin{itemize}
-\item {\tt astra2elegant} --- Converts ASCII particle output from ASTRA to a binary
+\item {\tt astra2elegant} --- Converts ASCII particle output from ASTRA \cite{ASTRA} to a binary
   SDDS file suitable for use with {\tt elegant}.  This program is recommended over
   the astra2sdds program on the ASTRA website, because the latter produces ASCII SDDS
-  files that are quite slow to read.
+  files that are quite slow to read and does not perform the correct computations
+  for low-energy beams.
 \item {\tt csrImpedance} --- Computes the shielded steady-state CSR impedance for a dipole magnet.
  The output can be used immediately with {\tt elegant}'s \verb|ZLONGIT| element.
  (Program by Y. Wang, H. Shang, and M. Borland.)
@@ -3872,6 +3911,9 @@ on subsequent pages.
  successively doubling the number.  Intended to be used to increase the number of particles
  produced by a photoinjector simulation to improve stability of CSR and LSC simulations.
  See also {\tt smoothDist6}.
+\item {\tt elegant2astra} --- This program translates {\tt elegant} phase space files into ASTRA \cite{ASTRA} format.
+\item {\tt elegant2track} --- This program translates {\tt elegant} phase space files into TRACK \cite{TRACK} format.
+  The ASCII version of TRACK is assumed.
 \item {\tt elegant2genesis} --- This program performs
         slice analysis of particle output files, which are suitable for use with
         the SDDS-compliant APS version of GENESIS\cite{GENESIS}.  This program is
@@ -3887,6 +3929,8 @@ on subsequent pages.
         damping, and intra-beam scattering.  Requires as input a file containing the
         Twiss parameters, such as that provided by the \verb|twiss_output| command.
         (Program by L. Emery, M. Borland, and A. Xiao)
+\item {\tt impact2elegant} --- Tranlates IMPACT-T \cite{IMPACT} output into {\tt elegant} conventions.
+\item {\tt impact2sdds} --- Translates IMPACT-T output files into SDDS for easier postprocessing.
 \item {\tt madto} --- Translates an {\tt elegant}-style lattice file (or a MAD file, with
         some restrictions) into formats accepted by other programs, such as COSY, PARMELA, 
         PATPET, PATRICIA, TRANSPORT, and XORBIT.  Will also generate an SDDS file containing lattice
@@ -3923,13 +3967,17 @@ on subsequent pages.
  the growth rate for energy and density modulations.  See also {\tt doubleDist6}.
 \item {\tt touschekLifetime} --- This program calculates Touschek lifetime using A. Piwinski's formula.
         Input files are generated from ``twiss\_output'' and ``momentum\_aperture''.  (Program by A. Xiao.)
+\item {\tt track2sdds} --- Translates output files, including phase space files, from version 39 of TRACK (with ASCII output \cite{TRACK})
+  into SDDS. 
+\item {\tt track2mag} --- Uses TRACK output files to create a file similar to the magnets outupt file from {\tt elegant}.
+  This gives a profile of the beamline that can be plotted with other data.
 \end{itemize}
 
 \begin{latexonly}
 \newpage
 \begin{center}{\Large\verb|astra2elegant|}\end{center}
 \end{latexonly}
-\subsection{csrImpedance}
+\subsection{astra2elegant}
 
 \begin{itemize}
 \item {\bf description:}   Converts ASCII particle output from ASTRA to a binary
@@ -5251,6 +5299,15 @@ LINAC''.
 \bibitem{Bengtsson}
  J. Bengtsson, "The Sextupole Scheme for the Swiss Light Source (SLS): An Analytic Approach," SLS Note 9/97,
  March 7, 1997. (Corrections to several typos were supplied by W. Guo, NSLS.)
+
+\bibitem{ASTRA}
+  K. Fl\"{o}ttmann, Astra User Manual, http://www.desy.de/~mpyflo/Astra\_dokumentation/
+
+\bibitem{IMPACT}
+J. Qiang {\em et al.},  J.~Comp.~Phys. 163, 434 (2000).
+
+\bibitem{TRACK}
+  V. N. Aseev {\em et al.}, Proc. PAC05, 2053-2055 (2005); ASCII version 39 from B. Mustapha.
 
 \end{thebibliography}
 
