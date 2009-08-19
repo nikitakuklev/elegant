@@ -33,7 +33,10 @@ set bg0 [rpn expr "$reference mev / 1 + sqr 1 - sqrt"]
 set fd [open $output w]
 puts $fd "    [format %.1f [expr $reference*1000]]  1"
 set np [exec sddsprocess $input -pipe=out -filter=col,p,$pmin,1e300 | sdds2stream -rows=bare -pipe ]
-puts stdout "$np particles ([expr (1.0*$np)/$np0])"
+set Q0 [exec sdds2stream $input -parameter=Charge]
+set Q  [expr ($Q0*$np)/$np0]
+set I  [expr (1e3*$Q)*($frequency*1e6)]
+puts stdout "$np particles, $Q C, $I mA"
 puts $fd "$np"
 puts $fd "1.0"
 puts $fd [string toupper "  0.000000000000000E+00  0.000000000000000E+00  0.000000000000000E+00  0.000000000000000E+00  0.000000000000000E+00 [format %22.15e $bg0]   0"]
