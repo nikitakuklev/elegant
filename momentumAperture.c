@@ -384,10 +384,12 @@ long doMomentumApertureSearch(
 
 #if SDDS_MPI_IO
   /* Open file here for parallel IO */
-  if (!SDDS_MPI_File_Open(SDDSma.MPI_dataset, SDDSma.layout.filename, SDDS_MPI_WRITE_ONLY)) 
-    SDDS_MPI_BOMB("SDDS_MPI_File_Open failed.", &SDDSma.MPI_dataset->MPI_file);
-  if (!SDDS_MPI_WriteLayout(&SDDSma))  
-    SDDS_MPI_BOMB("SDDS_MPI_WriteLayout failed.", &SDDSma.MPI_dataset->MPI_file);
+  if (!SDDS_LayoutWritten(&SDDSma)) {
+    if (!SDDS_MPI_File_Open(SDDSma.MPI_dataset, SDDSma.layout.filename, SDDS_MPI_WRITE_ONLY)) 
+      SDDS_MPI_BOMB("SDDS_MPI_File_Open failed.", &SDDSma.MPI_dataset->MPI_file);
+    if (!SDDS_MPI_WriteLayout(&SDDSma))  
+      SDDS_MPI_BOMB("SDDS_MPI_WriteLayout failed.", &SDDSma.MPI_dataset->MPI_file);
+  }
 #endif                                                                                       
   if (!SDDS_StartPage(&SDDSma, iElem) ||
       !SDDS_SetParameters(&SDDSma, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "Step",
