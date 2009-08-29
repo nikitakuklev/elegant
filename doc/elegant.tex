@@ -2446,6 +2446,12 @@ allowed for the expression.
 \begin{itemize}
 \item type: setup command.
 \item function: define an element parameter to be varied as a function of optimization parameters.
+\item N.B.: It is not possible to optimize an element if the element name starts with one of the following
+characters: 
+\verb|0|, \verb|1|, \verb|2|, \verb|3|, \verb|4|, \verb|5|, \verb|6|, \verb|7|, \verb|8|,
+\verb|9|, \verb|.|, \verb|+|, or \verb|-|.  The reason is that {\tt elegant} will attempt to 
+make an SDDS parameter name containing the element name, and these characters are disallowed
+at the beginning of such a name.
 \end{itemize}
 
 \begin{verbatim}
@@ -2703,6 +2709,9 @@ a significant difference in the optimization speed.
     long field_initial_value = 0;
     long field_final_value = 0;
     long field_interval = 1;
+    STRING input_file = NULL;
+    STRING input_column = NULL;
+    long verbose = 0;
 &end
 \end{verbatim}
 
@@ -2735,6 +2744,13 @@ details on designing optimization terms.
 &end
 \end{verbatim}
 
+\item \verb|input_file|, \verb|input_column| --- If given, \verb|input_file| is taken as the name of an SDDS file,
+  which is expected to have a string column named by \verb|input_column|.  Each row of the column is taken as
+  a separate optimization term.
+
+\item \verb|verbose| --- If nonzero, optimization terms are echoed to the terminal as they are created or read
+  from the input file.
+
 \end{itemize}
 
 \begin{latexonly}
@@ -2746,6 +2762,12 @@ details on designing optimization terms.
 \begin{itemize}
 \item type: setup command.
 \item function: defines a parameter of an element to be used in optimization.
+\item N.B.: It is not possible to optimize an element if the element name starts with one of the following
+characters: 
+\verb|0|, \verb|1|, \verb|2|, \verb|3|, \verb|4|, \verb|5|, \verb|6|, \verb|7|, \verb|8|,
+\verb|9|, \verb|.|, \verb|+|, or \verb|-|.  The reason is that {\tt elegant} will attempt to 
+make an SDDS parameter name containing the element name, and these characters are disallowed
+at the beginning of such a name.
 \end{itemize}
 
 \begin{verbatim}
@@ -3852,6 +3874,12 @@ integers and $p$ is $x$ or $y$.  $A_q = (1 + \alpha_q) q^2/\beta_q$, with $q=x$ 
 \begin{itemize}
 \item type: setup command.
 \item function: define an index and/or tie a parameter of an element to it.
+\item N.B.: It is not possible to vary an element if the element name starts with one of the following
+characters: 
+\verb|0|, \verb|1|, \verb|2|, \verb|3|, \verb|4|, \verb|5|, \verb|6|, \verb|7|, \verb|8|,
+\verb|9|, \verb|.|, \verb|+|, or \verb|-|.  The reason is that {\tt elegant} will attempt to 
+make an SDDS parameter name containing the element name, and these characters are disallowed
+at the beginning of such a name.
 \end{itemize}
 
 \begin{verbatim}
