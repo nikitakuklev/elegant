@@ -2234,20 +2234,21 @@ extern PARAMETER IBSCATTER_param[N_IBSCATTER_PARAMS];
 
 typedef struct {
   double factor, charge;
-  long do_x, do_y, do_z;
-  long smooth, verbosity, forceMatchedTwiss, isRing, interval;
+  long do_x, do_y, do_z, nslice;
+  long smooth, forceMatchedTwiss, isRing, interval;
   char *filename; 
   /* internal use only */
   char **name;
-  double *s, *pCentral;
-  double *betax, *alphax, *etax, *etaxp;
-  double *betay, *alphay, *etay, *etayp;
-  double *xRateVsS, *yRateVsS, *zRateVsS;
+  double *s, *pCentral, *icharge;
+  double *etax, *etaxp, *etay, *etayp; 
+  double **betax, **alphax, **betay, **alphay;
+  double **xRateVsS, **yRateVsS, **zRateVsS;
+  double *emitx0, *emity0, *emitl0, *sigmaz0, *sigmaDelta0;
+  double *emitx, *emity, *emitl, *sigmaz, *sigmaDelta;
+  double *xGrowthRate, *yGrowthRate, *zGrowthRate, *zRate, *pRate;
   long elements, offset, output;
   double revolutionLength, dT;
-  double emitx0, emity0, emitl0, sigmaz0, sigmaDelta0;
-  double emitx, emity, emitl, sigmaz, sigmaDelta;
-  double xGrowthRate, yGrowthRate, zGrowthRate;
+  ELEMENT_LIST *elem;
 } IBSCATTER;
 
 /* space charge multipole element */
@@ -2614,6 +2615,8 @@ extern void copy_beam_sums(BEAM_SUMS *target, BEAM_SUMS *source);
 extern long computeSliceMoments(double C[6], double S[6][6], 
 			 double **part, long np, 
 			 double minValue, double maxValue);
+double correctedEmittance(double S[6][6], double eta[4], long i1, long i2,
+			  double *beta, double *alpha);
 void performSliceAnalysisOutput(SLICE_OUTPUT *sliceOutput, double **particle, long particles, 
 				long newPage, long step, double Po, double charge, 
 				char *elementName, double elementPosition,

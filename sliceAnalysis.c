@@ -9,6 +9,9 @@
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.11  2009/02/12 22:55:41  borland
+ * Added ability to turn off echoing of namelists.
+ *
  * Revision 1.10  2006/05/31 16:02:54  ywang25
  * The first release of Pelegant. It has passed a regression test of 100 cases.
  *
@@ -59,9 +62,6 @@
 
 static double tmp_safe_sqrt;
 #define SAFE_SQRT(x) ((tmp_safe_sqrt=(x))<0?0.0:sqrt(tmp_safe_sqrt))
-
-double correctedEmittance(double S[6][6], double eta[4], long i1, long i2,
-			  double *beta, double *alpha);
 
 static SLICE_OUTPUT *sliceOutput = NULL;
 
