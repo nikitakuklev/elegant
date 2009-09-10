@@ -4015,7 +4015,7 @@ files that are quite slow to read.
 
 \item {\bf synopsis:}
 \begin{flushleft}{\tt
-astra2elegant [{\em inputFile}] [{\em outputFile}] [-pipe=[input][,output]]
+astra2elegant [{\em inputFile}] [{\em outputFile}] [-centerReference] [-pipe=[input][,output]]
 }\end{flushleft}
 
 \item {\bf files:}
@@ -4027,6 +4027,10 @@ astra2elegant [{\em inputFile}] [{\em outputFile}] [-pipe=[input][,output]]
 
 \item {\bf switches:}
 \begin{itemize}
+\item {\tt -centerReference} --- Normally, {\tt astra2elegant} offsets the arrival time of all particles
+  by the arrival time of the reference particle.  This behavior can be suppressed by giving the
+  {\tt -centerReference} option.  In that case, the arrival time of the reference particle is defined
+  as 0.
 \item {\tt -pipe[=input][,output]} --- Standard SDDS toolkit pipe option.
 \end{itemize}
 
