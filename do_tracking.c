@@ -406,7 +406,7 @@ long do_tracking(
                 nToTrack, i_pass);
 #else
       if (i_pass%20==0) {
-	if (!partOnMaster) {
+	if (!partOnMaster && notSinglePart) {
 	  /* We have to collect information from all the processors to print correct info during tracking */
 	  if (isMaster) nToTrack = 0; 
 	  MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
@@ -1869,7 +1869,7 @@ long do_tracking(
     fprintf(stdout, "%ld particles present after pass %ld        \n", 
             nToTrack, i_pass);
 #else
-    if (!partOnMaster) {
+    if (!partOnMaster && notSinglePart) {
       /* We have to collect information from all the processors to print correct info during tracking */
       if (isMaster) nToTrack = 0; 
       MPI_Reduce (&nToTrack, &(beam->n_to_track_total), 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
