@@ -2325,11 +2325,11 @@ void derivatives_laserModulator(double *qp, double *q, double tau)
     BOverGamma[2] = 0;
   } else if (lsrMdltr->fieldCode==LSRMDLTR_EXACT) {
     BOverGamma[1] = Bfactor*cos(kuz)*cosh(kuy);
-    BOverGamma[2] = Bfactor*sin(kuz)*sinh(kuy);
+    BOverGamma[2] = -Bfactor*sin(kuz)*sinh(kuy);
   } else {
     /* leading terms only */
     BOverGamma[1] = Bfactor*cos(kuz)*(1+sqr(kuy)/2);
-    BOverGamma[2] = Bfactor*sin(kuz)*kuy;
+    BOverGamma[2] = -Bfactor*sin(kuz)*kuy;
   }
   
   if (lsrMdltr->Ef0Laser>0 && lsrMdltr->laserW0>0) {
