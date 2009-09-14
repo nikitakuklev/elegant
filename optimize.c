@@ -1512,7 +1512,7 @@ double optimization_function(double *value, long *invalid)
       fflush(optimization_data->fp_log);
     }
 #if SDDS_MPI_IO
-    if (isMaster)
+    if (isMaster && notSinglePart)
       if (beam->n_to_track_total<(n_processors-1)) {
 	printf("*************************************************************************************\n");
 	printf("* Warning! The number of particles shouldn't be less than the number of processors! *\n");
