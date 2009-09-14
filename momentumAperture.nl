@@ -23,6 +23,7 @@
     STRING include_type_pattern = NULL;
     long fiducialize = 0;
     long verbosity = 1;        
+    long soft_failure = 0;
 #end
 
 

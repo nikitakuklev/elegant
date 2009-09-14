@@ -351,8 +351,13 @@ long doMomentumApertureSearch(
               exit(1);
             }
             if (!loserFound[side][iElem]) {
-              fprintf(stdout, "Error: No loss found for initial scan for  %s #%ld at s=%em\n", elem->name, elem->occurence, elem->end_pos);
-              exit(1);
+              if (!soft_failure) {
+                fprintf(stdout, "Error: No loss found for initial scan for  %s #%ld at s=%em\n", elem->name, elem->occurence, elem->end_pos);
+                exit(1);
+              } else {
+                loserFound[side][iElem] = 1;
+                split = splits;
+              }
             }
           }
           deltaStart = deltaSurvived[side][iElem] - steps_back*deltaInterval;
