@@ -71,13 +71,6 @@ void setup_aperture_search(
 
   log_entry("setup_aperture_search");
 
-#if USE_MPI
-  /* This function will be parallelized in the future */
-  fprintf(stdout, "Aperture search is not supported in this version of parallel elegant.\n");
-  MPI_Barrier(MPI_COMM_WORLD); /* Make sure the information can be printed before aborting */
-  MPI_Abort(MPI_COMM_WORLD, 1); 	
-#endif
-
   /* process namelist input */
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
@@ -112,6 +105,9 @@ void setup_aperture_search(
   if (offset_by_orbit && mode_code==SP_MODE)
     bomb("can't presently offset_by_orbit for that mode", NULL);
 
+#if USE_MPI
+  if(isMaster) {
+#endif
   if (!optimization_mode) {
     output = compose_filename(output, run->rootname);
     sprintf(description, "%s aperture search", search_mode[mode_code]);
@@ -125,7 +121,7 @@ void setup_aperture_search(
         SDDS_SetError("Unable to define additional SDDS parameters (setup_aperture_search)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
-    
+   
     if (!SDDS_WriteLayout(&SDDS_aperture)) {
       SDDS_SetError("Unable to write SDDS layout for aperture search");
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -164,6 +160,15 @@ void setup_aperture_search(
       fputs("&data mode=ascii no_row_counts=1 &end\n", fpSearchOutput);
     }
   }
+#if USE_MPI
+  } else  /* set output to NULL for the slave processors */
+    output = NULL;
+
+  if (optimization_mode) {
+    notSinglePart = 0; /* All the processors will track independently */
+    lessPartAllowed = 1;
+  }
+#endif
   
   *optimizationMode = optimization_mode;
 
@@ -527,17 +532,20 @@ long do_aperture_search_sp(
   xy_right  = (double**)czarray_2d(sizeof(**xy_right), ny, 2); 
   n_left = n_right = 0;
 
-  dx  = (xmax-xmin)/(nx-1);
+  dx = (xmax-xmin)/(nx-1);
   dy = (ymax-ymin)/(ny-1);
   last_x_left  = xmin;
   last_x_right = xmax;
   effort = 0;
   n_stable = 0;
   for (iy=0, y=ymin; iy<ny; iy++, y+=dy) {
+#if USE_MPI
+    /* A y value will be searched with one CPU */ 
+    if (myid!=iy%n_processors) continue;
+#endif 
     if (verbosity>0)
       fprintf(stdout, "searching for aperture for y = %e m\n", y);
     fflush(stdout);
-    /* search from left */
     if (verbosity>1) {
       fprintf(stdout, "    searching from left to right\n");
       fflush(stdout);
@@ -552,7 +560,7 @@ long do_aperture_search_sp(
       x = xmin;
       ix = 0;
     }
-    for ( ; ix<nx; ix++, x+=dx) {
+    for ( ; ix<nx; ix++, x+=dx) {     
       if (verbosity>1) {
         fprintf(stdout, "    tracking for x = %e m\n", x);
         fflush(stdout);
@@ -717,7 +725,12 @@ long do_aperture_search_sp(
     fprintf(stdout, "total effort:  %ld particle-turns   %ld stable particles were tracked\n", effort, n_stable);
     fflush(stdout);
   }
-  
+#if USE_MPI
+  /* Gather all the simulation result to master to write into a file */
+  /*  MPI_Gather(xy_left[0], 2*n_left, MPI_DOUBLE, MPI_IN_PLACE, 2*n_left, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+      MPI_Gather(xy_right[0], 2*n_right, MPI_DOUBLE, MPI_IN_PLACE, 2*n_right, MPI_DOUBLE, 0, MPI_COMM_WORLD); */
+  if (isMaster) {
+#endif
   if (!SDDS_StartTable(&SDDS_aperture, n_left+n_right)) {
     SDDS_SetError("Unable to start SDDS table (do_aperture_search)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -752,8 +765,10 @@ long do_aperture_search_sp(
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
   if (!inhibitFileSync)
-    SDDS_DoFSync(&SDDS_aperture);
-  
+    SDDS_DoFSync(&SDDS_aperture);  
+#if USE_MPI
+  }
+#endif
   free_czarray_2d((void**)coord, 1, 7);
   free_czarray_2d((void**)xy_left, ny, 2);
   free_czarray_2d((void**)xy_right, ny, 2);
@@ -782,6 +797,19 @@ void finish_aperture_search(
 }
 
 
+
+#ifdef USE_MPI
+int comp_index(const void *idx1, const void *idx2)
+{
+  double a1 = *((long*) idx1), a2 = *((long*) idx2);
+
+  if (a1 < a2) return -1;
+  else if (a1 > a2) return 1;
+  else 
+    return 0;
+}
+#endif
+
 /* line search routine */
 
 long do_aperture_search_line(
@@ -804,6 +832,10 @@ long do_aperture_search_line(
   double *dxFactor, *dyFactor;
   double *xLimit, *yLimit;
   long originStable;
+#if USE_MPI
+  long break_index; /* The index for which the particle is lost on each CPU */
+  long last_index; /* The index for which the last particle is survived */
+#endif
 
   coord = (double**)czarray_2d(sizeof(**coord), 1, 7);
 
@@ -905,8 +937,18 @@ long do_aperture_search_line(
 	  fflush(stdout);
 	}
       }
-	
+#if USE_MPI
+      break_index = nSteps;  /* Initialization, no particle has been lost */
+      last_index = -1;
+      if ((verbosity>=1) && isMaster && split==0) {
+	if (nSteps <= n_processors)
+	  printf("Warning: Please reduce the number of CPUs to %ld, or search aperture with finer grid to avoid wasting resources.\n", nSteps-1);
+      }
+#endif	
       for (index=0; index<nSteps; index++) {
+#if USE_MPI
+        if (myid==index%n_processors || !originStable) { /* All CPUs will track the first point */
+#endif
 	if (index!=0 || split!=0 || !originStable) {
 	  memcpy(coord[0], orbit, sizeof(*orbit)*6);
 	  coord[0][0] = index*dx + x0 + orbit[0];
@@ -921,6 +963,9 @@ long do_aperture_search_line(
 	      fprintf(stdout, "particle lost for x=%e, y=%e\n", index*dx + x0, index*dy + y0);
 	      fflush(stdout);
 	    }
+#if USE_MPI
+	      break_index = index;
+#endif
 	    break;
 	  }
 	}
@@ -942,8 +987,38 @@ long do_aperture_search_line(
 	    ySurvived = y0+index*dy;      
 	  }
 	}
+#if USE_MPI
+	}
+#endif
       }
-	
+
+#if USE_MPI
+      /* find the global extreme value and save it on master */
+      if (USE_MPI) {
+	long * index_array = (long *) malloc (n_processors*sizeof(*index_array));
+
+        MPI_Gather (&break_index, 1, MPI_LONG, index_array, 1, MPI_LONG, 0, MPI_COMM_WORLD);
+	if (isMaster) {
+	  qsort(index_array, n_processors, sizeof(*index_array), comp_index);  
+	  if (index_array[0]>0) {
+	    if (index_array[0] != nSteps) /* A particle is lost */
+	      last_index = index_array[0]-1; /* Get the index for the survived particle */
+	    else  /* The last one will be the index we need */
+	      last_index = nSteps-1;   
+	  } else /* A special case where only the first particle survived */
+	    last_index = 0;
+
+	  if ((last_index != -1) && (last_index != 0)) {
+	    xSurvived = x0+last_index*dx;
+	    ySurvived = y0+last_index*dy;
+	  }
+	}
+	free (index_array);
+	/* Broadcasts the last survived particle coordincates to all the processors */
+	MPI_Bcast(&xSurvived, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	MPI_Bcast(&ySurvived, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+      }
+#endif
       if (verbosity>=1) {
 	fprintf(stdout, "Sweep done, particle survived up to x=%e, y=%e\n", xSurvived, ySurvived);
 	fflush(stdout);
@@ -951,6 +1026,9 @@ long do_aperture_search_line(
     }
     xLimit[line] = xSurvived;
     yLimit[line] = ySurvived;
+#if USE_MPI
+    if (isMaster)
+#endif
     if (output) {
       if (!SDDS_SetRowValues(&SDDS_aperture, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, line,
                              IC_X, xSurvived, IC_Y, ySurvived, -1)) {
@@ -961,6 +1039,9 @@ long do_aperture_search_line(
   }
   
   area = 0;
+#if USE_MPI
+  if (isMaster) {
+#endif
   if (lines>1) {
     /* compute the area */
     
@@ -1017,6 +1098,9 @@ long do_aperture_search_line(
     if (!inhibitFileSync)
       SDDS_DoFSync(&SDDS_aperture);
   }
+#if USE_MPI
+  }
+#endif
   
   free_czarray_2d((void**)coord, 1, 7);
   free(dxFactor);
