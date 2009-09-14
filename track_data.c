@@ -2161,7 +2161,8 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     {    N_TWPL_PARAMS,  MAT_LEN_NCAT|UNIPROCESSOR,  sizeof(TW_PLATES),    twpl_param     }, 
     {  N_MALIGN_PARAMS,  HAS_MATRIX|DONT_CONCAT,
                                          sizeof(MALIGN),    malign_param   },
-    {    N_TWLA_PARAMS,  MAT_LEN_NCAT|MAY_CHANGE_ENERGY|UNIPROCESSOR|HAS_RF_MATRIX,   sizeof(TW_LINAC),    twla_param     },
+    {  N_TWLA_PARAMS,  MAT_LEN_NCAT|MAY_CHANGE_ENERGY|HAS_RF_MATRIX|MPALGORITHM,   sizeof(TW_LINAC),    twla_param     },
+
     {  N_PEPPOT_PARAMS,  MAT_LEN_NCAT,     sizeof(PEPPOT),    peppot_param   },
     {  N_ENERGY_PARAMS,          MPALGORITHM,     sizeof(ENERGY),    energy_param   },
     {  N_MAXAMP_PARAMS,           0,     sizeof(MAXAMP),    maxamp_param   },
