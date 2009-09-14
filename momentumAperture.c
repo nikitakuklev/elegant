@@ -151,6 +151,7 @@ long doMomentumApertureSearch(
   long processElements, skipElements, deltaSign, split;
 #if USE_MPI
   long total_iElem = 0;  /* A global counter for job distribution */
+  notSinglePart = 0;
 #endif
 #if defined(DEBUG)
   FILE *fpdeb = NULL;
