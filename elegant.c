@@ -231,6 +231,7 @@ long isMaster = 1;
 long isSlave = 1;
 long notSinglePart=0; /* All the processors will do the same thing by default */
 double factor = 1.0;    /* In serial version, the memory will be allocted for all the particles */ 
+long do_find_aperture = 0;
 
 #if USE_MPI
 int n_processors = 1;
@@ -291,7 +292,7 @@ char **argv;
   char *saved_lattice = NULL;
   long correction_setuped, run_setuped, run_controled, error_controled, beam_type, commandCode;
   long do_chromatic_correction = 0, do_twiss_output = 0, fl_do_tune_correction = 0, do_coupled_twiss_output = 0;
-  long do_moments_output = 0, do_find_aperture = 0;
+  long do_moments_output = 0;
   long do_closed_orbit = 0, do_matrix_output = 0, do_response_output = 0;
   long last_default_order = 0, new_beam_flags, links_present, twiss_computed = 0, moments_computed = 0;
   long correctionDone, linear_chromatic_tracking_setup_done = 0;

@@ -69,7 +69,7 @@ extern long writePermitted;
 extern long isMaster;
 /* flag used to identify if it is a slave processor */
 extern long isSlave;
-/* flag used to indicate if the same particle will be tracked on all the processors */
+/* flag used to indicate if the same particle will be tracked on all the processors, or all the processor will track independently (e.g., in dynamic aperture optimization) */
 extern long notSinglePart;     
 
 /* A hash table for loading parameters effectively */
@@ -88,7 +88,9 @@ extern long lessPartAllowed;
 extern MPI_Comm workers; /* The communicator will contain the slave processors only */
 extern int fd;
 extern int dumpAcceptance; /* A flag to indicate if the initial coordinates of transmitted particles will be dumped */
+extern long do_find_aperture; /* A flag to set singlePart tracking in dynamic aperture optimization for Pelegant */
 #endif
+
 long remaining_sequence_No, orig_sequence_No; /* For Pelegant regression test */
 
 #ifdef SORT
