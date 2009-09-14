@@ -1514,10 +1514,10 @@ double optimization_function(double *value, long *invalid)
 #if SDDS_MPI_IO
     if (isMaster && notSinglePart)
       if (beam->n_to_track_total<(n_processors-1)) {
-	printf("*************************************************************************************\n");
-	printf("* Warning! The number of particles shouldn't be less than the number of processors! *\n");
-	printf("* Less number of processors are recommended!                                        *\n");
-	printf("*************************************************************************************\n");
+	printf("*************************************************************************************************\n");
+	printf("* Warning! The number of particles (%ld) shouldn't be less than the number of processors (%ld)! *\n", beam->n_to_track, n_processors-1);
+	printf("* Less number of processors are recommended!                                                    *\n");
+	printf("*************************************************************************************************\n");
 	MPI_Abort(MPI_COMM_WORLD, 2);    
       }
 #endif
