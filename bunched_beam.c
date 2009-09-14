@@ -267,7 +267,7 @@ long new_bunched_beam(
     double save_emit_x, save_emit_y,
            save_sigma_dp, save_sigma_s;
 
-    if (firstIsFiducial)
+    if (firstIsFiducial || do_find_aperture)
       notSinglePart = 0;
     else
       notSinglePart = 1;
@@ -294,17 +294,31 @@ long new_bunched_beam(
         bunchGenerated = 0;
       beam->n_original = beam->n_to_track = beam->n_particle = n_particles_per_bunch;
 #if USE_MPI
+/*    For DA search, we need set lessPartAllowed=1 (singlePart=1), even the particle number is larger
+      than 1. Need to check if deleting these lines will affect other tests. 9/2/2009 Y. Wang
       if (beam->n_original_total != 1)
 	lessPartAllowed = 0;
       else {
 	lessPartAllowed = 1; 
       }
+*/
       if (isMaster) {
-	beam->particle = beam->original = beam->accepted = NULL;
-	beam->n_original = beam->n_to_track = beam->n_particle = 0;
+	if (notSinglePart) {
+	  beam->particle = beam->original = beam->accepted = NULL;
+	  beam->n_original = beam->n_to_track = beam->n_particle = 0;
+	} else {
+	  beam->particle=(double**)czarray_2d(sizeof(double),n_particles_per_bunch,7);
+	  if (!save_initial_coordinates)
+	    beam->original = beam->particle;
+	  else
+	    beam->original=(double**)czarray_2d(sizeof(double),n_particles_per_bunch,7);
+	  if (run->acceptance)
+	    beam->accepted=(double**)czarray_2d(sizeof(double),n_particles_per_bunch,7);
+	}
       }
 #endif
     }
+
     beam->n_accepted = 0;
 
     p_central = beam->p0_original = run->p_central;
@@ -318,7 +332,10 @@ long new_bunched_beam(
             /* means we don't have to store the original coordinates */
 #if SDDS_MPI_IO 
 	/* There will be no same sequence for different processors */
-	random_4(-(beamRepeatSeed+2*(myid-1)));  
+	if (notSinglePart)
+	  random_4(-(beamRepeatSeed+2*(myid-1)));  
+	else
+	  random_4(-beamRepeatSeed);
 #else
 	random_4(-beamRepeatSeed);
 #endif
