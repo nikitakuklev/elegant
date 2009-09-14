@@ -1477,6 +1477,10 @@ double exit_function(
 static char *known_mode[N_KNOWN_MODES] = {
     "median", "minimum", "maximum", "average", "first", "light"
     } ;
+#if USE_MPI
+/* We need a separate array to hold the coordinates for the fiducial particle in the parallel version */
+double best_particle[COORDINATES_PER_PARTICLE];
+#endif
 
 double *select_fiducial(double **part, long n_part, char *var_mode_in)
 {
@@ -1484,6 +1488,9 @@ double *select_fiducial(double **part, long n_part, char *var_mode_in)
   long i_best=0, i_var, fid_mode;
   double value, best_value, sum;
   char *var, *mode, *var_mode, *ptr;
+#if USE_MPI
+  long n_part_total;
+#endif
 
   log_entry("select_fiducial");
 
@@ -1491,10 +1498,15 @@ double *select_fiducial(double **part, long n_part, char *var_mode_in)
   i_var = -1;    /* t, p average */
   cp_str(&var_mode, var_mode_in==NULL?"average":var_mode_in);
 
+#if !USE_MPI
   if (n_part<=1) {
     log_exit("select_fiducial");
     return(part[0]);
   }
+#else
+  if (notSinglePart)
+    MPI_Allreduce(&n_part, &n_part_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
+#endif
 
   if (strlen(var_mode)!=0) {
     if ((ptr=strchr(var_mode, ',')) && (var=get_token(var_mode))) {
@@ -1527,8 +1539,22 @@ double *select_fiducial(double **part, long n_part, char *var_mode_in)
       deltaAve += part[i][5];
       tAve += part[i][4];
     }
+#if !USE_MPI
     deltaAve /= n_part;
     tAve /= n_part;
+#else
+    if (notSinglePart) {
+      double deltaAve_total, tAve_total; 
+
+      MPI_Allreduce(&deltaAve, &deltaAve_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(&tAve, &tAve_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      deltaAve = deltaAve_total/n_part_total;
+      tAve = tAve_total/n_part_total;
+    } else {
+      deltaAve /= n_part;
+      tAve /= n_part;
+    }
+#endif
     coord[0] = coord[1] = coord[2] = coord[3] = 0;
     coord[4] = tAve;
     coord[5] = deltaAve;
@@ -1537,8 +1563,27 @@ double *select_fiducial(double **part, long n_part, char *var_mode_in)
   else {
     switch (fid_mode) {
     case FID_MEDIAN:
+#if !USE_MPI
       if ((i_best = find_median_of_row(&best_value, part, i_var, n_part))<0)
         bomb("error: computation of median failed (select_fiducial)", NULL);
+#else
+      if (notSinglePart) {
+	if ((i_best = find_median_of_row_p(best_particle, part, i_var, n_part, n_part_total))<0)
+	  bomb("error: computation of median failed (select_fiducial)", NULL);
+	log_exit("select_fiducial");
+	return(best_particle);
+      }
+      else {
+	if ((i_best = find_median_of_row(&best_value, part, i_var, n_part))<0)
+	  bomb("error: computation of median failed (select_fiducial)", NULL);
+      }
+      /* printf("The median fidutial mode is not available in this version of Pelegant.\n \
+              Please request this feature by contacting authors\n");
+      MPI_Barrier (MPI_COMM_WORLD);
+      MPI_Abort(MPI_COMM_WORLD, 2);
+      */
+#endif
+      printf ("best_value=%lf\n", best_value);
       break;
     case FID_MINIMUM:
       i_best = 0;
@@ -1549,6 +1594,23 @@ double *select_fiducial(double **part, long n_part, char *var_mode_in)
           i_best = i;
         }
       }
+#if USE_MPI
+      if (notSinglePart) {
+	struct {
+	  double val;
+	  int rank;
+	} in, out;
+	in.rank = myid;
+	in.val = best_value;
+	/* find the global best value and its location, i.e., on which processor */
+	MPI_Allreduce(&in, &out, 1, MPI_DOUBLE_INT, MPI_MINLOC, MPI_COMM_WORLD);
+	if (in.rank==out.rank)
+	  memcpy(best_particle, part[i_best], sizeof(*best_particle)*COORDINATES_PER_PARTICLE);
+	MPI_Bcast(best_particle, COORDINATES_PER_PARTICLE, MPI_DOUBLE, out.rank, MPI_COMM_WORLD);
+	log_exit("select_fiducial");
+	return(best_particle);
+      }
+#endif
       break;
     case FID_MAXIMUM:
       i_best = 0;
@@ -1559,11 +1621,39 @@ double *select_fiducial(double **part, long n_part, char *var_mode_in)
           i_best = i;
         }
       }
+#if USE_MPI
+      if (notSinglePart) {
+	struct {
+	  double val;
+	  int rank;
+	} in, out;
+	in.rank = myid;
+	in.val = best_value;
+	/* find the global best value and its location, i.e., on which processor */
+	MPI_Allreduce(&in, &out, 1, MPI_DOUBLE_INT, MPI_MAXLOC, MPI_COMM_WORLD);
+	if (in.rank==out.rank)
+	  memcpy(best_particle, part[i_best], sizeof(*best_particle)*COORDINATES_PER_PARTICLE);
+	MPI_Bcast(best_particle, COORDINATES_PER_PARTICLE, MPI_DOUBLE, out.rank, MPI_COMM_WORLD);
+	log_exit("select_fiducial");
+	return(best_particle);
+      }
+#endif
       break;
     case FID_AVERAGE:
       for (i=sum=0; i<n_part; i++)
         sum += part[i][i_var];
+#if !USE_MPI
       sum /= n_part;
+#else
+      if (notSinglePart) {
+	double sum_total;
+
+	MPI_Allreduce(&sum, &sum_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        sum = sum_total/n_part_total;
+      }
+      else
+        sum /= n_part; 
+#endif
       best_value = DBL_MAX;
       for (i=0; i<n_part; i++) {
         if (best_value>(value=fabs(sum-part[i][i_var]))) {
@@ -1571,9 +1661,37 @@ double *select_fiducial(double **part, long n_part, char *var_mode_in)
           i_best = i;
         }
       }
+#if USE_MPI
+      if (notSinglePart) {
+	struct {
+	  double val;
+	  int rank;
+	} in, out;
+	in.rank = myid;
+	in.val = best_value;
+	/* find the global best value and its location, i.e., on which processor */
+	MPI_Allreduce(&in, &out, 1, MPI_DOUBLE_INT, MPI_MINLOC, MPI_COMM_WORLD);
+	if (in.rank==out.rank)
+	  memcpy(best_particle, part[i_best], sizeof(*best_particle)*COORDINATES_PER_PARTICLE);
+	MPI_Bcast(best_particle, COORDINATES_PER_PARTICLE, MPI_DOUBLE, out.rank, MPI_COMM_WORLD);
+	log_exit("select_fiducial");
+	return(best_particle);
+      }
+#endif
       break;
     case FID_FIRST:
+#if !USE_MPI
       i_best = 0;
+#else
+      if (notSinglePart) {
+       	if (myid==1)
+	  memcpy(best_particle, part[0], sizeof(*best_particle)*COORDINATES_PER_PARTICLE);
+	MPI_Bcast(best_particle, COORDINATES_PER_PARTICLE, MPI_DOUBLE, 1, MPI_COMM_WORLD);
+	log_exit("select_fiducial");
+	return(best_particle);
+      } else
+	i_best = 0;
+#endif
       break;
     case FID_LIGHT:
       /* special case--return NULL pointer to indicate that phasing is to v=c */
