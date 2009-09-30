@@ -60,8 +60,6 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
   if (!IBS->s)
     init_IBS(element);
   if (IBS->dT == 0) return;
-  if (IBS->elements<2) 
-    bomb("you need more elements >2 between IBSCATTERS, check twiss file for clue", NULL);
 
   double eta[4] = {IBS->etax[IBS->elements-1], IBS->etaxp[IBS->elements-1], IBS->etay[IBS->elements-1], IBS->etayp[IBS->elements-1]};
 
@@ -329,6 +327,8 @@ void init_IBS(ELEMENT_LIST *element)
     if (element->type==T_IBSCATTER) {
       IBS = (IBSCATTER*)element->p_elem; 
       IBS->revolutionLength = delta_s;
+      if (nElements<2) 
+        bomb("you need at least 2 other elements between IBSCATTERS, check twiss file for clue", NULL);
       IBS->dT = dt;
       dt = delta_s = 0.;
       IBS->elements = nElements;
