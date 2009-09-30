@@ -500,9 +500,15 @@ typedef struct {
     long n_accepted;        /* final number of particles being tracked. */
     long *lostOnPass;       /* pass on which a particle is lost */
     double bunchFrequency;
+  /*
+    HIST hist;
+  */
     } BEAM;
 void free_beamdata(BEAM *beam);
-
+/*
+typedef struct {
+} HIST;
+*/
 typedef struct {
   long active;
   char *filename;
@@ -1699,18 +1705,17 @@ typedef struct {
 
 typedef struct {
   long nbins;
-  double charge, ignoredPortion;
-  double ebeam, gamma, pCentral, betagamma;
-  double emit[3], range[3];
-  double sigz, sigma_p, delta, dp0;
+  double charge, frequency, ignoredPortion;
+  double emitN[3], range[3];
+  double sigz, delta_p0,delta_mev;
 } TSCATTER_SPEC;
 
 typedef struct {
   long dummy;
   /* internal variables */
   char *name;
-  double s, betagamma;
-  double IntR, p_rate, s_rate, i_rate;
+  double s, betagamma, gamma,pCentral_mev;
+  double AveR, p_rate, s_rate, i_rate, total_scatter;
   char *losFile, *bunFile, *disFile,*iniFile, *outFile;
   double twiss[3][3], disp[2][2];
   double sigx, sigy, sigz, sigxyz;
@@ -2247,7 +2252,7 @@ typedef struct {
   double **xRateVsS, **yRateVsS, **zRateVsS;
   double *emitx0, *emity0, *emitl0, *sigmaz0, *sigmaDelta0;
   double *emitx, *emity, *emitl, *sigmaz, *sigmaDelta;
-  double *xGrowthRate, *yGrowthRate, *zGrowthRate, *zRate, *pRate;
+  double *xGrowthRate, *yGrowthRate, *zGrowthRate;
   long elements, offset, output;
   double revolutionLength, dT;
   ELEMENT_LIST *elem;
@@ -3187,7 +3192,7 @@ void track_SReffects(double **coord, long n, SREFFECTS *SReffects, double Po,
 VMATRIX *srEffectsMatrix(SREFFECTS *SReffects);
 
 void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po, 
-               ELEMENT_LIST *element, CHARGE *charge, long i_pass, RUN *run);
+               ELEMENT_LIST *element, CHARGE *charge, long i_pass, long n_passes, RUN *run);
 
 long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, double p_error, double Po, double **accepted,
     double z_start, double z_end, CHARGE *charge, char *rootname);
