@@ -1705,17 +1705,18 @@ typedef struct {
 
 typedef struct {
   long nbins;
-  double charge, frequency, ignoredPortion;
-  double emitN[3], range[3];
-  double sigz, delta_p0,delta_mev;
+  double charge, ignoredPortion;
+  double ebeam, gamma, pCentral, betagamma;
+  double emit[3], range[3];
+  double sigz, sigma_p, delta, dp0;
 } TSCATTER_SPEC;
 
 typedef struct {
   long dummy;
   /* internal variables */
   char *name;
-  double s, betagamma, gamma,pCentral_mev;
-  double AveR, p_rate, s_rate, i_rate, total_scatter;
+  double s, betagamma;
+  double IntR, p_rate, s_rate, i_rate;
   char *losFile, *bunFile, *disFile,*iniFile, *outFile;
   double twiss[3][3], disp[2][2];
   double sigx, sigy, sigz, sigxyz;
