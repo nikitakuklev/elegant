@@ -4,6 +4,9 @@
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.16  2009/03/10 19:49:47  borland
+# Added optional computation of driving terms.
+#
 # Revision 1.15  2009/03/06 22:44:47  borland
 # Added masking feature for individual errors.
 #
@@ -795,6 +798,12 @@ proc FillDynamicApertureErrorsFrame {widget args} {
       -label "Include apertures: " -orientation horizontal -buttonList {Yes No} -valueList {1 0} \
       -variable dynamicApertureErrors(includeApertures) -contextHelp \
       "Choose whether to include the effects of apertures that are defined in the beamline."
+
+    APSLabeledEntry .leaf -parent $widget \
+      -label "Aperture file: " -width 80 -textVariable dynamicApertureErrors(apertureFile) \
+      -fileSelectButton 1 -buttonsOnLeft 1 -fileSelectPattern *.sdds \
+      -contextHelp \
+      "Enter the name of a file containing aperture data."
 
     set dynamicApertureErrors(template) [file join $templateDirectory $dynamicApertureErrors(template)]
     APSLabeledEntry .le8 -parent $widget \
