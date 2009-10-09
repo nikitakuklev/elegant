@@ -18,7 +18,7 @@
 void output_magnets(char *filename, char *line_name, LINE_LIST *beamline)
 {
     ELEMENT_LIST *eptr;
-    QUAD  *qptr; BEND  *bptr; 
+    QUAD  *qptr; BEND  *bptr; KQUSE *kqsptr;
     KQUAD *kqptr; KSBEND *kbptr; CSBEND *cbptr; CSRCSBEND *csrbptr;
     long iPhase;
     double start, end, total_length, dz, value;
@@ -59,10 +59,22 @@ void output_magnets(char *filename, char *line_name, LINE_LIST *beamline)
                     value = kqptr->B;
                 else
                     value = kqptr->k1;
-                fprintf(fpm, "%s %s %e  %d\n", eptr->name, entity_name[eptr->type], start, SIGN(kqptr->k1));
+                fprintf(fpm, "%s %s %e  %d\n", eptr->name, entity_name[eptr->type], start, SIGN(value));
                 end = start+kqptr->length;
                 fprintf(fpm, "%s %s %e  %d\n%s %s %e  0\n%s %s %e 0 %\n%s %s %e 0\n", 
                         eptr->name, entity_name[eptr->type], end, SIGN(kqptr->k1), 
+                        eptr->name, entity_name[eptr->type], end, 
+                        eptr->name, entity_name[eptr->type], start,
+                        eptr->name, entity_name[eptr->type], end);
+                start = end;
+                break;
+             case T_KQUSE:
+                kqsptr = (KQUSE*)eptr->p_elem;
+                value = kqsptr->k1;
+                fprintf(fpm, "%s %s %e  %d\n", eptr->name, entity_name[eptr->type], start, SIGN(value));
+                end = start+kqsptr->length;
+                fprintf(fpm, "%s %s %e  %d\n%s %s %e  0\n%s %s %e 0 %\n%s %s %e 0\n", 
+                        eptr->name, entity_name[eptr->type], end, SIGN(value), 
                         eptr->name, entity_name[eptr->type], end, 
                         eptr->name, entity_name[eptr->type], start,
                         eptr->name, entity_name[eptr->type], end);
