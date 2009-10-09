@@ -40,6 +40,12 @@
 &end
 sinclude(<ERRORPARAM>)
 
+&aperture_input
+        input = <apertureFile>,
+        periodic = 1,
+        disable = <apertureFileDisable>
+&end
+
 &alter_elements name=*, type=*SBEN*, item=ORDER, value=1, allow_missing_parameters=1,
 	allow_missing_elements=1 &end
 &alter_elements name=*, type=*SBEN*, item=EDGE_ORDER, value=1, allow_missing_elements=1 &end
