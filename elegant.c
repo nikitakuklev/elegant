@@ -240,6 +240,7 @@ int dumpAcceptance = 0;
 #if SDDS_MPI_IO
 parallelMode parallelStatus = trueParallel; 
 int partOnMaster = 0; /* indicate if the particle information is available on master */
+long watch_not_allowed = 0;
 #else
 parallelMode parallelStatus = initialMode; 
 int partOnMaster = 1;

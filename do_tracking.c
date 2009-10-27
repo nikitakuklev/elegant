@@ -904,6 +904,16 @@ long do_tracking(
 	          if (i_pass==0 && (n_passes/watch->interval)==0)
 	            fprintf(stdout, "warning: n_passes = %ld and WATCH interval = %ld--no output will be generated!\n",
 	     	     n_passes, watch->interval);
+#if SDDS_MPI_IO
+		  if(watch_not_allowed) {
+		    dup2(fd,fileno(stdout));
+		    printf("/****************************************************************************/\n");
+		    printf ("Watch point can not be used for dynamic aperture searching with Pelegant\n");
+		    printf("/****************************************************************************/\n");
+		    fflush(stdout);
+		    MPI_Abort(MPI_COMM_WORLD, 1);
+		  }
+#endif
 		  fflush(stdout);
 		  if (i_pass>=watch->start_pass && (i_pass-watch->start_pass)%watch->interval==0 &&
                       (watch->end_pass<0 || i_pass<=watch->end_pass)) {
@@ -914,16 +924,6 @@ long do_tracking(
 			        	   beamline->revolution_length, 
 					   charge?charge->macroParticleCharge*nToTrack:0.0, z);
 #else
-#ifdef SORT
-		      /* If more particles are lost, we need sort */	      
-		      /*   if ((isSlave || !notSinglePart) && (nLost != 0)) {		
-			qsort(coord[0], nToTrack, COORDINATES_PER_PARTICLE*sizeof(double), comp_IDs);  
-			if (*accepted!=NULL)
-			  qsort(accepted[0], nToTrack, COORDINATES_PER_PARTICLE*sizeof(double), comp_IDs);   
-			needSort = 0;
-			}
-		      */		      
-#endif
 		      dump_watch_particles(watch, step, i_pass, coord, nToTrack, *P_central,
 			        	   beamline->revolution_length, 
 					   charge?charge->macroParticleCharge*beam->n_to_track_total:0.0, z);

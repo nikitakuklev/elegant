@@ -89,6 +89,7 @@ extern MPI_Comm workers; /* The communicator will contain the slave processors o
 extern int fd;
 extern int dumpAcceptance; /* A flag to indicate if the initial coordinates of transmitted particles will be dumped */
 extern long do_find_aperture; /* A flag to set singlePart tracking in dynamic aperture optimization for Pelegant */
+extern long watch_not_allowed; /* A flag to indicate the watch point is not allowed for aperture searching for Pelegant */
 #endif
 
 long remaining_sequence_No, orig_sequence_No; /* For Pelegant regression test */

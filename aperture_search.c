@@ -106,6 +106,7 @@ void setup_aperture_search(
     bomb("can't presently offset_by_orbit for that mode", NULL);
 
 #if USE_MPI
+  watch_not_allowed = 1;
   if(isMaster) {
 #endif
   if (!optimization_mode) {
