@@ -318,6 +318,8 @@ long do_tracking(
     if (run->concat_order && !(flags&TEST_PARTICLES) && 
         !(beamline->flags&BEAMLINE_CONCAT_CURRENT) ) {
       /* form concatenated beamline for tracking */
+      if (getSCMULTSpecCount())
+        bomb("space charge calculation can not work together with matrix concatenation tracking.", NULL);
       concatenate_beamline(beamline, run);
     }
 
