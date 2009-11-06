@@ -34,7 +34,7 @@ void ComputeSASEFELParameters(
                               double pCentral, 
                               short planar)
 {
-  double sigma, aw, Aw, gamma, L1D, I, x, F;
+  double sigma, aw, Aw, gamma, L1D, Ic, x, F;
 
   if (!planar)
     SDDS_Bomb("nonplanar undulators not yet supported");
@@ -48,10 +48,10 @@ void ComputeSASEFELParameters(
   gamma = sqrt(sqr(pCentral)+1);
   *lightWavelength = undulatorPeriod*(1+sqr(aw))/(2*sqr(gamma));
     
-  I = charge/(sqrt(PIx2)*rmsBunchLength);
+  Ic = charge/(sqrt(PIx2)*rmsBunchLength);
   
   *PierceParameter 
-    = pow( (I/17.045e3) *
+    = pow( (Ic/17.045e3) *
           sqr(undulatorPeriod*Aw/(PIx2*sigma)) *
           pow(0.5/gamma, 3), 1./3.);
   
@@ -62,7 +62,7 @@ void ComputeSASEFELParameters(
                          undulatorPeriod, sigmaDelta);
   *gainLength = L1D/F;
   *noisePower = sqr(*PierceParameter)*me_mks*pow(c_mks, 3)*gamma/(*lightWavelength);
-  *saturationPower = 1.6*(*PierceParameter)*sqr(F)*(0.511e6*gamma*I);
+  *saturationPower = 1.6*(*PierceParameter)*sqr(F)*(0.511e6*gamma*Ic);
   *saturationLength = (*gainLength)*log(*saturationPower/(*noisePower/9.0));
 }
 

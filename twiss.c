@@ -18,7 +18,6 @@
 #include "chromDefs.h"
 #include "fftpackC.h"
 #include "twiss.h"
-#include "complex.h"
 #include <stddef.h>
 
 void computeDrivingTerms(DRIVING_TERMS *drivingTerms, ELEMENT_LIST *eptr, TWISS *twiss0, double *tune);
@@ -275,7 +274,8 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
   MATRIX *dispM, *dispOld, *dispNew;
   ELEMENT_LIST *elemOrig;
   static long asinWarning = 50;
-  COMPLEX kappa;  
+  double complex kappa;  
+
   if (!twiss0)
     bomb("initial Twiss parameters not given (propagate_twiss_parameters())", NULL);
   elemOrig = elem;
@@ -318,7 +318,7 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
   
   if (radIntegrals) {
     for (i=0; i<6; i++) 
-      radIntegrals->I[i] = 0;
+      radIntegrals->RI[i] = 0;
   }
   waists[0] = waists[1] = 0;
 
@@ -573,7 +573,7 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
     /* Compute linear coupling based on 187 of Handbook of Accelerator Physics and Engineering 
      * and P.J. Bryant, "A Simple Theory for Weak Betatron Coupling", CERN 94-01, Vol 1., 207-217.
      */
-    COMPLEX integrand, phaseFactor;
+    double complex integrand, phaseFactor;
     double ks, phase, y, K1, K1r, tilt;
     long q;
 #ifdef DEBUG_COUPLING
@@ -595,7 +595,7 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
     fprintf(fp, "&column name=kappa1 , type=double &end\n");
     fprintf(fp, "&data mode=ascii no_row_counts=1 &end\n");
 #endif
-    kappa.r = kappa.i = 0;  /* coupling factor */
+    kappa = 0;   /* coupling factor */
     elem = elemOrig;
     q = tune[0] - tune[1] + 0.5;
     couplingFactor[1] = (tune[0] - tune[1]) - q;
@@ -643,9 +643,8 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
             - (tune[0] - tune[1] - q)*2*PI*
               (elem->end_pos-length/2)/sTotal;
           phaseFactor = cexpi(phase);
-          integrand.r = K1r + (alpha[0]/beta[0] - alpha[1]/beta[1])*ks/2;
-          integrand.i = -(1/beta[0]+1/beta[1])*ks/2;
-          kappa = cadd(kappa, cmulr(cmul(integrand, phaseFactor), sqrt(beta[0]*beta[1])/PIx2*length));
+          integrand = K1r + (alpha[0]/beta[0] - alpha[1]/beta[1])*ks/2 - I*(1/beta[0]+1/beta[1])*ks/2;
+          kappa = kappa + integrand*phaseFactor*sqrt(beta[0]*beta[1])/PIx2*length;
 #ifdef DEBUG_COUPLING
           fprintf(fp, "%s %e %e %e %e %e %e %e %e %e %e %e %e\n",
                   elem->name, elem->end_pos-length/2, length, K1r, tilt, ks,
@@ -656,7 +655,7 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
       }
       elem = elem->succ;
     }
-    if ((couplingFactor[0] = sqrt(sqr(kappa.r)+sqr(kappa.i))))
+    if ((couplingFactor[0] = cabs(kappa)))
       couplingFactor[2] = sqr(couplingFactor[0])/(sqr(couplingFactor[0]) + sqr(couplingFactor[1]));
     else
       couplingFactor[2] = 0;
@@ -675,11 +674,11 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
           alpha[0], alpha[1]);
   if (radIntegrals)
     fprintf(stdout, "Radiation integrals: %e, %e, %e, %e, %e\n",
-            radIntegrals->I[0], 
-            radIntegrals->I[1], 
-            radIntegrals->I[2], 
-            radIntegrals->I[3], 
-            radIntegrals->I[4]);
+            radIntegrals->RI[0], 
+            radIntegrals->RI[1], 
+            radIntegrals->RI[2], 
+            radIntegrals->RI[3], 
+            radIntegrals->RI[4]);
 */
   
   m_free(&dispNew);
@@ -1054,11 +1053,11 @@ void dump_twiss_parameters(
   }
   if (radIntegrals) {
     if (!SDDS_SetParameters(&SDDS_twiss, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE,
-                            IP_I1, radIntegrals->I[0],
-                            IP_I2, radIntegrals->I[1],
-                            IP_I3, radIntegrals->I[2],
-                            IP_I4, radIntegrals->I[3],
-                            IP_I5, radIntegrals->I[4],
+                            IP_I1, radIntegrals->RI[0],
+                            IP_I2, radIntegrals->RI[1],
+                            IP_I3, radIntegrals->RI[2],
+                            IP_I4, radIntegrals->RI[3],
+                            IP_I5, radIntegrals->RI[4],
                             IP_EX0, radIntegrals->ex0,
                             IP_TAUX, radIntegrals->taux,
                             IP_JX, radIntegrals->Jx,
@@ -2119,11 +2118,11 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
 				 eta0, etap0, 
 				 beta0, alpha0,
 				 &I1, &I2, &I3, &I4, &I5);
-    radIntegrals->I[0] += I1;
-    radIntegrals->I[1] += I2;
-    radIntegrals->I[2] += I3;
-    radIntegrals->I[3] += I4;
-    radIntegrals->I[4] += I5;
+    radIntegrals->RI[0] += I1;
+    radIntegrals->RI[1] += I2;
+    radIntegrals->RI[2] += I3;
+    radIntegrals->RI[3] += I4;
+    radIntegrals->RI[4] += I5;
   } else if (elem->type==T_CWIGGLER) {
     CWIGGLER *wiggler;
     wiggler = (CWIGGLER*)(elem->p_elem);
@@ -2133,11 +2132,11 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
                                    wiggler->radiusInternal[1],
                                    eta0, etap0, beta0, alpha0,
                                    &I1, &I2, &I3, &I4, &I5);
-      radIntegrals->I[0] += I1;
-      radIntegrals->I[1] += I2;
-      radIntegrals->I[2] += I3;
-      radIntegrals->I[3] += I4;
-      radIntegrals->I[4] += I5;
+      radIntegrals->RI[0] += I1;
+      radIntegrals->RI[1] += I2;
+      radIntegrals->RI[2] += I3;
+      radIntegrals->RI[3] += I4;
+      radIntegrals->RI[4] += I5;
     }
     if (wiggler->BPeak[0]) {
       /* Bx */
@@ -2146,8 +2145,8 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
                                    wiggler->radiusInternal[0],
                                    etay0, etapy0, betay0, alphay0,
                                    &I1, &I2, &I3, &I4, &I5);
-      radIntegrals->I[1] += I2;
-      radIntegrals->I[2] += I3;
+      radIntegrals->RI[1] += I2;
+      radIntegrals->RI[2] += I3;
     }
   } else if (elem->type==T_UKICKMAP) {
     UKICKMAP *ukmap;
@@ -2157,11 +2156,11 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
                                    eta0, etap0,
                                    beta0, alpha0,
                                    &I1, &I2, &I3, &I4, &I5);
-      radIntegrals->I[0] += I1;
-      radIntegrals->I[1] += I2;
-      radIntegrals->I[2] += I3;
-      radIntegrals->I[3] += I4;
-      radIntegrals->I[4] += I5;
+      radIntegrals->RI[0] += I1;
+      radIntegrals->RI[1] += I2;
+      radIntegrals->RI[2] += I3;
+      radIntegrals->RI[3] += I4;
+      radIntegrals->RI[4] += I5;
     }
   } else {
     isBend = 1;
@@ -2352,11 +2351,11 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
       I3 = I2/fabs(rho);
       I4 = I2/rho*etaAve - 2*length*etaK1_rhoAve;
       I5 = HAve*I3;
-      radIntegrals->I[0] += I1;
-      radIntegrals->I[1] += I2;
-      radIntegrals->I[2] += I3;
-      radIntegrals->I[3] += I4;
-      radIntegrals->I[4] += I5;
+      radIntegrals->RI[0] += I1;
+      radIntegrals->RI[1] += I2;
+      radIntegrals->RI[2] += I3;
+      radIntegrals->RI[3] += I4;
+      radIntegrals->RI[4] += I5;
     }
   }
   if (dI) {
@@ -2374,15 +2373,15 @@ void completeRadiationIntegralComputation(RADIATION_INTEGRALS *RI, double Po, do
     double Rce, gamma;
     gamma = sqrt(sqr(Po)+1);
     Rce = sqr(particleCharge)/(1e7*particleMass);
-    RI->Uo = particleMassMV*Rce*RI->I[1]*2./3.*ipow(gamma,4);
-    RI->Jx = 1 - RI->I[3]/RI->I[1];
+    RI->Uo = particleMassMV*Rce*RI->RI[1]*2./3.*ipow(gamma,4);
+    RI->Jx = 1 - RI->RI[3]/RI->RI[1];
     RI->Jdelta = 3 - RI->Jx;
     RI->Jy = 1;
-    RI->tauy = 1./(Rce/3*ipow(gamma,3)*c_mks/revolutionLength*RI->I[1]);
+    RI->tauy = 1./(Rce/3*ipow(gamma,3)*c_mks/revolutionLength*RI->RI[1]);
     RI->taux = RI->tauy*RI->Jy/RI->Jx;
     RI->taudelta = RI->tauy*RI->Jy/RI->Jdelta;
-    RI->sigmadelta = gamma*sqrt(55./32./sqrt(3.)*hbar_mks/(particleMass*c_mks)*RI->I[2]/(2*RI->I[1]+RI->I[3]));
-    RI->ex0 = sqr(gamma)*55./32./sqrt(3.)*hbar_mks/(particleMass*c_mks)*RI->I[4]/(RI->I[1]-RI->I[3]);
+    RI->sigmadelta = gamma*sqrt(55./32./sqrt(3.)*hbar_mks/(particleMass*c_mks)*RI->RI[2]/(2*RI->RI[1]+RI->RI[3]));
+    RI->ex0 = sqr(gamma)*55./32./sqrt(3.)*hbar_mks/(particleMass*c_mks)*RI->RI[4]/(RI->RI[1]-RI->RI[3]);
     RI->computed = 1;
   }
 
@@ -3688,11 +3687,11 @@ void setLinearChromaticTrackingValues(LINE_LIST *beamline)
 void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, double *tune)
 /* Based on J. Bengtsson, SLS Note 9/97, March 7, 1997, with corrections per W. Guo (NSLS) */
 {
-  COMPLEX h11001, h00111, h20001, h00201, h10002;
-  COMPLEX h21000, h30000, h10110, h10020, h10200;
-  COMPLEX h22000, h11110, h00220, h31000, h40000, h12000;
-  COMPLEX h20110, h11200, h20020, h20200, h00310, h00400;
-  COMPLEX t1, t2, t3, t4;
+  double complex h11001, h00111, h20001, h00201, h10002;
+  double complex h21000, h30000, h10110, h10020, h10200;
+  double complex h22000, h11110, h00220, h31000, h40000, h12000;
+  double complex h20110, h11200, h20020, h20200, h00310, h00400;
+  double complex t1, t2, t3, t4;
   
   double betax1, betay1, phix1, phiy1, etax1;
   double betax2, betay2, phix2, phiy2;
@@ -3701,10 +3700,8 @@ void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, do
   ELEMENT_LIST *eptr1, *eptr2;
   
   /* accumulate real and imaginary parts */
-  h11001.r = h00111.r = h20001.r = h00201.r = h10002.r = 0;
-  h11001.i = h00111.i = h20001.i = h00201.i = h10002.i = 0;
-  h21000.r = h30000.r = h10110.r = h10020.r = h10200.r = 0;
-  h21000.i = h30000.i = h10110.i = h10020.i = h10200.i = 0;
+  h11001 = h00111 = h20001 = h00201 = h10002 = 0;
+  h21000 = h30000 = h10110 = h10020 = h10200 = 0;
 
   eptr1 = elem;
   while (eptr1) {
@@ -3762,114 +3759,104 @@ void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, do
       /* first-order chromatic terms */
       /* h11001 and h00111 */
       coef = b2L-2*b3L1*etax1;
-      h11001.r += coef*betax1/4;
-      h00111.r += -coef*betay1/4;
+      h11001 += coef*betax1/4;
+      h00111 += -coef*betay1/4;
 
       /* h20001, h00201 */
-      h20001.r += coef/8*betax1*cos(2*phix1);
-      h20001.i += coef/8*betax1*sin(2*phix1);
-      h00201.r += -coef/8*betay1*cos(2*phiy1);
-      h00201.i += -coef/8*betay1*sin(2*phiy1);
+      h20001 += coef/8*betax1*cos(2*phix1) + I*coef/8*betax1*sin(2*phix1);
+      h00201 += -coef/8*betay1*cos(2*phiy1) + I*(-coef/8*betay1*sin(2*phiy1));
 
       /* h10002 */
       coef = b2L-b3L1*etax1;
-      h10002.r += coef/2*etax1*sqrt_betax*cos(phix1);
-      h10002.i += coef/2*etax1*sqrt_betax*sin(phix1);
+      h10002 += coef/2*etax1*sqrt_betax*cos(phix1) + I*coef/2*etax1*sqrt_betax*sin(phix1);
 
       if (b3L1) {
         /* first-order geometric terms */
         /* h21000 */
         coef = -b3L1/8*sqrt3_betax;
-        h21000.r += coef*cos(phix1);
-        h21000.i += coef*sin(phix1);
+        h21000 += coef*cos(phix1) + I*coef*sin(phix1);
         
         /* h30000 */
         coef = coef/3;
-        h30000.r += coef*cos(3*phix1);
-        h30000.i += coef*sin(3*phix1);
+        h30000 += coef*cos(3*phix1) + I*coef*sin(3*phix1);
         
         /* h10110 */
         coef = b3L1/4*sqrt_betax*betay1;
-        h10110.r += coef*cos(phix1);
-        h10110.i += coef*sin(phix1);
+        h10110 += coef*cos(phix1) + I*coef*sin(phix1);
         
         /* h10020 and h10200 */
         coef = coef/2;
-        h10020.r += coef*cos(phix1-2*phiy1);
-        h10020.i += coef*sin(phix1-2*phiy1);
-        h10200.r += coef*cos(phix1+2*phiy1);
-        h10200.i += coef*sin(phix1+2*phiy1);
+        h10020 += coef*cos(phix1-2*phiy1) + I*coef*sin(phix1-2*phiy1);
+        h10200 += coef*cos(phix1+2*phiy1) + I*coef*sin(phix1+2*phiy1);
       }
     }
     eptr1 = eptr1->succ;
   }
 
-  d->h11001 = sqrt(sqr(h11001.r)+sqr(h11001.i));
-  d->h00111 = sqrt(sqr(h00111.r)+sqr(h00111.i));
-  d->h20001 = sqrt(sqr(h20001.r)+sqr(h20001.i));
-  d->h00201 = sqrt(sqr(h00201.r)+sqr(h00201.i));
-  d->h10002 = sqrt(sqr(h10002.r)+sqr(h10002.i));
+  d->h11001 = cabs(h11001);
+  d->h00111 = cabs(h00111);
+  d->h20001 = cabs(h20001);
+  d->h00201 = cabs(h00201);
+  d->h10002 = cabs(h10002);
 
-  d->h21000 = sqrt(sqr(h21000.r)+sqr(h21000.i));
-  d->h30000 = sqrt(sqr(h30000.r)+sqr(h30000.i));
-  d->h10110 = sqrt(sqr(h10110.r)+sqr(h10110.i));
-  d->h10020 = sqrt(sqr(h10020.r)+sqr(h10020.i));
-  d->h10200 = sqrt(sqr(h10200.r)+sqr(h10200.i));
+  d->h21000 = cabs(h21000);
+  d->h30000 = cabs(h30000);
+  d->h10110 = cabs(h10110);
+  d->h10020 = cabs(h10020);
+  d->h10200 = cabs(h10200);
 
   /* compute second-order geomeric terms */
-  h12000 = cconj(h21000);
-  h22000.r = (3*sqr(cmod(h21000)) + sqr(cmod(h30000)))/64;
-  h22000.i = 0;
-  d->h22000 = cmod(h22000);
+  h12000 = conj(h21000);
+  h22000 = (3*sqr(cabs(h21000)) + sqr(cabs(h30000)))/64;
+  d->h22000 = cabs(h22000);
 
-  t1 = cmulr(cmul(h21000, cconj(h10110)), 2.);
-  t2 = cmul(h10020, cconj(h10020));
-  t3 = cmul(h10200, cconj(h10200));
-  h11110 = cmulr(cadd(t1, cadd(t2, t3)), 1./16.);
-  d->h11110 = cmod(h11110);
+  t1 = 2*h21000*conj(h10110);
+  t2 = h10020*conj(h10020);
+  t3 = h10200*conj(h10200);
+  h11110 = (t1+t2+t3)/16;
+  d->h11110 = cabs(h11110);
   
-  h00220.r = (4*sqr(cmod(h10110)) + sqr(cmod(h10020)) + sqr(cmod(h10200)))/64;
-  h00220.i = 0;
-  d->h00220 = cmod(h00220);
+  h00220 = (4*sqr(cabs(h10110)) + sqr(cabs(h10020)) + sqr(cabs(h10200)))/64;
+  d->h00220 = cabs(h00220);
   
-  h31000 = cmulr(cmul(h30000, cconj(h21000)), 2./64.);
-  d->h31000 = cmod(h31000);
+  h31000 = h30000*conj(h21000)/32;
+  d->h31000 = cabs(h31000);
   
-  h40000 = cmulr(cmul(h30000, h21000), 1./64.);
-  d->h40000 = cmod(h40000);
+  h40000 = h30000*h21000/64;
+  d->h40000 = cabs(h40000);
   
-  t1 = cmulr(cmul(h30000, cconj(h10110)), 2);
-  t2 = cmulr(cmul(h21000, h10110), 2);
-  t3 = cmulr(cmul(h10200, h10020), 4);
-  h20110 = cmulr(cadd(cadd(t1, t2), t3), 1/64.);
-  d->h20110 = cmod(h20110);
+  t1 = 2*h30000*conj(h10110);
+  t2 = 2*h21000*h10110;
+  t3 = 4*h10200*h10020;
+  h20110 = (t1+t2+t3)/64;
+  d->h20110 = cabs(h20110);
   
-  t1 = cmulr(cmul(h10200, h12000), 2);
-  t2 = cmulr(cmul(h21000, cconj(h10020)), 2);
-  t3 = cmulr(cmul(h10200, cconj(h10110)), 4);
-  t4 = cmulr(cmul(h10110, cconj(h10020)), 4);
-  h11200 = cmulr(cadd(cadd(t1, t2), cadd(t3, t4)), 1./64.);
-  d->h11200 = cmod(h11200);
+  t1 = 2*h10200*h12000;
+  t2 = 2*h21000*conj(h10020);
+  t3 = 4*h10200*conj(h10110);
+  t4 = 4*h10110*conj(h10020);
+  h11200 = (t1+t2+t3+t4)/64;
+  d->h11200 = cabs(h11200);
   
-  t1 = cmul(h21000, h10020);
-  t2 = cmul(h30000, cconj(h10200));
-  t3 = cmulr(cmul(h10110, h10020), 4);
-  h20020 = cmulr(cadd(cadd(t1, t2), t3), 1./64.);
-  d->h20020 = cmod(h20020);
+  t1 = h21000*h10020;
+  t2 = h30000*conj(h10200);
+  t3 = 4*h10110*h10020;
+  h20020 = (t1+t2+t3)/64;
+  d->h20020 = cabs(h20020);
   
-  t1 = cmulr(cmul(h30000, cconj(h10020)), 1/64.);
-  t2 = cmulr(cmul(h10200, h21000), 1/64.);
-  t3 = cmulr(cmul(h10110, h10200), 1/16.);
-  h20200 = cadd(cadd(t1, t2), t3);
-  d->h20200 = cmod(h20200);
+  t1 = h30000*conj(h10020)/64;
+  t2 = h10200*h21000/64;
+  t3 = h10110*h10200/16;
+  h20200 = t1+t2+t3;
+  d->h20200 = cabs(h20200);
   
-  t1 = cmul(h10200, cconj(h10110));
-  t2 = cmul(h10110, cconj(h10020));
-  h00310 = cmulr(cadd(t1, t2), 2./64.);
-  d->h00310 = cmod(h00310);
+  t1 = h10200*conj(h10110);
+  t2 = h10110*conj(h10020);
+  h00310 = (t1+t2)/32;
+  d->h00310 = cabs(h00310);
   
-  h00400 = cmulr(cmul(h10200,cconj(h10020)), 1./64);
-  d->h00400 = cmod(h00400);
+  h00400 = h10200*conj(h10020)/64;
+  d->h00400 = cabs(h00400);
   
   nux = tune[0];
   nuy = tune[1];

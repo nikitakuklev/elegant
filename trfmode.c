@@ -350,8 +350,6 @@ void track_through_trfmode(
 }
 
 
-#include "complex.h"
-
 void set_up_trfmode(TRFMODE *trfmode, char *element_name, double element_z, 
                     long n_passes, RUN *run, long n_particles)
 {

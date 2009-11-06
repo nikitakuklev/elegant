@@ -2423,8 +2423,6 @@ void stochastic_laserModulator(double *q, double tau, double h)
   
   }
 
-#include "complex.h"
-
 void computeLaserField(double *Ef, double *Bf, double phase, double Ef0, double ZR,
                        double k, double w0, double x, double y, double dz,
                        double *timeValue, double *amplitudeValue, long profilePoints,
@@ -2435,8 +2433,8 @@ void computeLaserField(double *Ef, double *Bf, double phase, double Ef0, double 
   static FILE *fpdeb = NULL;
 #endif
 
-  COMPLEX Q, Q2, Efx, ctmp1, ctmp2, ctmp3, ctmp4;
-  COMPLEX Efz, Bfx, Bfy, Bfz;
+  double complex Q, Q2, Efx, ctmp1, ctmp2, ctmp3, ctmp4;
+  double complex Efz, Bfx, Bfy, Bfz;
   double r2, x2;
   static long lastIndex = 0;
   double amplitude = 1;
@@ -2490,41 +2488,20 @@ void computeLaserField(double *Ef, double *Bf, double phase, double Ef0, double 
   
   /* % Alex Chao's complex-Q [m]                */
   /* Q = 1/(dz -i*ZR) */
-  ctmp1.r = 1;  ctmp1.i = 0;
-  ctmp2.r = dz; ctmp2.i = -ZR; 
-  Q = cdiv(ctmp1, ctmp2);
+  Q = 1/(dz-I*ZR);
   
   /* % complex x-E-field [V/m] */
   /* Efx  = Ef0*exp(-i*w*t+i*k*z+i*phi0+i*k/2*r2.*Q)./(1+i*z/ZR)  */
-  ctmp3.r = 0; ctmp3.i = phase;
-  ctmp4.r = 0; ctmp4.i = k/2*r2;
-  ctmp2 = cmul(ctmp4, Q);
-  ctmp1.r = ctmp3.r + ctmp2.r;
-  ctmp1.i = ctmp3.i + ctmp2.i;
-  ctmp3.r = 1; ctmp3.i = dz/ZR;
-  ctmp2 = cdiv(cexp(ctmp1), ctmp3);
-  Efx.r = Ef0*ctmp2.r;
-  Efx.i = Ef0*ctmp2.i;
-
-  Ef[0] = Efx.r;
+  Efx = Ef0*cexp(I*phase + I*k/2*r2*Q)/(1+I*dz/ZR); 
+  Ef[0] = creal(Efx);
   Ef[1] = 0;
 
   /* Efz = real[-Efx.*Q.*x];  */
-  Efz = cmul(Efx, Q);
-  Ef[2] = -x*Efz.r;
+  Ef[2] = -x*creal(Efx*Q);
 
   /* Bf   = real([-Efx.*Q.^2.*x.*y, Efx.*(Q.^2.*x.^2-i*Q/k+1), -Efx.*Q.*y]); */
-  Q2 = cmul(Q, Q);
-  Bfx = cmul(Efx, Q2);
-  Bf[0] = -x*y*Bfx.r/c_mks;
-
-  ctmp3.r = 0; ctmp3.i = 1;
-  ctmp4.r = 1; ctmp4.i = 0;
-  ctmp1 = cmulr(cmul(Q, ctmp3), -1./k);
-  ctmp2 = cadd(cadd(cmulr(Q2, x2), ctmp1), ctmp4);
-  Bfy = cmul(Efx, ctmp2);
-  Bf[1] = Bfy.r/c_mks;
-
-  Bfz = cmul(Efx, Q);
-  Bf[2] = -y*Bfz.r/c_mks;
+  Q2 = Q*Q;
+  Bf[0] = -x*y*creal(Efx*Q2)/c_mks;
+  Bf[1] = Efx*(Q2*x*x - I*Q/k + 1)/c_mks;
+  Bf[2] = -y*Efx*Q/c_mks;
 }

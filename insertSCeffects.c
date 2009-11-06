@@ -10,7 +10,6 @@
 #include "mdb.h"
 #include "track.h"
 #include "match_string.h"
-#include "complex.h"
 
 #define DEBUG 0
 
@@ -272,7 +271,7 @@ int nonlinearSCKick(double *coord, ELEMENT_LIST *eptr, double *center,
                      double sigmax, double sigmay, double *kick)
 {
   double k0, kx, ky, sqs;
-  COMPLEX wa, wb, w1, w2, w;
+  double complex wa, wb, w1, w2, w;
   double temp;
   long flag;
 
@@ -282,21 +281,19 @@ int nonlinearSCKick(double *coord, ELEMENT_LIST *eptr, double *center,
   kx = k0 * sc->dmux * sigmax * sqrt(sigmax+sigmay) / sqrt(fabs(sigmax-sigmay)) / eptr->twiss->betax;
   ky = k0 * sc->dmuy * sigmay * sqrt(sigmax+sigmay) / sqrt(fabs(sigmax-sigmay)) / eptr->twiss->betay;
 
-  w1.r = (coord[0]-center[0])/sqs;
-  w1.i = (coord[2]-center[1])/sqs;
-  w2.r = (coord[0]-center[0])*sigmay/sigmax/sqs;
-  w2.i = (coord[2]-center[1])*sigmax/sigmay/sqs;
+  w1 = (coord[0]-center[0])/sqs + I*(coord[2]-center[1])/sqs;
+  w2 = (coord[0]-center[0])*sigmay/sigmax/sqs + I*(coord[2]-center[1])*sigmax/sigmay/sqs;
   temp = exp((-sqr(coord[0]-center[0])/sqr(sigmax)-sqr(coord[2]-center[1])/sqr(sigmay))/2.0);
 
-  wofz(&w1.r, &w1.i, &wa.r, &wa.i, &flag);
+  
+  wa = complexErf(w1, &flag);
   if(!flag) return(0);
-  wofz(&w2.r, &w2.i, &wb.r, &wb.i, &flag);
+  wb = complexErf(w2, &flag);
   if(!flag) return(0);
 
-  w.r = wa.r - temp*wb.r;
-  w.i = wa.i - temp*wb.i;
-  kick[0] = kx * w.i;
-  kick[1] = ky * w.r;
+  w = wa + temp*wb;
+  kick[0] = kx * cimag(w);
+  kick[1] = ky * creal(w);
 
   return(1);
 }

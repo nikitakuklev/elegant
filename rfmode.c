@@ -311,7 +311,6 @@ void track_through_rfmode(
   }
 
 
-#include "complex.h"
 
 void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_passes, 
                    RUN *run, long n_particles,
@@ -379,7 +378,7 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
   }
   if (rfmode->preload && rfmode->charge) {
     double Vb, omega, To, tau;
-    COMPLEX Vc;
+    double complex Vc;
     if (rfmode->fwaveform || rfmode->Qwaveform) {
       printf("Warning: preloading of RFMODE doesn't work properly with frequency or Q waveforms\n");
       printf("unless the initial values of the frequency and Q factors are 1.\n");
@@ -389,15 +388,11 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
     Vb = 2 * omega/4*(rfmode->Ra)/rfmode->Q * rfmode->charge * rfmode->preload_factor * particleRelSign;
     tau = 2*rfmode->Q/(omega*(1+rfmode->beta));
 
-    Vc = cmulr(
-               cdiv(cassign(1, 0), 
-                    cadd(cassign(1, 0), 
-                         cmulr(cexpi(omega*To), -exp(-To/tau)))),
-               -Vb);
-    rfmode->V = sqrt(sqr(Vc.r)+sqr(Vc.i));
-    rfmode->last_phase = atan2(Vc.i, Vc.r);
+    Vc = -Vb/(1-cexpi(omega*To)*exp(-To/tau));
+    rfmode->V = cabs(Vc);
+    rfmode->last_phase = atan2(cimag(Vc), creal(Vc));
     fprintf(stdout, "RFMODE %s at z=%fm preloaded:  V = (%e, %e) V  =  %eV at %fdeg \n",
-            element_name, element_z, Vc.r, Vc.i,
+            element_name, element_z, creal(Vc), cimag(Vc),
             rfmode->V, rfmode->last_phase*180/PI);
     fflush(stdout);
     fprintf(stdout, "omega=%21.15e To=%21.15es, Vb = %21.15eV, tau = %21.15es\n", omega, To, Vb, tau);

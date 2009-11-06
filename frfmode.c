@@ -221,8 +221,6 @@ void track_through_frfmode(
 }
 
 
-#include "complex.h"
-
 void set_up_frfmode(FRFMODE *rfmode, char *element_name, double element_z, long n_passes, 
                     RUN *run, long n_particles,
                     double Po, double total_length)

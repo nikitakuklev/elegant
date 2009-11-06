@@ -247,7 +247,7 @@ typedef struct {
 /* radiation integrals and related values.  See SLAC 1193. */
 typedef struct {
   short computed;
-  double I[5];
+  double RI[5];
   double Jx, Jy, Jdelta;
   double taux, tauy, taudelta;
   double ex0, sigmadelta, Uo;

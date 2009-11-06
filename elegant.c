@@ -1488,6 +1488,7 @@ char **argv;
         run_subprocess(&namelist_text, &run_conditions);
       break;
     case FIT_TRACES:
+#if 0
       do_fit_trace_data(&namelist_text, &run_conditions, beamline);
       if (parameters) {
         dumpLatticeParameters(parameters, &run_conditions, beamline);
@@ -1506,6 +1507,7 @@ char **argv;
       concat_order = print_statistics = p_central = 0;
       run_setuped = run_controled = error_controled = correction_setuped = do_chromatic_correction =
         fl_do_tune_correction = do_closed_orbit = do_twiss_output = do_coupled_twiss_output = do_response_output = 0;
+#endif
       break;
     case SASEFEL_AT_END:
       if (!run_setuped)
