@@ -295,7 +295,7 @@ elegant_SRCS = 	alpha_data.c alpha_matrix.c amplif.c analyze.c aperture_search.c
 		print_line.c quad_matrix.c ramp_momentum.c ramped_rfca.c response.c rfmode.c \
 		run_rpnexpr.c sample.c sdds_beam.c sdds_support.c simple_rfca.c  subprocess.c \
 		tune.c tilt_matrices.c trace.c track_data.c track_ramp.c track_rf.c trfmode.c \
-		ztransverse.c twiss.c vary.c zlongit.c SReffects.c mod_rfca.c fitTraces.c \
+		ztransverse.c twiss.c vary.c zlongit.c SReffects.c mod_rfca.c \
 		ibs_tracking.c zibs.c wake.c taylorSeries.c trwake.c circles.c tubend.c sasefelmx.c \
 		sasefel.c alter.c sliceAnalysis.c divideElements.c transmuteElements.c \
 		frfmode.c ftrfmode.c tfeedback.c engeCoef.c lsc.c frequencyMap.c \
@@ -316,8 +316,6 @@ madto_SRCS = 	madto.c sdds_strength_output.c convert_to_parmela.c convert_to_pat
 sddssasefel_SRCS = sddssasefel.c sasefelmx.c
 
 ibsEmittance_SRCS = ibsEmittance.c zibs.c
-
-fitTraces_CFLAGS = -I$(EPICS_EXTENSIONS)/src/SDDS/meschach
 
 ifdef WIN32
 kahan_CFLAGS = /O0
