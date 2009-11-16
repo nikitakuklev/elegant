@@ -27,6 +27,7 @@
 	random_number_seed = <seed>,
         semaphore_file = %s.done,
 	losses = %s.los,
+        acceptance = %s.acc,
         tracking_updates = 0,
 &end
 
