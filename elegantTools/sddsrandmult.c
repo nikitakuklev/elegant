@@ -17,7 +17,6 @@
 #include "mdb.h"
 #include "match_string.h"
 #include "namelist.h"
-#include "complex.h"
 
 void do_perturbations(NAMELIST_TEXT *nltext);
 
@@ -94,10 +93,10 @@ void do_perturbations(NAMELIST_TEXT *nltext)
   double *f, *g;        /* normal and skew fractional field errors at r=bore_radius */
   double *frms, *grms;
   double dxh, dyh;      /* offsets for the upper half (lower half is negative of this) */
-  double fdx, fdy, alpha, gamma, sin_gma, cos_gma, eps;
+  double fdx, fdy, alpha, gamma, eps;
   double fdX, fdY, srot, crot;
   double dr, dphi;
-  COMPLEX exp1, exp2, exp3, dHn;
+  complex double exp1, exp2, dHn;
 
   /* initialize variables */
   SDDS_output = elegant_output = kmult_output = name = NULL;
@@ -231,21 +230,15 @@ void do_perturbations(NAMELIST_TEXT *nltext)
         gamma = atan2(fdY, fdX);
         eps = hypot(fdY, fdX);
       }
-      sin_gma = sin(gamma-alpha);
-      cos_gma = cos(gamma-alpha);
+      exp1 = cexpi(gamma-alpha);
+      exp2 = conj(exp1);
       for (i=1; i<=n_harm; i++) {
         /* loop over all harmonics */
-        exp1.r = exp2.r = cos_gma;
-        exp2.i = -(exp1.i = sin_gma);
-        exp1 = cmulr(exp1, (coefs[iN].bm[i-1]-coefs[iN].am[i-1])*eps/2);
-        exp2 = cmulr(exp2, (coefs[iN].bm[i-1]+coefs[iN].am[i-1])*eps/2);
-        exp1 = cadd(exp1, exp2);
-        exp3 = cexpi(-(N+i)*alpha);
-        exp2 = cmul(exp1, exp3);
-        exp1 = cexpi(PI/2-(PI*i)/(2.*N));
-        dHn = cmul(exp2, exp1);
-        f[i-1] += dHn.r;
-        g[i-1] += dHn.i;
+	dHn = (exp1*(coefs[iN].bm[i-1]-coefs[iN].am[i-1])*eps/2 +
+	       exp2*(coefs[iN].bm[i-1]+coefs[iN].am[i-1])*eps/2)
+	  *cexpi(-(N+i)*alpha)*cexpi(PI/2-(PI*i)/(2.*N));
+        f[i-1] += creal(dHn);
+        g[i-1] += cimag(dHn);
       }
     }
     /* add rotation error contribution */
