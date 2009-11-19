@@ -118,7 +118,7 @@ typedef struct {
   double xFactor, yFactor;
 } FUNCTION;
 
-#define ITERATION_LIMITS 10
+#define ITERATION_LIMITS 1000
 
 void printFunction( char *label, FUNCTION *data);
 void initializeFunction( FUNCTION *data);
@@ -202,12 +202,13 @@ int main( int argc, char **argv)
   length = 0;
   rfVoltage = rfHarmonic = 0;
   steps = 1;
-  points=0.0;
+  points=1000;
+  iterationLimits = ITERATION_LIMITS;
   startTime=0.0;
-  deltaTime=0.0;
-  maxTolerance = 0.001; /* fraction of maximum */
+  deltaTime=0;
+  maxTolerance = 0.0001; /* fraction of maximum */
   intermediateSolutions=0;
-  fraction = 1.0;
+  fraction = 0.01;
   wakeFile = tCol = wCol = NULL;
   superPeriods = 1;
   desiredEnergy = 0.0;
@@ -291,11 +292,7 @@ int main( int argc, char **argv)
                "-harmonicCavity=voltage=<V>,harmonicFactor=<value>");
         break;
       case INTEGRATION:
-        if (scanned[i].n_items<3)
-          bomb("invalid -integrationParameters syntax", NULL);
         scanned[i].n_items--;
-        points = startTime = deltaTime = 0;
-        iterationLimits = ITERATION_LIMITS;
         if (!scanItemList(&dummyFlags, scanned[i].list+1, &scanned[i].n_items, 0,
                           "points", SDDS_LONG, &points, 1, 0,
                           "startTime", SDDS_DOUBLE, &startTime, 1, 0,
@@ -304,8 +301,10 @@ int main( int argc, char **argv)
                           "tolerance", SDDS_DOUBLE, &maxTolerance, 1, 0,
                           "iterations", SDDS_LONG, &iterationLimits, 1, 0,
                           NULL) ||
-            points<=0 || iterationLimits<=0 || maxTolerance<=0 || deltaTime<=0) 
+            points<=0 || iterationLimits<=0 || maxTolerance<=0 || deltaTime<0) {
           bomb("invalid -integrationParameters syntax/values", "-integrationParameters=deltaTime=<s>,points=<number>,startTime=<s>,iterations=<number>");
+        }
+        
         break;
       case WAKE:
         if(!strlen(wakeFile=scanned[i].list[1]))
@@ -403,7 +402,9 @@ int main( int argc, char **argv)
     VrfDot = sqr(2 * PI) * revFrequency * sqr(syncTune) * (energyMeV * 1e6)/
       momentumCompaction;
   }
-
+  if (deltaTime==0)
+    deltaTime = length/100;
+  
   if (!useWakeFunction && !useBBR) {
     if ( inductance==0 && ZoverN != 0) {
       inductance = ZoverN * circumference / 2 / PI/ c_mks;
