@@ -12,6 +12,8 @@ form {\em Element}\#{\em N}.{\em quantity}, where {\em quantity} has the followi
 \item The quantity {\tt Particles} will be available, giving the number of particles tracked to the marker location.
 \item The quantities {\tt s{\em i}{\em j}} will be available, giving $\langle ( x_i -\langle x_i\rangle)( x_j - \langle x_j \rangle)\rangle$
  at the marker location, where $1\leq i\leq 6$ and $i<j\leq 6$.
+\item The quantities {\tt betaxBeam}, {\tt alphaxBeam}, {\tt betayBeam}, and {\tt alphayBeam}, which are the twiss parameters computed
+      from the beam moments obtained by tracking, will be available.
 \item The quantities {\tt R{\em i}{\em j}} will be available, for $1\leq i \leq 6$ and $1\leq j \leq 6$,
   giving the accumulated first-order transport matrix to the marker location.
 \item If the default matrix order (as set in {\tt run\_setup}) is 2 or greater, the quantities {\tt T{\em i}{\em j}{\em k}} 

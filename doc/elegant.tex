@@ -23,32 +23,76 @@
 Note: another source of help for {\tt elegant} is the on-line
 \htmladdnormallink{forum}{https://www.aps.anl.gov/Accelerator_Systems_Division/Operations_Analysis/phpBB3}.
 Users are encouraged to join and participate.  At minimum, users should subscribe to the ``Bugs'' topic,
-since this is where bug notifications are posted.
+since this is where bug notifications are posted.  Contrary to previous practise, we will no longer announce
+bugs via email.
 
 \section{Highlights of What's New in Version 22.1}
 
 Here is a summary of what's changed since release 22.0.  For details and references, see the specific entries in the manual. 
 
-
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item 
+\item The \verb|LSRMDLTR| was not correctly including vertical focusing of the undulator when the exact and leading-terms
+  expansions were used.  This was fixed.  D. Xiang (SLAC) reported this problem.
+\item \verb|UKICKMAP| and \verb|BMAPXY| had a bug in the interpolation routines that resulted in extrapolation being performed
+  in some cases.   This might change results with coarse grids.
+\item \verb|WATCH| elements may now be placed between identical bending magnets without messing up the 
+  transport (previously, unwanted edge effects were added).
+\item The radiation matrix (used by \verb|moments_output|) was wrong for \verb|SBEN| when the element was tilted.
+\item Fixed some problems with keeping track of whether radiation integrals were computed. This prevents incorrect warnings
+  about \verb|SREFFECTS| not being set up.
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item 
+\item Fixed a bug in adding errors: in previous versions, if elements had errors from
+a parameters file and if the user also tried to add differential errors, the
+elements would all start from the value of the first occurence of the element.  I.e., the
+initial individual values were not used.  
+\item Fixed a bug that resulting in quoted string parameters being converted to upper case in
+  elements inserted with \verb|insert_elements|.
+\item The magnet-profile output (requested via \verb|run_setup|) now includes \verb|KQUSE| elements.
+\item The corrected emittance computations (from the \verb|sigma| file from \verb|run_setup|) were incorrect
+  when the energy spread was zero.
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item 
+\item The default integration order for \verb|CSBEND| and \verb|CSRCSBEND| was changed from 2 to 4, to resolve
+  a common source of perplexing results from users.
+\item The \verb|IBSCATTER| element can now compute intrabeam scattering in a sliced fashion, which is useful
+  for linac simulation.  This was done by A. Xiao (ANL).
+\item The \verb|LSRMDLTR| element now supports a laser time profile and also synchrotron radiation.  This was
+  requested by D. Xiang (SLAC).  The element is also parallel-capable now.
+\item \verb|CSRCSBEND| and \verb|TWLA| elements now participate in beam moments computations (i.e., \verb|moments_output|).
+\item Added tracking-based computation of the linear matrix for \verb|TWLA|, \verb|TWMTA|, and \verb|MAP_SOLENOID|, so that
+  twiss computations and other matrix-based computations will properly include these elements.  Tracking is unchanged.
+  S. Reiche (PSI) pointed out this deficiency.
+\item \verb|MARK| elements with \verb|FITPOINT=1| now store parameters named \verb|betaxBeam| and \verb|alphaxBeam|,
+  along with the same quantities for the y plane.  These are the twiss parameters computed from the beam.  They
+  also appear in the sigma output file (specified by \verb|run_setup|).
+  This was requested by S. Reiche (PSI).
+\item Added the \verb|DELTAP| parameter to the \verb|EMATRIX| element, allowing one to specify an energy change as
+  part of an explicit matrix.  Requested by Y. Roblin (TJNAF).
+\item The files created by the \verb|WATCH| element now contain a parameter with the name of the upstream element, which
+  is helpful in making plots.
+\item The \verb|XYFACTOR| element was added to \verb|UKICKMAP|, to allow expanding the kickmap size.
+\item \verb|RFCA| elements may now be subdivided using the regular element-division controls (\verb|run_setup| or
+  \verb|divide_elements|).
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item 
+\item The \verb|rpn_load| command can now load the parameters from an SDDS file instead of the columns.
+  This is obtained by setting \verb|load_parameters=1|.
+\item Aperture determination using \verb|find_aperture| and the line-search technique was parallelized.  This was done by
+  Y. Wang (ANL).
+\item The aperture determined by the \verb|find_aperture| command may now be optimized.  (However, this can't be done in the
+  parallel version at present.)
+\item \verb|alter_elements| now changes the reference value for the element. This means that errors will be added relative to
+  the altered value.
+\item The \verb|optimization_term| command can now read optimization terms from an SDDS file.
 \end{itemize}
 
 \subsection{Changes to Related Programs and Files}
@@ -2919,6 +2963,7 @@ used, for example, to read in {\tt rpn} commands from a file or store values in 
     STRING match_parameter_value = NULL;
     long use_row = -1;
     long use_page = -1;
+    long load_parameters = 0;
 &end
 \end{verbatim}
 
@@ -2961,6 +3006,7 @@ a different run.
 \item \verb|use_page| --- If nonnegative, specifies the page number to use, starting at 1 for the first page.
  Takes precedence over \verb|\match_parameter| if both are given.
 
+\item \verb|load_parameters| --- If nonzero, specifies loading the SDDS parameter data rather than the column data.
 \end{itemize}
 \end{itemize}
 
