@@ -832,7 +832,7 @@ extern char *entity_text[N_TYPES];
 #define N_TFBDRIVER_PARAMS 20
 #define N_LSCDRIFT_PARAMS  13
 #define N_DSCATTER_PARAMS 14
-#define N_LSRMDLTR_PARAMS 18
+#define N_LSRMDLTR_PARAMS 23
 #define N_TAYLORSERIES_PARAMS 6
 #define N_RFTM110_PARAMS 16
 #define N_CWIGGLER_PARAMS 24
@@ -2414,6 +2414,8 @@ typedef struct {
   long nSteps;
   double poleFactor1, poleFactor2, poleFactor3;
   double usersLaserWavelength, laserPeakPower, laserW0, laserPhase;
+  double laserX0, laserY0, laserZ0;
+  long laserM, laserN;  /* mode numbers TEM-m-n*/
   long synchRad, isr;
   char *timeProfileFile;
   double timeProfileOffset;

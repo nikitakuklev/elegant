@@ -171,6 +171,9 @@ static double P_central;
 static char *lsrMdltrFieldExpansion[N_LSRMDLTR_FIELD_EXPANSIONS] = {
   "ideal", "exact", "leading terms"
   };
+double HermitePolynomial(double x, long n);
+double HermitePolynomialDeriv(double x, long n);
+double HermitePolynomial2ndDeriv(double x, long n);
 
 long motion(
     double **part,
@@ -483,7 +486,8 @@ void (*set_up_derivatives(
     lsrMdltr->omega = omega = *kscale*c_mks;
     lsrMdltr->Escale = particleCharge/(particleMass*omega*c_mks);
     lsrMdltr->Bscale = particleCharge/(particleMass*omega);
-    lsrMdltr->Ef0Laser = 2/lsrMdltr->laserW0*sqrt(sqrt(mu_o/epsilon_o)*lsrMdltr->laserPeakPower/PI);
+    lsrMdltr->Ef0Laser = 2/lsrMdltr->laserW0*
+      sqrt(lsrMdltr->laserPeakPower/(ipow(2,lsrMdltr->laserM+lsrMdltr->laserN)*PI*factorial(lsrMdltr->laserM)*factorial(lsrMdltr->laserN)*epsilon_o*c_mks));
     X_offset = 0;
     X_aperture_center = X_center = 0;
     Y_aperture_center = Y_center = 0;
@@ -2255,7 +2259,8 @@ void makeRftmEz0FieldTestFile(RFTMEZ0 *rftmEz0)
 
 void computeLaserField(double *Ef, double *Bf, double phase, double Ef0, double ZR,
                        double k, double w0, double x, double y, double dz,
-                       double *tValue, double *amplitudeValue, long profilePoints, double tForProfile) ;
+                       double *tValue, double *amplitudeValue, long profilePoints, double tForProfile,
+                       long m, long n) ;
 
 #ifdef DEBUG
 FILE *fppu = NULL;
@@ -2300,7 +2305,7 @@ void derivatives_laserModulator(double *qp, double *q, double tau)
     
   lsrMdltr = (LSRMDLTR*)field_global;
 
-  x = (q[0] - X_offset)/lsrMdltr->k;
+  x = q[0]/lsrMdltr->k;
   y = q[1]/lsrMdltr->k;
   z = q[2]/lsrMdltr->k;
   if (x<xMinSeen)
@@ -2337,9 +2342,10 @@ void derivatives_laserModulator(double *qp, double *q, double tau)
     double Bscale;
     computeLaserField(E, Blaser, -tau + q[2] - Z_center + lsrMdltr->laserPhase,
                       lsrMdltr->Ef0Laser, lsrMdltr->ZRayleigh, lsrMdltr->k, lsrMdltr->laserW0,
-                      x, y, z-Z_center/lsrMdltr->k,
+                      x-lsrMdltr->laserX0, y-lsrMdltr->laserY0, z-lsrMdltr->laserZ0-Z_center/lsrMdltr->k,
                       lsrMdltr->timeValue, lsrMdltr->amplitudeValue, lsrMdltr->tProfilePoints,
-                      (tau/lsrMdltr->omega-lsrMdltr->t0) - (q[2]-Z_center)/(lsrMdltr->k*c_mks));
+                      (tau/lsrMdltr->omega-lsrMdltr->t0) - (q[2]-Z_center)/(lsrMdltr->k*c_mks),
+                      lsrMdltr->laserM, lsrMdltr->laserN);
     Bscale = lsrMdltr->Bscale/gamma;
     for (i=0; i<3; i++) {
       E[i] *= lsrMdltr->Escale;
@@ -2426,16 +2432,17 @@ void stochastic_laserModulator(double *q, double tau, double h)
 void computeLaserField(double *Ef, double *Bf, double phase, double Ef0, double ZR,
                        double k, double w0, double x, double y, double dz,
                        double *timeValue, double *amplitudeValue, long profilePoints,
-                       double tForProfile) 
+                       double tForProfile, long m, long n) 
 {
-  /* Based on P. Emma's MATLAB routine */
+  /* Based on Alex Chao's "Laser Acceleration --- Focused Laser" note (unpublished) */
+
 #if DEBUG
   static FILE *fpdeb = NULL;
 #endif
 
-  double complex Q, Q2, Efx, ctmp1, ctmp2, ctmp3, ctmp4;
-  double complex Efz, Bfx, Bfy, Bfz;
-  double r2, x2;
+  double complex Ec;
+  double complex Q;
+  double w, Hm, Hn, Hmp, Hnp, Hmpp;
   static long lastIndex = 0;
   double amplitude = 1;
   long i;
@@ -2481,27 +2488,107 @@ void computeLaserField(double *Ef, double *Bf, double phase, double Ef0, double 
     }
   }
   
-  Ef0 *= amplitude;
-    
-  x2 = sqr(x);
-  r2 = x2 + sqr(y);
+  Q = 1/(dz - I*ZR);
+  w = w0*sqrt(1 + sqr(dz/ZR));
+  Ec = amplitude*Ef0*w0/w*cexp(I*phase - I*(m+n+1)*atan(dz/ZR) + I*k*Q/2*(x*x+y*y));
+
+  Hm = HermitePolynomial(sqrt(2)*x/w, m);
+  Hn = HermitePolynomial(sqrt(2)*y/w, n);
+  Hmp = HermitePolynomialDeriv(sqrt(2)*x/w, m);
+  Hnp = HermitePolynomialDeriv(sqrt(2)*y/w, n);
+  Hmpp = HermitePolynomial2ndDeriv(sqrt(2)*x/w, m);
   
-  /* % Alex Chao's complex-Q [m]                */
-  /* Q = 1/(dz -i*ZR) */
-  Q = 1/(dz-I*ZR);
-  
-  /* % complex x-E-field [V/m] */
-  /* Efx  = Ef0*exp(-i*w*t+i*k*z+i*phi0+i*k/2*r2.*Q)./(1+i*z/ZR)  */
-  Efx = Ef0*cexp(I*phase + I*k/2*r2*Q)/(1+I*dz/ZR); 
-  Ef[0] = creal(Efx);
+  Ef[0] = creal(Hm*Hn*Ec);
   Ef[1] = 0;
+  Ef[2] = creal(Ec*(I*sqrt(2)/(k*w)*Hmp*Hn - Q*x*Hm*Hn));
 
-  /* Efz = real[-Efx.*Q.*x];  */
-  Ef[2] = -x*creal(Efx*Q);
-
-  /* Bf   = real([-Efx.*Q.^2.*x.*y, Efx.*(Q.^2.*x.^2-i*Q/k+1), -Efx.*Q.*y]); */
-  Q2 = Q*Q;
-  Bf[0] = -x*y*creal(Efx*Q2)/c_mks;
-  Bf[1] = Efx*(Q2*x*x - I*Q/k + 1)/c_mks;
-  Bf[2] = -y*Efx*Q/c_mks;
+  Bf[0] = creal(Ec*(2/sqr(k*w)*Hmp*Hnp + I*sqrt(2)*Q/(k*w)*(x*Hm*Hnp + y*Hmp*Hn) - x*y*Q*Q*Hm*Hn))/c_mks;
+  Bf[1] = creal(Ec*(-2/sqr(k*w)*Hmpp*Hn - 2*sqrt(2)*I*Q/(k*w)*x*Hmp*Hn + (Q*Q*sqr(x) - I*Q/k + 1)*Hm*Hn))/c_mks;
+  Bf[2] = creal(Ec*(I*sqrt(2)/(k*w)*Hm*Hnp - Q*y*Hm*Hn))/c_mks;
 }
+
+double HermitePolynomial(double x, long n)
+{
+  double result;
+  /* Butkov, Mathematical Physics */
+  switch (n) {
+  case 0:
+    result = 1;
+    break;
+  case 1:
+    result = 2*x;
+    break;
+  case 2:
+    result = 4*x*x-2;
+    break;
+  case 3:
+    result = 8*ipow(x, 3)-12*x;
+    break;
+  case 4:
+    result = ipow(x,2);
+    result = 16*ipow(result, 2) - 48*result + 12;
+    break;
+  default:
+    fprintf(stderr, "Sorry, laser mode number too high---send an email to borland@aps.anl.gov if you really need this.\n");
+    exit(1);
+    break;
+  }
+  return result;
+}
+
+double HermitePolynomialDeriv(double x, long n)
+{
+  double result;
+  /* Butkov, Mathematical Physics */
+  switch (n) {
+  case 0:
+    result = 0;
+    break;
+  case 1:
+    result = 2;
+    break;
+  case 2:
+    result = 8*x;
+    break;
+  case 3:
+    result = 24*ipow(x,2) - 12;
+    break;
+  case 4:
+    result = 64*ipow(x,3) - 96*x;
+    break;
+  default:
+    fprintf(stderr, "Sorry, laser mode number too high\n");
+    exit(1);
+    break;
+  }
+  return result;
+}
+
+double HermitePolynomial2ndDeriv(double x, long n)
+{
+  double result;
+  /* Butkov, Mathematical Physics */
+  switch (n) {
+  case 0:
+    result = 0;
+    break;
+  case 1:
+    result = 0;
+    break;
+  case 2:
+    result = 8;
+    break;
+  case 3:
+    result = 48*x;
+    break;
+  case 4:
+    result = 3*64*ipow(x,2) - 96;
+    break;
+  default:
+    fprintf(stderr, "Sorry, laser mode number too high\n");
+    exit(1);
+    break;
+  }
+  return result;
+}
+
