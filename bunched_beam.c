@@ -186,7 +186,7 @@ void setup_bunched_beam(
     one_random_bunch = 1;
   if (!one_random_bunch)
     save_initial_coordinates = save_original;
-  if (isSlave)
+  if (isSlave || !notSinglePart)
     beam->particle = (double**)czarray_2d(sizeof(double), n_particles_per_bunch, 7);
 #if SDDS_MPI_IO
   else
@@ -267,10 +267,14 @@ long new_bunched_beam(
     double save_emit_x, save_emit_y,
            save_sigma_dp, save_sigma_s;
 
-    if (firstIsFiducial || do_find_aperture)
+    if (firstIsFiducial || do_find_aperture || (beam->n_original_total==1)) {
       notSinglePart = 0;
-    else
+      lessPartAllowed = 1;
+    }
+    else {
       notSinglePart = 1;
+      lessPartAllowed = 0;
+    }
 #endif
 
     beamCounter++;

@@ -722,14 +722,60 @@ long do_aperture_search_sp(
   }
   if (fpSearchOutput)
     fflush(fpSearchOutput);
+#if !USE_MPI
   if (verbosity>0) {
     fprintf(stdout, "total effort:  %ld particle-turns   %ld stable particles were tracked\n", effort, n_stable);
     fflush(stdout);
   }
-#if USE_MPI
+#else
   /* Gather all the simulation result to master to write into a file */
-  /*  MPI_Gather(xy_left[0], 2*n_left, MPI_DOUBLE, MPI_IN_PLACE, 2*n_left, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-      MPI_Gather(xy_right[0], 2*n_right, MPI_DOUBLE, MPI_IN_PLACE, 2*n_right, MPI_DOUBLE, 0, MPI_COMM_WORLD); */
+  if (USE_MPI) {
+    int *n_vector = (int*)tmalloc(n_processors*sizeof(*n_vector));
+    int *offset = (int*)tmalloc(n_processors*sizeof(*offset));
+    long i;
+
+    MPI_Allgather(&n_left, 1, MPI_LONG, n_vector, 1, MPI_INT, MPI_COMM_WORLD);
+    offset[0] = 0;
+    for (i=0; i<n_processors-1; i++) {
+      n_vector[i] *= 2;
+      offset[i+1] = offset[i] + n_vector[i];
+    }
+    n_vector[n_processors-1] *= 2;
+    MPI_Allgatherv(xy_left[0], 2*n_left, MPI_DOUBLE, xy_left[0], n_vector, offset, MPI_DOUBLE, MPI_COMM_WORLD);
+
+
+    MPI_Allgather(&n_right, 1, MPI_LONG, n_vector, 1, MPI_INT, MPI_COMM_WORLD);
+    offset[0] = 0;
+    for (i=0; i<n_processors-1; i++) {
+      n_vector[i] *= 2;
+      offset[i+1] = offset[i] + n_vector[i];
+    }
+    n_vector[n_processors-1] *= 2;
+    MPI_Allgatherv(xy_right[0], 2*n_right, MPI_DOUBLE, xy_right[0], n_vector, offset, MPI_DOUBLE, MPI_COMM_WORLD);
+  } 
+
+  if (USE_MPI) {
+    long effort_total, n_stable_total;
+    long tmp[4], total[4];
+    
+
+    tmp[0] = effort;
+    tmp[1] = n_stable;
+    tmp[2] = n_left;
+    tmp[3] = n_right;
+    MPI_Reduce(tmp, &total, 4, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+
+    if (isMaster) {
+      effort_total = total[0];
+      n_stable_total = total[1];
+      n_left = total[2];
+      n_right = total[3];
+      if (verbosity>0) {
+	fprintf(stdout, "total effort:  %ld particle-turns   %ld stable particles were tracked\n", effort_total, n_stable_total);
+	fflush(stdout);
+      }
+    }
+  }
   if (isMaster) {
 #endif
   if (!SDDS_StartTable(&SDDS_aperture, n_left+n_right)) {

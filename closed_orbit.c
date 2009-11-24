@@ -265,11 +265,12 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
   long n_part, method;
   double p, error, last_error;
 
-  log_entry("find_closed_orbit");
-
 #if SDDS_MPI_IO
+  long notSinglePart_orig = notSinglePart; /* We need save the original value to switch it back */
   notSinglePart = 0; /* run as single particle mode, i.e., all processors will do the same thing */  
 #endif
+
+  log_entry("find_closed_orbit");
 
   if (fixed_length)
     return findFixedLengthClosedOrbit(clorb, clorb_acc, clorb_iter, beamline, M, run, dp,
@@ -467,7 +468,7 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
   clorb[0].centroid[5] = dp;
 
 #if SDDS_MPI_IO
-  notSinglePart = 1; /* Switch back to regular parallel tracking mode */  
+  notSinglePart = notSinglePart_orig; /* Switch back to original parallel tracking mode */  
 #endif
 
   log_exit("find_closed_orbit");
