@@ -5,6 +5,11 @@ Lorentz equation.  It is not symplectic, and hence this element is not
 recommended for long-term tracking simulation of undulators in storage
 rings.  
 
+The expressions for the laser field used by this element are from
+A. Chao's article ``Laser Acceleration --- Focussed Laser,'' available
+on-line at \\
+http://www.slac.stanford.edu/~achao/LaserAccelerationFocussed.pdf .
+
 The fields in the undulator can be expressed in one of three ways.
 The FIELD\_EXPANSION parameter is used to control which method is used.
 \begin{itemize}
@@ -61,9 +66,6 @@ poles (a result of the implementation of the undulator terminations).
 Hence, the default integrator is non-adaptive Runge-Kutta.  The
 integration accuracy is controlled via the N\_STEPS parameter.
 N\_STEPS should be about 100 times the number of undulator periods.
-
-The expressions for the laser field used by this element were provided
-by P. Emma (SLAC).
 
 The laser time profile can be specified using the \verb|TIME_PROFILE|
 parameter to specify the name of an SDDS file containing the

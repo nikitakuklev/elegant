@@ -63,8 +63,10 @@ initial individual values were not used.
   a common source of perplexing results from users.
 \item The \verb|IBSCATTER| element can now compute intrabeam scattering in a sliced fashion, which is useful
   for linac simulation.  This was done by A. Xiao (ANL).
-\item The \verb|LSRMDLTR| element now supports a laser time profile and also synchrotron radiation.  This was
-  requested by D. Xiang (SLAC).  The element is also parallel-capable now.
+\item The \verb|LSRMDLTR| element now supports a laser time profile, synchrotron radiation, higher-order laser modes
+  (up to TEM44), and allows the user to offset the laser beam in x, y, and z.  This was
+  requested by D. Xiang (SLAC).  Thanks to P. Emma (SLAC) for providing an very helpful relevant article.
+  The element is also parallel-capable now.
 \item \verb|CSRCSBEND| and \verb|TWLA| elements now participate in beam moments computations (i.e., \verb|moments_output|).
 \item Added tracking-based computation of the linear matrix for \verb|TWLA|, \verb|TWMTA|, and \verb|MAP_SOLENOID|, so that
   twiss computations and other matrix-based computations will properly include these elements.  Tracking is unchanged.
