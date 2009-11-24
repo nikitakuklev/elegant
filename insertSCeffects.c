@@ -176,7 +176,7 @@ void trackThroughSCMULT(double **part, long np, ELEMENT_LIST *eptr)
       np = 0;
     MPI_Allreduce (&np, &np_total, 1, MPI_LONG, MPI_SUM, workers);
    if (!np_total)
-     return(0.0);
+     return;
   }
 #endif
   /* compute bunch center */
