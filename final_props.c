@@ -814,35 +814,6 @@ double rms_emittance_p(double **coord, long i1, long i2, long n,
 }
 #endif
 
-double rms_norm_emittance(double **coord, long i1, long i2, long ip, long n, double Po)
-{
-    return Po*rms_emittance(coord, i1, i2, n, NULL, NULL, NULL);
-#if 0
-    double s11, s12, s22;
-    double x, px, xc, pxc;
-    long i;
-    
-    if (!n)
-        return(0.0);
-
-    /* compute centroids */
-    for (i=xc=pxc=0; i<n; i++) {
-        xc  += coord[i][i1];
-        pxc += coord[i][i2]*(1+coord[i][ip])/sqrt(1+sqr(coord[i][1])+sqr(coord[i][3]));
-        }
-    xc  /= n;
-    pxc /= n;
-
-    for (i=s11=s12=s22=0; i<n; i++) {
-        s11 += sqr(  x = coord[i][i1] - xc );
-        s22 += sqr( px = coord[i][i2]*(1+coord[i][ip])/sqrt(1+sqr(coord[i][1])+sqr(coord[i][3])) - pxc );
-        s12 += x*px;
-        }
-
-    return(Po*SAFE_SQRT(s11*s22-sqr(s12))/n);
-#endif
-  }
-
 double rms_longitudinal_emittance(double **coord, long n, double Po)
 {
     double s11, s12, s22, dt, ddp;
