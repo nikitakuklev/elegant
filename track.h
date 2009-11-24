@@ -734,7 +734,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_KQUSE 99
 #define T_UKICKMAP 100
 #define T_MKICKER 101
-#define N_TYPES   102
+#define T_EMITTANCE 102
+#define N_TYPES   103
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -843,6 +844,7 @@ extern char *entity_text[N_TYPES];
 #define N_KQUSE_PARAMS 14
 #define N_UKICKMAP_PARAMS 13
 #define N_MKICKER_PARAMS 13
+#define N_EMITTANCEELEMENT_PARAMS 4
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -1125,6 +1127,12 @@ typedef struct {
   /* internal variables */
   long transformComputed;
 } TWISSELEMENT;
+
+/* storage structure for emittance element (sets emittances) */
+typedef struct {
+  double emit[2];
+  double emitn[2];
+} EMITTANCEELEMENT;
 
 /* storage structure for floor element (sets floor coordinates) */
 typedef struct {

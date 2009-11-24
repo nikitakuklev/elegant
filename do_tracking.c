@@ -21,6 +21,7 @@ void set_up_frfmode(FRFMODE *rfmode, char *element_name, double element_z, long 
 void track_through_frfmode(double **part, long np, FRFMODE *rfmode, double Po,char *element_name, double element_z, long pass, long n_passes,CHARGE *charge);
 void set_up_ftrfmode(FTRFMODE *rfmode, char *element_name, double element_z, long n_passes,RUN *run, long n_particles,double Po, double total_length);
 void track_through_ftrfmode(double **part, long np, FTRFMODE *trfmode, double Po,char *element_name, double element_z, long pass, long n_passes,CHARGE *charge);
+void transformEmittances(double **coord, long np, double pCentral, EMITTANCEELEMENT *ee);
 
 ELEMENT_LIST *findBeamlineMatrixElement(ELEMENT_LIST *eptr);
 void trackLongitudinalOnlyRing(double **part, long np, VMATRIX *M, double *alpha);
@@ -1438,7 +1439,9 @@ long do_tracking(
                   fflush(stdout);
                 }
               }
-              
+              break;
+            case T_EMITTANCE:
+              transformEmittances(coord, nToTrack, *P_central, (EMITTANCEELEMENT*)eptr->p_elem);
               break;
 	    default:
 	      fprintf(stdout, "programming error: no tracking statements for element %s (type %s)\n",
@@ -3708,4 +3711,51 @@ int usefulOperation (ELEMENT_LIST *eptr, unsigned long flags, long i_pass)
   }
 #endif
 
+void transformEmittances(double **coord, long np, double pCentral, EMITTANCEELEMENT *ee)
+{
+  double emit, emitc, factor, pAverage, eta, etap;
+  long npTotal, i, j;
+  BEAM_SUMS sums;
+  
+#if SDDS_MPI_IO
+  MPI_Reduce (&np, &npTotal, 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+  if (isMaster && npTotal<10) {
+    printf("*** Error: too few particles (<10) for emittance modification\n");
+    exit(1);
+  }
+#endif
 
+  zero_beam_sums(&sums, 1);
+  accumulate_beam_sums(&sums, coord, np, pCentral);
+  pAverage = pCentral*(1+sums.centroid[5]);
+  
+  for (i=0; i<2; i++) {
+    computeEmitTwissFromSigmaMatrix(&emit, &emitc, NULL, NULL, sums.sigma, 2*i);
+    eta = etap = 0;
+    if (sums.sigma[5][5]) {
+      eta  = sums.sigma[2*i+0][5]/sums.sigma[5][5];
+      etap = sums.sigma[2*i+1][5]/sums.sigma[5][5];
+    }
+    if (ee->emit[i]>=0) {
+      /* use geometric emittance */
+      if (emitc>0)
+        factor = sqrt(ee->emit[i]/emitc);
+      else
+        continue;
+    } else if (ee->emitn[i]>=0) {
+      /* use normalized emittance */
+      emitc *= pAverage;
+      if (emitc>0)
+        factor = sqrt(ee->emitn[i]/emitc);
+      else
+        continue;
+    } else {
+      /* do nothing */
+      continue;
+    }
+    for (j=0; j<np; j++) {
+      coord[j][2*i+0] = factor*(coord[j][2*i+0]-eta*coord[j][5]) + eta*coord[j][5];
+      coord[j][2*i+1] = factor*(coord[j][2*i+1]-eta*coord[j][5]) + eta*coord[j][5];
+    }
+  }
+}

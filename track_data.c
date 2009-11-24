@@ -51,7 +51,7 @@ char *entity_name[N_TYPES] = {
     "LTHINLENS", "LMIRROR", "EMATRIX", "FRFMODE", "FTRFMODE",
     "TFBPICKUP", "TFBDRIVER", "LSCDRIFT", "DSCATTER", "LSRMDLTR",
     "TAYLORSERIES", "RFTM110", "CWIGGLER", "EDRIFT", "SCMULT", "ILMATRIX",
-    "TSCATTER", "KQUSE", "UKICKMAP", "MBUMPER",
+    "TSCATTER", "KQUSE", "UKICKMAP", "MBUMPER", "EMITTANCE",
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -2129,6 +2129,17 @@ PARAMETER ukickmap_param[N_UKICKMAP_PARAMS] = {
     };
 
 
+/* emittance scaling element physical parameters */
+
+EMITTANCEELEMENT emittanceElem_example;
+
+PARAMETER emittanceElement_param[N_EMITTANCEELEMENT_PARAMS] = {
+  {"EMITX", "M", IS_DOUBLE, 0, (long)((char *)&emittanceElem_example.emit[0]), NULL, -1.0, 0, "horizontal emittance"},
+  {"EMITY", "M", IS_DOUBLE, 0, (long)((char *)&emittanceElem_example.emit[1]), NULL, -1.0, 0, "vertical emittance"},
+  {"EMITNX", "M", IS_DOUBLE, 0, (long)((char *)&emittanceElem_example.emitn[0]), NULL, -1.0, 0, "horizontal normalized emittance"},
+  {"EMITNY", "M", IS_DOUBLE, 0, (long)((char *)&emittanceElem_example.emitn[1]), NULL, -1.0, 0, "vertical normalized emittance"},
+};
+
 /* array of parameter structures */
 
 #define MAT_LEN     HAS_MATRIX|HAS_LENGTH
@@ -2251,6 +2262,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
                                           sizeof(KQUSE),    kquse_param    },
     {   N_UKICKMAP_PARAMS, MAT_LEN_NCAT|IS_MAGNET|MPALGORITHM, sizeof(UKICKMAP),    ukickmap_param    },
     {  N_MKICKER_PARAMS,  MAT_LEN_NCAT|IS_MAGNET,     sizeof(MKICKER),    mkicker_param   },
+    {  N_EMITTANCEELEMENT_PARAMS,  0,    sizeof(EMITTANCEELEMENT),    emittanceElement_param   },
 } ;
 
 void compute_offsets()
