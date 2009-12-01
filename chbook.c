@@ -11,6 +11,7 @@
 #include "mdb.h"
 #include "SDDS.h"
 #include "constants.h"
+#include "track.h"
 #include "chbook.h"
 
 book1 *chbook1(char *vName, double xmin, double xmax, int xbins)
@@ -44,6 +45,135 @@ void chfill1(book1 *bName, double x, double weight)
   bName->count++;
 
   return;
+}
+
+void free_hbook1 (book1 *x)
+{
+  free(x->value);
+  free(x);
+  return;
+}
+
+book2 *chbook2(char *xName, char *yName, double xmin, double xmax, double ymin, double ymax, int xbins, int ybins)
+{
+  book2 *book;
+
+  book = (book2 *)malloc(sizeof(*book));
+
+  book->xname = xName;
+  book->yname = yName;
+
+  book->xmin = xmin;
+  book->xmax = xmax;
+  book->dx = (xmax-xmin)/(double)xbins;
+  book->xbins = xbins;  
+  book->ymin = ymin;
+  book->ymax = ymax;
+  book->dy = (ymax-ymin)/(double)ybins;
+  book->ybins = ybins;  
+
+  book->length = xbins*ybins;
+  book->count = 0;
+
+  book->value = calloc(sizeof(*book->value), book->length);
+
+  return book;
+}
+
+void chfill2(book2 *bName, double x, double y, double weight)
+{
+  int index[2], i;
+
+  index[0] = (int)((x - bName->xmin)/bName->dx);
+  if (index[0] < 0) index[0] =0;
+  if (index[0] > (bName->xbins-1)) index[0] = bName->xbins-1;
+  
+  index[1] = (int)((y - bName->ymin)/bName->dy);
+  if (index[1] < 0) index[1] =0;
+  if (index[1] > (bName->ybins-1)) index[1] = bName->ybins-1;
+  
+  i = index[0]*bName->xbins + index[1];
+  bName->value[i] += weight;
+  bName->count++;
+
+  return;
+}
+
+void free_hbook2 (book2 *x)
+{
+  free(x->value);
+  free(x);
+  return;
+}
+
+ntuple *chbookn(char **vName, int ND, double *xmin, double *xmax, long *xbins, int offset)
+{
+  ntuple *book;
+  int i;
+
+  book = (ntuple *)malloc(sizeof(*book));
+
+  book->nD = ND;
+
+  book->vname = calloc(sizeof(*book->vname), ND);
+  book->xmin = calloc(sizeof(*book->xmin), ND);
+  book->xmax = calloc(sizeof(*book->xmax), ND);
+  book->dx = calloc(sizeof(*book->dx), ND);
+  book->xbins = calloc(sizeof(*book->xbins), ND);
+  
+  book->count = 0;
+  book->length = 1;
+  for (i=0; i<ND; i++) {
+    book->vname[i] = vName[i+offset];
+    book->length *= xbins[i+offset];
+    book->xbins[i] = xbins[i+offset];
+    book->xmin[i] = xmin[i+offset];
+    book->xmax[i] = xmax[i+offset];
+    book->dx[i] = (xmax[i+offset]-xmin[i+offset])/(double)xbins[i+offset];
+  }
+
+  book->value = calloc(sizeof(*book->value), book->length);
+
+  return book;
+}
+
+void chfilln(ntuple *bName, double *x, double weight, int offset)
+{
+  int index;
+  int i, temp;
+
+  index = 0;
+  for (i=0; i<bName->nD; i++) {
+    temp = (int) ((x[i+offset] - bName->xmin[i])/bName->dx[i]);
+    if (temp < 0) temp = 0;
+    if (temp > bName->xbins[i]-1) temp = bName->xbins[i]-1;
+    if(i>0) index = index*bName->xbins[i-1]+temp;
+    if(i==0) index = temp;
+  }
+  
+  bName->value[index] += weight;
+  bName->count++;
+  return;
+}
+
+void free_hbookn (ntuple *x)
+{
+  free(x->vname);
+  free(x->xmin);
+  free(x->xmax);
+  free(x->dx);
+  free(x->xbins);
+  free(x->value);
+  free(x);
+  return;
+}
+
+void checkbook2 (book2 *bName) {
+  printf("xname=%s, yname=%s\n", bName->xname, bName->yname);
+  printf("xmin=%g, xmax=%g, dx=%g, xbins=%d\n", bName->xmin, bName->xmax, bName->dx, bName->xbins);
+  printf("ymin=%g, ymax=%g, dy=%g, ybins=%d\n", bName->ymin, bName->ymax, bName->dy, bName->ybins);
+  printf("length=%ld, count=%ld\n", bName->length, bName->count);
+
 }
 
 void chprint1(book1 *bName, char *filename, char *description, int verbosity)
@@ -104,58 +234,6 @@ void chprint1(book1 *bName, char *filename, char *description, int verbosity)
   return;
 }
 
-void free_hbook1 (book1 *x)
-{
-  free(x->value);
-  free(x);
-  return;
-}
-
-book2 *chbook2(char *xName, char *yName, double xmin, double xmax, double ymin, double ymax, int xbins, int ybins)
-{
-  book2 *book;
-
-  book = (book2 *)malloc(sizeof(*book));
-
-  book->xname = xName;
-  book->yname = yName;
-
-  book->xmin = xmin;
-  book->xmax = xmax;
-  book->dx = (xmax-xmin)/(double)xbins;
-  book->xbins = xbins;  
-  book->ymin = ymin;
-  book->ymax = ymax;
-  book->dy = (ymax-ymin)/(double)ybins;
-  book->ybins = ybins;  
-
-  book->length = xbins*ybins;
-  book->count = 0;
-
-  book->value = calloc(sizeof(*book->value), book->length);
-
-  return book;
-}
-
-void chfill2(book2 *bName, double x, double y, double weight)
-{
-  int index[2], i;
-
-  index[0] = (int)((x - bName->xmin)/bName->dx);
-  if (index[0] < 0) index[0] =0;
-  if (index[0] > (bName->xbins-1)) index[0] = bName->xbins-1;
-  
-  index[1] = (int)((y - bName->ymin)/bName->dy);
-  if (index[1] < 0) index[1] =0;
-  if (index[1] > (bName->ybins-1)) index[1] = bName->ybins-1;
-  
-  i = index[0]*bName->xbins + index[1];
-  bName->value[i] += weight;
-  bName->count++;
-
-  return;
-}
-
 void chprint2(book2 *bName, char *filename, char *description, int verbosity)
 {
   SDDS_DATASET outPage;
@@ -163,7 +241,6 @@ void chprint2(book2 *bName, char *filename, char *description, int verbosity)
   /* Open file for writting */
   if (verbosity)
     fprintf( stdout, "Opening \"%s\" for writing...\n", filename);
-
   if (!SDDS_InitializeOutput(&outPage, SDDS_BINARY, 1, 
                              description, description, filename))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -216,89 +293,116 @@ void chprint2(book2 *bName, char *filename, char *description, int verbosity)
   return;
 }
 
-void free_hbook2 (book2 *x)
+void chprintn(ntuple *bName, char *filename, char *description, SDDS_DEFINITION *parameter_definition,
+              void **sdds_value, int n_parameters, int verbosity, int append)
 {
-  free(x->value);
-  free(x);
-  return;
-}
+  SDDS_DATASET outPage;
+  char buffer[100], dimensionString[4];
+  long i, Index[5], last_index, index;
+ 
+  last_index = -1;
+  if (!append) {
+    /* Open file for writting */
+    if (verbosity)
+      fprintf( stdout, "Opening \"%s\" for writing...\n", filename);
+    if (!SDDS_InitializeOutput(&outPage, SDDS_BINARY, 1, 
+                               description, description, filename))
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 
-ntuple *chbookn(char **vName, int ND, double *xmin, double *xmax, int *xbins)
-{
-  ntuple *book;
-  int i;
+    for (i=0; i<n_parameters; i++) {
+      if (!SDDS_ProcessParameterString(&outPage, parameter_definition[i].text, 0) ||
+          (index=SDDS_GetParameterIndex(&outPage, parameter_definition[i].name))<0) {
+        fprintf(stdout, "Unable to define SDDS parameter for chprintn--string was:\n%s\n",
+                parameter_definition[i].text);
+        fflush(stdout);
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
+        exit(1);
+      }
+      if (index!=(last_index+1))
+        fprintf(stdout, "\7\7\7WARNING: parameter indices for SDDS file %s are not sequential--this will probably cause unexpected results\n", filename);
+      fflush(stdout);
+      last_index = index;
+    }
 
-  book = (ntuple *)malloc(sizeof(*book));
+    for (i=0; i< bName->nD; i++) {
+      sprintf(dimensionString, "%02ld", i);
+      
+      sprintf(buffer, "Variable%sName", dimensionString);
+      if (0>SDDS_DefineParameter(&outPage, buffer, NULL, NULL, 
+                                 NULL, NULL, SDDS_STRING, NULL)) 
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 
-  book->nD = ND;
+      sprintf(buffer, "Variable%sMin", dimensionString);
+      if (0>SDDS_DefineParameter(&outPage, buffer, NULL, NULL, 
+                                 NULL, NULL, SDDS_DOUBLE, NULL)) 
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 
-  book->vname = calloc(sizeof(*book->vname), ND);
-  book->xmin = calloc(sizeof(*book->xmin), ND);
-  book->xmax = calloc(sizeof(*book->xmax), ND);
-  book->dx = calloc(sizeof(*book->dx), ND);
-  book->xbins = calloc(sizeof(*book->xbins), ND);
-  
-  book->count = 0;
-  book->length = 1;
-  for (i=0; i<ND; i++) {
-    book->vname[i] = vName[i];
-    book->length *= xbins[i];
-    book->xbins[i] = xbins[i];
-    book->xmin[i] = xmin[i];
-    book->xmax[i] = xmax[i];
-    book->dx[i] = (xmax[i]-xmin[i])/(double)xbins[i];
+      sprintf(buffer, "Variable%sMax", dimensionString);
+      if (0>SDDS_DefineParameter(&outPage, buffer, NULL, NULL, 
+                                 NULL, NULL, SDDS_DOUBLE, NULL)) 
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+
+      sprintf(buffer, "Variable%sInterval", dimensionString);
+      if (0>SDDS_DefineParameter(&outPage, buffer, NULL, NULL, 
+                                 NULL, NULL, SDDS_DOUBLE, NULL)) 
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+
+      sprintf(buffer, "Variable%sDimension", dimensionString);
+      if (0>SDDS_DefineParameter(&outPage, buffer, NULL, NULL, 
+                                 NULL, NULL, SDDS_LONG, NULL)) 
+        SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    }
+
+    if (0>SDDS_DefineParameter(&outPage, "Total_count", NULL, NULL, 
+                               NULL, NULL, SDDS_LONG, NULL))
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    if (0>SDDS_DefineColumn(&outPage, "Index", NULL, NULL, 
+                            NULL, NULL, SDDS_LONG, 0) ||
+        0>SDDS_DefineColumn(&outPage, "weight", NULL, NULL, 
+                            NULL, NULL, SDDS_DOUBLE, 0))
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+    
+    if (!SDDS_WriteLayout(&outPage))
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  } else {
+    if (!SDDS_InitializeAppend(&outPage, filename))
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
 
-  book->value = calloc(sizeof(*book->value), book->length);
+  /* Write to output file */
+  if (0>SDDS_StartPage(&outPage, bName->length)) 
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 
-  return book;
-}
-
-void chfilln(ntuple *bName, double *x, double weight)
-{
-  int index;
-  int i, temp;
-
-  index = 0;
-  for (i=0; i<bName->nD; i++) {
-    temp = (int) ((x[i] - bName->xmin[i])/bName->dx[i]);
-    if (temp < 0) temp = 0;
-    if (temp > bName->xbins[i]-1) temp = bName->xbins[i]-1;
-    if(i>0) index = index*bName->xbins[i-1]+temp;
-    if(i==0) index = temp;
+  for (i=0; i<n_parameters; i++) {
+    if (!SDDS_SetParameters(&outPage, SDDS_SET_BY_INDEX|SDDS_PASS_BY_REFERENCE, 
+                            i, sdds_value[i], -1))
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
-  
-  bName->value[index] += weight;
-  bName->count++;
-  /*
-char a[100]="";    
-  sprintf( a, "%d", num );
-  for(i=0;i<6;i++) {
-    strcpy(a + strlen(a), vName[i]);
-    strcpy(a + strlen(a), ",");
+
+  Index[4] = n_parameters-1;
+  for (i=0; i< bName->nD; i++) {
+    Index[0] = Index[4]+1; Index[1]=Index[0]+1; Index[2]=Index[1]+1;
+    Index[3]=Index[2]+1; Index[4]=Index[3]+1;
+    if (!SDDS_SetParameters(&outPage, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE,
+                            Index[0], bName->vname[i],
+                            Index[1], bName->xmin[i],
+                            Index[2], bName->xmax[i],
+                            Index[3], bName->dx[i],
+                            Index[4], bName->xbins[i], -1))
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
-  printf("%s\n",a);                 
-*/
+  if (!SDDS_SetParameters(&outPage, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
+                          "Total_count", bName->count, NULL))
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  for (i=0; i<bName->length; i++) {
+    if (!SDDS_SetRowValues(&outPage, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, i,
+                           0, i, 1, bName->value[i], -1))
+      SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  }
+  if (!SDDS_WritePage(&outPage))
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  if (!SDDS_Terminate(&outPage))
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 
   return;
-}
-
-void free_hbookn (ntuple *x)
-{
-  free(x->vname);
-  free(x->xmin);
-  free(x->xmax);
-  free(x->dx);
-  free(x->xbins);
-  free(x->value);
-  free(x);
-  return;
-}
-
-void checkbook2 (book2 *bName) {
-  printf("xname=%s, yname=%s\n", bName->xname, bName->yname);
-  printf("xmin=%g, xmax=%g, dx=%g, xbins=%d\n", bName->xmin, bName->xmax, bName->dx, bName->xbins);
-  printf("ymin=%g, ymax=%g, dy=%g, ybins=%d\n", bName->ymin, bName->ymax, bName->dy, bName->ybins);
-  printf("length=%ld, count=%ld\n", bName->length, bName->count);
-
 }

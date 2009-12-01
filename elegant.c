@@ -2113,6 +2113,10 @@ void free_beamdata(BEAM *beam)
   beam->lostOnPass = NULL;
   beam->n_original = beam->n_to_track = beam->n_accepted = beam->n_saved = beam->n_particle = 0;
   beam->p0_original = beam->p0 =0.;
+  if (beam->hist) {
+    free(beam->hist);
+    beam->hist = NULL;
+  }
 }  
 
 long getTableFromSearchPath(TABLE *tab, char *file, long sampleInterval, long flags)

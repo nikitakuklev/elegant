@@ -24,5 +24,14 @@
     double p_lower = 0.0;
     double p_upper = 0.0;
     long save_initial_coordinates = 1;
+    STRING long_dist = NULL;
+    STRING tran_dist = NULL;
+    STRING full_dist = NULL;
+    long long_bins[2] = {0,0};
+    long tran_bins[4] = {0,0,0,0};
+    long full_bins[6] = {0,0,0,0,0,0};
+    STRING name = NULL;
+    STRING type = NULL;
+    STRING exclude = NULL;
 #end
 

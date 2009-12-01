@@ -483,6 +483,11 @@ typedef struct {
     long includeSimplex1dScans, startFromSimplexVertex1;
     } OPTIMIZATION_DATA;
 
+typedef struct {
+  long tbins[4], lbins[2], bins[6];
+  char *toutput, *loutput, *output;
+  char *name, *type, *exclude;
+} BEAM_HIST;
 /* structure to store particle coordinates */
 typedef struct {
     double **original;      /* original particle data */
@@ -501,15 +506,10 @@ typedef struct {
     long n_accepted;        /* final number of particles being tracked. */
     long *lostOnPass;       /* pass on which a particle is lost */
     double bunchFrequency;
-  /*
-    HIST hist;
-  */
+    BEAM_HIST *hist;
     } BEAM;
 void free_beamdata(BEAM *beam);
-/*
-typedef struct {
-} HIST;
-*/
+
 typedef struct {
   long active;
   char *filename;

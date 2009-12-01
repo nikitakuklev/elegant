@@ -46,8 +46,10 @@ void chfill2(book2 *bName, double x, double y, double weight);
 void chprint2(book2 *bName, char *filename, char *description, int verbosity);
 void free_hbook2(book2 *x);
 
-ntuple *chbookn(char **vName, int NDimension, double *xmin, double *xmax, int *xbins);
-void chfilln(ntuple *bName, double *x, double weight);
+ntuple *chbookn(char **vName, int NDimension, double *xmin, double *xmax, long *xbins, int offset);
+void chfilln(ntuple *bName, double *x, double weight, int offset);
+void chprintn(ntuple *bName, char *filename, char *description, SDDS_DEFINITION *parameter_definition,
+              void **sdds_value, int n_parameters, int verbosity, int append);
 void free_hbookn(ntuple *x);
 
 void checkbook2 (book2 *bName);

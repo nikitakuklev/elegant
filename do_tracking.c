@@ -15,6 +15,7 @@
 #include "mdb.h"
 #include "mdbsun.h"
 #include "track.h"
+#include "chbook.h"
 /* #include "smath.h" */
 void flushTransverseFeedbackDriverFiles(TFBDRIVER *tfbd);
 void set_up_frfmode(FRFMODE *rfmode, char *element_name, double element_z, long n_passes,  RUN *run, long n_particles, double Po, double total_length);
@@ -42,6 +43,8 @@ void distributionScatter(double **part, long np, double Po, DSCATTER *scat, long
 void recordLossPass(long *lostOnPass, long *nLost, long nLeft, long nMaximum, long pass, int myid,
                     int lostSinceSeqMode);
 void storeMonitorOrbitValues(ELEMENT_LIST *eptr, double **part, long np);
+void hist_table (BEAM *beam, long np, double Po, ELEMENT_LIST *eptr);
+void findMinMax (double **coord, long np, double *min, double *max, double *c0, double Po);
 
 #if USE_MPI
 typedef enum balanceMode {badBalance, startMode, goodBalance} balance;
@@ -1574,7 +1577,22 @@ long do_tracking(
       	if (((DRIFT*)eptr->p_elem)->length > 0.0) 
         	accumulateSCMULT(coord, nToTrack, eptr);
       }
-
+      if (i_pass == n_passes+passOffset-1) {
+      if (beam) {
+        if (beam->hist) {
+          long hist_flag = 1, type=eptr->type;
+          if (beam->hist->name && !wild_match(name, beam->hist->name))
+            hist_flag = 0;
+          if (beam->hist->type && !wild_match(entity_name[type], beam->hist->type))
+            hist_flag = 0;
+          if (beam->hist->exclude && wild_match(name, beam->hist->exclude))
+            hist_flag = 0;
+          if (hist_flag) {
+            hist_table (beam, nLeft, *P_central, eptr);
+          }
+        }
+      }
+      }
       last_type = eptr->type;
       eptrPred = eptr;
       eptr = eptr->succ;
@@ -3758,4 +3776,112 @@ void transformEmittances(double **coord, long np, double pCentral, EMITTANCEELEM
       coord[j][2*i+1] = factor*(coord[j][2*i+1]-eta*coord[j][5]) + eta*coord[j][5];
     }
   }
+}
+
+void hist_table (BEAM *beam, long np, double Po, ELEMENT_LIST *eptr)
+{
+  char *Name[6]={"x","xp","y","yp","t", "p"};
+  double Min[6], Max[6], c0[6];
+  long i, j, bins[6];
+  ntuple *transDis, *longiDis, *fullDis;
+  double **coord, part[6], P, beta;
+  static int append=0;
+  static SDDS_DEFINITION element_para[4] = {
+    {"s", "&parameter name=s, units=m, type=double, description=\"Distance\" &end"},
+    {"ElementName", "&parameter name=ElementName, type=string, description=\"Element name\", format_string=%10s &end"},
+    {"ElementOccurence", 
+     "&parameter name=ElementOccurence, type=long, description=\"Occurence of element\", format_string=%6ld &end"},
+    {"ElementType", "&parameter name=ElementType, type=string, description=\"Element-type name\", format_string=%10s &end"},
+  };
+  static void *element_para_value[4];
+  element_para_value[0] = (void*)(&eptr->end_pos);
+  element_para_value[1] = (void*)(&eptr->name);
+  element_para_value[2] = (void*)(&eptr->occurence);
+  element_para_value[3] = (void*)(&entity_name[eptr->type]);
+
+  for (i=0; i<4; i++)
+    bins[i] = beam->hist->tbins[i];
+  for (i=0; i<2; i++)
+    bins[i+4] = beam->hist->lbins[i];
+
+  coord = beam->particle;
+  findMinMax (coord, np, Min, Max, c0, Po);
+
+  Min[4] -= c0[4];
+  Max[4] -= c0[4];
+  if (beam->hist->toutput)
+    transDis = chbookn(Name, 4, Min, Max, bins, 0);
+  if (beam->hist->loutput)
+    longiDis = chbookn(Name, 2, Min, Max, bins, 4);
+  if (beam->hist->output)
+    fullDis = chbookn(Name, 6, Min, Max, beam->hist->bins, 0);
+
+  for (i=0; i<np; i++) {
+    for (j=0; j<6; j++) {
+      if (j==4) {
+        P = Po*(1+coord[i][5]);
+        beta = P/sqrt(P*P+1);
+        part[4] = coord[i][4]/(beta*c_mks)-c0[4];
+      }
+      else
+        part[j] = coord[i][j];
+    }
+    if (beam->hist->toutput)
+      chfilln(transDis, part, 1, 0);
+    if (beam->hist->loutput)
+      chfilln(longiDis, part, 1, 4);
+    if (beam->hist->output)
+      chfilln(fullDis, part, 1, 0);
+  }
+
+  if (beam->hist->toutput) {
+    chprintn(transDis, beam->hist->toutput, "transverse distribution", element_para, element_para_value,
+             4, 0, append);
+    free_hbookn(transDis);    
+  }
+  if (beam->hist->loutput) {
+    chprintn(longiDis, beam->hist->loutput, "longitudinal distribution", element_para, element_para_value,
+             4, 0, append);
+    free_hbookn(longiDis);
+  }
+  if (beam->hist->output) {
+    chprintn(fullDis, beam->hist->output, "6D distribution", element_para, element_para_value,
+             4, 0, append);
+    free_hbookn(fullDis);
+  }
+  append = 1;
+
+  return;
+}
+
+void findMinMax (double **coord, long np, double *min, double *max, double *c0, double Po)
+{
+  long i, j;
+  double P, beta, time;
+
+  for (j=0; j<6; j++) {
+    max[j] = -(min[j] = DBL_MAX);
+    c0[j] = 0;
+    for (i=0; i<np; i++) {
+      if (j==4) {
+        P = Po*(1+coord[i][5]);
+        beta = P/sqrt(P*P+1);
+        time = coord[i][4]/(beta*c_mks);
+        c0[j] += time;
+        if (min[j] > time)
+          min[j] = time;
+        if (max[j] < time)
+          max[j] = time;
+      }
+      else {
+        c0[j] += coord[i][j];
+        if (min[j] > coord[i][j])
+          min[j] = coord[i][j];
+        if (max[j] < coord[i][j])
+          max[j] = coord[i][j];
+      }
+    }
+    c0[j] /= (double)np; 
+  }
+  return;
 }
