@@ -5,11 +5,6 @@ Lorentz equation.  It is not symplectic, and hence this element is not
 recommended for long-term tracking simulation of undulators in storage
 rings.  
 
-The expressions for the laser field used by this element are from
-A. Chao's article ``Laser Acceleration --- Focussed Laser,'' available
-on-line at \\
-http://www.slac.stanford.edu/~achao/LaserAccelerationFocussed.pdf .
-
 The fields in the undulator can be expressed in one of three ways.
 The FIELD\_EXPANSION parameter is used to control which method is used.
 \begin{itemize}
@@ -51,6 +46,13 @@ precise.  Small differences from results with the exact field may be
 seen.  Generally, these are too small to be a concern.  As a result,
 this is the default mode.
 \end{itemize}
+
+The expressions for the laser field used by this element are from
+A. Chao's article ``Laser Acceleration --- Focussed Laser,'' available
+on-line at \\
+http://www.slac.stanford.edu/$\sim$achao/LaserAccelerationFocussed.pdf .
+The implementation covers laser modes TEM{\em ij}, where
+$0\leq i \leq 4$ and $0 \leq j \leq 4$.
 
 By default, if the laser wavelength is not given, it is computed from the resonance
 condition:

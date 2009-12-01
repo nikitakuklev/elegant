@@ -486,6 +486,8 @@ void (*set_up_derivatives(
     lsrMdltr->omega = omega = *kscale*c_mks;
     lsrMdltr->Escale = particleCharge/(particleMass*omega*c_mks);
     lsrMdltr->Bscale = particleCharge/(particleMass*omega);
+    if (lsrMdltr->laserM<0 || lsrMdltr->laserN<0)
+      bomb("M and N must be non-negative for LSRMDLTR", NULL);
     lsrMdltr->Ef0Laser = 2/lsrMdltr->laserW0*
       sqrt(lsrMdltr->laserPeakPower/(ipow(2,lsrMdltr->laserM+lsrMdltr->laserN)*PI*factorial(lsrMdltr->laserM)*factorial(lsrMdltr->laserN)*epsilon_o*c_mks));
     X_offset = 0;
