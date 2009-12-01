@@ -183,6 +183,7 @@ and phase modulation.",
     "A canonical kick element combining quadrupole and sextupole fields.",
     "An undulator kick map (e.g., using data from RADIA).",
     "A time-dependent multipole kicker magnet. The waveform is in SDDS format, with time in seconds and amplitude normalized to 1.",
+    "Applies a linear transformation to the beam to force the emittance to given values.",
     } ;
 
 QUAD quad_example;
