@@ -274,7 +274,11 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
   MATRIX *dispM, *dispOld, *dispNew;
   ELEMENT_LIST *elemOrig;
   static long asinWarning = 50;
+#if defined(__USE_ISOC99) || defined(__USE_ISOC94)
   double complex kappa;  
+#else
+  doublecomplex_sdds kappa;  
+#endif
 
   if (!twiss0)
     bomb("initial Twiss parameters not given (propagate_twiss_parameters())", NULL);
@@ -573,7 +577,12 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
     /* Compute linear coupling based on 187 of Handbook of Accelerator Physics and Engineering 
      * and P.J. Bryant, "A Simple Theory for Weak Betatron Coupling", CERN 94-01, Vol 1., 207-217.
      */
+#if defined(__USE_ISOC99) || defined(__USE_ISOC94)
     double complex integrand, phaseFactor;
+#else
+    doublecomplex_sdds integrand, phaseFactor, tmp;
+    double tmp2;
+#endif
     double ks, phase, y, K1, K1r, tilt;
     long q;
 #ifdef DEBUG_COUPLING
@@ -595,7 +604,12 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
     fprintf(fp, "&column name=kappa1 , type=double &end\n");
     fprintf(fp, "&data mode=ascii no_row_counts=1 &end\n");
 #endif
+#if defined(__USE_ISOC99) || defined(__USE_ISOC94)
     kappa = 0;   /* coupling factor */
+#else
+    kappa.r = 0;   /* coupling factor */
+    kappa.i = 0;
+#endif
     elem = elemOrig;
     q = tune[0] - tune[1] + 0.5;
     couplingFactor[1] = (tune[0] - tune[1]) - q;
@@ -643,22 +657,50 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
             - (tune[0] - tune[1] - q)*2*PI*
               (elem->end_pos-length/2)/sTotal;
           phaseFactor = cexpi(phase);
+#if defined(__USE_ISOC99) || defined(__USE_ISOC94)
           integrand = K1r + (alpha[0]/beta[0] - alpha[1]/beta[1])*ks/2 - I*(1/beta[0]+1/beta[1])*ks/2;
           kappa = kappa + integrand*phaseFactor*sqrt(beta[0]*beta[1])/PIx2*length;
+#else
+          integrand.r = K1r + (alpha[0]/beta[0] - alpha[1]/beta[1])*ks/2;
+          integrand.i = -(1/beta[0]+1/beta[1])*ks/2;
+
+	  tmp.r = (integrand.r * phaseFactor.r - integrand.i * phaseFactor.i);
+          tmp.i = (integrand.i * phaseFactor.r + integrand.r * phaseFactor.i);
+          tmp2 = sqrt(beta[0]*beta[1])/PIx2*length;
+          tmp.r = tmp.r * tmp2;
+          tmp.i = tmp.i * tmp2;
+	  kappa.r = kappa.r + tmp.r;
+          kappa.i = kappa.i + tmp.i;
+#endif
+
 #ifdef DEBUG_COUPLING
+#if defined(__USE_ISOC99) || defined(__USE_ISOC94)
+          fprintf(fp, "%s %e %e %e %e %e %e %e %e %e %e %e %e\n",
+                  elem->name, elem->end_pos-length/2, length, K1r, tilt, ks,
+                  phase, creal(phaseFactor), cimag(phaseFactor), creal(integrand), cimag(integrand),
+                  creal(kappa), cimag(kappa));
+#else
           fprintf(fp, "%s %e %e %e %e %e %e %e %e %e %e %e %e\n",
                   elem->name, elem->end_pos-length/2, length, K1r, tilt, ks,
                   phase, phaseFactor.r, phaseFactor.i, integrand.r, integrand.i,
-                  kappa.i, kappa.r);
+                  kappa.r, kappa.i);
 #endif
+#endif
+
         }
       }
       elem = elem->succ;
     }
+
+#if defined(__USE_ISOC99) || defined(__USE_ISOC94)
     if ((couplingFactor[0] = cabs(kappa)))
+#else
+    if (couplingFactor[0] = sqrt(kappa.r * kappa.r + kappa.i * kappa.i))
+#endif
       couplingFactor[2] = sqr(couplingFactor[0])/(sqr(couplingFactor[0]) + sqr(couplingFactor[1]));
     else
       couplingFactor[2] = 0;
+
 #ifdef DEBUG_COUPLING
     fclose(fp);
 #endif
@@ -3687,12 +3729,19 @@ void setLinearChromaticTrackingValues(LINE_LIST *beamline)
 void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, double *tune)
 /* Based on J. Bengtsson, SLS Note 9/97, March 7, 1997, with corrections per W. Guo (NSLS) */
 {
+#if defined(__USE_ISOC99) || defined(__USE_ISOC94)
   double complex h11001, h00111, h20001, h00201, h10002;
   double complex h21000, h30000, h10110, h10020, h10200;
   double complex h22000, h11110, h00220, h31000, h40000, h12000;
   double complex h20110, h11200, h20020, h20200, h00310, h00400;
   double complex t1, t2, t3, t4;
-  
+#else
+  doublecomplex_sdds h11001, h00111, h20001, h00201, h10002;
+  doublecomplex_sdds h21000, h30000, h10110, h10020, h10200;
+  doublecomplex_sdds h22000, h11110, h00220, h31000, h40000, h12000;
+  doublecomplex_sdds h20110, h11200, h20020, h20200, h00310, h00400;
+  doublecomplex_sdds t1, t2, t3, t4;
+#endif
   double betax1, betay1, phix1, phiy1, etax1;
   double betax2, betay2, phix2, phiy2;
   double coef, b2L, b3L1, b3L2, sqrt_betax, sqrt3_betax, nux, nuy;
@@ -3700,8 +3749,15 @@ void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, do
   ELEMENT_LIST *eptr1, *eptr2;
   
   /* accumulate real and imaginary parts */
+#if defined(__USE_ISOC99) || defined(__USE_ISOC94)
   h11001 = h00111 = h20001 = h00201 = h10002 = 0;
   h21000 = h30000 = h10110 = h10020 = h10200 = 0;
+#else
+  h11001.r = h00111.r = h20001.r = h00201.r = h10002.r = 0;
+  h21000.r = h30000.r = h10110.r = h10020.r = h10200.r = 0;
+  h11001.i = h00111.i = h20001.i = h00201.i = h10002.i = 0;
+  h21000.i = h30000.i = h10110.i = h10020.i = h10200.i = 0;
+#endif
 
   eptr1 = elem;
   while (eptr1) {
@@ -3759,40 +3815,81 @@ void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, do
       /* first-order chromatic terms */
       /* h11001 and h00111 */
       coef = b2L-2*b3L1*etax1;
+#if defined(__USE_ISOC99) || defined(__USE_ISOC94)
       h11001 += coef*betax1/4;
       h00111 += -coef*betay1/4;
+#else
+      h11001.r += coef*betax1/4;
+      h00111.r += -coef*betay1/4;
+#endif
 
+#if defined(__USE_ISOC99) || defined(__USE_ISOC94)
       /* h20001, h00201 */
       h20001 += coef/8*betax1*cos(2*phix1) + I*coef/8*betax1*sin(2*phix1);
       h00201 += -coef/8*betay1*cos(2*phiy1) + I*(-coef/8*betay1*sin(2*phiy1));
+#else
+      /* h20001, h00201 */
+      h20001.r += coef/8*betax1*cos(2*phix1);
+      h20001.i += coef/8*betax1*sin(2*phix1);
+      h00201.r += -coef/8*betay1*cos(2*phiy1);
+      h00201.i += -coef/8*betay1*sin(2*phiy1);
+#endif
 
       /* h10002 */
       coef = b2L-b3L1*etax1;
+#if defined(__USE_ISOC99) || defined(__USE_ISOC94)
       h10002 += coef/2*etax1*sqrt_betax*cos(phix1) + I*coef/2*etax1*sqrt_betax*sin(phix1);
+#else
+      h10002.r += coef/2*etax1*sqrt_betax*cos(phix1);
+      h10002.i += coef/2*etax1*sqrt_betax*sin(phix1);
+#endif
 
       if (b3L1) {
         /* first-order geometric terms */
         /* h21000 */
         coef = -b3L1/8*sqrt3_betax;
+#if defined(__USE_ISOC99) || defined(__USE_ISOC94)
         h21000 += coef*cos(phix1) + I*coef*sin(phix1);
+#else
+        h21000.r += coef*cos(phix1);
+        h21000.i += coef*sin(phix1);
+#endif
         
         /* h30000 */
         coef = coef/3;
+#if defined(__USE_ISOC99) || defined(__USE_ISOC94)
         h30000 += coef*cos(3*phix1) + I*coef*sin(3*phix1);
+#else
+        h30000.r += coef*cos(3*phix1);
+        h30000.i += coef*sin(3*phix1);
+#endif
         
         /* h10110 */
         coef = b3L1/4*sqrt_betax*betay1;
+#if defined(__USE_ISOC99) || defined(__USE_ISOC94)
         h10110 += coef*cos(phix1) + I*coef*sin(phix1);
+#else
+        h10110.r += coef*cos(phix1);
+        h10110.i += coef*sin(phix1);
+#endif
         
         /* h10020 and h10200 */
         coef = coef/2;
+#if defined(__USE_ISOC99) || defined(__USE_ISOC94)
         h10020 += coef*cos(phix1-2*phiy1) + I*coef*sin(phix1-2*phiy1);
         h10200 += coef*cos(phix1+2*phiy1) + I*coef*sin(phix1+2*phiy1);
+#else
+        h10020.r += coef*cos(phix1-2*phiy1);
+        h10020.i += coef*sin(phix1-2*phiy1);
+        h10200.r += coef*cos(phix1+2*phiy1);
+        h10200.i += coef*sin(phix1+2*phiy1);
+#endif
       }
     }
     eptr1 = eptr1->succ;
   }
 
+#if defined(__USE_ISOC99) || defined(__USE_ISOC94)
   d->h11001 = cabs(h11001);
   d->h00111 = cabs(h00111);
   d->h20001 = cabs(h20001);
@@ -3804,59 +3901,176 @@ void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, do
   d->h10110 = cabs(h10110);
   d->h10020 = cabs(h10020);
   d->h10200 = cabs(h10200);
+#else
+  d->h11001 = sqrt(h11001.r * h11001.r + h11001.i * h11001.i);
+  d->h00111 = sqrt(h00111.r * h00111.r + h00111.i * h00111.i);
+  d->h20001 = sqrt(h20001.r * h20001.r + h20001.i * h20001.i);
+  d->h00201 = sqrt(h00201.r * h00201.r + h00201.i * h00201.i);
+  d->h10002 = sqrt(h10002.r * h10002.r + h10002.i * h10002.i);
+
+  d->h21000 = sqrt(h21000.r * h21000.r + h21000.i * h21000.i);
+  d->h30000 = sqrt(h30000.r * h30000.r + h30000.i * h30000.i);
+  d->h10110 = sqrt(h10110.r * h10110.r + h10110.i * h10110.i);
+  d->h10020 = sqrt(h10020.r * h10020.r + h10020.i * h10020.i);
+  d->h10200 = sqrt(h10200.r * h10200.r + h10200.i * h10200.i);
+#endif
 
   /* compute second-order geomeric terms */
+#if defined(__USE_ISOC99) || defined(__USE_ISOC94)
   h12000 = conj(h21000);
   h22000 = (3*sqr(cabs(h21000)) + sqr(cabs(h30000)))/64;
   d->h22000 = cabs(h22000);
+#else
+  h12000.r = h21000.r;
+  h12000.i = -h21000.i;
+  h22000.r = (3*sqr(sqrt(h21000.r * h21000.r + h21000.i * h21000.i)) + sqr(sqrt(h30000.r * h30000.r + h30000.i * h30000.i)))/64;
+  h22000.i =0;
+  d->h22000 = abs(h22000.r);
+#endif
 
+#if defined(__USE_ISOC99) || defined(__USE_ISOC94)
   t1 = 2*h21000*conj(h10110);
   t2 = h10020*conj(h10020);
   t3 = h10200*conj(h10200);
   h11110 = (t1+t2+t3)/16;
   d->h11110 = cabs(h11110);
-  
+#else
+  t1.r = 2*(h21000.r*h10110.r + h21000.i*h10110.i);
+  t1.i = 2*(h21000.i*h10110.r - h21000.r*h10110.i);
+  t2.r = h10020.r*h10020.r + h10020.i*h10020.i;
+  t2.i = h10020.i*h10020.r - h10020.r*h10020.i;
+  t3.r = h10200.r*h10200.r + h10200.i*h10200.i;
+  t3.i = h10200.i*h10200.r - h10200.r*h10200.i;
+  h11110.r = (t1.r+t2.r+t3.r)/16;
+  h11110.i = (t1.i+t2.i+t3.i)/16;
+  d->h11110 = sqrt(h11110.r * h11110.r + h11110.i * h11110.i);
+#endif
+
+#if defined(__USE_ISOC99) || defined(__USE_ISOC94)
   h00220 = (4*sqr(cabs(h10110)) + sqr(cabs(h10020)) + sqr(cabs(h10200)))/64;
   d->h00220 = cabs(h00220);
-  
+#else
+  h00220.r = (4*sqr(sqrt(h10110.r * h10110.r + h10110.i * h10110.i)) + sqr(sqrt(h10020.r * h10020.r + h10020.i * h10020.i)) + sqr(sqrt(h10200.r * h10200.r + h10200.i * h10200.i)))/64;
+  h00220.i = 0;
+  d->h00220 = abs(h00220.r);
+#endif
+ 
+#if defined(__USE_ISOC99) || defined(__USE_ISOC94)
   h31000 = h30000*conj(h21000)/32;
   d->h31000 = cabs(h31000);
-  
+#else
+  h31000.r = (h30000.r * h21000.r + h30000.i * h21000.i)/32;
+  h31000.i = (h30000.i * h21000.r - h30000.r * h21000.i)/32;
+  d->h31000 = sqrt(h31000.r * h31000.r + h31000.i * h31000.i);
+#endif
+
+#if defined(__USE_ISOC99) || defined(__USE_ISOC94)
   h40000 = h30000*h21000/64;
   d->h40000 = cabs(h40000);
+#else
+  h40000.r = (h30000.r * h21000.r - h30000.i * h21000.i)/64;
+  h40000.i = (h30000.i * h21000.r + h30000.r * h21000.i)/64;
+  d->h40000 = sqrt(h40000.r * h40000.r + h40000.i * h40000.i);
+#endif
   
+#if defined(__USE_ISOC99) || defined(__USE_ISOC94)
   t1 = 2*h30000*conj(h10110);
   t2 = 2*h21000*h10110;
   t3 = 4*h10200*h10020;
   h20110 = (t1+t2+t3)/64;
   d->h20110 = cabs(h20110);
-  
+#else
+  t1.r = 2*(h30000.r*h10110.r + h30000.i*h10110.i);
+  t1.i = 2*(h30000.i*h10110.r - h30000.r*h10110.i);
+  t2.r = 2*(h21000.r*h10110.r - h21000.i*h10110.i);
+  t2.i = 2*(h21000.i*h10110.r + h21000.r*h10110.i);
+  t3.r = 4*(h10200.r*h10020.r - h10200.i*h10020.i);
+  t3.i = 4*(h10200.i*h10020.r + h10200.r*h10020.i);
+  h20110.r = (t1.r+t2.r+t3.r)/64;
+  h20110.i = (t1.i+t2.i+t3.i)/64;
+  d->h20110 = sqrt(h20110.r * h20110.r + h20110.i * h20110.i);
+#endif
+
+#if defined(__USE_ISOC99) || defined(__USE_ISOC94)
   t1 = 2*h10200*h12000;
   t2 = 2*h21000*conj(h10020);
   t3 = 4*h10200*conj(h10110);
   t4 = 4*h10110*conj(h10020);
   h11200 = (t1+t2+t3+t4)/64;
   d->h11200 = cabs(h11200);
-  
+#else
+  t1.r = 2*(h10200.r*h12000.r - h10200.i*h12000.i);
+  t1.i = 2*(h10200.i*h12000.r + h10200.r*h12000.i);
+  t2.r = 2*(h21000.r*h10020.r + h21000.i*h10020.i);
+  t2.i = 2*(h21000.i*h10020.r - h21000.r*h10020.i);
+  t3.r = 4*(h10200.r*h10110.r + h10200.i*h10110.i);
+  t3.i = 4*(h10200.i*h10110.r - h10200.r*h10110.i);
+  t4.r = 4*(h10110.r*h10020.r + h10110.i*h10020.i);
+  t4.i = 4*(h10110.i*h10020.r - h10110.r*h10020.i);
+  h11200.r = (t1.r+t2.r+t3.r+t4.r)/64;
+  h11200.i = (t1.i+t2.i+t3.i+t4.i)/64;
+  d->h11200 = sqrt(h11200.r * h11200.r + h11200.i * h11200.i);
+#endif
+
+#if defined(__USE_ISOC99) || defined(__USE_ISOC94)
   t1 = h21000*h10020;
   t2 = h30000*conj(h10200);
   t3 = 4*h10110*h10020;
   h20020 = (t1+t2+t3)/64;
   d->h20020 = cabs(h20020);
-  
+#else
+  t1.r = h21000.r*h10020.r - h21000.i*h10020.i;
+  t1.i = h21000.i*h10020.r + h21000.r*h10020.i;
+  t2.r = h30000.r*h10200.r + h30000.i*h10200.i;
+  t2.i = h30000.i*h10200.r - h30000.r*h10200.i;
+  t3.r = 4*(h10110.r*h10020.r - h10110.i*h10020.i);
+  t3.i = 4*(h10110.i*h10020.r + h10110.r*h10020.i);
+  h20020.r = (t1.r+t2.r+t3.r)/64;
+  h20020.i = (t1.i+t2.i+t3.i)/64;
+  d->h20020 = sqrt(h20020.r * h20020.r + h20020.i * h20020.i);
+#endif
+
+#if defined(__USE_ISOC99) || defined(__USE_ISOC94)
   t1 = h30000*conj(h10020)/64;
   t2 = h10200*h21000/64;
   t3 = h10110*h10200/16;
   h20200 = t1+t2+t3;
   d->h20200 = cabs(h20200);
+#else
+  t1.r = (h30000.r*h10020.r + h30000.i*h10020.i)/64;
+  t1.i = (h30000.i*h10020.r - h30000.r*h10020.i)/64;
+  t2.r = (h10200.r*h21000.r - h10200.i*h21000.i)/64;
+  t2.i = (h10200.i*h21000.r + h10200.r*h21000.i)/64;
+  t3.r = (h10110.r*h10200.r - h10110.i*h10200.i)/16;
+  t3.i = (h10110.i*h10200.r + h10110.r*h10200.i)/16;
+  h20200.r = t1.r+t2.r+t3.r;
+  h20200.i = t1.i+t2.i+t3.i;
+  d->h20200 = sqrt(h20200.r * h20200.r + h20200.i * h20200.i);
+#endif
   
+#if defined(__USE_ISOC99) || defined(__USE_ISOC94)
   t1 = h10200*conj(h10110);
   t2 = h10110*conj(h10020);
   h00310 = (t1+t2)/32;
   d->h00310 = cabs(h00310);
+#else
+  t1.r = h10200.r*h10110.r + h10200.i*h10110.i;
+  t1.i = h10200.i*h10110.r - h10200.r*h10110.i;
+  t2.r = h10110.r*h10020.r + h10110.i*h10020.i;
+  t2.i = h10110.i*h10020.r - h10110.r*h10020.i;
+  h00310.r = (t1.r+t2.r)/32;
+  h00310.i = (t1.i+t2.i)/32;
+  d->h00310 = sqrt(h00310.r * h00310.r + h00310.i * h00310.i);
+#endif
   
+#if defined(__USE_ISOC99) || defined(__USE_ISOC94)
   h00400 = h10200*conj(h10020)/64;
   d->h00400 = cabs(h00400);
+#else
+  h00400.r = (h10200.r * h10020.r + h10200.i * h10020.i)/64;
+  h00400.i = (h10200.i * h10020.r - h10200.r * h10020.i)/64;
+  d->h00400 = sqrt(h00400.r * h00400.r + h00400.i * h00400.i);
+#endif
   
   nux = tune[0];
   nuy = tune[1];

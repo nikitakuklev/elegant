@@ -378,7 +378,11 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
   }
   if (rfmode->preload && rfmode->charge) {
     double Vb, omega, To, tau;
+#if defined(__USE_ISOC99) || defined(__USE_ISOC94)
     double complex Vc;
+#else
+    doublecomplex_sdds Vc, tmp, tmp2;
+#endif
     if (rfmode->fwaveform || rfmode->Qwaveform) {
       printf("Warning: preloading of RFMODE doesn't work properly with frequency or Q waveforms\n");
       printf("unless the initial values of the frequency and Q factors are 1.\n");
@@ -388,12 +392,28 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
     Vb = 2 * omega/4*(rfmode->Ra)/rfmode->Q * rfmode->charge * rfmode->preload_factor * particleRelSign;
     tau = 2*rfmode->Q/(omega*(1+rfmode->beta));
 
+#if defined(__USE_ISOC99) || defined(__USE_ISOC94)
     Vc = -Vb/(1-cexpi(omega*To)*exp(-To/tau));
     rfmode->V = cabs(Vc);
     rfmode->last_phase = atan2(cimag(Vc), creal(Vc));
     fprintf(stdout, "RFMODE %s at z=%fm preloaded:  V = (%e, %e) V  =  %eV at %fdeg \n",
             element_name, element_z, creal(Vc), cimag(Vc),
             rfmode->V, rfmode->last_phase*180/PI);
+#else
+    tmp = cexpi(omega*To);
+    tmp2.r = (tmp.r * exp(-To/tau));
+    tmp2.i = (tmp.i * exp(-To/tau));
+    tmp2.r = 1 - tmp2.r;
+    tmp2.i = -tmp2.i;
+    Vc.r = (-Vb * tmp2.r) / (tmp2.r * tmp2.r + tmp2.i * tmp2.i);
+    Vc.i = (Vb * tmp2.i) / (tmp2.r * tmp2.r + tmp2.i * tmp2.i);
+    rfmode->V = sqrt(Vc.r * Vc.r + Vc.i * Vc.i);
+    rfmode->last_phase = atan2(Vc.i, Vc.r);
+    fprintf(stdout, "RFMODE %s at z=%fm preloaded:  V = (%e, %e) V  =  %eV at %fdeg \n",
+            element_name, element_z, Vc.r, Vc.i,
+            rfmode->V, rfmode->last_phase*180/PI);
+#endif
+
     fflush(stdout);
     fprintf(stdout, "omega=%21.15e To=%21.15es, Vb = %21.15eV, tau = %21.15es\n", omega, To, Vb, tau);
     fflush(stdout);

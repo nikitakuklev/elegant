@@ -96,7 +96,12 @@ void do_perturbations(NAMELIST_TEXT *nltext)
   double fdx, fdy, alpha, gamma, eps;
   double fdX, fdY, srot, crot;
   double dr, dphi;
+#if defined(__USE_ISOC99) || defined(__USE_ISOC94)
   complex double exp1, exp2, dHn;
+#else
+  doublecomplex_sdds exp1, exp2, dHn, tmp3, tmp4, tmp5, tmp6;
+  double tmp, tmp2;
+#endif
 
   /* initialize variables */
   SDDS_output = elegant_output = kmult_output = name = NULL;
@@ -231,6 +236,7 @@ void do_perturbations(NAMELIST_TEXT *nltext)
         eps = hypot(fdY, fdX);
       }
       exp1 = cexpi(gamma-alpha);
+#if defined(__USE_ISOC99) || defined(__USE_ISOC94)
       exp2 = conj(exp1);
       for (i=1; i<=n_harm; i++) {
         /* loop over all harmonics */
@@ -240,6 +246,25 @@ void do_perturbations(NAMELIST_TEXT *nltext)
         f[i-1] += creal(dHn);
         g[i-1] += cimag(dHn);
       }
+#else
+      exp2.r = exp1.r;
+      exp2.i = -exp1.i;
+      for (i=1; i<=n_harm; i++) {
+        /* loop over all harmonics */
+        tmp = (coefs[iN].bm[i-1]-coefs[iN].am[i-1])*eps/2;
+        tmp2 = (coefs[iN].bm[i-1]+coefs[iN].am[i-1])*eps/2;
+	tmp3.r = exp1.r * tmp + exp2.r * tmp2;
+	tmp3.i = exp1.i * tmp + exp2.i * tmp2;
+	tmp4 = cexpi(-(N+i)*alpha);
+	tmp5 = cexpi(PI/2-(PI*i)/(2.*N));
+	tmp6.r = (tmp3.r * tmp4.r - tmp3.i * tmp4.i);
+	tmp6.i = (tmp3.i * tmp4.r + tmp3.r * tmp4.i);
+	dHn.r = (tmp5.r * tmp6.r - tmp5.i * tmp6.i);
+	dHn.i = (tmp5.i * tmp6.r + tmp5.r * tmp6.i);
+        f[i-1] += dHn.r;
+        g[i-1] += dHn.i;
+      }
+#endif
     }
     /* add rotation error contribution */
     if (dphi_halves) {

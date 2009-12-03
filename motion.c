@@ -2442,8 +2442,13 @@ void computeLaserField(double *Ef, double *Bf, double phase, double Ef0, double 
   static FILE *fpdeb = NULL;
 #endif
 
+#if defined(__USE_ISOC99) || defined(__USE_ISOC94)
   double complex Ec;
   double complex Q;
+#else
+  doublecomplex_sdds Ec;
+  doublecomplex_sdds Q, tmp, tmp2;
+#endif
   double w, Hm, Hn, Hmp, Hnp, Hmpp;
   static long lastIndex = 0;
   double amplitude = 1;
@@ -2489,17 +2494,32 @@ void computeLaserField(double *Ef, double *Bf, double phase, double Ef0, double 
       lastIndex = i;
     }
   }
-  
+#if defined(__USE_ISOC99) || defined(__USE_ISOC94)
   Q = 1/(dz - I*ZR);
+#else
+  Q.r = dz/(dz * dz + ZR * ZR);
+  Q.i = ZR/(dz * dz + ZR * ZR);
+#endif
   w = w0*sqrt(1 + sqr(dz/ZR));
+#if defined(__USE_ISOC99) || defined(__USE_ISOC94)
   Ec = amplitude*Ef0*w0/w*cexp(I*phase - I*(m+n+1)*atan(dz/ZR) + I*k*Q/2*(x*x+y*y));
-
+#else
+  /* cexp (x + I * y) = exp (x) * cos (y) + I * exp (x) * sin (y) */
+  tmp.r = -k* Q.i /2*(x*x+y*y);
+  tmp.i = phase - (m+n+1)*atan(dz/ZR) + k* Q.r /2*(x*x+y*y);
+  tmp2.r = exp(tmp.r) * cos(tmp.i);
+  tmp2.i = exp(tmp.r) * sin(tmp.i);
+  Ec.r = amplitude*Ef0*w0/w * tmp2.r;
+  Ec.i = amplitude*Ef0*w0/w * tmp2.i;
+#endif
+  
   Hm = HermitePolynomial(sqrt(2)*x/w, m);
   Hn = HermitePolynomial(sqrt(2)*y/w, n);
   Hmp = HermitePolynomialDeriv(sqrt(2)*x/w, m);
   Hnp = HermitePolynomialDeriv(sqrt(2)*y/w, n);
   Hmpp = HermitePolynomial2ndDeriv(sqrt(2)*x/w, m);
-  
+
+#if defined(__USE_ISOC99) || defined(__USE_ISOC94)
   Ef[0] = creal(Hm*Hn*Ec);
   Ef[1] = 0;
   Ef[2] = creal(Ec*(I*sqrt(2)/(k*w)*Hmp*Hn - Q*x*Hm*Hn));
@@ -2507,6 +2527,18 @@ void computeLaserField(double *Ef, double *Bf, double phase, double Ef0, double 
   Bf[0] = creal(Ec*(2/sqr(k*w)*Hmp*Hnp + I*sqrt(2)*Q/(k*w)*(x*Hm*Hnp + y*Hmp*Hn) - x*y*Q*Q*Hm*Hn))/c_mks;
   Bf[1] = creal(Ec*(-2/sqr(k*w)*Hmpp*Hn - 2*sqrt(2)*I*Q/(k*w)*x*Hmp*Hn + (Q*Q*sqr(x) - I*Q/k + 1)*Hm*Hn))/c_mks;
   Bf[2] = creal(Ec*(I*sqrt(2)/(k*w)*Hm*Hnp - Q*y*Hm*Hn))/c_mks;
+#else
+  Ef[0] = Hm*Hn*Ec.r;
+  Ef[1] = 0;
+ 
+  Ef[2] = (Ec.r * (-Q.r * x*Hm*Hn)) - (Ec.i * (sqrt(2)/(k*w)*Hmp*Hn - Q.i * x*Hm*Hn));
+
+  Bf[0] = (Ec.r * (2/sqr(k*w)*Hmp*Hnp - sqrt(2)*Q.i/(k*w)*(x*Hm*Hnp + y*Hmp*Hn) - x*y*(Q.r*Q.r - Q.i*Q.i)*Hm*Hn))/c_mks - (Ec.i * (sqrt(2)*Q.r/(k*w)*(x*Hm*Hnp + y*Hmp*Hn) - x*y*(Q.i*Q.r + Q.r*Q.i)*Hm*Hn))/c_mks;
+
+  Bf[1] = (Ec.r * (-2/sqr(k*w)*Hmpp*Hn + 2*sqrt(2)*Q.i/(k*w)*x*Hmp*Hn + ((Q.r*Q.r - Q.i*Q.i)*sqr(x) + Q.i/k + 1)*Hm*Hn))/c_mks - (Ec.i * (-2*sqrt(2)*Q.r/(k*w)*x*Hmp*Hn + ((Q.i*Q.r + Q.r*Q.i)*sqr(x) - Q.r/k + 1)*Hm*Hn))/c_mks;
+
+  Bf[2] = (Ec.r * (-Q.r*y*Hm*Hn))/c_mks - (Ec.i * (sqrt(2)/(k*w)*Hm*Hnp - Q.i*y*Hm*Hn))/c_mks;
+#endif
 }
 
 double HermitePolynomial(double x, long n)

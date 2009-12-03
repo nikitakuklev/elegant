@@ -271,7 +271,11 @@ int nonlinearSCKick(double *coord, ELEMENT_LIST *eptr, double *center,
                      double sigmax, double sigmay, double *kick)
 {
   double k0, kx, ky, sqs;
+#if defined(__USE_ISOC99) || defined(__USE_ISOC94)
   double complex wa, wb, w1, w2, w;
+#else
+  doublecomplex_sdds wa, wb, w1, w2, w;
+#endif
   double temp;
   long flag;
 
@@ -281,8 +285,15 @@ int nonlinearSCKick(double *coord, ELEMENT_LIST *eptr, double *center,
   kx = k0 * sc->dmux * sigmax * sqrt(sigmax+sigmay) / sqrt(fabs(sigmax-sigmay)) / eptr->twiss->betax;
   ky = k0 * sc->dmuy * sigmay * sqrt(sigmax+sigmay) / sqrt(fabs(sigmax-sigmay)) / eptr->twiss->betay;
 
+#if defined(__USE_ISOC99) || defined(__USE_ISOC94)
   w1 = (coord[0]-center[0])/sqs + I*(coord[2]-center[1])/sqs;
   w2 = (coord[0]-center[0])*sigmay/sigmax/sqs + I*(coord[2]-center[1])*sigmax/sigmay/sqs;
+#else
+  w1.r = (coord[0]-center[0])/sqs;
+  w1.i = (coord[2]-center[1])/sqs;
+  w2.r = (coord[0]-center[0])*sigmay/sigmax/sqs;
+  w2.i = (coord[2]-center[1])*sigmax/sigmay/sqs;
+#endif
   temp = exp((-sqr(coord[0]-center[0])/sqr(sigmax)-sqr(coord[2]-center[1])/sqr(sigmay))/2.0);
 
   
@@ -291,10 +302,16 @@ int nonlinearSCKick(double *coord, ELEMENT_LIST *eptr, double *center,
   wb = complexErf(w2, &flag);
   if(!flag) return(0);
 
+#if defined(__USE_ISOC99) || defined(__USE_ISOC94)
   w = wa + temp*wb;
   kick[0] = kx * cimag(w);
   kick[1] = ky * creal(w);
-
+#else
+  w.r = wa.r + temp*wb.r;
+  w.i = wa.i + temp*wb.i;
+  kick[0] = kx * w.i;
+  kick[1] = ky * w.r;
+#endif
   return(1);
 }
 
