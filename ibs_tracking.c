@@ -47,6 +47,7 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
   double bLength, tLength, zRate[3];
   static SDDS_TABLE outPage;
   static long isInit=0, doOut=0;
+  double eta[4];
 
   if (IBS->nslice<1) 
     bomb("NSLICE has to be an integer >= 1", NULL);
@@ -61,7 +62,10 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
     init_IBS(element);
   if (IBS->dT == 0) return;
 
-  double eta[4] = {IBS->etax[IBS->elements-1], IBS->etaxp[IBS->elements-1], IBS->etay[IBS->elements-1], IBS->etayp[IBS->elements-1]};
+  eta[0] = IBS->etax[IBS->elements-1];
+  eta[1] = IBS->etaxp[IBS->elements-1];
+  eta[2] = IBS->etay[IBS->elements-1];
+  eta[3] = IBS->etayp[IBS->elements-1];
 
   index = (long*)malloc(sizeof(long)*np);
   count = (long*)malloc(sizeof(long)*IBS->nslice);
