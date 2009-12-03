@@ -106,6 +106,8 @@ initial individual values were not used.
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
+\item A bug was fixed in the {\tt haissinski}.  The \verb|-wake| option was nonfunctional due to an argument parsing
+  problem.  This was reported by A. Rusanov (NSRRC).
 \item The script {\tt astra2elegant} was replaced by a compiled program.  The program is not only much faster, but
   also has corrections for the conversion that will be evident in long bunches or low energy beams.  Thanks to 
   P. Piot (NIU) and J. Rowland (DLS) for input.
@@ -3286,15 +3288,6 @@ together with \verb|insert_elements| and \verb|replace_elements|.
     double p_upper = 0.0;
     long save_initial_coordinates = 1;
     long reverse_t_sign = 0;
-    STRING long_dist = NULL;
-    STRING tran_dist = NULL;
-    STRING full_dist = NULL;
-    long long_bins[2] = {0,0};
-    long tran_bins[4] = {0,0,0,0};
-    long full_bins[6] = {0,0,0,0,0,0};
-    STRING name = NULL;
-    STRING type = NULL;
-    STRING exclude = NULL;
 &end
 \end{verbatim}
 
@@ -3343,14 +3336,6 @@ accelerator is set to zero.
 of tracked particles in memory.  This is the default behavior.  If unset, the initial coordinates
 are not saved, but are reread from disk each time they are needed.  This is more memory efficient
 and is useful for tracking very large numbers of particles.
-\item \verb|long_dist|, \verb|tran_dist|,\verb|full_dist| --- The output file name of corresponding longitudinal (2D), transverse (4D) and full dimension histogram analysis. Has to be given together with the corresponding bin values. The output SDDS file contains a column ``weight'' (number of particles at each grid point). The data is sorted in a n-bit counter ($|nx,nxp,ny,nyp,nt,np|$ for 6D). Each page is for each required histogram analysis occurence. 
-\item \verb|long_bins|, \verb|tran_bins|, \verb|full_bins| --- The bin number in the order of (x,xp,y,yp,t,p) for doing histogram analysis. Has to be given together with the corresponding output file name.
-\item \verb|name| --- Possibily wild-card containing string specifying the
-	elements where the histogram analysis is taking place.
-\item \verb|type| --- Possibily wild-card containing string specifying the
-	element types where the histogram analysis is taking place.
-\item \verb|exclude| --- Possibily wild-card containing string specifying 
-	elements to be excluded from the specified histogram analysis.
 \end{itemize}
 
 \begin{latexonly}
