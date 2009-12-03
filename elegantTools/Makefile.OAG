@@ -7,9 +7,12 @@
 # in the file LICENSE that is included with this distribution. 
 #*************************************************************************
 #
-# $Id: Makefile.OAG,v 1.16 2009-07-28 14:44:53 borland Exp $
+# $Id: Makefile.OAG,v 1.17 2009-12-03 17:19:34 soliday Exp $
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.16  2009/07/28 14:44:53  borland
+# Replaced astra2elegant script with astra2elegant.c
+#
 # Revision 1.15  2009/07/22 21:52:59  borland
 # Added elegant2track script.
 #
@@ -84,7 +87,7 @@ SCRIPTS = elegantRingAnalysis beamLifetimeCalc fin2param elegant2shower shower2e
 PROD_HOST = $(PRODOAG)
 
 USR_CFLAGS = 	-I$(EPICS_EXTENSIONS)/src/SDDS/include -I$(EPICS_EXTENSIONS_INCLUDE) \
-		-DIEEE_MATH -DzLib
+		-DIEEE_MATH -DzLib -D_ISOC99_SOURCE
 
 ifdef WIN32
 USR_LIBS = 	mdbcommon matlib fftpack SDDS1 \
