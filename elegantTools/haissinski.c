@@ -14,7 +14,6 @@
  * Louis Emery, 2000
  */
 
-
 #include <stdio.h>
 #include "mdb.h"
 #include "scan.h"
@@ -309,12 +308,12 @@ int main( int argc, char **argv)
       case WAKE:
         if(!strlen(wakeFile=scanned[i].list[1]))
           bomb("bad -wake syntax", "-wakeFunction=<file>");
-        scanned[i].n_items--;
-        if (!scanItemList(&dummyFlags, scanned[i].list+1, &scanned[i].n_items, 0,
-                          "tColumn", SDDS_STRING, tCol, 1, 0,
-                          "wColumn", SDDS_STRING, wCol, 1, 0,
+        scanned[i].n_items -= 2;
+        if (!scanItemList(&dummyFlags, scanned[i].list+2, &scanned[i].n_items, 0,
+                          "tColumn", SDDS_STRING, &tCol, 1, 0,
+                          "wColumn", SDDS_STRING, &wCol, 1, 0,
                           NULL) ||
-            tCol || wCol)
+            !tCol || !wCol)
           bomb("invalid -wake syntax/values", "-wakeFunction=<file>,tColumn=<name>,wColumn=<name>");
         useWakeFunction = 1;
         useBBR = 0;
