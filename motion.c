@@ -2533,9 +2533,11 @@ void computeLaserField(double *Ef, double *Bf, double phase, double Ef0, double 
  
   Ef[2] = (Ec.r * (-Q.r * x*Hm*Hn)) - (Ec.i * (sqrt(2)/(k*w)*Hmp*Hn - Q.i * x*Hm*Hn));
 
-  Bf[0] = (Ec.r * (2/sqr(k*w)*Hmp*Hnp - sqrt(2)*Q.i/(k*w)*(x*Hm*Hnp + y*Hmp*Hn) - x*y*(Q.r*Q.r - Q.i*Q.i)*Hm*Hn))/c_mks - (Ec.i * (sqrt(2)*Q.r/(k*w)*(x*Hm*Hnp + y*Hmp*Hn) - x*y*(Q.i*Q.r + Q.r*Q.i)*Hm*Hn))/c_mks;
+  Bf[0] = (Ec.r * (2/sqr(k*w)*Hmp*Hnp - sqrt(2)*Q.i/(k*w)*(x*Hm*Hnp + y*Hmp*Hn) - x*y*(Q.r*Q.r - Q.i*Q.i)*Hm*Hn))/c_mks
+    - (Ec.i * (sqrt(2)*Q.r/(k*w)*(x*Hm*Hnp + y*Hmp*Hn) - x*y*(Q.i*Q.r + Q.r*Q.i)*Hm*Hn))/c_mks;
 
-  Bf[1] = (Ec.r * (-2/sqr(k*w)*Hmpp*Hn + 2*sqrt(2)*Q.i/(k*w)*x*Hmp*Hn + ((Q.r*Q.r - Q.i*Q.i)*sqr(x) + Q.i/k + 1)*Hm*Hn))/c_mks - (Ec.i * (-2*sqrt(2)*Q.r/(k*w)*x*Hmp*Hn + ((Q.i*Q.r + Q.r*Q.i)*sqr(x) - Q.r/k + 1)*Hm*Hn))/c_mks;
+  Bf[1] = (Ec.r * (-2/sqr(k*w)*Hmpp*Hn + 2*sqrt(2)*Q.i/(k*w)*x*Hmp*Hn + ((Q.r*Q.r - Q.i*Q.i)*sqr(x) + Q.i/k + 1)*Hm*Hn))/c_mks 
+    - (Ec.i * (-2*sqrt(2)*Q.r/(k*w)*x*Hmp*Hn + ((Q.i*Q.r + Q.r*Q.i)*sqr(x) - Q.r/k)*Hm*Hn))/c_mks;
 
   Bf[2] = (Ec.r * (-Q.r*y*Hm*Hn))/c_mks - (Ec.i * (sqrt(2)/(k*w)*Hm*Hnp - Q.i*y*Hm*Hn))/c_mks;
 #endif
