@@ -623,7 +623,7 @@ void getWakeFunction(FUNCTION *wake, char *wakeFile, char *tCol, char *wCol,
 
   SDDS_ReadPage(&wakePage);
   rows = SDDS_CountRowsOfInterest(&wakePage);
-  switch(SDDS_CheckColumn(&wakePage, tCol, "s", SDDS_DOUBLE, verbosity?stdout:NULL)) {
+  switch(SDDS_CheckColumn(&wakePage, tCol, "s", SDDS_DOUBLE, stderr)) {
   case SDDS_CHECK_NONEXISTENT:
   case SDDS_CHECK_WRONGTYPE:
   case SDDS_CHECK_WRONGUNITS:
@@ -631,7 +631,7 @@ void getWakeFunction(FUNCTION *wake, char *wakeFile, char *tCol, char *wCol,
     exit(1);
     break;
   }
-  switch(SDDS_CheckColumn(&wakePage, wCol, "V/C", SDDS_DOUBLE, verbosity?stdout:NULL)) {
+  switch(SDDS_CheckColumn(&wakePage, wCol, "V/C", SDDS_DOUBLE, stderr)) {
   case SDDS_CHECK_NONEXISTENT:
   case SDDS_CHECK_WRONGTYPE:
   case SDDS_CHECK_WRONGUNITS:
