@@ -9,6 +9,10 @@
 
 /* 
  * $Log: not supported by cvs2svn $
+ * Revision 1.4  2009/03/17 21:16:26  borland
+ * Added -deltaLimit option, which allows artificially imposing an maximum
+ * momentum aperture.
+ *
  * Revision 1.3  2008/05/21 21:00:15  xiaoam
  * Add check radiation integral when read twissFile. It's necessaray when user doesn't supply emitxInput.
  *
@@ -520,7 +524,7 @@ void TouschekLifeCalc(long verbosity)
 /* Normally the first element for twiss file is _BEG_, which is not true for aperture file.
  But we need it for starting the calculation. */
     if(s[i]!=0 && s[i]==s2[j] && strcmp(eName1[i],eName2[j])!=0) {
-      printf("element1 %s and elem2 %s at s1 %lf s2 %lf is diff",eName1[i],eName2[j],s[i],s2[j]);
+      printf("element1 \"%s\" and elem2 \"%s\" at s1 %21.15e s2 %21.15e don't match\n",eName1[i],eName2[j],s[i],s2[j]);
       bomb("Twiss and Aperture file are not for same beamline",NULL);
     }
 
