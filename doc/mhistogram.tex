@@ -1,0 +1,20 @@
+This element is used to generate multiple dimension (1, 2, 4, or 6)
+histogram output of particle coordinates.  
+
+The calculation is set up through output filename: \verb|FILE1D|,
+\verb|FILE2DH|, \verb|FILE2DV|, \verb|FILE2DL|, \verb|FILE4D|, \verb|FILE6D|.  
+They may be an incomplete filename (see \verb|HISTOGRAM| for
+detail). If \verb|LUMPED| set to non zero, then results are directed
+to a multi page SDDS file with each page contains data of same
+elements \verb|MHISTOGRAM| but at difference occurrence instead of
+multiple SDDS files. In this case the ``\%ld'' in filename is ignored.
+
+The bin number used to do histogram analysis is given through a SDDS
+file from \verb|INPUT_BINS|. It contains 4 columns: \verb|Bins_1D|,
+\verb|Bins_2D|, \verb|Bins_4D|, \verb|Bins_6D|; and 6 rows (x, x', y,
+y', dt, delta). A non-zero value in \verb|Bins_1D| is a switch for
+doing histogram analysis in corresponding dimension, and the maximum
+value in \verb|Bins_1D| is used as bin number to do the analysis.
+
+The normalization is different from \verb|HISTOGRAM| as we alwayse
+treat bin-size = 1.
