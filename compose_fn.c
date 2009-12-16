@@ -30,7 +30,7 @@ char *compose_filename(char *template, char *root_name)
 char *compose_filename_occurence(char *template, char *root_name, long occurence)
 {
   char *ptr_s, *ptr_ld;
-  char *ptr;
+  char *ptr, *filename;
   char format[10];
   long i;
   
@@ -43,6 +43,25 @@ char *compose_filename_occurence(char *template, char *root_name, long occurence
     sprintf(format, "%%0%ldld", i);
     if ((ptr=str_in(template, format)) && (!ptr_ld || ptr_ld>ptr))
       ptr_ld = ptr;
+  }
+  sprintf(format, "-%s", ptr_ld);
+  if ((ptr=str_in(template, format)))
+    ptr_ld = ptr;
+
+  if (!occurence && ptr_ld) {
+    filename = tmalloc(sizeof(char)*(strlen(template)));
+    ptr = template;
+    for (i=0; i<strlen(template); i++) {
+      if (ptr<ptr_ld || ptr>ptr_ld+strlen(ptr_ld))
+        strncat(filename, ptr, 1);
+      ptr++;
+    }
+    ptr = tmalloc(sizeof(char)*(strlen(filename)+strlen(root_name)+100));
+    if (ptr_s)
+      sprintf(ptr, filename, root_name);
+    else 
+      ptr = filename;
+    return ptr;
   }
   
   ptr = tmalloc(sizeof(char)*(strlen(template)+strlen(root_name)+100));

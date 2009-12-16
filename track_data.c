@@ -51,7 +51,7 @@ char *entity_name[N_TYPES] = {
     "LTHINLENS", "LMIRROR", "EMATRIX", "FRFMODE", "FTRFMODE",
     "TFBPICKUP", "TFBDRIVER", "LSCDRIFT", "DSCATTER", "LSRMDLTR",
     "TAYLORSERIES", "RFTM110", "CWIGGLER", "EDRIFT", "SCMULT", "ILMATRIX",
-    "TSCATTER", "KQUSE", "UKICKMAP", "MBUMPER", "EMITTANCE",
+    "TSCATTER", "KQUSE", "UKICKMAP", "MBUMPER", "EMITTANCE", "MHISTOGRAM", 
     };
 
 char *madcom_name[N_MADCOMS] = {
@@ -184,6 +184,7 @@ and phase modulation.",
     "An undulator kick map (e.g., using data from RADIA).",
     "A time-dependent multipole kicker magnet. The waveform is in SDDS format, with time in seconds and amplitude normalized to 1.",
     "Applies a linear transformation to the beam to force the emittance to given values.",
+    "Request for multiple dimensions (1, 2, 4 or 6) histogram output of particle coordinates.",
     } ;
 
 QUAD quad_example;
@@ -1524,6 +1525,23 @@ PARAMETER histogram_param[N_HISTOGRAM_PARAMS] = {
   {"NORMALIZE", "", IS_LONG, 0, (long)((char*)&histogram_example.normalize), NULL, 0.0, 1, "normalize histogram with bin size and number of particles?"},
   {"DISABLE", "", IS_LONG, 0, (long)((char *)&histogram_example.disable), NULL, 0.0, 0, "If nonzero, no output will be generated."},    
 };
+
+MHISTOGRAM mhistogram_example;
+/* MHISTOGRAM physical parameters */
+PARAMETER mhistogram_param[N_MHISTOGRAM_PARAMS] = {
+  {"FILE1D", "", IS_STRING, 0, (long)((char *)&mhistogram_example.file1d), NULL, 0.0, 0, "filename for 1d histogram output, possibly incomplete (see below)"},
+  {"FILE2DH", "", IS_STRING, 0, (long)((char *)&mhistogram_example.file2dH), NULL, 0.0, 0, "filename for 2d x-x' histogram output, possibly incomplete (see below)"},
+  {"FILE2DV", "", IS_STRING, 0, (long)((char *)&mhistogram_example.file2dV), NULL, 0.0, 0, "filename for 2d y-y' histogram output, possibly incomplete (see below)"},
+  {"FILE2DL", "", IS_STRING, 0, (long)((char *)&mhistogram_example.file2dL), NULL, 0.0, 0, "filename for 2d dt-deltaP histogram output, possibly incomplete (see below)"},
+  {"FILE4D", "", IS_STRING, 0, (long)((char *)&mhistogram_example.file4d), NULL, 0.0, 0, "filename for 4d x-x'-y-y' histogram output, possibly incomplete (see below)"},
+  {"FILE6D", "", IS_STRING, 0, (long)((char *)&mhistogram_example.file6d), NULL, 0.0, 0, "filename for 6d x-x'-y-y'-dt-deltaP histogram output, possibly incomplete (see below)"},
+  {"INPUT_BINS", " ", IS_STRING, 0, (long)((char *)&mhistogram_example.inputBinFile), NULL, 0.0, 0, "Name of SDDS file contains input bin number."},
+  {"INTERVAL", "", IS_LONG, 0, (long)((char *)&mhistogram_example.interval), NULL, 0.0, 1, "interval in passes between output."},
+  {"START_PASS", "", IS_LONG, 0, (long)((char*)&mhistogram_example.startPass), NULL, 0.0, 0, "starting pass for output"},
+  {"NORMALIZE", "", IS_LONG, 0, (long)((char*)&mhistogram_example.normalize), NULL, 0.0, 1, "normalize histogram with number of particles?"},
+  {"DISABLE", "", IS_LONG, 0, (long)((char *)&mhistogram_example.disable), NULL, 0.0, 0, "If nonzero, no output will be generated."},    
+  {"LUMPED", "", IS_LONG, 0, (long)((char *)&mhistogram_example.lumped), NULL, 0.0, 0, "If nonzero, then results at elements with same name will be output to a single multipage SDDS file."},    
+};
   
 CSRDRIFT csrdrift_example;
 /* CSR drift length physical parameters */
@@ -2264,6 +2282,7 @@ ELEMENT_DESCRIPTION entity_description[N_TYPES] = {
     {   N_UKICKMAP_PARAMS, MAT_LEN_NCAT|IS_MAGNET|MPALGORITHM, sizeof(UKICKMAP),    ukickmap_param    },
     {  N_MKICKER_PARAMS,  MAT_LEN_NCAT|IS_MAGNET,     sizeof(MKICKER),    mkicker_param   },
     {  N_EMITTANCEELEMENT_PARAMS,  0,    sizeof(EMITTANCEELEMENT),    emittanceElement_param   },
+    { N_MHISTOGRAM_PARAMS, UNIPROCESSOR, sizeof(MHISTOGRAM), mhistogram_param},
 } ;
 
 void compute_offsets()

@@ -39,6 +39,7 @@
 #include "SDDS.h"
 #include "rpn.h"
 #include "table.h"
+#include "chbook.h"
 #if defined(_WIN32)
 #include <float.h>
 #include <math.h>
@@ -483,11 +484,6 @@ typedef struct {
     long includeSimplex1dScans, startFromSimplexVertex1;
     } OPTIMIZATION_DATA;
 
-typedef struct {
-  long tbins[4], lbins[2], bins[6];
-  char *toutput, *loutput, *output;
-  char *name, *type, *exclude;
-} BEAM_HIST;
 /* structure to store particle coordinates */
 typedef struct {
     double **original;      /* original particle data */
@@ -506,7 +502,6 @@ typedef struct {
     long n_accepted;        /* final number of particles being tracked. */
     long *lostOnPass;       /* pass on which a particle is lost */
     double bunchFrequency;
-    BEAM_HIST *hist;
     } BEAM;
 void free_beamdata(BEAM *beam);
 
@@ -735,7 +730,8 @@ extern char *final_unit[N_FINAL_QUANTITIES];
 #define T_UKICKMAP 100
 #define T_MKICKER 101
 #define T_EMITTANCE 102
-#define N_TYPES   103
+#define T_MHISTOGRAM 103
+#define N_TYPES   104
 
 extern char *entity_name[N_TYPES];
 extern char *madcom_name[N_MADCOMS];
@@ -845,6 +841,7 @@ extern char *entity_text[N_TYPES];
 #define N_UKICKMAP_PARAMS 13
 #define N_MKICKER_PARAMS 13
 #define N_EMITTANCEELEMENT_PARAMS 4
+#define N_MHISTOGRAM_PARAMS 12
 
 #define PARAM_CHANGES_MATRIX   0x0001UL
 #define PARAM_DIVISION_RELATED 0x0002UL
@@ -1387,6 +1384,21 @@ typedef struct {
     SDDS_TABLE SDDS_table;
     } HISTOGRAM;
 
+extern PARAMETER mhistogram_param[N_MHISTOGRAM_PARAMS];
+
+typedef struct {
+    char *file1d, *file2dH, *file2dV, *file2dL, *file4d, *file6d;
+    char *inputBinFile;
+    long interval, startPass;
+    long normalize, disable, lumped;
+    /* internal variables for SDDS output */
+    long *bins1d, *bins2d, *bins4d, *bins6d;
+    book1m *x1d;
+    ntuple *x2d, *y2d, *z2d;
+    ntuple *Tr4d, *full6d;
+    long initialized, count;
+    } MHISTOGRAM;
+
 /* Traveling wave (TEM) deflector plates using NAG integrator.
  */
 extern PARAMETER twpl_param[N_TWPL_PARAMS];
@@ -1714,18 +1726,17 @@ typedef struct {
 
 typedef struct {
   long nbins;
-  double charge, ignoredPortion;
-  double ebeam, gamma, pCentral, betagamma;
-  double emit[3], range[3];
-  double sigz, sigma_p, delta, dp0;
+  double charge, frequency, ignoredPortion;
+  double emitN[3], range[3];
+  double sigz, delta_p0,delta_mev;
 } TSCATTER_SPEC;
 
 typedef struct {
   long dummy;
   /* internal variables */
   char *name;
-  double s, betagamma;
-  double IntR, p_rate, s_rate, i_rate;
+  double s, betagamma, gamma,pCentral_mev;
+  double AveR, p_rate, s_rate, i_rate, total_scatter;
   char *losFile, *bunFile, *disFile,*iniFile, *outFile;
   double twiss[3][3], disp[2][2];
   double sigx, sigy, sigz, sigxyz;

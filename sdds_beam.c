@@ -182,69 +182,6 @@ void setup_sdds_beam(
   beam->n_original = beam->n_to_track = beam->n_accepted = beam->n_saved = beam->n_particle = 0;
   save_initial_coordinates = save_original || save_initial_coordinates;
   
-  /* add histogram analysis */
-  beam->hist = NULL;
-  if (long_dist || tran_dist || full_dist) {
-    BEAM_HIST *hist=NULL;
-    long i;
-    if (!(hist	= SDDS_Calloc(1, sizeof(*(hist)))))
-      bomb("memory allocation failure - beam->hist", NULL);
-    if (!name || !strlen(name))
-      bomb("no name given", NULL);
-    if (!type || !strlen(type))
-      bomb("no type given", NULL);
-
-    if (name) {
-      str_toupper(name);
-      if (has_wildcards(name) && strchr(name, '-'))
-        name = expand_ranges(name);
-      hist->name = name;
-    }
-    if (type) {
-      str_toupper(type);
-      if (has_wildcards(type) && strchr(type, '-'))
-        type = expand_ranges(type);
-      for (i=0; i<N_TYPES; i++)
-        if (wild_match(entity_name[i], type))
-          break;
-      if (i==N_TYPES) {
-        fprintf(stderr, "type pattern %s does not match any known type", type);
-        exit(1);
-      }
-      hist->type = type;
-    }
-    if (exclude) {
-      str_toupper(exclude);
-      if (has_wildcards(exclude) && strchr(exclude, '-'))
-        exclude = expand_ranges(exclude);
-      hist->exclude = exclude;
-    }
-    
-    if (long_dist) {
-      if (!long_bins[0] || !long_bins[1])
-        bomb("long_bins value equal to zero", NULL);
-      for (i=0; i<2; i++)
-        hist->lbins[i] = long_bins[i];
-      hist->loutput = compose_filename(long_dist, run->rootname);
-    }
-    if (tran_dist) {
-      if (!tran_bins[0] || !tran_bins[1] || !tran_bins[2] || !tran_bins[3])
-        bomb("tran_bins value equal to zero", NULL);
-      for (i=0; i<4; i++)
-        hist->tbins[i] = tran_bins[i];
-      hist->toutput = compose_filename(tran_dist, run->rootname);
-    }
-    if (full_dist) {
-      if (!full_bins[0] || !full_bins[1] || !full_bins[2] || !full_bins[3] || !full_bins[4] || !full_bins[5])
-        bomb("full_bins value equal to zero", NULL);
-      for (i=0; i<6; i++)
-        hist->bins[i] = full_bins[i];
-      hist->output = compose_filename(full_dist, run->rootname);
-    }
-
-    beam->hist = hist;
-  }
-
   log_exit("setup_sdds_beam");
 }
 

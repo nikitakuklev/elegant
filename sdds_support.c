@@ -1797,13 +1797,15 @@ long check_sdds_column(SDDS_TABLE *SDDS_table, char *name, char *units)
   return(0);
 }
 
-#define BEAM_SCATTER_PARAMETERS 5
+#define BEAM_SCATTER_PARAMETERS 7
 static SDDS_DEFINITION beam_scatter_parameter[BEAM_SCATTER_PARAMETERS] = {
   {"Particles", "&parameter name=Particles, type=long, description=\"Total simulated scatted particles\" &end"},
-  {"IntRate", "&parameter name=IntRate, type=double, units=\"1/s\", description=\"Integrated Scattering Rate\" &end"},
-  {"PLocalRate", "&parameter name=PLocalRate, type=double, units=\"1/s/m\", description=\"Piwinski's Local Rate\" &end"},
-  {"SLocalRate", "&parameter name=SLocalRate, type=double, units=\"1/s/m\", description=\"Simulated Local Rate\" &end"},
-  {"IgnoredRate", "&parameter name=IgnoredRate, type=double, units=\"1/s/m\", description=\"Ignored Scattering Rate\" &end"},
+  {"pCentral", "&parameter name=pCentral, type=double, units=\"m$be$nc\", description=\"Central momentum\" &end"},
+  {"AveRate", "&parameter name=AveRate, type=double, units=\"1/s\", description=\"Average Scattering Rate\" &end"},
+  {"NScatter", "&parameter name=NScatter, type=double, description=\"Total Scattered particles\" &end"},
+  {"PLocalRate", "&parameter name=PLocalRate, type=double, units=\"1/s\", description=\"Piwinski's Local Rate\" &end"},
+  {"SLocalRate", "&parameter name=SLocalRate, type=double, units=\"1/s\", description=\"Simulated Local Rate\" &end"},
+  {"IgnoredRate", "&parameter name=IgnoredRate, type=double, units=\"1/s\", description=\"Ignored Scattering Rate\" &end"},
 };
 #define BEAM_SCATTER_COLUMNS 9
 static SDDS_DEFINITION beam_scatter_column[BEAM_SCATTER_COLUMNS] = {
@@ -1814,8 +1816,8 @@ static SDDS_DEFINITION beam_scatter_column[BEAM_SCATTER_COLUMNS] = {
     {"t", "&column name=t, units=s, type=double &end"},
     {"p", "&column name=p, units=\"m$be$nc\", type=double &end"},
     {"particleID", "&column name=particleID, type=long &end"},
-    {"Rate", "&column name=Rate, units=\"1/s/m\", type=double &end"},
-    {"IntRate", "&column name=IntRate, units=\"1/s\", type=double &end"},
+    {"LRate", "&column name=LRate, units=\"1/s\", type=double, description=\"represents local scattering rate\" &end"},
+    {"TRate", "&column name=TRate, units=\"1/s\", type=double, description=\"represents total scattering rate\" &end"},
 };
 
 void SDDS_BeamScatterSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row, char *contents, 
@@ -1853,7 +1855,7 @@ void dump_scattered_particles(SDDS_TABLE *SDDS_table, double **particle,
     }
 
     for (i=0; i<particles; i++) {
-      rate = weight[i]*tsptr->IntR/tsptr->s_rate;
+      rate = weight[i]/tsptr->s_rate*tsptr->total_scatter;
         if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, i,
                                0, particle[i][0], 1, particle[i][1], 2, particle[i][2], 3, particle[i][3],
                                4, particle[i][4]/c_mks, 5, (particle[i][5]+1.)*tsptr->betagamma,
@@ -1864,7 +1866,9 @@ void dump_scattered_particles(SDDS_TABLE *SDDS_table, double **particle,
     }
 
     if ((!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "Particles", particles, NULL))||
-        (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "IntRate", tsptr->IntR, NULL))||
+        (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "pCentral", tsptr->betagamma, NULL))||
+        (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "AveRate", tsptr->AveR, NULL))||
+        (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "NScatter", tsptr->total_scatter, NULL))||
         (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "PLocalRate", tsptr->p_rate, NULL))||
         (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "SLocalRate", tsptr->s_rate, NULL))||
         (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "IgnoredRate", tsptr->i_rate, NULL))) {
@@ -1899,17 +1903,20 @@ static SDDS_DEFINITION beam_scatter_loss_column[BEAM_SCATTER_LOSS_COLUMNS] = {
     {"y", "&column name=y, units=m, type=double &end"},
     {"s", "&column name=s, units=m, type=double &end"},
     {"Pass", "&column name=Pass, type=long &end"},
-    {"Rate", "&column name=Rate, units=\"1/s/m\", type=double &end"},
-    {"IntRate", "&column name=IntRate, units=\"1/s\", type=double &end"},
+    {"LRate", "&column name=LRate, units=\"1/s\", type=double, description=\"represents local scattering rate\" &end"},
+    {"TRate", "&column name=TRate, units=\"1/s\", type=double, description=\"represents total scattering rate\" &end"},
 } ;
-#define BEAM_SCATTER_LOSS_PARAMETERS 6
+#define BEAM_SCATTER_LOSS_PARAMETERS 9
 static SDDS_DEFINITION beam_scatter_loss_parameter[BEAM_SCATTER_LOSS_PARAMETERS] = {
   {"Particles", "&parameter name=Particles, type=long, description=\"Total lost simulated scatted particles\" &end"},
   {"S0", "&parameter name=S0, type=double, units=m, description=\"Scatter location\" &end"},
-  {"TotalRate", "&parameter name=TotalRate, type=double, units=\"1/s/m\", description=\"Total simulated scatter rate\" &end"},
-  {"LossRate", "&parameter name=LossRate, type=double, units=\"1/s/m\", description=\"Total loss rate including the ignored rate\" &end"},
-  {"IntRate", "&parameter name=IntRate, type=double, units=\"1/s\", description=\"Integrated Scattering Rate\" &end"},
-  {"IntLossRate", "&parameter name=IntLossRate, type=double, units=\"1/s\", description=\"Total integrated loss rate\" &end"},
+  {"PLocalRate", "&parameter name=PLocalRate, type=double, units=\"1/s\", description=\"Piwinski's Local Rate\" &end"},
+  {"SLocalRate", "&parameter name=SLocalRate, type=double, units=\"1/s\", description=\"Simulated Local Rate\" &end"},
+  {"IgnoredRate", "&parameter name=IgnoredRate, type=double, units=\"1/s\", description=\"Ignored Scattering Rate\" &end"},
+  {"AveRate", "&parameter name=AveRate, type=double, units=\"1/s\", description=\"Average Scattering Rate\" &end"},
+  {"NScatter", "&parameter name=NScatter, type=double, description=\"Total Scattered particles\" &end"},
+  {"TotalLoss", "&parameter name=TotalLoss, type=double, description=\"Total loss scattered particles\" &end"},
+  {"pCentral", "&parameter name=pCentral, type=double, units=\"m$be$nc\", description=\"Central momentum\" &end"},
 };
 
 void SDDS_BeamScatterLossSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row, char *contents, 
@@ -1928,7 +1935,7 @@ void dump_scattered_loss_particles(SDDS_TABLE *SDDS_table, double **particleLos,
                                    long *lostOnPass, long particles, double *weight, TSCATTER *tsptr)
 {
     long i, j;
-    double rate, lossRate, intLossRate;
+    double rate, intLossRate;
 
     log_entry("dump_scattered_loss_particles");
     if (!particleLos)
@@ -1945,11 +1952,10 @@ void dump_scattered_loss_particles(SDDS_TABLE *SDDS_table, double **particleLos,
         SDDS_SetError("Problem starting SDDS table (dump_scattered_loss_particles)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
-    lossRate=intLossRate=0.;
+    intLossRate=0.;
     for (i=0; i<particles; i++) {
         j = (long)particleLos[i][6]-1;
-        rate = weight[j]*tsptr->IntR/tsptr->s_rate;
-        lossRate += weight[j];
+        rate = weight[j]/tsptr->s_rate*tsptr->total_scatter;
         intLossRate += rate;
         if (!SDDS_SetRowValues(SDDS_table, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, i,
                                0, particleOri[j][0], 1, particleOri[j][1], 2, particleOri[j][2], 3, particleOri[j][3],
@@ -1962,10 +1968,13 @@ void dump_scattered_loss_particles(SDDS_TABLE *SDDS_table, double **particleLos,
         }
     if ((!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "Particles", particles, NULL))||
         (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "S0", tsptr->s, NULL))||
-        (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "TotalRate", tsptr->s_rate, NULL))||
-        (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "LossRate", lossRate, NULL))||
-        (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "IntRate", tsptr->IntR, NULL))||
-        (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "IntLossRate", intLossRate, NULL))) {
+        (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "PLocalRate", tsptr->p_rate, NULL))||
+        (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "SLocalRate", tsptr->s_rate, NULL))||
+        (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "IgnoredRate", tsptr->i_rate, NULL))||
+        (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "NScatter", tsptr->total_scatter, NULL))||
+        (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "AveRate", tsptr->AveR, NULL))||
+        (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "TotalLoss", intLossRate, NULL))||
+        (!SDDS_SetParameters(SDDS_table, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, "pCentral", tsptr->betagamma, NULL))) {
         SDDS_SetError("Problem setting SDDS parameters (dump_scattered_loss_particles)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }

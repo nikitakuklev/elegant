@@ -15,7 +15,6 @@
 #include "mdb.h"
 #include "mdbsun.h"
 #include "track.h"
-#include "chbook.h"
 /* #include "smath.h" */
 void flushTransverseFeedbackDriverFiles(TFBDRIVER *tfbd);
 void set_up_frfmode(FRFMODE *rfmode, char *element_name, double element_z, long n_passes,  RUN *run, long n_particles, double Po, double total_length);
@@ -43,7 +42,9 @@ void distributionScatter(double **part, long np, double Po, DSCATTER *scat, long
 void recordLossPass(long *lostOnPass, long *nLost, long nLeft, long nMaximum, long pass, int myid,
                     int lostSinceSeqMode);
 void storeMonitorOrbitValues(ELEMENT_LIST *eptr, double **part, long np);
-void hist_table (BEAM *beam, long np, double Po, ELEMENT_LIST *eptr);
+void mhist_table(ELEMENT_LIST *eptr0, ELEMENT_LIST *eptr, long step, long pass, double **coord, long np, 
+                double Po, double length, double charge, double z);
+void set_up_mhist(MHISTOGRAM *mhist, RUN *run, long occurence);
 void findMinMax (double **coord, long np, double *min, double *max, double *c0, double Po);
 
 #if USE_MPI
@@ -116,6 +117,7 @@ long do_tracking(
   WATCH *watch;
   STRAY *stray;
   HISTOGRAM *histogram;
+  MHISTOGRAM *mhist;
   ENERGY *energy;
   MAXAMP *maxamp;
   MALIGN *malign;
@@ -995,6 +997,43 @@ long do_tracking(
 		}
 	      }
 	      break;
+       case T_MHISTOGRAM:
+         if (!eptr->pred)
+           bomb("MHISTOGRAM should not be the first element of the beamline.", NULL);
+	      if (!(flags&TEST_PARTICLES) && !(flags&INHIBIT_FILE_OUTPUT)) {
+           mhist = (MHISTOGRAM*)eptr->p_elem;
+           if (!mhist->disable) {
+             watch_pt_seen = 1;   /* yes, this should be here */
+             if (i_pass==0 && (n_passes/mhist->interval)==0)
+               fprintf(stdout, "warning: n_passes = %ld and MHISTOGRAM interval = %ld--no output will be generated!\n",
+                       n_passes, mhist->interval);
+             fflush(stdout);
+             if (i_pass>=mhist->startPass && (i_pass-mhist->startPass)%mhist->interval==0) {
+
+               ELEMENT_LIST *eptr0;
+               if (mhist->lumped) {
+                 if (!mhist->initialized && eptr->occurence==1)
+                   set_up_mhist(mhist, run, 0); 
+                 eptr0 = &(beamline->elem);
+                 while (eptr0) {
+                   if (eptr0->type == eptr->type && strcmp(eptr0->name, eptr->name)==0)
+                     break;
+                   eptr0 = eptr0->succ;
+                 }
+               }
+               else {
+                 if (!mhist->initialized) 
+                   set_up_mhist(mhist, run, eptr->occurence);
+                 eptr0 = NULL;
+               }
+
+               mhist_table(eptr0, eptr, step, i_pass, coord, nToTrack, *P_central,
+                          beamline->revolution_length, 
+                          charge?charge->macroParticleCharge*nToTrack:0.0, z);
+             }
+           }
+	      }
+	      break;
 	    case T_MALIGN:
 	      malign = (MALIGN*)eptr->p_elem;
 	      if (malign->on_pass==-1 || malign->on_pass==i_pass)
@@ -1576,22 +1615,6 @@ long do_tracking(
 	/* need special care for element with 0 length but phase space rotation */
       	if (((DRIFT*)eptr->p_elem)->length > 0.0) 
         	accumulateSCMULT(coord, nToTrack, eptr);
-      }
-      if (i_pass == n_passes+passOffset-1) {
-      if (beam) {
-        if (beam->hist) {
-          long hist_flag = 1, type=eptr->type;
-          if (beam->hist->name && !wild_match(name, beam->hist->name))
-            hist_flag = 0;
-          if (beam->hist->type && !wild_match(entity_name[type], beam->hist->type))
-            hist_flag = 0;
-          if (beam->hist->exclude && wild_match(name, beam->hist->exclude))
-            hist_flag = 0;
-          if (hist_flag) {
-            hist_table (beam, nLeft, *P_central, eptr);
-          }
-        }
-      }
       }
       last_type = eptr->type;
       eptrPred = eptr;
@@ -3778,43 +3801,136 @@ void transformEmittances(double **coord, long np, double pCentral, EMITTANCEELEM
   }
 }
 
-void hist_table (BEAM *beam, long np, double Po, ELEMENT_LIST *eptr)
+void set_up_mhist(MHISTOGRAM *mhist, RUN *run, long occurence)
 {
-  char *Name[6]={"x","xp","y","yp","t", "p"};
-  double Min[6], Max[6], c0[6];
-  long i, j, bins[6];
-  ntuple *transDis, *longiDis, *fullDis;
-  double **coord, part[6], P, beta;
-  static int append=0;
-  static SDDS_DEFINITION element_para[4] = {
-    {"s", "&parameter name=s, units=m, type=double, description=\"Distance\" &end"},
-    {"ElementName", "&parameter name=ElementName, type=string, description=\"Element name\", format_string=%10s &end"},
-    {"ElementOccurence", 
-     "&parameter name=ElementOccurence, type=long, description=\"Occurence of element\", format_string=%6ld &end"},
-    {"ElementType", "&parameter name=ElementType, type=string, description=\"Element-type name\", format_string=%10s &end"},
+  SDDS_DATASET SDDSin;
+
+  if (mhist->disable)
+    return;
+  if (mhist->interval<=0)
+    bomb("interval is non-positive for MHISTOGRAM element", NULL);
+  if (!mhist->file1d && !mhist->file2dH && !mhist->file2dV && 
+      !mhist->file2dL && !mhist->file4d && !mhist->file6d)
+    bomb("No output request set to this mhistogram element. Use disable =1", NULL);  
+
+  if (!SDDS_InitializeInputFromSearchPath(&SDDSin, mhist->inputBinFile) ||
+      SDDS_ReadPage(&SDDSin)<=0 ||
+      !(mhist->bins1d = (long*)SDDS_GetColumnInLong(&SDDSin, "Bins_1D")) || 
+      !(mhist->bins2d = (long*)SDDS_GetColumnInLong(&SDDSin, "Bins_2D")) ||
+      !(mhist->bins4d = (long*)SDDS_GetColumnInLong(&SDDSin, "Bins_4D")) ||
+      !(mhist->bins6d = (long*)SDDS_GetColumnInLong(&SDDSin, "Bins_6D"))) {
+    SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
+  }
+  if (!SDDS_Terminate(&SDDSin))
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+
+  if (mhist->file1d) {
+    if (mhist->bins1d[0]<=2 && mhist->bins1d[1]<=2 && mhist->bins1d[2]<=2 &&
+        mhist->bins1d[3]<=2 && mhist->bins1d[4]<=2 && mhist->bins1d[5]<=2)
+      bomb("All 1D bin's value less than 2", NULL);  
+    mhist->file1d = compose_filename_occurence(mhist->file1d, run->rootname, occurence);
+  } 
+  if (mhist->file2dH) {
+    if (mhist->bins2d[0]<=2 || mhist->bins2d[1]<=2)
+      bomb("2D x-x' bin's value less than 2", NULL);  
+    mhist->file2dH = compose_filename_occurence(mhist->file2dH, run->rootname, occurence);    
+  }
+  if (mhist->file2dV) {
+    if (mhist->bins2d[2]<=2 || mhist->bins2d[3]<=2)
+      bomb("2D y-y' bin's value less than 2", NULL);  
+    mhist->file2dV = compose_filename_occurence(mhist->file2dV, run->rootname, occurence);    
+  }
+  if (mhist->file2dL) {
+    if (mhist->bins2d[4]<=2 || mhist->bins2d[5]<=2)
+      bomb("2D dt-dp bin's value less than 2", NULL);  
+    mhist->file2dL = compose_filename_occurence(mhist->file2dL, run->rootname, occurence);    
+  }
+  if (mhist->file4d) {
+    if (mhist->bins4d[0]<=2 || mhist->bins4d[1]<=2 ||
+        mhist->bins4d[2]<=2 || mhist->bins4d[3]<=2)
+      bomb("4D x-x'-y-y' bin's value less than 2", NULL);  
+    mhist->file4d = compose_filename_occurence(mhist->file4d, run->rootname, occurence);    
+  }
+  if (mhist->file6d) {
+    if (mhist->bins6d[0]<=2 || mhist->bins6d[1]<=2 || mhist->bins6d[2]<=2 ||
+        mhist->bins6d[3]<=2 || mhist->bins6d[4]<=2 || mhist->bins6d[5]<=2)
+      bomb("6D x-x'-y-y'-dt-dp bin's value less than 2", NULL);  
+    if (mhist->lumped)
+      mhist->file6d = compose_filename_occurence(mhist->file6d, run->rootname, 0);    
+    else
+      mhist->file6d = compose_filename_occurence(mhist->file6d, run->rootname, occurence);    
+  }
+
+  mhist->initialized = 1;
+  mhist->count = 0;
+
+  return;
+}
+
+#define MHISTOGRAM_TABLE_PARAMETERS 12
+static EXTERNAL_PARA mhist_table_para[MHISTOGRAM_TABLE_PARAMETERS] = {
+  {"Step", "&parameter name=Step, symbol=\"m$be$nc\", description=\"Simulation step\", type=long &end"},
+  {"pCentral", "&parameter name=pCentral, symbol=\"p$bcen$n\", units=\"m$be$nc\", description=\"Reference beta*gamma\", type=double &end"},
+  {"Charge", "&parameter name=Charge, units=\"C\", description=\"Beam charge\", type=double &end"},
+  {"Particles", "&parameter name=Particles, description=\"Number of particles\",  type=long &end"},
+  {"Pass", "&parameter name=Pass, type=long &end"},
+  {"PassLength", "&parameter name=PassLength, units=\"m\", type=double &end"},
+  {"PassCentralTime", "&parameter name=PassCentralTime, units=\"s\", type=double &end"},
+  {"s", "&parameter name=s, units=\"m\", description=\"Location from beginning of beamline\", type=double &end"},
+  {"ElementName", "&parameter name=ElementName, description=\"Previous element name\", type=string &end"},
+  {"ElementOccurence", "&parameter name=ElementOccurence, description=\"Previous element's occurence\", format_string=%6ld, type=long, &end"},
+  {"ElementType", "&parameter name=ElementType, description=\"Previous element-type name\", format_string=%10s, type=string, &end"},
+  {"Normalize", "&parameter name=Normalize, description=\"If the table is normalized?\", type=long &end"},
   };
-  static void *element_para_value[4];
-  element_para_value[0] = (void*)(&eptr->end_pos);
-  element_para_value[1] = (void*)(&eptr->name);
-  element_para_value[2] = (void*)(&eptr->occurence);
-  element_para_value[3] = (void*)(&entity_name[eptr->type]);
+static void *mhist_table_paraValue[MHISTOGRAM_TABLE_PARAMETERS];
 
-  for (i=0; i<4; i++)
-    bins[i] = beam->hist->tbins[i];
-  for (i=0; i<2; i++)
-    bins[i+4] = beam->hist->lbins[i];
+void mhist_table(ELEMENT_LIST *eptr0, ELEMENT_LIST *eptr, long step, long pass, double **coord, long np, 
+                double Po, double length, double charge, double z)
+{
+  char *Name[6]={"x","xp","y","yp","dt","delta"};
+  char *Units[6]={"m","","m","","s",""};
+  double Min[6], Max[6], c0[6], t0;
+  long i, j;
+  double part[6], P, beta;
+  MHISTOGRAM *mhist;
 
-  coord = beam->particle;
+  if (eptr0)
+    mhist = (MHISTOGRAM*)eptr0->p_elem;
+  else
+    mhist = (MHISTOGRAM*)eptr->p_elem;
+
+  t0 = pass*length*sqrt(Po*Po+1)/(c_mks*(Po+1e-32));  
+  mhist_table_paraValue[0] = (void*)(&step);
+  mhist_table_paraValue[1] = (void*)(&Po);
+  mhist_table_paraValue[2] = (void*)(&charge);
+  mhist_table_paraValue[3] = (void*)(&np);
+  mhist_table_paraValue[4] = (void*)(&pass);
+  mhist_table_paraValue[5] = (void*)(&length);
+  mhist_table_paraValue[6] = (void*)(&t0);
+  mhist_table_paraValue[7] = (void*)(&z);
+  mhist_table_paraValue[8] = (void*)(&eptr->pred->name);
+  mhist_table_paraValue[9] = (void*)(&eptr->pred->occurence);
+  mhist_table_paraValue[10] = (void*)(&entity_name[eptr->pred->type]);
+  mhist_table_paraValue[11] = (void*)(&mhist->normalize);
+
+
   findMinMax (coord, np, Min, Max, c0, Po);
-
   Min[4] -= c0[4];
   Max[4] -= c0[4];
-  if (beam->hist->toutput)
-    transDis = chbookn(Name, 4, Min, Max, bins, 0);
-  if (beam->hist->loutput)
-    longiDis = chbookn(Name, 2, Min, Max, bins, 4);
-  if (beam->hist->output)
-    fullDis = chbookn(Name, 6, Min, Max, beam->hist->bins, 0);
+
+  if (mhist->file1d)
+    mhist->x1d = chbook1m(Name, Units, Min, Max, mhist->bins1d, 6);
+
+  if (mhist->file2dH)
+    mhist->x2d = chbookn(Name, Units, 2, Min, Max, mhist->bins2d, 0);
+  if (mhist->file2dV)
+    mhist->y2d = chbookn(Name, Units, 2, Min, Max, mhist->bins2d, 2);
+  if (mhist->file2dL)
+    mhist->z2d = chbookn(Name, Units, 2, Min, Max, mhist->bins2d, 4);
+  if (mhist->file4d)
+    mhist->Tr4d = chbookn(Name, Units, 4, Min, Max, mhist->bins4d, 0);
+  if (mhist->file6d)
+    mhist->full6d = chbookn(Name, Units, 6, Min, Max, mhist->bins6d, 0);
 
   for (i=0; i<np; i++) {
     for (j=0; j<6; j++) {
@@ -3826,30 +3942,54 @@ void hist_table (BEAM *beam, long np, double Po, ELEMENT_LIST *eptr)
       else
         part[j] = coord[i][j];
     }
-    if (beam->hist->toutput)
-      chfilln(transDis, part, 1, 0);
-    if (beam->hist->loutput)
-      chfilln(longiDis, part, 1, 4);
-    if (beam->hist->output)
-      chfilln(fullDis, part, 1, 0);
+
+    if (mhist->x1d)
+      chfill1m(mhist->x1d, part, 1, mhist->bins1d, 6);
+    if (mhist->x2d)
+      chfilln(mhist->x2d, part, 1, 0);
+    if (mhist->y2d)
+      chfilln(mhist->y2d, part, 1, 2);
+    if (mhist->z2d)
+      chfilln(mhist->z2d, part, 1, 4);
+    if (mhist->Tr4d)
+      chfilln(mhist->Tr4d, part, 1, 0);
+    if (mhist->full6d)
+      chfilln(mhist->full6d, part, 1, 0);
   }
 
-  if (beam->hist->toutput) {
-    chprintn(transDis, beam->hist->toutput, "transverse distribution", element_para, element_para_value,
-             4, 0, append);
-    free_hbookn(transDis);    
+  if (mhist->x1d) {
+    chprint1m(mhist->x1d, mhist->file1d, "One dimentional distribution", mhist_table_para, 
+              mhist_table_paraValue, MHISTOGRAM_TABLE_PARAMETERS, mhist->normalize, 0, mhist->count);
+    free_hbook1m(mhist->x1d);
+
   }
-  if (beam->hist->loutput) {
-    chprintn(longiDis, beam->hist->loutput, "longitudinal distribution", element_para, element_para_value,
-             4, 0, append);
-    free_hbookn(longiDis);
+  if (mhist->x2d) {
+    chprintn(mhist->x2d, mhist->file2dH, "x-xp distribution", mhist_table_para,
+             mhist_table_paraValue, MHISTOGRAM_TABLE_PARAMETERS, mhist->normalize, 0, mhist->count);
+    free_hbookn(mhist->x2d);
   }
-  if (beam->hist->output) {
-    chprintn(fullDis, beam->hist->output, "6D distribution", element_para, element_para_value,
-             4, 0, append);
-    free_hbookn(fullDis);
+  if (mhist->y2d) {
+    chprintn(mhist->y2d, mhist->file2dV, "y-yp distribution", mhist_table_para,
+             mhist_table_paraValue, MHISTOGRAM_TABLE_PARAMETERS, mhist->normalize, 0, mhist->count);
+    free_hbookn(mhist->y2d);
   }
-  append = 1;
+  if (mhist->z2d) {
+    chprintn(mhist->z2d, mhist->file2dL, "y-yp distribution", mhist_table_para,
+             mhist_table_paraValue, MHISTOGRAM_TABLE_PARAMETERS, mhist->normalize, 0, mhist->count);
+    free_hbookn(mhist->z2d);
+  }
+  if (mhist->Tr4d) {
+    chprintn(mhist->Tr4d, mhist->file4d, "y-yp distribution", mhist_table_para,
+             mhist_table_paraValue, MHISTOGRAM_TABLE_PARAMETERS, mhist->normalize, 0, mhist->count);
+    free_hbookn(mhist->Tr4d);
+  }
+  if (mhist->full6d) {
+    chprintn(mhist->full6d, mhist->file6d, "y-yp distribution", mhist_table_para,
+             mhist_table_paraValue, MHISTOGRAM_TABLE_PARAMETERS, mhist->normalize, 0, mhist->count);
+    free_hbookn(mhist->full6d);
+  }
+
+  mhist->count ++;
 
   return;
 }
