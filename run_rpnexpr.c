@@ -172,11 +172,14 @@ void run_rpn_load(NAMELIST_TEXT *nltext, RUN *run)
                   columnName[iColumn]);
           exit(1);
         }
-        if (!(memName=SDDS_Realloc(memName, sizeof(*memName)*(strlen(tag)+strlen(columnName[iColumn])+2)))) {
+        if (!(memName=SDDS_Realloc(memName, sizeof(*memName)*((tag?strlen(tag):0)+strlen(columnName[iColumn])+2)))) {
           fprintf(stdout, "Memory allocation failure trying to create memory name for loaded data\n");
           exit(1);
         }
-        sprintf(memName, "%s.%s", tag, columnName[iColumn]);
+        if (tag && strlen(tag))
+          sprintf(memName, "%s.%s", tag, columnName[iColumn]);
+        else
+          sprintf(memName, "%s", columnName[iColumn]);
         rpn_store(data[matchRow], NULL, rpn_create_mem(memName, 0));
         fprintf(stdout, "%le --> %s\n", data[matchRow], memName);
         free(columnName[iColumn]);
@@ -205,11 +208,14 @@ void run_rpn_load(NAMELIST_TEXT *nltext, RUN *run)
                   parameterName[iParameter]);
           exit(1);
         }
-        if (!(memName=SDDS_Realloc(memName, sizeof(*memName)*(strlen(tag)+strlen(parameterName[iParameter])+2)))) {
+        if (!(memName=SDDS_Realloc(memName, sizeof(*memName)*((tag?strlen(tag):0)+strlen(parameterName[iParameter])+2)))) {
           fprintf(stdout, "Memory allocation failure trying to create memory name for loaded data\n");
           exit(1);
         }
-        sprintf(memName, "%s.%s", tag, parameterName[iParameter]);
+        if (tag && strlen(tag))
+          sprintf(memName, "%s.%s", tag, parameterName[iParameter]);
+        else
+          sprintf(memName, "%s", parameterName[iParameter]);
         rpn_store(data1, NULL, rpn_create_mem(memName, 0));
         fprintf(stdout, "%le --> %s\n", data1,  memName);
         free(parameterName[iParameter]);
