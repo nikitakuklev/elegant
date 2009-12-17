@@ -269,7 +269,7 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
   double beta[2], alpha[2], phi[2], eta[2], etap[2], gamma[2], refAlpha[2];
   double *func, path[6], path0[6], detR[2], length, sTotal;
   double **R=NULL, C[2], S[2], Cp[2], Sp[2], D[2], Dp[2], sin_dphi, cos_dphi, dphi;
-  long n_mat_computed, i, j, plane, otherPlane, hasMatrix;
+  long n_mat_computed, i, j, plane, otherPlane, hasMatrix, hasPath;
   VMATRIX *M1, *M2;
   MATRIX *dispM, *dispOld, *dispNew;
   ELEMENT_LIST *elemOrig;
@@ -390,16 +390,33 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
         n_mat_computed++;
       }
       hasMatrix = 1;
-      /* use matrix concatenation to include effect of beam path */
+      /* Use matrix concatenation to include effect of beam path. */
+      /* In addition to copying the path into the matrix centroid array, we check
+       * to see if we really need to concatenate (hasPath=1).  Saves some time
+       * when optimizing
+       */
       for (i=0; i<6; i++) 
+        /* path0 (entrance) is needed for rad integrals */
         path0[i] = M1->C[i] = path[i];
-      concat_matrices(M2, elem->matrix, M1,
-                      entity_description[elem->type].flags&HAS_RF_MATRIX?
-                      CONCAT_EXCLUDE_S0:0);
-      R = M2->R;
-      /* record new centroids for beam path */
-      for (i=0; i<6; i++)
-        path[i] = M2->C[i];
+      for (i=hasPath=0; i<4; i++)
+        if (path0[i]) {
+          hasPath = 1;
+          break;
+        }
+      if (hasPath || path0[5]) { 
+        concat_matrices(M2, elem->matrix, M1, entity_description[elem->type].flags&HAS_RF_MATRIX?CONCAT_EXCLUDE_S0:0);
+        R = M2->R;
+        /* record new centroids for beam path */
+        for (i=0; i<6; i++)
+          path[i] = M2->C[i];
+      } else {
+        R = elem->matrix->R;
+        /* record new centroids for beam path */
+        for (i=0; i<6; i++)
+          path[i] = elem->matrix->C[i];
+        path[4] += sTotal;
+      }
+
       for (plane=0; plane<2; plane++) {
         C[plane]  = R[0+2*plane][0+2*plane]; 
         S[plane]  = R[0+2*plane][1+2*plane];
@@ -2314,7 +2331,16 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
 	 angle /= 1+coord[5];
 	 }
       */
+      double tanE1, tanE2, h2, l2, l3, l4;
       rho = length/angle;
+      h = 1./rho;
+      h2 = h*h;
+      l2 = length*length;
+      l3 = l2*length;
+      l4 = l3*length;
+      tanE1 = tan(E1);
+      tanE2 = tan(E2);
+      
       k2 = K1+1./(rho*rho);
       /* equations are from SLAC 1193 */
       k = sqrt(fabs(k2));
@@ -2326,34 +2352,29 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
 	sin_kl = sin(kl);
 	cos_kl = cos(kl);
       }
-      etap1 = etap0 + eta0/rho*tan(E1);
+      etap1 = etap0 + eta0/rho*tanE1;
       eta2  = eta0*cos_kl + etap1*sin_kl/k + (1-cos_kl)/(rho*k2);
-      alpha1 = alpha0 - beta0/rho*tan(E1);
+      alpha1 = alpha0 - beta0/rho*tanE1;
       gamma1 = (1+sqr(alpha1))/beta0;
       if (kl>1e-2) {
 	etaAve = eta0*sin_kl/kl + etap1*(1-cos_kl)/(k2*length) +
 	  (kl-sin_kl)/(k2*kl*rho);
-	etaK1_rhoAve =  -etaAve*K1/rho + (eta0*tan(E1)+eta2*tan(E2))/(2*length*sqr(rho));
+	etaK1_rhoAve =  -etaAve*K1/rho + (eta0*tanE1+eta2*tanE2)/(2*length)*h2;
 	HAve = gamma1*sqr(eta0) + 2*alpha1*eta0*etap1 + beta0*sqr(etap1) 
-	  + 2*angle*( -(gamma1*eta0+alpha1*etap1)*(kl-sin_kl)/(k*k2*sqr(length)) +
-		      (alpha1*eta0+beta0*etap1)*(1-cos_kl)/(k2*sqr(length))
+	  + 2*angle*( -(gamma1*eta0+alpha1*etap1)*(kl-sin_kl)/(k*k2*l2) +
+		      (alpha1*eta0+beta0*etap1)*(1-cos_kl)/(k2*l2)
 		      )
-	  + sqr(angle)*(gamma1*(3*kl-4*sin_kl+sin_kl*cos_kl)/(2*k*k2*k2*ipow(length,3)) 
-			- alpha1*sqr(1-cos_kl)/(k2*k2*ipow(length,3))
-			+ beta0*(kl-cos_kl*sin_kl)/(2*kl*k2*sqr(length)));
+	  + sqr(angle)*(gamma1*(3*kl-4*sin_kl+sin_kl*cos_kl)/(2*k*k2*k2*l3) 
+			- alpha1*sqr(1-cos_kl)/(k2*k2*l3)
+			+ beta0*(kl-cos_kl*sin_kl)/(2*kl*k2*l2));
       } 
       if (kl<=1e-2 || HAve<0) {
-	double kl2, kl4, kl6, kl8, l2, l3, l4, h2;
+	double kl2, kl4, kl6, kl8;
 	double T0, T2, T4, T6, T8;
-	h = 1./rho;
-	h2 = h*h;
 	kl2 = kl*kl;
 	kl4 = kl2*kl2;
 	kl6 = kl4*kl2;
 	kl8 = kl6*kl2;
-	l2 = length*length;
-	l3 = l2*length;
-	l4 = l3*length;
 
 	T0 = eta0 + (length*(3*etap1 + h*length))/6.;
 	T2 = (-20*eta0 - length*(5*etap1 + h*length))/120.;
@@ -2361,7 +2382,7 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
 	T6 =  (-72*eta0 - length*(9*etap1 + h*length))/362880.;
 	T8 = 2.505210838544172e-8*(110.*eta0 + length*(11.*etap1 + h*length));
 	etaAve = T0 + T2*kl2 + T4*kl4 + T6*kl6 + T8*kl8;
-	etaK1_rhoAve =  -etaAve*K1/rho + (eta0*tan(E1)+eta2*tan(E2))/(2*length*sqr(rho));
+	etaK1_rhoAve =  -etaAve*K1/rho + (eta0*tanE1+eta2*tanE2)/(2*length)*h2;
 
 	T0 = (ipow(eta0,2)*gamma1 - 
 	      (eta0*gamma1*h*l2)/3. + 
@@ -2389,7 +2410,7 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
 	HAve = T0 + T2*kl2 + T4*kl4 + T6*kl6 + T8*kl8;
       }
       I1 = etaAve*length/rho;
-      I2 = length/sqr(rho);
+      I2 = length*h2;
       I3 = I2/fabs(rho);
       I4 = I2/rho*etaAve - 2*length*etaK1_rhoAve;
       I5 = HAve*I3;
