@@ -65,7 +65,15 @@ void concat_matrices(VMATRIX *M2, VMATRIX *M1, VMATRIX *M0, unsigned long mode)
     /* sum up contributions to C[i]: */
     for (j=sum=0; j<6; j++) {
       sum += R1[i][j]*C0[j];
-      if (M1->order>1) {
+    }
+    C2[i] = sum + C1[i];
+  }
+
+  /* calculate new zero-th order terms */
+  if (M1->order>1) {
+    for (i=0; i<6; i++) {
+      /* sum up contributions to C[i]: */
+      for (j=sum=0; j<6; j++) {
         for (k=0; k<=j; k++) {
           sum += T1[i][j][k]*C0[j]*C0[k];
           if (M1->order>2) {
@@ -74,9 +82,10 @@ void concat_matrices(VMATRIX *M2, VMATRIX *M1, VMATRIX *M0, unsigned long mode)
           }
         }
       }
+      C2[i] += sum;
     }
-    C2[i] = sum + C1[i];
   }
+
   if (mode&CONCAT_EXCLUDE_S0)
     C2[4] += M0C4;
   
@@ -84,9 +93,16 @@ void concat_matrices(VMATRIX *M2, VMATRIX *M1, VMATRIX *M0, unsigned long mode)
   for (i=0; i<6; i++) {
     for (m=0; m<6; m++) {
       /* sum up contributions to R[i][m]: */
-      for (j=sum=0; j<6; j++) {
+      for (j=sum=0; j<6; j++) 
         sum += R1[i][j]*R0[j][m];
-        if (M1->order>1) {
+      R2[i][m] = sum;
+    }
+  }
+  if (M1->order>1) {
+    for (i=0; i<6; i++) {
+      for (m=0; m<6; m++) {
+        /* sum up contributions to R[i][m]: */
+        for (j=sum=0; j<6; j++) {
           for (k=0; k<=j; k++) {
             sum += T1[i][j][k]*(C0[j]*R0[k][m]+C0[k]*R0[j][m]);
             if (M1->order>2) {
@@ -99,8 +115,8 @@ void concat_matrices(VMATRIX *M2, VMATRIX *M1, VMATRIX *M0, unsigned long mode)
             }
           }
         }
+        R2[i][m] += sum;
       }
-      R2[i][m] = sum;
     }
   }
 
