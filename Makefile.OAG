@@ -4,7 +4,7 @@ OP_SYS_CFLAGS =
 #OPT_CFLAGS_NO = 
 #OPT_CFLAGS_YES = -O3
 #HOST_OPT = NO
-#Ocustom =
+Ocustom = -O3
 
 #RATIONAL = purify
 #RATIONAL = quantify
