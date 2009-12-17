@@ -494,7 +494,6 @@ void free_nonlinear_matrices(VMATRIX *M)
 
 void set_matrix_pointers(double **C, double ***R, double ****T, double *****Q, VMATRIX *M)
 {
-    log_entry("set_matrix_pointers");
     if (!M) {
         fprintf(stdout, "error: NULL VMATRIX pointer\n");
         fflush(stdout);
@@ -504,7 +503,6 @@ void set_matrix_pointers(double **C, double ***R, double ****T, double *****Q, V
     *R = M->R;
     *T = M->T;
     *Q = M->Q;
-    log_exit("set_matrix_pointers");
     }
 
 long read_matrices(VMATRIX *M, FILE *fp)
@@ -738,8 +736,6 @@ long check_matrix(VMATRIX *M, char *comment)
 {
     long i, j, k;
 
-    log_entry("check_matrix");
-
     if (M==NULL) {
         fprintf(stdout, "error: NULL matrix pointer---%s\n", comment);
         fflush(stdout);
@@ -761,7 +757,6 @@ long check_matrix(VMATRIX *M, char *comment)
             fflush(stdout);
         }
     if (M->order==1) {
-        log_exit("check_matrix");
         return(1);
         }
     if (M->T==NULL) {
@@ -784,7 +779,6 @@ long check_matrix(VMATRIX *M, char *comment)
             }
         }
     if (M->order==2) {
-        log_exit("check_matrix");
         return(2);
         }
     if (M->Q==NULL) {
@@ -813,7 +807,6 @@ long check_matrix(VMATRIX *M, char *comment)
                 }
             }
         }
-    log_exit("check_matrix");
     return(3);
     }
 
