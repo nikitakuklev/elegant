@@ -1400,6 +1400,8 @@ PARAMETER bmapxy_param[N_BMAPXY_PARAMS] = {
 {"ACCURACY", NULL, IS_DOUBLE, 0, (long)((char *)&bmapxy_example.accuracy), NULL, 0.0, 0, "integration accuracy"},
 {"METHOD", NULL, IS_STRING, 0, (long)((char*)&bmapxy_example.method), NULL, 0.0, 0, "integration method (runge-kutta, bulirsch-stoer, modified-midpoint, two-pass modified-midpoint, leap-frog, non-adaptive runge-kutta"},
 {"FILENAME", NULL, IS_STRING, 0, (long)((char*)&bmapxy_example.filename), NULL, 0.0, 0, "name of file containing columns (x, y, Fx, Fy) giving normalized field (Fx, Fy) vs (x, y)"},
+{"FX", NULL, IS_STRING, 0, (long)((char*)&bmapxy_example.FxRpn), NULL, 0.0, 0, "rpn expression for Fx in terms of x and y"},
+{"FY", NULL, IS_STRING, 0, (long)((char*)&bmapxy_example.FyRpn), NULL, 0.0, 0, "rpn expression for Fy in terms of x and y"},
 };  
 
 ZTRANSVERSE ztransverse_example;
@@ -2022,16 +2024,16 @@ PARAMETER lscdrift_param[N_LSCDRIFT_PARAMS] = {
 
 LSRMDLTR lsrMdltr_example;
 PARAMETER lsrMdltr_param[N_LSRMDLTR_PARAMS] = {
-    {"L", "M", IS_DOUBLE, 0, (long)((char *)&lsrMdltr_example.length), NULL, 0.0, 0, "length"},
-    {"BU", "T", IS_DOUBLE, 0, (long)((char *)&lsrMdltr_example.Bu), NULL, 0.0, 0, "Undulator peak field"},
-    {"PERIODS", "", IS_LONG, 0, (long)((char *)&lsrMdltr_example.periods), NULL, 0.0, 0, "Number of undulator periods."},
+    {"L", "M", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lsrMdltr_example.length), NULL, 0.0, 0, "length"},
+    {"BU", "T", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lsrMdltr_example.Bu), NULL, 0.0, 0, "Undulator peak field"},
+    {"PERIODS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&lsrMdltr_example.periods), NULL, 0.0, 0, "Number of undulator periods."},
     {"METHOD", NULL, IS_STRING, 0, (long)((char*)&lsrMdltr_example.method), "non-adaptive runge-kutta", 0.0, 0, "integration method (runge-kutta, bulirsch-stoer, modified-midpoint, two-pass modified-midpoint, leap-frog, non-adaptive runge-kutta)"},
     {"FIELD_EXPANSION", NULL, IS_STRING, 0, (long)((char*)&lsrMdltr_example.fieldExpansion), "ideal", 0.0, 0, "ideal, exact, or \"leading terms\""},
-    {"ACCURACY", NULL, IS_DOUBLE, 0, (long)((char *)&lsrMdltr_example.accuracy), NULL, 0.0, 0, "Integration accuracy for adaptive integration. (Not recommended)"},
-    {"N_STEPS", "", IS_LONG, 0, (long)((char *)&lsrMdltr_example.nSteps), NULL, 0.0, 0, "Number of integration steps for non-adaptive integration."},
-    {"POLE_FACTOR1", "", IS_DOUBLE, 0, (long)((char *)&lsrMdltr_example.poleFactor1), NULL, 1.557175339644387e-01, 0, "Strength factor for the first and last pole."},
-    {"POLE_FACTOR2", "", IS_DOUBLE, 0, (long)((char *)&lsrMdltr_example.poleFactor2), NULL, 3.806876151926928e-01, 0, "Strength factor for the second and second-to-last pole."},
-    {"POLE_FACTOR3", "", IS_DOUBLE, 0, (long)((char *)&lsrMdltr_example.poleFactor3), NULL, 8.028299996984605e-01, 0, "Strength factor for the third and third-to-last pole."},
+    {"ACCURACY", NULL, IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lsrMdltr_example.accuracy), NULL, 0.0, 0, "Integration accuracy for adaptive integration. (Not recommended)"},
+    {"N_STEPS", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&lsrMdltr_example.nSteps), NULL, 0.0, 0, "Number of integration steps for non-adaptive integration."},
+    {"POLE_FACTOR1", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lsrMdltr_example.poleFactor1), NULL, 1.557175339644387e-01, 0, "Strength factor for the first and last pole."},
+    {"POLE_FACTOR2", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lsrMdltr_example.poleFactor2), NULL, 3.806876151926928e-01, 0, "Strength factor for the second and second-to-last pole."},
+    {"POLE_FACTOR3", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&lsrMdltr_example.poleFactor3), NULL, 8.028299996984605e-01, 0, "Strength factor for the third and third-to-last pole."},
     {"LASER_WAVELENGTH", "M", IS_DOUBLE, 0, (long)((char *)&lsrMdltr_example.usersLaserWavelength), NULL, 0.0, 0, "Laser wavelength. If zero, the wavelength is calculated from the resonance condition."},
     {"LASER_PEAK_POWER", "W", IS_DOUBLE, 0, (long)((char *)&lsrMdltr_example.laserPeakPower), NULL, 0.0, 0, "laser peak power"},
     {"LASER_W0", "M", IS_DOUBLE, 0, (long)((char *)&lsrMdltr_example.laserW0), NULL, 1.0, 0, "laser spot size at waist"},
@@ -2041,7 +2043,7 @@ PARAMETER lsrMdltr_param[N_LSRMDLTR_PARAMS] = {
     {"LASER_Z0", "M", IS_DOUBLE, 0, (long)((char *)&lsrMdltr_example.laserZ0), NULL, 0.0, 0, "laser longitudinal offset"},
     {"LASER_M", "", IS_LONG, 0, (long)((char *)&lsrMdltr_example.laserM), NULL, 0.0, 0, "laser horizontal mode number (<5)"},
     {"LASER_N", "", IS_LONG, 0, (long)((char *)&lsrMdltr_example.laserN), NULL, 0.0, 0, "laser vertical mode number (<5)"},
-    {"SYNCH_RAD", "", IS_LONG, 0, (long)((char *)&lsrMdltr_example.synchRad), NULL, 0.0, 0, "Include classical synchrotron radiation?"},
+    {"SYNCH_RAD", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&lsrMdltr_example.synchRad), NULL, 0.0, 0, "Include classical synchrotron radiation?"},
     {"ISR", "", IS_LONG, 0, (long)((char *)&lsrMdltr_example.isr), NULL, 0.0, 0, "Include quantum excitation?"},
     {"TIME_PROFILE", NULL, IS_STRING, PARAM_XY_WAVEFORM, (long)((char*)&lsrMdltr_example.timeProfileFile), NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving time-dependent modulation of the laser profile"},
     {"TIME_OFFSET", "S", IS_DOUBLE, 0, (long)((char *)&lsrMdltr_example.timeProfileOffset), NULL, 0.0, 0, "Time offset of the laser profile."},
