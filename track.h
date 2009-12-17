@@ -802,7 +802,7 @@ extern char *entity_text[N_TYPES];
 #define N_ZTRANSVERSE_PARAMS 29
 #define N_IBSCATTER_PARAMS 11
 #define N_FMULT_PARAMS 10
-#define N_BMAPXY_PARAMS 5
+#define N_BMAPXY_PARAMS 7
 #define N_WAKE_PARAMS 13
 #define N_TRWAKE_PARAMS 19
 #define N_TUBEND_PARAMS 6
@@ -2291,11 +2291,13 @@ extern PARAMETER bmapxy_param[N_BMAPXY_PARAMS];
 typedef struct {
   double length, strength, accuracy;
   char *method, *filename;
+  char *FxRpn, *FyRpn;
   /* these are set by the program when the file is read */
   long points, nx, ny, BGiven;
   double *Fx, *Fy;
   double xmin, xmax, dx;
   double ymin, ymax, dy;
+  long rpnMem[2];
 } BMAPXY;
 
 /* names and storage structure for CHARGE element */
