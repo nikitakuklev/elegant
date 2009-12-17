@@ -1089,7 +1089,7 @@ long do_aperture_search_line(
 #if USE_MPI
   if (isMaster) {
 #endif
-  if (lines>1) {
+  if (originStable && lines>1) {
     /* compute the area */
     
     /* First clip off any portions that stick out like islands.  This is done in three steps. */
