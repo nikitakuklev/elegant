@@ -523,6 +523,13 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
   case T_TWLA:
     motion(coord, n_track, eptr->p_elem, eptr->type, &run->p_central, &dgamma, dP, NULL, 0.0);
     break;
+  case T_LSRMDLTR:
+    ltmp1 = ((LSRMDLTR*)eptr->p_elem)->isr;
+    ltmp2 = ((LSRMDLTR*)eptr->p_elem)->synchRad;
+    motion(coord, n_track, eptr->p_elem, eptr->type, &run->p_central, &dgamma, dP, NULL, 0.0);
+    ((LSRMDLTR*)eptr->p_elem)->isr = ltmp1;
+    ((LSRMDLTR*)eptr->p_elem)->synchRad = ltmp2;
+    break;
   default:
     printf("*** Error: determineMatrix called for element that is not supported!\n");
     printf("***        Seek professional help!\n");
@@ -555,13 +562,14 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
 
   free_czarray_2d((void**)coord, 1+4*6, 7);
 
+  /*
   if (strlen(eptr->name)<900)
     sprintf(s, "\nElement %s#%ld matrix determined from tracking:\n", eptr->name, eptr->occurence);
   else
     sprintf(s, "\nElement matrix determined from tracking:\n");
-    
   print_matrices(stdout, s, M);
-  
+  */
+
   return M;
 }
 
