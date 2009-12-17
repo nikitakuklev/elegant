@@ -686,8 +686,16 @@ void lorentz_setup(
             central_length = bmapxy->length;
             select_lorentz_integrator(bmapxy->method);
             tolerance = bmapxy->accuracy;
-            if (!bmapxy->points)
-              bmapxy_field_setup(bmapxy);
+	    if ((!bmapxy->filename && !(bmapxy->FxRpn && bmapxy->FyRpn)) ||
+		(bmapxy->filename && (bmapxy->FxRpn || bmapxy->FyRpn)))
+	      bomb("Specify one and only one of filename or (Fx,Fy) for BMAPXY", NULL);
+            if (bmapxy->filename) {
+	      if (!bmapxy->points)
+		bmapxy_field_setup(bmapxy);
+	    } else {
+	      bmapxy->rpnMem[0] = rpn_create_mem("x", 0);
+	      bmapxy->rpnMem[1] = rpn_create_mem("y", 0);
+	    }
             break;
           default:
             bomb("invalid field type (lortenz_setup)", NULL);
@@ -1332,35 +1340,42 @@ void bmapxy_deriv_function(double *qp, double *q, double s)
 
     /* find field components */
     F0 = 0;  /* z component of field. */
-    ix = (x-bmapxy->xmin)/bmapxy->dx;
-    iy = (y-bmapxy->ymin)/bmapxy->dy;
-    if (ix<0 || iy<0 || ix>bmapxy->nx-1 || iy>bmapxy->ny-1) {
-      F1 = F2 = 0;
-      fprintf(stdout, "invalid particle: x=%e, y=%e, ix=%ld, iy=%ld\n",
-              x, y, ix, iy);
-      n_invalid_particles++;
-      wp[0] = wp[1] = wp[2] = 0;
-    } else {
-      fx = (x-(ix*bmapxy->dx+bmapxy->xmin))/bmapxy->dx;
-      fy = (y-(iy*bmapxy->dy+bmapxy->ymin))/bmapxy->dy;
-      Fa = (1-fy)*bmapxy->Fx[ix+iy*bmapxy->nx] + fy*bmapxy->Fx[ix+(iy+1)*bmapxy->nx];
-      Fb = (1-fy)*bmapxy->Fx[ix+1+iy*bmapxy->nx] + fy*bmapxy->Fx[ix+1+(iy+1)*bmapxy->nx];
-      F1 = (1-fx)*Fa+fx*Fb;
-      Fa = (1-fy)*bmapxy->Fy[ix+iy*bmapxy->nx] + fy*bmapxy->Fy[ix+(iy+1)*bmapxy->nx];
-      Fb = (1-fy)*bmapxy->Fy[ix+1+iy*bmapxy->nx] + fy*bmapxy->Fy[ix+1+(iy+1)*bmapxy->nx];
-      F2 = (1-fx)*Fa+fx*Fb;
-      F1 *= bmapxy->strength;
-      F2 *= bmapxy->strength;
-      /* compute lorentz force */
-      wp[0] = w[1]*F2 - w[2]*F1;
-      wp[1] = w[2]*F0 - w[0]*F2;
-      wp[2] = w[0]*F1 - w[1]*F0;
-      if (bmapxy->BGiven) {
-        for (ix=0; ix<3; ix++) 
-          wp[ix] *= particleCharge/(particleMass*c_mks*P0);
+    if (bmapxy->points) {
+      ix = (x-bmapxy->xmin)/bmapxy->dx;
+      iy = (y-bmapxy->ymin)/bmapxy->dy;
+      if (ix<0 || iy<0 || ix>bmapxy->nx-1 || iy>bmapxy->ny-1) {
+	F1 = F2 = 0;
+	fprintf(stdout, "invalid particle: x=%e, y=%e, ix=%ld, iy=%ld\n",
+		x, y, ix, iy);
+	n_invalid_particles++;
+	wp[0] = wp[1] = wp[2] = 0;
+      } else {
+	fx = (x-(ix*bmapxy->dx+bmapxy->xmin))/bmapxy->dx;
+	fy = (y-(iy*bmapxy->dy+bmapxy->ymin))/bmapxy->dy;
+	Fa = (1-fy)*bmapxy->Fx[ix+iy*bmapxy->nx] + fy*bmapxy->Fx[ix+(iy+1)*bmapxy->nx];
+	Fb = (1-fy)*bmapxy->Fx[ix+1+iy*bmapxy->nx] + fy*bmapxy->Fx[ix+1+(iy+1)*bmapxy->nx];
+	F1 = (1-fx)*Fa+fx*Fb;
+	Fa = (1-fy)*bmapxy->Fy[ix+iy*bmapxy->nx] + fy*bmapxy->Fy[ix+(iy+1)*bmapxy->nx];
+	Fb = (1-fy)*bmapxy->Fy[ix+1+iy*bmapxy->nx] + fy*bmapxy->Fy[ix+1+(iy+1)*bmapxy->nx];
+	F2 = (1-fx)*Fa+fx*Fb;
+	F1 *= bmapxy->strength;
+	F2 *= bmapxy->strength;
+	/* compute lorentz force */
+	wp[0] = w[1]*F2 - w[2]*F1;
+	wp[1] = w[2]*F0 - w[0]*F2;
+	wp[2] = w[0]*F1 - w[1]*F0;
+	if (bmapxy->BGiven) {
+	  for (ix=0; ix<3; ix++) 
+	    wp[ix] *= particleCharge/(particleMass*c_mks*P0);
+	}
       }
+    } else {
+      rpn_clear();
+      rpn_store(x, NULL, bmapxy->rpnMem[0]);
+      rpn_store(y, NULL, bmapxy->rpnMem[1]);
+      F1 = bmapxy->strength*rpn(bmapxy->FxRpn);
+      F2 = bmapxy->strength*rpn(bmapxy->FyRpn);
     }
-    
 #ifdef DEBUG
     fprintf(fp_field, "%e %e %e %e %e %e %e %e\n", q[0], q[1], q[2], 0.0, s, F0, F1, F2);
     fflush(fp_field);
