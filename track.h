@@ -3255,9 +3255,6 @@ void finish_load_parameters(void);
 extern long nearestInteger(double value);
 
 
-typedef struct {
-    char *name, *text; 
-    } SDDS_DEFINITION;
 #define SDDS_EOS_NEWFILE 1
 #define SDDS_EOS_COMPLETE 2
 long check_sdds_column(SDDS_TABLE *SDDS_table, char *name, char *units);
