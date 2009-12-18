@@ -2149,45 +2149,6 @@ void getRunControlContext (VARY *context)
   *context = run_control;
 }
 
-/* allocate Continguous Zero-offset 2D array */
-
-void **czarray_2d(long size, long n1, long n2)
-{
-  char **ptr0;
-  char *buffer;
-  long i;
-
-  ptr0 = (char**)tmalloc((unsigned)(sizeof(*ptr0)*n1));
-  buffer =  (char*)tmalloc((unsigned)(sizeof(*buffer)*size*n1*n2));
-  for (i=0; i<n1; i++)
-    ptr0[i] = buffer+i*size*n2;
-  return((void**)ptr0);
-}
-
-void **resize_czarray_2d(void **data, long size, long n1, long n2)
-{
-  char **ptr0;
-  char *buffer;
-  long i;
-
-  if (!data)
-    return czarray_2d(size, n1, n2);
-  buffer =  (char*)trealloc(*data, (unsigned)(sizeof(char)*size*n1*n2));
-  ptr0 = (char**)trealloc(data, (unsigned)(sizeof(char*)*n1));
-  for (i=0; i<n1; i++)
-    ptr0[i] = buffer+i*size*n2;
-  return((void**)ptr0);
-}
-
-/* arguments are for compatibility with free_zarray_2d */
-
-int free_czarray_2d(void **array, long n1, long n2)
-{
-  free(*array);
-  free(array);
-  return 0;
-}
-
 void swapParticles(double *p1, double *p2)
 {
   double buffer[7];
