@@ -7,12 +7,12 @@
 
 #namelist momentum_aperture static
     STRING output = NULL;
-    double x_initial = 0;
-    double y_initial = 0;
+    double x_initial = 1e-5;
+    double y_initial = 1e-5;
     double delta_negative_limit = -0.10;
     double delta_positive_limit = 0.10;
-    double delta_step_size = 0.01;
-    long splits = 2;
+    double delta_step_size = 0.0025;
+    long splits = 1;
     long steps_back = 1;
     long split_step_divisor = 10;
     long skip_elements = 0;
@@ -24,6 +24,7 @@
     long fiducialize = 0;
     long verbosity = 1;        
     long soft_failure = 0;
+    long output_mode = 0;
 #end
 
 
