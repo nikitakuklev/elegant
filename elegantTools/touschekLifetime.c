@@ -9,6 +9,9 @@
 
 /* 
  * $Log: not supported by cvs2svn $
+ * Revision 1.5  2009/12/15 03:20:14  borland
+ * Improved error message.
+ *
  * Revision 1.4  2009/03/17 21:16:26  borland
  * Added -deltaLimit option, which allows artificially imposing an maximum
  * momentum aperture.
@@ -50,6 +53,7 @@ static char *USAGE = "touschekLifetime <resultsFile>\n\
  [-deltaLimit=<percent>]\n\
  {-RF=Voltage=<MV>,harmonic=<value>|-length=<mm>}\n\
  [-emitxInput=<value>] [-deltaInput=<value>] [-verbosity=<value>]\n\
+ [-ignoreMismatch]\n\
 Program by A. Xiao.  (This is version 3, M. Borland)";
 
 #define VERBOSE 0
@@ -63,7 +67,8 @@ Program by A. Xiao.  (This is version 3, M. Borland)";
 #define TWISSFILE 8
 #define APERFILE 9
 #define DELTALIMIT 10
-#define N_OPTIONS 11
+#define IGNORE_MISMATCH 11
+#define N_OPTIONS 12
 
 char *option[N_OPTIONS] = {
   "verbose",
@@ -77,6 +82,7 @@ char *option[N_OPTIONS] = {
   "twiss",
   "aperture",
   "deltalimit",
+  "ignoreMismatch",
 };
 
 void TouschekLifeCalc();  
@@ -97,6 +103,7 @@ long *eOccur1;
 double pCentral, sz, sigmap; 
 double NP, emitx, emity; 
 char **eName1, **eName2, **eType1;
+long ignoreMismatch = 0;
 #define NDIV 10000;
 
 int main( int argc, char **argv)
@@ -203,6 +210,9 @@ int main( int argc, char **argv)
           bomb("invalid -deltaLimit syntax/values", "-deltaLimit=<percent>");        
         deltaLimit /= 100.0;
         break;
+      case IGNORE_MISMATCH:
+	ignoreMismatch = 1;
+	break;
       default:
         bomb("unknown option given.", NULL);  
       }
@@ -518,14 +528,15 @@ void TouschekLifeCalc(long verbosity)
         }        
       }
     }
-/* compare two files if it's for same beam line. */       
+    /* compare two files if it's for same beam line. */       
     if(s[i]>s2[j]) j++;
     if(j==elem2) j--;
-/* Normally the first element for twiss file is _BEG_, which is not true for aperture file.
- But we need it for starting the calculation. */
+    /* Normally the first element for twiss file is _BEG_, which is not true for aperture file.
+       But we need it for starting the calculation. */
     if(s[i]!=0 && s[i]==s2[j] && strcmp(eName1[i],eName2[j])!=0) {
       printf("element1 \"%s\" and elem2 \"%s\" at s1 %21.15e s2 %21.15e don't match\n",eName1[i],eName2[j],s[i],s2[j]);
-      bomb("Twiss and Aperture file are not for same beamline",NULL);
+      if (!ignoreMismatch)
+	bomb("Twiss and Aperture file are not for same beamline",NULL);
     }
 
     pp = linear_interpolation(dpp, s2, elem2, s[i], j-1); 
