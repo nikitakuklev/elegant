@@ -14,6 +14,9 @@
  * Michael Borland, 2000
  *
  $Log: not supported by cvs2svn $
+ Revision 1.5  2009/07/21 14:29:49  borland
+ Added symbols to the columns.
+
  Revision 1.4  2008/08/21 16:58:16  borland
  Incremented version number and date.
 
@@ -509,10 +512,6 @@ long check_sdds_beam_column(SDDS_TABLE *SDDS_table, char *name, char *units)
   free(units1);
   return(0);
 }
-
-typedef struct {
-    char *name, *text; 
-    } SDDS_DEFINITION;
 
 #define PHASE_SPACE_COLUMNS 7
 static SDDS_DEFINITION column_definition[PHASE_SPACE_COLUMNS] = {
