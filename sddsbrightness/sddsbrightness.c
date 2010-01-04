@@ -14,6 +14,9 @@
  * Michael Borland, 2002
  *
  $Log: not supported by cvs2svn $
+ Revision 1.15  2009/06/02 17:56:50  borland
+ Fixed units for brightness.
+
  Revision 1.14  2009/04/14 13:19:48  borland
  Now accepts units of "m" for ex0.
 
@@ -164,8 +167,8 @@ double convolutionFunc(double x);
 double delta0,sincNu; /*two constants used in convolutionFunc() */
 
 /*following functions are needed for calculating brightness using Dejus's method */
-void FindPeak(double *E,double *spec,double *ep,double *sp,long n);
-int Gauss_Convolve(double *E,double *spec,long *ns,double sigmaE);
+void FindPeak(double *E,double *spec,double *ep,double *sp,int32_t n);
+int Gauss_Convolve(double *E,double *spec,int32_t *ns,double sigmaE);
 /* note that sigmaE=Sdelta0 */
 void Dejus_CalculateBrightness(double current,long nE,
                                double period_mks, long nP, long device,
@@ -771,7 +774,7 @@ long GetTwissValues(SDDS_DATASET *SDDSin,
   return 1;
 }
 
-void FindPeak(double *E,double *spec,double *ep,double *sp,long n)
+void FindPeak(double *E,double *spec,double *ep,double *sp,int32_t n)
 {
   long i;
   
@@ -785,11 +788,10 @@ void FindPeak(double *E,double *spec,double *ep,double *sp,long n)
   }
 }
 
-int Gauss_Convolve(double *E,double *spec,long *ns,double sigmaE) 
+int Gauss_Convolve(double *E,double *spec,int32_t *ns,double sigmaE) 
 {
-  long nSigma=3,nppSigma=6,ne1,ne2,ns1,np;
-  
-  int i,j;
+  int32_t nSigma=3,nppSigma=6,ne1,ne2,ns1,np;
+  int32_t i,j;
   double ep,sp,sigp,de,sum, *gs,x, *spec2;
 	
   ns1=*ns;
@@ -905,8 +907,8 @@ void Dejus_CalculateBrightness(double current,long nE,
                                double ***Energy, double ***Brightness, double ***LamdarOut)
 {
   double lamdar,reducedE,kx,ky,eMin,eMax,ekMin,ekMax,ep,sp,dep1,dep2,fc,fc2,de,smax;
-  long ih,i,j,je,errorFlag=0;
-  long nSigma=3,nppSigma=6,nek,ns,exitLoop=0;
+  int32_t ih,i,j,je,errorFlag=0;
+  int32_t nSigma=3,nppSigma=6,nek,ns,exitLoop=0;
   double JArg,sigmaEE,gk,dek,ek;
   double *tmpE,*tmpSpec,**ei,*ptot,*pd,*kyb,**eb,**sb;
   double e,k;
