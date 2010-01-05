@@ -2324,6 +2324,8 @@ using values at marker elements.  See the documentation for
     STRING include_type_pattern = NULL;
     long fiducialize = 0;
     long verbosity = 1;
+    long soft_failure = 0;
+    long output_mode = 0;
 &end
 \end{verbatim}
 
@@ -2376,6 +2378,17 @@ pattern.
 
 \item \verb|verbosity| --- Larger values result in more detailed
 printouts as calculations proceed.  Mostly for debugging.
+
+\item \verb|soft_failure| --- Normally, if {\tt elegant} fails to find the momentum aperture,
+it aborts.  If \verb|soft_failure| is non-zero, it instead assigns a momentum aperture equal
+to the search limit.
+
+\item \verb|output_mode| --- Normally, {\tt elegant} puts the values for positive and
+negative momentum aperture in different columns.  Each element thus has a single row of
+data in the output file.  If \verb|output_mode| is nonzero, {\tt elegant} instead puts
+the values for positive and negative apertures in successive rows, with a reduced number
+of columns.  This is mostly advantageous for the parallel version, since it allows using
+twice as many simultaneous processors.
 \end{itemize}
 
 The idea for this command is from M. Belgroune {\em et al.}, ``Refined
