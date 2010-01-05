@@ -69,7 +69,7 @@ void setup_bunched_beam(
     double xTwiss[5], yTwiss[5];
     long mode;
     
-    if (!get_twiss_mode(&mode, xTwiss, yTwiss) && mode!=0)
+    if (!get_twiss_mode(&mode, xTwiss, yTwiss) || mode!=0)
       bomb("use_twiss_command_values invalid unless twiss_output command given previously with matched=0.",
            NULL);
     beta_x = xTwiss[0];

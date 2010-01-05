@@ -80,6 +80,7 @@ static long twissAnalysisRequests = 0;
 static TWISS_ANALYSIS_REQUEST *twissAnalysisRequest = NULL;
 
 static short mustResetRfcaMatrices = 0;
+static short twissComputed = 0;
 
 VMATRIX *compute_periodic_twiss(
                                 double *betax, double *alphax, double *etax, double *etapx, double *NUx,
@@ -256,6 +257,19 @@ VMATRIX *compute_periodic_twiss(
   *NUx = phi[0]/PIx2;
   *NUy = phi[1]/PIx2;
 
+  /* Copy the periodic values to the twiss_output input variables.  This makes them available
+   * for bunched_beams via the use_twiss_command_values qualifier 
+   */
+  twissComputed = 1;
+  beta_x = beta[0];
+  alpha_x = alpha[0];
+  eta_x = etax[0];
+  etap_x = etapx[0];
+  beta_y = beta[1];
+  alpha_y = alpha[1];
+  eta_y = etay[0];
+  etap_y = etapy[0];
+  
   log_exit("compute_periodic_twiss");
   return(M);
 }
@@ -1249,7 +1263,12 @@ long get_twiss_mode(long *mode, double *x_twiss, double *y_twiss)
 {
   if (!twiss_initialized)
     return(0);
-  *mode = matched;
+  if (*mode = matched) {
+    if (twissComputed) {
+      *mode = 0;
+    } else
+      return 0;
+  }
   x_twiss[0] = beta_x;
   x_twiss[1] = alpha_x;
   x_twiss[2] = eta_x;
