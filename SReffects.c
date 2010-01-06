@@ -35,11 +35,6 @@ void track_SReffects(double **coord, long np, SREFFECTS *SReffects, double Po,
       active = 0;
 #endif
 
-    if (SReffects->qExcite && !SReffects->includeOffsets) {
-      printf("\n*** Error: SREFFECTS seen with QEXCITATION=1 and INCLUDE_OFFSETS=0\n");
-      exit(1);
-    }
-
     if (!twiss) {
       printf("Problem with SREFFECTS: no twiss parameters were computed\n");
       printf("It may be necessary to pre-compute twiss parameters using an additional\n");
