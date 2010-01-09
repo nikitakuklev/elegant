@@ -1611,6 +1611,9 @@ double optimization_function(double *value, long *invalid)
             else
               optimization_data->termWeight[i] = 0;
             sum += fabs(value);
+	    if (rpn_check_error()) {
+	      printf("Problem evaluating expression: %s\n", optimization_data->term[i]);
+	    }
           }
           if (terms)
             for (i=0; i<optimization_data->terms; i++) {
