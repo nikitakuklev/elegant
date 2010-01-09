@@ -1144,6 +1144,7 @@ double optimization_function(double *value, long *invalid)
   TWISS twiss_ave, twiss_min, twiss_max;
   double XYZ[3], Angle[3], XYZMin[3], XYZMax[3];
   double startingOrbitCoord[6] = {0,0,0,0,0,0};
+  long rpnError = 0;
   
   log_entry("optimization_function");
   
@@ -1613,7 +1614,13 @@ double optimization_function(double *value, long *invalid)
             sum += fabs(value);
 	    if (rpn_check_error()) {
 	      printf("Problem evaluating expression: %s\n", optimization_data->term[i]);
+              rpn_clear_error();
+              rpnError++;
 	    }
+          }
+          if (rpnError) {
+            printf("RPN expression errors prevent balancing terms\n");
+            exit(1);
           }
           if (terms)
             for (i=0; i<optimization_data->terms; i++) {
@@ -1633,14 +1640,25 @@ double optimization_function(double *value, long *invalid)
           for (i=result=0; i<optimization_data->terms; i++)  {
             rpn_clear();
             result += (optimization_data->termValue[i]=optimization_data->termWeight[i]*rpn(optimization_data->term[i]));
+	    if (rpn_check_error()) {
+	      printf("Problem evaluating expression: %s\n", optimization_data->term[i]);
+              rpn_clear_error();
+              rpnError++;
+	    }
           }
         }
         else {
           rpn_clear();    /* clear rpn stack */
           result = rpn(optimization_data->UDFname);
+          if (rpn_check_error()) {
+            printf("Problem evaluating expression: %s\n", optimization_data->term[i]);
+            rpnError++;
+          }
         }
-        if (rpn_check_error())
+        if (rpnError) {
+          printf("RPN expression errors prevent optimization\n");
           exit(1);
+        }
         if (isnan(result) || isinf(result)) {
           *invalid = 1;
         } else {
