@@ -80,7 +80,8 @@ static long twissAnalysisRequests = 0;
 static TWISS_ANALYSIS_REQUEST *twissAnalysisRequest = NULL;
 
 static short mustResetRfcaMatrices = 0;
-static short twissComputed = 0;
+static short periodicTwissComputed = 0;
+static TWISS lastPeriodicTwiss;
 
 VMATRIX *compute_periodic_twiss(
                                 double *betax, double *alphax, double *etax, double *etapx, double *NUx,
@@ -260,15 +261,16 @@ VMATRIX *compute_periodic_twiss(
   /* Copy the periodic values to the twiss_output input variables.  This makes them available
    * for bunched_beams via the use_twiss_command_values qualifier 
    */
-  twissComputed = 1;
-  beta_x = beta[0];
-  alpha_x = alpha[0];
-  eta_x = etax[0];
-  etap_x = etapx[0];
-  beta_y = beta[1];
-  alpha_y = alpha[1];
-  eta_y = etay[0];
-  etap_y = etapy[0];
+  periodicTwissComputed = 1;
+  memset(&lastPeriodicTwiss, 0, sizeof(lastPeriodicTwiss));
+  lastPeriodicTwiss.betax = beta[0];
+  lastPeriodicTwiss.alphax = alpha[0];
+  lastPeriodicTwiss.etax = etax[0];
+  lastPeriodicTwiss.etapx = etapx[0];
+  lastPeriodicTwiss.betay = beta[1];
+  lastPeriodicTwiss.alphay = alpha[1];
+  lastPeriodicTwiss.etay = etay[0];
+  lastPeriodicTwiss.etapy = etapy[0];
   
   log_exit("compute_periodic_twiss");
   return(M);
@@ -1259,26 +1261,27 @@ void dump_twiss_parameters(
   log_exit("dump_twiss_parameters");
 }
 
-long get_twiss_mode(long *mode, double *x_twiss, double *y_twiss)
+long get_twiss_mode(long *mode, TWISS *twissRet)
 {
   if (!twiss_initialized)
     return(0);
   if (*mode = matched) {
-    if (twissComputed) {
+    if (periodicTwissComputed) {
       *mode = 0;
     } else
       return 0;
   }
-  x_twiss[0] = beta_x;
-  x_twiss[1] = alpha_x;
-  x_twiss[2] = eta_x;
-  x_twiss[3] = etap_x;
-  x_twiss[4] = 0;
-  y_twiss[0] = beta_y;
-  y_twiss[1] = alpha_y;
-  y_twiss[2] = eta_y;
-  y_twiss[3] = etap_y;
-  y_twiss[4] = 0;
+  if (!matched) { 
+    twissRet->betax = beta_x;
+    twissRet->alphax = alpha_x;
+    twissRet->etax = eta_x;
+    twissRet->etapx = etap_x;
+    twissRet->betay = beta_y;
+    twissRet->alphay = alpha_y;
+    twissRet->etay = eta_y;
+    twissRet->etapy = etap_y;
+  } else 
+    memcpy(twissRet, &lastPeriodicTwiss, sizeof(*twissRet));
   return(1);
 }
 

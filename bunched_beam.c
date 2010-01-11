@@ -58,7 +58,7 @@ void setup_bunched_beam(
 {
   long i, offset;
   log_entry("setup_bunched_beam");
-
+  
   /* process namelist input */
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
@@ -66,20 +66,20 @@ void setup_bunched_beam(
   if (Po<=0)
     Po = run->p_central;
   if (use_twiss_command_values) {
-    double xTwiss[5], yTwiss[5];
+    TWISS twiss;
     long mode;
     
-    if (!get_twiss_mode(&mode, xTwiss, yTwiss) || mode!=0)
-      bomb("use_twiss_command_values invalid unless twiss_output command given previously with matched=0.",
+    if (!get_twiss_mode(&mode, &twiss) || mode!=0)
+      bomb("use_twiss_command_values invalid unless twiss_output command given previously with matched=0 or in action mode with matched=1.",
            NULL);
-    beta_x = xTwiss[0];
-    alpha_x = xTwiss[1];
-    eta_x = xTwiss[2];
-    etap_x = xTwiss[3];
-    beta_y = yTwiss[0];
-    alpha_y = yTwiss[1];
-    eta_y = yTwiss[2];
-    etap_y = yTwiss[3];
+    beta_x = twiss.betax;
+    alpha_x = twiss.alphax;
+    eta_x = twiss.etax;
+    etap_x = twiss.etapx;
+    beta_y = twiss.betay;
+    alpha_y = twiss.alphay;
+    eta_y = twiss.etay;
+    etap_y = twiss.etapy;
   }
   
   if (echoNamelists) print_namelist(stdout, &bunched_beam);

@@ -2825,7 +2825,7 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
                                 RADIATION_INTEGRALS *radIntegrals,
                                 ELEMENT_LIST *elem, RUN *run, double *traj,
 				double *couplingFactor);
-long get_twiss_mode(long *mode, double *x_twiss, double *y_twiss);
+long get_twiss_mode(long *mode, TWISS *twiss);
 void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_coord, long matched, 
                               long radiation_integrals,
                               double beta_x, double alpha_x, double eta_x, double etap_x, 
