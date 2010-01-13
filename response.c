@@ -25,14 +25,17 @@ typedef struct {
     long sIndex, monitorNameIndex, *correctorIndex;
     } RESPONSE_OUTPUT;
 RESPONSE_OUTPUT xRespOutput, yRespOutput, xInvRespOutput, yInvRespOutput;
+RESPONSE_OUTPUT xyRespOutput, yxRespOutput;
 
 #define NORMAL_UNITS 0
 #define KNL_UNITS 1
 #define BNL_UNITS 2
 
+static CORMON_DATA CMyx, CMxy;
+
 void setup_response_output(RESPONSE_OUTPUT *respOutput,
                            char *filename, char *type, RUN *run, char *beamline_name, CORMON_DATA *CM, STEERING_LIST *SL, 
-                           long plane, long inverse, long unitsType);
+                           long bpmPlane, long corrPlane, long inverse, long unitsType);
 void do_response_output(RESPONSE_OUTPUT *respOutput, CORMON_DATA *CM, STEERING_LIST *SL, long plane,
                    long inverse, long KnL_units, long tune_corrected);
 #include "response.h"
@@ -60,6 +63,38 @@ void setup_correction_matrix_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *
     unitsCode = KnL_units?KNL_UNITS:(BnL_units?BNL_UNITS:0);
     if (unitsCode==BNL_UNITS && !BnLUnitsOK)
       bomb("At present you must give the matrix_output or twiss_output command to use BnL_units=1.  Sorry.", NULL);
+
+    if (coupled) {
+      /* set up the coupled response matrix data structures */
+
+      /* CMyx is the vertical response to horizontal correctors */
+      /* --- copy corrector information */
+      CMyx.ncor = correct->CMx->ncor;
+      CMyx.kick_coef = correct->CMx->kick_coef;
+      CMyx.sl_index = correct->CMx->sl_index;
+      CMyx.ucorr = correct->CMx->ucorr;
+      /* --- copy BPM information */      
+      CMyx.nmon = correct->CMy->nmon;
+      CMyx.umoni = correct->CMy->umoni;
+      CMyx.mon_index = correct->CMy->mon_index;
+      CMyx.C = NULL;
+      CMyx.bpmPlane = 1;
+      CMyx.corrPlane = 0;
+      
+      /* CMxy is the horizontal response to vertical correctors */
+      /* --- copy corrector information */
+      CMxy.ncor = correct->CMy->ncor;
+      CMxy.kick_coef = correct->CMy->kick_coef;
+      CMxy.sl_index = correct->CMy->sl_index;
+      CMxy.ucorr = correct->CMy->ucorr;
+      /* --- copy BPM information */      
+      CMxy.nmon = correct->CMx->nmon;
+      CMxy.umoni = correct->CMx->umoni;
+      CMxy.mon_index = correct->CMx->mon_index;
+      CMxy.C = NULL;
+      CMxy.bpmPlane = 0;
+      CMxy.corrPlane = 1;
+    }
     
 #if USE_MPI
     if (isSlave)
@@ -68,43 +103,54 @@ void setup_correction_matrix_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *
 
     if (response[0])
         setup_response_output(&xRespOutput, response[0], correction_mode[correct->mode], run, beamline->name,
-                              correct->CMx, &correct->SLx, 0, 0, unitsCode);
+                              correct->CMx, &correct->SLx, 0, 0, 0, unitsCode);
     if (response[1])
         setup_response_output(&yRespOutput, response[1], correction_mode[correct->mode], run, beamline->name,
-                              correct->CMy, &correct->SLy, 1, 0, unitsCode);
+                              correct->CMy, &correct->SLy, 1, 1, 0, unitsCode);
 
+    if (response[2])
+        setup_response_output(&yxRespOutput, response[2], correction_mode[correct->mode], run, beamline->name,
+                              &CMyx, &correct->SLx, 1, 0, 0, unitsCode);
+    if (response[3])
+        setup_response_output(&xyRespOutput, response[3], correction_mode[correct->mode], run, beamline->name,
+                              &CMxy, &correct->SLy, 0, 1, 0, unitsCode);
+      
     if (inverse[0])
         setup_response_output(&xInvRespOutput, inverse[0], correction_mode[correct->mode], run, beamline->name,
-                              correct->CMx, &correct->SLx, 0, 1, unitsCode);
+                              correct->CMx, &correct->SLx, 0, 0, 1, unitsCode);
     if (inverse[1])
         setup_response_output(&yInvRespOutput, inverse[1], correction_mode[correct->mode], run, beamline->name,
-                              correct->CMy, &correct->SLy, 1, 1, unitsCode);
+                              correct->CMy, &correct->SLy, 1, 1, 1, unitsCode);
 
     log_exit("setup_correction_matrix_output");
     }
 
 void setup_response_output(RESPONSE_OUTPUT *respOutput,
                            char *filename, char *type, RUN *run, char *beamline_name, CORMON_DATA *CM, STEERING_LIST *SL, 
-                           long plane, long inverse, long unitsCode)
+                           long bpmPlane, long correctorPlane, long inverse, long unitsCode)
 {
     ELEMENT_LIST *eptr;
     static char s[256], t[256], units[32];
     long i, j, *unique_name, sl_index;
+    long matrixType;
+    char *matrixTypeName[4] = {"horizontal", "vertical", "v->h", "h->v"};
 
+    matrixType = bpmPlane==correctorPlane ? bpmPlane : 2+bpmPlane;
+    
     log_entry("setup_response_output");
     filename = compose_filename(filename, run->rootname);
     if (!inverse) {
         sprintf(s, "%s-plane %s %sfixed path-length response matrix for beamline %s of lattice %s", 
-                plane?"vertical":"horizontal", type, 
+                matrixTypeName[matrixType], type,
                 fixed_length?"":"non-", beamline_name, run->lattice);
-        sprintf(t, "%s-plane %s %sfixed path-length response matrix", plane?"vertical":"horizontal", type,
+        sprintf(t, "%s-plane %s %sfixed path-length response matrix", matrixTypeName[matrixType], type,
                 fixed_length?"":"non-");
         }
     else {
         sprintf(s, "%s-plane %s transposed inverse %sfixed path-length response matrix for beamline %s of lattice %s", 
-                plane?"vertical":"horizontal", type, 
+                matrixTypeName[matrixType], type, 
                 fixed_length?"":"non-", beamline_name, run->lattice);
-        sprintf(t, "%s-plane %s transposed inverse %sfixed path-length response matrix", plane?"vertical":"horizontal", 
+        sprintf(t, "%s-plane %s transposed inverse %sfixed path-length response matrix", matrixTypeName[matrixType],
                 type, fixed_length?"":"non-");
         }
 
@@ -229,6 +275,65 @@ void setup_response_output(RESPONSE_OUTPUT *respOutput,
     log_exit("setup_response_output");
     }
 
+/* This routine is only run by the optimizer.  It results in values being placed in
+ * rpn memories for use in optimization.
+ */
+
+void update_response(RUN *run, LINE_LIST *beamline, CORRECTION *correct) 
+{
+    MAT *Cx, *Cy, *Tx, *Ty;
+
+    /* Copy the matrices from the correction structure so we can put them back when we are done. 
+     * We have to do this because the correction command may have different settings (e.g., fixed-length
+     * constraint or non-perturbed matrix.
+     */
+
+    Cx = correct->CMx->C;
+    Tx = correct->CMx->T;
+    correct->CMx->C = correct->CMx->T = NULL;
+
+    Cy = correct->CMy->C;
+    Ty = correct->CMy->T;
+    correct->CMy->C = correct->CMy->T = NULL;
+
+    if (correct->mode==TRAJECTORY_CORRECTION) {
+      compute_trajcor_matrices(correct->CMx, &correct->SLx, 0, run, beamline, 0, 0);
+      compute_trajcor_matrices(correct->CMy, &correct->SLy, 2, run, beamline, 0, 0);
+      if (coupled) {
+        compute_trajcor_matrices(&CMxy, &correct->SLy, 0, run, beamline, 0, 0);
+        compute_trajcor_matrices(&CMyx, &correct->SLx, 2, run, beamline, 0, 0);
+      }
+    }
+    else if (correct->mode==ORBIT_CORRECTION) {
+      compute_orbcor_matrices(correct->CMx, &correct->SLx, 0, run, beamline, 0, 0,
+                              fixed_length, 0);
+      compute_orbcor_matrices(correct->CMy, &correct->SLy, 2, run, beamline, 0, 0,
+                              fixed_length, 0);
+      if (coupled) {
+        compute_orbcor_matrices1(&CMxy, &correct->SLy, 0, run, beamline, 0, 0, 
+                                fixed_length, 0);
+        compute_orbcor_matrices1(&CMyx, &correct->SLx, 2, run, beamline, 0, 0,
+                                fixed_length, 0);
+      }
+    }
+    else
+      bomb("bad correction mode (update_response)", NULL);
+
+    /* copy matrices back to the correction structure and free memory */
+    matrix_free(correct->CMx->C);
+    matrix_free(correct->CMx->T);
+    correct->CMx->C = Cx;
+    correct->CMx->T = Tx;
+
+    matrix_free(correct->CMy->C);
+    matrix_free(correct->CMy->T);
+    correct->CMy->C = Cy;
+    correct->CMy->T = Ty;
+
+  }
+
+
+
 void run_response_output(RUN *run, LINE_LIST *beamline, CORRECTION *correct, long tune_corrected)
 {
     long unitsCode, inverseComputedSave;
@@ -258,6 +363,11 @@ void run_response_output(RUN *run, LINE_LIST *beamline, CORRECTION *correct, lon
 
       compute_trajcor_matrices(correct->CMy, &correct->SLy, 2, run, beamline, 0,
                                !(inverse[1]==NULL || SDDS_StringIsBlank(inverse[1])));
+
+      if (coupled) {
+        compute_trajcor_matrices(&CMxy, &correct->SLy, 0, run, beamline, 0, 0);
+        compute_trajcor_matrices(&CMyx, &correct->SLx, 2, run, beamline, 0, 0);
+      }
     }
     else if (correct->mode==ORBIT_CORRECTION) {
       printf("Computing orbit correction matrices for output, with %s length.\n",
@@ -268,24 +378,37 @@ void run_response_output(RUN *run, LINE_LIST *beamline, CORRECTION *correct, lon
       compute_orbcor_matrices(correct->CMy, &correct->SLy, 2, run, beamline, 0,
                               !(inverse[1]==NULL || SDDS_StringIsBlank(inverse[1])),
                               fixed_length, 1);
+      if (coupled) {
+        compute_orbcor_matrices1(&CMxy, &correct->SLy, 0, run, beamline, 0, 0, 
+                                fixed_length, 1);
+        compute_orbcor_matrices1(&CMyx, &correct->SLx, 2, run, beamline, 0, 0,
+                                fixed_length, 1);
+      }
     }
     else
       bomb("bad correction mode (run_response_output)", NULL);
 
 #if USE_MPI
-    if (isSlave)
-      return;
+    if (!isSlave) {
 #endif
 
-    if (response[0])
+      if (response[0])
         do_response_output(&xRespOutput, correct->CMx, &correct->SLx, 0, 0, unitsCode, tune_corrected);
-    if (response[1])
+      if (response[1])
         do_response_output(&yRespOutput, correct->CMy, &correct->SLy, 1, 0, unitsCode, tune_corrected);
-    if (inverse[0])
+      if (response[2])
+        do_response_output(&yxRespOutput, &CMyx, &correct->SLx, 0, 0, unitsCode, tune_corrected);
+      if (response[3])
+        do_response_output(&xyRespOutput, &CMxy, &correct->SLy, 1, 0, unitsCode, tune_corrected);
+      if (inverse[0])
         do_response_output(&xInvRespOutput, correct->CMx, &correct->SLx, 0, 1, unitsCode, tune_corrected);
-    if (inverse[1])
+      if (inverse[1])
         do_response_output(&yInvRespOutput, correct->CMy, &correct->SLy, 1, 1, unitsCode, tune_corrected);
 
+#if USE_MPI
+  }
+#endif
+    
     /* copy matrices back to the correction structure and free memory */
     matrix_free(correct->CMx->C);
     matrix_free(correct->CMx->T);
@@ -296,23 +419,16 @@ void run_response_output(RUN *run, LINE_LIST *beamline, CORRECTION *correct, lon
     matrix_free(correct->CMy->T);
     correct->CMy->C = Cy;
     correct->CMy->T = Ty;
+
     }
 
-void do_response_output(RESPONSE_OUTPUT *respOutput, CORMON_DATA *CM, STEERING_LIST *SL, long plane,
+void do_response_output(RESPONSE_OUTPUT *respOutput, CORMON_DATA *CM, STEERING_LIST *SL, long corrPlane,
                    long inverse, long unitsCode, long tune_corrected)
 {
     long i, j;
     ELEMENT_LIST *eptr;
     double value;
 
-/*
-    matrix_show(inverse ? CM->T : CM->C, "%13.6le ", 
-                plane ? 
-                (inverse ? "vertical inverse\n" : "vertical response\n") :
-                (inverse ? "horizontal inverse\n" : "horizontal response\n"), stdout);
-*/
-    
-    log_entry("do_response_output");
     if (!SDDS_StartTable(&respOutput->SDDSout, CM->nmon) ||
         !SDDS_SetParameters(&respOutput->SDDSout, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
                             "Stage", 
@@ -335,7 +451,7 @@ void do_response_output(RESPONSE_OUTPUT *respOutput, CORMON_DATA *CM, STEERING_L
                                        respOutput->correctorIndex[j], value, -1))
                     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
                 }
-        else if (unitsCode==KNL_UNITS && plane==0) 
+        else if (unitsCode==KNL_UNITS && corrPlane==0) 
             for (j=0; j<CM->ncor; j++) {
                 eptr = CM->ucorr[j];
                 value = (inverse?Mij(CM->T, j, i):Mij(CM->C, i, j));
@@ -355,7 +471,6 @@ void do_response_output(RESPONSE_OUTPUT *respOutput, CORMON_DATA *CM, STEERING_L
         }
     if (!SDDS_WriteTable(&respOutput->SDDSout))
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-    log_exit("do_response_output");
     }
 
 void finish_response_output(void)

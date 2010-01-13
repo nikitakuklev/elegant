@@ -43,6 +43,8 @@ typedef struct {
     MAT *C, *T; 
     /* information about last correction */
     long n_cycles_done;
+    /* at present these are used only for response matrix for cross-plane correction */
+    short bpmPlane, corrPlane;
     } CORMON_DATA;
 
 typedef struct {
@@ -62,6 +64,8 @@ typedef struct {
 
 extern void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN *run, LINE_LIST *beamline, long find_only, long invert);
 extern void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN *run, LINE_LIST *beamline, long find_only, long invert, long fixed_length, long verbose);
+void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN *run, LINE_LIST *beamline, 
+                              long find_only, long invert, long fixed_length, long verbose);
 
 extern void setup_corrector_output(char *filename, RUN *run);
 extern void dump_corrector_data(CORMON_DATA *CM, STEERING_LIST *SL, long index, char *plane, long step);
@@ -76,6 +80,7 @@ extern void setup_correction_matrix_output(NAMELIST_TEXT *nltext, RUN *run, LINE
                                            CORRECTION *correct,
                                            long *do_response, long BnLUnitsOk);
 extern void run_response_output(RUN *run, LINE_LIST *beamline, CORRECTION *correct, long tune_corrected);
+extern void update_response(RUN *run, LINE_LIST *beamline, CORRECTION *correct) ;
 extern void correction_setup(CORRECTION *_correct, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline);
 extern long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *starting_coords, 
         BEAM *beam, long sim_step, long initial_correction);

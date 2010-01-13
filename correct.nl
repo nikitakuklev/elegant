@@ -11,7 +11,7 @@
     STRING trajectory_output = NULL;
     STRING corrector_output = NULL;
     STRING statistics = NULL;
-    double corrector_tweek[2] = {1e-3, 1e-3};
+    double corrector_tweek[2] = {1e-6, 1e-6};
     double corrector_limit[2] = {0, 0};
     double correction_fraction[2] = {1, 1};
     double correction_accuracy[2] = {1e-6, 1e-6};

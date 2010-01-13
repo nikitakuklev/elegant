@@ -1937,6 +1937,133 @@ void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN
 
 }
 
+/* Compute orbit response matrix from closed orbit, rather than using beta functions etc */
+void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN *run, LINE_LIST *beamline, 
+                             long find_only, long invert, long fixed_length, long verbose)
+{
+  ELEMENT_LIST *corr, *start;
+  TRAJECTORY *clorb0, *clorb1;
+  long kick_offset, i_corr, i_moni, i;
+  long n_part;
+  double kick0, kick1, corr_tweek;
+  VMATRIX *save, *M;
+  long i_type;
+  char *matrixTypeName[2][2] = {{"H", "HV"}, {"VH", "V"}};
+  char memName[1024];
+  
+  start = find_useable_moni_corr(&CM->nmon, &CM->ncor, &CM->mon_index, &CM->umoni, &CM->ucorr, 
+                                 &CM->kick_coef, &CM->sl_index, coord, SL, run, beamline, 1);
+
+  if (CM->ncor==0) {
+    fprintf(stdout, "Warning: no correctors for %c plane.  No correction done.\n",  (coord==0?'x':'y'));
+    fflush(stdout);
+    return;
+  }
+  if (CM->nmon==0) {
+    fprintf(stdout, "Warning: no monitors for %c plane.  No correction done.\n",  (coord==0?'x':'y'));
+    fflush(stdout);
+    CM->ncor = 0;
+    return;
+  }
+
+  /* allocate matrices for this plane */
+  if (CM->C)
+    matrix_free(CM->C);
+  CM->C  = matrix_get(CM->nmon, CM->ncor);   /* Response matrix */
+  if (CM->T)
+    matrix_free(CM->T);
+  CM->T  = NULL;
+
+  if (find_only)
+    return;
+
+  if (verbose) {
+    fprintf(stdout, "computing orbit response matrix...");
+    fflush(stdout);
+  }
+  
+  if (verbose) {
+    report_stats(stdout, "\ndone");
+    fflush(stdout);
+  }
+
+  clorb0 = tmalloc(sizeof(*clorb0)*(beamline->n_elems+1));
+  clorb1 = tmalloc(sizeof(*clorb1)*(beamline->n_elems+1));
+
+  if (!(M = beamline->matrix)) {
+    if (beamline->elem_twiss)
+      M = beamline->matrix = full_matrix(beamline->elem_twiss, run, 1);
+    else
+      M = beamline->matrix = full_matrix(&(beamline->elem), run, 1);
+  }
+
+  /* Find and store reference closed orbit */
+  if (!find_closed_orbit(clorb0, 1e-12, 40, beamline, M, run, 0, 1, CM->fixed_length, NULL, 
+                         0.9, NULL)) {
+    fprintf(stdout, "Failed to find initial closed orbit.\n");
+    fflush(stdout);
+    return(-1);
+  }
+
+  for (i_corr = 0; i_corr<CM->ncor; i_corr++) {
+    corr = CM->ucorr[i_corr];
+
+    if ((i_type = find_index(corr->type, SL->corr_type, SL->n_corr_types))<0)
+      bomb("failed to find corrector type in type list", NULL);
+
+    kick_offset = SL->param_offset[i_type];
+    corr_tweek  = SL->corr_tweek[i_type];
+
+    /* record value of corrector */
+    kick0 = *((double*)(corr->p_elem+kick_offset));
+
+    /* change the corrector by corr_tweek and compute the new matrix for the corrector */
+    kick1 = *((double*)(corr->p_elem+kick_offset)) = kick0 + corr_tweek;
+
+    if (corr->matrix)
+      save = corr->matrix;
+    else
+      save = NULL;
+    compute_matrix(corr, run, NULL);
+
+    /* find closed orbit with tweaked corrector */
+    if (!find_closed_orbit(clorb1, 1e-12, 40, beamline, M, run, 0, 1, CM->fixed_length, NULL, 
+                           0.9, NULL)) {
+      fprintf(stdout, "Failed to find perturbed closed orbit.\n");
+      fflush(stdout);
+      return(-1);
+    }
+
+    /* compute coefficients of array C that are driven by this corrector */
+    for (i_moni=0; i_moni<CM->nmon; i_moni++) {
+      i = CM->mon_index[i_moni];
+      Mij(CM->C, i_moni, i_corr) = (clorb1[i].centroid[coord] - clorb0[i].centroid[coord])/corr_tweek;
+
+      /* store result in rpn memory */
+      sprintf(memName, "%sR_%s#%ld_%s#%ld.%s", 
+              matrixTypeName[CM->bpmPlane][CM->corrPlane],
+              CM->umoni[i_moni]->name, CM->umoni[i_moni]->occurence,
+              CM->ucorr[i_corr]->name, CM->ucorr[i_corr]->occurence,
+              SL->corr_param[CM->sl_index[i_corr]]);
+      rpn_store(Mij(CM->C, i_moni, i_corr), NULL, rpn_create_mem(memName, 0));
+    }
+    
+
+    /* change the corrector back */
+    *((double*)(corr->p_elem+kick_offset)) = kick0;
+    if (beamline->links)
+      assert_element_links(beamline->links, run, beamline, DYNAMIC_LINK);
+    if (corr->matrix) {
+      free_matrices(corr->matrix);
+      corr->matrix = NULL;
+    }
+    if (save)
+      corr->matrix = save;
+    else 
+      compute_matrix(corr, run, NULL);
+  } 
+}
+
 long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **orbit, long n_iterations, 
                   double clorb_acc, long clorb_iter, double clorb_iter_frac, RUN *run, LINE_LIST *beamline, double *closed_orbit, double *Cdp)
 {

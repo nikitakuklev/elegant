@@ -566,7 +566,7 @@ static long final_property_values;
 static double charge;
 static unsigned long optim_func_flags;
 static long force_output;
-static long doClosedOrbit, doChromCorr, doTuneCorr, doFindAperture;
+static long doClosedOrbit, doChromCorr, doTuneCorr, doFindAperture, doResponse;
 
 /* structure to keep results of last N optimization function
  * evaluations, so we don't track the same thing twice.
@@ -602,7 +602,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
                  long doClosedOrbit1, long doChromCorr1,
                  void *orbitCorrData1, long orbitCorrMode1,
                  void *tuneCorrData1, long doTuneCorr1,
-                 long doFindAperture1)
+                 long doFindAperture1, long doResponse1)
 {
     static long optUDFcount = 0;
     double optimization_function(double *values, long *invalid);
@@ -635,6 +635,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
     tuneCorrData      = (TUNE_CORRECTION*)tuneCorrData1;
     doTuneCorr        = doTuneCorr1;
     doFindAperture    = doFindAperture1;
+    doResponse        = doResponse1;
     
     n_evaluations_made = 0;
     n_passes_made      = 0;
@@ -1308,6 +1309,10 @@ double optimization_function(double *value, long *invalid)
     fflush(stdout);
   }
 
+  if (!*invalid && doResponse) {
+    update_response(run, beamline, orbitCorrData);
+  }
+  
 #if DEBUG
   if (doClosedOrbit) {
     fprintf(stdout, "Closed orbit: %g, %g, %g, %g, %g, %g\n",
