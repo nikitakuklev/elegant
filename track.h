@@ -2558,7 +2558,7 @@ typedef struct {
 void zero_centroid(double **particle, long n_particles, long coord);
 long generate_bunch(double **particle, long n_particles, TRANSVERSE *x_plane,  TRANSVERSE *y_plane,
                     LONGITUDINAL *longit, long *enforce_rms_params, long limit_invar, long symmetrize, 
-                    long *haltonID, long *randomizeOrder, long elliptical_symmetry, double Po);
+                    long *haltonID, long haltonOpt, long *randomizeOrder, long elliptical_symmetry, double Po);
 void set_beam_centroids(double **particle, long offset, long n_particles, double cent_posi, 
     double cent_slope);
 

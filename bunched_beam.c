@@ -30,7 +30,7 @@ static long x_beam_type, y_beam_type, longit_beam_type;
 static SDDS_TABLE SDDS_bunch;
 static long SDDS_bunch_initialized;
 static long beamRepeatSeed, bunchGenerated, firstIsFiducial, beamCounter;
-static long haltonID[6];
+static long haltonID[6], haltonOpt;
 
 void fill_transverse_structure(TRANSVERSE *trans, double emit, double beta, 
     double alpha, double eta, double etap, long xbeam_type, double cutoff,
@@ -229,14 +229,19 @@ void setup_bunched_beam(
   }
   bunchGenerated = 0;
   
+  haltonOpt = halton_optimized;
   for (i=0; i<3; i++) {
     for (offset=0; offset<2; offset++) {
       haltonID[2*i+offset] = 0;
       if (halton_sequence[i]) {
         if (halton_radix[2*i+offset]<0)
           bomb("Radix for Halton sequence can't be negative", NULL);
-        if ((haltonID[2*i+offset] = startHaltonSequence(&halton_radix[2*i+offset], 0.5))<0) 
-          bomb("problem starting Halton sequence", NULL);
+        if (haltonOpt) 
+          if ((haltonID[2*i+offset] = startModHaltonSequence(&halton_radix[2*i+offset], 0.5))<0) 
+            bomb("problem starting Halton sequence", NULL);
+        else
+          if ((haltonID[2*i+offset] = startHaltonSequence(&halton_radix[2*i+offset], 0.5))<0) 
+            bomb("problem starting Halton sequence", NULL);
         fprintf(stdout, "Using radix %" PRId32 " for Halton sequence for coordinate %ld\n",
                 halton_radix[2*i+offset], 2*i+offset);
       }
@@ -400,8 +405,8 @@ long new_bunched_beam(
 	    }
 	    my_n_actual_particles =
 	      generate_bunch(&beam->original[n_actual_particles], my_nToTrack, &x_plane,
-			     &y_plane, &longit, enforce_rms_values, limit_invariants, 
-			     symmetrize, haltonID, randomize_order, limit_in_4d, Po);
+                        &y_plane, &longit, enforce_rms_values, limit_invariants, 
+                        symmetrize, haltonID, haltonOpt, randomize_order, limit_in_4d, Po);
 	    n_actual_particles += my_n_actual_particles;
 	    if (x_plane.beam_type==DYNAP_BEAM)
 	      break;
@@ -411,8 +416,8 @@ long new_bunched_beam(
 #endif
 	  n_actual_particles = 
 	    generate_bunch(beam->original, beam->n_to_track, &x_plane,
-			   &y_plane, &longit, enforce_rms_values, limit_invariants, 
-			   symmetrize, haltonID, randomize_order, limit_in_4d, Po);
+                      &y_plane, &longit, enforce_rms_values, limit_invariants, 
+                      symmetrize, haltonID, haltonOpt, randomize_order, limit_in_4d, Po);
 #if USE_MPI
        if (firstIsFiducial && beamCounter==1) {
           /* copy values back */
