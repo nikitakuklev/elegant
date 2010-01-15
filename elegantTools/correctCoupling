@@ -3,6 +3,9 @@
 exec oagtclsh "$0" "$@"
 
 # $Log: not supported by cvs2svn $
+# Revision 1.3  2010/01/15 15:47:07  borland
+# Use cp for some copy operations to avoid stupid tcl copying of links.
+#
 # Revision 1.2  2010/01/15 15:10:47  borland
 # Various refinements and improvements after testing.
 #
@@ -119,12 +122,12 @@ file delete -force $rootname-original.mom0 $rootname-original.twi0
 # In the next step, we evaluate the correction, then optionally run the optimizer to 
 # raise the vertical emittance to the target value using the zeroth harmonic
 
-if [expr $eyTarget==0] {
+if [expr $eyTarget<=0] {
   # use cp to avoid stupid tcl copying of links
-  exec cp $srcDir/couplingCorrTemplate1.ele $rootname-CC.ele
+  exec cp $srcDir/couplingCorrTemplate1.ele $rootname.ele
 } else {
     # Create input file including emittance tuning
-    set fdl [open $rootname-CC.ele1 w]
+    set fdl [open $rootname.ele1 w]
     set first 1
     foreach skewOcc [exec sdds2stream -column=OldColumnNames $inverse] {
         set skew [os editstring "S/#/10D" $skewOcc]
@@ -140,26 +143,34 @@ if [expr $eyTarget==0] {
         }
     }
     close $fdl
-    exec cat $srcDir/couplingCorrTemplate1.ele $srcDir/couplingCorrTemplate2.ele $rootname-CC.ele1 $srcDir/couplingCorrTemplate3.ele > $rootname-CC.ele
-    file delete $rootname-CC.ele1 
+    exec cat $srcDir/couplingCorrTemplate1.ele $srcDir/couplingCorrTemplate2.ele $rootname.ele1 $srcDir/couplingCorrTemplate3.ele > $rootname.ele
+    file delete $rootname.ele1 
 }
 
 if ![string match "*#*" $diagnostic] {
     append diagnostic "#1"
 }
 set diagnostic0 [os editstring "S/#/10D" $diagnostic]
-catch {exec elegant $rootname-CC.ele \
+catch {exec elegant $rootname.ele \
          -macro=lattice=$lattice,beamline=$beamline,rootname=${rootname},inputParameters=$input,eyTarget=$eyTarget \
          -macro=bpmPattern=$bpmPattern,hcPattern=$hcPattern,vcPattern=$vcPattern \
-         -macro=diagnostic0=$diagnostic0,diagnostic=$diagnostic,order=$order > $rootname-CC.log} result
+         -macro=diagnostic0=$diagnostic0,diagnostic=$diagnostic,order=$order > $rootname.log} result
 puts $fdo "Correct coupling: $result"
 flush $fdo
 
+if ![file exists $rootname.done] {
+    puts stderr "Run failed."
+    exit 1
+}
+
 # Keep only the skew data in the output parameter file
-exec sddsprocess ${rootname}-CC.param -nowarning -match=col,ElementName=$skewPattern 
+if {[file exists ${rootname}-correction.param] && ![file exists $rootname.param]} {
+    file copy ${rootname}-correction.param $rootname.param
+}
+exec sddsprocess ${rootname}.param -nowarning -match=col,ElementName=$skewPattern 
 
 # Clean up
-eval file delete $rootname-CC.param~ $rootname-CC.param1 $rootname-CC.param2 $rootname-error.all $rootname-correction.param $rootname.cc-log 
+eval file delete $rootname.param~ $rootname.param1 $rootname.param2 $rootname-error.all $rootname-correction.param $rootname.cc-log 
 
 
 

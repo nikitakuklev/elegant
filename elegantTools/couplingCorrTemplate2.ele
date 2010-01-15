@@ -8,7 +8,7 @@
         final = %s.finOpt
         parameters = %s.param
         semaphore_file = %s.done,
-        rootname = <rootname>-CC
+        rootname = <rootname>
 &end
 
 &moments_output
@@ -19,7 +19,7 @@
 &end
 
 &load_parameters
-        filename = %s.param,
+        filename = <rootname>-<correction>.param,
         force_occurence_data = 1
         change_defined_values = 1
 &end

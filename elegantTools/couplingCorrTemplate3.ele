@@ -11,7 +11,7 @@
         magnets = %s.mag,
         semaphore_file = %s.done,
         parameters = %s.param
-        rootname = <rootname>-CC
+        rootname = <rootname>
 &end
 
 &load_parameters

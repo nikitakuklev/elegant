@@ -8,9 +8,9 @@
 	use_beamline = <beamline>,
 	p_central_mev = 7e3,
 	default_order = <order>,
-        parameters = %s.param
+        parameters = <rootname>-correction.param
         semaphore_file = %s.done,
-        rootname = <rootname>-CC
+        rootname = <rootname>,
 &end
 
 &load_parameters
