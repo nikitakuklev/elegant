@@ -8,13 +8,13 @@
 	use_beamline = <beamline>,
 	p_central_mev = 7e3,
 	default_order = <order>,
-        parameters = <rootname>-correction.param
         semaphore_file = %s.done,
         rootname = <rootname>,
+        parameters = <rootname>.param1
 &end
 
 &load_parameters
-        filename = <inputParameters>
+        filename = <rootname>-correction.param
         change_defined_values = 1
         force_occurence_data = 1
         allow_missing_elements = 1

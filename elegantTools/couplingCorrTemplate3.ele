@@ -10,12 +10,11 @@
 	default_order = <order>,
         magnets = %s.mag,
         semaphore_file = %s.done,
-        parameters = %s.param
         rootname = <rootname>
 &end
 
 &load_parameters
-        filename = %s.param,
+        filename = %s-final.param,
         force_occurence_data = 1
         change_defined_values = 1
 &end

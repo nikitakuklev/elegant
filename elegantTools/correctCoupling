@@ -3,6 +3,9 @@
 exec oagtclsh "$0" "$@"
 
 # $Log: not supported by cvs2svn $
+# Revision 1.4  2010/01/15 17:31:35  borland
+# Further refinements, mostly to make the filenames more sensible.
+#
 # Revision 1.3  2010/01/15 15:47:07  borland
 # Use cp for some copy operations to avoid stupid tcl copying of links.
 #
@@ -115,17 +118,24 @@ for {set iteration 1} {$iteration<=$iterations} {incr iteration} {
     file copy -force $input $rootname.lastInput
 }
 # Copy the true original results to convenient names
+file copy -force $input $rootname-correction.param
 file copy -force $rootname-original.mom0 $rootname-original.mom
 file copy -force $rootname-original.twi0 $rootname-original.twi
 file delete -force $rootname-original.mom0 $rootname-original.twi0
 
-# In the next step, we evaluate the correction, then optionally run the optimizer to 
-# raise the vertical emittance to the target value using the zeroth harmonic
+# In the next step, we evaluate the correction.
+catch {exec elegant $srcDir/couplingCorrTemplate1.ele \
+         -macro=lattice=$lattice,beamline=$beamline,rootname=${rootname},inputParameters=$input,eyTarget=$eyTarget \
+         -macro=bpmPattern=$bpmPattern,hcPattern=$hcPattern,vcPattern=$vcPattern \
+         -macro=order=$order > $rootname.log} result
+puts $fdo "$result"
+if ![file exists $rootname.done] {
+    puts stderr "Run failed."
+    exit 1
+}
 
-if [expr $eyTarget<=0] {
-  # use cp to avoid stupid tcl copying of links
-  exec cp $srcDir/couplingCorrTemplate1.ele $rootname.ele
-} else {
+if [expr $eyTarget>0] {
+    # Optionally run the optimizer to raise the vertical emittance to the target value using the zeroth harmonic
     # Create input file including emittance tuning
     set fdl [open $rootname.ele1 w]
     set first 1
@@ -143,7 +153,7 @@ if [expr $eyTarget<=0] {
         }
     }
     close $fdl
-    exec cat $srcDir/couplingCorrTemplate1.ele $srcDir/couplingCorrTemplate2.ele $rootname.ele1 $srcDir/couplingCorrTemplate3.ele > $rootname.ele
+    exec cat $srcDir/couplingCorrTemplate2.ele $rootname.ele1 $srcDir/couplingCorrTemplate3.ele > $rootname.ele
     file delete $rootname.ele1 
 }
 
