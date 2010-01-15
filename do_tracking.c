@@ -2566,6 +2566,10 @@ long trackWithIndividualizedLinearMatrix(double **particle, long particles, doub
   double *coord, deltaPoP, tune2pi, sin_phi, cos_phi;
   double alpha[2], beta[2], eta[4], beta1, alpha1, A[2];
   double R11, R22, R12;
+  long allowResonanceCrossing = 0;
+  
+  if (ilmat)
+    allowResonanceCrossing = ilmat->allowResonanceCrossing;
   
   static VMATRIX *M1 = NULL;
   double det;
@@ -2630,7 +2634,7 @@ long trackWithIndividualizedLinearMatrix(double **particle, long particles, doub
         is_lost = 1;
         continue;
       }
-      if (fabs( ((long)(2*tune2pi/PIx2)) - ((long)(2*tune0[plane]))) != 0) {
+      if (!allowResonanceCrossing && fabs( ((long)(2*tune2pi/PIx2)) - ((long)(2*tune0[plane]))) != 0) {
         fprintf(stdout, "particle with delta=%le crossed integer or half-integer resonance\n",
                 deltaPoP);
         fprintf(stdout, "particle is lost\n");
