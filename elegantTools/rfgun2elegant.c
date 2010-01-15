@@ -37,15 +37,16 @@
 #define SET_SAMPLE_FRACTION 3
 #define SET_VERBOSE 4
 #define SET_PMIN 5
-#define N_OPTIONS 6
+#define SET_DRIFT 6
+#define N_OPTIONS 7
 
 char *option[N_OPTIONS] = {
     "multiplier", "symmetrize", "seed", "sample_fraction", 
-    "verbose", "pmin"
+    "verbose", "pmin", "drift,"
     } ;
 
 char *USAGE="rfgun2elegant inputfile outputfile [-multiplier=number] [-symmetrize]\n\
-[-seed=random_number_seed] [-sample_fraction=value] [-pmin=value]  [-verbose]\n\n\
+[-seed=random_number_seed] [-sample_fraction=value] [-pmin=value]  [-verbose] [-drift=<meters>]\n\n\
 Program by Michael Borland.  (This is version 2, January 2010)";
 
 main(int argc, char **argv)
@@ -62,6 +63,7 @@ main(int argc, char **argv)
   long n_new, n_mp, i_new, j, verbose, inPoints, outPoints;
   double *pxIn, *tIn, *xIn, *yIn, *pyIn, *pzIn, *charge;
   double pmin = 0, xp, yp;
+  double drift = 0;
 
   argc = scanargs(&scanned, argc, argv); 
   if (argc<3 || argc>(3+N_OPTIONS)) 
@@ -107,6 +109,11 @@ main(int argc, char **argv)
             1!=sscanf(scanned[i_arg].list[1], "%lf", &pmin) ||
             pmin<0)
           bomb("invalid -pmin syntax", NULL);
+        break;
+      case SET_DRIFT:
+        if (scanned[i_arg].n_items!=2 ||
+            1!=sscanf(scanned[i_arg].list[1], "%lf", &drift))
+          bomb("invalid -drift syntax", NULL);
         break;
       default:
         bomb("unknown option in command line", NULL);
@@ -227,8 +234,8 @@ main(int argc, char **argv)
             cos_theta = cos(theta = theta0 + j*dtheta);
             sin_theta = sin(theta);
             if (!SDDS_SetRowValues(&outTable, SDDS_BY_INDEX|SDDS_PASS_BY_VALUE, i_new,
-                                   0, xIn[i]*cos_theta, 1, xp*cos_theta,
-                                   2, xIn[i]*sin_theta, 3, xp*sin_theta,
+                                   0, (xIn[i]+drift*xp)*cos_theta, 1, xp*cos_theta,
+                                   2, (xIn[i]+drift*xp)*sin_theta, 3, xp*sin_theta,
                                    4, tIn[i],  5, p, -1))
               SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
             i_new++;
@@ -239,8 +246,8 @@ main(int argc, char **argv)
         for (j=0; j<n_new; j++) {
           if (sample_fraction==1 || random_1(0)<sample_fraction) {
             if (!SDDS_SetRowValues(&outTable, SDDS_BY_INDEX|SDDS_PASS_BY_VALUE, i_new,
-                                   0, xIn[i],  1, xp, 
-                                   2, yIn[i],  3, yp,
+                                   0, xIn[i]+xp*drift,  1, xp, 
+                                   2, yIn[i]+yp*drift,  3, yp,
                                    4, tIn[i],  5, p, -1))
               SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
             i_new++;
