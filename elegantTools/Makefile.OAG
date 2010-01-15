@@ -7,9 +7,12 @@
 # in the file LICENSE that is included with this distribution. 
 #*************************************************************************
 #
-# $Id: Makefile.OAG,v 1.19 2010-01-15 15:10:47 borland Exp $
+# $Id: Makefile.OAG,v 1.20 2010-01-15 22:57:46 borland Exp $
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.19  2010/01/15 15:10:47  borland
+# Various refinements and improvements after testing.
+#
 # Revision 1.18  2009/12/20 19:55:40  borland
 # Added -O3 for optimization.
 #
@@ -87,7 +90,7 @@ endif
 PRODOAG = sddsemitmeas sddsemitproc sddsTouschekInteg \
           recurseSetup haissinski sddsmatchtwiss \
           sddsanalyzebeam sddsrandmult sddsresdiag \
-          sddsfindresonances touschekLifetime csrImpedance astra2elegant
+          sddsfindresonances touschekLifetime csrImpedance astra2elegant rfgun2elegant
 
 SCRIPTS = elegantRingAnalysis beamLifetimeCalc fin2param elegant2shower shower2elegant longitCmd longitCalcs km2sdds elegant2astra smoothDist6s impact2sdds impact2elegant computeTwissBeats fracEmittance doubleDist6 track2sdds track2mag elegant2track makeSkewResponseCP correctCoupling
 
