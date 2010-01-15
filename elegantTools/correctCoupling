@@ -3,6 +3,9 @@
 exec oagtclsh "$0" "$@"
 
 # $Log: not supported by cvs2svn $
+# Revision 1.2  2010/01/15 15:10:47  borland
+# Various refinements and improvements after testing.
+#
 
 set auto_path [linsert $auto_path 0  /usr/local/oag/apps/lib/$env(HOST_ARCH)]
 set auto_path [linsert $auto_path 0 /usr/local/oag/lib_patch/$env(HOST_ARCH)]
@@ -117,7 +120,8 @@ file delete -force $rootname-original.mom0 $rootname-original.twi0
 # raise the vertical emittance to the target value using the zeroth harmonic
 
 if [expr $eyTarget==0] {
-    file copy -force  $srcDir/couplingCorrTemplate1.ele $rootname-CC.ele
+  # use cp to avoid stupid tcl copying of links
+  exec cp $srcDir/couplingCorrTemplate1.ele $rootname-CC.ele
 } else {
     # Create input file including emittance tuning
     set fdl [open $rootname-CC.ele1 w]
