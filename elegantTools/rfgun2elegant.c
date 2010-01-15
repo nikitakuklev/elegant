@@ -36,15 +36,16 @@
 #define SET_SEED 2
 #define SET_SAMPLE_FRACTION 3
 #define SET_VERBOSE 4
-#define N_OPTIONS 5
+#define SET_PMIN 5
+#define N_OPTIONS 6
 
 char *option[N_OPTIONS] = {
     "multiplier", "symmetrize", "seed", "sample_fraction", 
-    "verbose", 
+    "verbose", "pmin"
     } ;
 
 char *USAGE="rfgun2elegant inputfile outputfile [-multiplier=number] [-symmetrize]\n\
-[-seed=random_number_seed] [-sample_fraction=value]  [-verbose]\n\n\
+[-seed=random_number_seed] [-sample_fraction=value] [-pmin=value]  [-verbose]\n\n\
 Program by Michael Borland.  (This is version 2, January 2010)";
 
 main(int argc, char **argv)
@@ -60,6 +61,7 @@ main(int argc, char **argv)
   char s[200];
   long n_new, n_mp, i_new, j, verbose, inPoints, outPoints;
   double *pxIn, *tIn, *xIn, *yIn, *pyIn, *pzIn, *charge;
+  double pmin = 0, xp, yp;
 
   argc = scanargs(&scanned, argc, argv); 
   if (argc<3 || argc>(3+N_OPTIONS)) 
@@ -99,6 +101,12 @@ main(int argc, char **argv)
         break;
       case SET_VERBOSE:
         verbose = 1;
+        break;
+      case SET_PMIN:
+        if (scanned[i_arg].n_items!=2 ||
+            1!=sscanf(scanned[i_arg].list[1], "%lf", &pmin) ||
+            pmin<0)
+          bomb("invalid -pmin syntax", NULL);
         break;
       default:
         bomb("unknown option in command line", NULL);
@@ -193,20 +201,24 @@ main(int argc, char **argv)
     for (i=0; i<inPoints; i++)
       outPoints += (1.0*multiplier*charge[i])/charge_min+0.5;
     if (verbose) {
-      sprintf(s, "creating %ld macro-particles for a total of %ld          ", 
-              (int)(sample_fraction*outPoints), n_mp+(int)(sample_fraction*outPoints));
+      sprintf(s, "creating %ld macro-particles for a total of %ld\n", 
+              (long)(sample_fraction*outPoints), n_mp+(long)(sample_fraction*outPoints));
       fputs(s, stdout);
-      backspace(strlen(s));
     }
     if (!outPoints)
       continue;
-    if (!SDDS_StartTable(&outTable, outPoints))
+    if (!SDDS_StartTable(&outTable, ((long)(outPoints+100))))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     i_new = 0;
     for (i=0; i<inPoints; i++) {
       if (pzIn[i]<=0)
         continue;
+      p = sqrt(sqr(pxIn[i])+sqr(pyIn[i])+sqr(pzIn[i]));
+      if (p<pmin)
+	continue;
       n_new = (1.0*multiplier*charge[i])/charge_min+0.5;
+      xp = pxIn[i]/pzIn[i];
+      yp = pyIn[i]/pzIn[i];
       if (symmetrize) {
         dtheta = PIx2/n_new;
         theta0 = random_1(0)*PIx2;
@@ -215,9 +227,9 @@ main(int argc, char **argv)
             cos_theta = cos(theta = theta0 + j*dtheta);
             sin_theta = sin(theta);
             if (!SDDS_SetRowValues(&outTable, SDDS_BY_INDEX|SDDS_PASS_BY_VALUE, i_new,
-                                   0, xIn[i]*cos_theta, 1, pxIn[i]/pzIn[i]*cos_theta,
-                                   2, xIn[i]*sin_theta, 3, pxIn[i]/pzIn[i]*sin_theta,
-                                   4, tIn[i]*1e-12, 5, sqrt(sqr(pxIn[i])+sqr(pyIn[i])+sqr(pzIn[i])), -1))
+                                   0, xIn[i]*cos_theta, 1, xp*cos_theta,
+                                   2, xIn[i]*sin_theta, 3, xp*sin_theta,
+                                   4, tIn[i],  5, p, -1))
               SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
             i_new++;
           }
@@ -227,9 +239,9 @@ main(int argc, char **argv)
         for (j=0; j<n_new; j++) {
           if (sample_fraction==1 || random_1(0)<sample_fraction) {
             if (!SDDS_SetRowValues(&outTable, SDDS_BY_INDEX|SDDS_PASS_BY_VALUE, i_new,
-                                   0, xIn[i]*cos_theta, 1, pxIn[i]/pzIn[i]*cos_theta,
-                                   2, xIn[i]*sin_theta, 3, pxIn[i]/pzIn[i]*sin_theta,
-                                   4, tIn[i]*1e-12, 5, sqrt(sqr(pxIn[i])+sqr(pyIn[i])+sqr(pzIn[i])), -1))
+                                   0, xIn[i],  1, xp, 
+                                   2, yIn[i],  3, yp,
+                                   4, tIn[i],  5, p, -1))
               SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
             i_new++;
           }
@@ -242,7 +254,15 @@ main(int argc, char **argv)
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
   }
-  printf("%s%ld macro-particles created\n", (verbose?"\n":""), n_mp);
+  free(charge);
+  free(xIn);
+  free(yIn);
+  free(tIn);
+  free(pxIn);
+  free(pyIn);
+  free(pzIn);
+  if (verbose)
+    printf("\n%ld macro-particles created\n", n_mp);
 }
 
 
