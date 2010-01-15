@@ -2102,7 +2102,7 @@ PARAMETER ilmatrix_param[N_ILMATRIX_PARAMS]={
     {"ALPHAC", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.alphac[0]), NULL, 0.0, 0, "First-order momentum compaction factor"},
     {"ALPHAC2", "", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.alphac[1]), NULL, 0.0, 0, "Second-order momentum compaction factor"},
     {"TILT", "RAD", IS_DOUBLE, PARAM_CHANGES_MATRIX, (long)((char *)&ilmatrix_example.tilt), NULL, 0.0, 0, "Rotation angle about the longitudinal axis."},
-    {"CROSS_RESONANCE", "", IS_LONG, 0, (long)((char *)&ilmatrix_example.allowResonanceCrossing), NULL, 0.0, 0, "If nonzero, then particles that cross an integer or half-integer resonance are not automatically considered lost."},
+    {"CROSS_RESONANCE", "", IS_LONG, 0, (long)((char *)&ilmatrix_example.allowResonanceCrossing), NULL, 0.0, 1, "If nonzero, then particles that cross an integer or half-integer resonance are not automatically considered lost."},
 };
 
 TSCATTER tscatter_example;   
