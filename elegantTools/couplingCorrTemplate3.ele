@@ -1,22 +1,27 @@
-&transmute_elements name=*, type=*MON*, exclude=<bpmPattern>  new_type=MARK &end
+
+&bunched_beam &end
+
+&optimize &end
 
 &run_setup
 	lattice = <lattice>,
 	use_beamline = <beamline>,
 	p_central_mev = 7e3,
 	default_order = <order>,
-        rootname = <rootname>
+        magnets = %s.mag,
         semaphore_file = %s.done,
+        parameters = %s.param
+        rootname = <rootname>-CC
 &end
 
 &load_parameters
-        filename = <inputParameters>
+        filename = %s.param,
+        force_occurence_data = 1
         change_defined_values = 1
-        allow_missing_elements = 1
 &end
 
 &moments_output
-        filename = "%s.mom",
+        filename = "<rootname>-final.mom",
         matched = 1,
         equilibrium = 1,
         radiation = 1,
@@ -24,10 +29,11 @@
 
 &twiss_output
         matched = 1
-        filename = %s.twi
+        filename = <rootname>-final.twi
         concat_order = <order>
         radiation_integrals = 1
 &end
+
 
 &steering_element name = <hcPattern>, element_type = HKICK, item = KICK, tweek = 1e-6, plane = "h" &end
 &steering_element name = <vcPattern>, element_type = VKICK, item = KICK, tweek = 1e-6, plane = "v" &end
@@ -39,13 +45,11 @@
 &end
 
 &correction_matrix_output
-	response[2] = <rootname>.vhrm, <rootname>.hvrm,
+	response[2] = <rootname>-final.vhrm, <rootname>-final.hvrm,
         coupled = 1,
         fixed_length = 1
 &end
 
 &run_control &end
-
 &bunched_beam &end
-
 &track &end

@@ -1,55 +1,43 @@
-
-&bunched_beam &end
-
-&optimize &end
+# Second step with zeroth harmonic to adjust ey
 
 &run_setup
 	lattice = <lattice>,
-	use_beamline = RINGRF,
+	use_beamline = <beamline>
 	p_central_mev = 7e3,
-	default_order = 1,
-        magnets = %s.mag,
-        semaphore_file = %s.done,
+	default_order = <order>,
+        final = %s.finOpt
         parameters = %s.param
+        semaphore_file = %s.done,
         rootname = <rootname>-CC
 &end
 
+&moments_output
+        matched = 1,
+        equilibrium = 1,
+        radiation = 1,
+        output_at_each_step = 1
+&end
+
 &load_parameters
-        filename = %s.param2,
+        filename = %s.param,
         force_occurence_data = 1
         change_defined_values = 1
 &end
 
-&moments_output
-        filename = "%s.mom",
-        matched = 1,
-        equilibrium = 1,
-        radiation = 1,
-&end
-
-&twiss_output
-        matched = 1
-        filename = %s.twi
-        concat_order =1 
-        radiation_integrals = 1
-&end
-
-
-&steering_element name = <hcPattern>, element_type = HKICK, item = KICK, tweek = 1e-6, plane = "h" &end
-&steering_element name = <vcPattern>, element_type = VKICK, item = KICK, tweek = 1e-6, plane = "v" &end
-
-&correct
-    mode = "orbit", method = "global",
-    verbose = 0, n_iterations = 0, n_xy_cycles = 1,
-    fixed_length = 1
-&end
-
-&correction_matrix_output
-	response[2] = %s.vhrm, %s.hvrm,
-        coupled = 1,
-        fixed_length = 1
-&end
+&alter_elements name=<diagnostic0>, item=FITPOINT, value=1 &end
 
 &run_control &end
-&bunched_beam &end
-&track &end
+
+&optimization_setup
+        n_evaluations = 1500
+        n_passes = 3
+        n_restarts = 0
+        verbose = 0
+        log_file = /dev/tty
+        tolerance = 1e-12
+        target = 1e-6
+&end
+
+&optimization_term
+        term = "<diagnostic>.s33m <diagnostic>.s44m * <diagnostic>.s34m sqr - sqrt 1e12 * <eyTarget> 1 sene" &end
+
