@@ -1998,12 +1998,14 @@ void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
   }
 
   /* Find and store reference closed orbit */
-  if (!find_closed_orbit(clorb0, 1e-12, 40, beamline, M, run, 0, 1, CM->fixed_length, NULL, 
+/*
+  if (!find_closed_orbit(clorb0, 1e-15, 100, beamline, M, run, 0, 1, CM->fixed_length, NULL, 
                          0.9, NULL)) {
     fprintf(stdout, "Failed to find initial closed orbit.\n");
     fflush(stdout);
     return(-1);
   }
+*/
 
   for (i_corr = 0; i_corr<CM->ncor; i_corr++) {
     corr = CM->ucorr[i_corr];
@@ -2018,7 +2020,7 @@ void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
     kick0 = *((double*)(corr->p_elem+kick_offset));
 
     /* change the corrector by corr_tweek and compute the new matrix for the corrector */
-    kick1 = *((double*)(corr->p_elem+kick_offset)) = kick0 + corr_tweek;
+    *((double*)(corr->p_elem+kick_offset)) = kick0 + corr_tweek;
 
     if (corr->matrix)
       save = corr->matrix;
@@ -2027,7 +2029,18 @@ void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
     compute_matrix(corr, run, NULL);
 
     /* find closed orbit with tweaked corrector */
-    if (!find_closed_orbit(clorb1, 1e-12, 40, beamline, M, run, 0, 1, CM->fixed_length, NULL, 
+    if (!find_closed_orbit(clorb1, 1e-15, 100, beamline, M, run, 0, 1, CM->fixed_length, NULL, 
+                           0.9, NULL)) {
+      fprintf(stdout, "Failed to find perturbed closed orbit.\n");
+      fflush(stdout);
+      return(-1);
+    }
+
+    /* change the corrector by -corr_tweek and compute the new matrix for the corrector */
+    *((double*)(corr->p_elem+kick_offset)) = kick0 - corr_tweek;
+    compute_matrix(corr, run, NULL);
+    /* find closed orbit with tweaked corrector */
+    if (!find_closed_orbit(clorb0, 1e-15, 100, beamline, M, run, 0, 1, CM->fixed_length, NULL, 
                            0.9, NULL)) {
       fprintf(stdout, "Failed to find perturbed closed orbit.\n");
       fflush(stdout);
@@ -2037,7 +2050,7 @@ void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
     /* compute coefficients of array C that are driven by this corrector */
     for (i_moni=0; i_moni<CM->nmon; i_moni++) {
       i = CM->mon_index[i_moni];
-      Mij(CM->C, i_moni, i_corr) = (clorb1[i].centroid[coord] - clorb0[i].centroid[coord])/corr_tweek;
+      Mij(CM->C, i_moni, i_corr) = (clorb1[i].centroid[coord] - clorb0[i].centroid[coord])/(2*corr_tweek);
 
       /* store result in rpn memory */
       sprintf(memName, "%sR_%s#%ld_%s#%ld.%s", 
