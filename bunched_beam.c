@@ -229,21 +229,22 @@ void setup_bunched_beam(
   }
   bunchGenerated = 0;
   
-  haltonOpt = halton_optimized;
+  haltonOpt = optimized_halton;
   for (i=0; i<3; i++) {
     for (offset=0; offset<2; offset++) {
       haltonID[2*i+offset] = 0;
       if (halton_sequence[i]) {
         if (halton_radix[2*i+offset]<0)
           bomb("Radix for Halton sequence can't be negative", NULL);
-        if (haltonOpt) 
+        if (haltonOpt) {
           if ((haltonID[2*i+offset] = startModHaltonSequence(&halton_radix[2*i+offset], 0.5))<0) 
             bomb("problem starting Halton sequence", NULL);
-        else
+        } else {
           if ((haltonID[2*i+offset] = startHaltonSequence(&halton_radix[2*i+offset], 0.5))<0) 
             bomb("problem starting Halton sequence", NULL);
-        fprintf(stdout, "Using radix %" PRId32 " for Halton sequence for coordinate %ld\n",
-                halton_radix[2*i+offset], 2*i+offset);
+        }
+        fprintf(stdout, "Using radix %" PRId32 " for %s Halton sequence for coordinate %ld\n",
+                halton_radix[2*i+offset], (haltonOpt?"optimized":"original"), 2*i+offset);
       }
     }
   }
