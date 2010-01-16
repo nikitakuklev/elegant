@@ -11,6 +11,8 @@
     double y_initial = 1e-5;
     double delta_negative_limit = -0.10;
     double delta_positive_limit = 0.10;
+    double delta_negative_start = 0.0;
+    double delta_positive_start = 0.0;
     double delta_step_size = 0.0025;
     long splits = 1;
     long steps_back = 1;

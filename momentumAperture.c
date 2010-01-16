@@ -59,12 +59,16 @@ void setupMomentumApertureSearch(
     bomb("delta_negative_limit >= 0", NULL);
   if (delta_positive_limit<=0) 
     bomb("delta_positive_limit <= 0", NULL);
+  if (delta_negative_start>0)
+    bomb("delta_negative_start > 0", NULL);
+  if (delta_positive_start<0) 
+    bomb("delta_positive_start < 0", NULL);
   if (delta_step_size<=0)
     bomb("delta_step_size <= 0", NULL);
-  if (fabs(delta_negative_limit)<=delta_step_size/2)
-    bomb("|delta_negative_limit| <= delta_step_size/2", NULL);
-  if (delta_positive_limit<=delta_step_size/2)
-    bomb("delta_positive_limit <= delta_step_size/2", NULL);
+  if (fabs(delta_negative_limit-delta_negative_start)<=delta_step_size/2)
+    bomb("|delta_negative_limit-delta_negative_start| <= delta_step_size/2", NULL);
+  if (delta_positive_limit-delta_positive_start<=delta_step_size/2)
+    bomb("delta_positive_limit-delta_positive_start <= delta_step_size/2", NULL);
   if (splits<0)
     bomb("splits < 0", NULL);
   if (s_start>=s_end)
@@ -163,7 +167,8 @@ long doMomentumApertureSearch(
   long *lostOnPass0, side;
   short **loserFound, *direction, **survivorFound;
   int32_t **lostOnPass;
-  double deltaLimit[2], deltaLimit1, **deltaWhenLost, delta;
+  double deltaLimit1[2], deltaLimit, **deltaWhenLost, delta;
+  double deltaStart1[2];
   double **xLost, **yLost, **deltaSurvived, **sLost, deltaLost;
   double *sStart;
   char **ElementName;
@@ -242,8 +247,10 @@ long doMomentumApertureSearch(
   ElementName = (char**)tmalloc(sizeof(*ElementName)*(output_mode?2:1)*nElem);
   if (output_mode)
     direction = (short*)tmalloc(sizeof(*direction)*2*nElem);
-  deltaLimit[0] = delta_negative_limit;
-  deltaLimit[1] = delta_positive_limit;
+  deltaLimit1[0] = delta_negative_limit;
+  deltaLimit1[1] = delta_positive_limit;
+  deltaStart1[0] = delta_negative_start;
+  deltaStart1[1] = delta_positive_start;
 
   /* need to do this because do_tracking() in principle may realloc this pointer */
   lostOnPass0 = tmalloc(sizeof(*lostOnPass0)*1);
@@ -311,7 +318,7 @@ long doMomentumApertureSearch(
 
         ElementName[outputRow] = elem->name;
         sStart[outputRow] = elem->end_pos;
-        deltaStart = 0;
+        deltaStart = deltaStart1[slot];
         deltaSign = side==0 ? -1 : 1;
         lostOnPass[slot][outputRow] = -1;
         loserFound[slot][outputRow] = survivorFound[slot][outputRow] = 0;
@@ -322,12 +329,12 @@ long doMomentumApertureSearch(
         deltaInterval = delta_step_size*deltaSign;
         
         if (verbosity>1) {
-          fprintf(stdout, " Searching for %s side from 0 toward %e with interval %e\n", side==0?"negative":"positive",
-                  deltaLimit[slot], delta_step_size);
+          fprintf(stdout, " Searching for %s side from %e toward %e with interval %e\n", side==0?"negative":"positive",
+                  deltaStart, deltaLimit1[slot], delta_step_size);
           fflush(stdout);
         }
 
-        deltaLimit1 = deltaLimit[slot];
+        deltaLimit = deltaLimit1[slot];
         for (split=0; split<=splits; split++) {
           delta = deltaStart;
           
@@ -337,7 +344,7 @@ long doMomentumApertureSearch(
           fflush(fpdeb);
 #endif
 
-          while (fabs(delta) <= fabs(deltaLimit1)) {
+          while (fabs(delta) <= fabs(deltaLimit)) {
             setTrackingWedgeFunction(momentumOffsetFunction, 
                                      elem->succ?elem->succ:elem0); 
             momentumOffsetValue = delta;
@@ -389,23 +396,28 @@ long doMomentumApertureSearch(
           } /* delta search */
           if (split==0) {
             if (!survivorFound[slot][outputRow]) {
-              fprintf(stdout, "Error: No survivor found for initial scan for  %s #%ld at s=%em\n", elem->name, elem->occurence, elem->end_pos);
-              exit(1);
+	      if (!soft_failure) {
+		fprintf(stdout, "Error: No survivor found for initial scan for  %s #%ld at s=%em\n", elem->name, elem->occurence, elem->end_pos);
+		exit(1);
+	      }
+              fprintf(stdout, "Warning: No survivor found for initial scan for  %s #%ld at s=%em\n", elem->name, elem->occurence, elem->end_pos);
+	      deltaSurvived[slot][outputRow] = 0;
+	      survivorFound[slot][outputRow] = 1;
+	      split = splits;
             }
             if (!loserFound[slot][outputRow]) {
               if (!soft_failure) {
                 fprintf(stdout, "Error: No loss found for initial scan for  %s #%ld at s=%em\n", elem->name, elem->occurence, elem->end_pos);
                 exit(1);
-              } else {
-                loserFound[slot][outputRow] = 1;
-                split = splits;
               }
+	      loserFound[slot][outputRow] = 1;
+	      split = splits;
             }
           }
           deltaStart = deltaSurvived[slot][outputRow] - steps_back*deltaInterval;
           deltaInterval /= split_step_divisor;
           deltaStart += deltaInterval;
-          deltaLimit1 = deltaLost;
+          deltaLimit = deltaLost;
           if ((deltaStart<0 && deltaSign==1) || (deltaStart>0 && deltaSign==-1))
             deltaStart = 0;
         } /* split loop */
