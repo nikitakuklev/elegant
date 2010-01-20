@@ -3872,7 +3872,7 @@ void set_up_mhist(MHISTOGRAM *mhist, RUN *run, long occurence)
 }
 
 #define MHISTOGRAM_TABLE_PARAMETERS 12
-static EXTERNAL_PARA mhist_table_para[MHISTOGRAM_TABLE_PARAMETERS] = {
+static SDDS_DEFINITION mhist_table_para[MHISTOGRAM_TABLE_PARAMETERS] = {
   {"Step", "&parameter name=Step, symbol=\"m$be$nc\", description=\"Simulation step\", type=long &end"},
   {"pCentral", "&parameter name=pCentral, symbol=\"p$bcen$n\", units=\"m$be$nc\", description=\"Reference beta*gamma\", type=double &end"},
   {"Charge", "&parameter name=Charge, units=\"C\", description=\"Beam charge\", type=double &end"},
@@ -3978,17 +3978,17 @@ void mhist_table(ELEMENT_LIST *eptr0, ELEMENT_LIST *eptr, long step, long pass, 
     free_hbookn(mhist->y2d);
   }
   if (mhist->z2d) {
-    chprintn(mhist->z2d, mhist->file2dL, "y-yp distribution", mhist_table_para,
+    chprintn(mhist->z2d, mhist->file2dL, "dt-delta distribution", mhist_table_para,
              mhist_table_paraValue, MHISTOGRAM_TABLE_PARAMETERS, mhist->normalize, 0, mhist->count);
     free_hbookn(mhist->z2d);
   }
   if (mhist->Tr4d) {
-    chprintn(mhist->Tr4d, mhist->file4d, "y-yp distribution", mhist_table_para,
+    chprintn(mhist->Tr4d, mhist->file4d, "x-xp-y-yp distribution", mhist_table_para,
              mhist_table_paraValue, MHISTOGRAM_TABLE_PARAMETERS, mhist->normalize, 0, mhist->count);
     free_hbookn(mhist->Tr4d);
   }
   if (mhist->full6d) {
-    chprintn(mhist->full6d, mhist->file6d, "y-yp distribution", mhist_table_para,
+    chprintn(mhist->full6d, mhist->file6d, "full distribution", mhist_table_para,
              mhist_table_paraValue, MHISTOGRAM_TABLE_PARAMETERS, mhist->normalize, 0, mhist->count);
     free_hbookn(mhist->full6d);
   }

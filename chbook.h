@@ -57,19 +57,18 @@ void free_hbook2(book2 *x);
 ntuple *chbookn(char **vName, char **units, long NDimension, double *xmin, double *xmax, long *xbins, long offset);
 void chfilln(ntuple *bName, double *x, double Frequency, long offset);
 void free_hbookn(ntuple *x);
+ntuple *readbookn(char *inputfile, long i_page);
+double interpolate_bookn(ntuple *bName, double *x0, double *x, long offset, long normalize);
 
 book1m *chbook1m(char **vName, char **units, double *xmin, double *xmax, long *xbins, long column_number);
 void chfill1m(book1m *bName, double *x, double Frequency, long *xbins, long column_number);
 void free_hbook1m(book1m *x);
 
-typedef struct {
-    char *name, *text; 
-} EXTERNAL_PARA;
-void chprint1(book1 *bName, char *filename, char *description, EXTERNAL_PARA *parameter_definition,
+void chprint1(book1 *bName, char *filename, char *description, SDDS_DEFINITION *parameter_definition,
               void **sdds_value, long n_parameters, long normalize, long verbosity, long append);
-void chprint2(book2 *bName, char *filename, char *description, EXTERNAL_PARA *parameter_definition,
+void chprint2(book2 *bName, char *filename, char *description, SDDS_DEFINITION *parameter_definition,
               void **sdds_value, long n_parameters, long normalize, long verbosity, long append);
-void chprintn(ntuple *bName, char *filename, char *description, EXTERNAL_PARA *parameter_definition,
+void chprintn(ntuple *bName, char *filename, char *description, SDDS_DEFINITION *parameter_definition,
               void **sdds_value, long n_parameters, long normalize, long verbosity, long append);
-void chprint1m(book1m *bName, char *filename, char *description, EXTERNAL_PARA *parameter_definition, 
+void chprint1m(book1m *bName, char *filename, char *description, SDDS_DEFINITION *parameter_definition, 
                void **sdds_value, long n_parameters, long normalize, long verbosity, long append);

@@ -20,29 +20,30 @@
 
 /* global variable */
 static TSCATTER_SPEC *tsSpec = NULL;
-static long distIn = 0;
+
 static SDDS_DATASET tranPage, longPage;
 static double tranMin[4], tranMax[4], tranInterval[4], tranDelta[4], *tweight;
 static double longMin[2], longMax[2], longInterval[2], longDelta[2], *lweight;
 static long tranDimen[4], longDimen[2];
 
 /* Initialization of the simulation */
-int init_distInput();
-void init_TSPEC (RUN *run);
-TSCATTER *initTSCATTER (ELEMENT_LIST *eptr);
+void init_TSPEC (RUN *run, LINE_LIST *beamlin, long nElement);
+TSCATTER *initTSCATTER (ELEMENT_LIST *eptr, long iElement);
+long get_MAInput(char *filename, LINE_LIST *beamline, long nElement); 
+long Check_HisInput(char *filename, LINE_LIST *beamline, long nElement, long *pIndex, long flag);
+
 /* Calculate local and integrated Touschek scattering rate */
 int TouschekRate(LINE_LIST *beamline);
-void FIntegral(double tm, double B1, double B2, double *F, char *name);
+void FIntegral(double tm, double b1, double b2, double *F);
 double Fvalue (double t, double tm, double b1, double b2);
+
 /* Monte Carlo simulation of Touschek scattering */
 void TouschekDistribution (RUN *run, LINE_LIST *beamline);
-void TouschekDistributionE(RUN *run, LINE_LIST *beamline);
 
-void selectPart0(TSCATTER *tsptr, double *p1, double *p2, 
+void selectPartGauss(TSCATTER *tsptr, double *p1, double *p2, 
                 double *dens1, double *dens2, double *ran1);
-void selectPart1(TSCATTER *tsptr, double *p1, double *p2, 
+void selectPartReal(TSCATTER *tsptr, double *p1, double *p2, 
                 double *dens1, double *dens2, double *ran1);
-double findDens(double *p);
 
 void bunch2cm(double *p1, double *p2, double *q, double *beta, double *gamma);
 void eulertrans(double *v0, double theta, double phi, double *v1, double *v);
@@ -51,30 +52,25 @@ double moeller(double beta0, double theta);
 void pickPart(double *weight, long *index, long start, long end, 
               long *iTotal, double *wTotal, double weight_limit, double weight_ave);
 
-char *compose_filename1(char *template, char *root_name, long index);
-int str_inp(const char *string1, const char *string2);
-void print_hbook (book1 *x, book1 *y, book1 *s, book1 *xp, book1 *yp, book1 *dp,
-                  TSCATTER *tsptr, char *filename, char *description, int verbosity, double factor);
-
-void setupTouschekEffect(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline) 
+void TouschekEffect(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline) 
 {
   ELEMENT_LIST *eptr;
-  int flag;
+  long flag, nElement;
 
   /* Check if there is TScatter element along beamline. */
   eptr = &(beamline->elem);
-  flag = 0;
+  flag = (nElement = 0);
   while (eptr) {
     if (eptr->type == T_TSCATTER) {
       flag = 1;
-      break;
+      nElement++;
     }
     eptr = eptr->succ; 
   }
   if(!flag) 
     bomb("No TSCATTER element along beamline", NULL);                
 
-   /* process the namelist text */
+  /* process the namelist text */
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
   process_namelist(&touschek_scatter, nltext);
@@ -96,39 +92,23 @@ void setupTouschekEffect(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     bomb("energy spread has to be given", NULL);
   if (!sigma_s)
     bomb("bunch length has to be given", NULL);
-  if (!delta && !delta_mev)
-    bomb("delta and delta_mev can not be zero at the same time", NULL);
-  if (!delta_mev)
-    delta_mev = (sqrt(sqr((delta+1.)*run->p_central)+1.)-sqrt(sqr(run->p_central)+1.))*me_mev;
-  if (longDist || tranDist) {
-    distIn = 1;
-    if (!longDist || !tranDist)
-      bomb("both tranDist and longDist need to be given", NULL);
-    init_distInput();    
-  }
-  
-  /* Initial Touschek calculation then calculate the Twiss function. */
-  init_TSPEC (run);
+
+  if (!Momentum_Aperture)
+    bomb("Momentum_Aperture file needed before performing simulation", NULL);
+  if (get_MAInput(Momentum_Aperture, beamline, nElement)<0)
+    bomb("The input Momentum_Aperture file is not valid for this calculation - not same element location!", NULL);
+
+  /* calculate Twiss function and initial Touschek calculation */
   run_twiss_output(run, beamline, NULL, -1);
-#if USE_MPI
-  MPI_Barrier(MPI_COMM_WORLD); 
-#endif
+  init_TSPEC(run, beamline, nElement);
+
   /* Calculate Piwinski's scattering rate. */
   if (TouschekRate(beamline))
     bomb("Touschek scattering rate calculation error", NULL);
   /* Generate scattered particles at TScatter. 
      And track the scattered particles down to beamline. */
-#if USE_MPI
-  MPI_Barrier(MPI_COMM_WORLD); 
-#endif
-  if (estimate) 
-    TouschekDistributionE(run, beamline);
-  else
-    TouschekDistribution(run, beamline);
+  TouschekDistribution(run, beamline);
     
-#if USE_MPI
-  MPI_Barrier(MPI_COMM_WORLD); 
-#endif
   return;
 }
 
@@ -139,7 +119,7 @@ int TouschekRate(LINE_LIST *beamline)
   ELEMENT_LIST *eptr;
 
   double betagamma, gamma; 
-  double deltap0, sp2, sp4, beta2, betagamma2, sh2;
+  double sp2, sp4, beta2, betagamma2, sh2;
   double sx2, sxb2, dx2, dx_2;
   double sy2, syb2, dy2, dy_2;
   double a0, c0, c1, c2, c3;
@@ -147,6 +127,15 @@ int TouschekRate(LINE_LIST *beamline)
 
   NP = tsSpec->charge/e_mks;
   a0 = sqr(re_mks)*c_mks*NP*NP/(8*sqrt(PI)*sigma_s);
+
+  eptr = &(beamline->elem);
+  while (eptr) {
+    if (eptr->type == T_TSCATTER) {
+      tm = sqr(eptr->Pref_output)/(sqr(eptr->Pref_output)+1.)*sqr(((TSCATTER*)eptr->p_elem)->delta);
+      break;
+    }
+    eptr = eptr->succ;
+  }
 
   IntR = 0.;
   IntLength = 0.;
@@ -159,10 +148,10 @@ int TouschekRate(LINE_LIST *beamline)
       ((TSCATTER*)eptr->p_elem)->total_scatter = IntR / c_mks * tsSpec->frequency;
       IntR = 0.;
       IntLength = 0.;
+      tm = sqr(eptr->Pref_output)/(sqr(eptr->Pref_output)+1.)*sqr(((TSCATTER*)eptr->p_elem)->delta);
     }
     if(!(entity_description[eptr->type].flags&HAS_LENGTH) ||
-       (eptr->pred && !(((DRIFT*)eptr->p_elem)->length)) ||
-       !eptr->succ) {
+       !(((DRIFT*)eptr->p_elem)->length)) {
       eptr = eptr->succ;
       continue;
     }
@@ -171,8 +160,6 @@ int TouschekRate(LINE_LIST *beamline)
     beta2 = sqr(betagamma)/sqr(gamma);
     betagamma2 = sqr(betagamma);
 
-    deltap0 = sqrt(sqr(gamma+tsSpec->delta_mev/me_mev)-1.)-betagamma;
-    tm = beta2*sqr(deltap0/betagamma);
     sp2 = sqr(tsSpec->delta_p0/betagamma);
     sp4 = sqr(sp2);
 
@@ -200,7 +187,7 @@ int TouschekRate(LINE_LIST *beamline)
     }
     B2=sqrt(B2);   	  
 
-    FIntegral(tm, B1, B2, &F, eptr->name);
+    FIntegral(tm, B1, B2, &F);
 
     rate = a0*sqrt(c0)*F/gamma/gamma;
     IntR += rate * ((DRIFT*)eptr->p_elem)->length;
@@ -211,7 +198,7 @@ int TouschekRate(LINE_LIST *beamline)
   return(0);
 }
 
-void FIntegral(double tm, double b1, double b2, double *F, char *name) 
+void FIntegral(double tm, double b1, double b2, double *F) 
 {
   long maxRegion = MAXREGION;
   long steps = STEPS; /* number of integration steps per decade */
@@ -269,257 +256,33 @@ double Fvalue (double t, double tm, double b1, double b2)
   return result;
 }
 
-char *compose_filename1(char *template, char *root_name, long index)
-{
-  char *root, *ext, *filename, *inx;
-  long i, divp;
-
-  divp = str_inp(template, ".");
-  if (divp<0)
-    bomb("touschek_scatter: The filename has to be x.x format. x is 1 to anynumber of characters", NULL);
-  if (str_in(template, "%s")) {
-    root = root_name;
-  }
-  else {
-    root = tmalloc(sizeof(char)*divp);
-    for (i=0; i<divp; i++) {
-      *(root+i) = *(template+i);
-    }
-    *(root+i) = '\0';    
-  }
-
-  ext =  tmalloc(sizeof(char)*(strlen(template)-divp+1));
-  for(i=0; i<strlen(template)-divp; i++) {
-    *(ext+i) = *(template+i+divp);
-  }
-  *(ext+i) = '\0';
-
-  inx = tmalloc(sizeof(char)*5);
-  sprintf(inx, "%04ld", index);
-
-  filename =  tmalloc(sizeof(char)*(strlen(root)+strlen(inx)+strlen(ext)+1));
-  strcat(filename,root);
-  strcat(filename,inx);
-  strcat(filename,ext);
-  return(filename);
-}
-
-int str_inp(const char *string1, const char *string2)
-{
-  int i, j, flag;
-
-  if (strlen(string1)<strlen(string2))
-    return (-1);
-
-  i=j=0;
-  for (i=0;i<strlen(string1); i++) {
-    if (*(string1+i) == *string2) {
-      if (strlen(string2)+i>strlen(string1))
-        return (-1);
-      for (j=0; j<strlen(string2); j++) {
-        if (*(string1+i+j) != *(string2+j)) {
-          flag = 0;
-          break;
-        }
-        flag=1;
-      }
-      if(flag)
-        return (i);
-    }
-  }
-
-  return (-1);
-}
-
-void print_hbook (book1 *x, book1 *y, book1 *s, book1 *xp, book1 *yp, book1 *dp,
-                  TSCATTER *tsptr, char *filename, char *description, int verbosity, double factor)
-{
-  SDDS_DATASET outPage;
-  long i;
-  double *v1, *v2, *v3, *v4, *v5, *v6;
-
-  v1 = calloc(sizeof(*v1), x->length);
-  v2 = calloc(sizeof(*v2), y->length);
-  v3 = calloc(sizeof(*v3), s->length);
-  v4 = calloc(sizeof(*v4), xp->length);
-  v5 = calloc(sizeof(*v5), yp->length);
-  v6 = calloc(sizeof(*v6), dp->length);
-  for(i=0; i<x->length; i++) {
-    v1[i] = ((double)i+0.5)*x->dx + x->xmin;
-    v2[i] = ((double)i+0.5)*y->dx + y->xmin;
-    v3[i] = ((double)i+0.5)*s->dx + s->xmin;
-    v4[i] = ((double)i+0.5)*xp->dx+ xp->xmin;
-    v5[i] = ((double)i+0.5)*yp->dx+ yp->xmin;
-    v6[i] = ((double)i+0.5)*dp->dx+ dp->xmin;
-    x->value[i] *= factor;
-    y->value[i] *= factor;
-    s->value[i] *= factor;
-    xp->value[i] *= factor;
-    yp->value[i] *= factor;
-    dp->value[i] *= factor;
-  }
-
-  /* Open file for writting */
-  if (verbosity)
-    fprintf( stdout, "Opening \"%s\" for writing...\n", filename);
-
-  if (!SDDS_InitializeOutput(&outPage, SDDS_BINARY, 1, 
-                             description, description, filename))
-    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-
-  if (0>SDDS_DefineParameter(&outPage, "Element_Name", NULL, NULL, 
-                             NULL, NULL, SDDS_STRING, NULL) ||
-      0>SDDS_DefineParameter(&outPage, "Element_Location", NULL, NULL, 
-                             NULL, NULL, SDDS_DOUBLE, NULL) ||
-      0>SDDS_DefineParameter(&outPage, "Piwinski_AveR", NULL, NULL, 
-                             NULL, NULL, SDDS_DOUBLE, NULL) ||
-      0>SDDS_DefineParameter(&outPage, "Piwinski_Rate", NULL, NULL, 
-                             NULL, NULL, SDDS_DOUBLE, NULL) ||
-      0>SDDS_DefineParameter(&outPage, "MC_Rate", NULL, NULL, 
-                             NULL, NULL, SDDS_DOUBLE, NULL) ||
-      0>SDDS_DefineParameter(&outPage, "Ignored_Rate", NULL, NULL, 
-                             NULL, NULL, SDDS_DOUBLE, NULL) ||
-      0>SDDS_DefineParameter(&outPage, "nbins", NULL, NULL, 
-                             NULL, NULL, SDDS_LONG, NULL) ||
-      0>SDDS_DefineParameter(&outPage, "Total_count", NULL, NULL, 
-                             NULL, NULL, SDDS_LONG, NULL) ||
-      0>SDDS_DefineParameter(&outPage, "VariableName_1", NULL, NULL, 
-                             NULL, NULL, SDDS_STRING, NULL) ||
-      0>SDDS_DefineParameter(&outPage, "Interval_1", NULL, NULL, 
-                             NULL, NULL, SDDS_DOUBLE, NULL) ||
-      0>SDDS_DefineParameter(&outPage, "Minimum_1", NULL, NULL, 
-                             NULL, NULL, SDDS_DOUBLE, NULL) ||
-      0>SDDS_DefineParameter(&outPage, "VariableName_2", NULL, NULL, 
-                             NULL, NULL, SDDS_STRING, NULL) ||
-      0>SDDS_DefineParameter(&outPage, "Interval_2", NULL, NULL, 
-                             NULL, NULL, SDDS_DOUBLE, NULL) ||
-      0>SDDS_DefineParameter(&outPage, "Minimum_2", NULL, NULL, 
-                             NULL, NULL, SDDS_DOUBLE, NULL) ||
-      0>SDDS_DefineParameter(&outPage, "VariableName_3", NULL, NULL, 
-                             NULL, NULL, SDDS_STRING, NULL) ||
-      0>SDDS_DefineParameter(&outPage, "Interval_3", NULL, NULL, 
-                             NULL, NULL, SDDS_DOUBLE, NULL) ||
-      0>SDDS_DefineParameter(&outPage, "Minimum_3", NULL, NULL, 
-                             NULL, NULL, SDDS_DOUBLE, NULL) ||
-      0>SDDS_DefineParameter(&outPage, "VariableName_4", NULL, NULL, 
-                             NULL, NULL, SDDS_STRING, NULL) ||
-      0>SDDS_DefineParameter(&outPage, "Interval_4", NULL, NULL, 
-                             NULL, NULL, SDDS_DOUBLE, NULL) ||
-      0>SDDS_DefineParameter(&outPage, "Minimum_4", NULL, NULL, 
-                             NULL, NULL, SDDS_DOUBLE, NULL) ||
-      0>SDDS_DefineParameter(&outPage, "VariableName_5", NULL, NULL, 
-                             NULL, NULL, SDDS_STRING, NULL) ||
-      0>SDDS_DefineParameter(&outPage, "Interval_5", NULL, NULL, 
-                             NULL, NULL, SDDS_DOUBLE, NULL) ||
-      0>SDDS_DefineParameter(&outPage, "Minimum_5", NULL, NULL, 
-                             NULL, NULL, SDDS_DOUBLE, NULL) ||
-      0>SDDS_DefineParameter(&outPage, "VariableName_6", NULL, NULL, 
-                             NULL, NULL, SDDS_STRING, NULL) ||
-      0>SDDS_DefineParameter(&outPage, "Interval_6", NULL, NULL, 
-                             NULL, NULL, SDDS_DOUBLE, NULL) ||
-      0>SDDS_DefineParameter(&outPage, "Minimum_6", NULL, NULL, 
-                             NULL, NULL, SDDS_DOUBLE, NULL))
-    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-
-  if (0>SDDS_DefineColumn(&outPage, "x", NULL, NULL, 
-                          NULL, NULL, SDDS_DOUBLE, 0) ||
-      0>SDDS_DefineColumn(&outPage, "x_count", NULL, NULL, 
-                          NULL, NULL, SDDS_DOUBLE, 0) ||
-      0>SDDS_DefineColumn(&outPage, "y", NULL, NULL, 
-                          NULL, NULL, SDDS_DOUBLE, 0) ||
-      0>SDDS_DefineColumn(&outPage, "y_count", NULL, NULL, 
-                          NULL, NULL, SDDS_DOUBLE, 0) ||
-      0>SDDS_DefineColumn(&outPage, "s", NULL, NULL, 
-                          NULL, NULL, SDDS_DOUBLE, 0) ||
-      0>SDDS_DefineColumn(&outPage, "s_count", NULL, NULL, 
-                          NULL, NULL, SDDS_DOUBLE, 0) ||
-      0>SDDS_DefineColumn(&outPage, "xp", NULL, NULL, 
-                          NULL, NULL, SDDS_DOUBLE, 0) ||
-      0>SDDS_DefineColumn(&outPage, "xp_count", NULL, NULL, 
-                          NULL, NULL, SDDS_DOUBLE, 0) ||
-      0>SDDS_DefineColumn(&outPage, "yp", NULL, NULL, 
-                          NULL, NULL, SDDS_DOUBLE, 0) ||
-      0>SDDS_DefineColumn(&outPage, "yp_count", NULL, NULL, 
-                          NULL, NULL, SDDS_DOUBLE, 0) ||
-      0>SDDS_DefineColumn(&outPage, "dp/p", NULL, NULL, 
-                          NULL, NULL, SDDS_DOUBLE, 0) ||
-      0>SDDS_DefineColumn(&outPage, "dp/p_count", NULL, NULL, 
-                          NULL, NULL, SDDS_DOUBLE, 0))
-    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-
-  if (!SDDS_WriteLayout(&outPage) )
-    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-
-  /* Write to output file */
-  if (0>SDDS_StartPage(&outPage, x->length) ||
-      !SDDS_SetParameters(&outPage, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
-                          "Element_Name", tsptr->name,
-                          "Element_Location", tsptr->s, 
-                          "VariableName_1", x->vname,
-                          "Interval_1", x->dx,
-                          "Minimum_1", x->xmin,
-                          "VariableName_2", y->vname,
-                          "Interval_2", y->dx,
-                          "Minimum_2", y->xmin,
-                          "VariableName_3", s->vname,
-                          "Interval_3", s->dx,
-                          "Minimum_3", s->xmin,
-                          "VariableName_4", xp->vname,
-                          "Interval_4", xp->dx,
-                          "Minimum_4", xp->xmin,
-                          "VariableName_5", yp->vname,
-                          "Interval_5", yp->dx,
-                          "Minimum_5", yp->xmin,
-                          "VariableName_6", dp->vname,
-                          "Interval_6", dp->dx,
-                          "Minimum_6", dp->xmin,
-                          "Piwinski_AveR", tsptr->AveR,
-                          "Piwinski_Rate", tsptr->p_rate,
-                          "MC_Rate", tsptr->s_rate,
-                          "Ignored_Rate", tsptr->i_rate,
-                          "nbins", x->length,
-                          "Total_count", x->count, NULL) ||
-      !SDDS_SetColumn(&outPage, SDDS_SET_BY_NAME, v1,        x->length,  "x") ||
-      !SDDS_SetColumn(&outPage, SDDS_SET_BY_NAME, x->value,  x->length,  "x_count") ||
-      !SDDS_SetColumn(&outPage, SDDS_SET_BY_NAME, v2,        y->length,  "y") ||
-      !SDDS_SetColumn(&outPage, SDDS_SET_BY_NAME, y->value,  y->length,  "y_count") ||
-      !SDDS_SetColumn(&outPage, SDDS_SET_BY_NAME, v3,        s->length,  "s") ||
-      !SDDS_SetColumn(&outPage, SDDS_SET_BY_NAME, s->value,  s->length,  "s_count") ||
-      !SDDS_SetColumn(&outPage, SDDS_SET_BY_NAME, v4,        xp->length, "xp") ||
-      !SDDS_SetColumn(&outPage, SDDS_SET_BY_NAME, xp->value, xp->length, "xp_count") ||
-      !SDDS_SetColumn(&outPage, SDDS_SET_BY_NAME, v5,        yp->length, "yp") ||
-      !SDDS_SetColumn(&outPage, SDDS_SET_BY_NAME, yp->value, yp->length, "yp_count") ||
-      !SDDS_SetColumn(&outPage, SDDS_SET_BY_NAME, v6,        dp->length, "dp/p") ||
-      !SDDS_SetColumn(&outPage, SDDS_SET_BY_NAME, dp->value, dp->length, "dp/p_count") ||
-      !SDDS_WritePage(&outPage))
-    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-
-  if (!SDDS_Terminate(&outPage))
-    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-
-  return;
-}
+#define PART_DIST_PARAMETERS 7
+static SDDS_DEFINITION part_dist_para[PART_DIST_PARAMETERS] = {
+  {"Element_Name", "&parameter name=Element_Name, type=string &end"},
+  {"s", "&parameter name=s, units=\"m\", description=\"Location from beginning of beamline\", type=double &end"},
+  {"Piwinski_AveR", "&parameter name=Piwinski_AveR, description=\"Average scattering rate from Piwinski's formula\", type=double &end"},
+  {"Piwinski_Rate", "&parameter name=Piwinski_Rate, description=\"Local scattering rate from Piwinski's formula\",  type=double &end"},
+  {"MC_Rate", "&parameter name=MC_Rate, description=\"Local scattering rate from Monte Carlo simulation\", type=double &end"},
+  {"Ignored_Rate", "&parameter name=Ignored_Rate, description=\"Ignored rate from tracking\", type=double &end"},
+  {"Bins", "&parameter name=Bins, type=long &end"},
+};
+static void *part_dist_paraValue[PART_DIST_PARAMETERS];
 
 void TouschekDistribution(RUN *run, LINE_LIST *beamline)
 {
-  long i, j, total_event, n_left, eleCount=0;
+  long i, j, total_event, n_left, iElement=0;
   ELEMENT_LIST *eptr;
   TSCATTER *tsptr;
-  double p1[6], p2[6], dens1, dens2, tdens;
+  double p1[6], p2[6], dens1, dens2;
   double theta, phi, qa[3], qb[3], beta[3], qabs, gamma;
   double beta0, cross, temp;
   static SDDS_TABLE SDDS_bunch, SDDS_loss;
   BEAM  Beam0, Beam, *beam0, *beam;
-  double xrangeP[6], xrangeM[6];
-  /*
-  book1 *x, *y, *s, *xp, *yp, *dp;
-  book1 *x0, *y0, *s0, *xp0, *yp0, *dp0;
-  */
-  book1m *iniBook, *outBook;
-  char *Name[6]={"x","xp","y","yp","dt","dp"};
-  char *Units[6]={"m","","m","","s",""};
+  char *Name[6]={"x","y","s","xp","yp","dp/p"};
+  char *Units[6]={"m","m","m","","",""};
   long bookBins[6];
   book1 *lossDis;
+  book1m *iniBook, *disBook;
   double *weight;
   double ran1[11];
   long *index, iTotal, sTotal;
@@ -528,418 +291,264 @@ void TouschekDistribution(RUN *run, LINE_LIST *beamline)
   eptr = &(beamline->elem);
   beam0 = &Beam0;
   beam = &Beam;
-  sTotal = (int)beamline->revolution_length;
+  sTotal = (long)beamline->revolution_length+1;
 
   while (eptr) {
     if (eptr->type == T_TSCATTER) {
-      eleCount++;
-      if(eleCount < i_start) {
+      iElement++;
+      if(iElement < i_start) {
         eptr = eptr->succ; 
         continue;
       }
-      if(eleCount > i_end)
+      if(iElement > i_end)
         break;
-#if USE_MPI
-      MPI_Barrier(MPI_COMM_WORLD); 
-      if (myid==0) {
-#endif
-        tsptr = initTSCATTER (eptr);
-        weight = (double*)malloc(sizeof(double)*n_simulated);
-        beam0->particle = (double**)czarray_2d(sizeof(double), n_simulated, 7);
-        beam0->original = (double**)czarray_2d(sizeof(double), n_simulated, 7);
-        beam0->accepted = NULL;
-        beam0->n_original = beam0->n_to_track = beam0->n_particle = n_simulated;
-        beam0->n_accepted = beam0->n_saved = 0;
-        beam0->p0_original = beam0->p0 = tsptr->betagamma;
-        beam0->bunchFrequency = 0.;
-        beam0->lostOnPass = tmalloc(sizeof(*(beam0->lostOnPass))*beam0->n_to_track);
-        if (!distIn) {
-          xrangeM[0] = -(xrangeP[0] = 0.5*tsSpec->range[0]*tsptr->sigx);
-          xrangeM[1] = -(xrangeP[1] = 0.5*tsSpec->range[1]*tsptr->sigy);
-          xrangeM[2] = -(xrangeP[2] = 0.5*tsSpec->range[2]*tsptr->sigz);
-          xrangeM[3] = -(xrangeP[3] = 0.5*tsSpec->range[0]
-                         *sqrt(tsSpec->emitN[0]/tsptr->gamma/tsptr->twiss[0][1])*(1.+fabs(tsptr->twiss[0][0])));
-          xrangeM[4] = -(xrangeP[4] = 0.5*tsSpec->range[1]
-                         *sqrt(tsSpec->emitN[1]/tsptr->gamma/tsptr->twiss[1][1])*(1.+fabs(tsptr->twiss[1][0])));
-	
-          xrangeM[0] = -(xrangeP[0] += fabs(0.5*tsSpec->range[2]*tsSpec->delta_p0/tsptr->betagamma*tsptr->disp[0][0]));
-          xrangeM[1] = -(xrangeP[1] += fabs(0.5*tsSpec->range[2]*tsSpec->delta_p0/tsptr->betagamma*tsptr->disp[1][0]));
-          xrangeM[3] = -(xrangeP[3] += fabs(0.5*tsSpec->range[2]*tsSpec->delta_p0/tsptr->betagamma*tsptr->disp[0][1]));
-          xrangeM[4] = -(xrangeP[4] += fabs(0.5*tsSpec->range[2]*tsSpec->delta_p0/tsptr->betagamma*tsptr->disp[1][1]));
-          xrangeM[5] = -(xrangeP[5] = 0.5*tsSpec->range[2]*tsSpec->delta_p0/tsptr->betagamma);
-        } else {
-          double dpmax = fabs(longMax[1])>fabs(longMin[1])? fabs(longMax[1]) : fabs(longMin[1]); 
-          xrangeP[0] = tranMax[0] + fabs(dpmax*tsptr->disp[0][0]);
-          xrangeM[0] = tranMin[0] - fabs(dpmax*tsptr->disp[0][0]);
-          xrangeP[1] = tranMax[2] + fabs(dpmax*tsptr->disp[1][0]);
-          xrangeM[1] = tranMin[2] - fabs(dpmax*tsptr->disp[1][0]);
-          xrangeP[3] = tranMax[1] + fabs(dpmax*tsptr->disp[0][1]);
-          xrangeM[3] = tranMin[1] - fabs(dpmax*tsptr->disp[0][1]);
-          xrangeP[4] = tranMax[3] + fabs(dpmax*tsptr->disp[1][1]);
-          xrangeM[4] = tranMin[3] - fabs(dpmax*tsptr->disp[1][1]);
-          xrangeP[2] = longMax[0];
-          xrangeM[2] = longMin[0];
-          xrangeP[5] = longMax[1];
-          xrangeM[5] = longMin[1];
-        }
-        if (initial) {
-          tdens = 0.;
-          tsptr->iniFile = compose_filename1(initial, run->rootname, eleCount);
-          for (i=0; i<6; i++)
-            bookBins[i] = tsSpec->nbins;
-          iniBook = chbook1m(Name, Units, xrangeM, xrangeP, bookBins, 6);
-        }
-        if (distribution) {
-          tsptr->disFile = compose_filename1(distribution, run->rootname, eleCount);
-          for (i=0; i<6; i++)
-            bookBins[i] = tsSpec->nbins;
-          xrangeM[5] = -0.1;
-          xrangeP[5] = 0.1;
-          outBook = chbook1m(Name, Units, xrangeM, xrangeP, bookBins, 6);
-        }
-        if (output) {
-          tsptr->outFile = compose_filename1(output, run->rootname, eleCount);
-          lossDis = chbook1("los_distribution", "m", 0, sTotal, sTotal);
-        }
-        if (loss) {
-          tsptr->losFile = compose_filename1(loss, run->rootname, eleCount);
-          SDDS_BeamScatterLossSetup(&SDDS_loss, tsptr->losFile, SDDS_BINARY, 1, 
-                                    "lost particle coordinates", run->runfile,
-                                    run->lattice, "touschek_scatter");
-        }
-        if (bunch) {
-          tsptr->bunFile = compose_filename1(bunch, run->rootname, eleCount);
-          SDDS_BeamScatterSetup(&SDDS_bunch, tsptr->bunFile, SDDS_BINARY, 1, 
-                                "scattered-beam phase space", run->runfile,
-                                run->lattice, "touschek_scatter");
-        }
-        i = 0; j=0; total_event=0;
-        while(1) {
-          if(total_event>=n_simulated)
-            break;
-          /* Select the 11 random number then mix them. Use elegant run_setup seed */
-          for (j=0; j<11; j++) {
-            ran1[j] = random_1_elegant(1);
-          }
-          randomizeOrder((char*)ran1, sizeof(ran1[0]), 11, 0, random_4);
-          
-          total_event++;
-          if (!distIn)
-            selectPart0(tsptr, p1, p2, &dens1, &dens2, ran1);
-          else
-            selectPart1(tsptr, p1, p2, &dens1, &dens2, ran1);
-          if (!dens1 || !dens2)
-            continue;
 
-          if (initial) {
-            tdens += dens1 + dens2;
-            chfill1m(iniBook, p1, dens1, bookBins, 6);
-            chfill1m(iniBook, p1, dens2, bookBins, 6);
-          }
-          /* This is very important. Change from slop to MeV */
-          for(j=3; j<5; j++) {
-            p1[j] *= tsptr->pCentral_mev;
-            p2[j] *= tsptr->pCentral_mev;
-          }
-          p1[5] = (p1[5]+1)*tsptr->pCentral_mev;
-          p2[5] = (p2[5]+1)*tsptr->pCentral_mev;
+      tsptr = initTSCATTER (eptr, iElement);
+      weight = (double*)malloc(sizeof(double)*n_simulated);
+      beam0->particle = (double**)czarray_2d(sizeof(double), n_simulated, 7);
+      beam0->original = (double**)czarray_2d(sizeof(double), n_simulated, 7);
+      beam0->accepted = NULL;
+      beam0->n_original = beam0->n_to_track = beam0->n_particle = n_simulated;
+      beam0->n_accepted = beam0->n_saved = 0;
+      beam0->p0_original = beam0->p0 = tsptr->betagamma;
+      beam0->bunchFrequency = 0.;
+      beam0->lostOnPass = tmalloc(sizeof(*(beam0->lostOnPass))*beam0->n_to_track);
+
+      if (initial) {
+        tsptr->iniFile = compose_filename_occurence(initial, run->rootname, eptr->occurence);
+        for (i=0; i<6; i++)
+          bookBins[i] = tsSpec->nbins;
+        iniBook = chbook1m(Name, Units, tsptr->xmin, tsptr->xmax, bookBins, 6);
+      }
+      if (distribution) {
+        tsptr->disFile = compose_filename_occurence(distribution, run->rootname, eptr->occurence);
+        for (i=0; i<6; i++)
+          bookBins[i] = tsSpec->nbins;
+        tsptr->xmin[5] = -0.1;
+        tsptr->xmax[5] = 0.1;
+        disBook = chbook1m(Name, Units, tsptr->xmin, tsptr->xmax, bookBins, 6);
+      }
+      if (output) {
+        tsptr->outFile = compose_filename_occurence(output, run->rootname, eptr->occurence);
+        lossDis = chbook1("s", "m", 0, sTotal, sTotal);
+      }
+      if (loss) {
+        tsptr->losFile = compose_filename_occurence(loss, run->rootname, eptr->occurence);
+        SDDS_BeamScatterLossSetup(&SDDS_loss, tsptr->losFile, SDDS_BINARY, 1, 
+                                  "lost particle coordinates", run->runfile,
+                                  run->lattice, "touschek_scatter");
+      }
+      if (bunch) {
+        tsptr->bunFile = compose_filename_occurence(bunch, run->rootname, eptr->occurence);
+        SDDS_BeamScatterSetup(&SDDS_bunch, tsptr->bunFile, SDDS_BINARY, 1, 
+                              "scattered-beam phase space", run->runfile,
+                              run->lattice, "touschek_scatter");
+      }
+
+      i = 0; j=0; total_event=0;
+      while(1) {
+        if(i>=n_simulated)
+          break;
+        /* Select the 11 random number then mix them. Use elegant run_setup seed */
+        for (j=0; j<11; j++) {
+          ran1[j] = random_1_elegant(1);
+        }
+        randomizeOrder((char*)ran1, sizeof(ran1[0]), 11, 0, random_4);
+          
+        total_event++;
+        if (!tsSpec->distIn)
+          selectPartGauss(tsptr, p1, p2, &dens1, &dens2, ran1);
+        else
+          selectPartReal(tsptr, p1, p2, &dens1, &dens2, ran1);
+
+        if (initial) {
+          chfill1m(iniBook, p1, dens1, bookBins, 6);
+          chfill1m(iniBook, p2, dens2, bookBins, 6);
+        }
+        if (!dens1 || !dens2) {
+          continue;
+        }
+        /* This is very important. Change from slop to MeV */
+        for(j=3; j<5; j++) {
+          p1[j] *= tsptr->pCentral_mev;
+          p2[j] *= tsptr->pCentral_mev;
+        }
+        p1[5] = (p1[5]+1)*tsptr->pCentral_mev;
+        p2[5] = (p2[5]+1)*tsptr->pCentral_mev;
             
-          bunch2cm(p1,p2,qa,beta,&gamma);
+        bunch2cm(p1,p2,qa,beta,&gamma);
           
-          theta = (ran1[9]*0.9999+0.00005)*PI;
-          phi = ran1[10]*PI;
+        theta = (ran1[9]*0.9999+0.00005)*PI;
+        phi = ran1[10]*PI;
 	  
-          temp = dens1*dens2*sin(theta);
-          eulertrans(qa,theta,phi,qb,&qabs);
-          cm2bunch(p1,p2,qb,beta,&gamma);
-          p1[5] -= tsptr->pCentral_mev;
-          p2[5] -= tsptr->pCentral_mev;
+        temp = dens1*dens2*sin(theta);
+        eulertrans(qa,theta,phi,qb,&qabs);
+        cm2bunch(p1,p2,qb,beta,&gamma);
+        p1[5] = (p1[5]-tsptr->pCentral_mev)/tsptr->pCentral_mev;
+        p2[5] = (p2[5]-tsptr->pCentral_mev)/tsptr->pCentral_mev;
 	  
-          if(fabs(p1[5])>tsSpec->delta_mev || fabs(p2[5])>tsSpec->delta_mev) {
-            beta0=qabs/sqrt(qabs*qabs+me_mev*me_mev);
-            cross = moeller(beta0,theta);
-            temp *= cross*beta0/gamma/gamma;
+        if(fabs(p1[5])>tsptr->delta || fabs(p2[5])>tsptr->delta) {
+          beta0=qabs/sqrt(qabs*qabs+me_mev*me_mev);
+          cross = moeller(beta0,theta);
+          temp *= cross*beta0/gamma/gamma;
 	    
-            if(fabs(p1[5])>tsSpec->delta_mev) {
-              tsptr->totalWeight += temp;
-              p1[3] /= tsptr->pCentral_mev;
-              p1[4] /= tsptr->pCentral_mev;
-              p1[5] /= tsptr->pCentral_mev;
-              if (distribution) {
-                chfill1m(outBook, p1, temp, bookBins, 6);
-              }
-              tsptr->simuCount++;
-              
-              beam0->particle[i][0] = p1[0];
-              beam0->particle[i][1] = p1[3];
-              beam0->particle[i][2] = p1[1];
-              beam0->particle[i][3] = p1[4];
-              beam0->particle[i][4] = p1[2];
-              beam0->particle[i][5] = p1[5];
-              beam0->particle[i][6] = i+1;
-              weight[i] = temp;
-              i++;
+          if(fabs(p1[5])>tsptr->delta) {
+            tsptr->totalWeight += temp;
+            p1[3] /= tsptr->pCentral_mev;
+            p1[4] /= tsptr->pCentral_mev;
+            if (distribution) {
+              chfill1m(disBook, p1, temp, bookBins, 6);
             }
+            tsptr->simuCount++;
               
-            if(i>=n_simulated)
-              break;
+            beam0->particle[i][0] = p1[0];
+            beam0->particle[i][1] = p1[3];
+            beam0->particle[i][2] = p1[1];
+            beam0->particle[i][3] = p1[4];
+            beam0->particle[i][4] = p1[2];
+            beam0->particle[i][5] = p1[5];
+            beam0->particle[i][6] = i+1;
+            weight[i] = temp;
+            i++;
+          }
+              
+          if(i>=n_simulated)
+            break;
 	    
-            if(fabs(p2[5])>tsSpec->delta_mev) {
-              tsptr->totalWeight += temp;
-              p2[3] /= tsptr->pCentral_mev;
-              p2[4] /= tsptr->pCentral_mev;
-              p2[5] /= tsptr->pCentral_mev;
-              if (distribution) {
-                chfill1m(outBook, p2, temp, bookBins, 6);
-              }
-              tsptr->simuCount++;
+          if(fabs(p2[5])>tsptr->delta) {
+            tsptr->totalWeight += temp;
+            p2[3] /= tsptr->pCentral_mev;
+            p2[4] /= tsptr->pCentral_mev;
+            if (distribution) {
+              chfill1m(disBook, p2, temp, bookBins, 6);
+            }
+            tsptr->simuCount++;
                 
-              beam0->particle[i][0] = p2[0];
-              beam0->particle[i][1] = p2[3];
-              beam0->particle[i][2] = p2[1];
-              beam0->particle[i][3] = p2[4];
-              beam0->particle[i][4] = p2[2];
-              beam0->particle[i][5] = p2[5];
-              beam0->particle[i][6] = i+1;
-              weight[i] = temp;
-              i++;
-            }
+            beam0->particle[i][0] = p2[0];
+            beam0->particle[i][1] = p2[3];
+            beam0->particle[i][2] = p2[1];
+            beam0->particle[i][3] = p2[4];
+            beam0->particle[i][4] = p2[2];
+            beam0->particle[i][5] = p2[5];
+            beam0->particle[i][6] = i+1;
+            weight[i] = temp;
+            i++;
           }
         }
-        if (total_event/tsptr->simuCount > 20) {
-          if (distribution_cutoff[0]<5 || distribution_cutoff[1]<5 ) 
-            fprintf(stdout, "waring: Scattering rate is low, please use 5 sigma beam for better simulation.\n");
-          else
-            fprintf(stdout, "waring: Scattering rate is very low, please ignore the rate from Monte Carlo simulation. Use Piwinski's rate only\n"); 
+        if (total_event*11 > (long)2e9)  {
+          fprintf(stdout, "warning: The total random number used > 2e9. Use less n_simulated or use small delta");
+          fflush(stdout);
+          break;
         }
-        tsptr->factor = tsptr->factor / (double)(total_event);
-        tsptr->s_rate = tsptr->totalWeight * tsptr->factor;
-        tsptr->i_rate = tsptr->s_rate*tsSpec->ignoredPortion;
+      }
+      if (total_event/tsptr->simuCount > 20) {
+        if (distribution_cutoff[0]<5 || distribution_cutoff[1]<5 ) 
+          fprintf(stdout, "waring: Scattering rate is low, please use 5 sigma beam for better simulation.\n");
+        else
+          fprintf(stdout, "waring: Scattering rate is very low, please ignore the rate from Monte Carlo simulation. Use Piwinski's rate only\n"); 
+      }
+      tsptr->factor = tsptr->factor / (double)(total_event);
+      tsptr->s_rate = tsptr->totalWeight * tsptr->factor;
+      tsptr->i_rate = tsptr->s_rate*tsSpec->ignoredPortion;
 	
-        /* Pick tracking particles from the simulated scattered particles */
-        index = (long*)malloc(sizeof(long)*tsptr->simuCount);
-        for (i=0; i<tsptr->simuCount; i++) index[i]=i;
-        if (tsSpec->ignoredPortion <=1e-6) {
-          iTotal = tsptr->simuCount; 
-          wTotal = tsptr->totalWeight;
-        } else {
-          iTotal = 0;
-          wTotal =0.;
-          weight_limit = tsptr->totalWeight*(1-tsSpec->ignoredPortion);
-          weight_ave = tsptr->totalWeight/tsptr->simuCount;
-          pickPart(weight, index, 0, tsptr->simuCount,  
-                   &iTotal, &wTotal, weight_limit, weight_ave);
-        }
+      /* Pick tracking particles from the simulated scattered particles */
+      index = (long*)malloc(sizeof(long)*tsptr->simuCount);
+      for (i=0; i<tsptr->simuCount; i++) index[i]=i;
+      if (tsSpec->ignoredPortion <=1e-6) {
+        iTotal = tsptr->simuCount; 
+        wTotal = tsptr->totalWeight;
+      } else {
+        iTotal = 0;
+        wTotal =0.;
+        weight_limit = tsptr->totalWeight*(1-tsSpec->ignoredPortion);
+        weight_ave = tsptr->totalWeight/tsptr->simuCount;
+        pickPart(weight, index, 0, tsptr->simuCount,  
+                 &iTotal, &wTotal, weight_limit, weight_ave);
+      }
         
-        beam->particle = (double**)czarray_2d(sizeof(double), iTotal, 7);
-        beam->original = (double**)czarray_2d(sizeof(double), iTotal, 7);
-        beam->accepted = NULL;
-        beam->n_original = beam->n_to_track = beam->n_particle = iTotal;
-        beam->n_accepted = beam->n_saved = 0;
-        beam->p0_original = beam->p0 = tsptr->betagamma;
-        beam->bunchFrequency = 0.;
-        beam->lostOnPass = tmalloc(sizeof(*(beam->lostOnPass))*beam->n_to_track);
+      beam->particle = (double**)czarray_2d(sizeof(double), iTotal, 7);
+      beam->original = (double**)czarray_2d(sizeof(double), iTotal, 7);
+      beam->accepted = NULL;
+      beam->n_original = beam->n_to_track = beam->n_particle = iTotal;
+      beam->n_accepted = beam->n_saved = 0;
+      beam->p0_original = beam->p0 = tsptr->betagamma;
+      beam->bunchFrequency = 0.;
+      beam->lostOnPass = tmalloc(sizeof(*(beam->lostOnPass))*beam->n_to_track);
 	  
-        for (i=0; i<iTotal; i++) {
-          beam->original[i][0] = beam->particle[i][0] = beam0->particle[index[i]][0];
-          beam->original[i][1] = beam->particle[i][1] = beam0->particle[index[i]][1];
-          beam->original[i][2] = beam->particle[i][2] = beam0->particle[index[i]][2];
-          beam->original[i][3] = beam->particle[i][3] = beam0->particle[index[i]][3];
-          beam->original[i][4] = beam->particle[i][4] = beam0->particle[index[i]][4];
-          beam->original[i][5] = beam->particle[i][5] = beam0->particle[index[i]][5];
-          beam->original[i][6] = beam->particle[i][6] = i+1;
-          weight[i] *= tsptr->factor;
-        }
-        if (distIn)
-          tsptr->total_scatter *= tsptr->s_rate/tsptr->p_rate;
+      for (i=0; i<iTotal; i++) {
+        beam->original[i][0] = beam->particle[i][0] = beam0->particle[index[i]][0];
+        beam->original[i][1] = beam->particle[i][1] = beam0->particle[index[i]][1];
+        beam->original[i][2] = beam->particle[i][2] = beam0->particle[index[i]][2];
+        beam->original[i][3] = beam->particle[i][3] = beam0->particle[index[i]][3];
+        beam->original[i][4] = beam->particle[i][4] = beam0->particle[index[i]][4];
+        beam->original[i][5] = beam->particle[i][5] = beam0->particle[index[i]][5];
+        beam->original[i][6] = beam->particle[i][6] = i+1;
+        weight[i] *= tsptr->factor;
+      }
+      if (tsSpec->distIn)
+        tsptr->total_scatter *= tsptr->s_rate/tsptr->p_rate;
 
-        if (bunch)
-          dump_scattered_particles(&SDDS_bunch, beam->particle, (long)iTotal,
-                                   weight, tsptr);
+      if (bunch)
+        dump_scattered_particles(&SDDS_bunch, beam->particle, (long)iTotal,
+                                 weight, tsptr);
+      if (distribution || initial) {
+        part_dist_paraValue[0] = (void*)(&tsptr->name);
+        part_dist_paraValue[1] = (void*)(&tsptr->s);
+        part_dist_paraValue[2] = (void*)(&tsptr->AveR);
+        part_dist_paraValue[3] = (void*)(&tsptr->p_rate);
+        part_dist_paraValue[4] = (void*)(&tsptr->s_rate);
+        part_dist_paraValue[5] = (void*)(&tsptr->i_rate);
+        part_dist_paraValue[6] = (void*)(&bookBins[0]);
+        
         if (distribution) {
-          /*
-          print_hbook(x, y, s, xp, yp, dp, tsptr, tsptr->disFile, 
-                      "Distribution of Scattered particles", 1, x->count*tsptr->factor/tsptr->s_rate);
-          */
-          free_hbook1m(outBook);
+          chprint1m(disBook, tsptr->disFile, "Simulated scattered particle final distribution", part_dist_para, 
+                    part_dist_paraValue, PART_DIST_PARAMETERS, 1, 0, 0);
+          free_hbook1m(disBook);
         }
         if (initial) {
-          /*
-          print_hbook(x0, y0, s0, xp0, yp0, dp0, tsptr, tsptr->iniFile, 
-                      "Distribution of simulated particles", 1, x0->count/tdens);
-          */
+          chprint1m(iniBook, tsptr->iniFile, "Simulated scattered particle original distribution", part_dist_para, 
+                    part_dist_paraValue, PART_DIST_PARAMETERS, 1, 0, 0);
           free_hbook1m(iniBook);
         }
-#if USE_MPI
       }
-      MPI_Barrier(MPI_COMM_WORLD); 
-#endif
+
       if (do_track) {
         n_left = do_tracking(beam, NULL, (long)iTotal, NULL, beamline, 
                              &beam->p0, NULL, NULL, NULL, NULL, run, 1,
                              0, 1, 0, NULL,
                              NULL, NULL, beam->lostOnPass, eptr);
-#if USE_MPI
-        MPI_Barrier(MPI_COMM_WORLD); 
-        if (myid==0) {
-#endif
-          if (loss) {
-            dump_scattered_loss_particles(&SDDS_loss, beam->particle+n_left, beam->original,  
-                                          beam->lostOnPass+n_left, beam->n_to_track-n_left, weight, tsptr);
-            if (!SDDS_Terminate(&SDDS_loss)) {
-              SDDS_SetError("Problem terminating 'losses' file (finish_output)");
-              SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-            }
-          }
-          if (output) {
-            for (i=0; i< beam->n_to_track-n_left; i++) {
-              j = (beam->particle+n_left)[i][6]-1;
-              chfill1(lossDis, (beam->particle+n_left)[i][4], weight[j]*tsptr->total_scatter/tsptr->s_rate);
-            }
-            chprint1(lossDis, tsptr->outFile, "Beam loss distribution in particles/s/m", NULL,
-                     NULL, 0, 0, verbosity, 0);
-            free_hbook1(lossDis);
-          }
-#if USE_MPI
-        }
-#endif
-      }
-#if USE_MPI
-      if (myid==0) {
-#endif
-        free_beamdata(beam);
-        free_beamdata(beam0);
-        free(weight);
-#if USE_MPI
-      }
-#endif
-    }
-    eptr = eptr->succ; 
-  }
-  return;
-}
-
-void TouschekDistributionE(RUN *run, LINE_LIST *beamline)
-{
-  ELEMENT_LIST *eptr;
-  TSCATTER *tsptr;
-  static SDDS_TABLE SDDS_bunch, SDDS_loss;
-  BEAM  Beam0, *beam0;
-  book1 *lossDis;
-  long i, n_left, eleCount=0, sTotal;
-  double *weight, **fiducial_part;
- 
-  eptr = &(beamline->elem);
-  beam0 = &Beam0;
-  sTotal = (int)beamline->revolution_length;
-
-  while (eptr) {
-    if (eptr->type == T_TSCATTER) {
-      eleCount++;
-      if(eleCount < i_start) {
-        eptr = eptr->succ; 
-        continue;
-      }
-      if(eleCount > i_end)
-        break;
-#if USE_MPI
-      MPI_Barrier(MPI_COMM_WORLD); 
-      if (myid==0) {
-#endif
-        weight = (double*)malloc(sizeof(double)*n_simulated);
-        beam0->particle = (double**)czarray_2d(sizeof(double), n_simulated, 7);
-        beam0->original = (double**)czarray_2d(sizeof(double), n_simulated, 7);
-        beam0->accepted = NULL;
-        beam0->n_original = beam0->n_to_track = beam0->n_particle = n_simulated;
-        beam0->n_accepted = beam0->n_saved = 0;
-        beam0->p0_original = beam0->p0 = tsptr->betagamma;
-        beam0->bunchFrequency = 0.;
-        beam0->lostOnPass = tmalloc(sizeof(*(beam0->lostOnPass))*beam0->n_to_track);
-        if (output) {
-          tsptr->outFile = compose_filename1(output, run->rootname, eleCount);
-          lossDis = chbook1("los_distribution", "m", 0, sTotal, sTotal);
-        }
         if (loss) {
-          tsptr->losFile = compose_filename1(loss, run->rootname, eleCount);
-          SDDS_BeamScatterLossSetup(&SDDS_loss, tsptr->losFile, SDDS_BINARY, 1, 
-                                    "lost particle coordinates", run->runfile,
-                                    run->lattice, "touschek_scatter");
-        }
-        if (bunch) {
-          tsptr->bunFile = compose_filename1(bunch, run->rootname, eleCount);
-          SDDS_BeamScatterSetup(&SDDS_bunch, tsptr->bunFile, SDDS_BINARY, 1, 
-                                "scattered-beam phase space", run->runfile,
-                                run->lattice, "touschek_scatter");
-        }
-        for (i=0; i<n_simulated; i++) {
-          beam0->original[i][0] =beam0->particle[i][0] = 0;
-          beam0->original[i][1] =beam0->particle[i][1] = 0;
-          beam0->original[i][2] =beam0->particle[i][2] = 0;
-          beam0->original[i][3] =beam0->particle[i][3] = 0;
-          beam0->original[i][4] =beam0->particle[i][4] = 0;
-          if (tsSpec->delta_mev >= tsptr->pCentral_mev)
-            beam0->original[i][5] = beam0->particle[i][5] = ((double)i/(n_simulated-1)-0.5)*2.;
-          else
-            beam0->original[i][5] = beam0->particle[i][5] = ((double)i/(n_simulated-1)-0.5)*2.*tsSpec->delta_mev/tsptr->pCentral_mev;
-          beam0->original[i][6] =beam0->particle[i][6] = i+1;
-          weight[i] = 1.;
-        }
-        if (bunch)
-          dump_scattered_particles(&SDDS_bunch, beam0->particle, (long)n_simulated,
-                                   weight, tsptr);
-#if USE_MPI
-      }
-      MPI_Barrier(MPI_COMM_WORLD); 
-#endif
-      if (do_track) {
-        delete_phase_references();
-        reset_special_elements(beamline, 1);
-        reset_driftCSR();
-        fiducial_part=(double**)czarray_2d(sizeof(double), 1, 7); 
-        for (fiducial_part[0][6]=1, i=0; i<6;i++)
-          fiducial_part[0][i] = 0.0;
-        n_left = do_tracking(NULL, fiducial_part, 1, NULL, beamline, 
-                             &beam0->p0, NULL, NULL, NULL, NULL, run, 1,
-                             513, 1, 0, NULL,
-                             NULL, NULL, NULL, eptr);
-        beam0->p0 = beam0->p0_original;
-        n_left = do_tracking(beam0, NULL, (long)n_simulated, NULL, beamline, 
-                             &beam0->p0, NULL, NULL, NULL, NULL, run, 2,
-                             0, 1, 0, NULL,
-                             NULL, NULL, beam0->lostOnPass, eptr);
-        free_czarray_2d((void**)fiducial_part, 1, 7);
-#if USE_MPI
-        MPI_Barrier(MPI_COMM_WORLD); 
-        if (myid==0) {
-#endif
-          if (loss) {
-            dump_scattered_loss_particles(&SDDS_loss, beam0->particle+n_left, beam0->original,  
-                                          beam0->lostOnPass+n_left, beam0->n_to_track-n_left, weight, tsptr);
-            if (!SDDS_Terminate(&SDDS_loss)) {
-              SDDS_SetError("Problem terminating 'losses' file (finish_output)");
-              SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-            }
+          dump_scattered_loss_particles(&SDDS_loss, beam->particle+n_left, beam->original,  
+                                        beam->lostOnPass+n_left, beam->n_to_track-n_left, weight, tsptr);
+          if (!SDDS_Terminate(&SDDS_loss)) {
+            SDDS_SetError("Problem terminating 'losses' file (finish_output)");
+            SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
           }
-          if (output) {
-            for (i=0; i< beam0->n_to_track-n_left; i++) {
-              chfill1(lossDis, (beam0->particle+n_left)[i][4], 1.);
-            }
-            chprint1(lossDis, tsptr->outFile, "Beam loss distribution in particles/s/m", NULL,
-                     NULL, 0, 0, verbosity, 0);
-            free_hbook1(lossDis);
-          }
-#if USE_MPI
         }
-#endif
+        if (output) {
+          for (i=0; i< beam->n_to_track-n_left; i++) {
+            j = (beam->particle+n_left)[i][6]-1;
+            chfill1(lossDis, (beam->particle+n_left)[i][4], weight[j]*tsptr->total_scatter/tsptr->s_rate);
+          }
+          chprint1(lossDis, tsptr->outFile, "Beam loss distribution in particles/s/m", NULL,
+                   NULL, 0, 0, verbosity, 0);
+          free_hbook1(lossDis);
+        }
       }
-#if USE_MPI
-      if (myid==0) {
-#endif
-        free_beamdata(beam0);
-        free(weight);
-#if USE_MPI
-      }
-#endif
+      free_beamdata(beam);
+      free_beamdata(beam0);
+      free(weight);
+      free(index);
+      if (tsSpec->distIn==1) {
+        free_hbookn(tsptr->fullhis);
+      } else if (tsSpec->distIn==2) {
+        free_hbookn(tsptr->this);
+        free_hbookn(tsptr->zhis);
+      } else if (tsSpec->distIn==3) {
+        free_hbookn(tsptr->xhis);
+        free_hbookn(tsptr->yhis);
+        free_hbookn(tsptr->zhis);
+      }        
     }
     eptr = eptr->succ; 
   }
@@ -947,10 +556,11 @@ void TouschekDistributionE(RUN *run, LINE_LIST *beamline)
 }
 
 /* Initialize beam parameter at each Scatter element */
-TSCATTER *initTSCATTER (ELEMENT_LIST *eptr)
+TSCATTER *initTSCATTER (ELEMENT_LIST *eptr, long iElement)
 {
   TSCATTER *tsptr;
   double temp;
+  long i;
 
   tsptr = ((TSCATTER*)eptr->p_elem);
 
@@ -982,10 +592,65 @@ TSCATTER *initTSCATTER (ELEMENT_LIST *eptr)
   tsptr->sigxyz = tsptr->sigx * tsptr->sigy * tsptr->sigz;
 
   temp = sqr(tsSpec->charge/e_mks)*sqr(PI)*sqr(re_mks)*c_mks/4.;
-  if (distIn) {
-    tsptr->factor = temp*(tranMax[0]-tranMin[0])*sqr(tranMax[1]-tranMin[1])
-      *(tranMax[2]-tranMin[2])*sqr(tranMax[3]-tranMin[3])
-      *(longMax[0]-longMin[0])*sqr(longMax[1]-longMin[1]);
+  if (!tsSpec->distIn) {
+    tsptr->xmin[0] = -(tsptr->xmax[0] = 0.5*tsSpec->range[0]*tsptr->sigx);
+    tsptr->xmin[1] = -(tsptr->xmax[1] = 0.5*tsSpec->range[1]*tsptr->sigy);
+    tsptr->xmin[2] = -(tsptr->xmax[2] = 0.5*tsSpec->range[2]*tsptr->sigz);
+    tsptr->xmin[3] = -(tsptr->xmax[3] = 0.5*tsSpec->range[0]
+                       *sqrt(tsSpec->emitN[0]/tsptr->gamma/tsptr->twiss[0][1])*(1.+fabs(tsptr->twiss[0][0])));
+    tsptr->xmin[4] = -(tsptr->xmax[4] = 0.5*tsSpec->range[1]
+                       *sqrt(tsSpec->emitN[1]/tsptr->gamma/tsptr->twiss[1][1])*(1.+fabs(tsptr->twiss[1][0])));	
+    tsptr->xmin[0] = -(tsptr->xmax[0] += fabs(0.5*tsSpec->range[2]*tsSpec->delta_p0/tsptr->betagamma*tsptr->disp[0][0]));
+    tsptr->xmin[1] = -(tsptr->xmax[1] += fabs(0.5*tsSpec->range[2]*tsSpec->delta_p0/tsptr->betagamma*tsptr->disp[1][0]));
+    tsptr->xmin[3] = -(tsptr->xmax[3] += fabs(0.5*tsSpec->range[2]*tsSpec->delta_p0/tsptr->betagamma*tsptr->disp[0][1]));
+    tsptr->xmin[4] = -(tsptr->xmax[4] += fabs(0.5*tsSpec->range[2]*tsSpec->delta_p0/tsptr->betagamma*tsptr->disp[1][1]));
+    tsptr->xmin[5] = -(tsptr->xmax[5] = 0.5*tsSpec->range[2]*tsSpec->delta_p0/tsptr->betagamma);
+  } else if (tsSpec->distIn==1) {
+    tsptr->fullhis = readbookn(FullDist, iElement);
+    for (i=0; i<3; i++) {
+      tsptr->xmin[i] = tsptr->fullhis->xmin[i*2];
+      tsptr->xmax[i] = tsptr->fullhis->xmax[i*2];
+      tsptr->xmin[i+3] = tsptr->fullhis->xmin[i*2+1];
+      tsptr->xmax[i+3] = tsptr->fullhis->xmax[i*2+1];
+    }
+    tsptr->xmin[2] *= c_mks;
+    tsptr->xmax[2] *= c_mks;
+  } else if (tsSpec->distIn==2) {
+    tsptr->this = readbookn(TranDist, iElement);
+    tsptr->zhis = readbookn(ZDist, iElement);
+    for (i=0; i<2; i++) {
+      tsptr->xmin[i] = tsptr->this->xmin[i*2];
+      tsptr->xmax[i] = tsptr->this->xmax[i*2];
+      tsptr->xmin[i+3] = tsptr->this->xmin[i*2+1];
+      tsptr->xmax[i+3] = tsptr->this->xmax[i*2+1];
+    }
+    tsptr->xmin[2] = tsptr->zhis->xmin[0]*c_mks;
+    tsptr->xmax[2] = tsptr->zhis->xmax[0]*c_mks;
+    tsptr->xmin[5] = tsptr->zhis->xmin[1];
+    tsptr->xmax[5] = tsptr->zhis->xmax[1];
+  } else if (tsSpec->distIn==3) {
+    tsptr->xhis = readbookn(XDist, iElement);
+    tsptr->yhis = readbookn(YDist, iElement);
+    tsptr->zhis = readbookn(ZDist, iElement);
+
+    tsptr->xmin[0] = tsptr->xhis->xmin[0];
+    tsptr->xmin[3] = tsptr->xhis->xmin[1];
+    tsptr->xmin[1] = tsptr->yhis->xmin[0];
+    tsptr->xmin[4] = tsptr->yhis->xmin[1];
+    tsptr->xmin[2] = tsptr->zhis->xmin[0]*c_mks;
+    tsptr->xmin[5] = tsptr->zhis->xmin[1];
+    tsptr->xmax[0] = tsptr->xhis->xmax[0];
+    tsptr->xmax[3] = tsptr->xhis->xmax[1];
+    tsptr->xmax[1] = tsptr->yhis->xmax[0];
+    tsptr->xmax[4] = tsptr->yhis->xmax[1];
+    tsptr->xmax[2] = tsptr->zhis->xmax[0]*c_mks;
+    tsptr->xmax[5] = tsptr->zhis->xmax[1];
+  }
+
+  if (tsSpec->distIn) {
+    tsptr->factor = temp*(tsptr->xmax[0]-tsptr->xmin[0])*sqr(tsptr->xmax[3]-tsptr->xmin[3])
+      *(tsptr->xmax[1]-tsptr->xmin[1])*sqr(tsptr->xmax[4]-tsptr->xmin[4])
+      *(tsptr->xmax[2]-tsptr->xmin[2])*sqr(tsptr->xmax[5]-tsptr->xmin[5]);
   } else {
     tsptr->factor = temp*pow(tsSpec->range[0],3.0)*pow(tsSpec->range[1],3.0)*pow(tsSpec->range[2],3.0)
       /pow(2*PI, 6.0)/tsptr->sigxyz;
@@ -995,7 +660,7 @@ TSCATTER *initTSCATTER (ELEMENT_LIST *eptr)
 }
 
 /* Initialize Touschek Scattering Calculation */
-void init_TSPEC (RUN *run)
+void init_TSPEC (RUN *run, LINE_LIST *beamline, long nElement)
 {
   if (!(tsSpec = SDDS_Malloc(sizeof(*tsSpec))))
     bomb("memory allocation failure at setup Touscheck scatter", NULL);                
@@ -1012,85 +677,146 @@ void init_TSPEC (RUN *run)
   tsSpec->range[2] = 2 * distribution_cutoff[2];
   tsSpec->sigz = sigma_s;
   tsSpec->delta_p0 = sigma_dp * run->p_central;
-  tsSpec->delta_mev = delta_mev;
 
+  tsSpec->distIn = 0;
+  if (FullDist) {
+    tsSpec->ipage_his = calloc(sizeof(long), nElement);
+    tsSpec->distIn = 1;
+    if (Check_HisInput(FullDist, beamline, nElement, tsSpec->ipage_his, 0)<0)
+      bomb("The input FullDist is not valid for this calculation - not same element location!", NULL);
+  } else if (TranDist) {
+    if (!ZDist) {
+      fprintf(stdout, "warning: ZDist need be given with TranDist. The input file is ignored\n");
+      fflush(stdout);
+      tsSpec->distIn = 0;
+    } else {
+      tsSpec->ipage_his = calloc(sizeof(long), nElement);
+      tsSpec->distIn = 2;
+      if (Check_HisInput(ZDist, beamline, nElement, tsSpec->ipage_his, 0)<0 ||
+          Check_HisInput(TranDist, beamline, nElement, tsSpec->ipage_his, 1)<0 )
+        bomb("The input ZDist or TranDist is not valid for this calculation - not same element location!", NULL);
+    }
+  } else if (XDist || YDist || ZDist) {
+    if (!XDist || !YDist || !ZDist) {
+      fprintf(stdout, "warning: [XYZ]Dist need be given at the same time. The input file is ignored\n");
+      fflush(stdout);
+      tsSpec->distIn = 0;
+    } else {
+      tsSpec->ipage_his = calloc(sizeof(long), nElement);
+      tsSpec->distIn = 3;
+      if (Check_HisInput(XDist, beamline, nElement, tsSpec->ipage_his, 0)<0 ||
+          Check_HisInput(YDist, beamline, nElement, tsSpec->ipage_his, 1)<0 ||
+          Check_HisInput(ZDist, beamline, nElement, tsSpec->ipage_his, 1)<0)
+        bomb("The input ZDist or TranDist is not valid for this calculation - not same element location!", NULL);
+    }
+  }
+  
   return;
 }
 
-/* Initialize distribution function input */
-int init_distInput ()
+/* Check validation of histogram input file, flag>1 for second file */
+long Check_HisInput(char *filename, LINE_LIST *beamline, long nElement, long *pIndex, long flag) 
 {
-  long i, nrow;
-  double sum;
+  long result;
+  long i, iPage, Occurence;
+  char **Name, **Type;
+  ELEMENT_LIST *eptr;
+  SDDS_DATASET input;
+  double s, eps=1e-7;
 
-  if (verbosity)
-    fprintf( stdout, "Opening \"%s\" for checking presence of parameters.\n", tranDist);
-  if (!SDDS_InitializeInput(&tranPage, tranDist))
-    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-  SDDS_ReadPage(&tranPage);
-  if (!SDDS_GetParameters(&tranPage,
-                          "Variable00Min", &tranMin[0],
-                          "Variable01Min", &tranMin[1],
-                          "Variable02Min", &tranMin[2],
-                          "Variable03Min", &tranMin[3],
-                          "Variable00Max", &tranMax[0],
-                          "Variable01Max", &tranMax[1],
-                          "Variable02Max", &tranMax[2],
-                          "Variable03Max", &tranMax[3],
-                          "Variable00Interval", &tranInterval[0],
-                          "Variable01Interval", &tranInterval[1],
-                          "Variable02Interval", &tranInterval[2],
-                          "Variable03Interval", &tranInterval[3],
-                          "Variable00Dimension", &tranDimen[0],
-                          "Variable01Dimension", &tranDimen[1],
-                          "Variable02Dimension", &tranDimen[2],
-                          "Variable03Dimension", &tranDimen[3],
-                          NULL) )
-    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-  for (i=0; i<4; i++)
-    tranDelta[i] = tranMax[i] - tranMin[i];
-  nrow = SDDS_RowCount(&tranPage);
-  tweight = (double*)malloc(sizeof(double)*nrow);
-  tweight = SDDS_GetColumnInDoubles(&tranPage, "weight");
-  for (sum=0., i=0; i<nrow; i++)
-     sum += tweight[i];
-  for (i=0; i<nrow; i++)
-    tweight[i] /= sum;
-
-  if (verbosity)
-    fprintf( stdout, "Opening \"%s\" for checking presence of parameters.\n", longDist);
-  if (!SDDS_InitializeInput(&longPage, longDist))
-    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-  SDDS_ReadPage(&longPage);
-  if (!SDDS_GetParameters(&longPage,
-                          "Variable00Min", &longMin[0],
-                          "Variable01Min", &longMin[1],
-                          "Variable00Max", &longMax[0],
-                          "Variable01Max", &longMax[1],
-                          "Variable00Interval", &longInterval[0],
-                          "Variable01Interval", &longInterval[1],
-                          "Variable00Dimension", &longDimen[0],
-                          "Variable01Dimension", &longDimen[1],
-                          NULL) )
-    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-  longMin[0] *= c_mks;
-  longMax[0] *= c_mks;
-  longInterval[0] *= c_mks;
-  for (i=0; i<2; i++)
-    longDelta[i] = longMax[i] - longMin[i];
-
-  nrow = SDDS_RowCount(&longPage);
-  lweight = (double*)malloc(sizeof(double)*nrow);
-  lweight = SDDS_GetColumnInDoubles(&longPage, "weight");
-  for (sum=0., i=0; i<nrow; i++)
-     sum += lweight[i];
-  for (i=0; i<nrow; i++)
-    lweight[i] /= sum;
-
-  if (!SDDS_Terminate(&tranPage) || !SDDS_Terminate(&longPage))
+  if (!SDDS_InitializeInput(&input, filename))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
 
-  return (0);
+  i = 0;
+  result = -nElement;
+  eptr = &(beamline->elem);
+  while (eptr) {
+    if (eptr->type == T_TSCATTER) {
+      while (1) {
+        if ((iPage=SDDS_ReadPage(&input))<=0)
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+        if (!(Name=(char*)SDDS_GetParameter(&input, "ElementName", NULL)))
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+        if (!(Type=(char*)SDDS_GetParameter(&input, "ElementType", NULL)))
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+        if (!SDDS_GetParameter(&input, "ElementOccurence", (void*)&Occurence))
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+        if (!SDDS_GetParameter(&input, "s", (void*)&s))
+          SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+        if (fabs(s - eptr->end_pos) < eps &&
+            Occurence == eptr->occurence &&
+            strcmp(*Name,eptr->name) == 0 &&
+            strcmp(*Type,entity_name[eptr->type]) == 0)
+          break;
+      }
+      if (!flag)
+        pIndex[i] = iPage;
+      else if (pIndex[i] != iPage)
+        bomb("The input ZDist and TranDist file has different element location!", NULL);
+      i++;
+      result++;
+    }
+    eptr = eptr->succ; 
+  }
+
+  if (!SDDS_Terminate(&input))
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  
+  return result;
+}
+
+/* Get Momentum Aperture Input */
+long get_MAInput(char *filename, LINE_LIST *beamline, long nElement) 
+{
+  long result, i, iTotal;
+  long *Occurence;
+  char **Name, **Type;
+  ELEMENT_LIST *eptr;
+  SDDS_DATASET input;
+  double *s, *dpp, *dpm, eps=1e-7;
+
+  if (!SDDS_InitializeInput(&input, filename))
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  if (SDDS_ReadPage(&input) <=0)
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  iTotal = SDDS_CountRowsOfInterest(&input);
+  s = SDDS_GetColumnInDoubles(&input, "s");
+  dpp = SDDS_GetColumnInDoubles(&input, "deltaPositive");
+  dpm = SDDS_GetColumnInDoubles(&input, "deltaNegative");
+  Name = SDDS_GetColumn(&input, "ElementName");
+  Type = SDDS_GetColumn(&input, "ElementType");
+  Occurence = SDDS_GetColumnInLong(&input, "ElementOccurence");
+
+  i = 0;
+  result = -nElement;
+  eptr = &(beamline->elem);
+
+  while (eptr) {
+    if (eptr->type == T_TSCATTER) {
+      while (1) {
+        if (fabs(*s - eptr->end_pos) < eps &&
+            *Occurence == eptr->occurence &&
+            strcmp(*Name,eptr->name) == 0 &&
+            strcmp(*Type,entity_name[eptr->type]) == 0) {
+          ((TSCATTER*)eptr->p_elem)->delta = ((*dpp < -(*dpm)) ? *dpp : -(*dpm))
+            * Momentum_Aperture_scale;
+          i++;
+          s++; dpp++; dpm++; Name++; Type++; Occurence++;
+          break;
+        }
+        s++; dpp++; dpm++; Name++; Type++; Occurence++;
+        if (i++ > iTotal)
+          bomb("Momentum aperture file end earlier than required", NULL);
+      }
+      result++;
+    }
+    eptr = eptr->succ;
+  }
+
+  if (!SDDS_Terminate(&input))
+    SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
+  
+  return result;
 }
 
 /************************************************************************************\
@@ -1099,7 +825,7 @@ int init_distInput ()
  * p1[x,y,s,xp,yp,dp/p]                                                             *
 \************************************************************************************/
 
-void selectPart0(TSCATTER *tsptr, double *p1, double *p2, 
+void selectPartGauss(TSCATTER *tsptr, double *p1, double *p2, 
                 double *dens1, double *dens2, double *ran1)
 {
   int i;
@@ -1146,131 +872,50 @@ void selectPart0(TSCATTER *tsptr, double *p1, double *p2,
   return;
 }
 
-void selectPart1(TSCATTER *tsptr, double *p1, double *p2, 
+/* select particle from input particle distribution function */
+void selectPartReal(TSCATTER *tsptr, double *p1, double *p2, 
                 double *dens1, double *dens2, double *ran1)
 {
-  /* select {z,deltaP} for p1 and p2 (use 3 random number) */
-  p2[2] = p1[2] = ran1[0]*longDelta[0]+longMin[0];
-  p1[5] = ran1[1]*longDelta[1]+longMin[1];
-  p2[5] = ran1[2]*longDelta[1]+longMin[1];
-  
-  /* select {x,xp} {y,yp} for p1 and p2 (use 6 random number) */
-  p1[0] = ran1[3]*tranDelta[0]+tranMin[0];
-  p1[1] = ran1[4]*tranDelta[2]+tranMin[2];
-  p1[3] = ran1[5]*tranDelta[1]+tranMin[1];
-  p2[3] = ran1[6]*tranDelta[1]+tranMin[1];
-  p1[4] = ran1[7]*tranDelta[3]+tranMin[3];
-  p2[4] = ran1[8]*tranDelta[3]+tranMin[3];
-  if (!(*dens1 = findDens(p1)))
-    return;
+  double x10[6], x20[6], x1[6], x2[6];
+  long i;
 
-  /* Dispersion correction */
-  p1[0] = p1[0] + p1[5]*tsptr->disp[0][0];
-  p1[1] = p1[1] + p1[5]*tsptr->disp[1][0];
-  p1[3] = p1[3] + p1[5]*tsptr->disp[0][1];
-  p1[4] = p1[4] + p1[5]*tsptr->disp[1][1];
+  *dens1 = (*dens2 = 0);
+  for (i=0; i<6; i++)
+    x10[i] = (x20[i] = ran1[i]);
+  x20[1] = ran1[6];
+  x20[3] = ran1[7];
+  x20[5] = ran1[8];
 
-  p2[0] = p1[0] - p2[5]*tsptr->disp[0][0];
-  p2[1] = p1[1] - p2[5]*tsptr->disp[1][0];
-  if (!(*dens2 = findDens(p2)))
-    return;
-
-  p2[0] = p1[0];
-  p2[1] = p1[1];
-  p2[3] = p2[3] + p2[5]*tsptr->disp[0][1];
-  p2[4] = p2[4] + p2[5]*tsptr->disp[1][1];
-
-  return;
-}
-
-double findDens(double *p)
-{
-  double p0[6];
-  double x0[16], x1[8], x2[4], x3[2], x4;
-  double t0[4], t1[2], t2;
-  long i, j, k, l, index1, index2;
-  long Ix[4], It[2];
-  double Cx[4][2], Ct[2][2];
+  if (tsSpec->distIn==1) {
+    *dens1 = interpolate_bookn(tsptr->fullhis, x10, x1, 0, 1);
+    *dens2 = interpolate_bookn(tsptr->fullhis, x20, x2, 0, 1);
+  }
+  if (tsSpec->distIn==2) {
+    *dens1  = interpolate_bookn(tsptr->this, x10, x1, 0, 1);
+    *dens2  = interpolate_bookn(tsptr->this, x20, x2, 0, 1);
+    *dens1 *= interpolate_bookn(tsptr->zhis, x10, x1, 4, 1);
+    *dens2 *= interpolate_bookn(tsptr->zhis, x20, x2, 4, 1);
+  }
+  if (tsSpec->distIn==3) {
+    *dens1  = interpolate_bookn(tsptr->xhis, x10, x1, 0, 1);
+    *dens2  = interpolate_bookn(tsptr->xhis, x20, x2, 0, 1);
+    *dens1 *= interpolate_bookn(tsptr->yhis, x10, x1, 2, 1);
+    *dens2 *= interpolate_bookn(tsptr->yhis, x20, x2, 2, 1);
+    *dens1 *= interpolate_bookn(tsptr->zhis, x10, x1, 4, 1);
+    *dens2 *= interpolate_bookn(tsptr->zhis, x20, x2, 4, 1);
+  }
 
   for (i=0; i<3; i++) {
-    p0[i*2] = p[i];
-    p0[i*2+1] = p[i+3];
+    p1[i] = x1[i*2];
+    p1[i+3] = x1[i*2+1];
+    p2[i] = x2[i*2];
+    p2[i+3] = x2[i*2+1];   
   }
+  p1[2] = (p2[2] *= c_mks);
+  *dens1 /= c_mks;
+  *dens2 /= c_mks;
 
-  /* do longitudinal first */
-  for (i=0; i<2; i++) {
-    Ct[i][0] = (p0[i+4]-longMin[i])/longInterval[i]+0.5;
-    It[i] = (long)Ct[i][0];
-    Ct[i][1] = Ct[i][0] - It[i];
-    Ct[i][0] = 1. - Ct[i][1];
-    It[i]--;
-  } 
-
-  index1 = 0;
-  for (i=0; i<2; i++) {
-    for (j=0; j<2; j++) {
-      if ((It[0]+i)<0 || (It[0]+i)==longDimen[0] ||
-          (It[1]+j)<0 || (It[1]+j)==longDimen[1])
-        t0[index1]=0.;
-      else {
-        index2 = (It[1]+j)+(It[0]+i)*longDimen[1];
-        t0[index1] = lweight[index2];
-      }
-      index1++;
-    }
-  }
-
-  if (!(t0[0] || t0[1] || t0[2] || t0[3]))
-    return (0);
-
-  for (i=0; i<2; i++) {
-    t1[i] = (Ct[1][0]*t0[i*2] + Ct[1][1]*t0[i*2+1])/longInterval[1];
-  }
-  t2 = (Ct[0][0]*t1[0] + Ct[0][1]*t1[1])/longInterval[0];
-
-  /* do transverse part */
-  for (i=0; i<4; i++) {
-    Cx[i][0] = (p0[i]-tranMin[i])/tranInterval[i]+0.5;
-    Ix[i] = (long)Cx[i][0];
-    Cx[i][1] = Cx[i][0] - Ix[i];
-    Cx[i][0] = 1. - Cx[i][1];
-    Ix[i]--;
-  } 
-
-  index1 = 0;
-  for (i=0; i<2; i++) {
-    for (j=0; j<2; j++) {
-      for (k=0; k<2; k++) {
-        for (l=0; l<2; l++) {
-          if ((Ix[0]+i)<0 || (Ix[0]+i)==tranDimen[0] ||
-              (Ix[1]+j)<0 || (Ix[1]+j)==tranDimen[1] ||
-              (Ix[2]+k)<0 || (Ix[2]+k)==tranDimen[2] ||
-              (Ix[3]+l)<0 || (Ix[3]+l)==tranDimen[3])
-            x0[index1] = 0.;
-          else {
-            index2 = (Ix[3]+l)+(Ix[2]+k)*tranDimen[3]
-              +(Ix[1]+j)*tranDimen[3]*tranDimen[2]
-              +(Ix[0]+i)*tranDimen[3]*tranDimen[2]*tranDimen[1];
-            x0[index1] = tweight[index2];
-          }
-          index1++;
-        }
-      }
-    }
-  }
-
-  for (i=0; i<8; i++) {
-    x1[i] = (Cx[3][0]*x0[i*2] + Cx[3][1]*x0[i*2+1])/tranInterval[3];
-  }
-  for (i=0; i<4; i++) {
-    x2[i] = (Cx[2][0]*x1[i*2] + Cx[2][1]*x1[i*2+1])/tranInterval[2];
-  }
-  for (i=0; i<2; i++) {
-    x3[i] = (Cx[1][0]*x2[i*2] + Cx[1][1]*x2[i*2+1])/tranInterval[1];
-  }
-  x4 = (Cx[0][0]*x3[0] + Cx[0][1]*x3[1])/tranInterval[0]; 
-
-  return (x4*t2);
+  return;
 }
 
 /* This function transfer particle's momentum from lab system to c.o.m system */

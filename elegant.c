@@ -1556,7 +1556,7 @@ char **argv;
     case TOUSCHEK_SCATTER:
       if (!run_setuped)
         bomb("run_setup must precede touschek_scatter namelist", NULL);
-      setupTouschekEffect(&namelist_text, &run_conditions, beamline);
+      TouschekEffect(&namelist_text, &run_conditions, beamline);
       break;
     case TWISS_ANALYSIS:
       if (do_twiss_output)

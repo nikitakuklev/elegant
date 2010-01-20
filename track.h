@@ -1726,22 +1726,25 @@ typedef struct {
 } DSCATTER;
 
 typedef struct {
-  long nbins;
+  long nbins, distIn;
+  long *ipage_his;
   double charge, frequency, ignoredPortion;
   double emitN[3], range[3];
-  double sigz, delta_p0,delta_mev;
+  double sigz, delta_p0;
 } TSCATTER_SPEC;
 
 typedef struct {
   long dummy;
   /* internal variables */
   char *name;
-  double s, betagamma, gamma,pCentral_mev;
+  double s, betagamma, gamma,pCentral_mev, delta;
   double AveR, p_rate, s_rate, i_rate, total_scatter;
   char *losFile, *bunFile, *disFile,*iniFile, *outFile;
   double twiss[3][3], disp[2][2];
   double sigx, sigy, sigz, sigxyz;
   double factor, totalWeight;
+  double xmin[6], xmax[6];
+  ntuple *this, *fullhis, *xhis, *yhis, *zhis;
   long simuCount; 
 } TSCATTER;
 
@@ -3382,7 +3385,7 @@ long replaceElem(char *name, long type, long *skip, long occurPosition);
 long getDelElemFlag();
 char *getElemDefinition1();
 
-void setupTouschekEffect(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline); 
+void TouschekEffect(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline); 
 void SDDS_BeamScatterSetup(SDDS_TABLE *SDDS_table, char *filename, long mode, long lines_per_row, char *contents, 
                            char *command_file, char *lattice_file, char *caller);
 void dump_scattered_particles(SDDS_TABLE *SDDS_table, double **particle, 
