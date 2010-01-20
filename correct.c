@@ -2033,7 +2033,7 @@ void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
                            0.9, NULL)) {
       fprintf(stdout, "Failed to find perturbed closed orbit.\n");
       fflush(stdout);
-      return(-1);
+      return;
     }
 
     /* change the corrector by -corr_tweek and compute the new matrix for the corrector */
@@ -2044,7 +2044,7 @@ void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
                            0.9, NULL)) {
       fprintf(stdout, "Failed to find perturbed closed orbit.\n");
       fflush(stdout);
-      return(-1);
+      return;
     }
 
     /* compute coefficients of array C that are driven by this corrector */
