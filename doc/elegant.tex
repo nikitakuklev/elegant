@@ -3482,6 +3482,117 @@ unit parameter change for the element.
 
 \begin{latexonly}
 \newpage
+\begin{center}{\Large\verb|touschek_scatter|}\end{center}
+\end{latexonly}
+\subsection{touschek\_scatter \label{subsec:touschekscatter}}
+\begin{itemize}
+\item type: setup/action command.
+\item function: Simulate Touschek scattering process at each \verb|TSCATTER| element 
+   based on Monte Carlo method. The local scattering rate is
+   calculated by using Piwinski's formula and from the Monte Carlo
+   simulation. Scattered particles can be tracked through the entire
+   beamline (one pass only), and beam loss information is recorded.
+\item notes: 
+	\begin{itemize} 
+      \item A momentum aperture file is required previous using this command. It
+      should contain momentum aperture at least at each \verb|TSCATTER| element and can be
+      obtained by running \verb|momentum_aperture| command. 
+      \item The simulation can be done for a Gaussian distributed beam or an arbitrary 
+      particle distribution given by histogram file(s) (See \verb|MHISTOGRAM|).  
+      \item When using histogram file as input, it should contain data at least at each 
+      \verb|TSCATTER| element. This can be done by inserting a \verb|MHISTOGRAM| element 
+      following each \verb|TSCATTER| element. With \verb|lumped=1| option, a multi page 
+      SDDS file will be output automatically or you can combine individual output file 
+      into a multi page SDDS file before using this command.
+      \item The input particle distribution can be given in 3 ways: 2D(x-x')+2D(y-y')+2D(dt-dp);
+      or 4D(x-x'-y-y')+2D(dt-dp); or 6D(x-x'-y-y'-dt-dp); base on user's choice. We recommend
+      to use lower ``order'' histogram table if the original particle number which used to generate
+      these table is not large enough.
+      \item The \verb|emit_*|, \verb|emit_dp| and \verb|sigma_s| is always required for running
+      the simulation (Used for Piwinski's rate). Use closed value when simulate a non-Gaussian 
+      distributed bunch. 
+	\end{itemize}
+\end{itemize}
+
+\begin{verbatim}
+&touschek_scatter
+        double charge = 0;
+        double frequency = 1;
+        double emit_x = 0;
+        double emit_nx = 0;
+        double emit_y = 0;
+        double emit_ny = 0;
+        double sigma_dp = 0;
+        double sigma_s = 0;
+        double distribution_cutoff[3] = {3, 3, 3};
+        double Momentum_Aperture_scale = 0.85;
+        STRING Momentum_Aperture = NULL;
+        STRING XDist = NULL;
+        STRING YDist = NULL;
+        STRING ZDist = NULL;
+        STRING TranDist = NULL;
+        STRING FullDist = NULL;
+        STRING bunch = NULL;
+        STRING loss = NULL;
+        STRING distribution = NULL;
+        STRING initial = NULL;
+        STRING output = NULL;
+        long nbins = 100;
+        long n_simulated = 5E6;
+        double ignored_portion = 0.01;
+        long i_start = 0;
+        long i_end = 1;
+        long do_track = 0;
+&end
+\end{verbatim}
+
+\begin{itemize}
+   \item \verb|charge| --- Bunch charge in ``C''. Can not be zero.
+   \item \verb|frequency| --- Bunch repeating frequency.
+   \item \verb|emit_x|, \verb|emit_y| --- RMS emittance for the X, Y plane. Ignored 
+   if RMS normalized emittance is nonzero.
+   \item \verb|emit_nx|, \verb|emit_ny| --- RMS normalized emittance for the X, Y plane.
+   \item \verb|sigma_dp|, \verb|sigma_s| --- Fractional momentum spread, $\delta$, and bunch length.
+   \item \verb|distribution_cutoff| --- The number of sigmas to use at each plane for Gaussian beam.
+   \item \verb|Momentum_Aperture| --- Input filename contains estimated momentum aperture at each
+   \verb|TSCATTER| element.
+   \item \verb|Momentum_Aperture_scale| --- This value times the aperture value from \verb|Momentum_Aperture|
+   file sets up the limitation $\delta_m$ of the simulation. Only particles have $\delta>\delta_m$ 
+   will be kept. And the scattering rate is calulated at this value.
+   \item \verb|XDist|, \verb|YDist|, \verb|ZDist| --- Input filename of 2D histogram table of X, Y, and Z plane. 
+   X and Y are ignored when \verb|TranDist| or \verb|FullDist| is present. 
+   \item \verb|TranDist| --- Input file name of the 4D histogram table of transverse plane. 
+   Has to be used together with \verb|ZDist|.
+   \item \verb|FullDist| --- Input file name of the 6D histogram table. If present, all other 
+   tables are ignored.
+   \item \verb|bunch| --- The (incomplete) name of an SDDS file to which the phase-space coordinates of 
+   the simulated scattered particles are to be written. Recommended value: ``\%s-\%03ld.bun''. If ``\%03ld''
+   is not provided then only the last simulated bunch is kept (One bunch for one \verb|TSCATTER| element).
+   \item \verb|loss| --- The (incomplete) name of an SDDS file to which the original and final 
+   phase-space coordinates of the lost simulated scattered particles are to be written. 
+   Recommended value: ``\%s-\%03ld.los''. Used together with \verb|do_track = 1|.
+   \item \verb|distribution| --- The (incomplete) name of an SDDS file to which the one dimension 
+   histogram of simulated scattered particles are to be written. Recommended value: ``\%s-\%03ld.dis'' 
+   \item \verb|initial| --- The (incomplete) name of an SDDS file to which the one dimension 
+   histogram of simulated particles before scattering are to be written. Recommended value: ``\%s-\%03ld.ini''
+   \item \verb|output| --- The (incomplete) name of an SDDS file. The loss rate is summarized along the
+   beamline and the average loss rate (particles per second per meter) at each location (1 m step) 
+   is written to this file. Recommended value: ``\%s-\%03ld.out'' 
+   \item \verb|nbins| --- Bin number used for the \verb|distribution| and \verb|initial| table.
+   \item \verb|n_simulated| --- The total number of simulatted scattered particles with $\delta>\delta_m$. Small
+   value will cause unstable simulation rate.
+   \item \verb|ignored_portion| --- The total scattering rate ignored from tracking. This will greatly 
+   increase the tracking speed. This number should be much less than the total loss rate. For example, if
+   the total loss rate is 50\% of the total scattering rate, then ignor 5\% (0.05) of the scattering particles
+   will cause some of 10\% error. But the simulation is greatly speed up.
+   \item \verb|i_start|, \verb|i_end| --- The simulation will be done from the \verb|i_start| to \verb|i_end|
+   \verb|TSCATTER| element along the beamline.    
+   \item \verb|do_track| --- If non-zero, then scattered particles will be tracked from the location they are
+   generated to the end of the beamline. The loss property can be analysised using \verb|output| or \verb|loss|. 
+\end{itemize}
+
+\begin{latexonly}
+\newpage
 \begin{center}{\Large\verb|transmute_elements|}\end{center}
 \end{latexonly}
 \subsection{transmute\_elements \label{subsec:transmuteelements}}
