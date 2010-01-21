@@ -374,14 +374,16 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
         if ((error = sqrt(sqr(diff->a[0][0]) + sqr(diff->a[1][0]) + sqr(diff->a[2][0]) + sqr(diff->a[3][0])))<clorb_acc)
           break;
         if (error>2*last_error) {
-          fprintf(stdout, "error: closed orbit diverging--iteration stopped\n");
-          fflush(stdout);
+          fprintf(stdout, "warning: closed orbit diverging--iteration stopped (accuracy requirement is %e)\n", clorb_acc);
           fprintf(stdout, "last error was %e, current is %e\n", last_error, error);
           fflush(stdout);
-          if (method==2)
-            bad_orbit = 1;
-          n_iter = clorb_iter;
-          break;
+          change_fraction = change_fraction/2;
+          if (change_fraction<0.01) {
+            n_iter = clorb_iter;
+            break;
+          }
+          fprintf(stdout, "reduced iteration fraction to %e\n", change_fraction);
+          fflush(stdout);
         }
         if (change_fraction) {
           m_mult(change, INV_ImR, diff);
@@ -400,9 +402,9 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
         one_part[0][4] = 0;
         one_part[0][5] = dp;
       } while (++n_iter<clorb_iter);
-      if (n_iter==clorb_iter)  {
-        fprintf(stdout, "error: closed orbit did not converge to better than %e after %ld iterations\n",
-                error, n_iter);
+      if (n_iter>=clorb_iter && error>clorb_acc)  {
+        fprintf(stdout, "error: closed orbit did not converge to better than %e after %ld iterations (requirement is %e)\n",
+                error, n_iter, clorb_acc);
         fflush(stdout);
         if (isnan(error) || isinf(error)) {
           return 0;
@@ -503,7 +505,7 @@ long findFixedLengthClosedOrbit(TRAJECTORY *clorb, double clorb_acc, long clorb_
      * individual orbits are converging.
      */
     error = sqrt(error + sqr((last_ds-ds)/(beamline->revolution_length*change_fraction)));
-    /* 
+#if DEBUG
       fprintf(stdout, "orbit error for dp=%le is %le, ds=%le:\n", dp, error, ds);
       for (i=0; i<6; i++)
       fprintf(stdout, "%10.3e ", clorb[0].centroid[i]);
@@ -511,7 +513,7 @@ long findFixedLengthClosedOrbit(TRAJECTORY *clorb, double clorb_acc, long clorb_
       for (i=0; i<6; i++)
       fprintf(stdout, "%10.3e ", clorb[nElems].centroid[i]-(i==4?beamline->revolution_length:0));
       fprintf(stdout, "\n");
-      */
+#endif
     if (error<clorb_acc)
       break;
     last_ds = ds;
