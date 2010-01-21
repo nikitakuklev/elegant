@@ -519,43 +519,35 @@ long multipole_tracking(
     }
 
 
+
 double *expansion_coefficients(long n)
 {
-    static double **expansion_coef=NULL;
-    static long *order=NULL;
-    static long n_expansions = 0;
-    long i;
+  static double **expansion_coef=NULL;
+  static long *orderDone=NULL;
+  static long maxOrder = -1;
+  long i;
+  
+  if (n<=maxOrder && orderDone[n]) 
+    return(expansion_coef[n]);
 
-    log_entry("expansion_coefficients");
+  if (n>maxOrder) {
+    expansion_coef = trealloc(expansion_coef, sizeof(*expansion_coef)*(n+1));
+    orderDone      = trealloc(orderDone, sizeof(*orderDone)*(n+1));
+    for (i=maxOrder+1; i<=n; i++)
+      orderDone[i] = 0;
+    maxOrder = n;
+  }
 
-    /* look and see if this is already stored */
-    for (i=0; i<n_expansions; i++)
-        if (n==order[i]) {
-            log_exit("expansion_coefficients");
-            return(expansion_coef[i]);
-            }
-
-    expansion_coef = trealloc(expansion_coef, sizeof(*expansion_coef)*(n_expansions+1));
-    order         = trealloc(order, sizeof(*order)*(n_expansions+1));
-    expansion_coef[n_expansions] = tmalloc(sizeof(**expansion_coef)*(n+1));
-    order[n_expansions] = n;
-
-    /* calculate expansion coefficients with signs for (x+iy)^n/n! */
-#ifdef DEBUG
-    fprintf(stdout, "coefficients of expansion for multipole of order %ld\n", n);
-    fflush(stdout);
-#endif
-    for (i=0; i<=n; i++) {
-        expansion_coef[n_expansions][i] = (ODD(i/2)?-1.0:1.0)/(dfactorial(i)*dfactorial(n-i));
-#ifdef DEBUG
-        fprintf(stdout, "%.16lf*%sx^%ld*y^%ld \n", expansion_coef[n_expansions][i]*dfactorial(n),
-                (ODD(i)?"i*":""), n-i, i);
-        fflush(stdout);
-#endif
-        }             
-    log_exit("expansion_coefficients");
-    return(expansion_coef[n_expansions++]);
-    }
+  expansion_coef[n] = tmalloc(sizeof(**expansion_coef)*(n+1));
+  
+  /* calculate expansion coefficients with signs for (x+iy)^n/n! */
+  for (i=0; i<=n; i++) {
+    expansion_coef[n][i] = (ODD(i/2)?-1.0:1.0)/(dfactorial(i)*dfactorial(n-i));
+  }             
+  orderDone[n] = 1;
+  
+  return(expansion_coef[n]);
+}
 
 long multipole_tracking2(
                          double **particle,   /* initial/final phase-space coordinates */
