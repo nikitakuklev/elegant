@@ -87,6 +87,8 @@ void setup_correction_matrix_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *
       CMxy.kick_coef = correct->CMy->kick_coef;
       CMxy.sl_index = correct->CMy->sl_index;
       CMxy.ucorr = correct->CMy->ucorr;
+      CMxy.fixed_length = fixed_length;
+      
       /* --- copy BPM information */      
       CMxy.nmon = correct->CMx->nmon;
       CMxy.umoni = correct->CMx->umoni;
@@ -94,6 +96,7 @@ void setup_correction_matrix_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *
       CMxy.C = NULL;
       CMxy.bpmPlane = 0;
       CMxy.corrPlane = 1;
+      CMxy.fixed_length = fixed_length;
     }
     
 #if USE_MPI
@@ -311,9 +314,9 @@ void update_response(RUN *run, LINE_LIST *beamline, CORRECTION *correct)
                               fixed_length, 0);
       if (coupled) {
         compute_orbcor_matrices1(&CMxy, &correct->SLy, 0, run, beamline, 0, 0, 
-                                fixed_length, 0);
+                                0);
         compute_orbcor_matrices1(&CMyx, &correct->SLx, 2, run, beamline, 0, 0,
-                                fixed_length, 0);
+                                0);
       }
     }
     else
@@ -380,9 +383,9 @@ void run_response_output(RUN *run, LINE_LIST *beamline, CORRECTION *correct, lon
                               fixed_length, 1);
       if (coupled) {
         compute_orbcor_matrices1(&CMxy, &correct->SLy, 0, run, beamline, 0, 0, 
-                                fixed_length, 1);
+                                 1);
         compute_orbcor_matrices1(&CMyx, &correct->SLx, 2, run, beamline, 0, 0,
-                                fixed_length, 1);
+                                 1);
       }
     }
     else

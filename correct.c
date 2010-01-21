@@ -1939,7 +1939,7 @@ void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN
 
 /* Compute orbit response matrix from closed orbit, rather than using beta functions etc */
 void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN *run, LINE_LIST *beamline, 
-                             long find_only, long invert, long fixed_length, long verbose)
+                             long find_only, long invert, long verbose)
 {
   ELEMENT_LIST *corr, *start;
   TRAJECTORY *clorb0, *clorb1;
@@ -1997,16 +1997,6 @@ void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
       M = beamline->matrix = full_matrix(&(beamline->elem), run, 1);
   }
 
-  /* Find and store reference closed orbit */
-/*
-  if (!find_closed_orbit(clorb0, 1e-15, 100, beamline, M, run, 0, 1, CM->fixed_length, NULL, 
-                         0.9, NULL)) {
-    fprintf(stdout, "Failed to find initial closed orbit.\n");
-    fflush(stdout);
-    return(-1);
-  }
-*/
-
   for (i_corr = 0; i_corr<CM->ncor; i_corr++) {
     corr = CM->ucorr[i_corr];
 
@@ -2029,7 +2019,7 @@ void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
     compute_matrix(corr, run, NULL);
 
     /* find closed orbit with tweaked corrector */
-    if (!find_closed_orbit(clorb1, 1e-15, 100, beamline, M, run, 0, 1, CM->fixed_length, NULL, 
+    if (!find_closed_orbit(clorb1, 1e-10, 500, beamline, M, run, 0, 1, CM->fixed_length, NULL, 
                            0.9, NULL)) {
       fprintf(stdout, "Failed to find perturbed closed orbit.\n");
       fflush(stdout);
@@ -2040,7 +2030,7 @@ void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
     *((double*)(corr->p_elem+kick_offset)) = kick0 - corr_tweek;
     compute_matrix(corr, run, NULL);
     /* find closed orbit with tweaked corrector */
-    if (!find_closed_orbit(clorb0, 1e-15, 100, beamline, M, run, 0, 1, CM->fixed_length, NULL, 
+    if (!find_closed_orbit(clorb0, 1e-10, 500, beamline, M, run, 0, 1, CM->fixed_length, NULL, 
                            0.9, NULL)) {
       fprintf(stdout, "Failed to find perturbed closed orbit.\n");
       fflush(stdout);

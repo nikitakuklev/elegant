@@ -65,7 +65,7 @@ typedef struct {
 extern void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN *run, LINE_LIST *beamline, long find_only, long invert);
 extern void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN *run, LINE_LIST *beamline, long find_only, long invert, long fixed_length, long verbose);
 void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN *run, LINE_LIST *beamline, 
-                              long find_only, long invert, long fixed_length, long verbose);
+                              long find_only, long invert, long verbose);
 
 extern void setup_corrector_output(char *filename, RUN *run);
 extern void dump_corrector_data(CORMON_DATA *CM, STEERING_LIST *SL, long index, char *plane, long step);
