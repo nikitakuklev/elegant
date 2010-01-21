@@ -19,6 +19,25 @@
         change_defined_values = 1
 &end
 
+&alter_elements
+        name = *, type=CSBEND, item=SYNCH_RAD, value=1, allow_missing_elements=1 &end
+&alter_elements
+        name = *, type=CSBEND, item=ISR, value=1, allow_missing_elements=1 &end
+&alter_elements
+        name = *, type=CSBEND, item=ISR1PART, value=0, allow_missing_elements=1 &end
+&alter_elements
+        name = *, type=KQUAD, item=SYNCH_RAD, value=1, allow_missing_elements=1 &end
+&alter_elements
+        name = *, type=KQUAD, item=ISR, value=1, allow_missing_elements=1 &end
+&alter_elements
+        name = *, type=KQUAD, item=ISR1PART, value=0, allow_missing_elements=1 &end
+&alter_elements
+        name = *, type=KSEXT, item=SYNCH_RAD, value=1, allow_missing_elements=1 &end
+&alter_elements
+        name = *, type=KSEXT, item=ISR, value=1, allow_missing_elements=1 &end
+&alter_elements
+        name = *, type=KSEXT, item=ISR1PART, value=0, allow_missing_elements=1 &end
+
 &moments_output
         filename = "<rootname>-final.mom",
         matched = 1,
