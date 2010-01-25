@@ -46,6 +46,13 @@ sinclude(<ERRORPARAM>)
 &alter_elements name=*, type=KSEXT, item=ISR, value=1, allow_missing_parameters=1,
 	allow_missing_elements=1 &end
 
+&alter_elements name=*, type=CSBEN*, item=ISR1PART, value=0, allow_missing_parameters=1,
+	allow_missing_elements=1 &end
+&alter_elements name=*, type=KQUAD, item=ISR1PART, value=0, allow_missing_parameters=1,
+	allow_missing_elements=1 &end
+&alter_elements name=*, type=KSEXT, item=ISR1PART, value=0, allow_missing_parameters=1,
+	allow_missing_elements=1 &end
+
 
 &closed_orbit
 	output = %s.clo,
