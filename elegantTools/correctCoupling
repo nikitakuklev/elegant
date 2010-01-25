@@ -3,6 +3,9 @@
 exec oagtclsh "$0" "$@"
 
 # $Log: not supported by cvs2svn $
+# Revision 1.5  2010/01/15 18:45:47  borland
+# Changes to workaround an apparent bug in elegant.
+#
 # Revision 1.4  2010/01/15 17:31:35  borland
 # Further refinements, mostly to make the filenames more sensible.
 #
@@ -174,16 +177,13 @@ if ![file exists $rootname.done] {
 }
 
 # Keep only the skew data in the output parameter file
-if {[file exists ${rootname}-correction.param] && ![file exists $rootname.param]} {
-    file copy ${rootname}-correction.param $rootname.param
+if [expr $eyTarget<=0] {
+    exec sddsprocess ${rootname}-correction.param ${rootname}.param -nowarning -match=col,ElementName=$skewPattern 
+} else {
+    exec sddsprocess ${rootname}-final.param ${rootname}.param -nowarning -match=col,ElementName=$skewPattern 
 }
-exec sddsprocess ${rootname}.param -nowarning -match=col,ElementName=$skewPattern 
 
 # Clean up
-eval file delete $rootname.param~ $rootname.param1 $rootname.param2 $rootname-error.all $rootname-correction.param $rootname.cc-log 
-
-
-
-
+eval file delete $rootname.param1 $rootname.param2 $rootname-error.all $rootname.cc-log 
 
 
