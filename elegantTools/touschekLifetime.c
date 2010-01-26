@@ -9,6 +9,9 @@
 
 /* 
  * $Log: not supported by cvs2svn $
+ * Revision 1.6  2009/12/20 19:55:50  borland
+ * Added -ignoreMismatch option.
+ *
  * Revision 1.5  2009/12/15 03:20:14  borland
  * Improved error message.
  *
@@ -413,7 +416,7 @@ int main( int argc, char **argv)
   dpp = SDDS_GetColumnInDoubles(&aperPage, "deltaPositive");
   dpm = SDDS_GetColumnInDoubles(&aperPage, "deltaNegative");
   if (deltaLimit>0)
-    limitMomentumAperture(dpp, dpm, deltaLimit, elements);
+    limitMomentumAperture(dpp, dpm, deltaLimit, elem2);
   
   /****************************************************\
    * calculate Touschek Lifetime                      *
