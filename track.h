@@ -152,6 +152,12 @@ typedef struct {
   short periodic;  /* kind of wasteful... */
 } TWISS;
 
+/* extended structure for storing Twiss parameters (x, y, z) for a beam */
+typedef struct {
+  double beta[3], alpha[3], eta[4];
+  double centroid[6], emit[3];
+} TWISSBEAM;
+
 /* Sigma matrix for beam moments computations */
 typedef struct {
   /* 21 unique elements from upper triangular part of the 
@@ -2797,6 +2803,7 @@ extern double rms_emittance_p(double **coord, long i1, long i2, long n,
 extern double rms_longitudinal_emittance_p(double **coord, long n, double Po);
 #endif
 void computeBeamTwissParameters(TWISS *twiss, double **data, long particles);
+void computeBeamTwissParameters3(TWISSBEAM *twiss, double **data, long particles);
 extern double rms_emittance(double **coord, long i1, long i2, long n,
                             double *S11Return, double *S12Return, double *S22Return);
 extern double rms_longitudinal_emittance(double **coord, long n, double Po);

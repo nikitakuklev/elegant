@@ -1254,3 +1254,88 @@ void computeBeamTwissParameters(TWISS *twiss, double **data, long particles)
   twiss->etay = eta[2];
   twiss->etapy = eta[3];
 }
+
+void computeBeamTwissParameters3(TWISSBEAM *twiss, double **data, long particles)
+{
+  double C[6], S[6][6], beamsize[6], eta[6], Sbeta[6][6], emitcor[3], betacor[3], alphacor[3];
+  long i, j, iPart;
+  double sum;
+#if USE_MPI 
+  long particles_total, index=0;
+  double S_p[21], S_p_sum[21], Sbeta_p[10], Sbeta_p_sum[10];  
+
+  MPI_Allreduce(&particles, &particles_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD); 
+#endif 
+
+  compute_centroids(C, data, particles);
+  memcpy(twiss->centroid, C, sizeof(*(twiss->centroid))*6);
+  
+  /* compute correlations */
+  for (i=0; i<6; i++) {
+    for (j=0; j<=i; j++) {
+      for (iPart=sum=0; iPart<particles; iPart++)
+        sum += (data[iPart][i]-C[i])*(data[iPart][j]-C[j]);
+#if (!USE_MPI)
+      S[j][i] = S[i][j] = sum/particles;
+#else
+      S_p[index++] = sum;
+#endif
+    }
+  }
+
+#if USE_MPI
+  MPI_Allreduce(S_p, S_p_sum, 21, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  index = 0; 
+  for (i=0; i<6; i++) {
+    for (j=0; j<=i; j++) {
+      S[i][j] = S[j][i] = S_p_sum[index++]/particles_total;
+    }
+  }
+#endif
+
+  for (i=0; i<6; i++)
+    beamsize[i] = sqrt(S[i][i]);
+
+  /* compute correlations with energy offset */
+  for (i=0; i<6; i++) 
+    eta[i] = 0;
+  if (S[5][5])
+    for (i=0; i<4; i++) 
+      eta[i] = S[i][5]/S[5][5];
+  memcpy(twiss->eta, eta, sizeof(*(twiss->eta))*4);
+  
+#if USE_MPI
+  index = 0;
+#endif
+  for (i=0; i<6; i++) {
+    for (j=0; j<=i; j++) {
+      for (iPart=sum=0; iPart<particles; iPart++)
+        sum += ((data[iPart][i]-C[i])-eta[i]*(data[iPart][5]-C[5]))*((data[iPart][j]-C[j])-eta[j]*(data[iPart][5]-C[5]));
+#if (!USE_MPI)
+      Sbeta[j][i] = Sbeta[i][j] = sum/particles;
+#else
+      Sbeta_p[index++] = sum; 
+#endif
+    }
+  }
+#if USE_MPI
+  MPI_Allreduce(Sbeta_p, Sbeta_p_sum, 10, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  index = 0; 
+  for (i=0; i<6; i++) {
+    for (j=0; j<=i; j++) {
+      Sbeta[i][j] = Sbeta[j][i] = Sbeta_p_sum[index++]/particles_total;
+    }
+  }
+#endif
+
+  /* compute beta functions etc */
+  for (i=0; i<3; i++) {
+    twiss->emit[i] = twiss->beta[i] = twiss->alpha[i] = 0;
+    if ((twiss->emit[i] = Sbeta[2*i+0][2*i+0]*Sbeta[2*i+1][2*i+1]-sqr(Sbeta[2*i+0][2*i+1]))>0) {
+      twiss->emit[i] = sqrt(twiss->emit[i]);
+      twiss->beta[i] = Sbeta[2*i+0][2*i+0]/twiss->emit[i];
+      twiss->alpha[i] = -Sbeta[2*i+0][2*i+1]/twiss->emit[i];
+    } else
+      twiss->emit[i] = 0;
+  }
+}

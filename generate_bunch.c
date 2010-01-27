@@ -30,7 +30,7 @@
 #include "mdb.h"
 #include "track.h"
 
-void enforce_beta_alpha_emit(double **coord, long n_part, long offset, double beta, double alpha, double emit);
+void enforceTwissValues(double **part, long np, TWISSBEAM *twiss, long offset, double beta1, double alpha1, double emit1, long enforceRms);
 void zero_centroid(double **particle, long n_particles, long coord);
 long dynap_distribution(double **particle, long n_particles, double sx, double sy,
             long nx, long ny);
@@ -77,6 +77,7 @@ long generate_bunch(
     double s1, s2, s3, s4, delta_p;
     double s56, beta, emit, alpha=0.0;
     double *randomizedData = NULL;
+    TWISSBEAM twissBeam;
 #if !SDDS_MPI_IO
     /* for Pelegant regression test */
     static long initial_saved=0;
@@ -184,16 +185,21 @@ long generate_bunch(
 	if(remaining_sequence_No<=1) {
 	  zero_centroid(first_particle_address, total_n_particles, 0);
 	  zero_centroid(first_particle_address, total_n_particles, 1);
+/*
 	  if (enforce_rms_params[0])
 	    enforce_sigma_values(first_particle_address, total_n_particles, 0, s1, s2);
+*/
 	  transform_from_normalized_coordinates(first_particle_address, total_n_particles, 0, x_plane->beta, x_plane->alpha);
 	}
 #else
         zero_centroid(particle, n_particles, 0);
         zero_centroid(particle, n_particles, 1);
+/*
         if (enforce_rms_params[0])
           enforce_sigma_values(particle, n_particles, 0, s1, s2);
+*/
         transform_from_normalized_coordinates(particle, n_particles, 0, x_plane->beta, x_plane->alpha);
+
 #endif
         
         /* make mono-energetic distribution in y plane */
@@ -241,15 +247,19 @@ long generate_bunch(
         if(remaining_sequence_No<=1) {
           zero_centroid(first_particle_address, total_n_particles, 2);
           zero_centroid(first_particle_address, total_n_particles, 3);
+/*
           if (enforce_rms_params[1])
             enforce_sigma_values(first_particle_address, total_n_particles, 2, s1, s2);
+*/
           transform_from_normalized_coordinates(first_particle_address, total_n_particles, 2, y_plane->beta, y_plane->alpha);
         }
 #else
         zero_centroid(particle, n_particles, 2);
         zero_centroid(particle, n_particles, 3);
+/*
         if (enforce_rms_params[1])
           enforce_sigma_values(particle, n_particles, 2, s1, s2);
+*/
         transform_from_normalized_coordinates(particle, n_particles, 2, y_plane->beta, y_plane->alpha);
 #endif
       }
@@ -280,11 +290,13 @@ long generate_bunch(
           zero_centroid(first_particle_address, total_n_particles, 1);
           zero_centroid(first_particle_address, total_n_particles, 2);
           zero_centroid(first_particle_address, total_n_particles, 3);
+/*
           if (enforce_rms_params[0])
             enforce_sigma_values(first_particle_address, total_n_particles, 0, s1, s2);
-          transform_from_normalized_coordinates(first_particle_address, total_n_particles, 0, x_plane->beta, x_plane->alpha);
           if (enforce_rms_params[1])
             enforce_sigma_values(first_particle_address, total_n_particles, 2, s1, s2);
+*/
+          transform_from_normalized_coordinates(first_particle_address, total_n_particles, 0, x_plane->beta, x_plane->alpha);
           transform_from_normalized_coordinates(first_particle_address, total_n_particles, 2, x_plane->beta, x_plane->alpha);
         }
 #else
@@ -292,10 +304,12 @@ long generate_bunch(
         zero_centroid(particle, n_particles, 1);
         zero_centroid(particle, n_particles, 2);
         zero_centroid(particle, n_particles, 3);
+/*
         if (enforce_rms_params[0])
           enforce_sigma_values(particle, n_particles, 0, s1, s2);
         if (enforce_rms_params[1])
           enforce_sigma_values(particle, n_particles, 2, s3, s4);
+*/
         transform_from_normalized_coordinates(particle, n_particles, 0, x_plane->beta, x_plane->alpha);
         transform_from_normalized_coordinates(particle, n_particles, 2, y_plane->beta, y_plane->alpha);
 #endif
@@ -437,7 +451,22 @@ long generate_bunch(
         break;  
       }
     }
+
     
+    /* Enforce desired twiss parameters and (optionally) rms values */
+    computeBeamTwissParameters3(&twissBeam, particle, n_particles);
+    if (x_plane->beam_type!=LINE_BEAM)
+      enforceTwissValues(particle, n_particles, &twissBeam, 0, x_plane->beta, x_plane->alpha, x_plane->emit, enforce_rms_params[0]);
+    if (y_plane->beam_type!=LINE_BEAM)
+      enforceTwissValues(particle, n_particles, &twissBeam, 2, y_plane->beta, y_plane->alpha, y_plane->emit, enforce_rms_params[1]);
+    if (longit->beam_type!=LINE_BEAM)
+      enforceTwissValues(particle, n_particles, &twissBeam, 4, beta, alpha, emit, enforce_rms_params[2]);
+    /* This allows getting the dispersion right since it gives us the spurious dispersion (due to random correlations) */
+    if (!((x_plane->beam_type==LINE_BEAM || y_plane->beam_type==LINE_BEAM) && longit->beam_type!=LINE_BEAM))
+      computeBeamTwissParameters3(&twissBeam, particle, n_particles);
+    else 
+      memset(twissBeam.eta, 0, 4*sizeof(twissBeam.eta[0]));
+
     /* incorporate dispersion and centroid shifts into (x, x', y, y') */
     /* also add particle ID */
 #if !SDDS_MPI_IO
@@ -449,10 +478,10 @@ long generate_bunch(
       first_particle_address[i_particle][4] += longit->cent_s;
       first_particle_address[i_particle][5] += longit->cent_dp;
       delta_p = first_particle_address[i_particle][5];
-      first_particle_address[i_particle][0] += delta_p*x_plane->eta + x_plane->cent_posi;
-      first_particle_address[i_particle][1] += delta_p*x_plane->etap + x_plane->cent_slope;
-      first_particle_address[i_particle][2] += delta_p*y_plane->eta + y_plane->cent_posi;
-      first_particle_address[i_particle][3] += delta_p*y_plane->etap + y_plane->cent_slope;
+      first_particle_address[i_particle][0] += delta_p*(x_plane->eta-twissBeam.eta[0]) + x_plane->cent_posi;
+      first_particle_address[i_particle][1] += delta_p*(x_plane->etap-twissBeam.eta[1]) + x_plane->cent_slope;
+      first_particle_address[i_particle][2] += delta_p*(y_plane->eta-twissBeam.eta[2]) + y_plane->cent_posi;
+      first_particle_address[i_particle][3] += delta_p*(y_plane->etap-twissBeam.eta[3]) + y_plane->cent_slope;
       first_particle_address[i_particle][6] = particleID++;
     }
     initial_saved = 0; /* Prepare for next bunch */
@@ -465,10 +494,10 @@ long generate_bunch(
       particle[i_particle][4] += longit->cent_s;
       particle[i_particle][5] += longit->cent_dp;
       delta_p = particle[i_particle][5];
-      particle[i_particle][0] += delta_p*x_plane->eta + x_plane->cent_posi;
-      particle[i_particle][1] += delta_p*x_plane->etap + x_plane->cent_slope;
-      particle[i_particle][2] += delta_p*y_plane->eta + y_plane->cent_posi;
-      particle[i_particle][3] += delta_p*y_plane->etap + y_plane->cent_slope;
+      particle[i_particle][0] += delta_p*(x_plane->eta-twissBeam.eta[0]) + x_plane->cent_posi;
+      particle[i_particle][1] += delta_p*(x_plane->etap-twissBeam.eta[1]) + x_plane->cent_slope;
+      particle[i_particle][2] += delta_p*(y_plane->eta-twissBeam.eta[2]) + y_plane->cent_posi;
+      particle[i_particle][3] += delta_p*(y_plane->etap-twissBeam.eta[3]) + y_plane->cent_slope;
       particle[i_particle][6] = particleID++;
     }
     /* prepare for the next bunch */
@@ -1150,4 +1179,35 @@ void uniform_4d_distribution(
         }
     log_exit("uniform_4d_distribution");
     }
+
+void enforceTwissValues(double **part, long np, TWISSBEAM *twiss, long offset, double beta1, double alpha1, double emit1, long enforceRms)
+{
+  long i;
+  double R11, R21, R22;
+  double betaMean;
+  
+  betaMean = sqrt(beta1*twiss->beta[offset/2]);
+  if (betaMean==0)
+    return;
+
+  R11 = beta1/betaMean;
+  R21 = (twiss->alpha[offset/2]-alpha1)/betaMean;
+  R22 = twiss->beta[offset/2]/betaMean;
+  
+  if (enforceRms) {
+    double ratio;
+    if (twiss->emit[offset/2]) {
+      ratio = sqrt(emit1/twiss->emit[offset/2]);
+      R11 *= ratio;
+      R21 *= ratio;
+      R22 *= ratio;
+    }
+  }
+  
+  for (i=0; i<np; i++) {
+    part[i][offset+1] = part[i][offset]*R21 + part[i][offset+1]*R22;
+    part[i][offset+0] = part[i][offset]*R11;
+  }
+
+}
 
