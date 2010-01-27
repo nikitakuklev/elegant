@@ -21,6 +21,11 @@
 static SDDS_DATASET SDDSma;
 static double momentumOffsetValue = 0;
 static long fireOnPass = 1;
+static double **turnByTurnCoord = NULL;
+static long turnsStored = 0;
+
+#include "fftpackC.h"
+long determineTunesFromTrackingData(double *tune, double **turnByTurnCoord, long turns, double delta);
 
 static void momentumOffsetFunction(double **coord, long np, long pass, double *pCentral)
 {
@@ -32,6 +37,18 @@ static void momentumOffsetFunction(double **coord, long np, long pass, double *p
     mal.dy = y_initial;
     mal.dp = momentumOffsetValue;
     offset_beam(coord, np, &mal, *pCentral);
+    turnsStored = 0;
+  }
+  if (turnByTurnCoord) {
+    /* N.B.: the arrays are ordered differently than normal, e.g.,
+     * turnByTurnCoord[0] is the data for x, not particle/turn 0
+     */
+    turnByTurnCoord[0][turnsStored] = coord[0][0]; 
+    turnByTurnCoord[1][turnsStored] = coord[0][1]; 
+    turnByTurnCoord[2][turnsStored] = coord[0][2]; 
+    turnByTurnCoord[3][turnsStored] = coord[0][3]; 
+    turnByTurnCoord[4][turnsStored] = coord[0][5]; 
+    turnsStored++;
   }
 }
 
@@ -171,6 +188,7 @@ long doMomentumApertureSearch(
   double deltaStart1[2];
   double **xLost, **yLost, **deltaSurvived, **sLost, deltaLost;
   double *sStart;
+  double nominalTune[2], tune[2];
   char **ElementName;
   long code, outputRow, jobCounter;
   long processElements, skipElements, deltaSign, split, slot;
@@ -200,6 +218,10 @@ long doMomentumApertureSearch(
     fireOnPass = 0;
   else
     fireOnPass = 1;
+  if (forbid_resonance_crossing)
+    turnByTurnCoord = (double**)czarray_2d(sizeof(double), 5, control->n_passes);
+  else
+    turnByTurnCoord = NULL;
   
   /* determine how many elements will be tracked */
   elem = &(beamline->elem);
@@ -260,7 +282,7 @@ long doMomentumApertureSearch(
   processElements = process_elements;
   skipElements = skip_elements;
 
-  if (fiducialize) {
+  if (fiducialize || forbid_resonance_crossing) {
     if (startingCoord)
       memcpy(coord[0], startingCoord, sizeof(double)*6);
     else
@@ -318,7 +340,7 @@ long doMomentumApertureSearch(
 
         ElementName[outputRow] = elem->name;
         sStart[outputRow] = elem->end_pos;
-        deltaStart = deltaStart1[slot];
+        deltaStart = deltaStart1[side];
         deltaSign = side==0 ? -1 : 1;
         lostOnPass[slot][outputRow] = -1;
         loserFound[slot][outputRow] = survivorFound[slot][outputRow] = 0;
@@ -334,6 +356,27 @@ long doMomentumApertureSearch(
           fflush(stdout);
         }
 
+        if (forbid_resonance_crossing) {
+          momentumOffsetValue = 0;
+          setTrackingWedgeFunction(momentumOffsetFunction, 
+                                   elem->succ?elem->succ:elem0); 
+          if (startingCoord)
+            memcpy(coord[0], startingCoord, sizeof(double)*6);
+          else
+            memset(coord[0], 0, sizeof(**coord)*6);
+          coord[0][6] = 1;
+          pCentral = run->p_central;
+          code = do_tracking(NULL, coord, 1, NULL, beamline, &pCentral, 
+                             NULL, NULL, NULL, NULL, run, control->i_step, 
+                             SILENT_RUNNING+INHIBIT_FILE_OUTPUT, control->n_passes, 0, NULL, NULL, NULL, lostOnPass0, NULL);
+          if (!code || !determineTunesFromTrackingData(nominalTune, turnByTurnCoord, turnsStored, 0.0)) {
+            fprintf(stdout, "Fiducial particle tune is undefined.\n");
+            exit(1);
+          }
+          if (verbosity>3)
+            fprintf(stdout, "  Nominal tunes: %e, %e\n", nominalTune[0], nominalTune[1]);
+        }
+        
         deltaLimit = deltaLimit1[slot];
         for (split=0; split<=splits; split++) {
           delta = deltaStart;
@@ -368,6 +411,24 @@ long doMomentumApertureSearch(
             code = do_tracking(NULL, coord, 1, NULL, beamline, &pCentral, 
                                NULL, NULL, NULL, NULL, run, control->i_step, 
                                SILENT_RUNNING+INHIBIT_FILE_OUTPUT, control->n_passes, 0, NULL, NULL, NULL, lostOnPass0, NULL);
+            if (forbid_resonance_crossing && code) {
+              if (!determineTunesFromTrackingData(tune, turnByTurnCoord, turnsStored, delta)) {
+                if (verbosity>3)
+                  fprintf(stdout, "   Resonance crossing detected (no tunes).  Particle lost\n");
+                code = 0; /* lost */
+              } else {
+                if (verbosity>3) 
+                  fprintf(stdout, "   Tunes: %e, %e\n", tune[0], tune[1]);
+                if ( ( ((long)(2*tune[0])) - ((long)(2*nominalTune[0])) )!=0 ||
+                    ( ((long)(2*tune[1])) - ((long)(2*nominalTune[1])) )!=0) {
+                  /* crossed integer or half integer */
+                  if (verbosity>3)
+                    fprintf(stdout, "   Resonance crossing detected (%e, %e -> %e, %e).  Particle lost\n",
+                            nominalTune[0], nominalTune[1], tune[0], tune[1]);
+                  code = 0;
+                }
+              }
+            }
             if (!code) {
               /* particle lost */
               if (verbosity>3) {
@@ -511,7 +572,73 @@ long doMomentumApertureSearch(
   free(sStart);
   free(ElementName);
   free(lostOnPass0);
+  if (turnByTurnCoord) 
+    free_czarray_2d((void**)turnByTurnCoord, 5, control->n_passes);
+  return 1;
+}
+
+
+long determineTunesFromTrackingData(double *tune, double **turnByTurnCoord, long turns, double delta)
+{
+  double amplitude[4], frequency[4], phase[4], dummy;
+  long i;
+  static FILE *fpd = NULL;
+  if (!fpd) {
+    fpd = fopen("tbt.sdds", "w");
+    fprintf(fpd, "SDDS1\n&column name=Pass type=long &end\n");
+    fprintf(fpd, "&column name=x type=double units=m &end\n");
+    fprintf(fpd, "&column name=xp type=double &end\n");
+    fprintf(fpd, "&column name=y type=double units=m &end\n");
+    fprintf(fpd, "&column name=yp type=double &end\n");
+    fprintf(fpd, "&column name=delta type=double &end\n");
+    fprintf(fpd, "&parameter name=delta0 type=double &end\n");
+    fprintf(fpd, "&data mode=ascii &end\n");
+  }
+  fprintf(fpd, "%ld\n", turns);
+  for (i=0; i<turns; i++) {
+    fprintf(fpd, "%ld %e %e %e %e %e\n", i,
+            turnByTurnCoord[0][i],
+            turnByTurnCoord[1][i],
+            turnByTurnCoord[2][i],
+            turnByTurnCoord[3][i],
+            turnByTurnCoord[4][i]);
+  }
   
+  
+  if (PerformNAFF(&frequency[0], &amplitude[0], &phase[0], 
+		  &dummy, 0.0, 1.0, turnByTurnCoord[0], turns, 
+		  NAFF_MAX_FREQUENCIES|NAFF_FREQ_CYCLE_LIMIT|NAFF_FREQ_ACCURACY_LIMIT,
+		  0.0, 1, 200, 1e-12, 0, 0)!=1) {
+    fprintf(stdout, "Warning: NAFF failed for tune analysis from tracking (x).\n");
+    return 0;
+  }
+
+  if (PerformNAFF(&frequency[1], &amplitude[1], &phase[1], 
+		  &dummy, 0.0, 1.0, turnByTurnCoord[1], turns, 
+		  NAFF_MAX_FREQUENCIES|NAFF_FREQ_CYCLE_LIMIT|NAFF_FREQ_ACCURACY_LIMIT,
+		  0.0, 1, 200, 1e-12,0, 0)!=1) {
+    fprintf(stdout, "Warning: NAFF failed for tune analysis from tracking (xp).\n");
+    return 0;
+  }
+
+  if (PerformNAFF(&frequency[2], &amplitude[2], &phase[2], 
+		  &dummy, 0.0, 1.0, turnByTurnCoord[2], turns,
+		  NAFF_MAX_FREQUENCIES|NAFF_FREQ_CYCLE_LIMIT|NAFF_FREQ_ACCURACY_LIMIT,
+		  0.0, 1, 200, 1e-12, 0, 0)!=1) {
+    fprintf(stdout, "Warning: NAFF failed for tune analysis from tracking (y).\n");
+    return 0;
+  }
+
+  if (PerformNAFF(&frequency[3], &amplitude[3], &phase[3], 
+		  &dummy, 0.0, 1.0, turnByTurnCoord[3], turns,
+		  NAFF_MAX_FREQUENCIES|NAFF_FREQ_CYCLE_LIMIT|NAFF_FREQ_ACCURACY_LIMIT,
+		  0.0, 1, 200, 1e-12, 0, 0)!=1) {
+    fprintf(stdout, "Warning: NAFF failed for tune analysis from tracking (yp).\n");
+    return 0;
+  }
+
+  tune[0] = adjustTuneHalfPlane(frequency[0], phase[0], phase[1]);
+  tune[1] = adjustTuneHalfPlane(frequency[2], phase[2], phase[3]);
   return 1;
 }
 

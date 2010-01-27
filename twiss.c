@@ -44,7 +44,6 @@ void computeTuneShiftWithAmplitude(double dnuxdA[N_TSWA][N_TSWA], double dnuydA[
 void computeTuneShiftWithAmplitudeM(double dnuxdA[N_TSWA][N_TSWA], double dnuydA[N_TSWA][N_TSWA],
                                     TWISS *twiss, double *tune, VMATRIX *M);
 void processTwissAnalysisRequests(ELEMENT_LIST *elem);
-double adjustTuneHalfPlane(double frequency, double phase0, double phase1);
 
 static long twissConcatOrder = 3;
 static long doTuneShiftWithAmplitude = 0;

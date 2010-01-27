@@ -27,6 +27,7 @@
     long verbosity = 1;        
     long soft_failure = 0;
     long output_mode = 0;
+    long forbid_resonance_crossing = 0;
 #end
 
 
