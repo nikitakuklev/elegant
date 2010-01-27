@@ -1,4 +1,5 @@
 &transmute_elements name=*, type=*MON*, exclude=<bpmPattern>  new_type=MARK &end
+&transmute_elements name=*, type=WATCH, new_type=MARK &end
 
 &run_setup
 	lattice = <lattice>,
@@ -13,6 +14,7 @@
         filename = <inputParameters>
         change_defined_values = 1
         allow_missing_elements = 1
+	allow_missing_items = 1
 &end
 
 &alter_elements

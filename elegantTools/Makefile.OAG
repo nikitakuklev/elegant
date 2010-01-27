@@ -7,9 +7,13 @@
 # in the file LICENSE that is included with this distribution. 
 #*************************************************************************
 #
-# $Id: Makefile.OAG,v 1.20 2010-01-15 22:57:46 borland Exp $
+# $Id: Makefile.OAG,v 1.21 2010-01-27 04:39:59 borland Exp $
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.20  2010/01/15 22:57:46  borland
+# Added rfgun2elegant, an old program for converting the output of rfgun to elegant
+# format.
+#
 # Revision 1.19  2010/01/15 15:10:47  borland
 # Various refinements and improvements after testing.
 #
@@ -71,7 +75,8 @@
 #
 
 #CMPLR = ANSI
-Ocustom = -O3
+#Ocustom = -O3
+HOST_OPT = NO
 
 #RATIONAL = purify
 #RATIONAL = quantify
