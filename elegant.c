@@ -1841,7 +1841,7 @@ void do_print_dictionary(char *filename, long latex_form, long SDDS_form)
 
 #define PRINTABLE_NULL(s) (s?s:"NULL")
 char *translateUnitsToTex(char *source);
-char *makeTexSafeString(char *source);
+char *makeTexSafeString(char *source, long checkMath);
 
 void print_dictionary_entry(FILE *fp, long type, long latex_form, long SDDS_form)
 {
@@ -1853,7 +1853,7 @@ void print_dictionary_entry(FILE *fp, long type, long latex_form, long SDDS_form
   if (latex_form) {
     fprintf(fp, "\\begin{latexonly}\n\\newpage\n\\begin{center}{\\Large\\verb|%s|}\\end{center}\n\\end{latexonly}\\subsection{%s}\n", 
             entity_name[type], entity_name[type]);
-    fprintf(fp, "%s\n\\\\\n", makeTexSafeString(entity_text[type]));
+    fprintf(fp, "%s\n\\\\\n", makeTexSafeString(entity_text[type], 0));
     fprintf(fp, "Parallel capable? : %s\\\\\n", entity_description[type].flags&UNIPROCESSOR?"no":"yes");
     fprintf(fp, "\\begin{tabular}{|l|l|l|l|p{\\descwidth}|} \\hline\n");
     fprintf(fp, "Parameter Name & Units & Type & Default & Description \\\\ \\hline \n");
@@ -1880,7 +1880,7 @@ void print_dictionary_entry(FILE *fp, long type, long latex_form, long SDDS_form
       fprintf(fp, "\\end{tabular}\n\n");
       fprintf(fp, "\\begin{latexonly}\n\\newpage\n\\begin{center}{\\Large\\verb|%s| continued}\\end{center}\n\\end{latexonly}\n", 
               entity_name[type]);
-      fprintf(fp, "%s\n\\\\\n", makeTexSafeString(entity_text[type]));
+      fprintf(fp, "%s\n\\\\\n", makeTexSafeString(entity_text[type], 0));
       fprintf(fp, "\\begin{tabular}{|l|l|l|l|p{\\descwidth}|} \\hline\n");
       fprintf(fp, "Parameter Name & Units & Type & Default & Description \\\\ \\hline \n");
     }
@@ -1897,13 +1897,13 @@ void print_dictionary_entry(FILE *fp, long type, long latex_form, long SDDS_form
     else {
       fprintf(fp, "%s ",
               makeTexSafeString(PRINTABLE_NULL(specialEntry ? "GROUP" : 
-                                               entity_description[type].parameter[j].name)));
+                                               entity_description[type].parameter[j].name), 0));
       fprintf(fp, "& %s ",
               translateUnitsToTex(PRINTABLE_NULL(specialEntry ? "" : 
                                                  entity_description[type].parameter[j].unit)));
       fprintf(fp, "& %s & ",
               makeTexSafeString(PRINTABLE_NULL(specialEntry ? "string" :
-                                               type_name[entity_description[type].parameter[j].type-1])));
+                                               type_name[entity_description[type].parameter[j].type-1]), 0));
     }
     if (!specialEntry) {
       if (entity_description[type].parameter[j].flags&PARAM_XY_WAVEFORM)
@@ -1947,29 +1947,12 @@ void print_dictionary_entry(FILE *fp, long type, long latex_form, long SDDS_form
       char *ptr0;
       strcpy_ss(buffer, description);
       if (strlen(ptr0 = buffer)) {
-        /* don't need splitting of strings since the p tabular code 
-           is used.
-           */
-        /*
-          while (strlen(ptr0)>20) {
-          ptr1 = ptr0+20;
-          while (*ptr1 && *ptr1!=' ')
-          ptr1++;
-          if (!*ptr1)
-          break;
-          *ptr1 = 0;
-          fprintf(fp, " & %s ", makeTexSafeString(ptr0));
-          fprintf(fp, "\\\\ \n & & & ");
-          ptr0 = ptr1+1;
-          texLines++;
-          }
-          */
         /* add to lines counter based on estimate of wrap-around lines
            in the latex parbox. 28 is approximate number of char. in 2 in */
         texLines += strlen(ptr0) / 28;
         if (*ptr0) {
           fprintf(fp, " & %s ", 
-                  makeTexSafeString(ptr0));
+                  makeTexSafeString(ptr0, 1));
           fprintf(fp, " \\\\ \\hline \n");
           texLines++;
         }
@@ -2031,29 +2014,38 @@ void initialize_structures(RUN *run_conditions, VARY *run_control, ERRORVAL *err
         memset((void*)links, 0, sizeof(*links));
     }
 
-char *makeTexSafeString(char *source)
+char *makeTexSafeString(char *source, long checkMath)
 {
   static char buffer[1024];
-  long index = 0;
+  long index = 0, math = 0;
   if (!source)
     return source;
   buffer[0] = 0;
   while (*source) {
-    if (*source=='_' || *source=='^' || *source=='{' || *source=='}' || *source=='%') {
-      buffer[index++] = '\\';
+    if (*source=='$' && checkMath) {
+      math = !math;
+      buffer[index++] = *source++;
+      continue;
+      }
+    if (!math) {
+      if (*source=='_' || *source=='^' || *source=='{' || *source=='}' || *source=='%') {
+        buffer[index++] = '\\';
+        buffer[index++] = *source++;
+      } else if  (*source=='<' || *source=='>' || *source=='|') {
+        buffer[index++] = '$';
+        buffer[index++] = *source++;
+        buffer[index++] = '$';
+      } else
+        buffer[index++] = *source++;
+    }
+    else {
       buffer[index++] = *source++;
     }
-    else if  (*source=='<' || *source=='>' || *source=='|') {
-      buffer[index++] = '$';
-      buffer[index++] = *source++;
-      buffer[index++] = '$';
-    }
-    else
-      buffer[index++] = *source++;
   }
   buffer[index] = 0;
   return buffer;
 }
+
 
 char *translateUnitsToTex(char *source)
 {
