@@ -71,7 +71,9 @@ N\_STEPS should be about 100 times the number of undulator periods.
 
 The laser time profile can be specified using the \verb|TIME_PROFILE|
 parameter to specify the name of an SDDS file containing the
-profile.   By default $t=0$ in the
+profile.   If given, the electric and magnetic fields of the laser are
+multiplied by the profile $P(t)$.  Hence, the laser intensity is multiplied
+by $P^2(t)$. By default $t=0$ in the
 profile is lined up with $\langle t \rangle$ in the electron bunch.
 This can be changed with the \verb|TIME_OFFSET| parameter. A positive
 value of \verb|TIME_OFFSET| moves the laser profile forward in time (toward
