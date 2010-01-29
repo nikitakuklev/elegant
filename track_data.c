@@ -2045,7 +2045,7 @@ PARAMETER lsrMdltr_param[N_LSRMDLTR_PARAMS] = {
     {"LASER_N", "", IS_LONG, 0, (long)((char *)&lsrMdltr_example.laserN), NULL, 0.0, 0, "laser vertical mode number (<5)"},
     {"SYNCH_RAD", "", IS_LONG, PARAM_CHANGES_MATRIX, (long)((char *)&lsrMdltr_example.synchRad), NULL, 0.0, 0, "Include classical synchrotron radiation?"},
     {"ISR", "", IS_LONG, 0, (long)((char *)&lsrMdltr_example.isr), NULL, 0.0, 0, "Include quantum excitation?"},
-    {"TIME_PROFILE", NULL, IS_STRING, PARAM_XY_WAVEFORM, (long)((char*)&lsrMdltr_example.timeProfileFile), NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving time-dependent modulation of the laser profile"},
+    {"TIME_PROFILE", NULL, IS_STRING, PARAM_XY_WAVEFORM, (long)((char*)&lsrMdltr_example.timeProfileFile), NULL, 0.0, 0, "<filename>=<x>+<y> form specification of input file giving time-dependent modulation of the laser electric and magnetic fields."},
     {"TIME_OFFSET", "S", IS_DOUBLE, 0, (long)((char *)&lsrMdltr_example.timeProfileOffset), NULL, 0.0, 0, "Time offset of the laser profile."},
 };  
 
