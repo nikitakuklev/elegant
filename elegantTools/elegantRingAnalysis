@@ -4,6 +4,9 @@
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.17  2009/10/09 15:27:01  borland
+# Added aperture to DA w/errors.
+#
 # Revision 1.16  2009/03/10 19:49:47  borland
 # Added optional computation of driving terms.
 #
@@ -173,6 +176,36 @@ proc ReadConfiguration {} {
     if ![file exists $configFile] return
     source $configFile
     setStatus "Configuration $configFile read."
+    if [info exists dynamicApertureErrors(mode)] {
+	if [string match *line* $dynamicApertureErrors(mode)] {
+	    switch $dynamicApertureErrors(mode) {
+		one-line {
+		    set dynamicApertureErrors(lines) 1
+		}
+		two-line {
+		    set dynamicApertureErrors(lines) 2
+		}
+		three-line {
+		    set dynamicApertureErrors(lines) 3
+		}
+		five-line {
+		    set dynamicApertureErrors(lines) 5
+		}
+		seven-line {
+		    set dynamicApertureErrors(lines) 7
+		}
+		nine-line {
+		    set dynamicApertureErrors(lines) 9
+		}
+		eleven-line {
+		    set dynamicApertureErrors(lines) 11
+		}
+		default {
+		    set dynamicApertureErrors(lines) 11
+		}
+	    }
+	}
+    }
 }
 
 proc Run {args} {
@@ -778,9 +811,9 @@ proc FillDynamicApertureErrorsFrame {widget args} {
       -contextHelp \
       "Enter the number of times to divide the interval."
     APSRadioButtonFrame .rb1 -parent $widget -label "Lines: " \
-      -orientation horizontal -variable dynamicApertureErrors(mode) \
-      -valueList "one-line three-line five-line seven-line nine-line eleven-line" \
-      -buttonList "1 3 5 7 9 11" -contextHelp \
+      -orientation horizontal -variable dynamicApertureErrors(lines) \
+      -valueList "1 3 5 7 9 11 15 19 23 27 31" \
+      -buttonList "1 3 5 7 9 11 15 19 23 27 31" -contextHelp \
       "Number of lines to search on starting at the origin."
     APSLabeledEntry .le5a -parent $widget \
       -label "Fractional momentum offset: " -width 20 -textVariable dynamicApertureErrors(delta) \
