@@ -427,20 +427,29 @@ long assert_element_links(ELEMENT_LINKS *links, RUN *run, LINE_LIST *beamline, l
 #endif
             p_elem = sour[i_elem]->p_elem;
             for (i_item=0; i_item<entity_description[sour[0]->type].n_params; i_item++) {
+  	        char s[1024];
+		double value0;
                 switch (entity_description[sour[0]->type].parameter[i_item].type) {
                     case IS_DOUBLE:
                         value = *((double*)(p_elem+entity_description[sour[0]->type].parameter[i_item].offset));
                         rpn_store(value, NULL, rpn_create_mem(entity_description[sour[0]->type].parameter[i_item].name, 0));
+                        value0 = *((double*)(sour[i_elem]->p_elem0+entity_description[sour[0]->type].parameter[i_item].offset));
+			sprintf(s, "%s0", entity_description[sour[0]->type].parameter[i_item].name);
+                        rpn_store(value0, NULL, rpn_create_mem(s, 0));
                         break;
                     case IS_LONG:
                         value = *((long*)(p_elem+entity_description[sour[0]->type].parameter[i_item].offset));
                         rpn_store(value, NULL, rpn_create_mem(entity_description[sour[0]->type].parameter[i_item].name, 0));
+                        value0 = *((long*)(sour[i_elem]->p_elem0+entity_description[sour[0]->type].parameter[i_item].offset));
+			sprintf(s, "%s0", entity_description[sour[0]->type].parameter[i_item].name);
+                        rpn_store(value0, NULL, rpn_create_mem(s, 0));
                         break;
                     default:
                         break;
                     }
-#if DEBUG
+#if DEBUG 
                 fprintf(stdout, "    asserting value %e for %s\n", value, entity_description[sour[0]->type].parameter[i_item].name);
+                fprintf(stdout, "    asserting value %e for %s0\n", value0, entity_description[sour[0]->type].parameter[i_item].name);
                 fflush(stdout);
 #endif
                 }
