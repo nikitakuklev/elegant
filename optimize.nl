@@ -39,6 +39,7 @@ static char *optimize_method[N_OPTIM_METHODS] = {
     long restart_worst_terms = 1;
     long matrix_order = 1;
     STRING log_file = NULL;
+    STRING term_log_file = NULL;
     long verbose = 1;
     long output_sparsing_factor = 1;
     long balance_terms = 0;

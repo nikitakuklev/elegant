@@ -70,6 +70,10 @@ void do_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
         else if ((optimization_data->fp_log=fopen_e(log_file, "w", FOPEN_RETURN_ON_ERROR))==NULL)
             bomb("unable to open log file", NULL);
         }
+    if (term_log_file) {
+      if (str_in(term_log_file, "%s"))
+        term_log_file = compose_filename(term_log_file, run->rootname);
+    }
     optimization_data->verbose = verbose;
     if (optimization_data->mode==OPTIM_MODE_MAXIMUM && target!=-DBL_MAX)
       target = -target;
@@ -1020,6 +1024,34 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
         for (i=0; i<covariables->n_covariables; i++)
 	  fprintf(stdout, "%10s: %23.15e\n", covariables->varied_quan_name[i], covariables->varied_quan_value[i]);
         fflush(stdout);
+      }
+      if (term_log_file && strlen(term_log_file) && optimization_data->terms) {
+        SDDS_DATASET termLog;
+        long i, iterm, ivalue;
+        if (!SDDS_InitializeOutput(&termLog, SDDS_BINARY, 0, NULL, NULL, term_log_file) ||
+            (iterm=SDDS_DefineColumn(&termLog, "Term", NULL, NULL, NULL, NULL, SDDS_STRING, 0))<0 ||
+            (ivalue=SDDS_DefineColumn(&termLog, "Contribution", NULL, NULL, NULL, NULL, SDDS_DOUBLE, 0))<0 ||
+            !SDDS_WriteLayout(&termLog) ||
+            !SDDS_StartPage(&termLog, optimization_data->terms)) {
+          fprintf(stdout, "Problem writing optimization term log\n");
+          SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
+          exit(1);
+        }
+        for (i=0; i<optimization_data->terms; i++) {
+          if (!SDDS_SetRowValues(&termLog, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, i,
+                                 iterm, optimization_data->term[i],
+                                 ivalue,optimization_data->termWeight[i]*rpn(optimization_data->term[i]), 
+                                 -1)) {
+            fprintf(stdout, "Problem writing optimization term log\n");
+            SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
+            exit(1);          
+          }
+        }
+        if (!SDDS_WritePage(&termLog) || !SDDS_Terminate(&termLog)) {
+          fprintf(stdout, "Problem writing optimization term log\n");
+          SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
+          exit(1);          
+        }
       }
     }
     /* ... Master only ending here */
