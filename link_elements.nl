@@ -19,6 +19,8 @@
     STRING source_position = NULL;
     STRING mode = NULL;
     STRING equation = NULL;
+    double minimum = -DBL_MAX;
+    double maximum = DBL_MAX;
 #end
 
 #define SRC_POSITION_BEFORE 0

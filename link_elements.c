@@ -51,11 +51,12 @@ void element_link_control(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, RUN *run_
                 j ++;
             if (j>=N_LINK_MODES)
                 bomb("unknown link mode detected during link summary", NULL);
-            fprintf(stdout, "%s.%s linked (%s) to %s with equation \"%s\"  --  %ld occurences:\n",
-                links->target_name[i], links->item[i], 
-                link_mode[j],
-                links->source_name[i], links->equation[i],
-                links->n_targets[i]);
+            fprintf(stdout, "%s.%s linked (%s) to %s within [%e, %e] using equation \"%s\"  --  %ld occurences:\n",
+                    links->target_name[i], links->item[i], 
+                    link_mode[j],
+                    links->source_name[i],
+                    links->minimum[i], links->maximum[i], links->equation[i],
+                    links->n_targets[i]);
             fflush(stdout);
             for (j=0; j<links->n_targets[i]; j++)
                 fprintf(stdout, "   %s#%ld at z=%.15gm linked to %s#%ld at z=%.15gm\n", 
@@ -125,7 +126,9 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
         bomb("source_position not given/unknown", NULL);
     if (!mode || (mode_code=match_string(mode, link_mode, N_LINK_MODES, 0))<0)
         bomb("link mode not known", NULL);
-
+    if (minimum>maximum)
+      bomb("minimum>maximum", NULL);
+    
     t_context = s_context = NULL;
 
     if (has_wildcards(target) && strchr(target, '-'))
@@ -179,6 +182,8 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
       links->n_targets       = trealloc(links->n_targets, sizeof(*links->n_targets)*(n_links+1));
       links->initial_value   = trealloc(links->initial_value, sizeof(*links->initial_value)*(n_links+1));
       links->baseline_value  = trealloc(links->baseline_value, sizeof(*links->baseline_value)*(n_links+1));
+      links->minimum   = trealloc(links->minimum, sizeof(*links->minimum)*(n_links+1));
+      links->maximum   = trealloc(links->maximum, sizeof(*links->maximum)*(n_links+1));
 
       /* copy the basic data */
       cp_str(links->target_name+n_links, target);
@@ -187,7 +192,9 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
       cp_str(links->equation+n_links, equation);
       links->source_position[n_links] = src_position_code;
       links->flags[n_links] = link_mode_flag[mode_code];
-
+      links->minimum[n_links] = minimum;
+      links->maximum[n_links] = maximum;
+      
       /* make the list of pointers to targets */
       eptr = tmalloc(sizeof(*eptr));
       eptr[0] = t_context;
@@ -450,6 +457,10 @@ long assert_element_links(ELEMENT_LINKS *links, RUN *run, LINE_LIST *beamline, l
             value = rpn(links->equation[i_link]);
             if (rpn_check_error()) exit(1);
             rpn_clear();
+            if (value>links->maximum[i_link])
+              value = links->maximum[i_link];
+            if (value<links->minimum[i_link])
+              value = links->minimum[i_link];
             if (verbosity>0)
                 fprintf(stdout, "asserting value %.15g for %s#%ld.%s at z=%.15gm\n",
                     value, links->target_name[i_link], targ[i_elem]->occurence, links->item[i_link], targ[i_elem]->end_pos);
