@@ -337,8 +337,12 @@ long multipole_tracking(
     if (!multipole)
         bomb("null MULT pointer (multipole_tracking)", NULL);
 
-    if ((n_kicks=multipole->n_kicks)<=0)
-        bomb("n_kicks<=0 in multipole()", NULL);
+    if ((n_kicks=multipole->n_kicks)<=0) {
+      TRACKING_CONTEXT tc;
+      getTrackingContext(&tc);
+      fprintf(stderr, "error: n_kicks<=0 in multipole() for %s #%ld\n", tc.elementName, tc.elementOccurrence);
+      exit(1);
+    }
 
     if ((order=multipole->order)<0)
         bomb("order < 0 in multipole()", NULL);
