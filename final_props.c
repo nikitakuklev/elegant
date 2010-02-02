@@ -1262,14 +1262,14 @@ void computeBeamTwissParameters3(TWISSBEAM *twiss, double **data, long particles
   double sum;
 #if USE_MPI 
   long particles_total, index=0;
-  double S_p[21], S_p_sum[21], Sbeta_p[10], Sbeta_p_sum[10];  
+  double S_p[21], S_p_sum[21], Sbeta_p[21], Sbeta_p_sum[21];  
 
   MPI_Allreduce(&particles, &particles_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD); 
 #endif 
 
   compute_centroids(C, data, particles);
   memcpy(twiss->centroid, C, sizeof(*(twiss->centroid))*6);
-  
+
   /* compute correlations */
   for (i=0; i<6; i++) {
     for (j=0; j<=i; j++) {
@@ -1319,7 +1319,7 @@ void computeBeamTwissParameters3(TWISSBEAM *twiss, double **data, long particles
     }
   }
 #if USE_MPI
-  MPI_Allreduce(Sbeta_p, Sbeta_p_sum, 10, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(Sbeta_p, Sbeta_p_sum, 21, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   index = 0; 
   for (i=0; i<6; i++) {
     for (j=0; j<=i; j++) {
