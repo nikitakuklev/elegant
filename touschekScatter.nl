@@ -6,7 +6,6 @@
 #include "namelist.h"
 
 #namelist touschek_scatter static
-        long nbins = 100;
         double charge = 0;
         double frequency = 1;
         double emit_x = 0;
@@ -28,6 +27,7 @@
         STRING distribution = NULL;
         STRING initial = NULL;
         STRING output = NULL;
+        long nbins = 100;
         long n_simulated = 5E6;
         double ignored_portion = 0.05;
         long i_start = 0;

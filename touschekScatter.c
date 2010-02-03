@@ -606,7 +606,7 @@ TSCATTER *initTSCATTER (ELEMENT_LIST *eptr, long iElement)
     tsptr->xmin[4] = -(tsptr->xmax[4] += fabs(0.5*tsSpec->range[2]*tsSpec->delta_p0/tsptr->betagamma*tsptr->disp[1][1]));
     tsptr->xmin[5] = -(tsptr->xmax[5] = 0.5*tsSpec->range[2]*tsSpec->delta_p0/tsptr->betagamma);
   } else if (tsSpec->distIn==1) {
-    tsptr->fullhis = readbookn(FullDist, iElement);
+    tsptr->fullhis = readbookn(FullDist, tsSpec->ipage_his(iElement-1));
     for (i=0; i<3; i++) {
       tsptr->xmin[i] = tsptr->fullhis->xmin[i*2];
       tsptr->xmax[i] = tsptr->fullhis->xmax[i*2];
@@ -616,8 +616,8 @@ TSCATTER *initTSCATTER (ELEMENT_LIST *eptr, long iElement)
     tsptr->xmin[2] *= c_mks;
     tsptr->xmax[2] *= c_mks;
   } else if (tsSpec->distIn==2) {
-    tsptr->this = readbookn(TranDist, iElement);
-    tsptr->zhis = readbookn(ZDist, iElement);
+    tsptr->this = readbookn(TranDist, tsSpec->ipage_his(iElement-1));
+    tsptr->zhis = readbookn(ZDist, tsSpec->ipage_his(iElement-1));
     for (i=0; i<2; i++) {
       tsptr->xmin[i] = tsptr->this->xmin[i*2];
       tsptr->xmax[i] = tsptr->this->xmax[i*2];
@@ -629,9 +629,9 @@ TSCATTER *initTSCATTER (ELEMENT_LIST *eptr, long iElement)
     tsptr->xmin[5] = tsptr->zhis->xmin[1];
     tsptr->xmax[5] = tsptr->zhis->xmax[1];
   } else if (tsSpec->distIn==3) {
-    tsptr->xhis = readbookn(XDist, iElement);
-    tsptr->yhis = readbookn(YDist, iElement);
-    tsptr->zhis = readbookn(ZDist, iElement);
+    tsptr->xhis = readbookn(XDist, tsSpec->ipage_his(iElement-1));
+    tsptr->yhis = readbookn(YDist, tsSpec->ipage_his(iElement-1));
+    tsptr->zhis = readbookn(ZDist, tsSpec->ipage_his(iElement-1));
 
     tsptr->xmin[0] = tsptr->xhis->xmin[0];
     tsptr->xmin[3] = tsptr->xhis->xmin[1];
