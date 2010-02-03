@@ -606,7 +606,7 @@ TSCATTER *initTSCATTER (ELEMENT_LIST *eptr, long iElement)
     tsptr->xmin[4] = -(tsptr->xmax[4] += fabs(0.5*tsSpec->range[2]*tsSpec->delta_p0/tsptr->betagamma*tsptr->disp[1][1]));
     tsptr->xmin[5] = -(tsptr->xmax[5] = 0.5*tsSpec->range[2]*tsSpec->delta_p0/tsptr->betagamma);
   } else if (tsSpec->distIn==1) {
-    tsptr->fullhis = readbookn(FullDist, tsSpec->ipage_his(iElement-1));
+    tsptr->fullhis = readbookn(FullDist, tsSpec->ipage_his[iElement-1]);
     for (i=0; i<3; i++) {
       tsptr->xmin[i] = tsptr->fullhis->xmin[i*2];
       tsptr->xmax[i] = tsptr->fullhis->xmax[i*2];
@@ -616,8 +616,8 @@ TSCATTER *initTSCATTER (ELEMENT_LIST *eptr, long iElement)
     tsptr->xmin[2] *= c_mks;
     tsptr->xmax[2] *= c_mks;
   } else if (tsSpec->distIn==2) {
-    tsptr->this = readbookn(TranDist, tsSpec->ipage_his(iElement-1));
-    tsptr->zhis = readbookn(ZDist, tsSpec->ipage_his(iElement-1));
+    tsptr->this = readbookn(TranDist, tsSpec->ipage_his[iElement-1]);
+    tsptr->zhis = readbookn(ZDist, tsSpec->ipage_his[iElement-1]);
     for (i=0; i<2; i++) {
       tsptr->xmin[i] = tsptr->this->xmin[i*2];
       tsptr->xmax[i] = tsptr->this->xmax[i*2];
@@ -629,9 +629,9 @@ TSCATTER *initTSCATTER (ELEMENT_LIST *eptr, long iElement)
     tsptr->xmin[5] = tsptr->zhis->xmin[1];
     tsptr->xmax[5] = tsptr->zhis->xmax[1];
   } else if (tsSpec->distIn==3) {
-    tsptr->xhis = readbookn(XDist, tsSpec->ipage_his(iElement-1));
-    tsptr->yhis = readbookn(YDist, tsSpec->ipage_his(iElement-1));
-    tsptr->zhis = readbookn(ZDist, tsSpec->ipage_his(iElement-1));
+    tsptr->xhis = readbookn(XDist, tsSpec->ipage_his[iElement-1]);
+    tsptr->yhis = readbookn(YDist, tsSpec->ipage_his[iElement-1]);
+    tsptr->zhis = readbookn(ZDist, tsSpec->ipage_his[iElement-1]);
 
     tsptr->xmin[0] = tsptr->xhis->xmin[0];
     tsptr->xmin[3] = tsptr->xhis->xmin[1];
@@ -769,11 +769,10 @@ long Check_HisInput(char *filename, LINE_LIST *beamline, long nElement, long *pI
 long get_MAInput(char *filename, LINE_LIST *beamline, long nElement) 
 {
   long result, i, iTotal;
-  long *Occurence;
-  char **Name, **Type;
   ELEMENT_LIST *eptr;
   SDDS_DATASET input;
-  double *s, *dpp, *dpm, eps=1e-7;
+  char **Name, **Type;
+  double *Occurence, *s, *dpp, *dpm, eps=1e-7;
 
   if (!SDDS_InitializeInput(&input, filename))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -783,9 +782,9 @@ long get_MAInput(char *filename, LINE_LIST *beamline, long nElement)
   s = SDDS_GetColumnInDoubles(&input, "s");
   dpp = SDDS_GetColumnInDoubles(&input, "deltaPositive");
   dpm = SDDS_GetColumnInDoubles(&input, "deltaNegative");
-  Name = SDDS_GetColumn(&input, "ElementName");
-  Type = SDDS_GetColumn(&input, "ElementType");
-  Occurence = SDDS_GetColumnInLong(&input, "ElementOccurence");
+  Occurence = SDDS_GetColumnInDoubles(&input, "ElementOccurence");
+  Name = (char **)SDDS_GetColumn(&input, "ElementName");
+  Type = (char **)SDDS_GetColumn(&input, "ElementType");
 
   i = 0;
   result = -nElement;
@@ -795,7 +794,7 @@ long get_MAInput(char *filename, LINE_LIST *beamline, long nElement)
     if (eptr->type == T_TSCATTER) {
       while (1) {
         if (fabs(*s - eptr->end_pos) < eps &&
-            *Occurence == eptr->occurence &&
+           (long)(*Occurence) == eptr->occurence &&
             strcmp(*Name,eptr->name) == 0 &&
             strcmp(*Type,entity_name[eptr->type]) == 0) {
           ((TSCATTER*)eptr->p_elem)->delta = ((*dpp < -(*dpm)) ? *dpp : -(*dpm))
