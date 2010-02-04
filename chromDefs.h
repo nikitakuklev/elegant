@@ -8,6 +8,9 @@
 \*************************************************************************/
 
 #include "matlib.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /* structure for chromaticity correction information */
 typedef struct {
@@ -40,4 +43,7 @@ void computeHigherOrderChromaticities(LINE_LIST *beamline, double *clorb, RUN *r
 				      long concatOrder, double deltaStep, long deltaPoints, long quickMode);
 void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTION *chrom);
 void computeChromaticTuneLimits(LINE_LIST *beamline);
+#ifdef __cplusplus
+}
+#endif
 
