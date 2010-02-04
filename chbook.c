@@ -13,6 +13,8 @@
 #include "constants.h"
 #include "chbook.h"
 
+void bombElegant(char *error, char *usage);
+
 void findBit (long value, long *Bit, long inc, long length);
 
 book1 *chbook1(char *vName, char *units, double xmin, double xmax, int32_t xbins)

@@ -51,6 +51,7 @@ void closeBeamlineOutputFiles(LINE_LIST *beamline);
 void setSigmaIndices();
 void process_particle_command(NAMELIST_TEXT *nltext);
 void processGlobalSettings(NAMELIST_TEXT *nltext);
+void freeInputObjects();
 
 #define DESCRIBE_INPUT 0
 #define DEFINE_MACRO 1

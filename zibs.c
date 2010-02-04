@@ -11,6 +11,7 @@
 #include "mdb.h"
 #include "constants.h"
 #include "zibs.h"
+#include "track.h"
 
 /* prototypes */
 void IBSRate (double particles, 
