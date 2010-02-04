@@ -17,6 +17,10 @@
 
 void initializeUndulatorKickMap(UKICKMAP *map);
 long interpolateUndulatorKickMap(double *xpFactor, double *ypFactor, UKICKMAP *map, double x, double y);
+void AddWigglerRadiationIntegrals(double length, long periods, double radius,
+				  double eta, double etap, 
+				  double beta, double alpha,
+				  double *I1, double *I2, double *I3, double *I4, double *I5);
 
 long trackUndulatorKickMap(
                double **particle,    /* array of particles */
@@ -280,4 +284,112 @@ long interpolateUndulatorKickMap(double *xpFactor, double *ypFactor, UKICKMAP *m
   return 1;
 }
 
+void AddWigglerRadiationIntegrals(double length, long poles, double radius,
+                                   double eta, double etap, 
+                                   double beta, double alpha,
+                                   double *I1, double *I2, double *I3, double *I4, double *I5)
+{
+  double h0, gamma;
+  double Lp;
+  long pole, fieldSign;
+#ifdef DEBUG
+  FILE *fpd = NULL;
+#endif
+
+  if (poles<2)
+    bombElegant("wiggler must have at least 2 poles", NULL);
+  if (radius<=0)
+    bombElegant("wiggler must have positive, nonzero radius", NULL);
+
+  /* length of each pole */
+  Lp = length/poles;
+
+#ifdef DEBUG
+  fpd = fopen_e("wiggler.sdds", "w", 0);
+  fprintf(fpd, "SDDS1\n&column name=Pole type=long &end\n");
+  fprintf(fpd, "&column name=beta type=double units=m &end\n");
+  fprintf(fpd, "&column name=alpha type=double &end\n");
+  fprintf(fpd, "&column name=eta type=double units=m &end\n");
+  fprintf(fpd, "&column name=etap type=double units=m &end\n");
+  fprintf(fpd, "&column name=h0 type=double units=1/m &end\n");
+  fprintf(fpd, "&column name=I1 type=double units=m &end\n");
+  fprintf(fpd, "&column name=I2 type=double units=1/m &end\n");
+  fprintf(fpd, "&column name=I3 type=double units=1/m$a2$n &end\n");
+  fprintf(fpd, "&column name=I4 type=double units=1/m &end\n");
+  fprintf(fpd, "&column name=I5 type=double units=1/m &end\n");
+  fprintf(fpd, "&data mode=ascii no_row_counts=1 &end\n");
+  fprintf(fpd, "0 %e %e %e %e 0 0 0 0 0 0\n", beta, alpha, eta, etap);
+#endif
+  
+  gamma = (1+alpha*alpha)/beta;
+  if (poles%2) {
+    /* Odd number of poles: use half-strength end-poles to match */
+    /* Integrate a half period at a time */
+    fieldSign = 1;
+    for (pole=0; pole<poles; pole++) {
+      fieldSign *= -1;
+      if (pole==0 || pole==poles-1) {
+	h0 = fieldSign*0.5/radius;
+      } else
+	h0 = fieldSign/radius;
+      
+      *I1 += (h0*Lp*(h0*ipow(Lp,2) + 4*eta*PI + 2*etap*Lp*PI))/(2.*ipow(PI,2));
+      *I2 += (ipow(h0,2)*Lp)/2.;
+      *I3 += SIGN(h0)*(4*ipow(h0,3)*Lp)/(3.*PI);
+      
+      *I5 += SIGN(h0)*
+	(ipow(h0,3)*Lp*(gamma*
+			(-50625*eta*h0*ipow(Lp,2)*ipow(PI,3) +
+			 72000*ipow(eta,2)*ipow(PI,4) +
+			 32*ipow(h0,2)*ipow(Lp,4)*(1664 + 225*ipow(PI,2))) +
+			225*ipow(PI,2)*
+			(alpha*(-289*ipow(h0,2)*ipow(Lp,3) +
+				5*h0*Lp*(128*eta - 45*etap*Lp)*PI + 640*eta*etap*ipow(PI,2)
+				) + 64*beta*(6*ipow(h0,2)*ipow(Lp,2) + 10*etap*h0*Lp*PI +
+					     5*ipow(etap,2)*ipow(PI,2)))))/(54000.*ipow(PI,5));
+      
+      beta  = beta - 2*Lp*alpha + sqr(Lp)*gamma;
+      alpha = alpha - Lp*gamma;
+      gamma = (1+alpha*alpha)/beta;
+      eta   = eta + (etap + Lp/PI*h0)*Lp ;
+      etap  = etap + 2*Lp/PI*h0;
+      
+#ifdef DEBUG
+      fprintf(fpd, "%ld %e %e %e %e %e %e %e %e %e %e\n", pole+1, beta, alpha, eta, etap,
+	      h0, *I1, *I2, *I3, *I4, *I5);
+#endif
+    }
+    
+  } else {
+    /* Even number of poles: use half-length end-poles to match 
+     * Integrate a full period at a time (starts and ends in the
+     * middle of a pole).
+     */
+    double L;
+    L = 2*Lp;
+    h0 = 1./radius;
+    for (pole=0; pole<poles; pole+=2) {
+      *I5 += (ipow(h0,3)*Lp*(gamma*
+                              (9000*ipow(eta,2)*ipow(PI,4) +
+                               1125*eta*h0*ipow(Lp,2)*ipow(PI,2)*(16 + 3*PI) +
+                               ipow(h0,2)*ipow(Lp,4)*(15656 + 2235*PI + 2250*ipow(PI,2))) +
+                              225*ipow(PI,2)*(8*beta*
+                                               (ipow(h0,2)*ipow(Lp,2) + 5*ipow(etap,2)*ipow(PI,2)) +
+                                               alpha*(-16*ipow(h0,2)*ipow(Lp,3) +
+                                                       5*etap*(16*eta*ipow(PI,2) + h0*ipow(Lp,2)*(16 + 3*PI))))))/
+                                                         (3375.*ipow(PI,5));
+      beta  = beta - 2*L*alpha + sqr(L)*gamma;
+      alpha = alpha - L*gamma;
+      gamma = (1+alpha*alpha)/beta;
+      eta   = eta + 2*Lp*etap;
+    }
+    *I1 += -(poles/2)*((ipow(h0,2)*ipow(Lp,3))/ipow(PI,2));
+    *I2 += (poles/2)*ipow(h0,2)*Lp;
+    *I3 += (poles/2)*(8*ipow(h0,3)*Lp)/(3.*PI);
+  }
+
+#ifdef DEBUG
+    fclose(fpd);
+#endif
+}
 
