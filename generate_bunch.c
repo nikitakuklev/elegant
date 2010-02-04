@@ -265,7 +265,7 @@ long generate_bunch(
       }
       else {
         if (y_plane->beam_type!=x_plane->beam_type || y_plane->cutoff!=x_plane->cutoff)
-          bomb("distribution types and cutoffs for x and y planes must be the same for limit_in_4d", NULL);
+          bombElegant("distribution types and cutoffs for x and y planes must be the same for limit_in_4d", NULL);
         s1 = sqrt(x_plane->emit);
         s2 = s1/x_plane->beta;
         s3 = sqrt(y_plane->emit);
@@ -281,7 +281,7 @@ long generate_bunch(
           uniform_4d_distribution(particle, n_particles, 0, s1, s2, s3, s4, x_plane->cutoff);
           break;
         default:
-          bomb("limit_in_4d is available only for gaussian and uniform beam distributions", NULL);
+          bombElegant("limit_in_4d is available only for gaussian and uniform beam distributions", NULL);
           break;
         }
 #if !SDDS_MPI_IO
@@ -415,7 +415,7 @@ long generate_bunch(
       case 1:
         /* randomize two coordinates independently */
         if (!(randomizedData=malloc(sizeof(*randomizedData)*n_particles)))
-          bomb("memory allocation failure (generate_bunch)", NULL);
+          bombElegant("memory allocation failure (generate_bunch)", NULL);
         for (j=0; j<n_particles; j++)
           randomizedData[j] = particle[j][2*i];
         randomizeOrder((char*)randomizedData, sizeof(*randomizedData), n_particles, 0, 
@@ -434,7 +434,7 @@ long generate_bunch(
       case 2:
         /* randomize two coordinates together */
         if (!(randomizedData=malloc(sizeof(*randomizedData)*n_particles*2)))
-          bomb("memory allocation failure (generate_bunch)", NULL);
+          bombElegant("memory allocation failure (generate_bunch)", NULL);
         for (j=0; j<n_particles; j++) {
           randomizedData[2*j] = particle[j][2*i];
           randomizedData[2*j+1] = particle[j][2*i+1];
@@ -462,7 +462,7 @@ long generate_bunch(
     if (longit->beam_type!=LINE_BEAM)
       enforceTwissValues(particle, n_particles, &twissBeam, 4, beta, alpha, emit, enforce_rms_params[2]);
     /* This allows getting the dispersion right since it gives us the spurious dispersion (due to random correlations) */
-    if (!((x_plane->beam_type==LINE_BEAM || y_plane->beam_type==LINE_BEAM) && longit->beam_type!=LINE_BEAM))
+    if (!(x_plane->beam_type==LINE_BEAM || y_plane->beam_type==LINE_BEAM) && longit->beam_type!=LINE_BEAM)
       computeBeamTwissParameters3(&twissBeam, particle, n_particles);
     else 
       memset(twissBeam.eta, 0, 4*sizeof(twissBeam.eta[0]));
@@ -510,7 +510,7 @@ long generate_bunch(
       long i;
       for (i=0; i<6; i++)
         if (isnan(particle[i_particle][i]) || isinf(particle[i_particle][i]))
-          bomb("invalid particle data generated in generate_bunch()!", NULL);
+          bombElegant("invalid particle data generated in generate_bunch()!", NULL);
     }
 #endif
 
@@ -662,11 +662,11 @@ void uniform_distribution(
         if (haltonOpt) {
           if ((rnd1=nextModHaltonSequencePoint(haltonID[offset]))<0 ||
               (rnd2=nextModHaltonSequencePoint(haltonID[offset+1]))<0)
-            bomb("problem determining Halton sequence", NULL);
+            bombElegant("problem determining Halton sequence", NULL);
         } else {
           if ((rnd1=nextHaltonSequencePoint(haltonID[offset]))<0 ||
               (rnd2=nextHaltonSequencePoint(haltonID[offset+1]))<0)
-            bomb("problem determining Halton sequence", NULL);
+            bombElegant("problem determining Halton sequence", NULL);
         }
         rnd1 -= 0.5;
         rnd2 -= 0.5;
@@ -739,11 +739,41 @@ void shell_distribution(
 
   log_entry("shell_distribution");
 
+#if !USE_MPI
   if (n_particles<=1) 
     dangle = 0;
   else
     dangle = PIx2/(n_particles-1);
   angle = -dangle;
+#else
+  if (notSinglePart) {
+    long i, start_particle, *particle_array = tmalloc(n_processors*sizeof(*particle_array));
+    long n_particles_total;
+    
+    MPI_Allgather (&n_particles, 1, MPI_LONG, particle_array, 1, MPI_LONG, MPI_COMM_WORLD);
+    for (i=1; i<n_processors; i++) {
+      particle_array[i] += particle_array[i-1] ; 
+    }
+    start_particle = particle_array[myid]-n_particles; /* The first particle for a processor */
+    n_particles_total = particle_array[n_processors-1];
+    tfree(particle_array);
+    
+    if (n_particles_total<=1) {
+      dangle = angle = 0;
+    } 
+    else {
+      dangle = PIx2/(n_particles_total-1);
+      angle = -dangle + dangle*start_particle;  
+    }
+  }
+  else {
+    if (n_particles<=1) 
+      dangle = 0;
+    else
+      dangle = PIx2/(n_particles-1);
+    angle = -dangle;
+  } 
+#endif
 
   s1 *= cutoff;
   s2 *= cutoff;
@@ -867,6 +897,7 @@ void line_distribution(
     long ip;
     double x1, x2, dx1, dx2;
 
+#if !USE_MPI
     x1 = -max1;
     x2 = -max2;
     if (n_particles>1) {
@@ -875,6 +906,39 @@ void line_distribution(
         }
     else
         x1 = x2 = dx1 = dx2 = 0;
+#else
+    if (notSinglePart) {
+      long i, start_particle, *particle_array = tmalloc(n_processors*sizeof(*particle_array));
+      long n_particles_total;
+
+      MPI_Allgather (&n_particles, 1, MPI_LONG, particle_array, 1, MPI_LONG, MPI_COMM_WORLD);
+      for (i=1; i<n_processors; i++) {
+	particle_array[i] += particle_array[i-1] ; 
+      }
+      start_particle = particle_array[myid]-n_particles; /* The first particle for a processor */
+      n_particles_total = particle_array[n_processors-1];
+      tfree(particle_array);
+      
+      if (n_particles_total>1) {
+	dx1 = 2*max1/(n_particles_total-1); 
+	dx2 = 2*max2/(n_particles_total-1);
+	x1 = -max1 + dx1*start_particle;
+	x2 = -max2 + dx2*start_particle;
+      } 
+      else
+	x1 = x2 = dx1 = dx2 = 0;
+    }
+    else {
+      x1 = -max1;
+      x2 = -max2;
+      if (n_particles>1) {
+        dx1 = 2*max1/(n_particles-1);
+        dx2 = 2*max2/(n_particles-1);
+      }
+      else
+        x1 = x2 = dx1 = dx2 = 0;
+    } 
+#endif
     for (ip=0; ip<n_particles; ip++) {
         particle[ip][offset] = x1;
         particle[ip][offset+1] = x2;
@@ -975,10 +1039,10 @@ long dynap_distribution(double **particle, long n_particles, double sx, double s
 
     if ((nx<1 || ny<1) || (nx==1 && ny==1 && n_particles!=1)) {
         if ((nx = sqrt(n_particles*1.0))<=1) 
-            bomb("too few particles requested for dynamic-aperture beam type", NULL);
+            bombElegant("too few particles requested for dynamic-aperture beam type", NULL);
         }
     if ((ny = n_particles/nx)<1)
-        bomb("invalid particle parameters for dynamic-aperture beam type--increase number of particles", NULL);
+        bombElegant("invalid particle parameters for dynamic-aperture beam type--increase number of particles", NULL);
 
     if (nx>1)
         dx = 2*sx/(nx-1);
@@ -1013,10 +1077,10 @@ long dynap_distribution_p(double **particle, long n_particles, double sx, double
     MPI_Allreduce(&n_particles, &n_particles_total, 1,  MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
     if ((nx<1 || ny<1) || (nx==1 && ny==1 && n_particles_total!=1)) {
         if ((nx = sqrt(n_particles_total*1.0))<=1) 
-            bomb("too few particles requested for dynamic-aperture beam type", NULL);
+            bombElegant("too few particles requested for dynamic-aperture beam type", NULL);
         }
     if ((ny = n_particles_total/nx)<1)
-        bomb("invalid particle parameters for dynamic-aperture beam type--increase number of particles", NULL);
+        bombElegant("invalid particle parameters for dynamic-aperture beam type--increase number of particles", NULL);
     if (nx>1)
         dx = 2*sx/(nx-1);
     if (ny>1)

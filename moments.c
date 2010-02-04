@@ -160,7 +160,7 @@ void dumpBeamMoments(
       data[IC_S] = elem->end_pos;     /* position */
       data[IC_PCENTRAL] = elem->Pref_output;
       if (!elem->sigmaMatrix)
-        bomb("Sigma matrix data not computed prior to dumpBeamMoments() call (2)", NULL);
+        bombElegant("Sigma matrix data not computed prior to dumpBeamMoments() call (2)", NULL);
       prepareMomentsArray(data, elem, elem->sigmaMatrix->sigma);
       for (j=IC_S; j<N_COLUMNS; j++)
         if (!SDDS_SetRowValues(&SDDSMoments, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row_count, j, data[j], -1)) {
@@ -178,21 +178,21 @@ void dumpBeamMoments(
       elem = elem->succ;
     }
     if (elemCheck!=n_elem)
-      bomb("element count error in dumpBeamMoments()", NULL);
+      bombElegant("element count error in dumpBeamMoments()", NULL);
   }
   else {
     /* find final element */
     elemCheck = 0;
     while (1) {
       if (!elem->sigmaMatrix)
-        bomb("Sigma matrix data not computed prior to dumpBeamMoments() call (3)", NULL);
+        bombElegant("Sigma matrix data not computed prior to dumpBeamMoments() call (3)", NULL);
       elemCheck++;
       if (!elem->succ)
         break;
       elem = elem->succ;
     }
     if (elemCheck!=n_elem)
-      bomb("element count error in dumpBeamMoments()", NULL);
+      bombElegant("element count error in dumpBeamMoments()", NULL);
     prepareMomentsArray(data, elem, elem->sigmaMatrix->sigma);
     for (j=IC_S; j<N_COLUMNS; j++)
       if (!SDDS_SetRowValues(&SDDSMoments, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, 0, j, data[j], -1)) {
@@ -238,7 +238,8 @@ void setupMomentsOutput(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
   /* process namelist input */
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
-  process_namelist(&moments_output, nltext);
+  if (processNamelist(&moments_output, nltext)==NAMELIST_ERROR)
+    bombElegant(NULL, NULL);
   if (echoNamelists) print_namelist(stdout, &moments_output);
   
 #if USE_MPI
@@ -251,15 +252,15 @@ void setupMomentsOutput(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
   *doMomentsOutput = output_at_each_step;
   
   if (reference_file && matched)
-    bomb("reference_file and matched=1 are incompatible", NULL);
+    bombElegant("reference_file and matched=1 are incompatible", NULL);
   if (!matched) {
     if (reference_file) {
       if (reference_element && reference_element_occurrence<0)
-        bomb("invalid value of reference_element_occurrence---use 0 for last occurrence, >=1 for specific occurrence.", NULL);
-      bomb("reference file feature not implemented yet.", NULL);
+        bombElegant("invalid value of reference_element_occurrence---use 0 for last occurrence, >=1 for specific occurrence.", NULL);
+      bombElegant("reference file feature not implemented yet.", NULL);
     }
     if (beta_x<=0 || beta_y<=0 || beta_z<=0 || emit_x<0 || emit_y<0 || emit_z<0)
-      bomb("invalid initial beta-functions given in moments_output namelist", NULL);
+      bombElegant("invalid initial beta-functions given in moments_output namelist", NULL);
   }
 
   if (filename) {
@@ -366,7 +367,7 @@ long runMomentsOutput(RUN *run, LINE_LIST *beamline, double *startingCoord, long
     if (matched) {
       /* Use periodic lattice functions */
       if (!(beamline->flags&BEAMLINE_TWISS_DONE))
-	bomb("no twiss parameters computed for matched moments propogation", NULL);
+	bombElegant("no twiss parameters computed for matched moments propogation", NULL);
       /* Determine starting moments from twiss parameter values */
       setStartingMoments(beamline->sigmaMatrix0,
 			 emit_x, beamline->twiss0->betax, beamline->twiss0->alphax, beamline->twiss0->etax, beamline->twiss0->etapx,

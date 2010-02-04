@@ -257,7 +257,7 @@ void set_up_trwake(TRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
     wakeData->macroParticleCharge = 0;
 #if (!USE_MPI)
     if (wakeData->charge<0)
-      bomb("WAKE charge parameter should be non-negative.  Use change_particle to set particle charge state.", NULL);
+      bombElegant("WAKE charge parameter should be non-negative.  Use change_particle to set particle charge state.", NULL);
     if (particles)
       wakeData->macroParticleCharge = wakeData->charge/particles;
 #else
@@ -276,16 +276,16 @@ void set_up_trwake(TRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
   wakeData->W[0] = wakeData->W[1] = wakeData->t = NULL;
   
   if (wakeData->n_bins<2 && wakeData->n_bins!=0)
-    bomb("n_bins must be >=2 or 0 (autoscale) for TRWAKE element", NULL);
+    bombElegant("n_bins must be >=2 or 0 (autoscale) for TRWAKE element", NULL);
 
   if (!wakeData->inputFile || !wakeData->tColumn || 
       (!wakeData->WxColumn && !wakeData->WyColumn) ||
       !strlen(wakeData->inputFile) || !strlen(wakeData->tColumn))
-    bomb("supply inputFile, tColumn, and WxColumn and/or WyColumn for TRWAKE element", NULL);
+    bombElegant("supply inputFile, tColumn, and WxColumn and/or WyColumn for TRWAKE element", NULL);
   if (wakeData->WxColumn && !strlen(wakeData->WxColumn))
-    bomb("supply valid column name for WxColumn for TRWAKE element", NULL);
+    bombElegant("supply valid column name for WxColumn for TRWAKE element", NULL);
   if (wakeData->WyColumn && !strlen(wakeData->WyColumn))
-    bomb("supply valid column name for WyColumn for TRWAKE element", NULL);
+    bombElegant("supply valid column name for WyColumn for TRWAKE element", NULL);
   
   for (iw=0; iw<storedWakes; iw++) {
     if (strcmp(storedWake[iw].filename, wakeData->inputFile)==0)
@@ -378,7 +378,7 @@ void set_up_trwake(TRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
   }
   
   if (!wakeData->W[0] && !wakeData->W[1])
-    bomb("no valid wake data for TRWAKE element", NULL);
+    bombElegant("no valid wake data for TRWAKE element", NULL);
   
   find_min_max(&tmin, &tmax, wakeData->t, wakeData->wakePoints);
 #if USE_MPI
@@ -386,9 +386,9 @@ void set_up_trwake(TRWAKE *wakeData, RUN *run, long pass, long particles, CHARGE
     find_global_min_max(&tmin, &tmax, wakeData->wakePoints, workers);      
 #endif
   if (tmin==tmax)
-    bomb("no time span in TRWAKE data", NULL);
+    bombElegant("no time span in TRWAKE data", NULL);
   if (tmin!=0)
-    bomb("TRWAKE function does not start at t=0.\n", NULL);
+    bombElegant("TRWAKE function does not start at t=0.\n", NULL);
   wakeData->dt = (tmax-tmin)/(wakeData->wakePoints-1);
 }
 

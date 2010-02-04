@@ -45,7 +45,8 @@ void process_trace_request(NAMELIST_TEXT *nltext)
     /* process the namelist text */
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
-    process_namelist(&trace, nltext);
+    if (processNamelist(&trace, nltext)==NAMELIST_ERROR)
+      bombElegant(NULL, NULL);
     if (echoNamelists) print_namelist(stdout, &trace);
 
     if (record_allocation && filename)
@@ -59,7 +60,7 @@ void process_trace_request(NAMELIST_TEXT *nltext)
     trace_mode = 0;
 
     if (!filename && trace_on)
-        bomb("provide filename for program trace", NULL);
+        bombElegant("provide filename for program trace", NULL);
     if (memory_log)
         fpmem = fopen_e(memory_log, "w", 0);
     else

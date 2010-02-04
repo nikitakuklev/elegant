@@ -52,7 +52,7 @@ void concat_matrices(VMATRIX *M2, VMATRIX *M1, VMATRIX *M0, unsigned long mode)
   
   order = M2->order;
   if (M1->order<1 || M0->order<1 || order<1)
-    bomb("order<1 in concat_matrices", NULL);
+    bombElegant("order<1 in concat_matrices", NULL);
 
   M0C4 = C0[4];
   if (mode&CONCAT_EXCLUDE_S0) {

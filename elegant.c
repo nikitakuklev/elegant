@@ -224,6 +224,7 @@ char *description[N_COMMANDS] = {
 #define DEBUG 0
 
 static VARY run_control;
+static char *semaphoreFile[3];
  
 long writePermitted = 1;
 /* For serial version, isMaster and isSlave are both set to 1 */
@@ -299,7 +300,6 @@ char **argv;
   long correctionDone, linear_chromatic_tracking_setup_done = 0;
   double *starting_coord, finalCharge;
   long namelists_read = 0, failed, firstPass;
-  char *semaphoreFile[2];
   double apertureReturn;
 #if USE_MPI
 #ifdef MPI_DEBUG
@@ -312,7 +312,7 @@ char **argv;
   int ranks[1];
 #endif
 
-  semaphoreFile[0] = semaphoreFile[1] = NULL;
+  semaphoreFile[0] = semaphoreFile[1] = semaphoreFile[2] = NULL;
 
 #if USE_MPI
   MPI_Init(&argc,&argv);
@@ -392,7 +392,7 @@ char **argv;
   macros = 1;
   if (!(macroTag = malloc(sizeof(*macroTag))) ||
       !(macroValue = malloc(sizeof(*macroValue)))) 
-    bomb("memory allocation failure setting up default macro tag/value pairs", NULL);
+    bombElegant("memory allocation failure setting up default macro tag/value pairs", NULL);
   macroTag[0] = "INPUTFILENAME";
   macroValue[0] = NULL;  /* will fill in later */
 
@@ -441,7 +441,7 @@ char **argv;
         }
         if (!(macroTag=SDDS_Realloc(macroTag, sizeof(*macroTag)*(macros+scanned[i].n_items))) ||
             !(macroValue=SDDS_Realloc(macroValue, sizeof(*macroValue)*(macros+scanned[i].n_items))))
-          bomb("memory allocation failure (-macro)", NULL);
+          bombElegant("memory allocation failure (-macro)", NULL);
         else {
           long j;
           for (j=0; j<scanned[i].n_items; j++) {
@@ -548,7 +548,7 @@ char **argv;
     switch ((commandCode=match_string(namelist_text.group_name, command, N_COMMANDS, EXACT_MATCH))) {
     case CHANGE_PARTICLE:
       if (run_setuped)
-        bomb("particle command should precede run_setup", NULL);  /* to ensure nothing is inconsistent */
+        bombElegant("particle command should precede run_setup", NULL);  /* to ensure nothing is inconsistent */
       process_particle_command(&namelist_text);
       break;
     case RUN_SETUP:
@@ -567,13 +567,14 @@ char **argv;
 
       set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
       set_print_namelist_flags(0);
-      process_namelist(&run_setup, &namelist_text);
+      if (processNamelist(&run_setup, &namelist_text)==NAMELIST_ERROR)
+        bombElegant(NULL, NULL);
       if (echoNamelists) print_namelist(stdout, &run_setup);
       setSearchPath(search_path);
       /* check for validity of namelist inputs */
       if (lattice==NULL) {
         if (!saved_lattice)
-          bomb("no lattice supplied", NULL);
+          bombElegant("no lattice supplied", NULL);
         if (default_order!=last_default_order)
           delete_matrix_data(NULL);
       }
@@ -588,15 +589,15 @@ char **argv;
       }
       free_beamdata(&beam);
       if (default_order<1 || default_order>3)
-        bomb("default_order is out of range", NULL);
+        bombElegant("default_order is out of range", NULL);
       if (concat_order>3)
-        bomb("concat_order is out of range", NULL);
+        bombElegant("concat_order is out of range", NULL);
       if (p_central && p_central_mev)
-        bomb("give only one of p_central and p_central_mev", NULL);
+        bombElegant("give only one of p_central and p_central_mev", NULL);
       if (p_central_mev!=0 && p_central==0)
         p_central = p_central_mev/particleMassMV;
       if (p_central<=0 && !expand_for)
-        bomb("p_central<=0 and p_central_mev<=0", NULL);
+        bombElegant("p_central<=0 and p_central_mev<=0", NULL);
       if (expand_for)
         p_central = find_beam_p_central(expand_for);
       if (random_number_seed==0) {
@@ -673,13 +674,21 @@ char **argv;
         remove(semaphore_file);
 		
       if (semaphoreFile[0]) {
+        /* "started" */
         semaphoreFile[0] = compose_filename(semaphoreFile[0], rootname);
 	createSemaphoreFile(semaphoreFile[0]);
       }
       if (semaphoreFile[1]) {
+        /* "done" */
         semaphoreFile[1] = compose_filename(semaphoreFile[1], rootname);
         if (fexists(semaphoreFile[1]))
           remove(semaphoreFile[1]);
+      }
+      if (semaphoreFile[2]) {
+        /* "failed" */
+        semaphoreFile[2] = compose_filename(semaphoreFile[2], rootname);
+        if (fexists(semaphoreFile[2]))
+          remove(semaphoreFile[2]);
       }
       
       /* parse the lattice file and create the beamline */
@@ -719,38 +728,38 @@ char **argv;
       break;
     case RUN_CONTROL:
       if (!run_setuped)
-        bomb("run_setup must precede run_control namelist", NULL);
+        bombElegant("run_setup must precede run_control namelist", NULL);
       vary_setup(&run_control, &namelist_text, &run_conditions, beamline);
       run_control.ready = 1;
       run_controled = 1;
       break;
     case VARY_ELEMENT:
       if (!run_controled)
-        bomb("run_control must precede vary_element namelists", NULL);
+        bombElegant("run_control must precede vary_element namelists", NULL);
       if (beam_type!=-1)
-        bomb("vary_element statements must come before beam definition", NULL);
+        bombElegant("vary_element statements must come before beam definition", NULL);
       add_varied_element(&run_control, &namelist_text, &run_conditions, beamline);
       break;
     case ERROR_CONTROL:
       if (!run_setuped || !run_controled)
-        bomb("run_setup and run_control must precede error_control namelist", NULL);
+        bombElegant("run_setup and run_control must precede error_control namelist", NULL);
       if (beam_type!=-1)
-        bomb("error specifications must be completed before beam type is specified", NULL);
+        bombElegant("error specifications must be completed before beam type is specified", NULL);
       error_setup(&error_control, &namelist_text, &run_conditions, beamline);
       error_controled = 1;
       break;                    
     case ERROR_ELEMENT:
       if (beam_type!=-1)
-        bomb("error_element statements must come before beam definition", NULL);
+        bombElegant("error_element statements must come before beam definition", NULL);
       if (!error_controled)
-        bomb("error_control namelist must precede error_element namelists", NULL);
+        bombElegant("error_control namelist must precede error_element namelists", NULL);
       add_error_element(&error_control, &namelist_text, beamline);
       break;
     case CORRECTION_SETUP:
       if (!run_setuped)
-        bomb("run_setup must precede correction", NULL);
+        bombElegant("run_setup must precede correction", NULL);
       if (beam_type!=-1)
-        bomb("beam setup (bunched_beam or sdds_beam) must follow correction setup", NULL);
+        bombElegant("beam setup (bunched_beam or sdds_beam) must follow correction setup", NULL);
       correction_setuped = 1;
       correction_setup(&correct, &namelist_text, &run_conditions, beamline); 
       delete_phase_references();
@@ -767,7 +776,7 @@ char **argv;
       break;
     case SET_BUNCHED_BEAM:
       if (!run_setuped || !run_controled)
-        bomb("run_setup and run_control must precede bunched_beam namelist", NULL);
+        bombElegant("run_setup and run_control must precede bunched_beam namelist", NULL);
       setup_bunched_beam(&beam, &namelist_text, &run_conditions, &run_control, &error_control, &optimize.variables,
                          &output_data, beamline, beamline->n_elems,
                          correct.mode!=-1 && 
@@ -777,7 +786,7 @@ char **argv;
       break;
     case SET_SDDS_BEAM: 
       if (!run_setuped || !run_controled)
-        bomb("run_setup and run_control must precede sdds_beam namelist", NULL);
+        bombElegant("run_setup and run_control must precede sdds_beam namelist", NULL);
       setup_sdds_beam(&beam, &namelist_text, &run_conditions, &run_control, &error_control, 
                       &optimize.variables, &output_data, beamline, beamline->n_elems,
                       correct.mode!=-1 && 
@@ -788,18 +797,19 @@ char **argv;
     case TRACK:
       set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
       set_print_namelist_flags(0);
-      process_namelist(&track, &namelist_text);
+      if (processNamelist(&track, &namelist_text)==NAMELIST_ERROR)
+        bombElegant(NULL, NULL);
       if (echoNamelists) print_namelist(stdout, &track);
       run_conditions.stopTrackingParticleLimit = stop_tracking_particle_limit;
       if (use_linear_chromatic_matrix && 
           !(linear_chromatic_tracking_setup_done || twiss_computed || do_twiss_output))
-        bomb("you must compute twiss parameters or give linear_chromatic_tracking_setup to do linear chromatic tracking", NULL);
+        bombElegant("you must compute twiss parameters or give linear_chromatic_tracking_setup to do linear chromatic tracking", NULL);
       if (longitudinal_ring_only && !(twiss_computed || do_twiss_output))
-        bomb("you must compute twiss parameters to do longitudinal ring tracking", NULL);
+        bombElegant("you must compute twiss parameters to do longitudinal ring tracking", NULL);
       if (use_linear_chromatic_matrix && longitudinal_ring_only)
-        bomb("can't do linear chromatic tracking and longitudinal-only tracking together", NULL);
+        bombElegant("can't do linear chromatic tracking and longitudinal-only tracking together", NULL);
       if (beam_type==-1)
-        bomb("beam must be defined prior to tracking", NULL);
+        bombElegant("beam must be defined prior to tracking", NULL);
       new_beam_flags = 0;
       firstPass = 1;
       while (vary_beamline(&run_control, &error_control, &run_conditions, beamline)) {
@@ -808,7 +818,7 @@ char **argv;
         if (correct.mode!= -1) {
           if (correct.track_before_and_after || correct.start_from_centroid) {
             if (beam_type==SET_AWE_BEAM) {
-              bomb("beam type of SET_AWE_BEAM in main routine--this shouldn't happen", NULL);
+              bombElegant("beam type of SET_AWE_BEAM in main routine--this shouldn't happen", NULL);
             }
             else if (beam_type==SET_SDDS_BEAM) {
               if (new_sdds_beam(&beam, &run_conditions, &run_control, &output_data, 0)<0)
@@ -835,7 +845,7 @@ char **argv;
           }
           else if (correct.use_actual_beam) {
             if (beam_type==SET_AWE_BEAM) {
-              bomb("beam type of SET_AWE_BEAM in main routine--this shouldn't happen", NULL);
+              bombElegant("beam type of SET_AWE_BEAM in main routine--this shouldn't happen", NULL);
             }
             else if (beam_type==SET_SDDS_BEAM) {
               if (new_sdds_beam(&beam, &run_conditions, &run_control, &output_data, 0)<0)
@@ -854,7 +864,7 @@ char **argv;
           correctionDone = 1;
         }
         if (beam_type==SET_AWE_BEAM) {
-          bomb("beam type of SET_AWE_BEAM in main routine--this shouldn't happen", NULL);
+          bombElegant("beam type of SET_AWE_BEAM in main routine--this shouldn't happen", NULL);
         }
         else if (beam_type==SET_SDDS_BEAM) {
           if (new_sdds_beam(&beam, &run_conditions, &run_control, &output_data, new_beam_flags)<0)
@@ -1014,13 +1024,13 @@ char **argv;
       break;
     case MATRIX_OUTPUT:
       if (!run_setuped)
-        bomb("run_setup must precede matrix_output namelist", NULL);
+        bombElegant("run_setup must precede matrix_output namelist", NULL);
       setup_matrix_output(&namelist_text, &run_conditions, beamline);
       do_matrix_output = 1;
       break;
     case TWISS_OUTPUT:
       if (!run_setuped)
-        bomb("run_setup must precede twiss_output namelist", NULL);
+        bombElegant("run_setup must precede twiss_output namelist", NULL);
       setup_twiss_output(&namelist_text, &run_conditions, beamline, &do_twiss_output,
                          run_conditions.default_order);
       if (!do_twiss_output) {
@@ -1034,7 +1044,7 @@ char **argv;
       break;
     case MOMENTS_OUTPUT:
       if (!run_setuped)
-        bomb("run_setup must precede moments_output namelist", NULL);
+        bombElegant("run_setup must precede moments_output namelist", NULL);
       setupMomentsOutput(&namelist_text, &run_conditions, beamline, &do_moments_output,
                          run_conditions.default_order);
       if (!do_moments_output) {
@@ -1048,7 +1058,7 @@ char **argv;
       break;
     case COUPLED_TWISS_OUTPUT:
       if (!run_setuped)
-        bomb("run_setup must precede coupled_twiss_output namelist", NULL);
+        bombElegant("run_setup must precede coupled_twiss_output namelist", NULL);
       setup_coupled_twiss_output(&namelist_text, &run_conditions, beamline, &do_coupled_twiss_output,
                                  run_conditions.default_order);
       if (!do_coupled_twiss_output) {
@@ -1061,12 +1071,12 @@ char **argv;
       break;
     case TUNE_SHIFT_WITH_AMPLITUDE:
       if (do_twiss_output)
-        bomb("you must give tune_shift_with_amplitude before twiss_output", NULL);
+        bombElegant("you must give tune_shift_with_amplitude before twiss_output", NULL);
       setupTuneShiftWithAmplitude(&namelist_text, &run_conditions);
       break;
     case SEMAPHORES:
       if (run_setuped)
-        bomb("you must give the semaphores command before run_setup", NULL);
+        bombElegant("you must give the semaphores command before run_setup", NULL);
       do_semaphore_setup(semaphoreFile, &namelist_text);
       break;
     case STOP:
@@ -1089,12 +1099,12 @@ char **argv;
       break;
     case OPTIMIZATION_SETUP:
       if (beam_type!=-1)
-        bomb("optimization statements must come before beam definition", NULL);
+        bombElegant("optimization statements must come before beam definition", NULL);
       do_optimization_setup(&optimize, &namelist_text, &run_conditions, beamline);
       break;
     case OPTIMIZE:
       if (beam_type==-1)
-        bomb("beam definition must come before optimize command", NULL);
+        bombElegant("beam definition must come before optimize command", NULL);
       while (vary_beamline(&run_control, &error_control, &run_conditions, beamline)) {
         do_optimize(&namelist_text, &run_conditions, &run_control, &error_control, beamline, &beam,
                     &output_data, &optimize, &chrom_corr_data, beam_type, do_closed_orbit,
@@ -1121,22 +1131,22 @@ char **argv;
       break;
     case OPTIMIZATION_VARIABLE:
       if (beam_type!=-1)
-        bomb("optimization statements must come before beam definition", NULL);
+        bombElegant("optimization statements must come before beam definition", NULL);
       add_optimization_variable(&optimize, &namelist_text, &run_conditions, beamline);
       break;
     case OPTIMIZATION_CONSTRAINT:
       if (beam_type!=-1)
-        bomb("optimization statements must come before beam definition", NULL);
+        bombElegant("optimization statements must come before beam definition", NULL);
       add_optimization_constraint(&optimize, &namelist_text, &run_conditions, beamline);
       break;
     case OPTIMIZATION_COVARIABLE:
       if (beam_type!=-1)
-        bomb("optimization statements must come before beam definition", NULL);
+        bombElegant("optimization statements must come before beam definition", NULL);
       add_optimization_covariable(&optimize, &namelist_text, &run_conditions, beamline);
       break;
     case OPTIMIZATION_TERM:
       if (beam_type!=-1)
-        bomb("optimization statements must come before beam definition", NULL);
+        bombElegant("optimization statements must come before beam definition", NULL);
       add_optimization_term(&optimize, &namelist_text, &run_conditions, beamline);
       break;
     case SAVE_LATTICE:
@@ -1425,21 +1435,21 @@ char **argv;
       break;
     case LINK_CONTROL:
       if (!run_setuped || !run_controled)
-        bomb("run_setup and run_control must precede link_control namelist", NULL);
+        bombElegant("run_setup and run_control must precede link_control namelist", NULL);
       element_link_control(&links, &namelist_text, &run_conditions, beamline);
       break;                    
     case LINK_ELEMENTS:
       if (!run_setuped || !run_controled)
-        bomb("run_setup and run_control must precede link_elements namelist", NULL);
+        bombElegant("run_setup and run_control must precede link_elements namelist", NULL);
       if (!beamline)
-        bomb("beamline not defined--can't add element links", NULL);
+        bombElegant("beamline not defined--can't add element links", NULL);
       add_element_links(&links, &namelist_text, beamline);
       links_present = 1;
       beamline->links = &links;
       break;
     case STEERING_ELEMENT:
       if (correction_setuped)
-        bomb("you must define steering elements prior to giving the 'correct' namelist", NULL);
+        bombElegant("you must define steering elements prior to giving the 'correct' namelist", NULL);
       add_steering_element(&correct, beamline, &run_conditions, &namelist_text);
       break;
     case AMPLIF_FACTORS:
@@ -1450,7 +1460,8 @@ char **argv;
     case PRINT_DICTIONARY:
       set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
       set_print_namelist_flags(0);
-      process_namelist(&print_dictionary, &namelist_text);
+      if (processNamelist(&print_dictionary, &namelist_text)==NAMELIST_ERROR)
+        bombElegant(NULL, NULL);
       if (echoNamelists) print_namelist(stdout, &print_dictionary);
       do_print_dictionary(filename, latex_form, SDDS_form);
       break;
@@ -1460,7 +1471,7 @@ char **argv;
       break;
     case CORRECTION_MATRIX_OUTPUT:
       if (!run_setuped)
-        bomb("run setup must precede correction_matrix_output namelist", NULL);
+        bombElegant("run setup must precede correction_matrix_output namelist", NULL);
       setup_correction_matrix_output(&namelist_text, &run_conditions, beamline, &correct,
                                      &do_response_output, 
                                      do_twiss_output+do_matrix_output+twiss_computed);
@@ -1474,11 +1485,11 @@ char **argv;
       break;
     case LOAD_PARAMETERS:
       if (!run_setuped)
-        bomb("run_setup must precede load_parameters namelists", NULL);
+        bombElegant("run_setup must precede load_parameters namelists", NULL);
       if (run_controled)
-        bomb("load_parameters namelists must precede run_control namelist", NULL);
+        bombElegant("load_parameters namelists must precede run_control namelist", NULL);
       if (error_controled)
-        bomb("load_parameters namelists must precede error_control and error namelists", NULL);
+        bombElegant("load_parameters namelists must precede error_control and error namelists", NULL);
       if (setup_load_parameters(&namelist_text, &run_conditions, beamline) && magnets)
         /* make sure the magnet output is right in case loading parameters changed something */
         output_magnets(magnets, lattice, beamline);
@@ -1511,56 +1522,56 @@ char **argv;
       break;
     case SASEFEL_AT_END:
       if (!run_setuped)
-        bomb("run_setup must precede sasefel namelist", NULL);
+        bombElegant("run_setup must precede sasefel namelist", NULL);
       if (beam_type!=-1)
-        bomb("sasefel namelist must precede beam definition", NULL);
+        bombElegant("sasefel namelist must precede beam definition", NULL);
       setupSASEFELAtEnd(&namelist_text, &run_conditions, &output_data);
       break;
     case ALTER_ELEMENTS:
       if (!run_setuped)
-        bomb("run_setup must precede alter_element namelist", NULL);
+        bombElegant("run_setup must precede alter_element namelist", NULL);
       do_alter_element(&namelist_text, &run_conditions, beamline);
       break;
     case SLICE_ANALYSIS:
       if (!run_setuped)
-        bomb("run_setup must precede slice_analysis namelist", NULL);
+        bombElegant("run_setup must precede slice_analysis namelist", NULL);
       if (beam_type!=-1)
-        bomb("slice_analysis namelist must precede beam definition", NULL);
+        bombElegant("slice_analysis namelist must precede beam definition", NULL);
       setupSliceAnalysis(&namelist_text, &run_conditions, &output_data);
       break;
     case DIVIDE_ELEMENTS: 
       if (run_setuped)
-        bomb("divide_elements must precede run_setup", NULL);
+        bombElegant("divide_elements must precede run_setup", NULL);
       setupDivideElements(&namelist_text, &run_conditions, beamline);
       break;
     case TRANSMUTE_ELEMENTS:
       if (run_setuped)
-        bomb("transmute_elements must precede run_setup", NULL);
+        bombElegant("transmute_elements must precede run_setup", NULL);
       setupTransmuteElements(&namelist_text, &run_conditions, beamline);
       break;
     case INSERT_SCEFFECTS:
       if (run_setuped)
-        bomb("insert_sceffects must precede run_setup", NULL);
+        bombElegant("insert_sceffects must precede run_setup", NULL);
       setupSCEffect(&namelist_text, &run_conditions, beamline);
       break;
     case INSERT_ELEMENTS:
       if (!run_setuped)
-        bomb("run_setup must precede insert_element namelist", NULL);
+        bombElegant("run_setup must precede insert_element namelist", NULL);
       do_insert_elements(&namelist_text, &run_conditions, beamline);
       break;
     case REPLACE_ELEMENTS:
       if (!run_setuped)
-        bomb("run_setup must precede replace_element namelist", NULL);
+        bombElegant("run_setup must precede replace_element namelist", NULL);
       do_replace_elements(&namelist_text, &run_conditions, beamline);
       break;
     case TOUSCHEK_SCATTER:
       if (!run_setuped)
-        bomb("run_setup must precede touschek_scatter namelist", NULL);
+        bombElegant("run_setup must precede touschek_scatter namelist", NULL);
       TouschekEffect(&namelist_text, &run_conditions, beamline);
       break;
     case TWISS_ANALYSIS:
       if (do_twiss_output)
-        bomb("twiss_analysis must come before twiss_output", NULL);
+        bombElegant("twiss_analysis must come before twiss_output", NULL);
       setupTwissAnalysisRequest(&namelist_text, &run_conditions, beamline);
       break;
     case APERTURE_INPUT:
@@ -1569,9 +1580,9 @@ char **argv;
       break;
     case LINEAR_CHROMATIC_TRACKING_SETUP:
       if (do_twiss_output)
-        bomb("you can't give twiss_output and linear_chromatic_tracking_setup together", NULL);
+        bombElegant("you can't give twiss_output and linear_chromatic_tracking_setup together", NULL);
       if (!run_setuped)
-        bomb("run_setup must precede linear_chromatic_tracking_setup", NULL);
+        bombElegant("run_setup must precede linear_chromatic_tracking_setup", NULL);
       setupLinearChromaticTracking(&namelist_text, beamline);
       linear_chromatic_tracking_setup_done = 1;
       break;
@@ -1784,12 +1795,12 @@ void do_print_dictionary(char *filename, long latex_form, long SDDS_form)
   DICTIONARY_ENTRY *dictList;
   
   if (!filename)
-    bomb("filename invalid (do_print_dictionary)", NULL);
+    bombElegant("filename invalid (do_print_dictionary)", NULL);
   if (latex_form && SDDS_form)
-    bomb("give latex_form=1 or SDDS_form=1, not both", NULL); 
+    bombElegant("give latex_form=1 or SDDS_form=1, not both", NULL); 
 
   if (!(dictList = malloc(sizeof(*dictList)*N_TYPES)))
-    bomb("memory allocation failure", NULL);
+    bombElegant("memory allocation failure", NULL);
   for (i=1; i<N_TYPES; i++) {
     dictList[i-1].elementName = entity_name[i];
     dictList[i-1].index = i;
@@ -2124,15 +2135,18 @@ void do_semaphore_setup(char **semaphoreFile,
   
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
-  process_namelist(&semaphores, nltext);
+  if (processNamelist(&semaphores, nltext)==NAMELIST_ERROR)
+    bombElegant("Problem processing semaphores command", NULL);
   if (echoNamelists) print_namelist(stdout, &semaphores);
  
-  semaphoreFile[0] = semaphoreFile[1] = NULL;
+  semaphoreFile[0] = semaphoreFile[1] = semaphoreFile[2] = NULL;
   if (writePermitted) {
     if (started)
       SDDS_CopyString(&semaphoreFile[0], started);
     if (done)
       SDDS_CopyString(&semaphoreFile[1], done);
+    if (failed)
+      SDDS_CopyString(&semaphoreFile[2], failed);
   }
 }
 
@@ -2173,7 +2187,8 @@ void readApertureInput(NAMELIST_TEXT *nltext, RUN *run)
 
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
-  process_namelist(&aperture_data, nltext);
+  if (processNamelist(&aperture_data, nltext)==NAMELIST_ERROR)
+    bombElegant(NULL, NULL);
   if (echoNamelists) print_namelist(stdout, &aperture_data);
 
   resetApertureData(&(run->apertureData));
@@ -2387,7 +2402,8 @@ void process_particle_command(NAMELIST_TEXT *nltext)
   
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
-  process_namelist(&change_particle, nltext);
+  if (processNamelist(&change_particle, nltext)==NAMELIST_ERROR)
+    bombElegant(NULL, NULL);
   if (echoNamelists) print_namelist(stdout, &change_particle);
 
   code = match_string(change_particle_struct.name, particleTypeName, N_PARTICLE_TYPES, EXACT_MATCH);
@@ -2419,7 +2435,7 @@ void process_particle_command(NAMELIST_TEXT *nltext)
       break;
     case TYPE_OTHER:
       if (change_particle_struct.mass_ratio<=0 || change_particle_struct.charge_ratio==0)
-        bomb("Must have mass_ratio>0 and charge_ratio nonzero", NULL);
+        bombElegant("Must have mass_ratio>0 and charge_ratio nonzero", NULL);
       particleMass = mass[TYPE_ELECTRON]*change_particle_struct.mass_ratio;
       /* minus sign is a legacy of time when this was an electron-only code */
       particleCharge = -charge[TYPE_ELECTRON]*change_particle_struct.charge_ratio;
@@ -2451,7 +2467,8 @@ void processGlobalSettings(NAMELIST_TEXT *nltext)
 {
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
-  process_namelist(&global_settings, nltext);
+  if (processNamelist(&global_settings, nltext)==NAMELIST_ERROR)
+    bombElegant(NULL, NULL);
   if (echoNamelists) print_namelist(stdout, &global_settings);
 
   inhibitFileSync = inhibit_fsync;
@@ -2462,4 +2479,14 @@ void processGlobalSettings(NAMELIST_TEXT *nltext)
     freopen(error_log_file, "w", stderr);
 }
 
+void bombElegant(char *error, char *usage)
+{
+  if (error)
+    fprintf(stderr, "error: %s\n", error);
+  if (usage)
+    fprintf(stderr, "usage: %s\n", usage);
+  if (semaphoreFile[2]) 
+    createSemaphoreFile(semaphoreFile[2]);
+  exit(1);
+}
 

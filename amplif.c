@@ -62,7 +62,8 @@ void compute_amplification_factors(
   /* process namelist input */
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
-  process_namelist(&amplification_factors, nltext);
+  if (processNamelist(&amplification_factors, nltext)==NAMELIST_ERROR)
+    bombElegant(NULL, NULL);
   if (echoNamelists) print_namelist(stdout, &amplification_factors);
 
   if (plane)
@@ -89,7 +90,7 @@ void compute_amplification_factors(
       fprintf(stdout, "warning: no exact match for type %s\n", type);
       fflush(stdout);
       if ((type_code=match_string(type, entity_name, N_TYPES, DCL_STYLE_MATCH|RETURN_FIRST_MATCH))<0)
-        bomb("unknown type name", NULL);
+        bombElegant("unknown type name", NULL);
       fprintf(stdout, "assuming that you meant type %s\n", entity_name[type_code]);
       fflush(stdout);
       cp_str(&type, entity_name[type_code]);
@@ -101,12 +102,12 @@ void compute_amplification_factors(
     str_toupper(name);
 
   if (!type && !name)
-    bomb("at least one of type and name must be defined", NULL);
+    bombElegant("at least one of type and name must be defined", NULL);
   if (!item)
-    bomb("item must be given", NULL);
+    bombElegant("item must be given", NULL);
   str_toupper(item);
   if (type_code!=-1 && !confirm_parameter(item, type_code))
-    bomb("specified element type does not have specified item as a parameter", NULL);
+    bombElegant("specified element type does not have specified item as a parameter", NULL);
 
   if (fpout)
     fclose(fpout);
@@ -124,7 +125,7 @@ void compute_amplification_factors(
     fpkf = fopen_e(kick_function = compose_filename(kick_function, run->rootname), "w", 0);
 
   if (number_to_do>0 && maximum_z>0)
-    bomb("only one of number_to_do and maximum_z may be positive", NULL);
+    bombElegant("only one of number_to_do and maximum_z may be positive", NULL);
 
   if (type_code==-1) {
     eptr = NULL;
@@ -134,7 +135,7 @@ void compute_amplification_factors(
         break;
     }
     if (iparam<0 || !eptr)
-      bomb("no element exists of given name with given item as a parameter", NULL);
+      bombElegant("no element exists of given name with given item as a parameter", NULL);
   }
   else {
     eptr = &(beamline->elem);
@@ -142,12 +143,12 @@ void compute_amplification_factors(
       if (eptr->type==type_code) {
         if ((iparam=confirm_parameter(item, eptr->type))>=0)
           break;
-        bomb("elements of the given type do not have the given item as a parameter", NULL);
+        bombElegant("elements of the given type do not have the given item as a parameter", NULL);
       }
       eptr = eptr->succ;
     }
     if (!eptr)
-      bomb("no items of the given type exist in the beamline", NULL);
+      bombElegant("no items of the given type exist in the beamline", NULL);
   }
 
   /* prepare labels */
@@ -171,15 +172,15 @@ void compute_amplification_factors(
     fputs("Amplification factors with correction for", stdout);
     if (fpuof) {
       if (correct->n_xy_cycles!=1)
-        bomb("n_xy_cycles!=1--can't provide uncorrected amplification function\nuse separate run or set n_xy_cycles=1", NULL);
+        bombElegant("n_xy_cycles!=1--can't provide uncorrected amplification function\nuse separate run or set n_xy_cycles=1", NULL);
     }
   }
   else {
     fputs("Amplification factors", stdout);
     if (fpcof)
-      bomb("can't compute corrected-orbit amplification function if you don't do correction", NULL);
+      bombElegant("can't compute corrected-orbit amplification function if you don't do correction", NULL);
     if (fpkf)
-      bomb("can't compute kick function if you don't do orbit correction", NULL);
+      bombElegant("can't compute kick function if you don't do orbit correction", NULL);
   }
 
   description[0] = 0;
@@ -289,7 +290,7 @@ void compute_amplification_factors(
     fprintf(stdout, "\nWorking on element %s#%ld at z=%em\n", eptr->name, eptr->occurence, eptr->end_pos);
     fflush(stdout);
     if (entity_description[eptr->type].parameter[iparam].type!=IS_DOUBLE)
-      bomb("item is not floating-point type", NULL);
+      bombElegant("item is not floating-point type", NULL);
 
     original_value = *((double*)(eptr->p_elem+entity_description[eptr->type].parameter[iparam].offset));
     *((double*)(eptr->p_elem+entity_description[eptr->type].parameter[iparam].offset)) += change;
@@ -304,7 +305,7 @@ void compute_amplification_factors(
 
     if (correct->mode!=-1) {
       if (!do_correction(correct, run, beamline, NULL, NULL, 0, 1))
-        bomb("correction failed", NULL);
+        bombElegant("correction failed", NULL);
       traj  = correct->traj[0];
       trajc = correct->traj[2];
     }
@@ -326,7 +327,7 @@ void compute_amplification_factors(
       fill_double_array(*one_part, 7, 0.0);
       if (!do_tracking(NULL, one_part, n_part, NULL, beamline, &p, (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
                        traj, run, 0, TEST_PARTICLES+TIME_DEPENDENCE_OFF, 1, 0, NULL, NULL, NULL, NULL, NULL))
-        bomb("tracking failed for test particle (compute_amplification_factors)", NULL);
+        bombElegant("tracking failed for test particle (compute_amplification_factors)", NULL);
     }
 
     *((double*)(eptr->p_elem+entity_description[eptr->type].parameter[iparam].offset)) = original_value;

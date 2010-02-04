@@ -62,7 +62,8 @@ void setup_bunched_beam(
   /* process namelist input */
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
-  process_namelist(&bunched_beam, nltext);
+  if (processNamelist(&bunched_beam, nltext)==NAMELIST_ERROR)
+    bombElegant(NULL, NULL);
   if (Po<=0)
     Po = run->p_central;
   if (use_twiss_command_values) {
@@ -70,7 +71,7 @@ void setup_bunched_beam(
     long mode;
     
     if (!get_twiss_mode(&mode, &twiss) || mode!=0)
-      bomb("use_twiss_command_values invalid unless twiss_output command given previously with matched=0 or in action mode with matched=1.",
+      bombElegant("use_twiss_command_values invalid unless twiss_output command given previously with matched=0 or in action mode with matched=1.",
            NULL);
     beta_x = twiss.betax;
     alpha_x = twiss.alphax;
@@ -90,7 +91,7 @@ void setup_bunched_beam(
   if (emit_ny && !emit_y)
     emit_y = emit_ny/Po;
   if (n_particles_per_bunch<=0)
-    bomb("n_particles_per_bunch is invalid", NULL);
+    bombElegant("n_particles_per_bunch is invalid", NULL);
 #if SDDS_MPI_IO
   beam->n_original_total = beam->n_to_track_total = n_particles_per_bunch; /* record the total number of particles being tracked */
   if (n_particles_per_bunch == 1) /* a special case for single particle tracking */
@@ -109,44 +110,44 @@ void setup_bunched_beam(
   }
 #endif
   if (emit_x<0 || beta_x<=0)
-    bomb("emit_x<=0 or beta_x<=0", NULL);
+    bombElegant("emit_x<=0 or beta_x<=0", NULL);
   if (emit_y<0 || beta_y<=0)
-    bomb("emit_y<=0 or beta_y<=0", NULL);
+    bombElegant("emit_y<=0 or beta_y<=0", NULL);
   if (sigma_dp<0 || sigma_s<0) 
-    bomb("sigma_dp<0 or sigma_s<0", NULL);
+    bombElegant("sigma_dp<0 or sigma_s<0", NULL);
   if (fabs(dp_s_coupling)>1)
-    bomb("|dp_s_coupling| > 1", NULL);
+    bombElegant("|dp_s_coupling| > 1", NULL);
   if (emit_z<0)
-    bomb("emit_z < 0", NULL);
+    bombElegant("emit_z < 0", NULL);
   if (beta_z<0)
-    bomb("beta_z < 0", NULL);
+    bombElegant("beta_z < 0", NULL);
   if (emit_z && (sigma_dp || sigma_s)) 
-    bomb("give emit_z or both sigma_dp and sigma_s", NULL);
+    bombElegant("give emit_z or both sigma_dp and sigma_s", NULL);
   if (emit_z && beta_z<=0)
-    bomb("give beta_z with emit_z", NULL);
+    bombElegant("give beta_z with emit_z", NULL);
   if ( ((alpha_z?1:0)+(dp_s_coupling?1:0)+(momentum_chirp?1:0))>1)
-    bomb("give only one of alpha_z, dp_s_coupling, or momentum_chirp", NULL);
+    bombElegant("give only one of alpha_z, dp_s_coupling, or momentum_chirp", NULL);
   if (emit_z && dp_s_coupling)
-    bomb("give alpha_z not dp_s_coupling with emit_z", NULL);
+    bombElegant("give alpha_z not dp_s_coupling with emit_z", NULL);
   
   if (!distribution_type[0] || 
       (x_beam_type=match_string(distribution_type[0], beam_type, 
                                 N_BEAM_TYPES, 0))<0)
-    bomb("missing or unknown x distribution type", NULL);
+    bombElegant("missing or unknown x distribution type", NULL);
   if (!distribution_type[1] || 
       (y_beam_type=match_string(distribution_type[1], beam_type,
                                 N_BEAM_TYPES, 0))<0)
-    bomb("missing or unknown y distribution type", NULL);
+    bombElegant("missing or unknown y distribution type", NULL);
   if (!distribution_type[2] ||
       (longit_beam_type=match_string(distribution_type[2], beam_type,
                                      N_BEAM_TYPES, 0))<0)
-    bomb("missing or unknown longitudinal distribution type", NULL);
+    bombElegant("missing or unknown longitudinal distribution type", NULL);
   if (distribution_cutoff[0]<0)
-    bomb("x distribution cutoff < 0", NULL);
+    bombElegant("x distribution cutoff < 0", NULL);
   if (distribution_cutoff[1]<0)
-    bomb("y distribution cutoff < 0", NULL);
+    bombElegant("y distribution cutoff < 0", NULL);
   if (distribution_cutoff[2]<0)
-    bomb("longitudinal distribution cutoff < 0", NULL);
+    bombElegant("longitudinal distribution cutoff < 0", NULL);
   if ((enforce_rms_values[0] || enforce_rms_values[1] || enforce_rms_values[2]) && n_particles_per_bunch%4)
     fputs("Note: you will get better results for enforcing RMS values if n_particles_per_bunch is divisible by 4.\n", stdout);
 
@@ -154,7 +155,7 @@ void setup_bunched_beam(
     unsigned long flags;
     flags = beamline->flags;
     if (!(control->cell = get_beamline(NULL, matched_to_cell, run->p_central, 0)))
-      bomb("unable to find beamline definition for cell", NULL);
+      bombElegant("unable to find beamline definition for cell", NULL);
     if (control->cell==beamline)
       beamline->flags = flags;
   }
@@ -235,13 +236,13 @@ void setup_bunched_beam(
       haltonID[2*i+offset] = 0;
       if (halton_sequence[i]) {
         if (halton_radix[2*i+offset]<0)
-          bomb("Radix for Halton sequence can't be negative", NULL);
+          bombElegant("Radix for Halton sequence can't be negative", NULL);
         if (haltonOpt) {
           if ((haltonID[2*i+offset] = startModHaltonSequence(&halton_radix[2*i+offset], 0.5))<0) 
-            bomb("problem starting Halton sequence", NULL);
+            bombElegant("problem starting Halton sequence", NULL);
         } else {
           if ((haltonID[2*i+offset] = startHaltonSequence(&halton_radix[2*i+offset], 0.5))<0) 
-            bomb("problem starting Halton sequence", NULL);
+            bombElegant("problem starting Halton sequence", NULL);
         }
         fprintf(stdout, "Using radix %" PRId32 " for %s Halton sequence for coordinate %ld\n",
                 halton_radix[2*i+offset], (haltonOpt?"optimized":"original"), 2*i+offset);
@@ -334,7 +335,7 @@ long new_bunched_beam(
     p_central = beam->p0_original = run->p_central;
 
     if (flags&TRACK_PREVIOUS_BUNCH && beam->original==beam->particle)
-      bomb("programming error: original beam coordinates needed but not saved", NULL);
+      bombElegant("programming error: original beam coordinates needed but not saved", NULL);
     
     if (!bunchGenerated || !save_initial_coordinates) {
       if (one_random_bunch) {
@@ -430,7 +431,7 @@ long new_bunched_beam(
 #endif
         if (bunch) {
             if (!SDDS_bunch_initialized)
-                bomb("'bunch' file is uninitialized (new_bunched_beam)", NULL);
+                bombElegant("'bunch' file is uninitialized (new_bunched_beam)", NULL);
             fprintf(stdout, "dumping bunch\n");
             fflush(stdout);
             dump_phase_space(&SDDS_bunch, beam->original, n_actual_particles, control->i_step, Po,
@@ -493,17 +494,17 @@ long track_beam(
     beam->lostOnPass = tmalloc(sizeof(*(beam->lostOnPass))*beam->n_to_track);
 
   if (!run)
-    bomb("RUN pointer is NULL (track_beam)", NULL);
+    bombElegant("RUN pointer is NULL (track_beam)", NULL);
   if (!control)
-    bomb("VARY pointer is NULL (track_beam)", NULL);
+    bombElegant("VARY pointer is NULL (track_beam)", NULL);
   if (!errcon)
-    bomb("ERROR pointer is NULL (track_beam)", NULL);
+    bombElegant("ERROR pointer is NULL (track_beam)", NULL);
   if (!beamline)
-    bomb("LINE_LIST pointer is NULL (track_beam)", NULL);
+    bombElegant("LINE_LIST pointer is NULL (track_beam)", NULL);
   if (!beam)
-    bomb("BEAM pointer is NULL (track_beam)", NULL);
+    bombElegant("BEAM pointer is NULL (track_beam)", NULL);
   if (!output)
-    bomb("OUTPUT_FILES pointer is NULL (track_beam)", NULL);
+    bombElegant("OUTPUT_FILES pointer is NULL (track_beam)", NULL);
 
   p_central = run->p_central;
 
@@ -627,7 +628,7 @@ void do_track_beam_output(RUN *run, VARY *control,
   
   if (run->output && !(flags&INHIBIT_FILE_OUTPUT)) {
     if (!output->output_initialized)
-      bomb("'output' file is uninitialized (track_beam)", NULL);
+      bombElegant("'output' file is uninitialized (track_beam)", NULL);
     if (!(flags&SILENT_RUNNING)) 
       fprintf(stdout, "Dumping output beam data..."); fflush(stdout);
       fflush(stdout);
@@ -640,7 +641,7 @@ void do_track_beam_output(RUN *run, VARY *control,
 
   if (run->acceptance && !(flags&INHIBIT_FILE_OUTPUT)) {
     if (!output->accept_initialized)
-      bomb("'acceptance' file is uninitialized (track_beam)", NULL);
+      bombElegant("'acceptance' file is uninitialized (track_beam)", NULL);
     if (!(flags&SILENT_RUNNING)) 
       fprintf(stdout, "Dumping acceptance output..."); fflush(stdout);
       fflush(stdout);
@@ -653,7 +654,7 @@ void do_track_beam_output(RUN *run, VARY *control,
 
   if (run->losses && !(flags&INHIBIT_FILE_OUTPUT)) {
     if (!output->losses_initialized)
-      bomb("'losses' file is uninitialized (track_beam)", NULL);
+      bombElegant("'losses' file is uninitialized (track_beam)", NULL);
     if (!(flags&SILENT_RUNNING)) {
       fprintf(stdout, "Dumping lost-particle data...\n"); fflush(stdout);
 #if SDDS_MPI_IO
@@ -682,9 +683,9 @@ void do_track_beam_output(RUN *run, VARY *control,
 
   if (run->centroid && !run->combine_bunch_statistics && !(flags&FINAL_SUMS_ONLY)  && !(flags&INHIBIT_FILE_OUTPUT)) {
     if (!output->centroid_initialized)
-      bomb("'centroid' file is uninitialized (track_beam)", NULL);
+      bombElegant("'centroid' file is uninitialized (track_beam)", NULL);
     if (!output->sums_vs_z)
-      bomb("missing beam sums pointer (track_beam)", NULL);
+      bombElegant("missing beam sums pointer (track_beam)", NULL);
     if (!(flags&SILENT_RUNNING)) 
       fprintf(stdout, "Dumping centroid data..."); fflush(stdout);
       fflush(stdout);
@@ -696,9 +697,9 @@ void do_track_beam_output(RUN *run, VARY *control,
 
   if (run->sigma && !run->combine_bunch_statistics && !(flags&FINAL_SUMS_ONLY) && !(flags&INHIBIT_FILE_OUTPUT)) {
     if (!output->sigma_initialized)
-      bomb("'sigma' file is uninitialized (track_beam)", NULL);
+      bombElegant("'sigma' file is uninitialized (track_beam)", NULL);
     if (!output->sums_vs_z)
-      bomb("missing beam sums pointer (track_beam)", NULL);
+      bombElegant("missing beam sums pointer (track_beam)", NULL);
     if (!(flags&SILENT_RUNNING)) 
       fprintf(stdout, "Dumping sigma data..."); fflush(stdout);
       fflush(stdout);
@@ -711,13 +712,13 @@ void do_track_beam_output(RUN *run, VARY *control,
   
   if (run->final && !run->combine_bunch_statistics) {
     if (!(M = full_matrix(&(beamline->elem), run, 1)))
-      bomb("computation of full matrix for final output failed (track_beam)", NULL);
+      bombElegant("computation of full matrix for final output failed (track_beam)", NULL);
     if (!output)
-      bomb("output pointer is NULL on attempt to write 'final' file (track_beam)", NULL);
+      bombElegant("output pointer is NULL on attempt to write 'final' file (track_beam)", NULL);
     if (!output->final_initialized)
-      bomb("'final' file is uninitialized (track_beam)", NULL);
+      bombElegant("'final' file is uninitialized (track_beam)", NULL);
     if (!output->sums_vs_z)
-      bomb("beam sums array for final output is NULL", NULL);
+      bombElegant("beam sums array for final output is NULL", NULL);
     if (!(flags&SILENT_RUNNING)) 
       fprintf(stdout, "Dumping final properties data..."); fflush(stdout);
     fflush(stdout);
@@ -836,17 +837,17 @@ void finish_output(
   log_entry("finish_output.1");
   
   if (!output)
-    bomb("null OUTPUT_FILES pointer (finish_output)", NULL);
+    bombElegant("null OUTPUT_FILES pointer (finish_output)", NULL);
   if (!run)
-    bomb("null RUN pointer (finish_output)", NULL);
+    bombElegant("null RUN pointer (finish_output)", NULL);
   if (!control)
-    bomb("null VARY pointer (finish_output)", NULL);
+    bombElegant("null VARY pointer (finish_output)", NULL);
   if (!errcon)
-    bomb("null ERROR pointer (finish_output)", NULL);
+    bombElegant("null ERROR pointer (finish_output)", NULL);
   if (!beam)
-    bomb("null BEAM pointer (finish_output)", NULL);
+    bombElegant("null BEAM pointer (finish_output)", NULL);
   if (!beamline)
-    bomb("null BEAMLINE pointer (finish_output)", NULL);
+    bombElegant("null BEAMLINE pointer (finish_output)", NULL);
 
   eptr = &(beamline->elem);
   while (eptr) {
@@ -868,22 +869,22 @@ void finish_output(
   
   if (run->centroid && run->combine_bunch_statistics) {
     if (!output->centroid_initialized)
-      bomb("'centroid' file is uninitialized (finish_output)", NULL);
+      bombElegant("'centroid' file is uninitialized (finish_output)", NULL);
     if (!output->sums_vs_z)
-      bomb("missing beam sums pointer (finish_output)", NULL);
+      bombElegant("missing beam sums pointer (finish_output)", NULL);
     dump_centroid(&output->SDDS_centroid, output->sums_vs_z, beamline, output->n_z_points, 0, beam->p0);
   }
   if (run->sigma && run->combine_bunch_statistics) {
     if (!output->sigma_initialized)
-      bomb("'sigma' file is uninitialized (finish_output)", NULL);
+      bombElegant("'sigma' file is uninitialized (finish_output)", NULL);
     if (!output->sums_vs_z)
-      bomb("missing beam sums pointer (finish_output)", NULL);
+      bombElegant("missing beam sums pointer (finish_output)", NULL);
     dump_sigma(&output->SDDS_sigma, output->sums_vs_z, beamline, output->n_z_points, 0, beam->p0);
   }
   if (run->final && run->combine_bunch_statistics) {
     VMATRIX *M;
     if (!output->final_initialized)
-      bomb("'final' file is uninitialized (track_beam)", NULL);
+      bombElegant("'final' file is uninitialized (track_beam)", NULL);
     dump_final_properties
       (&output->SDDS_final, output->sums_vs_z+output->n_z_points, 
        control->varied_quan_value, control->varied_quan_name?*control->varied_quan_name:NULL, 
@@ -902,7 +903,7 @@ void finish_output(
   log_entry("finish_output.2");
   if (run->output) {
     if (!output->output_initialized)
-      bomb("'output' file is uninitialized (finish_output)", NULL);
+      bombElegant("'output' file is uninitialized (finish_output)", NULL);
     if (!SDDS_Terminate(&output->SDDS_output)) {
       SDDS_SetError("Problem terminating 'output' file (finish_output)");
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
@@ -911,7 +912,7 @@ void finish_output(
   }
   if (run->acceptance) {
     if (!output->accept_initialized)
-      bomb("'acceptance' file is uninitialized (finish_output)", NULL);
+      bombElegant("'acceptance' file is uninitialized (finish_output)", NULL);
     if (!SDDS_Terminate(&output->SDDS_accept)) {
       SDDS_SetError("Problem terminating 'acceptance' file (finish_output)");
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -920,7 +921,7 @@ void finish_output(
   }
   if (run->centroid) {
     if (!output->centroid_initialized)
-      bomb("'centroid' file is uninitialized (finish_output)", NULL);
+      bombElegant("'centroid' file is uninitialized (finish_output)", NULL);
     if (!SDDS_Terminate(&output->SDDS_centroid)) {
       SDDS_SetError("Problem terminating 'centroid' file (finish_output)");
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -929,7 +930,7 @@ void finish_output(
   }
   if (run->sigma) {
     if (!output->sigma_initialized)
-      bomb("'sigma' file is uninitialized (finish_output)", NULL);
+      bombElegant("'sigma' file is uninitialized (finish_output)", NULL);
     if (!SDDS_Terminate(&output->SDDS_sigma)) {
       SDDS_SetError("Problem terminating 'sigma' file (finish_output)");
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -938,7 +939,7 @@ void finish_output(
   }
   if (run->final) {
     if (!output->final_initialized)
-      bomb("'final' file is uninitialized (finish_output)", NULL);
+      bombElegant("'final' file is uninitialized (finish_output)", NULL);
     if (!SDDS_Terminate(&output->SDDS_final)) {
       SDDS_SetError("Problem terminating 'final' file (finish_output)");
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -947,7 +948,7 @@ void finish_output(
   }
   if (bunch) {
     if (!SDDS_bunch_initialized)
-      bomb("'bunch' file is uninitialized (finish_output)", NULL);
+      bombElegant("'bunch' file is uninitialized (finish_output)", NULL);
     if (!SDDS_Terminate(&SDDS_bunch)) {
       SDDS_SetError("Problem terminating 'bunch' file (finish_output)");
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -956,7 +957,7 @@ void finish_output(
   }
   if (run->losses) {
     if (!output->losses_initialized)
-      bomb("'losses' file is uninitialized (finish_output)", NULL);
+      bombElegant("'losses' file is uninitialized (finish_output)", NULL);
     if (!SDDS_Terminate(&output->SDDS_losses)) {
       SDDS_SetError("Problem terminating 'losses' file (finish_output)");
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);

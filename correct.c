@@ -136,7 +136,9 @@ void correction_setup(
     /* process the namelist text */
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
-    process_namelist(&correct, nltext);
+    if (processNamelist(&correct, nltext)==NAMELIST_ERROR)
+      bombElegant(NULL, NULL);
+    
 #if USE_MPI 
     if (isSlave) {
        trajectory_output = NULL;
@@ -150,19 +152,19 @@ void correction_setup(
     
     /* check for valid input data */
     if ((_correct->mode=match_string(mode, correction_mode, N_CORRECTION_MODES, 0))<0)
-        bomb("invalid correction mode", NULL);
+        bombElegant("invalid correction mode", NULL);
     if ((_correct->method=match_string(method, correction_method, N_CORRECTION_METHODS, 0))<0)
-        bomb("invalid correction method", NULL);
+        bombElegant("invalid correction method", NULL);
     if (corrector_tweek[0]==0 || corrector_tweek[0]==0)
-        bomb("invalid corrector tweek(s)", NULL);
+        bombElegant("invalid corrector tweek(s)", NULL);
     if (corrector_limit[0]<0 || corrector_limit[1]<0 ||
         (corrector_limit[0] && corrector_limit[0]<corrector_tweek[0]) ||
         (corrector_limit[1] && corrector_limit[1]<corrector_tweek[1]) )
-        bomb("invalid corrector_limit(s)", NULL);
+        bombElegant("invalid corrector_limit(s)", NULL);
     if (correction_fraction[0]<=0 || correction_fraction[1]<=0)
-        bomb("invalid correction_fraction(s)", NULL);
+        bombElegant("invalid correction_fraction(s)", NULL);
     if (correction_accuracy[0]<0 || correction_accuracy[1]<0)
-        bomb("invalid correction_accuracy(s)", NULL);
+        bombElegant("invalid correction_accuracy(s)", NULL);
     if (trajectory_output)
         setup_orb_traj_output(trajectory_output=compose_filename(trajectory_output, run->rootname),
                     correction_mode[_correct->mode], run);
@@ -171,10 +173,10 @@ void correction_setup(
     if (corrector_output)
         setup_corrector_output(corrector_output=compose_filename(corrector_output, run->rootname), run);
     if (closed_orbit_accuracy<=0)
-        bomb("closed_orbit_accuracy must be > 0", NULL);
+        bombElegant("closed_orbit_accuracy must be > 0", NULL);
     if (closed_orbit_iteration_fraction<=0 ||
         closed_orbit_iteration_fraction>1)
-      bomb("closed_orbit_iteration_fraction must be on (0, 1]", NULL);
+      bombElegant("closed_orbit_iteration_fraction must be on (0, 1]", NULL);
     _correct->clorb_accuracy = closed_orbit_accuracy;
     _correct->clorb_iter_fraction = closed_orbit_iteration_fraction;
     _correct->verbose = verbose;
@@ -183,14 +185,14 @@ void correction_setup(
     _correct->start_from_centroid = start_from_centroid;
     _correct->use_actual_beam = use_actual_beam;
     if ((_correct->clorb_iterations=closed_orbit_iterations)<=0)
-        bomb("closed_orbit_iterations <= 0", NULL);
+        bombElegant("closed_orbit_iterations <= 0", NULL);
     if ((_correct->n_iterations = n_iterations)<0)
-        bomb("n_iterations < 0", NULL);
+        bombElegant("n_iterations < 0", NULL);
     if ((_correct->n_xy_cycles = n_xy_cycles)<0)
-        bomb("n_xy_cycles < 0", NULL);
+        bombElegant("n_xy_cycles < 0", NULL);
     _correct->minimum_cycles = minimum_cycles;
     if (threading_divisor[0]<=1 ||  threading_divisor[1]<=1)
-      bomb("threading_divisors must be >1", NULL);
+      bombElegant("threading_divisors must be >1", NULL);
 
     _correct->CMx = tmalloc(sizeof(*_correct->CMx));
     _correct->CMy = tmalloc(sizeof(*_correct->CMy));
@@ -209,10 +211,10 @@ void correction_setup(
     _correct->CMy->bpm_noise = bpm_noise[1];
     if ((_correct->CMx->bpm_noise_distribution 
          = match_string(bpm_noise_distribution[0], known_error_type, N_ERROR_TYPES, 0))<0)
-      bomb("unknown noise distribution type", NULL);
+      bombElegant("unknown noise distribution type", NULL);
     if ((_correct->CMy->bpm_noise_distribution 
          = match_string(bpm_noise_distribution[1], known_error_type, N_ERROR_TYPES, 0))<0)
-      bomb("unknown noise distribution type", NULL);
+      bombElegant("unknown noise distribution type", NULL);
     _correct->CMx->bpm_noise_cutoff = bpm_noise_cutoff[0];
     _correct->CMy->bpm_noise_cutoff = bpm_noise_cutoff[1];
     _correct->CMx->fixed_length = _correct->CMy->fixed_length = fixed_length;
@@ -224,13 +226,13 @@ void correction_setup(
     _correct->CMx->auto_limit_SVs = auto_limit_SVs[0];
     _correct->CMx->keep_largest_SVs = keep_largest_SVs[0];
     if ((_correct->CMx->minimum_SV_ratio = minimum_SV_ratio[0])>=1)
-      bomb("minimum_SV_ratio should be less than 1 to be meaningful", NULL);
+      bombElegant("minimum_SV_ratio should be less than 1 to be meaningful", NULL);
 
     _correct->CMy->remove_smallest_SVs = remove_smallest_SVs[1];
     _correct->CMy->auto_limit_SVs = auto_limit_SVs[1];
     _correct->CMy->keep_largest_SVs = keep_largest_SVs[1];
     if ((_correct->CMy->minimum_SV_ratio = minimum_SV_ratio[1])>=1) 
-      bomb("minimum_SV_ratio should be less than 1 to be meaningful", NULL);
+      bombElegant("minimum_SV_ratio should be less than 1 to be meaningful", NULL);
 
     if (verbose)
       fputs("finding correctors/monitors and/or computing correction matrices\n", stdout);
@@ -249,7 +251,7 @@ void correction_setup(
       found += add_steer_type_to_lists(&_correct->SLx, 0, T_KQUAD, item, _correct->CMx->default_tweek, 
                               _correct->CMx->corr_limit, beamline, run, 0);
       if (!found)
-        bomb("no horizontal steering elements found", NULL);
+        bombElegant("no horizontal steering elements found", NULL);
     }
     if (_correct->SLy.n_corr_types==0) {
       long found = 0;
@@ -265,7 +267,7 @@ void correction_setup(
       found += add_steer_type_to_lists(&_correct->SLy, 2, T_KQUAD, item, _correct->CMy->default_tweek, 
                               _correct->CMy->corr_limit, beamline, run, 0);
       if (!found)
-        bomb("no horizontal steering elements found", NULL);
+        bombElegant("no horizontal steering elements found", NULL);
     }
 
     if (_correct->mode==TRAJECTORY_CORRECTION) {
@@ -283,7 +285,7 @@ void correction_setup(
                               !_correct->response_only, fixed_length_matrix, verbose);
     }
     else
-      bomb("something impossible happened (correction_setup)", NULL);
+      bombElegant("something impossible happened (correction_setup)", NULL);
 
     if (n_iterations!=0) {
       /* allocate space to store before/after data for correctors and monitors */
@@ -320,22 +322,24 @@ void add_steering_element(CORRECTION *correct, LINE_LIST *beamline, RUN *run, NA
   /* process the namelist text */
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
-  process_namelist(&steering_element, nltext);
+  if (processNamelist(&steering_element, nltext)==NAMELIST_ERROR)
+    bombElegant(NULL, NULL);
+  
   if (echoNamelists) print_namelist(stdout, &steering_element);
 
   if (limit && (limit<tweek || limit<0))
-    bomb("invalid limit specified for steering element", NULL);
+    bombElegant("invalid limit specified for steering element", NULL);
 
   if (plane[0]=='h' || plane[0]=='H')  {
     if (!add_steer_elem_to_lists(&correct->SLx, 0, name, item, element_type, tweek, limit, beamline, run, 1))
-      bomb("no match to given element name or type", NULL);
+      bombElegant("no match to given element name or type", NULL);
   }
   else if (plane[0]=='v' || plane[0]=='V') {
     if (!add_steer_elem_to_lists(&correct->SLy, 2, name, item, element_type, tweek, limit, beamline, run, 1))
-      bomb("no match to given element name or type", NULL);
+      bombElegant("no match to given element name or type", NULL);
   }
   else
-    bomb("invalid plane specified for steering element", NULL);
+    bombElegant("invalid plane specified for steering element", NULL);
 }
 
 long add_steer_type_to_lists(STEERING_LIST *SL, long plane, long type, char *item, double tweek, double limit,
@@ -376,7 +380,7 @@ long add_steer_elem_to_lists(STEERING_LIST *SL, long plane, char *name, char *it
   }
 
   if (!name && !element_type)
-    bomb("NULL name and element_type passed to add_steer_elem_to_list", NULL);
+    bombElegant("NULL name and element_type passed to add_steer_elem_to_list", NULL);
   if (name) {
     str_toupper(name);
     if (has_wildcards(name) && strchr(name, '-'))
@@ -391,7 +395,7 @@ long add_steer_elem_to_lists(STEERING_LIST *SL, long plane, char *name, char *it
   }
 
   if (!item)
-    bomb("NULL item passed to add_steer_elem_to_list", NULL);
+    bombElegant("NULL item passed to add_steer_elem_to_list", NULL);
   str_toupper(item);
 
   context = NULL;
@@ -474,7 +478,7 @@ double compute_kick_coefficient(ELEMENT_LIST *elem, long plane, long type, doubl
   long param_offset=0, param_number;
 
   if ((param_number=confirm_parameter(item, type))<0 || (param_offset=find_parameter_offset(item, type))<0)
-    bomb("invalid parameter or element type (compute_kick_coefficient)", NULL);
+    bombElegant("invalid parameter or element type (compute_kick_coefficient)", NULL);
 
   switch (type) {
   case T_HCOR:
@@ -599,7 +603,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
                                run, beamline, starting_coord, (correct->use_actual_beam?beam:NULL));
           break;
         default:
-          bomb("Invalid x trajectory correction mode---this should never happen!", NULL);
+          bombElegant("Invalid x trajectory correction mode---this should never happen!", NULL);
           break;
         }
         correct->CMx->n_cycles_done = i_cycle+1;
@@ -650,7 +654,7 @@ long do_correction(CORRECTION *correct, RUN *run, LINE_LIST *beamline, double *s
                                run, beamline, starting_coord, (correct->use_actual_beam?beam:NULL));
           break;
         default:
-          bomb("Invalid y trajectory correction mode---this should never happen!", NULL);
+          bombElegant("Invalid y trajectory correction mode---this should never happen!", NULL);
           break;
         }
 
@@ -868,7 +872,7 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
   if (!do_tracking(NULL, one_part, n_part, NULL, beamline, &p, (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
                    traj0, run, 0, 
                    TEST_PARTICLES+TIME_DEPENDENCE_OFF, 1, 0, NULL, NULL, NULL, NULL, NULL))
-    bomb("tracking failed for test particle (compute_trajcor_matrices())", NULL);
+    bombElegant("tracking failed for test particle (compute_trajcor_matrices())", NULL);
 
 #ifdef  DEBUG
   i_debug = 0;
@@ -898,7 +902,7 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
     corr = CM->ucorr[i_corr];
 
     if ((i_type = find_index(corr->type, SL->corr_type, SL->n_corr_types))<0)
-      bomb("failed to find corrector type in type list", NULL);
+      bombElegant("failed to find corrector type in type list", NULL);
 
     kick_offset = SL->param_offset[i_type];
     corr_tweek  = SL->corr_tweek[i_type];
@@ -929,7 +933,7 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
     fill_double_array(*one_part, 7, 0.0);
     if (!do_tracking(NULL, one_part, n_part, NULL, beamline, &p, (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
                      traj1, run, 0, TEST_PARTICLES+TIME_DEPENDENCE_OFF, 1, 0, NULL, NULL, NULL, NULL, NULL))
-      bomb("tracking failed for test particle (compute_trajcor_matrices())", NULL);
+      bombElegant("tracking failed for test particle (compute_trajcor_matrices())", NULL);
 
 #ifdef DEBUG
     sprintf(s, "traj%c-%ld.deb", (coord==0?'x':'y'), i_debug++);
@@ -963,7 +967,7 @@ void compute_trajcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
     fill_double_array(*one_part, 7, 0.0);
     if (!do_tracking(NULL, one_part, n_part, NULL, beamline, &p, (double**)NULL, (BEAM_SUMS**)NULL, (long*)NULL,
                      traj0, run, 0, TEST_PARTICLES+TIME_DEPENDENCE_OFF, 1, 0, NULL, NULL, NULL, NULL, NULL))
-      bomb("tracking failed for test particle (compute_trajcor_matrices())", NULL);
+      bombElegant("tracking failed for test particle (compute_trajcor_matrices())", NULL);
 
     /* compute coefficients of array C that are driven by this corrector */
     corrCalibration = getCorrectorCalibration(CM->ucorr[i_corr], coord)/(2*corr_tweek);
@@ -1048,17 +1052,17 @@ long global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
   log_entry("global_trajcor_plane");
 
   if (!matrix_check(CM->C) || !matrix_check(CM->T))
-    bomb("corrupted response matrix detected (global_trajcor_plane)", NULL);
+    bombElegant("corrupted response matrix detected (global_trajcor_plane)", NULL);
   if (!CM->mon_index)
-    bomb("monitor index array is NULL (global_trajcor_plane)", NULL);
+    bombElegant("monitor index array is NULL (global_trajcor_plane)", NULL);
   if (!CM->posi)
-    bomb("monitor readout array is NULL (global_trajcor_plane)", NULL);
+    bombElegant("monitor readout array is NULL (global_trajcor_plane)", NULL);
   if (!CM->kick)
-    bomb("corrector value array is NULL (global_trajcor_plane)", NULL);
+    bombElegant("corrector value array is NULL (global_trajcor_plane)", NULL);
   if (!traject)
-    bomb("no trajectory arrays supplied (global_trajcor_plane)", NULL);
+    bombElegant("no trajectory arrays supplied (global_trajcor_plane)", NULL);
   if (!CM->T)
-    bomb("no inverse matrix computed (global_trajcor_plane)", NULL);
+    bombElegant("no inverse matrix computed (global_trajcor_plane)", NULL);
 
   Qo = matrix_get(CM->nmon, 1);   /* Vector of BPM errors */
    
@@ -1068,7 +1072,7 @@ long global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
   }
   else {
     if (beam->n_to_track==0)
-      bomb("no particles to track in global_trajcor_plane()", NULL);
+      bombElegant("no particles to track in global_trajcor_plane()", NULL);
     particle = (double**)czarray_2d(sizeof(**particle), beam->n_to_track, 7);
     tracking_flags = TEST_PARTICLES+TEST_PARTICLE_LOSSES;
   }
@@ -1080,11 +1084,11 @@ long global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
   }
   for (iteration=0; iteration<=n_iterations; iteration++) {
     if (!CM->posi[iteration])
-      bomb("monitor readout array for this iteration is NULL (global_trajcor_plane)", NULL);
+      bombElegant("monitor readout array for this iteration is NULL (global_trajcor_plane)", NULL);
     if (!CM->kick[iteration])
-      bomb("corrector value array for this iteration is NULL (global_trajcor_plane)", NULL);
+      bombElegant("corrector value array for this iteration is NULL (global_trajcor_plane)", NULL);
     if (!(traj = traject[iteration?1:0]))
-      bomb("trajectory array for this iteration is NULL (global_trajcor_plane)", NULL);
+      bombElegant("trajectory array for this iteration is NULL (global_trajcor_plane)", NULL);
 
     /* find trajectory */
     p = sqrt(sqr(run->ideal_gamma)-1);
@@ -1124,7 +1128,7 @@ long global_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
     /* find readings at monitors and add in reading errors */
     for (i_moni=0; i_moni<CM->nmon; i_moni++) {
       if (!(eptr=traj[CM->mon_index[i_moni]].elem))
-        bomb("invalid element pointer in trajectory array (global_trajcor_plane)", NULL);
+        bombElegant("invalid element pointer in trajectory array (global_trajcor_plane)", NULL);
       x = traj[CM->mon_index[i_moni]].centroid[0];
       y = traj[CM->mon_index[i_moni]].centroid[2];
       reading = computeMonitorReading(eptr, coord, x, y, 0);
@@ -1225,15 +1229,15 @@ void one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TR
   log_entry("one_to_one_trajcor_plane");
   
   if (!matrix_check(CM->C))
-    bomb("corrupted correction matrix detected (one_to_one_trajcor_plane)", NULL);
+    bombElegant("corrupted correction matrix detected (one_to_one_trajcor_plane)", NULL);
   if (!CM->mon_index)
-    bomb("monitor index array is NULL (one_to_one_trajcor_plane)", NULL);
+    bombElegant("monitor index array is NULL (one_to_one_trajcor_plane)", NULL);
   if (!CM->posi)
-    bomb("monitor readout array is NULL (one_to_one_trajcor_plane)", NULL);
+    bombElegant("monitor readout array is NULL (one_to_one_trajcor_plane)", NULL);
   if (!CM->kick)
-    bomb("corrector value array is NULL (one_to_one_trajcor_plane)", NULL);
+    bombElegant("corrector value array is NULL (one_to_one_trajcor_plane)", NULL);
   if (!traject)
-    bomb("no trajectory arrays supplied (one_to_one_trajcor_plane)", NULL);
+    bombElegant("no trajectory arrays supplied (one_to_one_trajcor_plane)", NULL);
   
   if (!beam) {
     particle = (double**)czarray_2d(sizeof(**particle), 1, 7);
@@ -1241,18 +1245,18 @@ void one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TR
   }
   else {
     if (beam->n_to_track==0)
-      bomb("no particles to track in one_to_one_trajcor_plane()", NULL);
+      bombElegant("no particles to track in one_to_one_trajcor_plane()", NULL);
     particle = (double**)czarray_2d(sizeof(**particle), beam->n_to_track, 7);
     tracking_flags = TEST_PARTICLES+TEST_PARTICLE_LOSSES;
   }
   
   for (iteration=0; iteration<=n_iterations; iteration++) {
     if (!CM->posi[iteration])
-      bomb("monitor readout array for this iteration is NULL (one_to_one_trajcor_plane)", NULL);
+      bombElegant("monitor readout array for this iteration is NULL (one_to_one_trajcor_plane)", NULL);
     if (!CM->kick[iteration])
-      bomb("corrector value array for this iteration is NULL (one_to_one_trajcor_plane)", NULL);
+      bombElegant("corrector value array for this iteration is NULL (one_to_one_trajcor_plane)", NULL);
     if (!(traj = traject[iteration?1:0]))
-      bomb("trajectory array for this iteration is NULL (one_to_one_trajcor_plane)", NULL);
+      bombElegant("trajectory array for this iteration is NULL (one_to_one_trajcor_plane)", NULL);
 
     /* record the starting trajectory */
     p = sqrt(sqr(run->ideal_gamma)-1);
@@ -1272,7 +1276,7 @@ void one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TR
                          traj, run, 0, tracking_flags, 1, 0, NULL, NULL, NULL, NULL, NULL);
     for (i_moni=0; i_moni<CM->nmon; i_moni++) {
       if (!(eptr=traj[CM->mon_index[i_moni]].elem))
-        bomb("invalid element pointer in trajectory array (one_to_one_trajcor_plane)", NULL);
+        bombElegant("invalid element pointer in trajectory array (one_to_one_trajcor_plane)", NULL);
       x = traj[CM->mon_index[i_moni]].centroid[0];
       y = traj[CM->mon_index[i_moni]].centroid[2];
       CM->posi[iteration][i_moni] = computeMonitorReading(eptr, coord, x, y, 0);
@@ -1337,7 +1341,7 @@ void one_to_one_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TR
       }
       
       if (!(eptr=traj[CM->mon_index[i_moni]].elem))
-        bomb("invalid element pointer in trajectory array (one_to_one_trajcor_plane)", NULL);
+        bombElegant("invalid element pointer in trajectory array (one_to_one_trajcor_plane)", NULL);
       x = traj[CM->mon_index[i_moni]].centroid[0];
       y = traj[CM->mon_index[i_moni]].centroid[2];
       reading = computeMonitorReading(eptr, coord, x, y, 0);
@@ -1414,20 +1418,20 @@ void thread_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
   long iScan, nScan;
 
   if (!CM->mon_index)
-    bomb("monitor index array is NULL (thread__trajcor_plane)", NULL);
+    bombElegant("monitor index array is NULL (thread__trajcor_plane)", NULL);
   if (!CM->posi)
-    bomb("monitor readout array is NULL (thread__trajcor_plane)", NULL);
+    bombElegant("monitor readout array is NULL (thread__trajcor_plane)", NULL);
   if (!CM->kick)
-    bomb("corrector value array is NULL (thread__trajcor_plane)", NULL);
+    bombElegant("corrector value array is NULL (thread__trajcor_plane)", NULL);
   if (!traject)
-    bomb("no trajectory arrays supplied (thread__trajcor_plane)", NULL);
+    bombElegant("no trajectory arrays supplied (thread__trajcor_plane)", NULL);
   
   if (!beam) {
     particle = (double**)czarray_2d(sizeof(**particle), 1, 7);
   }
   else {
     if (beam->n_to_track==0)
-      bomb("no particles to track in thread__trajcor_plane()", NULL);
+      bombElegant("no particles to track in thread__trajcor_plane()", NULL);
     particle = (double**)czarray_2d(sizeof(**particle), beam->n_to_track, 7);
   }
   tracking_flags = TEST_PARTICLES+TEST_PARTICLE_LOSSES;
@@ -1439,11 +1443,11 @@ void thread_trajcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJEC
   
   for (iteration=0; iteration<=n_iterations; iteration++) {
     if (!CM->posi[iteration])
-      bomb("monitor readout array for this iteration is NULL (thread__trajcor_plane)", NULL);
+      bombElegant("monitor readout array for this iteration is NULL (thread__trajcor_plane)", NULL);
     if (!CM->kick[iteration])
-      bomb("corrector value array for this iteration is NULL (thread__trajcor_plane)", NULL);
+      bombElegant("corrector value array for this iteration is NULL (thread__trajcor_plane)", NULL);
     if (!(traj = traject[iteration?1:0]))
-      bomb("trajectory array for this iteration is NULL (thread__trajcor_plane)", NULL);
+      bombElegant("trajectory array for this iteration is NULL (thread__trajcor_plane)", NULL);
 
     /* Establish baseline distance traveled before loss */
     p = sqrt(sqr(run->ideal_gamma)-1);
@@ -1826,7 +1830,7 @@ void compute_orbcor_matrices(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RUN
 
   /* find transfer matrix from correctors to monitors */
   if ((coef = 2*sin(htune=PIx2*beamline->tune[coord?1:0]/2))==0)
-    bomb("can't compute response matrix--beamline unstable", NULL);
+    bombElegant("can't compute response matrix--beamline unstable", NULL);
   coefFL = beamline->matrix->R[4][5];
   
   corrFactor   = tmalloc(sizeof(*corrFactor)*CM->ncor);
@@ -2001,7 +2005,7 @@ void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
     corr = CM->ucorr[i_corr];
 
     if ((i_type = find_index(corr->type, SL->corr_type, SL->n_corr_types))<0)
-      bomb("failed to find corrector type in type list", NULL);
+      bombElegant("failed to find corrector type in type list", NULL);
 
     kick_offset = SL->param_offset[i_type];
     corr_tweek  = SL->corr_tweek[i_type];
@@ -2083,15 +2087,15 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
   log_entry("orbcor_plane");
 
   if (!CM)
-    bomb("NULL CORMON_DATA pointer passed to orbcor_plane", NULL);
+    bombElegant("NULL CORMON_DATA pointer passed to orbcor_plane", NULL);
   if (!orbit)
-    bomb("NULL TRAJECTORY pointer passed to orbcor_plane", NULL);
+    bombElegant("NULL TRAJECTORY pointer passed to orbcor_plane", NULL);
   if (!run)
-    bomb("NULL RUN pointer passed to orbcor_plane", NULL);
+    bombElegant("NULL RUN pointer passed to orbcor_plane", NULL);
   if (!beamline)
-    bomb("NULL LINE_LIST pointer passed to orbcor_plane", NULL);
+    bombElegant("NULL LINE_LIST pointer passed to orbcor_plane", NULL);
   if (CM->ncor && CM->nmon && !CM->T)
-    bomb("No inverse matrix computed prior to orbcor_plane", NULL);
+    bombElegant("No inverse matrix computed prior to orbcor_plane", NULL);
 
   if (closed_orbit)
     dp = closed_orbit[5];
@@ -2128,7 +2132,7 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
         M = beamline->matrix = full_matrix(&(beamline->elem), run, 1);
     }
     if (!M || !M->R)
-      bomb("problem calculating full matrix (orbcor_plane)", NULL);
+      bombElegant("problem calculating full matrix (orbcor_plane)", NULL);
     if (iteration==1)
       for (i=0; i<6; i++)
         orbit[1][0].centroid[i] = orbit[0][0].centroid[i];
@@ -2156,7 +2160,7 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
         if (clorb[i].elem->succ)
           i++;
         else
-          bomb("missing monitor in closed orbit", NULL);
+          bombElegant("missing monitor in closed orbit", NULL);
       }
 
       x = clorb[i].centroid[0];
@@ -2482,7 +2486,7 @@ double noise_value(double xamplitude, double xcutoff, long xerror_type)
              */
             return(xamplitude*(random_3(0)>0.5?1.0:-1.0) - 1);
         default:
-            bomb("unknown error type in perturbation()", NULL);
+            bombElegant("unknown error type in perturbation()", NULL);
             exit(1);
             break;
         }
@@ -2525,7 +2529,7 @@ double computeMonitorReading(ELEMENT_LIST *elem, long coord, double x, double y,
       rotate_xy(&x, &y, tilt);   
     equation = ((HMON*)(elem->p_elem))->readout; 
     if (coord!=0)
-      bomb("element in horizontal monitor list is not a vertical monitor--internal logic error", NULL);
+      bombElegant("element in horizontal monitor list is not a vertical monitor--internal logic error", NULL);
     break;
   case T_VMON:
     x -= ((VMON*)(elem->p_elem))->dx;
@@ -2538,7 +2542,7 @@ double computeMonitorReading(ELEMENT_LIST *elem, long coord, double x, double y,
       rotate_xy(&x, &y, tilt);   
     equation = ((VMON*)(elem->p_elem))->readout; 
     if (!coord)
-      bomb("element in vertical monitor list is not a vertical monitor--internal logic error", NULL);
+      bombElegant("element in vertical monitor list is not a vertical monitor--internal logic error", NULL);
     break;
   default:
     fprintf(stdout, "error: element %s found in monitor list--internal logic error\n", 
@@ -2581,7 +2585,7 @@ double getMonitorWeight(ELEMENT_LIST *elem)
       case T_VMON:
         return ((VMON*)(elem->p_elem))->weight;
         }
-    bomb("invalid element type in getMonitorWeight()", NULL);
+    bombElegant("invalid element type in getMonitorWeight()", NULL);
 	return(1);
     }
 
@@ -2597,7 +2601,7 @@ double getMonitorCalibration(ELEMENT_LIST *elem, long coord)
             return ((MONI*)(elem->p_elem))->ycalibration;
         return ((MONI*)(elem->p_elem))->xcalibration;
         }
-    bomb("invalid element type in getMonitorCalibration()", NULL);
+    bombElegant("invalid element type in getMonitorCalibration()", NULL);
 	return(1);
     }
 
@@ -2617,7 +2621,7 @@ void setMonitorCalibration(ELEMENT_LIST *elem, double calib, long coord)
       ((MONI*)(elem->p_elem))->xcalibration = calib;
     break;
   default:
-    bomb("invalid element type in setMonitorCalibration()", NULL);
+    bombElegant("invalid element type in setMonitorCalibration()", NULL);
     break;
   }
 }

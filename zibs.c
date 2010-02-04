@@ -41,7 +41,7 @@ void IBSRate (double particles,
   long steps = STEPS; /* number of integration steps per decade */
 
   if (elements < 2)
-    bomb(NULL,"There are fewer than two elements in the twiss function arrays.\n");
+    bombElegant(NULL,"There are fewer than two elements in the twiss function arrays.\n");
 
   /* elegant give exit beam parameter. ibsEmit give input beam parameter */
   if(isElegant) {

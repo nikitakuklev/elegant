@@ -59,16 +59,17 @@ void setupFrequencyMap(
   /* process namelist input */
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
-  process_namelist(&frequency_map, nltext);
+  if (processNamelist(&frequency_map, nltext)==NAMELIST_ERROR)
+    bombElegant(NULL, NULL);
   if (echoNamelists) print_namelist(stdout, &frequency_map);
   
   /* check for data errors */
   if (!output)
-    bomb("no output filename specified", NULL);
+    bombElegant("no output filename specified", NULL);
   if (xmin>xmax)
-    bomb("xmin > xmax", NULL);
+    bombElegant("xmin > xmax", NULL);
   if (ymin>ymax)
-    bomb("ymin > ymax", NULL);
+    bombElegant("ymin > ymax", NULL);
   if (nx<1)
     nx = 1;
   if (ny<1)

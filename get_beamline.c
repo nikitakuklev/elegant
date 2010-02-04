@@ -1,4 +1,3 @@
-
 /*************************************************************************\
 * Copyright (c) 2002 The University of Chicago, as Operator of Argonne
 * National Laboratory.
@@ -91,7 +90,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
 
   if (!(s=malloc(sizeof(*s)*MAX_LINE_LENGTH)) ||
       !(t=malloc(sizeof(*s)*MAX_LINE_LENGTH)))
-    bomb("memory allocation failure (get_beamline)", NULL);
+    bombElegant("memory allocation failure (get_beamline)", NULL);
       
   if (madfile) {
     char *filename;
@@ -137,7 +136,7 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
         if (s[0]=='#' && strncmp(s, "#INCLUDE:", strlen("#INCLUDE:"))==0) {
           char *filename;
           if (++iMad==MAX_FILE_NESTING) 
-            bomb("files nested too deeply", NULL);
+            bombElegant("files nested too deeply", NULL);
           ptr = get_token(s+strlen("#INCLUDE:"));
           if (echo) {
             fprintf(stdout, "reading file %s\n", ptr);
@@ -345,14 +344,14 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
 
   if (type!=T_USE && use_beamline==NULL) {
     if (n_lines==0)
-      bomb("no beam-line defined\n", NULL);
+      bombElegant("no beam-line defined\n", NULL);
     fprintf(stdout, "no USE statement--will use line %s\n", lptr->name);
     fflush(stdout);
   }
   else {
     if (!use_beamline) {
       if ((ptr=get_token(s))==NULL) 
-        bomb("no line named in USE statement", NULL);
+        bombElegant("no line named in USE statement", NULL);
     }
     else
       ptr = str_toupper(use_beamline);
@@ -426,12 +425,12 @@ LINE_LIST *get_beamline(char *madfile, char *use_beamline, double p_central, lon
       flag = replaceElem(eptr->name, eptr->type, &skip, eptr->occurence);
       if (flag == 1) {
         if (!eptr->pred)
-          bomb("Can not replace the first element in beamline", NULL);
+          bombElegant("Can not replace the first element in beamline", NULL);
         eptr = replace_element(eptr, eptr_del);
       }
       if (flag == -1) {
         if (!eptr->pred)
-          bomb("Can not remove the first element in beamline", NULL);
+          bombElegant("Can not remove the first element in beamline", NULL);
         eptr = rm_element(eptr);
         lptr->n_elems--;
       } 
@@ -518,7 +517,7 @@ double compute_end_positions(LINE_LIST *lptr)
             theta += ((EMATRIX*)eptr->p_elem)->angle;
         else if (eptr->type==T_RECIRC) {
             if (recircPresent)
-                bomb("multiple recirculation (RECIRC) elements in beamline--this doesn't make sense", NULL);
+                bombElegant("multiple recirculation (RECIRC) elements in beamline--this doesn't make sense", NULL);
             lptr->elem_recirc = eptr;
             lptr->i_recirc = i_elem;
             z_recirc = z;
@@ -779,12 +778,13 @@ void do_save_lattice(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
   /* process the namelist text */
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
-  process_namelist(&save_lattice, nltext);
+  if (processNamelist(&save_lattice, nltext)==NAMELIST_ERROR)
+    bombElegant(NULL, NULL);
   if (echoNamelists) print_namelist(stdout, &save_lattice);
 
   /* check for valid data */
   if (filename==NULL)
-    bomb("no filename given to save lattice to", NULL);
+    bombElegant("no filename given to save lattice to", NULL);
   if (str_in(filename, "%s"))
     filename = compose_filename(filename, run->rootname);
   fp = fopen_e(filename, "w", FOPEN_INFORM_OF_OPEN);
@@ -1057,7 +1057,7 @@ void change_defined_parameter_values(char **elem_name, long *param_number, long 
         break;
       case IS_STRING:
       default:
-        bomb("unknown/invalid variable quantity", NULL);
+        bombElegant("unknown/invalid variable quantity", NULL);
         exit(1);
       }
     }
@@ -1166,7 +1166,7 @@ void change_defined_parameter_divopt(char *elem_name, long param, long elem_type
       }
       break;
     default:
-      bomb("unknown/invalid variable quantity", NULL);
+      bombElegant("unknown/invalid variable quantity", NULL);
       exit(1);
     }
   }
@@ -1187,7 +1187,7 @@ void process_rename_request(char *s, char **name, long n_names)
 
   log_entry("process_rename_request");
   if (!(ptr=strchr(s, '='))) 
-    bomb("invalid syntax for RENAME", NULL);
+    bombElegant("invalid syntax for RENAME", NULL);
   *ptr++ = 0;
   old = s;
   str_toupper(trim_spaces(old = s));

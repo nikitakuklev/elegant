@@ -29,7 +29,7 @@ void addDivisionSpec(char *name, char *type, char *exclude,
   if (!(divisionSpec 
 	= SDDS_Realloc(divisionSpec,
 		       sizeof(*divisionSpec)*(divisionSpecs+1))))
-    bomb("memory allocation failure", NULL);
+    bombElegant("memory allocation failure", NULL);
   divisionSpec[divisionSpecs].name = NULL;
   divisionSpec[divisionSpecs].type = NULL;
   divisionSpec[divisionSpecs].exclude = NULL;
@@ -41,7 +41,7 @@ void addDivisionSpec(char *name, char *type, char *exclude,
        !SDDS_CopyString(&divisionSpec[divisionSpecs].type, type)) ||
       (exclude &&
        !SDDS_CopyString(&divisionSpec[divisionSpecs].exclude, exclude)))
-    bomb("memory allocation failure", NULL);
+    bombElegant("memory allocation failure", NULL);
   
   divisionSpecs++;
 }
@@ -77,7 +77,7 @@ long elementDivisions(char *name, char *type, double length)
 	return 1;
       return div;
     }
-    bomb("Invalid division specification seen.  This shouldn't happen.", 
+    bombElegant("Invalid division specification seen.  This shouldn't happen.", 
 	 NULL);
   }
   return 1;
@@ -92,7 +92,8 @@ void setupDivideElements(NAMELIST_TEXT *nltext, RUN *run,
   /* process the namelist text */
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
-  process_namelist(&divide_elements, nltext);
+  if (processNamelist(&divide_elements, nltext)==NAMELIST_ERROR)
+    bombElegant(NULL, NULL);
   if (echoNamelists) print_namelist(stdout, &divide_elements);
 
   if (clear) {
@@ -102,13 +103,13 @@ void setupDivideElements(NAMELIST_TEXT *nltext, RUN *run,
   }
 
   if (divisions<=0 && maximum_length<=0)
-    bomb("either divisions or maximum_length must be positive", NULL);
+    bombElegant("either divisions or maximum_length must be positive", NULL);
   if (divisions<0)
-    bomb("divisions<0 doesn't make sense", NULL);
+    bombElegant("divisions<0 doesn't make sense", NULL);
   if (maximum_length<0)
-    bomb("maximum_length<0 doesn't make sense", NULL);
+    bombElegant("maximum_length<0 doesn't make sense", NULL);
   if (!name || !strlen(name))
-    bomb("no name given", NULL);
+    bombElegant("no name given", NULL);
   str_toupper(name);
   if (has_wildcards(name) && strchr(name, '-'))
     name = expand_ranges(name);
@@ -120,7 +121,7 @@ void setupDivideElements(NAMELIST_TEXT *nltext, RUN *run,
       if (wild_match(entity_name[i], type))
 	break;
     if (i==N_TYPES)
-      bomb("type pattern does not match any known type", NULL);
+      bombElegant("type pattern does not match any known type", NULL);
   }
   if (exclude) {
     str_toupper(exclude);

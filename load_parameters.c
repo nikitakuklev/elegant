@@ -71,7 +71,8 @@ long setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
   /* process the namelist text */
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
-  process_namelist(&load_parameters, nltext);
+  if (processNamelist(&load_parameters, nltext)==NAMELIST_ERROR)
+    bombElegant(NULL, NULL);
   if (echoNamelists) print_namelist(stdout, &load_parameters);
 
   if (filename_list && strlen(filename_list)) {
@@ -79,14 +80,14 @@ long setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
   }
   else {
     if (!filename && !clear_settings)
-      bomb("filename or filename_list must be given for load_parameters unless you are clearing settings", NULL);
+      bombElegant("filename or filename_list must be given for load_parameters unless you are clearing settings", NULL);
     fprintf(stdout, "Using single filename for parameter loading\n");
   }
 
   if (clear_settings && load_requests) {
     for (i=0; i<load_requests; i++) {
       if (!SDDS_Terminate(&load_request[i].table))
-        bomb("problem terminating load_parameters table", NULL);
+        bombElegant("problem terminating load_parameters table", NULL);
     }
     load_requests = 0;
   }

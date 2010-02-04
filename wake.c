@@ -253,7 +253,7 @@ void set_up_wake(WAKE *wakeData, RUN *run, long pass, long particles, CHARGE *ch
   } else if (pass==0) {
     wakeData->macroParticleCharge = 0;
     if (wakeData->charge<0)
-      bomb("WAKE charge parameter should be non-negative.  Use change_particle to set particle charge state.", NULL);
+      bombElegant("WAKE charge parameter should be non-negative.  Use change_particle to set particle charge state.", NULL);
 #if (!USE_MPI)
     if (particles)
       wakeData->macroParticleCharge = wakeData->charge/particles;
@@ -275,14 +275,14 @@ void set_up_wake(WAKE *wakeData, RUN *run, long pass, long particles, CHARGE *ch
   wakeData->W = wakeData->t = NULL;
 
   if (wakeData->n_bins<2 && wakeData->n_bins!=0)
-    bomb("n_bins must be >=2 or else 0 (autoscale) for WAKE element", NULL);
+    bombElegant("n_bins must be >=2 or else 0 (autoscale) for WAKE element", NULL);
 
   if (!wakeData->inputFile || !strlen(wakeData->inputFile))
-    bomb("supply inputFile for WAKE element", NULL);
+    bombElegant("supply inputFile for WAKE element", NULL);
   if (!wakeData->tColumn || !strlen(wakeData->tColumn))
-    bomb("supply tColumn for WAKE element", NULL);
+    bombElegant("supply tColumn for WAKE element", NULL);
   if (!wakeData->WColumn || !strlen(wakeData->WColumn))
-    bomb("supply WColumn for WAKE element", NULL);
+    bombElegant("supply WColumn for WAKE element", NULL);
   
   for (iw=0; iw<storedWakes; iw++) {
     if (strcmp(storedWake[iw].filename, wakeData->inputFile)==0)

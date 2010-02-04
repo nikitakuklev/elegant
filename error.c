@@ -39,7 +39,8 @@ void error_setup(ERRORVAL *errcon, NAMELIST_TEXT *nltext, RUN *run_cond, LINE_LI
     /* process namelist text */
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
-    process_namelist(&error_control, nltext);
+    if (processNamelist(&error_control, nltext)==NAMELIST_ERROR)
+      bombElegant(NULL, NULL);
     if (echoNamelists) print_namelist(stdout, &error_control);
 
     if (summarize_error_settings) {
@@ -132,30 +133,31 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
 
     if ((n_items = errcon->n_items)==0) {
         if (errcon->new_data_read)
-            bomb("improper sequencing of error specifications and tracking", NULL);
+            bombElegant("improper sequencing of error specifications and tracking", NULL);
         errcon->new_data_read = 1;
         }
 
     /* process namelist text */
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
-    process_namelist(&error, nltext);
+    if (processNamelist(&error, nltext)==NAMELIST_ERROR)
+      bombElegant(NULL, NULL);
     if (name==NULL) {
       if (!element_type)
-        bomb("element name missing in error namelist", NULL);
+        bombElegant("element name missing in error namelist", NULL);
       SDDS_CopyString(&name, "*");
     }
     if (echoNamelists) print_namelist(stdout, &error);
 
     /* check for valid input and copy to errcon arrays */
     if (item==NULL)
-        bomb("item name missing in error namelist", NULL);
+        bombElegant("item name missing in error namelist", NULL);
     if (match_string(type, known_error_type, N_ERROR_TYPES, 0)<0)
-        bomb("unknown error type specified", NULL);
+        bombElegant("unknown error type specified", NULL);
     if (bind_number<0)
-        bomb("bind_number < 0", NULL);
+        bombElegant("bind_number < 0", NULL);
     if (!additive && fractional)
-        bomb("fractional errors must be additive", NULL);
+        bombElegant("fractional errors must be additive", NULL);
 
     context = NULL;
     n_added = 0;
@@ -385,7 +387,7 @@ double parameter_value(char *pname, long elem_type, long param, LINE_LIST *beaml
                 return((double)lresult);
             case IS_STRING:
             default:
-                bomb("unknown/invalid variable quantity", NULL);
+                bombElegant("unknown/invalid variable quantity", NULL);
                 exit(1);
             }
         }
@@ -407,7 +409,7 @@ double perturbation(double xamplitude, double xcutoff, long xerror_type)
             /* return either -x or x */ 
             return(xamplitude*(random_1_elegant(0)>0.5?1.0:-1.0));
         default:
-            bomb("unknown error type in perturbation()", NULL);
+            bombElegant("unknown error type in perturbation()", NULL);
             exit(1);
             break;
         }

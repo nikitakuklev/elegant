@@ -50,13 +50,13 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
   double eta[4];
 
   if (IBS->nslice<1) 
-    bomb("NSLICE has to be an integer >= 1", NULL);
+    bombElegant("NSLICE has to be an integer >= 1", NULL);
   if (charge)
     IBS->charge = charge->macroParticleCharge*np;
   if (!IBS->charge)
-    bomb("bunch charge is not given", NULL);
+    bombElegant("bunch charge is not given", NULL);
   if (IBS->isRing && IBS->nslice>1)
-    bomb("no slice valid for ring beam. NSLICE has to be 1", NULL);
+    bombElegant("no slice valid for ring beam. NSLICE has to be 1", NULL);
 
   if (!IBS->s)
     init_IBS(element);
@@ -287,7 +287,7 @@ void init_IBS(ELEMENT_LIST *element)
   TWISS *tp;
   
   if (!element->twiss) 
-    bomb("Twiss parameters must be calculated befor IBS tracking.", NULL);
+    bombElegant("Twiss parameters must be calculated befor IBS tracking.", NULL);
 
   /* Find out start point of ring */
   element0 = elementStartRing = element;
@@ -332,7 +332,7 @@ void init_IBS(ELEMENT_LIST *element)
       IBS = (IBSCATTER*)element->p_elem; 
       IBS->revolutionLength = delta_s;
       if (nElements<2) 
-        bomb("you need at least 2 other elements between IBSCATTERS, check twiss file for clue", NULL);
+        bombElegant("you need at least 2 other elements between IBSCATTERS, check twiss file for clue", NULL);
       IBS->dT = dt;
       dt = delta_s = 0.;
       IBS->elements = nElements;
@@ -343,12 +343,12 @@ void init_IBS(ELEMENT_LIST *element)
       if (!(IBS->name = SDDS_Calloc(nElements,  sizeof(*(IBS->name)))) ||
           !(IBS->s = SDDS_Calloc(nElements, sizeof(*(IBS->s)))) ||
           !(IBS->pCentral = SDDS_Calloc(nElements, sizeof(*(IBS->pCentral)))))
-        bomb("memory allocation failure in init_IBS", NULL);
+        bombElegant("memory allocation failure in init_IBS", NULL);
       if (!(IBS->etax = SDDS_Realloc(IBS->etax, sizeof(*(IBS->etax))*nElements)) ||
           !(IBS->etaxp = SDDS_Realloc(IBS->etaxp, sizeof(*(IBS->etaxp))*nElements)) ||
           !(IBS->etay = SDDS_Realloc(IBS->etay, sizeof(*(IBS->etay))*nElements)) ||
           !(IBS->etayp = SDDS_Realloc(IBS->etayp, sizeof(*(IBS->etayp))*nElements)))
-        bomb("memory allocation failure in init_IBS", NULL);
+        bombElegant("memory allocation failure in init_IBS", NULL);
       if (!(IBS->icharge = SDDS_Realloc(IBS->icharge, sizeof(*(IBS->icharge))*IBS->nslice)) ||
           !(IBS->emitx0 = SDDS_Realloc(IBS->emitx0, sizeof(*(IBS->emitx0))*IBS->nslice)) ||
           !(IBS->emity0 = SDDS_Realloc(IBS->emity0, sizeof(*(IBS->emity0))*IBS->nslice)) ||
@@ -363,7 +363,7 @@ void init_IBS(ELEMENT_LIST *element)
           !(IBS->xGrowthRate = SDDS_Realloc(IBS->xGrowthRate, sizeof(*(IBS->xGrowthRate))*IBS->nslice)) ||
           !(IBS->yGrowthRate = SDDS_Realloc(IBS->yGrowthRate, sizeof(*(IBS->yGrowthRate))*IBS->nslice)) ||
           !(IBS->zGrowthRate = SDDS_Realloc(IBS->zGrowthRate, sizeof(*(IBS->zGrowthRate))*IBS->nslice)))
-        bomb("memory allocation failure in init_IBS", NULL);
+        bombElegant("memory allocation failure in init_IBS", NULL);
       if (!(IBS->betax = (double**)czarray_2d(sizeof(double), IBS->nslice, nElements)) ||
           !(IBS->alphax = (double**)czarray_2d(sizeof(double), IBS->nslice, nElements)) ||
           !(IBS->betay = (double**)czarray_2d(sizeof(double), IBS->nslice, nElements)) ||
@@ -371,7 +371,7 @@ void init_IBS(ELEMENT_LIST *element)
           !(IBS->xRateVsS = (double**)czarray_2d(sizeof(double), IBS->nslice, nElements)) ||
           !(IBS->yRateVsS = (double**)czarray_2d(sizeof(double), IBS->nslice, nElements)) ||
           !(IBS->zRateVsS = (double**)czarray_2d(sizeof(double), IBS->nslice, nElements)))
-        bomb("memory allocation failure in init_IBS", NULL);
+        bombElegant("memory allocation failure in init_IBS", NULL);
 
       for (i=0; i<IBS->elements; i++) {
         cp_str(&IBS->name[i], elementStartRing->name);
@@ -422,7 +422,7 @@ void init_IBS(ELEMENT_LIST *element)
   
   if (isRing)
     if (finalPos != IBS->s[IBS->elements-1])
-      bomb("You must have IBSCATTER at the end of the RING", NULL);
+      bombElegant("You must have IBSCATTER at the end of the RING", NULL);
   element = element0;
   return;
 }
@@ -493,7 +493,7 @@ void slicebeam(double **coord, long np, double Po, long nslice, long *index, lon
     tMin = tMax;
   }
   if (total !=np)
-    bomb("ibs: slice-beam, total is not equal to np. Report it to code developer", NULL);
+    bombElegant("ibs: slice-beam, total is not equal to np. Report it to code developer", NULL);
   free(time);
   return;
 }

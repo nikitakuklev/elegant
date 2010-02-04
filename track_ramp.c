@@ -46,7 +46,7 @@ void track_through_ramped_deflector(
             ramp_param->n_sections = 10;
         ramp_param->initialized = 1;
         if (ramp_param->gap==0 || ramp_param->ramp_time==0) 
-            bomb("RMDF cannot have gap=0 or ramp_time=0", NULL);
+            bombElegant("RMDF cannot have gap=0 or ramp_time=0", NULL);
         }
 
     t_null = ramp_param->t_first_particle + ramp_param->time_offset;

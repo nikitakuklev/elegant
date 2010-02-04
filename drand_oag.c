@@ -34,7 +34,7 @@ double random_1_elegant(long iseed)
         initialized = 1;
         }
     if (!initialized)
-        bomb("random_1_elegant not properly initialized", NULL);
+        bombElegant("random_1_elegant not properly initialized", NULL);
 
     return dlaran_OAG(seed);
 

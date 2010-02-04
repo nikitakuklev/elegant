@@ -117,7 +117,7 @@ void computeCSBENDFieldCoefficients(double *b, double h, long nonlinear, long ex
 
   expansionOrder1 = expansionOrder + 1;
   if (expansionOrder1>11)
-    bomb("expansion order >10 for CSBEND or CSRCSBEND", NULL);
+    bombElegant("expansion order >10 for CSBEND or CSRCSBEND", NULL);
   
   if (!Fx_xy)
     Fx_xy = (double**)czarray_2d(sizeof(double), 11, 11);
@@ -230,7 +230,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   static long largeRhoWarning = 0;
   
   if (!csbend)
-    bomb("null CSBEND pointer (track_through_csbend)", NULL);
+    bombElegant("null CSBEND pointer (track_through_csbend)", NULL);
 
   if (csbend->angle==0) {
     exactDrift(part, n_part, csbend->length);
@@ -238,10 +238,10 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   }
   
   if (!(csbend->edgeFlags&BEND_EDGE_DETERMINED)) 
-    bomb("CSBEND element doesn't have edge flags set.", NULL);
+    bombElegant("CSBEND element doesn't have edge flags set.", NULL);
   
   if (csbend->integration_order!=2 && csbend->integration_order!=4)
-    bomb("CSBEND integration_order is invalid--must be either 2 or 4", NULL);
+    bombElegant("CSBEND integration_order is invalid--must be either 2 or 4", NULL);
 
   rho0 =  csbend->length/csbend->angle;
   if (csbend->use_bn) {
@@ -575,11 +575,11 @@ void integrate_csbend_ord2(double *Qf, double *Qi, double *sigmaDelta2, double s
 #define DPoP Qf[5]
 
   if (!Qf)
-    bomb("NULL final coordinates pointer ()", NULL);
+    bombElegant("NULL final coordinates pointer ()", NULL);
   if (!Qi)
-    bomb("NULL initial coordinates pointer (integrate_csbend_ord2)", NULL);
+    bombElegant("NULL initial coordinates pointer (integrate_csbend_ord2)", NULL);
   if (n<1)
-    bomb("invalid number of steps (integrate_csbend_ord2)", NULL);
+    bombElegant("invalid number of steps (integrate_csbend_ord2)", NULL);
 
   /* calculate canonical momenta (scaled to central momentum) */
   dp = DPoP0;
@@ -735,11 +735,11 @@ void integrate_csbend_ord4(double *Qf, double *Qi, double *sigmaDelta2, double s
 #define BETA 1.25992104989487316477
 
   if (!Qf)
-    bomb("NULL final coordinates pointer ()", NULL);
+    bombElegant("NULL final coordinates pointer ()", NULL);
   if (!Qi)
-    bomb("NULL initial coordinates pointer (integrate_csbend_ord4)", NULL);
+    bombElegant("NULL initial coordinates pointer (integrate_csbend_ord4)", NULL);
   if (n<1)
-    bomb("invalid number of steps (integrate_csbend_ord4)", NULL);
+    bombElegant("invalid number of steps (integrate_csbend_ord4)", NULL);
 
   /* calculate canonical momenta (scaled to central momentum) */
   dp = DPoP0;
@@ -1027,7 +1027,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   getTrackingContext(&tContext);
   
   if (!csbend)
-    bomb("null CSBEND pointer (track_through_csbend)", NULL);
+    bombElegant("null CSBEND pointer (track_through_csbend)", NULL);
 
   if (csbend->angle==0) {
     if (!csbend->useMatrix)
@@ -1046,7 +1046,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   }
 
   if (csbend->integration_order!=2 && csbend->integration_order!=4)
-    bomb("CSBEND integration_order is invalid--must be either 2 or 4", NULL);
+    bombElegant("CSBEND integration_order is invalid--must be either 2 or 4", NULL);
 
   macroParticleCharge = 0;
   if (charge) {
@@ -1058,7 +1058,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   }
   
   if ((nBins=csbend->bins)<2)
-    bomb("Less than 2 bins for CSR!", NULL);
+    bombElegant("Less than 2 bins for CSR!", NULL);
 
   if (csbend->SGDerivHalfWidth<=0)
     csbend->SGDerivHalfWidth = csbend->SGHalfWidth;
@@ -1074,7 +1074,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
     if (n_part>maxParticles &&
 	(!(beta0=SDDS_Realloc(beta0, sizeof(*beta0)*(maxParticles=n_part))) ||
 	 !(particleLost=SDDS_Realloc(particleLost, sizeof(*particleLost)*n_part))))
-      bomb("Memory allocation failure (track_through_csbendCSR)", NULL);
+      bombElegant("Memory allocation failure (track_through_csbendCSR)", NULL);
 
   rho0 = csbend->length/csbend->angle;
   if (csbend->use_bn) {
@@ -1306,7 +1306,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
       !(T1=SDDS_Realloc(T1, sizeof(*T1)*nBins)) ||
       !(T2=SDDS_Realloc(T2, sizeof(*T2)*nBins)) ||
       !(dGamma=SDDS_Realloc(dGamma, sizeof(*dGamma)*nBins)))
-    bomb("memory allocation failure (track_through_csbendCSR)", NULL);
+    bombElegant("memory allocation failure (track_through_csbendCSR)", NULL);
 
   /* prepare some data for CSRDRIFT */
   csrWake.dGamma = dGamma;
@@ -2013,7 +2013,7 @@ long binParticleCoordinate(double **hist, long *maxBins,
   /* realloc if necessary */
   if (*bins>*maxBins &&
       !(*hist=SDDS_Realloc(*hist, sizeof(**hist)*(*maxBins=*bins))))
-    bomb("Memory allocation failure (binParticleCoordinate)", NULL);
+    bombElegant("Memory allocation failure (binParticleCoordinate)", NULL);
     
   for (iBin=0; iBin<*bins; iBin++)
     (*hist)[iBin] = 0;
@@ -2071,7 +2071,7 @@ long binParticleCoordinate_s(double **hist, long *maxBins,
   /* realloc if necessary */
   if (*bins>*maxBins &&
       !(*hist=SDDS_Realloc(*hist, sizeof(**hist)*(*maxBins=*bins))))
-    bomb("Memory allocation failure (binParticleCoordinate)", NULL);
+    bombElegant("Memory allocation failure (binParticleCoordinate)", NULL);
     
   for (iBin=0; iBin<*bins; iBin++)
     (*hist)[iBin] = 0;
@@ -2178,7 +2178,7 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
   } else 
     nKicks = csrDrift->nKicks;
   if (nKicks<=0)
-    bomb("nKicks=0 in CSR drift.", NULL);
+    bombElegant("nKicks=0 in CSR drift.", NULL);
   dz = (dz0=csrDrift->length/nKicks)/2;
   
   sigmaZ = 0;
@@ -2193,7 +2193,7 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
     sigmaZ = csrWake.perc90BunchLength;
     break;
   default:
-    bomb("invalid bunchlength_mode for CSRDRIFT.  Use rms or percentile.", NULL);
+    bombElegant("invalid bunchlength_mode for CSRDRIFT.  Use rms or percentile.", NULL);
   }
   
   overtakingLength = pow(24*sigmaZ*csrWake.rho*csrWake.rho, 1./3.);
@@ -2207,7 +2207,7 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
     iSpreadMode = 0;
     if (csrDrift->spreadMode && 
         (iSpreadMode=match_string(csrDrift->spreadMode, spreadMode, 3, 0))<0)
-      bomb("invalid spread_mode for CSR DRIFT.  Use full, simple, or radiation-only", NULL);
+      bombElegant("invalid spread_mode for CSR DRIFT.  Use full, simple, or radiation-only", NULL);
     switch (match_string(csrDrift->wavelengthMode, wavelengthMode, 3, 0)) {
     case 0:
     case 1:
@@ -2219,12 +2219,12 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
       wavelength = csrWake.peakToPeakWavelength;
       break;
     default:
-      bomb("invalid wavelength_mode for CSR DRIFT.  Use sigmaz or peak-to-peak", NULL);
+      bombElegant("invalid wavelength_mode for CSR DRIFT.  Use sigmaz or peak-to-peak", NULL);
       break;
     }
     criticalWavelength = 4.19/ipow(csrWake.Po, 3)*csrWake.rho;
     if (!particleIsElectron)
-      bomb("CSRDRIFT spread mode is not supported for particles other than electrons", NULL);
+      bombElegant("CSRDRIFT spread mode is not supported for particles other than electrons", NULL);
     thetaRad = 0.5463e-3/(csrWake.Po*0.511e-3)/pow(criticalWavelength/wavelength, 1./3.);
   }
 
@@ -2329,7 +2329,7 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
                    sqrt(csrWake.S11/(csrWake.S11 + sqr(zTravel*thetaRad))));
         break;
       default:
-        bomb("invalid spread code---programming error!", NULL);
+        bombElegant("invalid spread code---programming error!", NULL);
         break;
       }
     }
@@ -2456,7 +2456,7 @@ long reset_driftCSR()
   }
   if (csrWake.StupakovFileActive) {
     if (!SDDS_Terminate(&csrWake.SDDS_Stupakov))
-      bomb("problem terminating data file for Stupakov output from CSRDRIFT", NULL);
+      bombElegant("problem terminating data file for Stupakov output from CSRDRIFT", NULL);
     csrWake.StupakovFileActive = 0;
   }
   return 1;
@@ -2497,7 +2497,7 @@ void computeSaldinFdNorm(double **FdNorm, double **x, long *n, double sMax, long
 
   if (!(*FdNorm = calloc(sizeof(**FdNorm), (*n))) ||
       !(*x = malloc(sizeof(**x)*(*n))))
-    bomb("memory allocation failure (computeSaldinFdNorm)", NULL);
+    bombElegant("memory allocation failure (computeSaldinFdNorm)", NULL);
 
   for (ix=0; ix<*n; ix++)
     (*x)[ix] = ix==0 ? 0 : ipow(fx, ix-1)*dx;
@@ -2751,7 +2751,7 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
   } else 
     nKicks = csrDrift->nKicks;
   if (nKicks<=0)
-    bomb("nKicks=0 in CSR drift.", NULL);
+    bombElegant("nKicks=0 in CSR drift.", NULL);
   dz = (dz0=length/nKicks)/2;
   
   zTravel = zStart-csrWake.z0;  /* total distance traveled by radiation to reach this point */
@@ -2761,7 +2761,7 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
   if (!(ctHist=SDDS_Malloc(sizeof(*ctHist)*nBins)) ||
       !(ctHistDeriv=SDDS_Malloc(sizeof(*ctHistDeriv)*nBins)) ||
       !(phiSoln=SDDS_Malloc(sizeof(*phiSoln)*nBins)))
-    bomb("memory allocation failure (track_through_driftCSR)", NULL);
+    bombElegant("memory allocation failure (track_through_driftCSR)", NULL);
   
   for (iKick=0; iKick<nKicks; iKick++) {
     /* first drift is dz=dz0/2, others are dz0 */
@@ -2938,7 +2938,7 @@ long track_through_driftCSR_Stupakov(double **part, long np, CSRDRIFT *csrDrift,
       double x, dsMax, phi0, phi1;
       if (!csrWake.StupakovFileActive) {
         if (!SDDS_CopyString(&csrWake.StupakovOutput, csrDrift->StupakovOutput))
-          bomb("string copying problem preparing Stupakov output for CSRDRIFT", NULL);
+          bombElegant("string copying problem preparing Stupakov output for CSRDRIFT", NULL);
         csrWake.StupakovOutput = compose_filename(csrWake.StupakovOutput, rootname);
       }
       x = zTravel/csrWake.rho;

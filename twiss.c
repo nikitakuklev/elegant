@@ -104,7 +104,7 @@ VMATRIX *compute_periodic_twiss(
 
   if (cavities_are_drifts_if_matched) {
     if (run->always_change_p0)
-      bomb("can't have run_setup/always_change_p0=1 and twiss_output/cavities_are_drifts_if_matched=1", NULL);
+      bombElegant("can't have run_setup/always_change_p0=1 and twiss_output/cavities_are_drifts_if_matched=1", NULL);
     modify_rfca_matrices(elem, run->default_order);  /* replace rf cavities with drifts */
   }
   
@@ -296,7 +296,7 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
 #endif
 
   if (!twiss0)
-    bomb("initial Twiss parameters not given (propagate_twiss_parameters())", NULL);
+    bombElegant("initial Twiss parameters not given (propagate_twiss_parameters())", NULL);
   elemOrig = elem;
   
   m_alloc(&dispM, 4, 4);
@@ -1040,7 +1040,7 @@ void dump_twiss_parameters(
   elem = beamline->elem_twiss;
   
   if (!twiss0)
-    bomb("Twiss data not computed prior to dump_twiss_parameters() call (1)", NULL);
+    bombElegant("Twiss data not computed prior to dump_twiss_parameters() call (1)", NULL);
 
   data = tmalloc(sizeof(*data)*N_DOUBLE_COLUMNS);
 
@@ -1169,7 +1169,7 @@ void dump_twiss_parameters(
       data[0] = elem->end_pos;     /* position */
       data[N_DOUBLE_COLUMNS-1] = elem->Pref_output;
       if (!elem->twiss)
-        bomb("Twiss data not computed prior to dump_twiss_parameters() call (2)", NULL);
+        bombElegant("Twiss data not computed prior to dump_twiss_parameters() call (2)", NULL);
       copy_doubles(data+1, (double*)elem->twiss, N_DOUBLE_COLUMNS-2);
       for (j=0; j<N_DOUBLE_COLUMNS; j++)
         if (!SDDS_SetRowValues(&SDDS_twiss, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row_count, j, data[j], -1)) {
@@ -1199,21 +1199,21 @@ void dump_twiss_parameters(
       elem = elem->succ;
     }
     if (i!=n_elem)
-      bomb("element count error in dump_twiss_parameters()", NULL);
+      bombElegant("element count error in dump_twiss_parameters()", NULL);
   }
   else {
     /* find final element */
     i = 0;
     while (1) {
       if (!elem->twiss)
-        bomb("Twiss data not computed prior to dump_twiss_parameters() call (2)", NULL);
+        bombElegant("Twiss data not computed prior to dump_twiss_parameters() call (2)", NULL);
       i++;
       if (!elem->succ)
         break;
       elem = elem->succ;
     }
     if (i!=n_elem)
-      bomb("element count error in dump_twiss_parameters()", NULL);
+      bombElegant("element count error in dump_twiss_parameters()", NULL);
     data[0] = elem->end_pos;     /* position */
     data[N_DOUBLE_COLUMNS-1] = elem->Pref_output;
     copy_doubles(data+1, (double*)elem->twiss, N_DOUBLE_COLUMNS-2);
@@ -1293,7 +1293,8 @@ void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
   /* process namelist input */
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
-  process_namelist(&twiss_output, nltext);
+  if (processNamelist(&twiss_output, nltext)==NAMELIST_ERROR)
+    bombElegant(NULL, NULL);
   if (echoNamelists) print_namelist(stdout, &twiss_output);
   
 #if USE_MPI
@@ -1308,14 +1309,14 @@ void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
     twissConcatOrder = default_order;
   *do_twiss_output = output_at_each_step;
   if (higher_order_chromaticity && !matched) 
-    bomb("higher order chromaticity calculations available only for a matched (periodic) beamline", NULL);
+    bombElegant("higher order chromaticity calculations available only for a matched (periodic) beamline", NULL);
 
   if (reference_file && matched)
-    bomb("reference_file and matched=1 are incompatible", NULL);
+    bombElegant("reference_file and matched=1 are incompatible", NULL);
   if (!matched) {
     if (reference_file) {
       if (reference_element && reference_element_occurrence<0)
-        bomb("invalid value of reference_element_occurrence---use 0 for last occurrence, >=1 for specific occurrence.", NULL);
+        bombElegant("invalid value of reference_element_occurrence---use 0 for last occurrence, >=1 for specific occurrence.", NULL);
       LoadStartingTwissFromFile(&beta_x, &beta_y, &alpha_x, &alpha_y, 
                                 &eta_x, &etap_x, &eta_y, &etap_y,
                                 reference_file, reference_element,
@@ -1333,7 +1334,7 @@ void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
       fflush(stdout);
     }
     if (beta_x<=0 || beta_y<=0)
-      bomb("invalid initial beta-functions given in twiss_output namelist", NULL);
+      bombElegant("invalid initial beta-functions given in twiss_output namelist", NULL);
   }
 
   if (filename) {
@@ -1585,7 +1586,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
     fflush(stdout);
 #endif
     if (twissConcatOrder>=2 && !(beamline->matrix->T))
-      bomb("logic error: T matrix is NULL on return from compute_periodic_twiss", NULL);
+      bombElegant("logic error: T matrix is NULL on return from compute_periodic_twiss", NULL);
   }
   else {
     VMATRIX *M1;
@@ -1624,7 +1625,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
     beamline->twiss0->Cx  = beamline->twiss0->Cy = 0;
   
   if (twissConcatOrder>=2 && !(beamline->matrix->T))
-    bomb("logic error: beamline T matrix is NULL in compute_twiss_parameters", NULL);
+    bombElegant("logic error: beamline T matrix is NULL in compute_twiss_parameters", NULL);
 
 #ifdef DEBUG
   fprintf(stdout, "propagating parameters\n");
@@ -1686,7 +1687,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
   
   if (periodic) {
     if (!(M = beamline->matrix))
-      bomb("logic error: revolution matrix is NULL in compute_twiss_parameters", NULL);
+      bombElegant("logic error: revolution matrix is NULL in compute_twiss_parameters", NULL);
 
     if (twissConcatOrder>1) {
 #ifdef DEBUG
@@ -1694,7 +1695,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
       fflush(stdout);
 #endif
       if (!(M->T))
-        bomb("logic error: T matrix is NULL in compute_twiss_parameters", NULL);
+        bombElegant("logic error: T matrix is NULL in compute_twiss_parameters", NULL);
       computeChromaticities(&chromx, &chromy, 
                             &dbetax, &dbetay, &dalphax, &dalphay, beamline->twiss0, 
 			    beamline->elast->twiss, M);
@@ -1720,9 +1721,9 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
     elast = beamline->elast;
     
     if (!elast)
-      bomb("logic error in compute_twiss_parameters--elast pointer is NULL", NULL);
+      bombElegant("logic error in compute_twiss_parameters--elast pointer is NULL", NULL);
     if (!elast->twiss)
-      bomb("logic error in compute_twiss_parameters--elast->twiss pointer is NULL", NULL);
+      bombElegant("logic error in compute_twiss_parameters--elast->twiss pointer is NULL", NULL);
 
     betax = elast->twiss->betax;
     alphax = elast->twiss->alphax;
@@ -1735,7 +1736,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
 
     if (twissConcatOrder>=2) {
       if (!(M->T))
-        bomb("logic error: T matrix is NULL in compute_twiss_parameters", NULL);
+        bombElegant("logic error: T matrix is NULL in compute_twiss_parameters", NULL);
       computeChromaticities(&chromx, &chromy, 
                             &dbetax, &dbetay, &dalphax, &dalphay, beamline->twiss0, 
 			    beamline->elast->twiss, M);
@@ -2052,12 +2053,12 @@ void modify_rfca_matrices(ELEMENT_LIST *eptr, long order)
       switch (eptr->type) {
       case T_RFCA:
         if (((RFCA*)eptr->p_elem)->change_p0)
-          bomb("can't treat cavities like drifts when CHANGE_P0=1", NULL);
+          bombElegant("can't treat cavities like drifts when CHANGE_P0=1", NULL);
         eptr->matrix = drift_matrix(((RFCA*)eptr->p_elem)->length, order);
         break;
       case T_RFCW:
         if (((RFCW*)eptr->p_elem)->change_p0)
-          bomb("can't treat cavities like drifts when CHANGE_P0=1", NULL);
+          bombElegant("can't treat cavities like drifts when CHANGE_P0=1", NULL);
         eptr->matrix = drift_matrix(((RFCW*)eptr->p_elem)->length, order);
         break;
       case T_MODRF:
@@ -2537,21 +2538,22 @@ void setupTuneShiftWithAmplitude(NAMELIST_TEXT *nltext, RUN *run)
   /* process namelist input */
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
-  process_namelist(&tune_shift_with_amplitude, nltext);
+  if (processNamelist(&tune_shift_with_amplitude, nltext)==NAMELIST_ERROR)
+    bombElegant(NULL, NULL);
   if (echoNamelists) print_namelist(stdout, &tune_shift_with_amplitude);
 
   if (tune_shift_with_amplitude_struct.turns<100 && tune_shift_with_amplitude_struct.turns!=0)
-    bomb("too few turns requested (tune_shift_with_amplitude)", NULL);
+    bombElegant("too few turns requested (tune_shift_with_amplitude)", NULL);
   if (!tune_shift_with_amplitude_struct.turns && tune_shift_with_amplitude_struct.spread_only)
-    bomb("spread_only requires turns!=0", NULL);
+    bombElegant("spread_only requires turns!=0", NULL);
   if (tune_shift_with_amplitude_struct.turns) {
     if (tune_shift_with_amplitude_struct.x0<=0 ||
         tune_shift_with_amplitude_struct.y0<=0)
-      bomb("x0 or y0 is zero or negative (tune_shift_with_amplitude)", NULL);
+      bombElegant("x0 or y0 is zero or negative (tune_shift_with_amplitude)", NULL);
     if (!tune_shift_with_amplitude_struct.spread_only &&
 	(tune_shift_with_amplitude_struct.x1<tune_shift_with_amplitude_struct.x0*10 ||
 	 tune_shift_with_amplitude_struct.y1<tune_shift_with_amplitude_struct.y0*10))
-      bomb("x1 or y1 is too small (tune_shift_with_amplitude)", NULL);
+      bombElegant("x1 or y1 is too small (tune_shift_with_amplitude)", NULL);
   }
   doTuneShiftWithAmplitude = 1;
   if (tune_shift_with_amplitude_struct.tune_output) {
@@ -2586,7 +2588,7 @@ double QElement(double ****Q, long i1, long i2, long i3, long i4)
   if (i3<i4)
     SWAP_LONG(i3, i4);
   if (i2<i3 || i3<i4)
-    bomb("it didn't work",NULL);
+    bombElegant("it didn't work",NULL);
   return Q[i1][i2][i3][i4];
 }
 
@@ -2914,7 +2916,7 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
           for (ix1=j=0; ix1<nTSWA; ix1++) {
             for (iy1=0; (ix1+iy1)<=order; iy1++, j++) {
               if (j>=n)
-                bomb("indexing problem for TSWA calculation", NULL);
+                bombElegant("indexing problem for TSWA calculation", NULL);
               AxAy->a[i][j] = ipow(Ax[ix], ix1)*ipow(Ay[iy], iy1);
             }
           }
@@ -3059,7 +3061,7 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
 
   if (!(x = malloc(sizeof(*x)*turns)) || !(y = malloc(sizeof(*y)*turns)) ||
       !(xp = malloc(sizeof(*xp)*turns)) || !(yp = malloc(sizeof(*yp)*turns)))
-    bomb("memory allocation failure (computeTunesFromTracking)", NULL);
+    bombElegant("memory allocation failure (computeTunesFromTracking)", NULL);
 
 #ifdef DEBUG
   fprintf(stdout, "Did malloc\n");
@@ -3386,19 +3388,19 @@ void addTwissAnalysisRequest(char *tag, char *startName, char *endName,
 {
   long i;
   if (!tag || !strlen(tag))
-    bomb("NULL or blank tag passed to addTwissAnalysisRequest", NULL);
+    bombElegant("NULL or blank tag passed to addTwissAnalysisRequest", NULL);
   if (!(startName && strlen(startName) && endName && strlen(endName)) 
       && !(matchName && strlen(matchName)) && sStart==sEnd)
-    bomb("must have both startName and endName, or matchName, or sStart!=sEnd (addTwissAnalysisRequest)", NULL);
+    bombElegant("must have both startName and endName, or matchName, or sStart!=sEnd (addTwissAnalysisRequest)", NULL);
   if ((startName || endName) && matchName)
-    bomb("can't have startName or endName with matchName (addTwissAnalysisRequest)", NULL);
+    bombElegant("can't have startName or endName with matchName (addTwissAnalysisRequest)", NULL);
   for (i=0; i<twissAnalysisRequests; i++)
     if (strcmp(twissAnalysisRequest[i].tag, tag)==0)
-      bomb("duplicate tag names seen (addTwissAnalysisRequest)", NULL);
+      bombElegant("duplicate tag names seen (addTwissAnalysisRequest)", NULL);
   if (!(twissAnalysisRequest = 
         SDDS_Realloc(twissAnalysisRequest, sizeof(*twissAnalysisRequest)*(twissAnalysisRequests+1))) ||
       !SDDS_CopyString(&twissAnalysisRequest[twissAnalysisRequests].tag, tag))
-    bomb("memory allocation failure (addTwissAnalysisRequest)", NULL);
+    bombElegant("memory allocation failure (addTwissAnalysisRequest)", NULL);
   twissAnalysisRequest[twissAnalysisRequests].startName = 
     twissAnalysisRequest[twissAnalysisRequests].endName = 
       twissAnalysisRequest[twissAnalysisRequests].matchName = NULL;
@@ -3408,7 +3410,7 @@ void addTwissAnalysisRequest(char *tag, char *startName, char *endName,
        !SDDS_CopyString(&twissAnalysisRequest[twissAnalysisRequests].endName, endName)) ||
       (matchName &&
        !SDDS_CopyString(&twissAnalysisRequest[twissAnalysisRequests].matchName, matchName)))
-    bomb("memory allocation failure (addTwissAnalysisRequest)", NULL);
+    bombElegant("memory allocation failure (addTwissAnalysisRequest)", NULL);
   if (matchName && 
       has_wildcards(twissAnalysisRequest[twissAnalysisRequests].matchName) &&
       strchr(twissAnalysisRequest[twissAnalysisRequests].matchName, '-'))
@@ -3555,7 +3557,8 @@ void setupTwissAnalysisRequest(NAMELIST_TEXT *nltext, RUN *run,
 {
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
-  process_namelist(&twiss_analysis, nltext);
+  if (processNamelist(&twiss_analysis, nltext)==NAMELIST_ERROR)
+    bombElegant(NULL, NULL);
   if (echoNamelists) print_namelist(stdout, &twiss_analysis);
 
   if (twiss_analysis_struct.clear) {
@@ -3568,24 +3571,24 @@ void setupTwissAnalysisRequest(NAMELIST_TEXT *nltext, RUN *run,
   
   if (twiss_analysis_struct.start_name &&
       !strlen(trim_spaces(str_toupper(twiss_analysis_struct.start_name))))
-    bomb("start_name is blank", NULL);
+    bombElegant("start_name is blank", NULL);
   if (twiss_analysis_struct.end_name &&
       !strlen(trim_spaces(str_toupper(twiss_analysis_struct.end_name))))
-    bomb("end_name is blank", NULL);
+    bombElegant("end_name is blank", NULL);
   if (twiss_analysis_struct.match_name &&
       !strlen(trim_spaces(str_toupper(twiss_analysis_struct.match_name))))
-    bomb("match_name is blank", NULL);
+    bombElegant("match_name is blank", NULL);
   if ((twiss_analysis_struct.tag &&
        !strlen(trim_spaces(twiss_analysis_struct.tag))) ||
       !twiss_analysis_struct.tag)
-    bomb("tag is blank", NULL);
+    bombElegant("tag is blank", NULL);
   
   if (!(twiss_analysis_struct.start_name && twiss_analysis_struct.end_name)
         && !twiss_analysis_struct.match_name &&
       twiss_analysis_struct.s_start==twiss_analysis_struct.s_end)
-    bomb("you must give start_name and end_name, or match_name, or s_start different from s_end", NULL);
+    bombElegant("you must give start_name and end_name, or match_name, or s_start different from s_end", NULL);
   if (twiss_analysis_struct.s_start>twiss_analysis_struct.s_end)
-    bomb("s_start>s_end", NULL);
+    bombElegant("s_start>s_end", NULL);
   addTwissAnalysisRequest(twiss_analysis_struct.tag,
                           twiss_analysis_struct.start_name,
                           twiss_analysis_struct.end_name,
@@ -3609,9 +3612,9 @@ void AddWigglerRadiationIntegrals(double length, long poles, double radius,
 #endif
 
   if (poles<2)
-    bomb("wiggler must have at least 2 poles", NULL);
+    bombElegant("wiggler must have at least 2 poles", NULL);
   if (radius<=0)
-    bomb("wiggler must have positive, nonzero radius", NULL);
+    bombElegant("wiggler must have positive, nonzero radius", NULL);
 
   /* length of each pole */
   Lp = length/poles;
@@ -3710,13 +3713,14 @@ void setupLinearChromaticTracking(NAMELIST_TEXT *nltext, LINE_LIST *beamline)
 {
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
-  process_namelist(&setup_linear_chromatic_tracking, nltext);
+  if (processNamelist(&setup_linear_chromatic_tracking, nltext)==NAMELIST_ERROR)
+    bombElegant(NULL, NULL);
   if (echoNamelists) print_namelist(stdout, &setup_linear_chromatic_tracking);
 
   if (setup_linear_chromatic_tracking_struct.nux[0]<0)
-    bomb("nux < 0", NULL);
+    bombElegant("nux < 0", NULL);
   if (setup_linear_chromatic_tracking_struct.nuy[0]<0)
-    bomb("nuy < 0", NULL);
+    bombElegant("nuy < 0", NULL);
   
   beamline->twiss0 = malloc(sizeof(TWISS));
 

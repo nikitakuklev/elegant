@@ -70,7 +70,7 @@ void track_through_trfmode(
   } else if (pass==0) {
     trfmode->mp_charge = 0;
     if (trfmode->charge<0)
-      bomb("TRFMODE charge parameter should be non-negative. Use change_particle to set particle charge.", NULL);
+      bombElegant("TRFMODE charge parameter should be non-negative. Use change_particle to set particle charge.", NULL);
 #if (!USE_MPI) 
       if (np)
         trfmode->mp_charge = trfmode->charge/np;
@@ -114,7 +114,7 @@ void track_through_trfmode(
   omegaOverC = omega/c_mks;
 
   if (!trfmode->doX && !trfmode->doY)
-    bomb("x and y turned off for TRFMODE---this shouldn't happen", NULL);
+    bombElegant("x and y turned off for TRFMODE---this shouldn't happen", NULL);
   
   if (!been_warned) {        
     if (trfmode->freq<1e3 && trfmode->freq)  {
@@ -130,7 +130,7 @@ void track_through_trfmode(
   }
 
   if (!trfmode->initialized)
-    bomb("track_through_trfmode called with uninitialized element", NULL);
+    bombElegant("track_through_trfmode called with uninitialized element", NULL);
 
   if (trfmode->n_bins>max_n_bins) {
     max_n_bins = trfmode->n_bins;
@@ -364,13 +364,13 @@ void set_up_trfmode(TRFMODE *trfmode, char *element_name, double element_z,
   if (isSlave)
 #endif  
   if (n_particles<1)
-    bomb("too few particles in set_up_trfmode()", NULL);
+    bombElegant("too few particles in set_up_trfmode()", NULL);
   if (trfmode->n_bins<2)
-    bomb("too few bins for TRFMODE", NULL);
+    bombElegant("too few bins for TRFMODE", NULL);
   if (trfmode->bin_size<=0 && !trfmode->binless)
-    bomb("bin_size must be positive for TRFMODE", NULL);
+    bombElegant("bin_size must be positive for TRFMODE", NULL);
   if (trfmode->Ra && trfmode->Rs) 
-    bomb("TRFMODE element may have only one of Ra or Rs nonzero.  Ra is just 2*Rs", NULL);
+    bombElegant("TRFMODE element may have only one of Ra or Rs nonzero.  Ra is just 2*Rs", NULL);
   if (trfmode->Ra)
     trfmode->RaInternal = trfmode->Ra;
   else
@@ -394,7 +394,7 @@ void set_up_trfmode(TRFMODE *trfmode, char *element_name, double element_z,
   else if (strcmp_ci(trfmode->plane, "Y")==0)
     trfmode->doY = 1;
   if (!trfmode->doX && !trfmode->doY) 
-    bomb("No planes selected for TRFMODE", NULL);
+    bombElegant("No planes selected for TRFMODE", NULL);
 
 #if (USE_MPI)
     if (myid == 1) /* We let the first slave to dump the parameter */
@@ -475,7 +475,7 @@ void runBinlessTrfMode(
   } else if (pass==0) {
     trfmode->mp_charge = 0;
     if (trfmode->charge<0)
-      bomb("TRFMODE charge parameter should be non-negative. Use change_particle to set particle charge state.", NULL);
+      bombElegant("TRFMODE charge parameter should be non-negative. Use change_particle to set particle charge state.", NULL);
     if (np)
       trfmode->mp_charge = trfmode->charge/np;
   }
@@ -491,7 +491,7 @@ void runBinlessTrfMode(
   k = omega/4*trfmode->RaInternal/trfmode->Q;
 
   if (!trfmode->doX && !trfmode->doY)
-    bomb("x and y turned off for TRFMODE---this shouldn't happen", NULL);
+    bombElegant("x and y turned off for TRFMODE---this shouldn't happen", NULL);
   
   if (!been_warned) {        
     if (trfmode->freq<1e3 && trfmode->freq)  {
@@ -507,7 +507,7 @@ void runBinlessTrfMode(
   }
 
   if (!trfmode->initialized)
-    bomb("track_through_trfmode called with uninitialized element", NULL);
+    bombElegant("track_through_trfmode called with uninitialized element", NULL);
 
   if (np>max_np) 
     tData = trealloc(tData, sizeof(*tData)*(max_np=np));

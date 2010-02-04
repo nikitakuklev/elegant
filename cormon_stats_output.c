@@ -59,9 +59,9 @@ void setup_cormon_stats(char *filename, RUN *run)
         zero_memory(&SDDS_cormon, sizeof(SDDS_cormon));
         }
     if (!filename)
-        bomb("NULL filename passed (setup_cormon_stats)", NULL);
+        bombElegant("NULL filename passed (setup_cormon_stats)", NULL);
     if (!run)
-        bomb("NULL RUN pointer passed (setup_cormon_stats)", NULL);
+        bombElegant("NULL RUN pointer passed (setup_cormon_stats)", NULL);
 
     SDDS_ElegantOutputSetup(&SDDS_cormon, filename, SDDS_BINARY, 1, "corrector/monitor statistics", run->runfile,
                             run->lattice, parameter_definition, N_PARAMETERS,

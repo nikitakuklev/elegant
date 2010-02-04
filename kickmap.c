@@ -42,7 +42,7 @@ long trackUndulatorKickMap(
     initializeUndulatorKickMap(map);
 
   if ((nKicks=map->nKicks)<1)
-    bomb("N_KICKS must be >=1 for UKICKMAP", NULL);
+    bombElegant("N_KICKS must be >=1 for UKICKMAP", NULL);
 
   radCoef = isrCoef = sxpCoef = 0;
   if (map->synchRad)
@@ -72,7 +72,7 @@ long trackUndulatorKickMap(
       double S11beta, S12beta, S22beta, emit;
 
       if (nKicks!=map->periods)
-        bomb("Number of kicks must equal number of periods for UKICKMAP radiation tracking", NULL);
+        bombElegant("Number of kicks must equal number of periods for UKICKMAP radiation tracking", NULL);
       
       if (sxpCoef) {
         /* These calls are inefficient (repeat some calculations), but better than other routines we have now */
@@ -113,7 +113,7 @@ long trackUndulatorKickMap(
                                    &I1, &I2, &I3, &I4, &I5);
       if (sxpCoef) {
         if (I3<0 || I5<0)
-          bomb("I3 or I5 is negative in UKICKMAP", NULL);
+          bombElegant("I3 or I5 is negative in UKICKMAP", NULL);
         sqrtI3 = sqrt(I3);
         sqrtI5 = sqrt(I5);
       }

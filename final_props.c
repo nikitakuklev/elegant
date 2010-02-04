@@ -258,20 +258,20 @@ void dump_final_properties
     log_entry("dump_final_properites");
 
     if (!SDDS_table)
-        bomb("NULL SDDS_TABLE pointer (dump_final_properties)", NULL);
+        bombElegant("NULL SDDS_TABLE pointer (dump_final_properties)", NULL);
     if (!sums)
-        bomb("NULL beam sums pointer (dump_final_properites)", NULL);
+        bombElegant("NULL beam sums pointer (dump_final_properites)", NULL);
     if (n_varied_quan && (!varied_quan || !first_varied_quan_name))
-        bomb("Unexpected NULL pointer for varied quanitity values/names (dump_final_properties)", NULL);
+        bombElegant("Unexpected NULL pointer for varied quanitity values/names (dump_final_properties)", NULL);
     if (n_perturbed_quan && (!perturbed_quan || !perturbed_quan_index))
-        bomb("Unexpected NULL pointer for perturbed quantity values/names (dump_final_properties)", NULL);
+        bombElegant("Unexpected NULL pointer for perturbed quantity values/names (dump_final_properties)", NULL);
     if (n_optim_quan && (!optim_quan || !first_optim_quan_name)) 
-        bomb("Unexpected NULL pointer for optimization quantity values/names (dump_final_properties)", NULL);
+        bombElegant("Unexpected NULL pointer for optimization quantity values/names (dump_final_properties)", NULL);
     if (!M)
-        bomb("NULL matrix pointer (dump_final_properties)", NULL);
+        bombElegant("NULL matrix pointer (dump_final_properties)", NULL);
     if (isSlave)
     if (!particle)
-        bomb("NULL particle coordinates pointer (dump_final_properties)", NULL);
+        bombElegant("NULL particle coordinates pointer (dump_final_properties)", NULL);
 
     if (isMaster)
     if (!SDDS_StartTable(SDDS_table, 0)) {
@@ -409,14 +409,14 @@ long compute_final_properties
   log_entry("compute_final_properties");
 
   if (!data)
-    bomb("return data array is null (compute_final_properties)", NULL);
+    bombElegant("return data array is null (compute_final_properties)", NULL);
   if (!sums)
-    bomb("beam sums element is null (compute_final_properties)", NULL);
+    bombElegant("beam sums element is null (compute_final_properties)", NULL);
   if (!M || !M->C || !M->R)
-    bomb("invalid/null transport map (compute_final_properties)", NULL);
+    bombElegant("invalid/null transport map (compute_final_properties)", NULL);
   if (isSlave)
   if (!coord)
-    bomb("particle coordinate array is null (compute_final_properties)", NULL);
+    bombElegant("particle coordinate array is null (compute_final_properties)", NULL);
   
   /* compute centroids and sigmas */
 #if SDDS_MPI_IO
@@ -449,7 +449,7 @@ long compute_final_properties
     if ((!tData || sums->n_part>percDataMax) &&
         (!(tData = malloc(sizeof(*tData)*(percDataMax=sums->n_part))) ||
          !(deltaData = malloc(sizeof(*deltaData)*(percDataMax=sums->n_part)))))
-      bomb("memory allocation failure (compute_final_properties)", NULL);
+      bombElegant("memory allocation failure (compute_final_properties)", NULL);
 #if SDDS_MPI_IO
     if (isSlave || !notSinglePart)
 #endif
@@ -701,7 +701,7 @@ double beam_width(double fraction, double **coord, long n_part,
   qsort((void*)coord, n_part, sizeof(*coord), row_compare);
   for (i_median=1; i_median<n_part; i_median++) {
     if (coord[i_median][sort_coord]<coord[i_median-1][sort_coord])
-      bomb("sort failure in beam_width()", NULL);
+      bombElegant("sort failure in beam_width()", NULL);
   }
 
   /* find indices of particles that are at +/- fraction/2 from the median */

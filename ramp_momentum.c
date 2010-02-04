@@ -37,7 +37,7 @@ void ramp_momentum(
         set_up_ramp_p(rampp);
 
     if (!rampp->t_Pf || !rampp->Pfactor || rampp->n_pts<2)
-        bomb("NULL data for rampp element", NULL);
+        bombElegant("NULL data for rampp element", NULL);
 
     if (!rampp->Po)
         rampp->Po = *P_central;
@@ -86,13 +86,13 @@ void set_up_ramp_p(RAMPP *rampp)
     log_entry("set_up_rampp");
 
     if (!rampp->waveform)
-        bomb("no waveform filename given for rampp", NULL);
+        bombElegant("no waveform filename given for rampp", NULL);
 
     if (!getTableFromSearchPath(&data, rampp->waveform, 1, 0))
-        bomb("unable to read waveform for rampp", NULL);
+        bombElegant("unable to read waveform for rampp", NULL);
 
     if (data.n_data<=1)
-        bomb("rampp waveform contains less than 2 points", NULL);
+        bombElegant("rampp waveform contains less than 2 points", NULL);
 
     rampp->Po      = 0;
     rampp->t_Pf    = data.c1;
@@ -100,7 +100,7 @@ void set_up_ramp_p(RAMPP *rampp)
     rampp->n_pts   = data.n_data;
     for (i=0; i<rampp->n_pts-1; i++)
         if (rampp->t_Pf[i]>rampp->t_Pf[i+1])
-            bomb("time values are not monotonically increasing in rampp waveform", NULL);
+            bombElegant("time values are not monotonically increasing in rampp waveform", NULL);
     tfree(data.xlab); tfree(data.ylab); tfree(data.title); tfree(data.topline);
     data.xlab = data.ylab = data.title = data.topline = NULL;
     log_exit("set_up_rampp");

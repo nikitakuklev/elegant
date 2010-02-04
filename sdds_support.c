@@ -485,7 +485,7 @@ void SDDS_WatchPointSetup(WATCH *watch, long mode, long lines_per_row,
     if (!qualifier)
       watch->window_code = FFT_HANNING;
     else if ((watch->window_code=match_string(qualifier, fft_window_name, N_FFT_WINDOWS, 0))<0) 
-      bomb("invalid window mode for WATCH fft", NULL);
+      bombElegant("invalid window mode for WATCH fft", NULL);
     sprintf(s,  "watch-point centroid FFT (%s window)", fft_window_name[watch->window_code]);
     SDDS_ElegantOutputSetup(SDDS_table, filename, mode, lines_per_row, s,
                             command_file, lattice_file, standard_parameter, STANDARD_PARAMETERS, 
@@ -582,7 +582,7 @@ void SDDS_HistogramSetup(HISTOGRAM *histogram, long mode, long lines_per_row,
       columns += 6;
     }
     if (!columns)
-      bomb("no output selected for histogram", NULL);
+      bombElegant("no output selected for histogram", NULL);
     if (!SDDS_DefineSimpleParameter(SDDS_table, "Pass", NULL, SDDS_LONG) ||
 	!SDDS_DefineSimpleParameter(SDDS_table, "PassLength", "m", SDDS_DOUBLE) ||
 	!SDDS_DefineSimpleParameter(SDDS_table, "PassCentralTime", "s", SDDS_DOUBLE) ||
@@ -622,11 +622,11 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
 #endif
   {
   if (!watch->initialized)
-    bomb("uninitialized watch-point (coordinate mode) encountered (dump_watch_particles)", NULL);
+    bombElegant("uninitialized watch-point (coordinate mode) encountered (dump_watch_particles)", NULL);
   if (!particle)
-    bomb("NULL coordinate pointer passed to dump_watch_particles", NULL);
+    bombElegant("NULL coordinate pointer passed to dump_watch_particles", NULL);
   if (watch->fraction>1)
-    bomb("logic error--fraction>1 in dump_watch_particles", NULL);
+    bombElegant("logic error--fraction>1 in dump_watch_particles", NULL);
   for (i=0; i<particles; i++)
     if (!particle[i]) {
       fprintf(stdout, "error: coordinate slot %ld is NULL (dump_watch_particles)\n", i);
@@ -760,14 +760,14 @@ void dump_watch_parameters(WATCH *watch, long step, long pass, long n_passes, do
       log_entry("dump_watch_parameters");
  
       if (!watch->initialized)
-        bomb("uninitialized watch-point (coordinate mode) encountered (dump_watch_parameters)", NULL);
+        bombElegant("uninitialized watch-point (coordinate mode) encountered (dump_watch_parameters)", NULL);
     
       if (watch->fraction>1)
-        bomb("logic error--fraction>1 in dump_watch_parameters", NULL);
+        bombElegant("logic error--fraction>1 in dump_watch_parameters", NULL);
     }
     if (isSlave) {
       if (!particle)
-        bomb("NULL coordinate pointer passed to dump_watch_parameters", NULL);
+        bombElegant("NULL coordinate pointer passed to dump_watch_parameters", NULL);
     }
 
     for (i=0; i<particles; i++)
@@ -1029,11 +1029,11 @@ void dump_watch_FFT(WATCH *watch, long step, long pass, long n_passes, double **
 
     samples = n_passes/watch->interval;
     if (!power_of_2(samples)) 
-        bomb("number of samples must be a power of 2 for FFT (dump_watch_FFT)", NULL);
+        bombElegant("number of samples must be a power of 2 for FFT (dump_watch_FFT)", NULL);
     if (!watch->initialized)
-        bomb("uninitialized watch-point (coordinate mode) encountered (dump_watch_FFT)", NULL);
+        bombElegant("uninitialized watch-point (coordinate mode) encountered (dump_watch_FFT)", NULL);
     if (!particle)
-        bomb("NULL coordinate pointer passed to dump_watch_FFT", NULL);
+        bombElegant("NULL coordinate pointer passed to dump_watch_FFT", NULL);
     for (i=0; i<particles; i++)
         if (!particle[i]) {
             fprintf(stdout, "error: coordinate slot %ld is NULL (dump_watch_FFT)\n", i);
@@ -1115,7 +1115,7 @@ void do_watch_FFT(double **data, long n_data, long slot, long window_code)
 
     log_entry("do_watch_FFT");
     if (!data[slot])
-        bomb("data pointer for specified slot is NULL (do_watch_FFT)", NULL);
+        bombElegant("data pointer for specified slot is NULL (do_watch_FFT)", NULL);
 
     /* load into temporary array */
     real_imag = tmalloc(sizeof(*real_imag)*(n_data+2));
@@ -1181,10 +1181,10 @@ void dump_particle_histogram(HISTOGRAM *histogram, long step, long pass, double 
 
   log_entry("dump_particle_histogram");
   if (!histogram->initialized)
-    bomb("uninitialized histogram encountered (dump_particle_histogram)", NULL);
+    bombElegant("uninitialized histogram encountered (dump_particle_histogram)", NULL);
   if (isSlave)
     if (!particle)
-      bomb("NULL coordinate pointer passed to dump_particle_histogram", NULL);
+      bombElegant("NULL coordinate pointer passed to dump_particle_histogram", NULL);
   /*
   for (ipart=0; ipart<particles; ipart++)
     if (!particle[ipart]) {
@@ -1330,7 +1330,7 @@ void dump_phase_space(SDDS_TABLE *SDDS_table, double **particle, long particles,
     log_entry("dump_phase_space");
     if (isSlave) {
       if (!particle)
-        bomb("NULL coordinate pointer passed to dump_phase_space", NULL);
+        bombElegant("NULL coordinate pointer passed to dump_phase_space", NULL);
     
       for (i=0; i<particles; i++)
         if (!particle[i]) {
@@ -1424,7 +1424,7 @@ void dump_lost_particles(SDDS_TABLE *SDDS_table, double **particle, long *lostOn
     log_entry("dump_lost_particles");
     if (isSlave) {
       if (!particle)
-        bomb("NULL coordinate pointer passed to dump_lost_particles", NULL);
+        bombElegant("NULL coordinate pointer passed to dump_lost_particles", NULL);
     }
 
 #ifdef SORT   /* sort for comparing the serial and parallel versions */
@@ -1513,11 +1513,11 @@ void dump_centroid(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline,
     log_entry("dump_centroid");
 
     if (!SDDS_table)
-        bomb("SDDS_TABLE pointer is NULL (dump_centroid)", NULL);
+        bombElegant("SDDS_TABLE pointer is NULL (dump_centroid)", NULL);
     if (!sums)
-        bomb("BEAM_SUMS pointer is NULL (dump_centroid)", NULL);
+        bombElegant("BEAM_SUMS pointer is NULL (dump_centroid)", NULL);
     if (!beamline)
-        bomb("LINE_LIST pointer is NULL (dump_centroid)", NULL);
+        bombElegant("LINE_LIST pointer is NULL (dump_centroid)", NULL);
     if ((s_index=SDDS_GetColumnIndex(SDDS_table, "s"))<0 ||
         (Cx_index=SDDS_GetColumnIndex(SDDS_table, "Cx"))<0) {
         SDDS_SetError("Problem getting index of SDDS columns (dump_centroid)");
@@ -1617,11 +1617,11 @@ void dump_sigma(SDDS_TABLE *SDDS_table, BEAM_SUMS *sums, LINE_LIST *beamline, lo
 #endif
 
   if (!SDDS_table)
-    bomb("SDDS_TABLE pointer is NULL (dump_sigma)", NULL);
+    bombElegant("SDDS_TABLE pointer is NULL (dump_sigma)", NULL);
   if (!sums)
-    bomb("BEAM_SUMS pointer is NULL (dump_centroid)", NULL);
+    bombElegant("BEAM_SUMS pointer is NULL (dump_centroid)", NULL);
   if (!beamline)
-    bomb("LINE_LIST pointer is NULL (dump_centroid)", NULL);
+    bombElegant("LINE_LIST pointer is NULL (dump_centroid)", NULL);
   if ((s_index=SDDS_GetColumnIndex(SDDS_table, "s"))<0 ||
       (sNIndex[0]=SDDS_GetColumnIndex(SDDS_table, "s1"))<0 ||
       (sNIndex[1]=SDDS_GetColumnIndex(SDDS_table, "s2"))<0 ||
@@ -1840,7 +1840,7 @@ void dump_scattered_particles(SDDS_TABLE *SDDS_table, double **particle,
 
     log_entry("dump_scattered_particles");
     if (!particle)
-        bomb("NULL coordinate pointer passed to dump_scattered_particles", NULL);
+        bombElegant("NULL coordinate pointer passed to dump_scattered_particles", NULL);
 
     for (i=0; i<particles; i++)
         if (!particle[i]) {
@@ -1939,7 +1939,7 @@ void dump_scattered_loss_particles(SDDS_TABLE *SDDS_table, double **particleLos,
 
     log_entry("dump_scattered_loss_particles");
     if (!particleLos)
-        bomb("NULL coordinate pointer passed to dump_scattered_loss_particles", NULL);
+        bombElegant("NULL coordinate pointer passed to dump_scattered_loss_particles", NULL);
 
     for (i=0; i<particles; i++)
         if (!particleLos[i]) {
@@ -1992,9 +1992,9 @@ void dump_scattered_loss_particles(SDDS_TABLE *SDDS_table, double **particleLos,
 void computeEmitTwissFromSigmaMatrix(double *emit, double *emitc, double *beta, double *alpha, double sigma[6][6], long plane)
 {
   if (plane<0 || plane>4 || plane%2!=0)
-    bomb("invalid value for plane in computeEmitTwissFromSigmaMatrix", NULL);
+    bombElegant("invalid value for plane in computeEmitTwissFromSigmaMatrix", NULL);
   if (!emit || (!emitc && (alpha || beta)))
-    bomb("invalid pointers passed to computeEmitTwissFromSigmaMatrix", NULL);
+    bombElegant("invalid pointers passed to computeEmitTwissFromSigmaMatrix", NULL);
   
   /* emittance */
   *emit = SAFE_SQRT(sigma[0+plane][0+plane]*sigma[1+plane][1+plane] - sqr(sigma[0+plane][1+plane]));

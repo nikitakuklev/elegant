@@ -20,9 +20,9 @@ ELEMENT_LIST *find_element(char *elem_name,  ELEMENT_LIST **context,  ELEMENT_LI
 
     log_entry("find_element");
     if (!elem_name)
-        bomb("elem_name is NULL (find_element)", NULL);
+        bombElegant("elem_name is NULL (find_element)", NULL);
     if (!elem)
-        bomb("elem is NULL (find_element)", NULL);
+        bombElegant("elem is NULL (find_element)", NULL);
 
     if (!context || *context==NULL)
         eptr = elem;
@@ -45,9 +45,9 @@ ELEMENT_LIST *find_element_hash(char *elem_name, long occurence, ELEMENT_LIST **
 
     log_entry("find_element");
     if (!elem_name)
-        bomb("elem_name is NULL (find_element)", NULL);
+        bombElegant("elem_name is NULL (find_element)", NULL);
     if (!elem)
-        bomb("elem is NULL (find_element)", NULL);
+        bombElegant("elem is NULL (find_element)", NULL);
 
     if (!context || *context==NULL)
         eptr = elem;
@@ -75,9 +75,9 @@ ELEMENT_LIST *find_element_index(char *elem_name,  ELEMENT_LIST **context,  ELEM
   ELEMENT_LIST *eptr;
 
   if (!elem_name)
-    bomb("elem_name is NULL (find_element)", NULL);
+    bombElegant("elem_name is NULL (find_element)", NULL);
   if (!elem)
-    bomb("elem is NULL (find_element)", NULL);
+    bombElegant("elem is NULL (find_element)", NULL);
 
   if (!context || *context==NULL) {
     *index = 0;
@@ -106,9 +106,9 @@ ELEMENT_LIST *wfind_element(char *elem_name,  ELEMENT_LIST **context,  ELEMENT_L
 
     log_entry("wfind_element");
     if (!elem_name)
-        bomb("elem_name is NULL (wfind_element)", NULL);
+        bombElegant("elem_name is NULL (wfind_element)", NULL);
     if (!elem)
-        bomb("elem is NULL (wfind_element)", NULL);
+        bombElegant("elem is NULL (wfind_element)", NULL);
 
     if (!context || *context==NULL)
         eptr = elem;
@@ -132,7 +132,7 @@ long confirm_parameter(char *item_name, long type)
     log_entry("confirm_parameter");
 
     if (!item_name)
-        bomb("item_name is NULL (confirm_parameter)", NULL);
+        bombElegant("item_name is NULL (confirm_parameter)", NULL);
     
     param = entity_description[type].parameter;
     for (i=0; i<entity_description[type].n_params; i++) 

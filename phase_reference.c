@@ -103,7 +103,7 @@ long set_phase_reference(
             }
         }
     if (phase_ref_number>LONG_MAX/2)
-        bomb("please use a small integer for the phase_reference number", NULL);
+        bombElegant("please use a small integer for the phase_reference number", NULL);
     reference = trealloc(reference, sizeof(*reference)*(++n_references));
     reference[i].ref_number = phase_ref_number;
     reference[i].phase = phase;

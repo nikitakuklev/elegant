@@ -32,9 +32,9 @@ long check_duplic_elem(
   ELEMENT_LIST **elemArray = NULL;
 
   if (!elem0 || !*elem0)
-    bomb("root pointer of element list is null (check_duplic_elem)", NULL);
+    bombElegant("root pointer of element list is null (check_duplic_elem)", NULL);
   if ((!new_elem || !*new_elem) && !nameToCheck)
-    bomb("new element pointer is null (check_duplic_elem)", NULL);
+    bombElegant("new element pointer is null (check_duplic_elem)", NULL);
   
   if (n_elems>=1) {
     if (nameToCheck) {

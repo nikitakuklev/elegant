@@ -57,9 +57,9 @@ void setup_corrector_output(char *filename, RUN *run)
         }
 
     if (!filename)
-        bomb("NULL filename passed (setup_corrector_output)", NULL);
+        bombElegant("NULL filename passed (setup_corrector_output)", NULL);
     if (!run)
-        bomb("NULL RUN pointer passed (setup_corrector_output)", NULL);
+        bombElegant("NULL RUN pointer passed (setup_corrector_output)", NULL);
 
     SDDS_ElegantOutputSetup(&SDDS_cor, filename, SDDS_BINARY, 1, "corrector data", run->runfile,
                             run->lattice, parameter_definition, N_PARAMETERS,

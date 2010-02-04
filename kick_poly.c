@@ -37,13 +37,13 @@ long polynomial_kicks(
     log_entry("polynomial_kicks");
 
     if (!particle)
-        bomb("particle array is null (polynomial_kicks)", NULL);
+        bombElegant("particle array is null (polynomial_kicks)", NULL);
 
     if (!kpoly)
-        bomb("null KPOLY pointer (polynomial_kicks)", NULL);
+        bombElegant("null KPOLY pointer (polynomial_kicks)", NULL);
 
     if ((order=kpoly->order)<0)
-        bomb("order < 0 for KPOLY element (polynomial_kicks)", NULL);
+        bombElegant("order < 0 for KPOLY element (polynomial_kicks)", NULL);
 
     if (kpoly->plane && (kpoly->plane[0]=='y' || kpoly->plane[0]=='Y'))
         yplane = 1;

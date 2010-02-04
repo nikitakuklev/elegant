@@ -47,12 +47,13 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
     /* process namelist input */
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
-    process_namelist(&chromaticity, nltext);
+    if (processNamelist(&chromaticity, nltext)==NAMELIST_ERROR)
+      bombElegant(NULL, NULL);
     str_toupper(sextupoles);
     if (echoNamelists) print_namelist(stdout, &chromaticity);
 
     if (run->default_order<2)
-        bomb("default order must be >= 2 for chromaticity correction", NULL);
+        bombElegant("default order must be >= 2 for chromaticity correction", NULL);
 
     if (chrom->name)
         tfree(chrom->name);
@@ -60,7 +61,7 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
     while ((chrom->name[chrom->n_families-1]=get_token(sextupoles)))
         chrom->name = trealloc(chrom->name, sizeof(*chrom->name)*(chrom->n_families+=1));
     if ((--chrom->n_families)<1)
-        bomb("too few sextupoles given for chromaticity correction", NULL);
+        bombElegant("too few sextupoles given for chromaticity correction", NULL);
     chrom->chromx = dnux_dp;
     chrom->chromy = dnuy_dp;
     chrom->n_iterations = n_iterations;
@@ -122,7 +123,7 @@ void setup_chromaticity_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *b
       }
 
       if (!(M=beamline->matrix) || !M->C || !M->R || !M->T)
-        bomb("something wrong with transfer map for beamline (setup_chromaticity_correction)", NULL);
+        bombElegant("something wrong with transfer map for beamline (setup_chromaticity_correction)", NULL);
 
       computeChromCorrectionMatrix(run, beamline, chrom);
     }
@@ -190,7 +191,7 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
                 exit(1);
                 }
             if (!(K2ptr = (double*)(context->p_elem + entity_description[context->type].parameter[K2_param].offset)))
-                bomb("K2ptr NULL in setup_chromaticity_correction", NULL);
+                bombElegant("K2ptr NULL in setup_chromaticity_correction", NULL);
             if (count==0)
                 K2 = *K2ptr;
             *K2ptr = K2 + chrom->sextupole_tweek;
@@ -235,9 +236,9 @@ void computeChromCorrectionMatrix(RUN *run, LINE_LIST *beamline, CHROM_CORRECTIO
                 exit(1);
                 }
             if (!(K2ptr = (double*)(context->p_elem + entity_description[context->type].parameter[K2_param].offset)))
-                bomb("K2ptr NULL in setup_chromaticity_correction", NULL);
+                bombElegant("K2ptr NULL in setup_chromaticity_correction", NULL);
             if (!K2ptr)
-                bomb("K2ptr NULL in setup_chromaticity_correction", NULL);
+                bombElegant("K2ptr NULL in setup_chromaticity_correction", NULL);
             *K2ptr = K2;
             if (context->matrix) {
                 free_matrices(context->matrix);
@@ -347,7 +348,7 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
     }
 
     if (!(M = beamline->matrix) || !M->C || !M->R || !M->T)
-        bomb("something wrong with transfer map for beamline (do_chromaticity_correction.1)", NULL);
+        bombElegant("something wrong with transfer map for beamline (do_chromaticity_correction.1)", NULL);
 
     computeChromaticities(&chromx0, &chromy0, 
 			  NULL, NULL, NULL, NULL, beamline->twiss0,
@@ -405,7 +406,7 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
                     exit(1);
                     }
                 if (!(K2ptr = (double*)(context->p_elem + entity_description[context->type].parameter[K2_param].offset)))
-                    bomb("K2ptr NULL in setup_chromaticity_correction", NULL);
+                    bombElegant("K2ptr NULL in setup_chromaticity_correction", NULL);
                 K2 = (*K2ptr += chrom->correction_fraction*chrom->dK2->a[i][0]);
                 if (chrom->strengthLimit>0 && chrom->strengthLimit<fabs(K2)) {
                   K2 = *K2ptr = SIGN(K2)*chrom->strengthLimit;
@@ -462,7 +463,7 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
         beamline->twiss0->etapy  = etap_y;
         
         if (!M || !M->C || !M->R || !M->T)
-            bomb("something wrong with transfer map for beamline (do_chromaticity_correction.2)", NULL);
+            bombElegant("something wrong with transfer map for beamline (do_chromaticity_correction.2)", NULL);
         computeChromaticities(&chromx0, &chromy0, 
 			      NULL, NULL, NULL, NULL, beamline->twiss0, 
 			      beamline->elast->twiss, M);
@@ -480,7 +481,7 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
             context = NULL;
             while ((context=find_element(chrom->name[i], &context, beamline->elem_twiss))) {
               if (( K2_param = confirm_parameter("K2", context->type))<0)
-                bomb("confirm_parameter doesn't return offset for K2 parameter.\n", NULL);
+                bombElegant("confirm_parameter doesn't return offset for K2 parameter.\n", NULL);
               fprintf(fp_sl, "%ld %e %s\n", 
                       step,
                       *((double*)(context->p_elem + entity_description[context->type].parameter[K2_param].offset)),
@@ -587,11 +588,11 @@ void computeHigherOrderChromaticities(LINE_LIST *beamline, double *clorb, RUN *r
   VMATRIX M1, M0, *Mp;
 
   if (deltaPoints>MAX_NDELTA_VALUES)
-    bomb("too many points for higher-order chromaticity", NULL);
+    bombElegant("too many points for higher-order chromaticity", NULL);
   if (deltaPoints<5)
     deltaPoints = 5;
   if (!(beamline->matrix))
-    bomb("no matrix for beamline (computeHigherOrderChromaticities)", NULL);
+    bombElegant("no matrix for beamline (computeHigherOrderChromaticities)", NULL);
   
   beamline->chrom2[0] = beamline->chrom2[1] = 0;
   beamline->chrom3[0] = beamline->chrom3[1] = 0;

@@ -9,6 +9,9 @@
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.27  2009/02/12 22:52:45  borland
+ * Added ability to turn off echoing of namelists.
+ *
  * Revision 1.26  2008/10/22 18:30:51  borland
  * Added global_settings command and means to inhibit file sync calls.
  *
@@ -195,7 +198,7 @@ void fit_trace_randomizeValues(MAT *paramVector, FIT_TRACE_DATA *traceData,
 MAT *m_diag( VEC *diagElements, MAT *A ) {
   long i;
   if(!diagElements)
-    bomb("Problem with allocation of vector of diagonal elements.\n",NULL);
+    bombElegant("Problem with allocation of vector of diagonal elements.\n",NULL);
   if (!A)
     A = m_get(diagElements->dim, diagElements->dim);
   m_zero(A);
@@ -218,7 +221,8 @@ void do_fit_trace_data(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
   long pass=0, passCount, monitorCalsDone;
   
   /* process namelist text */
-  process_namelist(&fit_traces, nltext);
+  if (processNamelist(&fit_traces, nltext)==NAMELIST_ERROR)
+    bombElegant(NULL, NULL);
   if (echoNamelists) print_namelist(stdout, &fit_traces);
 
   if (!trace_data_file || !fexists(trace_data_file)) {

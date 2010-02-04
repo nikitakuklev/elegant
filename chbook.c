@@ -273,7 +273,7 @@ double interpolate_bookn(ntuple *bName, double *x0, double *x, long offset, long
 
     grid[i][1] = grid[i][0]+1;
     if (grid[i][1] > bName->xbins[i])
-      bomb("interpolate_bookn --- This should not be happen", NULL);
+      bombElegant("interpolate_bookn --- This should not be happen", NULL);
     if (grid[i][0] < 0) 
       grid[i][0] = 0;
     if (grid[i][1] == bName->xbins[i])

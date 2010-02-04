@@ -55,7 +55,7 @@ long modulated_rf_cavity(double **part, long np, MODRF *modrf, double P_central,
         }
 
     if (!part)
-        bomb("NULL particle data pointer (modulated_rf_cavity)", NULL);
+        bombElegant("NULL particle data pointer (modulated_rf_cavity)", NULL);
     for (ip=0; ip<np; ip++)
         if (!part[ip]) {
             fprintf(stdout, "NULL pointer for particle %ld (modulated_rf_cavity)\n", ip);
@@ -66,7 +66,7 @@ long modulated_rf_cavity(double **part, long np, MODRF *modrf, double P_central,
             abort();
             }
     if (!modrf)
-        bomb("NULL modrf pointer (modulated_rf_cavity)", NULL);
+        bombElegant("NULL modrf pointer (modulated_rf_cavity)", NULL);
 
 #ifdef DEBUG
     if (!debugInitialized) {
@@ -124,7 +124,7 @@ long modulated_rf_cavity(double **part, long np, MODRF *modrf, double P_central,
     }
 
     if (!(omega0 = PIx2*modrf->freq))
-        bomb("FREQ=0 for MODRF element", NULL);
+        bombElegant("FREQ=0 for MODRF element", NULL);
 
     if (modrf->phase_reference==0) 
         modrf->phase_reference = unused_phase_reference();
@@ -140,7 +140,7 @@ long modulated_rf_cavity(double **part, long np, MODRF *modrf, double P_central,
                  */
                 unsigned long mode;
                 if (!(mode = parseFiducialMode(modrf->fiducial)))
-                    bomb("invalid fiducial mode for MODRF element", NULL);
+                    bombElegant("invalid fiducial mode for MODRF element", NULL);
                 t0 = findFiducialTime(part, np, zEnd-length, length/2, P_central, mode);
                 modrf->phase_fiducial = -omega0*t0;
                 modrf->fiducial_seen = 1;
@@ -148,7 +148,7 @@ long modulated_rf_cavity(double **part, long np, MODRF *modrf, double P_central,
             set_phase_reference(modrf->phase_reference, phase=modrf->phase_fiducial);
             break;
         default:
-            bomb("unknown return value from get_phase_reference()", NULL);
+            bombElegant("unknown return value from get_phase_reference()", NULL);
             break;
         }
 

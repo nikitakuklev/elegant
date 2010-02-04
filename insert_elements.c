@@ -42,26 +42,27 @@ void do_insert_elements(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
   /* process the namelist text */
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
-  process_namelist(&insert_elements, nltext);
+  if (processNamelist(&insert_elements, nltext)==NAMELIST_ERROR)
+    bombElegant(NULL, NULL);
   if (echoNamelists) print_namelist(stdout, &insert_elements);
 
   if (disable)
     return;
   if (!skip && !add_at_end && !total_occurrences)
-    bomb("skip, add_at_end and total_occurrences can not be zero at the same time", NULL);
+    bombElegant("skip, add_at_end and total_occurrences can not be zero at the same time", NULL);
 
   if (total_occurrences) {
     if (skip)
-      bomb("skip and total_occurrences can not be used together. One must have to be set to zero", NULL);
+      bombElegant("skip and total_occurrences can not be used together. One must have to be set to zero", NULL);
     if (has_wildcards(name))
-      bomb("element name has to be specified if you use the occurrence feature", NULL);
+      bombElegant("element name has to be specified if you use the occurrence feature", NULL);
   }
   add_elem_flag = 0;
   
   if ((!name || !strlen(name)) && !type)
-    bomb("name or type needs to be given", NULL);
+    bombElegant("name or type needs to be given", NULL);
   if (!element_def || !strlen(element_def))
-    bomb("element's definition is not given", NULL);
+    bombElegant("element's definition is not given", NULL);
  
   if (name) {
     str_toupper(name);

@@ -47,7 +47,7 @@ VMATRIX *bend_matrix(
     if (FABS(angle)<1e-10)
         return(drift_matrix(length, order));
     if (length==0)
-        bomb("zero-length bend magnet not supported", NULL);
+        bombElegant("zero-length bend magnet not supported", NULL);
 
     if (angle<0) {
         /* Note that k2 gets a minus sign here because beta has a rho^3 in it. */

@@ -92,21 +92,21 @@ void setup_sdds_beam(
   log_entry("setup_sdds_beam");
 
   if (!beam)
-    bomb("BEAM pointer is null in setup_sdds_beam", NULL);
+    bombElegant("BEAM pointer is null in setup_sdds_beam", NULL);
   if (!nltext)
-    bomb("NAMELIST_TEXT pointer is null in setup_sdds_beam", NULL);
+    bombElegant("NAMELIST_TEXT pointer is null in setup_sdds_beam", NULL);
   if (!run)
-    bomb("RUN pointer is null in setup_sdds_beam", NULL);
+    bombElegant("RUN pointer is null in setup_sdds_beam", NULL);
   if (!control)
-    bomb("VARY pointer is null in setup_sdds_beam", NULL);
+    bombElegant("VARY pointer is null in setup_sdds_beam", NULL);
   if (!errcon)
-    bomb("ERROR pointer is null in setup_sdds_beam", NULL);
+    bombElegant("ERROR pointer is null in setup_sdds_beam", NULL);
   if (!output)
-    bomb("OUTPUT_FILES pointer is null in setup_sdds_beam", NULL);
+    bombElegant("OUTPUT_FILES pointer is null in setup_sdds_beam", NULL);
   if (!beamline)
-    bomb("beamline pointer is null in setup_sdds_beam", NULL);
+    bombElegant("beamline pointer is null in setup_sdds_beam", NULL);
   if (!run->runfile || !run->lattice)
-    bomb("null runfile or lattice pointer in RUN structure in setup_sdds_beam", NULL);
+    bombElegant("null runfile or lattice pointer in RUN structure in setup_sdds_beam", NULL);
 
   if (!initial_call)
     get_sdds_particles(NULL, 0, 0);
@@ -116,15 +116,16 @@ void setup_sdds_beam(
   /* process namelist input */
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
-  process_namelist(&sdds_beam, nltext);
+  if (processNamelist(&sdds_beam, nltext)==NAMELIST_ERROR)
+    bombElegant(NULL, NULL);
   if (echoNamelists) print_namelist(stdout, &sdds_beam);
   fflush(stdout);
 
   /* check for validity of namelist inputs */
   if (input==NULL && input_list==NULL)
-    bomb("no input file given in namelist sdds_beam", NULL);
+    bombElegant("no input file given in namelist sdds_beam", NULL);
   if ((selection_parameter && !selection_string) || (!selection_parameter && selection_string))
-    bomb("must specify selection_parameter and selection_string together or not at all", NULL);
+    bombElegant("must specify selection_parameter and selection_string together or not at all", NULL);
 
   if (inputFile)
     free(inputFile);
@@ -141,7 +142,7 @@ void setup_sdds_beam(
     while ((ptr=get_token(input_list))) {
       inputFiles += 1;
       if (!(inputFile = SDDS_Realloc(inputFile, sizeof(*inputFile)*inputFiles)))
-        bomb("memory allocation failure", NULL);
+        bombElegant("memory allocation failure", NULL);
       cp_str(inputFile+inputFiles-1, ptr);
       inputFile[inputFiles-1] = compose_filename(inputFile[inputFiles-1], run->rootname);
     }
@@ -153,21 +154,21 @@ void setup_sdds_beam(
 #endif
 
   if ((input_type_code=match_string(input_type, input_type_name, N_SDDS_INPUT_TYPES, 0))<0)
-    bomb("unknown sdds input type", NULL);
+    bombElegant("unknown sdds input type", NULL);
   if (input_type_code==SPIFFE_BEAM && n_particles_per_ring<=0)
-    bomb("n_particles_per_ring is invalid", NULL);
+    bombElegant("n_particles_per_ring is invalid", NULL);
   if (input_type_code!=SPIFFE_BEAM)
     n_particles_per_ring = 1;
   if (n_particles_per_ring!=1 && one_random_bunch) 
-    bomb("must have n_particles_per_ring==1 for one_random_bunch!=0", NULL);
+    bombElegant("must have n_particles_per_ring==1 for one_random_bunch!=0", NULL);
   if (p_lower>p_upper)
-    bomb("p_lower and p_upper are invalid", NULL);
+    bombElegant("p_lower and p_upper are invalid", NULL);
   if (sample_interval<1)
-    bomb("sample_interval < 1", NULL);
+    bombElegant("sample_interval < 1", NULL);
   if (sample_fraction>1)
-    bomb("sample_fraction > 1", NULL);
+    bombElegant("sample_fraction > 1", NULL);
   if (sample_fraction<1 && sample_interval>1)
-    bomb("either sample_fraction or sample_interval must be 1", NULL);
+    bombElegant("either sample_fraction or sample_interval must be 1", NULL);
   if (save_initial_coordinates && !reuse_bunch)
     save_initial_coordinates = 0;
 /*
@@ -230,12 +231,12 @@ long new_sdds_beam(
   if (flags&TRACK_PREVIOUS_BUNCH) {
     /* retracking bunch that has already been set up */
     if (!save_initial_coordinates)
-      bomb("logic error---initial beam coordinates not saved", NULL);
+      bombElegant("logic error---initial beam coordinates not saved", NULL);
 #if SDDS_MPI_IO
     if (isSlave || !notSinglePart)
 #endif
     if (beam->original==NULL)
-      bomb("can't retrack with previous bunch--there isn't one!", NULL);
+      bombElegant("can't retrack with previous bunch--there isn't one!", NULL);
     if (n_particles_per_ring!=1) {
       fputs("Warning: can't do retracking with previous bunch when n_particles_per_ring!=1\n", stdout);
       fputs("Will use a new bunch generated from previously read data.\n", stdout);
@@ -261,7 +262,7 @@ long new_sdds_beam(
         beam->particle = beam->accepted = beam->original = NULL;
         /* read the particle data */
         if ((beam->n_original=get_sdds_particles(&beam->original, prebunched, 0))<0) {
-          bomb("no particles in input file", NULL);
+          bombElegant("no particles in input file", NULL);
         }
         if (reuse_bunch) {
           if (save_initial_coordinates)
@@ -359,9 +360,9 @@ long new_sdds_beam(
 #endif
     if (input_type_code==SPIFFE_BEAM) {
       if (!beam->original)
-        bomb("beam->original array is NULL (new_sdds_beam-2)", NULL);
+        bombElegant("beam->original array is NULL (new_sdds_beam-2)", NULL);
       if (!beam->particle)
-        bomb("beam->particle array is NULL (new_sdds_beam-2)", NULL);
+        bombElegant("beam->particle array is NULL (new_sdds_beam-2)", NULL);
       for (i=i_store=0; i<beam->n_original; i+=sample_interval) {
         if (!beam->original[i]) {
           fprintf(stdout, "error: beam->original[%ld] is NULL (new_sdds_beam-2)\n", i);;
@@ -432,9 +433,9 @@ long new_sdds_beam(
        * so I just copy the data for the most part, except for sampling.
        */
       if (!beam->original && beam->n_original)
-        bomb("beam->original array is NULL (new_sdds_beam)", NULL);
+        bombElegant("beam->original array is NULL (new_sdds_beam)", NULL);
       if (!beam->particle)
-        bomb("beam->particle array is NULL (new_sdds_beam)", NULL);
+        bombElegant("beam->particle array is NULL (new_sdds_beam)", NULL);
       for (i=i_store=0; i<beam->n_original; i_store++,i+=sample_interval) {
         if (sample_fraction!=1 && random_4(1)>sample_fraction) {
           i_store--;
@@ -503,9 +504,9 @@ long new_sdds_beam(
     if (isSlave || (!notSinglePart)) {
 #endif
     if (!beam->original)
-      bomb("beam->original is NULL (new_sdds_beam.3)", NULL);
+      bombElegant("beam->original is NULL (new_sdds_beam.3)", NULL);
     if (!beam->particle)
-      bomb("beam->particle is NULL (new_sdds_beam.3)", NULL);
+      bombElegant("beam->particle is NULL (new_sdds_beam.3)", NULL);
     for (i=0; i<beam->n_saved; i++) {
       if (!beam->original[i]) {
         fprintf(stdout, "error: beam->original[%ld] is NULL (new_sdds_beam.3)\n", i);
@@ -538,11 +539,11 @@ long new_sdds_beam(
        to generate new beams.
        */
     if (beam->original==beam->particle) 
-      bomb("logic error in new_sdds_beam: array for original coordinates is missing", NULL);
+      bombElegant("logic error in new_sdds_beam: array for original coordinates is missing", NULL);
     if (!beam->original)
-      bomb("beam->original is NULL (new_sdds_beam.4)", NULL);
+      bombElegant("beam->original is NULL (new_sdds_beam.4)", NULL);
     if (!beam->particle)
-      bomb("beam->particle is NULL (new_sdds_beam.4)", NULL);
+      bombElegant("beam->particle is NULL (new_sdds_beam.4)", NULL);
     for (i=0; i<beam->n_to_track; i++) {
       if (!beam->original[i]) {
         fprintf(stdout, "error: beam->original[%ld] is NULL (new_sdds_beam.4)\n", i);

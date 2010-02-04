@@ -44,13 +44,13 @@ void track_through_frfmode(
   if (charge)
     rfmode->mp_charge = charge->macroParticleCharge;
   else
-    bomb("CHARGE element required to use FRFMODE", NULL);
+    bombElegant("CHARGE element required to use FRFMODE", NULL);
   
   if (rfmode->mp_charge==0 || rfmode->factor==0)
     return ;
   
   if (!rfmode->initialized)
-    bomb("track_through_rfmode called with uninitialized element", NULL);
+    bombElegant("track_through_rfmode called with uninitialized element", NULL);
 
   if (rfmode->outputFile && pass==0 && !SDDS_StartPage(&rfmode->SDDSout, n_passes))
     SDDS_Bomb("Problem starting page for FRFMODE output file");
@@ -234,15 +234,15 @@ void set_up_frfmode(FRFMODE *rfmode, char *element_name, double element_z, long 
 
 #if !SDDS_MPI_IO
   if (n_particles<1)
-    bomb("too few particles in set_up_frfmode()", NULL);
+    bombElegant("too few particles in set_up_frfmode()", NULL);
 #endif
 
   if (rfmode->n_bins<2)
-    bomb("too few bins for FRFMODE", NULL);
+    bombElegant("too few bins for FRFMODE", NULL);
 
     if (!rfmode->filename ||
 	!SDDS_InitializeInput(&SDDSin, rfmode->filename))
-      bomb("unable to open file for FRFMODE element", NULL);
+      bombElegant("unable to open file for FRFMODE element", NULL);
     /* check existence and properties of required columns  */
     if (SDDS_CheckColumn(&SDDSin, "Frequency", "Hz", SDDS_ANY_FLOATING_TYPE,
 			 stdout)!=SDDS_CHECK_OK) {
@@ -301,7 +301,7 @@ void set_up_frfmode(FRFMODE *rfmode, char *element_name, double element_z, long 
       SDDS_Bomb("Problem getting data from FRFMODE file");
     if (!(rfmode->beta = SDDS_GetColumnInDoubles(&SDDSin, "beta"))) {
       if (!(rfmode->beta = malloc(sizeof(*(rfmode->beta))*rfmode->modes)))
-	bomb("memory allocation failure (FRFMODE)", NULL);
+	bombElegant("memory allocation failure (FRFMODE)", NULL);
       for (imode=0; imode<rfmode->modes; imode++)
 	rfmode->beta[imode] = 0;
     }
@@ -310,7 +310,7 @@ void set_up_frfmode(FRFMODE *rfmode, char *element_name, double element_z, long 
       !(rfmode->Vr = malloc(sizeof(*(rfmode->Vr))*rfmode->modes)) ||
       !(rfmode->Vi = malloc(sizeof(*(rfmode->Vi))*rfmode->modes)) ||
       !(rfmode->last_phase = malloc(sizeof(*(rfmode->last_phase))*rfmode->modes)))
-    bomb("memory allocation failure (FRFMODE)", NULL);
+    bombElegant("memory allocation failure (FRFMODE)", NULL);
     
   for (imode=0; imode<rfmode->modes; imode++) {
     rfmode->omega[imode] *= PIx2;

@@ -117,7 +117,7 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
         /* printf("Bucket %ld ends with ip=%ld\n", bunches, ip-1); fflush(stdout); */
         bucketEnd[bunches++] = ip-1;
         if (bunches>=MAX_BUCKETS) {
-            bomb("Error (wake): maximum number of buckets was exceeded", NULL);
+            bombElegant("Error (wake): maximum number of buckets was exceeded", NULL);
           }
       }
     }
@@ -344,7 +344,7 @@ void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long part
   } else if (pass==0) {
     ztransverse->macroParticleCharge = 0;
     if (ztransverse->charge<0)
-      bomb("ZTRANSVERSE charge parameter should be non-negative. Use change_particle to set particle charge state.", NULL);
+      bombElegant("ZTRANSVERSE charge parameter should be non-negative. Use change_particle to set particle charge state.", NULL);
 #if (!USE_MPI)
     if (particles)
       ztransverse->macroParticleCharge = ztransverse->charge/particles;
@@ -369,12 +369,12 @@ void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long part
        */
     double term;
     if (ztransverse->bin_size<=0)
-      bomb("bin_size must be positive for ZTRANSVERSE element", NULL);
+      bombElegant("bin_size must be positive for ZTRANSVERSE element", NULL);
     if (ztransverse->n_bins%2!=0)
-      bomb("ZTRANSVERSE element must have n_bins divisible by 2", NULL);
+      bombElegant("ZTRANSVERSE element must have n_bins divisible by 2", NULL);
     if (ztransverse->ZxReal || ztransverse->ZxImag ||
         ztransverse->ZyReal || ztransverse->ZyImag )
-      bomb("can't specify both broad_band impedance and Z(f) files for ZTRANSVERSE element", NULL);
+      bombElegant("can't specify both broad_band impedance and Z(f) files for ZTRANSVERSE element", NULL);
 
     optimizeBinSettingsForImpedance(timeSpan, ztransverse->freq, ztransverse->Q,
                                     &(ztransverse->bin_size), &(ztransverse->n_bins),
@@ -410,10 +410,10 @@ void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long part
     long n_spect;
     SDDS_DATASET SDDSin;
     if (!ztransverse->freqColumn || !ztransverse->inputFile)
-      bomb("you must give an inputFile and freqColumn, or use a broad band model (ZTRANSVERSE)", NULL);
+      bombElegant("you must give an inputFile and freqColumn, or use a broad band model (ZTRANSVERSE)", NULL);
     if (!ztransverse->ZxReal && !ztransverse->ZxImag &&
         !ztransverse->ZyReal && !ztransverse->ZxImag)
-      bomb("you must either give broad_band=1, or Z[xy]Real and/or Z[xy]Imag (ZTRANSVERSE)", NULL);
+      bombElegant("you must either give broad_band=1, or Z[xy]Real and/or Z[xy]Imag (ZTRANSVERSE)", NULL);
     if (!SDDS_InitializeInputFromSearchPath(&SDDSin, ztransverse->inputFile) || !SDDS_ReadPage(&SDDSin)) {
       fprintf(stdout, "unable to read file %s\n", ztransverse->inputFile);
       fflush(stdout);
@@ -426,7 +426,7 @@ void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long part
       exit(1);
     }
     if (!power_of_2(n_spect-1))
-      bomb("number of spectrum points must be 2^n+1, n>1 (ZTRANSVERSE)", NULL);
+      bombElegant("number of spectrum points must be 2^n+1, n>1 (ZTRANSVERSE)", NULL);
     ZReal[0] = getTransverseImpedance(&SDDSin, ztransverse->ZxReal);
     ZImag[0] = getTransverseImpedance(&SDDSin, ztransverse->ZxImag);
     ZReal[1] = getTransverseImpedance(&SDDSin, ztransverse->ZyReal);
@@ -462,7 +462,7 @@ void set_up_ztransverse(ZTRANSVERSE *ztransverse, RUN *run, long pass, long part
           calloc(sizeof(*ztransverse->iZ[0]), n_spect*2)) ||
         !(ztransverse->iZ[1] =
           calloc(sizeof(*ztransverse->iZ[1]), n_spect*2)))
-      bomb("memory allocation failure (ZTRANSVERSE)", NULL);
+      bombElegant("memory allocation failure (ZTRANSVERSE)", NULL);
     for (i=0; i<n_spect; i++) {
       if (i==0) {
         /* DC term */

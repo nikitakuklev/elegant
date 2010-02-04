@@ -186,9 +186,9 @@ long do_tracking(
   strncpy(trackingContext.rootname, run->rootname, CONTEXT_BUFSIZE);
 
   if (!coord && !beam)
-    bomb("Null particle coordinate array and null beam pointer! (do_tracking)", NULL);
+    bombElegant("Null particle coordinate array and null beam pointer! (do_tracking)", NULL);
   if (coord && beam)
-    bomb("Particle coordinate array and beam pointer both supplied!  (do_tracking)", NULL);
+    bombElegant("Particle coordinate array and beam pointer both supplied!  (do_tracking)", NULL);
   if (beam) {
     coord = beam->particle;
     nOriginal = beam->n_to_track;  /* used only for computing macroparticle charge */
@@ -325,7 +325,7 @@ long do_tracking(
         !(beamline->flags&BEAMLINE_CONCAT_CURRENT) ) {
       /* form concatenated beamline for tracking */
       if (getSCMULTSpecCount())
-        bomb("space charge calculation can not work together with matrix concatenation tracking. \n Please remove concat_order from run_setup", NULL);
+        bombElegant("space charge calculation can not work together with matrix concatenation tracking. \n Please remove concat_order from run_setup", NULL);
       concatenate_beamline(beamline, run);
     }
 
@@ -528,7 +528,7 @@ long do_tracking(
 
       if (sums_vs_z && *sums_vs_z && !(flags&FINAL_SUMS_ONLY) && !(flags&TEST_PARTICLES)) {
         if (i_sums<0)
-          bomb("attempt to accumulate beam sums with negative index!", NULL);
+          bombElegant("attempt to accumulate beam sums with negative index!", NULL);
         accumulate_beam_sums(*sums_vs_z+i_sums, coord, nToTrack, *P_central);
         (*sums_vs_z)[i_sums].z = z;
 #if defined(BEAM_SUMS_DEBUG)
@@ -686,10 +686,10 @@ long do_tracking(
         else if (entity_description[eptr->type].flags&MATRIX_TRACKING &&
 		 !(flags&IBS_ONLY_TRACKING)) {
           if (!(entity_description[eptr->type].flags&HAS_MATRIX))
-            bomb("attempt to matrix-multiply for element with no matrix!",  NULL);
+            bombElegant("attempt to matrix-multiply for element with no matrix!",  NULL);
           if (!eptr->matrix) {
             if (!(eptr->matrix=compute_matrix(eptr, run, NULL)))
-              bomb("no matrix for element that must have matrix", NULL);
+              bombElegant("no matrix for element that must have matrix", NULL);
           }
           if (eptr->matrix->C[5]!=0) {
             fprintf(stdout, "Warning: matrix with C5!=0 detected in matrix multiplier--this shouldn't happen!\nAll particles considered lost!\n");
@@ -777,7 +777,7 @@ long do_tracking(
 		if (charge->chargePerParticle)
 		  charge->macroParticleCharge = charge->chargePerParticle;
                 if (charge->macroParticleCharge<0) 
-                  bomb("Error: CHARGE element should specify the quantity of charge (in Coulombs) without the sign", NULL);
+                  bombElegant("Error: CHARGE element should specify the quantity of charge (in Coulombs) without the sign", NULL);
 	      }
 	      break;
 	    case T_MARK:
@@ -999,7 +999,7 @@ long do_tracking(
 	      break;
        case T_MHISTOGRAM:
          if (!eptr->pred)
-           bomb("MHISTOGRAM should not be the first element of the beamline.", NULL);
+           bombElegant("MHISTOGRAM should not be the first element of the beamline.", NULL);
 	      if (!(flags&TEST_PARTICLES) && !(flags&INHIBIT_FILE_OUTPUT)) {
            mhist = (MHISTOGRAM*)eptr->p_elem;
            if (!mhist->disable) {
@@ -1052,7 +1052,7 @@ long do_tracking(
 		  /* Compute new central momentum to match the average momentum of the particles. */
 		  do_match_energy(coord, nToTrack, P_central, 0);
 		if (energy->match_particles)
-		  bomb("can't match_beamline AND match_particles for ENERGY element", NULL);
+		  bombElegant("can't match_beamline AND match_particles for ENERGY element", NULL);
 	      }
 	      else if (energy->match_particles) {
 		/* change the particle momenta so that the centroid is the central momentum */
@@ -1084,7 +1084,7 @@ long do_tracking(
 	      break;
 	    case T_ALPH:
 	      if (!eptr->matrix && !(eptr->matrix=compute_matrix(eptr, run, NULL)))
-		bomb("no matrix for alpha magnet", NULL);
+		bombElegant("no matrix for alpha magnet", NULL);
 	      nLeft = alpha_magnet_tracking(coord, eptr->matrix, (ALPH*)eptr->p_elem, nToTrack,
 					    accepted, *P_central, z);
 	      break;
@@ -1266,13 +1266,13 @@ long do_tracking(
 		  if (eptr->matrix)
 		    free_matrices(eptr->matrix);
 		  if (!(eptr->matrix = compute_matrix(eptr, run, NULL)))
-		    bomb("no matrix for element that must have matrix", NULL);
+		    bombElegant("no matrix for element that must have matrix", NULL);
 		}
 		sptr->ks = 0;  /* reset so it is clear that B is fundamental quantity */
 	      }
 	      if (!eptr->matrix) {
 		if (!(eptr->matrix=compute_matrix(eptr, run, NULL)))
-		  bomb("no matrix for element that must have matrix", NULL);
+		  bombElegant("no matrix for element that must have matrix", NULL);
 	      }
 	      track_particles(coord, eptr->matrix, coord, nToTrack);
 	      break;
@@ -1664,7 +1664,7 @@ long do_tracking(
       while (eptr) {
         if (sums_vs_z && *sums_vs_z && !(flags&FINAL_SUMS_ONLY) && !(flags&TEST_PARTICLES)) {
           if (i_sums<0)
-            bomb("attempt to accumulate beam sums with negative index!", NULL);
+            bombElegant("attempt to accumulate beam sums with negative index!", NULL);
           accumulate_beam_sums(*sums_vs_z+i_sums, coord, nToTrack, *P_central);
           (*sums_vs_z)[i_sums].z = z;
           i_sums++;
@@ -1733,7 +1733,7 @@ long do_tracking(
     if (sums_vs_z && (*sums_vs_z) && !(flags&FINAL_SUMS_ONLY) && !(flags&TEST_PARTICLES) &&
         (run->wrap_around || i_pass==n_passes-1)) {
       if (i_sums<0)
-        bomb("attempt to accumulate beam sums with negative index!", NULL);
+        bombElegant("attempt to accumulate beam sums with negative index!", NULL);
       accumulate_beam_sums(*sums_vs_z+i_sums, coord, nToTrack, *P_central);
       (*sums_vs_z)[i_sums].z = z;
 #if defined(BEAM_SUMS_DEBUG)
@@ -1869,7 +1869,7 @@ long do_tracking(
     else if (run->wrap_around) {
       log_entry("do_tracking.3.2");
       if (i_sums<0)
-        bomb("attempt to accumulate beam sums with negative index!", NULL);
+        bombElegant("attempt to accumulate beam sums with negative index!", NULL);
       /* accumulate sums for final output */
       accumulate_beam_sums(*sums_vs_z+i_sums, coord, nToTrack, *P_central);
 #if defined(BEAM_SUMS_DEBUG)
@@ -1882,7 +1882,7 @@ long do_tracking(
     else {
       log_entry("do_tracking.3.3");
       if (i_sums<0)
-        bomb("attempt to accumulate beam sums with negative index!", NULL);
+        bombElegant("attempt to accumulate beam sums with negative index!", NULL);
       copy_beam_sums(*sums_vs_z+i_sums, *sums_vs_z+i_sums-1);
 #if defined(BEAM_SUMS_DEBUG)
       fprintf(stdout, "beam sums copied to slot %ld from slot %ld for final sums at z=%em, sx=%e\n", 
@@ -2391,15 +2391,15 @@ void store_fitpoint_matrix_values(MARK *fpt, char *name, long occurence, VMATRIX
   if (!M) 
     return;
   if (!M->R)
-    bomb("NULL R matrix passed to store_fitpoint_matrix_values", NULL);
+    bombElegant("NULL R matrix passed to store_fitpoint_matrix_values", NULL);
 
   if (!(fpt->init_flags&8)) {
     if (M->order==1) {
       if (!(fpt->matrix_mem = malloc(sizeof(*(fpt->matrix_mem))*36)))
-        bomb("memory allocation failure (store_fitpoint_matrix_values)", NULL);
+        bombElegant("memory allocation failure (store_fitpoint_matrix_values)", NULL);
     } else {
       if (!(fpt->matrix_mem = malloc(sizeof(*(fpt->matrix_mem))*(36+126))))
-        bomb("memory allocation failure (store_fitpoint_matrix_values)", NULL);
+        bombElegant("memory allocation failure (store_fitpoint_matrix_values)", NULL);
     }
     for (i=count=0; i<6; i++) {
       for (j=0; j<6; j++) {
@@ -2532,7 +2532,7 @@ ELEMENT_LIST *findBeamlineMatrixElement(ELEMENT_LIST *eptr)
     eptr = eptr->succ;
   }
   if (!matrixSeen)
-    bomb("Can't do \"linear chromatic\" or \"longitudinal-only\" matrix tracking---no matrices!", NULL);
+    bombElegant("Can't do \"linear chromatic\" or \"longitudinal-only\" matrix tracking---no matrices!", NULL);
   while (eptr) {
     if ((eptr->p_elem || eptr->matrix) && eptr->type==T_MATR) {
       fprintf(stderr, "***** WARNING ****\n");
@@ -2655,7 +2655,7 @@ long trackWithIndividualizedLinearMatrix(double **particle, long particles, doub
         M1->R[1+offset][0+offset] = (R11*R22-1)/R12;
       }
       else {
-        bomb("divided by zero in trackWithChromaticLinearMatrix", NULL);
+        bombElegant("divided by zero in trackWithChromaticLinearMatrix", NULL);
       }
       det = M1->R[0+offset][0+offset]*M1->R[1+offset][1+offset] -
         M1->R[0+offset][1+offset]*M1->R[1+offset][0+offset];
@@ -2787,7 +2787,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
   if (!script->rootname || !strlen(script->rootname)) {
     /* generate random rootname */
     if (!(rootname = tmpname(NULL)))
-      bomb("problem generating temporary filename for script", NULL);
+      bombElegant("problem generating temporary filename for script", NULL);
 #if SDDS_MPI_IO
   /* As different processors will have different process names, we need
      make sure they have the same file name for parallel I/O */
@@ -2801,7 +2801,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
     strlen(script->outputExtension) + 4;
   if (!(input = malloc(sizeof(*input)*nameLength)) ||
       !(output = malloc(sizeof(*output)*nameLength)))
-    bomb("problem generating temporary filename for script", NULL);
+    bombElegant("problem generating temporary filename for script", NULL);
 
   doDrift = 0;
   if (script->onPass>=0) {
@@ -2835,7 +2835,7 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
 
   if (!(cmdBuffer0=malloc(sizeof(char)*(strlen(script->command)+10*strlen(input)+10*strlen(output)))) ||
       !(cmdBuffer1=malloc(sizeof(char)*(strlen(script->command)+10*strlen(input)+10*strlen(output)))))
-    bomb("memory allocation failure making command buffer for script", NULL);
+    bombElegant("memory allocation failure making command buffer for script", NULL);
   replaceString(cmdBuffer0, script->command, "%i", input, 9, 0);
   replaceString(cmdBuffer1, cmdBuffer0, "%o", output, 9, 0);
 
@@ -3812,10 +3812,10 @@ void set_up_mhist(MHISTOGRAM *mhist, RUN *run, long occurence)
   if (mhist->disable)
     return;
   if (mhist->interval<=0)
-    bomb("interval is non-positive for MHISTOGRAM element", NULL);
+    bombElegant("interval is non-positive for MHISTOGRAM element", NULL);
   if (!mhist->file1d && !mhist->file2dH && !mhist->file2dV && 
       !mhist->file2dL && !mhist->file4d && !mhist->file6d)
-    bomb("No output request set to this mhistogram element. Use disable =1", NULL);  
+    bombElegant("No output request set to this mhistogram element. Use disable =1", NULL);  
 
   if (!SDDS_InitializeInputFromSearchPath(&SDDSin, mhist->inputBinFile) ||
       SDDS_ReadPage(&SDDSin)<=0 ||
@@ -3831,34 +3831,34 @@ void set_up_mhist(MHISTOGRAM *mhist, RUN *run, long occurence)
   if (mhist->file1d) {
     if (mhist->bins1d[0]<=2 && mhist->bins1d[1]<=2 && mhist->bins1d[2]<=2 &&
         mhist->bins1d[3]<=2 && mhist->bins1d[4]<=2 && mhist->bins1d[5]<=2)
-      bomb("All 1D bin's value less than 2", NULL);  
+      bombElegant("All 1D bin's value less than 2", NULL);  
     mhist->file1d = compose_filename_occurence(mhist->file1d, run->rootname, occurence);
   } 
   if (mhist->file2dH) {
     if (mhist->bins2d[0]<=2 || mhist->bins2d[1]<=2)
-      bomb("2D x-x' bin's value less than 2", NULL);  
+      bombElegant("2D x-x' bin's value less than 2", NULL);  
     mhist->file2dH = compose_filename_occurence(mhist->file2dH, run->rootname, occurence);    
   }
   if (mhist->file2dV) {
     if (mhist->bins2d[2]<=2 || mhist->bins2d[3]<=2)
-      bomb("2D y-y' bin's value less than 2", NULL);  
+      bombElegant("2D y-y' bin's value less than 2", NULL);  
     mhist->file2dV = compose_filename_occurence(mhist->file2dV, run->rootname, occurence);    
   }
   if (mhist->file2dL) {
     if (mhist->bins2d[4]<=2 || mhist->bins2d[5]<=2)
-      bomb("2D dt-dp bin's value less than 2", NULL);  
+      bombElegant("2D dt-dp bin's value less than 2", NULL);  
     mhist->file2dL = compose_filename_occurence(mhist->file2dL, run->rootname, occurence);    
   }
   if (mhist->file4d) {
     if (mhist->bins4d[0]<=2 || mhist->bins4d[1]<=2 ||
         mhist->bins4d[2]<=2 || mhist->bins4d[3]<=2)
-      bomb("4D x-x'-y-y' bin's value less than 2", NULL);  
+      bombElegant("4D x-x'-y-y' bin's value less than 2", NULL);  
     mhist->file4d = compose_filename_occurence(mhist->file4d, run->rootname, occurence);    
   }
   if (mhist->file6d) {
     if (mhist->bins6d[0]<=2 || mhist->bins6d[1]<=2 || mhist->bins6d[2]<=2 ||
         mhist->bins6d[3]<=2 || mhist->bins6d[4]<=2 || mhist->bins6d[5]<=2)
-      bomb("6D x-x'-y-y'-dt-dp bin's value less than 2", NULL);  
+      bombElegant("6D x-x'-y-y'-dt-dp bin's value less than 2", NULL);  
     if (mhist->lumped)
       mhist->file6d = compose_filename_occurence(mhist->file6d, run->rootname, 0);    
     else

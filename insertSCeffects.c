@@ -39,7 +39,7 @@ void addSCSpec(char *name, char *type, char *exclude)
   if (!(scSpec 
 	= SDDS_Realloc(scSpec,
 		       sizeof(*scSpec)*(No_scSpec+1))))
-    bomb("memory allocation failure", NULL);
+    bombElegant("memory allocation failure", NULL);
   scSpec[No_scSpec].name = NULL;
   scSpec[No_scSpec].type = NULL;
   scSpec[No_scSpec].exclude = NULL;
@@ -49,7 +49,7 @@ void addSCSpec(char *name, char *type, char *exclude)
        !SDDS_CopyString(&scSpec[No_scSpec].type, type)) ||
       (exclude &&
        !SDDS_CopyString(&scSpec[No_scSpec].exclude, exclude)))
-    bomb("memory allocation failure", NULL);
+    bombElegant("memory allocation failure", NULL);
   
   No_scSpec++;
 }
@@ -95,12 +95,13 @@ void setupSCEffect(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
   long i;
   
   if (!No_scSpec && !(sc = SDDS_Realloc(sc, sizeof(*sc))))
-    bomb("memory allocation failure", NULL);                
+    bombElegant("memory allocation failure", NULL);                
 
   /* process the namelist text */
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
-  process_namelist(&insert_sceffects, nltext);
+  if (processNamelist(&insert_sceffects, nltext)==NAMELIST_ERROR)
+    bombElegant(NULL, NULL);
   if (echoNamelists) print_namelist(stdout, &insert_sceffects);
 
   if (clear) {
@@ -112,7 +113,7 @@ void setupSCEffect(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     return;
   
   if (!name || !strlen(name))
-    bomb("no name given", NULL);
+    bombElegant("no name given", NULL);
   str_toupper(name);
   if (has_wildcards(name) && strchr(name, '-'))
     name = expand_ranges(name);
@@ -320,7 +321,7 @@ void initializeSCMULT(ELEMENT_LIST *eptr, double **part, long np, double Po, lon
   static CHARGE *charge;
 	
   if (!eptr->twiss)
-    bomb("Twiss parameters must be calculated before SC tracking.", NULL);
+    bombElegant("Twiss parameters must be calculated before SC tracking.", NULL);
 		
   if (i_pass==0) {
     while(eptr) {
@@ -331,7 +332,7 @@ void initializeSCMULT(ELEMENT_LIST *eptr, double **part, long np, double Po, lon
       eptr =eptr->succ;
     }
     if (charge==NULL) 
-      bomb("No charge element is given.", NULL);
+      bombElegant("No charge element is given.", NULL);
 	
   }
 #if USE_MPI

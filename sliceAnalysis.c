@@ -9,6 +9,9 @@
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.12  2009/09/10 21:57:50  xiaoam
+ * Add slice analysis to IBS simulation.
+ *
  * Revision 1.11  2009/02/12 22:55:41  borland
  * Added ability to turn off echoing of namelists.
  *
@@ -146,19 +149,20 @@ void setupSliceAnalysis(NAMELIST_TEXT *nltext, RUN *run,
 #endif
 
   /* process namelist text */
-  process_namelist(&slice_analysis, nltext);
+  if (processNamelist(&slice_analysis, nltext)==NAMELIST_ERROR)
+    bombElegant(NULL, NULL);
   if (echoNamelists) print_namelist(stdout, &slice_analysis);
 
   sliceOutput = &(output_data->sliceAnalysis);
 
   if (!output || !strlen(output))
-    bomb("provide a filename for slice_analysis output", NULL);
+    bombElegant("provide a filename for slice_analysis output", NULL);
   if (n_slices<0) 
-    bomb("invalid n_slice value", NULL);
+    bombElegant("invalid n_slice value", NULL);
   if (s_start<0 || s_start>s_end) 
-    bomb("invalid s_start and/or s_end values", NULL);
+    bombElegant("invalid s_start and/or s_end values", NULL);
   if ((s_start>0 || s_end!=DBL_MAX) && final_values_only)
-    bomb("giving s_start or s_end with final_values_only=1 is not meaningful.", NULL);
+    bombElegant("giving s_start or s_end with final_values_only=1 is not meaningful.", NULL);
   clearSliceAnalysis();
   
   sliceOutput->active = 1;
@@ -185,7 +189,7 @@ void setupSliceAnalysis(NAMELIST_TEXT *nltext, RUN *run,
       !(sliceOutput->Cyp = malloc(sizeof(*(sliceOutput->Cyp))*(n_slices+2))) ||
       !(sliceOutput->Cdelta = malloc(sizeof(*(sliceOutput->Cdelta))*(n_slices+2))) ||
       !(sliceOutput->Ct = malloc(sizeof(*(sliceOutput->Ct))*(n_slices+2))))
-    bomb("memory allocation failure (setupSliceAnalysis)", NULL);
+    bombElegant("memory allocation failure (setupSliceAnalysis)", NULL);
 
   if (!(sliceOutput->enxIndex = malloc(sizeof(*(sliceOutput->enxIndex))*(n_slices+2))) ||
       !(sliceOutput->enyIndex = malloc(sizeof(*(sliceOutput->enyIndex))*(n_slices+2))) ||
@@ -206,7 +210,7 @@ void setupSliceAnalysis(NAMELIST_TEXT *nltext, RUN *run,
       !(sliceOutput->CdeltaIndex = malloc(sizeof(*(sliceOutput->CdeltaIndex))*(n_slices+2))) ||
       !(sliceOutput->CtIndex = malloc(sizeof(*(sliceOutput->CtIndex))*(n_slices+2))) ||
       !(sliceOutput->sliceFound = malloc(sizeof(*(sliceOutput->sliceFound))*(n_slices+2))))
-    bomb("memory allocation failure (setupSliceAnalysis)", NULL);
+    bombElegant("memory allocation failure (setupSliceAnalysis)", NULL);
   
   if (!(sliceOutput->enxMemNum = malloc(sizeof(*(sliceOutput->enxMemNum))*(n_slices+2))) ||
       !(sliceOutput->enyMemNum = malloc(sizeof(*(sliceOutput->enyMemNum))*(n_slices+2))) ||
@@ -226,7 +230,7 @@ void setupSliceAnalysis(NAMELIST_TEXT *nltext, RUN *run,
       !(sliceOutput->CypMemNum = malloc(sizeof(*(sliceOutput->CypMemNum))*(n_slices+2))) ||
       !(sliceOutput->CdeltaMemNum = malloc(sizeof(*(sliceOutput->CdeltaMemNum))*(n_slices+2))) ||
       !(sliceOutput->CtMemNum = malloc(sizeof(*(sliceOutput->CtMemNum))*(n_slices+2))))
-    bomb("memory allocation failure (setupSliceAnalysis)", NULL);    
+    bombElegant("memory allocation failure (setupSliceAnalysis)", NULL);    
 
   sliceOutput->filename = compose_filename(output, run->rootname);
   SDDSout = &(sliceOutput->SDDSout);
@@ -610,7 +614,7 @@ void performSliceAnalysis(SLICE_OUTPUT *sliceOutput, double **particle, long par
     }
     
     if (!slicesFound)
-      bomb("No valid slices found for slice property computation.", NULL);
+      bombElegant("No valid slices found for slice property computation.", NULL);
 
     sliceOutput->enx[nSlices+1] /= slicesFound;
     sliceOutput->eny[nSlices+1] /= slicesFound;

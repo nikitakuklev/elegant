@@ -59,7 +59,7 @@ void initializeTransverseFeedbackPickup(TFBPICKUP *tfbp)
   double sum;
 
   if (tfbp->ID==NULL || !strlen(tfbp->ID))
-    bomb("you must give an ID string for TFBPICKUP", NULL);
+    bombElegant("you must give an ID string for TFBPICKUP", NULL);
 
   for (i=sum=0; i<TFB_FILTER_LENGTH; i++)
     sum += tfbp->a[i];
@@ -71,14 +71,14 @@ void initializeTransverseFeedbackPickup(TFBPICKUP *tfbp)
       break;
   }
   if (i<0)
-    bomb("All filter coefficients are zero for TFBPICKUP", NULL);
+    bombElegant("All filter coefficients are zero for TFBPICKUP", NULL);
   tfbp->filterLength = i+1;
 
   if (strcmp(tfbp->plane, "x")==0 || strcmp(tfbp->plane, "X")==0) 
     tfbp->yPlane = 0;
   else {
     if (!(strcmp(tfbp->plane, "y")==0 || strcmp(tfbp->plane, "Y")==0))
-      bomb("PLANE must be x or y for TFBPICKUP", NULL);
+      bombElegant("PLANE must be x or y for TFBPICKUP", NULL);
     tfbp->yPlane = 1;
   }
 
@@ -98,7 +98,7 @@ void transverseFeedbackDriver(TFBDRIVER *tfbd, double **part, long np, LINE_LIST
   if (tfbd->delay>tfbd->maxDelay) {
     if (!(tfbd->driverSignal = 
           realloc(tfbd->driverSignal, sizeof(*tfbd->driverSignal)*(tfbd->delay+1+TFB_FILTER_LENGTH))))
-      bomb("memory allocation failure (transverseFeedbackDriver)", NULL);
+      bombElegant("memory allocation failure (transverseFeedbackDriver)", NULL);
     tfbd->maxDelay = tfbd->delay;
   }
     
@@ -170,14 +170,14 @@ void initializeTransverseFeedbackDriver(TFBDRIVER *tfbd, LINE_LIST *beamline, lo
   long pickupFound = 0, i;
 
   if (tfbd->ID==NULL || !strlen(tfbd->ID))
-    bomb("you must give an ID string for TFBDRIVER", NULL);
+    bombElegant("you must give an ID string for TFBDRIVER", NULL);
   
   for (i=TFB_FILTER_LENGTH-1; i>=0; i--) {
     if (tfbd->a[i]!=0)
       break;
   }
   if (i<0)
-    bomb("All filter coefficients are zero for TFBDRIVER", NULL);
+    bombElegant("All filter coefficients are zero for TFBDRIVER", NULL);
   tfbd->filterLength = i+1;
 
   eptr = &(beamline->elem);
@@ -190,12 +190,12 @@ void initializeTransverseFeedbackDriver(TFBDRIVER *tfbd, LINE_LIST *beamline, lo
     eptr = eptr->succ;
   }
   if (!pickupFound) 
-    bomb("pickup not found for TFBDRIVER", NULL);
+    bombElegant("pickup not found for TFBDRIVER", NULL);
   
   if (tfbd->delay<0)
-    bomb("TFBDRIVER delay is negative", NULL);
+    bombElegant("TFBDRIVER delay is negative", NULL);
   if (!(tfbd->driverSignal = malloc(sizeof(*(tfbd->driverSignal))*(tfbd->delay+1+TFB_FILTER_LENGTH))))
-    bomb("memory allocation failure (TFBDRIVER)", NULL);
+    bombElegant("memory allocation failure (TFBDRIVER)", NULL);
   tfbd->maxDelay = tfbd->delay;
   
   if (tfbd->outputFile) {

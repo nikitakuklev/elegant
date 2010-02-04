@@ -41,7 +41,8 @@ void run_subprocess(NAMELIST_TEXT *nltext, RUN *run)
   /* process the namelist text */
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
-  process_namelist(&subprocess, nltext);
+  if (processNamelist(&subprocess, nltext)==NAMELIST_ERROR)
+    bombElegant(NULL, NULL);
   if (echoNamelists) print_namelist(stdout, &subprocess);
 
   if (command) {
@@ -57,7 +58,7 @@ void run_subprocess(NAMELIST_TEXT *nltext, RUN *run)
       }
       else {
         if (!run || !run->rootname)
-          bomb("rootname must be initialized prior to subprocess execution if \%s substitution is used", NULL);
+          bombElegant("rootname must be initialized prior to subprocess execution if \%s substitution is used", NULL);
         *ptr = 0;
         ptr += 2;
         strcat(buffer, ptr0);

@@ -437,7 +437,7 @@ void lorentz_setup(
             coord_transform = nibend_coord_transform;
             select_lorentz_integrator(nibend->method);
             if ((fringe_code=match_string(nibend->model, fringe_model, N_FRINGE_MODELS, 0))<0)
-                bomb("unknown fringe-field model for NIBEND", NULL);
+                bombElegant("unknown fringe-field model for NIBEND", NULL);
             flen = 0;
             if ((Kg=2*nibend->hgap*nibend->fint)) {
                 switch (fringe_code) {
@@ -484,7 +484,7 @@ void lorentz_setup(
                         flen = nibend->flen = nibend->length;
                         break;
                     default:
-                        bomb("logic error in fringe field setup for NIBEND (lorentz_setup)", NULL);
+                        bombElegant("logic error in fringe field setup for NIBEND (lorentz_setup)", NULL);
                         break;
                     }
                 }
@@ -553,13 +553,13 @@ void lorentz_setup(
                   fse_opt = zeroNewton(nibend_trajectory_error_fse, 0, fse_opt, 1e-6, 10, 1e-14*nibend->rho0);
 #ifdef IEEE_MATH
                   if (isnan(fse_opt) || isinf(fse_opt))
-                    bomb("Newton's method failed to find strength adjustment for NIBEND--decrease accuracy parameter", NULL);
+                    bombElegant("Newton's method failed to find strength adjustment for NIBEND--decrease accuracy parameter", NULL);
 #endif
                 } else if (nibend->adjustBoundary) {
                   offset = zeroNewton(nibend_trajectory_error_offset, 0, offset, 1e-6, 10, 1e-14*nibend->rho0);
 #ifdef IEEE_MATH
                   if (isnan(offset) || isinf(offset))
-                    bomb("Newton's method failed to find coordinate offset for NIBEND--decrease accuracy parameter", NULL);
+                    bombElegant("Newton's method failed to find coordinate offset for NIBEND--decrease accuracy parameter", NULL);
 #endif
                 }
                 if (fringe_code==ENGE1_MODEL || fringe_code==ENGE3_MODEL
@@ -664,7 +664,7 @@ void lorentz_setup(
                 fse_opt = zeroNewton(nisept_trajectory_error, 0, fse_opt, 1e-6, 10, 1e-14);
 #ifdef IEEE_MATH
                 if (isnan(fse_opt) || isinf(fse_opt))
-                    bomb("Newton's method failed to find coordinate fse_opt for NISEPT--decrease accuracy parameter", NULL);
+                    bombElegant("Newton's method failed to find coordinate fse_opt for NISEPT--decrease accuracy parameter", NULL);
 #endif
                 if (fse_opt==0)
                     fse_opt = DBL_MIN;
@@ -688,7 +688,7 @@ void lorentz_setup(
             tolerance = bmapxy->accuracy;
 	    if ((!bmapxy->filename && !(bmapxy->FxRpn && bmapxy->FyRpn)) ||
 		(bmapxy->filename && (bmapxy->FxRpn || bmapxy->FyRpn)))
-	      bomb("Specify one and only one of filename or (Fx,Fy) for BMAPXY", NULL);
+	      bombElegant("Specify one and only one of filename or (Fx,Fy) for BMAPXY", NULL);
             if (bmapxy->filename) {
 	      if (!bmapxy->points)
 		bmapxy_field_setup(bmapxy);
@@ -698,7 +698,7 @@ void lorentz_setup(
 	    }
             break;
           default:
-            bomb("invalid field type (lortenz_setup)", NULL);
+            bombElegant("invalid field type (lortenz_setup)", NULL);
             break;
         }
     if (s_offset)
@@ -823,7 +823,7 @@ double nibend_trajectory_error_offset(double offsetp)
     fill_double_array(coord, 6, 0.0);
     offset = offsetp;
     if (!do_lorentz_integration(coord, field_global))
-        bomb("integration failure in nibend_trajectory_error", NULL);
+        bombElegant("integration failure in nibend_trajectory_error", NULL);
     traj_err_final_coord = coord;
     return(coord[1]);
     }
@@ -836,7 +836,7 @@ double nibend_trajectory_error_fse(double fsep)
     opf = one_plus_fse;
     one_plus_fse += fsep;
     if (!do_lorentz_integration(coord, field_global))
-        bomb("integration failure in nibend_trajectory_error", NULL);
+        bombElegant("integration failure in nibend_trajectory_error", NULL);
     traj_err_final_coord = coord;
     one_plus_fse = opf;
     return(coord[1]);
@@ -889,7 +889,7 @@ void nibend_coord_transform(double *q, double *coord, NIBEND *nibend, long which
         q[7] = coord[5];
         }
     else if (which_end==-2) {
-      bomb("nibend transform called with which_end==-2", NULL);
+      bombElegant("nibend transform called with which_end==-2", NULL);
         /* transform q into coord at entrance refence plane */
         dqds[0] = q[3];
         dqds[1] = q[4];
@@ -955,7 +955,7 @@ void nibend_coord_transform(double *q, double *coord, NIBEND *nibend, long which
         coord[4] += dz*sqrt(1+ sqr(coord[1]) + sqr(coord[3]));
         }
     else
-        bomb("unknown coordinate conversion requested (nibend_coord_transform)", NULL);
+        bombElegant("unknown coordinate conversion requested (nibend_coord_transform)", NULL);
     }
 
 
@@ -1085,7 +1085,7 @@ void nibend_deriv_function(double *qp, double *q, double s)
         F0 = S*q[2]*( (3*Fa+4*Fb*z+5*Fc*z2)*z2 - q22*(Fa + 4*Fb*z + 10*Fc*z2) );
         break;
       default:
-        bomb("invalid fringe-field code in nibend_deriv_function", NULL);
+        bombElegant("invalid fringe-field code in nibend_deriv_function", NULL);
         break;
       }
       F1 = F0*sin_alpha1;
@@ -1118,7 +1118,7 @@ void nibend_deriv_function(double *qp, double *q, double s)
           F0 = -S*q[2]*( (3*Fa+4*Fb*z+5*Fc*z2)*z2 - q22*(Fa + 4*Fb*z + 10*Fc*z2) );
           break;
         default:
-          bomb("invalid fringe-field code in nibend_deriv_function", NULL);
+          bombElegant("invalid fringe-field code in nibend_deriv_function", NULL);
           break;
         }
         F1 = -F0*sin_alpha2;
@@ -1154,7 +1154,7 @@ double nisept_trajectory_error(double fsep)
     fill_double_array(coord, 6, 0.0);
     fse_opt = fsep;
     if (!do_lorentz_integration(coord, field_global))
-        bomb("integration failure in nisept_trajectory_error", NULL);
+        bombElegant("integration failure in nisept_trajectory_error", NULL);
     traj_err_final_coord = coord;
     return(coord[1]);
     }
@@ -1224,7 +1224,7 @@ void nisept_coord_transform(double *q, double *coord, NISEPT *nisept, long which
             }
         }
     else
-        bomb("unknown coordinate conversion requested (nisept_coord_transform)", NULL);
+        bombElegant("unknown coordinate conversion requested (nisept_coord_transform)", NULL);
     }
 
 

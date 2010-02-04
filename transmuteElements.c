@@ -27,7 +27,7 @@ void addTransmutationSpec(char *name, char *type, char *exclude,
   if (!(transmutationSpec 
 	= SDDS_Realloc(transmutationSpec,
 		       sizeof(*transmutationSpec)*(transmutationSpecs+1))))
-    bomb("memory allocation failure", NULL);
+    bombElegant("memory allocation failure", NULL);
   transmutationSpec[transmutationSpecs].name = NULL;
   transmutationSpec[transmutationSpecs].type = NULL;
   transmutationSpec[transmutationSpecs].exclude = NULL;
@@ -38,7 +38,7 @@ void addTransmutationSpec(char *name, char *type, char *exclude,
        !SDDS_CopyString(&transmutationSpec[transmutationSpecs].type, type)) ||
       (exclude &&
        !SDDS_CopyString(&transmutationSpec[transmutationSpecs].exclude, exclude)))
-    bomb("memory allocation failure", NULL);
+    bombElegant("memory allocation failure", NULL);
   
   transmutationSpecs++;
 }
@@ -81,7 +81,8 @@ void setupTransmuteElements(NAMELIST_TEXT *nltext, RUN *run,
   /* process the namelist text */
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
-  process_namelist(&transmute_elements, nltext);
+  if (processNamelist(&transmute_elements, nltext)==NAMELIST_ERROR)
+    bombElegant(NULL, NULL);
   if (echoNamelists) print_namelist(stdout, &transmute_elements);
 
   if (clear_all) {
@@ -93,22 +94,22 @@ void setupTransmuteElements(NAMELIST_TEXT *nltext, RUN *run,
     return;
 
   if (!new_type)
-    bomb("new_type must be given", NULL);
+    bombElegant("new_type must be given", NULL);
   str_toupper(new_type);
   j = -1;
   for (i=0; i<N_TYPES; i++) {
     if (strncmp(entity_name[i], new_type, strlen(new_type))==0) {
       if (j>=0) 
-        bomb("new_type matches more than one element type", NULL);
+        bombElegant("new_type matches more than one element type", NULL);
       j = i;
     }
   }
   if (j==-1)
-    bomb("new_type does not match a known element type", NULL);
+    bombElegant("new_type does not match a known element type", NULL);
   newType = j;
   
   if (!name || !strlen(name))
-    bomb("no name given", NULL);
+    bombElegant("no name given", NULL);
   str_toupper(name);
   if (has_wildcards(name) && strchr(name, '-'))
     name = expand_ranges(name);

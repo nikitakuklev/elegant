@@ -137,7 +137,7 @@ void track_through_zlongit(double **part, long np, ZLONGIT *zlongit, double Po,
           /* printf("Bucket %ld ends with ip=%ld\n", bunches, ip-1); fflush(stdout); */
           bucketEnd[bunches++] = ip-1;
           if (bunches>=MAX_BUCKETS) {
-            bomb("Error (wake): maximum number of buckets was exceeded", NULL);
+            bombElegant("Error (wake): maximum number of buckets was exceeded", NULL);
           }
         }
       }
@@ -398,7 +398,7 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
     } else if (pass==0) {
       zlongit->macroParticleCharge = 0;
       if (zlongit->charge<0)
-        bomb("ZLONGIT charge parameter should be non-negative.  Use change_particle to set particle charge state.", NULL);
+        bombElegant("ZLONGIT charge parameter should be non-negative.  Use change_particle to set particle charge state.", NULL);
 #if (!USE_MPI)
       if (particles)
         zlongit->macroParticleCharge = zlongit->charge/particles;
@@ -423,15 +423,15 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
        */
         double term;
         if (zlongit->bin_size<=0)
-          bomb("bin_size must be positive for ZLONGIT element", NULL);
+          bombElegant("bin_size must be positive for ZLONGIT element", NULL);
         if (zlongit->Ra && zlongit->Rs) 
-          bomb("ZLONGIT element broad-band resonator may have only one of Ra or Rs nonzero.  Ra is just 2*Rs", NULL);
+          bombElegant("ZLONGIT element broad-band resonator may have only one of Ra or Rs nonzero.  Ra is just 2*Rs", NULL);
         if (!zlongit->Ra)
           zlongit->Ra = 2*zlongit->Rs;
         if (zlongit->n_bins%2!=0)
-            bomb("ZLONGIT element must have n_bins divisible by 2", NULL);
+            bombElegant("ZLONGIT element must have n_bins divisible by 2", NULL);
         if (zlongit->Zreal  || zlongit->Zimag) 
-            bomb("can't specify both broad_band impedance and Z(f) files for ZLONGIT element", NULL);
+            bombElegant("can't specify both broad_band impedance and Z(f) files for ZLONGIT element", NULL);
         optimizeBinSettingsForImpedance(timeSpan, zlongit->freq, zlongit->Q,
                                         &(zlongit->bin_size), &(zlongit->n_bins), zlongit->max_n_bins);
         df = 1/(zlongit->n_bins*zlongit->bin_size)/(zlongit->freq);
@@ -469,17 +469,17 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
         double df_spect;
         long n_spect=0;
         if (!zlongit->Zreal && !zlongit->Zimag)
-            bomb("you must either give broad_band=1, or Zreal and/or Zimag (ZLONGIT)", NULL);
+            bombElegant("you must either give broad_band=1, or Zreal and/or Zimag (ZLONGIT)", NULL);
         if (zlongit->Zreal && !getTableFromSearchPath(&Zr_data, zlongit->Zreal, 1, 0))
-            bomb("unable to read real impedance function (ZLONGIT)", NULL);
+            bombElegant("unable to read real impedance function (ZLONGIT)", NULL);
         if (zlongit->Zimag && !getTableFromSearchPath(&Zi_data, zlongit->Zimag, 1, 0))
-            bomb("unable to read imaginary impedance function (ZLONGIT)", NULL);
+            bombElegant("unable to read imaginary impedance function (ZLONGIT)", NULL);
         if (zlongit->Zreal && !zlongit->Zimag) {
             if (!checkPointSpacing(Zr_data.c1, Zr_data.n_data, 1e-6))
-                bomb("frequency values not equally spaced for real data (ZLONGIT)",  NULL);
+                bombElegant("frequency values not equally spaced for real data (ZLONGIT)",  NULL);
             Zr = Zr_data.c2;
             if ((n_spect = Zr_data.n_data)<2)
-                bomb("too little data in real impedance input file (ZLONGIT)", NULL);
+                bombElegant("too little data in real impedance input file (ZLONGIT)", NULL);
             df_spect = Zr_data.c1[1]-Zr_data.c1[0];
             Zi = tmalloc(sizeof(*Zi)*n_spect);
             for (i=0; i<n_spect; i++)
@@ -487,10 +487,10 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
             }
         else if (zlongit->Zimag && !zlongit->Zreal) {
             if (!checkPointSpacing(Zi_data.c1, Zi_data.n_data, 1e-6))
-                bomb("frequency values not equally spaced for real data (ZLONGIT)",  NULL);
+                bombElegant("frequency values not equally spaced for real data (ZLONGIT)",  NULL);
             Zi = Zi_data.c2;
             if ((n_spect = Zi_data.n_data)<2)
-                bomb("too little data in imaginary impedance input file (ZLONGIT)", NULL);
+                bombElegant("too little data in imaginary impedance input file (ZLONGIT)", NULL);
             df_spect = Zi_data.c1[1]-Zi_data.c1[0];
             Zr = tmalloc(sizeof(*Zr)*n_spect);
             for (i=0; i<n_spect; i++)
@@ -498,22 +498,22 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
             }
         else if (zlongit->Zimag && zlongit->Zreal) {
             if (!checkPointSpacing(Zr_data.c1, Zr_data.n_data, 1e-6))
-                bomb("frequency values not equally spaced for real data (ZLONGIT)",  NULL);
+                bombElegant("frequency values not equally spaced for real data (ZLONGIT)",  NULL);
             if (!checkPointSpacing(Zi_data.c1, Zi_data.n_data, 1e-6))
-                bomb("frequency values not equally spaced for real data (ZLONGIT)",  NULL);
+                bombElegant("frequency values not equally spaced for real data (ZLONGIT)",  NULL);
             if (Zi_data.n_data!=Zr_data.n_data)
-                bomb("real and imaginary impedance files have different amounts of data (ZLONGIT)", NULL);
+                bombElegant("real and imaginary impedance files have different amounts of data (ZLONGIT)", NULL);
             n_spect = Zi_data.n_data;
             df_spect = Zi_data.c1[1]-Zi_data.c1[0];
             if (df_spect!=(Zi_data.c1[1]-Zi_data.c1[0]))
-                bomb("real and imaginary impedance files have different frequency spacing (ZLONGIT)", NULL);
+                bombElegant("real and imaginary impedance files have different frequency spacing (ZLONGIT)", NULL);
             Zi = Zi_data.c2;
             Zr = Zr_data.c2;
             }
         if (Zi[0])
-            bomb("impedance spectrum has non-zero imaginary DC term (ZLONGIT)", NULL);
+            bombElegant("impedance spectrum has non-zero imaginary DC term (ZLONGIT)", NULL);
         if (!power_of_2(n_spect-1))
-            bomb("number of spectrum points must be 2^n+1, n>1 (ZLONGIT)", NULL);
+            bombElegant("number of spectrum points must be 2^n+1, n>1 (ZLONGIT)", NULL);
         zlongit->n_bins = 2*(n_spect-1);
         zlongit->bin_size = 1.0/(zlongit->n_bins*df_spect);
         nfreq = n_spect;

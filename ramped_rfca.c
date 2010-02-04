@@ -100,7 +100,7 @@ long ramped_rf_cavity(
         set_up_ramped_rfca(ramprf);
 
     if (!ramprf->t_Vf || !ramprf->Vfactor || !ramprf->n_Vpts)
-        bomb("no (valid) waveform data for RAMPRF", NULL);
+        bombElegant("no (valid) waveform data for RAMPRF", NULL);
     
     gamma = sqrt(sqr(P_central)+1);
     beta  = P_central/gamma;
@@ -139,7 +139,7 @@ long ramped_rf_cavity(
             if (!ramprf->fiducial_seen) {
                 unsigned long mode;
                 if (!(mode = parseFiducialMode(ramprf->fiducial)))
-                    bomb("invalid fiducial mode for RAMPRF element", NULL);
+                    bombElegant("invalid fiducial mode for RAMPRF element", NULL);
                 t0 = findFiducialTime(part, np, zEnd-length, length/2, P_central, mode);
                 ramprf->phase_fiducial = -omega*t0;
                 ramprf->fiducial_seen = 1;
@@ -147,7 +147,7 @@ long ramped_rf_cavity(
             set_phase_reference(ramprf->phase_reference, phase=ramprf->phase_fiducial);
             break;
           default:
-            bomb("unknown return value from get_phase_reference()", NULL);
+            bombElegant("unknown return value from get_phase_reference()", NULL);
             break;
             }
         if (omega) {
@@ -245,56 +245,56 @@ void set_up_ramped_rfca(RAMPRF *ramprf)
     ramprf->fiducial_seen = 0;
 
     if (!ramprf->vwaveform)
-        bomb("no voltage waveform filename given for ramprf", NULL);
+        bombElegant("no voltage waveform filename given for ramprf", NULL);
 
     if (!getTableFromSearchPath(&data, ramprf->vwaveform, 1, 0))
-        bomb("unable to read voltage waveform for ramprf", NULL);
+        bombElegant("unable to read voltage waveform for ramprf", NULL);
 
     if (data.n_data<=1)
-        bomb("ramprf voltage waveform contains less than 2 points", NULL);
+        bombElegant("ramprf voltage waveform contains less than 2 points", NULL);
 
     ramprf->t_Vf    = data.c1;
     ramprf->Vfactor = data.c2;
     ramprf->n_Vpts  = data.n_data;
     for (i=0; i<ramprf->n_Vpts-1; i++)
         if (ramprf->t_Vf[i]>ramprf->t_Vf[i+1])
-            bomb("time values are not monotonically increasing in ramprf voltage waveform", NULL);
+            bombElegant("time values are not monotonically increasing in ramprf voltage waveform", NULL);
     tfree(data.xlab); tfree(data.ylab); tfree(data.title); tfree(data.topline);
     data.xlab = data.ylab = data.title = data.topline = NULL;
 
     if ((ramprf->fwaveform && !ramprf->pwaveform) || (!ramprf->fwaveform && ramprf->pwaveform))
-        bomb("you must give both a freq_waveform and a phase_waveform, or else give neither (RAMPRF)", NULL);
+        bombElegant("you must give both a freq_waveform and a phase_waveform, or else give neither (RAMPRF)", NULL);
 
     if (ramprf->pwaveform) {
         if (!getTableFromSearchPath(&data, ramprf->pwaveform, 1, 0))
-            bomb("unable to read phase waveform for ramprf", NULL);
+            bombElegant("unable to read phase waveform for ramprf", NULL);
         
         if (data.n_data<=1)
-            bomb("ramprf phase waveform contains less than 2 points", NULL);
+            bombElegant("ramprf phase waveform contains less than 2 points", NULL);
         
         ramprf->t_dP    = data.c1;
         ramprf->dPhase  = data.c2;
         ramprf->n_Ppts  = data.n_data;
         for (i=0; i<ramprf->n_Ppts-1; i++)
             if (ramprf->t_dP[i]>ramprf->t_dP[i+1])
-                bomb("time values are not monotonically increasing in phase ramprf waveform", NULL);
+                bombElegant("time values are not monotonically increasing in phase ramprf waveform", NULL);
         tfree(data.xlab); tfree(data.ylab); tfree(data.title); tfree(data.topline);
         data.xlab = data.ylab = data.title = data.topline = NULL;
         }
 
     if (ramprf->fwaveform) {
         if (!getTableFromSearchPath(&data, ramprf->fwaveform, 1, 0))
-            bomb("unable to read frequency waveform for ramprf", NULL);
+            bombElegant("unable to read frequency waveform for ramprf", NULL);
         
         if (data.n_data<=1)
-            bomb("ramprf frequency waveform contains less than 2 points", NULL);
+            bombElegant("ramprf frequency waveform contains less than 2 points", NULL);
         
         ramprf->t_ff    = data.c1;
         ramprf->ffactor = data.c2;
         ramprf->n_fpts  = data.n_data;
         for (i=0; i<ramprf->n_fpts-1; i++)
             if (ramprf->t_ff[i]>ramprf->t_ff[i+1])
-                bomb("time values are not monotonically increasing in frequency ramprf waveform", NULL);
+                bombElegant("time values are not monotonically increasing in frequency ramprf waveform", NULL);
         tfree(data.xlab); tfree(data.ylab); tfree(data.title); tfree(data.topline);
         data.xlab = data.ylab = data.title = data.topline = NULL;
         }

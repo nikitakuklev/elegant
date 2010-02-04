@@ -98,15 +98,16 @@ void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamli
   /* process namelist input */
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
-  process_namelist(&floor_coordinates, nltext);
+  if (processNamelist(&floor_coordinates, nltext)==NAMELIST_ERROR)
+    bombElegant(NULL, NULL);
   if (echoNamelists) print_namelist(stdout, &floor_coordinates);
   
   if (magnet_centers && vertices_only)
-    bomb("you can simultaneously request magnet centers and vertices only output", NULL);
+    bombElegant("you can simultaneously request magnet centers and vertices only output", NULL);
   if (filename)
     filename = compose_filename(filename, run->rootname);
   else
-    bomb("filename must be given for floor coordinates", NULL);
+    bombElegant("filename must be given for floor coordinates", NULL);
   
   SDDS_ElegantOutputSetup(&SDDS_floor, filename, SDDS_BINARY, 1, "floor coordinates", 
                           run->runfile, run->lattice, NULL, 0,

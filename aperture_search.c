@@ -74,36 +74,37 @@ void setup_aperture_search(
   /* process namelist input */
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
-  process_namelist(&find_aperture, nltext);
+  if (processNamelist(&find_aperture, nltext)==NAMELIST_ERROR)
+    bombElegant(NULL, NULL);
   if (echoNamelists) print_namelist(stdout, &find_aperture);
 
   /* check for data errors */
   if (!output && !optimization_mode)
-    bomb("no output filename specified (required if optimization_mode=0)", NULL);
+    bombElegant("no output filename specified (required if optimization_mode=0)", NULL);
   if (xmin>=xmax)
-    bomb("xmin >= xmax", NULL);
+    bombElegant("xmin >= xmax", NULL);
   if (ymin>=ymax)
-    bomb("ymin >= ymax", NULL);
+    bombElegant("ymin >= ymax", NULL);
   if (nx<3)
-    bomb("nx < 3", NULL);
+    bombElegant("nx < 3", NULL);
   if (ny<2)
-    bomb("ny < 2", NULL);
+    bombElegant("ny < 2", NULL);
   if (n_splits && n_splits<1)
-    bomb("n_splits is non-zero, but less than 1", NULL);
+    bombElegant("n_splits is non-zero, but less than 1", NULL);
   if (n_splits) {
     if (split_fraction<=0 || split_fraction>=1)
-      bomb("split_fraction must be greater than 0 and less than 1", NULL);
+      bombElegant("split_fraction must be greater than 0 and less than 1", NULL);
     if (desired_resolution<=0 || desired_resolution>=1)
-      bomb("desired_resolution must be greater than 0 and less than 1", NULL);
+      bombElegant("desired_resolution must be greater than 0 and less than 1", NULL);
     if ((desired_resolution *= (xmax-xmin))>(xmax-xmin)/(nx-1))
-      bomb("desired_resolution is larger than coarse mesh", NULL);
+      bombElegant("desired_resolution is larger than coarse mesh", NULL);
   }
   if ((mode_code=match_string(mode, search_mode, N_SEARCH_MODES, 0))<0)
-    bomb("unknown search mode", NULL);
+    bombElegant("unknown search mode", NULL);
   if (optimization_mode && (mode_code<=TWO_LINE_MODE || (mode_code==LINE_MODE && n_lines<3)))
-    bomb("dynamic aperture optimization requires use of n-line mode with at least 3 lines", NULL);
+    bombElegant("dynamic aperture optimization requires use of n-line mode with at least 3 lines", NULL);
   if (offset_by_orbit && mode_code==SP_MODE)
-    bomb("can't presently offset_by_orbit for that mode", NULL);
+    bombElegant("can't presently offset_by_orbit for that mode", NULL);
 
 #if USE_MPI
   watch_not_allowed = 1;
@@ -193,7 +194,7 @@ long do_aperture_search(
   switch (mode_code) {
   case N_LINE_MODE:
     if (n_lines%2==0)
-      bomb("n_lines must be an odd number for aperture search", NULL);
+      bombElegant("n_lines must be an odd number for aperture search", NULL);
     retcode = do_aperture_search_line(run, control, referenceCoord, errcon, beamline, n_lines, returnValue);
     break;
   case MP_MODE:
@@ -334,7 +335,7 @@ long do_aperture_search_mp(
 
       iy = accepted[is][6];
       if (iy<0 || iy>=ny)
-	bomb("invalid index (do_aperture_search.1)", NULL);
+	bombElegant("invalid index (do_aperture_search.1)", NULL);
       found[iy] = 1;
     }
     n_stable += n_survived;
@@ -413,7 +414,7 @@ long do_aperture_search_mp(
 
       iy = accepted[is][6];
       if (iy<0 || iy>=ny)
-	bomb("invalid index (do_aperture_search.1)", NULL);
+	bombElegant("invalid index (do_aperture_search.1)", NULL);
       found[iy] = 1;
     }
     n_stable += n_survived;

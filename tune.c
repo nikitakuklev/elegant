@@ -40,7 +40,8 @@ void setup_tune_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline,
     /* process namelist input */
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
-    process_namelist(&correct_tunes, nltext);
+    if (processNamelist(&correct_tunes, nltext)==NAMELIST_ERROR)
+      bombElegant(NULL, NULL);
     str_toupper(quadrupoles);
     if (echoNamelists) print_namelist(stdout, &correct_tunes);
 
@@ -50,7 +51,7 @@ void setup_tune_correction(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline,
     while ((tune->name[tune->n_families-1]=get_token(quadrupoles)))
         tune->name = trealloc(tune->name, sizeof(*tune->name)*(tune->n_families+=1));
     if ((--tune->n_families)<2)
-        bomb("too few quadrupoles given for tune correction", NULL);
+        bombElegant("too few quadrupoles given for tune correction", NULL);
     tune->tunex = tune_x;
     tune->tuney = tune_y;
     tune->gain = correction_fraction;
@@ -137,7 +138,7 @@ void computeTuneCorrectionMatrix(RUN *run, LINE_LIST *beamline, TUNE_CORRECTION 
     ELEMENT_LIST *context;
     
     if (!(M=beamline->matrix) || !M->C || !M->R)
-        bomb("something wrong with transfer map for beamline (setup_tune_correction)", NULL);
+        bombElegant("something wrong with transfer map for beamline (setup_tune_correction)", NULL);
 
     m_alloc(&C, 2, tune->n_families);
     m_alloc(&Ct, tune->n_families, 2);
@@ -250,7 +251,7 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
 			     beamline->couplingFactor);
 
   if (!M || !M->C || !M->R)
-    bomb("something wrong with transfer map for beamline (do_tune_correction.1)", NULL);
+    bombElegant("something wrong with transfer map for beamline (do_tune_correction.1)", NULL);
 
   fprintf(stdout, "\nAdjusting tunes:\n");
   fflush(stdout);
@@ -295,7 +296,7 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
     }
 
     if (( K1_param = confirm_parameter("K1", T_QUAD))<0)
-      bomb("confirm_parameter doesn't return offset for K1 parameter of quadrupole!\n", NULL);
+      bombElegant("confirm_parameter doesn't return offset for K1 parameter of quadrupole!\n", NULL);
     
     m_mult(tune->dK1, tune->T, tune->dtune);
     m_scmul(tune->dK1, tune->dK1, gain);
@@ -353,7 +354,7 @@ long do_tune_correction(TUNE_CORRECTION *tune, RUN *run, LINE_LIST *beamline,
     beamline->twiss0->etapy  = etap_y;
     
     if (!M || !M->C || !M->R)
-      bomb("something wrong with transfer map for beamline (do_tune_correction.2)", NULL);
+      bombElegant("something wrong with transfer map for beamline (do_tune_correction.2)", NULL);
 
     propagate_twiss_parameters(beamline->twiss0, beamline->tune, beamline->waists,
                                NULL, beamline->elem_twiss, run, clorb,

@@ -225,7 +225,7 @@ long motion(
     stochasticEffects = set_up_stochastic_effects(field_type);
     
     if (n_steps<2)
-        bomb("too few steps for integration", NULL);
+        bombElegant("too few steps for integration", NULL);
 
     P = q+3;
     i_top = n_part-1;
@@ -476,7 +476,7 @@ void (*set_up_derivatives(
       exit(1);
     }
     if (lsrMdltr->isr && integratorCode!=NA_RUNGE_KUTTA)
-      bomb("LSRMDLTR with ISR must use non-adaptive runge-kutta integration", NULL);
+      bombElegant("LSRMDLTR with ISR must use non-adaptive runge-kutta integration", NULL);
     if (lsrMdltr->usersLaserWavelength)
       lsrMdltr->laserWavelength = lsrMdltr->usersLaserWavelength;
     else
@@ -487,7 +487,7 @@ void (*set_up_derivatives(
     lsrMdltr->Escale = particleCharge/(particleMass*omega*c_mks);
     lsrMdltr->Bscale = particleCharge/(particleMass*omega);
     if (lsrMdltr->laserM<0 || lsrMdltr->laserN<0)
-      bomb("M and N must be non-negative for LSRMDLTR", NULL);
+      bombElegant("M and N must be non-negative for LSRMDLTR", NULL);
     lsrMdltr->Ef0Laser = 2/lsrMdltr->laserW0*
       sqrt(lsrMdltr->laserPeakPower/(ipow(2,lsrMdltr->laserM+lsrMdltr->laserN)*PI*factorial(lsrMdltr->laserM)*factorial(lsrMdltr->laserN)*epsilon_o*c_mks));
     X_offset = 0;
@@ -502,15 +502,15 @@ void (*set_up_derivatives(
       long i;
       TABLE data;
       if (!getTableFromSearchPath(&data, lsrMdltr->timeProfileFile, 1, 0))
-        bomb("unable to read data for LSRMDLTR time profile", NULL);
+        bombElegant("unable to read data for LSRMDLTR time profile", NULL);
       if (data.n_data<=1)
-        bomb("LSRMDLTR time profile contains less than 2 points", NULL);
+        bombElegant("LSRMDLTR time profile contains less than 2 points", NULL);
       lsrMdltr->timeValue = data.c1;
       lsrMdltr->amplitudeValue = data.c2;
       lsrMdltr->tProfilePoints = data.n_data;
       for (i=1; i<data.n_data; i++)
         if (data.c1[i-1]>data.c1[i])
-          bomb("time values not monotonically increasing in LSRMDLTR time profile", NULL);
+          bombElegant("time values not monotonically increasing in LSRMDLTR time profile", NULL);
       tfree(data.xlab); tfree(data.ylab); tfree(data.title); tfree(data.topline);
     }
     lsrMdltr->t0 = findFiducialTime(part, n_part, 0, lsrMdltr->length/2, P_central, FID_MODE_TMEAN) + lsrMdltr->timeProfileOffset; 
@@ -829,7 +829,7 @@ void (*set_up_derivatives(
     output_impulse = output_impulse_twmta;
     return(derivatives_twmta);
   default:
-    bomb("invalid mode type (set_up_derivatives", NULL);
+    bombElegant("invalid mode type (set_up_derivatives", NULL);
     break;
   }
   exit(1);
@@ -1517,7 +1517,7 @@ double *select_fiducial(double **part, long n_part, char *var_mode_in)
   if (strlen(var_mode)!=0) {
     if ((ptr=strchr(var_mode, ',')) && (var=get_token(var_mode))) {
       if (*var!='t' && *var!='p')
-        bomb("no known variable listed for fiducial--must be 't' or 'p'\n", NULL);
+        bombElegant("no known variable listed for fiducial--must be 't' or 'p'\n", NULL);
       if (*var=='t')
         i_var = 4;
       else
@@ -1571,18 +1571,18 @@ double *select_fiducial(double **part, long n_part, char *var_mode_in)
     case FID_MEDIAN:
 #if !USE_MPI
       if ((i_best = find_median_of_row(&best_value, part, i_var, n_part))<0)
-        bomb("error: computation of median failed (select_fiducial)", NULL);
+        bombElegant("error: computation of median failed (select_fiducial)", NULL);
 #else
       /*
       if (notSinglePart) {
 	if ((i_best = find_median_of_row_p(best_particle, part, i_var, n_part, n_part_total))<0)
-	  bomb("error: computation of median failed (select_fiducial)", NULL);
+	  bombElegant("error: computation of median failed (select_fiducial)", NULL);
 	log_exit("select_fiducial");
 	return(best_particle);
       }
       else {
 	if ((i_best = find_median_of_row(&best_value, part, i_var, n_part))<0)
-	  bomb("error: computation of median failed (select_fiducial)", NULL);
+	  bombElegant("error: computation of median failed (select_fiducial)", NULL);
       }
       */
       printf("The median fidutial mode is not available in this version of Pelegant.\n \
@@ -1705,11 +1705,11 @@ double *select_fiducial(double **part, long n_part, char *var_mode_in)
       log_exit("select_fiducial");
       return(NULL);
     default:
-      bomb("apparent programming error in select_fiducial", NULL);
+      bombElegant("apparent programming error in select_fiducial", NULL);
       break;
     }
     if (i_best<0 || i_best>n_part)
-      bomb("fiducial particle selection returned invalid value!", NULL);
+      bombElegant("fiducial particle selection returned invalid value!", NULL);
   }
   
   log_exit("select_fiducial");
@@ -1767,16 +1767,16 @@ void setupRftmEz0FromFile(RFTMEZ0 *rftmEz0, double frequency, double length)
   double k, Ez, EzMax;
   
   if (!rftmEz0)
-    bomb("setupRftmEz0FromFile: NULL pointer passed.", NULL);
+    bombElegant("setupRftmEz0FromFile: NULL pointer passed.", NULL);
 
   if (rftmEz0->initialized)
     return;
   
   /* verify input parameters */
   if (!rftmEz0->inputFile || !rftmEz0->zColumn || !rftmEz0->EzColumn)
-    bomb("RFTMEZ0 must have INPUTFILE, ZCOLUMN, and EZCOLUMN specified.", NULL);
+    bombElegant("RFTMEZ0 must have INPUTFILE, ZCOLUMN, and EZCOLUMN specified.", NULL);
   if (rftmEz0->radial_order!=1)
-    bomb("RFTMEZ0 restricted to radial_order=1 at present", NULL);
+    bombElegant("RFTMEZ0 restricted to radial_order=1 at present", NULL);
 
   /* read (z, Ez) data from the file  */
   if (!SDDS_InitializeInputFromSearchPath(&SDDSin, rftmEz0->inputFile) || SDDS_ReadPage(&SDDSin)!=1) {

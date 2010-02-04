@@ -9,6 +9,9 @@
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.27  2009/04/14 01:34:44  ywang25
+ * Updated for Pelegant with parallel I/O
+ *
  * Revision 1.26  2009/02/12 22:54:58  borland
  * Added ability to turn off echoing of namelists.
  *
@@ -132,26 +135,27 @@ void setupSASEFELAtEnd(NAMELIST_TEXT *nltext, RUN *run, OUTPUT_FILES *output_dat
   SDDS_DATASET *SDDSout;
 
   /* process namelist text */
-  process_namelist(&sasefel, nltext);
+  if (processNamelist(&sasefel, nltext)==NAMELIST_ERROR)
+    bombElegant(NULL, NULL);
   if (echoNamelists) print_namelist(stdout, &sasefel);
 
   sasefelOutput = &(output_data->sasefel);
 
   if (beta<0)
-    bomb("beta < 0", NULL);
+    bombElegant("beta < 0", NULL);
   if (undulator_K<=0)
-    bomb("undulator_K <= 0", NULL);
+    bombElegant("undulator_K <= 0", NULL);
   if (undulator_period<=0)
-    bomb("undulator_period <= 0", NULL);
+    bombElegant("undulator_period <= 0", NULL);
   if (n_slices<0 || slice_fraction<0 ||
       (n_slices==0 && slice_fraction>0) ||
       (n_slices>0 && slice_fraction<=0) ||
       n_slices*slice_fraction>1)
-    bomb("invalid slice parameters", NULL);
+    bombElegant("invalid slice parameters", NULL);
   sasefelOutput->beamsizeMode = 0;
   if (strlen(beamsize_mode) &&
       (sasefelOutput->beamsizeMode=match_string(beamsize_mode, beamsizeOption, BEAMSIZE_OPTIONS, 0))<0)
-    bomb("beamsize_mode not 'geometric mean', 'arithmetic mean', 'horizontal', 'vertical', or 'maximum'", 
+    bombElegant("beamsize_mode not 'geometric mean', 'arithmetic mean', 'horizontal', 'vertical', or 'maximum'", 
          NULL);
 
   if (sasefelOutput->active && sasefelOutput->filename) {
@@ -236,7 +240,7 @@ void setupSASEFELAtEnd(NAMELIST_TEXT *nltext, RUN *run, OUTPUT_FILES *output_dat
       !(sasefelOutput->etaDiffraction = malloc(sizeof(*(sasefelOutput->etaDiffraction))*(n_slices+2))) ||
       !(sasefelOutput->etaEmittance = malloc(sizeof(*(sasefelOutput->etaEmittance))*(n_slices+2))) ||
       !(sasefelOutput->etaEnergySpread = malloc(sizeof(*(sasefelOutput->etaEnergySpread))*(n_slices+2)))) 
-    bomb("memory allocation failure (setupSASEFELAtEnd)", NULL);
+    bombElegant("memory allocation failure (setupSASEFELAtEnd)", NULL);
 
   if (!(sasefelOutput->betaToUseIndex = malloc(sizeof(*(sasefelOutput->betaToUseIndex))*(n_slices+2))) ||
       !(sasefelOutput->betaxBeamIndex = malloc(sizeof(*(sasefelOutput->betaxBeamIndex))*(n_slices+2))) ||
@@ -266,7 +270,7 @@ void setupSASEFELAtEnd(NAMELIST_TEXT *nltext, RUN *run, OUTPUT_FILES *output_dat
       !(sasefelOutput->etaEmittanceIndex = malloc(sizeof(*(sasefelOutput->etaEmittanceIndex))*(n_slices+2))) ||
       !(sasefelOutput->etaEnergySpreadIndex = malloc(sizeof(*(sasefelOutput->etaEnergySpreadIndex))*(n_slices+2))) ||
       !(sasefelOutput->sliceFound = malloc(sizeof(*(sasefelOutput->sliceFound))*(n_slices+2)))) 
-    bomb("memory allocation failure (setupSASEFELAtEnd)", NULL);
+    bombElegant("memory allocation failure (setupSASEFELAtEnd)", NULL);
 
   if (isMaster)
   if (output) {
@@ -827,7 +831,7 @@ void computeSASEFELAtEnd(SASEFEL_OUTPUT *sasefelOutput, double **particle, long 
     }
     
     if (!slicesFound)
-      bomb("No valid slices found for SASE FEL computation.", NULL);
+      bombElegant("No valid slices found for SASE FEL computation.", NULL);
 
     sasefelOutput->lightWavelength[nSlices+1] /= slicesFound;
     sasefelOutput->saturationLength[nSlices+1] /= slicesFound;
@@ -897,7 +901,7 @@ void SetSASEBetaEmitValues(double *emitToUse, double *betaToUse,
       *emitToUse = emitx>emity ? emitx : emity;
       break;
     default:
-      bomb("invalid beamsize mode (SetSASEBetaEmitValues)", NULL);
+      bombElegant("invalid beamsize mode (SetSASEBetaEmitValues)", NULL);
       break;
     }
     *betaToUse = userBeta;
@@ -923,7 +927,7 @@ void SetSASEBetaEmitValues(double *emitToUse, double *betaToUse,
       S = Sx>Sy ? Sx : Sy;
       break;
     default:
-      bomb("invalid beamsize mode (SetSASEBetaEmitValues)", NULL);
+      bombElegant("invalid beamsize mode (SetSASEBetaEmitValues)", NULL);
       break;
     }
     /* sase fel code just computes beamsize from sqrt(emit*beta),

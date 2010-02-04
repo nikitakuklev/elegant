@@ -79,17 +79,18 @@ void setup_matrix_output(
   /* process namelist input */
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
-  process_namelist(&matrix_output, nltext);
+  if (processNamelist(&matrix_output, nltext)==NAMELIST_ERROR)
+    bombElegant(NULL, NULL);
   if (echoNamelists) print_namelist(stdout, &matrix_output);
 
 
   /* check for validity of namelist inputs */
   if (printout==NULL && SDDS_output==NULL)
-    bomb("no output filenames given in namelist matrix_output", NULL);
+    bombElegant("no output filenames given in namelist matrix_output", NULL);
   if (printout && !(printout_order>0 && printout_order<4))
-    bomb("printout_order is invalid", NULL);
+    bombElegant("printout_order is invalid", NULL);
   if (SDDS_output && !(SDDS_output_order>0 && SDDS_output_order<4))
-    bomb("SDDS_output_order is invalid", NULL);
+    bombElegant("SDDS_output_order is invalid", NULL);
   printout   = compose_filename(printout, run->rootname);
   SDDS_output = compose_filename(SDDS_output, run->rootname);
 
@@ -104,7 +105,7 @@ void setup_matrix_output(
   SDDS_matrix_initialized= trealloc(SDDS_matrix_initialized, sizeof(*SDDS_matrix_initialized)*(n_outputs+1));
   SDDS_matrix_count= trealloc(SDDS_matrix_count, sizeof(*SDDS_matrix_count)*(n_outputs+1));
   if (individual_matrices && full_matrix_only)
-    bomb("individual_matrices and full_matrix_only are incompatible", NULL);
+    bombElegant("individual_matrices and full_matrix_only are incompatible", NULL);
   individualMatrices = individual_matrices;
   
   if (start_from)
@@ -293,7 +294,7 @@ void run_matrix_output(
       member = NULL;
       while (sfo--)
 	if (!(first_member=find_element(start_name[i_output], &member, &(beamline->elem))))
-	  bomb("can't find specified occurence of given element for matrix output", NULL);
+	  bombElegant("can't find specified occurence of given element for matrix output", NULL);
       fprintf(stdout, "starting matrix output from element %s at z=%e m\n", first_member->name, first_member->end_pos);
       fflush(stdout);
       member = first_member;
@@ -597,7 +598,7 @@ void SDDS_set_matrices(SDDS_TABLE *SDDS_table, VMATRIX *M, long order,
   log_entry("SDDS_set_matrices");
 
   if (!M || !(M->C) || !(M->R) || (order>1 && !(M->T)) || (order>2 && !(M->Q)))
-    bomb("bad matrix passed to SDDS_set_matrices()", NULL);
+    bombElegant("bad matrix passed to SDDS_set_matrices()", NULL);
 
   if (i_element==0) {
     if (!SDDS_StartTable(SDDS_table, n_elements)) {

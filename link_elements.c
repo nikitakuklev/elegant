@@ -32,7 +32,8 @@ void element_link_control(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, RUN *run_
     /* process namelist text */
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
-    process_namelist(&link_control, nltext);
+    if (processNamelist(&link_control, nltext)==NAMELIST_ERROR)
+      bombElegant(NULL, NULL);
     if (echoNamelists) print_namelist(stdout, &link_control);
     
     if (summarize_links) {
@@ -43,14 +44,14 @@ void element_link_control(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, RUN *run_
             fflush(stdout);
         if (!links->target_name || !links->item || !links->source_name || !links->equation ||
                 !links->n_targets || !links->target_elem || !links->source_elem)
-            bomb("link structure has null pointers", NULL);
+            bombElegant("link structure has null pointers", NULL);
         for (i=0; i<links->n_links; i++) {
             j = 0;
             flag = links->flags[i]&LINK_FLAG_MASK;
             while ((flag = flag/2))
                 j ++;
             if (j>=N_LINK_MODES)
-                bomb("unknown link mode detected during link summary", NULL);
+                bombElegant("unknown link mode detected during link summary", NULL);
             fprintf(stdout, "%s.%s linked (%s) to %s within [%e, %e] using equation \"%s\"  --  %ld occurences:\n",
                     links->target_name[i], links->item[i], 
                     link_mode[j],
@@ -98,7 +99,8 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
     cp_str(&mode, "dynamic");
 
     /* process namelist text */
-    process_namelist(&link_elements, nltext);
+    if (processNamelist(&link_elements, nltext)==NAMELIST_ERROR)
+      bombElegant(NULL, NULL);
     if (target)          str_toupper(target);
     if (exclude)         str_toupper(exclude);
     if (item)            str_toupper(item);
@@ -115,19 +117,19 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
 
     /* check for valid input */
     if (!target)
-        bomb("link target not named", NULL);
+        bombElegant("link target not named", NULL);
     if (!item)
-        bomb("link item not named", NULL);
+        bombElegant("link item not named", NULL);
     if (!source)
-        bomb("link source not named", NULL);
+        bombElegant("link source not named", NULL);
     if (!equation)
-        bomb("link equation not given", NULL);
+        bombElegant("link equation not given", NULL);
     if (!source_position || (src_position_code=match_string(source_position, src_position_name, N_SRC_POSITIONS, 0))<0)
-        bomb("source_position not given/unknown", NULL);
+        bombElegant("source_position not given/unknown", NULL);
     if (!mode || (mode_code=match_string(mode, link_mode, N_LINK_MODES, 0))<0)
-        bomb("link mode not known", NULL);
+        bombElegant("link mode not known", NULL);
     if (minimum>maximum)
-      bomb("minimum>maximum", NULL);
+      bombElegant("minimum>maximum", NULL);
     
     t_context = s_context = NULL;
 
@@ -160,7 +162,7 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
       }
     } while ((t_context=wfind_element(target, &t_context, &(beamline->elem))));
     if (!targets)
-      bomb("cannot make link--no targets found\n", NULL);
+      bombElegant("cannot make link--no targets found\n", NULL);
       
     /* note that targets==1 if all the targets have the same name ! */
     for (iTarget=0; iTarget<targets; iTarget++) {
@@ -223,7 +225,7 @@ void add_element_links(ELEMENT_LINKS *links, NAMELIST_TEXT *nltext, LINE_LIST *b
           *((long*)(eptr[0]->p_elem+entity_description[eptr[0]->type].parameter[links->target_param[n_links]].offset));
         break;
       default:
-        bomb("invalid type of item for target of link", NULL);
+        bombElegant("invalid type of item for target of link", NULL);
         break;
       }
       for (j=0; j<n_targets; j++)
@@ -487,7 +489,7 @@ long assert_element_links(ELEMENT_LINKS *links, RUN *run, LINE_LIST *beamline, l
                     break;
                 case IS_STRING:
                 default:
-                    bomb("unknown/invalid variable quantity (assert_element_links)", NULL);
+                    bombElegant("unknown/invalid variable quantity (assert_element_links)", NULL);
                     exit(1);
                 }
             if (flags&LINK_ELEMENT_DEFINITION) 
@@ -546,7 +548,7 @@ void reset_element_links(ELEMENT_LINKS *links, RUN *run, LINE_LIST *beamline)
                     break;
                 case IS_STRING:
                 default:
-                    bomb("unknown/invalid variable quantity (reset_element_links)", NULL);
+                    bombElegant("unknown/invalid variable quantity (reset_element_links)", NULL);
                     exit(1);
                 }
             if ((entity_description[targ[0]->type].parameter[param].flags&PARAM_CHANGES_MATRIX) && targ[i_elem]->matrix) {
@@ -593,7 +595,7 @@ void rebaseline_element_links(ELEMENT_LINKS *links, RUN *run, LINE_LIST *beamlin
                     break;
                 case IS_STRING:
                 default:
-                    bomb("unknown/invalid variable quantity (reset_element_links)", NULL);
+                    bombElegant("unknown/invalid variable quantity (reset_element_links)", NULL);
                     exit(1);
                 }
             }

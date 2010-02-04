@@ -58,9 +58,9 @@ void setup_orb_traj_output(char *filename, char *mode, RUN *run)
         }
 
     if (!filename)
-        bomb("NULL filename passed (setup_orb_traj_output)", NULL);
+        bombElegant("NULL filename passed (setup_orb_traj_output)", NULL);
     if (!run)
-        bomb("NULL RUN pointer passed (setup_orb_traj_output)", NULL);
+        bombElegant("NULL RUN pointer passed (setup_orb_traj_output)", NULL);
     if (SDDS_IsActive(&SDDS_orb)==1) {
         if (!SDDS_Terminate(&SDDS_orb)) {
             fprintf(stdout, "Unable to terminate SDDS output for correctors (setup_orb_traj_output)\n");

@@ -70,12 +70,12 @@ void track_through_ftrfmode(
   if (charge)
     trfmode->mp_charge = charge->macroParticleCharge;
   else
-    bomb("CHARGE element required to use FTRFMODE", NULL);
+    bombElegant("CHARGE element required to use FTRFMODE", NULL);
   if (trfmode->mp_charge==0 || (trfmode->xfactor==0 && trfmode->yfactor==0))
     return;
   
   if (!trfmode->initialized)
-    bomb("track_through_ftrfmode called with uninitialized element", NULL);
+    bombElegant("track_through_ftrfmode called with uninitialized element", NULL);
 
   if (trfmode->outputFile && pass==0 && !SDDS_StartPage(&trfmode->SDDSout, n_passes))
     SDDS_Bomb("Problem starting page for FTRFMODE output file");
@@ -464,12 +464,12 @@ void set_up_ftrfmode(FTRFMODE *rfmode, char *element_name, double element_z, lon
   if (rfmode->initialized)
     return;
   if (n_particles<1)
-    bomb("too few particles in set_up_ftrfmode()", NULL);
+    bombElegant("too few particles in set_up_ftrfmode()", NULL);
   if (rfmode->n_bins<2)
-    bomb("too few bins for FTRFMODE", NULL);
+    bombElegant("too few bins for FTRFMODE", NULL);
   if (!rfmode->filename ||
       !SDDS_InitializeInput(&SDDSin, rfmode->filename))
-    bomb("unable to open file for FTRFMODE element", NULL);
+    bombElegant("unable to open file for FTRFMODE element", NULL);
   /* check existence and properties of required columns  */
   if (SDDS_CheckColumn(&SDDSin, "Frequency", "Hz", SDDS_ANY_FLOATING_TYPE,
                        stdout)!=SDDS_CHECK_OK) {
@@ -544,19 +544,19 @@ void set_up_ftrfmode(FTRFMODE *rfmode, char *element_name, double element_z, lon
     SDDS_Bomb("Problem getting data from FTRFMODE file");
   if (!(rfmode->beta = SDDS_GetColumnInDoubles(&SDDSin, "beta"))) {
     if (!(rfmode->beta = malloc(sizeof(*(rfmode->beta))*rfmode->modes)))
-      bomb("memory allocation failure (FTRFMODE)", NULL);
+      bombElegant("memory allocation failure (FTRFMODE)", NULL);
     for (imode=0; imode<rfmode->modes; imode++)
       rfmode->beta[imode] = 0;
   }
   if (!(rfmode->doX = SDDS_GetColumnInLong(&SDDSin, "xMode"))) {
     if (!(rfmode->doX = malloc(sizeof(*(rfmode->doX))*rfmode->modes)))
-      bomb("memory allocation failure (FTRFMODE)", NULL);
+      bombElegant("memory allocation failure (FTRFMODE)", NULL);
     for (imode=0; imode<rfmode->modes; imode++)
       rfmode->doX[imode] = 1;
   }
   if (!(rfmode->doY = SDDS_GetColumnInLong(&SDDSin, "yMode"))) {
     if (!(rfmode->doY = malloc(sizeof(*(rfmode->doY))*rfmode->modes)))
-      bomb("memory allocation failure (FTRFMODE)", NULL);
+      bombElegant("memory allocation failure (FTRFMODE)", NULL);
     for (imode=0; imode<rfmode->modes; imode++)
       rfmode->doY[imode] = 1;
   }
@@ -569,7 +569,7 @@ void set_up_ftrfmode(FTRFMODE *rfmode, char *element_name, double element_z, lon
       !(rfmode->Vyi = malloc(sizeof(*(rfmode->Vyi))*rfmode->modes)) ||
       !(rfmode->lastPhasex = malloc(sizeof(*(rfmode->lastPhasex))*rfmode->modes)) ||
       !(rfmode->lastPhasey = malloc(sizeof(*(rfmode->lastPhasey))*rfmode->modes)))
-    bomb("memory allocation failure (FTRFMODE)", NULL);
+    bombElegant("memory allocation failure (FTRFMODE)", NULL);
   
   for (imode=0; imode<rfmode->modes; imode++) {
     rfmode->omega[imode] *= PIx2;

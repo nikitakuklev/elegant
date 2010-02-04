@@ -720,7 +720,7 @@ long remove_outlier_particles(
   limit[5] = clean->deltaLimit;
 
   if (!(sSave = malloc(sizeof(*sSave)*np)))
-    bomb("memory allocation failure", NULL);
+    bombElegant("memory allocation failure", NULL);
 
   /* compute centroids for each coordinate */
   for (j=0; j<6; j++) {
@@ -964,7 +964,7 @@ long imposeApertureData(
     sprintf(s, "%s.aplos", tcontext.rootname);
     fflush(stdout);
     if (!(fp = fopen(s, "w")))
-      bomb("unable to open debug file for aperture losses", NULL);
+      bombElegant("unable to open debug file for aperture losses", NULL);
     fprintf(fp, "SDDS1\n");
     fprintf(fp, "&column name=z type=double units=m &end\n");
     fprintf(fp, "&column name=x type=double units=m &end\n");

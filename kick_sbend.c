@@ -61,13 +61,13 @@ long track_through_kick_sbend(double **part, long n_part, KSBEND *ksbend, double
     log_entry("track_through_kick_sbend");
 
     if (!ksbend)
-        bomb("null KSBEND pointer (track_through_kick_sbend)", NULL);
+        bombElegant("null KSBEND pointer (track_through_kick_sbend)", NULL);
 
     if (ksbend->angle==0)
-        bomb("angle = 0 for ksbend", NULL);
+        bombElegant("angle = 0 for ksbend", NULL);
 
     if ((method_code=match_string(ksbend->method, method, N_METHODS, 0))<0)
-        bomb("unknown method for ksbend integration", NULL);
+        bombElegant("unknown method for ksbend integration", NULL);
 
     paraxial = ksbend->paraxial;
 
@@ -383,9 +383,9 @@ void kick_sbend_derivs(
     double one_plus_hx, xp2, yp2, Tp2, Tp2_yp2, Tp, y2, one_plus_dp, xpyp;
 
     if (!dQds)
-        bomb("null derivative pointer (kick_sbend_derivs)", NULL);
+        bombElegant("null derivative pointer (kick_sbend_derivs)", NULL);
     if (!Q)
-        bomb("null coordinate pointer (kick_sbend_derivs)", NULL);
+        bombElegant("null coordinate pointer (kick_sbend_derivs)", NULL);
 
     if (particle_lost) {
         dQds[0] = dQds[1] = dQds[2] = dQds[3] = dQds[4] = dQds[5] = 0;

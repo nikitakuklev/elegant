@@ -56,13 +56,14 @@ void setup_correction_matrix_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *
     /* process the namelist text */
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
-    process_namelist(&correction_matrix_output, nltext);
+    if (processNamelist(&correction_matrix_output, nltext)==NAMELIST_ERROR)
+      bombElegant(NULL, NULL);
     if (echoNamelists) print_namelist(stdout, &correction_matrix_output);
     *do_response = output_at_each_step;
 
     unitsCode = KnL_units?KNL_UNITS:(BnL_units?BNL_UNITS:0);
     if (unitsCode==BNL_UNITS && !BnLUnitsOK)
-      bomb("At present you must give the matrix_output or twiss_output command to use BnL_units=1.  Sorry.", NULL);
+      bombElegant("At present you must give the matrix_output or twiss_output command to use BnL_units=1.  Sorry.", NULL);
 
     if (coupled) {
       /* set up the coupled response matrix data structures */
@@ -320,7 +321,7 @@ void update_response(RUN *run, LINE_LIST *beamline, CORRECTION *correct)
       }
     }
     else
-      bomb("bad correction mode (update_response)", NULL);
+      bombElegant("bad correction mode (update_response)", NULL);
 
     /* copy matrices back to the correction structure and free memory */
     matrix_free(correct->CMx->C);
@@ -389,7 +390,7 @@ void run_response_output(RUN *run, LINE_LIST *beamline, CORRECTION *correct, lon
       }
     }
     else
-      bomb("bad correction mode (run_response_output)", NULL);
+      bombElegant("bad correction mode (run_response_output)", NULL);
 
 #if USE_MPI
     if (!isSlave) {

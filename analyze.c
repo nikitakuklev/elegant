@@ -110,14 +110,15 @@ void setup_transport_analysis(
     /* process namelist input */
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
-    process_namelist(&analyze_map, nltext);
+    if (processNamelist(&analyze_map, nltext)==NAMELIST_ERROR)
+      bombElegant(NULL, NULL);
     if (echoNamelists) print_namelist(stdout, &analyze_map);
 
     /* check for data errors */
     if (!output)
-        bomb("no output filename specified", NULL);
+        bombElegant("no output filename specified", NULL);
     if (n_points!=2 && n_points!=4)
-        bomb("n_points must be either 2 or 4", NULL);
+        bombElegant("n_points must be either 2 or 4", NULL);
 
     output = compose_filename(output, run->rootname);
     SDDS_ElegantOutputSetup(&SDDS_analyze, output, SDDS_BINARY, 1, "transport analysis", 
@@ -164,7 +165,7 @@ void do_transport_analysis(
     log_entry("do_transport_analysis");
         
     if (center_on_orbit && !orbit)
-        bomb("you've asked to center the analysis on the closed orbit, but you didn't issue a closed_orbit command", NULL);
+        bombElegant("you've asked to center the analysis on the closed orbit, but you didn't issue a closed_orbit command", NULL);
 
     if (!initialized) {
         coord = (double**)czarray_2d(sizeof(**coord), 1+6*n_points, 7);
@@ -717,7 +718,7 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
       kquad.k1 = quad->k1;
       kquad.tilt = quad->tilt;
       if (quad->ffringe)
-        bomb("Can't perform radiation matrix calculations when QUAD has nonzero FFRINGE parameter", NULL);
+        bombElegant("Can't perform radiation matrix calculations when QUAD has nonzero FFRINGE parameter", NULL);
       kquad.dx = quad->dx;
       kquad.dy = quad->dy;
       kquad.dz = quad->dz;

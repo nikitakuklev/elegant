@@ -34,16 +34,17 @@ void vary_setup(VARY *_control, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beam
     /* process the namelist text */
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
-    process_namelist(&run_control, nltext);
+    if (processNamelist(&run_control, nltext)==NAMELIST_ERROR)
+      bombElegant(NULL, NULL);
     if (echoNamelists) print_namelist(stdout, &run_control);
 
     /* check validity of input values */
     if (n_steps<=0 && n_indices<=0)
-        bomb("n_steps <= 0  and  n_indices <= 0", NULL);
+        bombElegant("n_steps <= 0  and  n_indices <= 0", NULL);
     if (n_indices<=0) {
         if (bunch_frequency) {
             if (bunch_frequency<0)
-                bomb("bunch_frequency<0", NULL);
+                bombElegant("bunch_frequency<0", NULL);
             }
         }
         
@@ -65,7 +66,7 @@ void vary_setup(VARY *_control, NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beam
     _control->n_passes = n_passes;
     _control->reset_rf_each_step = reset_rf_for_each_step;
     if (first_is_fiducial && n_passes!=1)
-      bomb("can't have fiducial beam and multiple passes", NULL);
+      bombElegant("can't have fiducial beam and multiple passes", NULL);
     _control->fiducial_flag = 0;
     if (first_is_fiducial)
       _control->fiducial_flag = FIRST_BEAM_IS_FIDUCIAL |
@@ -97,11 +98,11 @@ void add_varied_element(VARY *_control, NAMELIST_TEXT *nltext, RUN *run, LINE_LI
     log_entry("add_varied_element");
 
     if (_control->n_indices<=0)
-        bomb("can't vary an element if n_indices==0 in run_control namelist", NULL);
+        bombElegant("can't vary an element if n_indices==0 in run_control namelist", NULL);
     
     if ((n_elements_to_vary = _control->n_elements_to_vary)==0) {
         if (_control->new_data_read)
-            bomb("improper sequencing of variation and tracking", NULL);
+            bombElegant("improper sequencing of variation and tracking", NULL);
         _control->new_data_read = 1;
         }
 
@@ -125,20 +126,21 @@ void add_varied_element(VARY *_control, NAMELIST_TEXT *nltext, RUN *run, LINE_LI
     /* process namelist text */
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
-    process_namelist(&vary_element, nltext);
+    if (processNamelist(&vary_element, nltext)==NAMELIST_ERROR)
+      bombElegant(NULL, NULL);
     if (echoNamelists) print_namelist(stdout, &vary_element);
 
     /* check for valid input */
     if (index_number<0 || index_number>=_control->n_indices)
-        bomb("invalid index_number", NULL);
+        bombElegant("invalid index_number", NULL);
     _control->element_index[n_elements_to_vary] = index_number;
     _control->enumerated_value[n_elements_to_vary] = NULL;
     if (enumeration_file) {
         if (!enumeration_column)
-            bomb("must supply enumeration_column with enumeration_file", NULL);
+            bombElegant("must supply enumeration_column with enumeration_file", NULL);
         if (!(index_limit = load_enumerated_values(_control->enumerated_value+n_elements_to_vary, 
                                    enumeration_file, enumeration_column)))
-            bomb("enumerated_values_file contains no valid values", NULL);
+            bombElegant("enumerated_values_file contains no valid values", NULL);
         fprintf(stdout, "%ld values of %s loaded from file %s\n", index_limit, enumeration_column,
                enumeration_file);
         fflush(stdout);
@@ -164,7 +166,7 @@ void add_varied_element(VARY *_control, NAMELIST_TEXT *nltext, RUN *run, LINE_LI
         }
 
     if (name==NULL)
-        bomb("element name missing in vary_element namelist", NULL);
+        bombElegant("element name missing in vary_element namelist", NULL);
     str_toupper(name);
     context = NULL;
     if (!find_element(name, &context, &(beamline->elem))) {
@@ -191,7 +193,7 @@ void add_varied_element(VARY *_control, NAMELIST_TEXT *nltext, RUN *run, LINE_LI
     if (multiplicative) {
         if (!get_parameter_value(&value, name, _control->varied_param[n_elements_to_vary], 
                                  _control->varied_type[n_elements_to_vary], beamline))
-            bomb("unable to get preset parameter value for item", NULL);
+            bombElegant("unable to get preset parameter value for item", NULL);
         if (enumeration_file) {
             long i;
             for (i=0; i<index_limit; i++)
@@ -206,7 +208,7 @@ void add_varied_element(VARY *_control, NAMELIST_TEXT *nltext, RUN *run, LINE_LI
     if (differential) {
         if (!get_parameter_value(&value, name, _control->varied_param[n_elements_to_vary], 
                                  _control->varied_type[n_elements_to_vary], beamline))
-            bomb("unable to get preset parameter value for item", NULL);
+            bombElegant("unable to get preset parameter value for item", NULL);
         if (enumeration_file) {
             long i;
             for (i=0; i<index_limit; i++)
@@ -230,7 +232,7 @@ void add_varied_element(VARY *_control, NAMELIST_TEXT *nltext, RUN *run, LINE_LI
     if (geometric && !enumeration_file) {
         _control->flags[n_elements_to_vary] |= VARY_GEOMETRIC;
         if (initial==0 || SIGN(initial)!=SIGN(final))
-            bomb("must have initial!=0 and SIGN(initial)=SIGN(final) for geometric variation", NULL);
+            bombElegant("must have initial!=0 and SIGN(initial)=SIGN(final) for geometric variation", NULL);
         }
 
     _control->n_elements_to_vary = n_elements_to_vary+1;
@@ -307,7 +309,7 @@ long vary_beamline(VARY *_control, ERRORVAL *errcon, RUN *run, LINE_LIST *beamli
       /* check for zero index_limits */
       for (i=0; i<_control->n_indices; i++) {
         if (_control->index_limit[i]==0)
-          bomb("index limit must be given for each index", NULL);
+          bombElegant("index limit must be given for each index", NULL);
         _control->index[i] = 0;
         _control->varied_quan_value[i] = _control->initial[i];
       }
@@ -324,7 +326,7 @@ long vary_beamline(VARY *_control, ERRORVAL *errcon, RUN *run, LINE_LIST *beamli
         else if (_control->index_limit[_control->element_index[i]]==1)
           _control->step[i] = 0;
         else
-          bomb("index limits must be set for all indices", NULL);
+          bombElegant("index limits must be set for all indices", NULL);
       }
       /* set element flags to indicate variation of parameters */
       set_element_flags(beamline, _control->element, NULL, _control->varied_type, _control->varied_param, 
@@ -536,11 +538,11 @@ void set_element_flags(LINE_LIST *beamline, char **elem_name, long *elem_perturb
 
     log_entry("set_element_flags");
     if (!elem_name)
-        bomb("elem_name array is NULL (set_element_flags)", NULL);
+        bombElegant("elem_name array is NULL (set_element_flags)", NULL);
     if (type && !param)
-        bomb("param array is NULL when type array is not (set_element_flags)", NULL);
+        bombElegant("param array is NULL when type array is not (set_element_flags)", NULL);
     if (!beamline)
-        bomb("beamline pointer is NULL (set_element_flags)", NULL);
+        bombElegant("beamline pointer is NULL (set_element_flags)", NULL);
 
     for (i_elem=0; i_elem<n_elems; i_elem++) {
         eptr = NULL;
@@ -578,13 +580,13 @@ void reset_parameter_values(char **elem_name, long *param_number, long *type, lo
 
     log_entry("reset_parameter_values");
     if (!elem_name)
-        bomb("elem_name array is NULL (reset_parameter_values)", NULL);
+        bombElegant("elem_name array is NULL (reset_parameter_values)", NULL);
     if (!param_number)
-        bomb("param_number array is NULL (reset_parameter_values)", NULL);
+        bombElegant("param_number array is NULL (reset_parameter_values)", NULL);
     if (!type)
-        bomb("type array is NULL (reset_parameter_values)", NULL);
+        bombElegant("type array is NULL (reset_parameter_values)", NULL);
     if (!beamline)
-        bomb("beamline pointer is NULL (reset_parameter_values)", NULL);
+        bombElegant("beamline pointer is NULL (reset_parameter_values)", NULL);
 
     for (i_elem=0; i_elem<n_elems; i_elem++) {
         eptr = NULL;
@@ -615,7 +617,7 @@ void reset_parameter_values(char **elem_name, long *param_number, long *type, lo
                     break;
                 case IS_STRING:
                 default:
-                    bomb("unknown/invalid variable quantity", NULL);
+                    bombElegant("unknown/invalid variable quantity", NULL);
                     exit(1);
                 }
             }
@@ -632,15 +634,15 @@ void assert_parameter_values(char **elem_name, long *param_number, long *type, d
 
     log_entry("assert_parameter_values");
     if (!elem_name)
-        bomb("elem_name array is NULL (assert_parameter_values)", NULL);
+        bombElegant("elem_name array is NULL (assert_parameter_values)", NULL);
     if (!param_number)
-        bomb("param_number array is NULL (assert_parameter_values)", NULL);
+        bombElegant("param_number array is NULL (assert_parameter_values)", NULL);
     if (!type)
-        bomb("type array is NULL (assert_parameter_values)", NULL);
+        bombElegant("type array is NULL (assert_parameter_values)", NULL);
     if (!value)
-        bomb("value array is NULL (assert_parameter_values)", NULL);
+        bombElegant("value array is NULL (assert_parameter_values)", NULL);
     if (!beamline)
-        bomb("beamline pointer is NULL (assert_parameter_values)", NULL);
+        bombElegant("beamline pointer is NULL (assert_parameter_values)", NULL);
 
     for (i_elem=0; i_elem<n_elems; i_elem++) {
         eptr = NULL;
@@ -669,7 +671,7 @@ void assert_parameter_values(char **elem_name, long *param_number, long *type, d
                     break;
                 case IS_STRING:
                 default:
-                    bomb("unknown/invalid variable quantity", NULL);
+                    bombElegant("unknown/invalid variable quantity", NULL);
                     exit(1);
                 }
             }
@@ -685,11 +687,11 @@ long get_parameter_value(double *value, char *elem_name, long param_number, long
 
     log_entry("get_parameter_value");
     if (!value)
-        bomb("value array is NULL (get_parameter_value)", NULL);
+        bombElegant("value array is NULL (get_parameter_value)", NULL);
     if (!elem_name)
-        bomb("elem_name array is NULL (get_parameter_value)", NULL);
+        bombElegant("elem_name array is NULL (get_parameter_value)", NULL);
     if (!beamline)
-        bomb("beamline pointer is NULL (get_parameter_value)", NULL);
+        bombElegant("beamline pointer is NULL (get_parameter_value)", NULL);
 
     eptr = NULL;
     data_type = entity_description[type].parameter[param_number].type;
@@ -708,7 +710,7 @@ long get_parameter_value(double *value, char *elem_name, long param_number, long
                 log_exit("get_parameter_value");
                 return(0);
             default:
-                bomb("unknown/invalid variable quantity", NULL);
+                bombElegant("unknown/invalid variable quantity", NULL);
                 exit(1);
                 break;
             }
@@ -729,25 +731,25 @@ void assert_perturbations(char **elem_name, long *param_number, long *type, long
 
     log_entry("assert_perturbations");
     if (!elem_name)
-        bomb("element name array is NULL (assert_perturbations)", NULL);
+        bombElegant("element name array is NULL (assert_perturbations)", NULL);
     if (!param_number)
-        bomb("param_number array is NULL (assert_perturbations)", NULL);
+        bombElegant("param_number array is NULL (assert_perturbations)", NULL);
     if (!type)
-        bomb("type array is NULL (assert_perturbations)", NULL);
+        bombElegant("type array is NULL (assert_perturbations)", NULL);
     if (!amplitude)
-        bomb("amplitude array is NULL (assert_perturbations)", NULL);
+        bombElegant("amplitude array is NULL (assert_perturbations)", NULL);
     if (!cutoff)
-        bomb("cutoff array is NULL (assert_perturbations)", NULL);
+        bombElegant("cutoff array is NULL (assert_perturbations)", NULL);
     if (!error_type)
-        bomb("error_type array is NULL (assert_perturbations)", NULL);
+        bombElegant("error_type array is NULL (assert_perturbations)", NULL);
     if (!perturb)
-        bomb("perturb array is NULL (assert_perturbations)", NULL);
+        bombElegant("perturb array is NULL (assert_perturbations)", NULL);
     if (!elem_perturb_flags)
-        bomb("elem_perturb_flags array is NULL (assert_perturbations)", NULL);
+        bombElegant("elem_perturb_flags array is NULL (assert_perturbations)", NULL);
     if (!bind_number)
-        bomb("bind_number array is NULL (assert_perturbations)", NULL);
+        bombElegant("bind_number array is NULL (assert_perturbations)", NULL);
     if (!beamline)
-        bomb("beamline structure pointer is NULL (assert_perturbations)", NULL);
+        bombElegant("beamline structure pointer is NULL (assert_perturbations)", NULL);
 
     first_output = 1;
     
@@ -840,7 +842,7 @@ void assert_perturbations(char **elem_name, long *param_number, long *type, long
                     break;
                 case IS_STRING:
                 default:
-                    bomb("unknown/invalid variable quantity", NULL);
+                    bombElegant("unknown/invalid variable quantity", NULL);
                     exit(1);
                 }
             if (i_group++==0) 
@@ -973,11 +975,11 @@ long load_enumerated_values(double **value, char *file, char *column)
     long count=0;
 
     if (!value)
-        bomb("NULL value pointer passed (load_enumerated_values)", NULL);
+        bombElegant("NULL value pointer passed (load_enumerated_values)", NULL);
     if (!file)
-        bomb("NULL filename passed (load_enumerated_values)", NULL);
+        bombElegant("NULL filename passed (load_enumerated_values)", NULL);
     if (!column)
-        bomb("NULL column name passed (load_enumerated_values)", NULL);
+        bombElegant("NULL column name passed (load_enumerated_values)", NULL);
     
     if (!SDDS_InitializeInputFromSearchPath(&SDDS_table, file) || 
         SDDS_ReadTable(&SDDS_table)!=1 ||

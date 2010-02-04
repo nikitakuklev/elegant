@@ -15,6 +15,9 @@
 
 /*
  $Log: not supported by cvs2svn $
+ Revision 1.1  2004/03/26 15:59:52  borland
+ First version in repository, by L. Emery.
+
 */
 
 #include "mdb.h"
@@ -37,7 +40,7 @@ void initialize_taylorSeries(TAYLORSERIES *taylorSeries)
   if (taylorSeries->elementInitialized)
     return;
   if (!taylorSeries->filename)
-    bomb("TAYLORSERIES element doesn't have filename", NULL);
+    bombElegant("TAYLORSERIES element doesn't have filename", NULL);
   if (!SDDS_InitializeInputFromSearchPath(&SDDSin, taylorSeries->filename)) {
     sprintf(buffer, "Problem opening file %s (TAYLORSERIES)\n", taylorSeries->filename);
     SDDS_SetError(buffer);
@@ -45,16 +48,16 @@ void initialize_taylorSeries(TAYLORSERIES *taylorSeries)
     exit(1);
   }
   if (SDDS_CheckParameter(&SDDSin, "Coordinate", NULL, SDDS_STRING, stdout)!=SDDS_CHECK_OK )
-    bomb("problems with Coordinate parameter data in TAYLORSERIES input file", NULL);
+    bombElegant("problems with Coordinate parameter data in TAYLORSERIES input file", NULL);
   if (SDDS_CheckColumn(&SDDSin, "Ix", NULL, SDDS_ANY_INTEGER_TYPE, stdout)!=SDDS_CHECK_OK ||
       SDDS_CheckColumn(&SDDSin, "Iqx", NULL, SDDS_ANY_INTEGER_TYPE, stdout)!=SDDS_CHECK_OK ||
       SDDS_CheckColumn(&SDDSin, "Iy", NULL, SDDS_ANY_INTEGER_TYPE, stdout)!=SDDS_CHECK_OK ||
       SDDS_CheckColumn(&SDDSin, "Iqy", NULL, SDDS_ANY_INTEGER_TYPE, stdout)!=SDDS_CHECK_OK ||
       SDDS_CheckColumn(&SDDSin, "Icdt", NULL, SDDS_ANY_INTEGER_TYPE, stdout)!=SDDS_CHECK_OK ||
       SDDS_CheckColumn(&SDDSin, "Idelta", NULL, SDDS_ANY_INTEGER_TYPE, stdout)!=SDDS_CHECK_OK )
-    bomb("problems with integer power data in TAYLORSERIES input file", NULL);
+    bombElegant("problems with integer power data in TAYLORSERIES input file", NULL);
   if (SDDS_CheckColumn(&SDDSin, "Coefficient", NULL, SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK )
-    bomb("problems with Coefficient data in TAYLORSERIES input file", NULL);
+    bombElegant("problems with Coefficient data in TAYLORSERIES input file", NULL);
   while ((readCode=SDDS_ReadPage(&SDDSin))>0)  {
     /* determine the coordinate that is mapped */
     if (!(SDDS_GetParameter(&SDDSin, "Coordinate", &Coordinate))) {
@@ -133,10 +136,10 @@ long taylorSeries_tracking(
   double p, beta0, outputCoord[6];
   
     if (!particle)
-        bomb("particle array is null (taylorSeries)", NULL);
+        bombElegant("particle array is null (taylorSeries)", NULL);
 
     if (!taylorSeries)
-        bomb("null TAYLORSERIES pointer (taylorSeries)", NULL);
+        bombElegant("null TAYLORSERIES pointer (taylorSeries)", NULL);
 
     if (!taylorSeries->elementInitialized) 
       initialize_taylorSeries(taylorSeries);

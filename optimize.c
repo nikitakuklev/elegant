@@ -35,26 +35,27 @@ void do_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
     /* process the namelist text */
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
-    process_namelist(&optimization_setup, nltext);
+    if (processNamelist(&optimization_setup, nltext)==NAMELIST_ERROR)
+      bombElegant(NULL, NULL);
     if (echoNamelists) print_namelist(stdout, &optimization_setup);
 
     /* check validity of input values, and copy into structure */
     if ((optimization_data->mode=match_string(mode, optimize_mode, N_OPTIM_MODES, EXACT_MATCH))<0)
-        bomb("unknown optimization mode", NULL);
+        bombElegant("unknown optimization mode", NULL);
     optimization_data->equation = equation;
     if ((optimization_data->method=match_string(method, optimize_method, N_OPTIM_METHODS, EXACT_MATCH))<0)
-        bomb("unknown optimization method", NULL);
+        bombElegant("unknown optimization method", NULL);
     if ((optimization_data->tolerance=tolerance)==0)
-        bomb("tolerance == 0", NULL);
+        bombElegant("tolerance == 0", NULL);
     if ((optimization_data->n_passes=n_passes)<=0)
-        bomb("n_passes <= 0", NULL);
+        bombElegant("n_passes <= 0", NULL);
     if ((optimization_data->n_evaluations=n_evaluations)<=0)
-        bomb("n_evaluations <= 0", NULL);
+        bombElegant("n_evaluations <= 0", NULL);
     if ((optimization_data->n_restarts = n_restarts)<0)
-      bomb("n_restarts < 0", NULL);
+      bombElegant("n_restarts < 0", NULL);
     if ((optimization_data->matrix_order=matrix_order)<1 ||
         matrix_order>3)
-      bomb("matrix_order must be 1, 2, or 3", NULL);
+      bombElegant("matrix_order must be 1, 2, or 3", NULL);
     optimization_data->soft_failure = soft_failure;
     if (output_sparsing_factor<=0)
       output_sparsing_factor = 1;
@@ -68,7 +69,7 @@ void do_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
         if (strcmp(log_file, "/dev/tty")==0 || strcmp(log_file, "tt:")==0)
             optimization_data->fp_log = stdout;
         else if ((optimization_data->fp_log=fopen_e(log_file, "w", FOPEN_RETURN_ON_ERROR))==NULL)
-            bomb("unable to open log file", NULL);
+            bombElegant("unable to open log file", NULL);
         }
     if (term_log_file) {
       if (str_in(term_log_file, "%s"))
@@ -83,9 +84,9 @@ void do_optimization_setup(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
     optimization_data->includeSimplex1dScans = include_simplex_1d_scans;
     optimization_data->startFromSimplexVertex1 = start_from_simplex_vertex1;
     if ((optimization_data->restart_worst_term_factor = restart_worst_term_factor)<=0)
-      bomb("restart_worst_term_factor <= 0", NULL);
+      bombElegant("restart_worst_term_factor <= 0", NULL);
     if ((optimization_data->restart_worst_terms=restart_worst_terms)<=0)
-      bomb("restart_worst_terms <= 0", NULL);
+      bombElegant("restart_worst_terms <= 0", NULL);
     
     /* reset flags for elements that may have been varied previously */
     if (optimization_data->variables.n_variables)
@@ -124,7 +125,8 @@ void add_optimization_variable(OPTIMIZATION_DATA *optimization_data, NAMELIST_TE
     name = item = NULL;
     step_size = 1;
     lower_limit = -(upper_limit = DBL_MAX);
-    process_namelist(&optimization_variable, nltext);
+    if (processNamelist(&optimization_variable, nltext)==NAMELIST_ERROR)
+      bombElegant(NULL, NULL);
     if (echoNamelists) print_namelist(stdout, &optimization_variable);
 
     if (disable)
@@ -132,7 +134,7 @@ void add_optimization_variable(OPTIMIZATION_DATA *optimization_data, NAMELIST_TE
     
     if ((n_variables = optimization_data->variables.n_variables)==0) {
         if (optimization_data->new_data_read)
-            bomb("improper sequencing of variation and tracking", NULL);
+            bombElegant("improper sequencing of variation and tracking", NULL);
         optimization_data->new_data_read = 1;
         }
 
@@ -153,7 +155,7 @@ void add_optimization_variable(OPTIMIZATION_DATA *optimization_data, NAMELIST_TE
 
     /* check for valid input */
     if (name==NULL)
-        bomb("element name missing in optimization_variable namelist", NULL);
+        bombElegant("element name missing in optimization_variable namelist", NULL);
     str_toupper(name);
     context = NULL;
     if (!find_element(name, &context, &(beamline->elem))) {
@@ -164,7 +166,7 @@ void add_optimization_variable(OPTIMIZATION_DATA *optimization_data, NAMELIST_TE
     cp_str(&variables->element[n_variables], name);
     variables->varied_type[n_variables] = context->type;
     if (item==NULL)
-        bomb("item name missing in optimization_variable list", NULL);
+        bombElegant("item name missing in optimization_variable list", NULL);
     str_toupper(item);
     if ((variables->varied_param[n_variables] = confirm_parameter(item, context->type))<0) {
         fprintf(stdout, "error: cannot vary %s--no such parameter for %s\n",item, name);
@@ -176,9 +178,9 @@ void add_optimization_variable(OPTIMIZATION_DATA *optimization_data, NAMELIST_TE
         entity_description[context->type].parameter[variables->varied_param[n_variables]].unit);
     if (!get_parameter_value(variables->varied_quan_value+n_variables, name, variables->varied_param[n_variables],
             context->type, beamline))
-        bomb("unable to get initial value for parameter", NULL);
+        bombElegant("unable to get initial value for parameter", NULL);
     if (lower_limit>=upper_limit)
-        bomb("lower_limit >= upper_limit", NULL);
+        bombElegant("lower_limit >= upper_limit", NULL);
 
     variables->initial_value[n_variables] = variables->varied_quan_value[n_variables];
     if (variables->initial_value[n_variables]>upper_limit) {
@@ -222,26 +224,27 @@ void add_optimization_term(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
   /* process namelist text */
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
-  process_namelist(&optimization_term, nltext);
+  if (processNamelist(&optimization_term, nltext)==NAMELIST_ERROR)
+    bombElegant(NULL, NULL);
   if (echoNamelists) print_namelist(stdout, &optimization_term);
 
   if (optimization_term_struct.weight==0)
     return ;
   
   if (optimization_term_struct.term==NULL && optimization_term_struct.input_file==NULL)
-    bomb("term is invalid and no input file given", NULL);
+    bombElegant("term is invalid and no input file given", NULL);
   if (optimization_data->equation)
-    bomb("you've already given an optimization equation, so you can't give individual terms", NULL);
+    bombElegant("you've already given an optimization equation, so you can't give individual terms", NULL);
   if (optimization_term_struct.field_string && optimization_term_struct.input_file)
-    bomb("you can't use field substitution and file input together", NULL);
+    bombElegant("you can't use field substitution and file input together", NULL);
   if (optimization_term_struct.field_string) {
     if ((n_field_values = (optimization_term_struct.field_final_value-optimization_term_struct.field_initial_value)/optimization_term_struct.field_interval+1)<=0) 
-      bomb("something strage about field_final_value, field_initial_value, and field_interval", NULL);
+      bombElegant("something strage about field_final_value, field_initial_value, and field_interval", NULL);
     field_value = optimization_term_struct.field_initial_value;
   } else if (optimization_term_struct.input_file) {
     SDDS_DATASET SDDSin;
     if (!optimization_term_struct.input_column)
-      bomb("you must give input_column when giving input_file", NULL);
+      bombElegant("you must give input_column when giving input_file", NULL);
     if (!SDDS_InitializeInputFromSearchPath(&SDDSin, optimization_term_struct.input_file) ||
         SDDS_ReadPage(&SDDSin)!=1)
       SDDS_Bomb("problem reading optimization term input file");
@@ -276,7 +279,7 @@ void add_optimization_term(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
       !(optimization_data->usersTermWeight 
         = SDDS_Realloc(optimization_data->usersTermWeight,
                        sizeof(*optimization_data->usersTermWeight)*(optimization_data->terms+n_field_values+nFileTerms))))
-    bomb("memory allocation failure", NULL);
+    bombElegant("memory allocation failure", NULL);
 
   if (!nFileTerms) {
     for (index=0; index<n_field_values; index++) {
@@ -287,7 +290,7 @@ void add_optimization_term(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *
       } else 
         strcpy(s, optimization_term_struct.term);
       if (!SDDS_CopyString(&optimization_data->term[optimization_data->terms+index], s))
-        bomb("memory allocation failure", NULL);
+        bombElegant("memory allocation failure", NULL);
       optimization_data->termWeight[optimization_data->terms+index] = 1;
       optimization_data->usersTermWeight[optimization_data->terms+index] = optimization_term_struct.weight;
       if (optimization_term_struct.verbose)
@@ -322,7 +325,8 @@ void add_optimization_covariable(OPTIMIZATION_DATA *optimization_data, NAMELIST_
     /* process namelist text */
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
-    process_namelist(&optimization_covariable, nltext);
+    if (processNamelist(&optimization_covariable, nltext)==NAMELIST_ERROR)
+      bombElegant(NULL, NULL);
     if (echoNamelists) print_namelist(stdout, &optimization_covariable);
     if (disable)
       return ;
@@ -343,7 +347,7 @@ void add_optimization_covariable(OPTIMIZATION_DATA *optimization_data, NAMELIST_
 
     /* check for valid input */
     if (name==NULL)
-        bomb("element name missing in optimization_variable namelist", NULL);
+        bombElegant("element name missing in optimization_variable namelist", NULL);
     str_toupper(name);
     context = NULL;
     if (!find_element(name, &context, &(beamline->elem))) {
@@ -354,7 +358,7 @@ void add_optimization_covariable(OPTIMIZATION_DATA *optimization_data, NAMELIST_
     cp_str(&covariables->element[n_covariables], name);
     covariables->varied_type[n_covariables] = context->type;
     if (item==NULL)
-        bomb("item name missing in optimization_variable list", NULL);
+        bombElegant("item name missing in optimization_variable list", NULL);
     str_toupper(item);
     if ((covariables->varied_param[n_covariables] = confirm_parameter(item, context->type))<0) {
         fprintf(stdout, "error: cannot vary %s--no such parameter for %s\n",item, name);
@@ -367,7 +371,7 @@ void add_optimization_covariable(OPTIMIZATION_DATA *optimization_data, NAMELIST_
 
     if (!get_parameter_value(covariables->varied_quan_value+n_covariables, name, covariables->varied_param[n_covariables],
             context->type, beamline))
-        bomb("unable to get initial value for parameter", NULL);
+        bombElegant("unable to get initial value for parameter", NULL);
 
     ptr = tmalloc(sizeof(char)*(strlen(name)+strlen(item)+4));
     sprintf(ptr, "%s.%s0", name, item);
@@ -417,17 +421,18 @@ void add_optimization_constraint(OPTIMIZATION_DATA *optimization_data, NAMELIST_
     /* process namelist text */
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
-    process_namelist(&optimization_constraint, nltext);
+    if (processNamelist(&optimization_constraint, nltext)==NAMELIST_ERROR)
+      bombElegant(NULL, NULL);
     if (echoNamelists) print_namelist(stdout, &optimization_constraint);
 
     /* check for valid input */
     if (quantity==NULL)
-        bomb("quantity name missing in optimization_constraint namelist", NULL);
+        bombElegant("quantity name missing in optimization_constraint namelist", NULL);
     constraints->quantity[n_constraints] = quantity;
     if ((constraints->index[n_constraints]=get_final_property_index(quantity))<0)
-        bomb("no match for quantity to be constrained", NULL);
+        bombElegant("no match for quantity to be constrained", NULL);
     if (lower>upper)
-        bomb("lower > upper for constraint", NULL);
+        bombElegant("lower > upper for constraint", NULL);
     constraints->lower[n_constraints] = lower;
     constraints->upper[n_constraints] = upper;
 
@@ -650,7 +655,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
     constraints = &(optimization_data->constraints);
 
     if (variables->n_variables==0)
-        bomb("no variables specified for optimization", NULL);
+        bombElegant("no variables specified for optimization", NULL);
 
     for (i=0; i<MAX_OPTIM_RECORDS; i++)
       optimRecord[i].variableValue = tmalloc(sizeof(*optimRecord[i].variableValue)*
@@ -664,11 +669,11 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
     if (optimization_data->equation==NULL || !strlen(optimization_data->equation)) {
       long i, length;
       if (optimization_data->terms==0)
-        bomb("give an optimization equation or at least one optimization term", NULL);
+        bombElegant("give an optimization equation or at least one optimization term", NULL);
       for (i=length=0; i<optimization_data->terms; i++)
         length += strlen(optimization_data->term[i])+4;
       if (!(optimization_data->equation = SDDS_Malloc(sizeof(*optimization_data->equation)*length)))
-        bomb("memory allocation failue", NULL);
+        bombElegant("memory allocation failue", NULL);
       optimization_data->equation[0] = '\0';
       for (i=0; i<optimization_data->terms; i++) {
         strcat(optimization_data->equation, optimization_data->term[i]);
@@ -682,7 +687,8 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
     /* process namelist text */
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
-    process_namelist(&optimize, nltext);
+    if (processNamelist(&optimize, nltext)==NAMELIST_ERROR)
+      bombElegant(NULL, NULL);
     if (echoNamelists) print_namelist(stdout, &optimize);
 
     if (summarize_setup)
@@ -693,7 +699,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 				 variables->element[i], 
 				 variables->varied_param[i], 
 				 variables->varied_type[i], beamline))
-            bomb("unable to get initial value for parameter", NULL);
+            bombElegant("unable to get initial value for parameter", NULL);
 	variables->initial_value[i] = variables->varied_quan_value[i];
 	fprintf(stdout, "Initial value for %s.%s is %e\n", 
 		variables->element[i], variables->item[i],
@@ -731,7 +737,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 			       covariables->varied_param[i],
 			       covariables->varied_type[i],
 			       beamline))
-        bomb("unable to get initial value for parameter", NULL);
+        bombElegant("unable to get initial value for parameter", NULL);
       rpn_store(covariables->varied_quan_value[i] = rpn(covariables->equation[i]), 
 		NULL, covariables->memory_number[i]);
     }
@@ -782,7 +788,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
 		       (optimization_data->startFromSimplexVertex1?SIMPLEX_START_FROM_VERTEX1:0))<0) {
           if (result>optimization_data->tolerance) {
             if (!optimization_data->soft_failure)
-              bomb("optimization unsuccessful--aborting", NULL);
+              bombElegant("optimization unsuccessful--aborting", NULL);
             else
               fputs("warning: optimization unsuccessful--continuing\n", stdout);
           }
@@ -804,7 +810,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
                       (optimization_data->n_evaluations/optimization_data->n_passes+1), 3)<0) {
           if (result>optimization_data->tolerance) {
             if (!optimization_data->soft_failure)
-              bomb("optimization unsuccessful--aborting", NULL);
+              bombElegant("optimization unsuccessful--aborting", NULL);
             else
               fputs("warning: optimization unsuccessful--continuing\n", stdout);
           }
@@ -819,7 +825,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
                              variables->n_variables, optimization_data->target,
                              optimization_function)) {
           if (!optimization_data->soft_failure)
-            bomb("optimization unsuccessful--aborting", NULL);
+            bombElegant("optimization unsuccessful--aborting", NULL);
           else 
             fputs("warning: optimization unsuccessful--continuing", stdout);
         }
@@ -834,7 +840,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
                              optimization_function, optimization_data->n_evaluations*1.0,
                              random_1_elegant)) {
           if (!optimization_data->soft_failure)
-            bomb("optimization unsuccessful--aborting", NULL);
+            bombElegant("optimization unsuccessful--aborting", NULL);
           else
             fputs("warning: optimization unsuccessful--continuing", stdout);
         }
@@ -848,7 +854,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
                              optimization_data->target, optimization_function, 
                              optimization_data->n_evaluations, random_1_elegant)) {
           if (!optimization_data->soft_failure)
-            bomb("optimization unsuccessful--aborting", NULL);
+            bombElegant("optimization unsuccessful--aborting", NULL);
           else
             fputs("warning: optimization unsuccessful--continuing", stdout);
         }
@@ -864,7 +870,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
                            optimization_function, 
                            optimization_data->n_evaluations, random_1_elegant)) {
           if (!optimization_data->soft_failure)
-            bomb("optimization unsuccessful--aborting", NULL);
+            bombElegant("optimization unsuccessful--aborting", NULL);
           else
             fputs("warning: optimization unsuccessful--continuing", stdout);
         }
@@ -872,7 +878,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
           stopOptimization = 1;
         break;
       default:
-        bomb("unknown optimization method code (do_optimize())", NULL);
+        bombElegant("unknown optimization method code (do_optimize())", NULL);
         break;
       }
 
@@ -903,7 +909,7 @@ void do_optimize(NAMELIST_TEXT *nltext, RUN *run1, VARY *control1, ERRORVAL *err
           long imax, imin, iworst;
           double *savedTermValue, newResult;
           if (!(savedTermValue = malloc(sizeof(*savedTermValue)*optimization_data->terms)))
-            bomb("memory allocation failure (saving term values)", NULL);
+            bombElegant("memory allocation failure (saving term values)", NULL);
           memcpy(savedTermValue, optimization_data->termValue, optimization_data->terms*sizeof(*savedTermValue));
           newResult = lastResult;
           for (iworst=0; iworst<optimization_data->restart_worst_terms; iworst++) {
@@ -1291,17 +1297,17 @@ double optimization_function(double *value, long *invalid)
   /* generate initial beam distribution and track it */
   switch (beam_type_code) {
   case SET_AWE_BEAM:
-    bomb("beam type code of SET_AWE_BEAM in optimization_function--this shouldn't happen", NULL);
+    bombElegant("beam type code of SET_AWE_BEAM in optimization_function--this shouldn't happen", NULL);
     break;
   case SET_BUNCHED_BEAM:
     new_bunched_beam(beam, run, control, output, 0);
     break;
   case SET_SDDS_BEAM:
     if (new_sdds_beam(beam, run, control, output, 0)<0)
-      bomb("unable to get beam for tracking (is file empty or out of pages?)", NULL);
+      bombElegant("unable to get beam for tracking (is file empty or out of pages?)", NULL);
     break;
   default:
-    bomb("unknown beam type code in optimization", NULL);
+    bombElegant("unknown beam type code in optimization", NULL);
     break;
   }
 
@@ -1582,7 +1588,7 @@ double optimization_function(double *value, long *invalid)
       fflush(stdout);
 #endif
       if (!output->sums_vs_z)
-        bomb("sums_vs_z element of output structure is NULL--programming error (optimization_function)", NULL);
+        bombElegant("sums_vs_z element of output structure is NULL--programming error (optimization_function)", NULL);
       if ((i=compute_final_properties(final_property_value, output->sums_vs_z+output->n_z_points, 
                                       beam->n_to_track, beam->p0, M, beam->particle, 
                                       control->i_step, control->indexLimitProduct*control->n_steps,
@@ -1871,7 +1877,7 @@ void rpnStoreHigherMatrixElements(VMATRIX *M, long **TijkMem, long **UijklMem, l
         for (k=0; k<=j; k++)
           count++;
     if (!(*TijkMem = malloc(sizeof(**TijkMem)*count)))
-      bomb("memory allocation failure (rpnStoreHigherMatrixElements)", NULL);
+      bombElegant("memory allocation failure (rpnStoreHigherMatrixElements)", NULL);
     for (i=count=0; i<6; i++)
       for (j=0; j<6; j++)
         for (k=0; k<=j; k++, count++) {
@@ -1886,7 +1892,7 @@ void rpnStoreHigherMatrixElements(VMATRIX *M, long **TijkMem, long **UijklMem, l
           for (l=0; l<=k; l++)
             count++;
     if (!(*UijklMem = malloc(sizeof(**UijklMem)*count)))
-      bomb("memory allocation failure (rpnStoreHigherMatrixElements)", NULL);
+      bombElegant("memory allocation failure (rpnStoreHigherMatrixElements)", NULL);
     for (i=count=0; i<6; i++)
       for (j=0; j<6; j++)
         for (k=0; k<=j; k++)
@@ -1900,7 +1906,7 @@ void rpnStoreHigherMatrixElements(VMATRIX *M, long **TijkMem, long **UijklMem, l
     switch (order) {
     case 2:
       if (!M->T)
-        bomb("second order matrix is missing!", NULL);
+        bombElegant("second order matrix is missing!", NULL);
       for (i=count=0; i<6; i++)
         for (j=0; j<6; j++)
           for (k=0; k<=j; k++, count++)
@@ -1908,7 +1914,7 @@ void rpnStoreHigherMatrixElements(VMATRIX *M, long **TijkMem, long **UijklMem, l
       break;
     case 3:
       if (!M->Q)
-        bomb("third order matrix is missing!", NULL);
+        bombElegant("third order matrix is missing!", NULL);
       for (i=count=0; i<6; i++)
         for (j=0; j<6; j++)
           for (k=0; k<=j; k++)

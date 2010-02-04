@@ -34,7 +34,7 @@ void concatenate_beamline(LINE_LIST *beamline, RUN *run)
 
     if (beamline->flags&BEAMLINE_CONCAT_CURRENT) {
         if (!(beamline->flags&BEAMLINE_CONCAT_DONE))
-            bomb("logic problem with beamline concatenation", NULL);
+            bombElegant("logic problem with beamline concatenation", NULL);
         log_exit("concatenate_beamline");
         return;
         }
@@ -196,17 +196,17 @@ void copy_matrices1(VMATRIX *M1,  VMATRIX *M0)
     log_entry("copy_matrices1");
 
     if (!M0)
-        bomb("null VMATRIX pointer for source matrix (copy_matrices1)", NULL);
+        bombElegant("null VMATRIX pointer for source matrix (copy_matrices1)", NULL);
     if (!M1)
-        bomb("null VMATRIX pointer for target matrix (copy_matrices1)", NULL);
+        bombElegant("null VMATRIX pointer for target matrix (copy_matrices1)", NULL);
     if (M0->order<1)
-        bomb("invalid VMATRIX order for source matrix (copy_matrices1)", NULL);
+        bombElegant("invalid VMATRIX order for source matrix (copy_matrices1)", NULL);
     if (M1->order<1)
-        bomb("invalid VMATRIX order for target matrix (copy_matrices1)", NULL);
+        bombElegant("invalid VMATRIX order for target matrix (copy_matrices1)", NULL);
     if (!M0->C || !M0->R)
-        bomb("null C and/or R for source matrix (copy_matrices1)", NULL);
+        bombElegant("null C and/or R for source matrix (copy_matrices1)", NULL);
     if (!M1->C || !M1->R)
-        bomb("null C and/or R for target matrix (copy_matrices1)", NULL);
+        bombElegant("null C and/or R for target matrix (copy_matrices1)", NULL);
 
     for (i=0; i<6; i++) {
         M1->C[i] = M0->C[i];
@@ -217,10 +217,10 @@ void copy_matrices1(VMATRIX *M1,  VMATRIX *M0)
 
     if (M1->order>=2) {
         if (!M1->T)
-            bomb("null T for target matrix (copy_matrices1)", NULL);
+            bombElegant("null T for target matrix (copy_matrices1)", NULL);
         if (M0->order>=2) {
             if (!M0->T)
-                bomb("null T for source matrix (copy_matrices1)", NULL);
+                bombElegant("null T for source matrix (copy_matrices1)", NULL);
             for (i=0; i<6; i++)
                 for (j=0; j<6; j++)
                     for (k=0; k<=j; k++)
@@ -236,10 +236,10 @@ void copy_matrices1(VMATRIX *M1,  VMATRIX *M0)
 
     if (M1->order>=3) {
         if (!M1->Q)
-            bomb("null Q for target matrix (copy_matrices1)", NULL);
+            bombElegant("null Q for target matrix (copy_matrices1)", NULL);
         if (M0->order>=3) {
             if (!M0->Q)
-                bomb("null Q for source matrix (copy_matrices1)", NULL);
+                bombElegant("null Q for source matrix (copy_matrices1)", NULL);
             for (i=0; i<6; i++)
                 for (j=0; j<6; j++)
                     for (k=0; k<=j; k++)
@@ -269,7 +269,7 @@ void free_elements1(ELEMENT_LIST *eptr)
     while (eptr) {
         if (entity_description[eptr->type].flags&HAS_MATRIX && eptr->matrix ) {
             if (eptr->matrix->order<1 || eptr->matrix->order>3)
-                bomb("invalid matrix order (free_elements1)", NULL);
+                bombElegant("invalid matrix order (free_elements1)", NULL);
 /*            tfree(eptr->name); */
             free_matrices(eptr->matrix);
             tfree(eptr->matrix);

@@ -68,35 +68,36 @@ void TouschekEffect(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     eptr = eptr->succ; 
   }
   if(!flag) 
-    bomb("No TSCATTER element along beamline", NULL);                
+    bombElegant("No TSCATTER element along beamline", NULL);                
 
   /* process the namelist text */
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
-  process_namelist(&touschek_scatter, nltext);
+  if (processNamelist(&touschek_scatter, nltext)==NAMELIST_ERROR)
+    bombElegant(NULL, NULL);
   if (echoNamelists) print_namelist(stdout, &touschek_scatter);
 
   if (!charge)    
-    bomb("charge has to be given", NULL);
+    bombElegant("charge has to be given", NULL);
   if (frequency<1)
-    bomb("frequency has to >=1", NULL);
+    bombElegant("frequency has to >=1", NULL);
   if (!emit_x && !emit_nx)
-    bomb("bunch emittance-x has to be given", NULL);
+    bombElegant("bunch emittance-x has to be given", NULL);
   if (!emit_nx)
     emit_nx = sqrt(1.+ sqr(run->p_central))*emit_x;
   if (!emit_y && !emit_ny)
-    bomb("bunch emittance-y has to be given", NULL);
+    bombElegant("bunch emittance-y has to be given", NULL);
   if (!emit_ny)
     emit_ny = sqrt(1.+ sqr(run->p_central))*emit_y;
   if (!sigma_dp)
-    bomb("energy spread has to be given", NULL);
+    bombElegant("energy spread has to be given", NULL);
   if (!sigma_s)
-    bomb("bunch length has to be given", NULL);
+    bombElegant("bunch length has to be given", NULL);
 
   if (!Momentum_Aperture)
-    bomb("Momentum_Aperture file needed before performing simulation", NULL);
+    bombElegant("Momentum_Aperture file needed before performing simulation", NULL);
   if (get_MAInput(Momentum_Aperture, beamline, nElement)<0)
-    bomb("The input Momentum_Aperture file is not valid for this calculation - not same element location!", NULL);
+    bombElegant("The input Momentum_Aperture file is not valid for this calculation - not same element location!", NULL);
 
   /* calculate Twiss function and initial Touschek calculation */
   run_twiss_output(run, beamline, NULL, -1);
@@ -104,7 +105,7 @@ void TouschekEffect(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 
   /* Calculate Piwinski's scattering rate. */
   if (TouschekRate(beamline))
-    bomb("Touschek scattering rate calculation error", NULL);
+    bombElegant("Touschek scattering rate calculation error", NULL);
   /* Generate scattered particles at TScatter. 
      And track the scattered particles down to beamline. */
   TouschekDistribution(run, beamline);
@@ -663,7 +664,7 @@ TSCATTER *initTSCATTER (ELEMENT_LIST *eptr, long iElement)
 void init_TSPEC (RUN *run, LINE_LIST *beamline, long nElement)
 {
   if (!(tsSpec = SDDS_Malloc(sizeof(*tsSpec))))
-    bomb("memory allocation failure at setup Touscheck scatter", NULL);                
+    bombElegant("memory allocation failure at setup Touscheck scatter", NULL);                
 
   tsSpec->nbins = nbins;
   tsSpec->charge = charge;
@@ -683,7 +684,7 @@ void init_TSPEC (RUN *run, LINE_LIST *beamline, long nElement)
     tsSpec->ipage_his = calloc(sizeof(long), nElement);
     tsSpec->distIn = 1;
     if (Check_HisInput(FullDist, beamline, nElement, tsSpec->ipage_his, 0)<0)
-      bomb("The input FullDist is not valid for this calculation - not same element location!", NULL);
+      bombElegant("The input FullDist is not valid for this calculation - not same element location!", NULL);
   } else if (TranDist) {
     if (!ZDist) {
       fprintf(stdout, "warning: ZDist need be given with TranDist. The input file is ignored\n");
@@ -694,7 +695,7 @@ void init_TSPEC (RUN *run, LINE_LIST *beamline, long nElement)
       tsSpec->distIn = 2;
       if (Check_HisInput(ZDist, beamline, nElement, tsSpec->ipage_his, 0)<0 ||
           Check_HisInput(TranDist, beamline, nElement, tsSpec->ipage_his, 1)<0 )
-        bomb("The input ZDist or TranDist is not valid for this calculation - not same element location!", NULL);
+        bombElegant("The input ZDist or TranDist is not valid for this calculation - not same element location!", NULL);
     }
   } else if (XDist || YDist || ZDist) {
     if (!XDist || !YDist || !ZDist) {
@@ -707,7 +708,7 @@ void init_TSPEC (RUN *run, LINE_LIST *beamline, long nElement)
       if (Check_HisInput(XDist, beamline, nElement, tsSpec->ipage_his, 0)<0 ||
           Check_HisInput(YDist, beamline, nElement, tsSpec->ipage_his, 1)<0 ||
           Check_HisInput(ZDist, beamline, nElement, tsSpec->ipage_his, 1)<0)
-        bomb("The input ZDist or TranDist is not valid for this calculation - not same element location!", NULL);
+        bombElegant("The input ZDist or TranDist is not valid for this calculation - not same element location!", NULL);
     }
   }
   
@@ -752,7 +753,7 @@ long Check_HisInput(char *filename, LINE_LIST *beamline, long nElement, long *pI
       if (!flag)
         pIndex[i] = iPage;
       else if (pIndex[i] != iPage)
-        bomb("The input ZDist and TranDist file has different element location!", NULL);
+        bombElegant("The input ZDist and TranDist file has different element location!", NULL);
       i++;
       result++;
     }
@@ -806,7 +807,7 @@ long get_MAInput(char *filename, LINE_LIST *beamline, long nElement)
         }
         s++; dpp++; dpm++; Name++; Type++; Occurence++;
         if (i++ > iTotal)
-          bomb("Momentum aperture file end earlier than required", NULL);
+          bombElegant("Momentum aperture file end earlier than required", NULL);
       }
       result++;
     }

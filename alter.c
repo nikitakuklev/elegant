@@ -26,15 +26,16 @@ void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     /* process the namelist text */
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
-    process_namelist(&alter_elements, nltext);
+    if (processNamelist(&alter_elements, nltext)==NAMELIST_ERROR)
+      bombElegant(NULL, NULL);
     if (echoNamelists) print_namelist(stdout, &alter_elements);
 
     if (!name || !strlen(name))
-      bomb("no name given", NULL);
+      bombElegant("no name given", NULL);
     if (has_wildcards(name) && strchr(name, '-'))
       name = expand_ranges(name);
     if (!item || !strlen(item))
-      bomb("no item given", NULL);
+      bombElegant("no item given", NULL);
     if (multiplicative) {
       if (!differential)
 	/* convert to fractional change */
@@ -44,9 +45,9 @@ void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     if ((((s_start>=0 && s_end>=0) ? 1 : 0) +
          ((start_occurence!=0 && end_occurence!=0) ? 1 : 0 ) +
          ((after || before) ? 1 : 0 ))>1)
-      bomb("can't combine start_occurence/end_occurence, s_start/s_end, and after/before---use one method only", NULL);
+      bombElegant("can't combine start_occurence/end_occurence, s_start/s_end, and after/before---use one method only", NULL);
     if (start_occurence>end_occurence) 
-      bomb("start_occurence > end_occurence", NULL);
+      bombElegant("start_occurence > end_occurence", NULL);
     if (after || before) {
       ELEMENT_LIST *context;
       context = NULL;
@@ -80,10 +81,10 @@ void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
         fflush(stdout);
       }
       if (s_start>s_end) 
-        bomb("'after' element follows 'before' element!", NULL);
+        bombElegant("'after' element follows 'before' element!", NULL);
     }
     if (s_start>s_end)
-      bomb("s_start > s_end", NULL);
+      bombElegant("s_start > s_end", NULL);
     if (type) {
       long i;
       str_toupper(type);
@@ -93,7 +94,7 @@ void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 	if (wild_match(entity_name[i], type))
 	  break;
       if (i==N_TYPES)
-	bomb("type pattern does not match any known type", NULL);
+	bombElegant("type pattern does not match any known type", NULL);
     }    
     if (exclude && has_wildcards(exclude) && strchr(exclude, '-'))
       exclude = expand_ranges(exclude);
@@ -145,7 +146,7 @@ void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 	  if (!(changedDefinedParameter=SDDS_Realloc(changedDefinedParameter,
 						    sizeof(*changedDefinedParameter)*
 						     (nChangedDefinedParameter+1)))) {
-	    bomb("memory allocation failure (alter_elements)", NULL);
+	    bombElegant("memory allocation failure (alter_elements)", NULL);
 	  }
 	  changedDefinedParameter[nChangedDefinedParameter++] = eptr->name;
 	}
@@ -180,7 +181,7 @@ void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 	  if (!(changedDefinedParameter=SDDS_Realloc(changedDefinedParameter,
 						    sizeof(*changedDefinedParameter)*
 						     (nChangedDefinedParameter+1)))) {
-	    bomb("memory allocation failure (alter_elements)", NULL);
+	    bombElegant("memory allocation failure (alter_elements)", NULL);
 	  }
 	  changedDefinedParameter[nChangedDefinedParameter++] = eptr->name;
 	}
@@ -229,7 +230,7 @@ void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 	  if (!(changedDefinedParameter=SDDS_Realloc(changedDefinedParameter,
 						    sizeof(*changedDefinedParameter)*
 						     (nChangedDefinedParameter+1)))) {
-	    bomb("memory allocation failure (alter_elements)", NULL);
+	    bombElegant("memory allocation failure (alter_elements)", NULL);
 	  }
 	  changedDefinedParameter[nChangedDefinedParameter++] = eptr->name;
 	}

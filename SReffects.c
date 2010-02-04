@@ -44,7 +44,7 @@ void track_SReffects(double **coord, long np, SREFFECTS *SReffects, double Po,
     
     if (SReffects->pRef==0) {
       if (!radIntegrals || !radIntegrals->computed) {
-        bomb("Problem with SREFFECTS element: pRef=0 but no radiation integrals computed.  Use the twiss_output command to compute these.", NULL);
+        bombElegant("Problem with SREFFECTS element: pRef=0 but no radiation integrals computed.  Use the twiss_output command to compute these.", NULL);
       }
       /* take data from radiation integrals */
       SReffects->pRef = Po;
@@ -81,7 +81,7 @@ void track_SReffects(double **coord, long np, SREFFECTS *SReffects, double Po,
     if (!lossOnly) {
       /* RMS values for random added components */
       if (twiss->betax<=0 || twiss->betay<=0)
-        bomb("Twiss parameters invalid in track_SReffects", NULL);
+        bombElegant("Twiss parameters invalid in track_SReffects", NULL);
       /* damping rates less RF contributions */
       Fx = 1 + (SReffects->Jx - 1)*Ddelta;
       Fy = 1 + (SReffects->Jy - 1)*Ddelta;

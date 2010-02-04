@@ -63,41 +63,42 @@ void setupMomentumApertureSearch(
   /* process namelist input */
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
-  process_namelist(&momentum_aperture, nltext);
+  if (processNamelist(&momentum_aperture, nltext)==NAMELIST_ERROR)
+    bombElegant(NULL, NULL);
   if (echoNamelists) print_namelist(stdout, &momentum_aperture);
 
   if (run->concat_order!=0)
-    bomb("at present, momentum_aperture is incompatible with concatenation", NULL);
+    bombElegant("at present, momentum_aperture is incompatible with concatenation", NULL);
   
   /* check for data errors */
   if (!output)
-    bomb("no output filename specified", NULL);
+    bombElegant("no output filename specified", NULL);
   if (delta_negative_limit>=0)
-    bomb("delta_negative_limit >= 0", NULL);
+    bombElegant("delta_negative_limit >= 0", NULL);
   if (delta_positive_limit<=0) 
-    bomb("delta_positive_limit <= 0", NULL);
+    bombElegant("delta_positive_limit <= 0", NULL);
   if (delta_negative_start>0)
-    bomb("delta_negative_start > 0", NULL);
+    bombElegant("delta_negative_start > 0", NULL);
   if (delta_positive_start<0) 
-    bomb("delta_positive_start < 0", NULL);
+    bombElegant("delta_positive_start < 0", NULL);
   if (delta_step_size<=0)
-    bomb("delta_step_size <= 0", NULL);
+    bombElegant("delta_step_size <= 0", NULL);
   if (fabs(delta_negative_limit-delta_negative_start)<=delta_step_size/2)
-    bomb("|delta_negative_limit-delta_negative_start| <= delta_step_size/2", NULL);
+    bombElegant("|delta_negative_limit-delta_negative_start| <= delta_step_size/2", NULL);
   if (delta_positive_limit-delta_positive_start<=delta_step_size/2)
-    bomb("delta_positive_limit-delta_positive_start <= delta_step_size/2", NULL);
+    bombElegant("delta_positive_limit-delta_positive_start <= delta_step_size/2", NULL);
   if (splits<0)
-    bomb("splits < 0", NULL);
+    bombElegant("splits < 0", NULL);
   if (s_start>=s_end)
-    bomb("s_start >= s_end", NULL);
+    bombElegant("s_start >= s_end", NULL);
   if (include_name_pattern && has_wildcards(include_name_pattern) && strchr(include_name_pattern, '-'))
     include_name_pattern = expand_ranges(include_name_pattern);
   if (include_type_pattern && has_wildcards(include_type_pattern) && strchr(include_type_pattern, '-'))
     include_type_pattern = expand_ranges(include_type_pattern);
   if (skip_elements<0)
-    bomb("skip_elements < 0", NULL);
+    bombElegant("skip_elements < 0", NULL);
   if (process_elements<=0)
-    bomb("process_elements <= 0", NULL);
+    bombElegant("process_elements <= 0", NULL);
   
   output = compose_filename(output, run->rootname);
   sprintf(description, "Momentum aperture search");
@@ -203,7 +204,7 @@ long doMomentumApertureSearch(
   fprintf(stderr, "Debug file %s\n", s);
   
   if (!(fpdeb = fopen(s, "w")))
-    bomb("unable to open debug file for momentum aperture scan", NULL);
+    bombElegant("unable to open debug file for momentum aperture scan", NULL);
   fprintf(fpdeb, "SDDS1\n");
   fprintf(fpdeb, "&parameter name=ElementName type=string &end\n");
   fprintf(fpdeb, "&parameter name=Side type=string &end\n");

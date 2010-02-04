@@ -41,7 +41,8 @@ void setup_coupled_twiss_output(
   /* process namelist input */
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
   set_print_namelist_flags(0);
-  process_namelist(&coupled_twiss_output, nltext);
+  if (processNamelist(&coupled_twiss_output, nltext)==NAMELIST_ERROR)
+    bombElegant(NULL, NULL);
   if (echoNamelists) print_namelist(stdout, &coupled_twiss_output);
   
 #if USE_MPI
@@ -55,14 +56,14 @@ void setup_coupled_twiss_output(
   *do_coupled_twiss_output = output_at_each_step;
   
   if (!emittances_from_twiss_command && emit_x==0 && sigma_dp==0)
-    bomb("supply emit_x, sigma_dp, or set emittances_from_twiss_command=1", NULL);
+    bombElegant("supply emit_x, sigma_dp, or set emittances_from_twiss_command=1", NULL);
   if (!emittances_from_twiss_command) {
     if (emit_x<0)
-      bomb("emit_x < 0", NULL);
+      bombElegant("emit_x < 0", NULL);
     if (sigma_dp<0)
-      bomb("sigma_dp < 0", NULL);
+      bombElegant("sigma_dp < 0", NULL);
     if (emittance_ratio<0)
-      bomb("emittance_ratio < 0", NULL);
+      bombElegant("emittance_ratio < 0", NULL);
   }
 
   if (filename) {

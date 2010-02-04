@@ -64,7 +64,7 @@ void track_through_rfmode(
     } else if (pass==0) {
       rfmode->mp_charge = 0;
       if (rfmode->charge<0)
-        bomb("RFMODE charge parameter should be non-negative. Use change_particle to set particle charge state.", NULL);
+        bombElegant("RFMODE charge parameter should be non-negative. Use change_particle to set particle charge state.", NULL);
 #if (!USE_MPI) 
       if (np)
         rfmode->mp_charge = rfmode->charge/np;
@@ -103,7 +103,7 @@ void track_through_rfmode(
     }
 
     if (!rfmode->initialized)
-        bomb("track_through_rfmode called with uninitialized element", NULL);
+        bombElegant("track_through_rfmode called with uninitialized element", NULL);
 
     if (rfmode->n_bins>max_n_bins) {
        Ihist = trealloc(Ihist, sizeof(*Ihist)*(max_n_bins=rfmode->n_bins));
@@ -325,17 +325,17 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
   
   rfmode->initialized = 1;
   if (rfmode->pass_interval<=0)
-    bomb("pass_interval <= 0 for RFMODE", NULL);
+    bombElegant("pass_interval <= 0 for RFMODE", NULL);
 #if !SDDS_MPI_IO
   if (n_particles<1)
-    bomb("too few particles in set_up_rfmode()", NULL);
+    bombElegant("too few particles in set_up_rfmode()", NULL);
 #endif
   if (rfmode->n_bins<2)
-    bomb("too few bins for RFMODE", NULL);
+    bombElegant("too few bins for RFMODE", NULL);
   if (rfmode->bin_size<=0 && !rfmode->binless)
-    bomb("bin_size must be positive for RFMODE", NULL);
+    bombElegant("bin_size must be positive for RFMODE", NULL);
   if (rfmode->Ra && rfmode->Rs) 
-    bomb("RFMODE element may have only one of Ra or Rs nonzero.  Ra is just 2*Rs", NULL);
+    bombElegant("RFMODE element may have only one of Ra or Rs nonzero.  Ra is just 2*Rs", NULL);
   if (rfmode->Ra)
     rfmode->RaInternal = rfmode->Ra;
   else
@@ -430,15 +430,15 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
   rfmode->nFreq = 0;
   if (rfmode->fwaveform) {
     if (!getTableFromSearchPath(&data, rfmode->fwaveform, 1, 0)) 
-      bomb("unable to read frequency waveform for RFMODE", NULL);
+      bombElegant("unable to read frequency waveform for RFMODE", NULL);
     if (data.n_data<=1)
-      bomb("RFMODE frequency table contains less than 2 points", NULL);
+      bombElegant("RFMODE frequency table contains less than 2 points", NULL);
     rfmode->tFreq = data.c1;
     rfmode->fFreq = data.c2;
     rfmode->nFreq = data.n_data;
     for (i=1; i<rfmode->nFreq; i++)
       if (rfmode->tFreq[i-1]>rfmode->tFreq[i])
-        bomb("time values are not monotonically increasing in RFMODE frequency waveform", NULL);
+        bombElegant("time values are not monotonically increasing in RFMODE frequency waveform", NULL);
     tfree(data.xlab); tfree(data.ylab); tfree(data.title); tfree(data.topline);
     data.xlab = data.ylab = data.title = data.topline = NULL;
     data.c1 = data.c2 = NULL;
@@ -447,15 +447,15 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
   rfmode->nQ = 0;
   if (rfmode->Qwaveform) {
     if (!getTableFromSearchPath(&data, rfmode->Qwaveform, 1, 0)) 
-      bomb("unable to read Q waveform for RFMODE", NULL);
+      bombElegant("unable to read Q waveform for RFMODE", NULL);
     if (data.n_data<=1)
-      bomb("RFMODE Q table contains less than 2 points", NULL);
+      bombElegant("RFMODE Q table contains less than 2 points", NULL);
     rfmode->tQ = data.c1;
     rfmode->fQ = data.c2;
     rfmode->nQ = data.n_data;
     for (i=1; i<rfmode->nQ; i++)
       if (rfmode->tQ[i-1]>rfmode->tQ[i])
-        bomb("time values are not monotonically increasing in RFMODE Q waveform", NULL);
+        bombElegant("time values are not monotonically increasing in RFMODE Q waveform", NULL);
     tfree(data.xlab); tfree(data.ylab); tfree(data.title); tfree(data.topline);
     data.xlab = data.ylab = data.title = data.topline = NULL;
     data.c1 = data.c2 = NULL;
@@ -486,7 +486,7 @@ void runBinlessRfMode(
   } else if (pass==0) {
     rfmode->mp_charge = 0;
     if (rfmode->charge<0)
-      bomb("RFMODE charge parameter should be non-negative. Use change_particle to set particle charge state.", NULL);
+      bombElegant("RFMODE charge parameter should be non-negative. Use change_particle to set particle charge state.", NULL);
     if (np)
       rfmode->mp_charge = rfmode->charge/np;
   }
@@ -515,7 +515,7 @@ void runBinlessRfMode(
   }
 
   if (!rfmode->initialized)
-    bomb("track_through_rfmode called with uninitialized element", NULL);
+    bombElegant("track_through_rfmode called with uninitialized element", NULL);
 
   if (np>max_np) 
     tData = trealloc(tData, sizeof(*tData)*(max_np=np));

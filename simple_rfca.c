@@ -54,7 +54,7 @@ double findFiducialTime(double **part, long np, double s0, double sOffset,
     if (np)
      tFid = (part[0][4]+sOffset)/(c_mks*beta_from_delta(p0, np?part[0][5]:0.0)); 
     else
-      bomb("0 particle for the FID_MODE_FIRST mode in findFiducialTime", NULL);
+      bombElegant("0 particle for the FID_MODE_FIRST mode in findFiducialTime", NULL);
 #else
     fprintf(stdout, "FID_MODE_FIRST mode is not supported in the current parallel version.\n");
     fprintf(stdout, "Please use serial version.\n");
@@ -152,7 +152,7 @@ double findFiducialTime(double **part, long np, double s0, double sOffset,
 #endif
   }
   else
-    bomb("invalid fiducial mode in findFiducialTime", NULL);
+    bombElegant("invalid fiducial mode in findFiducialTime", NULL);
 #ifdef DEBUG
   printf("Fiducial time (mode %lx): %21.15e\n", mode, tFid);
 #endif
@@ -236,7 +236,7 @@ long trackRfCavityWithWakes
         }
     if (isSlave) {
       if (!part)
-        bomb("NULL particle data pointer (trackRfCavityWithWakes)", NULL);
+        bombElegant("NULL particle data pointer (trackRfCavityWithWakes)", NULL);
     }
     if (isSlave || !notSinglePart) {
       for (ip=0; ip<np; ip++)
@@ -250,7 +250,7 @@ long trackRfCavityWithWakes
 	}
     }
     if (!rfca)
-        bomb("NULL rfca pointer (trackRfCavityWithWakes)", NULL);
+        bombElegant("NULL rfca pointer (trackRfCavityWithWakes)", NULL);
 
 #if (!USE_MPI)
     if (np<=0) {
@@ -275,7 +275,7 @@ long trackRfCavityWithWakes
     }
 #endif 
     if (rfca->change_t && rfca->Q)
-        bomb("incompatible RF cavity parameters: change_t!=0 && Q!=0", NULL);
+        bombElegant("incompatible RF cavity parameters: change_t!=0 && Q!=0", NULL);
 
     length = rfca->length;
 
@@ -326,7 +326,7 @@ long trackRfCavityWithWakes
             if (!rfca->fiducial_seen) {
                 unsigned long mode;
                 if (!(mode = parseFiducialMode(rfca->fiducial)))
-                    bomb("invalid fiducial mode for RFCA element", NULL);
+                    bombElegant("invalid fiducial mode for RFCA element", NULL);
                 if (rfca->tReference!=-1)
                   t0 = rfca->tReference;
                 else 
@@ -340,7 +340,7 @@ long trackRfCavityWithWakes
 #endif
             break;
         default:
-            bomb("unknown return value from get_phase_reference()", NULL);
+            bombElegant("unknown return value from get_phase_reference()", NULL);
             break;
         }
 
@@ -374,7 +374,7 @@ long trackRfCavityWithWakes
     if ((linearize = rfca->linearize)) {
       tAve = 0;
       if (nKicks!=1)
-        bomb("Must use n_kicks=1 for linearized rf cavity", NULL);
+        bombElegant("Must use n_kicks=1 for linearized rf cavity", NULL);
 
       if(isSlave || !notSinglePart) {
 	for (ip=0; ip<np; ip++) {
@@ -713,7 +713,7 @@ long track_through_rfcw
 {
   static long warned = 0;
   if (rfcw->cellLength<=0) 
-    bomb("invalid cell length for RFCW", NULL);
+    bombElegant("invalid cell length for RFCW", NULL);
   if (rfcw->length==0 && !warned) {
     fprintf(stdout, "** Warning: length of RFCW element is zero. Wakefields will scale to 0!\n");
     warned = 1;

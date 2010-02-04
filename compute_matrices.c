@@ -679,7 +679,7 @@ VMATRIX *compute_matrix(
         ukmap = ((UKICKMAP*)elem->p_elem);
         if (ukmap->Kreference && ukmap->fieldFactor) {
           if (ukmap->periods<=0)
-            bomb("UKICKMAP has PERIODS<=0 and KREFERENCE non-zero", NULL);
+            bombElegant("UKICKMAP has PERIODS<=0 and KREFERENCE non-zero", NULL);
           ukmap->radiusInternal = 
             sqrt(sqr(elem->Pref_input)+1)*(ukmap->length/ukmap->periods)/(PIx2*ukmap->Kreference*ukmap->fieldFactor);
         } else 
@@ -721,7 +721,7 @@ VMATRIX *compute_matrix(
 			bend->edgeFlags, bend->TRANSPORT);
         if (bend->dx || bend->dy || bend->dz) {
             if (bend->tilt)
-                bomb("can't misalign tilted bending magnet--sorry.", NULL);
+                bombElegant("can't misalign tilted bending magnet--sorry.", NULL);
             misalign_matrix(elem->matrix, bend->dx, bend->dy, bend->dz, bend->angle);
             }
         break;
@@ -756,12 +756,12 @@ VMATRIX *compute_matrix(
         if (alph->xmax)
             alph->gradient = elem->Pref_input*sqr(ALPHA_CONST/alph->xmax);
         else
-            bomb("supply xmax for alpha magnet", NULL);
+            bombElegant("supply xmax for alpha magnet", NULL);
         elem->matrix = alpha_magnet_matrix(alph->gradient, sqrt(sqr(run->p_central)+1),
                                            (alph->order?alph->order:run->default_order), alph->part);
         if ((alph->xs1 || alph->xs2 || alph->dp1!=-1 || alph->dp2!=1 ||
              alph->xPuck!=-1 || alph->widthPuck!=0) && alph->part==0)
-            bomb("alpha-magnet scraper not supported for full magnet", NULL);
+            bombElegant("alpha-magnet scraper not supported for full magnet", NULL);
         if (alph->tilt)
             tilt_matrices(elem->matrix, alph->tilt);
         if (alph->dx || alph->dy || alph->dz)
@@ -852,7 +852,7 @@ VMATRIX *compute_matrix(
       case T_KSBEND:
         ksbend = (KSBEND*)elem->p_elem;
         if (ksbend->n_kicks<1)
-            bomb("n_kicks must be > 0 for KSBEND element", NULL);
+            bombElegant("n_kicks must be > 0 for KSBEND element", NULL);
         ksbend->flags = determine_bend_flags(elem, ksbend->edge1_effects, ksbend->edge2_effects);
         elem->matrix = 
             bend_matrix(ksbend->length, ksbend->angle, ksbend->e1, ksbend->e2, 
@@ -864,7 +864,7 @@ VMATRIX *compute_matrix(
                         ksbend->TRANSPORT);
         if (ksbend->dx || ksbend->dy || ksbend->dz) {
             if (ksbend->tilt)
-                bomb("can't misalign tilted bending magnet", NULL);
+                bombElegant("can't misalign tilted bending magnet", NULL);
             misalign_matrix(elem->matrix, ksbend->dx, ksbend->dy, ksbend->dz, ksbend->angle);
             }
         break;
@@ -873,7 +873,7 @@ VMATRIX *compute_matrix(
         if (kquad->bore)
             kquad->k1 = kquad->B/kquad->bore*(particleCharge/(particleMass*c_mks*elem->Pref_input));
         if (kquad->n_kicks<1)
-            bomb("n_kicks must by > 0 for KQUAD element", NULL);
+            bombElegant("n_kicks must by > 0 for KQUAD element", NULL);
         elem->matrix = quadrupole_matrix(kquad->k1, kquad->length, 
                                          (run->default_order?run->default_order:1), kquad->tilt, 0.0,
                                          kquad->fse, kquad->xkick, kquad->ykick, NULL);
@@ -891,7 +891,7 @@ VMATRIX *compute_matrix(
         if (ksext->bore)
             ksext->k2 = 2*ksext->B/sqr(ksext->bore)*(particleCharge/(particleMass*c_mks*elem->Pref_input));
         if (ksext->n_kicks<1)
-            bomb("n_kicks must by > 0 for KSEXT element", NULL);
+            bombElegant("n_kicks must by > 0 for KSEXT element", NULL);
         elem->matrix = sextupole_matrix(ksext->k2, ksext->length, 
                                         (run->default_order?run->default_order:2), ksext->tilt,
                                         ksext->fse);
@@ -905,7 +905,7 @@ VMATRIX *compute_matrix(
       case T_KQUSE:
         kquse = (KQUSE*)elem->p_elem;
         if (kquse->n_kicks<1)
-            bomb("n_kicks must by > 0 for KQUSE element", NULL);
+            bombElegant("n_kicks must by > 0 for KQUSE element", NULL);
         elem->matrix = quse_matrix(kquse->k1, kquse->k2, kquse->length, 
                                       (run->default_order?run->default_order:1), kquse->tilt,
                                       kquse->fse1, kquse->fse2);
@@ -918,9 +918,9 @@ VMATRIX *compute_matrix(
       case T_SAMPLE:
         sample = (SAMPLE*)elem->p_elem;
         if (sample->interval<=0)
-            bomb("sample interval invalid", NULL);
+            bombElegant("sample interval invalid", NULL);
         if (sample->fraction>1 || sample->fraction<=0)
-            bomb("sample fraction invalid", NULL);
+            bombElegant("sample fraction invalid", NULL);
         break;
       case T_HVCOR:
         hvcor = (HVCOR*) elem->p_elem;
@@ -955,7 +955,7 @@ VMATRIX *compute_matrix(
       case T_CSBEND:
         csbend = (CSBEND*)elem->p_elem;
         if (csbend->n_kicks<1)
-            bomb("n_kicks must be > 0 for CSBEND element", NULL);
+            bombElegant("n_kicks must be > 0 for CSBEND element", NULL);
         csbend->edgeFlags = determine_bend_flags(elem, csbend->edge1_effects, csbend->edge2_effects);
         elem->matrix = 
             bend_matrix(csbend->length, csbend->angle, csbend->e1, csbend->e2, 
@@ -968,14 +968,14 @@ VMATRIX *compute_matrix(
                         csbend->edge_order, csbend->edgeFlags, 0);
         if (csbend->dx || csbend->dy || csbend->dz) {
           if (csbend->tilt)
-              bomb("can't misalign tilted bending magnet", NULL);
+              bombElegant("can't misalign tilted bending magnet", NULL);
           misalign_matrix(elem->matrix, csbend->dx, csbend->dy, csbend->dz, csbend->angle);
         }
         break;
       case T_CSRCSBEND:
         csrcsbend = (CSRCSBEND*)elem->p_elem;
         if (csrcsbend->n_kicks<1)
-            bomb("n_kicks must be > 0 for CSRCSBEND element", NULL);
+            bombElegant("n_kicks must be > 0 for CSRCSBEND element", NULL);
         csrcsbend->edgeFlags = determine_bend_flags(elem, csrcsbend->edge1_effects, csrcsbend->edge2_effects);
         elem->matrix = 
             bend_matrix(csrcsbend->length, csrcsbend->angle, csrcsbend->e1, csrcsbend->e2, 
@@ -988,7 +988,7 @@ VMATRIX *compute_matrix(
                         csrcsbend->edge_order, csrcsbend->edgeFlags, 0);
         if (csrcsbend->dx || csrcsbend->dy || csrcsbend->dz) {
             if (csrcsbend->tilt)
-                bomb("can't misalign tilted bending magnet", NULL);
+                bombElegant("can't misalign tilted bending magnet", NULL);
             misalign_matrix(elem->matrix, csrcsbend->dx, csrcsbend->dy, csrcsbend->dz, csrcsbend->angle);
             }
         break;
@@ -1038,7 +1038,7 @@ VMATRIX *compute_matrix(
         csrdrift = (CSRDRIFT*)elem->p_elem;
         if ((csrdrift->useOvertakingLength?1:0)+
             (csrdrift->spread?1:0)+(csrdrift->attenuationLength>0?1:0)>1) 
-          bomb("Give one and only one of SPREAD, ATTENUATION_LENGTH, or USE_OVERTAKING_LENGTH for CSRDRIFT", NULL);
+          bombElegant("Give one and only one of SPREAD, ATTENUATION_LENGTH, or USE_OVERTAKING_LENGTH for CSRDRIFT", NULL);
         elem->matrix = drift_matrix(csrdrift->length, run->default_order);
         break;
       case T_LSCDRIFT:
@@ -1127,14 +1127,14 @@ void set_up_watch_point(WATCH *watch, RUN *run, long occurence, char *previousEl
     if (watch->disable)
       return;
     if (watch->interval<=0 || watch->fraction<=0)
-        bomb("interval or fraction is non-positive for WATCH element", NULL);
+        bombElegant("interval or fraction is non-positive for WATCH element", NULL);
     if (!watch->mode || watch->mode[0]==0)
-        bomb("mode must be given for WATCH element", NULL);
+        bombElegant("mode must be given for WATCH element", NULL);
     mode = watch->mode;
     if ((qualifier=strchr(mode, ' ')))
          *qualifier++ = 0;
     if ((watch->mode_code=match_string(watch->mode, watch_mode, N_WATCH_MODES, 0))<0)
-        bomb("unknown watch mode", NULL);
+        bombElegant("unknown watch mode", NULL);
     if (watch->label && str_in(watch->label, "%s")) {
         char *buffer;
         buffer = tmalloc(sizeof(*buffer)*(strlen(watch->label)+strlen(run->rootname)+1));
@@ -1155,13 +1155,13 @@ void set_up_histogram(HISTOGRAM *histogram, RUN *run, long occurence)
   if (histogram->disable)
     return;
   if (histogram->interval<=0)
-    bomb("interval is non-positive for HISTOGRAM element", NULL);
+    bombElegant("interval is non-positive for HISTOGRAM element", NULL);
   if (histogram->bins<=2)
-    bomb("number of bins is less than 2 for HISTOGRAM element", NULL);
+    bombElegant("number of bins is less than 2 for HISTOGRAM element", NULL);
   if (!histogram->xData && !histogram->yData && !histogram->longitData)
-    bomb("no data selected for HISTOGRAM element", NULL);
+    bombElegant("no data selected for HISTOGRAM element", NULL);
   if (histogram->binSizeFactor<=0)
-    bomb("bin_size_factor is non-positive for HISTOGRAM element", NULL);
+    bombElegant("bin_size_factor is non-positive for HISTOGRAM element", NULL);
   
   histogram->filename = compose_filename_occurence(histogram->filename, run->rootname, occurence);
   
@@ -1343,7 +1343,7 @@ VMATRIX *stray_field_matrix(double length, double *lB, double *gB, double theta,
       m_free(&Bl);
     } else {
       if (gB[0] || gB[1] || gB[2]) 
-        bomb("to use global stray fields, you must do a floor coordinate computation", NULL);
+        bombElegant("to use global stray fields, you must do a floor coordinate computation", NULL);
       Bx = lB[0];
       By = lB[1];
     }

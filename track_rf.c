@@ -46,7 +46,7 @@ void track_through_rf_deflector(
     n_kicks += 1;
   
   if (rf_param->frequency==0) 
-    bomb("RFDF cannot have frequency=0", NULL);
+    bombElegant("RFDF cannot have frequency=0", NULL);
   if (rf_param->voltage==0 ||
       (rf_param->startPass>=0 && pass<rf_param->startPass) ||
       (rf_param->endPass>=0 && pass>rf_param->endPass)) {
@@ -213,7 +213,7 @@ void track_through_rftm110_deflector(
   double gamma, t0;
 
   if (rf_param->frequency==0) 
-    bomb("RFTM110 cannot have frequency=0", NULL);
+    bombElegant("RFTM110 cannot have frequency=0", NULL);
 
   if (rf_param->voltage==0 ||
       (rf_param->startPass>=0 && pass<rf_param->startPass) ||
@@ -407,17 +407,17 @@ void set_up_rftm110(RFTM110 *rf_param, double **initial, long n_particles, doubl
 
   if (rf_param->voltageWaveform) {
     if (!getTableFromSearchPath(&data, rf_param->voltageWaveform, 1, 0))
-        bomb("unable to read voltage waveform for rftm110", NULL);
+        bombElegant("unable to read voltage waveform for rftm110", NULL);
 
     if (data.n_data<=1)
-        bomb("rftm110 voltage waveform contains less than 2 points", NULL);
+        bombElegant("rftm110 voltage waveform contains less than 2 points", NULL);
 
     rf_param->t_Vf    = data.c1;
     rf_param->Vfactor = data.c2;
     rf_param->n_Vpts  = data.n_data;
     for (i=0; i<rf_param->n_Vpts-1; i++)
         if (rf_param->t_Vf[i]>rf_param->t_Vf[i+1])
-            bomb("time values are not monotonically increasing in rftm110 voltage waveform", NULL);
+            bombElegant("time values are not monotonically increasing in rftm110 voltage waveform", NULL);
     rf_param->V_tInitial = rf_param->t_Vf[0];
     rf_param->V_tFinal = rf_param->t_Vf[rf_param->n_Vpts-1];
     tfree(data.xlab); tfree(data.ylab); tfree(data.title); tfree(data.topline);
@@ -507,17 +507,17 @@ void set_up_rfdf(RFDF *rf_param, double **initial, long n_particles, double pc_c
 
   if (rf_param->voltageWaveform) {
     if (!getTableFromSearchPath(&data, rf_param->voltageWaveform, 1, 0))
-        bomb("unable to read voltage waveform for rftm110", NULL);
+        bombElegant("unable to read voltage waveform for rftm110", NULL);
 
     if (data.n_data<=1)
-        bomb("rftm110 voltage waveform contains less than 2 points", NULL);
+        bombElegant("rftm110 voltage waveform contains less than 2 points", NULL);
 
     rf_param->t_Vf    = data.c1;
     rf_param->Vfactor = data.c2;
     rf_param->n_Vpts  = data.n_data;
     for (i=0; i<rf_param->n_Vpts-1; i++)
         if (rf_param->t_Vf[i]>rf_param->t_Vf[i+1])
-            bomb("time values are not monotonically increasing in rftm110 voltage waveform", NULL);
+            bombElegant("time values are not monotonically increasing in rftm110 voltage waveform", NULL);
     rf_param->V_tInitial = rf_param->t_Vf[0];
     rf_param->V_tFinal = rf_param->t_Vf[rf_param->n_Vpts-1];
     tfree(data.xlab); tfree(data.ylab); tfree(data.title); tfree(data.topline);

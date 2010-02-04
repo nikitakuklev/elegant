@@ -26,17 +26,17 @@ void copy_particles(
 
     log_entry("copy_particles");
     if (!copy)
-        bomb("can't copy particles--target is NULL pointer (copy_particles)", NULL);
+        bombElegant("can't copy particles--target is NULL pointer (copy_particles)", NULL);
     if (!original)
-        bomb("can't copy particles--source is NULL pointer (copy_particles)", NULL);
+        bombElegant("can't copy particles--source is NULL pointer (copy_particles)", NULL);
 
     for (ip=n_particles-1; ip>=0; ip--) {
         cptr = *copy++;
         optr = *original++;
         if (!cptr)
-            bomb("element of target array is NULL pointer (copy_particles)", NULL);
+            bombElegant("element of target array is NULL pointer (copy_particles)", NULL);
         if (!optr)
-            bomb("element of source array is NULL pointer (copy_particles)", NULL);
+            bombElegant("element of source array is NULL pointer (copy_particles)", NULL);
         for (ic=6; ic>=0; ic--)
             *cptr++ = *optr++;
         }

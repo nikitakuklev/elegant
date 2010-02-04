@@ -44,7 +44,7 @@ void track_through_kicker(
 
     if (!kicker->t_wf || !kicker->amp_wf || !kicker->n_wf ||
         kicker->tmin>=kicker->tmax)        
-        bomb("no (valid) waveform data for kicker", NULL);
+        bombElegant("no (valid) waveform data for kicker", NULL);
 
     if (kicker->phase_reference==0) 
         kicker->phase_reference = unused_phase_reference();
@@ -68,7 +68,7 @@ void track_through_kicker(
             set_phase_reference(kicker->phase_reference, time_offset = kicker->t_fiducial);
             break;
         default:
-            bomb("unknown return value from get_phase_reference()", NULL);
+            bombElegant("unknown return value from get_phase_reference()", NULL);
             break;
         }
 
@@ -205,20 +205,20 @@ void set_up_kicker(KICKER *kicker)
     log_entry("set_up_kicker");
 
     if (!kicker->waveform)
-        bomb("no waveform filename given for kicker", NULL);
+        bombElegant("no waveform filename given for kicker", NULL);
 
     if (!getTableFromSearchPath(&data, kicker->waveform, 1, 0))
-        bomb("unable to read waveform for kicker", NULL);
+        bombElegant("unable to read waveform for kicker", NULL);
 
     if (data.n_data<=1)
-        bomb("kicker waveform contains less than 2 points", NULL);
+        bombElegant("kicker waveform contains less than 2 points", NULL);
 
     kicker->t_wf   = data.c1;
     kicker->amp_wf = data.c2;
     kicker->n_wf   = data.n_data;
     for (i=0; i<kicker->n_wf-1; i++)
         if (kicker->t_wf[i]>kicker->t_wf[i+1])
-            bomb("time values not monotonically increasing in kicker waveform", NULL);
+            bombElegant("time values not monotonically increasing in kicker waveform", NULL);
     kicker->tmin = kicker->t_wf[0];
     kicker->tmax = kicker->t_wf[kicker->n_wf-1];
     tfree(data.xlab); tfree(data.ylab); tfree(data.title); tfree(data.topline);
@@ -243,7 +243,7 @@ void track_through_mkicker(
     set_up_mkicker(kicker);
 
   if (kicker->order<1) 
-    bomb("order<1 for MKICKER", NULL);
+    bombElegant("order<1 for MKICKER", NULL);
   
   if (kicker->fire_on_pass>pass) {
     drift_beam(part, np, kicker->length, default_order); 
@@ -252,7 +252,7 @@ void track_through_mkicker(
 
   if (!kicker->t_wf || !kicker->amp_wf || !kicker->n_wf ||
       kicker->tmin>=kicker->tmax)        
-    bomb("no (valid) waveform data for MBUMPER", NULL);
+    bombElegant("no (valid) waveform data for MBUMPER", NULL);
 
   if (kicker->phase_reference==0) 
     kicker->phase_reference = unused_phase_reference();
@@ -276,7 +276,7 @@ void track_through_mkicker(
     set_phase_reference(kicker->phase_reference, time_offset = kicker->t_fiducial);
     break;
   default:
-    bomb("unknown return value from get_phase_reference()", NULL);
+    bombElegant("unknown return value from get_phase_reference()", NULL);
     break;
   }
 
@@ -342,20 +342,20 @@ void set_up_mkicker(MKICKER *kicker)
   long i;
 
   if (!kicker->waveform)
-    bomb("no waveform filename given for MBUMPER", NULL);
+    bombElegant("no waveform filename given for MBUMPER", NULL);
 
   if (!getTableFromSearchPath(&data, kicker->waveform, 1, 0))
-    bomb("unable to read waveform for MBUMPER", NULL);
+    bombElegant("unable to read waveform for MBUMPER", NULL);
 
   if (data.n_data<=1)
-    bomb("kicker waveform contains less than 2 points", NULL);
+    bombElegant("kicker waveform contains less than 2 points", NULL);
 
   kicker->t_wf   = data.c1;
   kicker->amp_wf = data.c2;
   kicker->n_wf   = data.n_data;
   for (i=0; i<kicker->n_wf-1; i++)
     if (kicker->t_wf[i]>kicker->t_wf[i+1])
-      bomb("time values not monotonically increasing in MBUMPER waveform", NULL);
+      bombElegant("time values not monotonically increasing in MBUMPER waveform", NULL);
   kicker->tmin = kicker->t_wf[0];
   kicker->tmax = kicker->t_wf[kicker->n_wf-1];
   tfree(data.xlab); tfree(data.ylab); tfree(data.title); tfree(data.topline);

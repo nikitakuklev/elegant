@@ -72,5 +72,6 @@
 #namelist semaphores
         STRING started = "%s.started";
         STRING done = "%s.done";
+        STRING failed = "%s.failed";
 #end
 

@@ -56,7 +56,7 @@ VMATRIX *quadrupole_matrix(double K1, double lHC, long maximum_order,
          */
         if (fringeType) {
           if ((fixedStrengthFringe = match_string(fringeType, fringeTypeOpt, 2, 0))<0)
-            bomb("unrecognized fringe type for QUAD", NULL);
+            bombElegant("unrecognized fringe type for QUAD", NULL);
         }
         /* length of each edge */
         lEdge = lNominal*ffringe/2;

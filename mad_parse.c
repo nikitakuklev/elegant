@@ -31,7 +31,7 @@ long set_max_name_length(long length)
 {
     long tmp;
     if (length<=0)
-        bomb("maximum name length set to nonpositive number", NULL);
+        bombElegant("maximum name length set to nonpositive number", NULL);
     tmp = max_name_length;
     max_name_length = length;
     return(tmp);
@@ -66,7 +66,7 @@ void fill_line(
     for (i=0; i<nl; i++) 
         lptr = lptr->succ;
     if (lptr==NULL) 
-        bomb("improperly extended linked-list (fill_line)", NULL);
+        bombElegant("improperly extended linked-list (fill_line)", NULL);
 
     /* allocate string in which to save original beamline definition for later use */
     lptr->definition = tmalloc(sizeof(char)*(strlen(s)+12));
@@ -98,7 +98,7 @@ void fill_line(
       leptr = leptr->succ;
     }
     if (leptr->pred==NULL)
-      bomb("programming error: problem in linked list of beamlines", NULL);
+      bombElegant("programming error: problem in linked list of beamlines", NULL);
     (leptr->pred)->succ = NULL;
     log_exit("fill_line");
     }
@@ -156,7 +156,7 @@ extern ELEMENT_LIST *expand_line(
                     fflush(stdout);
                     fprintf(stdout, "position is %s\n", ptr1);
                     fflush(stdout);
-                    bomb("improper element multiplication", NULL);
+                    bombElegant("improper element multiplication", NULL);
                     }
                 ptr1 = ptr+1;
                 if (*ptr1=='(')
@@ -340,7 +340,7 @@ void copy_named_element(ELEMENT_LIST *eptr, char *s, ELEMENT_LIST *elem)
 
     if (!(match = get_token_tq(s, "", ",=", " \"", " \""))) {
         log_exit("copy_named_element");
-        bomb("programming error--unable to recover source element name (copy_named_element)", NULL);
+        bombElegant("programming error--unable to recover source element name (copy_named_element)", NULL);
         }
     delete_bounding(match, "\"");
 
@@ -728,7 +728,7 @@ long tell_type(char *s, ELEMENT_LIST *elem)
                 fprintf(stdout, "warning: reference to item %s is ambiguous--assuming element copy desired\n", ptr);
                 fflush(stdout);
             if (!elem->definition_text)
-                bomb("element copy with no definition_text--internal error", NULL);
+                bombElegant("element copy with no definition_text--internal error", NULL);
             buffer = tmalloc(sizeof(*buffer)*(strlen(elem->definition_text)+strlen(s)+1));
             if ((ptr=strchr(s, ','))) {
 #ifdef DEBUG
@@ -980,7 +980,7 @@ void parse_element(
         eptr->group = get_token(ptr);
       break;
     default:
-      bomb("unknown data type in parse_element!", NULL);
+      bombElegant("unknown data type in parse_element!", NULL);
       break;
     }
     free(ptr);
@@ -1047,7 +1047,7 @@ void interpretScraperDirection(SCRAPER *scraper)
       fprintf(stdout, "Error: invalid scraper insert_from parameter: %s\n",
               scraper->insert_from);
       fflush(stdout);
-      bomb("scraper insert_from axis letter is not one of x, h, y, or v", NULL);
+      bombElegant("scraper insert_from axis letter is not one of x, h, y, or v", NULL);
       break;
     }
     if (scraper->insert_from[0]=='-')
@@ -1075,7 +1075,7 @@ void copy_p_elem(char *target, char *source, long type)
 	     *((char**)(source+entity_description[type].parameter[i].offset)) );
       break;
     default:
-      bomb("invalid parameter type (copy_p_elem).  Seek professional help!", NULL);
+      bombElegant("invalid parameter type (copy_p_elem).  Seek professional help!", NULL);
       break;
     }
   }

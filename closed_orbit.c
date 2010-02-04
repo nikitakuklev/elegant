@@ -76,7 +76,8 @@ void setup_closed_orbit(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     /* process namelist input */
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
     set_print_namelist_flags(0);
-    process_namelist(&closed_orbit, nltext);
+    if (processNamelist(&closed_orbit, nltext)==NAMELIST_ERROR)
+      bombElegant(NULL, NULL);
     if (echoNamelists) print_namelist(stdout, &closed_orbit);
 
 #if (USE_MPI) 
@@ -86,11 +87,11 @@ void setup_closed_orbit(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     if (output)
         output = compose_filename(output, run->rootname);
     if (closed_orbit_accuracy<=0)
-        bomb("closed_orbit_accuracy <= 0", NULL);
+        bombElegant("closed_orbit_accuracy <= 0", NULL);
     if (closed_orbit_iterations<1)
-        bomb("closed_orbit_iterations < 1", NULL);
+        bombElegant("closed_orbit_iterations < 1", NULL);
     if (iteration_fraction<0 || iteration_fraction>1)
-        bomb("iteration_fraction must be on [0, 1]", NULL);
+        bombElegant("iteration_fraction must be on [0, 1]", NULL);
     if (output) {
         SDDS_ElegantOutputSetup(&SDDS_clorb, output, SDDS_BINARY, 1, "closed orbit", 
                                 run->runfile, run->lattice, parameter_definition, N_PARAMETERS,
@@ -113,7 +114,7 @@ long run_closed_orbit(RUN *run, LINE_LIST *beamline, double *starting_coord, BEA
 #endif
 
     if (!starting_coord)
-        bomb("starting_coord array is NULL (run_closed_orbit)", NULL);
+        bombElegant("starting_coord array is NULL (run_closed_orbit)", NULL);
     if (verbosity) {
       fprintf(stdout, "Starting point for closed orbit\n");
       for (i=0; i<6; i++) 
@@ -123,7 +124,7 @@ long run_closed_orbit(RUN *run, LINE_LIST *beamline, double *starting_coord, BEA
     if (start_from_centroid || start_from_dp_centroid) {
       double initial[6];
       if (!beam)
-        bomb("no beam present for closed-orbit calculation starting from centroid", NULL);
+        bombElegant("no beam present for closed-orbit calculation starting from centroid", NULL);
       compute_centroids(initial, beam->particle, beam->n_to_track);
       if (start_from_centroid)
         memcpy(starting_coord, initial, 6*sizeof(*starting_coord));
@@ -132,7 +133,7 @@ long run_closed_orbit(RUN *run, LINE_LIST *beamline, double *starting_coord, BEA
       dp = 0;
 
     if (!clorb)
-        bomb("TRAJECTORY array for closed orbit not allocated (run_closed_orbit)", NULL);
+        bombElegant("TRAJECTORY array for closed orbit not allocated (run_closed_orbit)", NULL);
     beamline->closed_orbit = clorb;
 
     if (beamline->elem_recirc)
@@ -286,9 +287,9 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
    */
 
   if (!M)
-    bomb("no transport matrix passed to find_closed_orbit()", NULL);
+    bombElegant("no transport matrix passed to find_closed_orbit()", NULL);
   if (!M->R)
-    bomb("faulty transport matrix passed to find_closed_orbit()", NULL);
+    bombElegant("faulty transport matrix passed to find_closed_orbit()", NULL);
 
   if (!initialized) {
     m_alloc(&ImR, 4, 4);
@@ -331,7 +332,7 @@ long find_closed_orbit(TRAJECTORY *clorb, double clorb_acc, long clorb_iter, LIN
 
   if (!starting_point) {
     if (!m_mult(co, INV_ImR, C))
-      bomb("unable to solve for closed orbit--matrix multiplication error", NULL);
+      bombElegant("unable to solve for closed orbit--matrix multiplication error", NULL);
     for (i=0; i<4; i++)
       one_part[0][i] = co->a[i][0];
     one_part[0][4] = 0;

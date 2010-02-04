@@ -535,7 +535,7 @@ long computeSliceMoments(double C[6], double S[6][6],
 {
   long i, j, k, count = 0;
   if (!part)
-    bomb("NULL pointer passed to computeSliceMoments", NULL);
+    bombElegant("NULL pointer passed to computeSliceMoments", NULL);
   for (j=0; j<6; j++) {
     C[j] = 0;
     for (k=0; k<6; k++)

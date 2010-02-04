@@ -209,12 +209,12 @@ void track_particles(double **final, VMATRIX *M, double  **initial, long n_part)
     log_entry("track_particles");
     
     if (!M)
-        bomb("NULL VMATRIX pointer in track_particles", NULL);
+        bombElegant("NULL VMATRIX pointer in track_particles", NULL);
 #if !SDDS_MPI_IO
     if (!final)
-        bomb("NULL final coordinates pointer in track_particles", NULL);
+        bombElegant("NULL final coordinates pointer in track_particles", NULL);
     if (!initial)
-        bomb("NULL initial coordinates pointer in track_particles", NULL);
+        bombElegant("NULL initial coordinates pointer in track_particles", NULL);
 #endif
 
     set_matrix_pointers(&C, &R, &T, &Q, M);
@@ -222,13 +222,13 @@ void track_particles(double **final, VMATRIX *M, double  **initial, long n_part)
     switch (M->order) {
       case 3:
         if (!C)
-            bomb("NULL C pointer (track_particles)", NULL);
+            bombElegant("NULL C pointer (track_particles)", NULL);
         if (!R)
-            bomb("NULL R pointer (track_particles)", NULL);
+            bombElegant("NULL R pointer (track_particles)", NULL);
         if (!T)
-            bomb("NULL T pointer (track_particles)", NULL);
+            bombElegant("NULL T pointer (track_particles)", NULL);
         if (!Q)
-            bomb("NULL Q pointer (track_particles)", NULL);
+            bombElegant("NULL Q pointer (track_particles)", NULL);
         for (i_part=n_part-1; i_part>=0; i_part--) {
             if (!(fin = final[i_part])) {
                 fprintf(stdout, "error: final coordinate pointer is NULL for particle %ld (track_particles)\n", i_part);
@@ -268,11 +268,11 @@ void track_particles(double **final, VMATRIX *M, double  **initial, long n_part)
         break;
       case 2:
         if (!C)
-            bomb("NULL C pointer (track_particles)", NULL);
+            bombElegant("NULL C pointer (track_particles)", NULL);
         if (!R)
-            bomb("NULL R pointer (track_particles)", NULL);
+            bombElegant("NULL R pointer (track_particles)", NULL);
         if (!T)
-            bomb("NULL T pointer (track_particles)", NULL);
+            bombElegant("NULL T pointer (track_particles)", NULL);
         for (i_part=n_part-1; i_part>=0; i_part--) {
             if (!(fin = final[i_part])) {
                 fprintf(stdout, "error: final coordinate pointer is NULL for particle %ld (track_particles)\n", i_part);
@@ -288,14 +288,14 @@ void track_particles(double **final, VMATRIX *M, double  **initial, long n_part)
             for (i=5; i>=0; i--) {
                 sum = C[i];
                 if (!(Ri  = R[i]+5))
-                    bomb("NULL R[i] pointer (track_particles)", NULL);
+                    bombElegant("NULL R[i] pointer (track_particles)", NULL);
                 if (!(Ti  = T[i]+5))
-                    bomb("NULL T[i] pointer (track_particles)", NULL);
+                    bombElegant("NULL T[i] pointer (track_particles)", NULL);
                 for (j=5; j>=0; j--, Ri--, Ti--) {
                     if ((coord_j= *(ini_k=ini+j))) {
                         sum1 = *Ri;
                         if (!(Tij  = *Ti+j))
-                            bomb("NULL T[i][j] pointer (tracking_particles)", NULL);
+                            bombElegant("NULL T[i][j] pointer (tracking_particles)", NULL);
                         for (k=j; k>=0; k--, Tij--, ini_k--)
                             sum1 += *Tij**ini_k;
                         sum += sum1*coord_j;
@@ -309,9 +309,9 @@ void track_particles(double **final, VMATRIX *M, double  **initial, long n_part)
         break;
       case 1:
         if (!C)
-            bomb("NULL C pointer (track_particles)", NULL);
+            bombElegant("NULL C pointer (track_particles)", NULL);
         if (!R)
-            bomb("NULL R pointer (track_particles)", NULL);
+            bombElegant("NULL R pointer (track_particles)", NULL);
         for (i_part=n_part-1; i_part>=0; i_part--) {
             if (!(fin = final[i_part])) {
                 fprintf(stdout, "error: final coordinate pointer is NULL for particle %ld (track_particles)\n", i_part);
@@ -327,7 +327,7 @@ void track_particles(double **final, VMATRIX *M, double  **initial, long n_part)
             for (i=5; i>=0; i--) {
                 sum = C[i];
                 if (!(Ri=R[i]+5))
-                    bomb("NULL R[i] pointer (track_particles)", NULL);
+                    bombElegant("NULL R[i] pointer (track_particles)", NULL);
                 for (j=5; j>=0; Ri--, j--)
                     sum += *Ri * ini[j];
                 temp[i] = sum;
@@ -357,32 +357,32 @@ void free_matrices(VMATRIX *M)
 
     log_entry("free_matrices");
     if (!M)
-        bomb("NULL matrix passed to free_matrices", NULL);
+        bombElegant("NULL matrix passed to free_matrices", NULL);
     
     set_matrix_pointers(&C, &R, &T, &Q, M);
     switch (M->order) {
         case 3:
             if (!Q || !T || !R || !C)
-                bomb("NULL Q, T, R, or C entry for matrix (free_matrices)", NULL);
+                bombElegant("NULL Q, T, R, or C entry for matrix (free_matrices)", NULL);
             for (i=0; i<6; i++) {
                 if (!R[i])
-                    bomb("NULL R[i] entry for matrix (free_matrices)", NULL);
+                    bombElegant("NULL R[i] entry for matrix (free_matrices)", NULL);
                 if (!T[i])
-                    bomb("NULL T[i] entry for matrix (free_matrices)", NULL);
+                    bombElegant("NULL T[i] entry for matrix (free_matrices)", NULL);
                 if (!Q[i])
-                    bomb("NULL Q[i] entry for matrix (free_matrices)", NULL);
+                    bombElegant("NULL Q[i] entry for matrix (free_matrices)", NULL);
                 for (j=0; j<6; j++) {
                     if (!(Qij = Q[i][j]))
-                        bomb("NULL Q[i][j] entry for matrix (free_matrices)", NULL);
+                        bombElegant("NULL Q[i][j] entry for matrix (free_matrices)", NULL);
                     for (k=0; k<=j; k++) {
                         if (!*Qij)
-                            bomb("NULL Q[i][j][k] entry for matrix (free_matrices)", NULL);
+                            bombElegant("NULL Q[i][j][k] entry for matrix (free_matrices)", NULL);
                         tfree(*Qij++);
                         }
                     if (!T[i][j])
-                        bomb("NULL T[i][j] entry for matrix (free_matrices)", NULL);
+                        bombElegant("NULL T[i][j] entry for matrix (free_matrices)", NULL);
                     if (!Q[i][j])
-                        bomb("NULL Q[i][j] entry for matrix (free_matrices)", NULL);
+                        bombElegant("NULL Q[i][j] entry for matrix (free_matrices)", NULL);
                     tfree(T[i][j]); T[i][j] = NULL;
                     tfree(Q[i][j]); Q[i][j] = NULL;
                     }
@@ -397,15 +397,15 @@ void free_matrices(VMATRIX *M)
             break;
         case 2:
             if (!T || !R || !C)
-                bomb("NULL T, R, or C entry for matrix (free_matrices)", NULL);
+                bombElegant("NULL T, R, or C entry for matrix (free_matrices)", NULL);
             for (i=0; i<6; i++) {
                 if (!R[i])
-                    bomb("NULL R[i] entry for matrix (free_matrices)", NULL);
+                    bombElegant("NULL R[i] entry for matrix (free_matrices)", NULL);
                 if (!T[i])
-                    bomb("NULL T[i] entry for matrix (free_matrices)", NULL);
+                    bombElegant("NULL T[i] entry for matrix (free_matrices)", NULL);
                 for (j=0; j<6; j++) {
                     if (!T[i][j])
-                        bomb("NULL T[i][j] entry for matrix (free_matrices)", NULL);
+                        bombElegant("NULL T[i][j] entry for matrix (free_matrices)", NULL);
                     tfree(T[i][j]); T[i][j] = NULL;
                     }
                 tfree(R[i]); R[i] = NULL;
@@ -417,10 +417,10 @@ void free_matrices(VMATRIX *M)
             break;
         case 1:
             if (!R || !C)
-                bomb("NULL R or C entry for matrix (free_matrices)", NULL);
+                bombElegant("NULL R or C entry for matrix (free_matrices)", NULL);
             for (i=0; i<6; i++) {
                 if (!R[i])
-                    bomb("NULL R[i] entry for matrix (free_matrices)", NULL);
+                    bombElegant("NULL R[i] entry for matrix (free_matrices)", NULL);
                 tfree(R[i]); R[i] = NULL;
                 }
             tfree(C);
