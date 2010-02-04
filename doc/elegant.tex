@@ -709,6 +709,7 @@ Command name & Type & Description \\
         long differential = 0;
         long multiplicative = 0;
         long verbose = 0;
+        long allow_missing_elements = 0;
         long allow_missing_parameters = 0;
         long start_occurence = 0;
         long end_occurence = 0;
@@ -735,6 +736,9 @@ Command name & Type & Description \\
         value of the parameter times the quantity given with \verb|value|.
 \item \verb|verbose| --- If nonzero, information is printed to the standard output describing
         what elements are changed.
+\item \verb|allow_missing_elements| --- If nonzero, then it is not an error if an
+        element matching \verb|name| does not exist.   Normally, such
+        an occurence is an error and terminates the program.
 \item \verb|allow_missing_parameters| --- If nonzero, then it is not an error if an
         element does not have the parameter named with \verb|item|.  Normally, such
         an occurence is an error and terminates the program.
