@@ -280,7 +280,7 @@ void TouschekDistribution(RUN *run, LINE_LIST *beamline)
   BEAM  Beam0, Beam, *beam0, *beam;
   char *Name[6]={"x","y","s","xp","yp","dp/p"};
   char *Units[6]={"m","m","m","","",""};
-  long bookBins[6];
+  int32_t bookBins[6];
   book1 *lossDis;
   book1m *iniBook, *disBook;
   double *weight;
@@ -772,7 +772,8 @@ long get_MAInput(char *filename, LINE_LIST *beamline, long nElement)
   ELEMENT_LIST *eptr;
   SDDS_DATASET input;
   char **Name, **Type;
-  double *Occurence, *s, *dpp, *dpm, eps=1e-7;
+  double *s, *dpp, *dpm, eps=1e-7;
+  int32_t *Occurence;
 
   if (!SDDS_InitializeInput(&input, filename))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
@@ -782,7 +783,7 @@ long get_MAInput(char *filename, LINE_LIST *beamline, long nElement)
   s = SDDS_GetColumnInDoubles(&input, "s");
   dpp = SDDS_GetColumnInDoubles(&input, "deltaPositive");
   dpm = SDDS_GetColumnInDoubles(&input, "deltaNegative");
-  Occurence = SDDS_GetColumnInDoubles(&input, "ElementOccurence");
+  Occurence = SDDS_GetColumnInLong(&input, "ElementOccurence");
   Name = (char **)SDDS_GetColumn(&input, "ElementName");
   Type = (char **)SDDS_GetColumn(&input, "ElementType");
 
@@ -794,7 +795,7 @@ long get_MAInput(char *filename, LINE_LIST *beamline, long nElement)
     if (eptr->type == T_TSCATTER) {
       while (1) {
         if (fabs(*s - eptr->end_pos) < eps &&
-           (long)(*Occurence) == eptr->occurence &&
+            *Occurence == eptr->occurence &&
             strcmp(*Name,eptr->name) == 0 &&
             strcmp(*Type,entity_name[eptr->type]) == 0) {
           ((TSCATTER*)eptr->p_elem)->delta = ((*dpp < -(*dpm)) ? *dpp : -(*dpm))

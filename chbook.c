@@ -15,7 +15,7 @@
 
 void findBit (long value, long *Bit, long inc, long length);
 
-book1 *chbook1(char *vName, char *units, double xmin, double xmax, long xbins)
+book1 *chbook1(char *vName, char *units, double xmin, double xmax, int32_t xbins)
 {
   book1 *book;
   book = (book1 *)malloc(sizeof(*book));
@@ -59,7 +59,7 @@ void free_hbook1 (book1 *x)
 }
 
 book2 *chbook2(char *xName, char *yName, char *xunits, char *yunits,
-               double xmin, double xmax, double ymin, double ymax, long xbins, long ybins)
+               double xmin, double xmax, double ymin, double ymax, int32_t xbins, int32_t ybins)
 {
   book2 *book;
 
@@ -115,7 +115,7 @@ void free_hbook2 (book2 *x)
   return;
 }
 
-ntuple *chbookn(char **vName, char **units, long ND, double *xmin, double *xmax, long *xbins, long offset)
+ntuple *chbookn(char **vName, char **units, long ND, double *xmin, double *xmax, int32_t *xbins, long offset)
 {
   ntuple *book;
   long i;
@@ -332,7 +332,7 @@ void free_hbookn (ntuple *x)
   return;
 }
 
-book1m *chbook1m(char **vName, char **units, double *xmin, double *xmax, long *xbins, long column_number)
+book1m *chbook1m(char **vName, char **units, double *xmin, double *xmax, int32_t *xbins, long column_number)
 {
   book1m *book;
   long i, j;
@@ -374,7 +374,7 @@ book1m *chbook1m(char **vName, char **units, double *xmin, double *xmax, long *x
   return book;
 }
 
-void chfill1m(book1m *bName, double *x, double Frequency, long *xbins, long column_number){
+void chfill1m(book1m *bName, double *x, double Frequency, int32_t *xbins, long column_number){
   long index, i, j;
 
   for (i=j=0; i<column_number; i++) {

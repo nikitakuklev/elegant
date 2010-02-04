@@ -1399,7 +1399,7 @@ typedef struct {
     long interval, startPass;
     long normalize, disable, lumped;
     /* internal variables for SDDS output */
-    long *bins1d, *bins2d, *bins4d, *bins6d;
+    int32_t *bins1d, *bins2d, *bins4d, *bins6d;
     book1m *x1d;
     ntuple *x2d, *y2d, *z2d;
     ntuple *Tr4d, *full6d;
