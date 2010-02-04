@@ -543,7 +543,7 @@ void TouschekDistribution(RUN *run, LINE_LIST *beamline)
       if (tsSpec->distIn==1) {
         free_hbookn(tsptr->fullhis);
       } else if (tsSpec->distIn==2) {
-        free_hbookn(tsptr->this);
+        free_hbookn(tsptr->thist);
         free_hbookn(tsptr->zhis);
       } else if (tsSpec->distIn==3) {
         free_hbookn(tsptr->xhis);
@@ -617,13 +617,13 @@ TSCATTER *initTSCATTER (ELEMENT_LIST *eptr, long iElement)
     tsptr->xmin[2] *= c_mks;
     tsptr->xmax[2] *= c_mks;
   } else if (tsSpec->distIn==2) {
-    tsptr->this = readbookn(TranDist, tsSpec->ipage_his[iElement-1]);
+    tsptr->thist = readbookn(TranDist, tsSpec->ipage_his[iElement-1]);
     tsptr->zhis = readbookn(ZDist, tsSpec->ipage_his[iElement-1]);
     for (i=0; i<2; i++) {
-      tsptr->xmin[i] = tsptr->this->xmin[i*2];
-      tsptr->xmax[i] = tsptr->this->xmax[i*2];
-      tsptr->xmin[i+3] = tsptr->this->xmin[i*2+1];
-      tsptr->xmax[i+3] = tsptr->this->xmax[i*2+1];
+      tsptr->xmin[i] = tsptr->thist->xmin[i*2];
+      tsptr->xmax[i] = tsptr->thist->xmax[i*2];
+      tsptr->xmin[i+3] = tsptr->thist->xmin[i*2+1];
+      tsptr->xmax[i+3] = tsptr->thist->xmax[i*2+1];
     }
     tsptr->xmin[2] = tsptr->zhis->xmin[0]*c_mks;
     tsptr->xmax[2] = tsptr->zhis->xmax[0]*c_mks;
@@ -892,8 +892,8 @@ void selectPartReal(TSCATTER *tsptr, double *p1, double *p2,
     *dens2 = interpolate_bookn(tsptr->fullhis, x20, x2, 0, 1);
   }
   if (tsSpec->distIn==2) {
-    *dens1  = interpolate_bookn(tsptr->this, x10, x1, 0, 1);
-    *dens2  = interpolate_bookn(tsptr->this, x20, x2, 0, 1);
+    *dens1  = interpolate_bookn(tsptr->thist, x10, x1, 0, 1);
+    *dens2  = interpolate_bookn(tsptr->thist, x20, x2, 0, 1);
     *dens1 *= interpolate_bookn(tsptr->zhis, x10, x1, 4, 1);
     *dens2 *= interpolate_bookn(tsptr->zhis, x20, x2, 4, 1);
   }
