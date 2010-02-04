@@ -44,10 +44,11 @@ char *compose_filename_occurence(char *template, char *root_name, long occurence
     if ((ptr=str_in(template, format)) && (!ptr_ld || ptr_ld>ptr))
       ptr_ld = ptr;
   }
-  sprintf(format, "-%s", ptr_ld);
-  if ((ptr=str_in(template, format)))
-    ptr_ld = ptr;
-
+  if (ptr_ld != NULL) {
+    sprintf(format, "-%s", ptr_ld);
+    if ((ptr=str_in(template, format)))
+      ptr_ld = ptr;
+  }
   if (!occurence && ptr_ld) {
     filename = tmalloc(sizeof(char)*(strlen(template)));
     ptr = template;
