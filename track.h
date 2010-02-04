@@ -19,6 +19,7 @@
  */
 
 /* Define USE_MPI to be 1 in the Makefile for compiling parallel elegant. */
+
 #ifndef USE_MPI
 #define USE_MPI 0
 #endif
@@ -48,15 +49,20 @@
 #define dup2(x,y) _dup2(x,y)
 #endif
 
-extern double particleMass, particleCharge, particleMassMV, particleRadius, particleRelSign;
-extern long particleIsElectron;
-
 #ifndef STANDARD
 #include "standard.h"
 #endif
 #ifndef HASHTAB
 #include "hashtab.h"
 #endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+extern double particleMass, particleCharge, particleMassMV, particleRadius, particleRelSign;
+extern long particleIsElectron;
+
 
 #define COORDINATES_PER_PARTICLE 7
 
@@ -93,7 +99,10 @@ extern long do_find_aperture; /* A flag to set singlePart tracking in dynamic ap
 extern long watch_not_allowed; /* A flag to indicate the watch point is not allowed for aperture searching for Pelegant */
 #endif
 
+#ifndef __cplusplus
 long remaining_sequence_No, orig_sequence_No; /* For Pelegant regression test */
+#endif
+
 
 #ifdef SORT
 extern int comp_IDs(const void *coord1, const void *coord2);
@@ -1751,7 +1760,7 @@ typedef struct {
   double sigx, sigy, sigz, sigxyz;
   double factor, totalWeight;
   double xmin[6], xmax[6];
-  ntuple *this, *fullhis, *xhis, *yhis, *zhis;
+  ntuple *thist, *fullhis, *xhis, *yhis, *zhis;
   long simuCount; 
 } TSCATTER;
 
@@ -2874,8 +2883,8 @@ void finishFrequencyMap();
 
 /* prototypes for elegant.c: */
 extern void getRunControlContext(VARY *context);
-extern char *compose_filename(char *template, char *root_name);
-char *compose_filename_occurence(char *template, char *root_name, long occurence);
+extern char *compose_filename(char *templateString, char *root_name);
+char *compose_filename_occurence(char *templateString, char *root_name, long occurence);
 extern double find_beam_p_central(char *input);
 void center_beam_on_coords(double **particle, long n_part, double *coord, long center_momentum_also);
 void offset_beam_by_coords(double **part, long np, double *coord, long offset_dp);
@@ -3487,3 +3496,6 @@ void SortEigenvalues (double *WR, double *WI, double *VR, int matDim, int eigenM
 
 
 
+#ifdef __cplusplus
+}
+#endif
