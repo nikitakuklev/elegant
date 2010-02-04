@@ -7,9 +7,12 @@
 # in the file LICENSE that is included with this distribution. 
 #*************************************************************************
 #
-# $Id: Makefile.OAG,v 1.22 2010-01-27 04:40:24 borland Exp $
+# $Id: Makefile.OAG,v 1.23 2010-02-04 23:51:46 soliday Exp $
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.22  2010/01/27 04:40:24  borland
+# Restored optimization flag.
+#
 # Revision 1.21  2010/01/27 04:39:59  borland
 # Now tolerates missing items in loading parameters.
 #
@@ -140,7 +143,7 @@ sddsemitproc_SRCS = sddsemitproc.c
 
 sddsemitmeas_SRCS = sddsemitmeas.c
 
-sddsrandmult_SRCS = sddsrandmult.c
+sddsrandmult_SRCS = sddsrandmult.cc
 
 sddsresdiag_SRCS = sddsresdiag.c
 
