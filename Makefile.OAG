@@ -290,16 +290,16 @@ elegant_SRCS = 	alpha_data.c alpha_matrix.c amplif.c analyze.c aperture_search.c
 		do_tracking.c elegant.c error.c extend_list.c final_props.c find_elem.c floor.c \
 		generate_bunch.c get_beamline.c kicker.c kick_poly.c kick_sbend.c \
 		limit_amplitudes.c link_date.c link_elements.c load_parameters.c lorentz.c mad_parse.c \
-		malign_mat.c matrix_output.c matrix.c matter.c motion.c multipole.c \
+		malign_mat.c matrix_output.c matrix.c matter.c motion.cc multipole.c \
 		orbtraj_output.c optimize.c output_magnets.c pepper_pot.c phase_reference.c \
-		print_line.c quad_matrix.c ramp_momentum.c ramped_rfca.c response.c rfmode.c \
+		print_line.c quad_matrix.c ramp_momentum.c ramped_rfca.c response.c rfmode.cc \
 		run_rpnexpr.c sample.c sdds_beam.c sdds_support.c simple_rfca.c  subprocess.c \
 		tune.c tilt_matrices.c trace.c track_data.c track_ramp.c track_rf.c trfmode.c \
-		ztransverse.c twiss.c vary.c zlongit.c SReffects.c mod_rfca.c \
+		ztransverse.c twiss.cc vary.c zlongit.c SReffects.c mod_rfca.c \
 		ibs_tracking.c zibs.c wake.c taylorSeries.c trwake.c circles.c tubend.c sasefelmx.c \
 		sasefel.c alter.c sliceAnalysis.c divideElements.c transmuteElements.c \
 		frfmode.c ftrfmode.c tfeedback.c engeCoef.c lsc.c frequencyMap.c \
-		GWigSymplecticPass.c gwig.c noiseGroup.c insertSCeffects.c momentumAperture.c kahan.c \
+		GWigSymplecticPass.c gwig.c noiseGroup.c insertSCeffects.cc momentumAperture.c kahan.c \
 		coupled_twiss.c drand_oag.c lookupa.c recycle.c hashtab.c moments.c \
                 insert_elements.c touschekScatter.c chbook.c kickmap.c matrixOp.c replace_elements.c
                    
