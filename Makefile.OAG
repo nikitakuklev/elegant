@@ -110,6 +110,7 @@ z_DIR = $(EPICS_EXTENSIONS_LIB)
 
 ifeq ($(MPI),1)
 USR_CFLAGS_WIN32 = -Ic:/MPICH2/include
+USR_CPPFLAGS_WIN32 = -Ic:/MPICH2/include
 USR_LIBS += mpi
 mpi_DIR = c:/MPICH2/lib
 else
