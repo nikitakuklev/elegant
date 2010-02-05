@@ -161,7 +161,10 @@ void setupSCEffect(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 /* track through space charge element */
 void trackThroughSCMULT(double **part, long np, ELEMENT_LIST *eptr)
 {
-  long i, np_total;
+  long i;
+#if USE_MPI
+  long np_total;
+#endif
   double *coord;
   double kx, ky, sx;
   double center[3], kick[2];
@@ -370,7 +373,10 @@ double computeRmsCoordinate(double **coord, long i1, long np)
 {
   double vrms=0.0, xc=0.0;
   double xc_sum=0.0, vrms_sum=0.0;
-  long i, np_total;
+  long i;
+#if USE_MPI
+  long np_total;
+#endif
 
   if ( !USE_MPI || !notSinglePart) {
     if (!np)

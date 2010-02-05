@@ -351,7 +351,9 @@ void set_up_rftm110(RFTM110 *rf_param, double **initial, long n_particles, doubl
 #if USE_MPI
     if (USE_MPI && notSinglePart) {
       long n_total;
+#ifndef USE_KAHAN 
       double tmp;
+#endif
       if (isMaster) {
         n_particles = 0;
         rf_param->t_first_particle = 0.0;
@@ -450,7 +452,9 @@ void set_up_rfdf(RFDF *rf_param, double **initial, long n_particles, double pc_c
 #if USE_MPI
     if (USE_MPI && notSinglePart) {
       long n_total;
+#ifndef USE_KAHAN 
       double tmp;
+#endif
       if (isMaster) {
         n_particles = 0;
         rf_param->t_first_particle = 0.0;

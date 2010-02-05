@@ -20,9 +20,6 @@ void convert_to_EmmaMatlab(char *outputfile, LINE_LIST *beamline, char *header_f
     BEND  *bend;
     HCOR  *hcor;
     VCOR  *vcor;
-    HMON  *hmon;
-    VMON  *vmon;
-    MONI  *moni;
     DRIFT *drift;
     CSBEND *csbend;
     CSRCSBEND *csrbend;

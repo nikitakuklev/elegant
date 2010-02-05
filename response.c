@@ -340,7 +340,7 @@ void update_response(RUN *run, LINE_LIST *beamline, CORRECTION *correct)
 
 void run_response_output(RUN *run, LINE_LIST *beamline, CORRECTION *correct, long tune_corrected)
 {
-    long unitsCode, inverseComputedSave;
+    long unitsCode;
     MAT *Cx, *Cy, *Tx, *Ty;
 
     unitsCode = KnL_units?KNL_UNITS:(BnL_units?BNL_UNITS:0);

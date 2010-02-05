@@ -9,6 +9,13 @@
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.13  2010/02/04 15:17:27  borland
+ * No longer use the bomb() routine.  Instead, use bombElegant(), which allows
+ * better control of what happens when exiting.  Added "failed" semaphore option.
+ * Switched from process_namelist() to processNamelist() for better response
+ * to errors.
+ * Includes Y. Wang's changes to parallelize shell and line beam types.
+ *
  * Revision 1.12  2009/09/10 21:57:50  xiaoam
  * Add slice analysis to IBS simulation.
  *
@@ -477,7 +484,6 @@ void performSliceAnalysisOutput(SLICE_OUTPUT *sliceOutput, double **particle, lo
 void performSliceAnalysis(SLICE_OUTPUT *sliceOutput, double **particle, long particles, 
                          double Po, double charge, long timeGiven)
 {
-  double emitx, emity;
   double *sSave;
   long i, slice, nSlices;
   double tMinAll, tMaxAll, tMin, tMax;
@@ -646,7 +652,7 @@ void performSliceAnalysis(SLICE_OUTPUT *sliceOutput, double **particle, long par
 double correctedEmittance(double S[6][6], double eta[4], long i1, long i2,
 			  double *beta, double *alpha)
 {
-  double T1, T2, T3, ec2, denom;
+  double T1, T2, T3, ec2;
   T1 = S[i1][i1] + sqr(eta[i1])*S[5][5] - 2*eta[i1]*S[i1][5];
   T2 = S[i2][i2] + sqr(eta[i2])*S[5][5] - 2*eta[i2]*S[i2][5];
   T3 = S[i1][i2] - S[i2][5]*eta[i1] - S[i1][5]*eta[i2] + S[5][5]*eta[i1]*eta[i2];

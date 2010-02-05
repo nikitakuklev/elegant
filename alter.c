@@ -21,7 +21,7 @@ void do_alter_element(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     char *p_elem;
     char *p_elem0;
     char **changedDefinedParameter = NULL;
-    long nChangedDefinedParameter = 0, modeCount;
+    long nChangedDefinedParameter = 0;
 
     /* process the namelist text */
     set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);

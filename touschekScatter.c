@@ -736,9 +736,9 @@ long Check_HisInput(char *filename, LINE_LIST *beamline, long nElement, long *pI
       while (1) {
         if ((iPage=SDDS_ReadPage(&input))<=0)
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-        if (!(Name=(char*)SDDS_GetParameter(&input, "ElementName", NULL)))
+        if (!(Name=(char**)SDDS_GetParameter(&input, "ElementName", NULL)))
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-        if (!(Type=(char*)SDDS_GetParameter(&input, "ElementType", NULL)))
+        if (!(Type=(char**)SDDS_GetParameter(&input, "ElementType", NULL)))
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         if (!SDDS_GetParameter(&input, "ElementOccurence", (void*)&Occurence))
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);

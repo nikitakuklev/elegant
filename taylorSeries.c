@@ -15,6 +15,13 @@
 
 /*
  $Log: not supported by cvs2svn $
+ Revision 1.2  2010/02/04 15:17:27  borland
+ No longer use the bomb() routine.  Instead, use bombElegant(), which allows
+ better control of what happens when exiting.  Added "failed" semaphore option.
+ Switched from process_namelist() to processNamelist() for better response
+ to errors.
+ Includes Y. Wang's changes to parallelize shell and line beam types.
+
  Revision 1.1  2004/03/26 15:59:52  borland
  First version in repository, by L. Emery.
 
@@ -127,7 +134,7 @@ long taylorSeries_tracking(
 {
   TAYLORSERIES_DATA data;
   double dx, dy, dz;  /* transverse offsets of the element center */
-  long i_part, i_top, yplane, is_lost=0;
+  long i_part, i_top, is_lost=0;
   double *coord;
   double cos_tilt, sin_tilt;
   double x, xp, y, yp;

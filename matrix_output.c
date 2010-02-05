@@ -263,7 +263,7 @@ void run_matrix_output(
 		       )
 {
   ELEMENT_LIST *member, *first_member;
-  long i, j, n_elem_no_matrix, n_elements, sfo;
+  long i, n_elem_no_matrix, n_elements, sfo;
   long i_SDDS_output, n_SDDS_output=0;
   long i_output, output_order;
   VMATRIX *M1, *M2, *tmp;

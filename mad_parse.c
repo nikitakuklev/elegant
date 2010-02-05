@@ -236,8 +236,6 @@ void fill_elem(ELEMENT_LIST *eptr, char *s, long type, FILE *fp_input)
 {
   BEND *bptr;
   MATR *matr;
-  FILE *fpm;
-  char *filename;
 
   log_entry("fill_elem");
   eptr->end_pos = eptr->flags = 0;
@@ -495,8 +493,6 @@ long expand_phys(
 
 void copy_element(ELEMENT_LIST *e1, ELEMENT_LIST *e2, long reverse, long division, long divisions)
 {
-    long i;
-    char *ptr1, *ptr2;
 
     log_entry("copy_element");
 
@@ -1058,7 +1054,7 @@ void interpretScraperDirection(SCRAPER *scraper)
 
 void copy_p_elem(char *target, char *source, long type)
 {
-  long i, offset;
+  long i;
 
   for (i=0; i<entity_description[type].n_params; i++) {
     switch (entity_description[type].parameter[i].type) {

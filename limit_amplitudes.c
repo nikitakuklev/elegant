@@ -948,9 +948,8 @@ long imposeApertureData(
                         double **initial, long np, double **accepted,
                         double z, double Po, APERTURE_DATA *apData)
 {
-  long ip, itop, iz, lost;
+  long ip, itop, lost;
   double *ini;
-  double z0, period;
   double xSize, ySize;
   double xCenter, yCenter;
   double dx, dy;

@@ -3759,10 +3759,11 @@ int usefulOperation (ELEMENT_LIST *eptr, unsigned long flags, long i_pass)
 void transformEmittances(double **coord, long np, double pCentral, EMITTANCEELEMENT *ee)
 {
   double emit, emitc, factor, pAverage, eta, etap;
-  long npTotal, i, j;
+  long i, j;
   BEAM_SUMS sums;
   
 #if SDDS_MPI_IO
+  long npTotal;
   MPI_Reduce (&np, &npTotal, 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
   if (isMaster && npTotal<10) {
     printf("*** Error: too few particles (<10) for emittance modification\n");

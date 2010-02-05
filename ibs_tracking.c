@@ -206,7 +206,7 @@ void track_IBS(double **coord, long np, IBSCATTER *IBS, double Po,
 void inflateEmittance(double **coord, double Po, 
                       long offset, long istart, long iend, long *index, double factor)
 {
-  long i, ipart, np;
+  long ipart, np;
   double factorSqrt, c[2]={0,0};
 
   np = iend - istart;

@@ -102,7 +102,7 @@ void computeCSBENDFields(double *Fx, double *Fy, double x, double y)
 
 void computeCSBENDFieldCoefficients(double *b, double h, long nonlinear, long expansionOrder)
 {
-  long i, j;
+  long i;
   double h2, h3, h4, h5;
 
   if (expansionOrder==0) {
@@ -214,7 +214,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
 {
   double h;
   long i_part, i_top;
-  double rho, s, Fx, Fy, rhoSign;
+  double rho, s, Fx, Fy;
   double x, xp, y, yp, dp, dp0;
   double n, fse, dp_prime;
   double tilt, etilt, cos_ttilt, sin_ttilt, ttilt;

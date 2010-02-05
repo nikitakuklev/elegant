@@ -1948,8 +1948,7 @@ void compute_orbcor_matrices1(CORMON_DATA *CM, STEERING_LIST *SL, long coord, RU
   ELEMENT_LIST *corr, *start;
   TRAJECTORY *clorb0, *clorb1;
   long kick_offset, i_corr, i_moni, i;
-  long n_part;
-  double kick0, kick1, corr_tweek;
+  double kick0, corr_tweek;
   VMATRIX *save, *M;
   long i_type;
   char *matrixTypeName[2][2] = {{"H", "HV"}, {"VH", "V"}};

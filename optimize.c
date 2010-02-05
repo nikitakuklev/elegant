@@ -1773,7 +1773,7 @@ double optimization_function(double *value, long *invalid)
 
 long checkForOptimRecord(double *value, long values, long *again)
 {
-  long iRecord, iValue, jRecord;
+  long iRecord, iValue;
   double diff;
   if (ignoreOptimRecords)
     return -1;

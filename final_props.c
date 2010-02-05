@@ -1257,7 +1257,7 @@ void computeBeamTwissParameters(TWISS *twiss, double **data, long particles)
 
 void computeBeamTwissParameters3(TWISSBEAM *twiss, double **data, long particles)
 {
-  double C[6], S[6][6], beamsize[6], eta[6], Sbeta[6][6], emitcor[3], betacor[3], alphacor[3];
+  double C[6], S[6][6], beamsize[6], eta[6], Sbeta[6][6];
   long i, j, iPart;
   double sum;
 #if USE_MPI 

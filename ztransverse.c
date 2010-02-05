@@ -55,7 +55,10 @@ void track_through_ztransverse(double **part, long np, ZTRANSVERSE *ztransverse,
   static double *pz = NULL;
   static long max_np = 0;
   double *Vfreq, *iZ;
-  long i, ib, nb, n_binned, nfreq, iReal, iImag, plane, first;
+#if USE_MPI
+  long i;
+#endif
+  long ib, nb, n_binned, nfreq, iReal, iImag, plane, first;
   double factor, tmin, tmax, tmean, dt, userFactor[2], rampFactor=1;
   static long not_first_call = -1;
   long ip, ip1, ip2, bunches, bunch, npb;
@@ -558,7 +561,7 @@ void optimizeBinSettingsForImpedance(double timeSpan, double freq, double Q,
                                      double *binSize, long *nBins, long maxBins)
 {
   long n_bins, maxBins2;
-  double bin_size, factor, factor1, factor2;
+  double bin_size, factor;
   TRACKING_CONTEXT tcontext;
   
   n_bins = *nBins;

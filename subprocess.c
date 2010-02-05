@@ -22,9 +22,6 @@
 #include "subprocess.h"
 #include <signal.h>
 
-#if defined(_WIN32)
-#define popen(command, mode) _popen(command, mode)
-#endif
 
 /* dummy signal handler for use with sigpause */
 void subprocess_sigusr1()

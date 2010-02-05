@@ -418,7 +418,7 @@ void lorentz_setup(
     NIBEND *nibend;
     NISEPT *nisept;
     BMAPXY *bmapxy;
-    double alpha, Kg, gamma, beta;
+    double alpha, Kg;
     static long warning_given = 0;
     static double last_offset=0;
     static double last_fse=0;
@@ -715,8 +715,6 @@ void lorentz_terminate(
     )
 {
     NIBEND *nibend;
-    NISEPT *nisept;
-    BMAPXY *bmapxy;
 
     switch (field_type) {
         case T_NIBEND:
@@ -849,7 +847,7 @@ void nibend_coord_transform(double *q, double *coord, NIBEND *nibend, long which
     double cos_ah, sin_ah, tan_ah;
     double q0I, ds, alpha;
     long i;
-    double ttilt, dz, dx, dy;
+    double dz, dx, dy;
     
     if (which_end==-1) {
         /* do misalignment */

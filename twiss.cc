@@ -3650,7 +3650,6 @@ void computeDrivingTerms(DRIVING_TERMS *d, ELEMENT_LIST *elem, TWISS *twiss0, do
   double betax1, betay1, phix1, phiy1, etax1;
   double betax2, betay2, phix2, phiy2;
   double coef, b2L, b3L1, b3L2, sqrt_betax, sqrt3_betax, nux, nuy;
-  double dnudA[2][2];
   ELEMENT_LIST *eptr1, *eptr2;
   
   /* accumulate real and imaginary parts */

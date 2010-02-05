@@ -66,7 +66,7 @@ static long missingElementWarningsLeft = 100, missingParameterWarningsLeft = 100
 
 long setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 {
-  long i, index;
+  long i;
   
   /* process the namelist text */
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
@@ -107,7 +107,7 @@ long setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 
 long setup_load_parameters_for_file(char *filename, RUN *run, LINE_LIST *beamline)
 {
-  long i, index;
+  long index;
   
   load_request = trealloc(load_request, sizeof(*load_request)*(load_requests+1));
   load_request[load_requests].flags = change_defined_values?COMMAND_FLAG_CHANGE_DEFINITIONS:0;
@@ -242,7 +242,7 @@ long setup_load_parameters_for_file(char *filename, RUN *run, LINE_LIST *beamlin
 
 long do_load_parameters(LINE_LIST *beamline, long change_definitions)
 {
-  long i, j, count, mode_flags, code, rows,  param, allFilesRead, allFilesIgnored;
+  long i, j, mode_flags, code, rows,  param, allFilesRead, allFilesIgnored;
   char **element, **parameter, **type, **mode, *p_elem, *p_elem0, *ptr, lastMissingElement[100];
   double *value, newValue;
   char **valueString;

@@ -445,7 +445,6 @@ VMATRIX *determineMatrix(RUN *run, ELEMENT_LIST *eptr, double *startingCoord, do
   double **R, *C;
   double defaultStep[6] = {1e-5, 1e-5, 1e-5, 1e-5, 1e-5, 1e-5};
   long ltmp1, ltmp2;
-  char s[1024];
   double dgamma, dP[3];
   
   coord = (double**)czarray_2d(sizeof(**coord), 1+6*4, 7);
@@ -585,7 +584,6 @@ void determineRadiationMatrix(VMATRIX *Mr, RUN *run, ELEMENT_LIST *eptr, double 
   VMATRIX *M1, *M2, *Ml1, *Mtmp;
   ELEMENT_LIST elem;
   MATRIX *Ms;
-  char s[1000];
   
   /* Accumulated diffusion matrix */
   accumD1 = tmalloc(21*sizeof(*(accumD1)));

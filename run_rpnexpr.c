@@ -39,7 +39,7 @@ void run_rpn_expression(NAMELIST_TEXT *nltext)
 void run_rpn_load(NAMELIST_TEXT *nltext, RUN *run)
 {
   SDDS_DATASET SDDSin;
-  long code, foundPage, iColumn, matchRow, rows, i, iParameter;
+  long code, foundPage, iColumn, matchRow, rows, iParameter;
   int32_t columns, parameters;
   char *parameterValue = NULL;
   double *data, data1;

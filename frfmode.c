@@ -34,7 +34,6 @@ void track_through_frfmode(
   double Vc, Vcr, dgamma;
   long max_hist, n_occupied, imode;
   double Qrp, VbImagFactor, Q;
-  long deltaPass;
   double rampFactor;
 #if USE_MPI
   double *buffer; 

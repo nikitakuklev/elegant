@@ -583,7 +583,7 @@ void GWigRadiationKicks(struct gwig *pWig, double *X, double *Bxy, double dl)
  * Added by M. Borland, August 2007.
  */
 {
-  double Po, irho2, H, irho, dFactor;
+  double Po, irho2, H, dFactor;
   double B2;
   double dDelta;
 
