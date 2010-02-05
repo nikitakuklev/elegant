@@ -217,7 +217,7 @@ void add_optimization_variable(OPTIMIZATION_DATA *optimization_data, NAMELIST_TE
 void add_optimization_term(OPTIMIZATION_DATA *optimization_data, NAMELIST_TEXT *nltext, RUN *run,
                            LINE_LIST *beamline)
 {
-  long field_value, n_field_values = 0, index, nFileTerms = 0;
+  long field_value=0, n_field_values = 0, index, nFileTerms = 0;
   char s[16834], value[100];
   char **fileTerm = NULL;
   
@@ -1643,7 +1643,7 @@ double optimization_function(double *value, long *invalid)
       result = 0;
       rpn_clear();
       if (!*invalid) {
-        long i, terms=0;
+        long i=0, terms=0;
         double value, sum;
         if (balanceTerms && optimization_data->balance_terms && optimization_data->terms) {
           for (i=sum=0; i<optimization_data->terms; i++) {

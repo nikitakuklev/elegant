@@ -41,6 +41,7 @@ This implements a hash table.
 #include "recycle.h"
 #endif
 
+#ifdef HSANITY
 /* sanity check -- make sure ipos, apos, and count make sense */
 static void  hsanity(t)
 htab *t;
@@ -70,7 +71,7 @@ htab *t;
   if (counter != t->count)
     printf("error: counter %ld  t->count %ld\n", counter, t->count);
 }
-
+#endif
 
 /*
  * hgrow - Double the size of a hash table.

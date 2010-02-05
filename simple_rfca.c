@@ -188,7 +188,7 @@ long trackRfCavityWithWakes
     double P, gamma, gamma1, dgamma=0.0, dgammaMax=0.0, phase, length, dtLight, volt, To;
     double *coord, t, t0, omega, beta_i, tau, dt, tAve=0, dgammaAve=0;
     long useSRSModel = 0;
-    static long been_warned = 0, been_warned_kicks=0;
+    static long been_warned = 0;
     double dgammaOverGammaAve = 0;
     long dgammaOverGammaNp = 0;
 #ifdef USE_KAHAN

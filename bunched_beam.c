@@ -193,20 +193,22 @@ void setup_bunched_beam(
   else
     beam->particle = NULL;
 #endif
-  if (isSlave)
+  if (isSlave) {
     if (!save_initial_coordinates)
       beam->original = beam->particle;
     else
       beam->original = (double**)czarray_2d(sizeof(double), n_particles_per_bunch, 7);
+  }
 #if SDDS_MPI_IO
   else
     beam->original = NULL;
 #endif
-  if(isSlave)
+  if(isSlave) {
     if (run->acceptance) 
       beam->accepted = (double**)czarray_2d(sizeof(double), n_particles_per_bunch, 7);
     else
       beam->accepted = NULL;
+  }
 #if SDDS_MPI_IO
   else
     beam->accepted = NULL;

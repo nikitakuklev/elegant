@@ -420,7 +420,6 @@ void lorentz_setup(
     BMAPXY *bmapxy;
     double alpha, Kg;
     static long warning_given = 0;
-    static double last_offset=0;
     static double last_fse=0;
 
     log_entry("lorentz_setup");

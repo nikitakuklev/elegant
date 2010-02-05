@@ -282,8 +282,8 @@ void init_IBS(ELEMENT_LIST *element)
   long count, nElements, i, j, isRing = 0, init=1;
   double startRingPos, finalPos;
   double s0, s1, dt, delta_s, p0, gamma;
-  ELEMENT_LIST *element0, *elementStartRing, *eptr;
-  IBSCATTER *IBS;
+  ELEMENT_LIST *element0, *elementStartRing, *eptr=NULL;
+  IBSCATTER *IBS=NULL;
   TWISS *tp;
   
   if (!element->twiss) 

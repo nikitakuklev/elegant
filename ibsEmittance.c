@@ -9,6 +9,9 @@
 
 /* 
  * $Log: not supported by cvs2svn $
+ * Revision 1.28  2008/10/23 19:14:31  xiaoam
+ * Remove not used parameter coupling inside IBSCATTER.
+ *
  * Revision 1.27  2008/05/20 20:45:29  xiaoam
  * Change code exits to warning message.
  *
@@ -216,7 +219,7 @@ int main( int argc, char **argv)
   double yReturn, *xGuess, *dxGuess, *xLowerLimit, *xUpperLimit;
   short *disable;
   long dimensions = 14, maxEvaluations = 500, maxPasses = 2;
-  double target = 1e-6, tolerance = 1e-8;
+  double target = 1e-6;
   int32_t integrationTurns, integrationStepSize;
   long integrationPoints = 0;
   double *exInteg=NULL, *eyInteg=NULL, *elInteg=NULL, *xRateInteg=NULL, *yRateInteg=NULL, *zRateInteg=NULL;

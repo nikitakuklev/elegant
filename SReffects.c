@@ -28,7 +28,6 @@ void track_SReffects(double **coord, long np, SREFFECTS *SReffects, double Po,
     static long first = 1;
     double deltaChange, cutoff;
     long active = 1;
-    static short warned = 0;
     
 #if USE_MPI
     if (isMaster && notSinglePart) /* This is a parallel element, the master will not track unless it is a single particle simulation */

@@ -36,7 +36,7 @@ long trackUndulatorKickMap(
   double eomc, H;
   double dxpFactor, dypFactor;
   double length, fieldFactor;
-  double radCoef, isrCoef, sxpCoef, beta, alpha, sqrtBeta, deltaFactor, delta;
+  double radCoef, isrCoef, sxpCoef, beta, alpha, sqrtBeta=0, deltaFactor, delta;
   double I1, I2, I3, I4, I5;
   double sqrtI3, sqrtI5;
   

@@ -35,7 +35,7 @@ void  refree(r)
 struct reroot *r;
 {
    recycle *temp;
-   if (temp = r->list) while (r->list)
+   if ((temp = r->list) != NULL) while (r->list)
    {
       temp = r->list->next;
       free((char *)r->list);

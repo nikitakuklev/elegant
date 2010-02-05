@@ -9,6 +9,9 @@
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.14  2010/02/05 17:48:50  soliday
+ * Fixed minor issues related to compiler warnings.
+ *
  * Revision 1.13  2010/02/04 15:17:27  borland
  * No longer use the bomb() routine.  Instead, use bombElegant(), which allows
  * better control of what happens when exiting.  Added "failed" semaphore option.
@@ -484,7 +487,7 @@ void performSliceAnalysisOutput(SLICE_OUTPUT *sliceOutput, double **particle, lo
 void performSliceAnalysis(SLICE_OUTPUT *sliceOutput, double **particle, long particles, 
                          double Po, double charge, long timeGiven)
 {
-  double *sSave;
+  double *sSave=NULL;
   long i, slice, nSlices;
   double tMinAll, tMaxAll, tMin, tMax;
   long count, slicesFound=0;

@@ -21,7 +21,7 @@ long modulated_rf_cavity(double **part, long np, MODRF *modrf, double P_central,
     long ip;
     double amPhase, pmPhase;
     double P, gamma, dgamma, phase, length, volt;
-    double *coord, t, t0, omega0, omega, beta_i, tau, dt, tAve;
+    double *coord, t, t0, omega0, omega, beta_i, tau, dt, tAve=0;
     static long been_warned = 0;
 #ifdef DEBUG
     static SDDS_TABLE debugTable;

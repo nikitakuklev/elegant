@@ -29,8 +29,8 @@ void track_through_wake(double **part, long np, WAKE *wakeData, double *PoInput,
   static double *time = NULL;            /* array to record arrival time of each particle */
   static long max_np = 0;
   static short shortBunchWarning = 0;
-  long ib, nb, n_binned;
-  double factor, tmin, tmax, tmean, dt, Po, rampFactor;
+  long ib, nb=0, n_binned=0;
+  double factor, tmin, tmax, tmean=0, dt=0, Po, rampFactor;
 #if USE_MPI
   double *buffer;
 #endif

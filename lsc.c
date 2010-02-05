@@ -27,7 +27,7 @@ void track_through_lscdrift(double **part, long np, LSCDRIFT *LSC, double Po, CH
   static long max_np = 0;
   double *Vfreq, ZImag;
   short kickMode = 0;
-  long ib, nb, n_binned, nfreq, iReal, iImag;
+  long ib, nb, n_binned=0, nfreq, iReal, iImag;
   double factor, tmin, tmax, tmean, dt, df, dk, a1, a2;
   double lengthLeft, Imin, Imax, kSC, Zmax;
   double Ia = 17045, Z0, length, k;

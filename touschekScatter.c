@@ -21,10 +21,6 @@
 /* global variable */
 static TSCATTER_SPEC *tsSpec = NULL;
 
-static SDDS_DATASET tranPage, longPage;
-static double tranMin[4], tranMax[4], tranInterval[4], tranDelta[4], *tweight;
-static double longMin[2], longMax[2], longInterval[2], longDelta[2], *lweight;
-static long tranDimen[4], longDimen[2];
 
 /* Initialization of the simulation */
 void init_TSPEC (RUN *run, LINE_LIST *beamlin, long nElement);
@@ -116,7 +112,7 @@ void TouschekEffect(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 int TouschekRate(LINE_LIST *beamline)
 {
   double NP;
-  double tm, B1, B2, F, rate, IntR, IntLength;
+  double tm=0, B1, B2, F, rate, IntR, IntLength;
   ELEMENT_LIST *eptr;
 
   double betagamma, gamma; 
@@ -282,8 +278,8 @@ void TouschekDistribution(RUN *run, LINE_LIST *beamline)
   char *Name[6]={"x","y","s","xp","yp","dp/p"};
   char *Units[6]={"m","m","m","","",""};
   int32_t bookBins[6];
-  book1 *lossDis;
-  book1m *iniBook, *disBook;
+  book1 *lossDis=NULL;
+  book1m *iniBook=NULL, *disBook=NULL;
   double *weight;
   double ran1[11];
   long *index, iTotal, sTotal;

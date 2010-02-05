@@ -829,7 +829,7 @@ void parse_element(
     char *type_name
     )
 {
-  long i, difference, isGroup, pType;
+  long i, difference, isGroup, pType=0;
   char *ptr, *ptr1, *rpn_token;
 
   log_entry("parse_element");

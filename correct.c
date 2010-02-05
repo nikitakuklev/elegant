@@ -2081,7 +2081,7 @@ long orbcor_plane(CORMON_DATA *CM, STEERING_LIST *SL, long coord, TRAJECTORY **o
   double dp, x, y, reading;
   double last_rms_pos, best_rms_pos, rms_pos, corr_fraction;
   double fraction, minFraction, param, change;
-  MAT *Qo, *dK;
+  MAT *Qo, *dK=NULL;
   
   log_entry("orbcor_plane");
 

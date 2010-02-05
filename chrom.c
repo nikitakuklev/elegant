@@ -291,7 +291,7 @@ long do_chromaticity_correction(CHROM_CORRECTION *chrom, RUN *run, LINE_LIST *be
             double *clorb, long step, long last_iteration)
 {
     VMATRIX *M;
-    double chromx0, chromy0, dchromx, dchromy;
+    double chromx0, chromy0, dchromx=0, dchromy=0;
     double K2=0.0, *K2ptr;
     ELEMENT_LIST *context;
     long i, K2_param=0, type=0, iter, count;

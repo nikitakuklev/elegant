@@ -26,8 +26,8 @@ void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
   static double *pz = NULL;
   static long max_np = 0;
   static short shortBunchWarning = 0;
-  long ib, nb, n_binned, plane;
-  double factor, tmin, tmean, tmax, dt, rampFactor=1;
+  long ib, nb=0, n_binned=0, plane;
+  double factor, tmin, tmean=0, tmax, dt=0, rampFactor=1;
 #if USE_MPI
   double *buffer;
 #endif

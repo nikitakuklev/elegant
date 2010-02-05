@@ -183,7 +183,7 @@ long doMomentumApertureSearch(
   double deltaInterval, pCentral, deltaStart;
   ELEMENT_LIST *elem, *elem0;
   long *lostOnPass0, side;
-  short **loserFound, *direction, **survivorFound;
+  short **loserFound, *direction=NULL, **survivorFound;
   int32_t **lostOnPass;
   double deltaLimit1[2], deltaLimit, **deltaWhenLost, delta;
   double deltaStart1[2];

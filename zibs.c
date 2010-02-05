@@ -26,7 +26,7 @@ void IBSRate (double particles,
   double test = 1e-5;
   double simpsonCoeff[2] = {2.,4.};
   double coulombLogReturn, constant, weight;
-  double h, lambda0, lambda, cof, term, func, polyx, polyy, polyz;
+  double h, lambda0, lambda=0, cof, term, func, polyx, polyy, polyz;
   double txi, tyi, tzi, sumx, sumy, sumz, zintx, zinty, zintz;
 
   double beta, gamma0, gamma1, gamma2;

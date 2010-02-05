@@ -466,7 +466,7 @@ void set_up_zlongit(ZLONGIT *zlongit, RUN *run, long pass, long particles, CHARG
     else {
         TABLE Zr_data, Zi_data;
         double *Zr=NULL, *Zi=NULL;
-        double df_spect;
+        double df_spect=0;
         long n_spect=0;
         if (!zlongit->Zreal && !zlongit->Zimag)
             bombElegant("you must either give broad_band=1, or Zreal and/or Zimag (ZLONGIT)", NULL);

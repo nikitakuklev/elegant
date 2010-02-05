@@ -16,6 +16,9 @@
  * Michael Borland, 1999
  *
  $Log: not supported by cvs2svn $
+ Revision 1.10  2003/01/21 18:49:04  borland
+ Added simplexMin() arguments.
+
  Revision 1.9  2003/01/16 02:20:36  borland
  Added simplex_divisor parameter to optimization_setup namelist.
  Updated calls to simplexMin().
@@ -421,9 +424,11 @@ void OptimizeSASEFELParameters
    long row)
 {
   short disable[8] = { 0,0,0,0,0,0,0,0 };
+#if DEBUG
   double lower[8] = { 0,0,0,0,0,0,0,0 };
   double upper[8] = { DBL_MAX,DBL_MAX,DBL_MAX,DBL_MAX,DBL_MAX,
 		      DBL_MAX,DBL_MAX,DBL_MAX };
+#endif
   double x0[8], dx[8], result;
   long i;
 

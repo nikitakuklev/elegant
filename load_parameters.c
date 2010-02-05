@@ -66,7 +66,7 @@ static long missingElementWarningsLeft = 100, missingParameterWarningsLeft = 100
 
 long setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 {
-  long i;
+  long i=0;
   
   /* process the namelist text */
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
@@ -97,7 +97,7 @@ long setup_load_parameters(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
 
   if (filename_list) {
     char *filename0;
-    while (filename0 = get_token(filename_list))
+    while ((filename0 = get_token(filename_list)) != NULL)
       i = setup_load_parameters_for_file(filename0, run, beamline);
     return i;
   }
@@ -247,7 +247,8 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
   double *value, newValue;
   char **valueString;
   ELEMENT_LIST *eptr;
-  long element_missing, numberChanged, totalNumberChanged = 0;
+  long element_missing;
+  int32_t numberChanged, totalNumberChanged = 0;
   long lastMissingOccurence = 0;
   int32_t *occurence;
 
@@ -458,7 +459,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
       if (mode_flags&LOAD_FLAG_IGNORE)
         continue;
       if (verbose)
-        fprintf(stdout, "Working on row %" PRId32 " of file\n", j);
+        fprintf(stdout, "Working on row %ld of file\n", j);
       
       if (load_request[i].flags&COMMAND_FLAG_CHANGE_DEFINITIONS) {
         change_defined_parameter(element[j], param, eptr->type, value?value[j]:0, 
@@ -542,7 +543,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
             newValue = value[j];
           }
           if (verbose)
-            fprintf(stdout, "Changing %s.%s #%" PRId32 "  from %" PRId32 "  to ",
+            fprintf(stdout, "Changing %s.%s #%" PRId32 "  from %ld  to ",
                     eptr->name,
                     entity_description[eptr->type].parameter[param].name, numberChanged,
                     *((long*)(p_elem+entity_description[eptr->type].parameter[param].offset)));
@@ -568,7 +569,7 @@ long do_load_parameters(LINE_LIST *beamline, long change_definitions)
 	      *((long*)(p_elem0+entity_description[eptr->type].parameter[param].offset)) *= 1+newValue;
 	  }
           if (verbose)
-            fprintf(stdout, "%" PRId32 " \n",
+            fprintf(stdout, "%ld \n",
                     *((long*)(p_elem+entity_description[eptr->type].parameter[param].offset)));
             fflush(stdout);
           break;

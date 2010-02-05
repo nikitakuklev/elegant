@@ -251,7 +251,7 @@ void dump_final_properties
      long step, double **particle, long n_original, double p_central, VMATRIX *M,
      double charge)
 {
-    long n_computed, n_properties;
+    long n_computed, n_properties=0;
     double *computed_properties;
     long index, i;
 
@@ -391,8 +391,8 @@ long compute_final_properties
 {
   register long i, j;
   long i_data, index, offset;
-  double dp_min, dp_max, Ddp;
-  double p_sum, gamma_sum, p, sum, tc, tmin, tmax, dt, t, pAverage;
+  double dp_min, dp_max, Ddp=0;
+  double p_sum, gamma_sum, p, sum, tc=0, tmin, tmax, dt=0, t, pAverage;
   double **R, centroid[6];
   MATRIX Rmat;
   static double *tData = NULL, *deltaData = NULL;

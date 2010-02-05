@@ -275,7 +275,7 @@ int main(argc, argv)
 int argc;
 char **argv;
 {
-  char **macroTag, **macroValue;
+  char **macroTag, **macroValue=NULL;
   long macros;
   LINE_LIST *beamline=NULL;        /* pointer to root of linked list */
   FILE *fp_in=NULL;
