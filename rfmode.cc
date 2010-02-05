@@ -222,7 +222,7 @@ void track_through_rfmode(
         lastBin = lastBin_global;
       }
       if(isSlave) {
-        buffer = malloc(sizeof(double) * (lastBin+1)); 
+        buffer = (double*)malloc(sizeof(double) * (lastBin+1)); 
 	MPI_Allreduce(Ihist, buffer, lastBin+1, MPI_LONG, MPI_SUM, workers);
         memcpy(Ihist, buffer, sizeof(long)*(lastBin+1));
 	free(buffer);
