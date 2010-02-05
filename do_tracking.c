@@ -2567,12 +2567,12 @@ long trackWithIndividualizedLinearMatrix(double **particle, long particles, doub
   double alpha[2], beta[2], eta[4], beta1, alpha1, A[2];
   double R11, R22, R12;
   long allowResonanceCrossing = 0;
+  static VMATRIX *M1 = NULL;
+  double det;
   
   if (ilmat)
     allowResonanceCrossing = ilmat->allowResonanceCrossing;
   
-  static VMATRIX *M1 = NULL;
-  double det;
   if (!M1) {
     M1 = tmalloc(sizeof(*M1));
     initialize_matrices(M1, 1);
