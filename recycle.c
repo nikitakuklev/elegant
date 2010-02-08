@@ -78,7 +78,7 @@ char   *purpose;
   if (!x)
   {
     fprintf(stderr, "malloc of %d failed for %s\n", 
-	    len, purpose);
+	    (int)len, purpose);
     exit(SUCCESS);
   }
   return x;
