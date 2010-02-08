@@ -297,6 +297,7 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   }
   
   fse = csbend->fse;
+  n = -csbend->b[0]/h;
   h = 1/rho0;
   if (fse>-1)
     rho_actual = 1/((1+fse)*h);
@@ -1002,7 +1003,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   double delta_xp;
   double macroParticleCharge, CSRConstant;
   long iBin, iBinBehind;
-  long csrInhibit = 0, largeRhoWarning;
+  long csrInhibit = 0, largeRhoWarning = 0;
   double derbenevRatio = 0;
   long n_partMoreThanOne = 0;
   TRACKING_CONTEXT tContext;
