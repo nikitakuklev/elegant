@@ -297,8 +297,8 @@ long track_through_csbend(double **part, long n_part, CSBEND *csbend, double p_e
   }
   
   fse = csbend->fse;
-  n = -csbend->b[0]/h;
   h = 1/rho0;
+  n = -csbend->b[0]/h;
   if (fse>-1)
     rho_actual = 1/((1+fse)*h);
   else
