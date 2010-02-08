@@ -153,7 +153,7 @@ void track_through_rfmode(
       n_binned = lastBin = 0;
       for (ip=0; ip<np; ip++) {
         pbin[ip] = -1;
-        ib = (time[ip]-tmin)/dt;
+        ib = (long)((time[ip]-tmin)/dt);
         if (ib<0)
             continue;
         if (ib>rfmode->n_bins - 1)
@@ -348,7 +348,7 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
   if (rfmode->bin_size*rfmode->freq>0.1) {
     T = rfmode->bin_size*rfmode->n_bins;
     rfmode->bin_size = 0.1/rfmode->freq;
-    rfmode->n_bins = T/rfmode->bin_size+1;
+    rfmode->n_bins = ((long)(T/rfmode->bin_size+1));
     rfmode->bin_size = T/rfmode->n_bins;
     fprintf(stdout, "The RFMODE %s bin size is too large--setting to %e and increasing to %ld bins\n",
             element_name, rfmode->bin_size, rfmode->n_bins);
@@ -505,12 +505,28 @@ void runBinlessRfMode(
   if (np>max_np) 
     tData = (TIMEDATA*)trealloc(tData, sizeof(*tData)*(max_np=np));
 
+  tmean = 0;
   for (ip=0; ip<np; ip++) {
     P = Po*(part[ip][5]+1);
     tData[ip].t = part[ip][4]*sqrt(sqr(P)+1)/(c_mks*P);
     tData[ip].ip = ip;
+    if (isSlave) {
+      tmean += tData[ip].t;
+    }
   }
   qsort(tData, np, sizeof(*tData), compTimeData);
+
+#if USE_MPI
+  if (isSlave) {
+    double t_total;
+    MPI_Allreduce(&np, &np_total, 1, MPI_LONG, MPI_SUM, workers);
+    MPI_Allreduce(&tmean, &t_total, 1, MPI_DOUBLE, MPI_SUM, workers);
+    tmean = t_total;
+  }
+  tmean /= np_total;      
+#else
+  tmean /= np;
+#endif
 
   V_sum = Vr_sum = phase_sum = Vc = Vcr = Q_sum = Vb_sum = 0;
   n_summed = max_hist = n_occupied = 0;
