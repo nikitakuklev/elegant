@@ -166,6 +166,7 @@ void null_matrices(VMATRIX *M, unsigned long flags)
     set_matrix_pointers(&C, &R, &T, &Q, M);
 
     if (M->order==3 && !(flags&EXCLUDE_Q) && Q)
+      for (i=0; i<6; i++) {
         for (j=0; j<6; j++) {
           Qij = Q[i][j];
           for (k=0; k<=j; k++) {
@@ -174,6 +175,8 @@ void null_matrices(VMATRIX *M, unsigned long flags)
               *Qijk++ = 0;
           }
         }
+      }
+    
     if (M->order>=2 && !(flags&EXCLUDE_T) && T)
       for (i=0; i<6; i++) {
         for (j=0; j<6; j++) {
