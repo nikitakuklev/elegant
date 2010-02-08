@@ -1584,8 +1584,9 @@ double *select_fiducial(double **part, long n_part, char *var_mode_in)
     switch (fid_mode) {
     case FID_MEDIAN:
 #if !USE_MPI
-      if ((i_best = find_median_of_row(&best_value, part, i_var, n_part))<0)
+      if ((i_best = find_median_of_row(&best_value, part, i_var, n_part))<0) 
         bombElegant("error: computation of median failed (select_fiducial)", NULL);
+      printf ("best_value=%lf\n", best_value);
 #else
       /*
       if (notSinglePart) {
@@ -1599,12 +1600,11 @@ double *select_fiducial(double **part, long n_part, char *var_mode_in)
 	  bombElegant("error: computation of median failed (select_fiducial)", NULL);
       }
       */
-      printf("The median fidutial mode is not available in this version of Pelegant.\n \
+      printf("The median fiducial mode is not available in this version of Pelegant.\n \
               Please request this feature by contacting authors\n");
       MPI_Barrier (MPI_COMM_WORLD);
       MPI_Abort(MPI_COMM_WORLD, 2);
 #endif
-      printf ("best_value=%lf\n", best_value);
       break;
     case FID_MINIMUM:
       i_best = 0;
