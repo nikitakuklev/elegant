@@ -133,7 +133,7 @@ long do_tracking(
   long watch_pt_seen, feedbackDriverSeen;
   double sum, x_max, y_max;
   long elliptical;
-  double et1, et2;
+  double et1, et2=0;
   long is_batch = 0, last_type;
   static long is_ansi_term = -1;
   char s[100], *name;
