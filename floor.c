@@ -167,7 +167,7 @@ void output_floor_coordinates(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamli
   while (elem) {
     if (elem->type==T_STRAY) {
       STRAY *stray;
-      stray = elem->p_elem;
+      stray = (STRAY*)elem->p_elem;
       if (!stray->WiInitialized) {
         m_alloc((MATRIX**)(&(stray->Wi)), 3, 3);
         stray->WiInitialized = 1;
