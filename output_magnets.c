@@ -46,7 +46,7 @@ void output_magnets(char *filename, char *line_name, LINE_LIST *beamline)
                 qptr = (QUAD*)eptr->p_elem;
                 fprintf(fpm, "%s %s %e  %d\n", eptr->name, entity_name[eptr->type], start, SIGN(qptr->k1));
                 end = start+qptr->length;
-                fprintf(fpm, "%s %s %e  %d\n%s %s %e  0\n%s %s %e 0 %\n%s %s %e 0\n",
+                fprintf(fpm, "%s %s %e  %d\n%s %s %e  0\n%s %s %e 0\n%s %s %e 0\n",
                         eptr->name, entity_name[eptr->type], end, SIGN(qptr->k1), 
                         eptr->name, entity_name[eptr->type], end, 
                         eptr->name, entity_name[eptr->type], start,
@@ -61,7 +61,7 @@ void output_magnets(char *filename, char *line_name, LINE_LIST *beamline)
                     value = kqptr->k1;
                 fprintf(fpm, "%s %s %e  %d\n", eptr->name, entity_name[eptr->type], start, SIGN(value));
                 end = start+kqptr->length;
-                fprintf(fpm, "%s %s %e  %d\n%s %s %e  0\n%s %s %e 0 %\n%s %s %e 0\n", 
+                fprintf(fpm, "%s %s %e  %d\n%s %s %e  0\n%s %s %e 0\n%s %s %e 0\n", 
                         eptr->name, entity_name[eptr->type], end, SIGN(kqptr->k1), 
                         eptr->name, entity_name[eptr->type], end, 
                         eptr->name, entity_name[eptr->type], start,
@@ -73,7 +73,7 @@ void output_magnets(char *filename, char *line_name, LINE_LIST *beamline)
                 value = kqsptr->k1;
                 fprintf(fpm, "%s %s %e  %d\n", eptr->name, entity_name[eptr->type], start, SIGN(value));
                 end = start+kqsptr->length;
-                fprintf(fpm, "%s %s %e  %d\n%s %s %e  0\n%s %s %e 0 %\n%s %s %e 0\n", 
+                fprintf(fpm, "%s %s %e  %d\n%s %s %e  0\n%s %s %e 0\n%s %s %e 0\n", 
                         eptr->name, entity_name[eptr->type], end, SIGN(value), 
                         eptr->name, entity_name[eptr->type], end, 
                         eptr->name, entity_name[eptr->type], start,
