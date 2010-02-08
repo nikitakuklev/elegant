@@ -101,17 +101,17 @@ VMATRIX *compute_periodic_twiss(
   long i, j, k;
   MATRIX *dispR, *dispM, *dispMInv, *dispEta;
   
-  log_entry("compute_periodic_twiss");
+  log_entry((char*)"compute_periodic_twiss");
 
   *unstable = 0;
 
   if ((i = fill_in_matrices(elem, run)))
-    fprintf(stdout, "%ld matrices recomputed for periodic Twiss parameter computation\n", i);
+    fprintf(stdout, (char*)"%ld matrices recomputed for periodic Twiss parameter computation\n", i);
     fflush(stdout);
 
   if (cavities_are_drifts_if_matched) {
     if (run->always_change_p0)
-      bombElegant("can't have run_setup/always_change_p0=1 and twiss_output/cavities_are_drifts_if_matched=1", NULL);
+      bombElegant((char*)"can't have run_setup/always_change_p0=1 and twiss_output/cavities_are_drifts_if_matched=1", NULL);
     modify_rfca_matrices(elem, run->default_order);  /* replace rf cavities with drifts */
   }
   
@@ -185,7 +185,7 @@ VMATRIX *compute_periodic_twiss(
     dispR->a[i][0] = R[i][5];
   }
   if (m_det(dispM)==0) {
-    fprintf(stdout, "Unable to compute dispersion: unstable\n");
+    fprintf(stdout, (char*)"Unable to compute dispersion: unstable\n");
     fflush(stdout);
     *unstable = 3; /* both planes */
   } else {
@@ -244,7 +244,7 @@ VMATRIX *compute_periodic_twiss(
   
   for (i=0; i<4; i+=2 ) {
     if (fabs(cos_phi = (R[i][i] + R[i+1][i+1])/2)>1) {
-      fprintf(stdout, "warning: beamline unstable for %c plane--can't match beta functions.\n", (char)('x'+i/2));
+      fprintf(stdout, (char*)"warning: beamline unstable for %c plane--can't match beta functions.\n", (char)('x'+i/2));
       fflush(stdout);
       *unstable |= (i==0?1:2);
       sin_phi = 1e-6;
@@ -278,7 +278,7 @@ VMATRIX *compute_periodic_twiss(
   lastPeriodicTwiss.etay = etay[0];
   lastPeriodicTwiss.etapy = etapy[0];
   
-  log_exit("compute_periodic_twiss");
+  log_exit((char*)"compute_periodic_twiss");
   return(M);
 }
 
@@ -298,7 +298,7 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
   static long asinWarning = 50;
   std::complex <double> kappa;
   if (!twiss0)
-    bombElegant("initial Twiss parameters not given (propagate_twiss_parameters())", NULL);
+    bombElegant((char*)"initial Twiss parameters not given (propagate_twiss_parameters())", NULL);
   elemOrig = elem;
   
   m_alloc(&dispM, 4, 4);
@@ -368,19 +368,19 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
               free(elem->matrix);
             }
             if (((TWISSELEMENT*)elem->p_elem)->verbose) {
-              printf("Computing twiss transformation matrix for %s at z=%e m from lattice twiss parameters\n", elem->name, elem->end_pos);
-              printf("  * Initial twiss parameters:\n");
-              printf("  betax = %le  alphax = %le  etax = %le, etaxp = %le\n",
+              printf((char*)"Computing twiss transformation matrix for %s at z=%e m from lattice twiss parameters\n", elem->name, elem->end_pos);
+              printf((char*)"  * Initial twiss parameters:\n");
+              printf((char*)"  betax = %le  alphax = %le  etax = %le, etaxp = %le\n",
                      twissInput.betax, twissInput.alphax, twissInput.etax, twissInput.etapx);
-              printf("  betay = %le  alphay = %le  etay = %le, etayp = %le\n",
+              printf((char*)"  betay = %le  alphay = %le  etay = %le, etayp = %le\n",
                      twissInput.betay, twissInput.alphay, twissInput.etay, twissInput.etapy);
-              printf("  * Final twiss parameters:\n");
-              printf("  betax = %le  alphax = %le  etax = %le, etaxp = %le\n",
+              printf((char*)"  * Final twiss parameters:\n");
+              printf((char*)"  betax = %le  alphax = %le  etax = %le, etaxp = %le\n",
                      ((TWISSELEMENT*)elem->p_elem)->twiss.betax,
                      ((TWISSELEMENT*)elem->p_elem)->twiss.alphax,
                      ((TWISSELEMENT*)elem->p_elem)->twiss.etax,
                      ((TWISSELEMENT*)elem->p_elem)->twiss.etapx);
-              printf("  betax = %le  alphax = %le  etax = %le, etaxp = %le\n",
+              printf((char*)"  betax = %le  alphax = %le  etax = %le, etaxp = %le\n",
                      ((TWISSELEMENT*)elem->p_elem)->twiss.betay,
                      ((TWISSELEMENT*)elem->p_elem)->twiss.alphay,
                      ((TWISSELEMENT*)elem->p_elem)->twiss.etay,
@@ -514,12 +514,12 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
         if ((sin_dphi=S[plane]/sqrt(beta[plane]*func[0]))>1) {
           if (asinWarning>0) {
             asinWarning--;
-            fprintf(stdout, "warning: argument of asin > 1 by %f (propagate_twiss)\n", sin_dphi-1);
-            fprintf(stdout, "element is %s at z=%em\n", elem->name, elem->end_pos);
-            fprintf(stdout, "%c-plane matrix:  C = %e,  S = %e,  ",
+            fprintf(stdout, (char*)"warning: argument of asin > 1 by %f (propagate_twiss)\n", sin_dphi-1);
+            fprintf(stdout, (char*)"element is %s at z=%em\n", elem->name, elem->end_pos);
+            fprintf(stdout, (char*)"%c-plane matrix:  C = %e,  S = %e,  ",
                     (plane==0?'x':'y'), C[plane], S[plane]);
-            fprintf(stdout, "C' = %e,  S' = %e\n", Cp[plane], Sp[plane]);
-            fprintf(stdout, "beta0 = %e, func[0] = %e\n", beta[plane], func[0]);
+            fprintf(stdout, (char*)"C' = %e,  S' = %e\n", Cp[plane], Sp[plane]);
+            fprintf(stdout, (char*)"beta0 = %e, func[0] = %e\n", beta[plane], func[0]);
             fflush(stdout);
           }
           sin_dphi = 1;
@@ -528,8 +528,8 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
         else if (sin_dphi<-1) {
           if (asinWarning>0) {
             asinWarning--;
-            fprintf(stdout, "warning: argument of asin < -1 by %f (propagate_twiss)\n", sin_dphi+1);
-            fprintf(stdout, "element is %s at z=%em\n", elem->name, elem->end_pos);
+            fprintf(stdout, (char*)"warning: argument of asin < -1 by %f (propagate_twiss)\n", sin_dphi+1);
+            fprintf(stdout, (char*)"element is %s at z=%em\n", elem->name, elem->end_pos);
             fflush(stdout);
           }
           sin_dphi = -1;
@@ -616,22 +616,22 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
     long q;
 #ifdef DEBUG_COUPLING
     FILE *fp;
-    fp = fopen("kappa.sdds", "w");
-    fprintf(fp, "SDDS1\n");
-    fprintf(fp, "&column name=ElementName type=string &end\n");
-    fprintf(fp, "&column name=Position, type=double &end\n");
-    fprintf(fp, "&column name=Length , type=double &end\n");
-    fprintf(fp, "&column name=K1 , type=double &end\n");
-    fprintf(fp, "&column name=Tilt , type=double &end\n");
-    fprintf(fp, "&column name=ks , type=double &end\n");
-    fprintf(fp, "&column name=phase type=double &end\n");
-    fprintf(fp, "&column name=exp0, type=double &end\n");
-    fprintf(fp, "&column name=exp1 , type=double &end\n");
-    fprintf(fp, "&column name=i0 , type=double &end\n");
-    fprintf(fp, "&column name=i1 , type=double &end\n");
-    fprintf(fp, "&column name=kappa0 , type=double &end\n");
-    fprintf(fp, "&column name=kappa1 , type=double &end\n");
-    fprintf(fp, "&data mode=ascii no_row_counts=1 &end\n");
+    fp = fopen((char*)"kappa.sdds", (char*)"w");
+    fprintf(fp, (char*)"SDDS1\n");
+    fprintf(fp, (char*)"&column name=ElementName type=string &end\n");
+    fprintf(fp, (char*)"&column name=Position, type=double &end\n");
+    fprintf(fp, (char*)"&column name=Length , type=double &end\n");
+    fprintf(fp, (char*)"&column name=K1 , type=double &end\n");
+    fprintf(fp, (char*)"&column name=Tilt , type=double &end\n");
+    fprintf(fp, (char*)"&column name=ks , type=double &end\n");
+    fprintf(fp, (char*)"&column name=phase type=double &end\n");
+    fprintf(fp, (char*)"&column name=exp0, type=double &end\n");
+    fprintf(fp, (char*)"&column name=exp1 , type=double &end\n");
+    fprintf(fp, (char*)"&column name=i0 , type=double &end\n");
+    fprintf(fp, (char*)"&column name=i1 , type=double &end\n");
+    fprintf(fp, (char*)"&column name=kappa0 , type=double &end\n");
+    fprintf(fp, (char*)"&column name=kappa1 , type=double &end\n");
+    fprintf(fp, (char*)"&data mode=ascii no_row_counts=1 &end\n");
 #endif
     kappa = std::complex<double>(0,0);
     elem = elemOrig;
@@ -687,7 +687,7 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
           kappa = kappa + integrand*phaseFactor*sqrt(beta[0]*beta[1])/PIx2*length;
 
 #ifdef DEBUG_COUPLING
-          fprintf(fp, "%s %e %e %e %e %e %e %e %e %e %e %e %e\n",
+          fprintf(fp, (char*)"%s %e %e %e %e %e %e %e %e %e %e %e %e\n",
                   elem->name, elem->end_pos-length/2, length, K1r, tilt, ks,
                   phase, phaseFactor.real(), phaseFactor.imag(), 
                   integrand.real(), integrand.imag(),
@@ -767,28 +767,28 @@ static long twiss_count = 0;
 #define IC_I5 (N_COLUMNS+4)
 #define N_COLUMNS_WRI (IC_I5+1)
 static SDDS_DEFINITION column_definition[N_COLUMNS_WRI] = {
-{"s", "&column name=s, type=double, units=m, description=Distance &end"},
-{"betax", "&column name=betax, type=double, units=m, symbol=\"$gb$r$bx$n\", description=\"Horizontal beta-function\" &end"},
-{"alphax", "&column name=alphax, type=double, symbol=\"$ga$r$bx$n\", description=\"Horizontal alpha-function\" &end"},
-{"psix", "&column name=psix, type=double, units=rad, symbol=\"$gy$r$bx$n\", description=\"Horizontal phase advance\" &end"},
-{"etax", "&column name=etax, type=double, units=m, symbol=\"$gc$r$bx$n\", description=\"Horizontal dispersion\" &end"},
-{"etaxp", "&column name=etaxp, type=double, symbol=\"$gc$r$bx$n$a'$n\", description=\"Slope of horizontal dispersion\" &end"},
-{"xAperture", "&column name=xAperture, type=double, units=m, symbol=\"a$bx,eff$n\", description=\"Effective horizontal aperture\" &end"},
-{"betay", "&column name=betay, type=double, units=m, symbol=\"$gb$r$by$n\", description=\"Vertical beta-function\" &end"},
-{"alphay", "&column name=alphay, type=double, symbol=\"$ga$r$by$n\", description=\"Vertical alpha-function\" &end"},
-{"psiy", "&column name=psiy, type=double, units=rad, symbol=\"$gy$r$by$n\", description=\"Vertical phase advance\" &end"},
-{"etay", "&column name=etay, type=double, units=m, symbol=\"$gc$r$by$n\", description=\"Vertical dispersion\" &end"},
-{"etayp", "&column name=etayp, type=double, symbol=\"$gc$r$by$n$a'$n\", description=\"Slope of vertical dispersion\" &end"},
-{"yAperture", "&column name=yAperture, type=double, units=m, symbol=\"a$by,eff$n\", description=\"Effective vertical aperture\" &end"},
-{"pCentral0", "&column name=pCentral0, type=double, units=\"m$be$nc\", symbol=\"p$bcent$n\", description=\"Initial central momentum\" &end"},
-{"ElementName", "&column name=ElementName, type=string, description=\"Element name\", format_string=%10s &end"},
-{"ElementOccurence", "&column name=ElementOccurence, type=long, description=\"Occurence of element\", format_string=%6ld &end"},
-{"ElementType", "&column name=ElementType, type=string, description=\"Element-type name\", format_string=%10s &end"},
-{"dI1", "&column name=dI1, type=double, description=\"Contribution to radiation integral 1\", units=m &end"} ,
-{"dI2", "&column name=dI2, type=double, description=\"Contribution to radiation integral 2\", units=1/m &end"} ,
-{"dI3", "&column name=dI3, type=double, description=\"Contribution to radiation integral 3\", units=1/m$a2$n &end"} ,
-{"dI4", "&column name=dI4, type=double, description=\"Contribution to radiation integral 4\", units=1/m &end"} ,
-{"dI5", "&column name=dI5, type=double, description=\"Contribution to radiation integral 5\", units=1/m &end"} ,
+{(char*)"s", (char*)"&column name=s, type=double, units=m, description=Distance &end"},
+{(char*)"betax", (char*)"&column name=betax, type=double, units=m, symbol=\"$gb$r$bx$n\", description=\"Horizontal beta-function\" &end"},
+{(char*)"alphax", (char*)"&column name=alphax, type=double, symbol=\"$ga$r$bx$n\", description=\"Horizontal alpha-function\" &end"},
+{(char*)"psix", (char*)"&column name=psix, type=double, units=rad, symbol=\"$gy$r$bx$n\", description=\"Horizontal phase advance\" &end"},
+{(char*)"etax", (char*)"&column name=etax, type=double, units=m, symbol=\"$gc$r$bx$n\", description=\"Horizontal dispersion\" &end"},
+{(char*)"etaxp", (char*)"&column name=etaxp, type=double, symbol=\"$gc$r$bx$n$a'$n\", description=\"Slope of horizontal dispersion\" &end"},
+{(char*)"xAperture", (char*)"&column name=xAperture, type=double, units=m, symbol=\"a$bx,eff$n\", description=\"Effective horizontal aperture\" &end"},
+{(char*)"betay", (char*)"&column name=betay, type=double, units=m, symbol=\"$gb$r$by$n\", description=\"Vertical beta-function\" &end"},
+{(char*)"alphay", (char*)"&column name=alphay, type=double, symbol=\"$ga$r$by$n\", description=\"Vertical alpha-function\" &end"},
+{(char*)"psiy", (char*)"&column name=psiy, type=double, units=rad, symbol=\"$gy$r$by$n\", description=\"Vertical phase advance\" &end"},
+{(char*)"etay", (char*)"&column name=etay, type=double, units=m, symbol=\"$gc$r$by$n\", description=\"Vertical dispersion\" &end"},
+{(char*)"etayp", (char*)"&column name=etayp, type=double, symbol=\"$gc$r$by$n$a'$n\", description=\"Slope of vertical dispersion\" &end"},
+{(char*)"yAperture", (char*)"&column name=yAperture, type=double, units=m, symbol=\"a$by,eff$n\", description=\"Effective vertical aperture\" &end"},
+{(char*)"pCentral0", (char*)"&column name=pCentral0, type=double, units=\"m$be$nc\", symbol=\"p$bcent$n\", description=\"Initial central momentum\" &end"},
+{(char*)"ElementName", (char*)"&column name=ElementName, type=string, description=\"Element name\", format_string=%10s &end"},
+{(char*)"ElementOccurence", (char*)"&column name=ElementOccurence, type=long, description=\"Occurence of element\", format_string=%6ld &end"},
+{(char*)"ElementType", (char*)"&column name=ElementType, type=string, description=\"Element-type name\", format_string=%10s &end"},
+{(char*)"dI1", (char*)"&column name=dI1, type=double, description=\"Contribution to radiation integral 1\", units=m &end"} ,
+{(char*)"dI2", (char*)"&column name=dI2, type=double, description=\"Contribution to radiation integral 2\", units=1/m &end"} ,
+{(char*)"dI3", (char*)"&column name=dI3, type=double, description=\"Contribution to radiation integral 3\", units=1/m$a2$n &end"} ,
+{(char*)"dI4", (char*)"&column name=dI4, type=double, description=\"Contribution to radiation integral 4\", units=1/m &end"} ,
+{(char*)"dI5", (char*)"&column name=dI5, type=double, description=\"Contribution to radiation integral 5\", units=1/m &end"} ,
 };
 
 #define IP_STEP 0
@@ -888,98 +888,98 @@ static SDDS_DEFINITION column_definition[N_COLUMNS_WRI] = {
 #define IP_U0 IP_ALPHAC+15
 #define N_PARAMETERS IP_U0+1
 static SDDS_DEFINITION parameter_definition[N_PARAMETERS] = {
-{"Step", "&parameter name=Step, type=long, description=\"Simulation step\" &end"},
-{"nux", "&parameter name=nux, symbol=\"$gn$r$bx$n\", type=double, units=\"1/(2$gp$r)\", description=\"Horizontal tune\" &end"},
-{"dnux/dp", "&parameter name=dnux/dp, symbol=\"$gx$r$bx$n\", type=double, units=\"1/(2$gp$r)\", description=\"Horizontal chromaticity\" &end"},
-{"dnux/dp2", "&parameter name=dnux/dp2, symbol=\"$gx$r$bx2$n\", type=double, units=\"1/(2$gp$r)\", description=\"Horizontal 2nd-order chromaticity\" &end"},
-{"dnux/dp3", "&parameter name=dnux/dp3, symbol=\"$gx$r$bx3$n\", type=double, units=\"1/(2$gp$r)\", description=\"Horizontal 3rd-order chromaticity\" &end"},
-{"Ax", "&parameter name=Ax, symbol=\"A$bx$n\", type=double, units=\"m\", description=\"Horizontal acceptance\" &end"},
-{"nuy", "&parameter name=nuy, symbol=\"$gn$r$by$n\", type=double, units=\"1/(2$gp$r)\", description=\"Vertical tune\" &end"},
-{"dnuy/dp", "&parameter name=dnuy/dp, symbol=\"$gx$r$by$n\", type=double, units=\"1/(2$gp$r)\", description=\"Vertical chromaticity\" &end"},
-{"dnuy/dp2", "&parameter name=dnuy/dp2, symbol=\"$gx$r$by2$n\", type=double, units=\"1/(2$gp$r)\", description=\"Vertical 2nd-order chromaticity\" &end"},
-{"dnuy/dp3", "&parameter name=dnuy/dp3, symbol=\"$gx$r$by3$n\", type=double, units=\"1/(2$gp$r)\", description=\"Vertical 3rd-order chromaticity\" &end"},
-{"Ay", "&parameter name=Ay, symbol=\"A$by$n\", type=double, units=\"m\", description=\"Vertical acceptance\" &end"},
-{"deltaHalfRange", "&parameter name=deltaHalfRange, symbol=\"$gDd$r/2\", type=double, description=\"Half range of momentum offset for chromatic tune spread evaluation\" &end"},
-{"nuxChromUpper", "&parameter name=nuxChromUpper, symbol=\"$gx$r$bu$n\", type=double, description=\"Upper limit of x tune due to chromaticity and deltaRange\" &end"},
-{"nuxChromLower", "&parameter name=nuxChromLower, symbol=\"$gx$r$bu$n\", type=double, description=\"Lower limit of x tune due to chromaticity and deltaRange\" &end"},
-{"nuyChromUpper", "&parameter name=nuyChromUpper, symbol=\"$gy$r$bu$n\", type=double, description=\"Upper limit of y tune due to chromaticity and deltaRange\" &end"},
-{"nuyChromLower", "&parameter name=nuyChromLower, symbol=\"$gy$r$bu$n\", type=double, description=\"Lower limit of y tune due to chromaticity and deltaRange\" &end"},
-{"Stage", "&parameter name=Stage, type=string, description=\"Stage of computation\" &end"},
-{"pCentral", "&parameter name=pCentral, type=double, units=\"m$be$nc\", description=\"Central momentum\" &end"},
-{"dbetax/dp", "&parameter name=dbetax/dp, units=m, type=double, description=\"Derivative of betax with momentum offset\" &end"},
-{"dbetay/dp", "&parameter name=dbetay/dp, units=m, type=double, description=\"Derivative of betay with momentum offset\" &end"},
-{"etax2", "&parameter name=etax2, symbol=\"$gc$r$bx2$n\", units=m, type=double, description=\"Second-order dispersion (for matched or periodic case only)\" &end"},
-{"etay2", "&parameter name=etay2, symbol=\"$gc$r$by2$n\", units=m, type=double, description=\"Second-order dispersion (for matched or periodic case only)\" &end"},
-{"etax3", "&parameter name=etax3, symbol=\"$gc$r$bx3$n\", units=m, type=double, description=\"Third-order dispersion (for matched or periodic case only)\" &end"},
-{"etay3", "&parameter name=etay3, symbol=\"$gc$r$by3$n\", units=m, type=double, description=\"Third-order dispersion (for matched or periodic case only)\" &end"},
-{"betaxMin", "&parameter name=betaxMin, type=double, units=m, description=\"Minimum betax\" &end"},
-{"betaxAve", "&parameter name=betaxAve, type=double, units=m, description=\"Average betax\" &end"},
-{"betaxMax", "&parameter name=betaxMax, type=double, units=m, description=\"Maximum betax\" &end"},
-{"betayMin", "&parameter name=betayMin, type=double, units=m, description=\"Minimum betay\" &end"},
-{"betayAve", "&parameter name=betayAve, type=double, units=m, description=\"Average betay\" &end"},
-{"betayMax", "&parameter name=betayMax, type=double, units=m, description=\"Maximum betay\" &end"},
-{"etaxMax", "&parameter name=etaxMax, type=double, units=m, description=\"Maximum absolute value of etax\" &end"},
-{"etayMax", "&parameter name=etayMax, type=double, units=m, description=\"Maximum absolute value of etay\" &end"},
-{"waistsx", "&parameter name=waistsx, type=long, description=\"Number of changes in the sign of alphax\" &end"},
-{"waistsy", "&parameter name=waistsy, type=long, description=\"Number of changes in the sign of alphay\" &end"},
-{"dnux/dAx", "&parameter name=dnux/dAx, type=double, description=\"Horizontal tune shift with horizontal amplitude\", units=1/m &end"},
-{"dnux/dAy", "&parameter name=dnux/dAy, type=double, description=\"Horizontal tune shift with vertical amplitude\", units=1/m &end"},
-{"dnuy/dAx", "&parameter name=dnuy/dAx, type=double, description=\"Vertical tune shift with horizontal amplitude\", units=1/m &end"},
-{"dnuy/dAy", "&parameter name=dnuy/dAy, type=double, description=\"Vertical tune shift with vertical amplitude\", units=1/m &end"},
-{"dnux/dAx2", "&parameter name=dnux/dAx2, type=double, description=\"Horizontal tune shift with horizontal amplitude\", units=1/m$a2$n &end"},
-{"dnux/dAy2", "&parameter name=dnux/dAy2, type=double, description=\"Horizontal tune shift with vertical amplitude\", units=1/m$a2$n &end"},
-{"dnux/dAxAy", "&parameter name=dnux/dAxAy, type=double, description=\"Horizontal tune shift with horizontal and vertical amplitude\", units=1/m$a2$n &end"},
-{"dnuy/dAx2", "&parameter name=dnuy/dAx2, type=double, description=\"Vertical tune shift with horizontal amplitude\", units=1/m$a2$n &end"},
-{"dnuy/dAy2", "&parameter name=dnuy/dAy2, type=double, description=\"Vertical tune shift with vertical amplitude\", units=1/m$a2$n &end"},
-{"dnuy/dAxAy", "&parameter name=dnuy/dAxAy, type=double, description=\"Vertical tune shift with horizontal and vertical amplitude\", units=1/m$a2$n &end"},
-{"nuxTswaLower", "&parameter name=nuxTswaLower, type=double, description=\"Minimum horizontal tune from tune-shift-with-amplitude calculations\", &end"},
-{"nuxTswaUpper", "&parameter name=nuxTswaUpper, type=double, description=\"Maximum horizontal tune from tune-shift-with-amplitude calculations\", &end"},
-{"nuyTswaLower", "&parameter name=nuyTswaLower, type=double, description=\"Minimum vertical tune from tune-shift-with-amplitude calculations\", &end"},
-{"nuyTswaUpper", "&parameter name=nuyTswaUpper, type=double, description=\"Maximum vertical tune from tune-shift-with-amplitude calculations\", &end"},
-{"couplingIntegral", "&parameter name=couplingIntegral, type=double, description=\"Coupling integral for difference resonance\" &end"},
-{"couplingDelta", "&parameter name=couplingDelta, type=double, description=\"Distance from difference resonance\" &end"},
-{"emittanceRatio", "&parameter name=emittanceRatio, type=double, description=\"Emittance ratio from coupling integral\" &end"},
-{"h11001", "&parameter name=h11001, type=double, description=\"Magnitude of chromatic driving term (x chromaticity)\", &end"},
-{"h00111", "&parameter name=h00111, type=double, description=\"Magnitude of chromatic driving term (y chromaticity)\", &end"},
-{"h20001", "&parameter name=h20001, type=double, description=\"Magnitude of chromatic driving term (synchro-betatron resonances)\", &end"},
-{"h00201", "&parameter name=h00201, type=double, description=\"Magnitude of chromatic driving term (momentum-dependence of beta functions)\", &end"},
-{"h10002", "&parameter name=h10002, type=double, description=\"Magnitude of chromatic driving term (second order dispersion)\", units=\"1/m$a1/2$n\" &end"},
-{"h21000", "&parameter name=h21000, type=double, description=\"Magnitude of geometric driving term (nux)\", units=\"1/m$a1/2$n\" &end"},
-{"h30000", "&parameter name=h30000, type=double, description=\"Magnitude of geometric driving term (3 nux)\", units=\"1/m$a1/2$n\" &end"},
-{"h10110", "&parameter name=h10110, type=double, description=\"Magnitude of geometric driving term (nux)\", units=\"1/m$a1/2$n\" &end"},
-{"h10020", "&parameter name=h10020, type=double, description=\"Magnitude of geometric driving term (nux - 2 nuy)\", units=\"1/m$a1/2$n\" &end"},
-{"h10200", "&parameter name=h10200, type=double, description=\"Magnitude of geometric driving term (nux + 2 nuy)\", units=\"1/m\" &end"},
-{"h22000", "&parameter name=h22000, type=double, description=\"Magnitude of geometric driving term (amplitude-dependent tune)\", units=\"1/m\" &end"},
-{"h11110", "&parameter name=h11110, type=double, description=\"Magnitude of geometric driving term (amplitude-dependent tune)\", units=\"1/m\" &end"},
-{"h00220", "&parameter name=h00220, type=double, description=\"Magnitude of geometric driving term (amplitude-dependent tune)\", units=\"1/m\" &end"},
-{"h31000", "&parameter name=h31000, type=double, description=\"Magnitude of geometric driving term (2 nux)\", units=\"1/m\" &end"},
-{"h40000", "&parameter name=h40000, type=double, description=\"Magnitude of geometric driving term (4 nux)\", units=\"1/m\" &end"},
-{"h20110", "&parameter name=h20110, type=double, description=\"Magnitude of geometric driving term (2 nux)\", units=\"1/m\" &end"},
-{"h11200", "&parameter name=h11200, type=double, description=\"Magnitude of geometric driving term (2 nuy)\", units=\"1/m\" &end"},
-{"h20020", "&parameter name=h20020, type=double, description=\"Magnitude of geometric driving term (2 nux - 2 nuy)\", units=\"1/m\" &end"},
-{"h20200", "&parameter name=h20200, type=double, description=\"Magnitude of geometric driving term (2 nux + 2 nuy)\", units=\"1/m\" &end"},
-{"h00310", "&parameter name=h00310, type=double, description=\"Magnitude of geometric driving term (2 nuy)\", units=\"1/m\" &end"},
-{"h00400", "&parameter name=h00400, type=double, description=\"Magnitude of geometric driving term (4 nuy)\", units=\"1/m\" &end"},
-{"dnux/dJx", "&parameter name=dnux/dJx, type=double, description=\"Horizontal tune shift with horizontal invariant\", units=\"1/m\" &end"},
-{"dnux/dJy", "&parameter name=dnux/dJy, type=double, description=\"Horizontal tune shift with vertical invariant\", units=\"1/m\" &end"},
-{"dnuy/dJy", "&parameter name=dnuy/dJy, type=double, description=\"Vertical tune shift with vertical invariant\", units=\"1/m\" &end"},
-{"alphac2", "&parameter name=alphac2, symbol=\"$ga$r$bc2$n\", type=double, description=\"2nd-order momentum compaction factor\" &end"},
-{"alphac", "&parameter name=alphac, symbol=\"$ga$r$bc$n\", type=double, description=\"Momentum compaction factor\" &end"},
-{"I1", "&parameter name=I1, type=double, description=\"Radiation integral 1\", units=m &end"} ,
-{"I2", "&parameter name=I2, type=double, description=\"Radiation integral 2\", units=1/m &end"} ,
-{"I3", "&parameter name=I3, type=double, description=\"Radiation integral 3\", units=1/m$a2$n &end"} ,
-{"I4", "&parameter name=I4, type=double, description=\"Radiation integral 4\", units=1/m &end"} ,
-{"I5", "&parameter name=I5, type=double, description=\"Radiation integral 5\", units=1/m &end"} ,
-{"ex0", "&parameter name=ex0, type=double, description=\"Damped horizontal emittance\", units=$gp$rm &end"},
-{"enx0", "&parameter name=enx0, type=double, units=\"m$be$nc $gp$rm\", description=\"Damped normalized horizontal emittance\""},
-{"taux", "&parameter name=taux, type=double, description=\"Horizontal damping time\", units=s &end"},
-{"Jx", "&parameter name=Jx, type=double, description=\"Horizontal damping partition number\" &end"},
-{"tauy", "&parameter name=tauy, type=double, description=\"Vertical damping time\", units=s &end"},
-{"Jy", "&parameter name=Jy, type=double, description=\"Vertical damping partition number\" &end"},
-{"Sdelta0", "&parameter name=Sdelta0, type=double, description=\"RMS fractional energy spread\" &end"},
-{"taudelta", "&parameter name=taudelta, type=double, description=\"Longitudinal damping time\", units=s &end"},
-{"Jdelta", "&parameter name=Jdelta, type=double, description=\"Longitudinal damping partition number\" &end"},
-{"U0", "&parameter name=U0, type=double, units=MeV, description=\"Energy loss per turn\" &end"},
+{(char*)"Step", (char*)"&parameter name=Step, type=long, description=\"Simulation step\" &end"},
+{(char*)"nux", (char*)"&parameter name=nux, symbol=\"$gn$r$bx$n\", type=double, units=\"1/(2$gp$r)\", description=\"Horizontal tune\" &end"},
+{(char*)"dnux/dp", (char*)"&parameter name=dnux/dp, symbol=\"$gx$r$bx$n\", type=double, units=\"1/(2$gp$r)\", description=\"Horizontal chromaticity\" &end"},
+{(char*)"dnux/dp2", (char*)"&parameter name=dnux/dp2, symbol=\"$gx$r$bx2$n\", type=double, units=\"1/(2$gp$r)\", description=\"Horizontal 2nd-order chromaticity\" &end"},
+{(char*)"dnux/dp3", (char*)"&parameter name=dnux/dp3, symbol=\"$gx$r$bx3$n\", type=double, units=\"1/(2$gp$r)\", description=\"Horizontal 3rd-order chromaticity\" &end"},
+{(char*)"Ax", (char*)"&parameter name=Ax, symbol=\"A$bx$n\", type=double, units=\"m\", description=\"Horizontal acceptance\" &end"},
+{(char*)"nuy", (char*)"&parameter name=nuy, symbol=\"$gn$r$by$n\", type=double, units=\"1/(2$gp$r)\", description=\"Vertical tune\" &end"},
+{(char*)"dnuy/dp", (char*)"&parameter name=dnuy/dp, symbol=\"$gx$r$by$n\", type=double, units=\"1/(2$gp$r)\", description=\"Vertical chromaticity\" &end"},
+{(char*)"dnuy/dp2", (char*)"&parameter name=dnuy/dp2, symbol=\"$gx$r$by2$n\", type=double, units=\"1/(2$gp$r)\", description=\"Vertical 2nd-order chromaticity\" &end"},
+{(char*)"dnuy/dp3", (char*)"&parameter name=dnuy/dp3, symbol=\"$gx$r$by3$n\", type=double, units=\"1/(2$gp$r)\", description=\"Vertical 3rd-order chromaticity\" &end"},
+{(char*)"Ay", (char*)"&parameter name=Ay, symbol=\"A$by$n\", type=double, units=\"m\", description=\"Vertical acceptance\" &end"},
+{(char*)"deltaHalfRange", (char*)"&parameter name=deltaHalfRange, symbol=\"$gDd$r/2\", type=double, description=\"Half range of momentum offset for chromatic tune spread evaluation\" &end"},
+{(char*)"nuxChromUpper", (char*)"&parameter name=nuxChromUpper, symbol=\"$gx$r$bu$n\", type=double, description=\"Upper limit of x tune due to chromaticity and deltaRange\" &end"},
+{(char*)"nuxChromLower", (char*)"&parameter name=nuxChromLower, symbol=\"$gx$r$bu$n\", type=double, description=\"Lower limit of x tune due to chromaticity and deltaRange\" &end"},
+{(char*)"nuyChromUpper", (char*)"&parameter name=nuyChromUpper, symbol=\"$gy$r$bu$n\", type=double, description=\"Upper limit of y tune due to chromaticity and deltaRange\" &end"},
+{(char*)"nuyChromLower", (char*)"&parameter name=nuyChromLower, symbol=\"$gy$r$bu$n\", type=double, description=\"Lower limit of y tune due to chromaticity and deltaRange\" &end"},
+{(char*)"Stage", (char*)"&parameter name=Stage, type=string, description=\"Stage of computation\" &end"},
+{(char*)"pCentral", (char*)"&parameter name=pCentral, type=double, units=\"m$be$nc\", description=\"Central momentum\" &end"},
+{(char*)"dbetax/dp", (char*)"&parameter name=dbetax/dp, units=m, type=double, description=\"Derivative of betax with momentum offset\" &end"},
+{(char*)"dbetay/dp", (char*)"&parameter name=dbetay/dp, units=m, type=double, description=\"Derivative of betay with momentum offset\" &end"},
+{(char*)"etax2", (char*)"&parameter name=etax2, symbol=\"$gc$r$bx2$n\", units=m, type=double, description=\"Second-order dispersion (for matched or periodic case only)\" &end"},
+{(char*)"etay2", (char*)"&parameter name=etay2, symbol=\"$gc$r$by2$n\", units=m, type=double, description=\"Second-order dispersion (for matched or periodic case only)\" &end"},
+{(char*)"etax3", (char*)"&parameter name=etax3, symbol=\"$gc$r$bx3$n\", units=m, type=double, description=\"Third-order dispersion (for matched or periodic case only)\" &end"},
+{(char*)"etay3", (char*)"&parameter name=etay3, symbol=\"$gc$r$by3$n\", units=m, type=double, description=\"Third-order dispersion (for matched or periodic case only)\" &end"},
+{(char*)"betaxMin", (char*)"&parameter name=betaxMin, type=double, units=m, description=\"Minimum betax\" &end"},
+{(char*)"betaxAve", (char*)"&parameter name=betaxAve, type=double, units=m, description=\"Average betax\" &end"},
+{(char*)"betaxMax", (char*)"&parameter name=betaxMax, type=double, units=m, description=\"Maximum betax\" &end"},
+{(char*)"betayMin", (char*)"&parameter name=betayMin, type=double, units=m, description=\"Minimum betay\" &end"},
+{(char*)"betayAve", (char*)"&parameter name=betayAve, type=double, units=m, description=\"Average betay\" &end"},
+{(char*)"betayMax", (char*)"&parameter name=betayMax, type=double, units=m, description=\"Maximum betay\" &end"},
+{(char*)"etaxMax", (char*)"&parameter name=etaxMax, type=double, units=m, description=\"Maximum absolute value of etax\" &end"},
+{(char*)"etayMax", (char*)"&parameter name=etayMax, type=double, units=m, description=\"Maximum absolute value of etay\" &end"},
+{(char*)"waistsx", (char*)"&parameter name=waistsx, type=long, description=\"Number of changes in the sign of alphax\" &end"},
+{(char*)"waistsy", (char*)"&parameter name=waistsy, type=long, description=\"Number of changes in the sign of alphay\" &end"},
+{(char*)"dnux/dAx", (char*)"&parameter name=dnux/dAx, type=double, description=\"Horizontal tune shift with horizontal amplitude\", units=1/m &end"},
+{(char*)"dnux/dAy", (char*)"&parameter name=dnux/dAy, type=double, description=\"Horizontal tune shift with vertical amplitude\", units=1/m &end"},
+{(char*)"dnuy/dAx", (char*)"&parameter name=dnuy/dAx, type=double, description=\"Vertical tune shift with horizontal amplitude\", units=1/m &end"},
+{(char*)"dnuy/dAy", (char*)"&parameter name=dnuy/dAy, type=double, description=\"Vertical tune shift with vertical amplitude\", units=1/m &end"},
+{(char*)"dnux/dAx2", (char*)"&parameter name=dnux/dAx2, type=double, description=\"Horizontal tune shift with horizontal amplitude\", units=1/m$a2$n &end"},
+{(char*)"dnux/dAy2", (char*)"&parameter name=dnux/dAy2, type=double, description=\"Horizontal tune shift with vertical amplitude\", units=1/m$a2$n &end"},
+{(char*)"dnux/dAxAy", (char*)"&parameter name=dnux/dAxAy, type=double, description=\"Horizontal tune shift with horizontal and vertical amplitude\", units=1/m$a2$n &end"},
+{(char*)"dnuy/dAx2", (char*)"&parameter name=dnuy/dAx2, type=double, description=\"Vertical tune shift with horizontal amplitude\", units=1/m$a2$n &end"},
+{(char*)"dnuy/dAy2", (char*)"&parameter name=dnuy/dAy2, type=double, description=\"Vertical tune shift with vertical amplitude\", units=1/m$a2$n &end"},
+{(char*)"dnuy/dAxAy", (char*)"&parameter name=dnuy/dAxAy, type=double, description=\"Vertical tune shift with horizontal and vertical amplitude\", units=1/m$a2$n &end"},
+{(char*)"nuxTswaLower", (char*)"&parameter name=nuxTswaLower, type=double, description=\"Minimum horizontal tune from tune-shift-with-amplitude calculations\", &end"},
+{(char*)"nuxTswaUpper", (char*)"&parameter name=nuxTswaUpper, type=double, description=\"Maximum horizontal tune from tune-shift-with-amplitude calculations\", &end"},
+{(char*)"nuyTswaLower", (char*)"&parameter name=nuyTswaLower, type=double, description=\"Minimum vertical tune from tune-shift-with-amplitude calculations\", &end"},
+{(char*)"nuyTswaUpper", (char*)"&parameter name=nuyTswaUpper, type=double, description=\"Maximum vertical tune from tune-shift-with-amplitude calculations\", &end"},
+{(char*)"couplingIntegral", (char*)"&parameter name=couplingIntegral, type=double, description=\"Coupling integral for difference resonance\" &end"},
+{(char*)"couplingDelta", (char*)"&parameter name=couplingDelta, type=double, description=\"Distance from difference resonance\" &end"},
+{(char*)"emittanceRatio", (char*)"&parameter name=emittanceRatio, type=double, description=\"Emittance ratio from coupling integral\" &end"},
+{(char*)"h11001", (char*)"&parameter name=h11001, type=double, description=\"Magnitude of chromatic driving term (x chromaticity)\", &end"},
+{(char*)"h00111", (char*)"&parameter name=h00111, type=double, description=\"Magnitude of chromatic driving term (y chromaticity)\", &end"},
+{(char*)"h20001", (char*)"&parameter name=h20001, type=double, description=\"Magnitude of chromatic driving term (synchro-betatron resonances)\", &end"},
+{(char*)"h00201", (char*)"&parameter name=h00201, type=double, description=\"Magnitude of chromatic driving term (momentum-dependence of beta functions)\", &end"},
+{(char*)"h10002", (char*)"&parameter name=h10002, type=double, description=\"Magnitude of chromatic driving term (second order dispersion)\", units=\"1/m$a1/2$n\" &end"},
+{(char*)"h21000", (char*)"&parameter name=h21000, type=double, description=\"Magnitude of geometric driving term (nux)\", units=\"1/m$a1/2$n\" &end"},
+{(char*)"h30000", (char*)"&parameter name=h30000, type=double, description=\"Magnitude of geometric driving term (3 nux)\", units=\"1/m$a1/2$n\" &end"},
+{(char*)"h10110", (char*)"&parameter name=h10110, type=double, description=\"Magnitude of geometric driving term (nux)\", units=\"1/m$a1/2$n\" &end"},
+{(char*)"h10020", (char*)"&parameter name=h10020, type=double, description=\"Magnitude of geometric driving term (nux - 2 nuy)\", units=\"1/m$a1/2$n\" &end"},
+{(char*)"h10200", (char*)"&parameter name=h10200, type=double, description=\"Magnitude of geometric driving term (nux + 2 nuy)\", units=\"1/m\" &end"},
+{(char*)"h22000", (char*)"&parameter name=h22000, type=double, description=\"Magnitude of geometric driving term (amplitude-dependent tune)\", units=\"1/m\" &end"},
+{(char*)"h11110", (char*)"&parameter name=h11110, type=double, description=\"Magnitude of geometric driving term (amplitude-dependent tune)\", units=\"1/m\" &end"},
+{(char*)"h00220", (char*)"&parameter name=h00220, type=double, description=\"Magnitude of geometric driving term (amplitude-dependent tune)\", units=\"1/m\" &end"},
+{(char*)"h31000", (char*)"&parameter name=h31000, type=double, description=\"Magnitude of geometric driving term (2 nux)\", units=\"1/m\" &end"},
+{(char*)"h40000", (char*)"&parameter name=h40000, type=double, description=\"Magnitude of geometric driving term (4 nux)\", units=\"1/m\" &end"},
+{(char*)"h20110", (char*)"&parameter name=h20110, type=double, description=\"Magnitude of geometric driving term (2 nux)\", units=\"1/m\" &end"},
+{(char*)"h11200", (char*)"&parameter name=h11200, type=double, description=\"Magnitude of geometric driving term (2 nuy)\", units=\"1/m\" &end"},
+{(char*)"h20020", (char*)"&parameter name=h20020, type=double, description=\"Magnitude of geometric driving term (2 nux - 2 nuy)\", units=\"1/m\" &end"},
+{(char*)"h20200", (char*)"&parameter name=h20200, type=double, description=\"Magnitude of geometric driving term (2 nux + 2 nuy)\", units=\"1/m\" &end"},
+{(char*)"h00310", (char*)"&parameter name=h00310, type=double, description=\"Magnitude of geometric driving term (2 nuy)\", units=\"1/m\" &end"},
+{(char*)"h00400", (char*)"&parameter name=h00400, type=double, description=\"Magnitude of geometric driving term (4 nuy)\", units=\"1/m\" &end"},
+{(char*)"dnux/dJx", (char*)"&parameter name=dnux/dJx, type=double, description=\"Horizontal tune shift with horizontal invariant\", units=\"1/m\" &end"},
+{(char*)"dnux/dJy", (char*)"&parameter name=dnux/dJy, type=double, description=\"Horizontal tune shift with vertical invariant\", units=\"1/m\" &end"},
+{(char*)"dnuy/dJy", (char*)"&parameter name=dnuy/dJy, type=double, description=\"Vertical tune shift with vertical invariant\", units=\"1/m\" &end"},
+{(char*)"alphac2", (char*)"&parameter name=alphac2, symbol=\"$ga$r$bc2$n\", type=double, description=\"2nd-order momentum compaction factor\" &end"},
+{(char*)"alphac", (char*)"&parameter name=alphac, symbol=\"$ga$r$bc$n\", type=double, description=\"Momentum compaction factor\" &end"},
+{(char*)"I1", (char*)"&parameter name=I1, type=double, description=\"Radiation integral 1\", units=m &end"} ,
+{(char*)"I2", (char*)"&parameter name=I2, type=double, description=\"Radiation integral 2\", units=1/m &end"} ,
+{(char*)"I3", (char*)"&parameter name=I3, type=double, description=\"Radiation integral 3\", units=1/m$a2$n &end"} ,
+{(char*)"I4", (char*)"&parameter name=I4, type=double, description=\"Radiation integral 4\", units=1/m &end"} ,
+{(char*)"I5", (char*)"&parameter name=I5, type=double, description=\"Radiation integral 5\", units=1/m &end"} ,
+{(char*)"ex0", (char*)"&parameter name=ex0, type=double, description=\"Damped horizontal emittance\", units=$gp$rm &end"},
+{(char*)"enx0", (char*)"&parameter name=enx0, type=double, units=\"m$be$nc $gp$rm\", description=\"Damped normalized horizontal emittance\""},
+{(char*)"taux", (char*)"&parameter name=taux, type=double, description=\"Horizontal damping time\", units=s &end"},
+{(char*)"Jx", (char*)"&parameter name=Jx, type=double, description=\"Horizontal damping partition number\" &end"},
+{(char*)"tauy", (char*)"&parameter name=tauy, type=double, description=\"Vertical damping time\", units=s &end"},
+{(char*)"Jy", (char*)"&parameter name=Jy, type=double, description=\"Vertical damping partition number\" &end"},
+{(char*)"Sdelta0", (char*)"&parameter name=Sdelta0, type=double, description=\"RMS fractional energy spread\" &end"},
+{(char*)"taudelta", (char*)"&parameter name=taudelta, type=double, description=\"Longitudinal damping time\", units=s &end"},
+{(char*)"Jdelta", (char*)"&parameter name=Jdelta, type=double, description=\"Longitudinal damping partition number\" &end"},
+{(char*)"U0", (char*)"&parameter name=U0, type=double, units=MeV, description=\"Energy loss per turn\" &end"},
 } ;
 
 void dump_twiss_parameters(
@@ -991,7 +991,7 @@ void dump_twiss_parameters(
   double *dbeta,
   double *acceptance,
   double *alphac,
-  long final_values_only,
+  long final_values_only_inner_scope,
   long tune_corrected,
   RUN *run
   )
@@ -1004,23 +1004,23 @@ void dump_twiss_parameters(
   TWISS *twiss0;
   ELEMENT_LIST *elem;
 
-  log_entry("dump_twiss_parameters");
+  log_entry((char*)"dump_twiss_parameters");
 
   twiss0 = beamline->twiss0;
   elem = beamline->elem_twiss;
   
   if (!twiss0)
-    bombElegant("Twiss data not computed prior to dump_twiss_parameters() call (1)", NULL);
+    bombElegant((char*)"Twiss data not computed prior to dump_twiss_parameters() call (1)", NULL);
 
   data = (double*)tmalloc(sizeof(*data)*N_DOUBLE_COLUMNS);
 
   if (tune_corrected==1)
-    stage = "tunes corrected";
+    stage = (char*)"tunes corrected";
   else
-    stage = "tunes uncorrected";
+    stage = (char*)"tunes uncorrected";
 
-  if (!SDDS_StartTable(&SDDS_twiss, final_values_only?1:n_elem+1)) {
-    SDDS_SetError("Problem starting SDDS table (dump_twiss_parameters)");
+  if (!SDDS_StartTable(&SDDS_twiss, final_values_only_inner_scope?1:n_elem+1)) {
+    SDDS_SetError((char*)"Problem starting SDDS table (dump_twiss_parameters)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
   
@@ -1092,7 +1092,7 @@ void dump_twiss_parameters(
                           IP_ETAX3, beamline->eta3[0],
                           IP_ETAY3, beamline->eta3[2],
                           IP_PCENTRAL, run->p_central, -1)) {
-    SDDS_SetError("Problem setting SDDS parameters (dump_twiss_parameters 1)");
+    SDDS_SetError((char*)"Problem setting SDDS parameters (dump_twiss_parameters 1)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
   if (radIntegrals) {
@@ -1113,24 +1113,24 @@ void dump_twiss_parameters(
                             IP_U0, radIntegrals->Uo, 
                             IP_ENX0, radIntegrals->ex0*sqrt(sqr(run->p_central)+1), 
                             -1)) {
-      SDDS_SetError("Problem setting SDDS parameters (dump_twiss_parameters 2)");
+      SDDS_SetError((char*)"Problem setting SDDS parameters (dump_twiss_parameters 2)");
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
   }
 
-  if (!final_values_only) {
+  if (!final_values_only_inner_scope) {
     row_count = 0;
     data[0] = 0;     /* position */
     copy_doubles(data+1, (double*)twiss0, N_DOUBLE_COLUMNS-2);
     data[N_DOUBLE_COLUMNS-1] = elem->Pref_input;
     for (j=0; j<N_DOUBLE_COLUMNS; j++)
       if (!SDDS_SetRowValues(&SDDS_twiss, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row_count, j, data[j], -1)) {
-        SDDS_SetError("Problem setting SDDS rows (dump_twiss_parameters)");
+        SDDS_SetError((char*)"Problem setting SDDS rows (dump_twiss_parameters)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
     if (!SDDS_SetRowValues(&SDDS_twiss, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row_count++, 
-                           IC_ELEMENT, "_BEG_", IC_OCCURENCE, (long)1, IC_TYPE, "MARK", -1)) {
-      SDDS_SetError("Problem setting SDDS rows (dump_twiss_parameters)");
+                           IC_ELEMENT, "_BEG_", IC_OCCURENCE, (long)1, IC_TYPE, (char*)"MARK", -1)) {
+      SDDS_SetError((char*)"Problem setting SDDS rows (dump_twiss_parameters)");
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
 
@@ -1139,17 +1139,17 @@ void dump_twiss_parameters(
       data[0] = elem->end_pos;     /* position */
       data[N_DOUBLE_COLUMNS-1] = elem->Pref_output;
       if (!elem->twiss)
-        bombElegant("Twiss data not computed prior to dump_twiss_parameters() call (2)", NULL);
+        bombElegant((char*)"Twiss data not computed prior to dump_twiss_parameters() call (2)", NULL);
       copy_doubles(data+1, (double*)elem->twiss, N_DOUBLE_COLUMNS-2);
       for (j=0; j<N_DOUBLE_COLUMNS; j++)
         if (!SDDS_SetRowValues(&SDDS_twiss, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row_count, j, data[j], -1)) {
-          SDDS_SetError("Problem setting SDDS rows (dump_twiss_parameters)");
+          SDDS_SetError((char*)"Problem setting SDDS rows (dump_twiss_parameters)");
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
       if (!SDDS_SetRowValues(&SDDS_twiss, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, row_count, 
                              IC_ELEMENT, elem->name, IC_OCCURENCE, elem->occurence, 
                              IC_TYPE, entity_name[elem->type], -1)) {
-        SDDS_SetError("Problem setting SDDS rows (dump_twiss_parameters)");
+        SDDS_SetError((char*)"Problem setting SDDS rows (dump_twiss_parameters)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
       if (radIntegrals) {
@@ -1160,7 +1160,7 @@ void dump_twiss_parameters(
                                IC_I4, elem->twiss->dI[3], 
                                IC_I5, elem->twiss->dI[4],
                                -1)) {
-          SDDS_SetError("Problem setting SDDS rows (dump_twiss_parameters)");
+          SDDS_SetError((char*)"Problem setting SDDS rows (dump_twiss_parameters)");
           SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
         }
       }
@@ -1169,33 +1169,33 @@ void dump_twiss_parameters(
       elem = elem->succ;
     }
     if (i!=n_elem)
-      bombElegant("element count error in dump_twiss_parameters()", NULL);
+      bombElegant((char*)"element count error in dump_twiss_parameters()", NULL);
   }
   else {
     /* find final element */
     i = 0;
     while (1) {
       if (!elem->twiss)
-        bombElegant("Twiss data not computed prior to dump_twiss_parameters() call (2)", NULL);
+        bombElegant((char*)"Twiss data not computed prior to dump_twiss_parameters() call (2)", NULL);
       i++;
       if (!elem->succ)
         break;
       elem = elem->succ;
     }
     if (i!=n_elem)
-      bombElegant("element count error in dump_twiss_parameters()", NULL);
+      bombElegant((char*)"element count error in dump_twiss_parameters()", NULL);
     data[0] = elem->end_pos;     /* position */
     data[N_DOUBLE_COLUMNS-1] = elem->Pref_output;
     copy_doubles(data+1, (double*)elem->twiss, N_DOUBLE_COLUMNS-2);
     for (j=0; j<N_DOUBLE_COLUMNS; j++)
       if (!SDDS_SetRowValues(&SDDS_twiss, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, 0, j, data[j], -1)) {
-        SDDS_SetError("Problem setting SDDS rows (dump_twiss_parameters)");
+        SDDS_SetError((char*)"Problem setting SDDS rows (dump_twiss_parameters)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
     if (!SDDS_SetRowValues(&SDDS_twiss, SDDS_SET_BY_INDEX|SDDS_PASS_BY_VALUE, 0, 
                            IC_ELEMENT, elem->name, IC_OCCURENCE, elem->occurence, 
                            IC_TYPE, entity_name[elem->type], -1)) {
-      SDDS_SetError("Problem setting SDDS rows (dump_twiss_parameters)");
+      SDDS_SetError((char*)"Problem setting SDDS rows (dump_twiss_parameters)");
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
     if (radIntegrals) {
@@ -1206,20 +1206,20 @@ void dump_twiss_parameters(
                              IC_I4, elem->twiss->dI[3], 
                              IC_I5, elem->twiss->dI[4],
                              -1)) {
-        SDDS_SetError("Problem setting SDDS rows (dump_twiss_parameters)");
+        SDDS_SetError((char*)"Problem setting SDDS rows (dump_twiss_parameters)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
       }
     }
   }
 
   if (!SDDS_WriteTable(&SDDS_twiss)) {
-    SDDS_SetError("Unable to write Twiss parameter data (dump_twiss_parameters)");
+    SDDS_SetError((char*)"Unable to write Twiss parameter data (dump_twiss_parameters)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
   if (!inhibitFileSync)
     SDDS_DoFSync(&SDDS_twiss);
   if (!SDDS_EraseData(&SDDS_twiss)) {
-    SDDS_SetError("Unable to erase Twiss parameter data (dump_twiss_parameters)");
+    SDDS_SetError((char*)"Unable to erase Twiss parameter data (dump_twiss_parameters)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
 
@@ -1227,7 +1227,7 @@ void dump_twiss_parameters(
   if (tune_corrected)
     twiss_count++;
 
-  log_exit("dump_twiss_parameters");
+  log_exit((char*)"dump_twiss_parameters");
 }
 
 long get_twiss_mode(long *mode, TWISS *twissRet)
@@ -1258,7 +1258,7 @@ void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
                         long default_order)
 {
 
-  log_entry("setup_twiss_output");
+  log_entry((char*)"setup_twiss_output");
 
   /* process namelist input */
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
@@ -1279,14 +1279,14 @@ void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
     twissConcatOrder = default_order;
   *do_twiss_output = output_at_each_step;
   if (higher_order_chromaticity && !matched) 
-    bombElegant("higher order chromaticity calculations available only for a matched (periodic) beamline", NULL);
+    bombElegant((char*)"higher order chromaticity calculations available only for a matched (periodic) beamline", NULL);
 
   if (reference_file && matched)
-    bombElegant("reference_file and matched=1 are incompatible", NULL);
+    bombElegant((char*)"reference_file and matched=1 are incompatible", NULL);
   if (!matched) {
     if (reference_file) {
       if (reference_element && reference_element_occurrence<0)
-        bombElegant("invalid value of reference_element_occurrence---use 0 for last occurrence, >=1 for specific occurrence.", NULL);
+        bombElegant((char*)"invalid value of reference_element_occurrence---use 0 for last occurrence, >=1 for specific occurrence.", NULL);
       LoadStartingTwissFromFile(&beta_x, &beta_y, &alpha_x, &alpha_y, 
                                 &eta_x, &etap_x, &eta_y, &etap_y,
                                 reference_file, reference_element,
@@ -1297,24 +1297,24 @@ void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
         etap_x = -etap_x;
         etap_y = -etap_y;
       }
-      fprintf(stdout, "Starting twiss parameters from reference file:\nbeta, alpha x: %le, %le\nbeta, alpha y: %le, %le\n",
+      fprintf(stdout, (char*)"Starting twiss parameters from reference file:\nbeta, alpha x: %le, %le\nbeta, alpha y: %le, %le\n",
               beta_x, alpha_x, beta_y, alpha_y);
-      fprintf(stdout, "eta, eta' x: %le, %le\neta, eta' y: %le, %le\n",
+      fprintf(stdout, (char*)"eta, eta' x: %le, %le\neta, eta' y: %le, %le\n",
               eta_x, etap_x, eta_y, etap_y);
       fflush(stdout);
     }
     if (beta_x<=0 || beta_y<=0)
-      bombElegant("invalid initial beta-functions given in twiss_output namelist", NULL);
+      bombElegant((char*)"invalid initial beta-functions given in twiss_output namelist", NULL);
   }
 
   if (filename) {
 #if SDDS_MPI_IO
     SDDS_twiss.parallel_io = 0;
 #endif
-    SDDS_ElegantOutputSetup(&SDDS_twiss, filename, SDDS_BINARY, 1, "Twiss parameters",
+    SDDS_ElegantOutputSetup(&SDDS_twiss, filename, SDDS_BINARY, 1, (char*)"Twiss parameters",
                             run->runfile, run->lattice, parameter_definition, 
                             (radiation_integrals?N_PARAMETERS:IP_ALPHAC+1),
-                            column_definition, (radiation_integrals?N_COLUMNS_WRI:N_COLUMNS), "setup_twiss_output",
+                            column_definition, (radiation_integrals?N_COLUMNS_WRI:N_COLUMNS), (char*)"setup_twiss_output",
                             SDDS_EOS_NEWFILE|SDDS_EOS_COMPLETE);
     SDDS_twiss_initialized = 1;
     twiss_count = 0;
@@ -1329,21 +1329,21 @@ void setup_twiss_output(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline, lo
   
   beamline->chromDeltaHalfRange = chromatic_tune_spread_half_range;
 
-  log_exit("setup_twiss_output");
+  log_exit((char*)"setup_twiss_output");
 }
 
 void finish_twiss_output(void)
 {
-  log_entry("finish_twiss_output");
+  log_entry((char*)"finish_twiss_output");
   if (SDDS_twiss_initialized && !SDDS_Terminate(&SDDS_twiss)) {
-    SDDS_SetError("Problem terminating SDDS output (finish_twiss_output)");
+    SDDS_SetError((char*)"Problem terminating SDDS output (finish_twiss_output)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
   SDDS_twiss_initialized = twiss_count = 0;
   if (doTuneShiftWithAmplitude && tune_shift_with_amplitude_struct.tune_output)
     SDDS_Terminate(&SDDSTswaTunes);
   doTuneShiftWithAmplitude = 0;
-  log_exit("finish_twiss_output");
+  log_exit((char*)"finish_twiss_output");
 }
 
 long run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, long tune_corrected)
@@ -1358,15 +1358,15 @@ long run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, lon
     return;
     */
 
-  log_entry("run_twiss_output");
+  log_entry((char*)"run_twiss_output");
 
 #ifdef DEBUG
-  fprintf(stdout, "now in run_twiss_output\n");
+  fprintf(stdout, (char*)"now in run_twiss_output\n");
   fflush(stdout);
 #endif
 
   if (tune_corrected==0 && !output_before_tune_correction) {
-    log_exit("run_twiss_output");
+    log_exit((char*)"run_twiss_output");
     return 1;
   }
 
@@ -1389,97 +1389,97 @@ long run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, lon
 
   if (twissConcatOrder) {
 #ifdef DEBUG
-    fprintf(stdout, "computing chromaticities\n");
+    fprintf(stdout, (char*)"computing chromaticities\n");
     fflush(stdout);
 #endif
-    fprintf(stdout, "%s Twiss parameters (chromaticity valid for fully second-order calculation only!):\n",
-            matched?"periodic":"final");
+    fprintf(stdout, (char*)"%s Twiss parameters (chromaticity valid for fully second-order calculation only!):\n",
+            matched?(char*)"periodic":(char*)"final");
     fflush(stdout);
-    fprintf(stdout, "         beta          alpha           nu           eta          eta'       dnu/d(dp/p)   dbeta/(dp/p)     accept.\n");
+    fprintf(stdout, (char*)"         beta          alpha           nu           eta          eta'       dnu/d(dp/p)   dbeta/(dp/p)     accept.\n");
     fflush(stdout);
-    fprintf(stdout, "          m                          1/2pi           m                         1/2pi            m          mm-mrad\n");
+    fprintf(stdout, (char*)"          m                          1/2pi           m                         1/2pi            m          mm-mrad\n");
     fflush(stdout);
-    fprintf(stdout, "--------------------------------------------------------------------------------------------------------------------\n");
+    fprintf(stdout, (char*)"--------------------------------------------------------------------------------------------------------------------\n");
     fflush(stdout);
-    fprintf(stdout, "  x: %13.6e %13.6e %13.6e %13.6e %13.6e %13.6e %13.6e %13.6e\n",  
+    fprintf(stdout, (char*)"  x: %13.6e %13.6e %13.6e %13.6e %13.6e %13.6e %13.6e %13.6e\n",  
             elast->twiss->betax, elast->twiss->alphax, beamline->tune[0], elast->twiss->etax, elast->twiss->etapx,
             beamline->chromaticity[0], beamline->dbeta_dPoP[0], 1e6*beamline->acceptance[0]);
     fflush(stdout);
     if (statistics) {
       compute_twiss_statistics(beamline, &twiss_ave, &twiss_min, &twiss_max);
-      fprintf(stdout, "ave: %13.6e %13.6e %-13s %13.6e %13.6e\n",
-              twiss_ave.betax, twiss_ave.alphax, "", twiss_ave.etax, twiss_ave.etapx);
+      fprintf(stdout, (char*)"ave: %13.6e %13.6e %-13s %13.6e %13.6e\n",
+              twiss_ave.betax, twiss_ave.alphax, (char*)"", twiss_ave.etax, twiss_ave.etapx);
       fflush(stdout);
-      fprintf(stdout, "min: %13.6e %13.6e %-13s %13.6e %13.6e\n",
-              twiss_min.betax, twiss_min.alphax, "", twiss_min.etax, twiss_min.etapx);
+      fprintf(stdout, (char*)"min: %13.6e %13.6e %-13s %13.6e %13.6e\n",
+              twiss_min.betax, twiss_min.alphax, (char*)"", twiss_min.etax, twiss_min.etapx);
       fflush(stdout);
-      fprintf(stdout, "max: %13.6e %13.6e %-13s %13.6e %13.6e\n",
-              twiss_max.betax, twiss_max.alphax, "", twiss_max.etax, twiss_max.etapx);
+      fprintf(stdout, (char*)"max: %13.6e %13.6e %-13s %13.6e %13.6e\n",
+              twiss_max.betax, twiss_max.alphax, (char*)"", twiss_max.etax, twiss_max.etapx);
       fflush(stdout);
     }
-    fprintf(stdout, "  y: %13.6e %13.6e %13.6e %13.6e %13.6e %13.6e %13.6e %13.6e\n",  
+    fprintf(stdout, (char*)"  y: %13.6e %13.6e %13.6e %13.6e %13.6e %13.6e %13.6e %13.6e\n",  
             elast->twiss->betay, elast->twiss->alphay, beamline->tune[1], elast->twiss->etay, elast->twiss->etapy,
             beamline->chromaticity[1], beamline->dbeta_dPoP[1], 1e6*beamline->acceptance[1]);
     fflush(stdout);
     if (statistics) {
-      fprintf(stdout, "ave: %13.6e %13.6e %-13s %13.6e %13.6e\n",
-              twiss_ave.betay, twiss_ave.alphay, "", twiss_ave.etay, twiss_ave.etapy);
+      fprintf(stdout, (char*)"ave: %13.6e %13.6e %-13s %13.6e %13.6e\n",
+              twiss_ave.betay, twiss_ave.alphay, (char*)"", twiss_ave.etay, twiss_ave.etapy);
       fflush(stdout);
-      fprintf(stdout, "min: %13.6e %13.6e %-13s %13.6e %13.6e\n",
-              twiss_min.betay, twiss_min.alphay, "", twiss_min.etay, twiss_min.etapy);
+      fprintf(stdout, (char*)"min: %13.6e %13.6e %-13s %13.6e %13.6e\n",
+              twiss_min.betay, twiss_min.alphay, (char*)"", twiss_min.etay, twiss_min.etapy);
       fflush(stdout);
-      fprintf(stdout, "max: %13.6e %13.6e %-13s %13.6e %13.6e\n",
-              twiss_max.betay, twiss_max.alphay, "", twiss_max.etay, twiss_max.etapy);
+      fprintf(stdout, (char*)"max: %13.6e %13.6e %-13s %13.6e %13.6e\n",
+              twiss_max.betay, twiss_max.alphay, (char*)"", twiss_max.etay, twiss_max.etapy);
       fflush(stdout);
     }
   }
   else {
-    fprintf(stdout, "%s Twiss parameters:\n", matched?"periodic":"final");
+    fprintf(stdout, (char*)"%s Twiss parameters:\n", matched?(char*)"periodic":(char*)"final");
     fflush(stdout);
-    fprintf(stdout, "         beta          alpha           nu           eta          eta'        accept.\n");
+    fprintf(stdout, (char*)"         beta          alpha           nu           eta          eta'        accept.\n");
     fflush(stdout);
-    fprintf(stdout, "          m                          1/2pi           m                       mm-mrad\n");
+    fprintf(stdout, (char*)"          m                          1/2pi           m                       mm-mrad\n");
     fflush(stdout);
-    fprintf(stdout, "---------------------------------------------------------------------------------------\n");
+    fprintf(stdout, (char*)"---------------------------------------------------------------------------------------\n");
     fflush(stdout);
-    fprintf(stdout, "  x: %13.6e %13.6e %13.6e %13.6e %13.6e %13.6e\n",  
+    fprintf(stdout, (char*)"  x: %13.6e %13.6e %13.6e %13.6e %13.6e %13.6e\n",  
             elast->twiss->betax, elast->twiss->alphax, beamline->tune[0], elast->twiss->etax, elast->twiss->etapx,
             1e6*beamline->acceptance[0]);
     fflush(stdout);
     if (statistics) {
       compute_twiss_statistics(beamline, &twiss_ave, &twiss_min, &twiss_max);
-      fprintf(stdout, "ave: %13.6e %13.6e %-13s %13.6e %13.6e\n",
-              twiss_ave.betax, twiss_ave.alphax, "", twiss_ave.etax, twiss_ave.etapx);
+      fprintf(stdout, (char*)"ave: %13.6e %13.6e %-13s %13.6e %13.6e\n",
+              twiss_ave.betax, twiss_ave.alphax, (char*)"", twiss_ave.etax, twiss_ave.etapx);
       fflush(stdout);
-      fprintf(stdout, "min: %13.6e %13.6e %-13s %13.6e %13.6e\n",
-              twiss_min.betax, twiss_min.alphax, "", twiss_min.etax, twiss_min.etapx);
+      fprintf(stdout, (char*)"min: %13.6e %13.6e %-13s %13.6e %13.6e\n",
+              twiss_min.betax, twiss_min.alphax, (char*)"", twiss_min.etax, twiss_min.etapx);
       fflush(stdout);
-      fprintf(stdout, "max: %13.6e %13.6e %-13s %13.6e %13.6e\n",
-              twiss_max.betax, twiss_max.alphax, "", twiss_max.etax, twiss_max.etapx);
+      fprintf(stdout, (char*)"max: %13.6e %13.6e %-13s %13.6e %13.6e\n",
+              twiss_max.betax, twiss_max.alphax, (char*)"", twiss_max.etax, twiss_max.etapx);
       fflush(stdout);
     }
-    fprintf(stdout, "  y: %13.6e %13.6e %13.6e %13.6e %13.6e %13.6e\n",  
+    fprintf(stdout, (char*)"  y: %13.6e %13.6e %13.6e %13.6e %13.6e %13.6e\n",  
             elast->twiss->betay, elast->twiss->alphay, beamline->tune[1], elast->twiss->etay, elast->twiss->etapy,
             1e6*beamline->acceptance[1]);
     fflush(stdout);
     if (statistics) {
-      fprintf(stdout, "ave: %13.6e %13.6e %-13s %13.6e %13.6e\n",
-              twiss_ave.betay, twiss_ave.alphay, "", twiss_ave.etay, twiss_ave.etapy);
+      fprintf(stdout, (char*)"ave: %13.6e %13.6e %-13s %13.6e %13.6e\n",
+              twiss_ave.betay, twiss_ave.alphay, (char*)"", twiss_ave.etay, twiss_ave.etapy);
       fflush(stdout);
-      fprintf(stdout, "min: %13.6e %13.6e %-13s %13.6e %13.6e\n",
-              twiss_min.betay, twiss_min.alphay, "", twiss_min.etay, twiss_min.etapy);
+      fprintf(stdout, (char*)"min: %13.6e %13.6e %-13s %13.6e %13.6e\n",
+              twiss_min.betay, twiss_min.alphay, (char*)"", twiss_min.etay, twiss_min.etapy);
       fflush(stdout);
-      fprintf(stdout, "max: %13.6e %13.6e %-13s %13.6e %13.6e\n",
-              twiss_max.betay, twiss_max.alphay, "", twiss_max.etay, twiss_max.etapy);
+      fprintf(stdout, (char*)"max: %13.6e %13.6e %-13s %13.6e %13.6e\n",
+              twiss_max.betay, twiss_max.alphay, (char*)"", twiss_max.etay, twiss_max.etapy);
       fflush(stdout);
     }
   }
 
   if (beamline->acc_limit_name[0])
-    fprintf(stdout, "x acceptance limited by %s ending at %e m\n", beamline->acc_limit_name[0], beamline->acceptance[2]);
+    fprintf(stdout, (char*)"x acceptance limited by %s ending at %e m\n", beamline->acc_limit_name[0], beamline->acceptance[2]);
     fflush(stdout);
   if (beamline->acc_limit_name[1])
-    fprintf(stdout, "y acceptance limited by %s ending at %e m\n", beamline->acc_limit_name[1], beamline->acceptance[3]);
+    fprintf(stdout, (char*)"y acceptance limited by %s ending at %e m\n", beamline->acc_limit_name[1], beamline->acceptance[3]);
     fflush(stdout);
 
   if (SDDS_twiss_initialized) {
@@ -1499,13 +1499,13 @@ long run_twiss_output(RUN *run, LINE_LIST *beamline, double *starting_coord, lon
       isnan(elast->twiss->etay))
     return 0;
 
-  log_exit("run_twiss_output");
+  log_exit((char*)"run_twiss_output");
   return 1;
 }
 
 void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_coord, 
 			      long periodic,
-                              long radiation_integrals,
+                              long radiation_integrals_inner_scope,
                               double betax, double alphax, double etax, double etapx, 
                               double betay, double alphay, double etay, double etapy, 
                               unsigned long *unstable)
@@ -1518,7 +1518,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
   char *x_acc_name, *y_acc_name;
   long i, j;
   
-  log_entry("compute_twiss_parameters");
+  log_entry((char*)"compute_twiss_parameters");
 
   *unstable = 0;
   
@@ -1547,16 +1547,16 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
                                               unstable, 
                                               beamline->eta2, beamline->eta3);
 #ifdef DEBUG
-    fprintf(stdout, "matched parameters computed--returned to compute_twiss_parameters\n");
+    fprintf(stdout, (char*)"matched parameters computed--returned to compute_twiss_parameters\n");
     fflush(stdout);
-    fprintf(stdout, "beamline matrix has order %ld\n", beamline->matrix->order);
+    fprintf(stdout, (char*)"beamline matrix has order %ld\n", beamline->matrix->order);
     fflush(stdout);
-    fprintf(stdout, "beamline matrix pointers:  %x, %x, %x, %x\n",
+    fprintf(stdout, (char*)"beamline matrix pointers:  %x, %x, %x, %x\n",
             beamline->matrix, beamline->matrix->C, beamline->matrix->R, beamline->matrix->T);
     fflush(stdout);
 #endif
     if (twissConcatOrder>=2 && !(beamline->matrix->T))
-      bombElegant("logic error: T matrix is NULL on return from compute_periodic_twiss", NULL);
+      bombElegant((char*)"logic error: T matrix is NULL on return from compute_periodic_twiss", NULL);
   }
   else {
     VMATRIX *M1;
@@ -1595,12 +1595,12 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
     beamline->twiss0->Cx  = beamline->twiss0->Cy = 0;
   
   if (twissConcatOrder>=2 && !(beamline->matrix->T))
-    bombElegant("logic error: beamline T matrix is NULL in compute_twiss_parameters", NULL);
+    bombElegant((char*)"logic error: beamline T matrix is NULL in compute_twiss_parameters", NULL);
 
 #ifdef DEBUG
-  fprintf(stdout, "propagating parameters\n");
+  fprintf(stdout, (char*)"propagating parameters\n");
   fflush(stdout);
-  fprintf(stdout, "beamline matrix pointers:  %x, %x, %x, %x\n",
+  fprintf(stdout, (char*)"beamline matrix pointers:  %x, %x, %x, %x\n",
           beamline->matrix, beamline->matrix->C, beamline->matrix->R, beamline->matrix->T);
   fflush(stdout);
 #endif
@@ -1608,16 +1608,16 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
   beamline->radIntegrals.computed = 0;
   
   propagate_twiss_parameters(beamline->twiss0, beamline->tune, beamline->waists,
-                             (radiation_integrals?&(beamline->radIntegrals):NULL),
+                             (radiation_integrals_inner_scope?&(beamline->radIntegrals):NULL),
                              beamline->elem_twiss, run, starting_coord,
 			     beamline->couplingFactor);
   
-  if (radiation_integrals)
+  if (radiation_integrals_inner_scope)
     completeRadiationIntegralComputation(&(beamline->radIntegrals), run->p_central,
                               beamline->revolution_length);
   
 #ifdef DEBUG
-  fprintf(stdout, "finding acceptance\n");
+  fprintf(stdout, (char*)"finding acceptance\n");
   fflush(stdout);
 #endif
   beamline->acceptance[0] = find_acceptance(beamline->elem_twiss, 0, run, &x_acc_name, &x_acc_z);
@@ -1637,7 +1637,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
   beamline->twiss0->apy = beamline->elem_twiss->twiss->apy;
 
 #ifdef DEBUG
-  fprintf(stdout, "computing chromaticities\n");
+  fprintf(stdout, (char*)"computing chromaticities\n");
   fflush(stdout);
 #endif
 
@@ -1657,15 +1657,15 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
   
   if (periodic) {
     if (!(M = beamline->matrix))
-      bombElegant("logic error: revolution matrix is NULL in compute_twiss_parameters", NULL);
+      bombElegant((char*)"logic error: revolution matrix is NULL in compute_twiss_parameters", NULL);
 
     if (twissConcatOrder>1) {
 #ifdef DEBUG
-      fprintf(stdout, "computing chromaticities\n");
+      fprintf(stdout, (char*)"computing chromaticities\n");
       fflush(stdout);
 #endif
       if (!(M->T))
-        bombElegant("logic error: T matrix is NULL in compute_twiss_parameters", NULL);
+        bombElegant((char*)"logic error: T matrix is NULL in compute_twiss_parameters", NULL);
       computeChromaticities(&chromx, &chromy, 
                             &dbetax, &dbetay, &dalphax, &dalphay, beamline->twiss0, 
 			    beamline->elast->twiss, M);
@@ -1691,9 +1691,9 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
     elast = beamline->elast;
     
     if (!elast)
-      bombElegant("logic error in compute_twiss_parameters--elast pointer is NULL", NULL);
+      bombElegant((char*)"logic error in compute_twiss_parameters--elast pointer is NULL", NULL);
     if (!elast->twiss)
-      bombElegant("logic error in compute_twiss_parameters--elast->twiss pointer is NULL", NULL);
+      bombElegant((char*)"logic error in compute_twiss_parameters--elast->twiss pointer is NULL", NULL);
 
     betax = elast->twiss->betax;
     alphax = elast->twiss->alphax;
@@ -1706,7 +1706,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
 
     if (twissConcatOrder>=2) {
       if (!(M->T))
-        bombElegant("logic error: T matrix is NULL in compute_twiss_parameters", NULL);
+        bombElegant((char*)"logic error: T matrix is NULL in compute_twiss_parameters", NULL);
       computeChromaticities(&chromx, &chromy, 
                             &dbetax, &dbetay, &dalphax, &dalphay, beamline->twiss0, 
 			    beamline->elast->twiss, M);
@@ -1724,7 +1724,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
                                       beamline->twiss0, beamline->tune, M, beamline, run,
                                       starting_coord); 
 #ifdef DEBUG
-      fprintf(stdout, "chomaticities: %e, %e\n", chromx, chromy);
+      fprintf(stdout, (char*)"chomaticities: %e, %e\n", chromx, chromy);
       fflush(stdout);
 #endif
     }
@@ -1743,7 +1743,7 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
               beamline->matrix->R[4][3]*elast->twiss->etapy)/beamline->matrix->C[4];
     if (beamline->matrix->T) {
       double eta[6];
-      long j, k;
+      long k;
       eta[0] = elast->twiss->etax;
       eta[1] = elast->twiss->etapx;
       eta[2] = elast->twiss->etay;
@@ -1762,13 +1762,13 @@ void compute_twiss_parameters(RUN *run, LINE_LIST *beamline, double *starting_co
   beamline->alpha[1] = alpha2;
 
   beamline->flags |= BEAMLINE_TWISS_DONE+BEAMLINE_TWISS_CURRENT;
-  if (radiation_integrals) 
+  if (radiation_integrals_inner_scope) 
     beamline->flags |= BEAMLINE_RADINT_DONE+BEAMLINE_RADINT_CURRENT;
   
   if (cavities_are_drifts_if_matched && mustResetRfcaMatrices)
     reset_rfca_matrices(&(beamline->elem), run->default_order);
   
-  log_exit("compute_twiss_parameters");
+  log_exit((char*)"compute_twiss_parameters");
 }
 
 void update_twiss_parameters(RUN *run, LINE_LIST *beamline, unsigned long *unstable)
@@ -1802,10 +1802,10 @@ void update_twiss_parameters(RUN *run, LINE_LIST *beamline, unsigned long *unsta
 
 void copy_doubles(double *target, double *source, long n)
 {
-  log_entry("copy_doubles");
+  log_entry((char*)"copy_doubles");
   while (n--)
     *target++ = *source++;
-  log_exit("copy_doubles");
+  log_exit((char*)"copy_doubles");
 }
 
 
@@ -1822,7 +1822,7 @@ double find_acceptance(
   SCRAPER *scraper;
   ELEMENT_LIST *ap_elem;
 
-  log_entry("find_acceptance");
+  log_entry((char*)"find_acceptance");
 
   acceptance = tube_aperture = a_tube = b_tube = 0;
   elliptical_tube = tube_set = 0;
@@ -1994,7 +1994,7 @@ double find_acceptance(
 
     elem = elem->succ;
   }
-  log_exit("find_acceptance");
+  log_exit((char*)"find_acceptance");
   return(acceptance);
 }
 
@@ -2023,12 +2023,12 @@ void modify_rfca_matrices(ELEMENT_LIST *eptr, long order)
       switch (eptr->type) {
       case T_RFCA:
         if (((RFCA*)eptr->p_elem)->change_p0)
-          bombElegant("can't treat cavities like drifts when CHANGE_P0=1", NULL);
+          bombElegant((char*)"can't treat cavities like drifts when CHANGE_P0=1", NULL);
         eptr->matrix = drift_matrix(((RFCA*)eptr->p_elem)->length, order);
         break;
       case T_RFCW:
         if (((RFCW*)eptr->p_elem)->change_p0)
-          bombElegant("can't treat cavities like drifts when CHANGE_P0=1", NULL);
+          bombElegant((char*)"can't treat cavities like drifts when CHANGE_P0=1", NULL);
         eptr->matrix = drift_matrix(((RFCW*)eptr->p_elem)->length, order);
         break;
       case T_MODRF:
@@ -2065,17 +2065,17 @@ void compute_twiss_statistics(LINE_LIST *beamline, TWISS *twiss_ave, TWISS *twis
   long nElems;
   
   if (!twiss_ave) {
-    fprintf(stdout, "error: NULL twiss_ave pointer in compute_twiss_statistics\n");
+    fprintf(stdout, (char*)"error: NULL twiss_ave pointer in compute_twiss_statistics\n");
     fflush(stdout);
     abort();
   }
   if (!twiss_min) {
-    fprintf(stdout, "error: NULL twiss_min pointer in compute_twiss_statistics\n");
+    fprintf(stdout, (char*)"error: NULL twiss_min pointer in compute_twiss_statistics\n");
     fflush(stdout);
     abort();
   }
   if (!twiss_max) {
-    fprintf(stdout, "error: NULL twiss_max pointer in compute_twiss_statistics\n");
+    fprintf(stdout, (char*)"error: NULL twiss_max pointer in compute_twiss_statistics\n");
     fflush(stdout);
     abort();
   }
@@ -2159,7 +2159,7 @@ void incrementRadIntegrals(RADIATION_INTEGRALS *radIntegrals, double *dI,
   I1 = I2 = I3 = I4 = I5 = 0;
 
 #ifdef DEBUG
-  fprintf(stderr, "incrementRadIntegrals: %s at %e: beta=%e, alpha=%e, eta=%e, etap=%e\n", 
+  fprintf(stderr, (char*)"incrementRadIntegrals: %s at %e: beta=%e, alpha=%e, eta=%e, etap=%e\n", 
 	  elem->name, elem->end_pos, beta0, alpha0, eta0, etap0);
 #endif
   if (elem->type==T_WIGGLER) {
@@ -2442,45 +2442,45 @@ void completeRadiationIntegralComputation(RADIATION_INTEGRALS *RI, double Po, do
 
 void LoadStartingTwissFromFile(double *betax, double *betay, double *alphax, double *alphay,
                                double *etax, double *etaxp, double *etay, double *etayp,
-                               char *filename, char *elementName, long elementOccurrence)
+                               char *filename_inner_scope, char *elementName, long elementOccurrence)
 {
   SDDS_DATASET SDDSin;
   long rows=0, rowOfInterest;
   double *betaxData, *betayData=NULL, *alphaxData=NULL, *alphayData=NULL;
   double *etaxData=NULL, *etayData=NULL, *etaxpData=NULL, *etaypData=NULL;
   
-  if (!SDDS_InitializeInputFromSearchPath(&SDDSin, filename) || 
+  if (!SDDS_InitializeInputFromSearchPath(&SDDSin, filename_inner_scope) || 
       SDDS_ReadPage(&SDDSin)!=1)
-    SDDS_Bomb("problem reading Twiss reference file");
-  if (SDDS_CheckColumn(&SDDSin, "betax", "m", SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK ||
-      SDDS_CheckColumn(&SDDSin, "betay", "m", SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK ||
-      SDDS_CheckColumn(&SDDSin, "alphax", NULL, SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK ||
-      SDDS_CheckColumn(&SDDSin, "alphay", NULL, SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK ||
-      SDDS_CheckColumn(&SDDSin, "etax", "m", SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK ||
-      SDDS_CheckColumn(&SDDSin, "etay", "m", SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK ||
-      SDDS_CheckColumn(&SDDSin, "etaxp", NULL, SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK ||
-      SDDS_CheckColumn(&SDDSin, "etayp", NULL, SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK ||
-      SDDS_CheckColumn(&SDDSin, "ElementName", NULL, SDDS_STRING, stdout)!=SDDS_CHECK_OK)
-    SDDS_Bomb("invalid/missing columns in Twiss reference file");
+    SDDS_Bomb((char*)"problem reading Twiss reference file");
+  if (SDDS_CheckColumn(&SDDSin, (char*)"betax", (char*)"m", SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK ||
+      SDDS_CheckColumn(&SDDSin, (char*)"betay", (char*)"m", SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK ||
+      SDDS_CheckColumn(&SDDSin, (char*)"alphax", NULL, SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK ||
+      SDDS_CheckColumn(&SDDSin, (char*)"alphay", NULL, SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK ||
+      SDDS_CheckColumn(&SDDSin, (char*)"etax", (char*)"m", SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK ||
+      SDDS_CheckColumn(&SDDSin, (char*)"etay", (char*)"m", SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK ||
+      SDDS_CheckColumn(&SDDSin, (char*)"etaxp", NULL, SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK ||
+      SDDS_CheckColumn(&SDDSin, (char*)"etayp", NULL, SDDS_ANY_FLOATING_TYPE, stdout)!=SDDS_CHECK_OK ||
+      SDDS_CheckColumn(&SDDSin, (char*)"ElementName", NULL, SDDS_STRING, stdout)!=SDDS_CHECK_OK)
+    SDDS_Bomb((char*)"invalid/missing columns in Twiss reference file");
   if (elementName) {
     if (!SDDS_SetRowFlags(&SDDSin, 1) ||
-        (rows=SDDS_MatchRowsOfInterest(&SDDSin, "ElementName", elementName, SDDS_AND))<=0)
-      SDDS_Bomb("Problem finding data for beta function reference.  Check for existence of element.");
+        (rows=SDDS_MatchRowsOfInterest(&SDDSin, (char*)"ElementName", elementName, SDDS_AND))<=0)
+      SDDS_Bomb((char*)"Problem finding data for beta function reference.  Check for existence of element.");
     if (elementOccurrence>0 && elementOccurrence>rows)
-      SDDS_Bomb("Too few occurrences of reference element in beta function reference file.");
+      SDDS_Bomb((char*)"Too few occurrences of reference element in beta function reference file.");
   } 
   if ((rows=SDDS_CountRowsOfInterest(&SDDSin))<1)
-    SDDS_Bomb("No data in beta function reference file.");
+    SDDS_Bomb((char*)"No data in beta function reference file.");
     
-  if (!(betaxData=SDDS_GetColumnInDoubles(&SDDSin, "betax")) ||
-      !(betayData=SDDS_GetColumnInDoubles(&SDDSin, "betay")) ||
-      !(alphaxData=SDDS_GetColumnInDoubles(&SDDSin, "alphax")) ||
-      !(alphayData=SDDS_GetColumnInDoubles(&SDDSin, "alphay")) || 
-      !(etaxData=SDDS_GetColumnInDoubles(&SDDSin, "etax")) ||
-      !(etayData=SDDS_GetColumnInDoubles(&SDDSin, "etay")) ||
-      !(etaxpData=SDDS_GetColumnInDoubles(&SDDSin, "etaxp")) ||
-      !(etaypData=SDDS_GetColumnInDoubles(&SDDSin, "etayp")) )
-    SDDS_Bomb("Problem getting data for beta function reference.");
+  if (!(betaxData=SDDS_GetColumnInDoubles(&SDDSin, (char*)"betax")) ||
+      !(betayData=SDDS_GetColumnInDoubles(&SDDSin, (char*)"betay")) ||
+      !(alphaxData=SDDS_GetColumnInDoubles(&SDDSin, (char*)"alphax")) ||
+      !(alphayData=SDDS_GetColumnInDoubles(&SDDSin, (char*)"alphay")) || 
+      !(etaxData=SDDS_GetColumnInDoubles(&SDDSin, (char*)"etax")) ||
+      !(etayData=SDDS_GetColumnInDoubles(&SDDSin, (char*)"etay")) ||
+      !(etaxpData=SDDS_GetColumnInDoubles(&SDDSin, (char*)"etaxp")) ||
+      !(etaypData=SDDS_GetColumnInDoubles(&SDDSin, (char*)"etayp")) )
+    SDDS_Bomb((char*)"Problem getting data for beta function reference.");
   if (elementName && elementOccurrence>0)
     rowOfInterest = elementOccurrence-1;
   else
@@ -2513,39 +2513,39 @@ void setupTuneShiftWithAmplitude(NAMELIST_TEXT *nltext, RUN *run)
   if (echoNamelists) print_namelist(stdout, &tune_shift_with_amplitude);
 
   if (tune_shift_with_amplitude_struct.turns<100 && tune_shift_with_amplitude_struct.turns!=0)
-    bombElegant("too few turns requested (tune_shift_with_amplitude)", NULL);
+    bombElegant((char*)"too few turns requested (tune_shift_with_amplitude)", NULL);
   if (!tune_shift_with_amplitude_struct.turns && tune_shift_with_amplitude_struct.spread_only)
-    bombElegant("spread_only requires turns!=0", NULL);
+    bombElegant((char*)"spread_only requires turns!=0", NULL);
   if (tune_shift_with_amplitude_struct.turns) {
     if (tune_shift_with_amplitude_struct.x0<=0 ||
         tune_shift_with_amplitude_struct.y0<=0)
-      bombElegant("x0 or y0 is zero or negative (tune_shift_with_amplitude)", NULL);
+      bombElegant((char*)"x0 or y0 is zero or negative (tune_shift_with_amplitude)", NULL);
     if (!tune_shift_with_amplitude_struct.spread_only &&
 	(tune_shift_with_amplitude_struct.x1<tune_shift_with_amplitude_struct.x0*10 ||
 	 tune_shift_with_amplitude_struct.y1<tune_shift_with_amplitude_struct.y0*10))
-      bombElegant("x1 or y1 is too small (tune_shift_with_amplitude)", NULL);
+      bombElegant((char*)"x1 or y1 is too small (tune_shift_with_amplitude)", NULL);
   }
   doTuneShiftWithAmplitude = 1;
   if (tune_shift_with_amplitude_struct.tune_output) {
-    char *filename;
-    filename = compose_filename(tune_shift_with_amplitude_struct.tune_output, run->rootname);
+    char *filename_inner_scope;
+    filename_inner_scope = compose_filename(tune_shift_with_amplitude_struct.tune_output, run->rootname);
     if (!SDDS_InitializeOutput(&SDDSTswaTunes, SDDS_BINARY, 0, NULL, NULL, 
-			       filename) ||
-	!SDDS_DefineSimpleColumn(&SDDSTswaTunes, "x", "m", SDDS_DOUBLE) ||
-	!SDDS_DefineSimpleColumn(&SDDSTswaTunes, "y", "m", SDDS_DOUBLE) ||
-	!SDDS_DefineSimpleColumn(&SDDSTswaTunes, "Ax", "m", SDDS_DOUBLE) ||
-	!SDDS_DefineSimpleColumn(&SDDSTswaTunes, "Ay", "m", SDDS_DOUBLE) ||
-	!SDDS_DefineSimpleColumn(&SDDSTswaTunes, "nux", NULL, SDDS_DOUBLE) ||
-	!SDDS_DefineSimpleColumn(&SDDSTswaTunes, "nuy", NULL, SDDS_DOUBLE) ||
+			       filename_inner_scope) ||
+	!SDDS_DefineSimpleColumn(&SDDSTswaTunes, (char*)"x", (char*)"m", SDDS_DOUBLE) ||
+	!SDDS_DefineSimpleColumn(&SDDSTswaTunes, (char*)"y", (char*)"m", SDDS_DOUBLE) ||
+	!SDDS_DefineSimpleColumn(&SDDSTswaTunes, (char*)"Ax", (char*)"m", SDDS_DOUBLE) ||
+	!SDDS_DefineSimpleColumn(&SDDSTswaTunes, (char*)"Ay", (char*)"m", SDDS_DOUBLE) ||
+	!SDDS_DefineSimpleColumn(&SDDSTswaTunes, (char*)"nux", NULL, SDDS_DOUBLE) ||
+	!SDDS_DefineSimpleColumn(&SDDSTswaTunes, (char*)"nuy", NULL, SDDS_DOUBLE) ||
 	!SDDS_WriteLayout(&SDDSTswaTunes)) {
-      fprintf(stdout, "Unable set up file %s\n", 
+      fprintf(stdout, (char*)"Unable set up file %s\n", 
 	      tune_shift_with_amplitude_struct.tune_output);
       fflush(stdout);
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
       exit(1);
     }
-    if (filename!=tune_shift_with_amplitude_struct.tune_output)
-      free(filename);
+    if (filename_inner_scope!=tune_shift_with_amplitude_struct.tune_output)
+      free(filename_inner_scope);
   }
 }
 
@@ -2558,7 +2558,7 @@ double QElement(double ****Q, long i1, long i2, long i3, long i4)
   if (i3<i4)
     SWAP_LONG(i3, i4);
   if (i2<i3 || i3<i4)
-    bombElegant("it didn't work",NULL);
+    bombElegant((char*)"it didn't work",NULL);
   return Q[i1][i2][i3][i4];
 }
 
@@ -2592,13 +2592,13 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
 
   if ((gridSize=tune_shift_with_amplitude_struct.grid_size)>TSWA_TRACKING_PTS) {
     gridSize = tune_shift_with_amplitude_struct.grid_size = TSWA_TRACKING_PTS;
-    fprintf(stdout, "Error: grid_size for TSWA is limited to %ld\n", gridSize);
+    fprintf(stdout, (char*)"Error: grid_size for TSWA is limited to %ld\n", gridSize);
     exit(1);
   }
   
   if (tune_shift_with_amplitude_struct.tune_output &&
       !SDDS_StartPage(&SDDSTswaTunes, gridSize*gridSize)) {
-    fprintf(stdout, "Problem starting SDDS page for TSWA tune output\n");
+    fprintf(stdout, (char*)"Problem starting SDDS page for TSWA tune output\n");
     SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
     exit(1);
   }
@@ -2656,17 +2656,17 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
         xTune[ix][iy] = tune1[0];
         yTune[ix][iy] = tune1[1];
         if (tune_shift_with_amplitude_struct.verbose)
-          fprintf(stdout, "Tunes for TSWA: x=%e, y=%e, nux=%.15e, nuy=%.15e\n",
+          fprintf(stdout, (char*)"Tunes for TSWA: x=%e, y=%e, nux=%.15e, nuy=%.15e\n",
                   x, y, tune1[0], tune1[1]);
       }
     }
     if (tune_shift_with_amplitude_struct.verbose)
-      fprintf(stdout, "All tunes computed for TSWA (%ld particles lost)\n", nLost);
+      fprintf(stdout, (char*)"All tunes computed for TSWA (%ld particles lost)\n", nLost);
 
     maxResult = -DBL_MAX;
     if (!tune_shift_with_amplitude_struct.spread_only) {
       if (nLost) {
-	fprintf(stdout, "Amplitude too large for TSWA computation---particles lost\n");
+	fprintf(stdout, (char*)"Amplitude too large for TSWA computation---particles lost\n");
       } else {
 	for (ix=0; ix<gridSize; ix++) {
 	  for (iy=0; iy<gridSize; iy++) {
@@ -2686,7 +2686,7 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
 	  }
 	}
 	if (tune_shift_with_amplitude_struct.verbose) 
-	  fprintf(stdout, "maximum tune change: %e\n", maxResult);
+	  fprintf(stdout, (char*)"maximum tune change: %e\n", maxResult);
       }
       if (nLost || maxResult>tune_shift_with_amplitude_struct.scale_down_limit) {
 	if (upperLimit[0]>tune_shift_with_amplitude_struct.x1)
@@ -2695,8 +2695,8 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
 	  upperLimit[1] = tune_shift_with_amplitude_struct.y1;
 	tune_shift_with_amplitude_struct.x1 = (upperLimit[0] + 2*lowerLimit[0])/3;
 	tune_shift_with_amplitude_struct.y1 = (upperLimit[1] + 2*lowerLimit[1])/3;
-	fprintf(stdout, "Warning: the amplitude you specified for tune shift with amplitude is too large.\n");
-	fprintf(stdout, "Reducing tune_shift_with_amplitude_struct.x1=%le and tune_shift_with_amplitude_struct.y1=%le\n",
+	fprintf(stdout, (char*)"Warning: the amplitude you specified for tune shift with amplitude is too large.\n");
+	fprintf(stdout, (char*)"Reducing tune_shift_with_amplitude_struct.x1=%le and tune_shift_with_amplitude_struct.y1=%le\n",
 		tune_shift_with_amplitude_struct.x1, tune_shift_with_amplitude_struct.y1);
 	if (tries==0) 
 	  tries = 1;   /* ensures we don't exit on amplitude too large */
@@ -2724,12 +2724,12 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
                 !(ix==0 || iy==0)))
           continue;
 	if (!SDDS_SetRowValues(&SDDSTswaTunes, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, j,
-			       "x", x0[ix], "Ax", Ax[ix],
-			       "nux", xTune[ix][iy],
-			       "y", y0[iy], "Ay", Ay[iy],
-			       "nuy", yTune[ix][iy],
+			       (char*)"x", x0[ix], (char*)"Ax", Ax[ix],
+			       (char*)"nux", xTune[ix][iy],
+			       (char*)"y", y0[iy], (char*)"Ay", Ay[iy],
+			       (char*)"nuy", yTune[ix][iy],
 			       NULL)) {
-	  fprintf(stdout, "Problem filling SDDS page for TSWA tune output\n");
+	  fprintf(stdout, (char*)"Problem filling SDDS page for TSWA tune output\n");
 	  SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
 	  exit(1);
 	}
@@ -2737,7 +2737,7 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
       }
     }
     if (!SDDS_WritePage(&SDDSTswaTunes)) {
-      fprintf(stdout, "Problem writing SDDS page for TSWA tune output\n");
+      fprintf(stdout, (char*)"Problem writing SDDS page for TSWA tune output\n");
       SDDS_PrintErrors(stdout, SDDS_VERBOSE_PrintErrors);
       exit(1);
     }
@@ -2767,16 +2767,16 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
     }
   }
   if (nLost && !tune_shift_with_amplitude_struct.exclude_lost_particles) {
-    fprintf(stdout, "%ld particles in tune tracking: setting spreads to 1\n", nLost);
+    fprintf(stdout, (char*)"%ld particles in tune tracking: setting spreads to 1\n", nLost);
     xTuneExtrema[0] = yTuneExtrema[0] = 0;
     xTuneExtrema[1] = yTuneExtrema[1] = 1.0;
   }
 
   if (tune_shift_with_amplitude_struct.verbose) {
-      fprintf(stdout, "xTune extrema: %21.15e, %21.15e, delta = %21.15e\n",
+      fprintf(stdout, (char*)"xTune extrema: %21.15e, %21.15e, delta = %21.15e\n",
 	      xTuneExtrema[0], xTuneExtrema[1], 
 	      fabs(xTuneExtrema[0]-xTuneExtrema[1]));
-      fprintf(stdout, "yTune extrema: %21.15e, %21.15e, delta = %21.15e\n",
+      fprintf(stdout, (char*)"yTune extrema: %21.15e, %21.15e, delta = %21.15e\n",
 	      yTuneExtrema[0], yTuneExtrema[1], 
 	      fabs(yTuneExtrema[0]-yTuneExtrema[1]));
   }
@@ -2822,21 +2822,21 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
         dnuy_dA[0][iy] = coefData[iy]*factorial(iy);
 
       if (tune_shift_with_amplitude_struct.verbose) {
-        fprintf(stdout, "dnux/(dAx^i):  ");
+        fprintf(stdout, (char*)"dnux/(dAx^i):  ");
         for (ix=0; ix<(order+1); ix++)
-          fprintf(stdout, "%10.3g ", dnux_dA[ix][0]);
+          fprintf(stdout, (char*)"%10.3g ", dnux_dA[ix][0]);
         fputc('\n', stdout);
-        fprintf(stdout, "dnux/(dAy^i):  ");
+        fprintf(stdout, (char*)"dnux/(dAy^i):  ");
         for (iy=0; iy<(order+1); iy++)
-          fprintf(stdout, "%10.3g ", dnux_dA[0][iy]);
+          fprintf(stdout, (char*)"%10.3g ", dnux_dA[0][iy]);
         fputc('\n', stdout);
-        fprintf(stdout, "dnuy/(dAx^i):  ");
+        fprintf(stdout, (char*)"dnuy/(dAx^i):  ");
         for (ix=0; ix<(order+1); ix++)
-          fprintf(stdout, "%10.3g ", dnuy_dA[ix][0]);
+          fprintf(stdout, (char*)"%10.3g ", dnuy_dA[ix][0]);
         fputc('\n', stdout);
-        fprintf(stdout, "dnuy/(dAy^i):  ");
+        fprintf(stdout, (char*)"dnuy/(dAy^i):  ");
         for (iy=0; iy<(order+1); iy++)
-          fprintf(stdout, "%10.3g ", dnuy_dA[0][iy]);
+          fprintf(stdout, (char*)"%10.3g ", dnuy_dA[0][iy]);
         fputc('\n', stdout);
       }
       free(tuneData);
@@ -2886,7 +2886,7 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
           for (ix1=j=0; ix1<nTSWA; ix1++) {
             for (iy1=0; (ix1+iy1)<=order; iy1++, j++) {
               if (j>=n)
-                bombElegant("indexing problem for TSWA calculation", NULL);
+                bombElegant((char*)"indexing problem for TSWA calculation", NULL);
               AxAy->a[i][j] = ipow(Ax[ix], ix1)*ipow(Ay[iy], iy1);
             }
           }
@@ -2914,10 +2914,10 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
         for (iy=0; (ix+iy)<=order; iy++, i++)
           dnux_dA[ix][iy] = Coef->a[i][0]*factorial(ix)*factorial(iy);
       if (tune_shift_with_amplitude_struct.verbose) {
-        fprintf(stdout, "dnux/(dAx^i dAy^j):\n");
+        fprintf(stdout, (char*)"dnux/(dAx^i dAy^j):\n");
         for (ix=0; ix<nTSWA; ix++) {
           for (iy=0; iy<nTSWA; iy++) {
-            fprintf(stdout, "%10.3g%c", dnux_dA[ix][iy], iy==(nTSWA-1)?'\n':' ');
+            fprintf(stdout, (char*)"%10.3g%c", dnux_dA[ix][iy], iy==(nTSWA-1)?'\n':' ');
           }
         }
       }
@@ -2940,10 +2940,10 @@ void computeTuneShiftWithAmplitude(double dnux_dA[N_TSWA][N_TSWA], double dnuy_d
         for (iy=0; (ix+iy)<=order; iy++, i++)
           dnuy_dA[ix][iy] = Coef->a[i][0]*factorial(ix)*factorial(iy);
       if (tune_shift_with_amplitude_struct.verbose) {
-        fprintf(stdout, "dnuy/(dAx^i dAy^j):\n");
+        fprintf(stdout, (char*)"dnuy/(dAx^i dAy^j):\n");
         for (ix=0; ix<nTSWA; ix++) {
           for (iy=0; iy<nTSWA; iy++) {
-            fprintf(stdout, "%10.3g%c", dnuy_dA[ix][iy], iy==(nTSWA-1)?'\n':' ');
+            fprintf(stdout, (char*)"%10.3g%c", dnuy_dA[ix][iy], iy==(nTSWA-1)?'\n':' ');
           }
         }
       }
@@ -2975,23 +2975,23 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
 #ifdef DEBUG1
   static FILE *fpdeb = NULL;
   if (!fpdeb) {
-    fpdeb = fopen("tuneTracking.sdds", "w");
-    fprintf(fpdeb, "SDDS1\n");
-    fprintf(fpdeb, "&column name=Pass type=long &end\n");
-    fprintf(fpdeb, "&column name=x type=double &end\n");
-    fprintf(fpdeb, "&column name=xp type=double &end\n");
-    fprintf(fpdeb, "&column name=y type=double &end\n");
-    fprintf(fpdeb, "&column name=yp type=double &end\n");
-    fprintf(fpdeb, "&column name=t type=double &end\n");
-    fprintf(fpdeb, "&column name=p type=double &end\n");
-    fprintf(fpdeb, "&data mode=ascii &end\n");
+    fpdeb = fopen((char*)"tuneTracking.sdds", (char*)"w");
+    fprintf(fpdeb, (char*)"SDDS1\n");
+    fprintf(fpdeb, (char*)"&column name=Pass type=long &end\n");
+    fprintf(fpdeb, (char*)"&column name=x type=double &end\n");
+    fprintf(fpdeb, (char*)"&column name=xp type=double &end\n");
+    fprintf(fpdeb, (char*)"&column name=y type=double &end\n");
+    fprintf(fpdeb, (char*)"&column name=yp type=double &end\n");
+    fprintf(fpdeb, (char*)"&column name=t type=double &end\n");
+    fprintf(fpdeb, (char*)"&column name=p type=double &end\n");
+    fprintf(fpdeb, (char*)"&data mode=ascii &end\n");
   }
-  fprintf(fpdeb, "%ld\n", turns);
+  fprintf(fpdeb, (char*)"%ld\n", turns);
 
 #endif
 
 #ifdef DEBUG
-  fprintf(stdout, "In computeTunesFromTracking: turns=%ld, xAmp=%le, yAmp=%le, useMatrix=%ld\n",
+  fprintf(stdout, (char*)"In computeTunesFromTracking: turns=%ld, xAmp=%le, yAmp=%le, useMatrix=%ld\n",
           turns, xAmplitude, yAmplitude, useMatrix);
   fflush(stdout);
 #endif
@@ -3016,7 +3016,7 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
   oneParticle[0][2] += yAmplitude;
 
 #ifdef DEBUG
-  fprintf(stdout, "Starting coordinates: %21.15le, %21.15le, %21.15le, %21.15le, %21.15le, %21.15le\n",
+  fprintf(stdout, (char*)"Starting coordinates: %21.15le, %21.15le, %21.15le, %21.15le, %21.15le, %21.15le\n",
           oneParticle[0][0], oneParticle[0][1],
           oneParticle[0][2], oneParticle[0][3],
           oneParticle[0][4], oneParticle[0][5]);
@@ -3024,17 +3024,17 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
 #endif
 
 #ifdef DEBUG
-  fprintf(stdout, "Doing malloc: turns=%ld\n", turns);
+  fprintf(stdout, (char*)"Doing malloc: turns=%ld\n", turns);
   fflush(stdout);
 #endif
 
 
   if (!(x = (double*)malloc(sizeof(*x)*turns)) || !(y = (double*)malloc(sizeof(*y)*turns)) ||
       !(xp = (double*)malloc(sizeof(*xp)*turns)) || !(yp = (double*)malloc(sizeof(*yp)*turns)))
-    bombElegant("memory allocation failure (computeTunesFromTracking)", NULL);
+    bombElegant((char*)"memory allocation failure (computeTunesFromTracking)", NULL);
 
 #ifdef DEBUG
-  fprintf(stdout, "Did malloc\n");
+  fprintf(stdout, (char*)"Did malloc\n");
   fflush(stdout);
 #endif
 
@@ -3046,11 +3046,11 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
 
 
 #ifdef DEBUG
-  fprintf(stdout, "Starting to track\n");
+  fprintf(stdout, (char*)"Starting to track\n");
   fflush(stdout);
 #endif
 #ifdef DEBUG1
-  fprintf(fpdeb, "0 %21.15e %21.15e %21.15e %21.15e %21.15e %21.15e\n",
+  fprintf(fpdeb, (char*)"0 %21.15e %21.15e %21.15e %21.15e %21.15e %21.15e\n",
             oneParticle[0][0], oneParticle[0][1], oneParticle[0][2], oneParticle[0][3], oneParticle[0][4], oneParticle[0][5]);
 #endif
 
@@ -3064,7 +3064,7 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
 		       TEST_PARTICLES+(allowLosses?TEST_PARTICLE_LOSSES:0)+TIME_DEPENDENCE_OFF, 
                        1, i-1, NULL, NULL, NULL, NULL, NULL)) {
 	if (!allowLosses) {
-	  fprintf(stdout, "warning: test particle lost on turn %ld (computeTunesFromTracking)\n", i);
+	  fprintf(stdout, (char*)"warning: test particle lost on turn %ld (computeTunesFromTracking)\n", i);
 	  fflush(stdout);
 	}
         return 0;
@@ -3074,7 +3074,7 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
         isnan(oneParticle[0][2]) || isnan(oneParticle[0][3]) ||
         isnan(oneParticle[0][4]) || isnan(oneParticle[0][5])) {
       if (!allowLosses) {
-	fprintf(stdout, "warning: test particle lost on turn %ld (computeTunesFromTracking)\n", i);
+	fprintf(stdout, (char*)"warning: test particle lost on turn %ld (computeTunesFromTracking)\n", i);
 	fflush(stdout);
       }
       return 0;
@@ -3084,7 +3084,7 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
     y[i] = oneParticle[0][2];
     yp[i] = oneParticle[0][3];
 #ifdef DEBUG1
-    fprintf(fpdeb, "%ld %21.15e %21.15e %21.15e %21.15e %21.15e %21.15e\n", i, 
+    fprintf(fpdeb, (char*)"%ld %21.15e %21.15e %21.15e %21.15e %21.15e %21.15e\n", i, 
             oneParticle[0][0], oneParticle[0][1], oneParticle[0][2], oneParticle[0][3], oneParticle[0][4], oneParticle[0][5]);
 #endif
   }
@@ -3093,7 +3093,7 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
       endingCoord[i] = oneParticle[0][i];
   }
 #ifdef DEBUG
-  fprintf(stdout, "Ending coordinates: %21.15le, %21.15le, %21.15le, %21.15le, %21.15le, %21.15le\n",
+  fprintf(stdout, (char*)"Ending coordinates: %21.15le, %21.15le, %21.15le, %21.15le, %21.15le, %21.15le\n",
           oneParticle[0][0], oneParticle[0][1],
           oneParticle[0][2], oneParticle[0][3],
           oneParticle[0][4], oneParticle[0][5]);
@@ -3102,7 +3102,7 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
 
 
 #ifdef DEBUG
-  fprintf(stdout, "Performing NAFF (1)\n");
+  fprintf(stdout, (char*)"Performing NAFF (1)\n");
   fflush(stdout);
 #endif
   if (PerformNAFF(&frequency[0], &amplitude[0], &phase[0], 
@@ -3111,14 +3111,14 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
 		  0.0, 1, 200, 1e-12,
 		  tuneLowerLimit?(tuneLowerLimit[0]>0.5 ? 1-tuneLowerLimit[0] : tuneLowerLimit[0]):0,
 		  tuneUpperLimit?(tuneUpperLimit[0]>0.5 ? 1-tuneUpperLimit[0] : tuneUpperLimit[0]):0)!=1) {
-    fprintf(stdout, "Warning: NAFF failed for tune analysis from tracking (x).\n");
-    fprintf(stdout, "Limits: %e, %e\n",
+    fprintf(stdout, (char*)"Warning: NAFF failed for tune analysis from tracking (x).\n");
+    fprintf(stdout, (char*)"Limits: %e, %e\n",
 	    tuneLowerLimit?(tuneLowerLimit[0]>0.5 ? 1-tuneLowerLimit[0] : tuneLowerLimit[0]):0,
 	    tuneUpperLimit?(tuneUpperLimit[0]>0.5 ? 1-tuneUpperLimit[0] : tuneUpperLimit[0]):0);
     return 0;
   }
 #ifdef DEBUG
-  fprintf(stdout, "Performing NAFF (2)\n");
+  fprintf(stdout, (char*)"Performing NAFF (2)\n");
   fflush(stdout);
 #endif
   if (PerformNAFF(&frequency[1], &amplitude[1], &phase[1], 
@@ -3127,14 +3127,14 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
 		  0.0, 1, 200, 1e-12,
 		  tuneLowerLimit?(tuneLowerLimit[0]>0.5 ? 1-tuneLowerLimit[0] : tuneLowerLimit[0]):0,
 		  tuneUpperLimit?(tuneUpperLimit[0]>0.5 ? 1-tuneUpperLimit[0] : tuneUpperLimit[0]):0)!=1) {
-    fprintf(stdout, "Warning: NAFF failed for tune analysis from tracking (xp).\n");
-    fprintf(stdout, "Limits: %e, %e\n",
+    fprintf(stdout, (char*)"Warning: NAFF failed for tune analysis from tracking (xp).\n");
+    fprintf(stdout, (char*)"Limits: %e, %e\n",
 	    tuneLowerLimit?(tuneLowerLimit[0]>0.5 ? 1-tuneLowerLimit[0] : tuneLowerLimit[0]):0,
 	    tuneUpperLimit?(tuneUpperLimit[0]>0.5 ? 1-tuneUpperLimit[0] : tuneUpperLimit[0]):0);
     return 0;
   }
 #ifdef DEBUG
-  fprintf(stdout, "Performing NAFF (3)\n");
+  fprintf(stdout, (char*)"Performing NAFF (3)\n");
   fflush(stdout);
 #endif
   if (PerformNAFF(&frequency[2], &amplitude[2], &phase[2], 
@@ -3143,14 +3143,14 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
 		  0.0, 1, 200, 1e-12,
 		  tuneLowerLimit?(tuneLowerLimit[1]>0.5 ? 1-tuneLowerLimit[1] : tuneLowerLimit[1]):0,
 		  tuneUpperLimit?(tuneUpperLimit[1]>0.5 ? 1-tuneUpperLimit[1] : tuneUpperLimit[1]):0)!=1) {
-    fprintf(stdout, "Warning: NAFF failed for tune analysis from tracking (y).\n");
-    fprintf(stdout, "Limits: %e, %e\n",
+    fprintf(stdout, (char*)"Warning: NAFF failed for tune analysis from tracking (y).\n");
+    fprintf(stdout, (char*)"Limits: %e, %e\n",
 	    tuneLowerLimit?(tuneLowerLimit[0]>0.5 ? 1-tuneLowerLimit[0] : tuneLowerLimit[0]):0,
 	    tuneUpperLimit?(tuneUpperLimit[0]>0.5 ? 1-tuneUpperLimit[0] : tuneUpperLimit[0]):0);
     return 0;
   }
 #ifdef DEBUG
-  fprintf(stdout, "Performing NAFF (4)\n");
+  fprintf(stdout, (char*)"Performing NAFF (4)\n");
   fflush(stdout);
 #endif
   if (PerformNAFF(&frequency[3], &amplitude[3], &phase[3], 
@@ -3159,17 +3159,17 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
 		  0.0, 1, 200, 1e-12,
 		  tuneLowerLimit?(tuneLowerLimit[1]>0.5 ? 1-tuneLowerLimit[1] : tuneLowerLimit[1]):0,
 		  tuneUpperLimit?(tuneUpperLimit[1]>0.5 ? 1-tuneUpperLimit[1] : tuneUpperLimit[1]):0)!=1 ) {
-    fprintf(stdout, "Warning: NAFF failed for tune analysis from tracking (yp).\n");
-    fprintf(stdout, "Limits: %e, %e\n",
+    fprintf(stdout, (char*)"Warning: NAFF failed for tune analysis from tracking (yp).\n");
+    fprintf(stdout, (char*)"Limits: %e, %e\n",
 	    tuneLowerLimit?(tuneLowerLimit[0]>0.5 ? 1-tuneLowerLimit[0] : tuneLowerLimit[0]):0,
 	    tuneUpperLimit?(tuneUpperLimit[0]>0.5 ? 1-tuneUpperLimit[0] : tuneUpperLimit[0]):0);
     return 0;
   }
 
 #ifdef DEBUG
-  fprintf(stdout, "NAFF done\n");
+  fprintf(stdout, (char*)"NAFF done\n");
   for (i=0; i<4; i++)
-    fprintf(stdout, "%ld: freq=%e, phase=%e, amp=%e\n",
+    fprintf(stdout, (char*)"%ld: freq=%e, phase=%e, amp=%e\n",
 	    i, frequency[i], phase[i], amplitude[i]);
   fflush(stdout);
 #endif
@@ -3181,7 +3181,7 @@ long computeTunesFromTracking(double *tune, double *amp, VMATRIX *M, LINE_LIST *
     amp[1] = amplitude[2];
   }
 #ifdef DEBUG
-  fprintf(stdout, "xtune = %e, ytune = %e\n", tune[0], tune[1]);
+  fprintf(stdout, (char*)"xtune = %e, ytune = %e\n", tune[0], tune[1]);
 #endif
 
   free(x);
@@ -3238,7 +3238,7 @@ void computeTuneShiftWithAmplitudeM(double dnux_dA[N_TSWA][N_TSWA], double dnuy_
   free_matrices(&M2);
 
 /*
-  fprintf(stderr, "Tune check: \n%le %le\n%le %le\n",
+  fprintf(stderr, (char*)"Tune check: \n%le %le\n%le %le\n",
           cos(PIx2*turns*tune[0]), (M1.R[0][0]+M1.R[1][1])/2,
           cos(PIx2*turns*tune[1]), (M1.R[2][2]+M1.R[3][3])/2);
 */
@@ -3262,20 +3262,20 @@ void computeTuneShiftWithAmplitudeM(double dnux_dA[N_TSWA][N_TSWA], double dnuy_
       js = is+1;
       shift[splane] = 0;
       /*
-      fprintf(stderr, "tplane=%ld splane=%ld\n", tplane, splane);
-      fprintf(stderr, "Q%ld%ld%ld%ld = %e\n",
+      fprintf(stderr, (char*)"tplane=%ld splane=%ld\n", tplane, splane);
+      fprintf(stderr, (char*)"Q%ld%ld%ld%ld = %e\n",
               it, it, is, is, QElement(M1.Q, it, it, is, is));
-      fprintf(stderr, "Q%ld%ld%ld%ld = %e\n",
+      fprintf(stderr, (char*)"Q%ld%ld%ld%ld = %e\n",
               jt, jt, is, is, QElement(M1.Q, jt, jt, is, is));
-      fprintf(stderr, "Q%ld%ld%ld%ld = %e\n",
+      fprintf(stderr, (char*)"Q%ld%ld%ld%ld = %e\n",
               it, it, is, js, QElement(M1.Q, it, it, is, js));
-      fprintf(stderr, "Q%ld%ld%ld%ld = %e\n",
+      fprintf(stderr, (char*)"Q%ld%ld%ld%ld = %e\n",
               jt, jt, is, js, QElement(M1.Q, jt, jt, is, js));
-      fprintf(stderr, "Q%ld%ld%ld%ld = %e\n",
+      fprintf(stderr, (char*)"Q%ld%ld%ld%ld = %e\n",
               it, it, js, js, QElement(M1.Q, it, it, js, js));
-      fprintf(stderr, "Q%ld%ld%ld%ld = %e\n",
+      fprintf(stderr, (char*)"Q%ld%ld%ld%ld = %e\n",
               jt, jt, js, js, QElement(M1.Q, jt, jt, js, js));
-      fprintf(stderr, "\n");
+      fprintf(stderr, (char*)"\n");
       */    
       for (ia=0, theta=0; ia<72; ia++, theta+=PIx2/72) {
         C = cos(theta);
@@ -3306,20 +3306,20 @@ void store_fitpoint_twiss_parameters(MARK *fpt, char *name, long occurence,TWISS
 {
   long i;
   static char *twiss_name_suffix[12] = {
-    "betax", "alphax", "nux", "etax", "etapx", "etaxp",
-    "betay", "alphay", "nuy", "etay", "etapy", "etayp",
+    (char*)"betax", (char*)"alphax", (char*)"nux", (char*)"etax", (char*)"etapx", (char*)"etaxp",
+    (char*)"betay", (char*)"alphay", (char*)"nuy", (char*)"etay", (char*)"etapy", (char*)"etayp",
     } ;
   static char s[200];
   if (!(fpt->init_flags&1)) {
     fpt->twiss_mem = (long*)tmalloc(sizeof(*(fpt->twiss_mem))*12);
     fpt->init_flags |= 1;
     for (i=0; i<12; i++) {
-      sprintf(s, "%s#%ld.%s", name, occurence, twiss_name_suffix[i]);
+      sprintf(s, (char*)"%s#%ld.%s", name, occurence, twiss_name_suffix[i]);
       fpt->twiss_mem[i] = rpn_create_mem(s, 0);
     }
   }
   if (!twiss) {
-    fprintf(stdout, "twiss parameter pointer unexpectedly NULL\n");
+    fprintf(stdout, (char*)"twiss parameter pointer unexpectedly NULL\n");
     fflush(stdout);
     abort();
   }
@@ -3358,19 +3358,19 @@ void addTwissAnalysisRequest(char *tag, char *startName, char *endName,
 {
   long i;
   if (!tag || !strlen(tag))
-    bombElegant("NULL or blank tag passed to addTwissAnalysisRequest", NULL);
+    bombElegant((char*)"NULL or blank tag passed to addTwissAnalysisRequest", NULL);
   if (!(startName && strlen(startName) && endName && strlen(endName)) 
       && !(matchName && strlen(matchName)) && sStart==sEnd)
-    bombElegant("must have both startName and endName, or matchName, or sStart!=sEnd (addTwissAnalysisRequest)", NULL);
+    bombElegant((char*)"must have both startName and endName, or matchName, or sStart!=sEnd (addTwissAnalysisRequest)", NULL);
   if ((startName || endName) && matchName)
-    bombElegant("can't have startName or endName with matchName (addTwissAnalysisRequest)", NULL);
+    bombElegant((char*)"can't have startName or endName with matchName (addTwissAnalysisRequest)", NULL);
   for (i=0; i<twissAnalysisRequests; i++)
     if (strcmp(twissAnalysisRequest[i].tag, tag)==0)
-      bombElegant("duplicate tag names seen (addTwissAnalysisRequest)", NULL);
+      bombElegant((char*)"duplicate tag names seen (addTwissAnalysisRequest)", NULL);
   if (!(twissAnalysisRequest = 
         (TWISS_ANALYSIS_REQUEST*)SDDS_Realloc(twissAnalysisRequest, sizeof(*twissAnalysisRequest)*(twissAnalysisRequests+1))) ||
       !SDDS_CopyString(&twissAnalysisRequest[twissAnalysisRequests].tag, tag))
-    bombElegant("memory allocation failure (addTwissAnalysisRequest)", NULL);
+    bombElegant((char*)"memory allocation failure (addTwissAnalysisRequest)", NULL);
   twissAnalysisRequest[twissAnalysisRequests].startName = 
     twissAnalysisRequest[twissAnalysisRequests].endName = 
       twissAnalysisRequest[twissAnalysisRequests].matchName = NULL;
@@ -3380,7 +3380,7 @@ void addTwissAnalysisRequest(char *tag, char *startName, char *endName,
        !SDDS_CopyString(&twissAnalysisRequest[twissAnalysisRequests].endName, endName)) ||
       (matchName &&
        !SDDS_CopyString(&twissAnalysisRequest[twissAnalysisRequests].matchName, matchName)))
-    bombElegant("memory allocation failure (addTwissAnalysisRequest)", NULL);
+    bombElegant((char*)"memory allocation failure (addTwissAnalysisRequest)", NULL);
   if (matchName && 
       has_wildcards(twissAnalysisRequest[twissAnalysisRequests].matchName) &&
       strchr(twissAnalysisRequest[twissAnalysisRequests].matchName, '-'))
@@ -3411,7 +3411,7 @@ void processTwissAnalysisRequests(ELEMENT_LIST *elem)
     for (iq=0; iq<TWISS_ANALYSIS_QUANTITIES; iq++)  {
       for (is=0; is<TWISS_ANALYSIS_STATS; is++)
         if (!twissAnalysisRequest[i].initialized) {
-          sprintf(buffer, "%s.%s.%s", twissAnalysisRequest[i].tag,
+          sprintf(buffer, (char*)"%s.%s.%s", twissAnalysisRequest[i].tag,
                   twissAnalysisStatName[is], twissAnalysisQuantityName[iq]);
           twissAnalysisRequest[i].twissMem[is][iq] = rpn_create_mem(buffer, 0);
         }
@@ -3456,7 +3456,7 @@ void processTwissAnalysisRequests(ELEMENT_LIST *elem)
           start_pos = 0;
       }
       if (twiss_analysis_struct.verbosity>1 && firstTime) {
-        fprintf(stdout, "twiss analysis %s will include %s#%ld\n",
+        fprintf(stdout, (char*)"twiss analysis %s will include %s#%ld\n",
                 twissAnalysisRequest[i].tag,
                 elem->name, elem->occurence);
       }
@@ -3486,7 +3486,7 @@ void processTwissAnalysisRequests(ELEMENT_LIST *elem)
       elem = elem->succ;
     }
     if (!count) {
-      fprintf(stdout, "error: twiss analysis conditions never satisfied for request with tag %s\n",
+      fprintf(stdout, (char*)"error: twiss analysis conditions never satisfied for request with tag %s\n",
               twissAnalysisRequest[i].tag);
       exit(1);
     }
@@ -3497,23 +3497,23 @@ void processTwissAnalysisRequests(ELEMENT_LIST *elem)
       }
     }
     if (twiss_analysis_struct.verbosity && firstTime) {
-      fprintf(stdout, "%ld elements included in computations for twiss analysis request with tag %s\n",
+      fprintf(stdout, (char*)"%ld elements included in computations for twiss analysis request with tag %s\n",
               count, 
               twissAnalysisRequest[i].tag);
     }
     
 #if DEBUG
     if (twissAnalysisRequest[i].matchName) {
-      fprintf(stdout, "%ld matches for %s\n",
+      fprintf(stdout, (char*)"%ld matches for %s\n",
               count, twissAnalysisRequest[i].tag
               );
       for (iq=0; iq<TWISS_ANALYSIS_QUANTITIES; iq++) {
-        fprintf(stdout, "%s: ", twissAnalysisQuantityName[iq]);
+        fprintf(stdout, (char*)"%s: ", twissAnalysisQuantityName[iq]);
         for (is=0; is<TWISS_ANALYSIS_STATS; is++) 
-          fprintf(stdout, "%s=%e%s",
+          fprintf(stdout, (char*)"%s=%e%s",
                   twissAnalysisStatName[is],
                   twissData[is][iq],
-                  (is==TWISS_ANALYSIS_STATS-1?"\n":", "));
+                  (is==TWISS_ANALYSIS_STATS-1?(char*)"\n":(char*)", "));
       }
       fflush(stdout);
     }
@@ -3541,24 +3541,24 @@ void setupTwissAnalysisRequest(NAMELIST_TEXT *nltext, RUN *run,
   
   if (twiss_analysis_struct.start_name &&
       !strlen(trim_spaces(str_toupper(twiss_analysis_struct.start_name))))
-    bombElegant("start_name is blank", NULL);
+    bombElegant((char*)"start_name is blank", NULL);
   if (twiss_analysis_struct.end_name &&
       !strlen(trim_spaces(str_toupper(twiss_analysis_struct.end_name))))
-    bombElegant("end_name is blank", NULL);
+    bombElegant((char*)"end_name is blank", NULL);
   if (twiss_analysis_struct.match_name &&
       !strlen(trim_spaces(str_toupper(twiss_analysis_struct.match_name))))
-    bombElegant("match_name is blank", NULL);
+    bombElegant((char*)"match_name is blank", NULL);
   if ((twiss_analysis_struct.tag &&
        !strlen(trim_spaces(twiss_analysis_struct.tag))) ||
       !twiss_analysis_struct.tag)
-    bombElegant("tag is blank", NULL);
+    bombElegant((char*)"tag is blank", NULL);
   
   if (!(twiss_analysis_struct.start_name && twiss_analysis_struct.end_name)
         && !twiss_analysis_struct.match_name &&
       twiss_analysis_struct.s_start==twiss_analysis_struct.s_end)
-    bombElegant("you must give start_name and end_name, or match_name, or s_start different from s_end", NULL);
+    bombElegant((char*)"you must give start_name and end_name, or match_name, or s_start different from s_end", NULL);
   if (twiss_analysis_struct.s_start>twiss_analysis_struct.s_end)
-    bombElegant("s_start>s_end", NULL);
+    bombElegant((char*)"s_start>s_end", NULL);
   addTwissAnalysisRequest(twiss_analysis_struct.tag,
                           twiss_analysis_struct.start_name,
                           twiss_analysis_struct.end_name,
@@ -3586,9 +3586,9 @@ void setupLinearChromaticTracking(NAMELIST_TEXT *nltext, LINE_LIST *beamline)
   if (echoNamelists) print_namelist(stdout, &setup_linear_chromatic_tracking);
 
   if (setup_linear_chromatic_tracking_struct.nux[0]<0)
-    bombElegant("nux < 0", NULL);
+    bombElegant((char*)"nux < 0", NULL);
   if (setup_linear_chromatic_tracking_struct.nuy[0]<0)
-    bombElegant("nuy < 0", NULL);
+    bombElegant((char*)"nuy < 0", NULL);
   
   beamline->twiss0 = (TWISS*)malloc(sizeof(TWISS));
 

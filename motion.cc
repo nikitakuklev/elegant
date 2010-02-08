@@ -115,7 +115,7 @@ static long integratorCode = -1;
 #define MODIFIED_MIDPOINT 3
 #define N_METHODS 4
 static char *method[N_METHODS] = {
-    "runge-kutta", "bulirsch-stoer", "non-adaptive runge-kutta", "modified midpoint"
+    (char*)"runge-kutta", (char*)"bulirsch-stoer", (char*)"non-adaptive runge-kutta", (char*)"modified midpoint"
     } ;
 
 long analyzeSpacing(double *z, long nz, double *dzReturn, FILE *fpError);
@@ -166,7 +166,6 @@ static long xMotionCenterVar = -1;
 
 static double radCoef = 0;
 static double isrCoef = 0;
-static double dsRad = 0;
 static double P_central;
 
 #define LSRMDLTR_IDEAL 0
@@ -174,7 +173,7 @@ static double P_central;
 #define LSRMDLTR_LEADING 2
 #define N_LSRMDLTR_FIELD_EXPANSIONS 3
 static char *lsrMdltrFieldExpansion[N_LSRMDLTR_FIELD_EXPANSIONS] = {
-  "ideal", "exact", "leading terms"
+  (char*)"ideal", (char*)"exact", (char*)"leading terms"
   };
 double HermitePolynomial(double x, long n);
 double HermitePolynomialDeriv(double x, long n);
@@ -200,7 +199,7 @@ long motion(
     static double accuracy[6], tiny[6];
     double tolerance, hmax, hrec;
     double *coord;
-    long i_part, i_top, rk_return;
+    long i_part, i_top, rk_return=0;
     double kscale, *P, Po, gamma;
     static double gamma0, P0[3];
     long n_steps;
@@ -217,7 +216,7 @@ long motion(
     radCoef = sqr(particleCharge)*pow3(P_central)/(6*PI*epsilon_o*sqr(c_mks)*particleMass);
     isrCoef = particleRadius*sqrt(55.0/(24*sqrt(3.0))*pow5(P_central)*137.0359895);
 
-    log_entry("motion");
+    log_entry((char*)"motion");
 
     X_aperture_center = Y_aperture_center = 0;
     X_limit = Y_limit = 0; 
@@ -230,7 +229,7 @@ long motion(
     stochasticEffects = set_up_stochastic_effects(field_type);
     
     if (n_steps<2)
-        bombElegant("too few steps for integration", NULL);
+        bombElegant((char*)"too few steps for integration", NULL);
 
     P = q+3;
     i_top = n_part-1;
@@ -242,7 +241,7 @@ long motion(
     xMaxSeen=-1e300;
     xMinSeen=1e300;
     if (xMotionCenterVar<0)
-      xMotionCenterVar = rpn_create_mem("xMotionCenter", 0);
+      xMotionCenterVar = rpn_create_mem((char*)"xMotionCenter", 0);
     
     for (i_part=0; i_part<=i_top; i_part++) {
         tol_factor = 1;
@@ -309,15 +308,15 @@ long motion(
                 case DIFFEQ_OUTSIDE_INTERVAL:
                 case DIFFEQ_XI_GT_XF:
                 case DIFFEQ_EXIT_COND_FAILED:
-                    fprintf(stdout, "Integration failure: %s\n", diffeq_result_description(rk_return));
+                    fprintf(stdout, (char*)"Integration failure: %s\n", diffeq_result_description(rk_return));
                     fflush(stdout);
 /*                    for (i=0; i<6; i++) 
-                        fprintf(stdout, "%11.4e  ", coord[i]);
+                        fprintf(stdout, (char*)"%11.4e  ", coord[i]);
                         fflush(stdout);
-                    fprintf(stdout, "\ngamma = %.4e,  P=(%.4e, %.4e, %.4e)\n",
+                    fprintf(stdout, (char*)"\ngamma = %.4e,  P=(%.4e, %.4e, %.4e)\n",
                         gamma0, P0[0], P0[1], P0[2]);
                     fflush(stdout);
-                    fprintf(stdout, "tolerance = %e     end_factor = %e\n",
+                    fprintf(stdout, (char*)"tolerance = %e     end_factor = %e\n",
                         tolerance, end_factor);
                     fflush(stdout);
 */
@@ -338,13 +337,13 @@ long motion(
                     dP[1]   += P[1] - P0[1];
                     dP[2]   += P[2] - P0[2];
 #if defined(DEBUG)
-                    fprintf(stdout, "initial, final phase: %21.15e, %21.15e\n", initial_phase, final_phase);
+                    fprintf(stdout, (char*)"initial, final phase: %21.15e, %21.15e\n", initial_phase, final_phase);
                     fflush(stdout);
-                    fprintf(stdout, "deriv calls: %ld\n", derivCalls);
+                    fprintf(stdout, (char*)"deriv calls: %ld\n", derivCalls);
                     fflush(stdout);
-                    fprintf(stdout, "Exit: tau=%le, ef=%le\n", tau, exit_function(dqdt, q, tau));
+                    fprintf(stdout, (char*)"Exit: tau=%le, ef=%le\n", tau, exit_function(dqdt, q, tau));
                     fflush(stdout);
-                    fprintf(stdout, "Pout = %21.15e  Zout = %21.15le\n", 
+                    fprintf(stdout, (char*)"Pout = %21.15e  Zout = %21.15le\n", 
                             Po, q[2]/kscale);
                     fflush(stdout);
 #endif
@@ -407,7 +406,7 @@ long motion(
     if (change_p0)
       do_match_energy(part, n_part, pCentral, 0);
     
-    log_exit("motion");
+    log_exit((char*)"motion");
     return(i_top+1);
     }
  
@@ -419,13 +418,13 @@ void (*set_up_derivatives(
                           long field_type,
                           double *kscale,
                           double z_start,
-                          double *Z_end,
+                          double *Z_end_inner_scope,
                           double *tau_start,
                           double **part,
                           long n_part,
-                          double P_central,
-                          double *X_limit,
-                          double *Y_limit,
+                          double P_central_inner_scope,
+                          double *X_limit_inner_scope,
+                          double *Y_limit_inner_scope,
                           double *accuracy,
                           long *n_steps
                           ))(double *, double *, double)
@@ -455,12 +454,12 @@ void (*set_up_derivatives(
     if (!mapSol->initialized)
       setupMapSolenoidFromFile(mapSol, mapSol->length);
     *tau_start = 0;
-    *Z_end = mapSol->length;
+    *Z_end_inner_scope = mapSol->length;
     X_offset = -(X_center = X_aperture_center = mapSol->dx);
     Y_offset = -(Y_center = Y_aperture_center = mapSol->dy);
     Z_center = mapSol->length/2;
     /* assume 1000m aperture for now */     
-    *X_limit = *Y_limit = 1e3;
+    *X_limit_inner_scope = *Y_limit_inner_scope = 1e3;
     *accuracy = mapSol->accuracy;
     *n_steps = mapSol->n_steps;
     mapSol->zMap0 = mapSol->length/2-mapSol->lUniform/2;
@@ -478,19 +477,19 @@ void (*set_up_derivatives(
     *accuracy = lsrMdltr->accuracy;
     *n_steps = lsrMdltr->nSteps;
     lsrMdltr->ku = 2*PI/(lsrMdltr->length/lsrMdltr->periods);
-    gamma = sqrt(sqr(P_central)+1);
-    beta = P_central/gamma;
+    gamma = sqrt(sqr(P_central_inner_scope)+1);
+    beta = P_central_inner_scope/gamma;
     Ku = lsrMdltr->Bu*particleCharge/(particleMass*c_mks)/(beta*lsrMdltr->ku);
     if ((lsrMdltr->fieldCode = match_string(lsrMdltr->fieldExpansion, 
                                          lsrMdltrFieldExpansion, N_LSRMDLTR_FIELD_EXPANSIONS, 0)),0) {
       long i;
-      fputs("Error: field expansion for LSRMDLTR elements must be one of:\n", stdout);
+      fputs((char*)"Error: field expansion for LSRMDLTR elements must be one of:\n", stdout);
       for (i=0; i<N_LSRMDLTR_FIELD_EXPANSIONS; i++)
-        fprintf(stdout, "    %s\n", lsrMdltrFieldExpansion[i]);
+        fprintf(stdout, (char*)"    %s\n", lsrMdltrFieldExpansion[i]);
       exit(1);
     }
     if (lsrMdltr->isr && integratorCode!=NA_RUNGE_KUTTA)
-      bombElegant("LSRMDLTR with ISR must use non-adaptive runge-kutta integration", NULL);
+      bombElegant((char*)"LSRMDLTR with ISR must use non-adaptive runge-kutta integration", NULL);
     if (lsrMdltr->usersLaserWavelength)
       lsrMdltr->laserWavelength = lsrMdltr->usersLaserWavelength;
     else
@@ -501,33 +500,33 @@ void (*set_up_derivatives(
     lsrMdltr->Escale = particleCharge/(particleMass*omega*c_mks);
     lsrMdltr->Bscale = particleCharge/(particleMass*omega);
     if (lsrMdltr->laserM<0 || lsrMdltr->laserN<0)
-      bombElegant("M and N must be non-negative for LSRMDLTR", NULL);
+      bombElegant((char*)"M and N must be non-negative for LSRMDLTR", NULL);
     lsrMdltr->Ef0Laser = 2/lsrMdltr->laserW0*
       sqrt(lsrMdltr->laserPeakPower/(ipow(2,lsrMdltr->laserM+lsrMdltr->laserN)*PI*factorial(lsrMdltr->laserM)*factorial(lsrMdltr->laserN)*epsilon_o*c_mks));
     X_offset = 0;
     X_aperture_center = X_center = 0;
     Y_aperture_center = Y_center = 0;
     Y_offset = 0;
-    *Z_end = lsrMdltr->length*(*kscale);
+    *Z_end_inner_scope = lsrMdltr->length*(*kscale);
     Z_center = lsrMdltr->length/2*(*kscale);
-    *X_limit = *Y_limit = 1e300;
+    *X_limit_inner_scope = *Y_limit_inner_scope = 1e300;
     lsrMdltr->t0 = 0;
     if (lsrMdltr->timeProfileFile) {
       long i;
       TABLE data;
       if (!getTableFromSearchPath(&data, lsrMdltr->timeProfileFile, 1, 0))
-        bombElegant("unable to read data for LSRMDLTR time profile", NULL);
+        bombElegant((char*)"unable to read data for LSRMDLTR time profile", NULL);
       if (data.n_data<=1)
-        bombElegant("LSRMDLTR time profile contains less than 2 points", NULL);
+        bombElegant((char*)"LSRMDLTR time profile contains less than 2 points", NULL);
       lsrMdltr->timeValue = data.c1;
       lsrMdltr->amplitudeValue = data.c2;
       lsrMdltr->tProfilePoints = data.n_data;
       for (i=1; i<data.n_data; i++)
         if (data.c1[i-1]>data.c1[i])
-          bombElegant("time values not monotonically increasing in LSRMDLTR time profile", NULL);
+          bombElegant((char*)"time values not monotonically increasing in LSRMDLTR time profile", NULL);
       tfree(data.xlab); tfree(data.ylab); tfree(data.title); tfree(data.topline);
     }
-    lsrMdltr->t0 = findFiducialTime(part, n_part, 0, lsrMdltr->length/2, P_central, FID_MODE_TMEAN) + lsrMdltr->timeProfileOffset; 
+    lsrMdltr->t0 = findFiducialTime(part, n_part, 0, lsrMdltr->length/2, P_central_inner_scope, FID_MODE_TMEAN) + lsrMdltr->timeProfileOffset; 
     return(derivatives_laserModulator);
   case T_RFTMEZ0:
     rftmEz0 = (RFTMEZ0*)field;
@@ -547,7 +546,7 @@ void (*set_up_derivatives(
       rftmEz0->k = *kscale;
       rftmEz0->fiducial_part = fiducial = select_fiducial(part, n_part, rftmEz0->fiducial);
       if (fiducial) {
-        Po = P_central*(1+fiducial[5]);
+        Po = P_central_inner_scope*(1+fiducial[5]);
         gamma = sqrt(1+sqr(Po));
         Pz = Po*sqrt(1-sqr(fiducial[0])-sqr(fiducial[2]));
         rftmEz0->phase0 =
@@ -563,16 +562,16 @@ void (*set_up_derivatives(
     }
     *tau_start = rftmEz0->phase + PIx2*rftmEz0->frequency*rftmEz0->time_offset +
       rftmEz0->phase0;
-    *Z_end = rftmEz0->length*(*kscale);
+    *Z_end_inner_scope = rftmEz0->length*(*kscale);
     X_center = X_aperture_center = rftmEz0->k*rftmEz0->dx;
     Y_center = Y_aperture_center = rftmEz0->k*rftmEz0->dy;
-    Z_center = *Z_end/2 + rftmEz0->k*rftmEz0->dzMA;
+    Z_center = *Z_end_inner_scope/2 + rftmEz0->k*rftmEz0->dzMA;
     X_center1 = rftmEz0->k*rftmEz0->dxSol;
     Y_center1 = rftmEz0->k*rftmEz0->dySol;
-    Z_center1 = *Z_end/2 + rftmEz0->k*rftmEz0->dzSolMA;
+    Z_center1 = *Z_end_inner_scope/2 + rftmEz0->k*rftmEz0->dzSolMA;
     /* assume 1000m aperture for now */     
-    *X_limit = rftmEz0->k*1e3;
-    *Y_limit = rftmEz0->k*1e3;
+    *X_limit_inner_scope = rftmEz0->k*1e3;
+    *Y_limit_inner_scope = rftmEz0->k*1e3;
     *accuracy = rftmEz0->accuracy;
     *n_steps = rftmEz0->n_steps;
     select_integrator(rftmEz0->method);
@@ -600,7 +599,7 @@ void (*set_up_derivatives(
       *kscale = tmcf->k;
       tmcf->fiducial_part = fiducial = select_fiducial(part, n_part, tmcf->fiducial);
       if (fiducial) {
-        Po = P_central*(1+fiducial[5]);
+        Po = P_central_inner_scope*(1+fiducial[5]);
         gamma = sqrt(1+sqr(Po));
         Pz = Po*sqrt(1-sqr(fiducial[0])-sqr(fiducial[2]));
         tmcf->phase0 =
@@ -619,11 +618,11 @@ void (*set_up_derivatives(
     }
     *tau_start = tmcf->phase + PIx2*tmcf->frequency*tmcf->time_offset +
       tmcf->phase0;
-    *Z_end = tmcf->length*(*kscale);
+    *Z_end_inner_scope = tmcf->length*(*kscale);
     X_offset = tmcf->k*tmcf->radial_offset*cos(tmcf->tilt);
     Y_offset = tmcf->k*tmcf->radial_offset*sin(tmcf->tilt);
-    *X_limit = tmcf->k*tmcf->x_max;
-    *Y_limit = tmcf->k*tmcf->y_max;
+    *X_limit_inner_scope = tmcf->k*tmcf->x_max;
+    *Y_limit_inner_scope = tmcf->k*tmcf->y_max;
     X_aperture_center = tmcf->k*tmcf->dx;
     Y_aperture_center = tmcf->k*tmcf->dy;
     *accuracy = tmcf->accuracy;
@@ -642,7 +641,7 @@ void (*set_up_derivatives(
       *kscale = cep->k = 1./(c_mks*cep->ramp_time);
       cep->fiducial_part = fiducial = select_fiducial(part, n_part, cep->fiducial);
       if (fiducial) {
-        Po = P_central*(1+fiducial[5]);
+        Po = P_central_inner_scope*(1+fiducial[5]);
         gamma = sqrt(1+sqr(Po));
         Pz = Po*sqrt(1-sqr(fiducial[0])-sqr(fiducial[2]));
         cep->tau0 = get_reference_phase(cep->phase_reference,
@@ -662,12 +661,12 @@ void (*set_up_derivatives(
     cep->cos_tilt = cos(cep->tilt);
     cep->sin_tilt = sin(cep->tilt);
     *tau_start = cep->time_offset/cep->ramp_time + cep->tau0;
-    *Z_end = cep->length*(*kscale);
+    *Z_end_inner_scope = cep->length*(*kscale);
     *accuracy = cep->accuracy;
     *n_steps = cep->n_steps;
     X_offset = Y_offset = 0;
-    *X_limit = cep->k*cep->x_max;
-    *Y_limit = cep->k*cep->y_max;
+    *X_limit_inner_scope = cep->k*cep->x_max;
+    *Y_limit_inner_scope = cep->k*cep->y_max;
     X_aperture_center = cep->k*cep->dx;
     Y_aperture_center = cep->k*cep->dy;
     select_integrator(cep->method);
@@ -684,7 +683,7 @@ void (*set_up_derivatives(
       *kscale = twp->k = 1./(c_mks*twp->ramp_time);
       twp->fiducial_part = fiducial = select_fiducial(part, n_part, twp->fiducial);
       if (fiducial) {
-        Po = P_central*(1+fiducial[5]);
+        Po = P_central_inner_scope*(1+fiducial[5]);
         gamma = sqrt(1+sqr(Po));
         Pz = Po*sqrt(1-sqr(fiducial[0])-sqr(fiducial[2]));
         twp->tau0 = get_reference_phase(twp->phase_reference,
@@ -704,21 +703,21 @@ void (*set_up_derivatives(
     twp->cos_tilt = cos(twp->tilt);
     twp->sin_tilt = sin(twp->tilt);
     *tau_start = twp->time_offset/twp->ramp_time + twp->tau0;
-    *Z_end = twp->length*(*kscale);
+    *Z_end_inner_scope = twp->length*(*kscale);
     *accuracy = twp->accuracy;
     *n_steps = twp->n_steps;
     X_offset = Y_offset = 0;
-    *X_limit = twp->k*twp->x_max;
-    *Y_limit = twp->k*twp->y_max;
+    *X_limit_inner_scope = twp->k*twp->x_max;
+    *Y_limit_inner_scope = twp->k*twp->y_max;
     X_aperture_center = twp->k*twp->dx;
     Y_aperture_center = twp->k*twp->dy;
 #if defined(DEBUG)
-    fprintf(stdout, "TWPL parameters:\n");
+    fprintf(stdout, (char*)"TWPL parameters:\n");
     fflush(stdout);
-    fprintf(stdout, "l=%le acc=%le x_max=%le y_max=%le\n",
+    fprintf(stdout, (char*)"l=%le acc=%le x_max=%le y_max=%le\n",
             twp->length, twp->accuracy, twp->x_max, twp->y_max);
     fflush(stdout);
-    fprintf(stdout, "dx=%le dy=%le method=%s ramp_time=%le phiref=%ld\n",
+    fprintf(stdout, (char*)"dx=%le dy=%le method=%s ramp_time=%le phiref=%ld\n",
             twp->dx, twp->dy, twp->method, twp->ramp_time,
             twp->phase_reference);
     fflush(stdout);
@@ -741,7 +740,7 @@ void (*set_up_derivatives(
       twla->kz = *kscale/twla->beta_wave;
       twla->fiducial_part = fiducial = select_fiducial(part, n_part, twla->fiducial);
       if (fiducial) {
-        Po = P_central*(1+fiducial[5]);
+        Po = P_central_inner_scope*(1+fiducial[5]);
         gamma = sqrt(1+sqr(Po));
         /* find the phase offset, phase0 = -omega*t_fiducial , or else equivalent value
          * for phase reference */
@@ -765,11 +764,11 @@ void (*set_up_derivatives(
      *              = omega*t_offset + phase + phase0
      */
     *tau_start = twla->phase + omega*twla->time_offset + twla->phase0;
-    *Z_end = twla->length*(*kscale);
+    *Z_end_inner_scope = twla->length*(*kscale);
     X_offset = X_aperture_center = (*kscale)*twla->dx;
     Y_offset = Y_aperture_center = (*kscale)*twla->dy;
-    *X_limit = (*kscale)*twla->x_max;
-    *Y_limit = (*kscale)*twla->y_max;
+    *X_limit_inner_scope = (*kscale)*twla->x_max;
+    *Y_limit_inner_scope = (*kscale)*twla->y_max;
     *accuracy = twla->accuracy;
     *n_steps = twla->n_steps;
     select_integrator(twla->method);
@@ -795,18 +794,18 @@ void (*set_up_derivatives(
       twmta->Ky = twmta->ky/(*kscale);
       twmta->Kz = twmta->kz/(*kscale);
       /*
-        fprintf(stdout, "TWMTA kx, ky, kz = %e, %e, %e\n", twmta->kx, twmta->ky, twmta->kz);
+        fprintf(stdout, (char*)"TWMTA kx, ky, kz = %e, %e, %e\n", twmta->kx, twmta->ky, twmta->kz);
         fflush(stdout);
-        fprintf(stdout, "      Ex, Ey, Ez = %e, %e, %e\n", twmta->ExS, twmta->EyS, twmta->EzS);
+        fprintf(stdout, (char*)"      Ex, Ey, Ez = %e, %e, %e\n", twmta->ExS, twmta->EyS, twmta->EzS);
         fflush(stdout);
-        fprintf(stdout, "      Bx, By, Bz = %e, %e\n", twmta->BxS, twmta->ByS);
+        fprintf(stdout, (char*)"      Bx, By, Bz = %e, %e\n", twmta->BxS, twmta->ByS);
         fflush(stdout);
         */
       twmta->fiducial_part = fiducial = select_fiducial(part, n_part, twmta->fiducial);
       if (fiducial) {
         /* find the phase offset, phase0 = -omega*t_fiducial , or else equivalent value
          * for phase reference */
-        Po = P_central*(1+fiducial[5]);
+        Po = P_central_inner_scope*(1+fiducial[5]);
         gamma = sqrt(1+sqr(Po));
         twmta->phase0 = get_reference_phase(twmta->phase_reference,
                                             -omega/c_mks*gamma*fiducial[4]/Po );
@@ -831,11 +830,11 @@ void (*set_up_derivatives(
      *              = phase + phase0
      */
     *tau_start = twmta->phase + twmta->phase0;
-    *Z_end = twmta->length*(*kscale);
+    *Z_end_inner_scope = twmta->length*(*kscale);
     X_offset = X_aperture_center = (*kscale)*twmta->dx;
     Y_offset = Y_aperture_center = (*kscale)*twmta->dy;
-    *X_limit = (*kscale)*twmta->x_max;
-    *Y_limit = (*kscale)*twmta->y_max;
+    *X_limit_inner_scope = (*kscale)*twmta->x_max;
+    *Y_limit_inner_scope = (*kscale)*twmta->y_max;
     *accuracy = twmta->accuracy;
     *n_steps = twmta->n_steps;
     select_integrator(twmta->method);
@@ -843,7 +842,7 @@ void (*set_up_derivatives(
     output_impulse = output_impulse_twmta;
     return(derivatives_twmta);
   default:
-    bombElegant("invalid mode type (set_up_derivatives", NULL);
+    bombElegant((char*)"invalid mode type (set_up_derivatives", NULL);
     break;
   }
   exit(1);
@@ -1495,7 +1494,7 @@ double exit_function(
 #define FID_LIGHT 5
 #define N_KNOWN_MODES 6
 static char *known_mode[N_KNOWN_MODES] = {
-    "median", "minimum", "maximum", "average", "first", "light"
+    (char*)"median", (char*)"minimum", (char*)"maximum", (char*)"average", (char*)"first", (char*)"light"
     } ;
 #if USE_MPI
 /* We need a separate array to hold the coordinates for the fiducial particle in the parallel version */
@@ -1512,15 +1511,15 @@ double *select_fiducial(double **part, long n_part, char *var_mode_in)
   long n_part_total;
 #endif
 
-  log_entry("select_fiducial");
+  log_entry((char*)"select_fiducial");
 
   fid_mode = FID_AVERAGE;
   i_var = -1;    /* t, p average */
-  cp_str(&var_mode, var_mode_in==NULL?(char*)"average":var_mode_in);
+  cp_str(&var_mode, var_mode_in==NULL?(char*)(char*)"average":var_mode_in);
 
 #if !USE_MPI
   if (n_part<=1) {
-    log_exit("select_fiducial");
+    log_exit((char*)"select_fiducial");
     return(part[0]);
   }
 #else
@@ -1531,7 +1530,7 @@ double *select_fiducial(double **part, long n_part, char *var_mode_in)
   if (strlen(var_mode)!=0) {
     if ((ptr=strchr(var_mode, ',')) && (var=get_token(var_mode))) {
       if (*var!='t' && *var!='p')
-        bombElegant("no known variable listed for fiducial--must be 't' or 'p'\n", NULL);
+        bombElegant((char*)"no known variable listed for fiducial--must be 't' or 'p'\n", NULL);
       if (*var=='t')
         i_var = 4;
       else
@@ -1539,16 +1538,16 @@ double *select_fiducial(double **part, long n_part, char *var_mode_in)
     } 
     if ((mode=get_token(var_mode))) {
       if ((fid_mode=match_string(mode, known_mode, N_KNOWN_MODES, 0))<0) {
-        fputs("error: no known mode listed for fiducialization--must be one of:\n", stdout);
+        fputs((char*)"error: no known mode listed for fiducialization--must be one of:\n", stdout);
         for (i=0; i<N_KNOWN_MODES; i++)
-          fprintf(stdout, "    %s\n", known_mode[i]);
+          fprintf(stdout, (char*)"    %s\n", known_mode[i]);
           fflush(stdout);
         exit(1);
       }
     }
   }
   if (i_var==-1 && fid_mode!=FID_AVERAGE) {
-    fprintf(stdout, "unless you use average mode for fiducialization, you must specify t or p coordinate.\n");
+    fprintf(stdout, (char*)"unless you use average mode for fiducialization, you must specify t or p coordinate.\n");
     fflush(stdout);
     exit(1);
   }
@@ -1585,22 +1584,22 @@ double *select_fiducial(double **part, long n_part, char *var_mode_in)
     case FID_MEDIAN:
 #if !USE_MPI
       if ((i_best = find_median_of_row(&best_value, part, i_var, n_part))<0) 
-        bombElegant("error: computation of median failed (select_fiducial)", NULL);
-      printf ("best_value=%lf\n", best_value);
+        bombElegant((char*)"error: computation of median failed (select_fiducial)", NULL);
+      printf ((char*)"best_value=%lf\n", best_value);
 #else
       /*
       if (notSinglePart) {
 	if ((i_best = find_median_of_row_p(best_particle, part, i_var, n_part, n_part_total))<0)
-	  bombElegant("error: computation of median failed (select_fiducial)", NULL);
-	log_exit("select_fiducial");
+	  bombElegant((char*)"error: computation of median failed (select_fiducial)", NULL);
+	log_exit((char*)"select_fiducial");
 	return(best_particle);
       }
       else {
 	if ((i_best = find_median_of_row(&best_value, part, i_var, n_part))<0)
-	  bombElegant("error: computation of median failed (select_fiducial)", NULL);
+	  bombElegant((char*)"error: computation of median failed (select_fiducial)", NULL);
       }
       */
-      printf("The median fiducial mode is not available in this version of Pelegant.\n \
+      printf((char*)"The median fiducial mode is not available in this version of Pelegant.\n \
               Please request this feature by contacting authors\n");
       MPI_Barrier (MPI_COMM_WORLD);
       MPI_Abort(MPI_COMM_WORLD, 2);
@@ -1628,7 +1627,7 @@ double *select_fiducial(double **part, long n_part, char *var_mode_in)
 	if (in.rank==out.rank)
 	  memcpy(best_particle, part[i_best], sizeof(*best_particle)*COORDINATES_PER_PARTICLE);
 	MPI_Bcast(best_particle, COORDINATES_PER_PARTICLE, MPI_DOUBLE, out.rank, MPI_COMM_WORLD);
-	log_exit("select_fiducial");
+	log_exit((char*)"select_fiducial");
 	return(best_particle);
       }
 #endif
@@ -1655,7 +1654,7 @@ double *select_fiducial(double **part, long n_part, char *var_mode_in)
 	if (in.rank==out.rank)
 	  memcpy(best_particle, part[i_best], sizeof(*best_particle)*COORDINATES_PER_PARTICLE);
 	MPI_Bcast(best_particle, COORDINATES_PER_PARTICLE, MPI_DOUBLE, out.rank, MPI_COMM_WORLD);
-	log_exit("select_fiducial");
+	log_exit((char*)"select_fiducial");
 	return(best_particle);
       }
 #endif
@@ -1695,7 +1694,7 @@ double *select_fiducial(double **part, long n_part, char *var_mode_in)
 	if (in.rank==out.rank)
 	  memcpy(best_particle, part[i_best], sizeof(*best_particle)*COORDINATES_PER_PARTICLE);
 	MPI_Bcast(best_particle, COORDINATES_PER_PARTICLE, MPI_DOUBLE, out.rank, MPI_COMM_WORLD);
-	log_exit("select_fiducial");
+	log_exit((char*)"select_fiducial");
 	return(best_particle);
       }
 #endif
@@ -1708,7 +1707,7 @@ double *select_fiducial(double **part, long n_part, char *var_mode_in)
        	if (myid==1)
 	  memcpy(best_particle, part[0], sizeof(*best_particle)*COORDINATES_PER_PARTICLE);
 	MPI_Bcast(best_particle, COORDINATES_PER_PARTICLE, MPI_DOUBLE, 1, MPI_COMM_WORLD);
-	log_exit("select_fiducial");
+	log_exit((char*)"select_fiducial");
 	return(best_particle);
       } else
 	i_best = 0;
@@ -1716,17 +1715,17 @@ double *select_fiducial(double **part, long n_part, char *var_mode_in)
       break;
     case FID_LIGHT:
       /* special case--return NULL pointer to indicate that phasing is to v=c */
-      log_exit("select_fiducial");
+      log_exit((char*)"select_fiducial");
       return(NULL);
     default:
-      bombElegant("apparent programming error in select_fiducial", NULL);
+      bombElegant((char*)"apparent programming error in select_fiducial", NULL);
       break;
     }
     if (i_best<0 || i_best>n_part)
-      bombElegant("fiducial particle selection returned invalid value!", NULL);
+      bombElegant((char*)"fiducial particle selection returned invalid value!", NULL);
   }
   
-  log_exit("select_fiducial");
+  log_exit((char*)"select_fiducial");
   return(part[i_best]);
 }
 
@@ -1734,21 +1733,21 @@ void select_integrator(char *desired_method)
 {
     long i;
 
-    log_entry("select_integrator");
+    log_entry((char*)"select_integrator");
 
 #if defined(DEBUG)
-    fprintf(stdout, "select_integrator called with pointer %lx\n", (long)(desired_method));
+    fprintf(stdout, (char*)"select_integrator called with pointer %lx\n", (long)(desired_method));
     fflush(stdout);
-    fprintf(stdout, "this translates into string %s\n", desired_method);
+    fprintf(stdout, (char*)"this translates into string %s\n", desired_method);
     fflush(stdout);
 #endif
     switch (integratorCode=match_string(desired_method, method, N_METHODS, 0)) {
       case RUNGE_KUTTA:
-        fprintf(stdout, "Warning: adaptive integrator chosen.  \"non-adaptive runge-kutta\" is recommended.\n");
+        fprintf(stdout, (char*)"Warning: adaptive integrator chosen.  \"non-adaptive runge-kutta\" is recommended.\n");
         fflush(stdout);
         break;
       case BULIRSCH_STOER:
-        fprintf(stdout, "Warning: adaptive integrator chosen.  \"non-adaptive runge-kutta\" is recommended.\n");
+        fprintf(stdout, (char*)"Warning: adaptive integrator chosen.  \"non-adaptive runge-kutta\" is recommended.\n");
         fflush(stdout);
         break;
       case NA_RUNGE_KUTTA:
@@ -1756,17 +1755,17 @@ void select_integrator(char *desired_method)
       case MODIFIED_MIDPOINT:
         break;
       default:
-        fprintf(stdout, "error: unknown integration method %s requested.\n", desired_method);
+        fprintf(stdout, (char*)"error: unknown integration method %s requested.\n", desired_method);
         fflush(stdout);
-        fprintf(stdout, "Available methods are:\n");
+        fprintf(stdout, (char*)"Available methods are:\n");
         fflush(stdout);
         for (i=0; i<N_METHODS; i++)
-            fprintf(stdout, "    %s\n", method[i]);
+            fprintf(stdout, (char*)"    %s\n", method[i]);
             fflush(stdout);
         exit(1);
         break;
         }
-    log_exit("select_integrator");
+    log_exit((char*)"select_integrator");
     }
 
 void setupRftmEz0FromFile(RFTMEZ0 *rftmEz0, double frequency, double length)
@@ -1777,43 +1776,43 @@ void setupRftmEz0FromFile(RFTMEZ0 *rftmEz0, double frequency, double length)
   double k, Ez, EzMax;
   
   if (!rftmEz0)
-    bombElegant("setupRftmEz0FromFile: NULL pointer passed.", NULL);
+    bombElegant((char*)"setupRftmEz0FromFile: NULL pointer passed.", NULL);
 
   if (rftmEz0->initialized)
     return;
   
   /* verify input parameters */
   if (!rftmEz0->inputFile || !rftmEz0->zColumn || !rftmEz0->EzColumn)
-    bombElegant("RFTMEZ0 must have INPUTFILE, ZCOLUMN, and EZCOLUMN specified.", NULL);
+    bombElegant((char*)"RFTMEZ0 must have INPUTFILE, ZCOLUMN, and EZCOLUMN specified.", NULL);
   if (rftmEz0->radial_order!=1)
-    bombElegant("RFTMEZ0 restricted to radial_order=1 at present", NULL);
+    bombElegant((char*)"RFTMEZ0 restricted to radial_order=1 at present", NULL);
 
   /* read (z, Ez) data from the file  */
   if (!SDDS_InitializeInputFromSearchPath(&SDDSin, rftmEz0->inputFile) || SDDS_ReadPage(&SDDSin)!=1) {
-    fprintf(stderr, "Error: unable to open or read RFTMEZ0 file %s\n", 
+    fprintf(stderr, (char*)"Error: unable to open or read RFTMEZ0 file %s\n", 
             rftmEz0->inputFile);
     exit(1);
   }
   if ((rftmEz0->nz=SDDS_RowCount(&SDDSin))<0 || rftmEz0->nz<2) {
-    fprintf(stderr, "Error: no data or insufficient data in RFTMEZ0 file %s\n", 
+    fprintf(stderr, (char*)"Error: no data or insufficient data in RFTMEZ0 file %s\n", 
             rftmEz0->inputFile);
     exit(1);
   }
-  if (SDDS_CheckColumn(&SDDSin, rftmEz0->zColumn, "m", SDDS_ANY_FLOATING_TYPE,
+  if (SDDS_CheckColumn(&SDDSin, rftmEz0->zColumn, (char*)"m", SDDS_ANY_FLOATING_TYPE,
                        stderr)!=SDDS_CHECK_OK) {
-    fprintf(stderr, "Error: problem with column %s in RFTMEZ0 file %s.  Check existence, type, and units.\n",
+    fprintf(stderr, (char*)"Error: problem with column %s in RFTMEZ0 file %s.  Check existence, type, and units.\n",
             rftmEz0->zColumn, rftmEz0->inputFile);
     exit(1);
   }
   if (SDDS_CheckColumn(&SDDSin, rftmEz0->EzColumn, NULL, SDDS_ANY_FLOATING_TYPE,
                        stderr)!=SDDS_CHECK_OK) {
-    fprintf(stderr, "Error: problem with column %s in RFTMEZ0 file %s.  Check existence and type.\n",
+    fprintf(stderr, (char*)"Error: problem with column %s in RFTMEZ0 file %s.  Check existence and type.\n",
             rftmEz0->EzColumn, rftmEz0->inputFile);
     exit(1);
   }
   if (!(z=SDDS_GetColumnInDoubles(&SDDSin, rftmEz0->zColumn)) ||
       !(rftmEz0->Ez=SDDS_GetColumnInDoubles(&SDDSin, rftmEz0->EzColumn))) {
-    fprintf(stderr, "Error: problem retrieving RFTMEZ0 data from SDDS structure for file %s\n",
+    fprintf(stderr, (char*)"Error: problem retrieving RFTMEZ0 data from SDDS structure for file %s\n",
             rftmEz0->inputFile);
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
@@ -1825,20 +1824,20 @@ void setupRftmEz0FromFile(RFTMEZ0 *rftmEz0, double frequency, double length)
   }
   if (!(rftmEz0->dEzdZ=(double*)SDDS_Malloc(sizeof(*(rftmEz0->dEzdZ))*rftmEz0->nz))) {
     
-    fprintf(stderr, "Error: memory allocation failure setting up RFTMEZ0 file %s\n",
+    fprintf(stderr, (char*)"Error: memory allocation failure setting up RFTMEZ0 file %s\n",
             rftmEz0->inputFile);
     exit(1);
   }
 
   /* compute dEz/dz for use in computing Er(z) */
   if (!analyzeSpacing(z, rftmEz0->nz, &rftmEz0->dz, stderr)) {
-    fprintf(stderr, "Error: problem with z points from RFTMEZ0 file %s\n",
+    fprintf(stderr, (char*)"Error: problem with z points from RFTMEZ0 file %s\n",
             rftmEz0->inputFile);
     exit(1);
   }
   
   if (fabs((length-(z[rftmEz0->nz-1]-z[0]))/rftmEz0->dz)>1e-4) {
-    fprintf(stderr, "Error: declared length (%le) and length from fields (%le) from RFTMEZ0 file %s do not agree to 1/10^4 tolerance\n",
+    fprintf(stderr, (char*)"Error: declared length (%le) and length from fields (%le) from RFTMEZ0 file %s do not agree to 1/10^4 tolerance\n",
             length, z[rftmEz0->nz-1]-z[0], rftmEz0->inputFile);
     exit(1);
   }
@@ -1889,39 +1888,39 @@ void setupRftmEz0SolenoidFromFile(RFTMEZ0 *rftmEz0, double length, double k)
     return;
   
   if (!rftmEz0->solenoid_zColumn || !rftmEz0->solenoidBzColumn)
-    SDDS_Bomb("missing column name for solenoid for RFTMEZ0 element");
+    SDDS_Bomb((char*)"missing column name for solenoid for RFTMEZ0 element");
   if (rftmEz0->solenoidBrColumn && !rftmEz0->solenoid_rColumn) 
-    SDDS_Bomb("missing column name for solenoid for RFTMEZ0 element---supply r column with Br column");
+    SDDS_Bomb((char*)"missing column name for solenoid for RFTMEZ0 element---supply r column with Br column");
 
   if (!SDDS_InitializeInputFromSearchPath(&SDDSin, rftmEz0->solenoidFile)) {
-    fprintf(stderr, "Error: unable to open or read RFTMEZ0 solenoid file %s\n", 
+    fprintf(stderr, (char*)"Error: unable to open or read RFTMEZ0 solenoid file %s\n", 
             rftmEz0->solenoidFile);
     exit(1);
   }
-  if (SDDS_CheckColumn(&SDDSin, rftmEz0->solenoid_zColumn, "m", SDDS_ANY_FLOATING_TYPE,
+  if (SDDS_CheckColumn(&SDDSin, rftmEz0->solenoid_zColumn, (char*)"m", SDDS_ANY_FLOATING_TYPE,
                        stderr)!=SDDS_CHECK_OK) {
-    fprintf(stderr, "Error: problem with column %s in RFTMEZ0 solenoid file %s.  Check existence, type, and units.\n",
+    fprintf(stderr, (char*)"Error: problem with column %s in RFTMEZ0 solenoid file %s.  Check existence, type, and units.\n",
             rftmEz0->solenoid_zColumn, rftmEz0->solenoidFile);
     exit(1);
   }
   if (rftmEz0->solenoid_rColumn &&
-      SDDS_CheckColumn(&SDDSin, rftmEz0->solenoid_rColumn, "m", SDDS_ANY_FLOATING_TYPE,
+      SDDS_CheckColumn(&SDDSin, rftmEz0->solenoid_rColumn, (char*)"m", SDDS_ANY_FLOATING_TYPE,
                        stderr)!=SDDS_CHECK_OK) {
-    fprintf(stderr, "Error: problem with column %s in RFTMEZ0 solenoid file %s.  Check existence, type, and units.\n",
+    fprintf(stderr, (char*)"Error: problem with column %s in RFTMEZ0 solenoid file %s.  Check existence, type, and units.\n",
             rftmEz0->solenoid_rColumn, rftmEz0->solenoidFile);
     exit(1);
   }
 
-  if (SDDS_CheckColumn(&SDDSin, rftmEz0->solenoidBzColumn, "T", SDDS_ANY_FLOATING_TYPE,
+  if (SDDS_CheckColumn(&SDDSin, rftmEz0->solenoidBzColumn, (char*)"T", SDDS_ANY_FLOATING_TYPE,
                        stderr)!=SDDS_CHECK_OK) {
-    fprintf(stderr, "Error: problem with column %s in RFTMEZ0 solenoid file %s.  Check existence, type, and units.\n",
+    fprintf(stderr, (char*)"Error: problem with column %s in RFTMEZ0 solenoid file %s.  Check existence, type, and units.\n",
             rftmEz0->solenoidBzColumn, rftmEz0->solenoidFile);
     exit(1);
   }
   if (rftmEz0->solenoidBrColumn &&
-      SDDS_CheckColumn(&SDDSin, rftmEz0->solenoidBrColumn, "T", SDDS_ANY_FLOATING_TYPE,
+      SDDS_CheckColumn(&SDDSin, rftmEz0->solenoidBrColumn, (char*)"T", SDDS_ANY_FLOATING_TYPE,
                        stderr)!=SDDS_CHECK_OK) {
-    fprintf(stderr, "Error: problem with column %s in RFTMEZ0 solenoid file %s.  Check existence, type, and units.\n",
+    fprintf(stderr, (char*)"Error: problem with column %s in RFTMEZ0 solenoid file %s.  Check existence, type, and units.\n",
             rftmEz0->solenoidBzColumn, rftmEz0->solenoidFile);
     exit(1);
   }
@@ -1931,23 +1930,23 @@ void setupRftmEz0SolenoidFromFile(RFTMEZ0 *rftmEz0, double length, double k)
   while ((page=SDDS_ReadPage(&SDDSin))>0) {
     if (page==1) {
       if ((rftmEz0->nzSol=SDDS_RowCount(&SDDSin))<0 || rftmEz0->nzSol<2) {
-        fprintf(stderr, "Error: no data or insufficient data in RFTMEZ0 solenoid file %s\n", 
+        fprintf(stderr, (char*)"Error: no data or insufficient data in RFTMEZ0 solenoid file %s\n", 
                 rftmEz0->solenoidFile);
         exit(1);
       }
       if (!(z=SDDS_GetColumnInDoubles(&SDDSin, rftmEz0->solenoid_zColumn))) {
-        fprintf(stderr, "Error: problem getting z data from RFTMEZ0 solenoid file %s\n",
+        fprintf(stderr, (char*)"Error: problem getting z data from RFTMEZ0 solenoid file %s\n",
                 rftmEz0->solenoidFile);
         exit(1);
       }
       if (!analyzeSpacing(z, rftmEz0->nzSol, &dz, stderr)) {
-        fprintf(stderr, "Problem with z spacing of solenoid data from RFTMEZ0 file %s (page %ld)\n",
+        fprintf(stderr, (char*)"Problem with z spacing of solenoid data from RFTMEZ0 file %s (page %ld)\n",
                 rftmEz0->solenoidFile, page);
         exit(1);
       }
       z0 = z[0];
       if (fabs((length-(z[rftmEz0->nzSol-1]-z[0]))/dz)>1e-4) {
-        fprintf(stderr, "Error: declared length and length from fields from RFTMEZ0 solenoid file %s do not agree to 1/10^4 tolerance\n",
+        fprintf(stderr, (char*)"Error: declared length and length from fields from RFTMEZ0 solenoid file %s do not agree to 1/10^4 tolerance\n",
                 rftmEz0->solenoidFile);
         
         exit(1);
@@ -1955,11 +1954,11 @@ void setupRftmEz0SolenoidFromFile(RFTMEZ0 *rftmEz0, double length, double k)
       free(z);
     } else {
       if (!rftmEz0->solenoidBrColumn) {
-        fprintf(stderr, "Error: multi-page file for RFTMEZ0 solenoid, but no BrColumn or rColumn\n");
+        fprintf(stderr, (char*)"Error: multi-page file for RFTMEZ0 solenoid, but no BrColumn or rColumn\n");
         exit(1);
       }
       if (rftmEz0->nzSol!=SDDS_RowCount(&SDDSin)) {
-        fprintf(stderr, "Error: page %ld of RFTMEZ0 file %s has only %d rows (%ld expected)\n",
+        fprintf(stderr, (char*)"Error: page %ld of RFTMEZ0 file %s has only %d rows (%ld expected)\n",
                 page, rftmEz0->solenoidFile, SDDS_RowCount(&SDDSin), rftmEz0->nzSol);
         exit(1);
       }
@@ -1967,29 +1966,29 @@ void setupRftmEz0SolenoidFromFile(RFTMEZ0 *rftmEz0, double length, double k)
 
     if (rftmEz0->solenoidBrColumn)  {
       if (!(rTemp = SDDS_GetColumnInDoubles(&SDDSin, rftmEz0->solenoid_rColumn))) {
-        fprintf(stderr, "Error: problem getting r data from RFTMEZ0 solenoid file %s\n",
+        fprintf(stderr, (char*)"Error: problem getting r data from RFTMEZ0 solenoid file %s\n",
                 rftmEz0->solenoidFile);
         exit(1);
       }
       if (!(r = (double*)SDDS_Realloc(r, sizeof(*r)*page)))
-        SDDS_Bomb("memory allocation failure (setupRftmEz0SolenoidFromFile)");
+        SDDS_Bomb((char*)"memory allocation failure (setupRftmEz0SolenoidFromFile)");
       r[page-1] = rTemp[0];
       free(rTemp);
       if (!(rftmEz0->BrSol = (double**)SDDS_Realloc(rftmEz0->BrSol, sizeof(*rftmEz0->BrSol)*page)) )
-        SDDS_Bomb("memory allocation failure (setupRftmEz0SolenoidFromFile)");
+        SDDS_Bomb((char*)"memory allocation failure (setupRftmEz0SolenoidFromFile)");
       if (!(rftmEz0->BrSol[page-1] = 
             SDDS_GetColumnInDoubles(&SDDSin, rftmEz0->solenoidBrColumn)) )  {
-        fprintf(stderr, "Error: problem getting field data from RFTMEZ0 solenoid file %s\n",
+        fprintf(stderr, (char*)"Error: problem getting field data from RFTMEZ0 solenoid file %s\n",
                 rftmEz0->solenoidFile);
         exit(1);
       }
     }
     
     if (!(rftmEz0->BzSol = (double**)SDDS_Realloc(rftmEz0->BzSol, sizeof(*rftmEz0->BzSol)*page)))
-      SDDS_Bomb("memory allocation failure (setupRftmEz0SolenoidFromFile)");
+      SDDS_Bomb((char*)"memory allocation failure (setupRftmEz0SolenoidFromFile)");
     if (!(rftmEz0->BzSol[page-1] = 
           SDDS_GetColumnInDoubles(&SDDSin, rftmEz0->solenoidBzColumn))) {
-      fprintf(stderr, "Error: problem getting field data from RFTMEZ0 solenoid file %s\n",
+      fprintf(stderr, (char*)"Error: problem getting field data from RFTMEZ0 solenoid file %s\n",
               rftmEz0->solenoidFile);
       exit(1);
     }
@@ -2000,10 +1999,10 @@ void setupRftmEz0SolenoidFromFile(RFTMEZ0 *rftmEz0, double length, double k)
   
   if (rftmEz0->solenoid_rColumn) {
     if (!analyzeSpacing(r, rftmEz0->nrSol, &dr, stderr)) {
-      fprintf(stderr, "Problem with r spacing of solenoid data from RFTMEZ0 file %s\nr values are:\n",
+      fprintf(stderr, (char*)"Problem with r spacing of solenoid data from RFTMEZ0 file %s\nr values are:\n",
               rftmEz0->solenoidFile);
       for (ir=0; ir<rftmEz0->nrSol; ir++)
-        fprintf(stderr, "%le\n", r[ir]);
+        fprintf(stderr, (char*)"%le\n", r[ir]);
       exit(1);
     }
     free(r);
@@ -2028,7 +2027,7 @@ void setupRftmEz0SolenoidFromFile(RFTMEZ0 *rftmEz0, double length, double k)
     /* take derivative for off-axis expansion */
 
     if (!(rftmEz0->dBzdZSol=(double*)SDDS_Malloc(sizeof(*(rftmEz0->dBzdZSol))*rftmEz0->nzSol))) {
-      fprintf(stderr, "Error: memory allocation failure setting up RFTMEZ0 file %s\n",
+      fprintf(stderr, (char*)"Error: memory allocation failure setting up RFTMEZ0 file %s\n",
               rftmEz0->solenoidFile);
       exit(1);
     }
@@ -2052,7 +2051,7 @@ long analyzeSpacing(double *z, long nz, double *dzReturn, FILE *fpError)
   
   if (nz<3) {
     if (fpError)
-      fprintf(fpError, "Problem with point spacing: less than 3 points\n");
+      fprintf(fpError, (char*)"Problem with point spacing: less than 3 points\n");
     return 0;
   }
   
@@ -2065,12 +2064,12 @@ long analyzeSpacing(double *z, long nz, double *dzReturn, FILE *fpError)
   }
   if (dzMin<=0 || dzMax<=0) {
     if (fpError)
-      fprintf(fpError, "Error: points are not monotonically increasing\n");
+      fprintf(fpError, (char*)"Error: points are not monotonically increasing\n");
     return 0;
   }
   if (fabs(1-dzMin/dzMax)>0.0001) {
     if (fpError)
-      fprintf(fpError, "Error: spacing of points is not uniform (0.01%% tolerance)\n");
+      fprintf(fpError, (char*)"Error: spacing of points is not uniform (0.01%% tolerance)\n");
     return 0;
   }
   *dzReturn = (z[nz-1]-z[0])/(nz-1.0);
@@ -2091,39 +2090,39 @@ void setupMapSolenoidFromFile(MAP_SOLENOID *mapSol, double length)
   
   /* check for solenoid input file */
   if (!mapSol->inputFile)
-    SDDS_Bomb("no input file given for MAPSOLENOID element");
+    SDDS_Bomb((char*)"no input file given for MAPSOLENOID element");
   
   if (!mapSol->zColumn || !mapSol->rColumn ||
       !mapSol->BzColumn || !mapSol->BrColumn) 
-    SDDS_Bomb("missing column name for solenoid for MAPSOLENOID element");
+    SDDS_Bomb((char*)"missing column name for solenoid for MAPSOLENOID element");
 
   if (!SDDS_InitializeInputFromSearchPath(&SDDSin, mapSol->inputFile)) {
-    fprintf(stderr, "Error: unable to open or read MAPSOLENOID file %s\n", 
+    fprintf(stderr, (char*)"Error: unable to open or read MAPSOLENOID file %s\n", 
             mapSol->inputFile);
     exit(1);
   }
-  if (SDDS_CheckColumn(&SDDSin, mapSol->zColumn, "m", SDDS_ANY_FLOATING_TYPE,
+  if (SDDS_CheckColumn(&SDDSin, mapSol->zColumn, (char*)"m", SDDS_ANY_FLOATING_TYPE,
                        stderr)!=SDDS_CHECK_OK) {
-    fprintf(stderr, "Error: problem with column %s in MAPSOLENOID file %s.  Check existence, type, and units.\n",
+    fprintf(stderr, (char*)"Error: problem with column %s in MAPSOLENOID file %s.  Check existence, type, and units.\n",
             mapSol->zColumn, mapSol->inputFile);
     exit(1);
   }
-  if (SDDS_CheckColumn(&SDDSin, mapSol->rColumn, "m", SDDS_ANY_FLOATING_TYPE,
+  if (SDDS_CheckColumn(&SDDSin, mapSol->rColumn, (char*)"m", SDDS_ANY_FLOATING_TYPE,
                        stderr)!=SDDS_CHECK_OK) {
-    fprintf(stderr, "Error: problem with column %s in MAPSOLENOID file %s.  Check existence, type, and units.\n",
+    fprintf(stderr, (char*)"Error: problem with column %s in MAPSOLENOID file %s.  Check existence, type, and units.\n",
             mapSol->rColumn, mapSol->inputFile);
     exit(1);
   }
 
-  if (SDDS_CheckColumn(&SDDSin, mapSol->BzColumn, "T", SDDS_ANY_FLOATING_TYPE,
+  if (SDDS_CheckColumn(&SDDSin, mapSol->BzColumn, (char*)"T", SDDS_ANY_FLOATING_TYPE,
                        stderr)!=SDDS_CHECK_OK) {
-    fprintf(stderr, "Error: problem with column %s in MAPSOLENOID file %s.  Check existence, type, and units.\n",
+    fprintf(stderr, (char*)"Error: problem with column %s in MAPSOLENOID file %s.  Check existence, type, and units.\n",
             mapSol->BzColumn, mapSol->inputFile);
     exit(1);
   }
-  if (SDDS_CheckColumn(&SDDSin, mapSol->BrColumn, "T", SDDS_ANY_FLOATING_TYPE,
+  if (SDDS_CheckColumn(&SDDSin, mapSol->BrColumn, (char*)"T", SDDS_ANY_FLOATING_TYPE,
                        stderr)!=SDDS_CHECK_OK) {
-    fprintf(stderr, "Error: problem with column %s in MAPSOLENOID file %s.  Check existence, type, and units.\n",
+    fprintf(stderr, (char*)"Error: problem with column %s in MAPSOLENOID file %s.  Check existence, type, and units.\n",
             mapSol->BzColumn, mapSol->inputFile);
     exit(1);
   }
@@ -2133,22 +2132,22 @@ void setupMapSolenoidFromFile(MAP_SOLENOID *mapSol, double length)
   while ((page=SDDS_ReadPage(&SDDSin))>0) {
     if (page==1) {
       if ((mapSol->nz=SDDS_RowCount(&SDDSin))<0 || mapSol->nz<2) {
-        fprintf(stderr, "Error: no data or insufficient data in MAPSOLENOID file %s\n", 
+        fprintf(stderr, (char*)"Error: no data or insufficient data in MAPSOLENOID file %s\n", 
                 mapSol->inputFile);
         exit(1);
       }
       if (!(z=SDDS_GetColumnInDoubles(&SDDSin, mapSol->zColumn))) {
-        fprintf(stderr, "Error: problem getting z data from MAPSOLENOID file %s\n",
+        fprintf(stderr, (char*)"Error: problem getting z data from MAPSOLENOID file %s\n",
                 mapSol->inputFile);
         exit(1);
       }
       if (!analyzeSpacing(z, mapSol->nz, &dz, stderr)) {
-        fprintf(stderr, "Problem with z spacing of solenoid data from MAPSOLENOID file %s (page %ld)\n",
+        fprintf(stderr, (char*)"Problem with z spacing of solenoid data from MAPSOLENOID file %s (page %ld)\n",
                 mapSol->inputFile, page);
         exit(1);
       }
       if (fabs((length-(z[mapSol->nz-1]-z[0]))/dz)>1e-4) {
-        fprintf(stderr, "Error: declared length (%le) and length from fields (%le) from MAP_SOLENOID file %s do not agree to 1/10^4 tolerance (in units of dz=%le)\nDiscrepancy is %le\n",
+        fprintf(stderr, (char*)"Error: declared length (%le) and length from fields (%le) from MAP_SOLENOID file %s do not agree to 1/10^4 tolerance (in units of dz=%le)\nDiscrepancy is %le\n",
                 length, z[mapSol->nz-1]-z[0], mapSol->inputFile, dz,
                 fabs((length-(z[mapSol->nz-1]-z[0]))/dz));
         exit(1);
@@ -2156,30 +2155,30 @@ void setupMapSolenoidFromFile(MAP_SOLENOID *mapSol, double length)
       free(z);
     } else {
       if (mapSol->nz!=SDDS_RowCount(&SDDSin)) {
-        fprintf(stderr, "Error: page %ld of MAPSOLENOID file %s has only %d rows (%ld expected)\n",
+        fprintf(stderr, (char*)"Error: page %ld of MAPSOLENOID file %s has only %d rows (%ld expected)\n",
                 page, mapSol->inputFile, SDDS_RowCount(&SDDSin), mapSol->nz);
         exit(1);
       }
     }
 
     if (!(rTemp = SDDS_GetColumnInDoubles(&SDDSin, mapSol->rColumn))) {
-      fprintf(stderr, "Error: problem getting r data from MAPSOLENOID file %s\n",
+      fprintf(stderr, (char*)"Error: problem getting r data from MAPSOLENOID file %s\n",
               mapSol->inputFile);
       exit(1);
     }
     if (!(r = (double*)SDDS_Realloc(r, sizeof(*r)*page)))
-      SDDS_Bomb("memory allocation failure (setupmapSolSolenoidFromFile)");
+      SDDS_Bomb((char*)"memory allocation failure (setupmapSolSolenoidFromFile)");
     r[page-1] = rTemp[0];
     free(rTemp);
     
     if (!(mapSol->Bz = (double**)SDDS_Realloc(mapSol->Bz, sizeof(*mapSol->Bz)*page)) ||
         !(mapSol->Br = (double**)SDDS_Realloc(mapSol->Br, sizeof(*mapSol->Br)*page)) )
-      SDDS_Bomb("memory allocation failure (setupmapSolSolenoidFromFile)");
+      SDDS_Bomb((char*)"memory allocation failure (setupmapSolSolenoidFromFile)");
     if (!(mapSol->Bz[page-1] = 
           SDDS_GetColumnInDoubles(&SDDSin, mapSol->BzColumn)) ||
         !(mapSol->Br[page-1] = 
           SDDS_GetColumnInDoubles(&SDDSin, mapSol->BrColumn)) )  {
-       fprintf(stderr, "Error: problem getting field data from MAPSOLENOID file %s\n",
+       fprintf(stderr, (char*)"Error: problem getting field data from MAPSOLENOID file %s\n",
                mapSol->inputFile);
        exit(1);
     }
@@ -2189,10 +2188,10 @@ void setupMapSolenoidFromFile(MAP_SOLENOID *mapSol, double length)
   SDDS_Terminate(&SDDSin);
   
   if (!analyzeSpacing(r, mapSol->nr, &dr, stderr)) {
-    fprintf(stderr, "Problem with r spacing of solenoid data from MAPSOLENOID file %s\nr values are:\n",
+    fprintf(stderr, (char*)"Problem with r spacing of solenoid data from MAPSOLENOID file %s\nr values are:\n",
             mapSol->inputFile);
     for (ir=0; ir<mapSol->nr; ir++)
-      fprintf(stderr, "%le\n", r[ir]);
+      fprintf(stderr, (char*)"%le\n", r[ir]);
     exit(1);
   }
   free(r);
@@ -2224,16 +2223,16 @@ void makeRftmEz0FieldTestFile(RFTMEZ0 *rftmEz0)
   nz = 2*(rftmEz0->nz>rftmEz0->nzSol ? rftmEz0->nz : rftmEz0->nzSol);
   rftmEz0->fieldTestFile = compose_filename(rftmEz0->fieldTestFile, context.rootname);
   if (!SDDS_InitializeOutput(&SDDSout, SDDS_BINARY, 0, NULL, NULL, rftmEz0->fieldTestFile) ||
-      !SDDS_DefineSimpleColumn(&SDDSout, "z", "m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(&SDDSout, "ExRFOverr", "V/m/m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(&SDDSout, "EyRFOverr", "V/m/m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(&SDDSout, "EzRF", "V/m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(&SDDSout, "BxRFOverr", "T/m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(&SDDSout, "ByRFOverr", "T/m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(&SDDSout, "BzRF", "T", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(&SDDSout, "BxSolOverr", "T/m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(&SDDSout, "BySolOverr", "T/m", SDDS_DOUBLE) ||
-      !SDDS_DefineSimpleColumn(&SDDSout, "BzSol", "T", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleColumn(&SDDSout, (char*)"z", (char*)"m", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleColumn(&SDDSout, (char*)"ExRFOverr", (char*)"V/m/m", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleColumn(&SDDSout, (char*)"EyRFOverr", (char*)"V/m/m", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleColumn(&SDDSout, (char*)"EzRF", (char*)"V/m", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleColumn(&SDDSout, (char*)"BxRFOverr", (char*)"T/m", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleColumn(&SDDSout, (char*)"ByRFOverr", (char*)"T/m", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleColumn(&SDDSout, (char*)"BzRF", (char*)"T", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleColumn(&SDDSout, (char*)"BxSolOverr", (char*)"T/m", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleColumn(&SDDSout, (char*)"BySolOverr", (char*)"T/m", SDDS_DOUBLE) ||
+      !SDDS_DefineSimpleColumn(&SDDSout, (char*)"BzSol", (char*)"T", SDDS_DOUBLE) ||
       !SDDS_WriteLayout(&SDDSout)  || !SDDS_StartPage(&SDDSout, nz)) {
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
     exit(1);
@@ -2249,22 +2248,22 @@ void makeRftmEz0FieldTestFile(RFTMEZ0 *rftmEz0)
                           PI/2.0, 1.0);
     if (!SDDS_SetRowValues(&SDDSout,
                            SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE, iz,
-                           "z", iz*dZ/rftmEz0->k,
-                           "ExRFOverr", E[0]/1e-3*ERFscale,
-                           "EyRFOverr", E[1]/1e-3*ERFscale,
-                           "EzRF", E[2]*ERFscale,
-                           "BxRFOverr", BOverGamma[0]/1e-3*BRFscale,
-                           "ByRFOverr", BOverGamma[1]/1e-3*BRFscale,
-                           "BzRF", BOverGamma[2]*BRFscale,
-                           "BxSolOverr", BOverGammaSol[0]/1e-3*scale,
-                           "BySolOverr", BOverGammaSol[1]/1e-3*scale,
-                           "BzSol", BOverGammaSol[2]*scale, NULL)) {
-        SDDS_SetError("Problem setting SDDS row values (makeRftmEz0FieldTestFile)");
+                           (char*)"z", iz*dZ/rftmEz0->k,
+                           (char*)"ExRFOverr", E[0]/1e-3*ERFscale,
+                           (char*)"EyRFOverr", E[1]/1e-3*ERFscale,
+                           (char*)"EzRF", E[2]*ERFscale,
+                           (char*)"BxRFOverr", BOverGamma[0]/1e-3*BRFscale,
+                           (char*)"ByRFOverr", BOverGamma[1]/1e-3*BRFscale,
+                           (char*)"BzRF", BOverGamma[2]*BRFscale,
+                           (char*)"BxSolOverr", BOverGammaSol[0]/1e-3*scale,
+                           (char*)"BySolOverr", BOverGammaSol[1]/1e-3*scale,
+                           (char*)"BzSol", BOverGammaSol[2]*scale, NULL)) {
+        SDDS_SetError((char*)"Problem setting SDDS row values (makeRftmEz0FieldTestFile)");
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
     }
   }
   if (!SDDS_WritePage(&SDDSout) || !SDDS_Terminate(&SDDSout)) {
-    SDDS_SetError("Problem writing or terminating file (makeRftmEz0FieldTestFile)");
+    SDDS_SetError((char*)"Problem writing or terminating file (makeRftmEz0FieldTestFile)");
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
   }
 }
@@ -2283,26 +2282,26 @@ void derivatives_laserModulator(double *qp, double *q, double tau)
   LSRMDLTR *lsrMdltr; 
   double gamma, *P, *Pp;
   double BOverGamma[3]={0,0,0}, E[3]={0,0,0}, Blaser[3]={0,0,0};
-  double x, y, z, factor, Bfactor, kuz, kuy;
+  double x, y, z, factor_inner_scope, Bfactor, kuz, kuy;
   long i, poleNumber;
   
 #ifdef DEBUG
   if (!fppu) {
-    fppu = fopen("lsrMdltr.sdds", "w");
-    fprintf(fppu, "SDDS1\n");
-    fprintf(fppu, "&column name=tau type=double &end\n");
-    fprintf(fppu, "&column name=t type=double units=s &end\n");
-    fprintf(fppu, "&column name=phi type=double &end\n");
-    fprintf(fppu, "&column name=x type=double units=m &end\n");
-    fprintf(fppu, "&column name=y type=double units=m &end\n");
+    fppu = fopen((char*)"lsrMdltr.sdds", (char*)"w");
+    fprintf(fppu, (char*)"SDDS1\n");
+    fprintf(fppu, (char*)"&column name=tau type=double &end\n");
+    fprintf(fppu, (char*)"&column name=t type=double units=s &end\n");
+    fprintf(fppu, (char*)"&column name=phi type=double &end\n");
+    fprintf(fppu, (char*)"&column name=x type=double units=m &end\n");
+    fprintf(fppu, (char*)"&column name=y type=double units=m &end\n");
 
-    fprintf(fppu, "&column name=z type=double units=m &end\n");
-    fprintf(fppu, "&column name=Px type=double &end\n");
-    fprintf(fppu, "&column name=Py type=double &end\n");
-    fprintf(fppu, "&column name=Pz type=double &end\n");
-    fprintf(fppu, "&column name=Ex type=double &end\n");
-    fprintf(fppu, "&column name=By type=double &end\n");
-    fprintf(fppu, "&data mode=ascii no_row_counts=1 &end\n");
+    fprintf(fppu, (char*)"&column name=z type=double units=m &end\n");
+    fprintf(fppu, (char*)"&column name=Px type=double &end\n");
+    fprintf(fppu, (char*)"&column name=Py type=double &end\n");
+    fprintf(fppu, (char*)"&column name=Pz type=double &end\n");
+    fprintf(fppu, (char*)"&column name=Ex type=double &end\n");
+    fprintf(fppu, (char*)"&column name=By type=double &end\n");
+    fprintf(fppu, (char*)"&data mode=ascii no_row_counts=1 &end\n");
   }
 #endif
   
@@ -2327,15 +2326,15 @@ void derivatives_laserModulator(double *qp, double *q, double tau)
   
   poleNumber = z/(lsrMdltr->length/(2*lsrMdltr->periods))+0.5;
   if (poleNumber>2 && poleNumber<(2*lsrMdltr->periods-2))
-    factor = 1;
+    factor_inner_scope = 1;
   else if (poleNumber==0 || poleNumber==2*lsrMdltr->periods)
-    factor = lsrMdltr->poleFactor1;
+    factor_inner_scope = lsrMdltr->poleFactor1;
   else if (poleNumber==1 || poleNumber==(2*lsrMdltr->periods-1))
-    factor = lsrMdltr->poleFactor2;
+    factor_inner_scope = lsrMdltr->poleFactor2;
   else 
-    factor = lsrMdltr->poleFactor3;
+    factor_inner_scope = lsrMdltr->poleFactor3;
 
-  Bfactor = factor*lsrMdltr->Bu*lsrMdltr->Bscale/gamma;
+  Bfactor = factor_inner_scope*lsrMdltr->Bu*lsrMdltr->Bscale/gamma;
   kuz = lsrMdltr->ku*z;
   kuy = lsrMdltr->ku*y;
   if (lsrMdltr->fieldCode==LSRMDLTR_IDEAL) {
@@ -2373,7 +2372,7 @@ void derivatives_laserModulator(double *qp, double *q, double tau)
 
   
 #ifdef DEBUG
-  fprintf(fppu, "%e %e %e %e %e %e %e %e %e %e %e\n", tau, tau/lsrMdltr->omega, 
+  fprintf(fppu, (char*)"%e %e %e %e %e %e %e %e %e %e %e\n", tau, tau/lsrMdltr->omega, 
           lsrMdltr->k*z-tau, x, y, z, P[0], P[1], P[2], E[0], BOverGamma[1]*gamma);
 #endif
 }
@@ -2463,7 +2462,6 @@ void computeLaserField(double *Ef, double *Bf, double phase, double Ef0, double 
     Ef[i] = Bf[i] = 0;
   
   if (timeValue) {
-    long i;
     if (tForProfile<timeValue[0] || tForProfile>timeValue[profilePoints-1])
       return;
     else {
@@ -2488,13 +2486,13 @@ void computeLaserField(double *Ef, double *Bf, double phase, double Ef0, double 
                                 tForProfile);
 #if DEBUG
       if (!fpdeb) {
-        fpdeb = fopen("lsrMdltr.sdds", "w");
-        fprintf(fpdeb, "SDDS1\n&column name=t type=double units=s &end\n");
-        fprintf(fpdeb, "&column name=A type=double &end\n");
-        fprintf(fpdeb, "&column name=dz type=double units=m &end\n");
-        fprintf(fpdeb, "&data mode=ascii no_row_counts=1 &end\n");
+        fpdeb = fopen((char*)"lsrMdltr.sdds", (char*)"w");
+        fprintf(fpdeb, (char*)"SDDS1\n&column name=t type=double units=s &end\n");
+        fprintf(fpdeb, (char*)"&column name=A type=double &end\n");
+        fprintf(fpdeb, (char*)"&column name=dz type=double units=m &end\n");
+        fprintf(fpdeb, (char*)"&data mode=ascii no_row_counts=1 &end\n");
       }
-      fprintf(fpdeb, "%e %e %e\n", tForProfile, amplitude, dz);
+      fprintf(fpdeb, (char*)"%e %e %e\n", tForProfile, amplitude, dz);
 #endif
       lastIndex = i;
     }
@@ -2541,7 +2539,7 @@ double HermitePolynomial(double x, long n)
     result = 16*ipow(result, 2) - 48*result + 12;
     break;
   default:
-    fprintf(stderr, "Sorry, laser mode number too high---send an email to borland@aps.anl.gov if you really need this.\n");
+    fprintf(stderr, (char*)"Sorry, laser mode number too high---send an email to borland@aps.anl.gov if you really need this.\n");
     exit(1);
     break;
   }
@@ -2569,7 +2567,7 @@ double HermitePolynomialDeriv(double x, long n)
     result = 64*ipow(x,3) - 96*x;
     break;
   default:
-    fprintf(stderr, "Sorry, laser mode number too high\n");
+    fprintf(stderr, (char*)"Sorry, laser mode number too high\n");
     exit(1);
     break;
   }
@@ -2597,7 +2595,7 @@ double HermitePolynomial2ndDeriv(double x, long n)
     result = 3*64*ipow(x,2) - 96;
     break;
   default:
-    fprintf(stderr, "Sorry, laser mode number too high\n");
+    fprintf(stderr, (char*)"Sorry, laser mode number too high\n");
     exit(1);
     break;
   }

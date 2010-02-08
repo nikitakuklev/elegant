@@ -41,14 +41,14 @@ void track_through_rfmode(
     static long *pbin = NULL;                /* array to record which bin each particle is in */
     static double *time = NULL;              /* array to record arrival time of each particle */
     static long max_np = 0;
-    long ip, ib, nb2, lastBin, n_binned;
-    double tmin, tmax, tmean, dt, P;
-    double Vb, V, omega, phase, t, k, damping_factor, tau;
+    long ip, ib, nb2, lastBin=0, n_binned=0;
+    double tmin=0, tmax, tmean, dt=0, P;
+    double Vb, V, omega=0, phase, t, k, damping_factor, tau;
     double V_sum, Vr_sum, phase_sum;
     double Vc, Vcr, Q_sum, dgamma;
     long n_summed, max_hist, n_occupied;
     static long been_warned = 0;
-    double Qrp, VbImagFactor, Q;
+    double Qrp, VbImagFactor, Q=0;
     long deltaPass;
 #if USE_MPI
     double *buffer;
@@ -57,8 +57,8 @@ void track_through_rfmode(
 
     if (rfmode->binless) { /* This can't be done in parallel mode */
 #if USE_MPI
-    fprintf(stdout, "binless in rfmode is not supported in the current parallel version.\n");
-    fprintf(stdout, "Please use serial version.\n");
+    fprintf(stdout, (char*)"binless in rfmode is not supported in the current parallel version.\n");
+    fprintf(stdout, (char*)"Please use serial version.\n");
     fflush(stdout);
     MPI_Barrier (MPI_COMM_WORLD);
     MPI_Abort(MPI_COMM_WORLD, 9);
@@ -71,7 +71,7 @@ void track_through_rfmode(
     } else if (pass==0) {
       rfmode->mp_charge = 0;
       if (rfmode->charge<0)
-        bombElegant("RFMODE charge parameter should be non-negative. Use change_particle to set particle charge state.", NULL);
+        bombElegant((char*)"RFMODE charge parameter should be non-negative. Use change_particle to set particle charge state.", NULL);
 #if (!USE_MPI) 
       if (np)
         rfmode->mp_charge = rfmode->charge/np;
@@ -91,12 +91,12 @@ void track_through_rfmode(
     
     if (isMaster && (!been_warned)) {        
         if (rfmode->freq<1e3 && rfmode->freq)  {
-            fprintf(stdout, "\7\7\7warning: your RFMODE frequency is less than 1kHz--this may be an error\n");
+            fprintf(stdout, (char*)"\7\7\7warning: your RFMODE frequency is less than 1kHz--this may be an error\n");
             fflush(stdout);
             been_warned = 1;
             }
         if (been_warned) {
-            fprintf(stdout, "units of parameters for RFMODE are as follows:\n");
+            fprintf(stdout, (char*)"units of parameters for RFMODE are as follows:\n");
             fflush(stdout);
             print_dictionary_entry(stdout, T_RFMODE, 0, 0);
             }
@@ -110,7 +110,7 @@ void track_through_rfmode(
     }
 
     if (!rfmode->initialized)
-        bombElegant("track_through_rfmode called with uninitialized element", NULL);
+        bombElegant((char*)"track_through_rfmode called with uninitialized element", NULL);
 
     if (rfmode->n_bins>max_n_bins) {
       Ihist = (long*)trealloc(Ihist, sizeof(*Ihist)*(max_n_bins=rfmode->n_bins));
@@ -185,7 +185,7 @@ void track_through_rfmode(
     }
 #if (!USE_MPI)
     if (Q<0.5) {
-      fprintf(stdout, "The effective Q<=0.5 for RFMODE.  Use the ZLONGIT element.\n");
+      fprintf(stdout, (char*)"The effective Q<=0.5 for RFMODE.  Use the ZLONGIT element.\n");
       fflush(stdout);
       exit(1);
     }
@@ -193,7 +193,7 @@ void track_through_rfmode(
     if (myid == 1) { /* Let the first slave processor write the output */
       if (Q<0.5) {
 	dup2(fd,fileno(stdout)); 
-	fprintf(stdout, "The effective Q<=0.5 for RFMODE.  Use the ZLONGIT element.\n");
+	fprintf(stdout, (char*)"The effective Q<=0.5 for RFMODE.  Use the ZLONGIT element.\n");
 	fflush(stdout);
 	close(fd);
 	MPI_Abort(MPI_COMM_WORLD, MPI_SUCCESS);
@@ -288,20 +288,20 @@ void track_through_rfmode(
       if ((pass%rfmode->sample_interval)==0 && 
           (!SDDS_SetRowValues(&rfmode->SDDSrec, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
 				(pass/rfmode->sample_interval),
-			      "Pass", pass, "NumberOccupied", n_occupied,
-			      "FractionBinned", np?(1.0*n_binned)/np:0.0,
-			      "VPostBeam", rfmode->V, "PhasePostBeam", rfmode->last_phase,
-			      "tPostBeam", rfmode->last_t,
-			      "V", n_summed?V_sum/n_summed:0.0,
-			      "VReal", n_summed?Vr_sum/n_summed:0.0,
-			      "Phase", n_summed?phase_sum/n_summed:0.0, NULL) ||
+			      (char*)"Pass", pass, (char*)"NumberOccupied", n_occupied,
+			      (char*)"FractionBinned", np?(1.0*n_binned)/np:0.0,
+			      (char*)"VPostBeam", rfmode->V, (char*)"PhasePostBeam", rfmode->last_phase,
+			      (char*)"tPostBeam", rfmode->last_t,
+			      (char*)"V", n_summed?V_sum/n_summed:0.0,
+			      (char*)"VReal", n_summed?Vr_sum/n_summed:0.0,
+			      (char*)"Phase", n_summed?phase_sum/n_summed:0.0, NULL) ||
 	   !SDDS_UpdatePage(&rfmode->SDDSrec, 0))) {
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-        SDDS_Bomb("problem setting up data for RFMODE record file");
+        SDDS_Bomb((char*)"problem setting up data for RFMODE record file");
       }
       if (pass==n_passes-1 && !SDDS_Terminate(&rfmode->SDDSrec)) {
         SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-        SDDS_Bomb("problem writing data for RFMODE record file");
+        SDDS_Bomb((char*)"problem writing data for RFMODE record file");
       }
     }
  
@@ -330,17 +330,17 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
   
   rfmode->initialized = 1;
   if (rfmode->pass_interval<=0)
-    bombElegant("pass_interval <= 0 for RFMODE", NULL);
+    bombElegant((char*)"pass_interval <= 0 for RFMODE", NULL);
 #if !SDDS_MPI_IO
   if (n_particles<1)
-    bombElegant("too few particles in set_up_rfmode()", NULL);
+    bombElegant((char*)"too few particles in set_up_rfmode()", NULL);
 #endif
   if (rfmode->n_bins<2)
-    bombElegant("too few bins for RFMODE", NULL);
+    bombElegant((char*)"too few bins for RFMODE", NULL);
   if (rfmode->bin_size<=0 && !rfmode->binless)
-    bombElegant("bin_size must be positive for RFMODE", NULL);
+    bombElegant((char*)"bin_size must be positive for RFMODE", NULL);
   if (rfmode->Ra && rfmode->Rs) 
-    bombElegant("RFMODE element may have only one of Ra or Rs nonzero.  Ra is just 2*Rs", NULL);
+    bombElegant((char*)"RFMODE element may have only one of Ra or Rs nonzero.  Ra is just 2*Rs", NULL);
   if (rfmode->Ra)
     rfmode->RaInternal = rfmode->Ra;
   else
@@ -350,9 +350,9 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
     rfmode->bin_size = 0.1/rfmode->freq;
     rfmode->n_bins = ((long)(T/rfmode->bin_size+1));
     rfmode->bin_size = T/rfmode->n_bins;
-    fprintf(stdout, "The RFMODE %s bin size is too large--setting to %e and increasing to %ld bins\n",
+    fprintf(stdout, (char*)"The RFMODE %s bin size is too large--setting to %e and increasing to %ld bins\n",
             element_name, rfmode->bin_size, rfmode->n_bins);
-    fprintf(stdout, "Total span changed from %le to %le\n",
+    fprintf(stdout, (char*)"Total span changed from %le to %le\n",
             T, rfmode->n_bins*rfmode->bin_size);
     fflush(stdout);
   }
@@ -365,19 +365,19 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
     if (myid == 1) /* We let the first slave to dump the parameter */
 #endif
     if (!SDDS_InitializeOutput(&rfmode->SDDSrec, SDDS_BINARY, 1, NULL, NULL, rfmode->record) ||
-        !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, "Pass", NULL, SDDS_LONG) ||
-        !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, "NumberOccupied", NULL, SDDS_LONG) ||
-        !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, "FractionBinned", NULL, SDDS_DOUBLE) ||
-        !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, "V", NULL, SDDS_DOUBLE) ||
-        !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, "VReal", NULL, SDDS_DOUBLE) ||
-        !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, "Phase", NULL, SDDS_DOUBLE) ||
-        !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, "VPostBeam", NULL, SDDS_DOUBLE) ||
-        !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, "PhasePostBeam", NULL, SDDS_DOUBLE) ||
-        !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, "tPostBeam", NULL, SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"Pass", NULL, SDDS_LONG) ||
+        !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"NumberOccupied", NULL, SDDS_LONG) ||
+        !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"FractionBinned", NULL, SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"V", NULL, SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"VReal", NULL, SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"Phase", NULL, SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"VPostBeam", NULL, SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"PhasePostBeam", NULL, SDDS_DOUBLE) ||
+        !SDDS_DefineSimpleColumn(&rfmode->SDDSrec, (char*)"tPostBeam", NULL, SDDS_DOUBLE) ||
         !SDDS_WriteLayout(&rfmode->SDDSrec) ||
         !SDDS_StartPage(&rfmode->SDDSrec, n+1)) {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      SDDS_Bomb("problem setting up RFMODE record file");
+      SDDS_Bomb((char*)"problem setting up RFMODE record file");
     }
     rfmode->fileInitialized = 0;
   }
@@ -385,8 +385,8 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
     double Vb, omega, To, tau;
     std::complex <double> Vc;
     if (rfmode->fwaveform || rfmode->Qwaveform) {
-      printf("Warning: preloading of RFMODE doesn't work properly with frequency or Q waveforms\n");
-      printf("unless the initial values of the frequency and Q factors are 1.\n");
+      printf((char*)"Warning: preloading of RFMODE doesn't work properly with frequency or Q waveforms\n");
+      printf((char*)"unless the initial values of the frequency and Q factors are 1.\n");
     }
     To = total_length/(Po*c_mks/sqrt(sqr(Po)+1));
     omega = rfmode->freq*PIx2;
@@ -396,11 +396,11 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
     Vc = -Vb/(1.0-cexpi(omega*To)*exp(-To/tau));
     rfmode->V = std::abs<double>(Vc);
     rfmode->last_phase = atan2(Vc.imag(), Vc.real());
-    fprintf(stdout, "RFMODE %s at z=%fm preloaded:  V = (%e, %e) V  =  %eV at %fdeg \n",
+    fprintf(stdout, (char*)"RFMODE %s at z=%fm preloaded:  V = (%e, %e) V  =  %eV at %fdeg \n",
             element_name, element_z, Vc.real(), Vc.imag(),
             rfmode->V, rfmode->last_phase*180/PI);
     fflush(stdout);
-    fprintf(stdout, "omega=%21.15e To=%21.15es, Vb = %21.15eV, tau = %21.15es\n", omega, To, Vb, tau);
+    fprintf(stdout, (char*)"omega=%21.15e To=%21.15es, Vb = %21.15eV, tau = %21.15es\n", omega, To, Vb, tau);
     fflush(stdout);
     rfmode->last_t = element_z/c_mks - To;
   }
@@ -415,15 +415,15 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
   rfmode->nFreq = 0;
   if (rfmode->fwaveform) {
     if (!getTableFromSearchPath(&data, rfmode->fwaveform, 1, 0)) 
-      bombElegant("unable to read frequency waveform for RFMODE", NULL);
+      bombElegant((char*)"unable to read frequency waveform for RFMODE", NULL);
     if (data.n_data<=1)
-      bombElegant("RFMODE frequency table contains less than 2 points", NULL);
+      bombElegant((char*)"RFMODE frequency table contains less than 2 points", NULL);
     rfmode->tFreq = data.c1;
     rfmode->fFreq = data.c2;
     rfmode->nFreq = data.n_data;
     for (i=1; i<rfmode->nFreq; i++)
       if (rfmode->tFreq[i-1]>rfmode->tFreq[i])
-        bombElegant("time values are not monotonically increasing in RFMODE frequency waveform", NULL);
+        bombElegant((char*)"time values are not monotonically increasing in RFMODE frequency waveform", NULL);
     tfree(data.xlab); tfree(data.ylab); tfree(data.title); tfree(data.topline);
     data.xlab = data.ylab = data.title = data.topline = NULL;
     data.c1 = data.c2 = NULL;
@@ -432,15 +432,15 @@ void set_up_rfmode(RFMODE *rfmode, char *element_name, double element_z, long n_
   rfmode->nQ = 0;
   if (rfmode->Qwaveform) {
     if (!getTableFromSearchPath(&data, rfmode->Qwaveform, 1, 0)) 
-      bombElegant("unable to read Q waveform for RFMODE", NULL);
+      bombElegant((char*)"unable to read Q waveform for RFMODE", NULL);
     if (data.n_data<=1)
-      bombElegant("RFMODE Q table contains less than 2 points", NULL);
+      bombElegant((char*)"RFMODE Q table contains less than 2 points", NULL);
     rfmode->tQ = data.c1;
     rfmode->fQ = data.c2;
     rfmode->nQ = data.n_data;
     for (i=1; i<rfmode->nQ; i++)
       if (rfmode->tQ[i-1]>rfmode->tQ[i])
-        bombElegant("time values are not monotonically increasing in RFMODE Q waveform", NULL);
+        bombElegant((char*)"time values are not monotonically increasing in RFMODE Q waveform", NULL);
     tfree(data.xlab); tfree(data.ylab); tfree(data.title); tfree(data.topline);
     data.xlab = data.ylab = data.title = data.topline = NULL;
     data.c1 = data.c2 = NULL;
@@ -471,7 +471,7 @@ void runBinlessRfMode(
   } else if (pass==0) {
     rfmode->mp_charge = 0;
     if (rfmode->charge<0)
-      bombElegant("RFMODE charge parameter should be non-negative. Use change_particle to set particle charge state.", NULL);
+      bombElegant((char*)"RFMODE charge parameter should be non-negative. Use change_particle to set particle charge state.", NULL);
     if (np)
       rfmode->mp_charge = rfmode->charge/np;
   }
@@ -481,12 +481,12 @@ void runBinlessRfMode(
     
   if (!been_warned) {        
     if (rfmode->freq<1e3 && rfmode->freq)  {
-      fprintf(stdout, "\7\7\7warning: your RFMODE frequency is less than 1kHz--this may be an error\n");
+      fprintf(stdout, (char*)"\7\7\7warning: your RFMODE frequency is less than 1kHz--this may be an error\n");
       fflush(stdout);
       been_warned = 1;
     }
     if (been_warned) {
-      fprintf(stdout, "units of parameters for RFMODE are as follows:\n");
+      fprintf(stdout, (char*)"units of parameters for RFMODE are as follows:\n");
       fflush(stdout);
       print_dictionary_entry(stdout, T_RFMODE, 0, 0);
     }
@@ -500,7 +500,7 @@ void runBinlessRfMode(
   }
 
   if (!rfmode->initialized)
-    bombElegant("track_through_rfmode called with uninitialized element", NULL);
+    bombElegant((char*)"track_through_rfmode called with uninitialized element", NULL);
 
   if (np>max_np) 
     tData = (TIMEDATA*)trealloc(tData, sizeof(*tData)*(max_np=np));
@@ -546,7 +546,7 @@ void runBinlessRfMode(
     Q *= linear_interpolation(rfmode->fQ, rfmode->tQ, rfmode->nQ, tmean, ib);
   }
   if (Q<0.5) {
-    fprintf(stdout, "The effective Q<=0.5 for RFMODE.  Use the ZLONGIT element.\n");
+    fprintf(stdout, (char*)"The effective Q<=0.5 for RFMODE.  Use the ZLONGIT element.\n");
     fflush(stdout);
     exit(1);
   }
@@ -607,21 +607,21 @@ void runBinlessRfMode(
     if ((pass%rfmode->sample_interval)==0 && 
 	(!SDDS_SetRowValues(&rfmode->SDDSrec, SDDS_SET_BY_NAME|SDDS_PASS_BY_VALUE,
 			    (pass/rfmode->sample_interval),
-			    "Pass", pass, "NumberOccupied", n_occupied,
-			    "FractionBinned", 1.0,
-			    "VPostBeam", rfmode->V, "PhasePostBeam", rfmode->last_phase,
-			    "tPostBeam", rfmode->last_t,
-			    "V", n_summed?V_sum/n_summed:0.0,
-			    "VReal", n_summed?Vr_sum/n_summed:0.0,
-			    "Phase", n_summed?phase_sum/n_summed:0.0, 
+			    (char*)"Pass", pass, (char*)"NumberOccupied", n_occupied,
+			    (char*)"FractionBinned", 1.0,
+			    (char*)"VPostBeam", rfmode->V, (char*)"PhasePostBeam", rfmode->last_phase,
+			    (char*)"tPostBeam", rfmode->last_t,
+			    (char*)"V", n_summed?V_sum/n_summed:0.0,
+			    (char*)"VReal", n_summed?Vr_sum/n_summed:0.0,
+			    (char*)"Phase", n_summed?phase_sum/n_summed:0.0, 
 			    NULL) ||
 	 !SDDS_UpdatePage(&rfmode->SDDSrec, 0))) {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      SDDS_Bomb("problem setting up data for RFMODE record file");
+      SDDS_Bomb((char*)"problem setting up data for RFMODE record file");
     }
     if (pass==n_passes-1 && !SDDS_Terminate(&rfmode->SDDSrec)) {
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors);
-      SDDS_Bomb("problem writing data for RFMODE record file");
+      SDDS_Bomb((char*)"problem writing data for RFMODE record file");
     }
   }
  
