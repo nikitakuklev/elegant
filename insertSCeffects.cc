@@ -40,7 +40,7 @@ void addSCSpec(char *name, char *type, char *exclude)
   if (!(scSpec 
 	= (SC_SPEC*)SDDS_Realloc(scSpec,
 		       sizeof(*scSpec)*(No_scSpec+1))))
-    bombElegant("memory allocation failure", NULL);
+    bombElegant((char*)"memory allocation failure", NULL);
   scSpec[No_scSpec].name = NULL;
   scSpec[No_scSpec].type = NULL;
   scSpec[No_scSpec].exclude = NULL;
@@ -50,7 +50,7 @@ void addSCSpec(char *name, char *type, char *exclude)
        !SDDS_CopyString(&scSpec[No_scSpec].type, type)) ||
       (exclude &&
        !SDDS_CopyString(&scSpec[No_scSpec].exclude, exclude)))
-    bombElegant("memory allocation failure", NULL);
+    bombElegant((char*)"memory allocation failure", NULL);
   
   No_scSpec++;
 }
@@ -96,7 +96,7 @@ void setupSCEffect(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
   long i;
   
   if (!No_scSpec && !(sc = (SPACE_CHARGE*)SDDS_Realloc(sc, sizeof(*sc))))
-    bombElegant("memory allocation failure", NULL);                
+    bombElegant((char*)"memory allocation failure", NULL);                
 
   /* process the namelist text */
   set_namelist_processing_flags(STICKY_NAMELIST_DEFAULTS);
@@ -114,7 +114,7 @@ void setupSCEffect(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
     return;
   
   if (!name || !strlen(name))
-    bombElegant("no name given", NULL);
+    bombElegant((char*)"no name given", NULL);
   str_toupper(name);
   if (has_wildcards(name) && strchr(name, '-'))
     name = expand_ranges(name);
@@ -126,7 +126,7 @@ void setupSCEffect(NAMELIST_TEXT *nltext, RUN *run, LINE_LIST *beamline)
       if (wild_match(entity_name[i], type))
 	break;
     if (i==N_TYPES) {
-      fprintf(stderr, "type pattern %s does not match any known type", type);
+      fprintf(stderr, (char*)"type pattern %s does not match any known type", type);
       exit(1);
     }
   }
@@ -308,7 +308,7 @@ void initializeSCMULT(ELEMENT_LIST *eptr, double **part, long np, double Po, lon
   static CHARGE *charge;
 	
   if (!eptr->twiss)
-    bombElegant("Twiss parameters must be calculated before SC tracking.", NULL);
+    bombElegant((char*)"Twiss parameters must be calculated before SC tracking.", NULL);
 		
   if (i_pass==0) {
     while(eptr) {
@@ -319,7 +319,7 @@ void initializeSCMULT(ELEMENT_LIST *eptr, double **part, long np, double Po, lon
       eptr =eptr->succ;
     }
     if (charge==NULL) 
-      bombElegant("No charge element is given.", NULL);
+      bombElegant((char*)"No charge element is given.", NULL);
 	
   }
 #if USE_MPI
@@ -372,9 +372,9 @@ void accumulateSCMULT(double **part, long np, ELEMENT_LIST *eptr)
 double computeRmsCoordinate(double **coord, long i1, long np)
 {
   double vrms=0.0, xc=0.0;
-  double xc_sum=0.0, vrms_sum=0.0;
   long i;
 #if USE_MPI
+  double xc_sum=0.0, vrms_sum=0.0;
   long np_total;
 #endif
 

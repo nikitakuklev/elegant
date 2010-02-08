@@ -2777,8 +2777,8 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
                              BEAM *beam, double **part, long np, long nLost,
                              char *mainRootname, long iPass, long driftOrder)
 {
-  char *rootname, *input, *output;
-  char *cmdBuffer0, *cmdBuffer1;
+  char *rootname, *input, *output=NULL;
+  char *cmdBuffer0, *cmdBuffer1=NULL;
   SDDS_DATASET SDDSout, SDDSin;
   double *data;
   char *dataname[6] = {"x","xp","y","yp","t","p"};
@@ -3820,10 +3820,10 @@ void set_up_mhist(MHISTOGRAM *mhist, RUN *run, long occurence)
 
   if (!SDDS_InitializeInputFromSearchPath(&SDDSin, mhist->inputBinFile) ||
       SDDS_ReadPage(&SDDSin)<=0 ||
-      !(mhist->bins1d = (long*)SDDS_GetColumnInLong(&SDDSin, "Bins_1D")) || 
-      !(mhist->bins2d = (long*)SDDS_GetColumnInLong(&SDDSin, "Bins_2D")) ||
-      !(mhist->bins4d = (long*)SDDS_GetColumnInLong(&SDDSin, "Bins_4D")) ||
-      !(mhist->bins6d = (long*)SDDS_GetColumnInLong(&SDDSin, "Bins_6D"))) {
+      !(mhist->bins1d = (int32_t*)SDDS_GetColumnInLong(&SDDSin, "Bins_1D")) || 
+      !(mhist->bins2d = (int32_t*)SDDS_GetColumnInLong(&SDDSin, "Bins_2D")) ||
+      !(mhist->bins4d = (int32_t*)SDDS_GetColumnInLong(&SDDSin, "Bins_4D")) ||
+      !(mhist->bins6d = (int32_t*)SDDS_GetColumnInLong(&SDDSin, "Bins_6D"))) {
     SDDS_PrintErrors(stderr, SDDS_EXIT_PrintErrors|SDDS_VERBOSE_PrintErrors);
   }
   if (!SDDS_Terminate(&SDDSin))

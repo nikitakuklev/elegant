@@ -985,7 +985,7 @@ long track_through_csbendCSR(double **part, long n_part, CSRCSBEND *csbend, doub
   static double *dGamma=NULL, *T1=NULL, *T2=NULL, *denom=NULL;
   static long maxParticles = 0, maxBins = 0 ;
   static char *particleLost=NULL;
-  double x, xp, y, yp, p1, beta1, p0;
+  double x=0, xp, y=0, yp, p1, beta1, p0;
   double ctLower, ctUpper, dct, slippageLength, phiBend, slippageLength13;
   long diSlippage, diSlippage4;
   long nBins, nBinned = 0;
@@ -2098,7 +2098,7 @@ long track_through_driftCSR(double **part, long np, CSRDRIFT *csrDrift,
                             double Po, double **accepted, double zStart, 
 			    double revolutionLength, char *rootname)
 {
-  long iPart, iKick, iBin, binned, nKicks, iSpreadMode=0;
+  long iPart, iKick, iBin, binned=0, nKicks, iSpreadMode=0;
   double *coord, p, beta, dz, ct0=0.0, factor, dz0, dzFirst;
   double ctmin, ctmax, spreadFactor, dct;
   double zTravel, attenuationLength, thetaRad=0.0, sigmaZ, overtakingLength, criticalWavelength, wavelength=0.0;
