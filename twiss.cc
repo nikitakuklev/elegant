@@ -79,7 +79,7 @@ typedef struct {
   long startOccurence, endOccurence;
   short initialized;
   long count;
-  double twissMem[TWISS_ANALYSIS_STATS][TWISS_ANALYSIS_QUANTITIES];
+  long twissMem[TWISS_ANALYSIS_STATS][TWISS_ANALYSIS_QUANTITIES];
 } TWISS_ANALYSIS_REQUEST;
 
 static long twissAnalysisRequests = 0;
@@ -1234,7 +1234,7 @@ long get_twiss_mode(long *mode, TWISS *twissRet)
 {
   if (!twiss_initialized)
     return(0);
-  if (*mode = matched) {
+  if ((*mode = matched)) {
     if (periodicTwissComputed) {
       *mode = 0;
     } else
