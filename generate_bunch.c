@@ -462,7 +462,7 @@ long generate_bunch(
     if (longit->beam_type!=LINE_BEAM)
       enforceTwissValues(particle, n_particles, &twissBeam, 4, beta, alpha, emit, enforce_rms_params[2]);
     /* This allows getting the dispersion right since it gives us the spurious dispersion (due to random correlations) */
-    if (!(x_plane->beam_type==LINE_BEAM || y_plane->beam_type==LINE_BEAM) && longit->beam_type!=LINE_BEAM)
+    if (!((x_plane->beam_type==LINE_BEAM || y_plane->beam_type==LINE_BEAM) && longit->beam_type==LINE_BEAM))
       computeBeamTwissParameters3(&twissBeam, particle, n_particles);
     else 
       memset(twissBeam.eta, 0, 4*sizeof(twissBeam.eta[0]));
