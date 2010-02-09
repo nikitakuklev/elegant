@@ -86,11 +86,14 @@ PROD_HOST = $(PRODOAG)
 endif
 
 USR_CFLAGS = 	-I$(EPICS_EXTENSIONS)/src/SDDS/include -I$(EPICS_EXTENSIONS_INCLUDE) \
-		-DIEEE_MATH -DzLib -D_ISOC99_SOURCE
+		-DIEEE_MATH -DzLib
+USR_CPPFLAGS = 	$(USR_CFLAGS)
 
 USR_CFLAGS_Linux = -I/lib/modules/`uname -r`/build/include -DMINIMIZE_MEMORY -D_GNU_SOURCE 
+USR_CPPFLAGS_Linux = $(USR_CFLAGS_Linux)
 
 USR_CFLAGS_DEFAULT += -DUNIX -DMINIMIZE_MEMORY
+USR_CPPFLAGS_DEFAULT += -DUNIX -DMINIMIZE_MEMORY
 
 ifeq ($(LYNCEANTECH),1) 
         USR_CFLAGS += -DLYNCEANTECH
@@ -178,10 +181,12 @@ endif
 
 ifneq ($(SUNPERF), 0)
 USR_CFLAGS += -DSUNPERF -dalign
+USR_CPPFLAGS += -DSUNPERF -dalign
 OP_SYS_LDLIBS += -xlic_lib=sunperf
 else #ifneq ($(SUNPERF), 0)
 ifneq ($(LAPACK), 0)
 USR_CFLAGS += -DHAVE_LAPACK -DLAPACK
+USR_CPPFLAGS += -DHAVE_LAPACK -DLAPACK
 ifeq ($(OS_CLASS),Linux)
 SYS_PROD_LIBS_Linux += lapack blas
 
@@ -203,7 +208,9 @@ endif
 endif #ifeq ($(OS_CLASS),Linux)
 ifeq ($(OS_CLASS),solaris)
 OPT_CFLAGS_YES=
+OPT_CPPFLAGS_YES=
 USR_CFLAGS += -dalign -xtarget=ultra
+USR_CPPFLAGS += -dalign -xtarget=ultra
 OP_SYS_LDLIBS += -L/usr/local/oag/lib -llapack -lblas -lF77
 endif #ifeq ($(OS_CLASS),solaris)
 endif #ifneq ($(LAPACK), 0)
