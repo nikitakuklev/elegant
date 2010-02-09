@@ -465,6 +465,9 @@ void runBinlessRfMode(
   double Qrp, VbImagFactor, Q;
   double tmean;
   long deltaPass;
+#if USE_MPI
+    long np_total;
+#endif
 
   if (charge) {
     rfmode->mp_charge = charge->macroParticleCharge;
