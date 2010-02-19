@@ -11,13 +11,9 @@ Ocustom = -O3
 #RATIONAL = purecov
 ifdef RATIONAL
 HOST_OPT = NO
-ifeq ($(EPICS_VERSION).$(EPICS_REVISION),3.13)
-CC = $(RATIONAL) -best-effort $($(ANSI)_$(CMPLR))
-CXX = $(RATIONAL) -best-effort $($(CPLUSPLUS)_$(CXXCMPLR))
-else 
+STATIC_BUILD=NO
 CC := $(RATIONAL) -best-effort $(CC)
 CCC := $(RATIONAL) -best-effort $(CCC)
-endif
 endif
 
 OP_SYS_CFLAGS+= -DSORT                 # sort for comparing the results of two elegants
