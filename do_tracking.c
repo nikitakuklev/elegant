@@ -2878,7 +2878,8 @@ long transformBeamWithScript(SCRIPT *script, double pCentral, CHARGE *charge,
     replaceString(cmdBuffer0, cmdBuffer1, tag, script->SP[i], count, 0);
     strcpy_ss(cmdBuffer1, cmdBuffer0);
   }
-
+  interpret_escaped_quotes(cmdBuffer1);
+  
   if (script->verbosity>0) {
     fprintf(stdout, "%s\n", cmdBuffer1);
     fflush(stdout);
