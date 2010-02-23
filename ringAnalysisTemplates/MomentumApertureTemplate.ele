@@ -95,6 +95,8 @@ sinclude(<ERROR>)
         output = %s.mmap,
         x_initial = <xInitial>,
         y_initial = <yInitial>,
+	delta_negative_start = <deltaNegativeStart>,
+	delta_positive_start = <deltaPositiveStart>,
         delta_negative_limit = <deltaNegativeLimit>,
         delta_positive_limit = <deltaPositiveLimit>,
         delta_step_size = <initialDeltaStep>,
@@ -108,6 +110,7 @@ sinclude(<ERROR>)
         include_name_pattern = <pattern>,
         include_type_pattern = <typePattern>,
         verbosity = 4
+	soft_failure = 1
 &end
 
 &stop &end
