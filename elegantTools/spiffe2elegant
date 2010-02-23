@@ -23,9 +23,13 @@ if [file exists $output] {
     return -code error "exists: $output"
 }
 
-if [catch {exec elegant /home/oxygen/BORLAND/bin/spiffe2elegant.ele -macro=input=$input,output=$output,drift=$drift} result] {
+set dir [pwd]
+cd $OAGGlobal(OAGAppConfigDataDirectory)/elegant/
+if [catch {exec elegant spiffe2elegant.ele -macro=input=$dir/$input,output=$dir/$output,drift=$drift} result] {
     return -code error "spiffe2elegant: $result"
 }
+cd $dir
+
 set tmpFile /tmp/[APSTmpString]
 APSAddToTempFileList $tmpFile
 exec sddscombine $input $tmpFile -merge
