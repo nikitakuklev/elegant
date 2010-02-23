@@ -4,6 +4,9 @@
 
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.18  2010/02/01 01:00:49  borland
+# Allow up to 31 lines for DA line search.
+#
 # Revision 1.17  2009/10/09 15:27:01  borland
 # Added aperture to DA w/errors.
 #
@@ -1042,16 +1045,27 @@ proc FillMomentumApertureFrame {widget args} {
       -contextHelp \
       "Enter the initial y coordinate relative to the closed orbit."
 
+    APSLabeledEntry .lednst -parent $widget \
+      -label "Negative delta start: " -width 20 \
+      -textVariable momentumAperture(deltaNegativeStart) \
+      -contextHelp \
+      "Enter the starting value for delta for the negative-side scan."
     APSLabeledEntry .ledns -parent $widget \
       -label "Negative delta limit: " -width 20 \
       -textVariable momentumAperture(deltaNegativeLimit) \
       -contextHelp \
       "Enter the limiting value for delta for the negative-side scan."
+
+    APSLabeledEntry .ledpst -parent $widget \
+      -label "Positive delta start: " -width 20 \
+      -textVariable momentumAperture(deltaPositiveStart) \
+      -contextHelp \
+      "Enter the starting value for delta for the positive-side scan."
     APSLabeledEntry .ledps -parent $widget \
       -label "Positive delta limit: " -width 20 \
       -textVariable momentumAperture(deltaPositiveLimit) \
       -contextHelp \
-      "Enter the starting value for delta for the positive-side scan."
+      "Enter the limiting value for delta for the positive-side scan."
 
     APSLabeledEntry .ledp -parent $widget \
       -label "Initial delta step: " \
