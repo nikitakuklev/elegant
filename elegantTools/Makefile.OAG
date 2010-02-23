@@ -7,9 +7,12 @@
 # in the file LICENSE that is included with this distribution. 
 #*************************************************************************
 #
-# $Id: Makefile.OAG,v 1.23 2010-02-04 23:51:46 soliday Exp $
+# $Id: Makefile.OAG,v 1.24 2010-02-23 14:23:50 borland Exp $
 #
 # $Log: not supported by cvs2svn $
+# Revision 1.23  2010/02/04 23:51:46  soliday
+# Updated because sddsrandmult.cc replaces sddsrandmult.c
+#
 # Revision 1.22  2010/01/27 04:40:24  borland
 # Restored optimization flag.
 #
@@ -103,7 +106,7 @@ PRODOAG = sddsemitmeas sddsemitproc sddsTouschekInteg \
           sddsanalyzebeam sddsrandmult sddsresdiag \
           sddsfindresonances touschekLifetime csrImpedance astra2elegant rfgun2elegant
 
-SCRIPTS = elegantRingAnalysis beamLifetimeCalc fin2param elegant2shower shower2elegant longitCmd longitCalcs km2sdds elegant2astra smoothDist6s impact2sdds impact2elegant computeTwissBeats fracEmittance doubleDist6 track2sdds track2mag elegant2track makeSkewResponseCP correctCoupling
+SCRIPTS = elegantRingAnalysis beamLifetimeCalc fin2param elegant2shower shower2elegant longitCmd longitCalcs km2sdds elegant2astra smoothDist6s impact2sdds impact2elegant computeTwissBeats fracEmittance doubleDist6 track2sdds track2mag elegant2track makeSkewResponseCP correctCoupling spiffe2elegant
 
 PROD_HOST = $(PRODOAG)
 
