@@ -354,7 +354,7 @@ void add_error_element(ERRORVAL *errcon, NAMELIST_TEXT *nltext, LINE_LIST *beaml
         n_added++;
         }
 
-    if (!n_added) {
+    if (!n_added && !allow_missing_elements) {
         fprintf(stdout, "error: no match for name %s\n", name);
         fflush(stdout);
         exit(1);

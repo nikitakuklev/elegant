@@ -27,6 +27,7 @@
     long fractional = 0;
     long post_correction = 0;
     long additive = 1;
+    long allow_missing_elements = 0;
     STRING before = NULL;
     STRING after = NULL;
 #end
