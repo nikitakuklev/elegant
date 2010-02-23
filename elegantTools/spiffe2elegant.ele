@@ -1,5 +1,5 @@
 &run_setup
-        lattice = /home/oxygen/BORLAND/bin/spiffe2elegant.lte,
+        lattice = spiffe2elegant.lte,
         use_beamline = DL,
         p_central = "{exec sddsprocess <input> -pipe=out -process=pz,ave,pzAve | sdds2stream -pipe -param=pzAve}",
         output = <output>
