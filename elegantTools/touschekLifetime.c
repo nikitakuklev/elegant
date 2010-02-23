@@ -9,6 +9,9 @@
 
 /* 
  * $Log: not supported by cvs2svn $
+ * Revision 1.7  2010/01/26 03:26:33  borland
+ * Fixed bug in -deltaLimit feature (used wrong length for arrays).
+ *
  * Revision 1.6  2009/12/20 19:55:50  borland
  * Added -ignoreMismatch option.
  *
@@ -373,7 +376,7 @@ int main( int argc, char **argv)
   if(elements<elem2)
     fprintf(stdout, "warning: Twiss file is shorter than Aperture file\n");
   if (emitxInput) {
-    emitx = emitxInput;
+    emitx = emitxInput/(1+coupling);
   } else {
     if (!SDDS_GetParameters(&twissPage, "ex0", &emitx0, NULL))
       SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
