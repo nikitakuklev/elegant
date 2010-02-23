@@ -9,6 +9,9 @@
 
 /* 
  * $Log: not supported by cvs2svn $
+ * Revision 1.29  2010/02/05 22:05:38  soliday
+ * Made some changes to reduce the number or compiler warnings on Linux.
+ *
  * Revision 1.28  2008/10/23 19:14:31  xiaoam
  * Remove not used parameter coupling inside IBSCATTER.
  *
@@ -557,6 +560,8 @@ int main( int argc, char **argv)
       sigmaDeltaInput = sigmaDelta0;
     if (!emitxInput)
       emitxInput = emitx0/ ( 1 + coupling);
+    else 
+      emitxInput = emitxInput/ ( 1 + coupling);
     emityInput = emitxInput * coupling;
     sigmaDelta = sigmaDeltaInput;
     if (length)
