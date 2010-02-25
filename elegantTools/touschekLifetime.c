@@ -9,6 +9,9 @@
 
 /* 
  * $Log: not supported by cvs2svn $
+ * Revision 1.8  2010/02/23 15:30:15  borland
+ * Emittance from commandline is now treated the same as ex0 from twiss file.
+ *
  * Revision 1.7  2010/01/26 03:26:33  borland
  * Fixed bug in -deltaLimit feature (used wrong length for arrays).
  *
@@ -92,7 +95,7 @@ char *option[N_OPTIONS] = {
 };
 
 void TouschekLifeCalc();  
-void FIntegral(double *tm, double *B1, double *B2, double *F, long index); 
+void FIntegral(double *tm, double *B1, double *B2, double *F, long index, long verbosity); 
 double Fvalue (double t, double tm, double b1, double b2);
 double linear_interpolation(double *y, double *t, long n, double t0, long i);
 void limitMomentumAperture(double *dpp, double *dpm, double limit, long n);
@@ -510,7 +513,9 @@ void TouschekLifeCalc(long verbosity)
   
   i=j=0;
   for (i = 0; i<elements; i++) {
-
+    if (verbosity>1) 
+      fprintf(stderr, "Working on i=%ld, j=%ld\n", i, j);
+    
 /* remove zero length elements from beamline. Except the first element. */
     if(i>0) {
       while(s[i]==s[i-1]) {
@@ -545,6 +550,8 @@ void TouschekLifeCalc(long verbosity)
 	bomb("Twiss and Aperture file are not for same beamline",NULL);
     }
 
+    if (verbosity>1) 
+      fprintf(stderr, "Interpolating for i=%ld, j=%ld\n", i, j);
     pp = linear_interpolation(dpp, s2, elem2, s[i], j-1); 
     pm = linear_interpolation(dpm, s2, elem2, s[i], j-1);
 
@@ -590,8 +597,12 @@ void TouschekLifeCalc(long verbosity)
     }
     
     coeff[i] = a0*c0;
-    FIntegral(tm, B1, B2, F, i);
+    if (verbosity>1) 
+      fprintf(stderr, "Computing F integral\n");
+    FIntegral(tm, B1, B2, F, i, verbosity);
   }
+  if (verbosity>1) 
+    fprintf(stderr, "Exited loop\n");
   
   tLife = 0;  
   for (i = 1; i<elements; i++) {
@@ -599,16 +610,19 @@ void TouschekLifeCalc(long verbosity)
       tLife += (s[i]-s[i-1])*(coeff[i]*F[i]+coeff[i-1]*F[i-1])/2;
     }
   }
+  if (verbosity>1) 
+    fprintf(stderr, "Exited second loop\n");
+
   tLife /= s[elements-1];
   tLife = 1/tLife/3600;
   return;
 } 
 
-void FIntegral(double *tm, double *B1, double *B2, double *F, long index) 
+void FIntegral(double *tm, double *B1, double *B2, double *F, long index, long verbosity) 
 {
   double f0, f1, sum;
   double HPI, step;
-  long converge=0;
+  long converge=0, pass, f1NonzeroSeen;
   double t1, k0, k1;
   double tstart, km, b1, b2;
   
@@ -621,8 +635,15 @@ void FIntegral(double *tm, double *B1, double *B2, double *F, long index)
   f0 = Fvalue(tstart, tstart, b1, b2);
   sum = 0;
   f1 = 0;
+  pass = 0;
+  f1NonzeroSeen = 0;
   
   while (!converge) {
+    if (verbosity>2) 
+      fprintf(stderr, "Computing F integral pass %ld: k0=%21.15e, f1=%21.15e\n",
+              pass, k0, f1);
+    pass++;
+    
     k1 = k0 + step;
     t1 = sqr(tan(k1));
     if (isnan(t1)) {
@@ -631,9 +652,11 @@ void FIntegral(double *tm, double *B1, double *B2, double *F, long index)
     }
     
     f1 = Fvalue(t1, tstart, b1, b2);
-
-    if (f1>0 && f1*(HPI-k1)<1e-3*sum)
-      converge =1;
+    if (f1>0)
+      f1NonzeroSeen = 1;
+    
+    if ((f1NonzeroSeen && f1==0) || (f1>0 && f1*(HPI-k1)<1e-3*sum))
+      converge = 1;
     
     sum +=(f1+f0)/2*step;
     k0 = k1;
