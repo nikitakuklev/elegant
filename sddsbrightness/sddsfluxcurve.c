@@ -15,6 +15,9 @@
  * Using code from sddsbrightness (Shang, Dejus, Borland) and sddsurgent (Shang, Dejus)
  *
  $Log: not supported by cvs2svn $
+ Revision 1.8  2009/05/01 21:31:40  borland
+ Default distance is now 100 m.
+
  Revision 1.7  2009/04/14 13:19:48  borland
  Now accepts units of "m" for ex0.
 
@@ -437,7 +440,7 @@ long SetUpOutputFile(SDDS_DATASET *SDDSout, SDDS_DATASET *SDDSin, char *outputfi
       !SDDS_DefineSimpleColumn(SDDSout, "TotalPower", "W", SDDS_DOUBLE) ||
       !SDDS_DefineSimpleColumn(SDDSout, "OnAxisPowerDensity", "W/mrad$a2$n", SDDS_DOUBLE))
     SDDS_PrintErrors(stderr, SDDS_VERBOSE_PrintErrors|SDDS_EXIT_PrintErrors);
-  if (SDDS_DefineParameter(SDDSout,"current",NULL, "mA", NULL,NULL,SDDS_DOUBLE, 0)<0 ||
+  if (SDDS_DefineParameter(SDDSout,"current",NULL, "A", NULL,NULL,SDDS_DOUBLE, 0)<0 ||
       SDDS_DefineParameter(SDDSout,"EnergySpread",NULL, NULL, NULL,NULL,SDDS_DOUBLE, 0)<0 ||
       SDDS_DefineParameter(SDDSout,"sigmax",NULL, "mm", NULL,NULL,SDDS_DOUBLE, 0)<0 ||
       SDDS_DefineParameter(SDDSout,"sigmay",NULL, "mm", NULL,NULL,SDDS_DOUBLE, 0)<0 ||
