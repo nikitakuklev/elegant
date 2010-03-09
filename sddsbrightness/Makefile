@@ -7,7 +7,7 @@
 # in the file LICENSE that is included with this distribution. 
 #*************************************************************************
 #
-# $Id: Makefile,v 1.12 2009-05-28 21:14:12 soliday Exp $
+# $Id: Makefile,v 1.13 2010-03-09 21:29:52 oag Exp $
 #
 #
 #
@@ -79,6 +79,12 @@ endif
 ifeq ($(EPICS_HOST_ARCH),solaris-x86_64)
 F77 = f77 -m64
 solaris_libs = -lcurses -lrt
+endif
+ifeq ($(EPICS_HOST_ARCH),linux-x86_64)
+F77 = gfortran -m64 -ffixed-line-length-132
+endif
+ifeq ($(EPICS_HOST_ARCH),linux-x86)
+F77 = gfortran -m32 -ffixed-line-length-132
 endif
 
 ifeq ($(OS_CLASS),Linux)
