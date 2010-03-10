@@ -33,6 +33,12 @@
  *
  * Michael Borland, 1989
  */
+#if USE_MPI 
+#include "mpi.h" /* Defines the interface to MPI allowing the use of all MPI functions. */
+#if USE_MPE
+#include "mpe.h" /* Defines the MPE library */ 
+#endif
+#endif
 #include <complex>
 #include "mdb.h"
 #include "match_string.h"
