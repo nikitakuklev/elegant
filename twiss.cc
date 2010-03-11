@@ -300,16 +300,26 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
   long n_mat_computed, i, j, plane, otherPlane, hasMatrix, hasPath;
   VMATRIX *M1, *M2;
   MATRIX *dispM, *dispOld, *dispNew;
+  VMATRIX *dispM1, *dispM2;  
   ELEMENT_LIST *elemOrig;
   static long asinWarning = 50;
   std::complex <double> kappa;
   if (!twiss0)
-    bombElegant((char*)"initial Twiss parameters not given (propagate_twiss_parameters())", NULL);
+      bombElegant((char*)"initial Twiss parameters not given (propagate_twiss_parameters())", NULL);
   elemOrig = elem;
-  
-  m_alloc(&dispM, 4, 4);
-  m_alloc(&dispOld, 4, 1);
-  m_alloc(&dispNew, 4, 1);
+
+  if (local_dispersion) {  
+    /* By default, dispersion is computed ignoring acceleration, i.e., using local deltaP/P */
+    m_alloc(&dispM, 4, 4);
+    m_alloc(&dispOld, 4, 1);
+    m_alloc(&dispNew, 4, 1);
+    dispM1 = dispM2 = NULL;
+  } else {
+    dispM1 = (VMATRIX*)tmalloc(sizeof(*dispM1));
+    dispM2 = (VMATRIX*)tmalloc(sizeof(*dispM2));
+    initialize_matrices(dispM1, 1);
+    initialize_matrices(dispM2, 1);
+  }
   
   for (plane=0; plane<2; plane++) {
     beta[plane]  = *(&twiss0->betax+plane*TWISS_Y_OFFSET);
@@ -334,6 +344,16 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
       path[i] = 0;
       M1->R[i][i] = 1;
     }
+  }
+
+  if (!local_dispersion) {
+    for (i=0; i<6; i++)
+      dispM1->R[i][i] = 1;
+    for (i=0; i<2; i++) {
+      dispM1->C[2*i+0] = eta[i];
+      dispM1->C[2*i+1] = etap[i];
+    }
+    dispM1->C[5] = 1;
   }
   
   n_mat_computed = 0;
@@ -432,21 +452,41 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
         /* record new centroids for beam path */
         for (i=0; i<6; i++)
           path[i] = M2->C[i];
+        if (!local_dispersion) {
+          concat_matrices(dispM2, M2, dispM1, 0);
+          /* prevent accumulation of the nominal path-length since rf elements need differential pathlength */
+          dispM2->C[4] -= M2->C[4];
+          /* print_matrices(stdout, elem->name, M2); */
+        }
       } else {
         R = elem->matrix->R;
         /* record new centroids for beam path */
         for (i=0; i<6; i++)
           path[i] = elem->matrix->C[i];
         path[4] += sTotal;
+        if (!local_dispersion) {
+          concat_matrices(dispM2, elem->matrix, dispM1, 0);
+          /* prevent accumulation of the nominal path-length since rf elements need differential pathlength */
+          dispM2->C[4] -= elem->matrix->C[4];
+          /* print_matrices(stdout, elem->name, elem->matrix); */
+        }
       }
+      /* 
+      if (!local_dispersion) {
+        fprintf(stdout, "\n%20s dispM1->C: ", elem->name);
+        for (i=0; i<6; i++)
+          fprintf(stdout, "%e,%c", dispM1->C[i], i==5?'\n':' ');
+        fprintf(stdout, "%20s dispM2->C: ", elem->name);
+        for (i=0; i<6; i++)
+          fprintf(stdout, "%e,%c", dispM2->C[i], i==5?'\n':' ');
+      }
+      */
 
       for (plane=0; plane<2; plane++) {
         C[plane]  = R[0+2*plane][0+2*plane]; 
         S[plane]  = R[0+2*plane][1+2*plane];
         Cp[plane] = R[1+2*plane][0+2*plane]; 
         Sp[plane] = R[1+2*plane][1+2*plane];
-        D[plane]  = R[0+2*plane][5]; 
-        Dp[plane] = R[1+2*plane][5];
       }
     }
     else {
@@ -570,38 +610,51 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
       }
     }
     
-    /* compute dispersion function and slope */
-    if (hasMatrix) {
-      for (i=0; i<4; i++) {
-        for (j=0; j<4; j++) {
-          dispM->a[i][j] = R[i][j];
+    if (local_dispersion) {
+      /* compute dispersion function and slope */
+      if (hasMatrix) {
+        for (i=0; i<4; i++) {
+          for (j=0; j<4; j++) {
+            dispM->a[i][j] = R[i][j];
+          }
         }
+      } else {
+        for (i=0; i<4; i++) {
+          for (j=0; j<4; j++) {
+            dispM->a[i][j] = i==j?1:0;
+          }
+        }
+        dispM->a[0][1] = S[0];
+        dispM->a[2][3] = S[1];
       }
+      dispOld->a[0][0] = eta[0];
+      dispOld->a[1][0] = etap[0];
+      dispOld->a[2][0] = eta[1];
+      dispOld->a[3][0] = etap[1];
+      
+      m_mult(dispNew, dispM, dispOld);
+      
+      plane = 0;
+      func = ((double*)elem->twiss) + (plane?TWISS_Y_OFFSET:0);
+      eta[plane] = func[3] = dispNew->a[0][0] + (hasMatrix?R[0][5]:0);
+      etap[plane] = func[4] = dispNew->a[1][0] + (hasMatrix?R[1][5]:0);
+      plane = 1;
+      func = ((double*)elem->twiss) + (plane?TWISS_Y_OFFSET:0);
+      eta[plane] = func[3] = dispNew->a[2][0] + (hasMatrix?R[2][5]:0);
+      etap[plane] = func[4] = dispNew->a[3][0] + (hasMatrix?R[3][5]:0);
     } else {
-      for (i=0; i<4; i++) {
-        for (j=0; j<4; j++) {
-          dispM->a[i][j] = i==j?1:0;
-        }
-      }
-      dispM->a[0][1] = S[0];
-      dispM->a[2][3] = S[1];
+      plane = 0;
+      func = ((double*)elem->twiss) + (plane?TWISS_Y_OFFSET:0);
+      eta[plane] = func[3] = dispM2->C[0];
+      etap[plane] = func[4] = dispM2->C[1];
+      plane = 1;
+      func = ((double*)elem->twiss) + (plane?TWISS_Y_OFFSET:0);
+      eta[plane] = func[3] = dispM2->C[2];
+      etap[plane] = func[4] = dispM2->C[3];
+      for (i=0; i<6; i++)
+        dispM1->C[i] = dispM2->C[i];
     }
-    dispOld->a[0][0] = eta[0];
-    dispOld->a[1][0] = etap[0];
-    dispOld->a[2][0] = eta[1];
-    dispOld->a[3][0] = etap[1];
     
-    m_mult(dispNew, dispM, dispOld);
-    
-    plane = 0;
-    func = ((double*)elem->twiss) + (plane?TWISS_Y_OFFSET:0);
-    eta[plane] = func[3] = dispNew->a[0][0] + (hasMatrix?R[0][5]:0);
-    etap[plane] = func[4] = dispNew->a[1][0] + (hasMatrix?R[1][5]:0);
-    plane = 1;
-    func = ((double*)elem->twiss) + (plane?TWISS_Y_OFFSET:0);
-    eta[plane] = func[3] = dispNew->a[2][0] + (hasMatrix?R[2][5]:0);
-    etap[plane] = func[4] = dispNew->a[3][0] + (hasMatrix?R[3][5]:0);
-
     if (elem->type==T_MARK && ((MARK*)elem->p_elem)->fitpoint)
       store_fitpoint_twiss_parameters((MARK*)elem->p_elem, elem->name, elem->occurence,
                                       elem->twiss);
@@ -641,7 +694,7 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
 #endif
     kappa = std::complex<double>(0,0);
     elem = elemOrig;
-    q = tune[0] - tune[1] + 0.5;
+    q = (long)(tune[0] - tune[1] + 0.5);
     couplingFactor[1] = (tune[0] - tune[1]) - q;
     while (elem) {
       if ((elem->type==T_QUAD || elem->type==T_KQUAD || elem->type==T_SEXT ||
@@ -731,9 +784,16 @@ void propagate_twiss_parameters(TWISS *twiss0, double *tune, long *waists,
             radIntegrals->RI[4]);
 */
   
-  m_free(&dispNew);
-  m_free(&dispM);
-  m_free(&dispOld);
+  if (local_dispersion) {
+    m_free(&dispNew);
+    m_free(&dispM);
+    m_free(&dispOld);
+  }
+  else {
+    free_matrices(dispM1); tfree(dispM1);
+    free_matrices(dispM2); tfree(dispM2);
+    /* fprintf(stderr, "*** Using global dispersion algorithm \n"); */
+  }
   
   free_matrices(M1); tfree(M1);
   free_matrices(M2); tfree(M2);
@@ -3427,7 +3487,8 @@ void processTwissAnalysisRequests(ELEMENT_LIST *elem)
     }
     twissAnalysisRequest[i].initialized = 1;
     
-    count = end_pos = 0;
+    count = 0;
+    end_pos = 0;
     while (elem) {
       if (twissAnalysisRequest[i].sStart<twissAnalysisRequest[i].sEnd &&
               elem->end_pos>twissAnalysisRequest[i].sEnd) 
