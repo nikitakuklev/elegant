@@ -17,7 +17,7 @@
 \begin{document}
 
 \title{User's Manual for {\tt elegant}}
-\author{Program Version 22.1\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
+\author{Program Version 23.0\\Advanced Photon Source\\Michael Borland\\ \date{\today}}
 \maketitle
 
 Note: another source of help for {\tt elegant} is the on-line
@@ -28,94 +28,96 @@ bugs via email.
 
 \section{Highlights of What's New in Version 22.1}
 
-Here is a summary of what's changed since release 22.0.  Some
-significant improvements were made for modeling of laser/undulator
-beam heaters (\verb|LSRMDLTR|) and intrabeam scattering.  It is also
-possible now to compute dynamic aperture using parallel resources.
-For details and references, see the specific entries in the manual.
+Here is a summary of what's changed since release 22.1. 
 
 \subsection{Bug Fixes for Elements}
 
 \begin{itemize}
-\item The \verb|LSRMDLTR| was not correctly including vertical focusing of the undulator when the exact and leading-terms
-  expansions were used.  This was fixed.  D. Xiang (SLAC) reported this problem.
-\item \verb|UKICKMAP| and \verb|BMAPXY| had a bug in the interpolation routines that resulted in extrapolation being performed
-  in some cases.   This might change results with coarse grids.
-\item \verb|WATCH| elements may now be placed between identical bending magnets without messing up the 
-  transport (previously, unwanted edge effects were added).
-\item The radiation matrix (used by \verb|moments_output|) was wrong for \verb|SBEN| when the element was tilted.
-\item Fixed some problems with keeping track of whether radiation integrals were computed. This prevents incorrect warnings
-  about \verb|SREFFECTS| not being set up.
+\item An uninitialized variable was found in the code for CSBEND (by R. Soliday, ANL) that would potentially give wrong results for
+  EDGE\_ORDER$>$1.   We didn't see problems in tests, but it may be platform-dependent.
+\item A bug was fixed in the SCRIPT element that prevented having commands with embedded quotes.
+\item A bug was fixed in subdivision of QUAD and KQUAD elements, that resulted in incorrect steering from the embedded steering
+  correctors.  This was reported by A. Petrenko (BINP).
 \end{itemize}
 
 \subsection{Bug Fixes for Commands}
 \begin{itemize}
-\item Fixed a bug in adding errors: in previous versions, if elements had errors from
-a parameters file and if the user also tried to add differential errors, the
-elements would all start from the value of the first occurence of the element.  I.e., the
-initial individual values were not used.  
-\item Fixed a bug that resulting in quoted string parameters being converted to upper case in
-  elements inserted with \verb|insert_elements|.
-\item The magnet-profile output (requested via \verb|run_setup|) now includes \verb|KQUSE| elements.
-\item The corrected emittance computations (from the \verb|sigma| file from \verb|run_setup|) were incorrect
-  when the energy spread was zero.
+\item When including an element, e.g., a deflecting cavity matrix, that includes coupling between time and transverse coordinates,
+  the dispersion from \verb|twiss_output| would disagree with the $R_{16}$ element from the \verb|matrix_output|.  This was
+  reported by P. Piot (NIU).  An additional, related problem is that {\tt elegant} would ignore acceleration in computing the
+  dispersion.  That is, the dispersion would be the ``local'' dispersion $\frac{\partial x}{\partial \delta}$, where $\delta$
+  was the local fractional momentum deviation.  In a linac, one might also be interested in the ``global'' dispersion
+  $\frac{\partial x}{\partial \delta_0}$, where $\delta_0$ is the energy deviation at the beginning of the system.
+  To resolve this, a parameter \verb|local_dispersion| was added to \verb|twiss_output|.  The default value is 1, which
+  gives the previous behavior.
+\item The line-search dynamic aperture method would previously return a large non-zero area if no stable particles were found.
+  It now returns zero.  This was reported by L. Yang (BNL).
 \end{itemize}
 
 \subsection{New and Modified Elements}
 \begin{itemize}
-\item The default integration order for \verb|CSBEND| and \verb|CSRCSBEND| was changed from 2 to 4, to resolve
-  a common source of perplexing results from users.
-\item The \verb|IBSCATTER| element can now compute intrabeam scattering in a sliced fashion, which is useful
-  for linac simulation.  This was done by A. Xiao (ANL).
-\item The \verb|LSRMDLTR| element now supports a laser time profile, synchrotron radiation, higher-order laser modes
-  (up to TEM44), and allows the user to offset the laser beam in x, y, and z.  This was
-  requested by D. Xiang (SLAC).  Thanks to P. Emma (SLAC) for providing an very helpful relevant article.
-  The element is also parallel-capable now.
-\item \verb|CSRCSBEND| and \verb|TWLA| elements now participate in beam moments computations (i.e., \verb|moments_output|).
-\item Added tracking-based computation of the linear matrix for \verb|TWLA|, \verb|TWMTA|, and \verb|MAP_SOLENOID|, so that
-  twiss computations and other matrix-based computations will properly include these elements.  Tracking is unchanged.
-  S. Reiche (PSI) pointed out this deficiency.
-\item \verb|MARK| elements with \verb|FITPOINT=1| now store parameters named \verb|betaxBeam| and \verb|alphaxBeam|,
-  along with the same quantities for the y plane.  These are the twiss parameters computed from the beam.  They
-  also appear in the sigma output file (specified by \verb|run_setup|).
-  This was requested by S. Reiche (PSI).
-\item Added the \verb|DELTAP| parameter to the \verb|EMATRIX| element, allowing one to specify an energy change as
-  part of an explicit matrix.  Requested by Y. Roblin (TJNAF).
-\item The files created by the \verb|WATCH| element now contain a parameter with the name of the upstream element, which
-  is helpful in making plots.
-\item The \verb|XYFACTOR| element was added to \verb|UKICKMAP|, to allow expanding the kickmap size.
-\item \verb|RFCA| elements may now be subdivided using the regular element-division controls (\verb|run_setup| or
-  \verb|divide_elements|).
-\item The \verb|EMITTANCE| element was added.  It allows transforming a beam during tracking to force the emittances
-  to specified values.
+\item The \verb|MHISTOGRAM| element was added, allowing compilation of multi-dimensional histograms.  This was the work 
+  of A. Xiao (ANL).
+\item The \verb|LSRMDLTR| element now has a transfer matrix determined from tracking, which will be used in 
+  \verb|twiss_output|, \verb|matrix_output|, and related computations.
+\item The implementation of KQUAD, KSEXT, FMULT, and MULT elements was improved to reduce running time by about 20\%.
+\item A new parameter, \verb|CROSS_RESONANCE|, was added to \verb|ILMATRIX|, which allows controlling whether crossing
+  the integer and half-integer resonances results in forced particle loss.  By default, the value is 0.  This was requested
+  by Y. Chae (ANL).
+\item The \verb|BMAPXY| element now supports specifying the fields using \verb|rpn| expressions.
 \end{itemize}
 
 \subsection{New and Modified Commands}
 \begin{itemize}
-\item The \verb|rpn_load| command can now load the parameters from an SDDS file instead of the columns.
-  This is obtained by setting \verb|load_parameters=1|.
-\item Aperture determination using \verb|find_aperture| and the line-search technique was parallelized.  This was done by
-  Y. Wang (ANL).
-\item The aperture determined by the \verb|find_aperture| command may now be optimized.  (However, this can't be done in the
-  parallel version at present.)
-\item \verb|alter_elements| now changes the reference value for the element. This means that errors will be added relative to
-  the altered value.
-\item The \verb|optimization_term| command can now read optimization terms from an SDDS file.
+\item In the past, the beam produced by the \verb|bunched_beam| command would not have {\em exactly} the twiss parameters and
+  dispersion requested by the user.  This has been dramatically improved.
+\item The \verb|touschek_scatter| command was added.  It allows simulation of Touschek scattering in linacs and transport lines,
+  including arbitrary beam distributions.  This was the work of A. Xiao (ANL).
+\item The \verb|semaphores| command now includes the option to create a semaphore when a run fails.
+\item The \verb|bunched_beam| command now includes the option for ``optimized'' Halton sequence generation \cite{Chi2005}.  They
+  have the advantage of removing correlations between the phase space planes.  This work was done by A. Xiao and H. Shang with
+  assistance from C. Wang (all ANL), using code from H. Chi.
+\item The functionality behind the \verb|use_twiss_command_values| parameter of \verb|bunched_beam|.  {\tt elegant} will now
+  update the values as twiss parameters are recomputed in multi-step runs.
+\item Computation of the cross-plane response matrix was added to \verb|correction_matrix_output|.  The cross-plane elements may
+  also be optimized.
+\item The \verb|error_elements| command now has a flag \verb|allow_missing_elements| that allows continuation of the run
+  in the event that no matching elements are found.
+\item The original value of the source parameter for \verb|link_elements| is now stored in a variable named {\em ParameterValue}0.
+  Also added minimum and maximum limits on the values placed in the target parameter.
+\item The \verb|momentum_aperture| command now accepts starting values for the positive- and negative-going aperture search, which
+  can speed up simulations.  Resonance detection was added to forbid crossing integer and half-integer resonances.
+\item The \verb|optimization_setup| command now accepts a \verb|term_log_file| parameter.  This names a file to which the
+  values of the optimization terms are written at the completion of optimization, which can be convenient when large numbers
+  of terms are used.
+\item The \verb|rpn_load| command now allows a blank tag, instead of bombing.  This bug was pointed out by M. Cornacchia (SLAC).
+\end{itemize}
+
+\subsection{Other Changes}
+\begin{itemize}
+\item The matrix concatenation code was reorganized to improve performance.
+\end{itemize}
+
+\subsection{Changes for Parallel Version Only}
+\begin{itemize}
+\item The ``line'' and ``shell'' beam types did not work in the parallel version.  This has been fixed (Y. Wang, ANL).
+\item The \verb|momentum_aperture| command now features an \verb|output_mode| parameter that allows use of twice as
+  many simultaneous processors.
 \end{itemize}
 
 \subsection{Changes to Related Programs and Files}
 
 \begin{itemize}
-\item A bug was fixed in the {\tt haissinski}.  The \verb|-wake| option was nonfunctional due to an argument parsing
-  problem.  This was reported by A. Rusanov (NSRRC).
-\item The script {\tt astra2elegant} was replaced by a compiled program.  The program is not only much faster, but
-  also has corrections for the conversion that will be evident in long bunches or low energy beams.  Thanks to 
-  P. Piot (NIU) and J. Rowland (DLS) for input.
-\item The scripts {\tt impact2sdds} and {\tt impact2elegant} were added.  These provide translation of IMPACT-T \cite{IMPACT} output
-  into SDDS files for more convenient postprocessing, as well as translation of IMPACT-T phase space into {\tt elegant}'s
-  conventions.  
-\item The scripts {\tt track2sdds}, {\tt track2mag}, and {\tt elegant2track} were added.  These provide a interface between
-  the ASCII version of TRACK and SDDS/{\tt elegant}.
+\item When emittance is given on the commandline for {\tt ibsEmittance} and {\tt touschekLifetime}, it is now treated the same as
+  the emittance \verb|ex0| read from an input file would be.  Previously, the meaning of the coupling parameter was different in these
+  cases.
+\item The script \verb|spiffe2elegant| was added, which allows converting the output of the PIC code \verb|spiffe| to the same form
+  as output by \verb|elegant|.  Note that \verb|elegant| will read \verb|spiffe| output directly. This script just allows converting the
+  data for use with related programs, such as \verb|sddsanalyzebeam|.
+\item The scripts \verb|makeSkewResponseCP| and \verb|correctCoupling| were added.  These can be used to compute the cross-plane response
+  matrices for skew quadrupoles and to perform coupling correction using those matrices.
+\item Problems with convergence in \verb|touschekLifetime| would sometimes result in very long run times.  This was fixed.  Several additional
+  options were added.
 \end{itemize}
 
 \subsection{Known Bugs, Problems, and Limitations}
@@ -1047,10 +1049,10 @@ to set
 \verb|randomize_order[0] = 2, 2, 2,|.  This avoids banding that may
 result from choosing larger radix values.
 
-\verb|halton_optimized| uses the improved halton sequence 
-(Alogrithm 659, Collected Algorithm from ACM. Derandom Algorithm is added
-   by Hongmei CHI (CS/FSU)). It avoids the banding probleam automitically and
-the \verb|halton_radix| values are ignored here.
+\verb|halton_optimized| uses the improved halton sequence \cite{Chi2005}.
+(Algorithm 659, Collected Algorithm from ACM. Derandom Algorithm is added
+by Hongmei CHI (CS/FSU)). It avoids the banding problem automatically and
+the \verb|halton_radix| values are ignored.
 
 \item \verb|randomize_order[3]| --- Allows randomizing the order of
 assigned coordinates for the pairs (x, x'), (y, y'), and (t,p).  0
@@ -1337,19 +1339,23 @@ use at each iteration.
 
 \begin{verbatim}
 &correction_matrix_output
-    STRING response[2] = NULL, NULL;
+    STRING response[4] = NULL, NULL;
     STRING inverse[2] = NULL, NULL;
     long KnL_units = 0;
     long BnL_units = 0;
     long output_at_each_step = 0;
     long output_before_tune_correction = 0;
     long fixed_length = 0;
+    long coupled = 0;
 &end
 \end{verbatim}
 
 \begin{itemize}
 \item \verb|response| --- Array of (incomplete) filenames for SDDS output of the x and y response
-matrices.  Recommended values: ``\%s.hrm'' and ``\%s.vrm''.
+matrices, plus the cross-plane response matrices.  Recommended values, in order: ``\%s.hrm'' (horizontal
+response to horizontal correctors), ``\%s.vrm'' (vertical response to vertical correctors),
+``\%s.vhrm'' (vertical response to horizontal correctors), and 
+``\%s.hvrm'' (horizontal response to vertical correctors).
 \item \verb|inverse| --- Array of (incomplete) filenames for SDDS output of the x and y 
 inverse response matrices. Recommended values: ``\%s.hirm'' and ``\%s.virm''.
 \item \verb|KnL_units| --- Flag that, if set, indicates use of ``units'' of m/K0L rather than
@@ -1363,6 +1369,7 @@ each simulation step.  By default, the data is output immediately for the define
 \verb|output_at_each_step| is set, that output shall occur prior to correcting the tunes.
 \item \verb|fixed_length| --- Flag that, if set, specifies output of the fixed-path-length
 matrix.
+\item \verb|coupled| --- If nonzero, the cross-plane response matrices are computed.
 \end{itemize}
 
 \begin{latexonly}
@@ -1556,6 +1563,7 @@ and momentum spread to compute the beam sizes, bunch length (if rf is included),
     long post_correction = 0;
     long fractional = 0;
     long additive = 1;
+    long allow_missing_elements = 0;
     STRING after = NULL;
     STRING before = NULL;
 &end
@@ -1591,6 +1599,7 @@ with different names.
 the amplitude of the fractional error.
 \item \verb|additive| --- A flag indicating that the errors should be added to the prior value of the
 parameter.  If zero, then the errors replace the prior value of the parameter.
+\item \verb|allow_missing_elements| --- A flag indicating that execution may continue even if no matching elements are found.
 \item \verb|after| --- The name of an element.  If given, the error is applied only to elements
  that follow the named element in the beamline.
 \item \verb|before| --- The name of an element.  If given, the error is applied only to elements
@@ -2050,6 +2059,8 @@ during computations.
     STRING source_position = "before";
     STRING mode = "dynamic";
     STRING equation = NULL;
+    double minimium = -DBL_MAX;
+    double maximum = DBL_MAX;
 &end
 \end{verbatim}
 
@@ -2069,8 +2080,11 @@ the source, and at the end of correction.
 \item \verb|equation| --- An {\tt rpn} equation for the new item value in
 terms of the item values for the source.  The prior value of the item is 
 on the top of the stack. To refer to the source
-parameter values, use the name of the parameters. These names must appear
+parameter values, use the name of the parameters. To refer to the initial source
+parameter values, append ``0'' to the parameter name.  These names must appear
 in capital letters.  
+\item \verb|minimum|, \verb|maximum| --- Minimum and maximum values that will be
+assigned to the target parameter.
 \end{itemize}
 
 \begin{latexonly}
@@ -2320,6 +2334,8 @@ using values at marker elements.  See the documentation for
     STRING output = NULL;
     double x_initial = 0;
     double y_initial = 0;
+    double delta_negative_start = 0.0;
+    double delta_positive_start = 0.0;
     double delta_negative_limit = -0.10;
     double delta_positive_limit = 0.10;
     double delta_step_size = 0.01;
@@ -2336,6 +2352,7 @@ using values at marker elements.  See the documentation for
     long verbosity = 1;
     long soft_failure = 0;
     long output_mode = 0;
+    long forbid_resonance_crossing = 0;
 &end
 \end{verbatim}
 
@@ -2344,9 +2361,12 @@ using values at marker elements.  See the documentation for
   Recommended value: ``\%s.mmap''.
 \item \verb|x_initial|, \verb|y_initial| --- The initial x and y coordinate values for tracking. It is essential
  that \verb|y_initial| be nonzero if one wants to see losses due to vertical resonances.  
+\item \verb|delta_negative_start|, \verb|delta_positive_start| ---
+Starting values of scans in the negative and positive
+directions. 
 \item \verb|delta_negative_limit|, \verb|delta_positive_limit| ---
 Limiting values of scans in the negative and positive
-directions. Scanning begins at 0 and moves to to these values, but never beyond. 
+directions. 
 \item \verb|delta_step_size| --- Initial size of steps in $\delta$.  This should
  be fairly large in order to save time.
 
@@ -2399,6 +2419,10 @@ data in the output file.  If \verb|output_mode| is nonzero, {\tt elegant} instea
 the values for positive and negative apertures in successive rows, with a reduced number
 of columns.  This is mostly advantageous for the parallel version, since it allows using
 twice as many simultaneous processors.
+
+\item \verb|forbid_resonance_crossing| --- Normally, {\tt elegant} allows the momentum
+aperture search to cross integer and half-integer resonances if no unstable particles are
+found.  If this is undesirable, this flag can be set to 1.
 \end{itemize}
 
 The idea for this command is from M. Belgroune {\em et al.}, ``Refined
@@ -2577,6 +2601,7 @@ variables and covariable may be accessed via names like \verb|<element-name>.<pa
     long n_restarts = 0;
     long matrix_order = 1;
     STRING log_file = NULL;
+    STRING term_log_file = NULL;
     long output_sparsing_factor = 0;
     long balance_terms = 0;
     double restart_worst_term_factor = 1;
@@ -2613,6 +2638,14 @@ If response matrix calculation is requested, response matrix values
 are available in variables with names {\em Plane}{\tt R\_}{\em
 bpmName}\verb|#|{\em occurence}{\tt \_}{\em corrName}\verb|#|{\em occurence}{\tt
 .}{\em corrParam}, where {\em Plane} is {\tt H} (horizontal) or {\tt
+V} (vertical) and {\em corrParam} is the parameter of the corrector
+used for changing the orbit (e.g., {\tt HKICK} or {\tt VKICK} for a
+{\tt KICKER} element).
+
+If cross-plane response matrix calculation is requested, response matrix values
+are available in variables with names {\em BpmPlane}{\em CorrPlane}{\tt R\_}{\em
+bpmName}\verb|#|{\em occurence}{\tt \_}{\em corrName}\verb|#|{\em occurence}{\tt
+.}{\em corrParam}, where {\em BpmPlane} and {\em CorrPlane} are  {\tt H} (horizontal) or {\tt
 V} (vertical) and {\em corrParam} is the parameter of the corrector
 used for changing the orbit (e.g., {\tt HKICK} or {\tt VKICK} for a
 {\tt KICKER} element).
@@ -2733,6 +2766,11 @@ Names for first-, second-, and third-order elements are of the form
 {\tt R}{\em ij}, {\tt T}{\em ijk}, and {\tt U}{\em ijkl}.
 \item \verb|log_file| --- A file to which progress reports will be written as optimization proceeds.
 For SDDS data, use the \verb|final| output file from the \verb|run_setup| namelist.
+
+\item \verb|term_log_file| --- This names a file to which the
+  values of the optimization terms are written at the completion of optimization, which can be convenient when large numbers
+  of terms are used.  For example, by using \verb|sddssort| one could find which terms are contributing most to the
+  penalty value.
 
 \item \verb|output_sparsing_factor| --- If set to a value larger than 0, results in
 sparsing of output to the ``final'' file (see \verb|run_setup|). This can make
@@ -3007,10 +3045,12 @@ a different run.
 
 \begin{itemize}
 
-\item \verb|tag| --- A string that will be pre-pended to the names of all the numerical columns 
+\item \verb|tag| --- Option string that will be pre-pended to the names of all the numerical columns 
  in the file in order to create RPN variable names.  E.g., if the input file was from the
  \verb|twiss_output| command and \verb|tag = tw1| was given, then RPN variables 
- \verb|tw1.betax|, \verb|tw1.alphax|, etc. would be used.
+ \verb|tw1.betax|, \verb|tw1.alphax|, etc. would be used.  {\em N.B.: If the tag is blank, then nothing 
+ is appended to the names from the file.  This can be dangerous since the names may conflict with
+ the names of other variables!}
 
 \item \verb|filename| --- The (incomplete) name of the SDDS file from which to read data.
     By default, data is taken from all columns from the last row of the last page of the file.
@@ -3377,6 +3417,7 @@ and is useful for tracking very large numbers of particles.
 &semaphores
         STRING started = ``%s.started'';
         STRING done    = ``%s.done'';
+        STRING failed  = ``%s.failed'';
 &end
 \end{verbatim}
 
@@ -3723,6 +3764,7 @@ unit parameter change for the element.
     long reflect_reference_values = 0;
     long cavities_are_drifts_if_matched = 1;
     long compute_driving_terms = 0;
+    long local_dispersion = 1;
 &end
 \end{verbatim}
 
@@ -3789,6 +3831,12 @@ used that gives the second-order chromaticity only.
  tune shifts with amplitude are computed by summing over dipole, quadrupole, and sextupole elements.  For dipoles, only the effects of gradients and
  sextupole terms are included; curvature effects are not present in the theory.   In addition, these quantities may be optimized 
  by using those names in optimization terms (see list below).
+\item \verb|local_dispersion| ---  Normally, {\tt elegant} will ignore acceleration in computing the
+  dispersion.  That is, the dispersion would be the ``local'' dispersion $\frac{\partial x}{\partial \delta}$, where $\delta$
+  was the local fractional momentum deviation.  In a linac or other systems with rf elements, one might also be interested in the ``global'' dispersion
+  $\frac{\partial x}{\partial \delta_0}$, where $\delta_0$ is the energy deviation at the beginning of the system.
+  In this case, set \verb|local_dispersion=0|.  Alternatively, one may look at the $R_{i6}$ elements of the matrix from 
+  \verb|matrix_output|.
 \end{itemize}
 
 The output file from this command contains the following columns, giving values of quantities at the
@@ -4186,12 +4234,17 @@ given with no arguments.
  time, smooths the distribution and adds optional energy and density modulation.   Intended to be used to increase the number of particles
  produced by a photoinjector simulation to improve stability of CSR and LSC simulations.  Also useful in studying 
  the growth rate for energy and density modulations.  See also {\tt doubleDist6}.
+\item The script \verb|spiffe2elegant| allows converting the output of the PIC code \verb|spiffe| to the same form
+  as output by \verb|elegant|.  Note that \verb|elegant| will read \verb|spiffe| output directly. This script just allows converting the
+  data for use with related programs, such as \verb|sddsanalyzebeam|.
 \item {\tt touschekLifetime} --- This program calculates Touschek lifetime using A. Piwinski's formula.
         Input files are generated from ``twiss\_output'' and ``momentum\_aperture''.  (Program by A. Xiao.)
 \item {\tt track2sdds} --- Translates output files, including phase space files, from version 39 of TRACK (with ASCII output \cite{TRACK})
   into SDDS. 
 \item {\tt track2mag} --- Uses TRACK output files to create a file similar to the magnets outupt file from {\tt elegant}.
   This gives a profile of the beamline that can be plotted with other data.
+\item The scripts \verb|makeSkewResponseCP| and \verb|correctCoupling| can be used to compute the cross-plane response
+  matrices for skew quadrupoles and to perform coupling correction using those matrices.
 \end{itemize}
 
 \begin{latexonly}
@@ -5235,8 +5288,9 @@ touschekLifetime aps.life -twiss=aps.twi -aper=aps.aper -part=2e10 -coupling=0.0
 touschekLifetime {\em outputFile}
  -twiss=<twissFile> -aperture=<momentumApertureFile>
  {-charge=<nC>|-particles=<value>} -coupling=<value>
- {-RF=Voltage=<MV>,harmonic=<value>|-length=<mm>}
+ {-RF=Voltage=<MV>,harmonic=<value>|-length=<mm>} 
  [-emitxInput=<value>] [-deltaInput=<value>] [-verbosity=<value>]
+ [-ignoreMismatch] [-deltaLimit=<value>]
 }\end{flushleft}
 
 \item {\bf files:}
@@ -5264,6 +5318,10 @@ the value from the parameter \verb|ex0| in {\em twissFile} is used.
 \item {\tt -deltaInput} --- Give the initial rms fractional momentum spread.  If not
 specified, the value from the parameter \verb|Sdelta0| in {\em twissFile} is used.
 \item {\tt -verbosity} --- If nonzero, program execution information is printed to the standard output.
+\item {\tt -ignoreMismatch} --- If given, then mismatch of element names between the twiss and momentum
+  aperture files is ignored.  May be useful if there are zero-length elements.
+\item {\tt -deltaLimit} --- Give the maximum value for the momentum aperture.  If not specified,
+  the values in the momentum aperture input file are used unaltered.
 \end{itemize}
 
 \item {\bf author:} A. Xiao, ANL/APS.
@@ -5533,6 +5591,9 @@ J. Qiang {\em et al.},  J.~Comp.~Phys. 163, 434 (2000).
 
 \bibitem{TRACK}
   V. N. Aseev {\em et al.}, Proc. PAC05, 2053-2055 (2005); ASCII version 39 from B. Mustapha.
+
+\bibitem{Chi2005}
+  H. Chi {\em et al.}, Mathematics and Computers in Simulation {\bf 70} (2005) 9-21.
 
 \end{thebibliography}
 
