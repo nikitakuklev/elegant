@@ -14,6 +14,9 @@
  * Michael Borland, 2000
  *
  $Log: not supported by cvs2svn $
+ Revision 1.2  2007/03/30 21:20:35  soliday
+ Modified to work on WIN32
+
  Revision 1.1  2007/03/30 16:50:29  soliday
  Moved from directory above.
 
@@ -229,7 +232,7 @@ int main(int argc, char **argv)
 	    ((xSpec.flags&ELEMENT_GIVEN || xSpec.flags&OCCURRENCE_GIVEN) &&
 	     !(xSpec.flags&FILENAME_GIVEN)))
           SDDS_Bomb("invalid -xPlane syntax/values---watch out for abbreviations of etaValue and etaSlope");
-	if (xSpec.flags&FILENAME_GIVEN && !LoadTwissFromFile(&xSpec, 0)) 
+	if (xSpec.flags&FILENAME_GIVEN && !LoadTwissFromFile(&xSpec, 0))
 	  SDDS_Bomb("invalid -xPlane syntax/values---problem loading data from twiss file");
         break;
       case SET_YPLANE:
@@ -636,7 +639,7 @@ long LoadTwissFromFile(PLANE_SPEC *spec, long yPlane)
       SDDS_SetError("Problem finding data for beta function reference.  Check for existence of element.");
       return 0;
     }
-    if (spec->occurrence>0 && spec->occurrence>rows) {
+    if (spec->flags&OCCURRENCE_GIVEN && spec->occurrence>0 && spec->occurrence>rows) {
       SDDS_SetError("Too few occurrences of reference element in beta function reference file.");
       return 0;
     }
@@ -652,7 +655,7 @@ long LoadTwissFromFile(PLANE_SPEC *spec, long yPlane)
     SDDS_SetError("Problem getting data for beta function reference.");
     return 0;
   }
-  if (spec->flags&ELEMENT_GIVEN && spec->element && spec->occurrence>0)
+  if (spec->flags&ELEMENT_GIVEN && spec->element && spec->flags&OCCURRENCE_GIVEN && spec->occurrence>0) 
     rowOfInterest = spec->occurrence-1;
   else
     rowOfInterest = rows-1;
