@@ -252,8 +252,8 @@ ntuple *readbookn(char *inputfile, long i_page)
   return book;
 }
 
-/* The input x should be values between 0-1. Returns normalized value */
-double interpolate_bookn(ntuple *bName, double *x0, double *x, long offset, long normalize)
+/* The x0 is normalized input [0-1]; x is actual input [xmin, xmax]. */
+double interpolate_bookn(ntuple *bName, double *x0, double *x, long offset, long normalize, long normalInput)
 {
   double **Coef, value, result;
   long **grid, *Bit;
@@ -265,8 +265,22 @@ double interpolate_bookn(ntuple *bName, double *x0, double *x, long offset, long
   Bit = calloc(sizeof(long), bName->nD);
 
   for (i=0; i<bName->nD; i++) {
-    x[i+offset] = x0[i+offset]*(bName->xmax[i] - bName->xmin[i]) + bName->xmin[i];
-
+    if (normalInput) {
+      x[i+offset] = x0[i+offset]*(bName->xmax[i] - bName->xmin[i]) + bName->xmin[i];
+    } else {
+      if (x[i+offset]>bName->xmax[i]) {
+        fprintf(stdout, "warning: interpolate_bookn - x value is out of up boundary, set it to xmax. \n Name=%s, i=%ld, xmax=%g, x=%g\n", 
+                bName->vname[i], i, bName->xmax[i], x[i+offset]);
+        x[i+offset] = bName->xmax[i];
+      }
+      if (x[i+offset]<bName->xmin[i]) {
+        fprintf(stdout, "warning: interpolate_bookn - x value is out of lower boundary, set it to xmin. \n Name=%s, i=%ld, xmin=%g, x=%g\n", 
+                bName->vname[i], i, bName->xmin[i], x[i+offset]);
+        x[i+offset] = bName->xmin[i];
+      }
+      x0[i+offset] = (x[i+offset] - bName->xmin[i])/(bName->xmax[i] - bName->xmin[i]);
+    }
+    
     grid[i][0] = (long)(x0[i+offset]*bName->xbins[i]-0.5);
     if ((x0[i+offset]*bName->xbins[i]-0.5)<0)
       grid[i][0] = -1;

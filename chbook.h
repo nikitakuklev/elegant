@@ -58,7 +58,7 @@ ntuple *chbookn(char **vName, char **units, long NDimension, double *xmin, doubl
 void chfilln(ntuple *bName, double *x, double Frequency, long offset);
 void free_hbookn(ntuple *x);
 ntuple *readbookn(char *inputfile, long i_page);
-double interpolate_bookn(ntuple *bName, double *x0, double *x, long offset, long normalize);
+double interpolate_bookn(ntuple *bName, double *x0, double *x, long offset, long normalize, long normalInput);
 
 book1m *chbook1m(char **vName, char **units, double *xmin, double *xmax, int32_t *xbins, long column_number);
 void chfill1m(book1m *bName, double *x, double Frequency, int32_t *xbins, long column_number);
