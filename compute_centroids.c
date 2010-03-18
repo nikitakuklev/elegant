@@ -148,7 +148,22 @@ void compute_sigmas(
 {
     long i_part, i_coord;
     double sum2[6], *part, value;
+    long active = 1;
+#if USE_MPI  /* In the non-parallel mode, it will be same with the serial version */ 
+  long n_total;
+  double sum2_total[6];
 
+  if (notSinglePart) {
+    if (isMaster)
+      n_part = 0;
+    if (((parallelStatus==trueParallel) && isSlave) || ((parallelStatus!=trueParallel) && isMaster))
+      active = 1;
+    else 
+      active = 0;
+  }
+#endif
+
+  if (active) {
     for (i_coord=0; i_coord<6; i_coord++)
         sum2[i_coord] = 0;
     if (emit)
@@ -160,7 +175,35 @@ void compute_sigmas(
         for (i_coord=0; i_coord<6; i_coord++) 
             sum2[i_coord] += sqr(part[i_coord]-centroid[i_coord]);
         }
-    if (n_part) {
+#if USE_MPI
+    if (notSinglePart) {
+      /* compute total number of particles over processors */
+      MPI_Allreduce(sum2, sum2_total, 6, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(&n_part, &n_total, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);      
+    }
+    if (n_total) {
+        for (i_coord=0; i_coord<6; i_coord++)
+            if ((value=sum2_total[i_coord])>0)
+                sigma[i_coord] = sqrt(value/n_total);
+            else
+                sigma[i_coord] = 0;
+        if (emit) {
+          for (i_coord=0; i_coord<6; i_coord+=2) {
+            double sum12, sum12_total;
+            sum12 = 0;
+            for (i_part=0; i_part<n_part; i_part++) {
+              part = coordinates[i_part];
+              sum12 += (part[i_coord]-centroid[i_coord])*(part[i_coord+1]-centroid[i_coord+1]);
+            }
+	    MPI_Allreduce(&sum12, &sum12_total, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+            if ((emit[i_coord/2] = sqr(sigma[i_coord]*sigma[i_coord+1]) - sqr(sum12_total/n_total))>0)
+              emit[i_coord/2] = sqrt(emit[i_coord/2]);
+            else
+              emit[i_coord/2] = 0;
+          }
+        }
+#else
+      if (n_part) {
         for (i_coord=0; i_coord<6; i_coord++)
             if ((value=sum2[i_coord])>0)
                 sigma[i_coord] = sqrt(value/n_part);
@@ -180,8 +223,10 @@ void compute_sigmas(
               emit[i_coord/2] = 0;
           }
         }
-      }
+#endif
     }
+  }
+}
 
 void zero_beam_sums(
                     BEAM_SUMS *sums,
