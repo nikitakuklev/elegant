@@ -239,15 +239,9 @@ long do_find_aperture = 0;
 int n_processors = 1;
 int myid;
 int dumpAcceptance = 0;
-#if SDDS_MPI_IO
 parallelMode parallelStatus = trueParallel; 
-int partOnMaster = 0; /* indicate if the particle information is available on master */
+int partOnMaster = 1; /* indicate if the particle information is available on master */
 long watch_not_allowed = 0;
-#else
-parallelMode parallelStatus = initialMode; 
-int partOnMaster = 1;
-#endif
-
 long lessPartAllowed = 0; /* By default, the number of particles is required to be at least n_processors-1 */
 MPI_Comm workers;
 int fd; /* save the duplicated file descriptor stdout to use it latter */
@@ -340,10 +334,10 @@ char **argv;
     /* redirect output, only the master processor will write on screen or files */
 #if defined(_WIN32)
     freopen("NUL","w",stdout);
-    freopen("NUL","w",stderr);
+    /* freopen("NUL","w",stderr); */
 #else
     freopen("/dev/null","w",stdout);
-    freopen("/dev/null","w",stderr);
+    /*    freopen("/dev/null","w",stderr); */
 #endif
 #endif
     writePermitted = isMaster = 0;
@@ -830,9 +824,10 @@ char **argv;
             new_beam_flags = TRACK_PREVIOUS_BUNCH;
 #if SDDS_MPI_IO
 	   if (correct.start_from_centroid) {
-	      notSinglePart = 1; /* Compute centroids across all the processors, instead of local centroid on each individual processor */		
+	      notSinglePart = 1; /* Compute centroids across all the processors, instead of local centroid on each individual processor */
+	      partOnMaster = 0;
               compute_centroids(starting_coord, beam.particle, beam.n_to_track);
-              notSinglePart = 0; /* Switch back to single particle mode, i.e., all the processor will do the same thing */  		
+              notSinglePart = 0; /* Switch back to single particle mode, i.e., all the processor will do the same thing */  	           partOnMaster = 1;	
 	  } 
 #else
             if (correct.start_from_centroid)

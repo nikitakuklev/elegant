@@ -15,6 +15,9 @@
    double *hist, *cdf, xMin, xMax, xCenter, xRange;
    long i, j, k;
 
+   if (!notSinglePart)
+     return approximate_percentiles(position, percent, positions, x, n, bins);
+
    if (bins<2 || positions<=0) /* In the parallel version, n=0 will not be a condition to return, as no particle on Master */
      return 0;
 

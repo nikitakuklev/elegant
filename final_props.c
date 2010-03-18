@@ -404,7 +404,8 @@ long compute_final_properties
   double tPosition2[9] = {0,0,0,0,0,0,0,0,0};
 #if SDDS_MPI_IO
   double tmp;
-  long n_part_total, n_original_total;
+  long n_part_total;
+  static long n_original_total = 0;
 #endif
   log_entry("compute_final_properties");
 
@@ -550,6 +551,7 @@ long compute_final_properties
       data[F_T_OFFSET] = ((double)sums->n_part)/n_original;
     else
       data[F_T_OFFSET] = 0;
+    n_original_total = n_original; /* This should happen on the first step for fiducial beam */
   }
 
 #endif
@@ -651,7 +653,10 @@ long compute_final_properties
 #if !SDDS_MPI_IO
   data[F_EMIT_OFFSET+4] = rms_longitudinal_emittance(coord, sums->n_part, p_central);
 #else
-  data[F_EMIT_OFFSET+4] = rms_longitudinal_emittance_p(coord, sums->n_part, p_central);
+  if (notSinglePart)
+    data[F_EMIT_OFFSET+4] = rms_longitudinal_emittance_p(coord, sums->n_part, p_central);
+  else
+    data[F_EMIT_OFFSET+4] = rms_longitudinal_emittance(coord, sums->n_part, p_central);
 #endif
   
   /* compute normalized emittances */

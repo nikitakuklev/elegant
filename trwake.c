@@ -45,31 +45,36 @@ void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
     pz = trealloc(pz, sizeof(*pz)*max_np);
   }
 #else
-    if (USE_MPI) {
-      long np_total;
-      if (isSlave) {
-	MPI_Allreduce(&np, &np_total, 1, MPI_LONG, MPI_SUM, workers);
-	if (np_total>max_np) { 
-	  /* if the total number of particles is increased, we do reallocation for every CPU */
-	  pbin = trealloc(pbin, sizeof(*pbin)*(max_np=np));
-	  time = trealloc(time, sizeof(*time)*max_np);
-	  pz = trealloc(pz, sizeof(*pz)*max_np);
-	  max_np = np_total; /* max_np should be the sum across all the processors */
-	}
+  if (notSinglePart) {
+    long np_total;
+    if (isSlave) {
+      MPI_Allreduce(&np, &np_total, 1, MPI_LONG, MPI_SUM, workers);
+      if (np_total>max_np) { 
+	/* if the total number of particles is increased, we do reallocation for every CPU */
+	pbin = trealloc(pbin, sizeof(*pbin)*(max_np=np));
+	time = trealloc(time, sizeof(*time)*max_np);
+	pz = trealloc(pz, sizeof(*pz)*max_np);
+	max_np = np_total; /* max_np should be the sum across all the processors */
       }
-    } 
-
+    }
+  } else {
+    if (np>max_np) {
+      pbin = trealloc(pbin, sizeof(*pbin)*(max_np=np));
+      time = trealloc(time, sizeof(*time)*max_np);
+      pz = trealloc(pz, sizeof(*pz)*max_np);
+    }
+  }
 #endif
 
   /* Compute time coordinate of each particle */
-  if (isSlave)
+  if (isSlave || !notSinglePart)
     tmean = computeTimeCoordinates(time, Po, part, np);
   find_min_max(&tmin, &tmax, time, np);
 #if USE_MPI
-  if (isSlave)
+  if (isSlave && notSinglePart)
     find_global_min_max(&tmin, &tmax, np, workers);      
 #endif  
-  if (isSlave) {
+  if (isSlave || !notSinglePart) {
     if ((tmax-tmin) > (wakeData->t[wakeData->wakePoints-1]-wakeData->t[0])) {
       fprintf(stderr, "The beam is longer than the transverse wake function.\nThis would produce unphysical results.\n");
       fprintf(stderr, "The beam length is %le s, while the wake length is %le s\n",
@@ -121,6 +126,7 @@ void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
     fflush(stdout);
   }
 #else
+  if (notSinglePart) {
     if (isSlave) {
       int all_binned, result = 1;
       
@@ -135,14 +141,21 @@ void track_through_trwake(double **part, long np, TRWAKE *wakeData, double Po,
 	}
       }
     }
+  } else {
+    if (n_binned!=np) {
+      fprintf(stdout, "warning: only %ld of %ld particles where binned (TRWAKE)\n", n_binned, np);
+      fprintf(stdout, "consider setting n_bins=0 in TRWAKE definition to invoke autoscaling\n");
+      fflush(stdout);
+    }
+  }
 #endif  
-    if (isSlave) {
+    if (isSlave || !notSinglePart) {
       for (plane=0; plane<2; plane++) {
 	if (!wakeData->W[plane])
 	  continue;
     
 #if USE_MPI 
-	if (isSlave) {
+	if (isSlave && notSinglePart) {
 	  buffer = malloc(sizeof(double) * nb);
 	  MPI_Allreduce(posItime[plane], buffer, nb, MPI_DOUBLE, MPI_SUM, workers);
 	  memcpy(posItime[plane], buffer, sizeof(double)*nb);

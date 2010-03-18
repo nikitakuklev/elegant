@@ -247,7 +247,6 @@ void set_up_wake(WAKE *wakeData, RUN *run, long pass, long particles, CHARGE *ch
    Zero the Memory when call  SDDS_InitializeInput */
   SDDSin.parallel_io = 0; 
 #endif
-  
   if (charge) {
     wakeData->macroParticleCharge = charge->macroParticleCharge;
   } else if (pass==0) {
@@ -258,14 +257,17 @@ void set_up_wake(WAKE *wakeData, RUN *run, long pass, long particles, CHARGE *ch
     if (particles)
       wakeData->macroParticleCharge = wakeData->charge/particles;
 #else
-    if (USE_MPI) {
+    if (notSinglePart) {
       long particles_total;
       if (isSlave) {
 	MPI_Allreduce(&particles, &particles_total, 1, MPI_LONG, MPI_SUM, workers);
 	if (particles_total)
 	  wakeData->macroParticleCharge = wakeData->charge/particles_total;  
       }
-    } 
+    } else {
+        if (particles)
+    	    wakeData->macroParticleCharge = wakeData->charge/particles;
+    }  	
 #endif
   }
   
@@ -342,7 +344,7 @@ void set_up_wake(WAKE *wakeData, RUN *run, long pass, long particles, CHARGE *ch
   }
   find_min_max(&tmin, &tmax, wakeData->t, wakeData->wakePoints);
 #if USE_MPI
-  if (isSlave)
+  if (isSlave && notSinglePart)
     find_global_min_max(&tmin, &tmax, wakeData->wakePoints, workers);      
 #endif
   if (tmin>=tmax) {

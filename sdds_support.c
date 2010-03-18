@@ -613,7 +613,6 @@ void dump_watch_particles(WATCH *watch, long step, long pass, double **particle,
 #if SDDS_MPI_IO
   long total_row;
 #endif
-
   log_entry("dump_watch_particles");
 #if SDDS_MPI_IO
   if (isMaster && notSinglePart)   /* No particle will be dumped by master */

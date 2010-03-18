@@ -181,10 +181,10 @@ long do_tracking(
     my_rate = 0.0;
   else
     my_rate = 1.0;
+  if (notSinglePart && partOnMaster) /* This is a special case when the first beam is fiducial. We need scatter the beam in the second step. */
+    distributed = 0;
 #endif 
-
   strncpy(trackingContext.rootname, run->rootname, CONTEXT_BUFSIZE);
-
   if (!coord && !beam)
     bombElegant("Null particle coordinate array and null beam pointer! (do_tracking)", NULL);
   if (coord && beam)
@@ -195,6 +195,7 @@ long do_tracking(
   }
 #if SDDS_MPI_IO
   if (notSinglePart) {
+
     if (isMaster )
       nOriginal = 0; 
     MPI_Allreduce(&nOriginal, &total_nOriginal, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
@@ -278,7 +279,7 @@ long do_tracking(
     *finalCharge = 0;  
 
 #if SDDS_MPI_IO
-  if (isSlave || (!notSinglePart)) {
+  if (isSlave || (!notSinglePart) || partOnMaster) {
 #else
   if (isMaster) {   /* As the particles have not been distributed, only master needs to do these computation */
 #endif 
@@ -421,7 +422,7 @@ long do_tracking(
 	  sprintf(s, "%ld particles present after pass %ld        ", 
 		  beam->n_to_track_total, i_pass);
 	}
-	else {
+	else { /* singlePart tracking or partOnMaster */
 	  sprintf(s, "%ld particles present after pass %ld        ", 
 		  nToTrack, i_pass);
 	}
@@ -525,7 +526,6 @@ long do_tracking(
           }   
         }
 #endif   
-
       if (sums_vs_z && *sums_vs_z && !(flags&FINAL_SUMS_ONLY) && !(flags&TEST_PARTICLES)) {
         if (i_sums<0)
           bombElegant("attempt to accumulate beam sums with negative index!", NULL);
@@ -538,7 +538,6 @@ long do_tracking(
 #endif
         i_sums++;
       }
-
 #if USE_MPI
       if (notSinglePart) {
 	active = 0;
@@ -602,7 +601,7 @@ long do_tracking(
 	    /* For the first pass, scatter when it is not in parallel mode */
 	    if (parallelStatus!=trueParallel) {
 	      scatterParticles(coord, &nToTrack, accepted, n_processors, myid,
-			       balanceStatus, my_rate, nParPerElements, round, lostSinceSeqMode, &distributed, &reAllocate, P_central); 
+			       balanceStatus, my_rate, nParPerElements, round, lostSinceSeqMode, &distributed, &reAllocate, P_central);
 	      if (myid != 0) {
 		/* update the nMaximum for recording the nLost on all the slave processors */
 		nMaximum = nToTrack; 
@@ -623,9 +622,9 @@ long do_tracking(
 	  }
 	  partOnMaster = 0;
 	}
-      }
+      } else /* singlePart case */
+	partOnMaster = 1;
 #endif
-
 
       name = eptr->name;
       last_z = z;
@@ -771,8 +770,10 @@ long do_tracking(
 		if (notSinglePart) {
 		  if (total_nOriginal)
 		    charge->macroParticleCharge = charge->charge/(total_nOriginal);
-		} else
-		  charge->macroParticleCharge = charge->charge;
+		} else {
+		  if (nOriginal)
+		    charge->macroParticleCharge = charge->charge/(nOriginal);
+		}
 #endif
 		if (charge->chargePerParticle)
 		  charge->macroParticleCharge = charge->chargePerParticle;
@@ -3422,14 +3423,10 @@ void scatterParticles(double **coord, long *nToTrack, double **accepted,
   int my_nToTrack, nItems, *nToTrackCounts;
   double total_rate, constTime, *rateCounts;
   MPI_Status status;
-
-#if SDDS_MPI_IO
-
-#endif
   
   nToTrackCounts = malloc(sizeof(int) * n_processors);
   rateCounts = malloc(sizeof(double) * n_processors);
-  
+
   /* The particles will be distributed to slave processors evenly for the first pass */
   if (((balanceStatus==startMode) && (!*distributed)) || lostSinceSeqMode || *reAllocate )  { 
     MPI_Bcast(nToTrack, 1, MPI_LONG, 0, MPI_COMM_WORLD);
@@ -3538,7 +3535,7 @@ void scatterParticles(double **coord, long *nToTrack, double **accepted,
     int  namelen;
     char processor_name[MPI_MAX_PROCESSOR_NAME];
     if (myid!=0)
-      if ((balanceStatus == badBalance) || lostSinceSeqMode) 
+      /*      if ((balanceStatus == badBalance) || lostSinceSeqMode) */ 
 	{
 	  MPI_Get_processor_name(processor_name,&namelen);
 	  fprintf(stderr, "%d will be computed on %d (%s)\n",my_nToTrack,myid,processor_name);
